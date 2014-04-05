@@ -213,3 +213,7 @@ pip-log.txt
 
 #Mr Developer
 .mr.developer.cfg
+
+#Executables and IDA files
+*.exe
+*.idb
