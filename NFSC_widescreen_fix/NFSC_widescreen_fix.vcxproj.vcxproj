@@ -13,7 +13,8 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{4E24A2AF-7398-48B2-8447-12C7A8D669B7}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>NFSС_widescreen_fix</RootNamespace>
+    <RootNamespace>NFSC_widescreen_fix</RootNamespace>
+    <ProjectName>NFSC_widescreen_fix</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

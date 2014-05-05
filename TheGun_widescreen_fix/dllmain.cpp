@@ -3,6 +3,9 @@
 #include <windows.h>
 #include "..\includes\CPatch.h"
 #include "..\includes\IniReader.h"
+#include "tchar.h"
+#include "Strsafe.h"
+
 
 HWND hWnd;
 
@@ -10,6 +13,10 @@ int hud_patch;
 int res_x;
 int res_y;
 DWORD WINAPI hud_handler(LPVOID);
+HKEY hKey;
+LPCTSTR Gun = TEXT("SOFTWARE\\Activision\\Gun\\Settings");
+float FOV;
+int GameSpeed;
 
 void Init()
 {
@@ -17,6 +24,8 @@ void Init()
 	res_x = iniReader.ReadInteger("MAIN", "X", 0);
 	res_y = iniReader.ReadInteger("MAIN", "Y", 0);
 	hud_patch = iniReader.ReadInteger("MAIN", "HUD_PATCH", 0);
+	FOV = iniReader.ReadFloat("MAIN", "FOV", 114.59155f);
+	GameSpeed = iniReader.ReadInteger("MAIN", "GameSpeed", 30);
 
 	if (!res_x || !res_y) {
 		HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
@@ -27,28 +36,30 @@ void Init()
 		res_y = info.rcMonitor.bottom - info.rcMonitor.top;
 	}
 
-	//game
-	/*patch(0x66AB61+0x1, &res_x, 4);
-	patch(0x66AB6B+0x1, &res_y, 4);*/
-	/*patch(0x66AB78+0x1, &res_x, 4);
-	patch(0x66AB7F+0x1, &res_y, 4);
-	patch(0x66AB87+0x1, &res_x, 4);
-	patch(0x66AB8E+0x1, &res_y, 4);
-	patch(0x66AB96+0x1, &res_x, 4);
-	patch(0x66AB9D+0x1, &res_y, 4);
-	patch(0x66ABA5+0x1, &res_x, 4);
-	patch(0x66ABAD+0x1, &res_y, 4);
-	patch(0x66ABB4+0x1, &res_x, 4);*/
+	LONG openReg = RegOpenKeyEx(HKEY_CURRENT_USER, Gun, 0, KEY_ALL_ACCESS, &hKey);
 
-	CPatch::Nop(0x50540A, 5); //nop res
-	CPatch::Nop(0x51942A, 5);
-	CPatch::Nop(0x5F9113, 5);
+	if (openReg == ERROR_SUCCESS) 
+	{
 
-	CPatch::Nop(0x50541D, 5);
-	CPatch::Nop(0x51943D, 5);
-	CPatch::Nop(0x5F9131, 5);
+		char value[] = TEXT("Resolution");
+		char data[20];
+		char res[20];
 
-	CPatch::Nop(0x4BA674, 5); //nop AR
+		sprintf_s(res, "%d", res_x);
+		strcat_s(data, res);
+		strcat_s(data, "x");
+		sprintf_s(res, "%d", res_y);
+		strcat_s(data, res);
+		strcat_s(data, "\0");
+
+		RegSetValueEx(hKey, value, 0, REG_SZ, (LPBYTE)data, _tcslen(data) * sizeof(TCHAR));
+
+		RegCloseKey(hKey);
+	}
+
+		Sleep(1000); //steam
+
+		CPatch::Nop(0x4BA674, 5); //nop AR
 
 		CPatch::SetInt(0x6B759C, res_x);
 		CPatch::SetInt(0x6B75A0, res_y);
@@ -66,13 +77,24 @@ void Init()
 		{
 			CPatch::SetFloat(0x6814CC, hud_multiplier_x);
 		}
+
+		//FOV hack
+		CPatch::SetPointer(0x498BA3 + 0x2, &FOV);
+
+		//Game speed
+		if (GameSpeed)
+		{
+			CPatch::SetInt(0x52E7CA, GameSpeed);
+		}
+		
+
 }
 
 BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
 	if (reason == DLL_PROCESS_ATTACH)
 	{
-		Init();
+		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, NULL, 0, NULL);
 	}
 	return TRUE;
 }
