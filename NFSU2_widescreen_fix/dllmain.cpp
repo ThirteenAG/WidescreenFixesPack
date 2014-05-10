@@ -9,6 +9,7 @@ HWND hWnd;
 int hud_patch;
 int res_x;
 int res_y;
+float FOV_hor, FOV_ver, HUD_scale;
 DWORD WINAPI hud_handler(LPVOID);
 
 void Init()
@@ -17,6 +18,9 @@ void Init()
 	res_x = iniReader.ReadInteger("MAIN", "X", 0);
 	res_y = iniReader.ReadInteger("MAIN", "Y", 0);
 	hud_patch = iniReader.ReadInteger("MAIN", "HUD_PATCH", 0);
+	FOV_hor = iniReader.ReadFloat("MAIN", "FOV_hor", 1.1f);
+	FOV_ver = iniReader.ReadFloat("MAIN", "FOV_ver", 0.86956525f);
+	HUD_scale = iniReader.ReadFloat("MAIN", "HUD_scale", 1.0f);
 
 	if (!res_x || !res_y) {
 		HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
@@ -56,13 +60,21 @@ void Init()
 		{
 			CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&hud_handler, NULL, 0, NULL);
 		}
+
+		if (FOV_hor && FOV_ver)
+		{
+			CPatch::SetFloat(0x7A27DC, FOV_hor);
+			CPatch::SetFloat(0x7A27E0, FOV_hor);
+			CPatch::SetFloat(0x7A27D8, FOV_ver);
+		}
+
 }
 
 
 DWORD WINAPI hud_handler(LPVOID)
 {
-	float hud_multiplier_x = 1.0f / (float)res_x * 2.0f;
-	float hud_multiplier_y = 1.0f / (float)res_y * 2.0f;
+	float hud_multiplier_x = (1.0f / (float)res_x * 2.0f) * HUD_scale;
+	float hud_multiplier_y = (1.0f / (float)res_y * 2.0f) * HUD_scale;
 
 	float orig_multiplier_x = 1.0f / 640.0f * 2.0f;
 	float orig_multiplier_y = 1.0f / 480.0f * 2.0f;
@@ -70,7 +82,7 @@ DWORD WINAPI hud_handler(LPVOID)
 	while (true)
 	{
 		Sleep(0);
-		if ((char)*(DWORD*)0x816204 == 0) 
+		if ((unsigned int)*(DWORD*)0x816204 == 0) 
 		{
 			CPatch::SetFloat(0x79AC10, hud_multiplier_x);
 			CPatch::SetFloat(0x79AC14, hud_multiplier_y);

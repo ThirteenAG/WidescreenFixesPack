@@ -5,8 +5,6 @@
 #include "..\includes\IniReader.h"
 
 HWND hWnd;
-DWORD jmpAddress;
-void asm_patch();
 float _halfres_x;
 float _halfres_y;
 
@@ -17,6 +15,7 @@ DWORD* _8F1CA0 = (DWORD*)0x8F1CA0;
 int hud_patch;
 int res_x;
 int res_y;
+float FOV_hor, FOV_ver, HUD_scale;
 DWORD WINAPI hud_handler(LPVOID);
 
 void Init()
@@ -26,6 +25,9 @@ void Init()
 	res_y = iniReader.ReadInteger("MAIN", "Y", 0);
 	hud_patch = iniReader.ReadInteger("MAIN", "HUD_PATCH", 0);
 	int shadows_patch = iniReader.ReadInteger("MAIN", "SHADOWS_RES", 1024);
+	FOV_hor = iniReader.ReadFloat("MAIN", "FOV_hor", 1.15f);
+	FOV_ver = iniReader.ReadFloat("MAIN", "FOV_ver", 0.5f);
+	HUD_scale = iniReader.ReadFloat("MAIN", "HUD_scale", 1.0f);
 
 	if (!res_x || !res_y) {
 		HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
@@ -80,6 +82,9 @@ void Init()
 		CPatch::SetInt(0x582BE8 + 0x400000, res_y);
 		//patch(0x8AE8F8,&res_y,4);
 
+		CPatch::SetFloat(0x8AE8F8, (float)res_x);
+		CPatch::SetFloat(0x8AF2C0, (float)res_y);
+
 
 		if (shadows_patch) {
 			
@@ -118,15 +123,21 @@ void Init()
 			CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&hud_handler, NULL, 0, NULL);
 		}
 
+		if (FOV_hor && FOV_ver)
+		{
+			CPatch::SetPointer(0x6CF50F + 2, &FOV_hor);
+			CPatch::SetPointer(0x6CF53A + 2, &FOV_ver);
+			CPatch::SetPointer(0x6CF578 + 2, &FOV_ver);
+		}
 }
 
 DWORD WINAPI hud_handler(LPVOID)
 {
-	float _halfres_x = 1.0f / (float)res_y * 2.0f;
-	float _halfres_y = 1.0f / (float)res_x * 2.0f;
+	float _halfres_x = (1.0f / (float)res_y * 2.0f) * HUD_scale;
+	float _halfres_y = (1.0f / (float)res_x * 2.0f) * HUD_scale;
 
-	float _halfres_x1 = 1.0f / (float)res_y;
-	float _halfres_y2 = 1.0f / (float)res_x;
+	float _halfres_x1 = (1.0f / (float)res_y) * HUD_scale;
+	float _halfres_y2 = (1.0f / (float)res_x) * HUD_scale;
 
 	float orig_halfres_x = 1.0f / 480.0f * 2.0f;
 	float orig_halfres_y = 1.0f / 640.0f * 2.0f;
@@ -141,7 +152,7 @@ DWORD WINAPI hud_handler(LPVOID)
 while (true)
 {
 	Sleep(0);
-	if ((char)*(DWORD*)0x909E6C == 0) {
+	if ((unsigned int)*(DWORD*)0x909E6C == 0) {
 		CPatch::SetFloat(0x8AF9A0, _halfres_x);
 		CPatch::SetFloat(0x8AF9A4, _halfres_y);
 
@@ -156,14 +167,9 @@ while (true)
 		CPatch::SetFloat(0x8AFA04, orig_halfres_x1);
 		CPatch::SetFloat(0x8AFA08, orig_halfres_y2);
 	}
+
 }
 	return 0;
-}
-
-void __declspec(naked)asm_patch()
-{
-	__asm mov jmpAddress, 0x400000
-	__asm jmp jmpAddress
 }
 
 BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
