@@ -12,11 +12,15 @@ HWND hWnd;
 int hud_patch;
 int res_x;
 int res_y;
-DWORD WINAPI hud_handler(LPVOID);
 HKEY hKey;
-LPCTSTR Gun = TEXT("SOFTWARE\\Activision\\Gun\\Settings");
 float FOV;
 int GameSpeed;
+float aspect_ratio;
+
+double sub_4BA680()
+{
+	return aspect_ratio * ((*(float*)0x750FAC) / (4.0f / 3.0f));
+}
 
 void Init()
 {
@@ -36,12 +40,10 @@ void Init()
 		res_y = info.rcMonitor.bottom - info.rcMonitor.top;
 	}
 
-	LONG openReg = RegOpenKeyEx(HKEY_CURRENT_USER, Gun, 0, KEY_ALL_ACCESS, &hKey);
-
-	if (openReg == ERROR_SUCCESS) 
+	DWORD dwDisp;
+	RegCreateKeyExA(HKEY_CURRENT_USER, TEXT("SOFTWARE\\Activision\\Gun\\Settings"), 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hKey, &dwDisp);
+	if (dwDisp == REG_CREATED_NEW_KEY || dwDisp == REG_OPENED_EXISTING_KEY)
 	{
-
-		char value[] = TEXT("Resolution");
 		char data[20];
 		char res[20];
 
@@ -52,21 +54,27 @@ void Init()
 		strcat_s(data, res);
 		strcat_s(data, "\0");
 
-		RegSetValueEx(hKey, value, 0, REG_SZ, (LPBYTE)data, _tcslen(data) * sizeof(TCHAR));
+		if (!RegSetValueEx(hKey, TEXT("Resolution"), NULL, REG_SZ, (LPBYTE)data, _tcslen(data) * sizeof(TCHAR)) == ERROR_SUCCESS)
+			MessageBox(0, "Error setting the value of the registry key.", "GUN", 0);
 
 		RegCloseKey(hKey);
+	}
+	else 
+	{
+		MessageBox(0, "Error creating the registry subkey.", "GUN", 0);
 	}
 
 		Sleep(1000); //steam
 
-		CPatch::Nop(0x4BA674, 5); //nop AR
+		//CPatch::Nop(0x4BA674, 5); //nop AR
 
 		CPatch::SetInt(0x6B759C, res_x);
 		CPatch::SetInt(0x6B75A0, res_y);
+		CPatch::RedirectJump(0x4BA680, sub_4BA680);
 
-		float aspect_ratio = (float)res_x / (float)res_y;
+		aspect_ratio = (float)res_x / (float)res_y;
 
-		CPatch::SetFloat(0x750FAC, aspect_ratio);
+		//CPatch::SetFloat(0x750FAC, aspect_ratio);
 		//HUD
 		float hud_multiplier_x = 1.0f / res_x * (res_y / 480.0f);
 		//float hud_multiplier_y = 1.0f / res_y * (res_x / 640.0f); //1.0 / res_y;

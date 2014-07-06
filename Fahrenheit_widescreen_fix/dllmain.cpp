@@ -47,6 +47,9 @@ void Init()
 	CPatch::SetInt(0xA0A930, res_x);
 	CPatch::SetInt(0xA0A934, res_y);
 
+	CPatch::SetFloat(0x552487 + 0x1, (float)res_x / (float)res_y);
+	CPatch::SetFloat(0x55248E + 0x1, (float)res_x / (float)res_y);
+
 
 /*	//HUD
 	if (hud_patch) {

@@ -52,6 +52,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NFSC_widescreen_fix", "NFSC_widescreen_fix\NFSC_widescreen_fix.vcxproj.vcxproj", "{4E24A2AF-7398-48B2-8447-12C7A8D669B7}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gta3vcsa_resolution_override", "gta3vcsa_resolution_override\gta3vcsa_resolution_override.vcxproj", "{A0E91513-77EA-46CB-8B32-D15DEC9B1C7D}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DeerAvenger4_widescreen_fix", "DeerAvenger4_widescreen_fix\DeerAvenger4_widescreen_fix.vcxproj", "{F9F9A973-4F4B-44EB-B87B-FB0B1286945C}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "StubbsTheZombie_widescreen_fix", "StubbsTheZombie_widescreen_fix\StubbsTheZombie_widescreen_fix.vcxproj", "{9A94EC8D-10A2-4FCF-927C-6783CD88676A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -142,6 +148,18 @@ Global
 		{4E24A2AF-7398-48B2-8447-12C7A8D669B7}.Debug|Win32.Build.0 = Debug|Win32
 		{4E24A2AF-7398-48B2-8447-12C7A8D669B7}.Release|Win32.ActiveCfg = Release|Win32
 		{4E24A2AF-7398-48B2-8447-12C7A8D669B7}.Release|Win32.Build.0 = Release|Win32
+		{A0E91513-77EA-46CB-8B32-D15DEC9B1C7D}.Debug|Win32.ActiveCfg = Debug|Win32
+		{A0E91513-77EA-46CB-8B32-D15DEC9B1C7D}.Debug|Win32.Build.0 = Debug|Win32
+		{A0E91513-77EA-46CB-8B32-D15DEC9B1C7D}.Release|Win32.ActiveCfg = Release|Win32
+		{A0E91513-77EA-46CB-8B32-D15DEC9B1C7D}.Release|Win32.Build.0 = Release|Win32
+		{F9F9A973-4F4B-44EB-B87B-FB0B1286945C}.Debug|Win32.ActiveCfg = Debug|Win32
+		{F9F9A973-4F4B-44EB-B87B-FB0B1286945C}.Debug|Win32.Build.0 = Debug|Win32
+		{F9F9A973-4F4B-44EB-B87B-FB0B1286945C}.Release|Win32.ActiveCfg = Release|Win32
+		{F9F9A973-4F4B-44EB-B87B-FB0B1286945C}.Release|Win32.Build.0 = Release|Win32
+		{9A94EC8D-10A2-4FCF-927C-6783CD88676A}.Debug|Win32.ActiveCfg = Debug|Win32
+		{9A94EC8D-10A2-4FCF-927C-6783CD88676A}.Debug|Win32.Build.0 = Debug|Win32
+		{9A94EC8D-10A2-4FCF-927C-6783CD88676A}.Release|Win32.ActiveCfg = Release|Win32
+		{9A94EC8D-10A2-4FCF-927C-6783CD88676A}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

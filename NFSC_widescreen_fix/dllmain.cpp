@@ -21,6 +21,7 @@ void Init()
 	FOV_hor = iniReader.ReadFloat("MAIN", "FOV_hor", 1.15f);
 	FOV_ver = iniReader.ReadFloat("MAIN", "FOV_ver", 0.5f);
 	HUD_scale = iniReader.ReadFloat("MAIN", "HUD_scale", 1.0f);
+	if (!HUD_scale) { HUD_scale = 1.0f; }
 
 	if (!res_x || !res_y) {
 		HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);

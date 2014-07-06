@@ -77,9 +77,18 @@ public:
 	{
 		Patch((void *)address, &value, 4);
 	}
+	inline static void SetUIntWithCheck(int address, unsigned int value, unsigned int expectedValue)
+	{
+		if (*(unsigned int *)address == expectedValue)
+		Patch((void *)address, &value, 4);
+	}
 	inline static void SetFloat(int address, float value)
 	{
 		Patch((void *)address, &value, 4);
+	}
+	inline static void SetDouble(int address, double value)
+	{
+		Patch((void *)address, &value, 8);
 	}
 	inline static void SetPointer(int address, void *value)
 	{
