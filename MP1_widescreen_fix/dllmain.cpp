@@ -23,6 +23,7 @@ float shadows_fix;
 DWORD jmpAddress;
 int counter;
 float ini_FOV;
+bool bComicsMode;
 
 int __fastcall P_Driver__getWidth(int a1)
 {
@@ -142,10 +143,12 @@ DWORD WINAPI Thread(LPVOID)
 	height_multipl = 1.0f / res1;
 	mul2 = 1.0f / res1 * 2.0f;
 	div2 = 1.0f / res1 / 2.0f;
-	div_comics = 1.0f / 480.0f / 2.0f;
-
-	float div_comics2 = 1.0f / 640.0f / (640.0f / 480.0f) / 2.0f;
+	div_comics = (1.0f / (640.0f / (4.0f / 3.0f)) / 2.0f); //1.0f / 480.0f / 2.0f;
+	float div_comics2 = (1.0f / (480.0f * aspect_ratio) / 2.0f); //1.0f / 640.0f / (640.0f / 480.0f) / 2.0f;
 	float div22 = 1.0f / 640.0f / 2.0f;
+
+	float div_comics_fullscr = (1.0f / (640.0f / (4.0f / 3.0f)) / 2.0f) * 1.27f;
+	float div_comics2_fullscr = (1.0f / (480.0f * aspect_ratio) / 2.0f) * 1.27f;
 
 			if (aspect_ratio >= 1.4f) //WS
 			{
@@ -196,16 +199,42 @@ DWORD WINAPI Thread(LPVOID)
 						counter = 0;
 					}
 
-					if ((unsigned char)*(DWORD*)comics == 255u)
+					if (GetAsyncKeyState(VK_F2) & 1)
 					{
-						CPatch::SetFloat((DWORD)h_e2mfc_dll + 0x49E00, div_comics2);
-						CPatch::SetFloat((DWORD)h_e2mfc_dll + 0x49DFC, div_comics);
+						bComicsMode = !bComicsMode;
+						while ((GetAsyncKeyState(VK_F2) & 0x8000) > 0) { Sleep(0); }
 					}
-					else
+
+					if (bComicsMode)
 					{
-						CPatch::SetFloat((DWORD)h_e2mfc_dll + 0x49E00, div22);
-						CPatch::SetFloat((DWORD)h_e2mfc_dll + 0x49DFC, div2);
-					}
+						if ((unsigned char)*(DWORD*)comics == 255u)
+						{
+							CPatch::SetFloat((DWORD)h_e2mfc_dll + 0x49E00, div_comics2);
+							CPatch::SetFloat((DWORD)h_e2mfc_dll + 0x49DFC, div_comics);
+							CPatch::SetFloat((DWORD)h_e2mfc_dll + 0x15658 + 0x6, 0.0f);
+						}
+						else
+						{
+							CPatch::SetFloat((DWORD)h_e2mfc_dll + 0x49E00, div22);
+							CPatch::SetFloat((DWORD)h_e2mfc_dll + 0x49DFC, div2);
+							CPatch::SetFloat((DWORD)h_e2mfc_dll + 0x15658 + 0x6, 0.0f);
+						}
+					} else 
+						{
+
+						if ((unsigned char)*(DWORD*)comics == 255u && *(char*)0x8A69E4)
+							{
+								CPatch::SetFloat((DWORD)h_e2mfc_dll + 0x49E00, div_comics2_fullscr);
+								CPatch::SetFloat((DWORD)h_e2mfc_dll + 0x49DFC, div_comics_fullscr);
+								CPatch::SetFloat((DWORD)h_e2mfc_dll + 0x15658 + 0x6, -0.39f);
+							}
+							else
+							{
+								CPatch::SetFloat((DWORD)h_e2mfc_dll + 0x49E00, div22);
+								CPatch::SetFloat((DWORD)h_e2mfc_dll + 0x49DFC, div2);
+								CPatch::SetFloat((DWORD)h_e2mfc_dll + 0x15658 + 0x6, 0.0f);
+							}
+						}
 				}
 			}
 	return 0;

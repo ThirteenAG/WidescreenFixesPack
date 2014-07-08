@@ -1,4 +1,5 @@
 #include "stdafx.h"
+
 #include "stdio.h"
 #include <windows.h>
 #include "..\includes\CPatch.h"
@@ -16,6 +17,8 @@ float mul2;
 float div2;
 float div_comics;
 float div_comics2;
+float stdViewPortSize;
+bool bComicsMode;
 
 int width = 0;
 int height = 0;
@@ -134,9 +137,15 @@ DWORD WINAPI Thread(LPVOID)
 
 	res1 = 640.0f / aspect_ratio; // 640.0 original
 	half_res1 = res1 / 2.0f; // 480.0 original
+	height_multipl = 1.0f / res1;
+	mul2 = 1.0f / res1 * 2.0f;
+	div2 = 1.0f / res1 / 2.0f;
+	div_comics = (1.0f / (640.0f / (4.0f / 3.0f)) / 2.0f); //1.0f / 480.0f / 2.0f;
+//	float div_comics2 = (1.0f / (480.0f * aspect_ratio) / 2.0f); //1.0f / 640.0f / (640.0f / 480.0f) / 2.0f;
+//	float div22 = 1.0f / 640.0f / 2.0f;
 
-	div_comics = 1.5f; //1.0 / 480.0 / 2.0;
-	div_comics2 = 2.0f; //1.0 / 480.0 / 2.0;
+//	float div_comics_fullscr = (1.0f / (640.0f / (4.0f / 3.0f)) / 2.0f) * 1.27f;
+//	float div_comics2_fullscr = (1.0f / (480.0f * aspect_ratio) / 2.0f) * 1.27f;
 
 	if (aspect_ratio >= 1.4f) //WS
 	{
@@ -213,6 +222,52 @@ DWORD WINAPI Thread(LPVOID)
 
 		//object disappearance fix
 		CPatch::SetFloat((DWORD)h_e2mfc_dll + 0x15B87 + 0x6, 0.0f);
+
+		stdViewPortSize = 640.0f;
+		CPatch::SetPointer((DWORD)h_e2mfc_dll + 0x176D4 + 0x2, &stdViewPortSize);
+
+		DWORD nComicsCheck = (DWORD)h_e2mfc_dll + 0x61183;
+
+		while (true)
+		{
+			Sleep(0);
+
+			if (GetAsyncKeyState(VK_F2) & 1)
+			{
+				bComicsMode = !bComicsMode;
+				while ((GetAsyncKeyState(VK_F2) & 0x8000) > 0) { Sleep(0); }
+			}
+			
+			if (bComicsMode)
+			{
+				Sleep(1);
+				if ((unsigned char)*(DWORD*)nComicsCheck == 0xAE)
+				{
+					stdViewPortSize = 480.0f * (aspect_ratio);
+					CPatch::SetFloat((DWORD)h_e2mfc_dll + 0x434F4, 480.0f); //480.0f
+				}
+				else
+				{
+					stdViewPortSize = 640.0f;
+					CPatch::SetFloat((DWORD)h_e2mfc_dll + 0x434F4, 480.0f); //480.0f
+				}
+			}
+			else
+			{
+				Sleep(1);
+				if ((unsigned char)*(DWORD*)nComicsCheck == 0xAE)
+				{
+					stdViewPortSize = 640.0f * 1.17936117936f;
+					CPatch::SetFloat((DWORD)h_e2mfc_dll + 0x434F4, 480.0f / 1.17936117936f); //480.0f
+				}
+				else
+				{
+					stdViewPortSize = 640.0f;
+					CPatch::SetFloat((DWORD)h_e2mfc_dll + 0x434F4, 480.0f); //480.0f
+				}
+			}
+		}
+		
 	}
 	return 0;
 }

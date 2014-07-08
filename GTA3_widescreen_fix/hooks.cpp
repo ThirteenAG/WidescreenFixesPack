@@ -36,7 +36,7 @@ char *szForceAspectRatio;
 char *szFOVControl;
 int FOVControl;
 int AspectRatioWidth, AspectRatioHeight;
-int HideAABug, SmartCutsceneBorders;
+int HideAABug, SmartCutsceneBorders, nMenuFix;
 
 void __cdecl CDraw__CalculateAspectRatio()
 {
@@ -196,10 +196,13 @@ void HudFix()
 	
 
 	/*menu*/
-	CPatch::SetPointer(0x48AC00 + 0x2, &fWideScreenWidthScaleDown);
-	CPatch::SetPointer(0x48B7E0 + 0x19B + 0x2, &fWideScreenWidthScaleDown);
+	if (nMenuFix)
+	{
+		CPatch::SetPointer(0x48AC00 + 0x2, &fWideScreenWidthScaleDown);
+		CPatch::SetPointer(0x48B7E0 + 0x19B + 0x2, &fWideScreenWidthScaleDown);
 
-	CPatch::SetPointer(0x48AC40 + 0x2, &fWideScreenHeightScaleDown);
+		CPatch::SetPointer(0x48AC40 + 0x2, &fWideScreenHeightScaleDown);
+	}
 	/**/
 
 
@@ -467,11 +470,14 @@ void HudFix()
 
 void MenuFix()
 {
-	CPatch::SetInt(0x47B174, nMenuAlignment);
-	CPatch::SetInt(0x47B1E0, nMenuAlignment);
-	CPatch::SetInt(0x47B33C, nMenuAlignment);
-	CPatch::SetInt(0x47B3A8, nMenuAlignment);
-	CPatch::SetInt(0x47B411, nMenuAlignment);
+	if (nMenuFix) 
+	{
+		CPatch::SetInt(0x47B174, nMenuAlignment);
+		CPatch::SetInt(0x47B1E0, nMenuAlignment);
+		CPatch::SetInt(0x47B33C, nMenuAlignment);
+		CPatch::SetInt(0x47B3A8, nMenuAlignment);
+		CPatch::SetInt(0x47B411, nMenuAlignment);
+	}
 }
 
 
@@ -566,6 +572,7 @@ void ApplyINIchanges()
 	fHudHeightScale = iniReader.ReadFloat("MAIN", "HudHeightScale", 0.66666670937f);
 	fRadarWidthScale = iniReader.ReadFloat("MAIN", "RadarWidthScale", 0.80354591724f);
 	fSubtitlesScale = iniReader.ReadFloat("MAIN", "SubtitlesScale", 1.0f);
+	nMenuFix = iniReader.ReadInteger("MAIN", "MenuFix", 1);
 
 	int SmallerTextShadows = iniReader.ReadInteger("MAIN", "SmallerTextShadows", 1);
 
@@ -989,14 +996,15 @@ void HudFix_steam()
 
 
 
+	if (nMenuFix)
+	{
+		CPatch::SetPointer(0x48AD10 + 0x2, &fWideScreenWidthScaleDown);
+		CPatch::SetPointer(0x48B860 + 0x19B + 0x2, &fWideScreenWidthScaleDown);
 
-	CPatch::SetPointer(0x48AD10 + 0x2, &fWideScreenWidthScaleDown);
-	CPatch::SetPointer(0x48B860 + 0x19B + 0x2, &fWideScreenWidthScaleDown);
 
 
-
-	CPatch::SetPointer(0x48AD50 + 0x2, &fWideScreenHeightScaleDown);
-
+		CPatch::SetPointer(0x48AD50 + 0x2, &fWideScreenHeightScaleDown);
+	}
 
 
 
@@ -1259,11 +1267,13 @@ void HudFix_steam()
 
 void MenuFix_steam()
 {
-	CPatch::SetInt(0x47B244, nMenuAlignment);
-	CPatch::SetInt(0x47B2B0, nMenuAlignment);
-	CPatch::SetInt(0x47B40C, nMenuAlignment);
-	CPatch::SetInt(0x47B478, nMenuAlignment);
-	CPatch::SetInt(0x47B4E1, nMenuAlignment);
+	if (nMenuFix) {
+		CPatch::SetInt(0x47B244, nMenuAlignment);
+		CPatch::SetInt(0x47B2B0, nMenuAlignment);
+		CPatch::SetInt(0x47B40C, nMenuAlignment);
+		CPatch::SetInt(0x47B478, nMenuAlignment);
+		CPatch::SetInt(0x47B4E1, nMenuAlignment);
+	}
 }
 
 void __declspec(naked)RsSelectDeviceHook_steam()
@@ -1358,6 +1368,7 @@ void ApplyINIchanges_steam()
 	fHudHeightScale = iniReader.ReadFloat("MAIN", "HudHeightScale", 0.66666670937f);
 	fRadarWidthScale = iniReader.ReadFloat("MAIN", "RadarWidthScale", 0.80354591724f);
 	fSubtitlesScale = iniReader.ReadFloat("MAIN", "SubtitlesScale", 1.0f);
+	nMenuFix = iniReader.ReadInteger("MAIN", "MenuFix", 1);
 
 	int SmallerTextShadows = iniReader.ReadInteger("MAIN", "SmallerTextShadows", 1);
 
