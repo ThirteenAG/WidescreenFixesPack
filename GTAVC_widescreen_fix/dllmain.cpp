@@ -28,6 +28,11 @@ void Init()
 {
 	if (gGameVersion == GTA_VC_1_0)
 	{
+		//Mouse fix
+		CPatch::Nop(0x499092, 5);
+		CPatch::Nop(0x49901B, 5);
+		CPatch::Nop(0x498F99, 5);
+
 		//Aspect Ratio fix
 		CPatch::RedirectCall(0x4A5C63, CDraw__CalculateAspectRatio);
 		CPatch::RedirectCall(0x4A5E95, CDraw__CalculateAspectRatio);

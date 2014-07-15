@@ -113,6 +113,7 @@ DWORD WINAPI Thread(LPVOID)
 	CIniReader iniReader("");
 	ini_FOV = iniReader.ReadFloat("MAIN", "FOV", 0.0f);
 
+
 	CPatch::RedirectJump(0x50A17B, patch_FOV); //fov hack
 
 	do
@@ -187,6 +188,8 @@ DWORD WINAPI Thread(LPVOID)
 
 				setFOV();
 
+				if (iniReader.ReadInteger("MAIN", "COMICS_MODE", 0))
+					bComicsMode = !bComicsMode;
 				
 				while (true)
 				{
@@ -199,9 +202,10 @@ DWORD WINAPI Thread(LPVOID)
 						counter = 0;
 					}
 
-					if (GetAsyncKeyState(VK_F2) & 1)
+					if ((GetAsyncKeyState(VK_F2) & 1) && ((unsigned char)*(DWORD*)comics == 255u))
 					{
 						bComicsMode = !bComicsMode;
+						iniReader.WriteInteger("MAIN", "COMICS_MODE", bComicsMode);
 						while ((GetAsyncKeyState(VK_F2) & 0x8000) > 0) { Sleep(0); }
 					}
 

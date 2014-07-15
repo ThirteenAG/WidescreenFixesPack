@@ -1097,7 +1097,14 @@ void ApplyINIchanges()
 	if (!fRadarWidthScale) { fRadarWidthScale = 0.80354591724f; }
 	if (!fSubtitlesScale) { fSubtitlesScale = 1.0f; }
 
-	if (SmallerTextShadows){ CPatch::RedirectJump(0x54FF20, SetDropShadowPosition); }
+	if (SmallerTextShadows)
+	{ 
+		CPatch::RedirectJump(0x54FF20, SetDropShadowPosition); 
+
+		CPatch::SetFloat(0x6874E0, 0.8f);
+		CPatch::SetFloat(0x6874E8, 0.93f);
+		CPatch::SetDouble(0x6874F0, 0.5f);
+	}
 
 	fPlayerMarkerPos = 94.0f * fRadarWidthScale;
 
@@ -2369,7 +2376,14 @@ void ApplyINIchanges_steam()
 	if (!fHudWidthScale || !fHudHeightScale) { fHudWidthScale = 0.62221788786f; fHudHeightScale = 0.66666670937f; }
 	if (!fRadarWidthScale) { fRadarWidthScale = 0.80354591724f; }
 
-	if (SmallerTextShadows){ CPatch::RedirectJump(0x54FE10, SetDropShadowPosition_steam); }
+	if (SmallerTextShadows)
+	{
+		CPatch::RedirectJump(0x54FE10, SetDropShadowPosition_steam);
+
+		CPatch::SetFloat(0x6864E0, 0.8f);
+		CPatch::SetFloat(0x6864E8, 0.93f);
+		CPatch::SetDouble(0x6864F0, 0.5f);
+	}
 
 	fPlayerMarkerPos = 94.0f * fRadarWidthScale;
 

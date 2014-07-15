@@ -228,13 +228,17 @@ DWORD WINAPI Thread(LPVOID)
 
 		DWORD nComicsCheck = (DWORD)h_e2mfc_dll + 0x61183;
 
+		if (iniReader.ReadInteger("MAIN", "COMICS_MODE", 0))
+			bComicsMode = !bComicsMode;
+
 		while (true)
 		{
 			Sleep(0);
 
-			if (GetAsyncKeyState(VK_F2) & 1)
+			if ((GetAsyncKeyState(VK_F2) & 1) && ((unsigned char)*(DWORD*)nComicsCheck == 0xAE))
 			{
 				bComicsMode = !bComicsMode;
+				iniReader.WriteInteger("MAIN", "COMICS_MODE", bComicsMode);
 				while ((GetAsyncKeyState(VK_F2) & 0x8000) > 0) { Sleep(0); }
 			}
 			

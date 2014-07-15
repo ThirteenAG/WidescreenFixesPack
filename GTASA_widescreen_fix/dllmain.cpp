@@ -24,6 +24,7 @@ float fCustomDynamicScreenFieldOfViewScale;
 DWORD DynamicScreenFieldOfViewScale;
 float fDefaultFOV = 1.0f;
 float fRadarScaling;
+int DisableWhiteCrosshairDot;
 
 float **const fWideScreenWidthScaleDown = (float**)0x00573F95;
 float **const fWideScreenHeightScaleDown = (float**)0x00573F7F;
@@ -180,6 +181,7 @@ DWORD WINAPI Load(LPVOID)
 		CPatch::RedirectJump(0x586C6A, RadarScaling_compat_patch);
 
 		DontTouchFOV = iniReader.ReadInteger("MAIN", "DontTouchFOV", 0);
+		DisableWhiteCrosshairDot = iniReader.ReadInteger("MAIN", "DisableWhiteCrosshairDot", 1);
 
 		szForceAspectRatio = iniReader.ReadString("MAIN", "ForceAspectRatio", "auto");
 		if (strncmp(szForceAspectRatio, "auto", 4) != 0)
@@ -226,9 +228,76 @@ DWORD WINAPI Load(LPVOID)
 			CPatch::RedirectCall(0x53E2B4, CCamera__DrawBordersForWideScreen);
 			CPatch::RedirectCall(0x5AF8C0, CCamera__DrawBordersForWideScreen);
 		}
+
+		if (DisableWhiteCrosshairDot)
+		{
+			CPatch::Nop(0x58E2DD, 5); // disable white crosshair dot drawing
+		}
 	return 0;
 }
 
+// COMMAND_GET_HEIGHT_PERCENT_IN_WORLD_LEVEL
+float getHeightPercentInWorldLevel(float fPosZ) {
+	float fHeightPerc;
+
+	if (fPosZ <= -100.0f) {
+		fHeightPerc = 100.0f;
+	}
+	else if (fPosZ <= 0.0f) {
+		fHeightPerc = -fPosZ;
+	}
+	else if (fPosZ <= 200.0f) {
+		fHeightPerc = fPosZ * (100.0f / 200.0f);
+	}
+	else if (fPosZ <= 950.0f) {
+		fHeightPerc = (fPosZ - 200.0f) * (100.0f / (950.0f - 200.0f));
+	}
+	else if (fPosZ < 1500.0f) {
+		fHeightPerc = (fPosZ - 950.0f) * (100.0f / (1500.0f - 950.0f));
+	}
+	else {
+		fHeightPerc = 100.0f;
+	}
+
+	return fHeightPerc;
+}
+
+void __declspec(naked) HOOK_PTR_0058A68F_drawMap() {
+	static const float fPosX = 15.0f;
+	static const float fPosY = 28.0f;
+	static const float fWidth = 20.0f;
+	static const float fHeight = 2.0f;
+	static const float fScrollHeight = 74.0f;
+	static const float fPercent = 0.01f;
+
+	__asm {
+		fild	ds : [ADDR_clRsGlobal]CRsGlobal.m_iScreenHeight
+			fld		st
+			fmul	fCustomWideScreenHeightScaleDown
+			mov		ecx, [eax]SRwV3d.m_fZ
+			push	ecx
+			call	getHeightPercentInWorldLevel
+			add		esp, 4
+			fmul	fPercent
+			fmul	fScrollHeight
+			fadd	fPosY
+			fmul	st, st(1)
+			fsubp	st(2), st
+			fmul	fHeight
+			fsubr	st, st(1)
+			fstp	dword ptr[esp + 34h - 14h]
+			fstp	dword ptr[esp + 34h - 1Ch]
+			fild	ds : [ADDR_clRsGlobal]CRsGlobal.m_iScreenWidth
+			fmul	fCustomWideScreenWidthScaleDown
+			fld		fPosX
+			fadd	fWidth
+			fmul	st, st(1)
+			fxch	st(1)
+			fmul	fPosX
+			mov		edx, ADDR_0058A73B_drawMap
+			jmp		edx
+	}
+}
 
 void WINAPI InstallAllHooks() {
 	// Rampage (Kill Frenzy) counter.
@@ -342,6 +411,7 @@ void WINAPI InstallAllHooks() {
 	//CPatch::SetPointer(0x0058A475, &fCustomWideScreenHeightScaleDown);							// Radar ring plane sprite Y position and height scale.
 	CPatch::SetPointer(0x0058A5DA, &fCustomWideScreenWidthScaleDown);							// Altimeter vertical bar X position and width scale.
 	CPatch::SetPointer(0x0058A602, &fCustomWideScreenHeightScaleDown);							// Altimeter vertical bar Y position and height scale.
+	CPatch::RedirectJump(0x0058A68F, HOOK_PTR_0058A68F_drawMap);											// Altimeter horizontal bar position and scale.
 	CPatch::SetPointer(0x0058A793, &fCustomWideScreenWidthScaleDown);							// Upper-left radar disc X position and width scale.
 	//CPatch::SetPointer(0x0058A7BB, &fCustomWideScreenHeightScaleDown);							// Upper-left radar disc Y position and height scale.
 	CPatch::SetPointer(0x0058A830, &fCustomWideScreenWidthScaleDown);							// Upper-right radar disc X position and width scale.
@@ -489,8 +559,12 @@ void WINAPI InstallAllHooks() {
 
 	CPatch::SetPointer((DWORD)hwshps + 0x85F5, &fCustomDynamicScreenFieldOfViewScale);
 
-	if (CLASS_pclRsGlobal->m_iScreenWidth > 1366)
-	CPatch::Nop(0x58E2DD, 5); // disable white crosshair dot drawing
+	//crash fixes
+	CPatch::SetUChar(0x57F884 + 1, 0x08);
+	CPatch::SetUChar(0x57FAE9, 0x14);
+	CPatch::SetUInt(0x57FAF3, 0x456A006A);
+	CPatch::SetUChar(0x57FAF7, 0x8B);
+	CPatch::SetUShort(0x57FD02, 0xFF68);
 }
 
 
