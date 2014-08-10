@@ -261,7 +261,7 @@ DWORD WINAPI Thread(LPVOID)
 				Sleep(1);
 				if ((unsigned char)*(DWORD*)nComicsCheck == 0xAE)
 				{
-					stdViewPortSize = 640.0f * (aspect_ratio / 1.50740740741f);
+					stdViewPortSize = (480.0f * (aspect_ratio) / 1.17936117936f);
 					CPatch::SetFloat((DWORD)h_e2mfc_dll + 0x434F4, 480.0f / 1.17936117936f); //480.0f
 				}
 				else

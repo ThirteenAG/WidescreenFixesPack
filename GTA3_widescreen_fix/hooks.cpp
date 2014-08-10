@@ -195,7 +195,7 @@ void HudFix()
 
 	
 
-	/*menu*/
+	/*menu
 	if (nMenuFix)
 	{
 		CPatch::SetPointer(0x48AC00 + 0x2, &fWideScreenWidthScaleDown);
@@ -203,7 +203,7 @@ void HudFix()
 
 		CPatch::SetPointer(0x48AC40 + 0x2, &fWideScreenHeightScaleDown);
 	}
-	/**/
+	*/
 
 
 	
@@ -827,6 +827,14 @@ void ApplyINIchanges()
 	CPatch::SetPointer(0x509030 + 0x10C4 + 0x2, &fCustomWideScreenHeightScaleDown);
 	CPatch::SetPointer(0x509030 + 0x1174 + 0x2, &fCustomWideScreenHeightScaleDown);
 
+	if (nMenuFix)
+	{
+		CPatch::SetPointer(0x48AC00 + 0x2, &fWideScreenWidthScaleDown);
+		CPatch::SetPointer(0x48B7E0 + 0x19B + 0x2, &fWideScreenWidthScaleDown);
+
+		CPatch::SetPointer(0x48AC40 + 0x2, &fWideScreenHeightScaleDown);
+	}
+
 #pragma endregion CHud::CustomDraw
 
 	if (fRadarWidthScale)
@@ -995,16 +1003,15 @@ void HudFix_steam()
 	CPatch::SetPointer(0x420920 + 0x3E3 + 0x2, &fWideScreenHeightScaleDown);
 
 
-
+	/*
 	if (nMenuFix)
 	{
 		CPatch::SetPointer(0x48AD10 + 0x2, &fWideScreenWidthScaleDown);
 		CPatch::SetPointer(0x48B860 + 0x19B + 0x2, &fWideScreenWidthScaleDown);
 
-
-
 		CPatch::SetPointer(0x48AD50 + 0x2, &fWideScreenHeightScaleDown);
 	}
+	*/
 
 
 
@@ -1621,6 +1628,15 @@ void ApplyINIchanges_steam()
 	CPatch::SetPointer(0x5090A0 + 0xEBD + 0x2, &fCustomWideScreenHeightScaleDown);
 	CPatch::SetPointer(0x5090A0 + 0x10C4 + 0x2, &fCustomWideScreenHeightScaleDown);
 	CPatch::SetPointer(0x5090A0 + 0x1174 + 0x2, &fCustomWideScreenHeightScaleDown);
+
+	if (nMenuFix)
+	{
+		CPatch::SetPointer(0x48AD10 + 0x2, &fWideScreenWidthScaleDown);
+		CPatch::SetPointer(0x48B860 + 0x19B + 0x2, &fWideScreenWidthScaleDown);
+
+		CPatch::SetPointer(0x48AD50 + 0x2, &fWideScreenHeightScaleDown);
+	}
+
 #pragma endregion CHud::CustomDraw_steam
 	if (fRadarWidthScale)
 	{
