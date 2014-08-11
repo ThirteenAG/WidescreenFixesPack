@@ -70,6 +70,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TonyHawksProSkater3_widescr
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TonyHawksProSkater2_widescreen_fix", "TonyHawksProSkater2_widescreen_fix\TonyHawksProSkater2_widescreen_fix.vcxproj", "{B88FB49B-4F38-4EC1-B2E0-0F2902916FBA}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TotalOverdose_widescreen_fix", "TotalOverdose_widescreen_fix\TotalOverdose_widescreen_fix.vcxproj", "{3D241934-B79D-457B-BBD8-071510157630}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -196,6 +198,10 @@ Global
 		{B88FB49B-4F38-4EC1-B2E0-0F2902916FBA}.Debug|Win32.Build.0 = Debug|Win32
 		{B88FB49B-4F38-4EC1-B2E0-0F2902916FBA}.Release|Win32.ActiveCfg = Release|Win32
 		{B88FB49B-4F38-4EC1-B2E0-0F2902916FBA}.Release|Win32.Build.0 = Release|Win32
+		{3D241934-B79D-457B-BBD8-071510157630}.Debug|Win32.ActiveCfg = Debug|Win32
+		{3D241934-B79D-457B-BBD8-071510157630}.Debug|Win32.Build.0 = Debug|Win32
+		{3D241934-B79D-457B-BBD8-071510157630}.Release|Win32.ActiveCfg = Release|Win32
+		{3D241934-B79D-457B-BBD8-071510157630}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
