@@ -21,7 +21,7 @@ CIniReader::CIniReader(char* szFileName)
 	strcat(iniName, ".ini");
 	strncpy(dllPath, moduleName, (tempPointer - moduleName + 1));
 	dllPath[tempPointer - moduleName + 1] = '\0';
-	if (strcmp(szFileName, "") == 0) //if (szFileName == "")
+	if (strcmp(szFileName, "") == 0)
 	{
 	strcat(dllPath, iniName);
 	} else {
