@@ -74,6 +74,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TotalOverdose_widescreen_fi
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PsiOps_widescreen_fix", "PsiOps_widescreen_fix\PsiOps_widescreen_fix.vcxproj", "{32673695-4F97-40D0-8321-1F2E0E413DF1}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ThePunisher_widescreen_fix", "ThePunisher_widescreen_fix\ThePunisher_widescreen_fix.vcxproj", "{1F7D0F01-3B52-413B-8852-913ECCD4927C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -208,6 +210,10 @@ Global
 		{32673695-4F97-40D0-8321-1F2E0E413DF1}.Debug|Win32.Build.0 = Debug|Win32
 		{32673695-4F97-40D0-8321-1F2E0E413DF1}.Release|Win32.ActiveCfg = Release|Win32
 		{32673695-4F97-40D0-8321-1F2E0E413DF1}.Release|Win32.Build.0 = Release|Win32
+		{1F7D0F01-3B52-413B-8852-913ECCD4927C}.Debug|Win32.ActiveCfg = Debug|Win32
+		{1F7D0F01-3B52-413B-8852-913ECCD4927C}.Debug|Win32.Build.0 = Debug|Win32
+		{1F7D0F01-3B52-413B-8852-913ECCD4927C}.Release|Win32.ActiveCfg = Release|Win32
+		{1F7D0F01-3B52-413B-8852-913ECCD4927C}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

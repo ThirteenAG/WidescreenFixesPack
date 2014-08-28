@@ -1,30 +1,18 @@
 #include "stdafx.h"
 #include "..\includes\CPatch.h"
 #include "..\includes\IniReader.h"
-#define _USE_MATH_DEFINES
-#include "math.h"
 HWND hWnd;
 
-int hud_patch;
-int res_x;
-int res_y;
-float fres_x, fres_y;
-float fDynamicScreenFieldOfViewScale;
-float fAspectRatio;
-
-#define DEGREE_TO_RADIAN(fAngle) \
-	((fAngle)* (float)M_PI / 180.0f)
-#define RADIAN_TO_DEGREE(fAngle) \
-	((fAngle)* 180.0f / (float)M_PI)
-#define SCREEN_FOV_HORIZONTAL		114.59155f
-#define SCREEN_FOV_VERTICAL			(2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / (4.0f / 3.0f))))
+int res_x, res_x43, res_y43, res_y;
+int res_x_default = 640;
+int res_y_default = 480;
+float hud_multiplier_x, hud_multiplier_y;
 
 void Init()
 {
 	CIniReader iniReader("");
 	res_x = iniReader.ReadInteger("MAIN", "X", 0);
 	res_y = iniReader.ReadInteger("MAIN", "Y", 0);
-	hud_patch = iniReader.ReadInteger("MAIN", "HUD_PATCH", 0);
 
 	if (!res_x || !res_y) {
 		HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
@@ -34,40 +22,59 @@ void Init()
 		res_x = info.rcMonitor.right - info.rcMonitor.left;
 		res_y = info.rcMonitor.bottom - info.rcMonitor.top;
 	}
-	/*CPatch::SetUInt(0x4E6825 + 0x6, res_x);
-	CPatch::SetUInt(0x4E682F + 0x6, res_y);
-	CPatch::SetUInt(0x4E67DF + 0x6, res_x);
-	CPatch::SetUInt(0x4E67E9 + 0x6, res_y);*/
-	/*CPatch::SetUInt(0x4EC6FE + 0x1, res_x);
-	CPatch::SetUInt(0x4EC6F9 + 0x1, res_y);*/
-	/*CPatch::SetUInt(0x4F6E7F + 0x1, res_x);
-	CPatch::SetUInt(0x4F6E86 + 0x1, res_y);*/
-	CPatch::SetUInt(0x4F8435 + 0x1, res_x);
-	CPatch::SetUInt(0x4F843A + 0x6, res_y);
 
-	/*fres_x = static_cast<float>(res_x);
-	fres_y = static_cast<float>(res_y);
+	if (*(DWORD*)0x4F8436 == 640)
+	{
+		CPatch::SetUInt(0x4F8435 + 0x1, res_x);
+		CPatch::SetUInt(0x4F843A + 0x6, res_y);
+	}
+	else 
+	{
+		CPatch::Nop(0x4F3F27, 2);
+		CPatch::Nop(0x4F3F3B, 14);
 
-	CPatch::SetPointer(0x4370CB + 0x4, &fres_x);
-	CPatch::SetPointer(0x4370F7 + 0x4, &fres_y);
+		res_x43 = static_cast<int>(res_x / (4.0f / 3.0f));
+		res_y43 = static_cast<int>(res_y * (4.0f / 3.0f));
 
-	CPatch::SetPointer(0x4370CB + 0x4, &fres_x);
-	CPatch::SetPointer(0x4370F7 + 0x4, &fres_y);
+		CPatch::SetUInt(0x4F5495 + 0x1, res_x);
+		CPatch::SetUInt(0x4F549A + 0x6, res_y43);
 
-	CPatch::SetUInt(0x53510D+1, res_x);
-	CPatch::SetUInt(0x53511A+4, res_x);
-	CPatch::SetUInt(0x535122+4, res_x);
-	CPatch::SetUInt(0x53512A+4, res_x);
+		CPatch::SetUInt(0x4F3F2F + 0x1, res_x);
+		CPatch::SetUInt(0x4F3F36 + 0x1, res_y43);
 
-	CPatch::SetUInt(0x53514A + 4, res_y);
-	CPatch::SetUInt(0x535152 + 4, res_y);
-	CPatch::SetUInt(0x53515A + 4, res_y);
+		hud_multiplier_x = 1.0f / res_x * (res_y / 480.0f);
+		hud_multiplier_y = 1.0f / res_x * (res_y43 / 480.0f);
 
-	fAspectRatio = fres_x / fres_y;
-	fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * fAspectRatio));
+			CPatch::SetFloat(0x516958, hud_multiplier_x);
+			CPatch::SetFloat(0x516954, hud_multiplier_y);
 
-	CPatch::SetFloat(0x691FA8, fDynamicScreenFieldOfViewScale);
-	CPatch::SetPointer(0x4EDA60 + 0x2, &fAspectRatio);*/
+			CPatch::SetPointer(0x457244, &res_x43);
+			CPatch::SetPointer(0x457270, &res_x43);
+			CPatch::SetPointer(0x457293, &res_x43);
+			CPatch::SetPointer(0x4572BE, &res_x43);
+
+			CPatch::SetPointer(0x457254 + 0x3, &res_y);
+			CPatch::SetPointer(0x45727B + 0x3, &res_y);
+			CPatch::SetPointer(0x4572A2 + 0x3, &res_y);
+			CPatch::SetPointer(0x4572CD + 0x3, &res_y);
+
+			//main menu wheel fix
+			CPatch::SetPointer(0x4578B0 + 0x2BC + 0x3, &res_x_default);
+			CPatch::SetPointer(0x4578B0 + 0x2E9 + 0x3, &res_x_default);
+			CPatch::SetPointer(0x4578B0 + 0x314 + 0x3, &res_x_default);
+			CPatch::SetPointer(0x4578B0 + 0x33F + 0x3, &res_x_default);
+
+			CPatch::SetPointer(0x4578B0 + 0x2D4 + 0x3, &res_y_default);
+			CPatch::SetPointer(0x4578B0 + 0x2FC + 0x3, &res_y_default);
+			CPatch::SetPointer(0x4578B0 + 0x327 + 0x3, &res_y_default);
+			CPatch::SetPointer(0x4578B0 + 0x352 + 0x3, &res_y_default);
+
+			CPatch::SetUChar(0x4F4003 + 0x1, 32);
+
+			//CPatch::SetUInt(0x4F3F2F + 0x1, res_x43); //crop screen
+			CPatch::SetUInt(0x4F3F36 + 0x1, res_y43); //crop screen
+	}
+
 }
 
 BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
