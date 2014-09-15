@@ -565,6 +565,10 @@ void WINAPI InstallAllHooks() {
 	CPatch::SetUInt(0x57FAF3, 0x456A006A);
 	CPatch::SetUChar(0x57FAF7, 0x8B);
 	CPatch::SetUShort(0x57FD02, 0xFF68);
+
+    //high speed bug
+    CPatch::SetUChar(0x574252, 0x3B);
+    CPatch::SetUInt(0x574253, 0xD90875C7);
 }
 
 
