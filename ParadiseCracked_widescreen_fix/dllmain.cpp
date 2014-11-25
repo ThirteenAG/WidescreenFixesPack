@@ -11,7 +11,7 @@ long screen_width;
 
 float view_stretch;
 
-BOOL CALLBACK EnumProc(HWND hWnd, LPARAM lParam) {
+BOOL CALLBACK EnumProc(HWND hWnd, LPARAM /*lParam*/) {
 	char szWindowName[1024];
 	GetWindowText(hWnd, szWindowName, 1024);
 
@@ -49,7 +49,7 @@ int Thread()
 		screen_width = rcClient.right - rcClient.left;
 		screen_height = rcClient.bottom - rcClient.top;
 
-		view_stretch = (screen_width == 0 ? 0.75 : (screen_height / (float) screen_width));
+		view_stretch = (screen_width == 0 ? 0.75f : (screen_height / (float) screen_width));
 
 		CPatch::SetFloat(view_stretch_address, view_stretch);
 	}
@@ -57,7 +57,7 @@ int Thread()
 	return 0;
 }
 
-BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
+BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
 	if (reason == DLL_PROCESS_ATTACH) {
 		HndThread = CreateThread(0, 0, (LPTHREAD_START_ROUTINE) &Thread, NULL, 0, NULL);

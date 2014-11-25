@@ -82,6 +82,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SonicHeroes_widescreen_fix"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ParadiseCracked_widescreen_fix", "ParadiseCracked_widescreen_fix\ParadiseCracked_widescreen_fix.vcxproj", "{42E49165-90F2-4E9C-B2D8-15B562A8AE39}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SniperElite_widescreen_fix", "SniperElite_widescreen_fix\SniperElite_widescreen_fix.vcxproj", "{36D48D25-CDDA-448E-9A30-C0F029C8271A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -232,6 +234,10 @@ Global
 		{42E49165-90F2-4E9C-B2D8-15B562A8AE39}.Debug|Win32.Build.0 = Debug|Win32
 		{42E49165-90F2-4E9C-B2D8-15B562A8AE39}.Release|Win32.ActiveCfg = Release|Win32
 		{42E49165-90F2-4E9C-B2D8-15B562A8AE39}.Release|Win32.Build.0 = Release|Win32
+		{36D48D25-CDDA-448E-9A30-C0F029C8271A}.Debug|Win32.ActiveCfg = Debug|Win32
+		{36D48D25-CDDA-448E-9A30-C0F029C8271A}.Debug|Win32.Build.0 = Debug|Win32
+		{36D48D25-CDDA-448E-9A30-C0F029C8271A}.Release|Win32.ActiveCfg = Release|Win32
+		{36D48D25-CDDA-448E-9A30-C0F029C8271A}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -60,6 +60,10 @@ DWORD WINAPI Thread(LPVOID)
 		CPatch::Nop(0x4890FA, 5);
 		CPatch::SetInt(0x581E5B + 0x3, res_x);
 		CPatch::SetInt(0x581E64 + 0x4, res_y);
+		CPatch::SetInt(0x602D3A + 0x6, res_x);
+		CPatch::SetInt(0x602D44 + 0x6, res_y);
+		CPatch::SetInt(0x602D4E + 0x6, res_x);
+		CPatch::SetInt(0x602D58 + 0x6, res_y);
 		CPatch::SetChar(0x581E6E + 0x4, 32u);
 		CPatch::SetChar(0x581E9A, 0xEBu); //jl      short loc_581E40 > jmp      short loc_581E40
 		CPatch::Nop(0x581E37, 5);
@@ -82,6 +86,10 @@ DWORD WINAPI Thread(LPVOID)
 		CPatch::SetChar(0x490095 + 0x2, 22u);
 		CPatch::SetInt(0x600E7B + 0x3, res_x);
 		CPatch::SetInt(0x600E84 + 0x4, res_y);
+		CPatch::SetInt(0x584C4A + 0x6, res_x);
+		CPatch::SetInt(0x584C54 + 0x6, res_y);
+		CPatch::SetInt(0x584C5E + 0x6, res_x);
+		CPatch::SetInt(0x584C68 + 0x6, res_y);
 		CPatch::SetChar(0x600E8E + 0x4, 32u);
 		CPatch::SetChar(0x600EBA, 0xEBu); //jl      short loc_600E60 > jmp      short loc_600E60
 		CPatch::Nop(0x600E57, 5);
@@ -103,6 +111,8 @@ DWORD WINAPI Thread(LPVOID)
 	case GTA_SA_1_0:
 		CPatch::SetInt(0x746362 + 0x1, res_x);
 		CPatch::SetInt(0x746367 + 0x1, res_y);
+		CPatch::SetInt(0x61960C + 0x6, res_x);
+		CPatch::SetInt(0x619616 + 0x6, res_y);
 		CPatch::SetInt(0x74636C + 0x1, 32);
 		CPatch::SetUShort(0x7462AB, 0xB2E9); //jz      loc_746362 > jmp      loc_746362
 		CPatch::SetInt(0x7462AB + 2, 0x00);
