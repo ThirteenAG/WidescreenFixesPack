@@ -25,6 +25,7 @@ float fHudWidthScale, fHudHeightScale;
 float fCustomWideScreenWidthScaleDown;
 float fCustomWideScreenHeightScaleDown;
 float fRadarWidthScale, fCustomRadarWidthScale, fCustomRadarRingWidthScale, fCustomRadarRingHeightScale, fSubtitlesScale;
+float fCrosshairHeightScaleDown;
 int nMenuAlignment;
 int RestoreCutsceneFOV;
 float fPlayerMarkerPos;
@@ -98,6 +99,10 @@ void __cdecl CDraw__CalculateAspectRatio()
 	fCustomRadarWidthScale = fWideScreenWidthScaleDown * fRadarWidthScale;
 	fCustomRadarRingWidthScale = fCustomRadarWidthScale + 0.000019f;
 	fCustomRadarRingHeightScale = fWideScreenHeightScaleDown + 0.000019f;
+
+	//Proportional elements
+	fCrosshairHeightScaleDown = fWideScreenHeightScaleDown * fHudWidthScale;
+
 	return;
 }
 
@@ -743,9 +748,9 @@ void ApplyINIchanges()
 	CPatch::SetPointer(0x509030 + 0x1199 + 0x2, &fCustomWideScreenWidthScaleDown);
 
 
-	CPatch::SetPointer(CHud__Draw + 0x2D0 + 0x2, &fCustomWideScreenHeightScaleDown);
-	CPatch::SetPointer(CHud__Draw + 0x3AB + 0x2, &fCustomWideScreenHeightScaleDown);
-	CPatch::SetPointer(CHud__Draw + 0x4BC + 0x2, &fCustomWideScreenHeightScaleDown);
+	CPatch::SetPointer(CHud__Draw + 0x2D0 + 0x2, &fCrosshairHeightScaleDown); // let's make crosshair proportional
+	CPatch::SetPointer(CHud__Draw + 0x3AB + 0x2, &fCrosshairHeightScaleDown); // let's make crosshair proportional
+	CPatch::SetPointer(CHud__Draw + 0x4BC + 0x2, &fCrosshairHeightScaleDown); // let's make crosshair proportional
 	CPatch::SetPointer(CHud__Draw + 0x5C8 + 0x2, &fCustomWideScreenHeightScaleDown);
 	CPatch::SetPointer(CHud__Draw + 0x792 + 0x2, &fCustomWideScreenHeightScaleDown);
 	//CPatch::SetPointer(CHud__Draw + 0x86B + 0x2, &fCustomWideScreenHeightScaleDown);
@@ -931,6 +936,10 @@ void __cdecl CDraw__CalculateAspectRatio_steam()
 	fCustomRadarWidthScale = fWideScreenWidthScaleDown * fRadarWidthScale;
 	fCustomRadarRingWidthScale = fCustomRadarWidthScale + 0.000019f;
 	fCustomRadarRingHeightScale = fWideScreenHeightScaleDown + 0.000019f;
+
+	//Proportional elements
+	fCrosshairHeightScaleDown = fWideScreenHeightScaleDown * fHudWidthScale;
+
 	return;
 }
 
@@ -1545,9 +1554,9 @@ void ApplyINIchanges_steam()
 
 
 
-	CPatch::SetPointer(0x505310 + 0x2D0 + 0x2, &fCustomWideScreenHeightScaleDown);
-	CPatch::SetPointer(0x505310 + 0x3AB + 0x2, &fCustomWideScreenHeightScaleDown);
-	CPatch::SetPointer(0x505310 + 0x4BC + 0x2, &fCustomWideScreenHeightScaleDown);
+	CPatch::SetPointer(0x505310 + 0x2D0 + 0x2, &fCrosshairHeightScaleDown); // let's make crosshair proportional
+	CPatch::SetPointer(0x505310 + 0x3AB + 0x2, &fCrosshairHeightScaleDown); // let's make crosshair proportional
+	CPatch::SetPointer(0x505310 + 0x4BC + 0x2, &fCrosshairHeightScaleDown); // let's make crosshair proportional
 	CPatch::SetPointer(0x505310 + 0x5C8 + 0x2, &fCustomWideScreenHeightScaleDown);
 	CPatch::SetPointer(0x505310 + 0x792 + 0x2, &fCustomWideScreenHeightScaleDown);
 	//CPatch::SetPointer(0x505310 + 0x86B + 0x2, &fCustomWideScreenHeightScaleDown);

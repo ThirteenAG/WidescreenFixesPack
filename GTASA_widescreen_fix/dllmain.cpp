@@ -159,6 +159,19 @@ DWORD WINAPI Load(LPVOID)
     CPatch::Nop(0x745B75, 2);
     CPatch::Nop(0x7459E1, 2);
 
+    //Windowed mode fix (from MTA sources)
+    if ((GetWindowLong(hWnd, GWL_STYLE) & WS_POPUP) == 0)
+    {
+        // Disable MENU AFTER alt + tab
+        //0053BC72   C605 7B67BA00 01 MOV BYTE PTR DS:[BA677B],1    
+        CPatch::SetUChar(0x53BC78, 0x00);
+
+        // ALLOW ALT+TABBING WITHOUT PAUSING
+        CPatch::Nop(0x748A8D, 6);
+
+        CPatch::RedirectJump(0x6194A0, AllowMouseMovement);
+    }
+
     static int i;
     do
     {
@@ -318,8 +331,8 @@ void WINAPI InstallAllHooks() {
     CPatch::SetPointer(0x0045C241, &fCustomWideScreenHeightScaleDown);							// Text height scale.
     CPatch::SetPointer(0x0045C257, &fCustomWideScreenWidthScaleDown);							// Text width scale.
     // Radar map zoomed coordinates.
-    CPatch::SetPointer(0x005834BC, &fCustomWideScreenWidthScaleDown);							// Map width scale.
-    //CPatch::SetPointer(0x005834EE, &fCustomWideScreenHeightScaleDown);							// Map height scale.
+    CPatch::SetPointer(0x005834BC, &fCustomRadarWidthScaleDown);	                						// Map width scale.
+    //CPatch::SetPointer(0x005834EE, &fCustomWideScreenHeightScaleDown);						// Map height scale.
     // Radar blip.
     CPatch::SetPointer(0x0058410D, &fCustomWideScreenWidthScaleDown);							// Squared radar blip border width scale.
     CPatch::SetPointer(0x0058412D, &fCustomWideScreenHeightScaleDown);							// Squared radar blip border height scale.
@@ -409,19 +422,19 @@ void WINAPI InstallAllHooks() {
     CPatch::SetPointer(0x0058A2B2, &fCustomWideScreenHeightScaleDown);							// Text Y position scale.
     CPatch::SetPointer(0x0058A2C2, &fCustomWideScreenWidthScaleDown);							// Text X position scale.
     // Map.
-    CPatch::SetPointer(0x0058A443, &fCustomWideScreenWidthScaleDown);							// Radar ring plane sprite X position and width scale.
-    //CPatch::SetPointer(0x0058A475, &fCustomWideScreenHeightScaleDown);							// Radar ring plane sprite Y position and height scale.
-    CPatch::SetPointer(0x0058A5DA, &fCustomWideScreenWidthScaleDown);							// Altimeter vertical bar X position and width scale.
-    CPatch::SetPointer(0x0058A602, &fCustomWideScreenHeightScaleDown);							// Altimeter vertical bar Y position and height scale.
-    CPatch::RedirectJump(0x0058A68F, HOOK_PTR_0058A68F_drawMap);											// Altimeter horizontal bar position and scale.
-    CPatch::SetPointer(0x0058A793, &fCustomWideScreenWidthScaleDown);							// Upper-left radar disc X position and width scale.
-    //CPatch::SetPointer(0x0058A7BB, &fCustomWideScreenHeightScaleDown);							// Upper-left radar disc Y position and height scale.
-    CPatch::SetPointer(0x0058A830, &fCustomWideScreenWidthScaleDown);							// Upper-right radar disc X position and width scale.
-    //CPatch::SetPointer(0x0058A85C, &fCustomWideScreenHeightScaleDown);							// Upper-right radar disc Y position and height scale.
-    CPatch::SetPointer(0x0058A8E1, &fCustomWideScreenWidthScaleDown);							// Lower-left radar disc X position and width scale.
-    //CPatch::SetPointer(0x0058A90B, &fCustomWideScreenHeightScaleDown);							// Lower-left radar disc Y position and height scale.
-    CPatch::SetPointer(0x0058A984, &fCustomWideScreenWidthScaleDown);							// Lower-right radar disc X position and width scale.
-    //CPatch::SetPointer(0x0058A9BF, &fCustomWideScreenHeightScaleDown);							// Lower-right radar disc Y position and height scale.
+    CPatch::SetPointer(0x0058A443, &fCustomRadarWidthScaleDown);						        // Radar ring plane sprite X position and width scale.
+    //CPatch::SetPointer(0x0058A475, &fCustomWideScreenHeightScaleDown);						// Radar ring plane sprite Y position and height scale.
+    CPatch::SetPointer(0x0058A5DA, &fCustomRadarWidthScaleDown);						        // Altimeter vertical bar X position and width scale.
+    CPatch::SetPointer(0x0058A602, &fCustomRadarWidthScaleDown);						        // Altimeter vertical bar Y position and height scale.
+    CPatch::RedirectJump(0x0058A68F, HOOK_PTR_0058A68F_drawMap);								// Altimeter horizontal bar position and scale.
+    CPatch::SetPointer(0x0058A793, &fCustomRadarWidthScaleDown);						        // Upper-left radar disc X position and width scale.
+    //CPatch::SetPointer(0x0058A7BB, &fCustomWideScreenHeightScaleDown);						// Upper-left radar disc Y position and height scale.
+    CPatch::SetPointer(0x0058A830, &fCustomRadarWidthScaleDown);						        // Upper-right radar disc X position and width scale.
+    //CPatch::SetPointer(0x0058A85C, &fCustomWideScreenHeightScaleDown);						// Upper-right radar disc Y position and height scale.
+    CPatch::SetPointer(0x0058A8E1, &fCustomRadarWidthScaleDown);							    // Lower-left radar disc X position and width scale.
+    //CPatch::SetPointer(0x0058A90B, &fCustomWideScreenHeightScaleDown);						// Lower-left radar disc Y position and height scale.
+    CPatch::SetPointer(0x0058A984, &fCustomRadarWidthScaleDown);						        // Lower-right radar disc X position and width scale.
+    //CPatch::SetPointer(0x0058A9BF, &fCustomWideScreenHeightScaleDown);						// Lower-right radar disc Y position and height scale.
     // Zone name.
     CPatch::SetPointer(0x0058AD26, &fCustomWideScreenHeightScaleDown);							// Text height scale.
     CPatch::SetPointer(0x0058AD3C, &fCustomWideScreenWidthScaleDown);							// Text width scale.
@@ -575,19 +588,6 @@ void WINAPI InstallAllHooks() {
     //Frame limiter bug
     CPatch::SetUChar(0x58BB87, 0x0C);
     CPatch::SetUChar(0x58BB88, 0x8A);
-
-    //Windowed mode fix (from MTA sources)
-    if ((GetWindowLong(hWnd, GWL_STYLE) & WS_POPUP) == 0)
-    {
-        // Disable MENU AFTER alt + tab
-        //0053BC72   C605 7B67BA00 01 MOV BYTE PTR DS:[BA677B],1    
-        CPatch::SetUChar(0x53BC78, 0x00);
-
-        // ALLOW ALT+TABBING WITHOUT PAUSING
-        CPatch::Nop(0x748A8D, 6);
-
-        CPatch::RedirectJump(0x6194A0, AllowMouseMovement);
-    }
 }
 
 DWORD _EAX;
