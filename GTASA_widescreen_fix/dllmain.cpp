@@ -106,8 +106,8 @@ inline float getDynamicScreenFieldOfView(float fFactor)
     fCustomWideScreenWidthScaleDown = **fWideScreenWidthScaleDown * fHudWidthScale;
     fCustomWideScreenHeightScaleDown = **fWideScreenHeightScaleDown * fHudHeightScale;
     fCustomRadarWidthScaleDown = **fWideScreenWidthScaleDown * fRadarWidthScale;
-    fSubtitlesScaleX = **fWideScreenWidthScaleDown * fSubtitlesScale;
-    fSubtitlesScaleY = **fWideScreenHeightScaleDown * fSubtitlesScale;
+    fSubtitlesScaleX = **fWideScreenWidthScaleDown * fHudWidthScale * fSubtitlesScale;
+    fSubtitlesScaleY = **fWideScreenHeightScaleDown * fHudHeightScale * fSubtitlesScale;
 
     if ((!(char)*(DWORD*)0xB6F065 == 0 && RestoreCutsceneFOV) || DontTouchFOV)
     {
@@ -571,6 +571,8 @@ void WINAPI InstallAllHooks() {
     
     CPatch::SetPointer(0x0058C397, &fSubtitlesScaleX);								// Cutscene text height scale.
     CPatch::SetPointer(0x0058C381, &fSubtitlesScaleY);								// Cutscene text width scale.
+    CPatch::SetPointer(0x0058C409, &fSubtitlesScaleY);								// Positioning/Normal text height scale.
+    CPatch::SetPointer(0x0058C41F, &fSubtitlesScaleX);								// Positioning/Normal text width scale.
 
     CPatch::SetPointer((DWORD)hwshps + 0x85F5, &fCustomDynamicScreenFieldOfViewScale);
 
