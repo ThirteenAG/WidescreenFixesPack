@@ -19,7 +19,7 @@ float ini_FOV_multiplier;
 
 DWORD WINAPI Thread(LPVOID)
 {
-	CIniReader iniReader("flatout_widescreen_fix.ini");
+	CIniReader iniReader("");
 
 	while (((unsigned char)*(DWORD*)0x66C554 == 255u || !(unsigned char)*(DWORD*)0x66C554 == NULL) 
 		&& ((unsigned char)*(DWORD*)0x66D554 == 255u || !(unsigned char)*(DWORD*)0x66D554 == NULL)) //just a random address i found to check whether player is in menu
@@ -57,6 +57,12 @@ DWORD WINAPI Thread(LPVOID)
 		menu_flag = (unsigned char)*(DWORD*)0x68A699;
 	}
 
+	while (true)
+	{
+		Sleep(0);
+		if (*g_Width != 0)
+			break;
+	}
 
 	if (*(float *)g_CameraAspectRatio_x == 4.0f) {
 
