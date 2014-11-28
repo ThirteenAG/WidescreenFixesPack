@@ -84,6 +84,9 @@ int CCamera__DrawBordersForWideScreen(int)
 
     GetScreenRect(ScreenRect);
 
+    unsigned char bTextBoxOffset = static_cast<unsigned char>(ScreenRect.y1);
+    CPatch::SetUChar(0x58BB93, bTextBoxOffset == 24 ? 0 : bTextBoxOffset);
+
     // Letterbox
     if (ScreenRect.y1 > 0.0 && ScreenRect.y2 > 0.0)
     {
@@ -152,38 +155,6 @@ void __declspec(naked)RadarScaling_compat_patch()
 
 DWORD WINAPI Load(LPVOID)
 {
-    // Unlocked widescreen resolutions by Silent
-    CPatch::SetUInt(0x745B71, 0x9090687D);
-    CPatch::SetUInt(0x74596C, 0x9090127D);
-    CPatch::Nop(0x745970, 2);
-    CPatch::Nop(0x745B75, 2);
-    CPatch::Nop(0x7459E1, 2);
-
-    //Windowed mode fix (from MTA sources)
-    if ((GetWindowLong(hWnd, GWL_STYLE) & WS_POPUP) == 0)
-    {
-        // Disable MENU AFTER alt + tab
-        //0053BC72   C605 7B67BA00 01 MOV BYTE PTR DS:[BA677B],1    
-        CPatch::SetUChar(0x53BC78, 0x00);
-
-        // ALLOW ALT+TABBING WITHOUT PAUSING
-        CPatch::Nop(0x748A8D, 6);
-
-        CPatch::RedirectJump(0x6194A0, AllowMouseMovement);
-    }
-
-    static int i;
-    do
-    {
-
-        Sleep(100);
-        i++;
-        if (i > 10000)
-        break;
-        hwshps = GetModuleHandle("wshps.asi");
-
-    } while (hwshps == NULL);
-
         CIniReader iniReader("");
         fHudWidthScale = iniReader.ReadFloat("MAIN", "HudWidthScale", 0.62221788786f);
         fHudHeightScale = iniReader.ReadFloat("MAIN", "HudHeightScale", 0.66666670937f);
@@ -204,6 +175,42 @@ DWORD WINAPI Load(LPVOID)
             AspectRatioWidth = std::stoi(szForceAspectRatio);
             AspectRatioHeight = std::stoi(strchr(szForceAspectRatio, ':') + 1);
         }
+
+        // Unlocked widescreen resolutions by Silent
+        CPatch::SetUInt(0x745B71, 0x9090687D);
+        CPatch::SetUInt(0x74596C, 0x9090127D);
+        CPatch::Nop(0x745970, 2);
+        CPatch::Nop(0x745B75, 2);
+        CPatch::Nop(0x7459E1, 2);
+
+        if (iniReader.ReadInteger("MAIN", "AllowAltTabbingWithoutPausing", 0))
+        {
+            //Windowed mode fix (from MTA sources)
+            if ((GetWindowLong(hWnd, GWL_STYLE) & WS_POPUP) == 0)
+            {
+                // Disable MENU AFTER alt + tab
+                //0053BC72   C605 7B67BA00 01 MOV BYTE PTR DS:[BA677B],1    
+                CPatch::SetUChar(0x53BC78, 0x00);
+
+                // ALLOW ALT+TABBING WITHOUT PAUSING
+                CPatch::Nop(0x748A8D, 6);
+
+                CPatch::RedirectJump(0x6194A0, AllowMouseMovement);
+            }
+        }
+
+        static int i;
+        do
+        {
+
+            Sleep(100);
+            i++;
+            if (i > 10000)
+                break;
+            hwshps = GetModuleHandle("wshps.asi");
+
+        } while (hwshps == NULL);
+
             if (AspectRatioWidth && AspectRatioHeight)
             {
                 CPatch::SetPointer((DWORD)hwshps + 0x8616, &AspectRatioWidth);
@@ -238,6 +245,8 @@ DWORD WINAPI Load(LPVOID)
             CPatch::RedirectJump(0x53E90E, _1pxBugFix);
         }
 
+        CPatch::SetUChar(0x53E2AD, 0x74); //Reverse g_MenuManager.widescreenOn to make widescreen off equal to borders off
+        CPatch::SetUChar(0x58BB90, 0x74); //for borders and text boxes.
         if (SmartCutsceneBorders)
         {
             CPatch::RedirectCall(0x53E2B4, CCamera__DrawBordersForWideScreen);
