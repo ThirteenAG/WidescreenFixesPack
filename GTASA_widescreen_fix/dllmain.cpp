@@ -206,17 +206,15 @@ DWORD WINAPI Load(LPVOID)
             Sleep(100);
             i++;
             if (i > 10000)
-                break;
-            hwshps = GetModuleHandle("wshps.asi");
+                return 0;
 
-        } while (hwshps == NULL);
+        } while (GetModuleHandle("wshps.asi") == NULL);
 
             if (AspectRatioWidth && AspectRatioHeight)
             {
-                CPatch::SetPointer((DWORD)hwshps + 0x8616, &AspectRatioWidth);
-                CPatch::SetPointer((DWORD)hwshps + 0x8616 + 6, &AspectRatioHeight);
+                CPatch::SetPointer((DWORD)GetModuleHandle("wshps.asi") + 0x8616, &AspectRatioWidth);
+                CPatch::SetPointer((DWORD)GetModuleHandle("wshps.asi") + 0x8616 + 6, &AspectRatioHeight);
             }
-
 
         szFOVControl = iniReader.ReadString("MAIN", "FOVControl", "0x6FF41B");
         sscanf_s(szFOVControl, "%X", &FOVControl);
@@ -236,7 +234,7 @@ DWORD WINAPI Load(LPVOID)
         CPatch::RedirectCall(0x0053BD7B - 1, setScreenFieldOfView);
         CPatch::RedirectCall(0x005BA225 - 1, setScreenFieldOfView);
 
-        DynamicScreenFieldOfViewScale = *(DWORD*)((DWORD)hwshps + 0x85F5);
+        DynamicScreenFieldOfViewScale = *(DWORD*)((DWORD)GetModuleHandle("wshps.asi") + 0x85F5);
 
         InstallAllHooks();		
 
@@ -434,7 +432,7 @@ void WINAPI InstallAllHooks() {
     CPatch::SetPointer(0x0058A443, &fCustomRadarWidthScaleDown);						        // Radar ring plane sprite X position and width scale.
     //CPatch::SetPointer(0x0058A475, &fCustomWideScreenHeightScaleDown);						// Radar ring plane sprite Y position and height scale.
     CPatch::SetPointer(0x0058A5DA, &fCustomRadarWidthScaleDown);						        // Altimeter vertical bar X position and width scale.
-    CPatch::SetPointer(0x0058A602, &fCustomRadarWidthScaleDown);						        // Altimeter vertical bar Y position and height scale.
+    //CPatch::SetPointer(0x0058A602, &fCustomRadarWidthScaleDown);						        // Altimeter vertical bar Y position and height scale.
     CPatch::RedirectJump(0x0058A68F, HOOK_PTR_0058A68F_drawMap);								// Altimeter horizontal bar position and scale.
     CPatch::SetPointer(0x0058A793, &fCustomRadarWidthScaleDown);						        // Upper-left radar disc X position and width scale.
     //CPatch::SetPointer(0x0058A7BB, &fCustomWideScreenHeightScaleDown);						// Upper-left radar disc Y position and height scale.
@@ -583,7 +581,7 @@ void WINAPI InstallAllHooks() {
     CPatch::SetPointer(0x0058C409, &fSubtitlesScaleY);								// Positioning/Normal text height scale.
     CPatch::SetPointer(0x0058C41F, &fSubtitlesScaleX);								// Positioning/Normal text width scale.
 
-    CPatch::SetPointer((DWORD)hwshps + 0x85F5, &fCustomDynamicScreenFieldOfViewScale);
+    CPatch::SetPointer((DWORD)GetModuleHandle("wshps.asi") + 0x85F5, &fCustomDynamicScreenFieldOfViewScale);
 
     //crash fixes
     CPatch::SetUChar(0x57F884 + 1, 0x08);
