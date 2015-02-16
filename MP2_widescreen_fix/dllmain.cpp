@@ -1,59 +1,20 @@
 #include "stdafx.h"
-
-#include "stdio.h"
 #include <windows.h>
 #include "..\includes\CPatch.h"
 #include "..\includes\IniReader.h"
-#include "buffer.h"
 
 HMODULE h_e2mfc_dll = NULL;
 HMODULE comics = NULL;
 
-float res1 = 360.0f;
-float half_res1 = 180.0f;
-float door_fix = 0.0020833334f;
-float height_multipl;
-float mul2;
-float div2;
-float div_comics;
-float div_comics2;
-float stdViewPortSize;
+float iniFOV, FOV;
+float fAspectRatio, stdViewPortSize, fWidthFactor;
+float fVisibilityFactor1, fVisibilityFactor2;
+unsigned int ScreenWidth, ScreenHeight;
+DWORD jmpAddress, jmpFOV;
+DWORD _EAX, _EBX; float _EDX;
 bool bComicsMode;
 
-int width = 0;
-int height = 0;
-float aspect_ratio = 0.0f;
-float FOV;
-int FOV_ptr;
-float shadows_fix;
-DWORD jmpAddress;
-DWORD jmpFOV;
-float ini_FOV;
-
-BYTE Data[114] = { 0xB9, 0x00, 0x00, 0x00, 0x00, 0x83, 0xC4, 0x04, 0x81, 0xFC, 0x94, 0xFC, 0x18, 0x00, 0x74, 0x43, 0x81, 0xFC,
-0xD0, 0xFC, 0x08, 0x00, 0x74, 0x4E, 0x81, 0xFC, 0xCC, 0xFC, 0x08, 0x00, 0x74, 0x33, 0x81, 0xFC, 0x3C, 0xFC,
-0x18, 0x00, 0x74, 0x2B, 0x81, 0xFC, 0x58, 0xFC, 0x18, 0x00, 0x74, 0x23, 0x81, 0xFC, 0xEC, 0xFC, 0x18, 0x00,
-0x74, 0x1B, 0x81, 0xFC, 0x9C, 0xFC, 0x18, 0x00, 0x74, 0x13, 0xEB, 0x00, 0x8B, 0x14, 0x24, 0x89, 0x96, 0x0C,
-0x02, 0x00, 0x00, 0x83, 0xEC, 0x04, 0xE9, 0xEE, 0x4F, 0x75, 0xFD, 0xD9, 0x41, 0x04, 0xD9, 0x41, 0x08, 0xDE,
-0xC9, 0xD9, 0x04, 0x24, 0xDE, 0xC9, 0xD9, 0x19, 0x8B, 0x11, 0xEB, 0xDF, 0xD9, 0x04, 0x24, 0xD8, 0x49, 0x04,
-0xD9, 0x19, 0x8B, 0x11, 0xEB, 0xD3 };
-
-
-BYTE Data_nonsteam[56] = { 0x81, 0xFC, 0x98, 0xFC, 0x13, 0x00, 0x74, 0x43, 0x81, 0xFC, 0xD4, 0xFC, 0x03, 0x00, 0x74, 0x4E, 0x81, 0xFC, 0xD0, 0xFC, 0x13, 0x00,
-0x74, 0x33, 0x81, 0xFC, 0x40, 0xFC, 0x13, 0x00, 0x74, 0x2B, 0x81, 0xFC, 0x5C, 0xFC, 0x13, 0x00, 0x74, 0x23, 0x81, 0xFC, 0xF0, 0xFC, 0x13, 0x00, 0x74,
-0x1B, 0x81, 0xFC, 0xA0, 0xFC, 0x13, 0x00, 0x74, 0x13 };
-
-BYTE Data2[4] = { 0x8C, 0x6F, 0x44, 0x3F };
-
-
-//char asm_patch[600];
-
-int asm_patch_nonsteam = (DWORD)asm_patch + 126;
-int asm_patch_nonsteam2 = (DWORD)asm_patch + 254;
-int asm_patch_nonsteam3 = (DWORD)asm_patch + 383;
-
-
-int __fastcall P_Driver__getWidth(int a1)
+int __fastcall PDriverGetWidth(int a1)
 {
 	int result; // eax@2
 
@@ -62,11 +23,11 @@ int __fastcall P_Driver__getWidth(int a1)
 	else
 		result = *(DWORD *)(a1 + 4);
 
-	width = result;
+	ScreenWidth = result;
 	return result;
 }
 
-int __fastcall P_Driver__getHeight(int a1)
+int __fastcall PDriverGetHeight(int a1)
 {
 	int result; // eax@2
 
@@ -75,13 +36,11 @@ int __fastcall P_Driver__getHeight(int a1)
 	else
 		result = *(DWORD *)(a1 + 8);
 
-	height = result;
+	ScreenHeight = result;
 	return result;
 }
 
-
-
-void __declspec(naked)patch_FOV()
+void __declspec(naked)PatchFOV()
 {
 	__asm mov ebx, FOV
 	__asm push    ebx //FOV value
@@ -102,12 +61,30 @@ void __declspec(naked)DisableSubViewport()
 	__asm ret 10h
 }
 
+void __declspec(naked)PCameraValidateHook()
+{
+	__asm mov _EAX, eax
+	__asm mov _EBX, ebx
+	__asm mov     edx, [esp + 4]
+	__asm mov _EDX, edx
+
+	if (_EDX >= 0.7f && _EDX <= 0.8f)
+	{
+		if ((_EBX == 1 && _EAX == 8) || (_EBX == 0 && _EAX != 8))
+		{
+			if (fWidthFactor)
+			__asm mov edx, fWidthFactor
+		}
+	}
+
+	__asm mov[esi + 20Ch], edx
+	__asm jmp jmpAddress
+}
 
 DWORD WINAPI Thread(LPVOID)
 {
 	CIniReader iniReader("");
-	ini_FOV = iniReader.ReadFloat("MAIN", "FOV", 0.0f);
-
+	iniFOV = iniReader.ReadFloat("MAIN", "FOV", 0.0f);
 
 	do
 	{
@@ -115,110 +92,32 @@ DWORD WINAPI Thread(LPVOID)
 		h_e2mfc_dll = GetModuleHandle("e2mfc.dll");
 	} while (h_e2mfc_dll == NULL);
 
-	CPatch::RedirectCall((DWORD)h_e2mfc_dll + 0x176AF, P_Driver__getWidth);
-	CPatch::RedirectCall((DWORD)h_e2mfc_dll + 0x176F4, P_Driver__getHeight);
+	CPatch::RedirectCall((DWORD)h_e2mfc_dll + 0x176AF, PDriverGetWidth);
+	CPatch::RedirectCall((DWORD)h_e2mfc_dll + 0x176F4, PDriverGetHeight);
 
 	CPatch::RedirectJump((DWORD)h_e2mfc_dll + 0x156A0, DisableSubViewport);
 	CPatch::RedirectJump((DWORD)h_e2mfc_dll + 0x14C80, ForceEntireViewport);
 
-	if (ini_FOV)
-	{
-		FOV = ini_FOV;
-		jmpFOV = 0x428F86;
-		CPatch::RedirectJump(0x428F81, patch_FOV); //fov hack
-	}
-
 	do
 	{
 		Sleep(0);
-	} while (width == 0 || height == 0);
+	} while (ScreenWidth == 0 || ScreenHeight == 0);
 
-	aspect_ratio = (float)width / (float)height;
-
-	res1 = 640.0f / aspect_ratio; // 640.0 original
-	half_res1 = res1 / 2.0f; // 480.0 original
-	height_multipl = 1.0f / res1;
-	mul2 = 1.0f / res1 * 2.0f;
-	div2 = 1.0f / res1 / 2.0f;
-	div_comics = (1.0f / (640.0f / (4.0f / 3.0f)) / 2.0f); //1.0f / 480.0f / 2.0f;
-//	float div_comics2 = (1.0f / (480.0f * aspect_ratio) / 2.0f); //1.0f / 640.0f / (640.0f / 480.0f) / 2.0f;
-//	float div22 = 1.0f / 640.0f / 2.0f;
-
-//	float div_comics_fullscr = (1.0f / (640.0f / (4.0f / 3.0f)) / 2.0f) * 1.27f;
-//	float div_comics2_fullscr = (1.0f / (480.0f * aspect_ratio) / 2.0f) * 1.27f;
-
-	if (aspect_ratio >= 1.4f) //WS
+	if (iniFOV)
 	{
-		CPatch::Unprotect((DWORD)asm_patch, 600);
-		float Const133 = (4.0f / 3.0f);
-		float WidthFactor = 1.0f;
+		FOV = iniFOV;
+		jmpFOV = 0x428F86;
+		CPatch::RedirectJump(0x428F81, PatchFOV); //fov hack
+	}
+
+	fAspectRatio = static_cast<float>(ScreenWidth) / static_cast<float>(ScreenHeight);
+
+	fWidthFactor = fAspectRatio / (16.0f / 9.0f);
+
+	if (fAspectRatio >= 1.4f)
+	{
 		jmpAddress = (DWORD)h_e2mfc_dll + 0x15041;
-		CPatch::Patch(asm_patch, &Data, 114);
-		CPatch::SetUInt((DWORD)asm_patch + 0x1, (DWORD)asm_patch + 0x72);
-		CPatch::SetFloat((DWORD)asm_patch + 0x72 + 0x8, Const133);
-		CPatch::SetFloat((DWORD)asm_patch + 0x72 + 0x4, WidthFactor);
-		CPatch::RedirectJump((DWORD)asm_patch + 0x4E, (void *)jmpAddress);
-		CPatch::RedirectJump((DWORD)h_e2mfc_dll + 0x1503B, asm_patch);
-		CPatch::Patch((void *)((DWORD)asm_patch + 0x72), &Data2, 4);
-
-		CPatch::SetChar((DWORD)asm_patch + 0x41, 0x44);
-
-		CPatch::Patch((void *)asm_patch_nonsteam, &Data, 114);
-		CPatch::Patch((void *)(asm_patch_nonsteam + 0x8), &Data_nonsteam, 56); //-4FFFC
-		CPatch::SetUInt((DWORD)asm_patch_nonsteam + 0x1, (DWORD)asm_patch_nonsteam + 0x72);
-		CPatch::SetFloat((DWORD)asm_patch_nonsteam + 0x72 + 0x8, Const133);
-		CPatch::SetFloat((DWORD)asm_patch_nonsteam + 0x72 + 0x4, WidthFactor);
-		CPatch::RedirectJump((DWORD)asm_patch_nonsteam + 0x4E, (void *)jmpAddress);
-		CPatch::Patch((void *)(asm_patch_nonsteam + 0x72), &Data2, 4);
-
-
-		CPatch::SetChar((DWORD)asm_patch_nonsteam + 0x41, 0x46);
-
-
-		CPatch::Patch((void *)asm_patch_nonsteam2, &Data, 114);
-		//patch((DWORD)asm_patch_nonsteam2+0x8, &Data_nonsteam, 56); //-4FFFC
-		CPatch::SetUInt((DWORD)asm_patch_nonsteam2 + 0x1, (DWORD)asm_patch_nonsteam2 + 0x72);
-		CPatch::SetFloat((DWORD)asm_patch_nonsteam2 + 0x72 + 0x8, Const133);
-		CPatch::SetFloat((DWORD)asm_patch_nonsteam2 + 0x72 + 0x4, WidthFactor);
-		CPatch::RedirectJump((DWORD)asm_patch_nonsteam2 + 0x4E, (void *)jmpAddress);
-		CPatch::Patch((void *)(asm_patch_nonsteam2 + 0x72), &Data2, 4);
-
-
-		CPatch::SetChar((DWORD)asm_patch_nonsteam2 + 0x41, 0x47);
-
-
-		CPatch::Patch((void *)asm_patch_nonsteam3, &Data, 114);
-		CPatch::Patch((void *)(asm_patch_nonsteam3 + 0x8), &Data_nonsteam, 56); //-4FFFC
-		CPatch::SetUInt((DWORD)asm_patch_nonsteam3 + 0x1, (DWORD)asm_patch_nonsteam3 + 0x72);
-		CPatch::SetFloat((DWORD)asm_patch_nonsteam3 + 0x72 + 0x8, Const133);
-		CPatch::SetFloat((DWORD)asm_patch_nonsteam3 + 0x72 + 0x4, WidthFactor);
-		CPatch::RedirectJump((DWORD)asm_patch_nonsteam3 + 0x4E, (void *)jmpAddress);
-		CPatch::Patch((void *)(asm_patch_nonsteam3 + 0x72), Data2, 4);
-
-
-		CPatch::SetChar((DWORD)asm_patch_nonsteam3 + 0x41, 0x00);
-
-		CPatch::SetChar((DWORD)asm_patch_nonsteam2 + 0x8 + 0x2, 0x90u);
-		CPatch::SetChar((DWORD)asm_patch_nonsteam2 + 0x10 + 0x2, 0xCCu);
-		CPatch::SetChar((DWORD)asm_patch_nonsteam2 + 0x18 + 0x2, 0xC8u);
-		CPatch::SetChar((DWORD)asm_patch_nonsteam2 + 0x20 + 0x2, 0x38u);
-		CPatch::SetChar((DWORD)asm_patch_nonsteam2 + 0x28 + 0x2, 0x54u);
-		CPatch::SetChar((DWORD)asm_patch_nonsteam2 + 0x30 + 0x2, 0xE8u);
-		CPatch::SetChar((DWORD)asm_patch_nonsteam2 + 0x38 + 0x2, 0x98u);
-
-		CPatch::SetChar((DWORD)asm_patch_nonsteam3 + 0x8 + 0x2, 0x94u);
-		CPatch::SetChar((DWORD)asm_patch_nonsteam3 + 0x10 + 0x2, 0xD0u);
-		CPatch::SetChar((DWORD)asm_patch_nonsteam3 + 0x18 + 0x2, 0xCCu);
-		CPatch::SetChar((DWORD)asm_patch_nonsteam3 + 0x20 + 0x2, 0x3Cu);
-		CPatch::SetChar((DWORD)asm_patch_nonsteam3 + 0x28 + 0x2, 0x58u);
-		CPatch::SetChar((DWORD)asm_patch_nonsteam3 + 0x30 + 0x2, 0xECu);
-		CPatch::SetChar((DWORD)asm_patch_nonsteam3 + 0x38 + 0x2, 0x9Cu);
-
-
-		WidthFactor = aspect_ratio / (16.0f / 9.0f);
-		CPatch::SetFloat((DWORD)asm_patch + 0x72 + 0x4, WidthFactor);
-		CPatch::SetFloat((DWORD)asm_patch_nonsteam + 0x72 + 0x4, WidthFactor);
-
+		CPatch::RedirectJump((DWORD)h_e2mfc_dll + 0x15037, PCameraValidateHook);
 
 		//object disappearance fix
 		CPatch::SetFloat((DWORD)h_e2mfc_dll + 0x15B87 + 0x6, 0.0f);
@@ -227,6 +126,17 @@ DWORD WINAPI Thread(LPVOID)
 		CPatch::SetPointer((DWORD)h_e2mfc_dll + 0x176D4 + 0x2, &stdViewPortSize);
 
 		DWORD nComicsCheck = (DWORD)h_e2mfc_dll + 0x61183;
+
+		//doors graphics fix
+		fVisibilityFactor1 = 0.5f;
+		fVisibilityFactor2 = 1.5f;
+		//CPatch::SetPointer((DWORD)GetModuleHandle("X_GameObjectsMFC.dll") + 0xA8D0 + 0x4F5 + 0x2, &fVisibilityFactor4);
+		CPatch::SetPointer((DWORD)GetModuleHandle("X_GameObjectsMFC.dll") + 0xA8D0 + 0x4CE + 0x2, &fVisibilityFactor1);
+		//CPatch::SetPointer((DWORD)GetModuleHandle("X_GameObjectsMFC.dll") + 0xA8D0 + 0x4AC + 0x2, &fVisibilityFactor3);
+		CPatch::SetPointer((DWORD)GetModuleHandle("X_GameObjectsMFC.dll") + 0xA8D0 + 0x485 + 0x2, &fVisibilityFactor2);
+
+		//CPatch::SetPointer((DWORD)GetModuleHandle("X_GameObjectsMFC.dll") + 0x101F39 + 0x2, &fVisibilityFactor1);
+		//CPatch::SetPointer((DWORD)GetModuleHandle("X_GameObjectsMFC.dll") + 0x101F67 + 0x2, &fVisibilityFactor2);
 
 		if (iniReader.ReadInteger("MAIN", "COMICS_MODE", 0))
 			bComicsMode = !bComicsMode;
@@ -241,13 +151,13 @@ DWORD WINAPI Thread(LPVOID)
 				iniReader.WriteInteger("MAIN", "COMICS_MODE", bComicsMode);
 				while ((GetAsyncKeyState(VK_F2) & 0x8000) > 0) { Sleep(0); }
 			}
-			
+
 			if (bComicsMode)
 			{
 				Sleep(1);
 				if ((unsigned char)*(DWORD*)nComicsCheck == 0xAE)
 				{
-					stdViewPortSize = 480.0f * (aspect_ratio);
+					stdViewPortSize = 480.0f * (fAspectRatio);
 					CPatch::SetFloat((DWORD)h_e2mfc_dll + 0x434F4, 480.0f); //480.0f
 				}
 				else
@@ -261,7 +171,7 @@ DWORD WINAPI Thread(LPVOID)
 				Sleep(1);
 				if ((unsigned char)*(DWORD*)nComicsCheck == 0xAE)
 				{
-					stdViewPortSize = (480.0f * (aspect_ratio) / 1.17936117936f);
+					stdViewPortSize = (480.0f * (fAspectRatio) / 1.17936117936f);
 					CPatch::SetFloat((DWORD)h_e2mfc_dll + 0x434F4, 480.0f / 1.17936117936f); //480.0f
 				}
 				else
@@ -271,12 +181,10 @@ DWORD WINAPI Thread(LPVOID)
 				}
 			}
 		}
-		
+
 	}
 	return 0;
 }
-
-
 
 BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
