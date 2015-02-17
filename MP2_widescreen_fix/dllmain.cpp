@@ -51,19 +51,18 @@ void __declspec(naked)PatchFOV()
 
 void __fastcall P_CameraSetFOV(DWORD P_Camera, float FOVvalue)
 {
-	float v2; // eax@4
-
 	FOVvalue *= iniFOV;
 
 	if (*(float *)&FOVvalue != *(float *)(P_Camera + 284))
 	{
 		if (*(float *)&FOVvalue >= 0.0)
 		{
-			v2 = 3.1241393f;
-			if (*(float *)&FOVvalue <= 3.1241393)
-				v2 = FOVvalue;
-			*(BYTE *)(P_Camera + 236) |= 0x40u;
-			*(float *)(P_Camera + 284) = v2;
+		
+			if (FOVvalue <= 3.1241393f)
+			{
+				*(BYTE *)(P_Camera + 236) |= 0x40u;
+				*(float *)(P_Camera + 284) = FOVvalue;
+			}
 		}
 		else
 		{
@@ -103,7 +102,7 @@ void __declspec(naked)PCameraValidateHook()
 			}
 
 			if (fDiffFactor)
-				_EDX *= fDiffFactor;
+			_EDX *= fDiffFactor;
 			__asm mov edx, _EDX
 		}
 	}
@@ -113,8 +112,18 @@ void __declspec(naked)PCameraValidateHook()
 		{
 			if (fDiffFactor)
 				_EDX *= fDiffFactor;
-			if ((_EBX == 1 && _EAX == 8 && _nEDX != 0x3ED413CD)) //0.414213568, it's to avoid comics stretching
+			if (_EBX == 1 && _EAX == 8 && _nEDX != 0x3ED413CD) //0.414213568, it's to avoid comics stretching
 				__asm mov edx, _EDX
+		} 
+		else
+		{
+			if ((_EDX > 0.8f && _EDX <= 1.5f) && _nEDX != 0x3F800000)
+			{
+				if (fDiffFactor)
+				_EDX *= fDiffFactor;
+				if ((_EBX == 1 && _EAX == 8) || (_EBX == 0 && _EAX != 8))
+				__asm mov edx, _EDX
+			}
 		}
 	}
 
