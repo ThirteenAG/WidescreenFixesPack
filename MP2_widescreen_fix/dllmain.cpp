@@ -7,11 +7,11 @@ HMODULE h_e2mfc_dll = NULL;
 HMODULE comics = NULL;
 
 float iniFOV, FOV;
-float fAspectRatio, stdViewPortSize, fWidthFactor;
+float fAspectRatio, stdViewPortSize, fWidthFactor, fDiffFactor;
 float fVisibilityFactor1, fVisibilityFactor2;
 unsigned int ScreenWidth, ScreenHeight;
 DWORD jmpAddress, jmpFOV;
-DWORD _EAX, _EBX; float _EDX;
+DWORD _EAX, _EBX, _nEDX; float _EDX;
 bool bComicsMode;
 
 int __fastcall PDriverGetWidth(int a1)
@@ -49,6 +49,30 @@ void __declspec(naked)PatchFOV()
 	__asm jmp jmpFOV
 }
 
+void __fastcall P_CameraSetFOV(DWORD P_Camera, float FOVvalue)
+{
+	float v2; // eax@4
+
+	FOVvalue *= iniFOV;
+
+	if (*(float *)&FOVvalue != *(float *)(P_Camera + 284))
+	{
+		if (*(float *)&FOVvalue >= 0.0)
+		{
+			v2 = 3.1241393f;
+			if (*(float *)&FOVvalue <= 3.1241393)
+				v2 = FOVvalue;
+			*(BYTE *)(P_Camera + 236) |= 0x40u;
+			*(float *)(P_Camera + 284) = v2;
+		}
+		else
+		{
+			*(BYTE *)(P_Camera + 236) |= 0x40u;
+			*(DWORD *)(P_Camera + 284) = 0;
+		}
+	}
+}
+
 
 void __declspec(naked)ForceEntireViewport()
 {
@@ -67,13 +91,30 @@ void __declspec(naked)PCameraValidateHook()
 	__asm mov _EBX, ebx
 	__asm mov     edx, [esp + 4]
 	__asm mov _EDX, edx
+	__asm mov _nEDX, edx
 
 	if (_EDX >= 0.7f && _EDX <= 0.8f)
 	{
 		if ((_EBX == 1 && _EAX == 8) || (_EBX == 0 && _EAX != 8))
 		{
-			if (fWidthFactor)
-			__asm mov edx, fWidthFactor
+			if (!fDiffFactor)
+			{
+				fDiffFactor = fWidthFactor / _EDX;
+			}
+
+			if (fDiffFactor)
+				_EDX *= fDiffFactor;
+			__asm mov edx, _EDX
+		}
+	}
+	else
+	{
+		if (_EAX == 8 && _EDX < 0.7f)
+		{
+			if (fDiffFactor)
+				_EDX *= fDiffFactor;
+			if ((_EBX == 1 && _EAX == 8 && _nEDX != 0x3ED413CD)) //0.414213568, it's to avoid comics stretching
+				__asm mov edx, _EDX
 		}
 	}
 
@@ -103,12 +144,14 @@ DWORD WINAPI Thread(LPVOID)
 		Sleep(0);
 	} while (ScreenWidth == 0 || ScreenHeight == 0);
 
-	if (iniFOV)
+	/*if (iniFOV)
 	{
-		FOV = iniFOV;
-		jmpFOV = 0x428F86;
-		CPatch::RedirectJump(0x428F81, PatchFOV); //fov hack
-	}
+		//FOV = iniFOV;
+		//jmpFOV = 0x428F86;
+		//CPatch::RedirectJump(0x428F81, PatchFOV); //fov hack
+		//CPatch::RedirectJump((DWORD)h_e2mfc_dll + 0x14E70, P_CameraSetFOV);
+		//CPatch::SetPointer(0x428F7B, P_CameraSetFOV);
+	}*/
 
 	fAspectRatio = static_cast<float>(ScreenWidth) / static_cast<float>(ScreenHeight);
 
