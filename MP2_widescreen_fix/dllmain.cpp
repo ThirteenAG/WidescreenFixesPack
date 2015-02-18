@@ -86,49 +86,47 @@ void __declspec(naked)DisableSubViewport()
 
 void __declspec(naked)PCameraValidateHook()
 {
-	__asm mov _EAX, eax
-	__asm mov _EBX, ebx
-	__asm mov     edx, [esp + 4]
-	__asm mov _EDX, edx
-	__asm mov _nEDX, edx
+    __asm mov _EAX, eax
+    __asm mov _EBX, ebx
+    __asm mov     edx, [esp + 4]
+    __asm mov _EDX, edx
+    __asm mov _nEDX, edx
 
-	if (_EDX >= 0.7f && _EDX <= 0.8f)
-	{
-		if ((_EBX == 1 && _EAX == 8) || (_EBX == 0 && _EAX != 8))
-		{
-			if (!fDiffFactor)
-			{
-				fDiffFactor = fWidthFactor / _EDX;
-			}
-
-			if (fDiffFactor)
-			_EDX *= fDiffFactor;
-			__asm mov edx, _EDX
-		}
-	}
-	else
-	{
-		if (_EAX == 8 && _EDX < 0.7f)
-		{
-			if (fDiffFactor)
-				_EDX *= fDiffFactor;
-			if (_EBX == 1 && _EAX == 8 && _nEDX != 0x3ED413CD) //0.414213568, it's to avoid comics stretching
-				__asm mov edx, _EDX
-		} 
-		else
-		{
-			if ((_EDX > 0.8f && _EDX <= 1.5f) && _nEDX != 0x3F800000)
-			{
-				if (fDiffFactor)
-				_EDX *= fDiffFactor;
-				if ((_EBX == 1 && _EAX == 8) || (_EBX == 0 && _EAX != 8))
-				__asm mov edx, _EDX
-			}
-		}
-	}
-
-	__asm mov[esi + 20Ch], edx
-	__asm jmp jmpAddress
+    if (!fDiffFactor)
+    {
+        fDiffFactor = fWidthFactor / _EDX;
+    }
+    else
+    {
+        if (_EDX >= 0.7f && _EDX <= 0.8f)
+        {
+            if ((_EBX == 1 && _EAX == 8) || (_EBX == 0 && _EAX != 8))
+            {
+                _EDX *= fDiffFactor;
+                __asm mov edx, _EDX
+            }
+        }
+        else
+        {
+            if (_EAX == 8 && _EDX < 0.7f)
+            {
+                _EDX *= fDiffFactor;
+                if (_EBX == 1 && _EAX == 8 && _nEDX != 0x3ED413CD) //0.414213568, it's to avoid comics stretching
+                    __asm mov edx, _EDX
+            }
+            else
+            {
+                if ((_EDX > 0.8f && _EDX <= 1.5f) && _nEDX != 0x3F800000)
+                {
+                    _EDX *= fDiffFactor;
+                    if ((_EBX == 1 && _EAX == 8) || (_EBX == 0 && _EAX != 8))
+                        __asm mov edx, _EDX
+                }
+            }
+        }
+    }
+    __asm mov[esi + 20Ch], edx
+    __asm jmp jmpAddress
 }
 
 DWORD WINAPI Thread(LPVOID)
@@ -164,7 +162,8 @@ DWORD WINAPI Thread(LPVOID)
 
 	fAspectRatio = static_cast<float>(ScreenWidth) / static_cast<float>(ScreenHeight);
 
-	fWidthFactor = fAspectRatio / (16.0f / 9.0f);
+	//fWidthFactor = fAspectRatio / (16.0f / 9.0f);
+    fWidthFactor = 0.7673270702f / ((4.0f / 3.0f) / fAspectRatio);
 
 	if (fAspectRatio >= 1.4f)
 	{
