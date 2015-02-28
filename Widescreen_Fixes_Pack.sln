@@ -46,7 +46,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{51C4CE72-9907-495A-B83C-54D21F33C7CF}"
 	ProjectSection(SolutionItems) = preProject
 		includes\CPatch.h = includes\CPatch.h
-		includes\IniReader.cpp = includes\IniReader.cpp
 		includes\IniReader.h = includes\IniReader.h
 	EndProjectSection
 EndProject
@@ -83,6 +82,15 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ParadiseCracked_widescreen_fix", "ParadiseCracked_widescreen_fix\ParadiseCracked_widescreen_fix.vcxproj", "{42E49165-90F2-4E9C-B2D8-15B562A8AE39}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SniperElite_widescreen_fix", "SniperElite_widescreen_fix\SniperElite_widescreen_fix.vcxproj", "{36D48D25-CDDA-448E-9A30-C0F029C8271A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "injector", "injector", "{E6BBA15B-0716-4DED-942B-21FAC25C4330}"
+	ProjectSection(SolutionItems) = preProject
+		includes\injector\assembly.hpp = includes\injector\assembly.hpp
+		includes\injector\calling.hpp = includes\injector\calling.hpp
+		includes\injector\hooking.hpp = includes\injector\hooking.hpp
+		includes\injector\injector.hpp = includes\injector\injector.hpp
+		includes\injector\utility.hpp = includes\injector\utility.hpp
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -241,5 +249,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{E6BBA15B-0716-4DED-942B-21FAC25C4330} = {51C4CE72-9907-495A-B83C-54D21F33C7CF}
 	EndGlobalSection
 EndGlobal

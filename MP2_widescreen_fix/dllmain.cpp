@@ -12,7 +12,7 @@ float fVisibilityFactor1, fVisibilityFactor2;
 unsigned int ScreenWidth, ScreenHeight;
 DWORD jmpAddress, jmpFOV;
 DWORD _EAX, _EBX, _nEDX; float _EDX;
-bool bComicsMode;
+bool bComicsMode, bMenuFix;
 
 int __fastcall PDriverGetWidth(int a1)
 {
@@ -86,53 +86,54 @@ void __declspec(naked)DisableSubViewport()
 
 void __declspec(naked)PCameraValidateHook()
 {
-    __asm mov _EAX, eax
-    __asm mov _EBX, ebx
-    __asm mov     edx, [esp + 4]
-    __asm mov _EDX, edx
-    __asm mov _nEDX, edx
+	__asm mov _EAX, eax
+	__asm mov _EBX, ebx
+	__asm mov     edx, [esp + 4]
+	__asm mov _EDX, edx
+	__asm mov _nEDX, edx
 
-    if (!fDiffFactor)
-    {
-        fDiffFactor = fWidthFactor / _EDX;
-    }
-    else
-    {
-        if (_EDX >= 0.7f && _EDX <= 0.8f)
-        {
-            if ((_EBX == 1 && _EAX == 8) || (_EBX == 0 && _EAX != 8))
-            {
-                _EDX *= fDiffFactor;
-                __asm mov edx, _EDX
-            }
-        }
-        else
-        {
-            if (_EAX == 8 && _EDX < 0.7f)
-            {
-                _EDX *= fDiffFactor;
-                if (_EBX == 1 && _EAX == 8 && _nEDX != 0x3ED413CD) //0.414213568, it's to avoid comics stretching
-                    __asm mov edx, _EDX
-            }
-            else
-            {
-                if ((_EDX > 0.8f && _EDX <= 1.5f) && _nEDX != 0x3F800000)
-                {
-                    _EDX *= fDiffFactor;
-                    if ((_EBX == 1 && _EAX == 8) || (_EBX == 0 && _EAX != 8))
-                        __asm mov edx, _EDX
-                }
-            }
-        }
-    }
-    __asm mov[esi + 20Ch], edx
-    __asm jmp jmpAddress
+	if (!fDiffFactor)
+	{
+		fDiffFactor = fWidthFactor / _EDX;
+	}
+	else
+	{
+		if (_EDX >= 0.7f && _EDX <= 0.8f)
+		{
+			if ((_EBX == 1 && _EAX == 8) || (_EBX == 0 && _EAX != 8) || (_EAX == 8 && _nEDX == 0x3F3340CF && bMenuFix == 1))
+			{
+				_EDX *= fDiffFactor;
+				__asm mov edx, _EDX
+			}
+		}
+		else
+		{
+			if (_EAX == 8 && _EDX < 0.7f)
+			{
+				_EDX *= fDiffFactor;
+				if (_EBX == 1 && _EAX == 8 && _nEDX != 0x3ED413CD) //0.414213568, it's to avoid comics stretching
+					__asm mov edx, _EDX
+			}
+			else
+			{
+				if ((_EDX > 0.8f/* && _EDX <= 1.5f*/) && _nEDX != 0x3F800000)
+				{
+					_EDX *= fDiffFactor;
+					if ((_EBX == 1 && _EAX == 8) || (_EBX == 0 && _EAX != 8))
+						__asm mov edx, _EDX
+				}
+			}
+		}
+	}
+	__asm mov[esi + 20Ch], edx
+	__asm jmp jmpAddress
 }
 
 DWORD WINAPI Thread(LPVOID)
 {
 	CIniReader iniReader("");
 	iniFOV = iniReader.ReadFloat("MAIN", "FOV", 0.0f);
+	bMenuFix = (iniReader.ReadInteger("MAIN", "MenuFix", 1));
 
 	do
 	{
@@ -163,7 +164,7 @@ DWORD WINAPI Thread(LPVOID)
 	fAspectRatio = static_cast<float>(ScreenWidth) / static_cast<float>(ScreenHeight);
 
 	//fWidthFactor = fAspectRatio / (16.0f / 9.0f);
-    fWidthFactor = 0.7673270702f / ((4.0f / 3.0f) / fAspectRatio);
+	fWidthFactor = 0.7673270702f / ((4.0f / 3.0f) / fAspectRatio);
 
 	if (fAspectRatio >= 1.4f)
 	{
@@ -189,7 +190,7 @@ DWORD WINAPI Thread(LPVOID)
 		//CPatch::SetPointer((DWORD)GetModuleHandle("X_GameObjectsMFC.dll") + 0x101F39 + 0x2, &fVisibilityFactor1);
 		//CPatch::SetPointer((DWORD)GetModuleHandle("X_GameObjectsMFC.dll") + 0x101F67 + 0x2, &fVisibilityFactor2);
 
-		if (iniReader.ReadInteger("MAIN", "COMICS_MODE", 0))
+		if (iniReader.ReadInteger("MAIN", "ComicsMode", 0))
 			bComicsMode = !bComicsMode;
 
 		while (true)
@@ -199,7 +200,7 @@ DWORD WINAPI Thread(LPVOID)
 			if ((GetAsyncKeyState(VK_F2) & 1) && ((unsigned char)*(DWORD*)nComicsCheck == 0xAE))
 			{
 				bComicsMode = !bComicsMode;
-				iniReader.WriteInteger("MAIN", "COMICS_MODE", bComicsMode);
+				iniReader.WriteInteger("MAIN", "ComicsMode", bComicsMode);
 				while ((GetAsyncKeyState(VK_F2) & 0x8000) > 0) { Sleep(0); }
 			}
 

@@ -80,10 +80,10 @@ void Init()
 		if (MVLScopeFix) { CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&MVLScopeFix, NULL, 0, NULL); }
 
 		//'Wide Screen' text replacement
-		auto CText__Get = (int(__thiscall *)(void *, char  const*)) 0x584F30;
-		int pFED_WIS = CText__Get((void *)0x94B220, "FED_WIS");
-		const wchar_t* wide = L"Borders    ";
-		CPatch::Patch2(pFED_WIS, (void*)wide, sizeof(wchar_t)* 11);
+		//auto CText__Get = (int(__thiscall *)(void *, char  const*)) 0x584F30;
+		//int pFED_WIS = CText__Get((void *)0x94B220, "FED_WIS");
+		//const wchar_t* wide = L"Borders    ";
+		//CPatch::Patch2(pFED_WIS, (void*)wide, sizeof(wchar_t)* 11);
 	}
 	else 
 	{
@@ -146,11 +146,11 @@ DWORD WINAPI PatchSteamExe(LPVOID)
 	ApplyINIchanges_steam();
 
 	//'Wide Screen' text replacement
-	Sleep(3000);
+	/*Sleep(3000);
 	auto CText__Get = (int(__thiscall *)(void *, char  const*)) 0x584D60;
 	int pFED_WIS = CText__Get((void *)0x94A228, "FED_WIS");
 	const wchar_t* wide = L"Borders    ";
-	CPatch::Patch2(pFED_WIS, (void*)wide, sizeof(wchar_t)* 11);
+	CPatch::Patch2(pFED_WIS, (void*)wide, sizeof(wchar_t)* 11);*/
 
 	return 0;
 }
