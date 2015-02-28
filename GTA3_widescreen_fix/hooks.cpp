@@ -38,6 +38,7 @@ char *szFOVControl;
 int FOVControl;
 int AspectRatioWidth, AspectRatioHeight;
 int HideAABug, SmartCutsceneBorders, nMenuFix;
+float gtaLogo128Coord1, gtaLogo128Coord2;
 
 void __cdecl CDraw__CalculateAspectRatio()
 {
@@ -90,7 +91,9 @@ void __cdecl CDraw__CalculateAspectRatio()
 		* (1.0f / SCREEN_FOV_HORIZONTAL);
 	fDynamicScreenFieldOfViewScale += 0.042470217f; //small FOV adjustment, to make aiming point and crosshair matchicng more precise
 
-	nMenuAlignment = static_cast<int>((*VAR_pfScreenAspectRatio / 1.333333f) * 320.0f);// (CLASS_pclRsGlobal->m_iScreenWidth / 2) * fWideScreenWidthScaleDown;
+	nMenuAlignment = static_cast<int>(((*VAR_pfScreenAspectRatio / (4.0f/3.0f)) * 320.0f) - 30);// (CLASS_pclRsGlobal->m_iScreenWidth / 2) * fWideScreenWidthScaleDown;
+    gtaLogo128Coord2 = static_cast<float>(nMenuAlignment - 95);
+	gtaLogo128Coord1 = gtaLogo128Coord2 + 190.0f;
 	MenuFix();
 
 	//Ini options
@@ -838,6 +841,9 @@ void ApplyINIchanges()
 		CPatch::SetPointer(0x48B7E0 + 0x19B + 0x2, &fWideScreenWidthScaleDown);
 
 		CPatch::SetPointer(0x48AC40 + 0x2, &fWideScreenHeightScaleDown);
+
+		CPatch::SetPointer(0x47AA5F + 0x2, &gtaLogo128Coord1);
+		CPatch::SetPointer(0x47AA81 + 0x2, &gtaLogo128Coord2);
 	}
 
 #pragma endregion CHud::CustomDraw
@@ -929,6 +935,8 @@ void __cdecl CDraw__CalculateAspectRatio_steam()
 	fDynamicScreenFieldOfViewScale += 0.042470217f; //small FOV adjustment, to make aiming point and crosshair matchicng more precise
 
 	nMenuAlignment = static_cast<int>((*VAR_pfScreenAspectRatio_steam / 1.333333f) * 320);// (CLASS_pclRsGlobal_steam->m_iScreenWidth / 2) * fWideScreenWidthScaleDown;
+    gtaLogo128Coord2 = static_cast<float>(nMenuAlignment - 95);
+    gtaLogo128Coord1 = gtaLogo128Coord2 + 190.0f;
 
 	//Ini options
 	fCustomWideScreenWidthScaleDown = fWideScreenWidthScaleDown * fHudWidthScale;
@@ -1644,6 +1652,9 @@ void ApplyINIchanges_steam()
 		CPatch::SetPointer(0x48B860 + 0x19B + 0x2, &fWideScreenWidthScaleDown);
 
 		CPatch::SetPointer(0x48AD50 + 0x2, &fWideScreenHeightScaleDown);
+
+        CPatch::SetPointer(0x47AA4F + 0x2, &gtaLogo128Coord1);
+        CPatch::SetPointer(0x47AA71 + 0x2, &gtaLogo128Coord2);
 	}
 
 #pragma endregion CHud::CustomDraw_steam

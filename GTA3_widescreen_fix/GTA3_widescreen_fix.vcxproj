@@ -77,8 +77,7 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <PostBuildEvent>
-      <Command>copy /y "$(TargetPath)" "H:\wsfix_tests\GTAIII\GTAIII_widescreen_fix.asi"
-copy /y "$(TargetPath)" "E:\Games\Steam\steamapps\common\Grand Theft Auto 3\scripts\GTAIII_widescreen_fix.asi"</Command>
+      <Command>copy /y "$(TargetPath)" "K:\wsfix_test\GTAIII\modloader\GTA3_widescreen_fix\GTAIII_widescreen_fix.asi"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
