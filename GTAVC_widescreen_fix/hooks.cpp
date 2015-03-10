@@ -39,6 +39,16 @@ int FOVControl;
 int AspectRatioWidth, AspectRatioHeight;
 int HideAABug, SmartCutsceneBorders;
 
+float fCustomRadarWidthIV = 101.0f;
+float fCustomRadarHeightIV = 78.0f;
+float fCustomRadarPosXIV = 109.0f;
+float fCustomRadarPosYIV = 107.0f;
+float fCustomRadarRingWidthIV = 101.0f;
+float fCustomRadarRingHeightIV = 83.0f;
+float fCustomRadarRingPosXIV = 98.0f;
+float fCustomRadarRingPosYIV = 109.5f;
+float fCustomRadarRingPosXIV2 = fCustomRadarRingPosXIV - 19.0f;
+
 long double __cdecl CDraw__CalculateAspectRatio()
 {
 	if (!AspectRatioWidth && !AspectRatioHeight)
@@ -195,7 +205,171 @@ int __declspec(naked)SetDropShadowPosition(short)
 	}
 }
 
+DWORD jmpAddr = 0x55185B;
+float ScaleX, ScaleY;
+float PosX, PosY, originalPosX, originalPosY, scaleX, scaleY;
+DWORD par3, par4, par5, par6;
+void __declspec(naked) TextDrawOutline()
+{
+	_asm
+	{
+		mov edx, [esp+0h]
+		mov PosX, edx
+		mov edx, [esp + 4h]
+		mov PosY, edx
+		mov edx, [esp + 8h]
+		mov par3, edx
+		mov edx, [esp + 0xC]
+		mov par4, edx
+		mov edx, [esp + 10h]
+		mov par5, edx
+		mov edx, [esp + 14h]
+		mov par6, edx
+		mov edx, [esp + 1Ch]
+		mov scaleX, edx
+		mov edx, [esp + 20h]
+		mov scaleY, edx
+	}
+	originalPosX = PosX - scaleX;
+	originalPosY = PosY - scaleY;
 
+	_asm
+	{
+		mov edx, 0x5516C0
+		call edx
+		add     esp, 18h
+	}
+
+	PosX = originalPosX + 1.0f;
+	PosY = originalPosY + 1.0f;
+
+	_asm
+	{
+		push par6
+		push par5
+		push par4
+		push par3
+		push PosY
+		push PosX
+		mov edx, 0x5516C0
+		call edx
+		add     esp, 18h
+	}
+
+	PosX = originalPosX + 2.0f;
+	PosY = originalPosY + 2.0f;
+
+	_asm
+	{
+		push par6
+		push par5
+		push par4
+		push par3
+		push PosY
+		push PosX
+		mov edx, 0x5516C0
+		call edx
+		add     esp, 18h
+	}
+
+	PosX = originalPosX + 1.0f;
+	PosY = originalPosY - 1.0f;
+
+	_asm
+	{
+		push par6
+		push par5
+		push par4
+		push par3
+		push PosY
+		push PosX
+		mov edx, 0x5516C0
+		call edx
+		add     esp, 18h
+	}
+
+	PosX = originalPosX + 2.0f;
+	PosY = originalPosY - 2.0f;
+
+	_asm
+	{
+		push par6
+		push par5
+		push par4
+		push par3
+		push PosY
+		push PosX
+		mov edx, 0x5516C0
+		call edx
+		add     esp, 18h
+	}
+
+	PosX = originalPosX - 1.0f;
+	PosY = originalPosY - 1.0f;
+
+	_asm
+	{
+		push par6
+		push par5
+		push par4
+		push par3
+		push PosY
+		push PosX
+		mov edx, 0x5516C0
+		call edx
+		add     esp, 18h
+	}
+
+	PosX = originalPosX - 2.0f;
+	PosY = originalPosY - 2.0f;
+
+	_asm
+	{
+		push par6
+		push par5
+		push par4
+		push par3
+		push PosY
+		push PosX
+		mov edx, 0x5516C0
+		call edx
+		add     esp, 18h
+	}
+
+	PosX = originalPosX - 1.0f;
+	PosY = originalPosY + 1.0f;
+
+	_asm
+	{
+		push par6
+		push par5
+		push par4
+		push par3
+		push PosY
+		push PosX
+		mov edx, 0x5516C0
+		call edx
+		add     esp, 18h
+	}
+
+	PosX = originalPosX - 2.0f;
+	PosY = originalPosY + 2.0f;
+
+	_asm
+	{
+		push par6
+		push par5
+		push par4
+		push par3
+		push PosY
+		push PosX
+		mov edx, 0x5516C0
+		call edx
+		add     esp, 18h
+	}
+		__asm jmp jmpAddr
+
+}
 
 #define	 	CDarkel__DrawMessages	 	0x429FE0
 #define	 	CGarages__PrintMessages	 	0x42F2B0
@@ -629,9 +803,9 @@ void HudFix()
 		CPatch::SetPointer(CHud__DrawAfterFade + 0x8EA + 0x2, &fWideScreenHeightScaleDown);
 		CPatch::SetPointer(CHud__DrawAfterFade + 0x926 + 0x2, &fWideScreenHeightScaleDown);
 		CPatch::SetPointer(CHud__DrawAfterFade + 0xBCD + 0x2, &fWideScreenHeightScaleDown);
-        CPatch::SetPointer(CHud__Draw + 0x3B6 + 0x2, &fWideScreenHeightScaleDown);
+		CPatch::SetPointer(CHud__Draw + 0x3B6 + 0x2, &fWideScreenHeightScaleDown);
 		CPatch::SetPointer(CHud__Draw + 0x49A + 0x2, &fWideScreenHeightScaleDown);
-        CPatch::SetPointer(CHud__Draw + 0x5B1 + 0x2, &fWideScreenHeightScaleDown);
+		CPatch::SetPointer(CHud__Draw + 0x5B1 + 0x2, &fWideScreenHeightScaleDown);
 		CPatch::SetPointer(CHud__Draw + 0x6E2 + 0x2, &fWideScreenHeightScaleDown);
 		CPatch::SetPointer(CHud__Draw + 0x849 + 0x2, &fWideScreenHeightScaleDown);
 		CPatch::SetPointer(CHud__Draw + 0x932 + 0x2, &fWideScreenHeightScaleDown);
@@ -1097,6 +1271,9 @@ void ApplyINIchanges()
 		CPatch::SetFloat(0x69590C, 3.0f); //car lights stretch
 	}
 
+	int IVRadarScaling = iniReader.ReadInteger("MAIN", "IVRadarScaling", 0);
+	int ReplaceTextShadowWithOutline = iniReader.ReadInteger("MAIN", "ReplaceTextShadowWithOutline", 0);
+
 	if (!fHudWidthScale || !fHudHeightScale) { fHudWidthScale = 0.62221788786f; fHudHeightScale = 0.66666670937f; }
 	if (!fRadarWidthScale) { fRadarWidthScale = 0.80354591724f; }
 	if (!fSubtitlesScale) { fSubtitlesScale = 1.0f; }
@@ -1215,7 +1392,7 @@ void ApplyINIchanges()
 	CPatch::SetPointer(CHud__DrawAfterFade + 0x926 + 0x2, &fCustomWideScreenHeightScaleDown);
 	CPatch::SetPointer(CHud__DrawAfterFade + 0xBCD + 0x2, &fCustomWideScreenHeightScaleDown);
 	CPatch::SetPointer(CHud__Draw + 0x3B6 + 0x2, &fCrosshairHeightScaleDown); // let's make crosshair proportional
-    CPatch::SetPointer(CHud__Draw + 0x49A + 0x2, &fCrosshairHeightScaleDown); // let's make crosshair proportional
+	CPatch::SetPointer(CHud__Draw + 0x49A + 0x2, &fCrosshairHeightScaleDown); // let's make crosshair proportional
 	CPatch::SetPointer(CHud__Draw + 0x5B1 + 0x2, &fCrosshairHeightScaleDown); // let's make crosshair proportional
 	CPatch::SetPointer(CHud__Draw + 0x6E2 + 0x2, &fCustomWideScreenHeightScaleDown);
 	CPatch::SetPointer(CHud__Draw + 0x849 + 0x2, &fCustomWideScreenHeightScaleDown);
@@ -1302,6 +1479,27 @@ void ApplyINIchanges()
 		CPatch::SetPointer(CHud__Draw + 0x37B9 + 0x2, &fCustomRadarWidthScale);
 	}
 
+	if (IVRadarScaling) //iv radar
+	{
+		fPlayerMarkerPos = fCustomRadarRingWidthIV * fRadarWidthScale;
+
+		CPatch::SetFloat(0x68FD24, fCustomRadarWidthIV);
+		CPatch::SetFloat(0x68FD30, fCustomRadarHeightIV);
+		CPatch::SetFloat(0x68FD2C, fCustomRadarPosXIV);
+		CPatch::SetFloat(0x68FD34, fCustomRadarPosYIV);
+
+		CPatch::SetPointer(0x55A9A6 + 0x2, &fCustomRadarRingWidthIV);
+		CPatch::SetPointer(0x55AADF + 0x2, &fCustomRadarRingWidthIV);
+		CPatch::SetPointer(0x55A9BF + 0x2, &fCustomRadarRingHeightIV);
+		CPatch::SetPointer(0x55AAF8 + 0x2, &fCustomRadarRingHeightIV);
+		CPatch::SetFloat(0x55A956, fCustomRadarRingPosXIV);
+		CPatch::SetPointer(0x55A9B2 + 0x2, &fCustomRadarRingPosXIV2);
+		CPatch::SetFloat(0x55AA94, fCustomRadarRingPosXIV);
+		CPatch::SetPointer(0x55AAEB + 0x2, &fCustomRadarRingPosXIV2);
+
+		CPatch::SetFloat(0x697C18, fCustomRadarRingPosYIV);
+	}
+
 	if (HideAABug)
 	{
 		CPatch::RedirectJump(0x57FAA0, _1pxBugFix);
@@ -1311,6 +1509,11 @@ void ApplyINIchanges()
 	{
 		CPatch::RedirectCall(0x4A61EE, CCamera__DrawBordersForWideScreen);
 		CPatch::RedirectCall(0x54A223, CCamera__DrawBordersForWideScreen);
+	}
+
+	if (ReplaceTextShadowWithOutline)
+	{
+		CPatch::RedirectJump(0x551853, TextDrawOutline);
 	}
 }
 
@@ -1915,9 +2118,9 @@ void HudFix_steam()
 	CPatch::SetPointer(CHud__DrawAfterFade + 0x8EA + 0x2, &fWideScreenHeightScaleDown);
 	CPatch::SetPointer(CHud__DrawAfterFade + 0x926 + 0x2, &fWideScreenHeightScaleDown);
 	CPatch::SetPointer(CHud__DrawAfterFade + 0xBCD + 0x2, &fWideScreenHeightScaleDown);
-    CPatch::SetPointer(CHud__Draw + 0x3B6 + 0x2, &fWideScreenHeightScaleDown);
+	CPatch::SetPointer(CHud__Draw + 0x3B6 + 0x2, &fWideScreenHeightScaleDown);
 	CPatch::SetPointer(CHud__Draw + 0x49A + 0x2, &fWideScreenHeightScaleDown);
-    CPatch::SetPointer(CHud__Draw + 0x5B1 + 0x2, &fWideScreenHeightScaleDown);
+	CPatch::SetPointer(CHud__Draw + 0x5B1 + 0x2, &fWideScreenHeightScaleDown);
 	CPatch::SetPointer(CHud__Draw + 0x6E2 + 0x2, &fWideScreenHeightScaleDown);
 	CPatch::SetPointer(CHud__Draw + 0x849 + 0x2, &fWideScreenHeightScaleDown);
 	CPatch::SetPointer(CHud__Draw + 0x932 + 0x2, &fWideScreenHeightScaleDown);
@@ -2475,7 +2678,7 @@ void ApplyINIchanges_steam()
 
 
 	CPatch::SetPointer(CHud__Draw + 0x3B6 + 0x2, &fCrosshairHeightScaleDown); // let's make crosshair proportional
-    CPatch::SetPointer(CHud__Draw + 0x49A + 0x2, &fCrosshairHeightScaleDown); // let's make crosshair proportional
+	CPatch::SetPointer(CHud__Draw + 0x49A + 0x2, &fCrosshairHeightScaleDown); // let's make crosshair proportional
 	CPatch::SetPointer(CHud__Draw + 0x5B1 + 0x2, &fCrosshairHeightScaleDown); // let's make crosshair proportional
 	CPatch::SetPointer(CHud__Draw + 0x6E2 + 0x2, &fCustomWideScreenHeightScaleDown);
 	CPatch::SetPointer(CHud__Draw + 0x849 + 0x2, &fCustomWideScreenHeightScaleDown);

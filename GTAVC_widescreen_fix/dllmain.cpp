@@ -67,7 +67,7 @@ void Init()
 		//CPatch::Nop(0x0046FD9B, 6); //Disable fading?
 		CPatch::Nop(0x46FE09, 3);
 		CPatch::SetUChar(0x55AE92, 0x02u);
-		CPatch::Nop(0x557249, 5);
+		//CPatch::Nop(0x557249, 5);
 		CPatch::RedirectJump(0x46FC1C, DrawBordersForWideScreen_patch);
 
 		//UI fix
@@ -136,7 +136,7 @@ DWORD WINAPI PatchSteamExe(LPVOID)
 	CPatch::Nop(0x46FC89, 12);
 	CPatch::Nop(0x46FCE9, 3);
 	CPatch::SetUChar(0x55AD82, 0x02u);
-	CPatch::Nop(0x557139, 5);
+	//CPatch::Nop(0x557139, 5);
 	CPatch::RedirectJump(0x46FAFC, DrawBordersForWideScreen_patch_steam);
 
 	//UI fix
