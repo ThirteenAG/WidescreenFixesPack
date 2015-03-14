@@ -40,7 +40,7 @@ int AspectRatioWidth, AspectRatioHeight;
 int HideAABug, SmartCutsceneBorders;
 
 float fCustomRadarWidthIV = 101.0f;
-float fCustomRadarHeightIV = 78.0f;
+float fCustomRadarHeightIV = 78.5f;
 float fCustomRadarPosXIV = 109.0f;
 float fCustomRadarPosYIV = 107.0f;
 float fCustomRadarRingWidthIV = 101.0f;
@@ -206,7 +206,6 @@ int __declspec(naked)SetDropShadowPosition(short)
 }
 
 DWORD jmpAddr = 0x55185B;
-float ScaleX, ScaleY;
 float PosX, PosY, originalPosX, originalPosY, scaleX, scaleY;
 DWORD par3, par4, par5, par6;
 void __declspec(naked) TextDrawOutline()

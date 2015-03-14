@@ -7,6 +7,24 @@
 #define GTA_3_STEAM     0x47BDA5
 DWORD WINAPI PatchSteamExe(LPVOID);
 
+DWORD WINAPI SPHandler(LPVOID)
+{
+	static int i;
+	do
+	{
+		Sleep(100);
+		i++;
+		if (i > 100)
+			break;
+
+	} while (GetModuleHandle("SilentPatchIII.asi") == NULL);
+
+	if (GetModuleHandle("SilentPatchIII.asi"))
+		ApplyINIchanges();
+
+	return 0;
+}
+
 void Init()
 {
 	if (gGameVersion == GTA_3_1_0)
@@ -53,6 +71,9 @@ void Init()
 
 		//INI
 		ApplyINIchanges();
+
+		//SilenPatch
+		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&SPHandler, NULL, 0, NULL);
 
 		//'Wide Screen' text replacement
 		//auto CText__Get = (int(__stdcall *)(void *, wchar_t*)) 0x52C5A0;
