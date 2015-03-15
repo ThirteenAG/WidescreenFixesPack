@@ -1,5 +1,8 @@
 #include "StdAfx.h"
 #include "hooks.h"
+#include "..\includes\injector\injector.hpp"
+#include "..\includes\injector\hooking.hpp"
+#include "..\includes\injector\calling.hpp"
 #include <string>
 
 float fScreenAspectRatioAcd = SCREEN_AR_ACADEMY;
@@ -18,7 +21,6 @@ float fWideScreenWidthScaled, fWideScreenHeightScaled;
 float fWideScreenWidthScaledInv, fWideScreenHeightScaledInv;
 
 float fDynamicScreenFieldOfViewScale;
-
 float fvcLogoScale;
 float fFiretruckAmblncFix;
 float fHudWidthScale, fHudHeightScale;
@@ -205,169 +207,152 @@ int __declspec(naked)SetDropShadowPosition(short)
 	}
 }
 
-DWORD jmpAddr = 0x55185B;
-float PosX, PosY, originalPosX, originalPosY, scaleX, scaleY;
-DWORD par3, par4, par5, par6;
-void __declspec(naked) TextDrawOutline()
+CRGBA rgba;
+float originalPosX, originalPosY, ScaleX, ScaleY;
+unsigned char originalColorR, originalColorG, originalColorB, originalColorA;
+unsigned char FontDropColorR, FontDropColorG, FontDropColorB, FontDropColorA;
+short ShadPos;
+template<uintptr_t addr>
+void TextDrawOutlineHookNOP()
 {
-	_asm
+	using printstr_hook = injector::function_hooker<addr, void(float a1, float a2, int a3, unsigned int a4, unsigned int a5, float a6)>;
+	injector::make_static_hook<printstr_hook>([](printstr_hook::func_type, float, float, int, unsigned int, unsigned int, float)
 	{
-		mov edx, [esp+0h]
-		mov PosX, edx
-		mov edx, [esp + 4h]
-		mov PosY, edx
-		mov edx, [esp + 8h]
-		mov par3, edx
-		mov edx, [esp + 0xC]
-		mov par4, edx
-		mov edx, [esp + 10h]
-		mov par5, edx
-		mov edx, [esp + 14h]
-		mov par6, edx
-		mov edx, [esp + 1Ch]
-		mov scaleX, edx
-		mov edx, [esp + 20h]
-		mov scaleY, edx
-	}
-	originalPosX = PosX - scaleX;
-	originalPosY = PosY - scaleY;
+		//PrintString(PosX, PosY, c);
+		return;
+	});
+}
 
-	_asm
+template<uintptr_t addr>
+void TextDrawOutlineHook()
+{
+	using printstr_hook = injector::function_hooker<addr, void(float, float, unsigned short*)>;
+	injector::make_static_hook<printstr_hook>([](printstr_hook::func_type PrintString, float PosX, float PosY, unsigned short* c)
 	{
-		mov edx, 0x5516C0
-		call edx
-		add     esp, 18h
-	}
+		//PrintString = injector::cstd<void(float, float, unsigned short*)>::call<0x551040>;
+		*(short*)0x97F860 = 0;
+		originalPosX = PosX;
+		originalPosY = PosY;
+		originalColorR = *(unsigned char*)0x97F820;
+		originalColorG = *(unsigned char*)0x97F821;
+		originalColorB = *(unsigned char*)0x97F822;
+		originalColorA = *(unsigned char*)0x97F823;
+		/*FontDropColorR = *(unsigned char*)0x97F862;
+		FontDropColorG = *(unsigned char*)0x97F863;
+		FontDropColorB = *(unsigned char*)0x97F864;
+		FontDropColorA = *(unsigned char*)0x97F865;*/
 
-	PosX = originalPosX + 1.0f;
-	PosY = originalPosY + 1.0f;
+		if (originalColorR != 0 || originalColorG != 0 || originalColorB != 0)
+		{
+			injector::thiscall<void(CRGBA*, uint8_t, uint8_t, uint8_t, uint8_t)>::call<0x541570>(&rgba, 0, 0, 0, originalColorA);
+			injector::cstd<void(CRGBA*)>::call<0x550170>(&rgba);
+			//injector::thiscall<void(CRGBA*, uint8_t, uint8_t, uint8_t, uint8_t)>::call<0x541570>(&rgba, 0, 0, 0, originalColorA);
+			//injector::cstd<void(CRGBA*)>::call<0x54FF30>(&rgba);
 
-	_asm
+			PosX = originalPosX + 1.0f;
+			PosY = originalPosY + 1.0f;
+
+			PrintString(PosX, PosY, c);
+
+			PosX = originalPosX + 2.0f;
+			PosY = originalPosY + 2.0f;
+
+			PrintString(PosX, PosY, c);
+
+			PosX = originalPosX + 1.0f;
+			PosY = originalPosY - 1.0f;
+
+			PrintString(PosX, PosY, c);
+
+			PosX = originalPosX + 2.0f;
+			PosY = originalPosY - 2.0f;
+
+			PrintString(PosX, PosY, c);
+
+			PosX = originalPosX - 1.0f;
+			PosY = originalPosY - 1.0f;
+
+			PrintString(PosX, PosY, c);
+
+			PosX = originalPosX - 2.0f;
+			PosY = originalPosY - 2.0f;
+
+			PrintString(PosX, PosY, c);
+
+			PosX = originalPosX - 1.0f;
+			PosY = originalPosY + 1.0f;
+
+			PrintString(PosX, PosY, c);
+
+			PosX = originalPosX - 2.0f;
+			PosY = originalPosY + 2.0f;
+			PrintString(PosX, PosY, c);
+
+			injector::thiscall<void(CRGBA*, uint8_t, uint8_t, uint8_t, uint8_t)>::call<0x541570>(&rgba, originalColorR, originalColorG, originalColorB, originalColorA);
+			injector::cstd<void(CRGBA*)>::call<0x550170>(&rgba);
+		}
+		PrintString(originalPosX, originalPosY, c);
+		return;
+	});
+}
+
+template<uintptr_t addr>
+void TextDrawOutlineHookColor()
+{
+	using printstr_hook = injector::function_hooker<addr, void(float, float, unsigned int, unsigned short *, unsigned short *, float)>;
+	injector::make_static_hook<printstr_hook>([](printstr_hook::func_type PrintString, float PosX, float PosY, unsigned int c, unsigned short *d, unsigned short *e, float f)
 	{
-		push par6
-		push par5
-		push par4
-		push par3
-		push PosY
-		push PosX
-		mov edx, 0x5516C0
-		call edx
-		add     esp, 18h
-	}
+		//PrintString = injector::cstd<void(float, float, unsigned short*)>::call<0x551040>;
+		ShadPos = *(short*)0x97F860;
 
-	PosX = originalPosX + 2.0f;
-	PosY = originalPosY + 2.0f;
+		__asm   mov edx, [esp + 1Ch]
+		__asm	mov ScaleX, edx
+		__asm	mov edx, [esp + 20h]
+		__asm	mov ScaleY, edx
 
-	_asm
-	{
-		push par6
-		push par5
-		push par4
-		push par3
-		push PosY
-		push PosX
-		mov edx, 0x5516C0
-		call edx
-		add     esp, 18h
-	}
+		originalPosX = PosX - ScaleX - 1.0f;
+		originalPosY = PosY - ScaleY - 1.0f;
 
-	PosX = originalPosX + 1.0f;
-	PosY = originalPosY - 1.0f;
+			PosX = originalPosX + 1.0f;
+			PosY = originalPosY + 1.0f;
 
-	_asm
-	{
-		push par6
-		push par5
-		push par4
-		push par3
-		push PosY
-		push PosX
-		mov edx, 0x5516C0
-		call edx
-		add     esp, 18h
-	}
+			PrintString(PosX, PosY, c, d, e, f);
 
-	PosX = originalPosX + 2.0f;
-	PosY = originalPosY - 2.0f;
+			PosX = originalPosX + 2.0f;
+			PosY = originalPosY + 2.0f;
 
-	_asm
-	{
-		push par6
-		push par5
-		push par4
-		push par3
-		push PosY
-		push PosX
-		mov edx, 0x5516C0
-		call edx
-		add     esp, 18h
-	}
+			PrintString(PosX, PosY, c, d, e, f);
 
-	PosX = originalPosX - 1.0f;
-	PosY = originalPosY - 1.0f;
+			PosX = originalPosX + 1.0f;
+			PosY = originalPosY - 1.0f;
 
-	_asm
-	{
-		push par6
-		push par5
-		push par4
-		push par3
-		push PosY
-		push PosX
-		mov edx, 0x5516C0
-		call edx
-		add     esp, 18h
-	}
+			PrintString(PosX, PosY, c, d, e, f);
 
-	PosX = originalPosX - 2.0f;
-	PosY = originalPosY - 2.0f;
+			PosX = originalPosX + 2.0f;
+			PosY = originalPosY - 2.0f;
 
-	_asm
-	{
-		push par6
-		push par5
-		push par4
-		push par3
-		push PosY
-		push PosX
-		mov edx, 0x5516C0
-		call edx
-		add     esp, 18h
-	}
+			PrintString(PosX, PosY, c, d, e, f);
 
-	PosX = originalPosX - 1.0f;
-	PosY = originalPosY + 1.0f;
+			PosX = originalPosX - 1.0f;
+			PosY = originalPosY - 1.0f;
 
-	_asm
-	{
-		push par6
-		push par5
-		push par4
-		push par3
-		push PosY
-		push PosX
-		mov edx, 0x5516C0
-		call edx
-		add     esp, 18h
-	}
+			PrintString(PosX, PosY, c, d, e, f);
 
-	PosX = originalPosX - 2.0f;
-	PosY = originalPosY + 2.0f;
+			PosX = originalPosX - 2.0f;
+			PosY = originalPosY - 2.0f;
 
-	_asm
-	{
-		push par6
-		push par5
-		push par4
-		push par3
-		push PosY
-		push PosX
-		mov edx, 0x5516C0
-		call edx
-		add     esp, 18h
-	}
-		__asm jmp jmpAddr
+			PrintString(PosX, PosY, c, d, e, f);
 
+			PosX = originalPosX - 1.0f;
+			PosY = originalPosY + 1.0f;
+
+			PrintString(PosX, PosY, c, d, e, f);
+
+			PosX = originalPosX - 2.0f;
+			PosY = originalPosY + 2.0f;
+			PrintString(PosX, PosY, c, d, e, f);
+		return;
+	});
 }
 
 #define	 	CDarkel__DrawMessages	 	0x429FE0
@@ -1512,7 +1497,107 @@ void ApplyINIchanges()
 
 	if (ReplaceTextShadowWithOutline)
 	{
-		CPatch::RedirectJump(0x551853, TextDrawOutline);
+		//replacing original shadows
+		TextDrawOutlineHookColor<(0x551853)>();
+		
+		//subs
+		injector::WriteMemory<char>(0x55AE92, 0x02, true); //subs
+		injector::MakeNOP(0x557249, 5, true);
+
+		//textbox
+		//injector::WriteMemory(0x55B59B, 0xFFFF4B31, true); //background 
+		injector::WriteMemory(0x55B5A0, 0xFFFF4AEC, true); //enable shadow
+		injector::WriteMemory<char>(0x55B5A5, 0x01, true); //shadow size
+
+		TextDrawOutlineHook<(0x42A225)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		//TextDrawOutlineHook<(0x42A35C)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)(shadow)
+		TextDrawOutlineHook<(0x42A3C9)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		//TextDrawOutlineHook<(0x42A468)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)(shadow)
+		TextDrawOutlineHook<(0x42A637)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		//TextDrawOutlineHook<(0x42F411)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)(shadow)
+		TextDrawOutlineHook<(0x42F4E2)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x43E809)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x48F9AF)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x490E97)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x490EFE)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		//TextDrawOutlineHook<(0x4910EF)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)(shadow)
+		TextDrawOutlineHook<(0x4911A6)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x4912A2)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x491642)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x4916CB)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x491789)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x49187C)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x49197C)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x491BFA)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x491D2A)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		//TextDrawOutlineHook<(0x49232A)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)(shadow)
+		TextDrawOutlineHook<(0x492396)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x492844)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x492D51)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x4934BD)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x49356F)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x493700)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x493884)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x493CD4)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x493D9D)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x494ADA)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		//TextDrawOutlineHook<(0x495627)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)(shadow)
+		TextDrawOutlineHook<(0x49572B)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x498933)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x49A59F)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x49B66C)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+	//	TextDrawOutlineHook<(0x49C0F3)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)(shadow)
+	//	TextDrawOutlineHook<(0x49C135)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)(shadow)
+		TextDrawOutlineHook<(0x49C28D)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+	//	TextDrawOutlineHook<(0x49C40B)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)(shadow)
+		TextDrawOutlineHook<(0x49C488)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		//TextDrawOutlineHook<(0x49E30E)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *) menu title
+		//TextDrawOutlineHook<(0x49E3D9)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x49E656)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x49FCAD)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x49FE4E)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x4A9885)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		//TextDrawOutlineHook<(0x4C2CB6)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)(shadow)
+		TextDrawOutlineHook<(0x4C5156)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		//TextDrawOutlineHook<(0x5446F2)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)(shadow)
+		TextDrawOutlineHook<(0x54474D)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x5516A8)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x5568E7)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x556AC8)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)(shadow)
+		TextDrawOutlineHook<(0x556BD9)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)(shadow)
+		TextDrawOutlineHook<(0x556EBF)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)(shadow)
+		TextDrawOutlineHook<(0x5572E6)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x55830F)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x558925)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x558C10)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x558CF4)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x558E80)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x558F64)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x5591A6)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x55943B)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x5594CD)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x559FF1)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x55A1DD)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x55A2AB)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x55A48E)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x55A82B)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x55AD18)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		//TextDrawOutlineHook<(0x55B113)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *) //subs
+		//TextDrawOutlineHook<(0x55B66B)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *) //textbox
+		TextDrawOutlineHook<(0x55BA42)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x55BCB2)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x571213)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x574043)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		//TextDrawOutlineHook<(0x5FA1FD)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)(shadow)
+		TextDrawOutlineHook<(0x5FA28A)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		//TextDrawOutlineHook<(0x605EF9)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)(shadow)
+		TextDrawOutlineHook<(0x605F6E)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		//TextDrawOutlineHook<(0x606010)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)(shadow)
+		TextDrawOutlineHook<(0x606084)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		//TextDrawOutlineHook<(0x606197)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)(shadow)
+		TextDrawOutlineHook<(0x606246)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x61E1FD)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		TextDrawOutlineHook<(0x620D1A)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
 	}
 }
 
