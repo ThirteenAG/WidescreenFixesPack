@@ -1268,7 +1268,7 @@ void ApplyINIchanges()
 		TextDrawOutlineHook<(0x507D63)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
 		TextDrawOutlineHookNOP<(0x507FF1)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
 		TextDrawOutlineHook<(0x508070)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
-		TextDrawOutlineHook<(0x508363)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
+		//TextDrawOutlineHook<(0x508363)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *)) //pager
 		TextDrawOutlineHook<(0x508698)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
 		TextDrawOutlineHook<(0x508953)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *)) (subtitles)
 		TextDrawOutlineHookNOP<(0x508C6E)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
