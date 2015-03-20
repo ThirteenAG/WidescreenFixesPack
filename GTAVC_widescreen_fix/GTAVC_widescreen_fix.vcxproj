@@ -76,8 +76,8 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <PostBuildEvent>
-      <Command>copy /y "$(TargetPath)" "H:\wsfix_tests\Grand Theft Auto Vice City\GTAVC_widescreen_fix.asi"
-copy /y "$(TargetPath)" "E:\Games\Steam\steamapps\common\Grand Theft Auto Vice City\scripts\GTAVC_widescreen_fix.asi"</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

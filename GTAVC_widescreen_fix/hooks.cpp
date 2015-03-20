@@ -41,8 +41,8 @@ int FOVControl;
 int AspectRatioWidth, AspectRatioHeight;
 int HideAABug, SmartCutsceneBorders;
 
-float fCustomRadarWidthIV = 101.0f;
-float fCustomRadarHeightIV = 78.5f;
+float fCustomRadarWidthIV = 102.0f;
+float fCustomRadarHeightIV = 79.0f;
 float fCustomRadarPosXIV = 109.0f;
 float fCustomRadarPosYIV = 107.0f;
 float fCustomRadarRingWidthIV = 101.0f;
@@ -1132,6 +1132,7 @@ void MenuFix()
 void __declspec(naked)RsSelectDeviceHook()
 {
 	MenuFix();
+	ApplyINIchanges();
 	_asm
 	{
 		add     esp, 10h
@@ -1465,6 +1466,10 @@ void ApplyINIchanges()
 
 	if (IVRadarScaling) //iv radar
 	{
+		fCustomRadarPosXIV = 109.0f * ((float)CLASS_pclRsGlobal->m_iScreenWidth * (1.0f / 1920.0f));
+		fCustomRadarRingPosXIV = 98.0f * ((float)CLASS_pclRsGlobal->m_iScreenWidth * (1.0f / 1920.0f));
+		fCustomRadarRingPosXIV2 = 116.0f * ((float)CLASS_pclRsGlobal->m_iScreenWidth * (1.0f / 1920.0f));
+
 		fPlayerMarkerPos = fCustomRadarRingWidthIV * fRadarWidthScale;
 
 		CPatch::SetFloat(0x68FD24, fCustomRadarWidthIV);
@@ -1477,9 +1482,9 @@ void ApplyINIchanges()
 		CPatch::SetPointer(0x55A9BF + 0x2, &fCustomRadarRingHeightIV);
 		CPatch::SetPointer(0x55AAF8 + 0x2, &fCustomRadarRingHeightIV);
 		CPatch::SetFloat(0x55A956, fCustomRadarRingPosXIV);
-		CPatch::SetPointer(0x55A9B2 + 0x2, &fCustomRadarRingPosXIV2);
+		CPatch::SetPointer(0x55A9AC + 0x2, &fCustomRadarRingPosXIV2);
 		CPatch::SetFloat(0x55AA94, fCustomRadarRingPosXIV);
-		CPatch::SetPointer(0x55AAEB + 0x2, &fCustomRadarRingPosXIV2);
+		CPatch::SetPointer(0x55AAE5 + 0x2, &fCustomRadarRingPosXIV2);
 
 		CPatch::SetFloat(0x697C18, fCustomRadarRingPosYIV);
 	}
@@ -1497,6 +1502,7 @@ void ApplyINIchanges()
 
 	if (ReplaceTextShadowWithOutline)
 	{
+		#if(1)
 		//replacing original shadows
 		TextDrawOutlineHookColor<(0x551853)>();
 		
@@ -1598,6 +1604,7 @@ void ApplyINIchanges()
 		TextDrawOutlineHook<(0x606246)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
 		TextDrawOutlineHook<(0x61E1FD)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
 		TextDrawOutlineHook<(0x620D1A)>(); //0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *)
+		#endif
 	}
 }
 

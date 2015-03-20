@@ -119,6 +119,11 @@ void __cdecl CDraw__CalculateAspectRatio()
 	//Proportional elements
 	fCrosshairHeightScaleDown = fWideScreenHeightScaleDown * fHudWidthScale;
 
+	//IV Radar
+	fCustomRadarPosXIV = 109.0f * ((float)CLASS_pclRsGlobal->m_iScreenWidth * (1.0f / 1920.0f));
+	fCustomRadarRingPosXIV = 111.0f * ((float)CLASS_pclRsGlobal->m_iScreenWidth * (1.0f / 1920.0f));
+	fCustomRadarRingPosXIV2 = 98.0f * ((float)CLASS_pclRsGlobal->m_iScreenWidth * (1.0f / 1920.0f));
+
 	return;
 }
 
@@ -649,6 +654,7 @@ void __declspec(naked)RsSelectDeviceHook()
 {
 	MenuFix();
 	CDraw__CalculateAspectRatio();
+	ApplyINIchanges();
 	_asm
 	{
 		add     esp, 10h
