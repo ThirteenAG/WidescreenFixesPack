@@ -114,6 +114,11 @@ long double __cdecl CDraw__CalculateAspectRatio()
 	//Proportional elements
 	fCrosshairHeightScaleDown = fWideScreenHeightScaleDown * fHudWidthScale;
 
+	//IV Radar
+	fCustomRadarPosXIV = 109.0f * ((float)CLASS_pclRsGlobal->m_iScreenWidth * (1.0f / 1920.0f));
+	fCustomRadarRingPosXIV = 98.0f * ((float)CLASS_pclRsGlobal->m_iScreenWidth * (1.0f / 1920.0f));
+	fCustomRadarRingPosXIV2 = 116.0f * ((float)CLASS_pclRsGlobal->m_iScreenWidth * (1.0f / 1920.0f));
+
 	return fDynamicScreenFieldOfViewScale;
 }
 
@@ -230,7 +235,7 @@ void TextDrawOutlineHook()
 	using printstr_hook = injector::function_hooker<addr, void(float, float, unsigned short*)>;
 	injector::make_static_hook<printstr_hook>([](printstr_hook::func_type PrintString, float PosX, float PosY, unsigned short* c)
 	{
-		PrintString = injector::cstd<void(float, float, unsigned short*)>::call<0x551040>;
+		//PrintString = injector::cstd<void(float, float, unsigned short*)>::call<0x551040>;
 		*(short*)0x97F860 = 0;
 		originalPosX = PosX;
 		originalPosY = PosY;
@@ -298,7 +303,7 @@ void TextDrawOutlineHookColor()
 	using printstr_hook = injector::function_hooker<addr, void(float, float, unsigned int, unsigned short *, unsigned short *, float)>;
 	injector::make_static_hook<printstr_hook>([](printstr_hook::func_type PrintString, float PosX, float PosY, unsigned int c, unsigned short *d, unsigned short *e, float f)
 	{
-		PrintString = injector::cstd<void(float, float, unsigned int, unsigned short *, unsigned short *, float)>::call<0x5516C0 >;
+		//PrintString = injector::cstd<void(float, float, unsigned int, unsigned short *, unsigned short *, float)>::call<0x5516C0 >;
 		//ShadPos = *(short*)0x97F860;
 
 		__asm   mov edx, [esp + 1Ch]
@@ -306,8 +311,8 @@ void TextDrawOutlineHookColor()
 		__asm	mov edx, [esp + 20h]
 		__asm	mov ScaleY, edx
 
-		originalPosX = PosX - ScaleX - 1.0f;
-		originalPosY = PosY - ScaleY - 1.0f;
+		originalPosX = PosX - ScaleX;
+		originalPosY = PosY - ScaleY;
 
 		PosX = originalPosX + 1.0f;
 		PosY = originalPosY + 1.0f;
@@ -1124,7 +1129,6 @@ void MenuFix()
 void __declspec(naked)RsSelectDeviceHook()
 {
 	MenuFix();
-	ApplyINIchanges();
 	_asm
 	{
 		add     esp, 10h
@@ -1458,10 +1462,6 @@ void ApplyINIchanges()
 
 	if (IVRadarScaling) //iv radar
 	{
-		fCustomRadarPosXIV = 109.0f * ((float)CLASS_pclRsGlobal->m_iScreenWidth * (1.0f / 1920.0f));
-		fCustomRadarRingPosXIV = 98.0f * ((float)CLASS_pclRsGlobal->m_iScreenWidth * (1.0f / 1920.0f));
-		fCustomRadarRingPosXIV2 = 116.0f * ((float)CLASS_pclRsGlobal->m_iScreenWidth * (1.0f / 1920.0f));
-
 		fPlayerMarkerPos = fCustomRadarRingWidthIV * fRadarWidthScale;
 
 		CPatch::SetFloat(0x68FD24, fCustomRadarWidthIV);
