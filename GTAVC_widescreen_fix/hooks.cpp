@@ -40,6 +40,7 @@ char *szFOVControl;
 int FOVControl;
 int AspectRatioWidth, AspectRatioHeight;
 int HideAABug, SmartCutsceneBorders;
+int ReplaceTextShadowWithOutline;
 
 float fCustomRadarWidthIV = 102.0f;
 float fCustomRadarHeightIV = 79.0f;
@@ -229,7 +230,7 @@ void TextDrawOutlineHook()
 	using printstr_hook = injector::function_hooker<addr, void(float, float, unsigned short*)>;
 	injector::make_static_hook<printstr_hook>([](printstr_hook::func_type PrintString, float PosX, float PosY, unsigned short* c)
 	{
-		//PrintString = injector::cstd<void(float, float, unsigned short*)>::call<0x551040>;
+		PrintString = injector::cstd<void(float, float, unsigned short*)>::call<0x551040>;
 		*(short*)0x97F860 = 0;
 		originalPosX = PosX;
 		originalPosY = PosY;
@@ -251,43 +252,38 @@ void TextDrawOutlineHook()
 
 			PosX = originalPosX + 1.0f;
 			PosY = originalPosY + 1.0f;
-
-			PrintString(PosX, PosY, c);
-
-			PosX = originalPosX + 2.0f;
-			PosY = originalPosY + 2.0f;
-
 			PrintString(PosX, PosY, c);
 
 			PosX = originalPosX + 1.0f;
 			PosY = originalPosY - 1.0f;
-
-			PrintString(PosX, PosY, c);
-
-			PosX = originalPosX + 2.0f;
-			PosY = originalPosY - 2.0f;
-
 			PrintString(PosX, PosY, c);
 
 			PosX = originalPosX - 1.0f;
 			PosY = originalPosY - 1.0f;
-
-			PrintString(PosX, PosY, c);
-
-			PosX = originalPosX - 2.0f;
-			PosY = originalPosY - 2.0f;
-
 			PrintString(PosX, PosY, c);
 
 			PosX = originalPosX - 1.0f;
 			PosY = originalPosY + 1.0f;
-
 			PrintString(PosX, PosY, c);
 
-			PosX = originalPosX - 2.0f;
-			PosY = originalPosY + 2.0f;
-			PrintString(PosX, PosY, c);
+			if (ReplaceTextShadowWithOutline > 1)
+			{
+				PosX = originalPosX + 2.0f;
+				PosY = originalPosY + 2.0f;
+				PrintString(PosX, PosY, c);
 
+				PosX = originalPosX + 2.0f;
+				PosY = originalPosY - 2.0f;
+				PrintString(PosX, PosY, c);
+
+				PosX = originalPosX - 2.0f;
+				PosY = originalPosY - 2.0f;
+				PrintString(PosX, PosY, c);
+
+				PosX = originalPosX - 2.0f;
+				PosY = originalPosY + 2.0f;
+				PrintString(PosX, PosY, c);
+			}
 			injector::thiscall<void(CRGBA*, uint8_t, uint8_t, uint8_t, uint8_t)>::call<0x541570>(&rgba, originalColorR, originalColorG, originalColorB, originalColorA);
 			injector::cstd<void(CRGBA*)>::call<0x550170>(&rgba);
 		}
@@ -302,8 +298,8 @@ void TextDrawOutlineHookColor()
 	using printstr_hook = injector::function_hooker<addr, void(float, float, unsigned int, unsigned short *, unsigned short *, float)>;
 	injector::make_static_hook<printstr_hook>([](printstr_hook::func_type PrintString, float PosX, float PosY, unsigned int c, unsigned short *d, unsigned short *e, float f)
 	{
-		//PrintString = injector::cstd<void(float, float, unsigned short*)>::call<0x551040>;
-		ShadPos = *(short*)0x97F860;
+		PrintString = injector::cstd<void(float, float, unsigned int, unsigned short *, unsigned short *, float)>::call<0x5516C0 >;
+		//ShadPos = *(short*)0x97F860;
 
 		__asm   mov edx, [esp + 1Ch]
 		__asm	mov ScaleX, edx
@@ -313,44 +309,40 @@ void TextDrawOutlineHookColor()
 		originalPosX = PosX - ScaleX - 1.0f;
 		originalPosY = PosY - ScaleY - 1.0f;
 
-			PosX = originalPosX + 1.0f;
-			PosY = originalPosY + 1.0f;
+		PosX = originalPosX + 1.0f;
+		PosY = originalPosY + 1.0f;
+		PrintString(PosX, PosY, c, d, e, f);
 
-			PrintString(PosX, PosY, c, d, e, f);
+		PosX = originalPosX + 1.0f;
+		PosY = originalPosY - 1.0f;
+		PrintString(PosX, PosY, c, d, e, f);
 
+		PosX = originalPosX - 1.0f;
+		PosY = originalPosY - 1.0f;
+		PrintString(PosX, PosY, c, d, e, f);
+
+		PosX = originalPosX - 1.0f;
+		PosY = originalPosY + 1.0f;
+		PrintString(PosX, PosY, c, d, e, f);
+
+		if (ReplaceTextShadowWithOutline > 1)
+		{
 			PosX = originalPosX + 2.0f;
 			PosY = originalPosY + 2.0f;
-
-			PrintString(PosX, PosY, c, d, e, f);
-
-			PosX = originalPosX + 1.0f;
-			PosY = originalPosY - 1.0f;
-
 			PrintString(PosX, PosY, c, d, e, f);
 
 			PosX = originalPosX + 2.0f;
 			PosY = originalPosY - 2.0f;
-
-			PrintString(PosX, PosY, c, d, e, f);
-
-			PosX = originalPosX - 1.0f;
-			PosY = originalPosY - 1.0f;
-
 			PrintString(PosX, PosY, c, d, e, f);
 
 			PosX = originalPosX - 2.0f;
 			PosY = originalPosY - 2.0f;
-
-			PrintString(PosX, PosY, c, d, e, f);
-
-			PosX = originalPosX - 1.0f;
-			PosY = originalPosY + 1.0f;
-
 			PrintString(PosX, PosY, c, d, e, f);
 
 			PosX = originalPosX - 2.0f;
 			PosY = originalPosY + 2.0f;
 			PrintString(PosX, PosY, c, d, e, f);
+		}
 		return;
 	});
 }
@@ -1257,7 +1249,7 @@ void ApplyINIchanges()
 	}
 
 	int IVRadarScaling = iniReader.ReadInteger("MAIN", "IVRadarScaling", 0);
-	int ReplaceTextShadowWithOutline = iniReader.ReadInteger("MAIN", "ReplaceTextShadowWithOutline", 0);
+	ReplaceTextShadowWithOutline = iniReader.ReadInteger("MAIN", "ReplaceTextShadowWithOutline", 0);
 
 	if (!fHudWidthScale || !fHudHeightScale) { fHudWidthScale = 0.62221788786f; fHudHeightScale = 0.66666670937f; }
 	if (!fRadarWidthScale) { fRadarWidthScale = 0.80354591724f; }
@@ -1474,8 +1466,8 @@ void ApplyINIchanges()
 
 		CPatch::SetFloat(0x68FD24, fCustomRadarWidthIV);
 		CPatch::SetFloat(0x68FD30, fCustomRadarHeightIV);
-		CPatch::SetFloat(0x68FD2C, fCustomRadarPosXIV);
-		CPatch::SetFloat(0x68FD34, fCustomRadarPosYIV);
+		CPatch::SetFloat(0x68FD2C, fCustomRadarPosXIV); CPatch::SetPointer(0x4C2996 + 0x2, (void*)0x690238); //+draw you are here sprite fix
+		CPatch::SetFloat(0x68FD34, fCustomRadarPosYIV); CPatch::SetPointer(0x4C29CB + 0x2, (void*)0x690238);
 
 		CPatch::SetPointer(0x55A9A6 + 0x2, &fCustomRadarRingWidthIV);
 		CPatch::SetPointer(0x55AADF + 0x2, &fCustomRadarRingWidthIV);

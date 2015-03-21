@@ -42,6 +42,7 @@ int FOVControl;
 int AspectRatioWidth, AspectRatioHeight;
 int HideAABug, SmartCutsceneBorders, nMenuFix;
 float gtaLogo128Coord1, gtaLogo128Coord2;
+int ReplaceTextShadowWithOutline;
 
 float fCustomRadarWidthIV = 101.5f;
 float fCustomRadarHeightIV = 78.0f;
@@ -231,42 +232,38 @@ void TextDrawOutlineHook()
 
 		PosX = originalPosX + 1.0f;
 		PosY = originalPosY + 1.0f;
-
-		PrintString(PosX, PosY, c);
-
-		PosX = originalPosX + 2.0f;
-		PosY = originalPosY + 2.0f;
-
 		PrintString(PosX, PosY, c);
 
 		PosX = originalPosX + 1.0f;
 		PosY = originalPosY - 1.0f;
-
-		PrintString(PosX, PosY, c);
-
-		PosX = originalPosX + 2.0f;
-		PosY = originalPosY - 2.0f;
-
 		PrintString(PosX, PosY, c);
 
 		PosX = originalPosX - 1.0f;
 		PosY = originalPosY - 1.0f;
-
-		PrintString(PosX, PosY, c);
-
-		PosX = originalPosX - 2.0f;
-		PosY = originalPosY - 2.0f;
-
 		PrintString(PosX, PosY, c);
 
 		PosX = originalPosX - 1.0f;
 		PosY = originalPosY + 1.0f;
-
 		PrintString(PosX, PosY, c);
 
-		PosX = originalPosX - 2.0f;
-		PosY = originalPosY + 2.0f;
-		PrintString(PosX, PosY, c);
+		if (ReplaceTextShadowWithOutline > 1)
+		{
+			PosX = originalPosX + 2.0f;
+			PosY = originalPosY + 2.0f;
+			PrintString(PosX, PosY, c);
+
+			PosX = originalPosX + 2.0f;
+			PosY = originalPosY - 2.0f;
+			PrintString(PosX, PosY, c);
+
+			PosX = originalPosX - 2.0f;
+			PosY = originalPosY - 2.0f;
+			PrintString(PosX, PosY, c);
+
+			PosX = originalPosX - 2.0f;
+			PosY = originalPosY + 2.0f;
+			PrintString(PosX, PosY, c);
+		}
 
 		injector::thiscall<void(CRGBA*, uint8_t, uint8_t, uint8_t, uint8_t)>::call<0x4F8C20>(&rgba, originalColorR, originalColorG, originalColorB, originalColorA);
 		injector::cstd<void(CRGBA*)>::call<0x501BD0>(&rgba);
@@ -297,42 +294,38 @@ void TextDrawOutlineHookMenu()
 
 			PosX = originalPosX + 1.0f;
 			PosY = originalPosY + 1.0f;
-
-			PrintString(PosX, PosY, c);
-
-			PosX = originalPosX + 2.0f;
-			PosY = originalPosY + 2.0f;
-
 			PrintString(PosX, PosY, c);
 
 			PosX = originalPosX + 1.0f;
 			PosY = originalPosY - 1.0f;
-
-			PrintString(PosX, PosY, c);
-
-			PosX = originalPosX + 2.0f;
-			PosY = originalPosY - 2.0f;
-
 			PrintString(PosX, PosY, c);
 
 			PosX = originalPosX - 1.0f;
 			PosY = originalPosY - 1.0f;
-
-			PrintString(PosX, PosY, c);
-
-			PosX = originalPosX - 2.0f;
-			PosY = originalPosY - 2.0f;
-
 			PrintString(PosX, PosY, c);
 
 			PosX = originalPosX - 1.0f;
 			PosY = originalPosY + 1.0f;
-
 			PrintString(PosX, PosY, c);
 
-			PosX = originalPosX - 2.0f;
-			PosY = originalPosY + 2.0f;
-			PrintString(PosX, PosY, c);
+			if (ReplaceTextShadowWithOutline > 1)
+			{
+				PosX = originalPosX + 2.0f;
+				PosY = originalPosY + 2.0f;
+				PrintString(PosX, PosY, c);
+
+				PosX = originalPosX + 2.0f;
+				PosY = originalPosY - 2.0f;
+				PrintString(PosX, PosY, c);
+
+				PosX = originalPosX - 2.0f;
+				PosY = originalPosY - 2.0f;
+				PrintString(PosX, PosY, c);
+
+				PosX = originalPosX - 2.0f;
+				PosY = originalPosY + 2.0f;
+				PrintString(PosX, PosY, c);
+			}
 
 			injector::thiscall<void(CRGBA*, uint8_t, uint8_t, uint8_t, uint8_t)>::call<0x4F8C20>(&rgba, originalColorR, originalColorG, originalColorB, originalColorA);
 			injector::cstd<void(CRGBA*)>::call<0x501BD0>(&rgba);
@@ -774,7 +767,7 @@ void ApplyINIchanges()
 	}
 
 	int IVRadarScaling = iniReader.ReadInteger("MAIN", "IVRadarScaling", 0);
-	int ReplaceTextShadowWithOutline = iniReader.ReadInteger("MAIN", "ReplaceTextShadowWithOutline", 0);
+	ReplaceTextShadowWithOutline = iniReader.ReadInteger("MAIN", "ReplaceTextShadowWithOutline", 0);
 
 	if (!fHudWidthScale || !fHudHeightScale) { fHudWidthScale = 0.62221788786f; fHudHeightScale = 0.66666670937f; }
 	if (!fRadarWidthScale) { fRadarWidthScale = 0.80354591724f; }
