@@ -3,6 +3,7 @@
 #include "..\includes\injector\injector.hpp"
 #include "..\includes\injector\hooking.hpp"
 #include "..\includes\injector\calling.hpp"
+#include "..\includes\injector\assembly.hpp"
 #include <string>
 
 float fScreenAspectRatioAcd = SCREEN_AR_ACADEMY;
@@ -210,10 +211,20 @@ int __declspec(naked)SetDropShadowPosition(short)
 }
 
 CRGBA rgba;
-float originalPosX, originalPosY, ScaleX, ScaleY;
+float originalPosX, originalPosY;
 unsigned char originalColorR, originalColorG, originalColorB, originalColorA;
 unsigned char FontDropColorR, FontDropColorG, FontDropColorB, FontDropColorA;
-short ShadPos;
+DWORD ShadPos, jmpAddr = 0x551853;
+
+void __declspec(naked) asm_TextDrawOutlineHook()
+{
+	__asm   fadd dword ptr[esp + 38h]
+	__asm   fstp dword ptr[esp]
+	__asm   mov edx, [esp + 18h]
+	__asm	mov ShadPos, edx
+	__asm   jmp jmpAddr
+}
+
 template<uintptr_t addr>
 void TextDrawOutlineHookNOP()
 {
@@ -299,16 +310,18 @@ void TextDrawOutlineHookColor()
 	using printstr_hook = injector::function_hooker<addr, void(float, float, unsigned int, unsigned short *, unsigned short *, float)>;
 	injector::make_static_hook<printstr_hook>([](printstr_hook::func_type PrintString, float PosX, float PosY, unsigned int c, unsigned short *d, unsigned short *e, float f)
 	{
-		//PrintString = injector::cstd<void(float, float, unsigned int, unsigned short *, unsigned short *, float)>::call<0x5516C0 >;
-		//ShadPos = *(short*)0x97F860;
+		//PrintString = injector::cstd<void(float, float, unsigned int, unsigned short *, unsigned short *, float)>::call<0x5516C0>;
 
-		__asm   mov edx, [esp + 1Ch]
-		__asm	mov ScaleX, edx
-		__asm	mov edx, [esp + 20h]
-		__asm	mov ScaleY, edx
-
-		originalPosX = PosX - ScaleX;
-		originalPosY = PosY - ScaleY;
+		if (ShadPos != 1 && ShadPos != 2)
+		{
+			originalPosX = PosX;
+			originalPosY = PosY;
+		}
+		else
+		{
+			originalPosX = PosX - 1.0f;
+			originalPosY = PosY - 1.0f;
+		}
 
 		PosX = originalPosX + 1.0f;
 		PosY = originalPosY + 1.0f;
@@ -1505,10 +1518,11 @@ void ApplyINIchanges()
 	{
 		#if(1)
 		//replacing original shadows
+		injector::MakeJMP(0x55184C, asm_TextDrawOutlineHook);
 		TextDrawOutlineHookColor<(0x551853)>();
 		
 		//subs
-		injector::WriteMemory<char>(0x55AE92, 0x02, true); //subs
+		injector::WriteMemory<char>(0x55AE92, 0x20, true); //special shadow size
 		injector::MakeNOP(0x557249, 5, true);
 
 		//textbox
