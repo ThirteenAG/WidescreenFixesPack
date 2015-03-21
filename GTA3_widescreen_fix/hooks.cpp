@@ -42,7 +42,7 @@ int FOVControl;
 int AspectRatioWidth, AspectRatioHeight;
 int HideAABug, SmartCutsceneBorders, nMenuFix;
 float gtaLogo128Coord1, gtaLogo128Coord2;
-int ReplaceTextShadowWithOutline;
+int IVRadarScaling, ReplaceTextShadowWithOutline;
 
 float fCustomRadarWidthIV = 101.5f;
 float fCustomRadarHeightIV = 78.0f;
@@ -53,6 +53,7 @@ float fCustomRadarRingHeightIV = 84.0f;
 float fCustomRadarRingPosXIV = 111.0f;
 float fCustomRadarRingPosYIV = 109.5f;
 float fCustomRadarRingPosXIV2 = fCustomRadarRingPosXIV - 13.0f;
+void IVRadar();
 
 void __cdecl CDraw__CalculateAspectRatio()
 {
@@ -121,9 +122,12 @@ void __cdecl CDraw__CalculateAspectRatio()
 	fCrosshairHeightScaleDown = fWideScreenHeightScaleDown * fHudWidthScale;
 
 	//IV Radar
-	fCustomRadarPosXIV = 109.0f * ((float)CLASS_pclRsGlobal->m_iScreenWidth * (1.0f / 1920.0f));
-	fCustomRadarRingPosXIV = 111.0f * ((float)CLASS_pclRsGlobal->m_iScreenWidth * (1.0f / 1920.0f));
-	fCustomRadarRingPosXIV2 = 98.0f * ((float)CLASS_pclRsGlobal->m_iScreenWidth * (1.0f / 1920.0f));
+	if (!fCustomRadarPosXIV)
+	{
+		fCustomRadarPosXIV = 109.0f * ((float)CLASS_pclRsGlobal->m_iScreenWidth * (1.0f / 1920.0f));
+		fCustomRadarRingPosXIV = 111.0f * ((float)CLASS_pclRsGlobal->m_iScreenWidth * (1.0f / 1920.0f));
+		fCustomRadarRingPosXIV2 = 98.0f * ((float)CLASS_pclRsGlobal->m_iScreenWidth * (1.0f / 1920.0f));
+	}
 
 	return;
 }
@@ -728,6 +732,26 @@ int CCamera__DrawBordersForWideScreen(int)
 
 }
 
+void IVRadar()
+{
+	fCustomRadarPosXIV = 109.0f * ((float)CLASS_pclRsGlobal->m_iScreenWidth * (1.0f / 1920.0f));
+	fCustomRadarRingPosXIV = 111.0f * ((float)CLASS_pclRsGlobal->m_iScreenWidth * (1.0f / 1920.0f));
+	fCustomRadarRingPosXIV2 = 98.0f * ((float)CLASS_pclRsGlobal->m_iScreenWidth * (1.0f / 1920.0f));
+
+	CPatch::SetPointer(0x4A505B + 0x2, &fCustomRadarWidthIV); //CRadar__DrawRadarMask
+	CPatch::SetPointer(0x4A5093 + 0x2, &fCustomRadarHeightIV); //CRadar__DrawRadarMask
+	CPatch::SetPointer(0x4A5075 + 0x2, &fCustomRadarPosXIV);
+	CPatch::SetPointer(0x4A50B0 + 0x2, &fCustomRadarPosYIV);
+
+	CPatch::SetFloat(0x5FDC70, fCustomRadarRingWidthIV);
+	CPatch::SetFloat(0x5FDC68, fCustomRadarRingHeightIV);
+
+	CPatch::SetPointer(0x50845F + 0x2, &fCustomRadarRingPosXIV);
+	CPatch::SetPointer(0x508481 + 0x2, &fCustomRadarRingPosXIV2);
+
+	CPatch::SetPointer(0x508433 + 0x2, &fCustomRadarRingPosYIV);
+}
+
 void ApplyINIchanges()
 {
 	CIniReader iniReader("GTAIII_widescreen_fix.ini");
@@ -766,7 +790,7 @@ void ApplyINIchanges()
 		CPatch::SetUInt(0x004F94A6, 0x005EC9BC); //car lights stretch
 	}
 
-	int IVRadarScaling = iniReader.ReadInteger("MAIN", "IVRadarScaling", 0);
+	IVRadarScaling = iniReader.ReadInteger("MAIN", "IVRadarScaling", 0);
 	ReplaceTextShadowWithOutline = iniReader.ReadInteger("MAIN", "ReplaceTextShadowWithOutline", 0);
 
 	if (!fHudWidthScale || !fHudHeightScale) { fHudWidthScale = 0.62221788786f; fHudHeightScale = 0.66666670937f; }
@@ -1031,18 +1055,7 @@ void ApplyINIchanges()
 
 	if (IVRadarScaling)
 	{
-		CPatch::SetPointer(0x4A505B + 0x2, &fCustomRadarWidthIV); //CRadar__DrawRadarMask
-		CPatch::SetPointer(0x4A5093 + 0x2, &fCustomRadarHeightIV); //CRadar__DrawRadarMask
-		CPatch::SetPointer(0x4A5075 + 0x2, &fCustomRadarPosXIV);
-		CPatch::SetPointer(0x4A50B0 + 0x2, &fCustomRadarPosYIV);
-
-		CPatch::SetFloat(0x5FDC70, fCustomRadarRingWidthIV);
-		CPatch::SetFloat(0x5FDC68, fCustomRadarRingHeightIV);
-
-		CPatch::SetPointer(0x50845F + 0x2, &fCustomRadarRingPosXIV);
-		CPatch::SetPointer(0x508481 + 0x2, &fCustomRadarRingPosXIV2);
-
-		CPatch::SetPointer(0x508433 + 0x2, &fCustomRadarRingPosYIV);
+		IVRadar();
 	}
 
 	if (ReplaceTextShadowWithOutline)

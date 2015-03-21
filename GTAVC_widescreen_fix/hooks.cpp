@@ -40,7 +40,7 @@ char *szFOVControl;
 int FOVControl;
 int AspectRatioWidth, AspectRatioHeight;
 int HideAABug, SmartCutsceneBorders;
-int ReplaceTextShadowWithOutline;
+int IVRadarScaling, ReplaceTextShadowWithOutline;
 
 float fCustomRadarWidthIV = 102.0f;
 float fCustomRadarHeightIV = 79.0f;
@@ -51,6 +51,7 @@ float fCustomRadarRingHeightIV = 83.0f;
 float fCustomRadarRingPosXIV = 98.0f;
 float fCustomRadarRingPosYIV = 109.5f;
 float fCustomRadarRingPosXIV2 = fCustomRadarRingPosXIV - 19.0f;
+void IVRadar();
 
 long double __cdecl CDraw__CalculateAspectRatio()
 {
@@ -113,11 +114,6 @@ long double __cdecl CDraw__CalculateAspectRatio()
 
 	//Proportional elements
 	fCrosshairHeightScaleDown = fWideScreenHeightScaleDown * fHudWidthScale;
-
-	//IV Radar
-	fCustomRadarPosXIV = 109.0f * ((float)CLASS_pclRsGlobal->m_iScreenWidth * (1.0f / 1920.0f));
-	fCustomRadarRingPosXIV = 98.0f * ((float)CLASS_pclRsGlobal->m_iScreenWidth * (1.0f / 1920.0f));
-	fCustomRadarRingPosXIV2 = 116.0f * ((float)CLASS_pclRsGlobal->m_iScreenWidth * (1.0f / 1920.0f));
 
 	return fDynamicScreenFieldOfViewScale;
 }
@@ -1129,6 +1125,10 @@ void MenuFix()
 void __declspec(naked)RsSelectDeviceHook()
 {
 	MenuFix();
+	if (IVRadarScaling)
+	{
+		IVRadar();
+	}
 	_asm
 	{
 		add     esp, 10h
@@ -1210,6 +1210,31 @@ int CCamera__DrawBordersForWideScreen(int)
 		
 }
 
+void IVRadar()
+{
+	fCustomRadarPosXIV = 109.0f * ((float)CLASS_pclRsGlobal->m_iScreenWidth * (1.0f / 1920.0f));
+	fCustomRadarRingPosXIV = 98.0f * ((float)CLASS_pclRsGlobal->m_iScreenWidth * (1.0f / 1920.0f));
+	fCustomRadarRingPosXIV2 = 116.0f * ((float)CLASS_pclRsGlobal->m_iScreenWidth * (1.0f / 1920.0f));
+
+	fPlayerMarkerPos = fCustomRadarRingWidthIV * fRadarWidthScale;
+
+	CPatch::SetFloat(0x68FD24, fCustomRadarWidthIV);
+	CPatch::SetFloat(0x68FD30, fCustomRadarHeightIV);
+	CPatch::SetFloat(0x68FD2C, fCustomRadarPosXIV); CPatch::SetPointer(0x4C2996 + 0x2, (void*)0x690238); //+draw you are here sprite fix
+	CPatch::SetFloat(0x68FD34, fCustomRadarPosYIV); CPatch::SetPointer(0x4C29CB + 0x2, (void*)0x690238);
+
+	CPatch::SetPointer(0x55A9A6 + 0x2, &fCustomRadarRingWidthIV);
+	CPatch::SetPointer(0x55AADF + 0x2, &fCustomRadarRingWidthIV);
+	CPatch::SetPointer(0x55A9BF + 0x2, &fCustomRadarRingHeightIV);
+	CPatch::SetPointer(0x55AAF8 + 0x2, &fCustomRadarRingHeightIV);
+	CPatch::SetFloat(0x55A956, fCustomRadarRingPosXIV);
+	CPatch::SetPointer(0x55A9AC + 0x2, &fCustomRadarRingPosXIV2);
+	CPatch::SetFloat(0x55AA94, fCustomRadarRingPosXIV);
+	CPatch::SetPointer(0x55AAE5 + 0x2, &fCustomRadarRingPosXIV2);
+
+	CPatch::SetFloat(0x697C18, fCustomRadarRingPosYIV);
+}
+
 void ApplyINIchanges()
 {
 	CIniReader iniReader("GTAVC_widescreen_fix.ini");
@@ -1252,7 +1277,7 @@ void ApplyINIchanges()
 		CPatch::SetFloat(0x69590C, 3.0f); //car lights stretch
 	}
 
-	int IVRadarScaling = iniReader.ReadInteger("MAIN", "IVRadarScaling", 0);
+	IVRadarScaling = iniReader.ReadInteger("MAIN", "IVRadarScaling", 0);
 	ReplaceTextShadowWithOutline = iniReader.ReadInteger("MAIN", "ReplaceTextShadowWithOutline", 0);
 
 	if (!fHudWidthScale || !fHudHeightScale) { fHudWidthScale = 0.62221788786f; fHudHeightScale = 0.66666670937f; }
@@ -1460,25 +1485,9 @@ void ApplyINIchanges()
 		CPatch::SetPointer(CHud__Draw + 0x37B9 + 0x2, &fCustomRadarWidthScale);
 	}
 
-	if (IVRadarScaling) //iv radar
+	if (IVRadarScaling)
 	{
-		fPlayerMarkerPos = fCustomRadarRingWidthIV * fRadarWidthScale;
-
-		CPatch::SetFloat(0x68FD24, fCustomRadarWidthIV);
-		CPatch::SetFloat(0x68FD30, fCustomRadarHeightIV);
-		CPatch::SetFloat(0x68FD2C, fCustomRadarPosXIV); CPatch::SetPointer(0x4C2996 + 0x2, (void*)0x690238); //+draw you are here sprite fix
-		CPatch::SetFloat(0x68FD34, fCustomRadarPosYIV); CPatch::SetPointer(0x4C29CB + 0x2, (void*)0x690238);
-
-		CPatch::SetPointer(0x55A9A6 + 0x2, &fCustomRadarRingWidthIV);
-		CPatch::SetPointer(0x55AADF + 0x2, &fCustomRadarRingWidthIV);
-		CPatch::SetPointer(0x55A9BF + 0x2, &fCustomRadarRingHeightIV);
-		CPatch::SetPointer(0x55AAF8 + 0x2, &fCustomRadarRingHeightIV);
-		CPatch::SetFloat(0x55A956, fCustomRadarRingPosXIV);
-		CPatch::SetPointer(0x55A9AC + 0x2, &fCustomRadarRingPosXIV2);
-		CPatch::SetFloat(0x55AA94, fCustomRadarRingPosXIV);
-		CPatch::SetPointer(0x55AAE5 + 0x2, &fCustomRadarRingPosXIV2);
-
-		CPatch::SetFloat(0x697C18, fCustomRadarRingPosYIV);
+		IVRadar();
 	}
 
 	if (HideAABug)
