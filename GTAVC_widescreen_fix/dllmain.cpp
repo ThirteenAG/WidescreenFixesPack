@@ -6,6 +6,37 @@
 #define GTA_VC_STEAM     0xF04F883
 DWORD WINAPI PatchSteamExe(LPVOID);
 
+DWORD WINAPI SPHandler(LPVOID)
+{
+	static int i;
+	do
+	{
+		Sleep(100);
+		i++;
+		if (i > 100)
+			break;
+
+	} while (GetModuleHandle("SilentPatchVC.asi") == NULL);
+
+	if (GetModuleHandle("SilentPatchVC.asi"))
+	{
+		CPatch::SetUChar(0x5516FB, 0x89);
+		CPatch::SetUInt(0x5516FC, 0x04DB2404);
+		CPatch::SetUInt(0x5516FC + 4, 0xC81DD824);
+
+		CPatch::SetUChar(0x5517C4, 0xDB);
+		CPatch::SetUChar(0x5517DF, 0xDB);
+		CPatch::SetUChar(0x551832, 0xDB);
+		CPatch::SetUChar(0x551848, 0xDB);
+		CPatch::SetUChar(0x5517E2, 0x18);
+		CPatch::SetUChar(0x55184B, 0x18);
+		CPatch::SetUChar(0x5517C7, 0x0C);
+		CPatch::SetUChar(0x551835, 0x08);
+	}
+
+	return 0;
+}
+
 DWORD WINAPI MVLScopeFix(LPVOID)
 {
 	static int i;
@@ -75,6 +106,9 @@ void Init()
 
 		//INI
 		ApplyINIchanges();
+
+		//SilenPatch
+		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&SPHandler, NULL, 0, NULL);
 
 		//MVL
 		if (MVLScopeFix) { CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&MVLScopeFix, NULL, 0, NULL); }
