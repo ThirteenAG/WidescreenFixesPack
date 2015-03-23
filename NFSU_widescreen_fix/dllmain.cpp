@@ -1,78 +1,104 @@
 #include "stdafx.h"
 #include "stdio.h"
 #include <windows.h>
-#include "..\includes\CPatch.h"
+#include "..\includes\injector\injector.hpp"
 #include "..\includes\IniReader.h"
 
 HWND hWnd;
 
-int hud_patch;
-int res_x;
-int res_y;
-float FOV_hor, FOV_ver, HUD_scale;
+bool HudFix;
+bool DisableCutsceneBorders;
+int ResX;
+int ResY;
+float horFOV, verFOV, HUDscale;
 DWORD WINAPI hud_handler(LPVOID);
 
 void Init()
 {
 	CIniReader iniReader("nfsu_res.ini");
-	res_x = iniReader.ReadInteger("MAIN", "X", 0);
-	res_y = iniReader.ReadInteger("MAIN", "Y", 0);
-	hud_patch = iniReader.ReadInteger("MAIN", "HUD_PATCH", 0);
-	FOV_hor = iniReader.ReadFloat("MAIN", "FOV_hor", 1.1f);
-	FOV_ver = iniReader.ReadFloat("MAIN", "FOV_ver", 0.90909088f);
-	HUD_scale = iniReader.ReadFloat("MAIN", "HUD_scale", 1.0f);
-	if (!HUD_scale) { HUD_scale = 1.0f; }
+	ResX = iniReader.ReadInteger("MAIN", "ResX", 0);
+	ResY = iniReader.ReadInteger("MAIN", "ResY", 0);
+	HudFix = iniReader.ReadInteger("MAIN", "HudFix", 1) == 1;
+	horFOV = iniReader.ReadFloat("MAIN", "horFOV", 0.0f);
+	verFOV = iniReader.ReadFloat("MAIN", "verFOV", 0.0f);
+	HUDscale = iniReader.ReadFloat("MAIN", "HUDscale", 1.0f);
+	DisableCutsceneBorders = iniReader.ReadInteger("MAIN", "DisableCutsceneBorders", 1) == 1;
 
-	if (!res_x || !res_y) {
+	if (!HUDscale) { HUDscale = 1.0f; }
+
+	if (!ResX || !ResY) {
 		HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
 		MONITORINFO info;
 		info.cbSize = sizeof(MONITORINFO);
 		GetMonitorInfo(monitor, &info);
-		res_x = info.rcMonitor.right - info.rcMonitor.left;
-		res_y = info.rcMonitor.bottom - info.rcMonitor.top;
+		ResX = info.rcMonitor.right - info.rcMonitor.left;
+		ResY = info.rcMonitor.bottom - info.rcMonitor.top;
 	}
 
 	//menu
-	CPatch::SetInt(0x408A25, res_x);
-	CPatch::SetInt(0x408A2A, res_y);
+	injector::WriteMemory(0x408A25, ResX, true);
+	injector::WriteMemory(0x408A2A, ResY, true);
 
-	CPatch::SetInt(0x4494C5, res_x);
-	CPatch::SetInt(0x4494CA, res_y);
+	injector::WriteMemory(0x4494C5, ResX, true);
+	injector::WriteMemory(0x4494CA, ResY, true);
 
 	//game
-	CPatch::SetInt(0x408783, res_x);
-	CPatch::SetInt(0x408796, res_x);
-	CPatch::SetInt(0x4087AF, res_x);
-	CPatch::SetInt(0x4087C8, res_x);
-	CPatch::SetInt(0x4087E1, res_x);
-	//CPatch::SetInt(0x4087FA, res_x);
+	injector::WriteMemory(0x408783, ResX, true);
+	injector::WriteMemory(0x408796, ResX, true);
+	injector::WriteMemory(0x4087AF, ResX, true);
+	injector::WriteMemory(0x4087C8, ResX, true);
+	injector::WriteMemory(0x4087E1, ResX, true);
+	//injector::WriteMemory(0x4087FA, ResX, true);
 
-	CPatch::SetInt(0x408788, res_y);
-	CPatch::SetInt(0x40879B, res_y);
-	CPatch::SetInt(0x4087B4, res_y);
-	CPatch::SetInt(0x4087CD, res_y);
-	CPatch::SetInt(0x4087E6, res_y);
-	//CPatch::SetInt(0x4087FF, res_y);
+	injector::WriteMemory(0x408788, ResY, true);
+	injector::WriteMemory(0x40879B, ResY, true);
+	injector::WriteMemory(0x4087B4, ResY, true);
+	injector::WriteMemory(0x4087CD, ResY, true);
+	injector::WriteMemory(0x4087E6, ResY, true);
+	//injector::WriteMemory(0x4087FF, ResY, true);
 
-	if (hud_patch)
-	{
-		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&hud_handler, NULL, 0, NULL);
-	}
+		//HUD
+		if (HudFix)
+		{
+			//CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&hud_handler, NULL, 0, NULL);
 
-	if (FOV_hor && FOV_ver)
-	{
-		CPatch::SetFloat(0x6B7C70, FOV_hor);
-		CPatch::SetFloat(0x6B7C74, FOV_hor);
-		CPatch::SetFloat(0x6B7C6C, FOV_ver);
-	}
+			float hud_multiplier_x = (1.0f / ResX * (ResY / 480.0f)) * 2.0f;
+			float hud_position_x = 640.0f / (640.0f * hud_multiplier_x);
+
+			injector::WriteMemory<float>(0x6CC914, hud_multiplier_x, true);
+			//CPatch::SetFloat(0x79AC14, hud_multiplier_y);
+
+			injector::WriteMemory<float>(0x400000 + 0xF1E2D, hud_position_x, true);
+			injector::WriteMemory<float>(0x400000 + 0xF20A3, hud_position_x, true);
+			injector::WriteMemory<float>(0x400000 + 0xF232F, hud_position_x, true);
+			injector::WriteMemory<float>(0x400000 + 0xF26E5, hud_position_x, true);
+			injector::WriteMemory<float>(0x400000 + 0xF28AF, hud_position_x, true);
+			injector::WriteMemory<float>(0x400000 + 0xF3147, hud_position_x, true);
+			injector::WriteMemory<float>(0x400000 + 0x14646B, hud_position_x, true);
+			injector::WriteMemory<float>(0x400000 + 0x2CC910, hud_position_x, true);
+			injector::WriteMemory<float>(0x400000 + 0x2EADCC, hud_position_x, true);
+			injector::WriteMemory<float>(0x400000 + 0x2EFC48, hud_position_x, true);
+			injector::WriteMemory<float>(0x400000 + 0x379CC0, hud_position_x, true);
+			injector::WriteMemory<float>(0x400000 + 0x379E20, hud_position_x, true);
+
+
+			//injector::WriteMemory<float>(0x797D58, hud_position_x * 2.0f);
+		}
+
+		if (horFOV && verFOV)
+		{
+			injector::WriteMemory<float>(0x6B7C70, horFOV, true);
+			injector::WriteMemory<float>(0x6B7C74, horFOV, true);
+			injector::WriteMemory<float>(0x6B7C6C, verFOV, true);
+		}
 
 }
 
 
 DWORD WINAPI hud_handler(LPVOID)
 {
-	float hud_multiplier_x = (1.0f / (float)res_x * 2.0f) * HUD_scale;
-	float hud_multiplier_y = (1.0f / (float)res_y * 2.0f) * HUD_scale;
+	float hud_multiplier_x = (1.0f / (float)ResX * 2.0f) * HUDscale;
+	float hud_multiplier_y = (1.0f / (float)ResY * 2.0f) * HUDscale;
 
 	float orig_multiplier_x = 1.0f / 640.0f * 2.0f;
 	float orig_multiplier_y = 1.0f / 480.0f * 2.0f;
@@ -80,72 +106,19 @@ DWORD WINAPI hud_handler(LPVOID)
 	while (true)
 	{
 		Sleep(0);
-		/*!!!!!!!!/*if (!((int)*(DWORD*)0x701038 == res_y)) {
-			patch(0x701034, &res_x, 4);
-			patch(0x71A96C, &res_x, 4);
-			patch(0x71AA44, &res_x, 4);
-			patch(0x71AA60, &res_x, 4);
-			patch(0x71AA98, &res_x, 4);
-
-			patch(0x701038, &res_y, 4);
-			patch(0x71A970, &res_y, 4);
-			patch(0x71AA48, &res_y, 4);
-			patch(0x71AA64, &res_y, 4);
-			patch(0x71AA9C, &res_y, 4);
-		}*//**/
-
-		/*changePointer(0x408410+0x103, &res_x, 2);
-		changePointer(0x408830+0x115, &res_x, 2);
-		changePointer(0x40A890+0xA6, &res_x, 2);
-		changePointer(0x40AA99, &res_x, 1);
-		changePointer(0x40CB80, &res_x, 1);
-		changePointer(0x40CB80+0xF7, &res_x, 2);
-		changePointer(0x40DCB0+0x2B, &res_x, 1);
-		changePointer(0x42F020+0x86, &res_x, 2);
-
-
-
-
-		changePointer(0x408410+0x10A, &res_y, 2);
-		changePointer(0x408830+0x11B, &res_y, 2);
-		changePointer(0x40A890+0x9B, &res_y, 2);
-		changePointer(0x40AA20+0x7E, &res_y, 2);
-		changePointer(0x40CB80+0x11, &res_y, 1);
-		changePointer(0x40CB80+0xEC, &res_y, 2);
-		changePointer(0x42F020+0x7E, &res_y, 2); */
-		//Sleep(1000);
-		//nop(0x40872D, 6);
-		//nop(0x4086BD, 5);
-		//nop(0x408727, 6);
-		//nop(0x40AAA4, 3);
-		//nop(0x40856D, 3);
-		//nop(0x40AAA4, 3);
-		//nop(0x40AAA4, 3);
-
-		//nop(0x408754, 6);
-		//nop(0x4086BD, 5);
-		//nop(0x408733, 6);
-		//nop(0x40AAAC, 3);
-		//nop(0x408570, 3);
-		//nop(0x40AAAC, 3);
-		//nop(0x40AAAC, 3);
-		//HUD
-
-			if ((unsigned int)*(DWORD*)0x713D00 == 0) 
-			{
-				CPatch::SetFloat(0x6CC914, hud_multiplier_x);
-				CPatch::SetFloat(0x6CCBA4, hud_multiplier_y);
-			}
-			else 
-			{
-				CPatch::SetFloat(0x6CC914, orig_multiplier_x);
-				CPatch::SetFloat(0x6CCBA4, orig_multiplier_y);
-			}
-
+		if ((unsigned int)*(DWORD*)0x816204 == 0) 
+		{
+			injector::WriteMemory<float>(0x79AC10, hud_multiplier_x);
+			injector::WriteMemory<float>(0x79AC14, hud_multiplier_y);
 		}
+		else 
+		{
+			injector::WriteMemory<float>(0x79AC10, orig_multiplier_x);
+			injector::WriteMemory<float>(0x79AC14, orig_multiplier_y);
+		}
+	}
 	return 0;
 }
-
 
 BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
