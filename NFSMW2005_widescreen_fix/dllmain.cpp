@@ -7,7 +7,6 @@
 HWND hWnd;
 
 bool HudFix;
-bool DisableCutsceneBorders;
 int ResX;
 int ResY;
 float horFOV, verFOV, HUDscale;
@@ -24,7 +23,6 @@ void Init()
 	horFOV = iniReader.ReadFloat("MAIN", "horFOV", 0.0f);
 	verFOV = iniReader.ReadFloat("MAIN", "verFOV", 0.0f);
 	HUDscale = iniReader.ReadFloat("MAIN", "HUDscale", 1.0f);
-	DisableCutsceneBorders = iniReader.ReadInteger("MAIN", "DisableCutsceneBorders", 1) == 1;
 
 	if (!HUDscale) { HUDscale = 1.0f; }
 
@@ -130,9 +128,6 @@ void Init()
 			injector::WriteMemory<float>(0x400000 + 0x19A845, hud_position_x, true);
 			injector::WriteMemory<float>(0x400000 + 0x1A44CC, hud_position_x, true);
 			injector::WriteMemory<float>(0x400000 + 0x494B40, hud_position_x, true);
-			injector::WriteMemory<float>(0x400000 + 0x4D43AE, hud_position_x, true);
-			injector::WriteMemory<float>(0x400000 + 0x4EFFC4, hud_position_x, true);
-			injector::WriteMemory<float>(0x400000 + 0x50CF6C, hud_position_x, true);
 
 			//mirror position fix
 			injector::WriteMemory<float>(0x6E70C0, ((640.0f / (640.0f * hud_multiplier_x)) + 130.0f), true);
@@ -141,16 +136,9 @@ void Init()
 			injector::WriteMemory<float>(0x6E70E9, ((640.0f / (640.0f * hud_multiplier_x)) - 130.0f), true);
 		}
 
-		if (DisableCutsceneBorders)
-		{
-			/*injector::WriteMemory<float>(0x5CBEF5, 0.0f, true); // borders
-			injector::WriteMemory<float>(0x5CBF05, 0.0f, true);
-			injector::WriteMemory<float>(0x5CBE89, 0.0f, true);
-			injector::WriteMemory<float>(0x5CBEA1, 0.0f, true);*/
-		}
-
 		if (horFOV && verFOV)
 		{
+			6CF5A0
 			injector::WriteMemory(0x6CF50F + 2, &horFOV);
 			injector::WriteMemory(0x6CF53A + 2, &verFOV);
 			injector::WriteMemory(0x6CF578 + 2, &verFOV);

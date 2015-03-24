@@ -76,13 +76,6 @@ void Init()
 			injector::WriteMemory<float>(0x400000 + 0xF3147, hud_position_x, true);
 			injector::WriteMemory<float>(0x400000 + 0x14646B, hud_position_x, true);
 			injector::WriteMemory<float>(0x400000 + 0x2CC910, hud_position_x, true);
-			injector::WriteMemory<float>(0x400000 + 0x2EADCC, hud_position_x, true);
-			injector::WriteMemory<float>(0x400000 + 0x2EFC48, hud_position_x, true);
-			injector::WriteMemory<float>(0x400000 + 0x379CC0, hud_position_x, true);
-			injector::WriteMemory<float>(0x400000 + 0x379E20, hud_position_x, true);
-
-
-			//injector::WriteMemory<float>(0x797D58, hud_position_x * 2.0f);
 		}
 
 		if (horFOV && verFOV)
@@ -90,6 +83,15 @@ void Init()
 			injector::WriteMemory<float>(0x6B7C70, horFOV, true);
 			injector::WriteMemory<float>(0x6B7C74, horFOV, true);
 			injector::WriteMemory<float>(0x6B7C6C, verFOV, true);
+		}
+		else
+		{
+			//16:9 excluisve fov hack
+			if ((float)ResX / (float)ResY == 16.0f/9.0f)
+			{
+				injector::WriteMemory<float>(0x40DE5C, (1.0f * ((float)ResX / (float)ResY)) / (4.0f / 3.0f), true);
+				injector::WriteMemory<float>(0x6B7C6C, 0.90909088f / 1.05f, true);
+			}
 		}
 
 }
