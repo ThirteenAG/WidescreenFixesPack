@@ -30,6 +30,7 @@ float fCustomWideScreenHeightScaleDown;
 float fRadarWidthScale, fCustomRadarWidthScale, fCustomRadarRingWidthScale, fCustomRadarRingHeightScale, fSubtitlesScale;
 float fCrosshairHeightScaleDown;
 int nMenuAlignment;
+int SelectedMultisamplingLevels;
 int RestoreCutsceneFOV;
 float fPlayerMarkerPos;
 float fTextShadowsSize;
@@ -760,6 +761,17 @@ void ApplyINIchanges()
 	fRadarWidthScale = iniReader.ReadFloat("MAIN", "RadarWidthScale", 0.80354591724f);
 	fSubtitlesScale = iniReader.ReadFloat("MAIN", "SubtitlesScale", 1.0f);
 	nMenuFix = iniReader.ReadInteger("MAIN", "MenuFix", 1);
+
+	szForceAspectRatio = iniReader.ReadString("MAIN", "ForceMultisamplingLevel", "");
+	if (strncmp(szForceAspectRatio, "max", 3) != 0)
+	{
+		SelectedMultisamplingLevels = iniReader.ReadInteger("MAIN", "ForceMultisamplingLevel", 0);
+		CPatch::SetPointer(0x5B7D75 + 0x1, &SelectedMultisamplingLevels);
+	}
+	else
+	{
+		CPatch::SetPointer(0x5B7D75 + 0x1, (void*)0x619468);
+	}
 
 	int SmallerTextShadows = iniReader.ReadInteger("MAIN", "SmallerTextShadows", 1);
 
