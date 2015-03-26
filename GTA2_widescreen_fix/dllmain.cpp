@@ -6,13 +6,13 @@ HWND hWnd;
 DWORD jmpAddress;
 void asm_patch();
 DWORD res_x;
-DWORD res_y;
+DWORD res_y, res_y43;
 
 DWORD WINAPI Thread(LPVOID)
 {
 	CIniReader iniReader("gta2_res.ini");
-	res_x = iniReader.ReadInteger("MAIN", "X", 640);
-	res_y = iniReader.ReadInteger("MAIN", "Y", 480);
+	res_x = iniReader.ReadInteger("MAIN", "X", 0);
+	res_y = iniReader.ReadInteger("MAIN", "Y", 0);
 
 
 	if (!res_x || !res_y) {
@@ -23,49 +23,65 @@ DWORD WINAPI Thread(LPVOID)
 		res_x = info.rcMonitor.right - info.rcMonitor.left;
 		res_y = info.rcMonitor.bottom - info.rcMonitor.top;
 	}
+	res_y43 = static_cast<DWORD>((res_x / (4.0f / 3.0f)) - res_y);
+
+	CPatch::SetUInt(0x4C94A1, res_y43); //subs
+
+	CPatch::SetPointer(0x4BAD1E, &res_x); // = 0x673578 + 0x0  -> mov     eax, window_width
+	CPatch::SetPointer(0x4BADAF, &res_x); // = 0x673578 + 0x0  -> mov     eax, window_width
+	CPatch::SetPointer(0x4BAE58, &res_x); // = 0x673578 + 0x0  -> mov     edx, window_width
+	CPatch::SetPointer(0x4BAF13, &res_x); // = 0x673578 + 0x0  -> mov     eax, window_width
+	CPatch::SetPointer(0x4CAEF3, &res_x); // = 0x673578 + 0x0  -> mov     eax, window_width
+	CPatch::SetPointer(0x4CB166, &res_x); // = 0x673578 + 0x0  -> mov     eax, window_width
+	CPatch::SetPointer(0x4CB182, &res_x); // = 0x673578 + 0x0  -> mov     eax, window_width
+	CPatch::SetPointer(0x4CB294, &res_x); // = 0x673578 + 0x0  -> mov     eax, window_width
+	//CPatch::SetPointer(0x4CB2D7, &res_x); // = 0x673578 + 0x0  -> mov     window_width, ecx
+	//CPatch::SetPointer(0x4CB30C, &res_x); // = 0x673578 + 0x0  -> mov     window_width, eax
+	CPatch::SetPointer(0x4CB3B7, &res_x); // = 0x673578 + 0x0  -> mov     eax, window_width
+	CPatch::SetPointer(0x4CB7DE, &res_x); // = 0x673578 + 0x0  -> mov     eax, window_width
+	CPatch::SetPointer(0x4CB8D4, &res_x); // = 0x673578 + 0x0  -> mov     ecx, window_width
+	CPatch::SetPointer(0x4CC613, &res_x); // = 0x673578 + 0x0  -> mov     ecx, window_width
+	//CPatch::SetPointer(0x4CC621, &res_x); // = 0x673578 + 0x0  -> mov     window_width, eax
+	CPatch::SetPointer(0x4CC63A, &res_x); // = 0x673578 + 0x0  -> mov     ecx, window_width
+	CPatch::SetPointer(0x4D135F, &res_x); // = 0x673578 + 0x0  -> mov     edi, window_width
+
+	CPatch::SetPointer(0x4BAD48, &res_y); // = 0x6732E8 + 0x0  -> mov     ecx, window_height
+	CPatch::SetPointer(0x4BADD9, &res_y); // = 0x6732E8 + 0x0  -> mov     ecx, window_height
+	CPatch::SetPointer(0x4BAE81, &res_y); // = 0x6732E8 + 0x0  -> mov     eax, window_height
+	CPatch::SetPointer(0x4BAF44, &res_y); // = 0x6732E8 + 0x0  -> mov     edx, window_height
+	CPatch::SetPointer(0x4CAEF9, &res_y); // = 0x6732E8 + 0x0  -> mov     ecx, window_height
+	CPatch::SetPointer(0x4CB176, &res_y); // = 0x6732E8 + 0x0  -> mov     edx, window_height
+	CPatch::SetPointer(0x4CB29A, &res_y); // = 0x6732E8 + 0x0  -> mov     ecx, window_height
+	//CPatch::SetPointer(0x4CB2DC, &res_y); // = 0x6732E8 + 0x0  -> mov     window_height, eax
+	//CPatch::SetPointer(0x4CB325, &res_y); // = 0x6732E8 + 0x0  -> mov     window_height, eax
+	CPatch::SetPointer(0x4CB3C5, &res_y); // = 0x6732E8 + 0x0  -> mov     ecx, window_height
+	CPatch::SetPointer(0x4CB7BE, &res_y); // = 0x6732E8 + 0x0  -> mov     edx, window_height
+	CPatch::SetPointer(0x4CB8DF, &res_y); // = 0x6732E8 + 0x0  -> mov     eax, window_height
+	//CPatch::SetPointer(0x4CC627, &res_y); // = 0x6732E8 + 0x0  -> mov     window_height, 1E0h
+	CPatch::SetPointer(0x4CC650, &res_y); // = 0x6732E8 + 0x0  -> mov     edx, window_height
+	CPatch::SetPointer(0x4D138B, &res_y); // = 0x6732E8 + 0x0  -> mov     ecx, window_height
 
 
-	/*CPatch::SetInt(0x4CB2E9, 1080);
-	CPatch::SetInt(0x4CB316, 1080);
+	CPatch::SetPointer(0x4CB2A1, &res_x); // = 0x6732E4 + 0x0  -> mov     ebx, full_width
+	//CPatch::SetPointer(0x4CB2E2, &res_x); // = 0x6732E4 + 0x0  -> mov     full_width, ecx
+	//CPatch::SetPointer(0x4CB33E, &res_x); // = 0x6732E4 + 0x0  -> mov     full_width, eax
+	//CPatch::SetPointer(0x4CB3A0, &res_x); // = 0x6732E4 + 0x0  -> cmp     full_width, ebx
+	CPatch::SetPointer(0x4CB577, &res_x); // = 0x6732E4 + 0x0  -> mov     ecx, full_width
+	CPatch::SetPointer(0x4CB598, &res_x); // = 0x6732E4 + 0x0  -> mov     ecx, full_width
+	//CPatch::SetPointer(0x4CB5AD, &res_x); // = 0x6732E4 + 0x0  -> mov     full_width, eax
+	CPatch::SetPointer(0x4CB5D8, &res_x); // = 0x6732E4 + 0x0  -> mov     edx, full_width
+	CPatch::SetPointer(0x4CB695, &res_x); // = 0x6732E4 + 0x0  -> mov     eax, full_width
 
-	CPatch::SetInt(0x4CB2FD, 1920);
-	CPatch::SetInt(0x4CB32F, 1920);*/
+	CPatch::SetPointer(0x4CB2B1, &res_y); // = 0x6732E0 + 0x0  -> mov     ebp, full_height
+	//CPatch::SetPointer(0x4CB354, &res_y); // = 0x6732E0 + 0x0  -> mov     full_height, eax
+	//CPatch::SetPointer(0x4CB3A8, &res_y); // = 0x6732E0 + 0x0  -> cmp     full_height, ebp
+	CPatch::SetPointer(0x4CB571, &res_y); // = 0x6732E0 + 0x0  -> mov     eax, full_height
+	//CPatch::SetPointer(0x4CB5BC, &res_y); // = 0x6732E0 + 0x0  -> mov     full_height, 1E0h
+	CPatch::SetPointer(0x4CB5D2, &res_y); // = 0x6732E0 + 0x0  -> mov     ecx, full_height
+	CPatch::SetPointer(0x4CB6AB, &res_y); // = 0x6732E0 + 0x0  -> mov     ecx, full_height
 
-	CPatch::SetPointer(0x4CB290 + 0xF + 0x2, &res_x); //     ebx, width
-	CPatch::SetPointer(0x4CB290 + 0x10E + 0x2, &res_x); //     width, ebx
-	CPatch::SetPointer(0x4CB570 + 0x5 + 0x2, &res_x); //     ecx, width
-	CPatch::SetPointer(0x4CB570 + 0x26 + 0x2, &res_x); //     ecx, width
-	CPatch::SetPointer(0x4CB570 + 0x66 + 0x2, &res_x); //     edx, width
-	CPatch::SetPointer(0x4CB570 + 0x124 + 0x1, &res_x); //     eax, width
-	CPatch::SetPointer(0x4BACF0 + 0x2D + 0x1, &res_x); //     eax, width1
-	CPatch::SetPointer(0x4BACF0 + 0xBE + 0x1, &res_x); //     eax, width1
-	CPatch::SetPointer(0x4BACF0 + 0x166 + 0x2, &res_x); //     edx, width1
-	CPatch::SetPointer(0x4BAEF0 + 0x22 + 0x1, &res_x); //     eax, width1
-	CPatch::SetPointer(0x4CAEC0 + 0x32 + 0x1, &res_x); //     eax, width1
-	CPatch::SetPointer(0x4CB150 + 0x15 + 0x1, &res_x); //     eax, width1
-	CPatch::SetPointer(0x4CB150 + 0x31 + 0x1, &res_x); //     eax, width1
-	CPatch::SetPointer(0x4CB290 + 0x3 + 0x1, &res_x); //     eax, width1
-	CPatch::SetPointer(0x4CB290 + 0x126 + 0x1, &res_x); //     eax, width1
-	CPatch::SetPointer(0x4CB730 + 0xAD + 0x1, &res_x); //     eax, width1
-	CPatch::SetPointer(0x4CB8D2 + 0x2, &res_x); //     ecx, width1
-	CPatch::SetPointer(0x4CC5C0 + 0x51 + 0x2, &res_x); //     ecx, width1
-	CPatch::SetPointer(0x4CC5C0 + 0x78 + 0x2, &res_x); //     ecx, width1
-	CPatch::SetPointer(0x4D1170 + 0x1ED + 0x2, &res_x); //     edi, width1
-
-
-	CPatch::SetPointer(0x4BACF0 + 0x56 + 0x2, &res_y); //     ecx, height 
-	CPatch::SetPointer(0x4BACF0 + 0xE7 + 0x2, &res_y); //     ecx, height 
-	CPatch::SetPointer(0x4BACF0 + 0x190 + 0x1, &res_y); //     eax, height 
-	CPatch::SetPointer(0x4BAEF0 + 0x52 + 0x2, &res_y); //     edx, height 
-	CPatch::SetPointer(0x4CAEC0 + 0x37 + 0x2, &res_y); //     ecx, height 
-	CPatch::SetPointer(0x4CB150 + 0x24 + 0x2, &res_y); //     edx, height 
-	CPatch::SetPointer(0x4CB290 + 0x8 + 0x2, &res_y); //     ecx, height 
-	CPatch::SetPointer(0x4CB290 + 0x133 + 0x2, &res_y); //     ecx, height 
-	CPatch::SetPointer(0x4CB730 + 0x8C + 0x2, &res_y); //     edx, height 
-	CPatch::SetPointer(0x4CB8DE + 0x1, &res_y); //     eax, height 
-	CPatch::SetPointer(0x4CC5C0 + 0x8E + 0x2, &res_y); //     edx, height 
-	CPatch::SetPointer(0x4D1170 + 0x219 + 0x2, &res_y); //     ecx, height 
-
+	//subs
+	//CPatch::SetUInt(0x4C94A1, static_cast<unsigned int>(480 / (res_x / res_y)));
 	return 0;
 }
 
