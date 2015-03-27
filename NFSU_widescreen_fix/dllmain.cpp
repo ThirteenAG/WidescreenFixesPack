@@ -156,7 +156,7 @@ DWORD WINAPI HudHandler(LPVOID)
 					injector::WriteMemory<float>(0x400000 + 0xF28AF, hud_position_x * 2.0f + 290.0f * ((float)ResX * (1.0f / 1920.0f)), true);
 					injector::WriteMemory<float>(0x400000 + 0xF3147, hud_position_x * 2.0f + 290.0f * ((float)ResX * (1.0f / 1920.0f)), true);
 					injector::WriteMemory<float>(0x400000 +0x14646B, hud_position_x * 2.0f + 290.0f * ((float)ResX * (1.0f / 1920.0f)), true);
-					MinimapPosX = 30.0f + 290.0f * ((float)ResX * (1.0f / 1920.0f));
+					MinimapPosX = (hud_position_x * 2.0f) * 1.7f * 1.1f;
 					MinimapPosY = 730.0f;
 				}
 			}
