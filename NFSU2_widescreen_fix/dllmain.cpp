@@ -10,8 +10,12 @@ bool HudFix;
 bool DisableCutsceneBorders;
 int ResX;
 int ResY;
-float horFOV, verFOV, HUDscale;
-DWORD WINAPI hud_handler(LPVOID);
+float horFOV, verFOV;
+bool bHudMode;
+DWORD WINAPI HudHandler(LPVOID); DWORD WINAPI HudHandler2(LPVOID);
+float hud_multiplier_x, hud_multiplier_y;
+float hud_position_x;
+float MinimapPosX, MinimapPosY;
 
 void Init()
 {
@@ -21,10 +25,8 @@ void Init()
 	HudFix = iniReader.ReadInteger("MAIN", "HudFix", 1) == 1;
 	horFOV = iniReader.ReadFloat("MAIN", "horFOV", 0.0f);
 	verFOV = iniReader.ReadFloat("MAIN", "verFOV", 0.0f);
-	HUDscale = iniReader.ReadFloat("MAIN", "HUDscale", 1.0f);
+	bHudMode = iniReader.ReadInteger("MAIN", "HudMode", 1) == 1;
 	DisableCutsceneBorders = iniReader.ReadInteger("MAIN", "DisableCutsceneBorders", 1) == 1;
-
-	if (!HUDscale) { HUDscale = 1.0f; }
 
 	if (!ResX || !ResY) {
 		HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
@@ -67,17 +69,16 @@ void Init()
 		//HUD
 		if (HudFix)
 		{
-			//CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&hud_handler, NULL, 0, NULL);
-
-			float hud_multiplier_x = (1.0f / ResX * (ResY / 480.0f)) * 2.0f;
-			float hud_position_x = 640.0f / (640.0f * hud_multiplier_x);
+			hud_multiplier_x = (1.0f / ResX * (ResY / 480.0f)) * 2.0f;
+			hud_multiplier_y = *(float*)0x79AC14;
+			hud_position_x = 640.0f / (640.0f * hud_multiplier_x);
 
 			injector::WriteMemory<float>(0x79AC10, hud_multiplier_x, true);
 			//CPatch::SetFloat(0x79AC14, hud_multiplier_y);
 
 			injector::WriteMemory<float>(0x51B3CB, hud_position_x, true);
 			injector::WriteMemory<float>(0x5368C8, hud_position_x, true);
-			injector::WriteMemory<float>(0x536A99, hud_position_x, true);
+			//injector::WriteMemory<float>(0x536A99, hud_position_x, true); //minimap
 			injector::WriteMemory<float>(0x536CC9, hud_position_x, true);
 			injector::WriteMemory<float>(0x537011, hud_position_x, true);
 			injector::WriteMemory<float>(0x48B640, hud_position_x, true);
@@ -90,6 +91,21 @@ void Init()
 			injector::WriteMemory<float>(0x5CBF05, (float)ResX, true);
 			injector::WriteMemory<float>(0x5CBE89, (float)ResX, true);
 			injector::WriteMemory<float>(0x5CBEA1, (float)ResX, true);
+
+
+			injector::WriteMemory<float>(0x5C726A, (float)ResX, true); // radar mask
+			injector::WriteMemory<float>(0x5C727A, (float)ResX, true);
+			injector::WriteMemory<float>(0x5C7282, (float)ResY, true);
+			injector::WriteMemory<float>(0x5C7292, (float)ResY, true);
+
+
+			//minimap position
+			MinimapPosX = hud_position_x;
+			MinimapPosY = 240.0f;
+			injector::WriteMemory<float>(0x536A99, MinimapPosX, true); //minimap
+			injector::WriteMemory<float>(0x536AA4, MinimapPosY, true); //minimap
+
+			CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&HudHandler, NULL, 0, NULL);
 		}
 
 		if (DisableCutsceneBorders)
@@ -140,10 +156,9 @@ void Init()
 		//HUD
 		if (HudFix)
 		{
-			//CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&hud_handler, NULL, 0, NULL);
-
-			float hud_multiplier_x = (1.0f / ResX * (ResY / 480.0f)) * 2.0f;
-			float hud_position_x = 640.0f / (640.0f * hud_multiplier_x);
+			hud_multiplier_x = (1.0f / ResX * (ResY / 480.0f)) * 2.0f;
+			hud_multiplier_y = *(float*)0x79AC14 + 0x4;
+			hud_position_x = 640.0f / (640.0f * hud_multiplier_x);
 
 			injector::WriteMemory<float>(0x79AC10 + 0x4, hud_multiplier_x, true);
 			//CPatch::SetFloat(0x79AC14, hud_multiplier_y);
@@ -163,6 +178,20 @@ void Init()
 			injector::WriteMemory<float>(0x5CBF05 - 0x400, (float)ResX, true);
 			injector::WriteMemory<float>(0x5CBE89 - 0x400, (float)ResX, true);
 			injector::WriteMemory<float>(0x5CBEA1 - 0x400, (float)ResX, true);
+
+
+			injector::WriteMemory<float>(0x5C726A - 0x400, (float)ResX, true); // radar mask
+			injector::WriteMemory<float>(0x5C727A - 0x400, (float)ResX, true);
+			injector::WriteMemory<float>(0x5C7282 - 0x400, (float)ResY, true);
+			injector::WriteMemory<float>(0x5C7292 - 0x400, (float)ResY, true);
+
+			//minimap position
+			MinimapPosX = hud_position_x;
+			MinimapPosY = 240.0f;
+			injector::WriteMemory<float>(0x536A99 - 0x460, MinimapPosX, true); //minimap
+			injector::WriteMemory<float>(0x536AA4 - 0x460, MinimapPosY, true); //minimap
+
+			CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&HudHandler2, NULL, 0, NULL);
 		}
 
 		if (DisableCutsceneBorders)
@@ -179,30 +208,192 @@ void Init()
 			injector::WriteMemory<float>(0x7A27E0 + 0x8, horFOV, true);
 			injector::WriteMemory<float>(0x7A27D8 + 0x8, verFOV, true);
 		}
+		else
+		{
+			//16:9 excluisve fov hack
+			if ((float)ResX / (float)ResY == 16.0f / 9.0f)
+			{
+				//injector::WriteMemory<float>(0x40DE5C, (1.0f * ((float)ResX / (float)ResY)) / (4.0f / 3.0f), true);
+				//injector::WriteMemory<float>(0x6B7C6C, 0.90909088f / 1.05f, true);
+			}
+		}
 	}
 }
 
 
-DWORD WINAPI hud_handler(LPVOID)
+DWORD WINAPI HudHandler(LPVOID)
 {
-	float hud_multiplier_x = (1.0f / (float)ResX * 2.0f) * HUDscale;
-	float hud_multiplier_y = (1.0f / (float)ResY * 2.0f) * HUDscale;
-
-	float orig_multiplier_x = 1.0f / 640.0f * 2.0f;
-	float orig_multiplier_y = 1.0f / 480.0f * 2.0f;
-
+	CIniReader iniReader("nfsu2_res.ini");
 	while (true)
 	{
 		Sleep(0);
-		if ((unsigned int)*(DWORD*)0x816204 == 0) 
+
+		if ((GetAsyncKeyState(VK_F2) & 1))
 		{
-			injector::WriteMemory<float>(0x79AC10, hud_multiplier_x);
-			injector::WriteMemory<float>(0x79AC14, hud_multiplier_y);
+			bHudMode = !bHudMode;
+			iniReader.WriteInteger("MAIN", "HudMode", bHudMode);
+			while ((GetAsyncKeyState(VK_F2) & 0x8000) > 0) { Sleep(0); }
 		}
-		else 
+
+		if (!bHudMode)
 		{
-			injector::WriteMemory<float>(0x79AC10, orig_multiplier_x);
-			injector::WriteMemory<float>(0x79AC14, orig_multiplier_y);
+			Sleep(1);
+			if (*(float*)0x51B3CB != hud_position_x)
+			{
+				injector::WriteMemory<float>(0x79AC10, hud_multiplier_x, true);
+				injector::WriteMemory<float>(0x79AC14, hud_multiplier_y, true);
+
+				injector::WriteMemory<float>(0x51B3CB, hud_position_x, true);
+				injector::WriteMemory<float>(0x5368C8, hud_position_x, true);
+				//injector::WriteMemory<float>(0x536A99, hud_position_x, true);
+				injector::WriteMemory<float>(0x536CC9, hud_position_x, true);
+				injector::WriteMemory<float>(0x537011, hud_position_x, true);
+				injector::WriteMemory<float>(0x48B640, hud_position_x, true);
+				injector::WriteMemory<float>(0x50B4F5, hud_position_x, true);
+				injector::WriteMemory<float>(0x797D50, hud_position_x, true);
+
+				MinimapPosX = hud_position_x;
+				MinimapPosY = 240.0f;
+				injector::WriteMemory<float>(0x536A99, MinimapPosX, true); //minimap
+				injector::WriteMemory<float>(0x536AA4, MinimapPosY, true); //minimap
+			}
+		}
+		else
+		{
+			Sleep(1);
+			if (*(unsigned char*)0x874E58 != 1)
+			{
+				if (*(float*)0x51B3CB == hud_position_x)
+				{
+					injector::WriteMemory<float>(0x79AC10, hud_multiplier_x / 1.7f, true);
+					injector::WriteMemory<float>(0x79AC14, hud_multiplier_y / 1.7f, true);
+
+					injector::WriteMemory<float>(0x51B3CB, hud_position_x * 2.0f + 290.0f * ((float)ResX * (1.0f / 1920.0f)), true);
+					injector::WriteMemory<float>(0x5368C8, hud_position_x * 2.0f + 290.0f * ((float)ResX * (1.0f / 1920.0f)), true);
+					//injector::WriteMemory<float>(0x536A99, hud_position_x * 2.0f + 290.0f * ((float)ResX * (1.0f / 1920.0f)), true);
+					injector::WriteMemory<float>(0x536CC9, hud_position_x * 2.0f + 290.0f * ((float)ResX * (1.0f / 1920.0f)), true);
+					injector::WriteMemory<float>(0x537011, hud_position_x * 2.0f + 290.0f * ((float)ResX * (1.0f / 1920.0f)), true);
+					injector::WriteMemory<float>(0x48B640, hud_position_x * 2.0f + 290.0f * ((float)ResX * (1.0f / 1920.0f)), true);
+					injector::WriteMemory<float>(0x50B4F5, hud_position_x * 2.0f + 290.0f * ((float)ResX * (1.0f / 1920.0f)), true);
+					injector::WriteMemory<float>(0x797D50, hud_position_x * 2.0f + 290.0f * ((float)ResX * (1.0f / 1920.0f)), true);
+
+					MinimapPosX = 1550.0f * ((float)ResX * (1.0f / 1920.0f));
+					MinimapPosY = 550.0f;
+					injector::WriteMemory<float>(0x536A99, MinimapPosX, true); //minimap
+					injector::WriteMemory<float>(0x536AA4, MinimapPosY, true); //minimap
+				}
+			}
+			else
+			{
+				if (*(float*)0x51B3CB != hud_position_x)
+				{
+					injector::WriteMemory<float>(0x79AC10, hud_multiplier_x, true);
+					injector::WriteMemory<float>(0x79AC14, hud_multiplier_y, true);
+
+					injector::WriteMemory<float>(0x51B3CB, hud_position_x, true);
+					injector::WriteMemory<float>(0x5368C8, hud_position_x, true);
+					//injector::WriteMemory<float>(0x536A99, hud_position_x, true);
+					injector::WriteMemory<float>(0x536CC9, hud_position_x, true);
+					injector::WriteMemory<float>(0x537011, hud_position_x, true);
+					injector::WriteMemory<float>(0x48B640, hud_position_x, true);
+					injector::WriteMemory<float>(0x50B4F5, hud_position_x, true);
+					injector::WriteMemory<float>(0x797D50, hud_position_x, true);
+
+					MinimapPosX = hud_position_x;
+					MinimapPosY = 240.0f;
+					injector::WriteMemory<float>(0x536A99, MinimapPosX, true); //minimap
+					injector::WriteMemory<float>(0x536AA4, MinimapPosY, true); //minimap
+				}
+			}
+		}
+	}
+	return 0;
+}
+
+DWORD WINAPI HudHandler2(LPVOID)
+{
+	CIniReader iniReader("nfsu2_res.ini");
+	while (true)
+	{
+		Sleep(0);
+
+		if ((GetAsyncKeyState(VK_F2) & 1))
+		{
+			bHudMode = !bHudMode;
+			iniReader.WriteInteger("MAIN", "HudMode", bHudMode);
+			while ((GetAsyncKeyState(VK_F2) & 0x8000) > 0) { Sleep(0); }
+		}
+
+		if (!bHudMode)
+		{
+			Sleep(1);
+			if (*(float*)0x51AEAB != hud_position_x)
+			{
+				injector::WriteMemory<float>(0x79AC10 + 0x4, hud_multiplier_x, true);
+				injector::WriteMemory<float>(0x79AC14 + 0x4, hud_multiplier_y, true);
+
+				injector::WriteMemory<float>(0x51B3CB - 0x520, hud_position_x, true);
+				injector::WriteMemory<float>(0x5368C8 - 0x460, hud_position_x, true);
+				injector::WriteMemory<float>(0x536A99 - 0x460, hud_position_x, true);
+				injector::WriteMemory<float>(0x536CC9 - 0x460, hud_position_x, true);
+				injector::WriteMemory<float>(0x537011 - 0x460, hud_position_x, true);
+				injector::WriteMemory<float>(0x48B640 - 0xA0, hud_position_x, true);
+				injector::WriteMemory<float>(0x50B4F5 - 0x5C0, hud_position_x, true);
+				injector::WriteMemory<float>(0x797D50 + 0x1C, hud_position_x, true);
+
+				MinimapPosX = hud_position_x;
+				MinimapPosY = 240.0f;
+				injector::WriteMemory<float>(0x536A99 - 0x460, MinimapPosX, true); //minimap
+				injector::WriteMemory<float>(0x536AA4 - 0x460, MinimapPosY, true); //minimap
+			}
+		}
+		else
+		{
+			Sleep(1);
+			if (*(unsigned char*)0x874E58 != 1)
+			{
+				if (*(float*)0x51AEAB == hud_position_x)
+				{
+					injector::WriteMemory<float>(0x79AC10 + 0x4, hud_multiplier_x / 1.7f, true);
+					injector::WriteMemory<float>(0x79AC14 + 0x4, hud_multiplier_y / 1.7f, true);
+
+					injector::WriteMemory<float>(0x51B3CB - 0x520, hud_position_x * 2.0f + 290.0f * ((float)ResX * (1.0f / 1920.0f)), true);
+					injector::WriteMemory<float>(0x5368C8 - 0x460, hud_position_x * 2.0f + 290.0f * ((float)ResX * (1.0f / 1920.0f)), true);
+					injector::WriteMemory<float>(0x536A99 - 0x460, hud_position_x * 2.0f + 290.0f * ((float)ResX * (1.0f / 1920.0f)), true);
+					injector::WriteMemory<float>(0x536CC9 - 0x460, hud_position_x * 2.0f + 290.0f * ((float)ResX * (1.0f / 1920.0f)), true);
+					injector::WriteMemory<float>(0x537011 - 0x460, hud_position_x * 2.0f + 290.0f * ((float)ResX * (1.0f / 1920.0f)), true);
+					injector::WriteMemory<float>(0x48B640 - 0xA0,  hud_position_x * 2.0f + 290.0f * ((float)ResX * (1.0f / 1920.0f)), true);
+					injector::WriteMemory<float>(0x50B4F5 - 0x5C0, hud_position_x * 2.0f + 290.0f * ((float)ResX * (1.0f / 1920.0f)), true);
+					injector::WriteMemory<float>(0x797D50 + 0x1C,  hud_position_x * 2.0f + 290.0f * ((float)ResX * (1.0f / 1920.0f)), true);
+
+					MinimapPosX = 1550.0f * ((float)ResX * (1.0f / 1920.0f));
+					MinimapPosY = 550.0f;
+					injector::WriteMemory<float>(0x536A99 - 0x460, MinimapPosX, true); //minimap
+					injector::WriteMemory<float>(0x536AA4 - 0x460, MinimapPosY, true); //minimap
+				}
+			}
+			else
+			{
+				if (*(float*)0x51AEAB != hud_position_x)
+				{
+					injector::WriteMemory<float>(0x79AC10 + 0x4, hud_multiplier_x, true);
+					injector::WriteMemory<float>(0x79AC14 + 0x4, hud_multiplier_y, true);
+
+					injector::WriteMemory<float>(0x51B3CB - 0x520, hud_position_x, true);
+					injector::WriteMemory<float>(0x5368C8 - 0x460, hud_position_x, true);
+					injector::WriteMemory<float>(0x536A99 - 0x460, hud_position_x, true);
+					injector::WriteMemory<float>(0x536CC9 - 0x460, hud_position_x, true);
+					injector::WriteMemory<float>(0x537011 - 0x460, hud_position_x, true);
+					injector::WriteMemory<float>(0x48B640 - 0xA0, hud_position_x, true);
+					injector::WriteMemory<float>(0x50B4F5 - 0x5C0, hud_position_x, true);
+					injector::WriteMemory<float>(0x797D50 + 0x1C, hud_position_x, true);
+
+					MinimapPosX = hud_position_x;
+					MinimapPosY = 240.0f;
+					injector::WriteMemory<float>(0x536A99 - 0x460, MinimapPosX, true); //minimap
+					injector::WriteMemory<float>(0x536AA4 - 0x460, MinimapPosY, true); //minimap
+				}
+			}
 		}
 	}
 	return 0;
