@@ -15,6 +15,7 @@ DWORD WINAPI HudHandler(LPVOID);
 float hud_multiplier_x, hud_multiplier_y;
 float hud_position_x;
 float MinimapPosX, MinimapPosY;
+float verFovCorrectionFactor;
 DWORD* _8F1CA0 = (DWORD*)0x8F1CA0;
 
 void Init()
@@ -23,10 +24,9 @@ void Init()
 	ResX = iniReader.ReadInteger("MAIN", "ResX", 0);
 	ResY = iniReader.ReadInteger("MAIN", "ResY", 0);
 	HudFix = iniReader.ReadInteger("MAIN", "HudFix", 1) == 1;
-	int ShadowsRes = iniReader.ReadInteger("MAIN", "ShadowsRes", 1024);
-	horFOV = iniReader.ReadFloat("MAIN", "horFOV", 0.0f);
-	verFOV = iniReader.ReadFloat("MAIN", "verFOV", 0.0f);
+	verFovCorrectionFactor = iniReader.ReadFloat("MAIN", "verFovCorrectionFactor", 0.06f);
 	bHudMode = iniReader.ReadInteger("MAIN", "HudMode", 1) == 1;
+	int ShadowsRes = iniReader.ReadInteger("MAIN", "ShadowsRes", 1024);
 
 	if (!ResX || !ResY) {
 		HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
@@ -38,7 +38,6 @@ void Init()
 	}
 
 	//game
-
 	injector::WriteMemory(0x6C27ED + 0x2, ResX, true);
 	injector::WriteMemory(0x6C27F3 + 0x2, ResY, true);
 	injector::WriteMemory(0x6C2804 + 0x2, ResX, true);
@@ -147,33 +146,14 @@ void Init()
 			CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&HudHandler, NULL, 0, NULL);
 		}
 
-		if (horFOV && verFOV)
+		if (verFovCorrectionFactor)
 		{
-			injector::WriteMemory(0x6CF50F + 2, &horFOV, true);
-			injector::WriteMemory(0x6CF53A + 2, &verFOV, true);
-			injector::WriteMemory(0x6CF578 + 2, &verFOV, true);
+			injector::WriteMemory(0x6CF566 + 2, &horFOV, true);
+			injector::WriteMemory(0x6CF5DC + 2, &verFOV, true);
+
+			horFOV = 1.0f / ((1.0f * ((float)ResX / (float)ResY)) / (4.0f / 3.0f));
+			verFOV = horFOV - verFovCorrectionFactor;
 		}
-		else
-		{
-			//16:9 excluisve fov hack
-			if ((float)ResX / (float)ResY == 16.0f / 9.0f)
-			{
-				injector::WriteMemory(0x6CF53A + 2, &verFOV, true);
-				injector::WriteMemory(0x6CF578 + 2, &verFOV, true);
-
-				injector::WriteMemory<float>(0x6CF5A1, (1.0f * ((float)ResX / (float)ResY)) / (4.0f / 3.0f), true);
-				verFOV = 0.5f / 1.05f;
-			}
-			else if ((float)ResX / (float)ResY == 16.0f / 10.0f)
-			{
-				injector::WriteMemory(0x6CF53A + 2, &verFOV, true);
-				injector::WriteMemory(0x6CF578 + 2, &verFOV, true);
-
-				injector::WriteMemory<float>(0x6CF5A1, (1.0f * ((float)ResX / (float)ResY)) / (4.0f / 3.0f), true);
-				verFOV = 0.5f / 1.08f;
-			}
-		}
-
 }
 
 

@@ -15,6 +15,7 @@ DWORD WINAPI HudHandler(LPVOID);
 float hud_multiplier_x, hud_multiplier_y;
 float hud_position_x;
 float MinimapPosX, MinimapPosY;
+float verFovCorrectionFactor;
 
 void Init()
 {
@@ -22,8 +23,8 @@ void Init()
 	ResX = iniReader.ReadInteger("MAIN", "ResX", 0);
 	ResY = iniReader.ReadInteger("MAIN", "ResY", 0);
 	HudFix = iniReader.ReadInteger("MAIN", "HudFix", 1) == 1;
-	horFOV = iniReader.ReadFloat("MAIN", "horFOV", 0.0f);
-	verFOV = iniReader.ReadFloat("MAIN", "verFOV", 0.0f);
+	verFovCorrectionFactor = iniReader.ReadFloat("MAIN", "verFovCorrectionFactor", 0.03f);
+	bHudMode = iniReader.ReadInteger("MAIN", "HudMode", 1) == 1;
 
 	if (!ResX || !ResY) {
 		HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
@@ -103,39 +104,13 @@ void Init()
 			injector::WriteMemory<float>(0x400000 + 0x5C778C, hud_position_x, true);
 		}
 
-		if (horFOV && verFOV)
-		{
-			injector::WriteMemory(0x71B883 + 2, &horFOV, true);
-			injector::WriteMemory(0x71B8AE + 2, &verFOV, true);
-			injector::WriteMemory(0x71B8EC + 2, &verFOV, true);
-		}
-		else
+		if (verFovCorrectionFactor)
 		{
 			injector::WriteMemory(0x71B8DA + 2, &horFOV, true);
 			injector::WriteMemory(0x71B923 + 2, &verFOV, true);
 
 			horFOV = 1.0f / ((1.0f * ((float)ResX / (float)ResY)) / (4.0f / 3.0f));
-			verFOV = horFOV - 0.03f;
-
-			/*//16:9 excluisve fov hack
-			if ((float)ResX / (float)ResY == 16.0f / 9.0f)
-			{
-				injector::WriteMemory(0x71B923 + 2, &horFOV, true);
-				injector::WriteMemory(0x71B8AE + 2, &verFOV, true);
-				injector::WriteMemory(0x71B8EC + 2, &verFOV, true);
-
-				horFOV = (1.0f * ((float)ResX / (float)ResY)) / (4.0f / 3.0f);
-				verFOV = 0.5f / 1.05f;
-			}
-			else if ((float)ResX / (float)ResY == 16.0f / 10.0f)
-			{
-				injector::WriteMemory(0x71B923 + 2, &horFOV, true);
-				injector::WriteMemory(0x71B8AE + 2, &verFOV, true);
-				injector::WriteMemory(0x71B8EC + 2, &verFOV, true);
-				
-				horFOV = (1.0f * ((float)ResX / (float)ResY)) / (4.0f / 3.0f);
-				verFOV = 0.5f / 1.08f;
-			}*/
+			verFOV = horFOV - verFovCorrectionFactor;
 		}
 	}
 	else

@@ -16,6 +16,7 @@ DWORD WINAPI HudHandler(LPVOID); DWORD WINAPI HudHandler2(LPVOID);
 float hud_multiplier_x, hud_multiplier_y;
 float hud_position_x;
 float MinimapPosX, MinimapPosY;
+float verFovCorrectionFactor;
 
 void Init()
 {
@@ -23,8 +24,7 @@ void Init()
 	ResX = iniReader.ReadInteger("MAIN", "ResX", 0);
 	ResY = iniReader.ReadInteger("MAIN", "ResY", 0);
 	HudFix = iniReader.ReadInteger("MAIN", "HudFix", 1) == 1;
-	horFOV = iniReader.ReadFloat("MAIN", "horFOV", 0.0f);
-	verFOV = iniReader.ReadFloat("MAIN", "verFOV", 0.0f);
+	verFovCorrectionFactor = iniReader.ReadFloat("MAIN", "verFovCorrectionFactor", 0.04f);
 	bHudMode = iniReader.ReadInteger("MAIN", "HudMode", 1) == 1;
 	DisableCutsceneBorders = iniReader.ReadInteger("MAIN", "DisableCutsceneBorders", 1) == 1;
 
@@ -116,25 +116,13 @@ void Init()
 			injector::WriteMemory<float>(0x5CBEA1, 0.0f, true);
 		}
 
-		if (horFOV && verFOV)
+		if (verFovCorrectionFactor)
 		{
-			injector::WriteMemory<float>(0x7A27DC, horFOV, true);
-			injector::WriteMemory<float>(0x7A27E0, horFOV, true);
-			injector::WriteMemory<float>(0x7A27D8, verFOV, true);
-		}
-		else
-		{
-			//16:9/16:10 excluisve fov hack
-			if ((float)ResX / (float)ResY == 16.0f / 9.0f)
-			{
-				injector::WriteMemory<float>(0x5C805F, (1.0f * ((float)ResX / (float)ResY)) / (4.0f / 3.0f), true);
-				injector::WriteMemory<float>(0x7A27D8, 0.90909088f / 1.05f, true);
-			} 
-			else if ((float)ResX / (float)ResY == 16.0f / 10.0f)
-			{
-				injector::WriteMemory<float>(0x5C805F, (1.0f * ((float)ResX / (float)ResY)) / (4.0f / 3.0f), true);
-				injector::WriteMemory<float>(0x7A27D8, 0.90909088f / 1.08f, true);
-			}
+			injector::WriteMemory(0x5C7FE8 + 2, &horFOV, true);
+			injector::WriteMemory(0x5C801F + 2, &verFOV, true);
+
+			horFOV = 1.0f / ((1.0f * ((float)ResX / (float)ResY)) / (4.0f / 3.0f));
+			verFOV = horFOV - verFovCorrectionFactor;
 		}
 	}
 	else
@@ -216,20 +204,13 @@ void Init()
 			injector::WriteMemory<float>(0x5CBEA1 - 0x400, 0.0f, true);
 		}
 
-		if (horFOV && verFOV)
+		if (verFovCorrectionFactor)
 		{
-			injector::WriteMemory<float>(0x7A27DC + 0x8, horFOV, true);
-			injector::WriteMemory<float>(0x7A27E0 + 0x8, horFOV, true);
-			injector::WriteMemory<float>(0x7A27D8 + 0x8, verFOV, true);
-		}
-		else
-		{
-			//16:9 excluisve fov hack
-			if ((float)ResX / (float)ResY == 16.0f / 9.0f)
-			{
-				injector::WriteMemory<float>(0x5C7C5F, (1.0f * ((float)ResX / (float)ResY)) / (4.0f / 3.0f), true);
-				injector::WriteMemory<float>(0x7A27D8 + 0x8, *(float*)(0x7A27D8 + 0x8) / 1.05f, true);
-			}
+			injector::WriteMemory(0x5C7BE8 + 2, &horFOV, true);
+			injector::WriteMemory(0x5C7C1F + 2, &verFOV, true);
+
+			horFOV = 1.0f / ((1.0f * ((float)ResX / (float)ResY)) / (4.0f / 3.0f));
+			verFOV = horFOV - verFovCorrectionFactor;
 		}
 	}
 }

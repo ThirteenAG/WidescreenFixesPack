@@ -16,6 +16,7 @@ DWORD WINAPI HudHandler(LPVOID);
 float hud_multiplier_x, hud_multiplier_y;
 float hud_position_x;
 float MinimapPosX, MinimapPosY;
+float verFovCorrectionFactor;
 
 void Init()
 {
@@ -23,8 +24,7 @@ void Init()
 	ResX = iniReader.ReadInteger("MAIN", "ResX", 0);
 	ResY = iniReader.ReadInteger("MAIN", "ResY", 0);
 	HudFix = iniReader.ReadInteger("MAIN", "HudFix", 1) == 1;
-	horFOV = iniReader.ReadFloat("MAIN", "horFOV", 0.0f);
-	verFOV = iniReader.ReadFloat("MAIN", "verFOV", 0.0f);
+	verFovCorrectionFactor = iniReader.ReadFloat("MAIN", "verFovCorrectionFactor", 0.04f);
 	bHudMode = iniReader.ReadInteger("MAIN", "HudMode", 1) == 1;
 	DisableCutsceneBorders = iniReader.ReadInteger("MAIN", "DisableCutsceneBorders", 1) == 1;	
 
@@ -87,27 +87,14 @@ void Init()
 			CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&HudHandler, NULL, 0, NULL);
 		}
 
-		if (horFOV && verFOV)
+		if (verFovCorrectionFactor)
 		{
-			injector::WriteMemory<float>(0x6B7C70, horFOV, true);
-			injector::WriteMemory<float>(0x6B7C74, horFOV, true);
-			injector::WriteMemory<float>(0x6B7C6C, verFOV, true);
-		}
-		else
-		{
-			//16:9 excluisve fov hack
-			if ((float)ResX / (float)ResY == 16.0f / 9.0f)
-			{
-				injector::WriteMemory<float>(0x40DE5C, (1.0f * ((float)ResX / (float)ResY)) / (4.0f / 3.0f), true);
-				injector::WriteMemory<float>(0x6B7C6C, 0.90909088f / 1.05f, true);
-			}
-			else if ((float)ResX / (float)ResY == 16.0f / 10.0f)
-			{
-				injector::WriteMemory<float>(0x40DE5C, (1.0f * ((float)ResX / (float)ResY)) / (4.0f / 3.0f), true);
-				injector::WriteMemory<float>(0x6B7C6C, 0.90909088f / 1.08f, true);
-			}
-		}
+			injector::WriteMemory(0x40DEBB + 2, &horFOV, true);
+			injector::WriteMemory(0x40DEEC + 2, &verFOV, true);
 
+			horFOV = 1.0f / ((1.0f * ((float)ResX / (float)ResY)) / (4.0f / 3.0f));
+			verFOV = horFOV - verFovCorrectionFactor;
+		}
 }
 
 
@@ -161,7 +148,7 @@ DWORD WINAPI HudHandler(LPVOID)
 					injector::WriteMemory<float>(0x400000 + 0xF28AF, hud_position_x * 2.0f + 290.0f * ((float)ResX * (1.0f / 1920.0f)), true);
 					injector::WriteMemory<float>(0x400000 + 0xF3147, hud_position_x * 2.0f + 290.0f * ((float)ResX * (1.0f / 1920.0f)), true);
 					injector::WriteMemory<float>(0x400000 +0x14646B, hud_position_x * 2.0f + 290.0f * ((float)ResX * (1.0f / 1920.0f)), true);
-					MinimapPosX = (hud_position_x * 2.0f) * 1.7f * 1.1f;
+					MinimapPosX = 320.0;
 					MinimapPosY = 730.0f;
 				}
 			}
