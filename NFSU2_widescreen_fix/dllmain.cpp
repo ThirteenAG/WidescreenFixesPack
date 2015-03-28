@@ -223,11 +223,11 @@ DWORD WINAPI HudHandler(LPVOID)
 	{
 		Sleep(0);
 
-		if ((GetAsyncKeyState(VK_F2) & 1))
+		if ((GetAsyncKeyState(VK_F1) & 1))
 		{
 			bHudMode = !bHudMode;
 			iniReader.WriteInteger("MAIN", "HudMode", bHudMode);
-			while ((GetAsyncKeyState(VK_F2) & 0x8000) > 0) { Sleep(0); }
+			while ((GetAsyncKeyState(VK_F1) & 0x8000) > 0) { Sleep(0); }
 		}
 
 		if (!bHudMode)
