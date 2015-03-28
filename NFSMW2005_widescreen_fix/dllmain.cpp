@@ -164,6 +164,14 @@ void Init()
 				injector::WriteMemory<float>(0x6CF5A1, (1.0f * ((float)ResX / (float)ResY)) / (4.0f / 3.0f), true);
 				verFOV = 0.5f / 1.05f;
 			}
+			else if ((float)ResX / (float)ResY == 16.0f / 10.0f)
+			{
+				injector::WriteMemory(0x6CF53A + 2, &verFOV, true);
+				injector::WriteMemory(0x6CF578 + 2, &verFOV, true);
+
+				injector::WriteMemory<float>(0x6CF5A1, (1.0f * ((float)ResX / (float)ResY)) / (4.0f / 3.0f), true);
+				verFOV = 0.5f / 1.08f;
+			}
 		}
 
 }

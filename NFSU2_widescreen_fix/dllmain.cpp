@@ -122,6 +122,20 @@ void Init()
 			injector::WriteMemory<float>(0x7A27E0, horFOV, true);
 			injector::WriteMemory<float>(0x7A27D8, verFOV, true);
 		}
+		else
+		{
+			//16:9/16:10 excluisve fov hack
+			if ((float)ResX / (float)ResY == 16.0f / 9.0f)
+			{
+				injector::WriteMemory<float>(0x5C805F, (1.0f * ((float)ResX / (float)ResY)) / (4.0f / 3.0f), true);
+				injector::WriteMemory<float>(0x7A27D8, 0.90909088f / 1.05f, true);
+			} 
+			else if ((float)ResX / (float)ResY == 16.0f / 10.0f)
+			{
+				injector::WriteMemory<float>(0x5C805F, (1.0f * ((float)ResX / (float)ResY)) / (4.0f / 3.0f), true);
+				injector::WriteMemory<float>(0x7A27D8, 0.90909088f / 1.08f, true);
+			}
+		}
 	}
 	else
 	{
@@ -208,15 +222,15 @@ void Init()
 			injector::WriteMemory<float>(0x7A27E0 + 0x8, horFOV, true);
 			injector::WriteMemory<float>(0x7A27D8 + 0x8, verFOV, true);
 		}
-		/*else
+		else
 		{
 			//16:9 excluisve fov hack
 			if ((float)ResX / (float)ResY == 16.0f / 9.0f)
 			{
-				//injector::WriteMemory<float>(0x40DE5C, (1.0f * ((float)ResX / (float)ResY)) / (4.0f / 3.0f), true);
-				//injector::WriteMemory<float>(0x6B7C6C, 0.90909088f / 1.05f, true);
+				injector::WriteMemory<float>(0x5C7C5F, (1.0f * ((float)ResX / (float)ResY)) / (4.0f / 3.0f), true);
+				injector::WriteMemory<float>(0x7A27D8 + 0x8, *(float*)(0x7A27D8 + 0x8) / 1.05f, true);
 			}
-		}*/
+		}
 	}
 }
 

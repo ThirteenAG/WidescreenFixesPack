@@ -96,10 +96,15 @@ void Init()
 		else
 		{
 			//16:9 excluisve fov hack
-			if ((float)ResX / (float)ResY == 16.0f/9.0f)
+			if ((float)ResX / (float)ResY == 16.0f / 9.0f)
 			{
 				injector::WriteMemory<float>(0x40DE5C, (1.0f * ((float)ResX / (float)ResY)) / (4.0f / 3.0f), true);
 				injector::WriteMemory<float>(0x6B7C6C, 0.90909088f / 1.05f, true);
+			}
+			else if ((float)ResX / (float)ResY == 16.0f / 10.0f)
+			{
+				injector::WriteMemory<float>(0x40DE5C, (1.0f * ((float)ResX / (float)ResY)) / (4.0f / 3.0f), true);
+				injector::WriteMemory<float>(0x6B7C6C, 0.90909088f / 1.08f, true);
 			}
 		}
 
