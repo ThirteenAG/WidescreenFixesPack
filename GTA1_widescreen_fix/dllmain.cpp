@@ -13,6 +13,7 @@ void patch_player_a(); void patch_player_a2();
 int res_x;
 int res_y;
 int res_x43;
+int Var_480 = 480;
 
 DWORD WINAPI Thread(LPVOID)
 {
@@ -57,6 +58,17 @@ DWORD WINAPI Thread(LPVOID)
 
 	//menu 
 	CPatch::SetUInt(0x4898C3 + 0x1, res_x);
+
+	//FMV crashfix
+	//CPatch::SetPointer(0x4152D6 + 2, &Var_640);
+	//CPatch::SetPointer(0x4152E7 + 1, &Var_480);
+
+	CPatch::SetPointer(0x42D830 + 0xA + 1, &Var_480);
+	CPatch::SetPointer(0x42D830 + 0x5B + 2, &Var_480);
+	CPatch::SetPointer(0x42D830 + 0x9C + 2, &Var_480);
+
+	//CPatch::SetPointer(0x42D830 + 0x3B + 2, &Var_640);
+	//CPatch::SetPointer(0x42D830 + 0x71 + 2, &Var_640);
 	return 0;
 }
 
