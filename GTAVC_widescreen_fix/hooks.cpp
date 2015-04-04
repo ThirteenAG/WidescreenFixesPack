@@ -235,8 +235,8 @@ void TextDrawOutlineHook()
 	{
 		//PrintString = injector::cstd<void(float, float, unsigned short*)>::call<0x551040>;
 		*(short*)0x97F860 = 0;
-		originalPosX = PosX;
-		originalPosY = PosY;
+		originalPosX = PosX + 1.0f;
+		originalPosY = PosY + 1.0f;
 		originalColorR = *(unsigned char*)0x97F820;
 		originalColorG = *(unsigned char*)0x97F821;
 		originalColorB = *(unsigned char*)0x97F822;

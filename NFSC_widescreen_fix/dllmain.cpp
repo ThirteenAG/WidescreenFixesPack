@@ -119,6 +119,17 @@ void Init()
 	}
 }
 
+bool NotInCutsceneOrMenu()
+{
+	if (*(unsigned char*)0xA97DE4 != 0) //in game menu
+	{
+		if (*(unsigned char*)0xA97A80 == 0) // cutscene
+		{
+			return true;
+		}
+	}
+	return false;
+}
 
 DWORD WINAPI HudHandler(LPVOID)
 {
@@ -157,12 +168,14 @@ DWORD WINAPI HudHandler(LPVOID)
 				injector::WriteMemory<float>(0x599416, MinimapPosX, true);
 				injector::WriteMemory<float>(0x599421, MinimapPosY, true);
 				injector::WriteMemory<float>(0x598FC2, MinimapPosY, true);
+
+				injector::WriteMemory(0x9D5E1C, 0x00642578, true); // "x%d" string
 			}
 		}
 		else
 		{
 			Sleep(1);
-			if (*(unsigned char*)0xB4D7E8 != 0)
+			if (NotInCutsceneOrMenu())
 			{
 				if (*(float*)0x598DC0 == hud_position_x)
 				{
@@ -187,6 +200,8 @@ DWORD WINAPI HudHandler(LPVOID)
 					injector::WriteMemory<float>(0x599421, MinimapPosY, true);
 					injector::WriteMemory<float>(0x598FC2, MinimapPosY, true);
 					injector::WriteMemory<float>(0x5D2B4E, MinimapPosY, true);
+
+					injector::WriteMemory(0x9D5E1C, 0x00202020, true);  // "x%d" string
 				}
 			}
 			else
@@ -211,6 +226,8 @@ DWORD WINAPI HudHandler(LPVOID)
 					injector::WriteMemory<float>(0x599416, MinimapPosX, true);
 					injector::WriteMemory<float>(0x599421, MinimapPosY, true);
 					injector::WriteMemory<float>(0x598FC2, MinimapPosY, true);
+
+					injector::WriteMemory(0x9D5E1C, 0x00642578, true); // "x%d" string
 				}
 			}
 		}

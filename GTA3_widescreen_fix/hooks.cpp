@@ -225,8 +225,8 @@ void TextDrawOutlineHook()
 	injector::make_static_hook<printstr_hook>([](printstr_hook::func_type PrintString, float PosX, float PosY, unsigned short* c)
 	{
 		PrintString = injector::cstd<void(float, float, unsigned short*)>::call<0x500F50>;
-		originalPosX = PosX;
-		originalPosY = PosY;
+		originalPosX = PosX + 1.0f;
+		originalPosY = PosY + 1.0f;
 		originalColorR = *(unsigned char*)0x8F317C;
 		originalColorG = *(unsigned char*)0x8F317D;
 		originalColorB = *(unsigned char*)0x8F317E;

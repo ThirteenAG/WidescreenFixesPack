@@ -156,6 +156,17 @@ void Init()
 		}
 }
 
+bool NotInCutsceneOrMenu()
+{
+	if (*(unsigned char*)0x988DEC != 0) //in game menu
+	{
+		if (*(unsigned char*)0x91A0D4 != 0) // cutscene
+		{
+			return true;
+		}
+	}
+	return false;
+}
 
 DWORD WINAPI HudHandler(LPVOID)
 {
@@ -194,12 +205,14 @@ DWORD WINAPI HudHandler(LPVOID)
 				injector::WriteMemory<float>(0x59A5B2, MinimapPosX, true);
 				injector::WriteMemory<float>(0x59A132, MinimapPosY, true);
 				injector::WriteMemory<float>(0x59A5BD, MinimapPosY, true);
+
+				injector::WriteMemory(0x8A04A0, 0x00642578, true); // "x%d" string
 			}
 		}
 		else
 		{
 			Sleep(1);
-			if (*(unsigned char*)0x988DEC != 0)
+			if (NotInCutsceneOrMenu())
 			{
 				if (*(float*)0x56FED4 == hud_position_x)
 				{
@@ -217,13 +230,15 @@ DWORD WINAPI HudHandler(LPVOID)
 					injector::WriteMemory<float>(0x400000 + 0x494B40, hud_position_x * 2.0f + 290.0f * ((float)ResX * (1.0f / 1920.0f)), true);
 
 					MinimapPosX = (hud_position_x * 2.0f) * 1.7f * 1.07f;
-					MinimapPosY = 20.0f;
+					MinimapPosY = 560.0f;
 					injector::WriteMemory<float>(0x59A127, MinimapPosX, true);
 					injector::WriteMemory<float>(0x59A5B2, MinimapPosX, true);
 					injector::WriteMemory<float>(0x59A132, MinimapPosY, true);
 					injector::WriteMemory<float>(0x59A5BD, MinimapPosY, true);
 
 					injector::WriteMemory<float>(0x400000 + 0x1A44CC, 20.0f, true); //text
+
+					injector::WriteMemory(0x8A04A0, 0x00202020, true);  // "x%d" string
 				}
 			}
 			else
@@ -248,6 +263,8 @@ DWORD WINAPI HudHandler(LPVOID)
 					injector::WriteMemory<float>(0x59A5B2, MinimapPosX, true);
 					injector::WriteMemory<float>(0x59A132, MinimapPosY, true);
 					injector::WriteMemory<float>(0x59A5BD, MinimapPosY, true);
+
+					injector::WriteMemory(0x8A04A0, 0x00642578, true); // "x%d" string
 				}
 			}
 		}
