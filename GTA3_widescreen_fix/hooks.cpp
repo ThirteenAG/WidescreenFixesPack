@@ -204,137 +204,71 @@ void __declspec(naked)DrawBordersForWideScreen_patch()
 	}
 }
 
-CRGBA rgba;
-float originalPosX, originalPosY;
-unsigned char originalColorR, originalColorG, originalColorB, originalColorA;
-template<uintptr_t addr>
-void TextDrawOutlineHookNOP()
-{
-	using printstr_hook = injector::function_hooker<addr, void(float, float, unsigned short*)>;
-	injector::make_static_hook<printstr_hook>([](printstr_hook::func_type /*PrintString*/, float /*PosX*/, float /*PosY*/, unsigned short* /*c*/)
-	{
-		//PrintString(PosX, PosY, c);
-		return;
-	});
-}
-
-template<uintptr_t addr>
+template<uintptr_t addr, bool bIsMenu = false, bool bBlackText = false, bool bIsSubtitles = false>
 void TextDrawOutlineHook()
 {
 	using printstr_hook = injector::function_hooker<addr, void(float, float, unsigned short*)>;
 	injector::make_static_hook<printstr_hook>([](printstr_hook::func_type PrintString, float PosX, float PosY, unsigned short* c)
 	{
+		CRGBA rgba;
 		PrintString = injector::cstd<void(float, float, unsigned short*)>::call<0x500F50>;
-		originalPosX = PosX + 1.0f;
-		originalPosY = PosY + 1.0f;
-		originalColorR = *(unsigned char*)0x8F317C;
-		originalColorG = *(unsigned char*)0x8F317D;
-		originalColorB = *(unsigned char*)0x8F317E;
-		originalColorA = *(unsigned char*)0x8F317F;
+		unsigned char originalColorR = *(unsigned char*)0x8F317C;
+		unsigned char originalColorG = *(unsigned char*)0x8F317D;
+		unsigned char originalColorB = *(unsigned char*)0x8F317E;
+		unsigned char originalColorA = *(unsigned char*)0x8F317F;
 
-		injector::thiscall<void(CRGBA*, uint8_t, uint8_t, uint8_t, uint8_t)>::call<0x4F8C20>(&rgba, 0, 0, 0, originalColorA);
-		injector::cstd<void(CRGBA*)>::call<0x501BD0>(&rgba);
-
-		PosX = originalPosX + 1.0f;
-		PosY = originalPosY + 1.0f;
-		PrintString(PosX, PosY, c);
-
-		PosX = originalPosX + 1.0f;
-		PosY = originalPosY - 1.0f;
-		PrintString(PosX, PosY, c);
-
-		PosX = originalPosX - 1.0f;
-		PosY = originalPosY - 1.0f;
-		PrintString(PosX, PosY, c);
-
-		PosX = originalPosX - 1.0f;
-		PosY = originalPosY + 1.0f;
-		PrintString(PosX, PosY, c);
-
-		if (ReplaceTextShadowWithOutline > 1)
+		if (originalColorR != 0 && originalColorG != 0 && originalColorB != 0 || bBlackText)
 		{
-			PosX = originalPosX + 2.0f;
-			PosY = originalPosY + 2.0f;
-			PrintString(PosX, PosY, c);
-
-			PosX = originalPosX + 2.0f;
-			PosY = originalPosY - 2.0f;
-			PrintString(PosX, PosY, c);
-
-			PosX = originalPosX - 2.0f;
-			PosY = originalPosY - 2.0f;
-			PrintString(PosX, PosY, c);
-
-			PosX = originalPosX - 2.0f;
-			PosY = originalPosY + 2.0f;
-			PrintString(PosX, PosY, c);
-		}
-
-		injector::thiscall<void(CRGBA*, uint8_t, uint8_t, uint8_t, uint8_t)>::call<0x4F8C20>(&rgba, originalColorR, originalColorG, originalColorB, originalColorA);
-		injector::cstd<void(CRGBA*)>::call<0x501BD0>(&rgba);
-		PrintString(originalPosX, originalPosY, c);
-
-		return;
-	});
-}
-
-template<uintptr_t addr>
-void TextDrawOutlineHookMenu()
-{
-	using printstr_hook = injector::function_hooker<addr, void(float, float, unsigned short*)>;
-	injector::make_static_hook<printstr_hook>([](printstr_hook::func_type PrintString, float PosX, float PosY, unsigned short* c)
-	{
-		PrintString = injector::cstd<void(float, float, unsigned short*)>::call<0x500F50>;
-		originalPosX = PosX;
-		originalPosY = PosY;
-		originalColorR = *(unsigned char*)0x8F317C;
-		originalColorG = *(unsigned char*)0x8F317D;
-		originalColorB = *(unsigned char*)0x8F317E;
-		originalColorA = *(unsigned char*)0x8F317F;
-
-		if (originalColorR != 0 && originalColorG != 0 && originalColorB != 0)
-		{
-			injector::thiscall<void(CRGBA*, uint8_t, uint8_t, uint8_t, uint8_t)>::call<0x4F8C20>(&rgba, 0, 0, 0, originalColorA);
+			if (!bBlackText)
+				injector::thiscall<void(CRGBA*, uint8_t, uint8_t, uint8_t, uint8_t)>::call<0x4F8C20>(&rgba, 0, 0, 0, originalColorA);
+			else
+				injector::thiscall<void(CRGBA*, uint8_t, uint8_t, uint8_t, uint8_t)>::call<0x4F8C20>(&rgba, 0xFF, 0xFF, 0xFF, originalColorA / 10);
 			injector::cstd<void(CRGBA*)>::call<0x501BD0>(&rgba);
 
-			PosX = originalPosX + 1.0f;
-			PosY = originalPosY + 1.0f;
-			PrintString(PosX, PosY, c);
+			bIsSubtitles ? PosX -= 0.5f : 0.0f;
 
-			PosX = originalPosX + 1.0f;
-			PosY = originalPosY - 1.0f;
-			PrintString(PosX, PosY, c);
+			PrintString(PosX + 1.0f, PosY, c);
+			PrintString(PosX - 1.0f, PosY, c);
+			PrintString(PosX, PosY + 1.0f, c);
+			PrintString(PosX, PosY - 1.0f, c);
+			PrintString(PosX + 1.0f, PosY + 1.0f, c);
+			PrintString(PosX - 1.0f, PosY + 1.0f, c);
+			PrintString(PosX + 1.0f, PosY - 1.0f, c);
+			PrintString(PosX - 1.0f, PosY - 1.0f, c);
 
-			PosX = originalPosX - 1.0f;
-			PosY = originalPosY - 1.0f;
-			PrintString(PosX, PosY, c);
-
-			PosX = originalPosX - 1.0f;
-			PosY = originalPosY + 1.0f;
-			PrintString(PosX, PosY, c);
+			if (bIsMenu)
+			{
+				*(unsigned char*)0x8F317F = originalColorA / 2;
+				PrintString(PosX - 1.0f - 1.0f, PosY, c);
+				PrintString(PosX, PosY + 1.0f + 1.0f, c);
+				*(unsigned char*)0x8F317F = originalColorA;
+			}
 
 			if (ReplaceTextShadowWithOutline > 1)
 			{
-				PosX = originalPosX + 2.0f;
-				PosY = originalPosY + 2.0f;
-				PrintString(PosX, PosY, c);
+				PrintString(PosX + 2.0f, PosY, c);
+				PrintString(PosX - 2.0f, PosY, c);
+				PrintString(PosX, PosY + 2.0f, c);
+				PrintString(PosX, PosY - 2.0f, c);
+				PrintString(PosX + 2.0f, PosY + 2.0f, c);
+				PrintString(PosX - 2.0f, PosY + 2.0f, c);
+				PrintString(PosX + 2.0f, PosY - 2.0f, c);
+				PrintString(PosX - 2.0f, PosY - 2.0f, c);
 
-				PosX = originalPosX + 2.0f;
-				PosY = originalPosY - 2.0f;
-				PrintString(PosX, PosY, c);
-
-				PosX = originalPosX - 2.0f;
-				PosY = originalPosY - 2.0f;
-				PrintString(PosX, PosY, c);
-
-				PosX = originalPosX - 2.0f;
-				PosY = originalPosY + 2.0f;
-				PrintString(PosX, PosY, c);
+				if (bIsMenu)
+				{
+					*(unsigned char*)0x8F317F = originalColorA / 2;
+					PrintString(PosX - 2.0f - 1.0f, PosY, c);
+					PrintString(PosX, PosY + 2.0f + 1.0f, c);
+					*(unsigned char*)0x8F317F = originalColorA;
+				}
 			}
+
+			bIsSubtitles ? PosX += 0.5f : 0.0f;
 
 			injector::thiscall<void(CRGBA*, uint8_t, uint8_t, uint8_t, uint8_t)>::call<0x4F8C20>(&rgba, originalColorR, originalColorG, originalColorB, originalColorA);
 			injector::cstd<void(CRGBA*)>::call<0x501BD0>(&rgba);
-			PrintString(originalPosX, originalPosY, c);
+			PrintString(PosX, PosY, c);
 		}
 		return;
 	});
@@ -1086,41 +1020,84 @@ void ApplyINIchanges()
 		injector::WriteMemory<BYTE>(0x500D6D, 0x89, true);
 		injector::WriteMemory<WORD>(0x500D74, 0x2024, true);
 
+
+		//
+		TextDrawOutlineHook<(0x47C666), true>(); //(menu shadows and text)
+		TextDrawOutlineHook<(0x47C74C), true>(); //(menu shadows and text)
+		TextDrawOutlineHook<(0x47AF76), true, true>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(menu)
+		TextDrawOutlineHook<(0x47F3E8), true, true>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(menu)
+
+		//shadow
+		injector::MakeNOP(0x420BBC, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+		injector::MakeNOP(0x420C29, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+		injector::MakeNOP(0x420CC8, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+		injector::MakeNOP(0x426446, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+		injector::MakeNOP(0x481010, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+		injector::MakeNOP(0x48113C, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+		injector::MakeNOP(0x4827AE, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+		injector::MakeNOP(0x505F82, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+		injector::MakeNOP(0x5065DA, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+		injector::MakeNOP(0x50669B, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+		injector::MakeNOP(0x50694B, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+		injector::MakeNOP(0x506A0C, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+		injector::MakeNOP(0x506C37, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+		injector::MakeNOP(0x5070FA, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+		injector::MakeNOP(0x507598, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+		injector::MakeNOP(0x507754, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+		injector::MakeNOP(0x507944, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+		injector::MakeNOP(0x507AC8, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+		injector::MakeNOP(0x507CF0, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+		injector::MakeNOP(0x507FF1, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+		injector::MakeNOP(0x508C6E, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+		injector::MakeNOP(0x508F09, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+		injector::MakeNOP(0x5098D6, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+		injector::MakeNOP(0x509A65, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+		injector::MakeNOP(0x509DDE, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+		injector::MakeNOP(0x57E9F5, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+		injector::MakeNOP(0x585786, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+		injector::MakeNOP(0x5858E5, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+		injector::MakeNOP(0x585AB7, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+
+		//
+		TextDrawOutlineHook<(0x509544), true>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(text box) 
+		//TextDrawOutlineHook<(0x508363)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *)) //pager
+		//TextDrawOutlineHook<(0x592BD8)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *)) with backgr
+		TextDrawOutlineHook<(0x508953), false, false, true>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *)) (subtitles)
+
+		//menu 		
+		//TextDrawOutlineHook<(0x4813DB), true, true>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *)) CLASSIC CONTROL CONFIGURATION
+		//TextDrawOutlineHook<(0x48A019), true, true>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
+		//TextDrawOutlineHook<(0x48A0D2), true, true>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
+		//TextDrawOutlineHook<(0x48A241), true, true>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
+		//TextDrawOutlineHook<(0x48A318), true, true>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
+
+
+
+		//
+		#if(1)
 		TextDrawOutlineHook<(0x420AAD)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
-		TextDrawOutlineHookNOP<(0x420BBC)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
-		TextDrawOutlineHookNOP<(0x420C29)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
-		TextDrawOutlineHookNOP<(0x420CC8)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
 		TextDrawOutlineHook<(0x420E3E)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
-		TextDrawOutlineHookNOP<(0x426446)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
 		TextDrawOutlineHook<(0x4264CD)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
 		TextDrawOutlineHook<(0x426584)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
 		TextDrawOutlineHook<(0x42665F)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
 		TextDrawOutlineHook<(0x4266EB)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
 		TextDrawOutlineHook<(0x432723)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
-		TextDrawOutlineHookMenu<(0x47AF76)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow) //menu
 		TextDrawOutlineHook<(0x47B132)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
-		TextDrawOutlineHookMenu<(0x47C666)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow) //menu
 		TextDrawOutlineHook<(0x47C74C)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
-		TextDrawOutlineHookMenu<(0x47F3E8)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow) //menu
 		TextDrawOutlineHook<(0x47F9F1)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
 		TextDrawOutlineHook<(0x47FAE4)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
 		TextDrawOutlineHook<(0x47FE87)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
 		TextDrawOutlineHook<(0x47FF24)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
 		TextDrawOutlineHook<(0x4808A8)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
-		TextDrawOutlineHookNOP<(0x481010)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
-		TextDrawOutlineHookNOP<(0x48113C)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
-		//TextDrawOutlineHook<(0x4813DB)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *)) CLASSIC CONTROL CONFIGURATION
 		TextDrawOutlineHook<(0x4818BB)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
 		TextDrawOutlineHook<(0x4818FD)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
 		TextDrawOutlineHook<(0x48193F)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
 		TextDrawOutlineHook<(0x481D0A)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
-		//TextDrawOutlineHookNOP<(0x48206F)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
 		TextDrawOutlineHook<(0x4824E1)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
 		TextDrawOutlineHook<(0x482527)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
 		TextDrawOutlineHook<(0x4825AD)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
 		TextDrawOutlineHook<(0x482620)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
 		TextDrawOutlineHook<(0x4826D0)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
-		TextDrawOutlineHookNOP<(0x4827AE)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
 		TextDrawOutlineHook<(0x483BE0)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
 		TextDrawOutlineHook<(0x483C04)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
 		TextDrawOutlineHook<(0x483C28)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
@@ -1250,10 +1227,6 @@ void ApplyINIchanges()
 		TextDrawOutlineHook<(0x489522)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
 		TextDrawOutlineHook<(0x489610)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
 		TextDrawOutlineHook<(0x4896EF)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
-		//TextDrawOutlineHook<(0x48A019)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
-		//TextDrawOutlineHook<(0x48A0D2)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
-		//TextDrawOutlineHook<(0x48A241)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
-		//TextDrawOutlineHook<(0x48A318)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
 		TextDrawOutlineHook<(0x48A3DD)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
 		TextDrawOutlineHook<(0x48A4EA)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
 		TextDrawOutlineHook<(0x48A5FD)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
@@ -1265,63 +1238,37 @@ void ApplyINIchanges()
 		TextDrawOutlineHook<(0x48DD30)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
 		TextDrawOutlineHook<(0x494413)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
 		TextDrawOutlineHook<(0x4FE6B2)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
-		TextDrawOutlineHookNOP<(0x505F82)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
 		TextDrawOutlineHook<(0x506018)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
-		//TextDrawOutlineHook<(0x506388)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
-		TextDrawOutlineHookNOP<(0x5065DA)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
-		TextDrawOutlineHookNOP<(0x50669B)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *)) (shadow)
 		TextDrawOutlineHook<(0x50670E)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
 		TextDrawOutlineHook<(0x5067C9)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
-		TextDrawOutlineHookNOP<(0x50694B)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
-		TextDrawOutlineHookNOP<(0x506A0C)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
 		TextDrawOutlineHook<(0x506A7F)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
 		TextDrawOutlineHook<(0x506B34)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
-		TextDrawOutlineHookNOP<(0x506C37)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
 		TextDrawOutlineHook<(0x506CE8)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
-		TextDrawOutlineHookNOP<(0x5070FA)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
 		TextDrawOutlineHook<(0x50719F)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
-		TextDrawOutlineHookNOP<(0x507598)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
 		TextDrawOutlineHook<(0x50763D)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
-		TextDrawOutlineHookNOP<(0x507754)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
 		TextDrawOutlineHook<(0x5077CA)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
-		TextDrawOutlineHookNOP<(0x507944)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
 		TextDrawOutlineHook<(0x5079EA)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
-		TextDrawOutlineHookNOP<(0x507AC8)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
 		TextDrawOutlineHook<(0x507B47)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
-		TextDrawOutlineHookNOP<(0x507CF0)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
 		TextDrawOutlineHook<(0x507D63)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
-		TextDrawOutlineHookNOP<(0x507FF1)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
 		TextDrawOutlineHook<(0x508070)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
-		//TextDrawOutlineHook<(0x508363)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *)) //pager
 		TextDrawOutlineHook<(0x508698)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
-		TextDrawOutlineHook<(0x508953)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *)) (subtitles)
-		TextDrawOutlineHookNOP<(0x508C6E)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
 		TextDrawOutlineHook<(0x508D0E)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
-		TextDrawOutlineHookNOP<(0x508F09)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
 		TextDrawOutlineHook<(0x508FA7)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
-		TextDrawOutlineHookMenu<(0x509544)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(text box) 
 		TextDrawOutlineHook<(0x509717)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
-		TextDrawOutlineHookNOP<(0x5098D6)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
 		TextDrawOutlineHook<(0x509953)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
-		TextDrawOutlineHookNOP<(0x509A65)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
 		TextDrawOutlineHook<(0x509AE2)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
-		TextDrawOutlineHookNOP<(0x509DDE)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
 		TextDrawOutlineHook<(0x509E51)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
 		TextDrawOutlineHook<(0x50A142)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
 		TextDrawOutlineHook<(0x50A1DC)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
 		TextDrawOutlineHook<(0x51AF43)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
-		TextDrawOutlineHookNOP<(0x57E9F5)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
 		TextDrawOutlineHook<(0x57EA80)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
 		TextDrawOutlineHook<(0x584DF9)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
 		TextDrawOutlineHook<(0x584E47)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
-		TextDrawOutlineHookNOP<(0x585786)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
 		TextDrawOutlineHook<(0x58581F)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
-		TextDrawOutlineHookNOP<(0x5858E5)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
 		TextDrawOutlineHook<(0x58597E)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
-		TextDrawOutlineHookNOP<(0x585AB7)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
 		TextDrawOutlineHook<(0x585B89)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
-		//TextDrawOutlineHook<(0x592BD8)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *)) with backgr
 		TextDrawOutlineHook<(0x59601A)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
+		#endif
 	}
 }
 

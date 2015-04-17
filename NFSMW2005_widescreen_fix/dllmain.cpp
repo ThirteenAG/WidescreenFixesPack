@@ -236,7 +236,7 @@ DWORD WINAPI HudHandler(LPVOID)
 					injector::WriteMemory<float>(0x59A132, MinimapPosY, true);
 					injector::WriteMemory<float>(0x59A5BD, MinimapPosY, true);
 
-					injector::WriteMemory<float>(0x400000 + 0x1A44CC, 20.0f, true); //text
+					injector::WriteMemory<float>(0x400000 + 0x1A44CC, hud_position_x * 2.0f + 290.0f * ((float)ResX * (1.0f / 1920.0f)), true); //text
 
 					injector::WriteMemory(0x8A04A0, 0x00202020, true);  // "x%d" string
 				}
