@@ -1467,10 +1467,10 @@ void ApplyINIchanges()
 		injector::WriteMemory(0x55B5A0, 0xFFFF4AEC, true); //enable shadow
 		injector::WriteMemory<char>(0x55B5A5, 0x01, true); //shadow size
 
-		injector::MakeNOP(0x5FA1FD, 5, true); //radio shadow
+		injector::WriteMemory(0x5FA1A5, 0, true); //radio shadow
 		TextDrawOutlineHook<(0x5FA28A)>(); // = 0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *) radio text
-		TextDrawOutlineHook<(0x55B113)>(); // = 0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *) subtitles
 	}
+	TextDrawOutlineHook<(0x55B113)>(); // = 0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *) subtitles
 }
 
 
