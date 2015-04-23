@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.21005.1
+VisualStudioVersion = 12.0.31101.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GTA1_widescreen_fix", "GTA1_widescreen_fix\GTA1_widescreen_fix.vcxproj", "{68FC361D-5588-45E3-893B-50A8D1975459}"
 EndProject
@@ -50,8 +50,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NFSC_widescreen_fix", "NFSC_widescreen_fix\NFSC_widescreen_fix.vcxproj.vcxproj", "{4E24A2AF-7398-48B2-8447-12C7A8D669B7}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gta3vcsa_resolution_override", "gta3vcsa_resolution_override\gta3vcsa_resolution_override.vcxproj", "{A0E91513-77EA-46CB-8B32-D15DEC9B1C7D}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DeerAvenger4_widescreen_fix", "DeerAvenger4_widescreen_fix\DeerAvenger4_widescreen_fix.vcxproj", "{F9F9A973-4F4B-44EB-B87B-FB0B1286945C}"
 EndProject
@@ -182,10 +180,6 @@ Global
 		{4E24A2AF-7398-48B2-8447-12C7A8D669B7}.Debug|Win32.Build.0 = Debug|Win32
 		{4E24A2AF-7398-48B2-8447-12C7A8D669B7}.Release|Win32.ActiveCfg = Release|Win32
 		{4E24A2AF-7398-48B2-8447-12C7A8D669B7}.Release|Win32.Build.0 = Release|Win32
-		{A0E91513-77EA-46CB-8B32-D15DEC9B1C7D}.Debug|Win32.ActiveCfg = Debug|Win32
-		{A0E91513-77EA-46CB-8B32-D15DEC9B1C7D}.Debug|Win32.Build.0 = Debug|Win32
-		{A0E91513-77EA-46CB-8B32-D15DEC9B1C7D}.Release|Win32.ActiveCfg = Release|Win32
-		{A0E91513-77EA-46CB-8B32-D15DEC9B1C7D}.Release|Win32.Build.0 = Release|Win32
 		{F9F9A973-4F4B-44EB-B87B-FB0B1286945C}.Debug|Win32.ActiveCfg = Debug|Win32
 		{F9F9A973-4F4B-44EB-B87B-FB0B1286945C}.Debug|Win32.Build.0 = Debug|Win32
 		{F9F9A973-4F4B-44EB-B87B-FB0B1286945C}.Release|Win32.ActiveCfg = Release|Win32
