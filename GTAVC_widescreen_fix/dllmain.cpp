@@ -9,6 +9,9 @@ void GetMemoryAddresses()
 		CDraw::pfScreenAspectRatio = (float*)0x94DD38;
 		CDraw::pfScreenFieldOfView = (float*)0x696658;
 		CSprite2dDrawRect = (int(__cdecl *)(CRect const &, CRGBA const &)) 0x577B00;
+		bWideScreen = 0x869652; BordersVar1 = 0x7E4738; BordersVar2 = 0x7E474C;
+		FindPlayerVehicle = (int(__cdecl *)()) 0x4BC1E0;
+		IsInCutscene = 0x7E46F5;
 	}
 	else
 	{
@@ -16,6 +19,9 @@ void GetMemoryAddresses()
 		CDraw::pfScreenAspectRatio = (float*)0x94CD40;
 		CDraw::pfScreenFieldOfView = (float*)0x695660;
 		CSprite2dDrawRect = (int(__cdecl *)(CRect const &, CRGBA const &)) 0x5779F0;
+		bWideScreen = 0x86865A; BordersVar1 = 0x7E3740; BordersVar2 = 0x7E3754;
+		FindPlayerVehicle = (int(__cdecl *)()) 0x4BC0B0;
+		IsInCutscene = 0x7E36FD;
 	}
 }
 
@@ -84,6 +90,15 @@ void FixAspectRatio()
 
 void FixFOV()
 {
+	if (FOVControl)
+	{
+		fFOVControlValue = *(float*)FOVControl;
+	}
+	else
+	{
+		fFOVControlValue = 1.0f;
+	}
+
 	if (!injector::address_manager::singleton().IsSteam())
 	{
 		injector::MakeCALL(0x46DCC8, CDraw::SetFOV, true);
@@ -501,7 +516,7 @@ void RsSelectDeviceHook()
 		{
 			injector::WriteMemory<uchar>(0x600FA9 + 5, 0xC3, true);
 			FixMenu();
-			if (IVRadarScaling)
+			if (!injector::address_manager::singleton().IsSteam() && IVRadarScaling)
 			{
 				IVRadar();
 			}
@@ -529,17 +544,6 @@ void FixCoronas()
 		injector::WriteMemory<uint8_t>(0x57786A, 0x0B, true);
 		injector::MakeNOP(0x57468D, 5, true); //CBrightLights::Render
 	}
-}
-
-template<uintptr_t addr>
-void DrawBordersForWideScreenHook()
-{
-	using printstr_hook = injector::function_hooker<addr, void()>;
-	injector::make_static_hook<printstr_hook>([](printstr_hook::func_type DrawBordersForWideScreen)
-	{
-		if (!injector::address_manager::singleton().IsSteam() ? !*(char*)0x869652 == 0 : !*(char*)0x86865A == 0)
-			return DrawBordersForWideScreen();
-	});
 }
 
 void FixBorders()
@@ -2086,8 +2090,8 @@ void IVRadar()
 template<uintptr_t addr>
 void TextDrawOutlineHook()
 {
-	using printstr_hook = injector::function_hooker<addr, void(float, float, unsigned short*)>;
-	injector::make_static_hook<printstr_hook>([](printstr_hook::func_type PrintString, float PosX, float PosY, unsigned short* c)
+	using func_hook = injector::function_hooker<addr, void(float, float, unsigned short*)>;
+	injector::make_static_hook<func_hook>([](func_hook::func_type PrintString, float PosX, float PosY, unsigned short* c)
 	{
 		*(short*)0x97F860 = 1;
 		*(short*)0x97F865 = 0xFF;
@@ -2116,8 +2120,8 @@ void __declspec(naked)GetTextOriginalColor()
 template<uintptr_t addr>
 void TextDrawOutlineHookShadow()
 {
-	using printstr_hook = injector::function_hooker<addr, void(float, float, unsigned int, unsigned short *, unsigned short *, float)>;
-	injector::make_static_hook<printstr_hook>([](printstr_hook::func_type PrintString, float PosX, float PosY, unsigned int c, unsigned short *d, unsigned short *e, float f)
+	using func_hook = injector::function_hooker<addr, void(float, float, unsigned int, unsigned short *, unsigned short *, float)>;
+	injector::make_static_hook<func_hook>([](func_hook::func_type PrintString, float PosX, float PosY, unsigned int c, unsigned short *d, unsigned short *e, float f)
 	{
 		CRGBA rgba;
 		unsigned char originalColorA = (originalColor >> 24) & 0xFF;
@@ -2457,6 +2461,15 @@ void Init()
 	{
 		if ((injector::address_manager::singleton().GetMajorVersion() == 1 && injector::address_manager::singleton().GetMinorVersion() == 0) || injector::address_manager::singleton().IsSteam())
 		{
+			if (injector::address_manager::singleton().IsSteam())
+			{
+				while (true)
+				{
+					Sleep(0);
+					if (*(DWORD*)0x666BA0 == 0x53E58955) break; //GTA_VC_STEAM
+				}
+			}
+
 			GetMemoryAddresses();
 
 			OverwriteResolution();
@@ -2478,7 +2491,10 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
 	if (reason == DLL_PROCESS_ATTACH)
 	{
-		Init();
+		if (!injector::address_manager::singleton().IsSteam())
+			Init();
+		else
+			CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, NULL, 0, NULL);
 	}
 	return TRUE;
 }

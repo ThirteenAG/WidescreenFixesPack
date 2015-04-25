@@ -7,7 +7,7 @@ extern float fCustomAspectRatioHor, fCustomAspectRatioVer;
 extern float fHudWidthScale, fHudHeightScale;
 extern float fCustomWideScreenWidthScaleDown;
 extern float fCustomWideScreenHeightScaleDown;
-extern float fRadarWidthScale, fCustomRadarWidthScale, fSubtitlesScale;
+extern float fRadarWidthScale, fCustomRadarWidthScale, fCustomRadarRingWidthScale, fCustomRadarRingHeightScale, fSubtitlesScale;
 extern RsGlobalType* RsGlobal;
 
 float*  CDraw::pfScreenAspectRatio;
@@ -32,11 +32,15 @@ extern float fDynamicScreenFieldOfViewScale;
 extern int RestoreCutsceneFOV;
 extern float fCarSpeedDependantFOV;
 extern int DontTouchFOV;
+extern float fFOVControlValue;
 extern int FOVControl;
 extern float fRadarScaling;
 
 extern float fvcLogoScale, fCrosshairHeightScaleDown;
 extern float fEmergencyVehiclesFix;
+
+extern int(__cdecl* FindPlayerVehicle)();
+extern DWORD IsInCutscene;
 
 void CDraw::CalculateAspectRatio()
 {
@@ -98,6 +102,8 @@ void CDraw::CalculateAspectRatio()
 	fCustomWideScreenWidthScaleDown = fWideScreenWidthScaleDown * fHudWidthScale;
 	fCustomWideScreenHeightScaleDown = fWideScreenHeightScaleDown * fHudHeightScale;
 	fCustomRadarWidthScale = fWideScreenWidthScaleDown * fRadarWidthScale;
+	fCustomRadarRingWidthScale = fCustomRadarWidthScale + 0.000019f;
+	fCustomRadarRingHeightScale = fWideScreenHeightScaleDown + 0.000019f;
 
 	//Proportional elements
 	fCrosshairHeightScaleDown = fWideScreenHeightScaleDown * fHudWidthScale;
@@ -109,20 +115,20 @@ inline float getDynamicScreenFieldOfView(float fFactor)
 {
 	fEmergencyVehiclesFix = 70.0f / fFactor;
 
-	if ((!injector::address_manager::singleton().IsSteam() ? !*(char*)0x7E46F5 == 0 : !*(char*)0x7E36FD == 0 && RestoreCutsceneFOV) || DontTouchFOV)
+	if ((!*(char*)IsInCutscene == 0 && RestoreCutsceneFOV) || DontTouchFOV)
 	{
-		return fFactor * (!FOVControl ? 1.0f : *(float*)FOVControl);
+		return fFactor * fFOVControlValue;
 	}
 
 	if (fCarSpeedDependantFOV)
 	{
-		if (!injector::address_manager::singleton().IsSteam() ? injector::cstd<int()>::call<0x4BC1E0>() : injector::cstd<int()>::call<0x4BC0B0>())
+		if (FindPlayerVehicle())
 		{
-			return (fFactor * (*(float*)FOVControl) * fDynamicScreenFieldOfViewScale) + (fRadarScaling / fCarSpeedDependantFOV);
+			return (fFactor * fFOVControlValue * fDynamicScreenFieldOfViewScale) + (fRadarScaling / fCarSpeedDependantFOV);
 		}
 	}
 
-	return fFactor * (!FOVControl ? 1.0f : *(float*)FOVControl) * fDynamicScreenFieldOfViewScale;
+	return fFactor * fFOVControlValue * fDynamicScreenFieldOfViewScale;
 }
 
 void CDraw::SetFOV(float fFactor)
