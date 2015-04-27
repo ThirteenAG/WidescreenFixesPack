@@ -1335,7 +1335,7 @@ void ApplyIniOptions()
 		}
 		else
 		{
-			injector::WriteMemory(0x5B7D75 + 0x1, (void*)0x619468);
+			injector::WriteMemory(0x5B7D75 + 0x1, (void*)0x619468, true);
 		}
 		
 		if (iniReader.ReadInteger("MAIN", "FixVehicleLights", 1))
@@ -1686,7 +1686,7 @@ void ApplyIniOptions()
 		}
 		else
 		{
-			injector::WriteMemory(0x5B7D75 + 0x1, (void*)0x619468);
+			injector::WriteMemory(0x5B7D75 + 0x1, (void*)0x619468, true);
 		}*/
 		
 		if (iniReader.ReadInteger("MAIN", "FixVehicleLights", 1))
