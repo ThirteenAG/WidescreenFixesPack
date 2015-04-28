@@ -2360,7 +2360,6 @@ void ApplyIniOptions()
 
 
 				Render2DStuffHook<(0x4A608E)>();
-
 			});
 		}
 	}

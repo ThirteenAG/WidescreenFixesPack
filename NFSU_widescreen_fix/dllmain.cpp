@@ -27,6 +27,8 @@ void Init()
 	verFovCorrectionFactor = iniReader.ReadFloat("MAIN", "verFovCorrectionFactor", 0.04f);
 	bHudMode = iniReader.ReadInteger("MAIN", "HudMode", 1) == 1;
 	DisableCutsceneBorders = iniReader.ReadInteger("MAIN", "DisableCutsceneBorders", 1) == 1;	
+	bool bHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1) == 1;
+	bool bFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1) == 1;
 
 	if (!ResX || !ResY) {
 		HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
@@ -94,6 +96,14 @@ void Init()
 
 			horFOV = 1.0f / ((1.0f * ((float)ResX / (float)ResY)) / (4.0f / 3.0f));
 			verFOV = horFOV - verFovCorrectionFactor;
+		}
+
+		if (bFMVWidescreenMode)
+		{
+			injector::WriteMemory<float>(0x4F1FC3 + 1, (0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
+			injector::WriteMemory<float>(0x4F1FC8 + 1, (0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
+			injector::WriteMemory<float>(0x4F1FCD + 1, -(0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
+			injector::WriteMemory<float>(0x4F1FD2 + 1, -(0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
 		}
 }
 

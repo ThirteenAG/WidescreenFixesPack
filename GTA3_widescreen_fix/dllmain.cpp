@@ -1287,6 +1287,53 @@ void TextDrawOutlineHook()
 	});
 }
 
+template<uintptr_t addr>
+void CSprite2dDrawHook()
+{
+	using func_hook = injector::function_hooker_thiscall<addr, void(void*, CRect const&, CRGBA const&)>;
+	injector::make_static_hook<func_hook>([](func_hook::func_type CSprite2dDraw, void* camera, CRect const& rect, CRGBA const& rgba)
+	{
+		CSprite2dDraw(camera, CRect(0.0f, 0.0f, 0.0f, 0.0f), CRGBA(0xFF, 0xFF, 0xFF, 0x01));
+
+	});
+}
+
+template<uintptr_t addr>
+void Render2DStuffHook()
+{
+	using func_hook = injector::function_hooker<addr, void()>;
+	injector::make_static_hook<func_hook>([](func_hook::func_type Render2DStuff)
+	{
+		if (*(bool*)0x8F5AE9 == 0) //bMenuVisible
+			Render2DStuff();
+		return;
+	});
+}
+
+template<uintptr_t addr>
+void RenderDebugShitHook()
+{
+	using func_hook = injector::function_hooker<addr, void()>;
+	injector::make_static_hook<func_hook>([](func_hook::func_type RenderDebugShit)
+	{
+		if (*(bool*)0x8F5AE9 == 0) //bMenuVisible
+			RenderDebugShit();
+		return;
+	});
+}
+
+template<uintptr_t addr>
+void CRendererConstructRenderListHook()
+{
+	using func_hook = injector::function_hooker<addr, void()>;
+	injector::make_static_hook<func_hook>([](func_hook::func_type CRendererConstructRenderList)
+	{
+		if (*(bool*)0x8F5AE9 == 0) //bMenuVisible
+			CRendererConstructRenderList();
+		return;
+	});
+}
+
 void ApplyIniOptions()
 {
 	
@@ -1318,6 +1365,7 @@ void ApplyIniOptions()
 	NoLoadingBarFix = iniReader.ReadInteger("LCS", "NoLoadingBarFix", 0);
 	IVRadarScaling = iniReader.ReadInteger("MAIN", "IVRadarScaling", 0);
 	ReplaceTextShadowWithOutline = iniReader.ReadInteger("MAIN", "ReplaceTextShadowWithOutline", 0);
+	bool bTransparentMenu = iniReader.ReadInteger("MAIN", "TransparentMenu", 0) == 1;
 
 	if (!fHudWidthScale || !fHudHeightScale) { fHudWidthScale = 0.62221788786f; fHudHeightScale = 0.66666670937f; }
 	if (!fRadarWidthScale) { fRadarWidthScale = 0.80354591724f; }
@@ -1673,11 +1721,36 @@ void ApplyIniOptions()
 			TextDrawOutlineHook<(0x585B89)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
 			TextDrawOutlineHook<(0x59601A)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
 #endif
+
+			if (bTransparentMenu)
+			{
+				injector::MakeInline<0x582E71, 0x582E78>([](injector::reg_pack&)
+				{
+					injector::WriteMemory<char>(0x8F5AEE, 0, true); // bGameStarted
+
+					injector::MakeNOP(0x48D02C, 5, true);
+
+					injector::MakeNOP(0x48E520, 6, true);
+
+					CSprite2dDrawHook<(0x47A5B0 + 0xE5)>(); //   call    Draw__9CSprite2dFRC5CRectRC5CRGBA; CSprite2d::Draw((CRect const &,CRGBA const &))
+					CSprite2dDrawHook<(0x47A5B0 + 0x262)>(); //   call    Draw__9CSprite2dFRC5CRectRC5CRGBA; CSprite2d::Draw((CRect const &,CRGBA const &))
+					CSprite2dDrawHook<(0x47A5B0 + 0x2E1)>(); //   call    Draw__9CSprite2dFRC5CRectRC5CRGBA; CSprite2d::Draw((CRect const &,CRGBA const &))
+					CSprite2dDrawHook<(0x47A5B0 + 0x354)>(); //   call    Draw__9CSprite2dFRC5CRectRC5CRGBA; CSprite2d::Draw((CRect const &,CRGBA const &))
+					/*CSprite2dDrawHook<(0x47AABB)>(); //   call    Draw__9CSprite2dFRC5CRectRC5CRGBA; CSprite2d::Draw((CRect const &,CRGBA const &))
+					CSprite2dDrawHook<(0x47A5B0 + 0x658)>(); //   call    Draw__9CSprite2dFRC5CRectRC5CRGBA; CSprite2d::Draw((CRect const &,CRGBA const &))
+					CSprite2dDrawHook<(0x47A5B0 + 0x79B)>(); //   call    Draw__9CSprite2dFRC5CRectRC5CRGBA; CSprite2d::Draw((CRect const &,CRGBA const &))
+					CSprite2dDrawHook<(0x47ADEA)>(); //   call    Draw__9CSprite2dFRC5CRectRC5CRGBA; CSprite2d::Draw((CRect const &,CRGBA const &)*/
+
+					CRendererConstructRenderListHook<0x48E539>();
+					Render2DStuffHook<(0x48E642)>();
+					RenderDebugShitHook<(0x48E5FE)>();
+				});
+			}
 		}
 	}
 	else
 	{
-		//steam
+		#pragma region SteamINI
 		/*szForceAspectRatio = iniReader.ReadString("MAIN", "ForceMultisamplingLevel", "");
 		if (strncmp(szForceAspectRatio, "max", 3) != 0)
 		{
@@ -1760,6 +1833,7 @@ void ApplyIniOptions()
 			injector::MakeCALL(0x48E18E, CCamera::DrawBordersForWideScreen, true);
 			injector::MakeCALL(0x4FE640, CCamera::DrawBordersForWideScreen, true);
 		}
+		#pragma endregion SteamINI
 	}
 }
 

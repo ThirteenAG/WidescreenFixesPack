@@ -25,6 +25,8 @@ void Init()
 	HudFix = iniReader.ReadInteger("MAIN", "HudFix", 1) == 1;
 	verFovCorrectionFactor = iniReader.ReadFloat("MAIN", "verFovCorrectionFactor", 0.03f);
 	bHudMode = iniReader.ReadInteger("MAIN", "HudMode", 1) == 1;
+	bool bHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1) == 1;
+	bool bFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1) == 1;
 
 	if (!ResX || !ResY) {
 		HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
@@ -111,6 +113,22 @@ void Init()
 
 			horFOV = 1.0f / ((1.0f * ((float)ResX / (float)ResY)) / (4.0f / 3.0f));
 			verFOV = horFOV - verFovCorrectionFactor;
+		}
+
+		if (bHudWidescreenMode) // thanks to dyons
+		{
+			injector::WriteMemory<char>(0x5DC508, 0x94, true);
+			injector::WriteMemory<char>(0x5D52B3, 0x94, true);
+			injector::WriteMemory<char>(0x5B6BAE, 0x75, true);
+			injector::WriteMemory<char>(0x5B6B5B, 0x75, true);
+		}
+
+		if (bFMVWidescreenMode)
+		{
+			injector::WriteMemory<float>(0x598EBE + 1, (0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
+			injector::WriteMemory<float>(0x598EC3 + 1, (0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
+			injector::WriteMemory<float>(0x598EC8 + 1, -(0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
+			injector::WriteMemory<float>(0x598ECD + 1, -(0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
 		}
 	}
 	else
