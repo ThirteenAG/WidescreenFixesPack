@@ -57,6 +57,7 @@ int AspectRatioWidth, AspectRatioHeight;
 int HideAABug, SmartCutsceneBorders, nMenuFix, nMenuAlignment;
 float gtaLogo128Coord1, gtaLogo128Coord2;
 int IVRadarScaling, ReplaceTextShadowWithOutline;
+int SmallerTextShadows;
 float fTextShadowsSize;
 
 float fCustomRadarWidthIV = 102.0f;

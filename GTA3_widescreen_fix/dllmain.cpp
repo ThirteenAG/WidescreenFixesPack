@@ -72,12 +72,14 @@ void FixAspectRatio()
 {
 	if (!injector::address_manager::singleton().IsSteam())
 	{
+		injector::MakeNOP(0x46B618, 2, true);
 		injector::MakeNOP(0x48D06B, 7, true);
 		injector::MakeJMP(0x584B26, CDraw::CalculateAspectRatio, true);
 		injector::MakeNOP(0x48D074, 2, true);
 	}
 	else
 	{
+		injector::MakeNOP(0x46B5E8, 2, true);
 		injector::MakeNOP(0x48D0FB, 7, true);
 		injector::MakeJMP(0x584D56, CDraw::CalculateAspectRatio, true);
 		injector::MakeNOP(0x48D104, 2, true);
@@ -413,7 +415,7 @@ void FixHUD()
 		injector::WriteMemory(0x509030 + 0x56F + 0x2, &fWideScreenWidthScaleDown, true);
 		injector::WriteMemory(0x509030 + 0x5EC + 0x2, &fWideScreenWidthScaleDown, true);
 		injector::WriteMemory(0x509030 + 0x608 + 0x2, &fWideScreenWidthScaleDown, true);
-		injector::WriteMemory(0x509030 + 0x6CC + 0x2, &fWideScreenWidthScaleDown, true);
+		//injector::WriteMemory(0x509030 + 0x6CC + 0x2, &fWideScreenWidthScaleDown, true);
 		injector::WriteMemory(0x509030 + 0x7E5 + 0x2, &fWideScreenWidthScaleDown, true);
 		injector::WriteMemory(0x509030 + 0x80C + 0x2, &fWideScreenWidthScaleDown, true);
 		injector::WriteMemory(0x509030 + 0x96E + 0x2, &fWideScreenWidthScaleDown, true);
@@ -500,7 +502,7 @@ void FixHUD()
 		injector::WriteMemory(0x509030 + 0x3C7 + 0x2, &fWideScreenHeightScaleDown, true);
 		injector::WriteMemory(0x509030 + 0x4DA + 0x2, &fWideScreenHeightScaleDown, true);
 		injector::WriteMemory(0x509030 + 0x553 + 0x2, &fWideScreenHeightScaleDown, true);
-		injector::WriteMemory(0x509030 + 0x69F + 0x2, &fWideScreenHeightScaleDown, true);
+		//injector::WriteMemory(0x509030 + 0x69F + 0x2, &fWideScreenHeightScaleDown, true);
 		injector::WriteMemory(0x509030 + 0x7CF + 0x2, &fWideScreenHeightScaleDown, true);
 		injector::WriteMemory(0x509030 + 0x958 + 0x2, &fWideScreenHeightScaleDown, true);
 		injector::WriteMemory(0x509030 + 0xCA7 + 0x2, &fWideScreenHeightScaleDown, true);
@@ -632,7 +634,7 @@ void FixHUD()
 		injector::WriteMemory(0x509030 + 0x56F + 0x2, &fCustomWideScreenWidthScaleDown, true);
 		injector::WriteMemory(0x509030 + 0x5EC + 0x2, &fCustomWideScreenWidthScaleDown, true);
 		injector::WriteMemory(0x509030 + 0x608 + 0x2, &fCustomWideScreenWidthScaleDown, true);
-		injector::WriteMemory(0x509030 + 0x6CC + 0x2, &fCustomWideScreenWidthScaleDown, true);
+		//injector::WriteMemory(0x509030 + 0x6CC + 0x2, &fCustomWideScreenWidthScaleDown, true);
 		injector::WriteMemory(0x509030 + 0x7E5 + 0x2, &fCustomWideScreenWidthScaleDown, true);
 		injector::WriteMemory(0x509030 + 0x80C + 0x2, &fCustomWideScreenWidthScaleDown, true);
 		injector::WriteMemory(0x509030 + 0x96E + 0x2, &fCustomWideScreenWidthScaleDown, true);
@@ -719,7 +721,7 @@ void FixHUD()
 		injector::WriteMemory(0x509030 + 0x3C7 + 0x2, &fCustomWideScreenHeightScaleDown, true);
 		injector::WriteMemory(0x509030 + 0x4DA + 0x2, &fCustomWideScreenHeightScaleDown, true);
 		injector::WriteMemory(0x509030 + 0x553 + 0x2, &fCustomWideScreenHeightScaleDown, true);
-		injector::WriteMemory(0x509030 + 0x69F + 0x2, &fCustomWideScreenHeightScaleDown, true);
+		//injector::WriteMemory(0x509030 + 0x69F + 0x2, &fCustomWideScreenHeightScaleDown, true);
 		injector::WriteMemory(0x509030 + 0x7CF + 0x2, &fCustomWideScreenHeightScaleDown, true);
 		injector::WriteMemory(0x509030 + 0x958 + 0x2, &fCustomWideScreenHeightScaleDown, true);
 		injector::WriteMemory(0x509030 + 0xCA7 + 0x2, &fCustomWideScreenHeightScaleDown, true);
@@ -866,7 +868,7 @@ void FixHUD()
 		injector::WriteMemory(0x5090A0 + 0x56F + 0x2, &fWideScreenWidthScaleDown, true);
 		injector::WriteMemory(0x5090A0 + 0x5EC + 0x2, &fWideScreenWidthScaleDown, true);
 		injector::WriteMemory(0x5090A0 + 0x608 + 0x2, &fWideScreenWidthScaleDown, true);
-		injector::WriteMemory(0x5090A0 + 0x6CC + 0x2, &fWideScreenWidthScaleDown, true);
+		//injector::WriteMemory(0x5090A0 + 0x6CC + 0x2, &fWideScreenWidthScaleDown, true);
 		injector::WriteMemory(0x5090A0 + 0x7E5 + 0x2, &fWideScreenWidthScaleDown, true);
 		injector::WriteMemory(0x5090A0 + 0x80C + 0x2, &fWideScreenWidthScaleDown, true);
 		injector::WriteMemory(0x5090A0 + 0x96E + 0x2, &fWideScreenWidthScaleDown, true);
@@ -955,7 +957,7 @@ void FixHUD()
 		injector::WriteMemory(0x5090A0 + 0x3C7 + 0x2, &fWideScreenHeightScaleDown, true);
 		injector::WriteMemory(0x5090A0 + 0x4DA + 0x2, &fWideScreenHeightScaleDown, true);
 		injector::WriteMemory(0x5090A0 + 0x553 + 0x2, &fWideScreenHeightScaleDown, true);
-		injector::WriteMemory(0x5090A0 + 0x69F + 0x2, &fWideScreenHeightScaleDown, true);
+		//injector::WriteMemory(0x5090A0 + 0x69F + 0x2, &fWideScreenHeightScaleDown, true);
 		injector::WriteMemory(0x5090A0 + 0x7CF + 0x2, &fWideScreenHeightScaleDown, true);
 		injector::WriteMemory(0x5090A0 + 0x958 + 0x2, &fWideScreenHeightScaleDown, true);
 		injector::WriteMemory(0x5090A0 + 0xCA7 + 0x2, &fWideScreenHeightScaleDown, true);
@@ -1085,7 +1087,7 @@ void FixHUD()
 		injector::WriteMemory(0x5090A0 + 0x56F + 0x2, &fCustomWideScreenWidthScaleDown, true);
 		injector::WriteMemory(0x5090A0 + 0x5EC + 0x2, &fCustomWideScreenWidthScaleDown, true);
 		injector::WriteMemory(0x5090A0 + 0x608 + 0x2, &fCustomWideScreenWidthScaleDown, true);
-		injector::WriteMemory(0x5090A0 + 0x6CC + 0x2, &fCustomWideScreenWidthScaleDown, true);
+		//injector::WriteMemory(0x5090A0 + 0x6CC + 0x2, &fCustomWideScreenWidthScaleDown, true);
 		injector::WriteMemory(0x5090A0 + 0x7E5 + 0x2, &fCustomWideScreenWidthScaleDown, true);
 		injector::WriteMemory(0x5090A0 + 0x80C + 0x2, &fCustomWideScreenWidthScaleDown, true);
 		injector::WriteMemory(0x5090A0 + 0x96E + 0x2, &fCustomWideScreenWidthScaleDown, true);
@@ -1174,7 +1176,7 @@ void FixHUD()
 		injector::WriteMemory(0x5090A0 + 0x3C7 + 0x2, &fCustomWideScreenHeightScaleDown, true);
 		injector::WriteMemory(0x5090A0 + 0x4DA + 0x2, &fCustomWideScreenHeightScaleDown, true);
 		injector::WriteMemory(0x5090A0 + 0x553 + 0x2, &fCustomWideScreenHeightScaleDown, true);
-		injector::WriteMemory(0x5090A0 + 0x69F + 0x2, &fCustomWideScreenHeightScaleDown, true);
+		//injector::WriteMemory(0x5090A0 + 0x69F + 0x2, &fCustomWideScreenHeightScaleDown, true);
 		injector::WriteMemory(0x5090A0 + 0x7CF + 0x2, &fCustomWideScreenHeightScaleDown, true);
 		injector::WriteMemory(0x5090A0 + 0x958 + 0x2, &fCustomWideScreenHeightScaleDown, true);
 		injector::WriteMemory(0x5090A0 + 0xCA7 + 0x2, &fCustomWideScreenHeightScaleDown, true);
@@ -1291,10 +1293,9 @@ template<uintptr_t addr>
 void CSprite2dDrawHook()
 {
 	using func_hook = injector::function_hooker_thiscall<addr, void(void*, CRect const&, CRGBA const&)>;
-	injector::make_static_hook<func_hook>([](func_hook::func_type CSprite2dDraw, void* camera, CRect const& rect, CRGBA const& rgba)
+	injector::make_static_hook<func_hook>([](func_hook::func_type CSprite2dDraw, void* camera, CRect const&, CRGBA const&)
 	{
 		CSprite2dDraw(camera, CRect(0.0f, 0.0f, 0.0f, 0.0f), CRGBA(0xFF, 0xFF, 0xFF, 0x01));
-
 	});
 }
 
@@ -1329,7 +1330,10 @@ void CRendererConstructRenderListHook()
 	injector::make_static_hook<func_hook>([](func_hook::func_type CRendererConstructRenderList)
 	{
 		if (*(bool*)0x8F5AE9 == 0) //bMenuVisible
+		{
 			CRendererConstructRenderList();
+			injector::cstd<void()>::call<0x4A7840>(); //CRenderer::PreRender((void))
+		}
 		return;
 	});
 }
@@ -1343,7 +1347,7 @@ void ApplyIniOptions()
 	fRadarWidthScale = iniReader.ReadFloat("MAIN", "RadarWidthScale", 0.80354591724f);
 	fSubtitlesScale = iniReader.ReadFloat("MAIN", "SubtitlesScale", 1.0f);
 	nMenuFix = iniReader.ReadInteger("MAIN", "MenuFix", 1);
-	int SmallerTextShadows = iniReader.ReadInteger("MAIN", "SmallerTextShadows", 1);
+	SmallerTextShadows = iniReader.ReadInteger("MAIN", "SmallerTextShadows", 1);
 	RestoreCutsceneFOV = iniReader.ReadInteger("MAIN", "RestoreCutsceneFOV", 1);
 	fCarSpeedDependantFOV = iniReader.ReadFloat("MAIN", "CarSpeedDependantFOV", 0.0f);
 	DontTouchFOV = iniReader.ReadInteger("MAIN", "DontTouchFOV", 0);
@@ -1392,7 +1396,7 @@ void ApplyIniOptions()
 			injector::WriteMemory(0x004F94A6, 0x005EC9BC, true); //car lights stretch
 		}
 
-		if (SmallerTextShadows)
+		if (SmallerTextShadows || ReplaceTextShadowWithOutline)
 		{
 			fTextShadowsSize = 1.0f;
 			injector::WriteMemory(0x505F7B, &fTextShadowsSize, true); injector::WriteMemory(0x505F50, &fTextShadowsSize, true);
@@ -1422,7 +1426,6 @@ void ApplyIniOptions()
 			injector::WriteMemory<float>(0x5ECFD0, 0.93f, true);
 			injector::WriteMemory<float>(0x5ECFD4, 0.8f, true);
 		}
-
 		
 		if (fSubtitlesScale)
 		{
@@ -1476,8 +1479,9 @@ void ApplyIniOptions()
 			//
 			TextDrawOutlineHook<(0x47C666), true>(); //(menu shadows and text)
 			TextDrawOutlineHook<(0x47C74C), true>(); //(menu shadows and text)
-			TextDrawOutlineHook<(0x47AF76), true, true>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(menu)
+			//TextDrawOutlineHook<(0x47AF76), true, true>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(menu/cleo version text)
 			TextDrawOutlineHook<(0x47F3E8), true, true>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(menu)
+			injector::WriteMemory<char>(0x47ACB7 + 0x1, 0x00, true); // cursor shadow alpha
 
 			//shadow
 			injector::MakeNOP(0x420BBC, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
@@ -1492,7 +1496,7 @@ void ApplyIniOptions()
 			injector::MakeNOP(0x50669B, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
 			injector::MakeNOP(0x50694B, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
 			injector::MakeNOP(0x506A0C, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
-			injector::MakeNOP(0x506C37, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+			//injector::MakeNOP(0x506C37, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(wanted stars)
 			injector::MakeNOP(0x5070FA, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
 			injector::MakeNOP(0x507598, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
 			injector::MakeNOP(0x507754, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
@@ -1511,6 +1515,7 @@ void ApplyIniOptions()
 			injector::MakeNOP(0x585AB7, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
 
 			//
+			injector::WriteMemory(0x50948D, 0xFFFF885F, true); //background 
 			TextDrawOutlineHook<(0x509544), true>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(text box) 
 			//TextDrawOutlineHook<(0x508363)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *)) //pager
 			//TextDrawOutlineHook<(0x592BD8)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *)) with backgr
@@ -1742,6 +1747,7 @@ void ApplyIniOptions()
 					CSprite2dDrawHook<(0x47ADEA)>(); //   call    Draw__9CSprite2dFRC5CRectRC5CRGBA; CSprite2d::Draw((CRect const &,CRGBA const &)*/
 
 					CRendererConstructRenderListHook<0x48E539>();
+					injector::MakeNOP(0x48E53E, 5, true); //noping CRenderer::PreRender(), but it will be called in CRendererConstructRenderListHook^
 					Render2DStuffHook<(0x48E642)>();
 					RenderDebugShitHook<(0x48E5FE)>();
 				});
@@ -1851,7 +1857,61 @@ DWORD WINAPI CompatHandler(LPVOID)
 
 	if (GetModuleHandle("SilentPatchIII.asi"))
 	{
-		ApplyIniOptions();
+		OverwriteResolution();
+		if (ReplaceTextShadowWithOutline)
+		{
+			//SP compat
+			injector::WriteMemory(0x500D27, 0xD8C3BF0F, true); injector::WriteMemory(0x500D27 + 4, 0xDA582444, true);
+			injector::WriteMemory<WORD>(0x500D4C, 0x4489, true);
+			injector::WriteMemory<WORD>(0x500D5F, 0x44DB, true);
+			injector::WriteMemory<WORD>(0x500D6E, 0x2444, true);
+			injector::WriteMemory(0x500D4E, 0xBF0F1824, true);
+			injector::WriteMemory(0x500D70, 0x44DB501C, true);
+			injector::WriteMemory(0x500D61, 0xBF0F1C24, true);
+			injector::WriteMemory<DWORD>(0x500D53, 0x182444DA, true);
+			injector::WriteMemory<BYTE>(0x500D52, 0xC3, true);
+			injector::WriteMemory<BYTE>(0x500D65, 0xC3, true);
+			injector::WriteMemory<BYTE>(0x500D6D, 0x89, true);
+			injector::WriteMemory<WORD>(0x500D74, 0x2024, true);
+
+
+			//
+			TextDrawOutlineHook<(0x47C666), true>(); //(menu shadows and text)
+			TextDrawOutlineHook<(0x47C74C), true>(); //(menu shadows and text)
+			//TextDrawOutlineHook<(0x47AF76), true, true>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(menu/cleo version text)
+			TextDrawOutlineHook<(0x47F3E8), true, true>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(menu)
+
+			//shadow
+			injector::MakeNOP(0x420BBC, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+			injector::MakeNOP(0x420C29, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+			injector::MakeNOP(0x420CC8, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+			injector::MakeNOP(0x426446, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+			injector::MakeNOP(0x481010, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+			injector::MakeNOP(0x48113C, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+			injector::MakeNOP(0x4827AE, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+			injector::MakeNOP(0x505F82, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+			injector::MakeNOP(0x5065DA, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+			injector::MakeNOP(0x50669B, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+			injector::MakeNOP(0x50694B, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+			injector::MakeNOP(0x506A0C, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+			//injector::MakeNOP(0x506C37, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(wanted stars)
+			injector::MakeNOP(0x5070FA, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+			injector::MakeNOP(0x507598, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+			injector::MakeNOP(0x507754, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+			injector::MakeNOP(0x507944, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+			injector::MakeNOP(0x507AC8, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+			injector::MakeNOP(0x507CF0, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+			injector::MakeNOP(0x507FF1, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+			injector::MakeNOP(0x508C6E, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+			injector::MakeNOP(0x508F09, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+			injector::MakeNOP(0x5098D6, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+			injector::MakeNOP(0x509A65, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+			injector::MakeNOP(0x509DDE, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+			injector::MakeNOP(0x57E9F5, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+			injector::MakeNOP(0x585786, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+			injector::MakeNOP(0x5858E5, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+			injector::MakeNOP(0x585AB7, 5, true);  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))(shadow)
+		}
 	}
 	return 0;
 }
@@ -1881,6 +1941,7 @@ void Init()
 			FixCoronas();
 			FixBorders();
 			FixHUD();
+
 			ApplyIniOptions();
 
 			if (!injector::address_manager::singleton().IsSteam())
@@ -1893,7 +1954,7 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
 	if (reason == DLL_PROCESS_ATTACH)
 	{
-			CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, NULL, 0, NULL);
+		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, NULL, 0, NULL);
 	}
 	return TRUE;
 }

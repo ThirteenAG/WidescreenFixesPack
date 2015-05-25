@@ -2326,6 +2326,8 @@ void ApplyIniOptions()
 			injector::WriteMemory(0x55B5A0, 0xFFFF4AEC, true); //enable shadow
 			injector::WriteMemory<char>(0x55B5A5, 0x01, true); //shadow size
 
+			injector::WriteMemory<char>(0x4A35A2 + 0x1, 0x00, true); // cursor shadow alpha
+
 			injector::WriteMemory(0x5FA1A5, 0, true); //radio shadow
 			TextDrawOutlineHook<(0x5FA28A)>(); // = 0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *) radio text
 
@@ -2482,6 +2484,7 @@ DWORD WINAPI CompatHandler(LPVOID)
 
 	if (GetModuleHandle("SilentPatchVC.asi"))
 	{
+		OverwriteResolution();
 		injector::WriteMemory<uint8_t>(0x5516FB, 0x89, true);
 		injector::WriteMemory(0x5516FC, 0x04DB2404, true);
 		injector::WriteMemory(0x5516FC + 4, 0xC81DD824, true);
