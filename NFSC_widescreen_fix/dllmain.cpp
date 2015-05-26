@@ -121,6 +121,13 @@ void Init()
 			injector::WriteMemory<char>(0x5D52B3, 0x94, true);
 			injector::WriteMemory<char>(0x5B6BAE, 0x75, true);
 			injector::WriteMemory<char>(0x5B6B5B, 0x75, true);
+
+			//PiP/rearview mirror
+			injector::WriteMemory<float>(0x750CF3, -0.308594f, true);
+			injector::WriteMemory<float>(0x750D01, 0.654053f, true);
+
+			injector::WriteMemory<float>(0x750DE7, 0.203125f, true);
+			injector::WriteMemory<float>(0x750DF5, 0.001953f, true);
 		}
 
 		if (bFMVWidescreenMode)

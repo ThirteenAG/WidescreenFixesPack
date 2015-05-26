@@ -95,10 +95,10 @@ void Init()
 			injector::WriteMemory<float>(0x5CBEA1, (float)ResX, true);
 
 
-			injector::WriteMemory<float>(0x5C726A, (float)ResX, true); // radar mask
-			injector::WriteMemory<float>(0x5C727A, (float)ResX, true);
-			injector::WriteMemory<float>(0x5C7282, (float)ResY, true);
-			injector::WriteMemory<float>(0x5C7292, (float)ResY, true);
+			injector::WriteMemory<float>(0x5C726A, (float)ResX * 2.0f, true); // radar mask
+			injector::WriteMemory<float>(0x5C727A, (float)ResX * 2.0f, true);
+			injector::WriteMemory<float>(0x5C7282, (float)ResY * 2.0f, true);
+			injector::WriteMemory<float>(0x5C7292, (float)ResY * 2.0f, true);
 
 
 			//minimap position
@@ -192,10 +192,10 @@ void Init()
 			injector::WriteMemory<float>(0x5CBEA1 - 0x400, (float)ResX, true);
 
 
-			injector::WriteMemory<float>(0x5C726A - 0x400, (float)ResX, true); // radar mask
-			injector::WriteMemory<float>(0x5C727A - 0x400, (float)ResX, true);
-			injector::WriteMemory<float>(0x5C7282 - 0x400, (float)ResY, true);
-			injector::WriteMemory<float>(0x5C7292 - 0x400, (float)ResY, true);
+			injector::WriteMemory<float>(0x5C726A - 0x400, (float)ResX * 2.0f, true); // radar mask
+			injector::WriteMemory<float>(0x5C727A - 0x400, (float)ResX * 2.0f, true);
+			injector::WriteMemory<float>(0x5C7282 - 0x400, (float)ResY * 2.0f, true);
+			injector::WriteMemory<float>(0x5C7292 - 0x400, (float)ResY * 2.0f, true);
 
 			//minimap position
 			MinimapPosX = hud_position_x;
