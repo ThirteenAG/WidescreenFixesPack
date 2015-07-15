@@ -88,6 +88,17 @@ void FixAspectRatio()
 	}
 }
 
+template<uintptr_t addr>
+void ProcessCamOnAStringAvoidTheGeometryHook()
+{
+	using func_hook = injector::function_hooker_thiscall<addr, void(void*, RwV3d const&, RwV3d const&, RwV3d&, float)>;
+	injector::make_static_hook<func_hook>([](func_hook::func_type funcAvoidTheGeometry, void* _this, RwV3d const& a1, RwV3d const& a2, RwV3d& a3, float a4)
+	{
+		if (*CDraw::pfScreenAspectRatio < 2.0f)
+		funcAvoidTheGeometry(_this, a1, a2, a3, a4);
+	});
+}
+
 void FixFOV()
 {
 	if (FOVControl)
@@ -101,6 +112,7 @@ void FixFOV()
 
 	if (!injector::address_manager::singleton().IsSteam())
 	{
+		ProcessCamOnAStringAvoidTheGeometryHook<0x480456>();
 		injector::MakeCALL(0x46DCC8, CDraw::SetFOV, true);
 		injector::MakeCALL(0x4A48AB, CDraw::SetFOV, true);
 		injector::MakeCALL(0x4A4D3A, CDraw::SetFOV, true);
@@ -125,6 +137,7 @@ void FixFOV()
 	}
 	else
 	{
+		ProcessCamOnAStringAvoidTheGeometryHook<0x480336>();
 		injector::MakeCALL(0x46DBA8, CDraw::SetFOV, true);
 		injector::MakeCALL(0x4A476B, CDraw::SetFOV, true);
 		injector::MakeCALL(0x4A4C07, CDraw::SetFOV, true);

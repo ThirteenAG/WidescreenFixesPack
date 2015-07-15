@@ -1,51 +1,24 @@
-#define _SCL_SECURE_NO_WARNINGS
 #include "stdafx.h"
-#include "..\includes\CPatch.h"
-#include "..\includes\IniReader.h"
-#define _USE_MATH_DEFINES
-#include "math.h"
-#include <cstdio>
+#include "stdio.h"
 #include <windows.h>
-#include <tlhelp32.h>
+#include "..\includes\injector\injector.hpp"
+#include "..\includes\IniReader.h"
 
-float height_multipl;
-float height_stretch;
-float width_stretch;
-float fDynamicScreenFieldOfViewScale;
+HWND hWnd;
+float fFOVFactor;
+bool bDisableGamepadInput;
+char* szCustomUserFilesDirectoryInGameDir;
 
-float aspect_ratio;
-float FOV_ptr;
-float hud_stretch;
-float ini_fov;
-int DisableGamepadInput;
-int RunJoyToKey;
-
-int* g_Width = (int *)0x829584;
-int* g_Height = (int *)0x829588;
-float* g_some = (float *)0x7D3450;
-float* g_fov = (float *)0x715C94;
-
-#define width (float)*g_Width
-#define height (float)*g_Height
-#define some (float)*g_some
-#define FOV (float)*g_fov
-
-#define DEGREE_TO_RADIAN(fAngle) \
-	((fAngle)* (float)M_PI / 180.0f)
-#define RADIAN_TO_DEGREE(fAngle) \
-	((fAngle)* 180.0f / (float)M_PI)
-#define SCREEN_FOV_HORIZONTAL		0.7f
-#define SCREEN_FOV_VERTICAL			(2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / (4.0f / 3.0f))))
-
-void getDynamicScreenFieldOfView()
+struct Screen
 {
-	if (ini_fov)
-	{
-	fDynamicScreenFieldOfViewScale = ini_fov;
-	} else {
-	fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * aspect_ratio));
-	}
-}
+	int Width;
+	int Height;
+	float fWidth;
+	float fHeight;
+	float fUnk1;
+	float FieldOfView;
+	float fAspectRatio;
+} Screen;
 
 DWORD jmpAddr;
 void __declspec(naked)setScreenFieldOfView()
@@ -53,104 +26,79 @@ void __declspec(naked)setScreenFieldOfView()
 	_asm
 	{
 		    fdiv dword ptr ds:[0x715C94]
-				fmul dword ptr ds : [fDynamicScreenFieldOfViewScale]
+				fmul dword ptr ds : [fFOVFactor]
 			fstp dword ptr[esp]
 			fld dword ptr[esp + 4]
 			fdiv dword ptr ds:[0x715C94]
-				fmul dword ptr ds : [fDynamicScreenFieldOfViewScale]
+				fmul dword ptr ds : [fFOVFactor]
 			mov jmpAddr, 0x475C4F
 			jmp jmpAddr
 	}
 }
 
-bool ProcessRunning(const char* name)
+char* __cdecl InitUserDirectories()
 {
-	HANDLE SnapShot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-
-	if (SnapShot == INVALID_HANDLE_VALUE)
-		return false;
-
-	PROCESSENTRY32 procEntry;
-	procEntry.dwSize = sizeof(PROCESSENTRY32);
-
-	if (!Process32First(SnapShot, &procEntry))
-		return false;
-
-	do
-	{
-		if (strcmp(procEntry.szExeFile, name) == 0)
-			return true;
-	} while (Process32Next(SnapShot, &procEntry));
-
-	return false;
+	CreateDirectory(szCustomUserFilesDirectoryInGameDir, NULL);
+	return szCustomUserFilesDirectoryInGameDir;
 }
 
-STARTUPINFO si;
-PROCESS_INFORMATION pi;
-void StartJ2K() {
-	if (!ProcessRunning("JoyToKey.exe")) {
-		DWORD dwExitCode = 0;
-		ZeroMemory(&si, sizeof(si));
-		si.cb = sizeof(si);
-		si.dwFlags = STARTF_USESHOWWINDOW;
-		si.wShowWindow = SW_SHOWMINNOACTIVE;
-		ZeroMemory(&pi, sizeof(pi));
-		CreateProcess("JoyToKey.exe", NULL, NULL, NULL, FALSE, CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi);
-	}
-	return;
+void ApplyMemoryPatches()
+{
+	Screen.Width = *(int *)0x829584;
+	Screen.Height = *(int *)0x829588;
+	Screen.fUnk1 = *(float *)0x7D3450;
+	Screen.FieldOfView = *(float *)0x715C94;
+
+	//Disable menu aspect ratio switch
+	injector::MakeNOP(0x5DAA20, 9, true);
+	injector::WriteMemory<unsigned char>(0x5DAA30, 0xC3, true); //ret
+
+	Screen.fWidth = static_cast<float>(Screen.Width);
+	Screen.fHeight = static_cast<float>(Screen.Height);
+	Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
+
+	float fHudHorScale = static_cast<float>(Screen.fHeight / ((Screen.fHeight / (640.0f / Screen.fAspectRatio)) / (Screen.fUnk1) * Screen.fWidth));
+	injector::WriteMemory(0x7D3458, fHudHorScale, true);
+
+	static float fHudVerScale = 0.7f * (Screen.fAspectRatio / (4.0f / 3.0f));
+	injector::WriteMemory(0x475BE2 + 0x2, &fHudVerScale, true);
+	injector::WriteMemory(0x475C09 + 0x2, &fHudVerScale, true);
+	injector::WriteMemory(0x476246 + 0x1, &fHudVerScale, true);
+
+	injector::WriteMemory<unsigned char>(0x475BF3, 0xEB);
+	static float fScreenWidthScale = 0.546875f;
+	injector::WriteMemory(0x475C1B + 0x2, &fScreenWidthScale, true);
+
+	if (fFOVFactor)
+		injector::MakeJMP(0x475C3C, setScreenFieldOfView, true);
 }
 
 DWORD WINAPI Thread(LPVOID)
 {
-	Sleep(10);
+	while (*(DWORD*)0x5E2579 !=0xE44972E8)
+		Sleep(0);
+
 	CIniReader iniReader("");
-	ini_fov = iniReader.ReadFloat("MAIN", "FOV", 0.0f);
-	DisableGamepadInput = iniReader.ReadInteger("MAIN", "DisableGamepadInput", 0);
-	RunJoyToKey = iniReader.ReadInteger("MAIN", "RunJoyToKey", 0);
+	fFOVFactor = iniReader.ReadFloat("MAIN", "FOVFactor", 0.0f);
+	bDisableGamepadInput = iniReader.ReadInteger("MAIN", "DisableGamepadInput", 0) != 0;
+	szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MAIN", "CustomUserFilesDirectoryInGameDir", "");
 
-	if (DisableGamepadInput)
+	injector::MakeCALL(0x5E2579, ApplyMemoryPatches, true);
+
+	if (bDisableGamepadInput)
 	{
-		CPatch::Nop(0x491DDE, 6);
-		CPatch::Nop(0x491DE7, 6);
-		CPatch::Nop(0x491DED, 10);
+		injector::MakeNOP(0x491DDE, 6, true);
+		injector::MakeNOP(0x491DE7, 6, true);
+		injector::MakeNOP(0x491DED, 10, true);
 	}
 
-	if (RunJoyToKey)
+	if (strncmp(szCustomUserFilesDirectoryInGameDir, "0", 1) != 0)
 	{
-		StartJ2K();
+		injector::MakeCALL(0x605E0B, InitUserDirectories, true);
 	}
 
-	aspect_ratio = width / height;
-
-		//CPatch::SetPointer(0x475BC0 + 0x89 + 0x2, &FOV_ptr);
-		//CPatch::SetPointer(0x475BC0 + 0x7C + 0x2, &FOV_ptr);
-
-		height_multipl = 640.0f / aspect_ratio; // HUD PATCH
-		hud_stretch = height / ((height / height_multipl) / (some) * width);
-		CPatch::SetFloat(0x7D3458, hud_stretch);
-
-		height_stretch = 0.6999999881f * (aspect_ratio / (4.0f / 3.0f));
-
-		CPatch::SetPointer(0x475BE2 + 0x2, &height_stretch);
-		CPatch::SetPointer(0x475C09 + 0x2, &height_stretch);
-		CPatch::SetPointer(0x476246 + 0x1, &height_stretch);
-
-		width_stretch = 0.546875f;
-		CPatch::SetPointer(0x475C1B + 0x2, &width_stretch);
-
-		//Disable menu aspect ratio switch
-		CPatch::Nop(0x5DAA20, 9);
-		CPatch::SetChar(0x5DAA30, 0xC3u); //ret
-
-		//if ( *(float *)&height_stretch > (double)flt_715AA8 (1.9) )
-		CPatch::SetChar(0x475BF3, 0xEBu);
-
-		//setFOV();
-		getDynamicScreenFieldOfView();
-		CPatch::RedirectJump(0x475C3C, setScreenFieldOfView);
 	return 0;
 }
-
 
 BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
@@ -158,11 +106,5 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 	{
 		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Thread, NULL, 0, NULL);
 	}
-	
-		if (reason == DLL_PROCESS_DETACH)
-		{
-			LPDWORD ExitCode;
-			TerminateProcess(pi.hProcess, GetExitCodeProcess(pi.hProcess, ExitCode));
-		}
 	return TRUE;
 }
