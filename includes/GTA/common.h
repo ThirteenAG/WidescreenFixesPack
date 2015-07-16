@@ -59,6 +59,7 @@ float gtaLogo128Coord1, gtaLogo128Coord2;
 int IVRadarScaling, ReplaceTextShadowWithOutline;
 int SmallerTextShadows;
 float fTextShadowsSize;
+float fCrosshairPosFactor;
 
 float fCustomRadarWidthIV = 102.0f;
 float fCustomRadarHeightIV = 79.0f;

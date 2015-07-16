@@ -198,6 +198,7 @@ void FixMenuHook()
 		nMenuAlignment = static_cast<int>(((*CDraw::pfScreenAspectRatio / (4.0f / 3.0f)) * 320.0f) - 30);// (CLASS_pclRsGlobal->m_iScreenWidth / 2) * fWideScreenWidthScaleDown;
 		gtaLogo128Coord2 = static_cast<float>(nMenuAlignment - 95);
 		gtaLogo128Coord1 = gtaLogo128Coord2 + 190.0f;
+		fCrosshairPosFactor = ((0.52999997f - 0.5f) / ((*CDraw::pfScreenAspectRatio) / (16.0f / 9.0f))) + 0.5f;
 		FixMenu();
 		if (!injector::address_manager::singleton().IsSteam() && IVRadarScaling)
 		{
@@ -274,6 +275,9 @@ void FixHUD()
 {
 	if (!injector::address_manager::singleton().IsSteam())
 	{
+		//crosshair fix
+		injector::WriteMemory(0x50550D + 0x2, &fCrosshairPosFactor, true);
+
 	#pragma region HUDFunctions
 	#define CDarkel__DrawMessages 0x420920
 	#define LoadingScreen 0x48D770
@@ -735,6 +739,9 @@ void FixHUD()
 	}
 	else
 	{
+		//crosshair fix
+		injector::WriteMemory(0x50557D + 0x2, &fCrosshairPosFactor, true);
+
 	#pragma region HUDFunctionsSteam
 		injector::WriteMemory(0x420920 + 0x289 + 0x2, &fWideScreenWidthScaleDown, true);
 		injector::WriteMemory(0x420920 + 0x2F6 + 0x2, &fWideScreenWidthScaleDown, true);

@@ -581,6 +581,11 @@ void FixHUD()
 {
 	if (!injector::address_manager::singleton().IsSteam())
 	{
+		//crosshair fix
+		injector::WriteMemory(0x46F927, &fCrosshairPosFactor, true);
+		injector::WriteMemory(0x5575FA, &fCrosshairPosFactor, true);
+		injector::WriteMemory(0x606B25, &fCrosshairPosFactor, true);
+
 	#pragma region HUDFunctions
 	#define	 	CDarkel__DrawMessages	 	0x429FE0
 	#define	 	CGarages__PrintMessages	 	0x42F2B0
@@ -1337,6 +1342,11 @@ void FixHUD()
 	}
 	else
 	{
+		//crosshair fix
+		injector::WriteMemory(0x46F807, &fCrosshairPosFactor, true);
+		injector::WriteMemory(0x5574EA, &fCrosshairPosFactor, true);
+		injector::WriteMemory(0x606745, &fCrosshairPosFactor, true);
+
 	#pragma region HUDFunctionsSteam
 		#define	 	steam_CDarkel__DrawMessages	 	0x429FB0
 		#define	 	steam_CGarages__PrintMessages	 	0x42F280
@@ -2190,7 +2200,6 @@ void CSprite2dDrawHook()
 	injector::make_static_hook<func_hook>([](func_hook::func_type CSprite2dDraw, void* _this, CRect const& rect, CRGBA const& rgba)
 	{
 		CSprite2dDraw(_this, rect, CRGBA(0xFF, 0xFF, 0xFF, 0x0));
-
 	});
 }
 

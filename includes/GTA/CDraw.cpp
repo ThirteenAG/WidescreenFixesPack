@@ -38,6 +38,7 @@ extern float fRadarScaling;
 
 extern float fvcLogoScale, fCrosshairHeightScaleDown;
 extern float fEmergencyVehiclesFix;
+extern float fCrosshairPosFactor;
 
 extern int(__cdecl* FindPlayerVehicle)();
 extern DWORD IsInCutscene;
@@ -93,10 +94,10 @@ void CDraw::CalculateAspectRatio()
 
 	fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(fScreenFieldOfViewVStd * 0.5f)) * *pfScreenAspectRatio))
 		* (1.0f / SCREEN_FOV_HORIZONTAL);
-	fDynamicScreenFieldOfViewScale += 0.042470217f; //small FOV adjustment, to make aiming point and crosshair matchicng more precise
 
 	//logo scaling
 	fvcLogoScale = (245.312497f * fWideScreenWidthScaleDown) / 1.7f;
+	fCrosshairPosFactor = ((0.52999997f - 0.5f) / ((*pfScreenAspectRatio) / (16.0f / 9.0f))) + 0.5f;
 
 	//Ini options
 	fCustomWideScreenWidthScaleDown = fWideScreenWidthScaleDown * fHudWidthScale;
@@ -107,7 +108,6 @@ void CDraw::CalculateAspectRatio()
 
 	//Proportional elements
 	fCrosshairHeightScaleDown = fWideScreenHeightScaleDown * fHudWidthScale;
-
 	return;
 }
 

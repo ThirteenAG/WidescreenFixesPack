@@ -75,7 +75,7 @@ void ApplyMemoryPatches()
 
 DWORD WINAPI Thread(LPVOID)
 {
-	while (*(DWORD*)0x5E2579 !=0xE44972E8)
+	while (*(DWORD*)0x5E2579 == 0xC8858425)
 		Sleep(0);
 
 	CIniReader iniReader("");
