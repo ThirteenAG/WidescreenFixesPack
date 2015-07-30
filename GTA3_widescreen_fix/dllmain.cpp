@@ -46,20 +46,20 @@ void OverwriteResolution()
 
 		if (!injector::address_manager::singleton().IsSteam())
 		{
-			injector::MakeNOP(0x4890FA, 5, true);
+			injector::WriteMemory<uchar>(0x4890F0 + 0x2, 0x08, true);
 			injector::WriteMemory(0x581E5B + 0x3, ResX, true);
 			injector::WriteMemory(0x581E64 + 0x4, ResY, true);
-			injector::WriteMemory(0x602D3A + 0x6, ResX, true);
-			injector::WriteMemory(0x602D44 + 0x6, ResY, true);
-			injector::WriteMemory(0x602D4E + 0x6, ResX, true);
-			injector::WriteMemory(0x602D58 + 0x6, ResY, true);
+			injector::WriteMemory<int>(0x584C4A + 0x6, ResX, true);
+			injector::WriteMemory<int>(0x584C54 + 0x6, ResY, true);
+			injector::WriteMemory<int>(0x584C5E + 0x6, ResX, true);
+			injector::WriteMemory<int>(0x584C68 + 0x6, ResY, true);
 			injector::WriteMemory<uchar>(0x581E6E + 0x4, 32, true);
 			injector::WriteMemory<uchar>(0x581E9A, 0xEB, true); //jl      short loc_581E40 > jmp      short loc_581E40
 			injector::MakeNOP(0x581E37, 5, true);
 		}
 		else
 		{
-			injector::MakeNOP(0x48920C, 5, true);
+			injector::WriteMemory<uchar>(0x489202 + 0x2, 0x08, true);
 			injector::WriteMemory(0x58208B + 0x3, ResX, true);
 			injector::WriteMemory(0x582094 + 0x4, ResY, true);
 			injector::WriteMemory<uchar>(0x58209E + 0x4, 32, true);

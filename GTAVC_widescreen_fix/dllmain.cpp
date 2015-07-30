@@ -49,10 +49,10 @@ void OverwriteResolution()
 			injector::WriteMemory<uchar>(0x490095 + 0x2, 22, true);
 			injector::WriteMemory<int>(0x600E7B + 0x3, ResX, true);
 			injector::WriteMemory<int>(0x600E84 + 0x4, ResY, true);
-			injector::WriteMemory<int>(0x584C4A + 0x6, ResX, true);
-			injector::WriteMemory<int>(0x584C54 + 0x6, ResY, true);
-			injector::WriteMemory<int>(0x584C5E + 0x6, ResX, true);
-			injector::WriteMemory<int>(0x584C68 + 0x6, ResY, true);
+			injector::WriteMemory(0x602D3A + 0x6, ResX, true);
+			injector::WriteMemory(0x602D44 + 0x6, ResY, true);
+			injector::WriteMemory(0x602D4E + 0x6, ResX, true);
+			injector::WriteMemory(0x602D58 + 0x6, ResY, true);
 			injector::WriteMemory<uchar>(0x600E8E + 0x4, 32, true);
 			injector::WriteMemory<uchar>(0x600EBA, 0xEB, true); //jl      short loc_600E60 > jmp      short loc_600E60
 			injector::MakeNOP(0x600E57, 5, true);
@@ -2303,7 +2303,7 @@ void ApplyIniOptions()
 			injector::WriteMemory(CRadar__DrawRadarSection + 0x382 + 0x2, &fCustomRadarWidthScale, true);
 			injector::WriteMemory(CRadar__DrawRadarSection + 0x3C1 + 0x2, &fCustomRadarWidthScale, true);
 
-			injector::WriteMemory(CRadar__DrawRotatingRadarSprite + 0x1A + 0x2, &fCustomRadarWidthScale, true);
+			//injector::WriteMemory(CRadar__DrawRotatingRadarSprite + 0x1A + 0x2, &fCustomRadarWidthScale, true);
 
 			injector::WriteMemory(CRadar__DrawBlips + 0xF4 + 0x2 + 0x6, &fPlayerMarkerPos, true);
 			injector::WriteMemory(CRadar__DrawBlips + 0x2E6 + 0x2 + 0x6, &fPlayerMarkerPos, true);
