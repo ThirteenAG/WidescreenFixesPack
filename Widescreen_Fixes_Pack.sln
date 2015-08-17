@@ -94,6 +94,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Mafia_widescreen_fix", "Maf
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SplinterCell_widescreen_fix", "SplinterCell_widescreen_fix\SplinterCell_widescreen_fix.vcxproj", "{E70641ED-0EFE-4427-956B-CE3A7C42CE78}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SplinterCellPandoraTomorrow_widescreen_fix", "SplinterCellPandoraTomorrow_widescreen_fix\SplinterCellPandoraTomorrow_widescreen_fix.vcxproj", "{940A2963-6A35-4194-82C1-B8438CE96F65}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -332,6 +334,14 @@ Global
 		{E70641ED-0EFE-4427-956B-CE3A7C42CE78}.Release|Win32.Build.0 = Release|Win32
 		{E70641ED-0EFE-4427-956B-CE3A7C42CE78}.Release|x64.ActiveCfg = Release|x64
 		{E70641ED-0EFE-4427-956B-CE3A7C42CE78}.Release|x64.Build.0 = Release|x64
+		{940A2963-6A35-4194-82C1-B8438CE96F65}.Debug|Win32.ActiveCfg = Debug|Win32
+		{940A2963-6A35-4194-82C1-B8438CE96F65}.Debug|Win32.Build.0 = Debug|Win32
+		{940A2963-6A35-4194-82C1-B8438CE96F65}.Debug|x64.ActiveCfg = Debug|x64
+		{940A2963-6A35-4194-82C1-B8438CE96F65}.Debug|x64.Build.0 = Debug|x64
+		{940A2963-6A35-4194-82C1-B8438CE96F65}.Release|Win32.ActiveCfg = Release|Win32
+		{940A2963-6A35-4194-82C1-B8438CE96F65}.Release|Win32.Build.0 = Release|Win32
+		{940A2963-6A35-4194-82C1-B8438CE96F65}.Release|x64.ActiveCfg = Release|x64
+		{940A2963-6A35-4194-82C1-B8438CE96F65}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
