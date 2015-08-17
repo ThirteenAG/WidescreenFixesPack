@@ -70,22 +70,17 @@ void __declspec(naked) UWindowsViewport_ResizeViewport_Hook()
 DWORD __esp;
 float offset1, offset2;
 DWORD Color;
-float temp1 = 940.0f, temp2 = 1111.0f;
-char xxx[100];
 void CenterHud()
 {
 	offset1 = *(float*)(__esp + 4);
 	offset2 = *(float*)(__esp + 4 + 8);
 	Color = *(DWORD*)(__esp + 0x2C);
 
-	if (offset1 >= 780.0f && offset1 <= 925.0f) //898.50 912.00 916.50 910.50 906.0 904.5 780.00 792.00 787.50 915.0
-		//925 - everything cept interaction menu
+	/*if (offset1 >= 780.0f && offset1 <= 925.0f) //898.50 912.00 916.50 910.50 906.0 904.5 780.00 792.00 787.50 915.0//925 - everything cept interaction menu
 	{
-		//sprintf(xxx, "%f", offset1);
-		//MessageBox(0, 0, xxx, 0);
 		offset2 += 150.0f;
 		offset1 += 150.0f;
-	}
+	}*/
 
 	offset1 += Screen.fHudOffset;
 	offset2 += Screen.fHudOffset;
@@ -167,37 +162,40 @@ DWORD WINAPI Thread(LPVOID)
 			break;
 	}
 
-	injector::MakeJMP((DWORD)D3DDrv + 0xCE48, UD3DRenderDevice_SetRes_Hook, true);
-	hookJmpAddr = (DWORD)D3DDrv + 0xCE5E;
-	dword_1003DBA0 = (DWORD)D3DDrv + 0x3DBA0;
-	dword_1003DBB4 = (DWORD)D3DDrv + 0x3DBB4;
-	dword_1003DBA4 = (DWORD)D3DDrv + 0x3DBA4;
+	
+	dword_1003DBA0 = /*(DWORD)D3DDrv + 0x3DBA0*/injector::ReadMemory<DWORD>((DWORD)GetProcAddress(D3DDrv, "?SetRes@UD3DRenderDevice@@UAEHPAVUViewport@@HHH@Z") + 0x5A8 + 0x2, true);
+	dword_1003DBB4 = /*(DWORD)D3DDrv + 0x3DBB4*/injector::ReadMemory<DWORD>((DWORD)GetProcAddress(D3DDrv, "?SetRes@UD3DRenderDevice@@UAEHPAVUViewport@@HHH@Z") + 0x5A8 + 0x2 + 0x6, true);
+	dword_1003DBA4 = /*(DWORD)D3DDrv + 0x3DBA4*/injector::ReadMemory<DWORD>((DWORD)GetProcAddress(D3DDrv, "?SetRes@UD3DRenderDevice@@UAEHPAVUViewport@@HHH@Z") + 0x5A8 + 0x2 + 0x6 + 0xA, true);
+	injector::MakeJMP(/*(DWORD)D3DDrv + 0xCE48*/(DWORD)GetProcAddress(D3DDrv, "?SetRes@UD3DRenderDevice@@UAEHPAVUViewport@@HHH@Z") + 0x5A8, UD3DRenderDevice_SetRes_Hook, true);
+	hookJmpAddr = /*(DWORD)D3DDrv + 0xCE5E*/(DWORD)GetProcAddress(D3DDrv, "?SetRes@UD3DRenderDevice@@UAEHPAVUViewport@@HHH@Z") + 0x5A8 + 0x16;
+	
+	DWORD pfResizeViewport = injector::ReadMemory<DWORD>((DWORD)GetProcAddress(WinDrv, "?ResizeViewport@UWindowsViewport@@UAEHKHH@Z") + 0x1, true) + (DWORD)GetProcAddress(WinDrv, "?ResizeViewport@UWindowsViewport@@UAEHKHH@Z") + 5;
+	injector::MakeJMP(/*(DWORD)WinDrv + 0xAB8B*/ pfResizeViewport + 0x6DB, UWindowsViewport_ResizeViewport_Hook, true);
+	hookJmpAddr2 = /*(DWORD)WinDrv + 0xAB9C*/pfResizeViewport + 0x6DB + 0x11;
 
-	injector::MakeJMP((DWORD)WinDrv + 0xAB8B, UWindowsViewport_ResizeViewport_Hook, true);
-	hookJmpAddr2 = (DWORD)WinDrv + 0xAB9C;
-
+	DWORD pfDrawTile = injector::ReadMemory<DWORD>((DWORD)GetProcAddress(Engine, "?DrawTile@UCanvas@@UAEXPAVUMaterial@@MMMMMMMMMVFPlane@@1@Z") + 0x1, true) + (DWORD)GetProcAddress(Engine, "?DrawTile@UCanvas@@UAEXPAVUMaterial@@MMMMMMMMMVFPlane@@1@Z") + 5;
+	DWORD pfDrawString = injector::ReadMemory<DWORD>((DWORD)GetProcAddress(Engine, "?DrawStringC@UCanvas@@UAEHPBGHH@Z") + 0x1, true) + (DWORD)GetProcAddress(Engine, "?DrawStringC@UCanvas@@UAEHPBGHH@Z") + 5;
+	DWORD pfsub_103C9750 = injector::ReadMemory<DWORD>(pfDrawString + 0xA8 + 0x1, true) + pfDrawString + 0xA8 + 5;
 	static float HUDScaleX = 1.0f / Screen.fWidth * (Screen.fHeight / 480.0f);
-	injector::WriteMemory<float>((DWORD)Engine + 0x1E9F78, HUDScaleX, true);
+	injector::WriteMemory<float>(/*(DWORD)Engine + 0x1E9F78*/injector::ReadMemory<DWORD>(pfDrawTile + 0x284 + 0x2, true), HUDScaleX, true);
 
-	injector::MakeCALL((DWORD)Engine + 0xC8ECE, FCanvasUtil_DrawTile_Hook, true);
-	injector::MakeCALL((DWORD)Engine + 0xC9B7C, FCanvasUtil_DrawTile_Hook, true);
-	injector::MakeCALL((DWORD)Engine + 0xC9DE1, FCanvasUtil_DrawTile_Hook, true);
-	hookJmpAddr3 = (DWORD)Engine + 0x157200;
-
-	injector::WriteMemory((DWORD)GetModuleHandle("Engine") + 0xD9419, 0x0001BAE9, true); //skipping resolution reading from SplinterCellUser.ini
-	injector::WriteMemory<unsigned short>((DWORD)GetModuleHandle("Engine") + 0xD9419 + 0x4, 0x9000, true); //because it causes black screen after loading save.
+	injector::MakeCALL(/*(DWORD)Engine + 0xC8ECE*/pfDrawTile + 0x50E, FCanvasUtil_DrawTile_Hook, true);
+	injector::MakeCALL(/*(DWORD)Engine + 0xC9B7C*/pfsub_103C9750 + 0x42C, FCanvasUtil_DrawTile_Hook, true);
+	injector::MakeCALL(/*(DWORD)Engine + 0xC9DE1*/pfsub_103C9750 + 0x691, FCanvasUtil_DrawTile_Hook, true);
+	hookJmpAddr3 = /*(DWORD)Engine + 0x157200*/injector::ReadMemory<DWORD>((DWORD)GetProcAddress(Engine, "?DrawTile@FCanvasUtil@@QAEXMMMMMMMMMPAVUMaterial@@VFColor@@@Z") + 0x1, true) + (DWORD)GetProcAddress(Engine, "?DrawTile@FCanvasUtil@@QAEXMMMMMMMMMPAVUMaterial@@VFColor@@@Z") + 5;
 
 	//FMV
-	injector::WriteMemory<float>((DWORD)D3DDrv + 0x31860, 0.0f, true); //Y
-	injector::WriteMemory<float>((DWORD)D3DDrv + 0x31864, 0.0f, true); //X
+	injector::WriteMemory<float>(/*(DWORD)D3DDrv + 0x31860*/injector::ReadMemory<DWORD>((DWORD)GetProcAddress(D3DDrv, "?DisplayVideo@UD3DRenderDevice@@UAEXPAVUCanvas@@PAX@Z") + 0x55D, true), 0.0f, true); //Y 
+	injector::WriteMemory<float>(/*(DWORD)D3DDrv + 0x31864*/injector::ReadMemory<DWORD>((DWORD)GetProcAddress(D3DDrv, "?DisplayVideo@UD3DRenderDevice@@UAEXPAVUCanvas@@PAX@Z") + 0x55D + 0x12, true), 0.0f, true); //X
 
 	//HUD
 	Screen.fHudOffset = (Screen.fWidth - Screen.fHeight * (4.0f/3.0f)) / 2.0f;	
 
 	//FOV
+	DWORD pfDraw = injector::ReadMemory<DWORD>((DWORD)GetProcAddress(Engine, "?Draw@UGameEngine@@UAEXPAVUViewport@@HPAEPAH@Z") + 0x1, true) + (DWORD)GetProcAddress(Engine, "?Draw@UGameEngine@@UAEXPAVUViewport@@HPAEPAH@Z") + 5;
 	fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(fScreenFieldOfViewVStd * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
-	injector::MakeJMP((DWORD)Engine + 0xEC5F4, UGameEngine_Draw_Hook, true);
-	hookJmpAddr4 = (DWORD)Engine + 0xEC5FA;
+	injector::MakeJMP(/*(DWORD)Engine + 0xEC5F4*/pfDraw + 0x104, UGameEngine_Draw_Hook, true);
+	hookJmpAddr4 = /*(DWORD)Engine + 0xEC5FA*/pfDraw + 0x104 + 0x6;
 
 	return 0;
 }
