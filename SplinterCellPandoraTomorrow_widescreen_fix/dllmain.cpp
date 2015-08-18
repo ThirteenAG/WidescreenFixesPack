@@ -110,15 +110,14 @@ void __declspec(naked) UGameEngine_Draw_Hook()
 		mov  __ECX, ecx
 	}
 	__ECX *= fDynamicScreenFieldOfViewScale;
-
-	__asm mov ecx, __ECX
+	__asm   mov ecx, __ECX
 	__asm	jmp	 hookJmpAddr4
 }
 
 
 void __declspec(naked) OpenVideo_Hook()
 {
-	__asm   mov     ecx, 0x4B000
+	__asm   mov     ecx, 0x4B000 //640x480
 	__asm	shr     ecx, 2
 	__asm	xor     eax, eax
 	__asm	jmp	 hookJmpAddr5
@@ -144,11 +143,6 @@ void __declspec(naked) DisplayVideo_Hook()
 		mov ecx, Screen.fFMVoffsetEndY
 		mov[esp + 0xC], ecx;
 	jmp label2
-	//esp+0 - start x
-	//esp+8 - end x
-	//esp+1Ch - go up
-	//esp+20h - 0.5 - horizontal stretch 1.0
-	//esp+24h - aspect ratio, vertical stretch
 	label1:
 		mov ecx, Screen.fFMVoffsetStartX
 		mov[esp + 0h], ecx;
@@ -195,10 +189,10 @@ DWORD WINAPI Thread(LPVOID)
 	dword_10173E5C = injector::ReadMemory<DWORD>(pfSetRes + 0x435 + 0x1, true);
 	injector::MakeJMP(pfSetRes + 0x435, UD3DRenderDevice_SetRes_Hook, true);
 	hookJmpAddr = pfSetRes + 0x435 + 0x5;
-
-	DWORD pfResizeViewport = (DWORD)GetProcAddress(WinDrv, "?ResizeViewport@UWindowsViewport@@UAEHKHH@Z");
+	
+	/*DWORD pfResizeViewport = (DWORD)GetProcAddress(WinDrv, "?ResizeViewport@UWindowsViewport@@UAEHKHH@Z");
 	injector::MakeJMP(pfResizeViewport + 0x469, UWindowsViewport_ResizeViewport_Hook, true); //crash on FMV
-	hookJmpAddr2 = pfResizeViewport + 0x469 + 0x6;
+	hookJmpAddr2 = pfResizeViewport + 0x469 + 0x6;*/
 
 	DWORD pfDrawTile = (DWORD)GetProcAddress(Engine, "?DrawTile@FCanvasUtil@@QAEXMMMMMMMMMPAVUMaterial@@VFColor@@HH@Z");
 	DWORD pfFUCanvasDrawTile = (DWORD)GetProcAddress(Engine, "?DrawTile@UCanvas@@UAEXPAVUMaterial@@MMMMMMMMMVFPlane@@1H@Z");
@@ -229,7 +223,7 @@ DWORD WINAPI Thread(LPVOID)
 	Screen.fFMVoffsetEndY = Screen.fHeight - Screen.fFMVoffsetStartY;
 
 	//HUD
-	Screen.fHudOffset = (Screen.fWidth - Screen.fHeight * (4.0f/3.0f)) / 2.0f / 1.5f;
+	Screen.fHudOffset = (Screen.fWidth - Screen.fHeight * (4.0f/3.0f)) / 2.0f / (Screen.fWidth / (640.0f * (4.0f / 3.0f)));
 
 	//FOV
 	DWORD pfDraw = (DWORD)GetProcAddress(Engine, "?Draw@UGameEngine@@UAEXPAVUViewport@@HPAEPAH@Z");
@@ -265,10 +259,10 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 		CIniReader iniWriter(UserIni);
 		char* Res = iniWriter.ReadString("WinDrv.WindowsClient", "WindowedViewportX", "");
 
-		if (strcmp(Res, "640") != 0)
+		if (strcmp(Res, "1920") != 0)
 		{
-			iniWriter.WriteString("WinDrv.WindowsClient", "WindowedViewportX", "640");
-			iniWriter.WriteString("WinDrv.WindowsClient", "WindowedViewportY", "480");
+			iniWriter.WriteString("WinDrv.WindowsClient", "WindowedViewportX", "1920");
+			iniWriter.WriteString("WinDrv.WindowsClient", "WindowedViewportY", "1080");
 			ProgramRestart("SCPT Widescreen Fix");
 		}
 
