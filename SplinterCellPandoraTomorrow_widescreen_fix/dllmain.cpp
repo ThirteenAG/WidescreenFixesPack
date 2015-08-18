@@ -34,7 +34,7 @@ struct Screen
 	float fFMVoffsetEndY;
 } Screen;
 
-HMODULE D3DDrv, WinDrv, Engine;
+HMODULE D3DDrv, WinDrv, Engine, Core;
 DWORD hookJmpAddr, hookJmpAddr2, hookJmpAddr3, hookJmpAddr4, hookJmpAddr5, hookJmpAddr6;
 DWORD dword_10173E5C;
 DWORD nForceShadowBufferSupport, nFMVWidescreenMode;
@@ -153,8 +153,8 @@ void __declspec(naked) DisplayVideo_Hook()
 		jmp	 hookJmpAddr6
 	}
 }
-	
-DWORD WINAPI Thread(LPVOID)
+
+void Init()
 {
 	CIniReader iniReader("");
 	Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
@@ -175,6 +175,28 @@ DWORD WINAPI Thread(LPVOID)
 	Screen.fHeight = static_cast<float>(Screen.Height);
 	Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
 
+	DWORD fAttr = GetFileAttributes(".\\SplinterCell2.ini");
+	char* UserIni;
+	if ((fAttr != INVALID_FILE_ATTRIBUTES) && !(fAttr & FILE_ATTRIBUTE_DIRECTORY))
+	{
+		UserIni = ".\\SplinterCell2.ini";
+	}
+	else
+	{
+		UserIni = "..\\SplinterCell2.ini";
+	}
+	CIniReader iniWriter(UserIni);
+
+	if (iniWriter.ReadInteger("WinDrv.WindowsClient", "WindowedViewportX", 0) != Screen.Width || iniWriter.ReadInteger("WinDrv.WindowsClient", "WindowedViewportY", 0) != Screen.Height)
+	{
+		iniWriter.WriteInteger("WinDrv.WindowsClient", "WindowedViewportX", Screen.Width);
+		iniWriter.WriteInteger("WinDrv.WindowsClient", "WindowedViewportY", Screen.Height);
+		ProgramRestart("SCPT Widescreen Fix");
+	}
+}
+	
+DWORD WINAPI Thread(LPVOID)
+{
 	while (true)
 	{
 		Sleep(0);
@@ -184,15 +206,22 @@ DWORD WINAPI Thread(LPVOID)
 		if (D3DDrv && WinDrv && Engine)
 			break;
 	}
+	SuspendThread(Thread);
+	/* Moved to Core.dll/ini
+	DWORD pfappInit = injector::ReadMemory<DWORD>((DWORD)GetProcAddress(Core, "?appInit@@YAXPBG0PAVFMalloc@@PAVFOutputDevice@@PAVFOutputDeviceError@@PAVFFeedbackContext@@PAVFFileManager@@P6APAVFConfigCache@@XZH@Z") + 0x1, true) + (DWORD)GetProcAddress(Core, "?appInit@@YAXPBG0PAVFMalloc@@PAVFOutputDevice@@PAVFOutputDeviceError@@PAVFFeedbackContext@@PAVFFileManager@@P6APAVFConfigCache@@XZH@Z") + 5;
+	injector::WriteMemory(pfappInit + 0x67E + 0x1, Screen.Width, true);
+	injector::WriteMemory(pfappInit + 0x69F + 0x1, Screen.Height, true);
+	injector::WriteMemory(pfappInit + 0x5FC + 0x6, Screen.Width, true);
+	injector::WriteMemory(pfappInit + 0x608 + 0x6, Screen.Height, true);*/
 
 	DWORD pfSetRes = injector::ReadMemory<DWORD>((DWORD)GetProcAddress(D3DDrv, "?SetRes@UD3DRenderDevice@@UAEHPAVUViewport@@HHH@Z") + 0x1, true) + (DWORD)GetProcAddress(D3DDrv, "?SetRes@UD3DRenderDevice@@UAEHPAVUViewport@@HHH@Z") + 5;
 	dword_10173E5C = injector::ReadMemory<DWORD>(pfSetRes + 0x435 + 0x1, true);
 	injector::MakeJMP(pfSetRes + 0x435, UD3DRenderDevice_SetRes_Hook, true);
 	hookJmpAddr = pfSetRes + 0x435 + 0x5;
 	
-	/*DWORD pfResizeViewport = (DWORD)GetProcAddress(WinDrv, "?ResizeViewport@UWindowsViewport@@UAEHKHH@Z");
+	DWORD pfResizeViewport = (DWORD)GetProcAddress(WinDrv, "?ResizeViewport@UWindowsViewport@@UAEHKHH@Z");
 	injector::MakeJMP(pfResizeViewport + 0x469, UWindowsViewport_ResizeViewport_Hook, true); //crash on FMV
-	hookJmpAddr2 = pfResizeViewport + 0x469 + 0x6;*/
+	hookJmpAddr2 = pfResizeViewport + 0x469 + 0x6;
 
 	DWORD pfDrawTile = (DWORD)GetProcAddress(Engine, "?DrawTile@FCanvasUtil@@QAEXMMMMMMMMMPAVUMaterial@@VFColor@@HH@Z");
 	DWORD pfFUCanvasDrawTile = (DWORD)GetProcAddress(Engine, "?DrawTile@UCanvas@@UAEXPAVUMaterial@@MMMMMMMMMVFPlane@@1H@Z");
@@ -246,26 +275,7 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
 	if (reason == DLL_PROCESS_ATTACH)
 	{
-		DWORD fAttr = GetFileAttributes(".\\SplinterCell2.ini");
-		char* UserIni;
-		if ((fAttr != INVALID_FILE_ATTRIBUTES) && !(fAttr & FILE_ATTRIBUTE_DIRECTORY))
-		{
-			UserIni = ".\\SplinterCell2.ini";
-		}
-		else
-		{
-			UserIni = "..\\SplinterCell2.ini";
-		}
-		CIniReader iniWriter(UserIni);
-		char* Res = iniWriter.ReadString("WinDrv.WindowsClient", "WindowedViewportX", "");
-
-		if (strcmp(Res, "1920") != 0)
-		{
-			iniWriter.WriteString("WinDrv.WindowsClient", "WindowedViewportX", "1920");
-			iniWriter.WriteString("WinDrv.WindowsClient", "WindowedViewportY", "1080");
-			ProgramRestart("SCPT Widescreen Fix");
-		}
-
+		Init();
 		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Thread, NULL, 0, NULL);
 	}
 	return TRUE;
