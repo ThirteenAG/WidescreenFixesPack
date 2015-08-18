@@ -28,12 +28,16 @@ struct Screen
 	float fAspectRatio;
 	float fHudOffset;
 	float fHudOffsetRight;
+	float fFMVoffsetStartX;
+	float fFMVoffsetEndX;
+	float fFMVoffsetStartY;
+	float fFMVoffsetEndY;
 } Screen;
 
 HMODULE D3DDrv, WinDrv, Engine;
-DWORD hookJmpAddr, hookJmpAddr2, hookJmpAddr3, hookJmpAddr4, hookJmpAddr5;
+DWORD hookJmpAddr, hookJmpAddr2, hookJmpAddr3, hookJmpAddr4, hookJmpAddr5, hookJmpAddr6;
 DWORD dword_10173E5C;
-DWORD nForceShadowBufferSupport;
+DWORD nForceShadowBufferSupport, nFMVWidescreenMode;
 
 void __declspec(naked) UD3DRenderDevice_SetRes_Hook()
 {
@@ -119,25 +123,50 @@ void __declspec(naked) OpenVideo_Hook()
 	__asm	xor     eax, eax
 	__asm	jmp	 hookJmpAddr5
 }
-template<uintptr_t addr>
-void TestHook()
-{
-	using func_hook = injector::function_hooker_thiscall<addr, int(int _this, float a2, float a3, float a4, float a5, float a6, float a7, float a8, float a9, int a10, int a11, int a12)>;
-	injector::make_static_hook<func_hook>([](func_hook::func_type Test, int _this, float a2, float a3, float a4, float a5, float a6, float a7, float a8, float a9, int a10, int a11, int a12)
-	{
-	a2 += 150.1f;
-	a4 += 150.1f;
-		Test(_this, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12);
-		return 1;
-	});
-}
 
+float f1 = 1.0f;
+void __declspec(naked) DisplayVideo_Hook()
+{
+	_asm
+	{
+		fstp    dword ptr[esp]
+		push    esi
+		push    esi
+		mov		__ECX, ecx
+		mov  ecx, f1
+		mov[esp + 20h], ecx;
+		mov[esp + 24h], ecx;
+		mov ecx, nFMVWidescreenMode
+		cmp ecx, 0
+	jz label1
+		mov ecx, Screen.fFMVoffsetStartY
+		mov[esp + 4h], ecx;
+		mov ecx, Screen.fFMVoffsetEndY
+		mov[esp + 0xC], ecx;
+	jmp label2
+	//esp+0 - start x
+	//esp+8 - end x
+	//esp+1Ch - go up
+	//esp+20h - 0.5 - horizontal stretch 1.0
+	//esp+24h - aspect ratio, vertical stretch
+	label1:
+		mov ecx, Screen.fFMVoffsetStartX
+		mov[esp + 0h], ecx;
+		mov ecx, Screen.fFMVoffsetEndX
+		mov[esp + 8h], ecx;
+	label2:
+		mov	 ecx, __ECX
+		jmp	 hookJmpAddr6
+	}
+}
+	
 DWORD WINAPI Thread(LPVOID)
 {
 	CIniReader iniReader("");
 	Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
 	Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
 	nForceShadowBufferSupport = iniReader.ReadInteger("MAIN", "ForceShadowBufferSupport", 0);
+	nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 0);
 
 	if (!Screen.Width || !Screen.Height) {
 		HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
@@ -189,9 +218,15 @@ DWORD WINAPI Thread(LPVOID)
 	DWORD pfOpenVideo = injector::ReadMemory<DWORD>((DWORD)GetProcAddress(D3DDrv, "?OpenVideo@UD3DRenderDevice@@UAEXPAVUCanvas@@PADHHH@Z") + 0x1, true) + (DWORD)GetProcAddress(D3DDrv, "?OpenVideo@UD3DRenderDevice@@UAEXPAVUCanvas@@PADHHH@Z") + 5;
 	DWORD pfDisplayVideo = injector::ReadMemory<DWORD>((DWORD)GetProcAddress(D3DDrv, "?DisplayVideo@UD3DRenderDevice@@UAEXPAVUCanvas@@PAX@Z") + 0x1, true) + (DWORD)GetProcAddress(D3DDrv, "?DisplayVideo@UD3DRenderDevice@@UAEXPAVUCanvas@@PAX@Z") + 5;
 	//////injector::WriteMemory<float>(injector::ReadMemory<DWORD>((DWORD)GetProcAddress(D3DDrv, "?DisplayVideo@UD3DRenderDevice@@UAEXPAVUCanvas@@PAX@Z") + 0x55D, true), 0.0f, true); //Y 
-	//injector::WriteMemory<float>(injector::ReadMemory<DWORD>(pfDisplayVideo + 0x332 + 0x2, true), 0.0010f, true); //X
+	//injector::WriteMemory<float>(injector::ReadMemory<DWORD>(pfDisplayVideo + 0x332 + 0x2, true), 0.003125f, true); //X
 	injector::MakeJMP(pfOpenVideo + 0x2D4, OpenVideo_Hook, true);
 	hookJmpAddr5 = pfOpenVideo + 0x2D4 + 0x5;
+	injector::MakeJMP(pfDisplayVideo + 0x37E, DisplayVideo_Hook, true);
+	hookJmpAddr6 = pfDisplayVideo + 0x37E + 0x5;
+	Screen.fFMVoffsetStartX = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
+	Screen.fFMVoffsetEndX = Screen.fWidth - Screen.fFMVoffsetStartX;
+	Screen.fFMVoffsetStartY = 0.0f - ((Screen.fHeight - ((Screen.fHeight / 1.5f) * ((16.0f / 9.0f) / Screen.fAspectRatio))) / 2.0f);
+	Screen.fFMVoffsetEndY = Screen.fHeight - Screen.fFMVoffsetStartY;
 
 	//HUD
 	Screen.fHudOffset = (Screen.fWidth - Screen.fHeight * (4.0f/3.0f)) / 2.0f / 1.5f;
