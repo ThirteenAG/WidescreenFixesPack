@@ -4,7 +4,7 @@
 #include "..\includes\IniReader.h"
 
 HWND hWnd;
-void ProgramRestart(LPTSTR lpszTitle);
+HINSTANCE hExecutableInstance;
 
 #define _USE_MATH_DEFINES
 #include "math.h"
@@ -36,7 +36,7 @@ struct Screen
 
 HMODULE D3DDrv, WinDrv, Engine, Core;
 DWORD hookJmpAddr, hookJmpAddr2, hookJmpAddr3, hookJmpAddr4, hookJmpAddr5, hookJmpAddr6;
-DWORD dword_10173E5C;
+DWORD epJump, dword_10173E5C;
 DWORD nForceShadowBufferSupport, nFMVWidescreenMode;
 
 void __declspec(naked) UD3DRenderDevice_SetRes_Hook()
@@ -71,7 +71,7 @@ void CenterHud()
 	offset2 = *(float*)(__esp + 4 + 8);
 	Color = *(DWORD*)(__esp + 0x2C);
 
-	/*if (offset1 >= 780.0f && offset1 <= 925.0f) //898.50 912.00 916.50 910.50 906.0 904.5 780.00 792.00 787.50 915.0//925 - everything cept interaction menu
+	/*if (offset1 >= 780.0f && offset1 <= 925.0f) //898.50 912.00 916.50 910.50 906.0 904.5 780.00 792.00 787.50 915.0//925
 	{
 		offset2 += 150.0f;
 		offset1 += 150.0f;
@@ -123,7 +123,6 @@ void __declspec(naked) OpenVideo_Hook()
 	__asm	jmp	 hookJmpAddr5
 }
 
-float f1 = 1.0f;
 void __declspec(naked) DisplayVideo_Hook()
 {
 	_asm
@@ -132,9 +131,9 @@ void __declspec(naked) DisplayVideo_Hook()
 		push    esi
 		push    esi
 		mov		__ECX, ecx
-		mov  ecx, f1
+		/*mov  ecx, f1
 		mov[esp + 20h], ecx;
-		mov[esp + 24h], ecx;
+		mov[esp + 24h], ecx;*/
 		mov ecx, nFMVWidescreenMode
 		cmp ecx, 0
 	jz label1
@@ -175,26 +174,26 @@ void Init()
 	Screen.fHeight = static_cast<float>(Screen.Height);
 	Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
 
-	DWORD fAttr = GetFileAttributes(".\\SplinterCell2.ini");
-	char* UserIni;
-	if ((fAttr != INVALID_FILE_ATTRIBUTES) && !(fAttr & FILE_ATTRIBUTE_DIRECTORY))
-	{
-		UserIni = ".\\SplinterCell2.ini";
-	}
-	else
-	{
-		UserIni = "..\\SplinterCell2.ini";
-	}
-	CIniReader iniWriter(UserIni);
-
+	CIniReader iniWriter("SplinterCell2.ini");
 	if (iniWriter.ReadInteger("WinDrv.WindowsClient", "WindowedViewportX", 0) != Screen.Width || iniWriter.ReadInteger("WinDrv.WindowsClient", "WindowedViewportY", 0) != Screen.Height)
 	{
 		iniWriter.WriteInteger("WinDrv.WindowsClient", "WindowedViewportX", Screen.Width);
 		iniWriter.WriteInteger("WinDrv.WindowsClient", "WindowedViewportY", Screen.Height);
-		ProgramRestart("SCPT Widescreen Fix");
+	}
+
+	DWORD pfappInit = injector::ReadMemory<DWORD>((DWORD)GetProcAddress(GetModuleHandle("Core"), "?appInit@@YAXPBG0PAVFMalloc@@PAVFOutputDevice@@PAVFOutputDeviceError@@PAVFFeedbackContext@@PAVFFileManager@@P6APAVFConfigCache@@XZH@Z") + 0x1, true) + (DWORD)GetProcAddress(GetModuleHandle("Core"), "?appInit@@YAXPBG0PAVFMalloc@@PAVFOutputDevice@@PAVFOutputDeviceError@@PAVFFeedbackContext@@PAVFFileManager@@P6APAVFConfigCache@@XZH@Z") + 5;
+	injector::WriteMemory<unsigned short>(pfappInit + 0x5FC, 0x7EEB, true);
+	injector::WriteMemory(pfappInit + 0x67E + 0x1, Screen.Width, true);
+	injector::WriteMemory(pfappInit + 0x69F + 0x1, Screen.Height, true);
+
+	_asm
+	{
+		xor     ebx, ebx
+		mov		[ebp - 20h], ebx
+		jmp		epJump
 	}
 }
-	
+
 DWORD WINAPI Thread(LPVOID)
 {
 	while (true)
@@ -206,22 +205,15 @@ DWORD WINAPI Thread(LPVOID)
 		if (D3DDrv && WinDrv && Engine)
 			break;
 	}
-	SuspendThread(Thread);
-	/* Moved to Core.dll/ini
-	DWORD pfappInit = injector::ReadMemory<DWORD>((DWORD)GetProcAddress(Core, "?appInit@@YAXPBG0PAVFMalloc@@PAVFOutputDevice@@PAVFOutputDeviceError@@PAVFFeedbackContext@@PAVFFileManager@@P6APAVFConfigCache@@XZH@Z") + 0x1, true) + (DWORD)GetProcAddress(Core, "?appInit@@YAXPBG0PAVFMalloc@@PAVFOutputDevice@@PAVFOutputDeviceError@@PAVFFeedbackContext@@PAVFFileManager@@P6APAVFConfigCache@@XZH@Z") + 5;
-	injector::WriteMemory(pfappInit + 0x67E + 0x1, Screen.Width, true);
-	injector::WriteMemory(pfappInit + 0x69F + 0x1, Screen.Height, true);
-	injector::WriteMemory(pfappInit + 0x5FC + 0x6, Screen.Width, true);
-	injector::WriteMemory(pfappInit + 0x608 + 0x6, Screen.Height, true);*/
 
-	DWORD pfSetRes = injector::ReadMemory<DWORD>((DWORD)GetProcAddress(D3DDrv, "?SetRes@UD3DRenderDevice@@UAEHPAVUViewport@@HHH@Z") + 0x1, true) + (DWORD)GetProcAddress(D3DDrv, "?SetRes@UD3DRenderDevice@@UAEHPAVUViewport@@HHH@Z") + 5;
+	/*DWORD pfSetRes = injector::ReadMemory<DWORD>((DWORD)GetProcAddress(D3DDrv, "?SetRes@UD3DRenderDevice@@UAEHPAVUViewport@@HHH@Z") + 0x1, true) + (DWORD)GetProcAddress(D3DDrv, "?SetRes@UD3DRenderDevice@@UAEHPAVUViewport@@HHH@Z") + 5;
 	dword_10173E5C = injector::ReadMemory<DWORD>(pfSetRes + 0x435 + 0x1, true);
 	injector::MakeJMP(pfSetRes + 0x435, UD3DRenderDevice_SetRes_Hook, true);
 	hookJmpAddr = pfSetRes + 0x435 + 0x5;
 	
 	DWORD pfResizeViewport = (DWORD)GetProcAddress(WinDrv, "?ResizeViewport@UWindowsViewport@@UAEHKHH@Z");
 	injector::MakeJMP(pfResizeViewport + 0x469, UWindowsViewport_ResizeViewport_Hook, true); //crash on FMV
-	hookJmpAddr2 = pfResizeViewport + 0x469 + 0x6;
+	hookJmpAddr2 = pfResizeViewport + 0x469 + 0x6;*/
 
 	DWORD pfDrawTile = (DWORD)GetProcAddress(Engine, "?DrawTile@FCanvasUtil@@QAEXMMMMMMMMMPAVUMaterial@@VFColor@@HH@Z");
 	DWORD pfFUCanvasDrawTile = (DWORD)GetProcAddress(Engine, "?DrawTile@UCanvas@@UAEXPAVUMaterial@@MMMMMMMMMVFPlane@@1H@Z");
@@ -275,42 +267,12 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
 	if (reason == DLL_PROCESS_ATTACH)
 	{
-		Init();
+		hExecutableInstance = GetModuleHandle(NULL);
+		IMAGE_NT_HEADERS* ntHeader = (IMAGE_NT_HEADERS*)((DWORD)hExecutableInstance + ((IMAGE_DOS_HEADER*)hExecutableInstance)->e_lfanew);
+		BYTE* ep = (BYTE*)((DWORD)hExecutableInstance + ntHeader->OptionalHeader.AddressOfEntryPoint);
+		injector::MakeJMP(ep + 12, Init, true);
+		epJump = (DWORD)ep + 12 + 5;
 		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Thread, NULL, 0, NULL);
 	}
 	return TRUE;
-}
-
-void ProgramRestart(LPTSTR lpszTitle)
-{
-	// Just doing this so you can tell that is a new process
-	TCHAR szBuffer[512];
-	if (strlen(lpszTitle) > 500) lpszTitle[500] = 0;
-	wsprintf(szBuffer, TEXT("%s - %08X"), lpszTitle, GetCurrentProcessId());
-
-	// If they answer yes, launch the new process
-	if (MessageBox(HWND_DESKTOP, TEXT("Widescreen fix detected that custom resolution is set in SplinterCell2.ini. It has been removed to make the fix work properly, the game should be restarted for the changes to take effect. Restart now?"),
-		szBuffer, MB_ICONQUESTION | MB_YESNO | MB_SETFOREGROUND | MB_APPLMODAL) == IDYES)
-	{
-		TCHAR szPath[MAX_PATH + 1];
-		PROCESS_INFORMATION pi;
-		STARTUPINFO si;
-
-		GetStartupInfo(&si);
-		GetModuleFileName(NULL, szPath, MAX_PATH);
-		static LPTSTR lpszRestartMutex = TEXT("NapalmSelfRestart");
-		HANDLE hRestartMutex = CreateMutex(NULL, TRUE, lpszRestartMutex);
-
-		if (CreateProcess(szPath, GetCommandLine(), NULL, NULL,
-			FALSE, DETACHED_PROCESS, NULL, NULL, &si, &pi) == 0)
-		{
-			MessageBox(HWND_DESKTOP, TEXT("Failed to restart program.\n"
-				"Please try manually."), TEXT("Error"), MB_ICONERROR);
-		}
-		else {
-			Sleep(1000);
-			CloseHandle(pi.hProcess);
-			CloseHandle(pi.hThread);
-		}
-	}
 }
