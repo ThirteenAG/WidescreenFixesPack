@@ -38,6 +38,7 @@ HMODULE D3DDrv, WinDrv, Engine, Core;
 DWORD hookJmpAddr, hookJmpAddr2, hookJmpAddr3, hookJmpAddr4, hookJmpAddr5, hookJmpAddr6;
 DWORD epJump, dword_10173E5C;
 DWORD nForceShadowBufferSupport, nFMVWidescreenMode;
+char* UserIni;
 
 void __declspec(naked) UD3DRenderDevice_SetRes_Hook()
 {
@@ -174,7 +175,7 @@ void Init()
 	Screen.fHeight = static_cast<float>(Screen.Height);
 	Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
 
-	CIniReader iniWriter("SplinterCell2.ini");
+	CIniReader iniWriter(UserIni);
 	if (iniWriter.ReadInteger("WinDrv.WindowsClient", "WindowedViewportX", 0) != Screen.Width || iniWriter.ReadInteger("WinDrv.WindowsClient", "WindowedViewportY", 0) != Screen.Height)
 	{
 		iniWriter.WriteInteger("WinDrv.WindowsClient", "WindowedViewportX", Screen.Width);
@@ -267,6 +268,16 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
 	if (reason == DLL_PROCESS_ATTACH)
 	{
+		DWORD fAttr = GetFileAttributes("SplinterCell2.ini");
+		if ((fAttr != INVALID_FILE_ATTRIBUTES) && !(fAttr & FILE_ATTRIBUTE_DIRECTORY))
+		{
+			UserIni = ".\\SplinterCell2.ini";
+		}
+		else
+		{
+			UserIni = "..\\SplinterCell2.ini";
+		}
+
 		hExecutableInstance = GetModuleHandle(NULL);
 		IMAGE_NT_HEADERS* ntHeader = (IMAGE_NT_HEADERS*)((DWORD)hExecutableInstance + ((IMAGE_DOS_HEADER*)hExecutableInstance)->e_lfanew);
 		BYTE* ep = (BYTE*)((DWORD)hExecutableInstance + ntHeader->OptionalHeader.AddressOfEntryPoint);
