@@ -176,11 +176,8 @@ void Init()
 	Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
 
 	CIniReader iniWriter(UserIni);
-	if (iniWriter.ReadInteger("WinDrv.WindowsClient", "WindowedViewportX", 0) != Screen.Width || iniWriter.ReadInteger("WinDrv.WindowsClient", "WindowedViewportY", 0) != Screen.Height)
-	{
-		iniWriter.WriteInteger("WinDrv.WindowsClient", "WindowedViewportX", Screen.Width);
-		iniWriter.WriteInteger("WinDrv.WindowsClient", "WindowedViewportY", Screen.Height);
-	}
+	iniWriter.WriteInteger("WinDrv.WindowsClient", "WindowedViewportX", Screen.Width);
+	iniWriter.WriteInteger("WinDrv.WindowsClient", "WindowedViewportY", Screen.Height);
 
 	DWORD pfappInit = injector::ReadMemory<DWORD>((DWORD)GetProcAddress(GetModuleHandle("Core"), "?appInit@@YAXPBG0PAVFMalloc@@PAVFOutputDevice@@PAVFOutputDeviceError@@PAVFFeedbackContext@@PAVFFileManager@@P6APAVFConfigCache@@XZH@Z") + 0x1, true) + (DWORD)GetProcAddress(GetModuleHandle("Core"), "?appInit@@YAXPBG0PAVFMalloc@@PAVFOutputDevice@@PAVFOutputDeviceError@@PAVFFeedbackContext@@PAVFFileManager@@P6APAVFConfigCache@@XZH@Z") + 5;
 	injector::WriteMemory<unsigned short>(pfappInit + 0x5FC, 0x7EEB, true);

@@ -4,7 +4,7 @@
 #include "..\includes\IniReader.h"
 
 HWND hWnd;
-void ProgramRestart(LPTSTR lpszTitle);
+HINSTANCE hExecutableInstance;
 
 #define _USE_MATH_DEFINES
 #include "math.h"
@@ -28,6 +28,10 @@ struct Screen
 	float fAspectRatio;
 	float fHudOffset;
 	float fHudOffsetRight;
+	float fFMVoffsetStartX;
+	float fFMVoffsetEndX;
+	float fFMVoffsetStartY;
+	float fFMVoffsetEndY;
 } Screen;
 
 HMODULE D3DDrv, WinDrv, Engine;
@@ -35,7 +39,9 @@ DWORD hookJmpAddr, hookJmpAddr2, hookJmpAddr3, hookJmpAddr4;
 DWORD dword_1003DBA0;
 DWORD dword_1003DBB4;
 DWORD dword_1003DBA4;
-DWORD nForceShadowBufferSupport;
+DWORD epJump;
+DWORD nForceShadowBufferSupport, nFMVWidescreenMode;
+char* UserIni;
 
 void __declspec(naked) UD3DRenderDevice_SetRes_Hook()
 {
@@ -121,25 +127,13 @@ void __declspec(naked) UGameEngine_Draw_Hook()
 	__asm	jmp	 hookJmpAddr4
 }
 
-template<uintptr_t addr>
-void TestHook()
-{
-	using func_hook = injector::function_hooker_thiscall<addr, int(int _this, float a2, float a3, float a4, float a5, float a6, float a7, float a8, float a9, int a10, int a11, int a12)>;
-	injector::make_static_hook<func_hook>([](func_hook::func_type Test, int _this, float a2, float a3, float a4, float a5, float a6, float a7, float a8, float a9, int a10, int a11, int a12)
-	{
-	a2 += 150.1f;
-	a4 += 150.1f;
-		Test(_this, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12);
-		return 1;
-	});
-}
-
-DWORD WINAPI Thread(LPVOID)
+void Init()
 {
 	CIniReader iniReader("");
 	Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
 	Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
 	nForceShadowBufferSupport = iniReader.ReadInteger("MAIN", "ForceShadowBufferSupport", 0);
+	nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 0);
 
 	if (!Screen.Width || !Screen.Height) {
 		HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
@@ -154,6 +148,22 @@ DWORD WINAPI Thread(LPVOID)
 	Screen.fHeight = static_cast<float>(Screen.Height);
 	Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
 
+	CIniReader iniWriter(UserIni);
+	char szRes[50];
+	sprintf(szRes, "%dx%d", Screen.Width, Screen.Height);
+	iniWriter.WriteString("Engine.EPCGameOptions", "Resolution", szRes);
+
+	_asm
+	{
+		push    ebp
+		mov     ebp, esp
+		push    0xFF
+		jmp		epJump
+	}
+}
+
+DWORD WINAPI Thread(LPVOID)
+{
 	while (true)
 	{
 		Sleep(0);
@@ -164,7 +174,6 @@ DWORD WINAPI Thread(LPVOID)
 			break;
 	}
 
-	
 	dword_1003DBA0 = /*(DWORD)D3DDrv + 0x3DBA0*/injector::ReadMemory<DWORD>((DWORD)GetProcAddress(D3DDrv, "?SetRes@UD3DRenderDevice@@UAEHPAVUViewport@@HHH@Z") + 0x5A8 + 0x2, true);
 	dword_1003DBB4 = /*(DWORD)D3DDrv + 0x3DBB4*/injector::ReadMemory<DWORD>((DWORD)GetProcAddress(D3DDrv, "?SetRes@UD3DRenderDevice@@UAEHPAVUViewport@@HHH@Z") + 0x5A8 + 0x2 + 0x6, true);
 	dword_1003DBA4 = /*(DWORD)D3DDrv + 0x3DBA4*/injector::ReadMemory<DWORD>((DWORD)GetProcAddress(D3DDrv, "?SetRes@UD3DRenderDevice@@UAEHPAVUViewport@@HHH@Z") + 0x5A8 + 0x2 + 0x6 + 0xA, true);
@@ -187,8 +196,8 @@ DWORD WINAPI Thread(LPVOID)
 	hookJmpAddr3 = /*(DWORD)Engine + 0x157200*/injector::ReadMemory<DWORD>((DWORD)GetProcAddress(Engine, "?DrawTile@FCanvasUtil@@QAEXMMMMMMMMMPAVUMaterial@@VFColor@@@Z") + 0x1, true) + (DWORD)GetProcAddress(Engine, "?DrawTile@FCanvasUtil@@QAEXMMMMMMMMMPAVUMaterial@@VFColor@@@Z") + 5;
 
 	//FMV
-	injector::WriteMemory<float>(/*(DWORD)D3DDrv + 0x31860*/injector::ReadMemory<DWORD>((DWORD)GetProcAddress(D3DDrv, "?DisplayVideo@UD3DRenderDevice@@UAEXPAVUCanvas@@PAX@Z") + 0x55D, true), 0.0f, true); //Y 
-	injector::WriteMemory<float>(/*(DWORD)D3DDrv + 0x31864*/injector::ReadMemory<DWORD>((DWORD)GetProcAddress(D3DDrv, "?DisplayVideo@UD3DRenderDevice@@UAEXPAVUCanvas@@PAX@Z") + 0x55D + 0x12, true), 0.0f, true); //X
+	injector::WriteMemory<float>(/*(DWORD)D3DDrv + 0x31860*/injector::ReadMemory<DWORD>((DWORD)GetProcAddress(D3DDrv, "?DisplayVideo@UD3DRenderDevice@@UAEXPAVUCanvas@@PAX@Z") + 0x55D, true), (1.0f / 640.0f) / ((Screen.fWidth / 640.0f)), true); //X
+	injector::WriteMemory<float>(/*(DWORD)D3DDrv + 0x31864*/injector::ReadMemory<DWORD>((DWORD)GetProcAddress(D3DDrv, "?DisplayVideo@UD3DRenderDevice@@UAEXPAVUCanvas@@PAX@Z") + 0x55D + 0x12, true), (1.0f / 480.0f) / ((Screen.fHeight / 480.0f)), true); //Y
 
 	//HUD
 	Screen.fHudOffset = (Screen.fWidth - Screen.fHeight * (4.0f/3.0f)) / 2.0f;	
@@ -202,10 +211,10 @@ DWORD WINAPI Thread(LPVOID)
 	//Shadows
 	if (nForceShadowBufferSupport)
 	{
-		injector::WriteMemory((DWORD)GetProcAddress(D3DDrv, "?SupportsShadowBuffer@UD3DRenderDevice@@UAEHXZ") + 0x113, &nForceShadowBufferSupport, true);
-		injector::WriteMemory<unsigned short>((DWORD)GetProcAddress(D3DDrv, "?SupportsShadowBuffer@UD3DRenderDevice@@UAEHXZ") + 0x10, 0xE990, true);
+		DWORD pfSupportsShadowBuffer = (DWORD)GetProcAddress(D3DDrv, "?SupportsShadowBuffer@UD3DRenderDevice@@UAEHXZ");
+		injector::WriteMemory<unsigned short>(pfSupportsShadowBuffer + 0x10, 0xE990, true);
+		injector::WriteMemory(pfSupportsShadowBuffer + 0x113, &nForceShadowBufferSupport, true);
 	}
-
 	return 0;
 }
 
@@ -213,8 +222,7 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
 	if (reason == DLL_PROCESS_ATTACH)
 	{
-		DWORD fAttr = GetFileAttributes(".\\SplinterCellUser.ini");
-		char* UserIni;
+		DWORD fAttr = GetFileAttributes("SplinterCellUser.ini");
 		if ((fAttr != INVALID_FILE_ATTRIBUTES) && !(fAttr & FILE_ATTRIBUTE_DIRECTORY))
 		{
 			UserIni = ".\\SplinterCellUser.ini";
@@ -223,50 +231,15 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 		{
 			UserIni = "..\\SplinterCellUser.ini";
 		}
-		CIniReader iniWriter(UserIni);
-		char* Res = iniWriter.ReadString("Engine.EPCGameOptions", "Resolution", "");
 
-		if (strcmp(Res, "") != 0)
-		{
-			iniWriter.WriteString("Engine.EPCGameOptions", "Resolution", "");
-			ProgramRestart("SC Widescreen Fix");
-		}
+		hExecutableInstance = GetModuleHandle(NULL);
+		IMAGE_NT_HEADERS* ntHeader = (IMAGE_NT_HEADERS*)((DWORD)hExecutableInstance + ((IMAGE_DOS_HEADER*)hExecutableInstance)->e_lfanew);
+		BYTE* ep = (BYTE*)((DWORD)hExecutableInstance + ntHeader->OptionalHeader.AddressOfEntryPoint);
+		injector::MakeJMP(ep, Init, true);
+		epJump = (DWORD)ep + 5;
 
 		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Thread, NULL, 0, NULL);
 	}
 	return TRUE;
 }
 
-void ProgramRestart(LPTSTR lpszTitle)
-{
-	// Just doing this so you can tell that is a new process
-	TCHAR szBuffer[512];
-	if (strlen(lpszTitle) > 500) lpszTitle[500] = 0;
-	wsprintf(szBuffer, TEXT("%s - %08X"), lpszTitle, GetCurrentProcessId());
-
-	// If they answer yes, launch the new process
-	if (MessageBox(HWND_DESKTOP, TEXT("Widescreen fix detected that custom resolution is set in SplinterCellUser.ini. It has been removed to make the fix work properly, the game should be restarted for the changes to take effect. Restart now?"),
-		szBuffer, MB_ICONQUESTION | MB_YESNO | MB_SETFOREGROUND | MB_APPLMODAL) == IDYES)
-	{
-		TCHAR szPath[MAX_PATH + 1];
-		PROCESS_INFORMATION pi;
-		STARTUPINFO si;
-
-		GetStartupInfo(&si);
-		GetModuleFileName(NULL, szPath, MAX_PATH);
-		static LPTSTR lpszRestartMutex = TEXT("NapalmSelfRestart");
-		HANDLE hRestartMutex = CreateMutex(NULL, TRUE, lpszRestartMutex);
-
-		if (CreateProcess(szPath, GetCommandLine(), NULL, NULL,
-			FALSE, DETACHED_PROCESS, NULL, NULL, &si, &pi) == 0)
-		{
-			MessageBox(HWND_DESKTOP, TEXT("Failed to restart program.\n"
-				"Please try manually."), TEXT("Error"), MB_ICONERROR);
-		}
-		else {
-			Sleep(1000);
-			CloseHandle(pi.hProcess);
-			CloseHandle(pi.hThread);
-		}
-	}
-}
