@@ -42,6 +42,7 @@ DWORD dword_1003DBA4;
 DWORD epJump;
 DWORD nForceShadowBufferSupport, nFMVWidescreenMode;
 char* UserIni;
+bool bIsSteam;
 
 void __declspec(naked) UD3DRenderDevice_SetRes_Hook()
 {
@@ -152,7 +153,6 @@ void Init()
 	char szRes[50];
 	sprintf(szRes, "%dx%d", Screen.Width, Screen.Height);
 	iniWriter.WriteString("Engine.EPCGameOptions", "Resolution", szRes);
-
 	_asm
 	{
 		push    ebp
@@ -164,6 +164,16 @@ void Init()
 
 DWORD WINAPI Thread(LPVOID)
 {
+	if (bIsSteam == true)
+	{
+		while (*(BYTE*)0x10918F1A != 0x55)
+		{
+			Sleep(0);
+		}
+		injector::MakeJMP(0x10918F1A, Init, true);
+		epJump = (DWORD)0x10918F1A + 5;
+	}
+
 	while (true)
 	{
 		Sleep(0);
@@ -235,9 +245,16 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 		hExecutableInstance = GetModuleHandle(NULL);
 		IMAGE_NT_HEADERS* ntHeader = (IMAGE_NT_HEADERS*)((DWORD)hExecutableInstance + ((IMAGE_DOS_HEADER*)hExecutableInstance)->e_lfanew);
 		BYTE* ep = (BYTE*)((DWORD)hExecutableInstance + ntHeader->OptionalHeader.AddressOfEntryPoint);
-		injector::MakeJMP(ep, Init, true);
-		epJump = (DWORD)ep + 5;
 
+		if (*(BYTE*)ep == 0x53)
+		{
+			bIsSteam = true;
+		}
+		else
+		{
+			injector::MakeJMP(ep, Init, true);
+			epJump = (DWORD)ep + 5;
+		}
 		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Thread, NULL, 0, NULL);
 	}
 	return TRUE;
