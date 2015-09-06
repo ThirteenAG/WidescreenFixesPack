@@ -88,14 +88,6 @@ void FixAspectRatio()
 
 void FixFOV()
 {
-	if (FOVControl)
-	{
-		fFOVControlValue = *(float*)FOVControl;
-	}
-	else
-	{
-		fFOVControlValue = 1.0f;
-	}
 	if (!injector::address_manager::singleton().IsSteam())
 	{
 		injector::MakeCALL(0x46E92E, CDraw::SetFOV, true);

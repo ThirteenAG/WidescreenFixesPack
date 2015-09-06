@@ -101,15 +101,6 @@ void ProcessCamOnAStringAvoidTheGeometryHook()
 
 void FixFOV()
 {
-	if (FOVControl)
-	{
-		fFOVControlValue = *(float*)FOVControl;
-	}
-	else
-	{
-		fFOVControlValue = 1.0f;
-	}
-
 	if (!injector::address_manager::singleton().IsSteam())
 	{
 		ProcessCamOnAStringAvoidTheGeometryHook<0x480456>();

@@ -114,6 +114,14 @@ void CDraw::CalculateAspectRatio()
 inline float getDynamicScreenFieldOfView(float fFactor)
 {
 	fEmergencyVehiclesFix = 70.0f / fFactor;
+	if (FOVControl)
+	{
+		fFOVControlValue = *(float*)FOVControl;
+	}
+	else
+	{
+		fFOVControlValue = 1.0f;
+	}
 
 	if ((!*(char*)IsInCutscene == 0 && RestoreCutsceneFOV) || DontTouchFOV)
 	{
