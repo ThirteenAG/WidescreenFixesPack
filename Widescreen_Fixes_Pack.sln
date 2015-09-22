@@ -98,6 +98,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SplinterCellPandoraTomorrow
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SplinterCellChaosTheory_widescreen_fix", "SplinterCellChaosTheory_widescreen_fix\SplinterCellChaosTheory_widescreen_fix.vcxproj", "{F2780F7E-A05C-4929-9CC0-CC04F16AFDC0}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SplinterCellDoubleAgent_widescreen_fix", "SplinterCellDoubleAgent_widescreen_fix\SplinterCellDoubleAgent_widescreen_fix.vcxproj", "{63CE7444-CEE8-4F00-AACB-55BEFA420DD7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -352,6 +354,14 @@ Global
 		{F2780F7E-A05C-4929-9CC0-CC04F16AFDC0}.Release|Win32.Build.0 = Release|Win32
 		{F2780F7E-A05C-4929-9CC0-CC04F16AFDC0}.Release|x64.ActiveCfg = Release|x64
 		{F2780F7E-A05C-4929-9CC0-CC04F16AFDC0}.Release|x64.Build.0 = Release|x64
+		{63CE7444-CEE8-4F00-AACB-55BEFA420DD7}.Debug|Win32.ActiveCfg = Debug|Win32
+		{63CE7444-CEE8-4F00-AACB-55BEFA420DD7}.Debug|Win32.Build.0 = Debug|Win32
+		{63CE7444-CEE8-4F00-AACB-55BEFA420DD7}.Debug|x64.ActiveCfg = Debug|x64
+		{63CE7444-CEE8-4F00-AACB-55BEFA420DD7}.Debug|x64.Build.0 = Debug|x64
+		{63CE7444-CEE8-4F00-AACB-55BEFA420DD7}.Release|Win32.ActiveCfg = Release|Win32
+		{63CE7444-CEE8-4F00-AACB-55BEFA420DD7}.Release|Win32.Build.0 = Release|Win32
+		{63CE7444-CEE8-4F00-AACB-55BEFA420DD7}.Release|x64.ActiveCfg = Release|x64
+		{63CE7444-CEE8-4F00-AACB-55BEFA420DD7}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
