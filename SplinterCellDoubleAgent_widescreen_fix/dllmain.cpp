@@ -36,11 +36,11 @@ struct Screen
 
 HMODULE D3DDrv, WinDrv, Engine, Core;
 DWORD hookJmpAddr, hookJmpAddr2, hookJmpAddr3, hookJmpAddr4, hookJmpAddr5, hookJmpAddr6;
-DWORD epJump, dword_10173E5C;
-DWORD nForceShadowBufferSupport, nFMVWidescreenMode;
+DWORD epJump;
 char* UserIni;
-
-
+float HUDScaleX, TextScaleX;
+int FilmstripScaleX, FilmstripOffset;
+float f1_0 = 1.0f;
 
 void Init()
 {
@@ -83,10 +83,69 @@ void Init()
 	}
 }
 
+void __declspec(naked) Text_Hook()
+{
+	_asm
+	{
+		movss xmm2, TextScaleX
+		divss   xmm1, xmm2
+		movss   dword ptr [esp + 14h], xmm1
+		jmp	 hookJmpAddr3
+	}
+}
 
+void __declspec(naked) HUD_Hook()
+{
+	_asm
+	{
+		movss xmm0, Screen.fHudOffset
+		subss   xmm3, xmm0
+		addss   xmm3, xmm4
+		movss xmm0, f1_0
+		jmp	 hookJmpAddr4
+	}
+}
+
+
+void __declspec(naked) RenderFilmstrip_Hook()
+{
+	_asm
+	{
+		mov     ecx, [ebx + 4]
+		mov     ecx, FilmstripScaleX
+		add     ecx, ecx
+		jmp		hookJmpAddr5
+	}
+}
+
+void __declspec(naked) RenderFilmstrip_Hook2()
+{
+	_asm
+	{
+		mov		edx, FilmstripOffset
+		mov		[esp + 10h], edx
+		fild    dword ptr [esp + 10h]
+		jmp		hookJmpAddr2
+	}
+}
+
+
+float __EDX;
+void __declspec(naked) UGameEngine_Draw_Hook()
+{
+	_asm
+	{
+		mov  edx, [ecx + 628h]
+		mov  __EDX, edx
+	}
+	__EDX *= fDynamicScreenFieldOfViewScale;
+	__asm   mov edx, __EDX
+	__asm	jmp	 hookJmpAddr6
+}
 
 DWORD WINAPI Thread(LPVOID)
 {
+
 	while (true)
 	{
 		Sleep(0);
@@ -97,7 +156,50 @@ DWORD WINAPI Thread(LPVOID)
 			break;
 	}
 
+	DWORD pfInitDraw = (DWORD)GetProcAddress(Engine, "?InitDraw@ImageUnreal@magma@@SAXXZ");
+	DWORD pWidthScale = (DWORD)GetProcAddress(Engine, "?m_widthScale@ImageUnreal@magma@@0MA");
+	DWORD pfImageUnrealDraw = (DWORD)GetProcAddress(Engine, "?Draw@ImageUnreal@magma@@UAEXXZ");
 
+	HUDScaleX = 2.0f / (600.0f * Screen.fAspectRatio);
+	injector::MakeNOP(pfInitDraw + 0x153, 8, true);
+	injector::WriteMemory<float>(pWidthScale, HUDScaleX, true);
+
+	TextScaleX = 600.0f * Screen.fAspectRatio;
+	Screen.fHudOffset = ((4.0f / 3.0f) / Screen.fAspectRatio);
+
+	injector::MakeJMP((0x1030678D - 0x10300000) + (unsigned char*)Engine, Text_Hook, true);
+	hookJmpAddr3 = (0x10306797 - 0x10300000) + (DWORD)((unsigned char*)Engine);
+
+	injector::WriteMemory((0x103069A5 + 0x4 - 0x10300000) + (unsigned char*)Engine, &Screen.fHudOffset, true);
+
+	injector::MakeJMP(pfImageUnrealDraw + 0x2EC, HUD_Hook, true);
+	hookJmpAddr4 = pfImageUnrealDraw + 0x2EC + 0x8;
+
+	//Minimap
+	DWORD pfRenderFilmstrip = (DWORD)GetProcAddress(D3DDrv, "?RenderFilmstrip@UD3DRenderDevice@@UAE_NXZ");
+
+	FilmstripScaleX = static_cast<int>(Screen.fWidth / (1280.0f / (368.0 * ((4.0 / 3.0) / (Screen.fAspectRatio)))));
+	FilmstripOffset = static_cast<int>((((Screen.fWidth / 2.0f) - ((Screen.fHeight * (4.0f / 3.0f)) / 2.0f)) * 2.0f) + ((float)FilmstripScaleX / 5.25f));
+
+	injector::MakeJMP(pfRenderFilmstrip + 0x38C, RenderFilmstrip_Hook, true);
+	hookJmpAddr5 = pfRenderFilmstrip + 0x38C + 0x5;
+
+	injector::MakeJMP(pfRenderFilmstrip + 0x350, RenderFilmstrip_Hook2, true);
+	hookJmpAddr2 = pfRenderFilmstrip + 0x350 + 0x8;
+
+	//FOV
+	DWORD pfDraw = (DWORD)GetProcAddress(Engine, "?Draw@UGameEngine@@UAEXPAVUViewport@@HPAEPAH@Z");
+	fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(fScreenFieldOfViewVStd * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
+
+	for (size_t i = (0xD47 - 0x100); i < (0xD47 + 0x100); i++)
+	{
+		if (*(DWORD*)(pfDraw + i) == 0x0628918B && *(DWORD*)(pfDraw + i + 4) == 0x8B520000)
+		{
+			injector::MakeJMP(pfDraw + i /*0xD47*/, UGameEngine_Draw_Hook, true);
+			hookJmpAddr6 = pfDraw + i /*0xD47*/ + 0x6;
+			break;
+		}
+	}
 
 	return 0;
 }
