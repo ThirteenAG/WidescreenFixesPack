@@ -1,10 +1,5 @@
 #include <iostream>
 #include <string>
-#include "..\IniReader.h"
-#include "..\injector\injector.hpp"
-#include "..\injector\calling.hpp"
-#include "..\injector\hooking.hpp"
-#include "..\injector\assembly.hpp"
 
 #include "..\GTA\RenderWare.h"
 #include "..\GTA\game.h"
@@ -75,3 +70,4 @@ void IVRadar();
 DWORD bWideScreen, BordersVar1, BordersVar2, IsInCutscene;
 int(__cdecl* CSprite2dDrawRect)(class CRect const &, class CRGBA const &);
 int(__cdecl* FindPlayerVehicle)();
+int(__cdecl* FindPlayerVehicleSA)(int, char);

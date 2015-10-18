@@ -1,8 +1,8 @@
+#include <windows.h>
 #include "CDraw.h"
 #include "RenderWare.h"
 #include "game.h"
-#include "..\injector\injector.hpp"
-#include "..\injector\calling.hpp"
+
 extern float fCustomAspectRatioHor, fCustomAspectRatioVer;
 extern float fHudWidthScale, fHudHeightScale;
 extern float fCustomWideScreenWidthScaleDown;
