@@ -39,7 +39,6 @@ void Init()
 
 	for (size_t i = 0; i < 2; i++)
 	{
-		//game
 		//addresses from MW
 		DWORD* dword_6C27ED = hook::pattern("C7 00 80 02 00 00 C7 01 E0 01 00 00 C2 08 00").get(0).get<DWORD>(2);
 		injector::WriteMemory(dword_6C27ED, ResX, true);
@@ -66,24 +65,6 @@ void Init()
 		DWORD dword_6C2866 = (DWORD)dword_6C2860 + 6;
 		injector::WriteMemory(dword_6C2866, ResY, true);
 	}
-
-
-	/*injector::WriteMemory(0xA63F80, ResX, true);
-	injector::WriteMemory(0xAB04E4, ResX, true);
-	injector::WriteMemory(0xAB0500, ResX, true);
-	injector::WriteMemory(0xAB0538, ResX, true);
-	injector::WriteMemory(0xAB05A8, ResX, true);
-	injector::WriteMemory(0xAB06FC, ResX, true);
-	injector::WriteMemory(0xAB0AC8, ResX, true);
-
-	injector::WriteMemory(0xA63F84, ResY, true);
-	injector::WriteMemory(0xAB04E8, ResY, true);
-	injector::WriteMemory(0xAB0504, ResY, true);
-	injector::WriteMemory(0xAB053C, ResY, true);
-	injector::WriteMemory(0xAB05AC, ResY, true);
-	injector::WriteMemory(0xAB0700, ResY, true);
-	injector::WriteMemory(0xAB0ACC, ResY, true);*/
-
 
 	DWORD* dword_9E9B68 = *hook::pattern("D8 0D ? ? ? ? DA 74 24 18 E8 ? ? ? ? 89 46 04 EB 03").get(0).get<DWORD*>(2);
 	injector::WriteMemory<float>(dword_9E9B68, (float)ResX, true);
@@ -113,22 +94,16 @@ void Init()
 			DWORD* dword_5A18BA = hook::pattern("C7 ? ? ? 00 00 A0 43 C7 ? ? ? 00 00 70 43").get(0).get<DWORD>(4);
 			injector::WriteMemory<float>(dword_5A18BA, fHudPosX, true);
 		}
-		
-
-		/*injector::WriteMemory<float>(0x400000 + 0x198DC0, fHudPosX, true);
-		injector::WriteMemory<float>(0x400000 + 0x198FB7, fHudPosX, true);
-		injector::WriteMemory<float>(0x400000 + 0x199416, fHudPosX, true);
-		injector::WriteMemory<float>(0x400000 + 0x1996AE, fHudPosX, true);*/
-		//injector::WriteMemory<float>(0x400000 + 0x1A18BE, fHudPosX, true);
-		//injector::WriteMemory<float>(0x400000 + 0x1D2B46, fHudPosX, true);
-		//injector::WriteMemory<float>(0x400000 + 0x6604AC, fHudPosX, true);
-		//injector::WriteMemory<float>(0x400000 + 0x5C778C, fHudPosX, true);
 
 		DWORD* dword_A604AC = *hook::pattern("D8 05 ? ? ? ? 89 44 24 18 D9 44 24 18").get(0).get<DWORD*>(2);
 		injector::WriteMemory<float>(dword_A604AC, fHudPosX, true);
 
 		DWORD* dword_9C778C = *hook::pattern("D8 25 ? ? ? ? 8D 46 34 50 D9 5C 24 20").get(0).get<DWORD*>(2);
 		injector::WriteMemory<float>(dword_9C778C, fHudPosX, true);
+
+		//mini_map_route fix
+		DWORD* dword_9D5F3C = *hook::pattern("D8 05 ? ? ? ? D9 5C 24 7C D9 86 B8 00 00 00 D8 05 ? ? ? ? D9 9C 24 80 00 00 00").get(0).get<DWORD*>(2);
+		injector::WriteMemory<float>(dword_9D5F3C, (fHudPosX - 320.0f) + 384.0f, true);
 	}
 
 	if (verFovCorrectionFactor)
