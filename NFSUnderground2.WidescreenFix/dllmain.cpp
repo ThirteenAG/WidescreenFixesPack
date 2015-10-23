@@ -163,6 +163,7 @@ void Init()
 
 	//game
 	DWORD* dword_5BF62F = hook::pattern("C7 00 80 02 00 00 C7 01 E0 01 00 00").get(0).get<DWORD>(2);
+	//injector::MakeNOP(dword_5BF62F - 10 - 13, 13, true);
 	injector::WriteMemory(dword_5BF62F, ResX, true);
 	DWORD* dword_5BF646 = hook::pattern("C7 02 20 03 00 00 C7 00 58 02 00 00").get(0).get<DWORD>(2);
 	injector::WriteMemory(dword_5BF646, ResX, true);

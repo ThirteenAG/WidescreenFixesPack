@@ -188,6 +188,9 @@ void Init()
 	injector::WriteMemory(dword_408783, ResX, true);
 	DWORD dword_408788 = (DWORD)dword_408783 + 5;
 	injector::WriteMemory(dword_408788, ResY, true);
+
+	injector::MakeNOP(dword_408788 + 4, 9, true);
+
 	DWORD* dword_408796 = hook::pattern("B8 80 02 00 00 BE E0 01 00 00 50").get(0).get<DWORD>(1);
 	injector::WriteMemory(dword_408796, ResX, true);
 	DWORD dword_40879B = (DWORD)dword_408796 + 5;

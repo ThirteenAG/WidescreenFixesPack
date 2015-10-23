@@ -167,6 +167,13 @@ void Init()
 			DWORD* dword_56D675 = hook::pattern("89 5E 0C 88 5E 10 E8 ? ? ? ? 88 5E 19 88 5E 22").get(0).get<DWORD>(0);
 			jmpAddr = (DWORD)dword_56D675 + 6;
 			injector::MakeJMP(dword_56D675, WidescreenHudHook, true);
+
+			DWORD* dword_57CB82 = hook::pattern("3A 55 34 0F 85 0B 02 00 00 A1 ? ? ? ?").get(0).get<DWORD>(0);
+			injector::WriteMemory<DWORD>(dword_57CB82, 0x0F01FA80, true);
+			DWORD* dword_5696CB = hook::pattern("8A 41 34 38 86 30 03 00 00 74 52 84 C0").get(0).get<DWORD>(0);
+			injector::WriteMemory<DWORD>(dword_5696CB, 0x389001B0, true);
+			DWORD* dword_58D883 = hook::pattern("8A 40 34 5F 5E 5D 3B CB 5B 75 12").get(0).get<DWORD>(0);
+			injector::WriteMemory<DWORD>(dword_58D883, 0x5F9001B0, true);
 		}
 
 		if (bFMVWidescreenMode)
