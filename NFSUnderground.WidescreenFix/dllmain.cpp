@@ -152,6 +152,25 @@ void __declspec(naked) MinimapHook2()
 	}
 }
 
+void __declspec(naked) LapsHook()
+{
+	_asm
+	{
+		mov		eax, [ebx + 1Ch]
+		mov		edx, [ebx + 20h]
+		mov		HudPosX.dwPos, eax
+		mov		HudPosY.dwPos, edx
+		call	WidescreenHud
+		mov		eax, HudPosX.dwPos
+		mov		edx, HudPosY.dwPos
+		mov		[ebx + 1Ch], eax
+		mov		[ebx + 20h], edx
+		fadd	dword ptr [ebx + 1Ch]
+		mov		edx, [esp + 18h]
+		jmp		jmpAddr4
+	}
+}
+
 void Init()
 {
 	CIniReader iniReader("");
@@ -288,6 +307,12 @@ void Init()
 		DWORD  dword_58FB22 = (DWORD)dword_58FB1C + 6;
 		injector::MakeJMP(dword_58FB1C, MinimapHook2, true);
 		jmpAddr3 = dword_58FB22;
+
+		DWORD* dword_4F6DAB = hook::pattern("D8 43 1C 8B 54 24 18 8B 44 24 10 D9 1A 8B 4E 68 50 51 57").get(0).get<DWORD>(0);
+		DWORD  dword_4F6DB2 = (DWORD)dword_4F6DAB + 7;
+		injector::MakeJMP(dword_4F6DAB, LapsHook, true);
+		jmpAddr4 = dword_4F6DB2;
+		
 	}
 }
 
