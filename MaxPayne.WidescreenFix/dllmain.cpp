@@ -24,13 +24,6 @@ struct Screen
 	float fHudOffsetWide;
 } Screen;
 
-union HudPos
-{
-	DWORD dwPos;
-	float fPos;
-} TextPosX1, TextPosY1, TextPosX2, TextPosY2,
-HudPosX1, HudPosY1, HudPosX2, HudPosY2, HudPosX3, HudPosX4;
-
 struct TextCoords
 {
 	float a;
@@ -49,7 +42,7 @@ float fWidthScale, fHalfWidthScale, f1_fWidthScale;
 float fDouble1_fWidthScale, fHalf1_fWidthScale;
 uchar* IsInComicsMode;
 DWORD GetScreenRectJmp;
-DWORD jmpAddr, jmpAddr2;
+DWORD jmpAddr, jmpAddr2, jmpAddr3, jmpAddr4;
 DWORD nCounter;
 float* pHudElementPosX; float* pHudElementPosY; TextCoords* pTextElementPosX;
 
@@ -269,10 +262,8 @@ void __declspec(naked) P_HudPosHook()
 }
 
 float TextPosX, TextNewPosX, TextUnkVal;
-DWORD _ESI, _PrevESI;
 void __declspec(naked) P_TextPosHook()
 {
-	__asm mov _ESI, esi
 
 	TextPosX = pTextElementPosX->a;
 	TextNewPosX = TextPosX;
@@ -280,17 +271,49 @@ void __declspec(naked) P_TextPosHook()
 	if ((pTextElementPosX->a == 0.0f || pTextElementPosX->a == -8.0f || pTextElementPosX->a == -16.0f || pTextElementPosX->a == -24.0f || pTextElementPosX->a == -32.0f) && pTextElementPosX->b == -10.5f && (pTextElementPosX->c == 8.0f || pTextElementPosX->c == 16.0f || pTextElementPosX->c == 24.0f || pTextElementPosX->c == 32.0f) && pTextElementPosX->d == 21) //ammo numbers(position depends on digits amount)
 	{
 		TextNewPosX = TextPosX + Screen.fHudOffsetWide;
-
-		if (pTextElementPosX->a == 0.0f && pTextElementPosX->c == 8.0f)
-		{
-			if (_ESI > _PrevESI)
-			TextNewPosX = TextPosX - Screen.fHudOffsetWide; //painkillers (hopefully)
-		}
 	}
 
-	_PrevESI = _ESI;
 	__asm fld    dword ptr[TextNewPosX]
 	__asm jmp    jmpAddr2
+}
+
+float TextPosX1, TextPosY1;
+float TextPosX2;
+
+void PainkillersText()
+{
+	if (TextPosX1 == (69.0f + Screen.fHudOffsetWide) && TextPosY1 == 457.0f) // painkillers amount number
+	{
+		TextPosX2 += (24.0f * Screen.fHudOffsetWide);
+	}
+}
+
+void __declspec(naked) P_TextPosHook2()
+{
+	_asm
+	{
+		mov dword ptr[ebp - 30h], 0
+		mov eax, [ebp - 28h]
+		mov TextPosX1, eax
+		mov eax, [ebp - 2Ch]
+		mov TextPosY1, eax
+		jmp jmpAddr3
+	}
+}
+
+void __declspec(naked) P_TextPosHook3()
+{
+	_asm
+	{
+		mov  eax, [ebp - 1Ch]
+		mov  TextPosX2, eax
+		call PainkillersText
+		mov  eax, TextPosX2
+		mov  [ebp - 1Ch], eax
+		mov  [ecx + 8], eax
+		fld  dword ptr[ebp - 1Ch]
+		jmp  jmpAddr4
+	}
 }
 
 DWORD WINAPI Thread(LPVOID)
@@ -364,6 +387,12 @@ DWORD WINAPI Thread(LPVOID)
 				pTextElementPosX = (TextCoords*)((DWORD)e2mfc + 0x647D0);
 				injector::MakeJMP((DWORD)e2mfc + 0x453A, P_TextPosHook, true);
 				jmpAddr2 = (DWORD)e2mfc + 0x453A + 0x6;
+
+				injector::MakeJMP((DWORD)e2mfc + 0x45FC, P_TextPosHook2, true);
+				jmpAddr3 = (DWORD)e2mfc + 0x45FC + 0x7;
+
+				injector::MakeJMP((DWORD)e2mfc + 0x4693, P_TextPosHook3, true);
+				jmpAddr4 = (DWORD)e2mfc + 0x4693 + 0x6;
 			}
 		}
 
