@@ -323,6 +323,10 @@ DWORD WINAPI Thread(LPVOID)
 	if (bUseGameFolderForSavegames)
 		injector::WriteMemory<uchar>(0x40FCAB, 0x85, true);
 
+	bool bAltTab = iniReader.ReadInteger("MAIN", "AllowAltTabbingWithoutPausing", 0) != 0;
+	if (bAltTab)
+		injector::MakeNOP(0x40D29B, 5, true);
+
 	fFOVFactor = iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f);
 	DWORD nLoadingDelay = iniReader.ReadInteger("MAIN", "LoadingDelay", 300);
 	bFixHud = iniReader.ReadInteger("MAIN", "FixHud", 1) != 0;
