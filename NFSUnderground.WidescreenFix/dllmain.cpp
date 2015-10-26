@@ -1,7 +1,7 @@
 #include "..\includes\stdafx.h"
 #include "..\includes\CFileMgr.h"
 #include "..\includes\hooking\Hooking.Patterns.h"
-
+#include <algorithm>
 HWND hWnd;
 
 bool HudFix;
@@ -72,19 +72,19 @@ void WidescreenHud()
 	__asm pushad
 	__asm pushfd
 
-	for (auto it = HudCoords.cbegin(); it != HudCoords.cend(); ++it)
-	{
-		if (HudPosX.dwPos == it->dwPosX && HudPosY.dwPos == it->dwPosY)
-		{
-			HudPosX.fPos += it->fOffsetX;
-			HudPosY.fPos += it->fOffsetY;
+	auto it = std::find_if(HudCoords.begin(), HudCoords.end(),
+		[&cc = CDatEntry(HudPosX.dwPos, HudPosY.dwPos, 0.0f, 0.0f)]
+	(const CDatEntry& cde) -> bool { return (cc.dwPosX == cde.dwPosX && cc.dwPosY == cde.dwPosY); });
 
-			if (bAddHudOffset)
-			{
-				HudPosX.fPos -= MinimapPosX;
-				HudPosX.fPos += fHudPosX;
-			}
-			break;
+	if (it != HudCoords.end())
+	{
+		HudPosX.fPos += it->fOffsetX;
+		HudPosY.fPos += it->fOffsetY;
+
+		if (bAddHudOffset)
+		{
+			HudPosX.fPos -= MinimapPosX;
+			HudPosX.fPos += fHudPosX;
 		}
 	}
 

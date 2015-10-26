@@ -174,6 +174,8 @@ void Init()
 			injector::WriteMemory<DWORD>(dword_5696CB, 0x389001B0, true);
 			DWORD* dword_58D883 = hook::pattern("8A 40 34 5F 5E 5D 3B CB 5B 75 12").get(0).get<DWORD>(0);
 			injector::WriteMemory<DWORD>(dword_58D883, 0x5F9001B0, true);
+			DWORD* dword_56885A = hook::pattern("38 48 34 74 31 8B 4E 38 68 7E 78 8E 90").get(0).get<DWORD>(0); //wrong way
+			injector::WriteMemory<DWORD>(dword_56885A, 0x7401F980, true);
 		}
 
 		if (bFMVWidescreenMode)

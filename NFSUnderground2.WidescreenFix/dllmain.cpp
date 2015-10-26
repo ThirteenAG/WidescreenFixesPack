@@ -1,7 +1,7 @@
 #include "..\includes\stdafx.h"
 #include "..\includes\CFileMgr.h"
 #include "..\includes\hooking\Hooking.Patterns.h"
-
+#include <algorithm>
 HWND hWnd;
 
 bool HudFix;
@@ -26,13 +26,13 @@ union HudPos
 class CDatEntry
 {
 public:
-	DWORD dwPosX;
-	DWORD dwPosY;
+	float fPosX;
+	float fPosY;
 	float fOffsetX;
 	float fOffsetY;
 
-	CDatEntry(DWORD posx, DWORD posy, float fOffsetX, float fOffsetY)
-		: dwPosX(posx), dwPosY(posy), fOffsetX(fOffsetX), fOffsetY(fOffsetY)
+	CDatEntry(float posx, float posy, float fOffsetX, float fOffsetY)
+		: fPosX(posx), fPosY(posy), fOffsetX(fOffsetX), fOffsetY(fOffsetY)
 	{}
 };
 
@@ -53,9 +53,9 @@ void LoadDatFile()
 		{
 			if (pLine[0] && pLine[0] != '#')
 			{
-				DWORD PosX, PosY;
+				float PosX, PosY;
 				float fOffsetX, fOffsetY;
-				sscanf(pLine, "%*s %x %x %f %f %*f %*f", &PosX, &PosY, &fOffsetX, &fOffsetY);
+				sscanf(pLine, "%*s %f %f %f %f", &PosX, &PosY, &fOffsetX, &fOffsetY);
 
 				if (((float)ResX / (float)ResY) < (16.0f / 9.0f))
 				{
@@ -74,35 +74,33 @@ void WidescreenHud()
 	__asm pushad
 	__asm pushfd
 
-	for (auto it = HudCoords.cbegin(); it != HudCoords.cend(); ++it)
+	auto it = std::find_if(HudCoords.begin(), HudCoords.end(),
+		[&cc = CDatEntry(std::floor(HudPosX.fPos), std::floor(HudPosY.fPos), 0.0f, 0.0f)]
+	(const CDatEntry& cde) -> bool { return (cc.fPosX == cde.fPosX && cc.fPosY == cde.fPosY); });
+
+	if (it != HudCoords.end())
 	{
-		if (HudPosX.dwPos == it->dwPosX && HudPosY.dwPos == it->dwPosY)
-		{
-			HudPosX.fPos += it->fOffsetX;
-			HudPosY.fPos += it->fOffsetY;
-			break;
-		}
+		HudPosX.fPos += it->fOffsetX;
+		HudPosY.fPos += it->fOffsetY;
 	}
 
 	__asm popfd
 	__asm popad
 }
 
-
-
-DWORD jmpAddr, jmpAddr2, jmpAddr3;
+DWORD jmpAddr, jmpAddr2, jmpAddr3, jmpAddr4, _EDX;
 void __declspec(naked) HudHook()
 {
 	_asm
 	{
-		mov HudPosX.dwPos, ecx
-		mov HudPosY.dwPos, edx
-		call WidescreenHud
-		mov ecx, HudPosX.dwPos
-		mov edx, HudPosY.dwPos
-		mov[esp + 60h], ecx
-		mov[esp + 64h], edx
-		jmp jmpAddr
+		mov		HudPosX.dwPos, ecx
+		mov		HudPosY.dwPos, edx
+		call	WidescreenHud
+		mov		ecx, HudPosX.dwPos
+		mov		edx, HudPosY.dwPos
+		mov		[esp + 60h], ecx
+		mov		[esp + 64h], edx
+		jmp		jmpAddr
 	}
 }
 
@@ -112,12 +110,10 @@ void __declspec(naked) BlipsHook()
 	{
 		mov     ecx, [ebx+1Ch]
 		mov     edx, [ebx + 1Ch + 4h]
-
-		mov HudPosX.dwPos, ecx
-		mov HudPosY.dwPos, edx
-		call WidescreenHud
-		mov ecx, HudPosX.dwPos
-		
+		mov		HudPosX.dwPos, ecx
+		mov		HudPosY.dwPos, edx
+		call	WidescreenHud
+		mov		ecx, HudPosX.dwPos
 		mov     edx, [esp + 18h]
 		mov     [edx], ecx
 		mov     eax, [ebx+20h]
@@ -132,11 +128,31 @@ void __declspec(naked) HudHook2()
 		fst     dword ptr[esi + 48h]
 		mov     ecx, [esi + 1Ch]
 		mov     edx, [esi + 1Ch + 4h]
-		mov HudPosX.dwPos, ecx
-		mov HudPosY.dwPos, edx
-		call WidescreenHud
-		mov ecx, HudPosX.dwPos
-		jmp jmpAddr3
+		mov		HudPosX.dwPos, ecx
+		mov		HudPosY.dwPos, edx
+		call	WidescreenHud
+		mov		ecx, HudPosX.dwPos
+		jmp		jmpAddr3
+	}
+}
+
+void __declspec(naked) StopSignHook()
+{
+	_asm
+	{
+		mov		_EDX, edx
+		mov     edx, [edx]
+		mov		HudPosX.dwPos, edx
+		mov     edx, _EDX
+		mov     edx, [edx+4]
+		mov		HudPosY.dwPos, edx
+		call	WidescreenHud
+		mov     edx, _EDX
+		//mov		edx, HudPosX.dwPos
+		fadd    dword ptr[HudPosX.dwPos]
+		fstp    dword ptr[esi]
+		fld     dword ptr[ecx + 4]
+		jmp		jmpAddr4
 	}
 }
 
@@ -323,6 +339,11 @@ void Init()
 		DWORD  dword_4C66B9 = (DWORD)dword_4C66B3 + 6;
 		injector::MakeJMP(dword_4C66B3, HudHook2, true);
 		jmpAddr3 = dword_4C66B9;
+
+		DWORD* dword_5050FB = hook::pattern("D8 02 D9 1E D9 41 04 D8 60 04 D8 4C 24 10 D8 42 04 D8 40 04 D9 5E 04 D9 41 08 D8 60 08").get(0).get<DWORD>(0); //addresses from 1.1 exe
+		DWORD  dword_505102 = (DWORD)dword_5050FB + 7;
+		injector::MakeJMP(dword_5050FB, StopSignHook, true);
+		jmpAddr4 = dword_505102;
 	}
 }
 

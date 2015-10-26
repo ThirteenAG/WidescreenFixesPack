@@ -45,6 +45,7 @@ DWORD GetScreenRectJmp;
 DWORD jmpAddr, jmpAddr2, jmpAddr3, jmpAddr4;
 DWORD nCounter;
 float* pHudElementPosX; float* pHudElementPosY; TextCoords* pTextElementPosX;
+int nCutsceneBorders;
 
 int __fastcall PDriverGetWidth(int _this)
 {
@@ -70,6 +71,18 @@ float __fastcall FOVHook(int _this)
 {
 	Screen.fFieldOfView = *(float *)(_this + 88) * Screen.fDynamicScreenFieldOfViewScale;
 	return Screen.fFieldOfView;
+}
+
+float __fastcall GetBordersSize(int _this)
+{
+	if (nCutsceneBorders > 1)
+	{
+		return *(float *)(_this + 12) * (1.0f / ((4.0f / 3.0f) / Screen.fAspectRatio));
+	}
+	else
+	{
+		return 1.0f;
+	}
 }
 
 void __declspec(naked)PCameraGetScreenRectHook()
@@ -327,11 +340,16 @@ DWORD WINAPI Thread(LPVOID)
 	if (bAltTab)
 		injector::MakeNOP(0x40D29B, 5, true);
 
+	nCutsceneBorders = iniReader.ReadFloat("MAIN", "CutsceneBorders", 1);
+	if (nCutsceneBorders)
+		injector::MakeJMP(0x5830E0, GetBordersSize, true);
+
 	fFOVFactor = iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f);
 	DWORD nLoadingDelay = iniReader.ReadInteger("MAIN", "LoadingDelay", 300);
 	bFixHud = iniReader.ReadInteger("MAIN", "FixHud", 1) != 0;
 	bWidescreenHud = iniReader.ReadInteger("MAIN", "WidescreenHud", 1) != 0;
 	float fWidescreenHudOffset = iniReader.ReadFloat("MAIN", "WidescreenHudOffset", 100.0f);
+	
 	if (!fFOVFactor) { fFOVFactor = 1.0f; }
 	if (!fWidescreenHudOffset) { fWidescreenHudOffset = 100.0f; }
 
