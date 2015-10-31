@@ -202,7 +202,7 @@ DWORD WINAPI ComicsHandler(LPVOID)
 			{
 				if (bPatched)
 				{
-					fViewPortSizeX = 480.0f * Screen.fAspectRatio;
+					fViewPortSizeX = 640.0f;
 					fViewPortSizeY = 480.0f;
 					bPatched = false;
 				}
@@ -214,7 +214,7 @@ DWORD WINAPI ComicsHandler(LPVOID)
 
 float ElementPosX, ElementNewPosX1, ElementNewPosX2;
 float ElementPosY, ElementNewPosY1, ElementNewPosY2;
-DWORD __EAX, __ESP20, __ESP2C, __ESP3C, __ESP34, __ESP44;
+DWORD __EAX, __ESP20, __ESP2C, __ESP30, __ESP3C, __ESP34, __ESP44;
 float __ECX;
 float* f10042294;
 float f10042B58 = 0.003125f;
@@ -277,8 +277,10 @@ void __declspec(naked) P_HudPosHook()
 	__asm mov __EAX, eax
 	__asm mov __ECX, ecx
 	__asm mov __ESP20, esp
+	__asm mov __ESP30, esp
 	__asm mov __ESP34, esp
 	__ESP20 += 0x20;
+	__ESP30 += 0x30;
 	__ESP34 += 0x34;
 
 	ElementPosX = *pHudElementPosX;
@@ -323,7 +325,7 @@ void __declspec(naked) P_HudPosHook()
 
 	ElementNewPosX2 = ElementNewPosX1;
 
-	if (bDoFix && ElementPosX == 0.0f && ElementPosY == 0.0f && __EAX == 2 && __ECX == 640.0f && *(DWORD*)__ESP20 != 0x40400000) // fading
+	if (bDoFix && ElementPosX == 0.0f && ElementPosY == 0.0f && __EAX == 2 && __ECX == 640.0f && *(DWORD*)__ESP20 != 0x40400000 && *(DWORD*)__ESP30 != 0x43800000) // fading, 0x43800000 related to player's shadow
 	{
 		ElementNewPosX1 = ElementPosX + (Screen.fHudOffsetWide + fFullscreen2DScale);
 		ElementNewPosX2 = ElementPosX - (Screen.fHudOffsetWide + fFullscreen2DScale);					  
@@ -409,10 +411,14 @@ void __declspec(naked) CWndCreateExHook()
 
 DWORD WINAPI Thread(LPVOID)
 {
-	injector::MakeJMP((DWORD)GetModuleHandle("mfc71.dll") + 0x12184, CWndCreateExHook, true); //fullscreen mode border fix for win10
-	jmpAddr7 = (DWORD)GetModuleHandle("mfc71.dll") + 0x12184 + 0x6;
-
 	CIniReader iniReader("");
+	bool bFixWindowBorder = iniReader.ReadInteger("MAIN", "FixWindowBorder", 1) != 0;
+	if (bFixWindowBorder)
+	{
+		injector::MakeJMP((DWORD)GetModuleHandle("mfc71.dll") + 0x12184, CWndCreateExHook, true); //fullscreen mode border fix for win10
+		jmpAddr7 = (DWORD)GetModuleHandle("mfc71.dll") + 0x12184 + 0x6;
+	}
+
 	bool bUseGameFolderForSavegames = iniReader.ReadInteger("MAIN", "UseGameFolderForSavegames", 0) != 0;
 	if (bUseGameFolderForSavegames)
 		injector::WriteMemory<uchar>(0x41D14C, 0x85, true);
@@ -423,7 +429,7 @@ DWORD WINAPI Thread(LPVOID)
 
 	nCutsceneBorders = iniReader.ReadInteger("MAIN", "CutsceneBorders", 1);
 	if (nCutsceneBorders)
-		injector::MakeJMP(0x41EF70, GetBordersSize, true);
+		injector::MakeCALL(0x488C68, GetBordersSize, true);
 
 	fFOVFactor = iniReader.ReadFloat("MAIN", "FOVFactor", 0.0f);
 	bFixHud = iniReader.ReadInteger("MAIN", "FixHud", 1) != 0;
