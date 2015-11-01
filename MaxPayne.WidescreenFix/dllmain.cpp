@@ -342,7 +342,7 @@ DWORD WINAPI Thread(LPVOID)
 
 	nCutsceneBorders = iniReader.ReadFloat("MAIN", "CutsceneBorders", 1);
 	if (nCutsceneBorders)
-		injector::MakeJMP(0x5830E0, GetBordersSize, true);
+		injector::MakeCALL(0x4565B8, GetBordersSize, true);
 
 	fFOVFactor = iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f);
 	DWORD nLoadingDelay = iniReader.ReadInteger("MAIN", "LoadingDelay", 300);
