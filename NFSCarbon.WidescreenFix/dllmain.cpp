@@ -27,6 +27,8 @@ void Init()
 	float fPiPPos2 = iniReader.ReadFloat("HUD", "PiPPos2", 0.001953f);
 	float fRearviewMirrorPos1 = iniReader.ReadFloat("HUD", "RearviewMirrorPos1", -0.308594f);
 	float fRearviewMirrorPos2 = iniReader.ReadFloat("HUD", "RearviewMirrorPos2", 0.654053f);
+	bool bLightingFix = iniReader.ReadInteger("MISC", "LightingFix", 0) == 1;
+	bool bCarShadowFix = iniReader.ReadInteger("MISC", "CarShadowFix", 0) == 1;
 
 	if (!ResX || !ResY) {
 		HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
@@ -147,6 +149,24 @@ void Init()
 		injector::WriteMemory<float>((DWORD)dword_598EB9 + 5, (0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
 		injector::WriteMemory<float>((DWORD)dword_598EB9 + 10, -(0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
 		injector::WriteMemory<float>((DWORD)dword_598EB9 + 15, -(0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
+	}
+
+	if (bLightingFix)
+	{
+		DWORD* dword_7497BF = hook::pattern("83 F8 06 89 0D ? ? ? ? C7 05 ? ? ? ? CD CC CC 3E").get(1).get<DWORD>(2);
+		injector::WriteMemory<uchar>(dword_7497BF, 0, true);
+		//static float f115 = 1.15f;
+		//injector::WriteMemory((DWORD)dword_7497BF + 25, &f115, true);
+		static float f15 = 1.5f;
+		DWORD* dword_748A70 = hook::pattern("A1 ? ? ? ? A3 ? ? ? ? 83 3D ? ? ? ? 06 C7 05 ? ? ? ? CD CC CC 3E").get(1).get<DWORD>(1);
+		injector::WriteMemory(dword_748A70, &f15, true);
+	}
+
+	if (bCarShadowFix)
+	{
+		DWORD* dword_7BEA3A = hook::pattern("D8 05 ? ? ? ? DC C0 E8 ? ? ? ? 85 C0 7F 04 33 C0").get(0).get<DWORD>(2);
+		static float f60 = 60.0f;
+		injector::WriteMemory(dword_7BEA3A, &f60, true);
 	}
 }
 

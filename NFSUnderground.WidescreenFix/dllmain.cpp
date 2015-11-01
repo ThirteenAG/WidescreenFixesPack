@@ -247,8 +247,21 @@ void Init()
 
 		for (size_t i = 0; i < 4; i++)
 		{
-			DWORD* dword_4F20A3 = hook::pattern("C7 ? ? ? ? 00 00 00 00 A0 43 C7 ? ? ? ? 00 00 00 00 70 43").get(0).get<DWORD>(7);
-			injector::WriteMemory<float>(dword_4F20A3, fHudPosX, true);
+			auto pattern = hook::pattern("C7 ? ? ? ? 00 00 00 00 A0 43 C7 ? ? ? ? 00 00 00 00 70 43");
+			if (pattern.size() > 0)
+			{
+				DWORD* dword_4F20A3 = pattern.get(0).get<DWORD>(7);
+				injector::WriteMemory<float>(dword_4F20A3, fHudPosX, true);
+			}
+			else
+			{
+				pattern = hook::pattern("C7 ? ? ? 00 00 A0 43 C7 ? ? ? ? 00 00 00 00 70 43");
+				if (pattern.size() > 0)
+				{
+					DWORD* dword_4F2287 = pattern.get(0).get<DWORD>(4);
+					injector::WriteMemory<float>(dword_4F2287, fHudPosX, true);
+				}
+			}
 		}
 
 		DWORD* dword_4F1E2D = hook::pattern("C7 ? ? ? 00 00 A0 43 C7 ? ? ? 00 00 70 43").get(0).get<DWORD>(4);
@@ -259,7 +272,33 @@ void Init()
 		DWORD* dword_6CC910 = *hook::pattern("D8 1D ? ? ? ? DF E0 F6 C4 41 75 0F D9 45 FC").get(0).get<DWORD*>(2);
 		injector::WriteMemory<float>(dword_6CC910, fHudPosX, true);
 
-		///injector::WriteMemory<float>(0x400000 + 0x14646B, fHudPosX, true);
+		DWORD* dword_5CC109;
+		DWORD dword_5CC119;
+		DWORD dword_5CC0F9;
+		DWORD dword_5CC129;
+		auto pattern = hook::pattern("C7 44 24 7C 00 00 48 43 C7 84 24 80 00 00 00 00 00 70 41 C7 84 24 8C 00 00 00 00 00 48 43 C7 84 24 90 00 00 00 00 00 BE 42");
+		if (pattern.size() > 0)
+		{
+			dword_5CC109 = pattern.get(0).get<DWORD>(4); //rearview mirror (nfsu2 addresses)
+			dword_5CC119 = (DWORD)dword_5CC109 + 16 + 6;
+			dword_5CC0F9 = (DWORD)dword_5CC109 - 16;
+			dword_5CC129 = (DWORD)dword_5CC109 + 32 + 12;
+		}
+		else
+		{
+			pattern = hook::pattern("C7 84 24 8C 00 00 00 00 00 48 43 C7 84 24 90 00 00 00 00 00 70 41 C7 84 24 9C 00 00 00 00 00 48 43 C7 84 24 A0 00 00 00 00 00 BE 42");
+			if (pattern.size() > 0)
+			{
+				dword_5CC109 = pattern.get(0).get<DWORD>(7);
+				dword_5CC119 = (DWORD)dword_5CC109 + 16 + 6;
+				dword_5CC0F9 = (DWORD)dword_5CC109 - 16 - 6;
+				dword_5CC129 = (DWORD)dword_5CC109 + 44;
+			}
+		}
+		injector::WriteMemory<float>(dword_5CC109, (fHudPosX - 320.0f) + 200.0f, true);
+		injector::WriteMemory<float>(dword_5CC119, (fHudPosX - 320.0f) + 200.0f, true);
+		injector::WriteMemory<float>(dword_5CC0F9, (fHudPosX - 320.0f) + 440.0f, true);
+		injector::WriteMemory<float>(dword_5CC129, (fHudPosX - 320.0f) + 440.0f, true);
 	}
 
 	if (verFovCorrectionFactor)

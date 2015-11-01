@@ -2,6 +2,8 @@
 
 HWND hWnd;
 HINSTANCE hExecutableInstance;
+BYTE originalCode[5];
+BYTE* originalEP;
 
 #define _USE_MATH_DEFINES
 #include "math.h"
@@ -81,7 +83,7 @@ void CenterHud()
 	offset2 = *(float*)(__esp + 4 + 8);
 	Color = *(DWORD*)(__esp + 0x2C);
 
-	/*if (offset1 >= 780.0f && offset1 <= 925.0f) //898.50 912.00 916.50 910.50 906.0 904.5 780.00 792.00 787.50 915.0//925 - everything cept interaction menu
+	/*if (offset1 >= 780.0f && offset1 <= 925.0f) //898.50 912.00 916.50 910.50 906.0 904.5 780.00 792.00 787.50 915.0//925 - everything except interaction menu
 	{
 		offset2 += 150.0f;
 		offset1 += 150.0f;
@@ -150,27 +152,18 @@ void Init()
 	char szRes[50];
 	sprintf(szRes, "%dx%d", Screen.Width, Screen.Height);
 	iniWriter.WriteString("Engine.EPCGameOptions", "Resolution", szRes);
+
+	// return to the original EP
+	*(DWORD*)originalEP = *(DWORD*)&originalCode;
+	*(BYTE*)(originalEP + 4) = originalCode[4];
 	_asm
 	{
-		push    ebp
-		mov     ebp, esp
-		push    0xFF
-		jmp		epJump
+		jmp originalEP
 	}
 }
 
 DWORD WINAPI Thread(LPVOID)
 {
-	if (bIsSteam == true)
-	{
-		while (*(BYTE*)0x10918F1A != 0x55)
-		{
-			Sleep(0);
-		}
-		injector::MakeJMP(0x10918F1A, Init, true);
-		epJump = (DWORD)0x10918F1A + 5;
-	}
-
 	while (true)
 	{
 		Sleep(0);
@@ -243,15 +236,13 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 		IMAGE_NT_HEADERS* ntHeader = (IMAGE_NT_HEADERS*)((DWORD)hExecutableInstance + ((IMAGE_DOS_HEADER*)hExecutableInstance)->e_lfanew);
 		BYTE* ep = (BYTE*)((DWORD)hExecutableInstance + ntHeader->OptionalHeader.AddressOfEntryPoint);
 
-		if (*(BYTE*)ep == 0x53)
-		{
-			bIsSteam = true;
-		}
-		else
-		{
-			injector::MakeJMP(ep, Init, true);
-			epJump = (DWORD)ep + 5;
-		}
+		// back up original code
+		*(DWORD*)&originalCode = *(DWORD*)ep;
+		originalCode[4] = *(ep + 4);
+		originalEP = ep;
+
+		injector::MakeJMP(ep, Init, true);
+
 		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Thread, NULL, 0, NULL);
 	}
 	return TRUE;

@@ -206,32 +206,6 @@ void Init()
 	DWORD dword_5BF6A8 = (DWORD)dword_5BF6A2 + 6;
 	injector::WriteMemory(dword_5BF6A8, ResY, true);
 
-
-	/*DWORD* dword_7FF77C = hook::pattern("").get(0).get<DWORD>(2);
-	injector::WriteMemory(dword_7FF77C, ResX, true);
-	DWORD* dword_86E77C = hook::pattern("").get(0).get<DWORD>(2);
-	injector::WriteMemory(dword_86E77C, ResX, true);
-	DWORD* dword_86E7B4 = hook::pattern("").get(0).get<DWORD>(2);
-	injector::WriteMemory(dword_86E7B4, ResX, true);
-	DWORD* dword_86F870 = hook::pattern("").get(0).get<DWORD>(2);
-	injector::WriteMemory(dword_86F870, ResX, true);
-	DWORD* dword_870980 = hook::pattern("").get(0).get<DWORD>(2);
-	injector::WriteMemory(dword_870980, ResX, true);
-
-	DWORD* dword_7FF780 = hook::pattern("").get(0).get<DWORD>(2);
-	injector::WriteMemory(dword_7FF780, ResY, true);
-	DWORD* dword_86E780 = hook::pattern("").get(0).get<DWORD>(2);
-	injector::WriteMemory(dword_86E780, ResY, true);
-	DWORD* dword_86E7B8 = hook::pattern("").get(0).get<DWORD>(2);
-	injector::WriteMemory(dword_86E7B8, ResY, true);
-	DWORD* dword_86F874 = hook::pattern("").get(0).get<DWORD>(2);
-	injector::WriteMemory(dword_86F874, ResY, true);
-	DWORD* dword_870984 = hook::pattern("").get(0).get<DWORD>(2);
-	injector::WriteMemory(dword_870984, ResY, true);*/
-	
-
-	
-
 	//HUD
 	if (HudFix)
 	{

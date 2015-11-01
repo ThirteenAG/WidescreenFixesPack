@@ -2,6 +2,8 @@
 
 HWND hWnd;
 HINSTANCE hExecutableInstance;
+BYTE originalCode[5];
+BYTE* originalEP;
 
 #define _USE_MATH_DEFINES
 #include "math.h"
@@ -181,11 +183,12 @@ void Init()
 	injector::WriteMemory(pfappInit + 0x67E + 0x1, Screen.Width, true);
 	injector::WriteMemory(pfappInit + 0x69F + 0x1, Screen.Height, true);
 
+	// return to the original EP
+	*(DWORD*)originalEP = *(DWORD*)&originalCode;
+	*(BYTE*)(originalEP + 4) = originalCode[4];
 	_asm
 	{
-		xor     ebx, ebx
-		mov		[ebp - 20h], ebx
-		jmp		epJump
+		jmp originalEP
 	}
 }
 
@@ -276,8 +279,13 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 		hExecutableInstance = GetModuleHandle(NULL);
 		IMAGE_NT_HEADERS* ntHeader = (IMAGE_NT_HEADERS*)((DWORD)hExecutableInstance + ((IMAGE_DOS_HEADER*)hExecutableInstance)->e_lfanew);
 		BYTE* ep = (BYTE*)((DWORD)hExecutableInstance + ntHeader->OptionalHeader.AddressOfEntryPoint);
-		injector::MakeJMP(ep + 12, Init, true);
-		epJump = (DWORD)ep + 12 + 5;
+		// back up original code
+		*(DWORD*)&originalCode = *(DWORD*)ep;
+		originalCode[4] = *(ep + 4);
+		originalEP = ep;
+
+		injector::MakeJMP(ep, Init, true);
+
 		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Thread, NULL, 0, NULL);
 	}
 	return TRUE;

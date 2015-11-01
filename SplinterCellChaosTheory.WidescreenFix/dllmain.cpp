@@ -2,6 +2,8 @@
 
 HWND hWnd;
 HINSTANCE hExecutableInstance;
+BYTE originalCode[5];
+BYTE* originalEP;
 
 #define _USE_MATH_DEFINES
 #include "math.h"
@@ -110,11 +112,12 @@ void Init()
 	injector::MakeJMP(0x10CD09AF, SetRes_Hook, true);
 	hookJmpAddr = 0x10CD09B6;
 
+	// return to the original EP
+	*(DWORD*)originalEP = *(DWORD*)&originalCode;
+	*(BYTE*)(originalEP + 4) = originalCode[4];
 	_asm
 	{
-		PUSH 60h
-		PUSH 0x11155180
-		jmp		epJump
+		jmp originalEP
 	}
 }
 
@@ -171,16 +174,13 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 		hExecutableInstance = GetModuleHandle(NULL);
 		IMAGE_NT_HEADERS* ntHeader = (IMAGE_NT_HEADERS*)((DWORD)hExecutableInstance + ((IMAGE_DOS_HEADER*)hExecutableInstance)->e_lfanew);
 		BYTE* ep = (BYTE*)((DWORD)hExecutableInstance + ntHeader->OptionalHeader.AddressOfEntryPoint);
-		if (*(BYTE*)ep == 0x53)
-		{
-			injector::MakeJMP(0x10F3185A, Init, true);
-			epJump = 0x10F3185A + 7;
-		}
-		else
-		{
-			injector::MakeJMP(ep, Init, true);
-			epJump = (DWORD)ep + 7;
-		}
+		// back up original code
+		*(DWORD*)&originalCode = *(DWORD*)ep;
+		originalCode[4] = *(ep + 4);
+		originalEP = ep;
+
+		injector::MakeJMP(ep, Init, true);
+
 		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Thread, NULL, 0, NULL);
 	}
 	return TRUE;

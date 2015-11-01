@@ -2,6 +2,8 @@
 
 HWND hWnd;
 HINSTANCE hExecutableInstance;
+BYTE originalCode[5];
+BYTE* originalEP;
 
 #define _USE_MATH_DEFINES
 #include "math.h"
@@ -72,11 +74,12 @@ void Init()
 	iniWriter.WriteString("WinDrv.WindowsClient", "FullscreenViewportX", ResX);
 	iniWriter.WriteString("WinDrv.WindowsClient", "FullscreenViewportY", ResY);
 
+	// return to the original EP
+	*(DWORD*)originalEP = *(DWORD*)&originalCode;
+	*(BYTE*)(originalEP + 4) = originalCode[4];
 	_asm
 	{
-		PUSH 60h
-		PUSH 0x1093E4D0
-		jmp		epJump
+		jmp originalEP
 	}
 }
 
@@ -201,16 +204,6 @@ DWORD WINAPI Thread(LPVOID)
 	return 0;
 }
 
-DWORD WINAPI SteamHandler(LPVOID)
-{
-	while (*(unsigned char*)0x10926D65 != 0x6A)
-		Sleep(0);
-
-	injector::MakeJMP(0x10926D65, Init, true);
-	epJump = 0x10926D65 + 7;
-	return 0;
-}
-
 BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
 	if (reason == DLL_PROCESS_ATTACH)
@@ -228,15 +221,13 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 		hExecutableInstance = GetModuleHandle(NULL);
 		IMAGE_NT_HEADERS* ntHeader = (IMAGE_NT_HEADERS*)((DWORD)hExecutableInstance + ((IMAGE_DOS_HEADER*)hExecutableInstance)->e_lfanew);
 		BYTE* ep = (BYTE*)((DWORD)hExecutableInstance + ntHeader->OptionalHeader.AddressOfEntryPoint);
-		if (*(BYTE*)ep == 0x53)
-		{
-			CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&SteamHandler, NULL, 0, NULL);
-		}
-		else
-		{
-			injector::MakeJMP(ep, Init, true);
-			epJump = (DWORD)ep + 7;
-		}
+		// back up original code
+		*(DWORD*)&originalCode = *(DWORD*)ep;
+		originalCode[4] = *(ep + 4);
+		originalEP = ep;
+
+		injector::MakeJMP(ep, Init, true);
+
 		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Thread, NULL, 0, NULL);
 	}
 	return TRUE;
