@@ -3,19 +3,19 @@
 #include "..\includes\hooking\Hooking.Patterns.h"
 #include <algorithm>
 HWND hWnd;
+bool bDelay;
 
-bool HudFix;
-bool DisableCutsceneBorders;
+bool bFixHUD, bFixFOV;
+bool bDisableCutsceneBorders;
 int ResX;
 int ResY;
-float horFOV, verFOV;
-bool bHudMode;
+float hor3DScale, ver3DScale;
 float fHudScaleX, fHudScaleY;
 float fHudPosX;
 float MinimapPosX, MinimapPosY;
-float verFovCorrectionFactor;
 bool bHudWidescreenMode;
 bool bFMVWidescreenMode;
+bool bXbox360Scaling;
 
 union HudPos
 {
@@ -156,17 +156,28 @@ void __declspec(naked) StopSignHook()
 	}
 }
 
-void Init()
+DWORD jmpAddr5;
+void __declspec(naked) FOVHook()
+{
+	_asm
+	{
+		mov dword ptr[esp + 20h], 3F800000h
+		fld ds : ver3DScale
+		jmp jmpAddr5
+	}
+}
+
+DWORD WINAPI Init(LPVOID)
 {
 	CIniReader iniReader("");
 	ResX = iniReader.ReadInteger("MAIN", "ResX", 0);
 	ResY = iniReader.ReadInteger("MAIN", "ResY", 0);
-	HudFix = iniReader.ReadInteger("MAIN", "HudFix", 1) == 1;
-	verFovCorrectionFactor = iniReader.ReadFloat("MAIN", "verFovCorrectionFactor", 0.04f);
-	bHudMode = iniReader.ReadInteger("MAIN", "HudMode", 1) == 1;
-	DisableCutsceneBorders = iniReader.ReadInteger("MAIN", "DisableCutsceneBorders", 1) == 1;
+	bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) == 1;
+	bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) == 1;
+	bXbox360Scaling = iniReader.ReadInteger("MAIN", "Xbox360Scaling", 1) == 1;
 	bHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1) == 1;
 	bFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1) == 1;
+	bDisableCutsceneBorders = iniReader.ReadInteger("MISC", "DisableCutsceneBorders", 1) == 1;
 
 	if (!ResX || !ResY) {
 		HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
@@ -175,6 +186,20 @@ void Init()
 		GetMonitorInfo(monitor, &info);
 		ResX = info.rcMonitor.right - info.rcMonitor.left;
 		ResY = info.rcMonitor.bottom - info.rcMonitor.top;
+	}
+	
+	auto pattern = hook::pattern("C7 00 80 02 00 00 C7 01 E0 01 00 00");
+	if (!(pattern.size() > 0) && !bDelay)
+	{
+		bDelay = true;
+		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, NULL, 0, NULL);
+		return 0;
+	}
+
+	if (bDelay)
+	{
+		while (!(pattern.size() > 0))
+			pattern = hook::pattern("C7 00 80 02 00 00 C7 01 E0 01 00 00");
 	}
 
 	//game
@@ -207,7 +232,7 @@ void Init()
 	injector::WriteMemory(dword_5BF6A8, ResY, true);
 
 	//HUD
-	if (HudFix)
+	if (bFixHUD)
 	{
 		fHudScaleX = (1.0f / ResX * (ResY / 480.0f)) * 2.0f;
 		fHudPosX = 640.0f / (640.0f * fHudScaleX);
@@ -254,7 +279,7 @@ void Init()
 		injector::WriteMemory<float>(dword_5CBE89, (float)ResX, true);
 		injector::WriteMemory<float>(dword_5CBEA1, (float)ResX, true);
 
-		if (DisableCutsceneBorders)
+		if (bDisableCutsceneBorders)
 		{
 			injector::WriteMemory<float>(dword_5CBEF5, 0.0f, true); // borders
 			injector::WriteMemory<float>(dword_5CBF05, 0.0f, true);
@@ -272,15 +297,31 @@ void Init()
 		injector::WriteMemory<float>(dword_5C7292, (float)ResY * 2.0f, true);
 	}
 
-	if (verFovCorrectionFactor)
+	if (bFixFOV)
 	{
-		DWORD* dword_5C7FEA = hook::pattern("D8 3D ? ? ? ? D9 5C 24 1C DB 44 24 2C D8 4C 24 28").get(0).get<DWORD>(2);
-		injector::WriteMemory(dword_5C7FEA, &horFOV, true);
-		DWORD* dword_5C8021 = hook::pattern("D8 3D ? ? ? ? D9 5C 24 38 D9 44 24 24 D8 64 24 30 D8 7C 24 24 D9 5C 24 34 E8 ? ? ? ?").get(0).get<DWORD>(2);
-		injector::WriteMemory(dword_5C8021, &verFOV, true);
+		hor3DScale = 1.0f / ((1.0f * ((float)ResX / (float)ResY)) / (4.0f / 3.0f));
+		ver3DScale = 0.75f;
 
-		horFOV = 1.0f / ((1.0f * ((float)ResX / (float)ResY)) / (4.0f / 3.0f));
-		verFOV = horFOV - verFovCorrectionFactor;
+		DWORD* dword_5C7FE8 = hook::pattern("D8 3D ? ? ? ? D9 5C 24 1C DB 44 24 2C D8 4C 24 28 D8 0D ? ? ? ? E8").get(0).get<DWORD>(2);
+		injector::WriteMemory(dword_5C7FE8, &hor3DScale, true);
+
+		DWORD* dword_5C7F56 = hook::pattern("DB 40 18 C7 44 24 20 00 00 80 3F DA 70 14").get(0).get<DWORD>(0);
+		jmpAddr5 = (DWORD)dword_5C7F56 + 14;
+		injector::MakeJMP(dword_5C7F56, FOVHook, true);
+
+		// FOV being different in menus and in-game fix
+		static float f06 = 0.6f;
+		DWORD* dword_5C7FFA = hook::pattern("D8 0D ? ? ? ? E8 ? ? ? ? 8B D8 53").get(1).get<DWORD>(2);
+		injector::WriteMemory(dword_5C7FFA, &f06, true);
+
+		static float f1234 = 1.234f;
+		DWORD* dword_5C801F = hook::pattern("D8 3D ? ? ? ? D9 5C 24 38 D9 44 24 24 D8 64 24 30 D8 7C 24 24 D9 5C 24 34").get(0).get<DWORD>(2);
+		injector::WriteMemory(dword_5C801F, &f1234, true);
+
+		if (bXbox360Scaling)
+		{
+			hor3DScale /= 1.0511562719f;
+		}
 	}
 
 	if (bFMVWidescreenMode)
@@ -319,13 +360,14 @@ void Init()
 		injector::MakeJMP(dword_5050FB, StopSignHook, true);
 		jmpAddr4 = dword_505102;
 	}
+	return 0;
 }
 
 BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
 	if (reason == DLL_PROCESS_ATTACH)
 	{
-		Init();
+		Init(NULL);
 	}
 	return TRUE;
 }

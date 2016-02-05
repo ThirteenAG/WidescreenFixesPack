@@ -1,18 +1,17 @@
 ﻿#include "..\includes\stdafx.h"
 #include "..\includes\hooking\Hooking.Patterns.h"
-
 HWND hWnd;
+bool bDelay;
 
-bool HudFix;
+bool bFixHUD, bFixFOV;
 int ResX;
 int ResY;
-float horFOV, verFOV;
+float hor3DScale, ver3DScale;
 float fHudScaleX, fHudScaleY;
 float fHudPosX;
 float MinimapPosX, MinimapPosY;
-float verFovCorrectionFactor;
 DWORD* dword_8F1CA0;
-DWORD jmpAddr;
+DWORD jmpAddr, jmpAddr2;
 
 void __declspec(naked) WidescreenHudHook()
 {
@@ -24,16 +23,28 @@ void __declspec(naked) WidescreenHudHook()
 	}
 }
 
-void Init()
+void __declspec(naked) FOVHook()
+{
+	_asm
+	{
+		fld ds : ver3DScale
+		jmp jmpAddr2
+	}
+}
+
+DWORD WINAPI Init(LPVOID)
 {
 	CIniReader iniReader("");
 	ResX = iniReader.ReadInteger("MAIN", "ResX", 0);
 	ResY = iniReader.ReadInteger("MAIN", "ResY", 0);
-	HudFix = iniReader.ReadInteger("MAIN", "HudFix", 1) == 1;
-	verFovCorrectionFactor = iniReader.ReadFloat("MAIN", "verFovCorrectionFactor", 0.06f);
-	int ShadowsRes = iniReader.ReadInteger("MAIN", "ShadowsRes", 1024);
+	bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) == 1;
+	bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) == 1;
 	bool bHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1) == 1;
 	bool bFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1) == 1;
+	bool bXbox360Scaling = iniReader.ReadInteger("MAIN", "Xbox360Scaling", 1) == 1;
+	int ShadowsRes = iniReader.ReadInteger("MISC", "ShadowsRes", 1024);
+	bool bShadowsFix = iniReader.ReadInteger("MISC", "ShadowsFix", 1) == 1;
+	bool bRearviewMirrorFix = iniReader.ReadInteger("MISC", "RearviewMirrorFix", 1) == 1;
 
 	if (!ResX || !ResY) {
 		HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
@@ -42,6 +53,20 @@ void Init()
 		GetMonitorInfo(monitor, &info);
 		ResX = info.rcMonitor.right - info.rcMonitor.left;
 		ResY = info.rcMonitor.bottom - info.rcMonitor.top;
+	}
+
+	auto pattern = hook::pattern("C7 00 80 02 00 00 C7 01 E0 01 00 00 C2 08 00");
+	if (!(pattern.size() > 0) && !bDelay)
+	{
+		bDelay = true;
+		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, NULL, 0, NULL);
+		return 0;
+	}
+
+	if (bDelay)
+	{
+		while (!(pattern.size() > 0))
+			pattern = hook::pattern("C7 00 80 02 00 00 C7 01 E0 01 00 00 C2 08 00");
 	}
 
 	for (size_t i = 0; i < 2; i++)
@@ -118,7 +143,7 @@ void Init()
 		}
 
 		//HUD
-		if (HudFix)
+		if (bFixHUD)
 		{
 			fHudScaleX = (1.0f / ResX * (ResY / 480.0f)) * 2.0f;
 			fHudPosX = 640.0f / (640.0f * fHudScaleX);
@@ -149,17 +174,38 @@ void Init()
 			injector::WriteMemory<float>(dword_6E70FF, (fHudPosX - 320.0f) + 190.0f, true);
 			injector::WriteMemory<float>(dword_6E70D3, (fHudPosX - 320.0f) + 450.0f, true);
 			injector::WriteMemory<float>(dword_6E70E9, (fHudPosX - 320.0f) + 450.0f, true);
+
+			//mouse cursor fix
+			static float fCursorFix = 480.0f * ((float)ResX / (float)ResY);
+			DWORD* dword_6C9C45 = hook::pattern("D8 0D ? ? ? ? DA 74 24 18 E8 ? ? ? ? 89 46 04").get(0).get<DWORD>(2);
+			injector::WriteMemory(dword_6C9C45, &fCursorFix, true);
 		}
 
-		if (verFovCorrectionFactor)
+		if (bFixFOV)
 		{
-			horFOV = 1.0f / ((1.0f * ((float)ResX / (float)ResY)) / (4.0f / 3.0f));
-			verFOV = horFOV - verFovCorrectionFactor;
+			hor3DScale = 1.0f / ((1.0f * ((float)ResX / (float)ResY)) / (4.0f / 3.0f));
+			ver3DScale = 0.75f;
 
-			DWORD* dword_6CF568 = hook::pattern("D8 3D ? ? ? ? D9 5C 24 20 DB 44 24 30 D8 4C 24 2C").get(0).get<DWORD>(2);
-			injector::WriteMemory(dword_6CF568, &horFOV, true);
-			DWORD* dword_6CF5DE = hook::pattern("D8 3D ? ? ? ? D9 44 24 20 D8 64 24 24 D8 7C 24 20 D9 C9 D9 E0 D9 5E 54").get(0).get<DWORD>(2);
-			injector::WriteMemory(dword_6CF5DE, &verFOV, true);
+			DWORD* dword_6CF566 = hook::pattern("D8 3D ? ? ? ? D9 5C 24 20 DB 44 24 30 D8 4C 24 2C").get(0).get<DWORD>(2);
+			injector::WriteMemory(dword_6CF566, &hor3DScale, true);
+
+			DWORD* dword_6CF4F0 = hook::pattern("DB 40 18 DA 70 14").get(0).get<DWORD>(0);
+			jmpAddr2 = (DWORD)dword_6CF4F0 + 6;
+			injector::MakeJMP(dword_6CF4F0, FOVHook, true);
+
+			// FOV being different in menus and in-game fix
+			static float f06 = 0.6f;
+			DWORD* dword_6CF578 = hook::pattern("D8 0D ? ? ? ? E8 ? ? ? ? 8B F8 57 E8").get(1).get<DWORD>(2);
+			injector::WriteMemory(dword_6CF578, &f06, true);
+
+			static float f1234 = 1.234f;
+			DWORD* dword_6CF5DC = hook::pattern("D8 3D ? ? ? ? D9 44 24 20 D8 64 24 24").get(0).get<DWORD>(2);
+			injector::WriteMemory(dword_6CF5DC, &f1234, true);
+
+			if (bXbox360Scaling)
+			{
+				hor3DScale /= 1.0511562719f;
+			}
 		}
 
 		if (bHudWidescreenMode) 
@@ -186,6 +232,28 @@ void Init()
 			injector::WriteMemory<float>((DWORD)dword_59A02A + 10, -(0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
 			injector::WriteMemory<float>((DWORD)dword_59A02A + 15, -(0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
 		}
+
+		if (bShadowsFix)
+		{
+			//dynamic shadow fix that stops them from disappearing when going into tunnels, under bridges by Aero_
+			DWORD* dword_6DE377 = hook::pattern("75 3B C7 05 ? ? ? ? 00 00 80 3F").get(0).get<DWORD>(0);
+			injector::MakeNOP(dword_6DE377, 2, true);
+			injector::WriteMemory((DWORD)dword_6DE377 + 8, 0, true);
+		}
+
+		if (bRearviewMirrorFix)
+		{
+			DWORD* dword_6CFB72 = hook::pattern("75 66 53 E8 ? ? ? ? 83 C4 04 84 C0 74 59").get(0).get<DWORD>(0);
+			injector::MakeNOP(dword_6CFB72, 2, true);
+			DWORD* dword_6CFBC5 = hook::pattern("75 0D 53 E8 ? ? ? ? 83 C4 04 84 C0 75 06 89 1D").get(0).get<DWORD>(0);
+			injector::MakeNOP(dword_6CFBC5, 2, true);
+
+			DWORD* dword_595DDA = hook::pattern("83 F8 02 74 2D 83 F8 03 74 28 83 F8 04 74 23 83 F8 05 74 1E 83 F8 06 74 19").get(0).get<DWORD>(2);
+			injector::WriteMemory<uchar>(dword_595DDA, 4, true);
+			injector::WriteMemory<uchar>((DWORD)dword_595DDA + 5, 4, true);
+		}
+
+	return 0;
 }
 
 
@@ -193,7 +261,7 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
 	if (reason == DLL_PROCESS_ATTACH)
 	{
-		Init();
+		Init(NULL);
 	}
 	return TRUE;
 }
