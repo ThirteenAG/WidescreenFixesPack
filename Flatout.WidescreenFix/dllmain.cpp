@@ -11,11 +11,12 @@ float* pfAspectRatioY;
 float* pfHUDScaleX;
 float fHUDScaleX;
 DWORD jmpAddr, jmpAddr2, jmpAddr3, _REG;
-float fHudOffset, fHUDOffset1;
+float fHudOffset, fHUDOffset1, fHudOffset2;
 DWORD* pfDrawHud;
 DWORD* pfDrawText;
 DWORD* pfSetFOV;
 float fIniFOVFactor, fFOVFactor;
+bool bDelay;
 
 #define _USE_MATH_DEFINES
 #include "math.h"
@@ -108,6 +109,7 @@ void Init()
 	injector::WriteMemory<float>(pfHUDScaleX, fHUDScaleX, true);
 
 	fHudOffset = (*nWidth - *nHeight * (4.0f / 3.0f)) / 2.0f;
+	fHudOffset2 = ((480.0f * (static_cast<float>(*nWidth) / static_cast<float>(*nHeight))) - 640.0f) / 2.0f;
 
 	pfDrawHud = hook::pattern("D8 4B 10 D9 5C 24 24 74 08").get(0).get<DWORD>(0); //0x4E2B41 
 	jmpAddr = (DWORD)pfDrawHud + 7; //0x4E2B41 + 7
@@ -123,13 +125,31 @@ void Init()
 
 	//pause menu centering
 	DWORD* TempPtr = *hook::pattern("D8 0D ? ? ? ? D9 5C 24 14 D9 44 24 10 D8 0D ? ? ? ? D9 5C 24 18").get(0).get<DWORD*>(2); //667FA4
-	injector::WriteMemory<float>(TempPtr, *(float*)TempPtr + 107.0f, true); //background
+	injector::WriteMemory<float>(TempPtr, *(float*)TempPtr + fHudOffset2, true); //background
 
 	TempPtr = *hook::pattern("D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 8B 54 24 08 8B 44 24 0C 89 7E 04 5F").get(0).get<DWORD*>(2); //667FAC
-	injector::WriteMemory<float>(TempPtr, *(float*)TempPtr + 107.0f, true); //PAUSED string
+	injector::WriteMemory<float>(TempPtr, *(float*)TempPtr + fHudOffset2, true); //PAUSED string
 
 	TempPtr = *hook::pattern("D8 0D ? ? ? ? D9 1C 24 55 E8 ? ? ? ? 8B 4C 24 20 FF 56 44").get(0).get<DWORD*>(2); //667F98
-	injector::WriteMemory<float>(TempPtr, *(float*)TempPtr + 107.0f, true); //menu text
+	injector::WriteMemory<float>(TempPtr, *(float*)TempPtr + fHudOffset2, true); //menu text
+
+	TempPtr = *hook::pattern("D8 0D ? ? ? ? D8 E1 D9 1C 24 57 DD D8").get(0).get<DWORD*>(2); //6681A8
+	injector::WriteMemory<float>(TempPtr, *(float*)TempPtr + fHudOffset2, true); //press enter to start text
+
+	TempPtr = *hook::pattern("D8 0D ? ? ? ? D9 1C 24 50 57").get(0).get<DWORD*>(2); //6681A8
+	injector::WriteMemory<float>(TempPtr, *(float*)TempPtr + fHudOffset2, true); //sound options text
+
+	TempPtr = *hook::pattern("D8 0D ? ? ? ? 83 EC 08 8B F7 D9 5C 24 20").get(0).get<DWORD*>(2); //667FC0
+	injector::WriteMemory<float>(TempPtr, *(float*)TempPtr + fHudOffset2, true); //sound options sliders
+
+	//wrong way text background (kinda ugly, let's remove it)
+	TempPtr = *hook::pattern("D8 0D ? ? ? ? C7 05 ? ? ? ? 00 00 D0 42").get(0).get<DWORD*>(2); //667FBC
+	injector::WriteMemory<float>(TempPtr, 0.0f, true);
+	injector::WriteMemory<float>(TempPtr + 1, 0.0f, true);
+
+	//loading bar offset
+	TempPtr = *hook::pattern("D8 0D ? ? ? ? 89 44 24 34 D9 5C 24 24").get(0).get<DWORD*>(2); //4C07C6
+	injector::WriteMemory<float>(TempPtr, *(float*)TempPtr + (fHudOffset2 / 2.18f), true);
 
 	fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(fScreenFieldOfViewVStd * 0.5f)) * (static_cast<float>(*nWidth) / static_cast<float>(*nHeight)))) * (1.0f / SCREEN_FOV_HORIZONTAL);
 	fFOVFactor = fDynamicScreenFieldOfViewScale * 0.017453292f * fIniFOVFactor;
@@ -143,8 +163,16 @@ void Init()
 	}
 }
 
-void PatchIntro()
+DWORD WINAPI PatchIntro(LPVOID)
 {
+	auto pattern = hook::pattern("C7 05 ? ? ? ? 00 04 00 00 C7 05 ? ? ? ? 00 03 00 00 C7 05 ? ? ? ? 10 00 00 00");
+	if (!(pattern.size() > 0) && !bDelay)
+	{
+		bDelay = true;
+		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&PatchIntro, NULL, 0, NULL);
+		return 0;
+	}
+
 	pfShowIntroCall = hook::pattern("E8 ? ? ? ? 8B 15 ? ? ? ? A1 ? ? ? ? 52 50 E8 ? ? ? ?").get(0).get<DWORD>(0);
 	pfShowIntro = injector::GetBranchDestination(pfShowIntroCall, true);
 	injector::MakeCALL(pfShowIntroCall, Init, true);
@@ -154,7 +182,7 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
 	if (reason == DLL_PROCESS_ATTACH)
 	{
-		PatchIntro();
+		PatchIntro(NULL);
 	}
 	return TRUE;
 }

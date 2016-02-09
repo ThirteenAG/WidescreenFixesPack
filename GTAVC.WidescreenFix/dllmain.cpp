@@ -1,4 +1,3 @@
-#include "stdafx.h"
 #include "..\includes\stdafx.h"
 #include "..\includes\GTA\common.h"
 
@@ -2249,7 +2248,6 @@ void ApplyIniOptions()
 	NoLoadingBarFix = iniReader.ReadInteger("LCS", "NoLoadingBarFix", 0);
 	IVRadarScaling = iniReader.ReadInteger("MAIN", "IVRadarScaling", 0);
 	ReplaceTextShadowWithOutline = iniReader.ReadInteger("MAIN", "ReplaceTextShadowWithOutline", 0);
-	bool bTransparentMenu = iniReader.ReadInteger("MAIN", "TransparentMenu", 0) == 1;
 
 	if (!fHudWidthScale || !fHudHeightScale) { fHudWidthScale = 0.62221788786f; fHudHeightScale = 0.66666670937f; }
 	if (!fRadarWidthScale) { fRadarWidthScale = 0.80354591724f; }
@@ -2361,36 +2359,6 @@ void ApplyIniOptions()
 			injector::MakeNOP(0x49E30E, 5, true); //menu title shadows
 		}
 		TextDrawOutlineHook<(0x55B113)>(); // = 0x551040 + 0x0  -> call    _ZN5CFont11PrintStringEffPt; CFont::PrintString(float,float,ushort *) subtitles
-
-		if (bTransparentMenu)
-		{
-			injector::MakeInline<0x600416, 0x60041D>([](injector::reg_pack&)
-			{
-				injector::WriteMemory<char>(0x86969C, 0, true); // bGameStarted
-
-				injector::MakeNOP(0x4A73C9, 5, true);
-				injector::MakeNOP(0x4A21E0, 5, true);
-
-				injector::MakeNOP(0x4A5E27, 6, true);
-
-				injector::MakeNOP(0x4A212D + 0x704, 5, true); //        CSprite2d::Draw2DPolygon(float, float, float, float, float, float, float, float, CRGBA const&)
-				injector::MakeNOP(0x4A212D + 0x7FE, 5, true); //        CSprite2d::Draw2DPolygon(float, float, float, float, float, float, float, float, CRGBA const&)
-				injector::MakeNOP(0x4A212D + 0x907, 5, true); //        CSprite2d::Draw2DPolygon(float, float, float, float, float, float, float, float, CRGBA const&)
-				injector::MakeNOP(0x4A212D + 0xC8C, 5, true); //        CSprite2d::Draw2DPolygon(float, float, float, float, float, float, float, float, CRGBA const&)
-				injector::MakeNOP(0x4A212D + 0xD86, 5, true); //        CSprite2d::Draw2DPolygon(float, float, float, float, float, float, float, float, CRGBA const&)
-				injector::MakeNOP(0x4A212D + 0xE95, 5, true); //        CSprite2d::Draw2DPolygon(float, float, float, float, float, float, float, float, CRGBA const&)
-				injector::MakeNOP(0x4A212D + 0xFA4, 5, true); //        CSprite2d::Draw2DPolygon(float, float, float, float, float, float, float, float, CRGBA const&)
-
-				CSprite2dDrawHook<(0x4A212D + 0x5FD)>(); //                                      call    _ZN9CSprite2d4DrawERK5CRectRK5CRGBA; CSprite2d::Draw(CRect const&,CRGBA const&)
-				CSprite2dDrawHook<(0x4A212D + 0xB85)>(); //                                      call    _ZN9CSprite2d4DrawERK5CRectRK5CRGBA; CSprite2d::Draw(CRect const&,CRGBA const&)
-				CSprite2dDrawHook<(0x4A212D + 0x13D6)>(); //                                      call    _ZN9CSprite2d4DrawERK5CRectRK5CRGBA; CSprite2d::Draw(CRect const&,CRGBA const&)
-				CSprite2dDrawHook<(0x4A212D + 0x1589)>(); //                                      call    _ZN9CSprite2d4DrawERK5CRectRK5CRGBA; CSprite2d::Draw(CRect const&,CRGBA const&)
-				//CSprite2dDrawHook<(0x4A212D+0x1666)>(); //                                      call    _ZN9CSprite2d4DrawERK5CRectRK5CRGBA; CSprite2d::Draw(CRect const&,CRGBA const&)*/
-
-
-				Render2DStuffHook<(0x4A608E)>();
-			});
-		}
 	}
 	else
 	{

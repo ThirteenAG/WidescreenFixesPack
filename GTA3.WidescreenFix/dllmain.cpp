@@ -1368,7 +1368,6 @@ void ApplyIniOptions()
 	NoLoadingBarFix = iniReader.ReadInteger("LCS", "NoLoadingBarFix", 0);
 	IVRadarScaling = iniReader.ReadInteger("MAIN", "IVRadarScaling", 0);
 	ReplaceTextShadowWithOutline = iniReader.ReadInteger("MAIN", "ReplaceTextShadowWithOutline", 0);
-	bool bTransparentMenu = iniReader.ReadInteger("MAIN", "TransparentMenu", 0) == 1;
 
 	if (!fHudWidthScale || !fHudHeightScale) { fHudWidthScale = 0.62221788786f; fHudHeightScale = 0.66666670937f; }
 	if (!fRadarWidthScale) { fRadarWidthScale = 0.80354591724f; }
@@ -1725,32 +1724,6 @@ void ApplyIniOptions()
 			TextDrawOutlineHook<(0x585B89)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
 			TextDrawOutlineHook<(0x59601A)>();  //0x500F50 + 0x0  -> call    PrintString__5CFontFffPUs; CFont::PrintString((float,float,ushort *))
 #endif
-
-			if (bTransparentMenu)
-			{
-				injector::MakeInline<0x582E71, 0x582E78>([](injector::reg_pack&)
-				{
-					injector::WriteMemory<char>(0x8F5AEE, 0, true); // bGameStarted
-
-					injector::MakeNOP(0x48D02C, 5, true);
-
-					injector::MakeNOP(0x48E520, 6, true);
-
-					CSprite2dDrawHook<(0x47A5B0 + 0xE5)>(); //   call    Draw__9CSprite2dFRC5CRectRC5CRGBA; CSprite2d::Draw((CRect const &,CRGBA const &))
-					CSprite2dDrawHook<(0x47A5B0 + 0x262)>(); //   call    Draw__9CSprite2dFRC5CRectRC5CRGBA; CSprite2d::Draw((CRect const &,CRGBA const &))
-					CSprite2dDrawHook<(0x47A5B0 + 0x2E1)>(); //   call    Draw__9CSprite2dFRC5CRectRC5CRGBA; CSprite2d::Draw((CRect const &,CRGBA const &))
-					CSprite2dDrawHook<(0x47A5B0 + 0x354)>(); //   call    Draw__9CSprite2dFRC5CRectRC5CRGBA; CSprite2d::Draw((CRect const &,CRGBA const &))
-					/*CSprite2dDrawHook<(0x47AABB)>(); //   call    Draw__9CSprite2dFRC5CRectRC5CRGBA; CSprite2d::Draw((CRect const &,CRGBA const &))
-					CSprite2dDrawHook<(0x47A5B0 + 0x658)>(); //   call    Draw__9CSprite2dFRC5CRectRC5CRGBA; CSprite2d::Draw((CRect const &,CRGBA const &))
-					CSprite2dDrawHook<(0x47A5B0 + 0x79B)>(); //   call    Draw__9CSprite2dFRC5CRectRC5CRGBA; CSprite2d::Draw((CRect const &,CRGBA const &))
-					CSprite2dDrawHook<(0x47ADEA)>(); //   call    Draw__9CSprite2dFRC5CRectRC5CRGBA; CSprite2d::Draw((CRect const &,CRGBA const &)*/
-
-					CRendererConstructRenderListHook<0x48E539>();
-					injector::MakeNOP(0x48E53E, 5, true); //noping CRenderer::PreRender(), but it will be called in CRendererConstructRenderListHook^
-					Render2DStuffHook<(0x48E642)>();
-					RenderDebugShitHook<(0x48E5FE)>();
-				});
-			}
 		}
 	}
 	else
