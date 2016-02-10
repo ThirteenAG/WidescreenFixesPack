@@ -30,6 +30,9 @@ union HudPos
 } HudScaleX, HudScaleY;
 
 float f1_480 = 1.0f / 480.0f;
+float fPSriteHudOffset, fPSriteHudScale;
+float fHudOffset2;
+bool bBulletTimeRender, bDynShadowRender, bScopesFix;
 
 HMODULE e2mfc, e2_d3d8_driver_mfc;
 float fFOVFactor;
@@ -45,7 +48,7 @@ float* pHudElementPosX; float* pHudElementPosY; TextCoords* pTextElementPosX;
 float fMirrorFactor;
 float fVisibilityFactor1, fVisibilityFactor2;
 float fViewPortSizeX = 640.0f, fViewPortSizeY = 480.0f;
-float fFullscreen2DScale;
+float fDiffFactor;
 int nCutsceneBorders;
 
 int __fastcall PDriverGetWidth(int _this)
@@ -105,42 +108,58 @@ void __declspec(naked)DisableSubViewport()
 	__asm ret 10h
 }
 
-DWORD _EAX, _EBX, _nEDX; float _EDX, fDiffFactor;
-void __declspec(naked)PCameraValidateHook()
+void __fastcall PCameraValidate(int _this)
 {
-	__asm mov _EAX, eax
-	__asm mov _EBX, ebx
-	__asm mov edx, [esp + 4]
-	__asm mov _EDX, edx
-	__asm mov _nEDX, edx
-	
-	if (_EDX >= 0.7f && _EDX <= 0.8f)
+	float fParam0 = *(float *)(_this + 0x11C);
+	float fParam1 = *(float *)(_this + 0x1DC);
+	float fParam2 = *(float *)(_this + 0x1D8);
+	float fParam3 = *(float *)(_this + 0x1D4);
+	float fParam4 = *(float *)(_this + 0x1D0);
+
+	float fParam5 = *(float *)(_this + 0x1E0);
+	float fParam6 = *(float *)(_this + 0x220);
+	//BYTE Param7 = *(BYTE *)(_this + 0x208);
+	//BYTE Param8 = *(BYTE *)(_this + 0x480);
+
+	if ((*(BYTE *)(_this + 0xEC) >> 6) & 1)
 	{
-		if ((_EBX == 1 && _EAX == 8) || (_EBX == 0 && _EAX != 8))
+		float v2 = tan(fParam0 / 2.0);
+
+		if (fParam5 == 0.05f && fParam6 != -1.0f /*&& Param7 != 0x40*/ /*&& Param7 == 0x40 && Param8 == 0*/)
 		{
-			_EDX *= fDiffFactor;
-		}
-	}
-	else
-	{
-		if (_EAX == 8 && _EDX < 0.7f)
-		{
-			if (_EBX == 1 && _nEDX != 0x3ED413CD) //0.414213568, it's to avoid comics stretching
-				_EDX *= fDiffFactor;
+			*(float *)(_this + 0x20C) = v2 * fDiffFactor;
 		}
 		else
-		{
-			if ((_EDX > 0.8f/* && _EDX <= 1.5f*/) && _nEDX != 0x3F800000)
-			{
-				if ((_EBX == 1 && _EAX == 8) || (_EBX == 0 && _EAX != 8))
-					_EDX *= fDiffFactor;
-			}
-		}
+			*(float *)(_this + 0x20C) = v2;
+
+		*(float *)(_this + 0x210) = (fParam1 - fParam2) * v2 / (fParam3 - fParam4);
+	}
+}
+
+char(__thiscall *PSpriteExecuteAlways)(void* _this);
+char __fastcall PSpriteExecuteAlwaysHook(void *_this)
+{
+	float fParam0 = *(float *)((DWORD)_this + 0x15C);
+	float fParam1 = *(float *)((DWORD)_this + 0x180);
+	BYTE Param3 = *(BYTE *)((DWORD)_this + 0x182);
+
+	if (fParam0 == 640.0f && fParam1 == 0.0f && Param3 == 0x00)
+		bBulletTimeRender = true;
+
+	if (fParam0 == 640.0f && (fParam1 == 0.0078125f || fParam1 == 0.015625) /*&& Param3 == 0x00*/) //for some reason it's 0.015625 on windows 7
+		bDynShadowRender = true;
+
+	if (fParam0 != 640.0f || bDynShadowRender || bBulletTimeRender)
+	{
+		fPSriteHudOffset = Screen.fHudOffset;
+		fPSriteHudScale = Screen.fHudScale;
+
+		return PSpriteExecuteAlways(_this);
 	}
 
-	__asm mov edx, _EDX
-	__asm mov[esi + 20Ch], edx
-	__asm jmp jmpAddr
+	fPSriteHudOffset = -1.0f;
+	fPSriteHudScale = 0.003125f;
+	return PSpriteExecuteAlways(_this);
 }
 
 DWORD WINAPI ComicsHandler(LPVOID)
@@ -214,64 +233,9 @@ DWORD WINAPI ComicsHandler(LPVOID)
 
 float ElementPosX, ElementNewPosX1, ElementNewPosX2;
 float ElementPosY, ElementNewPosY1, ElementNewPosY2;
-DWORD __EAX, __ESP20, __ESP2C, __ESP30, __ESP3C, __ESP34, __ESP44;
+DWORD __EAX, __ESP20, __ESP2C, __ESP30, __ESP34;
 float __ECX;
 float* f10042294;
-float f10042B58 = 0.003125f;
-float f10042B50 = -1.0f;
-bool bDoFix;
-void __declspec(naked) P_HudPosHook2()
-{
-	__asm mov __EAX, eax
-
-	__asm mov eax, [esp + 2Ch]
-	__asm mov __ESP2C, eax
-
-	__asm mov eax, [esp+3Ch]
-	__asm mov __ESP3C, eax
-
-	__asm mov eax, [esp + 44h]
-	__asm mov __ESP44, eax
-
-	__asm mov eax, __EAX
-		
-	bDoFix = false;
-
-	if ((__ESP44 != 0x43F00000 && __ESP2C == 0x459C4400 || __ESP2C == 0x40400000) && (__ESP3C != 0x43000000 && __ESP3C != 0x42800000)) //bullet time fullscreen effect and player's shadow 
-	{
-		bDoFix = true;
-		_asm
-		{
-			fmul    dword ptr ds : Screen.fHudScale
-			jmp	    jmpAddr4
-		}
-	}
-
-	_asm
-	{
-		fmul    ds : f10042B58
-		jmp	    jmpAddr4
-	}
-}
-
-void __declspec(naked) P_HudPosHook3()
-{
-	if (bDoFix) 
-	{
-		_asm
-		{
-			fmul    dword ptr ds : Screen.fHudOffset
-			jmp	    jmpAddr5
-		}
-	}
-
-	_asm
-	{
-		fmul    ds : f10042B50
-		jmp	    jmpAddr5
-	}
-}
-
 void __declspec(naked) P_HudPosHook()
 {
 	__asm mov __EAX, eax
@@ -325,12 +289,20 @@ void __declspec(naked) P_HudPosHook()
 
 	ElementNewPosX2 = ElementNewPosX1;
 
-	if (bDoFix && ElementPosX == 0.0f && ElementPosY == 0.0f && __EAX == 2 && __ECX == 640.0f && *(DWORD*)__ESP20 != 0x40400000 && *(DWORD*)__ESP30 != 0x43800000) // fading, 0x43800000 related to player's shadow
+	if (bBulletTimeRender || (bDynShadowRender && ElementPosX == 0.0f))
 	{
-		ElementNewPosX1 = ElementPosX + (Screen.fHudOffsetWide + fFullscreen2DScale);
-		ElementNewPosX2 = ElementPosX - (Screen.fHudOffsetWide + fFullscreen2DScale);					  
-		ElementNewPosY1 = ElementPosY + (Screen.fHudOffsetWide + fFullscreen2DScale);
-		ElementNewPosY2 = ElementPosY - (Screen.fHudOffsetWide + fFullscreen2DScale);
+		ElementNewPosX1 = ElementPosX + fHudOffset2;
+		ElementNewPosX2 = ElementPosX - fHudOffset2;
+		bBulletTimeRender = false;
+		bDynShadowRender = false;
+	}
+	else
+	{
+		if (bScopesFix && ElementPosX == 0.0f && ElementPosY == 0.0f && __EAX == 2 && __ECX == 640.0f && *(DWORD*)__ESP20 != 0x40400000 && *(DWORD*)__ESP30 != 0x43800000)
+		{
+			ElementNewPosY1 = ElementPosY + fHudOffset2; //to do, isn't scaled properly
+			ElementNewPosY2 = ElementPosY - fHudOffset2;
+		}
 	}
 	
 	_asm
@@ -435,9 +407,8 @@ DWORD WINAPI Thread(LPVOID)
 	bFixHud = iniReader.ReadInteger("MAIN", "FixHud", 1) != 0;
 	bWidescreenHud = iniReader.ReadInteger("MAIN", "WidescreenHud", 1) != 0;
 	float fWidescreenHudOffset = iniReader.ReadFloat("MAIN", "WidescreenHudOffset", 100.0f);
-	fFullscreen2DScale = iniReader.ReadFloat("MAIN", "Fullscreen2DScale", 10.0f);
 	if (!fWidescreenHudOffset) { fWidescreenHudOffset = 100.0f; }
-	if (!fFullscreen2DScale) { fFullscreen2DScale = 10.0f; }
+	bScopesFix = iniReader.ReadInteger("MAIN", "ScopesFix", 1) != 0;
 
 	do
 	{
@@ -474,8 +445,7 @@ DWORD WINAPI Thread(LPVOID)
 		injector::MakeJMP((DWORD)e2mfc + 0x14C80, ForceEntireViewport, true);
 
 		fDiffFactor = 1.0f / ((4.0f / 3.0f) / (Screen.fAspectRatio));
-		injector::MakeJMP((DWORD)e2mfc + 0x15037, PCameraValidateHook, true);
-		jmpAddr = (DWORD)e2mfc + 0x15041;
+		injector::MakeCALL((DWORD)e2mfc + 0x17077, PCameraValidate, true);
 
 		//object disappearance fix
 		injector::WriteMemory<float>((DWORD)e2mfc + 0x15B87 + 0x6, 0.0f, true);
@@ -498,17 +468,18 @@ DWORD WINAPI Thread(LPVOID)
 
 		if (bFixHud)
 		{
-
-
 			Screen.fHudOffset = ((-1.0f / Screen.fAspectRatio) * (4.0f / 3.0f));
 			Screen.fHudScale = (1.0f / (480.0f * Screen.fAspectRatio)) * 2.0f;
-			injector::MakeJMP((DWORD)e2mfc + 0xF011, P_HudPosHook2, true);
-			jmpAddr4 = (DWORD)e2mfc + 0xF011 + 0x6;
-			injector::MakeJMP((DWORD)e2mfc + 0xF05E, P_HudPosHook3, true);
-			jmpAddr5 = (DWORD)e2mfc + 0xF05E + 0x6;
+			fHudOffset2 = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
 
 			injector::WriteMemory<float>((DWORD)e2mfc + 0x42B50, Screen.fHudOffset, true);
 			injector::WriteMemory<float>((DWORD)e2mfc + 0x42B58, Screen.fHudScale, true);
+
+			injector::WriteMemory((DWORD)e2mfc + 0xF05E + 0x2, &fPSriteHudOffset, true);
+			injector::WriteMemory((DWORD)e2mfc + 0xF011 + 0x2, &fPSriteHudScale, true);
+
+			PSpriteExecuteAlways = (char(__thiscall *)(void *)) (DWORD)GetProcAddress(e2mfc, "?executeAlways@P_Sprite@@UAE_NXZ");
+			injector::WriteMemory((DWORD)e2mfc + 0x42DF8, PSpriteExecuteAlwaysHook, true);
 
 			pHudElementPosX = (float*)((DWORD)e2mfc + 0x61134);
 			pHudElementPosY = (float*)((DWORD)e2mfc + 0x61138);
