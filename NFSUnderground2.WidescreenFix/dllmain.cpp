@@ -16,6 +16,14 @@ float MinimapPosX, MinimapPosY;
 bool bHudWidescreenMode;
 bool bFMVWidescreenMode;
 bool bXbox360Scaling;
+char* szCustomUserFilesDirectoryInGameDir;
+
+HRESULT WINAPI SHGetFolderPathAHook(HWND hwnd, int csidl, HANDLE hToken, DWORD dwFlags, LPSTR pszPath)
+{
+	CreateDirectory(szCustomUserFilesDirectoryInGameDir, NULL);
+	strcpy(pszPath, szCustomUserFilesDirectoryInGameDir);
+	return S_OK;
+}
 
 union HudPos
 {
@@ -178,6 +186,10 @@ DWORD WINAPI Init(LPVOID)
 	bHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1) == 1;
 	bFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1) == 1;
 	bDisableCutsceneBorders = iniReader.ReadInteger("MISC", "DisableCutsceneBorders", 1) == 1;
+	szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "");
+	bool bCustomUsrDir;
+	if (strncmp(szCustomUserFilesDirectoryInGameDir, "0", 1) != 0)
+		bCustomUsrDir = true;
 
 	if (!ResX || !ResY) {
 		HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
@@ -359,6 +371,14 @@ DWORD WINAPI Init(LPVOID)
 		DWORD  dword_505102 = (DWORD)dword_5050FB + 7;
 		injector::MakeJMP(dword_5050FB, StopSignHook, true);
 		jmpAddr4 = dword_505102;
+	}
+
+	if (bCustomUsrDir)
+	{
+		auto pattern = hook::pattern("50 6A 00 6A 00 68 ? 80 00 00 6A 00");
+		DWORD* dword_6CBF17 = pattern.get(0).get<DWORD>(12);
+		injector::MakeCALL((DWORD)dword_6CBF17, SHGetFolderPathAHook, true);
+		injector::MakeNOP((DWORD)dword_6CBF17 + 5, 1, true);
 	}
 	return 0;
 }

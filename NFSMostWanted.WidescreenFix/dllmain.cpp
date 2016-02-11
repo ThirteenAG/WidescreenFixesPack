@@ -12,6 +12,14 @@ float fHudPosX;
 float MinimapPosX, MinimapPosY;
 DWORD* dword_8F1CA0;
 DWORD jmpAddr, jmpAddr2;
+char* szCustomUserFilesDirectoryInGameDir;
+
+HRESULT WINAPI SHGetFolderPathAHook(HWND hwnd, int csidl, HANDLE hToken, DWORD dwFlags, LPSTR pszPath)
+{
+	CreateDirectory(szCustomUserFilesDirectoryInGameDir, NULL);
+	strcpy(pszPath, szCustomUserFilesDirectoryInGameDir);
+	return S_OK;
+}
 
 void __declspec(naked) WidescreenHudHook()
 {
@@ -45,6 +53,10 @@ DWORD WINAPI Init(LPVOID)
 	int ShadowsRes = iniReader.ReadInteger("MISC", "ShadowsRes", 1024);
 	bool bShadowsFix = iniReader.ReadInteger("MISC", "ShadowsFix", 1) == 1;
 	bool bRearviewMirrorFix = iniReader.ReadInteger("MISC", "RearviewMirrorFix", 1) == 1;
+	szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "");
+	bool bCustomUsrDir;
+	if (strncmp(szCustomUserFilesDirectoryInGameDir, "0", 1) != 0)
+		bCustomUsrDir = true;
 
 	if (!ResX || !ResY) {
 		HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
@@ -253,6 +265,19 @@ DWORD WINAPI Init(LPVOID)
 			injector::WriteMemory<uchar>((DWORD)dword_595DDA + 5, 4, true);
 		}
 
+		if (bCustomUsrDir)
+		{
+			auto pattern = hook::pattern("50 6A 00 6A 00 68 ? 80 00 00 6A 00");
+			for (size_t i = 0; i < pattern.size(); i++)
+			{
+				DWORD* dword_6CBF17 = pattern.get(i).get<DWORD>(12);
+				if (*(BYTE*)dword_6CBF17 != 0xFF)
+					dword_6CBF17 = pattern.get(i).get<DWORD>(14);
+
+				injector::MakeCALL((DWORD)dword_6CBF17, SHGetFolderPathAHook, true);
+				injector::MakeNOP((DWORD)dword_6CBF17 + 5, 1, true);
+			}
+		}
 	return 0;
 }
 
