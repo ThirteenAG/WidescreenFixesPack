@@ -9,7 +9,9 @@
 extern RsGlobalType* RsGlobal;
 extern int HideAABug, SmartCutsceneBorders;
 extern int(__cdecl* CSprite2dDrawRect)(class CRect const &, class CRGBA const &);
-extern DWORD bWideScreen, BordersVar1, BordersVar2, BordersVar3;
+extern uint32_t* BordersVar1;
+extern uint32_t* BordersVar2;
+extern bool* bWideScreen;
 
 void GetScreenRect(CRect& rect)
 {
@@ -49,7 +51,7 @@ void Hide1pxAABug()
 
 void CCamera::DrawBordersForWideScreen()
 {
-	if (!*(char*)bWideScreen == 0)
+	if (!*bWideScreen == false)
 		return;
 
 	CRect		ScreenRect;
@@ -61,8 +63,8 @@ void CCamera::DrawBordersForWideScreen()
 
 	GetScreenRect(ScreenRect);
 
-		if (!*(DWORD*)BordersVar1 || *(float*)BordersVar1 == 2)
-			*(DWORD*)BordersVar2 = 80;
+		if (!*BordersVar1 || *BordersVar1 == 2)
+			*BordersVar2 = 80;
 
 	// Letterbox
 	if (ScreenRect.m_fBottom > 0.0 && ScreenRect.m_fTop > 0.0)

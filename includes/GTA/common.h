@@ -67,7 +67,11 @@ float fCustomRadarRingPosYIV = 109.5f;
 float fCustomRadarRingPosXIV2 = fCustomRadarRingPosXIV - 19.0f;
 void IVRadar();
 
-DWORD bWideScreen, BordersVar1, BordersVar2, IsInCutscene;
+uint32_t* BordersVar1;
+uint32_t* BordersVar2;
+bool* bWideScreen;
+bool* bIsInCutscene;
 int(__cdecl* CSprite2dDrawRect)(class CRect const &, class CRGBA const &);
 int(__cdecl* FindPlayerVehicle)();
 int(__cdecl* FindPlayerVehicleSA)(int, char);
+void(__thiscall *funcCCameraAvoidTheGeometry)(void* _this, RwV3d const&, RwV3d const&, RwV3d&, float);

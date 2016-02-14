@@ -99,6 +99,8 @@ namespace hook
 		void EnsureMatches(int maxCount);
 
 	public:
+		pattern() { };
+
 		template<size_t Len>
 		pattern(const char (&pattern)[Len])
 		{

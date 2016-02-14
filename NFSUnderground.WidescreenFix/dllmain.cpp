@@ -420,7 +420,7 @@ DWORD WINAPI Init(LPVOID)
 		dword_41C481.Int = *hook::pattern("68 ? ? ? ? 6A 00 6A 00 68 23 80 00 00 6A 00 FF 15").get(0).get<DWORD*>(16+2);
 		char pattern_str[20];
 
-		sprintf(pattern_str, "%X %X %X %X %X %X", 0xFF, 0x15, dword_41C481.Byte[0], dword_41C481.Byte[1], dword_41C481.Byte[2], dword_41C481.Byte[3]);
+		sprintf(pattern_str, "%02X %02X %02X %02X %02X %02X", 0xFF, 0x15, dword_41C481.Byte[0], dword_41C481.Byte[1], dword_41C481.Byte[2], dword_41C481.Byte[3]);
 		
 		auto pattern = hook::pattern(pattern_str);
 		//MessageBox(0, pattern_str, pattern_str, 0);
