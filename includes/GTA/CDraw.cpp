@@ -17,9 +17,9 @@ extern float fWideScreenWidthScaleDown;
 extern float fDynamicScreenFieldOfViewScale;
 extern float fScreenFieldOfViewVStd;
 
-extern int RestoreCutsceneFOV;
+extern bool bRestoreCutsceneFOV;
 extern float fCarSpeedDependantFOV;
-extern int DontTouchFOV;
+extern bool bDontTouchFOV;
 extern float fFOVControlValue;
 extern int FOVControl;
 extern float fRadarScaling;
@@ -57,7 +57,7 @@ inline float getDynamicScreenFieldOfView(float fFactor)
 		fFOVControlValue = 1.0f;
 	}
 
-	if ((!*bIsInCutscene == false && RestoreCutsceneFOV) || DontTouchFOV)
+	if ((!*bIsInCutscene == false && bRestoreCutsceneFOV) || bDontTouchFOV)
 	{
 		return fFactor * fFOVControlValue;
 	}
