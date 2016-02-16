@@ -21,7 +21,7 @@ extern bool bRestoreCutsceneFOV;
 extern float fCarSpeedDependantFOV;
 extern bool bDontTouchFOV;
 extern float fFOVControlValue;
-extern int FOVControl;
+extern unsigned int* FOVControl;
 extern float fRadarScaling;
 
 extern float fEmergencyVehiclesFix;
