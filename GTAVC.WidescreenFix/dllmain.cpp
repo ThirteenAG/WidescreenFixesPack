@@ -1,6 +1,7 @@
 #include "..\includes\stdafx.h"
 #include "..\includes\GTA\common.h"
 #include "..\includes\hooking\Hooking.Patterns.h"
+#include "..\includes\GTA\global.h"
 
 //#define _LOG
 #ifdef _LOG
@@ -52,7 +53,7 @@ void GetPatterns()
     MenuPattern7 = hook::pattern("C6 83 40 01 00 00 01 C7 43 40 00 00 22 43 C7 43 44"); //0x4A3CF0
     MenuPattern8 = hook::pattern("89 04 24 DB 04 24 D8 0D"); //0x68C348
     MenuPattern9 = hook::pattern("89 44 24 08 DB 44 24 08 D8 0D"); //0x68D5C4
-	MenuPattern10 = hook::pattern("89 44 24 10 DB 44 24 10 D8 0D"); //0x68D50C Loading game. Please wait...
+    MenuPattern10 = hook::pattern("89 44 24 10 DB 44 24 10 D8 0D"); //0x68D50C Loading game. Please wait...
 
     char pattern_str[20];
     union {
@@ -68,9 +69,9 @@ void GetPatterns()
     sprintf(pattern_str, "%02X %02X %02X %02X %02X %02X", 0xD8, 0x0D, dword_temp.Byte[0], dword_temp.Byte[1], dword_temp.Byte[2], dword_temp.Byte[3]);
     CDarkelDrawMessagesPattern = hook::pattern(pattern_str); //0x42A087
 
-	dword_temp.Int = *hook::pattern("50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 DB 05 ? ? ? ? 50").get(0).get<uint32_t*>(3);
-	sprintf(pattern_str, "%02X %02X %02X %02X %02X %02X", 0xD8, 0x0D, dword_temp.Byte[0], dword_temp.Byte[1], dword_temp.Byte[2], dword_temp.Byte[3]);
-	CDarkelDrawMessagesPattern2 = hook::pattern(pattern_str); //0x42A070
+    dword_temp.Int = *hook::pattern("50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 DB 05 ? ? ? ? 50").get(0).get<uint32_t*>(3);
+    sprintf(pattern_str, "%02X %02X %02X %02X %02X %02X", 0xD8, 0x0D, dword_temp.Byte[0], dword_temp.Byte[1], dword_temp.Byte[2], dword_temp.Byte[3]);
+    CDarkelDrawMessagesPattern2 = hook::pattern(pattern_str); //0x42A070
 
     dword_temp.Int = *hook::pattern("D8 0D ? ? ? ? D8 ? ? ? ? ? D9 1C 24 E8").get(8).get<uint32_t*>(2);
     sprintf(pattern_str, "%02X %02X %02X %02X %02X %02X", 0xD8, 0x0D, dword_temp.Byte[0], dword_temp.Byte[1], dword_temp.Byte[2], dword_temp.Byte[3]);
@@ -124,32 +125,32 @@ void GetMemoryAddresses()
 
 void SilentPatchCompatibility()
 {
-	OverwriteResolution();
-	auto pattern = hook::pattern("66 8B 2D ? ? ? ? 0F BF C5");
-	if (bSmallerTextShadows && *(uint8_t*)pattern.get(0).get<uint8_t*>(10) != 0x89)
-	{
-		injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(10), 0x89, true); //0x5516FB
-		injector::WriteMemory(pattern.get(0).get<uint32_t>(11), 0x04DB2404, true); //0x5516FC
-		injector::WriteMemory(pattern.get(0).get<uint32_t>(15), 0xC81DD824, true); //0x5516FC + 4
+    OverwriteResolution();
+    auto pattern = hook::pattern("66 8B 2D ? ? ? ? 0F BF C5");
+    if (bSmallerTextShadows && *(uint8_t*)pattern.get(0).get<uint8_t*>(10) != 0x89)
+    {
+        injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(10), 0x89, true); //0x5516FB
+        injector::WriteMemory(pattern.get(0).get<uint32_t>(11), 0x04DB2404, true); //0x5516FC
+        injector::WriteMemory(pattern.get(0).get<uint32_t>(15), 0xC81DD824, true); //0x5516FC + 4
 
-		pattern = hook::pattern("89 44 24 0C D8 05 ? ? ? ? D9 1D ? ? ? ?");
-		injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(16), 0xDB, true); //0x5517C4
-		injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(16 + 3), 0x0C, true); //0x5517C7
-		pattern = hook::pattern("0F BF C5 D9 1C 24 89 44 24 14 50");
-		injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(11), 0xDB, true); //0x5517DF
-		injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(11 + 3), 0x18, true); //0x5517E2
-		injector::WriteMemory<uint8_t>(pattern.get(1).get<uint32_t>(11), 0xDB, true); //0x551848
-		injector::WriteMemory<uint8_t>(pattern.get(1).get<uint32_t>(11 + 3), 0x18, true); //0x55184B
-		pattern = hook::pattern("FF 74 24 34 89 44 24 04 53");
-		injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(9), 0xDB, true); //0x551832
-		injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(9 + 3), 0x08, true); //0x551835
-	}
+        pattern = hook::pattern("89 44 24 0C D8 05 ? ? ? ? D9 1D ? ? ? ?");
+        injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(16), 0xDB, true); //0x5517C4
+        injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(16 + 3), 0x0C, true); //0x5517C7
+        pattern = hook::pattern("0F BF C5 D9 1C 24 89 44 24 14 50");
+        injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(11), 0xDB, true); //0x5517DF
+        injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(11 + 3), 0x18, true); //0x5517E2
+        injector::WriteMemory<uint8_t>(pattern.get(1).get<uint32_t>(11), 0xDB, true); //0x551848
+        injector::WriteMemory<uint8_t>(pattern.get(1).get<uint32_t>(11 + 3), 0x18, true); //0x55184B
+        pattern = hook::pattern("FF 74 24 34 89 44 24 04 53");
+        injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(9), 0xDB, true); //0x551832
+        injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(9 + 3), 0x08, true); //0x551835
+    }
 }
 
 injector::hook_back<signed int(__cdecl*)(void)> hbRsSelectDevice;
 signed int __cdecl RsSelectDeviceHook2()
 {
-	SilentPatchCompatibility();
+    SilentPatchCompatibility();
     return hbRsSelectDevice.fun();
 }
 
@@ -158,7 +159,7 @@ void OverwriteResolution()
     CIniReader iniReader("");
     ResX = iniReader.ReadInteger("MAIN", "ResX", -1);
     ResY = iniReader.ReadInteger("MAIN", "ResY", -1);
-	bSmallerTextShadows = iniReader.ReadInteger("MAIN", "SmallerTextShadows", 1) != 0;
+    bSmallerTextShadows = iniReader.ReadInteger("MAIN", "SmallerTextShadows", 1) != 0;
 
     if (!ResX || !ResY) {
         HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
@@ -293,8 +294,8 @@ void FixMenu()
     float fSaveLoadListTextScale = 0.00075000001f / (*CDraw::pfScreenAspectRatio / (4.0f / 3.0f));
     injector::WriteMemory<float>(*MenuPattern9.get(20).get<uint32_t*>(10), fSaveLoadListTextScale, true);
 
-	float fLoadingGameTextScale = 0.00065625005f / (*CDraw::pfScreenAspectRatio / (4.0f / 3.0f));
-	injector::WriteMemory<float>(*MenuPattern10.get(11).get<uint32_t*>(10), fSaveLoadListTextScale, true);
+    float fLoadingGameTextScale = 0.00065625005f / (*CDraw::pfScreenAspectRatio / (4.0f / 3.0f));
+    injector::WriteMemory<float>(*MenuPattern10.get(11).get<uint32_t*>(10), fSaveLoadListTextScale, true);
 }
 
 void RsSelectDeviceHook()
@@ -495,8 +496,8 @@ void __cdecl PrintStringHook2(float PosX, float PosY, unsigned short* c)
 void ApplyIniOptions()
 {
     CIniReader iniReader("");
-    fHudWidthScale = iniReader.ReadFloat("MAIN", "HudWidthScale", 0.0f);
-    fHudHeightScale = iniReader.ReadFloat("MAIN", "HudHeightScale", 0.0f);
+    fHudWidthScale = iniReader.ReadFloat("MAIN", "HudWidthScale", 0.0f); fHudWidthScale == 0.0f ? fHudWidthScale = 0.8f : fHudWidthScale;
+    fHudHeightScale = iniReader.ReadFloat("MAIN", "HudHeightScale", 0.0f); fHudHeightScale == 0.0f ? fHudHeightScale = 0.8f : fHudHeightScale;
 
     if (fHudWidthScale && fHudHeightScale) 
     {
@@ -518,20 +519,20 @@ void ApplyIniOptions()
             }
         }
 
-		auto pattern = hook::pattern("50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8"); //0x5FA15B radio text
-		injector::WriteMemory(pattern.get(31).get<uint32_t>(3), &fCustomWideScreenWidthScaleDown, true);
-		injector::WriteMemory(pattern.get(32).get<uint32_t>(3), &fCustomWideScreenWidthScaleDown, true);
-		injector::WriteMemory(pattern.get(38).get<uint32_t>(3), &fCustomWideScreenWidthScaleDown, true);//0x620C45 replay
+        auto pattern = hook::pattern("50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8"); //0x5FA15B radio text
+        injector::WriteMemory(pattern.get(31).get<uint32_t>(3), &fCustomWideScreenWidthScaleDown, true);
+        injector::WriteMemory(pattern.get(32).get<uint32_t>(3), &fCustomWideScreenWidthScaleDown, true);
+        injector::WriteMemory(pattern.get(38).get<uint32_t>(3), &fCustomWideScreenWidthScaleDown, true);//0x620C45 replay
 
-		pattern = hook::pattern("50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 DB 05"); //0x5FA145 radio text
-		injector::WriteMemory(pattern.get(34).get<uint32_t>(3), &fCustomWideScreenHeightScaleDown, true);
-		pattern = hook::pattern("50 D8 0D ? ? ? ? D8 0D ? ? ? ? D8 05 ? ? ? ? D9 1C 24"); //0x5FA1C6
-		injector::WriteMemory(pattern.get(6).get<uint32_t>(3), &fCustomWideScreenHeightScaleDown, true);
-		pattern = hook::pattern("50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24");
-		injector::WriteMemory(pattern.get(90).get<uint32_t>(3), &fCustomWideScreenHeightScaleDown, true);//0x620C2F replay
+        pattern = hook::pattern("50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 DB 05"); //0x5FA145 radio text
+        injector::WriteMemory(pattern.get(34).get<uint32_t>(3), &fCustomWideScreenHeightScaleDown, true);
+        pattern = hook::pattern("50 D8 0D ? ? ? ? D8 0D ? ? ? ? D8 05 ? ? ? ? D9 1C 24"); //0x5FA1C6
+        injector::WriteMemory(pattern.get(6).get<uint32_t>(3), &fCustomWideScreenHeightScaleDown, true);
+        pattern = hook::pattern("50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24");
+        injector::WriteMemory(pattern.get(90).get<uint32_t>(3), &fCustomWideScreenHeightScaleDown, true);//0x620C2F replay
     }
 
-    fRadarWidthScale = iniReader.ReadFloat("MAIN", "RadarWidthScale", 0.0f);
+    fRadarWidthScale = iniReader.ReadFloat("MAIN", "RadarWidthScale", 0.0f); fRadarWidthScale == 0.0f ? fRadarWidthScale = 0.9f : fRadarWidthScale;
     if (fRadarWidthScale && !bIVRadarScaling)
     {
         for (size_t i = 0; i < CRadarPattern.size(); i++)
@@ -552,20 +553,20 @@ void ApplyIniOptions()
         pattern = hook::pattern("D8 0D ? ? ? ? DD DA D9 C0 D8 CA"); //0x4C5170 + 0x307 + 0x2 + 0x6
         injector::WriteMemory(pattern.get(1).get<uint32_t>(2), &fPlayerMarkerPos, true);
 
-		for (size_t i = 0; i < CDarkelDrawMessagesPattern.size(); i++)
-		{
-			uint32_t* p15625 = CDarkelDrawMessagesPattern.get(i).get<uint32_t>(2);
-			injector::WriteMemory(p15625, &fCustomWideScreenWidthScaleDown, true);
-		}
+        for (size_t i = 0; i < CDarkelDrawMessagesPattern.size(); i++)
+        {
+            uint32_t* p15625 = CDarkelDrawMessagesPattern.get(i).get<uint32_t>(2);
+            injector::WriteMemory(p15625, &fCustomWideScreenWidthScaleDown, true);
+        }
 
-		for (size_t i = 0; i < CDarkelDrawMessagesPattern2.size(); i++)
-		{
-			uint32_t* p2232143 = CDarkelDrawMessagesPattern2.get(i).get<uint32_t>(2);
-			injector::WriteMemory(p2232143, &fCustomWideScreenHeightScaleDown, true);
-		}
+        for (size_t i = 0; i < CDarkelDrawMessagesPattern2.size(); i++)
+        {
+            uint32_t* p2232143 = CDarkelDrawMessagesPattern2.get(i).get<uint32_t>(2);
+            injector::WriteMemory(p2232143, &fCustomWideScreenHeightScaleDown, true);
+        }
     }
 
-    fSubtitlesScale = iniReader.ReadFloat("MAIN", "SubtitlesScale", 0.0f);
+    fSubtitlesScale = iniReader.ReadFloat("MAIN", "SubtitlesScale", 0.0f); fSubtitlesScale == 0.0f ? fSubtitlesScale = 0.8f : fSubtitlesScale;
     if (fSubtitlesScale)
     {
         auto pattern = hook::pattern("D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59"); //0x556A02
@@ -585,16 +586,16 @@ void ApplyIniOptions()
         AspectRatioHeight = std::stoi(strchr(szForceAspectRatio, ':') + 1);
     }
 
-	szFOVControl = iniReader.ReadString("MAIN", "FOVControl", "0x40104A");
-	auto pattern = hook::pattern("53 E8 ? ? ? ? 5B C2 04 00 31 C0 5B C2 04 00"); //0x401040
-	if (pattern.size() > 0)
-	{
-		FOVControl = pattern.get(1).get<uint32_t>(16);
-		injector::WriteMemory<float>(FOVControl, 1.0f, true);
-	}
+    szFOVControl = iniReader.ReadString("MAIN", "FOVControl", "0x40104A");
+    auto pattern = hook::pattern("53 E8 ? ? ? ? 5B C2 04 00 31 C0 5B C2 04 00"); //0x401040
+    if (pattern.size() > 0)
+    {
+        FOVControl = pattern.get(1).get<uint32_t>(16);
+        injector::WriteMemory<float>(FOVControl, 1.0f, true);
+    }
 
-    bHideAABug = iniReader.ReadInteger("MAIN", "HideAABug", 1) != 0;
-    if (bHideAABug)
+    nHideAABug = iniReader.ReadInteger("MAIN", "HideAABug", 0);
+    if (nHideAABug)
     {
         auto pattern = hook::pattern("E8 ? ? ? ? A1 ? ? ? ? 50 E8"); //0x57FAA0
         injector::MakeJMP(injector::ReadRelativeOffset(pattern.get(15).get<uint32_t>(1), 4, true), Hide1pxAABug, true);
@@ -650,8 +651,8 @@ void ApplyIniOptions()
 
     if (iniReader.ReadInteger("MAIN", "FixVehicleLights", 1))
     {
-		pattern = hook::pattern("D9 C2 DE CB D9 C2 DE CB D9 05");
-		injector::WriteMemory<float>(*pattern.get(0).get<uint32_t*>(10), 2.0f, true); //car lights stretch 0x69590C
+        pattern = hook::pattern("D9 C2 DE CB D9 C2 DE CB D9 05");
+        injector::WriteMemory<float>(*pattern.get(0).get<uint32_t*>(10), 2.0f, true); //car lights stretch 0x69590C
     }
 
     bIVRadarScaling = iniReader.ReadInteger("MAIN", "IVRadarScaling", 0) != 0;
@@ -699,6 +700,13 @@ void ApplyIniOptions()
     {
         auto pattern = hook::pattern("8B 44 24 04 66 A3 ? ? ? ? C3"); //0x54FF20
         injector::WriteMemory(pattern.get(0).get<uint32_t>(0), 0x0001B866, true); // mov ax, 0001
+    }
+
+    bAllowAltTabbingWithoutPausing = iniReader.ReadInteger("MAIN", "AllowAltTabbingWithoutPausing", 0) != 0;
+    if (bAllowAltTabbingWithoutPausing)
+    {
+        auto pattern = hook::pattern("A0 ? ? ? ? B9 ? ? ? ? A2 ? ? ? ? A0 ? ? ? ?"); //0x4A4FD0
+        injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(0), 0xC3, true); // ret
     }
 }
 

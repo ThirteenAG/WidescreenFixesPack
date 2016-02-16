@@ -1,5 +1,6 @@
 #include "..\includes\stdafx.h"
 #include "..\includes\GTA\common.h"
+#include "..\includes\GTA\global.h"
 #include "..\includes\CPatch.h"
 
 float** pfWideScreenWidthScaleDown;
@@ -7,6 +8,8 @@ float** pfWideScreenHeightScaleDown;
 float** pfDynamicScreenFieldOfViewScale;
 float fSubtitlesScaleX, fSubtitlesScaleY;
 float fCustomRadarWidthScaleDown;
+extern float fDynamicScreenFieldOfViewScale;
+int(__cdecl* FindPlayerVehicleSA)(int, char);
 
 void InstallWSHPSFixes()
 {
@@ -15,7 +18,7 @@ void InstallWSHPSFixes()
 	injector::WriteMemory<uchar>(0x57FAE9, 0x14, true);
 	injector::WriteMemory(0x57FAF3, 0x456A006A, true);
 	injector::WriteMemory<uchar>(0x57FAF7, 0x8B, true);
-	injector::WriteMemory<short>(0x57FD02, 0xFF68, true);
+	injector::WriteMemory<short>(0x57FD02, (short)0xFF68, true);
 
 	//high speed bug
 	injector::WriteMemory<uchar>(0x574252, 0x3B, true);
@@ -360,10 +363,10 @@ void GetMemoryAddresses()
 	CDraw::pfScreenAspectRatio = (float*)0x00C3EFA4;
 	CDraw::pfScreenFieldOfView = (float*)0x008D5038;
 	CSprite2dDrawRect = (int(__cdecl *)(CRect const &, CRGBA const &)) 0x00727B60;
-	bWideScreen = 0xBA6793; BordersVar1 = 0xB6F0B8; BordersVar2 = 0xB6F0CC;
+	bWideScreen = (bool*)0xBA6793; BordersVar1 = (uint32_t*)0xB6F0B8; BordersVar2 = (uint32_t*)0xB6F0CC;
 	FindPlayerVehicleSA = (int(__cdecl *)(int playerNum, char a2)) 0x56E0D0;
 	FindPlayerVehicle = &FindPlayerVehicle2;
-	IsInCutscene = 0xB6F065;
+	bIsInCutscene = (bool*)0xB6F065;
 	pfWideScreenWidthScaleDown = (float**)0x00573F95;
 	pfWideScreenHeightScaleDown = (float**)0x00573F7F;
 }
@@ -463,13 +466,13 @@ DWORD WINAPI Init(LPVOID)
 	fHudHeightScale = iniReader.ReadFloat("MAIN", "HudHeightScale", 0.66666670937f);
 	fRadarWidthScale = iniReader.ReadFloat("MAIN", "RadarWidthScale", 0.80354591724f);
 	fSubtitlesScale = iniReader.ReadFloat("MAIN", "SubtitlesScale", 1.0f);
-	RestoreCutsceneFOV = iniReader.ReadInteger("MAIN", "RestoreCutsceneFOV", 1);
+	bRestoreCutsceneFOV = iniReader.ReadInteger("MAIN", "RestoreCutsceneFOV", 1) != 0;
 	fCarSpeedDependantFOV = iniReader.ReadFloat("MAIN", "CarSpeedDependantFOV", 0.0f);
-	DontTouchFOV = iniReader.ReadInteger("MAIN", "DontTouchFOV", 0);
+	bDontTouchFOV = iniReader.ReadInteger("MAIN", "DontTouchFOV", 0) != 0;
 	bool DisableWhiteCrosshairDot = iniReader.ReadInteger("MAIN", "DisableWhiteCrosshairDot", 1) != 0;
 	szForceAspectRatio = iniReader.ReadString("MAIN", "ForceAspectRatio", "auto");
-	HideAABug = iniReader.ReadInteger("MAIN", "HideAABug", 1);
-	SmartCutsceneBorders = iniReader.ReadInteger("MAIN", "SmartCutsceneBorders", 1);
+	nHideAABug = iniReader.ReadInteger("MAIN", "HideAABug", 1);
+	bSmartCutsceneBorders = iniReader.ReadInteger("MAIN", "SmartCutsceneBorders", 1) != 0;
 	bool bAltTab = iniReader.ReadInteger("MAIN", "AllowAltTabbingWithoutPausing", 0) != 0;
 
 	OverwriteResolution();
@@ -501,8 +504,8 @@ DWORD WINAPI Init(LPVOID)
 	injector::WriteMemory<float>(FOVControl, 1.0f, true);
 
 
-	if (!fHudWidthScale || !fHudHeightScale) { fHudWidthScale = 0.82962955833f; fHudHeightScale = 0.76923079438f; }
-	if (!fRadarWidthScale) { fRadarWidthScale = 0.82962955833f; }
+	if (!fHudWidthScale || !fHudHeightScale) { fHudWidthScale = 0.8f; fHudHeightScale = 0.8f; }
+	if (!fRadarWidthScale) { fRadarWidthScale = 0.82f; }
 	if (!fSubtitlesScale) { fSubtitlesScale = 1.0f; }
 
 
@@ -567,17 +570,19 @@ DWORD WINAPI Init(LPVOID)
 	DWORD TempPtr2 = TempPtr.as_int() + 9;
 	pfDynamicScreenFieldOfViewScale = (float**)TempPtr2;
 
-	if (HideAABug)
+	if (nHideAABug)
 	{
 		injector::MakeJMP(0x53E90E, Hide1pxAABug, true);
 	}
 
 	injector::WriteMemory<uchar>(0x53E2AD, 0x74); //Reverse g_MenuManager.widescreenOn to make widescreen off equal to borders off
 	injector::WriteMemory<uchar>(0x58BB90, 0x74); //for borders and text boxes.
-	if (SmartCutsceneBorders)
+	if (bSmartCutsceneBorders)
 	{
 		injector::MakeCALL(0x53E2B4, CCamera::DrawBordersForWideScreen, true);
 		injector::MakeCALL(0x5AF8C0, CCamera::DrawBordersForWideScreen, true);
+		//const float					fTextBoxPosY = 20.0f;
+		//Patch<const void*>(0x58BBCB, &fTextBoxPosY);
 	}
 
 	InstallCustomHooks();

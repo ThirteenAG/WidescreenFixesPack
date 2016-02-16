@@ -1,33 +1,31 @@
-#include <windows.h>
+#include "..\stdafx.h"
+#include "common.h"
 #include "CDraw.h"
-#include "RenderWare.h"
-#include "game.h"
+#define _USE_MATH_DEFINES
+#include "math.h"
 
-extern float fCustomAspectRatioHor, fCustomAspectRatioVer;
-extern float fHudWidthScale, fHudHeightScale;
-extern float fCustomWideScreenWidthScaleDown;
-extern float fCustomWideScreenHeightScaleDown;
-extern float fRadarWidthScale, fCustomRadarWidthScale, fCustomRadarRingWidthScale, fCustomRadarRingHeightScale, fSubtitlesScale;
+#define DEGREE_TO_RADIAN(fAngle) \
+	((fAngle) * (float)M_PI / 180.0f)
+#define RADIAN_TO_DEGREE(fAngle) \
+	((fAngle) * 180.0f / (float)M_PI)
+
 extern RsGlobalType* RsGlobal;
-
 float*  CDraw::pfScreenAspectRatio;
 float*  CDraw::pfScreenFieldOfView;
+float fScreenFieldOfViewVStd = (2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(70.0f * 0.5f)) / (4.0f / 3.0f))));
 
 extern float fWideScreenWidthScaleDown;
-extern float fDynamicScreenFieldOfViewScale;
-extern float fScreenFieldOfViewVStd;
-
-extern bool bRestoreCutsceneFOV;
-extern float fCarSpeedDependantFOV;
-extern bool bDontTouchFOV;
-extern float fFOVControlValue;
-extern unsigned int* FOVControl;
-extern float fRadarScaling;
-
+extern float fCustomAspectRatioHor, fCustomAspectRatioVer;
+float fDynamicScreenFieldOfViewScale;
 extern float fEmergencyVehiclesFix;
-
-extern int(__cdecl* FindPlayerVehicle)();
+extern float fFOVControlValue;
+extern uint32_t* FOVControl;
+extern float fCarSpeedDependantFOV;
+extern float fRadarScaling;
+extern bool bRestoreCutsceneFOV;
+extern bool bDontTouchFOV;
 extern bool* bIsInCutscene;
+extern int(__cdecl* FindPlayerVehicle)();
 
 void CDraw::CalculateAspectRatio()
 {
@@ -39,10 +37,8 @@ void CDraw::CalculateAspectRatio()
 		*pfScreenAspectRatio = (float)fCustomAspectRatioHor / (float)fCustomAspectRatioVer;
 	}
 
-	fWideScreenWidthScaleDown = (SCREEN_SCALE_WIDTH) / (*pfScreenAspectRatio / SCREEN_AR_NARROW);
-
-	fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE((float)atan(tan(DEGREE_TO_RADIAN(fScreenFieldOfViewVStd * 0.5f)) * *pfScreenAspectRatio))
-		* (1.0f / SCREEN_FOV_HORIZONTAL);
+	fWideScreenWidthScaleDown = (1.0f / 640.0f) / (*pfScreenAspectRatio / (4.0f / 3.0f));
+	fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE((float)atan(tan(DEGREE_TO_RADIAN(fScreenFieldOfViewVStd * 0.5f)) * *pfScreenAspectRatio)) * (1.0f / 70.0f);
 }
 
 inline float getDynamicScreenFieldOfView(float fFactor)

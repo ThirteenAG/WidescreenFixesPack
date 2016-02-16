@@ -1,17 +1,13 @@
-#include <Windows.h>
-#include "..\injector\injector.hpp"
+#include "..\stdafx.h"
 #include "CCamera.h"
-#include "CDraw.h"
-#include "CRect.h"
-#include "CRGBA.h"
-#include "RenderWare.h"
-#include "game.h"
+#include "common.h"
+
 extern RsGlobalType* RsGlobal;
-extern bool bHideAABug, bSmartCutsceneBorders;
 extern int(__cdecl* CSprite2dDrawRect)(class CRect const &, class CRGBA const &);
+extern uint32_t nHideAABug;
+extern bool* bWideScreen;
 extern uint32_t* BordersVar1;
 extern uint32_t* BordersVar2;
-extern bool* bWideScreen;
 
 void GetScreenRect(CRect& rect)
 {
@@ -42,7 +38,7 @@ void Hide1pxAABug()
 {
 	CSprite2dDrawRect(CRect(0.0f, -5.0f, (float)RsGlobal->MaximumWidth, 0.5f), CRGBA(0, 0, 0, 255));
 	CSprite2dDrawRect(CRect(-5.0f, -1.0f, 0.5f, (float)RsGlobal->MaximumHeight), CRGBA(0, 0, 0, 255));
-	if (bHideAABug == 2)
+	if (nHideAABug == 2)
 	{
 		CSprite2dDrawRect(CRect(0.0f, (float)RsGlobal->MaximumHeight - 1.5f, (float)RsGlobal->MaximumWidth, (float)RsGlobal->MaximumHeight + 5.0f), CRGBA(0, 0, 0, 255));
 		CSprite2dDrawRect(CRect((float)RsGlobal->MaximumWidth - 1.0f, 0.0f, (float)RsGlobal->MaximumWidth + 5.0f, (float)RsGlobal->MaximumHeight + 5.0f), CRGBA(0, 0, 0, 255));
