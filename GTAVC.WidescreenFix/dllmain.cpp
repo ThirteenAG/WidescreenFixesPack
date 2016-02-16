@@ -25,6 +25,7 @@ uint32_t* SetColorAddr;
 uint8_t* bFontColorA;
 uint8_t* bDropShadowPosition;
 uint8_t* bFontDropColorA;
+uint8_t* bBackgroundOn;
 void OverwriteResolution();
 
 void GetPatterns()
@@ -121,6 +122,7 @@ void GetMemoryAddresses()
         bFontColorA = *hook::pattern("C6 05 ? ? ? ? FF EB").get(0).get<uint8_t*>(2);
         bDropShadowPosition = *hook::pattern("8B 44 24 04 66 A3 ? ? ? ? C3").get(0).get<uint8_t*>(6); //0x97F860
         bFontDropColorA = *hook::pattern("A2 ? ? ? ? D9 EE D9 05 ? ? ? ? D8 15 ? ? ? ? DF E0").get(0).get<uint8_t*>(1); //0x97F865
+        bBackgroundOn = *hook::pattern("C6 05 ? ? ? ? 01 C3").get(6).get<uint8_t*>(2); //0x97F83B
 }
 
 void SilentPatchCompatibility()
@@ -438,6 +440,9 @@ void __declspec(naked)GetTextOriginalColor()
 injector::hook_back<int (__cdecl*)(float, float, unsigned int, unsigned short *, unsigned short *, float)> hbPrintString;
 int __cdecl PrintStringHook(float PosX, float PosY, unsigned int c, unsigned short *d, unsigned short *e, float f)
 {
+    if (*bBackgroundOn == 1)
+        return 0;
+
     unsigned char originalColorA = (originalColor >> 24) & 0xFF;
     unsigned char originalColorB = (originalColor >> 16) & 0xFF;
     unsigned char originalColorG = (originalColor >> 8) & 0xFF;
@@ -481,7 +486,6 @@ int __cdecl PrintStringHook(float PosX, float PosY, unsigned int c, unsigned sho
         hbPrintString.fun(PosX, PosY + 2.0f + 1.0f, c, d, e, f);
         *bFontColorA = originalColorA;
     }
-
     return result;
 }
 
@@ -491,6 +495,13 @@ void __cdecl PrintStringHook2(float PosX, float PosY, unsigned short* c)
     *bDropShadowPosition = 1;
     *bFontDropColorA = 0xFF;
     return hbPrintString2.fun(PosX, PosY, c);
+}
+
+void __cdecl SetDropShadowPosition(uint8_t Pos)
+{
+    *bDropShadowPosition = Pos;
+    if (Pos > 1 && Pos < 0x77)
+        *bDropShadowPosition = 1;
 }
 
 void ApplyIniOptions()
@@ -521,17 +532,18 @@ void ApplyIniOptions()
 
         auto pattern = hook::pattern("50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8"); //0x5FA15B radio text
         injector::WriteMemory(pattern.get(31).get<uint32_t>(3), &fCustomWideScreenWidthScaleDown, true);
-        injector::WriteMemory(pattern.get(32).get<uint32_t>(3), &fCustomWideScreenWidthScaleDown, true);
+        //injector::WriteMemory(pattern.get(32).get<uint32_t>(3), &fCustomWideScreenWidthScaleDown, true);
         injector::WriteMemory(pattern.get(38).get<uint32_t>(3), &fCustomWideScreenWidthScaleDown, true);//0x620C45 replay
 
         pattern = hook::pattern("50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 DB 05"); //0x5FA145 radio text
         injector::WriteMemory(pattern.get(34).get<uint32_t>(3), &fCustomWideScreenHeightScaleDown, true);
-        pattern = hook::pattern("50 D8 0D ? ? ? ? D8 0D ? ? ? ? D8 05 ? ? ? ? D9 1C 24"); //0x5FA1C6
-        injector::WriteMemory(pattern.get(6).get<uint32_t>(3), &fCustomWideScreenHeightScaleDown, true);
+        //pattern = hook::pattern("50 D8 0D ? ? ? ? D8 0D ? ? ? ? D8 05 ? ? ? ? D9 1C 24"); //0x5FA1C6
+        //injector::WriteMemory(pattern.get(6).get<uint32_t>(3), &fCustomWideScreenHeightScaleDown, true);
         pattern = hook::pattern("50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24");
         injector::WriteMemory(pattern.get(90).get<uint32_t>(3), &fCustomWideScreenHeightScaleDown, true);//0x620C2F replay
     }
 
+    bIVRadarScaling = iniReader.ReadInteger("MAIN", "IVRadarScaling", 0) != 0;
     fRadarWidthScale = iniReader.ReadFloat("MAIN", "RadarWidthScale", 0.0f); fRadarWidthScale == 0.0f ? fRadarWidthScale = 0.9f : fRadarWidthScale;
     if (fRadarWidthScale && !bIVRadarScaling)
     {
@@ -617,12 +629,13 @@ void ApplyIniOptions()
         jmpAddr = pattern.get(0).get<uint32_t>(7);
 
         //textbox
-        pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? 6A 00 E8 ? ? ? ? D9");
-        injector::WriteMemory(pattern.get(0).get<uint32_t>(1), 0xFFFF4B31, true); //background 
-        injector::WriteMemory(pattern.get(0).get<uint32_t>(6), 0xFFFF4AEC, true); //enable shadow
-        injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(11), 0x01, true); //shadow size
+        //pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? 6A 00 E8 ? ? ? ? D9");
+        //injector::WriteMemory(pattern.get(0).get<uint32_t>(1), 0xFFFF4B31, true); //background 0x55B59B
+        //injector::WriteMemory(pattern.get(0).get<uint32_t>(6), 0xFFFF4AEC, true); //enable shadow 0x55B5A0
+        //injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(11), 0x77, true); //shadow size 0x55B5A5 disabled due to bugs
+
         pattern = hook::pattern("6A 32 6A 64 6A 64 6A 64 E8");
-        injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(1), 0x00, true); // cursor shadow alpha
+        injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(1), 0x00, true); // cursor shadow alpha 0x4A35A2 
 
         pattern = hook::pattern("8D 4C 24 0C 68 FF 00 00 00 6A 00 6A 00 6A 00");
         injector::WriteMemory(pattern.get(2).get<uint32_t>(5), 0x00000000, true); //radio shadow 0x5FA1A5
@@ -655,7 +668,6 @@ void ApplyIniOptions()
         injector::WriteMemory<float>(*pattern.get(0).get<uint32_t*>(10), 2.0f, true); //car lights stretch 0x69590C
     }
 
-    bIVRadarScaling = iniReader.ReadInteger("MAIN", "IVRadarScaling", 0) != 0;
     if (bIVRadarScaling)
     {
         fCustomRadarPosXIV = 40.0f + 31.0f;
@@ -699,7 +711,8 @@ void ApplyIniOptions()
     if (bSmallerTextShadows || ReplaceTextShadowWithOutline)
     {
         auto pattern = hook::pattern("8B 44 24 04 66 A3 ? ? ? ? C3"); //0x54FF20
-        injector::WriteMemory(pattern.get(0).get<uint32_t>(0), 0x0001B866, true); // mov ax, 0001
+        //injector::WriteMemory(pattern.get(0).get<uint32_t>(0), 0x0001B866, true); // mov ax, 0001
+        injector::MakeJMP(pattern.get(0).get<uint32_t>(0), SetDropShadowPosition, true);
     }
 
     bAllowAltTabbingWithoutPausing = iniReader.ReadInteger("MAIN", "AllowAltTabbingWithoutPausing", 0) != 0;
