@@ -15,7 +15,7 @@ auto& gvm = injector::address_manager::singleton();
 hook::pattern dwGameLoadStatePattern, DxInputNeedsExclusive, EmergencyVehiclesFixPattern, RadarScalingPattern;
 hook::pattern MenuPattern, MenuPattern15625, RsSelectDevicePattern, CDarkelDrawMessagesPattern, CDarkelDrawMessagesPattern2, CParticleRenderPattern;
 hook::pattern DrawHudHorScalePattern, DrawHudVerScalePattern, CSpecialFXRender2DFXsPattern, CSceneEditDrawPattern, sub61DEB0Pattern;
-hook::pattern MenuPattern1, MenuPattern2, MenuPattern3, MenuPattern4, MenuPattern5, MenuPattern6, MenuPattern7, MenuPattern8, MenuPattern9, MenuPattern10;
+hook::pattern MenuPattern1, MenuPattern2, MenuPattern3, MenuPattern4, MenuPattern5, MenuPattern6, MenuPattern7, MenuPattern8, MenuPattern9, MenuPattern10, MenuPattern11;
 hook::pattern ResolutionPattern0, ResolutionPattern1, ResolutionPattern2, ResolutionPattern3, ResolutionPattern4, ResolutionPattern5;
 hook::pattern CRadarPattern, BordersPattern;
 uint32_t* dwGameLoadState;
@@ -55,6 +55,7 @@ void GetPatterns()
     MenuPattern8 = hook::pattern("89 04 24 DB 04 24 D8 0D"); //0x68C348
     MenuPattern9 = hook::pattern("89 44 24 08 DB 44 24 08 D8 0D"); //0x68D5C4
     MenuPattern10 = hook::pattern("89 44 24 10 DB 44 24 10 D8 0D"); //0x68D50C Loading game. Please wait...
+    MenuPattern11 = hook::pattern("D8 05 ? ? ? ? DD DA D9 46 44"); //0x497AC1 Related to map scrolling position and something else
 
     char pattern_str[20];
     union {
@@ -289,6 +290,7 @@ void FixMenu()
 
     float fMapPos = (640.0f * (*CDraw::pfScreenAspectRatio / (4.0f / 3.0f))) / 2.0f;
     injector::WriteMemory<float>(MenuPattern7.get(0).get<uint32_t>(17), fMapPos, true);
+    injector::WriteMemory<float>(*MenuPattern11.get(0).get<uint32_t*>(2), fMapPos, true);
 
     float fMapBottomTextScale = 0.00046875002f / (*CDraw::pfScreenAspectRatio / (4.0f / 3.0f));
     injector::WriteMemory<float>(*MenuPattern8.get(9).get<uint32_t*>(8), fMapBottomTextScale, true);
