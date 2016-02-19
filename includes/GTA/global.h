@@ -11,7 +11,7 @@ float fCustomAspectRatioHor, fCustomAspectRatioVer;
 float fRadarWidthScale, fCustomRadarWidthScale;
 float fPlayerMarkerPos;
 char *szForceAspectRatio;
-char *szFOVControl;
+bool bFOVControl;
 float fEmergencyVehiclesFix;
 float fFOVControlValue;
 uint32_t* FOVControl;

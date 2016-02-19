@@ -10,7 +10,6 @@ ofstream logfile;
 #endif // _LOG
 
 bool bDelay;
-auto& gvm = injector::address_manager::singleton();
 
 hook::pattern dwGameLoadStatePattern, DxInputNeedsExclusive, EmergencyVehiclesFixPattern, RadarScalingPattern;
 hook::pattern MenuPattern, MenuPattern15625, RsSelectDevicePattern, CDarkelDrawMessagesPattern, CDarkelDrawMessagesPattern2, CParticleRenderPattern;
@@ -600,11 +599,11 @@ void ApplyIniOptions()
         AspectRatioHeight = std::stoi(strchr(szForceAspectRatio, ':') + 1);
     }
 
-    szFOVControl = iniReader.ReadString("MAIN", "FOVControl", "0x40104A");
-    auto pattern = hook::pattern("53 E8 ? ? ? ? 5B C2 04 00 31 C0 5B C2 04 00"); //0x401040
-    if (pattern.size() > 0)
+    bFOVControl = iniReader.ReadString("MAIN", "FOVControl", "1") != 0;
+    auto pattern = hook::pattern("DE D9 DE D9 EB E9"); //0x576686 1.0
+    if (bFOVControl && pattern.size() > 0)
     {
-        FOVControl = pattern.get(1).get<uint32_t>(16);
+        FOVControl = pattern.get(0).get<uint32_t>(6);
         injector::WriteMemory<float>(FOVControl, 1.0f, true);
     }
 
