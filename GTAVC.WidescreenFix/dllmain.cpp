@@ -33,7 +33,7 @@ void GetPatterns()
     DxInputNeedsExclusive = hook::pattern("8B 0D ? ? ? ? 83 EC 10 8D 04 24 51 50"); //0x601740
     EmergencyVehiclesFixPattern = hook::pattern("D9 9B F4 00 00 00 D9 83 F0 00 00 00"); //0x46DEB7
     RadarScalingPattern = hook::pattern("D9 1D ? ? ? ? EB 46 "); //0x4C5D0A
-    MenuPattern = hook::pattern("3D 80 02 00 00"); //0x48F482
+    //MenuPattern = hook::pattern("3D 80 02 00 00"); //0x48F482
     RsSelectDevicePattern = hook::pattern("C7 40 08 01 00 00 00 B8 01 00 00 00"); //0x600F97
     BordersPattern = hook::pattern("74 ? B9 ? ? ? ? E8"); //0x54A223 //0x4A61EE
 
@@ -285,7 +285,7 @@ void FixMenu()
     float fMapLegendIconsTextScale = 0.000859375f/ (*CDraw::pfScreenAspectRatio / (4.0f / 3.0f));
     injector::WriteMemory<float>(*MenuPattern5.get(10).get<uint32_t*>(10), fMapLegendIconsTextScale, true);
 
-    injector::WriteMemory<float>(*MenuPattern6.get(0).get<uint32_t*>(2), fWideScreenWidthScaleDown, true); //fRadarAndBlipsScale
+    injector::WriteMemory<float>(*MenuPattern6.get(0).get<uint32_t*>(2), fWideScreenWidthScaleDown, true); //fRadarAndBlipsScale, replaces entire CRadarPattern addresses directly, so no need to use it in HudFix
 
     float fMapPos = (640.0f * (*CDraw::pfScreenAspectRatio / (4.0f / 3.0f))) / 2.0f;
     injector::WriteMemory<float>(MenuPattern7.get(0).get<uint32_t>(17), fMapPos, true);
@@ -542,29 +542,6 @@ void ApplyIniOptions()
         //injector::WriteMemory(pattern.get(6).get<uint32_t>(3), &fCustomWideScreenHeightScaleDown, true);
         pattern = hook::pattern("50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24");
         injector::WriteMemory(pattern.get(90).get<uint32_t>(3), &fCustomWideScreenHeightScaleDown, true);//0x620C2F replay
-    }
-
-    bIVRadarScaling = iniReader.ReadInteger("MAIN", "IVRadarScaling", 0) != 0;
-    fRadarWidthScale = iniReader.ReadFloat("MAIN", "RadarWidthScale", 0.0f); fRadarWidthScale == 0.0f ? fRadarWidthScale = 0.9f : fRadarWidthScale;
-    if (fRadarWidthScale && !bIVRadarScaling)
-    {
-        for (size_t i = 0; i < CRadarPattern.size(); i++)
-        {
-            if ((i >= 0 && i < 6) || i == 19 || i == 33)
-            {
-                uint32_t* p15625 = CRadarPattern.get(i).get<uint32_t>(2);
-                injector::WriteMemory(p15625, &fCustomRadarWidthScale, true); //MenuLotsOfStuffScale
-            }
-        }
-
-        injector::WriteMemory(DrawHudHorScalePattern.get(66).get<uint32_t>(2), &fCustomRadarWidthScale, true);
-        injector::WriteMemory(DrawHudHorScalePattern.get(67).get<uint32_t>(2), &fCustomRadarWidthScale, true);
-
-        auto pattern = hook::pattern("D8 0D ? ? ? ? DD DA D9 05 ? ? ? ? D8 CA"); //0x4C4200 + 0xF4 + 0x2 + 0x6
-        injector::WriteMemory(pattern.get(2).get<uint32_t>(2), &fPlayerMarkerPos, true);
-
-        pattern = hook::pattern("D8 0D ? ? ? ? DD DA D9 C0 D8 CA"); //0x4C5170 + 0x307 + 0x2 + 0x6
-        injector::WriteMemory(pattern.get(1).get<uint32_t>(2), &fPlayerMarkerPos, true);
 
         for (size_t i = 0; i < CDarkelDrawMessagesPattern.size(); i++)
         {
@@ -577,6 +554,29 @@ void ApplyIniOptions()
             uint32_t* p2232143 = CDarkelDrawMessagesPattern2.get(i).get<uint32_t>(2);
             injector::WriteMemory(p2232143, &fCustomWideScreenHeightScaleDown, true);
         }
+    }
+
+    bIVRadarScaling = iniReader.ReadInteger("MAIN", "IVRadarScaling", 0) != 0;
+    fRadarWidthScale = iniReader.ReadFloat("MAIN", "RadarWidthScale", 0.0f); fRadarWidthScale == 0.0f ? fRadarWidthScale = 0.9f : fRadarWidthScale;
+    if (fRadarWidthScale && !bIVRadarScaling)
+    {
+        for (size_t i = 0; i < CRadarPattern.size(); i++)
+        {
+            if ((i >= 0 && i < 6) || i == 19 || i == 33)
+            {
+                uint32_t* p15625 = CRadarPattern.get(i).get<uint32_t>(2);
+                injector::WriteMemory(p15625, &fCustomRadarWidthScale, true);
+            }
+        }
+
+        injector::WriteMemory(DrawHudHorScalePattern.get(66).get<uint32_t>(2), &fCustomRadarWidthScale, true);
+        injector::WriteMemory(DrawHudHorScalePattern.get(67).get<uint32_t>(2), &fCustomRadarWidthScale, true);
+
+        auto pattern = hook::pattern("D8 0D ? ? ? ? DD DA D9 05 ? ? ? ? D8 CA"); //0x4C4200 + 0xF4 + 0x2 + 0x6
+        injector::WriteMemory(pattern.get(2).get<uint32_t>(2), &fPlayerMarkerPos, true);
+
+        pattern = hook::pattern("D8 0D ? ? ? ? DD DA D9 C0 D8 CA"); //0x4C5170 + 0x307 + 0x2 + 0x6
+        injector::WriteMemory(pattern.get(1).get<uint32_t>(2), &fPlayerMarkerPos, true);
     }
 
     fSubtitlesScale = iniReader.ReadFloat("MAIN", "SubtitlesScale", 0.0f); fSubtitlesScale == 0.0f ? fSubtitlesScale = 0.8f : fSubtitlesScale;
@@ -673,7 +673,7 @@ void ApplyIniOptions()
     {
         fCustomRadarPosXIV = 40.0f + 31.0f;
         auto pattern = hook::pattern("D8 05 ? ? ? ? DE C1 D9 5C 24 28");
-        injector::WriteMemory<float>(*pattern.get(0).get<uint32_t*>(2), fCustomRadarPosXIV); //0x68FD2C
+        injector::WriteMemory<float>(*pattern.get(0).get<uint32_t*>(2), fCustomRadarPosXIV, true); //0x68FD2C
         fCustomRadarWidthIV = 94.0f - 5.5f;
         pattern = hook::pattern("D8 0D ? ? ? ? DD D9 D9 C2 D8 C9 D8 0D");
         injector::WriteMemory<float>(*pattern.get(0).get<uint32_t*>(2), fCustomRadarWidthIV, true); //0x68FD24
@@ -699,9 +699,9 @@ void ApplyIniOptions()
         pattern = hook::pattern("D8 0D ? ? ? ? D8 05 ? ? ? ? D8 05 ? ? ? ? D9 9C 24 98 04 00 00");
         injector::WriteMemory<float>(*pattern.get(0).get<uint32_t*>(2), fCustomRadarRingWidthIV, true); //0x697C1C
 
-        fCustomRadarPosYIV = 116.0f - 7.5f;
+        fCustomRadarRingPosYIV = 116.0f - 7.5f;
         pattern = hook::pattern("D9 05 ? ? ? ? D8 CA DA 6C 24 74 51");
-        injector::WriteMemory<float>(*pattern.get(0).get<uint32_t*>(2), fCustomRadarPosYIV); //0x697C18
+        injector::WriteMemory<float>(*pattern.get(0).get<uint32_t*>(2), fCustomRadarRingPosYIV, true); //0x697C18
 
         fCustomRadarRingHeightIV = 76.0f + 5.0f;
         pattern = hook::pattern("D9 05 ? ? ? ? D8 CA D8 C1");
@@ -778,6 +778,21 @@ DWORD WINAPI Init(LPVOID)
                 fPlayerMarkerPos = (94.0f - 5.5f) * fRadarWidthScale;
         }
     }; injector::MakeInline<LoadState>(dwGameLoadStatePattern.get(0).get<uint32_t>(0), dwGameLoadStatePattern.get(0).get<uint32_t>(10));
+
+    if (bDelay)
+    {
+        pattern = hook::pattern("A1 ? ? ? ? 51 8B 38 50 FF 57 20 85 C0");
+        static auto dword_94DDA8 = *pattern.get(0).get<uint32_t*>(1);
+        struct SteamCompat
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                regs.eax = *dword_94DDA8;
+                CDraw::CalculateAspectRatio();
+                FixMenu();
+            }
+        }; injector::MakeInline<SteamCompat>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(5));
+    }
     return 0;
 }
 
