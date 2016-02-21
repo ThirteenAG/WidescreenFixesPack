@@ -472,6 +472,8 @@ void ApplyIniOptions()
     {
         AspectRatioWidth = std::stoi(szForceAspectRatio);
         AspectRatioHeight = std::stoi(strchr(szForceAspectRatio, ':') + 1);
+        fCustomAspectRatioHor = static_cast<float>(AspectRatioWidth);
+        fCustomAspectRatioVer = static_cast<float>(AspectRatioHeight);
     }
 
     bFOVControl = iniReader.ReadString("MAIN", "FOVControl", "1") != 0;

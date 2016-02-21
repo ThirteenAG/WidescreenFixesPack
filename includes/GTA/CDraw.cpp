@@ -34,7 +34,7 @@ void CDraw::CalculateAspectRatio()
 		*pfScreenAspectRatio = (float)RsGlobal->MaximumWidth / (float)RsGlobal->MaximumHeight;
 	}
 	else {
-		*pfScreenAspectRatio = (float)fCustomAspectRatioHor / (float)fCustomAspectRatioVer;
+		*pfScreenAspectRatio = fCustomAspectRatioHor / fCustomAspectRatioVer;
 	}
 
 	fWideScreenWidthScaleDown = (1.0f / 640.0f) / (*pfScreenAspectRatio / (4.0f / 3.0f));

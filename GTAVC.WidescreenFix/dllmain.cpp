@@ -585,6 +585,10 @@ void ApplyIniOptions()
     {
         auto pattern = hook::pattern("D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59"); //0x556A02
         injector::WriteMemory<float>(*pattern.get(6).get<uint32_t*>(2), 1.2f * fSubtitlesScale, true);
+
+        pattern = hook::pattern("D8 0D ? ? ? ? D9 1C 24 DB 05 ? ? ? ? 50"); //0x55B010
+        injector::WriteMemory<float>(*pattern.get(22).get<uint32_t*>(2), 1.22f * fSubtitlesScale, true);
+
         pattern = hook::pattern("D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? A1 ? ? ? ? 59"); //0x55AF5E
         injector::WriteMemory<float>(*pattern.get(0).get<uint32_t*>(2), 0.57999998f * fSubtitlesScale, true);
     }
@@ -598,6 +602,8 @@ void ApplyIniOptions()
     {
         AspectRatioWidth = std::stoi(szForceAspectRatio);
         AspectRatioHeight = std::stoi(strchr(szForceAspectRatio, ':') + 1);
+        fCustomAspectRatioHor = static_cast<float>(AspectRatioWidth);
+        fCustomAspectRatioVer = static_cast<float>(AspectRatioHeight);
     }
 
     bFOVControl = iniReader.ReadString("MAIN", "FOVControl", "1") != 0;
