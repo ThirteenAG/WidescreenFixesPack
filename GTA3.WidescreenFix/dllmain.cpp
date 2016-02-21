@@ -23,6 +23,7 @@ uint32_t funcCCameraAvoidTheGeometryJmp;
 uint32_t* SetColorAddr;
 uint32_t* nFontColor;
 uint8_t* bBackgroundOn;
+bool* bWantsToDrawHud;
 void OverwriteResolution();
 
 void GetPatterns()
@@ -91,11 +92,38 @@ void GetMemoryAddresses()
     SetColorAddr = hook::pattern("53 83 EC 10 8B 5C 24 18 8A 13").get(0).get<uint32_t>(0);
     nFontColor = *hook::pattern("88 15 ? ? ? ? 8A 43 01 A2 ? ? ? ? 8A 4B 02 88 0D ? ? ? ? 8A 43 03 A2 ? ? ? ? D9 EE").get(0).get<uint32_t*>(2);
     bBackgroundOn = *hook::pattern("C6 05 ? ? ? ? 01 C3").get(2).get<uint8_t*>(2); //0x8F3197
+    bWantsToDrawHud = *hook::pattern("80 3D ? ? ? ? 01 8B 5C 24 64 8B 6C 24 54").get(0).get<bool*>(2); //0x4A5877
+}
+
+void ShowRadarTrace(float fX, float fY, unsigned int nScale, BYTE r, BYTE g, BYTE b, BYTE a)
+{
+    if (*bWantsToDrawHud == true && !*bIsInCutscene)
+    {
+        float	fWidthMult = fWideScreenWidthScaleDown;
+        float	fHeightMult = 1.0f / 480.0f;
+
+        CSprite2dDrawRect(CRect(fX - ((nScale + 1.0f) * fWidthMult * RsGlobal->MaximumWidth),
+                                fY + ((nScale + 1.0f) * fHeightMult * RsGlobal->MaximumHeight),
+                                fX + ((nScale + 1.0f) * fWidthMult * RsGlobal->MaximumWidth),
+                                fY - ((nScale + 1.0f) * fHeightMult * RsGlobal->MaximumHeight)),
+                                CRGBA(0, 0, 0, a));
+
+        CSprite2dDrawRect(CRect(fX - (nScale * fWidthMult * RsGlobal->MaximumWidth),
+                                fY + (nScale * fHeightMult * RsGlobal->MaximumHeight),
+                                fX + (nScale * fWidthMult * RsGlobal->MaximumWidth),
+                                fY - (nScale * fHeightMult * RsGlobal->MaximumHeight)),
+                                CRGBA(r, g, b, a));
+    }
 }
 
 void SilentPatchCompatibility()
 {
     OverwriteResolution();
+    auto pattern = hook::pattern("FF 74 24 60 FF 74 24 60 E8");
+    injector::MakeCALL(pattern.get(2).get<uint8_t*>(8), ShowRadarTrace, true); //0x4A45FC
+    injector::MakeCALL(pattern.get(3).get<uint8_t*>(8), ShowRadarTrace, true); //0x4A47CD
+    injector::MakeCALL(pattern.get(4).get<uint8_t*>(8), ShowRadarTrace, true); //0x4A4A0F
+    injector::MakeCALL(pattern.get(5).get<uint8_t*>(8), ShowRadarTrace, true); //0x4A4BD9
     //anything else?
 }
 
@@ -143,6 +171,7 @@ void OverwriteResolution()
     injector::WriteMemory<uint8_t>(ResolutionPattern4.get(0).get<uint32_t>(15), 0xEB, true); //jl      short loc_600E60 > jmp      short loc_600E60
 
     injector::MakeNOP(ResolutionPattern5.get(0).get<uint32_t>(5), 5, true);
+    injector::WriteMemory<uint16_t>(ResolutionPattern5.get(0).get<uint32_t>(5), 0x07EB, true);
 }
 
 void FixAspectRatio()
@@ -599,12 +628,11 @@ DWORD WINAPI Init(LPVOID)
         while (!(pattern.size() > 0))
             pattern = hook::pattern("6A 02 6A 00 6A 00 68 01 20 00 00");
     }
-    
-    GetPatterns();
 
     //Immediate changes
-    GetMemoryAddresses();
+    GetPatterns();
     OverwriteResolution();
+    GetMemoryAddresses();
     FixAspectRatio();
     FixFOV();
     RsSelectDeviceHook();

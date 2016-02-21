@@ -161,7 +161,7 @@ void OverwriteResolution()
     CIniReader iniReader("");
     ResX = iniReader.ReadInteger("MAIN", "ResX", -1);
     ResY = iniReader.ReadInteger("MAIN", "ResY", -1);
-    bSmallerTextShadows = iniReader.ReadInteger("MAIN", "SmallerTextShadows", 1) != 0;
+    //bSmallerTextShadows = iniReader.ReadInteger("MAIN", "SmallerTextShadows", 1) != 0;
 
     if (!ResX || !ResY) {
         HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
@@ -193,6 +193,7 @@ void OverwriteResolution()
     injector::WriteMemory<uint8_t>(ResolutionPattern4.get(0).get<uint32_t>(15), 0xEB, true); //jl      short loc_600E60 > jmp      short loc_600E60
     
     injector::MakeNOP(ResolutionPattern5.get(0).get<uint32_t>(5), 5, true);
+    injector::WriteMemory<uint16_t>(ResolutionPattern5.get(0).get<uint32_t>(5), 0x07EB, true);
 }
 
 void FixAspectRatio()
@@ -743,13 +744,12 @@ DWORD WINAPI Init(LPVOID)
         while (!(pattern.size() > 0))
             pattern = hook::pattern("6A 02 6A 00 6A 00 68 01 20 00 00");
     }
-    
-    GetPatterns();
 
     //Immediate changes
+    GetPatterns();
+    OverwriteResolution();
     DxInputNeedsExclusive.size() > 0 ? injector::WriteMemory<uint32_t>(DxInputNeedsExclusive.get(0).get<uint32_t>(0), 0xC3C030, true) : nullptr; //mouse fix
     GetMemoryAddresses();
-    OverwriteResolution();
     FixAspectRatio();
     FixFOV();
     RsSelectDeviceHook();
