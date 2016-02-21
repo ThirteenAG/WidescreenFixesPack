@@ -191,13 +191,6 @@ void WINAPI InstallCustomHooks() {
 	CPatch::SetPointer(0x0058A07C, &fCustomWideScreenHeightScaleDown);							// Weekday text height scale.
 	CPatch::SetPointer(0x0058A092, &fCustomWideScreenWidthScaleDown);							// Weekday text width scale.
 	CPatch::SetPointer(0x0058A136, &fCustomWideScreenWidthScaleDown);							// Weekday text X position scale.
-																								// Trip skip.
-	CPatch::SetPointer(0x0058A17A, &fCustomWideScreenWidthScaleDown);							// Sprite X position and width scale.
-	CPatch::SetPointer(0x0058A19B, &fCustomWideScreenHeightScaleDown);							// Sprite Y position and height scale.
-	CPatch::SetPointer(0x0058A209, &fCustomWideScreenHeightScaleDown);							// Text height scale.
-	CPatch::SetPointer(0x0058A21F, &fCustomWideScreenWidthScaleDown);							// Text width scale.
-	CPatch::SetPointer(0x0058A2B2, &fCustomWideScreenHeightScaleDown);							// Text Y position scale.
-	CPatch::SetPointer(0x0058A2C2, &fCustomWideScreenWidthScaleDown);							// Text X position scale.
 																								// Map.
 	CPatch::SetPointer(0x0058A443, &fCustomRadarWidthScaleDown);						        // Radar ring plane sprite X position and width scale.
 																								//CPatch::SetPointer(0x0058A475, &fCustomWideScreenHeightScaleDown);						// Radar ring plane sprite Y position and height scale.
@@ -462,9 +455,9 @@ DWORD WINAPI Init(LPVOID)
 	CIniReader iniReader("");
 	ResX = iniReader.ReadInteger("MAIN", "ResX", -1);
 	ResY = iniReader.ReadInteger("MAIN", "ResY", -1);
-	fHudWidthScale = iniReader.ReadFloat("MAIN", "HudWidthScale", 0.62221788786f);
-	fHudHeightScale = iniReader.ReadFloat("MAIN", "HudHeightScale", 0.66666670937f);
-	fRadarWidthScale = iniReader.ReadFloat("MAIN", "RadarWidthScale", 0.80354591724f);
+	fHudWidthScale = iniReader.ReadFloat("MAIN", "HudWidthScale", 0.8f);
+	fHudHeightScale = iniReader.ReadFloat("MAIN", "HudHeightScale", 0.8f);
+	fRadarWidthScale = iniReader.ReadFloat("MAIN", "RadarWidthScale", 0.82f);
 	fSubtitlesScale = iniReader.ReadFloat("MAIN", "SubtitlesScale", 1.0f);
 	bRestoreCutsceneFOV = iniReader.ReadInteger("MAIN", "RestoreCutsceneFOV", 1) != 0;
 	fCarSpeedDependantFOV = iniReader.ReadFloat("MAIN", "CarSpeedDependantFOV", 0.0f);
@@ -499,15 +492,13 @@ DWORD WINAPI Init(LPVOID)
 	}
 
 
-	szFOVControl = iniReader.ReadString("MAIN", "FOVControl", "0x6FF41B");
-	sscanf_s(szFOVControl, "%X", &FOVControl);
+	bFOVControl = iniReader.ReadString("MAIN", "FOVControl", "1") != 0;
+	FOVControl = (uint32_t*)0x6FF41B;
 	injector::WriteMemory<float>(FOVControl, 1.0f, true);
-
 
 	if (!fHudWidthScale || !fHudHeightScale) { fHudWidthScale = 0.8f; fHudHeightScale = 0.8f; }
 	if (!fRadarWidthScale) { fRadarWidthScale = 0.82f; }
 	if (!fSubtitlesScale) { fSubtitlesScale = 1.0f; }
-
 
 	GetMemoryAddresses();
 
@@ -581,8 +572,7 @@ DWORD WINAPI Init(LPVOID)
 	{
 		injector::MakeCALL(0x53E2B4, CCamera::DrawBordersForWideScreen, true);
 		injector::MakeCALL(0x5AF8C0, CCamera::DrawBordersForWideScreen, true);
-		//const float					fTextBoxPosY = 20.0f;
-		//Patch<const void*>(0x58BBCB, &fTextBoxPosY);
+		injector::WriteMemory<uchar>(0x58BB93, 0x00); //text box offset in cutscenes
 	}
 
 	InstallCustomHooks();
