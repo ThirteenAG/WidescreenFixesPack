@@ -660,6 +660,18 @@ DWORD WINAPI Init(LPVOID)
             fPlayerMarkerPos = 94.0f * fRadarWidthScale;
             if (bIVRadarScaling)
                 fPlayerMarkerPos = (94.0f - 5.5f) * fRadarWidthScale;
+
+            //SilentPatchCompatibility(); not needed atm
+
+            //WIDESCREEN to BORDERS text
+            auto pattern = hook::pattern("B9 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? C2 04 00");
+            auto GetTextCall = pattern.get(0).get<uint32_t>(10);
+            auto GetText = injector::GetBranchDestination(GetTextCall, true).as_int();
+            auto pfGetText = (wchar_t *(__thiscall *)(int, char *))GetText;
+            auto TheText = *pattern.get(0).get<uint32_t*>(1);
+
+            wchar_t* ptr = pfGetText((int)TheText, "FED_WIS");
+            wcscpy(ptr, L"BORDERS");
         }
     }; injector::MakeInline<LoadState>(dwGameLoadStatePattern.get(0).get<uint32_t>(0), dwGameLoadStatePattern.get(0).get<uint32_t>(10));
     return 0;
