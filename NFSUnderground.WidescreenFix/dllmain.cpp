@@ -412,6 +412,13 @@ DWORD WINAPI Init(LPVOID)
 
 	if (bCustomUsrDir)
 	{
+		char			moduleName[MAX_PATH];
+		GetModuleFileName(NULL, moduleName, MAX_PATH);
+		char* tempPointer = strrchr(moduleName, '\\');
+		*(tempPointer + 1) = '\0';
+		strcat(moduleName, szCustomUserFilesDirectoryInGameDir);
+		strcpy(szCustomUserFilesDirectoryInGameDir, moduleName);
+
 		union {
 			DWORD* Int;
 			unsigned char Byte[4];

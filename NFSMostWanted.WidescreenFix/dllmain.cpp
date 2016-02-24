@@ -267,6 +267,13 @@ DWORD WINAPI Init(LPVOID)
 
 		if (bCustomUsrDir)
 		{
+			char			moduleName[MAX_PATH];
+			GetModuleFileName(NULL, moduleName, MAX_PATH);
+			char* tempPointer = strrchr(moduleName, '\\');
+			*(tempPointer + 1) = '\0';
+			strcat(moduleName, szCustomUserFilesDirectoryInGameDir);
+			strcpy(szCustomUserFilesDirectoryInGameDir, moduleName);
+
 			auto pattern = hook::pattern("50 6A 00 6A 00 68 ? 80 00 00 6A 00");
 			for (size_t i = 0; i < pattern.size(); i++)
 			{

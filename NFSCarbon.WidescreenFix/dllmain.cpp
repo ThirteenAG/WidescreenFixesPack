@@ -1,5 +1,7 @@
 #include "..\includes\stdafx.h"
 #include "..\includes\hooking\Hooking.Patterns.h"
+#include <iostream>
+#include <string>
 HWND hWnd;
 bool bDelay;
 
@@ -14,7 +16,7 @@ float MinimapPosX, MinimapPosY;
 DWORD jmpAddr, jmpAddr2;
 char* szCustomUserFilesDirectoryInGameDir;
 
-HRESULT WINAPI SHGetFolderPathAHook(HWND hwnd, int csidl, HANDLE hToken, DWORD dwFlags, LPSTR pszPath)
+HRESULT WINAPI SHGetFolderPathAHook(HWND /*hwnd*/, int /*csidl*/, HANDLE /*hToken*/, DWORD /*dwFlags*/, LPSTR pszPath)
 {
 	CreateDirectory(szCustomUserFilesDirectoryInGameDir, NULL);
 	strcpy(pszPath, szCustomUserFilesDirectoryInGameDir);
@@ -32,24 +34,34 @@ void __declspec(naked) FOVHook()
 	}
 }
 
+void WINAPI SetWindowLongHook(HWND hWnd, int nIndex, LONG dwNewLong)
+{
+	dwNewLong |= WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU;
+
+	SetWindowLong(hWnd, nIndex, dwNewLong);
+	SetWindowPos(hWnd, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
+}
+
 DWORD WINAPI Init(LPVOID)
 {
 	CIniReader iniReader("");
 	ResX = iniReader.ReadInteger("MAIN", "ResX", 0);
 	ResY = iniReader.ReadInteger("MAIN", "ResY", 0);
-	bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) == 1;
-	bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) == 1;
-	bHudMode = iniReader.ReadInteger("MAIN", "HudMode", 1) == 1;
-	bool bHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1) == 1;
-	bool bFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1) == 1;
+	bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) != 0;
+	bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) != 0;
+	bHudMode = iniReader.ReadInteger("MAIN", "HudMode", 1) != 0;
+	bool bHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1) != 0;
+	bool bFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1) != 0;
 	float fPiPPos1 = iniReader.ReadFloat("HUD", "PiPPos1", 0.203125f);
 	float fPiPPos2 = iniReader.ReadFloat("HUD", "PiPPos2", 0.001953f);
 	float fRearviewMirrorPos1 = iniReader.ReadFloat("HUD", "RearviewMirrorPos1", -0.308594f);
 	float fRearviewMirrorPos2 = iniReader.ReadFloat("HUD", "RearviewMirrorPos2", 0.654053f);
-	bool bLightingFix = iniReader.ReadInteger("MISC", "LightingFix", 0) == 1;
-	bool bCarShadowFix = iniReader.ReadInteger("MISC", "CarShadowFix", 0) == 1;
-	bool bXbox360Scaling = iniReader.ReadInteger("MAIN", "Xbox360Scaling", 1) == 1;
-	szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "");
+	int nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
+	bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 1) != 0;
+	bool bLightingFix = iniReader.ReadInteger("MISC", "LightingFix", 0) != 0;
+	bool bCarShadowFix = iniReader.ReadInteger("MISC", "CarShadowFix", 0) != 0;
+	bool bXbox360Scaling = iniReader.ReadInteger("MAIN", "Xbox360Scaling", 1) != 0;
+	szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
 	bool bCustomUsrDir;
 	if (strncmp(szCustomUserFilesDirectoryInGameDir, "0", 1) != 0)
 		bCustomUsrDir = true;
@@ -226,6 +238,13 @@ DWORD WINAPI Init(LPVOID)
 
 	if (bCustomUsrDir)
 	{
+		char			moduleName[MAX_PATH];
+		GetModuleFileName(NULL, moduleName, MAX_PATH);
+		char* tempPointer = strrchr(moduleName, '\\');
+		*(tempPointer + 1) = '\0';
+		strcat(moduleName, szCustomUserFilesDirectoryInGameDir);
+		strcpy(szCustomUserFilesDirectoryInGameDir, moduleName);
+
 		auto pattern = hook::pattern("50 6A 00 6A 00 68 ? 80 00 00 6A 00");
 		for (size_t i = 0; i < pattern.size(); i++)
 		{
@@ -235,6 +254,51 @@ DWORD WINAPI Init(LPVOID)
 
 			injector::MakeCALL((DWORD)dword_6CBF17, SHGetFolderPathAHook, true);
 			injector::MakeNOP((DWORD)dword_6CBF17 + 5, 1, true);
+		}
+	}
+
+	if (nWindowedMode)
+	{
+		HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
+		MONITORINFO info;
+		info.cbSize = sizeof(MONITORINFO);
+		GetMonitorInfo(monitor, &info);
+		int DesktopResX = info.rcMonitor.right - info.rcMonitor.left;
+		int DesktopResY = info.rcMonitor.bottom - info.rcMonitor.top;
+
+		static tagRECT REKT;
+		REKT.left = ((float)DesktopResX / 2.0f) - ((float)ResX / 2.0f);
+		REKT.top = ((float)DesktopResY / 2.0f) - ((float)ResY / 2.0f);
+		REKT.right = REKT.left + ResX;
+		REKT.bottom = REKT.top + ResY;
+
+		auto pattern = hook::pattern("A1 ? ? ? ? 33 FF 3B C7 74 ?"); //0xAB0AD4
+		injector::WriteMemory(*pattern.get(2).get<uint32_t*>(1), 1, true);
+
+		pattern = hook::pattern("B8 64 00 00 00 89 44 24 28"); //0x7309B4
+		injector::MakeNOP(pattern.get(0).get<uint32_t>(27), 3, true);
+		struct WindowedMode
+		{
+			void operator()(injector::reg_pack& regs)
+			{
+				*(uint32_t*)(regs.esp + 0x28) = REKT.left;
+				*(uint32_t*)(regs.esp + 0x2C) = REKT.top;
+				regs.eax = REKT.right;
+				regs.ecx = REKT.bottom;
+			}
+		}; injector::MakeInline<WindowedMode>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(16));
+
+		if (nWindowedMode > 1)
+		{
+			auto pattern = hook::pattern("68 00 00 00 10 6A F0 50"); //0x730B8A
+			injector::MakeNOP(pattern.get(0).get<uint32_t>(8), 6, true);
+			injector::MakeCALL(pattern.get(0).get<uint32_t>(8), SetWindowLongHook, true);
+		}
+
+		if (bSkipIntro)
+		{
+			auto pattern = hook::pattern("A3 ? ? ? ? A1 ? ? ? ? 6A 20 50"); //0xA9E6D8
+			injector::WriteMemory(*pattern.get(2).get<uint32_t*>(1), 1, true);
 		}
 	}
 
