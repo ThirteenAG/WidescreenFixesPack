@@ -63,7 +63,7 @@ DWORD WINAPI Init(LPVOID)
 	bool bXbox360Scaling = iniReader.ReadInteger("MAIN", "Xbox360Scaling", 1) != 0;
 	szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
 	bool bCustomUsrDir = false;
-	if (iniReader.ReadInteger("MISC", "CustomUserFilesDirectoryInGameDir", 0) != 0)
+	if (strncmp(szCustomUserFilesDirectoryInGameDir, "0", 1) != 0)
 		bCustomUsrDir = true;
 
 	if (!ResX || !ResY) {
@@ -211,7 +211,7 @@ DWORD WINAPI Init(LPVOID)
 	if (bFMVWidescreenMode)
 	{
 		DWORD* dword_598EB9 = hook::pattern("68 00 00 80 3F 68 00 00 00 3F 68 00 00 00 3F 68 00 00 00 BF 68 00 00 00 BF 8B CB E8 ? ? ? ? 8B CB C7").get(0).get<DWORD>(6);
-		injector::WriteMemory<float>(dword_598EB9 + 0, (0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
+		injector::WriteMemory<float>((DWORD)dword_598EB9 + 0, (0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
 		injector::WriteMemory<float>((DWORD)dword_598EB9 + 5, (0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
 		injector::WriteMemory<float>((DWORD)dword_598EB9 + 10, -(0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
 		injector::WriteMemory<float>((DWORD)dword_598EB9 + 15, -(0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);

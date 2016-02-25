@@ -188,7 +188,7 @@ DWORD WINAPI Init(LPVOID)
 	bDisableCutsceneBorders = iniReader.ReadInteger("MISC", "DisableCutsceneBorders", 1) == 1;
 	szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "");
 	bool bCustomUsrDir = false;
-	if (iniReader.ReadInteger("MISC", "CustomUserFilesDirectoryInGameDir", 0) != 0)
+	if (strncmp(szCustomUserFilesDirectoryInGameDir, "0", 1) != 0)
 		bCustomUsrDir = true;
 
 	if (!ResX || !ResY) {

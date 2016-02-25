@@ -55,7 +55,7 @@ DWORD WINAPI Init(LPVOID)
 	bool bRearviewMirrorFix = iniReader.ReadInteger("MISC", "RearviewMirrorFix", 1) == 1;
 	szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "");
 	bool bCustomUsrDir = false;
-	if (iniReader.ReadInteger("MISC", "CustomUserFilesDirectoryInGameDir", 0) != 0)
+	if (strncmp(szCustomUserFilesDirectoryInGameDir, "0", 1) != 0)
 		bCustomUsrDir = true;
 
 	if (!ResX || !ResY) {
@@ -109,21 +109,6 @@ DWORD WINAPI Init(LPVOID)
 		DWORD dword_6C2866 = (DWORD)dword_6C2860 + 6;
 		injector::WriteMemory(dword_6C2866, ResY, true);
 	}
-
-		/*injector::WriteMemory(0x4F9ADC + 0x400000, ResX, true);
-		injector::WriteMemory(0x53DACC + 0x400000, ResX, true);
-		injector::WriteMemory(0x53DB04 + 0x400000, ResX, true);
-		injector::WriteMemory(0x53E82C + 0x400000, ResX, true);
-		injector::WriteMemory(0x582BE4 + 0x400000, ResX, true);
-													   
-		injector::WriteMemory(0x4F9AE0 + 0x400000, ResY, true);
-		injector::WriteMemory(0x53DAD0 + 0x400000, ResY, true);
-		injector::WriteMemory(0x53DB08 + 0x400000, ResY, true);
-		injector::WriteMemory(0x53E830 + 0x400000, ResY, true);
-		injector::WriteMemory(0x582BE8 + 0x400000, ResY, true);
-
-		injector::WriteMemory<float>(0x8AE8F8, (float)ResX, true);
-		injector::WriteMemory<float>(0x8AF2C0, (float)ResY, true);*/
 
 		if (ShadowsRes) 
 		{
@@ -217,6 +202,7 @@ DWORD WINAPI Init(LPVOID)
 			if (bXbox360Scaling)
 			{
 				hor3DScale /= 1.0511562719f;
+				f1234 = 1.25f;
 			}
 		}
 
@@ -251,6 +237,10 @@ DWORD WINAPI Init(LPVOID)
 			DWORD* dword_6DE377 = hook::pattern("75 3B C7 05 ? ? ? ? 00 00 80 3F").get(0).get<DWORD>(0);
 			injector::MakeNOP(dword_6DE377, 2, true);
 			injector::WriteMemory((DWORD)dword_6DE377 + 8, 0, true);
+
+			//Car shadow opacity
+			DWORD* dword_8A0E50 = *hook::pattern("D9 05 ? ? ? ? 8B 54 24 70 D9 1A E9 D1").get(0).get<DWORD*>(2);
+			injector::WriteMemory(dword_8A0E50, 60.0f, true);
 		}
 
 		if (bRearviewMirrorFix)
