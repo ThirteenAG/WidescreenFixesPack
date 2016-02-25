@@ -14,7 +14,7 @@ DWORD* dword_8F1CA0;
 DWORD jmpAddr, jmpAddr2;
 char* szCustomUserFilesDirectoryInGameDir;
 
-HRESULT WINAPI SHGetFolderPathAHook(HWND hwnd, int csidl, HANDLE hToken, DWORD dwFlags, LPSTR pszPath)
+HRESULT WINAPI SHGetFolderPathAHook(HWND /*hwnd*/, int /*csidl*/, HANDLE /*hToken*/, DWORD /*dwFlags*/, LPSTR pszPath)
 {
 	CreateDirectory(szCustomUserFilesDirectoryInGameDir, NULL);
 	strcpy(pszPath, szCustomUserFilesDirectoryInGameDir);
@@ -54,8 +54,8 @@ DWORD WINAPI Init(LPVOID)
 	bool bShadowsFix = iniReader.ReadInteger("MISC", "ShadowsFix", 1) == 1;
 	bool bRearviewMirrorFix = iniReader.ReadInteger("MISC", "RearviewMirrorFix", 1) == 1;
 	szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "");
-	bool bCustomUsrDir;
-	if (strncmp(szCustomUserFilesDirectoryInGameDir, "0", 1) != 0)
+	bool bCustomUsrDir = false;
+	if (iniReader.ReadInteger("MISC", "CustomUserFilesDirectoryInGameDir", 0) != 0)
 		bCustomUsrDir = true;
 
 	if (!ResX || !ResY) {
@@ -149,8 +149,8 @@ DWORD WINAPI Init(LPVOID)
 
 			for (size_t i = 0; i < 20; i++)
 			{
-				DWORD* dword_93D898 = hook::pattern(TempStr).get(0).get<DWORD>(0);
-				injector::WriteMemory(dword_93D898, dword_8F1CA0, true);
+				DWORD* dword__93D898 = hook::pattern(TempStr).get(0).get<DWORD>(0);
+				injector::WriteMemory(dword__93D898, dword_8F1CA0, true);
 			}
 		}
 

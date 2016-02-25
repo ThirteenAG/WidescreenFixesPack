@@ -176,6 +176,7 @@ DWORD WINAPI PatchIntro(LPVOID)
 	pfShowIntroCall = hook::pattern("E8 ? ? ? ? 8B 15 ? ? ? ? A1 ? ? ? ? 52 50 E8 ? ? ? ?").get(0).get<DWORD>(0);
 	pfShowIntro = injector::GetBranchDestination(pfShowIntroCall, true);
 	injector::MakeCALL(pfShowIntroCall, Init, true);
+	return 0;
 }
 
 BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)

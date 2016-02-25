@@ -1,4 +1,6 @@
 #pragma once
+#pragma warning(disable:4458)
+#pragma warning(disable:4201)
 
 #include "targetver.h"
 

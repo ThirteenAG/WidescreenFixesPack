@@ -19,7 +19,7 @@ bool bXbox360Scaling;
 bool bAddHudOffset;
 char* szCustomUserFilesDirectoryInGameDir;
 
-HRESULT WINAPI SHGetFolderPathAHook(HWND hwnd, int csidl, HANDLE hToken, DWORD dwFlags, LPSTR pszPath)
+HRESULT WINAPI SHGetFolderPathAHook(HWND /*hwnd*/, int /*csidl*/, HANDLE /*hToken*/, DWORD /*dwFlags*/, LPSTR pszPath)
 {
 	CreateDirectory(szCustomUserFilesDirectoryInGameDir, NULL);
 	strcpy(pszPath, szCustomUserFilesDirectoryInGameDir);
@@ -205,8 +205,8 @@ DWORD WINAPI Init(LPVOID)
 	bHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1) == 1;
 	bFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1) == 1;
 	szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "");
-	bool bCustomUsrDir;
-	if (strncmp(szCustomUserFilesDirectoryInGameDir, "0", 1) != 0)
+	bool bCustomUsrDir = false;
+	if (iniReader.ReadInteger("MISC", "CustomUserFilesDirectoryInGameDir", 0) != 0)
 		bCustomUsrDir = true;
 
 	if (!ResX || !ResY) {
@@ -313,10 +313,10 @@ DWORD WINAPI Init(LPVOID)
 		DWORD* dword_6CC910 = *hook::pattern("D8 1D ? ? ? ? DF E0 F6 C4 41 75 0F D9 45 FC").get(0).get<DWORD*>(2);
 		injector::WriteMemory<float>(dword_6CC910, fHudPosX, true);
 
-		DWORD* dword_5CC109;
-		DWORD dword_5CC119;
-		DWORD dword_5CC0F9;
-		DWORD dword_5CC129;
+		DWORD* dword_5CC109 = nullptr;
+		DWORD dword_5CC119 = 0;
+		DWORD dword_5CC0F9 = 0;
+		DWORD dword_5CC129 = 0;
 		auto pattern = hook::pattern("C7 44 24 7C 00 00 48 43 C7 84 24 80 00 00 00 00 00 70 41 C7 84 24 8C 00 00 00 00 00 48 43 C7 84 24 90 00 00 00 00 00 BE 42");
 		if (pattern.size() > 0)
 		{

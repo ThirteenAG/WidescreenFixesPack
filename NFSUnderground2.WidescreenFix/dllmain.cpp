@@ -18,7 +18,7 @@ bool bFMVWidescreenMode;
 bool bXbox360Scaling;
 char* szCustomUserFilesDirectoryInGameDir;
 
-HRESULT WINAPI SHGetFolderPathAHook(HWND hwnd, int csidl, HANDLE hToken, DWORD dwFlags, LPSTR pszPath)
+HRESULT WINAPI SHGetFolderPathAHook(HWND /*hwnd*/, int /*csidl*/, HANDLE /*hToken*/, DWORD /*dwFlags*/, LPSTR pszPath)
 {
 	CreateDirectory(szCustomUserFilesDirectoryInGameDir, NULL);
 	strcpy(pszPath, szCustomUserFilesDirectoryInGameDir);
@@ -187,8 +187,8 @@ DWORD WINAPI Init(LPVOID)
 	bFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1) == 1;
 	bDisableCutsceneBorders = iniReader.ReadInteger("MISC", "DisableCutsceneBorders", 1) == 1;
 	szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "");
-	bool bCustomUsrDir;
-	if (strncmp(szCustomUserFilesDirectoryInGameDir, "0", 1) != 0)
+	bool bCustomUsrDir = false;
+	if (iniReader.ReadInteger("MISC", "CustomUserFilesDirectoryInGameDir", 0) != 0)
 		bCustomUsrDir = true;
 
 	if (!ResX || !ResY) {

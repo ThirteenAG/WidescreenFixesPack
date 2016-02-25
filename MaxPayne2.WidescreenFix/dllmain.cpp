@@ -123,7 +123,7 @@ void __fastcall PCameraValidate(int _this)
 
 	if ((*(BYTE *)(_this + 0xEC) >> 6) & 1)
 	{
-		float v2 = tan(fParam0 / 2.0);
+		float v2 = (float)tan(fParam0 / 2.0);
 
 		if (fParam5 == 0.05f && fParam6 != -1.0f /*&& Param7 != 0x40*/ /*&& Param7 == 0x40 && Param8 == 0*/)
 		{
@@ -167,7 +167,7 @@ DWORD WINAPI ComicsHandler(LPVOID)
 	CIniReader iniReader("");
 	bComicsMode = iniReader.ReadInteger("MAIN", "ComicsMode", 1) != 0;
 	DWORD nComicsModeKey = iniReader.ReadInteger("MAIN", "ComicsModeKey", VK_F2);
-	bool bPatched;
+	static bool bPatched;
 
 	injector::WriteMemory((DWORD)e2mfc + 0x176D4 + 0x2, &fViewPortSizeX, true);
 	injector::WriteMemory((DWORD)e2mfc + 0x17719 + 0x2, &fViewPortSizeY, true);

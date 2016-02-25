@@ -105,7 +105,7 @@ DWORD WINAPI ComicsHandler(LPVOID)
 	CIniReader iniReader("");
 	bComicsMode = iniReader.ReadInteger("MAIN", "ComicsMode", 1) != 0;
 	DWORD nComicsModeKey = iniReader.ReadInteger("MAIN", "ComicsModeKey", VK_F2);
-	bool bPatched;
+	static bool bPatched;
 
 	while (true)
 	{
@@ -277,7 +277,6 @@ void __declspec(naked) P_HudPosHook()
 float TextPosX, TextNewPosX, TextUnkVal;
 void __declspec(naked) P_TextPosHook()
 {
-
 	TextPosX = pTextElementPosX->a;
 	TextNewPosX = TextPosX;
 
@@ -340,7 +339,7 @@ DWORD WINAPI Thread(LPVOID)
 	if (bAltTab)
 		injector::MakeNOP(0x40D29B, 5, true);
 
-	nCutsceneBorders = iniReader.ReadFloat("MAIN", "CutsceneBorders", 1);
+	nCutsceneBorders = iniReader.ReadInteger("MAIN", "CutsceneBorders", 1);
 	if (nCutsceneBorders)
 		injector::MakeCALL(0x4565B8, GetBordersSize, true);
 

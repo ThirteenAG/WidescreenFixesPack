@@ -34,12 +34,12 @@ void __declspec(naked) FOVHook()
 	}
 }
 
-void WINAPI SetWindowLongHook(HWND hWnd, int nIndex, LONG dwNewLong)
+void WINAPI SetWindowLongHook(HWND hWndl, int nIndex, LONG dwNewLong)
 {
 	dwNewLong |= WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU;
 
-	SetWindowLong(hWnd, nIndex, dwNewLong);
-	SetWindowPos(hWnd, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
+	SetWindowLong(hWndl, nIndex, dwNewLong);
+	SetWindowPos(hWndl, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
 }
 
 DWORD WINAPI Init(LPVOID)
@@ -62,8 +62,8 @@ DWORD WINAPI Init(LPVOID)
 	bool bCarShadowFix = iniReader.ReadInteger("MISC", "CarShadowFix", 0) != 0;
 	bool bXbox360Scaling = iniReader.ReadInteger("MAIN", "Xbox360Scaling", 1) != 0;
 	szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
-	bool bCustomUsrDir;
-	if (strncmp(szCustomUserFilesDirectoryInGameDir, "0", 1) != 0)
+	bool bCustomUsrDir = false;
+	if (iniReader.ReadInteger("MISC", "CustomUserFilesDirectoryInGameDir", 0) != 0)
 		bCustomUsrDir = true;
 
 	if (!ResX || !ResY) {
@@ -267,10 +267,10 @@ DWORD WINAPI Init(LPVOID)
 		int DesktopResY = info.rcMonitor.bottom - info.rcMonitor.top;
 
 		static tagRECT REKT;
-		REKT.left = ((float)DesktopResX / 2.0f) - ((float)ResX / 2.0f);
-		REKT.top = ((float)DesktopResY / 2.0f) - ((float)ResY / 2.0f);
-		REKT.right = REKT.left + ResX;
-		REKT.bottom = REKT.top + ResY;
+		REKT.left = (LONG)(((float)DesktopResX / 2.0f) - ((float)ResX / 2.0f));
+		REKT.top = (LONG)(((float)DesktopResY / 2.0f) - ((float)ResY / 2.0f));
+		REKT.right = (LONG)(REKT.left + ResX);
+		REKT.bottom = (LONG)(REKT.top + ResY);
 
 		auto pattern = hook::pattern("A1 ? ? ? ? 33 FF 3B C7 74 ?"); //0xAB0AD4
 		injector::WriteMemory(*pattern.get(2).get<uint32_t*>(1), 1, true);
