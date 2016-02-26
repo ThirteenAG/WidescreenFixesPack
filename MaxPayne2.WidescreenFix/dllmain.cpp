@@ -125,7 +125,7 @@ void __fastcall PCameraValidate(int _this)
 	{
 		float v2 = (float)tan(fParam0 / 2.0);
 
-		if (fParam5 == 0.05f && fParam6 != -1.0f /*&& Param7 != 0x40*/ /*&& Param7 == 0x40 && Param8 == 0*/)
+		if ((fParam5 == 0.05f && fParam6 != -1.0f) || (fParam5 == 1.0f && fParam6 >= 0.7966f && fParam6 <= 0.79669f) /*&& Param7 != 0x40*/ /*&& Param7 == 0x40 && Param8 == 0*/) //0.7966 is 2d background scaling, bugged on win7
 		{
 			*(float *)(_this + 0x20C) = v2 * fDiffFactor;
 		}
