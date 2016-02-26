@@ -13,6 +13,7 @@ float MinimapPosX, MinimapPosY;
 DWORD* dword_8F1CA0;
 DWORD jmpAddr, jmpAddr2;
 char* szCustomUserFilesDirectoryInGameDir;
+static float f06 = 0.6f;
 
 HRESULT WINAPI SHGetFolderPathAHook(HWND /*hwnd*/, int /*csidl*/, HANDLE /*hToken*/, DWORD /*dwFlags*/, LPSTR pszPath)
 {
@@ -172,6 +173,14 @@ DWORD WINAPI Init(LPVOID)
 			injector::WriteMemory<float>(dword_6E70D3, (fHudPosX - 320.0f) + 450.0f, true);
 			injector::WriteMemory<float>(dword_6E70E9, (fHudPosX - 320.0f) + 450.0f, true);
 
+			if (bRearviewMirrorFix)
+			{
+				injector::WriteMemory<float>(dword_6E70C0, (fHudPosX - 320.0f) + 450.0f, true);
+				injector::WriteMemory<float>(dword_6E70FF, (fHudPosX - 320.0f) + 450.0f, true);
+				injector::WriteMemory<float>(dword_6E70D3, (fHudPosX - 320.0f) + 190.0f, true);
+				injector::WriteMemory<float>(dword_6E70E9, (fHudPosX - 320.0f) + 190.0f, true);
+			}
+
 			//mouse cursor fix
 			static float fCursorFix = 480.0f * ((float)ResX / (float)ResY);
 			DWORD* dword_6C9C45 = hook::pattern("D8 0D ? ? ? ? DA 74 24 18 E8 ? ? ? ? 89 46 04").get(0).get<DWORD>(2);
@@ -191,7 +200,6 @@ DWORD WINAPI Init(LPVOID)
 			injector::MakeJMP(dword_6CF4F0, FOVHook, true);
 
 			// FOV being different in menus and in-game fix
-			static float f06 = 0.6f;
 			DWORD* dword_6CF578 = hook::pattern("D8 0D ? ? ? ? E8 ? ? ? ? 8B F8 57 E8").get(1).get<DWORD>(2);
 			injector::WriteMemory(dword_6CF578, &f06, true);
 
@@ -253,6 +261,13 @@ DWORD WINAPI Init(LPVOID)
 			DWORD* dword_595DDA = hook::pattern("83 F8 02 74 2D 83 F8 03 74 28 83 F8 04 74 23 83 F8 05 74 1E 83 F8 06 74 19").get(0).get<DWORD>(2);
 			injector::WriteMemory<uchar>(dword_595DDA, 4, true);
 			injector::WriteMemory<uchar>((DWORD)dword_595DDA + 5, 4, true);
+
+			//scaling
+			f06 = 0.4f;
+			DWORD* dword_8AF994 = *hook::pattern("D9 44 24 24 D8 0D ? ? ? ? D9 5C 24 24").get(4).get<DWORD*>(6);
+			injector::WriteMemory<float>(dword_8AF994, 1.725f, true);
+			DWORD* dword_476823 = hook::pattern("66 C7 80 C4 00 00 00 20 4E").get(0).get<DWORD>(7);
+			injector::WriteMemory<short>(dword_476823, 14750, true);
 		}
 
 		if (bCustomUsrDir)

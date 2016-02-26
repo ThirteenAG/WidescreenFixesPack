@@ -1,7 +1,5 @@
 #include "..\includes\stdafx.h"
 #include "..\includes\hooking\Hooking.Patterns.h"
-#include <iostream>
-#include <string>
 HWND hWnd;
 bool bDelay;
 
@@ -61,6 +59,7 @@ DWORD WINAPI Init(LPVOID)
 	bool bLightingFix = iniReader.ReadInteger("MISC", "LightingFix", 0) != 0;
 	bool bCarShadowFix = iniReader.ReadInteger("MISC", "CarShadowFix", 0) != 0;
 	bool bXbox360Scaling = iniReader.ReadInteger("MAIN", "Xbox360Scaling", 1) != 0;
+	bool bExperimentalCrashFix = iniReader.ReadInteger("MAIN", "ExperimentalCrashFix", 0) != 0;
 	szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
 	bool bCustomUsrDir = false;
 	if (strncmp(szCustomUserFilesDirectoryInGameDir, "0", 1) != 0)
@@ -299,6 +298,13 @@ DWORD WINAPI Init(LPVOID)
 		{
 			auto pattern = hook::pattern("A3 ? ? ? ? A1 ? ? ? ? 6A 20 50"); //0xA9E6D8
 			injector::WriteMemory(*pattern.get(2).get<uint32_t*>(1), 1, true);
+			injector::WriteMemory(0xA97BC0, 1, true);
+		}
+
+		if (bExperimentalCrashFix)
+		{
+			auto pattern = hook::pattern("6A ? 68 ? ? ? ? 64 ? 00 00 00 00 50 64 ? ? 00 00 00 00 81 EC B8 02 00 00"); //0x595F90 
+			injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(0), 0xC3, true);
 		}
 	}
 
