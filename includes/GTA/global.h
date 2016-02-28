@@ -7,6 +7,7 @@ float fSubtitlesScale;
 float fCustomWideScreenWidthScaleDown;
 float fCustomWideScreenHeightScaleDown;
 uint32_t AspectRatioWidth, AspectRatioHeight;
+uint32_t FrontendAspectRatioWidth, FrontendAspectRatioHeight;
 float fCustomAspectRatioHor, fCustomAspectRatioVer;
 float fRadarWidthScale, fCustomRadarWidthScale;
 float fPlayerMarkerPos;

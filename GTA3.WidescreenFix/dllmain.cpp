@@ -611,6 +611,45 @@ void ApplyIniOptions()
     }*/
 }
 
+injector::hook_back<void(__cdecl*)(CRect&, CRGBA const&, CRGBA const&, CRGBA const&, CRGBA const&, unsigned int)> hbSetVertices;
+static void __cdecl SetVerticesHook(CRect& a1, CRGBA const& a2, CRGBA const& a3, CRGBA const& a4, CRGBA const& a5, unsigned int a6)
+{
+    if (static_cast<int>(a1.m_fRight) == RsGlobal->MaximumWidth && static_cast<int>(a1.m_fBottom) == RsGlobal->MaximumHeight)
+    {
+        float fMiddleScrCoord = (float)RsGlobal->MaximumWidth / 2.0f;
+        
+        a1.m_fTop = 0.0f;
+        a1.m_fLeft = fMiddleScrCoord - ((((float)RsGlobal->MaximumHeight * ((float)FrontendAspectRatioWidth / (float)FrontendAspectRatioHeight))) / 2.0f);
+        a1.m_fBottom = (float)RsGlobal->MaximumHeight;
+        a1.m_fRight = fMiddleScrCoord + ((((float)RsGlobal->MaximumHeight * ((float)FrontendAspectRatioWidth / (float)FrontendAspectRatioHeight))) / 2.0f);
+
+        CSprite2dDrawRect(CRect(-5.0f, a1.m_fBottom, a1.m_fLeft, -5.0f), CRGBA(0, 0, 0, a2.alpha));
+        CSprite2dDrawRect(CRect((float)RsGlobal->MaximumWidth, a1.m_fBottom, a1.m_fRight, -5.0f), CRGBA(0, 0, 0, a2.alpha));
+    }
+
+    return hbSetVertices.fun(a1, a2, a3, a4, a5, a6);
+}
+
+void Fix2DSprites()
+{
+    CIniReader iniReader("");
+    szForceAspectRatio = iniReader.ReadString("MAIN", "FrontendTexAspectRatio", "auto");
+    if (strncmp(szForceAspectRatio, "auto", 4) != 0)
+    {
+        FrontendAspectRatioWidth = std::stoi(szForceAspectRatio);
+        FrontendAspectRatioHeight = std::stoi(strchr(szForceAspectRatio, ':') + 1);
+    }
+    else
+    {
+        FrontendAspectRatioWidth = 4;
+        FrontendAspectRatioHeight = 3;
+    }
+
+    auto pattern = hook::pattern("E8 ? ? ? ? 89 D9 83 C4 18 E8 ? ? ? ? 6A 04"); //0x51ED62
+    hbSetVertices.fun = injector::MakeCALL(pattern.get(1).get<uint32_t>(0), SetVerticesHook).get();
+    injector::MakeCALL(pattern.get(2).get<uint32_t>(0), SetVerticesHook); //0x51EE0E
+}
+
 DWORD WINAPI Init(LPVOID)
 {
     #ifdef _LOG
@@ -644,6 +683,7 @@ DWORD WINAPI Init(LPVOID)
     FixHUD();
     FixCrosshair();
     ApplyIniOptions();
+    Fix2DSprites();
 
     //Delayed changes
     struct LoadState

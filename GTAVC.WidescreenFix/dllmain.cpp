@@ -14,7 +14,7 @@ bool bDelay;
 hook::pattern dwGameLoadStatePattern, DxInputNeedsExclusive, EmergencyVehiclesFixPattern, RadarScalingPattern;
 hook::pattern MenuPattern, MenuPattern15625, RsSelectDevicePattern, CDarkelDrawMessagesPattern, CDarkelDrawMessagesPattern2, CParticleRenderPattern;
 hook::pattern DrawHudHorScalePattern, DrawHudVerScalePattern, CSpecialFXRender2DFXsPattern, CSceneEditDrawPattern, sub61DEB0Pattern;
-hook::pattern MenuPattern1, MenuPattern2, MenuPattern3, MenuPattern4, MenuPattern5, MenuPattern6, MenuPattern7, MenuPattern8, MenuPattern9, MenuPattern10, MenuPattern11;
+hook::pattern MenuPattern1, MenuPattern2, MenuPattern3, MenuPattern4, MenuPattern5, MenuPattern6, MenuPattern7, MenuPattern8, MenuPattern9, MenuPattern10, MenuPattern11, MenuPattern12;
 hook::pattern ResolutionPattern0, ResolutionPattern1, ResolutionPattern2, ResolutionPattern3, ResolutionPattern4, ResolutionPattern5;
 hook::pattern CRadarPattern, BordersPattern;
 uint32_t* dwGameLoadState;
@@ -44,7 +44,7 @@ void GetPatterns()
     ResolutionPattern4 = hook::pattern("85 DB 75 0D E8 ? ? ? ? 39 05 ? ? ? ? 7C A4"); //0x600EBA
     ResolutionPattern5 = hook::pattern("A3 ? ? ? ? E9 84 00 00 00"); //0x600E57
 
-    MenuPattern1 = hook::pattern("89 84 24 88 00 00 00 DB 84 24 88 00 00 00 D8 0D ? ? ? ? DD DA A1 ? ? ? ? 3D C0 01 00 00 75 08"); //0x68D0C0
+    MenuPattern1 = hook::pattern("89 84 24 88 00 00 00 DB 84 24 88 00 00 00 D8 0D ? ? ? ? DD DA A1 ? ? ? ? 3D C0 01 00 00 75 08"); //0x68D29C
     MenuPattern2 = hook::pattern("89 44 24 48 DB 44 24 48 D8 0D"); //0x4912E3
     MenuPattern3 = hook::pattern("89 44 24 50 DB 44 24 50 D8 0D"); //0x492DAB
     MenuPattern4 = hook::pattern("89 14 24 DB 04 24 D8 0D"); //0x495886
@@ -55,7 +55,8 @@ void GetPatterns()
     MenuPattern9 = hook::pattern("89 44 24 08 DB 44 24 08 D8 0D"); //0x68D5C4
     MenuPattern10 = hook::pattern("89 44 24 10 DB 44 24 10 D8 0D"); //0x68D50C Loading game. Please wait...
     MenuPattern11 = hook::pattern("D8 05 ? ? ? ? DD DA D9 46 44"); //0x497AC1 Related to map scrolling position and something else
-
+    MenuPattern12 = hook::pattern("89 ? 24 20 DB 44 24 20 D8 0D"); //0x4A3731 cursor
+                                  
     char pattern_str[20];
     union {
         uint32_t* Int;
@@ -300,6 +301,12 @@ void FixMenu()
 
     float fLoadingGameTextScale = 0.00065625005f / (*CDraw::pfScreenAspectRatio / (4.0f / 3.0f));
     injector::WriteMemory<float>(*MenuPattern10.get(11).get<uint32_t*>(10), fSaveLoadListTextScale, true);
+
+    float fCursorScale = 0.0546875f / (*CDraw::pfScreenAspectRatio / (4.0f / 3.0f));
+    injector::WriteMemory<float>(*MenuPattern12.get(21).get<uint32_t*>(10), fCursorScale, true);
+
+    float fCursorShadowScale = 0.0703125f / (*CDraw::pfScreenAspectRatio / (4.0f / 3.0f));
+    injector::WriteMemory<float>(*MenuPattern12.get(17).get<uint32_t*>(10), fCursorShadowScale, true);
 }
 
 void RsSelectDeviceHook()
@@ -731,6 +738,45 @@ void ApplyIniOptions()
     }
 }
 
+injector::hook_back<void(__cdecl*)(CRect&, CRGBA const&, CRGBA const&, CRGBA const&, CRGBA const&)> hbSetVertices;
+static void __cdecl SetVerticesHook(CRect& a1, CRGBA const& a2, CRGBA const& a3, CRGBA const& a4, CRGBA const& a5)
+{
+    if (static_cast<int>(a1.m_fRight) == RsGlobal->MaximumWidth && static_cast<int>(a1.m_fBottom) == RsGlobal->MaximumHeight)
+    {
+        float fMiddleScrCoord = (float)RsGlobal->MaximumWidth / 2.0f;
+
+        a1.m_fTop = 0.0f;
+        a1.m_fLeft = fMiddleScrCoord - ((((float)RsGlobal->MaximumHeight * ((float)FrontendAspectRatioWidth / (float)FrontendAspectRatioHeight))) / 2.0f);
+        a1.m_fBottom = (float)RsGlobal->MaximumHeight;
+        a1.m_fRight = fMiddleScrCoord + ((((float)RsGlobal->MaximumHeight * ((float)FrontendAspectRatioWidth / (float)FrontendAspectRatioHeight))) / 2.0f);
+
+        CSprite2dDrawRect(CRect(-5.0f, a1.m_fBottom, a1.m_fLeft, -5.0f), CRGBA(0, 0, 0, a2.alpha));
+        CSprite2dDrawRect(CRect((float)RsGlobal->MaximumWidth, a1.m_fBottom, a1.m_fRight, -5.0f), CRGBA(0, 0, 0, a2.alpha));
+    }
+
+    return hbSetVertices.fun(a1, a2, a3, a4, a5);
+}
+
+void Fix2DSprites()
+{
+    CIniReader iniReader("");
+    szForceAspectRatio = iniReader.ReadString("MAIN", "FrontendTexAspectRatio", "auto");
+    if (strncmp(szForceAspectRatio, "auto", 4) != 0)
+    {
+        FrontendAspectRatioWidth = std::stoi(szForceAspectRatio);
+        FrontendAspectRatioHeight = std::stoi(strchr(szForceAspectRatio, ':') + 1);
+    }
+    else
+    {
+        FrontendAspectRatioWidth = 1;
+        FrontendAspectRatioHeight = 1;
+    }
+
+    auto pattern = hook::pattern("E8 ? ? ? ? 8B 0B 83 C4 14 85 C9"); //0x578720
+    hbSetVertices.fun = injector::MakeCALL(pattern.get(1).get<uint32_t>(0), SetVerticesHook).get();
+    injector::MakeCALL(pattern.get(0).get<uint32_t>(0), SetVerticesHook); //0x57865C
+}
+
 DWORD WINAPI Init(LPVOID)
 {
     #ifdef _LOG
@@ -764,6 +810,7 @@ DWORD WINAPI Init(LPVOID)
     FixHUD();
     FixCrosshair();
     ApplyIniOptions();
+    Fix2DSprites();
 
     //Delayed changes
     struct LoadState
