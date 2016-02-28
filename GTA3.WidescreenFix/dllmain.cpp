@@ -633,7 +633,7 @@ static void __cdecl SetVerticesHook(CRect& a1, CRGBA const& a2, CRGBA const& a3,
 void Fix2DSprites()
 {
     CIniReader iniReader("");
-    szForceAspectRatio = iniReader.ReadString("MAIN", "FrontendTexAspectRatio", "auto");
+    szForceAspectRatio = iniReader.ReadString("MAIN", "FrontendAspectRatio", "auto");
     if (strncmp(szForceAspectRatio, "auto", 4) != 0)
     {
         FrontendAspectRatioWidth = std::stoi(szForceAspectRatio);
@@ -641,8 +641,8 @@ void Fix2DSprites()
     }
     else
     {
-        FrontendAspectRatioWidth = 4;
-        FrontendAspectRatioHeight = 3;
+        FrontendAspectRatioWidth = 16;
+        FrontendAspectRatioHeight = 9;
     }
 
     auto pattern = hook::pattern("E8 ? ? ? ? 89 D9 83 C4 18 E8 ? ? ? ? 6A 04"); //0x51ED62
