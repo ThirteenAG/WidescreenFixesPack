@@ -263,11 +263,23 @@ DWORD WINAPI Init(LPVOID)
 			injector::WriteMemory<uchar>((DWORD)dword_595DDA + 5, 4, true);
 
 			//scaling
-			f06 = 0.4f;
-			DWORD* dword_8AF994 = *hook::pattern("D9 44 24 24 D8 0D ? ? ? ? D9 5C 24 24").get(4).get<DWORD*>(6);
-			injector::WriteMemory<float>(dword_8AF994, 1.725f, true);
-			DWORD* dword_476823 = hook::pattern("66 C7 80 C4 00 00 00 20 4E").get(0).get<DWORD>(7);
-			injector::WriteMemory<short>(dword_476823, 14750, true);
+			if (bFixFOV)
+			{
+				DWORD* dword_476823 = hook::pattern("66 C7 80 C4 00 00 00 20 4E").get(0).get<DWORD>(7);
+				injector::WriteMemory<short>(dword_476823, 14750, true);
+
+				f06 = 0.4f;
+				DWORD* dword_8AF994 = *hook::pattern("D9 44 24 24 D8 0D ? ? ? ? D9 5C 24 24").get(4).get<DWORD*>(6);
+				injector::WriteMemory<float>(dword_8AF994, 1.725f, true);
+			}
+
+			//render
+			DWORD* dword_4FAEB0 = hook::pattern("75 ? 83 CE 20 8B 7C 24 10 57 52").get(0).get<DWORD>(0);
+			injector::WriteMemory<uchar>(dword_4FAEB0, 0xEB, true);
+
+			DWORD* dword_6BFE33 = hook::pattern("74 22 8B 0D ? ? ? ? 85").get(0).get<DWORD>(0);
+			injector::MakeNOP(dword_6BFE33, 2, true);
+
 		}
 
 		if (bCustomUsrDir)
