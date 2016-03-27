@@ -832,6 +832,8 @@ DWORD WINAPI Init(LPVOID)
 
             SilentPatchCompatibility();
 
+            injector::WriteMemory<float>(*MenuPattern6.get(0).get<uint32_t*>(2), fWideScreenWidthScaleDown, true); //issues/84, copypaste from FixMenu()
+
             //WIDESCREEN to BORDERS text
             auto pattern = hook::pattern("E8 ? ? ? ? DB 05 ? ? ? ? 50 89 C3 D8 0D");
             auto GetTextCall = pattern.get(0).get<uint32_t>(0);
