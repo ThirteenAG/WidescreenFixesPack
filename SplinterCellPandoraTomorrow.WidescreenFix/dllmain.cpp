@@ -1,9 +1,6 @@
 #include "..\includes\stdafx.h"
-
+#include "..\includes\hooking\Hooking.Patterns.h"
 HWND hWnd;
-HINSTANCE hExecutableInstance;
-BYTE originalCode[5];
-BYTE* originalEP;
 
 #define _USE_MATH_DEFINES
 #include "math.h"
@@ -25,6 +22,7 @@ struct Screen
 	float fHeight;
 	float fFieldOfView;
 	float fAspectRatio;
+	float HUDScaleX;
 	float fHudOffset;
 	float fHudOffsetRight;
 	float fFMVoffsetStartX;
@@ -32,58 +30,26 @@ struct Screen
 	float fFMVoffsetStartY;
 	float fFMVoffsetEndY;
 } Screen;
+uint32_t nForceShadowBufferSupport, nFMVWidescreenMode;
 
-HMODULE D3DDrv, WinDrv, Engine, Core;
-DWORD hookJmpAddr, hookJmpAddr2, hookJmpAddr3, hookJmpAddr4, hookJmpAddr5, hookJmpAddr6;
-DWORD epJump, dword_10173E5C;
-DWORD nForceShadowBufferSupport, nFMVWidescreenMode;
-char* UserIni;
+HMODULE D3DDrv, WinDrv, Engine;
 
-void __declspec(naked) UD3DRenderDevice_SetRes_Hook()
-{
-	_asm
-	{
-		mov     edx, dword ptr ds:[dword_10173E5C]
-		mov		eax, Screen.Height
-		mov     dword ptr ds : [edx], eax // 640
-		mov     edx, Screen.Width
-		jmp	    hookJmpAddr
-	}
-}
-
-void __declspec(naked) UWindowsViewport_ResizeViewport_Hook()
-{
-	_asm
-	{
-		mov     ecx, Screen.Height
-		mov     [esi + 84h], ecx
-		mov		edx, Screen.Width
-		jmp	    hookJmpAddr2
-	}
-}
-
-DWORD __esp;
+uint32_t __esp, FCanvasUtilDrawTileHookJmp, DisplayVideo_HookJmp;
 float offset1, offset2;
-DWORD Color;
+uint32_t Color;
 void CenterHud()
 {
 	offset1 = *(float*)(__esp + 4);
 	offset2 = *(float*)(__esp + 4 + 8);
-	Color = *(DWORD*)(__esp + 0x2C);
-
-	/*if (offset1 >= 780.0f && offset1 <= 925.0f) //898.50 912.00 916.50 910.50 906.0 904.5 780.00 792.00 787.50 915.0//925
-	{
-		offset2 += 150.0f;
-		offset1 += 150.0f;
-	}*/
+	Color = *(uint32_t*)(__esp + 0x2C);
 
 	offset1 += Screen.fHudOffset;
 	offset2 += Screen.fHudOffset;
 
 	if (Color == 0xFE000000)
 	{
-		offset2 *= 0.0f; // hiding cutscene borders
-		offset1 *= 0.0f;
+		offset2 = 0.0f; // hiding cutscene borders
+		offset1 = 0.0f;
 	}
 }
 
@@ -97,43 +63,19 @@ void __declspec(naked) FCanvasUtil_DrawTile_Hook()
 		mov  [esp+4], eax;
 		mov  eax, offset2
 		mov  [esp + 4 + 8], eax;
-		jmp	 hookJmpAddr3
+		jmp	 FCanvasUtilDrawTileHookJmp
 	}
-}
-
-float __ECX;
-void __declspec(naked) UGameEngine_Draw_Hook()
-{
-	_asm
-	{
-		mov  ecx, [eax + 374h]
-		mov  __ECX, ecx
-	}
-	__ECX *= fDynamicScreenFieldOfViewScale;
-	__asm   mov ecx, __ECX
-	__asm	jmp	 hookJmpAddr4
-}
-
-
-void __declspec(naked) OpenVideo_Hook()
-{
-	__asm   mov     ecx, 0x4B000 //640x480
-	__asm	shr     ecx, 2
-	__asm	xor     eax, eax
-	__asm	jmp	 hookJmpAddr5
 }
 
 void __declspec(naked) DisplayVideo_Hook()
 {
+	static uint32_t __ECX;
 	_asm
 	{
 		fstp    dword ptr[esp]
 		push    esi
 		push    esi
 		mov		__ECX, ecx
-		/*mov  ecx, f1
-		mov[esp + 20h], ecx;
-		mov[esp + 24h], ecx;*/
 		mov ecx, nFMVWidescreenMode
 		cmp ecx, 0
 	jz label1
@@ -149,46 +91,7 @@ void __declspec(naked) DisplayVideo_Hook()
 		mov[esp + 8h], ecx;
 	label2:
 		mov	 ecx, __ECX
-		jmp	 hookJmpAddr6
-	}
-}
-
-void Init()
-{
-	CIniReader iniReader("");
-	Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
-	Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
-	nForceShadowBufferSupport = iniReader.ReadInteger("MAIN", "ForceShadowBufferSupport", 0);
-	nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 0);
-
-	if (!Screen.Width || !Screen.Height) {
-		HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
-		MONITORINFO info;
-		info.cbSize = sizeof(MONITORINFO);
-		GetMonitorInfo(monitor, &info);
-		Screen.Width = info.rcMonitor.right - info.rcMonitor.left;
-		Screen.Height = info.rcMonitor.bottom - info.rcMonitor.top;
-	}
-
-	Screen.fWidth = static_cast<float>(Screen.Width);
-	Screen.fHeight = static_cast<float>(Screen.Height);
-	Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
-
-	CIniReader iniWriter(UserIni);
-	iniWriter.WriteInteger("WinDrv.WindowsClient", "WindowedViewportX", Screen.Width);
-	iniWriter.WriteInteger("WinDrv.WindowsClient", "WindowedViewportY", Screen.Height);
-
-	DWORD pfappInit = injector::ReadMemory<DWORD>((DWORD)GetProcAddress(GetModuleHandle("Core"), "?appInit@@YAXPBG0PAVFMalloc@@PAVFOutputDevice@@PAVFOutputDeviceError@@PAVFFeedbackContext@@PAVFFileManager@@P6APAVFConfigCache@@XZH@Z") + 0x1, true) + (DWORD)GetProcAddress(GetModuleHandle("Core"), "?appInit@@YAXPBG0PAVFMalloc@@PAVFOutputDevice@@PAVFOutputDeviceError@@PAVFFeedbackContext@@PAVFFileManager@@P6APAVFConfigCache@@XZH@Z") + 5;
-	injector::WriteMemory<unsigned short>(pfappInit + 0x5FC, 0x7EEB, true);
-	injector::WriteMemory(pfappInit + 0x67E + 0x1, Screen.Width, true);
-	injector::WriteMemory(pfappInit + 0x69F + 0x1, Screen.Height, true);
-
-	// return to the original EP
-	*(DWORD*)originalEP = *(DWORD*)&originalCode;
-	*(BYTE*)(originalEP + 4) = originalCode[4];
-	_asm
-	{
-		jmp originalEP
+		jmp	 DisplayVideo_HookJmp
 	}
 }
 
@@ -208,85 +111,166 @@ DWORD WINAPI Thread(LPVOID)
 	/*dword_10173E5C = injector::ReadMemory<DWORD>(pfSetRes + 0x435 + 0x1, true);
 	injector::MakeJMP(pfSetRes + 0x435, UD3DRenderDevice_SetRes_Hook, true);
 	hookJmpAddr = pfSetRes + 0x435 + 0x5;
-	
+
 	DWORD pfResizeViewport = (DWORD)GetProcAddress(WinDrv, "?ResizeViewport@UWindowsViewport@@UAEHKHH@Z");
 	injector::MakeJMP(pfResizeViewport + 0x469, UWindowsViewport_ResizeViewport_Hook, true); //crash on FMV
 	hookJmpAddr2 = pfResizeViewport + 0x469 + 0x6;*/
 
-	DWORD pfDrawTile = (DWORD)GetProcAddress(Engine, "?DrawTile@FCanvasUtil@@QAEXMMMMMMMMMPAVUMaterial@@VFColor@@HH@Z");
-	DWORD pfFUCanvasDrawTile = (DWORD)GetProcAddress(Engine, "?DrawTile@UCanvas@@UAEXPAVUMaterial@@MMMMMMMMMVFPlane@@1H@Z");
-	DWORD pfexecDrawTextClipped = (DWORD)GetProcAddress(Engine, "?execDrawTextClipped@UCanvas@@QAEXAAUFFrame@@QAX@Z");
-	DWORD pfsub_103762F0 = injector::ReadMemory<DWORD>(pfexecDrawTextClipped + 0xF4 + 0x1, true) + pfexecDrawTextClipped + 0xF4 + 5;
-	static double HUDScaleX = 1.0f / Screen.fWidth * (Screen.fHeight / 480.0f);
-	injector::WriteMemory<double>(injector::ReadMemory<DWORD>(pfDrawTile + 0x49 + 0x2, true), HUDScaleX, true);
+	Screen.fHudOffset = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f / (Screen.fWidth / (640.0f * (4.0f / 3.0f)));
+	Screen.HUDScaleX = 1.0f / Screen.fWidth * (Screen.fHeight / 480.0f);
 
-	injector::MakeCALL(pfFUCanvasDrawTile + 0x219, FCanvasUtil_DrawTile_Hook, true);
-	injector::MakeCALL(pfsub_103762F0 + 0x36E, FCanvasUtil_DrawTile_Hook, true);
-	injector::MakeCALL(pfsub_103762F0 + 0x43D, FCanvasUtil_DrawTile_Hook, true);
-	injector::MakeCALL(pfsub_103762F0 + 0x4DA, FCanvasUtil_DrawTile_Hook, true);
-	injector::MakeCALL(pfsub_103762F0 + 0x564, FCanvasUtil_DrawTile_Hook, true);
-	hookJmpAddr3 = (DWORD)GetProcAddress(Engine, "?DrawTile@FCanvasUtil@@QAEXMMMMMMMMMPAVUMaterial@@VFColor@@HH@Z");
+	uint32_t pfDrawTile = (uint32_t)GetProcAddress(Engine, "?DrawTile@FCanvasUtil@@QAEXMMMMMMMMMPAVUMaterial@@VFColor@@HH@Z");
+	auto pattern = hook::range_pattern(pfDrawTile, pfDrawTile + 0x100, "DC 0D");
+	injector::WriteMemory<double>(*pattern.get(0).get<uint32_t*>(2), Screen.HUDScaleX, true);
+
+	uint32_t pfFUCanvasDrawTile = (uint32_t)GetProcAddress(Engine, "?DrawTile@UCanvas@@UAEXPAVUMaterial@@MMMMMMMMMVFPlane@@1H@Z");
+	pattern = hook::range_pattern(pfFUCanvasDrawTile, pfFUCanvasDrawTile + 0x400, "E8 ? ? ? ? 8B");
+	injector::MakeCALL(pattern.get(0).get<uint32_t>(0), FCanvasUtil_DrawTile_Hook, true); //pfFUCanvasDrawTile + 0x219
+
+	uint32_t pfexecDrawTextClipped = (uint32_t)GetProcAddress(Engine, "?execDrawTextClipped@UCanvas@@QAEXAAUFFrame@@QAX@Z");
+	pattern = hook::range_pattern(pfexecDrawTextClipped, pfexecDrawTextClipped + 0x400, "E8 ? ? ? ?");
+	uint32_t pfsub_103762F0 = injector::ReadMemory<uint32_t>((uint32_t)pattern.get(3).get<uint32_t>(1), true) + (uint32_t)pattern.get(3).get<uint32_t>(5); //pfexecDrawTextClipped + 0xF4 + 0x1 / pfexecDrawTextClipped + 0xF4 + 5
+
+	pattern = hook::range_pattern(pfsub_103762F0, pfsub_103762F0 + 0x800, "E8 ? ? ? ? 8B ?");
+	injector::MakeCALL(pattern.get(3).get<uint32_t>(0), FCanvasUtil_DrawTile_Hook, true); //pfsub_103762F0 + 0x36E
+	injector::MakeCALL(pattern.get(5).get<uint32_t>(0), FCanvasUtil_DrawTile_Hook, true); //pfsub_103762F0 + 0x43D
+	injector::MakeCALL(pattern.get(7).get<uint32_t>(0), FCanvasUtil_DrawTile_Hook, true); //pfsub_103762F0 + 0x4DA
+	injector::MakeCALL(pattern.get(9).get<uint32_t>(0), FCanvasUtil_DrawTile_Hook, true); //pfsub_103762F0 + 0x564
+	FCanvasUtilDrawTileHookJmp = (uint32_t)GetProcAddress(Engine, "?DrawTile@FCanvasUtil@@QAEXMMMMMMMMMPAVUMaterial@@VFColor@@HH@Z");
+
 
 	//FMV
-	DWORD pfOpenVideo = injector::ReadMemory<DWORD>((DWORD)GetProcAddress(D3DDrv, "?OpenVideo@UD3DRenderDevice@@UAEXPAVUCanvas@@PADHHH@Z") + 0x1, true) + (DWORD)GetProcAddress(D3DDrv, "?OpenVideo@UD3DRenderDevice@@UAEXPAVUCanvas@@PADHHH@Z") + 5;
-	DWORD pfDisplayVideo = injector::ReadMemory<DWORD>((DWORD)GetProcAddress(D3DDrv, "?DisplayVideo@UD3DRenderDevice@@UAEXPAVUCanvas@@PAX@Z") + 0x1, true) + (DWORD)GetProcAddress(D3DDrv, "?DisplayVideo@UD3DRenderDevice@@UAEXPAVUCanvas@@PAX@Z") + 5;
-	//////injector::WriteMemory<float>(injector::ReadMemory<DWORD>((DWORD)GetProcAddress(D3DDrv, "?DisplayVideo@UD3DRenderDevice@@UAEXPAVUCanvas@@PAX@Z") + 0x55D, true), 0.0f, true); //Y 
-	//injector::WriteMemory<float>(injector::ReadMemory<DWORD>(pfDisplayVideo + 0x332 + 0x2, true), 0.003125f, true); //X
-	injector::MakeJMP(pfOpenVideo + 0x2D4, OpenVideo_Hook, true);
-	hookJmpAddr5 = pfOpenVideo + 0x2D4 + 0x5;
-	injector::MakeJMP(pfDisplayVideo + 0x37E, DisplayVideo_Hook, true);
-	hookJmpAddr6 = pfDisplayVideo + 0x37E + 0x5;
 	Screen.fFMVoffsetStartX = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
 	Screen.fFMVoffsetEndX = Screen.fWidth - Screen.fFMVoffsetStartX;
 	Screen.fFMVoffsetStartY = 0.0f - ((Screen.fHeight - ((Screen.fHeight / 1.5f) * ((16.0f / 9.0f) / Screen.fAspectRatio))) / 2.0f);
 	Screen.fFMVoffsetEndY = Screen.fHeight - Screen.fFMVoffsetStartY;
 
-	//HUD
-	Screen.fHudOffset = (Screen.fWidth - Screen.fHeight * (4.0f/3.0f)) / 2.0f / (Screen.fWidth / (640.0f * (4.0f / 3.0f)));
+	uint32_t pfOpenVideo = injector::ReadMemory<uint32_t>((uint32_t)GetProcAddress(D3DDrv, "?OpenVideo@UD3DRenderDevice@@UAEXPAVUCanvas@@PADHHH@Z") + 0x1, true) + (uint32_t)GetProcAddress(D3DDrv, "?OpenVideo@UD3DRenderDevice@@UAEXPAVUCanvas@@PADHHH@Z") + 5;
+	uint32_t pfDisplayVideo = injector::ReadMemory<uint32_t>((uint32_t)GetProcAddress(D3DDrv, "?DisplayVideo@UD3DRenderDevice@@UAEXPAVUCanvas@@PAX@Z") + 0x1, true) + (uint32_t)GetProcAddress(D3DDrv, "?DisplayVideo@UD3DRenderDevice@@UAEXPAVUCanvas@@PAX@Z") + 5;
+	//////injector::WriteMemory<float>(injector::ReadMemory<uint32_t>((uint32_t)GetProcAddress(D3DDrv, "?DisplayVideo@UD3DRenderDevice@@UAEXPAVUCanvas@@PAX@Z") + 0x55D, true), 0.0f, true); //Y 
+	//////injector::WriteMemory<float>(injector::ReadMemory<uint32_t>(pfDisplayVideo + 0x332 + 0x2, true), 0.003125f, true); //X
+	
+	pattern = hook::range_pattern(pfOpenVideo, pfOpenVideo + 0x400, "C1 ? 02");
+	struct OpenVideo_Hook
+	{
+		void operator()(injector::reg_pack& regs)
+		{
+			regs.ecx = 0x4B000;
+			regs.ecx >>= 2;
+			regs.eax = 0;
+		}
+	}; injector::MakeInline<OpenVideo_Hook>(pattern.get(1).get<uint32_t>(0)); //pfOpenVideo + 0x2D4
+	
+	pattern = hook::range_pattern(pfDisplayVideo, pfDisplayVideo + 0x500, "D9 ? 24");
+	injector::MakeJMP(pattern.get(5).get<uint32_t>(0), DisplayVideo_Hook, true);//pfDisplayVideo + 0x37E
+	DisplayVideo_HookJmp = (uint32_t)pattern.get(5).get<uint32_t>(5);
 
 	//FOV
-	DWORD pfDraw = (DWORD)GetProcAddress(Engine, "?Draw@UGameEngine@@UAEXPAVUViewport@@HPAEPAH@Z");
 	fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(fScreenFieldOfViewVStd * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
-	injector::MakeJMP(pfDraw + 0x167, UGameEngine_Draw_Hook, true);
-	hookJmpAddr4 = pfDraw + 0x167 + 0x6;
+	
+	uint32_t pfDraw = (uint32_t)GetProcAddress(Engine, "?Draw@UGameEngine@@UAEXPAVUViewport@@HPAEPAH@Z");
+	pattern = hook::range_pattern(pfDraw, pfDraw + 0x300, "8B ? ? 03 00 00");
+	struct UGameEngine_Draw_Hook
+	{
+		void operator()(injector::reg_pack& regs)
+		{
+			*(float*)&regs.ecx = *(float*)(regs.eax + 0x374) * fDynamicScreenFieldOfViewScale;
+		}
+	}; injector::MakeInline<UGameEngine_Draw_Hook>(pattern.get(0).get<uint32_t>(0)/*pfDraw + 0x167*/, pattern.get(0).get<uint32_t>(0 + 6));
 
 	//Shadows
 	if (nForceShadowBufferSupport)
 	{
-		DWORD pfSupportsShadowBuffer = injector::ReadMemory<DWORD>((DWORD)GetProcAddress(D3DDrv, "?SupportsShadowBuffer@UD3DRenderDevice@@QAEHXZ") + 0x1, true) + (DWORD)GetProcAddress(D3DDrv, "?SupportsShadowBuffer@UD3DRenderDevice@@QAEHXZ") + 5;
-		injector::WriteMemory<unsigned short>(pfSupportsShadowBuffer + 0x10, 0xE990, true);
-		injector::WriteMemory(pfSupportsShadowBuffer + 0x113, &nForceShadowBufferSupport, true);
+		uint32_t pfSupportsShadowBuffer = injector::ReadMemory<uint32_t>((uint32_t)GetProcAddress(D3DDrv, "?SupportsShadowBuffer@UD3DRenderDevice@@QAEHXZ") + 0x1, true) + (uint32_t)GetProcAddress(D3DDrv, "?SupportsShadowBuffer@UD3DRenderDevice@@QAEHXZ") + 5;
+		pattern = hook::range_pattern(pfSupportsShadowBuffer, pfSupportsShadowBuffer + 0x90, "0F 84");
+		injector::WriteMemory<unsigned short>(pattern.get(0).get<uint32_t>(0), 0xE990, true); //pfSupportsShadowBuffer + 0x10
+		pattern = hook::range_pattern(pfSupportsShadowBuffer, pfSupportsShadowBuffer + 0x200, "A1 ? ? ? ? 5E");
+		injector::WriteMemory(pattern.get(0).get<uint32_t>(1), &nForceShadowBufferSupport, true); //pfSupportsShadowBuffer + 0x113
 		//injector::WriteMemory(pfSetRes + 0xA45 + 0x6, nForceShadowBufferSupport, true);
 	}
 
 	return 0;
 }
 
+void Init()
+{
+	HINSTANCE hExecutableInstance = GetModuleHandle(NULL);
+	IMAGE_NT_HEADERS* ntHeader = (IMAGE_NT_HEADERS*)((uint32_t)hExecutableInstance + ((IMAGE_DOS_HEADER*)hExecutableInstance)->e_lfanew);
+	static uint8_t* ep = (uint8_t*)((uint32_t)hExecutableInstance + ntHeader->OptionalHeader.AddressOfEntryPoint);
+	static uint8_t originalCode[5];
+	*(uint32_t*)&originalCode = *(uint32_t*)ep;
+	originalCode[4] = *(ep + 4);
+
+	struct EP
+	{
+		void operator()(injector::reg_pack& regs)
+		{
+			CIniReader iniReader("");
+			Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
+			Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
+			nForceShadowBufferSupport = iniReader.ReadInteger("MAIN", "ForceShadowBufferSupport", 0);
+			nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 0);
+
+			if (!Screen.Width || !Screen.Height) {
+				HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
+				MONITORINFO info;
+				info.cbSize = sizeof(MONITORINFO);
+				GetMonitorInfo(monitor, &info);
+				Screen.Width = info.rcMonitor.right - info.rcMonitor.left;
+				Screen.Height = info.rcMonitor.bottom - info.rcMonitor.top;
+			}
+
+			Screen.fWidth = static_cast<float>(Screen.Width);
+			Screen.fHeight = static_cast<float>(Screen.Height);
+			Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
+
+			char UserIni[MAX_PATH];
+			HMODULE hModule = GetModuleHandle(NULL);
+			if (hModule != NULL)
+			{
+				GetModuleFileName(hModule, UserIni, (sizeof(UserIni)));
+				char* pch = strrchr(UserIni, '\\');
+				pch[0] = '\0';
+				strcat(UserIni, "\\SplinterCell2User.ini");
+			}
+
+			CIniReader iniWriter(UserIni);
+			char szRes[50];
+			sprintf(szRes, "%dx%d", Screen.Width, Screen.Height);
+			iniWriter.WriteString("Engine.EPCGameOptions", "Resolution", szRes);
+
+			char* pch = strrchr(UserIni, '\\');
+			pch[0] = '\0';
+			strcat(UserIni, "\\SplinterCell2.ini");
+			CIniReader iniWriter2(UserIni);
+			iniWriter2.WriteInteger("WinDrv.WindowsClient", "WindowedViewportX", Screen.Width);
+			iniWriter2.WriteInteger("WinDrv.WindowsClient", "WindowedViewportY", Screen.Height);
+
+			uint32_t appInit = (uint32_t)GetProcAddress(GetModuleHandle("Core"), "?appInit@@YAXPBG0PAVFMalloc@@PAVFOutputDevice@@PAVFOutputDeviceError@@PAVFFeedbackContext@@PAVFFileManager@@P6APAVFConfigCache@@XZH@Z");
+			uint32_t pfappInit = injector::ReadMemory<uint32_t>(appInit + 0x1, true) + appInit + 5;
+
+			auto pattern = hook::range_pattern(pfappInit, pfappInit + 0x900, "80 02 00 00");
+			injector::WriteMemory<unsigned short>(pattern.get(0).get<uint32_t>(-6), 0x7EEB, true); //pfappInit + 0x5FC
+			injector::WriteMemory(pattern.get(1).get<uint32_t>(0), Screen.Width, true);  //pfappInit + 0x67E + 0x1
+			pattern = hook::range_pattern(pfappInit, pfappInit + 0x900, "E0 01 00 00");
+			injector::WriteMemory(pattern.get(1).get<uint32_t>(0), Screen.Height, true); //pfappInit + 0x69F + 0x1
+			
+			// return to the original EP
+			*(uint32_t*)ep = *(uint32_t*)&originalCode;
+			*(uint8_t*)(ep + 4) = originalCode[4];
+			//*(uintptr_t*)regs.esp = (uintptr_t)ep;
+			__asm jmp ep //PT crashes for some reason 
+		}
+	}; injector::MakeInline<EP>(ep);
+
+	CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Thread, NULL, 0, NULL);
+}
+
 BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
 	if (reason == DLL_PROCESS_ATTACH)
 	{
-		DWORD fAttr = GetFileAttributes("SplinterCell2.ini");
-		if ((fAttr != INVALID_FILE_ATTRIBUTES) && !(fAttr & FILE_ATTRIBUTE_DIRECTORY))
-		{
-			UserIni = ".\\SplinterCell2.ini";
-		}
-		else
-		{
-			UserIni = "..\\SplinterCell2.ini";
-		}
-
-		hExecutableInstance = GetModuleHandle(NULL);
-		IMAGE_NT_HEADERS* ntHeader = (IMAGE_NT_HEADERS*)((DWORD)hExecutableInstance + ((IMAGE_DOS_HEADER*)hExecutableInstance)->e_lfanew);
-		BYTE* ep = (BYTE*)((DWORD)hExecutableInstance + ntHeader->OptionalHeader.AddressOfEntryPoint);
-		// back up original code
-		*(DWORD*)&originalCode = *(DWORD*)ep;
-		originalCode[4] = *(ep + 4);
-		originalEP = ep;
-
-		injector::MakeJMP(ep, Init, true);
-
-		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Thread, NULL, 0, NULL);
+		Init();
 	}
 	return TRUE;
 }

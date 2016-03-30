@@ -256,6 +256,8 @@ public:
 
 	inline uintptr_t begin() { return m_begin; }
 	inline uintptr_t end()   { return m_end; }
+	inline void set_begin(uintptr_t bgn) {  m_begin = bgn; }
+	inline void set_end(uintptr_t end) {  m_end = end; }
 };
 
 void pattern::Initialize(const char* pattern, size_t length)
@@ -299,6 +301,12 @@ void pattern::EnsureMatches(int maxCount)
 
 	// scan the executable for code
 	executable_meta executable(m_module);
+
+	if (range_start || range_end)
+	{
+		executable.set_begin(range_start);
+		executable.set_end(range_end);
+	}
 
 	// check if SSE 4.2 is supported
 	int cpuid[4];

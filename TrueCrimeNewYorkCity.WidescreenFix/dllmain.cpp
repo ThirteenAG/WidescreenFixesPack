@@ -12,7 +12,7 @@ DWORD WINAPI Init(LPVOID)
 	CIniReader iniReader("");
 	int HUD_PATCH = iniReader.ReadInteger("MAIN", "HUD_PATCH", 0);
 	fGameSpeed = iniReader.ReadFloat("MAIN", "GameSpeed", 128.0f);
-	fGameSpeed = 200.0f;
+	
 	while (!*nWidth)
 		Sleep(0);
 

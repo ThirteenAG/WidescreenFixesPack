@@ -84,6 +84,8 @@ namespace hook
 
 	protected:
 		void* m_module;
+		uintptr_t range_start = 0;
+		uintptr_t range_end = 0;
 
 	protected:
 		inline pattern(void* module)
@@ -154,6 +156,20 @@ namespace hook
 		module_pattern(void* module, const char(&pattern)[Len])
 			: pattern(module)
 		{
+			Initialize(pattern, Len);
+		}
+	};
+
+	class range_pattern
+		: public pattern
+	{
+	public:
+		template<size_t Len>
+		range_pattern(uintptr_t begin, uintptr_t end, const char(&pattern)[Len]) : pattern()
+		{
+			m_module = getRVA<void>(0);
+			range_start = begin;
+			range_end = end;
 			Initialize(pattern, Len);
 		}
 	};

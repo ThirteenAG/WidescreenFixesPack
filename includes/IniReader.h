@@ -26,11 +26,13 @@ public:
 		strcat(iniName, ".ini");
 		strncpy(dllPath, moduleName, (tempPointer - moduleName + 1));
 		dllPath[tempPointer - moduleName + 1] = '\0';
-		if (strcmp(szFileName, "") == 0)
+		if (strchr(szFileName, ':') != NULL)
+		{
+			strcpy(dllPath, szFileName);
+		} else if (strcmp(szFileName, "") == 0)
 		{
 			strcat(dllPath, iniName);
-		}
-		else {
+		} else {
 			strcat(dllPath, szFileName);
 		}
 
