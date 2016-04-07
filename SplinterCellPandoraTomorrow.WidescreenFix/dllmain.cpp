@@ -40,7 +40,7 @@ struct Screen
 	float fFMVoffsetEndY;
 } Screen;
 
-uint32_t nForceShadowBufferSupport, nFMVWidescreenMode, nPostProcessFixedScale;
+uint32_t nForceShadowBufferMode, nFMVWidescreenMode, nPostProcessFixedScale;
 bool bHudWidescreenMode, bOpsatWidescreenMode;
 float fWidescreenHudOffset;
 
@@ -97,8 +97,8 @@ void WidescreenHud(float& offsetX1, float& offsetX2, float& offsetY1, float& off
 	else
 	{
 		if (
-		(offsetX1 == 48.0f && offsetX2 == 348.0f && offsetY1 == 42.0f && offsetY2 == 87.0f && Color.RGBA == 4266682200) || //top dialogue menu background
-		(offsetX1 == 48.0f && offsetX2 == 348.0f && offsetY1 == 42.0f && offsetY2 == 90.0f && Color.RGBA == 4266682200) || //top dialogue menu background (russian)
+		(offsetX1 == 48.0f && offsetX2 == 348.0f && offsetY1 >= 42.0f && offsetY2 <= 87.0f && Color.RGBA == 4266682200) || //top dialogue menu background
+		(offsetX1 == 48.0f && offsetX2 == 348.0f && offsetY1 >= 42.0f && offsetY2 <= 90.0f && Color.RGBA == 4266682200) || //top dialogue menu background (russian)
 		((offsetX1 == 45.0f || offsetX1 == 61.0f || offsetX1 == 335.0f ) && (offsetX2 == 61.0f || offsetX2 == 335.0f || offsetX2 == 351.0f) && Color.RGBA == 4266682200) || //top dialogue menu background border
 		(offsetX1 >= 52.0f && offsetY1 >= 43.0f && offsetY2 <= 185.0f && Color.RGBA == 4265759816) //top dialogue menu text
 		)
@@ -308,17 +308,6 @@ DWORD WINAPI Thread(LPVOID)
 		}
 	}; injector::MakeInline<UGameEngine_Draw_Hook>(pattern.get(0).get<uint32_t>(0)/*pfDraw + 0x167*/, pattern.get(0).get<uint32_t>(0 + 6));
 
-	//Shadows
-	if (nForceShadowBufferSupport)
-	{
-		uint32_t pfSupportsShadowBuffer = injector::ReadMemory<uint32_t>((uint32_t)GetProcAddress(D3DDrv, "?SupportsShadowBuffer@UD3DRenderDevice@@QAEHXZ") + 0x1, true) + (uint32_t)GetProcAddress(D3DDrv, "?SupportsShadowBuffer@UD3DRenderDevice@@QAEHXZ") + 5;
-		pattern = hook::range_pattern(pfSupportsShadowBuffer, pfSupportsShadowBuffer + 0x90, "0F 84");
-		injector::WriteMemory<unsigned short>(pattern.get(0).get<uint32_t>(0), 0xE990, true); //pfSupportsShadowBuffer + 0x10
-		pattern = hook::range_pattern(pfSupportsShadowBuffer, pfSupportsShadowBuffer + 0x200, "A1 ? ? ? ? 5E");
-		injector::WriteMemory(pattern.get(0).get<uint32_t>(1), &nForceShadowBufferSupport, true); //pfSupportsShadowBuffer + 0x113
-		//injector::WriteMemory(pfSetRes + 0xA45 + 0x6, nForceShadowBufferSupport, true);
-	}
-
 	if (nPostProcessFixedScale)
 	{
 		if (nPostProcessFixedScale == 1)
@@ -365,7 +354,7 @@ void Init()
 			CIniReader iniReader("");
 			Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
 			Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
-			nForceShadowBufferSupport = iniReader.ReadInteger("MAIN", "ForceShadowBufferSupport", 1);
+			nForceShadowBufferMode = iniReader.ReadInteger("MAIN", "ForceShadowBufferMode", 1);
 			nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 0);
 			bHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1) == 1;
 			bOpsatWidescreenMode = iniReader.ReadInteger("MAIN", "OpsatWidescreenMode", 1) == 1;
@@ -407,6 +396,12 @@ void Init()
 			iniWriter2.WriteInteger("WinDrv.WindowsClient", "WindowedViewportX", Screen.Width);
 			iniWriter2.WriteInteger("WinDrv.WindowsClient", "WindowedViewportY", Screen.Height);
 
+			pch = strrchr(UserIni, '\\');
+			pch[0] = '\0';
+			strcat(UserIni, "\\SplinterCell.ini");
+			CIniReader iniWriter3(UserIni);
+			iniWriter3.WriteInteger("D3DDrv.D3DRenderDevice", "ForceShadowMode", nForceShadowBufferMode);
+		
 			uint32_t appInit = (uint32_t)GetProcAddress(GetModuleHandle("Core"), "?appInit@@YAXPBG0PAVFMalloc@@PAVFOutputDevice@@PAVFOutputDeviceError@@PAVFFeedbackContext@@PAVFFileManager@@P6APAVFConfigCache@@XZH@Z");
 			uint32_t pfappInit = injector::ReadMemory<uint32_t>(appInit + 0x1, true) + appInit + 5;
 
