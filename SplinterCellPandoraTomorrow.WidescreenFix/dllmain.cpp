@@ -16,11 +16,11 @@ float fDynamicScreenFieldOfViewScale;
 
 union FColor
 {
-	uint8_t R;
-	uint8_t G;
-	uint8_t B;
-	uint8_t A;
 	uint32_t RGBA;
+	struct
+	{
+		uint8_t B, G, R, A;
+	};
 };
 
 struct Screen
@@ -66,8 +66,8 @@ void WidescreenHud(float& offsetX1, float& offsetX2, float& offsetY1, float& off
 	((offsetX2 - offsetX1 == 109) && offsetY1 == 338.0f && offsetY2 == 368.0f && (Color.RGBA == 4266682200 || Color.RGBA == 4271286934)) || //stealth meter
 	(offsetX1 == 491.0f && offsetX2 == 592.0f && offsetY1 == 373.0f && offsetY2 == 441.0f && Color.RGBA == 4266682200) || //weapon icon background
 	((offsetX1 == 487.0f || offsetX1 == 503.0f || offsetX1 == 580.0f) && (offsetX2 == 503.0f || offsetX2 == 580.0f || offsetX2 == 596.0f) && (offsetY1 == 369.0f || offsetY1 == 385.0f || offsetY1 == 429.0f) && Color.RGBA == 2152752984) || //weapon icon background border
-	(((offsetX2 - offsetX1 == 8) || (offsetX2 - offsetX1 == 11)) && offsetY1 == 316.0f && offsetY2 == 330.0f && Color.RGBA == 4265759816) || //alarm counter digits text
-	(((offsetX2 - offsetX1 == 3) || (offsetX2 - offsetX1 == 7)) && offsetY1 == 315.0f && offsetY2 == 330.0f && Color.RGBA == 4265759816) || //alarm counter digits text (russian)
+	(offsetX1 >= 562.0f && offsetX2 <= 602.0f && offsetY1 == 316.0f && offsetY2 == 330.0f && Color.RGBA == 4265759816) || //alarm counter digits text
+	(offsetX1 >= 562.0f && offsetX2 <= 602.0f && offsetY1 == 315.0f && offsetY2 == 330.0f && Color.RGBA == 4265759816) || //alarm counter digits text (russian)
 	((offsetX1 == 570.0f || offsetX1 == 586.0f) && (offsetX2 == 586.0f || offsetX2 == 602.0f) /*&& (offsetY1 == 125.0f || offsetY1 == 141.0f || offsetY1 == 269.0f)*/ /*&& (offsetY2 == 141.0f || offsetY2 == 269.0f || offsetY2 == 285.0f)*/ && Color.RGBA == 3360712536) || //health bar
 	(offsetX1 == 492.0f && offsetX2 == 519.0f && offsetY1 == 314.0f && offsetY2 == 333.0f && Color.RGBA == 4266682200) || //envelope icon
 	(offsetX1 == 521.0f && offsetX2 == 562.0f && offsetY1 == 306.0f && offsetY2 == 340.0f && (Color.RGBA == 4266682200 || Color.RGBA == 2152752984)) || //alarm icon
