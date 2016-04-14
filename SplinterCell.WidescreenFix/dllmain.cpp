@@ -67,7 +67,7 @@ void WidescreenHud(float& offsetX1, float& offsetX2, float& offsetY1, float& off
 #endif // _LOG
 
 	if (
-	(n_offsetX1 >= 599 && n_offsetX2 <= 616 && n_offsetY1 >= 39 && n_offsetY2 <= 233 && (Color.RGBA == 4269834368 || Color.RGBA == 671088640)) || //health bar
+	(n_offsetX1 >= 599 && n_offsetX2 <= 616 && n_offsetY1 >= 39 && n_offsetY2 <= 233 /*&& (Color.RGBA == 4269834368 || Color.RGBA == 671088640)*/) || //health bar
 	(n_offsetX1 >= 520 && n_offsetX2 <= 616 && n_offsetY1 == 304 && (n_offsetY2 == 331 || n_offsetY2 == 332) && (Color.RGBA == 4269834368))    || //hud icons
 	(n_offsetX1 >= 494 && n_offsetX2 <= 616 && n_offsetY1 >= 334 && n_offsetY2 <= 410 && (Color.RGBA == 4264768307 || Color.RGBA == 1283489920 || Color.RGBA == 4269834368 || Color.RGBA == 4265623616 || Color.RGBA == 3237936894 || Color.RGBA == 1275068416 || (Color.RGBA == 2550136832 && n_offsetX1 != 573) || Color.RGBA == 2558558336 || (Color.RGBA == 4278124286 && (n_offsetX1 == 525 || n_offsetX1 == 499)))) || //stealth bar and weapon hud
 	(n_offsetX1 >= 520 && n_offsetX2 <= 616 && n_offsetY1 >= 412 && n_offsetY2 <= 440 && Color.RGBA != 4264768307) //fire mode switch
@@ -215,6 +215,7 @@ DWORD WINAPI Thread(LPVOID)
 		}
 	}; injector::MakeInline<UGameEngine_Draw_Hook>(pattern.get(0).get<uint32_t>(3)/*pfDraw + 0x104*/, pattern.get(0).get<uint32_t>(3 + 6));
 
+	fWidescreenHudOffset = ((Screen.fHeight * (4.0f / 3.0f)) / (640.0f / fWidescreenHudOffset));
 	if (Screen.fAspectRatio < (16.0f / 9.0f))
 	{
 		fWidescreenHudOffset = fWidescreenHudOffset / (((16.0f / 9.0f) / (Screen.fAspectRatio)) * 1.5f);
@@ -243,7 +244,7 @@ void Init()
 			nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 0);
 			bHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1) == 1;
 			bOpsatWidescreenMode = iniReader.ReadInteger("MAIN", "OpsatWidescreenMode", 1) == 1;
-			fWidescreenHudOffset = iniReader.ReadFloat("MAIN", "WidescreenHudOffset", 180.0f);
+			fWidescreenHudOffset = iniReader.ReadFloat("MAIN", "WidescreenHudOffset", 120.0f);
 
 			if (!Screen.Width || !Screen.Height) {
 				HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
