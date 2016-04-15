@@ -41,9 +41,8 @@ struct Screen
 	float fFMVoffsetEndY;
 } Screen;
 
-uint32_t nFMVWidescreenMode;
-bool bHudWidescreenMode, bOpsatWidescreenMode;
-float fWidescreenHudOffset;
+bool bHudWidescreenMode;
+int32_t nWidescreenHudOffset;
 
 #define _LOG
 #ifdef _LOG
@@ -105,8 +104,7 @@ DWORD WINAPI Thread(LPVOID)
 	pattern = hook::pattern("D8 25 ? ? ? ? D9 05 ? ? ? ? D8 88");
 	injector::WriteMemory(pattern.get(0).get<uint32_t>(2), &Screen.fHudOffset, true); //0x10ADADBE + 0x2
 
-	/////////////////////
-	struct Test
+	struct WSHud
 	{
 		void operator()(injector::reg_pack& regs)
 		{
@@ -118,42 +116,87 @@ DWORD WINAPI Thread(LPVOID)
 			FColor Color; Color.RGBA = *(int32_t*)(regs.esp + 0x40);
 
 #ifdef _LOG
-			if (logit && offset3 > 200)
-				logfile << std::dec << offset1 << " " << offset2 << " " << offset3 << " " << std::hex << Color.RGBA << std::endl;
+			//if (logit /*&& offset3 > 45 && offset3 < 200*/)
+			//	logfile << std::dec << offset1 << " " << offset2 << " " << offset3 << " " << std::hex << Color.RGBA << std::endl;
 #endif // _LOG
+
+			if (offset1 == 0 && offset2 == 480 && offset3 == 480) //mission failed fading
+				*(int32_t*)(regs.esp + 0x10) += 10000;
 
 			if (((offset1 == -2 && offset2 == 257) || (offset1 == -2 && offset2 == 258) || (offset1 == -61 && offset2 == 380))) //scopes image left
 			{
-				*(int32_t*)(regs.esp + 0x10) -= (Screen.nHudOffsetReal);
+				*(int32_t*)(regs.esp + 0x10) -= Screen.nHudOffsetReal;
 			}
 			else if (((offset1 == 319 && offset2 == 380) || (offset1 == 382 && offset2 == 258) || (offset1 == 383 && offset2 == 257) || (offset1 == 383 && offset2 == 258))) //scopes image right
 			{
-				*(int32_t*)(regs.esp + 0x10) += (Screen.nHudOffsetReal);
+				*(int32_t*)(regs.esp + 0x10) += Screen.nHudOffsetReal;
 			}
 
-			if (true)
+			if (bHudWidescreenMode)
 			{
 				if (
 				((offset1 == 421 || offset1 == 424 || offset1 == 617 || offset1 == 622) && (offset2 == 20 || offset2 == 1) && (offset3 == 26 || offset3 == 45) && Color.RGBA == 0x32ffffff) || //health bar brackets
 				((offset1 == 427|| offset1 == 618) && (offset2 == 1 || offset2 == 10) && (offset3 == 30 || offset3 == 40) && Color.RGBA == 0x59ffffff) ||                                      //health bar
 				((offset1 == 428|| offset1 == 618) && (offset2 == 1 || offset2 == 10) && offset3 == 40 && (Color.RGBA == 0x59ffffff || Color.RGBA == 0x80ffffff)) ||                           //health bar
 				((offset1 == 431|| offset1 == 618) && (offset2 == 3 || offset2 == 5) && (offset3 == 36 || offset3 == 37) && (Color.RGBA == 0x32ffffff || Color.RGBA == 0x96ffffff)) ||         //health bar
-				(true)
+				((offset1 >= 478 && offset1 <= 610) && offset2 == 4 && offset3 == 420 && Color.RGBA == 0xffffffff) || //bottom right panel borders
+				((offset1 == 510 || offset1 == 545 || offset1 == 580) && offset2 == 6 && offset3 == 405 && Color.RGBA == 0xffffffff) || //bottom right panel borders
+				((offset1 == 467 || offset1 == 470 || offset1 == 477 || offset1 == 617 || offset1 == 622) && (offset2 == 1 || offset2 == 6 || offset2 == 75) && (offset3 == 391 || offset3 == 421 || offset3 == 465) && Color.RGBA == 0x32ffffff) || //brackets and sound meter (bottom right panel)
+				((offset1 == 473 || offset1 == 618) && (offset2 == 1 || offset2 == 12 || offset2 == 32) && (offset3 == 396 || offset3 == 408 || offset3 == 409 || offset3 == 412 || offset3 == 424 || offset3 == 425 || offset3 == 428 || offset3 == 460 || offset3 == 461) && Color.RGBA == 0x59ffffff) || //green borders (bottom right panel)
+				(offset1 == 474 && (offset2 == 11 || offset2 == 12 || offset2 == 31) && (offset3 == 424 || offset3 == 408 || offset3 == 460) && Color.RGBA == 0x80ffffff) || //backgrounds (bottom right panel)
+				(((offset1 == 475 && offset2 == 20 && offset3 == 391) || (offset1 == 492 && offset2 == 32 && offset3 == 396)) && (Color.R == 0xb8 && Color.G == 0xf7 && Color.B == 0xc8)) || //target icon / notebook icon
+				((offset1 == 476 || offset1 == 608) && offset2 == 16 && offset3 == 445 && Color.RGBA == 0x4bb8fac8) || //weapon name brackets
+				((offset1 == 476 || offset1 == 557) && offset2 == 16 && offset3 == 461 && Color.RGBA == 0x40ffffff) || //ammo brackets
+				((offset1 == 476 || offset1 == 527 || offset1 == 567 || offset1 == 568 || offset1 == 608) && offset2 == 16 && (offset3 == 445 || offset3 == 461) && Color.RGBA == 0x4bb8fac8) || //secondary ammo brackets
+				((offset1 >= 476 && offset1 <= 620) && offset2 == 6 && offset3 == 405 && (Color.R == 0xff && Color.G == 0xff && Color.B == 0xff)) || //visibility slider
+				((offset1 >= 476 && offset1 <= 620) && (offset2 == 1 || offset2 == 6 || offset2 == 32) && (offset3 == 397 || offset3 == 416 || offset3 == 421) && Color.RGBA == 0xc8ffffff) || //alarm icon
+
+				((offset1 == 421 || offset1 == 424 || offset1 == 617 || offset1 == 622) && (offset2 == 1 || offset2 == 5 || offset2 == 9 || offset2 == 16 || offset2 == 21) && (offset3 > 45 && offset3 < 200) && Color.RGBA == 0x32ffffff) || //interaction menu brackets
+				((offset1 == 427 || offset1 == 428 || offset1 == 618) && (offset2 == 1 || offset2 == 5 || offset2 == 15 || offset2 == 16) && (offset3 > 45 && offset3 < 200) && Color.RGBA == 0x59ffffff) ||  //interaction menu 
+				((offset1 == 428 || offset1 == 618) && (offset2 == 1 || offset2 == 4 || offset2 == 5 || offset2 == 14 || offset2 == 16) && (offset3 > 45 && offset3 < 200) && (Color.RGBA == 0x59ffffff || Color.RGBA == 0x99ffffff)) || //interaction menu 
+				((offset1 == 429 || offset1 == 430 || offset1 == 434 || offset1 == 607 || offset1 == 608 || offset1 == 617 || offset1 == 618 || offset1 == 622) && (offset2 == 1 || offset2 == 9 || offset2 == 15 || offset2 == 16 || offset2 == 21) && (offset3 > 45 && offset3 < 200) && (Color.RGBA == 0x32ffffff || Color.RGBA == 0xc8ffffff)) //|| //interaction menu 
 				) 
 				{
-					*(int32_t*)(regs.esp + 0x10) += 100;
+					*(int32_t*)(regs.esp + 0x10) += nWidescreenHudOffset;
 				}
-
 			}
 		}
-	}; injector::MakeInline<Test>(0x10ADADAE, 0x10ADADAE + 6);
-	/////////////////////
+	}; injector::MakeInline<WSHud>(0x10ADADAE, 0x10ADADAE + 6);
 
 	//TEXT
 	pattern = hook::pattern("D8 3D ? ? ? ? D9 5C 24 68 DB");
 	injector::WriteMemory(pattern.get(0).get<uint32_t>(2), &Screen.TextScaleX, true); //0x10B149CE + 0x2
 	pattern = hook::pattern("D8 25 ? ? ? ? D9 44 24 24 D8 4C 24");
 	injector::WriteMemory(pattern.get(0).get<uint32_t>(2), &Screen.fHudOffset, true); //0x10B14BAD + 0x2
+
+	struct WSText
+	{
+		void operator()(injector::reg_pack& regs)
+		{
+			//regs.edx = *(uint16_t*)(regs.eax + 0x86);
+			regs.eax = *(uint32_t*)0x11223A7C;
+
+			int32_t offset1 = *(int32_t*)(regs.esp + 0x4);
+			int32_t offset2 = *(int32_t*)(regs.esp + 0xC);
+			int32_t offset3 = static_cast<int32_t>(*(float*)(regs.esp + 0x1C));
+			FColor Color; Color.RGBA = *(int32_t*)(regs.esp + 0x160);
+
+#ifdef _LOG
+			if (logit)
+				logfile << std::dec << offset1 << " " << offset2 << " " << offset3 << " " << std::hex << Color.RGBA << std::endl;
+#endif // _LOG*/
+
+			if (
+			((offset1 == 435 || offset1 == 436) && (offset2 >= 3  && offset2 <= 20) && (offset3 == 345 || offset3 == 361 || offset3 == 377 || offset3 == 393 || offset3 == 416) && ((Color.R == 0xff && Color.G == 0xff && Color.B == 0xff) || (Color.R == 0xb8 && Color.G == 0xfa && Color.B == 0xc8))) || // top corner
+			((offset1 >= 489 && offset1 <= 598) && (offset2 == 1 || offset2 == 3 || offset2 == 7 || offset2 == 9 || offset2 == 13 || offset2 == 14 || offset2 == 15) && (offset3 == 23 || offset3 == 39 || offset3 == 93) && ((Color.R == 0xff && Color.G == 0xff && Color.B == 0xff) || (Color.R == 0xb8 && Color.G == 0xfa && Color.B == 0xc8))) || // bottom corner
+			(offset1 == 598 && offset2 == 3 && offset3 == 93 && (Color.R == 0xb8 && Color.G == 0xf7 && Color.B == 0xc8)) //icons text
+			)
+			{
+				*(float*)(regs.esp + 0x14) += 100.0f;
+			}
+
+		}
+	}; injector::MakeInline<WSText>(0x10B149C4, 0x10B149C4 + 5);
 
 	//FOV
 	pattern = hook::pattern("8B 91 BC 02 00 00 52 8B 54 24 24");
@@ -193,10 +236,8 @@ void Init()
 			CIniReader iniReader("");
 			Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
 			Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
-			nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 0);
 			bHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1) == 1;
-			bOpsatWidescreenMode = iniReader.ReadInteger("MAIN", "OpsatWidescreenMode", 1) == 1;
-			fWidescreenHudOffset = iniReader.ReadFloat("MAIN", "WidescreenHudOffset", 140.0f);
+			nWidescreenHudOffset = iniReader.ReadInteger("MAIN", "WidescreenHudOffset", 100);
 
 			if (!Screen.Width || !Screen.Height) {
 				HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
