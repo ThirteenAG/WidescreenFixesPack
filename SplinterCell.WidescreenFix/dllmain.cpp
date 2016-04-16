@@ -40,7 +40,7 @@ struct Screen
 	float fFMVoffsetEndY;
 } Screen;
 
-uint32_t nForceShadowBufferSupport, nFMVWidescreenMode;
+uint32_t nForceShadowBufferMode, nFMVWidescreenMode;
 bool bHudWidescreenMode, bOpsatWidescreenMode;
 float fWidescreenHudOffset;
 
@@ -240,7 +240,7 @@ void Init()
 			CIniReader iniReader("");
 			Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
 			Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
-			nForceShadowBufferSupport = iniReader.ReadInteger("MAIN", "ForceShadowBufferSupport", 1);
+			nForceShadowBufferMode = iniReader.ReadInteger("MAIN", "ForceShadowBufferMode", 1);
 			nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 0);
 			bHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1) == 1;
 			bOpsatWidescreenMode = iniReader.ReadInteger("MAIN", "OpsatWidescreenMode", 1) == 1;
@@ -280,6 +280,7 @@ void Init()
 			CIniReader iniWriter2(UserIni);
 			iniWriter2.WriteInteger("WinDrv.WindowsClient", "WindowedViewportX", Screen.Width);
 			iniWriter2.WriteInteger("WinDrv.WindowsClient", "WindowedViewportY", Screen.Height);
+			iniWriter2.WriteInteger("D3DDrv.D3DRenderDevice", "ForceShadowMode", nForceShadowBufferMode);
 			
 			// return to the original EP
 			*(uint32_t*)ep = *(uint32_t*)&originalCode;
