@@ -85,9 +85,10 @@ void WidescreenHud(float& offsetX1, float& offsetX2, float& offsetY1, float& off
 	((offsetX1 == 456.0f || offsetX1 == 457.0f) && (offsetX2 == 467.0f || offsetX2 == 465.0f) && offsetY1 == 371.0f && offsetY2 == 383.0f && Color.RGBA == 4265759816) || //weapon addon ammo text
 	((offsetX1 == 456.0f || offsetX1 == 457.0f) && (offsetX2 == 467.0f || offsetX2 == 464.0f) && offsetY1 == 371.0f && offsetY2 == 386.0f && Color.RGBA == 4265759816) || //weapon addon ammo text (russian)
 	(offsetX1 == 362.0f && offsetX2 == 562.0f /*&& offsetY1 == 42.0f && offsetY2 == 66.0f*/ && (Color.RGBA == 4266682200 || Color.RGBA == 4269316740)) || //interaction menu background
-	(offsetX1 == 443.0f && offsetX2 == 562.0f /*&& offsetY1 == 42.0f && offsetY2 == 66.0f*/ && (Color.RGBA == 4266682200 || Color.RGBA == 4269316740)) || //interaction menu background (russian)
+	((offsetX1 == 422.0f || offsetX1 == 443.0f) && offsetX2 == 562.0f /*&& offsetY1 == 42.0f && offsetY2 == 66.0f*/ && (Color.RGBA == 4266682200 || Color.RGBA == 4269316740)) || //interaction menu background (russian)
 	((offsetX1 == 359.0f || offsetX1 == 375.0f || offsetX1 == 549.0f || offsetX1 == 554.0f) && (offsetX2 == 375.0f || offsetX2 == 370.0f || offsetX2 == 549.0f || offsetX2 == 565.0f) && (Color.RGBA == 2152752984 || Color.RGBA == 4266682200)) || //interaction menu background border
 	((offsetX1 == 440.0f || offsetX1 == 456.0f || offsetX1 == 537.0f || offsetX1 == 554.0f) && (offsetX2 == 456.0f || offsetX2 == 451.0f || offsetX2 == 549.0f || offsetX2 == 565.0f) && (Color.RGBA == 2152752984 || Color.RGBA == 4266682200)) || //interaction menu background border (russian)
+	((offsetX1 == 419.0f || offsetX1 == 435.0f || offsetX1 == 439.0f || offsetX1 == 549.0f) && (offsetX2 == 435.0f || offsetX2 == 430.0f || offsetX2 == 549.0f || offsetX2 == 565.0f) && (Color.RGBA == 2152752984 || Color.RGBA == 4266682200)) || //interaction menu background border (russian2)
 	(offsetX1 >= 365.0f && offsetY1 >= 42.0f && offsetY2 <= 192.0f && (Color.RGBA == 4265759816 || Color.RGBA == 4269316740)) //interaction menu text
 	)
 	{
