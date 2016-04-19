@@ -50,7 +50,7 @@ DWORD WINAPI Init(LPVOID)
 	bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) == 1;
 	bool bHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1) == 1;
 	bool bFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1) == 1;
-	bool bXbox360Scaling = iniReader.ReadInteger("MAIN", "Xbox360Scaling", 1) == 1;
+	int nScaling = iniReader.ReadInteger("MAIN", "Scaling", 2);
 	int ShadowsRes = iniReader.ReadInteger("MISC", "ShadowsRes", 1024);
 	bool bShadowsFix = iniReader.ReadInteger("MISC", "ShadowsFix", 1) == 1;
 	bool bRearviewMirrorFix = iniReader.ReadInteger("MISC", "RearviewMirrorFix", 1) == 1;
@@ -207,10 +207,12 @@ DWORD WINAPI Init(LPVOID)
 			DWORD* dword_6CF5DC = hook::pattern("D8 3D ? ? ? ? D9 44 24 20 D8 64 24 24").get(0).get<DWORD>(2);
 			injector::WriteMemory(dword_6CF5DC, &f1234, true);
 
-			if (bXbox360Scaling)
+			if (nScaling)
 			{
 				hor3DScale /= 1.0511562719f;
 				f1234 = 1.25f;
+				if (nScaling == 2)
+					f1234 = 1.315f;
 			}
 		}
 

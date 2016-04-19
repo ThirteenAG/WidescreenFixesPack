@@ -58,7 +58,7 @@ DWORD WINAPI Init(LPVOID)
 	bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 1) != 0;
 	bool bLightingFix = iniReader.ReadInteger("MISC", "LightingFix", 0) != 0;
 	bool bCarShadowFix = iniReader.ReadInteger("MISC", "CarShadowFix", 0) != 0;
-	bool bXbox360Scaling = iniReader.ReadInteger("MAIN", "Xbox360Scaling", 1) != 0;
+	int nScaling = iniReader.ReadInteger("MAIN", "Scaling", 2);
 	bool bExperimentalCrashFix = iniReader.ReadInteger("MAIN", "ExperimentalCrashFix", 0) != 0;
 	szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
 	bool bCustomUsrDir = false;
@@ -178,9 +178,11 @@ DWORD WINAPI Init(LPVOID)
 		DWORD* dword_71B923 = hook::pattern("D8 3D ? ? ? ? D9 5C 24 2C 8B 54 24 2C 52 50 55").get(0).get<DWORD>(2);
 		injector::WriteMemory(dword_71B923, &f1234, true);
 
-		if (bXbox360Scaling)
+		if (nScaling)
 		{
 			hor3DScale /= 1.0511562719f;
+			if (nScaling == 2)
+				f1234 = 1.315f;
 		}
 	}
 

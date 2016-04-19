@@ -43,26 +43,26 @@ struct Screen
 
 bool bHudWidescreenMode;
 int32_t nWidescreenHudOffset;
+float fWidescreenHudOffset;
+struct WidescreenHudOffset
+{
+	int32_t _int;
+	float _float;
+} WidescreenHudOffset;
 
-#define _LOG
+//#define _LOG
 #ifdef _LOG
 #include <fstream>
 ofstream logfile;
-#endif // _LOG
-
 uint32_t logit;
-void WidescreenHud(float& offsetX1, float& offsetX2, float& offsetY1, float& offsetY2, FColor& Color)
-{
-#ifdef _LOG
-	if (logit)
-		logfile << offsetX1 << " " << offsetX2 << " " << offsetY1 << " " << offsetY2 << " " << Color.RGBA << std::endl;
 #endif // _LOG
-}
-
 
 DWORD WINAPI Thread(LPVOID)
 {
 	auto pattern = hook::pattern("89 6B 58 89 7B 5C EB 0E");
+	static auto dword_1120B6BC = *hook::pattern("D9 1D ? ? ? ? 0F BF").get(0).get<uint32_t*>(2);
+	static auto dword_1120B6B0 = *hook::pattern("8B 0D ? ? ? ? 85 C9 74 ? 8B 54 24 04 8B 82").get(0).get<uint32_t*>(2);
+	static auto dword_11223A7C = *hook::pattern("A1 ? ? ? ? 83 C4 04 85 C0 D8 3D ? ? ? ?").get(0).get<uint32_t*>(1);
 	struct GetRes
 	{
 		void operator()(injector::reg_pack& regs)
@@ -76,10 +76,21 @@ DWORD WINAPI Thread(LPVOID)
 			Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
 
 			Screen.HUDScaleX = (1.0f / Screen.fWidth * (Screen.fHeight / 480.0f)) * 2.0f;
-			injector::WriteMemory(0x1120B6BC, Screen.HUDScaleX, true);
+			injector::WriteMemory(dword_1120B6BC, Screen.HUDScaleX, true);
 			Screen.TextScaleX = ((4.0f / 3.0f) / Screen.fAspectRatio) * 2.0f;
 			Screen.fHudOffset = Screen.TextScaleX / 2.0f;
 			Screen.nHudOffsetReal = static_cast<int32_t>(((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f);
+
+			if (Screen.fAspectRatio < (16.0f / 9.0f))
+			{
+				WidescreenHudOffset._float = fWidescreenHudOffset / (((16.0f / 9.0f) / (Screen.fAspectRatio)) * 1.5f);
+				WidescreenHudOffset._int = static_cast<int32_t>(WidescreenHudOffset._float);
+			}
+			else
+			{
+				WidescreenHudOffset._int = nWidescreenHudOffset;
+				WidescreenHudOffset._float = fWidescreenHudOffset;
+			}
 
 			fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(fScreenFieldOfViewVStd * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
 
@@ -89,26 +100,27 @@ DWORD WINAPI Thread(LPVOID)
 			//actually it scales perfectly as is.
 		}
 	}; injector::MakeInline<GetRes>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(6)); //<0x10CC622C, 0x10CC6232>
-
+	
 	//HUD
 	pattern = hook::pattern("0F BF 90 86 00 00 00");
 	struct HudHook
 	{
 		void operator()(injector::reg_pack& regs)
 		{
-			injector::WriteMemory(0x1120B6BC, Screen.HUDScaleX, true);
-			*(uint32_t*)(regs.esp + 0x8) = *(uint16_t*)(regs.eax + 0x86);
+			injector::WriteMemory(dword_1120B6BC, Screen.HUDScaleX, true);
+			regs.edx = *(uint16_t*)(regs.eax + 0x86);
 		}
-	}; injector::MakeInline<HudHook>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(11)); //<0x10ADB0BC, 0x10ADB0C7>
+	}; injector::MakeInline<HudHook>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(7)); //<0x10ADB0BC>
 
 	pattern = hook::pattern("D8 25 ? ? ? ? D9 05 ? ? ? ? D8 88");
 	injector::WriteMemory(pattern.get(0).get<uint32_t>(2), &Screen.fHudOffset, true); //0x10ADADBE + 0x2
 
+	pattern = hook::pattern("89 35 ? ? ? ? DB 44 24 10 D8 0D ? ? ? ? D8 25");
 	struct WSHud
 	{
 		void operator()(injector::reg_pack& regs)
 		{
-			*(uint32_t*)0x1120B6B0 = regs.esi;
+			*(uint32_t*)dword_1120B6B0 = regs.esi;
 
 			int32_t offset1 = *(int32_t*)(regs.esp + 0x10);
 			int32_t offset2 = *(int32_t*)(regs.esp + 0x14);
@@ -150,6 +162,7 @@ DWORD WINAPI Thread(LPVOID)
 				((offset1 == 476 || offset1 == 527 || offset1 == 567 || offset1 == 568 || offset1 == 608) && offset2 == 16 && (offset3 == 445 || offset3 == 461) && Color.RGBA == 0x4bb8fac8) || //secondary ammo brackets
 				((offset1 >= 476 && offset1 <= 620) && offset2 == 6 && offset3 == 405 && (Color.R == 0xff && Color.G == 0xff && Color.B == 0xff)) || //visibility slider
 				((offset1 >= 476 && offset1 <= 620) && (offset2 == 1 || offset2 == 6 || offset2 == 32) && (offset3 == 397 || offset3 == 416 || offset3 == 421) && Color.RGBA == 0xc8ffffff) || //alarm icon
+				((offset1 == 573) && (offset2 == 6 || offset2 == 8) && (offset3 == 455 || offset3 == 456) && (Color.RGBA == 0x80ffffff || Color.RGBA == 0xffffffff)) || //pistol jammer bar
 
 				((offset1 == 421 || offset1 == 424 || offset1 == 617 || offset1 == 622) && (offset2 == 1 || offset2 == 5 || offset2 == 9 || offset2 == 16 || offset2 == 21) && (offset3 > 45 && offset3 < 200) && Color.RGBA == 0x32ffffff) || //interaction menu brackets
 				((offset1 == 427 || offset1 == 428 || offset1 == 618) && (offset2 == 1 || offset2 == 5 || offset2 == 15 || offset2 == 16) && (offset3 > 45 && offset3 < 200) && Color.RGBA == 0x59ffffff) ||  //interaction menu 
@@ -157,11 +170,11 @@ DWORD WINAPI Thread(LPVOID)
 				((offset1 == 429 || offset1 == 430 || offset1 == 434 || offset1 == 607 || offset1 == 608 || offset1 == 617 || offset1 == 618 || offset1 == 622) && (offset2 == 1 || offset2 == 9 || offset2 == 15 || offset2 == 16 || offset2 == 21) && (offset3 > 45 && offset3 < 200) && (Color.RGBA == 0x32ffffff || Color.RGBA == 0xc8ffffff)) //|| //interaction menu 
 				) 
 				{
-					*(int32_t*)(regs.esp + 0x10) += nWidescreenHudOffset;
+					*(int32_t*)(regs.esp + 0x10) += WidescreenHudOffset._int;
 				}
 			}
 		}
-	}; injector::MakeInline<WSHud>(0x10ADADAE, 0x10ADADAE + 6);
+	}; injector::MakeInline<WSHud>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(6)); //0x10ADADAE, 0x10ADADAE + 6
 
 	//TEXT
 	pattern = hook::pattern("D8 3D ? ? ? ? D9 5C 24 68 DB");
@@ -169,12 +182,12 @@ DWORD WINAPI Thread(LPVOID)
 	pattern = hook::pattern("D8 25 ? ? ? ? D9 44 24 24 D8 4C 24");
 	injector::WriteMemory(pattern.get(0).get<uint32_t>(2), &Screen.fHudOffset, true); //0x10B14BAD + 0x2
 
+	pattern = hook::pattern("A1 ? ? ? ? 83 C4 04 85 C0 D8 3D");
 	struct WSText
 	{
 		void operator()(injector::reg_pack& regs)
 		{
-			//regs.edx = *(uint16_t*)(regs.eax + 0x86);
-			regs.eax = *(uint32_t*)0x11223A7C;
+			regs.eax = *(uint32_t*)dword_11223A7C;
 
 			int32_t offset1 = *(int32_t*)(regs.esp + 0x4);
 			int32_t offset2 = *(int32_t*)(regs.esp + 0xC);
@@ -187,16 +200,16 @@ DWORD WINAPI Thread(LPVOID)
 #endif // _LOG*/
 
 			if (
-			((offset1 == 435 || offset1 == 436) && (offset2 >= 3  && offset2 <= 20) && (offset3 == 345 || offset3 == 361 || offset3 == 377 || offset3 == 393 || offset3 == 416) && ((Color.R == 0xff && Color.G == 0xff && Color.B == 0xff) || (Color.R == 0xb8 && Color.G == 0xfa && Color.B == 0xc8))) || // top corner
-			((offset1 >= 489 && offset1 <= 598) && (offset2 == 1 || offset2 == 3 || offset2 == 7 || offset2 == 9 || offset2 == 13 || offset2 == 14 || offset2 == 15) && (offset3 == 23 || offset3 == 39 || offset3 == 93) && ((Color.R == 0xff && Color.G == 0xff && Color.B == 0xff) || (Color.R == 0xb8 && Color.G == 0xfa && Color.B == 0xc8))) || // bottom corner
+			((offset1 == 435 || offset1 == 436) && (offset2 >= 3  && offset2 <= 20) && (offset3 == 345 || offset3 == 361 || offset3 == 377 || offset3 == 393 || offset3 == 416) && ((Color.R == 0xff && Color.G == 0xff && Color.B == 0xff) || (Color.R == 0xb8 && Color.G == 0xfa && Color.B == 0xc8) || (Color.R == 0x66 && Color.G == 0x66 && Color.B == 0x66))) || // top corner
+			((offset1 >= 489 && offset1 <= 598) && (offset2 == 1 || offset2 == 3 || (offset2 >= 7 && offset2 <= 20 )) && (offset3 == 23 || offset3 == 39 || offset3 == 93) && ((Color.R == 0xff && Color.G == 0xff && Color.B == 0xff) || (Color.R == 0xb8 && Color.G == 0xfa && Color.B == 0xc8))) || // bottom corner
 			(offset1 == 598 && offset2 == 3 && offset3 == 93 && (Color.R == 0xb8 && Color.G == 0xf7 && Color.B == 0xc8)) //icons text
 			)
 			{
-				*(float*)(regs.esp + 0x14) += 100.0f;
+				*(float*)(regs.esp + 0x14) += WidescreenHudOffset._float;
 			}
 
 		}
-	}; injector::MakeInline<WSText>(0x10B149C4, 0x10B149C4 + 5);
+	}; injector::MakeInline<WSText>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(5)); //0x10B149C4, 0x10B149C4 + 5
 
 	//FOV
 	pattern = hook::pattern("8B 91 BC 02 00 00 52 8B 54 24 24");
@@ -238,6 +251,7 @@ void Init()
 			Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
 			bHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1) == 1;
 			nWidescreenHudOffset = iniReader.ReadInteger("MAIN", "WidescreenHudOffset", 100);
+			fWidescreenHudOffset = static_cast<float>(nWidescreenHudOffset);
 
 			if (!Screen.Width || !Screen.Height) {
 				HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
