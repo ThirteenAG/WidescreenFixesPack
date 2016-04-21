@@ -1,6 +1,7 @@
 #include "..\includes\stdafx.h"
 #include "..\includes\hooking\Hooking.Patterns.h"
 HWND hWnd;
+bool bDelay;
 
 #define _USE_MATH_DEFINES
 #include "math.h"
@@ -36,27 +37,56 @@ union FColor
 	uint32_t RGBA;
 	struct
 	{
-		uint8_t B, G, R, A;
+		uint8_t R, G, B, A;
 	};
 };
-
-DWORD WINAPI Thread(LPVOID)
-{
-	return 0;
-}
 
 uintptr_t sub_42B380_addr, sub_42B3A0_addr, sub_42B460_addr, sub_42B610_addr, sub_42B740_addr, sub_42BA20_addr;
 uintptr_t sub_42BBA0_addr, sub_42BD11_addr, sub_42C880_addr, sub_42C8D0_addr, sub_42CA50_addr, sub_42B900_addr;
 
 bool bDisableCutsceneBorders;
 uint32_t nFMVWidescreenMode;
+bool bHudWidescreenMode;
+int32_t nWidescreenHudOffset;
+float fWidescreenHudOffset;
+
+//#define _LOG
+#ifdef _LOG
+#include <fstream>
+ofstream logfile;
+uint32_t logit;
+#endif // _LOG
 
 int __cdecl sub_42B460(float a1, float a2, float a3, float a4, float a5, float a6, float a7, float a8, int a9, int a10, int a11)
 {
 	auto _sub_42B460 = (int(__cdecl *)(float, float, float, float, float, float, float, float, int, int, int)) sub_42B460_addr;
 
+	uint32_t n_offsetX1 = static_cast<uint32_t>((a1));
+	uint32_t n_offsetY1 = static_cast<uint32_t>((a2));
+	uint32_t n_offsetX2 = static_cast<uint32_t>((a3));
+	uint32_t n_offsetY2 = static_cast<uint32_t>((a4));
+	auto Color = *(FColor*)&a9;
+
 	a1 = (a1 / Screen.fHudScaleX) + Screen.fHudOffset;
 	a3 = (a3 / Screen.fHudScaleX) + Screen.fHudOffset;
+
+	if (bHudWidescreenMode)
+	{
+		if ((n_offsetX1 >= 533 && n_offsetX1 <= 606) && (n_offsetX2 >= 541 && n_offsetX2 <= 616) && (n_offsetY1 >= 315 && n_offsetY1 <= 448) && (a9 == 0xffffffff || a9 == 0xfefefe))
+		{
+			a1 += fWidescreenHudOffset;
+			a3 += fWidescreenHudOffset;
+		}
+
+		if (
+		(n_offsetX1 == 24) && (n_offsetX2 == 136) && (n_offsetY1 >= 315 && n_offsetY1 <= 448) && (Color.R == 0xff && Color.G == 0xff && Color.B == 0xff) || //text (RESISTANCE | LIFE)
+		(n_offsetX1 == 92) && (n_offsetX2 == 204) && (n_offsetY1 >= 315 && n_offsetY1 <= 448) && (Color.R == 0xff && Color.G == 0xff && Color.B == 0xff) //text (INTERACTION)
+		)
+		{
+			a1 -= fWidescreenHudOffset;
+			a3 -= fWidescreenHudOffset;
+		}
+	}
 
 	return _sub_42B460(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11);
 }
@@ -65,19 +95,48 @@ void __cdecl sub_42B610(float a1, float a2, float a3, float a4, int a5, int a6, 
 {
 	auto _sub_42B610 = (void(__cdecl *)(float, float, float, float, int, int, int)) sub_42B610_addr;
 	
+	uint32_t n_offsetX1 = static_cast<uint32_t>((a1));
+	uint32_t n_offsetY1 = static_cast<uint32_t>((a2));
+	uint32_t n_offsetX2 = static_cast<uint32_t>((a3));
+	uint32_t n_offsetY2 = static_cast<uint32_t>((a4));
+
+/*#ifdef _LOG
+	if (logit)
+		logfile << std::dec << n_offsetX1 << " " << n_offsetX2 << " " << n_offsetY1 << " " << n_offsetY2 << " " << std::hex << a5 << " " << a6 << " " << a7 << std::endl;
+#endif // _LOG*/
+
 	if (a1 != 0.0f && a2 != 0.0f) //menu background rendered here
 	{
 		a1 = (a1 / Screen.fHudScaleX) + Screen.fHudOffset;
 		a3 = (a3 / Screen.fHudScaleX);
 	}
 
+	if (bHudWidescreenMode)
+	{
+		if (((n_offsetX1 == 21) && (n_offsetX2 >= 0 && n_offsetX2 <= 166) && (n_offsetY1 >= 315 && n_offsetY1 <= 448) && (a6 == 0 && a7 == 0))) //health, resistance bar etc
+		{
+			a1 -= fWidescreenHudOffset;
+			//a3 -= fWidescreenHudOffset;
+		}
+	}
+
 	return _sub_42B610(a1, a2, a3, a4, a5, a6, a7);
 }
 
-void __cdecl sub_42B740(float a1, float a2, float a3, float a4, int a5, int a6, int a7)
+void __cdecl sub_42B740(float a1, float a2, float a3, float a4, int a5, int a6, int a7) //health bar border, damage red bar etc
 {
 	auto _sub_42B740 = (void(__cdecl *)(float, float, float, float, int, int, int)) sub_42B740_addr;
 	auto Color = *(FColor*)&a5;
+
+	uint32_t n_offsetX1 = static_cast<uint32_t>((a1));
+	uint32_t n_offsetY1 = static_cast<uint32_t>((a2));
+	uint32_t n_offsetX2 = static_cast<uint32_t>((a3));
+	uint32_t n_offsetY2 = static_cast<uint32_t>((a4));
+
+#ifdef _LOG
+	if (logit)
+		logfile << std::dec << n_offsetX1 << " " << n_offsetX2 << " " << n_offsetY1 << " " << n_offsetY2 << " " << std::hex << a5 << " " << a6 << " " << a7 << std::endl;
+#endif // _LOG
 
 	if (a1 == 0.0f && ((a2 >= 0.0f && a2 <= 69.5f) || (a2 >= 400.0f && a2 <= 480.0f)) /*&& (a4 == 69.5f || a4 == 78.5f)*/ && a3 == 640.0f && a5 == 0xff000000 && a6 == 0 && a7 == 0) //borders
 	{
@@ -91,11 +150,21 @@ void __cdecl sub_42B740(float a1, float a2, float a3, float a4, int a5, int a6, 
 		}
 	}
 
-	if (a1 == 0.0f && a2 == 0.0f && a3 == Screen.fWidth && a4 == Screen.fHeight && (Color.R == 0 && Color.G == 0 && Color.B == 0) && a6 == 0 && a7 == 0x00000001) //fading
+	if (a1 == 0.0f && a2 == 0.0f && a3 == Screen.fWidth && a4 == Screen.fHeight && ((Color.R == 0 && Color.G == 0 && Color.B == 0) || (Color.R == 0xff && Color.G == 0xff && Color.B == 0xff)) && a6 == 0 && a7 == 0x00000001) //fading
 		return _sub_42B740(a1, a2, a3, a4, a5, a6, a7);
 
 	a1 = (a1 / Screen.fHudScaleX) + Screen.fHudOffset;
 	a3 = (a3 / Screen.fHudScaleX);
+
+	if (bHudWidescreenMode)
+	{
+		if (((n_offsetX1 == 20 || n_offsetX1 == 164) && (n_offsetX2 == 1 || n_offsetX2 == 144 || n_offsetX2 == 145) && (n_offsetY1 >= 315 && n_offsetY1 <= 448) && (Color.R == 0 && Color.G == 0 && Color.B == 0) && (a6 == 0))//health bar border etc
+		|| ((n_offsetX1 >= 20 && n_offsetX1 <= 166) && (Color.R == 0xff && Color.G == 0x24 && Color.B == 0x08))	)
+		{
+			a1 -= fWidescreenHudOffset;
+			//a3 -= fWidescreenHudOffset;
+		}
+	}
 
 	return _sub_42B740(a1, a2, a3, a4, a5, a6, a7);
 }
@@ -155,10 +224,10 @@ void __cdecl sub_42B900(float a1, float a2, float a3, float a4, int a5) //fmv
 
 	if (nFMVWidescreenMode && FMV == 0x5F564D46) //"FMV_"
 	{
-		a1 -= (720.0f / (640.0f / 280.0f) / 2.0f);
-		a2 -= (720.0f / (640.0f / 280.0f) / 2.0f) / (4.0f / 3.0f);
-		a3 += (720.0f / (640.0f / 280.0f) / 2.0f) * 2.0f;
-		a4 += (720.0f / (640.0f / 280.0f) / 2.0f) / (4.0f / 3.0f) * 2.0f;
+		a1 -= (Screen.fHeight / (640.0f / 280.0f) / 2.0f);
+		a2 -= (Screen.fHeight / (640.0f / 280.0f) / 2.0f) / (4.0f / 3.0f);
+		a3 += (Screen.fHeight / (640.0f / 280.0f) / 2.0f) * 2.0f;
+		a4 += (Screen.fHeight / (640.0f / 280.0f) / 2.0f) / (4.0f / 3.0f) * 2.0f;
 	}
 
 	return _sub_42B900(a1, a2, a3, a4, a5);
@@ -175,13 +244,30 @@ int __cdecl sub_42BD11(float a1, float a2, int a3, char a4, unsigned __int8 a5)
 	//?
 }
 
-void Init()
+DWORD WINAPI Init(LPVOID)
 {
+	auto pattern = hook::pattern("FF 74 24 10 FF 74 24 10 FF 74 24 10 FF 74 24 10 E8 ? ? ? ? C2 10 00");
+	if (!(pattern.size() > 0) && !bDelay)
+	{
+		bDelay = true;
+		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, NULL, 0, NULL);
+		return 0;
+	}
+
+	if (bDelay)
+	{
+		while (!(pattern.size() > 0))
+			pattern = hook::pattern("FF 74 24 10 FF 74 24 10 FF 74 24 10 FF 74 24 10 E8 ? ? ? ? C2 10 00");
+	}
+
 	CIniReader iniReader("");
 	Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
 	Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
 	bDisableCutsceneBorders = iniReader.ReadInteger("MAIN", "DisableCutsceneBorders", 0) == 1;
 	nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 0);
+	bHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1) == 1;
+	nWidescreenHudOffset = iniReader.ReadInteger("MAIN", "WidescreenHudOffset", 75);
+	fWidescreenHudOffset = static_cast<float>(nWidescreenHudOffset);
 
 	if (!Screen.Width || !Screen.Height) {
 		HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
@@ -198,8 +284,12 @@ void Init()
 	Screen.fHudScaleX = (480.0f * Screen.fAspectRatio) / 640.0f;
 	Screen.fHudOffset = ((Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f) / (Screen.fWidth / 640.f);
 	fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(fScreenFieldOfViewVStd * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
+	if (Screen.fAspectRatio < (16.0f / 9.0f))
+	{
+		fWidescreenHudOffset = fWidescreenHudOffset / (((16.0f / 9.0f) / (Screen.fAspectRatio)) * 1.5f);
+	}
 
-	auto pattern = hook::pattern("68 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 83 C4 08 89");
+	pattern = hook::pattern("68 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 83 C4 08 89");
 	struct SetResHook
 	{
 		void operator()(injector::reg_pack& regs)
@@ -248,19 +338,19 @@ void Init()
 			injector::MakeCALL(addr, sub_42CA50, true);
 
 		///if (dest == sub_42B380_addr)
-		///	injector::MakeCALL(addr, sub_42B380, true); ?
+		///	injector::MakeCALL(addr, sub_42B380, true);
 
 		///if (dest == sub_42B3A0_addr)
-		///	injector::MakeCALL(addr, sub_42B3A0, true); ? 
+		///	injector::MakeCALL(addr, sub_42B3A0, true);
 
 		//if (dest == sub_42BBA0_addr)
-		//	injector::MakeCALL(addr, sub_42BBA0, true); ??
+		//	injector::MakeCALL(addr, sub_42BBA0, true);
 
 		//if (dest == sub_42BD11_addr)
-		//	injector::MakeCALL(addr, sub_42BD11, true); ?
+		//	injector::MakeCALL(addr, sub_42BD11, true);
 
 		//if (dest == sub_42C880_addr)
-		//	injector::MakeCALL(addr, sub_42C880, true); ?
+		//	injector::MakeCALL(addr, sub_42C880, true);
 
 	}
 
@@ -282,7 +372,7 @@ void Init()
 	injector::MakeCALL(pattern.get(0).get<uint32_t>(14), sub_42B900, true); //0x486EC9
 
 	//FOV
-	pattern = hook::pattern("89 45 18 8B 5D FC DB 45 18 D8 0D");
+	pattern = hook::pattern("8D 4D 9C 8D 55 DC 51 52 8B CE");
 	struct FOVHook
 	{
 		void operator()(injector::reg_pack& regs)
@@ -296,7 +386,10 @@ void Init()
 			*(float *)(regs.esi + 0xC4) *= fDynamicScreenFieldOfViewScale; //CAMERA_CONSTRAINT_FOV
 
 		}
-	}; injector::MakeInline<FOVHook>(0x4AF5EE, 0x4AF5EE + 6); ///*pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(6)*/
+	}; injector::MakeInline<FOVHook>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(6)); //0x4AF5EE, 0x4AF5EE + 6
+
+	return 0;
+	//injector::MakeNOP(0x402232, 2, true); //debug menu
 }
 
 
@@ -304,9 +397,10 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
 	if (reason == DLL_PROCESS_ATTACH)
 	{
-		Init();
-		//injector::MakeNOP(0x402232, 2, true); //debug menu
-		//CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Thread, NULL, 0, NULL);
+#ifdef _LOG
+		logfile.open("CF.WidescreenFix.log");
+#endif // _LOG
+		Init(NULL);
 	}
 	return TRUE;
 }
