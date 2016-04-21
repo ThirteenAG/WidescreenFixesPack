@@ -67,12 +67,17 @@ int __cdecl sub_42B460(float a1, float a2, float a3, float a4, float a5, float a
 	uint32_t n_offsetY2 = static_cast<uint32_t>((a4));
 	auto Color = *(FColor*)&a9;
 
+#ifdef _LOG
+	if (logit)
+		logfile << std::dec << n_offsetX1 << " " << n_offsetX2 << " " << n_offsetY1 << " " << n_offsetY2 << " " << std::hex << a9 << " " << a10 << " " << a11 << std::endl;
+#endif // _LOG
+
 	a1 = (a1 / Screen.fHudScaleX) + Screen.fHudOffset;
 	a3 = (a3 / Screen.fHudScaleX) + Screen.fHudOffset;
 
 	if (bHudWidescreenMode)
 	{
-		if ((n_offsetX1 >= 533 && n_offsetX1 <= 606) && (n_offsetX2 >= 541 && n_offsetX2 <= 616) && (n_offsetY1 >= 315 && n_offsetY1 <= 448) && (a9 == 0xffffffff || a9 == 0xfefefe))
+		if ((n_offsetX1 >= 433 && n_offsetX1 <= 606) && (n_offsetX2 >= 441 && n_offsetX2 <= 616) && (n_offsetY1 >= 315 && n_offsetY1 <= 448) && ((Color.R == 0xff && Color.G == 0xff && Color.B == 0xff) || (Color.R == 0xfe && Color.G == 0xfe && Color.B == 0xfe) || (Color.A == 0xff && Color.R == 0xff)))
 		{
 			a1 += fWidescreenHudOffset;
 			a3 += fWidescreenHudOffset;
@@ -132,11 +137,6 @@ void __cdecl sub_42B740(float a1, float a2, float a3, float a4, int a5, int a6, 
 	uint32_t n_offsetY1 = static_cast<uint32_t>((a2));
 	uint32_t n_offsetX2 = static_cast<uint32_t>((a3));
 	uint32_t n_offsetY2 = static_cast<uint32_t>((a4));
-
-#ifdef _LOG
-	if (logit)
-		logfile << std::dec << n_offsetX1 << " " << n_offsetX2 << " " << n_offsetY1 << " " << n_offsetY2 << " " << std::hex << a5 << " " << a6 << " " << a7 << std::endl;
-#endif // _LOG
 
 	if (a1 == 0.0f && ((a2 >= 0.0f && a2 <= 69.5f) || (a2 >= 400.0f && a2 <= 480.0f)) /*&& (a4 == 69.5f || a4 == 78.5f)*/ && a3 == 640.0f && a5 == 0xff000000 && a6 == 0 && a7 == 0) //borders
 	{
