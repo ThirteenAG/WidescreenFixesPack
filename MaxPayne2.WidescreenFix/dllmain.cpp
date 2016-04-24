@@ -384,7 +384,7 @@ void __declspec(naked) CWndCreateExHook()
 DWORD WINAPI Thread(LPVOID)
 {
 	CIniReader iniReader("");
-	bool bFixWindowBorder = iniReader.ReadInteger("MAIN", "FixWindowBorder", 1) != 0;
+	bool bFixWindowBorder = iniReader.ReadInteger("MAIN", "FixWindowBorder", 0) != 0;
 	if (bFixWindowBorder)
 	{
 		injector::MakeJMP((DWORD)GetModuleHandle("mfc71.dll") + 0x12184, CWndCreateExHook, true); //fullscreen mode border fix for win10
