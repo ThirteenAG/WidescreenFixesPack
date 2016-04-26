@@ -258,13 +258,13 @@ void FixMenu()
     injector::WriteMemory<float>(*MenuPattern1.get(1).get<uint32_t*>(16), fMenuTextScale, true);
 
     float fMenuControlsOptionsTextScale = 0.00062499999f / (*CDraw::pfScreenAspectRatio / (4.0f / 3.0f));
-    injector::WriteMemory<float>(*MenuPattern2.get(4).get<uint32_t*>(10), fMenuControlsOptionsTextScale, true);
+    injector::WriteMemory<float>(*MenuPattern2.get(MenuPattern2.size() - 6).get<uint32_t*>(10), fMenuControlsOptionsTextScale, true); //MenuPattern2.size() is 9 for steam, 10 for 1.0
 
     float fMenuControlsOptionsTextScale2 = 0.00039062501f / (*CDraw::pfScreenAspectRatio / (4.0f / 3.0f));
-    injector::WriteMemory<float>(*MenuPattern2.get(2).get<uint32_t*>(10), fMenuControlsOptionsTextScale2, true);
+    injector::WriteMemory<float>(*MenuPattern2.get(MenuPattern2.size() - 8).get<uint32_t*>(10), fMenuControlsOptionsTextScale2, true);
 
     float fMenuBarsScale = 0.0046875002f / (*CDraw::pfScreenAspectRatio / (4.0f / 3.0f));
-    injector::WriteMemory<float>(*MenuPattern2.get(1).get<uint32_t*>(10), fMenuBarsScale, true);
+    injector::WriteMemory<float>(*MenuPattern2.get(MenuPattern2.size() - 9).get<uint32_t*>(10), fMenuBarsScale, true);
 
     float fMenuHeadersSkinsScale = 0.0014062499f / (*CDraw::pfScreenAspectRatio / (4.0f / 3.0f));
     injector::WriteMemory<float>(*MenuPattern3.get(35).get<uint32_t*>(10), fMenuHeadersSkinsScale, true);
