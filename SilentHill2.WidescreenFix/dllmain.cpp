@@ -78,10 +78,10 @@ DWORD WINAPI Init(LPVOID)
 	dword_temp.Int = dword_A37080;
 	sprintf(pattern_str, "%02X %02X %02X %02X %02X %02X", 0xDB, 0x05, dword_temp.Byte[0], dword_temp.Byte[1], dword_temp.Byte[2], dword_temp.Byte[3]);
 	pattern = hook::pattern(pattern_str);
-	for (size_t i = 0; i < pattern.size(); ++i)
+	for (size_t i = 0; i < pattern.size(); ++i) //http://pastebin.com/ZpkGX9My
 	{
 		if (i == 318 || i == 315 || i == 314 || i == 313 || i == 310 || i == 312 || i == 311 || i == 320 || i == 178 || i == 177 || i == 176 || i == 175 || i == 174 || i == 327 || i == 2 || i == 309
-		|| i == 173 || i == 317 || i == 316 || i == 332)
+		|| i == 173 || i == 317 || i == 316 || i == 332 || i == 330)
 		{
 			injector::WriteMemory(pattern.get(i).get<uint32_t>(2), &Screen.Width, true);
 		}
@@ -102,6 +102,8 @@ DWORD WINAPI Init(LPVOID)
 	injector::WriteMemory(pattern.get(0).get<uint32_t>(2), &Screen.fWidth, true);
 	pattern = hook::pattern("DB 05 ? ? ? ? 85 C0 7D 06 D8 05 ? ? ? ? 8B 0D ? ? ? ? D9 1D ? ? ? ? DB 05 ? ? ? ?"); //00510681 flashlight
 	injector::WriteMemory(pattern.get(0).get<uint32_t>(2), &Screen.Width43, true);
+	pattern = hook::pattern("8B 0D ? ? ? ? D1 E9 85 C9 89 4C 24 10 DB 44 24 10"); //004DC103 The light from the lighthouse  (i == 330)
+	injector::WriteMemory(pattern.get(0).get<uint32_t>(2), &Screen.Width, true);
 
 	pattern = hook::pattern("A3 ? ? ? ? 89 44 24 14 A1 ? ? ? ? 8D 4C 24 0C 51");
 	struct SetScaleHook
@@ -130,6 +132,7 @@ DWORD WINAPI Init(LPVOID)
 	sprintf(pattern_str, "%02X %02X %02X %02X %02X %02X", 0xD8, 0x0D, dword_temp.Byte[0], dword_temp.Byte[1], dword_temp.Byte[2], dword_temp.Byte[3]);
 	pattern = hook::pattern(pattern_str); //0x630DEC fmul
 
+	//http://pastebin.com/Lqg7hYsW
 	int f05Indices[] = { 29,31,33,35,37,39,41,43,45,47,49,51,53,55,57,59,61,63,65,67,75,77,79,81,83,84,85,86,87,88,89,91,93,95,97,99,
 		101,103,105,107,109,111,113,120,122,124,126,128,130,132,134,136,138,140,142,144,146,148,150,152,154,156,158,160,162,164,166,168,
 		170,172,174,176,178,180,182,184,186,188,190,192,194,196,198,200,202,204,206,208,210,212,214,216,218,220,222,224,226,228,230,232,234,
@@ -137,7 +140,7 @@ DWORD WINAPI Init(LPVOID)
 		304,306,308,310,312,314,316,318,320,322,324,326,328,330,332,334,336,338,340,342,344,346,348,350,352,354,356,370,372,386,388,390,392,394,396,
 		398,400,402,404,406,408,410,412,414,416,418,420,422,424,426,428,430,432,435,437,439,441,443,445,447,449,451,453,455,457,459,461,463,469,471,473,
 		475,477,479,481,483,485,487,489,491,493,495,497,499,501,503,505,507,509,511,513,515,517,519,521,523,525,527,529,531,533,535,541,543,549,551,553,555,
-		557,559,561,563,565,567,569,571,574,576,578,580,582,584,586,588,590,592,594,596,598,600,602,604,606,608,628,630,632,634,682 };
+		557,559,561,563,565,567,569,571,574,576,578,580,582,584,586,588,590,592,594,596,598,600,602,604,606,608,628,630,632,634,682, 610, 612 ,614, 616, 618, 620, 622, 624, 626 };
 
 	for (size_t i = 0; i < pattern.size(); ++i)
 	{

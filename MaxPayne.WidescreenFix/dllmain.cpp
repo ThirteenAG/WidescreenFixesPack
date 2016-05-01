@@ -1,4 +1,5 @@
 #include "..\includes\stdafx.h"
+#include "..\includes\hooking\Hooking.Patterns.h"
 
 #define _USE_MATH_DEFINES
 #include "math.h"
@@ -330,6 +331,12 @@ void __declspec(naked) P_TextPosHook3()
 
 DWORD WINAPI Thread(LPVOID)
 {
+	size_t size = 0;
+	do
+	{
+		size = hook::pattern("55 8B EC 6A FF 68 ? ? ? ? 68 ? ? ? ? 64 A1 00 00 00 00").size();
+	} while (!(size > 0));
+
 	CIniReader iniReader("");
 	bool bUseGameFolderForSavegames = iniReader.ReadInteger("MAIN", "UseGameFolderForSavegames", 0) != 0;
 	if (bUseGameFolderForSavegames)

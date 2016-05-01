@@ -1,4 +1,5 @@
 #include "..\includes\stdafx.h"
+#include "..\includes\hooking\Hooking.Patterns.h"
 
 struct Screen
 {
@@ -383,13 +384,19 @@ void __declspec(naked) CWndCreateExHook()
 
 DWORD WINAPI Thread(LPVOID)
 {
-	CIniReader iniReader("");
-	bool bFixWindowBorder = iniReader.ReadInteger("MAIN", "FixWindowBorder", 0) != 0;
-	if (bFixWindowBorder)
+	size_t size = 0;
+	do
 	{
-		injector::MakeJMP((DWORD)GetModuleHandle("mfc71.dll") + 0x12184, CWndCreateExHook, true); //fullscreen mode border fix for win10
-		jmpAddr7 = (DWORD)GetModuleHandle("mfc71.dll") + 0x12184 + 0x6;
-	}
+		size = hook::pattern("6A 74 68 ? ? ? ? E8 ? ? ? ? 33 DB").size();
+	} while (!(size > 0));
+		
+	CIniReader iniReader("");
+	//bool bFixWindowBorder = iniReader.ReadInteger("MAIN", "FixWindowBorder", 0) != 0;
+	//if (bFixWindowBorder)
+	//{
+	//	injector::MakeJMP((DWORD)GetModuleHandle("mfc71.dll") + 0x12184, CWndCreateExHook, true); //fullscreen mode border fix for win10
+	//	jmpAddr7 = (DWORD)GetModuleHandle("mfc71.dll") + 0x12184 + 0x6;
+	//}
 
 	bool bUseGameFolderForSavegames = iniReader.ReadInteger("MAIN", "UseGameFolderForSavegames", 0) != 0;
 	if (bUseGameFolderForSavegames)
