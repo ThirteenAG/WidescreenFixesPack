@@ -263,8 +263,8 @@ void FixBorders()
 {
     auto pattern = hook::pattern("74 14 D9 05 ? ? ? ? D8 0D ? ? ? ? D8 0D ? ? ? ? EB 12");
     injector::MakeNOP(pattern.get(0).get<uint32_t>(0), 2, true); //0x46086E
-    pattern = hook::pattern("74 08 D9 05 ? ? ? ? EB 06");
-    injector::MakeNOP(pattern.get(9).get<uint32_t>(0), 2, true); //0x46B618
+    //pattern = hook::pattern("74 08 D9 05 ? ? ? ? EB 06");
+    //injector::MakeNOP(pattern.get(9).get<uint32_t>(0), 2, true); //0x46B618
     pattern = hook::pattern("D9 EE 74 15 80 3D ? ? ? ? 00 75 0C");
     injector::MakeNOP(pattern.get(0).get<uint32_t>(0), 2, true); //0x46EBB9
     pattern = hook::pattern("74 0D FF 35 ? ? ? ? EB 0B");
