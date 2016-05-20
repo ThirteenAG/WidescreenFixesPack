@@ -248,8 +248,17 @@ void FixCoronas()
 {
     auto pattern = hook::pattern("D8 0E D9 1E D9 05 ? ? ? ? D8 35 ? ? ? ? D8 0B D9 1B"); //0x51C46A 
     injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(1), 0x0B, true);
-    pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? C3"); //0x518DCA 
-    injector::MakeNOP(pattern.get(4).get<uint32_t>(0), 5, true); //CBrightLights::Render
+
+    auto pfCAutoPreRender = (uint32_t)hook::pattern("81 EC F8 06 00 00 0F BF 45 5C 3D 83 00 00 00").get(0).get<uint32_t>(0);
+    auto pfCBrightLightsRegisterOne = (uint32_t)hook::pattern("D9 EE D9 EE 83 EC 20 8B 44 24").get(0).get<uint32_t>(0);
+    pattern = hook::range_pattern(pfCAutoPreRender, pfCAutoPreRender + 0x4309, "E8 ? ? ? ?");
+    for (size_t i = 0; i < pattern.size(); ++i)
+    {
+        auto addr = pattern.get(i).get<uint32_t>(0);
+        auto dest = injector::GetBranchDestination(addr, true).as_int();
+        if (dest == pfCBrightLightsRegisterOne)
+            injector::MakeNOP(addr, 5, true); //CBrightLights::RegisterOne
+    }
 }
 
 injector::hook_back<void(__fastcall*)(void*)> hbDrawBorders;
