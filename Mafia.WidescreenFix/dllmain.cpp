@@ -1,4 +1,4 @@
-//src from 2015.09.05
+//2016.06.29
 //created by behar
 //http://forum.mafia-game.ru/showthread.php?t=2059
 #include "..\includes\stdafx.h"
@@ -129,11 +129,22 @@ bool Init() {
 }
 
 void GetGameResolution() {
-	// Ставим главный хук - получаем разрешение игры и вызываем SetHooks()
+	// РЎС‚Р°РІРёРј РіР»Р°РІРЅС‹Р№ С…СѓРє - РїРѕР»СѓС‡Р°РµРј СЂР°Р·СЂРµС€РµРЅРёРµ РёРіСЂС‹ Рё РІС‹Р·С‹РІР°РµРј SetHooks()
 	static void *Get_Game_Resolution[3] = { v10_Eng_Get_Game_Resolution, v11_Eng_Get_Game_Resolution, v12_Eng_Get_Game_Resolution };
 
 	static int v10_sub_005FA58C[3] = { 0x005FA58C, 0x005BF074, 0x005BF814 };
 	CPatch::RedirectCall(v10_sub_005FA58C[game_version], Get_Game_Resolution[game_version]);
+
+	// РџСЂРёР±РёРІР°РµРј Matrox Parhelia
+	if (game_version != MAFIA_1_0_ENG) {
+		static int v11_sub_00600D8C[3] = { NULL, 0x00600D8C, 0x0060157C };
+		static int v11_sub_00600DAE[3] = { NULL, 0x00600DAE, 0x0060159E };
+		CPatch::SetUChar(v11_sub_00600D8C[game_version], 0xEB);
+		CPatch::SetUChar(v11_sub_00600DAE[game_version], 0xEB);
+
+		static int v11_sub_0055D025[3] = { NULL, 0x0055D025, 0x0055D6B5 };
+		CPatch::SetUChar(v11_sub_0055D025[game_version], 0xEB);
+	}
 }
 
 void FovHook() {
@@ -216,13 +227,13 @@ void FovHook() {
 }
 
 void HUDHook() {
-// Устанавливаем правильные пропорции:
+// РЈСЃС‚Р°РЅР°РІР»РёРІР°РµРј РїСЂР°РІРёР»СЊРЅС‹Рµ РїСЂРѕРїРѕСЂС†РёРё:
 
-	// HUD, титры авторов... 
+	// HUD, С‚РёС‚СЂС‹ Р°РІС‚РѕСЂРѕРІ... 
 	static int v10_sub_005533A7[3] = { 0x005533A7, 0x00600FBF, 0x006017AF };
 	CPatch::SetPointer(v10_sub_005533A7[game_version] + 0x2, &one_p_cur_base_width);
 
-	// HUD: спидометр, тахометр, часы, значок ограничителя скорости. Рассчитывается только при старте игры
+	// HUD: СЃРїРёРґРѕРјРµС‚СЂ, С‚Р°С…РѕРјРµС‚СЂ, С‡Р°СЃС‹, Р·РЅР°С‡РѕРє РѕРіСЂР°РЅРёС‡РёС‚РµР»СЏ СЃРєРѕСЂРѕСЃС‚Рё. Р Р°СЃСЃС‡РёС‚С‹РІР°РµС‚СЃСЏ С‚РѕР»СЊРєРѕ РїСЂРё СЃС‚Р°СЂС‚Рµ РёРіСЂС‹
 	static int v10_sub_005533EB[3] = { 0x005533EB, 0x00601003, 0x006017F3 };
 	CPatch::SetPointer(v10_sub_005533EB[game_version] + 0x2, &one_p_cur_base_width);
 
@@ -244,17 +255,17 @@ void HUDHook() {
 	}
 	
 #pragma region *HUD*
-	// Спидометр:						Привязка к правому краю.
+	// РЎРїРёРґРѕРјРµС‚СЂ:						РџСЂРёРІСЏР·РєР° Рє РїСЂР°РІРѕРјСѓ РєСЂР°СЋ.
 	static float hud_speedometer_x = 189.0f + fix_hud_left;
 	static int v10_sub_0055340C[3] = { 0x0055340C, 0x0060116A, 0x0060195A };
 	CPatch::SetPointer(v10_sub_0055340C[game_version] + 0x2, &hud_speedometer_x);
 
-	// Тахометр:						Привязка к правому краю.
+	// РўР°С…РѕРјРµС‚СЂ:						РџСЂРёРІСЏР·РєР° Рє РїСЂР°РІРѕРјСѓ РєСЂР°СЋ.
 	static float hud_tachometer_x = 259.0f + fix_hud_left;
 	static int v10_sub_0055344D[3] = { 0x0055344D, 0x006011AB, 0x0060199B };
 	CPatch::SetPointer(v10_sub_0055344D[game_version] + 0x2, &hud_tachometer_x);
 
-	// Значок ограничителя скорости:	С версии 1.1 привязка к правому краю.
+	// Р—РЅР°С‡РѕРє РѕРіСЂР°РЅРёС‡РёС‚РµР»СЏ СЃРєРѕСЂРѕСЃС‚Рё:	РЎ РІРµСЂСЃРёРё 1.1 РїСЂРёРІСЏР·РєР° Рє РїСЂР°РІРѕРјСѓ РєСЂР°СЋ.
 	float hud_speed_limiter_x;
 	if (game_version == MAFIA_1_0_ENG) {
 		hud_speed_limiter_x = 760.0f + fix_hud_right;
@@ -265,7 +276,7 @@ void HUDHook() {
 	static int v10_sub_00553C2D[3] = { 0x00553C2D, 0x00601B21, 0x00602311 };
 	CPatch::SetFloat(v10_sub_00553C2D[game_version] + 0x4, hud_speed_limiter_x);
 
-	// Часы:							С версии 1.1 привязка к правому краю.
+	// Р§Р°СЃС‹:							РЎ РІРµСЂСЃРёРё 1.1 РїСЂРёРІСЏР·РєР° Рє РїСЂР°РІРѕРјСѓ РєСЂР°СЋ.
 	float hud_timer_x;
 	if (game_version == MAFIA_1_0_ENG) {
 		hud_timer_x = 694.0f + fix_hud_right;
@@ -276,17 +287,17 @@ void HUDHook() {
 	static int v10_sub_00553CAD[3] = { 0x00553CAD, 0x00601BB5, 0x006023A5 };
 	CPatch::SetFloat(v10_sub_00553CAD[game_version] + 0x4, hud_timer_x);
 
-	// Компас:
+	// РљРѕРјРїР°СЃ:
 	static float hud_compas_x = 0.0f + fix_hud_left;
 	static int v10_sub_00550EF4[3] = { 0x00550EF4, 0x005FE753, 0x005FEF43 };
 	CPatch::SetPointer(v10_sub_00550EF4[game_version] + 0x2, &hud_compas_x);
 
-	// МиниКарта:
+	// РњРёРЅРёРљР°СЂС‚Р°:
 	static float hud_minimap_x = 29.0f + fix_hud_left;
 	static int v10_sub_0054FDBC[3] = { 0x0054FDBC, 0x005FD5CF, 0x005FDDBF };
 	CPatch::SetPointer(v10_sub_0054FDBC[game_version] + 0x2, &hud_minimap_x);
 
-	// Тип коробки передач:				С версии 1.1 привязка к правому краю.
+	// РўРёРї РєРѕСЂРѕР±РєРё РїРµСЂРµРґР°С‡:				РЎ РІРµСЂСЃРёРё 1.1 РїСЂРёРІСЏР·РєР° Рє РїСЂР°РІРѕРјСѓ РєСЂР°СЋ.
 	static float hud_transmission_x;
 	static int v10_sub_0054E9F5[3] = { 0x0054E9F5, 0x005FC142, 0x005FC932 };
 	if (game_version == MAFIA_1_0_ENG) {
@@ -297,7 +308,7 @@ void HUDHook() {
 	}
 	CPatch::SetPointer(v10_sub_0054E9F5[game_version] + 0x2, &hud_transmission_x);
 
-	// Индикатор отсутствия топлива:	С версии 1.1 привязка к правому краю.
+	// РРЅРґРёРєР°С‚РѕСЂ РѕС‚СЃСѓС‚СЃС‚РІРёСЏ С‚РѕРїР»РёРІР°:	РЎ РІРµСЂСЃРёРё 1.1 РїСЂРёРІСЏР·РєР° Рє РїСЂР°РІРѕРјСѓ РєСЂР°СЋ.
 	static float hud_fuel_led_x;
 	static int v10_sub_0054EBD4[3] = { 0x0054EBD4, 0x005FC333, 0x005FCB23 };
 	if (game_version == MAFIA_1_0_ENG) {
@@ -308,66 +319,66 @@ void HUDHook() {
 	}
 	CPatch::SetPointer(v10_sub_0054EBD4[game_version] + 0x2, &hud_fuel_led_x);
 
-	// Значок действия:
+	// Р—РЅР°С‡РѕРє РґРµР№СЃС‚РІРёСЏ:
 	static float hud_action_bar_x = 9.0f + fix_hud_left;
 	static int v10_sub_0054F2F3[3] = { 0x0054F2F3, 0x005FCA99, 0x005FD289 };
 	CPatch::SetPointer(v10_sub_0054F2F3[game_version] + 0x2, &hud_action_bar_x);
 
-	// Значок здоровья персонажей (без текста):
+	// Р—РЅР°С‡РѕРє Р·РґРѕСЂРѕРІСЊСЏ РїРµСЂСЃРѕРЅР°Р¶РµР№ (Р±РµР· С‚РµРєСЃС‚Р°):
 	static float hud_health_bar_x = 7.0f + fix_hud_left;
 	static int v10_sub_00549ACF[3] = { 0x00549ACF, 0x005F71EF, 0x005F79DF };
 	CPatch::SetPointer(v10_sub_00549ACF[game_version] + 0x2, &hud_health_bar_x);
 
-	// Значок здоровья персонажей (текст):
+	// Р—РЅР°С‡РѕРє Р·РґРѕСЂРѕРІСЊСЏ РїРµСЂСЃРѕРЅР°Р¶РµР№ (С‚РµРєСЃС‚):
 	static float hud_health_bar_text_x = 42.0f + fix_hud_left;
 	static int v10_sub_00549CD3[3] = { 0x00549CD3, 0x005F73EF, 0x005F7BDF };
 	CPatch::SetPointer(v10_sub_00549CD3[game_version] + 0x2, &hud_health_bar_text_x);
 
-	// Значок боеприпасов (без текста):
+	// Р—РЅР°С‡РѕРє Р±РѕРµРїСЂРёРїР°СЃРѕРІ (Р±РµР· С‚РµРєСЃС‚Р°):
 	static float hud_ammo_bar_x = 62.0f + fix_hud_left;
 	static int v10_sub_00549BC6[3] = { 0x00549BC6, 0x005F72E6, 0x005F7AD6 };
 	CPatch::SetPointer(v10_sub_00549BC6[game_version] + 0x2, &hud_ammo_bar_x);
 
-	// Значок боеприпасов (текст):
+	// Р—РЅР°С‡РѕРє Р±РѕРµРїСЂРёРїР°СЃРѕРІ (С‚РµРєСЃС‚):
 	static float hud_ammo_bar_text_x = 112.0f + fix_hud_left;
 	static int v10_sub_0054A089[3] = { 0x0054A089, 0x005F77A9, 0x005F7F99 };
 	CPatch::SetPointer(v10_sub_0054A089[game_version] + 0x2, &hud_ammo_bar_text_x);
 
-	// Значок поиска (розыск):
+	// Р—РЅР°С‡РѕРє РїРѕРёСЃРєР° (СЂРѕР·С‹СЃРє):
 	static float hud_search_bar_x = 336.0f + fix_hud_center;
 	static int v10_sub_0054E022[3] = { 0x0054E022, 0x005FB757, 0x005FBF47 };
 	CPatch::SetPointer(v10_sub_0054E022[game_version] + 0x2, &hud_search_bar_x);
 
-	// Значок "Здоровье" (у машины):	С версии 1.1 привязка к центру.
+	// Р—РЅР°С‡РѕРє "Р—РґРѕСЂРѕРІСЊРµ" (Сѓ РјР°С€РёРЅС‹):	РЎ РІРµСЂСЃРёРё 1.1 РїСЂРёРІСЏР·РєР° Рє С†РµРЅС‚СЂСѓ.
 	static float hud_live_bar_x = 368.0f + fix_hud_center;
 	static int v10_sub_0054ED61[3] = { 0x0054ED61, NULL, NULL };
 	if (game_version == MAFIA_1_0_ENG) {
 		CPatch::SetPointer(v10_sub_0054ED61[game_version] + 0x2, &hud_live_bar_x);
 	}
 
-	// Полоса действия (взлом машины или при замахе кулаком, битой):
+	// РџРѕР»РѕСЃР° РґРµР№СЃС‚РІРёСЏ (РІР·Р»РѕРј РјР°С€РёРЅС‹ РёР»Рё РїСЂРё Р·Р°РјР°С…Рµ РєСѓР»Р°РєРѕРј, Р±РёС‚РѕР№):
 	static float hud_progress_bar_x = 250.0f + fix_hud_center;
 	static int v10_sub_0054F5AA[3] = { 0x0054F5AA, 0x005FCD62, 0x005FD552 };
 	CPatch::SetPointer(v10_sub_0054F5AA[game_version] + 0x2, &hud_progress_bar_x);
 
-	// Полоса действия 2 (самолет в миссии Сливки общества - Аэропорт):
+	// РџРѕР»РѕСЃР° РґРµР№СЃС‚РІРёСЏ 2 (СЃР°РјРѕР»РµС‚ РІ РјРёСЃСЃРёРё РЎР»РёРІРєРё РѕР±С‰РµСЃС‚РІР° - РђСЌСЂРѕРїРѕСЂС‚):
 	static float hud_progress_bar2_x = 350.0f + fix_hud_center;
 	static int v10_sub_0054F8F5[3] = { 0x0054F8F5, 0x005FD0CB, 0x005FD8BB };
 	CPatch::SetPointer(v10_sub_0054F8F5[game_version] + 0x2, &hud_progress_bar2_x);
 
-	// Всплывающий текст слева:
+	// Р’СЃРїР»С‹РІР°СЋС‰РёР№ С‚РµРєСЃС‚ СЃР»РµРІР°:
 	static float hud_left_popup_text_x = 9.0f + fix_hud_left;
 	static int v10_sub_0054F54C[3] = { 0x0054F54C, 0x005FCCFE, 0x005FD4EE };
 	CPatch::SetPointer(v10_sub_0054F54C[game_version] + 0x2, &hud_left_popup_text_x);
 
-	// Деньги, текст справа сверху:
+	// Р”РµРЅСЊРіРё, С‚РµРєСЃС‚ СЃРїСЂР°РІР° СЃРІРµСЂС…Сѓ:
 	static float hud_money_right_text_x = 760.0f + fix_hud_right;
 	static int v10_sub_0054F086[3] = { 0x0054F086, 0x005FC81D, 0x005FD00D };
 	CPatch::SetPointer(v10_sub_0054F086[game_version] + 0x2, &hud_money_right_text_x);
 #pragma endregion
 
 #pragma region *Race Mission Specific*
-	// Гонка "3, 2, 1, Go":
+	// Р“РѕРЅРєР° "3, 2, 1, Go":
 	static float hud_race_321go_x = 400.0f + fix_hud_center;
 	static int v10_sub_0055274A[3] = { 0x0055274A, 0x006000F0, 0x006008E0 };
 	static int v10_sub_00552954[3] = { 0x00552954, 0x00600331, 0x00600B21 };
@@ -380,12 +391,12 @@ void HUDHook() {
 		CPatch::SetFloat(v10_sub_00552954[game_version] + 0x1, hud_race_321go_x);
 	}
 
-	// Гонка, "Едем не туда":
+	// Р“РѕРЅРєР°, "Р•РґРµРј РЅРµ С‚СѓРґР°":
 	float hud_race_wrong_way_x = 272.0f + fix_hud_center;
 	static int v10_sub_00552C90[3] = { 0x00552C90, 0x006006AE, 0x00600E9E };
 	CPatch::SetFloat(v10_sub_00552C90[game_version] + 0x1, hud_race_wrong_way_x);
 
-	// Гонка, текст по центру ("Контрольная точка"):
+	// Р“РѕРЅРєР°, С‚РµРєСЃС‚ РїРѕ С†РµРЅС‚СЂСѓ ("РљРѕРЅС‚СЂРѕР»СЊРЅР°СЏ С‚РѕС‡РєР°"):
 	float hud_race_checkpoint_x = 390.0f + fix_hud_center;
 	static int v10_sub_00552BFE[3] = { 0x00552BFE, 0x00600609, 0x00600DF9 };
 	if (game_version == MAFIA_1_0_ENG) {
@@ -395,21 +406,21 @@ void HUDHook() {
 		CPatch::SetFloat(v10_sub_00552BFE[game_version] + 0x1, hud_race_checkpoint_x);
 	}
 
-	// Гонка, текст справа сверху:
+	// Р“РѕРЅРєР°, С‚РµРєСЃС‚ СЃРїСЂР°РІР° СЃРІРµСЂС…Сѓ:
 	static float hud_race_right_text_x = 780.0f + fix_hud_right;
 	static int v10_sub_00552AEC[3] = { 0x00552AEC, 0x006004F0, 0x00600CE0 };
 	CPatch::SetPointer(v10_sub_00552AEC[game_version] + 0x2, &hud_race_right_text_x);
 #pragma endregion
 
 #pragma region *Map*
-	// Надпись "Нет карты":
+	// РќР°РґРїРёСЃСЊ "РќРµС‚ РєР°СЂС‚С‹":
 	static float hud_map_text_x = 350.0f + fix_hud_center;
 	static int v10_sub_00552017[3] = { 0x00552017, 0x005FF933, 0x00600123 };
 	CPatch::SetPointer(v10_sub_00552017[game_version] + 0x2, &hud_map_text_x);
 #pragma endregion
 
 #pragma region *Black Borders, Text*
-	// Черные полосы:
+	// Р§РµСЂРЅС‹Рµ РїРѕР»РѕСЃС‹:
 	static float hud_borders_width = cur_base_width + 1.0f;
 	float hud_borders_1 = (ori_base_width * 0.540540516376495f) / cur_base_width;
 	float hud_borders_2 = (ori_base_width * 0.5f) / cur_base_width;
@@ -424,12 +435,12 @@ void HUDHook() {
 		CPatch::SetFloat(v10_sub_00548E6C[game_version] + 0x1, hud_borders_2);
 	}
 
-	// Текст в центре на черном фоне:
+	// РўРµРєСЃС‚ РІ С†РµРЅС‚СЂРµ РЅР° С‡РµСЂРЅРѕРј С„РѕРЅРµ:
 	static float hud_black_centred_text_x = 400.0f + fix_hud_center;
 	static int v10_sub_0054B80B[3] = { 0x0054B80B, 0x005F8EFB, 0x005F96EB };
 	CPatch::SetPointer(v10_sub_0054B80B[game_version] + 0x2, &hud_black_centred_text_x);
 
-	// Титры:
+	// РўРёС‚СЂС‹:
 	static float hud_credits_text_1_x = 370.0f + fix_hud_center;
 	hud_credits_text_2_x = 390.0f + fix_hud_center;
 	static float hud_credits_text_3_x = 400.0f + fix_hud_center;
@@ -461,7 +472,7 @@ void HUDHook() {
 #pragma endregion
 
 #pragma region *Menus*
-	// Надпись "Пожалуйста подождите":
+	// РќР°РґРїРёСЃСЊ "РџРѕР¶Р°Р»СѓР№СЃС‚Р° РїРѕРґРѕР¶РґРёС‚Рµ":
 	if (!menu_patch) {
 		static float hud_please_wait_text_x = 780.0f + fix_hud_double;
 		static int v10_sub_0055F47B[3] = { 0x0055F47B, 0x005A3741, 0x005A3D31 };
@@ -491,24 +502,24 @@ void MapHook() {
 		//		fix_map_double = cur_base_width - ori_base_width;
 	}
 
-	// Левая граница карты:
+	// Р›РµРІР°СЏ РіСЂР°РЅРёС†Р° РєР°СЂС‚С‹:
 	static float map_left_x = (ori_base_width * 0.1f + fix_map_left) / cur_base_width;
 	static int v10_sub_005517D1[3] = { 0x005517D1, 0x005FF0B5, 0x005FF8A5 };
 	CPatch::SetPointer(v10_sub_005517D1[game_version] + 0x2, &map_left_x);
 
-	// Правая граница карты:
+	// РџСЂР°РІР°СЏ РіСЂР°РЅРёС†Р° РєР°СЂС‚С‹:
 	static float map_right_x = 1.0f - map_left_x;
 	static int v10_sub_00551838[3] = { 0x00551838, 0x005FF0C9, 0x005FF8B9 };
 	CPatch::SetPointer(v10_sub_00551838[game_version] + 0x2, &map_right_x);
 
-	// Позиция маркера игрока:
+	// РџРѕР·РёС†РёСЏ РјР°СЂРєРµСЂР° РёРіСЂРѕРєР°:
 	static void *Map_Hook_Player_Marker_x[3] = { v10_Eng_Map_Hook_Player_Marker_x, v11_Eng_Map_Hook_Player_Marker_x, v11_Eng_Map_Hook_Player_Marker_x };
 	map_player_marker_x = cur_game_height * ori_width_p_height;
 	int v10_sub_00551CD5[3] = { 0x00551CD5, 0x005FF5C7, 0x005FFDB7 };
 	CPatch::RedirectCall(v10_sub_00551CD5[game_version], Map_Hook_Player_Marker_x[game_version]);
 	CPatch::Nop(v10_sub_00551CD5[game_version] + 0x5, 0x1);
 
-	// Позиция маркера цели;
+	// РџРѕР·РёС†РёСЏ РјР°СЂРєРµСЂР° С†РµР»Рё;
 	static float map_width = map_right_x - map_left_x;
 	static int v10_sub_0055214C[3] = { 0x0055214C, 0x005FFA6A, 0x0060025A };
 	CPatch::SetPointer(v10_sub_0055214C[game_version] + 0x2, &map_width);
@@ -565,32 +576,32 @@ void TextHook() {
 }
 
 void MenuHook() {
-// Устанавливаем правильные пропорции:
+// РЈСЃС‚Р°РЅР°РІР»РёРІР°РµРј РїСЂР°РІРёР»СЊРЅС‹Рµ РїСЂРѕРїРѕСЂС†РёРё:
 
 	static int v11_sub_005E3303[3] = { NULL, 0x005E3303, 0x005E3B03 };
 	static int v10_sub_0056E525[3] = { 0x0056E525, 0x005EB28B, 0x005EBA8B };	
 	if (game_version == MAFIA_1_0_ENG) {
-		// Загрузочные экраны, меню, текст в машинопедии
+		// Р—Р°РіСЂСѓР·РѕС‡РЅС‹Рµ СЌРєСЂР°РЅС‹, РјРµРЅСЋ, С‚РµРєСЃС‚ РІ РјР°С€РёРЅРѕРїРµРґРёРё
 		CPatch::SetPointer(v10_sub_0056E525[game_version] + 0x2, &one_p_cur_base_width);
 	}	
 	else{
-		// Загрузочные экраны
+		// Р—Р°РіСЂСѓР·РѕС‡РЅС‹Рµ СЌРєСЂР°РЅС‹
 		CPatch::SetPointer(v11_sub_005E3303[game_version] + 0x2, &one_p_cur_base_width);
-		// Меню, текст в машинопедии
+		// РњРµРЅСЋ, С‚РµРєСЃС‚ РІ РјР°С€РёРЅРѕРїРµРґРёРё
 		CPatch::SetPointer(v10_sub_0056E525[game_version] + 0x2, &one_p_cur_base_width);
 	}
 
 	float fix_menu_right = (cur_base_width - ori_base_width) / 2.0f;
 
 #pragma region *Menus*
-	// Надпись "Пожалуйста подождите":
+	// РќР°РґРїРёСЃСЊ "РџРѕР¶Р°Р»СѓР№СЃС‚Р° РїРѕРґРѕР¶РґРёС‚Рµ":
 	static float menu_please_wait_text_x = 780.0f + fix_menu_right;
 	static int v10_sub_0055F47B[3] = { 0x0055F47B, 0x005A3741, 0x005A3D31 };
 	static int v10_sub_005DF781[3] = { 0x005DF781, 0x0060CEF5, 0x0060D3E5 };
 	CPatch::SetPointer(v10_sub_0055F47B[game_version] + 0x2, &menu_please_wait_text_x);
 	CPatch::SetPointer(v10_sub_005DF781[game_version] + 0x2, &menu_please_wait_text_x);
 
-	// Меню, загрузочные экраны, машинопедия
+	// РњРµРЅСЋ, Р·Р°РіСЂСѓР·РѕС‡РЅС‹Рµ СЌРєСЂР°РЅС‹, РјР°С€РёРЅРѕРїРµРґРёСЏ
 	menu_menu_x = (cur_game_width - (cur_game_height * ori_width_p_height)) / 2.0f;
 	static void *Menu_Hook_01[3] = { v10_Eng_Menu_Hook_01, v11_Eng_Menu_Hook_01, v12_Eng_Menu_Hook_01 };
 	static void *Menu_Hook_02[3] = { v10_Eng_Menu_Hook_02, v11_Eng_Menu_Hook_02, v12_Eng_Menu_Hook_02 };
@@ -601,23 +612,23 @@ void MenuHook() {
 		static int v10_sub_0056C007[3] = { 0x0056C007, NULL, NULL };
 		static int v10_sub_0056C0AF[3] = { 0x0056C0AF, NULL, NULL };
 		static int v10_sub_005758DF[3] = { 0x005758DF, NULL, NULL };
-		// Загрузочные экраны, текст в машинопедии
+		// Р—Р°РіСЂСѓР·РѕС‡РЅС‹Рµ СЌРєСЂР°РЅС‹, С‚РµРєСЃС‚ РІ РјР°С€РёРЅРѕРїРµРґРёРё
 		CPatch::RedirectCall(v10_sub_0056BF09[game_version], Menu_Hook_02[game_version]);
-		// Меню
+		// РњРµРЅСЋ
 		CPatch::RedirectCall(v10_sub_0056BF95[game_version], Menu_Hook_01[game_version]);
-		// "В гараже новый транспорт"
+		// "Р’ РіР°СЂР°Р¶Рµ РЅРѕРІС‹Р№ С‚СЂР°РЅСЃРїРѕСЂС‚"
 		CPatch::RedirectCall(v10_sub_0056C007[game_version], Menu_Hook_03[game_version]);
-		// Гонка: таблица рекордов
+		// Р“РѕРЅРєР°: С‚Р°Р±Р»РёС†Р° СЂРµРєРѕСЂРґРѕРІ
 		CPatch::RedirectCall(v10_sub_0056C0AF[game_version], Menu_Hook_03[game_version]);
-		// Машинопедия, список авто
+		// РњР°С€РёРЅРѕРїРµРґРёСЏ, СЃРїРёСЃРѕРє Р°РІС‚Рѕ
 		CPatch::RedirectCall(v10_sub_005758DF[game_version], Menu_Hook_03[game_version]);
 	}
 	else {
 		static int v11_sub_005D8D5B[3] = { NULL, 0x005D8D5B, 0x005D950B };
 		static int v11_sub_005D90CB[3] = { NULL, 0x005D90CB, 0x005D98DB };
-		// Меню
+		// РњРµРЅСЋ
 		CPatch::RedirectCall(v11_sub_005D8D5B[game_version], Menu_Hook_01[game_version]);
-		// Загрузочные экраны, машинопедия
+		// Р—Р°РіСЂСѓР·РѕС‡РЅС‹Рµ СЌРєСЂР°РЅС‹, РјР°С€РёРЅРѕРїРµРґРёСЏ
 		CPatch::RedirectCall(v11_sub_005D90CB[game_version], Menu_Hook_02[game_version]);
 	}
 #pragma endregion
@@ -625,7 +636,7 @@ void MenuHook() {
 
 void MovieHook() {
 #pragma region *Movies*
-	// Видео:
+	// Р’РёРґРµРѕ:
 	movie_aspect = cur_width_p_height / ori_width_p_height;
 	static void *Movie_Hook[3] = { v10_Eng_Movie_Hook, v11_Eng_Movie_Hook, v12_Eng_Movie_Hook };
 	static int v10_sub_10070430[3] = { 0x00070430, 0x00071490, 0x000745A0 };
@@ -704,35 +715,35 @@ void SetHooks() {
 	one_p_cur_base_width = 1.0f / cur_base_width;
 //	one_p_cur_base_height = 1.0f / cur_base_height;
 
-	// Исправляем FOV
+	// РСЃРїСЂР°РІР»СЏРµРј FOV
 	if (fov_patch) {
 		FovHook();
 	}
-	// Исправляем HUD
+	// РСЃРїСЂР°РІР»СЏРµРј HUD
 	if (hud_patch) {
 		HUDHook();
 	}
-	// Исправляем карту
+	// РСЃРїСЂР°РІР»СЏРµРј РєР°СЂС‚Сѓ
 	if (map_patch) {
 		MapHook();
 	}
-	// Исправляем разбиение текста
+	// РСЃРїСЂР°РІР»СЏРµРј СЂР°Р·Р±РёРµРЅРёРµ С‚РµРєСЃС‚Р°
 	if (text_patch) {
 		TextHook();
 	}
-	// Исправляем загрузочные экраны и меню
+	// РСЃРїСЂР°РІР»СЏРµРј Р·Р°РіСЂСѓР·РѕС‡РЅС‹Рµ СЌРєСЂР°РЅС‹ Рё РјРµРЅСЋ
 	if (menu_patch) {
 		MenuHook();
 	}
-	// Исправляем пропорции видеороликов
+	// РСЃРїСЂР°РІР»СЏРµРј РїСЂРѕРїРѕСЂС†РёРё РІРёРґРµРѕСЂРѕР»РёРєРѕРІ
 	if (movie_patch) {
 		MovieHook();
 	}
-	// Меняем дальность прорисовки
+	// РњРµРЅСЏРµРј РґР°Р»СЊРЅРѕСЃС‚СЊ РїСЂРѕСЂРёСЃРѕРІРєРё
 	if (draw_dist_patch) {
 		DrawDistanceHook();
 	}
-	// Другие исправления
+	// Р”СЂСѓРіРёРµ РёСЃРїСЂР°РІР»РµРЅРёСЏ
 	OtherHooks();
 }
 
@@ -1728,41 +1739,41 @@ void __declspec(naked)v10_Eng_Movie_Hook() {
 
 	label_movie_fix1:
 					//-------------------------------------------------------------------------
-					FLD DWORD PTR[cur_game_width];				// Левая сторона видео
+					FLD DWORD PTR[cur_game_width];				// Р›РµРІР°СЏ СЃС‚РѕСЂРѕРЅР° РІРёРґРµРѕ
 					FILD DWORD PTR[ESP + 0xC];
 					FDIV DWORD PTR[movie_aspect];
 					FSUBP ST(1), ST;
 					FMUL DWORD PTR[half];
 					FISTP DWORD PTR[EAX];
 					//-------------------------------------------------------------------------
-					MOV EDX, DWORD PTR[ESP + 0x8];				// Верхняя сторона видео
+					MOV EDX, DWORD PTR[ESP + 0x8];				// Р’РµСЂС…РЅСЏСЏ СЃС‚РѕСЂРѕРЅР° РІРёРґРµРѕ
 					MOV DWORD PTR[EAX + 0x4], EDX;
 					//-------------------------------------------------------------------------
-					FILD DWORD PTR[ESP + 0xC];					// Ширина видео
+					FILD DWORD PTR[ESP + 0xC];					// РЁРёСЂРёРЅР° РІРёРґРµРѕ
 					FDIV DWORD PTR[movie_aspect];
 					FISTP DWORD PTR[EAX + 0x8];
 					//-------------------------------------------------------------------------
-					MOV EDX, DWORD PTR[ESP + 0x10];				// Высота видео
+					MOV EDX, DWORD PTR[ESP + 0x10];				// Р’С‹СЃРѕС‚Р° РІРёРґРµРѕ
 					MOV DWORD PTR[EAX + 0x0C], EDX;
 					//-------------------------------------------------------------------------
 					RETN;
 
 	label_movie_fix2:
 					//-------------------------------------------------------------------------
-					MOV EDX, DWORD PTR[ESP + 0x4];				// Левая сторона видео
+					MOV EDX, DWORD PTR[ESP + 0x4];				// Р›РµРІР°СЏ СЃС‚РѕСЂРѕРЅР° РІРёРґРµРѕ
 					MOV DWORD PTR[EAX], EDX;
 					//-------------------------------------------------------------------------
-					FLD DWORD PTR[cur_game_height];				// Верхняя сторона видео
+					FLD DWORD PTR[cur_game_height];				// Р’РµСЂС…РЅСЏСЏ СЃС‚РѕСЂРѕРЅР° РІРёРґРµРѕ
 					FILD DWORD PTR[ESP + 0x10];
 					FMUL DWORD PTR[movie_aspect];
 					FSUBP ST(1), ST;
 					FMUL DWORD PTR[half];
 					FISTP DWORD PTR[EAX + 0x4];
 					//-------------------------------------------------------------------------
-					MOV EDX, DWORD PTR[ESP + 0xC];				// Ширина видео
+					MOV EDX, DWORD PTR[ESP + 0xC];				// РЁРёСЂРёРЅР° РІРёРґРµРѕ
 					MOV DWORD PTR[EAX + 0xC], EDX;
 					//-------------------------------------------------------------------------
-					FILD DWORD PTR[ESP + 0x10];					// Высота видео
+					FILD DWORD PTR[ESP + 0x10];					// Р’С‹СЃРѕС‚Р° РІРёРґРµРѕ
 					FMUL DWORD PTR[movie_aspect];
 					FISTP DWORD PTR[EAX + 0x0C];
 					//-------------------------------------------------------------------------
@@ -1880,41 +1891,41 @@ void __declspec(naked)v11_Eng_Movie_Hook() {
 
 	label_movie_fix1:
 					//-------------------------------------------------------------------------
-					FLD DWORD PTR[cur_game_width];				// Левая сторона видео
+					FLD DWORD PTR[cur_game_width];				// Р›РµРІР°СЏ СЃС‚РѕСЂРѕРЅР° РІРёРґРµРѕ
 					FILD DWORD PTR[ESP + 0xC];
 					FDIV DWORD PTR[movie_aspect];
 					FSUBP ST(1), ST;
 					FMUL DWORD PTR[half];
 					FISTP DWORD PTR[EAX];
 					//-------------------------------------------------------------------------
-					MOV EDX, DWORD PTR[ESP + 0x8];				// Верхняя сторона видео
+					MOV EDX, DWORD PTR[ESP + 0x8];				// Р’РµСЂС…РЅСЏСЏ СЃС‚РѕСЂРѕРЅР° РІРёРґРµРѕ
 					MOV DWORD PTR[EAX + 0x4], EDX;
 					//-------------------------------------------------------------------------
-					FILD DWORD PTR[ESP + 0xC];					// Ширина видео
+					FILD DWORD PTR[ESP + 0xC];					// РЁРёСЂРёРЅР° РІРёРґРµРѕ
 					FDIV DWORD PTR[movie_aspect];
 					FISTP DWORD PTR[EAX + 0x8];
 					//-------------------------------------------------------------------------
-					MOV EDX, DWORD PTR[ESP + 0x10];				// Высота видео
+					MOV EDX, DWORD PTR[ESP + 0x10];				// Р’С‹СЃРѕС‚Р° РІРёРґРµРѕ
 					MOV DWORD PTR[EAX + 0x0C], EDX;
 					//-------------------------------------------------------------------------
 					RETN;
 
 	label_movie_fix2:
 					//-------------------------------------------------------------------------
-					MOV EDX, DWORD PTR[ESP + 0x4];				// Левая сторона видео
+					MOV EDX, DWORD PTR[ESP + 0x4];				// Р›РµРІР°СЏ СЃС‚РѕСЂРѕРЅР° РІРёРґРµРѕ
 					MOV DWORD PTR[EAX], EDX;
 					//-------------------------------------------------------------------------
-					FLD DWORD PTR[cur_game_height];				// Верхняя сторона видео
+					FLD DWORD PTR[cur_game_height];				// Р’РµСЂС…РЅСЏСЏ СЃС‚РѕСЂРѕРЅР° РІРёРґРµРѕ
 					FILD DWORD PTR[ESP + 0x10];
 					FMUL DWORD PTR[movie_aspect];
 					FSUBP ST(1), ST;
 					FMUL DWORD PTR[half];
 					FISTP DWORD PTR[EAX + 0x4];
 					//-------------------------------------------------------------------------
-					MOV EDX, DWORD PTR[ESP + 0xC];				// Ширина видео
+					MOV EDX, DWORD PTR[ESP + 0xC];				// РЁРёСЂРёРЅР° РІРёРґРµРѕ
 					MOV DWORD PTR[EAX + 0xC], EDX;
 					//-------------------------------------------------------------------------
-					FILD DWORD PTR[ESP + 0x10];					// Высота видео
+					FILD DWORD PTR[ESP + 0x10];					// Р’С‹СЃРѕС‚Р° РІРёРґРµРѕ
 					FMUL DWORD PTR[movie_aspect];
 					FISTP DWORD PTR[EAX + 0x0C];
 					//-------------------------------------------------------------------------
@@ -2032,41 +2043,41 @@ void __declspec(naked)v12_Eng_Movie_Hook() {
 
 	label_movie_fix1:
 					//-------------------------------------------------------------------------
-					FLD DWORD PTR[cur_game_width];				// Левая сторона видео
+					FLD DWORD PTR[cur_game_width];				// Р›РµРІР°СЏ СЃС‚РѕСЂРѕРЅР° РІРёРґРµРѕ
 					FILD DWORD PTR[ESP + 0xC];
 					FDIV DWORD PTR[movie_aspect];
 					FSUBP ST(1), ST;
 					FMUL DWORD PTR[half];
 					FISTP DWORD PTR[EAX];
 					//-------------------------------------------------------------------------
-					MOV EDX, DWORD PTR[ESP + 0x8];				// Верхняя сторона видео
+					MOV EDX, DWORD PTR[ESP + 0x8];				// Р’РµСЂС…РЅСЏСЏ СЃС‚РѕСЂРѕРЅР° РІРёРґРµРѕ
 					MOV DWORD PTR[EAX + 0x4], EDX;
 					//-------------------------------------------------------------------------
-					FILD DWORD PTR[ESP + 0xC];					// Ширина видео
+					FILD DWORD PTR[ESP + 0xC];					// РЁРёСЂРёРЅР° РІРёРґРµРѕ
 					FDIV DWORD PTR[movie_aspect];
 					FISTP DWORD PTR[EAX + 0x8];
 					//-------------------------------------------------------------------------
-					MOV EDX, DWORD PTR[ESP + 0x10];				// Высота видео
+					MOV EDX, DWORD PTR[ESP + 0x10];				// Р’С‹СЃРѕС‚Р° РІРёРґРµРѕ
 					MOV DWORD PTR[EAX + 0x0C], EDX;
 					//-------------------------------------------------------------------------
 					RETN;
 
 	label_movie_fix2:
 					//-------------------------------------------------------------------------
-					MOV EDX, DWORD PTR[ESP + 0x4];				// Левая сторона видео
+					MOV EDX, DWORD PTR[ESP + 0x4];				// Р›РµРІР°СЏ СЃС‚РѕСЂРѕРЅР° РІРёРґРµРѕ
 					MOV DWORD PTR[EAX], EDX;
 					//-------------------------------------------------------------------------
-					FLD DWORD PTR[cur_game_height];				// Верхняя сторона видео
+					FLD DWORD PTR[cur_game_height];				// Р’РµСЂС…РЅСЏСЏ СЃС‚РѕСЂРѕРЅР° РІРёРґРµРѕ
 					FILD DWORD PTR[ESP + 0x10];
 					FMUL DWORD PTR[movie_aspect];
 					FSUBP ST(1), ST;
 					FMUL DWORD PTR[half];
 					FISTP DWORD PTR[EAX + 0x4];
 					//-------------------------------------------------------------------------
-					MOV EDX, DWORD PTR[ESP + 0xC];				// Ширина видео
+					MOV EDX, DWORD PTR[ESP + 0xC];				// РЁРёСЂРёРЅР° РІРёРґРµРѕ
 					MOV DWORD PTR[EAX + 0xC], EDX;
 					//-------------------------------------------------------------------------
-					FILD DWORD PTR[ESP + 0x10];					// Высота видео
+					FILD DWORD PTR[ESP + 0x10];					// Р’С‹СЃРѕС‚Р° РІРёРґРµРѕ
 					FMUL DWORD PTR[movie_aspect];
 					FISTP DWORD PTR[EAX + 0x0C];
 					//-------------------------------------------------------------------------
