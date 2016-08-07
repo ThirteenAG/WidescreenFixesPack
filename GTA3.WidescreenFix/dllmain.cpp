@@ -176,12 +176,12 @@ void OverwriteResolution()
 
 void FixAspectRatio()
 {
-    auto pattern = hook::pattern("74 08 D9 05 ? ? ? ? EB 06");
-    injector::MakeNOP(pattern.get(9).get<uint32_t>(0), 2, true); //0x46B618
+    auto pattern = hook::pattern("80 3D ? ? ? ? 00 74 ? D9 05 ? ? ? ? EB");
+    injector::MakeNOP(pattern.get(0).get<uint32_t>(7), 2, true); //0x46B618
     pattern = hook::pattern("80 3D ? ? ? ? 00 DD D9 74 0A FF 35");
-    injector::MakeNOP(pattern.get(0).get<uint32_t>(0), 7, true); //0x48D06B
+    //injector::MakeNOP(pattern.get(0).get<uint32_t>(0), 7, true); //0x48D06B
     injector::MakeNOP(pattern.get(0).get<uint32_t>(9), 2, true); //0x48D074
-
+   
     pattern = hook::pattern("EB 00 5D 5B C3"); //0x584B26
     injector::MakeJMP(pattern.get(0).get<uint32_t>(4), CDraw::CalculateAspectRatio, true);
 }
@@ -227,8 +227,41 @@ float __stdcall MenuScaleHook(float fScaleFactor)
 void FixMenu()
 {
     injector::MakeJMP(MenuPattern1.get(0).get<uint32_t>(0), MenuScaleHook, true);
-    static const float fGameRadioOffset = 320.0f - 1.0f;
-    injector::WriteMemory(MenuPattern2.get(5).get<uint32_t>(2), &fGameRadioOffset, true); //game radio icon fix
+
+    static float fHeadRadioOffset;
+    static float fDoubRadioOffset;
+    static float fKjahRadioOffset;
+    static float fRiseRadioOffset;
+    static float fLipsRadioOffset;
+    static float fGameRadioOffset;
+    static float fMsxxRadioOffset;
+    static float fFlasRadioOffset;
+    static float fChatRadioOffset;
+    static float fMp33RadioOffset;
+    
+    //centering radio icons
+    float fBaseOffset = (640.0f - (30.0f + 30.0f)) * (*CDraw::pfScreenAspectRatio / (4.0f / 3.0f)) / 10.0f;
+    fHeadRadioOffset = fBaseOffset * 1.0f;
+    fDoubRadioOffset = fBaseOffset * 2.0f;
+    fKjahRadioOffset = fBaseOffset * 3.0f;
+    fRiseRadioOffset = fBaseOffset * 4.0f;
+    fLipsRadioOffset = fBaseOffset * 5.0f;
+    fGameRadioOffset = fBaseOffset * 6.0f;
+    fMsxxRadioOffset = fBaseOffset * 7.0f;
+    fFlasRadioOffset = fBaseOffset * 8.0f;
+    fChatRadioOffset = fBaseOffset * 9.0f;
+    fMp33RadioOffset = fBaseOffset * 10.0f;
+
+    injector::WriteMemory(MenuPattern2.get(0).get<uint32_t>(2), &fHeadRadioOffset, true);
+    injector::WriteMemory(MenuPattern2.get(1).get<uint32_t>(2), &fDoubRadioOffset, true);
+    injector::WriteMemory(MenuPattern2.get(2).get<uint32_t>(2), &fKjahRadioOffset, true);
+    injector::WriteMemory(MenuPattern2.get(3).get<uint32_t>(2), &fRiseRadioOffset, true);
+    injector::WriteMemory(MenuPattern2.get(4).get<uint32_t>(2), &fLipsRadioOffset, true);
+    injector::WriteMemory(MenuPattern2.get(5).get<uint32_t>(2), &fGameRadioOffset, true);
+    injector::WriteMemory(MenuPattern2.get(6).get<uint32_t>(2), &fMsxxRadioOffset, true);
+    injector::WriteMemory(MenuPattern2.get(7).get<uint32_t>(2), &fFlasRadioOffset, true);
+    injector::WriteMemory(MenuPattern2.get(8).get<uint32_t>(2), &fChatRadioOffset, true);
+    injector::WriteMemory(MenuPattern2.get(9).get<uint32_t>(2), &fMp33RadioOffset, true);
 }
 
 void RsSelectDeviceHook()
@@ -283,6 +316,11 @@ void FixBorders()
 
     hbDrawBorders.fun = injector::MakeCALL(BordersPattern.get(11).get<uint32_t>(7), DrawBordersForWideScreenHook).get();
     injector::MakeCALL(BordersPattern.get(17).get<uint32_t>(7), DrawBordersForWideScreenHook);
+
+    // #108 Gap when fading
+    pattern = hook::pattern("0F 84 ? 00 00 00 8B 35 ? ? ? ? 89 F0");
+    injector::MakeNOP(pattern.get(0).get<uint32_t>(0), 1, true); //0x48D2D6
+    injector::WriteMemory<uint16_t>(pattern.get(0).get<uint32_t>(1), 0x84E9, true); //jmp 48D360
 }
 
 void FixHUD()
@@ -326,8 +364,9 @@ void FixHUD()
         injector::WriteMemory(p15625, &fWideScreenWidthScaleDown, true);
     }
 
+    static float fTBW = 350.0f;
     pattern = hook::pattern("D9 05 ? ? ? ? D8 C9 D9 05 ? ? ? ? D8 CA DE C1 D8 25"); // text box width
-    injector::WriteMemory(*pattern.get(0).get<uint32_t*>(2), 350.0f, true);
+    injector::WriteMemory(pattern.get(0).get<uint32_t*>(2), &fTBW, true);
 }
 
 void FixCrosshair()
@@ -551,8 +590,13 @@ void ApplyIniOptions()
         //pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? D9 05 ? ? ? ? D8 4C 24 04 D9 3C 24");
         //injector::WriteMemory(pattern.get(0).get<uint32_t>(1), 0xFFFF885F, true); //0x50948D text box background disable
 
-        //0x508363 pager?
-        //0x592BD8 with backgr?
+        //pager
+        auto pClr = hook::pattern("6A 42 68 A2 00 00 00 6A 20").get(0);
+        injector::WriteMemory<uint8_t>(pClr.get<uint32_t>(1), 0x01, true);
+        injector::WriteMemory<uint8_t>(pClr.get<uint32_t>(3), 0x01, true);
+        injector::WriteMemory<uint8_t>(pClr.get<uint32_t>(8), 0x01, true);
+
+        //0x592BD8?
     }
 
     pattern = hook::pattern("A1 ? ? ? ? 3B C3"); //0x5B7D75
