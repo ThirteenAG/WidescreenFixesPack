@@ -36,6 +36,8 @@ DWORD WINAPI Init(LPVOID)
 	CIniReader iniReader("");
 	Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
 	Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
+	bool bFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1) != 0;
+	bool bFMVWidescreenEnhancementPackCompatibility = iniReader.ReadInteger("MAIN", "FMVWidescreenEnhancementPackCompatibility", 0) != 0;
 	bool bDisableCutsceneBorders = iniReader.ReadInteger("MISC", "DisableCutsceneBorders", 1) != 0;
 	bool bSingleCoreAffinity = iniReader.ReadInteger("MISC", "SingleCoreAffinity", 1) != 0;
 	bool bDisableSafeMode = iniReader.ReadInteger("MISC", "DisableSafeMode", 1) != 0;
@@ -65,7 +67,7 @@ DWORD WINAPI Init(LPVOID)
 		i += 4;
 		injector::WriteMemory(i, Screen.Height, true);
 	}
-	
+
 	//2D
 	static auto dword_A37080 = *hook::pattern("DB 05 ? ? ? ? 8B 0D ? ? ? ? 85 C9 50").get(0).get<uint32_t*>(2);
 
@@ -81,7 +83,7 @@ DWORD WINAPI Init(LPVOID)
 	for (size_t i = 0; i < pattern.size(); ++i) //http://pastebin.com/ZpkGX9My
 	{
 		if (i == 318 || i == 315 || i == 314 || i == 313 || i == 310 || i == 312 || i == 311 || i == 320 || i == 178 || i == 177 || i == 176 || i == 175 || i == 174 || i == 327 || i == 2 || i == 309
-		|| i == 173 || i == 317 || i == 316 || i == 332 || i == 330)
+			|| i == 173 || i == 317 || i == 316 || i == 332 || i == 330)
 		{
 			injector::WriteMemory(pattern.get(i).get<uint32_t>(2), &Screen.Width, true);
 		}
@@ -312,12 +314,34 @@ DWORD WINAPI Init(LPVOID)
 	injector::WriteMemory<float>(*pattern.get(0).get<uint32_t*>(2), 0.05859375f * (1.0f / (Screen.fAspectRatio / (4.0f / 3.0f))), true);
 
 	//FMV
-	pattern = hook::pattern("A1 ? ? ? ? D9 15 ? ? ? ? D9 C2 89 15 ? ? ? ? D9 1D");
-	injector::WriteMemory(pattern.get(0).get<uint32_t>(1), &TextOffset, true); //0x0043E4D8
-	pattern = hook::pattern("D8 25 ? ? ? ? 8B 0D ? ? ? ? 85 C9 8B 15");
-	injector::WriteMemory(pattern.get(0).get<uint32_t>(2), &TextOffset, true); //0x0043E4C5
-	pattern = hook::pattern("8B 15 ? ? ? ? A1 ? ? ? ? 89 15 ? ? ? ? A3");
-	injector::WriteMemory(pattern.get(0).get<uint32_t>(2), &TextOffset, true); //0x0043E47F
+	auto FMVpattern1 = hook::pattern("A1 ? ? ? ? D9 15 ? ? ? ? D9 C2 89 15 ? ? ? ? D9 1D");
+	injector::WriteMemory(FMVpattern1.get(0).get<uint32_t>(1), &TextOffset, true); //0x0043E4D8
+	auto FMVpattern2 = hook::pattern("D8 25 ? ? ? ? 8B 0D ? ? ? ? 85 C9 8B 15");
+	injector::WriteMemory(FMVpattern2.get(0).get<uint32_t>(2), &TextOffset, true); //0x0043E4C5
+	auto FMVpattern3 = hook::pattern("8B 15 ? ? ? ? A1 ? ? ? ? 89 15 ? ? ? ? A3");
+	injector::WriteMemory(FMVpattern3.get(0).get<uint32_t>(2), &TextOffset, true); //0x0043E47F
+
+	if (bFMVWidescreenMode)
+	{
+		pattern = hook::pattern("E9 ? ? ? ? A1 ? ? ? ? 3D ? ? ? ? 77 05 B8 ? ? ? ?");
+		injector::WriteMemory<uint16_t>(pattern.get(0).get<uint32_t>(0), 0x850F, true); //0x0043E47F
+		injector::WriteMemory(pattern.get(0).get<uint32_t>(2), 0x00000088, true); //0x0043E47F+2
+		injector::MakeNOP(pattern.get(0).get<uint32_t>(2 + 4), 4, true);
+
+		static float fFMVOffset1 = (((480.0f * (16.0f / 9.0f)) / (640.0 / 390.0)) / (4.0 / 3.0));
+		pattern = hook::pattern("D8 0D ? ? ? ? D9 55 28 8B 0D ? ? ? ? DB 05 ? ? ? ? 85 C9 E9");
+		injector::WriteMemory(pattern.get(0).get<uint32_t>(-4), &fFMVOffset1, true); //43DBC5
+
+		static uint32_t fFMVOffset2 = static_cast<uint32_t>(fFMVOffset1);
+		pattern = hook::pattern("A1 ? ? ? ? 3D ? ? ? ? 77 05 B8 ? ? ? ? 2B 45 10");
+		injector::WriteMemory(pattern.get(0).get<uint32_t>(1), &fFMVOffset2, true); //43DC1E
+		//injector::MakeNOP(pattern.get(0).get<uint32_t>(5), 15, true);
+
+		static float TextOffsetWS = TextOffset - (((Screen.fHeight * (16.0f / 9.0f)) - Screen.fHeight * (4.0f / 3.0f)) / 2.0f);
+		injector::WriteMemory(FMVpattern1.get(0).get<uint32_t>(1), &TextOffsetWS, true); //0x0043E4D8
+		injector::WriteMemory(FMVpattern2.get(0).get<uint32_t>(2), &TextOffsetWS, true); //0x0043E4C5
+		injector::WriteMemory(FMVpattern3.get(0).get<uint32_t>(2), &TextOffsetWS, true); //0x0043E47F
+	}
 
 	if (bDisableCutsceneBorders)
 	{
@@ -337,6 +361,9 @@ DWORD WINAPI Init(LPVOID)
 	{
 		pattern = hook::pattern("74 05 E8 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 83 C4 08");
 		injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(0), 0xEB, true);
+
+		pattern = hook::pattern("8B 44 24 04 56 68 ? ? ? ? 50 FF 15 ? ? ? ? 8B F0 83 C4 08 85 F6 74 16");
+		injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(0), 0xC3, true);
 	}
 
 	if (bFastTransitions)
@@ -373,8 +400,8 @@ DWORD WINAPI Init(LPVOID)
 
 	if (nFPSLimit)
 	{
-		pattern = hook::pattern("6A 00 6A 1E 50 51");
-		injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(3), nFPSLimit, true); //004F6F53
+		pattern = hook::pattern("6A 00 6A ? 50 51");
+		injector::WriteMemory<uint8_t>(pattern.get(1).get<uint32_t>(3), nFPSLimit, true); //004F6F53
 	}
 
 	return 0;
