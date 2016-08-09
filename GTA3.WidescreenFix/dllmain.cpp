@@ -770,6 +770,7 @@ DWORD WINAPI Init(LPVOID)
 
                 wchar_t* ptr = pfGetText((int)TheText, "FED_WIS");
                 wcscpy(ptr, L"BORDERS");
+                bStringPatched = true;
             }
         }
     }; injector::MakeInline<LoadState>(dwGameLoadStatePattern.get(0).get<uint32_t>(0), dwGameLoadStatePattern.get(0).get<uint32_t>(10));

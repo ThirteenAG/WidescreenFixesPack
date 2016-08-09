@@ -47,7 +47,7 @@ void Hide1pxAABug()
 
 void CCamera::DrawBordersForWideScreen()
 {
-	if (!*bWideScreen == false)
+	if (*bWideScreen == false)
 		return;
 
 	CRect		ScreenRect;

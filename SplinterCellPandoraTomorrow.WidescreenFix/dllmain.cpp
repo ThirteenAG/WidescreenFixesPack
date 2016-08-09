@@ -73,7 +73,7 @@ void WidescreenHud(float& offsetX1, float& offsetX2, float& offsetY1, float& off
 	(offsetX1 == 521.0f && offsetX2 == 562.0f && offsetY1 == 306.0f && offsetY2 == 340.0f && (Color.RGBA == 4266682200 || Color.RGBA == 2152752984)) || //alarm icon
 	((offsetX1 == 494.0f || offsetX1 == 515.0f) && offsetY1 == 377.0f /*&& offsetY2 == 423.0f*/ && Color.RGBA == 4266682200) || //weapon icon
 	(offsetX1 >= 491.0f && /*offsetX2 == 519.0f &&*/ offsetY1 == 423.0f && offsetY2 == 437.0f /*&& Color.RGBA == 4265759816*/) || //weapon name text
-	(offsetX1 >= 491.0f && /*offsetX2 == 519.0f &&*/ offsetY1 == 423.0f && offsetY2 == 438.0f /*&& Color.RGBA == 4265759816*/) || //weapon name text (russian)
+	(offsetX1 >= 490.0f && /*offsetX2 == 519.0f &&*/ offsetY1 == 423.0f && offsetY2 == 438.0f /*&& Color.RGBA == 4265759816*/) || //weapon name text (russian)
 	(offsetX1 >= 571.0f && /*offsetX2 == 519.0f &&*/ offsetY1 == 373.0f && offsetY2 == 385.0f && Color.RGBA == 4265759816) || //ammo text
 	(offsetX1 >= 571.0f && /*offsetX2 == 519.0f &&*/ offsetY1 == 373.0f && offsetY2 == 388.0f && Color.RGBA == 4265759816) || //ammo text (russian)
 	(offsetX1 == 581.0f && (offsetX2 == 588.0f || offsetX2 == 592.0f) /*&& (Color.RGBA == 4266682200 || Color.RGBA == 4265759816)*/) ||  //bullets image
@@ -89,7 +89,8 @@ void WidescreenHud(float& offsetX1, float& offsetX2, float& offsetY1, float& off
 	((offsetX1 == 359.0f || offsetX1 == 375.0f || offsetX1 == 549.0f || offsetX1 == 554.0f) && (offsetX2 == 375.0f || offsetX2 == 370.0f || offsetX2 == 549.0f || offsetX2 == 565.0f) && (Color.RGBA == 2152752984 || Color.RGBA == 4266682200)) || //interaction menu background border
 	((offsetX1 == 440.0f || offsetX1 == 456.0f || offsetX1 == 537.0f || offsetX1 == 554.0f) && (offsetX2 == 456.0f || offsetX2 == 451.0f || offsetX2 == 549.0f || offsetX2 == 565.0f) && (Color.RGBA == 2152752984 || Color.RGBA == 4266682200)) || //interaction menu background border (russian)
 	((offsetX1 == 419.0f || offsetX1 == 435.0f || offsetX1 == 439.0f || offsetX1 == 549.0f) && (offsetX2 == 435.0f || offsetX2 == 430.0f || offsetX2 == 549.0f || offsetX2 == 565.0f) && (Color.RGBA == 2152752984 || Color.RGBA == 4266682200)) || //interaction menu background border (russian2)
-	(offsetX1 >= 365.0f && offsetY1 >= 42.0f && offsetY2 <= 192.0f && (Color.RGBA == 4265759816 || Color.RGBA == 4269316740)) //interaction menu text
+	(offsetX1 >= 365.0f && offsetY1 >= 42.0f && offsetY2 <= 192.0f && (Color.RGBA == 4265759816 || Color.RGBA == 4269316740)) || //interaction menu text
+	((offsetX1 == 371.0f || offsetX1 == 379.0f || offsetX1 == 387.0f || offsetX1 == 558.0f || offsetX1 == 566.0f) && offsetY1 >= 39.0f && offsetY2 <= 162.0f && (Color.RGBA == 4266682200 || Color.RGBA == 3036610302)) // turret interface
 	)
 	{
 		offsetX1 += fWidescreenHudOffset;
