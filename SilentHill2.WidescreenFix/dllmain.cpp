@@ -321,26 +321,28 @@ DWORD WINAPI Init(LPVOID)
 	auto FMVpattern3 = hook::pattern("8B 15 ? ? ? ? A1 ? ? ? ? 89 15 ? ? ? ? A3");
 	injector::WriteMemory(FMVpattern3.get(0).get<uint32_t>(2), &TextOffset, true); //0x0043E47F
 
-	if (bFMVWidescreenMode)
+	if (bFMVWidescreenMode || bFMVWidescreenEnhancementPackCompatibility)
 	{
 		pattern = hook::pattern("E9 ? ? ? ? A1 ? ? ? ? 3D ? ? ? ? 77 05 B8 ? ? ? ?");
 		injector::WriteMemory<uint16_t>(pattern.get(0).get<uint32_t>(0), 0x850F, true); //0x0043E47F
 		injector::WriteMemory(pattern.get(0).get<uint32_t>(2), 0x00000088, true); //0x0043E47F+2
 		injector::MakeNOP(pattern.get(0).get<uint32_t>(2 + 4), 4, true);
 
-		static float fFMVOffset1 = (((480.0f * (16.0f / 9.0f)) / (640.0 / 390.0)) / (4.0 / 3.0));
+		static float fFMVOffset1 = (((480.0f * (16.0f / 9.0f)) / (640.0f / 384.0f)) / (4.0f / 3.0f));
 		pattern = hook::pattern("D8 0D ? ? ? ? D9 55 28 8B 0D ? ? ? ? DB 05 ? ? ? ? 85 C9 E9");
 		injector::WriteMemory(pattern.get(0).get<uint32_t>(-4), &fFMVOffset1, true); //43DBC5
-
-		static uint32_t fFMVOffset2 = static_cast<uint32_t>(fFMVOffset1);
-		pattern = hook::pattern("A1 ? ? ? ? 3D ? ? ? ? 77 05 B8 ? ? ? ? 2B 45 10");
-		injector::WriteMemory(pattern.get(0).get<uint32_t>(1), &fFMVOffset2, true); //43DC1E
-		//injector::MakeNOP(pattern.get(0).get<uint32_t>(5), 15, true);
-
-		static float TextOffsetWS = TextOffset - (((Screen.fHeight * (16.0f / 9.0f)) - Screen.fHeight * (4.0f / 3.0f)) / 2.0f);
+		static float TextOffsetWS = TextOffset - (((Screen.fHeight * (640.0f / 384.0f)) - Screen.fHeight * (4.0f / 3.0f)) / 2.0f);
+		if (bFMVWidescreenEnhancementPackCompatibility)
+			TextOffsetWS = TextOffset - (((Screen.fHeight * (1360.0f / 768.0f)) - Screen.fHeight * (4.0f / 3.0f)) / 2.0f);
 		injector::WriteMemory(FMVpattern1.get(0).get<uint32_t>(1), &TextOffsetWS, true); //0x0043E4D8
 		injector::WriteMemory(FMVpattern2.get(0).get<uint32_t>(2), &TextOffsetWS, true); //0x0043E4C5
 		injector::WriteMemory(FMVpattern3.get(0).get<uint32_t>(2), &TextOffsetWS, true); //0x0043E47F
+
+		static uint32_t fFMVOffset2 = static_cast<uint32_t>(fFMVOffset1 * (290.0f / 384.0f)); //?
+		pattern = hook::pattern("A1 ? ? ? ? 3D ? ? ? ? 77 05 B8 ? ? ? ? 2B 45 10");
+		injector::WriteMemory(pattern.get(0).get<uint32_t>(1), &fFMVOffset2, true); //43DC1E
+		injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(10), 0xEB, true); //43DC28
+		injector::MakeNOP(pattern.get(0).get<uint32_t>(30), 8, true);
 	}
 
 	if (bDisableCutsceneBorders)
