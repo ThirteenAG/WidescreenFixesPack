@@ -31,6 +31,10 @@ void InstallWSHPSFixes()
 	//Heat Haze bug
 	injector::WriteMemory(0x0070149D, 0x00859520, true);
 	injector::WriteMemory(0x007014C5, 0x00859524, true);
+
+	//Stats + - bug
+	static float f65 = 65.0f - 10.0f;
+	injector::WriteMemory(0x0058C004, &f65, true);
 }
 
 // COMMAND_GET_HEIGHT_PERCENT_IN_WORLD_LEVEL
