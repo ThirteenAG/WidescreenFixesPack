@@ -10,6 +10,16 @@
 HWND hWnd;
 bool bDelay;
 
+#define _USE_MATH_DEFINES
+#include "math.h"
+#define DEGREE_TO_RADIAN(fAngle) \
+	((fAngle)* (float)M_PI / 180.0f)
+#define RADIAN_TO_DEGREE(fAngle) \
+	((fAngle)* 180.0f / (float)M_PI)
+#define SCREEN_AR_NARROW			(4.0f / 3.0f)	// 640.0f / 480.0f
+#define SCREEN_FOV_HORIZONTAL		60.0f
+#define SCREEN_FOV_VERTICAL			(2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))
+
 static char* GLExeStrings = "GL_ALWAYS GL_APPLE_transform_hint GL_ARB_fragment_program GL_ARB_multisample GL_ARB_multitexture GL_ARB_occlusion_query \
 GL_ARB_texture_compression GL_ARB_texture_mirrored_repeat GL_ARB_vertex_buffer_object GL_ATI_array_rev_comps_in_4_bytes GL_EXT_compiled_vertex_array \
 GL_EXT_texture_compression_s3tc GL_EXT_texture_env_add GL_EXT_texture_env_combine GL_EXT_texture_filter_anisotropic GL_EXT_texture_lod_bias GL_EXT_texture_rectangle \
@@ -132,7 +142,15 @@ DWORD WINAPI Init(LPVOID)
 	//GUI
 	pattern = hook::pattern("D8 05 ? ? ? ? D8 EA D9 5C 24 2C DB 44 24 10"); //0x565494
 	injector::MakeJMP(pattern.get(0).get<uint32_t>(0), GUIHook, true); //makeinline doesn't work
-	GUIHookJmp = (uintptr_t)pattern.get(0).get<uint32_t>(6);
+	GUIHookJmp = (uintptr_t)pattern.get(0).get<uint32_t>(6); \
+
+	//FOV
+	Screen.fFieldOfView = 2.8f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * (Screen.fAspectRatio))) * (1.0f / SCREEN_FOV_HORIZONTAL);
+	pattern = hook::pattern("D8 3D ? ? ? ? D9 C0 D8 8F ? ? ? ? D9 9F ? ? ? ? D9 C0"); //0x466AB0
+	injector::WriteMemory(pattern.get(0).get<uint32_t>(2), &Screen.fFieldOfView, true);
+	injector::WriteMemory(pattern.get(1).get<uint32_t>(2), &Screen.fFieldOfView, true);
+	pattern = hook::pattern("D9 05 ? ? ? ? D8 F1 D9 44 24 4C D8 C9"); //0x4669CD
+	injector::WriteMemory(pattern.get(0).get<uint32_t>(2), &Screen.fFieldOfView, true);
 	return 0;
 }
 

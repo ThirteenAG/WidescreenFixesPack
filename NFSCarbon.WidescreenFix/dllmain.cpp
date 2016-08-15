@@ -1,5 +1,6 @@
 #include "..\includes\stdafx.h"
 #include "..\includes\hooking\Hooking.Patterns.h"
+
 HWND hWnd;
 bool bDelay;
 
@@ -11,8 +12,75 @@ bool bHudMode;
 float fHudScaleX, fHudScaleY;
 float fHudPosX;
 float MinimapPosX, MinimapPosY;
-DWORD jmpAddr, jmpAddr2;
+DWORD jmpAddr;
 char* szCustomUserFilesDirectoryInGameDir;
+char szSettingsSavePath[MAX_PATH];
+CIniReader RegistryReader;
+
+LONG WINAPI RegCreateKeyAHook(HKEY hKey, LPCTSTR lpSubKey, PHKEY phkResult)
+{
+	return 1;
+}
+
+LONG WINAPI RegOpenKeyExAHook(HKEY hKey, LPCTSTR lpSubKey, DWORD ulOptions, REGSAM  samDesired, PHKEY phkResult)
+{
+	if (RegistryReader.ReadInteger("MAIN", "DisplayName", -1) == -1)
+	{
+		RegistryReader.WriteString("MAIN", "@", "INSERTYOURCDKEYHERE");
+		RegistryReader.WriteString("MAIN", "DisplayName", "Need for Speed Carbon");
+		RegistryReader.WriteString("MAIN", "Installed From", "C:\\");
+		RegistryReader.WriteString("MAIN", "Registration", "SOFTWARE\\Electronic Arts\\Electronic Arts\\Need for Speed Carbon\\ergc");
+		RegistryReader.WriteString("MAIN", "CacheSize", "5697825792");
+		RegistryReader.WriteString("MAIN", "SwapSize", "73400320");
+		RegistryReader.WriteString("MAIN", "Language", "English US");
+		RegistryReader.WriteString("MAIN", "Locale", "en_us");
+		RegistryReader.WriteString("MAIN", "CD Drive", "C:\\");
+		RegistryReader.WriteString("MAIN", "Product GUID", "{259C0ABB-A3B2-4D70-008F-BF7EE491B70B}");
+		RegistryReader.WriteString("MAIN", "Region", "NA");
+	}
+	return ERROR_SUCCESS;
+}
+
+LONG WINAPI RegCloseKeyHook(HKEY hKey)
+{
+	return ERROR_SUCCESS;
+}
+
+LONG WINAPI RegSetValueExAHook(HKEY hKey, LPCTSTR lpValueName, DWORD Reserved, DWORD dwType, const BYTE* lpData, DWORD cbData)
+{
+	RegistryReader.WriteInteger("MAIN", (char*)lpValueName, *(char*)lpData);
+	return ERROR_SUCCESS;
+}
+
+LONG WINAPI RegQueryValueExAHook(HKEY hKey, LPCTSTR lpValueName, LPDWORD lpReserved, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData)
+{
+	if (!lpValueName) //cd key
+	{
+		char* str = RegistryReader.ReadString("MAIN", "@", "");
+		strncpy((char*)lpData, str, *lpcbData);
+		return ERROR_SUCCESS;
+	}
+
+	if (*lpType == REG_SZ)
+	{
+		if (strstr(lpValueName, "Install Dir"))
+		{
+			GetModuleFileName(NULL, (char*)lpData, MAX_PATH);
+			*(strrchr((char*)lpData, '\\') + 1) = '\0';
+			return ERROR_SUCCESS;
+		}
+
+		char* str = RegistryReader.ReadString("MAIN", (char*)lpValueName, "");
+		strncpy((char*)lpData, str, *lpcbData);
+	}
+	else
+	{
+		DWORD nValue = RegistryReader.ReadInteger("MAIN", (char*)lpValueName, 0);
+		injector::WriteMemory(lpData, nValue, true);
+	}
+
+	return ERROR_SUCCESS;
+}
 
 HRESULT WINAPI SHGetFolderPathAHook(HWND /*hwnd*/, int /*csidl*/, HANDLE /*hToken*/, DWORD /*dwFlags*/, LPSTR pszPath)
 {
@@ -28,7 +96,7 @@ void __declspec(naked) FOVHook()
 		fld ds : ver3DScale
 		mov     eax, [ebp + 8]
 		cmp     eax, 1
-		jmp jmpAddr2
+		jmp jmpAddr
 	}
 }
 
@@ -48,19 +116,16 @@ DWORD WINAPI Init(LPVOID)
 	bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) != 0;
 	bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) != 0;
 	bHudMode = iniReader.ReadInteger("MAIN", "HudMode", 1) != 0;
+	int nScaling = iniReader.ReadInteger("MAIN", "Scaling", 2);
 	bool bHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1) != 0;
-	bool bFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1) != 0;
-	float fPiPPos1 = iniReader.ReadFloat("HUD", "PiPPos1", 0.203125f);
-	float fPiPPos2 = iniReader.ReadFloat("HUD", "PiPPos2", 0.001953f);
-	float fRearviewMirrorPos1 = iniReader.ReadFloat("HUD", "RearviewMirrorPos1", -0.308594f);
-	float fRearviewMirrorPos2 = iniReader.ReadFloat("HUD", "RearviewMirrorPos2", 0.654053f);
+	int nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
 	int nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
 	bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 1) != 0;
 	bool bLightingFix = iniReader.ReadInteger("MISC", "LightingFix", 0) != 0;
 	bool bCarShadowFix = iniReader.ReadInteger("MISC", "CarShadowFix", 0) != 0;
-	int nScaling = iniReader.ReadInteger("MAIN", "Scaling", 2);
-	bool bExperimentalCrashFix = iniReader.ReadInteger("MAIN", "ExperimentalCrashFix", 0) != 0;
+	bool bExperimentalCrashFix = iniReader.ReadInteger("MISC", "CrashFix", 0) != 0;
 	szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
+	bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 1) != 0;
 	bool bCustomUsrDir = false;
 	if (strncmp(szCustomUserFilesDirectoryInGameDir, "0", 1) != 0)
 		bCustomUsrDir = true;
@@ -117,10 +182,76 @@ DWORD WINAPI Init(LPVOID)
 		injector::WriteMemory(dword_6C2866, ResY, true);
 	}
 
+	//Autosculpt scaling
 	DWORD* dword_9E9B68 = *hook::pattern("D8 0D ? ? ? ? DA 74 24 18 E8 ? ? ? ? 89 46 04 EB 03").get(0).get<DWORD*>(2);
-	injector::WriteMemory<float>(dword_9E9B68, (float)ResX, true);
-	DWORD* dword_9E8F84 = *hook::pattern("D8 0D ? ? ? ? DA 74 24 10 DA 64 24 14 E8 ? ? ? ? 89 46 08").get(0).get<DWORD*>(2);
-	injector::WriteMemory<float>(dword_9E8F84, (float)ResY, true);
+	injector::WriteMemory<float>(dword_9E9B68, 480.0f * ((float)ResX / (float)ResY), true);
+
+	//Mouse cursor
+	//DWORD* dword_9E8F84 = *hook::pattern("D8 0D ? ? ? ? DA 74 24 10 DA 64 24 14 E8 ? ? ? ? 89 46 08").get(0).get<DWORD*>(2);
+	//injector::WriteMemory<float>(dword_9E8F84, (float)ResY, true);
+
+	//Arrest blur
+	DWORD* dword_9D0584 = *hook::pattern("D8 0D ? ? ? ? 8B 4C 24 14 8B 54").get(0).get<DWORD*>(2);
+	injector::WriteMemory<float>(dword_9D0584, (1.0f / 640.0f) * ((4.0f / 3.0f) / ((float)ResX / (float)ResY)), true);
+
+	//Water Reflections fix
+	static uint32_t n768 = 768;
+	static uint32_t n320 = 320;
+	DWORD* dword_71A9B1 = hook::pattern("8B 0D ? ? ? ? B8 56 55 55 55 89 15 ? ? ? ? F7 E9").get(1).get<DWORD>(2);
+	injector::WriteMemory(dword_71A9B1, &n768, true);
+	pattern = hook::pattern("8B ? ? ? ? ? ? 50 FF ? ? 85 C0");
+	DWORD* dword_71AA22 = pattern.get(2).get<DWORD>(2);
+	DWORD* dword_71AA72 = pattern.get(3).get<DWORD>(2);
+	injector::WriteMemory(dword_71AA22, &n320, true);
+	injector::WriteMemory(dword_71AA72, &n320, true);
+
+	//EA HD
+	DWORD* dword_9D51D8 = *hook::pattern("6A 01 6A 14 68 ? ? ? ? 8B CE").get(0).get<DWORD*>(5);
+	DWORD* dword_5BB83B = hook::pattern("68 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 83 C4 08 85 C0").get(4).get<DWORD>(1);
+	injector::WriteMemory(dword_5BB83B, dword_9D51D8, true);
+	pattern = hook::pattern("68 ? ? ? ? E8 ? ? ? ? 5E 59 C3");
+	DWORD* dword_5BD4A3 = pattern.get(1).get<DWORD>(1);
+	injector::WriteMemory(dword_5BD4A3, dword_9D51D8, true);
+	DWORD* dword_5BD4B0 = pattern.get(2).get<DWORD>(1);
+	injector::WriteMemory(dword_5BD4B0, dword_9D51D8, true);
+	injector::WriteMemory(hook::pattern("68 ? ? ? ? E8 ? ? ? ? 8B 4E 0C 50 51").get(2).get<DWORD>(1), 0, true);
+
+	//Lighting Fix Update (mirror)
+	pattern = hook::pattern("C7 05 ? ? ? ? 01 00 00 00 C7 05 ? ? ? ? 00 00 80");
+	DWORD* dword_72E382 = pattern.get(0).get<DWORD>(6);
+	injector::WriteMemory(dword_72E382, 0, true);
+	DWORD* dword_748C99 = hook::pattern("0F 85 A5 00 00 00 A1 ? ? ? ? C7 44 24 14 00 00 00 00").get(0).get<DWORD>(1);
+	injector::WriteMemory<uint8_t>(dword_748C99, 0x84, true);
+	pattern = hook::pattern("7E 52 8B 0D ? ? ? ? 83 79 04 01");
+	DWORD* dword_748D4B = pattern.get(0).get<DWORD>(0);
+	injector::MakeNOP(dword_748D4B, 2, true);
+	DWORD* dword_748D57 = pattern.get(0).get<DWORD>(12);
+	injector::WriteMemory<uint8_t>(dword_748D57, 0x74, true);
+	DWORD* dword_748D5A = pattern.get(0).get<DWORD>(15);
+	DWORD* dword_AB0958 = *hook::pattern("A1 ? ? ? ? 3B C6 74 0C 8B 08 50 FF 51 08 89 35").get(0).get<DWORD*>(1);
+	injector::WriteMemory(dword_748D5A, dword_AB0958, true);
+	DWORD* dword_748D66 = pattern.get(0).get<DWORD>(27);
+	DWORD* dword_B42F48 = *hook::pattern("8B 86 ? ? ? ? 3B C7 74 0C 8B 08 50 FF 51 08").get(2).get<DWORD*>(2);
+	injector::WriteMemory(dword_748D66, dword_B42F48, true);
+	DWORD* dword_748D6E = pattern.get(0).get<DWORD>(35);
+	DWORD* dword_AB095C = *hook::pattern("A1 ? ? ? ? 8B 08 68 ? ? ? ? 6A 00 50 FF 51 48").get(3).get<DWORD*>(1);
+	injector::WriteMemory(dword_748D6E, dword_AB095C, true);
+	DWORD* dword_748D74 = pattern.get(0).get<DWORD>(41);
+	injector::WriteMemory<uint8_t>(dword_748D74, 0x59, true);
+
+	//PiP pixelation
+	static uint32_t nResX43 = static_cast<uint32_t>(ResY * (4.0f / 3.0f));
+	DWORD* dword_70DB0C = hook::pattern("8B 0D ? ? ? ? B8 56 55 55 55").get(0).get<DWORD>(2);
+	injector::WriteMemory(dword_70DB0C, &nResX43, true);
+	
+	//World map cursor
+	DWORD* dword_570DCD = hook::pattern("75 33 D9 44 24 14 D8 5C 24 08 DF E0 F6 C4 41").get(0).get<DWORD>(0);
+	injector::MakeNOP(dword_570DCD, 2, true);
+	DWORD* dword_570DDC = hook::pattern("7A 24 D9 44 24 18 D8 5C 24 04 DF E0").get(0).get<DWORD>(0);
+	injector::MakeNOP(dword_570DDC, 2, true);
+
+	//For ini options
+	auto GetFolderPathpattern = hook::pattern("50 6A 00 6A 00 68 ? 80 00 00 6A 00");
 
 	//HUD
 	if (bFixHUD)
@@ -166,7 +297,7 @@ DWORD WINAPI Init(LPVOID)
 		injector::WriteMemory(dword_71B8DA, &hor3DScale, true);
 
 		DWORD* dword_71B858 = hook::pattern("DB 05 ? ? ? ? 8B 45 08 83 F8 01 DA 35 ? ? ? ? D9 5C 24 24").get(0).get<DWORD>(0);
-		jmpAddr2 = (DWORD)dword_71B858 + 18;
+		jmpAddr = (DWORD)dword_71B858 + 18;
 		injector::MakeJMP(dword_71B858, FOVHook, true);
 
 		// FOV being different in menus and in-game fix
@@ -198,24 +329,46 @@ DWORD WINAPI Init(LPVOID)
 		injector::WriteMemory<uchar>(dword_5B6B5B, 0x75, true);
 
 		//PiP/rearview mirror
-		DWORD* dword_750CF3 = hook::pattern("68 00 00 D0 BE 68 89 88 50 3F 8D 44 24 10 68 00 00 34 3F").get(0).get<DWORD>(1);
-		injector::WriteMemory<float>(dword_750CF3, fRearviewMirrorPos1, true);
-		DWORD dword_750D01 = (DWORD)dword_750CF3 + 14;
-		injector::WriteMemory<float>(dword_750D01, fRearviewMirrorPos2, true);
-
 		DWORD* dword_750DE7 = hook::pattern("68 CD CC 8C 3E 68 33 33 33 3F 8D 54 24 10 68 F4 FD D4 3C 52").get(0).get<DWORD>(1);
-		injector::WriteMemory<float>(dword_750DE7, fPiPPos1, true);
+		injector::WriteMemory<float>(dword_750DE7, 0.2799999714f, true);
 		DWORD dword_750DF5 = (DWORD)dword_750DE7 + 14;
-		injector::WriteMemory<float>(dword_750DF5, fPiPPos2, true);
+		injector::WriteMemory<float>(dword_750DF5, -0.1649999917f, true);
+
+		static float fMirrorScaling = 1.0f * ((4.0f / 3.0f) / ((float)ResX / (float)ResY));
+		pattern = hook::pattern("D9 5E 4C 89 46 5C 5E 5B C3");
+		struct MirrorFix
+		{
+			void operator()(injector::reg_pack& regs)
+			{
+				*(float *)(regs.esi + 0x00) = *(float *)(regs.esi + 0x00) * fMirrorScaling;
+				*(float *)(regs.esi + 0x18) = *(float *)(regs.esi + 0x18) * fMirrorScaling;											
+				*(float *)(regs.esi + 0x30) = *(float *)(regs.esi + 0x30) * fMirrorScaling;
+				*(float *)(regs.esi + 0x48) = *(float *)(regs.esi + 0x48) * fMirrorScaling;
+			}
+		}; injector::MakeInline<MirrorFix>(pattern.get(0).get<uint32_t>(6)); //750C23
+		injector::WriteMemory(pattern.get(0).get<uint32_t>(6 + 5), 0x90C35B5E, true); //pop esi pop ebx ret
 	}
 
-	if (bFMVWidescreenMode)
+	if (nFMVWidescreenMode)
 	{
-		DWORD* dword_598EB9 = hook::pattern("68 00 00 80 3F 68 00 00 00 3F 68 00 00 00 3F 68 00 00 00 BF 68 00 00 00 BF 8B CB E8 ? ? ? ? 8B CB C7").get(0).get<DWORD>(6);
-		injector::WriteMemory<float>((DWORD)dword_598EB9 + 0, (0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
-		injector::WriteMemory<float>((DWORD)dword_598EB9 + 5, (0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
-		injector::WriteMemory<float>((DWORD)dword_598EB9 + 10, -(0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
-		injector::WriteMemory<float>((DWORD)dword_598EB9 + 15, -(0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
+		if (nFMVWidescreenMode > 1)
+		{
+			DWORD* dword_598EB9 = hook::pattern("68 00 00 80 3F 68 00 00 00 3F 68 00 00 00 3F 68 00 00 00 BF 68 00 00 00 BF 8B CB E8 ? ? ? ? 8B CB C7").get(0).get<DWORD>(6);
+			injector::WriteMemory<float>((DWORD)dword_598EB9 + 0, (0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
+			injector::WriteMemory<float>((DWORD)dword_598EB9 + 5, (0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
+			injector::WriteMemory<float>((DWORD)dword_598EB9 + 10, -(0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
+			injector::WriteMemory<float>((DWORD)dword_598EB9 + 15, -(0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
+		}
+		else
+		{
+			//Native Fullscreen FMVs
+			DWORD* dword_5AB6D7 = hook::pattern("74 3C ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 68 D1 BC D5 FF").get(0).get<DWORD>(0);
+			injector::WriteMemory<uint8_t>(dword_5AB6D7, 0xEB, true);
+			DWORD* dword_5BB818 = hook::pattern("74 6A 8B CE E8 ? ? ? ? 84 C0 75 5F 68 ? ? ? ? 68").get(0).get<DWORD>(0);
+			injector::MakeNOP(dword_5BB818, 2, true);
+			DWORD* dword_5BD4A1 = hook::pattern("74 0D 68 ? ? ? ? E8 ? ? ? ? 5E 59 C3").get(0).get<DWORD>(0);
+			injector::MakeNOP(dword_5BD4A1, 2, true);
+		}
 	}
 
 	if (bLightingFix)
@@ -239,19 +392,18 @@ DWORD WINAPI Init(LPVOID)
 
 	if (bCustomUsrDir)
 	{
-		char			moduleName[MAX_PATH];
+		char moduleName[MAX_PATH];
 		GetModuleFileName(NULL, moduleName, MAX_PATH);
 		char* tempPointer = strrchr(moduleName, '\\');
 		*(tempPointer + 1) = '\0';
 		strcat(moduleName, szCustomUserFilesDirectoryInGameDir);
 		strcpy(szCustomUserFilesDirectoryInGameDir, moduleName);
 
-		auto pattern = hook::pattern("50 6A 00 6A 00 68 ? 80 00 00 6A 00");
-		for (size_t i = 0; i < pattern.size(); i++)
+		for (size_t i = 0; i < GetFolderPathpattern.size(); i++)
 		{
-			DWORD* dword_6CBF17 = pattern.get(i).get<DWORD>(12);
+			DWORD* dword_6CBF17 = GetFolderPathpattern.get(i).get<DWORD>(12);
 			if (*(BYTE*)dword_6CBF17 != 0xFF)
-				dword_6CBF17 = pattern.get(i).get<DWORD>(14);
+				dword_6CBF17 = GetFolderPathpattern.get(i).get<DWORD>(14);
 
 			injector::MakeCALL((DWORD)dword_6CBF17, SHGetFolderPathAHook, true);
 			injector::MakeNOP((DWORD)dword_6CBF17 + 5, 1, true);
@@ -302,14 +454,32 @@ DWORD WINAPI Init(LPVOID)
 			injector::WriteMemory(*pattern.get(2).get<uint32_t*>(1), 1, true);
 			injector::WriteMemory(0xA97BC0, 1, true);
 		}
-
-		if (bExperimentalCrashFix)
-		{
-			auto pattern = hook::pattern("6A ? 68 ? ? ? ? 64 ? 00 00 00 00 50 64 ? ? 00 00 00 00 81 EC B8 02 00 00"); //0x595F90 
-			injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(0), 0xC3, true);
-		}
 	}
 
+	if (bExperimentalCrashFix)
+	{
+		auto pattern = hook::pattern("75 0B 8B 06 8B CE FF 50 14 3B D8"); //0x59606D
+		injector::MakeNOP(pattern.get(0).get<uint32_t>(0), 2, true);
+		pattern = hook::pattern("74 20 8B 44 24 20 8B 55 00 6A 00 50 6A 00"); //0x5960A9
+		injector::MakeNOP(pattern.get(0).get<uint32_t>(0), 2, true);
+	}
+	
+	if (bWriteSettingsToFile)
+	{
+		uintptr_t GetFolderPathCallDest = injector::GetBranchDestination(GetFolderPathpattern.get(0).get<uintptr_t>(14), true).as_int();
+		injector::cstd<HRESULT(HWND, int, HANDLE, DWORD, LPSTR)>::call(GetFolderPathCallDest, NULL, 0x8005, NULL, NULL, szSettingsSavePath);
+		strcat(szSettingsSavePath, "\\NFS Carbon");
+		strcat(szSettingsSavePath, "\\Settings.ini");
+		RegistryReader.SetIniPath(szSettingsSavePath);
+		uintptr_t* RegIAT = *hook::pattern("FF 15 ? ? ? ? 8D 54 24 04 52").get(0).get<uintptr_t*>(2); //0x711C0F
+		injector::WriteMemory(&RegIAT[0], RegCreateKeyAHook, true);
+		injector::WriteMemory(&RegIAT[1], RegOpenKeyExAHook, true);
+		injector::WriteMemory(&RegIAT[2], RegCloseKeyHook, true);
+		injector::WriteMemory(&RegIAT[3], RegSetValueExAHook, true);
+		injector::WriteMemory(&RegIAT[4], RegQueryValueExAHook, true);
+		pattern = hook::pattern("C7 05 ? ? ? ? 00 00 00 00 8B 44 24 04 50 E8"); //0x71D117 
+		injector::MakeNOP(pattern.get(0).get<uintptr_t>(0), 10, true); //stops settings reset at startup
+	}
 	return 0;
 }
 

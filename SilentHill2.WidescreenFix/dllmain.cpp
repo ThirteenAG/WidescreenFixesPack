@@ -339,6 +339,8 @@ DWORD WINAPI Init(LPVOID)
 		injector::WriteMemory(FMVpattern3.get(0).get<uint32_t>(2), &TextOffsetWS, true); //0x0043E47F
 
 		static uint32_t fFMVOffset2 = static_cast<uint32_t>(fFMVOffset1 * (290.0f / 384.0f)); //?
+		if (bFMVWidescreenEnhancementPackCompatibility)
+			fFMVOffset2 = static_cast<uint32_t>(fFMVOffset1 * (480.0f / 384.0f));
 		pattern = hook::pattern("A1 ? ? ? ? 3D ? ? ? ? 77 05 B8 ? ? ? ? 2B 45 10");
 		injector::WriteMemory(pattern.get(0).get<uint32_t>(1), &fFMVOffset2, true); //43DC1E
 		injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(10), 0xEB, true); //43DC28
