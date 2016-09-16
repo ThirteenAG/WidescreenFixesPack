@@ -485,18 +485,14 @@ DWORD WINAPI Init(LPVOID)
 	if (nImproveGamepadSupport)
 	{
 		static char* GLOBALB = "scripts\\XBOXGLOBALB.BUN";
-		static char* GLOBALB2 = "scripts\\PCXBOXGLOBALB.BUN";
-		static char* GLOBALB3 = "scripts\\PSGLOBALB.BUN";
+		static char* GLOBALB2 = "scripts\\PSGLOBALB.BUN";
 
 		pattern = hook::pattern("68 ? ? ? ? E8 ? ? ? ? 83 C4 34 8B F0"); //0x6B6E81
 
 		if (nImproveGamepadSupport == 2)
 			injector::WriteMemory(pattern.get(0).get<uint32_t>(1), GLOBALB2, true);
 		else
-			if (nImproveGamepadSupport == 3)
-				injector::WriteMemory(pattern.get(0).get<uint32_t>(1), GLOBALB3, true);
-			else
-				injector::WriteMemory(pattern.get(0).get<uint32_t>(1), GLOBALB, true);
+			injector::WriteMemory(pattern.get(0).get<uint32_t>(1), GLOBALB, true);
 
 
 		struct PadState
@@ -567,7 +563,7 @@ DWORD WINAPI Init(LPVOID)
 			{
 				auto pszStr = *(char**)(regs.esp + 4);
 
-				if (nImproveGamepadSupport != 3)
+				if (nImproveGamepadSupport != 2)
 				{
 					if (strstr(pszStr, "Button 2"))
 					{

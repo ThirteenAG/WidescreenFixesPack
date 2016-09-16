@@ -122,6 +122,7 @@ DWORD WINAPI Init(LPVOID)
 	bool bRearviewMirrorFix = iniReader.ReadInteger("MISC", "RearviewMirrorFix", 1) == 1;
 	szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "");
 	bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 1) != 0;
+	static int nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
 	bool bCustomUsrDir = false;
 	if (strncmp(szCustomUserFilesDirectoryInGameDir, "0", 1) != 0)
 		bCustomUsrDir = true;
@@ -391,6 +392,256 @@ DWORD WINAPI Init(LPVOID)
 		injector::WriteMemory(&RegIAT[2], RegCloseKeyHook, true);
 		injector::WriteMemory(&RegIAT[3], RegSetValueExAHook, true);
 		injector::WriteMemory(&RegIAT[4], RegQueryValueExAHook, true);
+	}
+
+	if (nImproveGamepadSupport)
+	{
+		static char* GLOBALB = "scripts\\XBOXGLOBALB.BUN";
+		static char* GLOBALB2 = "scripts\\PSGLOBALB.BUN";
+
+		pattern = hook::pattern("68 ? ? ? ? E8 ? ? ? ? 83 C4 18 8B F0"); //0x664800
+
+		if (nImproveGamepadSupport == 2)
+			injector::WriteMemory(pattern.get(0).get<uint32_t>(1), GLOBALB2, true);
+		else
+			injector::WriteMemory(pattern.get(0).get<uint32_t>(1), GLOBALB, true);
+
+		struct PadState
+		{
+			int32_t LSAxis1;
+			int32_t LSAxis2;
+			int32_t LTRT;
+			int32_t A;
+			int32_t B;
+			int32_t X;
+			int32_t Y;
+			int32_t LB;
+			int32_t RB;
+			int32_t Select;
+			int32_t Start;
+			int32_t LSClick;
+			int32_t RSClick;
+		};
+
+		pattern = hook::pattern("C7 45 E0 01 00 00 00 89 5D E4"); //0x7F2AE2
+		static uintptr_t ButtonsState = (uintptr_t)*hook::pattern("0F B6 54 24 04 33 C0 B9").get(0).get<uint32_t*>(8); //0x514B90
+		struct CatchPad
+		{
+			void operator()(injector::reg_pack& regs)
+			{
+				*(uintptr_t*)(regs.ebp - 0x20) = 1; //mov     dword ptr [ebp-20h], 1
+
+				PadState* PadKeyPresses = (PadState*)(regs.esi + 0x234); //dpad is PadKeyPresses+0x220
+
+				//Keyboard 
+				//008F3584 2
+				//008F3514 3 
+				//008F34F8 4 
+
+				if (PadKeyPresses->Y) //3
+				{
+					*(int32_t*)(ButtonsState + 0xCC) = 1;
+				}
+				else
+				{
+					*(int32_t*)(ButtonsState + 0xCC) = 0;
+				}
+
+				if (PadKeyPresses->LSClick) //2
+				{
+					*(int32_t*)(ButtonsState + 0x13C) = 1;
+				}
+				else
+				{
+					*(int32_t*)(ButtonsState + 0x13C) = 0;
+				}
+				if (PadKeyPresses->RSClick) //4
+				{
+					*(int32_t*)(ButtonsState + 0xB0) = 1;
+				}
+				else
+				{
+					*(int32_t*)(ButtonsState + 0xB0) = 0;
+				}
+			}
+		}; injector::MakeInline<CatchPad>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(7));
+
+		pattern = hook::pattern("8B 44 24 1C 50 E8 ? ? ? ? 83 C4 10 5F 5E 5B C3"); //0x6282D3
+		injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(16 + 5), 0xC3, true);
+		struct Buttons
+		{
+			void operator()(injector::reg_pack& regs)
+			{
+				auto pszStr = *(char**)(regs.esp + 4);
+
+				if (nImproveGamepadSupport != 2)
+				{
+					if (strstr(pszStr, "Button 2"))
+					{
+						strcpy(pszStr, "B"); return;
+					}
+					if (strstr(pszStr, "Button 3"))
+					{
+						strcpy(pszStr, "X"); return;
+					}
+					if (strstr(pszStr, "Button 4"))
+					{
+						strcpy(pszStr, "Y"); return;
+					}
+					if (strstr(pszStr, "Button 5"))
+					{
+						strcpy(pszStr, "LB"); return;
+					}
+					if (strstr(pszStr, "Button 6"))
+					{
+						strcpy(pszStr, "RB"); return;
+					}
+					if (strstr(pszStr, "Button 7"))
+					{
+						strcpy(pszStr, "View (Select)"); return;
+					}
+					if (strstr(pszStr, "Button 8"))
+					{
+						strcpy(pszStr, "Menu (Start)"); return;
+					}
+					if (strstr(pszStr, "Button 9"))
+					{
+						strcpy(pszStr, "Left stick"); return;
+					}
+					if (strstr(pszStr, "Button 10"))
+					{
+						strcpy(pszStr, "Right stick");
+					}
+					if (strstr(pszStr, "Button 1"))
+					{
+						strcpy(pszStr, "A"); return;
+					}
+					if (strstr(pszStr, "POV Up"))
+					{
+						strcpy(pszStr, "D-pad Up"); return;
+					}
+					if (strstr(pszStr, "POV Down"))
+					{
+						strcpy(pszStr, "D-pad Down"); return;
+					}
+					if (strstr(pszStr, "POV Left"))
+					{
+						strcpy(pszStr, "D-pad Left"); return;
+					}
+					if (strstr(pszStr, "POV Right"))
+					{
+						strcpy(pszStr, "D-pad Right"); return;
+					}
+					if (strstr(pszStr, "X Rotation"))
+					{
+						strcpy(pszStr, "Right stick Left/Right"); return;
+					}
+					if (strstr(pszStr, "Y Rotation"))
+					{
+						strcpy(pszStr, "Right stick Up/Down"); return;
+					}
+					if (strstr(pszStr, "X Axis"))
+					{
+						strcpy(pszStr, "Left stick Left/Right"); return;
+					}
+					if (strstr(pszStr, "Y Axis"))
+					{
+						strcpy(pszStr, "Left stick Up/Down"); return;
+					}
+					if (strstr(pszStr, "Z Axis"))
+					{
+						strcpy(pszStr, "Left trigger / Right trigger"); return;
+					}
+					if (strstr(pszStr, "Hat Switch"))
+					{
+						strcpy(pszStr, "D-pad"); return;
+					}
+				}
+				else
+				{
+					if (strstr(pszStr, "Button 2"))
+					{
+						strcpy(pszStr, "Circle"); return;
+					}
+					if (strstr(pszStr, "Button 3"))
+					{
+						strcpy(pszStr, "Square"); return;
+					}
+					if (strstr(pszStr, "Button 4"))
+					{
+						strcpy(pszStr, "Triangle"); return;
+					}
+					if (strstr(pszStr, "Button 5"))
+					{
+						strcpy(pszStr, "L1"); return;
+					}
+					if (strstr(pszStr, "Button 6"))
+					{
+						strcpy(pszStr, "R1"); return;
+					}
+					if (strstr(pszStr, "Button 7"))
+					{
+						strcpy(pszStr, "Select"); return;
+					}
+					if (strstr(pszStr, "Button 8"))
+					{
+						strcpy(pszStr, "Start"); return;
+					}
+					if (strstr(pszStr, "Button 9"))
+					{
+						strcpy(pszStr, "L3"); return;
+					}
+					if (strstr(pszStr, "Button 10"))
+					{
+						strcpy(pszStr, "R3");
+					}
+					if (strstr(pszStr, "Button 1"))
+					{
+						strcpy(pszStr, "Cross"); return;
+					}
+					if (strstr(pszStr, "POV Up"))
+					{
+						strcpy(pszStr, "D-pad Up"); return;
+					}
+					if (strstr(pszStr, "POV Down"))
+					{
+						strcpy(pszStr, "D-pad Down"); return;
+					}
+					if (strstr(pszStr, "POV Left"))
+					{
+						strcpy(pszStr, "D-pad Left"); return;
+					}
+					if (strstr(pszStr, "POV Right"))
+					{
+						strcpy(pszStr, "D-pad Right"); return;
+					}
+					if (strstr(pszStr, "X Rotation"))
+					{
+						strcpy(pszStr, "Right stick Left/Right"); return;
+					}
+					if (strstr(pszStr, "Y Rotation"))
+					{
+						strcpy(pszStr, "Right stick Up/Down"); return;
+					}
+					if (strstr(pszStr, "X Axis"))
+					{
+						strcpy(pszStr, "Left stick Left/Right"); return;
+					}
+					if (strstr(pszStr, "Y Axis"))
+					{
+						strcpy(pszStr, "Left stick Up/Down"); return;
+					}
+					if (strstr(pszStr, "Z Axis"))
+					{
+						strcpy(pszStr, "L2 / R2"); return;
+					}
+					if (strstr(pszStr, "Hat Switch"))
+					{
+						strcpy(pszStr, "D-pad"); return;
+					}
+				}
+			}
+		}; injector::MakeInline<Buttons>(pattern.get(0).get<uint32_t>(16));
 	}
 	return 0;
 }
