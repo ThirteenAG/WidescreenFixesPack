@@ -197,7 +197,7 @@ DWORD WINAPI Init(LPVOID)
 
 	//Autosave icon
 	DWORD* dword_5CD4B0= *hook::pattern("FF 24 85 ? ? ? ? 8B 0D ? ? ? ? 8B 11 6A 00 FF 92 98 00 00 00").get(0).get<DWORD*>(3);
-	injector::WriteMemory(dword_5CD4B0 + 2, *hook::pattern("8B CE E8 ? ? ? ? 8B 0D ? ? ? ? 8B F1 E8").get(0).get<DWORD*>(0), true);
+	injector::WriteMemory(dword_5CD4B0 + 2, hook::pattern("8B CE E8 ? ? ? ? 8B 0D ? ? ? ? 8B F1 E8").get(0).get<DWORD*>(0), true);
 
 	//Water Reflections fix
 	static uint32_t n768 = 768;
