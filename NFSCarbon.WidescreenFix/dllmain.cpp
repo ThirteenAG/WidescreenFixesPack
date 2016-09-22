@@ -195,6 +195,10 @@ DWORD WINAPI Init(LPVOID)
 	DWORD* dword_9D0584 = *hook::pattern("D8 0D ? ? ? ? 8B 4C 24 14 8B 54").get(0).get<DWORD*>(2);
 	injector::WriteMemory<float>(dword_9D0584, (1.0f / 640.0f) * ((4.0f / 3.0f) / ((float)ResX / (float)ResY)), true);
 
+	//Autosave icon
+	DWORD* dword_5CD4B0= *hook::pattern("FF 24 85 ? ? ? ? 8B 0D ? ? ? ? 8B 11 6A 00 FF 92 98 00 00 00").get(0).get<DWORD*>(3);
+	injector::WriteMemory(dword_5CD4B0 + 2, *hook::pattern("8B CE E8 ? ? ? ? 8B 0D ? ? ? ? 8B F1 E8").get(0).get<DWORD*>(0), true);
+
 	//Water Reflections fix
 	static uint32_t n768 = 768;
 	static uint32_t n320 = 320;
@@ -514,6 +518,7 @@ DWORD WINAPI Init(LPVOID)
 
 		pattern = hook::pattern("C7 45 E0 01 00 00 00 89 5D E4"); //0x892BFD
 		static uintptr_t ButtonsState = (uintptr_t)*hook::pattern("0F B6 54 24 04 33 C0 B9").get(0).get<uint32_t*>(8); //0xA5E058
+		static int32_t* nGameState = (int32_t*)*hook::pattern("83 3D ? ? ? ? 06 ? ? A1").get(0).get<uint32_t*>(2); //0xA99BBC
 		struct CatchPad
 		{
 			void operator()(injector::reg_pack& regs)
@@ -552,6 +557,15 @@ DWORD WINAPI Init(LPVOID)
 				{
 					*(int32_t*)(ButtonsState + 0x13C) = 0;
 				}
+
+				if (PadKeyPresses->LSClick && PadKeyPresses->RSClick)
+				{
+					if (*nGameState == 3)
+					{
+						keybd_event(VkKeyScan('Q'), 0, 0, 0);
+						keybd_event(VkKeyScan('Q'), 0, KEYEVENTF_KEYUP, 0);
+					}
+				}
 			}
 		}; injector::MakeInline<CatchPad>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(7));
 
@@ -565,59 +579,59 @@ DWORD WINAPI Init(LPVOID)
 
 				if (nImproveGamepadSupport != 2)
 				{
-					if (strstr(pszStr, "Button 2"))
+					if (strstr(pszStr, " 2"))
 					{
 						strcpy(pszStr, "B"); return;
 					}
-					if (strstr(pszStr, "Button 3"))
+					if (strstr(pszStr, " 3"))
 					{
 						strcpy(pszStr, "X"); return;
 					}
-					if (strstr(pszStr, "Button 4"))
+					if (strstr(pszStr, " 4"))
 					{
 						strcpy(pszStr, "Y"); return;
 					}
-					if (strstr(pszStr, "Button 5"))
+					if (strstr(pszStr, " 5"))
 					{
 						strcpy(pszStr, "LB"); return;
 					}
-					if (strstr(pszStr, "Button 6"))
+					if (strstr(pszStr, " 6"))
 					{
 						strcpy(pszStr, "RB"); return;
 					}
-					if (strstr(pszStr, "Button 7"))
+					if (strstr(pszStr, " 7"))
 					{
 						strcpy(pszStr, "View (Select)"); return;
 					}
-					if (strstr(pszStr, "Button 8"))
+					if (strstr(pszStr, " 8"))
 					{
 						strcpy(pszStr, "Menu (Start)"); return;
 					}
-					if (strstr(pszStr, "Button 9"))
+					if (strstr(pszStr, " 9"))
 					{
 						strcpy(pszStr, "Left stick"); return;
 					}
-					if (strstr(pszStr, "Button 10"))
+					if (strstr(pszStr, " 10"))
 					{
 						strcpy(pszStr, "Right stick");
 					}
-					if (strstr(pszStr, "Button 1"))
+					if (strstr(pszStr, " 1"))
 					{
 						strcpy(pszStr, "A"); return;
 					}
-					if (strstr(pszStr, "POV Up"))
+					if (strstr(pszStr, " Up"))
 					{
 						strcpy(pszStr, "D-pad Up"); return;
 					}
-					if (strstr(pszStr, "POV Down"))
+					if (strstr(pszStr, " Down"))
 					{
 						strcpy(pszStr, "D-pad Down"); return;
 					}
-					if (strstr(pszStr, "POV Left"))
+					if (strstr(pszStr, " Left"))
 					{
 						strcpy(pszStr, "D-pad Left"); return;
 					}
-					if (strstr(pszStr, "POV Right"))
+					if (strstr(pszStr, " Right"))
 					{
 						strcpy(pszStr, "D-pad Right"); return;
 					}
@@ -641,62 +655,66 @@ DWORD WINAPI Init(LPVOID)
 					{
 						strcpy(pszStr, "Left trigger / Right trigger"); return;
 					}
+					if (strstr(pszStr, "Hat Switch"))
+					{
+						strcpy(pszStr, "D-pad"); return;
+					}
 				}
 				else
 				{
-					if (strstr(pszStr, "Button 2"))
+					if (strstr(pszStr, " 2"))
 					{
 						strcpy(pszStr, "Circle"); return;
 					}
-					if (strstr(pszStr, "Button 3"))
+					if (strstr(pszStr, " 3"))
 					{
 						strcpy(pszStr, "Square"); return;
 					}
-					if (strstr(pszStr, "Button 4"))
+					if (strstr(pszStr, " 4"))
 					{
 						strcpy(pszStr, "Triangle"); return;
 					}
-					if (strstr(pszStr, "Button 5"))
+					if (strstr(pszStr, " 5"))
 					{
 						strcpy(pszStr, "L1"); return;
 					}
-					if (strstr(pszStr, "Button 6"))
+					if (strstr(pszStr, " 6"))
 					{
 						strcpy(pszStr, "R1"); return;
 					}
-					if (strstr(pszStr, "Button 7"))
+					if (strstr(pszStr, " 7"))
 					{
 						strcpy(pszStr, "Select"); return;
 					}
-					if (strstr(pszStr, "Button 8"))
+					if (strstr(pszStr, " 8"))
 					{
 						strcpy(pszStr, "Start"); return;
 					}
-					if (strstr(pszStr, "Button 9"))
+					if (strstr(pszStr, " 9"))
 					{
 						strcpy(pszStr, "L3"); return;
 					}
-					if (strstr(pszStr, "Button 10"))
+					if (strstr(pszStr, " 10"))
 					{
 						strcpy(pszStr, "R3");
 					}
-					if (strstr(pszStr, "Button 1"))
+					if (strstr(pszStr, " 1"))
 					{
 						strcpy(pszStr, "Cross"); return;
 					}
-					if (strstr(pszStr, "POV Up"))
+					if (strstr(pszStr, " Up"))
 					{
 						strcpy(pszStr, "D-pad Up"); return;
 					}
-					if (strstr(pszStr, "POV Down"))
+					if (strstr(pszStr, " Down"))
 					{
 						strcpy(pszStr, "D-pad Down"); return;
 					}
-					if (strstr(pszStr, "POV Left"))
+					if (strstr(pszStr, " Left"))
 					{
 						strcpy(pszStr, "D-pad Left"); return;
 					}
-					if (strstr(pszStr, "POV Right"))
+					if (strstr(pszStr, " Right"))
 					{
 						strcpy(pszStr, "D-pad Right"); return;
 					}
@@ -719,6 +737,10 @@ DWORD WINAPI Init(LPVOID)
 					if (strstr(pszStr, "Z Axis"))
 					{
 						strcpy(pszStr, "L2 / R2"); return;
+					}
+					if (strstr(pszStr, "Hat Switch"))
+					{
+						strcpy(pszStr, "D-pad"); return;
 					}
 				}
 			}

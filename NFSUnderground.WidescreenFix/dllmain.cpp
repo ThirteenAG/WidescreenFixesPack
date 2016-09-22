@@ -83,6 +83,18 @@ void WidescreenHud()
 	__asm pushad
 	__asm pushfd
 
+	//if (HudPosX.fPos < -320.0f)
+	//{
+	//	HudPosX.fPos -= 10000.0f;
+	//}
+	//else
+	//{
+	//	if (HudPosX.fPos > 640.0f)
+	//	{
+	//		HudPosX.fPos += 10000.0f;
+	//	}
+	//}
+
 	auto it = std::find_if(HudCoords.begin(), HudCoords.end(),
 		[&cc = CDatEntry(HudPosX.dwPos, HudPosY.dwPos, 0.0f, 0.0f)]
 	(const CDatEntry& cde) -> bool { return (cc.dwPosX == cde.dwPosX && cc.dwPosY == cde.dwPosY); });
@@ -205,6 +217,7 @@ DWORD WINAPI Init(LPVOID)
 	bHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1) == 1;
 	bFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1) == 1;
 	szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "");
+	static int nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
 	bool bCustomUsrDir = false;
 	if (strncmp(szCustomUserFilesDirectoryInGameDir, "0", 1) != 0)
 		bCustomUsrDir = true;
@@ -437,6 +450,136 @@ DWORD WINAPI Init(LPVOID)
 			injector::MakeCALL((DWORD)dword_6CBF17, SHGetFolderPathAHook, true);
 			injector::MakeNOP((DWORD)dword_6CBF17 + 5, 1, true);
 		}
+	}
+
+	if (nImproveGamepadSupport)
+	{
+		static char* GLOBALB = "scripts\\XBOXGLOBALB.BUN";
+		static char* GLOBALB2 = "scripts\\PSGLOBALB.BUN";
+		static char* FrontB = "scripts\\XBOXFrontB.BUN";
+		static char* FrontB2 = "scripts\\PSFrontB.BUN";
+
+		pattern = hook::pattern("68 ? ? ? ? E8 ? ? ? ? 8B F0 83 C4 14 33 C9 33 C0"); //0x6B6E81 globalb
+		if (nImproveGamepadSupport == 2)
+			injector::WriteMemory(pattern.get(0).get<uint32_t>(1), GLOBALB2, true);
+		else
+			injector::WriteMemory(pattern.get(0).get<uint32_t>(1), GLOBALB, true);
+
+		pattern = hook::pattern("68 ? ? ? ? C6 05 ? ? ? ? 01 C7 ? ? ? ? ? ? ? ? ? E8 ? ? ? ? 8B F0 83 C4 14 33 C9"); //0x6B6E81 frontb
+		if (nImproveGamepadSupport == 2)
+			injector::WriteMemory(pattern.get(0).get<uint32_t>(1), FrontB2, true);
+		else
+			injector::WriteMemory(pattern.get(0).get<uint32_t>(1), FrontB, true);
+
+		struct PadState
+		{
+			int32_t LSAxis1;
+			int32_t LSAxis2;
+			int32_t LTRT;
+			int32_t RSAxis1;
+			int32_t RSAxis2;
+			uint8_t unk[28];
+			int8_t A;
+			int8_t B;
+			int8_t X;
+			int8_t Y;
+			int8_t LB;
+			int8_t RB;
+			int8_t Select;
+			int8_t Start;
+			int8_t LSClick;
+			int8_t RSClick;
+		};
+
+		static bool Zstate, Pstate, Tstate, Dstate, Qstate, Cstate;
+		pattern = hook::pattern("7C ? 5F 5D 5E 33 C0 5B C2 08 00"); //0x41989E
+		injector::WriteMemory(pattern.get(0).get<uint32_t>(8 + 5), 0x900008C2, true);
+		//static uintptr_t ButtonsState = (uintptr_t)*hook::pattern("").get(0).get<uint32_t*>(8); //0x
+		static int32_t* nGameState = (int32_t*)*hook::pattern("83 3D ? ? ? ? 06 ? ? A1").get(0).get<uint32_t*>(2); //0x77A920
+		struct CatchPad
+		{
+			void operator()(injector::reg_pack& regs)
+			{	
+				PadState* PadKeyPresses = *(PadState**)(regs.esp + 0x4);
+				//Keyboard 
+				//006F9358 backspace
+				//006F931C enter
+				if (*nGameState == 3)
+				{
+					if (PadKeyPresses->LSClick && PadKeyPresses->RSClick)
+					{
+						if (!Qstate)
+						{
+							keybd_event(VkKeyScan('Q'), 0, KEYEVENTF_EXTENDEDKEY, 0);
+							keybd_event(VkKeyScan('Q'), 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+						}
+						Qstate = true;
+					}
+					else
+						Qstate = false;
+
+					if (PadKeyPresses->Y)
+					{
+						if (!Zstate)
+						{
+							keybd_event(VkKeyScan('Z'), 0, KEYEVENTF_EXTENDEDKEY, 0);
+							keybd_event(VkKeyScan('Z'), 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+						}
+						Zstate = true;
+					}
+					else
+						Zstate = false;
+
+					if (PadKeyPresses->X)
+					{
+						if (!Pstate)
+						{
+							keybd_event(VkKeyScan('P'), 0, KEYEVENTF_EXTENDEDKEY, 0);
+							keybd_event(VkKeyScan('P'), 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+						}
+						Pstate = true;
+					}
+					else
+						Pstate = false;
+
+					if (PadKeyPresses->LSClick && !PadKeyPresses->RSClick)
+					{
+						if (!Tstate)
+						{
+							keybd_event(VkKeyScan('T'), 0, KEYEVENTF_EXTENDEDKEY, 0);
+							keybd_event(VkKeyScan('T'), 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+						}
+						Tstate = true;
+					}
+					else
+						Tstate = false;
+
+					if (PadKeyPresses->RSClick && !PadKeyPresses->LSClick)
+					{
+						if (!Dstate)
+						{
+							keybd_event(VkKeyScan('D'), 0, KEYEVENTF_EXTENDEDKEY, 0);
+							keybd_event(VkKeyScan('D'), 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+						}
+						Dstate = true;
+					}
+					else
+						Dstate = false;
+
+					if (PadKeyPresses->Select)
+					{
+						if (!Cstate)
+						{
+							keybd_event(VkKeyScan('C'), 0, KEYEVENTF_EXTENDEDKEY, 0);
+							keybd_event(VkKeyScan('C'), 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+						}
+						Cstate = true;
+					}
+					else
+						Cstate = false;
+				}
+			}
+		}; injector::MakeInline<CatchPad>(pattern.get(0).get<uint32_t>(8));
 	}
 	return 0;
 }
