@@ -90,7 +90,7 @@ void WidescreenHud(float& offsetX1, float& offsetX2, float& offsetY1, float& off
 	((offsetX1 == 440.0f || offsetX1 == 456.0f || offsetX1 == 537.0f || offsetX1 == 554.0f) && (offsetX2 == 456.0f || offsetX2 == 451.0f || offsetX2 == 549.0f || offsetX2 == 565.0f) && (Color.RGBA == 2152752984 || Color.RGBA == 4266682200)) || //interaction menu background border (russian)
 	((offsetX1 == 419.0f || offsetX1 == 435.0f || offsetX1 == 439.0f || offsetX1 == 549.0f) && (offsetX2 == 435.0f || offsetX2 == 430.0f || offsetX2 == 549.0f || offsetX2 == 565.0f) && (Color.RGBA == 2152752984 || Color.RGBA == 4266682200)) || //interaction menu background border (russian2)
 	(offsetX1 >= 365.0f && offsetY1 >= 42.0f && offsetY2 <= 192.0f && (Color.RGBA == 4265759816 || Color.RGBA == 4269316740)) || //interaction menu text
-	((offsetX1 == 371.0f || offsetX1 == 379.0f || offsetX1 == 387.0f || offsetX1 == 558.0f || offsetX1 == 566.0f) && offsetY1 >= 39.0f && offsetY2 <= 162.0f && (Color.RGBA == 4266682200 || Color.RGBA == 3036610302)) // turret interface
+	((offsetX1 == 371.0f || offsetX1 == 379.0f || offsetX1 == 387.0f || offsetX1 == 558.0f || offsetX1 == 566.0f) && offsetY1 >= 39.0f && offsetY2 <= 162.0f && (Color.RGBA == 4266682200 || Color.RGBA == 3036610302)) // turret interface, Color.RGBA == 4271155864 -> turret mouse area, maybe something else
 	)
 	{
 		offsetX1 += fWidescreenHudOffset;
@@ -317,12 +317,12 @@ DWORD WINAPI Thread(LPVOID)
 
 		//uint32_t pfSetRes = injector::ReadMemory<uint32_t>((uint32_t)GetProcAddress(D3DDrv, "?SetRes@UD3DRenderDevice@@UAEHPAVUViewport@@HHH@Z") + 0x1, true) + (uint32_t)GetProcAddress(D3DDrv, "?SetRes@UD3DRenderDevice@@UAEHPAVUViewport@@HHH@Z") + 5;
 		//auto pattern = hook::range_pattern(pfSetRes, pfSetRes + 0x1A8C, "68 00 02 00 00 68 00 02 00 00");
-		auto pattern = hook::module_pattern(D3DDrv, "68 00 02 00 00 68 00 02 00 00");
-		for (size_t i = 0; i < pattern.size(); i++)
-		{
-			injector::WriteMemory(pattern.get(i).get<uint32_t>(1), nPostProcessFixedScale, true);
-			injector::WriteMemory(pattern.get(i).get<uint32_t>(6), nPostProcessFixedScale, true);
-		}
+		//auto pattern = hook::module_pattern(D3DDrv, "68 00 02 00 00 68 00 02 00 00");
+		//for (size_t i = 0; i < pattern.size(); i++)
+		//{
+		//	injector::WriteMemory(pattern.get(i).get<uint32_t>(1), nPostProcessFixedScale, true); //affects glass reflections
+		//	injector::WriteMemory(pattern.get(i).get<uint32_t>(6), nPostProcessFixedScale, true);
+		//}
 
 		auto pattern2 = hook::module_pattern(Engine, "68 00 02 00 00 68 00 02 00 00 ?");
 		for (size_t i = 0; i < pattern2.size(); i++)
