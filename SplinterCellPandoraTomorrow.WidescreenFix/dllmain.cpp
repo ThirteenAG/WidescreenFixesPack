@@ -306,7 +306,11 @@ DWORD WINAPI Thread(LPVOID)
 	{
 		void operator()(injector::reg_pack& regs)
 		{
-			*(float*)&regs.ecx = *(float*)(regs.eax + 0x374) * fDynamicScreenFieldOfViewScale;
+			float fFovVal = *(float*)(regs.eax + 0x374);
+			if (fFovVal < 100.0f)
+				*(float*)&regs.ecx = fFovVal * fDynamicScreenFieldOfViewScale;
+			else
+				*(float*)&regs.ecx = fFovVal;
 		}
 	}; injector::MakeInline<UGameEngine_Draw_Hook>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(0 + 6));
 
@@ -314,7 +318,11 @@ DWORD WINAPI Thread(LPVOID)
 	{
 		void operator()(injector::reg_pack& regs)
 		{
-			*(float*)&regs.eax = *(float*)(regs.edx + 0x374) * fDynamicScreenFieldOfViewScale;
+			float fFovVal = *(float*)(regs.edx + 0x374);
+			if (fFovVal < 100.0f)
+				*(float*)&regs.eax = fFovVal * fDynamicScreenFieldOfViewScale;
+			else
+				*(float*)&regs.eax = fFovVal;
 		}
 	}; injector::MakeInline<UGameEngine_Draw_Hook2>(pattern.get(2).get<uint32_t>(0), pattern.get(2).get<uint32_t>(0 + 6));
 
@@ -322,7 +330,11 @@ DWORD WINAPI Thread(LPVOID)
 	{
 		void operator()(injector::reg_pack& regs)
 		{
-			*(float*)&regs.eax = *(float*)(regs.edx + 0x374) * fDynamicScreenFieldOfViewScale;
+			float fFovVal = *(float*)(regs.edx + 0x374);
+			if (fFovVal < 100.0f)
+				*(float*)&regs.eax = fFovVal * fDynamicScreenFieldOfViewScale;
+			else
+				*(float*)&regs.eax = fFovVal;
 		}
 	}; injector::MakeInline<UGameEngine_Draw_Hook3>(pattern.get(3).get<uint32_t>(0), pattern.get(3).get<uint32_t>(0 + 6));
 
