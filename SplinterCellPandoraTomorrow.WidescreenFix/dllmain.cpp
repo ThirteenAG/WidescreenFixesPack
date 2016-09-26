@@ -301,14 +301,31 @@ DWORD WINAPI Thread(LPVOID)
 	fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(fScreenFieldOfViewVStd * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
 	
 	uint32_t pfDraw = (uint32_t)GetProcAddress(Engine, "?Draw@UGameEngine@@UAEXPAVUViewport@@HPAEPAH@Z");
-	pattern = hook::range_pattern(pfDraw, pfDraw + 0x300, "8B ? ? 03 00 00");
+	pattern = hook::range_pattern(pfDraw, pfDraw + 0x1036, "8B ? ? 03 00 00");
 	struct UGameEngine_Draw_Hook
 	{
 		void operator()(injector::reg_pack& regs)
 		{
 			*(float*)&regs.ecx = *(float*)(regs.eax + 0x374) * fDynamicScreenFieldOfViewScale;
 		}
-	}; injector::MakeInline<UGameEngine_Draw_Hook>(pattern.get(0).get<uint32_t>(0)/*pfDraw + 0x167*/, pattern.get(0).get<uint32_t>(0 + 6));
+	}; injector::MakeInline<UGameEngine_Draw_Hook>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(0 + 6));
+
+	struct UGameEngine_Draw_Hook2 //1038AA8F
+	{
+		void operator()(injector::reg_pack& regs)
+		{
+			*(float*)&regs.eax = *(float*)(regs.edx + 0x374) * fDynamicScreenFieldOfViewScale;
+		}
+	}; injector::MakeInline<UGameEngine_Draw_Hook2>(pattern.get(2).get<uint32_t>(0), pattern.get(2).get<uint32_t>(0 + 6));
+
+	struct UGameEngine_Draw_Hook3 //1038B0E2
+	{
+		void operator()(injector::reg_pack& regs)
+		{
+			*(float*)&regs.eax = *(float*)(regs.edx + 0x374) * fDynamicScreenFieldOfViewScale;
+		}
+	}; injector::MakeInline<UGameEngine_Draw_Hook3>(pattern.get(3).get<uint32_t>(0), pattern.get(3).get<uint32_t>(0 + 6));
+
 
 	if (nPostProcessFixedScale)
 	{
@@ -317,12 +334,12 @@ DWORD WINAPI Thread(LPVOID)
 
 		//uint32_t pfSetRes = injector::ReadMemory<uint32_t>((uint32_t)GetProcAddress(D3DDrv, "?SetRes@UD3DRenderDevice@@UAEHPAVUViewport@@HHH@Z") + 0x1, true) + (uint32_t)GetProcAddress(D3DDrv, "?SetRes@UD3DRenderDevice@@UAEHPAVUViewport@@HHH@Z") + 5;
 		//auto pattern = hook::range_pattern(pfSetRes, pfSetRes + 0x1A8C, "68 00 02 00 00 68 00 02 00 00");
-		//auto pattern = hook::module_pattern(D3DDrv, "68 00 02 00 00 68 00 02 00 00");
-		//for (size_t i = 0; i < pattern.size(); i++)
-		//{
-		//	injector::WriteMemory(pattern.get(i).get<uint32_t>(1), nPostProcessFixedScale, true); //affects glass reflections
-		//	injector::WriteMemory(pattern.get(i).get<uint32_t>(6), nPostProcessFixedScale, true);
-		//}
+		auto pattern = hook::module_pattern(D3DDrv, "68 00 02 00 00 68 00 02 00 00");
+		for (size_t i = 0; i < pattern.size(); i++)
+		{
+			injector::WriteMemory(pattern.get(i).get<uint32_t>(1), nPostProcessFixedScale, true); //affects glass reflections
+			injector::WriteMemory(pattern.get(i).get<uint32_t>(6), nPostProcessFixedScale, true);
+		}
 
 		auto pattern2 = hook::module_pattern(Engine, "68 00 02 00 00 68 00 02 00 00 ?");
 		for (size_t i = 0; i < pattern2.size(); i++)
@@ -330,6 +347,9 @@ DWORD WINAPI Thread(LPVOID)
 			injector::WriteMemory(pattern2.get(i).get<uint32_t>(1), nPostProcessFixedScale, true);
 			injector::WriteMemory(pattern2.get(i).get<uint32_t>(6), nPostProcessFixedScale, true);
 		}
+
+		auto pattern3 = hook::module_pattern(D3DDrv, "B8 00 02 00 00");
+		injector::WriteMemory(pattern3.get(0).get<uint32_t>(1), nPostProcessFixedScale, true);
 	}
 
 	if (Screen.fAspectRatio < (16.0f / 9.0f))
