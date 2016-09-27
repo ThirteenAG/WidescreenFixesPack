@@ -580,6 +580,37 @@ DWORD WINAPI Init(LPVOID)
 				}
 			}
 		}; injector::MakeInline<CatchPad>(pattern.get(0).get<uint32_t>(8));
+
+
+		const wchar_t* ControlsTexts[] = { L" 0", L" 1", L" 2", L" 3", L" 4", L" 5", L" 6", L" 7", L" 8", L" 9", L" Up", L" Down", L" Left", L" Right", L"X Rotation", L"Y Rotation", L"X Axis", L"Y Axis", L"Z Axis", L"Hat Switch" };
+		const wchar_t* ControlsTextsXBOX[] = { L"A", L"B", L"X", L"Y", L"LB", L"RB", L"View (Select)", L"Menu (Start)", L"Left stick", L"Right stick", L"D-pad Up", L"D-pad Down", L"D-pad Left", L"D-pad Right", L"Right stick Left/Right", L"Right stick Up/Down", L"Left stick Left/Right", L"Left stick Up/Down", L"Left / Right trigger", L"D-pad" };
+		const wchar_t* ControlsTextsPS[] = { L"Cross", L"Circle", L"Square", L"Triangle", L"L1", L"R1", L"Select", L"Start", L"L3", L"R3", L"D-pad Up", L"D-pad Down", L"D-pad Left", L"D-pad Right", L"Right stick Left/Right", L"Right stick Up/Down", L"Left stick Left/Right", L"Left stick Up/Down", L"L2 / R2", L"D-pad" };
+
+		static std::vector<std::wstring> Texts(ControlsTexts, std::end(ControlsTexts));
+		static std::vector<std::wstring> TextsXBOX(ControlsTextsXBOX, std::end(ControlsTextsXBOX));
+		static std::vector<std::wstring> TextsPS(ControlsTextsPS, std::end(ControlsTextsPS));
+
+		pattern = hook::pattern("8D 43 60 8D 74 24 10 E8 ? ? ? ? 8B"); //0x4148F6
+		struct Buttons
+		{
+			void operator()(injector::reg_pack& regs)
+			{
+				regs.eax = regs.ebx + 0x60;
+				regs.esi = regs.esp + 0x10;
+
+				auto pszStr = (wchar_t*)(regs.esp + 0x10);
+				auto it = std::find_if(Texts.begin(), Texts.end(), [&](const std::wstring& str) { std::wstring s(pszStr); return s.find(str) != std::wstring::npos; });
+				auto i = std::distance(Texts.begin(), it);
+
+				if (it != Texts.end())
+				{
+					if (nImproveGamepadSupport != 2)
+						wcscpy(pszStr, TextsXBOX[i].c_str());
+					else
+						wcscpy(pszStr, TextsPS[i].c_str());
+				}
+			}
+		}; injector::MakeInline<Buttons>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(7));
 	}
 	return 0;
 }
