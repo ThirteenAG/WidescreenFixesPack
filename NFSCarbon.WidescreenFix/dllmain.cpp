@@ -1,5 +1,6 @@
 #include "..\includes\stdafx.h"
 #include "..\includes\hooking\Hooking.Patterns.h"
+#include <algorithm>
 
 HWND hWnd;
 bool bDelay;
@@ -569,179 +570,30 @@ DWORD WINAPI Init(LPVOID)
 			}
 		}; injector::MakeInline<CatchPad>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(7));
 
+		const char* ControlsTexts[] = { " 2", " 3", " 4", " 5", " 6", " 7", " 8", " 9", " 10", " 1", " Up", " Down", " Left", " Right", "X Rotation", "Y Rotation", "X Axis", "Y Axis", "Z Axis", "Hat Switch" };
+		const char* ControlsTextsXBOX[] = { "B", "X", "Y", "LB", "RB", "View (Select)", "Menu (Start)", "Left stick", "Right stick", "A", "D-pad Up", "D-pad Down", "D-pad Left", "D-pad Right", "Right stick Left/Right", "Right stick Up/Down", "Left stick Left/Right", "Left stick Up/Down", "Left trigger / Right trigger", "D-pad" };
+		const char* ControlsTextsPS[] = { "Circle", "Square", "Triangle", "L1", "R1", "Select", "Start", "L3", "R3", "Cross", "D-pad Up", "D-pad Down", "D-pad Left", "D-pad Right", "Right stick Left/Right", "Right stick Up/Down", "Left stick Left/Right", "Left stick Up/Down", "L2 / R2", "D-pad" };
+
+		static std::vector<std::string> Texts(ControlsTexts, std::end(ControlsTexts));
+		static std::vector<std::string> TextsXBOX(ControlsTextsXBOX, std::end(ControlsTextsXBOX));
+		static std::vector<std::string> TextsPS(ControlsTextsPS, std::end(ControlsTextsPS));
+
 		pattern = hook::pattern("68 04 01 00 00 51 E8 ? ? ? ? 83 C4 10 5F 5E C3"); //0x679B53
-		injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(16+5), 0xC3, true);
+		injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(16 + 5), 0xC3, true);
 		struct Buttons
 		{
 			void operator()(injector::reg_pack& regs)
 			{
 				auto pszStr = *(char**)(regs.esp + 4);
+				auto it = std::find_if(Texts.begin(), Texts.end(), [&](const std::string& str) { std::string s(pszStr); return s.find(str) != std::string::npos; });
+				auto i = std::distance(Texts.begin(), it);
 
-				if (nImproveGamepadSupport != 2)
+				if (it != Texts.end())
 				{
-					if (strstr(pszStr, " 2"))
-					{
-						strcpy(pszStr, "B"); return;
-					}
-					if (strstr(pszStr, " 3"))
-					{
-						strcpy(pszStr, "X"); return;
-					}
-					if (strstr(pszStr, " 4"))
-					{
-						strcpy(pszStr, "Y"); return;
-					}
-					if (strstr(pszStr, " 5"))
-					{
-						strcpy(pszStr, "LB"); return;
-					}
-					if (strstr(pszStr, " 6"))
-					{
-						strcpy(pszStr, "RB"); return;
-					}
-					if (strstr(pszStr, " 7"))
-					{
-						strcpy(pszStr, "View (Select)"); return;
-					}
-					if (strstr(pszStr, " 8"))
-					{
-						strcpy(pszStr, "Menu (Start)"); return;
-					}
-					if (strstr(pszStr, " 9"))
-					{
-						strcpy(pszStr, "Left stick"); return;
-					}
-					if (strstr(pszStr, " 10"))
-					{
-						strcpy(pszStr, "Right stick");
-					}
-					if (strstr(pszStr, " 1"))
-					{
-						strcpy(pszStr, "A"); return;
-					}
-					if (strstr(pszStr, " Up"))
-					{
-						strcpy(pszStr, "D-pad Up"); return;
-					}
-					if (strstr(pszStr, " Down"))
-					{
-						strcpy(pszStr, "D-pad Down"); return;
-					}
-					if (strstr(pszStr, " Left"))
-					{
-						strcpy(pszStr, "D-pad Left"); return;
-					}
-					if (strstr(pszStr, " Right"))
-					{
-						strcpy(pszStr, "D-pad Right"); return;
-					}
-					if (strstr(pszStr, "X Rotation"))
-					{
-						strcpy(pszStr, "Right stick Left/Right"); return;
-					}
-					if (strstr(pszStr, "Y Rotation"))
-					{
-						strcpy(pszStr, "Right stick Up/Down"); return;
-					}
-					if (strstr(pszStr, "X Axis"))
-					{
-						strcpy(pszStr, "Left stick Left/Right"); return;
-					}
-					if (strstr(pszStr, "Y Axis"))
-					{
-						strcpy(pszStr, "Left stick Up/Down"); return;
-					}
-					if (strstr(pszStr, "Z Axis"))
-					{
-						strcpy(pszStr, "Left trigger / Right trigger"); return;
-					}
-					if (strstr(pszStr, "Hat Switch"))
-					{
-						strcpy(pszStr, "D-pad"); return;
-					}
-				}
-				else
-				{
-					if (strstr(pszStr, " 2"))
-					{
-						strcpy(pszStr, "Circle"); return;
-					}
-					if (strstr(pszStr, " 3"))
-					{
-						strcpy(pszStr, "Square"); return;
-					}
-					if (strstr(pszStr, " 4"))
-					{
-						strcpy(pszStr, "Triangle"); return;
-					}
-					if (strstr(pszStr, " 5"))
-					{
-						strcpy(pszStr, "L1"); return;
-					}
-					if (strstr(pszStr, " 6"))
-					{
-						strcpy(pszStr, "R1"); return;
-					}
-					if (strstr(pszStr, " 7"))
-					{
-						strcpy(pszStr, "Select"); return;
-					}
-					if (strstr(pszStr, " 8"))
-					{
-						strcpy(pszStr, "Start"); return;
-					}
-					if (strstr(pszStr, " 9"))
-					{
-						strcpy(pszStr, "L3"); return;
-					}
-					if (strstr(pszStr, " 10"))
-					{
-						strcpy(pszStr, "R3");
-					}
-					if (strstr(pszStr, " 1"))
-					{
-						strcpy(pszStr, "Cross"); return;
-					}
-					if (strstr(pszStr, " Up"))
-					{
-						strcpy(pszStr, "D-pad Up"); return;
-					}
-					if (strstr(pszStr, " Down"))
-					{
-						strcpy(pszStr, "D-pad Down"); return;
-					}
-					if (strstr(pszStr, " Left"))
-					{
-						strcpy(pszStr, "D-pad Left"); return;
-					}
-					if (strstr(pszStr, " Right"))
-					{
-						strcpy(pszStr, "D-pad Right"); return;
-					}
-					if (strstr(pszStr, "X Rotation"))
-					{
-						strcpy(pszStr, "Right stick Left/Right"); return;
-					}
-					if (strstr(pszStr, "Y Rotation"))
-					{
-						strcpy(pszStr, "Right stick Up/Down"); return;
-					}
-					if (strstr(pszStr, "X Axis"))
-					{
-						strcpy(pszStr, "Left stick Left/Right"); return;
-					}
-					if (strstr(pszStr, "Y Axis"))
-					{
-						strcpy(pszStr, "Left stick Up/Down"); return;
-					}
-					if (strstr(pszStr, "Z Axis"))
-					{
-						strcpy(pszStr, "L2 / R2"); return;
-					}
-					if (strstr(pszStr, "Hat Switch"))
-					{
-						strcpy(pszStr, "D-pad"); return;
-					}
+					if (nImproveGamepadSupport != 2)
+						strcpy(pszStr, TextsXBOX[i].c_str());
+					else
+						strcpy(pszStr, TextsPS[i].c_str());
 				}
 			}
 		}; injector::MakeInline<Buttons>(pattern.get(0).get<uint32_t>(16));
