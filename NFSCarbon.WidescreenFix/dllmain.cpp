@@ -540,31 +540,33 @@ DWORD WINAPI Init(LPVOID)
 				//00A5E108 Space
 				//00A5E0D0 ESC
 				//00A5E0B4 Enter
-
-				if (PadKeyPresses->Y)
+				if (PadKeyPresses != nullptr && PadKeyPresses != (PadState*)0x1)
 				{
-					*(int32_t*)(ButtonsState + 0xE8) = 1;
-				}
-				else
-				{
-					*(int32_t*)(ButtonsState + 0xE8) = 0;
-				}
-
-				if (PadKeyPresses->LSClick)
-				{
-					*(int32_t*)(ButtonsState + 0x13C) = 1;
-				}
-				else
-				{
-					*(int32_t*)(ButtonsState + 0x13C) = 0;
-				}
-
-				if (PadKeyPresses->LSClick && PadKeyPresses->RSClick)
-				{
-					if (*nGameState == 3)
+					if (PadKeyPresses->Y)
 					{
-						keybd_event(VkKeyScan('Q'), 0, 0, 0);
-						keybd_event(VkKeyScan('Q'), 0, KEYEVENTF_KEYUP, 0);
+						*(int32_t*)(ButtonsState + 0xE8) = 1;
+					}
+					else
+					{
+						*(int32_t*)(ButtonsState + 0xE8) = 0;
+					}
+
+					if (PadKeyPresses->LSClick)
+					{
+						*(int32_t*)(ButtonsState + 0x13C) = 1;
+					}
+					else
+					{
+						*(int32_t*)(ButtonsState + 0x13C) = 0;
+					}
+
+					if (PadKeyPresses->LSClick && PadKeyPresses->RSClick)
+					{
+						if (*nGameState == 3)
+						{
+							keybd_event(VkKeyScan('Q'), 0, 0, 0);
+							keybd_event(VkKeyScan('Q'), 0, KEYEVENTF_KEYUP, 0);
+						}
 					}
 				}
 			}

@@ -440,38 +440,40 @@ DWORD WINAPI Init(LPVOID)
 				//008F3584 2
 				//008F3514 3 
 				//008F34F8 4 
-
-				if (PadKeyPresses->Y) //3
+				if (PadKeyPresses != nullptr && PadKeyPresses != (PadState*)0x1)
 				{
-					*(int32_t*)(ButtonsState + 0xCC) = 1;
-				}
-				else
-				{
-					*(int32_t*)(ButtonsState + 0xCC) = 0;
-				}
-
-				if (PadKeyPresses->LSClick) //2
-				{
-					*(int32_t*)(ButtonsState + 0x13C) = 1;
-				}
-				else
-				{
-					*(int32_t*)(ButtonsState + 0x13C) = 0;
-				}
-				if (PadKeyPresses->RSClick) //4
-				{
-					*(int32_t*)(ButtonsState + 0xB0) = 1;
-				}
-				else
-				{
-					*(int32_t*)(ButtonsState + 0xB0) = 0;
-				}
-				if (PadKeyPresses->LSClick && PadKeyPresses->RSClick)
-				{
-					if (*nGameState == 3)
+					if (PadKeyPresses->Y) //3
 					{
-						keybd_event(VkKeyScan('Q'), 0, 0, 0);
-						keybd_event(VkKeyScan('Q'), 0, KEYEVENTF_KEYUP, 0);
+						*(int32_t*)(ButtonsState + 0xCC) = 1;
+					}
+					else
+					{
+						*(int32_t*)(ButtonsState + 0xCC) = 0;
+					}
+
+					if (PadKeyPresses->LSClick) //2
+					{
+						*(int32_t*)(ButtonsState + 0x13C) = 1;
+					}
+					else
+					{
+						*(int32_t*)(ButtonsState + 0x13C) = 0;
+					}
+					if (PadKeyPresses->RSClick) //4
+					{
+						*(int32_t*)(ButtonsState + 0xB0) = 1;
+					}
+					else
+					{
+						*(int32_t*)(ButtonsState + 0xB0) = 0;
+					}
+					if (PadKeyPresses->LSClick && PadKeyPresses->RSClick)
+					{
+						if (*nGameState == 3)
+						{
+							keybd_event(VkKeyScan('Q'), 0, 0, 0);
+							keybd_event(VkKeyScan('Q'), 0, KEYEVENTF_KEYUP, 0);
+						}
 					}
 				}
 			}

@@ -286,6 +286,9 @@ DWORD WINAPI Init(LPVOID)
 	//DWORD dword_4087FF = (DWORD)dword_4087E1 + 5;
 	//injector::WriteMemory(dword_4087FF, ResY, true);
 
+	//__mbclen to strlen, "---" bug
+	DWORD* dword_4148EA = hook::pattern("E8 ? ? ? ? 83 C4 04 85 C0 76 21 8D 43 60").get(0).get<DWORD>(0);
+	injector::MakeCALL(dword_4148EA, strlen, true);
 
 	//HUD
 	if (bFixHUD)
@@ -504,7 +507,7 @@ DWORD WINAPI Init(LPVOID)
 				//Keyboard 
 				//006F9358 backspace
 				//006F931C enter
-				if (*nGameState == 3)
+				if (PadKeyPresses != nullptr && PadKeyPresses != (PadState*)0x1 && *nGameState == 3)
 				{
 					if (PadKeyPresses->LSClick && PadKeyPresses->RSClick)
 					{
