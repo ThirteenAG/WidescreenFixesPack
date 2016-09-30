@@ -193,7 +193,7 @@ DWORD WINAPI Init(LPVOID)
 			else
 				FMVOffset1 = (float)*ResXAddr1 / (Screen.fWidth / ((Screen.fWidth - Screen.fHeight * (964.0f / 622.0f)) / 2.0f));
 			FMVOffset2 = *ResXAddr1 - FMVOffset1;
-			FMVOffset3 = (float)*ResXAddr1;
+			FMVOffset3 = (float)*ResYAddr1;
 		}
 	};
 	
