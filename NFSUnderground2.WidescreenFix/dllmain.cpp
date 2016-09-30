@@ -187,6 +187,7 @@ DWORD WINAPI Init(LPVOID)
 	bFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1) == 1;
 	bDisableCutsceneBorders = iniReader.ReadInteger("MISC", "DisableCutsceneBorders", 1) == 1;
 	szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "");
+	static int nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
 	bool bCustomUsrDir = false;
 	if (strncmp(szCustomUserFilesDirectoryInGameDir, "0", 1) != 0)
 		bCustomUsrDir = true;
@@ -387,6 +388,142 @@ DWORD WINAPI Init(LPVOID)
 		injector::MakeCALL((DWORD)dword_6CBF17, SHGetFolderPathAHook, true);
 		injector::MakeNOP((DWORD)dword_6CBF17 + 5, 1, true);
 	}
+
+	if (nImproveGamepadSupport)
+	{
+		struct PadState
+		{
+			int32_t LSAxis1;
+			int32_t LSAxis2;
+			int32_t LTRT;
+			int32_t RSAxis1;
+			int32_t RSAxis2;
+			uint8_t unk[28];
+			int8_t A;
+			int8_t B;
+			int8_t X;
+			int8_t Y;
+			int8_t LB;
+			int8_t RB;
+			int8_t Select;
+			int8_t Start;
+			int8_t LSClick;
+			int8_t RSClick;
+		};
+
+		static bool Zstate, Pstate, Tstate, Dstate, Qstate, Cstate, LBRACKETstate, RBRACKETstate;
+		pattern = hook::pattern("5E 5D 5F 33 C0 5B 59 C2 04 00"); //5C8C5F
+		injector::WriteMemory(pattern.get(1).get<uint32_t>(7 + 5), 0x900004C2, true);
+		static int32_t* nGameState = (int32_t*)*hook::pattern("83 3D ? ? ? ? 06 ? ? A1").get(0).get<uint32_t*>(2);
+		struct CatchPad
+		{
+			void operator()(injector::reg_pack& regs)
+			{
+				PadState* PadKeyPresses = *(PadState**)(regs.esp + 0x4);
+
+				if (PadKeyPresses != nullptr && PadKeyPresses != (PadState*)0x1 && *nGameState == 3)
+				{
+					if (PadKeyPresses->LSClick && PadKeyPresses->RSClick)
+					{
+						if (!Qstate)
+						{
+							keybd_event(VkKeyScan('Q'), 0, KEYEVENTF_EXTENDEDKEY, 0);
+							keybd_event(VkKeyScan('Q'), 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+						}
+						Qstate = true;
+					}
+					else
+						Qstate = false;
+
+					if (PadKeyPresses->Y)
+					{
+						if (!Zstate)
+						{
+							keybd_event(VkKeyScan('P'), 0, KEYEVENTF_EXTENDEDKEY, 0);
+							keybd_event(VkKeyScan('P'), 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+						}
+						Zstate = true;
+					}
+					else
+						Zstate = false;
+				}
+			}
+		}; injector::MakeInline<CatchPad>(pattern.get(1).get<uint32_t>(7));
+
+
+		const char* MenuTexts[] = { "Quit Game", "Continue", "Back", "Reset Keys To Default", "Activate GPS", "Deactivate GPS", "Install Package", "Install Part", "Install Paint", "Install Decal", "Reset To Default", "Delete Tuned Car", "Logoff", "Cancel Changes", "Customize", "Host LAN Server", "Read Message", "Delete", "Test N2O Purge", "Accept", "Reset to default", "Select", "Open/Close Doors", "Open/Close Hood" }; // "Tip", 
+		const char* MenuTextsPC[] = { "[Q] Quit Game", "[Enter] Continue", "[Esc] Back", "[P] Reset Keys To Default", "[C] Activate GPS", "[C] Deactivate GPS", "[Enter] Install Package", "[Enter] Install Part", "[Enter] Install Paint", "[Enter] Install Decal", "[C] Reset To Default", "[C] Delete Tuned Car", "[Esc] Logoff", "[C] Cancel Changes", "[C] Customize", "[C] Host LAN Server", "[Enter] Read Message", "[C] Delete", "[C] Test N2O Purge", "[Enter] Accept", "[C] Reset to default", "[Enter] Select", "[C] Open/Close Doors", "[C] Open/Close Hood" };
+		const char* MenuTextsXBOX[] = { "(LS+RS) Quit Game", "(A) Continue", "(B) Back", "(Y) Reset Keys To Default", "(X) Activate GPS", "(X) Deactivate GPS", "(A) Install Package", "(A) Install Part", "(A) Install Paint", "(A) Install Decal", "(X) Reset To Default", "(X) Delete Tuned Car", "(B) Logoff", "(X) Cancel Changes", "(X) Customize", "(X) Host LAN Server", "(A) Read Message", "(X) Delete", "(X) Test N2O Purge", "(A) Accept", "(X) Reset to default", "(A) Select", "(X) Open/Close Doors", "(X) Open/Close Hood" };
+		const char* MenuTextsPS[] = { "(L3+R3) Quit Game", "(Cross) Continue", "(Circle) Back", "(Triangle) Reset Keys To Default", "(Square) Activate GPS", "(Square) Deactivate GPS", "(Cross) Install Package", "(Cross) Install Part", "(Cross) Install Paint", "(Cross) Install Decal", "(Square) Reset To Default", "(Square) Delete Tuned Car", "(Circle) Logoff", "(Square) Cancel Changes", "(Square) Customize", "(Square) Host LAN Server", "(Cross) Read Message", "(Square) Delete", "(Square) Test N2O Purge", "(Cross) Accept", "(Square) Reset to default", "(Cross) Select", "(Square) Open/Close Doors", "(Square) Open/Close Hood" };
+
+		static std::vector<std::string> vMenuStrings(MenuTexts, std::end(MenuTexts));
+		static std::vector<std::string> vMenuStringsPC(MenuTextsPC, std::end(MenuTextsPC));
+		static std::vector<std::string> vMenuStringsXBOX(MenuTextsXBOX, std::end(MenuTextsXBOX));
+		static std::vector<std::string> vMenuStringsPS(MenuTextsPS, std::end(MenuTextsPS));
+
+		pattern = hook::pattern("8B 0D ? ? ? ? 85 C9 50 74 12 8B 44"); //0x5124DD (v1.1)
+		static auto dword_8383DC = *pattern.get(0).get<uint32_t>(2);
+		struct Buttons
+		{
+			void operator()(injector::reg_pack& regs)
+			{
+				regs.ecx = dword_8383DC;
+
+				auto pszStr = (char*)regs.eax;
+				auto it = std::find(vMenuStrings.begin(), vMenuStrings.end(), pszStr);
+				auto i = std::distance(vMenuStrings.begin(), it);
+
+				if (it != vMenuStrings.end())
+				{
+					if (nImproveGamepadSupport == 3)
+						regs.eax = (uint32_t)vMenuStringsPC[i].c_str();
+					else
+						if (nImproveGamepadSupport != 2)
+							regs.eax = (uint32_t)vMenuStringsXBOX[i].c_str();
+						else
+							regs.eax = (uint32_t)vMenuStringsPS[i].c_str();
+				}
+			}
+		}; injector::MakeInline<Buttons>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(6));
+	}
+
+	const wchar_t* ControlsTexts[] = { L" 2", L" 3", L" 4", L" 5", L" 6", L" 7", L" 8", L" 9", L" 10", L" 1", L" Up", L" Down", L" Left", L" Right", L"X Rotation", L"Y Rotation", L"X Axis", L"Y Axis", L"Z Axis", L"Hat Switch" };
+	const wchar_t* ControlsTextsXBOX[] = { L"B", L"X", L"Y", L"LB", L"RB", L"View (Select)", L"Menu (Start)", L"Left stick", L"Right stick", L"A", L"D-pad Up", L"D-pad Down", L"D-pad Left", L"D-pad Right", L"Right stick Left/Right", L"Right stick Up/Down", L"Left stick Left/Right", L"Left stick Up/Down", L"Left trigger / Right trigger", L"D-pad" };
+	const wchar_t* ControlsTextsPS[] = { L"Circle", L"Square", L"Triangle", L"L1", L"R1", L"Select", L"Start", L"L3", L"R3", L"Cross", L"D-pad Up", L"D-pad Down", L"D-pad Left", L"D-pad Right", L"Right stick Left/Right", L"Right stick Up/Down", L"Left stick Left/Right", L"Left stick Up/Down", L"L2 / R2", L"D-pad" };
+
+	static std::vector<std::wstring> Texts(ControlsTexts, std::end(ControlsTexts));
+	static std::vector<std::wstring> TextsXBOX(ControlsTextsXBOX, std::end(ControlsTextsXBOX));
+	static std::vector<std::wstring> TextsPS(ControlsTextsPS, std::end(ControlsTextsPS));
+
+	pattern = hook::pattern("66 83 7C 24 08 00 5F 74 13 8D 4C 24 04 51"); //0x4ACF01
+	injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(0), 0x5F, true); //pop     edi
+	static auto dword_4ACF1D = pattern.get(0).get<uint32_t>(28);
+	struct Buttons
+	{
+		void operator()(injector::reg_pack& regs)
+		{
+			auto pszStr = (wchar_t*)(regs.esp + 0x4);
+			if (wcslen(pszStr))
+			{
+				if (nImproveGamepadSupport)
+				{
+					auto it = std::find_if(Texts.begin(), Texts.end(), [&](const std::wstring& str) { std::wstring s(pszStr); return s.find(str) != std::wstring::npos; });
+					auto i = std::distance(Texts.begin(), it);
+
+					if (it != Texts.end())
+					{
+						if (nImproveGamepadSupport != 2)
+							wcscpy(pszStr, TextsXBOX[i].c_str());
+						else
+							wcscpy(pszStr, TextsPS[i].c_str());
+					}
+				}
+			}
+			else
+				*(uintptr_t*)(regs.esp - 4) = (uintptr_t)dword_4ACF1D;
+		}
+	}; injector::MakeInline<Buttons>(pattern.get(0).get<uint32_t>(1), pattern.get(0).get<uint32_t>(9));
+
 	return 0;
 }
 
