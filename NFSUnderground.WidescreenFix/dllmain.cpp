@@ -287,8 +287,12 @@ DWORD WINAPI Init(LPVOID)
 	//injector::WriteMemory(dword_4087FF, ResY, true);
 
 	//__mbclen to strlen, "---" bug
-	DWORD* dword_4148EA = hook::pattern("E8 ? ? ? ? 83 C4 04 85 C0 76 21 8D 43 60").get(0).get<DWORD>(0);
-	injector::MakeCALL(dword_4148EA, strlen, true);
+	pattern = hook::pattern("E8 ? ? ? ? 83 C4 04 85 C0 76 21 8D 43 60");
+	if (pattern.size() > 0)
+	{
+		DWORD* dword_4148EA = pattern.get(0).get<DWORD>(0);
+		injector::MakeCALL(dword_4148EA, strlen, true);
+	}
 
 	//HUD
 	if (bFixHUD)
@@ -613,7 +617,7 @@ DWORD WINAPI Init(LPVOID)
 						wcscpy(pszStr, TextsPS[i].c_str());
 				}
 			}
-		}; injector::MakeInline<Buttons>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(7));
+		}; if (pattern.size() > 0) { injector::MakeInline<Buttons>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(7)); }
 	}
 	return 0;
 }
