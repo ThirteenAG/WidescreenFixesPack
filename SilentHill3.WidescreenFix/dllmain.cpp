@@ -139,6 +139,8 @@ DWORD WINAPI Init(LPVOID)
 	CIniReader iniReader("");
 	Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
 	Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
+	static int32_t RenderResX = iniReader.ReadInteger("MAIN", "RenderResX", -1);
+	static int32_t RenderResY = iniReader.ReadInteger("MAIN", "RenderResY", -1);
 	static bool bFMVWidescreenMode = iniReader.ReadInteger("MISC", "FMVWidescreenMode", 1) != 0;
 	bool bDisableCutsceneBorders = iniReader.ReadInteger("MISC", "DisableCutsceneBorders", 1) != 0;
 	bool bDisableSafeMode = iniReader.ReadInteger("MISC", "DisableSafeMode", 1) != 0;
@@ -159,9 +161,12 @@ DWORD WINAPI Init(LPVOID)
 	Screen.fWidth = static_cast<float>(Screen.Width);
 	Screen.fHeight = static_cast<float>(Screen.Height);
 	Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
-	//Screen.fHudOffset = (0.5f / ((4.0f / 3.0f) / (Screen.fAspectRatio)));
-	//Screen.Width43 = static_cast<uint32_t>(Screen.fHeight * (4.0f / 3.0f));
 
+	if (RenderResX == 0 && RenderResY == 0)
+	{
+		RenderResX = Screen.Width;
+		RenderResY = Screen.Height;
+	}
 
 	//Resolution
 	static int32_t* ResXAddr1; 
@@ -180,8 +185,11 @@ DWORD WINAPI Init(LPVOID)
 	{
 		void operator()(injector::reg_pack&)
 		{
-			//*ResXAddr1 = Screen.Width;
-			//*ResYAddr1 = Screen.Height;
+			if (RenderResX > 0 && RenderResY > 0)
+			{
+				*ResXAddr1 = RenderResX;
+				*ResYAddr1 = RenderResY;
+			}
 			*ResXAddr2 = Screen.Width;
 			*ResYAddr2 = Screen.Height;
 			*ResXAddr3 = Screen.Width;
@@ -257,7 +265,7 @@ DWORD WINAPI Init(LPVOID)
 
 	if (bFMVWidescreenMode)
 	{
-		static uint32_t f0 = 0.0f;
+		static float f0 = 0.0f;
 		pattern = hook::pattern("D9 05 ? ? ? ? 89 44 24 14 D8 25 ? ? ? ? C7"); //4045E2
 		injector::WriteMemory(pattern.get(0).get<uint32_t>(2), &f0, true);
 		
