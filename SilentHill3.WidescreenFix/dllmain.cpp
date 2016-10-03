@@ -367,10 +367,10 @@ DWORD WINAPI Init(LPVOID)
 		{
 			void operator()(injector::reg_pack& regs)
 			{
-				*flt_6B0BE4 = *ResXAddr1 - 0.5f;
-				*flt_6B0B94 = *ResXAddr1 - 0.5f;
-				*flt_6B0BF4 = *ResXAddr1 - 0.5f;
-				*flt_6B0BAC = *ResXAddr1 - 0.5f;
+				*flt_6B0BE4 = *ResYAddr1 - 0.5f;
+				*flt_6B0B94 = *ResYAddr1 - 0.5f;
+				*flt_6B0BF4 = *ResYAddr1 - 0.5f;
+				*flt_6B0BAC = *ResYAddr1 - 0.5f;
 				float temp;
 				__asm fstp temp
 				__asm fstp temp
