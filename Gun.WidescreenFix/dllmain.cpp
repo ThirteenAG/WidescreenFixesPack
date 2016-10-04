@@ -1,255 +1,212 @@
 #include "..\includes\stdafx.h"
-#include "tchar.h"
-#include "Strsafe.h"
-
-HWND hWnd;
-
-bool bFixHUD, bFixFOV;
-int ResX;
-int ResY;
-HKEY hKey;
-DWORD _REG, jmpAddr1, jmpAddr2, jmpAddr3, jmpAddr4, jmpAddr5, jmpAddr6;
-int nGameSpeed;
-float fAspectRatio;
-float fHudOffset, fHUDOffset1;
-
+#include "..\includes\hooking\Hooking.Patterns.h"
 #define _USE_MATH_DEFINES
 #include "math.h"
-#define DEGREE_TO_RADIAN(fAngle) \
-	((fAngle)* (float)M_PI / 180.0f)
-#define RADIAN_TO_DEGREE(fAngle) \
-	((fAngle)* 180.0f / (float)M_PI)
-#define SCREEN_AR_NARROW			(4.0f / 3.0f)	// 640.0f / 480.0f
-#define SCREEN_FOV_HORIZONTAL		48.0f
-#define SCREEN_FOV_VERTICAL			(2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))	// Default is 75.0f.
-float fScreenFieldOfViewVStd = SCREEN_FOV_VERTICAL;
-float fDynamicScreenFieldOfViewScale;
-float fFOVFactor;
 
-double SetAR()
+HWND hWnd;
+bool bDelay;
+
+struct Screen
 {
-	return fAspectRatio * ((*(float*)0x750FAC) / (4.0f / 3.0f));
+	int Width;
+	int Height;
+	float fWidth;
+	float fHeight;
+	float fFieldOfView;
+	float fAspectRatio;
+	float fHudScaleX;
+	float fHudOffset;
+	int Width43;
+	float* DefaultAR;
+} Screen;
+
+float SetAspect()
+{
+	return Screen.fAspectRatio * ((*Screen.DefaultAR) / (4.0f / 3.0f));
 }
 
-void __declspec(naked) CenterText()
+DWORD WINAPI Init(LPVOID)
 {
-	_asm
+	auto pattern = hook::pattern("6A 60 68 ? ? ? ? E8 ? ? ? ? BF 94 00 00 00");
+	if (!(pattern.size() > 0) && !bDelay)
 	{
-		fadd    st, st(1)
-		fstp    dword ptr[esp + 28h]
-		mov _REG, ecx
-		mov     ecx, [esp + 28h]
-		mov		fHUDOffset1, ecx
+		bDelay = true;
+		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, NULL, 0, NULL);
+		return 0;
 	}
-	fHUDOffset1 += fHudOffset;
-	_asm
+
+	if (bDelay)
 	{
-		mov     ecx, fHUDOffset1
-		mov     dword ptr[esp + 28h], ecx
-		mov     ecx, _REG
-		jmp     jmpAddr1
+		while (!(pattern.size() > 0))
+			pattern = hook::pattern("6A 60 68 ? ? ? ? E8 ? ? ? ? BF 94 00 00 00");
 	}
-}
 
-void __declspec(naked) CenterHUD()
-{
-	_asm
-	{
-		fadd    st, st(1)
-		fstp    dword ptr[esp + 28h]
-		mov		_REG, ecx
-		mov     ecx, [esp + 28h]
-		mov		fHUDOffset1, ecx
-	}
-	fHUDOffset1 += fHudOffset;
-	_asm
-	{
-		mov     ecx, fHUDOffset1
-		mov     dword ptr[esp + 28h], ecx
-		mov     ecx, _REG
-		jmp     jmpAddr2
-	}
-}
-
-void __declspec(naked) CenterHUD2()
-{
-	_asm
-	{
-		fadd    st, st(1)
-		fstp    dword ptr[esp + 18h]
-		mov		_REG, ecx
-		mov     ecx, [esp + 18h]
-		mov		fHUDOffset1, ecx
-	}
-	fHUDOffset1 += fHudOffset;
-	_asm
-	{
-		mov     ecx, fHUDOffset1
-		mov     dword ptr[esp + 18h], ecx
-		mov     ecx, _REG
-		jmp     jmpAddr3
-	}
-}
-
-void __declspec(naked) CenterHUD3()
-{
-	_asm
-	{
-		fadd    st, st(1)
-		fstp    dword ptr[esp + 14h]
-		mov		_REG, ecx
-	}
-	__asm	mov     ecx, [esp + 14h]
-	__asm	mov		fHUDOffset1, ecx
-	fHUDOffset1 += fHudOffset;
-	__asm	mov     ecx, fHUDOffset1
-	__asm	mov     dword ptr[esp + 14h], ecx
-
-	__asm	mov     ecx, [esp + 18h]
-	__asm	mov		fHUDOffset1, ecx
-	fHUDOffset1 += fHudOffset;
-	__asm	mov     ecx, fHUDOffset1
-	__asm	mov     dword ptr[esp + 18h], ecx
-	_asm
-	{
-		mov     ecx, _REG
-		jmp     jmpAddr5
-	}
-}
-
-void __declspec(naked) CenterHUD4()
-{
-	_asm
-	{
-		fadd    dword ptr[esp + 20h]
-		fstp    dword ptr[esp + 60h]
-		mov		_REG, ecx
-	}
-	__asm	mov     ecx, [esp + 0x5C]
-	__asm	mov		fHUDOffset1, ecx
-	fHUDOffset1 += fHudOffset;
-	__asm mov     ecx, fHUDOffset1
-	__asm mov     dword ptr[esp + 0x5C], ecx
-
-
-	__asm	mov     ecx, [esp + 0x6C]
-	__asm	mov		fHUDOffset1, ecx
-	fHUDOffset1 += fHudOffset;
-	__asm mov     ecx, fHUDOffset1
-	__asm mov     dword ptr[esp + 0x6C], ecx
-
-
-	__asm	mov     ecx, [esp + 0x7C]
-	__asm	mov		fHUDOffset1, ecx
-	fHUDOffset1 += fHudOffset;
-	__asm mov     ecx, fHUDOffset1
-	__asm mov     dword ptr[esp + 0x7C], ecx
-
-
-	__asm	mov     ecx, [esp + 0x8C]
-	__asm	mov		fHUDOffset1, ecx
-	fHUDOffset1 += fHudOffset;
-	__asm mov     ecx, fHUDOffset1
-	__asm mov     dword ptr[esp + 0x8C], ecx
-
-	_asm
-	{
-		mov     ecx, _REG
-		jmp     jmpAddr4
-	}
-}
-
-void Init()
-{
 	CIniReader iniReader("");
-	ResX = iniReader.ReadInteger("MAIN", "ResX", 0);
-	ResY = iniReader.ReadInteger("MAIN", "ResY", 0);
-	bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) != 0;
-	bFixFOV = iniReader.ReadFloat("MAIN", "FixFOV", 1) != 0;
-	nGameSpeed = iniReader.ReadInteger("MAIN", "GameSpeed", 30);
+	Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
+	Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
+	bool bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) != 0;
+	bool bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) != 0;
+	uint32_t nGameSpeed = iniReader.ReadInteger("MISC", "GameSpeed", 30);
 
-	if (!ResX || !ResY) {
+	if (!Screen.Width || !Screen.Height) {
 		HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
 		MONITORINFO info;
 		info.cbSize = sizeof(MONITORINFO);
 		GetMonitorInfo(monitor, &info);
-		ResX = info.rcMonitor.right - info.rcMonitor.left;
-		ResY = info.rcMonitor.bottom - info.rcMonitor.top;
+		Screen.Width = info.rcMonitor.right - info.rcMonitor.left;
+		Screen.Height = info.rcMonitor.bottom - info.rcMonitor.top;
 	}
 
-	DWORD dwDisp;
-	RegCreateKeyExA(HKEY_CURRENT_USER, TEXT("SOFTWARE\\Activision\\Gun\\Settings"), 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hKey, &dwDisp);
-	if (dwDisp == REG_CREATED_NEW_KEY || dwDisp == REG_OPENED_EXISTING_KEY)
+	Screen.fWidth = static_cast<float>(Screen.Width);
+	Screen.fHeight = static_cast<float>(Screen.Height);
+	Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
+	Screen.fHudOffset = (0.5f / ((4.0f / 3.0f) / (Screen.fAspectRatio)));
+	Screen.Width43 = static_cast<uint32_t>(Screen.fHeight * (4.0f / 3.0f));
+
+	pattern = hook::pattern("A3 ? ? ? ? E8 ? ? ? ? 84 C0 74 38 8B 0D");
+	static auto dword_6B75A0_Y = *pattern.get(0).get<uint32_t*>(1);
+	static auto dword_6B759C_X = dword_6B75A0_Y - 1;
+	struct ResHook1
 	{
-		char data[20];
-		char res[20];
+		void operator()(injector::reg_pack& regs)
+		{
+			*dword_6B759C_X = Screen.Width;
+			*dword_6B75A0_Y = Screen.Height;
+		}
+	}; injector::MakeInline<ResHook1>(pattern.get(0).get<uint32_t>(0));
 
-		sprintf_s(res, "%d", ResX);
-		strcat_s(data, res);
-		strcat_s(data, "x");
-		sprintf_s(res, "%d", ResY);
-		strcat_s(data, res);
-		strcat_s(data, "\0");
-
-		if (!RegSetValueEx(hKey, TEXT("Resolution"), NULL, REG_SZ, (LPBYTE)data, _tcslen(data) * sizeof(TCHAR)) == ERROR_SUCCESS)
-			MessageBox(0, "Error setting the value of the registry key.", "GUN", 0);
-
-		RegCloseKey(hKey);
-	}
-	else
+	pattern = hook::pattern("A3 ? ? ? ? E8 ? ? ? ? 6A 00 68 ? ? ? ? 8D 4C 24 14");
+	struct ResHook2
 	{
-		MessageBox(0, "Error creating the registry subkey.", "GUN", 0);
-	}
-
-	Sleep(1000); //steam
-
-	fAspectRatio = static_cast<float>(ResX) / static_cast<float>(ResY);
-	injector::MakeJMP(0x4BA680, SetAR);
+		void operator()(injector::reg_pack& regs)
+		{
+			*dword_6B759C_X = Screen.Width;
+			*dword_6B75A0_Y = Screen.Height;
+		}
+	}; injector::MakeInline<ResHook2>(pattern.get(0).get<uint32_t>(0));
+	
+	auto pSetAR = injector::GetBranchDestination(hook::pattern("E8 ? ? ? ? D8 1D ? ? ? ? D9 44 24").get(0).get<uintptr_t>(0), true).as_int(); //0x4BA680
+	Screen.DefaultAR = *(float**)(pSetAR + 2);
+	injector::MakeJMP(pSetAR, SetAspect);
 
 	if (bFixHUD)
 	{
-		static float fHudScaleX = 1.0f / static_cast<float>(ResX) * (static_cast<float>(ResY) / 480.0f);
-		injector::WriteMemory<float>(0x6814CC, fHudScaleX, true);
+		Screen.fHudScaleX = 1.0f / Screen.fWidth * (Screen.fHeight / 480.0f);
+		Screen.fHudOffset = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
 
-		fHudOffset = (static_cast<float>(ResX) - static_cast<float>(ResY) * (4.0f / 3.0f)) / 2.0f;
+		pattern = hook::pattern("D8 0D ? ? ? ? 8B 35 ? ? ? ? 85 F6 D9 1D");
+		injector::WriteMemory<float>(*pattern.get(0).get<float*>(2), Screen.fHudScaleX, true); //0x6814CC
 
-		jmpAddr1 = 0x4DC226 + 6;
-		injector::MakeJMP(0x4DC226, CenterText, true); //text
+		struct TextHudHook
+		{
+			void operator()(injector::reg_pack& regs)
+			{
+				float fCurOffset = 0.0f;
+				_asm
+				{
+					fadd    st, st(1)
+					fstp    dword ptr[fCurOffset]
+				}
+				*(float*)(regs.esp + 0x28) = fCurOffset + Screen.fHudOffset;
 
-		jmpAddr2 = 0x4F12DB + 6;
-		injector::MakeJMP(0x4F12DB, CenterHUD, true); //graphics
+			}
+		}; 
+		pattern = hook::pattern("D8 C1 D9 5C 24 28 DB 05 ? ? ? ? D9 47 2C");  //0x4DC226
+		injector::MakeInline<TextHudHook>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(6));
 
-		jmpAddr3 = 0x4F12E9 + 6;
-		injector::MakeJMP(0x4F12E9, CenterHUD2, true); //graphics
+		pattern = hook::pattern("D8 C1 D9 5C 24 28 D9 05 ? ? ? ? D8");  //0x4F12DB
+		injector::MakeInline<TextHudHook>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(6));
 
-		jmpAddr4 = 0x4F1BD7 + 8;
-		injector::MakeJMP(0x4F1BD7, CenterHUD4, true); //graphics
+		pattern = hook::pattern("D8 C1 D9 5C 24 18 DD D8 DD D8 DD D8");  //0x4F12E9
+		struct HudHook2
+		{
+			void operator()(injector::reg_pack& regs)
+			{
+				float fCurOffset = 0.0f;
+				_asm
+				{
+					fadd    st, st(1)
+					fstp    dword ptr[fCurOffset]
+				}
+				*(float*)(regs.esp + 0x18) = fCurOffset + Screen.fHudOffset;
+			}
+		}; injector::MakeInline<HudHook2>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(6));
 
-		jmpAddr5 = 0x4F0D06 + 6;
-		injector::MakeJMP(0x4F0D06, CenterHUD3, true); //graphics
+		pattern = hook::pattern("D8 44 24 20 D9 5C 24 60 0F 84 7A 03 00 00");  //0x4F1BD7
+		struct HudHook3
+		{
+			void operator()(injector::reg_pack& regs)
+			{
+				float temp1 = *(float*)(regs.esp + 0x20);
+				float temp2 = 0.0f;
+				_asm
+				{
+					fadd    dword ptr[temp1]
+					fstp    dword ptr[temp2]
+				}
+				*(float*)(regs.esp + 0x60) = temp2;
+				*(float*)(regs.esp + 0x5C) += Screen.fHudOffset;
+				*(float*)(regs.esp + 0x6C) += Screen.fHudOffset;
+				*(float*)(regs.esp + 0x7C) += Screen.fHudOffset;
+				*(float*)(regs.esp + 0x8C) += Screen.fHudOffset;
+			}
+		}; injector::MakeInline<HudHook3>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(8));
+		injector::WriteMemory<uint16_t>(pattern.get(0).get<uint32_t>(6), 0xC084, true); //test    al, al
 
-		injector::WriteMemory<uchar>(0x4FC837, 0xC0, true); //main menu cursor fix
-		injector::WriteMemory<uchar>(0x4FC847, 0xC0, true);
+		pattern = hook::pattern("D8 C1 D9 5C 24 14 DD D8");  //0x4F0D06
+		struct HudHook4
+		{
+			void operator()(injector::reg_pack& regs)
+			{
+				float temp1 = 0.0f;
+				_asm
+				{
+					fadd    st, st(1)
+					fstp    dword ptr[temp1]
+				}
+				*(float*)(regs.esp + 0x14) = temp1 + Screen.fHudOffset;
+				*(float*)(regs.esp + 0x18) += Screen.fHudOffset;
+			}
+		}; injector::MakeInline<HudHook4>(pattern.get(1).get<uint32_t>(0), pattern.get(1).get<uint32_t>(6));
+
+		pattern = hook::pattern("D8 C2 8B F0 D8 05 ? ? ? ? D8 0D ? ? ? ? D8"); //main menu cursor fix
+		injector::WriteMemory<uint8_t>(pattern.get(0).get<uintptr_t>(2), 0xC0, true); //0x4FC837
+		injector::WriteMemory<uint8_t>(pattern.get(0).get<uintptr_t>(17), 0xC0, true); //0x4FC847
 	}
 
 	if (bFixFOV)
 	{
-		fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(fScreenFieldOfViewVStd * 0.5f)) * (static_cast<float>(ResX) / static_cast<float>(ResY)))) * (1.0f / SCREEN_FOV_HORIZONTAL);
-		fFOVFactor = fDynamicScreenFieldOfViewScale * 114.59155f;
-		injector::WriteMemory(0x498BA3 + 0x2, &fFOVFactor, true);
+		#define DEGREE_TO_RADIAN(fAngle) \
+			((fAngle)* (float)M_PI / 180.0f)
+		#define RADIAN_TO_DEGREE(fAngle) \
+			((fAngle)* 180.0f / (float)M_PI)
+		#define SCREEN_AR_NARROW			(4.0f / 3.0f)	// 640.0f / 480.0f
+		#define SCREEN_FOV_HORIZONTAL		48.0f
+		#define SCREEN_FOV_VERTICAL			(2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))	// Default is 75.0f.
+		float fScreenFieldOfViewVStd = SCREEN_FOV_VERTICAL;
+		float fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(fScreenFieldOfViewVStd * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
+		static float fFOVFactor = fDynamicScreenFieldOfViewScale * 114.59155f;
+		pattern = hook::pattern("D8 0D ? ? ? ? D9 9E C4 00 00 00 E8 ? ? ? ? D9 86"); //0x498BA3
+		injector::WriteMemory(pattern.get(0).get<uintptr_t>(2), &fFOVFactor, true);
 	}
 
 	if (nGameSpeed)
 	{
-		injector::WriteMemory(0x52E7CA, nGameSpeed, true);
+		pattern = hook::pattern("C7 05 ? ? ? ? 1E 00 00 00"); //0x52E7CA
+		injector::WriteMemory(pattern.get(0).get<uintptr_t>(6), nGameSpeed, true);
 	}
+	//43F8B8 - fps
+
+
+	return 0;
 }
+
 
 BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
 	if (reason == DLL_PROCESS_ATTACH)
 	{
-		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, NULL, 0, NULL);
+		Init(NULL);
 	}
 	return TRUE;
 }
