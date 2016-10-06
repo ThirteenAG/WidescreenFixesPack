@@ -342,7 +342,7 @@ DWORD WINAPI Init(LPVOID)
 				*flt_6B12D0 = *ResXAddr1 - 0.5f;
 				*flt_6B131C = *ResYAddr1 - 0.5f;
 				*flt_6B1304 = *ResYAddr1 - 0.5f;
-				float temp;
+				float temp = 0.0f;
 				__asm fstp temp
 			}
 		}; injector::MakeInline<PixelationFixHook1>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(23));
@@ -360,7 +360,7 @@ DWORD WINAPI Init(LPVOID)
 				*flt_6B0B60 = *ResXAddr1 - 0.5f;
 				*flt_6B0BE0 = *ResXAddr1 - 0.5f;
 				*flt_6B0B90 = *ResXAddr1 - 0.5f;
-				float temp;
+				float temp = 0.0f;
 				__asm fstp temp
 				__asm fstp temp
 			}
@@ -379,7 +379,7 @@ DWORD WINAPI Init(LPVOID)
 				*flt_6B0B94 = *ResYAddr1 - 0.5f;
 				*flt_6B0BF4 = *ResYAddr1 - 0.5f;
 				*flt_6B0BAC = *ResYAddr1 - 0.5f;
-				float temp;
+				float temp = 0.0f;
 				__asm fstp temp
 				__asm fstp temp
 			}
