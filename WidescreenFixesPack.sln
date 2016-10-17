@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.25123.0
+VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GTA2.WidescreenFix", "GTA2.WidescreenFix\GTA2.WidescreenFix.vcxproj", "{51980D73-5A60-478E-83B5-DFCD7E438711}"
 EndProject
@@ -124,6 +124,12 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GTASA.WidescreenFix", "GTASA.WidescreenFix\GTASA.WidescreenFix.vcxproj", "{35F7F70D-B9B6-4D76-A598-56244C437BBC}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ColdFear.WidescreenFix", "ColdFear.WidescreenFix\ColdFear.WidescreenFix.vcxproj", "{8B08FC53-0DD5-4A32-90D8-892460776992}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BGAE.WidescreenFix", "BGAE.WidescreenFix\BGAE.WidescreenFix.vcxproj", "{1DC70071-07D6-493C-81B3-CFCFB94463A1}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Onimusha3.WidescreenFix", "Onimusha3.WidescreenFix\Onimusha3.WidescreenFix.vcxproj", "{2FFB2643-C62B-439B-B468-0A8F6020D790}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CallOfCthulhu.WidescreenFix", "CallOfCthulhu.WidescreenFix\CallOfCthulhu.WidescreenFix.vcxproj", "{B744568D-5047-44A9-80A0-8BBBB2597946}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -501,6 +507,30 @@ Global
 		{8B08FC53-0DD5-4A32-90D8-892460776992}.Release|x64.Build.0 = Release|x64
 		{8B08FC53-0DD5-4A32-90D8-892460776992}.Release|x86.ActiveCfg = Release|Win32
 		{8B08FC53-0DD5-4A32-90D8-892460776992}.Release|x86.Build.0 = Release|Win32
+		{1DC70071-07D6-493C-81B3-CFCFB94463A1}.Debug|x64.ActiveCfg = Debug|x64
+		{1DC70071-07D6-493C-81B3-CFCFB94463A1}.Debug|x64.Build.0 = Debug|x64
+		{1DC70071-07D6-493C-81B3-CFCFB94463A1}.Debug|x86.ActiveCfg = Debug|Win32
+		{1DC70071-07D6-493C-81B3-CFCFB94463A1}.Debug|x86.Build.0 = Debug|Win32
+		{1DC70071-07D6-493C-81B3-CFCFB94463A1}.Release|x64.ActiveCfg = Release|x64
+		{1DC70071-07D6-493C-81B3-CFCFB94463A1}.Release|x64.Build.0 = Release|x64
+		{1DC70071-07D6-493C-81B3-CFCFB94463A1}.Release|x86.ActiveCfg = Release|Win32
+		{1DC70071-07D6-493C-81B3-CFCFB94463A1}.Release|x86.Build.0 = Release|Win32
+		{2FFB2643-C62B-439B-B468-0A8F6020D790}.Debug|x64.ActiveCfg = Debug|x64
+		{2FFB2643-C62B-439B-B468-0A8F6020D790}.Debug|x64.Build.0 = Debug|x64
+		{2FFB2643-C62B-439B-B468-0A8F6020D790}.Debug|x86.ActiveCfg = Debug|Win32
+		{2FFB2643-C62B-439B-B468-0A8F6020D790}.Debug|x86.Build.0 = Debug|Win32
+		{2FFB2643-C62B-439B-B468-0A8F6020D790}.Release|x64.ActiveCfg = Release|x64
+		{2FFB2643-C62B-439B-B468-0A8F6020D790}.Release|x64.Build.0 = Release|x64
+		{2FFB2643-C62B-439B-B468-0A8F6020D790}.Release|x86.ActiveCfg = Release|Win32
+		{2FFB2643-C62B-439B-B468-0A8F6020D790}.Release|x86.Build.0 = Release|Win32
+		{B744568D-5047-44A9-80A0-8BBBB2597946}.Debug|x64.ActiveCfg = Debug|x64
+		{B744568D-5047-44A9-80A0-8BBBB2597946}.Debug|x64.Build.0 = Debug|x64
+		{B744568D-5047-44A9-80A0-8BBBB2597946}.Debug|x86.ActiveCfg = Debug|Win32
+		{B744568D-5047-44A9-80A0-8BBBB2597946}.Debug|x86.Build.0 = Debug|Win32
+		{B744568D-5047-44A9-80A0-8BBBB2597946}.Release|x64.ActiveCfg = Release|x64
+		{B744568D-5047-44A9-80A0-8BBBB2597946}.Release|x64.Build.0 = Release|x64
+		{B744568D-5047-44A9-80A0-8BBBB2597946}.Release|x86.ActiveCfg = Release|Win32
+		{B744568D-5047-44A9-80A0-8BBBB2597946}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
