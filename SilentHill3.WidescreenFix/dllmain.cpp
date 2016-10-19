@@ -277,7 +277,7 @@ DWORD WINAPI Init(LPVOID)
 	//Mouse Cursor Fix
 	pattern = hook::pattern("6A 02 E8 ? ? ? ? 83 C4 04 85 C0 74 07");
 	injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(12), 0xEB, true); // 43AB8C
-	injector::WriteMemory<uint8_t>(pattern.get(1).get<uint32_t>(12), 0xEB, true); // 43ABCC
+	injector::WriteMemory<uint8_t>(pattern.get(1).get<uint32_t>(12), 0x75, true); // 43ABCC
 	injector::MakeCALL(hook::pattern("E8 ? ? ? ? D9 9D 9C FE FF FF E8 ? ? ? ? 8D 85 5C FE").get(0).get<uint32_t>(0), pattern.get(1).get<uint32_t>(0), true); //4DDB94 call 0043ABC0
 
 	//Menu Width
