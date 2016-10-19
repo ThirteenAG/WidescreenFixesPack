@@ -114,6 +114,8 @@ DWORD WINAPI Init(LPVOID)
 			*(float*)&regs.eax = Screen.fAspectRatio;
 		}
 	}; injector::MakeInline<SetScalingHook>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(8));
+	injector::WriteMemory(*pattern.get(0).get<uint32_t*>(10), Screen.fAspectRatio, true);
+	injector::WriteMemory(*pattern.get(0).get<uint32_t*>(15), Screen.fAspectRatio, true);
 
 	if (bFixFOV)
 	{
