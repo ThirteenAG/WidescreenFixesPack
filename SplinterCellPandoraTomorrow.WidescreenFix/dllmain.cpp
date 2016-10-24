@@ -250,7 +250,7 @@ DWORD WINAPI Thread(LPVOID)
 	injector::MakeJMP(pfResizeViewport + 0x469, UWindowsViewport_ResizeViewport_Hook, true); //crash on FMV
 	hookJmpAddr2 = pfResizeViewport + 0x469 + 0x6;*/
 
-	Screen.fHudOffset = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f / (Screen.fWidth / (640.0f * (4.0f / 3.0f)));
+	Screen.fHudOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
 	Screen.HUDScaleX = 1.0f / Screen.fWidth * (Screen.fHeight / 480.0f);
 
 	uint32_t pfDrawTile = (uint32_t)GetProcAddress(Engine, "?DrawTile@FCanvasUtil@@QAEXMMMMMMMMMPAVUMaterial@@VFColor@@HH@Z");

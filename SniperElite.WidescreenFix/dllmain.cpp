@@ -137,8 +137,9 @@ DWORD WINAPI Init(LPVOID)
 		pattern = hook::pattern("E8 ? ? ? ? 6A 01 B9 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 8A"); //4D5839
 		injector::MakeCALL(pattern.get(0).get<uint32_t>(0), sub_4140E0Hook, true); //intro screen
 
-		//static float temp = (0.5f / Screen.fAspectRatio) / (4.0f / 3.0f);
-		//injector::WriteMemory(0x50221A + 2, &temp, true); //text size
+		static float fHudScale2 = (0.0009765625f / Screen.fAspectRatio) * (4.0f / 3.0f);
+		pattern = hook::pattern("D8 0D ? ? ? ? D9 5E 7C D9 44 24 0C"); //502232
+		injector::WriteMemory(pattern.get(0).get<uint32_t>(2), &fHudScale2, true); //text size and radar arrows
 
 		pattern = hook::pattern("8B 47 04 89 46 44 83 3D ? ? ? ? 01"); //5021C2
 		struct HudHook2
