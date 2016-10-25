@@ -1,80 +1,89 @@
 #include "..\includes\stdafx.h"
-#include "..\includes\CPatch.h"
+#include "..\includes\hooking\Hooking.Patterns.h"
 
 HWND hWnd;
+bool bDelay;
 
-int res_x;
-int res_y;
-
-void Init()
+struct Screen
 {
-	CIniReader iniReader("");
-	res_x = iniReader.ReadInteger("MAIN", "X", 0);
-	res_y = iniReader.ReadInteger("MAIN", "Y", 0);
+	int Width;
+	int Height;
+	float fWidth;
+	float fHeight;
+	float fFieldOfView;
+	float fAspectRatio;
+	int Width43;
+	float fWidth43;
+	float fHudScale;
+} Screen;
 
-	if (!res_x || !res_y) {
+
+DWORD WINAPI Init(LPVOID)
+{
+	auto pattern = hook::pattern("BF 94 00 00 00 8B C7 E8");
+	if (!(pattern.size() > 0) && !bDelay)
+	{
+		bDelay = true;
+		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, NULL, 0, NULL);
+		return 0;
+	}
+
+	if (bDelay)
+	{
+		while (!(pattern.size() > 0))
+			pattern = hook::pattern("BF 94 00 00 00 8B C7 E8");
+	}
+
+	CIniReader iniReader("");
+	Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
+	Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
+
+	if (!Screen.Width || !Screen.Height) {
 		HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
 		MONITORINFO info;
 		info.cbSize = sizeof(MONITORINFO);
 		GetMonitorInfo(monitor, &info);
-		res_x = info.rcMonitor.right - info.rcMonitor.left;
-		res_y = info.rcMonitor.bottom - info.rcMonitor.top;
+		Screen.Width = info.rcMonitor.right - info.rcMonitor.left;
+		Screen.Height = info.rcMonitor.bottom - info.rcMonitor.top;
 	}
 
-	if ((*(DWORD*)0x45E93B == 640))
+	Screen.fWidth = static_cast<float>(Screen.Width);
+	Screen.fHeight = static_cast<float>(Screen.Height);
+	Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
+	Screen.Width43 = static_cast<uint32_t>(Screen.fHeight * (4.0f / 3.0f));
+	Screen.fWidth43 = static_cast<float>(Screen.Width43);
+
+	pattern = hook::pattern("C7 00 ? ? ? ? C7 40 04 ? ? ? ? 88 58 08"); //45E939
+	for (size_t i = 0; i < pattern.size(); ++i)
 	{
-		CPatch::SetUInt(0x45E939 + 0x2, res_x);
-		CPatch::SetUInt(0x45E93F + 0x3, res_y);
-
-		CPatch::SetUInt(0x45E9A1 + 0x2, res_x);
-		CPatch::SetUInt(0x45E9A7 + 0x3, res_y);
-
-		CPatch::SetUInt(0x45EA09 + 0x2, res_x);
-		CPatch::SetUInt(0x45EA0F + 0x3, res_y);
-
-		CPatch::SetUInt(0x45EA71 + 0x2, res_x);
-		CPatch::SetUInt(0x45EA77 + 0x3, res_y);
-
-		CPatch::SetUInt(0x45EAD9 + 0x2, res_x);
-		CPatch::SetUInt(0x45EADF + 0x3, res_y);
-
-
-		CPatch::SetUInt(0x45EB3D + 0x1, res_x);
-		CPatch::SetUInt(0x45EB48 + 0x1, res_y);
-
-		CPatch::SetFloat(0x9B38EC, static_cast<float>(res_x) / static_cast<float>(res_y));
+		injector::WriteMemory(pattern.get(i).get<uint32_t>(2), Screen.Width, true);
+		injector::WriteMemory(pattern.get(i).get<uint32_t>(9), Screen.Height, true);
 	}
-	else
-	{
-		/*CPatch::SetUInt(0x946A37 + 0x4, res_x);
-		CPatch::SetUInt(0x946A3F + 0x4, res_y);
 
-		CPatch::SetUInt(0x9469FE + 0x4, res_x);
-		CPatch::SetUInt(0x946A06 + 0x4, res_y);
+	pattern = hook::pattern("B9 ? ? ? ? 89 8E 28 03 00 00 B8 ? ? ? ? 89 86 2C 03 00 00"); //45EB3D
+	injector::WriteMemory(pattern.get(0).get<uint32_t>(1), Screen.Width, true);
+	injector::WriteMemory(pattern.get(0).get<uint32_t>(12), Screen.Height, true);
 
-		CPatch::SetUInt(0x9469C5 + 0x4, res_x);
-		CPatch::SetUInt(0x9469CD + 0x4, res_y);
+	//Scaling
+	pattern = hook::pattern("F3 0F 59 15 ? ? ? ? F3 0F 5C D8 5F"); //41AA51
+	injector::WriteMemory<float>(*pattern.get(0).get<float*>(4), Screen.fAspectRatio, true);
 
-		CPatch::SetUInt(0x946995 + 0x4, res_x);
-		CPatch::SetUInt(0x94699D + 0x4, res_y);
+	pattern = hook::pattern("84 C0 F3 0F 10 05 ? ? ? ? 75 08 F3 0F 10 05"); //87E044
+	injector::WriteMemory<float>(*pattern.get(0).get<float*>(6), Screen.fAspectRatio, true);
 
-		CPatch::SetUInt(0x946964 + 0x4, res_x);
-		CPatch::SetUInt(0x94696C + 0x4, res_y);
-
-
-		//CPatch::SetUInt(0x45EB3D + 0x1, res_x);
-		//CPatch::SetUInt(0x45EB48 + 0x1, res_y);
-		CPatch::RedirectJump(0x41FD70, asm_patch);
-
-		CPatch::SetFloat(0x9B38EC, static_cast<float>(res_x) / static_cast<float>(res_y));*/
-	}
+	//Text Scaling
+	//static float fTextScale = 0.75f;
+	//pattern = hook::pattern("F3 0F 10 05 ? ? ? ? 8B F8 C1 E7 1C C1 FF 1C F6 C4 10"); //8FEA7E
+	//injector::WriteMemory(pattern.get(0).get<float*>(4), &fTextScale, true);
+	return 0;
 }
+
 
 BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
 	if (reason == DLL_PROCESS_ATTACH)
 	{
-		Init();
+		Init(NULL);
 	}
 	return TRUE;
 }
