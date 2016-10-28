@@ -1,179 +1,130 @@
 #include "..\includes\stdafx.h"
-#include "..\includes\CPatch.h"
+#include "..\includes\hooking\Hooking.Patterns.h"
 
 HWND hWnd;
-int res_x;
-int res_y;
-DWORD jmpAddr;
-DWORD pResolutionWidth, pResolutionHeight;
-DWORD _ESI, _EAX;
+bool bDelay;
 
-void __declspec(naked)patch_res()
+struct Screen
 {
-	_asm
-	{
-			push    esi
-			mov     esi, ecx
-			mov     ecx, [esp + 8]
-			mov		[esi + 55Ch], ecx
-			mov     eax, [ecx]
-			mov		[esi + 528h], eax //640
-			mov		_ESI, esi
-			mov     edx, [ecx + 4]
-			mov		[esi + 52Ch], edx //480
-			mov jmpAddr, 0x62BC0E
-			jmp jmpAddr
-	}
-}
+	int Width;
+	int Height;
+	float fWidth;
+	float fHeight;
+	float fFieldOfView;
+	float fAspectRatio;
+	int Width43;
+	float fWidth43;
+	float fHudScale;
+} Screen;
 
-void __declspec(naked)patch_res_rld()
-{
-	_asm
-	{
-		push    esi
-		mov     esi, [esp + 8]
-		mov		[ecx + 55Ch], esi
-		mov     eax, [esi]
-		mov		[ecx + 528h], eax
-		mov		_ESI, esi
-		mov     edx, [esi + 4]
-		mov		[ecx + 52Ch], edx
-		mov     eax, [esi + 18h]
-		mov     edx, [eax + 4]
-		mov jmpAddr, 0x61D652
-		jmp jmpAddr
-	}
-}
-
-void __declspec(naked)patch_res2()
-{
-	_asm
-	{
-			mov _EAX, eax
-			mov eax, res_x
-			mov DWORD PTR DS : [ebx], eax
-			add ebx, 4
-			mov eax, res_y
-			mov DWORD PTR DS : [ebx], eax
-			sub ebx, 4
-			mov eax, _EAX
-
-			PUSH EBX
-			PUSH EDX
-			MOV EDX, DWORD PTR DS : [76B68Ch]
-
-			mov jmpAddr, 0x62C203
-			jmp jmpAddr
-	}
-}
-
-void __declspec(naked)patch_res2_rld()
-{
-	_asm
-	{
-			mov _EAX, eax
-			mov eax, res_x
-			mov DWORD PTR DS : [ebx], eax
-			add ebx, 4
-			mov eax, res_y
-			mov DWORD PTR DS : [ebx], eax
-			sub ebx, 4
-			mov eax, _EAX
-
-			PUSH EBX
-			PUSH EDX
-			MOV EDX, DWORD PTR DS : [75119Ch]
-
-			mov jmpAddr, 0x61DC23
-			jmp jmpAddr
-	}
-}
-
-void __declspec(naked)disp_crashfix()
+void __declspec(naked) Ret4()
 {
 	__asm ret 4
 }
 
 DWORD WINAPI Init(LPVOID)
 {
-	CIniReader iniReader("");
-	res_x = iniReader.ReadInteger("MAIN", "X", 0);
-	res_y = iniReader.ReadInteger("MAIN", "Y", 0);
+	auto pattern = hook::pattern("BF 94 00 00 00 8B C7");
+	if (!(pattern.size() > 0) && !bDelay)
+	{
+		bDelay = true;
+		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, NULL, 0, NULL);
+		return 0;
+	}
 
-	if (!res_x || !res_y) {
+	if (bDelay)
+	{
+		while (!(pattern.size() > 0))
+			pattern = hook::pattern("BF 94 00 00 00 8B C7");
+	}
+
+	CIniReader iniReader("");
+	Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
+	Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
+
+	if (!Screen.Width || !Screen.Height) {
 		HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
 		MONITORINFO info;
 		info.cbSize = sizeof(MONITORINFO);
 		GetMonitorInfo(monitor, &info);
-		res_x = info.rcMonitor.right - info.rcMonitor.left;
-		res_y = info.rcMonitor.bottom - info.rcMonitor.top;
+		Screen.Width = info.rcMonitor.right - info.rcMonitor.left;
+		Screen.Height = info.rcMonitor.bottom - info.rcMonitor.top;
 	}
 
-	if (*(DWORD *)0x6D151C == 32)
+	Screen.fWidth = static_cast<float>(Screen.Width);
+	Screen.fHeight = static_cast<float>(Screen.Height);
+	Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
+	Screen.Width43 = static_cast<uint32_t>(Screen.fHeight * (4.0f / 3.0f));
+	Screen.fWidth43 = static_cast<float>(Screen.Width43);
+
+	//ini res crash fix
+	pattern = hook::pattern("74 21 8B 4C 24 10 8B 54 24 0C 8B 74 24 08"); //0x62AC16
+	injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(0), 0xEB, true); 
+
+	//display crashfix
+	pattern = hook::pattern("E8 ? ? ? ? 8B 96 0C 0B 00 00 8D 8E 0C 0B 00 00 6A 00"); //0x58063B
+	injector::MakeCALL(pattern.get(0).get<uint32_t>(0), Ret4, true);
+
+	pattern = hook::pattern("89 96 2C 05 00 00 8B 41 18"); //0x62BC08 
+	struct SetResHook
 	{
-		CPatch::RedirectJump(0x62BBF0, patch_res);
-		CPatch::RedirectJump(0x62C1FB, patch_res2);
-		CPatch::RedirectCall(0x580560 + 0xDB, disp_crashfix);
-
-		while (!_ESI)
+		void operator()(injector::reg_pack& regs)
 		{
-			Sleep(0);
+			*(uint32_t*)(regs.esi + 0x528) = Screen.Width;
+			*(uint32_t*)(regs.esi + 0x52C) = Screen.Height;
 		}
+	}; injector::MakeInline<SetResHook>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(6));
 
-		pResolutionWidth = _ESI + 0x528;
-		pResolutionHeight = _ESI + 0x528 + 0x4;
-
-		CPatch::Nop(0x5792C4, 6);
-		CPatch::Nop(0x62FD14, 6);
-
-		CPatch::Nop(0x5792CD, 6);
-		CPatch::Nop(0x62FD58, 6);
-
-
-		CPatch::SetUInt(0x6D1514, res_x);
-		CPatch::SetUInt(0x6D1518, res_y);
-		CPatch::SetUInt(pResolutionWidth, res_x);
-		CPatch::SetUInt(pResolutionHeight, res_y);
-	} else
+	pattern = hook::pattern("8D 99 28 05 00 00 8B 49 24 53"); //0x62C1F2
+	struct SetResHook2
+	{
+		void operator()(injector::reg_pack& regs)
 		{
-			CPatch::RedirectJump(0x61D630, patch_res_rld);
-			CPatch::RedirectJump(0x61DC1B, patch_res2_rld);
-			CPatch::RedirectCall(0x5781D0 + 0xDB, disp_crashfix);
-
-			while (!_ESI)
-			{
-				Sleep(0);
-			}
-
-			pResolutionWidth = _ESI + 0x528;
-			pResolutionHeight = _ESI + 0x528 + 0x4;
-
-
-			CPatch::Nop(0x5714B4, 6);
-			CPatch::Nop(0x62164B, 6);
-
-			CPatch::Nop(0x5714BD, 6);
-			CPatch::Nop(0x62168F, 6);
-
-
-			CPatch::SetUInt(0x6B9B98, res_x);
-			CPatch::SetUInt(0x6B9B9C, res_y);
-			CPatch::SetUInt(pResolutionWidth, res_x);
-			CPatch::SetUInt(pResolutionHeight, res_y);
+			regs.ebx = regs.ecx + 0x528;
+			*(uint32_t*)(regs.ecx + 0x528) = Screen.Width;
+			*(uint32_t*)(regs.ecx + 0x52C) = Screen.Height;
 		}
+	}; injector::MakeInline<SetResHook2>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(6));
+
+
+	pattern = hook::pattern("89 0D ? ? ? ? 8B 56 04 89 15 ? ? ? ? 8B 4E 0C"); //0x5792C4
+
+	injector::WriteMemory(*pattern.get(0).get<uint32_t*>(2), Screen.Width, true);
+	injector::WriteMemory(*pattern.get(0).get<uint32_t*>(11), Screen.Height, true);
+
+	injector::MakeNOP(pattern.get(0).get<uint32_t>(0), 6, true);
+	injector::MakeNOP(pattern.get(0).get<uint32_t>(9), 6, true);
+
+	pattern = hook::pattern("8B D8 53 8D ? 24 10 68 ? ? ? ? ? E8"); //0x62FCD5
+	struct SetIniResHook
+	{
+		void operator()(injector::reg_pack& regs)
+		{
+			regs.ebx = Screen.Width;
+			regs.edx = regs.esp + 0x10;
+		}
+	}; injector::MakeInline<SetIniResHook>(pattern.get(1).get<uint32_t>(0), pattern.get(1).get<uint32_t>(7));
+	injector::WriteMemory<uint8_t>(pattern.get(1).get<uint32_t>(5), 0x53, true); //push ebx
+
+	struct SetIniResHook2
+	{
+		void operator()(injector::reg_pack& regs)
+		{
+			regs.ebx = Screen.Height;
+			regs.ecx = regs.esp + 0x10;
+		}
+	}; injector::MakeInline<SetIniResHook2>(pattern.get(2).get<uint32_t>(0), pattern.get(2).get<uint32_t>(7));
+	injector::WriteMemory<uint8_t>(pattern.get(2).get<uint32_t>(5), 0x53, true); //push ebx
+
 	return 0;
 }
-
-
-
 
 
 BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
 	if (reason == DLL_PROCESS_ATTACH)
 	{
-		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, NULL, 0, NULL);
+		Init(NULL);
 	}
 	return TRUE;
 }
-
