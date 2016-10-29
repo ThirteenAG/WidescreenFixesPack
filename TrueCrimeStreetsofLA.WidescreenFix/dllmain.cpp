@@ -66,15 +66,32 @@ DWORD WINAPI Init(LPVOID)
 	injector::MakeCALL(pattern.get(0).get<uint32_t>(0), Ret4, true);
 
 	pattern = hook::pattern("89 96 2C 05 00 00 8B 41 18"); //0x62BC08 
-	struct SetResHook
+	if (pattern.size() > 0)
 	{
-		void operator()(injector::reg_pack& regs)
+		struct SetResHook
 		{
-			*(uint32_t*)(regs.esi + 0x528) = Screen.Width;
-			*(uint32_t*)(regs.esi + 0x52C) = Screen.Height;
+			void operator()(injector::reg_pack& regs)
+			{
+				*(uint32_t*)(regs.esi + 0x528) = Screen.Width;
+				*(uint32_t*)(regs.esi + 0x52C) = Screen.Height;
+			}
+		}; injector::MakeInline<SetResHook>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(6));
+	}
+	else
+	{
+		pattern = hook::pattern("89 91 2C 05 00 00 8B 46 18 8B 50 04"); //0x61D630
+		if (pattern.size() > 0)
+		{
+			struct SetResHook
+			{
+				void operator()(injector::reg_pack& regs)
+				{
+					*(uint32_t*)(regs.ecx + 0x528) = Screen.Width;
+					*(uint32_t*)(regs.ecx + 0x52C) = Screen.Height;
+				}
+			}; injector::MakeInline<SetResHook>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(6));
 		}
-	}; injector::MakeInline<SetResHook>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(6));
-
+	}
 	pattern = hook::pattern("8D 99 28 05 00 00 8B 49 24 53"); //0x62C1F2
 	struct SetResHook2
 	{
