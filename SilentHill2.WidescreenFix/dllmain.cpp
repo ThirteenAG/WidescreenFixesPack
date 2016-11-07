@@ -372,11 +372,9 @@ DWORD WINAPI Init(LPVOID)
 
 	if (bFastTransitions)
 	{
-		pattern = hook::pattern("8B 15 ? ? ? ? 6A 15 52 8B 15 ? ? ? ? 52");
-		static uint32_t n640 = 640;
-		static uint32_t n480 = 480;
-		injector::WriteMemory(pattern.get(0).get<uint32_t>(2), &n640, true);
-		injector::WriteMemory(pattern.get(0).get<uint32_t>(11), &n480, true);
+		pattern = hook::pattern("C7 44 24 08 9A 99 99 3F");
+		injector::MakeNOP(pattern.get(0).get<uint32_t>(-2), 2, true);
+		injector::WriteMemory<float>(pattern.get(0).get<float*>(4), 0.5f, true);
 	}
 
 	if (bCreateLocalFix)
