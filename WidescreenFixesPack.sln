@@ -131,6 +131,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Onimusha3.WidescreenFix", "
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CallOfCthulhu.WidescreenFix", "CallOfCthulhu.WidescreenFix\CallOfCthulhu.WidescreenFix.vcxproj", "{B744568D-5047-44A9-80A0-8BBBB2597946}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "KingKong.WidescreenFix", "KingKong.WidescreenFix\KingKong.WidescreenFix.vcxproj", "{388CCB23-72B4-44F1-89F9-99AC34143597}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -531,6 +533,14 @@ Global
 		{B744568D-5047-44A9-80A0-8BBBB2597946}.Release|x64.Build.0 = Release|x64
 		{B744568D-5047-44A9-80A0-8BBBB2597946}.Release|x86.ActiveCfg = Release|Win32
 		{B744568D-5047-44A9-80A0-8BBBB2597946}.Release|x86.Build.0 = Release|Win32
+		{388CCB23-72B4-44F1-89F9-99AC34143597}.Debug|x64.ActiveCfg = Debug|x64
+		{388CCB23-72B4-44F1-89F9-99AC34143597}.Debug|x64.Build.0 = Debug|x64
+		{388CCB23-72B4-44F1-89F9-99AC34143597}.Debug|x86.ActiveCfg = Debug|Win32
+		{388CCB23-72B4-44F1-89F9-99AC34143597}.Debug|x86.Build.0 = Debug|Win32
+		{388CCB23-72B4-44F1-89F9-99AC34143597}.Release|x64.ActiveCfg = Release|x64
+		{388CCB23-72B4-44F1-89F9-99AC34143597}.Release|x64.Build.0 = Release|x64
+		{388CCB23-72B4-44F1-89F9-99AC34143597}.Release|x86.ActiveCfg = Release|Win32
+		{388CCB23-72B4-44F1-89F9-99AC34143597}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
