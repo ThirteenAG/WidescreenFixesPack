@@ -90,6 +90,7 @@ DWORD WINAPI Init(LPVOID)
 	char *szForceAspectRatio = iniReader.ReadString("MAIN", "ForceAspectRatio", "auto");
 	static bool bFullscreenFMVs = iniReader.ReadInteger("MAIN", "FullscreenFMVs", 1) != 0;
 	static float fMouseSensitivityFactor = iniReader.ReadFloat("MAIN", "MouseSensitivityFactor", 0.0f);
+	static float fFOVFactor = iniReader.ReadFloat("MAIN", "FOVFactor", 0.0f);
 
 	if (strncmp(szForceAspectRatio, "auto", 4) != 0)
 	{
@@ -126,6 +127,12 @@ DWORD WINAPI Init(LPVOID)
 				Screen.fAspectRatio = Screen.fCustomAspectRatioHor / Screen.fCustomAspectRatioVer;
 				Screen.fHudScale = Screen.fCustomAspectRatioVer / Screen.fCustomAspectRatioHor;
 				Screen.fFieldOfView = 1.0f * (((4.0f / 3.0f)) / (Screen.fAspectRatio));
+				Screen.fCutOffArea = 0.5f / Screen.fFieldOfView;
+			}
+
+			if (fFOVFactor)
+			{
+				Screen.fFieldOfView /= fFOVFactor;
 				Screen.fCutOffArea = 0.5f / Screen.fFieldOfView;
 			}
 		}
