@@ -41,7 +41,6 @@ LONG WINAPI RegQueryValueExAHook(HKEY hKey, LPCTSTR lpValueName, LPDWORD lpReser
 	return RegQueryValueExA(hKey, lpValueName, lpReserved, lpType, lpData, lpcbData);
 }
 
-
 LONG WINAPI RegOpenKeyExAHook(HKEY hKey, LPCTSTR lpSubKey, DWORD ulOptions, REGSAM  samDesired, PHKEY phkResult)
 {
 	if (strstr(lpSubKey, "KONAMI"))
@@ -148,6 +147,7 @@ DWORD WINAPI Init(LPVOID)
 	uint32_t nStatusScreenRes = iniReader.ReadInteger("MISC", "StatusScreenRes", 512);
 	uint32_t nShadowsRes = iniReader.ReadInteger("MISC", "ShadowsRes", 1024);
 	uint32_t nDOFRes = iniReader.ReadInteger("MISC", "DOFRes", 1024);
+	bool bFrameRateFluctuationFix = iniReader.ReadInteger("MISC", "FrameRateFluctuationFix", 1) != 0;
 
 	if (!Screen.Width || !Screen.Height) {
 		HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
@@ -440,6 +440,12 @@ DWORD WINAPI Init(LPVOID)
 		injector::WriteMemory(dword_6B1444 - 2, nDOFRes, true); //otherworld corrosion resolution
 		injector::WriteMemory(dword_6B1444 + 2, nDOFRes, true);
 		injector::WriteMemory(dword_6B1444 + 3, nDOFRes, true);
+	}
+
+	if (bFrameRateFluctuationFix)
+	{
+		pattern = hook::pattern("4A 03 C8 A3 ? ? ? ? 89 15"); //41B5D1
+		injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(0), 0x42, true);
 	}
 	return 0;
 }

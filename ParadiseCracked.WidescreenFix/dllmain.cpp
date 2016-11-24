@@ -1,74 +1,102 @@
 #include "..\includes\stdafx.h"
-#include "..\includes\CPatch.h"
+#include "..\includes\hooking\Hooking.Patterns.h"
 
 HWND hWnd;
+bool bDelay;
 
-int res_x;
-int res_y;
-
-int view_stretch_address = 0x61F0B4;
-float view_stretch;
-
-void Init()
+struct Screen
 {
-	CIniReader iniReader("");
-	res_x = iniReader.ReadInteger("MAIN", "X", 0);
-	res_y = iniReader.ReadInteger("MAIN", "Y", 0);
+	int Width;
+	int Height;
+	float fWidth;
+	float fHeight;
+	float fAspectRatio;
+} Screen;
 
-	if (!res_x || !res_y) {
+DWORD WINAPI Init(LPVOID)
+{
+	auto pattern = hook::pattern("83 EC 58 53 56 57 89 65 E8");
+	if (!(pattern.size() > 0) && !bDelay)
+	{
+		bDelay = true;
+		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, NULL, 0, NULL);
+		return 0;
+	}
+
+	if (bDelay)
+	{
+		while (!(pattern.size() > 0))
+			pattern = hook::pattern("83 EC 58 53 56 57 89 65 E8");
+	}
+
+	CIniReader iniReader("");
+	Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
+	Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
+
+	if (!Screen.Width || !Screen.Height) {
 		HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
 		MONITORINFO info;
 		info.cbSize = sizeof(MONITORINFO);
 		GetMonitorInfo(monitor, &info);
-		res_x = info.rcMonitor.right - info.rcMonitor.left;
-		res_y = info.rcMonitor.bottom - info.rcMonitor.top;
+		Screen.Width = info.rcMonitor.right - info.rcMonitor.left;
+		Screen.Height = info.rcMonitor.bottom - info.rcMonitor.top;
 	}
 
-	if (!(*(float *)view_stretch_address == 0.75f)) // Currently works only for 1.06.001
-		return;
+	Screen.fWidth = static_cast<float>(Screen.Width);
+	Screen.fHeight = static_cast<float>(Screen.Height);
+	Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
 
-	//fixing menu
-	CPatch::SetUInt(0x483F0C, res_x);
-	CPatch::SetUInt(0x484130, res_x);
-	CPatch::SetUInt(0x48D9B8, res_x);
-	CPatch::SetUInt(0x48D9CD, res_x);
+	pattern = hook::pattern("68 58 02 00 00 68 20 03 00 00");
+	injector::WriteMemory(pattern.get(0).get<uint32_t>(1), Screen.Width, true);
+	injector::WriteMemory(pattern.get(0).get<uint32_t>(6), Screen.Height, true);
 
-	CPatch::SetUInt(0x483F13, res_y);
-	CPatch::SetUInt(0x48413A, res_y);
-	CPatch::SetUInt(0x48D9C0, res_y);
-	CPatch::SetUInt(0x48D9D6, res_y);
+	pattern = hook::pattern("BE 20 03 00 00");
+	for (size_t i = 0; i < pattern.size(); ++i)
+	{
+		injector::WriteMemory(pattern.get(i).get<uint32_t>(1), Screen.Width, true);
+	}
+	pattern = hook::pattern("BF 58 02 00 00");
+	for (size_t i = 0; i < pattern.size(); ++i)
+	{
+		injector::WriteMemory(pattern.get(i).get<uint32_t>(1), Screen.Height, true);
+	}
 
-	//fixing game
-	CPatch::SetUChar(0x48D92E, 0xEB);
-	CPatch::SetUInt(0x48D925, res_x);
-	CPatch::SetUInt(0x48D92A, res_y);
+	pattern = hook::pattern("74 22 48 75 25 68");
+	injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(0), 0xEB, true);
 
-	/*CPatch::SetPointer(0x43A019 + 0x1, &res_x);
-	CPatch::SetPointer(0x43A01F + 0x1, &res_y);
+	pattern = hook::pattern("83 7D F0 02 75 ? 8B 45 08");
+	injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(4), 0xEB, true);
+	
 
-	//CPatch::SetPointer(0x439B5A + 0x1, &res_x);
-	//CPatch::SetPointer(0x439B6D + 0x1, &res_y);
+	pattern = hook::pattern("C7 45 D0 20 03 00 00");
+	for (size_t i = 0; i < pattern.size(); ++i)
+	{
+		injector::WriteMemory(pattern.get(i).get<uint32_t>(3), Screen.Width, true);
+	}
 
-	//CPatch::SetPointer(0x439C89 + 0x1, &res_x);
-	//CPatch::SetPointer(0x439C91 + 0x1, &res_y);
+	pattern = hook::pattern("C7 45 D4 58 02 00 00");
+	for (size_t i = 0; i < pattern.size(); ++i)
+	{
+		injector::WriteMemory(pattern.get(i).get<uint32_t>(3), Screen.Height, true);
+	}
 
-	CPatch::SetPointer(0x45FB8A + 0x2, &res_x);
-	CPatch::SetPointer(0x45FBCE + 0x2, &res_x);
-	CPatch::SetPointer(0x45FBC8 + 0x2, &res_y);
+	pattern = hook::pattern("C7 85 5C FF FF FF 20 03 00 00");
+	injector::WriteMemory(pattern.get(0).get<uint32_t>(6), Screen.Width, true);
+	pattern = hook::pattern("C7 85 60 FF FF FF 58 02 00 00");
+	injector::WriteMemory(pattern.get(0).get<uint32_t>(6), Screen.Height, true);
 
-	//CPatch::SetPointer(0x439B02 + 0x2, &res_x);
-	//CPatch::SetPointer(0x439B19 + 0x2, &res_y);*/
-
-	view_stretch = (static_cast<float>(res_y) / static_cast<float>(res_x));
-
-	CPatch::SetFloat(view_stretch_address, view_stretch);
+	Screen.fAspectRatio = (Screen.fHeight / Screen.fWidth);
+	pattern = hook::pattern("D9 05 ? ? ? ? 83 EC 10 D9 5C 24 0C");
+	injector::WriteMemory<float>(*pattern.get(0).get<uint32_t*>(2), Screen.fAspectRatio, true);
+	return 0;
 }
+
 
 BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
 	if (reason == DLL_PROCESS_ATTACH)
 	{
-		Init();
+		Init(NULL);
 	}
 	return TRUE;
 }

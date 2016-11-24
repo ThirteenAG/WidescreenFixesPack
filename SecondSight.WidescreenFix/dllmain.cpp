@@ -1,77 +1,85 @@
 #include "..\includes\stdafx.h"
-#include "..\includes\CPatch.h"
+#include "..\includes\hooking\Hooking.Patterns.h"
 
 HWND hWnd;
+bool bDelay;
 
-int res_x;
-int res_y;
-float fAspectRatio;
-float FovMultiplier;
-
-DWORD jmpAddr = 0x40F2B8;
-DWORD _EAX;
-void __declspec(naked) asm_patch_x()
+struct Screen
 {
-	_asm
-	{		
-		mov _EAX, eax
-		mov eax, res_x
-		mov dword ptr ds : 0x74B4F4, eax //scr_width
-		mov eax, _EAX
-		jmp jmpAddr
-	}
-}
+	int Width;
+	int Height;
+	float fWidth;
+	float fHeight;
+	float fFieldOfView;
+	float fAspectRatio;
+} Screen;
 
-DWORD jmpAddr2 = 0x40F2D2;
-void __declspec(naked) asm_patch_y()
+DWORD WINAPI Init(LPVOID)
 {
-	_asm
+	auto pattern = hook::pattern("BF 94 00 00 00 8B C7");
+	if (!(pattern.size() > 0) && !bDelay)
 	{
-		mov _EAX, eax
-		mov eax, res_y
-		mov dword ptr ds : 0x74B4F8, eax //scr_width
-		mov eax, _EAX
-		jmp jmpAddr2
+		bDelay = true;
+		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, NULL, 0, NULL);
+		return 0;
 	}
-}
 
-void Init()
-{
+	if (bDelay)
+	{
+		while (!(pattern.size() > 0))
+			pattern = hook::pattern("BF 94 00 00 00 8B C7");
+	}
+
 	CIniReader iniReader("");
-	res_x = iniReader.ReadInteger("MAIN", "ResX", 0);
-	res_y = iniReader.ReadInteger("MAIN", "ResY", 0);
-	FovMultiplier = iniReader.ReadFloat("MAIN", "FOVMultiplier", 0.5f);
-	if (!FovMultiplier) { FovMultiplier = 0.5f; }
+	Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
+	Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
+	Screen.fFieldOfView = iniReader.ReadFloat("MAIN", "FOVFactor", 0.5f);
 
-	if (!res_x || !res_y) {
+	if (!Screen.Width || !Screen.Height) {
 		HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
 		MONITORINFO info;
 		info.cbSize = sizeof(MONITORINFO);
 		GetMonitorInfo(monitor, &info);
-		res_x = info.rcMonitor.right - info.rcMonitor.left;
-		res_y = info.rcMonitor.bottom - info.rcMonitor.top;
+		Screen.Width = info.rcMonitor.right - info.rcMonitor.left;
+		Screen.Height = info.rcMonitor.bottom - info.rcMonitor.top;
 	}
 
-	CPatch::RedirectJump(0x40F2B3, asm_patch_x);
-	CPatch::RedirectJump(0x40F2CD, asm_patch_y);
+	Screen.fWidth = static_cast<float>(Screen.Width);
+	Screen.fHeight = static_cast<float>(Screen.Height);
+	Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
 
-	//stretching
-	fAspectRatio = 0.25f * (static_cast<float>(res_x) / static_cast<float>(res_y));
-	CPatch::SetPointer(0x43D26B + 0x2, &fAspectRatio);
+	pattern = hook::pattern("A3 ? ? ? ? E8 ? ? ? ? 50 E8 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? A3 ? ? ? ? E8 ? ? ? ? 83 C4 44"); //0x40F2CD
+	static auto pResY = *pattern.get(0).get<uint32_t*>(1);
+	struct ResHook
+	{
+		void operator()(injector::reg_pack& regs)
+		{
+			*(pResY - 1) = Screen.Width;
+			*(pResY - 0) = Screen.Height;
+		}
+	}; injector::MakeInline<ResHook>(pattern.get(0).get<uint32_t>(0));
 
-	//FOV
-	CPatch::SetPointer(0x5E4B08 + 0x2, &FovMultiplier);
+	static float fARFactor = 0.25f * Screen.fAspectRatio;
+	pattern = hook::pattern("D8 0D ? ? ? ? 51 DB 05 ? ? ? ? 8B");
+	injector::WriteMemory(pattern.get(1).get<uint32_t>(2), &fARFactor); //0x43D26B
 
-	//HUD and 2D elements
-	CPatch::SetFloat(0x55BEB0, (static_cast<float>(res_x) / static_cast<float>(res_y)));
-	CPatch::SetFloat(0x71C714, (static_cast<float>(res_x) / static_cast<float>(res_y)));
+	pattern = hook::pattern("D8 0D ? ? ? ? 33 C9 D9 44 24 14 89 48 04 D8 64 24 10");
+	injector::WriteMemory(pattern.get(0).get<uint32_t>(2), &Screen.fFieldOfView); //0x5E4B08
+
+	pattern = hook::pattern("68 ? ? ? ? 52 E8 ? ? ? ? 8D 44 24 60 83");
+	injector::WriteMemory<float>(pattern.get(0).get<uint32_t>(1), Screen.fAspectRatio, true); //0x55BEB0
+	pattern = hook::pattern("D8 0D ? ? ? ? D9 9C 24 88 00 00 00 E8");
+	injector::WriteMemory<float>(*pattern.get(0).get<uint32_t*>(2), Screen.fAspectRatio, true); //0x71C714
+
+	return 0;
 }
+
 
 BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
 	if (reason == DLL_PROCESS_ATTACH)
 	{
-		Init();
+		Init(NULL);
 	}
 	return TRUE;
 }

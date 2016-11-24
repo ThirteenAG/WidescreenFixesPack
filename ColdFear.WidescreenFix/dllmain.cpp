@@ -219,7 +219,7 @@ void __cdecl sub_42B900(float a1, float a2, float a3, float a4, int a5) //fmv
 
 	_sub_42B740(0.0f, 0.0f, Screen.fWidth, Screen.fHeight + 500.0f, 0xff000000, 0, 0);
 
-	a1 = (a1 / Screen.fHudScaleX) + (Screen.fHudOffset * (Screen.fWidth / 640.f));
+	a1 = (a1 / Screen.fHudScaleX) + (Screen.fHudOffset * (Screen.fWidth / 640.0f));
 	a3 = (a3 / Screen.fHudScaleX);
 
 	if (nFMVWidescreenMode && FMV == 0x5F564D46) //"FMV_"
@@ -282,7 +282,7 @@ DWORD WINAPI Init(LPVOID)
 	Screen.fHeight = static_cast<float>(Screen.Height);
 	Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
 	Screen.fHudScaleX = (480.0f * Screen.fAspectRatio) / 640.0f;
-	Screen.fHudOffset = ((Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f) / (Screen.fWidth / 640.f);
+	Screen.fHudOffset = ((Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f) / (Screen.fWidth / 640.0f);
 	fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(fScreenFieldOfViewVStd * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
 	if (Screen.fAspectRatio < (16.0f / 9.0f))
 	{
@@ -362,8 +362,8 @@ DWORD WINAPI Init(LPVOID)
 			*(uintptr_t*)(regs.ebp + 0x18) = regs.eax;
 			regs.ebx = *(uintptr_t*)(regs.ebp - 0x4);
 
-			*(float*)(regs.esi + 0x10) = ((*(float*)(regs.esi + 0x10)) / Screen.fHudScaleX) + (Screen.fHudOffset * (Screen.fWidth / 640.f));
-			*(float*)(regs.esi + 0x18) = ((*(float*)(regs.esi + 0x18)) / Screen.fHudScaleX) + (Screen.fHudOffset * (Screen.fWidth / 640.f));
+			*(float*)(regs.esi + 0x10) = ((*(float*)(regs.esi + 0x10)) / Screen.fHudScaleX) + (Screen.fHudOffset * (Screen.fWidth / 640.0f));
+			*(float*)(regs.esi + 0x18) = ((*(float*)(regs.esi + 0x18)) / Screen.fHudScaleX) + (Screen.fHudOffset * (Screen.fWidth / 640.0f));
 		}
 	}; injector::MakeInline<sub_42BBA0Hook>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(6)); //0x42BC7B, 0x42BC7B + 6
 
