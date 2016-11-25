@@ -61,11 +61,11 @@ DWORD WINAPI Init(LPVOID)
 
 	static float fARFactor = 0.25f * Screen.fAspectRatio;
 	pattern = hook::pattern("D8 0D ? ? ? ? 51 DB 05 ? ? ? ? 8B");
-	injector::WriteMemory(pattern.get(1).get<uint32_t>(2), &fARFactor); //0x43D26B
-
+	injector::WriteMemory(pattern.get(1).get<uint32_t>(2), &fARFactor, true); //0x43D26B
+	
 	pattern = hook::pattern("D8 0D ? ? ? ? 33 C9 D9 44 24 14 89 48 04 D8 64 24 10");
-	injector::WriteMemory(pattern.get(0).get<uint32_t>(2), &Screen.fFieldOfView); //0x5E4B08
-
+	injector::WriteMemory(pattern.get(0).get<uint32_t>(2), &Screen.fFieldOfView, true); //0x5E4B08
+	
 	pattern = hook::pattern("68 ? ? ? ? 52 E8 ? ? ? ? 8D 44 24 60 83");
 	injector::WriteMemory<float>(pattern.get(0).get<uint32_t>(1), Screen.fAspectRatio, true); //0x55BEB0
 	pattern = hook::pattern("D8 0D ? ? ? ? D9 9C 24 88 00 00 00 E8");
