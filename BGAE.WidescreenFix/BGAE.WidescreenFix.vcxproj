@@ -148,6 +148,12 @@
     <ClCompile Include="..\includes\hooking\Hooking.Patterns.cpp" />
     <ClCompile Include="dllmain.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\includes\resources\WidescreenFix.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\includes\resources\resource.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

@@ -173,6 +173,9 @@
     <ClInclude Include="..\includes\GTA\CDraw.h" />
     <ClInclude Include="..\includes\GTA\global.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\includes\resources\WidescreenFix.rc" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
