@@ -1,75 +1,56 @@
-#include <iostream>
-#include <string>
-#include "..\IniReader.h"
-#include "..\injector\injector.hpp"
-#include "..\injector\calling.hpp"
-#include "..\injector\hooking.hpp"
-#include "..\injector\assembly.hpp"
+#include "..\stdafx.h"
+#include <string> 
+#include "CDraw.h"
+#include "CCamera.h"
 
-#include "..\GTA\RenderWare.h"
-#include "..\GTA\game.h"
-#include "..\GTA\CDraw.h"
-#include "..\GTA\CCamera.h"
-#include "..\GTA\CRGBA.h"
-#include "..\GTA\CRect.h"
+#pragma pack(push, 1)
+class CRGBA
+{
+public:
+	union {
+		unsigned int colorInt;
+		struct {
+			unsigned char red, green, blue, alpha;
+		};
+	};
 
-HWND hWnd;
-int ResX, ResY;
+	inline CRGBA(unsigned char r, unsigned char g, unsigned char b, unsigned char a = 255)
+		: red(r), green(g), blue(b), alpha(a)
+	{}
+	inline CRGBA() {}
+};
+#pragma pack(pop)
 
-RsGlobalType* RsGlobal;
-float fCustomAspectRatioHor, fCustomAspectRatioVer;
-float fEmergencyVehiclesFix;
-float fvcLogoScale;
-float fScreenAspectRatioAcd = SCREEN_AR_ACADEMY;
-float fInvScreenAspectRatioAcd = 1.0f / SCREEN_AR_ACADEMY;
-float fScreenFieldOfViewHStd = SCREEN_FOV_HORIZONTAL;
-float fScreenFieldOfViewVStd = SCREEN_FOV_VERTICAL;
+#pragma pack(push, 4)
+class CRect
+{
+public:
+	float m_fLeft;          // x1
+	float m_fBottom;        // y1
+	float m_fRight;         // x2
+	float m_fTop;           // y2
 
-float fWideScreenWidthRatio, fWideScreenHeightRatio;
-float fWideScreenWidthPerc, fWideScreenHeightPerc;
-float fWideScreenWidthDiff, fWideScreenHeightDiff;
-float fWideScreenWidthMult, fWideScreenHeightMult;
-float fWideScreenWidthScaleUp, fWideScreenHeightScaleUp;
-float fWideScreenWidthScaleMid, fWideScreenHeightScaleMid;
-float fWideScreenWidthScaleDown, fWideScreenHeightScaleDown;
-float fWideScreenWidthScaled, fWideScreenHeightScaled;
-float fWideScreenWidthScaledInv, fWideScreenHeightScaledInv;
-float fDynamicScreenFieldOfViewScale;
+	inline CRect() {}
+	inline CRect(float a, float b, float c, float d)
+		: m_fLeft(a), m_fBottom(b), m_fRight(c), m_fTop(d)
+	{}
+};
+#pragma pack(pop)
 
-float fHudWidthScale, fHudHeightScale;
-float fCustomWideScreenWidthScaleDown;
-float fCustomWideScreenHeightScaleDown;
-float fRadarWidthScale, fCustomRadarWidthScale, fCustomRadarRingWidthScale, fCustomRadarRingHeightScale, fSubtitlesScale;
-float fCrosshairHeightScaleDown;
-float fMVLScopeFix;
-int SelectedMultisamplingLevels;
-int RestoreCutsceneFOV;
-float fPlayerMarkerPos;
-float fCarSpeedDependantFOV;
-int DontTouchFOV;
-int NoLoadingBarFix;
-float fRadarScaling;
-char *szForceAspectRatio;
-char *szFOVControl;
-int FOVControl;
-float fFOVControlValue;
-int AspectRatioWidth, AspectRatioHeight;
-int HideAABug, SmartCutsceneBorders, nMenuFix, nMenuAlignment;
-float gtaLogo128Coord1, gtaLogo128Coord2;
-int IVRadarScaling, ReplaceTextShadowWithOutline;
-float fTextShadowsSize;
+struct RsGlobalType
+{
+	char *AppName;
+	int MaximumWidth;
+	int MaximumHeight;
+	int frameLimit;
+	int quit;
+	int ps;
+	/**/
+};
 
-float fCustomRadarWidthIV = 102.0f;
-float fCustomRadarHeightIV = 79.0f;
-float fCustomRadarPosXIV = 109.0f;
-float fCustomRadarPosYIV = 107.0f;
-float fCustomRadarRingWidthIV = 101.0f;
-float fCustomRadarRingHeightIV = 83.0f;
-float fCustomRadarRingPosXIV = 98.0f;
-float fCustomRadarRingPosYIV = 109.5f;
-float fCustomRadarRingPosXIV2 = fCustomRadarRingPosXIV - 19.0f;
-void IVRadar();
-
-DWORD bWideScreen, BordersVar1, BordersVar2, IsInCutscene;
-int(__cdecl* CSprite2dDrawRect)(class CRect const &, class CRGBA const &);
-int(__cdecl* FindPlayerVehicle)();
+struct RwV3d
+{
+	float x;
+	float y;
+	float z;
+};

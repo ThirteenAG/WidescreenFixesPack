@@ -1,15 +1,13 @@
-#include <Windows.h>
-#include "..\injector\injector.hpp"
+#include "..\stdafx.h"
 #include "CCamera.h"
-#include "CDraw.h"
-#include "CRect.h"
-#include "CRGBA.h"
-#include "RenderWare.h"
-#include "game.h"
+#include "common.h"
+
 extern RsGlobalType* RsGlobal;
-extern int HideAABug, SmartCutsceneBorders;
 extern int(__cdecl* CSprite2dDrawRect)(class CRect const &, class CRGBA const &);
-extern DWORD bWideScreen, BordersVar1, BordersVar2, BordersVar3;
+extern uint32_t nHideAABug;
+extern bool* bWideScreen;
+extern uint32_t* BordersVar1;
+extern uint32_t* BordersVar2;
 
 void GetScreenRect(CRect& rect)
 {
@@ -40,7 +38,7 @@ void Hide1pxAABug()
 {
 	CSprite2dDrawRect(CRect(0.0f, -5.0f, (float)RsGlobal->MaximumWidth, 0.5f), CRGBA(0, 0, 0, 255));
 	CSprite2dDrawRect(CRect(-5.0f, -1.0f, 0.5f, (float)RsGlobal->MaximumHeight), CRGBA(0, 0, 0, 255));
-	if (HideAABug == 2)
+	if (nHideAABug == 2)
 	{
 		CSprite2dDrawRect(CRect(0.0f, (float)RsGlobal->MaximumHeight - 1.5f, (float)RsGlobal->MaximumWidth, (float)RsGlobal->MaximumHeight + 5.0f), CRGBA(0, 0, 0, 255));
 		CSprite2dDrawRect(CRect((float)RsGlobal->MaximumWidth - 1.0f, 0.0f, (float)RsGlobal->MaximumWidth + 5.0f, (float)RsGlobal->MaximumHeight + 5.0f), CRGBA(0, 0, 0, 255));
@@ -49,7 +47,7 @@ void Hide1pxAABug()
 
 void CCamera::DrawBordersForWideScreen()
 {
-	if (!*(char*)bWideScreen == 0)
+	if (*bWideScreen == false)
 		return;
 
 	CRect		ScreenRect;
@@ -61,8 +59,8 @@ void CCamera::DrawBordersForWideScreen()
 
 	GetScreenRect(ScreenRect);
 
-		if (!*(DWORD*)BordersVar1 || *(float*)BordersVar1 == 2)
-			*(DWORD*)BordersVar2 = 80;
+		if (!*BordersVar1 || *BordersVar1 == 2)
+			*BordersVar2 = 80;
 
 	// Letterbox
 	if (ScreenRect.m_fBottom > 0.0 && ScreenRect.m_fTop > 0.0)

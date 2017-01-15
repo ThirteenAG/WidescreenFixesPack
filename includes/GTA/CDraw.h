@@ -8,5 +8,4 @@ public:
 
 	static void CalculateAspectRatio();
 	static void SetFOV(float);
-	static void EmergencyVehiclesFix();
 };

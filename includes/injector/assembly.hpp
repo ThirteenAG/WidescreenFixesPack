@@ -34,6 +34,7 @@
 #endif
 
 //
+#include <memory>
 #include "injector.hpp"
 
 namespace injector
@@ -152,14 +153,14 @@ namespace injector
     template<uintptr_t at, uintptr_t end, class FuncT>
     void MakeInline(FuncT func)
     {
-        static FuncT static_func = func;    // Stores the func object
-        static_func = func;                 //
+        static std::unique_ptr<FuncT> static_func;
+        static_func.reset(new FuncT(std::move(func)));
 
         // Encapsulates the call to static_func
         struct Caps
         {
             void operator()(reg_pack& regs)
-            { static_func(regs); }
+            { (*static_func)(regs); }
         };
 
         // Does the actual MakeInline
