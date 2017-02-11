@@ -2,13 +2,15 @@ echo off
 RD /S /Q ".\Archives"
 rem Copying asi loader
 setlocal enabledelayedexpansion
-FOR /R ".\" %%F IN (*.dll) DO (
+FOR /R ".\" %%F IN (*.tmp) DO (
 findstr /c:"loadfromscriptsonly" "%%F" >nul 2>&1
 if errorlevel 1 (
     echo String not found...
 ) else (
-    echo "%%F"
-	copy "..\..\Ultimate-ASI-Loader\bin\Release\dinput8.dll" "%%F"
+   SET filepath=%%F
+   SET dll=!filepath:.tmp=.dll!
+   ECHO !dll! 	
+   copy "..\..\Ultimate-ASI-Loader\bin\Release\dinput8.dll" !dll!
 )
 )
 

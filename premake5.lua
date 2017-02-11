@@ -26,6 +26,17 @@ workspace "WidescreenFixesPack"
    includedirs { "external/injector/include" }
    includedirs { "external/inireader" }
    
+   pbcommands = { 
+      "setlocal EnableDelayedExpansion",
+	  --"set \"path=" .. (gamepath) .. "\"",
+      "set file=$(TargetPath)",
+      "FOR %%i IN (\"%file%\") DO (",
+      "set filename=%%~ni",
+      "set fileextension=%%~xi",
+      "set target=!path!!filename!!fileextension!",
+      "if exist \"!target!\" copy /y \"!file!\" \"!target!\"",
+      ")" }
+   
    filter "configurations:Debug"
       defines "DEBUG"
       symbols "On"
@@ -71,6 +82,9 @@ project "SecondSight.WidescreenFix"
 project "SilentHill2.WidescreenFix"
 project "SilentHill3.WidescreenFix"
 project "SilentHill4.WidescreenFix"
+   gamepath = { "set \"path=Z:/WFP/Games/Silent Hill/Silent Hill 4 The Room/scripts/\"" }
+   table.insert(gamepath, pbcommands)
+   postbuildcommands (gamepath)
 project "SniperElite.WidescreenFix"
 project "SonicHeroes.WidescreenFix"
 project "SplinterCell.WidescreenFix"
