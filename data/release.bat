@@ -17,7 +17,7 @@ if errorlevel 1 (
 rem Creating archives
 
 FOR /d %%X IN (*) DO (
-7za a -tzip "Archives\%%X.zip" "%%X\" -r -xr^^!Archives -x^^!*.pdb -x^^!*.db -x^^!*.ipdb -x^^!*.iobj
+7za a -tzip "Archives\%%X.zip" "%%X\" -r -xr^^!Archives -x^^!*.pdb -x^^!*.db -x^^!*.ipdb -x^^!*.iobj -x^^!*.tmp
 )
 EXIT
 
