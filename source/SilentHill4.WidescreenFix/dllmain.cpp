@@ -203,11 +203,11 @@ DWORD WINAPI Init(LPVOID)
 		//Cutscene Borders
 		static float fBorderWidth = 4096.0f;
 		pattern = hook::pattern("DB 05 ? ? ? ? D9 5C 24 08 DB 05 ? ? ? ? D9 5C 24 04 DB 05 ? ? ? ? D9 1C 24"); //0x4F4926
-		injector::WriteMemory(pattern.get(0).get<uint32_t>(2), &fBorderWidth, true);
-		injector::WriteMemory(pattern.get(1).get<uint32_t>(2), &fBorderWidth, true);
+		//injector::WriteMemory(pattern.get(0).get<uint32_t>(2), &fBorderWidth, true);
+		//injector::WriteMemory(pattern.get(1).get<uint32_t>(2), &fBorderWidth, true);
 		static float fBorderPosX = -2048.0f;
-		injector::WriteMemory(pattern.get(0).get<uint32_t>(22), &fBorderPosX, true);
-		injector::WriteMemory(pattern.get(1).get<uint32_t>(22), &fBorderPosX, true);
+		//injector::WriteMemory(pattern.get(0).get<uint32_t>(22), &fBorderPosX, true);
+		//injector::WriteMemory(pattern.get(1).get<uint32_t>(22), &fBorderPosX, true);
 
 		//Map Zoom
 		static float fMapZoom = (0.5f / ((4.0f / 3.0f) / (Screen.fAspectRatio)));
