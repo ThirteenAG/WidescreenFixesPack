@@ -75,11 +75,22 @@ void __cdecl FMVHook(float X1, float Y1, float X2, float Y2, float a5, float a6,
 	return hbFMV.fun(X1, Y1, X2, Y2, a5, a6, a7, a8, a9, a10);
 }
 
-injector::hook_back<void(__cdecl*)(float, float, float, float, float, float, float, float, float, float)> hbOverlay1;
-void __cdecl Overlay1Hook(float X1, float Y1, float X2, float Y2, float a5, float a6, float a7, float a8, float a9, float a10)
+injector::hook_back<void(__cdecl*)(float, float, float, float, float, float, float, float, float, float)> hbOverlayIntro;
+void __cdecl OverlayIntroHook(float X1, float Y1, float X2, float Y2, float a5, float a6, float a7, float a8, float a9, float a10)
 {
-	float fOffset = 0.0f - ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
-	return hbOverlay1.fun(fOffset, Y1, Screen.fWidth, Y2, a5, a6, a7, a8, a9, a10);
+	float fOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
+	hbOverlayIntro.fun(X1 - fOffset, Y1, X2 + fOffset, Y2, a5, a6, a7, a8, a9, a10);
+}
+
+injector::hook_back<void(__cdecl*)(float, float, float, float, float, float, float, float, float, float)> hbOverlays;
+void __cdecl OverlaysHook(float X1, float Y1, float X2, float Y2, float a5, float a6, float a7, float a8, float a9, float a10)
+{
+
+	float fOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
+	if ((X1 == 0.0f) && (X2 == 640.0f || X2 == 512.0f))
+		return hbOverlays.fun(X1 - fOffset, Y1, X2 + (fOffset * 2.0f), Y2, a5, a6, a7, a8, a9, a10);
+	else
+		return hbOverlays.fun(X1, Y1, X2, Y2, a5, a6, a7, a8, a9, a10);
 }
 
 DWORD WINAPI Init(LPVOID)
@@ -185,16 +196,38 @@ DWORD WINAPI Init(LPVOID)
 
 		//FMV
 		pattern = hook::pattern("E8 ? ? ? ? 8B 14 B5 ? ? ? ? A1"); //0x412EAF
-		hbFMV.fun = injector::MakeCALL(pattern.get(0).get<uint32_t>(0), FMVHook).get();
+		hbFMV.fun = injector::MakeCALL(pattern.get(0).get<uint32_t>(0), FMVHook, true).get();
 
 		//Width
+		//sub_563BF0
+		auto sub_563BF0 = (uint32_t)hook::pattern("8B 44 24 04 53 8B 5C 24 18 55 8B").get(0).get<uint32_t>(0);
+		pattern = hook::pattern("E8 ? ? ? ?");
+		for (size_t i = 0, j = 1; i < pattern.size(); ++i)
+		{
+			auto addr = pattern.get(i).get<uint32_t>(0);
+			auto dest = injector::GetBranchDestination(addr, true).as_int();
+			if (dest == sub_563BF0)
+			{
+				j++;
+
+				if (j == 33) //menu
+					continue;
+
+				if (j < 44 || j > 48) //http://pastebin.com/Hv6TdTLh
+					hbOverlays.fun = injector::MakeCALL(pattern.get(i).get<uint32_t>(0), OverlaysHook, true).get();
+				else
+					hbOverlayIntro.fun = injector::MakeCALL(pattern.get(i).get<uint32_t>(0), OverlayIntroHook, true).get();
+			}
+		}
+		
 		//Overlay 1 (intro)
 		//pattern = hook::pattern("E8 ? ? ? ? 8B 44 24 34 8B 4C 24 38 6A 01"); //0x566B2A
-		//hbOverlay1.fun = injector::MakeCALL(pattern.get(0).get<uint32_t>(0), Overlay1Hook).get();
+		//hbOverlayIntro.fun = injector::MakeCALL(pattern.get(0).get<uint32_t>(0), OverlayIntroHook, true).get();
 
 		//Overlay 2 (cutscenes)
-		//pattern = hook::pattern(""); //0x566B15
+		//pattern = hook::pattern(""); //0x565DFB
 		//hbOverlay1.fun = injector::MakeCALL(0x566B15, Overlay1Hook).get();
+		//injector::MakeCALL(0x565DFB, Overlay1Hook, true);
 
 		//Overlay 3 (transition)
 		//pattern = hook::pattern("E8 ? ? ? ? 6A 00 8B 44 24 34 6A 01 8B 4C 24 34 6A 00 6A 00"); //0x5660C5
@@ -203,11 +236,11 @@ DWORD WINAPI Init(LPVOID)
 		//Cutscene Borders
 		static float fBorderWidth = 4096.0f;
 		pattern = hook::pattern("DB 05 ? ? ? ? D9 5C 24 08 DB 05 ? ? ? ? D9 5C 24 04 DB 05 ? ? ? ? D9 1C 24"); //0x4F4926
-		//injector::WriteMemory(pattern.get(0).get<uint32_t>(2), &fBorderWidth, true);
-		//injector::WriteMemory(pattern.get(1).get<uint32_t>(2), &fBorderWidth, true);
+		injector::WriteMemory(pattern.get(0).get<uint32_t>(2), &fBorderWidth, true);
+		injector::WriteMemory(pattern.get(1).get<uint32_t>(2), &fBorderWidth, true);
 		static float fBorderPosX = -2048.0f;
-		//injector::WriteMemory(pattern.get(0).get<uint32_t>(22), &fBorderPosX, true);
-		//injector::WriteMemory(pattern.get(1).get<uint32_t>(22), &fBorderPosX, true);
+		injector::WriteMemory(pattern.get(0).get<uint32_t>(22), &fBorderPosX, true);
+		injector::WriteMemory(pattern.get(1).get<uint32_t>(22), &fBorderPosX, true);
 
 		//Map Zoom
 		static float fMapZoom = (0.5f / ((4.0f / 3.0f) / (Screen.fAspectRatio)));
