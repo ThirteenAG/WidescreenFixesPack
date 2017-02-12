@@ -36,6 +36,14 @@ workspace "WidescreenFixesPack"
       "set target=!path!!filename!!fileextension!",
       "if exist \"!target!\" copy /y \"!file!\" \"!target!\"",
       ")" }
+
+   function setpaths (gamepath, exename, scriptspath)
+      cmdcopy = { "set \"path=" .. gamepath .. scriptspath .. "\"" }
+      table.insert(cmdcopy, pbcommands)
+      postbuildcommands (cmdcopy)
+      debugdir (gamepath)
+      debugcommand (gamepath .. exename)
+   end
    
    filter "configurations:Debug"
       defines "DEBUG"
@@ -82,9 +90,7 @@ project "SecondSight.WidescreenFix"
 project "SilentHill2.WidescreenFix"
 project "SilentHill3.WidescreenFix"
 project "SilentHill4.WidescreenFix"
-   gamepath = { "set \"path=Z:/WFP/Games/Silent Hill/Silent Hill 4 The Room/scripts/\"" }
-   table.insert(gamepath, pbcommands)
-   postbuildcommands (gamepath)
+   setpaths("Z:/WFP/Games/Silent Hill/Silent Hill 4 The Room/", "Silent Hill 4.exe", "scripts/")
 project "SniperElite.WidescreenFix"
 project "SonicHeroes.WidescreenFix"
 project "SplinterCell.WidescreenFix"
