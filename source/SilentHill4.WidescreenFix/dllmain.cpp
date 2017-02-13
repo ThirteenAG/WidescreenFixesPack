@@ -75,11 +75,19 @@ void __cdecl FMVHook(float X1, float Y1, float X2, float Y2, float a5, float a6,
 	return hbFMV.fun(X1, Y1, X2, Y2, a5, a6, a7, a8, a9, a10);
 }
 
+injector::hook_back<void(__cdecl*)(int, float, float, float, int, unsigned int)> hbInGameOverlay;
+void __cdecl InGameOverlayHook(int a1, float a2, float a3, float a4, int a5, unsigned int a6)
+{
+	float fOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
+
+	return hbInGameOverlay.fun(a1 - fOffset, a2, a3, a4, a5, a6);
+}
+
 injector::hook_back<void(__cdecl*)(float, float, float, float, float, float, float, float, float, float)> hbOverlayIntro;
 void __cdecl OverlayIntroHook(float X1, float Y1, float X2, float Y2, float a5, float a6, float a7, float a8, float a9, float a10)
 {
-	float fOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
-	hbOverlayIntro.fun(X1 - fOffset, Y1, X2 + fOffset, Y2, a5, a6, a7, a8, a9, a10);
+	float fOffset = ((480.0f * Screen.fAspectRatio) - 800.0f) / 2.0f;
+	hbOverlayIntro.fun(X1 - fOffset, Y1, X2, Y2, a5, a6, a7, a8, a9, a10);
 }
 
 injector::hook_back<void(__cdecl*)(float, float, float, float, float, float, float, float, float, float)> hbOverlays;
@@ -210,15 +218,20 @@ DWORD WINAPI Init(LPVOID)
 			{
 				j++;
 
-				if (j == 33) //menu
+				if (j == 33 || j == 71) //menu and save menu backgrounds, 1 -> 0x4053C8... http://pastebin.com/Hv6TdTLh
 					continue;
 
-				if (j < 44 || j > 48) //http://pastebin.com/Hv6TdTLh
+				if (j < 44 || j > 48)
 					hbOverlays.fun = injector::MakeCALL(pattern.get(i).get<uint32_t>(0), OverlaysHook, true).get();
 				else
 					hbOverlayIntro.fun = injector::MakeCALL(pattern.get(i).get<uint32_t>(0), OverlayIntroHook, true).get();
 			}
 		}
+
+		pattern = hook::pattern("52 6A 00 E8 ? ? ? ? 83 C4 1C C3"); //0x563CC0
+		//hbInGameOverlay.fun = injector::MakeCALL(pattern.get(0).get<uint32_t>(3), InGameOverlayHook, true).get();
+		hbInGameOverlay.fun = injector::MakeCALL(0x433CAF/*pattern.get(0).get<uint32_t>(3)*/, InGameOverlayHook, true).get();
+		hbInGameOverlay.fun = injector::MakeCALL(0x433D2D/*pattern.get(0).get<uint32_t>(3)*/, InGameOverlayHook, true).get();
 		
 		//Overlay 1 (intro)
 		//pattern = hook::pattern("E8 ? ? ? ? 8B 44 24 34 8B 4C 24 38 6A 01"); //0x566B2A
