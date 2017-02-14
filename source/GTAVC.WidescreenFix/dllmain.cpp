@@ -25,6 +25,8 @@ uint8_t* bFontColorA;
 uint8_t* bDropShadowPosition;
 uint8_t* bFontDropColorA;
 uint8_t* bBackgroundOn;
+uint16_t* font94B924;
+uint32_t* CMenuManager_m_PrefsLanguage;
 void OverwriteResolution();
 
 void GetPatterns()
@@ -124,6 +126,8 @@ void GetMemoryAddresses()
         bDropShadowPosition = *hook::pattern("8B 44 24 04 66 A3 ? ? ? ? C3").get(0).get<uint8_t*>(6); //0x97F860
         bFontDropColorA = *hook::pattern("A2 ? ? ? ? D9 EE D9 05 ? ? ? ? D8 15 ? ? ? ? DF E0").get(0).get<uint8_t*>(1); //0x97F865
         bBackgroundOn = *hook::pattern("C6 05 ? ? ? ? 01 C3").get(6).get<uint8_t*>(2); //0x97F83B
+        font94B924 = *hook::pattern("66 83 0D ? ? ? ? FF C7 05 ? ? ? ? 00 00 00 00").get(0).get<uint16_t*>(3); //0x94B924
+        CMenuManager_m_PrefsLanguage = *hook::pattern("A1 ? ? ? ? 83 C4 14 83 F8 03 74 0A 83 F8 01").get(0).get<uint32_t*>(1); //0x869680
 }
 
 void SilentPatchCompatibility()
@@ -661,6 +665,17 @@ void ApplyIniOptions()
         hbPrintString.fun = injector::MakeCALL(pattern.get(0).get<uint32_t>(7), PrintStringHook).get();
         injector::MakeJMP(pattern.get(0).get<uint32_t>(0), GetTextOriginalColor, true);
         jmpAddr = pattern.get(0).get<uint32_t>(7);
+
+        // #167 crashfix (spanish lang)
+        pattern = hook::pattern("66 A3 ? ? ? ? A0 ? ? ? ? D9 05");
+        struct CrashFix
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                if (*CMenuManager_m_PrefsLanguage == 0)
+                    *font94B924 = *(uint16_t*)(regs.esi + 0x2C);
+            }
+        }; injector::MakeInline<CrashFix>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(6));
 
         //textbox
         //pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? 6A 00 E8 ? ? ? ? D9");
