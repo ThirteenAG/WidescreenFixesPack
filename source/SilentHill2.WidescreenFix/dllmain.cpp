@@ -42,7 +42,9 @@ DWORD WINAPI Init(LPVOID)
 	bool bDisableSafeMode = iniReader.ReadInteger("MISC", "DisableSafeMode", 1) != 0;
 	bool bFastTransitions = iniReader.ReadInteger("MISC", "FastTransitions", 1) != 0;
 	bool bCreateLocalFix = iniReader.ReadInteger("MISC", "CreateLocalFix", 1) != 0;
-	uint32_t nFPSLimit = iniReader.ReadInteger("MISC", "FPSLimit", 1);
+	uint32_t nFPSLimit = iniReader.ReadInteger("MISC", "FPSLimit", 30);
+	bool bPS2CameraSpeed = iniReader.ReadInteger("MISC", "PS2CameraSpeed", 0) != 0;
+	bool bGamepadControlsFix = iniReader.ReadInteger("MISC", "GamepadControlsFix", 1) != 0;
 
 	if (!Screen.Width || !Screen.Height) {
 		HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
@@ -403,6 +405,37 @@ DWORD WINAPI Init(LPVOID)
 	{
 		pattern = hook::pattern("6A 00 6A ? 50 51");
 		injector::WriteMemory<uint8_t>(pattern.get(1).get<uint32_t>(3), nFPSLimit, true); //004F6F53
+	}
+
+	if (bPS2CameraSpeed)
+	{
+		static float f15 = 1.5f; // new value 1.5; restores speed of tilting camera action
+		static float f009 = 0.09; // new value 0.09; increases speed of all camera actions
+		static float f25 = 2.5f; // new value 2.5; restores speed of auto-panning camera action
+		static float f1 = 1.0f; // new value 1.00; reduces speed of auto-tilting camera action
+
+		pattern = hook::pattern("D8 0D ? ? ? ? 8B 6C 24 5C D9 5C 24 38 D9 43 04 D8 0D ? ? ? ? D9 5C 24 3C E8");
+		injector::WriteMemory(pattern.get(0).get<uint32_t>(2), &f15, true); //0051CF36 
+		
+		struct CameraHook
+		{
+			void operator()(injector::reg_pack&)
+			{
+				_asm fld dword ptr[f009]
+			}
+		}; injector::MakeInline<CameraHook>(pattern.get(0).get<uint32_t>(27)); //0051CF51 
+
+		pattern = hook::pattern("D9 05 ? ? ? ? D8 C1 D9 1D ? ? ? ? DD D8 F6 47 08 01");
+		injector::WriteMemory(pattern.get(0).get<uint32_t>(2), &f25, true); //0051C38C
+
+		pattern = hook::pattern("D8 05 ? ? ? ? D9 1D ? ? ? ? D9 44 24 14 D8 4E 04 D8 0D");
+		injector::WriteMemory(pattern.get(0).get<uint32_t>(2), &f1, true); //0051C302 
+	}
+
+	if (bGamepadControlsFix)
+	{
+		pattern = hook::pattern("74 15 39 04 CD ? ? ? ? 75 0C 83 F9 16");
+		injector::WriteMemory<uint8_t>(pattern.get(1).get<uint32_t>(0), 0xEB, true); //5AF936
 	}
 
 	return 0;
