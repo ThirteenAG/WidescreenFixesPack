@@ -249,6 +249,9 @@ DWORD WINAPI Init(LPVOID)
     // prevents crash for Intel gpu
     pattern = hook::pattern("75 2E A1 ? ? ? ? 8B 10 6A 00 68 ? ? ? ? 6A 00");
     injector::MakeNOP(pattern.get(0).get<DWORD>(0), 2, true); //715180    
+    //activates 00AB0C04
+    pattern = hook::pattern("7E 05 E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8");
+    injector::MakeNOP(pattern.get(0).get<DWORD>(0), 2, true); // 0071B3E6
 
     //PiP pixelation
     static uint32_t nResX43 = static_cast<uint32_t>(ResY * (4.0f / 3.0f));
