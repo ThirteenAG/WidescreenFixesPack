@@ -414,10 +414,11 @@ void FixHUD()
         injector::WriteMemory(p15625, &fWideScreenWidthScaleDown, true);
     }
 
-    pattern = hook::pattern("50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8"); //0x5FA15B radio text
-    injector::WriteMemory(pattern.get(31).get<uint32_t>(3), &fWideScreenWidthScaleDown, true);
-    injector::WriteMemory(pattern.get(32).get<uint32_t>(3), &fWideScreenWidthScaleDown, true);
-    injector::WriteMemory(pattern.get(38).get<uint32_t>(3), &fWideScreenWidthScaleDown, true);//0x620C45 replay
+    pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59 E8 ? ? ? ? 6A 01 E8"); //0x5FA15B radio text
+    injector::WriteMemory(pattern.get(0).get<uint32_t>(2), &fWideScreenWidthScaleDown, true);
+    injector::WriteMemory(pattern.get(0).get<uint32_t>(49), &fWideScreenWidthScaleDown, true);
+    pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59 E8 ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 83 C0 EC"); //0x620C45 replay
+    injector::WriteMemory(pattern.get(2).get<uint32_t>(2), &fWideScreenWidthScaleDown, true);
 
     for (size_t i = 0; i < CSceneEditDrawPattern.size(); i++)
     {
@@ -562,17 +563,12 @@ void ApplyIniOptions()
             }
         }
 
-        auto pattern = hook::pattern("50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8"); //0x5FA15B radio text
-        injector::WriteMemory(pattern.get(31).get<uint32_t>(3), &fCustomWideScreenWidthScaleDown, true);
-        //injector::WriteMemory(pattern.get(32).get<uint32_t>(3), &fCustomWideScreenWidthScaleDown, true);
-        injector::WriteMemory(pattern.get(38).get<uint32_t>(3), &fCustomWideScreenWidthScaleDown, true);//0x620C45 replay
-
-        pattern = hook::pattern("50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 DB 05"); //0x5FA145 radio text
-        injector::WriteMemory(pattern.get(34).get<uint32_t>(3), &fCustomWideScreenHeightScaleDown, true);
-        //pattern = hook::pattern("50 D8 0D ? ? ? ? D8 0D ? ? ? ? D8 05 ? ? ? ? D9 1C 24"); //0x5FA1C6
-        //injector::WriteMemory(pattern.get(6).get<uint32_t>(3), &fCustomWideScreenHeightScaleDown, true);
-        pattern = hook::pattern("50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24");
-        injector::WriteMemory(pattern.get(90).get<uint32_t>(3), &fCustomWideScreenHeightScaleDown, true);//0x620C2F replay
+        //moved to delayed changes
+        //auto pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59 E8 ? ? ? ? 6A 01 E8"); //0x5FA15B radio text
+        //injector::WriteMemory(pattern.get(0).get<uint32_t>(2), &fCustomWideScreenWidthScaleDown, true);
+        //injector::WriteMemory(pattern.get(0).get<uint32_t>(49), &fCustomWideScreenWidthScaleDown, true);
+        //pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59 E8 ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 83 C0 EC"); //0x620C45 replay
+        //injector::WriteMemory(pattern.get(2).get<uint32_t>(2), &fCustomWideScreenWidthScaleDown, true);
 
         for (size_t i = 0; i < CDarkelDrawMessagesPattern.size(); i++)
         {
@@ -722,6 +718,11 @@ void ApplyIniOptions()
         fCustomRadarPosXIV = 40.0f + 31.0f;
         auto pattern = hook::pattern("D8 05 ? ? ? ? DE C1 D9 5C 24 28");
         injector::WriteMemory<float>(*pattern.get(0).get<uint32_t*>(2), fCustomRadarPosXIV, true); //0x68FD2C
+        static float f40 = 40.0f;
+        pattern = hook::pattern("83 EC 50 DD D9 D9 05 ? ? ? ? D8 C9");
+        injector::WriteMemory(pattern.get(0).get<uint32_t>(7), &f40, true); //0x4C2996
+        injector::WriteMemory(pattern.get(0).get<uint32_t>(60), &f40, true); //0x4C29CB
+
         fCustomRadarWidthIV = 94.0f - 5.5f;
         pattern = hook::pattern("D8 0D ? ? ? ? DD D9 D9 C2 D8 C9 D8 0D");
         injector::WriteMemory<float>(*pattern.get(0).get<uint32_t*>(2), fCustomRadarWidthIV, true); //0x68FD24
@@ -804,6 +805,29 @@ void Fix2DSprites()
     {
         FrontendAspectRatioWidth = 16;
         FrontendAspectRatioHeight = 9;
+
+        char path[MAX_PATH];
+        GetModuleFileName(NULL, path, MAX_PATH);
+        *(strrchr(path, '\\') + 1) = '\0';
+        strcat(path, "\\txd\\LOADSC0.txd");
+
+        struct texsize {
+            unsigned short width;
+            unsigned short height;
+        } wh;
+
+        FILE* hFile = fopen(path, "rb");
+        if (hFile)
+        {
+            fseek(hFile, 0x84, SEEK_SET);
+            fread(&wh, sizeof(texsize), 1, hFile);
+            if (wh.width < 20000 && wh.height < 20000)
+            {
+                FrontendAspectRatioWidth = wh.width;
+                FrontendAspectRatioHeight = wh.height;
+            }
+            fclose(hFile);
+        }
     }
 
     auto pattern = hook::pattern("E8 ? ? ? ? 8B 0B 83 C4 14 85 C9"); //0x578720
@@ -865,6 +889,13 @@ DWORD WINAPI Init(LPVOID)
                 fPlayerMarkerPos = (94.0f - 5.5f) * fRadarWidthScale;
 
             SilentPatchCompatibility();
+
+            //+ another SilentPatchCompatibility (issue #105)
+            auto pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59 E8 ? ? ? ? 6A 01 E8"); //0x5FA15B radio text
+            injector::WriteMemory(pattern.get(0).get<uint32_t>(2), &fCustomWideScreenWidthScaleDown, true);
+            injector::WriteMemory(pattern.get(0).get<uint32_t>(49), &fCustomWideScreenWidthScaleDown, true);
+            pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59 E8 ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 83 C0 EC"); //0x620C45 replay
+            injector::WriteMemory(pattern.get(2).get<uint32_t>(2), &fCustomWideScreenWidthScaleDown, true);
 
             injector::WriteMemory<float>(*MenuPattern6.get(0).get<uint32_t*>(2), fWideScreenWidthScaleDown, true); //issues/84, copypaste from FixMenu()
 

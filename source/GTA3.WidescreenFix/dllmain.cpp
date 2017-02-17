@@ -363,9 +363,9 @@ void FixHUD()
         injector::WriteMemory(p15625, &fWideScreenWidthScaleDown, true);
     }
 
-    static float fTBW = 350.0f;
-    pattern = hook::pattern("D9 05 ? ? ? ? D8 C9 D9 05 ? ? ? ? D8 CA DE C1 D8 25"); // text box width
-    injector::WriteMemory(pattern.get(0).get<uint32_t*>(2), &fTBW, true);
+    //static float fTBW = 350.0f;
+    //pattern = hook::pattern("D9 05 ? ? ? ? D8 C9 D9 05 ? ? ? ? D8 CA DE C1 D8 25"); // text box width
+    //injector::WriteMemory(pattern.get(0).get<uint32_t*>(2), &fTBW, true); //no one likes it :(
 }
 
 void FixCrosshair()
@@ -464,9 +464,9 @@ void ApplyIniOptions()
         }
 
         auto pattern = hook::pattern("50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8"); //0x57E954 radio text
-        injector::WriteMemory(pattern.get(24).get<uint32_t>(3), &fWideScreenWidthScaleDown, true);
-        //injector::WriteMemory(pattern.get(25).get<uint32_t>(3), &fWideScreenWidthScaleDown, true);
-        injector::WriteMemory(pattern.get(27).get<uint32_t>(3), &fWideScreenWidthScaleDown, true);//0x595F45 replay
+        injector::WriteMemory(pattern.get(24).get<uint32_t>(3), &fCustomWideScreenWidthScaleDown, true);
+        //injector::WriteMemory(pattern.get(25).get<uint32_t>(3), &fCustomWideScreenWidthScaleDown, true);
+        injector::WriteMemory(pattern.get(27).get<uint32_t>(3), &fCustomWideScreenWidthScaleDown, true);//0x595F45 replay
 
         pattern = hook::pattern("50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 DB 05 ? ? ? ? 50"); //0x57E93E radio text
         injector::WriteMemory(pattern.get(16).get<uint32_t>(3), &fCustomWideScreenHeightScaleDown, true);
@@ -695,6 +695,29 @@ void Fix2DSprites()
     {
         FrontendAspectRatioWidth = 16;
         FrontendAspectRatioHeight = 9;
+
+        char path[MAX_PATH];
+        GetModuleFileName(NULL, path, MAX_PATH);
+        *(strrchr(path, '\\') + 1) = '\0';
+        strcat(path, "\\txd\\LOADSC0.txd");
+
+        struct texsize {
+            unsigned short width;
+            unsigned short height;
+        } wh;
+
+        FILE* hFile = fopen(path, "rb");
+        if (hFile)
+        {
+            fseek(hFile, 0x84, SEEK_SET);
+            fread(&wh, sizeof(texsize), 1, hFile);
+            if (wh.width < 20000 && wh.height < 20000)
+            {
+                FrontendAspectRatioWidth = wh.width;
+                FrontendAspectRatioHeight = wh.height;
+            }
+            fclose(hFile);
+        }
     }
 
     auto pattern = hook::pattern("E8 ? ? ? ? 89 D9 83 C4 18 E8 ? ? ? ? 6A 04"); //0x51ED62
