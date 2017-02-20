@@ -564,7 +564,7 @@ void ApplyIniOptions()
         //Changing black color for necessary strings
         for (size_t i = 0; i < MenuPattern3.size(); i++)
         {
-            if (i == 9 || i == 15 || i == 20 || i == 33 /*|| i == 36*/ ) // 9 - MAIN MENU strings, 15,21 - controls page key on hover, 33 - ammo, 36 - wanted stars;
+            if (i == 9 || i == 15 || i == 20 || i == 33 || i == 36 ) // 9 - MAIN MENU strings, 15,21 - controls page key on hover, 33 - ammo, 36 - wanted stars;
             {
                 auto pClr = MenuPattern3.get(i);
                 injector::WriteMemory<uint8_t>(pClr.get<uint32_t>(1), 0x01, true);
