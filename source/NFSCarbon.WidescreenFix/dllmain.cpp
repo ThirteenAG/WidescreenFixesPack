@@ -127,6 +127,7 @@ DWORD WINAPI Init(LPVOID)
     szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
     bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 1) != 0;
     static int nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
+    static float fRainDropletsScale = iniReader.ReadFloat("MISC", "RainDropletsScale", 0.5f);
     bool bCustomUsrDir = false;
     if (strncmp(szCustomUserFilesDirectoryInGameDir, "0", 1) != 0)
         bCustomUsrDir = true;
@@ -263,6 +264,33 @@ DWORD WINAPI Init(LPVOID)
     injector::MakeNOP(dword_570DCD, 2, true);
     DWORD* dword_570DDC = hook::pattern("7A 24 D9 44 24 18 D8 5C 24 04 DF E0").get(0).get<DWORD>(0);
     injector::MakeNOP(dword_570DDC, 2, true);
+
+    //Rain droplets
+    static float fRainScaleX = ((0.75f / ((float)ResX / (float)ResY)) * (4.0f / 3.0f));
+    pattern = hook::pattern("D9 44 24 08 D8 44 24 10 8B 4C 24 0C 8B 44 24 10 8B D1");
+    struct RainDropletsHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            float esp08 = *(float*)(regs.esp + 0x08);
+            float esp10 = *(float*)(regs.esp + 0x10);
+            _asm fld dword ptr[esp08]
+            _asm fmul dword ptr[fRainScaleX]
+            _asm fmul dword ptr[fRainDropletsScale]
+            _asm fadd dword ptr[esp10]
+        }
+    }; injector::MakeInline<RainDropletsHook>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(8)); //0x722E78
+
+    struct RainDropletsYScaleHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            float esp0C = *(float*)(regs.esp + 0x0C);
+            _asm fmul dword ptr[fRainDropletsScale]
+            _asm fadd dword ptr[esp0C]
+            *(uintptr_t*)(regs.esp + 0x34) = regs.eax;
+        }
+    }; injector::MakeInline<RainDropletsYScaleHook>(pattern.get(0).get<uint32_t>(36), pattern.get(0).get<uint32_t>(36+8)); //0x722E9C
 
     //For ini options
     auto GetFolderPathpattern = hook::pattern("50 6A 00 6A 00 68 ? 80 00 00 6A 00");
