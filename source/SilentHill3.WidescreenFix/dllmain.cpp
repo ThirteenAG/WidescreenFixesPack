@@ -140,7 +140,6 @@ DWORD WINAPI Init(LPVOID)
     static int32_t RenderResX = iniReader.ReadInteger("MAIN", "RenderResX", -1);
     static int32_t RenderResY = iniReader.ReadInteger("MAIN", "RenderResY", -1);
     bool bFixMenu = iniReader.ReadInteger("MAIN", "FixMenu", 1) != 0;
-    bool bFixInventory = iniReader.ReadInteger("MAIN", "FixInventory", 1) != 0;
     bool bFixFMV = iniReader.ReadInteger("MAIN", "FixFMV", 1) != 0;
     static bool bFMVWidescreenMode = iniReader.ReadInteger("MISC", "FMVWidescreenMode", 1) != 0;
     bool bDisableCutsceneBorders = iniReader.ReadInteger("MISC", "DisableCutsceneBorders", 1) != 0;
@@ -310,13 +309,10 @@ DWORD WINAPI Init(LPVOID)
         }
     }
 
-    if (bFixInventory)
-    {
-        //inventory background size
-        pattern = hook::pattern("B8 00 01 00 00 BA 00 FF FF FF 8B E8"); //5DAFE5
-        injector::WriteMemory(pattern.get(0).get<uint32_t>(1), 1024, true);
-        injector::WriteMemory(pattern.get(0).get<uint32_t>(6), -1024, true);
-    }
+    //inventory background size
+    pattern = hook::pattern("B8 00 01 00 00 BA 00 FF FF FF 8B E8"); //5DAFE5
+    injector::WriteMemory(pattern.get(0).get<uint32_t>(1), 1024, true);
+    injector::WriteMemory(pattern.get(0).get<uint32_t>(6), -1024, true);
 
     //window style
     pattern = hook::pattern("68 00 03 00 00 FF 15 ? ? ? ? 5E"); //403042
