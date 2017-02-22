@@ -72,6 +72,8 @@ project "DeerAvenger4.WidescreenFix"
    setpaths("Z:/WFP/Games/Deer Avenger 4/", "DA4.exe")
 project "DevilMayCry3.WidescreenFix"
    setpaths("Z:/WFP/Games/Devil May Cry 3/", "dmc3se.exe")
+project "DriverParallelLines.WidescreenFix"
+   setpaths("Z:/WFP/Games/Driver Parallel Lines/", "DriverParallelLines.exe")
 project "Fahrenheit.WidescreenFix"
 project "Flatout.WidescreenFix"
    setpaths("Z:/WFP/Games/Flatout/FlatOut/", "flatout.exe")
