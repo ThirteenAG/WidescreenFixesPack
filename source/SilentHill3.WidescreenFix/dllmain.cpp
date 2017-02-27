@@ -163,10 +163,18 @@ DWORD WINAPI Init(LPVOID)
     Screen.fHeight = static_cast<float>(Screen.Height);
     Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
 
-    if (RenderResX == 0 && RenderResY == 0)
+    if (RenderResX >= 0 && RenderResY >= 0)
     {
-        RenderResX = Screen.Width;
-        RenderResY = Screen.Height;
+        pattern = hook::pattern("51 A1 ? ? ? ? 53 8B 5C 24 0C"); //00402E00 
+        injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(0), 0xC3, true);
+        pattern = hook::pattern("8B 44 24 04 8B 4C 24 08 A3 ? ? ? ? 89 0D ? ? ? ? 33 C0 C3"); //00402B60
+        injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(0), 0xC3, true);
+
+        if (RenderResX == 0 && RenderResY == 0)
+        {
+            RenderResX = Screen.Width;
+            RenderResY = Screen.Height;
+        }
     }
 
     //Resolution
