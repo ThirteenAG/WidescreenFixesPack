@@ -18,12 +18,16 @@ struct Screen
     int32_t Height;
     float fWidth;
     float fHeight;
-    float fFieldOfView;
+    float fCustomFieldOfView;
     float fDynamicScreenFieldOfViewScale;
     float fAspectRatio;
     float fHudOffset;
     int32_t Width43;
     float fWidth43;
+    float fGameAspectRatio;
+    float fCenterPos;
+    int32_t* FMVStatus;
+    bool bFixFMVs;
 } Screen;
 
 enum ScreenModes
@@ -35,11 +39,7 @@ enum ScreenModes
 
 void __fastcall sub_5F3627(uintptr_t _this, uint32_t edx, uintptr_t a2, uintptr_t a3)
 {
-    //DWORD* unk_933E1C = (DWORD*)0x933E1C;
-    //uintptr_t v3 = unk_933E1C[(*(uintptr_t*)(_this + 4)) + 257];
     size_t j = 0;
-    //float w = *(float *)(v3 + 0x3F4);
-    // float h = *(float *)(v3 + 0x3F8);
     float v4 = 1.0f / Screen.fWidth;
     float v5 = 1.0f / Screen.fHeight;
     uintptr_t v6 = *(uintptr_t*)(a2 + 8);
@@ -93,12 +93,14 @@ void __fastcall sub_5F3627(uintptr_t _this, uint32_t edx, uintptr_t a2, uintptr_
                 if ((floats[0].f1 == 0.0f && floats[0].f2 == 1.0f) && (floats[1].f1 == 0.0f && floats[1].f2 == 0.0f) &&
                     (floats[2].f1 == 1.0f && floats[2].f2 == 1.0f) && (floats[3].f1 == 1.0f && floats[3].f2 == 0.0f))
                 {
-                    //to-do: fmv fix / radar
-                    //*(float *)(v8a - 4) -= 0.5f;
+                    if (Screen.bFixFMVs && *Screen.FMVStatus == 1)
+                        *(float *)(v8a - 4) /= (Screen.fAspectRatio / Screen.fGameAspectRatio);
                 }
                 else
                 {
-                    *(float *)(v8a - 4) /= (Screen.fAspectRatio / (16.0f / 9.0f));
+                    *(float *)(v8a - 4) /= (Screen.fAspectRatio / Screen.fGameAspectRatio);
+                    if (Screen.fGameAspectRatio <= ((16.0f / 9.0f) - 0.05f))
+                        *(float *)(v8a - 0) *= 0.75f;
                 }
                 v8a += 24;
             }
@@ -108,6 +110,14 @@ void __fastcall sub_5F3627(uintptr_t _this, uint32_t edx, uintptr_t a2, uintptr_
             v6 += 48;
         } while (j < *(uint32_t*)a2);
     }
+}
+
+float __stdcall sub_4BAA87(float a1)
+{
+    if (Screen.fGameAspectRatio <= ((16.0f / 9.0f) - 0.05f))
+        return a1 * 0.75f;
+    else
+        return a1;
 }
 
 DWORD WINAPI Init(LPVOID bDelay)
@@ -123,6 +133,9 @@ DWORD WINAPI Init(LPVOID bDelay)
     if (bDelay)
         while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
 
+    CIniReader iniReader("");
+    Screen.fCustomFieldOfView = iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f);
+    Screen.bFixFMVs = iniReader.ReadInteger("MAIN", "FixFMVs", 1) != 0;
 
     HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
     MONITORINFO info;
@@ -149,6 +162,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     static auto dword_71D4B4 = *hook::get_pattern<uintptr_t*>("A1 ? ? ? ? 8B 08 6A 00 50 FF 91 ? ? ? ? 8D 4E 18", 1);
     static auto pGameResWidth = dword_71D4B4 + 2;
     static auto pGameResHeight = dword_71D4B4 + 3;
+    Screen.FMVStatus = *hook::get_pattern<int32_t*>("BE ? ? ? ? 33 C0 B9 20 01 00 00 8B FE F3 AB", 1) + 0x1D; // 0x70C8B8
 
     pattern = hook::pattern("89 86 6C 01 00 00 8B 45 F4"); //0x5E4C55
     struct SetWindowedResHook
@@ -173,10 +187,16 @@ DWORD WINAPI Init(LPVOID bDelay)
             Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
             Screen.Width43 = static_cast<uint32_t>(Screen.fHeight * (4.0f / 3.0f));
             Screen.fWidth43 = static_cast<float>(Screen.Width43);
+            Screen.fCenterPos = ((480.0f * Screen.fAspectRatio) / 2.0f);
             Screen.fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * (Screen.fWidth / Screen.fHeight))) * (1.0f / SCREEN_FOV_HORIZONTAL);
 
             *pAspectRatio = Screen.fAspectRatio;
-            *pFOV = Screen.fDynamicScreenFieldOfViewScale * 1.308f;
+            *pFOV = Screen.fDynamicScreenFieldOfViewScale * 1.308f * Screen.fCustomFieldOfView;
+
+            if (Screen.fAspectRatio >= ((16.0f / 9.0f) - 0.05f))
+                Screen.fGameAspectRatio = (16.0f / 9.0f);
+            else
+                Screen.fGameAspectRatio = (4.0f / 3.0f);
 
             static tagRECT REKT;
             REKT.left = (LONG)(((float)Screen.DesktopResW / 2.0f) - (Screen.fWidth / 2.0f));
@@ -203,25 +223,75 @@ DWORD WINAPI Init(LPVOID bDelay)
     injector::MakeCALL(pattern.get_first(0), sub_5F3627, true);
 
     //Radar
-    pattern = hook::pattern("F3 0F 11 86 44 07 00 00 D9 40 14 51"); //0x4B874A
-    struct RadarPosHook
+    static auto GetRadarPosition = [](injector::reg_pack& regs) -> float
+    {
+        float fVar1 = (480.0f * Screen.fGameAspectRatio);
+        float fVar2 = (480.0f * Screen.fAspectRatio);
+        float fOriginalPos = *(float*)(regs.eax + 0x10) + 0.00078125f;
+        fOriginalPos *= fVar1; // 692px
+        float offset = fOriginalPos - (fVar1 / 2.0f); //265px
+        offset += Screen.fCenterPos;
+        offset /= fVar2;
+        return offset;
+    };
+
+    static auto GetRadarScale = [](injector::reg_pack& regs) -> float
+    {
+        return ((*(float *)(regs.eax + 0x18) - (1.0f / 640.0f / 2.0f)) / (Screen.fAspectRatio / Screen.fGameAspectRatio));
+    };
+
+    struct RadarPosHookEBX
     {
         void operator()(injector::reg_pack& regs)
         {
-            *(float*)(regs.esi + 0x744) = ((*(float *)(regs.eax + 0x10) + (1.0f / 640.0f / 2.0f)) / (Screen.fAspectRatio / (16.0f / 9.0f)));
+            *(float*)(regs.ebx + 0x744) = GetRadarPosition(regs);
         }
-    }; injector::MakeInline<RadarPosHook>(pattern.get_first(0), pattern.get_first(8));
+    };
 
-
-    pattern = hook::pattern("F3 0F 11 86 4C 07 00 00 D9 40 1C D9 1C 24 "); //0x4B877E
-    struct RadarScaleHook
+    struct RadarPosHookESI
     {
         void operator()(injector::reg_pack& regs)
         {
-            *(float*)(regs.esi + 0x74C) = ((*(float *)(regs.eax + 0x18) - (1.0f / 640.0f / 2.0f)) / (Screen.fAspectRatio / (16.0f / 9.0f)));
+            *(float*)(regs.esi + 0x744) = GetRadarPosition(regs);
         }
-    }; injector::MakeInline<RadarScaleHook>(pattern.get_first(0), pattern.get_first(8));
+    };
+    
+    struct RadarScaleHookEBX
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            *(float*)(regs.ebx + 0x74C) = GetRadarScale(regs);
 
+            if (Screen.fGameAspectRatio <= ((16.0f / 9.0f) - 0.05f))
+                *(float*)(regs.ebx + 0x748) *= 0.936f;
+        }
+    };
+
+    struct RadarScaleHookESI
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            *(float*)(regs.esi + 0x74C) = GetRadarScale(regs);
+
+            if (Screen.fGameAspectRatio <= ((16.0f / 9.0f) - 0.05f))
+                *(float*)(regs.esi + 0x748) *= 0.936f;
+        }
+    };
+
+    pattern = hook::pattern("F3 0F 11 ? 44 07 00 00").count(4); //0x4B85EC
+    injector::MakeInline<RadarPosHookEBX>(pattern.get(0).get<uintptr_t>(0), pattern.get(0).get<uintptr_t>(8));
+    injector::MakeInline<RadarPosHookESI>(pattern.get(2).get<uintptr_t>(0), pattern.get(2).get<uintptr_t>(8));
+    injector::MakeInline<RadarPosHookEBX>(pattern.get(3).get<uintptr_t>(0), pattern.get(3).get<uintptr_t>(8));
+
+    pattern = hook::pattern("F3 0F 11 ? 4C 07 00 00").count(3); //0x4B877E
+    injector::MakeInline<RadarScaleHookESI>(pattern.get(1).get<uintptr_t>(0), pattern.get(1).get<uintptr_t>(8));
+    injector::MakeInline<RadarScaleHookEBX>(pattern.get(2).get<uintptr_t>(0), pattern.get(2).get<uintptr_t>(8));
+    pattern = hook::pattern("89 8B 4C 07 00 00 D9 40 1C 51").count(1);
+    injector::MakeInline<RadarScaleHookEBX>(pattern.get(0).get<uintptr_t>(0), pattern.get(0).get<uintptr_t>(6));
+
+    //restoring radar height on 4:3
+    pattern = hook::pattern("8B 0D ? ? ? ? 8B 01 FF 50 1C 83 F8 02 ? ? D9 44 24 04"); //0x4BAA87
+    injector::MakeJMP(pattern.get_first(0), sub_4BAA87, true);
     return 0;
 }
 
