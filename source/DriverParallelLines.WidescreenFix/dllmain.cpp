@@ -1,15 +1,5 @@
 #include "stdafx.h"
 
-#define _USE_MATH_DEFINES
-#include "math.h"
-#define DEGREE_TO_RADIAN(fAngle) ((fAngle)* (float)M_PI / 180.0f)
-#define RADIAN_TO_DEGREE(fAngle) ((fAngle)* 180.0f / (float)M_PI)
-#define SCREEN_AR_NARROW (4.0f / 3.0f)
-#define SCREEN_FOV_HORIZONTAL 90.0f
-#define SCREEN_FOV_VERTICAL (2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))
-
-HWND hWnd;
-
 struct Screen
 {
     int32_t DesktopResW;
@@ -137,7 +127,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     Screen.fCustomFieldOfView = iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f);
     Screen.bFixFMVs = iniReader.ReadInteger("MAIN", "FixFMVs", 1) != 0;
 
-    HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
+    HMONITOR monitor = MonitorFromWindow(GetDesktopWindow(), MONITOR_DEFAULTTONEAREST);
     MONITORINFO info;
     info.cbSize = sizeof(MONITORINFO);
     GetMonitorInfo(monitor, &info);
@@ -153,6 +143,11 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     //default to desktop res
     pattern = hook::pattern("C7 46 4C ? ? ? ? C7 46 50 ? ? ? ? C7 46 54 ? ? ? ? C7"); //4C5077
+    injector::WriteMemory(pattern.get_first<int32_t*>(3 + 0), Screen.DesktopResW, true);
+    injector::WriteMemory(pattern.get_first<int32_t*>(3 + 7), Screen.DesktopResH, true);
+
+    //1024x768 black screen fix
+    pattern = hook::pattern("C7 45 E0 ? ? ? ? C7 45 E4 ? ? ? ? C7 45 E8 ? ? ? ? C7 45 EC 16 00 00 00"); //0x5EBA06
     injector::WriteMemory(pattern.get_first<int32_t*>(3 + 0), Screen.DesktopResW, true);
     injector::WriteMemory(pattern.get_first<int32_t*>(3 + 7), Screen.DesktopResH, true);
     
@@ -175,40 +170,55 @@ DWORD WINAPI Init(LPVOID bDelay)
         }
     }; injector::MakeInline<SetWindowedResHook>(pattern.get_first(0), pattern.get_first(15));
 
+    static auto GetRes = []()
+    {
+        Screen.Width = *pGameResWidth;
+        Screen.Height = *pGameResHeight;
+        Screen.fWidth = static_cast<float>(Screen.Width);
+        Screen.fHeight = static_cast<float>(Screen.Height);
+        Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
+        Screen.Width43 = static_cast<uint32_t>(Screen.fHeight * (4.0f / 3.0f));
+        Screen.fWidth43 = static_cast<float>(Screen.Width43);
+        Screen.fCenterPos = ((480.0f * Screen.fAspectRatio) / 2.0f);
+        Screen.fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * (Screen.fWidth / Screen.fHeight))) * (1.0f / SCREEN_FOV_HORIZONTAL);
+
+        *pAspectRatio = Screen.fAspectRatio;
+        *pFOV = Screen.fDynamicScreenFieldOfViewScale * 1.308f * Screen.fCustomFieldOfView;
+
+        if (Screen.fAspectRatio >= ((16.0f / 9.0f) - 0.05f))
+            Screen.fGameAspectRatio = (16.0f / 9.0f);
+        else
+            Screen.fGameAspectRatio = (4.0f / 3.0f);
+
+        static tagRECT REKT;
+        REKT.left = (LONG)(((float)Screen.DesktopResW / 2.0f) - (Screen.fWidth / 2.0f));
+        REKT.top = (LONG)(((float)Screen.DesktopResH / 2.0f) - (Screen.fHeight / 2.0f));
+        REKT.right = (LONG)Screen.Width;
+        REKT.bottom = (LONG)Screen.Height;
+        SetWindowPos(*pGameHwnd, NULL, REKT.left, REKT.top, REKT.right, REKT.bottom, SWP_NOACTIVATE | SWP_NOZORDER);
+    };
+
     pattern = hook::pattern("C6 01 01 33 C0 C2 0C 00"); //0x5E4A6A
-    struct GetResHook
+    struct GetResHook1
     {
         void operator()(injector::reg_pack& regs)
         {
-            Screen.Width = *pGameResWidth;
-            Screen.Height = *pGameResHeight;
-            Screen.fWidth = static_cast<float>(Screen.Width);
-            Screen.fHeight = static_cast<float>(Screen.Height);
-            Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
-            Screen.Width43 = static_cast<uint32_t>(Screen.fHeight * (4.0f / 3.0f));
-            Screen.fWidth43 = static_cast<float>(Screen.Width43);
-            Screen.fCenterPos = ((480.0f * Screen.fAspectRatio) / 2.0f);
-            Screen.fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * (Screen.fWidth / Screen.fHeight))) * (1.0f / SCREEN_FOV_HORIZONTAL);
-
-            *pAspectRatio = Screen.fAspectRatio;
-            *pFOV = Screen.fDynamicScreenFieldOfViewScale * 1.308f * Screen.fCustomFieldOfView;
-
-            if (Screen.fAspectRatio >= ((16.0f / 9.0f) - 0.05f))
-                Screen.fGameAspectRatio = (16.0f / 9.0f);
-            else
-                Screen.fGameAspectRatio = (4.0f / 3.0f);
-
-            static tagRECT REKT;
-            REKT.left = (LONG)(((float)Screen.DesktopResW / 2.0f) - (Screen.fWidth / 2.0f));
-            REKT.top = (LONG)(((float)Screen.DesktopResH / 2.0f) - (Screen.fHeight / 2.0f));
-            REKT.right = (LONG)Screen.Width;
-            REKT.bottom = (LONG)Screen.Height;
-            SetWindowPos(*pGameHwnd, NULL, REKT.left, REKT.top, REKT.right, REKT.bottom, SWP_NOACTIVATE | SWP_NOZORDER);
+            GetRes();
             *(uint8_t*)regs.ecx = 1;
             regs.eax = 0;
         }
-    }; injector::MakeInline<GetResHook>(pattern.get_first(0));
+    }; injector::MakeInline<GetResHook1>(pattern.get_first(0));
 
+    pattern = hook::pattern("89 8E 8C 01 00 00"); //0x5E4C73
+    struct GetResHook2
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            *(uint32_t*)(regs.esi + 0x18C) = regs.ecx;
+            GetRes();
+        }
+    }; injector::MakeInline<GetResHook2>(pattern.get_first(0), pattern.get_first(6));
+    
     pattern = hook::pattern("8B 44 24 04 89 41 10 B0 01 C2 04 00"); //0x57B954
     struct MenuAspectRatioSwitchHook
     {
@@ -221,7 +231,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     //2D
     pattern = hook::pattern("E8 ? ? ? ? 8B 45 08 8B 4D 0C 89 45 E8 8B"); //0x5F75AD
     injector::MakeCALL(pattern.get_first(0), sub_5F3627, true);
-
+    
     //Radar
     static auto GetRadarPosition = [](injector::reg_pack& regs) -> float
     {
