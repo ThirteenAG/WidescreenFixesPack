@@ -290,8 +290,8 @@ DWORD WINAPI Init(LPVOID bDelay)
     injector::MakeInline<RadarScaleHookEBX>(pattern.get(0).get<uintptr_t>(0), pattern.get(0).get<uintptr_t>(6));
 
     //restoring radar height on 4:3
-    pattern = hook::pattern("8B 0D ? ? ? ? 8B 01 FF 50 1C 83 F8 02 ? ? D9 44 24 04"); //0x4BAA87
-    injector::MakeJMP(pattern.get_first(0), sub_4BAA87, true);
+    pattern = hook::pattern("E8 ? ? ? ? 0F 57 C0 D9 9B 50"); //0x4BAA87
+    injector::MakeJMP(injector::GetBranchDestination(pattern.get_first(0)), sub_4BAA87, true);
     return 0;
 }
 
