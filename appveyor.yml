@@ -5,7 +5,7 @@ install:
 - cmd: >-
     git submodule update --init --recursive
 
-    premake5.bat
+    premake5 vs2015
 build:
   project: build/WidescreenFixesPack.sln
   verbosity: minimal
