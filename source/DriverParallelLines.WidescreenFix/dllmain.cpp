@@ -127,12 +127,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     Screen.fCustomFieldOfView = iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f);
     Screen.bFixFMVs = iniReader.ReadInteger("MAIN", "FixFMVs", 1) != 0;
 
-    HMONITOR monitor = MonitorFromWindow(GetDesktopWindow(), MONITOR_DEFAULTTONEAREST);
-    MONITORINFO info;
-    info.cbSize = sizeof(MONITORINFO);
-    GetMonitorInfo(monitor, &info);
-    Screen.DesktopResW = info.rcMonitor.right - info.rcMonitor.left;
-    Screen.DesktopResH = info.rcMonitor.bottom - info.rcMonitor.top;
+    std::tie(Screen.DesktopResW, Screen.DesktopResH) = GetDesktopRes();
  
     //uncapping resolutions
     pattern = hook::pattern("68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? FF 75 F8 BF"); //4C5A89

@@ -20,3 +20,14 @@
 #define SCREEN_AR_NARROW (4.0f / 3.0f)
 #define SCREEN_FOV_HORIZONTAL 90.0f
 #define SCREEN_FOV_VERTICAL (2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))
+
+std::tuple<int32_t, int32_t> GetDesktopRes()
+{
+    HMONITOR monitor = MonitorFromWindow(GetDesktopWindow(), MONITOR_DEFAULTTONEAREST);
+    MONITORINFO info = {};
+    info.cbSize = sizeof(MONITORINFO);
+    GetMonitorInfo(monitor, &info);
+    int32_t DesktopResW = info.rcMonitor.right - info.rcMonitor.left;
+    int32_t DesktopResH = info.rcMonitor.bottom - info.rcMonitor.top;
+    return std::make_tuple(DesktopResW, DesktopResH);
+}
