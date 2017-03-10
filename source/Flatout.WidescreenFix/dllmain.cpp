@@ -31,9 +31,6 @@ void ShowIntroHook()
     Screen.fHudScale = 1.0f / (480.0f * Screen.fAspectRatio);
     Screen.fHudOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
 
-    float* pfAspectRatioX = hook::pattern("8B 44 24 04 8B 4C 24 08 C7 00 00 00 80").get_first<float>(10); //0x5069DA 
-    float* pfAspectRatioY = (float*)((uintptr_t)pfAspectRatioX + 6); //0x5069E0
-
     //Aspect Ratio
     auto pattern = hook::pattern("8B 44 24 04 8B 4C 24 08 C7 00 00 00 80");
     injector::WriteMemory<float>(pattern.get_first<float>(10 + 0), Screen.fWidth, true);
