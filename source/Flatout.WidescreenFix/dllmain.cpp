@@ -42,7 +42,7 @@ void ShowIntroHook()
     //Hud Scale
     pattern = hook::pattern("D8 0D ? ? ? ? DB 40 0C C7 05 ? ? ? ? 00 80 F8 43");
     injector::WriteMemory<float>(*pattern.get_first<float*>(2), Screen.fHudScale, true);
-    pattern = hook::pattern("D9 05 ? ? ? ? 56 8B F1 8B 86");
+    pattern = hook::pattern("D9 05 ? ? ? ? 56 8B F1 8B 86"); //4E23A0
     injector::WriteMemory(pattern.get_first(2), &Screen.fHudOffset, true);
 
     //pause menu centering
@@ -72,6 +72,18 @@ void ShowIntroHook()
     //loading bar offset
     TempPtr = *hook::pattern("D8 0D ? ? ? ? 89 44 24 34 D9 5C 24 24").get_first<float*>(2); //4C07C6
     injector::WriteMemory<float>(TempPtr, *(float*)TempPtr + (Screen.fHudOffset / 2.18f), true);
+
+    //main menu selectables
+    pattern = hook::pattern("8B 06 8D 54 24 24 52 C7"); //0x4DEFAB
+    struct CircleGlowHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.eax = *(uint32_t*)(regs.esi + 0x00);
+            regs.edx = regs.esp + 0x24;
+            *(float*)(regs.edx + 0x4) += Screen.fHudOffset;
+        }
+    }; injector::MakeInline<CircleGlowHook>(pattern.get_first(0), pattern.get_first(6));
 
     //FOV
     float fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
