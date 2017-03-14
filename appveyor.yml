@@ -1,11 +1,12 @@
 version: '{build}'
 skip_tags: true
+image: Visual Studio 2017
 configuration: Release
 install:
 - cmd: >-
     git submodule update --init --recursive
 
-    premake5 vs2015
+    premake5.bat
 build:
   project: build/WidescreenFixesPack.sln
   verbosity: minimal
