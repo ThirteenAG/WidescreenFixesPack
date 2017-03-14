@@ -4,6 +4,7 @@
 #pragma warning(disable: 4178 4305 4309 4510 4996)
 #include <windows.h>
 #include <stdint.h>
+#include <array>
 #include "IniReader.h"
 #include "injector\injector.hpp"
 #include "injector\calling.hpp"
@@ -21,13 +22,75 @@
 #define SCREEN_FOV_HORIZONTAL 90.0f
 #define SCREEN_FOV_VERTICAL (2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))
 
-inline std::tuple<int32_t, int32_t> GetDesktopRes()
+std::tuple<int32_t, int32_t> GetDesktopRes();
+
+inline std::string format(const char *fmt, ...)
 {
-    HMONITOR monitor = MonitorFromWindow(GetDesktopWindow(), MONITOR_DEFAULTTONEAREST);
-    MONITORINFO info = {};
-    info.cbSize = sizeof(MONITORINFO);
-    GetMonitorInfo(monitor, &info);
-    int32_t DesktopResW = info.rcMonitor.right - info.rcMonitor.left;
-    int32_t DesktopResH = info.rcMonitor.bottom - info.rcMonitor.top;
-    return std::make_tuple(DesktopResW, DesktopResH);
+    va_list args;
+    va_start(args, fmt);
+    std::vector<char> v(1024);
+    while (true)
+    {
+        va_list args2;
+        va_copy(args2, args);
+        int res = vsnprintf(v.data(), v.size(), fmt, args2);
+        if ((res >= 0) && (res < static_cast<int>(v.size())))
+        {
+            va_end(args);
+            va_end(args2);
+            return std::string(v.data());
+        }
+        size_t size;
+        if (res < 0)
+            size = v.size() * 2;
+        else
+            size = static_cast<size_t>(res) + 1;
+        v.clear();
+        v.resize(size);
+        va_end(args2);
+    }
+}
+
+template<typename T>
+std::array<uint8_t, sizeof(T)> to_bytes(const T& object)
+{
+    std::array<uint8_t, sizeof(T)> bytes;
+    const uint8_t* begin = reinterpret_cast<const uint8_t*>(std::addressof(object));
+    const uint8_t* end = begin + sizeof(T);
+    std::copy(begin, end, std::begin(bytes));
+    return bytes;
+}
+
+template<typename T>
+T& from_bytes(const std::array<uint8_t, sizeof(T)>& bytes, T& object)
+{
+    static_assert(std::is_trivially_copyable<T>::value, "not a TriviallyCopyable type");
+    uint8_t* begin_object = reinterpret_cast<uint8_t*>(std::addressof(object));
+    std::copy(std::begin(bytes), std::end(bytes), begin_object);
+    return object;
+}
+
+template <size_t n>
+std::string pattern_str(const std::array<uint8_t, n> bytes)
+{
+    std::string result;
+    for (size_t i = 0; i < n; i++)
+    {
+        result += format("%02X ", bytes[i]);
+    }
+    return result;
+}
+
+template <typename T>
+std::string pattern_str(T t)
+{
+    std::string result;
+    return result += format("%02X ", t);
+}
+
+template <typename T, typename... Rest>
+std::string pattern_str(T t, Rest... rest)
+{
+    std::string result;
+    return result += format("%02X ", t) + pattern_str(rest...);
 }
