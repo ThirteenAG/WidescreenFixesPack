@@ -15,12 +15,60 @@ struct Screen
 
 injector::memory_pointer_raw pfShowIntro;
 
-injector::hook_back<void(__fastcall*)(int _this, int edx, float a2, float a3, float a4, float a5, int a6)> hbDrawDerbyTriangles;
-void __fastcall DrawDerbyTrianglesHook(int _this, int edx, float a2, float a3, float a4, float a5, int a6)
+//injector::hook_back<void(__fastcall*)(int _this, int edx, float a2, float a3, float a4, float a5, int a6)> hbDrawDerbyTriangles;
+//void __fastcall DrawDerbyTrianglesHook(int _this, int edx, float a2, float a3, float a4, float a5, int a6)
+//{
+//    return hbDrawDerbyTriangles.fun(_this,edx, a2, a3, a4, a5, a6);
+//}
+
+uintptr_t* dword_4B4C72;
+uintptr_t* dword_8DA718;
+void __declspec(naked) sub_4B4C50()
 {
-    a2 += Screen.fHudOffset; //??
-    a5 *= 2.0f; //??
-    return hbDrawDerbyTriangles.fun(_this,edx, a2, a3, a4, a5, a6);
+    const static float flt_67DBE4 = 0.0015625f;
+    _asm sub     esp, 0x34
+    _asm test    eax, eax
+    _asm mov     ecx, 0x8DA718
+    _asm mov     ecx, [ecx]
+    _asm fild    dword ptr [ecx+0x8]
+    _asm mov     dword ptr [esp], 0
+    _asm fild    dword ptr [ecx+0x0C]
+    _asm fstp    dword ptr [esp+0x0C]
+    _asm fld     ds:flt_67DBE4
+    _asm jmp     dword_4B4C72
+}
+
+void __declspec(naked) sub_4B4BF0()
+{
+    _asm sub     esp, 8
+    _asm movzx   eax, byte ptr [ecx+1Ch]
+    _asm fld     dword ptr [esp+18h]
+    _asm mov     edx, [ecx+4]
+    _asm mov     ecx, [ecx+10h]
+    _asm lea     edx, [edx+eax*8]
+    _asm push    esi
+    _asm push    edi
+    _asm fmul    dword ptr [edx]
+    _asm shl     eax, 4
+    _asm lea     esi, [eax+ecx]
+    _asm mov     eax, [esp+18h]
+    _asm mov     ecx, [esp+14h]
+    _asm fstp    dword ptr [esp+8]
+    _asm fld     dword ptr [esp+20h]
+    _asm lea     edi, [esp+8]
+    _asm fmul    dword ptr [edx+4]
+    _asm mov     edx, [esp+1Ch]
+    _asm push    edx
+    _asm push    eax
+    _asm mov     eax, [esp+2Ch]
+    _asm fstp    dword ptr [esp+14h]
+    _asm lea     edx, [esi+8]
+    _asm push    ecx
+    _asm call    sub_4B4C50
+    _asm pop     edi
+    _asm pop     esi
+    _asm add     esp, 8
+    _asm retn    14h
 }
 
 void ShowIntroHook()
@@ -46,7 +94,7 @@ void ShowIntroHook()
 
     //Hud Scale
     pattern = hook::pattern("D9 05 ? ? ? ? 56 8B F1 8B 86"); //53BBF3
-    //injector::WriteMemory(pattern.get_first(2), &Screen.fHudOffset, true);
+    injector::WriteMemory(pattern.get_first(2), &Screen.fHudOffset, true);
     pattern = hook::pattern("50 D8 0D ? ? ? ? D9 5C 24 20 DB 47 0C"); //4783C5
     //injector::WriteMemory<float>(*pattern.get_first<float*>(3), Screen.fHudScale, true);
     auto pf0015625 = *pattern.get_first<float*>(3);
@@ -64,31 +112,27 @@ void ShowIntroHook()
     injector::WriteMemory(pattern.count(2).get(0).get<uint32_t>(2), &Screen.fHudScale, true); // 0x00460217
     injector::WriteMemory(pattern.count(2).get(1).get<uint32_t>(2), &Screen.fHudScale, true); // 0x004B4C6C derby triangles etc
 
-    injector::WriteMemory<float>(0x4BB53E + 1, 0.0f, true); //hide text backround stripe (top right corner)
+    pattern = hook::pattern("D8 C9 D9 44 24 0C D8 0D ? ? ? ? 75");
+    dword_4B4C72 = pattern.get_first<uintptr_t>(0);
+    pattern = hook::pattern("8B 0D ? ? ? ? 89 16 8B 01 6A 20");
+    dword_8DA718 = *pattern.get_first<uintptr_t*>(2);
 
-    hbDrawDerbyTriangles.fun = injector::MakeCALL(0x4C0AE8, DrawDerbyTrianglesHook).get();
+    pattern = hook::pattern("E8 ? ? ? ? EB 04 DD D8 DD D8"); // 0x4C0AE8
+    injector::MakeCALL(pattern.get_first(0), sub_4B4BF0, true); //derby triangle restoration
+    pattern = hook::pattern("E8 ? ? ? ? D9 44 24 24 0F B6 4E"); // 0x4BB548
+    injector::MakeCALL(pattern.get_first(0), sub_4B4BF0, true);//text backround stripe (top right corner)
 
-    //pattern = hook::pattern("8B 06 8D 54 24 24 52 C7"); //0x4DEFAB
-    //struct DerbyTrianglesHook
+    //pattern = hook::pattern(""); //
+    //struct CenterStuff
     //{
     //    void operator()(injector::reg_pack& regs)
     //    {
-    //        regs.eax = *(uint32_t*)(regs.esp + 0x00) << 24;
+    //        if (*(float*)(regs.esp + 0x44) <= 640.0f)
+    //            *(float*)(regs.esp + 0x44) += Screen.fHudOffset;
+    //        regs.esi = regs.ecx;
+    //        regs.eax = *(uint32_t*)(regs.esi + 0x60);
     //    }
-    //}; injector::MakeInline<DerbyTrianglesHook>(0x4B4C8D, 0x4B4C8D+6/*pattern.get_first(0), pattern.get_first(6)*/);
-
-    //pattern = hook::pattern("8B 06 8D 54 24 24 52 C7"); //0x4DEFAB
-    //struct DerbyTrianglesHook
-    //{
-    //    void operator()(injector::reg_pack& regs)
-    //    {
-    //        *(float*)(regs.esp + 0x10) += Screen.fHudOffset;
-    //        *(float*)(regs.esp + 0x18) += Screen.fHudOffset;
-    //
-    //        regs.eax = *(uint32_t*)(regs.ecx);
-    //        regs.edx = regs.esp + 0x10;
-    //    }
-    //}; injector::MakeInline<DerbyTrianglesHook>(0x4B4D71, 0x4B4D71+6/*pattern.get_first(0), pattern.get_first(6)*/);
+    //}; injector::MakeInline<CenterStuff>(0x54F056);
 
     //FOV
     float fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
