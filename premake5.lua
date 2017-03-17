@@ -3,6 +3,8 @@ workspace "WidescreenFixesPack"
    platforms { "Win32" }
    architecture "x32"
    location "build"
+   objdir ("build/obj")
+   buildlog ("build/log/%{prj.name}.log")
    
    kind "SharedLib"
    language "C++"
@@ -21,6 +23,7 @@ workspace "WidescreenFixesPack"
    files { "source/%{prj.name}/*.cpp" }
    files { "Resources/*.rc" }
    files { "external/hooking/Hooking.Patterns.h", "external/hooking/Hooking.Patterns.cpp" }
+   files { "includes/stdafx.h", "includes/stdafx.cpp" }
    includedirs { "includes" }
    includedirs { "external/hooking" }
    includedirs { "external/injector/include" }
