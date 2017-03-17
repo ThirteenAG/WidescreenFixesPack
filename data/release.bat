@@ -10,7 +10,7 @@ if errorlevel 1 (
    SET filepath=%%F
    SET dll=!filepath:.tmp=.dll!
    ECHO !dll! 	
-   copy "..\..\Ultimate-ASI-Loader\bin\Release\dinput8.dll" !dll!
+   copy "..\..\Ultimate-ASI-Loader\data\dinput8.dll" !dll!
 )
 )
 
