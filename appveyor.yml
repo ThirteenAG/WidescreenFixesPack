@@ -24,20 +24,29 @@ before_package:
 - cmd: >-
     cd ..
 
+
     git clone https://github.com/ThirteenAG/Ultimate-ASI-Loader --recursive
 
-    cd Ultimate-ASI-Loader
+    Ultimate-ASI-Loader/premake5.bat
 
-    premake5.bat
-
-    msbuild.exe build/Ultimate-ASI-Loader-x86.sln /t:Build /p:Configuration=Release;Platform=Win32
-
-    cd ..
-
-    cd widescreenfixespack
+    msbuild.exe Ultimate-ASI-Loader/build/Ultimate-ASI-Loader-x86.sln /t:Build /p:Configuration=Release;Platform=Win32
 
 
-    cd data
+    git clone https://github.com/ThirteenAG/d3d8-wrapper --recursive
+
+    d3d8-wrapper/premake5.bat
+
+    msbuild.exe d3d8-wrapper/build/d3d8-wrapper.sln /t:Build /p:Configuration=Release;Platform=Win32
+
+
+    git clone https://github.com/ThirteenAG/d3d9-wrapper --recursive
+
+    d3d9-wrapper/premake5.bat
+
+    msbuild.exe d3d9-wrapper/build/d3d9-wrapper.sln /t:Build /p:Configuration=Release;Platform=Win32
+
+
+    cd widescreenfixespack/data
 
     release.bat
 after_build:
