@@ -14,6 +14,7 @@ if errorlevel 1 (
 )
 )
 
+rem Additional files
 FOR /R ".\" %%F IN (*.wrapper) DO (
 findstr /c:"FPSLimit" "%%F" >nul 2>&1
 if errorlevel 1 (
@@ -34,8 +35,11 @@ if errorlevel 1 (
 )
 )
 
-rem Additional files
+rem Scarface PIX
 
+copy "%DXSDK_DIR%\Utilities\bin\x86\Detoured.dll" ".\Scarface.GenericFix\Detoured.dll"
+copy "%DXSDK_DIR%\Utilities\bin\x86\PIXHelper.dll" ".\Scarface.GenericFix\PIXHelper.dll"
+copy "%DXSDK_DIR%\Utilities\bin\x86\PIXWin.exe" ".\Scarface.GenericFix\PIXWin.exe"
 
 rem Creating archives
 

@@ -27,23 +27,35 @@ before_package:
 
     git clone https://github.com/ThirteenAG/Ultimate-ASI-Loader --recursive
 
-    Ultimate-ASI-Loader/premake5.bat
+    cd Ultimate-ASI-Loader
 
-    msbuild.exe Ultimate-ASI-Loader/build/Ultimate-ASI-Loader-x86.sln /t:Build /p:Configuration=Release;Platform=Win32
+    premake5.bat
+
+    msbuild.exe build/Ultimate-ASI-Loader-x86.sln /t:Build /p:Configuration=Release;Platform=Win32
+
+    cd ..
 
 
     git clone https://github.com/ThirteenAG/d3d8-wrapper --recursive
 
-    d3d8-wrapper/premake5.bat
+    cd d3d8-wrapper
 
-    msbuild.exe d3d8-wrapper/build/d3d8-wrapper.sln /t:Build /p:Configuration=Release;Platform=Win32
+    premake5.bat
+
+    msbuild.exe build/d3d8-wrapper.sln /t:Build /p:Configuration=Release;Platform=Win32
+
+    cd ..
 
 
     git clone https://github.com/ThirteenAG/d3d9-wrapper --recursive
 
-    d3d9-wrapper/premake5.bat
+    cd d3d9-wrapper
 
-    msbuild.exe d3d9-wrapper/build/d3d9-wrapper.sln /t:Build /p:Configuration=Release;Platform=Win32
+    premake5.bat
+
+    msbuild.exe build/d3d9-wrapper.sln /t:Build /p:Configuration=Release;Platform=Win32
+
+    cd ..
 
 
     cd widescreenfixespack/data
