@@ -2,22 +2,45 @@ echo off
 RD /S /Q ".\Archives"
 rem Copying asi loader
 setlocal enabledelayedexpansion
-FOR /R ".\" %%F IN (*.tmp) DO (
+FOR /R ".\" %%F IN (*.ual) DO (
 findstr /c:"loadfromscriptsonly" "%%F" >nul 2>&1
 if errorlevel 1 (
     echo String not found...
 ) else (
    SET filepath=%%F
-   SET dll=!filepath:.tmp=.dll!
+   SET dll=!filepath:.ual=.dll!
    ECHO !dll! 	
    copy "..\..\Ultimate-ASI-Loader\data\dinput8.dll" !dll!
 )
 )
 
+FOR /R ".\" %%F IN (*.wrapper) DO (
+findstr /c:"FPSLimit" "%%F" >nul 2>&1
+if errorlevel 1 (
+		findstr /c:"SetVertexShaderConstantHook" "%%F" >nul 2>&1
+		if errorlevel 1 (
+			echo String not found...
+		) else (
+		SET filepath=%%F
+		SET dll=!filepath:.wrapper=.dll!
+		ECHO !dll! 	
+		copy "..\..\d3d8-wrapper\data\d3d8.dll" !dll!
+)
+) else (
+   SET filepath=%%F
+   SET dll=!filepath:.wrapper=.dll!
+   ECHO !dll! 	
+   copy "..\..\d3d9-wrapper\data\d3d9.dll" !dll!
+)
+)
+
+rem Additional files
+
+
 rem Creating archives
 
 FOR /d %%X IN (*) DO (
-7za a -tzip "Archives\%%X.zip" "%%X\" -r -xr^^!Archives -x^^!*.pdb -x^^!*.db -x^^!*.ipdb -x^^!*.iobj -x^^!*.tmp
+7za a -tzip "Archives\%%X.zip" "%%X\" -r -xr^^!Archives -x^^!*.pdb -x^^!*.db -x^^!*.ipdb -x^^!*.iobj -x^^!*.tmp -x^^!*.iobj -x^^!*.ual
 )
 EXIT
 
