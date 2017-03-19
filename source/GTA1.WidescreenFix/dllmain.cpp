@@ -1,312 +1,158 @@
 #include "stdafx.h"
-#include "..\includes\CPatch.h"
 
-HWND hWnd;
-DWORD jmpAddress;
-void patch_res();
-
-void patch_res_x1(), patch_res_x2(), patch_res_x3(), patch_res_x4(), patch_res_x5(), patch_res_x6(), patch_res_x7(), patch_res_x8(), patch_res_x9(), patch_res_x10();
-void patch_res_y1(), patch_res_y2(), patch_res_y3(), patch_res_y4(), patch_res_y5(), patch_res_y6(), patch_res_y7();
-void patch_player_a(); void patch_player_a2();
-
-int res_x;
-int res_y;
-int res_x43;
-int Var_480 = 480;
-
-DWORD WINAPI Thread(LPVOID)
+struct Screen
 {
-    CPatch::RedirectJump(0x42B512, patch_player_a);
-    CPatch::RedirectJump(0x4274FF, patch_player_a2);
+    int32_t Width;
+    int32_t Height;
+    int32_t Width43;
+} Screen;
 
-    CIniReader iniReader("");
-    res_x = iniReader.ReadInteger("MAIN", "ResX", 0);
-    res_y = iniReader.ReadInteger("MAIN", "ResY", 0);
+DWORD WINAPI WindowCheck(LPVOID hWnd)
+{
+    while (true)
+    {
+        Sleep(10);
 
-    if (!res_x || !res_y) {
-        HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
-        MONITORINFO info;
-        info.cbSize = sizeof(MONITORINFO);
-        GetMonitorInfo(monitor, &info);
-        res_x = info.rcMonitor.right - info.rcMonitor.left;
-        res_y = info.rcMonitor.bottom - info.rcMonitor.top;
+        if (*(HWND*)hWnd && !IsWindow(*(HWND*)hWnd))
+            ExitProcess(0);
     }
-
-    CPatch::RedirectJump(0x491E4C, patch_res);
-
-    CPatch::RedirectJump(0x414FF7, patch_res_x1);
-    CPatch::RedirectJump(0x43B7CF, patch_res_x2);
-
-    res_x43 = static_cast<int>(res_y * (4.0f / 3.0f));
-    CPatch::RedirectJump(0x46453B, patch_res_x3);
-    //CPatch::RedirectJump(0x46452C, patch_res_x4);
-    //CPatch::RedirectJump(0x486848, patch_res_x5);
-    //CPatch::RedirectJump(0x486852, patch_res_x6);
-    /*CPatch::RedirectJump(0x48C137, patch_res_x7);
-    CPatch::RedirectJump(0x48C276, patch_res_x8);
-    CPatch::RedirectJump(0x48C159, patch_res_x9);*/
-    //CPatch::RedirectJump(0x49168B, patch_res_x10);
-
-    CPatch::RedirectJump(0x415008, patch_res_y1);
-    CPatch::RedirectJump(0x43B7D8, patch_res_y2);
-    CPatch::RedirectJump(0x464532, patch_res_y3);
-    CPatch::RedirectJump(0x48683A, patch_res_y4);
-    CPatch::RedirectJump(0x48C13D, patch_res_y5);
-    CPatch::RedirectJump(0x48C2B0, patch_res_y6);
-    //CPatch::RedirectJump(0x, patch_res_y7);
-
-    //menu 
-    CPatch::SetUInt(0x4898C3 + 0x1, res_x);
-
-    //FMV crashfix
-    //CPatch::SetPointer(0x4152D6 + 2, &Var_640);
-    //CPatch::SetPointer(0x4152E7 + 1, &Var_480);
-
-    CPatch::SetPointer(0x42D830 + 0xA + 1, &Var_480);
-    CPatch::SetPointer(0x42D830 + 0x5B + 2, &Var_480);
-    CPatch::SetPointer(0x42D830 + 0x9C + 2, &Var_480);
-
-    //CPatch::SetPointer(0x42D830 + 0x3B + 2, &Var_640);
-    //CPatch::SetPointer(0x42D830 + 0x71 + 2, &Var_640);
     return 0;
 }
 
-void __declspec(naked)patch_res()
+DWORD WINAPI Init(LPVOID bDelay)
 {
-    _asm
+    auto pattern = hook::pattern("83 EC 0C 33 C0 53 57 33 DB");
+
+    if (pattern.empty() && !bDelay)
     {
-        mov eax, res_x
-        MOV DWORD PTR DS : [0x787310], EAX
-        MOV DWORD PTR DS : [0x787370], EAX
-        MOV EAX, DWORD PTR DS : [EBX + 1B4h]
-        INC EAX
-        TEST ECX, ECX
-        mov eax, res_y
-        MOV DWORD PTR DS : [0x787314], EAX
-        MOV DWORD PTR DS : [0x787388], EAX
-
-        mov jmpAddress, 0x491E69
-        jmp jmpAddress
+        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
+        return 0;
     }
-}
 
-void __declspec(naked)patch_res_x1()
-{
-    _asm
+    if (bDelay)
+        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
+
+    CIniReader iniReader("");
+    Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
+    Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
+    bool bEndProcess = iniReader.ReadInteger("MAIN", "EndProcessOnWindowClose", 0) != 0;
+
+    if (!Screen.Width || !Screen.Height)
+        std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
+
+    Screen.Width43 = static_cast<uint32_t>(Screen.Height * (4.0f / 3.0f));
+
+    //wndmode crashfix
+    pattern = hook::pattern("E8 ? ? ? ? 83 C4 04 B8 01 00 00 00 5D 5F 5E 5B 81 C4 70 05 00 00"); //0x49225B
+    injector::MakeNOP(pattern.get_first(0), 5, true);
+
+    //Player_a bugfix
+    pattern = hook::pattern("88 1D ? ? ? ? 88 1D ? ? ? ? C6 05 ? ? ? ? 01 88 1D ? ? ? ? C7 05"); //0x42B512
+    static auto byte_51029C = *pattern.get_first<uint8_t*>(2);
+    struct patch_player_a
     {
-        mov eax, res_x
-        MOV DWORD PTR DS : [0x504CC0], EAX
-        mov jmpAddress, 0x414FFC
-        jmp jmpAddress
-    }
-}
+        void operator()(injector::reg_pack& regs)
+        {
+            *byte_51029C = 0x06;
+        }
+    };
+    injector::MakeInline<patch_player_a>(pattern.get_first(0), pattern.get_first(6));
+    pattern = hook::pattern("A2 ? ? ? ? E8 ? ? ? ? 8B F0 83"); //0x4274FF
+    injector::MakeInline<patch_player_a>(pattern.get_first(0));
 
-void __declspec(naked)patch_res_x2()
-{
-    _asm
+    //Res change
+    pattern = hook::pattern("A3 ? ? ? ? A3 ? ? ? ? 8B 83 B4 01 00 00 40"); //0x491E4C
+    static auto nWidth = *pattern.get_first<uint32_t*>(1);
+    static auto dword_787370 = *pattern.get_first<uint32_t*>(6);
+    static auto nHeight = *pattern.get_first<uint32_t*>(20);
+    static auto dword_787388 = *pattern.get_first<uint32_t*>(25);
+    struct SetResHook
     {
-        mov edx, res_x
-        MOV DWORD PTR DS : [0x5C0C00], EDX
-        mov jmpAddress, 0x43B7D5
-        jmp jmpAddress
-    }
-}
+        void operator()(injector::reg_pack& regs)
+        {
+            *nWidth = Screen.Width;
+            *dword_787370 = Screen.Width;
+            regs.eax = Screen.Height;
+        }
+    }; injector::MakeInline<SetResHook>(pattern.get_first(0), pattern.get_first(17));
 
-void __declspec(naked)patch_res_x3()
-{
-    _asm
+    pattern = hook::pattern("89 B1 ? ? ? ? D1 F8 89 81"); //0x46453B
+    static auto dword_74F168 = *pattern.get_first<uint32_t>(2);
+    struct SetResHook43
     {
-        mov esi, res_x43
-        MOV DWORD PTR DS : [ECX + 0x74F168], ESI
-        mov jmpAddress, 0x464541
-        jmp jmpAddress
-    }
-}
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.esi = Screen.Width43;
+            *(uint32_t*)(regs.ecx + dword_74F168) = regs.esi;
+        }
+    }; injector::MakeInline<SetResHook43>(pattern.get_first(0), pattern.get_first(6));
 
-void __declspec(naked)patch_res_x4()
-{
-    _asm
+    pattern = hook::pattern("8B 4C 24 04 8B 81 40 02 00 00"); //0x48C1A0
+    struct SetResHookX
     {
-        mov edx, res_x
-        MOV DWORD PTR DS : [ECX + 0x74F170], EDX
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.eax = Screen.Width - 1;
+        }
+    }; injector::MakeInline<SetResHookX>(pattern.get_first(0), pattern.get_first(19));
 
-        mov jmpAddress, 0x464532
-        jmp jmpAddress
-    }
-}
-
-void __declspec(naked)patch_res_x5()
-{
-    _asm
+    pattern = hook::pattern("A3 ? ? ? ? E8 ? ? ? ? 83 C4 08 40 83"); //0x414FF7
+    static auto dword_504CC0 = *pattern.get_first<uint32_t*>(1);
+    struct SetResHookX1
     {
-        mov ecx, res_x
-        MOV DWORD PTR DS : [0x785170], ECX
-        mov jmpAddress, 0x48684E
-        jmp jmpAddress
-    }
-}
+        void operator()(injector::reg_pack& regs)
+        {
+            *dword_504CC0 = Screen.Width;
+        }
+    }; injector::MakeInline<SetResHookX1>(pattern.get_first(0));
 
-void __declspec(naked)patch_res_x6()
-{
-    _asm
+    pattern = hook::pattern("89 15 ? ? ? ? 8B 40 0C A3 ? ? ? ? C3"); //0x43B7CF
+    static auto dword_5C0C00 = *pattern.get_first<uint32_t*>(2);
+    struct SetResHookX2
     {
-        mov ecx, res_x
-        MOV DWORD PTR DS : [0x785178], ECX
-        mov jmpAddress, 0x486858
-        jmp jmpAddress
-    }
-}
+        void operator()(injector::reg_pack& regs)
+        {
+            *dword_5C0C00 = Screen.Width;
+        }
+    }; injector::MakeInline<SetResHookX2>(pattern.get_first(0), pattern.get_first(6));
 
-void __declspec(naked)patch_res_x7()
-{
-    _asm
+    pattern = hook::pattern("8B 4C 24 04 8B 81 44 02 00 00 8B 91"); //0x48C1C0
+    struct SetResHookY
     {
-        mov esi, res_x
-        MOV DWORD PTR DS : [0x787AD4], ESI
-        mov jmpAddress, 0x48C13D
-        jmp jmpAddress
-    }
-}
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.eax = Screen.Height - 1;
+        }
+    }; injector::MakeInline<SetResHookY>(pattern.get_first(0), pattern.get_first(19));
 
-void __declspec(naked)patch_res_x8()
-{
-    _asm
+    //Menu fix
+    pattern = hook::pattern("BB ? ? ? ? 2B 5D 0C D1 E3 89 5D FC"); //0x4898C3
+    injector::WriteMemory(pattern.get_first(1), Screen.Width, true);
+
+    //FMV crashfix
+    static int n480 = 480;
+    pattern = hook::pattern("A1 ? ? ? ? 74 56 85 C0 0F");
+    injector::WriteMemory(pattern.get_first(1), &n480, true); //42D83A
+    pattern = hook::pattern("3B 15 ? ? ? ? 7C B7 5B 5F 5E C3");
+    injector::WriteMemory(pattern.get_first(2), &n480, true); //42D88B
+    pattern = hook::pattern("3B 15 ? ? ? ? 7C C7 5F 5E C3");
+    injector::WriteMemory(pattern.get_first(2), &n480, true); //42D8CC
+
+    if (bEndProcess)
     {
-        mov eax, res_x
-        MOV DWORD PTR DS : [0x787AEC], EAX
-        mov jmpAddress, 0x48C27B
-        jmp jmpAddress
+        pattern = hook::pattern("3B 05 ? ? ? ? 0F 94 C3 85 DB"); //0x4B4FB8
+        auto hwnd = *pattern.get_first<HWND*>(2);
+        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&WindowCheck, (LPVOID)hwnd, 0, NULL);
     }
-}
 
-void __declspec(naked)patch_res_x9()
-{
-    _asm
-    {
-        mov eax, res_x
-        MOV DWORD PTR DS : [0x787CB0], EAX
-        mov jmpAddress, 0x48C15E
-        jmp jmpAddress
-    }
-}
-
-void __declspec(naked)patch_res_x10()
-{
-    _asm
-    {
-        mov eax, res_x
-        MOV DWORD PTR DS : [EDI + 16Ch], EAX
-        mov jmpAddress, 0x491691
-        jmp jmpAddress
-    }
-}
-
-
-
-
-
-void __declspec(naked)patch_res_y1()
-{
-    _asm
-    {
-        mov eax, res_y
-        MOV DWORD PTR DS : [0x504CC4], EAX
-        mov jmpAddress, 0x41500D
-        jmp jmpAddress
-    }
-}
-
-void __declspec(naked)patch_res_y2()
-{
-    _asm
-    {
-        mov eax, res_y
-        MOV DWORD PTR DS : [0x5BFAB0], EAX
-        mov jmpAddress, 0x43B7DD
-        jmp jmpAddress
-    }
-}
-
-void __declspec(naked)patch_res_y3()
-{
-    _asm
-    {
-        mov edi, res_y
-        MOV DWORD PTR DS : [ECX + 0x74F16C], EDI
-        mov jmpAddress, 0x464538
-        jmp jmpAddress
-    }
-}
-
-void __declspec(naked)patch_res_y4()
-{
-    _asm
-    {
-        mov edx, res_y
-        MOV DWORD PTR DS : [0x785174], EDX
-        mov jmpAddress, 0x486840
-        jmp jmpAddress
-    }
-}
-
-void __declspec(naked)patch_res_y5()
-{
-    _asm
-    {
-        mov edi, res_y
-        MOV DWORD PTR DS : [0x787AD8], EDI
-        mov jmpAddress, 0x48C143
-        jmp jmpAddress
-    }
-}
-
-void __declspec(naked)patch_res_y6()
-{
-    _asm
-    {
-        mov eax, res_y
-        MOV DWORD PTR DS : [0x787AF0], EAX
-        mov jmpAddress, 0x48C2B5
-        jmp jmpAddress
-    }
-}
-
-void __declspec(naked)patch_res_y7()
-{
-    _asm
-    {
-        mov edx, res_y
-        MOV DWORD PTR DS : [0x4B48C0], EDX
-        mov jmpAddress, 0x48AE8B
-        jmp jmpAddress
-    }
-}
-
-void __declspec(naked)patch_player_a()
-{
-    _asm
-    {
-        MOV BYTE PTR DS : [0x51029C], 0x06
-        mov jmpAddress, 0x42B518
-        jmp jmpAddress
-    }
-}
-
-void __declspec(naked)patch_player_a2()
-{
-    _asm
-    {
-        MOV BYTE PTR DS : [0x51029C], 0x06
-        mov jmpAddress, 0x427504
-        jmp jmpAddress
-    }
+    return 0;
 }
 
 BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Thread, NULL, 0, NULL);
+        Init(NULL);
     }
     return TRUE;
 }
