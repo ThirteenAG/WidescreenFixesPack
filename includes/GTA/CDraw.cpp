@@ -1,13 +1,6 @@
 #include "..\stdafx.h"
 #include "common.h"
 #include "CDraw.h"
-#define _USE_MATH_DEFINES
-#include "math.h"
-
-#define DEGREE_TO_RADIAN(fAngle) \
-	((fAngle) * (float)M_PI / 180.0f)
-#define RADIAN_TO_DEGREE(fAngle) \
-	((fAngle) * 180.0f / (float)M_PI)
 
 extern RsGlobalType* RsGlobal;
 float*  CDraw::pfScreenAspectRatio;

@@ -1,4 +1,5 @@
-HWND hWnd;
+#include "stdafx.h"
+
 uint32_t ResX, ResY;
 RsGlobalType* RsGlobal;
 float fWideScreenWidthScaleDown, fWideScreenHeightScaleDown;

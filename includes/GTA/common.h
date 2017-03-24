@@ -1,5 +1,4 @@
-#include "..\stdafx.h"
-#include <string> 
+#include "stdafx.h"
 #include "CDraw.h"
 #include "CCamera.h"
 
