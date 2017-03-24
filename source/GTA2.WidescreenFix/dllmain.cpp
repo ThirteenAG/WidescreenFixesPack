@@ -12,6 +12,7 @@ struct Screen
     float fHudScale;
     int32_t nHudScale;
     float fHudOffset;
+    float fMenuOffset;
     float fCameraZoom;
 } Screen;
 
@@ -27,8 +28,9 @@ DWORD WINAPI WindowCheck(LPVOID hWnd)
     return 0;
 }
 
-uintptr_t off_5952C4, esp40, esp44;
+uintptr_t off_5952C4, esp40, esp44, esp68;
 uintptr_t dword_6733F0, dword_4C834B, dword_4C74EA;
+uintptr_t dword_45379E, dword_453A22, dword_4580C6;
 uintptr_t gbh_DrawQuadAddr;
 void __declspec(naked) gbh_DrawQuad()
 {
@@ -36,13 +38,25 @@ void __declspec(naked) gbh_DrawQuad()
     _asm mov esp40, ecx
     _asm mov ecx, [esp + 0x44]
     _asm mov esp44, ecx
+    _asm mov ecx, [esp + 0x68]
+    _asm mov esp68, ecx
 
-    if (esp40 != dword_4C834B && esp44 != dword_4C74EA)
+    if (esp68 == dword_45379E || esp68 == dword_453A22 || esp68 == dword_4580C6)
     {
-        *(float*)(dword_6733F0 + 0x00) += Screen.fHudOffset;
-        *(float*)(dword_6733F0 + 0x20) += Screen.fHudOffset;
-        *(float*)(dword_6733F0 + 0x40) += Screen.fHudOffset;
-        *(float*)(dword_6733F0 + 0x60) += Screen.fHudOffset;
+        *(float*)(dword_6733F0 + 0x00) += Screen.fMenuOffset;
+        *(float*)(dword_6733F0 + 0x20) += Screen.fMenuOffset;
+        *(float*)(dword_6733F0 + 0x40) += Screen.fMenuOffset;
+        *(float*)(dword_6733F0 + 0x60) += Screen.fMenuOffset;
+    }
+    else
+    {
+        if (esp40 != dword_4C834B && esp44 != dword_4C74EA)
+        {
+            *(float*)(dword_6733F0 + 0x00) += Screen.fHudOffset;
+            *(float*)(dword_6733F0 + 0x20) += Screen.fHudOffset;
+            *(float*)(dword_6733F0 + 0x40) += Screen.fHudOffset;
+            *(float*)(dword_6733F0 + 0x60) += Screen.fHudOffset;
+        }
     }
 
     gbh_DrawQuadAddr = *(uintptr_t*)off_5952C4;
@@ -61,7 +75,7 @@ void __declspec(naked) gbh_BlitImage()
     //*(int32_t*)(esp00 + 0x0C) += Screen.fHudOffset; //int srcTop
     //*(int32_t*)(esp00 + 0x10) += Screen.fHudOffset; //int srcRight
     //*(int32_t*)(esp00 + 0x14) += Screen.fHudOffset; //int srcBottom
-    *(int32_t*)(esp00 + 0x18) += Screen.fHudOffset; //int dstX
+    *(int32_t*)(esp00 + 0x18) += Screen.fMenuOffset; //int dstX
     //*(int32_t*)(esp00 + 0x1C) += Screen.fHudOffset; //int dstY
 
     gbh_BlitImageAddr = *(uintptr_t*)off_59533C;
@@ -100,6 +114,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     Screen.fHudScale = ((16384.0f * (Screen.fWidth / 640.0f)) / (Screen.fAspectRatio / (4.0f / 3.0f)));
     Screen.nHudScale = static_cast<int32_t>(Screen.fHudScale);
     Screen.fHudOffset = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
+    Screen.fMenuOffset = (Screen.fWidth - 480.0f * (4.0f / 3.0f)) / 2.0f;
     if (strncmp(szCameraZoom, "auto", 4) != 0)
         Screen.fCameraZoom = iniReader.ReadFloat("MAIN", "CameraZoomFactor", 1.0f);
     else
@@ -152,21 +167,33 @@ DWORD WINAPI Init(LPVOID bDelay)
     {
         dword_6733F0 = *hook::pattern("68 ? ? ? ? 52 C7 05").get_first<uintptr_t>(1);
 
-        pattern = hook::pattern("FF 15 ? ? ? ? 5F 5E 5B 8B E5 5D C2");
-        off_5952C4 = *pattern.count(5).get(3).get<uintptr_t>(2);
+        pattern = hook::pattern("83 3D ? ? ? ? 00 75 ? 68 ? ? ? ? 68 ? ? ? ? 8D 85 B0 FC FF FF");
+        off_5952C4 = *pattern.count(1).get(0).get<uintptr_t>(2);
 
-        injector::MakeNOP(pattern.count(5).get(3).get<uintptr_t>(0), 6, true);
-        injector::MakeCALL(pattern.count(5).get(3).get<uintptr_t>(0), gbh_DrawQuad, true); //0x4CBD9A
-
-        injector::MakeNOP(pattern.count(5).get(4).get<uintptr_t>(0), 6, true);
-        injector::MakeCALL(pattern.count(5).get(4).get<uintptr_t>(0), gbh_DrawQuad, true); //0x4CC0B1
-
-        pattern = hook::pattern("FF 15 ? ? ? ? 8D 4C 24 10 51 8D 4C 24 7C");
-        injector::MakeNOP(pattern.get_first(0), 6, true);
-        injector::MakeCALL(pattern.get_first(0), gbh_DrawQuad, true); //0x4CC546
+        pattern = hook::pattern(pattern_str(0xFF, 0x15, to_bytes(off_5952C4)));
+        for (size_t i = 3; i < pattern.size(); ++i) //0x4CBD9A 0x4CC0B1 0x4CC546
+        { 
+            injector::MakeNOP(pattern.get(i).get<uint32_t>(0), 6, true);
+            injector::MakeCALL(pattern.get(i).get<uint32_t>(0), gbh_DrawQuad, true);
+        }
 
         dword_4C834B = (uintptr_t)hook::pattern("8B 46 20 48 83 F8 04").get_first(0);
         dword_4C74EA = (uintptr_t)hook::pattern("6A 06 E8 ? ? ? ? 5E 59 C3").get_first(7);
+
+        dword_45379E = (uintptr_t)hook::pattern("8B 44 24 1C 8B 54 24 20 40").get_first(0);
+        dword_453A22 = (uintptr_t)hook::pattern("C7 ? ? ? 02 00 00 00 E8 ? ? ? ? 59 C2 14 00").get_first(13);
+        dword_4580C6 = (uintptr_t)hook::pattern("8B 4C 24 18 41 66 3B 0F").get_first(0);
+
+        //menu (ret 24h)
+        //injector::MakeCALL(0x453590 + 0x209, test, true); //credits
+        //injector::MakeCALL(0x4539F0 + 0x2D , test, true); //main menu text
+        //injector::MakeCALL(0x4566C0 + 0x11C, test, true);
+        //injector::MakeCALL(0x4568C0 + 0x157, test, true);
+        //injector::MakeCALL(0x456FB0 + 0xF7 , test, true);
+        //injector::MakeCALL(0x4580C1 + 0x00 , test, true); //main menu greyed out text
+        //injector::MakeCALL(0x457920 + 0xB01, test, true);
+        //injector::MakeCALL(0x4BA2C0 + 0x57 , test, true);
+        //injector::MakeCALL(0x4C7280 + 0x56 , test, true);
 
         //injector::MakeCALL(0x453590 + 0x175, test, true);
         //injector::MakeCALL(0x453590 + 0x1C3, test, true);
