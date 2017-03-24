@@ -36,6 +36,7 @@ void __declspec(naked) gbh_DrawQuad()
     _asm mov esp40, ecx
     _asm mov ecx, [esp + 0x44]
     _asm mov esp44, ecx
+
     if (esp40 != dword_4C834B && esp44 != dword_4C74EA)
     {
         *(float*)(dword_6733F0 + 0x00) += Screen.fHudOffset;
@@ -43,9 +44,28 @@ void __declspec(naked) gbh_DrawQuad()
         *(float*)(dword_6733F0 + 0x40) += Screen.fHudOffset;
         *(float*)(dword_6733F0 + 0x60) += Screen.fHudOffset;
     }
-    gbh_DrawQuadAddr = *(uintptr_t*)off_5952C4;
 
+    gbh_DrawQuadAddr = *(uintptr_t*)off_5952C4;
     _asm jmp gbh_DrawQuadAddr;
+}
+
+uintptr_t esp00;
+uintptr_t off_59533C;
+uintptr_t gbh_BlitImageAddr;
+void __declspec(naked) gbh_BlitImage()
+{
+    _asm mov esp00, esp
+
+    //*(int32_t*)(esp00 + 0x04) += Screen.fHudOffset; //int imageIndex
+    //*(int32_t*)(esp00 + 0x08) += Screen.fHudOffset; //int srcLeft
+    //*(int32_t*)(esp00 + 0x0C) += Screen.fHudOffset; //int srcTop
+    //*(int32_t*)(esp00 + 0x10) += Screen.fHudOffset; //int srcRight
+    //*(int32_t*)(esp00 + 0x14) += Screen.fHudOffset; //int srcBottom
+    *(int32_t*)(esp00 + 0x18) += Screen.fHudOffset; //int dstX
+    //*(int32_t*)(esp00 + 0x1C) += Screen.fHudOffset; //int dstY
+
+    gbh_BlitImageAddr = *(uintptr_t*)off_59533C;
+    _asm jmp gbh_BlitImageAddr;
 }
 
 DWORD WINAPI Init(LPVOID bDelay)
@@ -164,25 +184,15 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     if (bFixMenu)
     {
-        pattern = hook::pattern("C1 E1 04 03 C8 6A 00 6A 00"); //0x4A80CD
-        struct MenuHook1
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                *(int32_t*)(regs.esp + 0x08) += Screen.fHudOffset;
-                regs.ecx = (regs.ecx << 4) + regs.eax;
-            }
-        }; injector::MakeInline<MenuHook1>(pattern.get_first(0));
+        pattern = hook::pattern("FF 15 ? ? ? ? 83 F8 F6 ? ? 66 0F B6 C3");
+        off_59533C = *pattern.count(1).get(0).get<uintptr_t>(2);
 
-        pattern = hook::pattern("C1 E2 04 03 D0"); //4530FB
-        struct MenuHook2
+        pattern = hook::pattern(pattern_str(0xFF, 0x15, to_bytes(off_59533C)));
+        for (size_t i = 0; i < pattern.size(); ++i)
         {
-            void operator()(injector::reg_pack& regs)
-            {
-                *(int32_t*)(regs.esp + 0x08) += Screen.fHudOffset;              
-                regs.edx = (regs.edx << 4) + regs.eax;
-            }
-        }; injector::MakeInline<MenuHook2>(pattern.get_first(0));
+            injector::MakeNOP(pattern.get(i).get<uint32_t>(0), 6, true);
+            injector::MakeCALL(pattern.get(i).get<uint32_t>(0), gbh_BlitImage, true);
+        }
     }
 
     if (bEndProcess)
