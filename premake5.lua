@@ -85,7 +85,7 @@ project "Flatout2.WidescreenFix"
 project "FlatoutUltimateCarnage.WidescreenFix"
    setpaths("Z:/WFP/Games/Flatout/FlatOut - Ultimate Carnage/", "Fouc.exe")
 project "GTA1.WidescreenFix"
-   setpaths("Z:/WFP/Games/Grand Theft Auto/Grand Theft Auto 1/WINO/", "Grand Theft Auto.exe")
+   setpaths("Z:/WFP/Games/Grand Theft Auto/Grand Theft Auto 1 London 1969 1961/", "WINO/Grand Theft Auto.exe", "WINO/scripts")
 project "GTA2.WidescreenFix"
    setpaths("Z:/WFP/Games/Grand Theft Auto/Grand Theft Auto 2/", "gta2.exe")
 project "GTA3.WidescreenFix"

@@ -87,7 +87,6 @@ artifacts/
 *.tli
 *.tlh
 *.tmp
-!data/**/*.tmp
 *.tmp_proj
 *.log
 *.vspscc
