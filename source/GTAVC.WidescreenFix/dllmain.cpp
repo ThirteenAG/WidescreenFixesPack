@@ -858,7 +858,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                 injector::WriteMemory<float>(*MenuPattern6.count(1).get(0).get<uint32_t*>(2), fWideScreenWidthScaleDown, true); //issues/84, copypaste from FixMenu()
 
                 //WIDESCREEN to BORDERS text
-                auto pattern = hook::pattern("E8 ? ? ? ? DB 05 ? ? ? ? 50 89 C3 D8 0D");
+                pattern = hook::pattern("E8 ? ? ? ? DB 05 ? ? ? ? 50 89 C3 D8 0D");
                 auto GetTextCall = pattern.count(1).get(0).get<uint32_t>(0);
                 auto GetText = injector::GetBranchDestination(GetTextCall, true).as_int();
                 auto pfGetText = (wchar_t *(__thiscall *)(int, char *))GetText;
