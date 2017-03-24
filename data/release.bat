@@ -48,8 +48,8 @@ FOR /d %%X IN (*) DO (
 )
 
 rem Creating texture archives
-7za a "Archives\GTA3.WidescreenFrontend.zip" "..\textures\GTA3.WidescreenFrontend" 2>nul
-7za a "Archives\GTAVC.WidescreenFrontend.zip" "..\textures\GTAVC.WidescreenFrontend" 2>nul
+if exist "..\textures\GTA3.WidescreenFrontend" 7za a "Archives\GTA3.WidescreenFrontend.zip" "..\textures\GTA3.WidescreenFrontend"
+if exist "..\textures\GTA3.WidescreenFrontend" 7za a "Archives\GTAVC.WidescreenFrontend.zip" "..\textures\GTAVC.WidescreenFrontend"
 EXIT
 
 7-Zip Extra
