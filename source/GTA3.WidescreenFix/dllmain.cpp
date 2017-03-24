@@ -742,35 +742,31 @@ DWORD WINAPI Init(LPVOID bDelay)
         {  
             if (*dwGameLoadState < 9)
             {
-                fCrosshairPosFactor = ((0.52999997f - 0.5f) / ((*CDraw::pfScreenAspectRatio) / (16.0f / 9.0f))) + 0.5f;
-                fCrosshairHeightScaleDown = fWideScreenWidthScaleDown * *CDraw::pfScreenAspectRatio;
-
-                fWideScreenHeightScaleDown = 1.0f / 480.0f;
-                fCustomWideScreenWidthScaleDown = fWideScreenWidthScaleDown * fHudWidthScale;
-                fCustomWideScreenHeightScaleDown = fWideScreenHeightScaleDown * fHudHeightScale;
-
-                fCustomRadarWidthScale = fWideScreenWidthScaleDown * fRadarWidthScale;
-                fPlayerMarkerPos = 94.0f * fRadarWidthScale;
-                if (bIVRadarScaling)
-                    fPlayerMarkerPos = (94.0f - 5.5f) * fRadarWidthScale;
-
                 //SilentPatchCompatibility(); not needed atm
 
                 //WIDESCREEN to BORDERS text
-                static bool bStringPatched = false;
-                if (!bStringPatched)
-                {
-                    auto pattern = hook::pattern("B9 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? C2 04 00");
-                    auto GetTextCall = pattern.count(1).get(0).get<uint32_t>(10);
-                    auto GetText = injector::GetBranchDestination(GetTextCall, true).as_int();
-                    auto pfGetText = (wchar_t *(__thiscall *)(int, char *))GetText;
-                    auto TheText = *pattern.count(1).get(0).get<uint32_t*>(1);
+                auto pattern = hook::pattern("B9 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? C2 04 00");
+                auto GetTextCall = pattern.count(1).get(0).get<uint32_t>(10);
+                auto GetText = injector::GetBranchDestination(GetTextCall, true).as_int();
+                auto pfGetText = (wchar_t *(__thiscall *)(int, char *))GetText;
+                auto TheText = *pattern.count(1).get(0).get<uint32_t*>(1);
 
-                    wchar_t* ptr = pfGetText((int)TheText, "FED_WIS");
-                    wcscpy(ptr, L"BORDERS");
-                    bStringPatched = true;
-                }
+                wchar_t* ptr = pfGetText((int)TheText, "FED_WIS");
+                wcscpy(ptr, L"BORDERS");
             }
+
+            fCrosshairPosFactor = ((0.52999997f - 0.5f) / ((*CDraw::pfScreenAspectRatio) / (16.0f / 9.0f))) + 0.5f;
+            fCrosshairHeightScaleDown = fWideScreenWidthScaleDown * *CDraw::pfScreenAspectRatio;
+
+            fWideScreenHeightScaleDown = 1.0f / 480.0f;
+            fCustomWideScreenWidthScaleDown = fWideScreenWidthScaleDown * fHudWidthScale;
+            fCustomWideScreenHeightScaleDown = fWideScreenHeightScaleDown * fHudHeightScale;
+
+            fCustomRadarWidthScale = fWideScreenWidthScaleDown * fRadarWidthScale;
+            fPlayerMarkerPos = 94.0f * fRadarWidthScale;
+            if (bIVRadarScaling)
+                fPlayerMarkerPos = (94.0f - 5.5f) * fRadarWidthScale;
+
             *dwGameLoadState = 9;
         }
     }; injector::MakeInline<LoadState>(dwGameLoadStatePattern.count(1).get(0).get<uint32_t>(0), dwGameLoadStatePattern.count(1).get(0).get<uint32_t>(10));

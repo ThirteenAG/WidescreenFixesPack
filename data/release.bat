@@ -46,6 +46,10 @@ rem Creating archives
 FOR /d %%X IN (*) DO (
 7za a -tzip "Archives\%%X.zip" "%%X\" -r -xr^^!Archives -x^^!*.pdb -x^^!*.db -x^^!*.ipdb -x^^!*.iobj -x^^!*.tmp -x^^!*.iobj -x^^!*.ual -x^^!*.iobj -x^^!*.wrapper
 )
+
+rem Creating texture archives
+7za a "Archives\GTA3.WidescreenFrontend.zip" "..\textures\GTA3.WidescreenFrontend"
+7za a "Archives\GTAVC.WidescreenFrontend.zip" "..\textures\GTAVC.WidescreenFrontend"
 EXIT
 
 7-Zip Extra
