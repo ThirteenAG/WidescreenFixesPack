@@ -345,6 +345,26 @@ void WINAPI InstallCustomHooks() {
     injector::WriteMemory(0x0058C381, &fSubtitlesScaleY, true);								            // Cutscene text width scale.
     injector::WriteMemory(0x0058C409, &fSubtitlesScaleY, true);								            // Positioning/Normal text height scale.
     injector::WriteMemory(0x0058C41F, &fSubtitlesScaleX, true);								            // Positioning/Normal text width scale.
+
+    // Unknown 2D stuff (0x00719B40).
+    injector::WriteMemory(0x00719C0F, &fCustomWideScreenWidthScaleDown);								        // CFont::RenderString
+    injector::WriteMemory(0x00719C29, &fCustomWideScreenHeightScaleDown);
+    injector::WriteMemory(0x00719C5A, &fCustomWideScreenHeightScaleDown);
+    injector::WriteMemory(0x00719C70, &fCustomWideScreenWidthScaleDown);
+    injector::WriteMemory(0x00719D2F, &fCustomWideScreenWidthScaleDown);								        // text outline
+    injector::WriteMemory(0x00719D49, &fCustomWideScreenHeightScaleDown);
+    injector::WriteMemory(0x00719D7E, &fCustomWideScreenHeightScaleDown);
+    injector::WriteMemory(0x00719D96, &fCustomWideScreenWidthScaleDown);
+    injector::WriteMemory(0x00719DB7, &fCustomWideScreenHeightScaleDown);
+    injector::WriteMemory(0x00719DD3, &fCustomWideScreenWidthScaleDown);
+    injector::WriteMemory(0x00719DF4, &fCustomWideScreenHeightScaleDown);
+    injector::WriteMemory(0x00719E10, &fCustomWideScreenWidthScaleDown);
+    injector::WriteMemory(0x00719E31, &fCustomWideScreenHeightScaleDown);
+    injector::WriteMemory(0x00719E4D, &fCustomWideScreenWidthScaleDown);
+    injector::WriteMemory(0x00719E71, &fCustomWideScreenWidthScaleDown);
+    injector::WriteMemory(0x00719E99, &fCustomWideScreenWidthScaleDown);
+    injector::WriteMemory(0x00719EC1, &fCustomWideScreenHeightScaleDown);
+    injector::WriteMemory(0x00719EE5, &fCustomWideScreenHeightScaleDown);
 }
 
 int(__cdecl* FindPlayerVehicleSA)(int, char);

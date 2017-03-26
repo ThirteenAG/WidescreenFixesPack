@@ -16,21 +16,39 @@ struct Screen
     float fCameraZoom;
 } Screen;
 
+int32_t nZoom = 0;
+WNDPROC wndProcOld = NULL;
+LRESULT APIENTRY WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    switch (uMsg)
+    {
+    case WM_KEYDOWN:
+        if (wParam == VK_ADD && nZoom < 200000)
+            nZoom += 4000;
+        else if (wParam == VK_SUBTRACT && nZoom > 0)
+            nZoom -= 4000;
+        break;
+    case WM_CLOSE:
+        ExitProcess(0);
+        break;
+    }
+
+    return CallWindowProc(wndProcOld, hwnd, uMsg, wParam, lParam);
+}
+
 DWORD WINAPI WindowCheck(LPVOID hWnd)
 {
-    while (true)
-    {
+    while (*(HWND*)hWnd == NULL)
         Sleep(10);
 
-        if (*(HWND*)hWnd && !IsWindow(*(HWND*)hWnd))
-            ExitProcess(0);
-    }
+    wndProcOld = (WNDPROC)GetWindowLong(*(HWND*)hWnd, GWL_WNDPROC);
+    SetWindowLong(*(HWND*)hWnd, GWL_WNDPROC, (LONG)WndProc);
     return 0;
 }
 
 uintptr_t off_5952C4, esp40, esp44, esp68;
-uintptr_t dword_6733F0, dword_4C834B, dword_4C74EA;
-uintptr_t dword_45379E, dword_453A22, dword_4580C6;
+uintptr_t dword_6733F0, dword_4C834B, dword_4C74EA, dword_4582F3, dword_458426;
+uintptr_t dword_45379E, dword_453A22, dword_4580C6, dword_4567E1;
 uintptr_t gbh_DrawQuadAddr;
 void __declspec(naked) gbh_DrawQuad()
 {
@@ -41,7 +59,7 @@ void __declspec(naked) gbh_DrawQuad()
     _asm mov ecx, [esp + 0x68]
     _asm mov esp68, ecx
 
-    if (esp68 == dword_45379E || esp68 == dword_453A22 || esp68 == dword_4580C6)
+    if (esp68 == dword_45379E || esp68 == dword_453A22 || esp68 == dword_4580C6 || esp68 == dword_4567E1 || esp68 == dword_458426 || esp40 == dword_4582F3)
     {
         *(float*)(dword_6733F0 + 0x00) += Screen.fMenuOffset;
         *(float*)(dword_6733F0 + 0x20) += Screen.fMenuOffset;
@@ -158,7 +176,10 @@ DWORD WINAPI Init(LPVOID bDelay)
             if (bFixHud)
                 *(int32_t*)(regs.ebp + 0x138) = Screen.nHudScale;
             if (Screen.fCameraZoom)
+            {
                 *(int32_t*)(regs.esi + 0x8) *= Screen.fCameraZoom;
+                *(int32_t*)(regs.esi + 0x8) += nZoom;
+            }
         }
     }; injector::MakeInline<CameraZoom>(pattern.get_first(0));
 
@@ -179,25 +200,28 @@ DWORD WINAPI Init(LPVOID bDelay)
 
         dword_4C834B = (uintptr_t)hook::pattern("8B 46 20 48 83 F8 04").get_first(0);
         dword_4C74EA = (uintptr_t)hook::pattern("6A 06 E8 ? ? ? ? 5E 59 C3").get_first(7);
+        dword_4582F3 = (uintptr_t)hook::pattern("E9 ? ? ? ? 66 8B 5D 6A").get_first(0);
+        dword_458426 = (uintptr_t)hook::pattern("8B 44 24 18 40 66 3B 47 02").get_first(0);
 
         dword_45379E = (uintptr_t)hook::pattern("8B 44 24 1C 8B 54 24 20 40").get_first(0);
         dword_453A22 = (uintptr_t)hook::pattern("C7 ? ? ? 02 00 00 00 E8 ? ? ? ? 59 C2 14 00").get_first(13);
         dword_4580C6 = (uintptr_t)hook::pattern("8B 4C 24 18 41 66 3B 0F").get_first(0);
+        dword_4567E1 = (uintptr_t)hook::pattern("8B 44 24 30 8B 4C 24 18 03 F8").get_first(0);
 
         //menu (ret 24h)
         //injector::MakeCALL(0x453590 + 0x209, test, true); //credits
         //injector::MakeCALL(0x4539F0 + 0x2D , test, true); //main menu text
-        //injector::MakeCALL(0x4566C0 + 0x11C, test, true);
+        //injector::MakeCALL(0x4566C0 + 0x11C, test, true); //red text
         //injector::MakeCALL(0x4568C0 + 0x157, test, true);
         //injector::MakeCALL(0x456FB0 + 0xF7 , test, true);
         //injector::MakeCALL(0x4580C1 + 0x00 , test, true); //main menu greyed out text
-        //injector::MakeCALL(0x457920 + 0xB01, test, true);
+        //injector::MakeCALL(0x457920 + 0xB01, test, true); // player quit text
         //injector::MakeCALL(0x4BA2C0 + 0x57 , test, true);
-        //injector::MakeCALL(0x4C7280 + 0x56 , test, true);
+        //injector::MakeCALL(0x4C7280 + 0x56 , test, true); //ingame text when press esc
 
         //injector::MakeCALL(0x453590 + 0x175, test, true);
         //injector::MakeCALL(0x453590 + 0x1C3, test, true);
-        //injector::MakeCALL(0x457920 + 0x9CE, test, true);
+        //injector::MakeCALL(0x457920 + 0x9CE, test, true); //red circle
         //injector::MakeCALL(0x4B92B0 + 0x174, test, true);
         //injector::MakeCALL(0x4C71B0 + 0x5D, test, true);
         //injector::MakeCALL(0x4C74A0 + 0x45, test, true); // player arrow
