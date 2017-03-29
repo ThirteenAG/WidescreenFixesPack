@@ -3,8 +3,8 @@
 void Init()
 {
     CIniReader iniReader("");
-    int ResX = iniReader.ReadInteger("MAIN", "X", 0);
-    int ResY = iniReader.ReadInteger("MAIN", "Y", 0);
+    int ResX = iniReader.ReadInteger("MAIN", "ResX", 0);
+    int ResY = iniReader.ReadInteger("MAIN", "ResY", 0);
 
     if (!ResX || !ResY)
         std::tie(ResX, ResY) = GetDesktopRes();
