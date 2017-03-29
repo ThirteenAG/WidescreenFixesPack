@@ -446,6 +446,47 @@ void updateScreenAspectRatioWrapper()
     });
 }
 
+uintptr_t SetEdgeAddr = 0x719590;
+void __declspec(naked) SetDropShadowPosition()
+{
+    _asm mov eax, [esp + 4]
+    _asm cmp ReplaceTextShadowWithOutline, 2
+    _asm jae label1
+    _asm test eax, eax
+    _asm jz label1
+    _asm dec eax
+    _asm mov[esp + 4], eax
+    label1:
+    _asm jmp SetEdgeAddr
+}
+
+injector::hook_back<void(__cdecl*)(void)> hbWipeLocalVariableMemoryForMissionScript;
+void __cdecl WipeLocalVariableMemoryForMissionScriptHook()
+{
+    uint8_t* ScriptSpace = *(uint8_t**)0x5D5380;
+    size_t ScriptFileSize = *(size_t*)0x468E75;
+    size_t ScriptMissionSize = *(size_t*)0x489A5B;
+    auto pattern = hook::range_pattern(uintptr_t(ScriptSpace + ScriptFileSize), uintptr_t(ScriptSpace + ScriptFileSize + ScriptMissionSize), "3F 03 06 CD CC 4C 3F 06 66 66 E6 3F").count_hint(3);
+    for (size_t i = 0; i < pattern.size(); i++)
+    {
+        float x = *pattern.get(i).get<float>(3) * (**pfWideScreenWidthScaleDown / (1.0f / 640.0f));
+        float y = *pattern.get(i).get<float>(8) * (**pfWideScreenHeightScaleDown / (1.0f / 480.0f));        
+        injector::WriteMemory(pattern.get(i).get<float*>(3), x, true);
+        injector::WriteMemory(pattern.get(i).get<float*>(8), y, true);
+    }
+
+    pattern = hook::range_pattern(uintptr_t(ScriptSpace + ScriptFileSize), uintptr_t(ScriptSpace + ScriptFileSize + ScriptMissionSize), "3F 03 06 9A 99 19 3F 06 CD CC CC 3F").count_hint(1);
+    if (pattern.size() == 1)
+    {
+        float x = *pattern.get(0).get<float>(3) * (**pfWideScreenWidthScaleDown / (1.0f / 640.0f));
+        float y = *pattern.get(0).get<float>(8) * (**pfWideScreenHeightScaleDown / (1.0f / 480.0f));
+        injector::WriteMemory(pattern.get(0).get<float*>(3), x, true);
+        injector::WriteMemory(pattern.get(0).get<float*>(8), y, true);
+    }
+
+    return hbWipeLocalVariableMemoryForMissionScript.fun();
+}
+
 DWORD WINAPI CompatHandler(LPVOID)
 {
     size_t i = 0;
@@ -480,6 +521,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         szForceAspectRatio = iniReader.ReadString("MAIN", "ForceAspectRatio", "auto");
         nHideAABug = iniReader.ReadInteger("MAIN", "HideAABug", 1);
         bSmartCutsceneBorders = iniReader.ReadInteger("MAIN", "SmartCutsceneBorders", 1) != 0;
+        ReplaceTextShadowWithOutline = iniReader.ReadInteger("MAIN", "ReplaceTextShadowWithOutline", 0);
         bool bAltTab = iniReader.ReadInteger("MAIN", "AllowAltTabbingWithoutPausing", 0) != 0;
 
         OverwriteResolution();
@@ -531,6 +573,12 @@ DWORD WINAPI Init(LPVOID bDelay)
         {
             injector::MakeNOP(0x58E2DD, 5, true);
         }
+
+        if (ReplaceTextShadowWithOutline)
+        {
+            //CFont::SetDropShadowPosition -> CFont::SetEdge
+            injector::MakeJMP(0x719570, SetDropShadowPosition, true);
+        }
     }
 
     if (!bDelay)
@@ -579,18 +627,22 @@ DWORD WINAPI Init(LPVOID bDelay)
         injector::MakeJMP(0x53E90E, Hide1pxAABug, true);
     }
 
-    injector::WriteMemory<uint8_t>(0x53E2AD, 0x74); //Reverse g_MenuManager.widescreenOn to make widescreen off equal to borders off
-    injector::WriteMemory<uint8_t>(0x58BB90, 0x74); //for borders and text boxes.
+    injector::WriteMemory<uint8_t>(0x53E2AD, 0x74, true); //Reverse g_MenuManager.widescreenOn to make widescreen off equal to borders off
+    injector::WriteMemory<uint8_t>(0x58BB90, 0x74, true); //for borders and text boxes.
     if (bSmartCutsceneBorders)
     {
         injector::MakeCALL(0x53E2B4, CCamera::DrawBordersForWideScreen, true);
         injector::MakeCALL(0x5AF8C0, CCamera::DrawBordersForWideScreen, true);
-        injector::WriteMemory<uint8_t>(0x58BB93, 0x00); //text box offset in cutscenes
+        injector::WriteMemory<uint8_t>(0x58BB93, 0x00, true); //text box offset in cutscenes
     }
 
     InstallCustomHooks();
 
     InstallWSHPSFixes();
+
+    // intro text scaling
+    hbWipeLocalVariableMemoryForMissionScript.fun = injector::MakeCALL(0x489A70, WipeLocalVariableMemoryForMissionScriptHook, true).get();
+    injector::MakeCALL(0x4899F0, WipeLocalVariableMemoryForMissionScriptHook, true);
 
     return 0;
 }
