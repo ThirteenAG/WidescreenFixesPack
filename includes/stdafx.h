@@ -58,13 +58,11 @@ std::string pattern_str(const std::array<uint8_t, n> bytes)
 template <typename T>
 std::string pattern_str(T t)
 {
-    std::string result;
-    return result += format("%02X ", t);
+    return std::string((std::is_same<T, char>::value ? format("%c ", t) : format("%02X ", t)));
 }
 
 template <typename T, typename... Rest>
 std::string pattern_str(T t, Rest... rest)
 {
-    std::string result;
-    return result += format("%02X ", t) + pattern_str(rest...);
+    return std::string((std::is_same<T, char>::value ? format("%c ", t) : format("%02X ", t)) + pattern_str(rest...));
 }

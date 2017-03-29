@@ -1,8 +1,5 @@
 #include "stdafx.h"
-#include <string>
 
-HWND hWnd;
-bool bDelay;
 bool bSettingsApp;
 uintptr_t pBarsPtr;
 uintptr_t pBarsJmp;
@@ -43,11 +40,11 @@ void __declspec(naked) BarsHook()
 DWORD WINAPI InitSettings(LPVOID)
 {
     auto pattern = hook::pattern("75 66 8D 4C 24 04 51");
-    if (pattern.size() > 0)
+    if (!pattern.empty())
     {
         bSettingsApp = true;
         pattern = hook::pattern("75 66 8D 4C 24 04 51");
-        injector::MakeNOP(pattern.get(0).get<uintptr_t>(0), 2, true); //0x40BD3F
+        injector::MakeNOP(pattern.get_first(0), 2, true); //0x40BD3F
 
         pattern = hook::pattern("75 39 83 7C 24 08 01 75 32 8B"); //0x40BD6C
         struct RegHook
@@ -60,29 +57,26 @@ DWORD WINAPI InitSettings(LPVOID)
                 GetModuleFileName(NULL, (char*)regs.edx, MAX_PATH);
                 *(strrchr((char*)regs.edx, '\\') + 1) = '\0';
             }
-        }; injector::MakeInline<RegHook>(pattern.get(0).get<uintptr_t>(0), pattern.get(0).get<uintptr_t>(20));
+        }; injector::MakeInline<RegHook>(pattern.get_first(0), pattern.get_first(20));
     }
     return 0;
 }
 
-DWORD WINAPI Init(LPVOID)
+DWORD WINAPI Init(LPVOID bDelay)
 {
     if (bSettingsApp)
         return 0;
 
     auto pattern = hook::pattern("33 DB 89 5D E0 53");
-    if (!(pattern.size() > 0) && !bDelay)
+
+    if (pattern.empty() && !bDelay)
     {
-        bDelay = true;
-        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, NULL, 0, NULL);
+        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
         return 0;
     }
 
     if (bDelay)
-    {
-        while (!(pattern.size() > 0))
-            pattern = hook::pattern("33 DB 89 5D E0 53");
-    }
+        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
 
     CIniReader iniReader("");
     static bool bCustomAR;
@@ -135,18 +129,10 @@ DWORD WINAPI Init(LPVOID)
                 Screen.fCutOffArea = 0.5f / Screen.fFieldOfView;
             }
         }
-    }; injector::MakeInline<ResHook>(pattern.get(0).get<uintptr_t>(0), pattern.get(0).get<uintptr_t>(18));
+    }; injector::MakeInline<ResHook>(pattern.get_first(0), pattern.get_first(18));
 
-    char pattern_str[20];
-    union {
-        uint32_t* Int;
-        unsigned char Byte[4];
-    } dword_temp;
-
-    dword_temp.Int = *hook::pattern("D9 04 8D ? ? ? ? D9 5C 24 18 EB 0A").get(0).get<uint32_t*>(3);
-    sprintf(pattern_str, "%02X %02X %c %02X %02X %02X %02X", 0xD9, 0x04, '?', dword_temp.Byte[0], dword_temp.Byte[1], dword_temp.Byte[2], dword_temp.Byte[3]);
-    pattern = hook::pattern(pattern_str); //0xA01C67
-
+    auto dword_temp = *hook::pattern("D9 04 8D ? ? ? ? D9 5C 24 18 EB 0A").count(1).get(0).get<uint32_t*>(3);
+    pattern = hook::pattern(pattern_str(0xD9, 0x04, '?', to_bytes(dword_temp))); //0xA01C67
     for (size_t i = 0; i < pattern.size(); i++)
     {
         injector::MakeNOP(pattern.get(i).get<uint32_t>(0), 1, true);
@@ -195,10 +181,10 @@ DWORD WINAPI Init(LPVOID)
             *(uintptr_t*)(regs.eax + 0x18) = regs.edx;
             regs.eax = *(uintptr_t*)(regs.esi);
         }
-    }; injector::MakeInline<FMVHook>(pattern.get(0).get<uintptr_t>(0));
+    }; injector::MakeInline<FMVHook>(pattern.get_first(0));
 
     pattern = hook::pattern("68 ? ? ? ? E8 ? ? ? ? 50 55 56 E8 ? ? ? ? 0F B7 4F 06 0F B7 57 04"); //0x992C4C
-    static auto unk_CC0E20 = *pattern.get(0).get<char*>(1);
+    static auto unk_CC0E20 = *pattern.count(1).get(0).get<char*>(1);
     struct TextHook
     {
         void operator()(injector::reg_pack& regs)
@@ -218,10 +204,10 @@ DWORD WINAPI Init(LPVOID)
             regs.ecx = *(uint16_t*)(regs.edi + 6);
             regs.edx = *(uint16_t*)(regs.edi + 4);
         }
-    }; injector::MakeInline<TextHook>(pattern.get(0).get<uintptr_t>(18), pattern.get(0).get<uintptr_t>(18 + 8));
+    }; injector::MakeInline<TextHook>(pattern.get_first(18), pattern.get_first(18 + 8));
 
     pBarsPtr = *(uintptr_t*)hook::get_pattern("A1 ? ? ? ? 8B 88 00 08 00 00 81 C1 B4 68 06 00", 1); //0xCBFBE0
-    auto off_AD5CE8 = *hook::pattern("89 46 1C C7 06 ? ? ? ? 8B C6 5E C3").get(1).get<uintptr_t*>(5);
+    auto off_AD5CE8 = *hook::pattern("89 46 1C C7 06 ? ? ? ? 8B C6 5E C3").count(2).get(1).get<uintptr_t*>(5);
     injector::WriteMemory(off_AD5CE8 + 5, BarsHook, true); //0xAD5CFC
     pBarsJmp = (uintptr_t)hook::get_pattern("8B 41 10 6A 00 50 B9 ? ? ? ? E8", 0); //0xA2A350
 
@@ -238,7 +224,7 @@ DWORD WINAPI Init(LPVOID)
                 float temp = *(float*)(regs.ebp - 0x1B4);
                 _asm fld     dword ptr[temp]
             }
-        }; injector::MakeInline<MouseSensHook>(pattern.get(0).get<uintptr_t>(0), pattern.get(0).get<uintptr_t>(6));
+        }; injector::MakeInline<MouseSensHook>(pattern.get_first(0), pattern.get_first(6));
     }
     return 0;
 }
