@@ -27,19 +27,19 @@ char* __cdecl InitUserDirectories()
 }
 
 injector::hook_back<void(__cdecl*)(float, float, float, float, int, int, int, int, int)> hbDrawRect;
-void __cdecl DrawRectHook(float fLeft, float fTop, float fRight, float fBottom, int r, int g, int b, int a, int unk)
+void __cdecl DrawRectHook(float fLeft, float fTop, float fRight, float fBottom, int r, int g, int b, int a, int pTexture)
 {
-    if (unk && fLeft == 0.0f && fTop == 0.0f && fRight == 1.0f && fBottom == 1.0f)
+    if (pTexture && fLeft == 0.0f && fTop == 0.0f && fRight == 1.0f && fBottom == 1.0f)
     {
         if (Screen.f2DSpritesOffset)
         {
-            hbDrawRect.fun(fLeft, fTop, fRight, fBottom, 0, 0, 0, 255, unk);
-            hbDrawRect.fun(Screen.f2DSpritesOffset, fTop, Screen.f2DSpritesScale, fBottom, r, g, b, a, unk);
+            hbDrawRect.fun(fLeft, fTop, fRight, fBottom, 0, 0, 0, 255, pTexture);
+            hbDrawRect.fun(Screen.f2DSpritesOffset, fTop, Screen.f2DSpritesScale, fBottom, r, g, b, a, pTexture);
         }
         else
         {
-            auto w = (float)(*(uint16_t*)(unk + 12));
-            auto h = (float)(*(uint16_t*)(unk + 16));
+            auto w = (float)(*(uint16_t*)(pTexture + 12));
+            auto h = (float)(*(uint16_t*)(pTexture + 16));
             if (w == h)
             {
                 w = 4.0f; 
@@ -47,12 +47,12 @@ void __cdecl DrawRectHook(float fLeft, float fTop, float fRight, float fBottom, 
             }
             auto f2DSpritesOffset = ((Screen.fWidth - Screen.fHeight * (w / h)) / 2.0f) / Screen.fWidth;
             auto f2DSpritesScale = 1.0f / (Screen.fAspectRatio / (w / h));
-            hbDrawRect.fun(fLeft, fTop, fRight, fBottom, 0, 0, 0, 255, unk);
-            hbDrawRect.fun(f2DSpritesOffset, fTop, f2DSpritesScale, fBottom, r, g, b, a, unk);
+            hbDrawRect.fun(fLeft, fTop, fRight, fBottom, 0, 0, 0, 255, pTexture);
+            hbDrawRect.fun(f2DSpritesOffset, fTop, f2DSpritesScale, fBottom, r, g, b, a, pTexture);
         }
         return;
     }
-    return hbDrawRect.fun(fLeft, fTop, fRight, fBottom, r, g, b, a, unk);
+    return hbDrawRect.fun(fLeft, fTop, fRight, fBottom, r, g, b, a, pTexture);
 }
 
 injector::hook_back<int(__cdecl*)(float a1, float a2, float a3, float a4, int a5, int a6, int a7, int a8, int a9, int a10, int a11, int a12, int a13, int a14, int a15, int a16, int a17, int a18, int a19, int a20, int a21, int a22, int a23, int a24, int a25, int a26, int a27, int a28)> hbDrawText;
