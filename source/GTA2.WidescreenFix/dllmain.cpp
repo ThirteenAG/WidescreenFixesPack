@@ -16,6 +16,8 @@ struct Screen
     float fCameraZoom;
 } Screen;
 
+bool bEndProcess;
+int32_t nQuicksaveKey;
 int32_t nZoom = 0;
 WNDPROC wndProcOld = NULL;
 LRESULT APIENTRY WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -29,7 +31,8 @@ LRESULT APIENTRY WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             nZoom -= 4000;
         break;
     case WM_CLOSE:
-        ExitProcess(0);
+        if (bEndProcess)
+            ExitProcess(0);
         break;
     }
 
@@ -116,11 +119,12 @@ DWORD WINAPI Init(LPVOID bDelay)
     CIniReader iniReader("");
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
-    bool bEndProcess = iniReader.ReadInteger("MAIN", "EndProcessOnWindowClose", 0) != 0;
+    bEndProcess = iniReader.ReadInteger("MAIN", "EndProcessOnWindowClose", 0) != 0;
     auto szCameraZoom = iniReader.ReadString("MAIN", "CameraZoomFactor", "auto");
     auto bSkipMovie = iniReader.ReadInteger("MAIN", "SkipMovie", 1) != 0;
     static auto bFixHud = iniReader.ReadInteger("MAIN", "FixHud", 1) != 0;
     auto bFixMenu = iniReader.ReadInteger("MAIN", "FixMenu", 1) != 0;
+    nQuicksaveKey = iniReader.ReadInteger("MAIN", "QuicksaveKey", VK_F5);
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -246,12 +250,9 @@ DWORD WINAPI Init(LPVOID bDelay)
         }
     }
 
-    if (bEndProcess)
-    {
-        pattern = hook::pattern("8B 15 ? ? ? ? 6A 06 52 8B 08 50"); //0x4B4FB8
-        auto hwnd = *pattern.get_first<HWND*>(2);
-        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&WindowCheck, (LPVOID)hwnd, 0, NULL);
-    }
+    pattern = hook::pattern("8B 15 ? ? ? ? 6A 06 52 8B 08 50"); //0x4B4FB8
+    auto hwnd = *pattern.get_first<HWND*>(2);
+    CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&WindowCheck, (LPVOID)hwnd, 0, NULL);
 
     if (bSkipMovie)
     {
@@ -260,6 +261,47 @@ DWORD WINAPI Init(LPVOID bDelay)
         injector::WriteMemory<uint8_t>(pattern.get_first(5), 0, true); //0x4D145C + 2
         pattern = hook::pattern("6A 08 E8 ? ? ? ? 5E C3");
         injector::WriteMemory<uint8_t>(pattern.get_first(1), 0, true); //0x45969C + 1
+    }
+
+    if (nQuicksaveKey)
+    {
+        //code from NTAuthority
+        static uint16_t oldState = 0;
+        static uint16_t curState = 0;
+
+        //injector::WriteMemory(0x47FEDC, 0, true);
+        //injector::WriteMemory(0x47FEF5, 500, true);
+
+        static uint32_t dword_45E510 = (uint32_t)hook::get_pattern("8D 81 00 03 00 00 C3", 0);
+        static uint32_t dword_5EC070 = *(uint32_t*)hook::get_pattern("B9 ? ? ? ? E8 ? ? ? ? 66 0F B6", 1);
+        static uint32_t dword_47EF40 = (uint32_t)hook::get_pattern("83 EC 18 53 8B 5C 24 20 55 8B", 0);
+        static uint32_t dword_6644BC = *(uint32_t*)hook::get_pattern("8B 15 ? ? ? ? 8B 82 38 03 00", 2);
+        static uint32_t dword_4C6750 = (uint32_t)hook::get_pattern("8B 44 24 08 8B 54 24 04 6A FF 50 52", 0);
+        static uint32_t dword_672F40 = *(uint32_t*)hook::get_pattern("8B 0D ? ? ? ? 56 68 ? ? ? ? 6A 01", 2);
+
+        pattern = hook::pattern("8B 73 04 33 FF 3B F7 66 89 BB E8"); //0x481380
+        struct QuicksaveHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                regs.esi = *(uint32_t*)(regs.ebx + 4);
+                regs.edi = 0;
+
+                curState = GetAsyncKeyState(nQuicksaveKey);
+
+                if (!curState && oldState) 
+                {
+                    //injector::thiscall<int(int, int)>::call(0x4105B0, 0x5D85A0, 0x3D); //sfx
+
+                    auto i = injector::thiscall<uint32_t(uint32_t)>::call(dword_45E510, dword_5EC070); //save
+                    injector::thiscall<uint32_t(uint32_t, uint32_t)>::call(dword_47EF40, dword_6644BC, i);
+
+                    injector::thiscall<uint32_t(uint32_t, uint32_t, char*)>::call(dword_4C6750, *(uintptr_t*)dword_672F40 + 0xE4, 1, "svdone"); // text display
+                }
+
+                oldState = curState;
+            }
+        }; injector::MakeInline<QuicksaveHook>(pattern.get_first(0));
     }
 
     return 0;

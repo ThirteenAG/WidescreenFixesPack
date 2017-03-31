@@ -121,6 +121,11 @@ DWORD WINAPI InitWF(LPVOID)
     Screen.fHalf1_fWidthScale = Screen.f1_fWidthScale / 2.0f;
     Screen.fHudOffset = ((-1.0f / Screen.fAspectRatio) * (4.0f / 3.0f));
     Screen.fHudScale = (1.0f / (480.0f * Screen.fAspectRatio)) * 2.0f;
+    #undef SCREEN_FOV_HORIZONTAL
+    #undef SCREEN_FOV_VERTICAL
+    #define SCREEN_FOV_HORIZONTAL 65.0f
+    #define SCREEN_FOV_VERTICAL (2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))
+    Screen.fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
 
     if (Screen.fAspectRatio <= ((4.0f / 3.0f) + 0.03f))
         return 0;
@@ -132,6 +137,9 @@ DWORD WINAPI InitWF(LPVOID)
     Screen.fWidescreenHudOffset = iniReader.ReadFloat("MAIN", "WidescreenHudOffset", 100.0f);
     bComicsMode = iniReader.ReadInteger("MAIN", "ComicsMode", 1) != 0;
     if (!Screen.fWidescreenHudOffset) { Screen.fWidescreenHudOffset = 100.0f; }
+    float fFOVFactor = iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f);
+    if (!fFOVFactor) { fFOVFactor = 1.0f; }
+    Screen.fDynamicScreenFieldOfViewScale *= fFOVFactor;
 
     //fix aspect ratio
     //injector::WriteMemory((DWORD)e2mfc + 0x148ED + 0x2, &f1_480, true); //doors fix ???
@@ -451,6 +459,15 @@ DWORD WINAPI Init(LPVOID bDelay)
     }
     pattern = hook::pattern("8B 0D ? ? ? ? 8B 3D ? ? ? ? 41 89 0D ? ? ? ? 6A 18 8B CE E8");
     bIsInMenu = *pattern.count(8).get(1).get<uint8_t*>(2); //0x100845E8
+
+    auto FOVHook = [](uintptr_t _this, uintptr_t edx) -> float
+    {
+        Screen.fFieldOfView = *(float*)(_this + 88) * Screen.fDynamicScreenFieldOfViewScale;
+        return Screen.fFieldOfView;
+    };
+
+    pattern = hook::pattern("E8 ? ? ? ? D8 8B 3C 12"); //0x50B9E0
+    injector::MakeJMP(injector::GetBranchDestination(pattern.get_first(), true), static_cast<float(__fastcall *)(uintptr_t, uintptr_t)>(FOVHook), true);
 
     return 0;
 }
