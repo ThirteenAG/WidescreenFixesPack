@@ -143,9 +143,9 @@ DWORD WINAPI InitWF(LPVOID)
     //fix aspect ratio
     //injector::WriteMemory((DWORD)e2mfc + 0x148ED + 0x2, &f1_480, true); //doors fix ???
     //CPatch::SetFloat((DWORD)h_e2mfc_dll + 0x49DE4, height_multipl); //D3DERR_INVALIDCALL
-    static uintptr_t e2mfc_14775, e2mfc_1566C;
+    static uintptr_t e2mfc_14775, e2mfc_1566C, e2mfc_146FA;
     static uintptr_t e2mfc_49DEC, e2mfc_49DFC;
-    
+
     uintptr_t dword_40B3B2 = (uintptr_t)hook::get_pattern("C7 86 F5 00 00 00 00 00 00 00 5E");
     struct DelayedHook
     {
@@ -153,6 +153,7 @@ DWORD WINAPI InitWF(LPVOID)
         {
             *(uint32_t*)(regs.esi + 0xF5) = 0;
 
+            injector::WriteMemory(e2mfc_146FA, &Screen.f1_fWidthScale, true); // D3DERR_INVALIDCALL 5
             injector::WriteMemory(e2mfc_14775, &Screen.f1_fWidthScale, true); // D3DERR_INVALIDCALL 6
             injector::WriteMemory(e2mfc_1566C, &Screen.f1_fWidthScale, true); // D3DERR_INVALIDCALL 9
 
@@ -167,12 +168,13 @@ DWORD WINAPI InitWF(LPVOID)
     while (pattern.clear().count_hint(9).empty()) { Sleep(0); };
     for (size_t i = 0; i < pattern.size(); i++)
     {
-        if (i != 5 && i != 8)
+        if (i != 4 && i != 5 && i != 8)
             injector::WriteMemory(pattern.get(i).get<uintptr_t>(2), &Screen.f1_fWidthScale, true);
     }
+    e2mfc_146FA = (uintptr_t)pattern.get(4).get<uintptr_t>(2);
     e2mfc_14775 = (uintptr_t)pattern.get(5).get<uintptr_t>(2);
     e2mfc_1566C = (uintptr_t)pattern.get(8).get<uintptr_t>(2);
-
+    
     pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 0D ? ? ? ? D9 1D ? ? ? ? 8A 86 E0");
     e2mfc_49DEC = *pattern.get_first<uintptr_t>(2);
     pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 0D ? ? ? ? D9 5D E0 E8");
@@ -448,6 +450,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     pattern = hook::pattern("8B 0D ? ? ? ? 8B 3D ? ? ? ? 41 89 0D ? ? ? ? 6A 18 8B CE E8");
     bIsInMenu = *pattern.count(8).get(1).get<uint8_t*>(2); //0x100845E8
 
+    //FOV
     auto FOVHook = [](uintptr_t _this, uintptr_t edx) -> float
     {
         Screen.fFieldOfView = *(float*)(_this + 88) * Screen.fDynamicScreenFieldOfViewScale;
@@ -455,7 +458,15 @@ DWORD WINAPI Init(LPVOID bDelay)
     };
 
     pattern = hook::pattern("E8 ? ? ? ? D8 8B 3C 12"); //0x50B9E0
-    injector::MakeJMP(injector::GetBranchDestination(pattern.get_first(), true), static_cast<float(__fastcall *)(uintptr_t, uintptr_t)>(FOVHook), true);
+    auto sub_50B9E0 = injector::GetBranchDestination(pattern.get_first(), true);
+    pattern = hook::pattern("E8 ? ? ? ?");
+    for (size_t i = 0; i < pattern.size(); ++i)
+    {
+        auto addr = pattern.get(i).get<uint32_t>(0);
+        auto dest = injector::GetBranchDestination(addr, true);
+        if (dest == sub_50B9E0)
+            injector::MakeCALL(addr, static_cast<float(__fastcall *)(uintptr_t, uintptr_t)>(FOVHook), true);
+    }
 
     return 0;
 }
