@@ -131,7 +131,6 @@ DWORD WINAPI InitWF(LPVOID)
         return 0;
 
     CIniReader iniReader("");
-    static int32_t nLoadingDelay = iniReader.ReadInteger("MAIN", "LoadingDelay", 300);
     bool bFixHud = iniReader.ReadInteger("MAIN", "FixHud", 1) != 0;
     static bool bWidescreenHud = iniReader.ReadInteger("MAIN", "WidescreenHud", 1) != 0;
     Screen.fWidescreenHudOffset = iniReader.ReadFloat("MAIN", "WidescreenHudOffset", 100.0f);
@@ -144,36 +143,25 @@ DWORD WINAPI InitWF(LPVOID)
     //fix aspect ratio
     //injector::WriteMemory((DWORD)e2mfc + 0x148ED + 0x2, &f1_480, true); //doors fix ???
     //CPatch::SetFloat((DWORD)h_e2mfc_dll + 0x49DE4, height_multipl); //D3DERR_INVALIDCALL
-    static int32_t nCounter = 0;
     static uintptr_t e2mfc_14775, e2mfc_1566C;
     static uintptr_t e2mfc_49DEC, e2mfc_49DFC;
-    static uintptr_t e2mfc_14786;
-    auto pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "BB 00 0C 00 00 25 00 0C 00 00 8B 4D F8");
-    e2mfc_14786 = (uintptr_t)pattern.count(10).get(5).get<uintptr_t>(0);
+    
+    uintptr_t dword_40B3B2 = (uintptr_t)hook::get_pattern("C7 86 F5 00 00 00 00 00 00 00 5E");
     struct DelayedHook
     {
         void operator()(injector::reg_pack& regs)
         {
-            regs.ebx = 0x0C00;
-            if (nCounter != -1)
-                nCounter++;
+            *(uint32_t*)(regs.esi + 0xF5) = 0;
 
-            if (nCounter != -1 && nCounter > nLoadingDelay)
-            {
-                injector::WriteMemory(e2mfc_14775, &Screen.f1_fWidthScale, true); // D3DERR_INVALIDCALL 6
-                injector::WriteMemory(e2mfc_1566C, &Screen.f1_fWidthScale, true); // D3DERR_INVALIDCALL 9
+            injector::WriteMemory(e2mfc_14775, &Screen.f1_fWidthScale, true); // D3DERR_INVALIDCALL 6
+            injector::WriteMemory(e2mfc_1566C, &Screen.f1_fWidthScale, true); // D3DERR_INVALIDCALL 9
 
-                injector::WriteMemory<float>(e2mfc_49DEC, Screen.fDouble1_fWidthScale, true);
-                injector::WriteMemory<float>(e2mfc_49DFC, Screen.fHalf1_fWidthScale, true);
-
-                nCounter = -1;
-
-                injector::WriteMemory<uint32_t>(e2mfc_14786, 0x000C00BB, true);
-                injector::WriteMemory<uint8_t>(e2mfc_14786 + 4, 0x00, true);
-            }
+            injector::WriteMemory<float>(e2mfc_49DEC, Screen.fDouble1_fWidthScale, true);
+            injector::WriteMemory<float>(e2mfc_49DFC, Screen.fHalf1_fWidthScale, true);
         }
-    }; injector::MakeInline<DelayedHook>(e2mfc_14786); //0x10014786
+    }; injector::MakeInline<DelayedHook>(dword_40B3B2, dword_40B3B2 + 10);
 
+    auto pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "BB 00 0C 00 00 25 00 0C 00 00 8B 4D F8");
     auto flt_10049DE4 = *pattern.count(10).get(5).get<uintptr_t>(-15);
     pattern = hook::module_pattern(GetModuleHandle("e2mfc"), pattern_str(0xD8, 0x0D, to_bytes(flt_10049DE4)));
     while (pattern.clear().count_hint(9).empty()) { Sleep(0); };
