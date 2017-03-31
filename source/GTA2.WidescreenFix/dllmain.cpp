@@ -50,7 +50,7 @@ DWORD WINAPI WindowCheck(LPVOID hWnd)
 }
 
 uintptr_t off_5952C4, esp40, esp44, esp68;
-uintptr_t dword_6733F0, dword_4C834B, dword_4C74EA, dword_4582F3, dword_458426;
+uintptr_t dword_6733F0, dword_4C834B, dword_4C74EA, dword_4582F3, dword_458426, dword_4C72DB;
 uintptr_t dword_45379E, dword_453A22, dword_4580C6, dword_4567E1;
 uintptr_t gbh_DrawQuadAddr;
 void __declspec(naked) gbh_DrawQuad()
@@ -71,7 +71,7 @@ void __declspec(naked) gbh_DrawQuad()
     }
     else
     {
-        if (esp40 != dword_4C834B && esp44 != dword_4C74EA)
+        if (esp40 != dword_4C834B && esp44 != dword_4C74EA && esp40 != dword_4C72DB)
         {
             *(float*)(dword_6733F0 + 0x00) += Screen.fHudOffset;
             *(float*)(dword_6733F0 + 0x20) += Screen.fHudOffset;
@@ -203,6 +203,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         }
 
         dword_4C834B = (uintptr_t)hook::pattern("8B 46 20 48 83 F8 04").get_first(0);
+        dword_4C72DB = (uintptr_t)hook::pattern("E8 ? ? ? ? 5F 5E 59 C2 20 00").count(2).get(1).get<uintptr_t>(5);
         dword_4C74EA = (uintptr_t)hook::pattern("6A 06 E8 ? ? ? ? 5E 59 C3").get_first(7);
         dword_4582F3 = (uintptr_t)hook::pattern("E9 ? ? ? ? 66 8B 5D 6A").get_first(0);
         dword_458426 = (uintptr_t)hook::pattern("8B 44 24 18 40 66 3B 47 02").get_first(0);
@@ -230,7 +231,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         //injector::MakeCALL(0x4C71B0 + 0x5D, test, true);
         //injector::MakeCALL(0x4C74A0 + 0x45, test, true); // player arrow
         //injector::MakeCALL(0x4C82C0 + 0x86, test, true); // mission arrrows
-        //injector::MakeCALL(0x4C82C0 + 0xED, test, true);
+        //injector::MakeCALL(0x4C82C0 + 0xED, test, true); // small arrow when near mission
         //void __declspec(naked) test()
         //{
         //    _asm ret 0x2C
@@ -291,12 +292,16 @@ DWORD WINAPI Init(LPVOID bDelay)
 
                 if (!curState && oldState) 
                 {
-                    //injector::thiscall<int(int, int)>::call(0x4105B0, 0x5D85A0, 0x3D); //sfx
+                    uint32_t missionFlag = **(uint32_t**)(*(uint32_t*)(dword_6644BC) + 0x344);
+                    if (!missionFlag)
+                    {
+                        //injector::thiscall<int(int, int)>::call(0x4105B0, 0x5D85A0, 0x3D); //sfx
 
-                    auto i = injector::thiscall<uint32_t(uint32_t)>::call(dword_45E510, dword_5EC070); //save
-                    injector::thiscall<uint32_t(uint32_t, uint32_t)>::call(dword_47EF40, dword_6644BC, i);
+                        auto i = injector::thiscall<uint32_t(uint32_t)>::call(dword_45E510, dword_5EC070); //save
+                        injector::thiscall<uint32_t(uint32_t, uint32_t)>::call(dword_47EF40, dword_6644BC, i);
 
-                    injector::thiscall<uint32_t(uint32_t, uint32_t, char*)>::call(dword_4C6750, *(uintptr_t*)dword_672F40 + 0xE4, 1, "svdone"); // text display
+                        injector::thiscall<uint32_t(uint32_t, uint32_t, char*)>::call(dword_4C6750, *(uintptr_t*)dword_672F40 + 0xE4, 1, "svdone"); // text display
+                    }
                 }
 
                 oldState = curState;
