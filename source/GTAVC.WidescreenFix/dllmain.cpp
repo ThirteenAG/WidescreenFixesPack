@@ -25,6 +25,7 @@ uint8_t* bBackgroundOn;
 uint16_t* font94B924;
 uint32_t* CMenuManager_m_PrefsLanguage;
 void OverwriteResolution();
+void* pRwRenderStateSet;
 
 void GetPatterns()
 {
@@ -747,19 +748,48 @@ void ApplyIniOptions()
 }
 
 injector::hook_back<void(__cdecl*)(CRect&, CRGBA const&, CRGBA const&, CRGBA const&, CRGBA const&)> hbSetVertices;
-static void __cdecl SetVerticesHook(CRect& a1, CRGBA const& a2, CRGBA const& a3, CRGBA const& a4, CRGBA const& a5)
+void __cdecl SetVerticesHook(CRect& a1, CRGBA const& a2, CRGBA const& a3, CRGBA const& a4, CRGBA const& a5)
 {
+    uint32_t pTexture = 0;
+    _asm mov pTexture, ebx
+
     if (static_cast<int>(a1.m_fRight) == RsGlobal->MaximumWidth && static_cast<int>(a1.m_fBottom) == RsGlobal->MaximumHeight)
     {
         float fMiddleScrCoord = (float)RsGlobal->MaximumWidth / 2.0f;
 
-        a1.m_fTop = 0.0f;
-        a1.m_fLeft = fMiddleScrCoord - ((((float)RsGlobal->MaximumHeight * ((float)FrontendAspectRatioWidth / (float)FrontendAspectRatioHeight))) / 2.0f);
-        a1.m_fBottom = (float)RsGlobal->MaximumHeight;
-        a1.m_fRight = fMiddleScrCoord + ((((float)RsGlobal->MaximumHeight * ((float)FrontendAspectRatioWidth / (float)FrontendAspectRatioHeight))) / 2.0f);
+        float w = 16.0f;
+        float h = 9.0f;
 
-        CSprite2dDrawRect(CRect(-5.0f, a1.m_fBottom, a1.m_fLeft, -5.0f), CRGBA(0, 0, 0, a2.alpha));
-        CSprite2dDrawRect(CRect((float)RsGlobal->MaximumWidth, a1.m_fBottom, a1.m_fRight, -5.0f), CRGBA(0, 0, 0, a2.alpha));
+        if (FrontendAspectRatioWidth && FrontendAspectRatioHeight)
+        {
+            w = (float)FrontendAspectRatioWidth;
+            h = (float)FrontendAspectRatioHeight;
+        }
+        else
+        {
+            if (pTexture)
+            {
+                if (*(uint32_t*)pTexture)
+                {
+                    pTexture = **(uint32_t**)pTexture;
+                    w = (float)(*(uint32_t*)(pTexture + 0x28));
+                    h = (float)(*(uint32_t*)(pTexture + 0x2C));
+                    if (w == h && w > 0 && h > 0)
+                    {
+                        w = 4.0f;
+                        h = 3.0f;
+                    }
+                }
+            }
+        }
+
+        a1.m_fTop = 0.0f;
+        a1.m_fLeft = fMiddleScrCoord - ((((float)RsGlobal->MaximumHeight * (w / h))) / 2.0f);
+        a1.m_fBottom = (float)RsGlobal->MaximumHeight;
+        a1.m_fRight = fMiddleScrCoord + ((((float)RsGlobal->MaximumHeight * (w / h))) / 2.0f);
+
+        CSprite2dDrawRect(CRect(-5.0f, (float)RsGlobal->MaximumHeight + 5.0f, (float)RsGlobal->MaximumWidth + 5.0f, -5.0f), CRGBA(0, 0, 0, a2.alpha));
+        injector::cstd<void(int,int)>::call(pRwRenderStateSet, 8, 0);
     }
 
     return hbSetVertices.fun(a1, a2, a3, a4, a5);
@@ -776,36 +806,15 @@ void Fix2DSprites()
     }
     else
     {
-        FrontendAspectRatioWidth = 16;
-        FrontendAspectRatioHeight = 9;
-
-        char path[MAX_PATH];
-        GetModuleFileName(NULL, path, MAX_PATH);
-        *(strrchr(path, '\\') + 1) = '\0';
-        strcat(path, "\\txd\\LOADSC0.txd");
-
-        struct texsize {
-            uint16_t width;
-            uint16_t height;
-        } wh;
-
-        FILE* hFile = fopen(path, "rb");
-        if (hFile)
-        {
-            fseek(hFile, 0x84, SEEK_SET);
-            fread(&wh, sizeof(texsize), 1, hFile);
-            if (wh.width < 20000 && wh.height < 20000)
-            {
-                FrontendAspectRatioWidth = wh.width;
-                FrontendAspectRatioHeight = wh.height;
-            }
-            fclose(hFile);
-        }
+        FrontendAspectRatioWidth = 0;
+        FrontendAspectRatioHeight = 0;
     }
 
     auto pattern = hook::pattern("E8 ? ? ? ? 8B 0B 83 C4 14 85 C9"); //0x578720
     hbSetVertices.fun = injector::MakeCALL(pattern.count(2).get(1).get<uint32_t>(0), SetVerticesHook).get();
     injector::MakeCALL(pattern.count(2).get(0).get<uint32_t>(0), SetVerticesHook); //0x57865C
+
+    pRwRenderStateSet = hook::get_pattern("A1 ? ? ? ? 83 EC 08 83 38 00"); //0x649BA0
 }
 
 DWORD WINAPI Init(LPVOID bDelay)
