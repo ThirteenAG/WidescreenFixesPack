@@ -50,7 +50,7 @@ DWORD WINAPI WindowCheck(LPVOID hWnd)
 }
 
 uintptr_t off_5952C4, esp40, esp44, esp68;
-uintptr_t dword_6733F0, dword_4C834B, dword_4C74EA, dword_4582F3, dword_458426, dword_4C72DB;
+uintptr_t dword_6733F0, dword_4C834B, dword_4C74EA, dword_4582F3, dword_458426, dword_4C83B2;
 uintptr_t dword_45379E, dword_453A22, dword_4580C6, dword_4567E1;
 uintptr_t gbh_DrawQuadAddr;
 void __declspec(naked) gbh_DrawQuad()
@@ -71,7 +71,7 @@ void __declspec(naked) gbh_DrawQuad()
     }
     else
     {
-        if (esp40 != dword_4C834B && esp44 != dword_4C74EA && esp40 != dword_4C72DB)
+        if (esp40 != dword_4C834B && esp44 != dword_4C74EA && esp40 != dword_4C83B2)
         {
             *(float*)(dword_6733F0 + 0x00) += Screen.fHudOffset;
             *(float*)(dword_6733F0 + 0x20) += Screen.fHudOffset;
@@ -203,7 +203,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         }
 
         dword_4C834B = (uintptr_t)hook::pattern("8B 46 20 48 83 F8 04").get_first(0);
-        dword_4C72DB = (uintptr_t)hook::pattern("E8 ? ? ? ? 5F 5E 59 C2 20 00").count(2).get(1).get<uintptr_t>(5);
+        dword_4C83B2 = (uintptr_t)hook::pattern("5F 5E 83 C4 08 C3").count(10).get(9).get<uintptr_t>(0);
         dword_4C74EA = (uintptr_t)hook::pattern("6A 06 E8 ? ? ? ? 5E 59 C3").get_first(7);
         dword_4582F3 = (uintptr_t)hook::pattern("E9 ? ? ? ? 66 8B 5D 6A").get_first(0);
         dword_458426 = (uintptr_t)hook::pattern("8B 44 24 18 40 66 3B 47 02").get_first(0);

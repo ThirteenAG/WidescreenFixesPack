@@ -109,7 +109,7 @@ DWORD WINAPI ComicsHandler(LPVOID)
 
 DWORD WINAPI InitWF(LPVOID)
 {
-    while (!Screen.nWidth && !Screen.nHeight) { Sleep(0); };
+    while (!Screen.nWidth || !Screen.nHeight) { Sleep(0); };
 
     Screen.fWidth = static_cast<float>(Screen.nWidth);
     Screen.fHeight = static_cast<float>(Screen.nHeight);
@@ -447,6 +447,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         pattern = hook::pattern("E8 ? ? ? ? EB ? D9 05 ? ? ? ? 8B CF");
         injector::MakeCALL(pattern.get_first(), static_cast<float(__fastcall *)(uintptr_t, uintptr_t)>(f), true); //0x4565B8
     }
+
     pattern = hook::pattern("8B 0D ? ? ? ? 8B 3D ? ? ? ? 41 89 0D ? ? ? ? 6A 18 8B CE E8");
     bIsInMenu = *pattern.count(8).get(1).get<uint8_t*>(2); //0x100845E8
 
