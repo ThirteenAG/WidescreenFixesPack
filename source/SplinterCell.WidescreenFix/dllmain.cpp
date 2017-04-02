@@ -150,12 +150,12 @@ DWORD WINAPI InitD3DDrv(LPVOID bDelay)
     }
 
     if (bDelay)
-        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
+        while (pattern.clear(GetModuleHandle("D3DDrv")).count_hint(2).empty()) { Sleep(0); };
 
     
-    static uint32_t* dword_1003DBA4 = *pattern.get(1).get<uint32_t*>(-4);
+    static uint32_t* dword_1003DBA4 = *pattern.count(2).get(1).get<uint32_t*>(-4);
     static uint32_t* dword_1003DBA0 = dword_1003DBA4 - 1;
-    static uint32_t* dword_1003DBC0 = *pattern.get(1).get<uint32_t*>(2);
+    static uint32_t* dword_1003DBC0 = *pattern.count(2).get(1).get<uint32_t*>(2);
     struct UD3DRenderDevice_SetRes_Hook
     {
         void operator()(injector::reg_pack&)
@@ -164,22 +164,23 @@ DWORD WINAPI InitD3DDrv(LPVOID bDelay)
             *dword_1003DBA4 = Screen.Height;
             *dword_1003DBC0 = 1;
         }
-    }; injector::MakeInline<UD3DRenderDevice_SetRes_Hook>(pattern.get(1).get<uint32_t>(0), pattern.get(1).get<uint32_t>(10));
+    }; injector::MakeInline<UD3DRenderDevice_SetRes_Hook>(pattern.count(2).get(1).get<uint32_t>(0), pattern.count(2).get(1).get<uint32_t>(10));
 
     //FMV
     Screen.fFMVoffsetStartX = (Screen.fWidth - 640.0f) / 2.0f;
     Screen.fFMVoffsetStartY = (Screen.fHeight - 480.0f) / 2.0f;
     pattern = hook::module_pattern(GetModuleHandle("D3DDrv"), "DA ? ? 00 00 00 D8 0D");
-    injector::MakeNOP(pattern.get(0).get<uint32_t>(0), 6, true);
-    injector::MakeNOP(pattern.get(1).get<uint32_t>(0), 6, true);
-    injector::WriteMemory<float>(*pattern.get(0).get<uint32_t*>(8), Screen.fFMVoffsetStartX * (1.0f / 640.0f), true); //(DWORD)D3DDrv + 0x31860
-    injector::WriteMemory<float>(*pattern.get(1).get<uint32_t*>(8), Screen.fFMVoffsetStartY * (1.0f / 480.0f), true); //(DWORD)D3DDrv + 0x31864
+    injector::MakeNOP(pattern.count(2).get(0).get<uint32_t>(0), 6, true);
+    injector::MakeNOP(pattern.count(2).get(1).get<uint32_t>(0), 6, true);
+    injector::WriteMemory<float>(*pattern.count(2).get(0).get<uint32_t*>(8), Screen.fFMVoffsetStartX * (1.0f / 640.0f), true); //(DWORD)D3DDrv + 0x31860
+    injector::WriteMemory<float>(*pattern.count(2).get(1).get<uint32_t*>(8), Screen.fFMVoffsetStartY * (1.0f / 480.0f), true); //(DWORD)D3DDrv + 0x31864
+
     return 0;
 }
 
 DWORD WINAPI InitEngine(LPVOID bDelay)
 {
-    auto pattern = hook::pattern("");
+    auto pattern = hook::module_pattern(GetModuleHandle("Engine"), "D8 C9 D8 0D");
 
     if (pattern.empty() && !bDelay)
     {
@@ -188,21 +189,20 @@ DWORD WINAPI InitEngine(LPVOID bDelay)
     }
 
     if (bDelay)
-        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
+        while (pattern.clear(GetModuleHandle("Engine")).count_hint(9).empty()) { Sleep(0); };
 
     //HUD
     Screen.fHudOffset = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
     Screen.HUDScaleX = 1.0f / Screen.fWidth * (Screen.fHeight / 480.0f);
-    pattern = hook::module_pattern(GetModuleHandle("Engine"), "D8 C9 D8 0D ? ? ? ?");
-    injector::WriteMemory<float>(*pattern.get(0).get<uint32_t*>(4), Screen.HUDScaleX, true); //(DWORD)Engine + 0x1E9F78
+    injector::WriteMemory<float>(*pattern.count(9).get(0).get<uint32_t*>(4), Screen.HUDScaleX, true); //(DWORD)Engine + 0x1E9F78
 
     pattern = hook::module_pattern(GetModuleHandle("Engine"), "8B ? 94 00 00 00 E8");
-    pDrawTile = injector::GetBranchDestination(pattern.get(0).get<uintptr_t>(6), true).as_int();
-    injector::MakeCALL(pattern.get(0).get<uintptr_t>(6), FCanvasUtilDrawTileHook, true); //(uint32_t)Engine + 0xC8ECE
+    pDrawTile = injector::GetBranchDestination(pattern.count(1).get(0).get<uintptr_t>(6), true).as_int();
+    injector::MakeCALL(pattern.count(1).get(0).get<uintptr_t>(6), FCanvasUtilDrawTileHook, true); //(uint32_t)Engine + 0xC8ECE
 
     pattern = hook::module_pattern(GetModuleHandle("Engine"), "8B ? 94 00 00 00 52 E8");
-    injector::MakeCALL(pattern.get(0).get<uint32_t>(7), FCanvasUtilDrawTileHook, true); //(uint32_t)Engine + 0xC9B7C
-    injector::MakeCALL(pattern.get(1).get<uint32_t>(7), FCanvasUtilDrawTileHook, true); //(uint32_t)Engine + 0xC9DE1
+    injector::MakeCALL(pattern.count(2).get(0).get<uint32_t>(7), FCanvasUtilDrawTileHook, true); //(uint32_t)Engine + 0xC9B7C
+    injector::MakeCALL(pattern.count(2).get(1).get<uint32_t>(7), FCanvasUtilDrawTileHook, true); //(uint32_t)Engine + 0xC9DE1
 
     //FOV
     #undef SCREEN_FOV_HORIZONTAL
@@ -218,7 +218,7 @@ DWORD WINAPI InitEngine(LPVOID bDelay)
         {
             *(float*)&regs.ecx = *(float*)(regs.eax + 0x2B0) * fDynamicScreenFieldOfViewScale;
         }
-    }; injector::MakeInline<UGameEngine_Draw_Hook>(pattern.get(0).get<uint32_t>(3), pattern.get(0).get<uint32_t>(3 + 6)); //pfDraw + 0x104
+    }; injector::MakeInline<UGameEngine_Draw_Hook>(pattern.count(1).get(0).get<uint32_t>(3), pattern.count(1).get(0).get<uint32_t>(3 + 6)); //pfDraw + 0x104
 
     fWidescreenHudOffset = ((Screen.fHeight * (4.0f / 3.0f)) / (640.0f / fWidescreenHudOffset));
     if (Screen.fAspectRatio < (16.0f / 9.0f))
@@ -293,6 +293,9 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
+        #ifdef _LOG
+        logfile.open("SC.WidescreenFix.log");
+        #endif // _LOG
         Init(NULL);
     }
     return TRUE;
