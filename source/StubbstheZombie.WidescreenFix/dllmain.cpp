@@ -1,23 +1,5 @@
 #include "stdafx.h"
-#include <string>
 #include <set>
-#include <algorithm>
-#include <iterator>
-#include <sstream>
-#include <iostream>
-
-HWND hWnd;
-bool bDelay;
-
-#define _USE_MATH_DEFINES
-#include "math.h"
-#define DEGREE_TO_RADIAN(fAngle) \
-    ((fAngle)* (float)M_PI / 180.0f)
-#define RADIAN_TO_DEGREE(fAngle) \
-    ((fAngle)* 180.0f / (float)M_PI)
-#define SCREEN_AR_NARROW			(4.0f / 3.0f)	// 640.0f / 480.0f
-#define SCREEN_FOV_HORIZONTAL		60.0f
-#define SCREEN_FOV_VERTICAL			(2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))
 
 static char* GLExeStrings = "GL_ALWAYS GL_APPLE_transform_hint GL_ARB_fragment_program GL_ARB_multisample GL_ARB_multitexture GL_ARB_occlusion_query \
 GL_ARB_texture_compression GL_ARB_texture_mirrored_repeat GL_ARB_vertex_buffer_object GL_ATI_array_rev_comps_in_4_bytes GL_EXT_compiled_vertex_array \
@@ -66,28 +48,25 @@ void __declspec(naked) GUIHook()
     _asm jmp GUIHookJmp
 }
 
-DWORD WINAPI Init(LPVOID)
+DWORD WINAPI Init(LPVOID bDelay)
 {
+    auto pattern = hook::pattern("BF 94 00 00 00 8B C7");
+
+    if (pattern.empty() && !bDelay)
+    {
+        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
+        return 0;
+    }
+
+    if (bDelay)
+        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
+
     CIniReader iniReader("");
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
 
-    auto pattern = hook::pattern("BF 94 00 00 00 8B C7");
-    if (!(pattern.size() > 0) && !bDelay)
-    {
-        bDelay = true;
-        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, NULL, 0, NULL);
-        return 0;
-    }
-
-    if (!Screen.Width || !Screen.Height) {
-        HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
-        MONITORINFO info;
-        info.cbSize = sizeof(MONITORINFO);
-        GetMonitorInfo(monitor, &info);
-        Screen.Width = info.rcMonitor.right - info.rcMonitor.left;
-        Screen.Height = info.rcMonitor.bottom - info.rcMonitor.top;
-    }
+    if (!Screen.Width || !Screen.Height)
+        std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
 
     Screen.fWidth = static_cast<float>(Screen.Width);
     Screen.fHeight = static_cast<float>(Screen.Height);
@@ -109,15 +88,15 @@ DWORD WINAPI Init(LPVOID)
             regs.eax = (uintptr_t)is.str().c_str();
             regs.edx = regs.esp + 0xA0;
         }
-    }; injector::MakeInline<GLCrashFix>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(7));
+    }; injector::MakeInline<GLCrashFix>(pattern.get_first(0), pattern.get_first(7));
 
     pattern = hook::pattern("66 8B 0D ? ? ? ? 66 89 8E 68 09 00 00 66 8B 15"); //0x54F0FE
-    injector::WriteMemory<uint16_t>(*pattern.get(0).get<uint16_t*>(3), (uint16_t)Screen.Width, true);
-    injector::WriteMemory<uint16_t>(*pattern.get(0).get<uint16_t*>(17), (uint16_t)Screen.Height, true);
+    injector::WriteMemory<uint16_t>(*pattern.count(1).get(0).get<uint16_t*>(3), (uint16_t)Screen.Width, true);
+    injector::WriteMemory<uint16_t>(*pattern.count(1).get(0).get<uint16_t*>(17), (uint16_t)Screen.Height, true);
 
     pattern = hook::pattern("66 C7 86 68 09 00 00 80 02 66 C7 86 6A 09 00 00 E0 01"); //0x54F150
-    injector::WriteMemory<uint16_t>(pattern.get(0).get<uint16_t>(7), (uint16_t)Screen.Width, true);
-    injector::WriteMemory<uint16_t>(pattern.get(0).get<uint16_t>(16), (uint16_t)Screen.Height, true);
+    injector::WriteMemory<uint16_t>(pattern.count(1).get(0).get<uint16_t>(7), (uint16_t)Screen.Width, true);
+    injector::WriteMemory<uint16_t>(pattern.count(1).get(0).get<uint16_t>(16), (uint16_t)Screen.Height, true);
 
     pattern = hook::pattern("0F BF 81 68 09 00 00 89 02 0F BF 81 6A 09 00 00"); //0x4ABE30
     struct PatchRes
@@ -127,29 +106,33 @@ DWORD WINAPI Init(LPVOID)
             *(uint32_t*)regs.edx = (uint16_t)Screen.Width;
             regs.eax = (uint16_t)Screen.Height;
         }
-    }; injector::MakeInline<PatchRes>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(16));
+    }; injector::MakeInline<PatchRes>(pattern.get_first(0), pattern.get_first(16));
 
     //Text
     Screen.fScaling = ((1.0f / (480.0f * (Screen.fWidth / Screen.fHeight))) * 2.0f);
     Screen.fTextAlignment = Screen.fScaling * ((480.0f * (4.0f / 3.0f)) / 2.0f);
 
     pattern = hook::pattern("C7 44 24 10 CD CC 4C 3B C7 44 24 14 00 00 00 00"); //0x5755E1 + 0x4
-    injector::WriteMemory<float>(pattern.get(0).get<uint32_t>(4), Screen.fScaling, true);
+    injector::WriteMemory<float>(pattern.count(1).get(0).get<uint32_t>(4), Screen.fScaling, true);
     pattern = hook::pattern("D8 05 ? ? ? ? D8 EA D9 5C 24 1C DB 44 24 0C"); //0x575671 + 0x2
-    injector::WriteMemory(pattern.get(0).get<uint32_t>(2), &Screen.fTextAlignment, true);
+    injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &Screen.fTextAlignment, true);
 
     //GUI
     pattern = hook::pattern("D8 05 ? ? ? ? D8 EA D9 5C 24 2C DB 44 24 10"); //0x565494
-    injector::MakeJMP(pattern.get(0).get<uint32_t>(0), GUIHook, true); //makeinline doesn't work
-    GUIHookJmp = (uintptr_t)pattern.get(0).get<uint32_t>(6); \
+    injector::MakeJMP(pattern.count(1).get(0).get<uint32_t>(0), GUIHook, true); //makeinline doesn't work
+    GUIHookJmp = (uintptr_t)pattern.count(1).get(0).get<uint32_t>(6);
 
     //FOV
+    #undef SCREEN_FOV_HORIZONTAL
+    #undef SCREEN_FOV_VERTICAL
+    #define SCREEN_FOV_HORIZONTAL 60.0f
+    #define SCREEN_FOV_VERTICAL (2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))
     Screen.fFieldOfView = 2.8f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * (Screen.fAspectRatio))) * (1.0f / SCREEN_FOV_HORIZONTAL);
     pattern = hook::pattern("D8 3D ? ? ? ? D9 C0 D8 8F ? ? ? ? D9 9F ? ? ? ? D9 C0"); //0x466AB0
-    injector::WriteMemory(pattern.get(0).get<uint32_t>(2), &Screen.fFieldOfView, true);
-    injector::WriteMemory(pattern.get(1).get<uint32_t>(2), &Screen.fFieldOfView, true);
+    injector::WriteMemory(pattern.count(2).get(0).get<uint32_t>(2), &Screen.fFieldOfView, true);
+    injector::WriteMemory(pattern.count(2).get(1).get<uint32_t>(2), &Screen.fFieldOfView, true);
     pattern = hook::pattern("D9 05 ? ? ? ? D8 F1 D9 44 24 4C D8 C9"); //0x4669CD
-    injector::WriteMemory(pattern.get(0).get<uint32_t>(2), &Screen.fFieldOfView, true);
+    injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &Screen.fFieldOfView, true);
     return 0;
 }
 

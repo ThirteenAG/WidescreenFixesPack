@@ -1,8 +1,5 @@
 #include "stdafx.h"
 
-HWND hWnd;
-bool bDelay;
-
 struct Screen
 {
     int Width;
@@ -22,35 +19,26 @@ struct Screen
     float f3DHorScale;
 } Screen;
 
-DWORD WINAPI Init(LPVOID)
+DWORD WINAPI Init(LPVOID bDelay)
 {
     auto pattern = hook::pattern("81 EC 04 01 00 00 53 55 56");
-    if (!(pattern.size() > 0) && !bDelay)
+
+    if (pattern.empty() && !bDelay)
     {
-        bDelay = true;
-        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, NULL, 0, NULL);
+        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
         return 0;
     }
 
     if (bDelay)
-    {
-        while (!(pattern.size() > 0))
-            pattern = hook::pattern("81 EC 04 01 00 00 53 55 56");
-    }
+        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
 
     CIniReader iniReader("");
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
     bool bFMVFullscreenMode = iniReader.ReadInteger("MAIN", "FMVFullscreenMode", 1) != 0;
 
-    if (!Screen.Width || !Screen.Height) {
-        HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
-        MONITORINFO info;
-        info.cbSize = sizeof(MONITORINFO);
-        GetMonitorInfo(monitor, &info);
-        Screen.Width = info.rcMonitor.right - info.rcMonitor.left;
-        Screen.Height = info.rcMonitor.bottom - info.rcMonitor.top;
-    }
+    if (!Screen.Width || !Screen.Height)
+        std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
 
     Screen.fWidth = static_cast<float>(Screen.Width);
     Screen.fHeight = static_cast<float>(Screen.Height);
@@ -59,9 +47,9 @@ DWORD WINAPI Init(LPVOID)
     Screen.fWidth43 = static_cast<float>(Screen.Width43);
 
     pattern = hook::pattern("75 0C 68 ? ? ? ? 68 ? ? ? ? EB 0A"); //406584
-    injector::MakeNOP(pattern.get(0).get<uint32_t>(0), 2, true);
-    injector::WriteMemory(pattern.get(0).get<uint32_t>(3), Screen.Height, true);
-    injector::WriteMemory(pattern.get(0).get<uint32_t>(8), Screen.Width, true);
+    injector::MakeNOP(pattern.count(1).get(0).get<uint32_t>(0), 2, true);
+    injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(3), Screen.Height, true);
+    injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(8), Screen.Width, true);
 
     pattern = hook::pattern("8B 04 C5 ? ? ? ? 89 0D ? ? ? ? A3"); //4957DC
     struct SetResHook
@@ -71,19 +59,19 @@ DWORD WINAPI Init(LPVOID)
             regs.ecx = Screen.Width;
             regs.eax = Screen.Height;
         }
-    }; injector::MakeInline<SetResHook>(pattern.get(0).get<uint32_t>(-2), pattern.get(0).get<uint32_t>(7));
-    injector::WriteMemory<uint16_t>(pattern.get(0).get<uint32_t>(3), 0xD13B, true);
+    }; injector::MakeInline<SetResHook>(pattern.get_first(-2), pattern.get_first(7));
+    injector::WriteMemory<uint16_t>(pattern.get_first(3), 0xD13B, true);
     
-    injector::WriteMemory(*pattern.get(0).get<uint32_t*>(9), Screen.Width, true);
-    injector::WriteMemory(*pattern.get(0).get<uint32_t*>(14), Screen.Height, true);
+    injector::WriteMemory(*pattern.count(1).get(0).get<uint32_t*>(9), Screen.Width, true);
+    injector::WriteMemory(*pattern.count(1).get(0).get<uint32_t*>(14), Screen.Height, true);
     
     //clipping fix
     static float fNegResX = -Screen.fWidth;
     static float fNegResY = -Screen.fHeight;
     pattern = hook::pattern("F3 0F 10 05 ? ? ? ? 8D 54 24 10 8D 4C 24 70"); //479982
-    injector::WriteMemory(pattern.get(0).get<uint32_t>(4), &fNegResX, true);
+    injector::WriteMemory(pattern.get_first(4), &fNegResX, true);
     pattern = hook::pattern("F3 0F 10 05 ? ? ? ? 8D 54 24 10 8D 8C 24 90"); //479A0C
-    injector::WriteMemory(pattern.get(0).get<uint32_t>(4), &fNegResY, true);
+    injector::WriteMemory(pattern.get_first(4), &fNegResY, true);
 
     //static float f3DHorScale = 1.0f * (Screen.fAspectRatio / (4.0f / 3.0f));
     //pattern = hook::pattern("F3 0F 10 15 ? ? ? ? F3 0F 5E 54 24"); //40B504 
@@ -91,7 +79,7 @@ DWORD WINAPI Init(LPVOID)
     static float f2 = 2.0f;
     Screen.f3DHorScale = 2.0f / (Screen.fAspectRatio / (4.0f / 3.0f));
     pattern = hook::pattern("F3 0F 10 0D ? ? ? ? 0F 28 54 24 30"); //40B504 
-    injector::WriteMemory(pattern.get(0).get<uint32_t>(4), &Screen.f3DHorScale, true);
+    injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(4), &Screen.f3DHorScale, true);
 
     pattern = hook::pattern("F3 0F 10 2D ? ? ? ? F3 0F 11 64 24 64 F3 0F 2A E1"); //41104C
     struct Set2DScale
@@ -107,7 +95,7 @@ DWORD WINAPI Init(LPVOID)
             else
                 _asm movss   xmm5, Screen.f3DHorScale
         }
-    }; injector::MakeInline<Set2DScale>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(8));
+    }; injector::MakeInline<Set2DScale>(pattern.get_first(0), pattern.get_first(8));
 
     Screen.fHudOffset1 = (Screen.fWidth - Screen.fWidth43) / 2.0f;
     Screen.fHudOffset2 = Screen.fHudOffset1 + Screen.fWidth43;
@@ -124,7 +112,7 @@ DWORD WINAPI Init(LPVOID)
             regs.ecx = *(uintptr_t*)regs.eax;
             regs.edx = *(uintptr_t*)(regs.ecx + 0x10C);
         }
-    }; injector::MakeInline<BackgroundsHook>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(8));
+    }; injector::MakeInline<BackgroundsHook>(pattern.get_first(0), pattern.get_first(8));
 
     //movies
     if (bFMVFullscreenMode)
@@ -161,12 +149,12 @@ DWORD WINAPI Init(LPVOID)
             *(float*)(regs.esp + 0x70) = 0.0f;
             *(float*)(regs.esp + 0x74) = 1.0f;
         }
-    }; injector::MakeInline<MoviesHook>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(12));
+    }; injector::MakeInline<MoviesHook>(pattern.get_first(0), pattern.get_first(12));
 
     //disable "Effect" option overlay
     pattern = hook::pattern("0F 84 FC 00 00 00 8D 44 24 60 33 ED"); //5686E4
-    injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(-1), 10, true);
-    injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(1), 0x82, true); //jb
+    injector::WriteMemory<uint8_t>(pattern.get_first(-1), 10, true);
+    injector::WriteMemory<uint8_t>(pattern.get_first(1), 0x82, true); //jb
     return 0;
 }
 
