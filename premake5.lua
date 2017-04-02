@@ -85,7 +85,7 @@ project "Flatout2.WidescreenFix"
 project "FlatoutUltimateCarnage.WidescreenFix"
    setpaths("Z:/WFP/Games/Flatout/FlatOut - Ultimate Carnage/", "Fouc.exe")
 project "GTA1.WidescreenFix"
-   setpaths("Z:/WFP/Games/Grand Theft Auto/Grand Theft Auto 1 London 1969 1961/", "WINO/Grand Theft Auto.exe", "WINO/scripts")
+   setpaths("Z:/WFP/Games/Grand Theft Auto/Grand Theft Auto 1 London 1969 1961/", "WINO/Grand Theft Auto.exe", "WINO/scripts/")
 project "GTA2.WidescreenFix"
    setpaths("Z:/WFP/Games/Grand Theft Auto/Grand Theft Auto 2/", "gta2.exe")
 project "GTA3.WidescreenFix"
@@ -136,31 +136,31 @@ project "SniperElite.WidescreenFix"
 project "SonicHeroes.WidescreenFix"
    setpaths("Z:/WFP/Games/SONICHEROES/", "Tsonic_win.exe")
 project "SplinterCell.WidescreenFix"
-   setpaths("Z:/WFP/Games/Splinter Cell/Splinter Cell/system/", "SplinterCell.exe", "system/scripts")
+   setpaths("Z:/WFP/Games/Splinter Cell/Splinter Cell/", "system/SplinterCell.exe", "system/scripts/")
 project "SplinterCellChaosTheory.WidescreenFix"
-   setpaths("Z:/WFP/Games/Splinter Cell/Splintercell Chaos Theory/", "splintercell3.exe", "system/scripts")
+   setpaths("Z:/WFP/Games/Splinter Cell/Splintercell Chaos Theory/", "system/splintercell3.exe", "system/scripts/")
 project "SplinterCellDoubleAgent.WidescreenFix"
-   setpaths("Z:/WFP/Games/Splinter Cell/Splinter Cell - Double Agent/", "SCDA-Offline/System/SplinterCell4.exe", "SCDA-Offline/System/scripts")
+   setpaths("Z:/WFP/Games/Splinter Cell/Splinter Cell - Double Agent/", "SCDA-Offline/System/SplinterCell4.exe", "SCDA-Offline/System/scripts/")
 project "SplinterCellPandoraTomorrow.WidescreenFix"
-   setpaths("Z:/WFP/Games/Splinter Cell/Splinter Cell Pandora Tomorrow/", "offline/system/SplinterCell2.exe", "offline/system/scripts")
+   setpaths("Z:/WFP/Games/Splinter Cell/Splinter Cell Pandora Tomorrow/", "offline/system/SplinterCell2.exe", "offline/system/scripts/")
 project "StreetRacingSyndicate.WidescreenFix"
-   setpaths("Z:/WFP/Games/Street Racing Syndicate/", "Bin/srs.exe", "Bin/scripts")
+   setpaths("Z:/WFP/Games/Street Racing Syndicate/", "Bin/srs.exe", "Bin/scripts/")
 project "StubbstheZombie.WidescreenFix"
    setpaths("Z:/WFP/Games/Stubbs the Zombie/", "Stubbs.exe")
 project "ThePunisher.WidescreenFix"
    setpaths("Z:/WFP/Games/The Punisher/", "punisher.exe")
 project "TonyHawksAmericanWasteland.WidescreenFix"
-   setpaths("Z:/WFP/Games/Tony Hawks/Tony Hawk's American Wasteland/", "Game/THAW.exe", "Game/scripts")
+   setpaths("Z:/WFP/Games/Tony Hawks/Tony Hawk's American Wasteland/", "Game/THAW.exe", "Game/scripts/")
 project "TonyHawksProSkater2.WidescreenFix"
    setpaths("Z:/WFP/Games/Tony Hawks/Pro Skater 2/", "THawk2.exe")
 project "TonyHawksProSkater3.WidescreenFix"
    setpaths("Z:/WFP/Games/Tony Hawks/Pro Skater 3/", "Skate3.exe")
 project "TonyHawksProSkater4.WidescreenFix"
-   setpaths("Z:/WFP/Games/Tony Hawks/Pro Skater 4/", "Game/Skate4.exe", "Game/scripts")
+   setpaths("Z:/WFP/Games/Tony Hawks/Pro Skater 4/", "Game/Skate4.exe", "Game/scripts/")
 project "TonyHawksUnderground.WidescreenFix"
-   setpaths("Z:/WFP/Games/Tony Hawks/Tony Hawk's Underground/", "Game/THUG.exe", "Game/scripts")
+   setpaths("Z:/WFP/Games/Tony Hawks/Tony Hawk's Underground/", "Game/THUG.exe", "Game/scripts/")
 project "TonyHawksUnderground2.WidescreenFix"
-   setpaths("Z:/WFP/Games/Tony Hawks/Tony Hawk's Underground 2/", "Game/THUG2.exe", "Game/scripts")
+   setpaths("Z:/WFP/Games/Tony Hawks/Tony Hawk's Underground 2/", "Game/THUG2.exe", "Game/scripts/")
 project "TotalOverdose.WidescreenFix"
    setpaths("Z:/WFP/Games/Total Overdose/", "TOD.exe")
 project "TrueCrimeNewYorkCity.WidescreenFix"
