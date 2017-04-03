@@ -1,234 +1,213 @@
 #include "stdafx.h"
 
-HWND hWnd;
-HINSTANCE hExecutableInstance;
-BYTE originalCode[5];
-BYTE* originalEP;
-
-#define _USE_MATH_DEFINES
-#include "math.h"
-#define DEGREE_TO_RADIAN(fAngle) \
-	((fAngle)* (float)M_PI / 180.0f)
-#define RADIAN_TO_DEGREE(fAngle) \
-	((fAngle)* 180.0f / (float)M_PI)
-#define SCREEN_AR_NARROW			(4.0f / 3.0f)	// 640.0f / 480.0f
-#define SCREEN_FOV_HORIZONTAL		75.0f
-#define SCREEN_FOV_VERTICAL			(2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))	// Default is 75.0f.
-float fScreenFieldOfViewVStd = SCREEN_FOV_VERTICAL;
-float fDynamicScreenFieldOfViewScale;
+//#define _LOG
+#ifdef _LOG
+#include <fstream>
+ofstream logfile;
+uint32_t logit;
+#endif // _LOG
 
 struct Screen
 {
-	int Width;
-	int Height;
-	float fWidth;
-	float fHeight;
-	float fFieldOfView;
-	float fAspectRatio;
-	float fHudOffset;
-	float fHudOffsetRight;
-	float fFMVoffsetStartX;
-	float fFMVoffsetEndX;
-	float fFMVoffsetStartY;
-	float fFMVoffsetEndY;
+    int32_t Width;
+    int32_t Height;
+    float fWidth;
+    float fHeight;
+    float fFieldOfView;
+    float fDynamicScreenFieldOfViewScale;
+    float fHudOffset;
+    float fAspectRatio;
+    float fHUDScaleX;
+    float fTextScaleX;
+    int32_t FilmstripScaleX;
+    int32_t FilmstripOffset;
 } Screen;
 
-HMODULE D3DDrv, WinDrv, Engine, Core;
-DWORD hookJmpAddr, hookJmpAddr2, hookJmpAddr3, hookJmpAddr4, hookJmpAddr5, hookJmpAddr6;
-DWORD epJump;
-char* UserIni;
-float HUDScaleX, TextScaleX;
-int FilmstripScaleX, FilmstripOffset;
-float f1_0 = 1.0f;
 
-void Init()
+DWORD WINAPI InitD3DDrv(LPVOID bDelay)
 {
-	CIniReader iniReader("");
-	Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
-	Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
+    auto pattern = hook::module_pattern(GetModuleHandle("D3DDrv"), "8B 4B 04 03 C9 85 C9 89 4C 24 10"); //?RenderFilmstrip@UD3DRenderDevice@@UAE_NXZ + 0x38C
 
-	if (Screen.Width == -1 || Screen.Height == -1)
-		return;
+    if (pattern.empty() && !bDelay)
+    {
+        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&InitD3DDrv, (LPVOID)true, 0, NULL);
+        return 0;
+    }
 
-	if (!Screen.Width || !Screen.Height) {
-		HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
-		MONITORINFO info;
-		info.cbSize = sizeof(MONITORINFO);
-		GetMonitorInfo(monitor, &info);
-		Screen.Width = info.rcMonitor.right - info.rcMonitor.left;
-		Screen.Height = info.rcMonitor.bottom - info.rcMonitor.top;
-	}
+    if (bDelay)
+        while (pattern.clear(GetModuleHandle("D3DDrv")).count_hint(1).empty()) { Sleep(0); };
 
-	Screen.fWidth = static_cast<float>(Screen.Width);
-	Screen.fHeight = static_cast<float>(Screen.Height);
-	Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
+    //Minimap
+    struct RenderFilmstrip_Hook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.ecx = Screen.FilmstripScaleX + Screen.FilmstripScaleX;
+        }
+    }; injector::MakeInline<RenderFilmstrip_Hook>(pattern.get_first(0));
 
-	char ResX[20];
-	char ResY[20];
-	_snprintf(ResX, 20, "%d", Screen.Width);
-	_snprintf(ResY, 20, "%d", Screen.Height);
 
-	CIniReader iniWriter(UserIni);
-	iniWriter.WriteString("WinDrv.WindowsClient", "WindowedViewportX", ResX);
-	iniWriter.WriteString("WinDrv.WindowsClient", "WindowedViewportY", ResY);
-	iniWriter.WriteString("WinDrv.WindowsClient", "FullscreenViewportX", ResX);
-	iniWriter.WriteString("WinDrv.WindowsClient", "FullscreenViewportY", ResY);
+    pattern = hook::module_pattern(GetModuleHandle("D3DDrv"), "03 D2 85 D2 89 54 24 10 DB 44 24 10"); //?RenderFilmstrip@UD3DRenderDevice@@UAE_NXZ + 0x350
+    struct RenderFilmstrip_Hook2
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.edx = Screen.FilmstripOffset;
+            *(int32_t*)(regs.esp + 0x10) = regs.edx;
+        }
+    }; injector::MakeInline<RenderFilmstrip_Hook2>(pattern.get_first(0), pattern.get_first(6));
+    injector::WriteMemory<uint16_t>(pattern.get_first(6), 0xD285, true);     //test    edx, edx
 
-	// return to the original EP
-	*(DWORD*)originalEP = *(DWORD*)&originalCode;
-	*(BYTE*)(originalEP + 4) = originalCode[4];
-	_asm
-	{
-		jmp originalEP
-	}
+    return 0;
 }
 
-void __declspec(naked) Text_Hook()
+DWORD WINAPI InitEngine(LPVOID bDelay)
 {
-	_asm
-	{
-		movss xmm2, TextScaleX
-		divss   xmm1, xmm2
-		movss   dword ptr [esp + 14h], xmm1
-		jmp	 hookJmpAddr3
-	}
+    auto pattern = hook::module_pattern(GetModuleHandle("Engine"), "F3 0F 11 15 ? ? ? ? 0F BF"); //10305753
+
+    if (pattern.empty() && !bDelay)
+    {
+        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&InitEngine, (LPVOID)true, 0, NULL);
+        return 0;
+    }
+
+    if (bDelay)
+        while (pattern.clear(GetModuleHandle("Engine")).count_hint(1).empty()) { Sleep(0); };
+
+    auto pWidthScale = *pattern.get_first<float*>(4); //?m_widthScale@ImageUnreal@magma@@0MA
+    injector::MakeNOP(pattern.get_first(), 8, true); //?InitDraw@ImageUnreal@magma@@SAXXZ + 0x153
+    injector::WriteMemory<float>(pWidthScale, Screen.fHUDScaleX, true);
+
+    pattern = hook::module_pattern(GetModuleHandle("Engine"), "F3 0F 5E CA F3 0F 11 4C 24 14 83 C4 04"); //0x1030678D
+    struct TextHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            _asm
+            {
+                cvtsi2ss xmm2, regs.ecx
+                movss xmm2, Screen.fTextScaleX
+                divss xmm1, xmm2
+            }
+        }
+    }; injector::MakeInline<TextHook>(pattern.get_first(-4), pattern.get_first(4));
+
+
+    pattern = hook::module_pattern(GetModuleHandle("Engine"), "F3 0F 5C 1D ? ? ? ? 0F 28 FD F3 0F 59 FA"); //0x103069A5 + 0x4
+    injector::WriteMemory(pattern.get_first(4), &Screen.fHudOffset, true);
+    
+    pattern = hook::module_pattern(GetModuleHandle("Engine"), "F3 0F 5C D8 F3 0F 58 DC"); //0x1030503C
+    struct HUDHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            static const float f1_0 = 1.0f;
+            _asm
+            {
+                movss xmm0, Screen.fHudOffset
+                subss xmm3, xmm0
+                addss xmm3, xmm4
+                movss xmm0, f1_0
+            }
+        }
+    }; injector::MakeInline<HUDHook>(pattern.get_first(0), pattern.get_first(8));
+
+
+    //FOV
+    #undef SCREEN_FOV_HORIZONTAL
+    #undef SCREEN_FOV_VERTICAL
+    #define SCREEN_FOV_HORIZONTAL 75.0f
+    #define SCREEN_FOV_VERTICAL (2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))
+    Screen.fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
+
+    pattern = hook::module_pattern(GetModuleHandle("Engine"), "8B 91 28 06 00 00 52 8B"); //?Draw@UGameEngine@@UAEXPAVUViewport@@HPAEPAH@Z  10530BD7
+    struct UGameEngine_Draw_Hook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            *(float*)&regs.edx = *(float*)(regs.ecx + 0x628) * Screen.fDynamicScreenFieldOfViewScale;
+        }
+    }; injector::MakeInline<UGameEngine_Draw_Hook>(pattern.get_first(0), pattern.get_first(6));
+
+    return 0;
 }
 
-void __declspec(naked) HUD_Hook()
+DWORD WINAPI Init(LPVOID bDelay)
 {
-	_asm
-	{
-		movss xmm0, Screen.fHudOffset
-		subss   xmm3, xmm0
-		addss   xmm3, xmm4
-		movss xmm0, f1_0
-		jmp	 hookJmpAddr4
-	}
-}
+    auto pattern = hook::pattern("89 85 D8 61 00 00");
 
+    if (pattern.empty() && !bDelay)
+    {
+        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
+        return 0;
+    }
 
-void __declspec(naked) RenderFilmstrip_Hook()
-{
-	_asm
-	{
-		mov     ecx, [ebx + 4]
-		mov     ecx, FilmstripScaleX
-		add     ecx, ecx
-		jmp		hookJmpAddr5
-	}
-}
+    if (bDelay)
+        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
 
-void __declspec(naked) RenderFilmstrip_Hook2()
-{
-	_asm
-	{
-		mov		edx, FilmstripOffset
-		mov		[esp + 10h], edx
-		fild    dword ptr [esp + 10h]
-		jmp		hookJmpAddr2
-	}
-}
+    struct SetResHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            *(uint32_t*)(regs.ebp + 0x61D8) = regs.eax;
 
+            CIniReader iniReader("");
+            Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
+            Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
+            bool bForceLL = iniReader.ReadInteger("MAIN", "ForceLL", 1) != 0;
 
-float __EDX;
-void __declspec(naked) UGameEngine_Draw_Hook()
-{
-	_asm
-	{
-		mov  edx, [ecx + 628h]
-		mov  __EDX, edx
-	}
-	__EDX *= fDynamicScreenFieldOfViewScale;
-	__asm   mov edx, __EDX
-	__asm	jmp	 hookJmpAddr6
-}
+            if (bForceLL)
+            {
+                auto pattern = hook::pattern("74 ? 68 ? ? ? ? 53 FF D7");
+                injector::MakeNOP(pattern.get_first(), 2, true);
+            }
 
-DWORD WINAPI Thread(LPVOID)
-{
+            if (!Screen.Width || !Screen.Height)
+                std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
 
-	while (true)
-	{
-		Sleep(0);
-		D3DDrv = GetModuleHandle("D3DDrv");
-		WinDrv = GetModuleHandle("WinDrv");
-		Engine = GetModuleHandle("Engine");
-		if (D3DDrv && WinDrv && Engine)
-			break;
-	}
+            Screen.fWidth = static_cast<float>(Screen.Width);
+            Screen.fHeight = static_cast<float>(Screen.Height);
+            Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
+            Screen.fHUDScaleX = 2.0f / (600.0f * Screen.fAspectRatio);
+            Screen.fTextScaleX = 600.0f * Screen.fAspectRatio;
+            Screen.fHudOffset = ((4.0f / 3.0f) / Screen.fAspectRatio);
+            Screen.FilmstripScaleX = static_cast<int32_t>(Screen.fWidth / (1280.0f / (368.0 * ((4.0 / 3.0) / (Screen.fAspectRatio)))));
+            Screen.FilmstripOffset = static_cast<int32_t>((((Screen.fWidth / 2.0f) - ((Screen.fHeight * (4.0f / 3.0f)) / 2.0f)) * 2.0f) + ((float)Screen.FilmstripScaleX / 5.25f));
 
-	DWORD pfInitDraw = (DWORD)GetProcAddress(Engine, "?InitDraw@ImageUnreal@magma@@SAXXZ");
-	DWORD pWidthScale = (DWORD)GetProcAddress(Engine, "?m_widthScale@ImageUnreal@magma@@0MA");
-	DWORD pfImageUnrealDraw = (DWORD)GetProcAddress(Engine, "?Draw@ImageUnreal@magma@@UAEXXZ");
+            if (Screen.Width > 0 && Screen.Height >> 0)
+            {
+                char UserIni[MAX_PATH];
+                GetModuleFileName(GetModuleHandle(NULL), UserIni, (sizeof(UserIni)));
+                *strrchr(UserIni, '\\') = '\0';
+                strcat(UserIni, "\\SplinterCell4.ini");
 
-	HUDScaleX = 2.0f / (600.0f * Screen.fAspectRatio);
-	injector::MakeNOP(pfInitDraw + 0x153, 8, true);
-	injector::WriteMemory<float>(pWidthScale, HUDScaleX, true);
+                CIniReader iniWriter(UserIni);
+                char ResX[20];
+                char ResY[20];
+                _snprintf(ResX, 20, "%d", Screen.Width);
+                _snprintf(ResY, 20, "%d", Screen.Height);
+                iniWriter.WriteString("WinDrv.WindowsClient", "WindowedViewportX", ResX);
+                iniWriter.WriteString("WinDrv.WindowsClient", "WindowedViewportY", ResY);
+                iniWriter.WriteString("WinDrv.WindowsClient", "FullscreenViewportX", ResX);
+                iniWriter.WriteString("WinDrv.WindowsClient", "FullscreenViewportY", ResY);
+            }
 
-	TextScaleX = 600.0f * Screen.fAspectRatio;
-	Screen.fHudOffset = ((4.0f / 3.0f) / Screen.fAspectRatio);
+            InitEngine(NULL);
+            InitD3DDrv(NULL);
+        }
+    }; injector::MakeInline<SetResHook>(pattern.get_first(0), pattern.get_first(6));
 
-	injector::MakeJMP((0x1030678D - 0x10300000) + (unsigned char*)Engine, Text_Hook, true);
-	hookJmpAddr3 = (0x10306797 - 0x10300000) + (DWORD)((unsigned char*)Engine);
-
-	injector::WriteMemory((0x103069A5 + 0x4 - 0x10300000) + (unsigned char*)Engine, &Screen.fHudOffset, true);
-
-	injector::MakeJMP(pfImageUnrealDraw + 0x2EC, HUD_Hook, true);
-	hookJmpAddr4 = pfImageUnrealDraw + 0x2EC + 0x8;
-
-	//Minimap
-	DWORD pfRenderFilmstrip = (DWORD)GetProcAddress(D3DDrv, "?RenderFilmstrip@UD3DRenderDevice@@UAE_NXZ");
-
-	FilmstripScaleX = static_cast<int>(Screen.fWidth / (1280.0f / (368.0 * ((4.0 / 3.0) / (Screen.fAspectRatio)))));
-	FilmstripOffset = static_cast<int>((((Screen.fWidth / 2.0f) - ((Screen.fHeight * (4.0f / 3.0f)) / 2.0f)) * 2.0f) + ((float)FilmstripScaleX / 5.25f));
-
-	injector::MakeJMP(pfRenderFilmstrip + 0x38C, RenderFilmstrip_Hook, true);
-	hookJmpAddr5 = pfRenderFilmstrip + 0x38C + 0x5;
-
-	injector::MakeJMP(pfRenderFilmstrip + 0x350, RenderFilmstrip_Hook2, true);
-	hookJmpAddr2 = pfRenderFilmstrip + 0x350 + 0x8;
-
-	//FOV
-	DWORD pfDraw = (DWORD)GetProcAddress(Engine, "?Draw@UGameEngine@@UAEXPAVUViewport@@HPAEPAH@Z");
-	fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(fScreenFieldOfViewVStd * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
-
-	for (size_t i = (0xD47 - 0x100); i < (0xD47 + 0x100); i++)
-	{
-		if (*(DWORD*)(pfDraw + i) == 0x0628918B && *(DWORD*)(pfDraw + i + 4) == 0x8B520000)
-		{
-			injector::MakeJMP(pfDraw + i /*0xD47*/, UGameEngine_Draw_Hook, true);
-			hookJmpAddr6 = pfDraw + i /*0xD47*/ + 0x6;
-			break;
-		}
-	}
-
-	return 0;
+    return 0;
 }
 
 BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
-	if (reason == DLL_PROCESS_ATTACH)
-	{
-		DWORD fAttr = GetFileAttributes("SplinterCell4.ini");
-		if ((fAttr != INVALID_FILE_ATTRIBUTES) && !(fAttr & FILE_ATTRIBUTE_DIRECTORY))
-		{
-			UserIni = ".\\SplinterCell4.ini";
-		}
-		else
-		{
-			UserIni = "..\\SplinterCell4.ini";
-		}
-
-		hExecutableInstance = GetModuleHandle(NULL);
-		IMAGE_NT_HEADERS* ntHeader = (IMAGE_NT_HEADERS*)((DWORD)hExecutableInstance + ((IMAGE_DOS_HEADER*)hExecutableInstance)->e_lfanew);
-		BYTE* ep = (BYTE*)((DWORD)hExecutableInstance + ntHeader->OptionalHeader.AddressOfEntryPoint);
-		// back up original code
-		*(DWORD*)&originalCode = *(DWORD*)ep;
-		originalCode[4] = *(ep + 4);
-		originalEP = ep;
-
-		injector::MakeJMP(ep, Init, true);
-
-		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Thread, NULL, 0, NULL);
-	}
-	return TRUE;
+    if (reason == DLL_PROCESS_ATTACH)
+    {
+        #ifdef _LOG
+        logfile.open("SC4.WidescreenFix.log");
+        #endif // _LOG
+        Init(NULL);
+    }
+    return TRUE;
 }
