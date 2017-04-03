@@ -455,11 +455,8 @@ DWORD WINAPI Init(LPVOID bDelay)
     auto FOVHook = [](uintptr_t _this, uintptr_t edx) -> float
     {
         Screen.fFieldOfView = *(float*)(_this + 88) * Screen.fDynamicScreenFieldOfViewScale;
-        if (Screen.fFieldOfView < 1.0f)
-            Screen.fFieldOfView = 1.0f;
-        else
-            if (Screen.fFieldOfView > 180.0f)
-                Screen.fFieldOfView = 180.0f;
+        if (Screen.fFieldOfView > 2.2f)
+            Screen.fFieldOfView = 2.2f;
 
         return Screen.fFieldOfView;
     };
