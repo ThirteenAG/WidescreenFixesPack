@@ -270,8 +270,8 @@ DWORD WINAPI Init(LPVOID bDelay)
         static uint16_t oldState = 0;
         static uint16_t curState = 0;
 
-        //injector::WriteMemory(0x47FEDC, 0, true);
-        //injector::WriteMemory(0x47FEF5, 500, true);
+        injector::WriteMemory(0x47FEDC, 0, true);
+        injector::WriteMemory(0x47FEF5, 500, true);
 
         static uint32_t dword_45E510 = (uint32_t)hook::get_pattern("8D 81 00 03 00 00 C3", 0);
         static uint32_t dword_5EC070 = *(uint32_t*)hook::get_pattern("B9 ? ? ? ? E8 ? ? ? ? 66 0F B6", 1);
@@ -298,7 +298,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                         //injector::thiscall<int(int, int)>::call(0x4105B0, 0x5D85A0, 0x3D); //sfx
 
                         auto i = injector::thiscall<uint32_t(uint32_t)>::call(dword_45E510, dword_5EC070); //save
-                        injector::thiscall<uint32_t(uint32_t, uint32_t)>::call(dword_47EF40, dword_6644BC, i);
+                        injector::thiscall<uint32_t(uint32_t, uint32_t)>::call(dword_47EF40, *(uint32_t*)dword_6644BC, i);
 
                         injector::thiscall<uint32_t(uint32_t, uint32_t, char*)>::call(dword_4C6750, *(uintptr_t*)dword_672F40 + 0xE4, 1, "svdone"); // text display
                     }

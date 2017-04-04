@@ -201,7 +201,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     {
         static float hor3DScale = 1.0f / (Screen.fAspectRatio / (4.0f / 3.0f));
         static float ver3DScale = 0.75f;
-        static float mirrorScale = 0.675f;
+        static float mirrorScale = 0.4f;
         static float f1234 = 1.25f;
         static float f06 = 0.6f;
         static float f1715 = 1.715f; // horizontal for vehicle reflection
@@ -232,12 +232,18 @@ DWORD WINAPI Init(LPVOID bDelay)
                 }
                 else
                 {
-                    flt1 = 1.0f;
-                    flt2 = 0.5f;
-                    flt3 = 1.0f;
-
                     if (regs.ecx > 10)
-                        flt2 = f1715;
+                    {
+                        flt1 = f1715;
+                        flt2 = f06;
+                        flt3 = f1234;
+                    }
+                    else
+                    {
+                        flt1 = 1.0f;
+                        flt2 = 0.5f;
+                        flt3 = 1.0f;
+                    }
                 }
                 
                 if (regs.ecx == 3) //if rearview mirror
