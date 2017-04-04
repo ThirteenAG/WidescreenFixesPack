@@ -12,7 +12,7 @@ struct Screen
     float fHudPosX;
 } Screen;
 
-uint32_t WINAPI Init(LPVOID bDelay)
+DWORD WINAPI Init(LPVOID bDelay)
 {
     auto pattern = hook::pattern("C7 00 80 02 00 00 C7 01 E0 01 00 00 C2 08 00");
 
@@ -30,7 +30,6 @@ uint32_t WINAPI Init(LPVOID bDelay)
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
     bool bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) != 0;
     bool bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) != 0;
-    bool bHudMode = iniReader.ReadInteger("MAIN", "HudMode", 1) != 0;
     int32_t nScaling = iniReader.ReadInteger("MAIN", "Scaling", 2);
     bool bHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1) != 0;
     int32_t nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
@@ -42,7 +41,7 @@ uint32_t WINAPI Init(LPVOID bDelay)
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
     bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 1) != 0;
     static int32_t nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
-    static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 20.0f);
+    static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
     static float fRainDropletsScale = iniReader.ReadFloat("MISC", "RainDropletsScale", 0.5f);
     bool bCustomUsrDir = false;
     if (strncmp(szCustomUserFilesDirectoryInGameDir, "0", 1) != 0)
@@ -235,9 +234,12 @@ uint32_t WINAPI Init(LPVOID bDelay)
     {
         static float hor3DScale = 1.0f / (Screen.fAspectRatio / (4.0f / 3.0f));
         static float ver3DScale = 0.75f;
-
-        uint32_t* dword_71B8DA = hook::pattern("D8 3D ? ? ? ? D9 5C 24 30 DB 44 24 20 D8 4C 24 2C").count(1).get(0).get<uint32_t>(2);
-        injector::WriteMemory(dword_71B8DA, &hor3DScale, true);
+        static float mirrorScale = 0.675f;
+        static float f1234 = 1.25f;
+        static float f06 = 0.6f;
+        static float flt1 = 0.0f;
+        static float flt2 = 0.0f;
+        static float flt3 = 0.0f;
 
         uint32_t* dword_71B858 = hook::pattern("DB 05 ? ? ? ? 8B 45 08 83 F8 01 DA 35 ? ? ? ? D9 5C 24 24").count(1).get(0).get<uint32_t>(0);
         struct FOVHook
@@ -245,19 +247,37 @@ uint32_t WINAPI Init(LPVOID bDelay)
             void operator()(injector::reg_pack& regs)
             {
                 regs.eax = *(uint32_t*)(regs.ebp + 8);
-                _asm fld ds: ver3DScale
+
+                if (regs.eax == 1 || regs.eax == 4) //Headlights stretching, reflections etc 
+                {
+                    flt1 = hor3DScale;
+                    flt2 = f06;
+                    flt3 = f1234;
+                }
+                else
+                {
+                    flt1 = 1.0f;
+                    flt2 = 0.5f;
+                    flt3 = 1.0f;
+                }
+
+                if (regs.eax == 3) //if rearview mirror
+                    _asm fld ds: mirrorScale
+                else
+                    _asm fld ds: ver3DScale
             }
         }; injector::MakeInline<FOVHook>((uint32_t)dword_71B858, (uint32_t)dword_71B858 + 18);
         injector::WriteMemory((uint32_t)dword_71B858 + 5, 0x9001F883, true); //cmp     eax, 1
 
-        // FOV being different in menus and in-game fix
-        static float f06 = 0.6f;
-        uint32_t* dword_71B8EC = hook::pattern("D8 0D ? ? ? ? E8 ? ? ? ? 8B E8 55 E8").count(2).get(1).get<uint32_t>(2);
-        injector::WriteMemory(dword_71B8EC, &f06, true);
+        uint32_t* dword_71B8DA = hook::pattern("D8 3D ? ? ? ? D9 5C 24 30 DB 44 24 20 D8 4C 24 2C").count(1).get(0).get<uint32_t>(2);
+        injector::WriteMemory(dword_71B8DA, &flt1, true);
 
-        static float f1234 = 1.25f;
+        // FOV being different in menus and in-game fix
+        uint32_t* dword_71B8EC = hook::pattern("D8 0D ? ? ? ? E8 ? ? ? ? 8B E8 55 E8").count(2).get(1).get<uint32_t>(2);
+        injector::WriteMemory(dword_71B8EC, &flt2, true);
+
         uint32_t* dword_71B923 = hook::pattern("D8 3D ? ? ? ? D9 5C 24 2C 8B 54 24 2C 52 50 55").count(1).get(0).get<uint32_t>(2);
-        injector::WriteMemory(dword_71B923, &f1234, true);
+        injector::WriteMemory(dword_71B923, &flt3, true);
 
         if (nScaling)
         {
