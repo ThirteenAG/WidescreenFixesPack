@@ -270,8 +270,8 @@ DWORD WINAPI Init(LPVOID bDelay)
         static uint16_t oldState = 0;
         static uint16_t curState = 0;
 
-        injector::WriteMemory(0x47FEDC, 0, true);
-        injector::WriteMemory(0x47FEF5, 500, true);
+        //injector::WriteMemory(0x47FEDC, 0, true);
+        //injector::WriteMemory(0x47FEF5, 500, true);
 
         static uint32_t dword_45E510 = (uint32_t)hook::get_pattern("8D 81 00 03 00 00 C3", 0);
         static uint32_t dword_5EC070 = *(uint32_t*)hook::get_pattern("B9 ? ? ? ? E8 ? ? ? ? 66 0F B6", 1);
