@@ -387,6 +387,22 @@ DWORD WINAPI Init(LPVOID bDelay)
                 _asm fld  dword ptr[ecx4]
             }
         }; injector::MakeInline<StopSignHook>((uint32_t)dword_5050FB, (uint32_t)dword_5050FB + 7);
+
+        uint32_t* dword_52C1B0 = hook::pattern("D9 07 8B 44 24 ? D8 01 D9 18 D9 41 ? D8 47 ? D9 58").get(0).get<uint32_t>(0);
+        struct HudHook3
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                regs.eax = *(uint32_t*)(regs.esp + 0x34);
+
+                HudPos HudPosX = *(uint32_t*)(regs.edi + 0x00);
+                HudPos HudPosY = *(uint32_t*)(regs.edi + 0x04);
+                WidescreenHud(HudPosX, HudPosY);
+                *(uint32_t*)(regs.edi + 0x00) = HudPosX.dwPos;
+                *(uint32_t*)(regs.edi + 0x04) = HudPosY.dwPos;
+                _asm fld  dword ptr[regs.edi]
+            }
+        }; injector::MakeInline<HudHook3>((uint32_t)dword_52C1B0, (uint32_t)dword_52C1B0 + 6);
     }
 
 
