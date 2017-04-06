@@ -204,7 +204,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         static float mirrorScale = 0.4f;
         static float f1234 = 1.25f;
         static float f06 = 0.6f;
-        static float f1715 = 1.715f; // horizontal for vehicle reflection
+        static float f1535 = 1.535f; // horizontal for vehicle reflection
         static float flt1 = 0.0f;
         static float flt2 = 0.0f;
         static float flt3 = 0.0f;
@@ -234,7 +234,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                 {
                     if (regs.ecx > 10)
                     {
-                        flt1 = f1715;
+                        flt1 = f1535;
                         flt2 = f06;
                         flt3 = f1234;
                     }
@@ -265,7 +265,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         injector::WriteMemory(dword_6CF5DC, &flt3, true);
 
         //Fixes vehicle reflection so that they're no longer broken and look exactly as they do without the widescreen fix.
-        static uint16_t dx = 21750;
+        static uint16_t dx = 20750;
         uint32_t* dword_6DA8AE = hook::pattern("66 8B 15 ? ? ? ? 66 89 93 C4 00 00 00").count(1).get(0).get<uint32_t>(3);
         injector::WriteMemory(dword_6DA8AE, &dx, true);
     }

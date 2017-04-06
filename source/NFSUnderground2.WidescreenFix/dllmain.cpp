@@ -88,6 +88,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     bool bDisableCutsceneBorders = iniReader.ReadInteger("MISC", "DisableCutsceneBorders", 1) != 0;
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
     static int nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
+    static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
     static float fRainDropletsScale = iniReader.ReadFloat("MISC", "RainDropletsScale", 0.5f);
     bool bCustomUsrDir = false;
     if (strncmp(szCustomUserFilesDirectoryInGameDir, "0", 1) != 0)
@@ -230,7 +231,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         static float mirrorScale = 0.45f;
         static float f1234 = 1.25f;
         static float f06 = 0.6f;
-        static float f1715 = 1.715f; // horizontal for vehicle reflection
+        static float f1535 = 1.535f; // horizontal for vehicle reflection
         static float flt1 = 0.0f;
         static float flt2 = 0.0f;
         static float flt3 = 0.0f;
@@ -257,7 +258,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                 {
                     if (regs.ecx > 10)
                     {
-                        flt1 = f1715;
+                        flt1 = f1535;
                         flt2 = f06;
                         flt3 = f1234;
                     }
@@ -289,7 +290,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         injector::WriteMemory(dword_5C801F, &flt3, true);
 
         //Fixes vehicle reflection so that they're no longer broken and look exactly as they do without the widescreen fix.
-        static uint16_t dx = 21750;
+        static uint16_t dx = 20750;
         uint32_t* dword_5C4FC9 = hook::pattern("66 A1 ? ? ? ? 66 89 86 C4 00 00 00").count(1).get(0).get<uint32_t>(2);
         injector::WriteMemory(dword_5C4FC9, &dx, true);
     }
@@ -388,21 +389,21 @@ DWORD WINAPI Init(LPVOID bDelay)
             }
         }; injector::MakeInline<StopSignHook>((uint32_t)dword_5050FB, (uint32_t)dword_5050FB + 7);
 
-        uint32_t* dword_52C1B0 = hook::pattern("D9 07 8B 44 24 ? D8 01 D9 18 D9 41 ? D8 47 ? D9 58").count(1).get(0).get<uint32_t>(0);
-        struct HudHook3
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                regs.eax = *(uint32_t*)(regs.esp + 0x34);
-
-                HudPos HudPosX = *(uint32_t*)(regs.edi + 0x00);
-                HudPos HudPosY = *(uint32_t*)(regs.edi + 0x04);
-                WidescreenHud(HudPosX, HudPosY);
-                *(uint32_t*)(regs.edi + 0x00) = HudPosX.dwPos;
-                *(uint32_t*)(regs.edi + 0x04) = HudPosY.dwPos;
-                _asm fld  dword ptr[regs.edi]
-            }
-        }; injector::MakeInline<HudHook3>((uint32_t)dword_52C1B0, (uint32_t)dword_52C1B0 + 6);
+        //uint32_t* dword_52C1B0 = hook::pattern("D9 07 8B 44 24 ? D8 01 D9 18 D9 41 ? D8 47 ? D9 58").count(1).get(0).get<uint32_t>(0);
+        //struct HudHook3
+        //{
+        //    void operator()(injector::reg_pack& regs)
+        //    {
+        //        regs.eax = *(uint32_t*)(regs.esp + 0x34);
+        //
+        //        HudPos HudPosX = *(uint32_t*)(regs.edi + 0x00);
+        //        HudPos HudPosY = *(uint32_t*)(regs.edi + 0x04);
+        //        WidescreenHud(HudPosX, HudPosY);
+        //        *(uint32_t*)(regs.edi + 0x00) = HudPosX.dwPos;
+        //        *(uint32_t*)(regs.edi + 0x04) = HudPosY.dwPos;
+        //        _asm fld  dword ptr[regs.edi]
+        //    }
+        //}; injector::MakeInline<HudHook3>((uint32_t)dword_52C1B0, (uint32_t)dword_52C1B0 + 6);
     }
 
 
@@ -561,6 +562,11 @@ DWORD WINAPI Init(LPVOID bDelay)
                 *(uintptr_t*)(regs.esp - 4) = (uintptr_t)dword_4ACF1D;
         }
     }; injector::MakeInline<Buttons>(pattern.get_first(1), pattern.get_first(9));
+
+    if (fLeftStickDeadzone)
+    {
+
+    }
 
     return 0;
 }
