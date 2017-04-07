@@ -1,58 +1,45 @@
 #include "stdafx.h"
 #include "GTA\CFileMgr.h"
-#include <algorithm>
-HWND hWnd;
-bool bDelay;
 
-bool bFixHUD, bFixFOV;
-bool bDisableCutsceneBorders;
-int ResX;
-int ResY;
-float hor3DScale, ver3DScale;
-float fHudScaleX, fHudScaleY;
-float fHudPosX;
-float MinimapPosX, MinimapPosY;
-bool bHudWidescreenMode;
-bool bFMVWidescreenMode;
-bool bXbox360Scaling;
-bool bAddHudOffset;
-char* szCustomUserFilesDirectoryInGameDir;
-
-HRESULT WINAPI SHGetFolderPathAHook(HWND /*hwnd*/, int /*csidl*/, HANDLE /*hToken*/, DWORD /*dwFlags*/, LPSTR pszPath)
+struct Screen
 {
-    CreateDirectory(szCustomUserFilesDirectoryInGameDir, NULL);
-    strcpy(pszPath, szCustomUserFilesDirectoryInGameDir);
-    return S_OK;
-}
+    int32_t Width;
+    int32_t Height;
+    int32_t Width43;
+    float fWidth;
+    float fHeight;
+    float fAspectRatio;
+    float fHudScaleX;
+    float fHudPosX;
+} Screen;
 
 union HudPos
 {
-    DWORD dwPos;
+    uint32_t dwPos;
     float fPos;
-} HudPosX, HudPosY;
+    HudPos(uint32_t pos) : dwPos(pos) {}
+    HudPos(float pos) : fPos(pos) {}
+};
 
 class CDatEntry
 {
 public:
-    DWORD dwPosX;
-    DWORD dwPosY;
+    uint32_t dwPosX;
+    uint32_t dwPosY;
     float fOffsetX;
     float fOffsetY;
 
-    CDatEntry(DWORD posx, DWORD posy, float fOffsetX, float fOffsetY)
+    CDatEntry(uint32_t posx, uint32_t posy, float fOffsetX, float fOffsetY)
         : dwPosX(posx), dwPosY(posy), fOffsetX(fOffsetX), fOffsetY(fOffsetY)
     {}
 };
 
 std::vector<CDatEntry> HudCoords;
-
 void LoadDatFile()
 {
     CIniReader iniReader("");
     char* DataFilePath = (char*)iniReader.GetIniPath().c_str();
-    char*			tempPointer;
-    tempPointer = strrchr(DataFilePath, '.');
-    *tempPointer = '\0';
+    *strrchr(DataFilePath, '.') = '\0';
     strcat(DataFilePath, ".dat");
 
     if (FILE* hFile = CFileMgr::OpenFile(DataFilePath, "r"))
@@ -65,9 +52,9 @@ void LoadDatFile()
                 float fOffsetX, fOffsetY;
                 sscanf(pLine, "%*s %x %x %f %f %*f %*f", &PosX, &PosY, &fOffsetX, &fOffsetY);
 
-                if (((float)ResX / (float)ResY) < (16.0f / 9.0f))
+                if (Screen.fAspectRatio < (16.0f / 9.0f))
                 {
-                    fOffsetX /= (((16.0f / 9.0f) / ((float)ResX / (float)ResY)) * 1.5f);
+                    fOffsetX /= (((16.0f / 9.0f) / Screen.fAspectRatio) * 1.5f);
                 }
 
                 HudCoords.push_back(CDatEntry(PosX, PosY, fOffsetX, fOffsetY));
@@ -77,230 +64,97 @@ void LoadDatFile()
     }
 }
 
-void WidescreenHud()
+DWORD WINAPI Init(LPVOID bDelay)
 {
-    __asm pushad
-    __asm pushfd
+    auto pattern = hook::pattern("68 20 03 00 00 BE 58 02 00 00");
 
-    //if (HudPosX.fPos < -320.0f)
-    //{
-    //	HudPosX.fPos -= 10000.0f;
-    //}
-    //else
-    //{
-    //	if (HudPosX.fPos > 640.0f)
-    //	{
-    //		HudPosX.fPos += 10000.0f;
-    //	}
-    //}
-
-    auto it = std::find_if(HudCoords.begin(), HudCoords.end(),
-        [&cc = CDatEntry(HudPosX.dwPos, HudPosY.dwPos, 0.0f, 0.0f)]
-    (const CDatEntry& cde) -> bool { return (cc.dwPosX == cde.dwPosX && cc.dwPosY == cde.dwPosY); });
-
-    if (it != HudCoords.end())
+    if (pattern.empty() && !bDelay)
     {
-        HudPosX.fPos += it->fOffsetX;
-        HudPosY.fPos += it->fOffsetY;
-
-        if (bAddHudOffset)
-        {
-            HudPosX.fPos -= MinimapPosX;
-            HudPosX.fPos += fHudPosX;
-        }
+        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
+        return 0;
     }
 
-    __asm popfd
-    __asm popad
-}
+    if (bDelay)
+        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
 
-DWORD jmpAddr, jmpAddr2, jmpAddr3, jmpAddr4;
-void __declspec(naked) HudHook()
-{
-    _asm
-    {
-        mov eax, [edi+1Ch]
-        mov ecx, [edi+20h]
-        mov HudPosX.dwPos, eax
-        mov HudPosY.dwPos, ecx
-        call WidescreenHud
-        mov eax, HudPosX.dwPos
-        mov ecx, HudPosY.dwPos
-        jmp jmpAddr
-    }
-}
-
-void __declspec(naked) MinimapHook1()
-{
-    _asm
-    {
-        mov     ecx, [ebp + 8]
-        mov		edx, [ecx + 68h]
-        mov		HudPosX.dwPos, edx
-        mov		edx, [ecx + 6Ch]
-        mov		HudPosY.dwPos, edx
-        mov     bAddHudOffset, 1
-        call	WidescreenHud
-        mov     bAddHudOffset, 0
-        mov		edx, HudPosX.dwPos
-        mov		[ecx + 68h], edx
-        mov		edx, HudPosY.dwPos
-        mov		[ecx + 6Ch], edx
-        
-        fld     dword ptr [ecx+68h]
-        jmp		jmpAddr2
-    }
-}
-
-void __declspec(naked) MinimapHook2()
-{
-    _asm
-    {
-        mov		edx, [eax + 68h]
-        mov		HudPosX.dwPos, edx
-        mov		edx, [eax + 6Ch]
-        mov		HudPosY.dwPos, edx
-        mov     bAddHudOffset, 1
-        call	WidescreenHud
-        mov     bAddHudOffset, 0
-        mov		edx, HudPosX.dwPos
-        mov		[eax + 68h], edx
-        mov		edx, HudPosY.dwPos
-        mov		[eax + 6Ch], edx
-        
-        fld     dword ptr[eax + 68h]
-        mov     ecx, [ebp + 0Ch]
-        jmp		jmpAddr3
-    }
-}
-
-void __declspec(naked) LapsHook()
-{
-    _asm
-    {
-        mov		eax, [ebx + 1Ch]
-        mov		edx, [ebx + 20h]
-        mov		HudPosX.dwPos, eax
-        mov		HudPosY.dwPos, edx
-        call	WidescreenHud
-        mov		eax, HudPosX.dwPos
-        mov		edx, HudPosY.dwPos
-        mov		[ebx + 1Ch], eax
-        mov		[ebx + 20h], edx
-        fadd	dword ptr [ebx + 1Ch]
-        mov		edx, [esp + 18h]
-        jmp		jmpAddr4
-    }
-}
-
-DWORD jmpAddr5;
-void __declspec(naked) FOVHook()
-{
-    _asm
-    {
-        mov dword ptr[esp + 20h], 3F800000h
-        fld ds : ver3DScale
-        jmp jmpAddr5
-    }
-}
-
-DWORD WINAPI Init(LPVOID)
-{
     CIniReader iniReader("");
-    ResX = iniReader.ReadInteger("MAIN", "ResX", 0);
-    ResY = iniReader.ReadInteger("MAIN", "ResY", 0);
-    bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) == 1;
-    bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) == 1;
-    bXbox360Scaling = iniReader.ReadInteger("MAIN", "Xbox360Scaling", 1) == 1;
-    bDisableCutsceneBorders = iniReader.ReadInteger("MAIN", "bDisableCutsceneBorders", 1) == 1;	
-    bHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1) == 1;
-    bFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1) == 1;
-    szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "");
+    Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
+    Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
+    bool bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) != 0;
+    bool bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) != 0;
+    bool bXbox360Scaling = iniReader.ReadInteger("MAIN", "Xbox360Scaling", 1) != 0;
+    bool bHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1) != 0;
+    bool bFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1) != 0;
+    static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
     static int nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
     bool bCustomUsrDir = false;
     if (strncmp(szCustomUserFilesDirectoryInGameDir, "0", 1) != 0)
         bCustomUsrDir = true;
 
-    if (!ResX || !ResY) {
-        HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
-        MONITORINFO info;
-        info.cbSize = sizeof(MONITORINFO);
-        GetMonitorInfo(monitor, &info);
-        ResX = info.rcMonitor.right - info.rcMonitor.left;
-        ResY = info.rcMonitor.bottom - info.rcMonitor.top;
-    }
+    if (!Screen.Width || !Screen.Height)
+        std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
 
-    auto pattern = hook::pattern("68 20 03 00 00 BE 58 02 00 00");
-    if (!(pattern.size() > 0) && !bDelay)
-    {
-        bDelay = true;
-        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, NULL, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-    {
-        while (!(pattern.size() > 0))
-            pattern = hook::pattern("68 20 03 00 00 BE 58 02 00 00");
-    }
+    Screen.fWidth = static_cast<float>(Screen.Width);
+    Screen.fHeight = static_cast<float>(Screen.Height);
+    Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
+    Screen.fHudScaleX = (1.0f / Screen.fWidth * (Screen.fHeight / 480.0f)) * 2.0f;
+    Screen.fHudPosX = 640.0f / (640.0f * Screen.fHudScaleX);
 
     //menu
-    DWORD* dword_408A25 = hook::pattern("68 20 03 00 00 BE 58 02 00 00").get(0).get<DWORD>(1);
-    injector::WriteMemory(dword_408A25, ResX, true);
-    DWORD dword_408A2A = (DWORD)dword_408A25 + 5;
-    injector::WriteMemory(dword_408A2A, ResY, true);
+    uint32_t* dword_408A25 = hook::pattern("68 20 03 00 00 BE 58 02 00 00").count(1).get(0).get<uint32_t>(1);
+    injector::WriteMemory(dword_408A25, Screen.Width, true);
+    uint32_t dword_408A2A = (uint32_t)dword_408A25 + 5;
+    injector::WriteMemory(dword_408A2A, Screen.Height, true);
 
-    DWORD* dword_4494C5 = hook::pattern("68 20 03 00 00 BE 58 02 00 00").get(0).get<DWORD>(1);
-    injector::WriteMemory(dword_4494C5, ResX, true);
-    DWORD dword_4494CA = (DWORD)dword_4494C5 + 5;
-    injector::WriteMemory(dword_4494CA, ResY, true);
+    uint32_t* dword_4494C5 = hook::pattern("68 20 03 00 00 BE 58 02 00 00").count(1).get(0).get<uint32_t>(1);
+    injector::WriteMemory(dword_4494C5, Screen.Width, true);
+    uint32_t dword_4494CA = (uint32_t)dword_4494C5 + 5;
+    injector::WriteMemory(dword_4494CA, Screen.Height, true);
 
     //game
-    DWORD* dword_408783 = hook::pattern("B8 20 03 00 00 BE 58 02 00 00 77 75").get(0).get<DWORD>(1);
-    injector::WriteMemory(dword_408783, ResX, true);
-    DWORD dword_408788 = (DWORD)dword_408783 + 5;
-    injector::WriteMemory(dword_408788, ResY, true);
+    uint32_t* dword_408783 = hook::pattern("B8 20 03 00 00 BE 58 02 00 00 77 75").count(1).get(0).get<uint32_t>(1);
+    injector::WriteMemory(dword_408783, Screen.Width, true);
+    uint32_t dword_408788 = (uint32_t)dword_408783 + 5;
+    injector::WriteMemory(dword_408788, Screen.Height, true);
 
     injector::MakeNOP(dword_408788 + 4, 9, true);
 
-    DWORD* dword_408796 = hook::pattern("B8 80 02 00 00 BE E0 01 00 00 50").get(0).get<DWORD>(1);
-    injector::WriteMemory(dword_408796, ResX, true);
-    DWORD dword_40879B = (DWORD)dword_408796 + 5;
-    injector::WriteMemory(dword_40879B, ResY, true);
-    DWORD* dword_4087AF = hook::pattern("B8 20 03 00 00 BE 58 02 00 00 50").get(0).get<DWORD>(1);
-    injector::WriteMemory(dword_4087AF, ResX, true);
-    DWORD dword_4087B4 = (DWORD)dword_4087AF + 5;
-    injector::WriteMemory(dword_4087B4, ResY, true);
-    DWORD* dword_4087C8 = hook::pattern("B8 00 04 00 00 BE 00 03 00 00 50").get(0).get<DWORD>(1);
-    injector::WriteMemory(dword_4087C8, ResX, true);
-    DWORD dword_4087CD = (DWORD)dword_4087C8 + 5;
-    injector::WriteMemory(dword_4087CD, ResY, true);
-    DWORD* dword_4087E1 = hook::pattern("B8 00 05 00 00 BE C0 03 00 00 50").get(0).get<DWORD>(1);
-    injector::WriteMemory(dword_4087E1, ResX, true);
-    DWORD dword_4087E6 = (DWORD)dword_4087E1 + 5;
-    injector::WriteMemory(dword_4087E6, ResY, true);
+    uint32_t* dword_408796 = hook::pattern("B8 80 02 00 00 BE E0 01 00 00 50").count(1).get(0).get<uint32_t>(1);
+    injector::WriteMemory(dword_408796, Screen.Width, true);
+    uint32_t dword_40879B = (uint32_t)dword_408796 + 5;
+    injector::WriteMemory(dword_40879B, Screen.Height, true);
+    uint32_t* dword_4087AF = hook::pattern("B8 20 03 00 00 BE 58 02 00 00 50").count(1).get(0).get<uint32_t>(1);
+    injector::WriteMemory(dword_4087AF, Screen.Width, true);
+    uint32_t dword_4087B4 = (uint32_t)dword_4087AF + 5;
+    injector::WriteMemory(dword_4087B4, Screen.Height, true);
+    uint32_t* dword_4087C8 = hook::pattern("B8 00 04 00 00 BE 00 03 00 00 50").count(1).get(0).get<uint32_t>(1);
+    injector::WriteMemory(dword_4087C8, Screen.Width, true);
+    uint32_t dword_4087CD = (uint32_t)dword_4087C8 + 5;
+    injector::WriteMemory(dword_4087CD, Screen.Height, true);
+    uint32_t* dword_4087E1 = hook::pattern("B8 00 05 00 00 BE C0 03 00 00 50").count(1).get(0).get<uint32_t>(1);
+    injector::WriteMemory(dword_4087E1, Screen.Width, true);
+    uint32_t dword_4087E6 = (uint32_t)dword_4087E1 + 5;
+    injector::WriteMemory(dword_4087E6, Screen.Height, true);
 
-    //DWORD* dword_4087FA = hook::pattern("BE 00 04 00 00 B8 00 05 00 00 50").get(0).get<DWORD>(1);
-    //injector::WriteMemory(dword_4087FA, ResX, true);
-    //DWORD dword_4087FF = (DWORD)dword_4087E1 + 5;
+    //uint32_t* dword_4087FA = hook::pattern("BE 00 04 00 00 B8 00 05 00 00 50").count(1).get(0).get<uint32_t>(1);
+    //injector::WriteMemory(dword_4087FA, Screen.Width, true);
+    //uint32_t dword_4087FF = (uint32_t)dword_4087E1 + 5;
     //injector::WriteMemory(dword_4087FF, ResY, true);
 
     //__mbclen to strlen, "---" bug
     pattern = hook::pattern("E8 ? ? ? ? 83 C4 04 85 C0 76 21 8D 43 60");
     if (pattern.size() > 0)
     {
-        DWORD* dword_4148EA = pattern.get(0).get<DWORD>(0);
+        auto dword_4148EA = pattern.get_first(0);
         injector::MakeCALL(dword_4148EA, strlen, true);
     }
+
 
     //HUD
     if (bFixHUD)
     {
-        fHudScaleX = (1.0f / ResX * (ResY / 480.0f)) * 2.0f;
-        fHudPosX = 640.0f / (640.0f * fHudScaleX);
-
-        DWORD* dword_6CC914 = *hook::pattern("D8 0D ? ? ? ? 57 0F B6 B8 81 00 00 00 D8 ? ? ? ? ?").get(0).get<DWORD*>(2);
-        injector::WriteMemory<float>(dword_6CC914, fHudScaleX, true);
+        uint32_t* dword_6CC914 = *hook::pattern("D8 0D ? ? ? ? 57 0F B6 B8 81 00 00 00 D8 ? ? ? ? ?").count(1).get(0).get<uint32_t*>(2);
+        injector::WriteMemory<float>(dword_6CC914, Screen.fHudScaleX, true);
 
         //fHudScaleY = *(float*)0x6CCBA4;
         //CPatch::SetFloat(0x79AC14, fHudScaleY);
@@ -310,145 +164,240 @@ DWORD WINAPI Init(LPVOID)
             auto pattern = hook::pattern("C7 ? ? ? ? 00 00 00 00 A0 43 C7 ? ? ? ? 00 00 00 00 70 43");
             if (pattern.size() > 0)
             {
-                DWORD* dword_4F20A3 = pattern.get(0).get<DWORD>(7);
-                injector::WriteMemory<float>(dword_4F20A3, fHudPosX, true);
+                uint32_t* dword_4F20A3 = pattern.get(0).get<uint32_t>(7);
+                injector::WriteMemory<float>(dword_4F20A3, Screen.fHudPosX, true);
             }
             else
             {
                 pattern = hook::pattern("C7 ? ? ? 00 00 A0 43 C7 ? ? ? ? 00 00 00 00 70 43");
                 if (pattern.size() > 0)
                 {
-                    DWORD* dword_4F2287 = pattern.get(0).get<DWORD>(4);
-                    injector::WriteMemory<float>(dword_4F2287, fHudPosX, true);
+                    uint32_t* dword_4F2287 = pattern.get(0).get<uint32_t>(4);
+                    injector::WriteMemory<float>(dword_4F2287, Screen.fHudPosX, true);
                 }
             }
         }
 
-        DWORD* dword_4F1E2D = hook::pattern("C7 ? ? ? 00 00 A0 43 C7 ? ? ? 00 00 70 43").get(0).get<DWORD>(4);
-        injector::WriteMemory<float>(dword_4F1E2D, fHudPosX, true);
-        DWORD* dword_4F26E5 = hook::pattern("C7 ? ? ? 00 00 A0 43 C7 ? ? ? 00 00 70 43").get(0).get<DWORD>(4);
-        injector::WriteMemory<float>(dword_4F26E5, fHudPosX, true);
-        
-        DWORD* dword_6CC910 = *hook::pattern("D8 1D ? ? ? ? DF E0 F6 C4 41 75 0F D9 45 FC").get(0).get<DWORD*>(2);
-        injector::WriteMemory<float>(dword_6CC910, fHudPosX, true);
+        uint32_t* dword_4F1E2D = hook::pattern("C7 ? ? ? 00 00 A0 43 C7 ? ? ? 00 00 70 43").count(1).get(0).get<uint32_t>(4);
+        injector::WriteMemory<float>(dword_4F1E2D, Screen.fHudPosX, true);
+        uint32_t* dword_4F26E5 = hook::pattern("C7 ? ? ? 00 00 A0 43 C7 ? ? ? 00 00 70 43").count(1).get(0).get<uint32_t>(4);
+        injector::WriteMemory<float>(dword_4F26E5, Screen.fHudPosX, true);
 
-        DWORD* dword_5CC109 = nullptr;
-        DWORD dword_5CC119 = 0;
-        DWORD dword_5CC0F9 = 0;
-        DWORD dword_5CC129 = 0;
+        uint32_t* dword_6CC910 = *hook::pattern("D8 1D ? ? ? ? DF E0 F6 C4 41 75 0F D9 45 FC").count(1).get(0).get<uint32_t*>(2);
+        injector::WriteMemory<float>(dword_6CC910, Screen.fHudPosX, true);
+
         auto pattern = hook::pattern("C7 44 24 ? 00 00 DC 43 C7 44 24 ? 00 00 70 41");
         if (pattern.size() > 0)
         {
-            dword_5CC109 = pattern.get(0).get<DWORD>(4); //rearview mirror (nfsu2 addresses)
-            dword_5CC119 = (DWORD)dword_5CC109 + 16 + 6;
-            dword_5CC0F9 = (DWORD)dword_5CC109 - 16;
-            dword_5CC129 = (DWORD)dword_5CC109 + 32 + 12;
-
-            injector::WriteMemory<float>(dword_5CC109, (fHudPosX - 320.0f) + 200.0f, true);
-            injector::WriteMemory<float>(dword_5CC119, (fHudPosX - 320.0f) + 200.0f, true);
-            injector::WriteMemory<float>(dword_5CC0F9, (fHudPosX - 320.0f) + 440.0f, true);
-            injector::WriteMemory<float>(dword_5CC129, (fHudPosX - 320.0f) + 440.0f, true);
+            injector::WriteMemory<float>(pattern.get_first(20), (Screen.fHudPosX - 320.0f) + 200.0f, true);
+            injector::WriteMemory<float>(pattern.get_first(42), (Screen.fHudPosX - 320.0f) + 200.0f, true);
+            injector::WriteMemory<float>(pattern.get_first(4),  (Screen.fHudPosX - 320.0f) + 440.0f, true);
+            injector::WriteMemory<float>(pattern.get_first(64), (Screen.fHudPosX - 320.0f) + 440.0f, true);
         }
     }
 
     if (bFixFOV)
     {
-        hor3DScale = 1.0f / ((1.0f * ((float)ResX / (float)ResY)) / (4.0f / 3.0f));
-        ver3DScale = 0.75f;
-
-        DWORD* dword_40DEBB = hook::pattern("D8 3D ? ? ? ? D9 1F E8 ? ? ? ? D9").get(0).get<DWORD>(2);
-        injector::WriteMemory(dword_40DEBB, &hor3DScale, true);
-
-        DWORD* dword_40DDD2 = hook::pattern("DB 40 18 C7 44 24").get(0).get<DWORD>(0);
-        jmpAddr5 = (DWORD)dword_40DDD2 + 14;
-        injector::MakeJMP(dword_40DDD2, FOVHook, true);
-
-        // FOV being different in menus and in-game fix
+        static float hor3DScale = 1.0f / (Screen.fAspectRatio / (4.0f / 3.0f));
+        static float ver3DScale = 0.75f;
+        static float mirrorScale = 0.45f;
+        static float f1234 = 1.25f;
         static float f06 = 0.6f;
-        DWORD* dword_40DE43 = hook::pattern("D8 0D ? ? ? ? ? ? E8 ? ? ? ? DD D8").get(0).get<DWORD>(2);
-        injector::WriteMemory(dword_40DE43, &f06, true);
-
-        static float f1234 = 1.234f;
-        DWORD* dword_40DEEC = hook::pattern("D8 3D ? ? ? ? D9 E0 D9 5E 54 D9 44 24 20").get(0).get<DWORD>(2);
-        injector::WriteMemory(dword_40DEEC, &f1234, true);
+        static float f1535 = 1.535f; // horizontal for vehicle reflection
+        static float flt1 = 0.0f;
+        static float flt2 = 0.0f;
+        static float flt3 = 0.0f;
 
         if (bXbox360Scaling)
         {
             hor3DScale /= 1.0511562719f;
         }
+
+        uint32_t* dword_40DDD2 = hook::pattern("DB 40 18 C7 44 24").count(1).get(0).get<uint32_t>(0);
+        struct FOVHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                *(float*)(regs.esp + 0x20) = 1.0f;
+                regs.eax = *(uint32_t*)(regs.ebp + 4);
+
+                if (regs.eax == 1 || regs.eax == 4) //Headlights stretching, reflections etc 
+                {
+                    flt1 = hor3DScale;
+                    flt2 = f06;
+                    flt3 = f1234;
+                }
+                else
+                {
+                    if (regs.eax > 9)
+                    {
+                        flt1 = f1535;
+                        flt2 = f06;
+                        flt3 = f1234;
+                    }
+                    else
+                    {
+                        flt1 = 1.0f;
+                        flt2 = 0.5f;
+                        flt3 = 1.0f;
+                    }
+                }
+                
+                if (regs.eax == 3) //if rearview mirror
+                    _asm fld ds : mirrorScale
+                else
+                    _asm fld ds : ver3DScale
+            }
+        }; injector::MakeInline<FOVHook>(dword_40DDD2, (uint32_t)dword_40DDD2 + 14);
+
+        uint32_t* dword_40DEBB = hook::pattern("D8 3D ? ? ? ? D9 1F E8 ? ? ? ? D9").count(1).get(0).get<uint32_t>(2);
+        injector::WriteMemory(dword_40DEBB, &flt1, true);
+
+        // FOV being different in menus and in-game fix
+        uint32_t* dword_40DE43 = hook::pattern("D8 0D ? ? ? ? ? ? E8 ? ? ? ? DD D8").count(1).get(0).get<uint32_t>(2);
+        injector::WriteMemory(dword_40DE43, &flt2, true);
+
+        uint32_t* dword_40DEEC = hook::pattern("D8 3D ? ? ? ? D9 E0 D9 5E 54 D9 44 24 20").count(1).get(0).get<uint32_t>(2);
+        injector::WriteMemory(dword_40DEEC, &flt3, true);
+
+        //Fixes vehicle reflection so that they're no longer broken and look exactly as they do without the widescreen fix.
+        static uint16_t dx = 20750;
+        uint32_t* dword_40B2F4 = hook::pattern("66 8B 15 ? ? ? ? 66 89 90 C4 00 00 00").count(1).get(0).get<uint32_t>(3);
+        injector::WriteMemory(dword_40B2F4, &dx, true);
     }
 
     if (bFMVWidescreenMode)
     {
-        DWORD* dword_4F1FC3 = hook::pattern("68 00 00 80 3F 68 00 00 00 3F 68 00 00 00 3F 68 00 00 00 BF 68 00 00 00 BF").get(0).get<DWORD>(6);
+        uint32_t* dword_4F1FC3 = hook::pattern("68 00 00 80 3F 68 00 00 00 3F 68 00 00 00 3F 68 00 00 00 BF 68 00 00 00 BF").count(1).get(0).get<uint32_t>(6);
         injector::WriteMemory<float>(dword_4F1FC3 + 0, (0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
-        injector::WriteMemory<float>((DWORD)dword_4F1FC3 + 5, (0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
-        injector::WriteMemory<float>((DWORD)dword_4F1FC3 + 10, -(0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
-        injector::WriteMemory<float>((DWORD)dword_4F1FC3 + 15, -(0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
+        injector::WriteMemory<float>((uint32_t)dword_4F1FC3 + 5, (0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
+        injector::WriteMemory<float>((uint32_t)dword_4F1FC3 + 10, -(0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
+        injector::WriteMemory<float>((uint32_t)dword_4F1FC3 + 15, -(0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
     }
 
-    if (bHudWidescreenMode && (((float)ResX / (float)ResY) > (4.0f / 3.0f)))
+    if (bHudWidescreenMode && (Screen.fAspectRatio > (4.0f / 3.0f)))
     {
         LoadDatFile();
+        static float fMinimapPosX = 320.0f;
+        static float fMinimapPosY = 240.0f;
+
+        static auto WidescreenHud = [](HudPos& HudPosX, HudPos& HudPosY, bool bAddHudOffset = false)
+        {
+            auto it = std::find_if(HudCoords.begin(), HudCoords.end(),
+                [&cc = CDatEntry(HudPosX.dwPos, HudPosY.dwPos, 0.0f, 0.0f)]
+            (const CDatEntry& cde) -> bool { return (cc.dwPosX == cde.dwPosX && cc.dwPosY == cde.dwPosY); });
+
+            if (it != HudCoords.end())
+            {
+                HudPosX.fPos += it->fOffsetX;
+                HudPosY.fPos += it->fOffsetY;
+
+                if (bAddHudOffset)
+                {
+                    HudPosX.fPos -= fMinimapPosX;
+                    HudPosX.fPos += Screen.fHudPosX;
+                }
+            }
+        };
 
         auto pattern = hook::pattern("8B 47 1C 8B 4F 20 89 84 24 10 01 00 00 8B 47 24 89 84 24 18 01 00 00 39 5C 24 04");
         if (pattern.size() > 0)
         {
-            DWORD* dword_4F18CB = pattern.get(0).get<DWORD>(0);
-            DWORD  dword_4F18D1 = (DWORD)dword_4F18CB + 6;
-            injector::MakeJMP(dword_4F18CB, HudHook, true);
-            jmpAddr = dword_4F18D1;
+            DWORD* dword_4F18CB = pattern.count(1).get(0).get<DWORD>(0);
+            struct HudHook
+            {
+                void operator()(injector::reg_pack& regs)
+                {
+                    regs.eax = *(uint32_t*)(regs.edi + 0x1C);
+                    regs.ecx = *(uint32_t*)(regs.edi + 0x20);
+                    HudPos HudPosX = regs.eax;
+                    HudPos HudPosY = regs.ecx;
+                    WidescreenHud(HudPosX, HudPosY);
+                    regs.eax = HudPosX.dwPos;
+                    regs.ecx = HudPosY.dwPos;
+                }
+            }; injector::MakeInline<HudHook>((uint32_t)dword_4F18CB, (uint32_t)dword_4F18CB + 6);
 
-            MinimapPosX = 320.0f;
-            MinimapPosY = 240.0f;
-            DWORD* dword_58E5BD = hook::pattern("D8 05 ? ? ? ? D9 5B 68 D8 05 ? ? ? ? D9 5B 6C D9 40 3C").get(0).get<DWORD>(2);
-            injector::WriteMemory(dword_58E5BD, &MinimapPosX, true);
+            DWORD* dword_58E5BD = hook::pattern("D8 05 ? ? ? ? D9 5B 68 D8 05 ? ? ? ? D9 5B 6C D9 40 3C").count(1).get(0).get<DWORD>(2);
+            injector::WriteMemory(dword_58E5BD, &fMinimapPosX, true);
             DWORD dword_58E5C6 = (DWORD)dword_58E5BD + 9;
-            injector::WriteMemory(dword_58E5C6, &MinimapPosY, true);
+            injector::WriteMemory(dword_58E5C6, &fMinimapPosY, true);
 
-            DWORD* dword_590DDC = hook::pattern("8B 4D 08 D9 41 68 53 57 8B 5D 0C 8B F8").get(0).get<DWORD>(0);
-            DWORD  dword_590DE2 = (DWORD)dword_590DDC + 6;
-            injector::MakeJMP(dword_590DDC, MinimapHook1, true);
-            jmpAddr2 = dword_590DE2;
 
-            DWORD* dword_58FB1C = hook::pattern("D9 40 68 8B 4D 0C D8 60 70 53 56 8D 91 83 00 00 00 D9 54 24 34").get(0).get<DWORD>(0);
-            DWORD  dword_58FB22 = (DWORD)dword_58FB1C + 6;
-            injector::MakeJMP(dword_58FB1C, MinimapHook2, true);
-            jmpAddr3 = dword_58FB22;
+            DWORD* dword_590DDC = hook::pattern("8B 4D 08 D9 41 68 53 57 8B 5D 0C 8B F8").count(1).get(0).get<DWORD>(0);
+            struct MinimapHook1
+            {
+                void operator()(injector::reg_pack& regs)
+                {
+                    regs.ecx = *(uint32_t*)(regs.ebp + 0x08);
 
-            DWORD* dword_4F6DAB = hook::pattern("D8 43 1C 8B 54 24 18 8B 44 24 10 D9 1A 8B 4E 68 50 51 57").get(0).get<DWORD>(0);
-            DWORD  dword_4F6DB2 = (DWORD)dword_4F6DAB + 7;
-            injector::MakeJMP(dword_4F6DAB, LapsHook, true);
-            jmpAddr4 = dword_4F6DB2;
+                    HudPos HudPosX = *(uint32_t*)(regs.ecx + 0x68);
+                    HudPos HudPosY = *(uint32_t*)(regs.ecx + 0x6C);
+                    WidescreenHud(HudPosX, HudPosY, true);
+                    *(uint32_t*)(regs.ecx + 0x68) = HudPosX.dwPos;
+                    *(uint32_t*)(regs.ecx + 0x6C) = HudPosY.dwPos;
+                     
+                     _asm fld dword ptr [HudPosX.fPos]
+                }
+            }; injector::MakeInline<MinimapHook1>((uint32_t)dword_590DDC, (uint32_t)dword_590DDC + 6);
+
+            DWORD* dword_58FB1C = hook::pattern("D9 40 68 8B 4D 0C D8 60 70 53 56 8D 91 83 00 00 00 D9 54 24 34").count(1).get(0).get<DWORD>(0);
+            struct MinimapHook2
+            {
+                void operator()(injector::reg_pack& regs)
+                {
+                    regs.ecx = *(uint32_t*)(regs.ebp + 0x0C);
+
+                    HudPos HudPosX = *(uint32_t*)(regs.eax + 0x68);
+                    HudPos HudPosY = *(uint32_t*)(regs.eax + 0x6C);
+                    WidescreenHud(HudPosX, HudPosY, true);
+                    *(uint32_t*)(regs.eax + 0x68) = HudPosX.dwPos;
+                    *(uint32_t*)(regs.eax + 0x6C) = HudPosY.dwPos;
+                    _asm fld dword ptr[HudPosX.fPos]
+                }
+            }; injector::MakeInline<MinimapHook2>((uint32_t)dword_58FB1C, (uint32_t)dword_58FB1C + 6);
+
+            DWORD* dword_4F6DAB = hook::pattern("D8 43 1C 8B 54 24 18 8B 44 24 10 D9 1A 8B 4E 68 50 51 57").count(1).get(0).get<DWORD>(0);
+            struct LapsHook
+            {
+                void operator()(injector::reg_pack& regs)
+                {
+                    regs.edx = *(uint32_t*)(regs.esp + 0x18);
+
+                    HudPos HudPosX = *(uint32_t*)(regs.ebx + 0x1C);
+                    HudPos HudPosY = *(uint32_t*)(regs.ebx + 0x20);
+                    WidescreenHud(HudPosX, HudPosY);
+                    *(uint32_t*)(regs.ebx + 0x1C) = HudPosX.dwPos;
+                    *(uint32_t*)(regs.ebx + 0x20) = HudPosY.dwPos;
+                    _asm fadd dword ptr[regs.ebx + 0x1C]
+
+                }
+            }; injector::MakeInline<LapsHook>((uint32_t)dword_4F6DAB, (uint32_t)dword_4F6DAB + 7);
         }
     }
 
     if (bCustomUsrDir)
     {
-        char			moduleName[MAX_PATH];
+        char moduleName[MAX_PATH];
         GetModuleFileName(NULL, moduleName, MAX_PATH);
-        char* tempPointer = strrchr(moduleName, '\\');
-        *(tempPointer + 1) = '\0';
+        *(strrchr(moduleName, '\\') + 1) = '\0';
         strcat(moduleName, szCustomUserFilesDirectoryInGameDir);
         strcpy(szCustomUserFilesDirectoryInGameDir, moduleName);
 
-        union {
-            DWORD* Int;
-            unsigned char Byte[4];
-        } dword_41C481;
+        auto SHGetFolderPathAHook = [](HWND /*hwnd*/, int /*csidl*/, HANDLE /*hToken*/, DWORD /*dwFlags*/, LPSTR pszPath) -> HRESULT
+        {
+            CreateDirectory(szCustomUserFilesDirectoryInGameDir, NULL);
+            strcpy(pszPath, szCustomUserFilesDirectoryInGameDir);
+            return S_OK;
+        };
 
-        dword_41C481.Int = *hook::pattern("68 ? ? ? ? 6A 00 6A 00 68 23 80 00 00 6A 00 FF 15").get(0).get<DWORD*>(16+2);
-        char pattern_str[20];
-
-        sprintf(pattern_str, "%02X %02X %02X %02X %02X %02X", 0xFF, 0x15, dword_41C481.Byte[0], dword_41C481.Byte[1], dword_41C481.Byte[2], dword_41C481.Byte[3]);
-        
-        auto pattern = hook::pattern(pattern_str);
-        //MessageBox(0, pattern_str, pattern_str, 0);
+        auto dword_41C481 = *hook::pattern("68 ? ? ? ? 6A 00 6A 00 68 23 80 00 00 6A 00 FF 15").count(1).get(0).get<uint32_t*>(16 + 2);
+        auto pattern = hook::pattern(pattern_str(0xFF, 0x15, to_bytes(dword_41C481)));
         for (size_t i = 0; i < pattern.size(); i++)
         {
-            DWORD* dword_6CBF17 = pattern.get(i).get<DWORD>(0);
-            injector::MakeCALL((DWORD)dword_6CBF17, SHGetFolderPathAHook, true);
-            injector::MakeNOP((DWORD)dword_6CBF17 + 5, 1, true);
+            uint32_t* dword_6CBF17 = pattern.get(i).get<uint32_t>(0);
+            injector::MakeCALL((uint32_t)dword_6CBF17, static_cast<HRESULT(WINAPI*)(HWND, int, HANDLE, DWORD, LPSTR)>(SHGetFolderPathAHook), true);
+            injector::MakeNOP((uint32_t)dword_6CBF17 + 5, 1, true);
         }
     }
 
@@ -461,15 +410,15 @@ DWORD WINAPI Init(LPVOID)
 
         pattern = hook::pattern("68 ? ? ? ? E8 ? ? ? ? 8B F0 83 C4 14 33 C9 33 C0"); //0x6B6E81 globalb
         if (nImproveGamepadSupport == 2)
-            injector::WriteMemory(pattern.get(0).get<uint32_t>(1), GLOBALB2, true);
+            injector::WriteMemory(pattern.get_first(1), GLOBALB2, true);
         else
-            injector::WriteMemory(pattern.get(0).get<uint32_t>(1), GLOBALB, true);
+            injector::WriteMemory(pattern.get_first(1), GLOBALB, true);
 
         pattern = hook::pattern("68 ? ? ? ? C6 05 ? ? ? ? 01 C7 ? ? ? ? ? ? ? ? ? E8 ? ? ? ? 8B F0 83 C4 14 33 C9"); //0x6B6E81 frontb
         if (nImproveGamepadSupport == 2)
-            injector::WriteMemory(pattern.get(0).get<uint32_t>(1), FrontB2, true);
+            injector::WriteMemory(pattern.get_first(1), FrontB2, true);
         else
-            injector::WriteMemory(pattern.get(0).get<uint32_t>(1), FrontB, true);
+            injector::WriteMemory(pattern.get_first(1), FrontB, true);
 
         struct PadState
         {
@@ -493,13 +442,13 @@ DWORD WINAPI Init(LPVOID)
 
         static bool Zstate, Pstate, Tstate, Dstate, Qstate, Cstate;
         pattern = hook::pattern("7C ? 5F 5D 5E 33 C0 5B C2 08 00"); //0x41989E
-        injector::WriteMemory(pattern.get(0).get<uint32_t>(8 + 5), 0x900008C2, true);
-        //static uintptr_t ButtonsState = (uintptr_t)*hook::pattern("").get(0).get<uint32_t*>(8); //0x
-        static int32_t* nGameState = (int32_t*)*hook::pattern("83 3D ? ? ? ? 06 ? ? A1").get(0).get<uint32_t*>(2); //0x77A920
+        injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(8 + 5), 0x900008C2, true);
+        //static uintptr_t ButtonsState = (uintptr_t)*hook::pattern("").count(1).get(0).get<uint32_t*>(8); //0x
+        static int32_t* nGameState = (int32_t*)*hook::pattern("83 3D ? ? ? ? 06 ? ? A1").count(1).get(0).get<uint32_t*>(2); //0x77A920
         struct CatchPad
         {
             void operator()(injector::reg_pack& regs)
-            {	
+            {
                 PadState* PadKeyPresses = *(PadState**)(regs.esp + 0x4);
                 //Keyboard 
                 //006F9358 backspace
@@ -579,7 +528,7 @@ DWORD WINAPI Init(LPVOID)
                         Cstate = false;
                 }
             }
-        }; injector::MakeInline<CatchPad>(pattern.get(0).get<uint32_t>(8));
+        }; injector::MakeInline<CatchPad>(pattern.get_first(8));
 
 
         const wchar_t* ControlsTexts[] = { L" 0", L" 1", L" 2", L" 3", L" 4", L" 5", L" 6", L" 7", L" 8", L" 9", L" Up", L" Down", L" Left", L" Right", L"X Rotation", L"Y Rotation", L"X Axis", L"Y Axis", L"Z Axis", L"Hat Switch" };
@@ -610,13 +559,13 @@ DWORD WINAPI Init(LPVOID)
                         wcscpy(pszStr, TextsPS[i].c_str());
                 }
             }
-        }; if (pattern.size() > 0) { injector::MakeInline<Buttons>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(7)); }
+        }; if (pattern.size() > 0) { injector::MakeInline<Buttons>(pattern.get_first(0), pattern.get_first(7)); }
     }
+
     return 0;
 }
 
-
-BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
+BOOL APIENTRY DllMain(HMODULE /*hModule*/, uint32_t reason, LPVOID /*lpReserved*/)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
@@ -624,4 +573,3 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
     }
     return TRUE;
 }
-

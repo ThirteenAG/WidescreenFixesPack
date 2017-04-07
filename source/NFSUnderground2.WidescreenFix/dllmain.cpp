@@ -88,6 +88,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     bool bDisableCutsceneBorders = iniReader.ReadInteger("MISC", "DisableCutsceneBorders", 1) != 0;
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
     static int nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
+    static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
     static float fRainDropletsScale = iniReader.ReadFloat("MISC", "RainDropletsScale", 0.5f);
     bool bCustomUsrDir = false;
     if (strncmp(szCustomUserFilesDirectoryInGameDir, "0", 1) != 0)
@@ -103,18 +104,18 @@ DWORD WINAPI Init(LPVOID bDelay)
     Screen.fHudPosX = 640.0f / (640.0f * Screen.fHudScaleX);
 
     //game
-    uint32_t* dword_5BF62F = hook::pattern("C7 00 80 02 00 00 C7 01 E0 01 00 00").get(0).get<uint32_t>(2);
+    uint32_t* dword_5BF62F = hook::pattern("C7 00 80 02 00 00 C7 01 E0 01 00 00").count(1).get(0).get<uint32_t>(2);
     //injector::MakeNOP(dword_5BF62F - 10 - 13, 13, true);
     injector::WriteMemory(dword_5BF62F, Screen.Width, true);
-    uint32_t* dword_5BF646 = hook::pattern("C7 02 20 03 00 00 C7 00 58 02 00 00").get(0).get<uint32_t>(2);
+    uint32_t* dword_5BF646 = hook::pattern("C7 02 20 03 00 00 C7 00 58 02 00 00").count(1).get(0).get<uint32_t>(2);
     injector::WriteMemory(dword_5BF646, Screen.Width, true);
-    uint32_t* dword_5BF65D = hook::pattern("C7 01 00 04 00 00 C7 02 00 03 00 00").get(0).get<uint32_t>(2);
+    uint32_t* dword_5BF65D = hook::pattern("C7 01 00 04 00 00 C7 02 00 03 00 00").count(1).get(0).get<uint32_t>(2);
     injector::WriteMemory(dword_5BF65D, Screen.Width, true);
-    uint32_t* dword_5BF674 = hook::pattern("C7 00 00 05 00 00 C7 01 C0 03 00 00").get(0).get<uint32_t>(2);
+    uint32_t* dword_5BF674 = hook::pattern("C7 00 00 05 00 00 C7 01 C0 03 00 00").count(1).get(0).get<uint32_t>(2);
     injector::WriteMemory(dword_5BF674, Screen.Width, true);
-    uint32_t* dword_5BF68B = hook::pattern("C7 02 00 05 00 00 C7 00 00 04 00 00").get(0).get<uint32_t>(2);
+    uint32_t* dword_5BF68B = hook::pattern("C7 02 00 05 00 00 C7 00 00 04 00 00").count(1).get(0).get<uint32_t>(2);
     injector::WriteMemory(dword_5BF68B, Screen.Width, true);
-    uint32_t* dword_5BF6A2 = hook::pattern("C7 01 40 06 00 00 C7 02 B0 04 00 00").get(0).get<uint32_t>(2);
+    uint32_t* dword_5BF6A2 = hook::pattern("C7 01 40 06 00 00 C7 02 B0 04 00 00").count(1).get(0).get<uint32_t>(2);
     injector::WriteMemory(dword_5BF6A2, Screen.Width, true);
 
     uint32_t dword_5BF635 = (uint32_t)dword_5BF62F + 6;
@@ -162,31 +163,31 @@ DWORD WINAPI Init(LPVOID bDelay)
     //HUD
     if (bFixHUD)
     {
-        uint32_t* dword_79AC10 = *hook::pattern("D9 05 ? ? ? ? 89 7C 24 28 C7 44 24 2C 00 00 00 3F D8 C9 C7 44 24 30 00 00 00 3F").get(0).get<uint32_t*>(2);
+        uint32_t* dword_79AC10 = *hook::pattern("D9 05 ? ? ? ? 89 7C 24 28 C7 44 24 2C 00 00 00 3F D8 C9 C7 44 24 30 00 00 00 3F").count(1).get(0).get<uint32_t*>(2);
         injector::WriteMemory<float>(dword_79AC10, Screen.fHudScaleX, true);
 
         //fHudScaleY = *(float*)0x79AC14;
         //CPatch::SetFloat(0x79AC14, fHudScaleY);
 
-        uint32_t* dword_51B3CB = hook::pattern("C7 84 24 A0 00 00 00 00 00 A0 43 C7 84 24 A4 00 00 00 00 00 70 43 C7 84 24 A8 00 00 00 00 00 00 00 0F B7 48 20").get(0).get<uint32_t>(7);
+        uint32_t* dword_51B3CB = hook::pattern("C7 84 24 A0 00 00 00 00 00 A0 43 C7 84 24 A4 00 00 00 00 00 70 43 C7 84 24 A8 00 00 00 00 00 00 00 0F B7 48 20").count(1).get(0).get<uint32_t>(7);
         injector::WriteMemory<float>(dword_51B3CB, Screen.fHudPosX, true);
-        uint32_t* dword_5368C8 = hook::pattern("C7 44 24 74 00 00 A0 43 C7 44 24 78 00 00 70 43 C7 44 24 7C 00 00 00 00 E8 ? ? ? ? 8D 4C 24 70").get(0).get<uint32_t>(4);
+        uint32_t* dword_5368C8 = hook::pattern("C7 44 24 74 00 00 A0 43 C7 44 24 78 00 00 70 43 C7 44 24 7C 00 00 00 00 E8 ? ? ? ? 8D 4C 24 70").count(1).get(0).get<uint32_t>(4);
         injector::WriteMemory<float>(dword_5368C8, Screen.fHudPosX, true);
-        uint32_t* dword_536A99 = hook::pattern("C7 84 24 84 00 00 00 00 00 A0 43 C7 84 24 88 00 00 00 00 00 70 43 C7 84 24 8C 00 00 00 00 00 00 00 E8 ? ? ? ? 8D 8C 24 80 00 00 00").get(0).get<uint32_t>(7);
+        uint32_t* dword_536A99 = hook::pattern("C7 84 24 84 00 00 00 00 00 A0 43 C7 84 24 88 00 00 00 00 00 70 43 C7 84 24 8C 00 00 00 00 00 00 00 E8 ? ? ? ? 8D 8C 24 80 00 00 00").count(1).get(0).get<uint32_t>(7);
         injector::WriteMemory<float>(dword_536A99, Screen.fHudPosX, true); //minimap
-        uint32_t* dword_536CC9 = hook::pattern("C7 84 24 94 00 00 00 00 00 A0 43 C7 84 24 98 00 00 00 00 00 70 43 C7 84 24 9C 00 00 00 00 00 00 00 E8 ? ? ? ? 8D 8C 24 90 00 00 00").get(0).get<uint32_t>(7);
+        uint32_t* dword_536CC9 = hook::pattern("C7 84 24 94 00 00 00 00 00 A0 43 C7 84 24 98 00 00 00 00 00 70 43 C7 84 24 9C 00 00 00 00 00 00 00 E8 ? ? ? ? 8D 8C 24 90 00 00 00").count(1).get(0).get<uint32_t>(7);
         injector::WriteMemory<float>(dword_536CC9, Screen.fHudPosX, true);
-        uint32_t* dword_537011 = hook::pattern("C7 44 24 74 00 00 A0 43 C7 44 24 78 00 00 70 43 C7 44 24 7C 00 00 00 00 E8 ? ? ? ? 8D 54 24 70 52").get(0).get<uint32_t>(4);
+        uint32_t* dword_537011 = hook::pattern("C7 44 24 74 00 00 A0 43 C7 44 24 78 00 00 70 43 C7 44 24 7C 00 00 00 00 E8 ? ? ? ? 8D 54 24 70 52").count(1).get(0).get<uint32_t>(4);
         injector::WriteMemory<float>(dword_537011, Screen.fHudPosX, true);
-        uint32_t* dword_48B640 = hook::pattern("C7 05 ? ? ? ? 00 00 A0 43 C7 05 ? ? ? ? 00 00 00 00 C7 05 ? ? ? ? 00 00 00 00 C6 05 ? ? ? ? 82").get(0).get<uint32_t>(6);
+        uint32_t* dword_48B640 = hook::pattern("C7 05 ? ? ? ? 00 00 A0 43 C7 05 ? ? ? ? 00 00 00 00 C7 05 ? ? ? ? 00 00 00 00 C6 05 ? ? ? ? 82").count(1).get(0).get<uint32_t>(6);
         injector::WriteMemory<float>(dword_48B640, Screen.fHudPosX, true);
-        uint32_t* dword_50B4F5 = hook::pattern("C7 84 24 A0 01 00 00 00 00 A0 43 C7 84 24 A4 01 00 00 00 00 70 43 C7 84 24 A8 01 00 00 00 00 00 00 E8 ? ? ? ? 8D 8C 24 30 01 00 00 51 8B F0").get(0).get<uint32_t>(7);
+        uint32_t* dword_50B4F5 = hook::pattern("C7 84 24 A0 01 00 00 00 00 A0 43 C7 84 24 A4 01 00 00 00 00 70 43 C7 84 24 A8 01 00 00 00 00 00 00 E8 ? ? ? ? 8D 8C 24 30 01 00 00 51 8B F0").count(1).get(0).get<uint32_t>(7);
         injector::WriteMemory<float>(dword_50B4F5, Screen.fHudPosX, true);
-        uint32_t* dword_797D50 = *hook::pattern("D8 25 ? ? ? ? 8B 4C 24 28 6A 00 8D 54 24 48 D9 5C 24 48 89 4C 24 50 D9 44 24 28 8B 0B").get(0).get<uint32_t*>(2);
+        uint32_t* dword_797D50 = *hook::pattern("D8 25 ? ? ? ? 8B 4C 24 28 6A 00 8D 54 24 48 D9 5C 24 48 89 4C 24 50 D9 44 24 28 8B 0B").count(1).get(0).get<uint32_t*>(2);
         injector::WriteMemory<float>(dword_797D50, Screen.fHudPosX, true);
         injector::WriteMemory<float>(dword_797D50 + 2, Screen.fHudPosX * 2.0f, true);
 
-        uint32_t* dword_5CC109 = hook::pattern("C7 44 24 40 00 00 48 43 C7 44 24 44 00 00 70 41 C7 44 24 50 00 00 48 43 C7 44 24 54 00 00 BE 42 C7 44 24 60 00 00 DC 43").get(0).get<uint32_t>(4); //rearview mirror
+        uint32_t* dword_5CC109 = hook::pattern("C7 44 24 40 00 00 48 43 C7 44 24 44 00 00 70 41 C7 44 24 50 00 00 48 43 C7 44 24 54 00 00 BE 42 C7 44 24 60 00 00 DC 43").count(1).get(0).get<uint32_t>(4); //rearview mirror
         DWORD dword_5CC119 = (uint32_t)dword_5CC109 + 16;
         DWORD dword_5CC0F9 = (uint32_t)dword_5CC109 - 16;
         DWORD dword_5CC129 = (uint32_t)dword_5CC109 + 32;
@@ -195,9 +196,9 @@ DWORD WINAPI Init(LPVOID bDelay)
         injector::WriteMemory<float>(dword_5CC0F9, (Screen.fHudPosX - 320.0f) + 440.0f, true);
         injector::WriteMemory<float>(dword_5CC129, (Screen.fHudPosX - 320.0f) + 440.0f, true);
 
-        uint32_t* dword_5CBEF5 = hook::pattern("C7 44 24 38 00 00 20 44 C7 44 24 40 00 00 00 00 C7 44 24 48 00 00").get(0).get<uint32_t>(4);
+        uint32_t* dword_5CBEF5 = hook::pattern("C7 44 24 38 00 00 20 44 C7 44 24 40 00 00 00 00 C7 44 24 48 00 00").count(1).get(0).get<uint32_t>(4);
         uint32_t  dword_5CBF05 = (uint32_t)dword_5CBEF5 + 16;
-        uint32_t* dword_5CBE89 = hook::pattern("C7 44 24 2C 00 00 20 44 C7 44 24 30 00 00 00 00 C7 44 24 34 00 00 00 00 C7 44 24 3C 00 00 20 44 C7 44 24 44 00 00 00 00").get(0).get<uint32_t>(4);
+        uint32_t* dword_5CBE89 = hook::pattern("C7 44 24 2C 00 00 20 44 C7 44 24 30 00 00 00 00 C7 44 24 34 00 00 00 00 C7 44 24 3C 00 00 20 44 C7 44 24 44 00 00 00 00").count(1).get(0).get<uint32_t>(4);
         uint32_t  dword_5CBEA1 = (uint32_t)dword_5CBE89 + 24;
         injector::WriteMemory<float>(dword_5CBEF5, Screen.fWidth, true); // borders
         injector::WriteMemory<float>(dword_5CBF05, Screen.fWidth, true);
@@ -212,7 +213,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             injector::WriteMemory<float>(dword_5CBEA1, 0.0f, true);
         }
 
-        uint32_t* dword_5C726A = hook::pattern("C7 44 24 30 00 00 20 44 C7 44 24 34 00 00 00 00 C7 44 24 40 00 00 20 44 C7 44 24 44 00 00 F0 43 C7 44 24 50 00 00 00 00 C7 44 24 54 00 00 F0 43 7D 06").get(0).get<uint32_t>(4);
+        uint32_t* dword_5C726A = hook::pattern("C7 44 24 30 00 00 20 44 C7 44 24 34 00 00 00 00 C7 44 24 40 00 00 20 44 C7 44 24 44 00 00 F0 43 C7 44 24 50 00 00 00 00 C7 44 24 54 00 00 F0 43 7D 06").count(1).get(0).get<uint32_t>(4);
         injector::WriteMemory<float>(dword_5C726A, Screen.fWidth * 2.0f, true); // radar mask
         uint32_t  dword_5C727A = (uint32_t)dword_5C726A + 16;
         injector::WriteMemory<float>(dword_5C727A, Screen.fWidth * 2.0f, true);
@@ -230,7 +231,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         static float mirrorScale = 0.45f;
         static float f1234 = 1.25f;
         static float f06 = 0.6f;
-        static float f1715 = 1.715f; // horizontal for vehicle reflection
+        static float f1535 = 1.535f; // horizontal for vehicle reflection
         static float flt1 = 0.0f;
         static float flt2 = 0.0f;
         static float flt3 = 0.0f;
@@ -240,7 +241,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             hor3DScale /= 1.0511562719f;
         }
 
-        uint32_t* dword_5C7F56 = hook::pattern("DB 40 18 C7 44 24 20 00 00 80 3F DA 70 14").get(0).get<uint32_t>(0);
+        uint32_t* dword_5C7F56 = hook::pattern("DB 40 18 C7 44 24 20 00 00 80 3F DA 70 14").count(1).get(0).get<uint32_t>(0);
         struct FOVHook
         {
             void operator()(injector::reg_pack& regs)
@@ -257,7 +258,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                 {
                     if (regs.ecx > 10)
                     {
-                        flt1 = f1715;
+                        flt1 = f1535;
                         flt2 = f06;
                         flt3 = f1234;
                     }
@@ -278,18 +279,18 @@ DWORD WINAPI Init(LPVOID bDelay)
         injector::WriteMemory((uint32_t)dword_5C7F56 - 1, 0x9001F983, true); //cmp     ecx, 1
         injector::MakeNOP((uint32_t)dword_5C7F56 + 3 + 8, 3, true); //nop fidiv
 
-        uint32_t* dword_5C7FE8 = hook::pattern("D8 3D ? ? ? ? D9 5C 24 1C DB 44 24 2C D8 4C 24 28 D8 0D ? ? ? ? E8").get(0).get<uint32_t>(2);
+        uint32_t* dword_5C7FE8 = hook::pattern("D8 3D ? ? ? ? D9 5C 24 1C DB 44 24 2C D8 4C 24 28 D8 0D ? ? ? ? E8").count(1).get(0).get<uint32_t>(2);
         injector::WriteMemory(dword_5C7FE8, &flt1, true);
 
         // FOV being different in menus and in-game fix
-        uint32_t* dword_5C7FFA = hook::pattern("D8 0D ? ? ? ? E8 ? ? ? ? 8B D8 53").get(1).get<uint32_t>(2);
+        uint32_t* dword_5C7FFA = hook::pattern("D8 0D ? ? ? ? E8 ? ? ? ? 8B D8 53").count(2).get(1).get<uint32_t>(2);
         injector::WriteMemory(dword_5C7FFA, &flt2, true);
 
-        uint32_t* dword_5C801F = hook::pattern("D8 3D ? ? ? ? D9 5C 24 38 D9 44 24 24 D8 64 24 30 D8 7C 24 24 D9 5C 24 34").get(0).get<uint32_t>(2);
+        uint32_t* dword_5C801F = hook::pattern("D8 3D ? ? ? ? D9 5C 24 38 D9 44 24 24 D8 64 24 30 D8 7C 24 24 D9 5C 24 34").count(1).get(0).get<uint32_t>(2);
         injector::WriteMemory(dword_5C801F, &flt3, true);
 
         //Fixes vehicle reflection so that they're no longer broken and look exactly as they do without the widescreen fix.
-        static uint16_t dx = 21750;
+        static uint16_t dx = 20750;
         uint32_t* dword_5C4FC9 = hook::pattern("66 A1 ? ? ? ? 66 89 86 C4 00 00 00").count(1).get(0).get<uint32_t>(2);
         injector::WriteMemory(dword_5C4FC9, &dx, true);
     }
@@ -297,7 +298,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     if (bFMVWidescreenMode)
     {
-        uint32_t* dword_536A1F = hook::pattern("68 00 00 00 3F 68 00 00 00 3F 68 00 00 00 BF 68 00 00 00 BF 8B CB E8 ? ? ? ? 8B 44 24 18 8B CB").get(0).get<uint32_t>(1);
+        uint32_t* dword_536A1F = hook::pattern("68 00 00 00 3F 68 00 00 00 3F 68 00 00 00 BF 68 00 00 00 BF 8B CB E8 ? ? ? ? 8B 44 24 18 8B CB").count(1).get(0).get<uint32_t>(1);
         uint32_t  dword_536A24 = (uint32_t)dword_536A1F + 5;
         uint32_t  dword_536A29 = (uint32_t)dword_536A1F + 10;
         uint32_t  dword_536A2E = (uint32_t)dword_536A1F + 15;
@@ -324,7 +325,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             }
         };
         
-        uint32_t* dword_51B190 = hook::pattern("89 4C 24 60 89 54 24 64 74 ? 8D 8C 24 F0 00 00 00 51").get(0).get<uint32_t>(0);
+        uint32_t* dword_51B190 = hook::pattern("89 4C 24 60 89 54 24 64 74 ? 8D 8C 24 F0 00 00 00 51").count(1).get(0).get<uint32_t>(0);
         struct HudHook
         {
             void operator()(injector::reg_pack& regs)
@@ -337,7 +338,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             }
         }; injector::MakeInline<HudHook>((uint32_t)dword_51B190, (uint32_t)dword_51B190 + 8);
         
-        uint32_t* dword_51D64E = hook::pattern("8B 4B 1C 8B 54 24 18 89 0A 8B 43 20").get(0).get<uint32_t>(0);
+        uint32_t* dword_51D64E = hook::pattern("8B 4B 1C 8B 54 24 18 89 0A 8B 43 20").count(1).get(0).get<uint32_t>(0);
         struct BlipsHook
         {
             void operator()(injector::reg_pack& regs)
@@ -354,7 +355,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             }
         }; injector::MakeInline<BlipsHook>((uint32_t)dword_51D64E, (uint32_t)dword_51D64E + 9);
 
-        uint32_t* dword_4C66B3 = hook::pattern("D9 56 48 8B 4E 1C D8 2D ? ? ? ? 89 4C 24 28 8B 56 20 89 54 24 2C 8B 46 24").get(0).get<uint32_t>(0); //addresses from 1.1 exe
+        uint32_t* dword_4C66B3 = hook::pattern("D9 56 48 8B 4E 1C D8 2D ? ? ? ? 89 4C 24 28 8B 56 20 89 54 24 2C 8B 46 24").count(1).get(0).get<uint32_t>(0); //addresses from 1.1 exe
         struct HudHook2
         {
             void operator()(injector::reg_pack& regs)
@@ -371,7 +372,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             }
         }; injector::MakeInline<HudHook2>((uint32_t)dword_4C66B3, (uint32_t)dword_4C66B3 + 6);
 
-        DWORD* dword_5050FB = hook::pattern("D8 02 D9 1E D9 41 04 D8 60 04 D8 4C 24 10 D8 42 04 D8 40 04 D9 5E 04 D9 41 08 D8 60 08").get(0).get<DWORD>(0); //addresses from 1.1 exe
+        DWORD* dword_5050FB = hook::pattern("D8 02 D9 1E D9 41 04 D8 60 04 D8 4C 24 10 D8 42 04 D8 40 04 D9 5E 04 D9 41 08 D8 60 08").count(1).get(0).get<DWORD>(0); //addresses from 1.1 exe
         struct StopSignHook
         {
             void operator()(injector::reg_pack& regs)
@@ -387,6 +388,22 @@ DWORD WINAPI Init(LPVOID bDelay)
                 _asm fld  dword ptr[ecx4]
             }
         }; injector::MakeInline<StopSignHook>((uint32_t)dword_5050FB, (uint32_t)dword_5050FB + 7);
+
+        //uint32_t* dword_52C1B0 = hook::pattern("D9 07 8B 44 24 ? D8 01 D9 18 D9 41 ? D8 47 ? D9 58").count(1).get(0).get<uint32_t>(0);
+        //struct HudHook3
+        //{
+        //    void operator()(injector::reg_pack& regs)
+        //    {
+        //        regs.eax = *(uint32_t*)(regs.esp + 0x34);
+        //
+        //        HudPos HudPosX = *(uint32_t*)(regs.edi + 0x00);
+        //        HudPos HudPosY = *(uint32_t*)(regs.edi + 0x04);
+        //        WidescreenHud(HudPosX, HudPosY);
+        //        *(uint32_t*)(regs.edi + 0x00) = HudPosX.dwPos;
+        //        *(uint32_t*)(regs.edi + 0x04) = HudPosY.dwPos;
+        //        _asm fld  dword ptr[regs.edi]
+        //    }
+        //}; injector::MakeInline<HudHook3>((uint32_t)dword_52C1B0, (uint32_t)dword_52C1B0 + 6);
     }
 
 
@@ -406,7 +423,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         };
 
         auto pattern = hook::pattern("50 6A 00 6A 00 68 ? 80 00 00 6A 00");
-        uint32_t* dword_6CBF17 = pattern.get(0).get<uint32_t>(12);
+        uint32_t* dword_6CBF17 = pattern.count(1).get(0).get<uint32_t>(12);
         injector::MakeCALL((uint32_t)dword_6CBF17, static_cast<HRESULT(WINAPI*)(HWND, int, HANDLE, DWORD, LPSTR)>(SHGetFolderPathAHook), true);
         injector::MakeNOP((uint32_t)dword_6CBF17 + 5, 1, true);
     }
@@ -435,8 +452,8 @@ DWORD WINAPI Init(LPVOID bDelay)
 
         static bool Zstate, Pstate, Tstate, Dstate, Qstate, Cstate, LBRACKETstate, RBRACKETstate;
         pattern = hook::pattern("5E 5D 5F 33 C0 5B 59 C2 04 00"); //5C8C5F
-        injector::WriteMemory(pattern.get(1).get<uint32_t>(7 + 5), 0x900004C2, true);
-        static int32_t* nGameState = (int32_t*)*hook::pattern("83 3D ? ? ? ? 06 ? ? A1").get(0).get<uint32_t*>(2);
+        injector::WriteMemory(pattern.count(2).get(1).get<uint32_t>(7 + 5), 0x900004C2, true);
+        static int32_t* nGameState = (int32_t*)*hook::pattern("83 3D ? ? ? ? 06 ? ? A1").count(1).get(0).get<uint32_t*>(2);
         struct CatchPad
         {
             void operator()(injector::reg_pack& regs)
@@ -470,7 +487,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                         Zstate = false;
                 }
             }
-        }; injector::MakeInline<CatchPad>(pattern.get(1).get<uint32_t>(7));
+        }; injector::MakeInline<CatchPad>(pattern.count(2).get(1).get<uint32_t>(7));
 
 
         const char* MenuTexts[] = { "Quit Game", "Continue", "Back", "Reset Keys To Default", "Activate GPS", "Deactivate GPS", "Install Package", "Install Part", "Install Paint", "Install Decal", "Reset To Default", "Delete Tuned Car", "Logoff", "Cancel Changes", "Customize", "Host LAN Server", "Read Message", "Delete", "Test N2O Purge", "Accept", "Reset to default", "Select", "Open/Close Doors", "Open/Close Hood" }; // "Tip", 
@@ -484,7 +501,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         static std::vector<std::string> vMenuStringsPS(MenuTextsPS, std::end(MenuTextsPS));
 
         pattern = hook::pattern("8B 0D ? ? ? ? 85 C9 50 74 12 8B 44"); //0x5124DD (v1.1)
-        static auto dword_8383DC = *pattern.get(0).get<uint32_t>(2);
+        static auto dword_8383DC = *pattern.count(1).get(0).get<uint32_t>(2);
         struct Buttons
         {
             void operator()(injector::reg_pack& regs)
@@ -506,7 +523,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                             regs.eax = (uint32_t)vMenuStringsPS[i].c_str();
                 }
             }
-        }; injector::MakeInline<Buttons>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(6));
+        }; injector::MakeInline<Buttons>(pattern.get_first(0), pattern.get_first(6));
     }
 
     const wchar_t* ControlsTexts[] = { L" 2", L" 3", L" 4", L" 5", L" 6", L" 7", L" 8", L" 9", L" 10", L" 1", L" Up", L" Down", L" Left", L" Right", L"X Rotation", L"Y Rotation", L"X Axis", L"Y Axis", L"Z Axis", L"Hat Switch" };
@@ -518,8 +535,8 @@ DWORD WINAPI Init(LPVOID bDelay)
     static std::vector<std::wstring> TextsPS(ControlsTextsPS, std::end(ControlsTextsPS));
 
     pattern = hook::pattern("66 83 7C 24 08 00 5F 74 13 8D 4C 24 04 51"); //0x4ACF01
-    injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(0), 0x5F, true); //pop     edi
-    static auto dword_4ACF1D = pattern.get(0).get<uint32_t>(28);
+    injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(0), 0x5F, true); //pop     edi
+    static auto dword_4ACF1D = pattern.count(1).get(0).get<uint32_t>(28);
     struct Buttons
     {
         void operator()(injector::reg_pack& regs)
@@ -544,7 +561,12 @@ DWORD WINAPI Init(LPVOID bDelay)
             else
                 *(uintptr_t*)(regs.esp - 4) = (uintptr_t)dword_4ACF1D;
         }
-    }; injector::MakeInline<Buttons>(pattern.get(0).get<uint32_t>(1), pattern.get(0).get<uint32_t>(9));
+    }; injector::MakeInline<Buttons>(pattern.get_first(1), pattern.get_first(9));
+
+    if (fLeftStickDeadzone)
+    {
+
+    }
 
     return 0;
 }
