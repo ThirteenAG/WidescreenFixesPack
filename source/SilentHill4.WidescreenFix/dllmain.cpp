@@ -72,14 +72,6 @@ void __cdecl FMVHook(float X1, float Y1, float X2, float Y2, float a5, float a6,
     return hbFMV.fun(X1, Y1, X2, Y2, a5, a6, a7, a8, a9, a10);
 }
 
-injector::hook_back<void(__cdecl*)(int, float, float, float, int, unsigned int)> hbInGameOverlay;
-void __cdecl InGameOverlayHook(int a1, float a2, float a3, float a4, int a5, unsigned int a6)
-{
-    float fOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
-
-    return hbInGameOverlay.fun(a1 - (int)fOffset, a2, a3, a4, a5, a6);
-}
-
 injector::hook_back<void(__cdecl*)(float, float, float, float, float, float, float, float, float, float)> hbOverlayIntro;
 void __cdecl OverlayIntroHook(float X1, float Y1, float X2, float Y2, float a5, float a6, float a7, float a8, float a9, float a10)
 {
@@ -170,9 +162,20 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     if (bFix2D)
     {
+        //Menu scale and disabling of some overlays
         static float fMenuScale = 0.00390625f * Screen.fHudScale;
         pattern = hook::pattern("D8 0D ? ? ? ? 6A 01 8D 54 24 1C 52 D9 5C 24 10 6A 5E"); //0x404E4C + 2
         injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &fMenuScale, true); // Menu Width
+
+        pattern = hook::pattern("E8 ? ? ? ? 8B 44 24 64 8B"); //0x433D81
+        injector::MakeNOP(pattern.get_first(), 5, true); //in game overlay
+        
+        pattern = hook::pattern("83 EC 18 53 56 57 E8 ? ? ? ? E8 ? ? ? ? A1"); //0x566440
+        injector::MakeRET(pattern.get_first()); //DOF/blur overlay
+
+        pattern = hook::pattern("55 8B EC 83 E4 F0 83 EC 64 D9 45 18"); //0x42E9A0
+        injector::MakeRET(pattern.get_first());
+        //
 
         // Text fix
         pattern = hook::pattern("C7 44 24 34 00 00 80 BF D9 5C"); //0x404EBB
@@ -206,23 +209,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             }
         }
 
-        //pattern = hook::pattern("52 6A 00 E8 ? ? ? ? 83 C4 1C C3"); //0x563CC0
-        //hbInGameOverlay.fun = injector::MakeCALL(pattern.count(1).get(0).get<uint32_t>(3), InGameOverlayHook, true).get();
-        ////hbInGameOverlay.fun = injector::MakeCALL(0x433CAF/*pattern.get(0).get<uint32_t>(3)*/, InGameOverlayHook, true).get();
-        ////hbInGameOverlay.fun = injector::MakeCALL(0x433D2D/*pattern.get(0).get<uint32_t>(3)*/, InGameOverlayHook, true).get();
-        
-        //Overlay 1 (intro)
-        //pattern = hook::pattern("E8 ? ? ? ? 8B 44 24 34 8B 4C 24 38 6A 01"); //0x566B2A
-        //hbOverlayIntro.fun = injector::MakeCALL(pattern.count(1).get(0).get<uint32_t>(0), OverlayIntroHook, true).get();
 
-        //Overlay 2 (cutscenes)
-        //pattern = hook::pattern(""); //0x565DFB
-        //hbOverlay1.fun = injector::MakeCALL(0x566B15, Overlay1Hook).get();
-        //injector::MakeCALL(0x565DFB, Overlay1Hook, true);
-
-        //Overlay 3 (transition)
-        //pattern = hook::pattern("E8 ? ? ? ? 6A 00 8B 44 24 34 6A 01 8B 4C 24 34 6A 00 6A 00"); //0x5660C5
-        //hbOverlay1.fun = injector::MakeCALL(0x566B15, Overlay1Hook).get();
 
         //Cutscene Borders
         static float fBorderWidth = 4096.0f;
@@ -307,7 +294,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     //double vision issue
     pattern = hook::pattern("50 51 E8 ? ? ? ? 83 C4 10 C3"); //0x565AEC
-    injector::MakeNOP(pattern.count(1).get(0).get<uint32_t>(2), 5, true);
+    injector::MakeNOP(pattern.get_first(2), 5, true);
 
     return 0;
 }
