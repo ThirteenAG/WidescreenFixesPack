@@ -567,7 +567,21 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     if (fLeftStickDeadzone)
     {
+        // [ -10000 | 10000 ] 
+        static int32_t nLeftStickDeadzone = static_cast<int32_t>(fLeftStickDeadzone * 100.0f);
+        pattern = hook::pattern("B9 44 00 00 00 89 7C 24 1C"); //0x5C875E
+        struct DeadzoneHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                regs.ecx = 0x44;
 
+                int32_t dStickStateX = *(int32_t*)(regs.esi + 0x00);
+                int32_t dStickStateY = *(int32_t*)(regs.esi + 0x04);
+                *(int32_t*)(regs.esi + 0x00) = (std::abs(dStickStateX) <= nLeftStickDeadzone) ? 0 : dStickStateX;
+                *(int32_t*)(regs.esi + 0x04) = (std::abs(dStickStateY) <= nLeftStickDeadzone) ? 0 : dStickStateY;
+            }
+        }; injector::MakeInline<DeadzoneHook>(pattern.get_first(0));
     }
 
     return 0;

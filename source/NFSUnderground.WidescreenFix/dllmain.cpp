@@ -87,6 +87,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     bool bFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1) != 0;
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
     static int nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
+    static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
     bool bCustomUsrDir = false;
     if (strncmp(szCustomUserFilesDirectoryInGameDir, "0", 1) != 0)
         bCustomUsrDir = true;
@@ -562,6 +563,25 @@ DWORD WINAPI Init(LPVOID bDelay)
                 }
             }
         }; if (pattern.size() > 0) { injector::MakeInline<Buttons>(pattern.get_first(0), pattern.get_first(7)); }
+    }
+
+    if (fLeftStickDeadzone)
+    {
+        // [ -10000 | 10000 ] 
+        static int32_t nLeftStickDeadzone = static_cast<int32_t>(fLeftStickDeadzone * 100.0f);
+        pattern = hook::pattern("B9 44 00 00 00 8B FB"); //0x5C875E
+        struct DeadzoneHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                regs.ecx = 0x44;
+
+                int32_t dStickStateX = *(int32_t*)(regs.esi + 0x00);
+                int32_t dStickStateY = *(int32_t*)(regs.esi + 0x04);
+                *(int32_t*)(regs.esi + 0x00) = (std::abs(dStickStateX) <= nLeftStickDeadzone) ? 0 : dStickStateX;
+                *(int32_t*)(regs.esi + 0x04) = (std::abs(dStickStateY) <= nLeftStickDeadzone) ? 0 : dStickStateY;
+            }
+        }; injector::MakeInline<DeadzoneHook>(pattern.get_first(0));
     }
 
     return 0;
