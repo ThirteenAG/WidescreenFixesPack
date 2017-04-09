@@ -24,8 +24,8 @@ union HudPos
 class CDatEntry
 {
 public:
-    uint32_t dwPosX;
-    uint32_t dwPosY;
+    int32_t dwPosX;
+    int32_t dwPosY;
     float fOffsetX;
     float fOffsetY;
 
@@ -48,7 +48,7 @@ void LoadDatFile()
         {
             if (pLine[0] && pLine[0] != '#')
             {
-                DWORD PosX, PosY;
+                int32_t PosX, PosY;
                 float fOffsetX, fOffsetY;
                 sscanf(pLine, "%*s %x %x %f %f %*f %*f", &PosX, &PosY, &fOffsetX, &fOffsetY);
 
@@ -306,7 +306,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         auto pattern = hook::pattern("8B 47 1C 8B 4F 20 89 84 24 10 01 00 00 8B 47 24 89 84 24 18 01 00 00 39 5C 24 04");
         if (pattern.size() > 0)
         {
-            DWORD* dword_4F18CB = pattern.count(1).get(0).get<DWORD>(0);
+            uint32_t* dword_4F18CB = pattern.count(1).get(0).get<uint32_t>(0);
             struct HudHook
             {
                 void operator()(injector::reg_pack& regs)
@@ -321,13 +321,13 @@ DWORD WINAPI Init(LPVOID bDelay)
                 }
             }; injector::MakeInline<HudHook>((uint32_t)dword_4F18CB, (uint32_t)dword_4F18CB + 6);
 
-            DWORD* dword_58E5BD = hook::pattern("D8 05 ? ? ? ? D9 5B 68 D8 05 ? ? ? ? D9 5B 6C D9 40 3C").count(1).get(0).get<DWORD>(2);
+            uint32_t* dword_58E5BD = hook::pattern("D8 05 ? ? ? ? D9 5B 68 D8 05 ? ? ? ? D9 5B 6C D9 40 3C").count(1).get(0).get<uint32_t>(2);
             injector::WriteMemory(dword_58E5BD, &fMinimapPosX, true);
-            DWORD dword_58E5C6 = (DWORD)dword_58E5BD + 9;
+            uint32_t dword_58E5C6 = (uint32_t)dword_58E5BD + 9;
             injector::WriteMemory(dword_58E5C6, &fMinimapPosY, true);
 
 
-            DWORD* dword_590DDC = hook::pattern("8B 4D 08 D9 41 68 53 57 8B 5D 0C 8B F8").count(1).get(0).get<DWORD>(0);
+            uint32_t* dword_590DDC = hook::pattern("8B 4D 08 D9 41 68 53 57 8B 5D 0C 8B F8").count(1).get(0).get<uint32_t>(0);
             struct MinimapHook1
             {
                 void operator()(injector::reg_pack& regs)
@@ -344,7 +344,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                 }
             }; injector::MakeInline<MinimapHook1>((uint32_t)dword_590DDC, (uint32_t)dword_590DDC + 6);
 
-            DWORD* dword_58FB1C = hook::pattern("D9 40 68 8B 4D 0C D8 60 70 53 56 8D 91 83 00 00 00 D9 54 24 34").count(1).get(0).get<DWORD>(0);
+            uint32_t* dword_58FB1C = hook::pattern("D9 40 68 8B 4D 0C D8 60 70 53 56 8D 91 83 00 00 00 D9 54 24 34").count(1).get(0).get<uint32_t>(0);
             struct MinimapHook2
             {
                 void operator()(injector::reg_pack& regs)
@@ -360,7 +360,23 @@ DWORD WINAPI Init(LPVOID bDelay)
                 }
             }; injector::MakeInline<MinimapHook2>((uint32_t)dword_58FB1C, (uint32_t)dword_58FB1C + 6);
 
-            DWORD* dword_4F6DAB = hook::pattern("D8 43 1C 8B 54 24 18 8B 44 24 10 D9 1A 8B 4E 68 50 51 57").count(1).get(0).get<DWORD>(0);
+            uint32_t* dword_58E5B2 = hook::pattern("D9 40 1C 8B 4D 08 D9 40 20").count(1).get(0).get<uint32_t>(0);
+            struct MinimapHook3
+            {
+                void operator()(injector::reg_pack& regs)
+                {
+                    HudPos HudPosX = *(uint32_t*)(regs.eax + 0x1C);
+                    HudPos HudPosY = *(uint32_t*)(regs.eax + 0x20);
+                    WidescreenHud(HudPosX, HudPosY, true);
+                    *(uint32_t*)(regs.eax + 0x1C) = HudPosX.dwPos;
+                    *(uint32_t*)(regs.eax + 0x20) = HudPosY.dwPos;
+                    regs.ecx = *(uint32_t*)(regs.ebp + 0x8);
+                    _asm fld dword ptr[HudPosX.fPos]
+                    _asm fld dword ptr[HudPosY.fPos]
+                }
+            }; injector::MakeInline<MinimapHook3>((uint32_t)dword_58E5B2, (uint32_t)dword_58E5B2 + 9);
+
+            uint32_t* dword_4F6DAB = hook::pattern("D8 43 1C 8B 54 24 18 8B 44 24 10 D9 1A 8B 4E 68 50 51 57").count(1).get(0).get<uint32_t>(0);
             struct LapsHook
             {
                 void operator()(injector::reg_pack& regs)
