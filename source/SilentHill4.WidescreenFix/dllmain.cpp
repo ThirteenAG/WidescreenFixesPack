@@ -175,6 +175,12 @@ DWORD WINAPI Init(LPVOID bDelay)
 
         pattern = hook::pattern("55 8B EC 83 E4 F0 83 EC 64 D9 45 18"); //0x42E9A0
         injector::MakeRET(pattern.get_first());
+
+        pattern = hook::pattern("E8 ? ? ? ? 83 C4 5C C6 05 ? ? ? ? 00 B8"); //0x42E719
+        injector::MakeNOP(pattern.get_first(), 5, true); // Cutscene Wall Darkness Effect
+
+        pattern = hook::pattern("E8 ? ? ? ? 83 C4 5C C6 05 ? ? ? ? 00 A1"); //0x42E9A0
+        injector::MakeRET(pattern.get_first()); //Cutscene Wall Grunge Effect
         //
 
         // Text fix

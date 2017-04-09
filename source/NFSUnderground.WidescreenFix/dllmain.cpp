@@ -482,8 +482,8 @@ DWORD WINAPI Init(LPVOID bDelay)
                     {
                         if (!Qstate)
                         {
-                            keybd_event(VkKeyScan('Q'), 0, KEYEVENTF_EXTENDEDKEY, 0);
-                            keybd_event(VkKeyScan('Q'), 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+                            keybd_event(BYTE(VkKeyScan('Q')), 0, KEYEVENTF_EXTENDEDKEY, 0);
+                            keybd_event(BYTE(VkKeyScan('Q')), 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
                         }
                         Qstate = true;
                     }
@@ -494,8 +494,8 @@ DWORD WINAPI Init(LPVOID bDelay)
                     {
                         if (!Zstate)
                         {
-                            keybd_event(VkKeyScan('Z'), 0, KEYEVENTF_EXTENDEDKEY, 0);
-                            keybd_event(VkKeyScan('Z'), 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+                            keybd_event(BYTE(VkKeyScan('Z')), 0, KEYEVENTF_EXTENDEDKEY, 0);
+                            keybd_event(BYTE(VkKeyScan('Z')), 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
                         }
                         Zstate = true;
                     }
@@ -506,8 +506,8 @@ DWORD WINAPI Init(LPVOID bDelay)
                     {
                         if (!Pstate)
                         {
-                            keybd_event(VkKeyScan('P'), 0, KEYEVENTF_EXTENDEDKEY, 0);
-                            keybd_event(VkKeyScan('P'), 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+                            keybd_event(BYTE(VkKeyScan('P')), 0, KEYEVENTF_EXTENDEDKEY, 0);
+                            keybd_event(BYTE(VkKeyScan('P')), 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
                         }
                         Pstate = true;
                     }
@@ -518,8 +518,8 @@ DWORD WINAPI Init(LPVOID bDelay)
                     {
                         if (!Tstate)
                         {
-                            keybd_event(VkKeyScan('T'), 0, KEYEVENTF_EXTENDEDKEY, 0);
-                            keybd_event(VkKeyScan('T'), 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+                            keybd_event(BYTE(VkKeyScan('T')), 0, KEYEVENTF_EXTENDEDKEY, 0);
+                            keybd_event(BYTE(VkKeyScan('T')), 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
                         }
                         Tstate = true;
                     }
@@ -530,8 +530,8 @@ DWORD WINAPI Init(LPVOID bDelay)
                     {
                         if (!Dstate)
                         {
-                            keybd_event(VkKeyScan('D'), 0, KEYEVENTF_EXTENDEDKEY, 0);
-                            keybd_event(VkKeyScan('D'), 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+                            keybd_event(BYTE(VkKeyScan('D')), 0, KEYEVENTF_EXTENDEDKEY, 0);
+                            keybd_event(BYTE(VkKeyScan('D')), 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
                         }
                         Dstate = true;
                     }
@@ -542,8 +542,8 @@ DWORD WINAPI Init(LPVOID bDelay)
                     {
                         if (!Cstate)
                         {
-                            keybd_event(VkKeyScan('C'), 0, KEYEVENTF_EXTENDEDKEY, 0);
-                            keybd_event(VkKeyScan('C'), 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+                            keybd_event(BYTE(VkKeyScan('C')), 0, KEYEVENTF_EXTENDEDKEY, 0);
+                            keybd_event(BYTE(VkKeyScan('C')), 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
                         }
                         Cstate = true;
                     }
