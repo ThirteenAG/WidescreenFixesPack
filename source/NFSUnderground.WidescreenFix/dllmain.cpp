@@ -195,6 +195,10 @@ DWORD WINAPI Init(LPVOID bDelay)
             injector::WriteMemory<float>(pattern.get_first(4),  (Screen.fHudPosX - 320.0f) + 440.0f, true);
             injector::WriteMemory<float>(pattern.get_first(64), (Screen.fHudPosX - 320.0f) + 440.0f, true);
         }
+
+        pattern = hook::pattern("8D 72 04 83 C0 60 E8 ? ? ? ? 5F 5E C3"); //menu (#179)
+        if (pattern.size() > 0)
+            injector::MakeNOP(pattern.get_first(), 11, true);
     }
 
     if (bFixFOV)
