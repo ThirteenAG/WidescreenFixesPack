@@ -179,7 +179,10 @@ DWORD WINAPI Init(LPVOID bDelay)
         {
             regs.ecx = 0x2F;
             if (bFixHud)
-                *(int32_t*)(regs.ebp + 0x138) = Screen.nHudScale;
+            {
+                *(int32_t*)(regs.ebp + 0x138) = Screen.nHudScale; // main
+                *(int32_t*)(regs.ebp + 0x178) = Screen.nHudScale; // during car remote control, maybe
+            }
 
             if (Screen.fCameraZoom)
             {
