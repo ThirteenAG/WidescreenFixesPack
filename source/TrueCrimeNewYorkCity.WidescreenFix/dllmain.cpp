@@ -107,12 +107,13 @@ DWORD WINAPI Init(LPVOID bDelay)
         {
             void operator()(injector::reg_pack& regs)
             {
+                auto regs_eax = regs.eax;
                 *(float*)(regs.esp + 0x18) = Screen.fHudOffset;
                 *(float*)(regs.esp + 0x20) = 1.0f;
                 *(float*)(regs.esp + 0x24) = 1.0f;
                 *(float*)(regs.esp + 0x28) = 1.0f;
                 *(float*)(regs.esp + 0x2C) = 1.0f;
-                __asm cmp regs.eax, 1
+                __asm cmp regs_eax, 1
             }
         }; injector::MakeInline<HudPosHook>(pattern.get_first(0), pattern.get_first(24));
     }

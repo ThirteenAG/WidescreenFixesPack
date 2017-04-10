@@ -12,7 +12,7 @@
 #include "injector\assembly.hpp"
 #include "injector\utility.hpp"
 #include "Hooking.Patterns.h"
-#pragma warning(default: 4178 4305 4309 4510 4996)
+#pragma warning(default: 4178 4305 4309 4510)
 
 #define _USE_MATH_DEFINES
 #include "math.h"

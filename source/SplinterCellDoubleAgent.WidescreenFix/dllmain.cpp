@@ -83,9 +83,10 @@ DWORD WINAPI InitEngine(LPVOID bDelay)
     {
         void operator()(injector::reg_pack& regs)
         {
+            auto regs_ecx = regs.ecx;
             _asm
             {
-                cvtsi2ss xmm2, regs.ecx
+                cvtsi2ss xmm2, regs_ecx
                 movss xmm2, Screen.fTextScaleX
                 divss xmm1, xmm2
             }

@@ -41,7 +41,7 @@ void __declspec(naked) GUIHook()
     {
         _asm mov eax, Screen.fScaling
         _asm mov dword ptr[esp + 0x20], eax
-        _asm fadd Screen.fTextAlignment
+        _asm fadd dword ptr Screen.fTextAlignment
     }
     _asm mov eax, _EAX
     _asm test al, al

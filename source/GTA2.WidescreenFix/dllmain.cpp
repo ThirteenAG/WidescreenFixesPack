@@ -96,7 +96,7 @@ void __declspec(naked) gbh_BlitImage()
     //*(int32_t*)(esp00 + 0x0C) += Screen.fHudOffset; //int srcTop
     //*(int32_t*)(esp00 + 0x10) += Screen.fHudOffset; //int srcRight
     //*(int32_t*)(esp00 + 0x14) += Screen.fHudOffset; //int srcBottom
-    *(int32_t*)(esp00 + 0x18) += Screen.fMenuOffset; //int dstX
+    *(int32_t*)(esp00 + 0x18) += (int32_t)Screen.fMenuOffset; //int dstX
     //*(int32_t*)(esp00 + 0x1C) += Screen.fHudOffset; //int dstY
 
     gbh_BlitImageAddr = *(uintptr_t*)off_59533C;
@@ -181,7 +181,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                 *(int32_t*)(regs.ebp + 0x138) = Screen.nHudScale;
             if (Screen.fCameraZoom)
             {
-                *(int32_t*)(regs.esi + 0x8) *= Screen.fCameraZoom;
+                *(int32_t*)(regs.esi + 0x8) *= (int32_t)Screen.fCameraZoom;
                 *(int32_t*)(regs.esi + 0x8) += nZoom;
             }
         }

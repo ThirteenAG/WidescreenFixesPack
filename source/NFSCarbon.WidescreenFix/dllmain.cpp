@@ -523,8 +523,8 @@ DWORD WINAPI Init(LPVOID bDelay)
                     {
                         if (*nGameState == 3)
                         {
-                            keybd_event(VkKeyScan('Q'), 0, 0, 0);
-                            keybd_event(VkKeyScan('Q'), 0, KEYEVENTF_KEYUP, 0);
+                            keybd_event(BYTE(VkKeyScan('Q')), 0, 0, 0);
+                            keybd_event(BYTE(VkKeyScan('Q')), 0, KEYEVENTF_KEYUP, 0);
                         }
                     }
                 }

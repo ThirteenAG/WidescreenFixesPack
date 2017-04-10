@@ -392,7 +392,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                     WidescreenHud(HudPosX, HudPosY);
                     *(uint32_t*)(regs.ebx + 0x1C) = HudPosX.dwPos;
                     *(uint32_t*)(regs.ebx + 0x20) = HudPosY.dwPos;
-                    _asm fadd dword ptr[regs.ebx + 0x1C]
+                    _asm fadd dword ptr[HudPosX.fPos]
 
                 }
             }; injector::MakeInline<LapsHook>((uint32_t)dword_4F6DAB, (uint32_t)dword_4F6DAB + 7);
