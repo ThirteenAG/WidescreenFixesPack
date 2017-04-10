@@ -169,7 +169,8 @@ DWORD WINAPI Init(LPVOID bDelay)
     injector::WriteMemory(pattern.get_first(1), Screen.Width, true); //0x4CB59C + 1
     injector::WriteMemory<uint8_t>(pattern.get_first(10), 32, true); //0x4CB5A5+1
     injector::WriteMemory(pattern.get_first(12), Screen.Height, true); //0x4CB5A7 + 1
-
+    pattern = hook::pattern("6A ? 50 51 52 32 DB"); //0x4CB583
+    injector::WriteMemory<uint8_t>(pattern.get_first(1), 32, true);
 
     pattern = hook::pattern("B9 2F 00 00 00 F3 A5 5F 8B CD"); //0x4A80CD
     struct CameraZoom
@@ -179,6 +180,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             regs.ecx = 0x2F;
             if (bFixHud)
                 *(int32_t*)(regs.ebp + 0x138) = Screen.nHudScale;
+
             if (Screen.fCameraZoom)
             {
                 *(int32_t*)(regs.esi + 0x8) *= (int32_t)Screen.fCameraZoom;
