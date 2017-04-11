@@ -170,19 +170,17 @@ DWORD WINAPI Init(LPVOID bDelay)
     injector::WriteMemory<uint8_t>(pattern.get_first(10), 32, true); //0x4CB5A5+1
     injector::WriteMemory(pattern.get_first(12), Screen.Height, true); //0x4CB5A7 + 1
     pattern = hook::pattern("6A ? 50 51 52 32 DB"); //0x4CB583
-    injector::WriteMemory<uint8_t>(pattern.get_first(1), 32, true);
+    //injector::WriteMemory<uint8_t>(pattern.get_first(1), 32, true); // causes green menu
+    injector::MakeNOP(pattern.get_first(32), 2, true); //0x4CB5A3
 
-    pattern = hook::pattern("B9 2F 00 00 00 F3 A5 5F 8B CD"); //0x4A80CD
+    pattern = hook::pattern("B9 2F 00 00 00 F3 A5"); //0x4A80CD 0x4A6257
     struct CameraZoom
     {
         void operator()(injector::reg_pack& regs)
         {
             regs.ecx = 0x2F;
             if (bFixHud)
-            {
-                *(int32_t*)(regs.ebp + 0x138) = Screen.nHudScale; // main
-                *(int32_t*)(regs.ebp + 0x178) = Screen.nHudScale; // during car remote control, maybe
-            }
+                *(int32_t*)(regs.ebp + 0x138) = Screen.nHudScale;
 
             if (Screen.fCameraZoom)
             {
@@ -190,7 +188,17 @@ DWORD WINAPI Init(LPVOID bDelay)
                 *(int32_t*)(regs.esi + 0x8) += nZoom;
             }
         }
-    }; injector::MakeInline<CameraZoom>(pattern.get_first(0));
+    }; injector::MakeInline<CameraZoom>(pattern.count(2).get(1).get<void*>(0));
+
+    struct MissionHudFix
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.ecx = 0x2F;
+            if (bFixHud)
+                *(int32_t*)(regs.esi + 0xA8) = Screen.nHudScale;
+        }
+    }; injector::MakeInline<MissionHudFix>(pattern.count(2).get(0).get<void*>(0));
 
 
     if (bFixHud)
@@ -263,10 +271,8 @@ DWORD WINAPI Init(LPVOID bDelay)
     if (bSkipMovie)
     {
         //skip movie to prevent windowed crash
-        pattern = hook::pattern("83 E7 F8 83 C7 08 EB 02");
-        injector::WriteMemory<uint8_t>(pattern.get_first(5), 0, true); //0x4D145C + 2
-        pattern = hook::pattern("6A 08 E8 ? ? ? ? 5E C3");
-        injector::WriteMemory<uint8_t>(pattern.get_first(1), 0, true); //0x45969C + 1
+        pattern = hook::pattern("8A 88 ? ? ? ? 88 88 ? ? ? ? 40 84 C9 ? ? B8 ? ? ? ? C3");
+        injector::WriteMemory<uint8_t>(*pattern.get_first<void*>(2), '_', true); //0x459695+2
     }
 
     if (nQuicksaveKey)

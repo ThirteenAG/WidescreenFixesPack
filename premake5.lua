@@ -152,7 +152,7 @@ project "ThePunisher.WidescreenFix"
 project "TonyHawksAmericanWasteland.WidescreenFix"
    setpaths("Z:/WFP/Games/Tony Hawks/Tony Hawk's American Wasteland/", "Game/THAW.exe", "Game/scripts/")
 project "TonyHawksProSkater2.WidescreenFix"
-   setpaths("Z:/WFP/Games/Tony Hawks/Pro Skater 2/", "THawk2.exe")
+   setpaths("Z:/WFP/Games/Tony Hawks/THPS2/", "THawk2.exe")
 project "TonyHawksProSkater3.WidescreenFix"
    setpaths("Z:/WFP/Games/Tony Hawks/Pro Skater 3/", "Skate3.exe")
 project "TonyHawksProSkater4.WidescreenFix"
