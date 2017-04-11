@@ -181,7 +181,10 @@ DWORD WINAPI Init(LPVOID bDelay)
             regs.ecx = 0x2F;
 
             if (bFixHud)
+            {
                 *(int32_t*)(regs.ebp + 0x138) = Screen.nHudScale;
+                *(int32_t*)(regs.ebp + 0x2B0) = Screen.nHudScale; // for Zaibatsu [It was an Accident!] mission
+            }
 
             if (Screen.fCameraZoom)
             {
@@ -193,18 +196,6 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     if (bFixHud)
     {
-        pattern = hook::pattern("8B 0D ? ? ? ? 53 8B 5D 08 56 57"); //4CBA59
-        static auto dword_670684 = *pattern.get_first<uint32_t*>(2);
-        struct HUDHook
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                regs.ecx = *dword_670684;
-                *(int32_t*)(regs.esi + 0x00) = Screen.nHudScale;
-                //*(int32_t*)(regs.esi - 0xBC) = Screen.nHudScale;
-            }
-        }; injector::MakeInline<HUDHook>(pattern.get_first(0), pattern.get_first(6));
-
         dword_6733F0 = *hook::pattern("68 ? ? ? ? 52 C7 05").get_first<uintptr_t>(1);
 
         pattern = hook::pattern("83 3D ? ? ? ? 00 75 ? 68 ? ? ? ? 68 ? ? ? ? 8D 85 B0 FC FF FF");
