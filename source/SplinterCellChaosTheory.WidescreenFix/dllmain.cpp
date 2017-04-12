@@ -199,22 +199,22 @@ DWORD WINAPI Init(LPVOID bDelay)
                     logfile << std::dec << fLeft << " " << fRight << " " << fTop << " " << fBottom /*<< " " << std::hex << Color.R << Color.G << Color.B*/ << std::endl;
                 #endif // _LOG
 
-                if ((fLeft == 0 && fRight == 640 /*&& fTop == 0 && fBottom == 480*/) || (fLeft == -2 && fRight == 639 && fTop == -2 && fBottom == 479)) //fullscreen images
+                if ((fLeft == 0 && fRight == 640 /*&& fTop == 0 && fBottom == 480*/) || (fLeft == -2 && fRight == 639 && fTop == -2 && fBottom == 479) || (fLeft == -1 && fRight == 640 && fTop == -2 && fBottom == 479)) //fullscreen images
                 {
                     Screen.fHUDScaleXDyn = Screen.fHUDScaleXOriginal;
                     Screen.fHudOffsetDyn = Screen.fHudOffsetOriginal;
                     return;
                 }
-
+                
                 if (bIsInMenu && *bIsInMenu == 0)
                 {
-                    if ((fLeft == -2 && fRight == 255) || (fLeft == -61 && fRight == 319)) //scopes image left
+                    if ((fLeft == -1 && fRight == 256) || (fLeft == -2 && fRight == 255) || (fLeft == -61 && fRight == 319) || (fLeft == -60 && fRight == 320)) //scopes image left
                     {
                         *(int16_t*)(regs.esp + 0x40) -= Screen.nHudOffsetReal;
                         *(int16_t*)(regs.esp + 0x42) -= Screen.nHudOffsetReal;
                         return;
                     }
-                    else if (((fLeft == 382 || fLeft == 383) && (fRight == 639 || fRight == 640)) || (fLeft == 319 && fRight == 699)) //scopes image right
+                    else if (((fLeft == 382 || fLeft == 383 || fLeft == 384) && (fRight == 639 || fRight == 640 || fRight == 641)) || ((fLeft == 319 && fRight == 699) || (fLeft == 320 && fRight == 700))) //scopes image right
                     {
                         *(int16_t*)(regs.esp + 0x40) += Screen.nHudOffsetReal;
                         *(int16_t*)(regs.esp + 0x42) += Screen.nHudOffsetReal;
