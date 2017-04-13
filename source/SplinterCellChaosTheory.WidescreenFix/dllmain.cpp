@@ -297,7 +297,6 @@ DWORD WINAPI Init(LPVOID bDelay)
                     ((offset1 >= 465 && offset1 <= 615) && (offset2 == 3 || offset2 == 13 || offset2 == 16 || offset2 == 17 || offset2 == 31 || offset2 == 47 || offset2 == 55) && (offset3 >= 138 && offset3 <= 191) && (Color.R == 0xb8 && Color.G == 0xf7 && Color.B == 0xc8)) // objective popup text
                     )
                     {
-                        logfile << std::dec << offset1 << " " << offset2 << " " << offset3 << " " << std::hex << Color.RGBA << std::endl;
                         *(float*)(regs.esp + 0x14) += WidescreenHudOffset._float;
                     }
                 }
