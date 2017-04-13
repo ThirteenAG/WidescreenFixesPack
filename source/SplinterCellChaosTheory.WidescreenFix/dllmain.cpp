@@ -175,80 +175,95 @@ DWORD WINAPI Init(LPVOID bDelay)
     pattern = hook::pattern(pattern_str(0xD8, 0x0D, to_bytes(dword_1120B6BC))); //fmul
     injector::WriteMemory(pattern.get_first(2), &Screen.fHUDScaleXDyn, true);
 
-    if (bHudWidescreenMode)
+    pattern = hook::pattern("33 CA 89 48 68 D9 44 24 48 DA E9 DF E0");
+    struct HudHook
     {
-        pattern = hook::pattern("33 CA 89 48 68 D9 44 24 48 DA E9 DF E0");
-        struct HudHook
+        void operator()(injector::reg_pack& regs)
         {
-            void operator()(injector::reg_pack& regs)
+            regs.ecx ^= regs.edx;
+            *(uint32_t*)(regs.eax + 0x68) = regs.ecx;
+
+            Screen.fHUDScaleXDyn = Screen.fHUDScaleX;
+            Screen.fHudOffsetDyn = Screen.fHudOffset;
+
+            int32_t fLeft = *(int16_t*)(regs.esp + 0x40);    // 0
+            int32_t fRight = *(int16_t*)(regs.esp + 0x42);   // 640
+            int32_t fTop = *(int16_t*)(regs.esp + 0x44);     // 0
+            int32_t fBottom = *(int16_t*)(regs.esp + 0x46);  // 480
+            FColor Color; Color.RGBA = *(int32_t*)(regs.esp + 0x3C);
+
+            #ifdef _LOG
+            if (logit)
+                logfile << std::dec << fLeft << " " << fRight << " " << fTop << " " << fBottom << " " << std::hex << Color.RGBA << std::endl;
+            #endif // _LOG
+
+            if ((fLeft == 0 && fRight == 640 /*&& fTop == 0 && fBottom == 480*/) || (fLeft == -2 && fRight == 639 && fTop == -2 && fBottom == 479) 
+                || (fLeft == -1 && fRight == 640 && fTop == -2 && fBottom == 479) || (fTop == 0 && fBottom == 512)) //fullscreen images, 0 512 - camera feed overlay
             {
-                regs.ecx ^= regs.edx;
-                *(uint32_t*)(regs.eax + 0x68) = regs.ecx;
-
-                Screen.fHUDScaleXDyn = Screen.fHUDScaleX;
-                Screen.fHudOffsetDyn = Screen.fHudOffset;
-
-                int32_t fLeft = *(int16_t*)(regs.esp + 0x40);    // 0
-                int32_t fRight = *(int16_t*)(regs.esp + 0x42);   // 640
-                int32_t fTop = *(int16_t*)(regs.esp + 0x44);     // 0
-                int32_t fBottom = *(int16_t*)(regs.esp + 0x46);  // 480
-                FColor Color; Color.RGBA = *(int32_t*)(regs.esp + 0x3C);
-
-                #ifdef _LOG
-                if (logit /*&& offset3 > 45 && offset3 < 200*/)
-                    logfile << std::dec << fLeft << " " << fRight << " " << fTop << " " << fBottom /*<< " " << std::hex << Color.R << Color.G << Color.B*/ << std::endl;
-                #endif // _LOG
-
-                if ((fLeft == 0 && fRight == 640 /*&& fTop == 0 && fBottom == 480*/) || (fLeft == -2 && fRight == 639 && fTop == -2 && fBottom == 479) || (fLeft == -1 && fRight == 640 && fTop == -2 && fBottom == 479)) //fullscreen images
+                Screen.fHUDScaleXDyn = Screen.fHUDScaleXOriginal;
+                Screen.fHudOffsetDyn = Screen.fHudOffsetOriginal;
+                return;
+            }
+            
+            if (bIsInMenu && *bIsInMenu == 0)
+            {
+                if ((fLeft == -1 && fRight == 256) || (fLeft == -2 && fRight == 255) || (fLeft == -61 && fRight == 319) || (fLeft == -60 && fRight == 320)) //scopes image left
                 {
-                    Screen.fHUDScaleXDyn = Screen.fHUDScaleXOriginal;
-                    Screen.fHudOffsetDyn = Screen.fHudOffsetOriginal;
+                    *(int16_t*)(regs.esp + 0x40) -= Screen.nHudOffsetReal;
+                    *(int16_t*)(regs.esp + 0x42) -= Screen.nHudOffsetReal;
                     return;
                 }
-                
-                if (bIsInMenu && *bIsInMenu == 0)
+                else if (((fLeft == 382 || fLeft == 383 || fLeft == 384) && (fRight == 639 || fRight == 640 || fRight == 641)) || ((fLeft == 319 && fRight == 699) || (fLeft == 320 && fRight == 700))) //scopes image right
                 {
-                    if ((fLeft == -1 && fRight == 256) || (fLeft == -2 && fRight == 255) || (fLeft == -61 && fRight == 319) || (fLeft == -60 && fRight == 320)) //scopes image left
-                    {
+                    *(int16_t*)(regs.esp + 0x40) += Screen.nHudOffsetReal;
+                    *(int16_t*)(regs.esp + 0x42) += Screen.nHudOffsetReal;
+                    return;
+                }
+
+                if (fTop == 0 && fBottom == 480 && Color.A == 0x1E) // camera feed white overlay
+                {
+                    if (fLeft == 0 && fRight == 65)
                         *(int16_t*)(regs.esp + 0x40) -= Screen.nHudOffsetReal;
-                        *(int16_t*)(regs.esp + 0x42) -= Screen.nHudOffsetReal;
-                        return;
-                    }
-                    else if (((fLeft == 382 || fLeft == 383 || fLeft == 384) && (fRight == 639 || fRight == 640 || fRight == 641)) || ((fLeft == 319 && fRight == 699) || (fLeft == 320 && fRight == 700))) //scopes image right
-                    {
-                        *(int16_t*)(regs.esp + 0x40) += Screen.nHudOffsetReal;
+                    else if (fLeft == 575 && fRight == 640)
                         *(int16_t*)(regs.esp + 0x42) += Screen.nHudOffsetReal;
-                        return;
-                    }
+                }
 
+                if (!bHudWidescreenMode)
+                    return;
 
-                    if (
-                    (
-                        (Color.RGBA == 0x99ffffff || Color.RGBA == 0xc8ffffff || Color.RGBA == 0x59ffffff || Color.RGBA == 0x80ffffff || Color.RGBA == 0x32ffffff || Color.RGBA == 0x96ffffff) && //top right menus colors
-                        ((fLeft >= 421 && fLeft <= 435) && (fRight >= 421 && fRight <= 435) && fTop >= 0 && fBottom <= 200) || //top right menu LEFT
-                        ((fLeft >= 421 && fLeft <= 438) && (fRight <= 630) && fTop >= 0 && fBottom <= 200) || //top right menu MIDDLE
-                        ((fLeft >= 600 && fLeft <= 635) && (fRight >= 600 && fRight <= 635) && fTop >= 0 && fBottom <= 200)    //top right menu RIGHT
+                if (
+                (
+                    (Color.RGBA == 0x99ffffff || Color.RGBA == 0xc8ffffff || Color.RGBA == 0x59ffffff || Color.RGBA == 0x80ffffff || Color.RGBA == 0x32ffffff || Color.RGBA == 0x96ffffff) && //top right menus colors
+                    ((fLeft >= 421 && fLeft <= 435) && (fRight >= 421 && fRight <= 435) && fTop >= 0 && fBottom <= 200) || //top right menu LEFT
+                    ((fLeft >= 421 && fLeft <= 438) && (fRight <= 630) && fTop >= 0 && fBottom <= 200) || //top right menu MIDDLE
+                    ((fLeft >= 600 && fLeft <= 635) && (fRight >= 600 && fRight <= 635) && fTop >= 0 && fBottom <= 200)    //top right menu RIGHT
+                )
+                ||
+                (
+                    (Color.RGBA == 0x4bb8fac8 || Color.RGBA == 0x32ffffff || Color.RGBA == 0x40ffffff || Color.RGBA == 0x59ffffff || Color.RGBA == 0x80ffffff || Color.RGBA == 0x96ffffff || Color.RGBA == 0x99ffffff || Color.RGBA == 0xc8ffffff || Color.RGBA == 0xffffffff || (Color.R == 0xb8 && Color.G == 0xf7 && Color.B == 0xc8)) &&
+                    ((fLeft >= 465 && fLeft <= 622) && (fRight >= 468 && fRight <= 625) && fTop >= 279 && fBottom <= 465) //bottom right panel
+                )
+                ||
+                (
+                    (Color.R == 0xff && Color.G == 0xff && Color.B == 0xff) && //objective text popup
+                    ((fLeft >= 465 && fLeft <= 622) && (fRight >= 468 && fRight <= 625) && fTop >= 279 && fBottom <= 351)
+                )
                     )
-                    ||
-                    (
-                        (Color.RGBA == 0x4bb8fac8 || Color.RGBA == 0x32ffffff || Color.RGBA == 0x40ffffff || Color.RGBA == 0x59ffffff || Color.RGBA == 0x80ffffff || Color.RGBA == 0x96ffffff || Color.RGBA == 0x99ffffff || Color.RGBA == 0xc8ffffff || Color.RGBA == 0xffffffff || (Color.R == 0xb8 && Color.G == 0xf7 && Color.B == 0xc8)) &&
-                        ((fLeft >= 465 && fLeft <= 622) && (fRight >= 468 && fRight <= 625) && fTop >= 351 && fBottom <= 465) //bottom right panel
-                    )
-                    ||
-                    (
-                        (Color.R == 0xff && Color.G == 0xff && Color.B == 0xff) && //objective text popup
-                        ((fLeft >= 465 && fLeft <= 622) && (fRight >= 468 && fRight <= 625) && fTop >= 310 && fBottom <= 351)
-                    )
-                        )
+                {
+                    if ( //excludes
+                        !(fLeft == 566 && fRight == 569 && fTop == 409 && fBottom == 425) && // camera screen bracket ]
+                        !(fLeft == 562 && fRight == 566 && fTop == 409 && fBottom == 410) && // camera screen bracket ]
+                        !(fLeft == 562 && fRight == 566 && fTop == 424 && fBottom == 425)    // camera screen bracket ]
+                        ) 
                     {
                         *(int16_t*)(regs.esp + 0x40) += WidescreenHudOffset._int;
                         *(int16_t*)(regs.esp + 0x42) += WidescreenHudOffset._int;
                     }
                 }
             }
-        }; injector::MakeInline<HudHook>(pattern.get_first(0)); //0x10ADABFA
-    }
-
+        }
+    }; injector::MakeInline<HudHook>(pattern.get_first(0)); //0x10ADABFA
+    
     //TEXT
     pattern = hook::pattern("D8 3D ? ? ? ? D9 5C 24 68 DB");
     injector::WriteMemory(pattern.get_first(2), &Screen.fTextScaleX, true); //0x10B149CE + 0x2
@@ -279,9 +294,10 @@ DWORD WINAPI Init(LPVOID bDelay)
                     ((offset1 == 435 || offset1 == 436) && (offset2 >= 3 && offset2 <= 20) && (offset3 == 329 || offset3 == 345 || offset3 == 361 || offset3 == 377 || offset3 == 393 || offset3 == 416) && ((Color.R == 0xff && Color.G == 0xff && Color.B == 0xff) || (Color.R == 0xb8 && Color.G == 0xfa && Color.B == 0xc8) || (Color.R == 0x66 && Color.G == 0x66 && Color.B == 0x66))) || // top corner
                     ((offset1 >= 489 && offset1 <= 598) && (offset2 == 1 || offset2 == 3 || (offset2 >= 7 && offset2 <= 20)) && (offset3 == 23 || offset3 == 39 || offset3 == 93) && ((Color.R == 0xff && Color.G == 0xff && Color.B == 0xff) || (Color.R == 0xb8 && Color.G == 0xfa && Color.B == 0xc8))) || // bottom corner
                     (offset1 == 598 && offset2 == 3 && offset3 == 93 && (Color.R == 0xb8 && Color.G == 0xf7 && Color.B == 0xc8)) || //icons text
-                    ((offset1 >= 473 && offset1 <= 598) && (offset2 == 3 || offset2 == 16 || offset2 == 17) && (offset3 == 152 || offset3 == 191 || offset3 == 93) && (Color.R == 0xb8 && Color.G == 0xf7 && Color.B == 0xc8)) // objective popup text
+                    ((offset1 >= 465 && offset1 <= 615) && (offset2 == 3 || offset2 == 13 || offset2 == 16 || offset2 == 17 || offset2 == 31 || offset2 == 47 || offset2 == 55) && (offset3 >= 138 && offset3 <= 191) && (Color.R == 0xb8 && Color.G == 0xf7 && Color.B == 0xc8)) // objective popup text
                     )
                     {
+                        logfile << std::dec << offset1 << " " << offset2 << " " << offset3 << " " << std::hex << Color.RGBA << std::endl;
                         *(float*)(regs.esp + 0x14) += WidescreenHudOffset._float;
                     }
                 }
