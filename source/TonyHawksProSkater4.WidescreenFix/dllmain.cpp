@@ -32,7 +32,6 @@ DWORD WINAPI Init(LPVOID bDelay)
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
     bool bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) != 0;
-    static bool bCenterMenu = iniReader.ReadInteger("MAIN", "CenterMenu", 1) != 0;
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -82,24 +81,6 @@ DWORD WINAPI Init(LPVOID bDelay)
     //HUD
     if (bFixHUD)
     {
-        auto sub_473520 = [](uintptr_t _this, uint32_t edx, uintptr_t a2)
-        {
-            *(float*)(a2 + 0x20) = *(float*)(a2 + 0x14) - (*(float*)(_this + 0x128) + 1.0f) * *(float*)(a2 + 0x28) * *(float*)(_this + 0x130) * 0.5f;
-            *(float*)(a2 + 0x24) = *(float*)(a2 + 0x18) - (*(float*)(_this + 0x12C) + 1.0f) * *(float*)(a2 + 0x2C) * *(float*)(_this + 0x134) * 0.5f;
-
-            if (bCenterMenu)
-                *(float*)(a2 + 0x20) += Screen.fHudOffsetReal;
-        };
-
-        //47355C - hud pos
-        //injector::MakeCALL(0x45A43D, sub_473520, true); //text pos incl. pause menu
-        //injector::MakeCALL(0x47218F, sub_473520, true);
-        //injector::MakeCALL(0x472240, sub_473520, true);
-        //injector::MakeCALL(0x4722E4, sub_473520, true); // menu graphics + text
-
-        pattern = hook::pattern("E8 ? ? ? ? 8B 46 08 80 CC 20"); //0x4722E4
-        injector::MakeCALL(pattern.get_first(0), static_cast<void(__fastcall *)(uintptr_t, uint32_t, uintptr_t)>(sub_473520), true);
-
         pattern = hook::pattern("8B 44 24 04 8B 54 24 08 89");
         struct HUDHook
         {
@@ -112,23 +93,20 @@ DWORD WINAPI Init(LPVOID bDelay)
 
         for (size_t i = 1; i < 6; i++) // from 2nd match to 6th
         {
+            //0 - not relevant
             //1 2 - menu text scale
             //3 - ingame text scale
-            //4 - ?? menu is a bit messed up
+            //4 - menu graphics scale
             //5 - menu graphics scale
             //6 - ???
             //7 - ???
             //8 9 - ??
-
-            if (i != 0 && i != 11 && i != 12 && i != 13 && i != 14 && i != 15 && i != 6 && i != 7 && i != 8 && i != 9)
-                injector::MakeInline<HUDHook>(pattern.get(i).get<void*>(0), pattern.get(i).get<void*>(6));
+            injector::MakeInline<HUDHook>(pattern.get(i).get<void*>(0), pattern.get(i).get<void*>(6));
         }
-    }
 
-    //Tony Hawk's Pro Skater 4 was unable to initialize graphics engine.
-    pattern = hook::pattern("68 ? ? ? ? 55 55 51 52"); //531C1C
-    auto pData = *pattern.get_first<char*>(1);
-    injector::WriteMemoryRaw(pData, "PT5SAEDZWPK0NCMG", std::size("PT5SAEDZWPK0NCMG"), true);
+        pattern = hook::pattern("C7 05 ? ? ? ? ? ? ? ? 83 E2 10 89 2D"); // 0x43F2D0+6
+        injector::WriteMemory(pattern.get_first(6), static_cast<int32_t>(Screen.fHudOffsetReal) + 32, true);
+    }
 
     return 0;
 }
