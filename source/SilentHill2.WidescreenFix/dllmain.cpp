@@ -291,6 +291,28 @@ DWORD WINAPI Init(LPVOID bDelay)
     pattern = hook::pattern("D8 0D ? ? ? ? C7 44 24 3C 0A D7 23 3C");
     injector::WriteMemory<float>(*pattern.count(1).get(0).get<uint32_t*>(2), 0.05859375f * (1.0f / (Screen.fAspectRatio / (4.0f / 3.0f))), true);
 
+    //solves camera pan inconsistency for different resolutions
+    //solves camera tilt inconsistency for different resolutions
+    pattern = hook::pattern("51 E8 ? ? ? ? 89 44 24 00 DB 44 24 00 D9 1D"); //47CD30
+    struct Ret640
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.eax = 640;
+        }
+    };
+    struct Ret480
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.eax = 480;
+        }
+    };
+    injector::MakeInline<Ret640>(pattern.get_first(1));
+    injector::MakeInline<Ret640>(pattern.get_first(39));
+    injector::MakeInline<Ret480>(pattern.get_first(20));
+    injector::MakeInline<Ret480>(pattern.get_first(64));
+
     //FMV
     auto FMVpattern1 = hook::pattern("A1 ? ? ? ? D9 15 ? ? ? ? D9 C2 89 15 ? ? ? ? D9 1D");
     injector::WriteMemory(FMVpattern1.count(1).get(0).get<uint32_t>(1), &TextOffset, true); //0x0043E4D8

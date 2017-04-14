@@ -31,7 +31,7 @@ workspace "WidescreenFixesPack"
    
    pbcommands = { 
       "setlocal EnableDelayedExpansion",
-	  --"set \"path=" .. (gamepath) .. "\"",
+      --"set \"path=" .. (gamepath) .. "\"",
       "set file=$(TargetPath)",
       "FOR %%i IN (\"%file%\") DO (",
       "set filename=%%~ni",
@@ -42,18 +42,18 @@ workspace "WidescreenFixesPack"
 
    function setpaths (gamepath, exepath, scriptspath)
       scriptspath = scriptspath or "scripts/"
-	  if (gamepath) then
+      if (gamepath) then
          cmdcopy = { "set \"path=" .. gamepath .. scriptspath .. "\"" }
          table.insert(cmdcopy, pbcommands)
          postbuildcommands (cmdcopy)
          debugdir (gamepath)
-		 if (exepath) then
-		    debugcommand (gamepath .. exepath)
-		    dir, file = exepath:match'(.*/)(.*)'
+         if (exepath) then
+            debugcommand (gamepath .. exepath)
+            dir, file = exepath:match'(.*/)(.*)'
             debugdir (gamepath .. (dir or ""))
-		 end
-	  end
-	  targetdir ("data/%{prj.name}/" .. scriptspath)
+         end
+      end
+      targetdir ("data/%{prj.name}/" .. scriptspath)
    end
    
    filter "configurations:Debug"
@@ -156,7 +156,7 @@ project "TonyHawksProSkater2.WidescreenFix"
 project "TonyHawksProSkater3.WidescreenFix"
    setpaths("Z:/WFP/Games/Tony Hawks/Pro Skater 3/", "Skate3.exe")
 project "TonyHawksProSkater4.WidescreenFix"
-   setpaths("Z:/WFP/Games/Tony Hawks/Pro Skater 4/", "Game/Skate4.exe", "Game/scripts/")
+   setpaths("Z:/WFP/Games/Tony Hawks/Tony Hawks Pro Skater 4/", "Game/Skate4.exe", "Game/scripts/")
 project "TonyHawksUnderground.WidescreenFix"
    setpaths("Z:/WFP/Games/Tony Hawks/Tony Hawk's Underground/", "Game/THUG.exe", "Game/scripts/")
 project "TonyHawksUnderground2.WidescreenFix"
