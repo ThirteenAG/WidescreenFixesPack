@@ -441,7 +441,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     if (bLightingFix)
     {
         pattern = hook::pattern("C7 05 ? ? ? ? 04 00 00 00 ? ? D9 44");
-        injector::WriteMemory<uint8_t>(pattern.get_first(6), 4, true); //4FF510
+        injector::WriteMemory(pattern.get_first(6), 4, true); //4FF510
     }
 
     if (bReduceCutsceneFOV)
