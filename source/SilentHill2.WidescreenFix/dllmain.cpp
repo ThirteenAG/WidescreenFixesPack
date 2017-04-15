@@ -446,7 +446,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     if (bReduceCutsceneFOV)
     {
-        static float f1472 = 1.14702f * (1.0f / (Screen.fAspectRatio / (4.0f / 3.0f)));
+        static float f1472 = 1.14702f / (1.0f / (Screen.fAspectRatio / (4.0f / 3.0f)));
         pattern = hook::pattern("D8 0D ? ? ? ? D9 1D ? ? ? ? E8 ? ? ? ? 6A 00 6A 00 6A 00");
         injector::WriteMemory(pattern.count(2).get(1).get<uint32_t>(2), &f1472, true); //4A1A61
     }
