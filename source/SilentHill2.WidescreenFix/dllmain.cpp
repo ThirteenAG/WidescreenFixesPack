@@ -38,6 +38,8 @@ DWORD WINAPI Init(LPVOID bDelay)
     uint32_t nFPSLimit = iniReader.ReadInteger("MISC", "FPSLimit", 30);
     bool bPS2CameraSpeed = iniReader.ReadInteger("MISC", "PS2CameraSpeed", 0) != 0;
     bool bGamepadControlsFix = iniReader.ReadInteger("MISC", "GamepadControlsFix", 1) != 0;
+    bool bLightingFix = iniReader.ReadInteger("MISC", "LightingFix", 1) != 0;
+    bool bReduceCutsceneFOV = iniReader.ReadInteger("MISC", "ReduceCutsceneFOV", 0) != 0;
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -434,6 +436,19 @@ DWORD WINAPI Init(LPVOID bDelay)
     {
         pattern = hook::pattern("74 15 39 04 CD ? ? ? ? 75 0C 83 F9 16");
         injector::WriteMemory<uint8_t>(pattern.count(2).get(1).get<uint32_t>(0), 0xEB, true); //5AF936
+    }
+
+    if (bLightingFix)
+    {
+        pattern = hook::pattern("C7 05 ? ? ? ? 04 00 00 00 ? ? D9 44");
+        injector::WriteMemory<uint8_t>(pattern.get_first(6), 4, true); //4FF510
+    }
+
+    if (bReduceCutsceneFOV)
+    {
+        static float f1472 = 1.14702f;
+        pattern = hook::pattern("D8 0D ? ? ? ? D9 1D ? ? ? ? E8 ? ? ? ? 6A 00 6A 00 6A 00");
+        injector::WriteMemory(pattern.count(2).get(1).get<uint32_t>(2), &f1472, true); //4A1A61
     }
 
     return 0;
