@@ -345,17 +345,16 @@ DWORD WINAPI Init(LPVOID bDelay)
         {
             void operator()(injector::reg_pack& regs)
             {
-                regs.ecx = *(uint32_t*)(regs.ebx + 0x1C);
-                regs.edx = *(uint32_t*)(regs.ebx + 0x20);
-                HudPos HudPosX = regs.ecx;
-                HudPos HudPosY = regs.edx;
+                HudPos HudPosX = *(uint32_t*)(regs.ebx + 0x1C);
+                HudPos HudPosY = *(uint32_t*)(regs.ebx + 0x20);
                 WidescreenHud(HudPosX, HudPosY);
-                regs.ecx = HudPosX.dwPos;
-                regs.edx = *(uint32_t*)(regs.esp + 0x18);
-                *(uint32_t*)(regs.edx) = regs.ecx;
+                *(uint32_t*)(regs.ebx + 0x1C) = HudPosX.dwPos;
+                *(uint32_t*)(regs.ebx + 0x20) = HudPosY.dwPos;
+
+                *(uint32_t*)(regs.edx) = *(uint32_t*)(regs.ebx + 0x1C);
                 regs.eax = *(uint32_t*)(regs.ebx + 0x20);
             }
-        }; injector::MakeInline<BlipsHook>((uint32_t)dword_51D64E, (uint32_t)dword_51D64E + 9);
+        }; injector::MakeInline<BlipsHook>((uint32_t)dword_51D64E + 7);
 
         uint32_t* dword_4C66B3 = hook::pattern("D9 56 48 8B 4E 1C D8 2D ? ? ? ? 89 4C 24 28 8B 56 20 89 54 24 2C 8B 46 24").count(1).get(0).get<uint32_t>(0); //addresses from 1.1 exe
         struct HudHook2
