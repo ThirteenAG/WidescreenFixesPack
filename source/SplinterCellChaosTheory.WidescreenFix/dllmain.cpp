@@ -294,7 +294,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                     ((offset1 == 435 || offset1 == 436) && (offset2 >= 3 && offset2 <= 20) && (offset3 == 329 || offset3 == 345 || offset3 == 361 || offset3 == 377 || offset3 == 393 || offset3 == 416) && ((Color.R == 0xff && Color.G == 0xff && Color.B == 0xff) || (Color.R == 0xb8 && Color.G == 0xfa && Color.B == 0xc8) || (Color.R == 0x66 && Color.G == 0x66 && Color.B == 0x66))) || // top corner
                     ((offset1 >= 489 && offset1 <= 598) && (offset2 == 1 || offset2 == 3 || (offset2 >= 7 && offset2 <= 20)) && (offset3 == 23 || offset3 == 39 || offset3 == 93) && ((Color.R == 0xff && Color.G == 0xff && Color.B == 0xff) || (Color.R == 0xb8 && Color.G == 0xfa && Color.B == 0xc8))) || // bottom corner
                     (offset1 == 598 && offset2 == 3 && offset3 == 93 && (Color.R == 0xb8 && Color.G == 0xf7 && Color.B == 0xc8)) || //icons text
-                    ((offset1 >= 465 && offset1 <= 615) && (offset2 == 3 || offset2 == 13 || offset2 == 16 || offset2 == 17 || offset2 == 31 || offset2 == 47 || offset2 == 55) && (offset3 >= 138 && offset3 <= 191) && (Color.R == 0xb8 && Color.G == 0xf7 && Color.B == 0xc8)) // objective popup text
+                    ((offset1 >= 465 && offset1 <= 615) && (offset2 >= 3 && offset2 <= 55) && (offset3 >= 138 && offset3 <= 191) && (Color.R == 0xb8 && Color.G == 0xf7 && Color.B == 0xc8)) // objective popup text
                     )
                     {
                         *(float*)(regs.esp + 0x14) += WidescreenHudOffset._float;
