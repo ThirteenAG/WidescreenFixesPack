@@ -13,7 +13,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 {
     auto pattern = hook::pattern("83 EC 58 53 56 57 89 65 E8");
 
-    if (pattern.empty() && !bDelay)
+    if (pattern.count_hint(1).empty() && !bDelay)
     {
         CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
         return 0;

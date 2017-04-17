@@ -219,7 +219,7 @@ DWORD WINAPI InitCore(LPVOID bDelay)
 {
     auto pattern = hook::module_pattern(GetModuleHandle("Core"), "C7 85 D4 F1 FF FF 00 00 00 00"); //0x1000CE5E
 
-    if (pattern.empty() && !bDelay)
+    if (pattern.count_hint(1).empty() && !bDelay)
     {
         CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&InitCore, (LPVOID)true, 0, NULL);
         return 0;
@@ -243,7 +243,7 @@ DWORD WINAPI InitD3DDrv(LPVOID bDelay)
 {
     auto pattern = hook::module_pattern(GetModuleHandle("D3DDrv"), "C1 E9 02 33 C0 F3 AB 8B CA 83 E1 03 F3 AA 8B 45 0C");
 
-    if (pattern.empty() && !bDelay)
+    if (pattern.count_hint(2).empty() && !bDelay)
     {
         CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&InitD3DDrv, (LPVOID)true, 0, NULL);
         return 0;
@@ -294,7 +294,7 @@ DWORD WINAPI InitEngine(LPVOID bDelay)
 {
     auto pattern = hook::module_pattern(GetModuleHandle("Engine"), "8B ? 94 00 00 00 E8");
 
-    if (pattern.empty() && !bDelay)
+    if (pattern.count_hint(3).empty() && !bDelay)
     {
         CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&InitEngine, (LPVOID)true, 0, NULL);
         return 0;
@@ -394,7 +394,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 {
     auto pattern = hook::pattern("C7 45 E8 00 00 00 00 8B 15");
 
-    if (pattern.empty() && !bDelay)
+    if (pattern.count_hint(1).empty() && !bDelay)
     {
         CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
         return 0;

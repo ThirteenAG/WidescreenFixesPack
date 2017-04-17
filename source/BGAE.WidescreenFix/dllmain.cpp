@@ -1,7 +1,5 @@
 #include "stdafx.h"
 
-HWND hWnd;
-bool bDelay;
 bool bConfigTool;
 
 struct Screen
@@ -36,21 +34,18 @@ void PatchInstallPath()
     }
 }
 
-DWORD WINAPI Init(LPVOID)
+DWORD WINAPI Init(LPVOID bDelay)
 {
     auto pattern = hook::pattern("89 65 E8 8B F4 89 3E 56");
-    if (!(pattern.size() > 0) && !bDelay)
+
+    if (pattern.count_hint(1).empty() && !bDelay)
     {
-        bDelay = true;
-        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, NULL, 0, NULL);
+        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
         return 0;
     }
 
     if (bDelay)
-    {
-        while (!(pattern.size() > 0))
-            pattern = hook::pattern("89 65 E8 8B F4 89 3E 56");
-    }
+        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
 
     PatchInstallPath();
     if (bConfigTool)
@@ -61,14 +56,8 @@ DWORD WINAPI Init(LPVOID)
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
     bool bDisableBorders = iniReader.ReadInteger("MAIN", "DisableBorders", 1) != 0;
 
-    if (!Screen.Width || !Screen.Height) {
-        HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
-        MONITORINFO info;
-        info.cbSize = sizeof(MONITORINFO);
-        GetMonitorInfo(monitor, &info);
-        Screen.Width = info.rcMonitor.right - info.rcMonitor.left;
-        Screen.Height = info.rcMonitor.bottom - info.rcMonitor.top;
-    }
+    if (!Screen.Width || !Screen.Height)
+        std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
 
     Screen.fWidth = static_cast<float>(Screen.Width);
     Screen.fHeight = static_cast<float>(Screen.Height);

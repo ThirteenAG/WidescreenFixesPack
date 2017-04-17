@@ -117,7 +117,7 @@ DWORD WINAPI InitX_GameObjectsMFC(LPVOID bDelay)
 {
     auto pattern = hook::module_pattern(GetModuleHandle("X_GameObjectsMFC"), "D8 3D ? ? ? ? D9 5C 24 0C D9");
 
-    if (pattern.empty() && !bDelay)
+    if (pattern.count_hint(4).empty() && !bDelay)
     {
         CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&InitX_GameObjectsMFC, (LPVOID)true, 0, NULL);
         return 0;
@@ -421,7 +421,7 @@ DWORD WINAPI InitE2MFC(LPVOID bDelay)
 {
     auto pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "E8 ? ? ? ? 85 C0 89 44 24 38 DB");
 
-    if (pattern.empty() && !bDelay)
+    if (pattern.count_hint(4).empty() && !bDelay)
     {
         CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&InitE2MFC, (LPVOID)true, 0, NULL);
         return 0;
@@ -462,7 +462,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 {
     auto pattern = hook::pattern("0F 84 ? ? ? ? E8 ? ? ? ? 8B 40 04 68");
 
-    if (pattern.empty() && !bDelay)
+    if (pattern.count_hint(1).empty() && !bDelay)
     {
         CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
         return 0;

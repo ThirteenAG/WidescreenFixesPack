@@ -40,7 +40,7 @@ void __declspec(naked) BarsHook()
 DWORD WINAPI InitSettings(LPVOID)
 {
     auto pattern = hook::pattern("75 66 8D 4C 24 04 51");
-    if (!pattern.empty())
+    if (!pattern.count_hint(1).empty())
     {
         bSettingsApp = true;
         pattern = hook::pattern("75 66 8D 4C 24 04 51");
@@ -69,7 +69,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     auto pattern = hook::pattern("33 DB 89 5D E0 53");
 
-    if (pattern.empty() && !bDelay)
+    if (pattern.count_hint(1).empty() && !bDelay)
     {
         CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
         return 0;
