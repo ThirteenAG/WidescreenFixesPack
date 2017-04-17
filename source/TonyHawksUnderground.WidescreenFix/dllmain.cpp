@@ -17,9 +17,9 @@ struct Screen
 
 DWORD WINAPI Init(LPVOID bDelay)
 {
-    auto pattern = hook::pattern("83 C2 01 83 C6 04 83 FA 04");
+    auto pattern = hook::pattern("6A 01 6A 01 ? 8B 15");
 
-    if (pattern.empty() && !bDelay)
+    if (pattern.count_hint(1).empty() && !bDelay)
     {
         LoadLibrary("TonyHawksUnderground.SafeDiscCheck.dll");
         CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
@@ -48,7 +48,6 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     //addresses is not based on drm free exe
     //Resolution
-    pattern = hook::pattern("6A 01 6A 01 ? 8B 15");
     static int32_t* dword_6D3608 = *pattern.get_first<int32_t*>(7);
     static int32_t* dword_6D360C = *pattern.get_first<int32_t*>(-4);
     struct SetResHook
@@ -68,15 +67,16 @@ DWORD WINAPI Init(LPVOID bDelay)
         injector::MakeInline<SetResHook>(pattern.get(i).get<uint32_t>(0), pattern.get(i).get<uint32_t>(6));
     
     pattern = hook::pattern(pattern_str(0x89, '?', to_bytes(dword_6D3608)));
-    injector::MakeInline<SetResHook>(pattern.get_first(0), pattern.get_first(6));
+    if (!pattern.count_hint(1).empty())
+        injector::MakeInline<SetResHook>(pattern.get_first(0), pattern.get_first(6));
 
     pattern = hook::pattern(pattern_str(0xA3, to_bytes(dword_6D360C)));
-    if (!pattern.empty())
+    if (!pattern.count_hint(1).empty())
         injector::MakeInline<SetResHook>(pattern.get_first(0));
 
     //Aspect Ratio
     pattern = hook::pattern("68 ? ? ? ? E8 ? ? ? ? 6A 00 68 ? ? ? ? E8 ? ? ? ? D9 5C 24 08");
-    if (!pattern.empty())
+    if (!pattern.count_hint(1).empty())
     {
         injector::WriteMemory<float>(pattern.get_first(1), Screen.fAspectRatio, true);
     }
@@ -95,7 +95,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         #define SCREEN_FOV_HORIZONTAL 114.59155f
         #define SCREEN_FOV_VERTICAL (2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))
         float fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
-        injector::WriteMemory<float>(*pattern.get_first<float*>(2), fDynamicScreenFieldOfViewScale, true);
+        injector::WriteMemory<float>(*pattern.get_first<float*>(2), SCREEN_FOV_HORIZONTAL * fDynamicScreenFieldOfViewScale, true);
     }
     else //fmul dbl
     {
@@ -104,14 +104,13 @@ DWORD WINAPI Init(LPVOID bDelay)
         #define SCREEN_FOV_HORIZONTAL 57.29577791868205f
         #define SCREEN_FOV_VERTICAL (2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))
         float fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
-        static double dbl_62D630 = 57.29577791868205 * fDynamicScreenFieldOfViewScale;
+        static double dbl_62D630 = SCREEN_FOV_HORIZONTAL * fDynamicScreenFieldOfViewScale;
         injector::WriteMemory(pattern.get_first(2), &dbl_62D630, true);
     }
 
     //HUD
     if (bFixHUD)
     {
-        Screen.fHUDScaleX = 1.0f / Screen.fHUDScaleX;
         static int32_t nHudOffset = static_cast<int32_t>(Screen.fHudOffsetReal);
         static int32_t* dword_72DFC4;
         struct SetOffsetHook
@@ -123,15 +122,14 @@ DWORD WINAPI Init(LPVOID bDelay)
         };
 
         pattern = hook::pattern("D8 0D ? ? ? ? 03 C2 C1 F8 02");
-        if (!pattern.empty())
+        if (!pattern.count_hint(1).empty())
         {
             injector::WriteMemory<float>(*pattern.get_first<float*>(2), Screen.fHUDScaleX, true);
-            nHudOffset = static_cast<int32_t>((Screen.fWidth - (Screen.fHeight * (4.0f / 3.0f))) / 4.0f);
             dword_72DFC4 = *hook::get_pattern<int32_t*>("DA 05 ? ? ? ? 0F BF 88", 2);
         }
         else
         {
-            
+            Screen.fHUDScaleX = 1.0f / Screen.fHUDScaleX;
             pattern = hook::pattern("DC 0D ? ? ? ? DE FB D9");
             injector::WriteMemory<double>(*pattern.get_first<double*>(2), Screen.fHUDScaleX, true);
 
@@ -141,8 +139,6 @@ DWORD WINAPI Init(LPVOID bDelay)
         pattern = hook::pattern(pattern_str(0x89, '?', to_bytes(dword_72DFC4)));
         for (size_t i = 0; i < pattern.size(); ++i)
             injector::MakeInline<SetOffsetHook>(pattern.get(i).get<uint32_t>(0), pattern.get(i).get<uint32_t>(6));
-
-        //4BE172 - filter fullscreen drawings maybe?
     }
 
     return 0;
