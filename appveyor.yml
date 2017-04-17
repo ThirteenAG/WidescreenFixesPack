@@ -6,7 +6,7 @@ init:
 - ps: >-
     Start-FileDownload 'https://download.microsoft.com/download/A/E/7/AE743F1F-632B-4809-87A9-AA1BB3458E31/DXSDK_Jun10.exe' -FileName 'C:\DXSDK_Jun10.exe'
 
-    $exitCode = [Diagnostics.Process]::Start("C:\DXSDK_Jun10.exe","/F /S /O /U").WaitForExit(100000)
+    $exitCode = [Diagnostics.Process]::Start("C:\DXSDK_Jun10.exe","/F /S /O /U").WaitForExit(100000000)
 
 
     Start-FileDownload 'https://github.com/chocolatey/chocolatey/raw/master/src/redirects/RefreshEnv.cmd' -FileName 'C:\RefreshEnv.cmd'
