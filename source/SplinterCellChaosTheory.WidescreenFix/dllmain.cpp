@@ -253,7 +253,8 @@ DWORD WINAPI Init(LPVOID bDelay)
                     if ( //excludes
                         !(fLeft == 566 && fRight == 569 && fTop == 409 && fBottom == 425) && // camera screen bracket ]
                         !(fLeft == 562 && fRight == 566 && fTop == 409 && fBottom == 410) && // camera screen bracket ]
-                        !(fLeft == 562 && fRight == 566 && fTop == 424 && fBottom == 425)    // camera screen bracket ]
+                        !(fLeft == 562 && fRight == 566 && fTop == 424 && fBottom == 425) && // camera screen bracket ]
+                        !((((fRight - fLeft) == 1) || ((fRight - fLeft) == 2) || ((fRight - fLeft) == 3) || ((fRight - fLeft) == 4)) && ((fBottom - fTop) == 1 || (fBottom - fTop) == 21 || (fBottom - fTop) == 22) && (fTop >= 195 && fBottom <= 395)) //other brackets of overlay menus
                         ) 
                     {
                         *(int16_t*)(regs.esp + 0x40) += WidescreenHudOffset._int;
