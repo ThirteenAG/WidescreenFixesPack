@@ -73,17 +73,17 @@ DWORD WINAPI Init(LPVOID bDelay)
     injector::MakeInline<SetResHook>(pattern.count(2).get(1).get<void*>(0), pattern.count(2).get(1).get<void*>(6));
 
     pattern = hook::pattern(pattern_str(0x89, '?', to_bytes(dword_787A7C)));
-    injector::MakeInline<SetResHook>(pattern.count(2).get(0).get<void*>(0), pattern.count(2).get(0).get<void*>(6));
-    injector::MakeInline<SetResHook>(pattern.count(2).get(1).get<void*>(0), pattern.count(2).get(1).get<void*>(6));
+    injector::MakeNOP(pattern.count(2).get(0).get<void*>(0), 6, true); //injector::MakeInline<SetResHook>(pattern.count(2).get(0).get<void*>(0), pattern.count(2).get(0).get<void*>(6));
+    injector::MakeNOP(pattern.count(2).get(1).get<void*>(0), 6, true); //injector::MakeInline<SetResHook>(pattern.count(2).get(1).get<void*>(0), pattern.count(2).get(1).get<void*>(6));
 
     pattern = hook::pattern(pattern_str(0x89, '?', to_bytes(dword_787A80)));
-    injector::MakeInline<SetResHook>(pattern.count(2).get(0).get<void*>(0), pattern.count(2).get(0).get<void*>(6));
-    injector::MakeInline<SetResHook>(pattern.count(2).get(1).get<void*>(0), pattern.count(2).get(1).get<void*>(6));
+    injector::MakeNOP(pattern.count(2).get(0).get<void*>(0), 6, true); //injector::MakeInline<SetResHook>(pattern.count(2).get(0).get<void*>(0), pattern.count(2).get(0).get<void*>(6));
+    injector::MakeNOP(pattern.count(2).get(1).get<void*>(0), 6, true); //injector::MakeInline<SetResHook>(pattern.count(2).get(1).get<void*>(0), pattern.count(2).get(1).get<void*>(6));
 
     //Aspect Ratio
     pattern = hook::pattern("68 ? ? ? ? E8 ? ? ? ? 6A 00 68 ? ? ? ? E8 ? ? ? ? D9");
     injector::WriteMemory<float>(pattern.get_first(1), Screen.fAspectRatio, true);
-
+    
     //FOV
     if (bFixFOV)
     {
