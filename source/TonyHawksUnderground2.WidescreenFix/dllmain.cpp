@@ -1,124 +1,154 @@
 #include "stdafx.h"
-#include "..\includes\CPatch.h"
+#include <random>
 
-#define _USE_MATH_DEFINES
-#include "math.h"
-HWND hWnd;
-
-int hud_patch;
-int res_x;
-int res_y;
-float fres_x, fres_y;
-float fDynamicScreenFieldOfViewScale;
-float fAspectRatio;
-float hud_multiplier_x;
-
-#define DEGREE_TO_RADIAN(fAngle) \
-	((fAngle)* (float)M_PI / 180.0f)
-#define RADIAN_TO_DEGREE(fAngle) \
-	((fAngle)* 180.0f / (float)M_PI)
-#define SCREEN_FOV_HORIZONTAL		124.59155f
-#define SCREEN_FOV_VERTICAL			(2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / (4.0f / 3.0f))))
-
-void Init()
+struct Screen
 {
-	CIniReader iniReader("");
-	res_x = iniReader.ReadInteger("MAIN", "X", 0);
-	res_y = iniReader.ReadInteger("MAIN", "Y", 0);
-	hud_patch = iniReader.ReadInteger("MAIN", "HUD_PATCH", 0);
+    int32_t Width;
+    int32_t Height;
+    float fWidth;
+    float fHeight;
+    int32_t Width43;
+    float fAspectRatio;
+    float fAspectRatioDiff;
+    float fFieldOfView;
+    float fHUDScaleX;
+    float fHudOffset;
+    float fHudOffsetReal;
+} Screen;
 
-	if (!res_x || !res_y) {
-		HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
-		MONITORINFO info;
-		info.cbSize = sizeof(MONITORINFO);
-		GetMonitorInfo(monitor, &info);
-		res_x = info.rcMonitor.right - info.rcMonitor.left;
-		res_y = info.rcMonitor.bottom - info.rcMonitor.top;
-	}
+DWORD WINAPI Init(LPVOID bDelay)
+{
+    auto pattern = hook::pattern("89 0D ? ? ? ? 89 15 ? ? ? ? 89 0D ? ? ? ? 89 15 ? ? ? ? 74");
 
-	if ((*(DWORD*)0x4E2932 == 640))
-	{
-		CPatch::SetUInt(0x67FBCC, res_x);
-		CPatch::SetUInt(0x67FBD0, res_y);
+    if (pattern.count_hint(1).empty() && !bDelay)
+    {
+        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
+        return 0;
+    }
 
-		fres_x = static_cast<float>(res_x);
-		fres_y = static_cast<float>(res_y);
+    if (bDelay)
+        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
 
-		/*CPatch::SetPointer(0x4370CB + 0x4, &fres_x);
-		CPatch::SetPointer(0x4370F7 + 0x4, &fres_y);
+    CIniReader iniReader("");
+    Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
+    Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
+    bool bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) != 0;
+    bool bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) != 0;
+    bool bRandomSongOrderFix = iniReader.ReadInteger("MAIN", "RandomSongOrderFix", 1) != 0;
 
-		CPatch::SetPointer(0x4370CB + 0x4, &fres_x);
-		CPatch::SetPointer(0x4370F7 + 0x4, &fres_y);*/
+    if (!Screen.Width || !Screen.Height)
+        std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
 
-		CPatch::SetUInt(0x4D88AC + 0x1, res_x);
-		CPatch::SetUInt(0x4D88CE + 0x4, res_x);
-		CPatch::SetUInt(0x4D88DA + 0x4, res_x);
-		CPatch::SetUInt(0x4D88E2 + 0x4, res_x);
+    Screen.fWidth = static_cast<float>(Screen.Width);
+    Screen.fHeight = static_cast<float>(Screen.Height);
+    Screen.Width43 = static_cast<int32_t>(Screen.fHeight * (4.0f / 3.0f));
+    Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
+    Screen.fAspectRatioDiff = 1.0f / (Screen.fAspectRatio / (4.0f / 3.0f));
+    Screen.fHUDScaleX = 1.0f / Screen.fWidth * (Screen.fHeight / 480.0f);
+    Screen.fHudOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
+    Screen.fHudOffsetReal = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
 
-		CPatch::SetUInt(0x4D88EE + 0x4, res_y);
-		CPatch::SetUInt(0x4D88F6 + 0x4, res_y);
-		CPatch::SetUInt(0x4D88FE + 0x4, res_y);
+    //Resolution
+    static int32_t* dword_67FBCC = *pattern.get_first<int32_t*>(2);
+    static int32_t* dword_67FBD0 = *pattern.get_first<int32_t*>(8);
+    static int32_t* dword_787A7C = *pattern.get_first<int32_t*>(12+2);
+    static int32_t* dword_787A80 = *pattern.get_first<int32_t*>(12+8);
+    struct SetResHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            *dword_67FBCC = Screen.Width;
+            *dword_67FBD0 = Screen.Height;
+            *dword_787A7C = Screen.Width;
+            *dword_787A80 = Screen.Height;
+        }
+    };
 
-		fAspectRatio = fres_x / fres_y;
-		fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * fAspectRatio));
+    pattern = hook::pattern(pattern_str(0x89, '?', to_bytes(dword_67FBCC)));
+    injector::MakeInline<SetResHook>(pattern.get_first(0), pattern.get_first(6));
+    pattern = hook::pattern(pattern_str(0xA3, to_bytes(dword_67FBCC)));
+    injector::MakeInline<SetResHook>(pattern.get_first(0));
+    pattern = hook::pattern(pattern_str(0x89, '?', to_bytes(dword_67FBD0)));
+    injector::MakeInline<SetResHook>(pattern.count(2).get(0).get<void*>(0), pattern.count(2).get(0).get<void*>(6));
+    injector::MakeInline<SetResHook>(pattern.count(2).get(1).get<void*>(0), pattern.count(2).get(1).get<void*>(6));
 
-		CPatch::SetFloat(0x649804, fDynamicScreenFieldOfViewScale);
-		CPatch::SetPointer(0x4A0860 + 0x2, &fAspectRatio);
+    pattern = hook::pattern(pattern_str(0x89, '?', to_bytes(dword_787A7C)));
+    injector::MakeInline<SetResHook>(pattern.count(2).get(0).get<void*>(0), pattern.count(2).get(0).get<void*>(6));
+    injector::MakeInline<SetResHook>(pattern.count(2).get(1).get<void*>(0), pattern.count(2).get(1).get<void*>(6));
 
-		hud_multiplier_x = 1.0f / res_x * (res_y / 480.0f);
-		if (hud_patch)
-		{
-			CPatch::SetPointer(0x4D8A30 + 0x2, &hud_multiplier_x);
-			CPatch::SetPointer(0x4B6CF8 + 0x2, &hud_multiplier_x);
+    pattern = hook::pattern(pattern_str(0x89, '?', to_bytes(dword_787A80)));
+    injector::MakeInline<SetResHook>(pattern.count(2).get(0).get<void*>(0), pattern.count(2).get(0).get<void*>(6));
+    injector::MakeInline<SetResHook>(pattern.count(2).get(1).get<void*>(0), pattern.count(2).get(1).get<void*>(6));
 
-			CPatch::Nop(0x4D87F0, 6);
-			CPatch::Nop(0x4D8A58, 6);
-			DWORD nHudAlignment = static_cast<DWORD>((fres_x - (fres_y * (4.0f / 3.0f))) / 2);
-			CPatch::SetUInt(0x787D88, nHudAlignment);
-		}
-	}
-	else
-	{
-		CPatch::SetUInt(0x67EBCC, res_x);
-		CPatch::SetUInt(0x67EBD0, res_y);
+    //Aspect Ratio
+    pattern = hook::pattern("68 ? ? ? ? E8 ? ? ? ? 6A 00 68 ? ? ? ? E8 ? ? ? ? D9");
+    injector::WriteMemory<float>(pattern.get_first(1), Screen.fAspectRatio, true);
 
-		fres_x = static_cast<float>(res_x);
-		fres_y = static_cast<float>(res_y);
+    //FOV
+    if (bFixFOV)
+    {
+        pattern = hook::pattern("D8 0D ? ? ? ? D9 96 B0 00");
+        #undef SCREEN_FOV_HORIZONTAL
+        #undef SCREEN_FOV_VERTICAL
+        #define SCREEN_FOV_HORIZONTAL 114.59155f
+        #define SCREEN_FOV_VERTICAL (2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))
+        float fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
+        injector::WriteMemory<float>(*pattern.get_first<float*>(2), SCREEN_FOV_HORIZONTAL * fDynamicScreenFieldOfViewScale, true);
+    }
 
-		CPatch::SetUInt(0x4D873C + 0x1, res_x);
-		CPatch::SetUInt(0x4D875E + 0x4, res_x);
-		CPatch::SetUInt(0x4D876A + 0x4, res_x);
-		CPatch::SetUInt(0x4D8772 + 0x4, res_x);
+    //HUD
+    if (bFixHUD)
+    {
+        static int32_t nHudOffset = static_cast<int32_t>(Screen.fHudOffsetReal);
+        static int32_t* dword_787D88;
+        struct SetOffsetHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                *dword_787D88 = nHudOffset;
+            }
+        };
 
-		CPatch::SetUInt(0x4D877E + 0x4, res_y);
-		CPatch::SetUInt(0x4D8786 + 0x4, res_y);
-		CPatch::SetUInt(0x4D878E + 0x4, res_y);
+        pattern = hook::pattern("D8 0D ? ? ? ? 89 0D ? ? ? ? 89 15 ? ? ? ? 0F B6 C8");
+        injector::WriteMemory<float>(*pattern.get_first<float*>(2), Screen.fHUDScaleX, true);
+        dword_787D88 = *hook::get_pattern<int32_t*>("DB 05 ? ? ? ? 57 D9 05 ? ? ? ? 8B F9", 2);
 
-		fAspectRatio = fres_x / fres_y;
-		fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * fAspectRatio));
+        pattern = hook::pattern(pattern_str(0x89, '?', to_bytes(dword_787D88)));
+        for (size_t i = 0; i < pattern.size(); ++i)
+            injector::MakeInline<SetOffsetHook>(pattern.get(i).get<uint32_t>(0), pattern.get(i).get<uint32_t>(6));
+    }
 
-		CPatch::SetFloat(0x648804, fDynamicScreenFieldOfViewScale);
-		CPatch::SetPointer(0x4A0790 + 0x2, &fAspectRatio);
+    if (bRandomSongOrderFix)
+    {
+        pattern = hook::pattern("83 C4 08 ? D0 07 00 00");
+        auto rpattern = hook::range_pattern((uintptr_t)pattern.get_first(3), (uintptr_t)pattern.get_first(110), "75 ? A1");
+        static auto dword_69B718 = *rpattern.get_first<int32_t*>(3);
+        static auto dword_681D14 = *hook::range_pattern((uintptr_t)pattern.get_first(3), (uintptr_t)pattern.get_first(60), "A1 ? ? ? ?").get_first<int32_t*>(1);
+        struct RandomHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                auto num_songs = *dword_681D14;
+                int32_t* sp_xbox_randomized_songs = dword_69B718;
 
-		hud_multiplier_x = 1.0f / res_x * (res_y / 480.0f);
-		if (hud_patch)
-		{
-			CPatch::SetPointer(0x4D88C0 + 0x2, &hud_multiplier_x);
-			CPatch::SetPointer(0x4B6BA8 + 0x2, &hud_multiplier_x);
+                std::vector<int32_t> songs;
+                songs.assign(std::addressof(sp_xbox_randomized_songs[0]), std::addressof(sp_xbox_randomized_songs[num_songs]));
+                std::mt19937 r{ std::random_device{}() };
+                std::shuffle(std::begin(songs), std::end(songs), r);
 
-			CPatch::Nop(0x4D8680, 6);
-			CPatch::Nop(0x4D88E8, 6);
-			DWORD nHudAlignment = static_cast<DWORD>((fres_x - (fres_y * (4.0f / 3.0f))) / 2);
-			CPatch::SetUInt(0x786D88, nHudAlignment);
-		}
-	}
+                std::copy(songs.begin(), songs.end(), sp_xbox_randomized_songs);
+            }
+        }; injector::MakeInline<RandomHook>(pattern.get_first(3), rpattern.get_first(2));
+    }
+
+    return 0;
 }
 
 BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
-	if (reason == DLL_PROCESS_ATTACH)
-	{
-		Init();
-	}
-	return TRUE;
+    if (reason == DLL_PROCESS_ATTACH)
+    {
+        Init(NULL);
+    }
+    return TRUE;
 }
