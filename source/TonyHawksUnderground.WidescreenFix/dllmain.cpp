@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include <random>
 
 struct Screen
 {
@@ -33,6 +34,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
     bool bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) != 0;
+    bool bRandomSongOrderFix = iniReader.ReadInteger("MAIN", "RandomSongOrderFix", 1) != 0;
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -139,6 +141,29 @@ DWORD WINAPI Init(LPVOID bDelay)
         pattern = hook::pattern(pattern_str(0x89, '?', to_bytes(dword_72DFC4)));
         for (size_t i = 0; i < pattern.size(); ++i)
             injector::MakeInline<SetOffsetHook>(pattern.get(i).get<uint32_t>(0), pattern.get(i).get<uint32_t>(6));
+    }
+
+    if (bRandomSongOrderFix)
+    {
+        pattern = hook::pattern("83 C4 08 ? D0 07 00 00"); //0x424BDD or 423CDB
+        static auto dword_681D14 = *pattern.get_first<int32_t*>(9);
+        auto rpattern = hook::range_pattern((uintptr_t)pattern.get_first(3), (uintptr_t)pattern.get_first(110), "75 ? A1");
+        static auto dword_69B718 = *rpattern.get_first<int32_t*>(3);
+        struct RandomHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                auto num_songs = *dword_681D14;
+                int32_t* sp_xbox_randomized_songs = dword_69B718;
+                
+                std::vector<int32_t> songs;
+                songs.assign(std::addressof(sp_xbox_randomized_songs[0]), std::addressof(sp_xbox_randomized_songs[num_songs]));
+                std::mt19937 r{ std::random_device{}() };
+                std::shuffle(std::begin(songs), std::end(songs), r);
+                
+                std::copy(songs.begin(), songs.end(), sp_xbox_randomized_songs);
+            }
+        }; injector::MakeInline<RandomHook>(pattern.get_first(3), rpattern.get_first(2));
     }
 
     return 0;
