@@ -1,5 +1,57 @@
 #include "stdafx.h"
 
+#define _LOG
+#ifdef _LOG
+#include <intrin.h>  
+#pragma intrinsic(_ReturnAddress)  
+#include <fstream>
+std::ofstream logfile;
+uint32_t logit;
+std::map<uintptr_t, uint32_t> retXmap;
+std::map<uintptr_t, uint32_t> retYmap;
+#endif // _LOG
+
+enum HudCoords
+{
+    HEALTH_CLUSTER_COORDS_RELATIVE_TO_HEALTH_CLUSTER_BACKGROUND,
+    HEALTH_CLUSTER_BACKGROUND_COORDS__SET_ME_TO_MOVE_HEALTHSLAUGHTER_HUD,
+    HEALTH_BAR_COORDS_RELATIVE_TO_HEALTH_CLUSTER_BACKGROUND,
+    HEALTH_BAR_WIDTH_HEIGHT_NEED_IT_SINCE_HEALTH_AND_ARMOR_ARE_IN_THE_SAME_METER,
+    SLAUGHTER_METER_COORDS_RELATIVE_TO_HEALTH_CLUSTER_BACKGROUND,
+    SKULL_ICON_RELATIVE_TO_HEALTH_CLUSTER_BACKGROUND,
+    USE_MESSAGE,
+    MAIN_WEAPON_UPPER_LEFT_CORNER,
+    WEAPON_ICON_OFFSET_FROM_UPPER_LEFT_CORNER_OF_BOX,
+    AMMO_COUNTER_OFFSET_FROM_UPPER_LEFT_CORNER_OF_BOX,
+    RESERVE_AMMO_BAR_OFFSET_FROM_UPPER_LEFT_CORNER_OF_BOX,
+    RETICLE_OFFSETS_FROM_CENTER_OF_SCREEN,
+    HUMAN_SHIELD,
+    THE_INTERROGATE_INTERACTIVE_HUD_ELEMENT,
+    THE_INTERROGATE_CONTROL_EXPLAINATION,
+    AMMO_PICKUP_MESSAGES,
+    HUD_PERSONA_BACKGROUND,
+    HUD_PERSONA_HEAD,
+    FRONT_DAMAGE_INDICATOR_CENTER,
+    LEFT_DAMAGE_INDICATOR_CENTER,
+    BACK_DAMAGE_INDICATOR_CENTER,
+    RIGHT_DAMAGE_INDICATOR_CENTER,
+    HUD_MESSAGE_LOG_TEXT_AREA_WIDTH_HEIGHT_IGNORED,
+    HUD_COUNTDOWN_TIMER,
+    GENERIC_MESSAGE_BACKGROUND_BITMAP_COORDINATES,
+    GENERIC_MESSAGE_TEXT_LOCATION,
+    GENERIC_MESSAGE_TEXT_WIDTH_IN_PIXELS_LINE_1,
+    POSITION_OF_OBJECTIVES_POPUP_FRAME,
+    COMBO_SCORE_DISPLAY,
+    LOADING_PROGRESS_BAR_NOTE_NOT_A_HUD_ITEM,
+    TUTORIAL_MESSAGE,
+    TUTORIAL_MESSAGE_WIDTH_Y_IS_IGNORED,
+    CHALLENGE_MODE_TEXT_X_IGNORED_CAUSE_ITS_CENTERED_ON_THE_SCREEN,
+    PUNISHMENT_MODE_TEXT_X_IGNORED,
+    PUNISHMENT_MODE_COUNTER,
+    SECONDARY_HEALTH_BAR_X_IGNORED,
+    SUBTITLE_YPOS_X_IS_USED_TO_LIMIT_WIDTH_MESSAGE_WIDTH__SCREEN_WIDTH__2X
+};
+
 struct Screen
 {
     int32_t Width;
@@ -13,25 +65,35 @@ struct Screen
     float fHUDScaleX;
     float fHudOffset;
     float fHudOffsetReal;
+    int32_t PresetWidth;
+    int32_t PresetHeight;
 } Screen;
 
-void _declspec(naked) asm_res_fix1()
+int retX()
 {
-    _asm
+#ifdef _LOG
+    if (GetAsyncKeyState(VK_F1) & 0x8000)
     {
-        mov     eax, 800
-        ret
+        auto retaddr = (uintptr_t)_ReturnAddress() - 5;
+        logfile << "retX addr: " << std::dec << retXmap[retaddr] << std::endl;
     }
-}
+#endif // _LOG
 
-void _declspec(naked) asm_res_fix2()
+
+    return Screen.PresetWidth;
+};
+
+int retY()
 {
-    _asm
+#ifdef _LOG
+    if (GetAsyncKeyState(VK_F1) & 0x8000)
     {
-        mov     eax, 600
-        ret
+        auto retaddr = (uintptr_t)_ReturnAddress() - 5;
+        logfile << "retY addr: " << std::dec << retYmap[retaddr] << std::endl;
     }
-}
+#endif // _LOG
+    return Screen.PresetHeight;
+};
 
 DWORD WINAPI Init(LPVOID bDelay)
 {
@@ -62,8 +124,10 @@ DWORD WINAPI Init(LPVOID bDelay)
     Screen.fHUDScaleX = 1.0f / Screen.fWidth * (Screen.fHeight / 480.0f);
     Screen.fHudOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
     Screen.fHudOffsetReal = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
+    Screen.PresetWidth = Screen.Height >= 960 ? 1280 : 800;
+    Screen.PresetHeight = Screen.Height >= 960 ? 960 : 600;
   
-    //Resolution 511CB2
+    //Resolution
     static int32_t* dword_913250 = *pattern.get_first<int32_t*>(2);
     static int32_t* dword_913254 = *pattern.get_first<int32_t*>(7);
     struct SetResHook
@@ -75,60 +139,89 @@ DWORD WINAPI Init(LPVOID bDelay)
         }
     }; injector::MakeInline<SetResHook>(pattern.get_first(0), pattern.get_first(11));
         
+    pattern = hook::pattern("C7 04 24 80 02 00 00"); //0x4DD6CB
+    injector::MakeNOP(pattern.get_first(-2), 2, true);
+    injector::WriteMemory(pattern.get_first(3), Screen.Width, true);
 
-    injector::MakeCALL(0x465360, asm_res_fix1, true);
-    injector::MakeCALL(0x46536A, asm_res_fix2, true);
-    injector::MakeCALL(0x477D37, asm_res_fix1, true);
-    injector::MakeCALL(0x477D31, asm_res_fix2, true);
-    
-    injector::MakeNOP(0x4DD6CB, 2, true);
-    injector::MakeNOP(0x4DD6ED, 2, true);
-    injector::WriteMemory(0x4DD6CD + 0x3, Screen.Width, true);
-    injector::WriteMemory(0x4DD6EF + 0x4, Screen.Height, true);
-
-    //static int x = 800;
-    //static int y = 600;
-    //injector::WriteMemory(0x510A00 + 1, &x, true);
-    //injector::WriteMemory(0x510A10 + 1, &y, true);
+    pattern = hook::pattern("C7 44 24 04 E0 01 00 00"); //0x4DD6ED
+    injector::MakeNOP(pattern.get_first(-2), 2, true);
+    injector::WriteMemory(pattern.get_first(4), Screen.Height, true);
 
     injector::MakeNOP(0x4DD5B9, 5, true); // no intro
 
 
+    //fixing only menu and startup stuff, which makes the game stuck in an infinite loop
+    uint32_t retXIncludes[] = { 25, 100, 101, 102, 103, 105, 106, 107, 130, 140, 142, 144, 145, 146, 149, 150, 151, 158, 180, 215, 216, 56, 99 };
+    uint32_t retYIncludes[] = { 24, 108, 107, 109, 110, 111, 112, 113, 114, 144, 146, 149, 150, 151, 152, 153, 154, 161, 187, 223, 224 };
 
-    auto retX = []() -> int
+    pattern = hook::pattern("E8 ? ? ? ?");
+    for (size_t i = 0, j = 0, k = 0; i < pattern.size(); ++i)
     {
-        return 800;
-    };
+        auto addr = pattern.get(i).get<uint32_t>(0);
+        auto dest = injector::GetBranchDestination(addr, true).as_int();
 
-    auto retY = []() -> int
-    {
-        return 600;
-    };
-
-    pattern = hook::pattern("E8 ? ? ? ? ? E8");
-    for (size_t i = 0; i < pattern.size(); ++i)
-    {
-        auto addr1 = pattern.get(i).get<uint32_t>(0);
-        auto dest1 = injector::GetBranchDestination(addr1, true).as_int();
-        auto addr2 = pattern.get(i).get<uint32_t>(6);
-        auto dest2 = injector::GetBranchDestination(addr2, true).as_int();
-
-        if (dest1 == 0x510A10 && dest2 == 0x510A00)
+        if (dest == 0x510A00)
         {
-            injector::MakeCALL(addr1, static_cast<int(*)()>(retY), true);
-            injector::MakeCALL(addr2, static_cast<int(*)()>(retX), true);
+#ifdef _LOG
+            retXmap.insert(std::pair<uintptr_t, uint32_t>((uintptr_t)addr, j));
+#endif
+            if (!(std::end(retXIncludes) == std::find(std::begin(retXIncludes), std::end(retXIncludes), j)))
+                injector::MakeCALL(addr, retX, true);
+            ++j;
+        }
+        else if (dest == 0x510A10)
+        {
+#ifdef _LOG
+            retYmap.insert(std::pair<uintptr_t, uint32_t>((uintptr_t)addr, k));
+#endif
+            if (!(std::end(retYIncludes) == std::find(std::begin(retYIncludes), std::end(retYIncludes), k)))
+                injector::MakeCALL(addr, retY, true);
+            ++k;
         }
     }
+    
+    
+    //HUD
+    static size_t curLine;
+    struct iHudHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            curLine = 0;
+            *(uint32_t*)regs.esp = 0x5F5588; //"#End"
+            regs.ecx = regs.edi;
+        }
+    };
+    injector::WriteMemory<uint8_t>(0x4632C0, 0x56i8, true);
+    injector::MakeInline<iHudHook>(0x4632C0 + 1, 0x4632C0 + 7/*pattern.get_first(0), pattern.get_first(11)*/);
+
+    struct HudHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            auto x = *(int32_t*)(regs.esi + 0x00);
+            auto y = *(int32_t*)(regs.esi + 0x04);
+
+            switch (curLine)
+            {
+            case (HEALTH_CLUSTER_BACKGROUND_COORDS__SET_ME_TO_MOVE_HEALTHSLAUGHTER_HUD):
+                x += 200;
+                break;
+            default:
+                break;
+            }
+
+            *(int32_t*)(regs.esi + 0x00) = x;
+            *(int32_t*)(regs.esi + 0x04) = y;
 
 
-
-    injector::MakeCALL(0x47CEC3, static_cast<int(*)()>(retX), true);
-    injector::MakeCALL(0x47CEDA, static_cast<int(*)()>(retY), true);
-
-
-
-    injector::MakeCALL(0x47D101, static_cast<int(*)()>(retX), true);
-    injector::MakeCALL(0x47D118, static_cast<int(*)()>(retY), true);
+            *(uint32_t*)regs.esp = 0x5F5588; //"#End"
+            regs.ecx = regs.edi;
+            ++curLine;
+        }
+    }; 
+    injector::WriteMemory<uint8_t>(0x4632E8, 0x56i8, true);
+    injector::MakeInline<HudHook>(0x4632E8+1, 0x4632E8+7/*pattern.get_first(0), pattern.get_first(11)*/);
 
     return 0;
 }
@@ -137,6 +230,10 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
+        MessageBox(0,0,0,0);
+        #ifdef _LOG
+        logfile.open("Pun.WidescreenFix.log");
+        #endif // _LOG
         Init(NULL);
     }
     return TRUE;
