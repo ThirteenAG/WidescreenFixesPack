@@ -1,28 +1,25 @@
 #include "stdafx.h"
-#include "..\includes\CPatch.h"
 
-#define _USE_MATH_DEFINES
-#include "math.h"
-HWND hWnd;
-
-int res_x, res_y, hud_res_x, hud_res_y;
-float fres_x, fres_y;
-float fDynamicScreenFieldOfViewScale;
-float fAspectRatio;
-float hud_multiplier_x;
-
-#define DEGREE_TO_RADIAN(fAngle) \
-    ((fAngle)* (float)M_PI / 180.0f)
-#define RADIAN_TO_DEGREE(fAngle) \
-    ((fAngle)* 180.0f / (float)M_PI)
-#define SCREEN_FOV_HORIZONTAL		60.0f
-#define SCREEN_FOV_VERTICAL			(2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / (4.0f / 3.0f))))
+struct Screen
+{
+    int32_t Width;
+    int32_t Height;
+    float fWidth;
+    float fHeight;
+    int32_t Width43;
+    float fAspectRatio;
+    float fAspectRatioDiff;
+    float fFieldOfView;
+    float fHUDScaleX;
+    float fHudOffset;
+    float fHudOffsetReal;
+} Screen;
 
 void _declspec(naked) asm_res_fix1()
 {
     _asm
     {
-        mov     eax, hud_res_x
+        mov     eax, 800
         ret
     }
 }
@@ -31,133 +28,116 @@ void _declspec(naked) asm_res_fix2()
 {
     _asm
     {
-        mov     eax, hud_res_y
+        mov     eax, 600
         ret
     }
 }
 
-void Init()
+DWORD WINAPI Init(LPVOID bDelay)
 {
+    auto pattern = hook::pattern("89 1D ? ? ? ? A3 ? ? ? ? 88 0D");
+
+    if (pattern.count_hint(1).empty() && !bDelay)
+    {
+        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
+        return 0;
+    }
+
+    if (bDelay)
+        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
+
     CIniReader iniReader("");
-    res_x = iniReader.ReadInteger("MAIN", "X", 0);
-    res_y = iniReader.ReadInteger("MAIN", "Y", 0);
-    hud_res_x = iniReader.ReadInteger("MAIN", "HUD_RESX", 1280);
-    hud_res_y = iniReader.ReadInteger("MAIN", "HUD_RESY", 960);
+    Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
+    Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
+    bool bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) != 0;
 
-    if (!res_x || !res_y) {
-        HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
-        MONITORINFO info;
-        info.cbSize = sizeof(MONITORINFO);
-        GetMonitorInfo(monitor, &info);
-        res_x = info.rcMonitor.right - info.rcMonitor.left;
-        res_y = info.rcMonitor.bottom - info.rcMonitor.top;
-    }
+    if (!Screen.Width || !Screen.Height)
+        std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
 
-    fres_x = static_cast<float>(res_x);
-    fres_y = static_cast<float>(res_y);
-
-    fAspectRatio = fres_x / fres_y;
-    fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * fAspectRatio));
-
-    if ((*(DWORD*)0x401F60 == 640)) // HOODLUM 2,48 MB (2 605 056 bytes)
+    Screen.fWidth = static_cast<float>(Screen.Width);
+    Screen.fHeight = static_cast<float>(Screen.Height);
+    Screen.Width43 = static_cast<int32_t>(Screen.fHeight * (4.0f / 3.0f));
+    Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
+    Screen.fAspectRatioDiff = 1.0f / (Screen.fAspectRatio / (4.0f / 3.0f));
+    Screen.fHUDScaleX = 1.0f / Screen.fWidth * (Screen.fHeight / 480.0f);
+    Screen.fHudOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
+    Screen.fHudOffsetReal = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
+  
+    //Resolution 511CB2
+    static int32_t* dword_913250 = *pattern.get_first<int32_t*>(2);
+    static int32_t* dword_913254 = *pattern.get_first<int32_t*>(7);
+    struct SetResHook
     {
-        CPatch::RedirectCall(0x465360, asm_res_fix1);
-        CPatch::RedirectCall(0x46536A, asm_res_fix2);
-
-        CPatch::RedirectCall(0x477D37, asm_res_fix1);
-        CPatch::RedirectCall(0x477D31, asm_res_fix2);
-
-        CPatch::Nop(0x4DD6CB, 2);
-        CPatch::Nop(0x4DD6ED, 2);
-        CPatch::SetUInt(0x4DD6CD + 0x3, res_x);
-        CPatch::SetUInt(0x4DD6EF + 0x4, res_y);
-
-        CPatch::SetFloat(0x4922AC + 0x6, fDynamicScreenFieldOfViewScale);
-        CPatch::SetFloat(0x4922DE + 0x6, fDynamicScreenFieldOfViewScale);
-        CPatch::SetFloat(0x493590 + 0x6, fDynamicScreenFieldOfViewScale);
-        CPatch::SetFloat(0x4B73A8 + 0x6, fDynamicScreenFieldOfViewScale);
-        CPatch::SetFloat(0x4B7CDB + 0x6, fDynamicScreenFieldOfViewScale);
-        CPatch::SetFloat(0x4B8585 + 0x6, fDynamicScreenFieldOfViewScale);
-
-        CPatch::SetFloat(0x403DD4 + 0x6, fDynamicScreenFieldOfViewScale);
-        CPatch::SetFloat(0x404340 + 0x1, fDynamicScreenFieldOfViewScale);
-        CPatch::SetFloat(0x404E95 + 0x1, fDynamicScreenFieldOfViewScale);
-        CPatch::SetFloat(0x406E6B + 0x6, fDynamicScreenFieldOfViewScale);
-        CPatch::SetFloat(0x4072C4 + 0x6, fDynamicScreenFieldOfViewScale);
-        CPatch::SetFloat(0x4C4CA2 + 0x4, fDynamicScreenFieldOfViewScale);
-
-        CPatch::Nop(0x4DD5B9, 5); // no intro
-    }
-    else
-    {
-        if ((*(DWORD*)0x401F70 == 640) && (*(DWORD*)0x514871 != 750)) // unknown 2,44 MB (2 562 048 bytes)
+        void operator()(injector::reg_pack& regs)
         {
-            CPatch::RedirectCall(0x465290, asm_res_fix1);
-            CPatch::RedirectCall(0x46529A, asm_res_fix2);
-
-            CPatch::RedirectCall(0x477D81, asm_res_fix1);
-            CPatch::RedirectCall(0x477D87, asm_res_fix2);
-
-            CPatch::Nop(0x4DD877, 2);
-            CPatch::Nop(0x4DD899, 2);
-            CPatch::SetUInt(0x4DD879 + 0x3, res_x);
-            CPatch::SetUInt(0x4DD89B + 0x4, res_y);
-
-            CPatch::SetFloat(0x49236C + 0x6, fDynamicScreenFieldOfViewScale); //to do
-            CPatch::SetFloat(0x49239E + 0x6, fDynamicScreenFieldOfViewScale);
-            CPatch::SetFloat(0x493650 + 0x6, fDynamicScreenFieldOfViewScale);
-            CPatch::SetFloat(0x4B7508 + 0x6, fDynamicScreenFieldOfViewScale);
-            CPatch::SetFloat(0x4B7E3B + 0x6, fDynamicScreenFieldOfViewScale);
-            CPatch::SetFloat(0x4B86E5 + 0x6, fDynamicScreenFieldOfViewScale);
-
-            CPatch::SetFloat(0x403DE4 + 0x6, fDynamicScreenFieldOfViewScale);
-            CPatch::SetFloat(0x404350 + 0x1, fDynamicScreenFieldOfViewScale);
-            CPatch::SetFloat(0x404EA5 + 0x1, fDynamicScreenFieldOfViewScale);
-            CPatch::SetFloat(0x406E7B + 0x6, fDynamicScreenFieldOfViewScale);
-            CPatch::SetFloat(0x4072D4 + 0x6, fDynamicScreenFieldOfViewScale);
-            CPatch::SetFloat(0x4C4DE2 + 0x4, fDynamicScreenFieldOfViewScale);
-
-            CPatch::Nop(0x4DD74B, 5); // no intro
+            *dword_913250 = Screen.Width;
+            *dword_913254 = Screen.Height;
         }
-        else
+    }; injector::MakeInline<SetResHook>(pattern.get_first(0), pattern.get_first(11));
+        
+
+    injector::MakeCALL(0x465360, asm_res_fix1, true);
+    injector::MakeCALL(0x46536A, asm_res_fix2, true);
+    injector::MakeCALL(0x477D37, asm_res_fix1, true);
+    injector::MakeCALL(0x477D31, asm_res_fix2, true);
+    
+    injector::MakeNOP(0x4DD6CB, 2, true);
+    injector::MakeNOP(0x4DD6ED, 2, true);
+    injector::WriteMemory(0x4DD6CD + 0x3, Screen.Width, true);
+    injector::WriteMemory(0x4DD6EF + 0x4, Screen.Height, true);
+
+    //static int x = 800;
+    //static int y = 600;
+    //injector::WriteMemory(0x510A00 + 1, &x, true);
+    //injector::WriteMemory(0x510A10 + 1, &y, true);
+
+    injector::MakeNOP(0x4DD5B9, 5, true); // no intro
+
+
+
+    auto retX = []() -> int
+    {
+        return 800;
+    };
+
+    auto retY = []() -> int
+    {
+        return 600;
+    };
+
+    pattern = hook::pattern("E8 ? ? ? ? ? E8");
+    for (size_t i = 0; i < pattern.size(); ++i)
+    {
+        auto addr1 = pattern.get(i).get<uint32_t>(0);
+        auto dest1 = injector::GetBranchDestination(addr1, true).as_int();
+        auto addr2 = pattern.get(i).get<uint32_t>(6);
+        auto dest2 = injector::GetBranchDestination(addr2, true).as_int();
+
+        if (dest1 == 0x510A10 && dest2 == 0x510A00)
         {
-            //Unpacked with ProcDump32       (C) G-RoM, Lorian & Stone - 1998, 1999 2,59 MB (2 719 744 bytes)
-
-            CPatch::RedirectCall(0x465380, asm_res_fix1);
-            CPatch::RedirectCall(0x46538A, asm_res_fix2);
-
-            CPatch::RedirectCall(0x477E57, asm_res_fix1);
-            CPatch::RedirectCall(0x477E51, asm_res_fix2);
-
-            CPatch::Nop(0x4DD9EC, 2);
-            CPatch::Nop(0x4DDA0E, 2);
-            CPatch::SetUInt(0x4DD9EE + 0x3, res_x);
-            CPatch::SetUInt(0x4DDA10 + 0x4, res_y);
-
-            CPatch::SetFloat(0x4924CC + 0x6, fDynamicScreenFieldOfViewScale);
-            CPatch::SetFloat(0x4924CC + 0x6, fDynamicScreenFieldOfViewScale);
-            CPatch::SetFloat(0x4924FE + 0x6, fDynamicScreenFieldOfViewScale);
-            CPatch::SetFloat(0x4B7658 + 0x6, fDynamicScreenFieldOfViewScale);
-            CPatch::SetFloat(0x4B7F8B + 0x6, fDynamicScreenFieldOfViewScale);
-            CPatch::SetFloat(0x4B8835 + 0x6, fDynamicScreenFieldOfViewScale);
-
-            CPatch::SetFloat(0x403DE4 + 0x6, fDynamicScreenFieldOfViewScale);
-            CPatch::SetFloat(0x404350 + 0x1, fDynamicScreenFieldOfViewScale);
-            CPatch::SetFloat(0x404EA5 + 0x1, fDynamicScreenFieldOfViewScale);
-            CPatch::SetFloat(0x406E7B + 0x6, fDynamicScreenFieldOfViewScale);
-            CPatch::SetFloat(0x4072D4 + 0x6, fDynamicScreenFieldOfViewScale);
-            CPatch::SetFloat(0x4C4F52 + 0x4, fDynamicScreenFieldOfViewScale);
-
-            CPatch::Nop(0x4DD8A9, 5); // no intro
+            injector::MakeCALL(addr1, static_cast<int(*)()>(retY), true);
+            injector::MakeCALL(addr2, static_cast<int(*)()>(retX), true);
         }
     }
+
+
+
+    injector::MakeCALL(0x47CEC3, static_cast<int(*)()>(retX), true);
+    injector::MakeCALL(0x47CEDA, static_cast<int(*)()>(retY), true);
+
+
+
+    injector::MakeCALL(0x47D101, static_cast<int(*)()>(retX), true);
+    injector::MakeCALL(0x47D118, static_cast<int(*)()>(retY), true);
+
+    return 0;
 }
 
 BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        Init();
+        Init(NULL);
     }
     return TRUE;
 }

@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include <random>
 
 struct Screen
 {
@@ -32,6 +33,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
     bool bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) != 0;
+    bool bRandomSongOrderFix = iniReader.ReadInteger("MAIN", "RandomSongOrderFix", 1) != 0;
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -120,6 +122,20 @@ DWORD WINAPI Init(LPVOID bDelay)
                 regs.eax = *(uint32_t*)(regs.ecx + 0xA4);
             }
         }; injector::MakeInline<HUDHook2>(pattern.get_first(0), pattern.get_first(6));
+    }
+
+    if (bRandomSongOrderFix)
+    {
+        pattern = hook::pattern("E8 ? ? ? ? 8B 96 E8");
+        struct RandomHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                std::mt19937 r{ std::random_device{}() };
+                std::uniform_int_distribution<uint32_t> uid(0, regs.eax);
+                regs.eax = uid(r);
+            }
+        }; injector::MakeInline<RandomHook>(pattern.get_first(0));
     }
 
     return 0;
