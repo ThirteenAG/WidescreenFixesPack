@@ -63,6 +63,8 @@ struct Screen
     float fAspectRatioDiff;
     float fFieldOfView;
     float fHUDScaleX;
+    float fHudOffset;
+    float fHudOffsetReal;
     float fMenuOffsetRealX;
     float fMenuOffsetRealY;
     int32_t PresetWidth;
@@ -124,6 +126,8 @@ DWORD WINAPI Init(LPVOID bDelay)
     Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
     Screen.fAspectRatioDiff = 1.0f / (Screen.fAspectRatio / (4.0f / 3.0f));
     Screen.fHUDScaleX = 1.0f / Screen.fWidth * (Screen.fHeight / 480.0f);
+    Screen.fHudOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
+    Screen.fHudOffsetReal = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
 
     //Presets
     int32_t arrY[] = { 448, 480, 600, 768, 960, Screen.Height };
@@ -192,10 +196,10 @@ DWORD WINAPI Init(LPVOID bDelay)
     //Hud, menu and presets
 
     //fixing only menu and startup stuff, which makes the game stuck in an infinite loop
-    uint32_t retXIncludes[] = { 25, 100, 101, 102, 103, 105, 106, 107, 130, 140, 142, 144, 145, 146, 149, 150, 151, 158, /*180,*/ 215, 216, 56, 99 };
-    //uint32_t retXIncludes[] = { 25, 100 }; // 25 - hud, 100 - preset, 180 - mouse
-    uint32_t retYIncludes[] = { 24, 108, 107, 109, 110, 111, 112, 113, 114, 144, 146, 149, 150, 151, 152, 153, 154, 161, /*187,*/ 223, 224 };
-    //uint32_t retYIncludes[] = { 24, 108 }; // 24 - hud, 108 - preset, 187 - mouse
+    //uint32_t retXIncludes[] = { 25, 100, 101, 102, 103, 105, /*106,*/ 107, 130, 140, 142, 144, 145, 146, 149, 150, 151, 158, /*180,*/ 215, 216, 56, 99 };
+    uint32_t retXIncludes[] = { 25, 100, 106}; // 25 - hud, 100 - preset, 180 - mouse, 215 - weapons overlay preset, 106 - weapons overlay scale
+    //int32_t retYIncludes[] = { 24, 108, 107, 109, 110, 111, 112, 113, 114, 144, 146, 149, 150, 151, 152, 153, 154, 161, /*187,*/ 223, 224 };
+    uint32_t retYIncludes[] = { 24, 108, 112, 113}; // 24 - hud, 108 - preset, 187 - mouse, 223 - weapons overlay preset, 112+113 - weapons overlay scale
 
     pattern = hook::pattern("E8 ? ? ? ? 50 E8 ? ? ? ? 50 6A 01 6A 03 E8 ? ? ? ? 8B 15");
     auto sub_510A00 = injector::GetBranchDestination(pattern.get_first(6), true);
@@ -284,7 +288,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                 x = static_cast<int32_t>(static_cast<float>(x) * Screen.PresetFactorX);
                 y = static_cast<int32_t>(static_cast<float>(y) * Screen.PresetFactorY);
 
-                if (x > (Screen.Width / 2))
+                if (x > (Screen.Width / 2)) //??
                     x += 70;
 
                 break;
@@ -304,61 +308,113 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     //menu
     //pattern = hook::pattern(""); //
-    //static auto dword_73DFA4 = 0x73DFA4;
-    //static auto dword_73DFA8 = 0x73DFA8;
-    //static auto dword_73DFAC = 0x73DFAC;
-    //static auto dword_73DFB0 = 0x73DFB0;
-    //static uint32_t* dword_73DF80 = (uint32_t*)0x73DF80;
-    //struct MenuHook
-    //{
-    //    void operator()(injector::reg_pack& regs)
-    //    {
-    //        auto i = *dword_73DF80 * 44;
-    //        
-    //        auto x = *(int32_t*)(dword_73DFA4 + i);
-    //        auto y = *(int32_t*)(dword_73DFA8 + i);
-    //        auto w = *(int32_t*)(dword_73DFAC + i);
-    //        auto h = *(int32_t*)&regs.eax;
-    //
-    //        //if (x == 0 && y == 0 && w == -1 && h == -1)
-    //        {
-    //    
-    //        }
-    //
-    //        *(int32_t*)(dword_73DFA4 + i) = x;
-    //        *(int32_t*)(dword_73DFA8 + i) = y;
-    //        *(int32_t*)(dword_73DFAC + i) = w;
-    //        *(int32_t*)&regs.eax = h;
-    //
-    //
-    //        *dword_73DF80 = regs.ecx;
-    //    }
-    //}; injector::MakeInline<MenuHook>(0x477E26, 0x477E26 +6);
-    
-    
-    //menu centering
-    struct SetMenuPosHook
+    static auto dword_73DFA4 = 0x73DFA4;
+    static auto dword_73DFA8 = 0x73DFA8;
+    static auto dword_73DFAC = 0x73DFAC;
+    static auto dword_73DFB0 = 0x73DFB0;
+    static uint32_t* dword_73DF80 = (uint32_t*)0x73DF80;
+    struct MenuHook
     {
         void operator()(injector::reg_pack& regs)
         {
-            *(float*)(regs.esi + 0x60) = 0.6f;
-            if (*(int32_t*)(regs.esi + 0x2C) == 0 && *(int32_t*)(regs.esi + 0x30) == 0)
+            auto i = *dword_73DF80 * 44;
+            
+            auto x = *(int32_t*)(dword_73DFA4 + i);
+            auto y = *(int32_t*)(dword_73DFA8 + i);
+            auto w = *(int32_t*)(dword_73DFAC + i);
+            auto h = *(int32_t*)&regs.eax;
+    
+            if (x == 0 && w == Screen.PresetWidth && h == (Screen.PresetHeight - y))
             {
-                *(int32_t*)(regs.esi + 0x2C) = left;
-                *(int32_t*)(regs.esi + 0x30) = top;
-                *(int32_t*)(regs.esi + 0x34) = Screen.PresetWidth;
-                *(int32_t*)(regs.esi + 0x38) = Screen.PresetHeight;
+                //*(int32_t*)(dword_73DFA4 + i) = x;
+                //*(int32_t*)(dword_73DFA8 + i) = y;
+                *(int32_t*)(dword_73DFAC + i) = Screen.Width;
+                *(int32_t*)&regs.eax = Screen.Height;
+            }
+    
+            *dword_73DF80 = regs.ecx;
+        }
+    }; injector::MakeInline<MenuHook>(0x477E26, 0x477E26 +6);
+    
+    
+    //menu centering
+    //struct BadSetMenuPosHook
+    //{
+    //    void operator()(injector::reg_pack& regs)
+    //    {
+    //        *(float*)(regs.esi + 0x60) = 0.6f;
+    //        if (*(int32_t*)(regs.esi + 0x2C) == 0 && *(int32_t*)(regs.esi + 0x30) == 0)
+    //        {
+    //            *(int32_t*)(regs.esi + 0x2C) = left;
+    //            *(int32_t*)(regs.esi + 0x30) = top;
+    //            *(int32_t*)(regs.esi + 0x34) = Screen.PresetWidth;
+    //            *(int32_t*)(regs.esi + 0x38) = Screen.PresetHeight;
+    //        }
+    //    }
+    //}; //injector::MakeInline<BadSetMenuPosHook>(0x479663, 0x47967C);
+
+
+    static bool bWeapOverlay;
+    //510C20 - renders UI, 0 0 800 600 are the params
+    struct Test
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.eax = 1;
+            auto x = *(int32_t*)(regs.esp + 0x08);
+            auto y = *(int32_t*)(regs.esp + 0x0C);
+            auto w = *(int32_t*)(regs.esp + 0x10);
+            auto h = *(int32_t*)(regs.esp + 0x14);
+            
+            if (x == 0 && y == 0 && w == Screen.Width && h == Screen.Height)
+            {
+                *(int32_t*)(regs.esp + 0x08) = static_cast<int32_t>(Screen.fHudOffsetReal);
+                //*(int32_t*)(regs.esp + 0x0C) = top;
+                *(int32_t*)(regs.esp + 0x10) = static_cast<int32_t>(Screen.fWidth - Screen.fHudOffsetReal - Screen.fHudOffsetReal);
+                //*(int32_t*)(regs.esp + 0x14) = Screen.PresetHeight;
+            }
+
+            if (bWeapOverlay)
+            {
+                //*(int32_t*)(regs.esp + 0x08) += 100;
+                //*(int32_t*)(regs.esp + 0x0C) += 100;
+                //
+                //*(int32_t*)(regs.esp + 0x10) *= Screen.PresetFactorX;
+                //*(int32_t*)(regs.esp + 0x14) *= Screen.PresetFactorY;
+                bWeapOverlay = false;
             }
         }
-    }; injector::MakeInline<SetMenuPosHook>(0x479663, 0x47967C);
+    }; injector::MakeInline<Test>(0x519CA4);
+
+    struct WeaponsOverlayHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.eax = *(uint32_t*)(regs.esi + regs.edi + 0x230);
+            bWeapOverlay = true;
+        }
+    }; injector::MakeInline<WeaponsOverlayHook>(0x47D2DA, 0x47D2DA+7);
+
+
+    injector::WriteMemory<uint8_t>(0x47C872+1, 1i8, true); // makes weapons screen stretched
+    injector::WriteMemory<uint8_t>(0x47C8C2+1, 1i8, true);
+
+    injector::MakeNOP(0x5266C4, 2, true); //weapons overlay preset
+    struct WeaponsOverlayHook2
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            **(int32_t**)(regs.esp + 0x28) += 400;
+            **(int32_t**)(regs.esp + 0x2C) += 200;
+        }
+    }; injector::MakeInline<WeaponsOverlayHook2>(0x5266DB, 0x5266E9);
+
+
+    //48ADB2 -> 74B9B8 - options_bg.tga offset, check edi for that and change eax to +=1;
 
 
 
-
-
-
-
-    injector::MakeNOP(0x4DD5B9, 5, true); // no intro
+    //injector::MakeNOP(0x4DD5B9, 5, true); // no intro
 
 
 
