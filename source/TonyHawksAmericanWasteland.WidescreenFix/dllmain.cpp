@@ -51,12 +51,16 @@ DWORD WINAPI Init(LPVOID bDelay)
     //Resolution
     static int32_t* dword_6D2224 = *pattern.get_first<int32_t*>(2);
     static int32_t* dword_6D2228 = *hook::get_pattern<int32_t*>("89 3D ? ? ? ? 89 3D ? ? ? ? 89 15 ? ? ? ? 89 15 ? ? ? ? 74", 2);
+    static int32_t* dword_7F3A2C = *pattern.get_first<int32_t*>(8);
+    static int32_t* dword_7F3A30 = *hook::get_pattern<int32_t*>("89 3D ? ? ? ? 89 3D ? ? ? ? 89 15 ? ? ? ? 89 15 ? ? ? ? 74", 8);
     struct SetResHook
     {
         void operator()(injector::reg_pack& regs)
         {
             *dword_6D2224 = Screen.Width;
             *dword_6D2228 = Screen.Height;
+            *dword_7F3A2C = Screen.Width;
+            *dword_7F3A30 = Screen.Height;
         }
     };
     pattern = hook::pattern(pattern_str(0xA3, to_bytes(dword_6D2224)));
@@ -71,6 +75,14 @@ DWORD WINAPI Init(LPVOID bDelay)
     injector::MakeInline<SetResHook>(pattern.count(2).get(0).get<void*>(0), pattern.count(2).get(0).get<void*>(6));
     injector::MakeInline<SetResHook>(pattern.count(2).get(1).get<void*>(0), pattern.count(2).get(1).get<void*>(6));
 
+    pattern = hook::pattern(pattern_str(0x89, '?', to_bytes(dword_7F3A2C)));
+    for (size_t i = 0; i < pattern.size(); ++i)
+        injector::MakeInline<SetResHook>(pattern.get(i).get<uint32_t>(0), pattern.get(i).get<uint32_t>(6));
+
+    pattern = hook::pattern(pattern_str(0x89, '?', to_bytes(dword_7F3A30)));
+    for (size_t i = 0; i < pattern.size(); ++i)
+        injector::MakeInline<SetResHook>(pattern.get(i).get<uint32_t>(0), pattern.get(i).get<uint32_t>(6));
+
 
     //Aspect Ratio
     pattern = hook::pattern("68 ? ? ? ? E8 ? ? ? ? 6A 00 68 ? ? ? ? E8 ? ? ? ? D9");
@@ -82,7 +94,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         pattern = hook::pattern("D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 8B 46 14");
         #undef SCREEN_FOV_HORIZONTAL
         #undef SCREEN_FOV_VERTICAL
-        #define SCREEN_FOV_HORIZONTAL 114.59155f
+        #define SCREEN_FOV_HORIZONTAL 127.0f
         #define SCREEN_FOV_VERTICAL (2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))
         float fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
         injector::WriteMemory<float>(*pattern.get_first<float*>(2), SCREEN_FOV_HORIZONTAL * fDynamicScreenFieldOfViewScale, true);

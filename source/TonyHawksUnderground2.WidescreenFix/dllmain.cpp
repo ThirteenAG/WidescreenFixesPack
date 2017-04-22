@@ -90,7 +90,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         pattern = hook::pattern("D8 0D ? ? ? ? D9 96 B0 00");
         #undef SCREEN_FOV_HORIZONTAL
         #undef SCREEN_FOV_VERTICAL
-        #define SCREEN_FOV_HORIZONTAL 114.59155f
+        #define SCREEN_FOV_HORIZONTAL 127.0f
         #define SCREEN_FOV_VERTICAL (2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))
         float fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
         injector::WriteMemory<float>(*pattern.get_first<float*>(2), SCREEN_FOV_HORIZONTAL * fDynamicScreenFieldOfViewScale, true);
