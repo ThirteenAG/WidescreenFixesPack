@@ -503,7 +503,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
         pattern = hook::pattern("8B 0D ? ? ? ? 85 C9 50 74 12 8B 44"); //0x5124DD (v1.1)
         static auto dword_8383DC = *pattern.count(1).get(0).get<uint32_t>(2);
-        struct Buttons
+        struct MenuText
         {
             void operator()(injector::reg_pack& regs)
             {
@@ -524,11 +524,11 @@ DWORD WINAPI Init(LPVOID bDelay)
                             regs.eax = (uint32_t)vMenuStringsPS[i].c_str();
                 }
             }
-        }; injector::MakeInline<Buttons>(pattern.get_first(0), pattern.get_first(6));
+        }; injector::MakeInline<MenuText>(pattern.get_first(0), pattern.get_first(6));
     }
 
     const wchar_t* ControlsTexts[] = { L" 2", L" 3", L" 4", L" 5", L" 6", L" 7", L" 8", L" 9", L" 10", L" 1", L" Up", L" Down", L" Left", L" Right", L"X Rotation", L"Y Rotation", L"X Axis", L"Y Axis", L"Z Axis", L"Hat Switch" };
-    const wchar_t* ControlsTextsXBOX[] = { L"B", L"X", L"Y", L"LB", L"RB", L"View (Select)", L"Menu (Start)", L"Left stick", L"Right stick", L"A", L"D-pad Up", L"D-pad Down", L"D-pad Left", L"D-pad Right", L"Right stick Left/Right", L"Right stick Up/Down", L"Left stick Left/Right", L"Left stick Up/Down", L"Left trigger / Right trigger", L"D-pad" };
+    const wchar_t* ControlsTextsXBOX[] = { L"B", L"X", L"Y", L"LB", L"RB", L"View (Select)", L"Menu (Start)", L"Left stick", L"Right stick", L"A", L"D-pad Up", L"D-pad Down", L"D-pad Left", L"D-pad Right", L"Right stick Left/Right", L"Right stick Up/Down", L"Left stick Left/Right", L"Left stick Up/Down", L"LT / RT", L"D-pad" };
     const wchar_t* ControlsTextsPS[] = { L"Circle", L"Square", L"Triangle", L"L1", L"R1", L"Select", L"Start", L"L3", L"R3", L"Cross", L"D-pad Up", L"D-pad Down", L"D-pad Left", L"D-pad Right", L"Right stick Left/Right", L"Right stick Up/Down", L"Left stick Left/Right", L"Left stick Up/Down", L"L2 / R2", L"D-pad" };
 
     static std::vector<std::wstring> Texts(ControlsTexts, std::end(ControlsTexts));
