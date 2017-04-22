@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-#define _LOG
+//#define _LOG
 #ifdef _LOG
 #include <intrin.h>  
 #pragma intrinsic(_ReturnAddress)  
@@ -61,7 +61,7 @@ struct Screen
     int32_t Width43;
     float fAspectRatio;
     float fAspectRatioDiff;
-    float fFieldOfView;
+    float fDynamicScreenFieldOfViewScale;
     float fHUDScaleX;
     float fHudOffset;
     float fHudOffsetReal;
@@ -115,7 +115,9 @@ DWORD WINAPI Init(LPVOID bDelay)
     CIniReader iniReader("");
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
-    bool bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) != 0;
+    bool bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 0) != 0;
+    static float fFOVFactor = iniReader.ReadFloat("MAIN", "FOVFactor", 0.0f);
+    fFOVFactor = fFOVFactor ? fFOVFactor : 1.0f;
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -162,16 +164,8 @@ DWORD WINAPI Init(LPVOID bDelay)
         break;
     }
 
-    Screen.PresetFactorX = static_cast<float>(Screen.Width) / static_cast<float>(Screen.PresetWidth);
-    Screen.PresetFactorY = static_cast<float>(Screen.Height) / static_cast<float>(Screen.PresetHeight);
-
-    static int32_t left = ((Screen.fWidth / 2.0f) - ((float)Screen.PresetWidth / 2.0f));
-    static int32_t top = ((Screen.fHeight / 2.0f) - ((float)Screen.PresetHeight / 2.0f));
-    static int32_t right = left + Screen.PresetWidth;
-    static int32_t bottom = top + Screen.PresetHeight;
-
-    //Screen.fMenuOffsetRealX = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
-    //Screen.fMenuOffsetRealY = ((640.0f * Screen.fAspectRatio) - 480.0f) / 2.0f;
+    Screen.PresetFactorX = Screen.fWidth  / static_cast<float>(Screen.PresetWidth);
+    Screen.PresetFactorY = Screen.fHeight / static_cast<float>(Screen.PresetHeight);
 
     //Resolution
     static int32_t* dword_913250 = *pattern.get_first<int32_t*>(2);
@@ -197,9 +191,9 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     //fixing only menu and startup stuff, which makes the game stuck in an infinite loop
     //uint32_t retXIncludes[] = { 25, 100, 101, 102, 103, 105, /*106,*/ 107, 130, 140, 142, 144, 145, 146, 149, 150, 151, 158, /*180,*/ 215, 216, 56, 99 };
-    uint32_t retXIncludes[] = { 25, 100, 106}; // 25 - hud, 100 - preset, 180 - mouse, 215 - weapons overlay preset, 106 - weapons overlay scale
+    uint32_t retXIncludes[] = { 25, 100 }; // 25 - hud, 100 - preset, 180 - mouse, 215 - weapons overlay preset, 106 - weapons overlay scale
     //int32_t retYIncludes[] = { 24, 108, 107, 109, 110, 111, 112, 113, 114, 144, 146, 149, 150, 151, 152, 153, 154, 161, /*187,*/ 223, 224 };
-    uint32_t retYIncludes[] = { 24, 108, 112, 113}; // 24 - hud, 108 - preset, 187 - mouse, 223 - weapons overlay preset, 112+113 - weapons overlay scale
+    uint32_t retYIncludes[] = { 24, 108 }; // 24 - hud, 108 - preset, 187 - mouse, 223 - weapons overlay preset, 112+113 - weapons overlay scale
 
     pattern = hook::pattern("E8 ? ? ? ? 50 E8 ? ? ? ? 50 6A 01 6A 03 E8 ? ? ? ? 8B 15");
     auto sub_510A00 = injector::GetBranchDestination(pattern.get_first(6), true);
@@ -257,16 +251,25 @@ DWORD WINAPI Init(LPVOID bDelay)
 
             switch (curLine)
             {
+            case HEALTH_CLUSTER_BACKGROUND_COORDS__SET_ME_TO_MOVE_HEALTHSLAUGHTER_HUD:
+                y = static_cast<int32_t>(static_cast<float>(y) * Screen.PresetFactorY);
+                break;
+            case COMBO_SCORE_DISPLAY:
+            case AMMO_PICKUP_MESSAGES:
+            case MAIN_WEAPON_UPPER_LEFT_CORNER:
+                x = Screen.Width - (Screen.PresetWidth - x);
+                y = static_cast<int32_t>(static_cast<float>(y) * Screen.PresetFactorY);
+                break;
             case HEALTH_CLUSTER_COORDS_RELATIVE_TO_HEALTH_CLUSTER_BACKGROUND:
             case HEALTH_BAR_COORDS_RELATIVE_TO_HEALTH_CLUSTER_BACKGROUND:
             case HEALTH_BAR_WIDTH_HEIGHT_NEED_IT_SINCE_HEALTH_AND_ARMOR_ARE_IN_THE_SAME_METER:
             case SLAUGHTER_METER_COORDS_RELATIVE_TO_HEALTH_CLUSTER_BACKGROUND:
             case SKULL_ICON_RELATIVE_TO_HEALTH_CLUSTER_BACKGROUND:
                 break;
-            case WEAPON_ICON_OFFSET_FROM_UPPER_LEFT_CORNER_OF_BOX:
+            //case WEAPON_ICON_OFFSET_FROM_UPPER_LEFT_CORNER_OF_BOX:
             case AMMO_COUNTER_OFFSET_FROM_UPPER_LEFT_CORNER_OF_BOX:
             case RESERVE_AMMO_BAR_OFFSET_FROM_UPPER_LEFT_CORNER_OF_BOX:
-            case RETICLE_OFFSETS_FROM_CENTER_OF_SCREEN:
+            //case RETICLE_OFFSETS_FROM_CENTER_OF_SCREEN:
                 break;
            case FRONT_DAMAGE_INDICATOR_CENTER:
                x = (Screen.Width / 2) - 176;
@@ -287,16 +290,11 @@ DWORD WINAPI Init(LPVOID bDelay)
             default:
                 x = static_cast<int32_t>(static_cast<float>(x) * Screen.PresetFactorX);
                 y = static_cast<int32_t>(static_cast<float>(y) * Screen.PresetFactorY);
-
-                if (x > (Screen.Width / 2)) //??
-                    x += 70;
-
                 break;
             }
 
             *(int32_t*)(regs.esi + 0x00) = x;
             *(int32_t*)(regs.esi + 0x04) = y;
-
 
             *(uint32_t*)regs.esp = str_5F5588; //"#End"
             regs.ecx = regs.edi;
@@ -306,13 +304,14 @@ DWORD WINAPI Init(LPVOID bDelay)
     injector::WriteMemory<uint8_t>(pattern.get_first(0), 0x56i8, true);
     injector::MakeInline<HudHook>(pattern.get_first(1), pattern.get_first(7));
 
-    //menu
-    //pattern = hook::pattern(""); //
-    static auto dword_73DFA4 = 0x73DFA4;
-    static auto dword_73DFA8 = 0x73DFA8;
-    static auto dword_73DFAC = 0x73DFAC;
-    static auto dword_73DFB0 = 0x73DFB0;
-    static uint32_t* dword_73DF80 = (uint32_t*)0x73DF80;
+
+    //Menu
+    pattern = hook::pattern("89 0D ? ? ? ? 68 ? ? ? ? 8D"); //0x477E26
+    static uint32_t* dword_73DF80 = *pattern.get_first<uint32_t*>(2);
+    static auto dword_73DFA4 = *hook::get_pattern<uint32_t>("89 81 ? ? ? ? 8D 0C 24 E8 ? ? ? ? 8B 15", 2);
+    static auto dword_73DFA8 = *hook::get_pattern<uint32_t>("89 82 ? ? ? ? E8 ? ? ? ? 8B 0D ? ? ? ? 6B C9 2C", 2);
+    static auto dword_73DFAC = *hook::get_pattern<uint32_t>("89 81 ? ? ? ? 8D 0C 24 E8 ? ? ? ? 8B 0D", 2);
+    static auto dword_73DFB0 = *hook::get_pattern<uint32_t>("8D 4C 24 04 89 82 ? ? ? ? E8 ? ? ? ? 84 C0", 6);
     struct MenuHook
     {
         void operator()(injector::reg_pack& regs)
@@ -328,35 +327,16 @@ DWORD WINAPI Init(LPVOID bDelay)
             {
                 //*(int32_t*)(dword_73DFA4 + i) = x;
                 //*(int32_t*)(dword_73DFA8 + i) = y;
-                *(int32_t*)(dword_73DFAC + i) = Screen.Width;
+                *(int32_t*)(dword_73DFAC + i) = Screen.Width; //makes weapons overlay not being cut off by preset
                 *(int32_t*)&regs.eax = Screen.Height;
             }
     
             *dword_73DF80 = regs.ecx;
         }
-    }; injector::MakeInline<MenuHook>(0x477E26, 0x477E26 +6);
-    
-    
-    //menu centering
-    //struct BadSetMenuPosHook
-    //{
-    //    void operator()(injector::reg_pack& regs)
-    //    {
-    //        *(float*)(regs.esi + 0x60) = 0.6f;
-    //        if (*(int32_t*)(regs.esi + 0x2C) == 0 && *(int32_t*)(regs.esi + 0x30) == 0)
-    //        {
-    //            *(int32_t*)(regs.esi + 0x2C) = left;
-    //            *(int32_t*)(regs.esi + 0x30) = top;
-    //            *(int32_t*)(regs.esi + 0x34) = Screen.PresetWidth;
-    //            *(int32_t*)(regs.esi + 0x38) = Screen.PresetHeight;
-    //        }
-    //    }
-    //}; //injector::MakeInline<BadSetMenuPosHook>(0x479663, 0x47967C);
+    }; injector::MakeInline<MenuHook>(pattern.get_first(0), pattern.get_first(6));
 
-
-    static bool bWeapOverlay;
-    //510C20 - renders UI, 0 0 800 600 are the params
-    struct Test
+    pattern = hook::pattern("B8 01 00 00 00 83 EC 18"); //0x519CA4
+    struct MenuHook2
     {
         void operator()(injector::reg_pack& regs)
         {
@@ -373,50 +353,92 @@ DWORD WINAPI Init(LPVOID bDelay)
                 *(int32_t*)(regs.esp + 0x10) = static_cast<int32_t>(Screen.fWidth - Screen.fHudOffsetReal - Screen.fHudOffsetReal);
                 //*(int32_t*)(regs.esp + 0x14) = Screen.PresetHeight;
             }
-
-            if (bWeapOverlay)
+            else
             {
-                //*(int32_t*)(regs.esp + 0x08) += 100;
-                //*(int32_t*)(regs.esp + 0x0C) += 100;
-                //
-                //*(int32_t*)(regs.esp + 0x10) *= Screen.PresetFactorX;
-                //*(int32_t*)(regs.esp + 0x14) *= Screen.PresetFactorY;
-                bWeapOverlay = false;
+                //*(int32_t*)(regs.esp + 0x08) *= 1.2f; //maybe there's a way to rescale 2d
+                //*(int32_t*)(regs.esp + 0x0C) *= 1.2f;
+                //*(int32_t*)(regs.esp + 0x10) *= 1.2f;
+                //*(int32_t*)(regs.esp + 0x14) *= 1.2f;
             }
+
+            //if (bWeapOverlay)
+            //{
+            //    //*(int32_t*)(regs.esp + 0x08) += 100;
+            //    //*(int32_t*)(regs.esp + 0x0C) += 100;
+            //    //
+            //    //*(int32_t*)(regs.esp + 0x10) *= Screen.PresetFactorX;
+            //    //*(int32_t*)(regs.esp + 0x14) *= Screen.PresetFactorY;
+            //    bWeapOverlay = false;
+            //}
         }
-    }; injector::MakeInline<Test>(0x519CA4);
+    }; injector::MakeInline<MenuHook2>(pattern.get_first(0));
 
-    struct WeaponsOverlayHook
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            regs.eax = *(uint32_t*)(regs.esi + regs.edi + 0x230);
-            bWeapOverlay = true;
-        }
-    }; injector::MakeInline<WeaponsOverlayHook>(0x47D2DA, 0x47D2DA+7);
+    //struct WeaponsOverlayHook
+    //{
+    //    void operator()(injector::reg_pack& regs)
+    //    {
+    //        regs.eax = *(uint32_t*)(regs.esi + regs.edi + 0x230);
+    //        bWeapOverlay = true;
+    //    }
+    //}; injector::MakeInline<WeaponsOverlayHook>(0x47D2DA, 0x47D2DA+7);
 
+    pattern = hook::pattern("6A 00 6A 00 B9 ? ? ? ? C7 05"); // 0x47C872 0x47C8C2
+    injector::WriteMemory<uint8_t>(pattern.count(2).get(0).get<uint8_t*>(1), 1i8, true); // makes weapons screen stretched
+    injector::WriteMemory<uint8_t>(pattern.count(2).get(0).get<uint8_t*>(1), 1i8, true);
 
-    injector::WriteMemory<uint8_t>(0x47C872+1, 1i8, true); // makes weapons screen stretched
-    injector::WriteMemory<uint8_t>(0x47C8C2+1, 1i8, true);
-
-    injector::MakeNOP(0x5266C4, 2, true); //weapons overlay preset
+    pattern = hook::pattern("75 ? E8 ? ? ? ? 8B 4C 24 28 89 01 8B CB E8 ? ? ? ? 89 45 00"); //0x5266C4
     struct WeaponsOverlayHook2
     {
         void operator()(injector::reg_pack& regs)
         {
-            **(int32_t**)(regs.esp + 0x28) += 400;
-            **(int32_t**)(regs.esp + 0x2C) += 200;
+            **(int32_t**)(regs.esp + 0x28) = static_cast<int32_t>(static_cast<float>(**(int32_t**)(regs.esp + 0x28)) * (Screen.fWidth / (480.0f * Screen.fAspectRatio)));
+            **(int32_t**)(regs.esp + 0x2C) = static_cast<int32_t>(static_cast<float>(**(int32_t**)(regs.esp + 0x2C)) * Screen.fHeight / 448.0f);
+            
+            **(int32_t**)(regs.esp + 0x28) += static_cast<int32_t>(Screen.fHudOffsetReal);
         }
-    }; injector::MakeInline<WeaponsOverlayHook2>(0x5266DB, 0x5266E9);
+    }; 
+    injector::MakeNOP(pattern.get_first(0), 2, true); //weapons overlay preset
+    injector::MakeInline<WeaponsOverlayHook2>(pattern.get_first(23), pattern.get_first(23+14)); //0x5266DB, 0x5266E9
+
+    pattern = hook::pattern("D8 0D ? ? ? ? D9 5C 24 18 E8 ? ? ? ? 89"); //0x47D10E
+    injector::WriteMemory(pattern.get_first(2), &Screen.fHUDScaleX, true); //weapons overlay scale
+
+    pattern = hook::pattern("8B 8F 8C 00 00 00 50 53 53 51"); //0x48ADB2
+    struct BackgroundHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.ecx = *(uint32_t*)(regs.edi + 0x8C);
+            char* options_bg = (char*)((*(uintptr_t*)(regs.edi)) + 0x58);
+            char* bf_detail_bg = (char*)((*(uintptr_t*)(regs.edi)) + 0x80);
+            if (starts_with(options_bg, "options_bg", false) || starts_with(bf_detail_bg, "bf_detail_bg", false)) //.tga offset
+                regs.eax += 1;
+        }
+    }; injector::MakeInline<BackgroundHook>(pattern.get_first(0), pattern.get_first(6));
 
 
-    //48ADB2 -> 74B9B8 - options_bg.tga offset, check edi for that and change eax to +=1;
+    if (bSkipIntro)
+    {
+        pattern = hook::pattern("E8 ? ? ? ? 68 00 00 40 3F 68 00 00"); // 0x4DD5B9
+        injector::MakeNOP(pattern.count(5).get(3).get<void*>(0), 5, true);
+    }
 
-
-
-    //injector::MakeNOP(0x4DD5B9, 5, true); // no intro
-
-
+    //FOV
+    #undef SCREEN_FOV_HORIZONTAL
+    #undef SCREEN_FOV_VERTICAL
+    #define SCREEN_FOV_HORIZONTAL		60.0f
+    #define SCREEN_FOV_VERTICAL			(2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))
+    Screen.fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
+    pattern = hook::pattern("A0 ? ? ? ? 83 EC 50 84 C0"); // 0x515890
+    static auto byte_9132CC = *pattern.get_first<uint8_t*>(1);
+    struct FOVHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.eax = *byte_9132CC;
+            *(float*)(regs.esp + 0x0C) *= Screen.fDynamicScreenFieldOfViewScale * fFOVFactor;
+        }
+    }; injector::MakeInline<FOVHook>(pattern.get_first(0));
 
     return 0;
 }

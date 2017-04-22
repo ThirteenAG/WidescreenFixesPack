@@ -442,6 +442,21 @@ DWORD WINAPI Init(LPVOID bDelay)
     {
         pattern = hook::pattern("C7 05 ? ? ? ? 04 00 00 00 ? ? D9 44");
         injector::WriteMemory(pattern.get_first(6), 3, true); //4FF510
+
+        pattern = hook::pattern("0F B7 05 ? ? ? ? 48 C3");
+        static uint16_t* word_9467F0 = *pattern.get_first<uint16_t*>(3);
+        static uint32_t* dword_01F7E3C4 = *hook::get_pattern<uint32_t*>("A1 ? ? ? ? 83 C4 18 83 C0 F9", 1);
+        struct LightingFixHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                *(uint16_t*)&regs.eax = *word_9467F0;
+                *(uint16_t*)&regs.eax -= 1;
+
+                if (*(uint16_t*)&regs.eax == 1 && *dword_01F7E3C4 == 0x5C)
+                    *(uint16_t*)&regs.eax = 0;
+            }
+        }; injector::MakeInline<LightingFixHook>(pattern.get_first(0), pattern.get_first(8)); //47AFE0
     }
 
     if (bReduceCutsceneFOV)
