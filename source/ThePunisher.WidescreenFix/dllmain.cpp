@@ -442,7 +442,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
             for (size_t i = 0; i < std::size(menuBackgrounds); ++i)
             {
-                if (memstr(str, menuBackgrounds[i], 0x100) != NULL)
+                if (memstr(str, menuBackgrounds[i], 0x60) != NULL)
                 {
                     regs.eax += 1;
                     break;
