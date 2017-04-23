@@ -11,6 +11,27 @@ std::map<uintptr_t, uint32_t> retXmap;
 std::map<uintptr_t, uint32_t> retYmap;
 #endif // _LOG
 
+char* memstr(char* block, char* pattern, size_t bsize)
+{
+    int32_t found = 0;
+    char*   start = block;
+    char*   where;
+
+    while (!found) {
+        where = (char*)memchr(start, (int32_t)pattern[0], (size_t)bsize - (size_t)(start - block));
+        if (where == NULL) {
+            found++;
+        }
+        else {
+            if (memcmp(where, pattern, strlen(pattern)) == 0) {
+                found++;
+            }
+        }
+        start = where + 1;
+    }
+    return where;
+}
+
 enum HudCoords
 {
     HEALTH_CLUSTER_COORDS_RELATIVE_TO_HEALTH_CLUSTER_BACKGROUND,
@@ -355,6 +376,11 @@ DWORD WINAPI Init(LPVOID bDelay)
             }
             else
             {
+                if ((x == 0 && y == 0 && w == 640 && h == 360) || (x == 0 && y == 0 && w == 960 && h == 540))
+                {
+                    *(int32_t*)(regs.esp + 0x08) += static_cast<int32_t>(Screen.fHudOffsetReal);
+                    *(int32_t*)(regs.esp + 0x10) -= static_cast<int32_t>(Screen.fHudOffsetReal);
+                }
                 //*(int32_t*)(regs.esp + 0x08) *= 1.2f; //maybe there's a way to rescale 2d
                 //*(int32_t*)(regs.esp + 0x0C) *= 1.2f;
                 //*(int32_t*)(regs.esp + 0x10) *= 1.2f;
@@ -402,6 +428,8 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     pattern = hook::pattern("D8 0D ? ? ? ? D9 5C 24 18 E8 ? ? ? ? 89"); //0x47D10E
     injector::WriteMemory(pattern.get_first(2), &Screen.fHUDScaleX, true); //weapons overlay scale
+    //pattern = hook::pattern("D8 0D ? ? ? ? E8 ? ? ? ? 8B 15 ? ? ? ? 50 6A"); //0x557FC8
+    //injector::WriteMemory(pattern.get_first(2), &Screen.fHUDScaleX, true); //videos scale
 
     pattern = hook::pattern("8B 8F 8C 00 00 00 50 53 53 51"); //0x48ADB2
     struct BackgroundHook
@@ -409,10 +437,17 @@ DWORD WINAPI Init(LPVOID bDelay)
         void operator()(injector::reg_pack& regs)
         {
             regs.ecx = *(uint32_t*)(regs.edi + 0x8C);
-            char* options_bg = (char*)((*(uintptr_t*)(regs.edi)) + 0x58);
-            char* bf_detail_bg = (char*)((*(uintptr_t*)(regs.edi)) + 0x80);
-            if (starts_with(options_bg, "options_bg", false) || starts_with(bf_detail_bg, "bf_detail_bg", false)) //.tga offset
-                regs.eax += 1;
+            auto str = (char*)((*(uintptr_t*)(regs.edi)) + 0x30);
+            static char* menuBackgrounds[] = { "options_bg", "bf_detail_bg", "pc_controls_menu_bg", "gs_menu_bg", "av_menu_bg" };
+
+            for (size_t i = 0; i < std::size(menuBackgrounds); ++i)
+            {
+                if (memstr(str, menuBackgrounds[i], 0x100) != NULL)
+                {
+                    regs.eax += 1;
+                    break;
+                }
+            }
         }
     }; injector::MakeInline<BackgroundHook>(pattern.get_first(0), pattern.get_first(6));
 
