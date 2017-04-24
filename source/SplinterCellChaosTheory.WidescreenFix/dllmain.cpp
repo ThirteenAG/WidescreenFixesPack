@@ -24,6 +24,7 @@ struct Screen
     float fHudOffsetDyn;
     float fTextScaleX;
     int32_t nHudOffsetReal;
+    int32_t nScopeScale;
     float fFMVoffsetStartX;
     float fFMVoffsetEndX;
     float fFMVoffsetStartY;
@@ -121,6 +122,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             Screen.fTextScaleX = ((4.0f / 3.0f) / Screen.fAspectRatio) * 2.0f;
             Screen.fHudOffset = Screen.fTextScaleX / 2.0f;
             Screen.nHudOffsetReal = static_cast<int32_t>(((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f);
+            Screen.nScopeScale = static_cast<int32_t>(Screen.fWidth * (Screen.fAspectRatio / (4.0f / 3.0f)));
 
             if (Screen.fAspectRatio < (16.0f / 9.0f))
             {
@@ -228,6 +230,14 @@ DWORD WINAPI Init(LPVOID bDelay)
                         *(int16_t*)(regs.esp + 0x42) += Screen.nHudOffsetReal;
                 }
 
+                if ((fLeft == -1 || fLeft == 579) && (fRight == 62 || fRight == 649) && fTop == -3 && fBottom == 483 && Color.RGBA == 0x1bffffff)
+                {
+                    if (fLeft == -1)
+                        *(int16_t*)(regs.esp + 0x40) -= Screen.nHudOffsetReal; //weapon scope
+                    else
+                        *(int16_t*)(regs.esp + 0x42) += Screen.nHudOffsetReal;
+                }
+
                 if (!bHudWidescreenMode)
                     return;
 
@@ -241,12 +251,12 @@ DWORD WINAPI Init(LPVOID bDelay)
                 ||
                 (
                     (Color.RGBA == 0x4bb8fac8 || Color.RGBA == 0x32ffffff || Color.RGBA == 0x40ffffff || Color.RGBA == 0x59ffffff || Color.RGBA == 0x80ffffff || Color.RGBA == 0x96ffffff || Color.RGBA == 0x99ffffff || Color.RGBA == 0xc8ffffff || Color.RGBA == 0xffffffff || (Color.R == 0xb8 && Color.G == 0xf7 && Color.B == 0xc8)) &&
-                    ((fLeft >= 465 && fLeft <= 622) && (fRight >= 468 && fRight <= 625) && fTop >= 279 && fBottom <= 465) //bottom right panel
+                    ((fLeft >= 465 && fLeft <= 622) && (fRight >= 468 && fRight <= 625) && fTop >= 360 && fBottom <= 465) //bottom right panel
                 )
                 ||
                 (
                     (Color.R == 0xff && Color.G == 0xff && Color.B == 0xff) && //objective text popup
-                    ((fLeft >= 465 && fLeft <= 622) && (fRight >= 468 && fRight <= 625) && fTop >= 279 && fBottom <= 351)
+                    ((fLeft >= 465 && fLeft <= 622) && (fRight >= 468 && fRight <= 625) && fTop >= 250 && fBottom <= 351)
                 )
                     )
                 {
@@ -254,7 +264,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                         !(fLeft == 566 && fRight == 569 && fTop == 409 && fBottom == 425) && // camera screen bracket ]
                         !(fLeft == 562 && fRight == 566 && fTop == 409 && fBottom == 410) && // camera screen bracket ]
                         !(fLeft == 562 && fRight == 566 && fTop == 424 && fBottom == 425) && // camera screen bracket ]
-                        !((((fRight - fLeft) == 1) || ((fRight - fLeft) == 2) || ((fRight - fLeft) == 3) || ((fRight - fLeft) == 4)) && ((fBottom - fTop) == 1 || (fBottom - fTop) == 21 || (fBottom - fTop) == 22) && (fTop >= 195 && fBottom <= 395)) //other brackets of overlay menus
+                        !((((fRight - fLeft) == 1) || ((fRight - fLeft) == 2) || ((fRight - fLeft) == 3) || ((fRight - fLeft) == 4)) && ((fBottom - fTop) == 1 || (fBottom - fTop) == 16 || (fBottom - fTop) == 21 || (fBottom - fTop) == 22) && (fTop >= 195 && fBottom <= 395)) //other brackets of overlay menus
                         ) 
                     {
                         *(int16_t*)(regs.esp + 0x40) += WidescreenHudOffset._int;
@@ -264,6 +274,16 @@ DWORD WINAPI Init(LPVOID bDelay)
             }
         }
     }; injector::MakeInline<HudHook>(pattern.get_first(0)); //0x10ADABFA
+
+    pattern = hook::pattern("8B 8E A4 01 00 00 E8 ? ? ? ? 8B 86 A4 01 00 00 8B 88 30 61 00 00 89 88 E0 56 00 00 8B 90 1C 76 00 00 89 90 E8 56 00 00 8B 06 6A 03");
+    struct ScopeHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.ecx = *(uint32_t*)(regs.esi + 0x1A4);
+            *(int32_t*)(regs.esp + 0x68) = Screen.nScopeScale;
+        }
+    }; injector::MakeInline<ScopeHook>(pattern.get_first(0), pattern.get_first(6)); //0x10C9A646
     
     //TEXT
     pattern = hook::pattern("D8 3D ? ? ? ? D9 5C 24 68 DB");
@@ -292,10 +312,10 @@ DWORD WINAPI Init(LPVOID bDelay)
                 if (bIsInMenu && *bIsInMenu == 0)
                 {
                     if (
-                    ((offset1 == 435 || offset1 == 436 || offset1 == 437) && (offset2 >= 3 && offset2 <= 21) && (offset3 == 329 || offset3 == 345 || offset3 == 361 || offset3 == 377 || offset3 == 393 || offset3 == 416) && ((Color.R == 0xff && Color.G == 0xff && Color.B == 0xff) || (Color.R == 0xb8 && Color.G == 0xfa && Color.B == 0xc8) || (Color.R == 0x66 && Color.G == 0x66 && Color.B == 0x66))) || // top corner
+                    ((offset1 == 435 || offset1 == 436 || offset1 == 437) && (offset2 >= 3 && offset2 <= 21) && (offset3 == 313 || offset3 == 329 || offset3 == 345 || offset3 == 361 || offset3 == 377 || offset3 == 393 || offset3 == 416) && ((Color.R == 0xff && Color.G == 0xff && Color.B == 0xff) || (Color.R == 0xb8 && Color.G == 0xfa && Color.B == 0xc8) || (Color.R == 0x66 && Color.G == 0x66 && Color.B == 0x66))) || // top corner
                     ((offset1 >= 489 && offset1 <= 598) && ((offset2 >= 1 && offset2 <= 20)) && (offset3 == 23 || offset3 == 39 || offset3 == 93) && ((Color.R == 0xff && Color.G == 0xff && Color.B == 0xff) || (Color.R == 0xb8 && Color.G == 0xfa && Color.B == 0xc8))) || // bottom corner
                     (offset1 == 598 && offset2 == 3 && offset3 == 93 && (Color.R == 0xb8 && Color.G == 0xf7 && Color.B == 0xc8)) || //icons text
-                    ((offset1 >= 465 && offset1 <= 615) && (offset2 >= 3 && offset2 <= 55) && (offset3 >= 128 && offset3 <= 191) && (Color.R == 0xb8 && Color.G == 0xf7 && Color.B == 0xc8)) // objective popup text
+                    ((offset1 >= 465 && offset1 <= 615) && (offset2 >= 3 && offset2 <= 75) && (offset3 >= 128 && offset3 <= 215) && (Color.R == 0xb8 && Color.G == 0xf7 && Color.B == 0xc8)) // objective popup text
                     )
                     {
                         *(float*)(regs.esp + 0x14) += WidescreenHudOffset._float;
