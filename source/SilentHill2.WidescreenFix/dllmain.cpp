@@ -441,7 +441,8 @@ DWORD WINAPI Init(LPVOID bDelay)
     if (bLightingFix)
     {
         pattern = hook::pattern("C7 05 ? ? ? ? 04 00 00 00 ? ? D9 44");
-        injector::WriteMemory(pattern.get_first(6), 3, true); //4FF510
+        injector::WriteMemory(pattern.count(2).get(0).get<void*>(6), 3, true); //4FF510
+        injector::WriteMemory(pattern.count(2).get(1).get<void*>(6), 3, true); //502EE0
 
         pattern = hook::pattern("0F B7 05 ? ? ? ? 48 C3");
         static uint16_t* word_9467F0 = *pattern.get_first<uint16_t*>(3);
