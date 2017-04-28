@@ -87,7 +87,7 @@ void WidescreenHud(float& offsetX1, float& offsetX2, float& offsetY1, float& off
     offsetX2 -= fWidescreenHudOffset;
     }*/
 
-    if ((n_offsetX1 == 179 || n_offsetX1 == 180 || n_offsetX1 == 183) && (n_offsetX2 == 608 || n_offsetX2 == 611)) //inventory fix
+    if ((n_offsetX1 >= 178 && n_offsetX1 <= 184) && (n_offsetX2 == 608 || n_offsetX2 == 609 || n_offsetX2 == 611 || n_offsetX2 == 612)) //inventory fix
     {
         offsetX2 += fWidescreenHudOffset;
     }
