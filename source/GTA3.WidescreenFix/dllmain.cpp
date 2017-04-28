@@ -683,6 +683,9 @@ static void __cdecl SetVerticesHook(CRect& a1, CRGBA const& a2, CRGBA const& a3,
         a1.m_fBottom = (float)RsGlobal->MaximumHeight;
         a1.m_fRight = fMiddleScrCoord + ((((float)RsGlobal->MaximumHeight * (w / h))) / 2.0f);
 
+        CSprite2dDrawRect(CRect(-5.0f, a1.m_fBottom, a1.m_fLeft, -5.0f), CRGBA(0, 0, 0, a2.alpha));
+        CSprite2dDrawRect(CRect((float)RsGlobal->MaximumWidth, a1.m_fBottom, a1.m_fRight, -5.0f), CRGBA(0, 0, 0, a2.alpha));
+
         CSprite2dDrawRect(CRect(-5.0f, (float)RsGlobal->MaximumHeight + 5.0f, (float)RsGlobal->MaximumWidth + 5.0f, -5.0f), CRGBA(0, 0, 0, a2.alpha));
         injector::cstd<void(int, int)>::call(pRwRenderStateSet, 8, 0);
     }

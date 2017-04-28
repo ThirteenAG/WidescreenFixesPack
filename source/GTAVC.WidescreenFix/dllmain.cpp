@@ -788,6 +788,9 @@ void __cdecl SetVerticesHook(CRect& a1, CRGBA const& a2, CRGBA const& a3, CRGBA 
         a1.m_fBottom = (float)RsGlobal->MaximumHeight;
         a1.m_fRight = fMiddleScrCoord + ((((float)RsGlobal->MaximumHeight * (w / h))) / 2.0f);
 
+        CSprite2dDrawRect(CRect(-5.0f, a1.m_fBottom, a1.m_fLeft, -5.0f), CRGBA(0, 0, 0, a2.alpha));
+        CSprite2dDrawRect(CRect((float)RsGlobal->MaximumWidth, a1.m_fBottom, a1.m_fRight, -5.0f), CRGBA(0, 0, 0, a2.alpha));
+
         CSprite2dDrawRect(CRect(-5.0f, (float)RsGlobal->MaximumHeight + 5.0f, (float)RsGlobal->MaximumWidth + 5.0f, -5.0f), CRGBA(0, 0, 0, a2.alpha));
         injector::cstd<void(int,int)>::call(pRwRenderStateSet, 8, 0);
     }
@@ -853,6 +856,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     {
         void operator()(injector::reg_pack& regs)
         {
+            static float* pMenuPattern6;
             if (*dwGameLoadState < 9)
             {
                 SilentPatchCompatibility();
@@ -864,7 +868,8 @@ DWORD WINAPI Init(LPVOID bDelay)
                 pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59 E8 ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 83 C0 EC"); //0x620C45 replay
                 injector::WriteMemory(pattern.count(3).get(2).get<uint32_t>(2), &fCustomWideScreenWidthScaleDown, true);
 
-                injector::WriteMemory<float>(*MenuPattern6.count(1).get(0).get<uint32_t*>(2), fWideScreenWidthScaleDown, true); //issues/84, copypaste from FixMenu()
+                //injector::WriteMemory<float>(*MenuPattern6.count(1).get(0).get<uint32_t*>(2), fWideScreenWidthScaleDown, true); //issues/84, copypaste from FixMenu()
+                pMenuPattern6 = *MenuPattern6.count(1).get(0).get<float*>(2);
 
                 //WIDESCREEN to BORDERS text
                 pattern = hook::pattern("E8 ? ? ? ? DB 05 ? ? ? ? 50 89 C3 D8 0D");
@@ -875,6 +880,8 @@ DWORD WINAPI Init(LPVOID bDelay)
                 wchar_t* ptr = pfGetText((int)TheText, "FED_WIS");
                 wcscpy(ptr, L"BORDERS");
             }
+
+            *pMenuPattern6 = fWideScreenWidthScaleDown;
 
             fCrosshairPosFactor = ((0.52999997f - 0.5f) / ((*CDraw::pfScreenAspectRatio) / (16.0f / 9.0f))) + 0.5f;
             fCrosshairHeightScaleDown = fWideScreenWidthScaleDown * *CDraw::pfScreenAspectRatio;
