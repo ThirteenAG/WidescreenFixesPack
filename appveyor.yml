@@ -9,6 +9,25 @@ init:
     Start-FileDownload 'https://github.com/chocolatey/chocolatey/raw/master/src/redirects/RefreshEnv.cmd' -FileName 'C:\RefreshEnv.cmd'
 
     Start-Process "C:\DXSDK_Jun10.exe" "/F /S /O /U" -NoNewWindow -Wait
+
+
+
+    $releases = "https://github.com/ThirteenAG/modupdater/releases"
+
+    $name = "modupdater.zip"
+
+    $latestRelease = Invoke-WebRequest $releases/latest -Headers @{"Accept"="application/json"}
+
+    $json = $latestRelease.Content | ConvertFrom-Json
+
+    $latestVersion = $json.tag_name
+
+    $url = "$releases/download/$latestVersion/$name"
+
+
+    Start-FileDownload $url -FileName 'C:\modupdater.zip'
+
+    7z e c:\modupdater.zip -oc:\Projects\modupdater\bin\Release
 install:
 - cmd: >-
     git submodule update --init --recursive
