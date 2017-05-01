@@ -11,6 +11,9 @@ if errorlevel 1 (
    SET dll=!filepath:.ual=.dll!
    ECHO !dll! 	
    copy "..\..\Ultimate-ASI-Loader\bin\x86\Release\dinput8.dll" !dll!
+   SET "mu=%%~dpF\scripts\modupdater.asi"
+   ECHO !mu!
+   copy "..\..\modupdater\bin\Release\modupdater.asi" !mu!
 )
 )
 
