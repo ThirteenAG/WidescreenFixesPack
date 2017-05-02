@@ -140,7 +140,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     if (strncmp(szCameraZoom, "auto", 4) != 0)
         Screen.fCameraZoom = iniReader.ReadFloat("MAIN", "CameraZoomFactor", 1.0f);
     else
-        Screen.fCameraZoom = (Screen.fAspectRatio / (4.0f / 3.0f)) * 2.25f;
+        Screen.fCameraZoom = (Screen.fAspectRatio / (4.0f / 3.0f)) * 2.5f;
 
     //Res change
     pattern = hook::pattern("8B 2D ? ? ? ? 56 8B 35 ? ? ? ? 57 8B 3D"); //0x4CB29F
