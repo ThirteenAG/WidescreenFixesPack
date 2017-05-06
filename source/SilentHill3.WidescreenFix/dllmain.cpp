@@ -4,14 +4,14 @@ bool bConfigTool;
 
 struct Screen
 {
-    int Width;
-    int Height;
+    int32_t Width;
+    int32_t Height;
     float fWidth;
     float fHeight;
     float fFieldOfView;
     float fAspectRatio;
     float fHudOffset;
-    int Width43;
+    int32_t Width43;
 } Screen;
 
 LONG WINAPI RegQueryValueExAHook(HKEY hKey, LPCTSTR lpValueName, LPDWORD lpReserved, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData)
@@ -144,6 +144,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     uint32_t nShadowsRes = iniReader.ReadInteger("MISC", "ShadowsRes", 1024);
     uint32_t nDOFRes = iniReader.ReadInteger("MISC", "DOFRes", 1024);
     bool bFrameRateFluctuationFix = iniReader.ReadInteger("MISC", "FrameRateFluctuationFix", 1) != 0;
+    bool bSingleCoreAffinity = iniReader.ReadInteger("MISC", "SingleCoreAffinity", 1) != 0;
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -315,6 +316,10 @@ DWORD WINAPI Init(LPVOID bDelay)
     pattern = hook::pattern("68 00 03 00 00 FF 15 ? ? ? ? 5E"); //403042
     injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(1), 0, true);
 
+    //options menu freeze
+    pattern = hook::pattern("81 EC D8 00 00 00 55 8B AC"); //5E2300
+    injector::MakeRET(pattern.count(1).get(0).get<uint32_t>(0));
+
     if (bDisableCutsceneBorders)
     {
         pattern = hook::pattern("D9 05 ? ? ? ? C7 05 ? ? ? ? 00 00 00 00 D8 C9"); //41BB4B
@@ -449,6 +454,12 @@ DWORD WINAPI Init(LPVOID bDelay)
         pattern = hook::pattern("4A 03 C8 A3 ? ? ? ? 89 15"); //41B5D1
         injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(0), 0x42, true);
     }
+
+    if (bSingleCoreAffinity)
+    {
+        SetProcessAffinityMask(GetCurrentProcess(), 1);
+    }
+
     return 0;
 }
 

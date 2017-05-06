@@ -2,14 +2,14 @@
 
 struct Screen
 {
-    int Width;
-    int Height;
+    int32_t Width;
+    int32_t Height;
     float fWidth;
     float fHeight;
     float fFieldOfView;
     float fAspectRatio;
     float fHudOffset;
-    int Width43;
+    int32_t Width43;
 } Screen;
 
 DWORD WINAPI Init(LPVOID bDelay)

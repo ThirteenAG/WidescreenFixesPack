@@ -188,7 +188,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
             if (Screen.fCameraZoom)
             {
-                *(int32_t*)(regs.esi + 0x8) *= (int32_t)Screen.fCameraZoom;
+                *(int32_t*)(regs.esi + 0x8) = static_cast<int32_t>(static_cast<float>(*(int32_t*)(regs.esi + 0x8)) * Screen.fCameraZoom);
                 *(int32_t*)(regs.esi + 0x8) += nZoom;
             }
         }
