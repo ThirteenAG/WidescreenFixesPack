@@ -102,7 +102,7 @@ void ShowIntroHook()
     pattern = hook::pattern(pattern_str(0xD8, 0x0D, to_bytes(pf0015625)));
     for (size_t i = 0; i < pattern.size(); ++i) //http://pastebin.com/hrmrmkNq
     {
-        if (i != 14 && i != 15 && i != 16 && i != 18 && i != 39 && i != 40 && i != 44 && i != 45 && i != 46 && i != 47 && i != 48)
+        if (i != 14 && i != 15 && i != 16 && i != 18 && i != 39 && i != 40 && i != 44 && i != 45 && i != 47 && i != 48)
         {
             injector::WriteMemory(pattern.get(i).get<uint32_t>(2), &Screen.fHudScale, true);
         }
