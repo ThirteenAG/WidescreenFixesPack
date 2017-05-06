@@ -14,8 +14,10 @@ DWORD WINAPI Init(LPVOID bDelay)
         while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
 
     static auto dword_7242B0 = *pattern.get_first<uint32_t>(1);
-    //injector::WriteMemory<float>(dword_7242B0 + 0x904, static_cast<float>(nWidth), true);
-    //injector::WriteMemory<float>(dword_7242B0 + 0x908, static_cast<float>(nHeight), true);
+    auto nWidth = *(uint32_t*)(dword_7242B0 + 0x8);
+    auto nHeight = *(uint32_t*)(dword_7242B0 + 0xC);
+    injector::WriteMemory<float>(dword_7242B0 + 0x904, static_cast<float>(nWidth), true);
+    injector::WriteMemory<float>(dword_7242B0 + 0x908, static_cast<float>(nHeight), true);
 
     pattern = hook::pattern("D9 44 24 04 D9 99 04 09 00 00 D9 44"); // 0x608970
     struct SetAR
