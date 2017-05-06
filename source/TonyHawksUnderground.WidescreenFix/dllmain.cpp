@@ -81,6 +81,9 @@ DWORD WINAPI Init(LPVOID bDelay)
     if (!pattern.count_hint(1).empty())
     {
         injector::WriteMemory<float>(pattern.get_first(1), Screen.fAspectRatio, true);
+
+        pattern = hook::pattern("E8 ? ? ? ? D9 04 24 D8 74 24 04 DE C9");
+        injector::WriteMemory(injector::GetBranchDestination(pattern.get_first()).as_int() + 2, &Screen.fAspectRatio, true);
     }
     else
     {

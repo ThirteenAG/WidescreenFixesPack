@@ -83,6 +83,8 @@ DWORD WINAPI Init(LPVOID bDelay)
     //Aspect Ratio
     pattern = hook::pattern("68 ? ? ? ? E8 ? ? ? ? 6A 00 68 ? ? ? ? E8 ? ? ? ? D9");
     injector::WriteMemory<float>(pattern.get_first(1), Screen.fAspectRatio, true);
+    pattern = hook::pattern("E8 ? ? ? ? D9 04 24 D8 74 24 04 DE C9");
+    injector::WriteMemory(injector::GetBranchDestination(pattern.get_first()).as_int() + 2, &Screen.fAspectRatio, true);
     
     //FOV
     if (bFixFOV)
