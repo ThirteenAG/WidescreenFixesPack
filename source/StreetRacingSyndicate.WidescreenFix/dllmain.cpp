@@ -22,7 +22,7 @@ int logit;
 
 DWORD WINAPI Init(LPVOID bDelay)
 {
-    auto pattern = hook::pattern("6A FF 51 FF D6");
+    auto pattern = hook::pattern("C7 47 14 ? ? ? ? C7 47 18");
 
     if (pattern.count_hint(1).empty() && !bDelay)
     {
@@ -48,7 +48,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     Screen.Width43 = static_cast<uint32_t>(Screen.fHeight * (4.0f / 3.0f));
     Screen.fWidth43 = static_cast<float>(Screen.Width43);
     
-    pattern = hook::pattern("C7 47 14 ? ? ? ? C7 47 18 ? ? ? ?"); //0x4C81A3 0x4C81AA 
+    //pattern = hook::pattern("C7 47 14 ? ? ? ? C7 47 18"); //0x4C81A3 0x4C81AA 
     injector::WriteMemory<float>(pattern.count(1).get(0).get<uint32_t>(3), Screen.fWidth, true);
     injector::WriteMemory<float>(pattern.count(1).get(0).get<uint32_t>(10), Screen.fHeight, true);
 
