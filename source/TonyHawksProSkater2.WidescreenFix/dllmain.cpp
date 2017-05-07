@@ -94,7 +94,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     //Main menu wheel fix
     auto sub_4F0A70 = [](int16_t a1) -> int32_t
     {
-        return (int32_t)(cos((float)(a1 & 0xFFF) * 0.00024414062f * 6.2831855f) * (4096.0f / (Screen.fAspectRatio / (4.0f / 3.0f))));
+        return (int32_t)(cos((float)(a1 & 0xFFF) * 0.00024414062f * 6.2831855f) * (4096.0f / (Screen.fHeight / 480.0f)));
     };
     pattern = hook::pattern("E8 ? ? ? ? 53 89 44 24 1C 89");
     injector::MakeCALL(pattern.get_first(0), static_cast<int32_t(*)(int16_t)>(sub_4F0A70), true); //0x457939
@@ -103,7 +103,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     auto sub_4F0AA0 = [](int16_t a1) -> int32_t
     {
-        return (int32_t)(sin((float)(a1 & 0xFFF) * 0.00024414062f * 6.2831855f) * (4096.0f / (Screen.fAspectRatio / (4.0f / 3.0f))));
+        return (int32_t)(sin((float)(a1 & 0xFFF) * 0.00024414062f * 6.2831855f) * (4096.0f / (Screen.fHeight / 480.0f)));
     };
     pattern = hook::pattern("E8 ? ? ? ? 8B F0 53 0F AF");
     injector::MakeCALL(pattern.get_first(0), static_cast<int32_t(*)(int16_t)>(sub_4F0AA0), true); //0x457947
