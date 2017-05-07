@@ -246,7 +246,7 @@ DWORD WINAPI InitWF(LPVOID)
             if (fParam0 == 640.0f && fParam1 == 0.0f && Param3 == 0x00)
                 bBulletTimeRender = true;
 
-            if (fParam0 == 640.0f && (fParam1 == 0.0078125f || fParam1 == 0.015625) /*&& Param3 == 0x00*/) //for some reason it's 0.015625 on windows 7
+            if (fParam0 == 640.0f && (fParam1 == 0.0078125f || fParam1 == 0.015625f) /*&& Param3 == 0x00*/) //for some reason it's 0.015625 on windows 7
                 bDynShadowRender = true;
 
             if (fParam0 != 640.0f || bDynShadowRender || bBulletTimeRender)
@@ -290,7 +290,7 @@ DWORD WINAPI InitWF(LPVOID)
                         ElementNewPosX1 = ElementPosX + Screen.fHudOffsetWide;
                     }
                 
-                    if (ElementPosX == 8.0f) // bullet time overlay()
+                    if (ElementPosX == 8.0f && ElementPosY != 8.0f) // bullet time overlay()
                     {
                         ElementNewPosX1 = ElementPosX + Screen.fHudOffsetWide;
                     }
