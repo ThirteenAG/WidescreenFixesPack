@@ -100,22 +100,21 @@ DWORD WINAPI Init(LPVOID bDelay)
                 *(int32_t*)(regs.ecx + 0xD8) = a2;
                 *(float*)(regs.ecx + 0xE8) = (1.0f / (float)a2);
             }
-        }; injector::MakeInline<HudScaleHook>(dword_654780, dword_654780 + 45);
+        }; injector::MakeInline<HudScaleHook>(dword_654780, dword_654780 + 53);
 
         pattern = hook::pattern("F3 0F 11 44 24 24 F3 0F 11 44 24 20 F3 0F 11"); //0x65E870
         struct HudPosHook
         {
             void operator()(injector::reg_pack& regs)
             {
-                auto regs_eax = regs.eax;
                 *(float*)(regs.esp + 0x18) = Screen.fHudOffset;
                 *(float*)(regs.esp + 0x20) = 1.0f;
                 *(float*)(regs.esp + 0x24) = 1.0f;
                 *(float*)(regs.esp + 0x28) = 1.0f;
                 *(float*)(regs.esp + 0x2C) = 1.0f;
-                __asm cmp regs_eax, 1
             }
         }; injector::MakeInline<HudPosHook>(pattern.get_first(0), pattern.get_first(24));
+        injector::WriteMemory(pattern.get_first(24 - 4), 0x9001F883, true); //cmp     eax, 1
     }
 
     if (bFixFOV)
