@@ -265,7 +265,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
     Screen.fHudScaleX = (480.0f * Screen.fAspectRatio) / 640.0f;
     Screen.fHudOffset = ((Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f) / (Screen.fWidth / 640.0f);
-    Screen.fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
+    //Screen.fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
     if (Screen.fAspectRatio < (16.0f / 9.0f))
     {
         fWidescreenHudOffset = fWidescreenHudOffset / (((16.0f / 9.0f) / (Screen.fAspectRatio)) * 1.5f);
@@ -354,21 +354,27 @@ DWORD WINAPI Init(LPVOID bDelay)
     injector::MakeCALL(pattern.count(1).get(0).get<uint32_t>(14), sub_42B900, true); //0x486EC9
 
     //FOV
-    pattern = hook::pattern("8D 4D 9C 8D 55 DC 51 52 8B CE");
-    struct FOVHook
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            regs.ecx = regs.ebp - 0x64;
-            regs.edx = regs.ebp - 0x24;
+    Screen.fDynamicScreenFieldOfViewScale = 1.0f / ((Screen.fWidth / Screen.fHeight) / (4.0f / 3.0f));
+    pattern = hook::pattern("D9 05 ? ? ? ? 89 4E 68 8B 50 04");
+    injector::WriteMemory(pattern.get_first(2), &Screen.fDynamicScreenFieldOfViewScale, true);
+    pattern = hook::pattern("D9 05 ? ? ? ? D8 76 6C D9 5E 74");
+    injector::WriteMemory(pattern.get_first(2), &Screen.fDynamicScreenFieldOfViewScale, true);
 
-            *(float *)(regs.esi + 0x40) *= Screen.fDynamicScreenFieldOfViewScale; //CAMERA_FOLLOW_MINDIST 
-            *(float *)(regs.esi + 0x44) *= Screen.fDynamicScreenFieldOfViewScale; //CAMERA_FOLLOW_MAXDIST 
-            *(float *)(regs.esi + 0xBC) *= Screen.fDynamicScreenFieldOfViewScale; //CAMERA_AIM_FOV
-            *(float *)(regs.esi + 0xC4) *= Screen.fDynamicScreenFieldOfViewScale; //CAMERA_CONSTRAINT_FOV
-
-        }
-    }; injector::MakeInline<FOVHook>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6)); //0x4AF5EE, 0x4AF5EE + 6
+    //pattern = hook::pattern("8D 4D 9C 8D 55 DC 51 52 8B CE");
+    //struct FOVHook
+    //{
+    //    void operator()(injector::reg_pack& regs)
+    //    {
+    //        regs.ecx = regs.ebp - 0x64;
+    //        regs.edx = regs.ebp - 0x24;
+    //
+    //        *(float *)(regs.esi + 0x40) *= Screen.fDynamicScreenFieldOfViewScale; //CAMERA_FOLLOW_MINDIST 
+    //        *(float *)(regs.esi + 0x44) *= Screen.fDynamicScreenFieldOfViewScale; //CAMERA_FOLLOW_MAXDIST 
+    //        *(float *)(regs.esi + 0xBC) *= Screen.fDynamicScreenFieldOfViewScale; //CAMERA_AIM_FOV
+    //        *(float *)(regs.esi + 0xC4) *= Screen.fDynamicScreenFieldOfViewScale; //CAMERA_CONSTRAINT_FOV
+    //
+    //    }
+    //}; //injector::MakeInline<FOVHook>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6)); //0x4AF5EE, 0x4AF5EE + 6
 
     return 0;
     //injector::MakeNOP(0x402232, 2, true); //debug menu
