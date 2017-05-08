@@ -177,8 +177,8 @@ DWORD WINAPI Init(LPVOID bDelay)
         Screen.fCenterPos = ((480.0f * Screen.fAspectRatio) / 2.0f);
         Screen.fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * (Screen.fWidth / Screen.fHeight))) * (1.0f / SCREEN_FOV_HORIZONTAL);
 
-        *pAspectRatio = Screen.fAspectRatio;
-        *pFOV = Screen.fDynamicScreenFieldOfViewScale * 1.308f * Screen.fCustomFieldOfView;
+        injector::WriteMemory<float>(pAspectRatio, Screen.fAspectRatio, true); //*pAspectRatio = Screen.fAspectRatio;
+        injector::WriteMemory<float>(pFOV, Screen.fDynamicScreenFieldOfViewScale * 1.308f * Screen.fCustomFieldOfView, true); //*pFOV = Screen.fDynamicScreenFieldOfViewScale * 1.308f * Screen.fCustomFieldOfView;
 
         if (Screen.fAspectRatio >= ((16.0f / 9.0f) - 0.05f))
             Screen.fGameAspectRatio = (16.0f / 9.0f);
