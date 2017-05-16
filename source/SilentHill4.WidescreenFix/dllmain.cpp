@@ -257,7 +257,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
         // cutscene blur
         pattern = hook::pattern("83 EC 10 56 8D 44 24"); //0x565C40
-        injector::MakeRET(pattern.get_first(2));
+        injector::MakeRET(pattern.get_first(0));
     }
 
     if (bDisableCutsceneBorders)
