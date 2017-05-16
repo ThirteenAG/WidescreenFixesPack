@@ -173,14 +173,14 @@ DWORD WINAPI Init(LPVOID bDelay)
         pattern = hook::pattern("83 EC 18 53 56 57 E8 ? ? ? ? E8 ? ? ? ? A1"); //0x566440
         injector::MakeRET(pattern.get_first()); //DOF/blur overlay
 
-        pattern = hook::pattern("55 8B EC 83 E4 F0 83 EC 64 D9 45 18"); //0x42E9A0
+        pattern = hook::pattern("55 8B EC 83 E4 F0 83 EC 64 D9 45 18"); //0x42EAC0
         injector::MakeRET(pattern.get_first());
 
         pattern = hook::pattern("E8 ? ? ? ? 83 C4 5C C6 05 ? ? ? ? 00 B8"); //0x42E719
         injector::MakeNOP(pattern.get_first(), 5, true); // Cutscene Wall Darkness Effect
 
-        pattern = hook::pattern("E8 ? ? ? ? 83 C4 5C C6 05 ? ? ? ? 00 A1"); //0x42E9A0
-        injector::MakeRET(pattern.get_first()); //Cutscene Wall Grunge Effect
+        pattern = hook::pattern("E8 ? ? ? ? 83 C4 5C C6 05 ? ? ? ? 00 A1"); //0x45EBD2
+        injector::MakeNOP(pattern.get_first(), 5, true); //Cutscene Wall Grunge Effect
         //
 
         // Text fix
@@ -246,6 +246,18 @@ DWORD WINAPI Init(LPVOID bDelay)
         pattern = hook::pattern("C7 44 24 0C 00 00 00 00 C7 44 24 04 00 00 00 00 DF E0"); //0x00567FF8 
         injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(4), &fFilmEffectPos, true);
         //injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(12), &fFilmEffectPos, true);
+
+        //double vision issue
+        pattern = hook::pattern("50 51 E8 ? ? ? ? 83 C4 10 C3"); //0x565AEC
+        injector::MakeNOP(pattern.get_first(2), 5, true);
+
+        //blood stains
+        pattern = hook::pattern("50 51 52 C6 05 ? ? ? ? 01 E8"); //0x565AEC
+        injector::MakeNOP(pattern.get_first(10), 5, true);
+
+        // cutscene blur
+        pattern = hook::pattern("83 EC 10 56 8D 44 24"); //0x565C40
+        injector::MakeRET(pattern.get_first(2));
     }
 
     if (bDisableCutsceneBorders)
@@ -297,10 +309,6 @@ DWORD WINAPI Init(LPVOID bDelay)
             injector::WriteMemory(&RegIAT[4], RegCloseKeyHook, true);
         }
     }
-
-    //double vision issue
-    pattern = hook::pattern("50 51 E8 ? ? ? ? 83 C4 10 C3"); //0x565AEC
-    injector::MakeNOP(pattern.get_first(2), 5, true);
 
     return 0;
 }

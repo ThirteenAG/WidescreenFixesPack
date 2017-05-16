@@ -430,6 +430,9 @@ DWORD WINAPI Init(LPVOID bDelay)
 
         pattern = hook::pattern("D8 05 ? ? ? ? D9 1D ? ? ? ? D9 44 24 14 D8 4E 04 D8 0D");
         injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &f1, true); //0051C302 
+
+        pattern = hook::pattern("74 ? D9 05 ? ? ? ? E8 ? ? ? ? 50 E8");
+        injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(0), 0xEBi8, true); //0058C0E3
     }
 
     if (bGamepadControlsFix)
