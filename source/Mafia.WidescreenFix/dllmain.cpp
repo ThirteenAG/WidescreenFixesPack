@@ -659,6 +659,11 @@ void DrawDistanceHook() {
     CPatch::RedirectCall(v10_sub_00600E99[game_version], Draw_Distance_Hook[game_version]);
     CPatch::Nop(v10_sub_00600E99[game_version] + 0x5, 0x2);
 
+    if ((300.0f > draw_dist_min) && (300.0f < draw_dist_max)) {
+        static int v10_sub_00542FEB[3] = { 0x00542FEB, 0x0059A7B0, 0x0059ABD0 };
+        CPatch::SetFloat(v10_sub_00542FEB[game_version] + 0x1, draw_dist_value);
+    }
+
     if (game_version == MAFIA_1_0_ENG) {
         static int v10_sub_005A89C9[3] = { 0x005A89C9, NULL, NULL };
         CPatch::SetFloat(v10_sub_005A89C9[game_version] + 0x1, draw_dist_value1);
