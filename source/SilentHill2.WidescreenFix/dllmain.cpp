@@ -443,10 +443,11 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     if (bLightingFix)
     {
-        static auto n45 = 45;
         pattern = hook::pattern("8B 10 75 ? 8B 0D");
-        injector::WriteMemory(pattern.count(2).get(0).get<void*>(6), &n45, true); //50002A solves flashlight bug for NPCs
-        injector::WriteMemory(pattern.count(2).get(1).get<void*>(6), &n45, true); //5039FB solves flashlight bug for reflective objects
+        auto dword_1F81298 = *pattern.count(2).get(0).get<uintptr_t>(6) - 0x10;
+        auto dword_1F8129C = *pattern.count(2).get(1).get<uintptr_t>(6) - 0x10;
+        injector::WriteMemory(pattern.count(2).get(0).get<void*>(6), dword_1F81298, true); //50002A solves flashlight bug for NPCs
+        injector::WriteMemory(pattern.count(2).get(1).get<void*>(6), dword_1F8129C, true); //5039FB solves flashlight bug for reflective objects
 
         pattern = hook::pattern("0F B7 05 ? ? ? ? 48 C3");
         static uint16_t* word_9467F0 = *pattern.get_first<uint16_t*>(3);
