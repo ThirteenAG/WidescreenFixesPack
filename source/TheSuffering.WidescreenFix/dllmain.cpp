@@ -14,7 +14,9 @@ struct Screen
     float fAspectRatioDiff;
 } Screen;
 
+bool isTTB;
 uintptr_t* pMemory;
+uint32_t off_288, off_290, off_2C0;
 void __cdecl sub_44A390(uintptr_t a1, float a2, float a3, float a4, float a5, float a6, float a7, float a8, float a9, float a10, float a11, uintptr_t a12, uintptr_t a13, uintptr_t a14)
 {
     uintptr_t Memory = *pMemory;
@@ -45,19 +47,19 @@ void __cdecl sub_44A390(uintptr_t a1, float a2, float a3, float a4, float a5, fl
 
     if (a14)
     {
-        *(float*)(a1 + 0x20) = a2 + *(float*)(0x2C0 * *((uint32_t*)Memory + 0x13) + *((uint32_t*)Memory + 0x10) + 0x288) + a4;
+        *(float*)(a1 + 0x20) = a2 + *(float*)(off_2C0 * *((uint32_t*)Memory + 0x13) + *((uint32_t*)Memory + 0x10) + off_288) + a4;
         *(float*)(a1 + 0x38) = a8;
-        *(float*)(a1 + 0x24) = a3 + *(float*)(0x2C0 * *((uint32_t*)Memory + 0x13) + *((uint32_t*)Memory + 0x10) + 0x290);
+        *(float*)(a1 + 0x24) = a3 + *(float*)(off_2C0 * *((uint32_t*)Memory + 0x13) + *((uint32_t*)Memory + 0x10) + off_290);
         *(float*)(a1 + 0x3C) = a7;
         *(float*)(a1 + 0x18) = a6;
-        *(float*)(a1 + 0x00) = a2 + *(float*)(0x2C0 * *((uint32_t*)Memory + 0x13) + *((uint32_t*)Memory + 0x10) + 0x288);
+        *(float*)(a1 + 0x00) = a2 + *(float*)(off_2C0 * *((uint32_t*)Memory + 0x13) + *((uint32_t*)Memory + 0x10) + off_288);
         *(float*)(a1 + 0x1C) = a9;
         *(float*)(a1 + 0x04) = a5 + *(float*)(a1 + 0x24);
     }
     else
     {
-        *(float*)(a1 + 0x00) = a2 + *(float*)(0x2C0 * *((uint32_t*)Memory + 0x13) + *((uint32_t*)Memory + 0x10) + 0x288);
-        *(float*)(a1 + 0x04) = a3 + *(float*)(0x2C0 * *((uint32_t*)Memory + 0x13) + *((uint32_t*)Memory + 0x10) + 0x290);
+        *(float*)(a1 + 0x00) = a2 + *(float*)(off_2C0 * *((uint32_t*)Memory + 0x13) + *((uint32_t*)Memory + 0x10) + off_288);
+        *(float*)(a1 + 0x04) = a3 + *(float*)(off_2C0 * *((uint32_t*)Memory + 0x13) + *((uint32_t*)Memory + 0x10) + off_290);
         *(float*)(a1 + 0x18) = v15 * v14;
         *(float*)(a1 + 0x1C) = v23 * v22;
         *(float*)(a1 + 0x20) = a4 + *(float*)a1;
@@ -123,7 +125,7 @@ void __cdecl sub_44A390(uintptr_t a1, float a2, float a3, float a4, float a5, fl
 
 DWORD WINAPI Init(LPVOID bDelay)
 {
-    auto pattern = hook::pattern("75 4B D9 45 A8 D8 5D EC DF E0 F6 C4 41");
+    auto pattern = hook::pattern("75 4B D9 45 ? D8 5D ? DF E0 F6 C4 41");
 
     if (pattern.count_hint(1).empty() && !bDelay)
     {
@@ -136,6 +138,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     CIniReader iniReader("");
     bool bDisableCutsceneBorders = iniReader.ReadInteger("MAIN", "DisableCutsceneBorders", 1) != 0;
+    static float fFOVFactor = iniReader.ReadFloat("MAIN", "FOVFactor", 0.0f);
 
     //unlocking resolutions
     injector::MakeNOP(pattern.get_first(0), 2, true);
@@ -143,16 +146,33 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     //unlocking windowed resolutions
     pattern = hook::pattern("8B 15 ? ? ? ? 83 E2 01"); //0x4B35E2
-    injector::WriteMemory<uint16_t>(pattern.get_first(9), 0xE990, true);
+    injector::WriteMemory<uint16_t>(pattern.get_first(9), 0xE990i16, true);
+
+    //PlayDiskVolumeLabel error, 0x43B989 in ttb
+    pattern = hook::pattern("85 C0 ? ? 8B 4C 24 0C 51");
+    injector::WriteMemory<uint8_t>(pattern.get_first(2), 0xEBi8, true);
 
     //FOV
-    pattern = hook::pattern("D8 15 ? ? ? ? D9 54 24 7C DF E0");
-    static float f64 = 64.0f;
-    static auto flt_5945E8 = *pattern.get_first<float*>(2);
-    injector::WriteMemory(pattern.get_first(2), &f64, true);
-    
+    pattern = hook::pattern("D9 05 ? ? ? ? D8 B1 ? ? ? ? D9 E8 D9 F3");
+    injector::WriteMemory(pattern.count(2).get(0).get<void*>(2), &Screen.fFieldOfView, true); //fld
+    injector::WriteMemory(pattern.count(2).get(1).get<void*>(2), &Screen.fFieldOfView, true); //fld
+    pattern = hook::pattern("D8 0D ? ? ? ? D8 B6 ? ? ? ? 5E D9 E8 D9 F3");
+    injector::WriteMemory(pattern.get_first(2), &Screen.fFieldOfView, true); //fmul
+    pattern = hook::pattern("D8 0D ? ? ? ? D9 96");
+    injector::WriteMemory(pattern.get_first(2), &Screen.fFieldOfView, true); //fmul
+    pattern = hook::pattern("D8 3D ? ? ? ? C2 04 00");
+    injector::WriteMemory(pattern.get_first(2), &Screen.fFieldOfView, true); //fdiv
+    pattern = hook::pattern("D8 3D ? ? ? ? D9 99 ? ? ? ? FF");
+    injector::WriteMemory(pattern.get_first(2), &Screen.fFieldOfView, true); //fdiv
+    pattern = hook::pattern("D8 3D ? ? ? ? D9 99 ? ? ? ? C2 04 00");
+    static auto pFOV = *pattern.get_first<float*>(2);
+    injector::WriteMemory(pattern.get_first(2), &Screen.fFieldOfView, true); //fdiv
+
     //HUD
     pMemory = *(uintptr_t**)hook::get_pattern("8B 0D ? ? ? ? DD D8 8B 51 4C DD D8", 2); //0x5C5D7C
+    off_288 = *hook::get_pattern<uint32_t>("D8 84 0A ? ? ? ? D8 44 24 14 D9 58 ? 8B 0D", 3);
+    off_290 = *hook::get_pattern<uint32_t>("8B 54 24 24 8B 4C 24 20 89 50 38 D9 58 24", -4);
+    off_2C0 = *hook::get_pattern<uint32_t>("8B 54 24 24 8B 4C 24 20 89 50 38 D9 58 24", -11);
     pattern = hook::pattern("E8 ? ? ? ? A1 ? ? ? ? 83 C4 38 50");
     injector::MakeCALL(pattern.get_first(0), sub_44A390, true); //0x44A6C0
     pattern = hook::pattern("E8 ? ? ? ? 8B 0D ? ? ? ? 83 C4 38 51");
@@ -176,8 +196,8 @@ DWORD WINAPI Init(LPVOID bDelay)
             Screen.fAspectRatioDiff = (Screen.fAspectRatio / (4.0f / 3.0f));
             Screen.fHudOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
             Screen.fHudOffsetReal = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
-            Screen.fFieldOfView = 64.0f / (Screen.fAspectRatio / (4.0f / 3.0f));
-            injector::WriteMemory<float>(flt_5945E8, Screen.fFieldOfView, true);
+            Screen.fFieldOfView = *pFOV / (Screen.fAspectRatio / (4.0f / 3.0f));
+            fFOVFactor ? Screen.fFieldOfView * fFOVFactor : 0;
         }
     }; injector::MakeInline<GetResHook>(pattern.get_first(0), pattern.get_first(6));
 
