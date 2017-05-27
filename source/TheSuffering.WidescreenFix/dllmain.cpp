@@ -179,6 +179,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     injector::MakeCALL(pattern.get_first(0), sub_44A390, true); //0x44AB58
 
     //resolution
+    static auto unk_5C6CEC = *(uintptr_t**)hook::get_pattern("68 ? ? ? ? 56 8D 4C 24", 1);
     pattern = hook::pattern("8B 52 08 89 50 08 C2 08 00"); //0x4460E7
     struct GetResHook
     {
@@ -187,8 +188,8 @@ DWORD WINAPI Init(LPVOID bDelay)
             regs.edx = *(uint32_t*)(regs.edx + 0x08);
             *(uint32_t*)(regs.eax + 0x08) = regs.edx;
 
-            Screen.Width = *(uint32_t*)(regs.eax + 0x00);
-            Screen.Height = *(uint32_t*)(regs.eax + 0x04);
+            Screen.Width = *(uint32_t*)(unk_5C6CEC + 0);
+            Screen.Height = *(uint32_t*)(unk_5C6CEC + 1);
             Screen.fWidth = static_cast<float>(Screen.Width);
             Screen.fHeight = static_cast<float>(Screen.Height);
             Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
