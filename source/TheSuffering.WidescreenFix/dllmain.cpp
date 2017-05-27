@@ -148,9 +148,11 @@ DWORD WINAPI Init(LPVOID bDelay)
     pattern = hook::pattern("8B 15 ? ? ? ? 83 E2 01"); //0x4B35E2
     injector::WriteMemory<uint16_t>(pattern.get_first(9), 0xE990i16, true);
 
-    //PlayDiskVolumeLabel error, 0x43B989 in ttb
-    pattern = hook::pattern("85 C0 ? ? 8B 4C 24 0C 51");
-    injector::WriteMemory<uint8_t>(pattern.get_first(2), 0xEBi8, true);
+    //The Game Play disk could not be found error
+    pattern = hook::pattern("85 C0 ? ? 8B 4C 24 0C 51"); //0x43B989 in ttb
+    injector::WriteMemory<uint8_t>(pattern.get_first(2), 0xEBi8, true); //0x43B959
+    pattern = hook::pattern("75 ? 8D 44 24 08 50 8B 44 24 10");
+    injector::MakeNOP(pattern.get_first(0), 2, true);
 
     //FOV
     pattern = hook::pattern("D9 05 ? ? ? ? D8 B1 ? ? ? ? D9 E8 D9 F3");
