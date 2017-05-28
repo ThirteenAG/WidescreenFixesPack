@@ -712,7 +712,8 @@ void Fix2DSprites()
     hbSetVertices.fun = injector::MakeCALL(pattern.count(3).get(1).get<uint32_t>(0), SetVerticesHook).get();
     injector::MakeCALL(pattern.count(3).get(2).get<uint32_t>(0), SetVerticesHook); //0x51EE0E
 
-    pRwRenderStateSet = hook::get_pattern("A1 ? ? ? ? 83 EC 08 83 38 00"); //0x649BA0
+    pattern = hook::pattern("E8 ? ? ? ? 59 59 6A 01 6A 0C E8");
+    pRwRenderStateSet = (void*)injector::GetBranchDestination(pattern.get_first()).as_int(); //0x649BA0
 }
 
 DWORD WINAPI Init(LPVOID bDelay)
