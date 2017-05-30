@@ -277,11 +277,11 @@ DWORD WINAPI Init(LPVOID bDelay)
         injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(1), Screen.Width, true);
         injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(6), Screen.Width, true);
 
-        pattern = hook::pattern("C7 05 ? ? ? ? ? ? ? ? C7 05 ? ? ? ? ? ? ? ? C7 05 ? ? ? ? ? ? ? ? C7 05 ? ? ? ? ? ? ? ? 89 35 7C 39 2E 01"); //0055A699
-        injector::WriteMemory<float>(pattern.count(1).get(0).get<uint32_t>(0x06), Screen.fWidth - 0.5f, true);
-        injector::WriteMemory<float>(pattern.count(1).get(0).get<uint32_t>(0x52), Screen.fWidth - 0.5f, true);
-        injector::WriteMemory<float>(pattern.count(1).get(0).get<uint32_t>(0x8A), Screen.fWidth - 0.5f, true);
-        injector::WriteMemory<float>(pattern.count(1).get(0).get<uint32_t>(0x94), Screen.fWidth - 0.5f, true);
+        pattern = hook::pattern("C7 05 ? ? ? ? ? ? ? ? C7 05 ? ? ? ? ? ? ? ? C7 05 ? ? ? ? ? ? ? ? C7 05 ? ? ? ? ? ? ? ? 89 35"); //0055A699
+        injector::WriteMemory<float>(pattern.count(6).get(3).get<uint32_t>(0x06), Screen.fWidth - 0.5f, true);
+        injector::WriteMemory<float>(pattern.count(6).get(3).get<uint32_t>(0x52), Screen.fWidth - 0.5f, true);
+        injector::WriteMemory<float>(pattern.count(6).get(3).get<uint32_t>(0x8A), Screen.fWidth - 0.5f, true);
+        injector::WriteMemory<float>(pattern.count(6).get(3).get<uint32_t>(0x94), Screen.fWidth - 0.5f, true);
     }
 
     if (bCutsceneFrameRateFix)
