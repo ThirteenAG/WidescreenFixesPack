@@ -604,7 +604,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
         auto RegOpenKeyExAHook = [](HKEY hKey, LPCTSTR lpSubKey, DWORD ulOptions, REGSAM samDesired, PHKEY phkResult) -> LONG
         {
-            if (RegistryReader.ReadInteger("MAIN", "DisplayName", -1) == -1)
+            if (strlen(RegistryReader.ReadString("MAIN", "DisplayName", "")) == 0)
             {
                 RegistryReader.WriteString("MAIN", "@", "INSERTYOURCDKEYHERE");
                 RegistryReader.WriteString("MAIN", "DisplayName", "Need for Speed Carbon");

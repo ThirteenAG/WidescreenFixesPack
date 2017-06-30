@@ -93,14 +93,6 @@ DWORD WINAPI Init(LPVOID bDelay)
     uint32_t* dword_6D4C1B = *hook::pattern("D8 0D ? ? ? ? 8B 4C 24 18 8B 54 24 1C").count(1).get(0).get<uint32_t*>(2);
     injector::WriteMemory<float>(dword_6D4C1B, (1.0f / 640.0f) * ((4.0f / 3.0f) / Screen.fAspectRatio), true);
 
-    //Widescreen Splash
-    pattern = hook::pattern("8B 46 10 8B 3D ? ? ? ? 53 50");
-    injector::MakeNOP(pattern.get_first(-2), 2, true);
-    pattern = hook::pattern("E8 ? ? ? ? 84 C0 B8 ? ? ? ? 75 ? B8 ? ? ? ? C3");
-    auto aWs_mw_ls_splas = *pattern.count(2).get(1).get<char*>(8);
-    auto aMw_ls_splash_0 = *pattern.count(2).get(1).get<char*>(15);
-    injector::WriteMemoryRaw(aMw_ls_splash_0, aWs_mw_ls_splas, strlen(aWs_mw_ls_splas), true);
-
     //Rain droplets
     static float fRainScaleX = ((0.75f / Screen.fAspectRatio) * (4.0f / 3.0f));
     pattern = hook::pattern("D9 44 24 0C D8 44 24 10 8B 4C 24 08 8B 44 24 10 8B D1");
@@ -292,6 +284,14 @@ DWORD WINAPI Init(LPVOID bDelay)
         injector::WriteMemory<uint32_t>(dword_58D883, 0x5F9001B0, true);
         uint32_t* dword_56885A = hook::pattern("38 48 34 74 31 8B 4E 38 68 7E 78 8E 90").count(1).get(0).get<uint32_t>(0); //wrong way
         injector::WriteMemory<uint32_t>(dword_56885A, 0x7401F980, true);
+
+        //Widescreen Splash
+        pattern = hook::pattern("8B 46 10 8B 3D ? ? ? ? 53 50");
+        injector::MakeNOP(pattern.get_first(-2), 2, true);
+        pattern = hook::pattern("E8 ? ? ? ? 84 C0 B8 ? ? ? ? 75 ? B8 ? ? ? ? C3");
+        auto aWs_mw_ls_splas = *pattern.count(2).get(1).get<char*>(8);
+        auto aMw_ls_splash_0 = *pattern.count(2).get(1).get<char*>(15);
+        injector::WriteMemoryRaw(aMw_ls_splash_0, aWs_mw_ls_splas, strlen(aWs_mw_ls_splas), true);
     }
 
     if (bFMVWidescreenMode)
@@ -517,7 +517,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
         auto RegOpenKeyExAHook = [](HKEY hKey, LPCTSTR lpSubKey, DWORD ulOptions, REGSAM samDesired, PHKEY phkResult) -> LONG
         {
-            if (RegistryReader.ReadInteger("MAIN", "DisplayName", -1) == -1)
+            if (strlen(RegistryReader.ReadString("MAIN", "DisplayName", "")) == 0)
             {
                 RegistryReader.WriteString("MAIN", "@", "INSERTYOURCDKEYHERE");
                 RegistryReader.WriteString("MAIN", "DisplayName", "Need for Speed Most Wanted");
