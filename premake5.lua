@@ -5,6 +5,7 @@ workspace "WidescreenFixesPack"
    location "build"
    objdir ("build/obj")
    buildlog ("build/log/%{prj.name}.log")
+   buildoptions {"-std:c++latest"}
    
    kind "SharedLib"
    language "C++"
@@ -75,6 +76,8 @@ project "DeerAvenger4.WidescreenFix"
    setpaths("Z:/WFP/Games/Deer Avenger 4/", "DA4.exe")
 project "DevilMayCry3.WidescreenFix"
    setpaths("Z:/WFP/Games/Devil May Cry 3/", "dmc3se.exe")
+project "Driv3r.WidescreenFix"
+   setpaths("Z:/WFP/Games/DRIV3R/", "driv3r.exe")
 project "DriverParallelLines.WidescreenFix"
    setpaths("Z:/WFP/Games/Driver Parallel Lines/", "DriverParallelLines.exe")
 project "Fahrenheit.WidescreenFix"
