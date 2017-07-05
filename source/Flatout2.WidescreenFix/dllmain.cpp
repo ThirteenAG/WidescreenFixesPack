@@ -89,8 +89,22 @@ void ShowIntroHook()
 
     //Aspect Ratio
     auto pattern = hook::pattern("D9 05 ? ? ? ? 8B 44 24 04 8B 4C 24");
-    injector::WriteMemory(pattern.get_first<float>(2), &Screen.fWidth, true);
-    injector::WriteMemory(pattern.get_first<float>(18), &Screen.fHeight, true);
+    if (!pattern.empty())
+    {
+        injector::WriteMemory(pattern.get_first<float>(2), &Screen.fWidth, true);
+        injector::WriteMemory(pattern.get_first<float>(18), &Screen.fHeight, true);
+    }
+    else
+    {
+        pattern = hook::pattern("8B 44 24 04 8B 4C 24 08 C7 00 00 00 80");
+        if (!pattern.empty())
+        {
+            injector::WriteMemory<float>(pattern.get_first<float>(10 + 0), Screen.fWidth, true);
+            injector::WriteMemory<float>(pattern.get_first<float>(10 + 6), Screen.fHeight, true);
+            injector::WriteMemory<float>(pattern.get_first<float>(23 + 10 + 0), Screen.fWidth, true);
+            injector::WriteMemory<float>(pattern.get_first<float>(23 + 10 + 6), Screen.fHeight, true);
+        }
+    }
 
     //Hud Scale
     pattern = hook::pattern("D9 05 ? ? ? ? 56 8B F1 8B 86"); //53BBF3
