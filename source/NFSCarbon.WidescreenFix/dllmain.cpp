@@ -558,6 +558,27 @@ DWORD WINAPI Init(LPVOID bDelay)
                 }
             }
         }; injector::MakeInline<Buttons>(pattern.get_first(16));
+
+        pattern = hook::pattern("8B 0F 8B 54 0E 08 DB 44 90 0C"); //0x67A466
+        static auto unk_A987EC = *hook::get_pattern<void**>("81 FA ? ? ? ? 89 74 24 18 ? ? ? ? ? ? 8B 44 24 14", 2);
+        struct MenuRemap
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                regs.ecx = *(uint32_t*)regs.edi;
+                regs.edx = *(uint32_t*)(regs.esi + regs.ecx + 0x08);
+        
+                auto dword_A9882C = &unk_A987EC[16];
+                auto dword_A98834 = &unk_A987EC[18];
+                auto dword_A9883C = &unk_A987EC[20];
+                auto dword_A98874 = &unk_A987EC[34];
+                
+                *(uint32_t*)(*(uint32_t*)dword_A9882C + 0x20) = 0; // "Enter"; changed B to A
+                *(uint32_t*)(*(uint32_t*)dword_A98834 + 0x20) = 1; // "ESC"; changed X to B
+                *(uint32_t*)(*(uint32_t*)dword_A9883C + 0x20) = 7; // "SPC"; changed RS to Start
+                *(uint32_t*)(*(uint32_t*)dword_A98874 + 0x20) = 3; // "1"; changed A to Y
+            }
+        }; injector::MakeInline<MenuRemap>(pattern.get_first(0), pattern.get_first(6));
     }
 
     if (fLeftStickDeadzone)

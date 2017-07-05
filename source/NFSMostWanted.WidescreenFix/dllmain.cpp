@@ -471,6 +471,25 @@ DWORD WINAPI Init(LPVOID bDelay)
                 }
             }
         }; injector::MakeInline<Buttons>(pattern.get_first(16));
+
+        pattern = hook::pattern("5E D8 0D ? ? ? ? 59 C2 08 00"); //0x628A51
+        static auto unk_91F7F4 = *hook::get_pattern<void**>("3D ? ? ? ? 89 7C 24 14 0F 8C ? ? ? ? 5F", 1);
+        struct MenuRemap
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                static const auto f0078125 = 0.0078125f;
+                _asm fmul dword ptr[f0078125]
+
+                auto dword_91FABC = &unk_91F7F4[178];
+                auto dword_91FAF0 = &unk_91F7F4[191];
+                auto dword_91FC90 = &unk_91F7F4[295];
+
+                *(uint32_t*)(dword_91FABC) = 0; // "Enter"; changed B to A
+                *(uint32_t*)(dword_91FAF0) = 1; // "ESC"; changed X to B
+                *(uint32_t*)(dword_91FC90) = 3; // "1"; changed A to Y
+            }
+        }; injector::MakeInline<MenuRemap>(pattern.get_first(1), pattern.get_first(7));
     }
 
     if (fLeftStickDeadzone)
