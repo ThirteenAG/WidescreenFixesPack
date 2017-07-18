@@ -172,3 +172,5 @@ project "TrueCrimeNewYorkCity.WidescreenFix"
    setpaths("Z:/WFP/Games/True Crime New York City/", "True Crime New York City.exe")
 project "TrueCrimeStreetsofLA.WidescreenFix"
    setpaths("Z:/WFP/Games/True Crime Streets of LA/", "TrueCrimeMB.exe")
+project "UltimateSpiderMan.WidescreenFix"
+   setpaths("Z:/WFP/Games/Ultimate Spider-Man/", "USM.exe")
