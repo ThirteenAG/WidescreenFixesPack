@@ -388,7 +388,7 @@ void FixHUD()
         injector::WriteMemory(p15625, &fWideScreenWidthScaleDown, true);
     }
 
-    pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59 E8 ? ? ? ? 6A 01 E8"); //0x5FA15B radio text
+    pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59 E8 ? ? ? ? 6A ? E8"); //0x5FA15B radio text
     injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &fWideScreenWidthScaleDown, true);
     injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(49), &fWideScreenWidthScaleDown, true);
     pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59 E8 ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 83 C0 EC"); //0x620C45 replay
@@ -865,6 +865,8 @@ DWORD WINAPI Init(LPVOID bDelay)
                 auto pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59 E8 ? ? ? ? 6A 01 E8"); //0x5FA15B radio text
                 injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &fCustomWideScreenWidthScaleDown, true);
                 injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(49), &fCustomWideScreenWidthScaleDown, true);
+                pattern = hook::pattern("50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 DB 05"); //0x5FA145 radio text
+                injector::WriteMemory(pattern.get(34).get<uint32_t>(3), &fCustomWideScreenHeightScaleDown, true);
                 pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59 E8 ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 83 C0 EC"); //0x620C45 replay
                 injector::WriteMemory(pattern.count(3).get(2).get<uint32_t>(2), &fCustomWideScreenWidthScaleDown, true);
 
