@@ -501,7 +501,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                 //00A5E0B4 Enter
                 if (PadKeyPresses != nullptr && PadKeyPresses != (PadState*)0x1)
                 {
-                    if (PadKeyPresses->Y)
+                    if (PadKeyPresses->Select)
                     {
                         *(int32_t*)(ButtonsState + 0xE8) = 1;
                     }
@@ -510,7 +510,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                         *(int32_t*)(ButtonsState + 0xE8) = 0;
                     }
 
-                    if (PadKeyPresses->LSClick)
+                    if (PadKeyPresses->X)
                     {
                         *(int32_t*)(ButtonsState + 0x13C) = 1;
                     }
@@ -518,7 +518,6 @@ DWORD WINAPI Init(LPVOID bDelay)
                     {
                         *(int32_t*)(ButtonsState + 0x13C) = 0;
                     }
-
                     if (PadKeyPresses->LSClick && PadKeyPresses->RSClick)
                     {
                         if (*nGameState == 3)
