@@ -102,6 +102,8 @@ project "GTASA.WidescreenFix"
    setpaths("Z:/WFP/Games/Grand Theft Auto/GTA San Andreas/", "gta_sa.exe")
 project "Gun.WidescreenFix"
    setpaths("Z:/WFP/Games/GUN/", "Gun.exe")
+project "HiddenandDangerous2.WidescreenFix"
+   setpaths("Z:/WFP/Games/Hidden and Dangerous 2/", "hd2.exe")
 project "KingKong.WidescreenFix"
    setpaths("Z:/WFP/Games/King Kong/", "CheckApplication.exe")
 project "Mafia.WidescreenFix"
