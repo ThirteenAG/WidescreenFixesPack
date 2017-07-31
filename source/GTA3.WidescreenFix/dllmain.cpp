@@ -135,7 +135,7 @@ void OverwriteResolution()
     if (!hbRsSelectDevice.fun)
         hbRsSelectDevice.fun = injector::MakeCALL(ResolutionPattern0.count(1).get(0).get<uint32_t>(0), RsSelectDeviceHook2).get();
 
-    injector::WriteMemory<uint8_t>(ResolutionPattern1.count(1).get(0).get<uint32_t>(2), 0x08, true);
+    injector::MakeNOP(ResolutionPattern1.get_first(10), 5, true);
 
     injector::WriteMemory(ResolutionPattern2.count(1).get(0).get<uint32_t>(14), ResX, true); //0x581E5B + 0x3
     injector::WriteMemory(ResolutionPattern2.count(1).get(0).get<uint32_t>(24), ResY, true); //0x581E64 + 0x4
