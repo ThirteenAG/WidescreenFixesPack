@@ -113,6 +113,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     bool bCutsceneFrameRateFix = iniReader.ReadInteger("MAIN", "CutsceneFrameRateFix", 1) != 0;
     bool bDisableCheckSpec = iniReader.ReadInteger("MAIN", "DisableCheckSpec", 1) != 0;
     bool bDisableRegistryDependency = iniReader.ReadInteger("MISC", "DisableRegistryDependency", 1) != 0;
+    bool bDisableSafeMode = iniReader.ReadInteger("MISC", "DisableSafeMode", 1) != 0;
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -308,6 +309,12 @@ DWORD WINAPI Init(LPVOID bDelay)
             injector::WriteMemory(&RegIAT[3], RegDeleteValueAHook, true);
             injector::WriteMemory(&RegIAT[4], RegCloseKeyHook, true);
         }
+    }
+
+    if (bDisableSafeMode)
+    {
+        pattern = hook::pattern("83 C8 FF 83 C4 10 C3"); //00413E53
+        injector::MakeNOP(pattern.get_first(-2), 2, true);
     }
 
     return 0;

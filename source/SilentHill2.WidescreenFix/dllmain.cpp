@@ -40,6 +40,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     bool bGamepadControlsFix = iniReader.ReadInteger("MISC", "GamepadControlsFix", 1) != 0;
     bool bLightingFix = iniReader.ReadInteger("MISC", "LightingFix", 1) != 0;
     bool bReduceCutsceneFOV = iniReader.ReadInteger("MISC", "ReduceCutsceneFOV", 0) != 0;
+    bool bSteamCrashFix = iniReader.ReadInteger("MISC", "SteamCrashFix", 0) != 0;
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -469,6 +470,12 @@ DWORD WINAPI Init(LPVOID bDelay)
         static float f1472 = 1.14702f / (1.0f / (Screen.fAspectRatio / (4.0f / 3.0f)));
         pattern = hook::pattern("D8 0D ? ? ? ? D9 1D ? ? ? ? E8 ? ? ? ? 6A 00 6A 00 6A 00");
         injector::WriteMemory(pattern.count(2).get(1).get<uint32_t>(2), &f1472, true); //4A1A61
+    }
+
+    if (bSteamCrashFix)
+    {
+        pattern = hook::pattern("57 33 C0 B9 0E 00 00 00"); //45826B
+        injector::WriteMemory<uint8_t>(pattern.get_first(-2), 0xEBi8, true);
     }
 
     return 0;
