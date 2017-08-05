@@ -146,6 +146,8 @@ DWORD WINAPI Init(LPVOID bDelay)
     bool bFrameRateFluctuationFix = iniReader.ReadInteger("MISC", "FrameRateFluctuationFix", 1) != 0;
     bool bSingleCoreAffinity = iniReader.ReadInteger("MISC", "SingleCoreAffinity", 1) != 0;
     static bool bReduceCutsceneFOV = iniReader.ReadInteger("MISC", "ReduceCutsceneFOV", 1) != 0;
+    bool bSH2Reference = iniReader.ReadInteger("MISC", "SH2Reference", 1) != 0;
+    static float fFogComplexity = static_cast<float>(iniReader.ReadInteger("MISC", "FogComplexity", 25));
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -344,6 +346,17 @@ DWORD WINAPI Init(LPVOID bDelay)
     pattern = hook::pattern("81 EC D8 00 00 00 55 8B AC"); //5E2300
     injector::MakeRET(pattern.count(1).get(0).get<uint32_t>(0));
 
+    //Pick-Up Item Width Restoration
+    pattern = hook::pattern("E8 ? ? ? ? D8 0D ? ? ? ? D8 05 ? ? ? ? D9 5C 24 04 E8 ? ? ? ? D8 0D ? ? ? ? 8B 4C"); //4DD329
+    struct FOVHook3
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            float f = 1.0f;
+            _asm fld dword ptr[f]
+        }
+    }; injector::MakeInline<FOVHook3>(pattern.get_first(0));
+
     if (bDisableCutsceneBorders)
     {
         pattern = hook::pattern("D9 05 ? ? ? ? C7 05 ? ? ? ? 00 00 00 00 D8 C9"); //41BB4B
@@ -465,7 +478,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     if (nDOFRes)
     {
-        pattern = hook::pattern("8B 3C 85 ? ? ? ? 8B 04 85 ? ? ? ? 56 6A 00 6A 15 6A 01 6A 01 ?"); //6B1444 //6B1434
+        pattern = hook::pattern("8B 3C 85 ? ? ? ? 8B 04 85 ? ? ? ? 56 6A 00 6A 15 6A 01 6A 01"); //6B1444 //6B1434
         auto dword_6B1444 = *pattern.count(1).get(0).get<uint32_t*>(3);
         injector::WriteMemory(dword_6B1444 - 1, nDOFRes, true); //otherworld corrosion resolution
         injector::WriteMemory(dword_6B1444 - 2, nDOFRes, true); //otherworld corrosion resolution
@@ -482,6 +495,18 @@ DWORD WINAPI Init(LPVOID bDelay)
     if (bSingleCoreAffinity)
     {
         SetProcessAffinityMask(GetCurrentProcess(), 1);
+    }
+
+    if (bSH2Reference)
+    {
+        pattern = hook::pattern("A0 ? ? ? ? 84 C0 ? ? E8 ? ? ? ? A2 ? ? ? ? C6 05"); //476C83
+        injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xC3i8, true);
+    }
+
+    if (fFogComplexity)
+    {
+        pattern = hook::pattern("D8 3D ? ? ? ? D9 1D ? ? ? ? 83 C4 08 C3"); //41B5D1
+        injector::WriteMemory(pattern.get_first(2), &fFogComplexity, true);
     }
 
     return 0;
