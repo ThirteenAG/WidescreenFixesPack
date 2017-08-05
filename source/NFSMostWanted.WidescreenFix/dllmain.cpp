@@ -85,6 +85,11 @@ DWORD WINAPI Init(LPVOID bDelay)
         injector::WriteMemory(dword_6C2866, Screen.Height, true);
     }
 
+    //restores missing geometry
+    uint32_t* dword_6C69A7 = hook::pattern("A0 ? ? ? ? 84 C0 74 ? B3 01").count(1).get(0).get<uint32_t>(0);
+    injector::MakeNOP(dword_6C69A7, 5, true);
+    injector::WriteMemory<uint16_t>(dword_6C69A7, 0x00B0i16, true); //mov al,00
+
     //Autosculpt scaling
     uint32_t* dword_6C9C45 = *hook::pattern("D8 0D ? ? ? ? DA 74 24 18 E8 ? ? ? ? 89 46 04 EB 03").count(1).get(0).get<uint32_t*>(2);
     injector::WriteMemory<float>(dword_6C9C45, 480.0f * Screen.fAspectRatio, true);
@@ -264,6 +269,10 @@ DWORD WINAPI Init(LPVOID bDelay)
         injector::WriteMemory(dword_6DA8AE, &dx, true);
     }
 
+    uint32_t* dword_57CB82 = hook::pattern("3A 55 34 0F 85 0B 02 00 00 A1").count(1).get(0).get<uint32_t>(0);
+    uint32_t* dword_5696CB = hook::pattern("8A 41 34 38 86 30 03 00 00 74 52 84 C0").count(1).get(0).get<uint32_t>(0);
+    uint32_t* dword_58D883 = hook::pattern("8A 40 34 5F 5E 5D 3B CB 5B 75 12").count(1).get(0).get<uint32_t>(0);
+    uint32_t* dword_56885A = hook::pattern("38 48 34 74 31 8B 4E 38 68 7E 78 8E 90").count(1).get(0).get<uint32_t>(0); //wrong way
     if (bHudWidescreenMode)
     {
         uint32_t* dword_56D675 = hook::pattern("89 5E 0C 88 5E 10 E8 ? ? ? ? 88 5E 19 88 5E 22").count(1).get(0).get<uint32_t>(0);
@@ -276,13 +285,9 @@ DWORD WINAPI Init(LPVOID bDelay)
             }
         }; injector::MakeInline<WidescreenHudHook>((uint32_t)dword_56D675, (uint32_t)dword_56D675 + 6);
 
-        uint32_t* dword_57CB82 = hook::pattern("3A 55 34 0F 85 0B 02 00 00 A1 ? ? ? ?").count(1).get(0).get<uint32_t>(0);
         injector::WriteMemory<uint32_t>(dword_57CB82, 0x0F01FA80, true);
-        uint32_t* dword_5696CB = hook::pattern("8A 41 34 38 86 30 03 00 00 74 52 84 C0").count(1).get(0).get<uint32_t>(0);
         injector::WriteMemory<uint32_t>(dword_5696CB, 0x389001B0, true);
-        uint32_t* dword_58D883 = hook::pattern("8A 40 34 5F 5E 5D 3B CB 5B 75 12").count(1).get(0).get<uint32_t>(0);
         injector::WriteMemory<uint32_t>(dword_58D883, 0x5F9001B0, true);
-        uint32_t* dword_56885A = hook::pattern("38 48 34 74 31 8B 4E 38 68 7E 78 8E 90").count(1).get(0).get<uint32_t>(0); //wrong way
         injector::WriteMemory<uint32_t>(dword_56885A, 0x7401F980, true);
 
         //Widescreen Splash
@@ -292,6 +297,13 @@ DWORD WINAPI Init(LPVOID bDelay)
         auto aWs_mw_ls_splas = *pattern.count(2).get(1).get<char*>(8);
         auto aMw_ls_splash_0 = *pattern.count(2).get(1).get<char*>(15);
         injector::WriteMemoryRaw(aMw_ls_splash_0, aWs_mw_ls_splas, strlen(aWs_mw_ls_splas), true);
+    }
+    else
+    {
+        injector::WriteMemory<uint32_t>(dword_57CB82, 0x0F00FA80, true);
+        injector::WriteMemory<uint32_t>(dword_5696CB, 0x389000B0, true);
+        injector::WriteMemory<uint32_t>(dword_58D883, 0x5F9000B0, true);
+        injector::WriteMemory<uint32_t>(dword_56885A, 0x7400F980, true);
     }
 
     if (bFMVWidescreenMode)
@@ -326,9 +338,9 @@ DWORD WINAPI Init(LPVOID bDelay)
         injector::WriteMemory<uint8_t>(dword_595DDA, 4, true);
         injector::WriteMemory<uint8_t>((uint32_t)dword_595DDA + 5, 4, true);
 
-        //render
-        uint32_t* dword_4FAEB0 = hook::pattern("75 ? 83 CE 20 8B 7C 24 10 57 52").count(1).get(0).get<uint32_t>(0);
-        injector::WriteMemory<uint8_t>(dword_4FAEB0, 0xEB, true);
+        //render (causes issues)
+        //uint32_t* dword_4FAEB0 = hook::pattern("75 ? 83 CE 20 8B 7C 24 10 57 52").count(1).get(0).get<uint32_t>(0);
+        //injector::WriteMemory<uint8_t>(dword_4FAEB0, 0xEB, true);
 
         uint32_t* dword_6BFE33 = hook::pattern("74 22 8B 0D ? ? ? ? 85").count(1).get(0).get<uint32_t>(0);
         injector::MakeNOP(dword_6BFE33, 2, true);
