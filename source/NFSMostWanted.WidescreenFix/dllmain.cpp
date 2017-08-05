@@ -85,10 +85,10 @@ DWORD WINAPI Init(LPVOID bDelay)
         injector::WriteMemory(dword_6C2866, Screen.Height, true);
     }
 
-    //restores missing geometry
-    uint32_t* dword_6C69A7 = hook::pattern("A0 ? ? ? ? 84 C0 74 ? B3 01").count(1).get(0).get<uint32_t>(0);
-    injector::MakeNOP(dword_6C69A7, 5, true);
-    injector::WriteMemory<uint16_t>(dword_6C69A7, 0x00B0i16, true); //mov al,00
+    //restores missing geometry, causes bugs
+    //uint32_t* dword_6C69A7 = hook::pattern("A0 ? ? ? ? 84 C0 74 ? B3 01").count(1).get(0).get<uint32_t>(0);
+    //injector::MakeNOP(dword_6C69A7, 5, true);
+    //injector::WriteMemory<uint16_t>(dword_6C69A7, 0x00B0i16, true); //mov al,00
 
     //Autosculpt scaling
     uint32_t* dword_6C9C45 = *hook::pattern("D8 0D ? ? ? ? DA 74 24 18 E8 ? ? ? ? 89 46 04 EB 03").count(1).get(0).get<uint32_t*>(2);

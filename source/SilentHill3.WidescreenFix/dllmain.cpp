@@ -248,7 +248,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     //FOV
     Screen.fFieldOfView = (((4.0f / 3.0f) / (Screen.fAspectRatio)));
-    static auto byte_81FAB4 = *hook::get_pattern<uint8_t*>("8A 0D ? ? ? ? 33 C0 80 F9 02 0F 94 C0 C3", 2);
+    static auto byte_81FAB5 = *hook::get_pattern<uint8_t*>("A2 ? ? ? ? A2 ? ? ? ? 74 4D 49", 1);
     pattern = hook::pattern("6A 02 E8 ? ? ? ? 83 C4 04 85 C0 ? ? D9 05 ? ? ? ? C3"); //43AB80 43ABC0
     struct FOVHook1
     {
@@ -256,7 +256,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         {
             float hor = Screen.fFieldOfView * 0.88f;
 
-            if (bReduceCutsceneFOV && *byte_81FAB4)
+            if (bReduceCutsceneFOV && *byte_81FAB5)
                 hor /= Screen.fFieldOfView;
 
             _asm fld dword ptr[hor]
@@ -271,7 +271,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         {
             float ver = 1.0f;
 
-            if (bReduceCutsceneFOV && *byte_81FAB4)
+            if (bReduceCutsceneFOV && *byte_81FAB5)
                 ver /= Screen.fFieldOfView;
 
             _asm fld dword ptr[ver]
@@ -347,12 +347,12 @@ DWORD WINAPI Init(LPVOID bDelay)
     injector::MakeRET(pattern.count(1).get(0).get<uint32_t>(0));
 
     //Pick-Up Item Width Restoration
-    pattern = hook::pattern("E8 ? ? ? ? D8 0D ? ? ? ? D8 05 ? ? ? ? D9 5C 24 04 E8 ? ? ? ? D8 0D ? ? ? ? 8B 4C"); //4DD329
+    pattern = hook::pattern("E8 ? ? ? ? D9 9D A0 FE FF FF"); //599C24
     struct FOVHook3
     {
         void operator()(injector::reg_pack& regs)
         {
-            float f = 1.0f;
+            float f = 0.88f;
             _asm fld dword ptr[f]
         }
     }; injector::MakeInline<FOVHook3>(pattern.get_first(0));
