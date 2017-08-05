@@ -145,6 +145,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     uint32_t nDOFRes = iniReader.ReadInteger("MISC", "DOFRes", 1024);
     bool bFrameRateFluctuationFix = iniReader.ReadInteger("MISC", "FrameRateFluctuationFix", 1) != 0;
     bool bSingleCoreAffinity = iniReader.ReadInteger("MISC", "SingleCoreAffinity", 1) != 0;
+    static bool bReduceCutsceneFOV = iniReader.ReadInteger("MISC", "ReduceCutsceneFOV", 1) != 0;
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -245,8 +246,37 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     //FOV
     Screen.fFieldOfView = (((4.0f / 3.0f) / (Screen.fAspectRatio)));
-    pattern = hook::pattern("D9 05 ? ? ? ? D8 0D ? ? ? ? C3"); //43AB95
-    injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &Screen.fFieldOfView, true);
+    static auto byte_81FAB4 = *hook::get_pattern<uint8_t*>("8A 0D ? ? ? ? 33 C0 80 F9 02 0F 94 C0 C3", 2);
+    pattern = hook::pattern("6A 02 E8 ? ? ? ? 83 C4 04 85 C0 ? ? D9 05 ? ? ? ? C3"); //43AB80 43ABC0
+    struct FOVHook1
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            float hor = Screen.fFieldOfView * 0.88f;
+
+            if (bReduceCutsceneFOV && *byte_81FAB4)
+                hor /= Screen.fFieldOfView;
+
+            _asm fld dword ptr[hor]
+        }
+    }; 
+    injector::MakeInline<FOVHook1>(pattern.count(2).get(0).get<void*>(0));
+    injector::WriteMemory<uint8_t>(pattern.count(2).get(0).get<void*>(5), 0xC3i8, true); //ret
+
+    struct FOVHook2
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            float ver = 1.0f;
+
+            if (bReduceCutsceneFOV && *byte_81FAB4)
+                ver /= Screen.fFieldOfView;
+
+            _asm fld dword ptr[ver]
+        }
+    };
+    injector::MakeInline<FOVHook2>(pattern.count(2).get(1).get<void*>(0));
+    injector::WriteMemory<uint8_t>(pattern.count(2).get(1).get<void*>(5), 0xC3i8, true); //ret
 
     //Removes the black bars visible on the side of the screen
     static float f0 = 0.0f;
@@ -276,12 +306,6 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     if (bFixMenu)
     {
-        //Mouse Cursor Fix
-        pattern = hook::pattern("6A 02 E8 ? ? ? ? 83 C4 04 85 C0 74 07");
-        injector::WriteMemory<uint8_t>(pattern.count(2).get(0).get<uint32_t>(12), 0xEB, true); // 43AB8C
-        injector::WriteMemory<uint8_t>(pattern.count(2).get(1).get<uint32_t>(12), 0x75, true); // 43ABCC
-        injector::MakeCALL(hook::pattern("E8 ? ? ? ? D9 9D 9C FE FF FF E8 ? ? ? ? 8D 85 5C FE").count(1).get(0).get<uint32_t>(0), pattern.get(1).get<uint32_t>(0), true); //4DDB94 call 0043ABC0
-
         //Menu Width
         static float fMenuWidthFactor = (1.0f / (480.0f * (Screen.fAspectRatio / 10.0f))) / 2.0f / 2.0f / 2.0f;
         static float fMenuXPos = 256.0f * (Screen.fAspectRatio / (4.0f / 3.0f));
