@@ -590,18 +590,25 @@ DWORD WINAPI Init(LPVOID bDelay)
         // [ -10000 | 10000 ] 
         static int32_t nLeftStickDeadzone = static_cast<int32_t>(fLeftStickDeadzone * 100.0f);
         pattern = hook::pattern("85 F6 7D 3D 8B 7C 24 18 57"); //0x4193B6
+        static auto loc_4193F7 = (uint32_t)hook::get_pattern("83 7C 24 18 01 75 ? B9 04 00 00 00");
+        static auto dword_71D8A8 = *hook::get_pattern<int32_t*>("8D 95 ? ? ? ? 8B F2 52 B9", 2);
         struct DeadzoneHook
         {
             void operator()(injector::reg_pack& regs)
             {
-                int32_t dStickStateX = *(int32_t*)(regs.edx + 0x00);
-                int32_t dStickStateY = *(int32_t*)(regs.edx + 0x04);
-                *(int32_t*)(regs.edx + 0x00) = (std::abs(dStickStateX) <= nLeftStickDeadzone) ? 0 : dStickStateX;
-                *(int32_t*)(regs.edx + 0x04) = (std::abs(dStickStateY) <= nLeftStickDeadzone) ? 0 : dStickStateY;
+                regs.esi = regs.eax;
+                if (*(int32_t*)&regs.esi >= 0)
+                {
+                    int32_t dStickStateX = *(int32_t*)(dword_71D8A8 + 0);
+                    int32_t dStickStateY = *(int32_t*)(dword_71D8A8 + 1);
+
+                    *(int32_t*)(dword_71D8A8 + 0) = (std::abs(dStickStateX) <= nLeftStickDeadzone) ? 0 : dStickStateX;
+                    *(int32_t*)(dword_71D8A8 + 1) = (std::abs(dStickStateY) <= nLeftStickDeadzone) ? 0 : dStickStateY;
+                    
+                    *(uint32_t*)(regs.esp - 4) = loc_4193F7;
+                }
             }
-        }; 
-        injector::MakeInline<DeadzoneHook>(pattern.get_first(0));
-        injector::WriteMemory<uint16_t>(pattern.get_first(5), 0x3AEBi16, true);
+        }; injector::MakeInline<DeadzoneHook>(pattern.get_first(-2), pattern.get_first(4));
     }
 
     return 0;
