@@ -200,7 +200,8 @@ DWORD WINAPI Init(LPVOID bDelay)
             //logfile << std::hex << stack[3] << std::endl;
 
             regs.ecx = regs.ebx + 0x150;
-            if ((uintptr_t)stack[3] == dword_464DE1 || (uintptr_t)stack[3] == dword_464E2C || (uintptr_t)stack[3] == dword_48DB15)
+            if ((uintptr_t)stack[3] == dword_464DE1 || (uintptr_t)stack[3] == dword_464E2C || (uintptr_t)stack[3] == dword_48DB15 ||
+                (uintptr_t)stack[2] == dword_464DE1 || (uintptr_t)stack[2] == dword_464E2C || (uintptr_t)stack[2] == dword_48DB15)
                 *(float*)(regs.ebx + 0x138) = Screen.fAspectRatio;
         }
     }; injector::MakeInline<ARFix>(mpattern.get_first(0), mpattern.get_first(6));

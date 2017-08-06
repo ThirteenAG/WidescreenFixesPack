@@ -199,7 +199,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             Screen.fAspectRatioDiff = (Screen.fAspectRatio / (4.0f / 3.0f));
             Screen.fHudOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
             Screen.fHudOffsetReal = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
-            Screen.fFieldOfView = (*pFOV / (Screen.fAspectRatio / (4.0f / 3.0f))) * (fFOVFactor ? fFOVFactor : 1.0f);
+            Screen.fFieldOfView = (*pFOV / (Screen.fAspectRatio / (4.0f / 3.0f))) / (fFOVFactor ? fFOVFactor : 1.0f);
         }
     }; injector::MakeInline<GetResHook>(pattern.get_first(0), pattern.get_first(6));
 
