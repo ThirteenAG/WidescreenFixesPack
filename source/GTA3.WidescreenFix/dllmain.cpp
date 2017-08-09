@@ -33,7 +33,7 @@ void GetPatterns()
     BordersPattern = hook::pattern("74 ? B9 ? ? ? ? E8"); //0x48E13E //0x4FE5D0
 
     ResolutionPattern0 = hook::pattern("E8 ? ? ? ? 85 C0 74 0A B8 01 00 00 00 E9 B1 00 00 00"); //0x584A60
-    ResolutionPattern1 = hook::pattern("8D 45 04 83 C4 0C 6A 01 50 53"); //0x4890F0 + 0x2
+    ResolutionPattern1 = hook::pattern("8D 44 24 38 30 DB 50 68"); //0x4891BC
     ResolutionPattern2 = hook::pattern("83 3D ? ? ? ? 00 59 59 74 2B 81 3C 24");
     ResolutionPattern3 = hook::pattern("C7 05 ? ? ? ? ? ? ? ? C7 05 ? ? ? ? 80 02 00 00");
     ResolutionPattern4 = hook::pattern("85 DB 75 0D E8 ? ? ? ? 39 05 ? ? ? ? 7C A4"); //0x581E9A
@@ -135,7 +135,15 @@ void OverwriteResolution()
     if (!hbRsSelectDevice.fun)
         hbRsSelectDevice.fun = injector::MakeCALL(ResolutionPattern0.count(1).get(0).get<uint32_t>(0), RsSelectDeviceHook2).get();
 
-    injector::MakeNOP(ResolutionPattern1.get_first(10), 5, true);
+    struct VideoModeReset
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.eax = regs.esp + 0x38;
+            regs.ebx = 0;
+            *(uint32_t*)(regs.ebp + 0x04) = 0; //resetting video mode
+        }
+    }; injector::MakeInline<VideoModeReset>(ResolutionPattern1.get_first(0), ResolutionPattern1.get_first(6));
 
     injector::WriteMemory(ResolutionPattern2.count(1).get(0).get<uint32_t>(14), ResX, true); //0x581E5B + 0x3
     injector::WriteMemory(ResolutionPattern2.count(1).get(0).get<uint32_t>(24), ResY, true); //0x581E64 + 0x4
