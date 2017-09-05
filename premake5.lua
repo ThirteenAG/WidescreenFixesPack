@@ -80,6 +80,8 @@ project "Driv3r.WidescreenFix"
    setpaths("Z:/WFP/Games/DRIV3R/", "driv3r.exe")
 project "DriverParallelLines.WidescreenFix"
    setpaths("Z:/WFP/Games/Driver Parallel Lines/", "DriverParallelLines.exe")
+project "EnterTheMatrix.WidescreenFix"
+   setpaths("Z:/WFP/Games/Enter the Matrix/", "Matrix.exe")
 project "Fahrenheit.WidescreenFix"
 project "Flatout.WidescreenFix"
    setpaths("Z:/WFP/Games/Flatout/FlatOut/", "flatout.exe")
