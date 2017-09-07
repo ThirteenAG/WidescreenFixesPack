@@ -154,6 +154,8 @@ project "StreetRacingSyndicate.WidescreenFix"
    setpaths("Z:/WFP/Games/Street Racing Syndicate/", "Bin/srs.exe", "Bin/scripts/")
 project "StubbstheZombie.WidescreenFix"
    setpaths("Z:/WFP/Games/Stubbs the Zombie/", "Stubbs.exe")
+project "TheMatrixPathOfNeo.WidescreenFix"
+   setpaths("Z:/WFP/Games/The Matrix - Path Of Neo/", "Matrix3.exe")
 project "ThePunisher.WidescreenFix"
    setpaths("Z:/WFP/Games/The Punisher/", "punisher.exe")
 project "TheSuffering.WidescreenFix"
