@@ -59,12 +59,22 @@ char* movies[] =
     "WB_Green"
 };
 
+char* misc[] =
+{
+    "film_scratch",
+    "oldfilm_noise04"
+    //"Hud_Generic_box",
+    //"Black_888"
+    //"HelveticaNeue_BoldCond"
+};
+
 injector::hook_back<void(__cdecl*)(void* a1, void* a2, void* a3, void* a4, float a5, float a6, float a7, float a8, void* a9, float a10, float a11, float a12)> hb_538E80;
 void __cdecl sub_538E80(void* a1, void* a2, void* a3, void* a4, float a5, float a6, float a7, float a8, void* a9, float a10, float a11, float a12)
 {
-    if (*(float*)a1 == 0.0f && *(float*)a2 == 1.0f && *(float*)a3 == 0.0f && *(float*)a4 == 1.0f && a12 == 2.0f) //fullscreen drawings
+    auto text = *(uint32_t*)((uintptr_t)a9 + 4);
+
+    if (*(float*)a1 == 0.0f && *(float*)a2 == 1.0f && *(float*)a3 == 0.0f && *(float*)a4 == 1.0f && (a12 == 2.0f || a12 == 4.0f)) //fullscreen drawings
     {
-        auto text = *(uint32_t*)((uintptr_t)a9 + 4);
         bool bFound = false;
 
         for each (auto var in movies)
@@ -80,11 +90,16 @@ void __cdecl sub_538E80(void* a1, void* a2, void* a3, void* a4, float a5, float 
             return hb_538E80.fun(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12);
     }
 
-    *(float*)a1 /= Screen.fHudScale;
-    *(float*)a2 /= Screen.fHudScale;
+    auto x = (char*)((uintptr_t)a9 + 4);
 
-    *(float*)a1 += Screen.fHudOffsetReal / Screen.fWidth;
-    *(float*)a2 += Screen.fHudOffsetReal / Screen.fWidth;
+    if (*(uint32_t*)misc[0] != text && *(uint32_t*)misc[1] != text)
+    {
+        *(float*)a1 /= Screen.fHudScale;
+        *(float*)a2 /= Screen.fHudScale;
+
+        *(float*)a1 += Screen.fHudOffsetReal / Screen.fWidth;
+        *(float*)a2 += Screen.fHudOffsetReal / Screen.fWidth;
+    }
 
     return hb_538E80.fun(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12);
 }
@@ -132,6 +147,12 @@ DWORD WINAPI Init(LPVOID bDelay)
             Screen.nAspectRatioDiff = static_cast<int32_t>(Screen.fWidth / (((4.0f / 3.0f)) / (Screen.fAspectRatio)));
         }
     }; injector::MakeInline<ResHook>(pattern1.count(3).get(2).get<void>(0), pattern2.count(2).get(1).get<void>(0)); //0x40DD33, 0x40DE21
+
+    //forcing 4:3 aspect, maybe better to hook sub_4BC320
+    pattern = hook::pattern("A3 ? ? ? ? A1 ? ? ? ? 85 C0 0F 84 ? ? ? ? 6A 01");
+    injector::MakeNOP(pattern.get_first(0), 5, true);
+    injector::WriteMemory(pattern2.count(2).get(1).get<uint32_t>(13), 0, true);
+    injector::WriteMemory(*pattern2.count(2).get(1).get<uint32_t>(9), 0, true);
     
     pattern = hook::pattern("05 94 00 00 00 D9 5C 24 08");
     struct AspectHook
