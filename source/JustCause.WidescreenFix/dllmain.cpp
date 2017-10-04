@@ -191,7 +191,6 @@ DWORD WINAPI Init(LPVOID bDelay)
     }; injector::MakeInline<ResHook>(pattern.get_first(0), pattern.get_first(7)); //0x40417C
 
     //Screen "bleeds" and flashes a lot with properly scaled backgrounds, so I need pillarboxing to hide that
-    //Same hook used to scale hud
     pattern = hook::pattern("8D 85 90 FE FF FF 50 6A 01 6A 00");
     struct Direct3DDeviceHook
     {
@@ -205,6 +204,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         }
     }; injector::MakeInline<Direct3DDeviceHook>(pattern.get_first(0), pattern.get_first(6)); //0x48A480, 0x48A480+6
 
+    //Same hook used to scale hud
     pattern = hook::pattern("E8 ? ? ? ? 8D 96 90 00 00 00 85 D2");
     hbDrawBorders.fun = injector::MakeCALL(pattern.get_first(0), DrawBordersHook).get(); //0x509340
 
@@ -299,7 +299,6 @@ DWORD WINAPI Init(LPVOID bDelay)
         }
     }; injector::MakeInline<TextScaleHook1>(pattern.get_first(0), pattern.get_first(9)); //0x5D079F, 0x5D079F + 9
 
-    pattern = hook::pattern("8B 48 04 8B 50 08");
     struct TextScaleHook2
     {
         void operator()(injector::reg_pack& regs)
@@ -308,10 +307,13 @@ DWORD WINAPI Init(LPVOID bDelay)
             regs.edx = *(int32_t*)(regs.eax + 0x08);
         }
     };
-    injector::MakeInline<TextScaleHook2>(pattern.count(4).get(0).get<void>(0), pattern.count(4).get(0).get<void>(6)); //0x5D10AF, 0x5D10AF + 6
-    injector::MakeInline<TextScaleHook2>(pattern.count(4).get(1).get<void>(0), pattern.count(4).get(1).get<void>(6)); //0x5D1563, 0x5D1563 + 6
-    //injector::MakeInline<TextScaleHook2>(pattern.count(4).get(2).get<void>(0), pattern.count(4).get(2).get<void>(6)); //0x5D2337, 0x5D2337+6 //crash
-    injector::MakeInline<TextScaleHook2>(pattern.count(4).get(3).get<void>(0), pattern.count(4).get(3).get<void>(6)); //0x5D269B, 0x5D269B + 6
+    pattern = hook::pattern("8B 48 04 8B 50 08 89 4C 24 44 89 54 24 40");
+    injector::MakeInline<TextScaleHook2>(pattern.get_first(0), pattern.get_first(6)); //0x5D10AF, 0x5D10AF + 6
+    pattern = hook::pattern("8B 48 04 8B 50 08 89 4C 24 34 89 54 24 2C");
+    injector::MakeInline<TextScaleHook2>(pattern.get_first(0), pattern.get_first(6)); //0x5D1563, 0x5D1563 + 6
+    pattern = hook::pattern("8B 48 04 8B 50 08 8B 86 88");
+    injector::MakeInline<TextScaleHook2>(pattern.get_first(0), pattern.get_first(6)); //0x5D269B, 0x5D269B + 6
+    //injector::MakeInline<TextScaleHook2>(); //0x5D2337, 0x5D2337+6 //crash
 
     pattern = hook::pattern("8B 48 04 8B BE A8 00 00 00");
     struct TextScaleHook3
