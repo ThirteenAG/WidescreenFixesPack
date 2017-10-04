@@ -106,6 +106,8 @@ project "Gun.WidescreenFix"
    setpaths("Z:/WFP/Games/GUN/", "Gun.exe")
 project "HiddenandDangerous2.WidescreenFix"
    setpaths("Z:/WFP/Games/Hidden and Dangerous 2/", "hd2.exe")
+project "JustCause.WidescreenFix"
+   setpaths("Z:/WFP/Games/Just Cause/", "JustCause.exe")
 project "KingKong.WidescreenFix"
    setpaths("Z:/WFP/Games/King Kong/", "CheckApplication.exe")
 project "Mafia.WidescreenFix"
