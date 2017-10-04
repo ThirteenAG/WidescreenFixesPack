@@ -232,7 +232,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         S_matrix_Identity_Xrefs.push_back((uintptr_t)hook::get_pattern("B0 01 E9 ? ? ? ? 8B 46 04")); // 0x006C1005
         S_matrix_Identity_Xrefs.push_back((uintptr_t)hook::get_pattern("FF 50 04 8B 4C 24 20 5F 5E 5D 5B", 3)); // 0x006C14B2
         S_matrix_Identity_Xrefs.push_back((uintptr_t)hook::get_pattern("89 45 EC 33 C0 66 A1")); // 0x006CA8B6
-        S_matrix_Identity_Xrefs.push_back((uintptr_t)hook::get_pattern("84 C0 0F 84 ? ? ? ? 80 3E")); // 0x006CCCF2
+        //S_matrix_Identity_Xrefs.push_back((uintptr_t)hook::get_pattern("84 C0 0F 84 ? ? ? ? 80 3E")); // 0x006CCCF2 - Causes black screen in  "Op. Challenger - Agent" cutscene
         S_matrix_Identity_Xrefs.push_back((uintptr_t)hook::get_pattern("E8 ? ? ? ? 8B C8 E8 ? ? ? ? 8D 54 24 2C")); // 0x006D3F7A
         //S_matrix_Identity_Xrefs.push_back(0x0040200E); //0040200E
         //S_matrix_Identity_Xrefs.push_back(0x00464E2C); //00464E2C
