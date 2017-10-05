@@ -94,7 +94,6 @@ DWORD WINAPI Init(LPVOID bDelay)
         injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &Screen.Width43, true);
         pattern = hook::pattern("8B 0D ? ? ? ? D1 E9 85 C9 89 4C 24 10 DB 44 24 10"); //004DC103 The light from the lighthouse  (i == 330)
         injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &Screen.Width, true);
-        injector::WriteMemory(0x4821EA+2, &Screen.Width, true);
 
         pattern = hook::pattern("A3 ? ? ? ? 89 44 24 14 A1 ? ? ? ? 8D 4C 24 0C 51");
         struct SetScaleHook
