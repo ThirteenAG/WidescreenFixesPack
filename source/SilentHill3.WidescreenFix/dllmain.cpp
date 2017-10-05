@@ -144,7 +144,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     uint32_t nShadowsRes = iniReader.ReadInteger("MISC", "ShadowsRes", 1024);
     uint32_t nDOFRes = iniReader.ReadInteger("MISC", "DOFRes", 1024);
     bool bFrameRateFluctuationFix = iniReader.ReadInteger("MISC", "FrameRateFluctuationFix", 1) != 0;
-    bool bSingleCoreAffinity = iniReader.ReadInteger("MISC", "SingleCoreAffinity", 1) != 0;
+    bool bSingleCoreAffinity = iniReader.ReadInteger("MISC", "SingleCoreAffinity", 0) != 0;
     static bool bReduceCutsceneFOV = iniReader.ReadInteger("MISC", "ReduceCutsceneFOV", 1) != 0;
     bool bSH2Reference = iniReader.ReadInteger("MISC", "SH2Reference", 1) != 0;
     static float fFogComplexity = static_cast<float>(iniReader.ReadInteger("MISC", "FogComplexity", 25));
@@ -331,6 +331,15 @@ DWORD WINAPI Init(LPVOID bDelay)
                 ++j;
             }
         }
+
+        //Mouse cursor width restoration
+        auto ret_088 = []() -> float
+        {
+            return 0.88f;
+        };
+
+        pattern = hook::pattern("E8 ? ? ? ? D9 9D 9C FE FF FF E8");
+        injector::MakeCALL(pattern.get_first(0), static_cast<float(*)()>(ret_088), true);
     }
 
     //inventory background size
