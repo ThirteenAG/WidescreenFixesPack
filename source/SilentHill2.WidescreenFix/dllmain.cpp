@@ -11,7 +11,18 @@ struct Screen
     float fHudOffset;
     int32_t Width43;
     float TextOffset;
+    int32_t FullscreenOffsetX;
+    int32_t FullscreenOffsetY;
 } Screen;
+
+uint32_t nImageId;
+injector::hook_back<uint32_t*(__cdecl*)(uintptr_t*, int32_t)> hbsub_457B40;
+uint32_t* __cdecl sub_457B40Hook(uintptr_t* a1, int32_t a2)
+{
+    auto pImageId = hbsub_457B40.fun(a1, a2);
+    nImageId = *pImageId;
+    return pImageId;
+}
 
 DWORD WINAPI Init(LPVOID bDelay)
 {
@@ -44,6 +55,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     bool bReduceCutsceneFOV = iniReader.ReadInteger("MISC", "ReduceCutsceneFOV", 0) != 0;
     bool bSteamCrashFix = iniReader.ReadInteger("MISC", "SteamCrashFix", 0) != 0;
     auto nIncreaseNoiseEffectRes = iniReader.ReadInteger("MISC", "IncreaseNoiseEffectRes", 1);
+    bool bFullscreenImages = iniReader.ReadInteger("MISC", "FullscreenImages", 1) != 0;
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -52,8 +64,10 @@ DWORD WINAPI Init(LPVOID bDelay)
     Screen.fHeight = static_cast<float>(Screen.Height);
     Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
     Screen.fHudOffset = (0.5f / ((4.0f / 3.0f) / (Screen.fAspectRatio)));
-    Screen.Width43 = static_cast<uint32_t>(Screen.fHeight * (4.0f / 3.0f));
+    Screen.Width43 = static_cast<int32_t>(Screen.fHeight * (4.0f / 3.0f));
     Screen.TextOffset = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
+    Screen.FullscreenOffsetX = static_cast<int32_t>(((Screen.fWidth - (Screen.fWidth * ((4.0f / 3.0f) / (1440.0f / 870.0f)))) / 2.0f) * ((1440.0f / 870.0f) / (4.0f / 3.0f)));
+    Screen.FullscreenOffsetY = static_cast<int32_t>(((Screen.fHeight - (Screen.fHeight * ((4.0f / 3.0f) / (1440.0f / 870.0f)))) / 2.0f) * ((1440.0f / 870.0f) / (4.0f / 3.0f)));
 
     auto ResList = *hook::pattern("3B 93 ? ? ? ? 75 ? 8B 44 24 14 3B 83").count(1).get(0).get<uint32_t*>(2); //4F60A8
     for (uint32_t i = (uint32_t)ResList; i <= (uint32_t)ResList + 0x2C; i += 4)
@@ -71,7 +85,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         for (size_t i = 0; i < pattern.size(); ++i) //http://pastebin.com/ZpkGX9My
         {
             if (i == 318 || i == 315 || i == 314 || i == 313 || i == 310 || i == 312 || i == 311 || i == 320 || i == 178 || i == 177 || i == 176 || i == 175 || i == 174 || i == 327 || i == 2 || i == 309
-                || i == 173 || i == 317 || i == 316 || i == 332 || i == 330 || i == 326)
+                || i == 173 || i == 317 || i == 316 || i == 332 || i == 330)
             {
                 injector::WriteMemory(pattern.get(i).get<uint32_t>(2), &Screen.Width, true);
             }
@@ -252,7 +266,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             }
         }; injector::MakeInline<TextPosHook6>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6)); //482117 | sub_481D20+3E3+
 
-
+        //horizontal lines in text
         pattern = hook::pattern("DB 05 ? ? ? ? 7D ? D8 05 ? ? ? ? D9 5C 24 20 0F BE 15");
         struct TextPosHook7
         {
@@ -488,7 +502,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     {
         //Eliminates tiling
         pattern = hook::pattern("C7 44 24 2C ? ? ? ? C7 44 24 48 ? ? ? ? C7 44 24 5C ? ? ? ? C7 44 24 60"); //4780E0
-        injector::WriteMemory<float>(pattern.get_first(4), 1.0f, true);
+        injector::WriteMemory<float>(pattern.get_first(4),  1.0f, true);
         injector::WriteMemory<float>(pattern.get_first(12), 1.0f, true);
         injector::WriteMemory<float>(pattern.get_first(20), 1.0f, true);
         injector::WriteMemory<float>(pattern.get_first(28), 1.0f, true);
@@ -525,6 +539,107 @@ DWORD WINAPI Init(LPVOID bDelay)
 
         pattern = hook::pattern("8B F3 BF ? ? ? ? E8"); //478402
         injector::WriteMemory(pattern.get_first(3), b, true);
+    }
+
+    if (bFullscreenImages)
+    {
+        pattern = hook::pattern("E8 ? ? ? ? 8B F8 83 C4 08 3B FD");
+        hbsub_457B40.fun = injector::MakeCALL(pattern.get_first(0), sub_457B40Hook).get(); //0x49FCD2
+
+        static uint32_t images[] = { 
+            0x00000004, 0x00000008, 0x0000000A, 0x0000000C, 0x0000000E, 0x00000010, 0x00000014, 0x00000016, 0x00000018, 0x0000001E, 0x0000001C, 0x00000020,
+            0x00000022, 0x00000024, 0x00000026, 0x00000028, 0x0000002A, 0x0000002C, 0x0000002E, 0x00000030, 0x00000032, 0x00000036, 0x0000003A, 0x0000003C,
+            0x0000003E, 0x00000042, 0x00000046, 0x00000048, 0x00000074, 0x00000076, 0x0000007A, 0x0000007C, 0x0000007E, 0x00000082, 0x00000086, 0x00000088,
+            0x0000008A, 0x0000008E, 0x00000094, 0x00000096, 0x0000009A, 0x0000009C, 0x000000A6, 0x000000A8, 0x000000B0, 0x000000B4, 0x000000B6, 0x000000B8,
+            0x000000BA, 0x000000BE, 0x000000C2, 0x000000C4, 0x000000C8, 0x000000CA, 0x00000130, 0x00000134, 0x00000138, 0x0000013A, 0x0000013C, 0x0000013E,
+            0x00000140, 0x00000142, 0x0000014E, 0x00000150, 0x00000152, 0x00000154, 0x00000156,
+            0x00000002, 0x00000006, 0x00000012, 0x0000001A, 0x00000072, 0x00000078, 0x00000080, 0x00000084, 0x0000008C, 0x00000090, 0x00000092, 0x00000098,
+            0x000000A4, 0x00000038, 0x00000034, 0x00000040, 0x00000044, 0x000000AA, 0x000000AC, 0x000000B2, 0x000000BC, 0x000000AE, 0x000000CC, 0x00000170,
+            0x00000174, 0x00000172, 0x00000176, 0x00000184, 0x00000186, 0x00000178, 0x00000188, 0x0000018A, 0x0000018C, 0x0000018E, 0x00000194, 0x0000017A,
+            0x00000190, 0x00000192, 0x0000017C, 0x0000017E, 0x00000180, 0x00000182, 0x00000196, 0x00000198, 0x0000019E, 0x000001A0, 0x000001A2, 0x000001A4,
+            0x000001A6, 0x0000012E, 0x00000130, 0x00000144
+        };
+
+        static auto isFullscreenImage = []() -> bool
+        {
+            return std::any_of(std::begin(images), std::end(images), [](uint32_t i) { return i == nImageId; });
+        };
+
+        pattern = hook::pattern("DB 05 ? ? ? ? A1 ? ? ? ? 81 EC C4 00 00 00 84 C9");
+        struct ImagesHook1
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                int32_t z = static_cast<int32_t>(Screen.fHeight * (1440.0f / 870.0f));
+                if (isFullscreenImage())
+                    _asm fild dword ptr[z]
+                else
+                    _asm fild dword ptr[Screen.Width43]
+            }
+        }; injector::MakeInline<ImagesHook1>(pattern.get_first(0), pattern.get_first(6)); //0x49F294, 0x49F294+6
+
+        struct ImagesHook2
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                int32_t z = Screen.Height + Screen.FullscreenOffsetY + Screen.FullscreenOffsetY;
+                if (isFullscreenImage())
+                    _asm fild dword ptr[z]
+                else
+                    _asm fild dword ptr[Screen.Height]
+            }
+        };
+        pattern = hook::pattern("DB 05 ? ? ? ? 7D ? D8 05 ? ? ? ? D9 54 24 10 0F BE");
+        injector::MakeInline<ImagesHook2>(pattern.get_first(0), pattern.get_first(6)); //0x49F2F8, 0x49F2F8 + 6
+        pattern = hook::pattern("DB 05 ? ? ? ? 7D ? D8 05 ? ? ? ? 0F BE 05 ? ? ? ? D9 54 24 10 D8");
+        injector::MakeInline<ImagesHook2>(pattern.get_first(0), pattern.get_first(6)); //0x49F4CA, 0x49F4CA + 6
+        pattern = hook::pattern("DB 05 ? ? ? ? 7D ? D8 05 ? ? ? ? 0F BE 15 ? ? ? ? D9 54 24 10");
+        injector::MakeInline<ImagesHook2>(pattern.get_first(0), pattern.get_first(6)); //0x49F5CE, 0x49F5CE + 6
+
+        struct ImagesHook3
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                if (isFullscreenImage())
+                    *(int32_t*)&regs.edx = 0 - Screen.FullscreenOffsetX;
+                else
+                    *(int32_t*)&regs.edx = 0;
+            }
+        };
+        pattern = hook::pattern("0F BE 15 ? ? ? ? D9 05 ? ? ? ? 0F BF 46 0C D8 C9");
+        injector::MakeInline<ImagesHook3>(pattern.get_first(0), pattern.get_first(7)); //0x49F2B7, 0x49F2B7 + 7
+        pattern = hook::pattern("0F BE 15 ? ? ? ? D9 54 24 00 D8 0D");
+        injector::MakeInline<ImagesHook3>(pattern.get_first(0), pattern.get_first(7)); //0x49F479, 0x49F479 + 7
+        pattern = hook::pattern("0F BE 15 ? ? ? ? D8 C9 A1 ? ? ? ? 85 C0 89");
+        injector::MakeInline<ImagesHook3>(pattern.get_first(0), pattern.get_first(7)); //0x49F596, 0x49F596 + 7
+
+        pattern = hook::pattern("0F BE 15 ? ? ? ? D9 54 24 10 D8 0D");
+        struct ImagesHook4
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                if (isFullscreenImage())
+                    *(int32_t*)&regs.edx = 0 - Screen.FullscreenOffsetY;
+                else
+                    *(int32_t*)&regs.edx = 0;
+            }
+        };
+        injector::MakeInline<ImagesHook4>(pattern.get_first(0), pattern.get_first(7)); //0x49F5DC, 0x49F5DC + 7
+
+        struct ImagesHook5
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                if (isFullscreenImage())
+                    *(int32_t*)&regs.eax = 0 - Screen.FullscreenOffsetY;
+                else
+                    *(int32_t*)&regs.eax = 0;
+            }
+        };
+        pattern = hook::pattern("0F BE 05 ? ? ? ? D8 0D ? ? ? ? 0F BF");
+        injector::MakeInline<ImagesHook5>(pattern.get_first(0), pattern.get_first(7)); //0x49F30A, 0x49F30A + 7
+        pattern = hook::pattern("0F BE 05 ? ? ? ? D9 54 24 10 D8 0D ? ? ? ? 0F BF 56 0E");
+        injector::MakeInline<ImagesHook5>(pattern.get_first(0), pattern.get_first(7)); //0x49F4D8, 0x49F4D8 + 7
     }
 
     return 0;
