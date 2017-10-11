@@ -15,6 +15,7 @@ struct Screen
     int32_t FullscreenOffsetY;
 } Screen;
 
+/*
 uint32_t nImageId; uint32_t* unk_1DBFC50;
 injector::hook_back<uint32_t*(__cdecl*)(uintptr_t*, int32_t)> hbsub_457B40;
 uint32_t* __cdecl sub_457B40Hook(uintptr_t* a1, int32_t a2)
@@ -26,6 +27,7 @@ uint32_t* __cdecl sub_457B40Hook(uintptr_t* a1, int32_t a2)
         nImageId = 0;
     return pImageId;
 }
+*/
 
 DWORD WINAPI Init(LPVOID bDelay)
 {
@@ -242,6 +244,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         }; injector::MakeInline<TextPosHook4>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(7)); //481F72 | sub_481D20+23E+
 
 
+        //censor boxes
         pattern = hook::pattern("DB 05 ? ? ? ? 7D 06 D8 05 ? ? ? ? 0F BE 0D ? ? ? ? 8B");
         struct TextPosHook5
         {
@@ -262,12 +265,13 @@ DWORD WINAPI Init(LPVOID bDelay)
                 _asm FSTP DWORD PTR[tempvar6]
                 tempvar6 += Screen.TextOffset;
                 _asm FLD  DWORD PTR[tempvar6]
-
+                *(float*)(regs.esp + 0x58) = tempvar6;
                 uint32_t esp58 = (regs.esp + 0x58);
                 _asm FST DWORD PTR[esp58]
                 _asm fxch    st(1)
             }
         }; injector::MakeInline<TextPosHook6>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6)); //482117 | sub_481D20+3E3+
+
 
         //horizontal lines in text
         pattern = hook::pattern("DB 05 ? ? ? ? 7D ? D8 05 ? ? ? ? D9 5C 24 20 0F BE 15");
@@ -546,9 +550,9 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     if (bFullscreenImages)
     {
-        pattern = hook::pattern("E8 ? ? ? ? 83 C4 08 3B C5 74 ? 8B 08");
-        unk_1DBFC50 = (uint32_t*)(*hook::get_pattern<uint32_t>("68 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 68 80 00 00 00", 1) + 0x10);
-        hbsub_457B40.fun = injector::MakeCALL(pattern.get_first(0), sub_457B40Hook).get(); //0x49FCA5
+        static auto unk_1DBFC50 = (uint32_t*)(*hook::get_pattern<uint32_t>("68 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 68 80 00 00 00", 1) + 0x10);
+        //pattern = hook::pattern("E8 ? ? ? ? 83 C4 08 3B C5 74 ? 8B 08");
+        //hbsub_457B40.fun = injector::MakeCALL(pattern.get_first(0), sub_457B40Hook).get(); //0x49FCA5
 
         static uint32_t images[] = { 
             0x00000004, 0x00000008, 0x0000000A, 0x0000000C, 0x0000000E, 0x00000010, 0x00000014, 0x00000016, 0x00000018, 0x0000001E, 0x0000001C, 0x00000020,
@@ -566,7 +570,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
         static auto isFullscreenImage = []() -> bool
         {
-            return std::any_of(std::begin(images), std::end(images), [](uint32_t i) { return i == nImageId; });
+            return std::any_of(std::begin(images), std::end(images), [](uint32_t i) { return i == *unk_1DBFC50; });
         };
 
         pattern = hook::pattern("DB 05 ? ? ? ? A1 ? ? ? ? 81 EC C4 00 00 00 84 C9");
