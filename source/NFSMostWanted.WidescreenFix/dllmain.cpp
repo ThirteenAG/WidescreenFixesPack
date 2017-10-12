@@ -297,6 +297,10 @@ DWORD WINAPI Init(LPVOID bDelay)
         auto aWs_mw_ls_splas = *pattern.count(2).get(1).get<char*>(8);
         auto aMw_ls_splash_0 = *pattern.count(2).get(1).get<char*>(15);
         injector::WriteMemoryRaw(aMw_ls_splash_0, aWs_mw_ls_splas, strlen(aWs_mw_ls_splas), true);
+
+        //issue #343 HD Compatible For Optimal Gaming Logo
+        pattern = hook::pattern("E8 ? ? ? ? 83 C4 0C E8 ? ? ? ? 85 C0 75 ? 8B 46");
+        injector::MakeCALL(pattern.get_first(0), injector::GetBranchDestination(hook::get_pattern("E8 ? ? ? ? 8B 46 10 68 6D 44 CF 13"), true), true);
     }
     else
     {
