@@ -177,6 +177,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     pfShowIntro = pattern.get_first(0);
     injector::MakeJMP(pfShowIntro, ShowIntroHook, true);
+    injector::MakeNOP(hook::get_pattern("6A 00 6A 00 E8 ? ? ? ? 83 C4 08 B8 01 00 00 00 5B", -7), 2, true);
 
     return 0;
 }
