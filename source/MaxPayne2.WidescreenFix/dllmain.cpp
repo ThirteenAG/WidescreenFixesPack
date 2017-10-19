@@ -289,27 +289,27 @@ DWORD WINAPI InitWF(LPVOID)
                     {
                         ElementNewPosX1 = ElementPosX + Screen.fHudOffsetWide;
                     }
-                
+                    else
                     if (ElementPosX == 8.0f && ElementPosY != 8.0f) // bullet time overlay()
                     {
                         ElementNewPosX1 = ElementPosX + Screen.fHudOffsetWide;
                     }
-                
+                    else
                     if (ElementPosX == 12.0f) // painkillers
                     {
                         ElementNewPosX1 = ElementPosX + Screen.fHudOffsetWide;
                     }
-                
+                    else
                     if (ElementPosX == 22.5f) //health bar and overlay
                     {
                         ElementNewPosX1 = ElementPosX + Screen.fHudOffsetWide;
                     }
-                
+                    else
                     if (ElementPosX == 96.0f) // other weapons name
                     {
                         ElementNewPosX1 = ElementPosX - Screen.fHudOffsetWide;
                     }
-                
+                    else
                     if (ElementPosX == 192.0f) //molotovs/grenades name pos
                     {
                         ElementNewPosX1 = ElementPosX - Screen.fHudOffsetWide;
@@ -366,7 +366,7 @@ DWORD WINAPI InitWF(LPVOID)
                     float TextPosX = pTextElementPosX->a;
                     float TextNewPosX = TextPosX;
 
-                    if ((pTextElementPosX->a == 0.0f || pTextElementPosX->a == -8.0f || pTextElementPosX->a == -16.0f || pTextElementPosX->a == -24.0f || pTextElementPosX->a == -32.0f) && pTextElementPosX->b == -10.5f && (pTextElementPosX->c == 8.0f || pTextElementPosX->c == 16.0f || pTextElementPosX->c == 24.0f || pTextElementPosX->c == 32.0f) && pTextElementPosX->d == 21) //ammo numbers(position depends on digits amount)
+                    if ((pTextElementPosX->a == 0.0f || pTextElementPosX->a == -8.0f || pTextElementPosX->a == -16.0f || pTextElementPosX->a == -24.0f || pTextElementPosX->a == -32.0f) && pTextElementPosX->b == -10.5f && (pTextElementPosX->c == 8.0f || pTextElementPosX->c == 16.0f || pTextElementPosX->c == 24.0f || pTextElementPosX->c == 32.0f || pTextElementPosX->c == 57.0f) && pTextElementPosX->d == 21) //ammo numbers(position depends on digits amount)
                     {
                         if (TextUnkVal < 0.0f)
                         {
