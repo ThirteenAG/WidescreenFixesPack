@@ -110,6 +110,8 @@ project "JustCause.WidescreenFix"
    setpaths("Z:/WFP/Games/Just Cause/", "JustCause.exe")
 project "KingKong.WidescreenFix"
    setpaths("Z:/WFP/Games/King Kong/", "CheckApplication.exe")
+project "LARush.WidescreenFix"
+   setpaths("Z:/WFP/Games/LA Rush/", "LARush.exe", "plugins/")
 project "Mafia.WidescreenFix"
    setpaths("Z:/WFP/Games/Mafia/", "Game.exe")
 project "Manhunt.WidescreenFix"
@@ -132,6 +134,8 @@ project "ParadiseCracked.WidescreenFix"
    setpaths("Z:/WFP/Games/Paradise Cracked/", "game.exe")
 project "PsiOpsTheMindgateConspiracy.WidescreenFix"
    setpaths("Z:/WFP/Games/PSI-OPS/", "PsiOps.exe")
+project "Psychonauts.WidescreenFix"
+   setpaths("Z:/WFP/Games/Psychonauts/", "Psychonauts.exe")
 project "SecondSight.WidescreenFix"
    setpaths("Z:/WFP/Games/Second Sight/", "secondsight.exe")
 project "SilentHill2.WidescreenFix"
