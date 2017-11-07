@@ -132,12 +132,10 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     if (fGameSpeed)
     {
-        auto sub_40C930 = hook::pattern("8B 44 24 04 8B 0D ? ? ? ? 0F BE 4C 01 08 8B C1 99");
-        auto flt_6CD6B0_pattern = hook::range_pattern((uintptr_t)sub_40C930.count(2).get(1).get<uintptr_t>(0), (uintptr_t)sub_40C930.count(2).get(1).get<uintptr_t>(108), "D8 2D ? ? ? ?");
-
-        injector::WriteMemory(flt_6CD6B0_pattern.count(3).get(0).get<uintptr_t>(2), &fGameSpeed, true); //0x40C930 + 0x2 + 0x32
-        injector::WriteMemory(flt_6CD6B0_pattern.count(3).get(1).get<uintptr_t>(2), &fGameSpeed, true); //0x40C930 + 0x2 + 0x64
-        injector::WriteMemory(flt_6CD6B0_pattern.count(3).get(2).get<uintptr_t>(2), &fGameSpeed, true); //0x40C930 + 0x2 + 0x4D
+        pattern = hook::pattern("D8 2D ? ? ? ? DE F9 C3");
+        injector::WriteMemory(pattern.count(3).get(0).get<void>(2), &fGameSpeed, true); //0x40C930 + 0x2 + 0x32
+        injector::WriteMemory(pattern.count(3).get(1).get<void>(2), &fGameSpeed, true); //0x40C930 + 0x2 + 0x64
+        injector::WriteMemory(pattern.count(3).get(2).get<void>(2), &fGameSpeed, true); //0x40C930 + 0x2 + 0x4D
     }
     
     return 0;
