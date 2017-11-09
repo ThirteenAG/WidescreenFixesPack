@@ -67,6 +67,14 @@ struct MemFloat
     float a16 = 1.0f;
 } flt_7933E0;
 
+bool bSign;
+injector::hook_back<void(__fastcall*)(int* _this, int edx, int a2, float a3, float a4, int a5, int a6, int a7, int a8, int a9, float a10, int a11, int a12, int a13, int a14)> hbsub_47C7C0;
+void __fastcall sub_47C7C0(int* _this, int edx, int a2, float a3, float a4, int a5, int a6, int a7, int a8, int a9, float a10, int a11, int a12, int a13, int a14)
+{
+    a3 = a3 + (bSign ? Screen.fHudOffsetWide : -Screen.fHudOffsetWide);
+    return hbsub_47C7C0.fun(_this, edx, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14);
+}
+
 DWORD WINAPI Init(LPVOID bDelay)
 {
     auto pattern = hook::pattern("8B 82 C8 02 00 00 89 81 94 05 00 00 8B 4D F8");
@@ -83,6 +91,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     CIniReader iniReader("");
     static bool bWidescreenHud = iniReader.ReadInteger("MAIN", "WidescreenHud", 1) != 0;
     static float fWidescreenHudOffset = iniReader.ReadFloat("MAIN", "WidescreenHudOffset", 100.0f);
+    bool bAltTab = iniReader.ReadInteger("MAIN", "AllowAltTabbingWithoutPausing", 0) != 0;
 
     struct ResHook
     {
@@ -128,38 +137,29 @@ DWORD WINAPI Init(LPVOID bDelay)
     }; injector::MakeInline<HudHook>(pattern.get_first(0), pattern.get_first(36)); //0x47D5B8, 0x47D5DC
 
     // xrefs
-    static auto dw_424949 = hook::get_pattern("0F B6 8D 63 FF FF FF 85 C9 0F 84", 0); // 0x00424949
-    static auto dw_425276 = hook::get_pattern("89 85 74 FF FF FF 83 BD 74 FF FF FF 00 0F 8E ? ? ? ? 8B 4D", 0); // 0x00425276
-    static auto dw_4FD37D = hook::get_pattern("8B 8D 28 FA FF FF 83 79 18 00 74", 0); // 0x004FD37D
-    static auto dw_616FB7 = hook::get_pattern("8B 45 C4 83 C0 01 89 45 C4 8B 4D C8", 0); // 0x00616FB7
+    static auto dw_61F2EF = hook::get_pattern("EB ? 8B 85 14 FF FF FF 8B 08 E8", 0);// 0x0061F2EF;
     static auto dw_61EA8F = hook::get_pattern("8B 95 14 FF FF FF 8B 4A 1C E8 ? ? ? ? 8B", 0); // 0x0061EA8F
+    static auto dw_616FB7 = hook::get_pattern("8B 45 C4 83 C0 01 89 45 C4 8B 4D C8", 0); // 0x00616FB7
+    static auto dw_4FD37D = hook::get_pattern("8B 8D 28 FA FF FF 83 79 18 00 74", 0); // 0x004FD37D
     static auto dw_61EAC4 = hook::get_pattern("8B 8D 14 FF FF FF 8B 51 10 8B 85 14", 0); // 0x0061EAC4
     static auto dw_61EADD = hook::get_pattern("8B 8D 14 FF FF FF 8B 51 0C 8B 85 14", 0); // 0x0061EADD
     static auto dw_61EAF6 = hook::get_pattern("C7 45 D8 00 00 00 00 8B 0D ? ? ? ? 8B 91 8C", 0); // 0x0061EAF6
-    static auto dw_61F2EF = hook::get_pattern("EB ? 8B 85 14 FF FF FF 8B 08 E8", 0);// 0x0061F2EF;
-    static auto dw_620A13 = hook::get_pattern("D9 85 CC FD FF FF D9 9D 7C FB FF FF D9 E8 D9", 0);// 0x00620A13;
-    static auto dw_620AD3 = hook::get_pattern("8B 85 38 FB FF FF 0F B6 48 75", 0);// 0x00620AD3;
-    static auto dw_620CE7 = hook::get_pattern("8D 95 CC FD FF FF 52 6A 01", 0);// 0x00620CE7;
-    static auto dw_620E1E = hook::get_pattern("8B 15 ? ? ? ? 8B 82 3C 82 00 00 33 C9 6B C9 74 8B 94 08 E4 02 00 00 89 95 20 FC FF FF", 0);// 0x00620E1E;
-    static auto dw_621030 = hook::get_pattern("8D 8D CC FD FF FF 51 6A 00 8B 15 ? ? ? ? 8B", 0);// 0x00621030;
-    static auto dw_621167 = hook::get_pattern("D9 EE D9 9D 98 FC FF FF D9 EE D9 9D 6C FC FF FF C6 45 FB 00", 0);// 0x00621167;
-    static auto dw_620498 = hook::get_pattern("8B 15 ? ? ? ? 8B 82 AC 83 00 00 83 E8 01 50 8B 0D ? ? ? ? 81 C1 0C 02 00 00 E8 ? ? ? ? 89 85 60 FC FF FF 8B 8D", 0);// 0x00620498;
-    static auto dw_424C91 = hook::get_pattern("8B 85 68 FF FF FF 83 C0 01 EB", 0);// 0x00424C91;
-    static auto dw_620166 = hook::get_pattern("D9 45 F8 DC 35 ? ? ? ? D8 4D F0 D8 6D 08 D9 5D 08", 0);// 0x00620166;
+    static auto dw_61F2FE = hook::get_pattern("8B 85 14 FF FF FF 8B 08 E8 ? ? ? ? 8B E5 5D C3", 13); // 0x0061F2FE
 
     pattern = hook::pattern("BE ? ? ? ? 8D BC 24 00 01 00 00 F3 A5 83 7D 20 00");
     injector::WriteMemory(pattern.get_first(1), &flt_7933E0, true); //0x47CC71 + 1
+
+    if (bWidescreenHud)
+    {
+        pattern = hook::pattern("E8 ? ? ? ? C7 45 D8 80 00 00 00"); //fix for misaligned faces
+        hbsub_47C7C0.fun = injector::MakeCALL(pattern.get_first(0), sub_47C7C0, true).get(); //0x5E0FA5
+    }
 
     pattern = hook::pattern("89 8C 24 AC 01 00 00 83 7D 08 00");
     struct HudHook2
     {
         const CRect fs = CRect(0.0f, 0.0f, 640.0f, 480.0f); // fullscreen images
         const CRect fl = CRect(0.0f, 0.0f, 20.0f, 15.0f);   // strike flash
-
-        // bottom right buttons 
-        const CRect bg = CRect(0x00000000U, 0x00000000U, 0x3F99999AU, 0x3F99999AU); // background
-        const CRect ki = CRect(0x00000040U, 0x00000040U, 0x3F300000U, 0x3F38CCCDU); // key icons
-        const CRect lt = CRect(0x3F400000U, 0x3B800000U, 0x3F400000U, 0x3F400000U); // letters
 
         void operator()(injector::reg_pack& regs)
         {
@@ -192,15 +192,12 @@ DWORD WINAPI Init(LPVOID bDelay)
 
                     if (bWidescreenHud)
                     {
-                        static void* stack[5];
-                        CaptureStackBackTrace(0, 5, stack, NULL);
+                        static void* stack[6];
+                        CaptureStackBackTrace(0, 6, stack, NULL);
 
-                        if ((*r == ki && stack[3] == dw_424949 && stack[4] != dw_425276) 
-                         || (*r == bg && stack[3] == dw_620498 /*&& stack[4] == dw_61F2EF*/)
-                         || (*r == lt && stack[3] == dw_424C91)
-                         || (*(uint32_t*)&r->m_fRight == 0x3F800000U && *(uint32_t*)&r->m_fTop == 0x3F800000U && stack[3] == dw_620166) //ammo
-                         || ((stack[3] == dw_620A13 || stack[3] == dw_620AD3 || stack[3] == dw_620CE7 || stack[3] == dw_620E1E || stack[3] == dw_621030 || stack[3] == dw_621167))) //item icons
+                        if (stack[4] == dw_61F2EF || stack[5] == dw_61F2EF || stack[4] == dw_61F2FE || stack[5] == dw_61F2FE)
                         {
+                            bSign = false;
                             flt_7933E0.a13 += Screen.fHudOffsetWide;
                         }
                         else
@@ -213,6 +210,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
                             if (stack[4] == dw_61EA8F || stack[4] == dw_616FB7 || stack[4] == dw_4FD37D)
                             {
+                                bSign = true;
                                 flt_7933E0.a13 -= Screen.fHudOffsetWide;
                             }
                             else
@@ -241,6 +239,12 @@ DWORD WINAPI Init(LPVOID bDelay)
             **(float**)(regs.esp + 0x0C) = Screen.fHudOffsetReal;    //x
         }
     }; injector::MakeInline<MoviesHook>(pattern.get_first(0), pattern.get_first(6)); //0x4891EF
+
+    if (bAltTab) //don't pause on minimize
+    {
+        pattern = hook::pattern("55 8B EC FF 15 ? ? ? ? 33 C9"); //0x465440
+        injector::MakeRET(pattern.get_first(0));
+    }
 
     return 0;
 }
