@@ -67,14 +67,6 @@ struct MemFloat
     float a16 = 1.0f;
 } flt_7933E0;
 
-bool bSign;
-injector::hook_back<void(__fastcall*)(int* _this, int edx, int a2, float a3, float a4, int a5, int a6, int a7, int a8, int a9, float a10, int a11, int a12, int a13, int a14)> hbsub_47C7C0;
-void __fastcall sub_47C7C0(int* _this, int edx, int a2, float a3, float a4, int a5, int a6, int a7, int a8, int a9, float a10, int a11, int a12, int a13, int a14)
-{
-    a3 = a3 + (bSign ? Screen.fHudOffsetWide : -Screen.fHudOffsetWide);
-    return hbsub_47C7C0.fun(_this, edx, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14);
-}
-
 DWORD WINAPI Init(LPVOID bDelay)
 {
     auto pattern = hook::pattern("8B 82 C8 02 00 00 89 81 94 05 00 00 8B 4D F8");
@@ -149,12 +141,6 @@ DWORD WINAPI Init(LPVOID bDelay)
     pattern = hook::pattern("BE ? ? ? ? 8D BC 24 00 01 00 00 F3 A5 83 7D 20 00");
     injector::WriteMemory(pattern.get_first(1), &flt_7933E0, true); //0x47CC71 + 1
 
-    if (bWidescreenHud)
-    {
-        pattern = hook::pattern("E8 ? ? ? ? C7 45 D8 80 00 00 00"); //fix for misaligned faces
-        hbsub_47C7C0.fun = injector::MakeCALL(pattern.get_first(0), sub_47C7C0, true).get(); //0x5E0FA5
-    }
-
     pattern = hook::pattern("89 8C 24 AC 01 00 00 83 7D 08 00");
     struct HudHook2
     {
@@ -164,6 +150,9 @@ DWORD WINAPI Init(LPVOID bDelay)
         void operator()(injector::reg_pack& regs)
         {
             *(uint32_t*)(regs.esp + 0x1AC) = regs.ecx;
+
+            flt_7933E0.a01 = 1.0f;
+            flt_7933E0.a13 = 0.0f;
 
             auto ptr = *(uint32_t*)(regs.ebp + 0x24);
             if (ptr)
@@ -187,9 +176,6 @@ DWORD WINAPI Init(LPVOID bDelay)
                 }
                 else
                 {
-                    flt_7933E0.a01 = 1.0f;
-                    flt_7933E0.a13 = 0.0f;
-
                     if (bWidescreenHud)
                     {
                         static void* stack[6];
@@ -197,7 +183,6 @@ DWORD WINAPI Init(LPVOID bDelay)
 
                         if (stack[4] == dw_61F2EF || stack[5] == dw_61F2EF || stack[4] == dw_61F2FE || stack[5] == dw_61F2FE)
                         {
-                            bSign = false;
                             flt_7933E0.a13 += Screen.fHudOffsetWide;
                         }
                         else
@@ -210,7 +195,6 @@ DWORD WINAPI Init(LPVOID bDelay)
 
                             if (stack[4] == dw_61EA8F || stack[4] == dw_616FB7 || stack[4] == dw_4FD37D)
                             {
-                                bSign = true;
                                 flt_7933E0.a13 -= Screen.fHudOffsetWide;
                             }
                             else
