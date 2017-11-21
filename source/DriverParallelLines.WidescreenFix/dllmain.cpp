@@ -126,6 +126,8 @@ DWORD WINAPI Init(LPVOID bDelay)
     CIniReader iniReader("");
     Screen.fCustomFieldOfView = iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f);
     Screen.bFixFMVs = iniReader.ReadInteger("MAIN", "FixFMVs", 1) != 0;
+    int32_t nMinResX = iniReader.ReadInteger("MAIN", "MinResX", 0);
+    int32_t nMinResY = iniReader.ReadInteger("MAIN", "MinResY", 0);
 
     std::tie(Screen.DesktopResW, Screen.DesktopResH) = GetDesktopRes();
  
@@ -133,8 +135,24 @@ DWORD WINAPI Init(LPVOID bDelay)
     pattern = hook::pattern("68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? FF 75 F8 BF"); //4C5A89
     injector::WriteMemory(pattern.get_first<int32_t*>(1 +  0), INT_MAX, true);
     injector::WriteMemory(pattern.get_first<int32_t*>(1 +  5), INT_MAX, true);
-    injector::WriteMemory(pattern.get_first<int32_t*>(1 + 10), 0, true);
-    injector::WriteMemory(pattern.get_first<int32_t*>(1 + 15), 0, true);
+    injector::WriteMemory(pattern.get_first<int32_t*>(1 + 10), nMinResY, true);
+    injector::WriteMemory(pattern.get_first<int32_t*>(1 + 15), nMinResX, true);
+
+    pattern = hook::pattern("68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? FF 75 F8 B9"); //5EB9AC
+    injector::WriteMemory(pattern.get_first<int32_t*>(1 +  0), INT_MAX, true);
+    injector::WriteMemory(pattern.get_first<int32_t*>(1 +  5), INT_MAX, true);
+    injector::WriteMemory(pattern.get_first<int32_t*>(1 + 10), nMinResY, true);
+    injector::WriteMemory(pattern.get_first<int32_t*>(1 + 15), nMinResX, true);
+
+    pattern = hook::pattern("68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 6A 00 B9"); //5E4B9B
+    injector::WriteMemory(pattern.get_first<int32_t*>(1 + 0), INT_MAX, true);
+    injector::WriteMemory(pattern.get_first<int32_t*>(1 + 5), INT_MAX, true);
+    injector::WriteMemory(pattern.get_first<int32_t*>(1 + 10), nMinResY, true);
+    injector::WriteMemory(pattern.get_first<int32_t*>(1 + 15), nMinResX, true);
+
+    //scroll through resolutions
+    pattern = hook::pattern("7C D8 83 C8 FF"); //4C5875
+    injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEBi8, true);
 
     //default to desktop res
     pattern = hook::pattern("C7 46 4C ? ? ? ? C7 46 50 ? ? ? ? C7 46 54 ? ? ? ? C7"); //4C5077

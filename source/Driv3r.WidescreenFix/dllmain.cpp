@@ -47,15 +47,29 @@ DWORD WINAPI Init(LPVOID bDelay)
     CIniReader iniReader("");
     Screen.fCustomFieldOfView = iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f);
     static float fDrawDistanceFactor = iniReader.ReadFloat("MAIN", "DrawDistanceFactor", 1.0f);
+    int32_t nMinResX = iniReader.ReadInteger("MAIN", "MinResX", 0);
+    int32_t nMinResY = iniReader.ReadInteger("MAIN", "MinResY", 0);
 
     std::tie(Screen.DesktopResW, Screen.DesktopResH) = GetDesktopRes();
  
     //uncapping resolutions
-    pattern = hook::pattern("68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 57 8B DE E8 ? ? ? ? 85 C0"); //054A5A0
+    pattern = hook::pattern("68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 57 8B DE E8 ? ? ? ? 85 C0"); //54A5A0
     injector::WriteMemory(pattern.get_first<int32_t*>(1 +  0), INT_MAX, true);
     injector::WriteMemory(pattern.get_first<int32_t*>(1 +  5), INT_MAX, true);
-    injector::WriteMemory(pattern.get_first<int32_t*>(1 + 10), 0, true);
-    injector::WriteMemory(pattern.get_first<int32_t*>(1 + 15), 0, true);
+    injector::WriteMemory(pattern.get_first<int32_t*>(1 + 10), nMinResY, true);
+    injector::WriteMemory(pattern.get_first<int32_t*>(1 + 15), nMinResX, true);
+
+    pattern = hook::pattern("68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 50 E8 ? ? ? ? 85"); //57F665
+    injector::WriteMemory(pattern.get_first<int32_t*>(1 + 0), INT_MAX, true);
+    injector::WriteMemory(pattern.get_first<int32_t*>(1 + 5), INT_MAX, true);
+    injector::WriteMemory(pattern.get_first<int32_t*>(1 + 10), nMinResY, true);
+    injector::WriteMemory(pattern.get_first<int32_t*>(1 + 15), nMinResX, true);
+
+    pattern = hook::pattern("68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 50 33 DB E8"); //5C9288
+    injector::WriteMemory(pattern.get_first<int32_t*>(1 + 0), INT_MAX, true);
+    injector::WriteMemory(pattern.get_first<int32_t*>(1 + 5), INT_MAX, true);
+    injector::WriteMemory(pattern.get_first<int32_t*>(1 + 10), nMinResY, true);
+    injector::WriteMemory(pattern.get_first<int32_t*>(1 + 15), nMinResX, true);
 
     //default to desktop res
     pattern = hook::pattern("EB ? C7 04 24 ? ? ? ? C7 44 24 04"); //54A7C7
@@ -113,6 +127,11 @@ DWORD WINAPI Init(LPVOID bDelay)
         void operator()(injector::reg_pack& regs)
         {
             *(uint32_t*)(regs.ebx + 0x180) = regs.ecx;
+            if (Screen.Width && Screen.Height)
+            {
+                *(uint32_t*)(regs.ebx + 0x160) = Screen.Width;
+                *(uint32_t*)(regs.ebx + 0x164) = Screen.Height;
+            }
             GetRes();
         }
     }; 
