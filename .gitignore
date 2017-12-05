@@ -1,8 +1,8 @@
 ## Releases data
 data/Archives
 data/**/*.asi
-data/Mafia.WidescreenFix/rw_data.bak
-data/Mafia.WidescreenFix/rw_data.dll
+!data/Mafia.WidescreenFix/rw_data.bak
+!data/Mafia.WidescreenFix/rw_data.dll
 data/Scarface.GenericFix/PIXWin.exe
 data/Scarface.GenericFix/PIXHelper.dll
 data/Scarface.GenericFix/Detoured.dll
