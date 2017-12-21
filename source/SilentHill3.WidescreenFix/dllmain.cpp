@@ -319,18 +319,39 @@ DWORD WINAPI Init(LPVOID bDelay)
         uintptr_t dword_413510 = (uintptr_t)pattern.count(3).get(0).get<uintptr_t>(0);
         uintptr_t dword_682BA0 = (uintptr_t)pattern.count(3).get(2).get<uintptr_t>(0);
         injector::MakeCALL(dword_413510 + 1, hook::pattern("A1 ? ? ? ? 85 C0 74 06 A1 ? ? ? ? C3 E9").count(1).get(0).get<uintptr_t>(0)); //402BA0
-        pattern = hook::pattern("E8 ? ? ? ?");
-        for (size_t i = 0, j = 0; i < pattern.size(); ++i) //http://pastebin.com/p03E9Vw1
+
+        // http://pastebin.com/p03E9Vw1 xrefs of 682BA0, ((j >= 0 && j <= 7) || (j >= 21 && j <= 26) || j == 75 || j == 76)
+        auto r_start = (uintptr_t)hook::get_pattern("8B 84 24 84 00 00 00 8B 08 51 81 CE 00 00 00 FF", 0);
+        auto r_end = (uintptr_t)hook::get_pattern("D9 9C 24 88 00 00 00 8B 45 04 50", 0);
+        auto rpattern = hook::range_pattern(r_start, r_end, "E8 ? ? ? ?");
+
+        for (size_t i = 0; i < rpattern.size(); ++i) 
         {
-            if (injector::GetBranchDestination(pattern.get(i).get<uintptr_t>(0), true).as_int() == dword_682BA0)
+            if (injector::GetBranchDestination(rpattern.get(i).get<uintptr_t>(0), true).as_int() == dword_682BA0)
             {
-                if ((j >= 0 && j <= 7) || (j >= 21 && j <= 26) || j == 75 || j == 76)
-                {
-                    injector::MakeCALL(pattern.get(i).get<uintptr_t>(0), dword_413510, true);
-                }
-                ++j;
+                //[0]0x00468B85 [1]0x00468BDA [2]0x00468C20 [3]0x00468C6C [4]0x00468E2C [5]0x00468E73 [6]0x00468EB2 [7]0x00468F07
+                injector::MakeCALL(rpattern.get(i).get<uintptr_t>(0), dword_413510, true);
             }
         }
+
+        r_start = (uintptr_t)hook::get_pattern("8B 8C 24 CC 00 00 00 51", 0);
+        r_end = (uintptr_t)hook::get_pattern("8B 4E 04 8B D8 51 89 5C 24 24", 0);
+        rpattern = hook::range_pattern(r_start, r_end, "E8 ? ? ? ?");
+
+        for (size_t i = 0; i < rpattern.size(); ++i)
+        {
+            if (injector::GetBranchDestination(rpattern.get(i).get<uintptr_t>(0), true).as_int() == dword_682BA0)
+            {
+                //[21]0x0047A67F [22]0x0047A6D3 [23]0x0047A721 [24]0x0047A76C [25]0x0047A7B4 [26]0x0049FAEB
+                injector::MakeCALL(rpattern.get(i).get<uintptr_t>(0), dword_413510, true);
+            }
+        }
+
+        pattern = hook::pattern("E8 ? ? ? ? 8B 0D ? ? ? ? 6B C9 1C"); //[75]0x005F6D22
+        injector::MakeCALL(pattern.get_first(0), dword_413510, true);
+
+        pattern = hook::pattern("E8 ? ? ? ? D9 5E FC D9 07 D8 0D ? ? ? ? E8 ? ? ? ? 50"); //[76]0x005F80EF
+        injector::MakeCALL(pattern.get_first(0), dword_413510, true);
 
         //Mouse cursor width restoration
         auto ret_088 = []() -> float
