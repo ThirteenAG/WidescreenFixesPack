@@ -11,6 +11,7 @@ struct Screen
     float fAspectRatio;
     float fHudScaleX;
     float fHudPosX;
+    float fHudOffset;
 } Screen;
 
 union HudPos
@@ -102,6 +103,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
     Screen.fHudScaleX = (1.0f / Screen.fWidth * (Screen.fHeight / 480.0f)) * 2.0f;
     Screen.fHudPosX = 640.0f / (640.0f * Screen.fHudScaleX);
+    Screen.fHudOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
 
     //game
     uint32_t* dword_5BF62F = hook::pattern("C7 00 80 02 00 00 C7 01 E0 01 00 00").count(1).get(0).get<uint32_t>(2);
@@ -188,9 +190,9 @@ DWORD WINAPI Init(LPVOID bDelay)
         injector::WriteMemory<float>(dword_797D50 + 2, Screen.fHudPosX * 2.0f, true);
 
         uint32_t* dword_5CC109 = hook::pattern("C7 44 24 40 00 00 48 43 C7 44 24 44 00 00 70 41 C7 44 24 50 00 00 48 43 C7 44 24 54 00 00 BE 42 C7 44 24 60 00 00 DC 43").count(1).get(0).get<uint32_t>(4); //rearview mirror
-        DWORD dword_5CC119 = (uint32_t)dword_5CC109 + 16;
-        DWORD dword_5CC0F9 = (uint32_t)dword_5CC109 - 16;
-        DWORD dword_5CC129 = (uint32_t)dword_5CC109 + 32;
+        uint32_t dword_5CC119 = (uint32_t)dword_5CC109 + 16;
+        uint32_t dword_5CC0F9 = (uint32_t)dword_5CC109 - 16;
+        uint32_t dword_5CC129 = (uint32_t)dword_5CC109 + 32;
         injector::WriteMemory<float>(dword_5CC109, (Screen.fHudPosX - 320.0f) + 200.0f, true);
         injector::WriteMemory<float>(dword_5CC119, (Screen.fHudPosX - 320.0f) + 200.0f, true);
         injector::WriteMemory<float>(dword_5CC0F9, (Screen.fHudPosX - 320.0f) + 440.0f, true);
@@ -221,6 +223,11 @@ DWORD WINAPI Init(LPVOID bDelay)
         injector::WriteMemory<float>(dword_5C7282, Screen.fHeight * 2.0f, true);
         uint32_t  dword_5C7292 = (uint32_t)dword_5C726A + 40;
         injector::WriteMemory<float>(dword_5C7292, Screen.fHeight * 2.0f, true);
+
+        //graph of the dyno result issue #366
+        static float fDyno = 79.0f + Screen.fHudOffset;
+        auto pattern = hook::pattern("6A 04 68 ? ? ? ? 68 ? ? ? ? 8B C8"); //53D082
+        injector::WriteMemory(pattern.get_first(8), &fDyno, true);
     }
 
 
@@ -373,7 +380,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             }
         }; injector::MakeInline<HudHook2>((uint32_t)dword_4C66B3, (uint32_t)dword_4C66B3 + 6);
 
-        DWORD* dword_5050FB = hook::pattern("D8 02 D9 1E D9 41 04 D8 60 04 D8 4C 24 10 D8 42 04 D8 40 04 D9 5E 04 D9 41 08 D8 60 08").count(1).get(0).get<DWORD>(0); //addresses from 1.1 exe
+        uint32_t* dword_5050FB = hook::pattern("D8 02 D9 1E D9 41 04 D8 60 04 D8 4C 24 10 D8 42 04 D8 40 04 D9 5E 04 D9 41 08 D8 60 08").count(1).get(0).get<uint32_t>(0); //addresses from 1.1 exe
         struct StopSignHook
         {
             void operator()(injector::reg_pack& regs)
