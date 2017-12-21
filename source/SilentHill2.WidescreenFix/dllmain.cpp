@@ -363,7 +363,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(-4), &fFMVOffset1, true); //43DBC5
         static float TextOffsetWS = Screen.TextOffset - (((Screen.fHeight * (640.0f / 384.0f)) - Screen.fHeight * (4.0f / 3.0f)) / 2.0f);
         if (bFMVWidescreenEnhancementPackCompatibility)
-            TextOffsetWS = Screen.TextOffset - (((Screen.fHeight * (1360.0f / 768.0f)) - Screen.fHeight * (4.0f / 3.0f)) / 2.0f);
+            TextOffsetWS = Screen.TextOffset - (((Screen.fHeight * (1280.0f / 720.0f)) - Screen.fHeight * (4.0f / 3.0f)) / 2.0f);
         injector::WriteMemory(FMVpattern1.count(1).get(0).get<uint32_t>(1), &TextOffsetWS, true); //0x0043E4D8
         injector::WriteMemory(FMVpattern2.count(1).get(0).get<uint32_t>(2), &TextOffsetWS, true); //0x0043E4C5
         injector::WriteMemory(FMVpattern3.count(1).get(0).get<uint32_t>(2), &TextOffsetWS, true); //0x0043E47F
@@ -495,7 +495,8 @@ DWORD WINAPI Init(LPVOID bDelay)
     if (bReduceCutsceneFOV)
     {
         static float f1472 = 1.14702f / (1.0f / (Screen.fAspectRatio / (4.0f / 3.0f)));
-        pattern = hook::pattern("D8 0D ? ? ? ? D9 1D ? ? ? ? E8 ? ? ? ? 6A 00 6A 00 6A 00");
+        pattern = hook::pattern("D8 0D ? ? ? ? D9 1D ? ? ? ? E8 ? ? ? ? 6A 00 6A 00 6A 00 6A 00");
+        injector::WriteMemory(pattern.count(2).get(0).get<uint32_t>(2), &f1472, true); //4A0E13
         injector::WriteMemory(pattern.count(2).get(1).get<uint32_t>(2), &f1472, true); //4A1A61
     }
 
@@ -649,6 +650,10 @@ DWORD WINAPI Init(LPVOID bDelay)
         pattern = hook::pattern("0F BE 05 ? ? ? ? D9 54 24 10 D8 0D ? ? ? ? 0F BF 56 0E");
         injector::MakeInline<ImagesHook5>(pattern.get_first(0), pattern.get_first(7)); //0x49F4D8, 0x49F4D8 + 7
     }
+
+    // Fixes lying figure cutscene bug; original value 00000005; issue #349
+    pattern = hook::pattern("C7 05 ? ? ? ? ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 83 C4 04 83 F8 20");
+    injector::WriteMemory(pattern.get_first(6), 0x0000002A, true);
 
     return 0;
 }
