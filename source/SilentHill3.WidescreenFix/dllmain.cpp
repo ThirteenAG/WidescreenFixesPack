@@ -361,6 +361,26 @@ DWORD WINAPI Init(LPVOID bDelay)
 
         pattern = hook::pattern("E8 ? ? ? ? D9 9D 9C FE FF FF E8");
         injector::MakeCALL(pattern.get_first(0), static_cast<float(*)()>(ret_088), true);
+
+        //Splash
+        static float fHudOffsetReal = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
+        static float w2 = Screen.fWidth - fHudOffsetReal;
+        pattern = hook::pattern("A1 ? ? ? ? 6A 05 C7 44 24 18"); //005D744A
+        injector::WriteMemory<float>(pattern.get_first(11), fHudOffsetReal, true);
+        pattern = hook::pattern("C7 44 24 50 ? ? ? ? C7 44 24 58 ? ? ? ? C7 44 24 5C ? ? ? ? C7 44 24 64"); //005D74B0 
+        injector::WriteMemory<float>(pattern.get_first(4), fHudOffsetReal, true);
+        pattern = hook::pattern("D8 25 ? ? ? ? 8D 54 24 0C 52 6A 02"); //005D7414 
+        injector::WriteMemory<uint16_t>(pattern.get_first(0), 0x05D9i16, true); //fsub -> fld
+        injector::WriteMemory(pattern.get_first(2), &w2, true);
+
+        //Credits
+        pattern = hook::pattern("C7 44 24 1C 00 00 00 BF D9 54 24 58 C7 44 24 20"); //0059BE49 
+        injector::WriteMemory<float>(pattern.get_first(11), fHudOffsetReal, true);
+        pattern = hook::pattern("C7 44 24 54 ? ? ? ? C7 44 24 5C ? ? ? ? C7 44 24 60 ? ? ? ? C7 44 24 68"); //0059BEAF 
+        injector::WriteMemory<float>(pattern.get_first(4), fHudOffsetReal, true);
+        pattern = hook::pattern("D8 25 ? ? ? ? 8D 4C 24 10 51 6A 02 D9 54 24 34 "); //0059BE13 
+        injector::WriteMemory<uint16_t>(pattern.get_first(0), 0x05D9i16, true); //fsub -> fld
+        injector::WriteMemory(pattern.get_first(2), &w2, true);
     }
 
     //inventory background size
