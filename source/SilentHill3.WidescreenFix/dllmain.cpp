@@ -374,8 +374,8 @@ DWORD WINAPI Init(LPVOID bDelay)
         injector::WriteMemory(pattern.get_first(2), &w2, true);
 
         //Credits
-        pattern = hook::pattern("C7 44 24 1C 00 00 00 BF D9 54 24 58 C7 44 24 20"); //0059BE49 
-        injector::WriteMemory<float>(pattern.get_first(11), fHudOffsetReal, true);
+        pattern = hook::pattern("6A 05 C7 44 24 1C"); //0059BE49 
+        injector::WriteMemory<float>(pattern.get_first(6), fHudOffsetReal, true);
         pattern = hook::pattern("C7 44 24 54 ? ? ? ? C7 44 24 5C ? ? ? ? C7 44 24 60 ? ? ? ? C7 44 24 68"); //0059BEAF 
         injector::WriteMemory<float>(pattern.get_first(4), fHudOffsetReal, true);
         pattern = hook::pattern("D8 25 ? ? ? ? 8D 4C 24 10 51 6A 02 D9 54 24 34 "); //0059BE13 
