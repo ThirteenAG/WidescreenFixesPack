@@ -168,7 +168,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                     << "0x" << std::hex << std::setw(8) << std::setfill('0') << *(uint32_t*)&r->m_fTop
                     << std::endl;
                 #endif
-                
+
                 if (*r == fs || *r == fl)
                 {
                     flt_7933E0.a01 = Screen.fHudScale;
@@ -178,30 +178,38 @@ DWORD WINAPI Init(LPVOID bDelay)
                 {
                     if (bWidescreenHud)
                     {
+                        static auto idx = 0;
                         static void* stack[6];
                         CaptureStackBackTrace(0, 6, stack, NULL);
 
-                        if (stack[4] == dw_61F2EF || stack[5] == dw_61F2EF || stack[4] == dw_61F2FE || stack[5] == dw_61F2FE)
-                        {
-                            flt_7933E0.a13 += Screen.fHudOffsetWide;
-                        }
-                        else
-                        {
-                            #ifdef _LOG
-                            if (false)
-                                logfile << "0x" << std::hex << std::setw(8) << std::setfill('0') << stack[3] << " "
-                                        << "0x" << std::hex << std::setw(8) << std::setfill('0') << stack[4] << std::endl;
-                            #endif
+                        auto it = std::find_if(std::begin(stack), std::end(stack), [](void* n) { return n == dw_61F2EF || n == dw_61F2FE; });
+                        if (!idx && it != std::end(stack))
+                            idx = std::distance(std::begin(stack), it);
 
-                            if (stack[4] == dw_61EA8F || stack[4] == dw_616FB7 || stack[4] == dw_4FD37D)
+                        if (idx)
+                        {
+                            if (stack[idx] == dw_61F2EF || stack[idx + 1] == dw_61F2EF || stack[idx] == dw_61F2FE || stack[idx + 1] == dw_61F2FE)
                             {
-                                flt_7933E0.a13 -= Screen.fHudOffsetWide;
+                                flt_7933E0.a13 += Screen.fHudOffsetWide;
                             }
                             else
                             {
-                                if (stack[4] == dw_61EAC4 || stack[4] == dw_61EAF6 || stack[4] == dw_61EADD)
+                            #ifdef _LOG
+                                if (false)
+                                    logfile << "0x" << std::hex << std::setw(8) << std::setfill('0') << stack[3] << " "
+                                    << "0x" << std::hex << std::setw(8) << std::setfill('0') << stack[4] << std::endl;
+                            #endif
+
+                                if (stack[idx] == dw_61EA8F || stack[idx] == dw_616FB7 || stack[idx] == dw_4FD37D)
                                 {
-                                    flt_7933E0.a13 += Screen.fHudOffsetWide;
+                                    flt_7933E0.a13 -= Screen.fHudOffsetWide;
+                                }
+                                else
+                                {
+                                    if (stack[idx] == dw_61EAC4 || stack[idx] == dw_61EAF6 || stack[idx] == dw_61EADD)
+                                    {
+                                        flt_7933E0.a13 += Screen.fHudOffsetWide;
+                                    }
                                 }
                             }
                         }
