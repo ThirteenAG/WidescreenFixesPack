@@ -137,6 +137,8 @@ DWORD WINAPI Init(LPVOID bDelay)
     static auto dw_61EADD = hook::get_pattern("8B 8D 14 FF FF FF 8B 51 0C 8B 85 14", 0); // 0x0061EADD
     static auto dw_61EAF6 = hook::get_pattern("C7 45 D8 00 00 00 00 8B 0D ? ? ? ? 8B 91 8C", 0); // 0x0061EAF6
     static auto dw_61F2FE = hook::get_pattern("8B 85 14 FF FF FF 8B 08 E8 ? ? ? ? 8B E5 5D C3", 13); // 0x0061F2FE
+    static auto dw_673413 = hook::get_pattern("D9 41 08 D9 1C 24 8B 4D FC E8 ? ? ? ? 8B E5 5D C3", 14); // 0x00673413
+    static auto dw_61F19D = hook::get_pattern("8B 95 14 FF FF FF 8B 4A 28 E8", 0); // 0x0061F19D
 
     pattern = hook::pattern("BE ? ? ? ? 8D BC 24 00 01 00 00 F3 A5 83 7D 20 00");
     injector::WriteMemory(pattern.get_first(1), &flt_7933E0, true); //0x47CC71 + 1
@@ -178,7 +180,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                 {
                     if (bWidescreenHud)
                     {
-                        static auto idx = 0;
+                        static auto idx = 0; // seems like 4 in debug build and 3 in release
                         static void* stack[6];
                         CaptureStackBackTrace(0, 6, stack, NULL);
 
@@ -206,7 +208,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                                 }
                                 else
                                 {
-                                    if (stack[idx] == dw_61EAC4 || stack[idx] == dw_61EAF6 || stack[idx] == dw_61EADD)
+                                    if (stack[idx] == dw_61EAC4 || stack[idx] == dw_61EAF6 || stack[idx] == dw_61EADD || stack[idx] == dw_673413 || stack[idx] == dw_61F19D)
                                     {
                                         flt_7933E0.a13 += Screen.fHudOffsetWide;
                                     }
