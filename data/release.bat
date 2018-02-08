@@ -11,10 +11,11 @@ if errorlevel 1 (
    SET dll=!filepath:.ual=.dll!
    ECHO !dll! 	
    copy "..\..\Ultimate-ASI-Loader\bin\x86\Release\dinput8.dll" !dll!
-   SET "mu=%%~dpF\scripts\modupdater.asi"
-   SET "mu2=%%~dpF\plugins\modupdater.asi"
+   SET "mu=%%~dpF\scripts\"
+   SET "mu2=%%~dpF\plugins\"
+   SET "mu3=modupdater.asi"
    ECHO !mu!
-   IF EXIST !mu! (copy "..\..\modupdater\bin\Release\modupdater.asi" !mu!) ELSE (copy "..\..\modupdater\bin\Release\modupdater.asi" !mu2!)
+   IF EXIST !mu! (copy "..\..\modupdater\bin\Release\modupdater.asi" !mu!!mu3!) ELSE (copy "..\..\modupdater\bin\Release\modupdater.asi" !mu2!!mu3!)
 )
 )
 
@@ -22,14 +23,14 @@ rem Additional files
 FOR /R ".\" %%F IN (*.wrapper) DO (
 findstr /c:"FPSLimit" "%%F" >nul 2>&1
 if errorlevel 1 (
-		findstr /c:"SetVertexShaderConstantHook" "%%F" >nul 2>&1
-		if errorlevel 1 (
-			echo String not found...
-		) else (
-		SET filepath=%%F
-		SET dll=!filepath:.wrapper=.dll!
-		ECHO !dll! 	
-		copy "..\..\d3d8-wrapper\data\d3d8.dll" !dll!
+        findstr /c:"SetVertexShaderConstantHook" "%%F" >nul 2>&1
+        if errorlevel 1 (
+            echo String not found...
+        ) else (
+        SET filepath=%%F
+        SET dll=!filepath:.wrapper=.dll!
+        ECHO !dll! 	
+        copy "..\..\d3d8-wrapper\data\d3d8.dll" !dll!
 )
 ) else (
    SET filepath=%%F
