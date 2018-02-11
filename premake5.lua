@@ -163,7 +163,7 @@ project "StubbstheZombie.WidescreenFix"
 project "TheMatrixPathOfNeo.WidescreenFix"
    setpaths("Z:/WFP/Games/The Matrix - Path Of Neo/", "Matrix3.exe")
 project "ThePunisher.WidescreenFix"
-   setpaths("Z:/WFP/Games/The Punisher/", "punisher.exe")
+   setpaths("Z:/WFP/Games/The Punisher/", "pun.exe")
 project "TheSuffering.WidescreenFix"
    setpaths("Z:/WFP/Games/The Suffering/The Suffering/", "suffering.exe")
 project "TonyHawksAmericanWasteland.WidescreenFix"

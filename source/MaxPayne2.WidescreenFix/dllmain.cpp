@@ -124,7 +124,7 @@ DWORD WINAPI InitX_GameObjectsMFC(LPVOID bDelay)
     }
 
     if (bDelay)
-        while (pattern.clear().count_hint(4).empty()) { Sleep(0); };
+        while (pattern.clear(GetModuleHandle("X_GameObjectsMFC")).count_hint(4).empty()) { Sleep(0); };
 
     //mirrors fix
     injector::WriteMemory(pattern.get_first(2), &Screen.fMirrorFactor, true); //0x10101F39
@@ -428,7 +428,7 @@ DWORD WINAPI InitE2MFC(LPVOID bDelay)
     }
 
     if (bDelay)
-        while (pattern.clear().count_hint(4).empty()) { Sleep(0); };
+        while (pattern.clear(GetModuleHandle("e2mfc")).count_hint(4).empty()) { Sleep(0); };
 
     auto PDriverGetWidth = [](uintptr_t P_Driver__m_initializedDriver, uintptr_t edx) -> int32_t
     {

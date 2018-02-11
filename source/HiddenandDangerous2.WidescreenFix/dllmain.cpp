@@ -137,7 +137,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     }
 
     if (bDelay)
-        while (mpattern.clear().count_hint(2).empty()) { Sleep(0); };
+        while (mpattern.clear(GetModuleHandle("LS3DF")).count_hint(2).empty()) { Sleep(0); };
 
     CIniReader iniReader("");
     bool bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 0) != 0;
