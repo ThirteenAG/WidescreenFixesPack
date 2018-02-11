@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include <d3d9.h>
+#include "dxsdk\d3dvtbl.h"
 
 //#define _LOG
 #ifdef _LOG
@@ -44,19 +45,15 @@ struct testParam
     float a12;
 };
 
-IDirect3DDevice9* pDirect3DDevice = nullptr;
 typedef HRESULT(STDMETHODCALLTYPE* CreateDevice_t)(IDirect3D9*, UINT, D3DDEVTYPE, HWND, DWORD, D3DPRESENT_PARAMETERS*, IDirect3DDevice9**);
 CreateDevice_t RealD3D9CreateDevice = NULL;
 typedef HRESULT(STDMETHODCALLTYPE* EndScene_t)(LPDIRECT3DDEVICE9);
 EndScene_t RealEndScene = NULL;
 
-void DrawRect(int32_t x, int32_t y, int32_t w, int32_t h, D3DCOLOR color = D3DCOLOR_XRGB(0, 0, 0))
+void DrawRect(LPDIRECT3DDEVICE9 pDevice, int32_t x, int32_t y, int32_t w, int32_t h, D3DCOLOR color = D3DCOLOR_XRGB(0, 0, 0))
 {
-    if (pDirect3DDevice != nullptr)
-    {
-        D3DRECT BarRect = { x, y, x + w, y + h };
-        pDirect3DDevice->Clear(1, &BarRect, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, color, 0, 0);
-    }
+    D3DRECT BarRect = { x, y, x + w, y + h };
+    pDevice->Clear(1, &BarRect, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, color, 0, 0);
 }
 
 HRESULT WINAPI EndScene(LPDIRECT3DDEVICE9 pDevice)
@@ -65,13 +62,13 @@ HRESULT WINAPI EndScene(LPDIRECT3DDEVICE9 pDevice)
     {
         if (Screen.bFullscreenFMVs)
         {
-            DrawRect(0, 0, static_cast<int32_t>(Screen.fWidescreenOffsetX), Screen.nHeight);
-            DrawRect(static_cast<int32_t>(Screen.fWidth - Screen.fWidescreenOffsetX), 0, static_cast<int32_t>(Screen.fWidth - Screen.fWidescreenOffsetX - Screen.fWidescreenOffsetX), Screen.nHeight);
+            DrawRect(pDevice, 0, 0, static_cast<int32_t>(Screen.fWidescreenOffsetX), Screen.nHeight);
+            DrawRect(pDevice, static_cast<int32_t>(Screen.fWidth - Screen.fWidescreenOffsetX), 0, static_cast<int32_t>(Screen.fWidth - Screen.fWidescreenOffsetX - Screen.fWidescreenOffsetX), Screen.nHeight);
         }
         else
         {
-            DrawRect(0, 0, static_cast<int32_t>(Screen.fHudOffsetReal), Screen.nHeight);
-            DrawRect(static_cast<int32_t>(Screen.fWidth43 + Screen.fHudOffsetReal), 0, static_cast<int32_t>(Screen.fWidth43 + Screen.fHudOffsetReal + Screen.fHudOffsetReal), Screen.nHeight);
+            DrawRect(pDevice, 0, 0, static_cast<int32_t>(Screen.fHudOffsetReal), Screen.nHeight);
+            DrawRect(pDevice, static_cast<int32_t>(Screen.fWidth43 + Screen.fHudOffsetReal), 0, static_cast<int32_t>(Screen.fWidth43 + Screen.fHudOffsetReal + Screen.fHudOffsetReal), Screen.nHeight);
         }
         //Screen.bDrawBorders = false;
     }
@@ -82,10 +79,9 @@ HRESULT WINAPI EndScene(LPDIRECT3DDEVICE9 pDevice)
 HRESULT __stdcall CreateDevice(IDirect3D9* d3ddev, UINT Adapter, D3DDEVTYPE DeviceType, HWND hFocusWindow, DWORD BehaviorFlags, D3DPRESENT_PARAMETERS* pPresentationParameters, IDirect3DDevice9** ppReturnedDeviceInterface) 
 {
     HRESULT retval = RealD3D9CreateDevice(d3ddev, Adapter, DeviceType, hFocusWindow, BehaviorFlags, pPresentationParameters, ppReturnedDeviceInterface);
-    pDirect3DDevice = *ppReturnedDeviceInterface;
     UINT_PTR* pVTable = (UINT_PTR*)(*((UINT_PTR*)*ppReturnedDeviceInterface));
-    RealEndScene = (EndScene_t)pVTable[42];
-    injector::WriteMemory(&pVTable[42], &EndScene, true);
+    RealEndScene = (EndScene_t)pVTable[IDirect3DDevice9VTBL::EndScene];
+    injector::WriteMemory(&pVTable[IDirect3DDevice9VTBL::EndScene], &EndScene, true);
     return retval;
 }
 
@@ -198,8 +194,8 @@ DWORD WINAPI Init(LPVOID bDelay)
         {
             auto pID3D9 = (IDirect3D9*)regs.eax;
             UINT_PTR* pVTable = (UINT_PTR*)(*((UINT_PTR*)pID3D9));
-            RealD3D9CreateDevice = (CreateDevice_t)pVTable[16];
-            injector::WriteMemory(&pVTable[16], &CreateDevice, true);            
+            RealD3D9CreateDevice = (CreateDevice_t)pVTable[IDirect3D9VTBL::CreateDevice];
+            injector::WriteMemory(&pVTable[IDirect3D9VTBL::CreateDevice], &CreateDevice, true);
             regs.eax = regs.ebp - 0x170;
         }
     }; injector::MakeInline<Direct3DDeviceHook>(pattern.get_first(0), pattern.get_first(6)); //0x48A480, 0x48A480+6

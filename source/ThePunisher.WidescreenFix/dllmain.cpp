@@ -209,13 +209,14 @@ DWORD WINAPI Init(LPVOID bDelay)
     injector::WriteMemory(pattern.get_first(4), Screen.Height, true);
 
     //Hud, menu and presets
-
+    
     //fixing only menu and startup stuff, which makes the game stuck in an infinite loop
-    //uint32_t retXIncludes[] = { 25, 100, 101, 102, 103, 105, /*106,*/ 107, 130, 140, 142, 144, 145, 146, 149, 150, 151, 158, /*180,*/ 215, 216, 56, 99 };
-    uint32_t retXIncludes[] = { 25, 100 }; // 25 - hud, 100 - preset, 180 - mouse, 215 - weapons overlay preset, 106 - weapons overlay scale
-    //int32_t retYIncludes[] = { 24, 108, 107, 109, 110, 111, 112, 113, 114, 144, 146, 149, 150, 151, 152, 153, 154, 161, /*187,*/ 223, 224 };
-    uint32_t retYIncludes[] = { 24, 108 }; // 24 - hud, 108 - preset, 187 - mouse, 223 - weapons overlay preset, 112+113 - weapons overlay scale
-
+    //this code doesn't work anymore because patterns don't find 0x46d91b and 0x4b7cbb calls for some reason and retXmap indices are wrong
+    ////uint32_t retXIncludes[] = { 25, 100, 101, 102, 103, 105, /*106,*/ 107, 130, 140, 142, 144, 145, 146, 149, 150, 151, 158, /*180,*/ 215, 216, 56, 99 };
+    //uint32_t retXIncludes[] = { 25, 100 }; // 25 - hud, 100 - preset, 180 - mouse, 215 - weapons overlay preset, 106 - weapons overlay scale
+    ////int32_t retYIncludes[] = { 24, 108, 107, 109, 110, 111, 112, 113, 114, 144, 146, 149, 150, 151, 152, 153, 154, 161, /*187,*/ 223, 224 };
+    //uint32_t retYIncludes[] = { 24, 108 }; // 24 - hud, 108 - preset, 187 - mouse, 223 - weapons overlay preset, 112+113 - weapons overlay scale
+    /*
     pattern = hook::pattern("E8 ? ? ? ? 50 E8 ? ? ? ? 50 6A 01 6A 03 E8 ? ? ? ? 8B 15");
     auto sub_510A00 = injector::GetBranchDestination(pattern.get_first(6), true);
     auto sub_510A10 = injector::GetBranchDestination(pattern.get_first(0), true);
@@ -245,7 +246,15 @@ DWORD WINAPI Init(LPVOID bDelay)
             ++k;
         }
     }
-        
+    */
+    //so instead just manual patch
+    pattern = hook::pattern("E8 ? ? ? ? A3 ? ? ? ? E8 ? ? ? ? A3 ? ? ? ? A1 ? ? ? ? 50 E8 ? ? ? ? 6A 01"); //X - 25, Y - 24
+    injector::MakeCALL(pattern.get_first(0), retX, true);
+    injector::MakeCALL(pattern.get_first(10), retY, true);
+    pattern = hook::pattern("E8 ? ? ? ? 50 8D 44 24 38 68 ? ? ? ? 50"); //X - 100, Y - 108
+    injector::MakeCALL(pattern.get_first(0), retX, true);
+    injector::MakeCALL(pattern.get_first(-6), retY, true);
+
     //HUD
     pattern = hook::pattern("68 ? ? ? ? 8B CF E8 ? ? ? ? 84 C0 ? ? 56 8B 74 24 08"); //0x4632C0
     static auto str_5F5588 = *pattern.get_first<uint32_t>(1);
