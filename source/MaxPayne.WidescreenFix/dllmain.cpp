@@ -13,6 +13,7 @@ struct Screen
     float fAspectRatio;
     float fHudScale;
     float fHudOffset;
+    float fHudOffsetReal;
     float fHudOffsetWide;
     float fWidescreenHudOffset;
     float fBorderOffset;
@@ -55,11 +56,19 @@ HRESULT WINAPI EndScene(LPDIRECT3DDEVICE8 pDevice)
         //hiding top/left 1px gap
         DrawRect(pDevice, 0, 0, Screen.nWidth, 1);
         DrawRect(pDevice, 0, 0, 1, Screen.nHeight);
+        Screen.bDrawBordersToFillGap = false;
     }
 
     if (Screen.bDrawBorders)
     {
-        DrawRect(pDevice, 50, 50, 150, 150, D3DCOLOR_XRGB(250, 0, 0));
+        auto x = Screen.fHudOffsetReal * Screen.fFieldOfView;
+        auto y = (x - Screen.fHudOffsetReal) / Screen.fFieldOfView;
+
+        DrawRect(pDevice, 0, 0, static_cast<int32_t>(x), Screen.nHeight);
+        DrawRect(pDevice, static_cast<int32_t>(Screen.fWidth - x), 0, static_cast<int32_t>(Screen.fHudOffsetReal + x), Screen.nHeight);
+
+        DrawRect(pDevice, 0, 0, Screen.nWidth, static_cast<int32_t>(y));
+        DrawRect(pDevice, 0, static_cast<int32_t>(Screen.fHeight - y), Screen.nWidth, static_cast<int32_t>(y));
     }
 
     return RealEndScene(pDevice);
@@ -160,6 +169,7 @@ DWORD WINAPI InitWF(LPVOID)
     Screen.fHudOffset = ((-1.0f / Screen.fAspectRatio) * (4.0f / 3.0f));
     Screen.fHudScale = (1.0f / (480.0f * Screen.fAspectRatio)) * 2.0f;
     Screen.fBorderOffset = (1.0f / Screen.fHudScale) - (640.0f / 2.0f);
+    Screen.fHudOffsetReal = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
     #undef SCREEN_FOV_HORIZONTAL
     #undef SCREEN_FOV_VERTICAL
     #define SCREEN_FOV_HORIZONTAL 65.0f
@@ -255,7 +265,6 @@ DWORD WINAPI InitWF(LPVOID)
                 float ElementNewPosY1 = ElementPosY;
                 float ElementNewPosX2 = ElementPosX;
                 float ElementNewPosY2 = ElementPosY;
-                Screen.bDrawBordersToFillGap = false;
                 if (!*bIsInCutscene)
                     Screen.bDrawBorders = false;
 
@@ -496,13 +505,15 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     pattern = hook::pattern("8B 0D ? ? ? ? 8B 3D ? ? ? ? 41 89 0D ? ? ? ? 6A 18 8B CE E8");
     bIsInMenu = *pattern.count(8).get(1).get<uint8_t*>(2); //0x100845E8
+    bIsInCutscene = *hook::get_pattern<bool*>("A0 ? ? ? ? 84 C0 0F 85 ? ? ? ? 8B 86 ? ? ? ? 85 C0 0F 84", 1);
 
     //FOV
-    auto FOVHook = [](uintptr_t _this, uintptr_t edx) -> float
+    static auto FOVHook = [](uintptr_t _this, uintptr_t edx) -> float
     {
         Screen.fFieldOfView = *(float*)(_this + 88) * Screen.fDynamicScreenFieldOfViewScale;
-        if (Screen.fFieldOfView > 2.2f)
-            Screen.fFieldOfView = 2.2f;
+
+        if (Screen.fFieldOfView > 2.0f)
+            Screen.fFieldOfView = 2.0f;
 
         return Screen.fFieldOfView;
     };
@@ -517,13 +528,22 @@ DWORD WINAPI Init(LPVOID bDelay)
         if (dest == sub_50B9E0)
             injector::MakeCALL(addr, static_cast<float(__fastcall *)(uintptr_t, uintptr_t)>(FOVHook), true);
     }
+    pattern = hook::pattern("E8 ? ? ? ? D9 5C 24 14 8B CF E8"); // 0x45650D
+    injector::MakeCALL(pattern.get_first(0), sub_50B9E0, true); // restoring cutscene FOV
 
-    //Camera overlay hook
     bool bD3DHookBorders = iniReader.ReadInteger("MAIN", "D3DHookBorders", 1) != 0;
     if (bD3DHookBorders)
     {
-        bIsInCutscene = *hook::get_pattern<bool*>("A0 ? ? ? ? 84 C0 0F 85 ? ? ? ? 8B 86 ? ? ? ? 85 C0 0F 84", 1);
-        //pattern = hook::pattern(""); TODO
+        auto CutsceneFOVHook = [](uintptr_t _this, uintptr_t edx) -> float
+        {
+            if (Screen.fAspectRatio > (16.0f / 9.0f))
+                return *(float*)(_this + 88);
+            else
+                return FOVHook(_this, edx);
+        };
+        injector::MakeCALL(pattern.get_first(0), static_cast<float(__fastcall *)(uintptr_t, uintptr_t)>(CutsceneFOVHook), true);
+
+        pattern = hook::pattern("8B 4D 08 8B 16 83 C4 14 51 8B CE 8B F8 FF 52 10");
         struct CameraOverlayHook
         {
             void operator()(injector::reg_pack& regs)
@@ -532,10 +552,10 @@ DWORD WINAPI Init(LPVOID bDelay)
                 regs.ecx = *(uint32_t*)(regs.ebp + 0x08);
                 regs.edx = *(uint32_t*)(regs.esi);
 
-                if (*(uint32_t*)(regs.esp + 0x2C) == 191) //looks like cutscene id or idk
+                if (*(uint32_t*)(regs.esp + 0x2C) == 191 && (Screen.fAspectRatio <= (16.0f / 9.0f))) // looks like cutscene id or idk
                     Screen.bDrawBorders = true;
             }
-        }; injector::MakeInline<CameraOverlayHook>(/*pattern.get_first(0), pattern.get_first(6)*/0x703861); //0x
+        }; injector::MakeInline<CameraOverlayHook>(pattern.count(201).get(168).get<void>(0)); // 0x703861
     }
 
     return 0;
