@@ -22,7 +22,7 @@ struct Screen
     float f1_fWidthScale;
     float fDouble1_fWidthScale;
     float fHalf1_fWidthScale;
-    bool bDrawBorders;
+    bool bDrawBordersForCameraOverlay;
     bool bDrawBordersToFillGap;
 } Screen;
 
@@ -56,7 +56,7 @@ HRESULT WINAPI EndScene(LPDIRECT3DDEVICE8 pDevice)
         Screen.bDrawBordersToFillGap = false;
     }
 
-    if (Screen.bDrawBorders)
+    if (Screen.bDrawBordersForCameraOverlay)
     {
         auto x = Screen.fHudOffsetReal * Screen.fFieldOfView;
         auto y = (x - Screen.fHudOffsetReal) / Screen.fFieldOfView;
@@ -188,8 +188,6 @@ DWORD WINAPI InitWF(LPVOID)
                 float ElementNewPosY1 = ElementPosY;
                 float ElementNewPosX2 = ElementPosX;
                 float ElementNewPosY2 = ElementPosY;
-                if (!*bIsInCutscene)
-                    Screen.bDrawBorders = false;
 
                 if (bWidescreenHud)
                 {
@@ -343,6 +341,9 @@ DWORD WINAPI InitWF(LPVOID)
         }
     }
 
+    //actually not a cutscene check, but X_Crosshair::sm_bCameraPathRunning
+    bIsInCutscene = *hook::get_pattern<bool*>("A0 ? ? ? ? 84 C0 0F 85 ? ? ? ? 8B 86 ? ? ? ? 85 C0 0F 84", 1);
+
     //Graphic Novels Handler
     static bool bPatched;
     static uint16_t oldState = 0;
@@ -369,6 +370,9 @@ DWORD WINAPI InitWF(LPVOID)
             regs.eax = *(uint32_t*)(regs.esi);
             regs.ecx = regs.esi;
             regs.edi = 0;
+
+            if (!*bIsInCutscene)
+                Screen.bDrawBordersForCameraOverlay = false;
 
             bIsInGraphicNovel = (callAddr == sub_49B6D0);
             callAddr = 0;
@@ -503,8 +507,6 @@ DWORD WINAPI Init(LPVOID bDelay)
         injector::MakeCALL(pattern.get_first(), static_cast<float(__fastcall *)(uintptr_t, uintptr_t)>(f), true); //0x4565B8
     }
 
-    bIsInCutscene = *hook::get_pattern<bool*>("A0 ? ? ? ? 84 C0 0F 85 ? ? ? ? 8B 86 ? ? ? ? 85 C0 0F 84", 1);
-
     //FOV
     static auto FOVHook = [](uintptr_t _this, uintptr_t edx) -> float
     {
@@ -541,19 +543,19 @@ DWORD WINAPI Init(LPVOID bDelay)
         };
         injector::MakeCALL(pattern.get_first(0), static_cast<float(__fastcall *)(uintptr_t, uintptr_t)>(CutsceneFOVHook), true);
 
-        pattern = hook::pattern("8B 4D 08 8B 16 83 C4 14 51 8B CE 8B F8 FF 52 10");
+        pattern = hook::pattern("C6 87 ? ? ? ? ? E8 ? ? ? ? 8B 4D F4");
         struct CameraOverlayHook
         {
             void operator()(injector::reg_pack& regs)
             {
-                Screen.bDrawBorders = false;
-                regs.ecx = *(uint32_t*)(regs.ebp + 0x08);
-                regs.edx = *(uint32_t*)(regs.esi);
+                Screen.bDrawBordersForCameraOverlay = false;
+                *(uint8_t*)(regs.edi + 0x14E) = 1;
 
-                if (*(uint32_t*)(regs.esp + 0x2C) == 191 && (Screen.fAspectRatio <= (16.0f / 9.0f))) // looks like cutscene id or idk
-                    Screen.bDrawBorders = true;
+                //what happens here is check for some camera coordinates, in this particular cutscene 1.81 is used https://i.imgur.com/A7wRrgk.gifv
+                if ((*(uint32_t*)(regs.esp + 0x10) == 0x3FE842CF && *(uint32_t*)(regs.esp + 0x1C) == 0x3FE842CF) && (Screen.fAspectRatio <= (16.0f / 9.0f))) //1.81
+                    Screen.bDrawBordersForCameraOverlay = true;
             }
-        }; injector::MakeInline<CameraOverlayHook>(pattern.count(201).get(168).get<void>(0)); // 0x703861
+        }; injector::MakeInline<CameraOverlayHook>(pattern.get_first(0), pattern.get_first(7)); // 0x672EB1
     }
 
     return 0;
