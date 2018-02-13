@@ -34,11 +34,8 @@ struct TextCoords
     float d;
 };
 
-enum P_D3D_RenderState
-{
-    GRAPHIC_NOVEL = 0x00FFFFFF,
-    GAMEPLAY = 0x00202020
-};
+bool bGraphicNovelMode, bIsInGraphicNovel;
+bool* bIsInCutscene;
 
 typedef HRESULT(STDMETHODCALLTYPE* EndScene_t)(LPDIRECT3DDEVICE8);
 EndScene_t RealEndScene = NULL;
@@ -74,86 +71,6 @@ HRESULT WINAPI EndScene(LPDIRECT3DDEVICE8 pDevice)
     return RealEndScene(pDevice);
 }
 
-uint32_t* pRenderState;
-uint8_t* bIsInMenu;
-bool bGraphicNovelMode;
-bool* bIsInCutscene;
-
-DWORD WINAPI GraphicNovelsHandler(LPVOID)
-{
-    static bool bPatched;
-    CIniReader iniReader("");
-    int32_t nGraphicNovelModeKey = iniReader.ReadInteger("MAIN", "GraphicNovelModeKey", VK_F2);
-
-    auto pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 0D ? ? ? ? D9 5D E4 D9 45 EC");
-    uintptr_t e2mfc_49E00 = *pattern.get_first<uintptr_t>(2);
-    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 0D ? ? ? ? D9 5D E0 E8");
-    uintptr_t e2mfc_49DFC = *pattern.get_first<uintptr_t>(2);
-    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "C7 05 ? ? ? ? ? ? ? ? C7 05 ? ? ? ? ? ? ? ? D8 0D");
-    uintptr_t e2mfc_1565E = (uintptr_t)pattern.get_first(6);
-
-    while (true)
-    {
-        Sleep(0);
-
-        if ((GetAsyncKeyState(nGraphicNovelModeKey) & 1) && (*pRenderState == P_D3D_RenderState::GRAPHIC_NOVEL))
-        {
-            bGraphicNovelMode = !bGraphicNovelMode;
-            bPatched = !bPatched;
-            iniReader.WriteInteger("MAIN", "GraphicNovelMode", bGraphicNovelMode);
-            while ((GetAsyncKeyState(nGraphicNovelModeKey) & 0x8000) > 0) { Sleep(0); }
-        }
-
-        if (bGraphicNovelMode)
-        {
-            if (*bIsInMenu && *pRenderState == P_D3D_RenderState::GRAPHIC_NOVEL) //+main menu check
-            {
-                if (!bPatched)
-                {
-                    injector::WriteMemory<float>(e2mfc_49E00, ((1.0f / (480.0f * Screen.fAspectRatio)) / 2.0f), true);
-                    injector::WriteMemory<float>(e2mfc_49DFC, (1.0f / (640.0f / (4.0f / 3.0f)) / 2.0f), true);
-                    injector::WriteMemory<float>(e2mfc_1565E, 0.0f, true);
-                    bPatched = true;
-                }
-            }
-            else
-            {
-                if (bPatched)
-                {
-                    injector::WriteMemory<float>(e2mfc_49E00, ((1.0f / 640.0f) / 2.0f), true);
-                    injector::WriteMemory<float>(e2mfc_49DFC, Screen.fHalf1_fWidthScale, true);
-                    injector::WriteMemory<float>(e2mfc_1565E, 0.0f, true);
-                    bPatched = false;
-                }
-            }
-        }
-        else
-        {
-            if (*bIsInMenu && *pRenderState == P_D3D_RenderState::GRAPHIC_NOVEL) //+main menu check
-            {
-                if (!bPatched)
-                {
-                    injector::WriteMemory<float>(e2mfc_49E00, ((1.0f / (480.0f * Screen.fAspectRatio)) / 2.0f) * 1.27f, true);
-                    injector::WriteMemory<float>(e2mfc_49DFC, (1.0f / (640.0f / (4.0f / 3.0f)) / 2.0f) * 1.27f, true);
-                    injector::WriteMemory<float>(e2mfc_1565E, -0.39f, true);
-                    bPatched = true;
-                }
-            }
-            else
-            {
-                if (bPatched)
-                {
-                    injector::WriteMemory<float>(e2mfc_49E00, ((1.0f / 640.0f) / 2.0f), true);
-                    injector::WriteMemory<float>(e2mfc_49DFC, Screen.fHalf1_fWidthScale, true);
-                    injector::WriteMemory<float>(e2mfc_1565E, 0.0f, true);
-                    bPatched = false;
-                }
-            }
-        }
-    }
-    return 0;
-}
-
 DWORD WINAPI InitWF(LPVOID)
 {
     while (!Screen.nWidth || !Screen.nHeight) { Sleep(0); };
@@ -179,11 +96,12 @@ DWORD WINAPI InitWF(LPVOID)
     if (Screen.fAspectRatio <= ((4.0f / 3.0f) + 0.03f))
         return 0;
 
-    CIniReader iniReader("");
+    static CIniReader iniReader("");
     bool bFixHud = iniReader.ReadInteger("MAIN", "FixHud", 1) != 0;
     static bool bWidescreenHud = iniReader.ReadInteger("MAIN", "WidescreenHud", 1) != 0;
     Screen.fWidescreenHudOffset = iniReader.ReadFloat("MAIN", "WidescreenHudOffset", 100.0f);
     bGraphicNovelMode = iniReader.ReadInteger("MAIN", "GraphicNovelMode", 1) != 0;
+    static int32_t nGraphicNovelModeKey = iniReader.ReadInteger("MAIN", "GraphicNovelModeKey", VK_F2);
     if (!Screen.fWidescreenHudOffset) { Screen.fWidescreenHudOffset = 100.0f; }
     float fFOVFactor = iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f);
     if (!fFOVFactor) { fFOVFactor = 1.0f; }
@@ -194,6 +112,7 @@ DWORD WINAPI InitWF(LPVOID)
     //CPatch::SetFloat((DWORD)h_e2mfc_dll + 0x49DE4, height_multipl); //D3DERR_INVALIDCALL
     static uintptr_t e2mfc_14775, e2mfc_1566C, e2mfc_146FA;
     static uintptr_t e2mfc_49DEC, e2mfc_49DFC;
+    static uintptr_t e2mfc_1565E, e2mfc_49E00;
 
     uintptr_t dword_40B3B2 = (uintptr_t)hook::get_pattern("C7 86 F5 00 00 00 00 00 00 00 5E");
     struct DelayedHook
@@ -228,6 +147,10 @@ DWORD WINAPI InitWF(LPVOID)
     e2mfc_49DEC = *pattern.get_first<uintptr_t>(2);
     pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 0D ? ? ? ? D9 5D E0 E8");
     e2mfc_49DFC = *pattern.get_first<uintptr_t>(2);
+    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 0D ? ? ? ? D9 5D E4 D9 45 EC");
+    e2mfc_49E00 = *pattern.get_first<uintptr_t>(2);
+    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "C7 05 ? ? ? ? ? ? ? ? C7 05 ? ? ? ? ? ? ? ? D8 0D");
+    e2mfc_1565E = (uintptr_t)pattern.get_first(6);
 
     pattern = hook::module_pattern(GetModuleHandle("e2mfc"), pattern_str(to_bytes(480.0f))); //0x5ECD00
     while (pattern.clear(GetModuleHandle("e2mfc")).count_hint(6).empty()) { Sleep(0); };
@@ -310,7 +233,7 @@ DWORD WINAPI InitWF(LPVOID)
                     //ElementNewPosY1 = ElementPosY + 48.0f;
                     //ElementNewPosY2 = ElementPosY - 48.0f;
                 }
-                else if ((pRenderState && *pRenderState == P_D3D_RenderState::GRAPHIC_NOVEL) && *bIsInMenu) //+main menu check
+                else if (bIsInGraphicNovel)
                 {
                     if (ElementPosX == 0.0f && ElementPosY == 100.0f /*&& regs.eax == 2*/ /*&& *(float*)&regs.edx == 80.0f*/) // graphic novels controls and background
                     {
@@ -420,6 +343,83 @@ DWORD WINAPI InitWF(LPVOID)
         }
     }
 
+    //Graphic Novels Handler
+    static bool bPatched;
+    static uint16_t oldState = 0;
+    static uint16_t curState = 0;
+    static uint32_t callAddr;
+
+    auto p = hook::pattern("8B 5C 24 3C 8B 10 53 8B C8"); //60145C
+    struct GraphicNovelXRefHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.ebx = *(uint32_t*)(regs.esp + 0x3C);
+            regs.edx = *(uint32_t*)(regs.eax);
+            callAddr = *(uint32_t*)(regs.edx + 0x38);
+        }
+    }; injector::MakeInline<GraphicNovelXRefHook>(p.get_first(0), p.get_first(6));
+
+    static auto sub_49B6D0 = (uint32_t)hook::get_pattern("55 8B EC 83 EC 48 8B 45 08 53 56 57 8B F1 50"); //MaxPayne_GraphicNovelMode::update
+    auto GraphicNovelPageUpdate = hook::pattern("8B 06 8B CE 33 FF FF 50 10"); //60146E
+    struct GraphicNovelPageUpdateHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.eax = *(uint32_t*)(regs.esi);
+            regs.ecx = regs.esi;
+            regs.edi = 0;
+
+            bIsInGraphicNovel = (callAddr == sub_49B6D0);
+            callAddr = 0;
+
+            if (bIsInGraphicNovel)
+            {
+                curState = GetAsyncKeyState(nGraphicNovelModeKey);
+
+                if (!curState && oldState)
+                {
+                    bGraphicNovelMode = !bGraphicNovelMode;
+                    bPatched = !bPatched;
+                    iniReader.WriteInteger("MAIN", "GraphicNovelMode", bGraphicNovelMode);
+                }
+
+                oldState = curState;
+
+                if (bGraphicNovelMode)
+                {
+                    if (!bPatched)
+                    {
+                        injector::WriteMemory<float>(e2mfc_49E00, ((1.0f / (480.0f * Screen.fAspectRatio)) / 2.0f), true);
+                        injector::WriteMemory<float>(e2mfc_49DFC, (1.0f / (640.0f / (4.0f / 3.0f)) / 2.0f), true);
+                        injector::WriteMemory<float>(e2mfc_1565E, 0.0f, true);
+                        bPatched = true;
+                    }
+                }
+                else
+                {
+                    if (!bPatched)
+                    {
+                        injector::WriteMemory<float>(e2mfc_49E00, ((1.0f / (480.0f * Screen.fAspectRatio)) / 2.0f) * 1.27f, true);
+                        injector::WriteMemory<float>(e2mfc_49DFC, (1.0f / (640.0f / (4.0f / 3.0f)) / 2.0f) * 1.27f, true);
+                        injector::WriteMemory<float>(e2mfc_1565E, -0.39f, true);
+                        bPatched = true;
+                    }
+                }
+            }
+            else
+            {
+                if (bPatched)
+                {
+                    injector::WriteMemory<float>(e2mfc_49E00, ((1.0f / 640.0f) / 2.0f), true);
+                    injector::WriteMemory<float>(e2mfc_49DFC, Screen.fHalf1_fWidthScale, true);
+                    injector::WriteMemory<float>(e2mfc_1565E, 0.0f, true);
+                    bPatched = false;
+                }
+            }
+        }
+    }; injector::MakeInline<GraphicNovelPageUpdateHook>(GraphicNovelPageUpdate.get_first(0), GraphicNovelPageUpdate.get_first(6));
+
     return 0;
 }
 
@@ -503,8 +503,6 @@ DWORD WINAPI Init(LPVOID bDelay)
         injector::MakeCALL(pattern.get_first(), static_cast<float(__fastcall *)(uintptr_t, uintptr_t)>(f), true); //0x4565B8
     }
 
-    pattern = hook::pattern("8B 0D ? ? ? ? 8B 3D ? ? ? ? 41 89 0D ? ? ? ? 6A 18 8B CE E8");
-    bIsInMenu = *pattern.count(8).get(1).get<uint8_t*>(2); //0x100845E8
     bIsInCutscene = *hook::get_pattern<bool*>("A0 ? ? ? ? 84 C0 0F 85 ? ? ? ? 8B 86 ? ? ? ? 85 C0 0F 84", 1);
 
     //FOV
@@ -573,11 +571,6 @@ DWORD WINAPI InitE2_D3D8_DRIVER_MFC(LPVOID bDelay)
 
     if (bDelay)
         while (pattern.clear(GetModuleHandle("e2_d3d8_driver_mfc")).count_hint(1).empty()) { Sleep(0); };
-
-    pattern = hook::module_pattern(GetModuleHandle("e2_d3d8_driver_mfc"), "8B 96 ? ? ? ? 85 D2 74 ? 39 9E");
-    pRenderState = (uint32_t*)(*pattern.get_first<uintptr_t>(2) + 0x680); //0x100845E8 (0x10083F68 + 0x680)
-
-    CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&GraphicNovelsHandler, NULL, 0, NULL);
 
     //D3D Hook for borders
     CIniReader iniReader("");
