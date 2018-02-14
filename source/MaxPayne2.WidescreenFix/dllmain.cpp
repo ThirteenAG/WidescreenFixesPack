@@ -33,112 +33,10 @@ struct TextCoords
     float d;
 };
 
-uint8_t* bIsInComicsMode;
-uint8_t* bIsInMenu;
-bool bComicsMode;
-
-DWORD WINAPI ComicsHandler(LPVOID)
-{
-    static bool bPatched;
-    CIniReader iniReader("");
-    int32_t nComicsModeKey = iniReader.ReadInteger("MAIN", "ComicsModeKey", VK_F2);
-
-    static float fViewPortSizeX = 640.0f;
-    static float fViewPortSizeY = 480.0f;
-    auto pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 35 ? ? ? ? D8 4C 24 38 D9 5C 24 34");
-    injector::WriteMemory(pattern.get_first(2), &fViewPortSizeX, true); //0x100176D4
-    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 35 ? ? ? ? D8 4C 24 38 D9 5C 24 30");
-    injector::WriteMemory(pattern.get_first(2), &fViewPortSizeY, true); //0x10017719
-    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 35 ? ? ? ? 89 1D ? ? ? ? 89 1D");
-    injector::WriteMemory(pattern.get_first(2), &fViewPortSizeY, true); //0x1001779A
-
-    while (true)
-    {
-        Sleep(0);
-
-        if (bIsInComicsMode && bIsInMenu)
-        {
-            if ((GetAsyncKeyState(nComicsModeKey) & 1) && (*bIsInComicsMode == 255))
-            {
-                bComicsMode = !bComicsMode;
-                bPatched = !bPatched;
-                iniReader.WriteInteger("MAIN", "ComicsMode", bComicsMode);
-                while ((GetAsyncKeyState(nComicsModeKey) & 0x8000) > 0) { Sleep(0); }
-            }
-
-            if (bComicsMode)
-            {
-                if (*bIsInMenu && *bIsInComicsMode == 255) //+main menu check
-                {
-                    if (!bPatched)
-                    {
-                        fViewPortSizeX = 480.0f * Screen.fAspectRatio;
-                        fViewPortSizeY = 480.0f;
-                        bPatched = true;
-                    }
-                }
-                else
-                {
-                    if (bPatched)
-                    {
-                        fViewPortSizeX = 640.0f;
-                        fViewPortSizeY = 480.0f;
-                        bPatched = false;
-                    }
-                }
-            }
-            else
-            {
-                if (*bIsInMenu && *bIsInComicsMode == 255) //+main menu check
-                {
-                    if (!bPatched)
-                    {
-                        fViewPortSizeX = (480.0f * Screen.fAspectRatio) / 1.17936117936f;
-                        fViewPortSizeY = 480.0f / 1.17936117936f;
-                        bPatched = true;
-                    }
-                }
-                else
-                {
-                    if (bPatched)
-                    {
-                        fViewPortSizeX = 640.0f;
-                        fViewPortSizeY = 480.0f;
-                        bPatched = false;
-                    }
-                }
-            }
-        }
-    }
-    return 0;
-}
-
-DWORD WINAPI InitX_GameObjectsMFC(LPVOID bDelay)
-{
-    auto pattern = hook::module_pattern(GetModuleHandle("X_GameObjectsMFC"), "D8 3D ? ? ? ? D9 5C 24 0C D9");
-
-    if (pattern.count_hint(4).empty() && !bDelay)
-    {
-        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&InitX_GameObjectsMFC, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear(GetModuleHandle("X_GameObjectsMFC")).count_hint(4).empty()) { Sleep(0); };
-
-    //mirrors fix
-    injector::WriteMemory(pattern.get_first(2), &Screen.fMirrorFactor, true); //0x10101F39
-
-    //doors graphics fix
-    static float fVisibilityFactor1 = 0.5f;
-    static float fVisibilityFactor2 = 1.5f;
-    pattern = hook::module_pattern(GetModuleHandle("X_GameObjectsMFC"), "D9 05 ? ? ? ? 89 44 24 1C"); //1000AD9E
-    injector::WriteMemory(pattern.get_first(2), &fVisibilityFactor1, true);
-    pattern = hook::module_pattern(GetModuleHandle("X_GameObjectsMFC"), "D9 05 ? ? ? ? 89 4C 24 18"); //1000AD55
-    injector::WriteMemory(pattern.get_first(2), &fVisibilityFactor2, true);
-
-    return 0;
-}
+bool bGraphicNovelMode, bIsInGraphicNovel;
+bool* bIsInCutscene;
+float fViewPortSizeX = 640.0f;
+float fViewPortSizeY = 480.0f;
 
 DWORD WINAPI InitWF(LPVOID)
 {
@@ -165,7 +63,7 @@ DWORD WINAPI InitWF(LPVOID)
     bool bFixHud = iniReader.ReadInteger("MAIN", "FixHud", 1) != 0;
     static bool bWidescreenHud = iniReader.ReadInteger("MAIN", "WidescreenHud", 1) != 0;
     Screen.fWidescreenHudOffset = iniReader.ReadFloat("MAIN", "WidescreenHudOffset", 100.0f);
-    bComicsMode = iniReader.ReadInteger("MAIN", "ComicsMode", 1) != 0;
+    bGraphicNovelMode = iniReader.ReadInteger("MAIN", "ComicsMode", 1) != 0;
     if (!Screen.fWidescreenHudOffset) { Screen.fWidescreenHudOffset = 100.0f; }
     float fFOVFactor = iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f);
     if (!fFOVFactor) { fFOVFactor = 1.0f; }
@@ -173,8 +71,6 @@ DWORD WINAPI InitWF(LPVOID)
     Screen.fDynamicScreenFieldOfViewScale = fFOVFactor;
 
     //fix aspect ratio
-    InitX_GameObjectsMFC(NULL);
-
     auto PCameraValidate = [](uintptr_t PCamera, uintptr_t edx)
     {
         float fParam0 = *(float *)(PCamera + 0x11C);
@@ -238,7 +134,6 @@ DWORD WINAPI InitWF(LPVOID)
 
         auto PSpriteExecuteAlwaysHook = [](uintptr_t PSprite, uintptr_t edx) -> int8_t
         {
-
             float fParam0 = *(float *)(PSprite + 0x15C);
             float fParam1 = *(float *)(PSprite + 0x180);
             BYTE Param3 = *(BYTE *)(PSprite + 0x182);
@@ -260,7 +155,7 @@ DWORD WINAPI InitWF(LPVOID)
             Screen.fPSriteHudOffset = -1.0f;
             Screen.fPSriteHudScale = 0.003125f;
             return PSpriteExecuteAlways(PSprite);
-           
+
         };
         injector::WriteMemory(off_10042DAC + 0x4C, static_cast<int8_t(__fastcall *)(uintptr_t, uintptr_t)>(PSpriteExecuteAlwaysHook), true); //0x10042DF8
 
@@ -384,23 +279,6 @@ DWORD WINAPI InitWF(LPVOID)
         }
     }
 
-
-    pattern = hook::module_pattern(GetModuleHandle("e2_d3d8_driver_mfc"), "C7 86 ? ? ? ? 00 00 00 00 81 FF 99 00 00 00");
-    bIsInComicsMode = (uint8_t*)(*pattern.get_first<uintptr_t>(2) + 0x680); //0x1007D2E8
-
-    pattern = hook::module_pattern(GetModuleHandle("X_ModesMFC"), "C6 41 71 01 C3"); //void __thiscall X_ModeBase::pauseTimeUpdate(X_ModeBase *__hidden this)
-    struct pauseTimeUpdateHook
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            bIsInMenu = (uint8_t*)(regs.ecx + 0x71);
-            *bIsInMenu = 1;
-        }
-    }; injector::MakeInline<pauseTimeUpdateHook>(pattern.get_first(0));
-    injector::MakeRET(pattern.get_first(5));
-
-    CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&ComicsHandler, NULL, 0, NULL);
-
     //FOV
     if (fFOVFactor && fFOVFactor != 1.0f)
     {
@@ -414,6 +292,7 @@ DWORD WINAPI InitWF(LPVOID)
             }
         }; injector::MakeInline<pauseTimeUpdateHook>(pattern.get_first(0), pattern.get_first(10));
     }
+
     return 0;
 }
 
@@ -453,6 +332,14 @@ DWORD WINAPI InitE2MFC(LPVOID bDelay)
     //get resolution
     injector::MakeCALL(pattern.get(0).get<uintptr_t>(0), static_cast<int32_t(__fastcall *)(uintptr_t, uintptr_t)>(PDriverGetWidth), true);  //e2mfc + 0x15582
     injector::MakeCALL(pattern.get(1).get<uintptr_t>(0), static_cast<int32_t(__fastcall *)(uintptr_t, uintptr_t)>(PDriverGetHeight), true); //e2mfc + 0x155AB
+
+    //for graphic novels scaling
+    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 35 ? ? ? ? D8 4C 24 38 D9 5C 24 34");
+    injector::WriteMemory(pattern.get_first(2), &fViewPortSizeX, true); //0x100176D4
+    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 35 ? ? ? ? D8 4C 24 38 D9 5C 24 30");
+    injector::WriteMemory(pattern.get_first(2), &fViewPortSizeY, true); //0x10017719
+    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 35 ? ? ? ? 89 1D ? ? ? ? 89 1D");
+    injector::WriteMemory(pattern.get_first(2), &fViewPortSizeY, true); //0x1001779A
 
     CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&InitWF, NULL, 0, NULL);
     return 0;
@@ -500,6 +387,131 @@ DWORD WINAPI Init(LPVOID bDelay)
     return 0;
 }
 
+DWORD WINAPI InitX_GameObjectsMFC(LPVOID bDelay)
+{
+    auto pattern = hook::module_pattern(GetModuleHandle("X_GameObjectsMFC"), "D8 3D ? ? ? ? D9 5C 24 0C D9");
+
+    if (pattern.count_hint(4).empty() && !bDelay)
+    {
+        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&InitX_GameObjectsMFC, (LPVOID)true, 0, NULL);
+        return 0;
+    }
+
+    if (bDelay)
+        while (pattern.clear(GetModuleHandle("X_GameObjectsMFC")).count_hint(4).empty()) { Sleep(0); };
+
+    //mirrors fix
+    injector::WriteMemory(pattern.get_first(2), &Screen.fMirrorFactor, true); //0x10101F39
+
+    //doors graphics fix
+    static float fVisibilityFactor1 = 0.5f;
+    static float fVisibilityFactor2 = 1.5f;
+    pattern = hook::module_pattern(GetModuleHandle("X_GameObjectsMFC"), "D9 05 ? ? ? ? 89 44 24 1C"); //1000AD9E
+    injector::WriteMemory(pattern.get_first(2), &fVisibilityFactor1, true);
+    pattern = hook::module_pattern(GetModuleHandle("X_GameObjectsMFC"), "D9 05 ? ? ? ? 89 4C 24 18"); //1000AD55
+    injector::WriteMemory(pattern.get_first(2), &fVisibilityFactor2, true);
+
+    //actually not a cutscene check, but X_Crosshair::sm_bCameraPathRunning
+    pattern = hook::module_pattern(GetModuleHandle("X_GameObjectsMFC"), "A0 ? ? ? ? 84 C0 0F 85"); //byte_101A7AA0
+    bIsInCutscene = *pattern.get_first<bool*>(1);
+
+    return 0;
+}
+
+DWORD WINAPI InitX_ModesMFC(LPVOID bDelay)
+{
+    auto pattern = hook::module_pattern(GetModuleHandle("X_ModesMFC"), "8B 5C 24 18 8B 01 53 FF 50 38");
+
+    if (pattern.count_hint(1).empty() && !bDelay)
+    {
+        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&InitX_ModesMFC, (LPVOID)true, 0, NULL);
+        return 0;
+    }
+
+    if (bDelay)
+        while (pattern.clear(GetModuleHandle("X_ModesMFC")).count_hint(1).empty()) { Sleep(0); };
+
+    static CIniReader iniReader("");
+    static int32_t nGraphicNovelModeKey = iniReader.ReadInteger("MAIN", "GraphicNovelModeKey", VK_F2);
+
+    //Graphic Novels Handler
+    static bool bPatched;
+    static uint16_t oldState = 0;
+    static uint16_t curState = 0;
+    static uint32_t callAddr;
+
+    struct GraphicNovelXRefHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.ebx = *(uint32_t*)(regs.esp + 0x18);
+            regs.eax = *(uint32_t*)(regs.ecx);
+            callAddr = *(uint32_t*)(regs.eax + 0x38);
+        }
+    }; injector::MakeInline<GraphicNovelXRefHook>(pattern.get_first(0), pattern.get_first(6)); //10001A6A
+
+    static auto sub_484AE0 = (uint32_t)hook::get_pattern("8B 44 24 04 83 EC 34 53 55 56 57 50 8B F1"); //MaxPayne_GraphicNovelMode::update
+    auto GraphicNovelPageUpdate = hook::module_pattern(GetModuleHandle("X_ModesMFC"), "8B 16 8B CE 33 FF FF 52 10"); //10001A7A 
+    struct GraphicNovelPageUpdateHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.edx = *(uint32_t*)(regs.esi);
+            regs.ecx = regs.esi;
+            regs.edi = 0;
+
+            //if (!*bIsInCutscene)
+            //    Screen.bDrawBordersForCameraOverlay = false;
+
+            bIsInGraphicNovel = (callAddr == sub_484AE0);
+            callAddr = 0;
+
+            if (bIsInGraphicNovel)
+            {
+                curState = GetAsyncKeyState(nGraphicNovelModeKey);
+
+                if (!curState && oldState)
+                {
+                    bGraphicNovelMode = !bGraphicNovelMode;
+                    bPatched = !bPatched;
+                    iniReader.WriteInteger("MAIN", "GraphicNovelMode", bGraphicNovelMode);
+                }
+
+                oldState = curState;
+
+                if (bGraphicNovelMode)
+                {
+                    if (!bPatched)
+                    {
+                        fViewPortSizeX = 480.0f * Screen.fAspectRatio;
+                        fViewPortSizeY = 480.0f;
+                        bPatched = true;
+                    }
+                }
+                else
+                {
+                    if (!bPatched)
+                    {
+                        fViewPortSizeX = (480.0f * Screen.fAspectRatio) / 1.17936117936f;
+                        fViewPortSizeY = 480.0f / 1.17936117936f;
+                        bPatched = true;
+                    }
+                }
+            }
+            else
+            {
+                if (bPatched)
+                {
+                    fViewPortSizeX = 640.0f;
+                    fViewPortSizeY = 480.0f;
+                    bPatched = false;
+                }
+            }
+        }
+    }; injector::MakeInline<GraphicNovelPageUpdateHook>(GraphicNovelPageUpdate.get_first(0), GraphicNovelPageUpdate.get_first(6));
+
+    return 0;
+}
 
 BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
@@ -507,6 +519,8 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
     {
         Init(NULL);
         InitE2MFC(NULL);
+        InitX_GameObjectsMFC(NULL);
+        InitX_ModesMFC(NULL);
     }
     return TRUE;
 }
