@@ -21,8 +21,13 @@ struct Screen
     float fDouble1_fWidthScale;
     float fHalf1_fWidthScale;
     float fMirrorFactor;
-    float fPSriteHudOffset;
-    float fPSriteHudScale;
+    float fViewPortSizeX = 640.0f;
+    float fViewPortSizeY = 480.0f;
+    float fNovelsScale = 0.003125f;
+    float fNovelsOffset = -1.0f;
+    bool bIsX_QuadRenderer;
+    bool bIsSniperZoomOn;
+    bool bIsFading;
 } Screen;
 
 struct TextCoords
@@ -35,8 +40,6 @@ struct TextCoords
 
 bool bGraphicNovelMode, bIsInGraphicNovel;
 bool* bIsInCutscene;
-float fViewPortSizeX = 640.0f;
-float fViewPortSizeY = 480.0f;
 
 DWORD WINAPI InitWF(LPVOID)
 {
@@ -55,6 +58,10 @@ DWORD WINAPI InitWF(LPVOID)
     Screen.fHudOffset2 = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
     Screen.fHudScale = (1.0f / (480.0f * Screen.fAspectRatio)) * 2.0f;
     Screen.fMirrorFactor = 1.0f * ((4.0f / 3.0f) / (Screen.fAspectRatio));
+    Screen.fViewPortSizeX = 640.0f;
+    Screen.fViewPortSizeY = 480.0f;
+    Screen.fNovelsScale = Screen.fHudScale;
+    Screen.fNovelsOffset = Screen.fHudOffset;
 
     if (Screen.fAspectRatio <= ((4.0f / 3.0f) + 0.03f))
         return 0;
@@ -122,43 +129,6 @@ DWORD WINAPI InitWF(LPVOID)
         pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? D9 44 24 1C"); //0x10042B58
         injector::WriteMemory<float>(*pattern.get_first<void*>(2), Screen.fHudScale, true);
 
-        pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 0D ? ? ? ? 8B 44 24 1C 52 50 51"); //0x1000F05E
-        injector::WriteMemory(pattern.get_first(2), &Screen.fPSriteHudOffset, true);
-        pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? D9 44 24 20 53"); //0x1000F011
-        injector::WriteMemory(pattern.get_first(2), &Screen.fPSriteHudScale, true);
-
-        static bool bBulletTimeRender, bDynShadowRender, bScopesFix;
-        pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "C7 06 ? ? ? ? C7 46 10 ? ? ? ? C7 07 ? ? ? ? 6A 01");
-        auto off_10042DAC = *pattern.get_first<uintptr_t>(2);
-        static auto PSpriteExecuteAlways = (uint8_t(__thiscall *)(uintptr_t)) *(uintptr_t*)(off_10042DAC + 0x4C);
-
-        auto PSpriteExecuteAlwaysHook = [](uintptr_t PSprite, uintptr_t edx) -> int8_t
-        {
-            float fParam0 = *(float *)(PSprite + 0x15C);
-            float fParam1 = *(float *)(PSprite + 0x180);
-            BYTE Param3 = *(BYTE *)(PSprite + 0x182);
-
-            if (fParam0 == 640.0f && fParam1 == 0.0f && Param3 == 0x00)
-                bBulletTimeRender = true;
-
-            if (fParam0 == 640.0f && (fParam1 == 0.0078125f || fParam1 == 0.015625f) /*&& Param3 == 0x00*/) //for some reason it's 0.015625 on windows 7
-                bDynShadowRender = true;
-
-            if (fParam0 != 640.0f || bDynShadowRender || bBulletTimeRender)
-            {
-                Screen.fPSriteHudOffset = Screen.fHudOffset;
-                Screen.fPSriteHudScale = Screen.fHudScale;
-
-                return PSpriteExecuteAlways(PSprite);
-            }
-
-            Screen.fPSriteHudOffset = -1.0f;
-            Screen.fPSriteHudScale = 0.003125f;
-            return PSpriteExecuteAlways(PSprite);
-
-        };
-        injector::WriteMemory(off_10042DAC + 0x4C, static_cast<int8_t(__fastcall *)(uintptr_t, uintptr_t)>(PSpriteExecuteAlwaysHook), true); //0x10042DF8
-
         pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 25 ? ? ? ? 89 44 24 44 83 EC 08");
         static auto pHudElementPosX = *pattern.get_first<float*>(2); //0x10061134
         pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 25 ? ? ? ? D9 5C 24 20");
@@ -166,7 +136,7 @@ DWORD WINAPI InitWF(LPVOID)
         pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D9 05 ? ? ? ? 8D 81 54");
         static auto pf10042294 = *pattern.get_first<float*>(2); //0x10042294
 
-        pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D9 05 ? ? ? ? 8B 86 64 01 00 00 ");
+        pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D9 05 ? ? ? ? 8B 86 64 01 00 00");
         struct P_HudPosHook
         {
             void operator()(injector::reg_pack& regs)
@@ -178,7 +148,7 @@ DWORD WINAPI InitWF(LPVOID)
                 auto ElementNewPosX2 = ElementPosX;
                 auto ElementNewPosY2 = ElementPosY;
                 
-                if (bWidescreenHud)
+                if (bWidescreenHud && !Screen.bIsSniperZoomOn)
                 {
                     if (ElementPosX == 7.0f) // bullet time meter
                     {
@@ -212,21 +182,24 @@ DWORD WINAPI InitWF(LPVOID)
                 }
                 
                 ElementNewPosX2 = ElementNewPosX1;
+
+                if (Screen.bIsSniperZoomOn)
+                {
+                    //render borders?
+                }
                 
-                if (bBulletTimeRender || (bDynShadowRender && ElementPosX == 0.0f))
+                if (Screen.bIsX_QuadRenderer)
                 {
                     ElementNewPosX1 = ElementPosX + Screen.fHudOffset2;
                     ElementNewPosX2 = ElementPosX - Screen.fHudOffset2;
-                    bBulletTimeRender = false;
-                    bDynShadowRender = false;
+                    Screen.bIsX_QuadRenderer = false;
                 }
-                else
+
+                if (Screen.bIsFading && !Screen.bIsSniperZoomOn && ElementPosX == 0.0f && ElementPosY == 0.0f)
                 {
-                    if (bScopesFix && ElementPosX == 0.0f && ElementPosY == 0.0f && regs.eax == 2 && regs.ecx == 640.0f && *(uint32_t*)(regs.esp + 0x20) != 0x40400000 && *(uint32_t*)(regs.esp + 0x30) != 0x43800000)
-                    {
-                        ElementNewPosY1 = ElementPosY + Screen.fHudOffset2; //to do, isn't scaled properly
-                        ElementNewPosY2 = ElementPosY - Screen.fHudOffset2;
-                    }
+                    ElementNewPosX1 = ElementPosX + Screen.fHudOffset2;
+                    ElementNewPosX2 = ElementPosX - Screen.fHudOffset2;
+                    Screen.bIsFading = false;
                 }
 
                 regs.eax = *(uint32_t*)(regs.esi + 0x164);
@@ -260,16 +233,18 @@ DWORD WINAPI InitWF(LPVOID)
                     float TextUnkVal = *(float*)(*(uintptr_t*)(regs.esp + 0xC) + 0x5C);
                     float TextPosX = pTextElementPosX->a;
                     float TextNewPosX = TextPosX;
-
-                    if ((pTextElementPosX->a == 0.0f || pTextElementPosX->a == -8.0f || pTextElementPosX->a == -16.0f || pTextElementPosX->a == -24.0f || pTextElementPosX->a == -32.0f) && pTextElementPosX->b == -10.5f && (pTextElementPosX->c == 8.0f || pTextElementPosX->c == 16.0f || pTextElementPosX->c == 24.0f || pTextElementPosX->c == 32.0f || pTextElementPosX->c == 57.0f) && pTextElementPosX->d == 21) //ammo numbers(position depends on digits amount)
+                    if (!Screen.bIsSniperZoomOn)
                     {
-                        if (TextUnkVal < 0.0f)
+                        if ((pTextElementPosX->a == 0.0f || pTextElementPosX->a == -8.0f || pTextElementPosX->a == -16.0f || pTextElementPosX->a == -24.0f || pTextElementPosX->a == -32.0f) && pTextElementPosX->b == -10.5f && (pTextElementPosX->c == 8.0f || pTextElementPosX->c == 16.0f || pTextElementPosX->c == 24.0f || pTextElementPosX->c == 32.0f || pTextElementPosX->c == 57.0f) && pTextElementPosX->d == 21) //ammo numbers(position depends on digits amount)
                         {
-                            TextNewPosX = TextPosX - Screen.fHudOffsetWide;
-                        }
-                        else
-                        {
-                            TextNewPosX = TextPosX + Screen.fHudOffsetWide;
+                            if (TextUnkVal < 0.0f)
+                            {
+                                TextNewPosX = TextPosX - Screen.fHudOffsetWide;
+                            }
+                            else
+                            {
+                                TextNewPosX = TextPosX + Screen.fHudOffsetWide;
+                            }
                         }
                     }
                     //*(float*)(regs.esp + 0x2C) = TextPosX * *(float*)(regs.ebx + 0x198);
@@ -335,11 +310,15 @@ DWORD WINAPI InitE2MFC(LPVOID bDelay)
 
     //for graphic novels scaling
     pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 35 ? ? ? ? D8 4C 24 38 D9 5C 24 34");
-    injector::WriteMemory(pattern.get_first(2), &fViewPortSizeX, true); //0x100176D4
+    injector::WriteMemory(pattern.get_first(2), &Screen.fViewPortSizeX, true); //0x100176D4
     pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 35 ? ? ? ? D8 4C 24 38 D9 5C 24 30");
-    injector::WriteMemory(pattern.get_first(2), &fViewPortSizeY, true); //0x10017719
+    injector::WriteMemory(pattern.get_first(2), &Screen.fViewPortSizeY, true); //0x10017719
     pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 35 ? ? ? ? 89 1D ? ? ? ? 89 1D");
-    injector::WriteMemory(pattern.get_first(2), &fViewPortSizeY, true); //0x1001779A
+    injector::WriteMemory(pattern.get_first(2), &Screen.fViewPortSizeY, true); //0x1001779A
+    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 0D ? ? ? ? 8B 44 24 1C 52 50 51"); //0x1000F05E
+    injector::WriteMemory(pattern.get_first(2), &Screen.fNovelsOffset, true);
+    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? D9 44 24 20 53"); //0x1000F011
+    injector::WriteMemory(pattern.get_first(2), &Screen.fNovelsScale, true);
 
     CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&InitWF, NULL, 0, NULL);
     return 0;
@@ -383,6 +362,34 @@ DWORD WINAPI Init(LPVOID bDelay)
         pattern = hook::pattern("E8 ? ? ? ? D8 2D ? ? ? ? D8");
         injector::MakeCALL(pattern.get_first(), static_cast<float(__fastcall *)(uintptr_t, uintptr_t)>(f), true); //0x488C68
     }
+
+    pattern = hook::pattern("8B 4C 24 18 51 8B 4F 04 FF 15");
+    struct X_CharacterSetSniperZoomOnHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.edx = *(uint32_t*)(regs.esp + 0x18);
+            regs.ecx = *(uint32_t*)(regs.edi + 0x04);
+            if (regs.edx == 1)
+                Screen.bIsSniperZoomOn = true;
+            else
+                Screen.bIsSniperZoomOn = false;
+        }
+    }; injector::MakeInline<X_CharacterSetSniperZoomOnHook>(pattern.get_first(0), pattern.get_first(8)); //428FB2
+    injector::WriteMemory<uint8_t>(pattern.get_first(6), 0x52i8, true); //push edx
+
+    pattern = hook::pattern("8B 8B AD 00 00 00 DF E0 F6 C4 41");
+    struct FadingHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.ecx = *(uint32_t*)(regs.ebx + 0xAD);
+            if (*(float*)(regs.esp + 0x34) == 0.0f)
+                Screen.bIsFading = false;
+            else
+                Screen.bIsFading = true;
+        }
+    }; injector::MakeInline<FadingHook>(pattern.get_first(0), pattern.get_first(8)); //4872C1 
     
     return 0;
 }
@@ -483,8 +490,10 @@ DWORD WINAPI InitX_ModesMFC(LPVOID bDelay)
                 {
                     if (!bPatched)
                     {
-                        fViewPortSizeX = 480.0f * Screen.fAspectRatio;
-                        fViewPortSizeY = 480.0f;
+                        Screen.fNovelsScale = 0.003125f;
+                        Screen.fNovelsOffset = -1.0f;
+                        Screen.fViewPortSizeX = 480.0f * Screen.fAspectRatio;
+                        Screen.fViewPortSizeY = 480.0f;
                         bPatched = true;
                     }
                 }
@@ -492,8 +501,10 @@ DWORD WINAPI InitX_ModesMFC(LPVOID bDelay)
                 {
                     if (!bPatched)
                     {
-                        fViewPortSizeX = (480.0f * Screen.fAspectRatio) / 1.17936117936f;
-                        fViewPortSizeY = 480.0f / 1.17936117936f;
+                        Screen.fNovelsScale = 0.003125f;
+                        Screen.fNovelsOffset = -1.0f;
+                        Screen.fViewPortSizeX = (480.0f * Screen.fAspectRatio) / 1.17936117936f;
+                        Screen.fViewPortSizeY = 480.0f / 1.17936117936f;
                         bPatched = true;
                     }
                 }
@@ -502,13 +513,41 @@ DWORD WINAPI InitX_ModesMFC(LPVOID bDelay)
             {
                 if (bPatched)
                 {
-                    fViewPortSizeX = 640.0f;
-                    fViewPortSizeY = 480.0f;
+                    Screen.fViewPortSizeX = 640.0f;
+                    Screen.fViewPortSizeY = 480.0f;
+                    Screen.fNovelsScale = Screen.fHudScale;
+                    Screen.fNovelsOffset = Screen.fHudOffset;
                     bPatched = false;
                 }
             }
         }
     }; injector::MakeInline<GraphicNovelPageUpdateHook>(GraphicNovelPageUpdate.get_first(0), GraphicNovelPageUpdate.get_first(6));
+
+    return 0;
+}
+
+DWORD WINAPI InitX_HelpersMFC(LPVOID bDelay)
+{
+    auto pattern = hook::module_pattern(GetModuleHandle("X_HelpersMFC"), "8B 41 08 8B 49 0C 50");
+
+    if (pattern.count_hint(1).empty() && !bDelay)
+    {
+        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&InitX_HelpersMFC, (LPVOID)true, 0, NULL);
+        return 0;
+    }
+
+    if (bDelay)
+        while (pattern.clear(GetModuleHandle("X_HelpersMFC")).count_hint(1).empty()) { Sleep(0); };
+
+    struct X_QuadRendererRenderHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.eax = *(uint32_t*)(regs.ecx + 0x08);
+            regs.ecx = *(uint32_t*)(regs.ecx + 0x0C);
+            Screen.bIsX_QuadRenderer = true;
+        }
+    }; injector::MakeInline<X_QuadRendererRenderHook>(pattern.get_first(0), pattern.get_first(6)); //10004820
 
     return 0;
 }
@@ -521,6 +560,7 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
         InitE2MFC(NULL);
         InitX_GameObjectsMFC(NULL);
         InitX_ModesMFC(NULL);
+        InitX_HelpersMFC(NULL);
     }
     return TRUE;
 }
