@@ -24,6 +24,9 @@ struct Screen
     float fHalf1_fWidthScale;
     bool bDrawBorders;
     bool bDrawBordersToFillGap;
+    bool bGraphicNovelMode;
+    bool bIsInGraphicNovel;
+    bool* bIsInCutscene;
 } Screen;
 
 struct TextCoords
@@ -33,9 +36,6 @@ struct TextCoords
     float c;
     float d;
 };
-
-bool bGraphicNovelMode, bIsInGraphicNovel;
-bool* bIsInCutscene;
 
 typedef HRESULT(STDMETHODCALLTYPE* EndScene_t)(LPDIRECT3DDEVICE8);
 EndScene_t RealEndScene = NULL;
@@ -56,7 +56,7 @@ HRESULT WINAPI EndScene(LPDIRECT3DDEVICE8 pDevice)
         Screen.bDrawBordersToFillGap = false;
     }
 
-    if (Screen.bDrawBorders && !bIsInGraphicNovel)
+    if (Screen.bDrawBorders && !Screen.bIsInGraphicNovel)
     {
         auto x = Screen.fHudOffsetReal;
         auto y = (x - Screen.fHudOffsetReal);
@@ -94,14 +94,11 @@ DWORD WINAPI InitWF(LPVOID)
     #define SCREEN_FOV_VERTICAL (2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))
     Screen.fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
 
-    if (Screen.fAspectRatio <= ((4.0f / 3.0f) + 0.03f))
-        return 0;
-
     static CIniReader iniReader("");
     bool bFixHud = iniReader.ReadInteger("MAIN", "FixHud", 1) != 0;
     static bool bWidescreenHud = iniReader.ReadInteger("MAIN", "WidescreenHud", 1) != 0;
     Screen.fWidescreenHudOffset = iniReader.ReadFloat("MAIN", "WidescreenHudOffset", 100.0f);
-    bGraphicNovelMode = iniReader.ReadInteger("MAIN", "GraphicNovelMode", 1) != 0;
+    Screen.bGraphicNovelMode = iniReader.ReadInteger("MAIN", "GraphicNovelMode", 1) != 0;
     static int32_t nGraphicNovelModeKey = iniReader.ReadInteger("MAIN", "GraphicNovelModeKey", VK_F2);
     if (!Screen.fWidescreenHudOffset) { Screen.fWidescreenHudOffset = 100.0f; }
     float fFOVFactor = iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f);
@@ -232,11 +229,11 @@ DWORD WINAPI InitWF(LPVOID)
                     //ElementNewPosY1 = ElementPosY + 48.0f;
                     //ElementNewPosY2 = ElementPosY - 48.0f;
                 }
-                else if (bIsInGraphicNovel)
+                else if (Screen.bIsInGraphicNovel)
                 {
                     if (ElementPosX == 0.0f && ElementPosY == 100.0f /*&& regs.eax == 2*/ /*&& *(float*)&regs.edx == 80.0f*/) // graphic novels controls and background
                     {
-                        if (bGraphicNovelMode)
+                        if (Screen.bGraphicNovelMode)
                         {
                             ElementNewPosY1 = ElementPosY - 90.0f;
                             ElementNewPosY2 = ElementPosY - 90.0f;
@@ -250,7 +247,7 @@ DWORD WINAPI InitWF(LPVOID)
                 
                     if (ElementPosX == 0.0f && ElementPosY == 0.0f && regs.eax == 2 && (*(float*)&regs.edx == 80.0f || *(float*)&regs.edx == 60.0f)) // graphic novels controls and background
                     {
-                        if (bGraphicNovelMode)
+                        if (Screen.bGraphicNovelMode)
                         {
                             ElementNewPosY1 = ElementPosY - 60.0f;
                             ElementNewPosY2 = ElementPosY - 60.0f;
@@ -343,7 +340,7 @@ DWORD WINAPI InitWF(LPVOID)
     }
 
     //actually not a cutscene check, but X_Crosshair::sm_bCameraPathRunning
-    bIsInCutscene = *hook::get_pattern<bool*>("A0 ? ? ? ? 84 C0 0F 85 ? ? ? ? 8B 86 ? ? ? ? 85 C0 0F 84", 1);
+    Screen.bIsInCutscene = *hook::get_pattern<bool*>("A0 ? ? ? ? 84 C0 0F 85 ? ? ? ? 8B 86 ? ? ? ? 85 C0 0F 84", 1);
 
     //Graphic Novels Handler
     static bool bPatched;
@@ -372,26 +369,26 @@ DWORD WINAPI InitWF(LPVOID)
             regs.ecx = regs.esi;
             regs.edi = 0;
 
-            if (!*bIsInCutscene)
+            if (!*Screen.bIsInCutscene)
                 Screen.bDrawBorders = false;
 
-            bIsInGraphicNovel = (callAddr == sub_49B6D0);
+            Screen.bIsInGraphicNovel = (callAddr == sub_49B6D0);
             callAddr = 0;
 
-            if (bIsInGraphicNovel)
+            if (Screen.bIsInGraphicNovel)
             {
                 curState = GetAsyncKeyState(nGraphicNovelModeKey);
 
                 if (!curState && oldState)
                 {
-                    bGraphicNovelMode = !bGraphicNovelMode;
+                    Screen.bGraphicNovelMode = !Screen.bGraphicNovelMode;
                     bPatched = !bPatched;
-                    iniReader.WriteInteger("MAIN", "GraphicNovelMode", bGraphicNovelMode);
+                    iniReader.WriteInteger("MAIN", "GraphicNovelMode", Screen.bGraphicNovelMode);
                 }
 
                 oldState = curState;
 
-                if (bGraphicNovelMode)
+                if (Screen.bGraphicNovelMode)
                 {
                     if (!bPatched)
                     {
