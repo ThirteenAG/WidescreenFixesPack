@@ -22,7 +22,7 @@ struct Screen
     float f1_fWidthScale;
     float fDouble1_fWidthScale;
     float fHalf1_fWidthScale;
-    bool bDrawBordersForCameraOverlay;
+    bool bDrawBorders;
     bool bDrawBordersToFillGap;
 } Screen;
 
@@ -56,16 +56,17 @@ HRESULT WINAPI EndScene(LPDIRECT3DDEVICE8 pDevice)
         Screen.bDrawBordersToFillGap = false;
     }
 
-    if (Screen.bDrawBordersForCameraOverlay)
+    if (Screen.bDrawBorders && !bIsInGraphicNovel)
     {
-        auto x = Screen.fHudOffsetReal * Screen.fFieldOfView;
-        auto y = (x - Screen.fHudOffsetReal) / Screen.fFieldOfView;
+        auto x = Screen.fHudOffsetReal;
+        auto y = (x - Screen.fHudOffsetReal);
 
         DrawRect(pDevice, 0, 0, static_cast<int32_t>(x), Screen.nHeight);
         DrawRect(pDevice, static_cast<int32_t>(Screen.fWidth - x), 0, static_cast<int32_t>(Screen.fHudOffsetReal + x), Screen.nHeight);
 
         DrawRect(pDevice, 0, 0, Screen.nWidth, static_cast<int32_t>(y));
         DrawRect(pDevice, 0, static_cast<int32_t>(Screen.fHeight - y), Screen.nWidth, static_cast<int32_t>(y));
+        Screen.bDrawBorders = false;
     }
 
     return RealEndScene(pDevice);
@@ -372,7 +373,7 @@ DWORD WINAPI InitWF(LPVOID)
             regs.edi = 0;
 
             if (!*bIsInCutscene)
-                Screen.bDrawBordersForCameraOverlay = false;
+                Screen.bDrawBorders = false;
 
             bIsInGraphicNovel = (callAddr == sub_49B6D0);
             callAddr = 0;
@@ -531,6 +532,17 @@ DWORD WINAPI Init(LPVOID bDelay)
     pattern = hook::pattern("E8 ? ? ? ? D9 5C 24 14 8B CF E8"); // 0x45650D
     injector::MakeCALL(pattern.get_first(0), sub_50B9E0, true); // restoring cutscene FOV
 
+    pattern = hook::pattern("05 40 01 00 00 84 C9 89 50 24");
+    struct X_ProgressBarUpdateProgressBarHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.eax += 0x140;
+            Screen.bDrawBorders = true;
+        }
+    }; injector::MakeInline<X_ProgressBarUpdateProgressBarHook>(pattern.get_first(0)); //10002FF0
+
+    /*
     bool bD3DHookBorders = iniReader.ReadInteger("MAIN", "D3DHookBorders", 1) != 0;
     if (bD3DHookBorders)
     {
@@ -550,14 +562,14 @@ DWORD WINAPI Init(LPVOID bDelay)
             {
                 Screen.bDrawBordersForCameraOverlay = false;
                 *(uint8_t*)(regs.edi + 0x14E) = 1;
-
+        
                 //what happens here is check for some camera coordinates, in this particular cutscene 1.81 is used https://i.imgur.com/A7wRrgk.gifv
                 if ((*(uint32_t*)(regs.esp + 0x10) == 0x3FE842CF && *(uint32_t*)(regs.esp + 0x1C) == 0x3FE842CF) && (Screen.fAspectRatio <= (16.0f / 9.0f))) //1.81
                     Screen.bDrawBordersForCameraOverlay = true;
             }
         }; injector::MakeInline<CameraOverlayHook>(pattern.get_first(0), pattern.get_first(7)); // 0x672EB1
     }
-
+    */
     return 0;
 }
 

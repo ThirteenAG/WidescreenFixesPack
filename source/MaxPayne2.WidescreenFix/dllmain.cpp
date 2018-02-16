@@ -1,4 +1,6 @@
 #include "stdafx.h"
+#include "dxsdk\d3d8.h"
+#include "dxsdk\d3dvtbl.h"
 
 struct Screen
 {
@@ -13,6 +15,7 @@ struct Screen
     float fHudScale;
     float fHudOffset;
     float fHudOffset2;
+    float fHudOffsetReal;
     float fHudOffsetWide;
     float fWidescreenHudOffset;
     float fWidthScale;
@@ -28,6 +31,7 @@ struct Screen
     bool bIsX_QuadRenderer;
     bool bIsSniperZoomOn;
     bool bIsFading;
+    bool bDrawBorders;
 } Screen;
 
 struct TextCoords
@@ -40,6 +44,33 @@ struct TextCoords
 
 bool bGraphicNovelMode, bIsInGraphicNovel;
 bool* bIsInCutscene;
+
+typedef HRESULT(STDMETHODCALLTYPE* EndScene_t)(LPDIRECT3DDEVICE8);
+EndScene_t RealEndScene = NULL;
+
+void DrawRect(LPDIRECT3DDEVICE8 pDevice, int32_t x, int32_t y, int32_t w, int32_t h, D3DCOLOR color = D3DCOLOR_XRGB(0, 0, 0))
+{
+    D3DRECT BarRect = { x, y, x + w, y + h };
+    pDevice->Clear(1, &BarRect, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, color, 0, 0);
+}
+
+HRESULT WINAPI EndScene(LPDIRECT3DDEVICE8 pDevice)
+{
+    if (Screen.bDrawBorders && !bIsInGraphicNovel)
+    {
+        auto x = Screen.fHudOffsetReal;
+        auto y = (x - Screen.fHudOffsetReal);
+        
+        DrawRect(pDevice, 0, 0, static_cast<int32_t>(x), Screen.nHeight);
+        DrawRect(pDevice, static_cast<int32_t>(Screen.fWidth - x), 0, static_cast<int32_t>(Screen.fHudOffsetReal + x), Screen.nHeight);
+        
+        DrawRect(pDevice, 0, 0, Screen.nWidth, static_cast<int32_t>(y));
+        DrawRect(pDevice, 0, static_cast<int32_t>(Screen.fHeight - y), Screen.nWidth, static_cast<int32_t>(y));
+        Screen.bDrawBorders = false;
+    }
+
+    return RealEndScene(pDevice);
+}
 
 DWORD WINAPI InitWF(LPVOID)
 {
@@ -56,6 +87,7 @@ DWORD WINAPI InitWF(LPVOID)
     Screen.fHalf1_fWidthScale = Screen.f1_fWidthScale / 2.0f;
     Screen.fHudOffset = ((-1.0f / Screen.fAspectRatio) * (4.0f / 3.0f));
     Screen.fHudOffset2 = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
+    Screen.fHudOffsetReal = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
     Screen.fHudScale = (1.0f / (480.0f * Screen.fAspectRatio)) * 2.0f;
     Screen.fMirrorFactor = 1.0f * ((4.0f / 3.0f) / (Screen.fAspectRatio));
     Screen.fViewPortSizeX = 640.0f;
@@ -106,8 +138,8 @@ DWORD WINAPI InitWF(LPVOID)
         }
     };
 
-    auto pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "00 00 00 00 3F 3F 3F");
-    injector::MakeCALL((DWORD)GetModuleHandle("e2mfc") + 0x17077, static_cast<void(__fastcall *)(uintptr_t, uintptr_t)>(PCameraValidate), true); //0x10017077
+    auto pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "E8 ? ? ? ? A0 ? ? ? ? 80 A6 EC 00 00 00 BF A8 01");
+    injector::MakeCALL(pattern.get_first(), static_cast<void(__fastcall *)(uintptr_t, uintptr_t)>(PCameraValidate), true); //0x10017077
 
     //corrupted graphic in tunnel in mp1, not sure if needed in mp2 (DisableSubViewport)
     pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "83 EC 08 56 8B F1 8B 86 E8");
@@ -185,7 +217,7 @@ DWORD WINAPI InitWF(LPVOID)
 
                 if (Screen.bIsSniperZoomOn)
                 {
-                    //render borders?
+                    Screen.bDrawBorders = true;
                 }
                 
                 if (Screen.bIsX_QuadRenderer)
@@ -467,8 +499,8 @@ DWORD WINAPI InitX_ModesMFC(LPVOID bDelay)
             regs.ecx = regs.esi;
             regs.edi = 0;
 
-            //if (!*bIsInCutscene)
-            //    Screen.bDrawBordersForCameraOverlay = false;
+            if (!*bIsInCutscene)
+                Screen.bDrawBorders = false;
 
             bIsInGraphicNovel = (callAddr == sub_484AE0);
             callAddr = 0;
@@ -549,6 +581,54 @@ DWORD WINAPI InitX_HelpersMFC(LPVOID bDelay)
         }
     }; injector::MakeInline<X_QuadRendererRenderHook>(pattern.get_first(0), pattern.get_first(6)); //10004820
 
+    pattern = hook::module_pattern(GetModuleHandle("X_HelpersMFC"), "05 58 01 00 00 33 D2");
+    struct X_ProgressBarUpdateProgressBarHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.eax += 0x158;
+            Screen.bDrawBorders = true;
+        }
+    }; injector::MakeInline<X_ProgressBarUpdateProgressBarHook>(pattern.get_first(0)); //10002FF0
+
+    return 0;
+}
+
+DWORD WINAPI InitE2_D3D8_DRIVER_MFC(LPVOID bDelay)
+{
+    auto pattern = hook::module_pattern(GetModuleHandle("e2_d3d8_driver_mfc"), "8B 45 0C 53 56 33 F6 2B C6 57");
+
+    if (pattern.count_hint(1).empty() && !bDelay)
+    {
+        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&InitE2_D3D8_DRIVER_MFC, (LPVOID)true, 0, NULL);
+        return 0;
+    }
+
+    if (bDelay)
+        while (pattern.clear(GetModuleHandle("e2_d3d8_driver_mfc")).count_hint(1).empty()) { Sleep(0); };
+
+    //D3D Hook for borders
+    CIniReader iniReader("");
+    bool bD3DHookBorders = iniReader.ReadInteger("MAIN", "D3DHookBorders", 1) != 0;
+    if (bD3DHookBorders)
+    {
+        pattern = hook::module_pattern(GetModuleHandle("e2_d3d8_driver_mfc"), "8B 86 ? ? ? ? 8B 08 50 FF 91");
+        struct EndSceneHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                regs.eax = *(uint32_t*)(regs.esi + 0x100);
+
+                if (!RealEndScene)
+                {
+                    auto addr = *(uint32_t*)(regs.eax) + (IDirect3DDevice8VTBL::EndScene * 4);
+                    RealEndScene = *(EndScene_t*)addr;
+                    injector::WriteMemory(addr, &EndScene, true);
+                }
+            }
+        }; injector::MakeInline<EndSceneHook>(pattern.get_first(0), pattern.get_first(6)); //0x1002856D 
+    }
+
     return 0;
 }
 
@@ -561,6 +641,7 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
         InitX_GameObjectsMFC(NULL);
         InitX_ModesMFC(NULL);
         InitX_HelpersMFC(NULL);
+        InitE2_D3D8_DRIVER_MFC(NULL);
     }
     return TRUE;
 }
