@@ -101,7 +101,7 @@ DWORD WINAPI InitWF(LPVOID)
     bool bFixHud = iniReader.ReadInteger("MAIN", "FixHud", 1) != 0;
     static bool bWidescreenHud = iniReader.ReadInteger("MAIN", "WidescreenHud", 1) != 0;
     Screen.fWidescreenHudOffset = iniReader.ReadFloat("MAIN", "WidescreenHudOffset", 100.0f);
-    Screen.bGraphicNovelMode = iniReader.ReadInteger("MAIN", "ComicsMode", 1) != 0;
+    Screen.bGraphicNovelMode = iniReader.ReadInteger("MAIN", "GraphicNovelMode", 1) != 0;
     if (!Screen.fWidescreenHudOffset) { Screen.fWidescreenHudOffset = 100.0f; }
 
     //fix aspect ratio
