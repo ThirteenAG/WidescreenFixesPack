@@ -32,6 +32,11 @@ struct Screen
     bool bIsSniperZoomOn;
     bool bIsFading;
     bool bDrawBorders;
+    bool bIs2D;
+    bool bIsSkybox;
+    bool bGraphicNovelMode;
+    bool bIsInGraphicNovel;
+    bool* bIsInCutscene;
 } Screen;
 
 struct TextCoords
@@ -41,9 +46,6 @@ struct TextCoords
     float c;
     float d;
 };
-
-bool bGraphicNovelMode, bIsInGraphicNovel;
-bool* bIsInCutscene;
 
 typedef HRESULT(STDMETHODCALLTYPE* EndScene_t)(LPDIRECT3DDEVICE8);
 EndScene_t RealEndScene = NULL;
@@ -56,7 +58,7 @@ void DrawRect(LPDIRECT3DDEVICE8 pDevice, int32_t x, int32_t y, int32_t w, int32_
 
 HRESULT WINAPI EndScene(LPDIRECT3DDEVICE8 pDevice)
 {
-    if (Screen.bDrawBorders && !bIsInGraphicNovel)
+    if (Screen.bDrawBorders && !Screen.bIsInGraphicNovel)
     {
         auto x = Screen.fHudOffsetReal;
         auto y = (x - Screen.fHudOffsetReal);
@@ -95,19 +97,12 @@ DWORD WINAPI InitWF(LPVOID)
     Screen.fNovelsScale = Screen.fHudScale;
     Screen.fNovelsOffset = Screen.fHudOffset;
 
-    if (Screen.fAspectRatio <= ((4.0f / 3.0f) + 0.03f))
-        return 0;
-
     CIniReader iniReader("");
     bool bFixHud = iniReader.ReadInteger("MAIN", "FixHud", 1) != 0;
     static bool bWidescreenHud = iniReader.ReadInteger("MAIN", "WidescreenHud", 1) != 0;
     Screen.fWidescreenHudOffset = iniReader.ReadFloat("MAIN", "WidescreenHudOffset", 100.0f);
-    bGraphicNovelMode = iniReader.ReadInteger("MAIN", "ComicsMode", 1) != 0;
+    Screen.bGraphicNovelMode = iniReader.ReadInteger("MAIN", "ComicsMode", 1) != 0;
     if (!Screen.fWidescreenHudOffset) { Screen.fWidescreenHudOffset = 100.0f; }
-    float fFOVFactor = iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f);
-    if (!fFOVFactor) { fFOVFactor = 1.0f; }
-    bool bScopesFix = iniReader.ReadInteger("MAIN", "ScopesFix", 1) != 0;
-    Screen.fDynamicScreenFieldOfViewScale = fFOVFactor;
 
     //fix aspect ratio
     auto PCameraValidate = [](uintptr_t PCamera, uintptr_t edx)
@@ -126,13 +121,13 @@ DWORD WINAPI InitWF(LPVOID)
         if ((*(BYTE *)(PCamera + 0xEC) >> 6) & 1)
         {
             float v2 = (float)tan(fParam0 / 2.0);
+            *(float *)(PCamera + 0x20C) = v2;
 
-            if ((fParam5 == 0.05f && fParam6 != -1.0f) || (fParam5 == 1.0f && fParam6 >= 0.7966f && fParam6 <= 0.79669f) /*&& Param7 != 0x40*/ /*&& Param7 == 0x40 && Param8 == 0*/) //0.7966 is 2d background scaling, bugged on win7
+            if (!Screen.bIs2D && !Screen.bIsInGraphicNovel)
             {
-                *(float *)(PCamera + 0x20C) = v2 * Screen.fDiffFactor;
+                if (fParam5 == 0.05f || Screen.bIsSkybox) /*|| stack[3] == (void*)0x004122bf*/
+                    *(float *)(PCamera + 0x20C) = v2 * Screen.fDiffFactor;
             }
-            else
-                *(float *)(PCamera + 0x20C) = v2;
 
             *(float *)(PCamera + 0x210) = (fParam1 - fParam2) * v2 / (fParam3 - fParam4);
         }
@@ -286,20 +281,6 @@ DWORD WINAPI InitWF(LPVOID)
         }
     }
 
-    //FOV
-    if (fFOVFactor && fFOVFactor != 1.0f)
-    {
-        pattern = hook::module_pattern(GetModuleHandle("X_GameObjectsMFC"), "8B 44 24 04 89 81 38 05 00 00"); //void __thiscall X_LevelRuntimeCamera::setFOV(X_LevelRuntimeCamera *this, float)
-        struct pauseTimeUpdateHook
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                *(float*)&regs.eax = *(float*)(regs.esp + 4);
-                *(float*)(regs.ecx + 0x538) = *(float*)&regs.eax * Screen.fDynamicScreenFieldOfViewScale;
-            }
-        }; injector::MakeInline<pauseTimeUpdateHook>(pattern.get_first(0), pattern.get_first(10));
-    }
-
     return 0;
 }
 
@@ -339,6 +320,28 @@ DWORD WINAPI InitE2MFC(LPVOID bDelay)
     //get resolution
     injector::MakeCALL(pattern.get(0).get<uintptr_t>(0), static_cast<int32_t(__fastcall *)(uintptr_t, uintptr_t)>(PDriverGetWidth), true);  //e2mfc + 0x15582
     injector::MakeCALL(pattern.get(1).get<uintptr_t>(0), static_cast<int32_t(__fastcall *)(uintptr_t, uintptr_t)>(PDriverGetHeight), true); //e2mfc + 0x155AB
+
+    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "C6 45 FC 02 89 4B 44");
+    struct P_SceneRenderHook1
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            *(uint8_t*)(regs.ebp - 0x04) = 2;
+            *(uint32_t*)(regs.ebx + 0x44) = regs.ecx;
+            Screen.bIs2D = true;
+        }
+    }; injector::MakeInline<P_SceneRenderHook1>(pattern.get_first(0), pattern.get_first(7));
+
+    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "89 73 34 89 73 38");
+    struct P_SceneRenderHook2
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            *(uint32_t*)(regs.ebx + 0x34) = 0;
+            *(uint32_t*)(regs.ebx + 0x38) = 0;
+            Screen.bIs2D = false;
+        }
+    }; injector::MakeInline<P_SceneRenderHook2>(pattern.get_first(0), pattern.get_first(6));
 
     //for graphic novels scaling
     pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 35 ? ? ? ? D8 4C 24 38 D9 5C 24 34");
@@ -422,7 +425,27 @@ DWORD WINAPI Init(LPVOID bDelay)
                 Screen.bIsFading = true;
         }
     }; injector::MakeInline<FadingHook>(pattern.get_first(0), pattern.get_first(8)); //4872C1 
-    
+
+    pattern = hook::pattern("C7 44 24 ? ? ? ? ? 75 07 8A 46 41 84 C0");
+    struct SkyboxHook1
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            *(uint32_t*)(regs.esp + 0x18) = 0;
+            Screen.bIsSkybox = true;
+        }
+    }; injector::MakeInline<SkyboxHook1>(pattern.get_first(0), pattern.get_first(8));
+
+    pattern = hook::pattern("C7 44 24 ? ? ? ? ? FF 15 ? ? ? ? 8B 4C 24 10 5E 64 89 0D ? ? ? ? 83 C4 18 C2 08 00");
+    struct SkyboxHook2
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            *(int32_t*)(regs.esp + 0x18) = -1;
+            Screen.bIsSkybox = false;
+        }
+    }; injector::MakeInline<SkyboxHook2>(pattern.get_first(0), pattern.get_first(8));
+
     return 0;
 }
 
@@ -450,10 +473,28 @@ DWORD WINAPI InitX_GameObjectsMFC(LPVOID bDelay)
     pattern = hook::module_pattern(GetModuleHandle("X_GameObjectsMFC"), "D9 05 ? ? ? ? 89 4C 24 18"); //1000AD55
     injector::WriteMemory(pattern.get_first(2), &fVisibilityFactor2, true);
 
+    //FOV
+    CIniReader iniReader("");
+    float fFOVFactor = iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f);
+    if (!fFOVFactor) { fFOVFactor = 1.0f; }
+    Screen.fDynamicScreenFieldOfViewScale = fFOVFactor;
+    if (fFOVFactor && fFOVFactor != 1.0f)
+    {
+        pattern = hook::module_pattern(GetModuleHandle("X_GameObjectsMFC"), "8B 44 24 04 89 81 38 05 00 00"); //void __thiscall X_LevelRuntimeCamera::setFOV(X_LevelRuntimeCamera *this, float)
+        struct pauseTimeUpdateHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                *(float*)&regs.eax = *(float*)(regs.esp + 4);
+                *(float*)(regs.ecx + 0x538) = *(float*)&regs.eax * Screen.fDynamicScreenFieldOfViewScale;
+            }
+        }; injector::MakeInline<pauseTimeUpdateHook>(pattern.get_first(0), pattern.get_first(10));
+    }
+
     //actually not a cutscene check, but X_Crosshair::sm_bCameraPathRunning
     pattern = hook::module_pattern(GetModuleHandle("X_GameObjectsMFC"), "A0 ? ? ? ? 84 C0 0F 85"); //byte_101A7AA0
-    bIsInCutscene = *pattern.get_first<bool*>(1);
-
+    Screen.bIsInCutscene = *pattern.get_first<bool*>(1);
+    
     return 0;
 }
 
@@ -499,26 +540,26 @@ DWORD WINAPI InitX_ModesMFC(LPVOID bDelay)
             regs.ecx = regs.esi;
             regs.edi = 0;
 
-            if (!*bIsInCutscene)
+            if (!*Screen.bIsInCutscene)
                 Screen.bDrawBorders = false;
 
-            bIsInGraphicNovel = (callAddr == sub_484AE0);
+            Screen.bIsInGraphicNovel = (callAddr == sub_484AE0);
             callAddr = 0;
 
-            if (bIsInGraphicNovel)
+            if (Screen.bIsInGraphicNovel)
             {
                 curState = GetAsyncKeyState(nGraphicNovelModeKey);
 
                 if (!curState && oldState)
                 {
-                    bGraphicNovelMode = !bGraphicNovelMode;
+                    Screen.bGraphicNovelMode = !Screen.bGraphicNovelMode;
                     bPatched = !bPatched;
-                    iniReader.WriteInteger("MAIN", "GraphicNovelMode", bGraphicNovelMode);
+                    iniReader.WriteInteger("MAIN", "GraphicNovelMode", Screen.bGraphicNovelMode);
                 }
 
                 oldState = curState;
 
-                if (bGraphicNovelMode)
+                if (Screen.bGraphicNovelMode)
                 {
                     if (!bPatched)
                     {
