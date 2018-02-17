@@ -547,8 +547,9 @@ DWORD WINAPI Init(LPVOID bDelay)
                 Screen.bDrawBordersForCameraOverlay = false;
                 *(uint8_t*)(regs.edi + 0x14E) = 1;
         
-                //what happens here is check for some camera coordinates, in this particular cutscene 1.81 is used https://i.imgur.com/A7wRrgk.gifv
-                if ((*(uint32_t*)(regs.esp + 0x10) == 0x3FE842CF && *(uint32_t*)(regs.esp + 0x1C) == 0x3FE842CF)) //1.81
+                //what happens here is check for some camera coordinates or angles
+                if ((*(uint32_t*)(regs.esp + 0x10) == 0x3FE842CF && *(uint32_t*)(regs.esp + 0x1C) == 0x3FE842CF) || //1.81 https://i.imgur.com/A7wRrgk.gifv
+                    (*(uint32_t*)(regs.esp + 0x10) == 0x3FC00000 && *(uint32_t*)(regs.esp + 0x1C) == 0x3FC00000  && *(uint32_t*)(regs.esp + 0x14) == 0x4096BEF4 && *(uint32_t*)(regs.esp + 0x18) == 0xC003936E))   //1.5 https://i.imgur.com/ouRpysL.jpg
                     Screen.bDrawBordersForCameraOverlay = true;
             }
         }; injector::MakeInline<CameraOverlayHook>(pattern.get_first(0), pattern.get_first(7)); // 0x672EB1
