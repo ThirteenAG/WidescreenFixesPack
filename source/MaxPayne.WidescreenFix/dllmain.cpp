@@ -24,6 +24,7 @@ struct Screen
     float fHalf1_fWidthScale;
     bool bDrawBorders;
     bool bDrawBordersToFillGap;
+    bool bDrawBordersForCameraOverlay;
     bool bGraphicNovelMode;
     bool bIsInGraphicNovel;
     bool* bIsInCutscene;
@@ -56,7 +57,7 @@ HRESULT WINAPI EndScene(LPDIRECT3DDEVICE8 pDevice)
         Screen.bDrawBordersToFillGap = false;
     }
 
-    if (Screen.bDrawBorders && !Screen.bIsInGraphicNovel)
+    if ((Screen.bDrawBorders || Screen.bDrawBordersForCameraOverlay) && !Screen.bIsInGraphicNovel)
     {
         auto x = Screen.fHudOffsetReal;
         auto y = (x - Screen.fHudOffsetReal);
@@ -370,7 +371,7 @@ DWORD WINAPI InitWF(LPVOID)
             regs.edi = 0;
 
             if (!*Screen.bIsInCutscene)
-                Screen.bDrawBorders = false;
+                Screen.bDrawBordersForCameraOverlay = false;
 
             Screen.bIsInGraphicNovel = (callAddr == sub_49B6D0);
             callAddr = 0;
@@ -528,27 +529,13 @@ DWORD WINAPI Init(LPVOID bDelay)
     }
     pattern = hook::pattern("E8 ? ? ? ? D9 5C 24 14 8B CF E8"); // 0x45650D
     injector::MakeCALL(pattern.get_first(0), sub_50B9E0, true); // restoring cutscene FOV
-
-    pattern = hook::pattern("05 40 01 00 00 84 C9 89 50 24");
-    struct X_ProgressBarUpdateProgressBarHook
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            regs.eax += 0x140;
-            Screen.bDrawBorders = true;
-        }
-    }; injector::MakeInline<X_ProgressBarUpdateProgressBarHook>(pattern.get_first(0)); //10002FF0
-
-    /*
+    
     bool bD3DHookBorders = iniReader.ReadInteger("MAIN", "D3DHookBorders", 1) != 0;
     if (bD3DHookBorders)
     {
         auto CutsceneFOVHook = [](uintptr_t _this, uintptr_t edx) -> float
         {
-            if (Screen.fAspectRatio > (16.0f / 9.0f))
-                return *(float*)(_this + 88);
-            else
-                return FOVHook(_this, edx);
+            return *(float*)(_this + 88) + ((((Screen.fHudOffsetReal / Screen.fWidth)) / *(float*)(_this + 88)) * 2.0f);
         };
         injector::MakeCALL(pattern.get_first(0), static_cast<float(__fastcall *)(uintptr_t, uintptr_t)>(CutsceneFOVHook), true);
 
@@ -561,12 +548,22 @@ DWORD WINAPI Init(LPVOID bDelay)
                 *(uint8_t*)(regs.edi + 0x14E) = 1;
         
                 //what happens here is check for some camera coordinates, in this particular cutscene 1.81 is used https://i.imgur.com/A7wRrgk.gifv
-                if ((*(uint32_t*)(regs.esp + 0x10) == 0x3FE842CF && *(uint32_t*)(regs.esp + 0x1C) == 0x3FE842CF) && (Screen.fAspectRatio <= (16.0f / 9.0f))) //1.81
+                if ((*(uint32_t*)(regs.esp + 0x10) == 0x3FE842CF && *(uint32_t*)(regs.esp + 0x1C) == 0x3FE842CF)) //1.81
                     Screen.bDrawBordersForCameraOverlay = true;
             }
         }; injector::MakeInline<CameraOverlayHook>(pattern.get_first(0), pattern.get_first(7)); // 0x672EB1
     }
-    */
+    
+    pattern = hook::pattern("05 40 01 00 00 84 C9 89 50 24");
+    struct X_ProgressBarUpdateProgressBarHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.eax += 0x140;
+            Screen.bDrawBorders = true;
+        }
+    }; injector::MakeInline<X_ProgressBarUpdateProgressBarHook>(pattern.get_first(0)); //10002FF0
+
     return 0;
 }
 
