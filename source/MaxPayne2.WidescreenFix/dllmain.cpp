@@ -32,6 +32,7 @@ struct Screen
     bool bIsSniperZoomOn;
     bool bIsFading;
     bool bDrawBorders;
+    bool bDrawBordersForCameraOverlay;
     bool bIs2D;
     bool bIsSkybox;
     bool bGraphicNovelMode;
@@ -58,16 +59,10 @@ void DrawRect(LPDIRECT3DDEVICE8 pDevice, int32_t x, int32_t y, int32_t w, int32_
 
 HRESULT WINAPI EndScene(LPDIRECT3DDEVICE8 pDevice)
 {
-    if (Screen.bDrawBorders && !Screen.bIsInGraphicNovel)
+    if ((Screen.bDrawBorders || Screen.bDrawBordersForCameraOverlay) && !Screen.bIsInGraphicNovel)
     {
-        auto x = Screen.fHudOffsetReal;
-        auto y = (x - Screen.fHudOffsetReal);
-        
-        DrawRect(pDevice, 0, 0, static_cast<int32_t>(x), Screen.nHeight);
-        DrawRect(pDevice, static_cast<int32_t>(Screen.fWidth - x), 0, static_cast<int32_t>(Screen.fHudOffsetReal + x), Screen.nHeight);
-        
-        DrawRect(pDevice, 0, 0, Screen.nWidth, static_cast<int32_t>(y));
-        DrawRect(pDevice, 0, static_cast<int32_t>(Screen.fHeight - y), Screen.nWidth, static_cast<int32_t>(y));
+        DrawRect(pDevice, 0, 0, static_cast<int32_t>(Screen.fHudOffsetReal), Screen.nHeight);
+        DrawRect(pDevice, static_cast<int32_t>(Screen.fWidth - Screen.fHudOffsetReal), 0, static_cast<int32_t>(Screen.fHudOffsetReal + Screen.fHudOffsetReal), Screen.nHeight);
         Screen.bDrawBorders = false;
     }
 
@@ -494,6 +489,34 @@ DWORD WINAPI InitX_GameObjectsMFC(LPVOID bDelay)
     //actually not a cutscene check, but X_Crosshair::sm_bCameraPathRunning
     pattern = hook::module_pattern(GetModuleHandle("X_GameObjectsMFC"), "A0 ? ? ? ? 84 C0 0F 85"); //byte_101A7AA0
     Screen.bIsInCutscene = *pattern.get_first<bool*>(1);
+
+    bool bD3DHookBorders = iniReader.ReadInteger("MAIN", "D3DHookBorders", 1) != 0;
+    if (bD3DHookBorders)
+    {
+        pattern = hook::module_pattern(GetModuleHandle("X_GameObjectsMFC"), "B1 01 88 46 65 E8 ? ? ? ? 5E C2 08 00");
+        struct CameraOverlayHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                Screen.bDrawBordersForCameraOverlay = false;
+                *((BYTE*)&(regs.ecx)) = 1;
+                *(uint8_t*)(regs.esi + 0x65) = LOBYTE(regs.eax);
+
+                auto x = *(uint32_t*)(regs.esi + 0x48);
+                auto y = *(uint32_t*)(regs.esi + 0x4C);
+                auto z = *(uint32_t*)(regs.esi + 0x50);
+
+                //what happens here is check for some camera coordinates
+                if ((x == 0x40d9d740 && y == 0x40d9d95a && z == 0xc24f706a) || (x == 0x405b016c && y == 0x40d69c24 && z == 0xc1a50336) || (x == 0xc0a3f326 && y == 0x40ee9c24 && z == 0xc2101fe9) || //https://i.imgur.com/Kn7lHIc.png
+                    (x == 0xc1564e4e && y == 0x406865f0 && z == 0xc253cb06) ||																														 // https://i.imgur.com/7Z0aaKz.png
+                    (x == 0xc01d03ff && y == 0x40e39c24 && z == 0x42ce75c2) || (x == 0xc10a916a && y == 0x412ee03e && z == 0x42cc4f35) || (x == 0x4117f993 && y == 0x418ee709 && z == 0x424c1fe9)    //https://i.imgur.com/7aw4nNh.png
+                    )
+                {
+                    Screen.bDrawBordersForCameraOverlay = true;
+                }
+            }
+        }; injector::MakeInline<CameraOverlayHook>(pattern.get_first(0)); // 100E19B7
+    }
     
     return 0;
 }
@@ -541,7 +564,7 @@ DWORD WINAPI InitX_ModesMFC(LPVOID bDelay)
             regs.edi = 0;
 
             if (!*Screen.bIsInCutscene)
-                Screen.bDrawBorders = false;
+                Screen.bDrawBordersForCameraOverlay = false;
 
             Screen.bIsInGraphicNovel = (callAddr == sub_484AE0);
             callAddr = 0;

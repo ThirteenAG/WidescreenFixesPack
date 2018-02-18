@@ -59,14 +59,10 @@ HRESULT WINAPI EndScene(LPDIRECT3DDEVICE8 pDevice)
 
     if ((Screen.bDrawBorders || Screen.bDrawBordersForCameraOverlay) && !Screen.bIsInGraphicNovel)
     {
-        auto x = Screen.fHudOffsetReal;
-        auto y = (x - Screen.fHudOffsetReal);
+        float fBadCamPosOffset = Screen.bDrawBordersForCameraOverlay ? 10.0f : 0.0f; // for motel camera gap https://i.imgur.com/JGNdm6y.jpg
 
-        DrawRect(pDevice, 0, 0, static_cast<int32_t>(x), Screen.nHeight);
-        DrawRect(pDevice, static_cast<int32_t>(Screen.fWidth - x), 0, static_cast<int32_t>(Screen.fHudOffsetReal + x), Screen.nHeight);
-
-        DrawRect(pDevice, 0, 0, Screen.nWidth, static_cast<int32_t>(y));
-        DrawRect(pDevice, 0, static_cast<int32_t>(Screen.fHeight - y), Screen.nWidth, static_cast<int32_t>(y));
+        DrawRect(pDevice, 0, 0, static_cast<int32_t>(Screen.fHudOffsetReal), Screen.nHeight);
+        DrawRect(pDevice, static_cast<int32_t>(Screen.fWidth - Screen.fHudOffsetReal - fBadCamPosOffset), 0, static_cast<int32_t>(Screen.fHudOffsetReal + Screen.fHudOffsetReal), Screen.nHeight);
         Screen.bDrawBorders = false;
     }
 
@@ -546,11 +542,21 @@ DWORD WINAPI Init(LPVOID bDelay)
             {
                 Screen.bDrawBordersForCameraOverlay = false;
                 *(uint8_t*)(regs.edi + 0x14E) = 1;
+
+                auto a1 = *(uint32_t*)(regs.esp + 0x10);
+                auto a2 = *(uint32_t*)(regs.esp + 0x14);
+                auto a3 = *(uint32_t*)(regs.esp + 0x18);
+                auto a4 = *(uint32_t*)(regs.esp + 0x1C);
         
                 //what happens here is check for some camera coordinates or angles
-                if ((*(uint32_t*)(regs.esp + 0x10) == 0x3FE842CF && *(uint32_t*)(regs.esp + 0x1C) == 0x3FE842CF) || //1.81 https://i.imgur.com/A7wRrgk.gifv
-                    (*(uint32_t*)(regs.esp + 0x10) == 0x3FC00000 && *(uint32_t*)(regs.esp + 0x1C) == 0x3FC00000  && *(uint32_t*)(regs.esp + 0x14) == 0x4096BEF4 && *(uint32_t*)(regs.esp + 0x18) == 0xC003936E))   //1.5 https://i.imgur.com/ouRpysL.jpg
+                if ((a1 == 0x3FE842CF && a4 == 0x3FE842CF) ||											//1.81 https://i.imgur.com/A7wRrgk.gifv
+                    (a1 == 0x3FC00000 && a2 == 0x4096BEF4 && a3 == 0xC003936E && a4 == 0x3FC00000) ||   //1.5 https://i.imgur.com/ouRpysL.jpg
+                    (a1 == 0xBFAAE30E && a2 == 0xBFC2B1AA && a3 == 0x3EC2E382 && a4 == 0xBFAAE30E) ||   //-1.33505 https://i.imgur.com/JGNdm6y.jpg
+                    (a1 == 0x403F7470 && a2 == 0xC067ED50 && a3 == 0x40424DE0 && a4 == 0x403F7470)      // 2.99148  https://i.imgur.com/hj5FsXp.png
+                    )
+                {
                     Screen.bDrawBordersForCameraOverlay = true;
+                }
             }
         }; injector::MakeInline<CameraOverlayHook>(pattern.get_first(0), pattern.get_first(7)); // 0x672EB1
     }
