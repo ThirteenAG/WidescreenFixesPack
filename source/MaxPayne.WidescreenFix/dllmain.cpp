@@ -92,7 +92,6 @@ DWORD WINAPI InitWF(LPVOID)
     Screen.fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
 
     static CIniReader iniReader("");
-    bool bFixHud = iniReader.ReadInteger("MAIN", "FixHud", 1) != 0;
     static bool bWidescreenHud = iniReader.ReadInteger("MAIN", "WidescreenHud", 1) != 0;
     Screen.fWidescreenHudOffset = iniReader.ReadFloat("MAIN", "WidescreenHudOffset", 100.0f);
     Screen.bGraphicNovelMode = iniReader.ReadInteger("MAIN", "GraphicNovelMode", 1) != 0;
@@ -163,177 +162,174 @@ DWORD WINAPI InitWF(LPVOID)
     injector::MakeRET(pattern.get_first(), 0x10, true); //10013FB0 ret 10h
   
     // Hud
-    if (bFixHud)
-    {
-        pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 0D ? ? ? ? 8B 4D F4");
-        injector::WriteMemory<float>(*pattern.get_first<float**>(2), Screen.fHudOffset, true); //100495C8
-        pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 0D ? ? ? ? D9 5D D8 B9 ? ? ? ? 8B 45 D8 8B 55 D4");
-        injector::WriteMemory<float>(*pattern.get_first<float**>(2), Screen.fHudScale, true); //100495D0
+    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 0D ? ? ? ? 8B 4D F4");
+    injector::WriteMemory<float>(*pattern.get_first<float**>(2), Screen.fHudOffset, true); //100495C8
+    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 0D ? ? ? ? D9 5D D8 B9 ? ? ? ? 8B 45 D8 8B 55 D4");
+    injector::WriteMemory<float>(*pattern.get_first<float**>(2), Screen.fHudScale, true); //100495D0
 
-        pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D9 05 ? ? ? ? D9 E0 D9 45 FC D8 25");
-        static float* pHudElementPosX = *pattern.count(2).get(1).get<float*>(2); //0x10065190
-        static float* pHudElementPosY = *pattern.count(2).get(1).get<float*>(22); //0x10065194
-        struct P_HudPosHook
+    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D9 05 ? ? ? ? D9 E0 D9 45 FC D8 25");
+    static float* pHudElementPosX = *pattern.count(2).get(1).get<float*>(2); //0x10065190
+    static float* pHudElementPosY = *pattern.count(2).get(1).get<float*>(22); //0x10065194
+    struct P_HudPosHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            float ElementPosX = *pHudElementPosX;
+            float ElementPosY = *pHudElementPosY;
+            float ElementNewPosX1 = ElementPosX;
+            float ElementNewPosY1 = ElementPosY;
+            float ElementNewPosX2 = ElementPosX;
+            float ElementNewPosY2 = ElementPosY;
+
+            if (bWidescreenHud)
+            {
+                if (ElementPosX == 7.0f) // bullet time meter
+                {
+                    ElementNewPosX1 = ElementPosX + Screen.fHudOffsetWide;
+                }
+
+                if (ElementPosX == 8.0f && regs.eax != 8) // bullet time overlay()
+                {
+                    ElementNewPosX1 = ElementPosX + Screen.fHudOffsetWide;
+                }
+
+                if (ElementPosX == 12.0f) // painkillers
+                {
+                    ElementNewPosX1 = ElementPosX + Screen.fHudOffsetWide;
+                }
+
+                if (ElementPosX == 22.5f) //health bar and overlay
+                {
+                    ElementNewPosX1 = ElementPosX + Screen.fHudOffsetWide;
+                }
+
+                if (ElementPosX == 95.0f) // other weapons name
+                {
+                    ElementNewPosX1 = ElementPosX - Screen.fHudOffsetWide;
+                }
+
+                if (ElementPosX == 190.0f) //molotovs/grenades name pos
+                {
+                    ElementNewPosX1 = ElementPosX - Screen.fHudOffsetWide;
+                }
+            }
+
+            ElementNewPosX2 = ElementNewPosX1;
+
+            if (ElementPosX == 0.0f && ElementPosY == 0.0f && regs.eax == 2 && *(float*)&regs.edx == 640.0f) // fading
+            {
+                ElementNewPosX1 = ElementPosX + 640.0f;
+                ElementNewPosX2 = ElementPosX - 640.0f;
+                //ElementNewPosY1 = ElementPosY + 48.0f;
+                //ElementNewPosY2 = ElementPosY - 48.0f;
+            }
+            else if (Screen.bIsInGraphicNovel)
+            {
+                if (ElementPosX == 0.0f && ElementPosY == 100.0f /*&& regs.eax == 2*/ /*&& *(float*)&regs.edx == 80.0f*/) // graphic novels controls and background
+                {
+                    if (Screen.bGraphicNovelMode)
+                    {
+                        ElementNewPosY1 = ElementPosY - 90.0f;
+                        ElementNewPosY2 = ElementPosY - 90.0f;
+                    }
+                    else
+                    {
+                        ElementNewPosY1 = ElementPosY - 160.0f;
+                        ElementNewPosY2 = ElementPosY - 160.0f;
+                    }
+                }
+
+                if (ElementPosX == 0.0f && ElementPosY == 0.0f && regs.eax == 2 && (*(float*)&regs.edx == 80.0f || *(float*)&regs.edx == 60.0f)) // graphic novels controls and background
+                {
+                    if (Screen.bGraphicNovelMode)
+                    {
+                        ElementNewPosY1 = ElementPosY - 60.0f;
+                        ElementNewPosY2 = ElementPosY - 60.0f;
+                    }
+                    else
+                    {
+                        ElementNewPosY1 = ElementPosY - 160.0f;
+                        ElementNewPosY2 = ElementPosY - 160.0f;
+                    }
+                }
+            }
+            else if (ElementPosX == 100.0f && (ElementPosY == 0.0f || ElementPosY == 20.0f || ElementPosY == 220.0f)) //sniper scope borders left side
+            {
+                Screen.bDrawBordersToFillGap = true;
+                ElementNewPosX1 += Screen.fBorderOffset;
+            }
+            else if (ElementPosX == 0.0f && (ElementPosY == 0.0f || ElementPosY == 20.0f || ElementPosY == 220.0f) && *(float*)&regs.edx == 100.0f) //sniper scope borders right side
+            {
+                Screen.bDrawBordersToFillGap = true;
+                ElementNewPosX2 -= Screen.fBorderOffset;
+            }
+
+            *(float *)(regs.ebp - 4) -= ElementNewPosX2;
+            *(float *)(regs.ebp - 8) -= ElementNewPosY2;
+
+            _asm
+            {
+                fld     dword ptr[ElementNewPosX1]
+                fchs
+                fld     dword ptr[ElementNewPosY1]
+                fchs
+            }
+        }
+    }; injector::MakeInline<P_HudPosHook>(pattern.count(2).get(1).get<uintptr_t>(0), pattern.count(2).get(1).get<uintptr_t>(40)); //1000856C
+
+
+    if (bWidescreenHud)
+    {
+        Screen.fHudOffsetWide = Screen.fWidescreenHudOffset;
+
+        if (Screen.fAspectRatio < (16.0f / 9.0f))
+        {
+            Screen.fHudOffsetWide = Screen.fWidescreenHudOffset / (((16.0f / 9.0f) / (Screen.fAspectRatio)) * 1.5f);
+        }
+
+        pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D9 05 ? ? ? ? D8 8E 74 01 00 00");
+        static auto pTextElementPosX = *pattern.get_first<TextCoords*>(2); //0x100647D0
+        struct P_TextPosHook
         {
             void operator()(injector::reg_pack& regs)
             {
-                float ElementPosX = *pHudElementPosX;
-                float ElementPosY = *pHudElementPosY;
-                float ElementNewPosX1 = ElementPosX;
-                float ElementNewPosY1 = ElementPosY;
-                float ElementNewPosX2 = ElementPosX;
-                float ElementNewPosY2 = ElementPosY;
+                auto TextPosX = pTextElementPosX->a;
+                auto TextNewPosX = TextPosX;
 
-                if (bWidescreenHud)
-                {
-                    if (ElementPosX == 7.0f) // bullet time meter
-                    {
-                        ElementNewPosX1 = ElementPosX + Screen.fHudOffsetWide;
-                    }
+                if ((pTextElementPosX->a == 0.0f || pTextElementPosX->a == -8.0f || pTextElementPosX->a == -16.0f || pTextElementPosX->a == -24.0f || pTextElementPosX->a == -32.0f) && pTextElementPosX->b == -10.5f && (pTextElementPosX->c == 8.0f || pTextElementPosX->c == 16.0f || pTextElementPosX->c == 24.0f || pTextElementPosX->c == 32.0f) && pTextElementPosX->d == 21) //ammo numbers(position depends on digits amount)
+                    TextNewPosX = TextPosX + Screen.fHudOffsetWide;
 
-                    if (ElementPosX == 8.0f && regs.eax != 8) // bullet time overlay()
-                    {
-                        ElementNewPosX1 = ElementPosX + Screen.fHudOffsetWide;
-                    }
-
-                    if (ElementPosX == 12.0f) // painkillers
-                    {
-                        ElementNewPosX1 = ElementPosX + Screen.fHudOffsetWide;
-                    }
-
-                    if (ElementPosX == 22.5f) //health bar and overlay
-                    {
-                        ElementNewPosX1 = ElementPosX + Screen.fHudOffsetWide;
-                    }
-
-                    if (ElementPosX == 95.0f) // other weapons name
-                    {
-                        ElementNewPosX1 = ElementPosX - Screen.fHudOffsetWide;
-                    }
-
-                    if (ElementPosX == 190.0f) //molotovs/grenades name pos
-                    {
-                        ElementNewPosX1 = ElementPosX - Screen.fHudOffsetWide;
-                    }
-                }
-
-                ElementNewPosX2 = ElementNewPosX1;
-
-                if (ElementPosX == 0.0f && ElementPosY == 0.0f && regs.eax == 2 && *(float*)&regs.edx == 640.0f) // fading
-                {
-                    ElementNewPosX1 = ElementPosX + 640.0f;
-                    ElementNewPosX2 = ElementPosX - 640.0f;
-                    //ElementNewPosY1 = ElementPosY + 48.0f;
-                    //ElementNewPosY2 = ElementPosY - 48.0f;
-                }
-                else if (Screen.bIsInGraphicNovel)
-                {
-                    if (ElementPosX == 0.0f && ElementPosY == 100.0f /*&& regs.eax == 2*/ /*&& *(float*)&regs.edx == 80.0f*/) // graphic novels controls and background
-                    {
-                        if (Screen.bGraphicNovelMode)
-                        {
-                            ElementNewPosY1 = ElementPosY - 90.0f;
-                            ElementNewPosY2 = ElementPosY - 90.0f;
-                        }
-                        else
-                        {
-                            ElementNewPosY1 = ElementPosY - 160.0f;
-                            ElementNewPosY2 = ElementPosY - 160.0f;
-                        }
-                    }
-                
-                    if (ElementPosX == 0.0f && ElementPosY == 0.0f && regs.eax == 2 && (*(float*)&regs.edx == 80.0f || *(float*)&regs.edx == 60.0f)) // graphic novels controls and background
-                    {
-                        if (Screen.bGraphicNovelMode)
-                        {
-                            ElementNewPosY1 = ElementPosY - 60.0f;
-                            ElementNewPosY2 = ElementPosY - 60.0f;
-                        }
-                        else
-                        {
-                            ElementNewPosY1 = ElementPosY - 160.0f;
-                            ElementNewPosY2 = ElementPosY - 160.0f;
-                        }
-                    }
-                }
-                else if (ElementPosX == 100.0f && (ElementPosY == 0.0f || ElementPosY == 20.0f || ElementPosY == 220.0f)) //sniper scope borders left side
-                {
-                    Screen.bDrawBordersToFillGap = true;
-                    ElementNewPosX1 += Screen.fBorderOffset;
-                }
-                else if (ElementPosX == 0.0f && (ElementPosY == 0.0f || ElementPosY == 20.0f || ElementPosY == 220.0f) && *(float*)&regs.edx == 100.0f) //sniper scope borders right side
-                {
-                    Screen.bDrawBordersToFillGap = true;
-                    ElementNewPosX2 -= Screen.fBorderOffset;
-                }
-                
-                *(float *)(regs.ebp - 4) -= ElementNewPosX2;
-                *(float *)(regs.ebp - 8) -= ElementNewPosY2;
-
-                _asm
-                {
-                    fld     dword ptr[ElementNewPosX1]
-                    fchs
-                    fld     dword ptr[ElementNewPosY1]
-                    fchs
-                }
+                _asm fld    dword ptr[TextNewPosX]
             }
-        }; injector::MakeInline<P_HudPosHook>(pattern.count(2).get(1).get<uintptr_t>(0), pattern.count(2).get(1).get<uintptr_t>(40)); //1000856C
+        }; injector::MakeInline<P_TextPosHook>(pattern.get_first(0), pattern.get_first(6));
 
-
-        if (bWidescreenHud)
+        static float TextPosX1, TextPosX2, TextPosY1;
+        pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "C7 45 D0 00 00 00 00 D9 5D"); //100045FC
+        struct P_TextPosHook2
         {
-            Screen.fHudOffsetWide = Screen.fWidescreenHudOffset;
-        
-            if (Screen.fAspectRatio < (16.0f / 9.0f))
+            void operator()(injector::reg_pack& regs)
             {
-                Screen.fHudOffsetWide = Screen.fWidescreenHudOffset / (((16.0f / 9.0f) / (Screen.fAspectRatio)) * 1.5f);
+                *(float*)(regs.ebp - 0x30) = 0.0f;
+                TextPosX1 = *(float*)(regs.ebp - 0x28);
+                TextPosY1 = *(float*)(regs.ebp - 0x2C);
             }
-        
-            pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D9 05 ? ? ? ? D8 8E 74 01 00 00");
-            static auto pTextElementPosX = *pattern.get_first<TextCoords*>(2); //0x100647D0
-            struct P_TextPosHook
+        }; injector::MakeInline<P_TextPosHook2>(pattern.get_first(0), pattern.get_first(7));
+
+        pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "89 41 08 D9 45 E4 D8 0D"); //0x10004693
+        struct P_TextPosHook3
+        {
+            void operator()(injector::reg_pack& regs)
             {
-                void operator()(injector::reg_pack& regs)
-                {
-                    auto TextPosX = pTextElementPosX->a;
-                    auto TextNewPosX = TextPosX;
+                TextPosX2 = *(float*)(regs.ebp - 0x1C);
 
-                    if ((pTextElementPosX->a == 0.0f || pTextElementPosX->a == -8.0f || pTextElementPosX->a == -16.0f || pTextElementPosX->a == -24.0f || pTextElementPosX->a == -32.0f) && pTextElementPosX->b == -10.5f && (pTextElementPosX->c == 8.0f || pTextElementPosX->c == 16.0f || pTextElementPosX->c == 24.0f || pTextElementPosX->c == 32.0f) && pTextElementPosX->d == 21) //ammo numbers(position depends on digits amount)
-                        TextNewPosX = TextPosX + Screen.fHudOffsetWide;
+                if (TextPosX1 == (69.0f + Screen.fHudOffsetWide) && TextPosY1 == 457.0f) // painkillers amount number
+                    *(float*)(regs.ebp - 0x1C) += (24.0f * Screen.fHudOffsetWide);
 
-                    _asm fld    dword ptr[TextNewPosX]
-                }
-            }; injector::MakeInline<P_TextPosHook>(pattern.get_first(0), pattern.get_first(6));
-
-            static float TextPosX1, TextPosX2, TextPosY1;
-            pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "C7 45 D0 00 00 00 00 D9 5D"); //100045FC
-            struct P_TextPosHook2
-            {
-                void operator()(injector::reg_pack& regs)
-                {
-                    *(float*)(regs.ebp - 0x30) = 0.0f;
-                    TextPosX1 = *(float*)(regs.ebp - 0x28);
-                    TextPosY1 = *(float*)(regs.ebp - 0x2C);
-                }
-            }; injector::MakeInline<P_TextPosHook2>(pattern.get_first(0), pattern.get_first(7));
-
-            pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "89 41 08 D9 45 E4 D8 0D"); //0x10004693
-            struct P_TextPosHook3
-            {
-                void operator()(injector::reg_pack& regs)
-                {
-                    TextPosX2 = *(float*)(regs.ebp - 0x1C);
-
-                    if (TextPosX1 == (69.0f + Screen.fHudOffsetWide) && TextPosY1 == 457.0f) // painkillers amount number
-                        *(float*)(regs.ebp - 0x1C) += (24.0f * Screen.fHudOffsetWide);
-
-                    *(uint32_t*)(regs.ecx + 8) = regs.eax;
-                    auto ebp1C = *(float*)(regs.ebp - 0x1C);
-                    _asm fld  dword ptr[ebp1C]
-                }
-            }; injector::MakeInline<P_TextPosHook3>(pattern.get_first(0), pattern.get_first(6));
-        }
+                *(uint32_t*)(regs.ecx + 8) = regs.eax;
+                auto ebp1C = *(float*)(regs.ebp - 0x1C);
+                _asm fld  dword ptr[ebp1C]
+            }
+        }; injector::MakeInline<P_TextPosHook3>(pattern.get_first(0), pattern.get_first(6));
     }
 
     //actually not a cutscene check, but X_Crosshair::sm_bCameraPathRunning
