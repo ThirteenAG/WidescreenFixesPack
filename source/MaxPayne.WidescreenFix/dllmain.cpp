@@ -507,7 +507,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         {
             pattern = hook::pattern("E8 ? ? ? ? 8B 40 04 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 8D 55 10 52");
             static auto AfxGetModuleState = injector::GetBranchDestination(pattern.get_first(0), true); //0x76F77E
-            static auto GetProfileStringA = injector::GetBranchDestination(pattern.get_first(27), true); //0x76F7B4
+            static auto GetProfileStringA = injector::GetBranchDestination(pattern.get_first(29), true); //0x76F7B4
             static auto aLastSavedGameF = *pattern.get_first<char*>(14); // 8680EC
             static auto aSaveGame = *pattern.get_first<char*>(19); // 866FDC
             static auto aSavegames = *hook::get_pattern<char*>("BF ? ? ? ? F2 AE F7 D1 2B F9 8B D1 83 C9 FF 8B F7 8B FB F2 AE 8B 45 08 8B CA C1 E9 02 4F", 1);
@@ -590,7 +590,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                             FindClose(File);
                         }
 
-                        if (nSaveNum >= 0)
+                        if (nSaveNum >= 0 && nLoadSaveSlot < 0)
                         {
                             char buffer[5]; sprintf(buffer, "%03d", nSaveNum);
                             SFPath += fd.cFileName;
