@@ -671,7 +671,24 @@ DWORD WINAPI Init(LPVOID bDelay)
             regs.eax += 0x140;
             Screen.bDrawBorders = true;
         }
-    }; injector::MakeInline<X_ProgressBarUpdateProgressBarHook>(pattern.get_first(0)); //10002FF0
+    }; injector::MakeInline<X_ProgressBarUpdateProgressBarHook>(pattern.get_first(0)); //5829D1
+
+    //screenshots aspect ratio
+    static float fScreenShotHeight = 0.0f;
+    pattern = hook::pattern("89 93 ? ? ? ? D9 05 ? ? ? ? D9 05 ? ? ? ? D9 9B");
+    static auto off_6301B6 = pattern.get_first(32);
+    struct SaveScrHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            *(uint32_t*)(regs.ebx + 0x10E) = regs.edx;
+            if (!fScreenShotHeight)
+            {
+                fScreenShotHeight = **(float**)off_6301B6 * ((4.0f / 3.0f) / Screen.fAspectRatio);
+                injector::WriteMemory(off_6301B6, &fScreenShotHeight, true);
+            }
+        }
+    }; injector::MakeInline<SaveScrHook>(pattern.get_first(0), pattern.get_first(6)); //630196
 
     return 0;
 }
