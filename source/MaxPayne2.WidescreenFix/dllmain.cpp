@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "dxsdk\d3d8.h"
 #include "dxsdk\d3dvtbl.h"
+#include <shlobj.h>
 
 struct Screen
 {
@@ -364,11 +365,11 @@ DWORD WINAPI Init(LPVOID bDelay)
         while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
 
     CIniReader iniReader("");
-    bool bUseGameFolderForSavegames = iniReader.ReadInteger("MAIN", "UseGameFolderForSavegames", 0) != 0;
+    static bool bUseGameFolderForSavegames = iniReader.ReadInteger("MISC", "UseGameFolderForSavegames", 0) != 0;
     if (bUseGameFolderForSavegames)
         injector::WriteMemory<uint8_t>(pattern.get_first(1), 0x85, true); //0x41D14C
 
-    bool bAltTab = iniReader.ReadInteger("MAIN", "AllowAltTabbingWithoutPausing", 0) != 0;
+    bool bAltTab = iniReader.ReadInteger("MISC", "AllowAltTabbingWithoutPausing", 0) != 0;
     if (bAltTab)
     {
         pattern = hook::pattern("E8 ? ? ? ? 8B CF C6 87 82 00 00 00 00");
@@ -387,6 +388,111 @@ DWORD WINAPI Init(LPVOID bDelay)
         };
         pattern = hook::pattern("E8 ? ? ? ? D8 2D ? ? ? ? D8");
         injector::MakeCALL(pattern.get_first(), static_cast<float(__fastcall *)(uintptr_t, uintptr_t)>(f), true); //0x488C68
+    }
+
+    static int32_t nLoadSaveSlot = iniReader.ReadInteger("MISC", "LoadSaveSlot", -1);
+    if (nLoadSaveSlot == -2 || nLoadSaveSlot == -3 || (nLoadSaveSlot >= 0 && nLoadSaveSlot <= 999))
+    {
+        static auto unk_556860 = *hook::get_pattern<void*>("BA ? ? ? ? 2B D1 8A 01 88 04 0A", 1);
+        if (*(uint8_t*)unk_556860 == 0)
+        {
+            pattern = hook::pattern("E8 ? ? ? ? 8B 48 04 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 8D 45 18 50");
+            static auto AfxGetModuleState = injector::GetBranchDestination(pattern.get_first(0), true); //0x4D2DB2
+            static auto GetProfileStringA = injector::GetBranchDestination(pattern.get_first(27), true); //0x4D2ECC
+            static auto aLastSavedGameF = *pattern.get_first<char*>(14); // 4E8F44
+            static auto aSaveGame = *pattern.get_first<char*>(19); // 4E62D4
+			static auto aSavegames = *hook::get_pattern<char*>("8B 15 ? ? ? ? 89 17 A1 ? ? ? ? 8B 55 10 89 47 04", 2);
+			static auto MaxPayne2Saveg = *hook::get_pattern<char*>("8B 15 ? ? ? ? 89 17 A1 ? ? ? ? 89 47 04", 2);
+            pattern = hook::pattern("89 97 ? ? ? ? FF 15 ? ? ? ? FF 15 ? ? ? ? E8 ? ? ? ? 8D 50 01");
+            struct SaveGameHook
+            {
+                void operator()(injector::reg_pack& regs)
+                {
+                    *(uint32_t*)(regs.edi + 0xE8) = regs.edx;
+
+                    if (nLoadSaveSlot == -2)
+                    {
+                        void* pStr = nullptr;
+                        auto _this = injector::stdcall<void*()>::call(AfxGetModuleState);
+                        injector::thiscall<void(void* _this, void* out, char const* a1, char const* a2, char const* a3)>::call(GetProfileStringA, *(void**)((uint32_t)_this + 4), &pStr, (char const*)aSaveGame, (char const*)aLastSavedGameF, "");
+                        std::string_view LastSavedGameFilename{ (char*)pStr };
+                        if (!LastSavedGameFilename.empty())
+                            injector::WriteMemoryRaw(unk_556860, (void*)LastSavedGameFilename.data(), LastSavedGameFilename.size(), true);
+                    }
+                    else
+                    {
+						char buffer[MAX_PATH];
+						if (bUseGameFolderForSavegames)
+						{
+							GetModuleFileName(NULL, buffer, MAX_PATH);
+							*strrchr(buffer, '\\') = '\0';
+							strcat_s(buffer, "\\");
+							strcat_s(buffer, aSavegames);
+							strcat_s(buffer, "\\");
+						}
+						else
+						{
+							SHGetSpecialFolderPathA(0, buffer, 5, false);
+							strcat_s(buffer, "\\");
+							strcat_s(buffer, MaxPayne2Saveg);
+							strcat_s(buffer, "\\");
+						}
+
+						auto nSaveNum = -1;
+						std::string SFPath(buffer);
+
+						WIN32_FIND_DATA fd;
+						HANDLE File = FindFirstFile(std::string(SFPath + "*.mp2s").c_str(), &fd);
+						FILETIME LastWriteTime = fd.ftLastWriteTime;
+
+						if (File != INVALID_HANDLE_VALUE)
+						{
+							do
+							{
+								std::string str(fd.cFileName);
+								auto n = str.find_first_of("0123456789");
+
+								if (nLoadSaveSlot >= 0)
+								{
+									if (n != std::string::npos)
+									{
+										nSaveNum = std::atoi(&str[n]);
+										if (nSaveNum == nLoadSaveSlot)
+										{
+											SFPath += str;
+											injector::WriteMemoryRaw(unk_556860, SFPath.data(), SFPath.size(), true);
+											return;
+										}
+									}
+								}
+								else
+								{
+									if (CompareFileTime(&fd.ftLastWriteTime, &LastWriteTime) >= 0)
+									{
+										LastWriteTime = fd.ftLastWriteTime;
+										std::string str(fd.cFileName);
+										if (n != std::string::npos)
+										{
+											nSaveNum = std::atoi(&str[n]);
+										}
+									}
+								}
+							} while (FindNextFile(File, &fd));
+							FindClose(File);
+						}
+
+						if (nSaveNum >= 0)
+						{
+							char buffer[5]; sprintf(buffer, "%03d", nSaveNum);
+							SFPath += fd.cFileName;
+							auto offset = SFPath.end() - std::strlen("000.mp2s");
+							SFPath.replace(offset, offset + 3, buffer);
+							injector::WriteMemoryRaw(unk_556860, SFPath.data(), SFPath.size(), true);
+						}
+                    }
+                }
+            }; injector::MakeInline<SaveGameHook>(pattern.get_first(0), pattern.get_first(6)); //0x4187C3
+        }
     }
 
     pattern = hook::pattern("8B 4C 24 18 51 8B 4F 04 FF 15");
