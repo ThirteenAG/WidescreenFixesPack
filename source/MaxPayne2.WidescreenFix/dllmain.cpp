@@ -619,7 +619,7 @@ DWORD WINAPI InitX_GameObjectsMFC(LPVOID bDelay)
             }
         }; injector::MakeInline<CameraOverlayHook>(pattern.get_first(0)); // 100E19B7
     }
-    
+
     return 0;
 }
 
@@ -800,29 +800,28 @@ DWORD WINAPI InitE2_D3D8_DRIVER_MFC(LPVOID bDelay)
 
 DWORD WINAPI InitX_BasicModesMFC(LPVOID bDelay)
 {
-	auto pattern = hook::module_pattern(GetModuleHandle("X_BasicModesMFC"), "A1 ? ? ? ? 8B 0D ? ? ? ? 89 8E ? ? ? ? 89 86");
+    auto pattern = hook::module_pattern(GetModuleHandle("X_BasicModesMFC"), "A1 ? ? ? ? 8B 0D ? ? ? ? 89 8E ? ? ? ? 89 86");
 
-	if (pattern.count_hint(1).empty() && !bDelay)
-	{
-		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&InitX_BasicModesMFC, (LPVOID)true, 0, NULL);
-		return 0;
-	}
+    if (pattern.count_hint(1).empty() && !bDelay)
+    {
+        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&InitX_BasicModesMFC, (LPVOID)true, 0, NULL);
+        return 0;
+    }
 
-	if (bDelay)
-		while (pattern.clear(GetModuleHandle("X_BasicModesMFC")).count_hint(1).empty()) { Sleep(0); };
+    if (bDelay)
+        while (pattern.clear(GetModuleHandle("X_BasicModesMFC")).count_hint(1).empty()) { Sleep(0); };
 
-	//screenshots aspect ratio
-	static float fScreenShotHeight = 0.0f;
-	static auto dword_100451A8 = *pattern.get_first<float*>(1);
-	struct SaveScrHook
-	{
-		void operator()(injector::reg_pack& regs)
-		{
-			*(float*)&regs.eax = *dword_100451A8 * ((4.0f / 3.0f) / Screen.fAspectRatio);
-		}
-	}; injector::MakeInline<SaveScrHook>(pattern.get_first(0)); //10007684
+    //screenshots aspect ratio
+    static auto dword_100451A8 = *pattern.get_first<float*>(1);
+    struct SaveScrHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            *(float*)&regs.eax = *dword_100451A8 * ((4.0f / 3.0f) / Screen.fAspectRatio);
+        }
+    }; injector::MakeInline<SaveScrHook>(pattern.get_first(0)); //10007684
 
-	return 0;
+    return 0;
 }
 
 BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
@@ -835,7 +834,7 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
         InitX_ModesMFC(NULL);
         InitX_HelpersMFC(NULL);
         InitE2_D3D8_DRIVER_MFC(NULL);
-		InitX_BasicModesMFC(NULL);
+        InitX_BasicModesMFC(NULL);
     }
     return TRUE;
 }
