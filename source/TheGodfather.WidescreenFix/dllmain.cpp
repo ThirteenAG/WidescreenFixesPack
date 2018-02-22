@@ -34,7 +34,7 @@ struct ResList
     ResEntry r15 = { 160, length("1400x1050xx") };
     ResEntry r16 = { 172, length("1600x1024xx") };
     ResEntry r17 = { 184, length("1600x1200xx") };
-    ResEntry r18 = { 195, length("1680x1050xx") };
+    ResEntry r18 = { 196, length("1680x1050xx") };
 
     constexpr ResList()
     {}
@@ -54,19 +54,21 @@ DWORD WINAPI Init(LPVOID bDelay)
         while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
 
     CIniReader iniReader("");
-    Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
-    Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
-
-    if (!Screen.Width || !Screen.Height)
-        std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
-
-    Screen.fWidth = static_cast<float>(Screen.Width);
-    Screen.fHeight = static_cast<float>(Screen.Height);
-    Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
+    auto bPreferWidescreenResolutions = iniReader.ReadInteger("MAIN", "PreferWidescreenResolutions", 1) != 0;
 
     static constexpr ResList mem_chunk;
     static std::vector<std::string> list;
     GetResolutionsList(list);
+
+    if (bPreferWidescreenResolutions)
+    {
+        list.erase(std::remove_if(list.begin(), list.end(), [](const std::string& s) {
+            int32_t x, y;
+            sscanf(s.c_str(), "%dx%d", &x, &y);
+            return (fabs(((float)x / (float)y) - (4.0f / 3.0f)) < FLT_EPSILON);
+        }), list.end());
+    }
+
     struct ResHook
     {
         void operator()(injector::reg_pack& regs)
