@@ -11,6 +11,23 @@ std::tuple<int32_t, int32_t> GetDesktopRes()
     return std::make_tuple(DesktopResW, DesktopResH);
 }
 
+void GetResolutionsList(std::vector<std::string>& list)
+{
+    DEVMODE dm = { 0 };
+    for (auto iModeNum = 0; EnumDisplaySettings(NULL, iModeNum, &dm) != 0; iModeNum++)
+    {
+        auto str = format("%dx%d", dm.dmPelsWidth, dm.dmPelsHeight);
+        list.push_back(str);
+    }
+    list.erase(std::unique(std::begin(list), std::end(list)), list.end());
+    std::sort(list.begin(), list.end(), [](const std::string& lhs, const std::string& rhs) {
+        int32_t x1, y1, x2, y2;
+        sscanf(lhs.c_str(), "%dx%d", &x1, &y1);
+        sscanf(rhs.c_str(), "%dx%d", &x2, &y2);
+        return (x1 != x2) ? (x1 < x2) : (x1 * y1 < x2 * y2);
+    });
+}
+
 std::string format(const char *fmt, ...)
 {
     va_list args;

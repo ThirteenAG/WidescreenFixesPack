@@ -23,6 +23,7 @@
 #define SCREEN_FOV_VERTICAL (2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))
 
 std::tuple<int32_t, int32_t> GetDesktopRes();
+void GetResolutionsList(std::vector<std::string>& list);
 std::string format(const char *fmt, ...);
 
 template<typename T>
@@ -41,6 +42,16 @@ T& from_bytes(const std::array<uint8_t, sizeof(T)>& bytes, T& object)
     static_assert(std::is_trivially_copyable<T>::value, "not a TriviallyCopyable type");
     uint8_t* begin_object = reinterpret_cast<uint8_t*>(std::addressof(object));
     std::copy(std::begin(bytes), std::end(bytes), begin_object);
+    return object;
+}
+
+template<class T, class T1>
+T from_bytes(const T1& bytes)
+{
+    static_assert(std::is_trivially_copyable<T>::value, "not a TriviallyCopyable type");
+    T object;
+    uint8_t* begin_object = reinterpret_cast<uint8_t*>(std::addressof(object));
+    std::copy(std::begin(bytes), std::end(bytes) - (sizeof(T1) - sizeof(T)), begin_object);
     return object;
 }
 
@@ -65,4 +76,10 @@ template <typename T, typename... Rest>
 std::string pattern_str(T t, Rest... rest)
 {
     return std::string((std::is_same<T, char>::value ? format("%c ", t) : format("%02X ", t)) + pattern_str(rest...));
+}
+
+template<size_t N>
+constexpr size_t length(char const (&)[N])
+{
+    return N - 1;
 }

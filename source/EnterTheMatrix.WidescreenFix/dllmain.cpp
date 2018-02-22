@@ -73,6 +73,7 @@ DWORD WINAPI InitSettings(LPVOID)
     {
         bSettingsApp = true;
         static std::vector<std::string> list;
+        GetResolutionsList(list);
 
         static auto dword_4280CC = *hook::get_pattern<uint32_t*>("8B 0D ? ? ? ? 8D 54 24 0C 51", 2);
         pattern = hook::pattern("8B 45 04 85 C0 74");
@@ -90,24 +91,16 @@ DWORD WINAPI InitSettings(LPVOID)
                 char defVal[20];
                 sprintf_s(defVal, "%dx%d", iniResX, iniResY);
                 char* iniRes = iniReader.ReadString("RENDERING", "RESOLUTION", defVal);
-                sscanf_s(iniRes, "%dx%d", &iniResX, &iniResY);
-                int32_t x = 0, y = 0, i = 0, mode = 0;
-                DEVMODE dm = { 0 };
-                for (auto iModeNum = 0; EnumDisplaySettings(NULL, iModeNum, &dm) != 0; iModeNum++)
+                //sscanf_s(iniRes, "%dx%d", &iniResX, &iniResY);
+                int32_t i = 0, mode = 0;
+                for each (auto &res in list)
                 {
-                    if (x != dm.dmPelsWidth && y != dm.dmPelsHeight)
-                    {
-                        auto str = format("%dx%d", dm.dmPelsWidth, dm.dmPelsHeight);
-                        list.push_back(str);
-                        SendMessageA(*((HWND*)(regs.esi + 0x13E8)), 0x143u, 0, (LPARAM)(str.c_str()));
+                    SendMessageA(*((HWND*)(regs.esi + 0x13E8)), 0x143u, 0, (LPARAM)(res.c_str()));
 
-                        if (dm.dmPelsWidth == iniResX && dm.dmPelsHeight == iniResY)
-                            mode = i;
+                    if (res == iniRes)
+                        mode = i;
 
-                        ++i;
-                    }
-
-                    x = dm.dmPelsWidth; y = dm.dmPelsHeight;
+                    ++i;
                 }
                 SendMessageA(*((HWND*)(regs.esi + 0x13E8)), 0x14Eu, mode, 0);
                 *dword_4280CC = mode;
