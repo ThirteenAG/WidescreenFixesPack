@@ -86,10 +86,10 @@ DWORD WINAPI InitWF(LPVOID)
     Screen.fHudScale = (1.0f / (480.0f * Screen.fAspectRatio)) * 2.0f;
     Screen.fBorderOffset = (1.0f / Screen.fHudScale) - (640.0f / 2.0f);
     Screen.fHudOffsetReal = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
-    #undef SCREEN_FOV_HORIZONTAL
-    #undef SCREEN_FOV_VERTICAL
-    #define SCREEN_FOV_HORIZONTAL 65.0f
-    #define SCREEN_FOV_VERTICAL (2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))
+#undef SCREEN_FOV_HORIZONTAL
+#undef SCREEN_FOV_VERTICAL
+#define SCREEN_FOV_HORIZONTAL 65.0f
+#define SCREEN_FOV_VERTICAL (2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))
     Screen.fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
 
     static CIniReader iniReader("");
@@ -137,7 +137,7 @@ DWORD WINAPI InitWF(LPVOID)
     e2mfc_146FA = (uintptr_t)pattern.get(4).get<uintptr_t>(2);
     e2mfc_14775 = (uintptr_t)pattern.get(5).get<uintptr_t>(2);
     e2mfc_1566C = (uintptr_t)pattern.get(8).get<uintptr_t>(2);
-    
+
     pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 0D ? ? ? ? D9 1D ? ? ? ? 8A 86 E0");
     e2mfc_49DEC = *pattern.get_first<uintptr_t>(2);
     pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 0D ? ? ? ? D9 5D E0 E8");
@@ -161,7 +161,7 @@ DWORD WINAPI InitWF(LPVOID)
     //corrupted graphic in tunnel (DisableSubViewport)
     pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "55 8B EC 83 EC 24 56 8B F1 D9 86 DC 01");
     injector::MakeRET(pattern.get_first(), 0x10, true); //10013FB0 ret 10h
-  
+
     // Hud
     pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 0D ? ? ? ? 8B 4D F4");
     injector::WriteMemory<float>(*pattern.get_first<float**>(2), Screen.fHudOffset, true); //100495C8
@@ -477,14 +477,14 @@ DWORD WINAPI Init(LPVOID bDelay)
     static bool bUseGameFolderForSavegames = iniReader.ReadInteger("MISC", "UseGameFolderForSavegames", 0) != 0;
     if (bUseGameFolderForSavegames)
         injector::WriteMemory<uint8_t>(pattern.get_first(1), 0x85, true); //0x40FCAB
-    
+
     bool bAltTab = iniReader.ReadInteger("MISC", "AllowAltTabbingWithoutPausing", 0) != 0;
     if (bAltTab)
     {
         pattern = hook::pattern("E8 ? ? ? ? 8B CE E8 ? ? ? ? 5E C2 08 00");
         injector::MakeNOP(pattern.count(2).get(1).get<uintptr_t>(0), 5, true); //0x40D29B
     }
-    
+
     static int32_t nCutsceneBorders = iniReader.ReadInteger("MAIN", "CutsceneBorders", 1);
     if (nCutsceneBorders)
     {
@@ -627,7 +627,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     }
     pattern = hook::pattern("E8 ? ? ? ? D9 5C 24 14 8B CF E8"); // 0x45650D
     injector::MakeCALL(pattern.get_first(0), sub_50B9E0, true); // restoring cutscene FOV
-    
+
     bool bD3DHookBorders = iniReader.ReadInteger("MAIN", "D3DHookBorders", 1) != 0;
     if (bD3DHookBorders)
     {
@@ -649,7 +649,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                 auto a2 = *(uint32_t*)(regs.esp + 0x14);
                 auto a3 = *(uint32_t*)(regs.esp + 0x18);
                 auto a4 = *(uint32_t*)(regs.esp + 0x1C);
-        
+
                 //what happens here is check for some camera coordinates or angles
                 if ((a1 == 0x3FE842CF && a4 == 0x3FE842CF) ||											//1.81 https://i.imgur.com/A7wRrgk.gifv
                     (a1 == 0x3FC00000 && a2 == 0x4096BEF4 && a3 == 0xC003936E && a4 == 0x3FC00000) ||   //1.5 https://i.imgur.com/ouRpysL.jpg
@@ -662,7 +662,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             }
         }; injector::MakeInline<CameraOverlayHook>(pattern.get_first(0), pattern.get_first(7)); // 0x672EB1
     }
-    
+
     pattern = hook::pattern("05 40 01 00 00 84 C9 89 50 24");
     struct X_ProgressBarUpdateProgressBarHook
     {
@@ -689,6 +689,11 @@ DWORD WINAPI Init(LPVOID bDelay)
             }
         }
     }; injector::MakeInline<SaveScrHook>(pattern.get_first(0), pattern.get_first(6)); //630196
+
+    //savegame date format
+    static auto fmt = iniReader.ReadString("MISC", "SaveStringFormat", "%a, %b %d %Y, %H:%M");
+    pattern = hook::pattern("68 ? ? ? ? 8D 54 24 24 68 ? ? ? ? 52"); //411091
+    injector::WriteMemory(pattern.get_first(1), &fmt, true);
 
     return 0;
 }
