@@ -21,6 +21,7 @@
 #define SCREEN_AR_NARROW (4.0f / 3.0f)
 #define SCREEN_FOV_HORIZONTAL 90.0f
 #define SCREEN_FOV_VERTICAL (2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))
+float GetFOV(float f, float ar);
 
 std::tuple<int32_t, int32_t> GetDesktopRes();
 void GetResolutionsList(std::vector<std::string>& list);
