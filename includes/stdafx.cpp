@@ -1,5 +1,10 @@
 #include "stdafx.h"
 
+float GetFOV(float f, float ar)
+{
+    return atan2(tan(atan2(tan(f * 0.5f) / (4.0f / 3.0f), 1.0f)) * (ar), 1.0f);
+}
+
 std::tuple<int32_t, int32_t> GetDesktopRes()
 {
     HMONITOR monitor = MonitorFromWindow(GetDesktopWindow(), MONITOR_DEFAULTTONEAREST);
