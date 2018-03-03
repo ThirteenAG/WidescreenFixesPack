@@ -23,7 +23,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     if (pattern.count_hint(1).empty() && !bDelay)
     {
         LoadLibrary("TonyHawksUnderground.SafeDiscCheck.dll");
-        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
+        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
         return 0;
     }
 
