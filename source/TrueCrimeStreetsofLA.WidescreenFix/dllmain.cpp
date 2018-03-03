@@ -24,7 +24,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     if (pattern.count_hint(1).empty() && !bDelay)
     {
-        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
+        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
         return 0;
     }
 
@@ -46,7 +46,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     //ini res crash fix
     pattern = hook::pattern("74 21 8B 4C 24 10 8B 54 24 0C 8B 74 24 08"); //0x62AC16
-    injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(0), 0xEB, true); 
+    injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(0), 0xEB, true);
 
     //display crashfix
     pattern = hook::pattern("E8 ? ? ? ? 8B 96 0C 0B 00 00 8D 8E 0C 0B 00 00 6A 00"); //0x58063B

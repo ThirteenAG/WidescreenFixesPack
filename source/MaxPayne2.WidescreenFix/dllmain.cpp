@@ -282,7 +282,7 @@ DWORD WINAPI InitE2MFC(LPVOID bDelay)
 
     if (pattern.count_hint(4).empty() && !bDelay)
     {
-        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&InitE2MFC, (LPVOID)true, 0, NULL);
+        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&InitE2MFC, (LPVOID)true, 0, NULL);
         return 0;
     }
 
@@ -347,7 +347,7 @@ DWORD WINAPI InitE2MFC(LPVOID bDelay)
     pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? D9 44 24 20 53"); //0x1000F011
     injector::WriteMemory(pattern.get_first(2), &Screen.fNovelsScale, true);
 
-    CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&InitWF, NULL, 0, NULL);
+    CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&InitWF, NULL, 0, NULL);
     return 0;
 }
 
@@ -357,7 +357,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     if (pattern.count_hint(1).empty() && !bDelay)
     {
-        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
+        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
         return 0;
     }
 
@@ -557,7 +557,7 @@ DWORD WINAPI InitX_GameObjectsMFC(LPVOID bDelay)
 
     if (pattern.count_hint(4).empty() && !bDelay)
     {
-        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&InitX_GameObjectsMFC, (LPVOID)true, 0, NULL);
+        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&InitX_GameObjectsMFC, (LPVOID)true, 0, NULL);
         return 0;
     }
 
@@ -634,7 +634,7 @@ DWORD WINAPI InitX_ModesMFC(LPVOID bDelay)
 
     if (pattern.count_hint(1).empty() && !bDelay)
     {
-        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&InitX_ModesMFC, (LPVOID)true, 0, NULL);
+        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&InitX_ModesMFC, (LPVOID)true, 0, NULL);
         return 0;
     }
 
@@ -735,7 +735,7 @@ DWORD WINAPI InitX_HelpersMFC(LPVOID bDelay)
 
     if (pattern.count_hint(1).empty() && !bDelay)
     {
-        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&InitX_HelpersMFC, (LPVOID)true, 0, NULL);
+        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&InitX_HelpersMFC, (LPVOID)true, 0, NULL);
         return 0;
     }
 
@@ -771,7 +771,7 @@ DWORD WINAPI InitE2_D3D8_DRIVER_MFC(LPVOID bDelay)
 
     if (pattern.count_hint(1).empty() && !bDelay)
     {
-        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&InitE2_D3D8_DRIVER_MFC, (LPVOID)true, 0, NULL);
+        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&InitE2_D3D8_DRIVER_MFC, (LPVOID)true, 0, NULL);
         return 0;
     }
 
@@ -809,7 +809,7 @@ DWORD WINAPI InitX_BasicModesMFC(LPVOID bDelay)
 
     if (pattern.count_hint(1).empty() && !bDelay)
     {
-        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&InitX_BasicModesMFC, (LPVOID)true, 0, NULL);
+        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&InitX_BasicModesMFC, (LPVOID)true, 0, NULL);
         return 0;
     }
 

@@ -109,7 +109,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     if (pattern.count_hint(1).empty() && !bDelay)
     {
-        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
+        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
         return 0;
     }
 
@@ -259,7 +259,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     pattern = hook::pattern("8B 15 ? ? ? ? 6A 06 52 8B 08 50"); //0x4B4FB8
     auto hwnd = *pattern.get_first<HWND*>(2);
-    CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&WindowCheck, (LPVOID)hwnd, 0, NULL);
+    CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&WindowCheck, (LPVOID)hwnd, 0, NULL);
 
     if (bSkipMovie)
     {

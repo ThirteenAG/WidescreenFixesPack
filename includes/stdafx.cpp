@@ -5,6 +5,11 @@ float GetFOV(float f, float ar)
     return atan2(tan(atan2(tan(f * 0.5f) / (4.0f / 3.0f), 1.0f)) * (ar), 1.0f);
 }
 
+void CreateThreadAutoClose(LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_T dwStackSize, LPTHREAD_START_ROUTINE lpStartAddress, LPVOID lpParameter, DWORD dwCreationFlags, LPDWORD lpThreadId)
+{
+    CloseHandle(CreateThread(lpThreadAttributes, dwStackSize, lpStartAddress, lpParameter, dwCreationFlags, lpThreadId));
+}
+
 std::tuple<int32_t, int32_t> GetDesktopRes()
 {
     HMONITOR monitor = MonitorFromWindow(GetDesktopWindow(), MONITOR_DEFAULTTONEAREST);

@@ -50,7 +50,7 @@ void __cdecl sub_76B6D0(float a1, float a2, float a3, float a4)
     //float v14 = a2 * v10 + a2 * v10 - 1.0f;
     //float v15 = (a3 + 1.0f) * v8 + (a3 + 1.0f) * v8 - 1.0f;
     //float v13 = (a4 + 1.0f) * v10 + (a4 + 1.0f) * v10 - 1.0f;
-    
+
     auto _sub_76B4D0 = (void(__cdecl *)(float, float, float, float)) sub_76B4D0_addr;
     _sub_76B4D0(0.0f, 0.0f, 0.0f, 0.0f); //_sub_76B4D0(v9, v14, v15, v13);
 }
@@ -61,7 +61,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     if (pattern.count_hint(1).empty() && !bDelay)
     {
-        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
+        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
         return 0;
     }
 
@@ -84,7 +84,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     injector::WriteMemory(pattern.get_first(1), &(*defRes.begin()), true);
 
     pattern = hook::pattern("A3 ? ? ? ? 89 0D ? ? ? ? E8 ? ? ? ? 6A 00"); //0x5AD20D
-    static auto nWidth  = *pattern.get_first<uint32_t*>(1);
+    static auto nWidth = *pattern.get_first<uint32_t*>(1);
     static auto nHeight = *pattern.get_first<uint32_t*>(7);
     struct GetResHook
     {
@@ -113,7 +113,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     injector::WriteMemory(pattern.get_first(2), &Screen.fScale, true);
     pattern = hook::pattern("D8 0D ? ? ? ? D9 55 1C DC C0"); //0x4B3F4B
     injector::WriteMemory(pattern.get_first(2), &Screen.fDynamicScreenFieldOfViewScale, true);
-    
+
     //FMVs
     //pattern = hook::pattern("8D 84 24 14 01 00 00 53 50"); //0x629B1A
     //struct FMVHook

@@ -425,7 +425,7 @@ DWORD WINAPI InitE2MFC(LPVOID bDelay)
 
     if (pattern.count_hint(2).empty() && !bDelay)
     {
-        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&InitE2MFC, (LPVOID)true, 0, NULL);
+        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&InitE2MFC, (LPVOID)true, 0, NULL);
         return 0;
     }
 
@@ -456,7 +456,7 @@ DWORD WINAPI InitE2MFC(LPVOID bDelay)
     injector::MakeCALL(pattern.get(0).get<uintptr_t>(0), static_cast<int32_t(__fastcall *)(uintptr_t, uintptr_t)>(PDriverGetWidth), true);   //e2mfc + 0x15582
     injector::MakeCALL(pattern.get(0).get<uintptr_t>(41), static_cast<int32_t(__fastcall *)(uintptr_t, uintptr_t)>(PDriverGetHeight), true); //e2mfc + 0x155AB
 
-    CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&InitWF, NULL, 0, NULL);
+    CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&InitWF, NULL, 0, NULL);
     return 0;
 }
 
@@ -466,7 +466,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     if (pattern.count_hint(1).empty() && !bDelay)
     {
-        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
+        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
         return 0;
     }
 
@@ -704,7 +704,7 @@ DWORD WINAPI InitE2_D3D8_DRIVER_MFC(LPVOID bDelay)
 
     if (pattern.count_hint(1).empty() && !bDelay)
     {
-        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&InitE2_D3D8_DRIVER_MFC, (LPVOID)true, 0, NULL);
+        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&InitE2_D3D8_DRIVER_MFC, (LPVOID)true, 0, NULL);
         return 0;
     }
 

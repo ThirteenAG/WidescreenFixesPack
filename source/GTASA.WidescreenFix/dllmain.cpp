@@ -525,7 +525,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         bool bAltTab = iniReader.ReadInteger("MAIN", "AllowAltTabbingWithoutPausing", 0) != 0;
 
         OverwriteResolution();
-        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&CompatHandler, NULL, 0, NULL);
+        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&CompatHandler, NULL, 0, NULL);
         GetMemoryAddresses();
 
         if (bAltTab)
@@ -583,7 +583,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     if (!bDelay)
     {
-        CreateThread(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
+        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
         return 0;
     }
 
