@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include <d3d9.h>
 
 //#define _LOG
 #ifdef _LOG
@@ -21,8 +22,8 @@ struct Screen
     float fTextScaleX;
     int32_t FilmstripScaleX;
     int32_t FilmstripOffset;
+    uint32_t pFilmstripTex;
 } Screen;
-
 
 DWORD WINAPI InitD3DDrv(LPVOID bDelay)
 {
@@ -37,7 +38,7 @@ DWORD WINAPI InitD3DDrv(LPVOID bDelay)
     if (bDelay)
         while (pattern.clear(GetModuleHandle("D3DDrv")).count_hint(1).empty()) { Sleep(0); };
 
-    //Minimap
+    //Minimap aka FilmStrip
     struct RenderFilmstrip_Hook
     {
         void operator()(injector::reg_pack& regs)
@@ -45,7 +46,6 @@ DWORD WINAPI InitD3DDrv(LPVOID bDelay)
             regs.ecx = Screen.FilmstripScaleX + Screen.FilmstripScaleX;
         }
     }; injector::MakeInline<RenderFilmstrip_Hook>(pattern.get_first(0));
-
 
     pattern = hook::module_pattern(GetModuleHandle("D3DDrv"), "03 D2 85 D2 89 54 24 10 DB 44 24 10"); //?RenderFilmstrip@UD3DRenderDevice@@UAE_NXZ + 0x350
     struct RenderFilmstrip_Hook2
@@ -57,6 +57,73 @@ DWORD WINAPI InitD3DDrv(LPVOID bDelay)
         }
     }; injector::MakeInline<RenderFilmstrip_Hook2>(pattern.get_first(0), pattern.get_first(6));
     injector::WriteMemory<uint16_t>(pattern.get_first(6), 0xD285, true);     //test    edx, edx
+
+    //crashfix
+    pattern = hook::module_pattern(GetModuleHandle("D3DDrv"), "8D B5 64 98 00 00 6A 04 8B CE F3 0F 11 44 24 18"); //
+    struct RenderFilmstrip_Hook3
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.esi = regs.ebp + 0x9864;
+
+            if (regs.edi)
+            {
+                Screen.pFilmstripTex = regs.edi;
+                auto pTex = (IDirect3DTexture9*)regs.edi;
+                auto type = pTex->GetType();
+
+                if (type == 0) // check if ptr valid so it doesn't crash
+                {
+                    regs.edi = 0;
+                    *(uint32_t*)(regs.ebx + 0x3C) = regs.edi;
+                }
+            }
+        }
+    }; injector::MakeInline<RenderFilmstrip_Hook3>(pattern.get_first(0), pattern.get_first(6));
+
+    pattern = hook::module_pattern(GetModuleHandle("D3DDrv"), "8B 46 2C 3B C7 74 1D 39 7E 4C 50"); //
+    static auto GMalloc = *pattern.get_first<uint32_t>(22);
+    struct FlushHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.eax = *(uint32_t*)(regs.esi + 0x2C);
+            if (regs.eax && regs.eax != Screen.pFilmstripTex)
+            {
+                regs.eax = *(uint32_t*)(regs.esi + 0x2C);
+                if (*(uint32_t*)(regs.esi + 0x4C))
+                    (*(void(__stdcall**)(int))(*(uint32_t*)GMalloc + 8))(regs.eax);
+                else
+                    (*(void(__stdcall**)(int))(*(uint32_t*)regs.eax + 8))(regs.eax);
+                *(uint32_t*)(regs.esi + 0x2C) = 0;
+            }
+        }
+    }; injector::MakeInline<FlushHook>(pattern.get_first(0), pattern.get_first(36));
+
+    pattern = hook::module_pattern(GetModuleHandle("D3DDrv"), "8B 95 ? ? ? ? 8B 85 ? ? ? ? 8B 08 52 50 FF 91 ? ? ? ? 8B 8D"); //
+    struct test //vertex shader for alt tab
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.edx = NULL;
+        }
+    }; injector::MakeInline<test>(pattern.get_first(0), pattern.get_first(6));
+
+    pattern = hook::module_pattern(GetModuleHandle("D3DDrv"), "8B 7B 64 85 FF 8B CE 6A 04 74 1F 89 BD"); //alpha, settexture, maybe not needed
+    injector::WriteMemory(pattern.get_first(0), 0x85909090, true);
+
+    //pattern = hook::module_pattern(GetModuleHandle("D3DDrv"), "C7 86 30 5F 00 00 00 00 00 00"); //
+    //struct ResetHook
+    //{
+    //    void operator()(injector::reg_pack& regs)
+    //    {
+    //        *(uint32_t*)(regs.esi + 0x5F30) = 0;
+    //
+    //        //*(uint32_t*)(regs.esi + 0x5BC0) = 0;
+    //        //*(uint32_t*)(regs.esi + 0x5BB4) = 0;
+    //        //*(uint32_t*)(regs.esi + 0x5BB8) = 0;
+    //    }
+    //}; injector::MakeInline<ResetHook>(pattern.get_first(0), pattern.get_first(10));
 
     return 0;
 }
@@ -96,7 +163,7 @@ DWORD WINAPI InitEngine(LPVOID bDelay)
 
     pattern = hook::module_pattern(GetModuleHandle("Engine"), "F3 0F 5C 1D ? ? ? ? 0F 28 FD F3 0F 59 FA"); //0x103069A5 + 0x4
     injector::WriteMemory(pattern.get_first(4), &Screen.fHudOffset, true);
-    
+
     pattern = hook::module_pattern(GetModuleHandle("Engine"), "F3 0F 5C D8 F3 0F 58 DC"); //0x1030503C
     struct HUDHook
     {
@@ -115,10 +182,10 @@ DWORD WINAPI InitEngine(LPVOID bDelay)
 
 
     //FOV
-    #undef SCREEN_FOV_HORIZONTAL
-    #undef SCREEN_FOV_VERTICAL
-    #define SCREEN_FOV_HORIZONTAL 75.0f
-    #define SCREEN_FOV_VERTICAL (2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))
+#undef SCREEN_FOV_HORIZONTAL
+#undef SCREEN_FOV_VERTICAL
+#define SCREEN_FOV_HORIZONTAL 75.0f
+#define SCREEN_FOV_VERTICAL (2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))
     Screen.fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
 
     pattern = hook::module_pattern(GetModuleHandle("Engine"), "8B 91 28 06 00 00 52 8B"); //?Draw@UGameEngine@@UAEXPAVUViewport@@HPAEPAH@Z  10530BD7
@@ -205,9 +272,9 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        #ifdef _LOG
+#ifdef _LOG
         logfile.open("SC4.WidescreenFix.log");
-        #endif // _LOG
+#endif // _LOG
         Init(NULL);
     }
     return TRUE;
