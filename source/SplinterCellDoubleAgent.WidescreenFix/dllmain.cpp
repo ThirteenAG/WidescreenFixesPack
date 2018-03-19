@@ -1,5 +1,8 @@
 #include "stdafx.h"
+#include "ico.h"
 #include <d3d9.h>
+#include <D3dx9.h>
+#pragma comment(lib, "D3dx9.lib")
 
 //#define _LOG
 #ifdef _LOG
@@ -24,6 +27,13 @@ struct Screen
     int32_t FilmstripOffset;
     uint32_t pFilmstripTex;
 } Screen;
+
+std::string szLoadscPath;
+HICON ico;
+HICON WINAPI LoadIconProxy(HINSTANCE hInstance, LPCWSTR lpIconName)
+{
+    return ico;
+}
 
 DWORD WINAPI InitD3DDrv(LPVOID bDelay)
 {
@@ -59,30 +69,28 @@ DWORD WINAPI InitD3DDrv(LPVOID bDelay)
     injector::WriteMemory<uint16_t>(pattern.get_first(6), 0xD285, true);     //test    edx, edx
 
     //ScopeLens
-    pattern = hook::module_pattern(GetModuleHandle("D3DDrv"), "F3 0F 2A 8F ? ? ? ? 8B AC 24");
-    struct ScopeLens_Hook1 // stretching scope image horizontally
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            auto t = Screen.fWidth * Screen.fAspectRatio;
-            _asm movss xmm1, dword ptr[t]
-        }
-    }; injector::MakeInline<ScopeLens_Hook1>(pattern.get_first(0), pattern.get_first(8));
-
     pattern = hook::module_pattern(GetModuleHandle("D3DDrv"), "8B 80 ? ? ? ? 8B 08 6A 14 8D 54 24 70 52 6A 02 6A 05");
-    struct ScopeLens_Hook2 // and then fixing it along with overlay
+    struct ScopeLens_Hook
     {
         void operator()(injector::reg_pack& regs)
         {
             regs.eax = *(uint32_t*)(regs.eax + 0x5F30);
 
-            auto pVertexStreamZeroData = regs.esp + 0x6C;
-            *(float*)(pVertexStreamZeroData + 0x00) /= Screen.fAspectRatio;
-            *(float*)(pVertexStreamZeroData + 0x14) /= Screen.fAspectRatio;
-            *(float*)(pVertexStreamZeroData + 0x28) /= Screen.fAspectRatio;
-            *(float*)(pVertexStreamZeroData + 0x3C) /= Screen.fAspectRatio;
+            if (Screen.fAspectRatio > (4.0f / 3.0f))
+            {
+                auto pVertexStreamZeroData = regs.esp + 0x6C;
+                *(float*)(pVertexStreamZeroData + 0x00) /= (Screen.fAspectRatio / (16.0f / 9.0f)) / (((4.0f / 3.0f)) / (Screen.fAspectRatio));
+                *(float*)(pVertexStreamZeroData + 0x14) /= (Screen.fAspectRatio / (16.0f / 9.0f)) / (((4.0f / 3.0f)) / (Screen.fAspectRatio));
+                *(float*)(pVertexStreamZeroData + 0x28) /= (Screen.fAspectRatio / (16.0f / 9.0f)) / (((4.0f / 3.0f)) / (Screen.fAspectRatio));
+                *(float*)(pVertexStreamZeroData + 0x3C) /= (Screen.fAspectRatio / (16.0f / 9.0f)) / (((4.0f / 3.0f)) / (Screen.fAspectRatio));
+
+                *(float*)(pVertexStreamZeroData + 0x04) /= (4.0f / 3.0f);
+                *(float*)(pVertexStreamZeroData + 0x18) /= (4.0f / 3.0f);
+                *(float*)(pVertexStreamZeroData + 0x2C) /= (4.0f / 3.0f);
+                *(float*)(pVertexStreamZeroData + 0x40) /= (4.0f / 3.0f);
+            }
         }
-    }; injector::MakeInline<ScopeLens_Hook2>(pattern.get_first(0), pattern.get_first(6));
+    }; injector::MakeInline<ScopeLens_Hook>(pattern.get_first(0), pattern.get_first(6));
 
     //crashfix
     pattern = hook::module_pattern(GetModuleHandle("D3DDrv"), "8D B5 64 98 00 00 6A 04 8B CE F3 0F 11 44 24 18"); //
@@ -138,18 +146,37 @@ DWORD WINAPI InitD3DDrv(LPVOID bDelay)
     pattern = hook::module_pattern(GetModuleHandle("D3DDrv"), "8B 7B 64 85 FF 8B CE 6A 04 74 1F 89 BD"); //alpha, settexture, maybe not needed
     injector::WriteMemory(pattern.get_first(0), 0x85909090, true);
 
-    //pattern = hook::module_pattern(GetModuleHandle("D3DDrv"), "C7 86 30 5F 00 00 00 00 00 00"); //
-    //struct ResetHook
-    //{
-    //    void operator()(injector::reg_pack& regs)
-    //    {
-    //        *(uint32_t*)(regs.esi + 0x5F30) = 0;
-    //
-    //        //*(uint32_t*)(regs.esi + 0x5BC0) = 0;
-    //        //*(uint32_t*)(regs.esi + 0x5BB4) = 0;
-    //        //*(uint32_t*)(regs.esi + 0x5BB8) = 0;
-    //    }
-    //}; injector::MakeInline<ResetHook>(pattern.get_first(0), pattern.get_first(10));
+    //loadscreen
+    pattern = hook::module_pattern(GetModuleHandle("D3DDrv"), "89 BE ? ? ? ? E8 ? ? ? ? 8B 86 ? ? ? ? 8B 08 57 6A 00 50 FF 91 ? ? ? ? 6A 04 8B CB E8 ? ? ? ? 8B 6C 24 30 F6 45 54 01 74 48 83 BE"); //
+    struct LoadscHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            if (regs.edi)
+            {
+                auto pTex = (IDirect3DTexture9*)regs.edi;
+                if (pTex->GetType() == D3DRTYPE_TEXTURE)
+                {
+                    D3DSURFACE_DESC pDesc;
+                    pTex->GetLevelDesc(0, &pDesc);
+                    if (pDesc.Width == 2048 && pDesc.Height == 1024 && pDesc.Format == D3DFMT_DXT5 && pDesc.Usage == 0)
+                    {
+                        static LPDIRECT3DTEXTURE9 pTexLoadscreenCustom = nullptr;
+                        if (!pTexLoadscreenCustom)
+                        {
+                            IDirect3DDevice9* ppDevice = nullptr;
+                            pTex->GetDevice(&ppDevice);
+                            if (D3DXCreateTextureFromFile(ppDevice, szLoadscPath.c_str(), &pTexLoadscreenCustom) == D3D_OK)
+                                regs.edi = (uint32_t)pTexLoadscreenCustom;
+                        }
+                        else
+                            regs.edi = (uint32_t)pTexLoadscreenCustom;
+                    }
+                }
+            }
+            *(uint32_t*)(regs.esi + 0x6EB0) = regs.edi;
+        }
+    }; injector::MakeInline<LoadscHook>(pattern.get_first(0), pattern.get_first(6));
 
     return 0;
 }
@@ -167,8 +194,8 @@ DWORD WINAPI InitEngine(LPVOID bDelay)
     if (bDelay)
         while (pattern.clear(GetModuleHandle("Engine")).count_hint(1).empty()) { Sleep(0); };
 
-    static auto GIsWideScreen = hook::module_pattern(GetModuleHandle("Engine"), "8B 0D ? ? ? ? F3 0F 59 D9 F3 0F 10 0D ? ? ? ? F3 0F 5C D8 F3 0F 58 DC").get_first<uint8_t>(2);
-    static auto GIsSameFrontBufferOnNormalTV = hook::module_pattern(GetModuleHandle("Engine"), "8B 15 ? ? ? ? 83 3A 00 74 58 F3 0F 10 88").get_first<uint8_t>(2);
+    static auto GIsWideScreen = *hook::module_pattern(GetModuleHandle("Engine"), "8B 0D ? ? ? ? F3 0F 59 D9 F3 0F 10 0D ? ? ? ? F3 0F 5C D8 F3 0F 58 DC").get_first<uint8_t*>(2);
+    static auto GIsSameFrontBufferOnNormalTV = *hook::module_pattern(GetModuleHandle("Engine"), "8B 15 ? ? ? ? 83 3A 00 74 58 F3 0F 10 88").get_first<uint8_t*>(2);
     pattern = hook::module_pattern(GetModuleHandle("Engine"), "83 39 00 75 63 8B 15 ? ? ? ? 83 3A 00"); //
     static auto dword_109E09F0 = *pattern.get_first<float*>(60);
     static auto dword_109E09F4 = dword_109E09F0 + 1;
@@ -253,6 +280,25 @@ DWORD WINAPI InitEngine(LPVOID bDelay)
     return 0;
 }
 
+DWORD WINAPI InitWindow(LPVOID bDelay)
+{
+    auto pattern = hook::module_pattern(GetModuleHandle("Window"), "FF 15 ? ? ? ? 8B 4E 04 50 6A 01 68 80 00 00 00 51");
+
+    if (pattern.count_hint(2).empty() && !bDelay)
+    {
+        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&InitWindow, (LPVOID)true, 0, NULL);
+        return 0;
+    }
+
+    if (bDelay)
+        while (pattern.clear(GetModuleHandle("Window")).count_hint(2).empty()) { Sleep(0); };
+
+    injector::WriteMemory(*pattern.count_hint(2).get(0).get<void*>(2), LoadIconProxy, true);
+    injector::WriteMemory(*pattern.count_hint(2).get(1).get<void*>(2), LoadIconProxy, true);
+
+    return 0;
+}
+
 DWORD WINAPI Init(LPVOID bDelay)
 {
     auto pattern = hook::pattern("89 85 D8 61 00 00");
@@ -276,6 +322,8 @@ DWORD WINAPI Init(LPVOID bDelay)
             Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
             Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
             bool bForceLL = iniReader.ReadInteger("MAIN", "ForceLL", 1) != 0;
+            szLoadscPath = iniReader.GetIniPath();
+            szLoadscPath = szLoadscPath.substr(0, szLoadscPath.find_last_of('.')) + ".png";
 
             if (bForceLL)
             {
@@ -295,7 +343,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             Screen.FilmstripScaleX = static_cast<int32_t>(Screen.fWidth / (1280.0f / (368.0 * ((4.0 / 3.0) / (Screen.fAspectRatio)))));
             Screen.FilmstripOffset = static_cast<int32_t>((((Screen.fWidth / 2.0f) - ((Screen.fHeight * (4.0f / 3.0f)) / 2.0f)) * 2.0f) + ((float)Screen.FilmstripScaleX / 5.25f));
 
-            if (Screen.Width > 0 && Screen.Height >> 0)
+            if (Screen.Width && Screen.Height)
             {
                 char UserIni[MAX_PATH];
                 GetModuleFileName(GetModuleHandle(NULL), UserIni, (sizeof(UserIni)));
@@ -317,6 +365,10 @@ DWORD WINAPI Init(LPVOID bDelay)
             InitD3DDrv(NULL);
         }
     }; injector::MakeInline<SetResHook>(pattern.get_first(0), pattern.get_first(6));
+
+    //icon fix
+    ico = CreateIconFromBMP(icoData);
+    InitWindow(NULL);
 
     return 0;
 }
