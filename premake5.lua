@@ -29,6 +29,11 @@ workspace "WidescreenFixesPack"
    includedirs { "external/hooking" }
    includedirs { "external/injector/include" }
    includedirs { "external/inireader" }
+   local dxsdk = os.getenv "DXSDK_DIR"
+   if dxsdk then
+      includedirs { dxsdk .. "/include" }
+      libdirs { dxsdk .. "/lib/x86" }
+   end
    
    pbcommands = { 
       "setlocal EnableDelayedExpansion",
