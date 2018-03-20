@@ -13,6 +13,7 @@ struct Screen
     float fHudOffset;
     float fAspectRatio;
     float fHudScaleX;
+    float fHudScaleX2;
     float fTextScaleX;
     int32_t FilmstripScaleX;
     int32_t FilmstripOffset;
@@ -68,6 +69,7 @@ DWORD WINAPI InitD3DDrv(LPVOID bDelay)
             Screen.fHeight = static_cast<float>(Screen.Height);
             Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
             Screen.fHudScaleX = 1.0f / (((4.0f / 3.0f)) / (Screen.fAspectRatio));
+            Screen.fHudScaleX2 = 2.0f / (600.0f * Screen.fAspectRatio);
             Screen.fTextScaleX = 600.0f * Screen.fAspectRatio;
             Screen.fHudOffset = ((4.0f / 3.0f) / Screen.fAspectRatio);
             Screen.FilmstripScaleX = static_cast<int32_t>(Screen.fWidth / (1280.0f / (368.0 * ((4.0 / 3.0) / (Screen.fAspectRatio)))));
@@ -101,7 +103,7 @@ DWORD WINAPI InitD3DDrv(LPVOID bDelay)
 
     //ScopeLens
     pattern = hook::module_pattern(GetModuleHandle("D3DDrv"), "8B 80 ? ? ? ? 8B 08 6A 14 8D 54 24 70 52 6A 02 6A 05");
-    struct ScopeLens_Hook
+    struct ScopeLensHook1
     {
         void operator()(injector::reg_pack& regs)
         {
@@ -121,7 +123,7 @@ DWORD WINAPI InitD3DDrv(LPVOID bDelay)
                 *(float*)(pVertexStreamZeroData + 0x40) /= (4.0f / 3.0f);
             }
         }
-    }; injector::MakeInline<ScopeLens_Hook>(pattern.get_first(0), pattern.get_first(6));
+    }; injector::MakeInline<ScopeLensHook1>(pattern.get_first(0), pattern.get_first(6));
 
     //crashfix
     pattern = hook::module_pattern(GetModuleHandle("D3DDrv"), "8D B5 64 98 00 00 6A 04 8B CE F3 0F 11 44 24 18"); //
@@ -249,29 +251,46 @@ DWORD WINAPI InitEngine(LPVOID bDelay)
                 *(float*)&dword_109E09FC[regs.eax / 4] *= 0.75f;
             }
 
-            if ((w == 1275.0f && h == 637.0f) || (w == 32.0f && h == 32.0f)) // fullscreen loadscreen and spinner
+            if ((w == 1275.0f && h == 637.0f) || (w == 800.0f)) // loadscreen and fullscreen images
             {
-                if (!(w == 32.0f && h == 32.0f))
+                *(float*)&dword_109E09F0[regs.eax / 4] *= Screen.fHudScaleX;
+                *(float*)&dword_109E09F8[regs.eax / 4] *= Screen.fHudScaleX;
+
+                if (w == 1275.0f && h == 637.0f)
                 {
                     *(float*)&dword_109E09F4[regs.eax / 4] *= Screen.fHudScaleX;
                     *(float*)&dword_109E09FC[regs.eax / 4] *= Screen.fHudScaleX;
                 }
             }
-            else
-            {
-                if (w == 800.0f)
-                {
-                    *(float*)&dword_109E09F0[regs.eax / 4] *= Screen.fHudScaleX;
-                    *(float*)&dword_109E09F8[regs.eax / 4] *= Screen.fHudScaleX;
-                }
-                else
-                {
-                    *(float*)&dword_109E09F0[regs.eax / 4] /= Screen.fHudScaleX;
-                    *(float*)&dword_109E09F8[regs.eax / 4] /= Screen.fHudScaleX;
-                }
-            }
         }
     }; injector::MakeInline<ImageUnrealDrawHook>(pattern.get_first(0), pattern.get_first(104));
+
+    pattern = hook::module_pattern(GetModuleHandle("Engine"), "D9 05 ? ? ? ? 83 C4 08 D8 C9 D9 5C 24 24");
+    injector::WriteMemory(pattern.get_first(2), &Screen.fHudScaleX2, true);
+    pattern = hook::module_pattern(GetModuleHandle("Engine"), "D9 05 ? ? ? ? D8 4C 24 10 D9 5C 24 28");
+    injector::WriteMemory(pattern.get_first(2), &Screen.fHudScaleX2, true);
+    pattern = hook::module_pattern(GetModuleHandle("Engine"), "F3 0F 10 0D ? ? ? ? F3 0F 11 44 24 ? F3 0F 11 44 24 ? F3 0F 10 05 ? ? ? ? F3 0F 11 4C 24 ? F3 0F 11 44 24");
+    injector::WriteMemory(pattern.get_first(4), &Screen.fHudScaleX2, true);
+    pattern = hook::module_pattern(GetModuleHandle("Engine"), "F3 0F 10 0D ? ? ? ? F3 0F 10 15 ? ? ? ? 2B D1 F3 0F 2A C2");
+    injector::WriteMemory(pattern.get_first(4), &Screen.fHudScaleX2, true);
+    pattern = hook::module_pattern(GetModuleHandle("Engine"), "F3 0F 5C 1D ? ? ? ? 0F 28 FD F3 0F 59 FA"); //0x103069A5 + 0x4
+    injector::WriteMemory(pattern.get_first(4), &Screen.fHudOffset, true);
+
+    pattern = hook::module_pattern(GetModuleHandle("Engine"), "F3 0F 5C D8 F3 0F 58 DC"); //0x1030503C
+    struct HUDPosHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            static const float f1_0 = 1.0f;
+            _asm
+            {
+                movss xmm0, Screen.fHudOffset
+                subss xmm3, xmm0
+                addss xmm3, xmm4
+                movss xmm0, f1_0
+            }
+        }
+    }; injector::MakeInline<HUDPosHook>(pattern.get_first(0), pattern.get_first(8));
 
     pattern = hook::module_pattern(GetModuleHandle("Engine"), "F3 0F 5E CA F3 0F 11 4C 24 14 83 C4 04"); //0x1030678D
     struct TextHook
