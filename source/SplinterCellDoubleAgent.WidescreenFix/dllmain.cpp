@@ -68,6 +68,52 @@ DWORD WINAPI InitD3DDrv(LPVOID bDelay)
     }; injector::MakeInline<RenderFilmstrip_Hook2>(pattern.get_first(0), pattern.get_first(6));
     injector::WriteMemory<uint16_t>(pattern.get_first(6), 0xD285, true);     //test    edx, edx
 
+    //SetRes
+    static auto pPresentParams = *hook::module_pattern(GetModuleHandle("D3DDrv"), "BF ? ? ? ? F3 AB 8B 0D ? ? ? ? 39 01 8B 4D").get_first<D3DPRESENT_PARAMETERS*>(1);
+    pattern = hook::module_pattern(GetModuleHandle("D3DDrv"), "B8 01 00 00 00 64 89 0D 00 00 00 00 5B 8B E5 5D C2 10 00");
+    struct SetResHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.eax = 1;
+
+            Screen.Width = pPresentParams->BackBufferWidth;
+            Screen.Height = pPresentParams->BackBufferHeight;
+            Screen.fWidth = static_cast<float>(Screen.Width);
+            Screen.fHeight = static_cast<float>(Screen.Height);
+            Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
+            Screen.fHudScaleX = 1.0f / (((4.0f / 3.0f)) / (Screen.fAspectRatio));
+            Screen.fTextScaleX = 600.0f * Screen.fAspectRatio;
+            Screen.fHudOffset = ((4.0f / 3.0f) / Screen.fAspectRatio);
+            Screen.FilmstripScaleX = static_cast<int32_t>(Screen.fWidth / (1280.0f / (368.0 * ((4.0 / 3.0) / (Screen.fAspectRatio)))));
+            Screen.FilmstripOffset = static_cast<int32_t>((((Screen.fWidth / 2.0f) - ((Screen.fHeight * (4.0f / 3.0f)) / 2.0f)) * 2.0f) + ((float)Screen.FilmstripScaleX / 5.25f));
+
+            CIniReader iniReader("");
+            auto[DesktopResW, DesktopResH] = GetDesktopRes();
+            if (Screen.Width != DesktopResW || Screen.Height != DesktopResH)
+            {
+                iniReader.WriteInteger("MAIN", "ResX", Screen.Width);
+                iniReader.WriteInteger("MAIN", "ResY", Screen.Height);
+            }
+            else
+            {
+                iniReader.WriteInteger("MAIN", "ResX", 0);
+                iniReader.WriteInteger("MAIN", "ResY", 0);
+            }
+
+            if (pPresentParams->Windowed)
+            {
+                tagRECT rect;
+                rect.left = (LONG)(((float)DesktopResW / 2.0f) - (Screen.fWidth / 2.0f));
+                rect.top = (LONG)(((float)DesktopResH / 2.0f) - (Screen.fHeight / 2.0f));
+                rect.right = (LONG)Screen.Width;
+                rect.bottom = (LONG)Screen.Height;
+                SetWindowLong(pPresentParams->hDeviceWindow, GWL_STYLE, GetWindowLong(pPresentParams->hDeviceWindow, GWL_STYLE) & ~WS_OVERLAPPEDWINDOW);
+                SetWindowPos(pPresentParams->hDeviceWindow, NULL, rect.left, rect.top, rect.right, rect.bottom, SWP_NOACTIVATE | SWP_NOZORDER);
+            }
+        }
+    }; injector::MakeInline<SetResHook>(pattern.get_first(0));
+
     //ScopeLens
     pattern = hook::module_pattern(GetModuleHandle("D3DDrv"), "8B 80 ? ? ? ? 8B 08 6A 14 8D 54 24 70 52 6A 02 6A 05");
     struct ScopeLens_Hook
@@ -299,6 +345,50 @@ DWORD WINAPI InitWindow(LPVOID bDelay)
     return 0;
 }
 
+DWORD WINAPI InitEchelonMenus(LPVOID bDelay)
+{
+    auto pattern = hook::module_pattern(GetModuleHandle("EchelonMenus"), "C6 45 FC 10 33 F6 83 FE 07");
+
+    if (pattern.count_hint(1).empty() && !bDelay)
+    {
+        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&InitEchelonMenus, (LPVOID)true, 0, NULL);
+        return 0;
+    }
+
+    if (bDelay)
+        while (pattern.clear(GetModuleHandle("EchelonMenus")).count_hint(1).empty()) { Sleep(0); };
+
+    static std::vector<std::string> list;
+    GetResolutionsList(list);
+    std::swap(list[list.size() - 5], list[list.size() - 6]);
+    list[list.size() - 5] = format("%dx%d", Screen.Width, Screen.Height);
+
+    auto rpattern = hook::range_pattern((uintptr_t)pattern.get_first(-850), (uintptr_t)pattern.get_first(0), "C7 45 E8");
+    for (size_t i = 0; i < rpattern.size(); ++i)
+    {
+        injector::WriteMemory(rpattern.get(i).get<uint32_t>(3), &list[list.size() - 1 - i][0], true);
+    }
+
+    static const auto wsz0 = 0;
+    rpattern = hook::range_pattern((uintptr_t)pattern.get_first(-850), (uintptr_t)pattern.get_first(0), "8D ? E4 68");
+    for (size_t i = 0; i < rpattern.size(); ++i)
+    {
+        injector::WriteMemory(rpattern.get(i).get<uint32_t>(4), &wsz0, true);
+    }
+
+    struct ResListHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            *(uint8_t*)(regs.ebp - 4) = 16;
+            regs.esi = 0;
+            list.clear();
+        }
+    }; injector::MakeInline<ResListHook>(pattern.get_first(0), pattern.get_first(6));
+
+    return 0;
+}
+
 DWORD WINAPI Init(LPVOID bDelay)
 {
     auto pattern = hook::pattern("89 85 D8 61 00 00");
@@ -312,7 +402,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     if (bDelay)
         while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
 
-    struct SetResHook
+    struct StartupHook
     {
         void operator()(injector::reg_pack& regs)
         {
@@ -334,37 +424,26 @@ DWORD WINAPI Init(LPVOID bDelay)
             if (!Screen.Width || !Screen.Height)
                 std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
 
-            Screen.fWidth = static_cast<float>(Screen.Width);
-            Screen.fHeight = static_cast<float>(Screen.Height);
-            Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
-            Screen.fHudScaleX = 1.0f / (((4.0f / 3.0f)) / (Screen.fAspectRatio));
-            Screen.fTextScaleX = 600.0f * Screen.fAspectRatio;
-            Screen.fHudOffset = ((4.0f / 3.0f) / Screen.fAspectRatio);
-            Screen.FilmstripScaleX = static_cast<int32_t>(Screen.fWidth / (1280.0f / (368.0 * ((4.0 / 3.0) / (Screen.fAspectRatio)))));
-            Screen.FilmstripOffset = static_cast<int32_t>((((Screen.fWidth / 2.0f) - ((Screen.fHeight * (4.0f / 3.0f)) / 2.0f)) * 2.0f) + ((float)Screen.FilmstripScaleX / 5.25f));
+            char UserIni[MAX_PATH];
+            GetModuleFileName(GetModuleHandle(NULL), UserIni, (sizeof(UserIni)));
+            *strrchr(UserIni, '\\') = '\0';
+            strcat(UserIni, "\\SplinterCell4.ini");
 
-            if (Screen.Width && Screen.Height)
-            {
-                char UserIni[MAX_PATH];
-                GetModuleFileName(GetModuleHandle(NULL), UserIni, (sizeof(UserIni)));
-                *strrchr(UserIni, '\\') = '\0';
-                strcat(UserIni, "\\SplinterCell4.ini");
-
-                CIniReader iniWriter(UserIni);
-                char ResX[20];
-                char ResY[20];
-                _snprintf(ResX, 20, "%d", Screen.Width);
-                _snprintf(ResY, 20, "%d", Screen.Height);
-                iniWriter.WriteString("WinDrv.WindowsClient", "WindowedViewportX", ResX);
-                iniWriter.WriteString("WinDrv.WindowsClient", "WindowedViewportY", ResY);
-                iniWriter.WriteString("WinDrv.WindowsClient", "FullscreenViewportX", ResX);
-                iniWriter.WriteString("WinDrv.WindowsClient", "FullscreenViewportY", ResY);
-            }
+            CIniReader iniWriter(UserIni);
+            char ResX[20];
+            char ResY[20];
+            _snprintf(ResX, 20, "%d", Screen.Width);
+            _snprintf(ResY, 20, "%d", Screen.Height);
+            iniWriter.WriteString("WinDrv.WindowsClient", "WindowedViewportX", ResX);
+            iniWriter.WriteString("WinDrv.WindowsClient", "WindowedViewportY", ResY);
+            iniWriter.WriteString("WinDrv.WindowsClient", "FullscreenViewportX", ResX);
+            iniWriter.WriteString("WinDrv.WindowsClient", "FullscreenViewportY", ResY);
 
             InitEngine(NULL);
             InitD3DDrv(NULL);
+            InitEchelonMenus(NULL);
         }
-    }; injector::MakeInline<SetResHook>(pattern.get_first(0), pattern.get_first(6));
+    }; injector::MakeInline<StartupHook>(pattern.get_first(0), pattern.get_first(6));
 
     //icon fix
     ico = CreateIconFromBMP(icoData);
@@ -380,6 +459,7 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 #ifdef _LOG
         logfile.open("SC4.WidescreenFix.log");
 #endif // _LOG
+
         Init(NULL);
     }
     return TRUE;
