@@ -22,6 +22,7 @@
 #define SCREEN_FOV_HORIZONTAL 90.0f
 #define SCREEN_FOV_VERTICAL (2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))
 float GetFOV(float f, float ar);
+float AdjustFOV(float f, float ar);
 
 void CreateThreadAutoClose(LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_T dwStackSize, LPTHREAD_START_ROUTINE lpStartAddress, LPVOID lpParameter, DWORD dwCreationFlags, LPDWORD lpThreadId);
 std::tuple<int32_t, int32_t> GetDesktopRes();

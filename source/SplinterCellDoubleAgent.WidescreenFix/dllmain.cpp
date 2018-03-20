@@ -4,21 +4,12 @@
 #include <D3dx9.h>
 #pragma comment(lib, "D3dx9.lib")
 
-//#define _LOG
-#ifdef _LOG
-#include <fstream>
-ofstream logfile;
-uint32_t logit;
-#endif // _LOG
-
 struct Screen
 {
     int32_t Width;
     int32_t Height;
     float fWidth;
     float fHeight;
-    float fFieldOfView;
-    float fDynamicScreenFieldOfViewScale;
     float fHudOffset;
     float fAspectRatio;
     float fHudScaleX;
@@ -26,14 +17,8 @@ struct Screen
     int32_t FilmstripScaleX;
     int32_t FilmstripOffset;
     uint32_t pFilmstripTex;
+    std::string szLoadscPath;
 } Screen;
-
-std::string szLoadscPath;
-HICON ico;
-HICON WINAPI LoadIconProxy(HINSTANCE hInstance, LPCWSTR lpIconName)
-{
-    return ico;
-}
 
 DWORD WINAPI InitD3DDrv(LPVOID bDelay)
 {
@@ -212,7 +197,7 @@ DWORD WINAPI InitD3DDrv(LPVOID bDelay)
                         {
                             IDirect3DDevice9* ppDevice = nullptr;
                             pTex->GetDevice(&ppDevice);
-                            if (D3DXCreateTextureFromFile(ppDevice, szLoadscPath.c_str(), &pTexLoadscreenCustom) == D3D_OK)
+                            if (D3DXCreateTextureFromFile(ppDevice, Screen.szLoadscPath.c_str(), &pTexLoadscreenCustom) == D3D_OK)
                                 regs.edi = (uint32_t)pTexLoadscreenCustom;
                         }
                         else
@@ -307,19 +292,12 @@ DWORD WINAPI InitEngine(LPVOID bDelay)
     injector::WriteMemory(pattern.get_first(4), &Screen.fHudOffset, true);
 
     //FOV
-#undef SCREEN_FOV_HORIZONTAL
-#undef SCREEN_FOV_VERTICAL
-#define SCREEN_FOV_HORIZONTAL 75.0f
-#define SCREEN_FOV_VERTICAL (2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))
-    Screen.fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
-
     pattern = hook::module_pattern(GetModuleHandle("Engine"), "8B 91 28 06 00 00 52 8B"); //?Draw@UGameEngine@@UAEXPAVUViewport@@HPAEPAH@Z  10530BD7
     struct UGameEngine_Draw_Hook
     {
         void operator()(injector::reg_pack& regs)
         {
-            auto f = *(float*)(regs.ecx + 0x628) * Screen.fDynamicScreenFieldOfViewScale;
-            *(float*)&regs.edx = f > 170.0f ? 170.0f : f;
+            *(float*)&regs.edx = AdjustFOV(*(float*)(regs.ecx + 0x628), Screen.fAspectRatio);
         }
     }; injector::MakeInline<UGameEngine_Draw_Hook>(pattern.get_first(0), pattern.get_first(6));
 
@@ -339,8 +317,14 @@ DWORD WINAPI InitWindow(LPVOID bDelay)
     if (bDelay)
         while (pattern.clear(GetModuleHandle("Window")).count_hint(2).empty()) { Sleep(0); };
 
-    injector::WriteMemory(*pattern.count_hint(2).get(0).get<void*>(2), LoadIconProxy, true);
-    injector::WriteMemory(*pattern.count_hint(2).get(1).get<void*>(2), LoadIconProxy, true);
+    //icon fix
+    static auto ico = CreateIconFromBMP(icoData);
+    auto LoadIconProxy = [](HINSTANCE hInstance, LPCWSTR lpIconName) -> HICON {
+        return ico;
+    };
+
+    injector::WriteMemory(*pattern.count_hint(2).get(0).get<void*>(2), static_cast<HICON(WINAPI *)(HINSTANCE, LPCWSTR)>(LoadIconProxy), true);
+    injector::WriteMemory(*pattern.count_hint(2).get(1).get<void*>(2), static_cast<HICON(WINAPI *)(HINSTANCE, LPCWSTR)>(LoadIconProxy), true);
 
     return 0;
 }
@@ -412,8 +396,8 @@ DWORD WINAPI Init(LPVOID bDelay)
             Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
             Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
             bool bForceLL = iniReader.ReadInteger("MAIN", "ForceLL", 1) != 0;
-            szLoadscPath = iniReader.GetIniPath();
-            szLoadscPath = szLoadscPath.substr(0, szLoadscPath.find_last_of('.')) + ".png";
+            Screen.szLoadscPath = iniReader.GetIniPath();
+            Screen.szLoadscPath = Screen.szLoadscPath.substr(0, Screen.szLoadscPath.find_last_of('.')) + ".png";
 
             if (bForceLL)
             {
@@ -445,10 +429,6 @@ DWORD WINAPI Init(LPVOID bDelay)
         }
     }; injector::MakeInline<StartupHook>(pattern.get_first(0), pattern.get_first(6));
 
-    //icon fix
-    ico = CreateIconFromBMP(icoData);
-    InitWindow(NULL);
-
     return 0;
 }
 
@@ -456,11 +436,8 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-#ifdef _LOG
-        logfile.open("SC4.WidescreenFix.log");
-#endif // _LOG
-
         Init(NULL);
+        InitWindow(NULL);
     }
     return TRUE;
 }
