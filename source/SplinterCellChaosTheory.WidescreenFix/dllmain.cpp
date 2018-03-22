@@ -13,8 +13,6 @@ struct Screen
     int Height;
     float fWidth;
     float fHeight;
-    float fFieldOfView;
-    float fDynamicScreenFieldOfViewScale;
     float fAspectRatio;
     float fHUDScaleX;
     float fHudOffset;
@@ -135,12 +133,6 @@ DWORD WINAPI Init(LPVOID bDelay)
                 WidescreenHudOffset._float = fWidescreenHudOffset;
             }
 
-            #undef SCREEN_FOV_HORIZONTAL	
-            #undef SCREEN_FOV_VERTICAL		
-            #define SCREEN_FOV_HORIZONTAL 75.0f
-            #define SCREEN_FOV_VERTICAL (2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))
-            Screen.fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
-
             //FMV
             //Screen.fFMVoffsetStartX = ((Screen.fHeight * Screen.fAspectRatio) - (Screen.fHeight * (4.0f / 3.0f))) / 2.0f;
             //injector::WriteMemory(0x10C863D6 + 0x4, Screen.fFMVoffsetStartX, true);
@@ -194,19 +186,19 @@ DWORD WINAPI Init(LPVOID bDelay)
             int32_t fBottom = *(int16_t*)(regs.esp + 0x46);  // 480
             FColor Color; Color.RGBA = *(int32_t*)(regs.esp + 0x3C);
 
-            #ifdef _LOG
+#ifdef _LOG
             if (logit)
                 logfile << std::dec << fLeft << " " << fRight << " " << fTop << " " << fBottom << " " << std::hex << Color.RGBA << std::endl;
-            #endif // _LOG
+#endif // _LOG
 
-            if ((fLeft == 0 && fRight == 640 /*&& fTop == 0 && fBottom == 480*/) || (fLeft == -2 && fRight == 639 && fTop == -2 && fBottom == 479) 
+            if ((fLeft == 0 && fRight == 640 /*&& fTop == 0 && fBottom == 480*/) || (fLeft == -2 && fRight == 639 && fTop == -2 && fBottom == 479)
                 || (fLeft == -1 && fRight == 640 && fTop == -2 && fBottom == 479) || (fTop == 0 && fBottom == 512)) //fullscreen images, 0 512 - camera feed overlay
             {
                 Screen.fHUDScaleXDyn = Screen.fHUDScaleXOriginal;
                 Screen.fHudOffsetDyn = Screen.fHudOffsetOriginal;
                 return;
             }
-            
+
             if (bIsInMenu && *bIsInMenu == 0)
             {
                 if ((fLeft == -1 && fRight == 256) || (fLeft == -2 && fRight == 255) || (fLeft == -61 && fRight == 319) || (fLeft == -60 && fRight == 320)) //scopes image left
@@ -242,22 +234,22 @@ DWORD WINAPI Init(LPVOID bDelay)
                     return;
 
                 if (
-                (
+                    (
                     (Color.RGBA == 0x99ffffff || Color.RGBA == 0xc8ffffff || Color.RGBA == 0x59ffffff || Color.RGBA == 0x80ffffff || Color.RGBA == 0x32ffffff || Color.RGBA == 0x96ffffff) && //top right menus colors
-                    ((fLeft >= 421 && fLeft <= 435) && (fRight >= 421 && fRight <= 435) && fTop >= 0 && fBottom <= 200) || //top right menu LEFT
-                    ((fLeft >= 421 && fLeft <= 438) && (fRight <= 630) && fTop >= 0 && fBottom <= 200) || //top right menu MIDDLE
-                    ((fLeft >= 600 && fLeft <= 635) && (fRight >= 600 && fRight <= 635) && fTop >= 0 && fBottom <= 200)    //top right menu RIGHT
-                )
-                ||
-                (
+                        ((fLeft >= 421 && fLeft <= 435) && (fRight >= 421 && fRight <= 435) && fTop >= 0 && fBottom <= 200) || //top right menu LEFT
+                        ((fLeft >= 421 && fLeft <= 438) && (fRight <= 630) && fTop >= 0 && fBottom <= 200) || //top right menu MIDDLE
+                        ((fLeft >= 600 && fLeft <= 635) && (fRight >= 600 && fRight <= 635) && fTop >= 0 && fBottom <= 200)    //top right menu RIGHT
+                        )
+                    ||
+                    (
                     (Color.RGBA == 0x4bb8fac8 || Color.RGBA == 0x32ffffff || Color.RGBA == 0x40ffffff || Color.RGBA == 0x59ffffff || Color.RGBA == 0x80ffffff || Color.RGBA == 0x96ffffff || Color.RGBA == 0x99ffffff || Color.RGBA == 0xc8ffffff || Color.RGBA == 0xffffffff || (Color.R == 0xb8 && Color.G == 0xf7 && Color.B == 0xc8)) &&
-                    ((fLeft >= 465 && fLeft <= 622) && (fRight >= 468 && fRight <= 625) && fTop >= 360 && fBottom <= 465) //bottom right panel
-                )
-                ||
-                (
+                        ((fLeft >= 465 && fLeft <= 622) && (fRight >= 468 && fRight <= 625) && fTop >= 360 && fBottom <= 465) //bottom right panel
+                        )
+                    ||
+                    (
                     (Color.R == 0xff && Color.G == 0xff && Color.B == 0xff) && //objective text popup
-                    ((fLeft >= 465 && fLeft <= 622) && (fRight >= 468 && fRight <= 625) && fTop >= 250 && fBottom <= 351)
-                )
+                        ((fLeft >= 465 && fLeft <= 622) && (fRight >= 468 && fRight <= 625) && fTop >= 250 && fBottom <= 351)
+                        )
                     )
                 {
                     if ( //excludes
@@ -265,7 +257,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                         !(fLeft == 562 && fRight == 566 && fTop == 409 && fBottom == 410) && // camera screen bracket ]
                         !(fLeft == 562 && fRight == 566 && fTop == 424 && fBottom == 425) && // camera screen bracket ]
                         !((((fRight - fLeft) == 1) || ((fRight - fLeft) == 2) || ((fRight - fLeft) == 3) || ((fRight - fLeft) == 4)) && ((fBottom - fTop) == 1 || (fBottom - fTop) == 16 || (fBottom - fTop) == 21 || (fBottom - fTop) == 22) && (fTop >= 195 && fBottom <= 395)) //other brackets of overlay menus
-                        ) 
+                        )
                     {
                         *(int16_t*)(regs.esp + 0x40) += WidescreenHudOffset._int;
                         *(int16_t*)(regs.esp + 0x42) += WidescreenHudOffset._int;
@@ -284,7 +276,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             *(int32_t*)(regs.esp + 0x68) = Screen.nScopeScale;
         }
     }; injector::MakeInline<ScopeHook>(pattern.get_first(0), pattern.get_first(6)); //0x10C9A646
-    
+
     //TEXT
     pattern = hook::pattern("D8 3D ? ? ? ? D9 5C 24 68 DB");
     injector::WriteMemory(pattern.get_first(2), &Screen.fTextScaleX, true); //0x10B149CE + 0x2
@@ -305,18 +297,18 @@ DWORD WINAPI Init(LPVOID bDelay)
                 int32_t offset3 = static_cast<int32_t>(*(float*)(regs.esp + 0x1C));
                 FColor Color; Color.RGBA = *(int32_t*)(regs.esp + 0x160);
 
-                #ifdef _LOG
+#ifdef _LOG
                 if (logit)
                     logfile << std::dec << offset1 << " " << offset2 << " " << offset3 << " " << std::hex << Color.RGBA << std::endl;
-                #endif // _LOG
+#endif // _LOG
                 if (bIsInMenu && *bIsInMenu == 0)
                 {
                     if (
-                    ((offset1 == 435 || offset1 == 436 || offset1 == 437) && (offset2 >= 3 && offset2 <= 21) && (offset3 == 313 || offset3 == 329 || offset3 == 345 || offset3 == 361 || offset3 == 377 || offset3 == 393 || offset3 == 416) && ((Color.R == 0xff && Color.G == 0xff && Color.B == 0xff) || (Color.R == 0xb8 && Color.G == 0xfa && Color.B == 0xc8) || (Color.R == 0x66 && Color.G == 0x66 && Color.B == 0x66))) || // top corner
-                    ((offset1 >= 489 && offset1 <= 598) && ((offset2 >= 1 && offset2 <= 20)) && (offset3 == 23 || offset3 == 39 || offset3 == 93) && ((Color.R == 0xff && Color.G == 0xff && Color.B == 0xff) || (Color.R == 0xb8 && Color.G == 0xfa && Color.B == 0xc8))) || // bottom corner
-                    (offset1 == 598 && offset2 == 3 && offset3 == 93 && (Color.R == 0xb8 && Color.G == 0xf7 && Color.B == 0xc8)) || //icons text
-                    ((offset1 >= 465 && offset1 <= 615) && (offset2 >= 3 && offset2 <= 75) && (offset3 >= 128 && offset3 <= 215) && (Color.R == 0xb8 && Color.G == 0xf7 && Color.B == 0xc8)) // objective popup text
-                    )
+                        ((offset1 == 435 || offset1 == 436 || offset1 == 437) && (offset2 >= 3 && offset2 <= 21) && (offset3 == 313 || offset3 == 329 || offset3 == 345 || offset3 == 361 || offset3 == 377 || offset3 == 393 || offset3 == 416) && ((Color.R == 0xff && Color.G == 0xff && Color.B == 0xff) || (Color.R == 0xb8 && Color.G == 0xfa && Color.B == 0xc8) || (Color.R == 0x66 && Color.G == 0x66 && Color.B == 0x66))) || // top corner
+                        ((offset1 >= 489 && offset1 <= 598) && ((offset2 >= 1 && offset2 <= 20)) && (offset3 == 23 || offset3 == 39 || offset3 == 93) && ((Color.R == 0xff && Color.G == 0xff && Color.B == 0xff) || (Color.R == 0xb8 && Color.G == 0xfa && Color.B == 0xc8))) || // bottom corner
+                        (offset1 == 598 && offset2 == 3 && offset3 == 93 && (Color.R == 0xb8 && Color.G == 0xf7 && Color.B == 0xc8)) || //icons text
+                        ((offset1 >= 465 && offset1 <= 615) && (offset2 >= 3 && offset2 <= 75) && (offset3 >= 128 && offset3 <= 215) && (Color.R == 0xb8 && Color.G == 0xf7 && Color.B == 0xc8)) // objective popup text
+                        )
                     {
                         *(float*)(regs.esp + 0x14) += WidescreenHudOffset._float;
                     }
@@ -331,7 +323,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     {
         void operator()(injector::reg_pack& regs)
         {
-            *(float*)&regs.edx = *(float*)(regs.ecx + 0x2BC) * Screen.fDynamicScreenFieldOfViewScale;
+            *(float*)&regs.edx = AdjustFOV(*(float*)(regs.ecx + 0x2BC), Screen.fAspectRatio);
         }
     }; injector::MakeInline<UGameEngine_Draw_Hook>(pattern.get_first(0), pattern.get_first(6)); //0x10A3E67F
 
@@ -340,7 +332,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     {
         void operator()(injector::reg_pack& regs)
         {
-            *(float*)&regs.ecx = *(float*)(regs.eax + 0x2BC) * Screen.fDynamicScreenFieldOfViewScale;
+            *(float*)&regs.ecx = AdjustFOV(*(float*)(regs.eax + 0x2BC), Screen.fAspectRatio);
         }
     }; injector::MakeInline<UGameEngine_Draw_Hook2>(pattern.get_first(0), pattern.get_first(6)); //0x10A3E8A0
 
@@ -351,9 +343,9 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        #ifdef _LOG
+#ifdef _LOG
         logfile.open("SC3.WidescreenFix.log");
-        #endif // _LOG
+#endif // _LOG
         Init(NULL);
     }
     return TRUE;

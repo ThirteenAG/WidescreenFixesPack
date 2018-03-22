@@ -47,36 +47,36 @@ void WidescreenHud(float& offsetX1, float& offsetX2, float& offsetY1, float& off
 #endif // _LOG
 
     if (
-    ((offsetX2 - offsetX1 == 17) && (offsetY1 == 337.0f || offsetY1 == 360.0f) && (offsetY2 == 368.0f || offsetY2 == 345.0f) /*&& Color.RGBA == 4266682200*/) || //stealth meter line 
-    ((offsetX2 - offsetX1 == 109) && offsetY1 == 338.0f && offsetY2 == 368.0f && (Color.RGBA == 4266682200 || Color.RGBA == 4271286934)) || //stealth meter
-    (offsetX1 == 491.0f && offsetX2 == 592.0f && offsetY1 == 373.0f && offsetY2 == 441.0f && Color.RGBA == 4266682200) || //weapon icon background
-    ((offsetX1 == 487.0f || offsetX1 == 503.0f || offsetX1 == 580.0f) && (offsetX2 == 503.0f || offsetX2 == 580.0f || offsetX2 == 596.0f) && (offsetY1 == 369.0f || offsetY1 == 385.0f || offsetY1 == 429.0f) && Color.RGBA == 2152752984) || //weapon icon background border
-    (offsetX1 >= 562.0f && offsetX2 <= 602.0f && offsetY1 == 316.0f && offsetY2 == 330.0f && Color.RGBA == 4265759816) || //alarm counter digits text
-    (offsetX1 >= 562.0f && offsetX2 <= 602.0f && offsetY1 == 315.0f && offsetY2 == 330.0f && Color.RGBA == 4265759816) || //alarm counter digits text (russian)
-    ((offsetX1 == 570.0f || offsetX1 == 586.0f) && (offsetX2 == 586.0f || offsetX2 == 602.0f) /*&& (offsetY1 == 125.0f || offsetY1 == 141.0f || offsetY1 == 269.0f)*/ /*&& (offsetY2 == 141.0f || offsetY2 == 269.0f || offsetY2 == 285.0f)*/ && Color.RGBA == 3360712536) || //health bar
-    (offsetX1 == 492.0f && offsetX2 == 519.0f && offsetY1 == 314.0f && offsetY2 == 333.0f && Color.RGBA == 4266682200) || //envelope icon
-    (offsetX1 == 521.0f && offsetX2 == 562.0f && offsetY1 == 306.0f && offsetY2 == 340.0f && (Color.RGBA == 4266682200 || Color.RGBA == 2152752984)) || //alarm icon
-    ((offsetX1 == 494.0f || offsetX1 == 515.0f) && offsetY1 == 377.0f /*&& offsetY2 == 423.0f*/ && Color.RGBA == 4266682200) || //weapon icon
-    (offsetX1 >= 491.0f && /*offsetX2 == 519.0f &&*/ offsetY1 == 423.0f && offsetY2 == 437.0f /*&& Color.RGBA == 4265759816*/) || //weapon name text
-    (offsetX1 >= 490.0f && /*offsetX2 == 519.0f &&*/ offsetY1 == 423.0f && offsetY2 == 438.0f /*&& Color.RGBA == 4265759816*/) || //weapon name text (russian)
-    (offsetX1 >= 571.0f && /*offsetX2 == 519.0f &&*/ offsetY1 == 373.0f && offsetY2 == 385.0f && Color.RGBA == 4265759816) || //ammo text
-    (offsetX1 >= 571.0f && /*offsetX2 == 519.0f &&*/ offsetY1 == 373.0f && offsetY2 == 388.0f && Color.RGBA == 4265759816) || //ammo text (russian)
-    (offsetX1 == 581.0f && (offsetX2 == 588.0f || offsetX2 == 592.0f) /*&& (Color.RGBA == 4266682200 || Color.RGBA == 4265759816)*/) ||  //bullets image
-    (offsetX1 == 568.0f /*&& (offsetX2 == 588.0f || offsetX2 == 592.0f)*/&& offsetY1 == 406.0f /*&& (Color.RGBA == 4266682200 /*|| Color.RGBA == 4265759816)*/) ||  //another bullet image
-    (offsetX1 >= 536.0f && offsetX2 <= 576.0f && offsetY1 == 416.0f && offsetY2 == 421.0f /*&& Color.RGBA == 0xFE000000*/) || //rate of fire image
-    (offsetX1 == 441.0f && offsetX2 == 481.0f && offsetY1 == 373.0f && offsetY2 == 413.0f && Color.RGBA == 4266682200) || //weapon addon icon background
-    (offsetX1 == 439.0f && offsetX2 == 483.0f && offsetY1 == 380.0f && offsetY2 == 412.0f && Color.RGBA == 4266682200) || //weapon addon icon
-    ((offsetX1 == 437.0f || offsetX1 == 453.0f || offsetX1 == 469.0f) && (offsetX2 == 453.0f || offsetX2 == 469.0f || offsetX2 == 485.0f) && (offsetY1 == 369.0f || offsetY1 == 385.0f || offsetY1 == 401.0f) && Color.RGBA == 2152752984) || //weapon addon icon background border
-    ((offsetX1 == 452.0f || offsetX1 == 456.0f || offsetX1 == 457.0f || offsetX1 == 460.0f) && (offsetX2 == 460.0f || offsetX2 == 465.0f || offsetX2 == 467.0f || offsetX2 == 469.0f) && offsetY1 == 371.0f && offsetY2 == 383.0f && Color.RGBA == 4265759816) || //weapon addon ammo text
-    ((offsetX1 == 452.0f || offsetX1 == 456.0f || offsetX1 == 457.0f || offsetX1 == 460.0f) && (offsetX2 == 460.0f || offsetX2 == 464.0f || offsetX2 == 467.0f || offsetX2 == 469.0f) && offsetY1 == 371.0f && offsetY2 == 386.0f && Color.RGBA == 4265759816) || //weapon addon ammo text (russian)
-    (offsetX1 == 362.0f && offsetX2 == 562.0f /*&& offsetY1 == 42.0f && offsetY2 == 66.0f*/ && (Color.RGBA == 4266682200 || Color.RGBA == 4269316740)) || //interaction menu background
-    ((offsetX1 == 422.0f || offsetX1 == 443.0f) && offsetX2 == 562.0f /*&& offsetY1 == 42.0f && offsetY2 == 66.0f*/ && (Color.RGBA == 4266682200 || Color.RGBA == 4269316740)) || //interaction menu background (russian)
-    ((offsetX1 == 359.0f || offsetX1 == 375.0f || offsetX1 == 549.0f || offsetX1 == 554.0f) && (offsetX2 == 375.0f || offsetX2 == 370.0f || offsetX2 == 549.0f || offsetX2 == 565.0f) && (Color.RGBA == 2152752984 || Color.RGBA == 4266682200)) || //interaction menu background border
-    ((offsetX1 == 440.0f || offsetX1 == 456.0f || offsetX1 == 537.0f || offsetX1 == 554.0f) && (offsetX2 == 456.0f || offsetX2 == 451.0f || offsetX2 == 549.0f || offsetX2 == 565.0f) && (Color.RGBA == 2152752984 || Color.RGBA == 4266682200)) || //interaction menu background border (russian)
-    ((offsetX1 == 419.0f || offsetX1 == 435.0f || offsetX1 == 439.0f || offsetX1 == 549.0f) && (offsetX2 == 435.0f || offsetX2 == 430.0f || offsetX2 == 549.0f || offsetX2 == 565.0f) && (Color.RGBA == 2152752984 || Color.RGBA == 4266682200)) || //interaction menu background border (russian2)
-    (offsetX1 >= 365.0f && offsetY1 >= 42.0f && offsetY2 <= 192.0f && (Color.RGBA == 4265759816 || Color.RGBA == 4269316740)) || //interaction menu text
-    ((offsetX1 == 371.0f || offsetX1 == 379.0f || offsetX1 == 387.0f || offsetX1 == 558.0f || offsetX1 == 566.0f) && offsetY1 >= 39.0f && offsetY2 <= 162.0f && (Color.RGBA == 4266682200 || Color.RGBA == 3036610302)) // turret interface, Color.RGBA == 4271155864 -> turret mouse area, maybe something else
-    )
+        ((offsetX2 - offsetX1 == 17) && (offsetY1 == 337.0f || offsetY1 == 360.0f) && (offsetY2 == 368.0f || offsetY2 == 345.0f) /*&& Color.RGBA == 4266682200*/) || //stealth meter line 
+        ((offsetX2 - offsetX1 == 109) && offsetY1 == 338.0f && offsetY2 == 368.0f && (Color.RGBA == 4266682200 || Color.RGBA == 4271286934)) || //stealth meter
+        (offsetX1 == 491.0f && offsetX2 == 592.0f && offsetY1 == 373.0f && offsetY2 == 441.0f && Color.RGBA == 4266682200) || //weapon icon background
+        ((offsetX1 == 487.0f || offsetX1 == 503.0f || offsetX1 == 580.0f) && (offsetX2 == 503.0f || offsetX2 == 580.0f || offsetX2 == 596.0f) && (offsetY1 == 369.0f || offsetY1 == 385.0f || offsetY1 == 429.0f) && Color.RGBA == 2152752984) || //weapon icon background border
+        (offsetX1 >= 562.0f && offsetX2 <= 602.0f && offsetY1 == 316.0f && offsetY2 == 330.0f && Color.RGBA == 4265759816) || //alarm counter digits text
+        (offsetX1 >= 562.0f && offsetX2 <= 602.0f && offsetY1 == 315.0f && offsetY2 == 330.0f && Color.RGBA == 4265759816) || //alarm counter digits text (russian)
+        ((offsetX1 == 570.0f || offsetX1 == 586.0f) && (offsetX2 == 586.0f || offsetX2 == 602.0f) /*&& (offsetY1 == 125.0f || offsetY1 == 141.0f || offsetY1 == 269.0f)*/ /*&& (offsetY2 == 141.0f || offsetY2 == 269.0f || offsetY2 == 285.0f)*/ && Color.RGBA == 3360712536) || //health bar
+        (offsetX1 == 492.0f && offsetX2 == 519.0f && offsetY1 == 314.0f && offsetY2 == 333.0f && Color.RGBA == 4266682200) || //envelope icon
+        (offsetX1 == 521.0f && offsetX2 == 562.0f && offsetY1 == 306.0f && offsetY2 == 340.0f && (Color.RGBA == 4266682200 || Color.RGBA == 2152752984)) || //alarm icon
+        ((offsetX1 == 494.0f || offsetX1 == 515.0f) && offsetY1 == 377.0f /*&& offsetY2 == 423.0f*/ && Color.RGBA == 4266682200) || //weapon icon
+        (offsetX1 >= 491.0f && /*offsetX2 == 519.0f &&*/ offsetY1 == 423.0f && offsetY2 == 437.0f /*&& Color.RGBA == 4265759816*/) || //weapon name text
+        (offsetX1 >= 490.0f && /*offsetX2 == 519.0f &&*/ offsetY1 == 423.0f && offsetY2 == 438.0f /*&& Color.RGBA == 4265759816*/) || //weapon name text (russian)
+        (offsetX1 >= 571.0f && /*offsetX2 == 519.0f &&*/ offsetY1 == 373.0f && offsetY2 == 385.0f && Color.RGBA == 4265759816) || //ammo text
+        (offsetX1 >= 571.0f && /*offsetX2 == 519.0f &&*/ offsetY1 == 373.0f && offsetY2 == 388.0f && Color.RGBA == 4265759816) || //ammo text (russian)
+        (offsetX1 == 581.0f && (offsetX2 == 588.0f || offsetX2 == 592.0f) /*&& (Color.RGBA == 4266682200 || Color.RGBA == 4265759816)*/) ||  //bullets image
+        (offsetX1 == 568.0f /*&& (offsetX2 == 588.0f || offsetX2 == 592.0f)*/&& offsetY1 == 406.0f /*&& (Color.RGBA == 4266682200 /*|| Color.RGBA == 4265759816)*/) ||  //another bullet image
+        (offsetX1 >= 536.0f && offsetX2 <= 576.0f && offsetY1 == 416.0f && offsetY2 == 421.0f /*&& Color.RGBA == 0xFE000000*/) || //rate of fire image
+        (offsetX1 == 441.0f && offsetX2 == 481.0f && offsetY1 == 373.0f && offsetY2 == 413.0f && Color.RGBA == 4266682200) || //weapon addon icon background
+        (offsetX1 == 439.0f && offsetX2 == 483.0f && offsetY1 == 380.0f && offsetY2 == 412.0f && Color.RGBA == 4266682200) || //weapon addon icon
+        ((offsetX1 == 437.0f || offsetX1 == 453.0f || offsetX1 == 469.0f) && (offsetX2 == 453.0f || offsetX2 == 469.0f || offsetX2 == 485.0f) && (offsetY1 == 369.0f || offsetY1 == 385.0f || offsetY1 == 401.0f) && Color.RGBA == 2152752984) || //weapon addon icon background border
+        ((offsetX1 == 452.0f || offsetX1 == 456.0f || offsetX1 == 457.0f || offsetX1 == 460.0f) && (offsetX2 == 460.0f || offsetX2 == 465.0f || offsetX2 == 467.0f || offsetX2 == 469.0f) && offsetY1 == 371.0f && offsetY2 == 383.0f && Color.RGBA == 4265759816) || //weapon addon ammo text
+        ((offsetX1 == 452.0f || offsetX1 == 456.0f || offsetX1 == 457.0f || offsetX1 == 460.0f) && (offsetX2 == 460.0f || offsetX2 == 464.0f || offsetX2 == 467.0f || offsetX2 == 469.0f) && offsetY1 == 371.0f && offsetY2 == 386.0f && Color.RGBA == 4265759816) || //weapon addon ammo text (russian)
+        (offsetX1 == 362.0f && offsetX2 == 562.0f /*&& offsetY1 == 42.0f && offsetY2 == 66.0f*/ && (Color.RGBA == 4266682200 || Color.RGBA == 4269316740)) || //interaction menu background
+        ((offsetX1 == 422.0f || offsetX1 == 443.0f) && offsetX2 == 562.0f /*&& offsetY1 == 42.0f && offsetY2 == 66.0f*/ && (Color.RGBA == 4266682200 || Color.RGBA == 4269316740)) || //interaction menu background (russian)
+        ((offsetX1 == 359.0f || offsetX1 == 375.0f || offsetX1 == 549.0f || offsetX1 == 554.0f) && (offsetX2 == 375.0f || offsetX2 == 370.0f || offsetX2 == 549.0f || offsetX2 == 565.0f) && (Color.RGBA == 2152752984 || Color.RGBA == 4266682200)) || //interaction menu background border
+        ((offsetX1 == 440.0f || offsetX1 == 456.0f || offsetX1 == 537.0f || offsetX1 == 554.0f) && (offsetX2 == 456.0f || offsetX2 == 451.0f || offsetX2 == 549.0f || offsetX2 == 565.0f) && (Color.RGBA == 2152752984 || Color.RGBA == 4266682200)) || //interaction menu background border (russian)
+        ((offsetX1 == 419.0f || offsetX1 == 435.0f || offsetX1 == 439.0f || offsetX1 == 549.0f) && (offsetX2 == 435.0f || offsetX2 == 430.0f || offsetX2 == 549.0f || offsetX2 == 565.0f) && (Color.RGBA == 2152752984 || Color.RGBA == 4266682200)) || //interaction menu background border (russian2)
+        (offsetX1 >= 365.0f && offsetY1 >= 42.0f && offsetY2 <= 192.0f && (Color.RGBA == 4265759816 || Color.RGBA == 4269316740)) || //interaction menu text
+        ((offsetX1 == 371.0f || offsetX1 == 379.0f || offsetX1 == 387.0f || offsetX1 == 558.0f || offsetX1 == 566.0f) && offsetY1 >= 39.0f && offsetY2 <= 162.0f && (Color.RGBA == 4266682200 || Color.RGBA == 3036610302)) // turret interface, Color.RGBA == 4271155864 -> turret mouse area, maybe something else
+        )
     {
         offsetX1 += fWidescreenHudOffset;
         offsetX2 += fWidescreenHudOffset;
@@ -84,11 +84,11 @@ void WidescreenHud(float& offsetX1, float& offsetX2, float& offsetY1, float& off
     else
     {
         if (
-        (offsetX1 == 48.0f && offsetX2 == 348.0f && offsetY1 >= 42.0f && offsetY2 <= 87.0f && Color.RGBA == 4266682200) || //top dialogue menu background
-        (offsetX1 == 48.0f && offsetX2 == 348.0f && offsetY1 >= 42.0f && offsetY2 <= 90.0f && Color.RGBA == 4266682200) || //top dialogue menu background (russian)
-        ((offsetX1 == 45.0f || offsetX1 == 61.0f || offsetX1 == 335.0f ) && (offsetX2 == 61.0f || offsetX2 == 335.0f || offsetX2 == 351.0f) && Color.RGBA == 4266682200) || //top dialogue menu background border
-        (offsetX1 >= 52.0f && offsetY1 >= 43.0f && offsetY2 <= 185.0f && Color.RGBA == 4265759816) //top dialogue menu text
-        )
+            (offsetX1 == 48.0f && offsetX2 == 348.0f && offsetY1 >= 42.0f && offsetY2 <= 87.0f && Color.RGBA == 4266682200) || //top dialogue menu background
+            (offsetX1 == 48.0f && offsetX2 == 348.0f && offsetY1 >= 42.0f && offsetY2 <= 90.0f && Color.RGBA == 4266682200) || //top dialogue menu background (russian)
+            ((offsetX1 == 45.0f || offsetX1 == 61.0f || offsetX1 == 335.0f) && (offsetX2 == 61.0f || offsetX2 == 335.0f || offsetX2 == 351.0f) && Color.RGBA == 4266682200) || //top dialogue menu background border
+            (offsetX1 >= 52.0f && offsetY1 >= 43.0f && offsetY2 <= 185.0f && Color.RGBA == 4265759816) //top dialogue menu text
+            )
         {
             offsetX1 -= fWidescreenHudOffset;
             offsetX2 -= fWidescreenHudOffset;
@@ -108,20 +108,20 @@ void __declspec(naked) DisplayVideo_Hook()
         mov		__ECX, ecx
         mov ecx, nFMVWidescreenMode
         cmp ecx, 0
-    jz label1
+        jz label1
         mov ecx, Screen.fFMVoffsetStartY
         mov[esp + 4h], ecx;
         mov ecx, Screen.fFMVoffsetEndY
-        mov[esp + 0xC], ecx;
-    jmp label2
-    label1:
+            mov[esp + 0xC], ecx;
+        jmp label2
+            label1 :
         mov ecx, Screen.fFMVoffsetStartX
-        mov[esp + 0h], ecx;
+            mov[esp + 0h], ecx;
         mov ecx, Screen.fFMVoffsetEndX
-        mov[esp + 8h], ecx;
+            mov[esp + 8h], ecx;
     label2:
         mov	 ecx, __ECX
-        jmp	 DisplayVideo_HookJmp
+            jmp	 DisplayVideo_HookJmp
     }
 }
 
@@ -325,23 +325,13 @@ DWORD WINAPI InitEngine(LPVOID bDelay)
 
 
     //FOV
-    #undef SCREEN_FOV_HORIZONTAL	
-    #undef SCREEN_FOV_VERTICAL		
-    #define SCREEN_FOV_HORIZONTAL 75.0f
-    #define SCREEN_FOV_VERTICAL (2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))
-    static float fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
-
     uint32_t pfDraw = (uint32_t)hook::module_pattern(GetModuleHandle("Engine"), "81 EC 84 06 00 00 A1 ? ? ? ? 53 56 57").get_first();
     rpattern = hook::range_pattern(pfDraw, pfDraw + 0x1036, "8B ? ? 03 00 00");
     struct UGameEngine_Draw_Hook
     {
         void operator()(injector::reg_pack& regs)
         {
-            float fFovVal = *(float*)(regs.eax + 0x374);
-            if (fFovVal < 100.0f)
-                *(float*)&regs.ecx = fFovVal * fDynamicScreenFieldOfViewScale;
-            else
-                *(float*)&regs.ecx = fFovVal;
+            *(float*)&regs.ecx = AdjustFOV(*(float*)(regs.eax + 0x374), Screen.fAspectRatio);
         }
     }; injector::MakeInline<UGameEngine_Draw_Hook>(rpattern.get(0).get<uint32_t>(0), rpattern.get(0).get<uint32_t>(0 + 6));
 
@@ -349,25 +339,11 @@ DWORD WINAPI InitEngine(LPVOID bDelay)
     {
         void operator()(injector::reg_pack& regs)
         {
-            float fFovVal = *(float*)(regs.edx + 0x374);
-            if (fFovVal < 100.0f)
-                *(float*)&regs.eax = fFovVal * fDynamicScreenFieldOfViewScale;
-            else
-                *(float*)&regs.eax = fFovVal;
+            *(float*)&regs.eax = AdjustFOV(*(float*)(regs.edx + 0x374), Screen.fAspectRatio);
         }
-    }; injector::MakeInline<UGameEngine_Draw_Hook2>(rpattern.get(2).get<uint32_t>(0), rpattern.get(2).get<uint32_t>(0 + 6));
-
-    struct UGameEngine_Draw_Hook3 //1038B0E2
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            float fFovVal = *(float*)(regs.edx + 0x374);
-            if (fFovVal < 100.0f)
-                *(float*)&regs.eax = fFovVal * fDynamicScreenFieldOfViewScale;
-            else
-                *(float*)&regs.eax = fFovVal;
-        }
-    }; injector::MakeInline<UGameEngine_Draw_Hook3>(rpattern.get(3).get<uint32_t>(0), rpattern.get(3).get<uint32_t>(0 + 6));
+    };
+    injector::MakeInline<UGameEngine_Draw_Hook2>(rpattern.get(2).get<uint32_t>(0), rpattern.get(2).get<uint32_t>(0 + 6));
+    injector::MakeInline<UGameEngine_Draw_Hook2>(rpattern.get(3).get<uint32_t>(0), rpattern.get(3).get<uint32_t>(0 + 6));
 
     if (Screen.fAspectRatio < (16.0f / 9.0f))
     {
@@ -460,9 +436,9 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        #ifdef _LOG
+#ifdef _LOG
         logfile.open("SC2.WidescreenFix.log");
-        #endif // _LOG
+#endif // _LOG
         Init(NULL);
     }
     return TRUE;

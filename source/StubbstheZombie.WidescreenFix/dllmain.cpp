@@ -27,10 +27,10 @@ void __declspec(naked) GUIHook()
 {
     _asm mov _EAX, eax
     _asm mov eax, dword ptr[esp + 0x13C]
-    _asm mov fElementWidth1, eax
+        _asm mov fElementWidth1, eax
     _asm mov eax, dword ptr[esp + 0x230]
-    _asm mov fElementWidth2, eax
-    
+        _asm mov fElementWidth2, eax
+
     if (fElementWidth1 == 640.0f || fElementWidth2 == 640.0f || fElementWidth1 == 641.0f || fElementWidth2 == 641.0f)
     {
         _asm mov eax, f0031
@@ -83,7 +83,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             std::set<std::string> ext2((std::istream_iterator<std::string>(s2)), std::istream_iterator<std::string>());
 
             static std::ostringstream is;
-            std::set_intersection(ext1.begin(), ext1.end(),	ext2.begin(), ext2.end(), std::ostream_iterator<std::string>(is, " "));
+            std::set_intersection(ext1.begin(), ext1.end(), ext2.begin(), ext2.end(), std::ostream_iterator<std::string>(is, " "));
 
             regs.eax = (uintptr_t)is.str().c_str();
             regs.edx = regs.esp + 0xA0;
@@ -123,11 +123,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     GUIHookJmp = (uintptr_t)pattern.count(1).get(0).get<uint32_t>(6);
 
     //FOV
-    #undef SCREEN_FOV_HORIZONTAL
-    #undef SCREEN_FOV_VERTICAL
-    #define SCREEN_FOV_HORIZONTAL 60.0f
-    #define SCREEN_FOV_VERTICAL (2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))
-    Screen.fFieldOfView = 2.8f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * (Screen.fAspectRatio))) * (1.0f / SCREEN_FOV_HORIZONTAL);
+    Screen.fFieldOfView = AdjustFOV(1.0f, Screen.fAspectRatio);
     pattern = hook::pattern("D8 3D ? ? ? ? D9 C0 D8 8F ? ? ? ? D9 9F ? ? ? ? D9 C0"); //0x466AB0
     injector::WriteMemory(pattern.count(2).get(0).get<uint32_t>(2), &Screen.fFieldOfView, true);
     injector::WriteMemory(pattern.count(2).get(1).get<uint32_t>(2), &Screen.fFieldOfView, true);

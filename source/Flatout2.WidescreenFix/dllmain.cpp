@@ -26,49 +26,53 @@ uintptr_t* dword_8DA718;
 void __declspec(naked) sub_4B4C50()
 {
     const static float flt_67DBE4 = 0.0015625f;
-    _asm sub     esp, 0x34
-    _asm test    eax, eax
-    _asm mov     ecx, 0x8DA718
-    _asm mov     ecx, [ecx]
-    _asm fild    dword ptr [ecx+0x8]
-    _asm mov     dword ptr [esp], 0
-    _asm fild    dword ptr [ecx+0x0C]
-    _asm fstp    dword ptr [esp+0x0C]
-    _asm fld     ds:flt_67DBE4
-    _asm jmp     dword_4B4C72
+    _asm {
+        sub     esp, 0x34
+        test    eax, eax
+        mov     ecx, 0x8DA718
+        mov     ecx, [ecx]
+        fild    dword ptr[ecx + 0x8]
+        mov     dword ptr[esp], 0
+        fild    dword ptr[ecx + 0x0C]
+        fstp    dword ptr[esp + 0x0C]
+        fld     ds : flt_67DBE4
+        jmp     dword_4B4C72
+    }
 }
 
 void __declspec(naked) sub_4B4BF0()
 {
-    _asm sub     esp, 8
-    _asm movzx   eax, byte ptr [ecx+1Ch]
-    _asm fld     dword ptr [esp+18h]
-    _asm mov     edx, [ecx+4]
-    _asm mov     ecx, [ecx+10h]
-    _asm lea     edx, [edx+eax*8]
-    _asm push    esi
-    _asm push    edi
-    _asm fmul    dword ptr [edx]
-    _asm shl     eax, 4
-    _asm lea     esi, [eax+ecx]
-    _asm mov     eax, [esp+18h]
-    _asm mov     ecx, [esp+14h]
-    _asm fstp    dword ptr [esp+8]
-    _asm fld     dword ptr [esp+20h]
-    _asm lea     edi, [esp+8]
-    _asm fmul    dword ptr [edx+4]
-    _asm mov     edx, [esp+1Ch]
-    _asm push    edx
-    _asm push    eax
-    _asm mov     eax, [esp+2Ch]
-    _asm fstp    dword ptr [esp+14h]
-    _asm lea     edx, [esi+8]
-    _asm push    ecx
-    _asm call    sub_4B4C50
-    _asm pop     edi
-    _asm pop     esi
-    _asm add     esp, 8
-    _asm retn    14h
+    _asm {
+        sub     esp, 8
+        movzx   eax, byte ptr[ecx + 1Ch]
+        fld     dword ptr[esp + 18h]
+        mov     edx, [ecx + 4]
+        mov     ecx, [ecx + 10h]
+        lea     edx, [edx + eax * 8]
+        push    esi
+        push    edi
+        fmul    dword ptr[edx]
+        shl     eax, 4
+        lea     esi, [eax + ecx]
+        mov     eax, [esp + 18h]
+        mov     ecx, [esp + 14h]
+        fstp    dword ptr[esp + 8]
+        fld     dword ptr[esp + 20h]
+        lea     edi, [esp + 8]
+        fmul    dword ptr[edx + 4]
+        mov     edx, [esp + 1Ch]
+        push    edx
+        push    eax
+        mov     eax, [esp + 2Ch]
+        fstp    dword ptr[esp + 14h]
+        lea     edx, [esi + 8]
+        push    ecx
+        call    sub_4B4C50
+        pop     edi
+        pop     esi
+        add     esp, 8
+        retn    14h
+    }
 }
 
 void ShowIntroHook()
@@ -149,8 +153,7 @@ void ShowIntroHook()
     //}; injector::MakeInline<CenterStuff>(0x54F056);
 
     //FOV
-    float fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
-    static float fFOVFactor = fDynamicScreenFieldOfViewScale * 0.017453292f * fIniFOVFactor;
+    static float fFOVFactor = GetFOV2(0.017453292f, Screen.fAspectRatio) * fIniFOVFactor;
     auto pfSetFOV = hook::pattern("D8 0D ? ? ? ? 55 8B EF 2B DD C1 FB 02 8D 68 01 3B EB").get_first(2);
     injector::WriteMemory(pfSetFOV, &fFOVFactor, true);
 

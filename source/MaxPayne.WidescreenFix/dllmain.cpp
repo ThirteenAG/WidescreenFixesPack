@@ -9,7 +9,7 @@ struct Screen
     int32_t nHeight;
     float fWidth;
     float fHeight;
-    float fDynamicScreenFieldOfViewScale;
+    float fFOVFactor;
     float fFieldOfView;
     float fAspectRatio;
     float fHudScale;
@@ -86,11 +86,6 @@ DWORD WINAPI InitWF(LPVOID)
     Screen.fHudScale = (1.0f / (480.0f * Screen.fAspectRatio)) * 2.0f;
     Screen.fBorderOffset = (1.0f / Screen.fHudScale) - (640.0f / 2.0f);
     Screen.fHudOffsetReal = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
-#undef SCREEN_FOV_HORIZONTAL
-#undef SCREEN_FOV_VERTICAL
-#define SCREEN_FOV_HORIZONTAL 65.0f
-#define SCREEN_FOV_VERTICAL (2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))
-    Screen.fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
 
     static CIniReader iniReader("");
     static bool bWidescreenHud = iniReader.ReadInteger("MAIN", "WidescreenHud", 1) != 0;
@@ -98,9 +93,8 @@ DWORD WINAPI InitWF(LPVOID)
     Screen.bGraphicNovelMode = iniReader.ReadInteger("MAIN", "GraphicNovelMode", 1) != 0;
     static int32_t nGraphicNovelModeKey = iniReader.ReadInteger("MAIN", "GraphicNovelModeKey", VK_F2);
     if (!Screen.fWidescreenHudOffset) { Screen.fWidescreenHudOffset = 100.0f; }
-    float fFOVFactor = iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f);
-    if (!fFOVFactor) { fFOVFactor = 1.0f; }
-    Screen.fDynamicScreenFieldOfViewScale *= fFOVFactor;
+    Screen.fFOVFactor = iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f);
+    if (!Screen.fFOVFactor) { Screen.fFOVFactor = 1.0f; }
 
     //fix aspect ratio
     //injector::WriteMemory((DWORD)e2mfc + 0x148ED + 0x2, &f1_480, true); //doors fix ???
@@ -607,11 +601,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     //FOV
     static auto FOVHook = [](uintptr_t _this, uintptr_t edx) -> float
     {
-        Screen.fFieldOfView = *(float*)(_this + 88) * Screen.fDynamicScreenFieldOfViewScale;
-
-        if (Screen.fFieldOfView > 2.0f)
-            Screen.fFieldOfView = 2.0f;
-
+        Screen.fFieldOfView = GetFOV2(*(float*)(_this + 88), Screen.fAspectRatio) * Screen.fFOVFactor;
         return Screen.fFieldOfView;
     };
 

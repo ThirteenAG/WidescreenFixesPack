@@ -83,8 +83,7 @@ void ShowIntroHook()
     }; injector::MakeInline<CircleGlowHook>(pattern.get_first(0), pattern.get_first(6));
 
     //FOV
-    float fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
-    static float fFOVFactor = fDynamicScreenFieldOfViewScale * 0.017453292f * fIniFOVFactor;
+    static float fFOVFactor = GetFOV2(0.017453292f, Screen.fAspectRatio) * fIniFOVFactor;
     auto pfSetFOV = hook::pattern("D8 0D ? ? ? ? 55 8B EF 2B DD C1 FB 02 8D 68 01 3B EB").get_first(2);
     injector::WriteMemory(pfSetFOV, &fFOVFactor, true);
 

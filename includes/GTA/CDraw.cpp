@@ -5,11 +5,9 @@
 extern RsGlobalType* RsGlobal;
 float*  CDraw::pfScreenAspectRatio;
 float*  CDraw::pfScreenFieldOfView;
-float fScreenFieldOfViewVStd = (2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(70.0f * 0.5f)) / (4.0f / 3.0f))));
 
 extern float fWideScreenWidthScaleDown;
 extern float fCustomAspectRatioHor, fCustomAspectRatioVer;
-float fDynamicScreenFieldOfViewScale;
 extern float fEmergencyVehiclesFix;
 extern float fFOVControlValue;
 extern uint32_t* FOVControl;
@@ -22,47 +20,37 @@ extern int(__cdecl* FindPlayerVehicle)();
 
 void CDraw::CalculateAspectRatio()
 {
-	if (!fCustomAspectRatioHor && !fCustomAspectRatioVer)
-	{
-		*pfScreenAspectRatio = (float)RsGlobal->MaximumWidth / (float)RsGlobal->MaximumHeight;
-	}
-	else {
-		*pfScreenAspectRatio = fCustomAspectRatioHor / fCustomAspectRatioVer;
-	}
+    if (!fCustomAspectRatioHor && !fCustomAspectRatioVer)
+    {
+        *pfScreenAspectRatio = (float)RsGlobal->MaximumWidth / (float)RsGlobal->MaximumHeight;
+    }
+    else {
+        *pfScreenAspectRatio = fCustomAspectRatioHor / fCustomAspectRatioVer;
+    }
 
-	fWideScreenWidthScaleDown = (1.0f / 640.0f) / (*pfScreenAspectRatio / (4.0f / 3.0f));
-	fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE((float)atan(tan(DEGREE_TO_RADIAN(fScreenFieldOfViewVStd * 0.5f)) * *pfScreenAspectRatio)) * (1.0f / 70.0f);
-}
-
-inline float getDynamicScreenFieldOfView(float fFactor)
-{
-	fEmergencyVehiclesFix = 70.0f / fFactor;
-	if (FOVControl)
-	{
-		fFOVControlValue = *(float*)FOVControl;
-	}
-	else
-	{
-		fFOVControlValue = 1.0f;
-	}
-
-	if ((!*bIsInCutscene == false && bRestoreCutsceneFOV) || bDontTouchFOV)
-	{
-		return fFactor * fFOVControlValue;
-	}
-
-	if (fCarSpeedDependantFOV)
-	{
-		if (FindPlayerVehicle())
-		{
-			return (fFactor * fFOVControlValue * fDynamicScreenFieldOfViewScale) + (fRadarScaling / fCarSpeedDependantFOV);
-		}
-	}
-
-	return fFactor * fFOVControlValue * fDynamicScreenFieldOfViewScale;
+    fWideScreenWidthScaleDown = (1.0f / 640.0f) / (*pfScreenAspectRatio / (4.0f / 3.0f));
 }
 
 void CDraw::SetFOV(float fFactor)
 {
-	*pfScreenFieldOfView = getDynamicScreenFieldOfView(fFactor);
+    fEmergencyVehiclesFix = 70.0f / fFactor;
+
+    FOVControl ? fFOVControlValue = *(float*)FOVControl : fFOVControlValue = 1.0f;
+
+    if ((*bIsInCutscene == true && bRestoreCutsceneFOV) || bDontTouchFOV)
+    {
+        *pfScreenFieldOfView = fFactor * fFOVControlValue;
+        return;
+    }
+
+    if (fCarSpeedDependantFOV)
+    {
+        if (FindPlayerVehicle())
+        {
+            *pfScreenFieldOfView = (AdjustFOV(fFactor, *pfScreenAspectRatio) * fFOVControlValue) + (fRadarScaling / fCarSpeedDependantFOV);
+            return;
+        }
+    }
+
+    *pfScreenFieldOfView = AdjustFOV(fFactor, *pfScreenAspectRatio) * fFOVControlValue;
 }

@@ -10,7 +10,6 @@ struct Screen
     int32_t Width43;
     float fAspectRatio;
     float fAspectRatioDiff;
-    float fFieldOfView;
     float fHUDScaleX;
     float fHudOffset;
     float fHudOffsetReal;
@@ -83,7 +82,6 @@ DWORD WINAPI Init(LPVOID bDelay)
     for (size_t i = 0; i < pattern.size(); ++i)
         injector::MakeInline<SetResHook>(pattern.get(i).get<uint32_t>(0), pattern.get(i).get<uint32_t>(6));
 
-
     //Aspect Ratio
     pattern = hook::pattern("68 ? ? ? ? E8 ? ? ? ? 6A 00 68 ? ? ? ? E8 ? ? ? ? D9");
     injector::WriteMemory<float>(pattern.get_first(1), Screen.fAspectRatio, true);
@@ -93,13 +91,16 @@ DWORD WINAPI Init(LPVOID bDelay)
     //FOV
     if (bFixFOV)
     {
-        pattern = hook::pattern("D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 8B 46 14");
-        #undef SCREEN_FOV_HORIZONTAL
-        #undef SCREEN_FOV_VERTICAL
-        #define SCREEN_FOV_HORIZONTAL 127.0f
-        #define SCREEN_FOV_VERTICAL (2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))
-        float fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
-        injector::WriteMemory<float>(*pattern.get_first<float*>(2), SCREEN_FOV_HORIZONTAL * fDynamicScreenFieldOfViewScale, true);
+        pattern = hook::pattern("D9 9E C4 00 00 00 E8 ? ? ? ? D9 86 C4 00 00 00 5E 59 C3"); //0x4C23D9
+        struct FovHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                float fov = 0.0f;
+                _asm {fstp dword ptr[fov]}
+                *(float*)(regs.esi + 0xC4) = AdjustFOV(fov, Screen.fAspectRatio);
+            }
+        }; injector::MakeInline<FovHook>(pattern.get_first(), pattern.get_first(6));
     }
 
     //HUD

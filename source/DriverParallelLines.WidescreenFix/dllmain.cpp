@@ -9,7 +9,6 @@ struct Screen
     float fWidth;
     float fHeight;
     float fCustomFieldOfView;
-    float fDynamicScreenFieldOfViewScale;
     float fAspectRatio;
     float fHudOffset;
     int32_t Width43;
@@ -130,17 +129,17 @@ DWORD WINAPI Init(LPVOID bDelay)
     int32_t nMinResY = iniReader.ReadInteger("MAIN", "MinResY", 0);
 
     std::tie(Screen.DesktopResW, Screen.DesktopResH) = GetDesktopRes();
- 
+
     //uncapping resolutions
     pattern = hook::pattern("68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? FF 75 F8 BF"); //4C5A89
-    injector::WriteMemory(pattern.get_first<int32_t*>(1 +  0), INT_MAX, true);
-    injector::WriteMemory(pattern.get_first<int32_t*>(1 +  5), INT_MAX, true);
+    injector::WriteMemory(pattern.get_first<int32_t*>(1 + 0), INT_MAX, true);
+    injector::WriteMemory(pattern.get_first<int32_t*>(1 + 5), INT_MAX, true);
     injector::WriteMemory(pattern.get_first<int32_t*>(1 + 10), nMinResY, true);
     injector::WriteMemory(pattern.get_first<int32_t*>(1 + 15), nMinResX, true);
 
     pattern = hook::pattern("68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? FF 75 F8 B9"); //5EB9AC
-    injector::WriteMemory(pattern.get_first<int32_t*>(1 +  0), INT_MAX, true);
-    injector::WriteMemory(pattern.get_first<int32_t*>(1 +  5), INT_MAX, true);
+    injector::WriteMemory(pattern.get_first<int32_t*>(1 + 0), INT_MAX, true);
+    injector::WriteMemory(pattern.get_first<int32_t*>(1 + 5), INT_MAX, true);
     injector::WriteMemory(pattern.get_first<int32_t*>(1 + 10), nMinResY, true);
     injector::WriteMemory(pattern.get_first<int32_t*>(1 + 15), nMinResX, true);
 
@@ -163,7 +162,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     pattern = hook::pattern("C7 45 E0 ? ? ? ? C7 45 E4 ? ? ? ? C7 45 E8 ? ? ? ? C7 45 EC 16 00 00 00"); //0x5EBA06
     injector::WriteMemory(pattern.get_first<int32_t*>(3 + 0), Screen.DesktopResW, true);
     injector::WriteMemory(pattern.get_first<int32_t*>(3 + 7), Screen.DesktopResH, true);
-    
+
     static auto pGameHwnd = *hook::get_pattern<HWND*>("A1 ? ? ? ? 85 C0 8D 7E 14 89", 1); //0x933E18
     static auto pAspectRatio = *hook::get_pattern<float*>("D9 05 ? ? ? ? 53 8B 5D 08 8B 03 57 51", 2); //64B238
     static auto pFOV = *hook::get_pattern<float*>("D9 05 ? ? ? ? 8B 03 51 8B CB D9 1C 24", 2); //64B234
@@ -193,10 +192,9 @@ DWORD WINAPI Init(LPVOID bDelay)
         Screen.Width43 = static_cast<uint32_t>(Screen.fHeight * (4.0f / 3.0f));
         Screen.fWidth43 = static_cast<float>(Screen.Width43);
         Screen.fCenterPos = ((480.0f * Screen.fAspectRatio) / 2.0f);
-        Screen.fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * (Screen.fWidth / Screen.fHeight))) * (1.0f / SCREEN_FOV_HORIZONTAL);
 
         injector::WriteMemory<float>(pAspectRatio, Screen.fAspectRatio, true); //*pAspectRatio = Screen.fAspectRatio;
-        injector::WriteMemory<float>(pFOV, Screen.fDynamicScreenFieldOfViewScale * 1.308f * Screen.fCustomFieldOfView, true); //*pFOV = Screen.fDynamicScreenFieldOfViewScale * 1.308f * Screen.fCustomFieldOfView;
+        injector::WriteMemory<float>(pFOV, AdjustFOV(1.04f, Screen.fAspectRatio) * (Screen.fCustomFieldOfView ? Screen.fCustomFieldOfView : 1.0f), true);
 
         if (Screen.fAspectRatio >= ((16.0f / 9.0f) - 0.05f))
             Screen.fGameAspectRatio = (16.0f / 9.0f);
@@ -231,7 +229,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             GetRes();
         }
     }; injector::MakeInline<GetResHook2>(pattern.get_first(0), pattern.get_first(6));
-    
+
     pattern = hook::pattern("8B 44 24 04 89 41 10 B0 01 C2 04 00"); //0x57B954
     struct MenuAspectRatioSwitchHook
     {
@@ -244,7 +242,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     //2D
     pattern = hook::pattern("E8 ? ? ? ? 8B 45 08 8B 4D 0C 89 45 E8 8B"); //0x5F75AD
     injector::MakeCALL(pattern.get_first(0), sub_5F3627, true);
-    
+
     //Radar
     static auto GetRadarPosition = [](injector::reg_pack& regs) -> float
     {
@@ -278,7 +276,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             *(float*)(regs.esi + 0x744) = GetRadarPosition(regs);
         }
     };
-    
+
     struct RadarScaleHookEBX
     {
         void operator()(injector::reg_pack& regs)
