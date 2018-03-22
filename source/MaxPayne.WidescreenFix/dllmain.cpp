@@ -601,7 +601,8 @@ DWORD WINAPI Init(LPVOID bDelay)
     //FOV
     static auto FOVHook = [](uintptr_t _this, uintptr_t edx) -> float
     {
-        Screen.fFieldOfView = GetFOV2(*(float*)(_this + 88), Screen.fAspectRatio) * Screen.fFOVFactor;
+        float f = AdjustFOV(*(float*)(_this + 0x58) * 57.295776f, Screen.fAspectRatio) * Screen.fFOVFactor;
+        Screen.fFieldOfView = (((f > 179.0f) ? 179.0f : f) / 57.295776f);
         return Screen.fFieldOfView;
     };
 
