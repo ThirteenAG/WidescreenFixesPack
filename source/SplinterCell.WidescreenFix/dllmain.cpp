@@ -13,7 +13,6 @@ struct Screen
     int Height;
     float fWidth;
     float fHeight;
-    float fFieldOfView;
     float fAspectRatio;
     float HUDScaleX;
     float fHudOffset;
@@ -152,7 +151,7 @@ DWORD WINAPI InitD3DDrv(LPVOID bDelay)
     if (bDelay)
         while (pattern.clear(GetModuleHandle("D3DDrv")).count_hint(2).empty()) { Sleep(0); };
 
-    
+
     static uint32_t* dword_1003DBA4 = *pattern.count(2).get(1).get<uint32_t*>(-4);
     static uint32_t* dword_1003DBA0 = dword_1003DBA4 - 1;
     static uint32_t* dword_1003DBC0 = *pattern.count(2).get(1).get<uint32_t*>(2);
@@ -204,19 +203,12 @@ DWORD WINAPI InitEngine(LPVOID bDelay)
     injector::MakeCALL(pattern.count(2).get(0).get<uint32_t>(7), FCanvasUtilDrawTileHook, true); //(uint32_t)Engine + 0xC9B7C
     injector::MakeCALL(pattern.count(2).get(1).get<uint32_t>(7), FCanvasUtilDrawTileHook, true); //(uint32_t)Engine + 0xC9DE1
 
-    //FOV
-    #undef SCREEN_FOV_HORIZONTAL
-    #undef SCREEN_FOV_VERTICAL  
-    #define SCREEN_FOV_HORIZONTAL 75.0f
-    #define SCREEN_FOV_VERTICAL  (2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))
-    static float fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
-
     pattern = hook::module_pattern(GetModuleHandle("Engine"), "8B 46 34 8B 88 B0 02 00 00");
     struct UGameEngine_Draw_Hook
     {
         void operator()(injector::reg_pack& regs)
         {
-            *(float*)&regs.ecx = *(float*)(regs.eax + 0x2B0) * fDynamicScreenFieldOfViewScale;
+            *(float*)&regs.ecx = AdjustFOV(*(float*)(regs.eax + 0x2B0), Screen.fAspectRatio);
         }
     }; injector::MakeInline<UGameEngine_Draw_Hook>(pattern.count(1).get(0).get<uint32_t>(3), pattern.count(1).get(0).get<uint32_t>(3 + 6)); //pfDraw + 0x104
 
@@ -293,9 +285,9 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        #ifdef _LOG
+#ifdef _LOG
         logfile.open("SC.WidescreenFix.log");
-        #endif // _LOG
+#endif // _LOG
         Init(NULL);
     }
     return TRUE;

@@ -179,6 +179,15 @@ DWORD WINAPI InitD3DDrv(LPVOID bDelay)
     pattern = hook::module_pattern(GetModuleHandle("D3DDrv"), "8B 7B 64 85 FF 8B CE 6A 04 74 1F 89 BD"); //alpha, settexture, maybe not needed
     injector::WriteMemory(pattern.get_first(0), 0x85909090, true);
 
+    //pattern = hook::module_pattern(GetModuleHandle("D3DDrv"), "8D 9E 64 98 00 00 6A 04 8B CB 89 BE B0 6E 00 00 E8 ? ? ? ? 8B 86 30 5F 00 00 8B 08 57 6A 00 50 FF 91 04 01 00 00 6A 04 8B CB E8 ? ? ? ? 8B 6C 24 30 F6 45 54 01 74 48 83 BE 64 60 00 00 00");
+    //struct test
+    //{
+    //    void operator()(injector::reg_pack& regs)
+    //    {
+    //        regs.ebx = regs.esi + 0x9864;
+    //    }
+    //}; injector::MakeInline<test>(pattern.get_first(0), pattern.get_first(6));
+
     //loadscreen
     pattern = hook::module_pattern(GetModuleHandle("D3DDrv"), "89 BE ? ? ? ? E8 ? ? ? ? 8B 86 ? ? ? ? 8B 08 57 6A 00 50 FF 91 ? ? ? ? 6A 04 8B CB E8 ? ? ? ? 8B 6C 24 30 F6 45 54 01 74 48 83 BE"); //
     struct LoadscHook

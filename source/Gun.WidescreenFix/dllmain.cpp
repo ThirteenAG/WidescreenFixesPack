@@ -69,7 +69,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             *dword_6B75A0_Y = Screen.Height;
         }
     }; injector::MakeInline<ResHook2>(pattern.get_first());
-    
+
     auto pSetAR = injector::GetBranchDestination(hook::pattern("E8 ? ? ? ? D8 1D ? ? ? ? D9 44 24").count(1).get(0).get<uintptr_t>(0), true).as_int(); //0x4BA680
     Screen.DefaultAR = *(float**)(pSetAR + 2);
     injector::MakeJMP(pSetAR, SetAspect, true);
@@ -95,7 +95,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                 *(float*)(regs.esp + 0x28) = fCurOffset + Screen.fHudOffset;
 
             }
-        }; 
+        };
         pattern = hook::pattern("D8 C1 D9 5C 24 28 DB 05 ? ? ? ? D9 47 2C");  //0x4DC226
         injector::MakeInline<TextHudHook>(pattern.count(1).get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(6));
 
@@ -161,14 +161,16 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     if (bFixFOV)
     {
-        #undef SCREEN_FOV_HORIZONTAL
-        #undef SCREEN_FOV_VERTICAL
-        #define SCREEN_FOV_HORIZONTAL		48.0f
-        #define SCREEN_FOV_VERTICAL			(2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))
-        float fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
-        static float fFOVFactor = fDynamicScreenFieldOfViewScale * 114.59155f;
-        pattern = hook::pattern("D8 0D ? ? ? ? D9 9E C4 00 00 00 E8 ? ? ? ? D9 86"); //0x498BA3
-        injector::WriteMemory(pattern.count(1).get(0).get<uintptr_t>(2), &fFOVFactor, true);
+        pattern = hook::pattern("D9 9E C4 00 00 00 E8 ? ? ? ? D9 86 C4 00 00 00 5E 59 C3"); //0x498BA9
+        struct FovHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                float fov = 0.0f;
+                _asm {fstp dword ptr[fov]}
+                *(float*)(regs.esi + 0xC4) = AdjustFOV(fov, Screen.fAspectRatio);
+            }
+        }; injector::MakeInline<FovHook>(pattern.get_first(), pattern.get_first(6));
     }
 
     if (nGameSpeed)

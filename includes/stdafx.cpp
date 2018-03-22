@@ -5,6 +5,11 @@ float GetFOV(float f, float ar)
     return atan2(tan(atan2(tan(f * 0.5f) / (4.0f / 3.0f), 1.0f)) * (ar), 1.0f);
 }
 
+float GetFOV2(float f, float ar)
+{
+    return f * (2.0f * ((180.0f / (float)M_PI) * (atan(tan(((float)M_PI / 180.0f) * ((2.0f * ((180.0f / (float)M_PI) * (atan(tan(((float)M_PI / 180.0f) * (90.0f * 0.5f)) / (4.0f / 3.0f))))) * 0.5f)) * (ar)))) * (1.0f / 90.0f));
+}
+
 float AdjustFOV(float f, float ar)
 {
     return std::round((2.0f * atan(((ar) / (4.0f / 3.0f)) * tan(f / 2.0f * ((float)M_PI / 180.0f)))) * (180.0f / (float)M_PI) * 100.0f) / 100.0f;

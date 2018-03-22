@@ -6,7 +6,6 @@ struct Screen
     int32_t Height;
     float fWidth;
     float fHeight;
-    float fFieldOfView;
     float fAspectRatio;
     int32_t Width43;
     float fWidth43;
@@ -69,7 +68,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     pattern = hook::pattern("C7 05 ? ? ? ? 00 03 00 00 C7 05 ? ? ? ? 00 04 00 00"); //622B17
     injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(6), Screen.Height, true);
     injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(16), Screen.Width, true);
-    
+
     pattern = hook::pattern("8B 0D ? ? ? ? 8B 35 ? ? ? ? 8B C1 99"); //48B0D6
     struct SetResHook
     {
@@ -104,13 +103,8 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     if (bFixFOV)
     {
-        #undef SCREEN_FOV_HORIZONTAL
-        #undef SCREEN_FOV_VERTICAL
-        #define SCREEN_FOV_HORIZONTAL 75.0f
-        #define SCREEN_FOV_VERTICAL (2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / (4.0f / 3.0f))))
-        float fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * Screen.fAspectRatio));
         pattern = hook::pattern("D8 0D ? ? ? ? 83 C4 04 6A 00 68 00 00 80 3F"); //4A15F6
-        injector::WriteMemory(*pattern.count(1).get(0).get<uint32_t*>(2), fDynamicScreenFieldOfViewScale, true);
+        injector::WriteMemory(*pattern.count(1).get(0).get<uint32_t*>(2), AdjustFOV(75.0f, Screen.fAspectRatio), true);
     }
 
     if (bFixHUD)

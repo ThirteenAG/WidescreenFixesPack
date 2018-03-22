@@ -46,7 +46,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     Screen.fHUDScaleX = 1.0f / Screen.fWidth * (Screen.fHeight / 480.0f);
     Screen.fHudOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
     Screen.fHudOffsetReal = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
-  
+
     //Resolution
     static int32_t* dword_5A0280 = *pattern.get_first<int32_t*>(6);
     static int32_t* dword_5A0284 = *pattern.get_first<int32_t*>(12);
@@ -74,11 +74,16 @@ DWORD WINAPI Init(LPVOID bDelay)
     injector::WriteMemory(pattern.get_first(1), Screen.fAspectRatio, true);
 
     //FOV
-    float fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
-    Screen.fFieldOfView = 180.0f * fDynamicScreenFieldOfViewScale;
-
-    pattern = hook::pattern("D9 05 ? ? ? ? D8 35 ? ? ? ? DE C9 DC C0 D9 96 A4"); //0x45DF17 + 0x2
-    injector::WriteMemory(pattern.get_first(2), &Screen.fFieldOfView, true);
+    pattern = hook::pattern("D9 96 A4 00 00 00 5E 59 C3");
+    struct FovHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            float fov = 0.0f;
+            _asm {fst dword ptr[fov]}
+            *(float*)(regs.esi + 0xA4) = AdjustFOV(fov, Screen.fAspectRatio);
+        }
+    }; injector::MakeInline<FovHook>(pattern.get_first(0), pattern.get_first(6));
 
     //HUD
     if (bFixHUD)
@@ -91,7 +96,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                 *(float*)&regs.eax = *(float*)(regs.esp + 0x4) * Screen.fAspectRatioDiff;
                 *(float*)&regs.edx = *(float*)(regs.esp + 0x8);
             }
-        }; 
+        };
 
         for (size_t i = 1; i < 6; i++) // from 2nd match to 6th
         {

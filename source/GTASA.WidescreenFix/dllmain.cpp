@@ -4,10 +4,8 @@
 
 float** pfWideScreenWidthScaleDown;
 float** pfWideScreenHeightScaleDown;
-float** pfDynamicScreenFieldOfViewScale;
 float fSubtitlesScaleX, fSubtitlesScaleY;
 float fCustomRadarWidthScaleDown;
-extern float fDynamicScreenFieldOfViewScale;
 
 void InstallWSHPSFixes()
 {
@@ -39,17 +37,22 @@ void InstallWSHPSFixes()
 float getHeightPercentInWorldLevel(float fPosZ) {
     float fHeightPerc;
 
-    if(fPosZ <= -100.0f) {
+    if (fPosZ <= -100.0f) {
         fHeightPerc = 100.0f;
-    } else if(fPosZ <= 0.0f) {
+    }
+    else if (fPosZ <= 0.0f) {
         fHeightPerc = -fPosZ;
-    } else if(fPosZ <= 200.0f) {
+    }
+    else if (fPosZ <= 200.0f) {
         fHeightPerc = fPosZ * (100.0f / 200.0f);
-    } else if(fPosZ <= 950.0f) {
+    }
+    else if (fPosZ <= 950.0f) {
         fHeightPerc = (fPosZ - 200.0f) * (100.0f / (950.0f - 200.0f));
-    } else if(fPosZ < 1500.0f) {
+    }
+    else if (fPosZ < 1500.0f) {
         fHeightPerc = (fPosZ - 950.0f) * (100.0f / (1500.0f - 950.0f));
-    } else {
+    }
+    else {
         fHeightPerc = 100.0f;
     }
 
@@ -68,7 +71,7 @@ void __declspec(naked) HOOK_PTR_0058A68F_drawMap() {
         fild	ds : [0x00C17040 + 0x8]
         fld		st
         fmul	fWideScreenHeightScaleDown
-        mov		ecx, [eax+8]
+        mov		ecx, [eax + 8]
         push	ecx
         call	getHeightPercentInWorldLevel
         add		esp, 4
@@ -416,15 +419,16 @@ void __declspec(naked) AllowMouseMovement()
     _asm
     {
         mov _EAX, eax
-        mov eax, dword ptr ds: [0x8D621C]
+        mov eax, dword ptr ds : [0x8D621C]
         cmp eax, 0
         jne label1
         mov eax, _EAX
         ret
-    label1:
-        mov eax, _EAX
-        mov _EAX, 0x7453F0
-        jmp _EAX
+
+        label1 :
+        {mov eax, _EAX}
+        {mov _EAX, 0x7453F0}
+        {jmp _EAX}
     }
 }
 
@@ -437,7 +441,6 @@ void updateScreenAspectRatioWrapper()
         updateScreenAspectRatio();
 
         fWideScreenHeightScaleDown = **pfWideScreenHeightScaleDown;
-        fDynamicScreenFieldOfViewScale = **pfDynamicScreenFieldOfViewScale;
         fCustomWideScreenWidthScaleDown = **pfWideScreenWidthScaleDown * fHudWidthScale;
         fCustomWideScreenHeightScaleDown = **pfWideScreenHeightScaleDown * fHudHeightScale;
         fCustomRadarWidthScaleDown = **pfWideScreenWidthScaleDown * fRadarWidthScale;
@@ -449,15 +452,18 @@ void updateScreenAspectRatioWrapper()
 uintptr_t SetEdgeAddr = 0x719590;
 void __declspec(naked) SetDropShadowPosition()
 {
-    _asm mov eax, [esp + 4]
-    _asm cmp ReplaceTextShadowWithOutline, 2
-    _asm jae label1
-    _asm test eax, eax
-    _asm jz label1
-    _asm dec eax
-    _asm mov[esp + 4], eax
-    label1:
-    _asm jmp SetEdgeAddr
+    _asm {
+        mov eax, [esp + 4]
+        cmp ReplaceTextShadowWithOutline, 2
+        jae label1
+        test eax, eax
+        jz label1
+        dec eax
+        mov[esp + 4], eax
+
+        label1 :
+        jmp SetEdgeAddr
+    }
 }
 
 injector::hook_back<void(__cdecl*)(void)> hbWipeLocalVariableMemoryForMissionScript;
@@ -470,7 +476,7 @@ void __cdecl WipeLocalVariableMemoryForMissionScriptHook()
     for (size_t i = 0; i < pattern.size(); i++)
     {
         float x = *pattern.get(i).get<float>(3) * (**pfWideScreenWidthScaleDown / (1.0f / 640.0f));
-        float y = *pattern.get(i).get<float>(8) * (**pfWideScreenHeightScaleDown / (1.0f / 480.0f));        
+        float y = *pattern.get(i).get<float>(8) * (**pfWideScreenHeightScaleDown / (1.0f / 480.0f));
         injector::WriteMemory(pattern.get(i).get<float*>(3), x, true);
         injector::WriteMemory(pattern.get(i).get<float*>(8), y, true);
     }
@@ -564,7 +570,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                 void operator()(injector::reg_pack& regs)
                 {
                     _asm fstp dword ptr ds : [00BA8314h]
-                    fRadarScaling = *(float*)0xBA8314 - 180.0f;
+                        fRadarScaling = *(float*)0xBA8314 - 180.0f;
                 }
             }; injector::MakeInline<FOVHook>(0x586C6A, 0x586C70);
         }
@@ -617,10 +623,6 @@ DWORD WINAPI Init(LPVOID bDelay)
     injector::MakeCALL(0x0052C977 - 1, CDraw::SetFOV, true);
     injector::MakeCALL(0x0053BD7B - 1, CDraw::SetFOV, true);
     injector::MakeCALL(0x005BA225 - 1, CDraw::SetFOV, true);
-
-    auto TempPtr = injector::GetBranchDestination(0x50AD4A, true);
-    DWORD TempPtr2 = TempPtr.as_int() + 9;
-    pfDynamicScreenFieldOfViewScale = (float**)TempPtr2;
 
     if (nHideAABug)
     {

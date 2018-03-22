@@ -67,7 +67,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     pattern = hook::pattern(pattern_str(0x89, '?', to_bytes(dword_6D360C)));
     for (size_t i = 0; i < pattern.size(); ++i)
         injector::MakeInline<SetResHook>(pattern.get(i).get<uint32_t>(0), pattern.get(i).get<uint32_t>(6));
-    
+
     pattern = hook::pattern(pattern_str(0x89, '?', to_bytes(dword_6D3608)));
     if (!pattern.count_hint(1).empty())
         injector::MakeInline<SetResHook>(pattern.get_first(0), pattern.get_first(6));
@@ -92,26 +92,16 @@ DWORD WINAPI Init(LPVOID bDelay)
     }
 
     //FOV
-    pattern = hook::pattern("? 0D ? ? ? ? D9 9E ? ? ? ? 5E 59 C3");
-    if (*pattern.get_first<uint8_t>(0) == (uint8_t)0xD8) //fmul flt
+    pattern = hook::pattern("0D ? ? ? ? D9 9E ? ? ? ? 5E 59 C3");
+    struct FovHook
     {
-        #undef SCREEN_FOV_HORIZONTAL
-        #undef SCREEN_FOV_VERTICAL
-        #define SCREEN_FOV_HORIZONTAL 127.0f
-        #define SCREEN_FOV_VERTICAL (2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))
-        float fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
-        injector::WriteMemory<float>(*pattern.get_first<float*>(2), SCREEN_FOV_HORIZONTAL * fDynamicScreenFieldOfViewScale, true);
-    }
-    else //fmul dbl
-    {
-        #undef SCREEN_FOV_HORIZONTAL
-        #undef SCREEN_FOV_VERTICAL
-        #define SCREEN_FOV_HORIZONTAL 57.29577791868205f
-        #define SCREEN_FOV_VERTICAL (2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))
-        float fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
-        static double dbl_62D630 = SCREEN_FOV_HORIZONTAL * fDynamicScreenFieldOfViewScale;
-        injector::WriteMemory(pattern.get_first(2), &dbl_62D630, true);
-    }
+        void operator()(injector::reg_pack& regs)
+        {
+            float fov = 0.0f;
+            _asm {fstp dword ptr[fov]}
+            *(float*)(regs.esi + 0xA4) = AdjustFOV(fov, Screen.fAspectRatio);
+        }
+    }; injector::MakeInline<FovHook>(pattern.get_first(5), pattern.get_first(5 + 6));
 
     //HUD
     if (bFixHUD)

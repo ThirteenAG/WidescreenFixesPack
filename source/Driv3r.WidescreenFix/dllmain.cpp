@@ -9,7 +9,6 @@ struct Screen
     float fWidth;
     float fHeight;
     float fCustomFieldOfView;
-    float fDynamicScreenFieldOfViewScale;
     float fCutOffArea;
     float fAspectRatio;
     float fHudOffset;
@@ -51,11 +50,11 @@ DWORD WINAPI Init(LPVOID bDelay)
     int32_t nMinResY = iniReader.ReadInteger("MAIN", "MinResY", 0);
 
     std::tie(Screen.DesktopResW, Screen.DesktopResH) = GetDesktopRes();
- 
+
     //uncapping resolutions
     pattern = hook::pattern("68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 57 8B DE E8 ? ? ? ? 85 C0"); //54A5A0
-    injector::WriteMemory(pattern.get_first<int32_t*>(1 +  0), INT_MAX, true);
-    injector::WriteMemory(pattern.get_first<int32_t*>(1 +  5), INT_MAX, true);
+    injector::WriteMemory(pattern.get_first<int32_t*>(1 + 0), INT_MAX, true);
+    injector::WriteMemory(pattern.get_first<int32_t*>(1 + 5), INT_MAX, true);
     injector::WriteMemory(pattern.get_first<int32_t*>(1 + 10), nMinResY, true);
     injector::WriteMemory(pattern.get_first<int32_t*>(1 + 15), nMinResX, true);
 
@@ -105,11 +104,10 @@ DWORD WINAPI Init(LPVOID bDelay)
         Screen.fCenterPos = ((480.0f * Screen.fAspectRatio) / 2.0f);
         Screen.fHudOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
         Screen.fHudOffsetReal = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
-        Screen.fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * (Screen.fWidth / Screen.fHeight))) * (1.0f / SCREEN_FOV_HORIZONTAL);
         Screen.fCutOffArea = 1.0f; //?
 
         injector::WriteMemory<float>(pAspectRatio, Screen.fAspectRatio, true); //*pAspectRatio = Screen.fAspectRatio;
-        injector::WriteMemory<float>(pFOV, Screen.fDynamicScreenFieldOfViewScale * 1.308f * (Screen.fCustomFieldOfView ? Screen.fCustomFieldOfView : 1.0f), true); //*pFOV = Screen.fDynamicScreenFieldOfViewScale * 1.308f * Screen.fCustomFieldOfView;
+        injector::WriteMemory<float>(pFOV, AdjustFOV(1.04f, Screen.fAspectRatio) * (Screen.fCustomFieldOfView ? Screen.fCustomFieldOfView : 1.0f), true);
 
         Screen.fGameAspectRatio = (4.0f / 3.0f);
 
@@ -129,12 +127,12 @@ DWORD WINAPI Init(LPVOID bDelay)
             *(uint32_t*)(regs.ebx + 0x180) = regs.ecx;
             if (Screen.Width && Screen.Height)
             {
-                *(uint32_t*)(regs.ebx + 0x160) = Screen.Width;
-                *(uint32_t*)(regs.ebx + 0x164) = Screen.Height;
+                Screen.Width = *(uint32_t*)(regs.ebx + 0x160);
+                Screen.Height = *(uint32_t*)(regs.ebx + 0x164);
             }
             GetRes();
         }
-    }; 
+    };
     injector::MakeInline<GetResHook2>(pattern.count(2).get(0).get<void*>(0), pattern.count(2).get(0).get<void*>(6));
     injector::MakeInline<GetResHook2>(pattern.count(2).get(1).get<void*>(0), pattern.count(2).get(1).get<void*>(6));
 
@@ -160,7 +158,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             *(uint32_t*)(regs.esi - 0x24) = regs.edx;
             regs.eax += 1;
             float temp = 0.0f;
-            _asm fstp dword ptr[temp]
+            _asm {fstp dword ptr[temp]}
             *(float*)(regs.esi - 0x2C) = temp;
 
             auto x1 = *(float*)(*(DWORD*)(regs.edi + 8) + (regs.ebp - 0x30) + 0x10);
@@ -179,7 +177,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             else
             {
                 if (x1 == 0.0f && x2 == 1.0f && retAddr == dword_540F2E) //fading
-                { 
+                {
                     //
                 }
                 else

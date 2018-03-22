@@ -47,7 +47,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
     Screen.Width43 = static_cast<uint32_t>(Screen.fHeight * (4.0f / 3.0f));
     Screen.fWidth43 = static_cast<float>(Screen.Width43);
-    
+
     //pattern = hook::pattern("C7 47 14 ? ? ? ? C7 47 18"); //0x4C81A3 0x4C81AA 
     injector::WriteMemory<float>(pattern.count(1).get(0).get<uint32_t>(3), Screen.fWidth, true);
     injector::WriteMemory<float>(pattern.count(1).get(0).get<uint32_t>(10), Screen.fHeight, true);
@@ -58,7 +58,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         void operator()(injector::reg_pack& regs)
         {
             float temp = 0.0f;
-            _asm fstp    dword ptr[temp]
+            _asm {fstp    dword ptr[temp]}
 
             *(float*)(regs.edi + 0x14) = Screen.fWidth;
             *(float*)(regs.edi + 0x18) = Screen.fHeight;
@@ -85,7 +85,6 @@ DWORD WINAPI Init(LPVOID bDelay)
         injector::WriteMemory<float>(pattern.get(i).get<uint32_t>(6), (480.0f * Screen.fAspectRatio), true);
     }
 
-
     if (bFixHUD)
     {
         Screen.fHudScale = Screen.fAspectRatio / (4.0f / 3.0f);
@@ -94,14 +93,14 @@ DWORD WINAPI Init(LPVOID bDelay)
         {
             void operator()(injector::reg_pack& regs)
             {
-                #ifdef _LOG
+#ifdef _LOG
                 if (logit)
                     logfile << *(float*)(*(uintptr_t*)(regs.ecx + 0x0A859C) + 0x00) << " "
                     << *(uintptr_t*)(*(uintptr_t*)(regs.ecx + 0x0A859C) + 0x10) << " "
                     << *(uintptr_t*)(*(uintptr_t*)(regs.ecx + 0x0A859C) + 0x14) << " "
                     << *(uintptr_t*)(*(uintptr_t*)(regs.ecx + 0x0A859C) + 0x18) << " "
                     << *(uintptr_t*)(*(uintptr_t*)(regs.ecx + 0x0A859C) + 0x1C) << std::endl;
-                #endif // _LOG
+#endif // _LOG
 
                 if (*(float*)(*(uintptr_t*)(regs.ecx + 0x0A859C) + 0x08) != 90.0f && *(uintptr_t*)(*(uintptr_t*)(regs.ecx + 0x0A859C) + 0x18) != 235587392) //fading check
                 {
@@ -118,24 +117,18 @@ DWORD WINAPI Init(LPVOID bDelay)
             void operator()(injector::reg_pack& regs)
             {
                 uint32_t fMirrorOffset = *(uint32_t*)(regs.esp + 0x8) + (uint32_t)(((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f);
-                _asm fild    dword ptr[fMirrorOffset]
+                _asm {fild    dword ptr[fMirrorOffset]}
                 regs.eax = regs.esi + 0xA8;
             }
         }; injector::MakeInline<RearviewMirrorHook>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(10));
 
     }
 
-
     if (bFixFOV)
     {
-        #undef SCREEN_FOV_HORIZONTAL
-        #undef SCREEN_FOV_VERTICAL
-        #define SCREEN_FOV_HORIZONTAL 48.0f
-        #define SCREEN_FOV_VERTICAL (2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))
-        float fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
-        static float fFOVFactor = fDynamicScreenFieldOfViewScale * 0.5f;
+        Screen.fFieldOfView = GetFOV2(0.55f, Screen.fAspectRatio);
         pattern = hook::pattern("D8 0D ? ? ? ? 8D B2 ? ? ? ? 33 C0 8B FE D9 F2"); //0x4BC4BB
-        injector::WriteMemory(pattern.count(1).get(0).get<uintptr_t>(2), &fFOVFactor, true);
+        injector::WriteMemory(pattern.count(1).get(0).get<uintptr_t>(2), &Screen.fFieldOfView, true);
     }
 
     return 0;
@@ -146,9 +139,9 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        #ifdef _LOG
+#ifdef _LOG
         logfile.open("WidescreenFix.log");
-        #endif // _LOG
+#endif // _LOG
         Init(NULL);
     }
     return TRUE;

@@ -51,8 +51,8 @@ DWORD WINAPI Init(LPVOID bDelay)
     //Resolution
     static int32_t* dword_67FBCC = *pattern.get_first<int32_t*>(2);
     static int32_t* dword_67FBD0 = *pattern.get_first<int32_t*>(8);
-    static int32_t* dword_787A7C = *pattern.get_first<int32_t*>(12+2);
-    static int32_t* dword_787A80 = *pattern.get_first<int32_t*>(12+8);
+    static int32_t* dword_787A7C = *pattern.get_first<int32_t*>(12 + 2);
+    static int32_t* dword_787A80 = *pattern.get_first<int32_t*>(12 + 8);
     struct SetResHook
     {
         void operator()(injector::reg_pack& regs)
@@ -85,17 +85,20 @@ DWORD WINAPI Init(LPVOID bDelay)
     injector::WriteMemory<float>(pattern.get_first(1), Screen.fAspectRatio, true);
     pattern = hook::pattern("E8 ? ? ? ? D9 04 24 D8 74 24 04 DE C9");
     injector::WriteMemory(injector::GetBranchDestination(pattern.get_first()).as_int() + 2, &Screen.fAspectRatio, true);
-    
+
     //FOV
     if (bFixFOV)
     {
-        pattern = hook::pattern("D8 0D ? ? ? ? D9 96 B0 00");
-        #undef SCREEN_FOV_HORIZONTAL
-        #undef SCREEN_FOV_VERTICAL
-        #define SCREEN_FOV_HORIZONTAL 127.0f
-        #define SCREEN_FOV_VERTICAL (2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))
-        float fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
-        injector::WriteMemory<float>(*pattern.get_first<float*>(2), SCREEN_FOV_HORIZONTAL * fDynamicScreenFieldOfViewScale, true);
+        pattern = hook::pattern("D9 96 B0 00 00 00 D8 0D ? ? ? ? D9 F2 DD D8"); //0x485B57
+        struct FovHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                float fov = 0.0f;
+                _asm {fst dword ptr[fov]}
+                *(float*)(regs.esi + 0xB0) = AdjustFOV(fov, Screen.fAspectRatio);
+            }
+        }; injector::MakeInline<FovHook>(pattern.get_first(), pattern.get_first(6));
     }
 
     //HUD

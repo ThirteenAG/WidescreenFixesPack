@@ -96,26 +96,26 @@ struct Screen
 
 int32_t retX()
 {
-    #ifdef _LOG
+#ifdef _LOG
     if (GetAsyncKeyState(VK_F1) & 0x8000)
     {
         auto retaddr = (uintptr_t)_ReturnAddress() - 5;
         logfile << "retX addr: " << std::dec << retXmap[retaddr] << std::endl;
     }
-    #endif // _LOG
+#endif // _LOG
 
     return Screen.PresetWidth;
 };
 
 int32_t retY()
 {
-    #ifdef _LOG
+#ifdef _LOG
     if (GetAsyncKeyState(VK_F1) & 0x8000)
     {
         auto retaddr = (uintptr_t)_ReturnAddress() - 5;
         logfile << "retY addr: " << std::dec << retYmap[retaddr] << std::endl;
     }
-    #endif // _LOG
+#endif // _LOG
 
     return Screen.PresetHeight;
 };
@@ -161,7 +161,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             return ((a > b) && (a < Screen.Height && b < Screen.Height));
         }
     }; std::sort(std::begin(arrY), std::end(arrY), StartWithMinHeight());
-    
+
     Screen.PresetHeight = arrY[0];
 
     switch (Screen.PresetHeight)
@@ -185,7 +185,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         break;
     }
 
-    Screen.PresetFactorX = Screen.fWidth  / static_cast<float>(Screen.PresetWidth);
+    Screen.PresetFactorX = Screen.fWidth / static_cast<float>(Screen.PresetWidth);
     Screen.PresetFactorY = Screen.fHeight / static_cast<float>(Screen.PresetHeight);
 
     //Resolution
@@ -199,7 +199,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             *dword_913254 = Screen.Height;
         }
     }; injector::MakeInline<SetResHook>(pattern.get_first(0), pattern.get_first(11));
-        
+
     pattern = hook::pattern("C7 04 24 80 02 00 00"); //0x4DD6CB
     injector::MakeNOP(pattern.get_first(-2), 2, true);
     injector::WriteMemory(pattern.get_first(3), Screen.Width, true);
@@ -209,7 +209,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     injector::WriteMemory(pattern.get_first(4), Screen.Height, true);
 
     //Hud, menu and presets
-    
+
     //fixing only menu and startup stuff, which makes the game stuck in an infinite loop
     //this code doesn't work anymore because patterns don't find 0x46d91b and 0x4b7cbb calls for some reason and retXmap indices are wrong
     ////uint32_t retXIncludes[] = { 25, 100, 101, 102, 103, 105, /*106,*/ 107, 130, 140, 142, 144, 145, 146, 149, 150, 151, 158, /*180,*/ 215, 216, 56, 99 };
@@ -296,27 +296,27 @@ DWORD WINAPI Init(LPVOID bDelay)
             case SLAUGHTER_METER_COORDS_RELATIVE_TO_HEALTH_CLUSTER_BACKGROUND:
             case SKULL_ICON_RELATIVE_TO_HEALTH_CLUSTER_BACKGROUND:
                 break;
-            //case WEAPON_ICON_OFFSET_FROM_UPPER_LEFT_CORNER_OF_BOX:
+                //case WEAPON_ICON_OFFSET_FROM_UPPER_LEFT_CORNER_OF_BOX:
             case AMMO_COUNTER_OFFSET_FROM_UPPER_LEFT_CORNER_OF_BOX:
             case RESERVE_AMMO_BAR_OFFSET_FROM_UPPER_LEFT_CORNER_OF_BOX:
-            //case RETICLE_OFFSETS_FROM_CENTER_OF_SCREEN:
+                //case RETICLE_OFFSETS_FROM_CENTER_OF_SCREEN:
                 break;
-           case FRONT_DAMAGE_INDICATOR_CENTER:
-               x = (Screen.Width / 2) - 176;
-               y = 0;
-               break;
-           case BACK_DAMAGE_INDICATOR_CENTER:
-               x = (Screen.Width / 2) - 176;
-               y = Screen.Height - 69;
-               break;
-           case LEFT_DAMAGE_INDICATOR_CENTER:
-               x = 0;
-               y = (Screen.Height / 2) - 176;
-               break;
-           case RIGHT_DAMAGE_INDICATOR_CENTER:
-               x = Screen.Width - 69;
-               y = (Screen.Height / 2) - 176;
-               break;
+            case FRONT_DAMAGE_INDICATOR_CENTER:
+                x = (Screen.Width / 2) - 176;
+                y = 0;
+                break;
+            case BACK_DAMAGE_INDICATOR_CENTER:
+                x = (Screen.Width / 2) - 176;
+                y = Screen.Height - 69;
+                break;
+            case LEFT_DAMAGE_INDICATOR_CENTER:
+                x = 0;
+                y = (Screen.Height / 2) - 176;
+                break;
+            case RIGHT_DAMAGE_INDICATOR_CENTER:
+                x = Screen.Width - 69;
+                y = (Screen.Height / 2) - 176;
+                break;
             default:
                 x = static_cast<int32_t>(static_cast<float>(x) * Screen.PresetFactorX);
                 y = static_cast<int32_t>(static_cast<float>(y) * Screen.PresetFactorY);
@@ -330,7 +330,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             regs.ecx = regs.edi;
             ++curLine;
         }
-    }; 
+    };
     injector::WriteMemory<uint8_t>(pattern.get_first(0), 0x56i8, true);
     injector::MakeInline<HudHook>(pattern.get_first(1), pattern.get_first(7));
 
@@ -347,12 +347,12 @@ DWORD WINAPI Init(LPVOID bDelay)
         void operator()(injector::reg_pack& regs)
         {
             auto i = *dword_73DF80 * 44;
-            
+
             auto x = *(int32_t*)(dword_73DFA4 + i);
             auto y = *(int32_t*)(dword_73DFA8 + i);
             auto w = *(int32_t*)(dword_73DFAC + i);
             auto h = *(int32_t*)&regs.eax;
-    
+
             if (x == 0 && w == Screen.PresetWidth && h == (Screen.PresetHeight - y))
             {
                 //*(int32_t*)(dword_73DFA4 + i) = x;
@@ -360,7 +360,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                 *(int32_t*)(dword_73DFAC + i) = Screen.Width; //makes weapons overlay not being cut off by preset
                 *(int32_t*)&regs.eax = Screen.Height;
             }
-    
+
             *dword_73DF80 = regs.ecx;
         }
     }; injector::MakeInline<MenuHook>(pattern.get_first(0), pattern.get_first(6));
@@ -375,7 +375,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             auto y = *(int32_t*)(regs.esp + 0x0C);
             auto w = *(int32_t*)(regs.esp + 0x10);
             auto h = *(int32_t*)(regs.esp + 0x14);
-            
+
             if (x == 0 && y == 0 && w == Screen.Width && h == Screen.Height)
             {
                 *(int32_t*)(regs.esp + 0x08) = static_cast<int32_t>(Screen.fHudOffsetReal);
@@ -428,12 +428,12 @@ DWORD WINAPI Init(LPVOID bDelay)
         {
             **(int32_t**)(regs.esp + 0x28) = static_cast<int32_t>(static_cast<float>(**(int32_t**)(regs.esp + 0x28)) * (Screen.fWidth / (480.0f * Screen.fAspectRatio)));
             **(int32_t**)(regs.esp + 0x2C) = static_cast<int32_t>(static_cast<float>(**(int32_t**)(regs.esp + 0x2C)) * Screen.fHeight / 448.0f);
-            
+
             **(int32_t**)(regs.esp + 0x28) += static_cast<int32_t>(Screen.fHudOffsetReal);
         }
-    }; 
+    };
     injector::MakeNOP(pattern.get_first(0), 2, true); //weapons overlay preset
-    injector::MakeInline<WeaponsOverlayHook2>(pattern.get_first(23), pattern.get_first(23+14)); //0x5266DB, 0x5266E9
+    injector::MakeInline<WeaponsOverlayHook2>(pattern.get_first(23), pattern.get_first(23 + 14)); //0x5266DB, 0x5266E9
 
     pattern = hook::pattern("D8 0D ? ? ? ? D9 5C 24 18 E8 ? ? ? ? 89"); //0x47D10E
     injector::WriteMemory(pattern.get_first(2), &Screen.fHUDScaleX, true); //weapons overlay scale
@@ -468,11 +468,6 @@ DWORD WINAPI Init(LPVOID bDelay)
     }
 
     //FOV
-    #undef SCREEN_FOV_HORIZONTAL
-    #undef SCREEN_FOV_VERTICAL
-    #define SCREEN_FOV_HORIZONTAL		60.0f
-    #define SCREEN_FOV_VERTICAL			(2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))
-    Screen.fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
     pattern = hook::pattern("A0 ? ? ? ? 83 EC 50 84 C0"); // 0x515890
     static auto byte_9132CC = *pattern.get_first<uint8_t*>(1);
     struct FOVHook
@@ -480,7 +475,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         void operator()(injector::reg_pack& regs)
         {
             regs.eax = *byte_9132CC;
-            *(float*)(regs.esp + 0x0C) *= Screen.fDynamicScreenFieldOfViewScale * fFOVFactor;
+            *(float*)(regs.esp + 0x0C) = AdjustFOV(*(float*)(regs.esp + 0x0C), Screen.fAspectRatio) * fFOVFactor;
         }
     }; injector::MakeInline<FOVHook>(pattern.get_first(0));
 
@@ -491,11 +486,12 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        //MessageBox(0,0,0,0);
-        #ifdef _LOG
+#ifdef _LOG
         logfile.open("Pun.WidescreenFix.log");
-        #endif // _LOG
+#endif // _LOG
+
         Init(NULL);
     }
+
     return TRUE;
 }
