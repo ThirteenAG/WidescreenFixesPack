@@ -7,3 +7,6 @@
 [submodule "external/hooking"]
 	path = external/hooking
 	url = https://github.com/ThirteenAG/Hooking.Patterns
+[submodule "external/spdlog"]
+	path = external/spdlog
+	url = https://github.com/gabime/spdlog
