@@ -1,11 +1,5 @@
 #include "stdafx.h"
-
-//#define _LOG
-#ifdef _LOG
-#include <fstream>
-std::ofstream logfile;
-uint32_t logit;
-#endif // _LOG
+#include "log.h"
 
 struct Screen
 {
@@ -186,11 +180,6 @@ DWORD WINAPI Init(LPVOID bDelay)
             int32_t fBottom = *(int16_t*)(regs.esp + 0x46);  // 480
             FColor Color; Color.RGBA = *(int32_t*)(regs.esp + 0x3C);
 
-#ifdef _LOG
-            if (logit)
-                logfile << std::dec << fLeft << " " << fRight << " " << fTop << " " << fBottom << " " << std::hex << Color.RGBA << std::endl;
-#endif // _LOG
-
             if ((fLeft == 0 && fRight == 640 /*&& fTop == 0 && fBottom == 480*/) || (fLeft == -2 && fRight == 639 && fTop == -2 && fBottom == 479)
                 || (fLeft == -1 && fRight == 640 && fTop == -2 && fBottom == 479) || (fTop == 0 && fBottom == 512)) //fullscreen images, 0 512 - camera feed overlay
             {
@@ -256,9 +245,11 @@ DWORD WINAPI Init(LPVOID bDelay)
                         !(fLeft == 566 && fRight == 569 && fTop == 409 && fBottom == 425) && // camera screen bracket ]
                         !(fLeft == 562 && fRight == 566 && fTop == 409 && fBottom == 410) && // camera screen bracket ]
                         !(fLeft == 562 && fRight == 566 && fTop == 424 && fBottom == 425) && // camera screen bracket ]
+                        !(fLeft == 594 && fRight == 604 && fTop == 270 && fBottom == 271) && // camera screen bracket ]
                         !((((fRight - fLeft) == 1) || ((fRight - fLeft) == 2) || ((fRight - fLeft) == 3) || ((fRight - fLeft) == 4)) && ((fBottom - fTop) == 1 || (fBottom - fTop) == 16 || (fBottom - fTop) == 21 || (fBottom - fTop) == 22) && (fTop >= 195 && fBottom <= 395)) //other brackets of overlay menus
                         )
                     {
+                        DBGONLY(KEYPRESS(VK_F1) { spd::log->info("{0:d} {1:d} {2:d} {3:d} {4:08x}", fLeft, fRight, fTop, fBottom, Color.RGBA); });
                         *(int16_t*)(regs.esp + 0x40) += WidescreenHudOffset._int;
                         *(int16_t*)(regs.esp + 0x42) += WidescreenHudOffset._int;
                     }
@@ -297,10 +288,8 @@ DWORD WINAPI Init(LPVOID bDelay)
                 int32_t offset3 = static_cast<int32_t>(*(float*)(regs.esp + 0x1C));
                 FColor Color; Color.RGBA = *(int32_t*)(regs.esp + 0x160);
 
-#ifdef _LOG
-                if (logit)
-                    logfile << std::dec << offset1 << " " << offset2 << " " << offset3 << " " << std::hex << Color.RGBA << std::endl;
-#endif // _LOG
+                DBGONLY(KEYPRESS(VK_F2) { spd::log->info("{0:d} {1:d} {2:d} {4:08x}", offset1, offset2, offset3, Color.RGBA); });
+
                 if (bIsInMenu && *bIsInMenu == 0)
                 {
                     if (
@@ -336,6 +325,23 @@ DWORD WINAPI Init(LPVOID bDelay)
         }
     }; injector::MakeInline<UGameEngine_Draw_Hook2>(pattern.get_first(0), pattern.get_first(6)); //0x10A3E8A0
 
+    //windowed alt-tab fix
+    pattern = hook::pattern("8B 84 24 ? ? ? ? 50 53 57 52 74 50 FF 15 ? ? ? ? 5F 5E 5D 5B 81 C4 ? ? ? ? C2 0C 00");
+    struct WndProcHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.eax = *(uint32_t*)(regs.esp + 0x3A8);
+
+            if (regs.edi == WM_WINDOWPOSCHANGED)
+            {
+                auto lpwp = (LPWINDOWPOS)regs.eax;
+                if (lpwp->x < 0 && lpwp->y < 0)
+                    ShowWindow((HWND)regs.edx, SW_RESTORE);
+            }
+        }
+    }; injector::MakeInline<WndProcHook>(pattern.get_first(0), pattern.get_first(7)); //0x10CC4EEA 
+
     return 0;
 }
 
@@ -343,9 +349,6 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-#ifdef _LOG
-        logfile.open("SC3.WidescreenFix.log");
-#endif // _LOG
         Init(NULL);
     }
     return TRUE;

@@ -2,12 +2,6 @@
 #include "GTA\common.h"
 #include "GTA\global.h"
 
-//#define _LOG
-#ifdef _LOG
-#include <fstream>
-ofstream logfile;
-#endif // _LOG
-
 hook::pattern dwGameLoadStatePattern, DxInputNeedsExclusive, EmergencyVehiclesFixPattern, RadarScalingPattern;
 hook::pattern MenuPattern, MenuPattern15625, RsSelectDevicePattern, CDarkelDrawMessagesPattern, CDarkelDrawMessagesPattern2, CParticleRenderPattern;
 hook::pattern DrawHudHorScalePattern, DrawHudVerScalePattern, CSpecialFXRender2DFXsPattern, CSceneEditDrawPattern, sub61DEB0Pattern;
@@ -89,16 +83,16 @@ void ShowRadarTrace(float fX, float fY, unsigned int nScale, BYTE r, BYTE g, BYT
         float	fHeightMult = 1.0f / 480.0f;
 
         CSprite2dDrawRect(CRect(fX - ((nScale + 1.0f) * fWidthMult * RsGlobal->MaximumWidth),
-                                fY + ((nScale + 1.0f) * fHeightMult * RsGlobal->MaximumHeight),
-                                fX + ((nScale + 1.0f) * fWidthMult * RsGlobal->MaximumWidth),
-                                fY - ((nScale + 1.0f) * fHeightMult * RsGlobal->MaximumHeight)),
-                                CRGBA(0, 0, 0, a));
+            fY + ((nScale + 1.0f) * fHeightMult * RsGlobal->MaximumHeight),
+            fX + ((nScale + 1.0f) * fWidthMult * RsGlobal->MaximumWidth),
+            fY - ((nScale + 1.0f) * fHeightMult * RsGlobal->MaximumHeight)),
+            CRGBA(0, 0, 0, a));
 
         CSprite2dDrawRect(CRect(fX - (nScale * fWidthMult * RsGlobal->MaximumWidth),
-                                fY + (nScale * fHeightMult * RsGlobal->MaximumHeight),
-                                fX + (nScale * fWidthMult * RsGlobal->MaximumWidth),
-                                fY - (nScale * fHeightMult * RsGlobal->MaximumHeight)),
-                                CRGBA(r, g, b, a));
+            fY + (nScale * fHeightMult * RsGlobal->MaximumHeight),
+            fX + (nScale * fWidthMult * RsGlobal->MaximumWidth),
+            fY - (nScale * fHeightMult * RsGlobal->MaximumHeight)),
+            CRGBA(r, g, b, a));
     }
 }
 
@@ -167,7 +161,7 @@ void FixAspectRatio()
     pattern = hook::pattern("80 3D ? ? ? ? 00 DD D9 74 0A FF 35");
     //injector::MakeNOP(pattern.count(1).get(0).get<uint32_t>(0), 7, true); //0x48D06B
     injector::MakeNOP(pattern.count(1).get(0).get<uint32_t>(9), 2, true); //0x48D074
-   
+
     pattern = hook::pattern("EB 00 5D 5B C3"); //0x584B26
     injector::MakeJMP(pattern.count(1).get(0).get<uint32_t>(4), CDraw::CalculateAspectRatio, true);
 }
@@ -224,7 +218,7 @@ void FixMenu()
     static float fFlasRadioOffset;
     static float fChatRadioOffset;
     static float fMp33RadioOffset;
-    
+
     //centering radio icons
     float fBaseOffset = (640.0f - (30.0f + 30.0f)) * (*CDraw::pfScreenAspectRatio / (4.0f / 3.0f)) / 10.0f;
     fHeadRadioOffset = fBaseOffset * 1.0f;
@@ -321,7 +315,7 @@ void FixHUD()
     injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &fWideScreenWidthScaleDown, true); //sniper scope border @Render2dStuff
     pattern = hook::pattern("D8 0D ? ? ? ? 89 54 24 0C FF 35 ? ? ? ? D8 0D ? ? ? ? 50 DA 44 24 14"); //0x48E3CC
     injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &fWideScreenWidthScaleDown, true);
-    pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? 50 D9 1C 24 E8 ? ? ? ? 59 59"); 
+    pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? 50 D9 1C 24 E8 ? ? ? ? 59 59");
     injector::WriteMemory(pattern.count(2).get(0).get<uint32_t>(2), &fWideScreenWidthScaleDown, true); //0x48DC09
     injector::WriteMemory(pattern.count(2).get(1).get<uint32_t>(2), &fWideScreenWidthScaleDown, true); //48DCDB
 
@@ -535,7 +529,7 @@ void ApplyIniOptions()
     ReplaceTextShadowWithOutline = iniReader.ReadInteger("MAIN", "ReplaceTextShadowWithOutline", 0);
     if (ReplaceTextShadowWithOutline)
     {
-        auto pattern = hook::pattern("E8 ? ? ? ? 83 C4 0C 89 E9 FF 35 ? ? ? ? E8 ? ? ? ? 89 E9"); 
+        auto pattern = hook::pattern("E8 ? ? ? ? 83 C4 0C 89 E9 FF 35 ? ? ? ? E8 ? ? ? ? 89 E9");
         auto dest = injector::GetBranchDestination(pattern.count(2).get(1).get<uint32_t>(0), true); //PrintString 500F50
 
         pattern = hook::pattern("66 C7 05 ? ? ? ? 00 00 59 C3 00 00 00 00 00 00");
@@ -551,7 +545,7 @@ void ApplyIniOptions()
         //Changing black color for necessary strings
         for (size_t i = 0; i < MenuPattern3.size(); i++)
         {
-            if (i == 9 || i == 15 || i == 20 || i == 33 || i == 36 ) // 9 - MAIN MENU strings, 15,21 - controls page key on hover, 33 - ammo, 36 - wanted stars;
+            if (i == 9 || i == 15 || i == 20 || i == 33 || i == 36) // 9 - MAIN MENU strings, 15,21 - controls page key on hover, 33 - ammo, 36 - wanted stars;
             {
                 auto pClr = MenuPattern3.get(i);
                 injector::WriteMemory<uint8_t>(pClr.get<uint32_t>(1), 0x01, true);
@@ -726,10 +720,6 @@ void Fix2DSprites()
 
 DWORD WINAPI Init(LPVOID bDelay)
 {
-    #ifdef _LOG
-    logfile.open("GTAIII.WidescreenFix.log");
-    #endif // _LOG
-
     auto pattern = hook::pattern("6A 02 6A 00 6A 00 68 01 20 00 00");
 
     if (pattern.count_hint(1).empty() && !bDelay)
@@ -759,8 +749,8 @@ DWORD WINAPI Init(LPVOID bDelay)
     //Delayed changes
     struct LoadState
     {
-        void operator()(injector::reg_pack& regs) 
-        {  
+        void operator()(injector::reg_pack& regs)
+        {
             if (*dwGameLoadState < 9)
             {
                 //SilentPatchCompatibility(); not needed atm

@@ -1,4 +1,5 @@
 #include "stdafx.h"
+//#include "log.h"
 
 struct Screen
 {
@@ -12,13 +13,6 @@ struct Screen
     float fWidth43;
     float fHudScale;
 } Screen;
-
-//#define _LOG
-#ifdef _LOG
-#include <fstream>
-std::ofstream logfile;
-int logit;
-#endif // _LOG
 
 DWORD WINAPI Init(LPVOID bDelay)
 {
@@ -93,14 +87,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         {
             void operator()(injector::reg_pack& regs)
             {
-#ifdef _LOG
-                if (logit)
-                    logfile << *(float*)(*(uintptr_t*)(regs.ecx + 0x0A859C) + 0x00) << " "
-                    << *(uintptr_t*)(*(uintptr_t*)(regs.ecx + 0x0A859C) + 0x10) << " "
-                    << *(uintptr_t*)(*(uintptr_t*)(regs.ecx + 0x0A859C) + 0x14) << " "
-                    << *(uintptr_t*)(*(uintptr_t*)(regs.ecx + 0x0A859C) + 0x18) << " "
-                    << *(uintptr_t*)(*(uintptr_t*)(regs.ecx + 0x0A859C) + 0x1C) << std::endl;
-#endif // _LOG
+                //DBGONLY(spd::log->info("{} {} {} {} {}", *(float*)(*(uintptr_t*)(regs.ecx + 0x0A859C) + 0x00), *(uintptr_t*)(*(uintptr_t*)(regs.ecx + 0x0A859C) + 0x10), *(uintptr_t*)(*(uintptr_t*)(regs.ecx + 0x0A859C) + 0x14), *(uintptr_t*)(*(uintptr_t*)(regs.ecx + 0x0A859C) + 0x18), *(uintptr_t*)(*(uintptr_t*)(regs.ecx + 0x0A859C) + 0x1C)););
 
                 if (*(float*)(*(uintptr_t*)(regs.ecx + 0x0A859C) + 0x08) != 90.0f && *(uintptr_t*)(*(uintptr_t*)(regs.ecx + 0x0A859C) + 0x18) != 235587392) //fading check
                 {
@@ -139,9 +126,6 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-#ifdef _LOG
-        logfile.open("WidescreenFix.log");
-#endif // _LOG
         Init(NULL);
     }
     return TRUE;

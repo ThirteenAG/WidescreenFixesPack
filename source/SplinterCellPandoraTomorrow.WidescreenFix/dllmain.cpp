@@ -1,11 +1,5 @@
 #include "stdafx.h"
-
-//#define _LOG
-#ifdef _LOG
-#include <fstream>
-ofstream logfile;
-uint32_t logit;
-#endif // _LOG
+#include "log.h"
 
 struct Screen
 {
@@ -41,10 +35,7 @@ uintptr_t pDrawTile;
 
 void WidescreenHud(float& offsetX1, float& offsetX2, float& offsetY1, float& offsetY2, FColor& Color)
 {
-#ifdef _LOG
-    if (logit)
-        logfile << offsetX1 << " " << offsetX2 << " " << offsetY1 << " " << offsetY2 << " " << Color.RGBA << std::endl;
-#endif // _LOG
+    DBGONLY(KEYPRESS(VK_F1) { spd::log->info("{0:f} {1:f} {2:f} {3:f} {4:08x}", offsetX1, offsetX2, offsetY1, offsetY2, Color.RGBA); });
 
     if (
         ((offsetX2 - offsetX1 == 17) && (offsetY1 == 337.0f || offsetY1 == 360.0f) && (offsetY2 == 368.0f || offsetY2 == 345.0f) /*&& Color.RGBA == 4266682200*/) || //stealth meter line 
@@ -436,9 +427,6 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-#ifdef _LOG
-        logfile.open("SC2.WidescreenFix.log");
-#endif // _LOG
         Init(NULL);
     }
     return TRUE;

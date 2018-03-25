@@ -1,13 +1,7 @@
 #include "stdafx.h"
 #include <d3d9.h>
 #include "dxsdk\d3dvtbl.h"
-
-//#define _LOG
-#ifdef _LOG
-#include <fstream>
-std::ofstream logfile;
-uint32_t logit;
-#endif // _LOG
+#include "log.h"
 
 struct Screen
 {
@@ -76,7 +70,7 @@ HRESULT WINAPI EndScene(LPDIRECT3DDEVICE9 pDevice)
     return RealEndScene(pDevice);
 }
 
-HRESULT __stdcall CreateDevice(IDirect3D9* d3ddev, UINT Adapter, D3DDEVTYPE DeviceType, HWND hFocusWindow, DWORD BehaviorFlags, D3DPRESENT_PARAMETERS* pPresentationParameters, IDirect3DDevice9** ppReturnedDeviceInterface) 
+HRESULT __stdcall CreateDevice(IDirect3D9* d3ddev, UINT Adapter, D3DDEVTYPE DeviceType, HWND hFocusWindow, DWORD BehaviorFlags, D3DPRESENT_PARAMETERS* pPresentationParameters, IDirect3DDevice9** ppReturnedDeviceInterface)
 {
     HRESULT retval = RealD3D9CreateDevice(d3ddev, Adapter, DeviceType, hFocusWindow, BehaviorFlags, pPresentationParameters, ppReturnedDeviceInterface);
     UINT_PTR* pVTable = (UINT_PTR*)(*((UINT_PTR*)*ppReturnedDeviceInterface));
@@ -88,10 +82,7 @@ HRESULT __stdcall CreateDevice(IDirect3D9* d3ddev, UINT Adapter, D3DDEVTYPE Devi
 injector::hook_back<void(__fastcall*)(void*, void*, testParam*)> hbDrawBorders;
 void __fastcall DrawBordersHook(void* _this, void* edx, testParam* a2)
 {
-    #ifdef _LOG
-    if (false)
-        logfile << a2->a1 << " " << a2->a2 << " " << a2->a3 << " " << a2->a4 << " " << a2->a5 << " " << a2->a6 << " " << a2->a7 << " " << a2->a8 << " " << a2->a9 << std::endl;
-    #endif
+    DBGONLY(KEYPRESS(VK_F1) { spd::log->info("{0:f} {1:f} {2:f} {3:f} {4:f} {5:f} {6:f} {7:f} {8:f}", a2->a1, a2->a2, a2->a3, a2->a4, a2->a5, a2->a6, a2->a7, a2->a8, a2->a9); });
 
     static float x4 = 0.0f;
     if (!x4 && (fabs(-a2->a2 - a2->a4) <= FLT_EPSILON * fmax(fabs(-a2->a2), fabs(a2->a4))))
@@ -244,7 +235,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         pattern = hook::pattern("E8 ? ? ? ? DB 44 24 08 8A 86"); //0x5092D9
         injector::MakeCALL(pattern.get_first(0), static_cast<void(__fastcall *)(uintptr_t, uint32_t, int32_t*, int32_t*)>(sub_480BA0_2), true); //radar
     }
-    
+
     //pda map is broken now
     pattern = hook::pattern("D8 1D ? ? ? ? DF E0 F6 C4 44 7A ? C7 85 30 FF FF FF 01 00 00 00 EB");
     static const float f1 = 1.0f; //map fix
@@ -367,9 +358,6 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        #ifdef _LOG
-        logfile.open("JC.WidescreenFix.log");
-        #endif // _LOG
         Init(NULL);
     }
     return TRUE;

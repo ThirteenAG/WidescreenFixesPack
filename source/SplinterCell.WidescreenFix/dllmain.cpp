@@ -1,11 +1,5 @@
 #include "stdafx.h"
-
-//#define _LOG
-#ifdef _LOG
-#include <fstream>
-ofstream logfile;
-uint32_t logit;
-#endif // _LOG
+#include "log.h"
 
 struct Screen
 {
@@ -46,10 +40,7 @@ void WidescreenHud(float& offsetX1, float& offsetX2, float& offsetY1, float& off
     uint32_t n_offsetY1 = static_cast<uint32_t>((480.0f * (Screen.fWidth / Screen.fHeight)) / (Screen.fWidth / offsetY1));
     uint32_t n_offsetY2 = static_cast<uint32_t>((480.0f * (Screen.fWidth / Screen.fHeight)) / (Screen.fWidth / offsetY2));
 
-#ifdef _LOG
-    if (logit)
-        logfile << n_offsetX1 << " " << n_offsetX2 << " " << n_offsetY1 << " " << n_offsetY2 << " " << Color.RGBA << std::endl;
-#endif // _LOG
+    DBGONLY(KEYPRESS(VK_F1) { spd::log->info("{0:d} {1:d} {2:d} {3:d} {4:08x}", n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color.RGBA); });
 
     if (
         (n_offsetX1 >= 599 && n_offsetX2 <= 616 && n_offsetY1 >= 39 && n_offsetY2 <= 233 /*&& (Color.RGBA == 4269834368 || Color.RGBA == 671088640)*/) || //health bar
@@ -285,9 +276,6 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-#ifdef _LOG
-        logfile.open("SC.WidescreenFix.log");
-#endif // _LOG
         Init(NULL);
     }
     return TRUE;

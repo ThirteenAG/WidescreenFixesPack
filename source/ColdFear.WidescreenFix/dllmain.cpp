@@ -1,9 +1,5 @@
 #include "stdafx.h"
-
-#undef SCREEN_FOV_HORIZONTAL
-#undef SCREEN_FOV_VERTICAL
-#define SCREEN_FOV_HORIZONTAL		15.0f
-#define SCREEN_FOV_VERTICAL			(2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / SCREEN_AR_NARROW)))	// Default is 75.0f.
+#include "log.h"
 
 struct Screen
 {
@@ -41,13 +37,6 @@ bool bHudWidescreenMode;
 int32_t nWidescreenHudOffset;
 float fWidescreenHudOffset;
 
-//#define _LOG
-#ifdef _LOG
-#include <fstream>
-ofstream logfile;
-uint32_t logit;
-#endif // _LOG
-
 int __cdecl sub_42B460(float a1, float a2, float a3, float a4, float a5, float a6, float a7, float a8, int a9, int a10, int a11)
 {
     auto _sub_42B460 = (int(__cdecl *)(float, float, float, float, float, float, float, float, int, int, int)) sub_42B460_addr;
@@ -58,10 +47,7 @@ int __cdecl sub_42B460(float a1, float a2, float a3, float a4, float a5, float a
     uint32_t n_offsetY2 = static_cast<uint32_t>((a4));
     auto Color = *(FColor*)&a9;
 
-#ifdef _LOG
-    if (logit)
-        logfile << std::dec << n_offsetX1 << " " << n_offsetX2 << " " << n_offsetY1 << " " << n_offsetY2 << " " << std::hex << a9 << " " << a10 << " " << a11 << std::endl;
-#endif // _LOG
+    DBGONLY(KEYPRESS(VK_F1) { spd::log->info("{0:d} {1:d} {2:d} {3:d} {4:08x} {5:08x} {6:08x}", n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, a9, a10, a11); });
 
     a1 = (a1 / Screen.fHudScaleX) + Screen.fHudOffset;
     a3 = (a3 / Screen.fHudScaleX) + Screen.fHudOffset;
@@ -75,9 +61,9 @@ int __cdecl sub_42B460(float a1, float a2, float a3, float a4, float a5, float a
         }
 
         if (
-        (n_offsetX1 == 24) && (n_offsetX2 == 136) && (n_offsetY1 >= 315 && n_offsetY1 <= 448) && (Color.R == 0xff && Color.G == 0xff && Color.B == 0xff) || //text (RESISTANCE | LIFE)
-        (n_offsetX1 == 92) && (n_offsetX2 == 204) && (n_offsetY1 >= 315 && n_offsetY1 <= 448) && (Color.R == 0xff && Color.G == 0xff && Color.B == 0xff) //text (INTERACTION)
-        )
+            (n_offsetX1 == 24) && (n_offsetX2 == 136) && (n_offsetY1 >= 315 && n_offsetY1 <= 448) && (Color.R == 0xff && Color.G == 0xff && Color.B == 0xff) || //text (RESISTANCE | LIFE)
+            (n_offsetX1 == 92) && (n_offsetX2 == 204) && (n_offsetY1 >= 315 && n_offsetY1 <= 448) && (Color.R == 0xff && Color.G == 0xff && Color.B == 0xff) //text (INTERACTION)
+            )
         {
             a1 -= fWidescreenHudOffset;
             a3 -= fWidescreenHudOffset;
@@ -90,16 +76,13 @@ int __cdecl sub_42B460(float a1, float a2, float a3, float a4, float a5, float a
 void __cdecl sub_42B610(float a1, float a2, float a3, float a4, int a5, int a6, int a7)
 {
     auto _sub_42B610 = (void(__cdecl *)(float, float, float, float, int, int, int)) sub_42B610_addr;
-    
+
     uint32_t n_offsetX1 = static_cast<uint32_t>((a1));
     uint32_t n_offsetY1 = static_cast<uint32_t>((a2));
     uint32_t n_offsetX2 = static_cast<uint32_t>((a3));
     uint32_t n_offsetY2 = static_cast<uint32_t>((a4));
 
-/*#ifdef _LOG
-    if (logit)
-        logfile << std::dec << n_offsetX1 << " " << n_offsetX2 << " " << n_offsetY1 << " " << n_offsetY2 << " " << std::hex << a5 << " " << a6 << " " << a7 << std::endl;
-#endif // _LOG*/
+    DBGONLY(KEYPRESS(VK_F1) { spd::log->info("{0:d} {1:d} {2:d} {3:d} {4:08x} {5:08x} {6:08x}", n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, a5, a6, a7); });
 
     if (a1 != 0.0f && a2 != 0.0f) //menu background rendered here
     {
@@ -150,7 +133,7 @@ void __cdecl sub_42B740(float a1, float a2, float a3, float a4, int a5, int a6, 
     if (bHudWidescreenMode)
     {
         if (((n_offsetX1 == 20 || n_offsetX1 == 164) && (n_offsetX2 == 1 || n_offsetX2 == 144 || n_offsetX2 == 145) && (n_offsetY1 >= 315 && n_offsetY1 <= 448) && (Color.R == 0 && Color.G == 0 && Color.B == 0) && (a6 == 0))//health bar border etc
-        || ((n_offsetX1 >= 20 && n_offsetX1 <= 166) && (Color.R == 0xff && Color.G == 0x24 && Color.B == 0x08))	)
+            || ((n_offsetX1 >= 20 && n_offsetX1 <= 166) && (Color.R == 0xff && Color.G == 0x24 && Color.B == 0x08)))
         {
             a1 -= fWidescreenHudOffset;
             //a3 -= fWidescreenHudOffset;
@@ -163,7 +146,7 @@ void __cdecl sub_42B740(float a1, float a2, float a3, float a4, int a5, int a6, 
 void __cdecl sub_42BA20(float a1, float a2, int a3, int a4, int a5)
 {
     auto _sub_42BA20 = (void(__cdecl *)(float, float, int, int, int)) sub_42BA20_addr;
-    
+
     a1 = (a1 / Screen.fHudScaleX) + Screen.fHudOffset;
     //a3 = (a3 / Screen.fHudScaleX) + Screen.fHudOffset;
 
@@ -257,15 +240,14 @@ DWORD WINAPI Init(LPVOID bDelay)
     nWidescreenHudOffset = iniReader.ReadInteger("MAIN", "WidescreenHudOffset", 75);
     fWidescreenHudOffset = static_cast<float>(nWidescreenHudOffset);
 
-    if (!Screen.Width || !Screen.Height) 
+    if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
-    
+
     Screen.fWidth = static_cast<float>(Screen.Width);
     Screen.fHeight = static_cast<float>(Screen.Height);
     Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
     Screen.fHudScaleX = (480.0f * Screen.fAspectRatio) / 640.0f;
     Screen.fHudOffset = ((Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f) / (Screen.fWidth / 640.0f);
-    //Screen.fDynamicScreenFieldOfViewScale = 2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * Screen.fAspectRatio)) * (1.0f / SCREEN_FOV_HORIZONTAL);
     if (Screen.fAspectRatio < (16.0f / 9.0f))
     {
         fWidescreenHudOffset = fWidescreenHudOffset / (((16.0f / 9.0f) / (Screen.fAspectRatio)) * 1.5f);
@@ -300,22 +282,22 @@ DWORD WINAPI Init(LPVOID bDelay)
     {
         auto addr = pattern.get(i).get<uint32_t>(0);
         auto dest = injector::GetBranchDestination(addr, true).as_int();
-        
+
         if (dest == sub_42B460_addr)
             injector::MakeCALL(addr, sub_42B460, true);
-        
+
         if (dest == sub_42B610_addr)
             injector::MakeCALL(addr, sub_42B610, true);
-        
+
         if (dest == sub_42B740_addr)
             injector::MakeCALL(addr, sub_42B740, true);
-        
+
         if (dest == sub_42BA20_addr)
             injector::MakeCALL(addr, sub_42BA20, true);
-                
+
         if (dest == sub_42C8D0_addr)
             injector::MakeCALL(addr, sub_42C8D0, true);
-        
+
         if (dest == sub_42CA50_addr)
             injector::MakeCALL(addr, sub_42CA50, true);
 
@@ -385,9 +367,6 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-#ifdef _LOG
-        logfile.open("CF.WidescreenFix.log");
-#endif // _LOG
         Init(NULL);
     }
     return TRUE;

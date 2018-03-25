@@ -29,6 +29,7 @@ workspace "WidescreenFixesPack"
    includedirs { "external/hooking" }
    includedirs { "external/injector/include" }
    includedirs { "external/inireader" }
+   includedirs { "external/spdlog/include" }
    local dxsdk = os.getenv "DXSDK_DIR"
    if dxsdk then
       includedirs { dxsdk .. "/include" }

@@ -2,12 +2,6 @@
 #include "GTA\common.h"
 #include "GTA\global.h"
 
-//#define _LOG
-#ifdef _LOG
-#include <fstream>
-ofstream logfile;
-#endif // _LOG
-
 hook::pattern dwGameLoadStatePattern, DxInputNeedsExclusive, EmergencyVehiclesFixPattern, RadarScalingPattern;
 hook::pattern MenuPattern, MenuPattern15625, RsSelectDevicePattern, CDarkelDrawMessagesPattern, CDarkelDrawMessagesPattern2, CParticleRenderPattern;
 hook::pattern DrawHudHorScalePattern, DrawHudVerScalePattern, CSpecialFXRender2DFXsPattern, CSceneEditDrawPattern, sub61DEB0Pattern;
@@ -56,7 +50,7 @@ void GetPatterns()
     MenuPattern10 = hook::pattern("89 44 24 10 DB 44 24 10 D8 0D"); //0x68D50C Loading game. Please wait...
     MenuPattern11 = hook::pattern("D8 05 ? ? ? ? DD DA D9 46 44"); //0x497AC1 Related to map scrolling position and something else
     MenuPattern12 = hook::pattern("89 ? 24 20 DB 44 24 20 D8 0D"); //0x4A3731 cursor
-                                  
+
     auto dword_temp = *hook::pattern("89 04 24 DB 04 24 D8 0D").count(11).get(10).get<uint32_t*>(8);
     MenuPattern15625 = hook::pattern(pattern_str(0xD8, 0x0D, to_bytes(dword_temp))); //0x68C350
 
@@ -90,26 +84,26 @@ void GetPatterns()
 
 void GetMemoryAddresses()
 {
-        RsGlobal = *hook::pattern("8B 35 ? ? ? ? 6A 00 55 6A 00 6A 00 52 50").count(1).get(0).get<RsGlobalType *>(2); //0x9B48D8
-        CDraw::pfScreenAspectRatio = *hook::pattern("FF 35 ? ? ? ? FF 74 24 10 6A 00 50").count(1).get(0).get<float*>(2); //0x94DD38
-        CDraw::pfScreenFieldOfView = *hook::pattern("D8 35 ? ? ? ? D9 9B F0 00 00 00 D9 45 08 D8 1D").count(1).get(0).get<float*>(2); //0x696658
-        CSprite2dDrawRect = (int(__cdecl *)(CRect const &, CRGBA const &)) hook::pattern("8B 44 24 04 53 8B 5C 24 0C 53 53 53 53 50").count(1).get(0).get<uint32_t>(0); //0x577B00
-        funcCCameraAvoidTheGeometry = (void(__thiscall *)(void* _this, RwV3d const& a1, RwV3d const& a2, RwV3d& a3, float a4)) hook::pattern("53 56 57 55 81 EC 20 01 00 00 8B").count(1).get(0).get<uint32_t>(0); //0x473AA4
-        funcCCameraAvoidTheGeometryJmp = (uint32_t)funcCCameraAvoidTheGeometry + 10;
-        bWideScreen = *hook::pattern("80 3D ? ? ? ? 00 D9 C1 DD DA 74 00").count(1).get(0).get<bool*>(2);//0x869652
-        BordersVar1 = *hook::pattern("A1 ? ? ? ? 85 C0 74 05 83 F8 02 75 1D").count(1).get(0).get<uint32_t*>(1); //0x7E4738
-        BordersVar2 = *hook::pattern("DF E0 F6 C4 45 75 00 C7 05").count(1).get(0).get<uint32_t*>(9); //0x7E474C
-        FindPlayerVehicle = (int(__cdecl *)()) hook::pattern("0F B6 05 ? ? ? ? 6B C0 2E 8B 0C C5 ? ? ? ? 85 C9 74 10").get(0).get<uint32_t>(0);//0x4BC1E0
-        bIsInCutscene = *hook::pattern("80 3D ? ? ? ? ? 74 04 83 C4 38 C3").count(1).get(0).get<bool*>(2); //0x7E46F5
-        dwGameLoadState = *dwGameLoadStatePattern.count(1).get(0).get<uint32_t*>(2);
-        fCRadarRadarRange = *RadarScalingPattern.count(1).get(0).get<float*>(2);
-        SetColorAddr = hook::pattern("53 83 EC 10 8B 5C 24 18 8A 13").count(2).get(1).get<uint32_t>(0);
-        bFontColorA = *hook::pattern("C6 05 ? ? ? ? FF EB").count(1).get(0).get<uint8_t*>(2);
-        bDropShadowPosition = *hook::pattern("8B 44 24 04 66 A3 ? ? ? ? C3").count(1).get(0).get<uint8_t*>(6); //0x97F860
-        bFontDropColorA = *hook::pattern("A2 ? ? ? ? D9 EE D9 05 ? ? ? ? D8 15 ? ? ? ? DF E0").count(1).get(0).get<uint8_t*>(1); //0x97F865
-        bBackgroundOn = *hook::pattern("C6 05 ? ? ? ? 01 C3").count(7).get(6).get<uint8_t*>(2); //0x97F83B
-        font94B924 = *hook::pattern("66 83 0D ? ? ? ? FF C7 05 ? ? ? ? 00 00 00 00").count(1).get(0).get<uint16_t*>(3); //0x94B924
-        CMenuManager_m_PrefsLanguage = *hook::pattern("A1 ? ? ? ? 83 C4 14 83 F8 03 74 0A 83 F8 01").count(1).get(0).get<uint32_t*>(1); //0x869680
+    RsGlobal = *hook::pattern("8B 35 ? ? ? ? 6A 00 55 6A 00 6A 00 52 50").count(1).get(0).get<RsGlobalType *>(2); //0x9B48D8
+    CDraw::pfScreenAspectRatio = *hook::pattern("FF 35 ? ? ? ? FF 74 24 10 6A 00 50").count(1).get(0).get<float*>(2); //0x94DD38
+    CDraw::pfScreenFieldOfView = *hook::pattern("D8 35 ? ? ? ? D9 9B F0 00 00 00 D9 45 08 D8 1D").count(1).get(0).get<float*>(2); //0x696658
+    CSprite2dDrawRect = (int(__cdecl *)(CRect const &, CRGBA const &)) hook::pattern("8B 44 24 04 53 8B 5C 24 0C 53 53 53 53 50").count(1).get(0).get<uint32_t>(0); //0x577B00
+    funcCCameraAvoidTheGeometry = (void(__thiscall *)(void* _this, RwV3d const& a1, RwV3d const& a2, RwV3d& a3, float a4)) hook::pattern("53 56 57 55 81 EC 20 01 00 00 8B").count(1).get(0).get<uint32_t>(0); //0x473AA4
+    funcCCameraAvoidTheGeometryJmp = (uint32_t)funcCCameraAvoidTheGeometry + 10;
+    bWideScreen = *hook::pattern("80 3D ? ? ? ? 00 D9 C1 DD DA 74 00").count(1).get(0).get<bool*>(2);//0x869652
+    BordersVar1 = *hook::pattern("A1 ? ? ? ? 85 C0 74 05 83 F8 02 75 1D").count(1).get(0).get<uint32_t*>(1); //0x7E4738
+    BordersVar2 = *hook::pattern("DF E0 F6 C4 45 75 00 C7 05").count(1).get(0).get<uint32_t*>(9); //0x7E474C
+    FindPlayerVehicle = (int(__cdecl *)()) hook::pattern("0F B6 05 ? ? ? ? 6B C0 2E 8B 0C C5 ? ? ? ? 85 C9 74 10").get(0).get<uint32_t>(0);//0x4BC1E0
+    bIsInCutscene = *hook::pattern("80 3D ? ? ? ? ? 74 04 83 C4 38 C3").count(1).get(0).get<bool*>(2); //0x7E46F5
+    dwGameLoadState = *dwGameLoadStatePattern.count(1).get(0).get<uint32_t*>(2);
+    fCRadarRadarRange = *RadarScalingPattern.count(1).get(0).get<float*>(2);
+    SetColorAddr = hook::pattern("53 83 EC 10 8B 5C 24 18 8A 13").count(2).get(1).get<uint32_t>(0);
+    bFontColorA = *hook::pattern("C6 05 ? ? ? ? FF EB").count(1).get(0).get<uint8_t*>(2);
+    bDropShadowPosition = *hook::pattern("8B 44 24 04 66 A3 ? ? ? ? C3").count(1).get(0).get<uint8_t*>(6); //0x97F860
+    bFontDropColorA = *hook::pattern("A2 ? ? ? ? D9 EE D9 05 ? ? ? ? D8 15 ? ? ? ? DF E0").count(1).get(0).get<uint8_t*>(1); //0x97F865
+    bBackgroundOn = *hook::pattern("C6 05 ? ? ? ? 01 C3").count(7).get(6).get<uint8_t*>(2); //0x97F83B
+    font94B924 = *hook::pattern("66 83 0D ? ? ? ? FF C7 05 ? ? ? ? 00 00 00 00").count(1).get(0).get<uint16_t*>(3); //0x94B924
+    CMenuManager_m_PrefsLanguage = *hook::pattern("A1 ? ? ? ? 83 C4 14 83 F8 03 74 0A 83 F8 01").count(1).get(0).get<uint32_t*>(1); //0x869680
 }
 
 void SilentPatchCompatibility()
@@ -155,7 +149,7 @@ void OverwriteResolution()
     else if (ResX == -1 || ResY == -1)
         return;
 
-    if(!hbRsSelectDevice.fun)
+    if (!hbRsSelectDevice.fun)
         hbRsSelectDevice.fun = injector::MakeCALL(ResolutionPattern0.count(1).get(0).get<uint32_t>(0), RsSelectDeviceHook2).get();
 
     injector::WriteMemory<uint8_t>(ResolutionPattern1.count(1).get(0).get<uint32_t>(2), 22, true);
@@ -170,7 +164,7 @@ void OverwriteResolution()
     injector::WriteMemory(ResolutionPattern3.count(2).get(1).get<uint32_t>(26), ResY, true); //0x602D58 + 0x6
 
     injector::WriteMemory<uint8_t>(ResolutionPattern4.count(1).get(0).get<uint32_t>(15), 0xEB, true); //jl      short loc_600E60 > jmp      short loc_600E60
-    
+
     injector::MakeNOP(ResolutionPattern5.count(1).get(0).get<uint32_t>(5), 5, true);
     injector::WriteMemory<uint16_t>(ResolutionPattern5.count(1).get(0).get<uint32_t>(5), 0x07EB, true);
 }
@@ -201,33 +195,33 @@ void __declspec(naked) funcCCameraAvoidTheGeometryHook()
 
 void FixFOV()
 {
-        auto pattern = hook::pattern("D9 44 24 04 D9 1D ? ? ? ? C3"); //0x54A2E0 
-        injector::MakeJMP(pattern.count(1).get(0).get<uint32_t>(0), CDraw::SetFOV, true);
+    auto pattern = hook::pattern("D9 44 24 04 D9 1D ? ? ? ? C3"); //0x54A2E0 
+    injector::MakeJMP(pattern.count(1).get(0).get<uint32_t>(0), CDraw::SetFOV, true);
 
-        pattern = hook::pattern("E8 ? ? ? ? D9 EE D9 EE D9 44 24 38 D8 A3 7C 01 00 00 DD D9"); //0x480456 
-        injector::MakeCALL(pattern.count(1).get(0).get<uint32_t>(0), funcCCameraAvoidTheGeometryHook, true);
+    pattern = hook::pattern("E8 ? ? ? ? D9 EE D9 EE D9 44 24 38 D8 A3 7C 01 00 00 DD D9"); //0x480456 
+    injector::MakeCALL(pattern.count(1).get(0).get<uint32_t>(0), funcCCameraAvoidTheGeometryHook, true);
 
-        struct EmergencyVehiclesFix
+    struct EmergencyVehiclesFix
+    {
+        void operator()(injector::reg_pack& regs)
         {
-            void operator()(injector::reg_pack& regs)
-            {
-                *(float*)(regs.ebx + 0xF4) = fEmergencyVehiclesFix;
-            }
-        }; injector::MakeInline<EmergencyVehiclesFix>(EmergencyVehiclesFixPattern.count(1).get(0).get<uint32_t>(0), EmergencyVehiclesFixPattern.count(1).get(0).get<uint32_t>(6));
+            *(float*)(regs.ebx + 0xF4) = fEmergencyVehiclesFix;
+        }
+    }; injector::MakeInline<EmergencyVehiclesFix>(EmergencyVehiclesFixPattern.count(1).get(0).get<uint32_t>(0), EmergencyVehiclesFixPattern.count(1).get(0).get<uint32_t>(6));
 
 
-        struct RadarScaling
+    struct RadarScaling
+    {
+        void operator()(injector::reg_pack& regs)
         {
-            void operator()(injector::reg_pack& regs)
+            _asm
             {
-                _asm
-                {
-                    fstp    ds : fRadarScaling
-                }
-                *fCRadarRadarRange = fRadarScaling;
-                fRadarScaling -= 180.0f;
+                fstp    ds : fRadarScaling
             }
-        }; injector::MakeInline<RadarScaling>(RadarScalingPattern.count(1).get(0).get<uint32_t>(0), RadarScalingPattern.count(1).get(0).get<uint32_t>(6));
+            *fCRadarRadarRange = fRadarScaling;
+            fRadarScaling -= 180.0f;
+        }
+    }; injector::MakeInline<RadarScaling>(RadarScalingPattern.count(1).get(0).get<uint32_t>(0), RadarScalingPattern.count(1).get(0).get<uint32_t>(6));
 }
 
 void FixMenu()
@@ -258,11 +252,11 @@ void FixMenu()
 
     float fvcLogoScale = 0.2453125f / (*CDraw::pfScreenAspectRatio / (4.0f / 3.0f));
     injector::WriteMemory<float>(*MenuPattern4.count(4).get(3).get<uint32_t*>(8), fvcLogoScale, true);
-    
+
     float fMapLegendTextScale = 0.001015625f / (*CDraw::pfScreenAspectRatio / (4.0f / 3.0f));
     injector::WriteMemory<float>(*MenuPattern5.count(11).get(4).get<uint32_t*>(10), fMapLegendTextScale, true);
-    
-    float fMapLegendIconsTextScale = 0.000859375f/ (*CDraw::pfScreenAspectRatio / (4.0f / 3.0f));
+
+    float fMapLegendIconsTextScale = 0.000859375f / (*CDraw::pfScreenAspectRatio / (4.0f / 3.0f));
     injector::WriteMemory<float>(*MenuPattern5.count(11).get(10).get<uint32_t*>(10), fMapLegendIconsTextScale, true);
 
     injector::WriteMemory<float>(*MenuPattern6.count(1).get(0).get<uint32_t*>(2), fWideScreenWidthScaleDown, true); //fRadarAndBlipsScale, replaces entire CRadarPattern addresses directly, so no need to use it in HudFix
@@ -420,7 +414,7 @@ void FixCrosshair()
 
     auto pattern = hook::pattern("D9 05 ? ? ? ? D8 25 ? ? ? ? 69 C0 CC 01 00 00"); //0x46F925
     injector::WriteMemory(pattern.count(2).get(1).get<uint32_t>(2), &fCrosshairPosFactor, true);
-    
+
     pattern = hook::pattern("D8 0D ? ? ? ? D9 5C 24 24"); //0x5575FA
     injector::WriteMemory(pattern.count(8).get(7).get<uint32_t>(2), &fCrosshairPosFactor, true);
 
@@ -444,7 +438,7 @@ void __declspec(naked)GetTextOriginalColor()
     }
 }
 
-injector::hook_back<int (__cdecl*)(float, float, unsigned int, unsigned short *, unsigned short *, float)> hbPrintString;
+injector::hook_back<int(__cdecl*)(float, float, unsigned int, unsigned short *, unsigned short *, float)> hbPrintString;
 int __cdecl PrintStringHook(float PosX, float PosY, unsigned int c, unsigned short *d, unsigned short *e, float f)
 {
     if (*bBackgroundOn == 1)
@@ -517,7 +511,7 @@ void ApplyIniOptions()
     fHudWidthScale = iniReader.ReadFloat("MAIN", "HudWidthScale", 0.0f); fHudWidthScale == 0.0f ? fHudWidthScale = 0.8f : fHudWidthScale;
     fHudHeightScale = iniReader.ReadFloat("MAIN", "HudHeightScale", 0.0f); fHudHeightScale == 0.0f ? fHudHeightScale = 0.8f : fHudHeightScale;
 
-    if (fHudWidthScale && fHudHeightScale) 
+    if (fHudWidthScale && fHudHeightScale)
     {
         for (size_t i = 0; i < DrawHudHorScalePattern.size(); i++)
         {
@@ -792,7 +786,7 @@ void __cdecl SetVerticesHook(CRect& a1, CRGBA const& a2, CRGBA const& a3, CRGBA 
         CSprite2dDrawRect(CRect((float)RsGlobal->MaximumWidth, a1.m_fBottom, a1.m_fRight, -5.0f), CRGBA(0, 0, 0, a2.alpha));
 
         CSprite2dDrawRect(CRect(-5.0f, (float)RsGlobal->MaximumHeight + 5.0f, (float)RsGlobal->MaximumWidth + 5.0f, -5.0f), CRGBA(0, 0, 0, a2.alpha));
-        injector::cstd<void(int,int)>::call(pRwRenderStateSet, 8, 0);
+        injector::cstd<void(int, int)>::call(pRwRenderStateSet, 8, 0);
     }
 
     return hbSetVertices.fun(a1, a2, a3, a4, a5);
@@ -822,10 +816,6 @@ void Fix2DSprites()
 
 DWORD WINAPI Init(LPVOID bDelay)
 {
-    #ifdef _LOG
-    logfile.open("GTAVC.WidescreenFix.log");
-    #endif // _LOG
-
     auto pattern = hook::pattern("6A 02 6A 00 6A 00 68 01 20 00 00");
     if (pattern.count_hint(1).empty() && !bDelay)
     {
