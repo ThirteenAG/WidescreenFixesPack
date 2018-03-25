@@ -1,12 +1,5 @@
 #include "stdafx.h"
-
-//#define _LOG
-#ifdef _LOG
-#include <fstream>
-#include <iomanip>
-std::ofstream logfile;
-uint32_t logit;
-#endif // _LOG
+#include "log.h"
 
 struct Screen
 {
@@ -90,7 +83,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         void operator()(injector::reg_pack& regs)
         {
             *(int32_t*)(regs.ecx + 0x594) = *(int32_t*)(regs.edx + 0x2C8);
-            Screen.nWidth =  *(int32_t*)(regs.ecx + 0x590);
+            Screen.nWidth = *(int32_t*)(regs.ecx + 0x590);
             Screen.nHeight = *(int32_t*)(regs.ecx + 0x594);
 
             Screen.fWidth = static_cast<float>(Screen.nWidth);
@@ -161,15 +154,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             {
                 CRect* r = (CRect*)(ptr - 0x08);
 
-                #ifdef _LOG
-                if (false)
-                    logfile << r->m_fLeft << " " << r->m_fBottom << " " << r->m_fRight << " " << r->m_fTop << " - "
-                    << "0x" << std::hex << std::setw(8) << std::setfill('0') << *(uint32_t*)&r->m_fLeft << " "
-                    << "0x" << std::hex << std::setw(8) << std::setfill('0') << *(uint32_t*)&r->m_fBottom << " "
-                    << "0x" << std::hex << std::setw(8) << std::setfill('0') << *(uint32_t*)&r->m_fRight << " "
-                    << "0x" << std::hex << std::setw(8) << std::setfill('0') << *(uint32_t*)&r->m_fTop
-                    << std::endl;
-                #endif
+                DBGONLY(KEYPRESS(VK_F1) { spd::log->info("{0:f} {1:f} {2:f} {3:f} {4:08x} {5:08x} {6:08x} {7:08x}", r->m_fLeft, r->m_fBottom, r->m_fRight, r->m_fTop, *(uint32_t*)&r->m_fLeft, *(uint32_t*)&r->m_fBottom, *(uint32_t*)&r->m_fRight, *(uint32_t*)&r->m_fTop); });
 
                 if (*r == fs || *r == fl)
                 {
@@ -196,11 +181,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                             }
                             else
                             {
-                            #ifdef _LOG
-                                if (false)
-                                    logfile << "0x" << std::hex << std::setw(8) << std::setfill('0') << stack[3] << " "
-                                    << "0x" << std::hex << std::setw(8) << std::setfill('0') << stack[4] << std::endl;
-                            #endif
+                                DBGONLY(KEYPRESS(VK_F2) { spd::log->info("0x{0:08x} 0x{1:08x}", stack[3], stack[4]); });
 
                                 if (stack[idx] == dw_61EA8F || stack[idx] == dw_616FB7 || stack[idx] == dw_4FD37D)
                                 {
@@ -247,9 +228,6 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        #ifdef _LOG
-        logfile.open("Psy.WidescreenFix.log");
-        #endif // _LOG
         Init(NULL);
     }
     return TRUE;

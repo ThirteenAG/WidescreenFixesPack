@@ -1,11 +1,5 @@
 #include "stdafx.h"
-
-//#define _LOG
-#ifdef _LOG
-#include <fstream>
-std::ofstream logfile;
-uint32_t logit;
-#endif // _LOG
+#include "log.h"
 
 bool bSettingsApp;
 
@@ -106,9 +100,8 @@ void __stdcall S_matrix_Identity(S_matrix* _this)
             self->a1 = Screen.fHudScale;
         }
     }
-    #ifdef _LOG
-    logfile << std::hex << stack[3] << std::endl;
-    #endif
+
+    DBGONLY(spd::log->info("{0:x}", stack[3]););
 }
 
 DWORD WINAPI InitSettings(LPVOID)
@@ -259,7 +252,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                 *(float *)(regs.esi + 0x08) *= Screen.fHudScale;
                 *(float *)(regs.esi + 0x10) *= Screen.fHudScale;
                 *(float *)(regs.esi + 0x18) *= Screen.fHudScale;
-                
+
                 *(float *)(regs.esi + 0x08) += Screen.fHudOffset;
                 *(float *)(regs.esi + 0x10) += Screen.fHudOffset;
                 //*(float *)(regs.esi + 0x18) += Screen.fHudOffset;
@@ -308,10 +301,6 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        #ifdef _LOG
-        logfile.open("HD2.WidescreenFix.log");
-        #endif
-
         InitSettings(NULL);
         Init(NULL);
     }

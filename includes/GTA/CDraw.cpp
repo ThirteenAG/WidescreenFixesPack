@@ -1,4 +1,3 @@
-#include "..\stdafx.h"
 #include "common.h"
 #include "CDraw.h"
 

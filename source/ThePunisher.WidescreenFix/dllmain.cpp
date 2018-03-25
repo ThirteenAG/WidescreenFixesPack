@@ -1,15 +1,12 @@
 #include "stdafx.h"
+#include "log.h"
 
-//#define _LOG
-#ifdef _LOG
+#ifdef DEBUG
 #include <intrin.h>  
 #pragma intrinsic(_ReturnAddress)  
-#include <fstream>
-std::ofstream logfile;
-uint32_t logit;
 std::map<uintptr_t, uint32_t> retXmap;
 std::map<uintptr_t, uint32_t> retYmap;
-#endif // _LOG
+#endif
 
 char* memstr(char* block, char* pattern, size_t bsize)
 {
@@ -96,26 +93,14 @@ struct Screen
 
 int32_t retX()
 {
-#ifdef _LOG
-    if (GetAsyncKeyState(VK_F1) & 0x8000)
-    {
-        auto retaddr = (uintptr_t)_ReturnAddress() - 5;
-        logfile << "retX addr: " << std::dec << retXmap[retaddr] << std::endl;
-    }
-#endif // _LOG
+    DBGONLY(KEYPRESS(VK_F1) { spd::log->info("retX addr: 0x{0:08x}", retXmap[((uintptr_t)_ReturnAddress() - 5)]); });
 
     return Screen.PresetWidth;
 };
 
 int32_t retY()
 {
-#ifdef _LOG
-    if (GetAsyncKeyState(VK_F1) & 0x8000)
-    {
-        auto retaddr = (uintptr_t)_ReturnAddress() - 5;
-        logfile << "retY addr: " << std::dec << retYmap[retaddr] << std::endl;
-    }
-#endif // _LOG
+    DBGONLY(KEYPRESS(VK_F1) { spd::log->info("retY addr: 0x{0:08x}", retYmap[((uintptr_t)_ReturnAddress() - 5)]); });
 
     return Screen.PresetHeight;
 };
@@ -212,11 +197,11 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     //fixing only menu and startup stuff, which makes the game stuck in an infinite loop
     //this code doesn't work anymore because patterns don't find 0x46d91b and 0x4b7cbb calls for some reason and retXmap indices are wrong
-    ////uint32_t retXIncludes[] = { 25, 100, 101, 102, 103, 105, /*106,*/ 107, 130, 140, 142, 144, 145, 146, 149, 150, 151, 158, /*180,*/ 215, 216, 56, 99 };
-    //uint32_t retXIncludes[] = { 25, 100 }; // 25 - hud, 100 - preset, 180 - mouse, 215 - weapons overlay preset, 106 - weapons overlay scale
-    ////int32_t retYIncludes[] = { 24, 108, 107, 109, 110, 111, 112, 113, 114, 144, 146, 149, 150, 151, 152, 153, 154, 161, /*187,*/ 223, 224 };
-    //uint32_t retYIncludes[] = { 24, 108 }; // 24 - hud, 108 - preset, 187 - mouse, 223 - weapons overlay preset, 112+113 - weapons overlay scale
-    /*
+    //uint32_t retXIncludes[] = { 25, 100, 101, 102, 103, 105, /*106,*/ 107, 130, 140, 142, 144, 145, 146, 149, 150, 151, 158, /*180,*/ 215, 216, 56, 99 };
+    uint32_t retXIncludes[] = { 25, 100 }; // 25 - hud, 100 - preset, 180 - mouse, 215 - weapons overlay preset, 106 - weapons overlay scale
+    //int32_t retYIncludes[] = { 24, 108, 107, 109, 110, 111, 112, 113, 114, 144, 146, 149, 150, 151, 152, 153, 154, 161, /*187,*/ 223, 224 };
+    uint32_t retYIncludes[] = { 24, 108 }; // 24 - hud, 108 - preset, 187 - mouse, 223 - weapons overlay preset, 112+113 - weapons overlay scale
+
     pattern = hook::pattern("E8 ? ? ? ? 50 E8 ? ? ? ? 50 6A 01 6A 03 E8 ? ? ? ? 8B 15");
     auto sub_510A00 = injector::GetBranchDestination(pattern.get_first(6), true);
     auto sub_510A10 = injector::GetBranchDestination(pattern.get_first(0), true);
@@ -229,31 +214,31 @@ DWORD WINAPI Init(LPVOID bDelay)
 
         if (dest == sub_510A00)
         {
-            #ifdef _LOG
+#ifdef _LOG
             retXmap.insert(std::pair<uintptr_t, uint32_t>((uintptr_t)addr, j));
-            #endif
+#endif
             if (!(std::end(retXIncludes) == std::find(std::begin(retXIncludes), std::end(retXIncludes), j)))
                 injector::MakeCALL(addr, retX, true);
             ++j;
         }
         else if (dest == sub_510A10)
         {
-            #ifdef _LOG
+#ifdef _LOG
             retYmap.insert(std::pair<uintptr_t, uint32_t>((uintptr_t)addr, k));
-            #endif
+#endif
             if (!(std::end(retYIncludes) == std::find(std::begin(retYIncludes), std::end(retYIncludes), k)))
                 injector::MakeCALL(addr, retY, true);
             ++k;
         }
     }
-    */
+
     //so instead just manual patch
-    pattern = hook::pattern("E8 ? ? ? ? A3 ? ? ? ? E8 ? ? ? ? A3 ? ? ? ? A1 ? ? ? ? 50 E8 ? ? ? ? 6A 01"); //X - 25, Y - 24
-    injector::MakeCALL(pattern.get_first(0), retX, true);
-    injector::MakeCALL(pattern.get_first(10), retY, true);
-    pattern = hook::pattern("E8 ? ? ? ? 50 8D 44 24 38 68 ? ? ? ? 50"); //X - 100, Y - 108
-    injector::MakeCALL(pattern.get_first(0), retX, true);
-    injector::MakeCALL(pattern.get_first(-6), retY, true);
+    //pattern = hook::pattern("E8 ? ? ? ? A3 ? ? ? ? E8 ? ? ? ? A3 ? ? ? ? A1 ? ? ? ? 50 E8 ? ? ? ? 6A 01"); //X - 25, Y - 24
+    //injector::MakeCALL(pattern.get_first(0), retX, true);
+    //injector::MakeCALL(pattern.get_first(10), retY, true);
+    //pattern = hook::pattern("E8 ? ? ? ? 50 8D 44 24 38 68 ? ? ? ? 50"); //X - 100, Y - 108
+    //injector::MakeCALL(pattern.get_first(0), retX, true);
+    //injector::MakeCALL(pattern.get_first(-6), retY, true);
 
     //HUD
     pattern = hook::pattern("68 ? ? ? ? 8B CF E8 ? ? ? ? 84 C0 ? ? 56 8B 74 24 08"); //0x4632C0
@@ -486,10 +471,6 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-#ifdef _LOG
-        logfile.open("Pun.WidescreenFix.log");
-#endif // _LOG
-
         Init(NULL);
     }
 
