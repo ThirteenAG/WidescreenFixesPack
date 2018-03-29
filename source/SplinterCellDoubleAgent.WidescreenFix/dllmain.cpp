@@ -167,27 +167,6 @@ DWORD WINAPI InitD3DDrv(LPVOID bDelay)
         }
     }; injector::MakeInline<FlushHook>(pattern.get_first(0), pattern.get_first(36));
 
-    pattern = hook::module_pattern(GetModuleHandle("D3DDrv"), "8B 95 ? ? ? ? 8B 85 ? ? ? ? 8B 08 52 50 FF 91 ? ? ? ? 8B 8D"); //
-    struct RenderFilmstripHook4 //vertex shader for alt tab
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            regs.edx = NULL;
-        }
-    }; injector::MakeInline<RenderFilmstripHook4>(pattern.get_first(0), pattern.get_first(6));
-
-    pattern = hook::module_pattern(GetModuleHandle("D3DDrv"), "8B 7B 64 85 FF 8B CE 6A 04 74 1F 89 BD"); //alpha, settexture, maybe not needed
-    injector::WriteMemory(pattern.get_first(0), 0x85909090, true);
-
-    //pattern = hook::module_pattern(GetModuleHandle("D3DDrv"), "8D 9E 64 98 00 00 6A 04 8B CB 89 BE B0 6E 00 00 E8 ? ? ? ? 8B 86 30 5F 00 00 8B 08 57 6A 00 50 FF 91 04 01 00 00 6A 04 8B CB E8 ? ? ? ? 8B 6C 24 30 F6 45 54 01 74 48 83 BE 64 60 00 00 00");
-    //struct test
-    //{
-    //    void operator()(injector::reg_pack& regs)
-    //    {
-    //        regs.ebx = regs.esi + 0x9864;
-    //    }
-    //}; injector::MakeInline<test>(pattern.get_first(0), pattern.get_first(6));
-
     //loadscreen
     pattern = hook::module_pattern(GetModuleHandle("D3DDrv"), "89 BE ? ? ? ? E8 ? ? ? ? 8B 86 ? ? ? ? 8B 08 57 6A 00 50 FF 91 ? ? ? ? 6A 04 8B CB E8 ? ? ? ? 8B 6C 24 30 F6 45 54 01 74 48 83 BE"); //
     struct LoadscHook
@@ -220,6 +199,10 @@ DWORD WINAPI InitD3DDrv(LPVOID bDelay)
         }
     }; injector::MakeInline<LoadscHook>(pattern.get_first(0), pattern.get_first(6));
 
+    //Enhanced night vision NaN workaround
+    pattern = hook::module_pattern(GetModuleHandle("D3DDrv"), "F3 A5 8B 90 30 02 00 00");
+    injector::MakeNOP(pattern.get_first(0), 2, true);
+
     return 0;
 }
 
@@ -236,6 +219,8 @@ DWORD WINAPI InitEngine(LPVOID bDelay)
     if (bDelay)
         while (pattern.clear(GetModuleHandle("Engine")).count_hint(1).empty()) { Sleep(0); };
 
+    static bool bIsOPSAT = false;
+    static bool bIsVideoPlaying = false;
     static auto GIsWideScreen = *hook::module_pattern(GetModuleHandle("Engine"), "8B 0D ? ? ? ? F3 0F 59 D9 F3 0F 10 0D ? ? ? ? F3 0F 5C D8 F3 0F 58 DC").get_first<uint8_t*>(2);
     static auto GIsSameFrontBufferOnNormalTV = *hook::module_pattern(GetModuleHandle("Engine"), "8B 15 ? ? ? ? 83 3A 00 74 58 F3 0F 10 88").get_first<uint8_t*>(2);
     pattern = hook::module_pattern(GetModuleHandle("Engine"), "83 39 00 75 63 8B 15 ? ? ? ? 83 3A 00"); //
@@ -258,6 +243,16 @@ DWORD WINAPI InitEngine(LPVOID bDelay)
                 *(float*)&dword_109E09F4[regs.eax / 4] *= 0.75f;
                 *(float*)&dword_109E09F8[regs.eax / 4] *= 0.75f;
                 *(float*)&dword_109E09FC[regs.eax / 4] *= 0.75f;
+            }
+            else
+            {
+                if (bIsOPSAT && bIsVideoPlaying)
+                {
+                    *(float*)&dword_109E09F0[regs.eax / 4] *= (4.0f / 3.0f);
+                    *(float*)&dword_109E09F4[regs.eax / 4] *= (4.0f / 3.0f);
+                    *(float*)&dword_109E09F8[regs.eax / 4] *= (4.0f / 3.0f);
+                    *(float*)&dword_109E09FC[regs.eax / 4] *= (4.0f / 3.0f);
+                }
             }
 
             if ((w == 1275.0f && h == 637.0f) || (w == 800.0f)) // loadscreen and fullscreen images
@@ -318,6 +313,79 @@ DWORD WINAPI InitEngine(LPVOID bDelay)
 
     pattern = hook::module_pattern(GetModuleHandle("Engine"), "F3 0F 5C 1D ? ? ? ? 0F 28 FD F3 0F 59 FA"); //0x103069A5 + 0x4
     injector::WriteMemory(pattern.get_first(4), &Screen.fHudOffset, true);
+
+    pattern = hook::module_pattern(GetModuleHandle("Engine"), "8B 0D ? ? ? ? 83 39 00 89 54 24 20 75 3D 8B 15 ? ? ? ? 83 3A 00");
+    struct TextHook2
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            auto f3 = 0.0f;
+            auto f4 = *(float*)(regs.esp + 0x24);
+            auto f5 = 0.0f;
+            auto f6 = 0.0f;
+            _asm { movss dword ptr ds : f3, xmm3}
+            _asm { movss dword ptr ds : f5, xmm5}
+            _asm { movss dword ptr ds : f6, xmm6}
+
+            if (!*GIsWideScreen && *GIsSameFrontBufferOnNormalTV)
+            {
+                *(float *)(regs.ebp + 0x00) = f3 * 0.75f;
+                *(float *)(regs.ebp + 0x04) = f4 * 0.75f;
+                *(float *)(regs.ebp + 0x08) = f5 * 0.75f;
+                *(float *)(regs.ebp + 0x0C) = f6 * 0.75f;
+            }
+            else
+            {
+                if (bIsOPSAT && bIsVideoPlaying)
+                {
+                    *(float *)(regs.ebp + 0x00) = f3 * (4.0f / 3.0f);
+                    *(float *)(regs.ebp + 0x04) = f4 * (4.0f / 3.0f);
+                    *(float *)(regs.ebp + 0x08) = f5 * (4.0f / 3.0f);
+                    *(float *)(regs.ebp + 0x0C) = f6 * (4.0f / 3.0f);
+                }
+            }
+        }
+    }; injector::MakeInline<TextHook2>(pattern.get_first(0), pattern.get_first(76));
+
+    //OPSAT and computer videos (scale text and hud like x360 version)
+    pattern = hook::module_pattern(GetModuleHandle("Engine"), "8B 86 ? ? ? ? 83 C4 10 85 C0 74 49 83 78 64 00"); //0x10515086
+    struct UCanvasOpenVideoHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            static auto getVideoPath = [](const std::string_view& str, char beg, char end) -> std::string
+            {
+                std::size_t begPos;
+                if ((begPos = str.find(beg)) != std::string_view::npos)
+                {
+                    std::size_t endPos;
+                    if ((endPos = str.find(end, begPos)) != std::string_view::npos && endPos != begPos + 1)
+                        return std::string(str).substr(begPos + 1, endPos - begPos - 1);
+                }
+
+                return std::string();
+            };
+            bIsVideoPlaying = true;
+            regs.eax = *(uint32_t*)(regs.esi + 0x80);
+            auto str = getVideoPath(std::string_view(*(char**)(regs.esp + 0x0C)), '\\', '.');
+            if (iequals(str, "computer_hq_1") || iequals(str, "computer_hq_2") || iequals(str, "computer_hq_3") ||
+                iequals(str, "computer_mission_1") || iequals(str, "computer_mission_2") || starts_with(str.c_str(), "opsat", false))
+                bIsOPSAT = true;
+            else
+                bIsOPSAT = false;
+        }
+    }; injector::MakeInline<UCanvasOpenVideoHook>(pattern.get_first(0), pattern.get_first(6));
+
+    //
+    pattern = hook::module_pattern(GetModuleHandle("Engine"), "8B 86 ? ? ? ? 85 C0 74 12 83 78 64 00 74 0C"); //0x10515110
+    struct UCanvasCloseVideoHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.eax = *(uint32_t*)(regs.esi + 0x80);
+            bIsVideoPlaying = false;
+        }
+    }; injector::MakeInline<UCanvasCloseVideoHook>(pattern.get_first(0), pattern.get_first(6));
 
     //FOV
     pattern = hook::module_pattern(GetModuleHandle("Engine"), "8B 91 28 06 00 00 52 8B"); //?Draw@UGameEngine@@UAEXPAVUViewport@@HPAEPAH@Z  10530BD7
