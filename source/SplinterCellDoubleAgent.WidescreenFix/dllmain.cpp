@@ -126,13 +126,11 @@ DWORD WINAPI InitD3DDrv(LPVOID bDelay)
     }; injector::MakeInline<ScopeLensHook1>(pattern.get_first(0), pattern.get_first(6));
 
     //crashfix
-    pattern = hook::module_pattern(GetModuleHandle("D3DDrv"), "8D B5 64 98 00 00 6A 04 8B CE F3 0F 11 44 24 18"); //
+    pattern = hook::module_pattern(GetModuleHandle("D3DDrv"), "6A 04 8B CE F3 0F 11 44 24"); //
     struct RenderFilmstrip_Hook3
     {
         void operator()(injector::reg_pack& regs)
         {
-            regs.esi = regs.ebp + 0x9864;
-
             if (regs.edi)
             {
                 Screen.pFilmstripTex = regs.edi;
@@ -145,8 +143,11 @@ DWORD WINAPI InitD3DDrv(LPVOID bDelay)
                     *(uint32_t*)(regs.ebx + 0x3C) = regs.edi;
                 }
             }
+            static float _xmm0 = 0.0f;
+            _asm movss   dword ptr[_xmm0], xmm0
+            *(float*)(regs.esp + 0x18) = _xmm0;
         }
-    }; injector::MakeInline<RenderFilmstrip_Hook3>(pattern.get_first(0), pattern.get_first(6));
+    }; injector::MakeInline<RenderFilmstrip_Hook3>(pattern.get_first(4), pattern.get_first(10));
 
     pattern = hook::module_pattern(GetModuleHandle("D3DDrv"), "8B 46 2C 3B C7 74 1D 39 7E 4C 50"); //
     static auto GMalloc = *pattern.get_first<uint32_t>(22);
