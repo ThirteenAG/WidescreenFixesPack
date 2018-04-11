@@ -54,7 +54,7 @@ DWORD WINAPI InitSettings(LPVOID)
                 regs.ecx = *(uint32_t*)(regs.esp + 0x118);
                 regs.edx = (regs.esp + 0x0C);
 
-                GetModuleFileName(NULL, (char*)regs.edx, MAX_PATH);
+                GetModuleFileNameA(NULL, (char*)regs.edx, MAX_PATH);
                 *(strrchr((char*)regs.edx, '\\') + 1) = '\0';
             }
         }; injector::MakeInline<RegHook>(pattern.get_first(0), pattern.get_first(20));
@@ -152,7 +152,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     struct FMVHook
     {
         void operator()(injector::reg_pack& regs)
-        { 
+        {
             //hor
             *(float*)(regs.eax - 0x54) /= Screen.fFMVScale;
             *(float*)(regs.eax - 0x38) /= Screen.fFMVScale;
@@ -177,7 +177,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                 *(float*)(regs.eax - 0x34) *= fFMVSize;
                 *(float*)(regs.eax + 0x04) *= fFMVSize;
             }
-            
+
             *(uintptr_t*)(regs.eax + 0x18) = regs.edx;
             regs.eax = *(uintptr_t*)(regs.esi);
         }

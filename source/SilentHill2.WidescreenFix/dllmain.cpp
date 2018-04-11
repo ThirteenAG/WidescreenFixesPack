@@ -181,12 +181,12 @@ DWORD WINAPI Init(LPVOID bDelay)
                 regs.edx = *(uint16_t*)(regs.eax + 0xA);
 
                 _asm FSTP DWORD PTR[tempvar1]
-                _asm FSTP DWORD PTR[tempvar2]
-                _asm FSTP DWORD PTR[tempvar3]
-                tempvar3 += Screen.TextOffset;
+                    _asm FSTP DWORD PTR[tempvar2]
+                    _asm FSTP DWORD PTR[tempvar3]
+                    tempvar3 += Screen.TextOffset;
                 _asm FLD  DWORD PTR[tempvar3]
-                _asm FLD  DWORD PTR[tempvar2]
-                _asm FLD  DWORD PTR[tempvar1]
+                    _asm FLD  DWORD PTR[tempvar2]
+                    _asm FLD  DWORD PTR[tempvar1]
             }
         }; injector::MakeInline<TextPosHook>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(8)); //0x4819C7, 0x4819C7+8 | sub_4818D0+75 +
 
@@ -203,7 +203,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             void operator()(injector::reg_pack& regs)
             {
                 _asm FSTP DWORD PTR[temp]
-                *(float*)flt_807498 += Screen.TextOffset;
+                    * (float*)flt_807498 += Screen.TextOffset;
                 *(float*)flt_8074C8 += Screen.TextOffset;
                 *(float*)flt_8074E8 = temp + Screen.TextOffset;
                 *(float*)flt_8074A8 += Screen.TextOffset;
@@ -220,10 +220,10 @@ DWORD WINAPI Init(LPVOID bDelay)
                 *(uintptr_t*)(regs.esp + 0xA8) = regs.edx;
 
                 _asm FSTP DWORD PTR[tempvar4]
-                tempvar4 += Screen.TextOffset;
+                    tempvar4 += Screen.TextOffset;
                 _asm FLD  DWORD PTR[tempvar4]
 
-                *(float*)(regs.esp + 0x6C + 4) += Screen.TextOffset;
+                    * (float*)(regs.esp + 0x6C + 4) += Screen.TextOffset;
             }
         }; injector::MakeInline<TextPosHook3>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(7)); //0x481E70 | sub_481D20+119+
 
@@ -234,12 +234,12 @@ DWORD WINAPI Init(LPVOID bDelay)
             void operator()(injector::reg_pack& regs)
             {
                 _asm FSTP DWORD PTR[tempvar5]
-                tempvar5 += Screen.TextOffset;
+                    tempvar5 += Screen.TextOffset;
                 _asm FLD  DWORD PTR[tempvar5]
 
-                float esp90 = 0.0f;
+                    float esp90 = 0.0f;
                 _asm FST DWORD PTR[esp90]
-                *(float*)(regs.esp + 0x90) = esp90;
+                    * (float*)(regs.esp + 0x90) = esp90;
             }
         }; injector::MakeInline<TextPosHook4>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(7)); //481F72 | sub_481D20+23E+
 
@@ -263,12 +263,12 @@ DWORD WINAPI Init(LPVOID bDelay)
             void operator()(injector::reg_pack& regs)
             {
                 _asm FSTP DWORD PTR[tempvar6]
-                tempvar6 += Screen.TextOffset;
+                    tempvar6 += Screen.TextOffset;
                 _asm FLD  DWORD PTR[tempvar6]
-                *(float*)(regs.esp + 0x58) = tempvar6;
+                    * (float*)(regs.esp + 0x58) = tempvar6;
                 uint32_t esp58 = (regs.esp + 0x58);
                 _asm FST DWORD PTR[esp58]
-                _asm fxch    st(1)
+                    _asm fxch    st(1)
             }
         }; injector::MakeInline<TextPosHook6>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6)); //482117 | sub_481D20+3E3+
 
@@ -280,9 +280,9 @@ DWORD WINAPI Init(LPVOID bDelay)
             void operator()(injector::reg_pack& regs)
             {
                 _asm FSTP DWORD PTR[tempvar7]
-                tempvar7 += Screen.TextOffset;
+                    tempvar7 += Screen.TextOffset;
                 _asm FLD  DWORD PTR[tempvar7]
-                *(float*)(regs.esp + 0x2C) += Screen.TextOffset;
+                    * (float*)(regs.esp + 0x2C) += Screen.TextOffset;
                 _asm FILD DWORD PTR[Screen.Height]
             }
         }; injector::MakeInline<TextPosHook7>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6)); //482249 | sub_482160+D3 
@@ -295,11 +295,11 @@ DWORD WINAPI Init(LPVOID bDelay)
             {
                 uint32_t esp40 = (regs.esp + 0x40);
                 _asm FSTP DWORD PTR[tempvar8]
-                tempvar8 += Screen.TextOffset;
+                    tempvar8 += Screen.TextOffset;
                 _asm FLD  DWORD PTR[tempvar8]
-                *(float*)(regs.esp + 0x40) = tempvar8;
+                    * (float*)(regs.esp + 0x40) = tempvar8;
                 _asm FST DWORD PTR[esp40]
-                _asm fld     st(1)			
+                    _asm fld     st(1)
             }
         }; injector::MakeInline<TextPosHook8>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6)); //482348 | sub_482160+1D6
 
@@ -410,13 +410,13 @@ DWORD WINAPI Init(LPVOID bDelay)
     if (bCreateLocalFix)
     {
         char moduleName[MAX_PATH];
-        GetModuleFileName(NULL, moduleName, MAX_PATH);
+        GetModuleFileNameA(NULL, moduleName, MAX_PATH);
         *(strrchr(moduleName, '\\') + 1) = '\0';
         strcat(moduleName, "local.fix");
 
-        auto FileExists = [](LPCTSTR szPath) -> BOOL 
+        auto FileExists = [](LPCSTR szPath) -> BOOL
         {
-            DWORD dwAttrib = GetFileAttributes(szPath);
+            DWORD dwAttrib = GetFileAttributesA(szPath);
             return (dwAttrib != INVALID_FILE_ATTRIBUTES && !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
         };
 
@@ -444,7 +444,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
         pattern = hook::pattern("D8 0D ? ? ? ? 8B 6C 24 5C D9 5C 24 38 D9 43 04 D8 0D ? ? ? ? D9 5C 24 3C E8");
         injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &f15, true); //0051CF36 
-        
+
         struct CameraHook
         {
             void operator()(injector::reg_pack&)
@@ -510,7 +510,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     {
         //Eliminates tiling
         pattern = hook::pattern("C7 44 24 2C ? ? ? ? C7 44 24 48 ? ? ? ? C7 44 24 5C ? ? ? ? C7 44 24 60"); //4780E0
-        injector::WriteMemory<float>(pattern.get_first(4),  1.0f, true);
+        injector::WriteMemory<float>(pattern.get_first(4), 1.0f, true);
         injector::WriteMemory<float>(pattern.get_first(12), 1.0f, true);
         injector::WriteMemory<float>(pattern.get_first(20), 1.0f, true);
         injector::WriteMemory<float>(pattern.get_first(28), 1.0f, true);
@@ -555,7 +555,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         //pattern = hook::pattern("E8 ? ? ? ? 83 C4 08 3B C5 74 ? 8B 08");
         //hbsub_457B40.fun = injector::MakeCALL(pattern.get_first(0), sub_457B40Hook).get(); //0x49FCA5
 
-        static uint32_t images[] = { 
+        static uint32_t images[] = {
             0x00000004, 0x00000008, 0x0000000A, 0x0000000C, 0x0000000E, 0x00000010, 0x00000014, 0x00000016, 0x00000018, 0x0000001E, 0x0000001C, 0x00000020,
             0x00000022, 0x00000024, 0x00000026, 0x00000028, 0x0000002A, 0x0000002C, 0x0000002E, 0x00000030, 0x00000032, 0x00000036, 0x0000003A, 0x0000003C,
             0x0000003E, 0x00000042, 0x00000046, 0x00000048, 0x00000074, 0x00000076, 0x0000007A, 0x0000007C, 0x0000007E, 0x00000082, 0x00000086, 0x00000088,

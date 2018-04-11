@@ -22,7 +22,7 @@ struct Screen
 char* szCustomUserFilesDirectory;
 char* __cdecl InitUserDirectories()
 {
-    CreateDirectory(szCustomUserFilesDirectory, NULL);
+    CreateDirectoryA(szCustomUserFilesDirectory, NULL);
     return szCustomUserFilesDirectory;
 }
 
@@ -42,7 +42,7 @@ void __cdecl DrawRectHook(float fLeft, float fTop, float fRight, float fBottom, 
             auto h = (float)(*(uint16_t*)(pTexture + 16));
             if (w == h)
             {
-                w = 4.0f; 
+                w = 4.0f;
                 h = 3.0f;
             }
             auto f2DSpritesOffset = ((Screen.fWidth - Screen.fHeight * (w / h)) / 2.0f) / Screen.fWidth;
@@ -96,9 +96,9 @@ DWORD WINAPI Init(LPVOID bDelay)
     {
         void operator()(injector::reg_pack& regs)
         {
-            Screen.Width  = **(int32_t**)hook::get_pattern("8B 15 ? ? ? ? 8B 44 24 14 8B 0D", 2); //*(int *)0x829584;
+            Screen.Width = **(int32_t**)hook::get_pattern("8B 15 ? ? ? ? 8B 44 24 14 8B 0D", 2); //*(int *)0x829584;
             Screen.Height = **(int32_t**)hook::get_pattern("8B 15 ? ? ? ? 8B 44 24 14 8B 0D", 12); //*(int *)0x829588;
-            Screen.fUnk1  = **(float**)hook::get_pattern("D8 35 ? ? ? ? D8 0D ? ? ? ? D8 3D ? ? ? ? D9 1D ? ? ? ?", 2);//*(float *)0x7D3450;
+            Screen.fUnk1 = **(float**)hook::get_pattern("D8 35 ? ? ? ? D8 0D ? ? ? ? D8 3D ? ? ? ? D9 1D ? ? ? ?", 2);//*(float *)0x7D3450;
             Screen.pfFieldOfView = *(float**)hook::get_pattern("D8 0D ? ? ? ? DD DA D9 C2 D8", 2);//*(float *)0x715C94;
 
             Screen.fWidth = static_cast<float>(Screen.Width);
@@ -121,7 +121,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             injector::WriteMemory(*(uintptr_t*)pattern.get_first(2), Screen.fHudHorScale, true); //0x7D3458
 
             pattern = hook::pattern("83 3D ? ? ? ? 01 74 ? D9 05 ? ? ? ? D8 1D");
-            injector::WriteMemory<uint8_t>(pattern.get_first(11+15), 0xEB, true); //0x475BF3
+            injector::WriteMemory<uint8_t>(pattern.get_first(11 + 15), 0xEB, true); //0x475BF3
             injector::WriteMemory(pattern.get_first(11), &Screen.fHudVerScale, true); //0x475BE2 + 0x2
             pattern = hook::pattern("8B 15 ? ? ? ? 89 14 24 D9 04 24 D8 05");
             injector::WriteMemory(pattern.get_first(2), &Screen.fHudVerScale, true); //0x475C09 + 0x2
@@ -179,7 +179,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             if (strncmp(szCustomUserFilesDirectory, "0", 1) != 0)
             {
                 char			moduleName[MAX_PATH];
-                GetModuleFileName(NULL, moduleName, MAX_PATH);
+                GetModuleFileNameA(NULL, moduleName, MAX_PATH);
                 *(strrchr(moduleName, '\\') + 1) = '\0';
                 strcat(moduleName, szCustomUserFilesDirectory);
                 strcpy(szCustomUserFilesDirectory, moduleName);

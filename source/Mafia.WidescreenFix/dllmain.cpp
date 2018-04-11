@@ -84,7 +84,7 @@ bool Init() {
     if ((*(unsigned int *)0x0063C000) == 0x004C6150) {
         // 1.0 Eng
         if ((*(unsigned int *)0x00401000) != 0x0424448B) {
-            MessageBox(NULL, "Detected Game.exe: v.1.0 Eng.\n\nThis version of Game.exe infected with SafeDisc.\nWideScreen Fix will be disabled.", "Mafia WideScreen Fix", MB_ICONERROR | MB_SYSTEMMODAL | MB_SETFOREGROUND);
+            MessageBoxA(NULL, "Detected Game.exe: v.1.0 Eng.\n\nThis version of Game.exe infected with SafeDisc.\nWideScreen Fix will be disabled.", "Mafia WideScreen Fix", MB_ICONERROR | MB_SYSTEMMODAL | MB_SETFOREGROUND);
             return false;
         }
         game_version = MAFIA_1_0_ENG;
@@ -93,7 +93,7 @@ bool Init() {
     else if ((*(unsigned int *)0x00623000) == 0x0044D570) {
         // 1.1 Eng
         if ((*(unsigned int *)0x00401000) != 0x79780D8A) {
-            MessageBox(NULL, "Detected Game.exe: v.1.1 Eng.\n\nThis version of Game.exe infected with SafeDisc.\nWideScreen Fix will be disabled.", "Mafia WideScreen Fix", MB_ICONERROR | MB_SYSTEMMODAL | MB_SETFOREGROUND);
+            MessageBoxA(NULL, "Detected Game.exe: v.1.1 Eng.\n\nThis version of Game.exe infected with SafeDisc.\nWideScreen Fix will be disabled.", "Mafia WideScreen Fix", MB_ICONERROR | MB_SYSTEMMODAL | MB_SETFOREGROUND);
             return false;
         }
         game_version = MAFIA_1_1_ENG;
@@ -102,14 +102,14 @@ bool Init() {
     else if ((*(unsigned int *)0x00624000) == 0x0044E120) {
         // 1.2 Eng, 1.2 Rus 1C
         if ((*(unsigned int *)0x00401000) != 0x8A480D8A) {
-            MessageBox(NULL, "Detected Game.exe: v.1.2 Eng.\n\nThis version of Game.exe infected with SafeDisc.\nWideScreen Fix will be disabled.", "Mafia WideScreen Fix", MB_ICONERROR | MB_SYSTEMMODAL | MB_SETFOREGROUND);
+            MessageBoxA(NULL, "Detected Game.exe: v.1.2 Eng.\n\nThis version of Game.exe infected with SafeDisc.\nWideScreen Fix will be disabled.", "Mafia WideScreen Fix", MB_ICONERROR | MB_SYSTEMMODAL | MB_SETFOREGROUND);
             return false;
         }
         game_version = MAFIA_1_2_ENG;
         WriteLog("Detected Game.exe: v.1.2 eng\n");
     }
     else {
-        MessageBox(NULL, "This version of Game.exe is not supported.\nWideScreen Fix will be disabled.", "Mafia WideScreen Fix", MB_ICONERROR | MB_SYSTEMMODAL | MB_SETFOREGROUND);
+        MessageBoxA(NULL, "This version of Game.exe is not supported.\nWideScreen Fix will be disabled.", "Mafia WideScreen Fix", MB_ICONERROR | MB_SYSTEMMODAL | MB_SETFOREGROUND);
         return false;
     }
 
@@ -118,11 +118,11 @@ bool Init() {
     static int v10_sub_0062439A[3] = { 0x0062439A, 0x0060F508, 0x0060FCD8 };
     unsigned int LS3DF_TEV_addr = **(unsigned int **)(v10_sub_0062439A[game_version] + 0x2);
     WriteLog("LS3DF.dll TEV func address: 0x%X\n", LS3DF_TEV_addr);
-    GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT | GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCTSTR)LS3DF_TEV_addr, &hLS3DF);
+    GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT | GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCSTR)LS3DF_TEV_addr, &hLS3DF);
     base_LS3DF = (unsigned int)hLS3DF;
     WriteLog("LS3DF.dll base address: 0x%X\n", base_LS3DF);
     if (!base_LS3DF) {
-        MessageBox(NULL, "Can't get LS3DF.dll base address.\nWideScreen Fix will be disabled.", "Mafia WideScreen Fix", MB_ICONERROR | MB_SYSTEMMODAL | MB_SETFOREGROUND);
+        MessageBoxA(NULL, "Can't get LS3DF.dll base address.\nWideScreen Fix will be disabled.", "Mafia WideScreen Fix", MB_ICONERROR | MB_SYSTEMMODAL | MB_SETFOREGROUND);
         return false;
     }
     return true;
@@ -227,9 +227,9 @@ void FovHook() {
 }
 
 void HUDHook() {
-// Устанавливаем правильные пропорции:
+    // Устанавливаем правильные пропорции:
 
-    // HUD, титры авторов... 
+        // HUD, титры авторов... 
     static int v10_sub_005533A7[3] = { 0x005533A7, 0x00600FBF, 0x006017AF };
     CPatch::SetPointer(v10_sub_005533A7[game_version] + 0x2, &one_p_cur_base_width);
 
@@ -253,7 +253,7 @@ void HUDHook() {
         fix_hud_right = cur_base_width - ori_base_width;
         fix_hud_double = cur_base_width - ori_base_width;
     }
-    
+
 #pragma region *HUD*
     // Спидометр:						Привязка к правому краю.
     static float hud_speedometer_x = 189.0f + fix_hud_left;
@@ -552,12 +552,12 @@ void MapHook() {
 
 void TextHook() {
     static float text_width;
-/*	if (text_patch == 1) {
-        text_width = (ori_base_width * 0.9f) / cur_base_width;
-    }
-    else {
-        text_width = (cur_base_width - (ori_base_width - (ori_base_width * 0.9f))) / cur_base_width;
-    }*/
+    /*	if (text_patch == 1) {
+            text_width = (ori_base_width * 0.9f) / cur_base_width;
+        }
+        else {
+            text_width = (cur_base_width - (ori_base_width - (ori_base_width * 0.9f))) / cur_base_width;
+        }*/
 
     text_width = (ori_base_width * 0.9f) / cur_base_width;
 
@@ -576,15 +576,15 @@ void TextHook() {
 }
 
 void MenuHook() {
-// Устанавливаем правильные пропорции:
+    // Устанавливаем правильные пропорции:
 
     static int v11_sub_005E3303[3] = { NULL, 0x005E3303, 0x005E3B03 };
-    static int v10_sub_0056E525[3] = { 0x0056E525, 0x005EB28B, 0x005EBA8B };	
+    static int v10_sub_0056E525[3] = { 0x0056E525, 0x005EB28B, 0x005EBA8B };
     if (game_version == MAFIA_1_0_ENG) {
         // Загрузочные экраны, меню, текст в машинопедии
         CPatch::SetPointer(v10_sub_0056E525[game_version] + 0x2, &one_p_cur_base_width);
-    }	
-    else{
+    }
+    else {
         // Загрузочные экраны
         CPatch::SetPointer(v11_sub_005E3303[game_version] + 0x2, &one_p_cur_base_width);
         // Меню, текст в машинопедии
@@ -713,14 +713,14 @@ void SetHooks() {
     WriteLog("Detected game resolution: %.0fx%.0f\n", cur_game_width, cur_game_height);
 
     cur_width_p_height = cur_game_width / cur_game_height;
-//	cur_height_p_width = cur_game_height / cur_game_width;
+    //	cur_height_p_width = cur_game_height / cur_game_width;
 
     cur_base_width = ori_base_height * cur_width_p_height;
 
     one_p_cur_base_width = 1.0f / cur_base_width;
-//	one_p_cur_base_height = 1.0f / cur_base_height;
+    //	one_p_cur_base_height = 1.0f / cur_base_height;
 
-    // Исправляем FOV
+        // Исправляем FOV
     if (fov_patch) {
         FovHook();
     }
@@ -757,7 +757,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
     if (ul_reason_for_call == DLL_PROCESS_ATTACH) {
         ReadINI("");
         ClearLog();
-        if (Init()){
+        if (Init()) {
             GetGameResolution();
         }
     }
@@ -777,54 +777,54 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
 void __declspec(naked)v10_Eng_Get_Game_Resolution() {
 
     _asm {
-                    PUSHAD;
-                    PUSHFD;
-                    FILD_DWORD_PTR DW(00,6F,95,2E);
-                    FSTP DWORD PTR[cur_game_width];
-                    FILD_DWORD_PTR DW(00,6F,95,32);
-                    FSTP DWORD PTR[cur_game_height];
-                    CALL SetHooks;
-                    POPFD;
-                    POPAD;
+        PUSHAD;
+        PUSHFD;
+        FILD_DWORD_PTR DW(00, 6F, 95, 2E);
+        FSTP DWORD PTR[cur_game_width];
+        FILD_DWORD_PTR DW(00, 6F, 95, 32);
+        FSTP DWORD PTR[cur_game_height];
+        CALL SetHooks;
+        POPFD;
+        POPAD;
 
-                    MOV_EAX_DWORD_PTR DW(00,6F,95,2E);
-                    RETN;
+        MOV_EAX_DWORD_PTR DW(00, 6F, 95, 2E);
+        RETN;
     }
 }
 
 void __declspec(naked)v11_Eng_Get_Game_Resolution() {
 
     _asm {
-                    PUSHAD;
-                    PUSHFD;
-                    FILD_DWORD_PTR DW(00,64,6E,16);
-                    FSTP DWORD PTR[cur_game_width];
-                    FILD_DWORD_PTR DW(00,64,6E,1A);
-                    FSTP DWORD PTR[cur_game_height];
-                    CALL SetHooks;
-                    POPFD;
-                    POPAD;
+        PUSHAD;
+        PUSHFD;
+        FILD_DWORD_PTR DW(00, 64, 6E, 16);
+        FSTP DWORD PTR[cur_game_width];
+        FILD_DWORD_PTR DW(00, 64, 6E, 1A);
+        FSTP DWORD PTR[cur_game_height];
+        CALL SetHooks;
+        POPFD;
+        POPAD;
 
-                    MOV_EAX_DWORD_PTR DW(00,64,6E,1A);
-                    RETN;
+        MOV_EAX_DWORD_PTR DW(00, 64, 6E, 1A);
+        RETN;
     }
 }
 
 void __declspec(naked)v12_Eng_Get_Game_Resolution() {
 
     _asm {
-                    PUSHAD;
-                    PUSHFD;
-                    FILD_DWORD_PTR DW(00,64,7E,E6);
-                    FSTP DWORD PTR[cur_game_width];
-                    FILD_DWORD_PTR DW(00,64,7E,EA);
-                    FSTP DWORD PTR[cur_game_height];
-                    CALL SetHooks;
-                    POPFD;
-                    POPAD;
+        PUSHAD;
+        PUSHFD;
+        FILD_DWORD_PTR DW(00, 64, 7E, E6);
+        FSTP DWORD PTR[cur_game_width];
+        FILD_DWORD_PTR DW(00, 64, 7E, EA);
+        FSTP DWORD PTR[cur_game_height];
+        CALL SetHooks;
+        POPFD;
+        POPAD;
 
-                    MOV_EAX_DWORD_PTR DW(00,64,7E,EA);
-                    RETN;
+        MOV_EAX_DWORD_PTR DW(00, 64, 7E, EA);
+        RETN;
     }
 }
 
@@ -834,40 +834,40 @@ void __declspec(naked)v10_Eng_FOV_Hook() {
     static int sub_1009756C = 0x0009756C;
 
     _asm {
-//					_emit 0xCC;
-                    CMP init, 0;
-                    JZ label_begin;
-                    MOV init, 0;
-                    CALL label_init;
+        //					_emit 0xCC;
+        CMP init, 0;
+        JZ label_begin;
+        MOV init, 0;
+        CALL label_init;
 
     label_begin:
-                    ADD BYTE PTR[ESP], 0x1;
-                    //-------------------------------------------------------------------------
-                    PUSH EAX;									//
-                    MOV EAX, DWORD PTR[sub_1009756C];			// FMUL DWORD PTR[100985B0]
-                    FMUL DWORD PTR[EAX];						//
-                    POP EAX;									//
-                    //-------------------------------------------------------------------------
-                    FLD ST;
-                    FCOS;
-                    FXCH ST(1);
-                    FSIN;
-                    FDIVP ST(1), ST;
-                    FMUL DWORD PTR[ori_width_p_height];
-                    FLD DWORD PTR[cur_width_p_height];
-                    FXCH ST(1);
-                    FPATAN;
-                    RETN;
+        ADD BYTE PTR[ESP], 0x1;
+        //-------------------------------------------------------------------------
+        PUSH EAX;									//
+        MOV EAX, DWORD PTR[sub_1009756C];			// FMUL DWORD PTR[100985B0]
+        FMUL DWORD PTR[EAX];						//
+        POP EAX;									//
+        //-------------------------------------------------------------------------
+        FLD ST;
+        FCOS;
+        FXCH ST(1);
+        FSIN;
+        FDIVP ST(1), ST;
+        FMUL DWORD PTR[ori_width_p_height];
+        FLD DWORD PTR[cur_width_p_height];
+        FXCH ST(1);
+        FPATAN;
+        RETN;
 
     label_init:
-                    PUSH EAX;
+        PUSH EAX;
 
-                    MOV EAX, DWORD PTR[sub_1009756C];
-                    ADD EAX, DWORD PTR[base_LS3DF];
-                    MOV DWORD PTR[sub_1009756C], EAX;
+        MOV EAX, DWORD PTR[sub_1009756C];
+        ADD EAX, DWORD PTR[base_LS3DF];
+        MOV DWORD PTR[sub_1009756C], EAX;
 
-                    POP EAX;
-                    RETN;
+        POP EAX;
+        RETN;
     }
 }
 
@@ -877,40 +877,40 @@ void __declspec(naked)v11_Eng_FOV_Hook() {
     static int sub_100985B0 = 0x000985B0;
 
     _asm {
-//					_emit 0xCC;
-                    CMP init, 0;
-                    JZ label_begin;
-                    MOV init, 0;
-                    CALL label_init;
+        //					_emit 0xCC;
+        CMP init, 0;
+        JZ label_begin;
+        MOV init, 0;
+        CALL label_init;
 
     label_begin:
-                    ADD BYTE PTR[ESP], 0x1;
-                    //-------------------------------------------------------------------------
-                    PUSH EAX;									//
-                    MOV EAX, DWORD PTR[sub_100985B0];			// FMUL DWORD PTR[100985B0]
-                    FMUL DWORD PTR[EAX];						//
-                    POP EAX;									//
-                    //-------------------------------------------------------------------------
-                    FLD ST;
-                    FCOS;
-                    FXCH ST(1);
-                    FSIN;
-                    FDIVP ST(1), ST;
-                    FMUL DWORD PTR[ori_width_p_height];
-                    FLD DWORD PTR[cur_width_p_height];
-                    FXCH ST(1);
-                    FPATAN;
-                    RETN;
+        ADD BYTE PTR[ESP], 0x1;
+        //-------------------------------------------------------------------------
+        PUSH EAX;									//
+        MOV EAX, DWORD PTR[sub_100985B0];			// FMUL DWORD PTR[100985B0]
+        FMUL DWORD PTR[EAX];						//
+        POP EAX;									//
+        //-------------------------------------------------------------------------
+        FLD ST;
+        FCOS;
+        FXCH ST(1);
+        FSIN;
+        FDIVP ST(1), ST;
+        FMUL DWORD PTR[ori_width_p_height];
+        FLD DWORD PTR[cur_width_p_height];
+        FXCH ST(1);
+        FPATAN;
+        RETN;
 
     label_init:
-                    PUSH EAX;
+        PUSH EAX;
 
-                    MOV EAX, DWORD PTR[sub_100985B0];
-                    ADD EAX, DWORD PTR[base_LS3DF];
-                    MOV DWORD PTR[sub_100985B0], EAX;
+        MOV EAX, DWORD PTR[sub_100985B0];
+        ADD EAX, DWORD PTR[base_LS3DF];
+        MOV DWORD PTR[sub_100985B0], EAX;
 
-                    POP EAX;
-                    RETN;
+        POP EAX;
+        RETN;
     }
 }
 
@@ -920,55 +920,55 @@ void __declspec(naked)v12_Eng_FOV_Hook() {
     static int sub_1009B5B0 = 0x0009B5B0;
 
     _asm {
-//					_emit 0xCC;
-                    CMP init, 0;
-                    JZ label_begin;
-                    MOV init, 0;
-                    CALL label_init;
+        //					_emit 0xCC;
+        CMP init, 0;
+        JZ label_begin;
+        MOV init, 0;
+        CALL label_init;
 
     label_begin:
-                    ADD BYTE PTR[ESP], 0x1;
-                    //-------------------------------------------------------------------------
-                    PUSH EAX;									//
-                    MOV EAX, DWORD PTR[sub_1009B5B0];			// FMUL DWORD PTR[1009B5B0]
-                    FMUL DWORD PTR[EAX];						//
-                    POP EAX;									//
-                    //-------------------------------------------------------------------------
-                    FLD ST;
-                    FCOS;
-                    FXCH ST(1);
-                    FSIN;
-                    FDIVP ST(1), ST;
-                    FMUL DWORD PTR[ori_width_p_height];
-                    FLD DWORD PTR[cur_width_p_height];
-                    FXCH ST(1);
-                    FPATAN;
-                    RETN;
+        ADD BYTE PTR[ESP], 0x1;
+        //-------------------------------------------------------------------------
+        PUSH EAX;									//
+        MOV EAX, DWORD PTR[sub_1009B5B0];			// FMUL DWORD PTR[1009B5B0]
+        FMUL DWORD PTR[EAX];						//
+        POP EAX;									//
+        //-------------------------------------------------------------------------
+        FLD ST;
+        FCOS;
+        FXCH ST(1);
+        FSIN;
+        FDIVP ST(1), ST;
+        FMUL DWORD PTR[ori_width_p_height];
+        FLD DWORD PTR[cur_width_p_height];
+        FXCH ST(1);
+        FPATAN;
+        RETN;
 
     label_init:
-                    PUSH EAX;
+        PUSH EAX;
 
-                    MOV EAX, DWORD PTR[sub_1009B5B0];
-                    ADD EAX, DWORD PTR[base_LS3DF];
-                    MOV DWORD PTR[sub_1009B5B0], EAX;
+        MOV EAX, DWORD PTR[sub_1009B5B0];
+        ADD EAX, DWORD PTR[base_LS3DF];
+        MOV DWORD PTR[sub_1009B5B0], EAX;
 
-                    POP EAX;
-                    RETN;
+        POP EAX;
+        RETN;
     }
 }
 
 void __declspec(naked)v10_Eng_Map_Hook_Player_Marker_x() {
     _asm {
-                    FMUL DWORD PTR[map_player_marker_x];
-                    RETN;
+        FMUL DWORD PTR[map_player_marker_x];
+        RETN;
     }
 }
 
 void __declspec(naked)v11_Eng_Map_Hook_Player_Marker_x() {
     _asm {
-                    FMUL DWORD PTR[map_player_marker_x];
-                    FXCH ST(1);
-                    RETN;
+        FMUL DWORD PTR[map_player_marker_x];
+        FXCH ST(1);
+        RETN;
     }
 }
 
@@ -976,129 +976,129 @@ void __declspec(naked)v10_Eng_Menu_Hook_01() {
     static int sub_0057D850 = 0x0057D850;
 
     _asm {
-                    MOV EAX, DWORD PTR[ESP + 0x8];
-                    SUB ESP, 0x8;
-                    PUSH ESI;
-                    MOV ESI, ECX;
-                    MOV DWORD PTR[ESI + 0x34], EAX;
-                    MOV EAX, DWORD PTR[ESP + 0x10];
-                    MOV DWORD PTR[ESI], 0x0063DBDC;
-                    MOV ECX, DWORD PTR[EAX];
-                    MOV DWORD PTR[ESI + 0x4], ECX;
-                    XOR ECX, ECX;
-                    MOV DWORD PTR[ESI + 0x8], ECX;
-                    MOV EDX, DWORD PTR[EAX + 0x18];
-                    MOV DWORD PTR[ESI + 0x0C], EDX;
-                    MOV_DL_BYTE_PTR DW(00,67,26,28);
-                    CMP DL, CL;
-                    JE SHORT label_005704FB;
-                    MOV EDX, DWORD PTR[EAX + 0x8];
-                    MOV DWORD PTR[ESI + 0x10], EDX;
-                    MOV EDX, DWORD PTR[EAX + 0x0C];
-                    MOV DWORD PTR[ESI + 0x14], EDX;
-                    MOV EDX, DWORD PTR[EAX + 0x10];
-                    MOV DWORD PTR[ESI + 0x18], EDX;
-                    MOV EDX, DWORD PTR[EAX + 0x14];
-                    MOV DWORD PTR[ESI + 0x1C], EDX;
-                    JMP SHORT label_0057052B;
+        MOV EAX, DWORD PTR[ESP + 0x8];
+        SUB ESP, 0x8;
+        PUSH ESI;
+        MOV ESI, ECX;
+        MOV DWORD PTR[ESI + 0x34], EAX;
+        MOV EAX, DWORD PTR[ESP + 0x10];
+        MOV DWORD PTR[ESI], 0x0063DBDC;
+        MOV ECX, DWORD PTR[EAX];
+        MOV DWORD PTR[ESI + 0x4], ECX;
+        XOR ECX, ECX;
+        MOV DWORD PTR[ESI + 0x8], ECX;
+        MOV EDX, DWORD PTR[EAX + 0x18];
+        MOV DWORD PTR[ESI + 0x0C], EDX;
+        MOV_DL_BYTE_PTR DW(00, 67, 26, 28);
+        CMP DL, CL;
+        JE SHORT label_005704FB;
+        MOV EDX, DWORD PTR[EAX + 0x8];
+        MOV DWORD PTR[ESI + 0x10], EDX;
+        MOV EDX, DWORD PTR[EAX + 0x0C];
+        MOV DWORD PTR[ESI + 0x14], EDX;
+        MOV EDX, DWORD PTR[EAX + 0x10];
+        MOV DWORD PTR[ESI + 0x18], EDX;
+        MOV EDX, DWORD PTR[EAX + 0x14];
+        MOV DWORD PTR[ESI + 0x1C], EDX;
+        JMP SHORT label_0057052B;
     label_005704FB:
-                    FLD_DWORD_PTR DW(00,67,A4,C0);
-                    FMUL DWORD PTR[EAX + 0x8];
-                    //-------------------------------------------------------------------------
-                    CALL label_filter;						// Correct value
-                    //-------------------------------------------------------------------------
-                    FSTP DWORD PTR[ESI + 0x10];
-                    FLD_DWORD_PTR DW(00,67,A4,C4);
-                    FMUL DWORD PTR[EAX + 0x0C];
-                    FSTP DWORD PTR[ESI + 0x14];
-                    FLD_DWORD_PTR DW(00,67,A4,C0);
-                    FMUL DWORD PTR[EAX + 0x10];
-                    FSTP DWORD PTR[ESI + 0x18];
-                    FLD_DWORD_PTR DW(00,67,A4,C4);
-                    FMUL DWORD PTR[EAX + 0x14];
-                    FSTP DWORD PTR[ESI + 0x1C];
+        FLD_DWORD_PTR DW(00, 67, A4, C0);
+        FMUL DWORD PTR[EAX + 0x8];
+        //-------------------------------------------------------------------------
+        CALL label_filter;						// Correct value
+        //-------------------------------------------------------------------------
+        FSTP DWORD PTR[ESI + 0x10];
+        FLD_DWORD_PTR DW(00, 67, A4, C4);
+        FMUL DWORD PTR[EAX + 0x0C];
+        FSTP DWORD PTR[ESI + 0x14];
+        FLD_DWORD_PTR DW(00, 67, A4, C0);
+        FMUL DWORD PTR[EAX + 0x10];
+        FSTP DWORD PTR[ESI + 0x18];
+        FLD_DWORD_PTR DW(00, 67, A4, C4);
+        FMUL DWORD PTR[EAX + 0x14];
+        FSTP DWORD PTR[ESI + 0x1C];
     label_0057052B:
-                    MOV EDX, DWORD PTR[EAX + 0x1C];
-                    MOV DWORD PTR[ESP + 0x8], ECX;
-                    MOV DWORD PTR[ESI + 0x20], EDX;
-                    MOV EDX, DWORD PTR[EAX + 0x20];
-                    MOV DWORD PTR[ESI + 0x24], EDX;
-                    MOV EAX, DWORD PTR[EAX + 0x20];
-                    MOV DWORD PTR[ESP + 0x4], EAX;
-                    MOV EAX, DWORD PTR[ESI + 0x0C];
-                    FILD QWORD PTR[ESP + 0x4];
-                    CMP EAX, ECX;
-                    MOV DWORD PTR[ESI + 0x2C], ECX;
-                    FSTP DWORD PTR[ESI + 0x28];
-                    JE SHORT label_0057056A;
-                    PUSH EAX;
-                    MOV ECX, 0x0067A57C;
-                    //-------------------------------------------------------------------------
-                    CALL DWORD PTR[sub_0057D850];				// CALL 0057D850
-                    //-------------------------------------------------------------------------
-                    MOV DWORD PTR[ESI + 0x30], EAX;
-                    MOV EAX, ESI;
-                    POP ESI;
-                    ADD ESP, 0x8;
-                    RETN 0x8;
+        MOV EDX, DWORD PTR[EAX + 0x1C];
+        MOV DWORD PTR[ESP + 0x8], ECX;
+        MOV DWORD PTR[ESI + 0x20], EDX;
+        MOV EDX, DWORD PTR[EAX + 0x20];
+        MOV DWORD PTR[ESI + 0x24], EDX;
+        MOV EAX, DWORD PTR[EAX + 0x20];
+        MOV DWORD PTR[ESP + 0x4], EAX;
+        MOV EAX, DWORD PTR[ESI + 0x0C];
+        FILD QWORD PTR[ESP + 0x4];
+        CMP EAX, ECX;
+        MOV DWORD PTR[ESI + 0x2C], ECX;
+        FSTP DWORD PTR[ESI + 0x28];
+        JE SHORT label_0057056A;
+        PUSH EAX;
+        MOV ECX, 0x0067A57C;
+        //-------------------------------------------------------------------------
+        CALL DWORD PTR[sub_0057D850];				// CALL 0057D850
+        //-------------------------------------------------------------------------
+        MOV DWORD PTR[ESI + 0x30], EAX;
+        MOV EAX, ESI;
+        POP ESI;
+        ADD ESP, 0x8;
+        RETN 0x8;
     label_0057056A:
-                    MOV DWORD PTR[ESI + 0x30], ECX;
-                    MOV EAX, ESI;
-                    POP ESI;
-                    ADD ESP, 0x8;
-                    RETN 0x8;
+        MOV DWORD PTR[ESI + 0x30], ECX;
+        MOV EAX, ESI;
+        POP ESI;
+        ADD ESP, 0x8;
+        RETN 0x8;
 
     label_filter:
-                    CMP EAX, 0x006728DC;		// Player Profile
-                    JE label_add;
-                    CMP EAX, 0x00672828;		// Player Profile -> Create New Profile
-                    JE label_add;
-                    CMP EAX, 0x00672C60;		// Main Menu
-                    JE label_add;
-                    CMP EAX, 0x00674A9C;		// Main Menu -> Load Game
-                    JE label_add;
-                    CMP EAX, 0x00674E68;		// Main Menu -> Free Ride
-                    JE label_add;
-                    CMP EAX, 0x00678F84;		// Main Menu -> Free Ride -> Location
-                    JE label_add;
-                    CMP EAX, 0x00676770;		// Main Menu -> Free Ride -> Garage
-                    JE label_add;
-                    CMP EAX, 0x00676AAC;		// Main Menu -> Free Ride -> Garage -> Models
-                    JE label_add;
-                    CMP EAX, 0x00676BF0;		// Main Menu -> Free Ride -> Garage -> Models -> Car Colors
-                    JE label_add;
-                    CMP EAX, 0x0067341C;		// Main Menu -> Options
-                    JE label_add;
-                    CMP EAX, 0x006734F4;		// Main Menu -> Options -> Player Controls
-                    JE label_add;
-                    CMP EAX, 0x0067353C;		// Main Menu -> Options -> Car Controls
-                    JE label_add;
-                    CMP EAX, 0x00673584;		// Main Menu -> Options -> Other Controls
-                    JE label_add;
-                    CMP EAX, 0x00672F0C;		// Main Menu -> Options -> Audio & Video
-                    JE label_add;
-                    CMP EAX, 0x006792E4;		// Main Menu -> Quit Game, Game Menu -> Exit Game
-                    JE label_add;
-                    CMP EAX, 0x00672E34;		// Game Menu
-                    JE label_add;
-                    CMP EAX, 0x006750A8;		// Game -> Inventory
-                    JE label_add;
-                    CMP EAX, 0x006750F0;		// Game -> Inventory
-                    JE label_add;
-                    CMP EAX, 0x006774A8;		// Game -> Garage
-                    JE label_add;
-                    CMP EAX, 0x00677580;		// Game -> Garage
-                    JE label_add;
-                    CMP EAX, 0x00675474;		// Game -> Pickup/Use
-                    JE label_add;
-                    CMP EAX, 0x00678C00;		// Game -> Game Over
-                    JE label_add;
-                    CMP EAX, 0x00678A98;		// Game Menu (in Race Mission)
-                    JE label_add;
-                    RETN;
+        CMP EAX, 0x006728DC;		// Player Profile
+        JE label_add;
+        CMP EAX, 0x00672828;		// Player Profile -> Create New Profile
+        JE label_add;
+        CMP EAX, 0x00672C60;		// Main Menu
+        JE label_add;
+        CMP EAX, 0x00674A9C;		// Main Menu -> Load Game
+        JE label_add;
+        CMP EAX, 0x00674E68;		// Main Menu -> Free Ride
+        JE label_add;
+        CMP EAX, 0x00678F84;		// Main Menu -> Free Ride -> Location
+        JE label_add;
+        CMP EAX, 0x00676770;		// Main Menu -> Free Ride -> Garage
+        JE label_add;
+        CMP EAX, 0x00676AAC;		// Main Menu -> Free Ride -> Garage -> Models
+        JE label_add;
+        CMP EAX, 0x00676BF0;		// Main Menu -> Free Ride -> Garage -> Models -> Car Colors
+        JE label_add;
+        CMP EAX, 0x0067341C;		// Main Menu -> Options
+        JE label_add;
+        CMP EAX, 0x006734F4;		// Main Menu -> Options -> Player Controls
+        JE label_add;
+        CMP EAX, 0x0067353C;		// Main Menu -> Options -> Car Controls
+        JE label_add;
+        CMP EAX, 0x00673584;		// Main Menu -> Options -> Other Controls
+        JE label_add;
+        CMP EAX, 0x00672F0C;		// Main Menu -> Options -> Audio & Video
+        JE label_add;
+        CMP EAX, 0x006792E4;		// Main Menu -> Quit Game, Game Menu -> Exit Game
+        JE label_add;
+        CMP EAX, 0x00672E34;		// Game Menu
+        JE label_add;
+        CMP EAX, 0x006750A8;		// Game -> Inventory
+        JE label_add;
+        CMP EAX, 0x006750F0;		// Game -> Inventory
+        JE label_add;
+        CMP EAX, 0x006774A8;		// Game -> Garage
+        JE label_add;
+        CMP EAX, 0x00677580;		// Game -> Garage
+        JE label_add;
+        CMP EAX, 0x00675474;		// Game -> Pickup/Use
+        JE label_add;
+        CMP EAX, 0x00678C00;		// Game -> Game Over
+        JE label_add;
+        CMP EAX, 0x00678A98;		// Game Menu (in Race Mission)
+        JE label_add;
+        RETN;
     label_add:
-                    FADD DWORD PTR[menu_menu_x];
-                    RETN;
+        FADD DWORD PTR[menu_menu_x];
+        RETN;
     }
 }
 
@@ -1107,98 +1107,98 @@ void __declspec(naked)v11_Eng_Menu_Hook_01() {
     static int sub_005E9650 = 0x005E9650;
 
     _asm {
-                    PUSH - 0x1;
-                    PUSH 0x0062172B;
-                    MOV EAX, DWORD PTR FS : [0x0];
-                    PUSH EAX;
-                    MOV DWORD PTR FS : [0x0], ESP;
-                    PUSH ECX;
-                    MOV AL, BYTE PTR[ESP + 0x14];
-                    PUSH ESI;
-                    PUSH EDI;
-                    MOV ESI, ECX;
-                    XOR EDI, EDI;
-                    MOV DWORD PTR[ESP + 0x8], ESI;
-                    MOV BYTE PTR[ESI + 0x30], AL;
-                    MOV DWORD PTR[ESI + 0x34], EDI;
-                    MOV DWORD PTR[ESI + 0x38], EDI;
-                    MOV DWORD PTR[ESI + 0x3C], EDI;
-                    MOV EAX, DWORD PTR[ESP + 0x1C];
-                    MOV DWORD PTR[ESI], 0x00624FF8;
-                    MOV DWORD PTR[ESP + 0x14], EDI;
-                    MOV ECX, DWORD PTR[EAX];
-                    MOV DWORD PTR[ESI + 0x4], ECX;
-                    MOV EDX, DWORD PTR[EAX + 0x1C];
-                    MOV DWORD PTR[ESI + 0x8], EDX;
-                    FLD_DWORD_PTR DW(00,6B,C7,B8);
-                    FMUL DWORD PTR[EAX + 0x8];
-                    //-------------------------------------------------------------------------
-                    CALL label_filter;						// Correct value
-                    //-------------------------------------------------------------------------
-                    FST DWORD PTR[ESI + 0x24];
-                    FSTP DWORD PTR[ESI + 0x14];
-                    FLD_DWORD_PTR DW(00,6B,C7,BC);
-                    FMUL DWORD PTR[EAX + 0x0C];
-                    FST DWORD PTR[ESI + 0x28];
-                    FSTP DWORD PTR[ESI + 0x18];
-                    FLD_DWORD_PTR DW(00,6B,C7,B8);
-                    FMUL DWORD PTR[EAX + 0x10];
-                    FSTP DWORD PTR[ESI + 0x1C];
-                    FLD_DWORD_PTR DW(00,6B,C7,BC);
-                    FMUL DWORD PTR[EAX + 0x14];
-                    FSTP DWORD PTR[ESI + 0x20];
-                    MOV EAX, DWORD PTR[EAX + 0x18];
-                    CMP EAX, EDI;
-                    MOV DWORD PTR[ESI + 0x0C], EAX;
-                    JE SHORT label_005E9479;
-                    PUSH EAX;
-                    MOV ECX, 0x006D7644;
-                    //-------------------------------------------------------------------------
-                    CALL DWORD PTR[sub_0060F370];				// CALL 0060F370
-                    //-------------------------------------------------------------------------
-                    MOV DWORD PTR[ESI + 0x10], EAX;
-                    JMP SHORT label_005E947C;
+        PUSH - 0x1;
+        PUSH 0x0062172B;
+        MOV EAX, DWORD PTR FS : [0x0];
+        PUSH EAX;
+        MOV DWORD PTR FS : [0x0], ESP;
+        PUSH ECX;
+        MOV AL, BYTE PTR[ESP + 0x14];
+        PUSH ESI;
+        PUSH EDI;
+        MOV ESI, ECX;
+        XOR EDI, EDI;
+        MOV DWORD PTR[ESP + 0x8], ESI;
+        MOV BYTE PTR[ESI + 0x30], AL;
+        MOV DWORD PTR[ESI + 0x34], EDI;
+        MOV DWORD PTR[ESI + 0x38], EDI;
+        MOV DWORD PTR[ESI + 0x3C], EDI;
+        MOV EAX, DWORD PTR[ESP + 0x1C];
+        MOV DWORD PTR[ESI], 0x00624FF8;
+        MOV DWORD PTR[ESP + 0x14], EDI;
+        MOV ECX, DWORD PTR[EAX];
+        MOV DWORD PTR[ESI + 0x4], ECX;
+        MOV EDX, DWORD PTR[EAX + 0x1C];
+        MOV DWORD PTR[ESI + 0x8], EDX;
+        FLD_DWORD_PTR DW(00, 6B, C7, B8);
+        FMUL DWORD PTR[EAX + 0x8];
+        //-------------------------------------------------------------------------
+        CALL label_filter;						// Correct value
+        //-------------------------------------------------------------------------
+        FST DWORD PTR[ESI + 0x24];
+        FSTP DWORD PTR[ESI + 0x14];
+        FLD_DWORD_PTR DW(00, 6B, C7, BC);
+        FMUL DWORD PTR[EAX + 0x0C];
+        FST DWORD PTR[ESI + 0x28];
+        FSTP DWORD PTR[ESI + 0x18];
+        FLD_DWORD_PTR DW(00, 6B, C7, B8);
+        FMUL DWORD PTR[EAX + 0x10];
+        FSTP DWORD PTR[ESI + 0x1C];
+        FLD_DWORD_PTR DW(00, 6B, C7, BC);
+        FMUL DWORD PTR[EAX + 0x14];
+        FSTP DWORD PTR[ESI + 0x20];
+        MOV EAX, DWORD PTR[EAX + 0x18];
+        CMP EAX, EDI;
+        MOV DWORD PTR[ESI + 0x0C], EAX;
+        JE SHORT label_005E9479;
+        PUSH EAX;
+        MOV ECX, 0x006D7644;
+        //-------------------------------------------------------------------------
+        CALL DWORD PTR[sub_0060F370];				// CALL 0060F370
+        //-------------------------------------------------------------------------
+        MOV DWORD PTR[ESI + 0x10], EAX;
+        JMP SHORT label_005E947C;
     label_005E9479:
-                    MOV DWORD PTR[ESI + 0x10], EDI;
+        MOV DWORD PTR[ESI + 0x10], EDI;
     label_005E947C:
-                    MOV ECX, DWORD PTR[ESP + 0x20];
-                    CMP ECX, EDI;
-                    MOV DWORD PTR[ESI + 0x2C], ECX;
-                    JE SHORT label_005E948D;
-                    PUSH ESI;
-                    //-------------------------------------------------------------------------
-                    CALL DWORD PTR[sub_005E9650];				// CALL 005E9650
-                    //-------------------------------------------------------------------------
+        MOV ECX, DWORD PTR[ESP + 0x20];
+        CMP ECX, EDI;
+        MOV DWORD PTR[ESI + 0x2C], ECX;
+        JE SHORT label_005E948D;
+        PUSH ESI;
+        //-------------------------------------------------------------------------
+        CALL DWORD PTR[sub_005E9650];				// CALL 005E9650
+        //-------------------------------------------------------------------------
     label_005E948D:
-                    MOV ECX, DWORD PTR[ESP + 0x0C];
-                    MOV EAX, ESI;
-                    POP EDI;
-                    POP ESI;
-                    MOV DWORD PTR FS : [0x0], ECX;
-                    ADD ESP, 0x10;
-                    RETN 0x8;
+        MOV ECX, DWORD PTR[ESP + 0x0C];
+        MOV EAX, ESI;
+        POP EDI;
+        POP ESI;
+        MOV DWORD PTR FS : [0x0], ECX;
+        ADD ESP, 0x10;
+        RETN 0x8;
 
     label_filter:
-                    CMP ECX, 0x1;				// Load Screens, Carcyclopedia
-                    JE label_add;
-                    CMP ECX, 0x2;				// Carcyclopedia - Show Mode
-                    JE label_test;
-                    CMP ECX, 0x3;				// Menu
-                    JE label_add;
-                    CMP ECX, 0x82;				// Menu
-                    JE label_add;
-                    RETN;
+        CMP ECX, 0x1;				// Load Screens, Carcyclopedia
+        JE label_add;
+        CMP ECX, 0x2;				// Carcyclopedia - Show Mode
+        JE label_test;
+        CMP ECX, 0x3;				// Menu
+        JE label_add;
+        CMP ECX, 0x82;				// Menu
+        JE label_add;
+        RETN;
     label_test:
-                    CMP EDX, 0x00FF00B2;		// Options
-                    JE label_add;
-                    CMP EDX, 0x00FF0032;		// Options -> Controls
-                    JE label_add;
-                    CMP EDX, 0x001F0032;		// Options -> Audio & Video
-                    JE label_add;
-                    RETN;
+        CMP EDX, 0x00FF00B2;		// Options
+        JE label_add;
+        CMP EDX, 0x00FF0032;		// Options -> Controls
+        JE label_add;
+        CMP EDX, 0x001F0032;		// Options -> Audio & Video
+        JE label_add;
+        RETN;
     label_add:
-                    FADD DWORD PTR[menu_menu_x];
-                    RETN;
+        FADD DWORD PTR[menu_menu_x];
+        RETN;
     }
 }
 
@@ -1207,98 +1207,98 @@ void __declspec(naked)v12_Eng_Menu_Hook_01() {
     static int sub_005E9E50 = 0x005E9E50;
 
     _asm {
-                    PUSH - 0x1;
-                    PUSH 0x00621EFB;
-                    MOV EAX, DWORD PTR FS : [0x0];
-                    PUSH EAX;
-                    MOV DWORD PTR FS : [0x0], ESP;
-                    PUSH ECX;
-                    MOV AL, BYTE PTR[ESP + 0x14];
-                    PUSH ESI;
-                    PUSH EDI;
-                    MOV ESI, ECX;
-                    XOR EDI, EDI;
-                    MOV DWORD PTR[ESP + 0x8], ESI;
-                    MOV BYTE PTR[ESI + 0x30], AL;
-                    MOV DWORD PTR[ESI + 0x34], EDI;
-                    MOV DWORD PTR[ESI + 0x38], EDI;
-                    MOV DWORD PTR[ESI + 0x3C], EDI;
-                    MOV EAX, DWORD PTR[ESP + 0x1C];
-                    MOV DWORD PTR[ESI], 0x00625FF8;
-                    MOV DWORD PTR[ESP + 0x14], EDI;
-                    MOV ECX, DWORD PTR[EAX];
-                    MOV DWORD PTR[ESI + 0x4], ECX;
-                    MOV EDX, DWORD PTR[EAX + 0x1C];
-                    MOV DWORD PTR[ESI + 0x8], EDX;
-                    FLD_DWORD_PTR DW(00,6B,D8,88);
-                    FMUL DWORD PTR[EAX + 0x8];
-                    //-------------------------------------------------------------------------
-                    CALL label_filter;						// Correct value
-                    //-------------------------------------------------------------------------
-                    FST DWORD PTR[ESI + 0x24];
-                    FSTP DWORD PTR[ESI + 0x14];
-                    FLD_DWORD_PTR DW(00,6B,D8,8C);
-                    FMUL DWORD PTR[EAX + 0x0C];
-                    FST DWORD PTR[ESI + 0x28];
-                    FSTP DWORD PTR[ESI + 0x18];
-                    FLD_DWORD_PTR DW(00,6B,D8,88);
-                    FMUL DWORD PTR[EAX + 0x10];
-                    FSTP DWORD PTR[ESI + 0x1C];
-                    FLD_DWORD_PTR DW(00,6B,D8,8C);
-                    FMUL DWORD PTR[EAX + 0x14];
-                    FSTP DWORD PTR[ESI + 0x20];
-                    MOV EAX, DWORD PTR[EAX + 0x18];
-                    CMP EAX, EDI;
-                    MOV DWORD PTR[ESI + 0x0C], EAX;
-                    JE SHORT label_005E9C79;
-                    PUSH EAX;
-                    MOV ECX, 0x006D8714;
-                    //-------------------------------------------------------------------------
-                    CALL DWORD PTR[sub_0060FB40];				// CALL 0060FB40
-                    //-------------------------------------------------------------------------
-                    MOV DWORD PTR[ESI + 0x10], EAX;
-                    JMP SHORT label_005E9C7C;
+        PUSH - 0x1;
+        PUSH 0x00621EFB;
+        MOV EAX, DWORD PTR FS : [0x0];
+        PUSH EAX;
+        MOV DWORD PTR FS : [0x0], ESP;
+        PUSH ECX;
+        MOV AL, BYTE PTR[ESP + 0x14];
+        PUSH ESI;
+        PUSH EDI;
+        MOV ESI, ECX;
+        XOR EDI, EDI;
+        MOV DWORD PTR[ESP + 0x8], ESI;
+        MOV BYTE PTR[ESI + 0x30], AL;
+        MOV DWORD PTR[ESI + 0x34], EDI;
+        MOV DWORD PTR[ESI + 0x38], EDI;
+        MOV DWORD PTR[ESI + 0x3C], EDI;
+        MOV EAX, DWORD PTR[ESP + 0x1C];
+        MOV DWORD PTR[ESI], 0x00625FF8;
+        MOV DWORD PTR[ESP + 0x14], EDI;
+        MOV ECX, DWORD PTR[EAX];
+        MOV DWORD PTR[ESI + 0x4], ECX;
+        MOV EDX, DWORD PTR[EAX + 0x1C];
+        MOV DWORD PTR[ESI + 0x8], EDX;
+        FLD_DWORD_PTR DW(00, 6B, D8, 88);
+        FMUL DWORD PTR[EAX + 0x8];
+        //-------------------------------------------------------------------------
+        CALL label_filter;						// Correct value
+        //-------------------------------------------------------------------------
+        FST DWORD PTR[ESI + 0x24];
+        FSTP DWORD PTR[ESI + 0x14];
+        FLD_DWORD_PTR DW(00, 6B, D8, 8C);
+        FMUL DWORD PTR[EAX + 0x0C];
+        FST DWORD PTR[ESI + 0x28];
+        FSTP DWORD PTR[ESI + 0x18];
+        FLD_DWORD_PTR DW(00, 6B, D8, 88);
+        FMUL DWORD PTR[EAX + 0x10];
+        FSTP DWORD PTR[ESI + 0x1C];
+        FLD_DWORD_PTR DW(00, 6B, D8, 8C);
+        FMUL DWORD PTR[EAX + 0x14];
+        FSTP DWORD PTR[ESI + 0x20];
+        MOV EAX, DWORD PTR[EAX + 0x18];
+        CMP EAX, EDI;
+        MOV DWORD PTR[ESI + 0x0C], EAX;
+        JE SHORT label_005E9C79;
+        PUSH EAX;
+        MOV ECX, 0x006D8714;
+        //-------------------------------------------------------------------------
+        CALL DWORD PTR[sub_0060FB40];				// CALL 0060FB40
+        //-------------------------------------------------------------------------
+        MOV DWORD PTR[ESI + 0x10], EAX;
+        JMP SHORT label_005E9C7C;
     label_005E9C79:
-                    MOV DWORD PTR[ESI + 0x10], EDI;
+        MOV DWORD PTR[ESI + 0x10], EDI;
     label_005E9C7C:
-                    MOV ECX, DWORD PTR[ESP + 0x20];
-                    CMP ECX, EDI;
-                    MOV DWORD PTR[ESI + 0x2C], ECX;
-                    JE SHORT label_005E9C8D;
-                    PUSH ESI;
-                    //-------------------------------------------------------------------------
-                    CALL DWORD PTR[sub_005E9E50];				// CALL 005E9E50
-                    //-------------------------------------------------------------------------
+        MOV ECX, DWORD PTR[ESP + 0x20];
+        CMP ECX, EDI;
+        MOV DWORD PTR[ESI + 0x2C], ECX;
+        JE SHORT label_005E9C8D;
+        PUSH ESI;
+        //-------------------------------------------------------------------------
+        CALL DWORD PTR[sub_005E9E50];				// CALL 005E9E50
+        //-------------------------------------------------------------------------
     label_005E9C8D:
-                    MOV ECX, DWORD PTR[ESP + 0x0C];
-                    MOV EAX, ESI;
-                    POP EDI;
-                    POP ESI;
-                    MOV DWORD PTR FS : [0x0], ECX;
-                    ADD ESP, 0x10;
-                    RETN 0x8;
+        MOV ECX, DWORD PTR[ESP + 0x0C];
+        MOV EAX, ESI;
+        POP EDI;
+        POP ESI;
+        MOV DWORD PTR FS : [0x0], ECX;
+        ADD ESP, 0x10;
+        RETN 0x8;
 
     label_filter:
-                    CMP ECX, 0x1;				// Load Screens, Carcyclopedia
-                    JE label_add;
-                    CMP ECX, 0x2;				// Carcyclopedia - Show Mode
-                    JE label_test;
-                    CMP ECX, 0x3;				// Menu
-                    JE label_add;
-                    CMP ECX, 0x82;				// Menu
-                    JE label_add;
-                    RETN;
+        CMP ECX, 0x1;				// Load Screens, Carcyclopedia
+        JE label_add;
+        CMP ECX, 0x2;				// Carcyclopedia - Show Mode
+        JE label_test;
+        CMP ECX, 0x3;				// Menu
+        JE label_add;
+        CMP ECX, 0x82;				// Menu
+        JE label_add;
+        RETN;
     label_test:
-                    CMP EDX, 0x00FF00B2;		// Options
-                    JE label_add;
-                    CMP EDX, 0x00FF0032;		// Options -> Controls
-                    JE label_add;
-                    CMP EDX, 0x001F0032;		// Options -> Audio & Video
-                    JE label_add;
-                    RETN;
+        CMP EDX, 0x00FF00B2;		// Options
+        JE label_add;
+        CMP EDX, 0x00FF0032;		// Options -> Controls
+        JE label_add;
+        CMP EDX, 0x001F0032;		// Options -> Audio & Video
+        JE label_add;
+        RETN;
     label_add:
-                    FADD DWORD PTR[menu_menu_x];
-                    RETN;
+        FADD DWORD PTR[menu_menu_x];
+        RETN;
     }
 }
 
@@ -1306,87 +1306,87 @@ void __declspec(naked)v10_Eng_Menu_Hook_02() {
     static int sub_0057D850 = 0x0057D850;
 
     _asm {
-                    MOV EAX, DWORD PTR[ESP + 0x8];
-                    SUB ESP, 0x8;
-                    PUSH ESI;
-                    MOV ESI, ECX;
-                    MOV DWORD PTR[ESI + 0x34], EAX;
-                    MOV EAX, DWORD PTR[ESP + 0x10];
-                    MOV DWORD PTR[ESI], 0x0063DBDC;
-                    MOV ECX, DWORD PTR[EAX];
-                    MOV DWORD PTR[ESI + 0x4], ECX;
-                    XOR ECX, ECX;
-                    MOV DWORD PTR[ESI + 0x8], ECX;
-                    MOV EDX, DWORD PTR[EAX + 0x18];
-                    MOV DWORD PTR[ESI + 0x0C], EDX;
-                    MOV_DL_BYTE_PTR DW(00,67,26,28);
-                    CMP DL, CL;
-                    JE SHORT label_005704FB;
-                    MOV EDX, DWORD PTR[EAX + 0x8];
-                    MOV DWORD PTR[ESI + 0x10], EDX;
-                    MOV EDX, DWORD PTR[EAX + 0x0C];
-                    MOV DWORD PTR[ESI + 0x14], EDX;
-                    MOV EDX, DWORD PTR[EAX + 0x10];
-                    MOV DWORD PTR[ESI + 0x18], EDX;
-                    MOV EDX, DWORD PTR[EAX + 0x14];
-                    MOV DWORD PTR[ESI + 0x1C], EDX;
-                    JMP SHORT label_0057052B;
+        MOV EAX, DWORD PTR[ESP + 0x8];
+        SUB ESP, 0x8;
+        PUSH ESI;
+        MOV ESI, ECX;
+        MOV DWORD PTR[ESI + 0x34], EAX;
+        MOV EAX, DWORD PTR[ESP + 0x10];
+        MOV DWORD PTR[ESI], 0x0063DBDC;
+        MOV ECX, DWORD PTR[EAX];
+        MOV DWORD PTR[ESI + 0x4], ECX;
+        XOR ECX, ECX;
+        MOV DWORD PTR[ESI + 0x8], ECX;
+        MOV EDX, DWORD PTR[EAX + 0x18];
+        MOV DWORD PTR[ESI + 0x0C], EDX;
+        MOV_DL_BYTE_PTR DW(00, 67, 26, 28);
+        CMP DL, CL;
+        JE SHORT label_005704FB;
+        MOV EDX, DWORD PTR[EAX + 0x8];
+        MOV DWORD PTR[ESI + 0x10], EDX;
+        MOV EDX, DWORD PTR[EAX + 0x0C];
+        MOV DWORD PTR[ESI + 0x14], EDX;
+        MOV EDX, DWORD PTR[EAX + 0x10];
+        MOV DWORD PTR[ESI + 0x18], EDX;
+        MOV EDX, DWORD PTR[EAX + 0x14];
+        MOV DWORD PTR[ESI + 0x1C], EDX;
+        JMP SHORT label_0057052B;
     label_005704FB:
-                    FLD_DWORD_PTR DW(00,67,A4,C0);
-                    FMUL DWORD PTR[EAX + 0x8];
-                    //-------------------------------------------------------------------------
-                    CALL label_filter;						// Correct value
-                    //-------------------------------------------------------------------------
-                    FSTP DWORD PTR[ESI + 0x10];
-                    FLD_DWORD_PTR DW(00,67,A4,C4);
-                    FMUL DWORD PTR[EAX + 0x0C];
-                    FSTP DWORD PTR[ESI + 0x14];
-                    FLD_DWORD_PTR DW(00,67,A4,C0);
-                    FMUL DWORD PTR[EAX + 0x10];
-                    FSTP DWORD PTR[ESI + 0x18];
-                    FLD_DWORD_PTR DW(00,67,A4,C4);
-                    FMUL DWORD PTR[EAX + 0x14];
-                    FSTP DWORD PTR[ESI + 0x1C];
+        FLD_DWORD_PTR DW(00, 67, A4, C0);
+        FMUL DWORD PTR[EAX + 0x8];
+        //-------------------------------------------------------------------------
+        CALL label_filter;						// Correct value
+        //-------------------------------------------------------------------------
+        FSTP DWORD PTR[ESI + 0x10];
+        FLD_DWORD_PTR DW(00, 67, A4, C4);
+        FMUL DWORD PTR[EAX + 0x0C];
+        FSTP DWORD PTR[ESI + 0x14];
+        FLD_DWORD_PTR DW(00, 67, A4, C0);
+        FMUL DWORD PTR[EAX + 0x10];
+        FSTP DWORD PTR[ESI + 0x18];
+        FLD_DWORD_PTR DW(00, 67, A4, C4);
+        FMUL DWORD PTR[EAX + 0x14];
+        FSTP DWORD PTR[ESI + 0x1C];
     label_0057052B:
-                    MOV EDX, DWORD PTR[EAX + 0x1C];
-                    MOV DWORD PTR[ESP + 0x8], ECX;
-                    MOV DWORD PTR[ESI + 0x20], EDX;
-                    MOV EDX, DWORD PTR[EAX + 0x20];
-                    MOV DWORD PTR[ESI + 0x24], EDX;
-                    MOV EAX, DWORD PTR[EAX + 0x20];
-                    MOV DWORD PTR[ESP + 0x4], EAX;
-                    MOV EAX, DWORD PTR[ESI + 0x0C];
-                    FILD QWORD PTR[ESP + 0x4];
-                    CMP EAX, ECX;
-                    MOV DWORD PTR[ESI + 0x2C], ECX;
-                    FSTP DWORD PTR[ESI + 0x28];
-                    JE SHORT label_0057056A;
-                    PUSH EAX;
-                    MOV ECX, 0x0067A57C;
-                    //-------------------------------------------------------------------------
-                    CALL DWORD PTR[sub_0057D850];				// CALL 0057D850
-                    //-------------------------------------------------------------------------
-                    MOV DWORD PTR[ESI + 0x30], EAX;
-                    MOV EAX, ESI;
-                    POP ESI;
-                    ADD ESP, 0x8;
-                    RETN 0x8;
+        MOV EDX, DWORD PTR[EAX + 0x1C];
+        MOV DWORD PTR[ESP + 0x8], ECX;
+        MOV DWORD PTR[ESI + 0x20], EDX;
+        MOV EDX, DWORD PTR[EAX + 0x20];
+        MOV DWORD PTR[ESI + 0x24], EDX;
+        MOV EAX, DWORD PTR[EAX + 0x20];
+        MOV DWORD PTR[ESP + 0x4], EAX;
+        MOV EAX, DWORD PTR[ESI + 0x0C];
+        FILD QWORD PTR[ESP + 0x4];
+        CMP EAX, ECX;
+        MOV DWORD PTR[ESI + 0x2C], ECX;
+        FSTP DWORD PTR[ESI + 0x28];
+        JE SHORT label_0057056A;
+        PUSH EAX;
+        MOV ECX, 0x0067A57C;
+        //-------------------------------------------------------------------------
+        CALL DWORD PTR[sub_0057D850];				// CALL 0057D850
+        //-------------------------------------------------------------------------
+        MOV DWORD PTR[ESI + 0x30], EAX;
+        MOV EAX, ESI;
+        POP ESI;
+        ADD ESP, 0x8;
+        RETN 0x8;
     label_0057056A:
-                    MOV DWORD PTR[ESI + 0x30], ECX;
-                    MOV EAX, ESI;
-                    POP ESI;
-                    ADD ESP, 0x8;
-                    RETN 0x8;
+        MOV DWORD PTR[ESI + 0x30], ECX;
+        MOV EAX, ESI;
+        POP ESI;
+        ADD ESP, 0x8;
+        RETN 0x8;
 
     label_filter:
-                    CMP EAX, 0x00678DB0;		// Load Screens
-                    JE label_add;
-                    CMP EAX, 0x00674C94;		// Carcyclopedia
-                    JE label_add;
-                    RETN;
+        CMP EAX, 0x00678DB0;		// Load Screens
+        JE label_add;
+        CMP EAX, 0x00674C94;		// Carcyclopedia
+        JE label_add;
+        RETN;
     label_add:
-                    FADD DWORD PTR[menu_menu_x];
-                    RETN;
+        FADD DWORD PTR[menu_menu_x];
+        RETN;
     }
 }
 
@@ -1395,88 +1395,88 @@ void __declspec(naked)v11_Eng_Menu_Hook_02() {
     static int sub_005E9650 = 0x005E9650;
 
     _asm {
-                    PUSH - 0x1;
-                    PUSH 0x0062172B;
-                    MOV EAX, DWORD PTR FS : [0x0];
-                    PUSH EAX;
-                    MOV DWORD PTR FS : [0x0], ESP;
-                    PUSH ECX;
-                    MOV AL, BYTE PTR[ESP + 0x14];
-                    PUSH ESI;
-                    PUSH EDI;
-                    MOV ESI, ECX;
-                    XOR EDI, EDI;
-                    MOV DWORD PTR[ESP + 0x8], ESI;
-                    MOV BYTE PTR[ESI + 0x30], AL;
-                    MOV DWORD PTR[ESI + 0x34], EDI;
-                    MOV DWORD PTR[ESI + 0x38], EDI;
-                    MOV DWORD PTR[ESI + 0x3C], EDI;
-                    MOV EAX, DWORD PTR[ESP + 0x1C];
-                    MOV DWORD PTR[ESI], 0x00624FF8;
-                    MOV DWORD PTR[ESP + 0x14], EDI;
-                    MOV ECX, DWORD PTR[EAX];
-                    MOV DWORD PTR[ESI + 0x4], ECX;
-                    MOV EDX, DWORD PTR[EAX + 0x1C];
-                    MOV DWORD PTR[ESI + 0x8], EDX;
-                    FLD_DWORD_PTR DW(00,6B,C7,B8);
-                    FMUL DWORD PTR[EAX + 0x8];
-                    //-------------------------------------------------------------------------
-                    CALL label_filter;						// Correct value
-                    //-------------------------------------------------------------------------
-                    FST DWORD PTR[ESI + 0x24];
-                    FSTP DWORD PTR[ESI + 0x14];
-                    FLD_DWORD_PTR DW(00,6B,C7,BC);
-                    FMUL DWORD PTR[EAX + 0x0C];
-                    FST DWORD PTR[ESI + 0x28];
-                    FSTP DWORD PTR[ESI + 0x18];
-                    FLD_DWORD_PTR DW(00,6B,C7,B8);
-                    FMUL DWORD PTR[EAX + 0x10];
-                    FSTP DWORD PTR[ESI + 0x1C];
-                    FLD_DWORD_PTR DW(00,6B,C7,BC);
-                    FMUL DWORD PTR[EAX + 0x14];
-                    FSTP DWORD PTR[ESI + 0x20];
-                    MOV EAX, DWORD PTR[EAX + 0x18];
-                    CMP EAX, EDI;
-                    MOV DWORD PTR[ESI + 0x0C], EAX;
-                    JE SHORT label_005E9479;
-                    PUSH EAX;
-                    MOV ECX, 0x006D7644;
-                    //-------------------------------------------------------------------------
-                    CALL DWORD PTR[sub_0060F370];				// CALL 0060F370
-                    //-------------------------------------------------------------------------
-                    MOV DWORD PTR[ESI + 0x10], EAX;
-                    JMP SHORT label_005E947C;
+        PUSH - 0x1;
+        PUSH 0x0062172B;
+        MOV EAX, DWORD PTR FS : [0x0];
+        PUSH EAX;
+        MOV DWORD PTR FS : [0x0], ESP;
+        PUSH ECX;
+        MOV AL, BYTE PTR[ESP + 0x14];
+        PUSH ESI;
+        PUSH EDI;
+        MOV ESI, ECX;
+        XOR EDI, EDI;
+        MOV DWORD PTR[ESP + 0x8], ESI;
+        MOV BYTE PTR[ESI + 0x30], AL;
+        MOV DWORD PTR[ESI + 0x34], EDI;
+        MOV DWORD PTR[ESI + 0x38], EDI;
+        MOV DWORD PTR[ESI + 0x3C], EDI;
+        MOV EAX, DWORD PTR[ESP + 0x1C];
+        MOV DWORD PTR[ESI], 0x00624FF8;
+        MOV DWORD PTR[ESP + 0x14], EDI;
+        MOV ECX, DWORD PTR[EAX];
+        MOV DWORD PTR[ESI + 0x4], ECX;
+        MOV EDX, DWORD PTR[EAX + 0x1C];
+        MOV DWORD PTR[ESI + 0x8], EDX;
+        FLD_DWORD_PTR DW(00, 6B, C7, B8);
+        FMUL DWORD PTR[EAX + 0x8];
+        //-------------------------------------------------------------------------
+        CALL label_filter;						// Correct value
+        //-------------------------------------------------------------------------
+        FST DWORD PTR[ESI + 0x24];
+        FSTP DWORD PTR[ESI + 0x14];
+        FLD_DWORD_PTR DW(00, 6B, C7, BC);
+        FMUL DWORD PTR[EAX + 0x0C];
+        FST DWORD PTR[ESI + 0x28];
+        FSTP DWORD PTR[ESI + 0x18];
+        FLD_DWORD_PTR DW(00, 6B, C7, B8);
+        FMUL DWORD PTR[EAX + 0x10];
+        FSTP DWORD PTR[ESI + 0x1C];
+        FLD_DWORD_PTR DW(00, 6B, C7, BC);
+        FMUL DWORD PTR[EAX + 0x14];
+        FSTP DWORD PTR[ESI + 0x20];
+        MOV EAX, DWORD PTR[EAX + 0x18];
+        CMP EAX, EDI;
+        MOV DWORD PTR[ESI + 0x0C], EAX;
+        JE SHORT label_005E9479;
+        PUSH EAX;
+        MOV ECX, 0x006D7644;
+        //-------------------------------------------------------------------------
+        CALL DWORD PTR[sub_0060F370];				// CALL 0060F370
+        //-------------------------------------------------------------------------
+        MOV DWORD PTR[ESI + 0x10], EAX;
+        JMP SHORT label_005E947C;
     label_005E9479:
-                    MOV DWORD PTR[ESI + 0x10], EDI;
+        MOV DWORD PTR[ESI + 0x10], EDI;
     label_005E947C:
-                    MOV ECX, DWORD PTR[ESP + 0x20];
-                    CMP ECX, EDI;
-                    MOV DWORD PTR[ESI + 0x2C], ECX;
-                    JE SHORT label_005E948D;
-                    PUSH ESI;
-                    //-------------------------------------------------------------------------
-                    CALL DWORD PTR[sub_005E9650];				// CALL 005E9650
-                    //-------------------------------------------------------------------------
+        MOV ECX, DWORD PTR[ESP + 0x20];
+        CMP ECX, EDI;
+        MOV DWORD PTR[ESI + 0x2C], ECX;
+        JE SHORT label_005E948D;
+        PUSH ESI;
+        //-------------------------------------------------------------------------
+        CALL DWORD PTR[sub_005E9650];				// CALL 005E9650
+        //-------------------------------------------------------------------------
     label_005E948D:
-                    MOV ECX, DWORD PTR[ESP + 0x0C];
-                    MOV EAX, ESI;
-                    POP EDI;
-                    POP ESI;
-                    MOV DWORD PTR FS : [0x0], ECX;
-                    ADD ESP, 0x10;
-                    RETN 0x8;
+        MOV ECX, DWORD PTR[ESP + 0x0C];
+        MOV EAX, ESI;
+        POP EDI;
+        POP ESI;
+        MOV DWORD PTR FS : [0x0], ECX;
+        ADD ESP, 0x10;
+        RETN 0x8;
 
     label_filter:
-                    CMP ECX, 0x1;				// Load Screens, Carcyclopedia
-                    JE label_add;
-                    CMP ECX, 0x2;				// Carcyclopedia - Show Mode
-                    JE label_add;
-                    CMP ECX, 0x3;				// Load Game
-                    JE label_add;
-                    RETN;
+        CMP ECX, 0x1;				// Load Screens, Carcyclopedia
+        JE label_add;
+        CMP ECX, 0x2;				// Carcyclopedia - Show Mode
+        JE label_add;
+        CMP ECX, 0x3;				// Load Game
+        JE label_add;
+        RETN;
     label_add:
-                    FADD DWORD PTR[menu_menu_x];
-                    RETN;
+        FADD DWORD PTR[menu_menu_x];
+        RETN;
     }
 }
 
@@ -1485,88 +1485,88 @@ void __declspec(naked)v12_Eng_Menu_Hook_02() {
     static int sub_005E9E50 = 0x005E9E50;
 
     _asm {
-                    PUSH - 0x1;
-                    PUSH 0x00621EFB;
-                    MOV EAX, DWORD PTR FS : [0x0];
-                    PUSH EAX;
-                    MOV DWORD PTR FS : [0x0], ESP;
-                    PUSH ECX;
-                    MOV AL, BYTE PTR[ESP + 0x14];
-                    PUSH ESI;
-                    PUSH EDI;
-                    MOV ESI, ECX;
-                    XOR EDI, EDI;
-                    MOV DWORD PTR[ESP + 0x8], ESI;
-                    MOV BYTE PTR[ESI + 0x30], AL;
-                    MOV DWORD PTR[ESI + 0x34], EDI;
-                    MOV DWORD PTR[ESI + 0x38], EDI;
-                    MOV DWORD PTR[ESI + 0x3C], EDI;
-                    MOV EAX, DWORD PTR[ESP + 0x1C];
-                    MOV DWORD PTR[ESI], 0x00625FF8;
-                    MOV DWORD PTR[ESP + 0x14], EDI;
-                    MOV ECX, DWORD PTR[EAX];
-                    MOV DWORD PTR[ESI + 0x4], ECX;
-                    MOV EDX, DWORD PTR[EAX + 0x1C];
-                    MOV DWORD PTR[ESI + 0x8], EDX;
-                    FLD_DWORD_PTR DW(00,6B,D8,88);
-                    FMUL DWORD PTR[EAX + 0x8];
-                    //-------------------------------------------------------------------------
-                    CALL label_filter;						// Correct value
-                    //-------------------------------------------------------------------------
-                    FST DWORD PTR[ESI + 0x24];
-                    FSTP DWORD PTR[ESI + 0x14];
-                    FLD_DWORD_PTR DW(00,6B,D8,8C);
-                    FMUL DWORD PTR[EAX + 0x0C];
-                    FST DWORD PTR[ESI + 0x28];
-                    FSTP DWORD PTR[ESI + 0x18];
-                    FLD_DWORD_PTR DW(00,6B,D8,88);
-                    FMUL DWORD PTR[EAX + 0x10];
-                    FSTP DWORD PTR[ESI + 0x1C];
-                    FLD_DWORD_PTR DW(00,6B,D8,8C);
-                    FMUL DWORD PTR[EAX + 0x14];
-                    FSTP DWORD PTR[ESI + 0x20];
-                    MOV EAX, DWORD PTR[EAX + 0x18];
-                    CMP EAX, EDI;
-                    MOV DWORD PTR[ESI + 0x0C], EAX;
-                    JE SHORT label_005E9C79;
-                    PUSH EAX;
-                    MOV ECX, 0x006D8714;
-                    //-------------------------------------------------------------------------
-                    CALL DWORD PTR[sub_0060FB40];				// CALL 0060FB40
-                    //-------------------------------------------------------------------------
-                    MOV DWORD PTR[ESI + 0x10], EAX;
-                    JMP SHORT label_005E9C7C;
+        PUSH - 0x1;
+        PUSH 0x00621EFB;
+        MOV EAX, DWORD PTR FS : [0x0];
+        PUSH EAX;
+        MOV DWORD PTR FS : [0x0], ESP;
+        PUSH ECX;
+        MOV AL, BYTE PTR[ESP + 0x14];
+        PUSH ESI;
+        PUSH EDI;
+        MOV ESI, ECX;
+        XOR EDI, EDI;
+        MOV DWORD PTR[ESP + 0x8], ESI;
+        MOV BYTE PTR[ESI + 0x30], AL;
+        MOV DWORD PTR[ESI + 0x34], EDI;
+        MOV DWORD PTR[ESI + 0x38], EDI;
+        MOV DWORD PTR[ESI + 0x3C], EDI;
+        MOV EAX, DWORD PTR[ESP + 0x1C];
+        MOV DWORD PTR[ESI], 0x00625FF8;
+        MOV DWORD PTR[ESP + 0x14], EDI;
+        MOV ECX, DWORD PTR[EAX];
+        MOV DWORD PTR[ESI + 0x4], ECX;
+        MOV EDX, DWORD PTR[EAX + 0x1C];
+        MOV DWORD PTR[ESI + 0x8], EDX;
+        FLD_DWORD_PTR DW(00, 6B, D8, 88);
+        FMUL DWORD PTR[EAX + 0x8];
+        //-------------------------------------------------------------------------
+        CALL label_filter;						// Correct value
+        //-------------------------------------------------------------------------
+        FST DWORD PTR[ESI + 0x24];
+        FSTP DWORD PTR[ESI + 0x14];
+        FLD_DWORD_PTR DW(00, 6B, D8, 8C);
+        FMUL DWORD PTR[EAX + 0x0C];
+        FST DWORD PTR[ESI + 0x28];
+        FSTP DWORD PTR[ESI + 0x18];
+        FLD_DWORD_PTR DW(00, 6B, D8, 88);
+        FMUL DWORD PTR[EAX + 0x10];
+        FSTP DWORD PTR[ESI + 0x1C];
+        FLD_DWORD_PTR DW(00, 6B, D8, 8C);
+        FMUL DWORD PTR[EAX + 0x14];
+        FSTP DWORD PTR[ESI + 0x20];
+        MOV EAX, DWORD PTR[EAX + 0x18];
+        CMP EAX, EDI;
+        MOV DWORD PTR[ESI + 0x0C], EAX;
+        JE SHORT label_005E9C79;
+        PUSH EAX;
+        MOV ECX, 0x006D8714;
+        //-------------------------------------------------------------------------
+        CALL DWORD PTR[sub_0060FB40];				// CALL 0060FB40
+        //-------------------------------------------------------------------------
+        MOV DWORD PTR[ESI + 0x10], EAX;
+        JMP SHORT label_005E9C7C;
     label_005E9C79:
-                    MOV DWORD PTR[ESI + 0x10], EDI;
+        MOV DWORD PTR[ESI + 0x10], EDI;
     label_005E9C7C:
-                    MOV ECX, DWORD PTR[ESP + 0x20];
-                    CMP ECX, EDI;
-                    MOV DWORD PTR[ESI + 0x2C], ECX;
-                    JE SHORT label_005E9C8D;
-                    PUSH ESI;
-                    //-------------------------------------------------------------------------
-                    CALL DWORD PTR[sub_005E9E50];				// CALL 005E9E50
-                    //-------------------------------------------------------------------------
+        MOV ECX, DWORD PTR[ESP + 0x20];
+        CMP ECX, EDI;
+        MOV DWORD PTR[ESI + 0x2C], ECX;
+        JE SHORT label_005E9C8D;
+        PUSH ESI;
+        //-------------------------------------------------------------------------
+        CALL DWORD PTR[sub_005E9E50];				// CALL 005E9E50
+        //-------------------------------------------------------------------------
     label_005E9C8D:
-                    MOV ECX, DWORD PTR[ESP + 0x0C];
-                    MOV EAX, ESI;
-                    POP EDI;
-                    POP ESI;
-                    MOV DWORD PTR FS : [0x0], ECX;
-                    ADD ESP, 0x10;
-                    RETN 0x8;
+        MOV ECX, DWORD PTR[ESP + 0x0C];
+        MOV EAX, ESI;
+        POP EDI;
+        POP ESI;
+        MOV DWORD PTR FS : [0x0], ECX;
+        ADD ESP, 0x10;
+        RETN 0x8;
 
     label_filter:
-                    CMP ECX, 0x1;				// Load Screens, Carcyclopedia
-                    JE label_add;
-                    CMP ECX, 0x2;				// Carcyclopedia - Show Mode
-                    JE label_add;
-                    CMP ECX, 0x3;				// Load Game
-                    JE label_add;
-                    RETN;
+        CMP ECX, 0x1;				// Load Screens, Carcyclopedia
+        JE label_add;
+        CMP ECX, 0x2;				// Carcyclopedia - Show Mode
+        JE label_add;
+        CMP ECX, 0x3;				// Load Game
+        JE label_add;
+        RETN;
     label_add:
-                    FADD DWORD PTR[menu_menu_x];
-                    RETN;
+        FADD DWORD PTR[menu_menu_x];
+        RETN;
     }
 }
 
@@ -1574,89 +1574,89 @@ void __declspec(naked)v10_Eng_Menu_Hook_03() {
     static int sub_0057D850 = 0x0057D850;
 
     _asm {
-                    MOV EAX, DWORD PTR[ESP + 0x8];
-                    SUB ESP, 0x8;
-                    PUSH ESI;
-                    MOV ESI, ECX;
-                    MOV DWORD PTR[ESI + 0x34], EAX;
-                    MOV EAX, DWORD PTR[ESP + 0x10];
-                    MOV DWORD PTR[ESI], 0x0063DBDC;
-                    MOV ECX, DWORD PTR[EAX];
-                    MOV DWORD PTR[ESI + 0x4], ECX;
-                    XOR ECX, ECX;
-                    MOV DWORD PTR[ESI + 0x8], ECX;
-                    MOV EDX, DWORD PTR[EAX + 0x18];
-                    MOV DWORD PTR[ESI + 0x0C], EDX;
-                    MOV_DL_BYTE_PTR DW(00,67,26,28);
-                    CMP DL, CL;
-                    JE SHORT label_005704FB;
-                    MOV EDX, DWORD PTR[EAX + 0x8];
-                    MOV DWORD PTR[ESI + 0x10], EDX;
-                    MOV EDX, DWORD PTR[EAX + 0x0C];
-                    MOV DWORD PTR[ESI + 0x14], EDX;
-                    MOV EDX, DWORD PTR[EAX + 0x10];
-                    MOV DWORD PTR[ESI + 0x18], EDX;
-                    MOV EDX, DWORD PTR[EAX + 0x14];
-                    MOV DWORD PTR[ESI + 0x1C], EDX;
-                    JMP SHORT label_0057052B;
+        MOV EAX, DWORD PTR[ESP + 0x8];
+        SUB ESP, 0x8;
+        PUSH ESI;
+        MOV ESI, ECX;
+        MOV DWORD PTR[ESI + 0x34], EAX;
+        MOV EAX, DWORD PTR[ESP + 0x10];
+        MOV DWORD PTR[ESI], 0x0063DBDC;
+        MOV ECX, DWORD PTR[EAX];
+        MOV DWORD PTR[ESI + 0x4], ECX;
+        XOR ECX, ECX;
+        MOV DWORD PTR[ESI + 0x8], ECX;
+        MOV EDX, DWORD PTR[EAX + 0x18];
+        MOV DWORD PTR[ESI + 0x0C], EDX;
+        MOV_DL_BYTE_PTR DW(00, 67, 26, 28);
+        CMP DL, CL;
+        JE SHORT label_005704FB;
+        MOV EDX, DWORD PTR[EAX + 0x8];
+        MOV DWORD PTR[ESI + 0x10], EDX;
+        MOV EDX, DWORD PTR[EAX + 0x0C];
+        MOV DWORD PTR[ESI + 0x14], EDX;
+        MOV EDX, DWORD PTR[EAX + 0x10];
+        MOV DWORD PTR[ESI + 0x18], EDX;
+        MOV EDX, DWORD PTR[EAX + 0x14];
+        MOV DWORD PTR[ESI + 0x1C], EDX;
+        JMP SHORT label_0057052B;
     label_005704FB:
-                    FLD_DWORD_PTR DW(00,67,A4,C0);
-                    FMUL DWORD PTR[EAX + 0x8];
-                    //-------------------------------------------------------------------------
-                    CALL label_filter;						// Correct value
-                    //-------------------------------------------------------------------------
-                    FSTP DWORD PTR[ESI + 0x10];
-                    FLD_DWORD_PTR DW(00,67,A4,C4);
-                    FMUL DWORD PTR[EAX + 0x0C];
-                    FSTP DWORD PTR[ESI + 0x14];
-                    FLD_DWORD_PTR DW(00,67,A4,C0);
-                    FMUL DWORD PTR[EAX + 0x10];
-                    FSTP DWORD PTR[ESI + 0x18];
-                    FLD_DWORD_PTR DW(00,67,A4,C4);
-                    FMUL DWORD PTR[EAX + 0x14];
-                    FSTP DWORD PTR[ESI + 0x1C];
+        FLD_DWORD_PTR DW(00, 67, A4, C0);
+        FMUL DWORD PTR[EAX + 0x8];
+        //-------------------------------------------------------------------------
+        CALL label_filter;						// Correct value
+        //-------------------------------------------------------------------------
+        FSTP DWORD PTR[ESI + 0x10];
+        FLD_DWORD_PTR DW(00, 67, A4, C4);
+        FMUL DWORD PTR[EAX + 0x0C];
+        FSTP DWORD PTR[ESI + 0x14];
+        FLD_DWORD_PTR DW(00, 67, A4, C0);
+        FMUL DWORD PTR[EAX + 0x10];
+        FSTP DWORD PTR[ESI + 0x18];
+        FLD_DWORD_PTR DW(00, 67, A4, C4);
+        FMUL DWORD PTR[EAX + 0x14];
+        FSTP DWORD PTR[ESI + 0x1C];
     label_0057052B:
-                    MOV EDX, DWORD PTR[EAX + 0x1C];
-                    MOV DWORD PTR[ESP + 0x8], ECX;
-                    MOV DWORD PTR[ESI + 0x20], EDX;
-                    MOV EDX, DWORD PTR[EAX + 0x20];
-                    MOV DWORD PTR[ESI + 0x24], EDX;
-                    MOV EAX, DWORD PTR[EAX + 0x20];
-                    MOV DWORD PTR[ESP + 0x4], EAX;
-                    MOV EAX, DWORD PTR[ESI + 0x0C];
-                    FILD QWORD PTR[ESP + 0x4];
-                    CMP EAX, ECX;
-                    MOV DWORD PTR[ESI + 0x2C], ECX;
-                    FSTP DWORD PTR[ESI + 0x28];
-                    JE SHORT label_0057056A;
-                    PUSH EAX;
-                    MOV ECX, 0x0067A57C;
-                    //-------------------------------------------------------------------------
-                    CALL DWORD PTR[sub_0057D850];				// CALL 0057D850
-                    //-------------------------------------------------------------------------
-                    MOV DWORD PTR[ESI + 0x30], EAX;
-                    MOV EAX, ESI;
-                    POP ESI;
-                    ADD ESP, 0x8;
-                    RETN 0x8;
+        MOV EDX, DWORD PTR[EAX + 0x1C];
+        MOV DWORD PTR[ESP + 0x8], ECX;
+        MOV DWORD PTR[ESI + 0x20], EDX;
+        MOV EDX, DWORD PTR[EAX + 0x20];
+        MOV DWORD PTR[ESI + 0x24], EDX;
+        MOV EAX, DWORD PTR[EAX + 0x20];
+        MOV DWORD PTR[ESP + 0x4], EAX;
+        MOV EAX, DWORD PTR[ESI + 0x0C];
+        FILD QWORD PTR[ESP + 0x4];
+        CMP EAX, ECX;
+        MOV DWORD PTR[ESI + 0x2C], ECX;
+        FSTP DWORD PTR[ESI + 0x28];
+        JE SHORT label_0057056A;
+        PUSH EAX;
+        MOV ECX, 0x0067A57C;
+        //-------------------------------------------------------------------------
+        CALL DWORD PTR[sub_0057D850];				// CALL 0057D850
+        //-------------------------------------------------------------------------
+        MOV DWORD PTR[ESI + 0x30], EAX;
+        MOV EAX, ESI;
+        POP ESI;
+        ADD ESP, 0x8;
+        RETN 0x8;
     label_0057056A:
-                    MOV DWORD PTR[ESI + 0x30], ECX;
-                    MOV EAX, ESI;
-                    POP ESI;
-                    ADD ESP, 0x8;
-                    RETN 0x8;
+        MOV DWORD PTR[ESI + 0x30], ECX;
+        MOV EAX, ESI;
+        POP ESI;
+        ADD ESP, 0x8;
+        RETN 0x8;
 
     label_filter:
-                    CMP EAX, 0x00677658;		// "New cars have been added to the garage"
-                    JE label_add;
-                    CMP EAX, 0x00676F98;		// Racing (in Race Mission)
-                    JE label_add;
-                    CMP EAX, 0x00674DB4;		// Carcyclopedia (Cars List)
-                    JE label_add;
-                    RETN;
+        CMP EAX, 0x00677658;		// "New cars have been added to the garage"
+        JE label_add;
+        CMP EAX, 0x00676F98;		// Racing (in Race Mission)
+        JE label_add;
+        CMP EAX, 0x00674DB4;		// Carcyclopedia (Cars List)
+        JE label_add;
+        RETN;
     label_add:
-                    FADD DWORD PTR[menu_menu_x];
-                    RETN;
+        FADD DWORD PTR[menu_menu_x];
+        RETN;
     }
 }
 
@@ -1669,142 +1669,142 @@ void __declspec(naked)v10_Eng_Movie_Hook() {
     static int sub_101C13F4 = 0x001C13F4;
     static int sub_101C1588 = 0x001C1588;
     _asm {
-//					_emit 0xCC;
-                    CMP init, 0;
-                    JZ label_begin;
-                    MOV init, 0;
-                    CALL label_init;
+        //					_emit 0xCC;
+        CMP init, 0;
+        JZ label_begin;
+        MOV init, 0;
+        CALL label_init;
 
     label_begin:
-                    //-------------------------------------------------------------------------
-                    MOV EAX, DWORD PTR[sub_101C1588];			//
-                    MOV AL, BYTE PTR[EAX];						// MOV AL, BYTE PTR[101C1588]
-                    //-------------------------------------------------------------------------
-                    MOV ECX, DWORD PTR[sub_101C13A8];			//
-                    MOV ECX, DWORD PTR[ECX];					// MOV ECX, DWORD PTR[101C13A8]
-                    //-------------------------------------------------------------------------
-                    SUB ESP, 0x10;
-                    TEST AL, AL;
-                    JS label_10070448;
-                    //-------------------------------------------------------------------------
-                    MOV ECX, DWORD PTR[sub_101C13F4];			//
-                    MOV ECX, DWORD PTR[ECX];					// MOV ECX, DWORD PTR[101C13F4]
-                    //-------------------------------------------------------------------------
+        //-------------------------------------------------------------------------
+        MOV EAX, DWORD PTR[sub_101C1588];			//
+        MOV AL, BYTE PTR[EAX];						// MOV AL, BYTE PTR[101C1588]
+        //-------------------------------------------------------------------------
+        MOV ECX, DWORD PTR[sub_101C13A8];			//
+        MOV ECX, DWORD PTR[ECX];					// MOV ECX, DWORD PTR[101C13A8]
+        //-------------------------------------------------------------------------
+        SUB ESP, 0x10;
+        TEST AL, AL;
+        JS label_10070448;
+        //-------------------------------------------------------------------------
+        MOV ECX, DWORD PTR[sub_101C13F4];			//
+        MOV ECX, DWORD PTR[ECX];					// MOV ECX, DWORD PTR[101C13F4]
+        //-------------------------------------------------------------------------
 
     label_10070448:
-                    MOV EAX, DWORD PTR[ESP + 0x18];
-                    TEST EAX, EAX;
-                    JNZ label_1007045E;
-                    LEA EAX, [ESP];
-                    PUSH EAX;
-                    PUSH ECX;
-                    //-------------------------------------------------------------------------
-                    PUSH EAX;									//
-                    MOV EAX, DWORD PTR[sub_10097198];			//
-                    MOV EAX, DWORD PTR[EAX];					// CALL DWORD PTR[10097198]
-                    MOV DWORD PTR[temp], EAX;					//
-                    POP EAX;									//
-                    CALL DWORD PTR[temp];						//
-                    //-------------------------------------------------------------------------
-                    JMP label_10070479;
+        MOV EAX, DWORD PTR[ESP + 0x18];
+        TEST EAX, EAX;
+        JNZ label_1007045E;
+        LEA EAX, [ESP];
+        PUSH EAX;
+        PUSH ECX;
+        //-------------------------------------------------------------------------
+        PUSH EAX;									//
+        MOV EAX, DWORD PTR[sub_10097198];			//
+        MOV EAX, DWORD PTR[EAX];					// CALL DWORD PTR[10097198]
+        MOV DWORD PTR[temp], EAX;					//
+        POP EAX;									//
+        CALL DWORD PTR[temp];						//
+        //-------------------------------------------------------------------------
+        JMP label_10070479;
     label_1007045E:
-                    MOV ECX, DWORD PTR[EAX];
-                    MOV EDX, DWORD PTR[EAX + 0x4];
-                    MOV DWORD PTR[ESP], ECX;
-                    MOV ECX, DWORD PTR[EAX + 0x8];
-                    MOV DWORD PTR[ESP + 0x4], EDX;
-                    MOV EDX, DWORD PTR[EAX + 0x0C];
-                    MOV DWORD PTR[ESP + 0x8], ECX;
-                    MOV DWORD PTR[ESP + 0x0C], EDX;
+        MOV ECX, DWORD PTR[EAX];
+        MOV EDX, DWORD PTR[EAX + 0x4];
+        MOV DWORD PTR[ESP], ECX;
+        MOV ECX, DWORD PTR[EAX + 0x8];
+        MOV DWORD PTR[ESP + 0x4], EDX;
+        MOV EDX, DWORD PTR[EAX + 0x0C];
+        MOV DWORD PTR[ESP + 0x8], ECX;
+        MOV DWORD PTR[ESP + 0x0C], EDX;
     label_10070479:
-                    MOV ECX, DWORD PTR[ESP + 0x14];
-//					MOV EDX,DWORD PTR [ESP];
-                    LEA EAX, [ECX + 0x28];
-//					MOV DWORD PTR [EAX],EDX;
-//					MOV EDX,DWORD PTR [ESP+0x4];
-//					MOV DWORD PTR [EAX+0x4],EDX;
-//					MOV EDX,DWORD PTR [ESP+0x8];
-//					MOV DWORD PTR [EAX+0x8],EDX;
-//					MOV EDX,DWORD PTR [ESP+0x0C];
-//					MOV DWORD PTR [EAX+0x0C],EDX;
-                    //-------------------------------------------------------------------------
-                    CMP movie_patch, 1;
-                    JA label_fix2;
-                    CALL label_movie_fix1;
-                    JMP label_end_fix;
+        MOV ECX, DWORD PTR[ESP + 0x14];
+        //					MOV EDX,DWORD PTR [ESP];
+        LEA EAX, [ECX + 0x28];
+        //					MOV DWORD PTR [EAX],EDX;
+        //					MOV EDX,DWORD PTR [ESP+0x4];
+        //					MOV DWORD PTR [EAX+0x4],EDX;
+        //					MOV EDX,DWORD PTR [ESP+0x8];
+        //					MOV DWORD PTR [EAX+0x8],EDX;
+        //					MOV EDX,DWORD PTR [ESP+0x0C];
+        //					MOV DWORD PTR [EAX+0x0C],EDX;
+                            //-------------------------------------------------------------------------
+        CMP movie_patch, 1;
+        JA label_fix2;
+        CALL label_movie_fix1;
+        JMP label_end_fix;
     label_fix2:
-                    CALL label_movie_fix2;
+        CALL label_movie_fix2;
     label_end_fix:
-                    //-------------------------------------------------------------------------
-                    CALL DWORD PTR[sub_10070240];				// CALL 10070240
-                    //-------------------------------------------------------------------------
-                    XOR EAX, EAX;
-                    ADD ESP, 0x10;
-                    RETN 0x8;
+        //-------------------------------------------------------------------------
+        CALL DWORD PTR[sub_10070240];				// CALL 10070240
+        //-------------------------------------------------------------------------
+        XOR EAX, EAX;
+        ADD ESP, 0x10;
+        RETN 0x8;
 
     label_movie_fix1:
-                    //-------------------------------------------------------------------------
-                    FLD DWORD PTR[cur_game_width];				// Левая сторона видео
-                    FILD DWORD PTR[ESP + 0xC];
-                    FDIV DWORD PTR[movie_aspect];
-                    FSUBP ST(1), ST;
-                    FMUL DWORD PTR[half];
-                    FISTP DWORD PTR[EAX];
-                    //-------------------------------------------------------------------------
-                    MOV EDX, DWORD PTR[ESP + 0x8];				// Верхняя сторона видео
-                    MOV DWORD PTR[EAX + 0x4], EDX;
-                    //-------------------------------------------------------------------------
-                    FILD DWORD PTR[ESP + 0xC];					// Ширина видео
-                    FDIV DWORD PTR[movie_aspect];
-                    FISTP DWORD PTR[EAX + 0x8];
-                    //-------------------------------------------------------------------------
-                    MOV EDX, DWORD PTR[ESP + 0x10];				// Высота видео
-                    MOV DWORD PTR[EAX + 0x0C], EDX;
-                    //-------------------------------------------------------------------------
-                    RETN;
+        //-------------------------------------------------------------------------
+        FLD DWORD PTR[cur_game_width];				// Левая сторона видео
+        FILD DWORD PTR[ESP + 0xC];
+        FDIV DWORD PTR[movie_aspect];
+        FSUBP ST(1), ST;
+        FMUL DWORD PTR[half];
+        FISTP DWORD PTR[EAX];
+        //-------------------------------------------------------------------------
+        MOV EDX, DWORD PTR[ESP + 0x8];				// Верхняя сторона видео
+        MOV DWORD PTR[EAX + 0x4], EDX;
+        //-------------------------------------------------------------------------
+        FILD DWORD PTR[ESP + 0xC];					// Ширина видео
+        FDIV DWORD PTR[movie_aspect];
+        FISTP DWORD PTR[EAX + 0x8];
+        //-------------------------------------------------------------------------
+        MOV EDX, DWORD PTR[ESP + 0x10];				// Высота видео
+        MOV DWORD PTR[EAX + 0x0C], EDX;
+        //-------------------------------------------------------------------------
+        RETN;
 
     label_movie_fix2:
-                    //-------------------------------------------------------------------------
-                    MOV EDX, DWORD PTR[ESP + 0x4];				// Левая сторона видео
-                    MOV DWORD PTR[EAX], EDX;
-                    //-------------------------------------------------------------------------
-                    FLD DWORD PTR[cur_game_height];				// Верхняя сторона видео
-                    FILD DWORD PTR[ESP + 0x10];
-                    FMUL DWORD PTR[movie_aspect];
-                    FSUBP ST(1), ST;
-                    FMUL DWORD PTR[half];
-                    FISTP DWORD PTR[EAX + 0x4];
-                    //-------------------------------------------------------------------------
-                    MOV EDX, DWORD PTR[ESP + 0xC];				// Ширина видео
-                    MOV DWORD PTR[EAX + 0xC], EDX;
-                    //-------------------------------------------------------------------------
-                    FILD DWORD PTR[ESP + 0x10];					// Высота видео
-                    FMUL DWORD PTR[movie_aspect];
-                    FISTP DWORD PTR[EAX + 0x0C];
-                    //-------------------------------------------------------------------------
-                    RETN;
+        //-------------------------------------------------------------------------
+        MOV EDX, DWORD PTR[ESP + 0x4];				// Левая сторона видео
+        MOV DWORD PTR[EAX], EDX;
+        //-------------------------------------------------------------------------
+        FLD DWORD PTR[cur_game_height];				// Верхняя сторона видео
+        FILD DWORD PTR[ESP + 0x10];
+        FMUL DWORD PTR[movie_aspect];
+        FSUBP ST(1), ST;
+        FMUL DWORD PTR[half];
+        FISTP DWORD PTR[EAX + 0x4];
+        //-------------------------------------------------------------------------
+        MOV EDX, DWORD PTR[ESP + 0xC];				// Ширина видео
+        MOV DWORD PTR[EAX + 0xC], EDX;
+        //-------------------------------------------------------------------------
+        FILD DWORD PTR[ESP + 0x10];					// Высота видео
+        FMUL DWORD PTR[movie_aspect];
+        FISTP DWORD PTR[EAX + 0x0C];
+        //-------------------------------------------------------------------------
+        RETN;
 
     label_init:
-                    PUSH EAX;
+        PUSH EAX;
 
-                    MOV EAX, DWORD PTR[sub_10070240];
-                    ADD EAX, DWORD PTR[base_LS3DF];
-                    MOV DWORD PTR[sub_10070240], EAX;
-                    MOV EAX, DWORD PTR[sub_10097198];
-                    ADD EAX, DWORD PTR[base_LS3DF];
-                    MOV DWORD PTR[sub_10097198], EAX;
-                    MOV EAX, DWORD PTR[sub_101C13A8];
-                    ADD EAX, DWORD PTR[base_LS3DF];
-                    MOV DWORD PTR[sub_101C13A8], EAX;
-                    MOV EAX, DWORD PTR[sub_101C13F4];
-                    ADD EAX, DWORD PTR[base_LS3DF];
-                    MOV DWORD PTR[sub_101C13F4], EAX;
-                    MOV EAX, DWORD PTR[sub_101C1588];
-                    ADD EAX, DWORD PTR[base_LS3DF];
-                    MOV DWORD PTR[sub_101C1588], EAX;
+        MOV EAX, DWORD PTR[sub_10070240];
+        ADD EAX, DWORD PTR[base_LS3DF];
+        MOV DWORD PTR[sub_10070240], EAX;
+        MOV EAX, DWORD PTR[sub_10097198];
+        ADD EAX, DWORD PTR[base_LS3DF];
+        MOV DWORD PTR[sub_10097198], EAX;
+        MOV EAX, DWORD PTR[sub_101C13A8];
+        ADD EAX, DWORD PTR[base_LS3DF];
+        MOV DWORD PTR[sub_101C13A8], EAX;
+        MOV EAX, DWORD PTR[sub_101C13F4];
+        ADD EAX, DWORD PTR[base_LS3DF];
+        MOV DWORD PTR[sub_101C13F4], EAX;
+        MOV EAX, DWORD PTR[sub_101C1588];
+        ADD EAX, DWORD PTR[base_LS3DF];
+        MOV DWORD PTR[sub_101C1588], EAX;
 
-                    POP EAX;
-                    RETN;
+        POP EAX;
+        RETN;
     }
 }
 
@@ -1817,146 +1817,146 @@ void __declspec(naked)v11_Eng_Movie_Hook() {
     static int sub_101C2558 = 0x001C2558;
     static int sub_101C26E8 = 0x001C26E8;
     _asm {
-//					_emit 0xCC;
-                    CMP init, 0;
-                    JZ label_begin;
-                    MOV init, 0;
-                    CALL label_init;
+        //					_emit 0xCC;
+        CMP init, 0;
+        JZ label_begin;
+        MOV init, 0;
+        CALL label_init;
 
     label_begin:
-                    //-------------------------------------------------------------------------
-                    MOV EAX, DWORD PTR[sub_101C26E8];			//
-                    MOV AL, BYTE PTR[EAX];						// MOV AL,BYTE PTR [101C26E8]
-                    //-------------------------------------------------------------------------
-                    MOV ECX, DWORD PTR[sub_101C2508];			//
-                    MOV ECX, DWORD PTR[ECX];					// MOV ECX, DWORD PTR[101C2508]
-                    //-------------------------------------------------------------------------
-                    SUB ESP, 0x10;
-                    TEST AL, AL;
-                    JS label_100714A8;
-                    //-------------------------------------------------------------------------
-                    MOV ECX, DWORD PTR[sub_101C2558];			//
-                    MOV ECX, DWORD PTR[ECX];					// MOV ECX, DWORD PTR[101C2558]
-                    //-------------------------------------------------------------------------
+        //-------------------------------------------------------------------------
+        MOV EAX, DWORD PTR[sub_101C26E8];			//
+        MOV AL, BYTE PTR[EAX];						// MOV AL,BYTE PTR [101C26E8]
+        //-------------------------------------------------------------------------
+        MOV ECX, DWORD PTR[sub_101C2508];			//
+        MOV ECX, DWORD PTR[ECX];					// MOV ECX, DWORD PTR[101C2508]
+        //-------------------------------------------------------------------------
+        SUB ESP, 0x10;
+        TEST AL, AL;
+        JS label_100714A8;
+        //-------------------------------------------------------------------------
+        MOV ECX, DWORD PTR[sub_101C2558];			//
+        MOV ECX, DWORD PTR[ECX];					// MOV ECX, DWORD PTR[101C2558]
+        //-------------------------------------------------------------------------
     label_100714A8:
-                    MOV EAX, DWORD PTR[ESP + 0x18];
-                    XOR EDX, EDX;
-                    CMP EAX, EDX;
-                    MOV DWORD PTR[ESP], EDX;
-                    MOV DWORD PTR[ESP + 0x4], EDX;
-                    MOV DWORD PTR[ESP + 0x8], 0x280;
-                    MOV DWORD PTR[ESP + 0x0C], 0x1E0;
-                    JNE label_100714D8;
-                    LEA EAX, [ESP];
-                    PUSH EAX;
-                    PUSH ECX;
-                    //-------------------------------------------------------------------------
-                    PUSH EAX;									//
-                    MOV EAX, DWORD PTR[sub_100981B0];			//
-                    MOV EAX, DWORD PTR[EAX];					// CALL DWORD PTR[100981B0]
-                    MOV DWORD PTR[temp], EAX;					//
-                    POP EAX;									//
-                    CALL DWORD PTR[temp];						//
-                    //-------------------------------------------------------------------------
-                    JMP label_100714F3;
+        MOV EAX, DWORD PTR[ESP + 0x18];
+        XOR EDX, EDX;
+        CMP EAX, EDX;
+        MOV DWORD PTR[ESP], EDX;
+        MOV DWORD PTR[ESP + 0x4], EDX;
+        MOV DWORD PTR[ESP + 0x8], 0x280;
+        MOV DWORD PTR[ESP + 0x0C], 0x1E0;
+        JNE label_100714D8;
+        LEA EAX, [ESP];
+        PUSH EAX;
+        PUSH ECX;
+        //-------------------------------------------------------------------------
+        PUSH EAX;									//
+        MOV EAX, DWORD PTR[sub_100981B0];			//
+        MOV EAX, DWORD PTR[EAX];					// CALL DWORD PTR[100981B0]
+        MOV DWORD PTR[temp], EAX;					//
+        POP EAX;									//
+        CALL DWORD PTR[temp];						//
+        //-------------------------------------------------------------------------
+        JMP label_100714F3;
     label_100714D8:
-                    MOV ECX, DWORD PTR[EAX];
-                    MOV EDX, DWORD PTR[EAX + 0x4];
-                    MOV DWORD PTR[ESP], ECX;
-                    MOV ECX, DWORD PTR[EAX + 0x8];
-                    MOV DWORD PTR[ESP + 0x4], EDX;
-                    MOV EDX, DWORD PTR[EAX + 0x0C];
-                    MOV DWORD PTR[ESP + 0x8], ECX;
-                    MOV DWORD PTR[ESP + 0x0C], EDX;
+        MOV ECX, DWORD PTR[EAX];
+        MOV EDX, DWORD PTR[EAX + 0x4];
+        MOV DWORD PTR[ESP], ECX;
+        MOV ECX, DWORD PTR[EAX + 0x8];
+        MOV DWORD PTR[ESP + 0x4], EDX;
+        MOV EDX, DWORD PTR[EAX + 0x0C];
+        MOV DWORD PTR[ESP + 0x8], ECX;
+        MOV DWORD PTR[ESP + 0x0C], EDX;
     label_100714F3:
-                    MOV ECX, DWORD PTR[ESP + 0x14];
-//					MOV EDX, DWORD PTR[ESP];
-                    LEA EAX, [ECX + 0x28];
-//					MOV DWORD PTR[EAX], EDX;
-//					MOV EDX, DWORD PTR[ESP + 0x4];
-//					MOV DWORD PTR[EAX + 0x4], EDX;
-//					MOV EDX, DWORD PTR[ESP + 0x8];
-//					MOV DWORD PTR[EAX + 0x8], EDX;
-//					MOV EDX, DWORD PTR[ESP + 0x0C];
-//					MOV DWORD PTR[EAX + 0x0C], EDX;
-                    //-------------------------------------------------------------------------
-                    CMP movie_patch, 1;
-                    JA label_fix2;
-                    CALL label_movie_fix1;
-                    JMP label_end_fix;
+        MOV ECX, DWORD PTR[ESP + 0x14];
+        //					MOV EDX, DWORD PTR[ESP];
+        LEA EAX, [ECX + 0x28];
+        //					MOV DWORD PTR[EAX], EDX;
+        //					MOV EDX, DWORD PTR[ESP + 0x4];
+        //					MOV DWORD PTR[EAX + 0x4], EDX;
+        //					MOV EDX, DWORD PTR[ESP + 0x8];
+        //					MOV DWORD PTR[EAX + 0x8], EDX;
+        //					MOV EDX, DWORD PTR[ESP + 0x0C];
+        //					MOV DWORD PTR[EAX + 0x0C], EDX;
+                            //-------------------------------------------------------------------------
+        CMP movie_patch, 1;
+        JA label_fix2;
+        CALL label_movie_fix1;
+        JMP label_end_fix;
     label_fix2:
-                    CALL label_movie_fix2;
+        CALL label_movie_fix2;
     label_end_fix:
-                    //-------------------------------------------------------------------------
-                    CALL DWORD PTR[sub_10071270];				// CALL 10071270
-                    //-------------------------------------------------------------------------
-                    XOR EAX, EAX;
-                    ADD ESP, 0x10;
-                    RETN 0x8;
+        //-------------------------------------------------------------------------
+        CALL DWORD PTR[sub_10071270];				// CALL 10071270
+        //-------------------------------------------------------------------------
+        XOR EAX, EAX;
+        ADD ESP, 0x10;
+        RETN 0x8;
 
     label_movie_fix1:
-                    //-------------------------------------------------------------------------
-                    FLD DWORD PTR[cur_game_width];				// Левая сторона видео
-                    FILD DWORD PTR[ESP + 0xC];
-                    FDIV DWORD PTR[movie_aspect];
-                    FSUBP ST(1), ST;
-                    FMUL DWORD PTR[half];
-                    FISTP DWORD PTR[EAX];
-                    //-------------------------------------------------------------------------
-                    MOV EDX, DWORD PTR[ESP + 0x8];				// Верхняя сторона видео
-                    MOV DWORD PTR[EAX + 0x4], EDX;
-                    //-------------------------------------------------------------------------
-                    FILD DWORD PTR[ESP + 0xC];					// Ширина видео
-                    FDIV DWORD PTR[movie_aspect];
-                    FISTP DWORD PTR[EAX + 0x8];
-                    //-------------------------------------------------------------------------
-                    MOV EDX, DWORD PTR[ESP + 0x10];				// Высота видео
-                    MOV DWORD PTR[EAX + 0x0C], EDX;
-                    //-------------------------------------------------------------------------
-                    RETN;
+        //-------------------------------------------------------------------------
+        FLD DWORD PTR[cur_game_width];				// Левая сторона видео
+        FILD DWORD PTR[ESP + 0xC];
+        FDIV DWORD PTR[movie_aspect];
+        FSUBP ST(1), ST;
+        FMUL DWORD PTR[half];
+        FISTP DWORD PTR[EAX];
+        //-------------------------------------------------------------------------
+        MOV EDX, DWORD PTR[ESP + 0x8];				// Верхняя сторона видео
+        MOV DWORD PTR[EAX + 0x4], EDX;
+        //-------------------------------------------------------------------------
+        FILD DWORD PTR[ESP + 0xC];					// Ширина видео
+        FDIV DWORD PTR[movie_aspect];
+        FISTP DWORD PTR[EAX + 0x8];
+        //-------------------------------------------------------------------------
+        MOV EDX, DWORD PTR[ESP + 0x10];				// Высота видео
+        MOV DWORD PTR[EAX + 0x0C], EDX;
+        //-------------------------------------------------------------------------
+        RETN;
 
     label_movie_fix2:
-                    //-------------------------------------------------------------------------
-                    MOV EDX, DWORD PTR[ESP + 0x4];				// Левая сторона видео
-                    MOV DWORD PTR[EAX], EDX;
-                    //-------------------------------------------------------------------------
-                    FLD DWORD PTR[cur_game_height];				// Верхняя сторона видео
-                    FILD DWORD PTR[ESP + 0x10];
-                    FMUL DWORD PTR[movie_aspect];
-                    FSUBP ST(1), ST;
-                    FMUL DWORD PTR[half];
-                    FISTP DWORD PTR[EAX + 0x4];
-                    //-------------------------------------------------------------------------
-                    MOV EDX, DWORD PTR[ESP + 0xC];				// Ширина видео
-                    MOV DWORD PTR[EAX + 0xC], EDX;
-                    //-------------------------------------------------------------------------
-                    FILD DWORD PTR[ESP + 0x10];					// Высота видео
-                    FMUL DWORD PTR[movie_aspect];
-                    FISTP DWORD PTR[EAX + 0x0C];
-                    //-------------------------------------------------------------------------
-                    RETN;
+        //-------------------------------------------------------------------------
+        MOV EDX, DWORD PTR[ESP + 0x4];				// Левая сторона видео
+        MOV DWORD PTR[EAX], EDX;
+        //-------------------------------------------------------------------------
+        FLD DWORD PTR[cur_game_height];				// Верхняя сторона видео
+        FILD DWORD PTR[ESP + 0x10];
+        FMUL DWORD PTR[movie_aspect];
+        FSUBP ST(1), ST;
+        FMUL DWORD PTR[half];
+        FISTP DWORD PTR[EAX + 0x4];
+        //-------------------------------------------------------------------------
+        MOV EDX, DWORD PTR[ESP + 0xC];				// Ширина видео
+        MOV DWORD PTR[EAX + 0xC], EDX;
+        //-------------------------------------------------------------------------
+        FILD DWORD PTR[ESP + 0x10];					// Высота видео
+        FMUL DWORD PTR[movie_aspect];
+        FISTP DWORD PTR[EAX + 0x0C];
+        //-------------------------------------------------------------------------
+        RETN;
 
     label_init:
-                    PUSH EAX;
+        PUSH EAX;
 
-                    MOV EAX, DWORD PTR[sub_10071270];
-                    ADD EAX, DWORD PTR[base_LS3DF];
-                    MOV DWORD PTR[sub_10071270], EAX;
-                    MOV EAX, DWORD PTR[sub_100981B0];
-                    ADD EAX, DWORD PTR[base_LS3DF];
-                    MOV DWORD PTR[sub_100981B0], EAX;
-                    MOV EAX, DWORD PTR[sub_101C2508];
-                    ADD EAX, DWORD PTR[base_LS3DF];
-                    MOV DWORD PTR[sub_101C2508], EAX;
-                    MOV EAX, DWORD PTR[sub_101C2558];
-                    ADD EAX, DWORD PTR[base_LS3DF];
-                    MOV DWORD PTR[sub_101C2558], EAX;
-                    MOV EAX, DWORD PTR[sub_101C26E8];
-                    ADD EAX, DWORD PTR[base_LS3DF];
-                    MOV DWORD PTR[sub_101C26E8], EAX;
+        MOV EAX, DWORD PTR[sub_10071270];
+        ADD EAX, DWORD PTR[base_LS3DF];
+        MOV DWORD PTR[sub_10071270], EAX;
+        MOV EAX, DWORD PTR[sub_100981B0];
+        ADD EAX, DWORD PTR[base_LS3DF];
+        MOV DWORD PTR[sub_100981B0], EAX;
+        MOV EAX, DWORD PTR[sub_101C2508];
+        ADD EAX, DWORD PTR[base_LS3DF];
+        MOV DWORD PTR[sub_101C2508], EAX;
+        MOV EAX, DWORD PTR[sub_101C2558];
+        ADD EAX, DWORD PTR[base_LS3DF];
+        MOV DWORD PTR[sub_101C2558], EAX;
+        MOV EAX, DWORD PTR[sub_101C26E8];
+        ADD EAX, DWORD PTR[base_LS3DF];
+        MOV DWORD PTR[sub_101C26E8], EAX;
 
-                    POP EAX;
-                    RETN;
+        POP EAX;
+        RETN;
     }
 }
 
@@ -1969,146 +1969,146 @@ void __declspec(naked)v12_Eng_Movie_Hook() {
     static int sub_101C5458 = 0x001C5458;
     static int sub_101C55E8 = 0x001C55E8;
     _asm {
-//					_emit 0xCC;
-                    CMP init, 0;
-                    JZ label_begin;
-                    MOV init, 0;
-                    CALL label_init;
+        //					_emit 0xCC;
+        CMP init, 0;
+        JZ label_begin;
+        MOV init, 0;
+        CALL label_init;
 
     label_begin:
-                    //-------------------------------------------------------------------------
-                    MOV EAX, DWORD PTR[sub_101C55E8];			//
-                    MOV AL, BYTE PTR[EAX];						// MOV AL, BYTE PTR[101C55E8]
-                    //-------------------------------------------------------------------------
-                    MOV ECX, DWORD PTR[sub_101C5408];			//
-                    MOV ECX, DWORD PTR[ECX];					// MOV ECX, DWORD PTR[101C5408]
-                    //-------------------------------------------------------------------------
-                    SUB ESP, 0x10;
-                    TEST AL, AL;
-                    JS label_100745B8;
-                    //-------------------------------------------------------------------------
-                    MOV ECX, DWORD PTR[sub_101C5458];			//
-                    MOV ECX, DWORD PTR[ECX];					// MOV ECX, DWORD PTR[101C5458]
-                    //-------------------------------------------------------------------------
+        //-------------------------------------------------------------------------
+        MOV EAX, DWORD PTR[sub_101C55E8];			//
+        MOV AL, BYTE PTR[EAX];						// MOV AL, BYTE PTR[101C55E8]
+        //-------------------------------------------------------------------------
+        MOV ECX, DWORD PTR[sub_101C5408];			//
+        MOV ECX, DWORD PTR[ECX];					// MOV ECX, DWORD PTR[101C5408]
+        //-------------------------------------------------------------------------
+        SUB ESP, 0x10;
+        TEST AL, AL;
+        JS label_100745B8;
+        //-------------------------------------------------------------------------
+        MOV ECX, DWORD PTR[sub_101C5458];			//
+        MOV ECX, DWORD PTR[ECX];					// MOV ECX, DWORD PTR[101C5458]
+        //-------------------------------------------------------------------------
     label_100745B8:
-                    MOV EAX, DWORD PTR[ESP + 0x18];
-                    XOR EDX, EDX;
-                    CMP EAX, EDX;
-                    MOV DWORD PTR[ESP], EDX;
-                    MOV DWORD PTR[ESP + 0x4], EDX;
-                    MOV DWORD PTR[ESP + 0x8], 0x280;
-                    MOV DWORD PTR[ESP + 0x0C], 0x1E0;
-                    JNE label_100745E8;
-                    LEA EAX, [ESP];
-                    PUSH EAX;
-                    PUSH ECX;
-                    //-------------------------------------------------------------------------
-                    PUSH EAX;									//
-                    MOV EAX, DWORD PTR[sub_1009B1B0];			//
-                    MOV EAX, DWORD PTR[EAX];					// CALL DWORD PTR[1009B1B0]
-                    MOV DWORD PTR[temp], EAX;					//
-                    POP EAX;									//
-                    CALL DWORD PTR[temp];						//
-                    //-------------------------------------------------------------------------
-                    JMP label_10074603;
+        MOV EAX, DWORD PTR[ESP + 0x18];
+        XOR EDX, EDX;
+        CMP EAX, EDX;
+        MOV DWORD PTR[ESP], EDX;
+        MOV DWORD PTR[ESP + 0x4], EDX;
+        MOV DWORD PTR[ESP + 0x8], 0x280;
+        MOV DWORD PTR[ESP + 0x0C], 0x1E0;
+        JNE label_100745E8;
+        LEA EAX, [ESP];
+        PUSH EAX;
+        PUSH ECX;
+        //-------------------------------------------------------------------------
+        PUSH EAX;									//
+        MOV EAX, DWORD PTR[sub_1009B1B0];			//
+        MOV EAX, DWORD PTR[EAX];					// CALL DWORD PTR[1009B1B0]
+        MOV DWORD PTR[temp], EAX;					//
+        POP EAX;									//
+        CALL DWORD PTR[temp];						//
+        //-------------------------------------------------------------------------
+        JMP label_10074603;
     label_100745E8:
-                    MOV ECX, DWORD PTR[EAX];
-                    MOV EDX, DWORD PTR[EAX + 0x4];
-                    MOV DWORD PTR[ESP], ECX;
-                    MOV ECX, DWORD PTR[EAX + 0x8];
-                    MOV DWORD PTR[ESP + 0x4], EDX;
-                    MOV EDX, DWORD PTR[EAX + 0x0C];
-                    MOV DWORD PTR[ESP + 0x8], ECX;
-                    MOV DWORD PTR[ESP + 0x0C], EDX;
+        MOV ECX, DWORD PTR[EAX];
+        MOV EDX, DWORD PTR[EAX + 0x4];
+        MOV DWORD PTR[ESP], ECX;
+        MOV ECX, DWORD PTR[EAX + 0x8];
+        MOV DWORD PTR[ESP + 0x4], EDX;
+        MOV EDX, DWORD PTR[EAX + 0x0C];
+        MOV DWORD PTR[ESP + 0x8], ECX;
+        MOV DWORD PTR[ESP + 0x0C], EDX;
     label_10074603:
-                    MOV ECX, DWORD PTR[ESP + 0x14];
-//					MOV EDX, DWORD PTR[ESP];
-                    LEA EAX, [ECX + 0x2C];
-//					MOV DWORD PTR[EAX], EDX;
-//					MOV EDX, DWORD PTR[ESP + 0x4];
-//					MOV DWORD PTR[EAX + 0x4], EDX;
-//					MOV EDX, DWORD PTR[ESP + 0x8];
-//					MOV DWORD PTR[EAX + 0x8], EDX;
-//					MOV EDX, DWORD PTR[ESP + 0x0C];
-//					MOV DWORD PTR[EAX + 0x0C], EDX;
-                    //-------------------------------------------------------------------------
-                    CMP movie_patch, 1;
-                    JA label_fix2;
-                    CALL label_movie_fix1;
-                    JMP label_end_fix;
+        MOV ECX, DWORD PTR[ESP + 0x14];
+        //					MOV EDX, DWORD PTR[ESP];
+        LEA EAX, [ECX + 0x2C];
+        //					MOV DWORD PTR[EAX], EDX;
+        //					MOV EDX, DWORD PTR[ESP + 0x4];
+        //					MOV DWORD PTR[EAX + 0x4], EDX;
+        //					MOV EDX, DWORD PTR[ESP + 0x8];
+        //					MOV DWORD PTR[EAX + 0x8], EDX;
+        //					MOV EDX, DWORD PTR[ESP + 0x0C];
+        //					MOV DWORD PTR[EAX + 0x0C], EDX;
+                            //-------------------------------------------------------------------------
+        CMP movie_patch, 1;
+        JA label_fix2;
+        CALL label_movie_fix1;
+        JMP label_end_fix;
     label_fix2:
-                    CALL label_movie_fix2;
+        CALL label_movie_fix2;
     label_end_fix:
-                    //-------------------------------------------------------------------------
-                    CALL DWORD PTR[sub_10074380];				// CALL 10074380
-                    //-------------------------------------------------------------------------
-                    XOR EAX, EAX;
-                    ADD ESP, 0x10;
-                    RETN 0x8;
+        //-------------------------------------------------------------------------
+        CALL DWORD PTR[sub_10074380];				// CALL 10074380
+        //-------------------------------------------------------------------------
+        XOR EAX, EAX;
+        ADD ESP, 0x10;
+        RETN 0x8;
 
     label_movie_fix1:
-                    //-------------------------------------------------------------------------
-                    FLD DWORD PTR[cur_game_width];				// Левая сторона видео
-                    FILD DWORD PTR[ESP + 0xC];
-                    FDIV DWORD PTR[movie_aspect];
-                    FSUBP ST(1), ST;
-                    FMUL DWORD PTR[half];
-                    FISTP DWORD PTR[EAX];
-                    //-------------------------------------------------------------------------
-                    MOV EDX, DWORD PTR[ESP + 0x8];				// Верхняя сторона видео
-                    MOV DWORD PTR[EAX + 0x4], EDX;
-                    //-------------------------------------------------------------------------
-                    FILD DWORD PTR[ESP + 0xC];					// Ширина видео
-                    FDIV DWORD PTR[movie_aspect];
-                    FISTP DWORD PTR[EAX + 0x8];
-                    //-------------------------------------------------------------------------
-                    MOV EDX, DWORD PTR[ESP + 0x10];				// Высота видео
-                    MOV DWORD PTR[EAX + 0x0C], EDX;
-                    //-------------------------------------------------------------------------
-                    RETN;
+        //-------------------------------------------------------------------------
+        FLD DWORD PTR[cur_game_width];				// Левая сторона видео
+        FILD DWORD PTR[ESP + 0xC];
+        FDIV DWORD PTR[movie_aspect];
+        FSUBP ST(1), ST;
+        FMUL DWORD PTR[half];
+        FISTP DWORD PTR[EAX];
+        //-------------------------------------------------------------------------
+        MOV EDX, DWORD PTR[ESP + 0x8];				// Верхняя сторона видео
+        MOV DWORD PTR[EAX + 0x4], EDX;
+        //-------------------------------------------------------------------------
+        FILD DWORD PTR[ESP + 0xC];					// Ширина видео
+        FDIV DWORD PTR[movie_aspect];
+        FISTP DWORD PTR[EAX + 0x8];
+        //-------------------------------------------------------------------------
+        MOV EDX, DWORD PTR[ESP + 0x10];				// Высота видео
+        MOV DWORD PTR[EAX + 0x0C], EDX;
+        //-------------------------------------------------------------------------
+        RETN;
 
     label_movie_fix2:
-                    //-------------------------------------------------------------------------
-                    MOV EDX, DWORD PTR[ESP + 0x4];				// Левая сторона видео
-                    MOV DWORD PTR[EAX], EDX;
-                    //-------------------------------------------------------------------------
-                    FLD DWORD PTR[cur_game_height];				// Верхняя сторона видео
-                    FILD DWORD PTR[ESP + 0x10];
-                    FMUL DWORD PTR[movie_aspect];
-                    FSUBP ST(1), ST;
-                    FMUL DWORD PTR[half];
-                    FISTP DWORD PTR[EAX + 0x4];
-                    //-------------------------------------------------------------------------
-                    MOV EDX, DWORD PTR[ESP + 0xC];				// Ширина видео
-                    MOV DWORD PTR[EAX + 0xC], EDX;
-                    //-------------------------------------------------------------------------
-                    FILD DWORD PTR[ESP + 0x10];					// Высота видео
-                    FMUL DWORD PTR[movie_aspect];
-                    FISTP DWORD PTR[EAX + 0x0C];
-                    //-------------------------------------------------------------------------
-                    RETN;
+        //-------------------------------------------------------------------------
+        MOV EDX, DWORD PTR[ESP + 0x4];				// Левая сторона видео
+        MOV DWORD PTR[EAX], EDX;
+        //-------------------------------------------------------------------------
+        FLD DWORD PTR[cur_game_height];				// Верхняя сторона видео
+        FILD DWORD PTR[ESP + 0x10];
+        FMUL DWORD PTR[movie_aspect];
+        FSUBP ST(1), ST;
+        FMUL DWORD PTR[half];
+        FISTP DWORD PTR[EAX + 0x4];
+        //-------------------------------------------------------------------------
+        MOV EDX, DWORD PTR[ESP + 0xC];				// Ширина видео
+        MOV DWORD PTR[EAX + 0xC], EDX;
+        //-------------------------------------------------------------------------
+        FILD DWORD PTR[ESP + 0x10];					// Высота видео
+        FMUL DWORD PTR[movie_aspect];
+        FISTP DWORD PTR[EAX + 0x0C];
+        //-------------------------------------------------------------------------
+        RETN;
 
     label_init:
-                    PUSH EAX;
+        PUSH EAX;
 
-                    MOV EAX, DWORD PTR[sub_10074380];
-                    ADD EAX, DWORD PTR[base_LS3DF];
-                    MOV DWORD PTR[sub_10074380], EAX;
-                    MOV EAX, DWORD PTR[sub_1009B1B0];
-                    ADD EAX, DWORD PTR[base_LS3DF];
-                    MOV DWORD PTR[sub_1009B1B0], EAX;
-                    MOV EAX, DWORD PTR[sub_101C5408];
-                    ADD EAX, DWORD PTR[base_LS3DF];
-                    MOV DWORD PTR[sub_101C5408], EAX;
-                    MOV EAX, DWORD PTR[sub_101C5458];
-                    ADD EAX, DWORD PTR[base_LS3DF];
-                    MOV DWORD PTR[sub_101C5458], EAX;
-                    MOV EAX, DWORD PTR[sub_101C55E8];
-                    ADD EAX, DWORD PTR[base_LS3DF];
-                    MOV DWORD PTR[sub_101C55E8], EAX;
+        MOV EAX, DWORD PTR[sub_10074380];
+        ADD EAX, DWORD PTR[base_LS3DF];
+        MOV DWORD PTR[sub_10074380], EAX;
+        MOV EAX, DWORD PTR[sub_1009B1B0];
+        ADD EAX, DWORD PTR[base_LS3DF];
+        MOV DWORD PTR[sub_1009B1B0], EAX;
+        MOV EAX, DWORD PTR[sub_101C5408];
+        ADD EAX, DWORD PTR[base_LS3DF];
+        MOV DWORD PTR[sub_101C5408], EAX;
+        MOV EAX, DWORD PTR[sub_101C5458];
+        ADD EAX, DWORD PTR[base_LS3DF];
+        MOV DWORD PTR[sub_101C5458], EAX;
+        MOV EAX, DWORD PTR[sub_101C55E8];
+        ADD EAX, DWORD PTR[base_LS3DF];
+        MOV DWORD PTR[sub_101C55E8], EAX;
 
-                    POP EAX;
-                    RETN;
+        POP EAX;
+        RETN;
     }
 }
 
@@ -2123,19 +2123,19 @@ float __cdecl Draw_Distance_Hook_01(float dist) {
 void __declspec(naked)v10_Eng_Draw_Distance_Hook() {
 
     _asm {
-                    ADD BYTE PTR[ESP], 0x2;
-                    PUSHAD;
-                    PUSHFD;
+        ADD BYTE PTR[ESP], 0x2;
+        PUSHAD;
+        PUSHFD;
 
-                    PUSH DWORD PTR[ESP + 0x0DC];
-                    CALL Draw_Distance_Hook_01;
-                    ADD ESP, 0x4;
-                    FSTP DWORD PTR[ESP + 0x0DC];
+        PUSH DWORD PTR[ESP + 0x0DC];
+        CALL Draw_Distance_Hook_01;
+        ADD ESP, 0x4;
+        FSTP DWORD PTR[ESP + 0x0DC];
 
-                    POPFD;
-                    POPAD;
-                    MOV ECX, DWORD PTR[ESP + 0x0B8];
-                    RETN;
+        POPFD;
+        POPAD;
+        MOV ECX, DWORD PTR[ESP + 0x0B8];
+        RETN;
     }
 }
 
@@ -2144,30 +2144,30 @@ void __declspec(naked)v10_Eng_Ru_Credits_Hook() {
     static int sub_00560550 = 0x00560550;
 
     _asm {
-                    MOV ECX, DWORD PTR[ESP + 0x0C];
-                    MOV EDX, DWORD PTR[ESI + 0x8];
-                    PUSH 0x0;
-                    PUSH 0x1;
-                    PUSH 0x2;
-                    PUSH -0x1;
-                    PUSH 0x41F00000;
-                    PUSH 0x41A00000;
-                    PUSH ECX;
+        MOV ECX, DWORD PTR[ESP + 0x0C];
+        MOV EDX, DWORD PTR[ESI + 0x8];
+        PUSH 0x0;
+        PUSH 0x1;
+        PUSH 0x2;
+        PUSH(-0x1);
+        PUSH 0x41F00000;
+        PUSH 0x41A00000;
+        PUSH ECX;
 
-                    CMP hud_patch, 0;
-                    JE label_ori;
-                    PUSH hud_credits_text_2_x;
-                    JMP label_end;
+        CMP hud_patch, 0;
+        JE label_ori;
+        PUSH hud_credits_text_2_x;
+        JMP label_end;
     label_ori:
-                    PUSH 0x43C30000;
+        PUSH 0x43C30000;
 
     label_end:
-                    PUSH EDX;
-                    MOV ECX, 0x00658330;
-                    CALL DWORD PTR[sub_00560550];
-                    POP ESI;
-                    POP ECX;
-                    RETN 0x4;
+        PUSH EDX;
+        MOV ECX, 0x00658330;
+        CALL DWORD PTR[sub_00560550];
+        POP ESI;
+        POP ECX;
+        RETN 0x4;
     }
 }
 
@@ -2175,30 +2175,30 @@ void __declspec(naked)v11_Eng_Ru_Credits_Hook() {
     static int sub_0060E0A0 = 0x0060E0A0;
 
     _asm {
-                    MOV ECX, DWORD PTR[ESP + 0x0C];
-                    MOV EDX, DWORD PTR[ESI + 0x8];
-                    PUSH 0x0;
-                    PUSH 0x1;
-                    PUSH 0x2;
-                    PUSH -0x1;
-                    PUSH 0x41F00000;
-                    PUSH 0x41A00000;
-                    PUSH ECX;
+        MOV ECX, DWORD PTR[ESP + 0x0C];
+        MOV EDX, DWORD PTR[ESI + 0x8];
+        PUSH 0x0;
+        PUSH 0x1;
+        PUSH 0x2;
+        PUSH(-0x1);
+        PUSH 0x41F00000;
+        PUSH 0x41A00000;
+        PUSH ECX;
 
-                    CMP hud_patch, 0;
-                    JE label_ori;
-                    PUSH hud_credits_text_2_x;
-                    JMP label_end;
+        CMP hud_patch, 0;
+        JE label_ori;
+        PUSH hud_credits_text_2_x;
+        JMP label_end;
     label_ori:
-                    PUSH 0x43C30000;
+        PUSH 0x43C30000;
 
     label_end:
-                    PUSH EDX;
-                    MOV ECX, 0x006BE8B0;
-                    CALL DWORD PTR[sub_0060E0A0];
-                    POP ESI;
-                    POP ECX;
-                    RETN 0x4;
+        PUSH EDX;
+        MOV ECX, 0x006BE8B0;
+        CALL DWORD PTR[sub_0060E0A0];
+        POP ESI;
+        POP ECX;
+        RETN 0x4;
     }
 }
 

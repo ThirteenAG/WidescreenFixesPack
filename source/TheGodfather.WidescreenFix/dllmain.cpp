@@ -202,7 +202,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                     else
                     {
                         HMODULE hModule = NULL;
-                        GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCTSTR)ret, &hModule);
+                        GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCWSTR)ret, &hModule);
                         if (hModule != GetModuleHandle(NULL))
                         {
                             spgfRet = ret;

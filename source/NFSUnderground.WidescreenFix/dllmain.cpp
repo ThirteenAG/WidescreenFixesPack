@@ -192,7 +192,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         {
             injector::WriteMemory<float>(pattern.get_first(20), (Screen.fHudPosX - 320.0f) + 200.0f, true);
             injector::WriteMemory<float>(pattern.get_first(42), (Screen.fHudPosX - 320.0f) + 200.0f, true);
-            injector::WriteMemory<float>(pattern.get_first(4),  (Screen.fHudPosX - 320.0f) + 440.0f, true);
+            injector::WriteMemory<float>(pattern.get_first(4), (Screen.fHudPosX - 320.0f) + 440.0f, true);
             injector::WriteMemory<float>(pattern.get_first(64), (Screen.fHudPosX - 320.0f) + 440.0f, true);
         }
 
@@ -249,7 +249,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                         flt3 = 1.0f;
                     }
                 }
-                
+
                 if (regs.eax == 3) //if rearview mirror
                     _asm fld ds : mirrorScale
                 else
@@ -343,8 +343,8 @@ DWORD WINAPI Init(LPVOID bDelay)
                     WidescreenHud(HudPosX, HudPosY, true);
                     *(uint32_t*)(regs.ecx + 0x68) = HudPosX.dwPos;
                     *(uint32_t*)(regs.ecx + 0x6C) = HudPosY.dwPos;
-                     
-                     _asm fld dword ptr [HudPosX.fPos]
+
+                    _asm fld dword ptr[HudPosX.fPos]
                 }
             }; injector::MakeInline<MinimapHook1>((uint32_t)dword_590DDC, (uint32_t)dword_590DDC + 6);
 
@@ -376,7 +376,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                     *(uint32_t*)(regs.eax + 0x20) = HudPosY.dwPos;
                     regs.ecx = *(uint32_t*)(regs.ebp + 0x8);
                     _asm fld dword ptr[HudPosX.fPos]
-                    _asm fld dword ptr[HudPosY.fPos]
+                        _asm fld dword ptr[HudPosY.fPos]
                 }
             }; injector::MakeInline<MinimapHook3>((uint32_t)dword_58E5B2, (uint32_t)dword_58E5B2 + 9);
 
@@ -402,14 +402,14 @@ DWORD WINAPI Init(LPVOID bDelay)
     if (bCustomUsrDir)
     {
         char moduleName[MAX_PATH];
-        GetModuleFileName(NULL, moduleName, MAX_PATH);
+        GetModuleFileNameA(NULL, moduleName, MAX_PATH);
         *(strrchr(moduleName, '\\') + 1) = '\0';
         strcat(moduleName, szCustomUserFilesDirectoryInGameDir);
         strcpy(szCustomUserFilesDirectoryInGameDir, moduleName);
 
         auto SHGetFolderPathAHook = [](HWND /*hwnd*/, int /*csidl*/, HANDLE /*hToken*/, DWORD /*dwFlags*/, LPSTR pszPath) -> HRESULT
         {
-            CreateDirectory(szCustomUserFilesDirectoryInGameDir, NULL);
+            CreateDirectoryA(szCustomUserFilesDirectoryInGameDir, NULL);
             strcpy(pszPath, szCustomUserFilesDirectoryInGameDir);
             return S_OK;
         };
@@ -604,7 +604,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
                     *(int32_t*)(dword_71D8A8 + 0) = (std::abs(dStickStateX) <= nLeftStickDeadzone) ? 0 : dStickStateX;
                     *(int32_t*)(dword_71D8A8 + 1) = (std::abs(dStickStateY) <= nLeftStickDeadzone) ? 0 : dStickStateY;
-                    
+
                     *(uint32_t*)(regs.esp - 4) = loc_4193F7;
                 }
             }
