@@ -82,7 +82,7 @@ DWORD WINAPI InitSettings(LPVOID)
             void operator()(injector::reg_pack& regs)
             {
                 char iniPath[MAX_PATH];
-                GetModuleFileName(NULL, iniPath, MAX_PATH);
+                GetModuleFileNameA(NULL, iniPath, MAX_PATH);
                 *strrchr(iniPath, '\\') = '\0';
                 strcat_s(iniPath, "\\MatrixConfig.ini");
                 CIniReader iniReader(iniPath);
@@ -113,7 +113,7 @@ DWORD WINAPI InitSettings(LPVOID)
             void operator()(injector::reg_pack& regs)
             {
                 char iniPath[MAX_PATH];
-                GetModuleFileName(NULL, iniPath, MAX_PATH);
+                GetModuleFileNameA(NULL, iniPath, MAX_PATH);
                 *strrchr(iniPath, '\\') = '\0';
                 strcat_s(iniPath, "\\MatrixConfig.ini");
                 CIniReader iniReader(iniPath);
@@ -152,7 +152,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         void operator()(injector::reg_pack& regs)
         {
             char iniPath[MAX_PATH];
-            GetModuleFileName(NULL, iniPath, MAX_PATH);
+            GetModuleFileNameA(NULL, iniPath, MAX_PATH);
             *strrchr(iniPath, '\\') = '\0';
             strcat_s(iniPath, "\\MatrixConfig.ini");
             CIniReader iniReader(iniPath);

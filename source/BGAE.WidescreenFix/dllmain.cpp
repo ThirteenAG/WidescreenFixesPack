@@ -18,7 +18,7 @@ struct Screen
 uint8_t __stdcall GetInstallPath(void* _this)
 {
     char path[MAX_PATH];
-    GetModuleFileName(NULL, path, MAX_PATH);
+    GetModuleFileNameA(NULL, path, MAX_PATH);
     *(strrchr(path, '\\') + 1) = '\0';
     injector::thiscall<void(void *_this, const char *a2)>::call(0x404A10, _this, path);
     return 1;
@@ -85,8 +85,8 @@ DWORD WINAPI Init(LPVOID bDelay)
         {
             float temp = 0;
             _asm fstp    dword ptr[temp]
-            //if (*(uint32_t*)&temp != 0x3FEA4D6C && *(uint32_t*)(regs.esp + 0x6C) != 0)
-                **dword_B8B77C = (temp * ((4.0f / 3.0f) / (Screen.fAspectRatio)));
+                //if (*(uint32_t*)&temp != 0x3FEA4D6C && *(uint32_t*)(regs.esp + 0x6C) != 0)
+                * *dword_B8B77C = (temp * ((4.0f / 3.0f) / (Screen.fAspectRatio)));
             //else
             //	**dword_B8B77C = temp;
         }
@@ -104,7 +104,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             float temp = 0.0f;
             _asm fmul    st, st(1)
             _asm fstp    dword ptr[temp]
-            _asm fldz
+                _asm fldz
             *(float*)regs.eax = (temp * ((4.0f / 3.0f) / (Screen.fAspectRatio)));
         }
     }; injector::MakeInline<TextScalingHook>(pattern.get(0).get<uint32_t>(-2), pattern.get(0).get<uint32_t>(4));
@@ -115,8 +115,8 @@ DWORD WINAPI Init(LPVOID bDelay)
         void operator()(injector::reg_pack& regs)
         {
             float temp = 0.0f;
-            _asm fldz
-            _asm fstp    dword ptr[temp]
+            _asm {fldz}
+            _asm {fstp    dword ptr[temp]}
             *(float*)(regs.eax + 0x2C) = temp;
             *(float*)(regs.ebp + 0x10) = Screen.fWidth43;
         }

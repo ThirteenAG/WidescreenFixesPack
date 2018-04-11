@@ -14,14 +14,14 @@ struct Screen
     int32_t Width43;
 } Screen;
 
-LONG WINAPI RegQueryValueExAHook(HKEY hKey, LPCTSTR lpValueName, LPDWORD lpReserved, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData)
+LONG WINAPI RegQueryValueExAHook(HKEY hKey, LPCSTR lpValueName, LPDWORD lpReserved, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData)
 {
     if (strstr(lpValueName, "movie") || strstr(lpValueName, "sound") || strstr(lpValueName, "data") || strstr(lpValueName, "save") || strstr(lpValueName, "installdir"))
     {
         if (lpData == NULL)
         {
             char temp[MAX_PATH];
-            GetModuleFileName(NULL, temp, MAX_PATH);
+            GetModuleFileNameA(NULL, temp, MAX_PATH);
             *(strrchr(temp, '\\') + 1) = '\0';
             strstr(lpValueName, "save") ? strcat_s(temp, "savedata\\") : 0;
             *lpcbData = std::size(temp);
@@ -29,7 +29,7 @@ LONG WINAPI RegQueryValueExAHook(HKEY hKey, LPCTSTR lpValueName, LPDWORD lpReser
         }
         else
         {
-            GetModuleFileName(NULL, (char*)lpData, MAX_PATH);
+            GetModuleFileNameA(NULL, (char*)lpData, MAX_PATH);
             *(strrchr((char*)lpData, '\\') + 1) = '\0';
             strstr(lpValueName, "save") ? strcat((char*)lpData, "savedata\\") : 0;
         }
@@ -38,7 +38,7 @@ LONG WINAPI RegQueryValueExAHook(HKEY hKey, LPCTSTR lpValueName, LPDWORD lpReser
     return RegQueryValueExA(hKey, lpValueName, lpReserved, lpType, lpData, lpcbData);
 }
 
-LONG WINAPI RegOpenKeyExAHook(HKEY hKey, LPCTSTR lpSubKey, DWORD ulOptions, REGSAM  samDesired, PHKEY phkResult)
+LONG WINAPI RegOpenKeyExAHook(HKEY hKey, LPCSTR lpSubKey, DWORD ulOptions, REGSAM  samDesired, PHKEY phkResult)
 {
     if (strstr(lpSubKey, "KONAMI"))
         return ERROR_SUCCESS;
@@ -46,7 +46,7 @@ LONG WINAPI RegOpenKeyExAHook(HKEY hKey, LPCTSTR lpSubKey, DWORD ulOptions, REGS
     return RegOpenKeyExA(hKey, lpSubKey, ulOptions, samDesired, phkResult);
 }
 
-LONG WINAPI RegDeleteKeyAHook(HKEY hKey, LPCTSTR lpSubKey)
+LONG WINAPI RegDeleteKeyAHook(HKEY hKey, LPCSTR lpSubKey)
 {
     return ERROR_SUCCESS;
 }
@@ -56,22 +56,22 @@ LONG WINAPI RegEnumKeyAHook(HKEY hKey, DWORD dwIndex, LPTSTR lpName, DWORD cchNa
     return ERROR_SUCCESS;
 }
 
-LONG WINAPI RegOpenKeyAHook(HKEY hKey, LPCTSTR lpSubKey, PHKEY phkResult)
+LONG WINAPI RegOpenKeyAHook(HKEY hKey, LPCSTR lpSubKey, PHKEY phkResult)
 {
     return ERROR_SUCCESS;
 }
 
-LONG WINAPI RegQueryValueAHook(HKEY hKey, LPCTSTR lpSubKey, LPTSTR lpValue, PLONG lpcbValue)
+LONG WINAPI RegQueryValueAHook(HKEY hKey, LPCSTR lpSubKey, LPTSTR lpValue, PLONG lpcbValue)
 {
     return ERROR_SUCCESS;
 }
 
-LONG WINAPI RegCreateKeyExAHook(HKEY hKey, LPCTSTR lpSubKey, DWORD Reserved, LPTSTR lpClass, DWORD dwOptions, REGSAM samDesired, LPSECURITY_ATTRIBUTES lpSecurityAttributes, PHKEY phkResult, LPDWORD lpdwDisposition)
+LONG WINAPI RegCreateKeyExAHook(HKEY hKey, LPCSTR lpSubKey, DWORD Reserved, LPTSTR lpClass, DWORD dwOptions, REGSAM samDesired, LPSECURITY_ATTRIBUTES lpSecurityAttributes, PHKEY phkResult, LPDWORD lpdwDisposition)
 {
     return ERROR_SUCCESS;
 }
 
-LONG WINAPI RegSetValueExAHook(HKEY hKey, LPCTSTR lpValueName,DWORD Reserved, DWORD dwType, const BYTE *lpData, DWORD cbData)
+LONG WINAPI RegSetValueExAHook(HKEY hKey, LPCSTR lpValueName, DWORD Reserved, DWORD dwType, const BYTE *lpData, DWORD cbData)
 {
     return ERROR_SUCCESS;
 }
@@ -171,7 +171,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     }
 
     //Resolution
-    static int32_t* ResXAddr1; 
+    static int32_t* ResXAddr1;
     static int32_t* ResXAddr2;
     static int32_t* ResXAddr3;
     static int32_t* ResXAddr4;
@@ -207,7 +207,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             FMVOffset3 = (float)*ResYAddr1;
         }
     };
-    
+
     ResXAddr1 = *hook::pattern("A1 ? ? ? ? 53 8B 5C 24 0C 3B C3 55 8B 6C 24 14").count(1).get(0).get<int32_t*>(1); //72BFD0 rendering res
     ResYAddr1 = ResXAddr1 + 1; //72BFD4
     ResXAddr2 = *hook::pattern("BF ? ? ? ? F3 AB 52").count(1).get(0).get<int32_t*>(1); //0072C664 
@@ -240,7 +240,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     pattern = hook::pattern("89 0D ? ? ? ? 89 0D ? ? ? ? C6 05 ? ? ? ? 01 33 C0 C3");
     injector::MakeInline<SetResHook>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(12)); //416B4D
     pattern = hook::pattern("A3 ? ? ? ? 89 0D ? ? ? ? A3 ? ? ? ? C7 05 ? ? ? ? 3C 00");
-    injector::MakeInline<SetResHook>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(5+11)); //418C57
+    injector::MakeInline<SetResHook>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(5 + 11)); //418C57
 
 
     pattern = hook::pattern("A3 ? ? ? ? 89 0D ? ? ? ? 33 C0 C3");
@@ -261,7 +261,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
             _asm fld dword ptr[hor]
         }
-    }; 
+    };
     injector::MakeInline<FOVHook1>(pattern.count(2).get(0).get<void*>(0));
     injector::WriteMemory<uint8_t>(pattern.count(2).get(0).get<void*>(5), 0xC3i8, true); //ret
 
@@ -325,7 +325,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         auto r_end = (uintptr_t)hook::get_pattern("D9 9C 24 88 00 00 00 8B 45 04 50", 0);
         auto rpattern = hook::range_pattern(r_start, r_end, "E8 ? ? ? ?");
 
-        for (size_t i = 0; i < rpattern.size(); ++i) 
+        for (size_t i = 0; i < rpattern.size(); ++i)
         {
             if (injector::GetBranchDestination(rpattern.get(i).get<uintptr_t>(0), true).as_int() == dword_682BA0)
             {
@@ -490,7 +490,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         pattern = hook::pattern("BE ? ? ? ? 8D A4 24 00 00 00 00 8B 2C 01 89 28 83 C0 04 4E"); //41E165
         injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(1), nStatusScreenRes, true);
 
-        pattern = hook::pattern("68 ? ? ? ? 6A 02 6A 05 50 FF 91 20 01 00 00 A1 ? ? ? ? 8B 10 6A 01"); 
+        pattern = hook::pattern("68 ? ? ? ? 6A 02 6A 05 50 FF 91 20 01 00 00 A1 ? ? ? ? 8B 10 6A 01");
         uintptr_t dword_6B0D00 = *pattern.count(2).get(1).get<uintptr_t>(1);
         injector::WriteMemory(dword_6B0D00 + 0x00, static_cast<float>(nStatusScreenRes), true); //006B0D00
         injector::WriteMemory(dword_6B0D00 + 0x30, static_cast<float>(nStatusScreenRes), true); //006B0D30 

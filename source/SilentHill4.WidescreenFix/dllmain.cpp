@@ -15,21 +15,21 @@ struct Screen
     float fFMVScale;
 } Screen;
 
-LONG WINAPI RegQueryValueExAHook(HKEY hKey, LPCTSTR lpValueName, LPDWORD lpReserved, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData)
+LONG WINAPI RegQueryValueExAHook(HKEY hKey, LPCSTR lpValueName, LPDWORD lpReserved, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData)
 {
     if (strstr(lpValueName, "Install Path") || strstr(lpValueName, "Movie Install"))
     {
         if (lpData == NULL)
         {
             char temp[MAX_PATH];
-            GetModuleFileName(NULL, temp, MAX_PATH);
+            GetModuleFileNameA(NULL, temp, MAX_PATH);
             *(strrchr(temp, '\\') + 1) = '\0';
             *lpcbData = std::size(temp);
             *lpType = 1;
         }
         else
         {
-            GetModuleFileName(NULL, (char*)lpData, MAX_PATH);
+            GetModuleFileNameA(NULL, (char*)lpData, MAX_PATH);
             *(strrchr((char*)lpData, '\\') + 1) = '\0';
         }
         return ERROR_SUCCESS;
@@ -37,7 +37,7 @@ LONG WINAPI RegQueryValueExAHook(HKEY hKey, LPCTSTR lpValueName, LPDWORD lpReser
     return RegQueryValueExA(hKey, lpValueName, lpReserved, lpType, lpData, lpcbData);
 }
 
-LONG WINAPI RegOpenKeyAHook(HKEY hKey, LPCTSTR lpSubKey, PHKEY phkResult)
+LONG WINAPI RegOpenKeyAHook(HKEY hKey, LPCSTR lpSubKey, PHKEY phkResult)
 {
     if (strstr(lpSubKey, "Konami"))
         return ERROR_SUCCESS;
@@ -45,12 +45,12 @@ LONG WINAPI RegOpenKeyAHook(HKEY hKey, LPCTSTR lpSubKey, PHKEY phkResult)
         return RegOpenKeyA(hKey, lpSubKey, phkResult);
 }
 
-LONG WINAPI RegSetValueExAHook(HKEY hKey, LPCTSTR lpValueName, DWORD Reserved, DWORD dwType, const BYTE *lpData, DWORD cbData)
+LONG WINAPI RegSetValueExAHook(HKEY hKey, LPCSTR lpValueName, DWORD Reserved, DWORD dwType, const BYTE *lpData, DWORD cbData)
 {
     return ERROR_SUCCESS;
 }
 
-LONG WINAPI RegDeleteValueAHook(HKEY hKey, LPCTSTR lpValueName)
+LONG WINAPI RegDeleteValueAHook(HKEY hKey, LPCSTR lpValueName)
 {
     return ERROR_SUCCESS;
 }
@@ -146,7 +146,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     {
         void operator()(injector::reg_pack&)
         {
-            *nWidthPtr  = Screen.Width;
+            *nWidthPtr = Screen.Width;
             *nHeightPtr = Screen.Height;
         }
     }; injector::MakeInline<SetResHook>(pattern.count(1).get(0).get<uintptr_t>(0), pattern.count(1).get(0).get<uintptr_t>(6));
@@ -170,7 +170,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
         pattern = hook::pattern("E8 ? ? ? ? 8B 44 24 64 8B"); //0x433D81
         injector::MakeNOP(pattern.get_first(), 5, true); //in game overlay
-        
+
         pattern = hook::pattern("83 EC 18 53 56 57 E8 ? ? ? ? E8 ? ? ? ? A1"); //0x566440
         injector::MakeRET(pattern.get_first()); //DOF/blur overlay
 

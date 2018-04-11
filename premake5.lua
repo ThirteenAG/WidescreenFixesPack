@@ -11,7 +11,7 @@ workspace "WidescreenFixesPack"
    language "C++"
    targetdir "data/%{prj.name}/scripts"
    targetextension ".asi"
-   characterset ("MBCS")
+   characterset ("UNICODE")
    flags { "StaticRuntime" }
    
    defines { "rsc_CompanyName=\"ThirteenAG\"" }
@@ -72,23 +72,23 @@ workspace "WidescreenFixesPack"
       optimize "On"
 
 
-project "BGAE.WidescreenFix"
-   setpaths("Z:/WFP/Games/Beyond Good and Evil/", "BGE.exe")
+--project "BGAE.WidescreenFix"
+--   setpaths("Z:/WFP/Games/Beyond Good and Evil/", "BGE.exe")
 project "CallOfCthulhu.WidescreenFix"
    setpaths("Z:/WFP/Games/Call of Cthulhu/", "Engine/CoCMainWin32.exe", "Engine/scripts/")
 project "ColdFear.WidescreenFix"
    setpaths("Z:/WFP/Games/ColdFear/", "ColdFear_retail.exe")
 project "DeerAvenger4.WidescreenFix"
    setpaths("Z:/WFP/Games/Deer Avenger 4/", "DA4.exe")
-project "DevilMayCry3.WidescreenFix"
-   setpaths("Z:/WFP/Games/Devil May Cry 3/", "dmc3se.exe")
+--project "DevilMayCry3.WidescreenFix"
+--   setpaths("Z:/WFP/Games/Devil May Cry 3/", "dmc3se.exe")
 project "Driv3r.WidescreenFix"
    setpaths("Z:/WFP/Games/DRIV3R/", "driv3r.exe")
 project "DriverParallelLines.WidescreenFix"
    setpaths("Z:/WFP/Games/Driver Parallel Lines/", "DriverParallelLines.exe")
 project "EnterTheMatrix.WidescreenFix"
    setpaths("Z:/WFP/Games/Enter the Matrix/", "Matrix.exe")
-project "Fahrenheit.WidescreenFix"
+--project "Fahrenheit.WidescreenFix"
 project "Flatout.WidescreenFix"
    setpaths("Z:/WFP/Games/Flatout/FlatOut/", "flatout.exe")
 project "Flatout2.WidescreenFix"

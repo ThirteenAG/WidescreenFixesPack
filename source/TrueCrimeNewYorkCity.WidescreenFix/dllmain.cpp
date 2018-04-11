@@ -50,7 +50,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                 regs.ecx = 0x20;
                 regs.edi = (regs.esp + 0x18);
 
-                GetModuleFileName(NULL, (char*)regs.edi, MAX_PATH);
+                GetModuleFileNameA(NULL, (char*)regs.edi, MAX_PATH);
                 *strrchr((char*)regs.edi, '\\') = '\0';
                 strcat((char*)regs.edi, "\\data");
             }
@@ -137,7 +137,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         injector::WriteMemory(pattern.count(3).get(1).get<void>(2), &fGameSpeed, true); //0x40C930 + 0x2 + 0x64
         injector::WriteMemory(pattern.count(3).get(2).get<void>(2), &fGameSpeed, true); //0x40C930 + 0x2 + 0x4D
     }
-    
+
     return 0;
 }
 

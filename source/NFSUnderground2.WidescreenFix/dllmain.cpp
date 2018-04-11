@@ -144,9 +144,9 @@ DWORD WINAPI Init(LPVOID bDelay)
             float esp0C = *(float*)(regs.esp + 0x0C);
             float esp10 = *(float*)(regs.esp + 0x10);
             _asm fld dword ptr[esp0C]
-            _asm fmul dword ptr[fRainScaleX]
-            _asm fmul dword ptr[fRainDropletsScale]
-            _asm fadd dword ptr[esp10]
+                _asm fmul dword ptr[fRainScaleX]
+                _asm fmul dword ptr[fRainDropletsScale]
+                _asm fadd dword ptr[esp10]
         }
     }; injector::MakeInline<RainDropletsHook>(pattern.get_first(0), pattern.get_first(8)); //5C7C35
 
@@ -156,8 +156,8 @@ DWORD WINAPI Init(LPVOID bDelay)
         {
             float esp08 = *(float*)(regs.esp + 0x08);
             _asm fmul dword ptr[fRainDropletsScale]
-            _asm fadd dword ptr[esp08]
-            *(uintptr_t*)(regs.esp + 0x38) = regs.eax;
+                _asm fadd dword ptr[esp08]
+                * (uintptr_t*)(regs.esp + 0x38) = regs.eax;
         }
     }; injector::MakeInline<RainDropletsYScaleHook>(pattern.get_first(30), pattern.get_first(30 + 8)); //5C7C53
 
@@ -278,7 +278,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                         flt3 = 1.0f;
                     }
                 }
-                
+
                 if (regs.ecx == 3) //if rearview mirror
                     _asm fld ds : mirrorScale
                 else
@@ -333,7 +333,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                 HudPosY.fPos += it->fOffsetY;
             }
         };
-        
+
         uint32_t* dword_51B190 = hook::pattern("89 4C 24 60 89 54 24 64 74 ? 8D 8C 24 F0 00 00 00 51").count(1).get(0).get<uint32_t>(0);
         struct HudHook
         {
@@ -346,7 +346,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                 *(uint32_t*)(regs.esp + 0x64) = HudPosY.dwPos;
             }
         }; injector::MakeInline<HudHook>((uint32_t)dword_51B190, (uint32_t)dword_51B190 + 8);
-        
+
         uint32_t* dword_51D64E = hook::pattern("8B 4B 1C 8B 54 24 18 89 0A 8B 43 20").count(1).get(0).get<uint32_t>(0);
         struct BlipsHook
         {
@@ -370,7 +370,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             {
                 float esi48 = 0.0f;
                 _asm fst dword ptr[esi48]
-                *(float*)(regs.esi + 0x48) = esi48;
+                    * (float*)(regs.esi + 0x48) = esi48;
                 regs.ecx = *(uint32_t*)(regs.esi + 0x1C);
                 regs.edx = *(uint32_t*)(regs.esi + 0x20);
                 HudPos HudPosX = regs.ecx;
@@ -391,8 +391,8 @@ DWORD WINAPI Init(LPVOID bDelay)
                 HudPos HudPosY = *(uint32_t*)(regs.edx + 0x04);
                 WidescreenHud(HudPosX, HudPosY);
                 _asm fadd dword ptr[HudPosX.fPos]
-                _asm fstp dword ptr[esi00]
-                *(float*)(regs.esi + 0x00) = esi00;
+                    _asm fstp dword ptr[esi00]
+                    * (float*)(regs.esi + 0x00) = esi00;
                 _asm fld  dword ptr[ecx4]
             }
         }; injector::MakeInline<StopSignHook>((uint32_t)dword_5050FB, (uint32_t)dword_5050FB + 7);
@@ -418,14 +418,14 @@ DWORD WINAPI Init(LPVOID bDelay)
     if (bCustomUsrDir)
     {
         char moduleName[MAX_PATH];
-        GetModuleFileName(NULL, moduleName, MAX_PATH);
+        GetModuleFileNameA(NULL, moduleName, MAX_PATH);
         *(strrchr(moduleName, '\\') + 1) = '\0';
         strcat(moduleName, szCustomUserFilesDirectoryInGameDir);
         strcpy(szCustomUserFilesDirectoryInGameDir, moduleName);
 
         auto SHGetFolderPathAHook = [](HWND /*hwnd*/, int /*csidl*/, HANDLE /*hToken*/, DWORD /*dwFlags*/, LPSTR pszPath) -> HRESULT
         {
-            CreateDirectory(szCustomUserFilesDirectoryInGameDir, NULL);
+            CreateDirectoryA(szCustomUserFilesDirectoryInGameDir, NULL);
             strcpy(pszPath, szCustomUserFilesDirectoryInGameDir);
             return S_OK;
         };

@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "log.h"
 
 struct Screen
 {
@@ -208,7 +207,7 @@ void __fastcall FCanvasUtilDrawTileHook(void* _this, uint32_t EDX, float X, floa
 
 DWORD WINAPI InitCore(LPVOID bDelay)
 {
-    auto pattern = hook::module_pattern(GetModuleHandle("Core"), "C7 85 D4 F1 FF FF 00 00 00 00"); //0x1000CE5E
+    auto pattern = hook::module_pattern(GetModuleHandle(L"Core"), "C7 85 D4 F1 FF FF 00 00 00 00"); //0x1000CE5E
 
     if (pattern.count_hint(1).empty() && !bDelay)
     {
@@ -217,7 +216,7 @@ DWORD WINAPI InitCore(LPVOID bDelay)
     }
 
     if (bDelay)
-        while (pattern.clear(GetModuleHandle("Core")).count_hint(1).empty()) { Sleep(0); };
+        while (pattern.clear(GetModuleHandle(L"Core")).count_hint(1).empty()) { Sleep(0); };
 
     uint32_t pfappInit = (uint32_t)pattern.get_first();
 
@@ -232,7 +231,7 @@ DWORD WINAPI InitCore(LPVOID bDelay)
 
 DWORD WINAPI InitD3DDrv(LPVOID bDelay)
 {
-    auto pattern = hook::module_pattern(GetModuleHandle("D3DDrv"), "C1 E9 02 33 C0 F3 AB 8B CA 83 E1 03 F3 AA 8B 45 0C");
+    auto pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "C1 E9 02 33 C0 F3 AB 8B CA 83 E1 03 F3 AA 8B 45 0C");
 
     if (pattern.count_hint(2).empty() && !bDelay)
     {
@@ -241,7 +240,7 @@ DWORD WINAPI InitD3DDrv(LPVOID bDelay)
     }
 
     if (bDelay)
-        while (pattern.clear(GetModuleHandle("D3DDrv")).count_hint(2).empty()) { Sleep(0); };
+        while (pattern.clear(GetModuleHandle(L"D3DDrv")).count_hint(2).empty()) { Sleep(0); };
 
     //FMV
     Screen.fFMVoffsetStartX = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
@@ -259,7 +258,7 @@ DWORD WINAPI InitD3DDrv(LPVOID bDelay)
         }
     }; injector::MakeInline<OpenVideo_Hook>(pattern.count(2).get(0).get<void*>(0)); //pfOpenVideo + 0x2D4
 
-    pattern = hook::module_pattern(GetModuleHandle("D3DDrv"), "D9 1C 24 56 56 FF 15");
+    pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "D9 1C 24 56 56 FF 15");
     injector::MakeJMP(pattern.get_first(0), DisplayVideo_Hook, true);//pfDisplayVideo + 0x37E
     DisplayVideo_HookJmp = (uint32_t)pattern.get_first(5);
 
@@ -268,14 +267,14 @@ DWORD WINAPI InitD3DDrv(LPVOID bDelay)
         if (nPostProcessFixedScale == 1)
             nPostProcessFixedScale = Screen.Width;
 
-        pattern = hook::module_pattern(GetModuleHandle("D3DDrv"), "68 00 02 00 00 68 00 02 00 00");
+        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "68 00 02 00 00 68 00 02 00 00");
         for (size_t i = 0; i < pattern.size(); i++)
         {
             injector::WriteMemory(pattern.get(i).get<uint32_t>(1), nPostProcessFixedScale, true); //affects glass reflections
             injector::WriteMemory(pattern.get(i).get<uint32_t>(6), nPostProcessFixedScale, true);
         }
 
-        pattern = hook::module_pattern(GetModuleHandle("D3DDrv"), "B8 00 02 00 00");
+        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "B8 00 02 00 00");
         injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(1), nPostProcessFixedScale, true);
     }
     return 0;
@@ -283,7 +282,7 @@ DWORD WINAPI InitD3DDrv(LPVOID bDelay)
 
 DWORD WINAPI InitEngine(LPVOID bDelay)
 {
-    auto pattern = hook::module_pattern(GetModuleHandle("Engine"), "8B ? 94 00 00 00 E8");
+    auto pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "8B ? 94 00 00 00 E8");
 
     if (pattern.count_hint(3).empty() && !bDelay)
     {
@@ -292,7 +291,7 @@ DWORD WINAPI InitEngine(LPVOID bDelay)
     }
 
     if (bDelay)
-        while (pattern.clear(GetModuleHandle("Engine")).count_hint(3).empty()) { Sleep(0); };
+        while (pattern.clear(GetModuleHandle(L"Engine")).count_hint(3).empty()) { Sleep(0); };
 
 
     Screen.fHudOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
@@ -303,11 +302,11 @@ DWORD WINAPI InitEngine(LPVOID bDelay)
     auto rpattern = hook::range_pattern(pDrawTile, pDrawTile + 0x100, "DC 0D");
     injector::WriteMemory<double>(*rpattern.get(0).get<uint32_t*>(2), Screen.HUDScaleX, true);
 
-    pattern = hook::module_pattern(GetModuleHandle("Engine"), "8B 4D F4 5F 5E 64 89 0D 00 00 00 00 5B 8B E5 5D C2 4C 00");
+    pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "8B 4D F4 5F 5E 64 89 0D 00 00 00 00 5B 8B E5 5D C2 4C 00");
     injector::MakeCALL(pattern.count(1).get(0).get<uint32_t>(-5), FCanvasUtilDrawTileHook, true); //pfFUCanvasDrawTile + 0x219
 
 
-    uint32_t pfsub_103762F0 = (uint32_t)hook::module_pattern(GetModuleHandle("Engine"), "8B 4C 24 04 8B 51 44 83").get_first(0);
+    uint32_t pfsub_103762F0 = (uint32_t)hook::module_pattern(GetModuleHandle(L"Engine"), "8B 4C 24 04 8B 51 44 83").get_first(0);
     rpattern = hook::range_pattern(pfsub_103762F0, pfsub_103762F0 + 0x800, "E8 ? ? ? ? 8B ?");
     injector::MakeCALL(rpattern.get(3).get<uint32_t>(0), FCanvasUtilDrawTileHook, true); //pfsub_103762F0 + 0x36E
     injector::MakeCALL(rpattern.get(5).get<uint32_t>(0), FCanvasUtilDrawTileHook, true); //pfsub_103762F0 + 0x43D
@@ -316,7 +315,7 @@ DWORD WINAPI InitEngine(LPVOID bDelay)
 
 
     //FOV
-    uint32_t pfDraw = (uint32_t)hook::module_pattern(GetModuleHandle("Engine"), "81 EC 84 06 00 00 A1 ? ? ? ? 53 56 57").get_first();
+    uint32_t pfDraw = (uint32_t)hook::module_pattern(GetModuleHandle(L"Engine"), "81 EC 84 06 00 00 A1 ? ? ? ? 53 56 57").get_first();
     rpattern = hook::range_pattern(pfDraw, pfDraw + 0x1036, "8B ? ? 03 00 00");
     struct UGameEngine_Draw_Hook
     {
@@ -346,7 +345,7 @@ DWORD WINAPI InitEngine(LPVOID bDelay)
         if (nPostProcessFixedScale == 1)
             nPostProcessFixedScale = Screen.Width;
 
-        auto pattern2 = hook::module_pattern(GetModuleHandle("Engine"), "68 00 02 00 00 68 00 02 00 00 ?");
+        auto pattern2 = hook::module_pattern(GetModuleHandle(L"Engine"), "68 00 02 00 00 68 00 02 00 00 ?");
         for (size_t i = 0; i < pattern2.size(); i++)
         {
             injector::WriteMemory(pattern2.get(i).get<uint32_t>(1), nPostProcessFixedScale, true);
@@ -394,7 +393,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
 
             char UserIni[MAX_PATH];
-            GetModuleFileName(GetModuleHandle(NULL), UserIni, (sizeof(UserIni)));
+            GetModuleFileNameA(GetModuleHandle(NULL), UserIni, (sizeof(UserIni)));
             *strrchr(UserIni, '\\') = '\0';
             strcat(UserIni, "\\SplinterCell2User.ini");
 

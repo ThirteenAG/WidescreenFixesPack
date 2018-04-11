@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "log.h"
 
 struct Screen
 {
@@ -85,10 +84,10 @@ DWORD WINAPI Init(LPVOID bDelay)
             char ResY[20];
             _snprintf(ResX, 20, "%d", Screen.Width);
             _snprintf(ResY, 20, "%d", Screen.Height);
-            WritePrivateProfileString("WinDrv.WindowsClient", "WindowedViewportX", ResX, pszPath);
-            WritePrivateProfileString("WinDrv.WindowsClient", "WindowedViewportY", ResY, pszPath);
-            WritePrivateProfileString("WinDrv.WindowsClient", "FullscreenViewportX", ResX, pszPath);
-            WritePrivateProfileString("WinDrv.WindowsClient", "FullscreenViewportY", ResY, pszPath);
+            WritePrivateProfileStringA("WinDrv.WindowsClient", "WindowedViewportX", ResX, pszPath);
+            WritePrivateProfileStringA("WinDrv.WindowsClient", "WindowedViewportY", ResY, pszPath);
+            WritePrivateProfileStringA("WinDrv.WindowsClient", "FullscreenViewportX", ResX, pszPath);
+            WritePrivateProfileStringA("WinDrv.WindowsClient", "FullscreenViewportY", ResY, pszPath);
         }
     }; injector::MakeInline<SetResHook>(pattern.get_first(0), pattern.get_first(7));
 

@@ -108,9 +108,9 @@ DWORD WINAPI Init(LPVOID bDelay)
             float esp0C = *(float*)(regs.esp + 0x0C);
             float esp10 = *(float*)(regs.esp + 0x10);
             _asm fld dword ptr[esp0C]
-            _asm fmul dword ptr[fRainScaleX]
-            _asm fmul dword ptr[fRainDropletsScale]
-            _asm fadd dword ptr[esp10]
+                _asm fmul dword ptr[fRainScaleX]
+                _asm fmul dword ptr[fRainDropletsScale]
+                _asm fadd dword ptr[esp10]
         }
     }; injector::MakeInline<RainDropletsHook>(pattern.get_first(0), pattern.get_first(8)); //6D480D
 
@@ -120,8 +120,8 @@ DWORD WINAPI Init(LPVOID bDelay)
         {
             float esp08 = *(float*)(regs.esp + 0x08);
             _asm fmul dword ptr[fRainDropletsScale]
-            _asm fadd dword ptr[esp08]
-            *(uintptr_t*)(regs.esp + 0x38) = regs.ecx;
+                _asm fadd dword ptr[esp08]
+                * (uintptr_t*)(regs.esp + 0x38) = regs.ecx;
         }
     }; injector::MakeInline<RainDropletsYScaleHook>(pattern.get_first(30), pattern.get_first(30 + 8)); //6D482B
 
@@ -220,7 +220,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             void operator()(injector::reg_pack& regs)
             {
                 regs.eax = *(uint32_t*)(regs.edi + 0x60);
-                
+
                 if (regs.ecx == 1 || regs.ecx == 4) //Headlights stretching, reflections etc 
                 {
                     flt1 = hor3DScale;
@@ -244,7 +244,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                         flt3 = 1.0f;
                     }
                 }
-                
+
                 if (regs.ecx == 3) //if rearview mirror
                     _asm fld ds : mirrorScale
                 else
@@ -353,14 +353,14 @@ DWORD WINAPI Init(LPVOID bDelay)
     if (bCustomUsrDir)
     {
         char moduleName[MAX_PATH];
-        GetModuleFileName(NULL, moduleName, MAX_PATH);
+        GetModuleFileNameA(NULL, moduleName, MAX_PATH);
         *(strrchr(moduleName, '\\') + 1) = '\0';
         strcat(moduleName, szCustomUserFilesDirectoryInGameDir);
         strcpy(szCustomUserFilesDirectoryInGameDir, moduleName);
 
         auto SHGetFolderPathAHook = [](HWND /*hwnd*/, int /*csidl*/, HANDLE /*hToken*/, DWORD /*dwFlags*/, LPSTR pszPath) -> HRESULT
         {
-            CreateDirectory(szCustomUserFilesDirectoryInGameDir, NULL);
+            CreateDirectoryA(szCustomUserFilesDirectoryInGameDir, NULL);
             strcpy(pszPath, szCustomUserFilesDirectoryInGameDir);
             return S_OK;
         };
@@ -497,7 +497,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                 static const auto f0078125 = 0.0078125f;
                 _asm fmul dword ptr[f0078125]
 
-                auto dword_91FABC = &unk_91F7F4[178];
+                    auto dword_91FABC = &unk_91F7F4[178];
                 auto dword_91FAF0 = &unk_91F7F4[191];
                 auto dword_91FC90 = &unk_91F7F4[295];
 
@@ -545,12 +545,12 @@ DWORD WINAPI Init(LPVOID bDelay)
     {
         static CIniReader RegistryReader;
 
-        auto RegCreateKeyAHook = [](HKEY hKey, LPCTSTR lpSubKey, PHKEY phkResult) -> LONG
+        auto RegCreateKeyAHook = [](HKEY hKey, LPCSTR lpSubKey, PHKEY phkResult) -> LONG
         {
             return 1;
         };
 
-        auto RegOpenKeyExAHook = [](HKEY hKey, LPCTSTR lpSubKey, DWORD ulOptions, REGSAM samDesired, PHKEY phkResult) -> LONG
+        auto RegOpenKeyExAHook = [](HKEY hKey, LPCSTR lpSubKey, DWORD ulOptions, REGSAM samDesired, PHKEY phkResult) -> LONG
         {
             if (strlen(RegistryReader.ReadString("MAIN", "DisplayName", "")) == 0)
             {
@@ -568,19 +568,19 @@ DWORD WINAPI Init(LPVOID bDelay)
             }
             return ERROR_SUCCESS;
         };
-        
+
         auto RegCloseKeyHook = [](HKEY hKey) -> LONG
         {
             return ERROR_SUCCESS;
         };
-        
-        auto RegSetValueExAHook = [](HKEY hKey, LPCTSTR lpValueName, DWORD Reserved, DWORD dwType, const BYTE* lpData, DWORD cbData) -> LONG
+
+        auto RegSetValueExAHook = [](HKEY hKey, LPCSTR lpValueName, DWORD Reserved, DWORD dwType, const BYTE* lpData, DWORD cbData) -> LONG
         {
             RegistryReader.WriteInteger("MAIN", (char*)lpValueName, *(char*)lpData);
             return ERROR_SUCCESS;
         };
-        
-        auto RegQueryValueExAHook = [](HKEY hKey, LPCTSTR lpValueName, LPDWORD lpReserved, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData) -> LONG
+
+        auto RegQueryValueExAHook = [](HKEY hKey, LPCSTR lpValueName, LPDWORD lpReserved, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData) -> LONG
         {
             if (!lpValueName) //cd key
             {
@@ -593,7 +593,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             {
                 if (strstr(lpValueName, "Install Dir"))
                 {
-                    GetModuleFileName(NULL, (char*)lpData, MAX_PATH);
+                    GetModuleFileNameA(NULL, (char*)lpData, MAX_PATH);
                     *(strrchr((char*)lpData, '\\') + 1) = '\0';
                     return ERROR_SUCCESS;
                 }
@@ -618,11 +618,11 @@ DWORD WINAPI Init(LPVOID bDelay)
         strcat(szSettingsSavePath, "\\Settings.ini");
         RegistryReader.SetIniPath(szSettingsSavePath);
         uintptr_t* RegIAT = *hook::pattern("FF 15 ? ? ? ? 8D 54 24 04 52").get(0).get<uintptr_t*>(2); //0x711C0F
-        injector::WriteMemory(&RegIAT[0], static_cast<LONG(WINAPI*)(HKEY hKey, LPCTSTR lpSubKey, PHKEY phkResult)>(RegCreateKeyAHook), true);
-        injector::WriteMemory(&RegIAT[1], static_cast<LONG(WINAPI*)(HKEY hKey, LPCTSTR lpSubKey, DWORD ulOptions, REGSAM samDesired, PHKEY phkResult)>(RegOpenKeyExAHook), true);
+        injector::WriteMemory(&RegIAT[0], static_cast<LONG(WINAPI*)(HKEY hKey, LPCSTR lpSubKey, PHKEY phkResult)>(RegCreateKeyAHook), true);
+        injector::WriteMemory(&RegIAT[1], static_cast<LONG(WINAPI*)(HKEY hKey, LPCSTR lpSubKey, DWORD ulOptions, REGSAM samDesired, PHKEY phkResult)>(RegOpenKeyExAHook), true);
         injector::WriteMemory(&RegIAT[2], static_cast<LONG(WINAPI*)(HKEY hKey)>(RegCloseKeyHook), true);
-        injector::WriteMemory(&RegIAT[3], static_cast<LONG(WINAPI*)(HKEY hKey, LPCTSTR lpValueName, DWORD Reserved, DWORD dwType, const BYTE* lpData, DWORD cbData)>(RegSetValueExAHook), true);
-        injector::WriteMemory(&RegIAT[4], static_cast<LONG(WINAPI*)(HKEY hKey, LPCTSTR lpValueName, LPDWORD lpReserved, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData)>(RegQueryValueExAHook), true);
+        injector::WriteMemory(&RegIAT[3], static_cast<LONG(WINAPI*)(HKEY hKey, LPCSTR lpValueName, DWORD Reserved, DWORD dwType, const BYTE* lpData, DWORD cbData)>(RegSetValueExAHook), true);
+        injector::WriteMemory(&RegIAT[4], static_cast<LONG(WINAPI*)(HKEY hKey, LPCSTR lpValueName, LPDWORD lpReserved, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData)>(RegQueryValueExAHook), true);
     }
 
     return 0;

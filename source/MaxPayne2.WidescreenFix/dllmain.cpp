@@ -128,35 +128,35 @@ DWORD WINAPI InitWF(LPVOID)
         }
     };
 
-    auto pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "E8 ? ? ? ? A0 ? ? ? ? 80 A6 EC 00 00 00 BF A8 01");
+    auto pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "E8 ? ? ? ? A0 ? ? ? ? 80 A6 EC 00 00 00 BF A8 01");
     injector::MakeCALL(pattern.get_first(), static_cast<void(__fastcall *)(uintptr_t, uintptr_t)>(PCameraValidate), true); //0x10017077
 
     //corrupted graphic in tunnel in mp1, not sure if needed in mp2 (DisableSubViewport)
-    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "83 EC 08 56 8B F1 8B 86 E8");
+    pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "83 EC 08 56 8B F1 8B 86 E8");
     injector::MakeRET(pattern.get_first(), 0x10, true); //100156A0 ret 10h
 
     //ForceEntireViewport 0x10014C80 mov ax, 1 ret
-    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "A0 ? ? ? ? C3");
+    pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "A0 ? ? ? ? C3");
     injector::WriteMemory<uint8_t>(pattern.count(3).get(2).get<void*>(0), 0xB0, true);
     injector::WriteMemory(pattern.count(3).get(2).get<void*>(1), 0x90909001, true);
 
     //object disappearance fix
-    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "C7 05 ? ? ? ? ? ? ? ? D8 35"); //0x10015B87
+    pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "C7 05 ? ? ? ? ? ? ? ? D8 35"); //0x10015B87
     injector::WriteMemory<float>(pattern.get_first(6), 0.0f, true);
 
-    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 0D ? ? ? ? 8B 44 24 24 52 50 51"); //0x10042B50
+    pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "D8 0D ? ? ? ? 8B 44 24 24 52 50 51"); //0x10042B50
     injector::WriteMemory<float>(*pattern.get_first<void*>(2), Screen.fHudOffset, true);
-    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? D9 44 24 1C"); //0x10042B58
+    pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? D9 44 24 1C"); //0x10042B58
     injector::WriteMemory<float>(*pattern.get_first<void*>(2), Screen.fHudScale, true);
 
-    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 25 ? ? ? ? 89 44 24 44 83 EC 08");
+    pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "D8 25 ? ? ? ? 89 44 24 44 83 EC 08");
     static auto pHudElementPosX = *pattern.get_first<float*>(2); //0x10061134
-    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 25 ? ? ? ? D9 5C 24 20");
+    pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "D8 25 ? ? ? ? D9 5C 24 20");
     static auto pHudElementPosY = *pattern.get_first<float*>(2); //0x10061138
-    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D9 05 ? ? ? ? 8D 81 54");
+    pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "D9 05 ? ? ? ? 8D 81 54");
     static auto pf10042294 = *pattern.get_first<float*>(2); //0x10042294
 
-    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D9 05 ? ? ? ? 8B 86 64 01 00 00");
+    pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "D9 05 ? ? ? ? 8B 86 64 01 00 00");
     struct P_HudPosHook
     {
         void operator()(injector::reg_pack& regs)
@@ -244,7 +244,7 @@ DWORD WINAPI InitWF(LPVOID)
             Screen.fHudOffsetWide = Screen.fWidescreenHudOffset / (((16.0f / 9.0f) / (Screen.fAspectRatio)) * 1.5f);
         }
 
-        pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D9 05 ? ? ? ? D8 8B 98");
+        pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "D9 05 ? ? ? ? D8 8B 98");
         static auto pTextElementPosX = *pattern.get_first<TextCoords*>(2); //0x10060374
         struct P_TextPosHook
         {
@@ -278,7 +278,7 @@ DWORD WINAPI InitWF(LPVOID)
 
 DWORD WINAPI InitE2MFC(LPVOID bDelay)
 {
-    auto pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "E8 ? ? ? ? 85 C0 89 44 24 38 DB");
+    auto pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "E8 ? ? ? ? 85 C0 89 44 24 38 DB");
 
     if (pattern.count_hint(4).empty() && !bDelay)
     {
@@ -287,7 +287,7 @@ DWORD WINAPI InitE2MFC(LPVOID bDelay)
     }
 
     if (bDelay)
-        while (pattern.clear(GetModuleHandle("e2mfc")).count_hint(4).empty()) { Sleep(0); };
+        while (pattern.clear(GetModuleHandle(L"e2mfc")).count_hint(4).empty()) { Sleep(0); };
 
     auto PDriverGetWidth = [](uintptr_t P_Driver__m_initializedDriver, uintptr_t edx) -> int32_t
     {
@@ -313,7 +313,7 @@ DWORD WINAPI InitE2MFC(LPVOID bDelay)
     injector::MakeCALL(pattern.get(0).get<uintptr_t>(0), static_cast<int32_t(__fastcall *)(uintptr_t, uintptr_t)>(PDriverGetWidth), true);  //e2mfc + 0x15582
     injector::MakeCALL(pattern.get(1).get<uintptr_t>(0), static_cast<int32_t(__fastcall *)(uintptr_t, uintptr_t)>(PDriverGetHeight), true); //e2mfc + 0x155AB
 
-    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "C6 45 FC 02 89 4B 44");
+    pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "C6 45 FC 02 89 4B 44");
     struct P_SceneRenderHook1
     {
         void operator()(injector::reg_pack& regs)
@@ -324,7 +324,7 @@ DWORD WINAPI InitE2MFC(LPVOID bDelay)
         }
     }; injector::MakeInline<P_SceneRenderHook1>(pattern.get_first(0), pattern.get_first(7));
 
-    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "89 73 34 89 73 38");
+    pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "89 73 34 89 73 38");
     struct P_SceneRenderHook2
     {
         void operator()(injector::reg_pack& regs)
@@ -336,15 +336,15 @@ DWORD WINAPI InitE2MFC(LPVOID bDelay)
     }; injector::MakeInline<P_SceneRenderHook2>(pattern.get_first(0), pattern.get_first(6));
 
     //for graphic novels scaling
-    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 35 ? ? ? ? D8 4C 24 38 D9 5C 24 34");
+    pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "D8 35 ? ? ? ? D8 4C 24 38 D9 5C 24 34");
     injector::WriteMemory(pattern.get_first(2), &Screen.fViewPortSizeX, true); //0x100176D4
-    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 35 ? ? ? ? D8 4C 24 38 D9 5C 24 30");
+    pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "D8 35 ? ? ? ? D8 4C 24 38 D9 5C 24 30");
     injector::WriteMemory(pattern.get_first(2), &Screen.fViewPortSizeY, true); //0x10017719
-    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 35 ? ? ? ? 89 1D ? ? ? ? 89 1D");
+    pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "D8 35 ? ? ? ? 89 1D ? ? ? ? 89 1D");
     injector::WriteMemory(pattern.get_first(2), &Screen.fViewPortSizeY, true); //0x1001779A
-    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 0D ? ? ? ? 8B 44 24 1C 52 50 51"); //0x1000F05E
+    pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "D8 0D ? ? ? ? 8B 44 24 1C 52 50 51"); //0x1000F05E
     injector::WriteMemory(pattern.get_first(2), &Screen.fNovelsOffset, true);
-    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? D9 44 24 20 53"); //0x1000F011
+    pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? D9 44 24 20 53"); //0x1000F011
     injector::WriteMemory(pattern.get_first(2), &Screen.fNovelsScale, true);
 
     CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&InitWF, NULL, 0, NULL);
@@ -424,7 +424,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                         char buffer[MAX_PATH];
                         if (bUseGameFolderForSavegames)
                         {
-                            GetModuleFileName(NULL, buffer, MAX_PATH);
+                            GetModuleFileNameA(NULL, buffer, MAX_PATH);
                             *strrchr(buffer, '\\') = '\0';
                             strcat_s(buffer, "\\");
                             strcat_s(buffer, aSavegames);
@@ -441,8 +441,8 @@ DWORD WINAPI Init(LPVOID bDelay)
                         auto nSaveNum = -1;
                         std::string SFPath(buffer);
 
-                        WIN32_FIND_DATA fd;
-                        HANDLE File = FindFirstFile(std::string(SFPath + "*.mp2s").c_str(), &fd);
+                        WIN32_FIND_DATAA fd;
+                        HANDLE File = FindFirstFileA(std::string(SFPath + "*.mp2s").c_str(), &fd);
                         FILETIME LastWriteTime = fd.ftLastWriteTime;
 
                         if (File != INVALID_HANDLE_VALUE)
@@ -477,7 +477,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                                         }
                                     }
                                 }
-                            } while (FindNextFile(File, &fd));
+                            } while (FindNextFileA(File, &fd));
                             FindClose(File);
                         }
 
@@ -553,7 +553,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
 DWORD WINAPI InitX_GameObjectsMFC(LPVOID bDelay)
 {
-    auto pattern = hook::module_pattern(GetModuleHandle("X_GameObjectsMFC"), "D8 3D ? ? ? ? D9 5C 24 0C D9");
+    auto pattern = hook::module_pattern(GetModuleHandle(L"X_GameObjectsMFC"), "D8 3D ? ? ? ? D9 5C 24 0C D9");
 
     if (pattern.count_hint(4).empty() && !bDelay)
     {
@@ -562,7 +562,7 @@ DWORD WINAPI InitX_GameObjectsMFC(LPVOID bDelay)
     }
 
     if (bDelay)
-        while (pattern.clear(GetModuleHandle("X_GameObjectsMFC")).count_hint(4).empty()) { Sleep(0); };
+        while (pattern.clear(GetModuleHandle(L"X_GameObjectsMFC")).count_hint(4).empty()) { Sleep(0); };
 
     //mirrors fix
     injector::WriteMemory(pattern.get_first(2), &Screen.fMirrorFactor, true); //0x10101F39
@@ -570,9 +570,9 @@ DWORD WINAPI InitX_GameObjectsMFC(LPVOID bDelay)
     //doors graphics fix
     static float fVisibilityFactor1 = 0.5f;
     static float fVisibilityFactor2 = 1.5f;
-    pattern = hook::module_pattern(GetModuleHandle("X_GameObjectsMFC"), "D9 05 ? ? ? ? 89 44 24 1C"); //1000AD9E
+    pattern = hook::module_pattern(GetModuleHandle(L"X_GameObjectsMFC"), "D9 05 ? ? ? ? 89 44 24 1C"); //1000AD9E
     injector::WriteMemory(pattern.get_first(2), &fVisibilityFactor1, true);
-    pattern = hook::module_pattern(GetModuleHandle("X_GameObjectsMFC"), "D9 05 ? ? ? ? 89 4C 24 18"); //1000AD55
+    pattern = hook::module_pattern(GetModuleHandle(L"X_GameObjectsMFC"), "D9 05 ? ? ? ? 89 4C 24 18"); //1000AD55
     injector::WriteMemory(pattern.get_first(2), &fVisibilityFactor2, true);
 
     //FOV
@@ -582,7 +582,7 @@ DWORD WINAPI InitX_GameObjectsMFC(LPVOID bDelay)
     Screen.fDynamicScreenFieldOfViewScale = fFOVFactor;
     if (fFOVFactor && fFOVFactor != 1.0f)
     {
-        pattern = hook::module_pattern(GetModuleHandle("X_GameObjectsMFC"), "8B 44 24 04 89 81 38 05 00 00"); //void __thiscall X_LevelRuntimeCamera::setFOV(X_LevelRuntimeCamera *this, float)
+        pattern = hook::module_pattern(GetModuleHandle(L"X_GameObjectsMFC"), "8B 44 24 04 89 81 38 05 00 00"); //void __thiscall X_LevelRuntimeCamera::setFOV(X_LevelRuntimeCamera *this, float)
         struct pauseTimeUpdateHook
         {
             void operator()(injector::reg_pack& regs)
@@ -594,13 +594,13 @@ DWORD WINAPI InitX_GameObjectsMFC(LPVOID bDelay)
     }
 
     //actually not a cutscene check, but X_Crosshair::sm_bCameraPathRunning
-    pattern = hook::module_pattern(GetModuleHandle("X_GameObjectsMFC"), "A0 ? ? ? ? 84 C0 0F 85"); //byte_101A7AA0
+    pattern = hook::module_pattern(GetModuleHandle(L"X_GameObjectsMFC"), "A0 ? ? ? ? 84 C0 0F 85"); //byte_101A7AA0
     Screen.bIsInCutscene = *pattern.get_first<bool*>(1);
 
     bool bD3DHookBorders = iniReader.ReadInteger("MAIN", "D3DHookBorders", 1) != 0;
     if (bD3DHookBorders)
     {
-        pattern = hook::module_pattern(GetModuleHandle("X_GameObjectsMFC"), "B1 01 88 46 65 E8 ? ? ? ? 5E C2 08 00");
+        pattern = hook::module_pattern(GetModuleHandle(L"X_GameObjectsMFC"), "B1 01 88 46 65 E8 ? ? ? ? 5E C2 08 00");
         struct CameraOverlayHook
         {
             void operator()(injector::reg_pack& regs)
@@ -630,7 +630,7 @@ DWORD WINAPI InitX_GameObjectsMFC(LPVOID bDelay)
 
 DWORD WINAPI InitX_ModesMFC(LPVOID bDelay)
 {
-    auto pattern = hook::module_pattern(GetModuleHandle("X_ModesMFC"), "8B 5C 24 18 8B 01 53 FF 50 38");
+    auto pattern = hook::module_pattern(GetModuleHandle(L"X_ModesMFC"), "8B 5C 24 18 8B 01 53 FF 50 38");
 
     if (pattern.count_hint(1).empty() && !bDelay)
     {
@@ -639,7 +639,7 @@ DWORD WINAPI InitX_ModesMFC(LPVOID bDelay)
     }
 
     if (bDelay)
-        while (pattern.clear(GetModuleHandle("X_ModesMFC")).count_hint(1).empty()) { Sleep(0); };
+        while (pattern.clear(GetModuleHandle(L"X_ModesMFC")).count_hint(1).empty()) { Sleep(0); };
 
     static CIniReader iniReader("");
     static int32_t nGraphicNovelModeKey = iniReader.ReadInteger("MAIN", "GraphicNovelModeKey", VK_F2);
@@ -661,7 +661,7 @@ DWORD WINAPI InitX_ModesMFC(LPVOID bDelay)
     }; injector::MakeInline<GraphicNovelXRefHook>(pattern.get_first(0), pattern.get_first(6)); //10001A6A
 
     static auto sub_484AE0 = (uint32_t)hook::get_pattern("8B 44 24 04 83 EC 34 53 55 56 57 50 8B F1"); //MaxPayne_GraphicNovelMode::update
-    auto GraphicNovelPageUpdate = hook::module_pattern(GetModuleHandle("X_ModesMFC"), "8B 16 8B CE 33 FF FF 52 10"); //10001A7A 
+    auto GraphicNovelPageUpdate = hook::module_pattern(GetModuleHandle(L"X_ModesMFC"), "8B 16 8B CE 33 FF FF 52 10"); //10001A7A 
     struct GraphicNovelPageUpdateHook
     {
         void operator()(injector::reg_pack& regs)
@@ -731,7 +731,7 @@ DWORD WINAPI InitX_ModesMFC(LPVOID bDelay)
 
 DWORD WINAPI InitX_HelpersMFC(LPVOID bDelay)
 {
-    auto pattern = hook::module_pattern(GetModuleHandle("X_HelpersMFC"), "8B 41 08 8B 49 0C 50");
+    auto pattern = hook::module_pattern(GetModuleHandle(L"X_HelpersMFC"), "8B 41 08 8B 49 0C 50");
 
     if (pattern.count_hint(1).empty() && !bDelay)
     {
@@ -740,7 +740,7 @@ DWORD WINAPI InitX_HelpersMFC(LPVOID bDelay)
     }
 
     if (bDelay)
-        while (pattern.clear(GetModuleHandle("X_HelpersMFC")).count_hint(1).empty()) { Sleep(0); };
+        while (pattern.clear(GetModuleHandle(L"X_HelpersMFC")).count_hint(1).empty()) { Sleep(0); };
 
     struct X_QuadRendererRenderHook
     {
@@ -752,7 +752,7 @@ DWORD WINAPI InitX_HelpersMFC(LPVOID bDelay)
         }
     }; injector::MakeInline<X_QuadRendererRenderHook>(pattern.get_first(0), pattern.get_first(6)); //10004820
 
-    pattern = hook::module_pattern(GetModuleHandle("X_HelpersMFC"), "05 58 01 00 00 33 D2");
+    pattern = hook::module_pattern(GetModuleHandle(L"X_HelpersMFC"), "05 58 01 00 00 33 D2");
     struct X_ProgressBarUpdateProgressBarHook
     {
         void operator()(injector::reg_pack& regs)
@@ -767,7 +767,7 @@ DWORD WINAPI InitX_HelpersMFC(LPVOID bDelay)
 
 DWORD WINAPI InitE2_D3D8_DRIVER_MFC(LPVOID bDelay)
 {
-    auto pattern = hook::module_pattern(GetModuleHandle("e2_d3d8_driver_mfc"), "8B 45 0C 53 56 33 F6 2B C6 57");
+    auto pattern = hook::module_pattern(GetModuleHandle(L"e2_d3d8_driver_mfc"), "8B 45 0C 53 56 33 F6 2B C6 57");
 
     if (pattern.count_hint(1).empty() && !bDelay)
     {
@@ -776,14 +776,14 @@ DWORD WINAPI InitE2_D3D8_DRIVER_MFC(LPVOID bDelay)
     }
 
     if (bDelay)
-        while (pattern.clear(GetModuleHandle("e2_d3d8_driver_mfc")).count_hint(1).empty()) { Sleep(0); };
+        while (pattern.clear(GetModuleHandle(L"e2_d3d8_driver_mfc")).count_hint(1).empty()) { Sleep(0); };
 
     //D3D Hook for borders
     CIniReader iniReader("");
     bool bD3DHookBorders = iniReader.ReadInteger("MAIN", "D3DHookBorders", 1) != 0;
     if (bD3DHookBorders)
     {
-        pattern = hook::module_pattern(GetModuleHandle("e2_d3d8_driver_mfc"), "8B 86 ? ? ? ? 8B 08 50 FF 91");
+        pattern = hook::module_pattern(GetModuleHandle(L"e2_d3d8_driver_mfc"), "8B 86 ? ? ? ? 8B 08 50 FF 91");
         struct EndSceneHook
         {
             void operator()(injector::reg_pack& regs)
@@ -805,7 +805,7 @@ DWORD WINAPI InitE2_D3D8_DRIVER_MFC(LPVOID bDelay)
 
 DWORD WINAPI InitX_BasicModesMFC(LPVOID bDelay)
 {
-    auto pattern = hook::module_pattern(GetModuleHandle("X_BasicModesMFC"), "A1 ? ? ? ? 8B 0D ? ? ? ? 89 8E ? ? ? ? 89 86");
+    auto pattern = hook::module_pattern(GetModuleHandle(L"X_BasicModesMFC"), "A1 ? ? ? ? 8B 0D ? ? ? ? 89 8E ? ? ? ? 89 86");
 
     if (pattern.count_hint(1).empty() && !bDelay)
     {
@@ -814,7 +814,7 @@ DWORD WINAPI InitX_BasicModesMFC(LPVOID bDelay)
     }
 
     if (bDelay)
-        while (pattern.clear(GetModuleHandle("X_BasicModesMFC")).count_hint(1).empty()) { Sleep(0); };
+        while (pattern.clear(GetModuleHandle(L"X_BasicModesMFC")).count_hint(1).empty()) { Sleep(0); };
 
     //screenshots aspect ratio
     static auto dword_100451A8 = *pattern.get_first<float*>(1);

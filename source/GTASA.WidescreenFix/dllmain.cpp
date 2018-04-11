@@ -496,7 +496,7 @@ void __cdecl WipeLocalVariableMemoryForMissionScriptHook()
 DWORD WINAPI CompatHandler(LPVOID)
 {
     size_t i = 0;
-    while (GetModuleHandle("SilentPatchSA.asi") == NULL)
+    while (GetModuleHandle(L"SilentPatchSA.asi") == NULL)
     {
         Sleep(0);
         ++i;

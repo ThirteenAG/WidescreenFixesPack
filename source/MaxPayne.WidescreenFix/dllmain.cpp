@@ -119,10 +119,10 @@ DWORD WINAPI InitWF(LPVOID)
         }
     }; injector::MakeInline<DelayedHook>(dword_40B3B2, dword_40B3B2 + 10);
 
-    auto pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "BB 00 0C 00 00 25 00 0C 00 00 8B 4D F8");
+    auto pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "BB 00 0C 00 00 25 00 0C 00 00 8B 4D F8");
     auto flt_10049DE4 = *pattern.count(10).get(5).get<uintptr_t>(-15);
-    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), pattern_str(0xD8, 0x0D, to_bytes(flt_10049DE4)));
-    while (pattern.clear(GetModuleHandle("e2mfc")).count_hint(9).empty()) { Sleep(0); };
+    pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), pattern_str(0xD8, 0x0D, to_bytes(flt_10049DE4)));
+    while (pattern.clear(GetModuleHandle(L"e2mfc")).count_hint(9).empty()) { Sleep(0); };
     for (size_t i = 0; i < pattern.size(); i++)
     {
         if (i != 4 && i != 5 && i != 8)
@@ -132,37 +132,37 @@ DWORD WINAPI InitWF(LPVOID)
     e2mfc_14775 = (uintptr_t)pattern.get(5).get<uintptr_t>(2);
     e2mfc_1566C = (uintptr_t)pattern.get(8).get<uintptr_t>(2);
 
-    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 0D ? ? ? ? D9 1D ? ? ? ? 8A 86 E0");
+    pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "D8 0D ? ? ? ? D9 1D ? ? ? ? 8A 86 E0");
     e2mfc_49DEC = *pattern.get_first<uintptr_t>(2);
-    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 0D ? ? ? ? D9 5D E0 E8");
+    pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "D8 0D ? ? ? ? D9 5D E0 E8");
     e2mfc_49DFC = *pattern.get_first<uintptr_t>(2);
-    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 0D ? ? ? ? D9 5D E4 D9 45 EC");
+    pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "D8 0D ? ? ? ? D9 5D E4 D9 45 EC");
     e2mfc_49E00 = *pattern.get_first<uintptr_t>(2);
-    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "C7 05 ? ? ? ? ? ? ? ? C7 05 ? ? ? ? ? ? ? ? D8 0D");
+    pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "C7 05 ? ? ? ? ? ? ? ? C7 05 ? ? ? ? ? ? ? ? D8 0D");
     e2mfc_1565E = (uintptr_t)pattern.get_first(6);
 
-    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), pattern_str(to_bytes(480.0f))); //0x5ECD00
-    while (pattern.clear(GetModuleHandle("e2mfc")).count_hint(6).empty()) { Sleep(0); };
+    pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), pattern_str(to_bytes(480.0f))); //0x5ECD00
+    while (pattern.clear(GetModuleHandle(L"e2mfc")).count_hint(6).empty()) { Sleep(0); };
     for (size_t i = 0; i < pattern.size(); i++)
         injector::WriteMemory<float>(pattern.get(i).get<float*>(0), Screen.fWidthScale, true);
 
-    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 3D ? ? ? ? D8 6D 0C D9 5D 0C");
+    pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "D8 3D ? ? ? ? D8 6D 0C D9 5D 0C");
     injector::WriteMemory<float>(*pattern.get_first<float**>(2), Screen.fWidthScale, true); //0x10049DDC 480.0f
 
-    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 25 ? ? ? ? D9 86 DC 01 00 00");
+    pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "D8 25 ? ? ? ? D9 86 DC 01 00 00");
     injector::WriteMemory<float>(*pattern.get_first<float**>(2), Screen.fHalfWidthScale, true); //0x10049DF0 240.0
 
     //corrupted graphic in tunnel (DisableSubViewport)
-    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "55 8B EC 83 EC 24 56 8B F1 D9 86 DC 01");
+    pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "55 8B EC 83 EC 24 56 8B F1 D9 86 DC 01");
     injector::MakeRET(pattern.get_first(), 0x10, true); //10013FB0 ret 10h
 
     // Hud
-    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 0D ? ? ? ? 8B 4D F4");
+    pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "D8 0D ? ? ? ? 8B 4D F4");
     injector::WriteMemory<float>(*pattern.get_first<float**>(2), Screen.fHudOffset, true); //100495C8
-    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D8 0D ? ? ? ? D9 5D D8 B9 ? ? ? ? 8B 45 D8 8B 55 D4");
+    pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "D8 0D ? ? ? ? D9 5D D8 B9 ? ? ? ? 8B 45 D8 8B 55 D4");
     injector::WriteMemory<float>(*pattern.get_first<float**>(2), Screen.fHudScale, true); //100495D0
 
-    pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D9 05 ? ? ? ? D9 E0 D9 45 FC D8 25");
+    pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "D9 05 ? ? ? ? D9 E0 D9 45 FC D8 25");
     static float* pHudElementPosX = *pattern.count(2).get(1).get<float*>(2); //0x10065190
     static float* pHudElementPosY = *pattern.count(2).get(1).get<float*>(22); //0x10065194
     struct P_HudPosHook
@@ -282,7 +282,7 @@ DWORD WINAPI InitWF(LPVOID)
             Screen.fHudOffsetWide = Screen.fWidescreenHudOffset / (((16.0f / 9.0f) / (Screen.fAspectRatio)) * 1.5f);
         }
 
-        pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "D9 05 ? ? ? ? D8 8E 74 01 00 00");
+        pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "D9 05 ? ? ? ? D8 8E 74 01 00 00");
         static auto pTextElementPosX = *pattern.get_first<TextCoords*>(2); //0x100647D0
         struct P_TextPosHook
         {
@@ -299,7 +299,7 @@ DWORD WINAPI InitWF(LPVOID)
         }; injector::MakeInline<P_TextPosHook>(pattern.get_first(0), pattern.get_first(6));
 
         static float TextPosX1, TextPosX2, TextPosY1;
-        pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "C7 45 D0 00 00 00 00 D9 5D"); //100045FC
+        pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "C7 45 D0 00 00 00 00 D9 5D"); //100045FC
         struct P_TextPosHook2
         {
             void operator()(injector::reg_pack& regs)
@@ -310,7 +310,7 @@ DWORD WINAPI InitWF(LPVOID)
             }
         }; injector::MakeInline<P_TextPosHook2>(pattern.get_first(0), pattern.get_first(7));
 
-        pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "89 41 08 D9 45 E4 D8 0D"); //0x10004693
+        pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "89 41 08 D9 45 E4 D8 0D"); //0x10004693
         struct P_TextPosHook3
         {
             void operator()(injector::reg_pack& regs)
@@ -415,7 +415,7 @@ DWORD WINAPI InitWF(LPVOID)
 
 DWORD WINAPI InitE2MFC(LPVOID bDelay)
 {
-    auto pattern = hook::module_pattern(GetModuleHandle("e2mfc"), "E8 ? ? ? ? 8B 0D ? ? ? ? 89 45 DC 89 5D E0");
+    auto pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "E8 ? ? ? ? 8B 0D ? ? ? ? 89 45 DC 89 5D E0");
 
     if (pattern.count_hint(2).empty() && !bDelay)
     {
@@ -424,7 +424,7 @@ DWORD WINAPI InitE2MFC(LPVOID bDelay)
     }
 
     if (bDelay)
-        while (pattern.clear(GetModuleHandle("e2mfc")).count_hint(2).empty()) { Sleep(0); };
+        while (pattern.clear(GetModuleHandle(L"e2mfc")).count_hint(2).empty()) { Sleep(0); };
 
     auto PDriverGetWidth = [](uintptr_t P_Driver__m_initializedDriver, uintptr_t edx) -> int32_t
     {
@@ -527,7 +527,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                         char buffer[MAX_PATH];
                         if (bUseGameFolderForSavegames)
                         {
-                            GetModuleFileName(NULL, buffer, MAX_PATH);
+                            GetModuleFileNameA(NULL, buffer, MAX_PATH);
                             *strrchr(buffer, '\\') = '\0';
                             strcat_s(buffer, "\\");
                             strcat_s(buffer, aSavegames);
@@ -544,8 +544,8 @@ DWORD WINAPI Init(LPVOID bDelay)
                         auto nSaveNum = -1;
                         std::string SFPath(buffer);
 
-                        WIN32_FIND_DATA fd;
-                        HANDLE File = FindFirstFile(std::string(SFPath + "*.mps").c_str(), &fd);
+                        WIN32_FIND_DATAA fd;
+                        HANDLE File = FindFirstFileA(std::string(SFPath + "*.mps").c_str(), &fd);
                         FILETIME LastWriteTime = fd.ftLastWriteTime;
 
                         if (File != INVALID_HANDLE_VALUE)
@@ -580,7 +580,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                                         }
                                     }
                                 }
-                            } while (FindNextFile(File, &fd));
+                            } while (FindNextFileA(File, &fd));
                             FindClose(File);
                         }
 
@@ -691,7 +691,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
 DWORD WINAPI InitE2_D3D8_DRIVER_MFC(LPVOID bDelay)
 {
-    auto pattern = hook::module_pattern(GetModuleHandle("e2_d3d8_driver_mfc"), "8B 45 0C 53 56 33 F6 2B C6 57");
+    auto pattern = hook::module_pattern(GetModuleHandle(L"e2_d3d8_driver_mfc"), "8B 45 0C 53 56 33 F6 2B C6 57");
 
     if (pattern.count_hint(1).empty() && !bDelay)
     {
@@ -700,14 +700,14 @@ DWORD WINAPI InitE2_D3D8_DRIVER_MFC(LPVOID bDelay)
     }
 
     if (bDelay)
-        while (pattern.clear(GetModuleHandle("e2_d3d8_driver_mfc")).count_hint(1).empty()) { Sleep(0); };
+        while (pattern.clear(GetModuleHandle(L"e2_d3d8_driver_mfc")).count_hint(1).empty()) { Sleep(0); };
 
     //D3D Hook for borders
     CIniReader iniReader("");
     bool bD3DHookBorders = iniReader.ReadInteger("MAIN", "D3DHookBorders", 1) != 0;
     if (bD3DHookBorders)
     {
-        pattern = hook::module_pattern(GetModuleHandle("e2_d3d8_driver_mfc"), "8B 86 ? ? ? ? 8B 08 50 FF 91");
+        pattern = hook::module_pattern(GetModuleHandle(L"e2_d3d8_driver_mfc"), "8B 86 ? ? ? ? 8B 08 50 FF 91");
         struct EndSceneHook
         {
             void operator()(injector::reg_pack& regs)

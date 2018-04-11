@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "log.h"
 
 struct Screen
 {
@@ -131,7 +130,7 @@ void __fastcall FCanvasUtilDrawTileHook(void* _this, uint32_t EDX, float X, floa
 
 DWORD WINAPI InitD3DDrv(LPVOID bDelay)
 {
-    auto pattern = hook::module_pattern(GetModuleHandle("D3DDrv"), "C7 05 ? ? ? ? 01 00 00 00"); //0x1000CE5E
+    auto pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "C7 05 ? ? ? ? 01 00 00 00"); //0x1000CE5E
 
     if (pattern.count_hint(2).empty() && !bDelay)
     {
@@ -140,7 +139,7 @@ DWORD WINAPI InitD3DDrv(LPVOID bDelay)
     }
 
     if (bDelay)
-        while (pattern.clear(GetModuleHandle("D3DDrv")).count_hint(2).empty()) { Sleep(0); };
+        while (pattern.clear(GetModuleHandle(L"D3DDrv")).count_hint(2).empty()) { Sleep(0); };
 
 
     static uint32_t* dword_1003DBA4 = *pattern.count(2).get(1).get<uint32_t*>(-4);
@@ -159,7 +158,7 @@ DWORD WINAPI InitD3DDrv(LPVOID bDelay)
     //FMV
     Screen.fFMVoffsetStartX = (Screen.fWidth - 640.0f) / 2.0f;
     Screen.fFMVoffsetStartY = (Screen.fHeight - 480.0f) / 2.0f;
-    pattern = hook::module_pattern(GetModuleHandle("D3DDrv"), "DA ? ? 00 00 00 D8 0D");
+    pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "DA ? ? 00 00 00 D8 0D");
     injector::MakeNOP(pattern.count(2).get(0).get<uint32_t>(0), 6, true);
     injector::MakeNOP(pattern.count(2).get(1).get<uint32_t>(0), 6, true);
     injector::WriteMemory<float>(*pattern.count(2).get(0).get<uint32_t*>(8), Screen.fFMVoffsetStartX * (1.0f / 640.0f), true); //(DWORD)D3DDrv + 0x31860
@@ -170,7 +169,7 @@ DWORD WINAPI InitD3DDrv(LPVOID bDelay)
 
 DWORD WINAPI InitEngine(LPVOID bDelay)
 {
-    auto pattern = hook::module_pattern(GetModuleHandle("Engine"), "D8 C9 D8 0D");
+    auto pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "D8 C9 D8 0D");
 
     if (pattern.count_hint(9).empty() && !bDelay)
     {
@@ -179,22 +178,22 @@ DWORD WINAPI InitEngine(LPVOID bDelay)
     }
 
     if (bDelay)
-        while (pattern.clear(GetModuleHandle("Engine")).count_hint(9).empty()) { Sleep(0); };
+        while (pattern.clear(GetModuleHandle(L"Engine")).count_hint(9).empty()) { Sleep(0); };
 
     //HUD
     Screen.fHudOffset = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
     Screen.HUDScaleX = 1.0f / Screen.fWidth * (Screen.fHeight / 480.0f);
     injector::WriteMemory<float>(*pattern.count(9).get(0).get<uint32_t*>(4), Screen.HUDScaleX, true); //(DWORD)Engine + 0x1E9F78
 
-    pattern = hook::module_pattern(GetModuleHandle("Engine"), "8B ? 94 00 00 00 E8");
+    pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "8B ? 94 00 00 00 E8");
     pDrawTile = injector::GetBranchDestination(pattern.count(1).get(0).get<uintptr_t>(6), true).as_int();
     injector::MakeCALL(pattern.count(1).get(0).get<uintptr_t>(6), FCanvasUtilDrawTileHook, true); //(uint32_t)Engine + 0xC8ECE
 
-    pattern = hook::module_pattern(GetModuleHandle("Engine"), "8B ? 94 00 00 00 52 E8");
+    pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "8B ? 94 00 00 00 52 E8");
     injector::MakeCALL(pattern.count(2).get(0).get<uint32_t>(7), FCanvasUtilDrawTileHook, true); //(uint32_t)Engine + 0xC9B7C
     injector::MakeCALL(pattern.count(2).get(1).get<uint32_t>(7), FCanvasUtilDrawTileHook, true); //(uint32_t)Engine + 0xC9DE1
 
-    pattern = hook::module_pattern(GetModuleHandle("Engine"), "8B 46 34 8B 88 B0 02 00 00");
+    pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "8B 46 34 8B 88 B0 02 00 00");
     struct UGameEngine_Draw_Hook
     {
         void operator()(injector::reg_pack& regs)
@@ -248,7 +247,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
 
             char UserIni[MAX_PATH];
-            GetModuleFileName(GetModuleHandle(NULL), UserIni, (sizeof(UserIni)));
+            GetModuleFileNameA(GetModuleHandle(NULL), UserIni, (sizeof(UserIni)));
             *strrchr(UserIni, '\\') = '\0';
             strcat(UserIni, "\\SplinterCellUser.ini");
 
