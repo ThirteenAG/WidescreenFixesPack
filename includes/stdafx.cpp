@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-std::map<std::wstring, std::function<void()>, DllCallbackHandler::Comparator> DllCallbackHandler::functions;
+std::map<std::wstring, std::function<void()>, CallbackHandler::Comparator> CallbackHandler::functions;
 #if DEBUG
 const std::shared_ptr<spdlog::logger> spd::log = spdlog::basic_logger_mt("basic_logger", spd::GetLogName(), true);
 #endif
@@ -78,4 +78,27 @@ std::string format(const char *fmt, ...)
         v.resize(size);
         va_end(args2);
     }
+}
+
+HICON CreateIconFromBMP(UCHAR* data)
+{
+    BITMAPINFOHEADER* bmih = (BITMAPINFOHEADER*)(data + sizeof(BITMAPFILEHEADER));
+    HICON hIcon = 0;
+    ICONINFO ii = {};
+    ULONG n = bmih->biWidth * bmih->biHeight;
+    if (PULONG lpBits = new ULONG[n])
+    {
+        PULONG p = lpBits;
+        if (ii.hbmColor = CreateBitmap(bmih->biWidth, bmih->biHeight, 1, bmih->biBitCount, (data + sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER))))
+        {
+            if (ii.hbmMask = CreateBitmap(bmih->biWidth, bmih->biHeight, 1, 1, 0))
+            {
+                hIcon = CreateIconIndirect(&ii);
+                DeleteObject(ii.hbmMask);
+            }
+            DeleteObject(ii.hbmColor);
+        }
+        delete[] lpBits;
+    }
+    return hIcon;
 }

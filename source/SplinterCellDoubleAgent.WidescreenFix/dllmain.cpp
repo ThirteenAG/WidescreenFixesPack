@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "ico.h"
 #include <d3d9.h>
 #include <D3dx9.h>
 #pragma comment(lib, "D3dx9.lib")
@@ -55,7 +54,21 @@ void Init()
 	iniWriter.WriteString("WinDrv.WindowsClient", "FullscreenViewportY", ResY);
 
 	if (bForceLL)
-		ExeCallbackHandler::add(InitLL, "6A 03 6A 00 6A 00 6A 00 6A 00 6A FE 50", 1);
+		CallbackHandler::RegisterCallback(InitLL, hook::pattern("74 ? 68 ? ? ? ? 53 FF D7").count_hint(1).empty(), 0x1100);
+
+	//for test only (steam version)
+	//CallbackHandler::RegisterCallback([]()
+	//{
+	//	auto pattern = hook::pattern("89 85 D8 61 00 00");
+	//	struct StartupHook
+	//	{
+	//		void operator()(injector::reg_pack& regs)
+	//		{
+	//			*(uint32_t*)(regs.ebp + 0x61D8) = regs.eax;
+	//			MessageBox(0, 0, L"test", 0);
+	//		}
+	//	}; injector::MakeInline<StartupHook>(pattern.get_first(0), pattern.get_first(6));
+	//}, hook::pattern("89 85 D8 61 00 00").count_hint(1).empty(), 0x1100);
 }
 
 void InitD3DDrv()
@@ -415,14 +428,35 @@ void InitEngine()
 
 void InitWindow()
 {
-	auto pattern = hook::module_pattern(GetModuleHandle(L"Window"), "FF 15 ? ? ? ? 8B 4E 04 50 6A 01 68 80 00 00 00 51");
-
 	//icon fix
-	static auto ico = CreateIconFromBMP(icoData);
+	static HICON ico;
+	HMODULE hm;
+	GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR)&InitWindow, &hm);
+
+	constexpr auto IDR_SCDAICON = 200;
+	HRSRC hResource = FindResource(hm, MAKEINTRESOURCE(IDR_SCDAICON), RT_RCDATA);
+	if (hResource)
+	{
+		HGLOBAL hLoadedResource = LoadResource(hm, hResource);
+		if (hLoadedResource)
+		{
+			LPVOID pLockedResource = LockResource(hLoadedResource);
+			if (pLockedResource)
+			{
+				size_t dwResourceSize = SizeofResource(hm, hResource);
+				if (dwResourceSize)
+				{
+					ico = CreateIconFromBMP((UCHAR*)pLockedResource);
+				}
+			}
+		}
+	}
+
 	auto LoadIconProxy = [](HINSTANCE hInstance, LPCWSTR lpIconName) -> HICON {
 		return ico;
 	};
 
+	auto pattern = hook::module_pattern(GetModuleHandle(L"Window"), "FF 15 ? ? ? ? 8B 4E 04 50 6A 01 68 80 00 00 00 51");
 	injector::WriteMemory(*pattern.count_hint(2).get(0).get<void*>(2), static_cast<HICON(WINAPI *)(HINSTANCE, LPCWSTR)>(LoadIconProxy), true);
 	injector::WriteMemory(*pattern.count_hint(2).get(1).get<void*>(2), static_cast<HICON(WINAPI *)(HINSTANCE, LPCWSTR)>(LoadIconProxy), true);
 }
@@ -461,14 +495,14 @@ void InitEchelonMenus()
 
 CEXP void InitializeASI()
 {
-	Init();
-	DllCallbackHandler::add(L"Window.dll", InitWindow);
-	DllCallbackHandler::add(L"Engine.dll", InitEngine);
-	DllCallbackHandler::add(L"D3DDrv.dll", InitD3DDrv);
-	DllCallbackHandler::add(L"EchelonMenus.dll", InitEchelonMenus);
+	CallbackHandler::RegisterCallback(Init);
+	CallbackHandler::RegisterCallback(L"Window.dll", InitWindow);
+	CallbackHandler::RegisterCallback(L"Engine.dll", InitEngine);
+	CallbackHandler::RegisterCallback(L"D3DDrv.dll", InitD3DDrv);
+	CallbackHandler::RegisterCallback(L"EchelonMenus.dll", InitEchelonMenus);
 }
 
-BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
 	if (reason == DLL_PROCESS_ATTACH)
 	{

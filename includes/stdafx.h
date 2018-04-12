@@ -8,6 +8,7 @@
 #include <array>
 #include <math.h>
 #include <subauth.h>
+#include <thread>
 #include "IniReader.h"
 #include "injector\injector.hpp"
 #include "injector\calling.hpp"
@@ -30,6 +31,7 @@ void CreateThreadAutoClose(LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_T dwSt
 std::tuple<int32_t, int32_t> GetDesktopRes();
 void GetResolutionsList(std::vector<std::string>& list);
 std::string format(const char *fmt, ...);
+HICON CreateIconFromBMP(UCHAR* data);
 
 template<typename T>
 std::array<uint8_t, sizeof(T)> to_bytes(const T& object)
@@ -98,46 +100,100 @@ bool iequals(const T& s1, const V& s2)
 	return (str1 == str2);
 }
 
-class ExeCallbackHandler
+class CallbackHandler
 {
 public:
-	static inline void add(std::function<void()>&& fn, const std::string_view s, uint32_t expected = 1)
+	static inline void RegisterCallback(std::function<void()>&& fn)
 	{
-		if (s.empty() || !hook::pattern(s).count_hint(expected).empty())
+		fn();
+	}
+
+	static inline void RegisterCallback(std::wstring_view module_name, std::function<void()>&& fn)
+	{
+		if (module_name.empty() || GetModuleHandleW(module_name.data()) != NULL)
 		{
 			fn();
 		}
 		else
 		{
-			auto *p = new ThreadParams{ fn, s, expected };
-			CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Thread, (LPVOID)p, 0, NULL);
+			RegisterDllNotification();
+			functions.emplace(module_name, std::forward<std::function<void()>>(fn));
+		}
+	}
+
+	static inline void RegisterCallback(std::function<void()>&& fn, bool bPatternNotFound, ptrdiff_t offset = 0x1100)
+	{
+		if (!bPatternNotFound)
+		{
+			fn();
+		}
+		else
+		{
+			auto mh = GetModuleHandle(NULL);
+			IMAGE_NT_HEADERS* ntHeader = (IMAGE_NT_HEADERS*)((DWORD)mh + ((IMAGE_DOS_HEADER*)mh)->e_lfanew);
+			auto ptr = (uint32_t*)((DWORD)mh + ntHeader->OptionalHeader.BaseOfCode + ntHeader->OptionalHeader.SizeOfCode - offset);
+			if (ptr)
+			{
+				std::thread([](std::function<void()>&& fn, uint32_t* ptr, uint32_t val)
+				{
+					while (*ptr == val)
+						std::this_thread::yield();
+
+					fn();
+				}, fn, ptr, *ptr).detach();
+			}
+		}
+	}
+
+	static inline void RegisterCallback(std::function<void()>&& fn, hook::pattern pattern)
+	{
+		if (!pattern.empty())
+		{
+			fn();
+		}
+		else
+		{
+			auto* ptr = new ThreadParams{ fn, pattern };
+			CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&ThreadProc, (LPVOID)ptr, 0, NULL);
 		}
 	}
 
 private:
+	static inline void call(std::wstring_view module_name)
+	{
+		if (functions.count(module_name.data()))
+		{
+			functions.at(module_name.data())();
+			functions.erase(module_name.data());
+		}
+
+		if (functions.empty())
+			UnRegisterDllNotification();
+	}
+
+	static inline void invoke_all()
+	{
+		for (auto&& fn : functions)
+			fn.second();
+	}
+
+private:
+	struct Comparator {
+		bool operator() (const std::wstring& s1, const std::wstring& s2) const {
+			std::wstring str1(s1.length(), ' ');
+			std::wstring str2(s2.length(), ' ');
+			std::transform(s1.begin(), s1.end(), str1.begin(), tolower);
+			std::transform(s2.begin(), s2.end(), str2.begin(), tolower);
+			return  str1 < str2;
+		}
+	};
+
 	struct ThreadParams
 	{
 		std::function<void()> fn;
-		const std::string_view str;
-		uint32_t expected;
+		hook::pattern pattern;
 	};
 
-	static inline DWORD WINAPI Thread(LPVOID p)
-	{
-		auto params = *static_cast<ExeCallbackHandler::ThreadParams*>(p);
-		delete p;
-
-		auto pattern = hook::pattern(params.str);
-		while (pattern.clear().count_hint(params.expected).empty()) { Sleep(0); };
-
-		params.fn();
-
-		return 0;
-	}
-};
-
-class DllCallbackHandler
-{
 	typedef NTSTATUS(NTAPI* _LdrRegisterDllNotification) (ULONG, PVOID, PVOID, PVOID);
 	typedef NTSTATUS(NTAPI* _LdrUnregisterDllNotification) (PVOID);
 
@@ -154,9 +210,15 @@ class DllCallbackHandler
 		LDR_DLL_UNLOADED_NOTIFICATION_DATA Unloaded;
 	} LDR_DLL_NOTIFICATION_DATA, *PLDR_DLL_NOTIFICATION_DATA;
 
-	static inline _LdrRegisterDllNotification   LdrRegisterDllNotification;
-	static inline _LdrUnregisterDllNotification LdrUnregisterDllNotification;
-	static inline void* cookie;
+private:
+	static inline void CALLBACK LdrDllNotification(ULONG NotificationReason, PLDR_DLL_NOTIFICATION_DATA NotificationData, PVOID Context)
+	{
+		static constexpr auto LDR_DLL_NOTIFICATION_REASON_LOADED = 1;
+		if (NotificationReason == LDR_DLL_NOTIFICATION_REASON_LOADED)
+		{
+			call(NotificationData->Loaded.BaseDllName->Buffer);
+		}
+	}
 
 	static inline void RegisterDllNotification()
 	{
@@ -172,55 +234,20 @@ class DllCallbackHandler
 			LdrUnregisterDllNotification(cookie);
 	}
 
-public:
-	static inline void add(std::wstring_view s, std::function<void()>&& fn)
+	static inline DWORD WINAPI ThreadProc(LPVOID ptr)
 	{
-		if (GetModuleHandleW(s.data()) != NULL)
-		{
-			fn();
-		}
-		else
-		{
-			RegisterDllNotification();
-			functions.emplace(s, std::forward<std::function<void()>>(fn));
-		}
-	}
-	static inline void call(std::wstring_view s)
-	{
-		if (functions.count(s.data()))
-		{
-			functions.at(s.data())();
-			functions.erase(s.data());
-		}
+		auto params = *static_cast<CallbackHandler::ThreadParams*>(ptr);
+		delete ptr;
 
-		if (functions.empty())
-		{
-			UnRegisterDllNotification();
-		}
-	}
-	static inline void invoke_all()
-	{
-		for (auto && fn : functions)
-			fn.second();
-	}
-	static inline void CALLBACK LdrDllNotification(ULONG NotificationReason, PLDR_DLL_NOTIFICATION_DATA NotificationData, PVOID Context)
-	{
-		static constexpr auto LDR_DLL_NOTIFICATION_REASON_LOADED = 1;
-		if (NotificationReason == LDR_DLL_NOTIFICATION_REASON_LOADED)
-		{
-			call(NotificationData->Loaded.BaseDllName->Buffer);
-		}
-	}
+		while (params.pattern.clear().empty()) { Sleep(0); };
 
+		params.fn();
+
+		return 0;
+	}
 private:
-	struct Comparator {
-		bool operator() (const std::wstring& s1, const std::wstring& s2) const {
-			std::wstring str1(s1.length(), ' ');
-			std::wstring str2(s2.length(), ' ');
-			std::transform(s1.begin(), s1.end(), str1.begin(), tolower);
-			std::transform(s2.begin(), s2.end(), str2.begin(), tolower);
-			return  str1 < str2;
-		}
-	};
 	static /*inline*/ std::map<std::wstring, std::function<void()>, Comparator> functions;
+	static inline _LdrRegisterDllNotification   LdrRegisterDllNotification;
+	static inline _LdrUnregisterDllNotification LdrUnregisterDllNotification;
+	static inline void* cookie;
 };
