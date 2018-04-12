@@ -132,16 +132,13 @@ public:
 			auto mh = GetModuleHandle(NULL);
 			IMAGE_NT_HEADERS* ntHeader = (IMAGE_NT_HEADERS*)((DWORD)mh + ((IMAGE_DOS_HEADER*)mh)->e_lfanew);
 			auto ptr = (uint32_t*)((DWORD)mh + ntHeader->OptionalHeader.BaseOfCode + ntHeader->OptionalHeader.SizeOfCode - offset);
-			if (ptr)
+			std::thread([](std::function<void()>&& fn, uint32_t* ptr, uint32_t val)
 			{
-				std::thread([](std::function<void()>&& fn, uint32_t* ptr, uint32_t val)
-				{
-					while (*ptr == val)
-						std::this_thread::yield();
+				while (*ptr == val)
+					std::this_thread::yield();
 
-					fn();
-				}, fn, ptr, *ptr).detach();
-			}
+				fn();
+			}, fn, ptr, *ptr).detach();
 		}
 	}
 
