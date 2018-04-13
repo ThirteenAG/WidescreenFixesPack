@@ -9,6 +9,7 @@
 #include <math.h>
 #include <subauth.h>
 #include <thread>
+#include <mutex>
 #include "IniReader.h"
 #include "injector\injector.hpp"
 #include "injector\calling.hpp"
