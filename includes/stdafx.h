@@ -247,4 +247,6 @@ private:
 	static inline _LdrRegisterDllNotification   LdrRegisterDllNotification;
 	static inline _LdrUnregisterDllNotification LdrUnregisterDllNotification;
 	static inline void* cookie;
+public:
+	static inline std::once_flag flag;
 };

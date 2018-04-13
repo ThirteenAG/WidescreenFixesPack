@@ -94,7 +94,7 @@ void InitD3DDrv()
 	}; injector::MakeInline<RenderFilmstrip_Hook2>(pattern.get_first(0), pattern.get_first(6));
 	injector::WriteMemory<uint16_t>(pattern.get_first(6), 0xD285, true);     //test    edx, edx
 
-																			 //SetRes
+	//SetRes
 	static auto pPresentParams = *hook::module_pattern(GetModuleHandle(L"D3DDrv"), "BF ? ? ? ? F3 AB 8B 0D ? ? ? ? 39 01 8B 4D").get_first<D3DPRESENT_PARAMETERS*>(1);
 	pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "B8 01 00 00 00 64 89 0D 00 00 00 00 5B 8B E5 5D C2 10 00");
 	struct SetResHook
@@ -137,6 +137,8 @@ void InitD3DDrv()
 				rect.bottom = (LONG)Screen.Height;
 				SetWindowLong(pPresentParams->hDeviceWindow, GWL_STYLE, GetWindowLong(pPresentParams->hDeviceWindow, GWL_STYLE) & ~WS_OVERLAPPEDWINDOW);
 				SetWindowPos(pPresentParams->hDeviceWindow, NULL, rect.left, rect.top, rect.right, rect.bottom, SWP_NOACTIVATE | SWP_NOZORDER);
+				SetForegroundWindow(pPresentParams->hDeviceWindow);
+				SetCursor(NULL);
 			}
 		}
 	}; injector::MakeInline<SetResHook>(pattern.get_first(0));
@@ -495,11 +497,14 @@ void InitEchelonMenus()
 
 CEXP void InitializeASI()
 {
-	CallbackHandler::RegisterCallback(Init);
-	CallbackHandler::RegisterCallback(L"Window.dll", InitWindow);
-	CallbackHandler::RegisterCallback(L"Engine.dll", InitEngine);
-	CallbackHandler::RegisterCallback(L"D3DDrv.dll", InitD3DDrv);
-	CallbackHandler::RegisterCallback(L"EchelonMenus.dll", InitEchelonMenus);
+	std::call_once(CallbackHandler::flag, []()
+	{
+		CallbackHandler::RegisterCallback(Init);
+		CallbackHandler::RegisterCallback(L"Window.dll", InitWindow);
+		CallbackHandler::RegisterCallback(L"Engine.dll", InitEngine);
+		CallbackHandler::RegisterCallback(L"D3DDrv.dll", InitD3DDrv);
+		CallbackHandler::RegisterCallback(L"EchelonMenus.dll", InitEchelonMenus);
+	});
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
