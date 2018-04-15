@@ -132,6 +132,7 @@ project "NFSMostWanted.WidescreenFix"
    setpaths("Z:/WFP/Games/Need For Speed/Need for Speed Most Wanted/", "speed.exe")
 project "NFSUnderground.WidescreenFix"
    setpaths("Z:/WFP/Games/Need For Speed/Need For Speed Underground/", "speed.exe")
+   files { "textures/NFSU/nfsuicon.rc" }
 project "NFSUnderground2.WidescreenFix"
    setpaths("Z:/WFP/Games/Need For Speed/Need For Speed Underground 2/", "speed2.exe")
 project "Onimusha3.WidescreenFix"
