@@ -61,10 +61,10 @@ DWORD WINAPI Init(LPVOID bDelay)
         }
     }; injector::MakeInline<SetResHook>(pattern.get_first(-2), pattern.get_first(7));
     injector::WriteMemory<uint16_t>(pattern.get_first(3), 0xD13B, true);
-    
+
     injector::WriteMemory(*pattern.count(1).get(0).get<uint32_t*>(9), Screen.Width, true);
     injector::WriteMemory(*pattern.count(1).get(0).get<uint32_t*>(14), Screen.Height, true);
-    
+
     //clipping fix
     static float fNegResX = -Screen.fWidth;
     static float fNegResY = -Screen.fHeight;
@@ -87,10 +87,10 @@ DWORD WINAPI Init(LPVOID bDelay)
         void operator()(injector::reg_pack& regs)
         {
             if ((*(uint32_t*)(0x02ADB7B8 + 0x0) == 100 && (*(uint32_t*)(0x02ADB7B8 + 0x8) == 70) && (*(uint32_t*)(0x02ADB7B8 + 0x38) == 524288 || *(uint32_t*)(0x02ADB7B8 + 0x38) == 524296) && (*(uint32_t*)(0x02ADB7B8 + 0xB8) == 1)) //generic
-             || (*(uint32_t*)(0x02ADB7B8 + 0x0) == 0 && *(uint32_t*)(0x02ADB7B8 + 0x4) == 0 && *(uint32_t*)(0x02ADB7B8 + 0x8) == 6 && (*(uint32_t*)(0x02ADB7B8 + 0x38) == 524288 || *(uint32_t*)(0x02ADB7B8 + 0x38) == 524296) && (*(uint32_t*)(0x02ADB7B8 + 0xB8) == 1 || *(uint32_t*)(0x02ADB7B8 + 0xB8) == 65536)) //cutscene borders
-             || (*(uint32_t*)(0x02ADB7B8 + 0x0) == 100 && *(uint32_t*)(0x02ADB7B8 + 0x8) == 70 && (*(uint32_t*)(0x02ADB7B8 + 0x38) == 524288 || *(uint32_t*)(0x02ADB7B8 + 0x38) == 524296) && (*(uint32_t*)(0x02ADB7B8 + 0xB8) == 65536)) //cutscene fading
-             || (*(uint32_t*)(0x02ADB7B8 + 0x0) == 68 && *(uint32_t*)(0x02ADB7B8 + 0x4) == 0 && *(uint32_t*)(0x02ADB7B8 + 0x8) == 6) //player shadow
-            )
+                || (*(uint32_t*)(0x02ADB7B8 + 0x0) == 0 && *(uint32_t*)(0x02ADB7B8 + 0x4) == 0 && *(uint32_t*)(0x02ADB7B8 + 0x8) == 6 && (*(uint32_t*)(0x02ADB7B8 + 0x38) == 524288 || *(uint32_t*)(0x02ADB7B8 + 0x38) == 524296) && (*(uint32_t*)(0x02ADB7B8 + 0xB8) == 1 || *(uint32_t*)(0x02ADB7B8 + 0xB8) == 65536)) //cutscene borders
+                || (*(uint32_t*)(0x02ADB7B8 + 0x0) == 100 && *(uint32_t*)(0x02ADB7B8 + 0x8) == 70 && (*(uint32_t*)(0x02ADB7B8 + 0x38) == 524288 || *(uint32_t*)(0x02ADB7B8 + 0x38) == 524296) && (*(uint32_t*)(0x02ADB7B8 + 0xB8) == 65536)) //cutscene fading
+                || (*(uint32_t*)(0x02ADB7B8 + 0x0) == 68 && *(uint32_t*)(0x02ADB7B8 + 0x4) == 0 && *(uint32_t*)(0x02ADB7B8 + 0x8) == 6) //player shadow
+                )
                 _asm movss   xmm5, f2
             else
                 _asm movss   xmm5, Screen.f3DHorScale

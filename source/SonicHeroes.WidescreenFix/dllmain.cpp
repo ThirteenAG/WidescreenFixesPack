@@ -35,7 +35,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
     Screen.fHudScale = ((1.0f / Screen.fAspectRatio) * (4.0f / 3.0f));
 
-     //446B2A
+    //446B2A
     struct ResHook
     {
         void operator()(injector::reg_pack& regs)
@@ -58,7 +58,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             *(pResY - 0) = Screen.Height;
         }
     }; injector::MakeInline<ResHook2>(pattern.count(1).get(0).get<uint32_t>(0));
-    
+
     pattern = hook::pattern("A3 ? ? ? ? A1 ? ? ? ? 68 ? ? ? ? 50 8B 08"); //6557A8
     struct ResHook2A
     {
@@ -68,7 +68,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             *(pResY - 0) = Screen.Height;
         }
     }; injector::MakeInline<ResHook2A>(pattern.count(1).get(0).get<uint32_t>(0));
-    
+
     pattern = hook::pattern("89 0D ? ? ? ? 8B 6C 24 7C 8B 75 60 80 7E 20 05"); //657047
     struct ResHook3
     {
@@ -78,7 +78,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             *(pResY - 0) = Screen.Height;
         }
     }; injector::MakeInline<ResHook3>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
-    
+
     pattern = hook::pattern("89 15 ? ? ? ? 8B 51 08 89 15 ? ? ? ? 8B 49 0C"); //
     struct ResHook4
     {
@@ -88,7 +88,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             *(pResY - 0) = Screen.Height;
         }
     }; injector::MakeInline<ResHook4>(pattern.count(3).get(2).get<uint32_t>(0), pattern.count(3).get(2).get<uint32_t>(6));
-    
+
     pattern = hook::pattern("89 0D ? ? ? ? 5F 5E 5D B8 01 00 00 00"); //657CAF
     struct ResHook5
     {
@@ -108,15 +108,18 @@ DWORD WINAPI Init(LPVOID bDelay)
             float eax00 = *(float*)(regs.eax + 0);
             float eax04 = *(float*)(regs.eax + 4);
             float eax08 = *(float*)(regs.eax + 8);
-            _asm fld     dword ptr [edx68]
-            _asm fmul    dword ptr [eax00]
-            _asm fld     dword ptr [edx68]
-            _asm fmul    dword ptr [eax04]
-            _asm fld     dword ptr [edx68]
-            _asm fmul    dword ptr [eax08]
+            _asm
+            {
+                fld     dword ptr[edx68]
+                fmul    dword ptr[eax00]
+                fld     dword ptr[edx68]
+                fmul    dword ptr[eax04]
+                fld     dword ptr[edx68]
+                fmul    dword ptr[eax08]
+            }
         }
     }; injector::MakeInline<CutOffAreaHook>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(17));
-    
+
     pattern = hook::pattern("D9 05 ? ? ? ? 89 4E 68 8B 50 04 D8 76 68"); //0x64AC8B
     injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &Screen.fHudScale, true);
     return 0;

@@ -56,11 +56,11 @@ uintptr_t gbh_DrawQuadAddr;
 void __declspec(naked) gbh_DrawQuad()
 {
     _asm mov ecx, [esp + 0x40]
-    _asm mov esp40, ecx
+        _asm mov esp40, ecx
     _asm mov ecx, [esp + 0x44]
-    _asm mov esp44, ecx
+        _asm mov esp44, ecx
     _asm mov ecx, [esp + 0x68]
-    _asm mov esp68, ecx
+        _asm mov esp68, ecx
 
     if (esp68 == dword_45379E || esp68 == dword_453A22 || esp68 == dword_4580C6 || esp68 == dword_4567E1 || esp68 == dword_458426 || esp40 == dword_4582F3)
     {
@@ -203,7 +203,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
         pattern = hook::pattern(pattern_str(0xFF, 0x15, to_bytes(off_5952C4)));
         for (size_t i = 3; i < pattern.size(); ++i) //0x4CBD9A 0x4CC0B1 0x4CC546
-        { 
+        {
             injector::MakeNOP(pattern.get(i).get<uint32_t>(0), 6, true);
             injector::MakeCALL(pattern.get(i).get<uint32_t>(0), gbh_DrawQuad, true);
         }
@@ -295,9 +295,9 @@ DWORD WINAPI Init(LPVOID bDelay)
 
                 curState = GetAsyncKeyState(nQuicksaveKey);
 
-                if (!curState && oldState) 
+                if (!curState && oldState)
                 {
-                    uint32_t missionFlag = **(uint32_t**)(*(uint32_t*)(dword_6644BC) + 0x344);
+                    uint32_t missionFlag = **(uint32_t**)(*(uint32_t*)(dword_6644BC)+0x344);
                     uint32_t isMP = *(uint32_t*)dword_673E2C;
                     if (!missionFlag && !isMP)
                     {

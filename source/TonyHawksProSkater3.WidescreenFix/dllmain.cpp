@@ -46,7 +46,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     Screen.fHUDScaleX = 1.0f / Screen.fWidth * (Screen.fHeight / 480.0f);
     Screen.fHudOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
     Screen.fHudOffsetReal = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
-    
+
     //Resolution
     pattern = hook::pattern("C7 05 ? ? ? ? ? ? ? ? C7 05 ? ? ? ? ? ? ? ? B0 01 5F 5E"); //40B349
     static int32_t* dword_851084 = *pattern.get_first<int32_t*>(2);
@@ -60,7 +60,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             *dword_851084 = Screen.Width;
             *dword_851088 = Screen.Height;
         }
-    }; 
+    };
     injector::MakeInline<SetResHook>(pattern.get_first(0), pattern.get_first(20));
     pattern = hook::pattern("C7 05 ? ? ? ? ? ? ? ? C7 05 ? ? ? ? ? ? ? ? C7 05 ? ? ? ? ? ? ? ? 89 2D"); //40B5B8
     injector::MakeInline<SetResHook>(pattern.get_first(0), pattern.get_first(20));
@@ -90,8 +90,8 @@ DWORD WINAPI Init(LPVOID bDelay)
         {
             void operator()(injector::reg_pack& regs)
             {
-                if (*(float*)(regs.eax + 0x00) == 0.0f && *(float*)(regs.eax + 0x1C) == 0.0f 
-                    && (int32_t)(*(float*)(regs.eax + 0x38)) == Screen.Width43 
+                if (*(float*)(regs.eax + 0x00) == 0.0f && *(float*)(regs.eax + 0x1C) == 0.0f
+                    && (int32_t)(*(float*)(regs.eax + 0x38)) == Screen.Width43
                     && (int32_t)(*(float*)(regs.eax + 0x54)) == Screen.Width43)
                 {
                     //blood overlay, maybe more

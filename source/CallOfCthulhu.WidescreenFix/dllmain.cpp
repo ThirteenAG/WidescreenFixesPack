@@ -54,7 +54,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             }
         }
     }; injector::MakeInline<ResHook>(pattern.count(1).get(0).get<uintptr_t>(0), pattern.count(1).get(0).get<uintptr_t>(9));
-    
+
     pattern = hook::pattern("D9 05 ? ? ? ? D8 F1 D9 5C 24 38 DD D8 DD D8"); //0x4E1486
     struct HudHook
     {
@@ -62,7 +62,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         {
             auto ptr = *(uintptr_t*)(regs.esp + 0x60);
             float x = (float)(*(int32_t*)(regs.esp + 0x24));
-            
+
             if (bStretchFullscreenImages && (*(float*)(ptr + 0x0) == 0.0f && *(float*)(ptr + 0x8) == Screen.fWidth))
             {
                 *(float*)(regs.esp + 0x2C) = 1.0f / (10.0f * x);
@@ -75,10 +75,10 @@ DWORD WINAPI Init(LPVOID bDelay)
             }
 
             float fneg05 = -0.5f;
-            _asm fld ds: fneg05
+            _asm fld ds : fneg05
         }
     }; injector::MakeInline<HudHook>(pattern.count(1).get(0).get<uintptr_t>(0), pattern.count(1).get(0).get<uintptr_t>(6));
-    
+
     pattern = hook::pattern("89 4C 24 08 8B 48 08 89 54 24 0C 8B 50 0C 8D 44 24 04"); //0x4239B1
     struct ClickableAreaHook
     {
@@ -91,15 +91,15 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     pattern = hook::pattern("D8 25 ? ? ? ? D8 F2 D9 5C 24 2C D9"); //0x4E0BC4
     injector::WriteMemory(pattern.count(1).get(0).get<uintptr_t>(2), &Screen.fTextOffset, true);
-    
+
     pattern = hook::pattern("D8 F2 D9 5C 24 2C D9 44 24 44 D8 25"); //0x4E0BCA
     struct TextHook
     {
         void operator()(injector::reg_pack& regs)
         {
             float temp = 0.0f;
-            _asm fdiv    st, st(2)
-            _asm fstp    dword ptr[temp]
+            _asm {fdiv    st, st(2)}
+            _asm {fstp    dword ptr[temp]}
             *(float*)(regs.esp + 0x2C) = temp;
 
             *(float*)(regs.esp + 0x24) *= Screen.fHudScale;
