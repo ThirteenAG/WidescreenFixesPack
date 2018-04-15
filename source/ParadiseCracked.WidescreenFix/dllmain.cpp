@@ -53,7 +53,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     pattern = hook::pattern("83 7D F0 02 75 ? 8B 45 08");
     injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(4), 0xEB, true);
-    
+
 
     pattern = hook::pattern("C7 45 D0 20 03 00 00");
     for (size_t i = 0; i < pattern.size(); ++i)

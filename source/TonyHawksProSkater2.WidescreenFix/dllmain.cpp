@@ -40,7 +40,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
     Screen.fHudOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
     Screen.fHudOffsetReal = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
-    
+
     pattern = hook::pattern("A3 ? ? ? ? E8 ? ? ? ? 8B 15 ? ? ? ? A1 ? ? ? ? 6A 10"); //4F3FEE
     static int32_t* dword_29D6FE8 = *pattern.get_first<int32_t*>(1);
     static int32_t* dword_29D6FE4 = *pattern.get_first<int32_t*>(17);
@@ -68,7 +68,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     static int32_t* dword_55ED00 = *pattern.get_first<int32_t*>(2);
     pattern = hook::pattern("A3 ? ? ? ? ? ? 8D 04 49 33 D2");
     static int32_t* dword_55ED18 = *pattern.get_first<int32_t*>(1);
-    pattern = hook::pattern("C7 05 ? ? ? ? 00 10 00 00 5E A3"); 
+    pattern = hook::pattern("C7 05 ? ? ? ? 00 10 00 00 5E A3");
     static int32_t* dword_5606CC = *pattern.get_first<int32_t*>(2);
     static int32_t* dword_5606D0 = *pattern.get_first<int32_t*>(12);
     struct AspectRatioHook
@@ -80,7 +80,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             *dword_5606D0 = 4096;
             *dword_5606CC = 4096;
         }
-    }; 
+    };
     pattern = hook::pattern("E8 ? ? ? ? 83 C4 08 E8 ? ? ? ? 5E 5B 83 C4 08 C3"); //0x430466
     injector::MakeInline<AspectRatioHook>(pattern.get_first(0));
     pattern = hook::pattern("E8 ? ? ? ? 83 C4 08 53 56"); //0x4645B8
@@ -144,12 +144,12 @@ DWORD WINAPI Init(LPVOID bDelay)
                 *(int16_t*)(regs.ecx + 0x20) += (int16_t)Screen.fHudOffsetReal;
                 *(float*)(regs.ecx + 0x28) = -1.0f;
             }
-        }; 
+        };
 
         for (size_t i = 0; i < pattern.size(); ++i)
         {
             injector::MakeInline<MenuHook2>(pattern.get(i).get<uint32_t>(0), pattern.get(i).get<uint32_t>(7));
-        
+
             rpattern = hook::range_pattern((uintptr_t)pattern.get(i).get<uint32_t>(-0x170), (uintptr_t)pattern.get(i).get<uint32_t>(0), pattern_str(0x0F, 0xAF, '?', to_bytes(dword_29D6FE4))); //imul    e?x, dword_29D6FE4
             for (size_t i = 0; i < rpattern.size(); ++i)
             {

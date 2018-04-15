@@ -153,7 +153,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     injector::MakeNOP(pattern.get_first(0), 5, true);
     injector::WriteMemory(pattern2.count(2).get(1).get<uint32_t>(13), 0, true);
     injector::WriteMemory(*pattern2.count(2).get(1).get<uint32_t>(9), 0, true);
-    
+
     pattern = hook::pattern("05 94 00 00 00 D9 5C 24 08");
     struct AspectHook
     {

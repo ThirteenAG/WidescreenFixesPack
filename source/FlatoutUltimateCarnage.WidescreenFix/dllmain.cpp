@@ -26,9 +26,9 @@ DWORD WINAPI Init(LPVOID bDelay)
         {
             float temp = 0.0f;
             _asm fstp dword ptr[temp]
-            _asm fstp dword ptr[temp]
+                _asm fstp dword ptr[temp]
 
-            auto nWidth = *(uint32_t*)(dword_7242B0 + 0x8);
+                auto nWidth = *(uint32_t*)(dword_7242B0 + 0x8);
             auto nHeight = *(uint32_t*)(dword_7242B0 + 0xC);
             *(float*)(regs.ecx + 0x904) = static_cast<float>(nWidth);
             *(float*)(regs.ecx + 0x908) = static_cast<float>(nHeight);
