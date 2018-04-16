@@ -90,19 +90,8 @@ void __cdecl OverlaysHook(float X1, float Y1, float X2, float Y2, float a5, floa
         return hbOverlays.fun(X1, Y1, X2, Y2, a5, a6, a7, a8, a9, a10);
 }
 
-DWORD WINAPI Init(LPVOID bDelay)
+void Init()
 {
-    auto pattern = hook::pattern("BF 94 00 00 00 8B C7");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
-
     CIniReader iniReader("");
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
@@ -126,7 +115,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     //Resolution
     static auto nWidthPtr = *hook::pattern("8B 0D ? ? ? ? 6A 00 50 51").count(1).get(0).get<uint32_t*>(2);
-    pattern = hook::pattern(pattern_str(0xC7, 0x05, to_bytes(nWidthPtr))); //0x4141E3
+    auto pattern = hook::pattern(pattern_str(0xC7, 0x05, to_bytes(nWidthPtr))); //0x4141E3
 
     for (size_t i = 0; i < pattern.size(); i++)
     {
@@ -316,15 +305,21 @@ DWORD WINAPI Init(LPVOID bDelay)
         pattern = hook::pattern("83 C8 FF 83 C4 10 C3"); //00413E53
         injector::MakeNOP(pattern.get_first(-2), 2, true);
     }
-
-    return 0;
 }
 
-BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
+CEXP void InitializeASI()
+{
+    std::call_once(CallbackHandler::flag, []()
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("BF 94 00 00 00 8B C7"));
+    });
+}
+
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        Init(NULL);
+
     }
     return TRUE;
 }

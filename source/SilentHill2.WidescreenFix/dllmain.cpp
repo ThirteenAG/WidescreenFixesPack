@@ -29,19 +29,8 @@ uint32_t* __cdecl sub_457B40Hook(uintptr_t* a1, int32_t a2)
 }
 */
 
-DWORD WINAPI Init(LPVOID bDelay)
+void Init()
 {
-    auto pattern = hook::pattern("6A 70 68 ? ? ? ? E8 ? ? ? ? 33 DB 53 8B 3D ? ? ? ? FF D7");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
-
     CIniReader iniReader("");
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
@@ -86,7 +75,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     {
         //2D
         static auto dword_A37080 = *hook::pattern("DB 05 ? ? ? ? 8B 0D ? ? ? ? 85 C9 50").count(1).get(0).get<uint32_t*>(2);
-        pattern = hook::pattern(pattern_str(0xDB, 0x05, to_bytes(dword_A37080)));
+        auto pattern = hook::pattern(pattern_str(0xDB, 0x05, to_bytes(dword_A37080)));
         for (size_t i = 0; i < pattern.size(); ++i) //http://pastebin.com/ZpkGX9My
         {
             if (i == 318 || i == 315 || i == 314 || i == 313 || i == 310 || i == 312 || i == 311 || i == 320 || i == 178 || i == 177 || i == 176 || i == 175 || i == 174 || i == 327 || i == 2 || i == 309
@@ -323,7 +312,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     //solves camera pan inconsistency for different resolutions
     //solves camera tilt inconsistency for different resolutions
-    pattern = hook::pattern("51 E8 ? ? ? ? 89 44 24 00 DB 44 24 00 D9 1D"); //47CD30
+    auto pattern = hook::pattern("51 E8 ? ? ? ? 89 44 24 00 DB 44 24 00 D9 1D"); //47CD30
     struct Ret640
     {
         void operator()(injector::reg_pack& regs)
@@ -654,16 +643,21 @@ DWORD WINAPI Init(LPVOID bDelay)
     // Fixes lying figure cutscene bug; original value 00000005; issue #349
     pattern = hook::pattern("C7 05 ? ? ? ? ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 83 C4 04 83 F8 20");
     injector::WriteMemory(pattern.get_first(6), 0x0000002A, true);
-
-    return 0;
 }
 
+CEXP void InitializeASI()
+{
+    std::call_once(CallbackHandler::flag, []()
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("6A 70 68 ? ? ? ? E8 ? ? ? ? 33 DB 53 8B 3D ? ? ? ? FF D7"));
+    });
+}
 
-BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        Init(NULL);
+
     }
     return TRUE;
 }

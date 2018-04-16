@@ -16,19 +16,8 @@ struct Screen
     float fTextScale;
 } Screen;
 
-DWORD WINAPI Init(LPVOID bDelay)
+void Init()
 {
-    auto pattern = hook::pattern("8B 44 24 04 85 C0 75 ? 8B 44 24");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
-
     CIniReader iniReader("");
     Screen.nWidth = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.nHeight = iniReader.ReadInteger("MAIN", "ResY", 0);
@@ -47,6 +36,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     Screen.fTextScale = (1.0f / 640.0f) / Screen.fHudScale;
 
     //Resolution
+    auto pattern = hook::pattern("8B 44 24 04 85 C0 75 ? 8B 44 24");
     struct ResHook
     {
         void operator()(injector::reg_pack& regs)
@@ -76,15 +66,21 @@ DWORD WINAPI Init(LPVOID bDelay)
     //Text Scale
     pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 68");
     injector::WriteMemory<float>(*pattern.get_first<void*>(2), Screen.fTextScale, true); //0x5E0134
-
-    return 0;
 }
 
-BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
+CEXP void InitializeASI()
+{
+    std::call_once(CallbackHandler::flag, []()
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("8B 44 24 04 85 C0 75 ? 8B 44 24"));
+    });
+}
+
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        Init(NULL);
+
     }
     return TRUE;
 }

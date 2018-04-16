@@ -16,19 +16,8 @@ struct Screen
     float fHudOffsetReal;
 } Screen;
 
-DWORD WINAPI Init(LPVOID bDelay)
+void Init()
 {
-    auto pattern = hook::pattern("8B 4C B4 20 89 15");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
-
     CIniReader iniReader("");
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
@@ -48,6 +37,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     Screen.fHudOffsetReal = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
 
     //Resolution
+    auto pattern = hook::pattern("8B 4C B4 20 89 15");
     static int32_t* dword_5A0280 = *pattern.get_first<int32_t*>(6);
     static int32_t* dword_5A0284 = *pattern.get_first<int32_t*>(12);
     struct SetResHook
@@ -128,15 +118,21 @@ DWORD WINAPI Init(LPVOID bDelay)
             }
         }; injector::MakeInline<RandomHook>(pattern.get_first(0));
     }
-
-    return 0;
 }
 
-BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
+CEXP void InitializeASI()
+{
+    std::call_once(CallbackHandler::flag, []()
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("8B 4C B4 20 89 15"));
+    });
+}
+
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        Init(NULL);
+
     }
     return TRUE;
 }

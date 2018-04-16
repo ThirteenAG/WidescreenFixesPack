@@ -25,42 +25,31 @@ float fElementWidth1, fElementWidth2;
 uintptr_t GUIHookJmp, _EAX;
 void __declspec(naked) GUIHook()
 {
-    _asm mov _EAX, eax
-    _asm mov eax, dword ptr[esp + 0x13C]
-        _asm mov fElementWidth1, eax
-    _asm mov eax, dword ptr[esp + 0x230]
-        _asm mov fElementWidth2, eax
+    _asm {mov _EAX, eax}
+    _asm {mov eax, dword ptr[esp + 0x13C]}
+    _asm {mov fElementWidth1, eax}
+    _asm {mov eax, dword ptr[esp + 0x230]}
+    _asm {mov fElementWidth2, eax}
 
     if (fElementWidth1 == 640.0f || fElementWidth2 == 640.0f || fElementWidth1 == 641.0f || fElementWidth2 == 641.0f)
     {
-        _asm mov eax, f0031
-        _asm mov  dword ptr[esp + 0x20], eax
-        _asm fadd f1
+        _asm {mov eax, f0031}
+        _asm {mov  dword ptr[esp + 0x20], eax}
+        _asm {fadd f1}
     }
     else
     {
-        _asm mov eax, Screen.fScaling
-        _asm mov dword ptr[esp + 0x20], eax
-        _asm fadd dword ptr Screen.fTextAlignment
+        _asm {mov eax, Screen.fScaling}
+        _asm {mov dword ptr[esp + 0x20], eax}
+        _asm {fadd dword ptr Screen.fTextAlignment}
     }
-    _asm mov eax, _EAX
-    _asm test al, al
-    _asm jmp GUIHookJmp
+    _asm {mov eax, _EAX}
+    _asm {test al, al}
+    _asm {jmp GUIHookJmp}
 }
 
-DWORD WINAPI Init(LPVOID bDelay)
+void Init()
 {
-    auto pattern = hook::pattern("BF 94 00 00 00 8B C7");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
-
     CIniReader iniReader("");
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
@@ -72,7 +61,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     Screen.fHeight = static_cast<float>(Screen.Height);
     Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
 
-    pattern = hook::pattern("8D 94 24 A0 00 00 00 8D 49 00"); //0x00561986
+    auto pattern = hook::pattern("8D 94 24 A0 00 00 00 8D 49 00"); //0x00561986
     struct GLCrashFix
     {
         void operator()(injector::reg_pack& regs)
@@ -129,15 +118,21 @@ DWORD WINAPI Init(LPVOID bDelay)
     injector::WriteMemory(pattern.count(2).get(1).get<uint32_t>(2), &Screen.fFieldOfView, true);
     pattern = hook::pattern("D9 05 ? ? ? ? D8 F1 D9 44 24 4C D8 C9"); //0x4669CD
     injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &Screen.fFieldOfView, true);
-    return 0;
 }
 
+CEXP void InitializeASI()
+{
+    std::call_once(CallbackHandler::flag, []()
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("BF 94 00 00 00 8B C7"));
+    });
+}
 
-BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        Init(NULL);
+
     }
     return TRUE;
 }

@@ -13,19 +13,8 @@ struct Screen
     float fHudOffsetReal;
 } Screen;
 
-DWORD WINAPI Init(LPVOID bDelay)
+void Init()
 {
-    auto pattern = hook::pattern("53 56 57 89 65 E8 33 F6 39");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
-
     CIniReader iniReader("");
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
@@ -41,7 +30,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     Screen.fHudOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
     Screen.fHudOffsetReal = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
 
-    pattern = hook::pattern("A3 ? ? ? ? E8 ? ? ? ? 8B 15 ? ? ? ? A1 ? ? ? ? 6A 10"); //4F3FEE
+    auto pattern = hook::pattern("A3 ? ? ? ? E8 ? ? ? ? 8B 15 ? ? ? ? A1 ? ? ? ? 6A 10"); //4F3FEE
     static int32_t* dword_29D6FE8 = *pattern.get_first<int32_t*>(1);
     static int32_t* dword_29D6FE4 = *pattern.get_first<int32_t*>(17);
 
@@ -157,15 +146,21 @@ DWORD WINAPI Init(LPVOID bDelay)
             }
         }
     }
-
-    return 0;
 }
 
-BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
+CEXP void InitializeASI()
+{
+    std::call_once(CallbackHandler::flag, []()
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("53 56 57 89 65 E8 33 F6 39"));
+    });
+}
+
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        Init(NULL);
+
     }
     return TRUE;
 }

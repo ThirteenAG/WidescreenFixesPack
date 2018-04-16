@@ -104,19 +104,8 @@ void __cdecl sub_538E80(void* a1, void* a2, void* a3, void* a4, float a5, float 
     return hb_538E80.fun(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12);
 }
 
-DWORD WINAPI Init(LPVOID bDelay)
+void Init()
 {
-    auto pattern = hook::pattern("33 84 24 08 04 00 00");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
-
     CIniReader iniReader("");
     Screen.nWidth = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.nHeight = iniReader.ReadInteger("MAIN", "ResY", 0);
@@ -149,7 +138,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     }; injector::MakeInline<ResHook>(pattern1.count(3).get(2).get<void>(0), pattern2.count(2).get(1).get<void>(0)); //0x40DD33, 0x40DE21
 
     //forcing 4:3 aspect, maybe better to hook sub_4BC320
-    pattern = hook::pattern("A3 ? ? ? ? A1 ? ? ? ? 85 C0 0F 84 ? ? ? ? 6A 01");
+    auto pattern = hook::pattern("A3 ? ? ? ? A1 ? ? ? ? 85 C0 0F 84 ? ? ? ? 6A 01");
     injector::MakeNOP(pattern.get_first(0), 5, true);
     injector::WriteMemory(pattern2.count(2).get(1).get<uint32_t>(13), 0, true);
     injector::WriteMemory(*pattern2.count(2).get(1).get<uint32_t>(9), 0, true);
@@ -169,15 +158,21 @@ DWORD WINAPI Init(LPVOID bDelay)
         pattern = hook::pattern("E8 ? ? ? ? 83 C4 30 5F 5E 5B 8B E5 5D C3"); //0x57A783
         hb_538E80.fun = injector::MakeCALL(pattern.get_first(0), sub_538E80, true).get();
     }
-
-    return 0;
 }
 
-BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
+CEXP void InitializeASI()
+{
+    std::call_once(CallbackHandler::flag, []()
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("33 84 24 08 04 00 00"));
+    });
+}
+
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        Init(NULL);
+
     }
     return TRUE;
 }

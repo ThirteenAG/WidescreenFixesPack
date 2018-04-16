@@ -1,18 +1,8 @@
 #include "stdafx.h"
 
-DWORD WINAPI Init(LPVOID bDelay)
+void Init()
 {
     auto pattern = hook::pattern("B9 ? ? ? ? E8 ? ? ? ? 8B 7C 24 10 6A 65 8B F0 57 89 74 24 28");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
-
     static auto dword_7242B0 = *pattern.get_first<uint32_t>(1);
     auto nWidth = *(uint32_t*)(dword_7242B0 + 0x8);
     auto nHeight = *(uint32_t*)(dword_7242B0 + 0xC);
@@ -47,15 +37,21 @@ DWORD WINAPI Init(LPVOID bDelay)
     //        regs.edx = *(uint32_t*)(regs.ecx + 0x2C);
     //    }
     //}; injector::MakeInline<Hook>(0x46FF14, 0x46FF14+6);
-    return 0;
 }
 
+CEXP void InitializeASI()
+{
+    std::call_once(CallbackHandler::flag, []()
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("B9 ? ? ? ? E8 ? ? ? ? 8B 7C 24 10 6A 65 8B F0 57 89 74 24 28"));
+    });
+}
 
-BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        Init(NULL);
+
     }
     return TRUE;
 }

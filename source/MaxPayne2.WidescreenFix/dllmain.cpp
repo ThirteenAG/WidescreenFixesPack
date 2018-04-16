@@ -70,10 +70,8 @@ HRESULT WINAPI EndScene(LPDIRECT3DDEVICE8 pDevice)
     return RealEndScene(pDevice);
 }
 
-DWORD WINAPI InitWF(LPVOID)
+void InitWF()
 {
-    while (!Screen.nWidth || !Screen.nHeight) { Sleep(0); };
-
     Screen.fWidth = static_cast<float>(Screen.nWidth);
     Screen.fHeight = static_cast<float>(Screen.nHeight);
     Screen.fAspectRatio = Screen.fWidth / Screen.fHeight;
@@ -272,23 +270,11 @@ DWORD WINAPI InitWF(LPVOID)
             }
         }; injector::MakeInline<P_TextPosHook>(pattern.get_first(0), pattern.get_first(6)); //0x1000AACC
     }
-
-    return 0;
 }
 
-DWORD WINAPI InitE2MFC(LPVOID bDelay)
+void InitE2MFC()
 {
-    auto pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "E8 ? ? ? ? 85 C0 89 44 24 38 DB");
-
-    if (pattern.count_hint(4).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&InitE2MFC, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear(GetModuleHandle(L"e2mfc")).count_hint(4).empty()) { Sleep(0); };
-
+    static std::once_flag wf;
     auto PDriverGetWidth = [](uintptr_t P_Driver__m_initializedDriver, uintptr_t edx) -> int32_t
     {
         if (*(uintptr_t*)(P_Driver__m_initializedDriver + 48))
@@ -306,12 +292,17 @@ DWORD WINAPI InitE2MFC(LPVOID bDelay)
         else
             Screen.nHeight = *(int32_t *)(P_Driver__m_initializedDriver + 8);
 
+        if (Screen.nWidth && Screen.nHeight)
+        {
+            std::call_once(wf, []() { InitWF(); });
+        }
         return Screen.nHeight;
     };
 
     //get resolution
-    injector::MakeCALL(pattern.get(0).get<uintptr_t>(0), static_cast<int32_t(__fastcall *)(uintptr_t, uintptr_t)>(PDriverGetWidth), true);  //e2mfc + 0x15582
-    injector::MakeCALL(pattern.get(1).get<uintptr_t>(0), static_cast<int32_t(__fastcall *)(uintptr_t, uintptr_t)>(PDriverGetHeight), true); //e2mfc + 0x155AB
+    auto pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "E8 ? ? ? ? 85 C0 89 44 24 38 DB");
+    injector::MakeCALL(pattern.count_hint(4).get(0).get<uintptr_t>(0), static_cast<int32_t(__fastcall*)(uintptr_t, uintptr_t)>(PDriverGetWidth), true);  //e2mfc + 0x15582
+    injector::MakeCALL(pattern.count_hint(4).get(1).get<uintptr_t>(0), static_cast<int32_t(__fastcall*)(uintptr_t, uintptr_t)>(PDriverGetHeight), true); //e2mfc + 0x155AB
 
     pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "C6 45 FC 02 89 4B 44");
     struct P_SceneRenderHook1
@@ -347,32 +338,23 @@ DWORD WINAPI InitE2MFC(LPVOID bDelay)
     pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? D9 44 24 20 53"); //0x1000F011
     injector::WriteMemory(pattern.get_first(2), &Screen.fNovelsScale, true);
 
-    CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&InitWF, NULL, 0, NULL);
-    return 0;
+    //CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&InitWF, NULL, 0, NULL);
 }
 
-DWORD WINAPI Init(LPVOID bDelay)
+void Init()
 {
-    auto pattern = hook::pattern("0F 84 ? ? ? ? E8 ? ? ? ? 8B 40 04 68");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
-
     CIniReader iniReader("");
     static bool bUseGameFolderForSavegames = iniReader.ReadInteger("MISC", "UseGameFolderForSavegames", 0) != 0;
     if (bUseGameFolderForSavegames)
+    {
+        auto pattern = hook::pattern("0F 84 ? ? ? ? E8 ? ? ? ? 8B 40 04 68");
         injector::WriteMemory<uint8_t>(pattern.get_first(1), 0x85, true); //0x41D14C
+    }
 
     bool bAltTab = iniReader.ReadInteger("MISC", "AllowAltTabbingWithoutPausing", 0) != 0;
     if (bAltTab)
     {
-        pattern = hook::pattern("E8 ? ? ? ? 8B CF C6 87 82 00 00 00 00");
+        auto pattern = hook::pattern("E8 ? ? ? ? 8B CF C6 87 82 00 00 00 00");
         injector::MakeNOP(pattern.get_first(0), 5, true); //0x404935
     }
 
@@ -386,7 +368,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             else
                 return 1.0f;
         };
-        pattern = hook::pattern("E8 ? ? ? ? D8 2D ? ? ? ? D8");
+        auto pattern = hook::pattern("E8 ? ? ? ? D8 2D ? ? ? ? D8");
         injector::MakeCALL(pattern.get_first(), static_cast<float(__fastcall *)(uintptr_t, uintptr_t)>(f), true); //0x488C68
     }
 
@@ -396,7 +378,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         static auto unk_556860 = *hook::get_pattern<void*>("BA ? ? ? ? 2B D1 8A 01 88 04 0A", 1);
         if (*(uint8_t*)unk_556860 == 0)
         {
-            pattern = hook::pattern("E8 ? ? ? ? 8B 48 04 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 8D 45 18 50");
+            auto pattern = hook::pattern("E8 ? ? ? ? 8B 48 04 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 8D 45 18 50");
             static auto AfxGetModuleState = injector::GetBranchDestination(pattern.get_first(0), true); //0x4D2DB2
             static auto GetProfileStringA = injector::GetBranchDestination(pattern.get_first(27), true); //0x4D2ECC
             static auto aLastSavedGameF = *pattern.get_first<char*>(14); // 4E8F44
@@ -495,7 +477,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         }
     }
 
-    pattern = hook::pattern("8B 4C 24 18 51 8B 4F 04 FF 15");
+    auto pattern = hook::pattern("8B 4C 24 18 51 8B 4F 04 FF 15");
     struct X_CharacterSetSniperZoomOnHook
     {
         void operator()(injector::reg_pack& regs)
@@ -547,24 +529,12 @@ DWORD WINAPI Init(LPVOID bDelay)
     static auto fmt = iniReader.ReadString("MISC", "SaveStringFormat", "%a, %b %d %Y, %H:%M");
     pattern = hook::pattern("68 ? ? ? ? 8D 54 24 18 68 ? ? ? ? 52"); //41CA8D
     injector::WriteMemory(pattern.get_first(1), &fmt, true);
-
-    return 0;
 }
 
-DWORD WINAPI InitX_GameObjectsMFC(LPVOID bDelay)
+void InitX_GameObjectsMFC()
 {
-    auto pattern = hook::module_pattern(GetModuleHandle(L"X_GameObjectsMFC"), "D8 3D ? ? ? ? D9 5C 24 0C D9");
-
-    if (pattern.count_hint(4).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&InitX_GameObjectsMFC, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear(GetModuleHandle(L"X_GameObjectsMFC")).count_hint(4).empty()) { Sleep(0); };
-
     //mirrors fix
+    auto pattern = hook::module_pattern(GetModuleHandle(L"X_GameObjectsMFC"), "D8 3D ? ? ? ? D9 5C 24 0C D9");
     injector::WriteMemory(pattern.get_first(2), &Screen.fMirrorFactor, true); //0x10101F39
 
     //doors graphics fix
@@ -624,23 +594,10 @@ DWORD WINAPI InitX_GameObjectsMFC(LPVOID bDelay)
             }
         }; injector::MakeInline<CameraOverlayHook>(pattern.get_first(0)); // 100E19B7
     }
-
-    return 0;
 }
 
-DWORD WINAPI InitX_ModesMFC(LPVOID bDelay)
+void InitX_ModesMFC()
 {
-    auto pattern = hook::module_pattern(GetModuleHandle(L"X_ModesMFC"), "8B 5C 24 18 8B 01 53 FF 50 38");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&InitX_ModesMFC, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear(GetModuleHandle(L"X_ModesMFC")).count_hint(1).empty()) { Sleep(0); };
-
     static CIniReader iniReader("");
     static int32_t nGraphicNovelModeKey = iniReader.ReadInteger("MAIN", "GraphicNovelModeKey", VK_F2);
 
@@ -650,6 +607,7 @@ DWORD WINAPI InitX_ModesMFC(LPVOID bDelay)
     static uint16_t curState = 0;
     static uint32_t callAddr;
 
+    auto pattern = hook::module_pattern(GetModuleHandle(L"X_ModesMFC"), "8B 5C 24 18 8B 01 53 FF 50 38");
     struct GraphicNovelXRefHook
     {
         void operator()(injector::reg_pack& regs)
@@ -725,23 +683,11 @@ DWORD WINAPI InitX_ModesMFC(LPVOID bDelay)
             }
         }
     }; injector::MakeInline<GraphicNovelPageUpdateHook>(GraphicNovelPageUpdate.get_first(0), GraphicNovelPageUpdate.get_first(6));
-
-    return 0;
 }
 
-DWORD WINAPI InitX_HelpersMFC(LPVOID bDelay)
+void InitX_HelpersMFC()
 {
     auto pattern = hook::module_pattern(GetModuleHandle(L"X_HelpersMFC"), "8B 41 08 8B 49 0C 50");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&InitX_HelpersMFC, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear(GetModuleHandle(L"X_HelpersMFC")).count_hint(1).empty()) { Sleep(0); };
-
     struct X_QuadRendererRenderHook
     {
         void operator()(injector::reg_pack& regs)
@@ -761,29 +707,16 @@ DWORD WINAPI InitX_HelpersMFC(LPVOID bDelay)
             Screen.bDrawBorders = true;
         }
     }; injector::MakeInline<X_ProgressBarUpdateProgressBarHook>(pattern.get_first(0)); //10002FF0
-
-    return 0;
 }
 
-DWORD WINAPI InitE2_D3D8_DRIVER_MFC(LPVOID bDelay)
+void InitE2_D3D8_DRIVER_MFC()
 {
-    auto pattern = hook::module_pattern(GetModuleHandle(L"e2_d3d8_driver_mfc"), "8B 45 0C 53 56 33 F6 2B C6 57");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&InitE2_D3D8_DRIVER_MFC, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear(GetModuleHandle(L"e2_d3d8_driver_mfc")).count_hint(1).empty()) { Sleep(0); };
-
     //D3D Hook for borders
     CIniReader iniReader("");
     bool bD3DHookBorders = iniReader.ReadInteger("MAIN", "D3DHookBorders", 1) != 0;
     if (bD3DHookBorders)
     {
-        pattern = hook::module_pattern(GetModuleHandle(L"e2_d3d8_driver_mfc"), "8B 86 ? ? ? ? 8B 08 50 FF 91");
+        auto pattern = hook::module_pattern(GetModuleHandle(L"e2_d3d8_driver_mfc"), "8B 86 ? ? ? ? 8B 08 50 FF 91");
         struct EndSceneHook
         {
             void operator()(injector::reg_pack& regs)
@@ -799,24 +732,12 @@ DWORD WINAPI InitE2_D3D8_DRIVER_MFC(LPVOID bDelay)
             }
         }; injector::MakeInline<EndSceneHook>(pattern.get_first(0), pattern.get_first(6)); //0x1002856D 
     }
-
-    return 0;
 }
 
-DWORD WINAPI InitX_BasicModesMFC(LPVOID bDelay)
+void InitX_BasicModesMFC()
 {
-    auto pattern = hook::module_pattern(GetModuleHandle(L"X_BasicModesMFC"), "A1 ? ? ? ? 8B 0D ? ? ? ? 89 8E ? ? ? ? 89 86");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&InitX_BasicModesMFC, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear(GetModuleHandle(L"X_BasicModesMFC")).count_hint(1).empty()) { Sleep(0); };
-
     //screenshots aspect ratio
+    auto pattern = hook::module_pattern(GetModuleHandle(L"X_BasicModesMFC"), "A1 ? ? ? ? 8B 0D ? ? ? ? 89 8E ? ? ? ? 89 86");
     static auto dword_100451A8 = *pattern.get_first<float*>(1);
     struct SaveScrHook
     {
@@ -825,21 +746,27 @@ DWORD WINAPI InitX_BasicModesMFC(LPVOID bDelay)
             *(float*)&regs.eax = *dword_100451A8 * ((4.0f / 3.0f) / Screen.fAspectRatio);
         }
     }; injector::MakeInline<SaveScrHook>(pattern.get_first(0)); //10007684
-
-    return 0;
 }
 
-BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
+CEXP void InitializeASI()
+{
+    std::call_once(CallbackHandler::flag, []()
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("0F 84 ? ? ? ? E8 ? ? ? ? 8B 40 04 68").count_hint(1).empty(), 0x1100);
+        CallbackHandler::RegisterCallback(L"E2MFC.dll", InitE2MFC);
+        CallbackHandler::RegisterCallback(L"X_GameObjectsMFC.dll", InitX_GameObjectsMFC);
+        CallbackHandler::RegisterCallback(L"X_ModesMFC.dll", InitX_ModesMFC);
+        CallbackHandler::RegisterCallback(L"X_HelpersMFC.dll", InitX_HelpersMFC);
+        CallbackHandler::RegisterCallback(L"E2_D3D8_DRIVER_MFC.dll", InitE2_D3D8_DRIVER_MFC);
+        CallbackHandler::RegisterCallback(L"X_BasicModesMFC.dll", InitX_BasicModesMFC);
+    });
+}
+
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        Init(NULL);
-        InitE2MFC(NULL);
-        InitX_GameObjectsMFC(NULL);
-        InitX_ModesMFC(NULL);
-        InitX_HelpersMFC(NULL);
-        InitE2_D3D8_DRIVER_MFC(NULL);
-        InitX_BasicModesMFC(NULL);
+
     }
     return TRUE;
 }

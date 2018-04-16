@@ -238,7 +238,22 @@ private:
         auto params = *static_cast<CallbackHandler::ThreadParams*>(ptr);
         delete ptr;
 
-        while (params.pattern.clear().empty()) { Sleep(0); };
+        HANDLE hTimer = NULL;
+        LARGE_INTEGER liDueTime;
+        liDueTime.QuadPart = -100000000LL;
+        hTimer = CreateWaitableTimer(NULL, TRUE, NULL);
+        SetWaitableTimer(hTimer, &liDueTime, 0, NULL, NULL, 0);
+
+        while (params.pattern.clear().empty())
+        {
+            Sleep(0);
+
+            if (WaitForSingleObject(hTimer, INFINITE) == WAIT_OBJECT_0)
+            {
+                CloseHandle(hTimer);
+                return 0;
+            }
+        };
 
         params.fn();
 

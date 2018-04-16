@@ -70,19 +70,8 @@ void __cdecl sub_88C8E0(ptrdiff_t a1, ptrdiff_t a2, ptrdiff_t a3, int32_t a4)
     } while (a4 > 0);
 }
 
-DWORD WINAPI Init(LPVOID bDelay)
+void Init()
 {
-    auto pattern = hook::pattern("8B 74 24 10 0F BE 06 85 C0 57");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
-
     CIniReader iniReader("");
     auto bPreferWidescreenResolutions = iniReader.ReadInteger("MAIN", "PreferWidescreenResolutions", 1) != 0;
 
@@ -99,6 +88,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         }), list.end());
     }
 
+    auto pattern = hook::pattern("8B 74 24 10 0F BE 06 85 C0 57");
     struct ResListHook
     {
         void operator()(injector::reg_pack& regs)
@@ -358,15 +348,21 @@ DWORD WINAPI Init(LPVOID bDelay)
     pattern = hook::pattern("C6 86 DE 01 00 00 01");
     injector::MakeNOP(pattern.count(6).get(1).get<void>(0), 7, true);
     injector::MakeNOP(pattern.count(6).get(2).get<void>(0), 7, true);
-
-    return 0;
 }
 
-BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
+CEXP void InitializeASI()
+{
+    std::call_once(CallbackHandler::flag, []()
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("8B 74 24 10 0F BE 06 85 C0 57"));
+    });
+}
+
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        Init(NULL);
+
     }
     return TRUE;
 }

@@ -55,19 +55,8 @@ void __cdecl sub_76B6D0(float a1, float a2, float a3, float a4)
     _sub_76B4D0(0.0f, 0.0f, 0.0f, 0.0f); //_sub_76B4D0(v9, v14, v15, v13);
 }
 
-DWORD WINAPI Init(LPVOID bDelay)
+void Init()
 {
-    auto pattern = hook::pattern("81 EC EC 03 00 00 68");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
-
     CIniReader iniReader("");
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
@@ -79,7 +68,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
 
     //Default resolution
-    pattern = hook::pattern("68 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 8B 35"); //0x5AC3C8
+    auto pattern = hook::pattern("68 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 8B 35"); //0x5AC3C8
     static std::string defRes = std::to_string(Screen.Width) + "x" + std::to_string(Screen.Height);
     injector::WriteMemory(pattern.get_first(1), &(*defRes.begin()), true);
 
@@ -176,16 +165,21 @@ DWORD WINAPI Init(LPVOID bDelay)
         pattern = hook::pattern("D8 3D ? ? ? ? D9 5C 24 0C"); //0x76E7CD
         injector::WriteMemory(pattern.get_first(2), &fFPSLimit, true);
     }
-
-    return 0;
 }
 
+CEXP void InitializeASI()
+{
+    std::call_once(CallbackHandler::flag, []()
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("81 EC EC 03 00 00 68"));
+    });
+}
 
-BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        Init(NULL);
+
     }
     return TRUE;
 }

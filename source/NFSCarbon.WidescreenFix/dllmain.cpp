@@ -12,19 +12,8 @@ struct Screen
     float fHudPosX;
 } Screen;
 
-DWORD WINAPI Init(LPVOID bDelay)
+void Init()
 {
-    auto pattern = hook::pattern("C7 00 80 02 00 00 C7 01 E0 01 00 00 C2 08 00");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
-
     CIniReader iniReader("");
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
@@ -106,7 +95,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     static uint32_t n320 = 320;
     uint32_t* dword_71A9B1 = hook::pattern("8B 0D ? ? ? ? B8 56 55 55 55 89 15 ? ? ? ? F7 E9").count(2).get(1).get<uint32_t>(2);
     injector::WriteMemory(dword_71A9B1, &n768, true);
-    pattern = hook::pattern("8B ? ? ? ? ? ? 50 FF ? ? 85 C0");
+    auto pattern = hook::pattern("8B ? ? ? ? ? ? 50 FF ? ? 85 C0");
     uint32_t* dword_71AA22 = pattern.count(4).get(2).get<uint32_t>(2);
     uint32_t* dword_71AA72 = pattern.count(4).get(3).get<uint32_t>(2);
     injector::WriteMemory(dword_71AA22, &n320, true);
@@ -174,10 +163,10 @@ DWORD WINAPI Init(LPVOID bDelay)
         {
             float esp08 = *(float*)(regs.esp + 0x08);
             float esp10 = *(float*)(regs.esp + 0x10);
-            _asm fld  dword ptr[esp08]
-                _asm fmul dword ptr[fRainScaleX]
-                _asm fmul dword ptr[fRainDropletsScale]
-                _asm fadd dword ptr[esp10]
+            _asm {fld  dword ptr[esp08]}
+            _asm {fmul dword ptr[fRainScaleX]}
+            _asm {fmul dword ptr[fRainDropletsScale]}
+            _asm {fadd dword ptr[esp10]}
         }
     }; injector::MakeInline<RainDropletsHook>(pattern.get_first(0), pattern.get_first(8)); //0x722E78
 
@@ -186,9 +175,9 @@ DWORD WINAPI Init(LPVOID bDelay)
         void operator()(injector::reg_pack& regs)
         {
             float esp0C = *(float*)(regs.esp + 0x0C);
-            _asm fmul dword ptr[fRainDropletsScale]
-                _asm fadd dword ptr[esp0C]
-                * (uintptr_t*)(regs.esp + 0x34) = regs.eax;
+            _asm {fmul dword ptr[fRainDropletsScale]}
+            _asm {fadd dword ptr[esp0C]}
+            *(uintptr_t*)(regs.esp + 0x34) = regs.eax;
         }
     }; injector::MakeInline<RainDropletsYScaleHook>(pattern.get_first(36), pattern.get_first(36 + 8)); //0x722E9C
 
@@ -697,15 +686,21 @@ DWORD WINAPI Init(LPVOID bDelay)
         pattern = hook::pattern("C7 05 ? ? ? ? 00 00 00 00 8B 44 24 04 50 E8"); //0x71D117 
         injector::MakeNOP(pattern.get(0).get<uintptr_t>(0), 10, true); //stops settings reset at startup
     }
-
-    return 0;
 }
 
-BOOL APIENTRY DllMain(HMODULE /*hModule*/, uint32_t reason, LPVOID /*lpReserved*/)
+CEXP void InitializeASI()
+{
+    std::call_once(CallbackHandler::flag, []()
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("C7 00 80 02 00 00 C7 01 E0 01 00 00 C2 08 00"));
+    });
+}
+
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        Init(NULL);
+
     }
     return TRUE;
 }

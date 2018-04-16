@@ -1,7 +1,5 @@
 #include "stdafx.h"
 
-bool bConfigTool;
-
 struct Screen
 {
     int Width;
@@ -30,27 +28,11 @@ void PatchInstallPath()
     if (pattern.size() > 0)
     {
         injector::MakeCALL(pattern.get(0).get<uintptr_t>(0), GetInstallPath, true);
-        bConfigTool = true;
     }
 }
 
-DWORD WINAPI Init(LPVOID bDelay)
+void Init()
 {
-    auto pattern = hook::pattern("89 65 E8 8B F4 89 3E 56");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
-
-    PatchInstallPath();
-    if (bConfigTool)
-        return 0;
-
     CIniReader iniReader("");
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
@@ -65,7 +47,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     Screen.Width43 = static_cast<uint32_t>(Screen.fHeight * (4.0f / 3.0f));
     Screen.fWidth43 = static_cast<float>(Screen.Width43);
 
-    pattern = hook::pattern("8B 4C 24 1C 8B 44 24 18 8B 54 24 20 68"); //402564
+    auto pattern = hook::pattern("8B 4C 24 1C 8B 44 24 18 8B 54 24 20 68"); //402564
     struct SetResHook
     {
         void operator()(injector::reg_pack& regs)
@@ -84,9 +66,9 @@ DWORD WINAPI Init(LPVOID bDelay)
         void operator()(injector::reg_pack& regs)
         {
             float temp = 0;
-            _asm fstp    dword ptr[temp]
-                //if (*(uint32_t*)&temp != 0x3FEA4D6C && *(uint32_t*)(regs.esp + 0x6C) != 0)
-                * *dword_B8B77C = (temp * ((4.0f / 3.0f) / (Screen.fAspectRatio)));
+            _asm {fstp    dword ptr[temp]}
+            //if (*(uint32_t*)&temp != 0x3FEA4D6C && *(uint32_t*)(regs.esp + 0x6C) != 0)
+            **dword_B8B77C = (temp * ((4.0f / 3.0f) / (Screen.fAspectRatio)));
             //else
             //	**dword_B8B77C = temp;
         }
@@ -130,15 +112,22 @@ DWORD WINAPI Init(LPVOID bDelay)
         injector::WriteMemory(pattern.get(0).get<uint32_t>(8), 0, true);
         injector::WriteMemory(*pattern.get(0).get<uint32_t*>(4), 0, true);
     }
-    return 0;
 }
 
+CEXP void InitializeASI()
+{
+    std::call_once(CallbackHandler::flag, []()
+    {
+        CallbackHandler::RegisterCallback(PatchInstallPath, hook::pattern("8D 48 01 8D 9B 00 00 00 00"));
+        CallbackHandler::RegisterCallback(Init, hook::pattern("8B 4C 24 1C 8B 44 24 18 8B 54 24 20 68"));
+    });
+}
 
-BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        Init(NULL);
+
     }
     return TRUE;
 }

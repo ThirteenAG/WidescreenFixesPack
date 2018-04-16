@@ -1,5 +1,4 @@
 #include "stdafx.h"
-bool bSettingsApp;
 
 struct Screen
 {
@@ -66,85 +65,65 @@ void* __cdecl sub_608BF9(int a1, int a2, int a3, int a4, int a5, int a6, float a
     return hb_608BF9.fun(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10);
 }
 
-DWORD WINAPI InitSettings(LPVOID)
+void InitSettings()
 {
-    auto pattern = hook::pattern("8B 45 04 85 C0 74 6B 8B 15");
-    if (!pattern.count_hint(1).empty())
+    static std::vector<std::string> list;
+    GetResolutionsList(list);
+
+    static auto dword_4280CC = *hook::get_pattern<uint32_t*>("8B 0D ? ? ? ? 8D 54 24 0C 51", 2);
+    auto pattern = hook::pattern("8B 45 04 85 C0 74");
+    struct ResListHook
     {
-        bSettingsApp = true;
-        static std::vector<std::string> list;
-        GetResolutionsList(list);
-
-        static auto dword_4280CC = *hook::get_pattern<uint32_t*>("8B 0D ? ? ? ? 8D 54 24 0C 51", 2);
-        pattern = hook::pattern("8B 45 04 85 C0 74");
-        struct ResListHook
+        void operator()(injector::reg_pack& regs)
         {
-            void operator()(injector::reg_pack& regs)
+            char iniPath[MAX_PATH];
+            GetModuleFileNameA(NULL, iniPath, MAX_PATH);
+            *strrchr(iniPath, '\\') = '\0';
+            strcat_s(iniPath, "\\MatrixConfig.ini");
+            CIniReader iniReader(iniPath);
+            int32_t iniResX = 0, iniResY = 0;
+            std::tie(iniResX, iniResY) = GetDesktopRes();
+            char defVal[20];
+            sprintf_s(defVal, "%dx%d", iniResX, iniResY);
+            char* iniRes = iniReader.ReadString("RENDERING", "RESOLUTION", defVal);
+            //sscanf_s(iniRes, "%dx%d", &iniResX, &iniResY);
+            int32_t i = 0, mode = 0;
+            for each (auto &res in list)
             {
-                char iniPath[MAX_PATH];
-                GetModuleFileNameA(NULL, iniPath, MAX_PATH);
-                *strrchr(iniPath, '\\') = '\0';
-                strcat_s(iniPath, "\\MatrixConfig.ini");
-                CIniReader iniReader(iniPath);
-                int32_t iniResX = 0, iniResY = 0;
-                std::tie(iniResX, iniResY) = GetDesktopRes();
-                char defVal[20];
-                sprintf_s(defVal, "%dx%d", iniResX, iniResY);
-                char* iniRes = iniReader.ReadString("RENDERING", "RESOLUTION", defVal);
-                //sscanf_s(iniRes, "%dx%d", &iniResX, &iniResY);
-                int32_t i = 0, mode = 0;
-                for each (auto &res in list)
-                {
-                    SendMessageA(*((HWND*)(regs.esi + 0x13E8)), 0x143u, 0, (LPARAM)(res.c_str()));
+                SendMessageA(*((HWND*)(regs.esi + 0x13E8)), 0x143u, 0, (LPARAM)(res.c_str()));
 
-                    if (res == iniRes)
-                        mode = i;
+                if (res == iniRes)
+                    mode = i;
 
-                    ++i;
-                }
-                SendMessageA(*((HWND*)(regs.esi + 0x13E8)), 0x14Eu, mode, 0);
-                *dword_4280CC = mode;
+                ++i;
             }
-        }; injector::MakeInline<ResListHook>(pattern.get_first(0), pattern.get_first(126)); //0x40600D, 0x40608B
+            SendMessageA(*((HWND*)(regs.esi + 0x13E8)), 0x14Eu, mode, 0);
+            *dword_4280CC = mode;
+        }
+    }; injector::MakeInline<ResListHook>(pattern.get_first(0), pattern.get_first(126)); //0x40600D, 0x40608B
 
-        pattern = hook::pattern("68 ? ? ? ? 50 68 ? ? ? ? 68 ? ? ? ? FF D6 8D 4C 24 0C 51");
-        struct MatrixOptionsHook
+    pattern = hook::pattern("68 ? ? ? ? 50 68 ? ? ? ? 68 ? ? ? ? FF D6 8D 4C 24 0C 51");
+    struct MatrixOptionsHook
+    {
+        void operator()(injector::reg_pack& regs)
         {
-            void operator()(injector::reg_pack& regs)
-            {
-                char iniPath[MAX_PATH];
-                GetModuleFileNameA(NULL, iniPath, MAX_PATH);
-                *strrchr(iniPath, '\\') = '\0';
-                strcat_s(iniPath, "\\MatrixConfig.ini");
-                CIniReader iniReader(iniPath);
-                iniReader.WriteString("RENDERING", "RESOLUTION", (char*)list[*dword_4280CC].c_str());
-            }
-        }; injector::MakeInline<MatrixOptionsHook>(pattern.get_first(0), pattern.get_first(18)); //0x406B9F, 0x406BB1
-    }
-    return 0;
+            char iniPath[MAX_PATH];
+            GetModuleFileNameA(NULL, iniPath, MAX_PATH);
+            *strrchr(iniPath, '\\') = '\0';
+            strcat_s(iniPath, "\\MatrixConfig.ini");
+            CIniReader iniReader(iniPath);
+            iniReader.WriteString("RENDERING", "RESOLUTION", (char*)list[*dword_4280CC].c_str());
+        }
+    }; injector::MakeInline<MatrixOptionsHook>(pattern.get_first(0), pattern.get_first(18)); //0x406B9F, 0x406BB1
 }
 
-DWORD WINAPI Init(LPVOID bDelay)
+void Init()
 {
-    if (bSettingsApp)
-        return 0;
-
-    auto pattern = hook::pattern("55 8B EC 83 EC 34 56 6A 00 6A FF");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
-
     CIniReader iniReader("");
     bool bFixHud = iniReader.ReadInteger("MAIN", "FixHud", 1) != 0;
     Screen.fWidescreenHudOffset = iniReader.ReadFloat("MAIN", "WidescreenHudOffset", 100.0f);
 
-    pattern = hook::pattern("68 ? ? ? ? 6A 00 68 ? ? ? ? 68 ? ? ? ? FF 15 ? ? ? ? 89 85 EC FA FF FF 8B 8D");
+    auto pattern = hook::pattern("68 ? ? ? ? 6A 00 68 ? ? ? ? 68 ? ? ? ? FF 15 ? ? ? ? 89 85 EC FA FF FF 8B 8D");
     static auto dword_93B7B0 = *hook::get_pattern<int32_t*>("A1 ? ? ? ? 89 45 E0 8B 0D ? ? ? ? 89 4D E4 33 D2", 1);
     static auto dword_93B7B4 = *hook::get_pattern<int32_t*>("A1 ? ? ? ? 89 45 E0 8B 0D ? ? ? ? 89 4D E4 33 D2", 10);
     struct ResHook
@@ -220,16 +199,22 @@ DWORD WINAPI Init(LPVOID bDelay)
         pattern = hook::pattern("E8 ? ? ? ? 83 C4 28 8B 15 ? ? ? ? DB 42 1C"); //0x407013
         hb_608BF9.fun = injector::MakeJMP(injector::GetBranchDestination(pattern.get_first(0)), sub_608BF9, true).get();
     }
-
-    return 0;
 }
 
-BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
+CEXP void InitializeASI()
+{
+    std::call_once(CallbackHandler::flag, []()
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("55 8B EC 83 EC 34 56 6A 00 6A FF"));
+        CallbackHandler::RegisterCallback(InitSettings, hook::pattern("8B 45 04 85 C0 74 6B 8B 15"));
+    });
+}
+
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        InitSettings(NULL);
-        Init(NULL);
+
     }
     return TRUE;
 }

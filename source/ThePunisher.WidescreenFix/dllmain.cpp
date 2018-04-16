@@ -104,19 +104,8 @@ int32_t retY()
     return Screen.PresetHeight;
 };
 
-DWORD WINAPI Init(LPVOID bDelay)
+void Init()
 {
-    auto pattern = hook::pattern("89 1D ? ? ? ? A3 ? ? ? ? 88 0D");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
-
     CIniReader iniReader("");
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
@@ -173,6 +162,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     Screen.PresetFactorY = Screen.fHeight / static_cast<float>(Screen.PresetHeight);
 
     //Resolution
+    auto pattern = hook::pattern("89 1D ? ? ? ? A3 ? ? ? ? 88 0D");
     static int32_t* dword_913250 = *pattern.get_first<int32_t*>(2);
     static int32_t* dword_913254 = *pattern.get_first<int32_t*>(7);
     struct SetResHook
@@ -462,16 +452,21 @@ DWORD WINAPI Init(LPVOID bDelay)
             *(float*)(regs.esp + 0x0C) = AdjustFOV(*(float*)(regs.esp + 0x0C), Screen.fAspectRatio) * fFOVFactor;
         }
     }; injector::MakeInline<FOVHook>(pattern.get_first(0));
-
-    return 0;
 }
 
-BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
+CEXP void InitializeASI()
+{
+    std::call_once(CallbackHandler::flag, []()
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("89 1D ? ? ? ? A3 ? ? ? ? 88 0D"));
+    });
+}
+
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        Init(NULL);
-    }
 
+    }
     return TRUE;
 }
