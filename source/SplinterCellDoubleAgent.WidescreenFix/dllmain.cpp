@@ -431,36 +431,22 @@ void InitEngine()
 void InitWindow()
 {
     //icon fix
-    static HICON ico;
-    HMODULE hm;
-    GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR)&InitWindow, &hm);
-
-    constexpr auto IDR_SCDAICON = 200;
-    HRSRC hResource = FindResource(hm, MAKEINTRESOURCE(IDR_SCDAICON), RT_RCDATA);
-    if (hResource)
-    {
-        HGLOBAL hLoadedResource = LoadResource(hm, hResource);
-        if (hLoadedResource)
-        {
-            LPVOID pLockedResource = LockResource(hLoadedResource);
-            if (pLockedResource)
-            {
-                size_t dwResourceSize = SizeofResource(hm, hResource);
-                if (dwResourceSize)
-                {
-                    ico = CreateIconFromBMP((UCHAR*)pLockedResource);
-                }
-            }
-        }
-    }
-
-    auto LoadIconProxy = [](HINSTANCE hInstance, LPCWSTR lpIconName) -> HICON {
-        return ico;
+    auto RegisterClassExWProxy = [](WNDCLASSEXW* lpwcx) -> ATOM {
+        lpwcx->hIcon = CreateIconFromResourceICO(IDR_SCDAICON, ::GetSystemMetrics(SM_CXICON), ::GetSystemMetrics(SM_CYICON));
+        lpwcx->hIconSm = CreateIconFromResourceICO(IDR_SCDAICON, ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON));
+        return RegisterClassExW(lpwcx);
     };
 
-    auto pattern = hook::module_pattern(GetModuleHandle(L"Window"), "FF 15 ? ? ? ? 8B 4E 04 50 6A 01 68 80 00 00 00 51");
-    injector::WriteMemory(*pattern.count_hint(2).get(0).get<void*>(2), static_cast<HICON(WINAPI *)(HINSTANCE, LPCWSTR)>(LoadIconProxy), true);
-    injector::WriteMemory(*pattern.count_hint(2).get(1).get<void*>(2), static_cast<HICON(WINAPI *)(HINSTANCE, LPCWSTR)>(LoadIconProxy), true);
+    auto RegisterClassExAProxy = [](WNDCLASSEXA* lpwcx) -> ATOM {
+        lpwcx->hIcon = CreateIconFromResourceICO(IDR_SCDAICON, ::GetSystemMetrics(SM_CXICON), ::GetSystemMetrics(SM_CYICON));
+        lpwcx->hIconSm = CreateIconFromResourceICO(IDR_SCDAICON, ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON));
+        return RegisterClassExA(lpwcx);
+    };
+
+    auto pattern = hook::module_pattern(GetModuleHandle(L"Window"), "FF 15 ? ? ? ? 66 85 C0 0F 85 ? ? ? ? 68 F5 02 00 00");
+    injector::WriteMemory(*pattern.get_first<void*>(2), static_cast<ATOM(WINAPI*)(WNDCLASSEXW*)>(RegisterClassExWProxy), true);
+    pattern = hook::module_pattern(GetModuleHandle(L"Window"), "FF 15 ? ? ? ? 66 85 C0 75 18 68 03 03 00 00");
+    injector::WriteMemory(*pattern.get_first<void*>(2), static_cast<ATOM(WINAPI*)(WNDCLASSEXA*)>(RegisterClassExAProxy), true);
 }
 
 void InitEchelonMenus()
