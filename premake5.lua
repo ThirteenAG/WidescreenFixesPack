@@ -132,7 +132,8 @@ project "NFSMostWanted.WidescreenFix"
    setpaths("Z:/WFP/Games/Need For Speed/Need for Speed Most Wanted/", "speed.exe")
 project "NFSUnderground.WidescreenFix"
    setpaths("Z:/WFP/Games/Need For Speed/Need For Speed Underground/", "speed.exe")
-   files { "textures/NFSU/nfsuicon.rc" }
+   files { "textures/NFSU/icon.rc" }
+   defines { "IDR_NFSUICON=200" }
 project "NFSUnderground2.WidescreenFix"
    setpaths("Z:/WFP/Games/Need For Speed/Need For Speed Underground 2/", "speed2.exe")
 project "Onimusha3.WidescreenFix"
@@ -161,7 +162,8 @@ project "SplinterCellChaosTheory.WidescreenFix"
    setpaths("Z:/WFP/Games/Splinter Cell/Splintercell Chaos Theory/", "system/splintercell3.exe", "system/scripts/")
 project "SplinterCellDoubleAgent.WidescreenFix"
    setpaths("Z:/WFP/Games/Splinter Cell/Splinter Cell - Double Agent/", "SCDA-Offline/System/SplinterCell4.exe", "SCDA-Offline/System/scripts/")
-   files { "textures/SCDA/scdaicon.rc" }
+   files { "textures/SCDA/icon.rc" }
+   defines { "IDR_SCDAICON=200" }
 project "SplinterCellPandoraTomorrow.WidescreenFix"
    setpaths("Z:/WFP/Games/Splinter Cell/Splinter Cell Pandora Tomorrow/", "offline/system/SplinterCell2.exe", "offline/system/scripts/")
 project "StreetRacingSyndicate.WidescreenFix"

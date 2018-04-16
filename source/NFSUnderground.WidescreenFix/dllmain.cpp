@@ -637,34 +637,11 @@ void Init()
     }
 
     //icon fix
-    static HICON ico;
-    HMODULE hm;
-    GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR)&Init, &hm);
-
-    constexpr auto IDR_NFSUICON = 200;
-    HRSRC hResource = FindResource(hm, MAKEINTRESOURCE(IDR_NFSUICON), RT_RCDATA);
-    if (hResource)
-    {
-        HGLOBAL hLoadedResource = LoadResource(hm, hResource);
-        if (hLoadedResource)
-        {
-            LPVOID pLockedResource = LockResource(hLoadedResource);
-            if (pLockedResource)
-            {
-                size_t dwResourceSize = SizeofResource(hm, hResource);
-                if (dwResourceSize)
-                {
-                    ico = CreateIconFromBMP((UCHAR*)pLockedResource);
-                }
-            }
-        }
-    }
-
     auto SetWindowLongHook = [](HWND hWndl, int nIndex, LONG dwNewLong)
     {
         SetWindowLongA(hWndl, nIndex, dwNewLong);
-        SendMessage(hWndl, WM_SETICON, ICON_BIG, (LPARAM)ico);
-        SendMessage(hWndl, WM_SETICON, ICON_SMALL, (LPARAM)ico);
+        SendMessage(hWndl, WM_SETICON, ICON_BIG, (LPARAM)CreateIconFromResourceICO(IDR_NFSUICON, ::GetSystemMetrics(SM_CXICON), ::GetSystemMetrics(SM_CYICON)));
+        SendMessage(hWndl, WM_SETICON, ICON_SMALL, (LPARAM)CreateIconFromResourceICO(IDR_NFSUICON, ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON)));
     };
 
     pattern = hook::pattern("FF 15 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 8B 0D ? ? ? ? 33 D2 3B CB 0F 95 C2");
