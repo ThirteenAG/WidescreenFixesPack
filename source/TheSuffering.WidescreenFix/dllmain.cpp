@@ -123,24 +123,14 @@ void __cdecl sub_44A390(uintptr_t a1, float a2, float a3, float a4, float a5, fl
         *(uint32_t*)a13 = 0;
 }
 
-DWORD WINAPI Init(LPVOID bDelay)
+void Init()
 {
-    auto pattern = hook::pattern("75 4B D9 45 ? D8 5D ? DF E0 F6 C4 41");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
-
     CIniReader iniReader("");
     bool bDisableCutsceneBorders = iniReader.ReadInteger("MAIN", "DisableCutsceneBorders", 1) != 0;
     static float fFOVFactor = iniReader.ReadFloat("MAIN", "FOVFactor", 0.0f);
 
     //unlocking resolutions
+    auto pattern = hook::pattern("75 4B D9 45 ? D8 5D ? DF E0 F6 C4 41");
     injector::MakeNOP(pattern.get_first(0), 2, true);
     injector::MakeNOP(pattern.get_first(13), 2, true);
 
@@ -208,16 +198,21 @@ DWORD WINAPI Init(LPVOID bDelay)
         pattern = hook::pattern("51 53 55 56 8B F1 8B 46 34 85 C0"); //0x4B0B30
         injector::MakeRET(pattern.get_first());
     }
-
-    return 0;
 }
 
+CEXP void InitializeASI()
+{
+    std::call_once(CallbackHandler::flag, []()
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("75 4B D9 45 ? D8 5D ? DF E0 F6 C4 41"));
+    });
+}
 
-BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        Init(NULL);
+
     }
     return TRUE;
 }

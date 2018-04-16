@@ -62,19 +62,8 @@ int __cdecl DrawTextHook(float a1, float a2, float a3, float a4, int a5, int a6,
     return hbDrawText.fun(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28);
 }
 
-DWORD WINAPI Init(LPVOID bDelay)
+void Init()
 {
-    auto pattern = hook::pattern("6A 02 6A 00 6A 00 68 01 20 00 00");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
-
     CIniReader iniReader("");
     Screen.fFOVFactor = iniReader.ReadFloat("MAIN", "FOVFactor", 0.0f);
     static bool bDisableGamepadInput = iniReader.ReadInteger("MAIN", "DisableGamepadInput", 0) != 0;
@@ -91,7 +80,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         Screen.FrontendAspectRatioHeight = 0;
     }
 
-    pattern = hook::pattern("E8 ? ? ? ? 59 68 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 59 59 E8 ? ? ? ? E8 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? E8"); //0x5E2579
+    auto pattern = hook::pattern("E8 ? ? ? ? 59 68 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 59 59 E8 ? ? ? ? E8 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? E8"); //0x5E2579
     struct AspectRatioHook
     {
         void operator()(injector::reg_pack& regs)
@@ -196,16 +185,21 @@ DWORD WINAPI Init(LPVOID bDelay)
             }
         }
     }; injector::MakeInline<AspectRatioHook>(pattern.get_first(0));
-
-    return 0;
 }
 
+CEXP void InitializeASI()
+{
+    std::call_once(CallbackHandler::flag, []()
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("6A 02 6A 00 6A 00 68 01 20 00 00").count_hint(1).empty(), 0x1100);
+    });
+}
 
-BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        Init(NULL);
+
     }
     return TRUE;
 }

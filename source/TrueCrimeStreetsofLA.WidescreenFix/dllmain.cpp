@@ -18,19 +18,8 @@ void __declspec(naked) Ret4()
     __asm ret 4
 }
 
-DWORD WINAPI Init(LPVOID bDelay)
+void Init()
 {
-    auto pattern = hook::pattern("BF 94 00 00 00 8B C7");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
-
     CIniReader iniReader("");
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
@@ -45,7 +34,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     Screen.fWidth43 = static_cast<float>(Screen.Width43);
 
     //ini res crash fix
-    pattern = hook::pattern("74 21 8B 4C 24 10 8B 54 24 0C 8B 74 24 08"); //0x62AC16
+    auto pattern = hook::pattern("74 21 8B 4C 24 10 8B 54 24 0C 8B 74 24 08"); //0x62AC16
     injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(0), 0xEB, true);
 
     //display crashfix
@@ -119,16 +108,21 @@ DWORD WINAPI Init(LPVOID bDelay)
         }
     }; injector::MakeInline<SetIniResHook2>(pattern.count(3).get(2).get<uint32_t>(0), pattern.count(3).get(2).get<uint32_t>(7));
     injector::WriteMemory<uint8_t>(pattern.count(3).get(2).get<uint32_t>(5), 0x53, true); //push ebx
-
-    return 0;
 }
 
+CEXP void InitializeASI()
+{
+    std::call_once(CallbackHandler::flag, []()
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("BF 94 00 00 00 8B C7"));
+    });
+}
 
-BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        Init(NULL);
+
     }
     return TRUE;
 }

@@ -9,19 +9,8 @@ struct Screen
     float fAspectRatio;
 } Screen;
 
-DWORD WINAPI Init(LPVOID bDelay)
+void Init()
 {
-    auto pattern = hook::pattern("83 EC 58 53 56 57 89 65 E8");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
-
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
 
@@ -29,7 +18,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     Screen.fHeight = static_cast<float>(Screen.Height);
     Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
 
-    pattern = hook::pattern("D9 05 ? ? ? ? D8 73 68 D9 05 ? ? ? ? D8 73 6C D9 C9"); //0x4460E7
+    auto pattern = hook::pattern("D9 05 ? ? ? ? D8 73 68 D9 05 ? ? ? ? D8 73 6C D9 C9"); //0x4460E7
     struct SetScaleHook
     {
         void operator()(injector::reg_pack& regs)
@@ -38,16 +27,21 @@ DWORD WINAPI Init(LPVOID bDelay)
             _asm fld    dword ptr[fScaleValue]
         }
     }; injector::MakeInline<SetScaleHook>(pattern.get_first(0), pattern.get_first(6));
-
-    return 0;
 }
 
+CEXP void InitializeASI()
+{
+    std::call_once(CallbackHandler::flag, []()
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("83 EC 58 53 56 57 89 65 E8"));
+    });
+}
 
-BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        Init(NULL);
+
     }
     return TRUE;
 }

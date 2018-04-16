@@ -19,19 +19,8 @@ DWORD WINAPI WindowCheck(LPVOID hWnd)
     return 0;
 }
 
-DWORD WINAPI Init(LPVOID bDelay)
+void Init()
 {
-    auto pattern = hook::pattern("83 EC 0C 33 C0 53 57 33 DB");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
-
     CIniReader iniReader("");
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
@@ -43,7 +32,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     Screen.Width43 = static_cast<uint32_t>(Screen.Height * (4.0f / 3.0f));
 
     //wndmode crashfix
-    pattern = hook::pattern("E8 ? ? ? ? 83 C4 04 B8 01 00 00 00 5D 5F 5E 5B 81 C4 70 05 00 00"); //0x49225B
+    auto pattern = hook::pattern("E8 ? ? ? ? 83 C4 04 B8 01 00 00 00 5D 5F 5E 5B 81 C4 70 05 00 00"); //0x49225B
     injector::MakeNOP(pattern.get_first(0), 5, true);
 
     //Player_a bugfix
@@ -144,15 +133,21 @@ DWORD WINAPI Init(LPVOID bDelay)
         auto hwnd = *pattern.get_first<HWND*>(2);
         CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&WindowCheck, (LPVOID)hwnd, 0, NULL);
     }
-
-    return 0;
 }
 
-BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
+CEXP void InitializeASI()
+{
+    std::call_once(CallbackHandler::flag, []()
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("83 EC 0C 33 C0 53 57 33 DB"));
+    });
+}
+
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        Init(NULL);
+
     }
     return TRUE;
 }

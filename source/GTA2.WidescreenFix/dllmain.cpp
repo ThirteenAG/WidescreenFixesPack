@@ -55,12 +55,12 @@ uintptr_t dword_45379E, dword_453A22, dword_4580C6, dword_4567E1;
 uintptr_t gbh_DrawQuadAddr;
 void __declspec(naked) gbh_DrawQuad()
 {
-    _asm mov ecx, [esp + 0x40]
-        _asm mov esp40, ecx
-    _asm mov ecx, [esp + 0x44]
-        _asm mov esp44, ecx
-    _asm mov ecx, [esp + 0x68]
-        _asm mov esp68, ecx
+    _asm {mov ecx, [esp + 0x40]}
+    _asm {mov esp40, ecx}
+    _asm {mov ecx, [esp + 0x44]}
+    _asm {mov esp44, ecx}
+    _asm {mov ecx, [esp + 0x68]}
+    _asm {mov esp68, ecx}
 
     if (esp68 == dword_45379E || esp68 == dword_453A22 || esp68 == dword_4580C6 || esp68 == dword_4567E1 || esp68 == dword_458426 || esp40 == dword_4582F3)
     {
@@ -103,19 +103,8 @@ void __declspec(naked) gbh_BlitImage()
     _asm jmp gbh_BlitImageAddr;
 }
 
-DWORD WINAPI Init(LPVOID bDelay)
+void Init()
 {
-    auto pattern = hook::pattern("83 EC 68 55 56 8B 74 24 74");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
-
     CIniReader iniReader("");
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
@@ -143,7 +132,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         Screen.fCameraZoom = (Screen.fAspectRatio / (4.0f / 3.0f)) * 2.5f;
 
     //Res change
-    pattern = hook::pattern("8B 2D ? ? ? ? 56 8B 35 ? ? ? ? 57 8B 3D"); //0x4CB29F
+    auto pattern = hook::pattern("8B 2D ? ? ? ? 56 8B 35 ? ? ? ? 57 8B 3D"); //0x4CB29F
     static auto dword_6732E0 = *pattern.get_first<uint32_t*>(2);
     pattern = hook::pattern("89 0D ? ? ? ? A3 ? ? ? ? 89 0D ? ? ? ? EB 5F"); //0x4CB2D5
     static auto dword_673578 = *pattern.get_first<uint32_t*>(2);
@@ -314,15 +303,21 @@ DWORD WINAPI Init(LPVOID bDelay)
             }
         }; injector::MakeInline<QuicksaveHook>(pattern.get_first(0));
     }
-
-    return 0;
 }
 
-BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
+CEXP void InitializeASI()
+{
+    std::call_once(CallbackHandler::flag, []()
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("83 EC 68 55 56 8B 74 24 74"));
+    });
+}
+
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        Init(NULL);
+
     }
     return TRUE;
 }

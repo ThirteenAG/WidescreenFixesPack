@@ -814,18 +814,8 @@ void Fix2DSprites()
     pRwRenderStateSet = hook::get_pattern("A1 ? ? ? ? 83 EC 08 83 38 00"); //0x649BA0
 }
 
-DWORD WINAPI Init(LPVOID bDelay)
+void Init()
 {
-    auto pattern = hook::pattern("6A 02 6A 00 6A 00 68 01 20 00 00");
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
-
     //Immediate changes
     GetPatterns();
     OverwriteResolution();
@@ -891,30 +881,32 @@ DWORD WINAPI Init(LPVOID bDelay)
         }
     }; injector::MakeInline<LoadState>(dwGameLoadStatePattern.count(1).get(0).get<uint32_t>(0), dwGameLoadStatePattern.count(1).get(0).get<uint32_t>(10));
 
-    if (bDelay)
+    auto pattern = hook::pattern("A1 ? ? ? ? 51 8B 38 50 FF 57 20 85 C0");
+    static auto dword_94DDA8 = *pattern.count(1).get(0).get<uint32_t*>(1);
+    struct SteamCompat
     {
-        pattern = hook::pattern("A1 ? ? ? ? 51 8B 38 50 FF 57 20 85 C0");
-        static auto dword_94DDA8 = *pattern.count(1).get(0).get<uint32_t*>(1);
-        struct SteamCompat
+        void operator()(injector::reg_pack& regs)
         {
-            void operator()(injector::reg_pack& regs)
-            {
-                regs.eax = *dword_94DDA8;
-                CDraw::CalculateAspectRatio();
-                FixMenu();
-            }
-        }; injector::MakeInline<SteamCompat>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(5));
-    }
-    return 0;
+            regs.eax = *dword_94DDA8;
+            CDraw::CalculateAspectRatio();
+            FixMenu();
+        }
+    }; injector::MakeInline<SteamCompat>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(5));
 }
 
+CEXP void InitializeASI()
+{
+    std::call_once(CallbackHandler::flag, []()
+    {
 
-BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
+    });
+}
+
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        Init(NULL);
+        CallbackHandler::RegisterCallback(Init, hook::pattern("6A 02 6A 00 6A 00 68 01 20 00 00"));
     }
     return TRUE;
 }
-

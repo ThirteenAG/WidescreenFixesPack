@@ -217,19 +217,8 @@ int __cdecl sub_42BD11(float a1, float a2, int a3, char a4, unsigned __int8 a5)
     return 0; //?
 }
 
-DWORD WINAPI Init(LPVOID bDelay)
+void Init()
 {
-    auto pattern = hook::pattern("FF 74 24 10 FF 74 24 10 FF 74 24 10 FF 74 24 10 E8 ? ? ? ? C2 10 00");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
-
     CIniReader iniReader("");
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
@@ -252,7 +241,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         fWidescreenHudOffset = fWidescreenHudOffset / (((16.0f / 9.0f) / (Screen.fAspectRatio)) * 1.5f);
     }
 
-    pattern = hook::pattern("68 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 83 C4 08 89");
+    auto pattern = hook::pattern("68 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 83 C4 08 89");
     struct SetResHook
     {
         void operator()(injector::reg_pack& regs)
@@ -357,16 +346,22 @@ DWORD WINAPI Init(LPVOID bDelay)
     //    }
     //}; //injector::MakeInline<FOVHook>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6)); //0x4AF5EE, 0x4AF5EE + 6
 
-    return 0;
     //injector::MakeNOP(0x402232, 2, true); //debug menu
 }
 
+CEXP void InitializeASI()
+{
+    std::call_once(CallbackHandler::flag, []()
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("FF 74 24 10 FF 74 24 10 FF 74 24 10 FF 74 24 10 E8 ? ? ? ? C2 10 00"));
+    });
+}
 
-BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        Init(NULL);
+
     }
     return TRUE;
 }

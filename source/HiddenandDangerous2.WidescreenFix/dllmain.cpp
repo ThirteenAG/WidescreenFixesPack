@@ -103,34 +103,15 @@ void __stdcall S_matrix_Identity(S_matrix* _this)
     DBGONLY(spd::log->info("{0:x}", stack[3]););
 }
 
-DWORD WINAPI InitSettings(LPVOID)
+void InitSettings()
 {
     auto pattern = hook::pattern("0F ? ? ? ? ? 81 ? 80 02 00 00"); //0x4029AB 0x4029AB
-    if (!pattern.count_hint(2).empty())
-    {
-        bSettingsApp = true;
-        injector::MakeNOP(pattern.count_hint(2).get(0).get<void*>(0), 6, true);
-        injector::MakeNOP(pattern.count_hint(2).get(1).get<void*>(0), 6, true);
-    }
-    return 0;
+    injector::MakeNOP(pattern.count_hint(2).get(0).get<void*>(0), 6, true);
+    injector::MakeNOP(pattern.count_hint(2).get(1).get<void*>(0), 6, true);
 }
 
-DWORD WINAPI Init(LPVOID bDelay)
+void Init()
 {
-    if (bSettingsApp)
-        return 0;
-
-    auto mpattern = hook::module_pattern(GetModuleHandle(L"LS3DF"), "D8 0D ? ? ? ? D9 82 38 01 00 00");
-
-    if (mpattern.count_hint(2).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (mpattern.clear(GetModuleHandle(L"LS3DF")).count_hint(2).empty()) { Sleep(0); };
-
     CIniReader iniReader("");
     bool bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 0) != 0;
     Screen.fCustomFieldOfView = iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f);
@@ -162,6 +143,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     }; injector::MakeInline<GetResHook>(pattern.get_first(0), pattern.get_first(7));
 
     //FOV and aspect ratio again
+    auto mpattern = hook::module_pattern(GetModuleHandle(L"LS3DF"), "D8 0D ? ? ? ? D9 82 38 01 00 00");
     injector::WriteMemory(mpattern.count_hint(2).get(0).get<void*>(2), &Screen.fDynamicScreenFieldOfViewScale, true);
     injector::WriteMemory(mpattern.count_hint(2).get(1).get<void*>(2), &Screen.fDynamicScreenFieldOfViewScale, true);
 
@@ -292,16 +274,22 @@ DWORD WINAPI Init(LPVOID bDelay)
         auto ret_key = []() -> const char* { return "1234-5678-9abc-dddf"; };
         injector::MakeJMP(pattern.get_first(0), static_cast<const char*(*)()>(ret_key), true); //0x731C30
     }
-
-    return 0;
 }
 
-BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
+CEXP void InitializeASI()
+{
+    std::call_once(CallbackHandler::flag, []()
+    {
+        CallbackHandler::RegisterCallback(L"LS3DF.dll", Init);
+        CallbackHandler::RegisterCallback(InitSettings, hook::pattern("0F ? ? ? ? ? 81 ? 80 02 00 00"));
+    });
+}
+
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        InitSettings(NULL);
-        Init(NULL);
+
     }
     return TRUE;
 }

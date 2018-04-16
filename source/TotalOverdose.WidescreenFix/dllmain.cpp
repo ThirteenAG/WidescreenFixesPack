@@ -13,20 +13,8 @@ struct Screen
     float fHudScale;
 } Screen;
 
-
-DWORD WINAPI Init(LPVOID bDelay)
+void Init()
 {
-    auto pattern = hook::pattern("BF 94 00 00 00 8B C7 E8");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
-
     CIniReader iniReader("");
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
@@ -40,7 +28,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     Screen.Width43 = static_cast<uint32_t>(Screen.fHeight * (4.0f / 3.0f));
     Screen.fWidth43 = static_cast<float>(Screen.Width43);
 
-    pattern = hook::pattern("C7 00 ? ? ? ? C7 40 04 ? ? ? ? 88 58 08"); //45E939
+    auto pattern = hook::pattern("C7 00 ? ? ? ? C7 40 04 ? ? ? ? 88 58 08"); //45E939
     for (size_t i = 0; i < pattern.size(); ++i)
     {
         injector::WriteMemory(pattern.get(i).get<uint32_t>(2), Screen.Width, true);
@@ -62,15 +50,21 @@ DWORD WINAPI Init(LPVOID bDelay)
     //static float fTextScale = 0.75f;
     //pattern = hook::pattern("F3 0F 10 05 ? ? ? ? 8B F8 C1 E7 1C C1 FF 1C F6 C4 10"); //8FEA7E
     //injector::WriteMemory(pattern.count(1).get(0).get<float*>(4), &fTextScale, true);
-    return 0;
 }
 
+CEXP void InitializeASI()
+{
+    std::call_once(CallbackHandler::flag, []()
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("BF 94 00 00 00 8B C7 E8"));
+    });
+}
 
-BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        Init(NULL);
+
     }
     return TRUE;
 }

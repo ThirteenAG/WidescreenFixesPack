@@ -165,35 +165,29 @@ void ShowIntroHook()
     }
 }
 
-DWORD WINAPI Init(LPVOID bDelay)
+void Init()
 {
-    auto pattern = hook::pattern("81 EC 04 01 00 00 8B 15");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
-
-    pfShowIntro = pattern.get_first(0);
+    pfShowIntro = hook::get_pattern("81 EC 04 01 00 00 8B 15", 0);
     injector::MakeJMP(pfShowIntro, ShowIntroHook, true);
 
-    pattern = hook::pattern("6A 00 6A 00 E8 ? ? ? ? 83 C4 08 B8 01 00 00 00 5B");
+    auto pattern = hook::pattern("6A 00 6A 00 E8 ? ? ? ? 83 C4 08 B8 01 00 00 00 5B");
     if (!pattern.empty())
         injector::MakeNOP(pattern.get_first(-7), 2, true);
-
-    return 0;
 }
 
+CEXP void InitializeASI()
+{
+    std::call_once(CallbackHandler::flag, []()
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("81 EC 04 01 00 00 8B 15"));
+    });
+}
 
-BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        Init(NULL);
+
     }
     return TRUE;
 }

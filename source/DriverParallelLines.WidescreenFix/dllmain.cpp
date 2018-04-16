@@ -109,19 +109,8 @@ float __stdcall sub_4BAA87(float a1)
         return a1;
 }
 
-DWORD WINAPI Init(LPVOID bDelay)
+void Init()
 {
-    auto pattern = hook::pattern("55 8B EC 83 EC 60 53 56 57");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
-
     CIniReader iniReader("");
     Screen.fCustomFieldOfView = iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f);
     Screen.bFixFMVs = iniReader.ReadInteger("MAIN", "FixFMVs", 1) != 0;
@@ -131,7 +120,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     std::tie(Screen.DesktopResW, Screen.DesktopResH) = GetDesktopRes();
 
     //uncapping resolutions
-    pattern = hook::pattern("68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? FF 75 F8 BF"); //4C5A89
+    auto pattern = hook::pattern("68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? FF 75 F8 BF"); //4C5A89
     injector::WriteMemory(pattern.get_first<int32_t*>(1 + 0), INT_MAX, true);
     injector::WriteMemory(pattern.get_first<int32_t*>(1 + 5), INT_MAX, true);
     injector::WriteMemory(pattern.get_first<int32_t*>(1 + 10), nMinResY, true);
@@ -313,15 +302,21 @@ DWORD WINAPI Init(LPVOID bDelay)
     //restoring radar height on 4:3
     pattern = hook::pattern("E8 ? ? ? ? 0F 57 C0 D9 9B 50"); //0x4BAA87
     injector::MakeJMP(injector::GetBranchDestination(pattern.get_first(0)), sub_4BAA87, true);
-    return 0;
 }
 
+CEXP void InitializeASI()
+{
+    std::call_once(CallbackHandler::flag, []()
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("55 8B EC 83 EC 60 53 56 57"));
+    });
+}
 
-BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        Init(NULL);
+
     }
     return TRUE;
 }

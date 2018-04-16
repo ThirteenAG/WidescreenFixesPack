@@ -13,23 +13,12 @@ struct Screen
     float fFMVOffset;
 } Screen;
 
-DWORD WINAPI Init(LPVOID bDelay)
+void Init()
 {
-    auto pattern = hook::pattern("89 65 E8 8B F4 89 3E 56");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
-
     CIniReader iniReader("");
     static bool bStretchFullscreenImages = iniReader.ReadInteger("MAIN", "StretchFullscreenImages", 0) != 0;
 
-    pattern = hook::pattern("8B 4C 24 18 BF 01 00 00 00 C7"); //0x406344
+    auto pattern = hook::pattern("8B 4C 24 18 BF 01 00 00 00 C7"); //0x406344
     struct ResHook
     {
         void operator()(injector::reg_pack& regs)
@@ -122,16 +111,21 @@ DWORD WINAPI Init(LPVOID bDelay)
             *(float*)(regs.eax + 0x58) = 0.0f;
         }
     }; injector::MakeInline<FMVHook>(pattern.count(1).get(0).get<uintptr_t>(0));
-
-    return 0;
 }
 
+CEXP void InitializeASI()
+{
+    std::call_once(CallbackHandler::flag, []()
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("89 65 E8 8B F4 89 3E 56"));
+    });
+}
 
-BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        Init(NULL);
+
     }
     return TRUE;
 }

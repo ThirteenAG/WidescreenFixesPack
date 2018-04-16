@@ -70,10 +70,8 @@ HRESULT WINAPI EndScene(LPDIRECT3DDEVICE8 pDevice)
     return RealEndScene(pDevice);
 }
 
-DWORD WINAPI InitWF(LPVOID)
+void InitWF()
 {
-    while (!Screen.nWidth || !Screen.nHeight) { Sleep(0); };
-
     Screen.fWidth = static_cast<float>(Screen.nWidth);
     Screen.fHeight = static_cast<float>(Screen.nHeight);
     Screen.fAspectRatio = Screen.fWidth / Screen.fHeight;
@@ -409,23 +407,11 @@ DWORD WINAPI InitWF(LPVOID)
             }
         }
     }; injector::MakeInline<GraphicNovelPageUpdateHook>(GraphicNovelPageUpdate.get_first(0), GraphicNovelPageUpdate.get_first(6));
-
-    return 0;
 }
 
-DWORD WINAPI InitE2MFC(LPVOID bDelay)
+void InitE2MFC()
 {
-    auto pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "E8 ? ? ? ? 8B 0D ? ? ? ? 89 45 DC 89 5D E0");
-
-    if (pattern.count_hint(2).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&InitE2MFC, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear(GetModuleHandle(L"e2mfc")).count_hint(2).empty()) { Sleep(0); };
-
+    static std::once_flag wf;
     auto PDriverGetWidth = [](uintptr_t P_Driver__m_initializedDriver, uintptr_t edx) -> int32_t
     {
         if (*(uintptr_t*)(P_Driver__m_initializedDriver + 48))
@@ -443,39 +429,34 @@ DWORD WINAPI InitE2MFC(LPVOID bDelay)
         else
             Screen.nHeight = *(int32_t *)(P_Driver__m_initializedDriver + 8);
 
+        if (Screen.nWidth && Screen.nHeight)
+        {
+            std::call_once(wf, []() { InitWF(); });
+        }
         return Screen.nHeight;
     };
 
     //get resolution
-    injector::MakeCALL(pattern.get(0).get<uintptr_t>(0), static_cast<int32_t(__fastcall *)(uintptr_t, uintptr_t)>(PDriverGetWidth), true);   //e2mfc + 0x15582
-    injector::MakeCALL(pattern.get(0).get<uintptr_t>(41), static_cast<int32_t(__fastcall *)(uintptr_t, uintptr_t)>(PDriverGetHeight), true); //e2mfc + 0x155AB
-
-    CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&InitWF, NULL, 0, NULL);
-    return 0;
+    auto pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "E8 ? ? ? ? 8B 0D ? ? ? ? 89 45 DC 89 5D E0");
+    injector::MakeCALL(pattern.count_hint(2).get(0).get<uintptr_t>(0), static_cast<int32_t(__fastcall*)(uintptr_t, uintptr_t)>(PDriverGetWidth), true);   //e2mfc + 0x15582
+    injector::MakeCALL(pattern.count_hint(2).get(0).get<uintptr_t>(41), static_cast<int32_t(__fastcall*)(uintptr_t, uintptr_t)>(PDriverGetHeight), true); //e2mfc + 0x155AB
+    //CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&InitWF, NULL, 0, NULL);
 }
 
-DWORD WINAPI Init(LPVOID bDelay)
+void Init()
 {
-    auto pattern = hook::pattern("0F 84 ? ? ? ? E8 ? ? ? ? 8B 48 04 68 ? ? ? ? 56 89");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
-
     CIniReader iniReader("");
     static bool bUseGameFolderForSavegames = iniReader.ReadInteger("MISC", "UseGameFolderForSavegames", 0) != 0;
     if (bUseGameFolderForSavegames)
+    {
+        auto pattern = hook::pattern("0F 84 ? ? ? ? E8 ? ? ? ? 8B 48 04 68 ? ? ? ? 56 89");
         injector::WriteMemory<uint8_t>(pattern.get_first(1), 0x85, true); //0x40FCAB
+    }
 
     bool bAltTab = iniReader.ReadInteger("MISC", "AllowAltTabbingWithoutPausing", 0) != 0;
     if (bAltTab)
     {
-        pattern = hook::pattern("E8 ? ? ? ? 8B CE E8 ? ? ? ? 5E C2 08 00");
+        auto pattern = hook::pattern("E8 ? ? ? ? 8B CE E8 ? ? ? ? 5E C2 08 00");
         injector::MakeNOP(pattern.count(2).get(1).get<uintptr_t>(0), 5, true); //0x40D29B
     }
 
@@ -489,7 +470,7 @@ DWORD WINAPI Init(LPVOID bDelay)
             else
                 return 1.0f;
         };
-        pattern = hook::pattern("E8 ? ? ? ? EB ? D9 05 ? ? ? ? 8B CF");
+        auto pattern = hook::pattern("E8 ? ? ? ? EB ? D9 05 ? ? ? ? 8B CF");
         injector::MakeCALL(pattern.get_first(), static_cast<float(__fastcall *)(uintptr_t, uintptr_t)>(f), true); //0x4565B8
     }
 
@@ -499,7 +480,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         static auto unk_8A6490 = *hook::get_pattern<void*>("BF ? ? ? ? F3 A5 8B C8 83 E1 03 F3 A4 5F 5E C3", 1);
         if (*(uint8_t*)unk_8A6490 == 0)
         {
-            pattern = hook::pattern("E8 ? ? ? ? 8B 40 04 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 8D 55 10 52");
+            auto pattern = hook::pattern("E8 ? ? ? ? 8B 40 04 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 8D 55 10 52");
             static auto AfxGetModuleState = injector::GetBranchDestination(pattern.get_first(0), true); //0x76F77E
             static auto GetProfileStringA = injector::GetBranchDestination(pattern.get_first(29), true); //0x76F7B4
             static auto aLastSavedGameF = *pattern.get_first<char*>(14); // 8680EC
@@ -606,7 +587,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         return Screen.fFieldOfView;
     };
 
-    pattern = hook::pattern("E8 ? ? ? ? D8 8B 3C 12"); //0x50B9E0
+    auto pattern = hook::pattern("E8 ? ? ? ? D8 8B 3C 12"); //0x50B9E0
     auto sub_50B9E0 = injector::GetBranchDestination(pattern.get_first(), true);
     pattern = hook::pattern("E8 ? ? ? ?");
     for (size_t i = 0; i < pattern.size(); ++i)
@@ -685,29 +666,16 @@ DWORD WINAPI Init(LPVOID bDelay)
     static auto fmt = iniReader.ReadString("MISC", "SaveStringFormat", "%a, %b %d %Y, %H:%M");
     pattern = hook::pattern("68 ? ? ? ? 8D 54 24 24 68 ? ? ? ? 52"); //411091
     injector::WriteMemory(pattern.get_first(1), &fmt, true);
-
-    return 0;
 }
 
-DWORD WINAPI InitE2_D3D8_DRIVER_MFC(LPVOID bDelay)
+void InitE2_D3D8_DRIVER_MFC()
 {
-    auto pattern = hook::module_pattern(GetModuleHandle(L"e2_d3d8_driver_mfc"), "8B 45 0C 53 56 33 F6 2B C6 57");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&InitE2_D3D8_DRIVER_MFC, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear(GetModuleHandle(L"e2_d3d8_driver_mfc")).count_hint(1).empty()) { Sleep(0); };
-
     //D3D Hook for borders
     CIniReader iniReader("");
     bool bD3DHookBorders = iniReader.ReadInteger("MAIN", "D3DHookBorders", 1) != 0;
     if (bD3DHookBorders)
     {
-        pattern = hook::module_pattern(GetModuleHandle(L"e2_d3d8_driver_mfc"), "8B 86 ? ? ? ? 8B 08 50 FF 91");
+        auto pattern = hook::module_pattern(GetModuleHandle(L"e2_d3d8_driver_mfc"), "8B 86 ? ? ? ? 8B 08 50 FF 91");
         struct EndSceneHook
         {
             void operator()(injector::reg_pack& regs)
@@ -723,18 +691,23 @@ DWORD WINAPI InitE2_D3D8_DRIVER_MFC(LPVOID bDelay)
             }
         }; injector::MakeInline<EndSceneHook>(pattern.get_first(0), pattern.get_first(6)); //0x1002856D 
     }
-
-    return 0;
 }
 
+CEXP void InitializeASI()
+{
+    std::call_once(CallbackHandler::flag, []()
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("0F 84 ? ? ? ? E8 ? ? ? ? 8B 48 04 68 ? ? ? ? 56 89").count_hint(1).empty(), 0x1100);
+        CallbackHandler::RegisterCallback(L"E2MFC.dll", InitE2MFC);
+        CallbackHandler::RegisterCallback(L"E2_D3D8_DRIVER_MFC.dll", InitE2_D3D8_DRIVER_MFC);
+    });
+}
 
-BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        Init(NULL);
-        InitE2MFC(NULL);
-        InitE2_D3D8_DRIVER_MFC(NULL);
+
     }
     return TRUE;
 }

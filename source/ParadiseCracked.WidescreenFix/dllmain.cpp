@@ -9,19 +9,8 @@ struct Screen
     float fAspectRatio;
 } Screen;
 
-DWORD WINAPI Init(LPVOID bDelay)
+void Init()
 {
-    auto pattern = hook::pattern("83 EC 58 53 56 57 89 65 E8");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
-
     CIniReader iniReader("");
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
@@ -33,7 +22,7 @@ DWORD WINAPI Init(LPVOID bDelay)
     Screen.fHeight = static_cast<float>(Screen.Height);
     Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
 
-    pattern = hook::pattern("68 58 02 00 00 68 20 03 00 00");
+    auto pattern = hook::pattern("68 58 02 00 00 68 20 03 00 00");
     injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(1), Screen.Width, true);
     injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(6), Screen.Height, true);
 
@@ -75,15 +64,21 @@ DWORD WINAPI Init(LPVOID bDelay)
     Screen.fAspectRatio = (Screen.fHeight / Screen.fWidth);
     pattern = hook::pattern("D9 05 ? ? ? ? 83 EC 10 D9 5C 24 0C");
     injector::WriteMemory<float>(*pattern.count(1).get(0).get<uint32_t*>(2), Screen.fAspectRatio, true);
-    return 0;
 }
 
+CEXP void InitializeASI()
+{
+    std::call_once(CallbackHandler::flag, []()
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("83 EC 58 53 56 57 89 65 E8"));
+    });
+}
 
-BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        Init(NULL);
+
     }
     return TRUE;
 }

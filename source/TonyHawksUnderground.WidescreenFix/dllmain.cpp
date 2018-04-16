@@ -16,20 +16,8 @@ struct Screen
     float fHudOffsetReal;
 } Screen;
 
-DWORD WINAPI Init(LPVOID bDelay)
+void Init()
 {
-    auto pattern = hook::pattern("6A 01 6A 01 ? 8B 15");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        LoadLibrary(L"TonyHawksUnderground.SafeDiscCheck.dll");
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
-
     CIniReader iniReader("");
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
@@ -50,6 +38,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     //addresses is not based on drm free exe
     //Resolution
+    auto pattern = hook::pattern("6A 01 6A 01 ? 8B 15");
     static int32_t* dword_6D3608 = *pattern.get_first<int32_t*>(7);
     static int32_t* dword_6D360C = *pattern.get_first<int32_t*>(-4);
     struct SetResHook
@@ -158,15 +147,21 @@ DWORD WINAPI Init(LPVOID bDelay)
             }
         }; injector::MakeInline<RandomHook>(pattern.get_first(3), rpattern.get_first(2));
     }
-
-    return 0;
 }
 
-BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
+CEXP void InitializeASI()
+{
+    std::call_once(CallbackHandler::flag, []()
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("6A 01 6A 01 ? 8B 15"));
+    });
+}
+
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        Init(NULL);
+
     }
     return TRUE;
 }

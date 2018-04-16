@@ -125,19 +125,8 @@ void __fastcall DrawBordersHook(void* _this, void* edx, testParam* a2)
     hbDrawBorders.fun(_this, edx, a2);
 }
 
-DWORD WINAPI Init(LPVOID bDelay)
+void Init()
 {
-    auto pattern = hook::pattern("C7 46 08 ? ? ? ? C7 46 0C ? ? ? ? 88 5E 18");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
-
     CIniReader iniReader("");
     Screen.nWidth = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.nHeight = iniReader.ReadInteger("MAIN", "ResY", 0);
@@ -149,6 +138,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     int32_t defX = 0, defY = 0;
     std::tie(defX, defY) = GetDesktopRes();
+    auto pattern = hook::pattern("C7 46 08 ? ? ? ? C7 46 0C ? ? ? ? 88 5E 18");
     injector::WriteMemory(pattern.get_first(3), defX, true); //497822
     injector::WriteMemory(pattern.get_first(10), defY, true);
 
@@ -349,15 +339,21 @@ DWORD WINAPI Init(LPVOID bDelay)
     //shadow fix
     pattern = hook::pattern("85 C9 ? 1F 6A 10");
     injector::WriteMemory<uint8_t>(pattern.get_first(2), 0xEBi8, true); //jmp
-
-    return 0;
 }
 
-BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
+CEXP void InitializeASI()
+{
+    std::call_once(CallbackHandler::flag, []()
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("C7 46 08 ? ? ? ? C7 46 0C ? ? ? ? 88 5E 18"));
+    });
+}
+
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        Init(NULL);
+
     }
     return TRUE;
 }

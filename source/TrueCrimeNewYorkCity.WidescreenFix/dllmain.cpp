@@ -20,19 +20,8 @@ int32_t __cdecl SetLanguage(LPCSTR lpValueName)
     return nLanguage;
 }
 
-DWORD WINAPI Init(LPVOID bDelay)
+void Init()
 {
-    auto pattern = hook::pattern("BF 94 00 00 00 8B C7");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
-
     CIniReader iniReader("");
     bool bDoNotUseRegistryPath = iniReader.ReadInteger("MAIN", "DoNotUseRegistryPath", 1) != 0;
     nLanguage = iniReader.ReadInteger("MAIN", "Language", -1);
@@ -42,7 +31,7 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     if (bDoNotUseRegistryPath)
     {
-        pattern = hook::pattern("B9 20 00 00 00 8D 7C 24 18 F3 AB 8D 44 24 0C"); //0x496F27
+        auto pattern = hook::pattern("B9 20 00 00 00 8D 7C 24 18 F3 AB 8D 44 24 0C"); //0x496F27
         struct RegHook
         {
             void operator()(injector::reg_pack& regs)
@@ -60,13 +49,13 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     if (nLanguage >= 0)
     {
-        pattern = hook::pattern("E8 ? ? ? ? 8B 04 85 ? ? ? ? 83 C4 04 C3"); //0x495E95
+        auto pattern = hook::pattern("E8 ? ? ? ? 8B 04 85 ? ? ? ? 83 C4 04 C3"); //0x495E95
         injector::MakeCALL(pattern.count(1).get(0).get<uintptr_t>(0), SetLanguage, true);
         pattern = hook::pattern("68 ? ? ? ? E8 ? ? ? ? 83 C4 04 C3"); //0x495EB5
         injector::MakeCALL(pattern.count(2).get(1).get<uintptr_t>(5), SetLanguage, true);
     }
 
-    pattern = hook::pattern("89 55 00 89 5D 04 C7 45 08 15 00 00 00 89 7D 0C"); //0x649478
+    auto pattern = hook::pattern("89 55 00 89 5D 04 C7 45 08 15 00 00 00 89 7D 0C"); //0x649478
     struct ResHook
     {
         void operator()(injector::reg_pack& regs)
@@ -137,16 +126,21 @@ DWORD WINAPI Init(LPVOID bDelay)
         injector::WriteMemory(pattern.count(3).get(1).get<void>(2), &fGameSpeed, true); //0x40C930 + 0x2 + 0x64
         injector::WriteMemory(pattern.count(3).get(2).get<void>(2), &fGameSpeed, true); //0x40C930 + 0x2 + 0x4D
     }
-
-    return 0;
 }
 
+CEXP void InitializeASI()
+{
+    std::call_once(CallbackHandler::flag, []()
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("BF 94 00 00 00 8B C7"));
+    });
+}
 
-BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        Init(NULL);
+
     }
     return TRUE;
 }

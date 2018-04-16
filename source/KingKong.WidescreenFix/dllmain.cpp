@@ -1,6 +1,5 @@
 #include "stdafx.h"
 
-bool bSettingsApp;
 uintptr_t pBarsPtr;
 uintptr_t pBarsJmp;
 
@@ -37,47 +36,27 @@ void __declspec(naked) BarsHook()
     }
 }
 
-DWORD WINAPI InitSettings(LPVOID)
+void InitSettings()
 {
     auto pattern = hook::pattern("75 66 8D 4C 24 04 51");
-    if (!pattern.count_hint(1).empty())
+    injector::MakeNOP(pattern.get_first(0), 2, true); //0x40BD3F
+
+    pattern = hook::pattern("75 39 83 7C 24 08 01 75 32 8B"); //0x40BD6C
+    struct RegHook
     {
-        bSettingsApp = true;
-        pattern = hook::pattern("75 66 8D 4C 24 04 51");
-        injector::MakeNOP(pattern.get_first(0), 2, true); //0x40BD3F
-
-        pattern = hook::pattern("75 39 83 7C 24 08 01 75 32 8B"); //0x40BD6C
-        struct RegHook
+        void operator()(injector::reg_pack& regs)
         {
-            void operator()(injector::reg_pack& regs)
-            {
-                regs.ecx = *(uint32_t*)(regs.esp + 0x118);
-                regs.edx = (regs.esp + 0x0C);
+            regs.ecx = *(uint32_t*)(regs.esp + 0x118);
+            regs.edx = (regs.esp + 0x0C);
 
-                GetModuleFileNameA(NULL, (char*)regs.edx, MAX_PATH);
-                *(strrchr((char*)regs.edx, '\\') + 1) = '\0';
-            }
-        }; injector::MakeInline<RegHook>(pattern.get_first(0), pattern.get_first(20));
-    }
-    return 0;
+            GetModuleFileNameA(NULL, (char*)regs.edx, MAX_PATH);
+            *(strrchr((char*)regs.edx, '\\') + 1) = '\0';
+        }
+    }; injector::MakeInline<RegHook>(pattern.get_first(0), pattern.get_first(20));
 }
 
-DWORD WINAPI Init(LPVOID bDelay)
+void Init()
 {
-    if (bSettingsApp)
-        return 0;
-
-    auto pattern = hook::pattern("33 DB 89 5D E0 53");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
-
     CIniReader iniReader("");
     static bool bCustomAR;
     char *szForceAspectRatio = iniReader.ReadString("MAIN", "ForceAspectRatio", "auto");
@@ -92,7 +71,7 @@ DWORD WINAPI Init(LPVOID bDelay)
         bCustomAR = true;
     }
 
-    pattern = hook::pattern("89 86 BC 02 00 00 89 8E C0 02 00 00 89 96 C4 02 00 00"); //0x9F2161 
+    auto pattern = hook::pattern("89 86 BC 02 00 00 89 8E C0 02 00 00 89 96 C4 02 00 00"); //0x9F2161 
     struct ResHook
     {
         void operator()(injector::reg_pack& regs)
@@ -226,15 +205,22 @@ DWORD WINAPI Init(LPVOID bDelay)
             }
         }; injector::MakeInline<MouseSensHook>(pattern.get_first(0), pattern.get_first(6));
     }
-    return 0;
 }
 
-BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
+CEXP void InitializeASI()
+{
+    std::call_once(CallbackHandler::flag, []()
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("33 DB 89 5D E0 53"));
+        CallbackHandler::RegisterCallback(InitSettings, hook::pattern("75 66 8D 4C 24 04 51"));
+    });
+}
+
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        InitSettings(NULL);
-        Init(NULL);
+
     }
     return TRUE;
 }
