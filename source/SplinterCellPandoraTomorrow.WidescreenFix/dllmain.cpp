@@ -1,20 +1,27 @@
 #include "stdafx.h"
+#include <dxsdk/d3d8.h>
 
 struct Screen
 {
-    int Width;
-    int Height;
+    int32_t Width;
+    int32_t Height;
     float fWidth;
     float fHeight;
-    float fFieldOfView;
     float fAspectRatio;
-    float HUDScaleX;
+    float fHUDScaleX;
+    double dHUDScaleX;
     float fHudOffset;
     float fHudOffsetRight;
     float fFMVoffsetStartX;
     float fFMVoffsetEndX;
     float fFMVoffsetStartY;
     float fFMVoffsetEndY;
+    float fIniHudOffset;
+    float fWidescreenHudOffset;
+    bool bHudWidescreenMode;
+    bool bOpsatWidescreenMode;
+    uint32_t nPostProcessFixedScale;
+    uint32_t nFMVWidescreenMode;
 } Screen;
 
 union FColor
@@ -26,12 +33,7 @@ union FColor
     };
 };
 
-uint32_t nForceShadowBufferMode, nFMVWidescreenMode, nPostProcessFixedScale;
-bool bHudWidescreenMode, bOpsatWidescreenMode;
-float fWidescreenHudOffset;
-
 uintptr_t pDrawTile;
-
 void WidescreenHud(float& offsetX1, float& offsetX2, float& offsetY1, float& offsetY2, FColor& Color)
 {
     DBGONLY(KEYPRESS(VK_F1) { spd::log->info("{0:f} {1:f} {2:f} {3:f} {4:08x}", offsetX1, offsetX2, offsetY1, offsetY2, Color.RGBA); });
@@ -68,8 +70,8 @@ void WidescreenHud(float& offsetX1, float& offsetX2, float& offsetY1, float& off
         ((offsetX1 == 371.0f || offsetX1 == 379.0f || offsetX1 == 387.0f || offsetX1 == 558.0f || offsetX1 == 566.0f) && offsetY1 >= 39.0f && offsetY2 <= 162.0f && (Color.RGBA == 4266682200 || Color.RGBA == 3036610302)) // turret interface, Color.RGBA == 4271155864 -> turret mouse area, maybe something else
         )
     {
-        offsetX1 += fWidescreenHudOffset;
-        offsetX2 += fWidescreenHudOffset;
+        offsetX1 += Screen.fWidescreenHudOffset;
+        offsetX2 += Screen.fWidescreenHudOffset;
     }
     else
     {
@@ -80,38 +82,9 @@ void WidescreenHud(float& offsetX1, float& offsetX2, float& offsetY1, float& off
             (offsetX1 >= 52.0f && offsetY1 >= 43.0f && offsetY2 <= 185.0f && Color.RGBA == 4265759816) //top dialogue menu text
             )
         {
-            offsetX1 -= fWidescreenHudOffset;
-            offsetX2 -= fWidescreenHudOffset;
+            offsetX1 -= Screen.fWidescreenHudOffset;
+            offsetX2 -= Screen.fWidescreenHudOffset;
         }
-    }
-}
-
-uint32_t DisplayVideo_HookJmp;
-void __declspec(naked) DisplayVideo_Hook()
-{
-    static uint32_t __ECX;
-    _asm
-    {
-        fstp    dword ptr[esp]
-        push    esi
-        push    esi
-        mov		__ECX, ecx
-        mov ecx, nFMVWidescreenMode
-        cmp ecx, 0
-        jz label1
-        mov ecx, Screen.fFMVoffsetStartY
-        mov[esp + 4h], ecx;
-        mov ecx, Screen.fFMVoffsetEndY
-            mov[esp + 0xC], ecx;
-        jmp label2
-            label1 :
-        mov ecx, Screen.fFMVoffsetStartX
-            mov[esp + 0h], ecx;
-        mov ecx, Screen.fFMVoffsetEndX
-            mov[esp + 8h], ecx;
-    label2:
-        mov	 ecx, __ECX
-            jmp	 DisplayVideo_HookJmp
     }
 }
 
@@ -142,7 +115,7 @@ void __fastcall FCanvasUtilDrawTileHook(void* _this, uint32_t EDX, float X, floa
 
     if (X == 0.0f && SizeX == 64.0f) //sony ericsson overlay
     {
-        if (bOpsatWidescreenMode)
+        if (Screen.bOpsatWidescreenMode)
         {
             DrawTile(_this, EDX, X, Y, SizeX, SizeY, U, V, SizeU, SizeV, unk1, Texture, Color, unk3, unk4);
             return;
@@ -154,7 +127,7 @@ void __fastcall FCanvasUtilDrawTileHook(void* _this, uint32_t EDX, float X, floa
     }
     if (X == 64.0f && SizeX == 320.0f) //sony ericsson overlay
     {
-        if (bOpsatWidescreenMode)
+        if (Screen.bOpsatWidescreenMode)
         {
             DrawTile(_this, EDX, X, Y, SizeX + Screen.fHudOffset, SizeY, U, V, SizeU, SizeV, unk1, Texture, Color, unk3, unk4);
             return;
@@ -162,7 +135,7 @@ void __fastcall FCanvasUtilDrawTileHook(void* _this, uint32_t EDX, float X, floa
     }
     if (X == 320.0f && SizeX == 576.0f) //sony ericsson overlay
     {
-        if (bOpsatWidescreenMode)
+        if (Screen.bOpsatWidescreenMode)
         {
             DrawTile(_this, EDX, X + Screen.fHudOffset, Y, SizeX + Screen.fHudOffset + Screen.fHudOffset, SizeY, U, V, SizeU, SizeV, unk1, Texture, Color, unk3, unk4);
             return;
@@ -171,7 +144,7 @@ void __fastcall FCanvasUtilDrawTileHook(void* _this, uint32_t EDX, float X, floa
 
     if (X == 576.0f && SizeX == 640.0f) //sony ericsson overlay
     {
-        if (bOpsatWidescreenMode)
+        if (Screen.bOpsatWidescreenMode)
         {
             DrawTile(_this, EDX, X + Screen.fHudOffset + Screen.fHudOffset, Y, SizeX + Screen.fHudOffset + Screen.fHudOffset, SizeY, U, V, SizeU, SizeV, unk1, Texture, Color, unk3, unk4);
             return;
@@ -196,7 +169,7 @@ void __fastcall FCanvasUtilDrawTileHook(void* _this, uint32_t EDX, float X, floa
         }
     }
 
-    if (bHudWidescreenMode)
+    if (Screen.bHudWidescreenMode)
         WidescreenHud(X, SizeX, Y, SizeY, Color);
 
     X += Screen.fHudOffset;
@@ -205,19 +178,46 @@ void __fastcall FCanvasUtilDrawTileHook(void* _this, uint32_t EDX, float X, floa
     return DrawTile(_this, EDX, X, Y, SizeX, SizeY, U, V, SizeU, SizeV, unk1, Texture, Color, unk3, unk4);
 }
 
-DWORD WINAPI InitCore(LPVOID bDelay)
+void Init()
+{
+    CIniReader iniReader("");
+    Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
+    Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
+    Screen.nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 0);
+    Screen.bHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1) != 0;
+    Screen.bOpsatWidescreenMode = iniReader.ReadInteger("MAIN", "OpsatWidescreenMode", 1) != 0;
+    Screen.fIniHudOffset = iniReader.ReadFloat("MAIN", "WidescreenHudOffset", 140.0f);
+    Screen.nPostProcessFixedScale = iniReader.ReadInteger("MAIN", "PostProcessFixedScale", 1);
+
+    if (!Screen.Width || !Screen.Height)
+        std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
+
+    char UserIni[MAX_PATH];
+    GetModuleFileNameA(GetModuleHandle(NULL), UserIni, (sizeof(UserIni)));
+    *strrchr(UserIni, '\\') = '\0';
+    strcat(UserIni, "\\SplinterCell2User.ini");
+
+    CIniReader iniWriter(UserIni);
+    char szRes[50];
+    sprintf(szRes, "%dx%d", Screen.Width, Screen.Height);
+    iniWriter.WriteString("Engine.EPCGameOptions", "Resolution", szRes);
+
+    *strrchr(UserIni, '\\') = '\0';
+    strcat(UserIni, "\\SplinterCell2.ini");
+    iniWriter.SetIniPath(UserIni);
+    iniWriter.WriteInteger("WinDrv.WindowsClient", "WindowedViewportX", Screen.Width);
+    iniWriter.WriteInteger("WinDrv.WindowsClient", "WindowedViewportY", Screen.Height);
+    iniWriter.WriteInteger("D3DDrv.D3DRenderDevice", "ForceShadowMode", iniReader.ReadInteger("MAIN", "ForceShadowBufferMode", 1));
+
+    *strrchr(UserIni, '\\') = '\0';
+    strcat(UserIni, "\\SplinterCell.ini");
+    iniWriter.SetIniPath(UserIni);
+    iniWriter.WriteInteger("D3DDrv.D3DRenderDevice", "ForceShadowMode", iniReader.ReadInteger("MAIN", "ForceShadowBufferMode", 1));
+}
+
+void InitCore()
 {
     auto pattern = hook::module_pattern(GetModuleHandle(L"Core"), "C7 85 D4 F1 FF FF 00 00 00 00"); //0x1000CE5E
-
-    if (pattern.count_hint(1).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&InitCore, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear(GetModuleHandle(L"Core")).count_hint(1).empty()) { Sleep(0); };
-
     uint32_t pfappInit = (uint32_t)pattern.get_first();
 
     auto rpattern = hook::range_pattern(pfappInit, pfappInit + 0x900, "80 02 00 00");
@@ -225,29 +225,64 @@ DWORD WINAPI InitCore(LPVOID bDelay)
     injector::WriteMemory(rpattern.count(2).get(1).get<uint32_t>(0), Screen.Width, true);  //pfappInit + 0x67E + 0x1
     rpattern = hook::range_pattern(pfappInit, pfappInit + 0x900, "E0 01 00 00");
     injector::WriteMemory(rpattern.count(2).get(1).get<uint32_t>(0), Screen.Height, true); //pfappInit + 0x69F + 0x1
-
-    return 0;
 }
 
-DWORD WINAPI InitD3DDrv(LPVOID bDelay)
+void InitD3DDrv()
 {
-    auto pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "C1 E9 02 33 C0 F3 AB 8B CA 83 E1 03 F3 AA 8B 45 0C");
-
-    if (pattern.count_hint(2).empty() && !bDelay)
+    static auto pPresentParams = *hook::module_pattern(GetModuleHandle(L"D3DDrv"), "BF ? ? ? ? 33 C0 8B D9 C1 E9 02 83 E3 03").get_first<D3DPRESENT_PARAMETERS*>(1);
+    auto pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "B8 01 00 00 00 8B 4D F4 64 89 0D 00 00 00 00 5F 5E 5B 8B E5 5D C2 10 00");
+    struct SetResHook
     {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&InitD3DDrv, (LPVOID)true, 0, NULL);
-        return 0;
-    }
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.eax = 1;
 
-    if (bDelay)
-        while (pattern.clear(GetModuleHandle(L"D3DDrv")).count_hint(2).empty()) { Sleep(0); };
+            Screen.Width = pPresentParams->BackBufferWidth;
+            Screen.Height = pPresentParams->BackBufferHeight;
+            Screen.fWidth = static_cast<float>(Screen.Width);
+            Screen.fHeight = static_cast<float>(Screen.Height);
+            Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
+            Screen.fHudOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
+            Screen.fHUDScaleX = 1.0f / Screen.fWidth * (Screen.fHeight / 480.0f);
+            Screen.dHUDScaleX = static_cast<double>(Screen.fHUDScaleX);
+            Screen.fFMVoffsetStartX = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
+            Screen.fFMVoffsetEndX = Screen.fWidth - Screen.fFMVoffsetStartX;
+            Screen.fFMVoffsetStartY = 0.0f - ((Screen.fHeight - ((Screen.fHeight / 1.5f) * ((16.0f / 9.0f) / Screen.fAspectRatio))) / 2.0f);
+            Screen.fFMVoffsetEndY = Screen.fHeight - Screen.fFMVoffsetStartY;
+            Screen.fWidescreenHudOffset = Screen.fIniHudOffset;
+            if (Screen.fAspectRatio < (16.0f / 9.0f))
+                Screen.fWidescreenHudOffset = Screen.fWidescreenHudOffset / (((16.0f / 9.0f) / (Screen.fAspectRatio)) * 1.5f);
+
+            CIniReader iniReader("");
+            auto[DesktopResW, DesktopResH] = GetDesktopRes();
+            if (Screen.Width != DesktopResW || Screen.Height != DesktopResH)
+            {
+                iniReader.WriteInteger("MAIN", "ResX", Screen.Width);
+                iniReader.WriteInteger("MAIN", "ResY", Screen.Height);
+            }
+            else
+            {
+                iniReader.WriteInteger("MAIN", "ResX", 0);
+                iniReader.WriteInteger("MAIN", "ResY", 0);
+            }
+
+            if (pPresentParams->Windowed)
+            {
+                tagRECT rect;
+                rect.left = (LONG)(((float)DesktopResW / 2.0f) - (Screen.fWidth / 2.0f));
+                rect.top = (LONG)(((float)DesktopResH / 2.0f) - (Screen.fHeight / 2.0f));
+                rect.right = (LONG)Screen.Width;
+                rect.bottom = (LONG)Screen.Height;
+                SetWindowLong(pPresentParams->hDeviceWindow, GWL_STYLE, GetWindowLong(pPresentParams->hDeviceWindow, GWL_STYLE) & ~WS_OVERLAPPEDWINDOW);
+                SetWindowPos(pPresentParams->hDeviceWindow, NULL, rect.left, rect.top, rect.right, rect.bottom, SWP_NOACTIVATE | SWP_NOZORDER);
+                SetForegroundWindow(pPresentParams->hDeviceWindow);
+                SetCursor(NULL);
+            }
+        }
+    }; injector::MakeInline<SetResHook>(pattern.get_first(0));
 
     //FMV
-    Screen.fFMVoffsetStartX = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
-    Screen.fFMVoffsetEndX = Screen.fWidth - Screen.fFMVoffsetStartX;
-    Screen.fFMVoffsetStartY = 0.0f - ((Screen.fHeight - ((Screen.fHeight / 1.5f) * ((16.0f / 9.0f) / Screen.fAspectRatio))) / 2.0f);
-    Screen.fFMVoffsetEndY = Screen.fHeight - Screen.fFMVoffsetStartY;
-
+    pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "C1 E9 02 33 C0 F3 AB 8B CA 83 E1 03 F3 AA 8B 45 0C");
     struct OpenVideo_Hook
     {
         void operator()(injector::reg_pack& regs)
@@ -259,60 +294,61 @@ DWORD WINAPI InitD3DDrv(LPVOID bDelay)
     }; injector::MakeInline<OpenVideo_Hook>(pattern.count(2).get(0).get<void*>(0)); //pfOpenVideo + 0x2D4
 
     pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "D9 1C 24 56 56 FF 15");
-    injector::MakeJMP(pattern.get_first(0), DisplayVideo_Hook, true);//pfDisplayVideo + 0x37E
-    DisplayVideo_HookJmp = (uint32_t)pattern.get_first(5);
-
-    if (nPostProcessFixedScale)
+    struct DisplayVideo_Hook
     {
-        if (nPostProcessFixedScale == 1)
-            nPostProcessFixedScale = Screen.Width;
+        void operator()(injector::reg_pack& regs)
+        {
+            *(float*)(regs.esp + 0x00) = static_cast<float>(*(int32_t*)(regs.esp + 0x68));
+            *(float*)&regs.eax = 0.0f;
+
+            if (Screen.nFMVWidescreenMode)
+            {
+                *(float*)&regs.esi = Screen.fFMVoffsetStartY;
+                *(float*)(regs.esp + 0x04) = Screen.fFMVoffsetEndY;
+            }
+            else
+            {
+                *(float*)&regs.eax = Screen.fFMVoffsetStartX;
+                *(float*)(regs.esp + 0x00) = Screen.fFMVoffsetEndX;
+            }
+        }
+    }; injector::MakeInline<DisplayVideo_Hook>(pattern.get_first(-4), pattern.get_first(3)); //pfDisplayVideo + 0x37E
+    injector::WriteMemory<uint8_t>(pattern.get_first(4), 0x50, true); //push eax
+
+    if (Screen.nPostProcessFixedScale)
+    {
+        if (Screen.nPostProcessFixedScale == 1)
+            Screen.nPostProcessFixedScale = Screen.Width;
 
         pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "68 00 02 00 00 68 00 02 00 00");
         for (size_t i = 0; i < pattern.size(); i++)
         {
-            injector::WriteMemory(pattern.get(i).get<uint32_t>(1), nPostProcessFixedScale, true); //affects glass reflections
-            injector::WriteMemory(pattern.get(i).get<uint32_t>(6), nPostProcessFixedScale, true);
+            injector::WriteMemory(pattern.get(i).get<uint32_t>(1), Screen.nPostProcessFixedScale, true); //affects glass reflections
+            injector::WriteMemory(pattern.get(i).get<uint32_t>(6), Screen.nPostProcessFixedScale, true);
         }
 
         pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "B8 00 02 00 00");
-        injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(1), nPostProcessFixedScale, true);
+        injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(1), Screen.nPostProcessFixedScale, true);
     }
-    return 0;
 }
 
-DWORD WINAPI InitEngine(LPVOID bDelay)
+void InitEngine()
 {
     auto pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "8B ? 94 00 00 00 E8");
-
-    if (pattern.count_hint(3).empty() && !bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&InitEngine, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear(GetModuleHandle(L"Engine")).count_hint(3).empty()) { Sleep(0); };
-
-
-    Screen.fHudOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
-    Screen.HUDScaleX = 1.0f / Screen.fWidth * (Screen.fHeight / 480.0f);
-
     pDrawTile = injector::GetBranchDestination(pattern.count(3).get(0).get<uintptr_t>(6), true).as_int();
 
-    auto rpattern = hook::range_pattern(pDrawTile, pDrawTile + 0x100, "DC 0D");
-    injector::WriteMemory<double>(*rpattern.get(0).get<uint32_t*>(2), Screen.HUDScaleX, true);
+    pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "DC 0D ? ? ? ? DB 43 18 DC 0D ? ? ? ? D9 5D E4 75 12 D9 45 10");
+    injector::WriteMemory(pattern.get_first(2), &Screen.dHUDScaleX, true);
 
     pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "8B 4D F4 5F 5E 64 89 0D 00 00 00 00 5B 8B E5 5D C2 4C 00");
     injector::MakeCALL(pattern.count(1).get(0).get<uint32_t>(-5), FCanvasUtilDrawTileHook, true); //pfFUCanvasDrawTile + 0x219
 
-
     uint32_t pfsub_103762F0 = (uint32_t)hook::module_pattern(GetModuleHandle(L"Engine"), "8B 4C 24 04 8B 51 44 83").get_first(0);
-    rpattern = hook::range_pattern(pfsub_103762F0, pfsub_103762F0 + 0x800, "E8 ? ? ? ? 8B ?");
+    auto rpattern = hook::range_pattern(pfsub_103762F0, pfsub_103762F0 + 0x800, "E8 ? ? ? ? 8B ?");
     injector::MakeCALL(rpattern.get(3).get<uint32_t>(0), FCanvasUtilDrawTileHook, true); //pfsub_103762F0 + 0x36E
     injector::MakeCALL(rpattern.get(5).get<uint32_t>(0), FCanvasUtilDrawTileHook, true); //pfsub_103762F0 + 0x43D
     injector::MakeCALL(rpattern.get(7).get<uint32_t>(0), FCanvasUtilDrawTileHook, true); //pfsub_103762F0 + 0x4DA
     injector::MakeCALL(rpattern.get(9).get<uint32_t>(0), FCanvasUtilDrawTileHook, true); //pfsub_103762F0 + 0x564
-
 
     //FOV
     uint32_t pfDraw = (uint32_t)hook::module_pattern(GetModuleHandle(L"Engine"), "81 EC 84 06 00 00 A1 ? ? ? ? 53 56 57").get_first();
@@ -335,98 +371,36 @@ DWORD WINAPI InitEngine(LPVOID bDelay)
     injector::MakeInline<UGameEngine_Draw_Hook2>(rpattern.get(2).get<uint32_t>(0), rpattern.get(2).get<uint32_t>(0 + 6));
     injector::MakeInline<UGameEngine_Draw_Hook2>(rpattern.get(3).get<uint32_t>(0), rpattern.get(3).get<uint32_t>(0 + 6));
 
-    if (Screen.fAspectRatio < (16.0f / 9.0f))
+    if (Screen.nPostProcessFixedScale)
     {
-        fWidescreenHudOffset = fWidescreenHudOffset / (((16.0f / 9.0f) / (Screen.fAspectRatio)) * 1.5f);
-    }
+        if (Screen.nPostProcessFixedScale == 1)
+            Screen.nPostProcessFixedScale = Screen.Width;
 
-    if (nPostProcessFixedScale)
-    {
-        if (nPostProcessFixedScale == 1)
-            nPostProcessFixedScale = Screen.Width;
-
-        auto pattern2 = hook::module_pattern(GetModuleHandle(L"Engine"), "68 00 02 00 00 68 00 02 00 00 ?");
+        auto pattern2 = hook::module_pattern(GetModuleHandle(L"Engine"), "68 00 02 00 00 68 00 02 00 00");
         for (size_t i = 0; i < pattern2.size(); i++)
         {
-            injector::WriteMemory(pattern2.get(i).get<uint32_t>(1), nPostProcessFixedScale, true);
-            injector::WriteMemory(pattern2.get(i).get<uint32_t>(6), nPostProcessFixedScale, true);
+            injector::WriteMemory(pattern2.get(i).get<uint32_t>(1), Screen.nPostProcessFixedScale, true);
+            injector::WriteMemory(pattern2.get(i).get<uint32_t>(6), Screen.nPostProcessFixedScale, true);
         }
     }
-
-    return 0;
 }
 
-DWORD WINAPI Init(LPVOID bDelay)
+CEXP void InitializeASI()
 {
-    auto pattern = hook::pattern("C7 45 E8 00 00 00 00 8B 15");
-
-    if (pattern.count_hint(1).empty() && !bDelay)
+    std::call_once(CallbackHandler::flag, []()
     {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
-        return 0;
-    }
-
-    if (bDelay)
-        while (pattern.clear().count_hint(1).empty()) { Sleep(0); };
-
-    struct SetResHook
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            *(uint32_t*)(regs.ebp - 0x18) = 0;
-
-            CIniReader iniReader("");
-            Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
-            Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
-            nForceShadowBufferMode = iniReader.ReadInteger("MAIN", "ForceShadowBufferMode", 1);
-            nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 0);
-            bHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1) == 1;
-            bOpsatWidescreenMode = iniReader.ReadInteger("MAIN", "OpsatWidescreenMode", 1) == 1;
-            fWidescreenHudOffset = iniReader.ReadFloat("MAIN", "WidescreenHudOffset", 140.0f);
-            nPostProcessFixedScale = iniReader.ReadInteger("MAIN", "PostProcessFixedScale", 1);
-
-            if (!Screen.Width || !Screen.Height)
-                std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
-
-            Screen.fWidth = static_cast<float>(Screen.Width);
-            Screen.fHeight = static_cast<float>(Screen.Height);
-            Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
-
-            char UserIni[MAX_PATH];
-            GetModuleFileNameA(GetModuleHandle(NULL), UserIni, (sizeof(UserIni)));
-            *strrchr(UserIni, '\\') = '\0';
-            strcat(UserIni, "\\SplinterCell2User.ini");
-
-            CIniReader iniWriter(UserIni);
-            char szRes[50];
-            sprintf(szRes, "%dx%d", Screen.Width, Screen.Height);
-            iniWriter.WriteString("Engine.EPCGameOptions", "Resolution", szRes);
-
-            *strrchr(UserIni, '\\') = '\0';
-            strcat(UserIni, "\\SplinterCell2.ini");
-            iniWriter.SetIniPath(UserIni);
-            iniWriter.WriteInteger("WinDrv.WindowsClient", "WindowedViewportX", Screen.Width);
-            iniWriter.WriteInteger("WinDrv.WindowsClient", "WindowedViewportY", Screen.Height);
-
-            *strrchr(UserIni, '\\') = '\0';
-            strcat(UserIni, "\\SplinterCell.ini");
-            iniWriter.SetIniPath(UserIni);
-            iniWriter.WriteInteger("D3DDrv.D3DRenderDevice", "ForceShadowMode", nForceShadowBufferMode);
-
-            InitCore(NULL);
-            InitEngine(NULL);
-            InitD3DDrv(NULL);
-        }
-    }; injector::MakeInline<SetResHook>(pattern.get_first(0), pattern.get_first(7));
-
-    return 0;
+        CallbackHandler::RegisterCallback(Init);
+        CallbackHandler::RegisterCallback(L"Core.dll", InitCore);
+        CallbackHandler::RegisterCallback(L"Engine.dll", InitEngine);
+        CallbackHandler::RegisterCallback(L"D3DDrv.dll", InitD3DDrv);
+    });
 }
 
-BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        Init(NULL);
+
     }
     return TRUE;
 }
