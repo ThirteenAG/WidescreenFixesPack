@@ -39,7 +39,7 @@ public:
     {}
 };
 
-void LoadDatFile(std::string_view str, std::function<void(std::string_view line)>&& ñallback)
+void LoadDatFile(std::string_view str, std::function<void(std::string_view line)>&& cb)
 {
     if (FILE* hFile = CFileMgr::OpenFile(str.data(), "r"))
     {
@@ -47,7 +47,7 @@ void LoadDatFile(std::string_view str, std::function<void(std::string_view line)
         {
             if (pLine[0] && pLine[0] != '#')
             {
-                ñallback(pLine);
+                cb(pLine);
             }
         }
         CFileMgr::CloseFile(hFile);
