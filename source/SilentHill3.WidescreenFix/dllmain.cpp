@@ -1,7 +1,5 @@
 #include "stdafx.h"
 
-bool bConfigTool;
-
 struct Screen
 {
     int32_t Width;
@@ -81,7 +79,7 @@ LONG WINAPI RegCloseKeyHook(HKEY hKey)
     return ERROR_SUCCESS;
 }
 
-void PatchRegistryFuncs()
+bool PatchRegistryFuncs()
 {
     auto RegIATpat = hook::pattern("50 53 53 FF 75 F4 C7 45 F0 10 00 00 00 FF 15");
     if (RegIATpat.size() > 0)
@@ -96,7 +94,7 @@ void PatchRegistryFuncs()
         injector::WriteMemory(&RegIAT[6], RegCreateKeyExAHook, true);
         injector::WriteMemory(&RegIAT[7], RegSetValueExAHook, true);
         injector::WriteMemory(&RegIAT[8], RegCloseKeyHook, true);
-        bConfigTool = true;
+        return true;
     }
     else
     {
@@ -110,12 +108,12 @@ void PatchRegistryFuncs()
             injector::WriteMemory(&RegIAT[3], RegCloseKeyHook, true);
         }
     }
+    return false;
 }
 
 void Init()
 {
-    PatchRegistryFuncs();
-    if (bConfigTool)
+    if (PatchRegistryFuncs())
         return;
 
     CIniReader iniReader("");
@@ -371,6 +369,22 @@ void Init()
         injector::WriteMemory<uint16_t>(pattern.get_first(0), 0x05D9i16, true); //fsub -> fld
         injector::WriteMemory(pattern.get_first(2), &w2, true);
     }
+
+    //health indicator
+    pattern = hook::pattern("D9 59 E8 D9 C0 D8 48 F8 D9 59 EC 7C DE 6A 01"); //5F1D15 
+    struct HealthHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            float fHudScale = (((4.0f / 3.0f)) / (Screen.fAspectRatio));
+            float temp = 480.0f;
+            _asm {fmul dword ptr[fHudScale]}
+            _asm {fadd dword ptr[temp] } //todo
+            _asm {fstp dword ptr[temp]}
+            *(float*)(regs.ecx - 0x18) = temp;
+            _asm {fld st(0)}
+        }
+    }; injector::MakeInline<HealthHook>(pattern.get_first(0), pattern.get_first(8));
 
     //inventory background size
     pattern = hook::pattern("B8 00 01 00 00 BA 00 FF FF FF 8B E8"); //5DAFE5
