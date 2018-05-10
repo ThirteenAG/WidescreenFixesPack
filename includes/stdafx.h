@@ -166,8 +166,8 @@ private:
             functions.erase(module_name.data());
         }
 
-        if (functions.empty())
-            UnRegisterDllNotification();
+        //if (functions.empty()) //win7 crash in splinter cell
+        //    UnRegisterDllNotification();
     }
 
     static inline void invoke_all()
