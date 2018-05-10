@@ -270,9 +270,17 @@ void Init()
 
     if (bInsertKey)
     {
-        pattern = hook::pattern("56 57 BA 01 00 00 00 B9");
-        auto ret_key = []() -> const char* { return "1234-5678-9abc-dddf"; };
-        injector::MakeJMP(pattern.get_first(0), static_cast<const char*(*)()>(ret_key), true); //0x731C30
+        pattern = hook::pattern("8B C7 5F F7 D8 1B C0 5E 25 ? ? ? ? C3"); //0x731C30
+        struct InsertKey
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                static constexpr auto key = "1234-5678-9abc-dddf";
+                if (!regs.eax)
+                    regs.eax = (uint32_t)key;
+            }
+        }; injector::MakeInline<InsertKey>(pattern.get_first(13));
+        injector::MakeRET(pattern.get_first(13 + 5));
     }
 }
 
