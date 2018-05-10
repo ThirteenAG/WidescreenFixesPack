@@ -381,7 +381,7 @@ void Init()
             float fHudScale = (((4.0f / 3.0f)) / (Screen.fAspectRatio));
             float temp = 0.0f;
             _asm {fstp dword ptr ds : [temp]}
-            static float fHudOffset = (Screen.fWidth - (temp * fHudScale) - 90.0f);
+            static float fHudOffset = (Screen.fWidth - (temp * fHudScale) - 125.0f);
             *(float*)(regs.ecx - 0x18) = (temp * fHudScale) + fHudOffset;
             _asm {fld st}
         }
