@@ -371,9 +371,7 @@ void Init()
     }
 
     //health indicator
-    char bytes[5] = { 0 };
     pattern = hook::pattern("D9 59 E8 D9 C0 D8 48 F8 D9 59 EC 7C DE 6A 01"); //5F1D15
-    injector::ReadMemoryRaw(pattern.get_first(-5), bytes, sizeof(bytes), true);
     struct HealthHook
     {
         void operator()(injector::reg_pack& regs)
@@ -381,12 +379,10 @@ void Init()
             float fHudScale = (((4.0f / 3.0f)) / (Screen.fAspectRatio));
             float temp = 0.0f;
             _asm {fstp dword ptr ds : [temp]}
-            static float fHudOffset = (Screen.fWidth - (temp * fHudScale) - 125.0f);
-            *(float*)(regs.ecx - 0x18) = (temp * fHudScale) + fHudOffset;
+            *(float*)(regs.ecx - 0x18) = (temp * fHudScale) + (Screen.fWidth - (Screen.fHeight * (4.0f / 3.0f)));
             _asm {fld st}
         }
-    }; injector::MakeInline<HealthHook>(pattern.get_first(-5), pattern.get_first(5));
-    injector::WriteMemoryRaw(pattern.get_first(0), bytes, sizeof(bytes), true); //cmp eax, offset unk_71FAE4
+    }; injector::MakeInline<HealthHook>(pattern.get_first(0));
 
     //inventory background size
     pattern = hook::pattern("B8 00 01 00 00 BA 00 FF FF FF 8B E8"); //5DAFE5
