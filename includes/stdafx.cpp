@@ -1,10 +1,5 @@
 #include "stdafx.h"
 
-std::map<std::wstring, std::function<void()>, CallbackHandler::Comparator> CallbackHandler::functions;
-#if DEBUG
-const std::shared_ptr<spdlog::logger> spd::log = spdlog::basic_logger_mt("basic_logger", spd::GetLogName(), true);
-#endif
-
 float GetFOV(float f, float ar)
 {
     return atan2(tan(atan2(tan(f * 0.5f) / (4.0f / 3.0f), 1.0f)) * (ar), 1.0f);

@@ -46,7 +46,7 @@ int __cdecl sub_42B460(float a1, float a2, float a3, float a4, float a5, float a
     uint32_t n_offsetY2 = static_cast<uint32_t>((a4));
     auto Color = *(FColor*)&a9;
 
-    DBGONLY(KEYPRESS(VK_F1) { spd::log->info("{0:d} {1:d} {2:d} {3:d} {4:08x} {5:08x} {6:08x}", n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, a9, a10, a11); });
+    DBGONLY(KEYPRESS(VK_F1) { spd::log()->info("{0:d} {1:d} {2:d} {3:d} {4:08x} {5:08x} {6:08x}", n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, a9, a10, a11); });
 
     a1 = (a1 / Screen.fHudScaleX) + Screen.fHudOffset;
     a3 = (a3 / Screen.fHudScaleX) + Screen.fHudOffset;
@@ -81,7 +81,7 @@ void __cdecl sub_42B610(float a1, float a2, float a3, float a4, int a5, int a6, 
     uint32_t n_offsetX2 = static_cast<uint32_t>((a3));
     uint32_t n_offsetY2 = static_cast<uint32_t>((a4));
 
-    DBGONLY(KEYPRESS(VK_F1) { spd::log->info("{0:d} {1:d} {2:d} {3:d} {4:08x} {5:08x} {6:08x}", n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, a5, a6, a7); });
+    DBGONLY(KEYPRESS(VK_F1) { spd::log()->info("{0:d} {1:d} {2:d} {3:d} {4:08x} {5:08x} {6:08x}", n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, a5, a6, a7); });
 
     if (a1 != 0.0f && a2 != 0.0f) //menu background rendered here
     {

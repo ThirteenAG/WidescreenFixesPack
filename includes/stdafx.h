@@ -119,7 +119,7 @@ public:
         else
         {
             RegisterDllNotification();
-            functions.emplace(module_name, std::forward<std::function<void()>>(fn));
+            GetCallbackList().emplace(module_name, std::forward<std::function<void()>>(fn));
         }
     }
 
@@ -160,19 +160,19 @@ public:
 private:
     static inline void call(std::wstring_view module_name)
     {
-        if (functions.count(module_name.data()))
+        if (GetCallbackList().count(module_name.data()))
         {
-            functions.at(module_name.data())();
-            functions.erase(module_name.data());
+            GetCallbackList().at(module_name.data())();
+            GetCallbackList().erase(module_name.data());
         }
 
-        //if (functions.empty()) //win7 crash in splinter cell
+        //if (GetCallbackList().empty()) //win7 crash in splinter cell
         //    UnRegisterDllNotification();
     }
 
     static inline void invoke_all()
     {
-        for (auto&& fn : functions)
+        for (auto&& fn : GetCallbackList())
             fn.second();
     }
 
@@ -186,6 +186,12 @@ private:
             return  str1 < str2;
         }
     };
+
+    static std::map<std::wstring, std::function<void()>, Comparator>& GetCallbackList()
+    {
+        static std::map<std::wstring, std::function<void()>, Comparator> functions;
+        return functions;
+    }
 
     struct ThreadParams
     {
@@ -260,7 +266,6 @@ private:
         return 0;
     }
 private:
-    static /*inline*/ std::map<std::wstring, std::function<void()>, Comparator> functions;
     static inline _LdrRegisterDllNotification   LdrRegisterDllNotification;
     static inline _LdrUnregisterDllNotification LdrUnregisterDllNotification;
     static inline void* cookie;

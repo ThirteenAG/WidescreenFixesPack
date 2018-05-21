@@ -9,6 +9,14 @@
 class spd
 {
 public:
+    static const std::shared_ptr<spdlog::logger>& log()
+    {
+        static const auto log = spdlog::basic_logger_mt("basic_logger", spd::GetLogName(), true);
+        spdlog::set_pattern("%v");
+        return log;
+    }
+
+private:
     inline static const std::wstring GetLogName()
     {
         HMODULE hm = NULL;
@@ -17,11 +25,8 @@ public:
         ret.resize(MAX_PATH);
         GetModuleFileNameW(hm, &ret[0], ret.size());
         ret = ret.substr(0, ret.find_last_of('.')) + L".log";
-        spdlog::set_pattern("%v");
         return ret;
     }
-
-    /*inline*/ static const std::shared_ptr<spdlog::logger> log;
 };
 #else
 #define DBGONLY(x)

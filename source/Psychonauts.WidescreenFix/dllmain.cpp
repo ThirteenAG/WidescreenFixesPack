@@ -143,7 +143,7 @@ void Init()
             {
                 CRect* r = (CRect*)(ptr - 0x08);
 
-                DBGONLY(KEYPRESS(VK_F1) { spd::log->info("{0:f} {1:f} {2:f} {3:f} {4:08x} {5:08x} {6:08x} {7:08x}", r->m_fLeft, r->m_fBottom, r->m_fRight, r->m_fTop, *(uint32_t*)&r->m_fLeft, *(uint32_t*)&r->m_fBottom, *(uint32_t*)&r->m_fRight, *(uint32_t*)&r->m_fTop); });
+                DBGONLY(KEYPRESS(VK_F1) { spd::log()->info("{0:f} {1:f} {2:f} {3:f} {4:08x} {5:08x} {6:08x} {7:08x}", r->m_fLeft, r->m_fBottom, r->m_fRight, r->m_fTop, *(uint32_t*)&r->m_fLeft, *(uint32_t*)&r->m_fBottom, *(uint32_t*)&r->m_fRight, *(uint32_t*)&r->m_fTop); });
 
                 if (*r == fs || *r == fl)
                 {
@@ -170,7 +170,7 @@ void Init()
                             }
                             else
                             {
-                                DBGONLY(KEYPRESS(VK_F2) { spd::log->info("0x{0:08x} 0x{1:08x}", stack[3], stack[4]); });
+                                DBGONLY(KEYPRESS(VK_F2) { spd::log()->info("0x{0:08x} 0x{1:08x}", stack[3], stack[4]); });
 
                                 if (stack[idx] == dw_61EA8F || stack[idx] == dw_616FB7 || stack[idx] == dw_4FD37D)
                                 {
