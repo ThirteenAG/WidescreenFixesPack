@@ -100,7 +100,7 @@ void __stdcall S_matrix_Identity(S_matrix* _this)
         }
     }
 
-    DBGONLY(spd::log->info("{0:x}", stack[3]););
+    DBGONLY(spd::log()->info("{0:x}", stack[3]););
 }
 
 void InitSettings()

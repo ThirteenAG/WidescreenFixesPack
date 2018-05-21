@@ -75,7 +75,7 @@ void Init()
         {
             void operator()(injector::reg_pack& regs)
             {
-                DBGONLY(spd::log->info("{} {} {} {} {}", *(float*)(*(uintptr_t*)(regs.ecx + 0x0A859C) + 0x00), *(uintptr_t*)(*(uintptr_t*)(regs.ecx + 0x0A859C) + 0x10), *(uintptr_t*)(*(uintptr_t*)(regs.ecx + 0x0A859C) + 0x14), *(uintptr_t*)(*(uintptr_t*)(regs.ecx + 0x0A859C) + 0x18), *(uintptr_t*)(*(uintptr_t*)(regs.ecx + 0x0A859C) + 0x1C)););
+                DBGONLY(spd::log()->info("{} {} {} {} {}", *(float*)(*(uintptr_t*)(regs.ecx + 0x0A859C) + 0x00), *(uintptr_t*)(*(uintptr_t*)(regs.ecx + 0x0A859C) + 0x10), *(uintptr_t*)(*(uintptr_t*)(regs.ecx + 0x0A859C) + 0x14), *(uintptr_t*)(*(uintptr_t*)(regs.ecx + 0x0A859C) + 0x18), *(uintptr_t*)(*(uintptr_t*)(regs.ecx + 0x0A859C) + 0x1C)););
 
                 if (*(float*)(*(uintptr_t*)(regs.ecx + 0x0A859C) + 0x08) != 90.0f && *(uintptr_t*)(*(uintptr_t*)(regs.ecx + 0x0A859C) + 0x18) != 235587392) //fading check
                 {

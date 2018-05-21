@@ -92,14 +92,14 @@ struct Screen
 
 int32_t retX()
 {
-    DBGONLY(KEYPRESS(VK_F1) { spd::log->info("retX addr: 0x{0:08x}", retXmap[((uintptr_t)_ReturnAddress() - 5)]); });
+    DBGONLY(KEYPRESS(VK_F1) { spd::log()->info("retX addr: 0x{0:08x}", retXmap[((uintptr_t)_ReturnAddress() - 5)]); });
 
     return Screen.PresetWidth;
 };
 
 int32_t retY()
 {
-    DBGONLY(KEYPRESS(VK_F1) { spd::log->info("retY addr: 0x{0:08x}", retYmap[((uintptr_t)_ReturnAddress() - 5)]); });
+    DBGONLY(KEYPRESS(VK_F1) { spd::log()->info("retY addr: 0x{0:08x}", retYmap[((uintptr_t)_ReturnAddress() - 5)]); });
 
     return Screen.PresetHeight;
 };

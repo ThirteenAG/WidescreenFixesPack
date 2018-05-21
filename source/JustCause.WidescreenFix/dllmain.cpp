@@ -81,7 +81,7 @@ HRESULT __stdcall CreateDevice(IDirect3D9* d3ddev, UINT Adapter, D3DDEVTYPE Devi
 injector::hook_back<void(__fastcall*)(void*, void*, testParam*)> hbDrawBorders;
 void __fastcall DrawBordersHook(void* _this, void* edx, testParam* a2)
 {
-    DBGONLY(KEYPRESS(VK_F1) { spd::log->info("{0:f} {1:f} {2:f} {3:f} {4:f} {5:f} {6:f} {7:f} {8:f}", a2->a1, a2->a2, a2->a3, a2->a4, a2->a5, a2->a6, a2->a7, a2->a8, a2->a9); });
+    DBGONLY(KEYPRESS(VK_F1) { spd::log()->info("{0:f} {1:f} {2:f} {3:f} {4:f} {5:f} {6:f} {7:f} {8:f}", a2->a1, a2->a2, a2->a3, a2->a4, a2->a5, a2->a6, a2->a7, a2->a8, a2->a9); });
 
     static float x4 = 0.0f;
     if (!x4 && (fabs(-a2->a2 - a2->a4) <= FLT_EPSILON * fmax(fabs(-a2->a2), fabs(a2->a4))))

@@ -238,7 +238,7 @@ void Init()
                         !((((fRight - fLeft) == 1) || ((fRight - fLeft) == 2) || ((fRight - fLeft) == 3) || ((fRight - fLeft) == 4)) && ((fBottom - fTop) == 1 || (fBottom - fTop) == 16 || (fBottom - fTop) == 21 || (fBottom - fTop) == 22) && (fTop >= 195 && fBottom <= 395)) //other brackets of overlay menus
                         )
                     {
-                        DBGONLY(KEYPRESS(VK_F1) { spd::log->info("{0:d} {1:d} {2:d} {3:d} {4:08x}", fLeft, fRight, fTop, fBottom, Color.RGBA); });
+                        DBGONLY(KEYPRESS(VK_F1) { spd::log()->info("{0:d} {1:d} {2:d} {3:d} {4:08x}", fLeft, fRight, fTop, fBottom, Color.RGBA); });
                         *(int16_t*)(regs.esp + 0x40) += WidescreenHudOffset._int;
                         *(int16_t*)(regs.esp + 0x42) += WidescreenHudOffset._int;
                     }
@@ -277,7 +277,7 @@ void Init()
                 int32_t offset3 = static_cast<int32_t>(*(float*)(regs.esp + 0x1C));
                 FColor Color; Color.RGBA = *(int32_t*)(regs.esp + 0x160);
 
-                DBGONLY(KEYPRESS(VK_F2) { spd::log->info("{0:d} {1:d} {2:d} {4:08x}", offset1, offset2, offset3, Color.RGBA); });
+                DBGONLY(KEYPRESS(VK_F2) { spd::log()->info("{0:d} {1:d} {2:d} {4:08x}", offset1, offset2, offset3, Color.RGBA); });
 
                 if (bIsInMenu && *bIsInMenu == 0)
                 {
