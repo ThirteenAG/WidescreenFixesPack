@@ -90,6 +90,7 @@ void Init()
     Screen.fWidth = static_cast<float>(Screen.Width);
     Screen.fHeight = static_cast<float>(Screen.Height);
     Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
+    Screen.Width43 = static_cast<uint32_t>(Screen.fHeight * (4.0f / 3.0f));
     Screen.fHudScaleX = (1.0f / Screen.fWidth * (Screen.fHeight / 480.0f)) * 2.0f;
     Screen.fHudPosX = 640.0f / (640.0f * Screen.fHudScaleX);
     Screen.fHudOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
