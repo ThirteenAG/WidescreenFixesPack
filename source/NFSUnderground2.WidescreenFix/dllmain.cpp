@@ -213,10 +213,14 @@ void Init()
         uint32_t  dword_5C7292 = (uint32_t)dword_5C726A + 40;
         injector::WriteMemory<float>(dword_5C7292, Screen.fHeight * 2.0f, true);
 
-        //graph of the dyno result issue #366
-        static float fDyno = 79.0f + Screen.fHudOffset;
-        auto pattern = hook::pattern("6A 04 68 ? ? ? ? 68 ? ? ? ? 8B C8"); //53D082
-        injector::WriteMemory(pattern.get_first(8), &fDyno, true);
+        //graph of the dyno result issue #366 / #462
+        auto flt_7FA3C0 = *hook::get_pattern<float*>("6A 04 68 ? ? ? ? 68 ? ? ? ? 8B C8", 8); //53D082
+        injector::WriteMemory<float>(flt_7FA3C0, 79.0f + Screen.fHudOffset, true);
+        injector::WriteMemory<float>(flt_7FA3C0 + 1, 60.0f, true);
+
+        //controls screenshot aspect ratio issue #462
+        auto pattern = hook::pattern("DA 0D ? ? ? ? 55 56 8B F0 A1 ? ? ? ? 99"); //5C30AC
+        injector::WriteMemory(pattern.get_first(2), &Screen.Width43, true);
     }
 
 
@@ -358,8 +362,8 @@ void Init()
             void operator()(injector::reg_pack& regs)
             {
                 float esi48 = 0.0f;
-                _asm fst dword ptr[esi48]
-                    * (float*)(regs.esi + 0x48) = esi48;
+                _asm {fst dword ptr[esi48]}
+                *(float*)(regs.esi + 0x48) = esi48;
                 regs.ecx = *(uint32_t*)(regs.esi + 0x1C);
                 regs.edx = *(uint32_t*)(regs.esi + 0x20);
                 HudPos HudPosX = regs.ecx;
@@ -379,10 +383,10 @@ void Init()
                 HudPos HudPosX = *(uint32_t*)(regs.edx + 0x00);
                 HudPos HudPosY = *(uint32_t*)(regs.edx + 0x04);
                 WidescreenHud(HudPosX, HudPosY);
-                _asm fadd dword ptr[HudPosX.fPos]
-                    _asm fstp dword ptr[esi00]
-                    * (float*)(regs.esi + 0x00) = esi00;
-                _asm fld  dword ptr[ecx4]
+                _asm {fadd dword ptr[HudPosX.fPos]}
+                _asm {fstp dword ptr[esi00]}
+                *(float*)(regs.esi + 0x00) = esi00;
+                _asm fld dword ptr[ecx4]
             }
         }; injector::MakeInline<StopSignHook>((uint32_t)dword_5050FB, (uint32_t)dword_5050FB + 7);
 
