@@ -126,7 +126,7 @@ void Init()
     Screen.nHudScale = static_cast<int32_t>(Screen.fHudScale);
     Screen.fHudOffset = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
     Screen.fMenuOffset = (Screen.fWidth - 480.0f * (4.0f / 3.0f)) / 2.0f;
-    if (strncmp(szCameraZoom, "auto", 4) != 0)
+    if (strncmp(szCameraZoom.c_str(), "auto", 4) != 0)
         Screen.fCameraZoom = iniReader.ReadFloat("MAIN", "CameraZoomFactor", 1.0f);
     else
         Screen.fCameraZoom = (Screen.fAspectRatio / (4.0f / 3.0f)) * 2.5f;

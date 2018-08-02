@@ -549,13 +549,13 @@ DWORD WINAPI Init(LPVOID bDelay)
             }
         }
 
-        if (strncmp(szForceAspectRatio, "auto", 4) != 0)
+        if (strncmp(szForceAspectRatio.c_str(), "auto", 4) != 0)
         {
-            AspectRatioWidth = std::stoi(szForceAspectRatio);
-            AspectRatioHeight = std::stoi(strchr(szForceAspectRatio, ':') + 1);
+            AspectRatioWidth = std::stoi(szForceAspectRatio.c_str());
+            AspectRatioHeight = std::stoi(strchr(szForceAspectRatio.c_str(), ':') + 1);
         }
 
-        bFOVControl = iniReader.ReadString("MAIN", "FOVControl", "1") != 0;
+        bFOVControl = iniReader.ReadInteger("MAIN", "FOVControl", 1) != 0;
         FOVControl = (uint32_t*)0x6FF41B;
         injector::WriteMemory<float>(FOVControl, 1.0f, true);
 

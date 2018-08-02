@@ -12,7 +12,7 @@ uint32_t FrontendAspectRatioWidth, FrontendAspectRatioHeight;
 float fCustomAspectRatioHor, fCustomAspectRatioVer;
 float fRadarWidthScale, fCustomRadarWidthScale;
 float fPlayerMarkerPos;
-char *szForceAspectRatio;
+std::string szForceAspectRatio;
 bool bFOVControl;
 float fEmergencyVehiclesFix;
 float fFOVControlValue;

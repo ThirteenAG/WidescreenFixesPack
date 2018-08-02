@@ -592,15 +592,15 @@ void ApplyIniOptions()
     bDontTouchFOV = iniReader.ReadInteger("MAIN", "DontTouchFOV", 0) != 0;
 
     szForceAspectRatio = iniReader.ReadString("MAIN", "ForceAspectRatio", "auto");
-    if (strncmp(szForceAspectRatio, "auto", 4) != 0)
+    if (strncmp(szForceAspectRatio.c_str(), "auto", 4) != 0)
     {
-        AspectRatioWidth = std::stoi(szForceAspectRatio);
-        AspectRatioHeight = std::stoi(strchr(szForceAspectRatio, ':') + 1);
+        AspectRatioWidth = std::stoi(szForceAspectRatio.c_str());
+        AspectRatioHeight = std::stoi(strchr(szForceAspectRatio.c_str(), ':') + 1);
         fCustomAspectRatioHor = static_cast<float>(AspectRatioWidth);
         fCustomAspectRatioVer = static_cast<float>(AspectRatioHeight);
     }
 
-    bFOVControl = iniReader.ReadString("MAIN", "FOVControl", "1") != 0;
+    bFOVControl = iniReader.ReadInteger("MAIN", "FOVControl", 1) != 0;
     auto pattern = hook::pattern("DE D9 DE D9 EB E9"); //0x576686 1.0
     if (bFOVControl && pattern.size() > 0)
     {
@@ -664,7 +664,7 @@ void ApplyIniOptions()
 
     pattern = hook::pattern("A1 ? ? ? ? 3B C3"); //0x65C321
     szForceAspectRatio = iniReader.ReadString("MAIN", "ForceMultisamplingLevel", "");
-    if (strncmp(szForceAspectRatio, "max", 3) != 0)
+    if (strncmp(szForceAspectRatio.c_str(), "max", 3) != 0)
     {
         SelectedMultisamplingLevels = iniReader.ReadInteger("MAIN", "ForceMultisamplingLevel", 0);
         injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(1), &SelectedMultisamplingLevels, true);
@@ -796,10 +796,10 @@ void Fix2DSprites()
 {
     CIniReader iniReader("");
     szForceAspectRatio = iniReader.ReadString("MAIN", "FrontendAspectRatio", "auto");
-    if (strncmp(szForceAspectRatio, "auto", 4) != 0)
+    if (strncmp(szForceAspectRatio.c_str(), "auto", 4) != 0)
     {
-        FrontendAspectRatioWidth = std::stoi(szForceAspectRatio);
-        FrontendAspectRatioHeight = std::stoi(strchr(szForceAspectRatio, ':') + 1);
+        FrontendAspectRatioWidth = std::stoi(szForceAspectRatio.c_str());
+        FrontendAspectRatioHeight = std::stoi(strchr(szForceAspectRatio.c_str(), ':') + 1);
     }
     else
     {
