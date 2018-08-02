@@ -102,7 +102,7 @@ void Init()
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
     bool bD3DHookBorders = iniReader.ReadInteger("MISC", "D3DHookBorders", 0) != 0;
     bool bCustomUsrDir = false;
-    if (strncmp(szCustomUserFilesDirectoryInGameDir, "0", 1) != 0)
+    if (strncmp(szCustomUserFilesDirectoryInGameDir.c_str(), "0", 1) != 0)
         bCustomUsrDir = true;
 
     if (!Screen.nWidth || !Screen.nHeight)
@@ -451,13 +451,12 @@ void Init()
         char moduleName[MAX_PATH];
         GetModuleFileNameA(NULL, moduleName, MAX_PATH);
         *(strrchr(moduleName, '\\') + 1) = '\0';
-        strcat(moduleName, szCustomUserFilesDirectoryInGameDir);
-        strcpy(szCustomUserFilesDirectoryInGameDir, moduleName);
+        szCustomUserFilesDirectoryInGameDir = moduleName + szCustomUserFilesDirectoryInGameDir;
 
         auto SHGetFolderPathAHook = [](HWND /*hwnd*/, int /*csidl*/, HANDLE /*hToken*/, DWORD /*dwFlags*/, LPSTR pszPath) -> HRESULT
         {
-            CreateDirectoryA(szCustomUserFilesDirectoryInGameDir, NULL);
-            strcpy(pszPath, szCustomUserFilesDirectoryInGameDir);
+            CreateDirectoryA(szCustomUserFilesDirectoryInGameDir.c_str(), NULL);
+            strcpy(pszPath, szCustomUserFilesDirectoryInGameDir.c_str());
             return S_OK;
         };
 

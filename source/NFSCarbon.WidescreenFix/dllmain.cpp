@@ -33,7 +33,7 @@ void Init()
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
     static float fRainDropletsScale = iniReader.ReadFloat("MISC", "RainDropletsScale", 0.5f);
     bool bCustomUsrDir = false;
-    if (strncmp(szCustomUserFilesDirectoryInGameDir, "0", 1) != 0)
+    if (strncmp(szCustomUserFilesDirectoryInGameDir.c_str(), "0", 1) != 0)
         bCustomUsrDir = true;
 
     if (!Screen.Width || !Screen.Height)
@@ -354,13 +354,12 @@ void Init()
         char moduleName[MAX_PATH];
         GetModuleFileNameA(NULL, moduleName, MAX_PATH);
         *(strrchr(moduleName, '\\') + 1) = '\0';
-        strcat(moduleName, szCustomUserFilesDirectoryInGameDir);
-        strcpy(szCustomUserFilesDirectoryInGameDir, moduleName);
+        szCustomUserFilesDirectoryInGameDir = moduleName + szCustomUserFilesDirectoryInGameDir;
 
         auto SHGetFolderPathAHook = [](HWND /*hwnd*/, int /*csidl*/, HANDLE /*hToken*/, DWORD /*dwFlags*/, LPSTR pszPath) -> HRESULT
         {
-            CreateDirectoryA(szCustomUserFilesDirectoryInGameDir, NULL);
-            strcpy(pszPath, szCustomUserFilesDirectoryInGameDir);
+            CreateDirectoryA(szCustomUserFilesDirectoryInGameDir.c_str(), NULL);
+            strcpy(pszPath, szCustomUserFilesDirectoryInGameDir.c_str());
             return S_OK;
         };
 
@@ -613,7 +612,7 @@ void Init()
 
         auto RegOpenKeyExAHook = [](HKEY hKey, LPCSTR lpSubKey, DWORD ulOptions, REGSAM samDesired, PHKEY phkResult) -> LONG
         {
-            if (strlen(RegistryReader.ReadString("MAIN", "DisplayName", "")) == 0)
+            if (RegistryReader.ReadString("MAIN", "DisplayName", "").length() == 0)
             {
                 RegistryReader.WriteString("MAIN", "@", "INSERTYOURCDKEYHERE");
                 RegistryReader.WriteString("MAIN", "DisplayName", "Need for Speed Carbon");
@@ -645,8 +644,8 @@ void Init()
         {
             if (!lpValueName) //cd key
             {
-                char* str = RegistryReader.ReadString("MAIN", "@", "");
-                strncpy((char*)lpData, str, *lpcbData);
+                auto str = RegistryReader.ReadString("MAIN", "@", "");
+                strncpy((char*)lpData, str.c_str(), *lpcbData);
                 return ERROR_SUCCESS;
             }
 
@@ -659,8 +658,8 @@ void Init()
                     return ERROR_SUCCESS;
                 }
 
-                char* str = RegistryReader.ReadString("MAIN", (char*)lpValueName, "");
-                strncpy((char*)lpData, str, *lpcbData);
+                auto str = RegistryReader.ReadString("MAIN", (char*)lpValueName, "");
+                strncpy((char*)lpData, str.c_str(), *lpcbData);
             }
             else
             {

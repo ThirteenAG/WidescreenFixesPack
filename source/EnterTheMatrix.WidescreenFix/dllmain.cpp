@@ -85,7 +85,7 @@ void InitSettings()
             std::tie(iniResX, iniResY) = GetDesktopRes();
             char defVal[20];
             sprintf_s(defVal, "%dx%d", iniResX, iniResY);
-            char* iniRes = iniReader.ReadString("RENDERING", "RESOLUTION", defVal);
+            auto iniRes = iniReader.ReadString("RENDERING", "RESOLUTION", defVal);
             //sscanf_s(iniRes, "%dx%d", &iniResX, &iniResY);
             int32_t i = 0, mode = 0;
             for each (auto &res in list)
@@ -138,8 +138,8 @@ void Init()
             std::tie(Screen.nWidth, Screen.nHeight) = GetDesktopRes();
             char defVal[20];
             sprintf_s(defVal, "%dx%d", Screen.nWidth, Screen.nHeight);
-            char* iniRes = iniReader.ReadString("RENDERING", "RESOLUTION", defVal);
-            sscanf_s(iniRes, "%dx%d", &Screen.nWidth, &Screen.nHeight);
+            auto iniRes = iniReader.ReadString("RENDERING", "RESOLUTION", defVal);
+            sscanf_s(iniRes.c_str(), "%dx%d", &Screen.nWidth, &Screen.nHeight);
 
             *dword_93B7B0 = Screen.nWidth;
             *dword_93B7B4 = Screen.nHeight;

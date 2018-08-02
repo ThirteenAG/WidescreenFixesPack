@@ -19,11 +19,11 @@ struct Screen
     uint16_t FrontendAspectRatioHeight;
 } Screen;
 
-char* szCustomUserFilesDirectory;
-char* __cdecl InitUserDirectories()
+std::string szCustomUserFilesDirectory;
+const char* __cdecl InitUserDirectories()
 {
-    CreateDirectoryA(szCustomUserFilesDirectory, NULL);
-    return szCustomUserFilesDirectory;
+    CreateDirectoryA(szCustomUserFilesDirectory.c_str(), NULL);
+    return szCustomUserFilesDirectory.c_str();
 }
 
 injector::hook_back<void(__cdecl*)(float, float, float, float, int, int, int, int, int)> hbDrawRect;
@@ -68,11 +68,11 @@ void Init()
     Screen.fFOVFactor = iniReader.ReadFloat("MAIN", "FOVFactor", 0.0f);
     static bool bDisableGamepadInput = iniReader.ReadInteger("MAIN", "DisableGamepadInput", 0) != 0;
     szCustomUserFilesDirectory = iniReader.ReadString("MAIN", "CustomUserFilesDirectoryInGameDir", "");
-    char* szFrontendAspectRatio = iniReader.ReadString("MAIN", "FrontendAspectRatio", "auto");
-    if (strncmp(szFrontendAspectRatio, "auto", 4) != 0)
+    auto szFrontendAspectRatio = iniReader.ReadString("MAIN", "FrontendAspectRatio", "auto");
+    if (strncmp(szFrontendAspectRatio.c_str(), "auto", 4) != 0)
     {
-        Screen.FrontendAspectRatioWidth = std::stoi(szFrontendAspectRatio);
-        Screen.FrontendAspectRatioHeight = std::stoi(strchr(szFrontendAspectRatio, ':') + 1);
+        Screen.FrontendAspectRatioWidth = std::stoi(szFrontendAspectRatio.c_str());
+        Screen.FrontendAspectRatioHeight = std::stoi(strchr(szFrontendAspectRatio.c_str(), ':') + 1);
     }
     else
     {
@@ -165,13 +165,12 @@ void Init()
                 }; injector::MakeInline<FOVHook1>(pattern.get_first(0), pattern.get_first(6));
             }
 
-            if (strncmp(szCustomUserFilesDirectory, "0", 1) != 0)
+            if (!szCustomUserFilesDirectory.empty() || szCustomUserFilesDirectory != "0")
             {
-                char			moduleName[MAX_PATH];
+                char moduleName[MAX_PATH];
                 GetModuleFileNameA(NULL, moduleName, MAX_PATH);
                 *(strrchr(moduleName, '\\') + 1) = '\0';
-                strcat(moduleName, szCustomUserFilesDirectory);
-                strcpy(szCustomUserFilesDirectory, moduleName);
+                szCustomUserFilesDirectory = moduleName + szCustomUserFilesDirectory;
 
                 pattern = hook::pattern("E8 ? ? ? ? 50 8D 54 24 08 52 E8 ? ? ? ? 83 C4 0C 8D");
                 injector::MakeCALL(pattern.get_first(0), InitUserDirectories, true); //0x605E0B

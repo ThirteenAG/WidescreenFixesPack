@@ -59,15 +59,15 @@ void Init()
 {
     CIniReader iniReader("");
     static bool bCustomAR;
-    char *szForceAspectRatio = iniReader.ReadString("MAIN", "ForceAspectRatio", "auto");
+    auto szForceAspectRatio = iniReader.ReadString("MAIN", "ForceAspectRatio", "auto");
     static bool bFullscreenFMVs = iniReader.ReadInteger("MAIN", "FullscreenFMVs", 1) != 0;
     static float fMouseSensitivityFactor = iniReader.ReadFloat("MAIN", "MouseSensitivityFactor", 0.0f);
     static float fFOVFactor = iniReader.ReadFloat("MAIN", "FOVFactor", 0.0f);
 
-    if (strncmp(szForceAspectRatio, "auto", 4) != 0)
+    if (strncmp(szForceAspectRatio.c_str(), "auto", 4) != 0)
     {
-        Screen.fCustomAspectRatioHor = static_cast<float>(std::stoi(szForceAspectRatio));
-        Screen.fCustomAspectRatioVer = static_cast<float>(std::stoi(strchr(szForceAspectRatio, ':') + 1));
+        Screen.fCustomAspectRatioHor = static_cast<float>(std::stoi(szForceAspectRatio.c_str()));
+        Screen.fCustomAspectRatioVer = static_cast<float>(std::stoi(strchr(szForceAspectRatio.c_str(), ':') + 1));
         bCustomAR = true;
     }
 
