@@ -1,6 +1,6 @@
 #pragma once
 
-#if DEBUG
+#if _DEBUG
 #define DBGONLY(x) x
 #define KEYPRESS(x) if (GetAsyncKeyState(x) & 0x8000)
 #define SPDLOG_WCHAR_FILENAMES

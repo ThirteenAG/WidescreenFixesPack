@@ -31,7 +31,7 @@ union FColor
     {
         uint8_t B, G, R, A;
     };
-};
+} gColor;
 
 uintptr_t pDrawTile;
 void WidescreenHud(float& offsetX1, float& offsetX2, float& offsetY1, float& offsetY2, FColor& Color)
@@ -188,6 +188,7 @@ void Init()
     Screen.bOpsatWidescreenMode = iniReader.ReadInteger("MAIN", "OpsatWidescreenMode", 1) != 0;
     Screen.fIniHudOffset = iniReader.ReadFloat("MAIN", "WidescreenHudOffset", 140.0f);
     Screen.nPostProcessFixedScale = iniReader.ReadInteger("MAIN", "PostProcessFixedScale", 1);
+    gColor.RGBA = iniReader.ReadInteger("BONUS", "GogglesLightColor", 0);
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -253,6 +254,9 @@ void InitD3DDrv()
             if (Screen.fAspectRatio < (16.0f / 9.0f))
                 Screen.fWidescreenHudOffset = Screen.fWidescreenHudOffset / (((16.0f / 9.0f) / (Screen.fAspectRatio)) * 1.5f);
 
+            if (Screen.Width < 640 || Screen.Height < 480)
+                return;
+
             CIniReader iniReader("");
             auto[DesktopResW, DesktopResH] = GetDesktopRes();
             if (Screen.Width != DesktopResW || Screen.Height != DesktopResH)
@@ -275,6 +279,7 @@ void InitD3DDrv()
                 rect.bottom = (LONG)Screen.Height;
                 SetWindowLong(pPresentParams->hDeviceWindow, GWL_STYLE, GetWindowLong(pPresentParams->hDeviceWindow, GWL_STYLE) & ~WS_OVERLAPPEDWINDOW);
                 SetWindowPos(pPresentParams->hDeviceWindow, NULL, rect.left, rect.top, rect.right, rect.bottom, SWP_NOACTIVATE | SWP_NOZORDER);
+                SetWindowPos(pPresentParams->hDeviceWindow, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
                 SetForegroundWindow(pPresentParams->hDeviceWindow);
                 SetCursor(NULL);
             }
@@ -382,6 +387,21 @@ void InitEngine()
             injector::WriteMemory(pattern2.get(i).get<uint32_t>(1), Screen.nPostProcessFixedScale, true);
             injector::WriteMemory(pattern2.get(i).get<uint32_t>(6), Screen.nPostProcessFixedScale, true);
         }
+    }
+
+    if (gColor.RGBA)
+    {
+        pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "B0 7F 88 45 24 88 45 25 88 45 26 C6 45 27 FF 8B 45 24 50 8B CB FF 52 40"); //104070CF
+        struct USkeletalMeshInstanceRenderHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                *(uint8_t*)(regs.ebp + 0x24) = gColor.B;
+                *(uint8_t*)(regs.ebp + 0x25) = gColor.G;
+                *(uint8_t*)(regs.ebp + 0x26) = gColor.R;
+                *(uint8_t*)(regs.ebp + 0x27) = 0xFF;
+            }
+        }; injector::MakeInline<USkeletalMeshInstanceRenderHook>(pattern.get_first(0), pattern.get_first(15));
     }
 }
 

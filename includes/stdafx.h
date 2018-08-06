@@ -2,6 +2,7 @@
 #include "targetver.h"
 #define WIN32_LEAN_AND_MEAN
 #define _USE_MATH_DEFINES
+#pragma warning(push)
 #pragma warning(disable: 4178 4305 4309 4510 4996)
 #include <windows.h>
 #include <stdint.h>
@@ -17,8 +18,8 @@
 #include "injector\assembly.hpp"
 #include "injector\utility.hpp"
 #include "Hooking.Patterns.h"
-#pragma warning(default: 4178 4305 4309 4510)
 #include "log.h"
+#pragma warning(pop)
 
 #ifndef CEXP
 #define CEXP extern "C" __declspec(dllexport)
@@ -241,8 +242,9 @@ private:
 
     static inline DWORD WINAPI ThreadProc(LPVOID ptr)
     {
-        auto params = *static_cast<CallbackHandler::ThreadParams*>(ptr);
-        delete ptr;
+        auto paramsPtr = static_cast<CallbackHandler::ThreadParams*>(ptr);
+        auto params = *paramsPtr;
+        delete paramsPtr;
 
         HANDLE hTimer = NULL;
         LARGE_INTEGER liDueTime;

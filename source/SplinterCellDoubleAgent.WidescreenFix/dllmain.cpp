@@ -3,6 +3,84 @@
 #include <D3dx9.h>
 #pragma comment(lib, "D3dx9.lib")
 
+uint32_t gColor;
+float* __cdecl FGetHSV(float* dest, uint8_t H, uint8_t S, uint8_t V)
+{
+    if (H == 0x41 && S == 0x33)
+    {
+        switch (gColor)
+        {
+        case 2:
+            dest[0] = 1.0f;
+            dest[1] = 0.5f;
+            dest[2] = 0.0f;
+            dest[3] = 1.0f;
+            break;
+        default:
+            dest[0] = 1.0f;
+            dest[1] = 0.0f;
+            dest[2] = 0.0f;
+            dest[3] = 1.0f;
+            break;
+        }
+
+        return dest;
+    }
+
+    float r, g, b, a = 1.0f;
+    float v14 = (float)H * 6.0f * 0.00390625f;
+    float v4 = floor(v14);
+    float v5 = (float)(255 - S) * 0.0039215689f;
+    float v6 = (float)V * 0.0039215689f;
+    float v16 = (1.0f - v5) * v6;
+    float v10 = (1.0f - (v5 * (v14 - v4))) * v6;
+    float v7 = (1.0f - (v14 - v4)) * v5;
+    float v15 = (float)V * 0.0039215689f;
+    float v17 = (1.0f - v7) * v6;
+
+    switch ((uint32_t)v4)
+    {
+    case 0:
+        r = v15;
+        g = v17;
+        b = v16;
+        break;
+    case 1:
+        r = v10;
+        g = v15;
+        b = v16;
+        break;
+    case 2:
+        r = v16;
+        g = v15;
+        b = v17;
+        break;
+    case 3:
+        r = v16;
+        g = v10;
+        b = v15;
+        break;
+    case 4:
+        r = v17;
+        g = v16;
+        b = v15;
+        break;
+    case 5:
+        r = v15;
+        g = v16;
+        b = v10;
+        break;
+    default:
+        break;
+    }
+
+    dest[0] = r;
+    dest[1] = g;
+    dest[2] = b;
+    dest[3] = a;
+    return dest;
+}
+
 struct Screen
 {
     int32_t Width;
@@ -34,6 +112,7 @@ void Init()
     bool bForceLL = iniReader.ReadInteger("MAIN", "ForceLL", 1) != 0;
     Screen.szLoadscPath = iniReader.GetIniPath();
     Screen.szLoadscPath = Screen.szLoadscPath.substr(0, Screen.szLoadscPath.find_last_of('.')) + ".png";
+    gColor = iniReader.ReadInteger("BONUS", "GogglesLightColor", 0);
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -245,6 +324,19 @@ void InitD3DDrv()
     //Enhanced night vision NaN workaround
     pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "F3 A5 8B 90 30 02 00 00");
     injector::MakeNOP(pattern.get_first(0), 2, true);
+
+    //Goggles Light Color
+    if (gColor)
+    {
+        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "FF 15 ? ? ? ? 83 C4 10 8D AE ? ? ? ? 6A 01 8B CD 8B D8 E8");
+        injector::MakeNOP(pattern.get(0).get<void>(0), 6, true);
+        injector::MakeCALL(pattern.get(0).get<void>(0), FGetHSV, true);
+
+        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "FF 15 ? ? ? ? 8B 6D 5C 0F 57 C0 83 C4 10 85 ED F3 0F 11 44 24 ? 0F 84 ? ? ? ? 8B 44 24 10 F3 0F 10 40");
+        injector::MakeNOP(pattern.get(0).get<void>(0), 6, true);
+        injector::MakeCALL(pattern.get(0).get<void>(0), FGetHSV, true);
+    }
+
 }
 
 void InitEngine()

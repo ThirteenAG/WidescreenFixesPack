@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-#ifdef DEBUG
+#ifdef _DEBUG
 #include <intrin.h>  
 #pragma intrinsic(_ReturnAddress)  
 std::map<uintptr_t, uint32_t> retXmap;
