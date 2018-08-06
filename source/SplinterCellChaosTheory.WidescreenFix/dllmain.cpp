@@ -31,6 +31,25 @@ union FColor
     };
 };
 
+struct FLTColor
+{
+    float R, G, B, A = 1.0f;
+    inline FLTColor() {}
+    inline FLTColor(uint32_t color) {
+        R = ((color >> 16) & 0xFF) / 255.0f;
+        G = ((color >> 8) & 0xFF) / 255.0f;
+        B = ((color) & 0xFF) / 255.0f;
+        A = 1.0f;
+    }
+    bool empty() {
+        return (R == 0.0f && G == 0.0f && B == 0.0f);
+    }
+    FLTColor& operator=(uint32_t color) {
+        *this = FLTColor(color);
+        return *this;
+    }
+};
+
 struct WidescreenHudOffset
 {
     int32_t _int;
@@ -41,6 +60,72 @@ bool bHudWidescreenMode;
 int32_t nWidescreenHudOffset;
 float fWidescreenHudOffset;
 
+FLTColor gColor;
+float* __cdecl FGetHSV(float* dest, uint8_t H, uint8_t S, uint8_t V)
+{
+    if ((H == 0x41 && S == 0xC8) || (H == 0x2C && S == 0xCC))
+    {
+        dest[0] = gColor.R;
+        dest[1] = gColor.G;
+        dest[2] = gColor.B;
+        dest[3] = 1.0f;
+        return dest;
+    }
+
+    float r, g, b, a = 1.0f;
+    float v14 = (float)H * 6.0f * 0.00390625f;
+    float v4 = floor(v14);
+    float v5 = (float)(255 - S) * 0.0039215689f;
+    float v6 = (float)V * 0.0039215689f;
+    float v16 = (1.0f - v5) * v6;
+    float v10 = (1.0f - (v5 * (v14 - v4))) * v6;
+    float v7 = (1.0f - (v14 - v4)) * v5;
+    float v15 = (float)V * 0.0039215689f;
+    float v17 = (1.0f - v7) * v6;
+
+    switch ((uint32_t)v4)
+    {
+    case 0:
+        r = v15;
+        g = v17;
+        b = v16;
+        break;
+    case 1:
+        r = v10;
+        g = v15;
+        b = v16;
+        break;
+    case 2:
+        r = v16;
+        g = v15;
+        b = v17;
+        break;
+    case 3:
+        r = v16;
+        g = v10;
+        b = v15;
+        break;
+    case 4:
+        r = v17;
+        g = v16;
+        b = v15;
+        break;
+    case 5:
+        r = v15;
+        g = v16;
+        b = v10;
+        break;
+    default:
+        break;
+    }
+
+    dest[0] = r;
+    dest[1] = g;
+    dest[2] = b;
+    dest[3] = a;
+    return dest;
+}
+
 void Init()
 {
     CIniReader iniReader("");
@@ -49,6 +134,7 @@ void Init()
     bHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1) != 0;
     nWidescreenHudOffset = iniReader.ReadInteger("MAIN", "WidescreenHudOffset", 100);
     fWidescreenHudOffset = static_cast<float>(nWidescreenHudOffset);
+    gColor = iniReader.ReadInteger("BONUS", "GogglesLightColor", 0);
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -64,7 +150,7 @@ void Init()
         {
             regs.eax = (regs.esp + 0x434); // lea eax, [esp+434h]
 
-            if (Screen.Width < 0 || Screen.Height < 0)
+            if (Screen.Width < 640 || Screen.Height < 480)
                 return;
 
             char pszPath[MAX_PATH];
@@ -330,6 +416,15 @@ void Init()
             }
         }
     }; injector::MakeInline<WndProcHook>(pattern.get_first(0), pattern.get_first(7)); //0x10CC4EEA 
+
+    //Goggles Light Color
+    if (!gColor.empty())
+    {
+        pattern = hook::pattern("E8 ? ? ? ? 8B 8E ? ? ? ? 8B 11 83 C4 10 6A 01 50 6A 14 51");
+        injector::MakeCALL(pattern.get_first(0), FGetHSV, true); //0x10CB4325
+        pattern = hook::pattern("E8 ? ? ? ? 8B 45 48 83 C4 10 3B C7 C7 44 24");
+        injector::MakeCALL(pattern.get_first(0), FGetHSV, true); //0x10CB4798
+    }
 }
 
 CEXP void InitializeASI()

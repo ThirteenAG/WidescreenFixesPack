@@ -81,20 +81,18 @@ HICON CreateIconFromBMP(UCHAR* data)
     HICON hIcon = 0;
     ICONINFO ii = {};
     ULONG n = bmih->biWidth * bmih->biHeight;
-    if (PULONG lpBits = new ULONG[n])
+    PULONG lpBits = new ULONG[n];
+    PULONG p = lpBits;
+    if (ii.hbmColor = CreateBitmap(bmih->biWidth, bmih->biHeight, 1, bmih->biBitCount, (data + sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER))))
     {
-        PULONG p = lpBits;
-        if (ii.hbmColor = CreateBitmap(bmih->biWidth, bmih->biHeight, 1, bmih->biBitCount, (data + sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER))))
+        if (ii.hbmMask = CreateBitmap(bmih->biWidth, bmih->biHeight, 1, 1, 0))
         {
-            if (ii.hbmMask = CreateBitmap(bmih->biWidth, bmih->biHeight, 1, 1, 0))
-            {
-                hIcon = CreateIconIndirect(&ii);
-                DeleteObject(ii.hbmMask);
-            }
-            DeleteObject(ii.hbmColor);
+            hIcon = CreateIconIndirect(&ii);
+            DeleteObject(ii.hbmMask);
         }
-        delete[] lpBits;
+        DeleteObject(ii.hbmColor);
     }
+    delete[] lpBits;
     return hIcon;
 }
 
