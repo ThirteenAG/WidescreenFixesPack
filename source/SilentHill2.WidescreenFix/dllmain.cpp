@@ -502,6 +502,25 @@ void Init()
 
     if (nIncreaseNoiseEffectRes)
     {
+        if (nIncreaseNoiseEffectRes < 128)
+        {
+            switch (nIncreaseNoiseEffectRes)
+            {
+            case 2:
+                nIncreaseNoiseEffectRes = 640;
+                break;
+            case 3:
+                nIncreaseNoiseEffectRes = 960;
+                break;
+            case 4:
+                nIncreaseNoiseEffectRes = 1440;
+                break;
+            default:
+                nIncreaseNoiseEffectRes = 512;
+                break;
+            }
+        }
+
         //Eliminates tiling
         pattern = hook::pattern("C7 44 24 2C ? ? ? ? C7 44 24 48 ? ? ? ? C7 44 24 5C ? ? ? ? C7 44 24 60"); //4780E0
         injector::WriteMemory<float>(pattern.get_first(4), 1.0f, true);
@@ -509,38 +528,18 @@ void Init()
         injector::WriteMemory<float>(pattern.get_first(20), 1.0f, true);
         injector::WriteMemory<float>(pattern.get_first(28), 1.0f, true);
 
-        auto a = 0;
-        auto b = 0;
-
-        switch (nIncreaseNoiseEffectRes)
-        {
-        case 2:
-            a = 960;
-            b = 240;
-            break;
-        case 3:
-            a = 1280;
-            b = 320;
-            break;
-        case 4:
-            a = 1920;
-            b = 480;
-            break;
-        default:
-            a = 640;
-            b = 160;
-            break;
-        }
+        auto x = static_cast<int32_t>((roundf(((float)nIncreaseNoiseEffectRes / ((4.0f / 3.0f) / (Screen.fAspectRatio))) / 4.0f)));
+        auto y = static_cast<int32_t>(roundf((float)nIncreaseNoiseEffectRes / 4.0f));
 
         pattern = hook::pattern("68 ? ? ? ? 68 ? ? ? ? 50 FF 52 50"); //478373 478378
-        injector::WriteMemory(pattern.get_first(1), a, true);
-        injector::WriteMemory(pattern.get_first(6), a, true);
+        injector::WriteMemory(pattern.get_first(1), y * 4, true);
+        injector::WriteMemory(pattern.get_first(6), x * 4, true);
 
         pattern = hook::pattern("8B 5C 24 10 55 56 57 BD"); //4783FA
-        injector::WriteMemory(pattern.get_first(8), b, true);
+        injector::WriteMemory(pattern.get_first(8), y, true);
 
         pattern = hook::pattern("8B F3 BF ? ? ? ? E8"); //478402
-        injector::WriteMemory(pattern.get_first(3), b, true);
+        injector::WriteMemory(pattern.get_first(3), x, true);
     }
 
     if (bFullscreenImages)
