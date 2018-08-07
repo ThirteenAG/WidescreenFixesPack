@@ -169,13 +169,13 @@ void Init()
                 *(uintptr_t*)(regs.esp + 0x4) = regs.edx;
                 regs.edx = *(uint16_t*)(regs.eax + 0xA);
 
-                _asm FSTP DWORD PTR[tempvar1]
-                    _asm FSTP DWORD PTR[tempvar2]
-                    _asm FSTP DWORD PTR[tempvar3]
-                    tempvar3 += Screen.TextOffset;
-                _asm FLD  DWORD PTR[tempvar3]
-                    _asm FLD  DWORD PTR[tempvar2]
-                    _asm FLD  DWORD PTR[tempvar1]
+                _asm {FSTP DWORD PTR[tempvar1]}
+                _asm {FSTP DWORD PTR[tempvar2]}
+                _asm {FSTP DWORD PTR[tempvar3]}
+                tempvar3 += Screen.TextOffset;
+                _asm {FLD  DWORD PTR[tempvar3]}
+                _asm {FLD  DWORD PTR[tempvar2]}
+                _asm {FLD  DWORD PTR[tempvar1]}
             }
         }; injector::MakeInline<TextPosHook>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(8)); //0x4819C7, 0x4819C7+8 | sub_4818D0+75 +
 
@@ -191,8 +191,8 @@ void Init()
         {
             void operator()(injector::reg_pack& regs)
             {
-                _asm FSTP DWORD PTR[temp]
-                    * (float*)flt_807498 += Screen.TextOffset;
+                _asm {FSTP DWORD PTR[temp]}
+                *(float*)flt_807498 += Screen.TextOffset;
                 *(float*)flt_8074C8 += Screen.TextOffset;
                 *(float*)flt_8074E8 = temp + Screen.TextOffset;
                 *(float*)flt_8074A8 += Screen.TextOffset;
@@ -208,11 +208,11 @@ void Init()
             {
                 *(uintptr_t*)(regs.esp + 0xA8) = regs.edx;
 
-                _asm FSTP DWORD PTR[tempvar4]
-                    tempvar4 += Screen.TextOffset;
-                _asm FLD  DWORD PTR[tempvar4]
+                _asm {FSTP DWORD PTR[tempvar4]}
+                tempvar4 += Screen.TextOffset;
+                _asm {FLD  DWORD PTR[tempvar4]}
 
-                    * (float*)(regs.esp + 0x6C + 4) += Screen.TextOffset;
+                *(float*)(regs.esp + 0x6C + 4) += Screen.TextOffset;
             }
         }; injector::MakeInline<TextPosHook3>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(7)); //0x481E70 | sub_481D20+119+
 
@@ -222,13 +222,13 @@ void Init()
         {
             void operator()(injector::reg_pack& regs)
             {
-                _asm FSTP DWORD PTR[tempvar5]
-                    tempvar5 += Screen.TextOffset;
-                _asm FLD  DWORD PTR[tempvar5]
+                _asm {FSTP DWORD PTR[tempvar5]}
+                tempvar5 += Screen.TextOffset;
+                _asm {FLD  DWORD PTR[tempvar5]}
 
-                    float esp90 = 0.0f;
-                _asm FST DWORD PTR[esp90]
-                    * (float*)(regs.esp + 0x90) = esp90;
+                float esp90 = 0.0f;
+                _asm {FST DWORD PTR[esp90]}
+                *(float*)(regs.esp + 0x90) = esp90;
             }
         }; injector::MakeInline<TextPosHook4>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(7)); //481F72 | sub_481D20+23E+
 
@@ -251,13 +251,13 @@ void Init()
         {
             void operator()(injector::reg_pack& regs)
             {
-                _asm FSTP DWORD PTR[tempvar6]
-                    tempvar6 += Screen.TextOffset;
-                _asm FLD  DWORD PTR[tempvar6]
-                    * (float*)(regs.esp + 0x58) = tempvar6;
+                _asm {FSTP DWORD PTR[tempvar6]}
+                tempvar6 += Screen.TextOffset;
+                _asm {FLD  DWORD PTR[tempvar6]}
+                *(float*)(regs.esp + 0x58) = tempvar6;
                 uint32_t esp58 = (regs.esp + 0x58);
-                _asm FST DWORD PTR[esp58]
-                    _asm fxch    st(1)
+                _asm {FST DWORD PTR[esp58]}
+                _asm fxch    st(1)
             }
         }; injector::MakeInline<TextPosHook6>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6)); //482117 | sub_481D20+3E3+
 
@@ -268,11 +268,11 @@ void Init()
         {
             void operator()(injector::reg_pack& regs)
             {
-                _asm FSTP DWORD PTR[tempvar7]
-                    tempvar7 += Screen.TextOffset;
-                _asm FLD  DWORD PTR[tempvar7]
-                    * (float*)(regs.esp + 0x2C) += Screen.TextOffset;
-                _asm FILD DWORD PTR[Screen.Height]
+                _asm {FSTP DWORD PTR[tempvar7]}
+                tempvar7 += Screen.TextOffset;
+                _asm {FLD  DWORD PTR[tempvar7]}
+                *(float*)(regs.esp + 0x2C) += Screen.TextOffset;
+                _asm {FILD DWORD PTR[Screen.Height]}
             }
         }; injector::MakeInline<TextPosHook7>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6)); //482249 | sub_482160+D3 
 
@@ -283,12 +283,12 @@ void Init()
             void operator()(injector::reg_pack& regs)
             {
                 uint32_t esp40 = (regs.esp + 0x40);
-                _asm FSTP DWORD PTR[tempvar8]
-                    tempvar8 += Screen.TextOffset;
-                _asm FLD  DWORD PTR[tempvar8]
-                    * (float*)(regs.esp + 0x40) = tempvar8;
-                _asm FST DWORD PTR[esp40]
-                    _asm fld     st(1)
+                _asm {FSTP DWORD PTR[tempvar8]}
+                tempvar8 += Screen.TextOffset;
+                _asm {FLD  DWORD PTR[tempvar8]}
+                *(float*)(regs.esp + 0x40) = tempvar8;
+                _asm {FST DWORD PTR[esp40]}
+                _asm fld     st(1)
             }
         }; injector::MakeInline<TextPosHook8>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6)); //482348 | sub_482160+1D6
 
