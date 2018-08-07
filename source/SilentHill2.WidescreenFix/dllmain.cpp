@@ -487,6 +487,11 @@ void Init()
         pattern = hook::pattern("D8 0D ? ? ? ? D9 1D ? ? ? ? E8 ? ? ? ? 6A 00 6A 00 6A 00 6A 00");
         injector::WriteMemory(pattern.count(2).get(0).get<uint32_t>(2), &f1472, true); //4A0E13
         injector::WriteMemory(pattern.count(2).get(1).get<uint32_t>(2), &f1472, true); //4A1A61
+        pattern = hook::pattern("D8 0D ? ? ? ? D9 1D ? ? ? ? 0F 87");
+        injector::WriteMemory(pattern.get_first(2), &f1472, true); //0059FFBD
+        static float f1043 = 1.0437882f / (1.0f / (Screen.fAspectRatio / (4.0f / 3.0f)));
+        pattern = hook::pattern("D8 0D ? ? ? ? D9 1D ? ? ? ? E8 ? ? ? ? 53 53 53 53 53");
+        injector::WriteMemory(pattern.get_first(2), &f1043, true); //005A18C5
     }
 
     if (bSteamCrashFix)
