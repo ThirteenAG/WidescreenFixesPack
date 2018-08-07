@@ -256,7 +256,7 @@ private:
         {
             Sleep(0);
 
-            if (WaitForSingleObject(hTimer, INFINITE) == WAIT_OBJECT_0)
+            if (WaitForSingleObject(hTimer, 0) == WAIT_OBJECT_0)
             {
                 CloseHandle(hTimer);
                 return 0;
