@@ -555,7 +555,7 @@ void Init()
             0x000000A4, 0x00000038, 0x00000034, 0x00000040, 0x00000044, 0x000000AA, 0x000000AC, 0x000000B2, 0x000000BC, 0x000000AE, 0x000000CC, 0x00000170,
             0x00000174, 0x00000172, 0x00000176, 0x00000184, 0x00000186, 0x00000178, 0x00000188, 0x0000018A, 0x0000018C, 0x0000018E, 0x00000194, 0x0000017A,
             0x00000190, 0x00000192, 0x0000017C, 0x0000017E, 0x00000180, 0x00000182, 0x00000196, 0x00000198, 0x0000019E, 0x000001A0, 0x000001A2, 0x000001A4,
-            0x000001A6, 0x0000012E, 0x00000130, 0x00000144, 
+            0x000001A6, 0x0000012E, 0x00000130, 0x00000144,
             0x0000012C, 0x00000070, 0x00000136, 0x000000C0, 0x000000C6, 0x0000014C, 0x00000080
         };
 
@@ -644,6 +644,14 @@ void Init()
     // Fixes lying figure cutscene bug; original value 00000005; issue #349
     pattern = hook::pattern("C7 05 ? ? ? ? ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 83 C4 04 83 F8 20");
     injector::WriteMemory(pattern.get_first(6), 0x0000002A, true);
+
+    //Loading Text Position #493
+    static constexpr auto n640 = 640;
+    static constexpr auto n480 = 480;
+    pattern = hook::pattern("DB 05 ? ? ? ? 50 A1 ? ? ? ? 85 C0 7D 06 D8 05");
+    injector::WriteMemory(pattern.get_first(2), &n640, true); //0044AE96
+    pattern = hook::pattern("DB 05 ? ? ? ? 8B 15 ? ? ? ? 85 D2 7D 06 D8 05");
+    injector::WriteMemory(pattern.get_first(2), &n480, true); //0044AE6F
 }
 
 CEXP void InitializeASI()
