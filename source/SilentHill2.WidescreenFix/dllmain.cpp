@@ -308,6 +308,33 @@ void Init()
         //Cursor
         pattern = hook::pattern("D8 0D ? ? ? ? C7 44 24 3C 0A D7 23 3C");
         injector::WriteMemory<float>(*pattern.count(1).get(0).get<uint32_t*>(2), 0.05859375f * (1.0f / (Screen.fAspectRatio / (4.0f / 3.0f))), true);
+
+        //Stretched menu hitboxes #440
+        pattern = hook::pattern("DB 05 ? ? ? ? C7 44 24 0C 0A D7 23 3C C7"); //004F6DCC
+        injector::WriteMemory(pattern.get_first(2), &Screen.Width43, true);
+
+        pattern = hook::pattern("E8 ? ? ? ? 2D 00 01 00 00 89 44 24 04 DB 44 24 04 D9 1D ? ? ? ? E8 ? ? ? ? 2D F0 00 00 00 89 44 24 04 DB 44 24 04 D9"); //4A2D4E
+        auto t = injector::GetBranchDestination(pattern.get_first(0), true);
+        static auto dword_944F58 = injector::ReadMemory<uint32_t*>(t.as_int() + 1, true);
+
+        struct retHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                regs.eax = *dword_944F58;
+                //*(int32_t*)&regs.eax -= offset;
+            }
+        }; injector::MakeInline<retHook>(t);
+
+        auto sub_45A5E0 = []() -> int32_t
+        {
+            return *dword_944F58;
+        }; //injector::MakeCALL(pattern.get_first(0), static_cast<int32_t(*)()>(sub_45A5E0), true);
+
+        auto x = static_cast<int32_t>(640.0f * (Screen.fAspectRatio / (4.0f / 3.0f)));
+        pattern = hook::pattern("81 FE 80 02 00 00 7E 05 BE 80 02 00 00 3B 35 ? ? ? ? EB 17"); //0045A84F
+        injector::WriteMemory(pattern.get_first(2), x, true);
+        injector::WriteMemory(pattern.get_first(9), x, true);
     }
 
     //solves camera pan inconsistency for different resolutions
