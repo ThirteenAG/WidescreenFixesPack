@@ -15,20 +15,6 @@ struct Screen
     int32_t FullscreenOffsetY;
 } Screen;
 
-/*
-uint32_t nImageId; uint32_t* unk_1DBFC50;
-injector::hook_back<uint32_t*(__cdecl*)(uintptr_t*, int32_t)> hbsub_457B40;
-uint32_t* __cdecl sub_457B40Hook(uintptr_t* a1, int32_t a2)
-{
-    auto pImageId = hbsub_457B40.fun(a1, a2);
-    if (unk_1DBFC50 == pImageId)
-        nImageId = *pImageId;
-    else
-        nImageId = 0;
-    return pImageId;
-}
-*/
-
 void Init()
 {
     CIniReader iniReader("");
@@ -568,11 +554,19 @@ void Init()
 
     if (bFullscreenImages)
     {
-        static auto unk_1DBFC50 = (uint32_t*)(*hook::get_pattern<uint32_t>("68 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 68 80 00 00 00", 1) + 0x10);
+        static uint32_t* unk_1DBFC50 = nullptr;
+        static auto sub_401168 = (uint32_t*(*)())(injector::GetBranchDestination(hook::get_pattern("E8 ? ? ? ? 50 68 ? ? ? ? E8 ? ? ? ? 8B 0D ? ? ? ? 8B C6 C1", 0)).as_int());
         static auto dword_935D78 = *hook::get_pattern<uint32_t*>("A1 ? ? ? ? BB 10 00 00 00 3B C3 0F 87 ? ? ? ? FF 24 85", 1);
-        //pattern = hook::pattern("E8 ? ? ? ? 83 C4 08 3B C5 74 ? 8B 08");
-        //hbsub_457B40.fun = injector::MakeCALL(pattern.get_first(0), sub_457B40Hook).get(); //0x49FCA5
-        //pointer issue
+
+        pattern = hook::pattern("FF 85 00 04 00 00 5F 5E 5D 5B C3 90 90 90 90 90");
+        struct PtrHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                unk_1DBFC50 = sub_401168() + 0x4;
+            }
+        }; injector::MakeInline<PtrHook>(pattern.get_first(10)); //49F282
+        injector::MakeRET(pattern.get_first(10 + 5));
 
         static uint32_t images[] = {
             0x00000004, 0x00000008, 0x0000000A, 0x0000000C, 0x0000000E, 0x00000010, 0x00000014, 0x00000016, 0x00000018, 0x0000001E, 0x0000001C, 0x00000020,
@@ -591,7 +585,7 @@ void Init()
 
         static auto isFullscreenImage = []() -> bool
         {
-            return (*dword_935D78 == 4 || *dword_935D78 == 8) && std::any_of(std::begin(images), std::end(images), [](uint32_t i) { return i == *unk_1DBFC50; });
+            return unk_1DBFC50 && (*dword_935D78 == 4 || *dword_935D78 == 8) && std::any_of(std::begin(images), std::end(images), [](uint32_t i) { return i == *unk_1DBFC50; });
         };
 
         pattern = hook::pattern("DB 05 ? ? ? ? A1 ? ? ? ? 81 EC C4 00 00 00 84 C9");
