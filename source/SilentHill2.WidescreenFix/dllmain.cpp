@@ -685,9 +685,9 @@ void Init()
         injector::WriteMemory(pattern.count(3).get(0).get<void>(2), &fneg190, true);
         injector::WriteMemory(pattern.count(3).get(2).get<void>(2), &fneg190, true);
         pattern = hook::pattern("C7 05 ? ? ? ? ? ? ? ? E9 ? ? ? ? 8B 15"); //004A314F 
-        injector::WriteMemory<float>(pattern.get_first(2), fneg190, true);
+        injector::WriteMemory<float>(pattern.get_first(6), fneg190, true);
         pattern = hook::pattern("C7 05 ? ? ? ? ? ? ? ? E9 ? ? ? ? 6A 00 68 00 00 04 00 6A 00"); //004A2DD2 
-        injector::WriteMemory<float>(pattern.get_first(2), fneg190, true);
+        injector::WriteMemory<float>(pattern.get_first(6), fneg190, true);
     }
 
     // Fixes lying figure cutscene bug; original value 00000005; issue #349
