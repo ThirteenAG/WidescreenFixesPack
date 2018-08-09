@@ -126,17 +126,23 @@ void Init()
         }; injector::MakeInline<BackgroundGraphicsHook>(pattern.get_first(0), pattern.get_first(8)); //550082
 
         //Mouse
-        pattern = hook::pattern("8B 54 24 24 8B 44 24 0C 8B 4C 24 2C 8B 5C 24 28");
+        static auto ret_4C74E8 = (uint32_t)hook::get_pattern("A1 ? ? ? ? 8B 0D ? ? ? ? F3 0F 10 05 ? ? ? ? 50 51 8D 54 24 40 F3 0F 11 44 24", 0);
+        static auto ret_4C751D = (uint32_t)hook::get_pattern("83 C4 14 E9 ? ? ? ? 3B DF 75 43 F3 0F 10 44 24 ? F3 0F 58 44 24", 0);
+        static auto ret_4F6CFC = (uint32_t)hook::get_pattern("68 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? F3 0F 10 44 24 ? F3 0F 58 44 24", 0);
+        pattern = hook::pattern("D9 58 0C DD D8 DD D8 83 C4 5C C3");
         struct MouseHook
         {
             void operator()(injector::reg_pack& regs)
             {
-                regs.edx = *(uint32_t*)(regs.esp + 0x24);
-                regs.eax = *(uint32_t*)(regs.esp + 0x0C);
-                regs.ecx = *(uint32_t*)(regs.esp + 0x2C);
-                regs.ebx = *(uint32_t*)(regs.esp + 0x28);
+                if (*(uint32_t*)regs.esp != ret_4C74E8 && *(uint32_t*)regs.esp != ret_4C751D && *(uint32_t*)regs.esp != ret_4F6CFC)
+                {
+                    *(float *)(regs.eax + 0x0) /= Screen.fHudScale;
+                    *(float *)(regs.eax + 0x0) += Screen.fHudOffsetReal / Screen.fWidth;
+                    *(float *)(regs.eax + 0x8) /= Screen.fHudScale;
+                }
             }
-        }; //injector::MakeInline<MouseHook>(pattern.get_first(0), pattern.get_first(16)); //563CE9
+        }; injector::MakeInline<MouseHook>(pattern.get_first(10)); //4BF734
+        injector::MakeRET(pattern.get_first(10 + 5));
     }
     else
     {
