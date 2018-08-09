@@ -46,8 +46,8 @@ void Init()
     Screen.fHudOffset = (0.5f / ((4.0f / 3.0f) / (Screen.fAspectRatio)));
     Screen.Width43 = static_cast<int32_t>(Screen.fHeight * (4.0f / 3.0f));
     Screen.TextOffset = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
-    Screen.FullscreenOffsetX = static_cast<int32_t>(((Screen.fWidth - (Screen.fWidth * ((4.0f / 3.0f) / (1440.0f / 870.0f)))) / 2.0f) * ((1440.0f / 870.0f) / (4.0f / 3.0f)));
-    Screen.FullscreenOffsetY = static_cast<int32_t>(((Screen.fHeight - (Screen.fHeight * ((4.0f / 3.0f) / (1440.0f / 870.0f)))) / 2.0f) * ((1440.0f / 870.0f) / (4.0f / 3.0f)));
+    Screen.FullscreenOffsetX = static_cast<int32_t>(((Screen.fWidth - (Screen.fWidth * ((4.0f / 3.0f) / (1440.0f / 810.0f)))) / 2.0f) * ((1440.0f / 810.0f) / (4.0f / 3.0f)));
+    Screen.FullscreenOffsetY = static_cast<int32_t>(((Screen.fHeight - (Screen.fHeight * ((4.0f / 3.0f) / (1440.0f / 810.0f)))) / 2.0f) * ((1440.0f / 810.0f) / (4.0f / 3.0f)));
 
     auto ResList = *hook::pattern("3B 93 ? ? ? ? 75 ? 8B 44 24 14 3B 83").count(1).get(0).get<uint32_t*>(2); //4F60A8
     for (uint32_t i = (uint32_t)ResList; i <= (uint32_t)ResList + 0x2C; i += 4)
@@ -86,7 +86,7 @@ void Init()
         injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &Screen.fWidth, true);
         pattern = hook::pattern("DB 05 ? ? ? ? 85 C0 7D 06 D8 05 ? ? ? ? 8B 0D ? ? ? ? D9 1D ? ? ? ? DB 05 ? ? ? ?"); //00510681 flashlight
         injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &Screen.Width43, true);
-        pattern = hook::pattern("8B 0D ? ? ? ? D1 E9 85 C9 89 4C 24 10 DB 44 24 10"); //004DC103 The light from the lighthouse  (i == 330)
+        pattern = hook::pattern("8B 0D ? ? ? ? D1 E9 85 C9 89 4C 24 10 DB 44 24 10"); //004DC103 toluca lake light  (i == 330)
         injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &Screen.Width, true);
 
         pattern = hook::pattern("A3 ? ? ? ? 89 44 24 14 A1 ? ? ? ? 8D 4C 24 0C 51");
@@ -580,7 +580,7 @@ void Init()
             0x00000174, 0x00000172, 0x00000176, 0x00000184, 0x00000186, 0x00000178, 0x00000188, 0x0000018A, 0x0000018C, 0x0000018E, 0x00000194, 0x0000017A,
             0x00000190, 0x00000192, 0x0000017C, 0x0000017E, 0x00000180, 0x00000182, 0x00000196, 0x00000198, 0x0000019E, 0x000001A0, 0x000001A2, 0x000001A4,
             0x000001A6, 0x0000012E, 0x00000130, 0x00000144,
-            0x0000012C, 0x00000070, 0x00000136, 0x000000C0, 0x000000C6, 0x0000014C, 0x00000080
+            0x0000012C, 0x00000070, 0x00000136, 0x000000C0, 0x000000C6, 0x0000014C, 0x00000080, 0x000000A2
         };
 
         static auto isFullscreenImage = []() -> bool
@@ -593,7 +593,7 @@ void Init()
         {
             void operator()(injector::reg_pack& regs)
             {
-                int32_t z = static_cast<int32_t>(Screen.fHeight * (1440.0f / 870.0f));
+                int32_t z = static_cast<int32_t>(Screen.fHeight * (1440.0f / 810.0f));
                 if (isFullscreenImage())
                     _asm fild dword ptr[z]
                 else
@@ -665,29 +665,29 @@ void Init()
         injector::MakeInline<ImagesHook5>(pattern.get_first(0), pattern.get_first(7)); //0x49F4D8, 0x49F4D8 + 7
 
         //mouse boundaries
-        static auto f190 = 190.0f;
-        static auto fneg190 = -f190;
+        static auto f180 = 180.0f;
+        static auto fneg180 = -f180;
 
         pattern = hook::pattern("D9 05 ? ? ? ? D8 1D ? ? ? ? DF E0 F6 C4 05 7A 78 D9 05"); //004A2D24
-        injector::WriteMemory(pattern.get_first(2), &f190, true);
+        injector::WriteMemory(pattern.get_first(2), &f180, true);
         pattern = hook::pattern("D9 05 ? ? ? ? D9 1D ? ? ? ? E8 ? ? ? ? 85 C0"); //004A2D37 
-        injector::WriteMemory(pattern.get_first(2), &f190, true);
+        injector::WriteMemory(pattern.get_first(2), &f180, true);
         pattern = hook::pattern("D9 05 ? ? ? ? D8 1D ? ? ? ? DF E0 F6 C4 05 0F 8A ? ? ? ? D9 05 ? ? ? ? D9 1D ? ? ? ? D9 05 ? ? ? ? D8 05"); //004A2FB6 
-        injector::WriteMemory(pattern.get_first(2), &f190, true);
+        injector::WriteMemory(pattern.get_first(2), &f180, true);
         pattern = hook::pattern("D9 05 ? ? ? ? D9 1D ? ? ? ? D9 05 ? ? ? ? D8 05 ? ? ? ? E8 ? ? ? ? 50 E8 ? ? ? ? D9 05"); //004A2FCD 
-        injector::WriteMemory(pattern.get_first(2), &f190, true);
+        injector::WriteMemory(pattern.get_first(2), &f180, true);
         pattern = hook::pattern("D8 05 ? ? ? ? E8 ? ? ? ? 50 E8 ? ? ? ? 83 C4 08 A1 ? ? ? ? 66 81 25"); //004A2FF6 
-        injector::WriteMemory(pattern.get_first(2), &f190, true);
+        injector::WriteMemory(pattern.get_first(2), &f180, true);
         pattern = hook::pattern("2D ? ? ? ? 89 44 24 04 DB 44 24 04 D9 1D ? ? ? ? E9 ? ? ? ? D9 05"); //004A2D6C 
-        injector::WriteMemory(pattern.get_first(1), static_cast<int32_t>(f190), true);
+        injector::WriteMemory(pattern.get_first(1), static_cast<int32_t>(f180), true);
 
         pattern = hook::pattern("D9 05 ? ? ? ? D8 1D ? ? ? ? DF E0 F6 C4 41 0F 85 ? ? ? ? DD D8 "); //004A2DB5 004A3132
-        injector::WriteMemory(pattern.count(3).get(0).get<void>(2), &fneg190, true);
-        injector::WriteMemory(pattern.count(3).get(2).get<void>(2), &fneg190, true);
+        injector::WriteMemory(pattern.count(3).get(0).get<void>(2), &fneg180, true);
+        injector::WriteMemory(pattern.count(3).get(2).get<void>(2), &fneg180, true);
         pattern = hook::pattern("C7 05 ? ? ? ? ? ? ? ? E9 ? ? ? ? 8B 15"); //004A314F 
-        injector::WriteMemory<float>(pattern.get_first(6), fneg190, true);
+        injector::WriteMemory<float>(pattern.get_first(6), fneg180, true);
         pattern = hook::pattern("C7 05 ? ? ? ? ? ? ? ? E9 ? ? ? ? 6A 00 68 00 00 04 00 6A 00"); //004A2DD2 
-        injector::WriteMemory<float>(pattern.get_first(6), fneg190, true);
+        injector::WriteMemory<float>(pattern.get_first(6), fneg180, true);
     }
 
     // Fixes lying figure cutscene bug; original value 00000005; issue #349
