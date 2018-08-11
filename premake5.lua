@@ -74,6 +74,8 @@ workspace "WidescreenFixesPack"
 
 project "BGAE.WidescreenFix"
    setpaths("Z:/WFP/Games/Beyond Good and Evil/", "BGE.exe")
+project "Bully.WidescreenFix"
+   setpaths("Z:/WFP/Games/Bully Scholarship Edition/", "Bully.exe", "plugins/")
 project "CallOfCthulhu.WidescreenFix"
    setpaths("Z:/WFP/Games/Call of Cthulhu/", "Engine/CoCMainWin32.exe", "Engine/scripts/")
 project "ColdFear.WidescreenFix"
