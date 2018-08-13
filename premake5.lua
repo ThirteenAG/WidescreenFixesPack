@@ -124,6 +124,8 @@ project "Mafia.WidescreenFix"
    setpaths("Z:/WFP/Games/Mafia/", "Game.exe")
 project "Manhunt.WidescreenFix"
    setpaths("Z:/WFP/Games/Manhunt/", "manhunt.exe")
+project "MassEffectTrilogy.FOVFix"
+   setpaths("Z:/WFP/Games/Mass Effect/Mass Effect 2/Binaries/", "MassEffect2.exe", "/")
 project "MaxPayne.WidescreenFix"
    setpaths("Z:/WFP/Games/Max Payne/Max Payne/", "MaxPayne.exe")
 project "MaxPayne2.WidescreenFix"
