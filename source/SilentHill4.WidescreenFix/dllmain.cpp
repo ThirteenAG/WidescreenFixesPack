@@ -157,8 +157,43 @@ void Init()
         pattern = hook::pattern("D8 0D ? ? ? ? 6A 01 8D 54 24 1C 52 D9 5C 24 10 6A 5E"); //0x404E4C + 2
         injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &fMenuScale, true); // Menu Width
 
-        pattern = hook::pattern("E8 ? ? ? ? 8B 44 24 64 8B"); //0x433D81
-        injector::MakeNOP(pattern.get_first(), 5, true); //in game overlay
+        //in game overlay
+        auto ret_512 = []() -> int32_t
+        {
+            return static_cast<int32_t>(512.0f * Screen.fHudScale);
+        };
+        pattern = hook::pattern("E8 ? ? ? ? 8B 4C 24 1C 99 2B C2 8B 51 10 D1 F8"); //433C4D
+        injector::MakeCALL(pattern.get_first(0), static_cast<int32_t(*)()>(ret_512), true);
+        pattern = hook::pattern("E8 ? ? ? ? 8B 7C 24 50 99 2B C2 8B 57 10 D1 F8"); //433CCF
+        injector::MakeCALL(pattern.get_first(0), static_cast<int32_t(*)()>(ret_512), true);
+        pattern = hook::pattern("DB 44 24 20 D9 5C 24 20 E8 ? ? ? ? 8B 4C 24 1C 99 2B C2 8B 51 14 D1 F8"); //433C69
+        struct OverlayWidthHook1
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                float f = 0.0f;
+                int32_t n = *(int32_t*)(regs.esp + 0x20);
+                _asm {fild dword ptr[n]}
+                _asm {fdiv dword ptr[Screen.fHudScale]}
+                _asm {fstp dword ptr[f]}
+                *(float*)(regs.esp + 0x20) = f;
+            }
+        }; injector::MakeInline<OverlayWidthHook1>(pattern.get_first(0), pattern.get_first(8));
+
+        pattern = hook::pattern("DB 44 24 50 D9 5C 24 38 E8 ? ? ? ? 8B 4F 14 99 2B C2 D1 F8"); //433CEB
+        struct OverlayWidthHook2
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                float f = 0.0f;
+                int32_t n = *(int32_t*)(regs.esp + 0x50);
+                _asm {fild dword ptr[n]}
+                _asm {fdiv dword ptr[Screen.fHudScale]}
+                _asm {fstp dword ptr[f]}
+                *(float*)(regs.esp + 0x38) = f;
+            }
+        }; injector::MakeInline<OverlayWidthHook2>(pattern.get_first(0), pattern.get_first(8));
+
 
         pattern = hook::pattern("83 EC 18 53 56 57 E8 ? ? ? ? E8 ? ? ? ? A1"); //0x566440
         injector::MakeRET(pattern.get_first()); //DOF/blur overlay
@@ -311,7 +346,7 @@ CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
-        CallbackHandler::RegisterCallback(Init, hook::pattern("BF 94 00 00 00 8B C7"));
+        CallbackHandler::RegisterCallback(Init, hook::pattern("8B 0D ? ? ? ? 6A 00 50 51"));
     });
 }
 
