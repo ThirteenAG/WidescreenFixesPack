@@ -1,4 +1,6 @@
 #include "stdafx.h"
+#include "GTA\CFileMgr.h"
+#include <set>
 
 struct Screen
 {
@@ -14,6 +16,21 @@ struct Screen
     int32_t FullscreenOffsetX;
     int32_t FullscreenOffsetY;
 } Screen;
+
+void LoadDatFile(std::string_view str, std::function<void(std::string_view line)>&& cb)
+{
+    if (FILE* hFile = CFileMgr::OpenFile(str.data(), "r"))
+    {
+        while (const char* pLine = CFileMgr::LoadLine(hFile))
+        {
+            if (pLine[0] && pLine[0] != '#')
+            {
+                cb(pLine);
+            }
+        }
+        CFileMgr::CloseFile(hFile);
+    }
+}
 
 void Init()
 {
@@ -554,6 +571,29 @@ void Init()
 
     if (bFullscreenImages)
     {
+        static std::set<uint32_t> images;
+        CIniReader iniReader("");
+        auto DataFilePath = iniReader.GetIniPath();
+        auto pos = DataFilePath.rfind('.');
+        DataFilePath.replace(pos, DataFilePath.length() - pos, ".dat");
+        char buf[MAX_PATH];
+        GetModuleFileNameA(NULL, buf, MAX_PATH);
+        *(strrchr(buf, '\\') + 1) = '\0';
+        std::string mPath(buf);
+        LoadDatFile(DataFilePath, [&mPath](std::string_view line)
+        {
+            auto texPath = mPath + std::string(line);
+            std::FILE* fp = std::fopen(texPath.c_str(), "rb");
+            if (fp)
+            {
+                uint16_t n;
+                std::fseek(fp, 0x10, SEEK_SET); // seek to start
+                std::fread(&n, sizeof(uint16_t), 1, fp);
+                std::fclose(fp);
+                images.emplace((uint32_t)n);
+            }
+        });
+
         static uint32_t* unk_1DBFC50 = nullptr;
         static auto sub_401168 = (uint32_t*(*)())(injector::GetBranchDestination(hook::get_pattern("E8 ? ? ? ? 50 68 ? ? ? ? E8 ? ? ? ? 8B 0D ? ? ? ? 8B C6 C1", 0)).as_int());
         static auto dword_935D78 = *hook::get_pattern<uint32_t*>("A1 ? ? ? ? BB 10 00 00 00 3B C3 0F 87 ? ? ? ? FF 24 85", 1);
@@ -567,21 +607,6 @@ void Init()
             }
         }; injector::MakeInline<PtrHook>(pattern.get_first(10)); //49F282
         injector::MakeRET(pattern.get_first(10 + 5));
-
-        static uint32_t images[] = {
-            0x00000004, 0x00000008, 0x0000000A, 0x0000000C, 0x0000000E, 0x00000010, 0x00000014, 0x00000016, 0x00000018, 0x0000001E, 0x0000001C, 0x00000020,
-            0x00000022, 0x00000024, 0x00000026, 0x00000028, 0x0000002A, 0x0000002C, 0x0000002E, 0x00000030, 0x00000032, 0x00000036, 0x0000003A, 0x0000003C,
-            0x0000003E, 0x00000042, 0x00000046, 0x00000048, 0x00000074, 0x00000076, 0x0000007A, 0x0000007C, 0x0000007E, 0x00000082, 0x00000086, 0x00000088,
-            0x0000008A, 0x0000008E, 0x00000094, 0x00000096, 0x0000009A, 0x0000009C, 0x000000A6, 0x000000A8, 0x000000B0, 0x000000B4, 0x000000B6, 0x000000B8,
-            0x000000BA, 0x000000BE, 0x000000C2, 0x000000C4, 0x000000C8, 0x000000CA, 0x00000130, 0x00000134, 0x00000138, 0x0000013A, 0x0000013C, 0x0000013E,
-            0x00000140, 0x00000142, 0x0000014E, 0x00000150, 0x00000152, 0x00000154, 0x00000156,
-            0x00000002, 0x00000006, 0x00000012, 0x0000001A, 0x00000072, 0x00000078, 0x00000080, 0x00000084, 0x0000008C, 0x00000090, 0x00000092, 0x00000098,
-            0x000000A4, 0x00000038, 0x00000034, 0x00000040, 0x00000044, 0x000000AA, 0x000000AC, 0x000000B2, 0x000000BC, 0x000000AE, 0x000000CC, 0x00000170,
-            0x00000174, 0x00000172, 0x00000176, 0x00000184, 0x00000186, 0x00000178, 0x00000188, 0x0000018A, 0x0000018C, 0x0000018E, 0x00000194, 0x0000017A,
-            0x00000190, 0x00000192, 0x0000017C, 0x0000017E, 0x00000180, 0x00000182, 0x00000196, 0x00000198, 0x0000019E, 0x000001A0, 0x000001A2, 0x000001A4,
-            0x000001A6, 0x0000012E, 0x00000130, 0x00000144,
-            0x0000012C, 0x00000070, 0x00000136, 0x000000C0, 0x000000C6, 0x0000014C, 0x00000080, 0x000000A2
-        };
 
         static auto isFullscreenImage = []() -> bool
         {
