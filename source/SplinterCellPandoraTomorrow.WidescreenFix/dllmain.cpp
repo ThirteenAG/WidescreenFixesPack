@@ -299,26 +299,25 @@ void InitD3DDrv()
     }; injector::MakeInline<OpenVideo_Hook>(pattern.count(2).get(0).get<void*>(0)); //pfOpenVideo + 0x2D4
 
     pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "D9 1C 24 56 56 FF 15");
+    injector::WriteMemory<uint8_t>(pattern.get_first(-4), 0x56, true); //push esi
     struct DisplayVideo_Hook
     {
         void operator()(injector::reg_pack& regs)
         {
-            *(float*)(regs.esp + 0x00) = static_cast<float>(*(int32_t*)(regs.esp + 0x68));
-            *(float*)&regs.eax = 0.0f;
+            *(float*)(regs.esp + 0x04) = static_cast<float>(*(int32_t*)(regs.esp + 0x68 + 0x4));
 
             if (Screen.nFMVWidescreenMode)
             {
-                *(float*)&regs.esi = Screen.fFMVoffsetStartY;
-                *(float*)(regs.esp + 0x04) = Screen.fFMVoffsetEndY;
+                *(float*)(regs.esp + 0x00) = Screen.fFMVoffsetStartY;
+                *(float*)(regs.esp + 0x08) = Screen.fFMVoffsetEndY;
             }
             else
             {
-                *(float*)&regs.eax = Screen.fFMVoffsetStartX;
-                *(float*)(regs.esp + 0x00) = Screen.fFMVoffsetEndX;
+                *(float*)&regs.esi = Screen.fFMVoffsetStartX;
+                *(float*)(regs.esp + 0x04) = Screen.fFMVoffsetEndX;
             }
         }
-    }; injector::MakeInline<DisplayVideo_Hook>(pattern.get_first(-4), pattern.get_first(3)); //pfDisplayVideo + 0x37E
-    injector::WriteMemory<uint8_t>(pattern.get_first(4), 0x50, true); //push eax
+    }; injector::MakeInline<DisplayVideo_Hook>(pattern.get_first(-3), pattern.get_first(4)); //pfDisplayVideo + 0x37E
 
     if (Screen.nPostProcessFixedScale)
     {
