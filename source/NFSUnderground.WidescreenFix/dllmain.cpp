@@ -448,10 +448,7 @@ void Init()
 
     if (bCustomUsrDir)
     {
-        char moduleName[MAX_PATH];
-        GetModuleFileNameA(NULL, moduleName, MAX_PATH);
-        *(strrchr(moduleName, '\\') + 1) = '\0';
-        szCustomUserFilesDirectoryInGameDir = moduleName + szCustomUserFilesDirectoryInGameDir;
+        szCustomUserFilesDirectoryInGameDir = GetExeModulePath<std::string>() + szCustomUserFilesDirectoryInGameDir;
 
         auto SHGetFolderPathAHook = [](HWND /*hwnd*/, int /*csidl*/, HANDLE /*hToken*/, DWORD /*dwFlags*/, LPSTR pszPath) -> HRESULT
         {
@@ -471,22 +468,38 @@ void Init()
 
     if (nImproveGamepadSupport)
     {
-        static char* GLOBALB = "scripts\\XBOXGLOBALB.BUN";
-        static char* GLOBALB2 = "scripts\\PSGLOBALB.BUN";
-        static char* FrontB = "scripts\\XBOXFrontB.BUN";
-        static char* FrontB2 = "scripts\\PSFrontB.BUN";
+        pattern = hook::pattern("6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 51 A1 ? ? ? ? 57");
+        static auto CreateResourceFile = (void*(*)(const char* ResourceFileName, int32_t ResourceFileType, int, int, int)) pattern.get_first(0); //0x004482F0
+        pattern = hook::pattern("56 8B F2 89 8E 98 00 00 00 8B 0D ? ? ? ? 89 86 94 00 00 00 8B 86 9C 00 00 00");
+        static auto ResourceFileBeginLoading = (void(__fastcall *)(int a1, void* rsc, int a2)) pattern.get_first(0); //0x00448110;
+        static auto LoadResourceFile = [](const char* ResourceFileName, int32_t ResourceFileType, int32_t nUnk1 = 0, int32_t nUnk2 = 0, int32_t nUnk3 = 0, int32_t nUnk4 = 0, int32_t nUnk5 = 0)
+        {
+            auto r = CreateResourceFile(ResourceFileName, ResourceFileType, nUnk1, nUnk2, nUnk3);
+            _asm
+            {
+                mov     edx, r
+                mov     ecx, nUnk5
+                mov     eax, nUnk4
+                call    ResourceFileBeginLoading
+            }
+        };
 
-        pattern = hook::pattern("68 ? ? ? ? E8 ? ? ? ? 8B F0 83 C4 14 33 C9 33 C0"); //0x6B6E81 globalb
-        if (nImproveGamepadSupport == 2)
-            injector::WriteMemory(pattern.get_first(1), GLOBALB2, true);
-        else
-            injector::WriteMemory(pattern.get_first(1), GLOBALB, true);
+        static auto TPKPath = GetThisModulePath<std::string>().substr(GetExeModulePath<std::string>().length());
 
-        pattern = hook::pattern("68 ? ? ? ? C6 05 ? ? ? ? 01 C7 ? ? ? ? ? ? ? ? ? E8 ? ? ? ? 8B F0 83 C4 14 33 C9"); //0x6B6E81 frontb
-        if (nImproveGamepadSupport == 2)
-            injector::WriteMemory(pattern.get_first(1), FrontB2, true);
-        else
-            injector::WriteMemory(pattern.get_first(1), FrontB, true);
+        if (nImproveGamepadSupport == 1)
+            TPKPath += "buttons-xbox.tpk";
+        else if (nImproveGamepadSupport == 2)
+            TPKPath += "buttons-playstation.tpk";
+
+        static injector::hook_back<void(__cdecl*)()> hb_448600;
+        auto LoadTPK = []()
+        {
+            LoadResourceFile(TPKPath.c_str(), 1);
+            return hb_448600.fun();
+        };
+
+        pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 6A 00 6A 00 6A 00 68 F0 59 00 00"); //0x447280
+        hb_448600.fun = injector::MakeCALL(pattern.get_first(0), static_cast<void(__cdecl*)()>(LoadTPK), true).get();
 
         struct PadState
         {
