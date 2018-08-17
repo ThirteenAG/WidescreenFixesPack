@@ -202,7 +202,7 @@ T GetCurrentDirectoryW()
             bufferSize *= 2;
         }
     }
-    return L"";
+    return T();
 }
 
 class CallbackHandler
