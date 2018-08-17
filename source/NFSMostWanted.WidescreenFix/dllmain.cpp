@@ -30,9 +30,8 @@ void Init()
     static int nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
     static float fRainDropletsScale = iniReader.ReadFloat("MISC", "RainDropletsScale", 0.5f);
-    bool bCustomUsrDir = false;
-    if (strncmp(szCustomUserFilesDirectoryInGameDir.c_str(), "0", 1) != 0)
-        bCustomUsrDir = true;
+    if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
+        szCustomUserFilesDirectoryInGameDir.clear();
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -339,12 +338,9 @@ void Init()
         injector::MakeNOP(dword_6BFE33, 2, true);
     }
 
-    if (bCustomUsrDir)
+    if (!szCustomUserFilesDirectoryInGameDir.empty())
     {
-        char moduleName[MAX_PATH];
-        GetModuleFileNameA(NULL, moduleName, MAX_PATH);
-        *(strrchr(moduleName, '\\') + 1) = '\0';
-        szCustomUserFilesDirectoryInGameDir = moduleName + szCustomUserFilesDirectoryInGameDir;
+        szCustomUserFilesDirectoryInGameDir = GetExeModulePath<std::string>() + szCustomUserFilesDirectoryInGameDir;
 
         auto SHGetFolderPathAHook = [](HWND /*hwnd*/, int /*csidl*/, HANDLE /*hToken*/, DWORD /*dwFlags*/, LPSTR pszPath) -> HRESULT
         {

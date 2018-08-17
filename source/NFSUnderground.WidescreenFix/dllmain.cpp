@@ -101,9 +101,8 @@ void Init()
     static int nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
     bool bD3DHookBorders = iniReader.ReadInteger("MISC", "D3DHookBorders", 0) != 0;
-    bool bCustomUsrDir = false;
-    if (strncmp(szCustomUserFilesDirectoryInGameDir.c_str(), "0", 1) != 0)
-        bCustomUsrDir = true;
+    if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
+        szCustomUserFilesDirectoryInGameDir.clear();
 
     if (!Screen.nWidth || !Screen.nHeight)
         std::tie(Screen.nWidth, Screen.nHeight) = GetDesktopRes();
@@ -446,7 +445,7 @@ void Init()
         }
     }
 
-    if (bCustomUsrDir)
+    if (!szCustomUserFilesDirectoryInGameDir.empty())
     {
         szCustomUserFilesDirectoryInGameDir = GetExeModulePath<std::string>() + szCustomUserFilesDirectoryInGameDir;
 
