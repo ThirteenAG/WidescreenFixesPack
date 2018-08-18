@@ -1,6 +1,3 @@
-set "inifile=%cd%\inifixer.exe"
-set "settings=%cd%\unpacked\D444E031.ini"
-
 rmdir /Q /S unpacked
 md unpacked
 
@@ -27,32 +24,10 @@ xcopy /S /Q /Y /F "textures/view.dds" "unpacked/D444E031/PC_KEY_3.dds"
 xcopy /S /Q /Y /F "textures/x.dds" "unpacked/D444E031/PC_KEY_2.dds"
 xcopy /S /Q /Y /F "textures/y.dds" "unpacked/D444E031/PC_KEY_1.dds"
 xcopy /S /Q /Y /F "textures/quit.dds" "unpacked/D444E031/PC_QUIT.dds"
-
-%inifile% %settings% PC_KEY_ENTER 4000
-%inifile% %settings% PC_KEY_ESC 4000
-%inifile% %settings% PC_KEY_ESC_FRENCH 4000
-%inifile% %settings% PC_KEY_Q 4000
-%inifile% %settings% L1 4000
-%inifile% %settings% PC_KEY_9 4000
-%inifile% %settings% PC_KEY_SPC 4000
-%inifile% %settings% PC_KEY_SPC_CZECH 4000
-%inifile% %settings% PC_KEY_SPC_DANISH 4000
-%inifile% %settings% PC_KEY_SPC_DUTCH 4000
-%inifile% %settings% PC_KEY_SPC_FRENCH 4000
-%inifile% %settings% PC_KEY_SPC_GERMAN 4000
-%inifile% %settings% PC_KEY_SPC_ITALIAN 4000
-%inifile% %settings% PC_KEY_SPC_SPANISH 4000
-%inifile% %settings% PC_X 4000
-%inifile% %settings% PC_KEY_0 4000
-%inifile% %settings% R1 4000
-%inifile% %settings% PC_KEY_3 4000
-%inifile% %settings% PC_KEY_2 4000
-%inifile% %settings% PC_KEY_1 4000
-%inifile% %settings% PC_QUIT 4000
+xcopy /S /Q /Y /F "textures/dummy.dds" "unpacked/D444E031/PC_LOAD.dds"
 
 XNFSTPKTool.exe -w unpacked/D444E031.ini ../../data/NFSCarbon.WidescreenFix/scripts/buttons-xbox.tpk
 rmdir /Q /S unpacked
-
 
 md unpacked
 
@@ -79,28 +54,7 @@ xcopy /S /Q /Y /F "textures/select.dds" "unpacked/D444E031/PC_KEY_3.dds"
 xcopy /S /Q /Y /F "textures/square.dds" "unpacked/D444E031/PC_KEY_2.dds"
 xcopy /S /Q /Y /F "textures/triangle.dds" "unpacked/D444E031/PC_KEY_1.dds"
 xcopy /S /Q /Y /F "textures/quit.dds" "unpacked/D444E031/PC_QUIT.dds"
-
-%inifile% %settings% PC_KEY_ENTER 4000
-%inifile% %settings% PC_KEY_ESC 4000
-%inifile% %settings% PC_KEY_ESC_FRENCH 4000
-%inifile% %settings% PC_KEY_Q 4000
-%inifile% %settings% L1 4000
-%inifile% %settings% PC_KEY_9 4000
-%inifile% %settings% PC_KEY_SPC 4000
-%inifile% %settings% PC_KEY_SPC_CZECH 4000
-%inifile% %settings% PC_KEY_SPC_DANISH 4000
-%inifile% %settings% PC_KEY_SPC_DUTCH 4000
-%inifile% %settings% PC_KEY_SPC_FRENCH 4000
-%inifile% %settings% PC_KEY_SPC_GERMAN 4000
-%inifile% %settings% PC_KEY_SPC_ITALIAN 4000
-%inifile% %settings% PC_KEY_SPC_SPANISH 4000
-%inifile% %settings% PC_X 4000
-%inifile% %settings% PC_KEY_0 4000
-%inifile% %settings% R1 4000
-%inifile% %settings% PC_KEY_3 4000
-%inifile% %settings% PC_KEY_2 4000
-%inifile% %settings% PC_KEY_1 4000
-%inifile% %settings% PC_QUIT 4000
+xcopy /S /Q /Y /F "textures/dummy.dds" "unpacked/D444E031/PC_LOAD.dds"
 
 XNFSTPKTool.exe -w unpacked/D444E031.ini ../../data/NFSCarbon.WidescreenFix/scripts/buttons-playstation.tpk
 rmdir /Q /S unpacked
