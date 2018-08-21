@@ -382,7 +382,7 @@ void Init()
         REKT.right = (LONG)(REKT.left + Screen.Width);
         REKT.bottom = (LONG)(REKT.top + Screen.Height);
 
-        auto pattern = hook::pattern("A1 ? ? ? ? 33 FF 3B C7 74 ?"); //0xAB0AD4
+        auto pattern = hook::pattern("A1 ? ? ? ? 33 FF 3B C7 74"); //0xAB0AD4
         injector::WriteMemory(*pattern.count(3).get(2).get<uint32_t*>(1), 1, true);
 
         pattern = hook::pattern("B8 64 00 00 00 89 44 24 28"); //0x7309B4
@@ -458,6 +458,14 @@ void Init()
 
         pattern = hook::pattern("E8 ? ? ? ? 8B 35 ? ? ? ? 6A 04 FF D6 83 C4 04 85 C0 74 08 C7 00"); //0x6B7736
         hb_6B6D40.fun = injector::MakeCALL(pattern.get_first(0), static_cast<void(__cdecl*)()>(LoadTPK), true).get();
+
+        //cursor
+        constexpr float cursorScale = 1.0f * (128.0f / 16.0f);
+        pattern = hook::pattern("C7 44 24 74 00 00 80 3F D9 5C 24 60"); //585424
+        injector::WriteMemory<float>(pattern.get_first(4), cursorScale, true);
+        injector::WriteMemory<float>(pattern.get_first(24), cursorScale, true);
+        injector::WriteMemory<float>(pattern.get_first(35), cursorScale, true);
+        injector::WriteMemory<float>(pattern.get_first(57), cursorScale, true);
 
         struct PadState
         {

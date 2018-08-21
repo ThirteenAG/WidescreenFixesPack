@@ -113,7 +113,7 @@ T GetModulePath(HMODULE hModule)
     for (size_t iterations = 0; iterations < MAX_ITERATIONS; ++iterations)
     {
         ret.resize(bufferSize);
-        auto charsReturned = 0;
+        size_t charsReturned = 0;
         if constexpr (std::is_same_v<T, std::string>)
             charsReturned = GetModuleFileNameA(hModule, &ret[0], bufferSize);
         else
@@ -187,7 +187,7 @@ T GetCurrentDirectoryW()
     for (size_t iterations = 0; iterations < MAX_ITERATIONS; ++iterations)
     {
         ret.resize(bufferSize);
-        auto charsReturned = 0;
+        size_t charsReturned = 0;
         if constexpr (std::is_same_v<T, std::string>)
             charsReturned = GetCurrentDirectoryA(bufferSize, &ret[0]);
         else
