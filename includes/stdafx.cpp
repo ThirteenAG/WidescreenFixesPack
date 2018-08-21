@@ -33,19 +33,32 @@ std::tuple<int32_t, int32_t> GetDesktopRes()
 
 void GetResolutionsList(std::vector<std::string>& list)
 {
-    DEVMODE dm = { 0 };
-    for (auto iModeNum = 0; EnumDisplaySettings(NULL, iModeNum, &dm) != 0; iModeNum++)
-    {
-        auto str = format("%dx%d", dm.dmPelsWidth, dm.dmPelsHeight);
-        list.push_back(str);
+    DISPLAY_DEVICE dd;
+    dd.cb = sizeof(DISPLAY_DEVICE);
+    DWORD deviceNum = 0;
+    while (EnumDisplayDevices(NULL, deviceNum, &dd, 0)) {
+        DISPLAY_DEVICE newdd = { 0 };
+        newdd.cb = sizeof(DISPLAY_DEVICE);
+        DWORD monitorNum = 0;
+        DEVMODE dm = { 0 };
+        while (EnumDisplayDevices(dd.DeviceName, monitorNum, &newdd, 0))
+        {
+            for (auto iModeNum = 0; EnumDisplaySettings(NULL, iModeNum, &dm) != 0; iModeNum++)
+            {
+                auto str = format("%dx%d", dm.dmPelsWidth, dm.dmPelsHeight);
+                list.emplace_back(str);
+            }
+            monitorNum++;
+        }
+        deviceNum++;
     }
-    list.erase(std::unique(std::begin(list), std::end(list)), list.end());
     std::sort(list.begin(), list.end(), [](const std::string& lhs, const std::string& rhs) {
         int32_t x1, y1, x2, y2;
         sscanf(lhs.c_str(), "%dx%d", &x1, &y1);
         sscanf(rhs.c_str(), "%dx%d", &x2, &y2);
         return (x1 != x2) ? (x1 < x2) : (x1 * y1 < x2 * y2);
     });
+    list.erase(std::unique(std::begin(list), std::end(list)), list.end());
 }
 
 std::string format(const char *fmt, ...)
