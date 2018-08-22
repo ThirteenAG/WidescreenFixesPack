@@ -74,8 +74,8 @@ void Init()
     auto bResDetect = iniReader.ReadInteger("MultiFix", "ResDetect", 1) != 0;
     auto bPostRaceFix = iniReader.ReadInteger("MultiFix", "PostRaceFix", 1) != 0;
     auto bFramerateUncap = iniReader.ReadInteger("MultiFix", "FramerateUncap", 1) != 0;
-    auto bAntiTrackStreamerCrash = iniReader.ReadInteger("MultiFix", "AntiTrackStreamerCrash", 1);
-    auto bAntiDamageModelCrash = iniReader.ReadInteger("MultiFix", "AntiDamageModelCrash", 1);
+    auto bAntiTrackStreamerCrash = iniReader.ReadInteger("MultiFix", "AntiTrackStreamerCrash", 1) != 0;
+    auto bAntiDamageModelCrash = iniReader.ReadInteger("MultiFix", "AntiDamageModelCrash", 1) != 0;
 
     if (bResDetect)
     {
@@ -526,7 +526,7 @@ CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
-        CallbackHandler::RegisterCallback(Init, hook::pattern("50 6A 00 6A 00 68 ? 80 00 00 6A 00").count_hint(2).empty());
+        CallbackHandler::RegisterCallback(Init, hook::pattern("C7 46 ? ? ? ? ? E8 ? ? ? ? C6 86 ? ? ? ? ? 5E C2 04 00").count_hint(1).empty());
     });
 }
 
