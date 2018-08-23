@@ -77,6 +77,7 @@ void Init()
     bool bFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1) != 0;
     bool bDisableCutsceneBorders = iniReader.ReadInteger("MISC", "DisableCutsceneBorders", 1) != 0;
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
+    bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 1) != 0;
     static int nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
     static float fRainDropletsScale = iniReader.ReadFloat("MISC", "RainDropletsScale", 0.5f);
@@ -427,6 +428,28 @@ void Init()
 
     if (nImproveGamepadSupport)
     {
+        pattern = hook::pattern("6A FF 68 ? ? ? ? 64 A1 ? ? ? ? 50 64 89 25 ? ? ? ? 51 A1 ? ? ? ? 50 E8 ? ? ? ? 83 C4 04 89 44 24 00 85 C0 C7 44 24 ? ? ? ? ? 74 22 8B 4C 24 24");
+        static auto CreateResourceFile = (void*(*)(const char* ResourceFileName, int32_t ResourceFileType, int, int, int)) pattern.get_first(0); //0x0057CEA0
+        pattern = hook::pattern("8B 44 24 04 56 8B F1 8B 4C 24 0C 89 86 ? ? ? ? 89 8E");
+        static auto ResourceFileBeginLoading = (void(__thiscall *)(void* rsc, int a1, int a2)) pattern.get_first(0); //0x0057BCA0
+        static auto LoadResourceFile = [](const char* ResourceFileName, int32_t ResourceFileType, int32_t nUnk1 = 0, int32_t nUnk2 = 0, int32_t nUnk3 = 0, int32_t nUnk4 = 0, int32_t nUnk5 = 0)
+        {
+            auto r = CreateResourceFile(ResourceFileName, ResourceFileType, nUnk1, nUnk2, nUnk3);
+            ResourceFileBeginLoading(r, nUnk4, nUnk5);
+        };
+
+        static auto TPKPath = GetThisModulePath<std::string>().substr(GetExeModulePath<std::string>().length()) + "test.tpk";
+
+        static injector::hook_back<void(__cdecl*)()> hb_57FA60;
+        auto LoadTPK = []()
+        {
+            LoadResourceFile(TPKPath.c_str(), 1);
+            return hb_57FA60.fun();
+        };
+
+        pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 5F C6 05 ? ? ? ? ? C7 05 ? ? ? ? ? ? ? ? 5E"); //0x57ECEF
+        hb_57FA60.fun = injector::MakeCALL(pattern.get_first(0), static_cast<void(__cdecl*)()>(LoadTPK), true).get();
+
         struct PadState
         {
             int32_t LSAxis1;
@@ -584,6 +607,32 @@ void Init()
                 }
             }
         }; injector::MakeInline<DeadzoneHook>(pattern.get_first(-2), pattern.get_first(4));
+    }
+
+    if (bWriteSettingsToFile)
+    {
+        char szSettingsSavePath[MAX_PATH];
+        auto GetFolderPathpattern = hook::pattern("50 6A 00 6A 00 68 ? 80 00 00 6A 00");
+        uintptr_t GetFolderPathCallDest = injector::GetBranchDestination(GetFolderPathpattern.count(1).get(0).get<uintptr_t>(12), true).as_int();
+        injector::stdcall<HRESULT(HWND, int, HANDLE, DWORD, LPSTR)>::call(GetFolderPathCallDest, NULL, 0x801C, NULL, NULL, szSettingsSavePath);
+        strcat(szSettingsSavePath, "\\NFS Underground 2");
+        strcat(szSettingsSavePath, "\\Settings.ini");
+
+        RegistryWrapper("Need for Speed", szSettingsSavePath);
+        uintptr_t* RegIAT = *hook::pattern("FF 15 ? ? ? ? 8D 54 24 04 52").get(0).get<uintptr_t*>(2);
+        injector::WriteMemory(&RegIAT[0], RegistryWrapper::RegCreateKeyA, true);
+        injector::WriteMemory(&RegIAT[-1], RegistryWrapper::RegOpenKeyA, true);
+        injector::WriteMemory(&RegIAT[-2], RegistryWrapper::RegOpenKeyExA, true);
+        injector::WriteMemory(&RegIAT[1], RegistryWrapper::RegCloseKey, true);
+        injector::WriteMemory(&RegIAT[-4], RegistryWrapper::RegSetValueExA, true);
+        injector::WriteMemory(&RegIAT[-3], RegistryWrapper::RegQueryValueExA, true);
+        RegistryWrapper::AddPathWriter("Install Dir", "InstallDir", "Path");
+        RegistryWrapper::AddDefault("@", "INSERTYOURCDKEYHERE");
+        RegistryWrapper::AddDefault("CD Drive", "D:\\");
+        RegistryWrapper::AddDefault("CacheSize", "1879040000");
+        RegistryWrapper::AddDefault("SwapSize", "0");
+        RegistryWrapper::AddDefault("Language", "English US");
+        RegistryWrapper::AddDefault("StreamingInstall", "0");
     }
 }
 

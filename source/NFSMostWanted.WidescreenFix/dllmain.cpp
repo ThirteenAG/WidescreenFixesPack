@@ -544,86 +544,28 @@ void Init()
 
     if (bWriteSettingsToFile)
     {
-        static CIniReader RegistryReader;
-
-        auto RegCreateKeyAHook = [](HKEY hKey, LPCSTR lpSubKey, PHKEY phkResult) -> LONG
-        {
-            return 1;
-        };
-
-        auto RegOpenKeyExAHook = [](HKEY hKey, LPCSTR lpSubKey, DWORD ulOptions, REGSAM samDesired, PHKEY phkResult) -> LONG
-        {
-            if (RegistryReader.ReadString("MAIN", "DisplayName", "").length() == 0)
-            {
-                RegistryReader.WriteString("MAIN", "@", "INSERTYOURCDKEYHERE");
-                RegistryReader.WriteString("MAIN", "DisplayName", "Need for Speed Most Wanted");
-                RegistryReader.WriteString("MAIN", "Installed From", "C:\\");
-                RegistryReader.WriteString("MAIN", "Registration", "SOFTWARE\\Electronic Arts\\Electronic Arts\\Need for Speed Most Wanted\\ergc");
-                RegistryReader.WriteString("MAIN", "CacheSize", "5697825792");
-                RegistryReader.WriteString("MAIN", "SwapSize", "73400320");
-                RegistryReader.WriteString("MAIN", "Language", "English US");
-                RegistryReader.WriteString("MAIN", "Locale", "en_us");
-                RegistryReader.WriteString("MAIN", "CD Drive", "C:\\");
-                RegistryReader.WriteString("MAIN", "Product GUID", "{A48B9CD8-C2BA-4EC9-0081-7260D238C7CF}");
-                RegistryReader.WriteString("MAIN", "Region", "NA");
-            }
-            return ERROR_SUCCESS;
-        };
-
-        auto RegCloseKeyHook = [](HKEY hKey) -> LONG
-        {
-            return ERROR_SUCCESS;
-        };
-
-        auto RegSetValueExAHook = [](HKEY hKey, LPCSTR lpValueName, DWORD Reserved, DWORD dwType, const BYTE* lpData, DWORD cbData) -> LONG
-        {
-            RegistryReader.WriteInteger("MAIN", (char*)lpValueName, *(char*)lpData);
-            return ERROR_SUCCESS;
-        };
-
-        auto RegQueryValueExAHook = [](HKEY hKey, LPCSTR lpValueName, LPDWORD lpReserved, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData) -> LONG
-        {
-            if (!lpValueName) //cd key
-            {
-                auto str = RegistryReader.ReadString("MAIN", "@", "");
-                strncpy((char*)lpData, str.c_str(), *lpcbData);
-                return ERROR_SUCCESS;
-            }
-
-            if (*lpType == REG_SZ)
-            {
-                if (strstr(lpValueName, "Install Dir"))
-                {
-                    GetModuleFileNameA(NULL, (char*)lpData, MAX_PATH);
-                    *(strrchr((char*)lpData, '\\') + 1) = '\0';
-                    return ERROR_SUCCESS;
-                }
-
-                auto str = RegistryReader.ReadString("MAIN", (char*)lpValueName, "");
-                strncpy((char*)lpData, str.c_str(), *lpcbData);
-            }
-            else
-            {
-                DWORD nValue = RegistryReader.ReadInteger("MAIN", (char*)lpValueName, 0);
-                injector::WriteMemory(lpData, nValue, true);
-            }
-
-            return ERROR_SUCCESS;
-        };
-
         char szSettingsSavePath[MAX_PATH];
         auto GetFolderPathpattern = hook::pattern("50 6A 00 6A 00 68 ? 80 00 00 6A 00");
         uintptr_t GetFolderPathCallDest = injector::GetBranchDestination(GetFolderPathpattern.count(1).get(0).get<uintptr_t>(14), true).as_int();
         injector::stdcall<HRESULT(HWND, int, HANDLE, DWORD, LPSTR)>::call(GetFolderPathCallDest, NULL, 0x8005, NULL, NULL, szSettingsSavePath);
         strcat(szSettingsSavePath, "\\NFS Most Wanted");
         strcat(szSettingsSavePath, "\\Settings.ini");
-        RegistryReader.SetIniPath(szSettingsSavePath);
-        uintptr_t* RegIAT = *hook::pattern("FF 15 ? ? ? ? 8D 54 24 04 52").get(0).get<uintptr_t*>(2); //0x711C0F
-        injector::WriteMemory(&RegIAT[0], static_cast<LONG(WINAPI*)(HKEY hKey, LPCSTR lpSubKey, PHKEY phkResult)>(RegCreateKeyAHook), true);
-        injector::WriteMemory(&RegIAT[1], static_cast<LONG(WINAPI*)(HKEY hKey, LPCSTR lpSubKey, DWORD ulOptions, REGSAM samDesired, PHKEY phkResult)>(RegOpenKeyExAHook), true);
-        injector::WriteMemory(&RegIAT[2], static_cast<LONG(WINAPI*)(HKEY hKey)>(RegCloseKeyHook), true);
-        injector::WriteMemory(&RegIAT[3], static_cast<LONG(WINAPI*)(HKEY hKey, LPCSTR lpValueName, DWORD Reserved, DWORD dwType, const BYTE* lpData, DWORD cbData)>(RegSetValueExAHook), true);
-        injector::WriteMemory(&RegIAT[4], static_cast<LONG(WINAPI*)(HKEY hKey, LPCSTR lpValueName, LPDWORD lpReserved, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData)>(RegQueryValueExAHook), true);
+
+        RegistryWrapper("Need for Speed", szSettingsSavePath);
+        auto RegIAT = *hook::pattern("FF 15 ? ? ? ? 8D 54 24 04 52").get(0).get<uintptr_t*>(2);
+        injector::WriteMemory(&RegIAT[0], RegistryWrapper::RegCreateKeyA, true);
+        injector::WriteMemory(&RegIAT[1], RegistryWrapper::RegOpenKeyExA, true);
+        injector::WriteMemory(&RegIAT[2], RegistryWrapper::RegCloseKey, true);
+        injector::WriteMemory(&RegIAT[3], RegistryWrapper::RegSetValueExA, true);
+        injector::WriteMemory(&RegIAT[4], RegistryWrapper::RegQueryValueExA, true);
+        RegistryWrapper::AddPathWriter("Install Dir", "InstallDir", "Path");
+        RegistryWrapper::AddDefault("@", "INSERTYOURCDKEYHERE");
+        RegistryWrapper::AddDefault("CD Drive", "D:\\");
+        RegistryWrapper::AddDefault("CacheSize", "2936691712");
+        RegistryWrapper::AddDefault("SwapSize", "73400320");
+        RegistryWrapper::AddDefault("Language", "English");
+        RegistryWrapper::AddDefault("StreamingInstall", "0");
+        RegistryWrapper::AddDefault("VTMode", "0");
     }
 }
 
