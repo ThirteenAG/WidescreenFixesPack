@@ -11,6 +11,8 @@
 #include <subauth.h>
 #include <thread>
 #include <mutex>
+#include <set>
+#include <map>
 #include "IniReader.h"
 #include "injector\injector.hpp"
 #include "injector\calling.hpp"
@@ -375,4 +377,200 @@ private:
     static inline void* cookie;
 public:
     static inline std::once_flag flag;
+};
+
+class RegistryWrapper
+{
+private:
+    static inline std::string filter;
+    static inline std::string section;
+    static inline CIniReader RegistryReader;
+    static inline std::map<std::string, std::string> DefaultStrings;
+    static inline std::set<std::string, std::less<>> PathStrings;
+public:
+    RegistryWrapper(std::string_view searchString, std::string_view iniPath)
+    {
+        filter = searchString;
+        RegistryReader.SetIniPath(iniPath);
+
+    }
+    static void AddDefault(std::string_view key, std::string_view value)
+    {
+        DefaultStrings.emplace(key, value);
+    }
+    template<typename... Args>
+    static void AddPathWriter(Args... args)
+    {
+        PathStrings = { args... };
+        for (size_t i = 0; i < PathStrings.size(); i++)
+        {
+            AddDefault(*std::next(PathStrings.begin(), i), GetExeModulePath<std::string>());
+        }
+    }
+    static LSTATUS WINAPI RegCloseKey(HKEY hKey)
+    {
+        if (hKey == NULL) {
+            return ERROR_SUCCESS;
+        }
+        else
+            return ::RegCloseKey(hKey);
+    }
+    static LSTATUS WINAPI RegCreateKeyA(HKEY hKey, LPCSTR lpSubKey, PHKEY phkResult)
+    {
+        if (hKey == NULL) {
+            return ERROR_SUCCESS;
+        }
+        else
+            return ::RegCreateKeyA(hKey, lpSubKey, phkResult);
+    }
+    static LSTATUS WINAPI RegOpenKeyA(HKEY hKey, LPCSTR lpSubKey, PHKEY phkResult)
+    {
+        if (strstr(lpSubKey, filter.c_str()) != NULL) {
+            *phkResult = NULL;
+            section = lpSubKey;
+            section = section.substr(section.find_last_of('\\') + 1);
+            return ERROR_SUCCESS;
+        }
+        else
+            return ::RegOpenKeyA(hKey, lpSubKey, phkResult);
+    }
+    static LSTATUS WINAPI RegOpenKeyExA(HKEY hKey, LPCSTR lpSubKey, DWORD ulOptions, REGSAM samDesired, PHKEY phkResult)
+    {
+        if (strstr(lpSubKey, filter.c_str()) != NULL) {
+            *phkResult = NULL;
+            section = lpSubKey;
+            section = section.substr(section.find_last_of('\\') + 1);
+            return ERROR_SUCCESS;
+        }
+        else
+            return ::RegOpenKeyExA(hKey, lpSubKey, ulOptions, samDesired, phkResult);
+    }
+
+    static LSTATUS WINAPI RegQueryValueExA(HKEY hKey, LPCSTR lpValueName, LPDWORD lpReserved, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData)
+    {
+        std::string ValueName = "@";
+        if (lpValueName)
+            ValueName = lpValueName;
+
+        if (hKey == NULL)
+        {
+            if (lpType)
+            {
+                switch (*lpType)
+                {
+                case REG_BINARY:
+                {
+                    std::string str = RegistryReader.ReadString(section, ValueName, DefaultStrings[ValueName]);
+                    if (!str.empty())
+                    {
+                        std::istringstream input(str);
+                        std::string number;
+                        size_t i = 0;
+                        while (std::getline(input, number, ','))
+                        {
+                            lpData[i] = (BYTE)std::stoul(number, nullptr, 16);
+                            ++i;
+                        }
+                    }
+                    else
+                        RegistryReader.WriteString(section, ValueName, DefaultStrings[ValueName].empty() ? "INSERTBINARYDATAHERE" : DefaultStrings[ValueName]);
+                    break;
+                }
+                case REG_DWORD:
+                {
+                    DWORD def = UINT_MAX;
+                    if (!DefaultStrings[ValueName].empty())
+                    {
+                        try {
+                            def = (DWORD)std::stoul(DefaultStrings[ValueName]);
+                        }
+                        catch (const std::invalid_argument&) {
+                            def = UINT_MAX;
+                        }
+                    }
+                    *(DWORD*)lpData = RegistryReader.ReadInteger(section, ValueName, def);
+                    if (*(DWORD*)lpData == UINT_MAX)
+                    {
+                        RegistryReader.WriteString(section, ValueName, DefaultStrings[ValueName].empty() ? "INSERTDWORDHERE" : DefaultStrings[ValueName]);
+                        *(DWORD*)lpData = 0;
+                    }
+                    break;
+                }
+                case REG_MULTI_SZ: //not implemented
+                    break;
+                case REG_NONE:
+                    *(bool*)lpData = RegistryReader.ReadBoolean("MAIN", ValueName, false);
+                    break;
+                case REG_SZ:
+                case REG_EXPAND_SZ:
+                {
+                    std::string_view str((char*)lpData, *lpcbData);
+                    auto ret = RegistryReader.ReadString(section, ValueName, DefaultStrings[ValueName]);
+                    ret.copy((char*)str.data(), min(ret.length(), str.length()), 0);
+                    if ((ret.empty() || DefaultStrings[ValueName] == ret) && PathStrings.find(ValueName) == PathStrings.end())
+                        RegistryReader.WriteString(section, ValueName, DefaultStrings[ValueName].empty() ? "INSERTSTRINGDATAHERE" : DefaultStrings[ValueName]);
+                    break;
+                }
+                default:
+                    break;
+                }
+            }
+            return ERROR_SUCCESS;
+        }
+        else
+            return ::RegQueryValueExA(hKey, lpValueName, lpReserved, lpType, lpData, lpcbData);
+    }
+    static LSTATUS WINAPI RegSetValueExA(HKEY hKey, LPCSTR lpValueName, DWORD Reserved, DWORD dwType, const BYTE *lpData, DWORD cbData)
+    {
+        if (hKey == NULL)
+        {
+            switch (dwType)
+            {
+            case REG_BINARY:
+            {
+                std::string str;
+                for (size_t i = 0; i < cbData; i++)
+                {
+                    str += format("%02x", lpData[i]);
+                    if (i != cbData - 1)
+                        str += ',';
+                }
+                RegistryReader.WriteString(section, lpValueName, str);
+                break;
+            }
+            case REG_DWORD:
+                RegistryReader.WriteInteger(section, lpValueName, *(DWORD*)lpData);
+                break;
+            case REG_MULTI_SZ:
+            {
+                std::string str;
+                const char* temp = (const char*)lpData;
+                size_t index = 0;
+                size_t len = strlen(&temp[0]) + 1;
+                while (len > 1)
+                {
+                    str += temp[index];
+                    str += ',';
+                    index += len + 1;
+                    len = strlen(&temp[index]) + 1;
+                }
+                str.resize(str.size() - 1);
+                RegistryReader.WriteString(section, lpValueName, str);
+                break;
+            }
+            case REG_NONE:
+                RegistryReader.WriteBoolean("MAIN", lpValueName, true);
+                break;
+            case REG_SZ:
+            case REG_EXPAND_SZ:
+                RegistryReader.WriteString(section, lpValueName, std::string((char*)lpData, cbData));
+                break;
+            default:
+                break;
+            }
+            return ERROR_SUCCESS;
+        }
+        else
+            return ::RegSetValueExA(hKey, lpValueName, Reserved, dwType, lpData, cbData);
+    }
 };

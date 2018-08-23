@@ -441,85 +441,49 @@ void Init()
 
     if (bWriteSettingsToFile)
     {
-        static CIniReader RegistryReader;
-
-        auto RegCreateKeyAHook = [](HKEY hKey, LPCSTR lpSubKey, PHKEY phkResult) -> LONG
-        {
-            return 1;
-        };
-
-        auto RegOpenKeyExAHook = [](HKEY hKey, LPCSTR lpSubKey, DWORD ulOptions, REGSAM samDesired, PHKEY phkResult) -> LONG
-        {
-            if (RegistryReader.ReadString("MAIN", "DisplayName", "").length() == 0)
-            {
-                RegistryReader.WriteString("MAIN", "@", "INSERTYOURCDKEYHERE");
-                RegistryReader.WriteString("MAIN", "DisplayName", "Need for Speed ProStreet");
-                RegistryReader.WriteString("MAIN", "Installed From", "C:\\");
-                RegistryReader.WriteString("MAIN", "Registration", "SOFTWARE\\Electronic Arts\\Electronic Arts\\Need for Speed ProStreet\\ergc");
-                RegistryReader.WriteString("MAIN", "Language", "1");
-                RegistryReader.WriteString("MAIN", "Locale", "en_us");
-                RegistryReader.WriteString("MAIN", "CD Drive", "C:\\");
-                RegistryReader.WriteString("MAIN", "Product GUID", "{CC419DDC-E0F0-4013-B25A-6FA036516F0D}");
-                RegistryReader.WriteString("MAIN", "Region", "NA");
-            }
-            return ERROR_SUCCESS;
-        };
-
-        auto RegCloseKeyHook = [](HKEY hKey) -> LONG
-        {
-            return ERROR_SUCCESS;
-        };
-
-        auto RegSetValueExAHook = [](HKEY hKey, LPCSTR lpValueName, DWORD Reserved, DWORD dwType, const BYTE* lpData, DWORD cbData) -> LONG
-        {
-            RegistryReader.WriteInteger("MAIN", (char*)lpValueName, *(DWORD*)lpData);
-            return ERROR_SUCCESS;
-        };
-
-        auto RegQueryValueExAHook = [](HKEY hKey, LPCSTR lpValueName, LPDWORD lpReserved, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData) -> LONG
-        {
-            if (!lpValueName) //cd key
-            {
-                auto str = RegistryReader.ReadString("MAIN", "@", "");
-                strncpy((char*)lpData, str.c_str(), *lpcbData);
-                return ERROR_SUCCESS;
-            }
-
-            if (*lpType == REG_SZ)
-            {
-                if (strstr(lpValueName, "Install Dir"))
-                {
-                    GetModuleFileNameA(NULL, (char*)lpData, MAX_PATH);
-                    *(strrchr((char*)lpData, '\\') + 1) = '\0';
-                    return ERROR_SUCCESS;
-                }
-
-                auto str = RegistryReader.ReadString("MAIN", (char*)lpValueName, "");
-                strncpy((char*)lpData, str.c_str(), *lpcbData);
-            }
-            else
-            {
-                DWORD nValue = RegistryReader.ReadInteger("MAIN", (char*)lpValueName, 0);
-                injector::WriteMemory(lpData, nValue, true);
-            }
-
-            return ERROR_SUCCESS;
-        };
-
+        auto[DesktopResW, DesktopResH] = GetDesktopRes();
         char szSettingsSavePath[MAX_PATH];
         uintptr_t GetFolderPathCallDest = injector::GetBranchDestination(GetFolderPathpattern.get(0).get<uintptr_t>(14), true).as_int();
         injector::stdcall<HRESULT(HWND, int, HANDLE, DWORD, LPSTR)>::call(GetFolderPathCallDest, NULL, 0x8005, NULL, NULL, szSettingsSavePath);
         strcat(szSettingsSavePath, "\\NFS ProStreet");
         strcat(szSettingsSavePath, "\\Settings.ini");
-        RegistryReader.SetIniPath(szSettingsSavePath);
-        uintptr_t* RegIAT = *hook::pattern("FF 15 ? ? ? ? 8D 54 24 40 52 68 3F 00 0F 00").get(0).get<uintptr_t*>(2);
-        injector::WriteMemory(&RegIAT[0], static_cast<LONG(WINAPI*)(HKEY hKey, LPCSTR lpSubKey, PHKEY phkResult)>(RegCreateKeyAHook), true);
-        injector::WriteMemory(&RegIAT[1], static_cast<LONG(WINAPI*)(HKEY hKey, LPCSTR lpSubKey, DWORD ulOptions, REGSAM samDesired, PHKEY phkResult)>(RegOpenKeyExAHook), true);
-        injector::WriteMemory(&RegIAT[2], static_cast<LONG(WINAPI*)(HKEY hKey)>(RegCloseKeyHook), true);
-        injector::WriteMemory(&RegIAT[3], static_cast<LONG(WINAPI*)(HKEY hKey, LPCSTR lpValueName, DWORD Reserved, DWORD dwType, const BYTE* lpData, DWORD cbData)>(RegSetValueExAHook), true);
-        injector::WriteMemory(&RegIAT[4], static_cast<LONG(WINAPI*)(HKEY hKey, LPCSTR lpValueName, LPDWORD lpReserved, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData)>(RegQueryValueExAHook), true);
-    }
 
+        RegistryWrapper("Need for Speed", szSettingsSavePath);
+        auto RegIAT = *hook::pattern("FF 15 ? ? ? ? 8D 54 24 40 52 68 3F 00 0F 00").get(0).get<uintptr_t*>(2);
+        injector::WriteMemory(&RegIAT[0], RegistryWrapper::RegCreateKeyA, true);
+        injector::WriteMemory(&RegIAT[1], RegistryWrapper::RegOpenKeyExA, true);
+        injector::WriteMemory(&RegIAT[2], RegistryWrapper::RegCloseKey, true);
+        injector::WriteMemory(&RegIAT[3], RegistryWrapper::RegSetValueExA, true);
+        injector::WriteMemory(&RegIAT[4], RegistryWrapper::RegQueryValueExA, true);
+        RegistryWrapper::AddPathWriter("Install Dir", "InstallDir", "Path");
+        RegistryWrapper::AddDefault("@", "INSERTYOURCDKEYHERE");
+        RegistryWrapper::AddDefault("CD Drive", "D:\\");
+        RegistryWrapper::AddDefault("CacheSize", "5697825792");
+        RegistryWrapper::AddDefault("SwapSize", "73400320");
+        RegistryWrapper::AddDefault("Language", "Engish (US)");
+        RegistryWrapper::AddDefault("StreamingInstall", "0");
+        RegistryWrapper::AddDefault("FirstTime", "0");
+        RegistryWrapper::AddDefault("g_CarEffects", "0");
+        RegistryWrapper::AddDefault("g_WorldFXLevel", "0");
+        RegistryWrapper::AddDefault("g_RoadReflectionEnable", "0");
+        RegistryWrapper::AddDefault("g_WorldLodLevel", "0");
+        RegistryWrapper::AddDefault("g_CarLodLevel", "0");
+        RegistryWrapper::AddDefault("g_FSAALevel", "0");
+        RegistryWrapper::AddDefault("g_RainEnable", "0");
+        RegistryWrapper::AddDefault("g_TextureFiltering", "0");
+        RegistryWrapper::AddDefault("g_SmokeEnable", "0");
+        RegistryWrapper::AddDefault("g_CarDamageDetail", "0");
+        RegistryWrapper::AddDefault("g_PerformanceLevel", "0");
+        RegistryWrapper::AddDefault("g_VSyncOn", "0");
+        RegistryWrapper::AddDefault("g_ShadowEnable", "0");
+        RegistryWrapper::AddDefault("g_ShaderDetailLevel", "0");
+        RegistryWrapper::AddDefault("g_AudioDetail", "0");
+        RegistryWrapper::AddDefault("g_Brightness", "68");
+        RegistryWrapper::AddDefault("g_AudioMode", "1");
+        RegistryWrapper::AddDefault("g_Width", std::to_string(DesktopResW));
+        RegistryWrapper::AddDefault("g_Height", std::to_string(DesktopResH));
+        RegistryWrapper::AddDefault("g_Refresh", "60");
+    }
 }
 
 CEXP void InitializeASI()
