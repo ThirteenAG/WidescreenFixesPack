@@ -135,7 +135,9 @@ project "NFSCarbon.WidescreenFix"
 project "NFSMostWanted.WidescreenFix"
    setpaths("Z:/WFP/Games/Need For Speed/Need for Speed Most Wanted/", "speed.exe")
 project "NFSProStreet.GenericFix"
-   setpaths("Z:/WFP/Games/Need For Speed/Need for Speed ProStreet/", "nfs.exe")
+   setpaths("Z:/WFP/Games/Need For Speed/Need for Speed ProStreet/", "nfsps.exe")
+project "NFSUndercover.GenericFix"
+   setpaths("Z:/WFP/Games/Need For Speed/Need for Speed Undercover/", "nfs.exe")
 project "NFSUnderground.WidescreenFix"
    setpaths("Z:/WFP/Games/Need For Speed/Need For Speed Underground/", "speed.exe")
    files { "textures/NFS/NFSU/icon.rc" }

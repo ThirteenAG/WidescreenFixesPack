@@ -70,6 +70,12 @@ void __declspec(naked) ExitPostRaceFixPart2()
 void Init()
 {
     FreeConsole();
+
+    //Proper hud scaling
+    static constexpr double dbl_9FAAE8 = 4.0 / 3.0;
+    auto pattern = hook::pattern("DC 3D ? ? ? ? D9 5C 24 0C F3 0F 10 44 24 0C");
+    injector::WriteMemory(pattern.get_first(2), &dbl_9FAAE8, true);
+
     CIniReader iniReader("");
     auto bResDetect = iniReader.ReadInteger("MultiFix", "ResDetect", 1) != 0;
     auto bPostRaceFix = iniReader.ReadInteger("MultiFix", "PostRaceFix", 1) != 0;
@@ -361,26 +367,34 @@ void Init()
             }
         }; injector::MakeInline<Buttons>(pattern.get_first(16));
 
-        pattern = hook::pattern("8B 0F 8B 54 0E 08 DB 44 90 0C"); //0x6A5E4C
-        static auto unk_A987EC = *hook::get_pattern<void**>("81 FE ? ? ? ? 0F 8C ? ? ? ? 8B 44 24 14 83 B8", 2);
-        struct MenuRemap
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                regs.ecx = *(uint32_t*)regs.edi;
-                regs.edx = *(uint32_t*)(regs.esi + regs.ecx + 0x08);
+        //redundant, replaced with the patch below
+        //pattern = hook::pattern("8B 0F 8B 54 0E 08 DB 44 90 0C"); //0x6A5E4C
+        //static auto unk_A987EC = *hook::get_pattern<void**>("81 FE ? ? ? ? 0F 8C ? ? ? ? 8B 44 24 14 83 B8", 2);
+        //struct MenuRemap
+        //{
+        //    void operator()(injector::reg_pack& regs)
+        //    {
+        //        regs.ecx = *(uint32_t*)regs.edi;
+        //        regs.edx = *(uint32_t*)(regs.esi + regs.ecx + 0x08);
+        //
+        //        auto dword_A9882C = &unk_A987EC[16];
+        //        auto dword_A98834 = &unk_A987EC[18];
+        //        auto dword_A9883C = &unk_A987EC[20];
+        //        auto dword_A98874 = &unk_A987EC[34];
+        //
+        //        *(uint32_t*)(*(uint32_t*)dword_A9882C + 0x20) = 0; // "Enter"; changed B to A
+        //        *(uint32_t*)(*(uint32_t*)dword_A98834 + 0x20) = 1; // "ESC"; changed X to B
+        //        *(uint32_t*)(*(uint32_t*)dword_A9883C + 0x20) = 7; // "SPC"; changed RS to Start
+        //        *(uint32_t*)(*(uint32_t*)dword_A98874 + 0x20) = 3; // "1"; changed A to Y
+        //    }
+        //}; injector::MakeInline<MenuRemap>(pattern.get_first(0), pattern.get_first(6));
 
-                auto dword_A9882C = &unk_A987EC[16];
-                auto dword_A98834 = &unk_A987EC[18];
-                auto dword_A9883C = &unk_A987EC[20];
-                auto dword_A98874 = &unk_A987EC[34];
-
-                *(uint32_t*)(*(uint32_t*)dword_A9882C + 0x20) = 0; // "Enter"; changed B to A
-                *(uint32_t*)(*(uint32_t*)dword_A98834 + 0x20) = 1; // "ESC"; changed X to B
-                *(uint32_t*)(*(uint32_t*)dword_A9883C + 0x20) = 7; // "SPC"; changed RS to Start
-                *(uint32_t*)(*(uint32_t*)dword_A98874 + 0x20) = 3; // "1"; changed A to Y
-            }
-        }; injector::MakeInline<MenuRemap>(pattern.get_first(0), pattern.get_first(6));
+        //all pads use same control scheme
+        pattern = hook::pattern("0F 84 ? ? ? ? 50 E8 ? ? ? ? 83 C4 04 3D BA CC B6 5F"); //006B6DA6 006B864E
+        auto addr = (uintptr_t)hook::get_pattern("3D E0 19 5E 2A 0F 84 ? ? ? ? 3D FF 53 17 2C", 0);
+        injector::MakeJMP(pattern.get_first(0), addr, true);
+        pattern = hook::pattern("B8 02 00 00 00 BB 04 00 00 00 BA 01 00 00 00 BD 05 00 00 00 B9 06 00 00 00"); //006B8653 006C0500
+        injector::MakeJMP(addr + 5, pattern.get_first(0), true);
     }
 
     if (fLeftStickDeadzone)
@@ -463,20 +477,20 @@ void Init()
         RegistryWrapper::AddDefault("Language", "Engish (US)");
         RegistryWrapper::AddDefault("StreamingInstall", "0");
         RegistryWrapper::AddDefault("FirstTime", "0");
-        RegistryWrapper::AddDefault("g_CarEffects", "0");
-        RegistryWrapper::AddDefault("g_WorldFXLevel", "0");
-        RegistryWrapper::AddDefault("g_RoadReflectionEnable", "0");
-        RegistryWrapper::AddDefault("g_WorldLodLevel", "0");
+        RegistryWrapper::AddDefault("g_CarEffects", "2");
+        RegistryWrapper::AddDefault("g_WorldFXLevel", "3");
+        RegistryWrapper::AddDefault("g_RoadReflectionEnable", "1");
+        RegistryWrapper::AddDefault("g_WorldLodLevel", "2");
         RegistryWrapper::AddDefault("g_CarLodLevel", "0");
-        RegistryWrapper::AddDefault("g_FSAALevel", "0");
-        RegistryWrapper::AddDefault("g_RainEnable", "0");
-        RegistryWrapper::AddDefault("g_TextureFiltering", "0");
-        RegistryWrapper::AddDefault("g_SmokeEnable", "0");
-        RegistryWrapper::AddDefault("g_CarDamageDetail", "0");
+        RegistryWrapper::AddDefault("g_FSAALevel", "3");
+        RegistryWrapper::AddDefault("g_RainEnable", "1");
+        RegistryWrapper::AddDefault("g_TextureFiltering", "2");
+        RegistryWrapper::AddDefault("g_SmokeEnable", "1");
+        RegistryWrapper::AddDefault("g_CarDamageDetail", "2");
         RegistryWrapper::AddDefault("g_PerformanceLevel", "0");
         RegistryWrapper::AddDefault("g_VSyncOn", "0");
-        RegistryWrapper::AddDefault("g_ShadowEnable", "0");
-        RegistryWrapper::AddDefault("g_ShaderDetailLevel", "0");
+        RegistryWrapper::AddDefault("g_ShadowEnable", "3");
+        RegistryWrapper::AddDefault("g_ShaderDetailLevel", "1");
         RegistryWrapper::AddDefault("g_AudioDetail", "0");
         RegistryWrapper::AddDefault("g_Brightness", "68");
         RegistryWrapper::AddDefault("g_AudioMode", "1");
