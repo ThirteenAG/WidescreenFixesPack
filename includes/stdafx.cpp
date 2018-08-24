@@ -115,3 +115,9 @@ HICON CreateIconFromResourceICO(UINT nID, int32_t cx, int32_t cy)
     GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR)&GetDesktopRes, &hm);
     return (HICON)LoadImage(hm, MAKEINTRESOURCE(nID), IMAGE_ICON, cx, cy, LR_SHARED);
 }
+
+std::string RegistryWrapper::filter;
+std::string RegistryWrapper::section;
+CIniReader RegistryWrapper::RegistryReader;
+std::map<std::string, std::string> RegistryWrapper::DefaultStrings;
+std::set<std::string, std::less<>> RegistryWrapper::PathStrings;
