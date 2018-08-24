@@ -382,11 +382,11 @@ public:
 class RegistryWrapper
 {
 private:
-    static inline std::string filter;
-    static inline std::string section;
-    static inline CIniReader RegistryReader;
-    static inline std::map<std::string, std::string> DefaultStrings;
-    static inline std::set<std::string, std::less<>> PathStrings;
+    static /*inline c a e*/ std::string filter;
+    static /*inline r t x*/ std::string section;
+    static /*inline a   i*/ CIniReader RegistryReader;
+    static /*inline s   t*/ std::map<std::string, std::string> DefaultStrings;
+    static /*inline h    */ std::set<std::string, std::less<>> PathStrings;
 public:
     RegistryWrapper(std::string_view searchString, std::string_view iniPath)
     {
@@ -406,6 +406,11 @@ public:
         {
             AddDefault(*std::next(PathStrings.begin(), i), GetExeModulePath<std::string>());
         }
+    }
+    static void AddPathWriterWithPath(std::string_view key, std::string_view merge)
+    {
+        PathStrings.emplace(key);
+        AddDefault(key, GetExeModulePath<std::string>() + std::string(merge) + "\\");
     }
     static LSTATUS WINAPI RegCloseKey(HKEY hKey)
     {
@@ -471,6 +476,7 @@ public:
                             lpData[i] = (BYTE)std::stoul(number, nullptr, 16);
                             ++i;
                         }
+                        *lpcbData = i;
                     }
                     else
                         RegistryReader.WriteString(section, ValueName, DefaultStrings[ValueName].empty() ? "INSERTBINARYDATAHERE" : DefaultStrings[ValueName]);
@@ -494,25 +500,59 @@ public:
                         RegistryReader.WriteString(section, ValueName, DefaultStrings[ValueName].empty() ? "INSERTDWORDHERE" : DefaultStrings[ValueName]);
                         *(DWORD*)lpData = 0;
                     }
+                    *lpcbData = sizeof(DWORD);
                     break;
                 }
                 case REG_MULTI_SZ: //not implemented
                     break;
                 case REG_NONE:
-                    *(bool*)lpData = RegistryReader.ReadBoolean("MAIN", ValueName, false);
+                {
+                    if (lpData != NULL)
+                    {
+                        *(bool*)lpData = RegistryReader.ReadBoolean("MAIN", ValueName, false);
+                        *lpcbData = sizeof(bool);
+                    }
+                    else
+                    {
+                        auto s = DefaultStrings.find(ValueName);
+                        if (s != DefaultStrings.end())
+                        {
+                            *lpcbData = s->second.size();
+                            *lpType = 1;
+                            return ERROR_SUCCESS;
+                        }
+                        else
+                            return ERROR_FILE_NOT_FOUND;
+                    }
                     break;
+                }
                 case REG_SZ:
                 case REG_EXPAND_SZ:
                 {
-                    std::string_view str((char*)lpData, *lpcbData);
-                    auto ret = RegistryReader.ReadString(section, ValueName, DefaultStrings[ValueName]);
-                    ret.copy((char*)str.data(), min(ret.length(), str.length()), 0);
-                    if ((ret.empty() || DefaultStrings[ValueName] == ret) && PathStrings.find(ValueName) == PathStrings.end())
-                        RegistryReader.WriteString(section, ValueName, DefaultStrings[ValueName].empty() ? "INSERTSTRINGDATAHERE" : DefaultStrings[ValueName]);
+                    if (lpData != NULL)
+                    {
+                        std::string_view str((char*)lpData, *lpcbData);
+                        auto ret = RegistryReader.ReadString(section, ValueName, DefaultStrings[ValueName]);
+                        *lpcbData = min(ret.length(), str.length());
+                        ret.copy((char*)str.data(), *lpcbData, 0);
+                        lpData[*lpcbData] = '\0';
+                        if ((ret.empty() || DefaultStrings[ValueName] == ret) && PathStrings.find(ValueName) == PathStrings.end())
+                            RegistryReader.WriteString(section, ValueName, DefaultStrings[ValueName].empty() ? "INSERTSTRINGDATAHERE" : DefaultStrings[ValueName]);
+                    }
+                    else
+                    {
+                        auto ret = RegistryReader.ReadString(section, ValueName, DefaultStrings[ValueName]);
+                        *lpcbData = ret.length();
+                    }
                     break;
                 }
                 default:
+                {
+                    auto ret = RegistryReader.ReadString(section, ValueName, DefaultStrings[ValueName]);
+                    *lpcbData = ret.length();
+                    *lpType = REG_SZ;
                     break;
+                }
                 }
             }
             return ERROR_SUCCESS;
@@ -572,5 +612,37 @@ public:
         }
         else
             return ::RegSetValueExA(hKey, lpValueName, Reserved, dwType, lpData, cbData);
+    }
+    static LSTATUS WINAPI RegDeleteKeyA(HKEY hKey, LPCSTR lpSubKey)
+    {
+        if (hKey == NULL) {
+            return ERROR_SUCCESS; //not implemented
+        }
+        else
+            return ::RegDeleteKeyA(hKey, lpSubKey);
+    }
+    static LSTATUS WINAPI RegEnumKeyA(HKEY hKey, DWORD dwIndex, LPSTR lpName, DWORD cchName)
+    {
+        if (hKey == NULL) {
+            return ERROR_SUCCESS; //not implemented
+        }
+        else
+            return ::RegEnumKeyA(hKey, dwIndex, lpName, cchName);
+    }
+    static LSTATUS WINAPI RegQueryValueA(HKEY hKey, LPCSTR lpSubKey, LPSTR lpData, PLONG lpcbData)
+    {
+        if (hKey == NULL) {
+            return ERROR_SUCCESS; //not implemented
+        }
+        else
+            return ::RegQueryValueA(hKey, lpSubKey, lpData, lpcbData);
+    }
+    static LSTATUS WINAPI RegCreateKeyExA(HKEY hKey, LPCSTR lpSubKey, DWORD Reserved, LPSTR lpClass, DWORD dwOptions, REGSAM samDesired, CONST LPSECURITY_ATTRIBUTES lpSecurityAttributes, PHKEY phkResult, LPDWORD lpdwDisposition)
+    {
+        if (hKey == NULL) {
+            return ERROR_SUCCESS; //not implemented
+        }
+        else
+            return ::RegCreateKeyExA(hKey, lpSubKey, Reserved, lpClass, dwOptions, samDesired, lpSecurityAttributes, phkResult, lpdwDisposition);
     }
 };

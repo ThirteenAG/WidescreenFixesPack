@@ -15,51 +15,6 @@ struct Screen
     float fFMVScale;
 } Screen;
 
-LONG WINAPI RegQueryValueExAHook(HKEY hKey, LPCSTR lpValueName, LPDWORD lpReserved, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData)
-{
-    if (strstr(lpValueName, "Install Path") || strstr(lpValueName, "Movie Install"))
-    {
-        if (lpData == NULL)
-        {
-            char temp[MAX_PATH];
-            GetModuleFileNameA(NULL, temp, MAX_PATH);
-            *(strrchr(temp, '\\') + 1) = '\0';
-            *lpcbData = std::size(temp);
-            *lpType = 1;
-        }
-        else
-        {
-            GetModuleFileNameA(NULL, (char*)lpData, MAX_PATH);
-            *(strrchr((char*)lpData, '\\') + 1) = '\0';
-        }
-        return ERROR_SUCCESS;
-    }
-    return RegQueryValueExA(hKey, lpValueName, lpReserved, lpType, lpData, lpcbData);
-}
-
-LONG WINAPI RegOpenKeyAHook(HKEY hKey, LPCSTR lpSubKey, PHKEY phkResult)
-{
-    if (strstr(lpSubKey, "Konami"))
-        return ERROR_SUCCESS;
-    else
-        return RegOpenKeyA(hKey, lpSubKey, phkResult);
-}
-
-LONG WINAPI RegSetValueExAHook(HKEY hKey, LPCSTR lpValueName, DWORD Reserved, DWORD dwType, const BYTE *lpData, DWORD cbData)
-{
-    return ERROR_SUCCESS;
-}
-
-LONG WINAPI RegDeleteValueAHook(HKEY hKey, LPCSTR lpValueName)
-{
-    return ERROR_SUCCESS;
-}
-
-LONG WINAPI RegCloseKeyHook(HKEY hKey)
-{
-    return ERROR_SUCCESS;
-}
-
 injector::hook_back<void(__cdecl*)(float, float, float, float, float, float, float, float, float, float)> hbFMV;
 void __cdecl FMVHook(float X1, float Y1, float X2, float Y2, float a5, float a6, float a7, float a8, float a9, float a10)
 {
@@ -326,12 +281,14 @@ void Init()
         auto RegIATpat = hook::pattern("FF 15 ? ? ? ? 8B 44 24 00 50");
         if (RegIATpat.size() > 0)
         {
+            RegistryWrapper("KONAMI", "");
+            RegistryWrapper::AddPathWriter("Install Path", "Movie Install");
             uintptr_t* RegIAT = *RegIATpat.count(1).get(0).get<uintptr_t*>(2); //0x413D67
-            injector::WriteMemory(&RegIAT[0], RegQueryValueExAHook, true);
-            injector::WriteMemory(&RegIAT[1], RegOpenKeyAHook, true);
-            injector::WriteMemory(&RegIAT[2], RegSetValueExAHook, true);
-            injector::WriteMemory(&RegIAT[3], RegDeleteValueAHook, true);
-            injector::WriteMemory(&RegIAT[4], RegCloseKeyHook, true);
+            injector::WriteMemory(&RegIAT[0], RegQueryValueExA, true);
+            injector::WriteMemory(&RegIAT[1], RegOpenKeyA, true);
+            injector::WriteMemory(&RegIAT[2], RegSetValueExA, true);
+            injector::WriteMemory(&RegIAT[3], RegDeleteValueA, true);
+            injector::WriteMemory(&RegIAT[4], RegCloseKey, true);
         }
     }
 

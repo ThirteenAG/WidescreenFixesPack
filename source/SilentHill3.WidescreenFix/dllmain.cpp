@@ -12,88 +12,24 @@ struct Screen
     int32_t Width43;
 } Screen;
 
-LONG WINAPI RegQueryValueExAHook(HKEY hKey, LPCSTR lpValueName, LPDWORD lpReserved, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData)
-{
-    if (strstr(lpValueName, "movie") || strstr(lpValueName, "sound") || strstr(lpValueName, "data") || strstr(lpValueName, "save") || strstr(lpValueName, "installdir"))
-    {
-        if (lpData == NULL)
-        {
-            char temp[MAX_PATH];
-            GetModuleFileNameA(NULL, temp, MAX_PATH);
-            *(strrchr(temp, '\\') + 1) = '\0';
-            strstr(lpValueName, "save") ? strcat_s(temp, "savedata\\") : 0;
-            *lpcbData = std::size(temp);
-            *lpType = 1;
-        }
-        else
-        {
-            GetModuleFileNameA(NULL, (char*)lpData, MAX_PATH);
-            *(strrchr((char*)lpData, '\\') + 1) = '\0';
-            strstr(lpValueName, "save") ? strcat((char*)lpData, "savedata\\") : 0;
-        }
-        return ERROR_SUCCESS;
-    }
-    return RegQueryValueExA(hKey, lpValueName, lpReserved, lpType, lpData, lpcbData);
-}
-
-LONG WINAPI RegOpenKeyExAHook(HKEY hKey, LPCSTR lpSubKey, DWORD ulOptions, REGSAM  samDesired, PHKEY phkResult)
-{
-    if (strstr(lpSubKey, "KONAMI"))
-        return ERROR_SUCCESS;
-
-    return RegOpenKeyExA(hKey, lpSubKey, ulOptions, samDesired, phkResult);
-}
-
-LONG WINAPI RegDeleteKeyAHook(HKEY hKey, LPCSTR lpSubKey)
-{
-    return ERROR_SUCCESS;
-}
-
-LONG WINAPI RegEnumKeyAHook(HKEY hKey, DWORD dwIndex, LPTSTR lpName, DWORD cchName)
-{
-    return ERROR_SUCCESS;
-}
-
-LONG WINAPI RegOpenKeyAHook(HKEY hKey, LPCSTR lpSubKey, PHKEY phkResult)
-{
-    return ERROR_SUCCESS;
-}
-
-LONG WINAPI RegQueryValueAHook(HKEY hKey, LPCSTR lpSubKey, LPTSTR lpValue, PLONG lpcbValue)
-{
-    return ERROR_SUCCESS;
-}
-
-LONG WINAPI RegCreateKeyExAHook(HKEY hKey, LPCSTR lpSubKey, DWORD Reserved, LPTSTR lpClass, DWORD dwOptions, REGSAM samDesired, LPSECURITY_ATTRIBUTES lpSecurityAttributes, PHKEY phkResult, LPDWORD lpdwDisposition)
-{
-    return ERROR_SUCCESS;
-}
-
-LONG WINAPI RegSetValueExAHook(HKEY hKey, LPCSTR lpValueName, DWORD Reserved, DWORD dwType, const BYTE *lpData, DWORD cbData)
-{
-    return ERROR_SUCCESS;
-}
-
-LONG WINAPI RegCloseKeyHook(HKEY hKey)
-{
-    return ERROR_SUCCESS;
-}
-
 bool PatchRegistryFuncs()
 {
     auto RegIATpat = hook::pattern("50 53 53 FF 75 F4 C7 45 F0 10 00 00 00 FF 15");
+    RegistryWrapper("KONAMI", "");
+    RegistryWrapper::AddPathWriter("movie", "sound", "data", "installdir");
+    RegistryWrapper::AddPathWriterWithPath("save", "savedata");
     if (RegIATpat.size() > 0)
     {
         uintptr_t* RegIAT = *RegIATpat.get(0).get<uintptr_t*>(15); //0x4232E4 in config tool
-        injector::WriteMemory(&RegIAT[0], RegQueryValueExAHook, true);
-        injector::WriteMemory(&RegIAT[1], RegOpenKeyExAHook, true);
-        injector::WriteMemory(&RegIAT[2], RegDeleteKeyAHook, true);
-        injector::WriteMemory(&RegIAT[3], RegEnumKeyAHook, true);
-        injector::WriteMemory(&RegIAT[4], RegOpenKeyAHook, true);
-        injector::WriteMemory(&RegIAT[5], RegQueryValueAHook, true);
-        injector::WriteMemory(&RegIAT[6], RegCreateKeyExAHook, true);
-        injector::WriteMemory(&RegIAT[7], RegSetValueExAHook, true);
-        injector::WriteMemory(&RegIAT[8], RegCloseKeyHook, true);
+        injector::WriteMemory(&RegIAT[0], RegistryWrapper::RegQueryValueExA, true);
+        injector::WriteMemory(&RegIAT[1], RegistryWrapper::RegOpenKeyExA, true);
+        injector::WriteMemory(&RegIAT[2], RegistryWrapper::RegDeleteKeyA, true);
+        injector::WriteMemory(&RegIAT[3], RegistryWrapper::RegEnumKeyA, true);
+        injector::WriteMemory(&RegIAT[4], RegistryWrapper::RegOpenKeyA, true);
+        injector::WriteMemory(&RegIAT[5], RegistryWrapper::RegQueryValueA, true);
+        injector::WriteMemory(&RegIAT[6], RegistryWrapper::RegCreateKeyExA, true);
+        injector::WriteMemory(&RegIAT[7], RegistryWrapper::RegSetValueExA, true);
+        injector::WriteMemory(&RegIAT[8], RegistryWrapper::RegCloseKey, true);
         return true;
     }
     else
@@ -102,10 +38,10 @@ bool PatchRegistryFuncs()
         if (RegIATpat.size() > 0)
         {
             uintptr_t* RegIAT = *RegIATpat.get(0).get<uintptr_t*>(7); //0x5E9709 in game exe
-            injector::WriteMemory(&RegIAT[0], RegOpenKeyExAHook, true);
-            injector::WriteMemory(&RegIAT[1], RegQueryValueExAHook, true);
-            injector::WriteMemory(&RegIAT[2], RegOpenKeyAHook, true);
-            injector::WriteMemory(&RegIAT[3], RegCloseKeyHook, true);
+            injector::WriteMemory(&RegIAT[0], RegistryWrapper::RegOpenKeyExA, true);
+            injector::WriteMemory(&RegIAT[1], RegistryWrapper::RegQueryValueExA, true);
+            injector::WriteMemory(&RegIAT[2], RegistryWrapper::RegOpenKeyA, true);
+            injector::WriteMemory(&RegIAT[3], RegistryWrapper::RegCloseKey, true);
         }
     }
     return false;
