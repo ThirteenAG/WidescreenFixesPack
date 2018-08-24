@@ -45,7 +45,7 @@ xcopy /S /Q /Y /F "../textures/start.dds" "unpacked/8C37F6B1/PC_KEY_4.dds"
 xcopy /S /Q /Y /F "../textures/pdpadud.dds" "unpacked/8C37F6B1/PC_ARROW_KEYS_UP_DOWN.dds"
 xcopy /S /Q /Y /F "../textures/dummy.dds" "unpacked/8C37F6B1/PC_LOAD.dds"
 %XNFSTPKTool% -w2 unpacked/8C37F6B1.ini unpacked/temp1.tpk
-xcopy /S /Q /Y /F "../textures/xdpadlr.dds" "unpacked/A8AD59C0/PC_ARROW_KEYS.dds"
+xcopy /S /Q /Y /F "../textures/pdpadlr.dds" "unpacked/A8AD59C0/PC_ARROW_KEYS.dds"
 %XNFSTPKTool% -w2 unpacked/A8AD59C0.ini unpacked/temp2.tpk
 cd unpacked
 copy /b temp1.tpk+temp2.tpk buttons-playstation.tpk
