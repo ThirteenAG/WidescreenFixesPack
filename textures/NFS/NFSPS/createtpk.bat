@@ -29,6 +29,8 @@ xcopy /S /Q /Y /F "../textures/a.dds" "unpacked/1B4F984/PC_KEY_ENTER.dds"
 xcopy /S /Q /Y /F "../textures/menu.dds" "unpacked/1B4F984/PC_KEY_SPC_CZECH.dds"
 xcopy /S /Q /Y /F "../textures/menu.dds" "unpacked/1B4F984/PC_KEY_SPC_DUTCH.dds"
 xcopy /S /Q /Y /F "../textures/b.dds" "unpacked/1B4F984/PC_KEY_ESC_FRENCH.dds"
+xcopy /S /Q /Y /F "../textures/lt.dds" "unpacked/1B4F984/L1.dds"
+xcopy /S /Q /Y /F "../textures/rt.dds" "unpacked/1B4F984/R1.dds"
 %XNFSTPKTool% -w unpacked/1B4F984.ini ../../../data/NFSProStreet.GenericFix/scripts/buttons-xbox.tpk
 rmdir /Q /S unpacked
 
@@ -62,5 +64,7 @@ xcopy /S /Q /Y /F "../textures/cross.dds" "unpacked/1B4F984/PC_KEY_ENTER.dds"
 xcopy /S /Q /Y /F "../textures/start.dds" "unpacked/1B4F984/PC_KEY_SPC_CZECH.dds"
 xcopy /S /Q /Y /F "../textures/start.dds" "unpacked/1B4F984/PC_KEY_SPC_DUTCH.dds"
 xcopy /S /Q /Y /F "../textures/circle.dds" "unpacked/1B4F984/PC_KEY_ESC_FRENCH.dds"
+xcopy /S /Q /Y /F "../textures/l2.dds" "unpacked/1B4F984/L1.dds"
+xcopy /S /Q /Y /F "../textures/r2.dds" "unpacked/1B4F984/R1.dds"
 %XNFSTPKTool% -w unpacked/1B4F984.ini ../../../data/NFSProStreet.GenericFix/scripts/buttons-playstation.tpk
 rmdir /Q /S unpacked
