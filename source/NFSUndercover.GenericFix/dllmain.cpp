@@ -69,6 +69,7 @@ void Init()
     }
 
 
+    bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 1) != 0;
     static int32_t nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
     static int32_t nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
@@ -76,6 +77,12 @@ void Init()
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
         szCustomUserFilesDirectoryInGameDir.clear();
+
+    if (bSkipIntro)
+    {
+        pattern = hook::pattern("39 1D ? ? ? ? 74 25 8B 45 04 8B 48 0C"); //0x12BB200
+        injector::WriteMemory(*pattern.get_first<uint32_t>(2), 1, true);
+    }
 
     if (nWindowedMode)
     {
