@@ -2,6 +2,10 @@
 
 void Init()
 {
+    //Stop settings reset after crash
+    auto pattern = hook::pattern("E8 ? ? ? ? A0 ? ? ? ? A2 ? ? ? ? E8 ? ? ? ? 53 53 E8 ? ? ? ? 83 C4 08"); //710C2A
+    injector::MakeNOP(pattern.get_first(0), 5, true);
+
     CIniReader iniReader("");
     auto bResDetect = iniReader.ReadInteger("MultiFix", "ResDetect", 1) != 0;
 
@@ -11,11 +15,14 @@ void Init()
         {
             uint32_t ResX;
             uint32_t ResY;
+            uint32_t LangHash;
         };
 
-        std::vector<std::string> list;
-        GetResolutionsList(list);
+        static std::vector<std::string> list;
         static std::vector<ScreenRes> list2;
+        static std::vector<uint32_t> list3;
+        GetResolutionsList(list);
+        list3.resize(list.size());
         for each (auto s in list)
         {
             ScreenRes r;
@@ -23,10 +30,42 @@ void Init()
             list2.emplace_back(r);
         }
 
-        auto pattern = hook::pattern("83 C0 08 83 F8 78");
-        injector::WriteMemory(pattern.get_first(-6), &list2[0].ResX, true);
-        injector::WriteMemory(pattern.get_first(-14), &list2[0].ResY, true);
-        injector::WriteMemory<uint8_t>(pattern.get_first(5), 0xFFi8, true);
+        // patch res pointers
+        pattern = hook::pattern("89 34 85 ? ? ? ? 83 C0 01 A3");
+        injector::WriteMemory(pattern.get_first(3), &list3[0], true); //0x53D39E
+        pattern = hook::pattern("8D 3C 85 ? ? ? ? 2B C8");
+        injector::WriteMemory(pattern.get_first(3), &list3[0], true); //0x53D3C4
+        pattern = hook::pattern("8B 14 8D ? ? ? ? 8B 02");
+        injector::WriteMemory(pattern.get_first(3), &list3[0], true); //0x57A5B5
+        pattern = hook::pattern("8B 14 8D ? ? ? ? 8B 42 04 50");
+        injector::WriteMemory(pattern.get_first(3), &list3[0], true); //0x57A5D1
+        pattern = hook::pattern("8B 04 8D ? ? ? ? 8B 50");
+        injector::WriteMemory(pattern.get_first(), &list3[0], true); //0x57A5EE
+        pattern = hook::pattern("8B 04 BD ? ? ? ? 8B 48");
+        injector::WriteMemory(pattern.get_first(3), &list3[0], true); //0x5872A3
+        pattern = hook::pattern("8B 14 8D ? ? ? ? 39 3A");
+        injector::WriteMemory(pattern.get_first(), &list3[0], true); //0x5872F3
+
+        pattern = hook::pattern("BE ? ? ? ? 8B 46 04 8B 0E 50 51"); //0x53D37B
+        injector::WriteMemory(pattern.get_first(1), &list2[0], true);
+        pattern = hook::pattern("81 FE ? ? ? ? 7C CB 83 F8 ? 5E"); //0x53D3AD
+        injector::WriteMemory(pattern.get_first(2), &list2[list2.size() - 1], true);
+        pattern = hook::pattern("8B 0C 85 ? ? ? ? 89 4F 6C 8B 46 10 "); //0x74006F
+        injector::WriteMemory(pattern.get_first(3), &list2[0], true);
+        injector::WriteMemory(pattern.get_first(19), &list2[0].ResY, true);//0x74007F
+
+        pattern = hook::pattern("50 51 B9 ? ? ? ? E8 ? ? ? ? 83 F8 FF"); //0x53D385 0x53D394
+        injector::MakeJMP(pattern.get_first(0), pattern.get_first(15), true);
+        injector::MakeNOP(pattern.get_first(20), 2, true); //0x53D399 get rid of resolution check
+
+        pattern = hook::pattern("E8 ? ? ? ? 89 44 BC ? 83 C7 01 83 C4 04"); //0x5872AB
+        struct GetPackedStringHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                *(char**)&regs.eax = list[regs.edi].data();
+            }
+        }; injector::MakeInline<GetPackedStringHook>(pattern.get_first(0));
     }
 
 
@@ -173,8 +212,7 @@ void Init()
         }; injector::MakeInline<Buttons>(pattern.get_first(16));
 
         static injector::hook_back<int32_t(__stdcall*)(int, int)> hb_666790;
-        auto padFix = [](int, int) -> int32_t
-        {
+        auto padFix = [](int, int) -> int32_t {
             return 0x2A5E19E0;
         };
         pattern = hook::pattern("E8 ? ? ? ? 3D ? ? ? ? 0F 87 ? ? ? ? 0F 84 ? ? ? ? 3D ? ? ? ? 0F 87 ? ? ? ? 0F 84 ? ? ? ? 3D ? ? ? ? 0F 87"); //0x670B7A
@@ -214,7 +252,6 @@ void Init()
         }; injector::MakeInline<DeadzoneHookY>(pattern.get_first(18 + 0), pattern.get_first(18 + 6));
     }
 
-
     auto GetFolderPathpattern = hook::pattern("50 6A 00 6A 00 68 ? 80 00 00 6A 00");
     if (!szCustomUserFilesDirectoryInGameDir.empty())
     {
@@ -237,7 +274,6 @@ void Init()
             injector::MakeNOP((uint32_t)dword_6CBF17 + 5, 1, true);
         }
     }
-
 
     if (bWriteSettingsToFile)
     {
