@@ -76,6 +76,10 @@ void Init()
     auto pattern = hook::pattern("DC 3D ? ? ? ? D9 5C 24 0C F3 0F 10 44 24 0C");
     injector::WriteMemory(pattern.get_first(2), &dbl_9FAAE8, true);
 
+    //Stop settings reset after crash
+    pattern = hook::pattern("E8 ? ? ? ? A0 ? ? ? ? A2 ? ? ? ? E8 ? ? ? ? 53 53 E8 ? ? ? ? 83 C4 08"); //710C2A
+    injector::MakeNOP(pattern.get_first(0), 5, true);
+
     CIniReader iniReader("");
     auto bResDetect = iniReader.ReadInteger("MultiFix", "ResDetect", 1) != 0;
     auto bPostRaceFix = iniReader.ReadInteger("MultiFix", "PostRaceFix", 1) != 0;
@@ -367,34 +371,28 @@ void Init()
             }
         }; injector::MakeInline<Buttons>(pattern.get_first(16));
 
-        //redundant, replaced with the patch below
-        //pattern = hook::pattern("8B 0F 8B 54 0E 08 DB 44 90 0C"); //0x6A5E4C
-        //static auto unk_A987EC = *hook::get_pattern<void**>("81 FE ? ? ? ? 0F 8C ? ? ? ? 8B 44 24 14 83 B8", 2);
-        //struct MenuRemap
-        //{
-        //    void operator()(injector::reg_pack& regs)
-        //    {
-        //        regs.ecx = *(uint32_t*)regs.edi;
-        //        regs.edx = *(uint32_t*)(regs.esi + regs.ecx + 0x08);
-        //
-        //        auto dword_A9882C = &unk_A987EC[16];
-        //        auto dword_A98834 = &unk_A987EC[18];
-        //        auto dword_A9883C = &unk_A987EC[20];
-        //        auto dword_A98874 = &unk_A987EC[34];
-        //
-        //        *(uint32_t*)(*(uint32_t*)dword_A9882C + 0x20) = 0; // "Enter"; changed B to A
-        //        *(uint32_t*)(*(uint32_t*)dword_A98834 + 0x20) = 1; // "ESC"; changed X to B
-        //        *(uint32_t*)(*(uint32_t*)dword_A9883C + 0x20) = 7; // "SPC"; changed RS to Start
-        //        *(uint32_t*)(*(uint32_t*)dword_A98874 + 0x20) = 3; // "1"; changed A to Y
-        //    }
-        //}; injector::MakeInline<MenuRemap>(pattern.get_first(0), pattern.get_first(6));
+        pattern = hook::pattern("8B 0F 8B 54 0E 08 DB 44 90 0C"); //0x6A5E4C
+        static auto unk_ABA3E4 = *hook::get_pattern<void**>("81 FE ? ? ? ? 0F 8C ? ? ? ? 8B 44 24 14 83 B8", 2);
+        struct MenuRemap
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                regs.ecx = *(uint32_t*)regs.edi;
+                regs.edx = *(uint32_t*)(regs.esi + regs.ecx + 0x08);
 
-        //all pads use same control scheme
-        pattern = hook::pattern("0F 84 ? ? ? ? 50 E8 ? ? ? ? 83 C4 04 3D BA CC B6 5F"); //006B6DA6 006B864E
-        auto addr = (uintptr_t)hook::get_pattern("3D E0 19 5E 2A 0F 84 ? ? ? ? 3D FF 53 17 2C", 0);
-        injector::MakeJMP(pattern.get_first(0), addr, true);
-        pattern = hook::pattern("B8 02 00 00 00 BB 04 00 00 00 BA 01 00 00 00 BD 05 00 00 00 B9 06 00 00 00"); //006B8653 006C0500
-        injector::MakeJMP(addr + 5, pattern.get_first(0), true);
+                auto dword_ABA4C4 = &unk_ABA3E4[26];
+                auto dword_ABA454 = &unk_ABA3E4[28];
+                *(uint32_t*)(*(uint32_t*)dword_ABA4C4 + 0x20) = 4; // changes RB to LB
+                *(uint32_t*)(*(uint32_t*)dword_ABA454 + 0x20) = 5; // changes LB to RB
+            }
+        }; injector::MakeInline<MenuRemap>(pattern.get_first(0), pattern.get_first(6));
+
+        static injector::hook_back<int32_t(__cdecl*)(char*)> hb_4366E0;
+        auto padFix = [](char*) -> int32_t {
+            return 0x2A5E19E0;
+        };
+        pattern = hook::pattern("E8 ? ? ? ? 83 C4 04 3D ? ? ? ? 0F 87 ? ? ? ? 0F 84 ? ? ? ? 3D");
+        hb_4366E0.fun = injector::MakeCALL(pattern.get_first(0), static_cast<int32_t(__cdecl*)(char*)>(padFix), true).get();
     }
 
     if (fLeftStickDeadzone)
