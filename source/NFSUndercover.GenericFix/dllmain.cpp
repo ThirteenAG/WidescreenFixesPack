@@ -40,11 +40,11 @@ void Init()
         pattern = hook::pattern("8B 14 8D ? ? ? ? 8B 42 04 50");
         injector::WriteMemory(pattern.get_first(3), &list3[0], true); //0x57A5D1
         pattern = hook::pattern("8B 04 8D ? ? ? ? 8B 50");
-        injector::WriteMemory(pattern.get_first(), &list3[0], true); //0x57A5EE
+        injector::WriteMemory(pattern.get_first(3), &list3[0], true); //0x57A5EE
         pattern = hook::pattern("8B 04 BD ? ? ? ? 8B 48");
         injector::WriteMemory(pattern.get_first(3), &list3[0], true); //0x5872A3
         pattern = hook::pattern("8B 14 8D ? ? ? ? 39 3A");
-        injector::WriteMemory(pattern.get_first(), &list3[0], true); //0x5872F3
+        injector::WriteMemory(pattern.get_first(3), &list3[0], true); //0x5872F3
 
         pattern = hook::pattern("BE ? ? ? ? 8B 46 04 8B 0E 50 51"); //0x53D37B
         injector::WriteMemory(pattern.get_first(1), &list2[0], true);

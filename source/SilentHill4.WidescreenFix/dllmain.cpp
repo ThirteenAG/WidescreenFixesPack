@@ -154,10 +154,6 @@ void Init()
             }
         }; injector::MakeInline<OverlayWidthHook2>(pattern.get_first(0), pattern.get_first(8));
 
-
-        pattern = hook::pattern("83 EC 18 53 56 57 E8 ? ? ? ? E8 ? ? ? ? A1"); //0x566440
-        injector::MakeRET(pattern.get_first()); //DOF/blur overlay
-
         pattern = hook::pattern("55 8B EC 83 E4 F0 83 EC 64 D9 45 18"); //0x42EAC0
         injector::MakeRET(pattern.get_first());
 
@@ -166,7 +162,6 @@ void Init()
 
         pattern = hook::pattern("E8 ? ? ? ? 83 C4 5C C6 05 ? ? ? ? 00 A1"); //0x45EBD2
         injector::MakeNOP(pattern.get_first(), 5, true); //Cutscene Wall Grunge Effect
-        //
 
         // Text fix
         pattern = hook::pattern("C7 44 24 34 00 00 80 BF D9 5C"); //0x404EBB
@@ -195,7 +190,7 @@ void Init()
 
                 if (
                     (j >= 44 && j <= 49) || //intro overlay
-                    (j == 65) // and blur
+                    (j >= 56 && j <= 65 && j != 64) //DOF/blur overlay
                     )
                 {
                     hb_563BF0.fun = injector::MakeCALL(pattern.get(i).get<uint32_t>(0), sub_563BF0_hook, true).get();
