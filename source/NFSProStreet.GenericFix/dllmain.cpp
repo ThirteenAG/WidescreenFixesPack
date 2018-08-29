@@ -80,6 +80,11 @@ void Init()
     pattern = hook::pattern("E8 ? ? ? ? A0 ? ? ? ? A2 ? ? ? ? E8 ? ? ? ? 53 53 E8 ? ? ? ? 83 C4 08"); //710C2A
     injector::MakeNOP(pattern.get_first(0), 5, true);
 
+    //Brake Light Fix
+    static constexpr double d0 = 0.0f;
+    pattern = hook::pattern("DD 05 ? ? ? ? D9 C9 DF F1 DD D8 77 15 8B 86"); //717C9A
+    injector::WriteMemory(pattern.get_first(2), &d0, true);
+
     CIniReader iniReader("");
     auto bResDetect = iniReader.ReadInteger("MultiFix", "ResDetect", 1) != 0;
     auto bPostRaceFix = iniReader.ReadInteger("MultiFix", "PostRaceFix", 1) != 0;
@@ -160,6 +165,7 @@ void Init()
     static int32_t nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
     bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 1) != 0;
+    bool bDisableMotionBlur = iniReader.ReadInteger("MISC", "DisableMotionBlur", 0) != 0;
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
         szCustomUserFilesDirectoryInGameDir.clear();
@@ -288,6 +294,7 @@ void Init()
             int32_t LSClick;
             int32_t RSClick;
         };
+
 
         pattern = hook::pattern("C7 45 E0 01 00 00 00 89 5D E4"); //0x892BFD
         static uintptr_t ButtonsState = (uintptr_t)*hook::pattern("0F B6 54 24 04 33 C0 B9").get(0).get<uint32_t*>(8); //0xA5E058
@@ -495,6 +502,12 @@ void Init()
         RegistryWrapper::AddDefault("g_Width", std::to_string(DesktopResW));
         RegistryWrapper::AddDefault("g_Height", std::to_string(DesktopResH));
         RegistryWrapper::AddDefault("g_Refresh", "60");
+    }
+
+    if (bDisableMotionBlur)
+    {
+        pattern = hook::pattern("74 73 F3 0F 10 84 24 ? ? ? ? F3 0F 11 44 24");
+        injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true); //4B153E jmp 4B15B3
     }
 }
 
