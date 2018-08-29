@@ -12,37 +12,40 @@ struct Screen
     float fWidth43;
     float fHudScale;
     float fHudOffset;
+    float fHudOffsetReal;
     float fFMVScale;
 } Screen;
 
-injector::hook_back<void(__cdecl*)(float, float, float, float, float, float, float, float, float, float)> hbFMV;
-void __cdecl FMVHook(float X1, float Y1, float X2, float Y2, float a5, float a6, float a7, float a8, float a9, float a10)
+injector::hook_back<void(__cdecl*)(float, float, float, float, float, float, float, float, int, int)> hb_563BF0;
+void __cdecl sub_563BF0_hook(float x, float y, float w, float h, float a5, float a6, float a7, float a8, int a9, int a10)
 {
-    float fAR = (Screen.fAspectRatio > (16.0f / 9.0f)) ? (16.0f / 9.0f) : Screen.fAspectRatio;
-    static float fOffset = ((480.0f * fAR) - 640.0f) / 2.0f; //106.0
-    Y1 -= fOffset / (4.0f / 3.0f);
-    Y2 += fOffset / (4.0f / 3.0f);
-    X1 -= fOffset;
-    X2 += fOffset;
-    return hbFMV.fun(X1, Y1, X2, Y2, a5, a6, a7, a8, a9, a10);
+    x -= Screen.fHudOffset;
+    w += Screen.fHudOffset;
+    return hb_563BF0.fun(x, y, w, h, a5, a6, a7, a8, a9, a10);
 }
 
-injector::hook_back<void(__cdecl*)(float, float, float, float, float, float, float, float, float, float)> hbOverlayIntro;
-void __cdecl OverlayIntroHook(float X1, float Y1, float X2, float Y2, float a5, float a6, float a7, float a8, float a9, float a10)
+void __cdecl sub_563BF0_hook2(float x, float y, float w, float h, float a5, float a6, float a7, float a8, int a9, int a10)
 {
-    float fOffset = ((480.0f * Screen.fAspectRatio) - 800.0f) / 2.0f;
-    hbOverlayIntro.fun(X1 - fOffset, Y1, X2, Y2, a5, a6, a7, a8, a9, a10);
+    x -= Screen.fHudOffset;
+    return hb_563BF0.fun(x, y, w, h, a5, a6, a7, a8, a9, a10);
 }
 
-injector::hook_back<void(__cdecl*)(float, float, float, float, float, float, float, float, float, float)> hbOverlays;
-void __cdecl OverlaysHook(float X1, float Y1, float X2, float Y2, float a5, float a6, float a7, float a8, float a9, float a10)
+void __cdecl FMVHook(float X1, float Y1, float X2, float Y2, float a5, float a6, float a7, float a8, int a9, int a10)
 {
+    Y1 -= Screen.fHudOffset / (4.0f / 3.0f);
+    Y2 += Screen.fHudOffset / (4.0f / 3.0f);
+    X1 -= Screen.fHudOffset;
+    X2 += Screen.fHudOffset;
+    return hb_563BF0.fun(X1, Y1, X2, Y2, a5, a6, a7, a8, a9, a10);
+}
 
-    float fOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
-    if ((X1 == 0.0f) && (X2 == 640.0f || X2 == 512.0f))
-        return hbOverlays.fun(X1 - fOffset, Y1, X2 + (fOffset * 2.0f), Y2, a5, a6, a7, a8, a9, a10);
+injector::hook_back<void(__cdecl*)(float, float, float, float, float, float, float, float, int, int)> hbOverlays;
+void __cdecl OverlaysHook(float x, float y, float w, float h, float a5, float a6, float a7, float a8, int a9, int a10)
+{
+    if ((x >= -2.0f && x <= 2.0f) && (y >= -2.0f && y <= 2.0f) && (w >= 638.0f && w <= 642.0f) && (h >= 478.0f && h <= 482.0f) || (w == 512.0f && h == 448.0f))
+        return hbOverlays.fun(x - Screen.fHudOffset, y, w + (Screen.fHudOffset * 2.0f), h, a5, a6, a7, a8, a9, a10);
     else
-        return hbOverlays.fun(X1, Y1, X2, Y2, a5, a6, a7, a8, a9, a10);
+        return hbOverlays.fun(x, y, w, h, a5, a6, a7, a8, a9, a10);
 }
 
 void Init()
@@ -67,6 +70,8 @@ void Init()
     Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
     Screen.fFieldOfView = ((1.0f / Screen.fAspectRatio) * (4.0f / 3.0f));
     Screen.fHudScale = ((1.0f / Screen.fAspectRatio) * (4.0f / 3.0f));
+    Screen.fHudOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
+    Screen.fHudOffsetReal = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
 
     //Resolution
     static auto nWidthPtr = *hook::pattern("8B 0D ? ? ? ? 6A 00 50 51").count(1).get(0).get<uint32_t*>(2);
@@ -171,7 +176,7 @@ void Init()
 
         //FMV
         pattern = hook::pattern("E8 ? ? ? ? 8B 14 B5 ? ? ? ? A1"); //0x412EAF
-        hbFMV.fun = injector::MakeCALL(pattern.count(1).get(0).get<uint32_t>(0), FMVHook, true).get();
+        hb_563BF0.fun = injector::MakeCALL(pattern.count(1).get(0).get<uint32_t>(0), FMVHook, true).get();
 
         //Width
         //sub_563BF0
@@ -188,14 +193,24 @@ void Init()
                 if (j == 33 || j == 71) //menu and save menu backgrounds, 1 -> 0x4053C8... http://pastebin.com/Hv6TdTLh
                     continue;
 
-                if (j < 44 || j > 48)
-                    hbOverlays.fun = injector::MakeCALL(pattern.get(i).get<uint32_t>(0), OverlaysHook, true).get();
-                else
-                    hbOverlayIntro.fun = injector::MakeCALL(pattern.get(i).get<uint32_t>(0), OverlayIntroHook, true).get();
+                if (
+                    (j >= 44 && j <= 49) || //intro overlay
+                    (j == 65) // and blur
+                    )
+                {
+                    hb_563BF0.fun = injector::MakeCALL(pattern.get(i).get<uint32_t>(0), sub_563BF0_hook, true).get();
+                    continue;
+                }
+
+                if (j >= 64) //blur
+                {
+                    hb_563BF0.fun = injector::MakeCALL(pattern.get(i).get<uint32_t>(0), sub_563BF0_hook2, true).get();
+                    continue;
+                }
+
+                hbOverlays.fun = injector::MakeCALL(pattern.get(i).get<uint32_t>(0), OverlaysHook, true).get();
             }
         }
-
-
 
         //Cutscene Borders
         static float fBorderWidth = 4096.0f;
@@ -227,17 +242,14 @@ void Init()
         injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(4), &fFilmEffectPos, true);
         //injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(12), &fFilmEffectPos, true);
 
-        //double vision issue
-        pattern = hook::pattern("50 51 E8 ? ? ? ? 83 C4 10 C3"); //0x565AEC
-        injector::MakeNOP(pattern.get_first(2), 5, true);
-
         //blood stains
         pattern = hook::pattern("50 51 52 C6 05 ? ? ? ? 01 E8"); //0x565AEC
         injector::MakeNOP(pattern.get_first(10), 5, true);
 
-        // cutscene blur
-        pattern = hook::pattern("83 EC 10 56 8D 44 24"); //0x565C40
-        injector::MakeRET(pattern.get_first(0));
+        //Blur Restoration
+        static int32_t n640 = static_cast<int32_t>(round(((640.0f - (640.0f / Screen.fHudScale)) * 8.0f) + (640.0f / Screen.fHudScale)));
+        pattern = hook::pattern("B8 80 02 00 00 DB 44 24 34 99 F7 FE"); //0x566A79
+        injector::WriteMemory(pattern.get_first(1), n640, true);
     }
 
     if (bDisableCutsceneBorders)
