@@ -213,8 +213,9 @@ void Init()
         void operator()(injector::reg_pack& regs)
         {
             *(uint32_t*)(regs.ebp - 0x4) = 0;
-            *(uint32_t*)(regs.ebp + 0x10) = (uint32_t)defaultCmd.data();
-            _asm nop
+            std::string_view lpCmdLine(*(char**)(regs.ebp + 0x10));
+            if (lpCmdLine.empty())
+                *(uint32_t*)(regs.ebp + 0x10) = (uint32_t)defaultCmd.data();
         }
     }; injector::MakeInline<StartupHook>(pattern.get_first(0), pattern.get_first(7));
 
