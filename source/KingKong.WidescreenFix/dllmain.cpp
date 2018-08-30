@@ -205,6 +205,48 @@ void Init()
             }
         }; injector::MakeInline<MouseSensHook>(pattern.get_first(0), pattern.get_first(6));
     }
+
+    static const std::string defaultCmd("/B /lang:01  /spg:50 /GDBShaders KKMaps.bf");
+    pattern = hook::pattern("C7 45 ? ? ? ? ? 68 04 01 00 00 8D 85 D8 FB FF FF 50"); //0x401A10
+    struct StartupHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            *(uint32_t*)(regs.ebp - 0x4) = 0;
+            *(uint32_t*)(regs.ebp + 0x10) = (uint32_t)defaultCmd.data();
+            _asm nop
+        }
+    }; injector::MakeInline<StartupHook>(pattern.get_first(0), pattern.get_first(7));
+
+    if (true) //windowed mode text fix
+    {
+        auto[ResX, ResY] = GetDesktopRes();
+        HKEY phkResult;
+        DWORD cbData, Type;
+        BYTE Data[4];
+
+        if (RegOpenKeyExA(HKEY_CURRENT_USER, "Software\\Ubisoft\\KingKong\\{2C391F94-B8B9-4832-9C57-3AFC332CC037}\\Basic video", 0, KEY_READ | KEY_SET_VALUE, &phkResult))
+            RegCreateKeyA(HKEY_CURRENT_USER, "Software\\Ubisoft\\KingKong\\{2C391F94-B8B9-4832-9C57-3AFC332CC037}\\Basic video", &phkResult);
+
+        cbData = 4;
+        if (!RegQueryValueExA(phkResult, "ResolutionWidth", 0, &Type, Data, &cbData) && Type == 4 && cbData == 4)
+            ResX = *(int32_t*)Data;
+        else
+            RegSetValueExA(phkResult, "ResolutionWidth", 0, REG_DWORD, (const BYTE*)&ResX, cbData);
+        cbData = 4;
+        if (!RegQueryValueExA(phkResult, "ResolutionHeight", 0, &Type, Data, &cbData) && Type == 4 && cbData == 4)
+            ResY = *(int32_t*)Data;
+        else
+            RegSetValueExA(phkResult, "ResolutionHeight", 0, REG_DWORD, (const BYTE*)&ResY, cbData);
+        RegCloseKey(phkResult);
+
+        pattern = hook::pattern("68 E0 01 00 00 68 80 02 00 00");
+        for (size_t i = 0; i < pattern.size(); ++i)
+        {
+            injector::WriteMemory(pattern.get(i).get<uint32_t>(6), ResX, true);
+            injector::WriteMemory(pattern.get(i).get<uint32_t>(1), ResY, true);
+        }
+    }
 }
 
 CEXP void InitializeASI()
