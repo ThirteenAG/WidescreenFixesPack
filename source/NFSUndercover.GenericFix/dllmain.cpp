@@ -138,8 +138,8 @@ void Init()
                 tagRECT rc;
                 auto[DesktopResW, DesktopResH] = GetDesktopRes();
 
-                rc.left = 0.0f;
-                rc.top = 0.0f;
+                rc.left = 0;
+                rc.top = 0;
                 rc.right = DesktopResW;
                 rc.bottom = DesktopResH;
 
@@ -224,6 +224,152 @@ void Init()
         };
         pattern = hook::pattern("E8 ? ? ? ? 3D ? ? ? ? 0F 87 ? ? ? ? 0F 84 ? ? ? ? 3D ? ? ? ? 0F 87 ? ? ? ? 0F 84 ? ? ? ? 3D ? ? ? ? 0F 87"); //0x670B7A
         hb_666790.fun = injector::MakeCALL(pattern.get_first(0), static_cast<int32_t(__stdcall*)(int, int)>(padFix), true).get();
+
+        //Remap
+        enum NFSUC_ACTION
+        {
+            GAME_ACTION_GAS,
+            GAME_ACTION_BRAKE,
+            GAME_ACTION_STEERLEFT,
+            GAME_ACTION_STEERRIGHT,
+            GAME_ACTION_HANDBRAKE,
+            GAME_ACTION_GAMEBREAKER,
+            GAME_ACTION_NOS,
+            GAME_ACTION_SHIFTDOWN,
+            GAME_ACTION_SHIFTUP,
+            GAME_ACTION_SHIFTFIRST,
+            GAME_ACTION_SHIFTSECOND,
+            GAME_ACTION_SHIFTTHIRD,
+            GAME_ACTION_SHIFTFOURTH,
+            GAME_ACTION_SHIFTFIFTH,
+            GAME_ACTION_SHIFTSIXTH,
+            GAME_ACTION_SHIFTREVERSE,
+            GAME_ACTION_SHIFTNEUTRAL,
+            GAME_ACTION_RESET,
+            CAM_ACTION_CHANGE,
+            CAM_ACTION_LOOKBACK,
+            HUD_ACTION_MESSENGER,
+            HUD_ACTION_PAD_LEFT,
+            HUD_ACTION_RACE_NOW,
+            HUD_ACTION_SCREENSHOT,
+            HUD_ACTION_PAUSEREQUEST,
+            FE_ACTION_LEFT,
+            FE_ACTION_RIGHT,
+            FE_ACTION_UP,
+            FE_ACTION_DOWN,
+            FE_ACTION_RLEFT,
+            FE_ACTION_RRIGHT,
+            FE_ACTION_RUP,
+            FE_ACTION_RDOWN,
+            FE_ACTION_ACCEPT,
+            FE_ACTION_CANCEL,
+            FE_ACTION_START,
+            FE_ACTION_LTRIG,
+            FE_ACTION_RTRIG,
+            FE_ACTION_B0,
+            FE_ACTION_B1,
+            FE_ACTION_B2,
+            FE_ACTION_B3,
+            FE_ACTION_B4,
+            FE_ACTION_B5,
+            HUD_ACTION_SKIPNIS,
+            HUD_ACTION_NEXTSONG,
+            SC_W,
+            SC_A,
+            SC_S,
+            SC_D,
+            FE_ACTION_RTRIGGER,
+            FE_ACTION_LTRIGGER,
+            SC_BACKSLASH,
+            DEBUG_ACTION_TOGGLECAM,
+            DEBUG_ACTION_TOGGLECARCOLOR,
+            SC_BACK,
+            SC_K,
+            SC_NUMPAD1,
+            SC_NUMPAD2,
+            SC_NUMPAD3,
+            SC_NUMPAD4,
+            SC_NUMPAD5,
+            SC_NUMPAD6,
+            SC_NUMPAD7,
+            SC_NUMPAD8,
+            SC_NUMPAD9,
+            SC_NUMPAD0,
+            SC_DECIMAL,
+            SC_SUBTRACT,
+            SC_ADD
+        };
+
+        struct ButtonStruct
+        {
+            uint32_t v1;
+            uint32_t v2;
+            uint32_t v3;
+            uint32_t v4;
+            uint32_t v5;
+            uint32_t v6;
+            uint32_t v7;
+            uint32_t v8;
+            uint32_t v9;
+            uint32_t v10;
+            uint32_t v11;
+            uint32_t v12;
+        };
+
+        struct ButtonsTable
+        {
+            char* str;
+            ButtonStruct* ptr;
+        };
+
+        enum ButtonType
+        {
+            X_AXIS,
+            Y_AXIS,
+            BUTTON
+        };
+
+        enum PadBtn
+        {
+            X = 2,
+            Y = 3,
+            AXIS_Y = 6,
+            AXIS_X = 7,
+            LS = 8,
+            RS = 9
+        };
+
+        static auto pBtnTable = *hook::get_pattern<ButtonsTable*>("8D 34 F5 ? ? ? ? 75 10 8B B9 ? ? ? ? 8D 7C 3F 02", 3);
+        pattern = hook::pattern("8B 0B 8B 54 0F 08 F3 0F 2A 44 90 ? F3 0F 59 05 ? ? ? ? 5F"); //0x65C4A1
+        struct RemapHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                regs.ecx = *(uint32_t*)(regs.ebx + 0x00);
+                regs.edx = *(uint32_t*)(regs.edi + regs.ecx + 0x08);
+
+                pBtnTable[FE_ACTION_RUP].ptr->v7 = PadBtn::AXIS_Y;
+                pBtnTable[FE_ACTION_RUP].ptr->v9 = ButtonType::Y_AXIS;
+
+                pBtnTable[FE_ACTION_RLEFT].ptr->v7 = PadBtn::AXIS_Y;
+                pBtnTable[FE_ACTION_RLEFT].ptr->v9 = ButtonType::X_AXIS;
+
+                pBtnTable[FE_ACTION_RDOWN].ptr->v7 = PadBtn::AXIS_X;
+                pBtnTable[FE_ACTION_RDOWN].ptr->v9 = ButtonType::Y_AXIS;
+
+                pBtnTable[FE_ACTION_RRIGHT].ptr->v7 = PadBtn::AXIS_X;
+                pBtnTable[FE_ACTION_RRIGHT].ptr->v9 = ButtonType::X_AXIS;
+
+                pBtnTable[FE_ACTION_B4].ptr->v9 = PadBtn::X;
+
+                pBtnTable[FE_ACTION_B5].ptr->v7 = ButtonType::BUTTON;
+                pBtnTable[FE_ACTION_B5].ptr->v9 = PadBtn::Y;
+
+                pBtnTable[FE_ACTION_B3].ptr->v9 = PadBtn::RS;
+
+                pBtnTable[FE_ACTION_B2].ptr->v9 = PadBtn::LS;
+            }
+        }; injector::MakeInline<RemapHook>(pattern.get_first(0), pattern.get_first(6));
     }
 
     if (fLeftStickDeadzone)
