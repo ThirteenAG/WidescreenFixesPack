@@ -1,4 +1,6 @@
 #include "stdafx.h"
+#include <d3d9.h>
+#include "dxsdk\d3dvtbl.h"
 
 uintptr_t pBarsPtr;
 uintptr_t pBarsJmp;
@@ -36,6 +38,30 @@ void __declspec(naked) BarsHook()
     }
 }
 
+typedef HRESULT(STDMETHODCALLTYPE* CreateDevice_t)(IDirect3D9*, UINT, D3DDEVTYPE, HWND, DWORD, D3DPRESENT_PARAMETERS*, IDirect3DDevice9**);
+CreateDevice_t RealD3D9CreateDevice = NULL;
+typedef HRESULT(STDMETHODCALLTYPE* DrawPrimitive_t)(LPDIRECT3DDEVICE9, D3DPRIMITIVETYPE, UINT, UINT);
+DrawPrimitive_t RealDrawPrimitive = NULL;
+
+HRESULT WINAPI DrawPrimitive(LPDIRECT3DDEVICE9 pDevice, D3DPRIMITIVETYPE PrimitiveType, UINT StartVertex, UINT PrimitiveCount)
+{
+    //hides some untextured objects and objects with broken geometry, may also hide normal objects
+    //367 - tall grass, has some broken vertices, but hiding it is overkill
+    if (PrimitiveType == D3DPT_TRIANGLESTRIP && StartVertex == 0 && (PrimitiveCount == 749 || PrimitiveCount == 909 /*|| PrimitiveCount == 367*/))
+        return D3D_OK;
+
+    return RealDrawPrimitive(pDevice, PrimitiveType, StartVertex, PrimitiveCount);
+}
+
+HRESULT WINAPI CreateDevice(IDirect3D9* d3ddev, UINT Adapter, D3DDEVTYPE DeviceType, HWND hFocusWindow, DWORD BehaviorFlags, D3DPRESENT_PARAMETERS* pPresentationParameters, IDirect3DDevice9** ppReturnedDeviceInterface)
+{
+    HRESULT retval = RealD3D9CreateDevice(d3ddev, Adapter, DeviceType, hFocusWindow, BehaviorFlags, pPresentationParameters, ppReturnedDeviceInterface);
+    UINT_PTR* pVTable = (UINT_PTR*)(*((UINT_PTR*)*ppReturnedDeviceInterface));
+    RealDrawPrimitive = (DrawPrimitive_t)pVTable[IDirect3DDevice9VTBL::DrawPrimitive];
+    injector::WriteMemory(&pVTable[IDirect3DDevice9VTBL::DrawPrimitive], &DrawPrimitive, true);
+    return retval;
+}
+
 void InitSettings()
 {
     auto pattern = hook::pattern("75 66 8D 4C 24 04 51");
@@ -63,6 +89,7 @@ void Init()
     static bool bFullscreenFMVs = iniReader.ReadInteger("MAIN", "FullscreenFMVs", 1) != 0;
     static float fMouseSensitivityFactor = iniReader.ReadFloat("MAIN", "MouseSensitivityFactor", 0.0f);
     static float fFOVFactor = iniReader.ReadFloat("MAIN", "FOVFactor", 0.0f);
+    static bool bHideUntexturedObjects = iniReader.ReadInteger("MISC", "HideUntexturedObjects", 0) != 0;
 
     if (strncmp(szForceAspectRatio.c_str(), "auto", 4) != 0)
     {
@@ -247,6 +274,22 @@ void Init()
             injector::WriteMemory(pattern.get(i).get<uint32_t>(6), ResX, true);
             injector::WriteMemory(pattern.get(i).get<uint32_t>(1), ResY, true);
         }
+    }
+
+    if (bHideUntexturedObjects)
+    {
+        pattern = hook::pattern("8B 84 24 90 04 00 00 50 8B CD E8 ? ? ? ? 8B 45 00 8B 08 50");
+        struct Direct3DDeviceHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                auto pID3D9 = *(IDirect3D9**)(regs.ebp + 0x00);
+                UINT_PTR* pVTable = (UINT_PTR*)(*((UINT_PTR*)pID3D9));
+                RealD3D9CreateDevice = (CreateDevice_t)pVTable[IDirect3D9VTBL::CreateDevice];
+                injector::WriteMemory(&pVTable[IDirect3D9VTBL::CreateDevice], &CreateDevice, true);
+                regs.eax = *(uint32_t*)(regs.esp + 0x490);
+            }
+        }; injector::MakeInline<Direct3DDeviceHook>(pattern.get_first(0), pattern.get_first(7));
     }
 }
 
