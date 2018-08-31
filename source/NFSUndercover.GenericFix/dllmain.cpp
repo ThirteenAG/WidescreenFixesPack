@@ -340,7 +340,7 @@ void Init()
         };
 
         static auto pBtnTable = *hook::get_pattern<ButtonsTable*>("8D 34 F5 ? ? ? ? 75 10 8B B9 ? ? ? ? 8D 7C 3F 02", 3);
-        pattern = hook::pattern("8B 0B 8B 54 0F 08 F3 0F 2A 44 90 ? F3 0F 59 05 ? ? ? ? 5F"); //0x65C4A1
+        pattern = hook::pattern("F3 0F 2A 44 90 0C"); //0x65C4A1
         struct RemapHook
         {
             void operator()(injector::reg_pack& regs)
@@ -369,7 +369,7 @@ void Init()
 
                 pBtnTable[FE_ACTION_B2].ptr->v9 = PadBtn::LS;
             }
-        }; injector::MakeInline<RemapHook>(pattern.get_first(0), pattern.get_first(6));
+        }; injector::MakeInline<RemapHook>(pattern.get_first(-6), pattern.get_first(0));
     }
 
     if (fLeftStickDeadzone)
