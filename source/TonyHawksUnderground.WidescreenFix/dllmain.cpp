@@ -78,6 +78,9 @@ void Init()
     {
         pattern = hook::pattern("D9 05 ? ? ? ? 51 D9 1C 24 E8 ? ? ? ? 6A 00");
         injector::WriteMemory<float>(*pattern.get_first<float*>(2), Screen.fAspectRatio, true);
+
+        pattern = hook::pattern("E8 ? ? ? ? D8 0C 24 D8 74 24 04 D9 5C 24 04 D9 44 24 04 83 C4 08 C3");
+        injector::WriteMemory(injector::GetBranchDestination(pattern.get_first()).as_int() + 2, &Screen.fAspectRatio, true);
     }
 
     //FOV
