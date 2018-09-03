@@ -158,7 +158,7 @@ void Init()
     static auto dw81A292 = hook::get_pattern("83 C4 14 5F 5E C2 04 00", 0);
     static auto dw81A3D2 = hook::get_pattern("D9 5F 6C 8B 15 ? ? ? ? FF 52 30 83 C4 14 5F 5E C2 04 00", 12);
     static auto dw81B4DC = hook::get_pattern("83 C4 0C 8B 54 24 30 8B 7C 24 4C", 0);
-    static auto dw7CEA9B = hook::get_pattern("83 C4 0C 66 89 7E 3C 8B 4C 24 68 D9 44 24 18", 0);
+    static auto dw7CEA9B = hook::get_pattern("83 C4 0C 66 89 7E 3C 8B", 0);
     static auto dw7CC347 = hook::get_pattern("83 C4 0C 66 C7 45 3C 00 00 8B 45 28 D9 44 24 10 D8 A0 90 00 00 00", 0);
     static auto dw79F715 = hook::get_pattern("8B 44 24 48 83 C4 14 3B F0", 0);
     static auto dw7CF68D = hook::get_pattern("A1 ? ? ? ? 83 C4 08 85 C0 89 44 24 20 89 74 24 24", 0);
@@ -235,7 +235,7 @@ void Init()
         }
     }; injector::MakeInline<ScalingHook>(pattern.get_first(0)); //0x76FDE3
 
-    pattern = hook::pattern("D9 1D ? ? ? ? DB 44 24 08 D9 1D ? ? ? ? D9 40 68 DC C0 ");
+    pattern = hook::pattern("D9 1D ? ? ? ? DB 44 24 08 D9 1D ? ? ? ? D9 40 68 DC C0");
     static auto dword_1061AF0 = *pattern.get_first<float*>(2);
     struct TextBreakHook
     {
