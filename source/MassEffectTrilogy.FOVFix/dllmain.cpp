@@ -40,7 +40,7 @@ void InitME2()
         void operator()(injector::reg_pack& regs)
         {
             float f = (*(float *)(regs.ebx + 0x204) - *(float *)(regs.eax + 0x204)) + *(float *)(regs.esi + 0x18);
-            if (f >= 70.0f)
+            if (f >= 60.0f)
                 f = AdjustFOV(f, static_cast<float>(nWidth) / static_cast<float>(nHeight));
             _asm movss xmm0, dword ptr[f]
         }
@@ -56,22 +56,21 @@ void InitME3()
     static auto nWidth = std::ref(**pattern.get_first<uint32_t*>(2));
     static auto nHeight = std::ref(**pattern.get_first<uint32_t*>(8));
 
-    pattern = hook::pattern("55 8B EC 8B 41 44 83 F8 01 75 0E 8B 45 0C D9 00 8B 4D 08 D9 19 5D C2 14 00");
+    pattern = hook::pattern("D9 45 FC 50 51 D9 1C 24 57 E8 ? ? ? ? 8B 4D 0C 5F F3 0F 11 01 5E 8B E5 5D C2 08 00");
     struct FOVHook
     {
         void operator()(injector::reg_pack& regs)
         {
-            regs.eax = *(uint32_t*)(regs.ebp + 0x0C);
-            float f = *(float*)regs.eax;
-            int32_t n = static_cast<int32_t>(f);
-            if (n == 70 || n == 80)
-            {
-                f = AdjustFOV(f, static_cast<float>(nWidth) / static_cast<float>(nHeight));
-                *(float*)regs.eax = f;
-            }
-            _asm fld dword ptr[f]
+            float f = *(float*)(regs.ecx);
+            if (f >= 60.0f)
+                *(float*)(regs.ecx) = AdjustFOV(f, static_cast<float>(nWidth) / static_cast<float>(nHeight));
         }
-    }; injector::MakeInline<FOVHook>(pattern.get_first(11));
+    }; injector::MakeInline<FOVHook>(pattern.get_first(22));
+    injector::WriteMemory<uint8_t>(pattern.get_first(22 + 5), 0x5E, true); //pop esi
+    injector::WriteMemory<uint16_t>(pattern.get_first(22 + 6), 0xE58B, true); //mov esp, ebp
+    injector::WriteMemory<uint8_t>(pattern.get_first(22 + 8), 0x5D, true); //pop ebp
+    injector::WriteMemory<uint8_t>(pattern.get_first(22 + 9), 0xC2, true); //ret
+    injector::WriteMemory<uint16_t>(pattern.get_first(22 + 10), 0x0008, true); //8
 }
 
 CEXP void InitializeASI()
