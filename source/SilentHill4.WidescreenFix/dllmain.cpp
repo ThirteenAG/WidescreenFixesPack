@@ -185,7 +185,7 @@ void Init()
             {
                 j++;
 
-                if (j == 33 || j == 71) //menu and save menu backgrounds, 1 -> 0x4053C8... http://pastebin.com/Hv6TdTLh
+                if (j == 33 || j == 71 || j == 66 || j == 70) //menu and save menu backgrounds, 1 -> 0x4053C8... http://pastebin.com/Hv6TdTLh
                     continue;
 
                 if (
