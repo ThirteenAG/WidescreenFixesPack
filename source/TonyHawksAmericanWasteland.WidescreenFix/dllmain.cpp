@@ -36,8 +36,13 @@ void Init()
     Screen.fHudOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
     Screen.fHudOffsetReal = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
 
+    //Fixes (sort of) crash when using high resolutions
+    static uint8_t vec[100000];
+    auto pattern = hook::pattern("B9 ? ? ? ? 89 74 24 14 8B FF 8B C3 99 F7 FE"); //0x50D195
+    injector::WriteMemory(pattern.get_first(1), &vec[0], true);
+
     //Resolution
-    auto pattern = hook::pattern("89 0D ? ? ? ? 89 0D ? ? ? ? 8A 0D ? ? ? ? 84 C9");
+    pattern = hook::pattern("89 0D ? ? ? ? 89 0D ? ? ? ? 8A 0D ? ? ? ? 84 C9");
     static int32_t* dword_6D2224 = *pattern.get_first<int32_t*>(2);
     static int32_t* dword_6D2228 = *hook::get_pattern<int32_t*>("89 3D ? ? ? ? 89 3D ? ? ? ? 89 15 ? ? ? ? 89 15 ? ? ? ? 74", 2);
     static int32_t* dword_7F3A2C = *pattern.get_first<int32_t*>(8);
