@@ -278,78 +278,6 @@ void Init()
         pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 8B 35 ? ? ? ? 6A 04 FF D6 83 C4 04 85 C0"); //0x6DABDE
         hb_6D98B0.fun = injector::MakeCALL(pattern.get_first(0), static_cast<void(__cdecl*)()>(LoadTPK), true).get();
 
-        struct PadState
-        {
-            int32_t LSAxis1;
-            int32_t LSAxis2;
-            int32_t LTRT;
-            int32_t A;
-            int32_t B;
-            int32_t X;
-            int32_t Y;
-            int32_t LB;
-            int32_t RB;
-            int32_t Select;
-            int32_t Start;
-            int32_t LSClick;
-            int32_t RSClick;
-        };
-
-
-        pattern = hook::pattern("C7 45 E0 01 00 00 00 89 5D E4"); //0x892BFD
-        static uintptr_t ButtonsState = (uintptr_t)*hook::pattern("0F B6 54 24 04 33 C0 B9").get(0).get<uint32_t*>(8); //0xA5E058
-        static int32_t* nGameState = (int32_t*)*hook::pattern("83 3D ? ? ? ? 06 ? ? A1").get(0).get<uint32_t*>(2); //0xA99BBC
-        struct CatchPad
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                *(uintptr_t*)(regs.ebp - 0x20) = 1; //mov     dword ptr [ebp-20h], 1
-
-                PadState* PadKeyPresses = (PadState*)(regs.esi + 0x234); //dpad is PadKeyPresses+0x220
-
-                //Keyboard
-                //00A5E15C T
-                //00A5E124 M
-                //00A5E1B0 1
-                //00A5E194 2
-                //00A5E140 3
-                //00A5E178 4
-                //00A5E1CC 9
-                //00A5E1E8 0
-                //00A5E108 Space
-                //00A5E0D0 ESC
-                //00A5E0B4 Enter
-                if (PadKeyPresses != nullptr && PadKeyPresses != (PadState*)0x1)
-                {
-                    if (PadKeyPresses->Select)
-                    {
-                        *(int32_t*)(ButtonsState + 0xE8) = 1;
-                    }
-                    else
-                    {
-                        *(int32_t*)(ButtonsState + 0xE8) = 0;
-                    }
-
-                    if (PadKeyPresses->X)
-                    {
-                        *(int32_t*)(ButtonsState + 0x13C) = 1;
-                    }
-                    else
-                    {
-                        *(int32_t*)(ButtonsState + 0x13C) = 0;
-                    }
-                    if (PadKeyPresses->LSClick && PadKeyPresses->RSClick)
-                    {
-                        if (*nGameState == 3)
-                        {
-                            keybd_event(BYTE(VkKeyScan('Q')), 0, 0, 0);
-                            keybd_event(BYTE(VkKeyScan('Q')), 0, KEYEVENTF_KEYUP, 0);
-                        }
-                    }
-                }
-            }
-        }; injector::MakeInline<CatchPad>(pattern.get_first(0), pattern.get_first(7));
-
         const char* ControlsTexts[] = { " 2", " 3", " 4", " 5", " 6", " 7", " 8", " 9", " 10", " 1", " Up", " Down", " Left", " Right", "X Rotation", "Y Rotation", "X Axis", "Y Axis", "Z Axis", "Hat Switch" };
         const char* ControlsTextsXBOX[] = { "B", "X", "Y", "LB", "RB", "View (Select)", "Menu (Start)", "Left stick", "Right stick", "A", "D-pad Up", "D-pad Down", "D-pad Left", "D-pad Right", "Right stick Left/Right", "Right stick Up/Down", "Left stick Left/Right", "Left stick Up/Down", "LT / RT", "D-pad" };
         const char* ControlsTextsPS[] = { "Circle", "Square", "Triangle", "L1", "R1", "Select", "Start", "L3", "R3", "Cross", "D-pad Up", "D-pad Down", "D-pad Left", "D-pad Right", "Right stick Left/Right", "Right stick Up/Down", "Left stick Left/Right", "Left stick Up/Down", "L2 / R2", "D-pad" };
@@ -400,6 +328,10 @@ void Init()
         };
         pattern = hook::pattern("E8 ? ? ? ? 83 C4 04 3D ? ? ? ? 0F 87 ? ? ? ? 0F 84 ? ? ? ? 3D");
         hb_4366E0.fun = injector::MakeCALL(pattern.get_first(0), static_cast<int32_t(__cdecl*)(char*)>(padFix), true).get();
+
+        //controls in photo mode
+        //pattern = hook::pattern("D9 EE 6A 00 51 D9 1C 24 8B 8E D0 00 00 00 E8 ? ? ? ? D9 EE 6A 00 "); //0x59890A
+        //injector::WriteMemory(pattern.get_first(0), 0xC3595E90, true); //pop esi  pop ecx  ret
     }
 
     if (fLeftStickDeadzone)

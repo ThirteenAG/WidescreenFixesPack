@@ -61,6 +61,7 @@ void Init()
     bool bDisableCheckSpec = iniReader.ReadInteger("MAIN", "DisableCheckSpec", 1) != 0;
     bool bDisableRegistryDependency = iniReader.ReadInteger("MISC", "DisableRegistryDependency", 1) != 0;
     bool bDisableSafeMode = iniReader.ReadInteger("MISC", "DisableSafeMode", 1) != 0;
+    bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 1) != 0;
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -303,6 +304,23 @@ void Init()
     {
         pattern = hook::pattern("83 C8 FF 83 C4 10 C3"); //00413E53
         injector::MakeNOP(pattern.get_first(-2), 2, true);
+    }
+
+    if (bSkipIntro)
+    {
+        pattern = hook::pattern("A1 ? ? ? ? 3B C6 0F 84 ? ? ? ? 83 F8 01"); //415180
+        static auto dword_107BFE0 = *pattern.get_first<uint32_t*>(1);
+        struct GameStateHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                static bool once = false;
+                if (!once)
+                    *dword_107BFE0 = 3;
+                regs.eax = *dword_107BFE0;
+                once = true;
+            }
+        }; injector::MakeInline<GameStateHook>(pattern.get_first(0));
     }
 }
 
