@@ -390,6 +390,14 @@ void Init()
         pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 56 57 B9 ? ? ? ? E8"); //0x6660B6
         hb_662B30.fun = injector::MakeCALL(pattern.get_first(0), static_cast<void(__cdecl*)()>(LoadTPK), true).get();
 
+        //cursor
+        //constexpr float cursorScale = 1.0f * (128.0f / 16.0f);
+        //pattern = hook::pattern("C7 84 24 34 02 00 00 00 00 80 3F D9"); //5704F8
+        //injector::WriteMemory<float>(pattern.get_first(7), cursorScale, true);
+        //injector::WriteMemory<float>(pattern.get_first(36), cursorScale, true);
+        //injector::WriteMemory<float>(pattern.get_first(47), cursorScale, true);
+        //injector::WriteMemory<float>(pattern.get_first(69), cursorScale, true);
+
         struct PadState
         {
             int32_t LSAxis1;
