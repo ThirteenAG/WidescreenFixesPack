@@ -142,7 +142,8 @@ void Init()
     if (bFramerateUncap) // Framerate unlock
     {
         auto pattern = hook::pattern("83 3D ? ? ? ? ? 75 05 E8 ? ? ? ? 8B 0D ? ? ? ? 85 C9 74 0F 6A 09");
-        injector::MakeJMP(pattern.get_first(0), pattern.get_first(14), true); //0x004B42FA, 0x4B4308
+        if (!pattern.empty())
+            injector::MakeJMP(pattern.get_first(0), pattern.get_first(14), true); //0x004B42FA, 0x4B4308
     }
 
     if (bAntiTrackStreamerCrash)
