@@ -3,8 +3,8 @@
 void Init()
 {
     //Stop settings reset after crash
-    auto pattern = hook::pattern("E8 ? ? ? ? A0 ? ? ? ? A2 ? ? ? ? E8 ? ? ? ? 53 53 E8 ? ? ? ? 83 C4 08"); //710C2A
-    injector::MakeNOP(pattern.get_first(0), 5, true);
+    auto pattern = hook::pattern("C7 44 24 ? ? ? ? ? FF 15 ? ? ? ? 8D 54 24 0C 52");
+    injector::WriteMemory(pattern.get_first(4), 0, true);
 
     CIniReader iniReader("");
     auto bResDetect = iniReader.ReadInteger("MultiFix", "ResDetect", 1) != 0;
