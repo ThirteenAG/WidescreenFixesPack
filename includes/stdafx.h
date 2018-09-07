@@ -494,7 +494,12 @@ public:
                             def = UINT_MAX;
                         }
                     }
-                    *(DWORD*)lpData = RegistryReader.ReadInteger(section, ValueName, def);
+                    try {
+                        *(DWORD*)lpData = RegistryReader.ReadInteger(section, ValueName, def);
+                    }
+                    catch (const std::invalid_argument&) {
+                        *(DWORD*)lpData = UINT_MAX;
+                    }
                     if (*(DWORD*)lpData == UINT_MAX)
                     {
                         RegistryReader.WriteString(section, ValueName, DefaultStrings[ValueName].empty() ? "INSERTDWORDHERE" : DefaultStrings[ValueName]);

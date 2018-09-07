@@ -574,6 +574,24 @@ void Init()
         RegistryWrapper::AddDefault("Language", "English");
         RegistryWrapper::AddDefault("StreamingInstall", "0");
         RegistryWrapper::AddDefault("VTMode", "0");
+        RegistryWrapper::AddDefault("VERSION", "0");
+        RegistryWrapper::AddDefault("SIZE", "0");
+        RegistryWrapper::AddDefault("g_CarEnvironmentMapEnable", "3");
+        RegistryWrapper::AddDefault("g_CarEnvironmentMapUpdateData", "1");
+        RegistryWrapper::AddDefault("g_RoadReflectionEnable", "3");
+        RegistryWrapper::AddDefault("g_MotionBlurEnable", "1");
+        RegistryWrapper::AddDefault("g_ParticleSystemEnable", "1");
+        RegistryWrapper::AddDefault("g_WorldLodLevel", "3");
+        RegistryWrapper::AddDefault("g_CarLodLevel", "1");
+        RegistryWrapper::AddDefault("g_OverBrightEnable", "1");
+        RegistryWrapper::AddDefault("g_FSAALevel", "7");
+        RegistryWrapper::AddDefault("g_RainEnable", "1");
+        RegistryWrapper::AddDefault("g_TextureFiltering", "2");
+        RegistryWrapper::AddDefault("g_RacingResolution", "1");
+        RegistryWrapper::AddDefault("g_PerformanceLevel", "5");
+        RegistryWrapper::AddDefault("g_VSyncOn", "0");
+        RegistryWrapper::AddDefault("g_ShadowDetail", "2");
+        RegistryWrapper::AddDefault("g_VisualTreatment", "1");
     }
 }
 
