@@ -77,8 +77,8 @@ void Init()
     injector::WriteMemory(pattern.get_first(2), &dbl_9FAAE8, true);
 
     //Stop settings reset after crash
-    pattern = hook::pattern("E8 ? ? ? ? A0 ? ? ? ? A2 ? ? ? ? E8 ? ? ? ? 53 53 E8 ? ? ? ? 83 C4 08"); //710C2A
-    injector::MakeNOP(pattern.get_first(0), 5, true);
+    pattern = hook::pattern("C7 44 24 ? ? ? ? ? FF 15 ? ? ? ? 8D 54 24 0C 52");
+    injector::WriteMemory(pattern.get_first(4), 0, true);
 
     //Brake Light Fix
     static constexpr double d0 = 0.0f;
