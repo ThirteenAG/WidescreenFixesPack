@@ -19,6 +19,9 @@ struct Screen
 
 void Init()
 {
+    CIniReader iniReader("");
+    static auto fFOVFactor = iniReader.ReadFloat("MAIN", "FOVFactor", 0.0f);
+
     //Unlocking a bit more resolutions
     auto pattern = hook::pattern("81 FF ? ? ? ? 8B 54 24 14 7C 53 81 FA ? ? ? ? 7C 4B 8B 0D ? ? ? ? 85 C9");
     injector::WriteMemory(pattern.get_first(2), 640, true);
@@ -166,8 +169,9 @@ void Init()
     {
         void operator()(injector::reg_pack& regs)
         {
-
             Screen.fFieldOfView = AdjustFOV(*flt_C3CD04, Screen.fAspectRatio);
+            if (fFOVFactor)
+                Screen.fFieldOfView *= fFOVFactor;
             _asm fld[Screen.fFieldOfView]
         }
     };

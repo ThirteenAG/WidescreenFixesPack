@@ -49,14 +49,18 @@ void Init()
         pattern = hook::pattern("BE ? ? ? ? 8B 46 04 8B 0E 50 51"); //0x53D37B
         injector::WriteMemory(pattern.get_first(1), &list2[0], true);
         pattern = hook::pattern("81 FE ? ? ? ? 7C CB 83 F8 ? 5E"); //0x53D3AD
-        injector::WriteMemory(pattern.get_first(2), &list2[list2.size() - 1], true);
-        pattern = hook::pattern("8B 0C 85 ? ? ? ? 89 4F 6C 8B 46 10 "); //0x74006F
+        if (!pattern.empty())
+            injector::WriteMemory(pattern.get_first(2), &list2[list2.size() - 1], true);
+        pattern = hook::pattern("8B 0C 85 ? ? ? ? 89 4F 6C 8B 46 10"); //0x74006F
         injector::WriteMemory(pattern.get_first(3), &list2[0], true);
         injector::WriteMemory(pattern.get_first(19), &list2[0].ResY, true);//0x74007F
 
         pattern = hook::pattern("50 51 B9 ? ? ? ? E8 ? ? ? ? 83 F8 FF"); //0x53D385 0x53D394
-        injector::MakeJMP(pattern.get_first(0), pattern.get_first(15), true);
-        injector::MakeNOP(pattern.get_first(20), 2, true); //0x53D399 get rid of resolution check
+        if (!pattern.empty())
+        {
+            injector::MakeJMP(pattern.get_first(0), pattern.get_first(15), true);
+            injector::MakeNOP(pattern.get_first(20), 2, true); //0x53D399 get rid of resolution check
+        }
 
         pattern = hook::pattern("E8 ? ? ? ? 89 44 BC ? 83 C7 01 83 C4 04"); //0x5872AB
         struct GetPackedStringHook
@@ -157,10 +161,10 @@ void Init()
 
     if (nImproveGamepadSupport)
     {
-        auto pattern = hook::pattern("6A FF 68 ? ? ? ? 64 A1 ? ? ? ? 50 51 A1 ? ? ? ? 33 C4 50 8D 44 24 08 64 A3 ? ? ? ? A1 ? ? ? ? 50 E8 ? ? ? ? 83 C4 04 89 44 24 04 85 C0 C7 44 24 ? ? ? ? ? 74 22");
-        static auto CreateResourceFile = (void*(*)(const char* ResourceFileName, int32_t ResourceFileType, int, int, int)) pattern.get_first(0);
-        pattern = hook::pattern("8B 44 24 04 56 8B F1 8B 4C 24 0C 89 46 3C 89 4E 40 83 05 ? ? ? ? ? 83 7E 44 00 75 14 8B 56 10 C1 EA 03 81 E2 ? ? ? ? 52 8B CE");
-        static auto ResourceFileBeginLoading = (void(__thiscall*)(void* rsc, int a1, int a2)) pattern.get_first(0);
+        auto pattern = hook::pattern("E8 ? ? ? ? 8B 4E 04 83 C4 20 89 46 08 8B 15 ? ? ? ? 51 52 68 0B 20 00 00");
+        static auto CreateResourceFile = (void*(*)(const char* ResourceFileName, int32_t ResourceFileType, int, int, int)) injector::GetBranchDestination(pattern.get_first(0)).as_int();
+        pattern = hook::pattern("E8 ? ? ? ? 5B B0 01 5F 88 46 14 C6 46 15 00 5E C3");
+        static auto ResourceFileBeginLoading = (void(__thiscall*)(void* rsc, int a1, int a2)) injector::GetBranchDestination(pattern.get_first(0)).as_int();
         pattern = hook::pattern("8B 44 24 04 50 B9 ? ? ? ? E8 ? ? ? ? C3");
         static auto SharedStringPoolAllocate = (void*(__cdecl*)(const char* ResourceFileName)) pattern.get_first(0);
         pattern = hook::pattern("8B 3D ? ? ? ? 6A 00 6A 00 6A 00 6A 01");
