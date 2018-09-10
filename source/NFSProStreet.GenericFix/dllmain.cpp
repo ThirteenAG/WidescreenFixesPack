@@ -369,6 +369,22 @@ void Init()
     }
 
     auto GetFolderPathpattern = hook::pattern("50 6A 00 6A 00 68 ? 80 00 00 6A 00");
+    if (bWriteSettingsToFile && injector::GetBranchDestination(GetFolderPathpattern.get(0).get<uintptr_t>(14), true).as_int() == 0)
+    {
+        auto msgboxID = MessageBox(
+            NULL,
+            (LPCWSTR)L"WriteSettingsToFile option will not work with your exe version. Use different exe or disable that option.\nDo you want to disable it now?",
+            (LPCWSTR)L"NFSProStreet.GenericFix",
+            MB_ICONWARNING | MB_YESNO | MB_DEFBUTTON1
+        );
+
+        if (msgboxID == IDYES)
+        {
+            iniReader.WriteInteger("MISC", "WriteSettingsToFile", 0);
+            bWriteSettingsToFile = false;
+        }
+    }
+
     if (!szCustomUserFilesDirectoryInGameDir.empty())
     {
         szCustomUserFilesDirectoryInGameDir = GetExeModulePath<std::string>() + szCustomUserFilesDirectoryInGameDir;
@@ -396,45 +412,48 @@ void Init()
         auto[DesktopResW, DesktopResH] = GetDesktopRes();
         char szSettingsSavePath[MAX_PATH];
         uintptr_t GetFolderPathCallDest = injector::GetBranchDestination(GetFolderPathpattern.get(0).get<uintptr_t>(14), true).as_int();
-        injector::stdcall<HRESULT(HWND, int, HANDLE, DWORD, LPSTR)>::call(GetFolderPathCallDest, NULL, 0x8005, NULL, NULL, szSettingsSavePath);
-        strcat(szSettingsSavePath, "\\NFS ProStreet");
-        strcat(szSettingsSavePath, "\\Settings.ini");
+        if (GetFolderPathCallDest)
+        {
+            injector::stdcall<HRESULT(HWND, int, HANDLE, DWORD, LPSTR)>::call(GetFolderPathCallDest, NULL, 0x8005, NULL, NULL, szSettingsSavePath);
+            strcat(szSettingsSavePath, "\\NFS ProStreet");
+            strcat(szSettingsSavePath, "\\Settings.ini");
 
-        RegistryWrapper("Need for Speed", szSettingsSavePath);
-        auto RegIAT = *hook::pattern("FF 15 ? ? ? ? 8D 54 24 40 52 68 3F 00 0F 00").get(0).get<uintptr_t*>(2);
-        injector::WriteMemory(&RegIAT[0], RegistryWrapper::RegCreateKeyA, true);
-        injector::WriteMemory(&RegIAT[1], RegistryWrapper::RegOpenKeyExA, true);
-        injector::WriteMemory(&RegIAT[2], RegistryWrapper::RegCloseKey, true);
-        injector::WriteMemory(&RegIAT[3], RegistryWrapper::RegSetValueExA, true);
-        injector::WriteMemory(&RegIAT[4], RegistryWrapper::RegQueryValueExA, true);
-        RegistryWrapper::AddPathWriter("Install Dir", "InstallDir", "Path");
-        RegistryWrapper::AddDefault("@", "INSERTYOURCDKEYHERE");
-        RegistryWrapper::AddDefault("CD Drive", "D:\\");
-        RegistryWrapper::AddDefault("CacheSize", "5697825792");
-        RegistryWrapper::AddDefault("SwapSize", "73400320");
-        RegistryWrapper::AddDefault("Language", "Engish (US)");
-        RegistryWrapper::AddDefault("StreamingInstall", "0");
-        RegistryWrapper::AddDefault("FirstTime", "0");
-        RegistryWrapper::AddDefault("g_CarEffects", "2");
-        RegistryWrapper::AddDefault("g_WorldFXLevel", "3");
-        RegistryWrapper::AddDefault("g_RoadReflectionEnable", "1");
-        RegistryWrapper::AddDefault("g_WorldLodLevel", "2");
-        RegistryWrapper::AddDefault("g_CarLodLevel", "0");
-        RegistryWrapper::AddDefault("g_FSAALevel", "3");
-        RegistryWrapper::AddDefault("g_RainEnable", "1");
-        RegistryWrapper::AddDefault("g_TextureFiltering", "2");
-        RegistryWrapper::AddDefault("g_SmokeEnable", "1");
-        RegistryWrapper::AddDefault("g_CarDamageDetail", "2");
-        RegistryWrapper::AddDefault("g_PerformanceLevel", "0");
-        RegistryWrapper::AddDefault("g_VSyncOn", "0");
-        RegistryWrapper::AddDefault("g_ShadowEnable", "3");
-        RegistryWrapper::AddDefault("g_ShaderDetailLevel", "1");
-        RegistryWrapper::AddDefault("g_AudioDetail", "0");
-        RegistryWrapper::AddDefault("g_Brightness", "68");
-        RegistryWrapper::AddDefault("g_AudioMode", "1");
-        RegistryWrapper::AddDefault("g_Width", std::to_string(DesktopResW));
-        RegistryWrapper::AddDefault("g_Height", std::to_string(DesktopResH));
-        RegistryWrapper::AddDefault("g_Refresh", "60");
+            RegistryWrapper("Need for Speed", szSettingsSavePath);
+            auto RegIAT = *hook::pattern("FF 15 ? ? ? ? 8D 54 24 40 52 68 3F 00 0F 00").get(0).get<uintptr_t*>(2);
+            injector::WriteMemory(&RegIAT[0], RegistryWrapper::RegCreateKeyA, true);
+            injector::WriteMemory(&RegIAT[1], RegistryWrapper::RegOpenKeyExA, true);
+            injector::WriteMemory(&RegIAT[2], RegistryWrapper::RegCloseKey, true);
+            injector::WriteMemory(&RegIAT[3], RegistryWrapper::RegSetValueExA, true);
+            injector::WriteMemory(&RegIAT[4], RegistryWrapper::RegQueryValueExA, true);
+            RegistryWrapper::AddPathWriter("Install Dir", "InstallDir", "Path");
+            RegistryWrapper::AddDefault("@", "INSERTYOURCDKEYHERE");
+            RegistryWrapper::AddDefault("CD Drive", "D:\\");
+            RegistryWrapper::AddDefault("CacheSize", "5697825792");
+            RegistryWrapper::AddDefault("SwapSize", "73400320");
+            RegistryWrapper::AddDefault("Language", "Engish (US)");
+            RegistryWrapper::AddDefault("StreamingInstall", "0");
+            RegistryWrapper::AddDefault("FirstTime", "0");
+            RegistryWrapper::AddDefault("g_CarEffects", "2");
+            RegistryWrapper::AddDefault("g_WorldFXLevel", "3");
+            RegistryWrapper::AddDefault("g_RoadReflectionEnable", "1");
+            RegistryWrapper::AddDefault("g_WorldLodLevel", "2");
+            RegistryWrapper::AddDefault("g_CarLodLevel", "0");
+            RegistryWrapper::AddDefault("g_FSAALevel", "3");
+            RegistryWrapper::AddDefault("g_RainEnable", "1");
+            RegistryWrapper::AddDefault("g_TextureFiltering", "2");
+            RegistryWrapper::AddDefault("g_SmokeEnable", "1");
+            RegistryWrapper::AddDefault("g_CarDamageDetail", "2");
+            RegistryWrapper::AddDefault("g_PerformanceLevel", "0");
+            RegistryWrapper::AddDefault("g_VSyncOn", "0");
+            RegistryWrapper::AddDefault("g_ShadowEnable", "3");
+            RegistryWrapper::AddDefault("g_ShaderDetailLevel", "1");
+            RegistryWrapper::AddDefault("g_AudioDetail", "0");
+            RegistryWrapper::AddDefault("g_Brightness", "68");
+            RegistryWrapper::AddDefault("g_AudioMode", "1");
+            RegistryWrapper::AddDefault("g_Width", std::to_string(DesktopResW));
+            RegistryWrapper::AddDefault("g_Height", std::to_string(DesktopResH));
+            RegistryWrapper::AddDefault("g_Refresh", "60");
+        }
     }
 
     if (bDisableMotionBlur)
