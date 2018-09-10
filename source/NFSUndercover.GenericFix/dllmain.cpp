@@ -35,8 +35,8 @@ void Init()
         injector::WriteMemory(pattern.get_first(3), &list3[0], true); //0x53D39E
         pattern = hook::pattern("8D 3C 85 ? ? ? ? 2B C8");
         injector::WriteMemory(pattern.get_first(3), &list3[0], true); //0x53D3C4
-        pattern = hook::pattern("8B 14 8D ? ? ? ? 8B 02");
-        injector::WriteMemory(pattern.get_first(3), &list3[0], true); //0x57A5B5
+        pattern = hook::pattern("68 D7 13 00 00");
+        injector::WriteMemory(pattern.get_first(24), &list3[0], true); //0x57A5B5
         pattern = hook::pattern("8B 14 8D ? ? ? ? 8B 42 04 50");
         injector::WriteMemory(pattern.get_first(3), &list3[0], true); //0x57A5D1
         pattern = hook::pattern("8B 04 8D ? ? ? ? 8B 50");
@@ -82,10 +82,29 @@ void Init()
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
         szCustomUserFilesDirectoryInGameDir.clear();
 
+    static float fBloomIntensity = iniReader.ReadFloat("MISC", "BloomIntensity", 1.0f);
+    pattern = hook::pattern("D9 05 ? ? ? ? 50 83 EC 08 D9 5C 24 04"); //0x766FC5
+    injector::WriteMemory(pattern.get_first(2), &fBloomIntensity, true);
+
     if (bSkipIntro)
     {
-        pattern = hook::pattern("39 1D ? ? ? ? 74 25 8B 45 04 8B 48 0C"); //0x12BB200
-        injector::WriteMemory(*pattern.get_first<uint32_t>(2), 1, true);
+        pattern = hook::pattern("C6 ? 98 00 00 00 01 A1 ? ? ? ? 85 C0 74 05 E8"); //0x575604
+        static auto dword_12BB200 = *pattern.get_first<uint32_t*>(25);
+        pattern = hook::pattern("A1 ? ? ? ? 33 C4 89 84 24 38 02 00 00 53 55 56 57 A1 ? ? ? ? 33 C4 50"); //0x5755C4
+        static auto dword_1272378 = *pattern.get_first<uint32_t*>(1);
+
+        struct MoviesHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                regs.eax = *dword_1272378;
+                *dword_12BB200 = 0;
+                static bool bOnce = false;
+                if (!bOnce)
+                    *dword_12BB200 = 1;
+                bOnce = true;
+            }
+        }; injector::MakeInline<MoviesHook>(pattern.get_first(0));
     }
 
     if (nWindowedMode)
@@ -485,7 +504,7 @@ CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
-        CallbackHandler::RegisterCallback(Init, hook::pattern("89 5D 3C 89 5D 18 89 5D 44").count_hint(1).empty());
+        CallbackHandler::RegisterCallback(Init, hook::pattern("C6 ? 98 00 00 00 01 A1 ? ? ? ? 85 C0 74 05 E8").count_hint(1).empty());
     });
 }
 
