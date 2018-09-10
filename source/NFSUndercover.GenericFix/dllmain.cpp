@@ -90,8 +90,8 @@ void Init()
     {
         pattern = hook::pattern("C6 ? 98 00 00 00 01 A1 ? ? ? ? 85 C0 74 05 E8"); //0x575604
         static auto dword_12BB200 = *pattern.get_first<uint32_t*>(25);
-        pattern = hook::pattern("A1 ? ? ? ? 33 C4 89 84 24 38 02 00 00 53 55 56 57 A1 ? ? ? ? 33 C4 50"); //0x5755C4
-        static auto dword_1272378 = *pattern.get_first<uint32_t*>(1);
+        auto rpattern = hook::range_pattern((uintptr_t)pattern.get_first(-100), (uintptr_t)pattern.get_first(0), "A1 ? ? ? ? 33 C4 89 84 24"); //0x5755C4
+        static auto dword_1272378 = *rpattern.get_first<uint32_t*>(1);
 
         struct MoviesHook
         {
@@ -104,7 +104,7 @@ void Init()
                     *dword_12BB200 = 1;
                 bOnce = true;
             }
-        }; injector::MakeInline<MoviesHook>(pattern.get_first(0));
+        }; injector::MakeInline<MoviesHook>(rpattern.get_first(0));
     }
 
     if (nWindowedMode)
