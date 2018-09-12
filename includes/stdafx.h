@@ -228,7 +228,7 @@ public:
         }
     }
 
-    static inline void RegisterCallback(std::function<void()>&& fn, bool bPatternNotFound, ptrdiff_t offset = 0x1100)
+    static inline void RegisterCallback(std::function<void()>&& fn, bool bPatternNotFound, ptrdiff_t offset = 0x1100, uint32_t* ptr = nullptr)
     {
         if (!bPatternNotFound)
         {
@@ -238,7 +238,8 @@ public:
         {
             auto mh = GetModuleHandle(NULL);
             IMAGE_NT_HEADERS* ntHeader = (IMAGE_NT_HEADERS*)((DWORD)mh + ((IMAGE_DOS_HEADER*)mh)->e_lfanew);
-            auto ptr = (uint32_t*)((DWORD)mh + ntHeader->OptionalHeader.BaseOfCode + ntHeader->OptionalHeader.SizeOfCode - offset);
+            if (ptr == nullptr)
+                ptr = (uint32_t*)((DWORD)mh + ntHeader->OptionalHeader.BaseOfCode + ntHeader->OptionalHeader.SizeOfCode - offset);
             std::thread([](std::function<void()>&& fn, uint32_t* ptr, uint32_t val)
             {
                 while (*ptr == val)
@@ -352,7 +353,7 @@ private:
 
         HANDLE hTimer = NULL;
         LARGE_INTEGER liDueTime;
-        liDueTime.QuadPart = -100000000LL;
+        liDueTime.QuadPart = -30 * 10000000LL;
         hTimer = CreateWaitableTimer(NULL, TRUE, NULL);
         SetWaitableTimer(hTimer, &liDueTime, 0, NULL, NULL, 0);
 
