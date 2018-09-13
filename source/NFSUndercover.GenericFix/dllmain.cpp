@@ -22,19 +22,26 @@ void InitRes()
     static std::vector<ScreenRes> list2;
     static std::vector<uint32_t> list3;
     GetResolutionsList(list);
-    list3.resize(list.size());
-    for each (auto s in list)
+    for each (auto& s in list)
     {
         ScreenRes r;
         sscanf_s(s.c_str(), "%dx%d", &r.ResX, &r.ResY);
         list2.emplace_back(r);
     }
+    list3.resize(list2.size() + 1);
+    size_t i = 0;
+    for each (auto& s in list2)
+    {
+        list3[i] = ((uint32_t)(&list2[i]));
+        ++i;
+    }
+    list3[i] = 0;
 
-    // patch res pointers
-    auto pattern = GetPattern("89 34 85 ? ? ? ? 83 C0 01 A3");
-    injector::WriteMemory(pattern.get_first(3), &list3[0], true); //0x53D39E
-    pattern = GetPattern("8D 3C 85 ? ? ? ? 2B C8");
-    injector::WriteMemory(pattern.get_first(3), &list3[0], true); //0x53D3C4
+    auto pattern = GetPattern("6A 15 B9 ? ? ? ? 8B F8 E8 ? ? ? ? 33 C9"); //0x12AA194
+    injector::WriteMemory(*pattern.get_first<void*>(18), list3.size() - 1, true);
+
+    pattern = GetPattern("53 E8 ? ? ? ? 83 C4 1C 33 FF E9 ? ? ? ? E8 ? ? ? ? 33 FF"); //0x587291
+    injector::MakeNOP(pattern.get_first(16), 5, true);
 
     pattern = GetPattern("68 D7 13 00 00");
     injector::WriteMemory(pattern.get_first(24), &list3[0], true); //0x57A5B5
@@ -47,15 +54,9 @@ void InitRes()
     pattern = GetPattern("8B 14 8D ? ? ? ? 39 3A");
     injector::WriteMemory(pattern.get_first(3), &list3[0], true); //0x5872F3
 
-    pattern = GetPattern("BE ? ? ? ? 8B 46 04 8B 0E 50 51"); //0x53D37B
-    injector::WriteMemory(pattern.get_first(1), &list2[0], true);
-    pattern = GetPattern("83 C6 0C 81 FE ? ? ? ? 7C ? 83 F8 ? 5E"); //0x53D3AD
-    injector::WriteMemory(pattern.get_first(5), &list2[list2.size() - 1], true);
     pattern = GetPattern("8B 0C 85 ? ? ? ? 89 4F 6C 8B 46 10"); //0x74006F
     injector::WriteMemory(pattern.get_first(3), &list2[0], true);
     injector::WriteMemory(pattern.get_first(19), &list2[0].ResY, true);//0x74007F
-    pattern = GetPattern("89 34 85 ? ? ? ? 83 C0 01 A3"); //0x53D399
-    injector::MakeNOP(pattern.get_first(-2), 2, true); // get rid of resolution check
 
     pattern = GetPattern("E8 ? ? ? ? 89 44 BC ? 83 C7 01 83 C4 04"); //0x5872AB
     struct GetPackedStringHook
@@ -119,7 +120,6 @@ void Init2()
     CIniReader iniReader("");
     static bool bResDetect = iniReader.ReadInteger("MultiFix", "ResDetect", 1) != 0;
     static bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 1) != 0;
-    static int32_t nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
     static int32_t nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
 
     auto pattern = GetPattern("C6 ? 98 00 00 00 01 A1 ? ? ? ? 85 C0 74 05 E8"); //0x575604
@@ -144,77 +144,6 @@ void Init2()
             bOnce = true;
         }
     }; injector::MakeInline<MoviesHook>(rpattern.get_first(0));
-
-    if (nWindowedMode)
-    {
-        auto pattern = GetPattern("89 5D 3C 89 5D 18 89 5D 44"); //0x708379
-        struct WindowedMode
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                *(uint32_t*)(regs.ebp + 0x3C) = 1;
-                *(uint32_t*)(regs.ebp + 0x18) = regs.ebx;
-            }
-        }; injector::MakeInline<WindowedMode>(pattern.get_first(0), pattern.get_first(6));
-
-        static auto hGameHWND = *hook::get_pattern<HWND*>("8B 0D ? ? ? ? 6A 01 51 8B C8", 2);
-        pattern = GetPattern("C7 40 ? ? ? ? ? 88 50 20");
-        static uint32_t* Width = nullptr;
-        static uint32_t* Height = nullptr;
-        struct ResHook
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                *(uint32_t*)(regs.eax + 0x14) = 1;
-                if (!Width || !Height)
-                {
-                    Width = (uint32_t*)(regs.eax + 0x18);
-                    Height = (uint32_t*)(regs.eax + 0x1C);
-                }
-
-                tagRECT rc;
-                auto[DesktopResW, DesktopResH] = GetDesktopRes();
-                rc.left = (LONG)(((float)DesktopResW / 2.0f) - ((float)*Width / 2.0f));
-                rc.top = (LONG)(((float)DesktopResH / 2.0f) - ((float)*Height / 2.0f));
-                rc.right = *Width;
-                rc.bottom = *Height;
-                SetWindowPos(*hGameHWND, NULL, rc.left, rc.top, rc.right, rc.bottom, SWP_NOACTIVATE | SWP_NOZORDER);
-                if (nWindowedMode > 1)
-                {
-                    SetWindowLong(*hGameHWND, GWL_STYLE, GetWindowLong(*hGameHWND, GWL_STYLE) | WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU);
-                    SetWindowPos(*hGameHWND, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
-                }
-                else
-                {
-                    SetWindowLong(*hGameHWND, GWL_STYLE, GetWindowLong(*hGameHWND, GWL_STYLE) & ~WS_OVERLAPPEDWINDOW);
-                }
-            }
-        }; injector::MakeInline<ResHook>(pattern.get_first(0), pattern.get_first(7));
-
-        pattern = GetPattern("C7 06 ? ? ? ? C7 46 ? ? ? ? ? 83 79 3C 00 57");
-        struct WindowedModeRect
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                tagRECT rc;
-                auto[DesktopResW, DesktopResH] = GetDesktopRes();
-
-                rc.left = 0;
-                rc.top = 0;
-                rc.right = DesktopResW;
-                rc.bottom = DesktopResH;
-
-                *(uint32_t*)(regs.esi + 0x00) = rc.left;
-                *(uint32_t*)(regs.esi + 0x04) = rc.top;
-                *(uint32_t*)(regs.esi + 0x08) = rc.right;
-                *(uint32_t*)(regs.esi + 0x0C) = rc.bottom;
-            }
-        }; injector::MakeInline<WindowedModeRect>(pattern.get_first(0), pattern.get_first(13));
-        pattern = GetPattern("89 46 08 83 79 3C 00 74 08 8B 49 54");
-        injector::MakeNOP(pattern.get_first(0), 3, true);
-        pattern = GetPattern("89 46 08 89 4E 0C E8 ? ? ? ? 83 C4 08 8B F8 6A 00");
-        injector::MakeNOP(pattern.get_first(0), 6, true);
-    }
 
     if (nImproveGamepadSupport)
     {
@@ -538,6 +467,83 @@ void Init3()
     }
 }
 
+void Init4()
+{
+    CIniReader iniReader("");
+    static int32_t nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
+
+    if (nWindowedMode)
+    {
+        auto pattern = GetPattern("89 5D 3C 89 5D 18 89 5D 44"); //0x708379
+        struct WindowedMode
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                *(uint32_t*)(regs.ebp + 0x3C) = 1;
+                *(uint32_t*)(regs.ebp + 0x18) = regs.ebx;
+            }
+        }; injector::MakeInline<WindowedMode>(pattern.get_first(0), pattern.get_first(6));
+
+        static auto hGameHWND = *hook::get_pattern<HWND*>("8B 0D ? ? ? ? 6A 01 51 8B C8", 2);
+        pattern = GetPattern("C7 40 ? ? ? ? ? 88 50 20");
+        static uint32_t* Width = nullptr;
+        static uint32_t* Height = nullptr;
+        struct ResHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                *(uint32_t*)(regs.eax + 0x14) = 1;
+                if (!Width || !Height)
+                {
+                    Width = (uint32_t*)(regs.eax + 0x18);
+                    Height = (uint32_t*)(regs.eax + 0x1C);
+                }
+
+                tagRECT rc;
+                auto[DesktopResW, DesktopResH] = GetDesktopRes();
+                rc.left = (LONG)(((float)DesktopResW / 2.0f) - ((float)*Width / 2.0f));
+                rc.top = (LONG)(((float)DesktopResH / 2.0f) - ((float)*Height / 2.0f));
+                rc.right = *Width;
+                rc.bottom = *Height;
+                SetWindowPos(*hGameHWND, NULL, rc.left, rc.top, rc.right, rc.bottom, SWP_NOACTIVATE | SWP_NOZORDER);
+                if (nWindowedMode > 1)
+                {
+                    SetWindowLong(*hGameHWND, GWL_STYLE, GetWindowLong(*hGameHWND, GWL_STYLE) | WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU);
+                    SetWindowPos(*hGameHWND, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
+                }
+                else
+                {
+                    SetWindowLong(*hGameHWND, GWL_STYLE, GetWindowLong(*hGameHWND, GWL_STYLE) & ~WS_OVERLAPPEDWINDOW);
+                }
+            }
+        }; injector::MakeInline<ResHook>(pattern.get_first(0), pattern.get_first(7));
+
+        pattern = GetPattern("C7 06 ? ? ? ? C7 46 ? ? ? ? ? 83 79 3C 00 57");
+        struct WindowedModeRect
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                tagRECT rc;
+                auto[DesktopResW, DesktopResH] = GetDesktopRes();
+
+                rc.left = 0;
+                rc.top = 0;
+                rc.right = DesktopResW;
+                rc.bottom = DesktopResH;
+
+                *(uint32_t*)(regs.esi + 0x00) = rc.left;
+                *(uint32_t*)(regs.esi + 0x04) = rc.top;
+                *(uint32_t*)(regs.esi + 0x08) = rc.right;
+                *(uint32_t*)(regs.esi + 0x0C) = rc.bottom;
+            }
+        }; injector::MakeInline<WindowedModeRect>(pattern.get_first(0), pattern.get_first(13));
+        pattern = GetPattern("89 46 08 83 79 3C 00 74 08 8B 49 54");
+        injector::MakeNOP(pattern.get_first(0), 3, true);
+        pattern = GetPattern("89 46 08 89 4E 0C E8 ? ? ? ? 83 C4 08 8B F8 6A 00");
+        injector::MakeNOP(pattern.get_first(0), 6, true);
+    }
+}
+
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
@@ -560,6 +566,7 @@ CEXP void InitializeASI()
         CallbackHandler::RegisterCallback(Init1, hook::range_pattern(ModuleStart, RangeEnd, "C7 44 24 ? ? ? ? ? FF 15 ? ? ? ? 8D 54 24 0C 52"));
         CallbackHandler::RegisterCallback(Init2, hook::range_pattern(ModuleStart, RangeEnd, "E8 ? ? ? ? 8B 4E 04 83 C4 20 89 46 08 8B 15 ? ? ? ? 51 52 68 0B 20 00 00"));
         CallbackHandler::RegisterCallback(Init3, hook::range_pattern(ModuleStart, RangeEnd, "FF 15 ? ? ? ? 8D 54 24 40 52 68 3F 00 0F 00"));
+        CallbackHandler::RegisterCallback(Init4, hook::range_pattern(ModuleStart, RangeEnd, "8B 0D ? ? ? ? 6A 01 51 8B C8"));
     });
 }
 
