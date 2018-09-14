@@ -321,12 +321,10 @@ void Init()
         void operator()(injector::reg_pack& regs)
         {
             auto i = *dword_73DF80 * 44;
-
             auto x = *(int32_t*)(dword_73DFA4 + i);
             auto y = *(int32_t*)(dword_73DFA8 + i);
             auto w = *(int32_t*)(dword_73DFAC + i);
             auto h = *(int32_t*)&regs.eax;
-
             if (x == 0 && w == Screen.PresetWidth && h == (Screen.PresetHeight - y))
             {
                 //*(int32_t*)(dword_73DFA4 + i) = x;
@@ -334,53 +332,70 @@ void Init()
                 *(int32_t*)(dword_73DFAC + i) = Screen.Width; //makes weapons overlay not being cut off by preset
                 *(int32_t*)&regs.eax = Screen.Height;
             }
-
             *dword_73DF80 = regs.ecx;
         }
     }; injector::MakeInline<MenuHook>(pattern.get_first(0), pattern.get_first(6));
 
-    pattern = hook::pattern("B8 01 00 00 00 83 EC 18"); //0x519CA4
-    struct MenuHook2
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            regs.eax = 1;
-            auto x = *(int32_t*)(regs.esp + 0x08);
-            auto y = *(int32_t*)(regs.esp + 0x0C);
-            auto w = *(int32_t*)(regs.esp + 0x10);
-            auto h = *(int32_t*)(regs.esp + 0x14);
+    pattern = hook::pattern("A2 ? ? ? ? 8A 44 24 10 88 0D"); //0x510B6C
+    static auto gTexColor = *pattern.get_first<uint32_t*>(1);
+    static auto GetTexColor = []() -> uint32_t {
+        return *gTexColor;
+    };
 
-            if (x == 0 && y == 0 && w == Screen.Width && h == Screen.Height)
+    static auto SetTexColor = [](uint32_t argb) {
+        *gTexColor = argb;
+    };
+
+    pattern = hook::pattern("57 8B 7C 24 08 57 E8 ? ? ? ? 83 C4 04 85 C0 7D 7E A1 ? ? ? ? 55 56 8B F0 6B F6 2C"); //50C750
+    static auto GetTexID = (int32_t(__cdecl*)(const char* FileName)) pattern.get_first(0);
+
+    static injector::hook_back<void(__cdecl*)(int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int8_t, int8_t, int32_t, int8_t, int8_t)> hb_519CA0;
+    auto DrawHook = [](int32_t texID, int32_t x, int32_t y, int32_t w, int32_t h, int32_t a6, int32_t a7, int32_t a8, int32_t a9, int8_t a10, int8_t a11, int32_t a12, int8_t a13, int8_t a14)
+    {
+        if (x == 0 && y == 0 && w == Screen.Width && h == Screen.Height)
+        {
+            x = static_cast<int32_t>(Screen.fHudOffsetReal);
+            //y = top;
+            w = static_cast<int32_t>(Screen.fWidth - Screen.fHudOffsetReal - Screen.fHudOffsetReal);
+            //h = Screen.PresetHeight;
+
+            auto og = GetTexColor();
+            SetTexColor(0xFF000000);
+            hb_519CA0.fun(texID, 0, 0, (int)Screen.fHudOffsetReal, Screen.Height, a6, a7, a8, a9, a10, a11, a12, a13, a14);
+            hb_519CA0.fun(texID, Screen.Width - (int32_t)Screen.fHudOffsetReal, 0, Screen.Width, Screen.Height, a6, a7, a8, a9, a10, a11, a12, a13, a14);
+            SetTexColor(og);
+        }
+        else
+        {
+            if ((x == 0 && y == 0 && w == 640 && h == 360) || (x == 0 && y == 0 && w == 960 && h == 540) || (x == 0 && y == 540 && w == 960 && h == 540))
             {
-                *(int32_t*)(regs.esp + 0x08) = static_cast<int32_t>(Screen.fHudOffsetReal);
-                //*(int32_t*)(regs.esp + 0x0C) = top;
-                *(int32_t*)(regs.esp + 0x10) = static_cast<int32_t>(Screen.fWidth - Screen.fHudOffsetReal - Screen.fHudOffsetReal);
-                //*(int32_t*)(regs.esp + 0x14) = Screen.PresetHeight;
+                x += static_cast<int32_t>(Screen.fHudOffsetReal);
+                w -= static_cast<int32_t>(Screen.fHudOffsetReal);
+
+                auto og = GetTexColor();
+                SetTexColor(0xFF000000);
+                hb_519CA0.fun(texID, 0, 0, (int)Screen.fHudOffsetReal, Screen.Height, a6, a7, a8, a9, a10, a11, a12, a13, a14);
+                hb_519CA0.fun(texID, Screen.Width - (int32_t)Screen.fHudOffsetReal, 0, Screen.Width, Screen.Height, a6, a7, a8, a9, a10, a11, a12, a13, a14);
+                SetTexColor(og);
             }
             else
             {
-                if ((x == 0 && y == 0 && w == 640 && h == 360) || (x == 0 && y == 0 && w == 960 && h == 540))
+                if ((x == 960 && y == 0 && w == 960 && h == 540) || (x == 960 && y == 540 && w == 960 && h == 540))
                 {
-                    *(int32_t*)(regs.esp + 0x08) += static_cast<int32_t>(Screen.fHudOffsetReal);
-                    *(int32_t*)(regs.esp + 0x10) -= static_cast<int32_t>(Screen.fHudOffsetReal);
-                }
-                //*(int32_t*)(regs.esp + 0x08) *= 1.2f; //maybe there's a way to rescale 2d
-                //*(int32_t*)(regs.esp + 0x0C) *= 1.2f;
-                //*(int32_t*)(regs.esp + 0x10) *= 1.2f;
-                //*(int32_t*)(regs.esp + 0x14) *= 1.2f;
-            }
+                    w -= static_cast<int32_t>(Screen.fHudOffsetReal);
 
-            //if (bWeapOverlay)
-            //{
-            //    //*(int32_t*)(regs.esp + 0x08) += 100;
-            //    //*(int32_t*)(regs.esp + 0x0C) += 100;
-            //    //
-            //    //*(int32_t*)(regs.esp + 0x10) *= Screen.PresetFactorX;
-            //    //*(int32_t*)(regs.esp + 0x14) *= Screen.PresetFactorY;
-            //    bWeapOverlay = false;
-            //}
+                    auto og = GetTexColor();
+                    SetTexColor(0xFF000000);
+                    hb_519CA0.fun(texID, 0, 0, (int)Screen.fHudOffsetReal, Screen.Height, a6, a7, 1, 1, a10, a11, a12, a13, a14);
+                    hb_519CA0.fun(texID, Screen.Width - (int32_t)Screen.fHudOffsetReal, 0, Screen.Width, Screen.Height, a6, a7, 1, 1, a10, a11, a12, a13, a14);
+                    SetTexColor(og);
+                }
+            }
         }
-    }; injector::MakeInline<MenuHook2>(pattern.get_first(0));
+        return hb_519CA0.fun(texID, x, y, w, h, a6, a7, a8, a9, a10, a11, a12, a13, a14);
+    };
+    pattern = hook::pattern("8B 54 24 34 51 52 50 E8 ? ? ? ? 83 C4 38 C3"); //0x510C68
+    hb_519CA0.fun = injector::MakeCALL(pattern.get_first(7), static_cast<void(__cdecl*)(int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int8_t, int8_t, int32_t, int8_t, int8_t)>(DrawHook), true).get();
 
     //struct WeaponsOverlayHook
     //{
