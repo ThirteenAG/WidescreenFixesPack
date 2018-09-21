@@ -10,6 +10,7 @@ struct Screen
     float fAspectRatio;
     float fHudOffset;
     int32_t Width43;
+    float fHudScale;
 } Screen;
 
 bool PatchRegistryFuncs()
@@ -78,6 +79,7 @@ void Init()
     Screen.fWidth = static_cast<float>(Screen.Width);
     Screen.fHeight = static_cast<float>(Screen.Height);
     Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
+    Screen.fHudScale = (4.0f / 3.0f) / (Screen.fAspectRatio);
 
     if (RenderResX >= 0 && RenderResY >= 0)
     {
@@ -304,6 +306,48 @@ void Init()
         pattern = hook::pattern("D8 25 ? ? ? ? 8D 4C 24 10 51 6A 02 D9 54 24 34 "); //0059BE13 
         injector::WriteMemory<uint16_t>(pattern.get_first(0), 0x05D9i16, true); //fsub -> fld
         injector::WriteMemory(pattern.get_first(2), &w2, true);
+
+        //menu hitboxes
+        //Width
+        pattern = hook::pattern("D8 05 ? ? ? ? D9 5C 24 04 E8 ? ? ? ? D8 0D ? ? ? ? 8B 4C 24 04 68 80 00 00 00 6A 01"); //4DD334
+        static auto flt_BB3184 = *pattern.get_first<float*>(2);
+        struct MenuWidthHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                float temp = *flt_BB3184;
+                _asm {fadd dword ptr[temp]}
+                _asm {fmul dword ptr[Screen.fHudScale] }
+            }
+        }; injector::MakeInline<MenuWidthHook>(pattern.get_first(0), pattern.get_first(6));
+
+        //X Pos
+        static injector::hook_back<int32_t(*)()> hb_600B60;
+        auto sub_600B60 = []() -> int32_t
+        {
+            return static_cast<int32_t>((float)hb_600B60.fun() - (((512.0f / Screen.fHudScale) - 512.0f) / 2.0f));
+        };
+        pattern = hook::pattern("E8 ? ? ? ? 8B F0 E8 ? ? ? ? 8B 0D ? ? ? ? 85 C9"); //00601A4B
+        hb_600B60.fun = injector::MakeCALL(pattern.get_first(0), static_cast<int32_t(*)()>(sub_600B60), true).get();
+
+        //Mouse Boundaries
+        static injector::hook_back<int32_t(*)()> hb_4168E0;
+        auto sub_4168E0 = []() -> int32_t
+        {
+            return static_cast<int32_t>(floor(Screen.fWidth * Screen.fHudScale));
+        };
+        pattern = hook::pattern("E8 ? ? ? ? 8B C8 8B C6 C1 E0 09 99"); //00600A18
+        hb_4168E0.fun = injector::MakeCALL(pattern.get_first(0), static_cast<int32_t(*)()>(sub_4168E0), true).get();
+
+        //Restore Width
+        pattern = hook::pattern("DB 44 24 00 D9 1D ? ? ? ? E8 ? ? ? ? 89 44 24 00 DB 44 24 00 D9 1D ? ? ? ? 83 C4 14 C3"); //004DD1A3
+        struct WidthHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                *flt_BB3184 = (float)(*(int32_t*)&regs.eax) * Screen.fHudScale;
+            }
+        }; injector::MakeInline<WidthHook>(pattern.get_first(0), pattern.get_first(10));
     }
 
     //health indicator
@@ -312,10 +356,9 @@ void Init()
     {
         void operator()(injector::reg_pack& regs)
         {
-            float fHudScale = (((4.0f / 3.0f)) / (Screen.fAspectRatio));
             float temp = 0.0f;
             _asm {fstp dword ptr ds : [temp]}
-            *(float*)(regs.ecx - 0x18) = (temp * fHudScale) + (Screen.fWidth - (Screen.fHeight * (4.0f / 3.0f)));
+            *(float*)(regs.ecx - 0x18) = (temp * Screen.fHudScale) + (Screen.fWidth - (Screen.fHeight * (4.0f / 3.0f)));
             _asm {fld st}
         }
     }; injector::MakeInline<HealthHook>(pattern.get_first(0));
