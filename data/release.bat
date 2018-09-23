@@ -13,19 +13,20 @@ if errorlevel 1 (
    copy "..\..\Ultimate-ASI-Loader\bin\x86\Release\dinput8.dll" !dll!
    SET "mu=%%~dpF\scripts\"
    SET "mu2=%%~dpF\plugins\"
-   SET "mu3=modupdater.asi"
+   SET "mu3=%%~dpF\"
+   SET "mu4=modupdater.asi"
    ECHO !mu!
-   IF EXIST !mu! (copy "..\..\modupdater\bin\Release\modupdater.asi" !mu!!mu3!) ELSE (copy "..\..\modupdater\bin\Release\modupdater.asi" !mu2!!mu3!)
+   IF EXIST !mu! (copy "..\..\modupdater\bin\Release\modupdater.asi" !mu!!mu4!) ELSE IF EXIST !mu2! (copy "..\..\modupdater\bin\Release\modupdater.asi" !mu2!!mu4!) ELSE (copy "..\..\modupdater\bin\Release\modupdater.asi" !mu3!!mu4!)
 )
 )
 
-FOR /R ".\" %%F IN (*.ualx64) DO (
+FOR /R ".\" %%F IN (*.x64ual) DO (
 findstr /c:"loadfromscriptsonly" "%%F" >nul 2>&1
 if errorlevel 1 (
     echo String not found...
 ) else (
    SET filepath=%%F
-   SET dll=!filepath:.ualx64=.dll!
+   SET dll=!filepath:.x64ual=.dll!
    ECHO !dll! 	
    copy "..\..\Ultimate-ASI-Loader\bin\x64\Release\dinput8.dll" !dll!
    REM SET "mu=%%~dpF\scripts\"
@@ -66,7 +67,7 @@ copy "%DXSDK_DIR%\Utilities\bin\x86\PIXWin.exe" ".\Scarface.GenericFix\PIXWin.ex
 rem Creating archives
 
 FOR /d %%X IN (*) DO (
-7za a -tzip "Archives\%%X.zip" "%%X\" -r -xr^^!Archives -x^^!*.pdb -x^^!*.db -x^^!*.ipdb -x^^!*.iobj -x^^!*.tmp -x^^!*.iobj -x^^!*.ual -x^^!*.ualx64 -x^^!*.iobj -x^^!*.wrapper -x^^!*.lib -x^^!*.exp -x^^!*.ilk
+7za a -tzip "Archives\%%X.zip" "%%X\" -r -xr^^!Archives -x^^!*.pdb -x^^!*.db -x^^!*.ipdb -x^^!*.iobj -x^^!*.tmp -x^^!*.iobj -x^^!*.ual -x^^!*.x64ual -x^^!*.iobj -x^^!*.wrapper -x^^!*.lib -x^^!*.exp -x^^!*.ilk
 )
 
 rem Creating texture archives
