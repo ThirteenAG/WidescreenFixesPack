@@ -71,7 +71,6 @@ workspace "WidescreenFixesPack"
       defines "NDEBUG"
       optimize "On"
 
-
 project "Bully.WidescreenFix"
    setpaths("Z:/WFP/Games/Bully Scholarship Edition/", "Bully.exe", "plugins/")
 project "CallOfCthulhu.WidescreenFix"
@@ -89,6 +88,14 @@ project "DriverParallelLines.WidescreenFix"
 project "EnterTheMatrix.WidescreenFix"
    setpaths("Z:/WFP/Games/Enter the Matrix/", "Matrix.exe")
 project "Fahrenheit.WidescreenFix"
+project "FarCry.WidescreenFix"
+   setpaths("Z:/WFP/Games/Far Cry/", "Bin32/FarCry.exe", "Bin32/")
+project "FarCry64.WidescreenFix"
+   platforms { "Win64" }
+   architecture "x64"
+   files { "source/FarCry.WidescreenFix/*.cpp" }
+   setpaths("Z:/WFP/Games/Far Cry/", "Bin64/FarCry.exe", "Bin64/")
+   targetdir "data/FarCry.WidescreenFix/Bin64"
 project "Flatout.WidescreenFix"
    setpaths("Z:/WFP/Games/Flatout/FlatOut/", "flatout.exe")
 project "Flatout2.WidescreenFix"

@@ -19,6 +19,23 @@ if errorlevel 1 (
 )
 )
 
+FOR /R ".\" %%F IN (*.ualx64) DO (
+findstr /c:"loadfromscriptsonly" "%%F" >nul 2>&1
+if errorlevel 1 (
+    echo String not found...
+) else (
+   SET filepath=%%F
+   SET dll=!filepath:.ualx64=.dll!
+   ECHO !dll! 	
+   copy "..\..\Ultimate-ASI-Loader\bin\x64\Release\dinput8.dll" !dll!
+   REM SET "mu=%%~dpF\scripts\"
+   REM SET "mu2=%%~dpF\plugins\"
+   REM SET "mu3=modupdater.asi"
+   REM ECHO !mu!
+   REM IF EXIST !mu! (copy "..\..\modupdater\bin\Release\modupdater.asi" !mu!!mu3!) ELSE (copy "..\..\modupdater\bin\Release\modupdater.asi" !mu2!!mu3!)
+)
+)
+
 rem Additional files
 FOR /R ".\" %%F IN (*.wrapper) DO (
 findstr /c:"FPSLimit" "%%F" >nul 2>&1
@@ -49,7 +66,7 @@ copy "%DXSDK_DIR%\Utilities\bin\x86\PIXWin.exe" ".\Scarface.GenericFix\PIXWin.ex
 rem Creating archives
 
 FOR /d %%X IN (*) DO (
-7za a -tzip "Archives\%%X.zip" "%%X\" -r -xr^^!Archives -x^^!*.pdb -x^^!*.db -x^^!*.ipdb -x^^!*.iobj -x^^!*.tmp -x^^!*.iobj -x^^!*.ual -x^^!*.iobj -x^^!*.wrapper -x^^!*.lib -x^^!*.exp
+7za a -tzip "Archives\%%X.zip" "%%X\" -r -xr^^!Archives -x^^!*.pdb -x^^!*.db -x^^!*.ipdb -x^^!*.iobj -x^^!*.tmp -x^^!*.iobj -x^^!*.ual -x^^!*.ualx64 -x^^!*.iobj -x^^!*.wrapper -x^^!*.lib -x^^!*.exp -x^^!*.ilk
 )
 
 rem Creating texture archives

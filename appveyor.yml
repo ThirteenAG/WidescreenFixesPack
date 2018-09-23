@@ -67,6 +67,8 @@ before_package:
 
     msbuild.exe build/Ultimate-ASI-Loader-x86.sln /t:Build /p:Configuration=Release;Platform=Win32
 
+    msbuild.exe build/Ultimate-ASI-Loader-x64.sln /t:Build /p:Configuration=Release;Platform=x64
+
     cd ..
 
 
