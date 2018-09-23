@@ -16,6 +16,9 @@ data/**/dinput8.dll
 data/**/dsound.dll
 data/**/ddraw.dll
 data/**/xlive.dll
+data/**/binkw32.dll
+data/**/version.dll
+data/**/msvfw32.dll
 
 #Textures
 textures/**/*.txd
