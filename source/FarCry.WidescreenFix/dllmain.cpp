@@ -39,8 +39,6 @@ struct Screen
         this->fHudOffsetReal = (this->fWidth - this->fHeight * (4.0f / 3.0f)) / 2.0f;
         this->fHudScale = 1.0f / (((4.0f / 3.0f)) / (this->fAspectRatio));
         this->fHudOffset = (((600.0f * this->fAspectRatio) - 800.0f) / 2.0f) / this->fHudScale;
-        this->fFMVOffsetH = (((600.0f * this->fFMVAspectRatio) - 800.0f) / 2.0f) / this->fHudScale;
-        this->fFMVOffsetV = (600.0f - (600.0f / (1.0f / (((4.0f / 3.0f)) / (this->fFMVAspectRatio))))) / 2.0f;
         this->fRadarVerticalOffset = this->fHudOffset * (4.0f / 3.0f);
         this->fCutOffArea = 0.5f * this->fHudScale;
         this->fFOVFactor = this->fHudScale * this->fIniFOV;
@@ -433,11 +431,12 @@ void InitXRenderD3D9()
             X64Assembler a(cb);
 
             a.movl(reg::rbx[0x17BC8], reg::ecx); //_asm mov ecx, [rbx + 17BC8h]
-            a.movl(reg::ecx, reg::rax[0x10]); //_asm mov[rax + 10h], ecx
+            a.movl(reg::ecx, reg::rax[0x10]);    //_asm mov[rax + 10h], ecx
             a.movl(reg::rbx[0x17BCC], reg::ecx); //_asm mov ecx, [rbx + 17BCCh]
-            a.movl(reg::ecx, reg::rax[0x14]); //_asm mov[rax + 14h], ecx
+            a.movl(reg::ecx, reg::rax[0x14]);    //_asm mov[rax + 14h], ecx
 
             a.pushq(reg::rax);
+            a.pushq(reg::rbx);
             a.pushq(reg::rdx);
             a.pushq(reg::rcx);
             a.pushq(reg::r8);
@@ -449,13 +448,14 @@ void InitXRenderD3D9()
             {
                 Screen.AdjustToRes(w, h);
             }
-            ), reg::rax);
-            a.callq(reg::rax);
+            ), reg::rbx);
+            a.callq(reg::rbx);
 
             a.popq(reg::r9);
             a.popq(reg::r8);
             a.popq(reg::rcx);
             a.popq(reg::rdx);
+            a.popq(reg::rbx);
             a.popq(reg::rax);
 
             assert(sizeof(buffer) > ((cb.frontier() + JMPSIZE) - cb.base()));
