@@ -60,7 +60,7 @@ void Init()
     static int32_t RenderResY = iniReader.ReadInteger("MAIN", "RenderResY", -1);
     bool bFixMenu = iniReader.ReadInteger("MAIN", "FixMenu", 1) != 0;
     bool bFixFMV = iniReader.ReadInteger("MAIN", "FixFMV", 1) != 0;
-    static bool bFMVWidescreenMode = iniReader.ReadInteger("MISC", "FMVWidescreenMode", 1) != 0;
+    static int32_t nFMVWidescreenMode = iniReader.ReadInteger("MISC", "FMVWidescreenMode", 1);
     bool bDisableCutsceneBorders = iniReader.ReadInteger("MISC", "DisableCutsceneBorders", 1) != 0;
     bool bDisableSafeMode = iniReader.ReadInteger("MISC", "DisableSafeMode", 1) != 0;
     bool bPixelationFix = iniReader.ReadInteger("MISC", "PixelationFix", 1) != 0;
@@ -124,10 +124,10 @@ void Init()
             *ResXAddr4 = Screen.Width;
             *ResYAddr4 = Screen.Height;
 
-            if (!bFMVWidescreenMode)
+            if (!nFMVWidescreenMode)
                 FMVOffset1 = (float)*ResXAddr1 / (Screen.fWidth / ((Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f));
             else
-                FMVOffset1 = (float)*ResXAddr1 / (Screen.fWidth / ((Screen.fWidth - Screen.fHeight * (964.0f / 622.0f)) / 2.0f));
+                FMVOffset1 = (float)*ResXAddr1 / (Screen.fWidth / ((Screen.fWidth - Screen.fHeight * (nFMVWidescreenMode != 2 ? (964.0f / 622.0f) : (16.0f / 9.0f))) / 2.0f));
             FMVOffset2 = *ResXAddr1 - FMVOffset1;
             FMVOffset3 = (float)*ResYAddr1;
         }
@@ -220,7 +220,7 @@ void Init()
         pattern = hook::pattern("D9 05 ? ? ? ? C7 44 24 0C 00 00 00 00 D8 25"); //004045C8 
         injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &FMVOffset2, true);
 
-        if (bFMVWidescreenMode)
+        if (nFMVWidescreenMode)
         {
             static float f0 = 0.0f;
             pattern = hook::pattern("D9 05 ? ? ? ? 89 44 24 14 D8 25 ? ? ? ? C7"); //4045E2
