@@ -9,21 +9,15 @@ struct Screen
     int32_t Width43;
     float fWidth43;
     float fAspectRatio;
-    float fFieldOfView;
-    float fHUDScaleX;
-    float fHudOffset;
-    float fHudOffsetReal;
-    float fHudPos;
     float fAspectRatioDiff;
-    float fScale;
-    float fDynamicScreenFieldOfViewScale;
-    float fCustomFieldOfView;
+    float fFOVFactor;
 } Screen;
 
 void* sub_76B4D0_addr;
+uint32_t* dword_971F00;
 void __cdecl sub_76B6D0(float a1, float a2, float a3, float a4)
 {
-    auto v4 = *(uint32_t*)0x971F00;
+    auto v4 = *dword_971F00;
     float v12 = 640.0f;
     float v6 = 480.0f;
 
@@ -31,6 +25,13 @@ void __cdecl sub_76B6D0(float a1, float a2, float a3, float a4)
     {
         v12 = static_cast<float>(*(uint32_t*)(*(uint32_t*)(v4 + 0x334) + 0x18));
         v6 = static_cast<float>(*(uint32_t*)(*(uint32_t*)(v4 + 0x334) + 0x1C));
+    }
+
+    if (false) // fixed radar but broken blips
+    {
+        v12 *= Screen.fAspectRatioDiff;
+        a1 += 106.0f;
+        a3 += 106.0f;
     }
 
     float v8 = 1.0f / v12;
@@ -41,18 +42,9 @@ void __cdecl sub_76B6D0(float a1, float a2, float a3, float a4)
     *(float*)(v4 + 0x370) = (a4 + 1.0f) * v10 + (a4 + 1.0f) * v10 - 1.0f;
     *(uint8_t*)(v4 + 0x3E4) = 1;
 
-
-    //float t = a3 - a1;
-    //a1 -= Screen.fHudOffset / (Screen.fWidth / 640.0f);
-    //a3 = a1 + (t / (Screen.fAspectRatio / (4.0f / 3.0f)));
-    //
-    //float v9 = a1 * v8 + a1 * v8 - 1.0f;
-    //float v14 = a2 * v10 + a2 * v10 - 1.0f;
-    //float v15 = (a3 + 1.0f) * v8 + (a3 + 1.0f) * v8 - 1.0f;
-    //float v13 = (a4 + 1.0f) * v10 + (a4 + 1.0f) * v10 - 1.0f;
-
-    auto _sub_76B4D0 = (void(__cdecl *)(float, float, float, float)) sub_76B4D0_addr;
-    _sub_76B4D0(0.0f, 0.0f, 0.0f, 0.0f); //_sub_76B4D0(v9, v14, v15, v13);
+    static auto _sub_76B4D0 = (void(__cdecl *)(float, float, float, float)) sub_76B4D0_addr;
+    _sub_76B4D0(0.0f, 0.0f, 0.0f, 0.0f);
+    //_sub_76B4D0(*(float*)(v4 + 0x364), *(float*)(v4 + 0x368), *(float*)(v4 + 0x36C), *(float*)(v4 + 0x370)); // fixed radar but broken blips
 }
 
 void Init()
@@ -61,8 +53,11 @@ void Init()
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
     bool bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 0) != 0;
-    Screen.fCustomFieldOfView = iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f);
+    Screen.fFOVFactor = iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f);
     int32_t nFPSLimit = iniReader.ReadInteger("MAIN", "FPSLimit", 0);
+
+    if (!Screen.fFOVFactor)
+        Screen.fFOVFactor = 1.0f;
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -89,43 +84,47 @@ void Init()
             Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
             Screen.Width43 = static_cast<uint32_t>(Screen.fHeight * (4.0f / 3.0f));
             Screen.fWidth43 = static_cast<float>(Screen.Width43);
-            Screen.fHudOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
-            Screen.fHudOffsetReal = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
-            Screen.fHudPos = (320.0f / ((4.0f / 3.0f) / (Screen.fAspectRatio)));
-            Screen.fScale = (0.5f / ((4.0f / 3.0f) / (Screen.fAspectRatio)));
-            Screen.fDynamicScreenFieldOfViewScale = (2.25f / ((4.0f / 3.0f) / (Screen.fAspectRatio))) * (Screen.fCustomFieldOfView ? Screen.fCustomFieldOfView : 1.0f);
+            Screen.fAspectRatioDiff = 1.0f / (((4.0f / 3.0f)) / (Screen.fAspectRatio));
         }
     }; injector::MakeInline<GetResHook>(pattern.get_first(0), pattern.get_first(11));
 
-    //3D stretching
-    pattern = hook::pattern("D8 0D ? ? ? ? E8 ? ? ? ? D9 05 ? ? ? ? D8 25 ? ? ? ? 89 44 24 20 DA 4C 24 38"); //0x53A96C
-    injector::WriteMemory(pattern.get_first(2), &Screen.fScale, true);
-    pattern = hook::pattern("D8 0D ? ? ? ? D9 55 1C DC C0"); //0x4B3F4B
-    injector::WriteMemory(pattern.get_first(2), &Screen.fDynamicScreenFieldOfViewScale, true);
+    //Aspect ratio
+    static injector::hook_back<void(__cdecl*)(float)> hb_540070;
+    auto sub_540070 = [](float f) {
+        return hb_540070.fun(f * Screen.fAspectRatioDiff);
+    };
+    pattern = hook::pattern("E8 ? ? ? ? 83 C4 08 6A 00 56 8D 4C 24 3C"); //0x738A41
+    hb_540070.fun = injector::MakeCALL(pattern.get_first(0), static_cast<void(__cdecl*)(float)>(sub_540070), true).get();
+    pattern = hook::pattern("E8 ? ? ? ? 8B 16 83 C4 04 57 8B CE FF 52 1C"); //0x741C40
+    injector::MakeCALL(pattern.get_first(0), static_cast<void(__cdecl*)(float)>(sub_540070), true);
 
-    //FMVs
-    //pattern = hook::pattern("8D 84 24 14 01 00 00 53 50"); //0x629B1A
-    //struct FMVHook
-    //{
-    //    void operator()(injector::reg_pack& regs)
-    //    {
-    //        regs.eax = regs.esp + 0x114;
-    //        *(float*)&regs.ebx = (Screen.fHudOffset / ((Screen.fAspectRatio) / (4.0f / 3.0f)));
-    //        *(float*)(regs.esp + 4) = 640.0f - (Screen.fHudOffset / ((Screen.fAspectRatio) / (4.0f / 3.0f)));
-    //    }
-    //}; 
-    //injector::MakeInline<FMVHook>(pattern.get_first(0), pattern.get_first(7));
-    //injector::WriteMemory<uint8_t>(pattern.get_first(5), 0x53i8, true); //push ebx
-    //injector::WriteMemory<uint16_t>(pattern.get_first(6), 0xDB33i16, true); //xor ebx, ebx
+    //objects disappearing fix
+    auto sub_588DB0 = [](float a1, float* a2, float* a3) {
+        a1 *= Screen.fAspectRatioDiff;
+        *a3 = cos(a1);
+        *a2 = sin(a1);
+    };
+    pattern = hook::pattern("E8 ? ? ? ? 8B 54 24 1C 8B 44 24 38 83 C4 0C");
+    injector::MakeCALL(pattern.get_first(0), static_cast<void(__cdecl*)(float, float*, float*)>(sub_588DB0), true); //0x53ACE8
+
+    //FOV
+    static injector::hook_back<void(__cdecl*)(float, float, float)> hb_76B820;
+    auto sub_76B820 = [](float a1, float a2, float a3) {
+        a1 = AdjustFOV(a1, Screen.fAspectRatio) * Screen.fFOVFactor;
+        return hb_76B820.fun(a1, a2, a3);
+    };
+    pattern = hook::pattern("E8 ? ? ? ? 83 C4 0C B9 ? ? ? ? E8 ? ? ? ? 84 C0"); //0x53AB29
+    hb_76B820.fun = injector::MakeCALL(pattern.get_first(0), static_cast<void(__cdecl*)(float, float, float)>(sub_76B820), true).get();
 
     if (bFixHUD)
     {
+        //Hud scale
         pattern = hook::pattern("C7 44 24 08 CD CC 4C 3B C7 44 24 0C 89 88 88 BB"); //0x640E79
         struct HUDPart1
         {
             void operator()(injector::reg_pack& regs)
             {
-                *(float*)(regs.esp + 0x08) = ((1.0f / 320.0f) * ((4.0f / 3.0f) / (Screen.fAspectRatio)));
+                *(float*)(regs.esp + 0x08) = ((1.0f / 320.0f) / Screen.fAspectRatioDiff);
             }
         }; injector::MakeInline<HUDPart1>(pattern.get_first(0), pattern.get_first(8));
 
@@ -134,7 +133,7 @@ void Init()
         {
             void operator()(injector::reg_pack& regs)
             {
-                *(float*)(regs.esp + 0x04) = (-1.0f * ((4.0f / 3.0f) / (Screen.fAspectRatio)));
+                *(float*)(regs.esp + 0x04) = (-1.0f / Screen.fAspectRatioDiff);
             }
         }; injector::MakeInline<HUDPart2>(pattern.get_first(0), pattern.get_first(8));
 
@@ -143,17 +142,28 @@ void Init()
         {
             void operator()(injector::reg_pack& regs)
             {
-                *(float*)(regs.esp + 0x18) = (-1.0f * ((4.0f / 3.0f) / (Screen.fAspectRatio)));
+                *(float*)(regs.esp + 0x18) = (-1.0f / Screen.fAspectRatioDiff);
             }
         }; injector::MakeInline<HUDPart3>(pattern.get_first(0), pattern.get_first(8));
 
-        pattern = hook::pattern("D9 05 ? ? ? ? D9 05 ? ? ? ? EB ? 8B 80"); //0x76A776
-        injector::WriteMemory(pattern.get_first(2), &Screen.fHudPos, true); //breaks minimap blips
+        //Hud pos
+        pattern = hook::pattern("89 32 8B 71 04 89 72 04 8B 71 08 89 72 08 8B 49 0C 89 4A 0C 8B 4C 24 0C 8B 31 8D 50 10 89 32 8B 71"); //0x4118FB
+        struct HUDPart4
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                auto f1 = *(float*)&regs.esi;
+                *(float*)(regs.edx + 0x00) = f1;
 
-        //Radar
-        pattern = hook::pattern("D9 05 ? ? ? ? BE ? ? ? ? 8D 7C"); //0x53ABBB
-        injector::WriteMemory(pattern.get_first(2), &Screen.fScale, true); //blips on global map fix
+                if (fabs((1.0f / f1) - 320.0f) < FLT_EPSILON)
+                    *(float*)(regs.edx + 0x00) /= Screen.fAspectRatioDiff;
 
+                regs.esi = *(uint32_t*)(regs.ecx + 0x04);
+            }
+        }; injector::MakeInline<HUDPart4>(pattern.get_first(0));
+
+        //Disable radar
+        dword_971F00 = *hook::get_pattern<uint32_t*>("8B 0D ? ? ? ? 8A 81 BA 03 00 00 84 C0", 2);
         sub_76B4D0_addr = hook::get_pattern("D9 44 24 04 83 EC 08 D8 1D ? ? ? ? DF E0 F6 C4 05");
         pattern = hook::pattern("E8 ? ? ? ? 83 C4 10 8D 54 24 0F 52 8D 4C 24 48"); //0x641AA1
         injector::MakeCALL(pattern.get_first(0), sub_76B6D0, true);
