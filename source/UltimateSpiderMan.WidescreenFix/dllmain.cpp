@@ -85,6 +85,7 @@ void Init()
             Screen.Width43 = static_cast<uint32_t>(Screen.fHeight * (4.0f / 3.0f));
             Screen.fWidth43 = static_cast<float>(Screen.Width43);
             Screen.fAspectRatioDiff = 1.0f / (((4.0f / 3.0f)) / (Screen.fAspectRatio));
+            Screen.fFOVFactor = 0.75f * Screen.fAspectRatioDiff * Screen.fFOVFactor;
         }
     }; injector::MakeInline<GetResHook>(pattern.get_first(0), pattern.get_first(11));
 
@@ -98,23 +99,10 @@ void Init()
     pattern = hook::pattern("E8 ? ? ? ? 8B 16 83 C4 04 57 8B CE FF 52 1C"); //0x741C40
     injector::MakeCALL(pattern.get_first(0), static_cast<void(__cdecl*)(float)>(sub_540070), true);
 
-    //objects disappearing fix
-    auto sub_588DB0 = [](float a1, float* a2, float* a3) {
-        a1 *= Screen.fAspectRatioDiff;
-        *a3 = cos(a1);
-        *a2 = sin(a1);
-    };
-    pattern = hook::pattern("E8 ? ? ? ? 8B 54 24 1C 8B 44 24 38 83 C4 0C");
-    injector::MakeCALL(pattern.get_first(0), static_cast<void(__cdecl*)(float, float*, float*)>(sub_588DB0), true); //0x53ACE8
-
     //FOV
-    static injector::hook_back<void(__cdecl*)(float, float, float)> hb_76B820;
-    auto sub_76B820 = [](float a1, float a2, float a3) {
-        a1 = AdjustFOV(a1, Screen.fAspectRatio) * Screen.fFOVFactor;
-        return hb_76B820.fun(a1, a2, a3);
-    };
-    pattern = hook::pattern("E8 ? ? ? ? 83 C4 0C B9 ? ? ? ? E8 ? ? ? ? 84 C0"); //0x53AB29
-    hb_76B820.fun = injector::MakeCALL(pattern.get_first(0), static_cast<void(__cdecl*)(float, float, float)>(sub_76B820), true).get();
+    pattern = hook::pattern("7A 22 D9 44 24 2C D8 0D ? ? ? ? D9 F2 DD D8");
+    injector::MakeNOP(pattern.get_first(0), 2, true);
+    injector::WriteMemory(pattern.get_first(18), &Screen.fFOVFactor, true);
 
     if (bFixHUD)
     {
