@@ -618,7 +618,7 @@ void InitXRenderD3D9()
     {
         std::tuple<Address, void*> operator()()
         {
-            static float x1, y1, x2, y2;
+            static volatile float x1, y1, x2, y2;
 
             static uint8_t buffer[300];
             injector::ProtectMemory(buffer, sizeof(buffer), PAGE_EXECUTE_READWRITE);
