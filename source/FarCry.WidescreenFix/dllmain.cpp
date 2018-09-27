@@ -340,22 +340,56 @@ void InitXRenderD3D9()
         if (Screen.bStretch)
         {
             Screen.bStretch = false;
-            DrawImage((void*)_this, 0.0f, 0.0f, Screen.fHudOffset, 600.0f, 0, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.5f);
-            DrawImage((void*)_this, 800.0f - Screen.fHudOffset, 0.0f, Screen.fHudOffset, 600.0f, 0, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.5f);
+            DrawImage((void*)_rcx, 0.0f, 0.0f, Screen.fHudOffset + 1.0f, 600.0f, 0, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.5f);
+            DrawImage((void*)_rcx, 800.0f - Screen.fHudOffset - 1.0f, 0.0f, Screen.fHudOffset + 1.0f, 600.0f, 0, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.5f);
             Screen.bStretch = true;
         }
     };
 #else
-    //static auto DrawBorders = [](uint64_t _this)
-    //{
-    //    if (Screen.bStretch)
-    //    {
-    //        Screen.bStretch = false;
-    //        Screen.bStretch = true;
-    //    }
-    //};
-#endif
+    static uint64_t _rcx;
 
+    pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "48 8B C4 48 81 EC 38 01 00 00 48 C7 44 24 58 FE FF FF FF 48");
+    //static auto DrawImage = (void(__fastcall*)(void* _this, float x, float y, float w, float h, int tex, float a6, float a7, float a8, float a9, float a10, float r, float g, float b, float alpha, float a15)) pattern.get_first(0);
+
+    static uint8_t DrawImageOriginal[100];
+    {
+        injector::ProtectMemory(DrawImageOriginal, sizeof(DrawImageOriginal), PAGE_EXECUTE_READWRITE);
+        CodeBlock cb; cb.init((Address)DrawImageOriginal, sizeof(DrawImageOriginal));
+        X64Assembler a(cb);
+
+        a.movq(reg::rsp, reg::rax); // _asm mov rax, rsp
+        a.subq(0x138, reg::rsp);    // _asm sub rsp, 138h
+        a.movq(-2, reg::rsp[0x58]); // _asm mov qword ptr [rsp+58h], -2
+        a.setFrontier((Address)MakeAbsJMP(a.frontier(), pattern.get_first(19), true).as_int());
+        assert(sizeof(DrawImageOriginal) > ((cb.frontier() + JMPSIZE) - cb.base()));
+    }
+    static auto DrawImage = (void(__fastcall*)(void* _this, float x, float y, float w, float h, int tex, float a6, float a7, float a8, float a9, float a10, float r, float g, float b, float alpha, float a15)) &DrawImageOriginal;
+
+    static uint8_t DrawBordersBuffer[100];
+    {
+        injector::ProtectMemory(DrawBordersBuffer, sizeof(DrawBordersBuffer), PAGE_EXECUTE_READWRITE);
+        CodeBlock cb; cb.init((Address)DrawBordersBuffer, sizeof(DrawBordersBuffer));
+        X64Assembler a(cb);
+
+        pushad();
+        a.movq((int64_t)static_cast<void(*)()>([]()
+        {
+            if (Screen.bStretch)
+            {
+                Screen.bStretch = false;
+                DrawImage((void*)_rcx, 0.0f, 0.0f, Screen.fHudOffset + 1.0f, 600.0f, 0, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.5f);
+                DrawImage((void*)_rcx, 800.0f - Screen.fHudOffset - 1.0f, 0.0f, Screen.fHudOffset + 1.0f, 600.0f, 0, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.5f);
+                Screen.bStretch = true;
+            }
+        }
+        ), reg::rax);
+        a.callq(reg::rax);
+        popad();
+        a.ret();
+        assert(sizeof(DrawBordersBuffer) > ((cb.frontier() + JMPSIZE) - cb.base()));
+    }
+    static auto DrawBorders = (void(*)()) &DrawBordersBuffer;
+#endif
 
 #ifndef _WIN64
     pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "8B B1 98 C6 01 00 85 F6 89 81 54 6D 01 00");
@@ -585,7 +619,6 @@ void InitXRenderD3D9()
         std::tuple<Address, void*> operator()()
         {
             static float x1, y1, x2, y2;
-            static uint64_t _rcx;
 
             static uint8_t buffer[300];
             injector::ProtectMemory(buffer, sizeof(buffer), PAGE_EXECUTE_READWRITE);
@@ -683,13 +716,13 @@ void InitXRenderD3D9()
                         else
                         {
                             Screen.bStretch = true;
-                            //DrawBorders(_rcx);
+                            DrawBorders();
                         }
                     }
                     else
                     {
                         Screen.bStretch = true;
-                        //DrawBorders(_rcx);
+                        DrawBorders();
                     }
                 }
             }
