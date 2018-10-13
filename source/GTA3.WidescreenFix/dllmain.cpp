@@ -17,6 +17,8 @@ uint8_t* bBackgroundOn;
 bool* bWantsToDrawHud;
 void OverwriteResolution();
 void* pRwRenderStateSet;
+float* pfScreenAspectRatioSkin;
+float* pfSkinX;
 
 void GetPatterns()
 {
@@ -60,6 +62,8 @@ void GetMemoryAddresses()
 {
     RsGlobal = *hook::pattern("8B 0D ? ? ? ? 6A 00 6A 00 52 50").count(1).get(0).get<RsGlobalType *>(2); //0x8F4360
     CDraw::pfScreenAspectRatio = *hook::pattern("FF 35 ? ? ? ? EB 0B").count(1).get(0).get<float*>(2); //0x5F53C0
+    pfScreenAspectRatioSkin = *hook::pattern("DD D9 FF 35 ? ? ? ? 50 D9 14 24 A1 6C").count(1).get(0).get<float*>(4); //0x5F53C4
+    pfSkinX = *hook::pattern("A5 A5 A5 BE ? ? ? ? 8D 7C 24 1C").count(1).get(0).get<float*>(4); //0x6182B0
     CDraw::pfScreenFieldOfView = *hook::pattern("D8 0D ? ? ? ? 53 83 EC 20 8A 44 24 28").count(1).get(0).get<float*>(2); //0x5FBC6C
     CSprite2dDrawRect = (int(__cdecl *)(CRect const &, CRGBA const &)) hook::pattern("8B 44 24 04 53 8B 5C 24 0C 6A 00 53 53 53 53 50").count(1).get(0).get<uint32_t>(0); //0x51F970
     bWideScreen = *hook::pattern("80 3D ? ? ? ? 00 DD D9 74 0D").count(1).get(0).get<bool*>(2);//0x95CD23
@@ -154,6 +158,16 @@ void OverwriteResolution()
     injector::WriteMemory<uint16_t>(ResolutionPattern5.count(1).get(0).get<uint32_t>(5), 0x07EB, true);
 }
 
+const float f1 = 1.35 / (640.0 / 2.0 - 110.0) * (640.0 / 2.0);
+const float f2 = f1 - 1.35;
+
+void CalculateAspectRatio2()
+{
+    CDraw::CalculateAspectRatio();
+    *pfScreenAspectRatioSkin = *CDraw::pfScreenAspectRatio;
+    *pfSkinX = f1 * (*pfScreenAspectRatioSkin / (4.0 / 3.0)) - f2;
+}
+
 void FixAspectRatio()
 {
     auto pattern = hook::pattern("80 3D ? ? ? ? 00 74 ? D9 05 ? ? ? ? EB");
@@ -163,7 +177,7 @@ void FixAspectRatio()
     injector::MakeNOP(pattern.count(1).get(0).get<uint32_t>(9), 2, true); //0x48D074
 
     pattern = hook::pattern("EB 00 5D 5B C3"); //0x584B26
-    injector::MakeJMP(pattern.count(1).get(0).get<uint32_t>(4), CDraw::CalculateAspectRatio, true);
+    injector::MakeJMP(pattern.count(1).get(0).get<uint32_t>(4), CalculateAspectRatio2, true);
 }
 
 void FixFOV()
