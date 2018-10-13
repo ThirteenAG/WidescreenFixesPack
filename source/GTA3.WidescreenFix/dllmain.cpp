@@ -62,8 +62,8 @@ void GetMemoryAddresses()
 {
     RsGlobal = *hook::pattern("8B 0D ? ? ? ? 6A 00 6A 00 52 50").count(1).get(0).get<RsGlobalType *>(2); //0x8F4360
     CDraw::pfScreenAspectRatio = *hook::pattern("FF 35 ? ? ? ? EB 0B").count(1).get(0).get<float*>(2); //0x5F53C0
-    pfScreenAspectRatioSkin = *hook::pattern("DD D9 FF 35 ? ? ? ? 50 D9 14 24 A1 6C").count(1).get(0).get<float*>(4); //0x5F53C4
-    pfSkinX = *hook::pattern("A5 A5 A5 BE ? ? ? ? 8D 7C 24 1C").count(1).get(0).get<float*>(4); //0x6182B0
+    pfScreenAspectRatioSkin = *hook::pattern("89 C0 8D 40 00 FF 35 ? ? ? ? 50 D9").count(1).get(0).get<float*>(7); //0x5F53C4
+    pfSkinX = *hook::pattern("A5 A5 A5 BE ? ? ? ? 8D 7C 24 1C A5 A5 A5").count(1).get(0).get<float*>(4); //0x6182B0
     CDraw::pfScreenFieldOfView = *hook::pattern("D8 0D ? ? ? ? 53 83 EC 20 8A 44 24 28").count(1).get(0).get<float*>(2); //0x5FBC6C
     CSprite2dDrawRect = (int(__cdecl *)(CRect const &, CRGBA const &)) hook::pattern("8B 44 24 04 53 8B 5C 24 0C 6A 00 53 53 53 53 50").count(1).get(0).get<uint32_t>(0); //0x51F970
     bWideScreen = *hook::pattern("80 3D ? ? ? ? 00 DD D9 74 0D").count(1).get(0).get<bool*>(2);//0x95CD23
