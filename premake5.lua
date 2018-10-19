@@ -123,6 +123,18 @@ project "JustCause.WidescreenFix"
    setpaths("Z:/WFP/Games/Just Cause/", "JustCause.exe")
 project "KingKong.WidescreenFix"
    setpaths("Z:/WFP/Games/King Kong/", "CheckApplication.exe")
+project "KnightRider.WidescreenFix"
+   configurations { "Release", "Debug", "ReleasePCSX2", "DebugPCSX2" }
+      setpaths("Z:/WFP/Games/Knight Rider/", "Knight Rider.exe")
+      files { "includes/pcsx2/pcsx2.h", "includes/pcsx2/pcsx2.cpp" }
+   filter "configurations:*PCSX2"
+      setpaths("Z:/WFP/Games/PCSX2/", "pcsx2.exe")
+project "KnightRider2.WidescreenFix"
+   configurations { "Release", "Debug", "ReleasePCSX2", "DebugPCSX2" }
+      setpaths("Z:/WFP/Games/Knight Rider 2/", "KR2.exe")
+      files { "includes/pcsx2/pcsx2.h", "includes/pcsx2/pcsx2.cpp" }
+   filter "configurations:*PCSX2"
+      setpaths("Z:/WFP/Games/PCSX2/", "pcsx2.exe")
 project "LARush.WidescreenFix"
    setpaths("Z:/WFP/Games/LA Rush/", "LARush.exe", "plugins/")
 project "Mafia.WidescreenFix"
