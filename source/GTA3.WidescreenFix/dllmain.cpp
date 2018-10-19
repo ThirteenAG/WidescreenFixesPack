@@ -158,14 +158,13 @@ void OverwriteResolution()
     injector::WriteMemory<uint16_t>(ResolutionPattern5.count(1).get(0).get<uint32_t>(5), 0x07EB, true);
 }
 
-const float f1 = 1.35 / (640.0 / 2.0 - 110.0) * (640.0 / 2.0);
-const float f2 = f1 - 1.35;
-
 void CalculateAspectRatio2()
 {
+    static constexpr float f1 = 1.35f / (640.0f / 2.0f - 110.0f) * (640.0f / 2.0f);
+    static constexpr float f2 = f1 - 1.35f;
     CDraw::CalculateAspectRatio();
     *pfScreenAspectRatioSkin = *CDraw::pfScreenAspectRatio;
-    *pfSkinX = f1 * (*pfScreenAspectRatioSkin / (4.0 / 3.0)) - f2;
+    *pfSkinX = f1 * (*pfScreenAspectRatioSkin / (4.0f / 3.0f)) - f2;
 }
 
 void FixAspectRatio()
