@@ -13,6 +13,7 @@
 #include <mutex>
 #include <set>
 #include <map>
+#include <iomanip>
 #include "IniReader.h"
 #include "injector\injector.hpp"
 #include "injector\calling.hpp"
@@ -207,6 +208,21 @@ T GetCurrentDirectoryW()
         }
     }
     return T();
+}
+
+template <typename T>
+inline std::wstring int_to_hex(T val, size_t width = sizeof(T) * 2)
+{
+    std::wstringstream ss;
+    ss << std::uppercase << std::setfill(L'0') << std::setw(width) << std::hex << (val | 0);
+    return ss.str();
+}
+
+template <typename T>
+bool fileExists(T fileName)
+{
+    std::ifstream infile(fileName);
+    return infile.good();
 }
 
 class CallbackHandler
