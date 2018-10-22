@@ -665,7 +665,7 @@ void Init()
     //savegame date format
     static auto fmt = iniReader.ReadString("MISC", "SaveStringFormat", "%a, %b %d %Y, %H:%M");
     pattern = hook::pattern("68 ? ? ? ? 8D 54 24 24 68 ? ? ? ? 52"); //411091
-    injector::WriteMemory(pattern.get_first(1), &fmt, true);
+    injector::WriteMemory(pattern.get_first(1), fmt.data(), true);
 }
 
 void InitE2_D3D8_DRIVER_MFC()
