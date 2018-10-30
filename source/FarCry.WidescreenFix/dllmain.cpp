@@ -40,8 +40,8 @@ struct Screen
         this->fHudScale = 1.0f / (((4.0f / 3.0f)) / (this->fAspectRatio));
         this->fHudOffset = (((600.0f * this->fAspectRatio) - 800.0f) / 2.0f) / this->fHudScale;
         this->fRadarVerticalOffset = this->fHudOffset * (4.0f / 3.0f);
-        this->fCutOffArea = 0.5f * this->fHudScale / this->fIniFOV;
         this->fFOVFactor = this->fHudScale * this->fIniFOV;
+        this->fCutOffArea = 0.5f / fFOVFactor;
         this->fWidescreenHudOffset = fIniHudOffset / this->fHudScale;
         if (this->fAspectRatio < (16.0f / 9.0f))
             this->fWidescreenHudOffset = this->fWidescreenHudOffset / (((16.0f / 9.0f) / (this->fAspectRatio)) * 1.5f);
