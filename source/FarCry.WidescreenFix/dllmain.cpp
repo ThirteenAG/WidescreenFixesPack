@@ -41,10 +41,10 @@ struct Screen
         this->fHudOffset = (((600.0f * this->fAspectRatio) - 800.0f) / 2.0f) / this->fHudScale;
         this->fRadarVerticalOffset = this->fHudOffset * (4.0f / 3.0f);
         this->fFOVFactor = this->fHudScale * this->fIniFOV;
-        this->fCutOffArea = 0.5f / fFOVFactor;
+        this->fCutOffArea = 0.5f / ((this->fAspectRatio / (4.0f / 3.0f)) * 0.5f) / this->fIniFOV;
         this->fWidescreenHudOffset = fIniHudOffset / this->fHudScale;
         if (this->fAspectRatio < (16.0f / 9.0f))
-            this->fWidescreenHudOffset = this->fWidescreenHudOffset / (((16.0f / 9.0f) / (this->fAspectRatio)) * 1.5f);
+            this->fWidescreenHudOffset = ((this->fWidescreenHudOffset * (this->fHudScale)) - this->fWidescreenHudOffset);
     }
 
     void AdjustFMVRes(uint32_t w, uint32_t h)
@@ -217,6 +217,7 @@ void* dword_1018EB80 = nullptr;
 void* dword_1018E5B4 = nullptr;
 void* dword_100B72BB = nullptr;
 void* dword_1018F11C = nullptr;
+void* dword_1018E4C6 = nullptr;
 #endif
 
 void
@@ -417,7 +418,7 @@ void InitXRenderD3D9()
     {
         std::tuple<Address, void*> operator()()
         {
-            static uint8_t buffer[100];
+            static uint8_t buffer[200];
             injector::ProtectMemory(buffer, sizeof(buffer), PAGE_EXECUTE_READWRITE);
             CodeBlock cb; cb.init((Address)buffer, sizeof(buffer));
             X64Assembler a(cb);
@@ -426,11 +427,7 @@ void InitXRenderD3D9()
             a.movl(reg::r8d, reg::rcx[0x17BF4]); //_asm mov[rcx + 17BF4h], r8d
             a.movl(reg::edx, reg::rcx[0x17BE8]); //_asm mov[rcx + 17BE8h], edx
 
-            a.pushq(reg::rax);
-            a.pushq(reg::rdx);
-            a.pushq(reg::rcx);
-            a.pushq(reg::r8);
-            a.pushq(reg::r9);
+            pushad();
 
             a.movl(reg::r9d, reg::ecx);
             a.movl(reg::r8d, reg::edx);
@@ -441,11 +438,7 @@ void InitXRenderD3D9()
             ), reg::rax);
             a.callq(reg::rax);
 
-            a.popq(reg::r9);
-            a.popq(reg::r8);
-            a.popq(reg::rcx);
-            a.popq(reg::rdx);
-            a.popq(reg::rax);
+            popad();
 
             a.testq(reg::rbx, reg::rbx); // _asm test    rbx, rbx
 
@@ -687,7 +680,7 @@ void InitXRenderD3D9()
                         x1 -= Screen.fWidescreenHudOffset;
                     }
                 }
-                else if (ret == dword_1018F2CE || ret == dword_1018E00E || ret == dword_1018ECE0 || ret == dword_1018EB80 || ret == dword_1018E5B4 || ret == dword_1018F11C)
+                else if (ret == dword_1018F2CE || ret == dword_1018E00E || ret == dword_1018ECE0 || ret == dword_1018EB80 || ret == dword_1018E5B4 || ret == dword_1018F11C || ret == dword_1018E4C6)
                 {
                     x1 /= Screen.fHudScale;
                     y1 /= Screen.fHudScale;
@@ -922,6 +915,7 @@ void InitCryGame()
     dword_1018EB80 = hook::make_module_pattern(GetModuleHandle(L"CryGame"), "F3 0F 10 BC 24 ? ? ? ? F3 0F 10 B4 24 ? ? ? ? E9 ? ? ? ? 45 0F 28 C5 45 0F 28 D4").get_first(0);
     dword_1018E5B4 = hook::make_module_pattern(GetModuleHandle(L"CryGame"), "F3 44 0F 10 9C 24 ? ? ? ? F3 44 0F 10 84 24").get_first(0);
     dword_1018F11C = hook::make_module_pattern(GetModuleHandle(L"CryGame"), "E9 ? ? ? ? F3 0F 5E 15 ? ? ? ? F3 0F 10 05").get_first(0);
+    dword_1018E4C6 = hook::make_module_pattern(GetModuleHandle(L"CryGame"), "F3 44 0F 10 84 24 84 00 00 00 E9 ? ? ? ? F3 44 0F 5E 05").get_first(0);
 #endif
 
 #ifndef _WIN64
@@ -1050,6 +1044,7 @@ void InitCry3DEngine()
 #ifndef _WIN64
     auto pattern = hook::module_pattern(GetModuleHandle(L"Cry3DEngine"), "D8 0D ? ? ? ? D9 C0 D9 FF D9 C9 D9 FE D9 C9 D9 C9 8D B4 24");
     injector::WriteMemory(pattern.get_first(2), &Screen.fCutOffArea, true);
+    injector::WriteMemory<uint8_t>(pattern.get_first(1), 0x35i8, true); //fdiv
 #else
     auto pattern = hook::module_pattern(GetModuleHandle(L"Cry3DEngine"), "F3 0F 11 43 58 F3 0F 10 43 48 F3 0F 59 43 30");
     struct CutOffAreaHook1
