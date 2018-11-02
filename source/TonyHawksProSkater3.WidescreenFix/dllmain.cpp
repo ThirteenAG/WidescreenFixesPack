@@ -74,7 +74,7 @@ void Init()
         pattern = hook::pattern("D8 0D ? ? ? ? 8B CF 89 5C 24 50 D8"); //0x58DDC8
         injector::WriteMemory(*pattern.get_first<float*>(2), Screen.fHUDScaleX, true);
 
-        pattern = hook::pattern("C1 E6 08 0B F2 89 70 64 A1"); //0x4F65AE
+        pattern = hook::pattern("0B F2 89 70 64 A1 8C 67 90"); //0x4F65B1
         struct HUDHook //sub_4F62A0
         {
             void operator()(injector::reg_pack& regs)
