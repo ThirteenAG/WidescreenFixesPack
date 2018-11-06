@@ -591,7 +591,12 @@ void InitXRenderD3D9()
             {
                 if (ret == dword_365526AD) // Objectives window on Tab
                 {
-                    Screen.bStretch = true;
+                    ret2 = *(void**)(regs.esp + 0x1E4);
+
+                    if (ret2 != dword_330193CE)
+                        Screen.bStretch = false;
+                    else
+                        Screen.bStretch = true;
                 }
                 else if (ret2 == dword_330193CE) // Damage overlay
                 {
@@ -699,7 +704,12 @@ void InitXRenderD3D9()
                 {
                     if (ret == dword_100B0A58) // Objectives window on Tab
                     {
-                        Screen.bStretch = true;
+                        ret2 = *(void**)(ptr + 0x1E4);
+
+                        if (ret2 != dword_100B72BB)
+                            Screen.bStretch = false;
+                        else
+                            Screen.bStretch = true;
                     }
                     else if (ret2 == dword_100B72BB) // Damage overlay (and scopes in x64 version)
                     {
