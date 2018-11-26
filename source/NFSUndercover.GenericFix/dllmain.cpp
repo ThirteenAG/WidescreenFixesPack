@@ -470,33 +470,55 @@ void Init4()
     CIniReader iniReader("");
     static int32_t nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
 
-    if (nWindowedMode)
+    //HUD Refresh
+    auto pattern = GetPattern("38 86 E3 00 00 00 5F");
+    injector::MakeNOP(pattern.get_first(7), 2, true);
+
+    //HUD Width
+    static float fHudScale = 1.0f;
+    static float fHudWidth = 1280.0f;
+    static float fHudXPos = -1.0f;
+    pattern = GetPattern("E8 ? ? ? ? 84 C0 74 0A F3 0F 10 05");
+    auto dword_C21B00 = *pattern.get_first<void*>(13);
+    pattern = GetPattern(pattern_str(0xF3, 0x0F, 0x10, 0x05, to_bytes(dword_C21B00))); //movss   xmm0, ds:dword_C21B00
+    for (size_t i = 0; i < pattern.size(); ++i)
     {
-        auto pattern = GetPattern("89 5D 3C 89 5D 18 89 5D 44"); //0x708379
-        struct WindowedMode
+        injector::WriteMemory(pattern.get(i).get<uint32_t>(4), &fHudWidth, true);
+    }
+
+    static auto hGameHWND = *hook::get_pattern<HWND*>("8B 0D ? ? ? ? 6A 01 51 8B C8", 2);
+    pattern = GetPattern("C7 40 ? ? ? ? ? 88 50 20");
+    static uint32_t* Width = nullptr;
+    static uint32_t* Height = nullptr;
+    struct ResHook
+    {
+        void operator()(injector::reg_pack& regs)
         {
-            void operator()(injector::reg_pack& regs)
+            *(uint32_t*)(regs.eax + 0x14) = 1;
+            if (!Width || !Height)
             {
-                *(uint32_t*)(regs.ebp + 0x3C) = 1;
-                *(uint32_t*)(regs.ebp + 0x18) = regs.ebx;
+                Width = (uint32_t*)(regs.eax + 0x18);
+                Height = (uint32_t*)(regs.eax + 0x1C);
             }
-        }; injector::MakeInline<WindowedMode>(pattern.get_first(0), pattern.get_first(6));
-
-        static auto hGameHWND = *hook::get_pattern<HWND*>("8B 0D ? ? ? ? 6A 01 51 8B C8", 2);
-        pattern = GetPattern("C7 40 ? ? ? ? ? 88 50 20");
-        static uint32_t* Width = nullptr;
-        static uint32_t* Height = nullptr;
-        struct ResHook
-        {
-            void operator()(injector::reg_pack& regs)
+            else
             {
-                *(uint32_t*)(regs.eax + 0x14) = 1;
-                if (!Width || !Height)
+                float fAspectRatio = static_cast<float>(*Width) / static_cast<float>(*Height);
+                if (fAspectRatio <= 1.34)
                 {
-                    Width = (uint32_t*)(regs.eax + 0x18);
-                    Height = (uint32_t*)(regs.eax + 0x1C);
+                    fHudScale = 1.0f;
+                    fHudWidth = 1280.0f;
+                    fHudXPos = -1.0f;
                 }
+                else
+                {
+                    fHudScale = 1280.0f / (720.0f * fAspectRatio);
+                    fHudWidth = 1280.0f / fHudScale;
+                    fHudXPos = -1.0f * fHudScale;
+                }
+            }
 
+            if (nWindowedMode)
+            {
                 tagRECT rc;
                 auto[DesktopResW, DesktopResH] = GetDesktopRes();
                 rc.left = (LONG)(((float)DesktopResW / 2.0f) - ((float)*Width / 2.0f));
@@ -514,7 +536,24 @@ void Init4()
                     SetWindowLong(*hGameHWND, GWL_STYLE, GetWindowLong(*hGameHWND, GWL_STYLE) & ~WS_OVERLAPPEDWINDOW);
                 }
             }
-        }; injector::MakeInline<ResHook>(pattern.get_first(0), pattern.get_first(7));
+        }
+    }; injector::MakeInline<ResHook>(pattern.get_first(0), pattern.get_first(7));
+
+    //HUD X Pos
+    pattern = GetPattern("F3 0F 11 44 24 0C E8 ? ? ? ? 0F 57 C0 F3 0F 10 0D ? ? ? ? F3 0F 10 15");
+    injector::WriteMemory(pattern.get_first(26), &fHudXPos, true);
+
+    if (nWindowedMode)
+    {
+        pattern = GetPattern("89 5D 3C 89 5D 18 89 5D 44"); //0x708379
+        struct WindowedMode
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                *(uint32_t*)(regs.ebp + 0x3C) = 1;
+                *(uint32_t*)(regs.ebp + 0x18) = regs.ebx;
+            }
+        }; injector::MakeInline<WindowedMode>(pattern.get_first(0), pattern.get_first(6));
 
         pattern = GetPattern("C7 06 ? ? ? ? C7 46 ? ? ? ? ? 83 79 3C 00 57");
         struct WindowedModeRect
