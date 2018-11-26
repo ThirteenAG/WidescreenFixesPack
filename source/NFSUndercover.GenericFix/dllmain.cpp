@@ -37,7 +37,7 @@ void InitRes()
     }
     list3[i] = 0;
 
-    auto pattern = GetPattern("E8 ? ? ? ? 33 FF 39 ? ? ? ? ? 76 22 8B 04 BD"); //0x587291
+    auto pattern = GetPattern("E8 ? ? ? ? 33 FF 39 ? ? ? ? ? 76"); //0x587291
     injector::MakeNOP(pattern.get_first(0), 5, true);
     injector::WriteMemory(*pattern.get_first<void*>(9), list3.size() - 1, true);//0x12AA194
 
