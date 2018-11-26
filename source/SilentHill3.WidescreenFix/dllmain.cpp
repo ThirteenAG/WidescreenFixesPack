@@ -87,6 +87,8 @@ void Init()
         injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(0), 0xC3, true);
         pattern = hook::pattern("8B 44 24 04 8B 4C 24 08 A3 ? ? ? ? 89 0D ? ? ? ? 33 C0 C3"); //00402B60
         injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(0), 0xC3, true);
+        pattern = hook::pattern("8B 07 83 EC 0C 53 33 DB 3B C3 56"); //005E26D0
+        injector::MakeRET(pattern.get_first(0));
 
         if (RenderResX == 0 && RenderResY == 0)
         {
