@@ -218,7 +218,7 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 
 ![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed HUD
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Only support for different aspect ratios like 21:9 is added
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Only supports different aspect ratios like 21:9
 
 [Download](http://thirteenag.github.io/wfp#flatoutuc)
 |
@@ -258,7 +258,7 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 
 ![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Field of View
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Many different options avaialable in the ini file
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Many different options available in the ini file
 
 [Download](http://thirteenag.github.io/wfp#gta3)
 |
@@ -274,7 +274,7 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 
 ![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Field of View
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Many different options avaialable in the ini file
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Many different options available in the ini file
 
 [Download](http://thirteenag.github.io/wfp#gtavc)
 |
@@ -286,7 +286,7 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 
 ![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed HUD (customization options for wshps)
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Many different options avaialable in the ini file
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Many different options available in the ini file
 
 [Download](http://thirteenag.github.io/wfp#gtasa)
 |
@@ -362,7 +362,7 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Adjustable FOV via ini
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added option to increase mouse sensitivity beyond the game limit
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added option to increase mouse sensitivity beyond the game's limit
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added option to make FMVs fullscreen
 
@@ -435,6 +435,10 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 ![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Field of View
 
 ![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed FMVs
+
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added option to increase draw distance
+
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added option to change fps limit
 
 [Download](http://thirteenag.github.io/wfp#mafia)
 |
@@ -574,7 +578,7 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added option to change save game directory
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added option to write registry settings to file
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added option to write registry settings to a file
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added option to improve gamepad support (gamepad icons, fixed bindings etc)
 
@@ -610,7 +614,7 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added option to change save game directory
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added option to write registry settings to file
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added option to write registry settings to a file
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added option to improve gamepad support (gamepad icons, fixed bindings etc)
 
@@ -644,7 +648,7 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added option to change save game directory
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added option to write registry settings to file
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added option to write registry settings to a file
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added option to improve gamepad support (gamepad icons, fixed bindings etc)
 
@@ -676,7 +680,7 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added option to change save game directory
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added option to write registry settings to file
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added option to write registry settings to a file
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added option to improve gamepad support (gamepad icons, fixed bindings etc)
 
@@ -704,7 +708,7 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added option to change save game directory
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added option to write registry settings to file
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added option to write registry settings to a file
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added option to improve gamepad support (gamepad icons, fixed bindings etc)
 
@@ -956,7 +960,7 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added option to increase night vision resolution
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added option to change goggles light color
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added option to change goggles' light color
 
 [Download](http://thirteenag.github.io/wfp#scpt)
 |
@@ -976,7 +980,7 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 
 ![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed FMVs
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added option to change goggles light color
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added option to change goggles' light color
 
 [Download](http://thirteenag.github.io/wfp#scct)
 |
@@ -996,7 +1000,7 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 
 ![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed FMVs
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added option to change goggles light color
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added option to change goggles' light color
 
 [Download](http://thirteenag.github.io/wfp#scda)
 |
