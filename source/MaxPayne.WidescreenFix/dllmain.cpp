@@ -583,7 +583,7 @@ void Init()
     static auto FOVHook = [](uintptr_t _this, uintptr_t edx) -> float
     {
         float f = AdjustFOV(*(float*)(_this + 0x58) * 57.295776f, Screen.fAspectRatio) * Screen.fFOVFactor;
-        Screen.fFieldOfView = (((f > 179.0f) ? 179.0f : f) / 57.295776f);
+        Screen.fFieldOfView = f / 57.295776f;
         return Screen.fFieldOfView;
     };
 
@@ -597,6 +597,19 @@ void Init()
         if (dest == sub_50B9E0)
             injector::MakeCALL(addr, static_cast<float(__fastcall *)(uintptr_t, uintptr_t)>(FOVHook), true);
     }
+
+    pattern = hook::pattern("D8 4C 24 38 D9 54 24 38 D8 1D");
+    struct FOVCheck
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            float f = *(float*)(regs.esp + 0x38);
+            _asm {fmul dword ptr[f]}
+            _asm {fst dword ptr[f]}
+            *(float*)(regs.esp + 0x38) = (f > 3.14f) ? 3.14f : f;
+        }
+    }; injector::MakeInline<FOVCheck>(pattern.get_first(0), pattern.get_first(8)); // 0x4563D4
+
     pattern = hook::pattern("E8 ? ? ? ? D9 5C 24 14 8B CF E8"); // 0x45650D
     injector::MakeCALL(pattern.get_first(0), sub_50B9E0, true); // restoring cutscene FOV
 
