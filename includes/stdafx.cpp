@@ -67,10 +67,10 @@ void GetResolutionsList(std::vector<std::string>& list)
 
     std::sort(list.begin(), list.end(), [](const std::string& lhs, const std::string& rhs) {
         int32_t x1, y1, x2, y2;
-        sscanf(lhs.c_str(), "%dx%d", &x1, &y1);
-        sscanf(rhs.c_str(), "%dx%d", &x2, &y2);
+        sscanf_s(lhs.c_str(), "%dx%d", &x1, &y1);
+        sscanf_s(rhs.c_str(), "%dx%d", &x2, &y2);
         return (x1 != x2) ? (x1 < x2) : (x1 * y1 < x2 * y2);
-    });
+        });
     list.erase(std::unique(std::begin(list), std::end(list)), list.end());
 }
 
