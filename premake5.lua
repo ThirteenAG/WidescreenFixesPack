@@ -137,8 +137,11 @@ project "KnightRider2.WidescreenFix"
       setpaths("Z:/WFP/Games/PCSX2/", "pcsx2.exe")
 project "LARush.WidescreenFix"
    setpaths("Z:/WFP/Games/LA Rush/", "LARush.exe", "plugins/")
+project "Mafia.GenericFix"
+   setpaths("Z:/WFP/Games/Mafia/", "Setup.exe")
+   targetdir "data/Mafia.WidescreenFix/scripts"
 project "Mafia.WidescreenFix"
-   setpaths("Z:/WFP/Games/Mafia/", "Game.exe")
+   setpaths("Z:/WFP/Games/Mafia/", "GameV12.exe")
 project "Manhunt.WidescreenFix"
    setpaths("Z:/WFP/Games/Manhunt/", "manhunt.exe")
 project "MassEffectTrilogy.FOVFix"

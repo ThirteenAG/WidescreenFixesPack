@@ -259,12 +259,12 @@ public:
             if (ptr == nullptr)
                 ptr = (uint32_t*)((DWORD)mh + ntHeader->OptionalHeader.BaseOfCode + ntHeader->OptionalHeader.SizeOfCode - offset);
             std::thread([](std::function<void()>&& fn, uint32_t* ptr, uint32_t val)
-            {
-                while (*ptr == val)
-                    std::this_thread::yield();
+                {
+                    while (*ptr == val)
+                        std::this_thread::yield();
 
-                fn();
-            }, fn, ptr, *ptr).detach();
+                    fn();
+                }, fn, ptr, *ptr).detach();
         }
     }
 
@@ -407,6 +407,8 @@ private:
     static /*inline s   t*/ std::map<std::string, std::string> DefaultStrings;
     static /*inline h    */ std::set<std::string, std::less<>> PathStrings;
 public:
+    static inline DWORD OverrideTypeREG_NONE = REG_NONE;
+
     RegistryWrapper(std::string_view searchString, std::string_view iniPath)
     {
         filter = searchString;
@@ -478,6 +480,9 @@ public:
 
         if (hKey == NULL)
         {
+            if (OverrideTypeREG_NONE)
+                lpType = &OverrideTypeREG_NONE;
+
             if (lpType)
             {
                 switch (*lpType)
@@ -588,6 +593,9 @@ public:
     {
         if (hKey == NULL)
         {
+            if (OverrideTypeREG_NONE)
+                dwType = OverrideTypeREG_NONE;
+
             switch (dwType)
             {
             case REG_BINARY:
@@ -663,8 +671,11 @@ public:
     }
     static LSTATUS WINAPI RegCreateKeyExA(HKEY hKey, LPCSTR lpSubKey, DWORD Reserved, LPSTR lpClass, DWORD dwOptions, REGSAM samDesired, CONST LPSECURITY_ATTRIBUTES lpSecurityAttributes, PHKEY phkResult, LPDWORD lpdwDisposition)
     {
-        if (hKey == NULL) {
-            return ERROR_SUCCESS; //not implemented
+        if (strstr(lpSubKey, filter.c_str()) != NULL) {
+            *phkResult = NULL;
+            section = lpSubKey;
+            section = section.substr(section.find_last_of('\\') + 1);
+            return ERROR_SUCCESS;
         }
         else
             return ::RegCreateKeyExA(hKey, lpSubKey, Reserved, lpClass, dwOptions, samDesired, lpSecurityAttributes, phkResult, lpdwDisposition);

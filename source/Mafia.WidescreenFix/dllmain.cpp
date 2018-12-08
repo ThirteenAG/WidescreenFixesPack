@@ -109,7 +109,9 @@ bool Init() {
         WriteLog("Detected Game.exe: v.1.2 eng\n");
     }
     else {
-        MessageBoxA(NULL, "This version of Game.exe is not supported.\nWideScreen Fix will be disabled.", "Mafia WideScreen Fix", MB_ICONERROR | MB_SYSTEMMODAL | MB_SETFOREGROUND);
+        //Disabling messagebox for setup.exe
+        //MessageBoxA(NULL, "This version of Game.exe is not supported.\nWideScreen Fix will be disabled.", "Mafia WideScreen Fix", MB_ICONERROR | MB_SYSTEMMODAL | MB_SETFOREGROUND);
+        WriteLog("This version of Game.exe is not supported. WideScreen Fix will be disabled.\n");
         return false;
     }
 
@@ -229,7 +231,7 @@ void FovHook() {
 void HUDHook() {
     // Устанавливаем правильные пропорции:
 
-        // HUD, титры авторов... 
+    // HUD, титры авторов... 
     static int v10_sub_005533A7[3] = { 0x005533A7, 0x00600FBF, 0x006017AF };
     CPatch::SetPointer(v10_sub_005533A7[game_version] + 0x2, &one_p_cur_base_width);
 
@@ -720,7 +722,7 @@ void SetHooks() {
     one_p_cur_base_width = 1.0f / cur_base_width;
     //	one_p_cur_base_height = 1.0f / cur_base_height;
 
-        // Исправляем FOV
+    // Исправляем FOV
     if (fov_patch) {
         FovHook();
     }
