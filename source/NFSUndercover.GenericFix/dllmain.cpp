@@ -542,7 +542,34 @@ void Init4()
     //HUD X Pos
     pattern = GetPattern("F3 0F 11 44 24 0C E8 ? ? ? ? 0F 57 C0 F3 0F 10 0D ? ? ? ? F3 0F 10 15");
     injector::WriteMemory(pattern.get_first(26), &fHudXPos, true);
+#if 0
+    //FOV
+    pattern = GetPattern("F2 0F 10 0D ? ? ? ? 0F B7 C5 F2 0F 2A C0"); //0x74A81F
+    struct FOVHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            static constexpr double qword_C1FD28 = 1.174999952316284;
+            static double qword_BE3DE8 = 0.005493164062500 * (1.0f / fHudScale);
+            static double qword_BD9D40 = 10.00000000000000 * (1.0f / fHudScale) * (1.0f / fHudScale) * (1.0f / fHudScale);
 
+            float f = (float)*(int32_t*)(regs.esp + 0x38) * (1.0f / fHudScale);
+
+            *(int32_t*)&regs.ebp = (int32_t)f;
+
+            double d = (double)LOWORD(regs.ebp);
+            _asm
+            {
+                movsd    xmm1, ds : qword_C1FD28
+                movsd    xmm0, ds : d
+                mulsd    xmm0, ds : qword_BE3DE8
+                cvtsd2ss xmm0, xmm0
+                cvtss2sd xmm0, xmm0
+                subsd    xmm0, ds : qword_BD9D40
+            }
+        }
+    }; injector::MakeInline<FOVHook>(pattern.get_first(0), pattern.get_first(39));
+#endif
     if (nWindowedMode)
     {
         pattern = GetPattern("89 5D 3C 89 5D 18 89 5D 44"); //0x708379
@@ -584,27 +611,27 @@ void Init4()
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
-    {
-        //securom compatibility
-        auto ModuleStart = (uintptr_t)GetModuleHandle(NULL);
-        MEMORY_BASIC_INFORMATION mbi;
-        auto pattern = hook::pattern("FF 25"); //jmp
-        for (size_t i = 0; i < pattern.size(); i++)
         {
-            auto addr = injector::ReadMemory<uintptr_t>(pattern.get(i).get<void>(2), true);
-            VirtualQuery((PVOID)addr, &mbi, sizeof(MEMORY_BASIC_INFORMATION));
-            if (RangeEnd < addr && mbi.Protect == PAGE_EXECUTE_WRITECOPY && mbi.AllocationBase == (PVOID)ModuleStart)
+            //securom compatibility
+            auto ModuleStart = (uintptr_t)GetModuleHandle(NULL);
+            MEMORY_BASIC_INFORMATION mbi;
+            auto pattern = hook::pattern("FF 25"); //jmp
+            for (size_t i = 0; i < pattern.size(); i++)
             {
-                RangeStart = (uintptr_t)mbi.BaseAddress;
-                RangeEnd = (uintptr_t)mbi.BaseAddress + mbi.RegionSize;
+                auto addr = injector::ReadMemory<uintptr_t>(pattern.get(i).get<void>(2), true);
+                VirtualQuery((PVOID)addr, &mbi, sizeof(MEMORY_BASIC_INFORMATION));
+                if (RangeEnd < addr && mbi.Protect == PAGE_EXECUTE_WRITECOPY && mbi.AllocationBase == (PVOID)ModuleStart)
+                {
+                    RangeStart = (uintptr_t)mbi.BaseAddress;
+                    RangeEnd = (uintptr_t)mbi.BaseAddress + mbi.RegionSize;
+                }
             }
-        }
 
-        CallbackHandler::RegisterCallback(Init1, hook::range_pattern(ModuleStart, RangeEnd, "C7 44 24 ? ? ? ? ? FF 15 ? ? ? ? 8D 54 24 0C 52"));
-        CallbackHandler::RegisterCallback(Init2, hook::range_pattern(ModuleStart, RangeEnd, "E8 ? ? ? ? 8B 4E 04 83 C4 20 89 46 08 8B 15 ? ? ? ? 51 52 68 0B 20 00 00"));
-        CallbackHandler::RegisterCallback(Init3, hook::range_pattern(ModuleStart, RangeEnd, "FF 15 ? ? ? ? 8D 54 24 40 52 68 3F 00 0F 00"));
-        CallbackHandler::RegisterCallback(Init4, hook::range_pattern(ModuleStart, RangeEnd, "8B 0D ? ? ? ? 6A 01 51 8B C8"));
-    });
+            CallbackHandler::RegisterCallback(Init1, hook::range_pattern(ModuleStart, RangeEnd, "C7 44 24 ? ? ? ? ? FF 15 ? ? ? ? 8D 54 24 0C 52"));
+            CallbackHandler::RegisterCallback(Init2, hook::range_pattern(ModuleStart, RangeEnd, "E8 ? ? ? ? 8B 4E 04 83 C4 20 89 46 08 8B 15 ? ? ? ? 51 52 68 0B 20 00 00"));
+            CallbackHandler::RegisterCallback(Init3, hook::range_pattern(ModuleStart, RangeEnd, "FF 15 ? ? ? ? 8D 54 24 40 52 68 3F 00 0F 00"));
+            CallbackHandler::RegisterCallback(Init4, hook::range_pattern(ModuleStart, RangeEnd, "8B 0D ? ? ? ? 6A 01 51 8B C8"));
+        });
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)

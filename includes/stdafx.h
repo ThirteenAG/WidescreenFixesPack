@@ -24,6 +24,7 @@
 #include "injector\utility.hpp"
 #include "Hooking.Patterns.h"
 #include "log.h"
+#include "ModuleList.hpp"
 #pragma warning(pop)
 
 #ifndef CEXP
@@ -34,6 +35,7 @@ float GetFOV(float f, float ar);
 float GetFOV2(float f, float ar);
 float AdjustFOV(float f, float ar);
 
+bool IsUALPresent();
 void CreateThreadAutoClose(LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_T dwStackSize, LPTHREAD_START_ROUTINE lpStartAddress, LPVOID lpParameter, DWORD dwCreationFlags, LPDWORD lpThreadId);
 std::tuple<int32_t, int32_t> GetDesktopRes();
 void GetResolutionsList(std::vector<std::string>& list);

@@ -20,6 +20,18 @@ void CreateThreadAutoClose(LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_T dwSt
     CloseHandle(CreateThread(lpThreadAttributes, dwStackSize, lpStartAddress, lpParameter, dwCreationFlags, lpThreadId));
 }
 
+bool IsUALPresent()
+{
+    ModuleList dlls;
+    dlls.Enumerate(ModuleList::SearchLocation::LocalOnly);
+    for (auto& e : dlls.m_moduleList)
+    {
+        if (GetProcAddress(std::get<HMODULE>(e), "TitleExport_XUserFindUsers") != NULL)
+            return true;
+    }
+    return false;
+}
+
 std::tuple<int32_t, int32_t> GetDesktopRes()
 {
     HMONITOR monitor = MonitorFromWindow(GetDesktopWindow(), MONITOR_DEFAULTTONEAREST);
