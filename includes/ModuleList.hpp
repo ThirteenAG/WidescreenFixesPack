@@ -5,34 +5,6 @@
 #include <cassert>
 #include <tuple>
 
-std::wstring GetModuleFileNameW(HMODULE hModule)
-{
-    static constexpr auto INITIAL_BUFFER_SIZE = MAX_PATH;
-    static constexpr auto MAX_ITERATIONS = 7;
-    std::wstring ret;
-    auto bufferSize = INITIAL_BUFFER_SIZE;
-    for (size_t iterations = 0; iterations < MAX_ITERATIONS; ++iterations)
-    {
-        ret.resize(bufferSize);
-        auto charsReturned = GetModuleFileNameW(hModule, &ret[0], bufferSize);
-        if (charsReturned < ret.length())
-        {
-            ret.resize(charsReturned);
-            return ret;
-        }
-        else
-        {
-            bufferSize *= 2;
-        }
-    }
-    return L"";
-}
-
-bool starts_with(const std::wstring &big_str, const std::wstring &small_str)
-{
-    return big_str.compare(0, small_str.length(), small_str) == 0;
-};
-
 // Stores a list of loaded modules with their names, WITHOUT extension
 class ModuleList
 {
@@ -125,7 +97,7 @@ public:
 
         auto it = std::find_if(m_moduleList.begin(), m_moduleList.end(), [&](const auto& e) {
             return _wcsicmp(moduleName, std::get<1>(e).c_str()) == 0;
-        });
+            });
         return it != m_moduleList.end() ? std::get<0>(*it) : nullptr;
     }
 
@@ -150,6 +122,29 @@ public:
 private:
     void EnumerateInternal(HMODULE* modules, SearchLocation location, size_t numModules)
     {
+        auto GetModuleFileNameW = [](HMODULE hModule) -> std::wstring
+        {
+            static constexpr auto INITIAL_BUFFER_SIZE = MAX_PATH;
+            static constexpr auto MAX_ITERATIONS = 7;
+            std::wstring ret;
+            auto bufferSize = INITIAL_BUFFER_SIZE;
+            for (size_t iterations = 0; iterations < MAX_ITERATIONS; ++iterations)
+            {
+                ret.resize(bufferSize);
+                auto charsReturned = ::GetModuleFileNameW(hModule, &ret[0], bufferSize);
+                if (charsReturned < ret.length())
+                {
+                    ret.resize(charsReturned);
+                    return ret;
+                }
+                else
+                {
+                    bufferSize *= 2;
+                }
+            }
+            return L"";
+        };
+
         const auto exeModulePath = GetModuleFileNameW(NULL).substr(0, GetModuleFileNameW(NULL).find_last_of(L"/\\"));
 
         m_moduleList.reserve(numModules);
@@ -160,6 +155,11 @@ private:
 
             if (!moduleName.empty())
             {
+                auto starts_with = [](const std::wstring &big_str, const std::wstring &small_str) -> bool
+                {
+                    return big_str.compare(0, small_str.length(), small_str) == 0;
+                };
+
                 const wchar_t* nameBegin = wcsrchr(moduleName.c_str(), '\\') + 1;
                 const wchar_t* dotPos = wcsrchr(nameBegin, '.');
                 bool isLocal = starts_with(std::wstring(moduleName), exeModulePath);

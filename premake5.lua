@@ -77,6 +77,8 @@ project "CallOfCthulhu.WidescreenFix"
    setpaths("Z:/WFP/Games/Call of Cthulhu/", "Engine/CoCMainWin32.exe", "Engine/scripts/")
 project "ColdFear.WidescreenFix"
    setpaths("Z:/WFP/Games/ColdFear/", "ColdFear_retail.exe")
+project "Condemned.WidescreenFix"
+   setpaths("Z:/WFP/Games/Condemned Criminal Origins/", "Condemned.exe")
 project "DeerAvenger4.WidescreenFix"
    setpaths("Z:/WFP/Games/Deer Avenger 4/", "DA4.exe")
 project "DevilMayCry3.WidescreenFix"
@@ -172,6 +174,8 @@ project "PsiOpsTheMindgateConspiracy.WidescreenFix"
    setpaths("Z:/WFP/Games/PSI-OPS/", "PsiOps.exe")
 project "Psychonauts.WidescreenFix"
    setpaths("Z:/WFP/Games/Psychonauts/", "Psychonauts.exe")
+project "Scarface.GenericFix"
+   setpaths("Z:/WFP/Games/Scarface/", "Scarface.exe", "")
 project "SecondSight.WidescreenFix"
    setpaths("Z:/WFP/Games/Second Sight/", "secondsight.exe")
 project "SilentHill2.WidescreenFix"
