@@ -94,11 +94,48 @@ void Init()
     }
 }
 
+int WINAPI GetSystemMetricsHook(int nIndex)
+{
+    return 0;
+}
+
+HWND WINAPI CreateWindowExAHook(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam)
+{
+    auto hwnd = ::CreateWindowExA(dwExStyle, lpClassName, lpWindowName, dwStyle & ~WS_OVERLAPPEDWINDOW, X, Y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
+
+    if (dwStyle != 0x50000000)
+    {
+        auto[DesktopResW, DesktopResH] = GetDesktopRes();
+        tagRECT rect;
+        rect.left = (LONG)(((float)DesktopResW / 2.0f) - (nWidth / 2.0f));
+        rect.top = (LONG)(((float)DesktopResH / 2.0f) - (nHeight / 2.0f));
+        rect.right = nWidth;
+        rect.bottom = nHeight;
+        SetWindowPos(hwnd, NULL, rect.left, rect.top, rect.right, rect.bottom, SWP_NOACTIVATE | SWP_NOZORDER);
+    }
+
+    return hwnd;
+}
+
+void InitLS3DF()
+{
+    CIniReader iniReader("");
+
+    if (iniReader.ReadInteger("MAIN", "BorderlessWindowed", 1) != 0)
+    {
+        auto pattern = hook::module_pattern(GetModuleHandle(L"LS3DF"), "FF 15 ? ? ? ? 85 C0 0F 95 C0 A2 ? ? ? ? 8B 0E 56 FF 51 40");
+        injector::WriteMemory(*pattern.get_first<uint32_t*>(2), GetSystemMetricsHook, true);
+        pattern = hook::module_pattern(GetModuleHandle(L"LS3DF"), "FF 15 ? ? ? ? 3B C5 A3 ? ? ? ? 0F 84 ? ? ? ? 50");
+        injector::WriteMemory(*pattern.get_first<uint32_t*>(2), CreateWindowExAHook, true);
+    }
+}
+
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
         {
             CallbackHandler::RegisterCallback(Init);
+            CallbackHandler::RegisterCallback(L"LS3DF.dll", InitLS3DF);
         });
 }
 
