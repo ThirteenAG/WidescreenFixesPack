@@ -86,6 +86,28 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 |
 [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/ColdFear.WidescreenFix/scripts/ColdFear.WidescreenFix.ini)
 
+## Condemned: Criminal Origins Widescreen Fix
+
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Resolution (Config.exe)
+
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Aspect Ratio (Ultra-Wide)
+
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed HUD (Ultra-Wide)
+
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added option to fix stretched menu
+
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added option to fix low framerate
+
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added option to fix issue when controls aren't saved
+
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added option to make windowed mode borderless
+
+[Download](http://thirteenag.github.io/wfp#condemned)
+|
+[Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/Condemned.WidescreenFix/dllmain.cpp)
+|
+[Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/Condemned.WidescreenFix/scripts/Condemned.WidescreenFix.ini)
+
 ## Deer Avenger 4 Widescreen Fix
 
 ![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Aspect Ratio

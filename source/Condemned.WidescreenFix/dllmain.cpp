@@ -108,8 +108,20 @@ void Init()
     }
 }
 
+void InitSavePath()
+{
+    if (IniFile.FixSavePath)
+    {
+        static auto pF = &SHGetFolderPathAHook;
+        auto pattern = hook::pattern("FF 15 ? ? ? ? 85 C0 7C 4F 56 57 BE ? ? ? ? 56");
+        injector::WriteMemory(pattern.get_first(2), &pF, true);
+    }
+}
+
 void InitGameClient()
 {
+    InitSavePath();
+
     if (IniFile.FixAspectRatio)
     {
         //Hud
@@ -161,16 +173,6 @@ void InitConfig()
     }
 }
 
-void InitSavePath()
-{
-    if (IniFile.FixSavePath)
-    {
-        static auto pF = &SHGetFolderPathAHook;
-        auto pattern = hook::pattern("FF 15 ? ? ? ? 85 C0 7C 4F 56 57 BE ? ? ? ? 56");
-        injector::WriteMemory(pattern.get_first(2), &pF, true);
-    }
-}
-
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
@@ -186,6 +188,9 @@ CEXP void InitializeASI()
             CallbackHandler::RegisterCallback(InitConfig, hook::pattern("0F 85 ? ? ? ? 83 7C 24 2C 16 0F 85 ? ? ? ? 6A 7F"));
             CallbackHandler::RegisterCallback(InitSavePath, hook::pattern("FF 15 ? ? ? ? 85 C0 7C 4F 56 57 BE ? ? ? ? 56"));
             CallbackHandler::RegisterCallback(L"GameClient.dll", InitGameClient);
+            CallbackHandler::RegisterCallback(L"EngineServer.dll", InitSavePath);
+            CallbackHandler::RegisterCallback(L"GameDatabase.dll", InitSavePath);
+            CallbackHandler::RegisterCallback(L"GameServer.dll", InitSavePath);
         });
 }
 
