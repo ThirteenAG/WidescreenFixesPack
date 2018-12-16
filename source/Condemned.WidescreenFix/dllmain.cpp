@@ -15,16 +15,21 @@ HRESULT SHGetFolderPathAHook(HWND hwnd, int csidl, HANDLE hToken, DWORD dwFlags,
 {
     auto r = SHGetFolderPathA(hwnd, CSIDL_PERSONAL | CSIDL_FLAG_CREATE, hToken, dwFlags, pszPath);
 
-    CHAR szPath[MAX_PATH];
-    if (SUCCEEDED(SHGetFolderPathA(NULL, CSIDL_COMMON_DOCUMENTS | CSIDL_FLAG_CREATE, NULL, 0, szPath)))
+    static bool once = false;
+    if (!once)
     {
-        auto src = std::filesystem::path(std::string(szPath) + "\\Monolith Productions\\Condemned\\");
         auto dest = std::filesystem::path(std::string(pszPath) + "\\Monolith Productions\\Condemned\\");
         if (!std::filesystem::exists(dest))
         {
-            std::filesystem::create_directories(dest);
-            std::filesystem::copy(src, dest, std::filesystem::copy_options::recursive);
+            CHAR szPath[MAX_PATH];
+            if (SUCCEEDED(SHGetFolderPathA(NULL, CSIDL_COMMON_DOCUMENTS | CSIDL_FLAG_CREATE, NULL, 0, szPath)))
+            {
+                auto src = std::filesystem::path(std::string(szPath) + "\\Monolith Productions\\Condemned\\");
+                std::filesystem::create_directories(dest);
+                std::filesystem::copy(src, dest, std::filesystem::copy_options::recursive);
+            }
         }
+        once = true;
     }
 
     return r;
@@ -43,6 +48,8 @@ void __fastcall sub_4059F0(float* _this, uint32_t edx, float* a2)
     _this[62] = (_this[62] < _this[60]) ? _this[60] : _this[62];
 }
 
+uint32_t gc_16C900;
+uint32_t gc_16DD00;
 void Init()
 {
     if (IniFile.FixLowFramerate)
@@ -63,6 +70,11 @@ void Init()
 
     if (IniFile.FixMenu)
     {
+        static auto exe_567CC4 = *hook::pattern("8B 0D ? ? ? ? 85 C9 74 05 E9 ? ? ? ? C3").count(4).get(1).get<uint32_t>(2);
+        static auto exe_567C78 = *hook::pattern("68 ? ? ? ? E8 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 83 C4 10 C3").count(41).get(40).get<uint32_t>(1);
+        static auto exe_567CF8 = *hook::get_pattern<uint32_t>("8B 0D ? ? ? ? 85 C9 74 05 E8 ? ? ? ? 8B 0D ? ? ? ? 85 C9 74 05 E8 ? ? ? ? 8B 0D ? ? ? ? 85 C9", 2) + 0x28;
+        static auto exe_5701F8 = *hook::get_pattern<uint32_t>("56 8B F1 8D 46 0C 68 ? ? ? ? 50", 7);
+
         auto pattern = hook::pattern("8B C3 D9 5C 24 24 F3 A5 5F 5E 83 C4 38 C3");
         struct HudHook
         {
@@ -76,23 +88,34 @@ void Init()
                 auto w = *(uint32_t*)(regs.esp + 0x08);
                 auto h = *(uint32_t*)(regs.esp + 0x0C);
 
-                if ((*(float*)(regs.esp + 0x50) == 1.0f && *(uint32_t*)(regs.esp + 0x54) == 0 && *(uint32_t*)(regs.esp + 0x98) == 1) ||
-                    (*(float*)(regs.esp + 0x2C) == 1.0f && *(uint32_t*)(regs.esp + 0x30) == 0 && *(uint32_t*)(regs.esp + 0xE4) == 1))
+                uint32_t arr[10];
+                for (size_t i = regs.esp, j = 0; j < 9; i += 4)
                 {
-                    if (*(uint32_t*)(regs.esp + 0xC4) >= 37570176 && (*(uint32_t*)(regs.esp + 0x114) == 0 || *(uint32_t*)(regs.esp + 0x114) == 2 ||
-                        *(uint32_t*)(regs.esp + 0x110) == 0 || *(uint32_t*)(regs.esp + 0x110) == 2 || *(float*)(regs.esp + 0x110) == -0.5f ||
-                        (*(float*)(regs.esp + 0x11C) == -0.5f && *(float*)(regs.esp + 0x50) == 1.0f)))
+                    if ((*(size_t*)i > (size_t)GetModuleHandle(NULL) && *(size_t*)i < (size_t)GetModuleHandle(NULL) + 0x176004) || (*(size_t*)i > (size_t)GetModuleHandle(L"GameClient") && *(size_t*)i < (size_t)GetModuleHandle(L"GameClient") + 0x172AD8))
                     {
-                        //*(float*)(regs.esp + 0x10) /= (((float)w / (float)h) / (4.0f / 3.0f)); //x fix
-                        //*(float*)(regs.esp + 0x1C) /= (((float)w / (float)h) / (4.0f / 3.0f)); //x fix
-
-                        *(float*)(regs.esp + 0x24) *= (((float)w / (float)h) / (4.0f / 3.0f)); //y fix
-                        *(float*)(regs.esp + 0x2C) *= (((float)w / (float)h) / (4.0f / 3.0f)); //y fix
+                        arr[j] = *(size_t*)i;
+                        ++j;
                     }
-                    else if (*(uint32_t*)(regs.esp + 0xC4) == 3 && *(uint32_t*)(regs.esp + 0x114) > 0 && *(uint32_t*)(regs.esp + 0x114) <= 10)
+
+                    if (i > regs.esp + 0x100)
+                        break;
+                }
+
+                if ((arr[0] == exe_567CC4 && arr[1] == exe_5701F8 && arr[6] == arr[7] && arr[7] == arr[8]) ||
+                    (arr[0] == exe_567CC4 && arr[1] == exe_5701F8 && arr[6] == arr[7] && ((arr[7] == gc_16C900 || (arr[7] == gc_16DD00)))))
+                {
+                    *(float*)(regs.esp + 0x24) *= (((float)w / (float)h) / (4.0f / 3.0f)); //y fix
+                    *(float*)(regs.esp + 0x2C) *= (((float)w / (float)h) / (4.0f / 3.0f)); //y fix
+                }
+                else
+                {
+                    if (arr[0] == exe_567CC4 && arr[1] == exe_5701F8 && arr[6] == exe_567CF8 && arr[7] == exe_567C78)
                     {
-                        *(float*)(regs.esp + 0x24) *= (((float)w / (float)h) / (4.0f / 3.0f)); //y fix
-                        *(float*)(regs.esp + 0x2C) *= (((float)w / (float)h) / (4.0f / 3.0f)); //y fix
+                        if (*(uint32_t*)(regs.esp + 0xC4) == 3 && *(uint32_t*)(regs.esp + 0x114) > 0 && *(uint32_t*)(regs.esp + 0x114) <= 10)
+                        {
+                            *(float*)(regs.esp + 0x24) *= (((float)w / (float)h) / (4.0f / 3.0f)); //y fix
+                            *(float*)(regs.esp + 0x2C) *= (((float)w / (float)h) / (4.0f / 3.0f)); //y fix
+                        }
                     }
                 }
             }
@@ -121,6 +144,13 @@ void InitSavePath()
 void InitGameClient()
 {
     InitSavePath();
+
+    if (IniFile.FixMenu)
+    {
+        auto unk_10169F30 = *hook::module_pattern(GetModuleHandle(L"GameClient"), "C7 05 ? ? ? ? ? ? ? ? C7 05 ? ? ? ? ? ? ? ? E8 ? ? ? ? 6A 04").get_first<void**>(6);
+        gc_16C900 = (uint32_t)(unk_10169F30 + 0xA74);
+        gc_16DD00 = (uint32_t)(unk_10169F30 + 0xF74);
+    }
 
     if (IniFile.FixAspectRatio)
     {
