@@ -82,7 +82,7 @@ void Init()
         for (size_t i = 0; i < pattern.size(); ++i) //http://pastebin.com/ZpkGX9My
         {
             if (i == 318 || i == 315 || i == 314 || i == 313 || i == 310 || i == 312 || i == 311 || i == 320 || i == 178 || i == 177 || i == 176 || i == 175 || i == 174 || i == 327 || i == 2 || i == 309
-                || i == 173 || i == 317 || i == 316 || i == 332 || i == 330)
+                || i == 173 || i == 317 || i == 316 || i == 332 || i == 330 || i == 333)
             {
                 injector::WriteMemory(pattern.get(i).get<uint32_t>(2), &Screen.Width, true);
             }
@@ -581,18 +581,18 @@ void Init()
         *(strrchr(buf, '\\') + 1) = '\0';
         std::string mPath(buf);
         LoadDatFile(DataFilePath, [&mPath](std::string_view line)
-        {
-            auto texPath = mPath + std::string(line);
-            std::FILE* fp = std::fopen(texPath.c_str(), "rb");
-            if (fp)
             {
-                uint16_t n;
-                std::fseek(fp, 0x10, SEEK_SET); // seek to start
-                std::fread(&n, sizeof(uint16_t), 1, fp);
-                std::fclose(fp);
-                images.emplace((uint32_t)n);
-            }
-        });
+                auto texPath = mPath + std::string(line);
+                std::FILE* fp = std::fopen(texPath.c_str(), "rb");
+                if (fp)
+                {
+                    uint16_t n;
+                    std::fseek(fp, 0x10, SEEK_SET); // seek to start
+                    std::fread(&n, sizeof(uint16_t), 1, fp);
+                    std::fclose(fp);
+                    images.emplace((uint32_t)n);
+                }
+            });
 
         static uint32_t* unk_1DBFC50 = nullptr;
         static auto sub_401168 = (uint32_t*(*)())(injector::GetBranchDestination(hook::get_pattern("E8 ? ? ? ? 50 68 ? ? ? ? E8 ? ? ? ? 8B 0D ? ? ? ? 8B C6 C1", 0)).as_int());
@@ -731,9 +731,9 @@ void Init()
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
-    {
-        CallbackHandler::RegisterCallback(Init, hook::pattern("6A 70 68 ? ? ? ? E8 ? ? ? ? 33 DB 53 8B 3D ? ? ? ? FF D7"));
-    });
+        {
+            CallbackHandler::RegisterCallback(Init, hook::pattern("6A 70 68 ? ? ? ? E8 ? ? ? ? 33 DB 53 8B 3D ? ? ? ? FF D7"));
+        });
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
