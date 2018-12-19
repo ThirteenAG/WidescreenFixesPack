@@ -53,6 +53,7 @@ before_build:
     cd ../../..
 build:
   project: build/WidescreenFixesPack.sln
+  parallel: true
   verbosity: minimal
 before_package:
 - cmd: >-

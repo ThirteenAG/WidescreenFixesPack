@@ -12,7 +12,7 @@ workspace "WidescreenFixesPack"
    targetdir "data/%{prj.name}/scripts"
    targetextension ".asi"
    characterset ("UNICODE")
-   flags { "StaticRuntime" }
+   staticruntime "On"
    
    defines { "rsc_CompanyName=\"ThirteenAG\"" }
    defines { "rsc_LegalCopyright=\"MIT License\""} 
