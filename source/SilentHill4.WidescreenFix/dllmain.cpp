@@ -62,6 +62,7 @@ void Init()
     bool bDisableRegistryDependency = iniReader.ReadInteger("MISC", "DisableRegistryDependency", 1) != 0;
     bool bDisableSafeMode = iniReader.ReadInteger("MISC", "DisableSafeMode", 1) != 0;
     bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 1) != 0;
+    bool bBrightnessFix = iniReader.ReadInteger("MISC", "BrightnessFix", 1) != 0;
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -322,14 +323,35 @@ void Init()
             }
         }; injector::MakeInline<GameStateHook>(pattern.get_first(0));
     }
+
+    if (bBrightnessFix)
+    {
+        static constexpr auto fContrastScale = 0.0075f;
+        static constexpr auto fBrightnessScale = 0.003875f;
+        static constexpr auto gamma = 0x000A0A0A;
+
+        pattern = hook::pattern("D8 0D ? ? ? ? DB 05 ? ? ? ? D8 0D ? ? ? ? 74 10 DD D8 DD D8");
+        injector::WriteMemory(pattern.get_first(2), &fContrastScale, true);    // 55A17E
+        injector::WriteMemory(pattern.get_first(14), &fBrightnessScale, true); // 55A18A
+
+        pattern = hook::pattern("68 ? ? ? ? C7 05 ? ? ? ? ? ? ? ? E8 ? ? ? ? 8B 44 24 1C");
+        injector::WriteMemory(pattern.get_first(1), gamma, true);  // 5226A9
+        injector::WriteMemory(pattern.get_first(11), gamma, true); // 5226AE
+
+        pattern = hook::pattern("BE ? ? ? ? 8D 7C 24 0C F3 A5");
+        injector::WriteMemory(*pattern.get_first<uint32_t>(1) + 0x1C, gamma, true); // 5C5B10
+
+        pattern = hook::pattern("83 FF 08 7D 2A 47 EB 1A");
+        injector::WriteMemory<uint8_t>(pattern.get_first<uint32_t>(2), 0x05, true); // 5222D2
+    }
 }
 
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
-    {
-        CallbackHandler::RegisterCallback(Init, hook::pattern("8B 0D ? ? ? ? 6A 00 50 51"));
-    });
+        {
+            CallbackHandler::RegisterCallback(Init, hook::pattern("8B 0D ? ? ? ? 6A 00 50 51"));
+        });
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
