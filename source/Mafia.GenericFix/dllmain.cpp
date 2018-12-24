@@ -130,12 +130,89 @@ void InitLS3DF()
     }
 }
 
+void InitIJoy()
+{
+    CIniReader iniReader("");
+    static float fLeftStickDeadzone = iniReader.ReadFloat("MAIN", "LeftStickDeadzone", 10.0f) / 100.0f;
+    static float fRightStickDeadzone = iniReader.ReadFloat("MAIN", "RightStickDeadzone", 10.0f) / 100.0f;
+    static constexpr auto pad_max = 10000.0f; //[ -10000 0 10000 ]
+
+    if (fLeftStickDeadzone)
+    {
+        auto pattern = hook::module_pattern(GetModuleHandle(L"IJoy"), "DB 06 F6 C1 04 D8 85");
+        struct LSHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                float x = static_cast<float>(*(int32_t*)(regs.esi + 0x00)) / pad_max;
+                float y = static_cast<float>(*(int32_t*)(regs.esi + 0x04)) / pad_max;
+                float f = *(float*)(regs.ebp + 0xF38);
+
+                auto len = sqrtf(x * x + y * y);
+                if (len < fLeftStickDeadzone)
+                {
+                    x = 0.0f;
+                    y = 0.0f;
+                }
+                else
+                {
+                    auto scale = min(1.0f, (len - fLeftStickDeadzone) / (1.0f - fLeftStickDeadzone)) / len;
+                    x *= scale * pad_max;
+                    y *= scale * pad_max;
+                };
+
+                *(int32_t*)(regs.esi + 0x00) = static_cast<int32_t>(x);
+                *(int32_t*)(regs.esi + 0x04) = static_cast<int32_t>(y);
+
+                _asm {fld  dword ptr[x]}
+                _asm {fadd dword ptr[f]}
+            }
+        }; injector::MakeInline<LSHook>(pattern.get_first(0), pattern.get_first(11)); //0x10002F71
+        injector::WriteMemory(pattern.get_first(5), 0x9004C1F6, true); //test cl, 4
+    }
+
+    if (fRightStickDeadzone)
+    {
+        auto pattern = hook::module_pattern(GetModuleHandle(L"IJoy"), "DB 45 2C F6 C1 04 D8 85");
+        struct RSX
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                float x = static_cast<float>(*(int32_t*)(regs.ebp + 0x2C)) / pad_max;
+                float y = static_cast<float>(*(int32_t*)(regs.ebp + 0x30)) / pad_max;
+                float f = *(float*)(regs.ebp + 0xF38);
+
+                auto len = sqrtf(x * x + y * y);
+                if (len < fRightStickDeadzone)
+                {
+                    x = 0.0f;
+                    y = 0.0f;
+                }
+                else
+                {
+                    auto scale = min(1.0f, (len - fRightStickDeadzone) / (1.0f - fRightStickDeadzone)) / len;
+                    x *= scale * pad_max;
+                    y *= scale * pad_max;
+                };
+
+                *(int32_t*)(regs.ebp + 0x2C) = static_cast<int32_t>(x);
+                *(int32_t*)(regs.ebp + 0x30) = static_cast<int32_t>(y);
+
+                _asm {fld  dword ptr[x]}
+                _asm {fadd dword ptr[f]}
+            }
+        }; injector::MakeInline<RSX>(pattern.get_first(0), pattern.get_first(12));
+        injector::WriteMemory(pattern.get_first(5), 0x9004C1F6, true); //test cl, 4
+    }
+}
+
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
         {
             CallbackHandler::RegisterCallback(Init);
             CallbackHandler::RegisterCallback(L"LS3DF.dll", InitLS3DF);
+            CallbackHandler::RegisterCallback(L"IJoy.dll", InitIJoy);
         });
 }
 
