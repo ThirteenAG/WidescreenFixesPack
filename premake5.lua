@@ -81,15 +81,12 @@ project "Condemned.WidescreenFix"
    setpaths("Z:/WFP/Games/Condemned Criminal Origins/", "Condemned.exe")
 project "DeerAvenger4.WidescreenFix"
    setpaths("Z:/WFP/Games/Deer Avenger 4/", "DA4.exe")
-project "DevilMayCry3.WidescreenFix"
-   setpaths("Z:/WFP/Games/Devil May Cry 3/", "dmc3se.exe")
 project "Driv3r.WidescreenFix"
    setpaths("Z:/WFP/Games/DRIV3R/", "driv3r.exe")
 project "DriverParallelLines.WidescreenFix"
    setpaths("Z:/WFP/Games/Driver Parallel Lines/", "DriverParallelLines.exe")
 project "EnterTheMatrix.WidescreenFix"
    setpaths("Z:/WFP/Games/Enter the Matrix/", "Matrix.exe")
-project "Fahrenheit.WidescreenFix"
 project "FarCry.WidescreenFix"
    setpaths("Z:/WFP/Games/Far Cry/", "Bin32/FarCry.exe", "Bin32/")
 project "FarCry64.WidescreenFix"

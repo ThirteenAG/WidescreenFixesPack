@@ -85,7 +85,7 @@ void Init()
             int32_t x, y;
             sscanf(s.c_str(), "%dx%d", &x, &y);
             return (fabs(((float)x / (float)y) - (4.0f / 3.0f)) < FLT_EPSILON);
-        }), list.end());
+            }), list.end());
     }
 
     auto pattern = hook::pattern("8B 74 24 10 0F BE 06 85 C0 57");
@@ -353,16 +353,16 @@ void Init()
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
-    {
-        CallbackHandler::RegisterCallback(Init, hook::pattern("8B 74 24 10 0F BE 06 85 C0 57"));
-    });
+        {
+            CallbackHandler::RegisterCallback(Init, hook::pattern("8B 74 24 10 0F BE 06 85 C0 57"));
+        });
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-
+        if (!IsUALPresent()) { InitializeASI(); }
     }
     return TRUE;
 }

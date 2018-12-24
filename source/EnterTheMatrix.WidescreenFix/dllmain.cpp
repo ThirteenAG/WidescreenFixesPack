@@ -204,17 +204,17 @@ void Init()
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
-    {
-        CallbackHandler::RegisterCallback(Init, hook::pattern("55 8B EC 83 EC 34 56 6A 00 6A FF"));
-        CallbackHandler::RegisterCallback(InitSettings, hook::pattern("8B 45 04 85 C0 74 6B 8B 15"));
-    });
+        {
+            CallbackHandler::RegisterCallback(Init, hook::pattern("55 8B EC 83 EC 34 56 6A 00 6A FF"));
+            CallbackHandler::RegisterCallback(InitSettings, hook::pattern("8B 45 04 85 C0 74 6B 8B 15"));
+        });
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-
+        if (!IsUALPresent()) { InitializeASI(); }
     }
     return TRUE;
 }

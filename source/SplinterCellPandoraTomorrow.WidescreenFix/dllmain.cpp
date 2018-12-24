@@ -407,19 +407,19 @@ void InitEngine()
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
-    {
-        CallbackHandler::RegisterCallback(Init);
-        CallbackHandler::RegisterCallback(L"Core.dll", InitCore);
-        CallbackHandler::RegisterCallback(L"Engine.dll", InitEngine);
-        CallbackHandler::RegisterCallback(L"D3DDrv.dll", InitD3DDrv);
-    });
+        {
+            CallbackHandler::RegisterCallback(Init);
+            CallbackHandler::RegisterCallback(L"Core.dll", InitCore);
+            CallbackHandler::RegisterCallback(L"Engine.dll", InitEngine);
+            CallbackHandler::RegisterCallback(L"D3DDrv.dll", InitD3DDrv);
+        });
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-
+        if (!IsUALPresent()) { InitializeASI(); }
     }
     return TRUE;
 }

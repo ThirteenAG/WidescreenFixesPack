@@ -236,23 +236,23 @@ void Init()
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
-    {
-        CallbackHandler::RegisterCallback(Init, hook::pattern("8D 4C 24 18 50 51 6A 04 8B CE"));
-
-        if (!hook::pattern("FF 35 ? ? ? ? 51 68 ? ? ? ? 50 E8 ? ? ? ? 83 C4 18 8B C8 E8 ? ? ? ? C6 45 FC 05").empty()) //pcsx2
         {
-            void PCSX2Thread();
-            std::thread t(PCSX2Thread);
-            t.detach();
-        }
-    });
+            CallbackHandler::RegisterCallback(Init, hook::pattern("8D 4C 24 18 50 51 6A 04 8B CE"));
+
+            if (!hook::pattern("FF 35 ? ? ? ? 51 68 ? ? ? ? 50 E8 ? ? ? ? 83 C4 18 8B C8 E8 ? ? ? ? C6 45 FC 05").empty()) //pcsx2
+            {
+                void PCSX2Thread();
+                std::thread t(PCSX2Thread);
+                t.detach();
+            }
+        });
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-
+        if (!IsUALPresent()) { InitializeASI(); }
     }
     return TRUE;
 }

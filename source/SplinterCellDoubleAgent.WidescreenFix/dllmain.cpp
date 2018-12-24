@@ -576,20 +576,20 @@ void InitEchelonMenus()
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
-    {
-        CallbackHandler::RegisterCallback(Init);
-        CallbackHandler::RegisterCallback(L"Window.dll", InitWindow);
-        CallbackHandler::RegisterCallback(L"Engine.dll", InitEngine);
-        CallbackHandler::RegisterCallback(L"D3DDrv.dll", InitD3DDrv);
-        CallbackHandler::RegisterCallback(L"EchelonMenus.dll", InitEchelonMenus);
-    });
+        {
+            CallbackHandler::RegisterCallback(Init);
+            CallbackHandler::RegisterCallback(L"Window.dll", InitWindow);
+            CallbackHandler::RegisterCallback(L"Engine.dll", InitEngine);
+            CallbackHandler::RegisterCallback(L"D3DDrv.dll", InitD3DDrv);
+            CallbackHandler::RegisterCallback(L"EchelonMenus.dll", InitEchelonMenus);
+        });
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-
+        if (!IsUALPresent()) { InitializeASI(); }
     }
     return TRUE;
 }
