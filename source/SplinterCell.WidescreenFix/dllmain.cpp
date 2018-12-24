@@ -349,19 +349,19 @@ void InitWinDrv()
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
-    {
-        CallbackHandler::RegisterCallback(Init);
-        CallbackHandler::RegisterCallback(L"Engine.dll", InitEngine);
-        CallbackHandler::RegisterCallback(L"D3DDrv.dll", InitD3DDrv);
-        CallbackHandler::RegisterCallback(L"WinDrv.dll", InitWinDrv);
-    });
+        {
+            CallbackHandler::RegisterCallback(Init);
+            CallbackHandler::RegisterCallback(L"Engine.dll", InitEngine);
+            CallbackHandler::RegisterCallback(L"D3DDrv.dll", InitD3DDrv);
+            CallbackHandler::RegisterCallback(L"WinDrv.dll", InitWinDrv);
+        });
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-
+        if (!IsUALPresent()) { InitializeASI(); }
     }
     return TRUE;
 }

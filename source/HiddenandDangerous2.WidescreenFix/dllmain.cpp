@@ -287,17 +287,17 @@ void Init()
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
-    {
-        CallbackHandler::RegisterCallback(L"LS3DF.dll", Init);
-        CallbackHandler::RegisterCallback(InitSettings, hook::pattern("0F ? ? ? ? ? 81 ? 80 02 00 00"));
-    });
+        {
+            CallbackHandler::RegisterCallback(L"LS3DF.dll", Init);
+            CallbackHandler::RegisterCallback(InitSettings, hook::pattern("0F ? ? ? ? ? 81 ? 80 02 00 00"));
+        });
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-
+        if (!IsUALPresent()) { InitializeASI(); }
     }
     return TRUE;
 }

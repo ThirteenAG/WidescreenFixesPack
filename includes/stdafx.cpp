@@ -26,7 +26,7 @@ bool IsUALPresent()
     dlls.Enumerate(ModuleList::SearchLocation::LocalOnly);
     for (auto& e : dlls.m_moduleList)
     {
-        if (GetProcAddress(std::get<HMODULE>(e), "TitleExport_XUserFindUsers") != NULL)
+        if (GetProcAddress(std::get<HMODULE>(e), "DirectInput8Create") != NULL && GetProcAddress(std::get<HMODULE>(e), "DirectSoundCreate8") != NULL && GetProcAddress(std::get<HMODULE>(e), "InternetOpenA") != NULL)
             return true;
     }
     return false;

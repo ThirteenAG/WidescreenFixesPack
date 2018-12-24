@@ -374,15 +374,15 @@ void InitXRenderD3D9()
 
         pushad();
         a.movq((int64_t)static_cast<void(*)()>([]()
-        {
-            if (Screen.bStretch)
             {
-                Screen.bStretch = false;
-                DrawImage((void*)_rcx, 0.0f, 0.0f, Screen.fHudOffset + 1.0f, 600.0f, 0, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.5f);
-                DrawImage((void*)_rcx, 800.0f - Screen.fHudOffset - 1.0f, 0.0f, Screen.fHudOffset + 1.0f, 600.0f, 0, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.5f);
-                Screen.bStretch = true;
+                if (Screen.bStretch)
+                {
+                    Screen.bStretch = false;
+                    DrawImage((void*)_rcx, 0.0f, 0.0f, Screen.fHudOffset + 1.0f, 600.0f, 0, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.5f);
+                    DrawImage((void*)_rcx, 800.0f - Screen.fHudOffset - 1.0f, 0.0f, Screen.fHudOffset + 1.0f, 600.0f, 0, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.5f);
+                    Screen.bStretch = true;
+                }
             }
-        }
         ), reg::rax);
         a.callq(reg::rax);
         popad();
@@ -432,9 +432,9 @@ void InitXRenderD3D9()
             a.movl(reg::r9d, reg::ecx);
             a.movl(reg::r8d, reg::edx);
             a.movq((int64_t)static_cast<void(*)(uint32_t, uint32_t)>([](uint32_t w, uint32_t h)
-            {
-                Screen.AdjustToRes(w, h);
-            }
+                {
+                    Screen.AdjustToRes(w, h);
+                }
             ), reg::rax);
             a.callq(reg::rax);
 
@@ -472,9 +472,9 @@ void InitXRenderD3D9()
             a.movl(reg::rax[0x10], reg::ecx);
             a.movl(reg::rax[0x14], reg::edx);
             a.movq((int64_t)static_cast<void(*)(uint32_t, uint32_t)>([](uint32_t w, uint32_t h)
-            {
-                Screen.AdjustToRes(w, h);
-            }
+                {
+                    Screen.AdjustToRes(w, h);
+                }
             ), reg::rbx);
             a.callq(reg::rbx);
 
@@ -639,96 +639,96 @@ void InitXRenderD3D9()
 
             a.movq(reg::rsp, reg::rcx);
             a.movq((int64_t)static_cast<void(*)(int64_t)>([](int64_t ptr)
-            {
-                Screen.bStretch = false;
-
-                void* ret = *(void**)(ptr + 0x90);
-                void* ret2 = nullptr;
-                void* ret3 = nullptr;
-                if (ret == dword_100B1018)
-                {
-                    ret2 = *(void**)(ptr + 0x160);
-                    ret3 = *(void**)(ptr + 0x160 + 0x30);
-                }
-                else if (ret == dword_1005DA88)
-                {
-                    ret2 = *(void**)(ptr + 0x1F0);
-                }
-
-                if (ret == dword_1005DA88 && ret2 == dword_10068D88) //fmv
                 {
                     Screen.bStretch = false;
-                    x1 /= Screen.fHudScale;
-                    x2 /= Screen.fHudScale;
-                    x1 += Screen.fHudOffset;
 
-                    x1 -= Screen.fFMVOffsetH;
-                    y1 -= Screen.fFMVOffsetV;
-                    x2 += Screen.fFMVOffsetH + Screen.fFMVOffsetH;
-                    y2 += Screen.fFMVOffsetV + Screen.fFMVOffsetV;
-                    return;
-                }
-
-                if (ret == dword_1018DCD8 || ret == dword_1018DD8F || ret == dword_1018DEA3 || ret == dword_1018DF57)
-                {
-                    x1 /= Screen.fHudScale;
-                    y1 /= Screen.fHudScale;
-                    x2 /= Screen.fHudScale;
-                    y2 /= Screen.fHudScale;
-
-                    x1 += Screen.fHudOffset;
-                    y1 += Screen.fRadarVerticalOffset;
-                    Screen.bStretch = false;
-
-                    if (Screen.bWidescreenHud)
+                    void* ret = *(void**)(ptr + 0x90);
+                    void* ret2 = nullptr;
+                    void* ret3 = nullptr;
+                    if (ret == dword_100B1018)
                     {
-                        x1 -= Screen.fWidescreenHudOffset;
+                        ret2 = *(void**)(ptr + 0x160);
+                        ret3 = *(void**)(ptr + 0x160 + 0x30);
                     }
-                }
-                else if (ret == dword_1018F2CE || ret == dword_1018E00E || ret == dword_1018ECE0 || ret == dword_1018EB80 || ret == dword_1018E5B4 || ret == dword_1018F11C || ret == dword_1018E4C6)
-                {
-                    x1 /= Screen.fHudScale;
-                    y1 /= Screen.fHudScale;
-                    x2 /= Screen.fHudScale;
-
-                    x1 += Screen.fHudOffset;
-                    y1 += Screen.fRadarVerticalOffset;
-                    Screen.bStretch = false;
-
-                    if (Screen.bWidescreenHud)
+                    else if (ret == dword_1005DA88)
                     {
-                        x1 -= Screen.fWidescreenHudOffset;
+                        ret2 = *(void**)(ptr + 0x1F0);
                     }
-                }
-                else
-                {
-                    if (ret == dword_100B0A58) // Objectives window on Tab
-                    {
-                        ret2 = *(void**)(ptr + 0x1E4);
 
-                        if (ret2 != dword_100B72BB)
-                            Screen.bStretch = false;
-                        else
-                            Screen.bStretch = true;
-                    }
-                    else if (ret2 == dword_100B72BB) // Damage overlay (and scopes in x64 version)
+                    if (ret == dword_1005DA88 && ret2 == dword_10068D88) //fmv
                     {
-                        if ((x1 == 0.0f && x2 == 800.0f && y1 == 0.0f && y2 == 90.0f) || (x1 == 0.0f && x2 == 800.0f && y1 == 510.0f && y2 == 90.0f) ||
-                            (x1 == 0.0f && x2 == 90.0f && y1 == 0.0f && y2 == 600.0f) || (x1 == 710.0f && x2 == 90.0f && y1 == 0.0f && y2 == 600.0f))
-                            Screen.bStretch = false;
+                        Screen.bStretch = false;
+                        x1 /= Screen.fHudScale;
+                        x2 /= Screen.fHudScale;
+                        x1 += Screen.fHudOffset;
+
+                        x1 -= Screen.fFMVOffsetH;
+                        y1 -= Screen.fFMVOffsetV;
+                        x2 += Screen.fFMVOffsetH + Screen.fFMVOffsetH;
+                        y2 += Screen.fFMVOffsetV + Screen.fFMVOffsetV;
+                        return;
+                    }
+
+                    if (ret == dword_1018DCD8 || ret == dword_1018DD8F || ret == dword_1018DEA3 || ret == dword_1018DF57)
+                    {
+                        x1 /= Screen.fHudScale;
+                        y1 /= Screen.fHudScale;
+                        x2 /= Screen.fHudScale;
+                        y2 /= Screen.fHudScale;
+
+                        x1 += Screen.fHudOffset;
+                        y1 += Screen.fRadarVerticalOffset;
+                        Screen.bStretch = false;
+
+                        if (Screen.bWidescreenHud)
+                        {
+                            x1 -= Screen.fWidescreenHudOffset;
+                        }
+                    }
+                    else if (ret == dword_1018F2CE || ret == dword_1018E00E || ret == dword_1018ECE0 || ret == dword_1018EB80 || ret == dword_1018E5B4 || ret == dword_1018F11C || ret == dword_1018E4C6)
+                    {
+                        x1 /= Screen.fHudScale;
+                        y1 /= Screen.fHudScale;
+                        x2 /= Screen.fHudScale;
+
+                        x1 += Screen.fHudOffset;
+                        y1 += Screen.fRadarVerticalOffset;
+                        Screen.bStretch = false;
+
+                        if (Screen.bWidescreenHud)
+                        {
+                            x1 -= Screen.fWidescreenHudOffset;
+                        }
+                    }
+                    else
+                    {
+                        if (ret == dword_100B0A58) // Objectives window on Tab
+                        {
+                            ret2 = *(void**)(ptr + 0x1E4);
+
+                            if (ret2 != dword_100B72BB)
+                                Screen.bStretch = false;
+                            else
+                                Screen.bStretch = true;
+                        }
+                        else if (ret2 == dword_100B72BB) // Damage overlay (and scopes in x64 version)
+                        {
+                            if ((x1 == 0.0f && x2 == 800.0f && y1 == 0.0f && y2 == 90.0f) || (x1 == 0.0f && x2 == 800.0f && y1 == 510.0f && y2 == 90.0f) ||
+                                (x1 == 0.0f && x2 == 90.0f && y1 == 0.0f && y2 == 600.0f) || (x1 == 710.0f && x2 == 90.0f && y1 == 0.0f && y2 == 600.0f))
+                                Screen.bStretch = false;
+                            else
+                            {
+                                Screen.bStretch = true;
+                                DrawBorders();
+                            }
+                        }
                         else
                         {
                             Screen.bStretch = true;
                             DrawBorders();
                         }
                     }
-                    else
-                    {
-                        Screen.bStretch = true;
-                        DrawBorders();
-                    }
                 }
-            }
             ), reg::rax);
             a.callq(reg::rax);
 
@@ -791,12 +791,12 @@ void InitXRenderD3D9()
             a.pushq(reg::rcx);
             a.movq(reg::r11, reg::rcx);
             a.movq((int64_t)static_cast<void(*)(uintptr_t)>([](uintptr_t ptr)
-            {
-                *(float*)(ptr + 0x00) /= Screen.fHudScale;
-                *(float*)(ptr + 0x00) += Screen.fHudOffset;
-                *(float*)(ptr + 0x18) /= Screen.fHudScale;
-                *(float*)(ptr + 0x18) += Screen.fHudOffset;
-            }
+                {
+                    *(float*)(ptr + 0x00) /= Screen.fHudScale;
+                    *(float*)(ptr + 0x00) += Screen.fHudOffset;
+                    *(float*)(ptr + 0x18) /= Screen.fHudScale;
+                    *(float*)(ptr + 0x18) += Screen.fHudOffset;
+                }
             ), reg::rax);
             a.callq(reg::rax);
             a.popq(reg::rcx);
@@ -839,9 +839,9 @@ void InitXRenderD3D9()
             a.movq(reg::rsp[0xC0], reg::rcx);
             a.movq(reg::rsp[0xC8], reg::rdx);
             a.movq((int64_t)static_cast<void(*)(int64_t, int64_t)>([](int64_t w, int64_t h)
-            {
-                Screen.AdjustFMVRes(w, h);
-            }
+                {
+                    Screen.AdjustFMVRes(w, h);
+                }
             ), reg::rax);
             a.callq(reg::rax);
 
@@ -998,39 +998,39 @@ void InitCryGame()
 
             a.movq(reg::rsp, reg::rcx);
             a.movq((int64_t)static_cast<void(*)(uintptr_t)>([](uintptr_t ptr)
-            {
-                auto q = QUAD(*(float*)(ptr + 0x98), *(float*)(ptr + 0x94), *(float*)(ptr + 0xB0), *(float*)(ptr + 0xAC),
-                    *(float*)(ptr + 0xC8), *(float*)(ptr + 0xC4), *(float*)(ptr + 0xE0), *(float*)(ptr + 0xDC));
-
-                Screen.bStretch = false;
-                *(float*)(ptr + 0x98) /= Screen.fHudScale;
-                *(float*)(ptr + 0xB0) /= Screen.fHudScale;
-                *(float*)(ptr + 0xC8) /= Screen.fHudScale;
-                *(float*)(ptr + 0xE0) /= Screen.fHudScale;
-
-                *(float*)(ptr + 0x98) += Screen.fHudOffset;
-                *(float*)(ptr + 0xB0) += Screen.fHudOffset;
-                *(float*)(ptr + 0xC8) += Screen.fHudOffset;
-                *(float*)(ptr + 0xE0) += Screen.fHudOffset;
-
-                if (Screen.bWidescreenHud)
                 {
-                    if (q.ix1 >= 551)
+                    auto q = QUAD(*(float*)(ptr + 0x98), *(float*)(ptr + 0x94), *(float*)(ptr + 0xB0), *(float*)(ptr + 0xAC),
+                        *(float*)(ptr + 0xC8), *(float*)(ptr + 0xC4), *(float*)(ptr + 0xE0), *(float*)(ptr + 0xDC));
+
+                    Screen.bStretch = false;
+                    *(float*)(ptr + 0x98) /= Screen.fHudScale;
+                    *(float*)(ptr + 0xB0) /= Screen.fHudScale;
+                    *(float*)(ptr + 0xC8) /= Screen.fHudScale;
+                    *(float*)(ptr + 0xE0) /= Screen.fHudScale;
+
+                    *(float*)(ptr + 0x98) += Screen.fHudOffset;
+                    *(float*)(ptr + 0xB0) += Screen.fHudOffset;
+                    *(float*)(ptr + 0xC8) += Screen.fHudOffset;
+                    *(float*)(ptr + 0xE0) += Screen.fHudOffset;
+
+                    if (Screen.bWidescreenHud)
                     {
-                        *(float*)(ptr + 0x98) += Screen.fWidescreenHudOffset;
-                        *(float*)(ptr + 0xB0) += Screen.fWidescreenHudOffset;
-                        *(float*)(ptr + 0xC8) += Screen.fWidescreenHudOffset;
-                        *(float*)(ptr + 0xE0) += Screen.fWidescreenHudOffset;
-                    }
-                    else if (q.ix1 <= 99)
-                    {
-                        *(float*)(ptr + 0x98) -= Screen.fWidescreenHudOffset;
-                        *(float*)(ptr + 0xB0) -= Screen.fWidescreenHudOffset;
-                        *(float*)(ptr + 0xC8) -= Screen.fWidescreenHudOffset;
-                        *(float*)(ptr + 0xE0) -= Screen.fWidescreenHudOffset;
+                        if (q.ix1 >= 551)
+                        {
+                            *(float*)(ptr + 0x98) += Screen.fWidescreenHudOffset;
+                            *(float*)(ptr + 0xB0) += Screen.fWidescreenHudOffset;
+                            *(float*)(ptr + 0xC8) += Screen.fWidescreenHudOffset;
+                            *(float*)(ptr + 0xE0) += Screen.fWidescreenHudOffset;
+                        }
+                        else if (q.ix1 <= 99)
+                        {
+                            *(float*)(ptr + 0x98) -= Screen.fWidescreenHudOffset;
+                            *(float*)(ptr + 0xB0) -= Screen.fWidescreenHudOffset;
+                            *(float*)(ptr + 0xC8) -= Screen.fWidescreenHudOffset;
+                            *(float*)(ptr + 0xE0) -= Screen.fWidescreenHudOffset;
+                        }
                     }
                 }
-            }
             ), reg::rax);
             a.callq(reg::rax);
 
@@ -1122,20 +1122,20 @@ void InitCrySystem()
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
-    {
-        Init();
-        CallbackHandler::RegisterCallback(L"XRenderD3D9.dll", InitXRenderD3D9);
-        CallbackHandler::RegisterCallback(L"CryGame.dll", InitCryGame);
-        CallbackHandler::RegisterCallback(L"Cry3DEngine.dll", InitCry3DEngine);
-        CallbackHandler::RegisterCallback(L"CrySystem.dll", InitCrySystem);
-    });
+        {
+            Init();
+            CallbackHandler::RegisterCallback(L"XRenderD3D9.dll", InitXRenderD3D9);
+            CallbackHandler::RegisterCallback(L"CryGame.dll", InitCryGame);
+            CallbackHandler::RegisterCallback(L"Cry3DEngine.dll", InitCry3DEngine);
+            CallbackHandler::RegisterCallback(L"CrySystem.dll", InitCrySystem);
+        });
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-
+        if (!IsUALPresent()) { InitializeASI(); }
     }
     return TRUE;
 }

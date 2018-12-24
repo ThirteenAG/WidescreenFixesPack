@@ -41,7 +41,7 @@ void InitME2()
         {
             float f = (*(float *)(regs.ebx + 0x204) - *(float *)(regs.eax + 0x204)) + *(float *)(regs.esi + 0x18);
             if (f >= 60.0f)
-                f = AdjustFOV(f, static_cast<float>(nWidth) / static_cast<float>(nHeight));
+                f = min(AdjustFOV(f, static_cast<float>(nWidth) / static_cast<float>(nHeight)), 110.0f);
             _asm movss xmm0, dword ptr[f]
         }
     }; injector::MakeInline<FOVHook>(pattern.get_first(0));
@@ -63,7 +63,7 @@ void InitME3()
         {
             float f = *(float*)(regs.ecx);
             if (f >= 60.0f)
-                *(float*)(regs.ecx) = AdjustFOV(f, static_cast<float>(nWidth) / static_cast<float>(nHeight));
+                *(float*)(regs.ecx) = min(AdjustFOV(f, static_cast<float>(nWidth) / static_cast<float>(nHeight)), 110.0f);
         }
     }; injector::MakeInline<FOVHook>(pattern.get_first(22));
     injector::WriteMemory<uint8_t>(pattern.get_first(22 + 5), 0x5E, true); //pop esi
@@ -76,18 +76,18 @@ void InitME3()
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
-    {
-        CallbackHandler::RegisterCallback(InitME1, hook::pattern("8B 41 44 83 F8 01 75 0F 8B 44 24 08 D9 00 8B 4C 24 04 D9 19 C2 14 00")/*.count_hint(1).empty(), 0x1100*/);
-        CallbackHandler::RegisterCallback(InitME2, hook::pattern("8B 41 44 83 F8 01 75 0F 8B 44 24 08 D9 00 8B 4C 24 04 D9 19 C2 14 00")/*.count_hint(1).empty(), 0x1100*/);
-        CallbackHandler::RegisterCallback(InitME3, hook::pattern("55 8B EC 8B 41 44 83 F8 01 75 0E 8B 45 0C D9 00 8B 4D 08 D9 19 5D C2")/*.count_hint(1).empty(), 0x1100*/);
-    });
+        {
+            CallbackHandler::RegisterCallback(InitME1, hook::pattern("8B 41 44 83 F8 01 75 0F 8B 44 24 08 D9 00 8B 4C 24 04 D9 19 C2 14 00")/*.count_hint(1).empty(), 0x1100*/);
+            CallbackHandler::RegisterCallback(InitME2, hook::pattern("8B 41 44 83 F8 01 75 0F 8B 44 24 08 D9 00 8B 4C 24 04 D9 19 C2 14 00")/*.count_hint(1).empty(), 0x1100*/);
+            CallbackHandler::RegisterCallback(InitME3, hook::pattern("55 8B EC 8B 41 44 83 F8 01 75 0E 8B 45 0C D9 00 8B 4D 08 D9 19 5D C2")/*.count_hint(1).empty(), 0x1100*/);
+        });
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-        InitializeASI();
+        if (!IsUALPresent()) { InitializeASI(); }
     }
     return TRUE;
 }
