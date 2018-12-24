@@ -20,6 +20,7 @@ void Init()
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
     bool bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) != 0;
+    float fFOVFactor = iniReader.ReadFloat("MAIN", "FOVFactor", 0.0f);
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -53,6 +54,12 @@ void Init()
 
         pattern = hook::pattern("D9 05 ? ? ? ? D8 75 10 51 D9 1C 24 8D 55 80 52"); //0x756D23
         injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &Screen.fHudScale, true);
+    }
+
+    if (fFOVFactor)
+    {
+        pattern = hook::pattern("D9 45 18 D8 45 14 D8 4D F8 51 D9 1C 24 6A 00"); //0x648C79
+        injector::WriteMemory(pattern.get_first(-4), -1.0f * fFOVFactor, true);
     }
 }
 
