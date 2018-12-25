@@ -43,10 +43,10 @@ void WidescreenHud(float& offsetX1, float& offsetX2, float& offsetY1, float& off
     DBGONLY(KEYPRESS(VK_F1) { spd::log()->info("{0:d} {1:d} {2:d} {3:d} {4:08x}", n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color.RGBA); });
 
     if (
-        (n_offsetX1 >= 599 && n_offsetX2 <= 616 && n_offsetY1 >= 39 && n_offsetY2 <= 233 /*&& (Color.RGBA == 4269834368 || Color.RGBA == 671088640)*/) || //health bar
-        (n_offsetX1 >= 520 && n_offsetX2 <= 616 && n_offsetY1 == 304 && (n_offsetY2 == 331 || n_offsetY2 == 332) && (Color.RGBA == 4269834368)) || //hud icons
-        (n_offsetX1 >= 494 && n_offsetX2 <= 616 && n_offsetY1 >= 334 && n_offsetY2 <= 410 && (Color.RGBA == 4264768307 || Color.RGBA == 1283489920 || Color.RGBA == 4269834368 || Color.RGBA == 4265623616 || Color.RGBA == 3237936894 || Color.RGBA == 1275068416 || (Color.RGBA == 2550136832 && n_offsetX1 != 573) || Color.RGBA == 2558558336 || (Color.RGBA == 4278124286 && (n_offsetX1 == 524 || n_offsetX1 == 525 || n_offsetX1 == 498 || n_offsetX1 == 499)))) || //stealth bar and weapon hud
-        (n_offsetX1 >= 520 && n_offsetX2 <= 616 && n_offsetY1 >= 412 && n_offsetY2 <= 440 && Color.RGBA != 4264768307) //fire mode switch
+        (n_offsetX1 >= 598 && n_offsetX2 <= 616 && n_offsetY1 >= 38 && n_offsetY2 <= 233 /*&& (Color.RGBA == 4269834368 || Color.RGBA == 671088640)*/) || //health bar
+        (n_offsetX1 >= 519 && n_offsetX2 <= 616 && n_offsetY1 == 304 && (n_offsetY2 == 331 || n_offsetY2 == 332) && (Color.RGBA == 4269834368)) || //hud icons
+        (n_offsetX1 >= 493 && n_offsetX2 <= 616 && n_offsetY1 >= 333 && n_offsetY2 <= 410 && (Color.RGBA == 4264768307 || Color.RGBA == 1283489920 || Color.RGBA == 4269834368 || Color.RGBA == 4265623616 || Color.RGBA == 3237936894 || Color.RGBA == 1275068416 || (Color.RGBA == 2550136832 && n_offsetX1 != 573) || Color.RGBA == 2558558336 || (Color.RGBA == 4278124286 && (n_offsetX1 == 524 || n_offsetX1 == 525 || n_offsetX1 == 498 || n_offsetX1 == 499)))) || //stealth bar and weapon hud
+        (n_offsetX1 >= 519 && n_offsetX2 <= 616 && n_offsetY1 >= 411 && n_offsetY2 <= 440 && Color.RGBA != 4264768307) //fire mode switch
         )
     {
         offsetX1 += Screen.fWidescreenHudOffset;
@@ -77,7 +77,7 @@ void WidescreenHud(float& offsetX1, float& offsetX2, float& offsetY1, float& off
     offsetX2 -= Screen.fWidescreenHudOffset;
     }*/
 
-    if ((n_offsetX1 >= 178 && n_offsetX1 <= 184) && (n_offsetX2 == 608 || n_offsetX2 == 609 || n_offsetX2 == 611 || n_offsetX2 == 612)) //inventory fix
+    if ((n_offsetX1 >= 178 && n_offsetX1 <= 184) && (n_offsetX2 >= 607 && n_offsetX2 <= 612)) //inventory fix
     {
         offsetX2 += Screen.fWidescreenHudOffset;
     }
