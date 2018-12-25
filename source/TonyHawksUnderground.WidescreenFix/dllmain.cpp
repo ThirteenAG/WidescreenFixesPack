@@ -37,8 +37,14 @@ void Init()
     Screen.fHudOffsetReal = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
 
     //addresses is not based on drm free exe
+
+    //Fixes (sort of) crash when using high resolutions
+    static uint8_t vec[100000];
+    auto pattern = hook::pattern("B9 ? ? ? ? 89 ? 24 14 ? ? 24");
+    injector::WriteMemory(pattern.get_first(1), &vec[0], true);
+
     //Resolution
-    auto pattern = hook::pattern("6A 01 6A 01 ? 8B 15");
+    pattern = hook::pattern("6A 01 6A 01 ? 8B 15");
     static int32_t* dword_6D3608 = *pattern.get_first<int32_t*>(7);
     static int32_t* dword_6D360C = *pattern.get_first<int32_t*>(-4);
     struct SetResHook
