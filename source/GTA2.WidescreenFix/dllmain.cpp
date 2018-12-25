@@ -305,11 +305,27 @@ void Init()
     }
 }
 
+void InitD3DDim()
+{
+    auto pattern = hook::module_pattern(GetModuleHandle(L"d3dim"), "B8 00 08 00 00 39");
+    if (!pattern.count_hint(2).empty())
+        injector::WriteMemory(pattern.get(0).get<void>(1), -1, true);
+}
+
+void InitD3DDim700()
+{
+    auto pattern = hook::module_pattern(GetModuleHandle(L"d3dim700"), "B8 00 08 00 00 39");
+    if (!pattern.count_hint(2).empty())
+        injector::WriteMemory(pattern.get(0).get<void>(1), -1, true);
+}
+
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
         {
             CallbackHandler::RegisterCallback(Init, hook::pattern("83 EC 68 55 56 8B 74 24 74"));
+            CallbackHandler::RegisterCallback(L"d3dim.dll", InitD3DDim);       // crash fix for
+            CallbackHandler::RegisterCallback(L"d3dim700.dll", InitD3DDim700); // resolutions > 2048
         });
 }
 
