@@ -123,7 +123,7 @@ void InitLS3DF()
 
     if (iniReader.ReadInteger("MAIN", "BorderlessWindowed", 1) != 0)
     {
-        auto pattern = hook::module_pattern(GetModuleHandle(L"LS3DF"), "FF 15 ? ? ? ? 85 C0 0F 95 C0 A2 ? ? ? ? 8B 0E 56 FF 51 40");
+        auto pattern = hook::module_pattern(GetModuleHandle(L"LS3DF"), "8B 35 ? ? ? ? 0F 84 ? ? ? ? 8B 3D ? ? ? ? 55 55 55 55");
         injector::WriteMemory(*pattern.get_first<uint32_t*>(2), GetSystemMetricsHook, true);
         pattern = hook::module_pattern(GetModuleHandle(L"LS3DF"), "FF 15 ? ? ? ? 3B C5 A3 ? ? ? ? 0F 84 ? ? ? ? 50");
         injector::WriteMemory(*pattern.get_first<uint32_t*>(2), CreateWindowExAHook, true);
