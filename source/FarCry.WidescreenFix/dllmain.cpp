@@ -42,6 +42,9 @@ struct Screen
         this->fRadarVerticalOffset = this->fHudOffset * (4.0f / 3.0f);
         this->fFOVFactor = this->fHudScale * this->fIniFOV;
         this->fCutOffArea = 0.5f / ((this->fAspectRatio / (4.0f / 3.0f)) * 0.5f) / this->fIniFOV;
+#ifndef _WIN64
+        this->fCutOffArea *= 2.0f;
+#endif
         this->fWidescreenHudOffset = fIniHudOffset / this->fHudScale;
         if (this->fAspectRatio < (16.0f / 9.0f))
             this->fWidescreenHudOffset = ((this->fWidescreenHudOffset * (this->fHudScale)) - this->fWidescreenHudOffset);
@@ -591,10 +594,12 @@ void InitXRenderD3D9()
             {
                 if (ret == dword_365526AD) // Objectives window on Tab
                 {
-                    ret2 = *(void**)(regs.esp + 0x1E4);
-
-                    if (ret2 != dword_330193CE)
+                    if (x2 == 50.0f && y2 == 25.0f) // enemy markers (binoculars)
+                    {
+                        *(float*)(regs.esp + 0x38) /= Screen.fHudScale;
+                        *(float*)(regs.esp + 0x30) += (50.0f - *(float*)(regs.esp + 0x38)) / 2.0f;
                         Screen.bStretch = false;
+                    }
                     else
                         Screen.bStretch = true;
                 }
@@ -704,10 +709,12 @@ void InitXRenderD3D9()
                     {
                         if (ret == dword_100B0A58) // Objectives window on Tab
                         {
-                            ret2 = *(void**)(ptr + 0x1E4);
-
-                            if (ret2 != dword_100B72BB)
+                            if (x2 == 50.0f && y2 == 25.0f) // enemy markers (binoculars)
+                            {
+                                x2 /= Screen.fHudScale;
+                                x1 += (50.0f - x2) / 2.0f;
                                 Screen.bStretch = false;
+                            }
                             else
                                 Screen.bStretch = true;
                         }
@@ -769,7 +776,7 @@ void InitXRenderD3D9()
             *(uint32_t*)(regs.ecx + 0x08) = regs.edx;
             *(uint32_t*)(regs.eax + 0x24) = regs.ebx;
         }
-    }; injector::MakeInline<DrawLineHook>(pattern.get_first(0), pattern.get_first(6));
+}; injector::MakeInline<DrawLineHook>(pattern.get_first(0), pattern.get_first(6));
 #else
     pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "41 89 43 18 8B 47 04 41 89 43 1C 8B 47 08 41 89 6B 24 41 89 43 20");
     struct DrawLineHook
