@@ -468,6 +468,8 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to make windowed mode borderless
 
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to set deadzone for left stick and right stick on gamepad (otherwise camera just spins on its own)
+
 [Download](http://thirteenag.github.io/wfp#mafia)
 |
 [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/Mafia.WidescreenFix/dllmain.cpp)
