@@ -25,6 +25,7 @@
 #include "Hooking.Patterns.h"
 #include "log.h"
 #include "ModuleList.hpp"
+#include <filesystem>
 #pragma warning(pop)
 
 #ifndef CEXP
@@ -415,7 +416,7 @@ public:
     {
         filter = searchString;
         RegistryReader.SetIniPath(iniPath);
-
+        std::filesystem::create_directories(std::filesystem::path(iniPath).parent_path());
     }
     static void AddDefault(std::string_view key, std::string_view value)
     {
@@ -505,7 +506,7 @@ public:
                         *lpcbData = i;
                     }
                     else
-                        RegistryReader.WriteString(section, ValueName, DefaultStrings[ValueName].empty() ? "INSERTBINARYDATAHERE" : DefaultStrings[ValueName]);
+                        RegistryReader.WriteString(section, ValueName, DefaultStrings[ValueName].empty() ? "" : DefaultStrings[ValueName]);
                     break;
                 }
                 case REG_DWORD:

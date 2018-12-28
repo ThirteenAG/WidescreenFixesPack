@@ -437,7 +437,7 @@ void InitXRenderD3D9()
             a.movq((int64_t)static_cast<void(*)(uint32_t, uint32_t)>([](uint32_t w, uint32_t h)
                 {
                     Screen.AdjustToRes(w, h);
-        }
+                }
             ), reg::rax);
             a.callq(reg::rax);
 
@@ -447,316 +447,316 @@ void InitXRenderD3D9()
 
             assert(sizeof(buffer) > ((cb.frontier() + JMPSIZE) - cb.base()));
             return std::make_tuple(cb.frontier(), &buffer);
-    }
-}; MakeInlineJMP<SetResHook>(pattern.get_first(0), pattern.get_first(20)); //0x1012B5A1, 0x1012B5B5
+        }
+    }; MakeInlineJMP<SetResHook>(pattern.get_first(0), pattern.get_first(20)); //0x1012B5A1, 0x1012B5B5
 
-pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "8B 8B ? ? ? ? 89 48 10 8B 8B ? ? ? ? 89 48 14");
-struct SetResHook2
-{
-    std::tuple<Address, void*> operator()()
+    pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "8B 8B ? ? ? ? 89 48 10 8B 8B ? ? ? ? 89 48 14");
+    struct SetResHook2
     {
-        static uint8_t buffer[100];
-        injector::ProtectMemory(buffer, sizeof(buffer), PAGE_EXECUTE_READWRITE);
-        CodeBlock cb; cb.init((Address)buffer, sizeof(buffer));
-        X64Assembler a(cb);
+        std::tuple<Address, void*> operator()()
+        {
+            static uint8_t buffer[100];
+            injector::ProtectMemory(buffer, sizeof(buffer), PAGE_EXECUTE_READWRITE);
+            CodeBlock cb; cb.init((Address)buffer, sizeof(buffer));
+            X64Assembler a(cb);
 
-        a.movl(reg::rbx[0x17BC8], reg::ecx); //_asm mov ecx, [rbx + 17BC8h]
-        a.movl(reg::ecx, reg::rax[0x10]);    //_asm mov[rax + 10h], ecx
-        a.movl(reg::rbx[0x17BCC], reg::ecx); //_asm mov ecx, [rbx + 17BCCh]
-        a.movl(reg::ecx, reg::rax[0x14]);    //_asm mov[rax + 14h], ecx
+            a.movl(reg::rbx[0x17BC8], reg::ecx); //_asm mov ecx, [rbx + 17BC8h]
+            a.movl(reg::ecx, reg::rax[0x10]);    //_asm mov[rax + 10h], ecx
+            a.movl(reg::rbx[0x17BCC], reg::ecx); //_asm mov ecx, [rbx + 17BCCh]
+            a.movl(reg::ecx, reg::rax[0x14]);    //_asm mov[rax + 14h], ecx
 
-        a.pushq(reg::rax);
-        a.pushq(reg::rbx);
-        a.pushq(reg::rdx);
-        a.pushq(reg::rcx);
-        a.pushq(reg::r8);
-        a.pushq(reg::r9);
+            a.pushq(reg::rax);
+            a.pushq(reg::rbx);
+            a.pushq(reg::rdx);
+            a.pushq(reg::rcx);
+            a.pushq(reg::r8);
+            a.pushq(reg::r9);
 
-        a.movl(reg::rax[0x10], reg::ecx);
-        a.movl(reg::rax[0x14], reg::edx);
-        a.movq((int64_t)static_cast<void(*)(uint32_t, uint32_t)>([](uint32_t w, uint32_t h)
-            {
-                Screen.AdjustToRes(w, h);
-            }
-        ), reg::rbx);
-        a.callq(reg::rbx);
+            a.movl(reg::rax[0x10], reg::ecx);
+            a.movl(reg::rax[0x14], reg::edx);
+            a.movq((int64_t)static_cast<void(*)(uint32_t, uint32_t)>([](uint32_t w, uint32_t h)
+                {
+                    Screen.AdjustToRes(w, h);
+                }
+            ), reg::rbx);
+            a.callq(reg::rbx);
 
-        a.popq(reg::r9);
-        a.popq(reg::r8);
-        a.popq(reg::rcx);
-        a.popq(reg::rdx);
-        a.popq(reg::rbx);
-        a.popq(reg::rax);
+            a.popq(reg::r9);
+            a.popq(reg::r8);
+            a.popq(reg::rcx);
+            a.popq(reg::rdx);
+            a.popq(reg::rbx);
+            a.popq(reg::rax);
 
-        assert(sizeof(buffer) > ((cb.frontier() + JMPSIZE) - cb.base()));
-        return std::make_tuple(cb.frontier(), &buffer);
-    }
-}; MakeInlineJMP<SetResHook2>(pattern.get_first(0), pattern.get_first(18)); //0x100852B9, 0x100852CB
+            assert(sizeof(buffer) > ((cb.frontier() + JMPSIZE) - cb.base()));
+            return std::make_tuple(cb.frontier(), &buffer);
+        }
+    }; MakeInlineJMP<SetResHook2>(pattern.get_first(0), pattern.get_first(18)); //0x100852B9, 0x100852CB
 #endif
 
 #ifndef _WIN64
     //borderless windowed
-pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "8B 35 ? ? ? ? 6A 10");
-injector::WriteMemory(*pattern.get_first<uint32_t*>(2), GetSystemMetricsHook, true); //0x3816A218
+    pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "8B 35 ? ? ? ? 6A 10");
+    injector::WriteMemory(*pattern.get_first<uint32_t*>(2), GetSystemMetricsHook, true); //0x3816A218
 
-pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "8B 86 ? ? ? ? 83 C0 F0 3B F8 7E 02 8B F8");
-injector::WriteMemory<uint8_t>(pattern.get_first(-2), 0xEB, true); //jmp
+    pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "8B 86 ? ? ? ? 83 C0 F0 3B F8 7E 02 8B F8");
+    injector::WriteMemory<uint8_t>(pattern.get_first(-2), 0xEB, true); //jmp
 
-pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "B8 00 00 CA 10 89 83 34 B7 01 00");
-injector::WriteMemory(pattern.get_first(1), *pattern.get_first<LONG>(1) & ~WS_OVERLAPPEDWINDOW, true);
+    pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "B8 00 00 CA 10 89 83 34 B7 01 00");
+    injector::WriteMemory(pattern.get_first(1), *pattern.get_first<LONG>(1) & ~WS_OVERLAPPEDWINDOW, true);
 #else
-pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "FF 15 ? ? ? ? B9 ? ? ? ? 2B C3 99 2B C2 D1 F8 44 8B F0");
-auto ptr = (uint64_t)pattern.get_first(0) + injector::ReadMemory<uint32_t>(pattern.get_first(2), true) + 6;
-injector::WriteMemory(ptr, GetSystemMetricsHook, true); //0x1008845E
+    pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "FF 15 ? ? ? ? B9 ? ? ? ? 2B C3 99 2B C2 D1 F8 44 8B F0");
+    auto ptr = (uint64_t)pattern.get_first(0) + injector::ReadMemory<uint32_t>(pattern.get_first(2), true) + 6;
+    injector::WriteMemory(ptr, GetSystemMetricsHook, true); //0x1008845E
 
-pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "41 8B 84 24 ? ? ? ? 83 C0 F0 3B F8 0F 4F F8");
-injector::WriteMemory<uint8_t>(pattern.get_first(-2), 0xEB, true); //jmp
+    pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "41 8B 84 24 ? ? ? ? 83 C0 F0 3B F8 0F 4F F8");
+    injector::WriteMemory<uint8_t>(pattern.get_first(-2), 0xEB, true); //jmp
 
-pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "BD ? ? ? ? 89 AF ? ? ? ? 4C 89 AC 24 ? ? ? ? 0F 85 ? ? ? ? 41 BD");
-injector::WriteMemory(pattern.get_first(1), *pattern.get_first<LONG>(1) & ~WS_OVERLAPPEDWINDOW, true);
+    pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "BD ? ? ? ? 89 AF ? ? ? ? 4C 89 AC 24 ? ? ? ? 0F 85 ? ? ? ? 41 BD");
+    injector::WriteMemory(pattern.get_first(1), *pattern.get_first<LONG>(1) & ~WS_OVERLAPPEDWINDOW, true);
 #endif
 
-//2D
+    //2D
 #ifndef _WIN64
-pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "8B 86 ? ? ? ? 8B 80 ? ? ? ? 8D 8D");
-struct Draw_2DImageHook
-{
-    void operator()(injector::reg_pack& regs)
+    pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "8B 86 ? ? ? ? 8B 80 ? ? ? ? 8D 8D");
+    struct Draw_2DImageHook
     {
-        regs.eax = *(uint32_t*)(regs.esi + 0x171C4);
-
-        Screen.bStretch = false;
-
-        auto x1 = *(float*)(regs.esp + 0x30);
-        auto y1 = *(float*)(regs.esp + 0x34);
-        auto x2 = *(float*)(regs.esp + 0x38);
-        auto y2 = *(float*)(regs.esp + 0x3C);
-
-        void* ret = *(void**)(regs.esp + 0x2C);
-        void* ret2 = nullptr;
-        void* ret3 = nullptr;
-        if (ret == dword_36552A15)
+        void operator()(injector::reg_pack& regs)
         {
-            ret2 = *(void**)(regs.esp + 0x1F4);
-            ret3 = *(void**)(regs.esp + 0x208);
-        }
-        else if (ret == dword_3302ED49)
-        {
-            ret2 = *(void**)(regs.esp + 0x90);
-        }
+            regs.eax = *(uint32_t*)(regs.esi + 0x171C4);
 
-        if (ret == dword_3302ED49 && ret2 == dword_33038051) //fmv
-        {
-            Screen.bStretch = false;
-            *(float*)(regs.esp + 0x30) /= Screen.fHudScale;
-            *(float*)(regs.esp + 0x38) /= Screen.fHudScale;
-            *(float*)(regs.esp + 0x30) += Screen.fHudOffset;
-
-            *(float*)(regs.esp + 0x30) -= Screen.fFMVOffsetH;
-            *(float*)(regs.esp + 0x34) -= Screen.fFMVOffsetV;
-            *(float*)(regs.esp + 0x38) += Screen.fFMVOffsetH + Screen.fFMVOffsetH;
-            *(float*)(regs.esp + 0x3C) += Screen.fFMVOffsetV + Screen.fFMVOffsetV;
-            return;
-        }
-
-        if (ret == dword_330D054C || ret == dword_330D05E4 || ret == dword_330D06E5 || ret == dword_330D0771)
-        {
-            *(float*)(regs.esp + 0x30) /= Screen.fHudScale;
-            *(float*)(regs.esp + 0x34) /= Screen.fHudScale;
-            *(float*)(regs.esp + 0x38) /= Screen.fHudScale;
-            *(float*)(regs.esp + 0x3C) /= Screen.fHudScale;
-
-            *(float*)(regs.esp + 0x30) += Screen.fHudOffset;
-            *(float*)(regs.esp + 0x34) += Screen.fRadarVerticalOffset;
             Screen.bStretch = false;
 
-            if (Screen.bWidescreenHud)
-            {
-                *(float*)(regs.esp + 0x30) -= Screen.fWidescreenHudOffset;
-            }
-        }
-        else if (ret == dword_330D0832 || ret == dword_330D0D61 || ret == dword_330D134A)
-        {
-            *(float*)(regs.esp + 0x30) /= Screen.fHudScale;
-            *(float*)(regs.esp + 0x34) /= Screen.fHudScale;
-            *(float*)(regs.esp + 0x38) /= Screen.fHudScale;
+            auto x1 = *(float*)(regs.esp + 0x30);
+            auto y1 = *(float*)(regs.esp + 0x34);
+            auto x2 = *(float*)(regs.esp + 0x38);
+            auto y2 = *(float*)(regs.esp + 0x3C);
 
-            *(float*)(regs.esp + 0x30) += Screen.fHudOffset;
-            *(float*)(regs.esp + 0x34) += Screen.fRadarVerticalOffset;
-            Screen.bStretch = false;
+            void* ret = *(void**)(regs.esp + 0x2C);
+            void* ret2 = nullptr;
+            void* ret3 = nullptr;
+            if (ret == dword_36552A15)
+            {
+                ret2 = *(void**)(regs.esp + 0x1F4);
+                ret3 = *(void**)(regs.esp + 0x208);
+            }
+            else if (ret == dword_3302ED49)
+            {
+                ret2 = *(void**)(regs.esp + 0x90);
+            }
 
-            if (Screen.bWidescreenHud)
-            {
-                *(float*)(regs.esp + 0x30) -= Screen.fWidescreenHudOffset;
-            }
-        }
-        else
-        {
-            if (ret == dword_365526AD) // Objectives window on Tab
-            {
-                if (x2 == 50.0f && y2 == 25.0f) // enemy markers (binoculars)
-                {
-                    *(float*)(regs.esp + 0x38) /= Screen.fHudScale;
-                    *(float*)(regs.esp + 0x30) += (50.0f - *(float*)(regs.esp + 0x38)) / 2.0f;
-                    Screen.bStretch = false;
-                }
-                else
-                    Screen.bStretch = true;
-            }
-            else if (ret2 == dword_330193CE) // Damage overlay
+            if (ret == dword_3302ED49 && ret2 == dword_33038051) //fmv
             {
                 Screen.bStretch = false;
+                *(float*)(regs.esp + 0x30) /= Screen.fHudScale;
+                *(float*)(regs.esp + 0x38) /= Screen.fHudScale;
+                *(float*)(regs.esp + 0x30) += Screen.fHudOffset;
+
+                *(float*)(regs.esp + 0x30) -= Screen.fFMVOffsetH;
+                *(float*)(regs.esp + 0x34) -= Screen.fFMVOffsetV;
+                *(float*)(regs.esp + 0x38) += Screen.fFMVOffsetH + Screen.fFMVOffsetH;
+                *(float*)(regs.esp + 0x3C) += Screen.fFMVOffsetV + Screen.fFMVOffsetV;
+                return;
+            }
+
+            if (ret == dword_330D054C || ret == dword_330D05E4 || ret == dword_330D06E5 || ret == dword_330D0771)
+            {
+                *(float*)(regs.esp + 0x30) /= Screen.fHudScale;
+                *(float*)(regs.esp + 0x34) /= Screen.fHudScale;
+                *(float*)(regs.esp + 0x38) /= Screen.fHudScale;
+                *(float*)(regs.esp + 0x3C) /= Screen.fHudScale;
+
+                *(float*)(regs.esp + 0x30) += Screen.fHudOffset;
+                *(float*)(regs.esp + 0x34) += Screen.fRadarVerticalOffset;
+                Screen.bStretch = false;
+
+                if (Screen.bWidescreenHud)
+                {
+                    *(float*)(regs.esp + 0x30) -= Screen.fWidescreenHudOffset;
+                }
+            }
+            else if (ret == dword_330D0832 || ret == dword_330D0D61 || ret == dword_330D134A)
+            {
+                *(float*)(regs.esp + 0x30) /= Screen.fHudScale;
+                *(float*)(regs.esp + 0x34) /= Screen.fHudScale;
+                *(float*)(regs.esp + 0x38) /= Screen.fHudScale;
+
+                *(float*)(regs.esp + 0x30) += Screen.fHudOffset;
+                *(float*)(regs.esp + 0x34) += Screen.fRadarVerticalOffset;
+                Screen.bStretch = false;
+
+                if (Screen.bWidescreenHud)
+                {
+                    *(float*)(regs.esp + 0x30) -= Screen.fWidescreenHudOffset;
+                }
             }
             else
             {
-                Screen.bStretch = true;
-                DrawBorders(regs.ecx);
-            }
-        }
-    }
-}; injector::MakeInline<Draw_2DImageHook>(pattern.get_first(0), pattern.get_first(6));
-#else
-pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "48 8B C4 48 81 EC ? ? ? ? 48 C7 44 24 ? ? ? ? ? 48 89 58 F8 48 89 68 F0 48 89 70 E8 48 89 78 E0 4C 89 60 D8 66 0F 7F 70");
-struct Draw_2DImageHook
-{
-    std::tuple<Address, void*> operator()()
-    {
-        static volatile float x1, y1, x2, y2;
-
-        static uint8_t buffer[300];
-        injector::ProtectMemory(buffer, sizeof(buffer), PAGE_EXECUTE_READWRITE);
-        CodeBlock cb; cb.init((Address)buffer, sizeof(buffer));
-        X64Assembler a(cb);
-
-        pushad();
-
-        a.movq((int64_t)&_rcx, reg::rax);
-        a.movq(reg::rcx, reg::rax[0]);
-        a.movq((int64_t)&x1, reg::rax);
-        a.movss(reg::xmm1, reg::rax[0]);
-        a.movq((int64_t)&y1, reg::rax);
-        a.movss(reg::xmm2, reg::rax[0]);
-        a.movq((int64_t)&x2, reg::rax);
-        a.movss(reg::xmm3, reg::rax[0]);
-        a.movq((int64_t)&y2, reg::rax);
-        a.movss(reg::rsp[0x28 + 0x90], reg::xmm1);
-        a.movss(reg::xmm1, reg::rax[0]);
-
-        a.movq(reg::rsp, reg::rcx);
-        a.movq((int64_t)static_cast<void(*)(int64_t)>([](int64_t ptr)
-            {
-                Screen.bStretch = false;
-
-                void* ret = *(void**)(ptr + 0x90);
-                void* ret2 = nullptr;
-                void* ret3 = nullptr;
-                if (ret == dword_100B1018)
+                if (ret == dword_365526AD) // Objectives window on Tab
                 {
-                    ret2 = *(void**)(ptr + 0x160);
-                    ret3 = *(void**)(ptr + 0x160 + 0x30);
-                }
-                else if (ret == dword_1005DA88)
-                {
-                    ret2 = *(void**)(ptr + 0x1F0);
-                }
-
-                if (ret == dword_1005DA88 && ret2 == dword_10068D88) //fmv
-                {
-                    Screen.bStretch = false;
-                    x1 /= Screen.fHudScale;
-                    x2 /= Screen.fHudScale;
-                    x1 += Screen.fHudOffset;
-
-                    x1 -= Screen.fFMVOffsetH;
-                    y1 -= Screen.fFMVOffsetV;
-                    x2 += Screen.fFMVOffsetH + Screen.fFMVOffsetH;
-                    y2 += Screen.fFMVOffsetV + Screen.fFMVOffsetV;
-                    return;
-                }
-
-                if (ret == dword_1018DCD8 || ret == dword_1018DD8F || ret == dword_1018DEA3 || ret == dword_1018DF57)
-                {
-                    x1 /= Screen.fHudScale;
-                    y1 /= Screen.fHudScale;
-                    x2 /= Screen.fHudScale;
-                    y2 /= Screen.fHudScale;
-
-                    x1 += Screen.fHudOffset;
-                    y1 += Screen.fRadarVerticalOffset;
-                    Screen.bStretch = false;
-
-                    if (Screen.bWidescreenHud)
+                    if (x2 == 50.0f && y2 == 25.0f) // enemy markers (binoculars)
                     {
-                        x1 -= Screen.fWidescreenHudOffset;
+                        *(float*)(regs.esp + 0x38) /= Screen.fHudScale;
+                        *(float*)(regs.esp + 0x30) += (50.0f - *(float*)(regs.esp + 0x38)) / 2.0f;
+                        Screen.bStretch = false;
                     }
+                    else
+                        Screen.bStretch = true;
                 }
-                else if (ret == dword_1018F2CE || ret == dword_1018E00E || ret == dword_1018ECE0 || ret == dword_1018EB80 || ret == dword_1018E5B4 || ret == dword_1018F11C || ret == dword_1018E4C6)
+                else if (ret2 == dword_330193CE) // Damage overlay
                 {
-                    x1 /= Screen.fHudScale;
-                    y1 /= Screen.fHudScale;
-                    x2 /= Screen.fHudScale;
-
-                    x1 += Screen.fHudOffset;
-                    y1 += Screen.fRadarVerticalOffset;
                     Screen.bStretch = false;
-
-                    if (Screen.bWidescreenHud)
-                    {
-                        x1 -= Screen.fWidescreenHudOffset;
-                    }
                 }
                 else
                 {
-                    if (ret == dword_100B0A58) // Objectives window on Tab
+                    Screen.bStretch = true;
+                    DrawBorders(regs.ecx);
+                }
+            }
+        }
+    }; injector::MakeInline<Draw_2DImageHook>(pattern.get_first(0), pattern.get_first(6));
+#else
+    pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "48 8B C4 48 81 EC ? ? ? ? 48 C7 44 24 ? ? ? ? ? 48 89 58 F8 48 89 68 F0 48 89 70 E8 48 89 78 E0 4C 89 60 D8 66 0F 7F 70");
+    struct Draw_2DImageHook
+    {
+        std::tuple<Address, void*> operator()()
+        {
+            static volatile float x1, y1, x2, y2;
+
+            static uint8_t buffer[300];
+            injector::ProtectMemory(buffer, sizeof(buffer), PAGE_EXECUTE_READWRITE);
+            CodeBlock cb; cb.init((Address)buffer, sizeof(buffer));
+            X64Assembler a(cb);
+
+            pushad();
+
+            a.movq((int64_t)&_rcx, reg::rax);
+            a.movq(reg::rcx, reg::rax[0]);
+            a.movq((int64_t)&x1, reg::rax);
+            a.movss(reg::xmm1, reg::rax[0]);
+            a.movq((int64_t)&y1, reg::rax);
+            a.movss(reg::xmm2, reg::rax[0]);
+            a.movq((int64_t)&x2, reg::rax);
+            a.movss(reg::xmm3, reg::rax[0]);
+            a.movq((int64_t)&y2, reg::rax);
+            a.movss(reg::rsp[0x28 + 0x90], reg::xmm1);
+            a.movss(reg::xmm1, reg::rax[0]);
+
+            a.movq(reg::rsp, reg::rcx);
+            a.movq((int64_t)static_cast<void(*)(int64_t)>([](int64_t ptr)
+                {
+                    Screen.bStretch = false;
+
+                    void* ret = *(void**)(ptr + 0x90);
+                    void* ret2 = nullptr;
+                    void* ret3 = nullptr;
+                    if (ret == dword_100B1018)
                     {
-                        if (x2 == 50.0f && y2 == 25.0f) // enemy markers (binoculars)
-                        {
-                            x2 /= Screen.fHudScale;
-                            x1 += (50.0f - x2) / 2.0f;
-                            Screen.bStretch = false;
-                        }
-                        else
-                            Screen.bStretch = true;
+                        ret2 = *(void**)(ptr + 0x160);
+                        ret3 = *(void**)(ptr + 0x160 + 0x30);
                     }
-                    else if (ret2 == dword_100B72BB) // Damage overlay (and scopes in x64 version)
+                    else if (ret == dword_1005DA88)
                     {
-                        if ((x1 == 0.0f && x2 == 800.0f && y1 == 0.0f && y2 == 90.0f) || (x1 == 0.0f && x2 == 800.0f && y1 == 510.0f && y2 == 90.0f) ||
-                            (x1 == 0.0f && x2 == 90.0f && y1 == 0.0f && y2 == 600.0f) || (x1 == 710.0f && x2 == 90.0f && y1 == 0.0f && y2 == 600.0f))
-                            Screen.bStretch = false;
+                        ret2 = *(void**)(ptr + 0x1F0);
+                    }
+
+                    if (ret == dword_1005DA88 && ret2 == dword_10068D88) //fmv
+                    {
+                        Screen.bStretch = false;
+                        x1 /= Screen.fHudScale;
+                        x2 /= Screen.fHudScale;
+                        x1 += Screen.fHudOffset;
+
+                        x1 -= Screen.fFMVOffsetH;
+                        y1 -= Screen.fFMVOffsetV;
+                        x2 += Screen.fFMVOffsetH + Screen.fFMVOffsetH;
+                        y2 += Screen.fFMVOffsetV + Screen.fFMVOffsetV;
+                        return;
+                    }
+
+                    if (ret == dword_1018DCD8 || ret == dword_1018DD8F || ret == dword_1018DEA3 || ret == dword_1018DF57)
+                    {
+                        x1 /= Screen.fHudScale;
+                        y1 /= Screen.fHudScale;
+                        x2 /= Screen.fHudScale;
+                        y2 /= Screen.fHudScale;
+
+                        x1 += Screen.fHudOffset;
+                        y1 += Screen.fRadarVerticalOffset;
+                        Screen.bStretch = false;
+
+                        if (Screen.bWidescreenHud)
+                        {
+                            x1 -= Screen.fWidescreenHudOffset;
+                        }
+                    }
+                    else if (ret == dword_1018F2CE || ret == dword_1018E00E || ret == dword_1018ECE0 || ret == dword_1018EB80 || ret == dword_1018E5B4 || ret == dword_1018F11C || ret == dword_1018E4C6)
+                    {
+                        x1 /= Screen.fHudScale;
+                        y1 /= Screen.fHudScale;
+                        x2 /= Screen.fHudScale;
+
+                        x1 += Screen.fHudOffset;
+                        y1 += Screen.fRadarVerticalOffset;
+                        Screen.bStretch = false;
+
+                        if (Screen.bWidescreenHud)
+                        {
+                            x1 -= Screen.fWidescreenHudOffset;
+                        }
+                    }
+                    else
+                    {
+                        if (ret == dword_100B0A58) // Objectives window on Tab
+                        {
+                            if (x2 == 50.0f && y2 == 25.0f) // enemy markers (binoculars)
+                            {
+                                x2 /= Screen.fHudScale;
+                                x1 += (50.0f - x2) / 2.0f;
+                                Screen.bStretch = false;
+                            }
+                            else
+                                Screen.bStretch = true;
+                        }
+                        else if (ret2 == dword_100B72BB) // Damage overlay (and scopes in x64 version)
+                        {
+                            if ((x1 == 0.0f && x2 == 800.0f && y1 == 0.0f && y2 == 90.0f) || (x1 == 0.0f && x2 == 800.0f && y1 == 510.0f && y2 == 90.0f) ||
+                                (x1 == 0.0f && x2 == 90.0f && y1 == 0.0f && y2 == 600.0f) || (x1 == 710.0f && x2 == 90.0f && y1 == 0.0f && y2 == 600.0f))
+                                Screen.bStretch = false;
+                            else
+                            {
+                                Screen.bStretch = true;
+                                DrawBorders();
+                            }
+                        }
                         else
                         {
                             Screen.bStretch = true;
                             DrawBorders();
                         }
                     }
-                    else
-                    {
-                        Screen.bStretch = true;
-                        DrawBorders();
-                    }
                 }
-            }
-        ), reg::rax);
-        a.callq(reg::rax);
+            ), reg::rax);
+            a.callq(reg::rax);
 
-        a.movq((int64_t)&x1, reg::rax);
-        a.movss(reg::rax[0], reg::xmm1);
-        a.movq((int64_t)&y1, reg::rax);
-        a.movss(reg::rax[0], reg::xmm2);
-        a.movq((int64_t)&x2, reg::rax);
-        a.movss(reg::rax[0], reg::xmm3);
-        a.movq((int64_t)&y2, reg::rax);
-        a.movq(reg::rax[0], reg::rax);
-        a.movq(reg::rax, reg::rsp[0x28 + 0x90]);
+            a.movq((int64_t)&x1, reg::rax);
+            a.movss(reg::rax[0], reg::xmm1);
+            a.movq((int64_t)&y1, reg::rax);
+            a.movss(reg::rax[0], reg::xmm2);
+            a.movq((int64_t)&x2, reg::rax);
+            a.movss(reg::rax[0], reg::xmm3);
+            a.movq((int64_t)&y2, reg::rax);
+            a.movq(reg::rax[0], reg::rax);
+            a.movq(reg::rax, reg::rsp[0x28 + 0x90]);
 
-        popad();
+            popad();
 
-        a.movq(reg::rsp, reg::rax); // _asm mov rax, rsp
-        a.subq(0x138, reg::rsp);    // _asm sub rsp, 138h
-        a.movq(-2, reg::rsp[0x58]); // _asm mov qword ptr [rsp+58h], -2
+            a.movq(reg::rsp, reg::rax); // _asm mov rax, rsp
+            a.subq(0x138, reg::rsp);    // _asm sub rsp, 138h
+            a.movq(-2, reg::rsp[0x58]); // _asm mov qword ptr [rsp+58h], -2
 
-        assert(sizeof(buffer) > ((cb.frontier() + JMPSIZE) - cb.base()));
-        return std::make_tuple(cb.frontier(), &buffer);
+            assert(sizeof(buffer) > ((cb.frontier() + JMPSIZE) - cb.base()));
+            return std::make_tuple(cb.frontier(), &buffer);
         }
     }; MakeInlineJMP<Draw_2DImageHook>(pattern.get_first(0), pattern.get_first(19)); //0x10021730, 0x10021743
 #endif
@@ -803,14 +803,14 @@ struct Draw_2DImageHook
                     *(float*)(ptr + 0x00) += Screen.fHudOffset;
                     *(float*)(ptr + 0x18) /= Screen.fHudScale;
                     *(float*)(ptr + 0x18) += Screen.fHudOffset;
-        }
+                }
             ), reg::rax);
             a.callq(reg::rax);
             a.popq(reg::rcx);
 
             assert(sizeof(buffer) > ((cb.frontier() + JMPSIZE) - cb.base()));
             return std::make_tuple(cb.frontier(), &buffer);
-    }
+        }
     }; MakeInlineJMP<DrawLineHook>(pattern.get_first(0), pattern.get_first(22)); //0x10020E6B, 0x10020E81
 #endif
 
@@ -1037,7 +1037,7 @@ void InitCryGame()
                             *(float*)(ptr + 0xE0) -= Screen.fWidescreenHudOffset;
                         }
                     }
-        }
+                }
             ), reg::rax);
             a.callq(reg::rax);
 
@@ -1051,7 +1051,7 @@ void InitCryGame()
 
             assert(sizeof(buffer) > ((cb.frontier() + JMPSIZE) - cb.base()));
             return std::make_tuple(cb.frontier(), &buffer);
-}
+        }
     }; MakeInlineJMP<HUDHook>(pattern.get_first(0), pattern.get_first(19)); //0x100AF490, 0x100AF4A3
 #endif
 }
