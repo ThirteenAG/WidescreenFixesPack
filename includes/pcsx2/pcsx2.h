@@ -5,10 +5,41 @@
 static constexpr uint32_t EEMainMemoryStart = 0x20000000;
 static constexpr uint32_t EEMainMemoryEnd = 0x21ffffff;
 
+struct wxSize
+{
+    int x, y;
+};
+
+struct wxPoint
+{
+    int x, y;
+};
+
+struct GSWindowOptions
+{
+    bool		CloseOnEsc;
+    bool		DefaultToFullscreen;
+    bool		AlwaysHideMouse;
+    bool		DisableResizeBorders;
+    bool		DisableScreenSaver;
+    int         AspectRatio;
+    int         FMVAspectRatioSwitch;
+    int	        Zoom;
+    int	        StretchY;
+    int	        OffsetX;
+    int	        OffsetY;
+    wxSize		WindowSize;
+    wxPoint		WindowPos;
+    bool		IsMaximized;
+    bool		IsFullscreen;
+    bool		EnableVsyncWindowFlag;
+    bool		IsToggleFullscreenOnDoubleClick;
+};
+
 struct PCSX2Data
 {
     uint32_t* pGameCRC;
-    uint32_t* pGSWindowOptions;
+    GSWindowOptions* pGSWindowOptions;
 
     uint32_t GameCRC;
     uint32_t WindowWidth;
