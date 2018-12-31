@@ -11,7 +11,7 @@ CEXP PCSX2Data PCSX2GetData()
         if (_PCSX2GetData)
             return _PCSX2GetData();
 
-        auto pattern = hook::pattern("C6 45 FC 08 8D 47 1C FF 70 04");
+        auto pattern = hook::pattern("C6 45 FC 08 8D 47 ? FF 70 04");
         if (pattern.empty())
         {
             ModuleList dlls;
@@ -28,13 +28,14 @@ CEXP PCSX2Data PCSX2GetData()
         }
         else
         {
+            static auto offs = *pattern.get_first<uint8_t>(7);
             struct GetOptionsRes
             {
                 void operator()(injector::reg_pack& regs)
                 {
                     *(uint8_t*)(regs.ebp - 4) = 8;
-                    regs.eax = regs.edi + 0x1C;
-                    data.pGSWindowOptions = *(uint32_t**)(regs.ebp - 0x3C);
+                    regs.eax = regs.edi + offs;
+                    data.pGSWindowOptions = *(GSWindowOptions**)(regs.ebp - 0x3C);
                 }
             }; injector::MakeInline<GetOptionsRes>(pattern.get_first(0), pattern.get_first(7));
 
@@ -52,10 +53,10 @@ CEXP PCSX2Data PCSX2GetData()
     data.GameCRC = *data.pGameCRC;
     if (data.pGSWindowOptions != nullptr)
     {
-        data.Fullscreen = *(uint8_t*)((uint32_t)data.pGSWindowOptions + 0x2D);
-        data.AspectRatioSwitch = data.pGSWindowOptions[2];
-        data.WindowWidth = data.Fullscreen ? data.DesktopWidth : data.pGSWindowOptions[7];
-        data.WindowHeight = data.Fullscreen ? data.DesktopHeight : data.pGSWindowOptions[8];
+        data.Fullscreen = data.pGSWindowOptions->IsFullscreen;
+        data.AspectRatioSwitch = data.pGSWindowOptions->AspectRatio;
+        data.WindowWidth = data.Fullscreen ? data.DesktopWidth : data.pGSWindowOptions->WindowSize.x;
+        data.WindowHeight = data.Fullscreen ? data.DesktopHeight : data.pGSWindowOptions->WindowSize.y;
         switch (data.AspectRatioSwitch)
         {
         case 1:
