@@ -34,8 +34,9 @@ void InitME2()
     static auto nWidth = std::ref(**pattern.get_first<uint32_t*>(9));
     static auto nHeight = std::ref(**pattern.get_first<uint32_t*>(2));
     static auto dword_126A26C = *hook::get_pattern<uint32_t*>("83 3D ? ? ? ? ? DC 0D ? ? ? ? B8 ? ? ? ? 0F 95 C2 89 46 28", 2);
-    static bool bIsNotDialogue = false;
 
+    /*
+    static bool bIsNotDialogue = false;
     pattern = hook::pattern("89 74 24 7C 89 44 24 10");
     struct DialogueCheck
     {
@@ -46,6 +47,7 @@ void InitME2()
             bIsNotDialogue = true;
         }
     }; injector::MakeInline<DialogueCheck>(pattern.get_first(0), pattern.get_first(8));
+    */
 
     pattern = hook::pattern("F3 0F 58 46 18 5F F3 0F 11 46 18 5B 8B E5 5D C2 04 00");
     struct FOVHook
@@ -56,7 +58,7 @@ void InitME2()
             if (*dword_126A26C == 0 /*|| bIsNotDialogue*/)
                 f = AdjustFOV(f, static_cast<float>(nWidth) / static_cast<float>(nHeight));
             _asm {movss xmm0, dword ptr[f]}
-            bIsNotDialogue = false;
+            //bIsNotDialogue = false;
         }
     }; injector::MakeInline<FOVHook>(pattern.get_first(0));
 }

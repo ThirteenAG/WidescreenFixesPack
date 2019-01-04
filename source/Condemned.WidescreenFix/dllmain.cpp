@@ -35,6 +35,77 @@ HRESULT SHGetFolderPathAHook(HWND hwnd, int csidl, HANDLE hToken, DWORD dwFlags,
     return r;
 }
 
+void InitSavePath(HMODULE module)
+{
+    if (IniFile.FixSavePath)
+    {
+        auto hInst = (size_t)module;
+        IMAGE_NT_HEADERS*           ntHeader = (IMAGE_NT_HEADERS*)(hInst + ((IMAGE_DOS_HEADER*)hInst)->e_lfanew);
+        IMAGE_IMPORT_DESCRIPTOR*    pImports = (IMAGE_IMPORT_DESCRIPTOR*)(hInst + ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress);
+        size_t                      nNumImports = ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].Size / sizeof(IMAGE_IMPORT_DESCRIPTOR) - 1;
+
+        auto PatchIAT = [&](size_t start, size_t end, size_t exe_end)
+        {
+            for (size_t i = 0; i < nNumImports; i++)
+            {
+                if (hInst + (pImports + i)->FirstThunk > start && !(end && hInst + (pImports + i)->FirstThunk > end))
+                    end = hInst + (pImports + i)->FirstThunk;
+            }
+
+            if (!end) { end = start + 0x100; }
+            if (end > exe_end) //for very broken exes
+            {
+                start = hInst;
+                end = exe_end;
+            }
+
+            for (auto i = start; i < end; i += sizeof(size_t))
+            {
+                DWORD dwProtect[2];
+                VirtualProtect((size_t*)i, sizeof(size_t), PAGE_EXECUTE_READWRITE, &dwProtect[0]);
+
+                auto ptr = *(size_t*)i;
+                if (!ptr)
+                    continue;
+
+                if (ptr == (size_t)::SHGetFolderPathA)
+                {
+                    *(size_t*)i = (size_t)SHGetFolderPathAHook;
+                }
+
+                VirtualProtect((size_t*)i, sizeof(size_t), dwProtect[0], &dwProtect[1]);
+            }
+        };
+
+        static auto getSection = [](const PIMAGE_NT_HEADERS nt_headers, unsigned section) -> PIMAGE_SECTION_HEADER
+        {
+            return reinterpret_cast<PIMAGE_SECTION_HEADER>(
+                (UCHAR*)nt_headers->OptionalHeader.DataDirectory +
+                nt_headers->OptionalHeader.NumberOfRvaAndSizes * sizeof(IMAGE_DATA_DIRECTORY) +
+                section * sizeof(IMAGE_SECTION_HEADER));
+        };
+
+        static auto getSectionEnd = [](IMAGE_NT_HEADERS* ntHeader, size_t inst) -> auto
+        {
+            auto sec = getSection(ntHeader, ntHeader->FileHeader.NumberOfSections - 1);
+            auto secSize = max(sec->SizeOfRawData, sec->Misc.VirtualSize);
+            auto end = inst + max(sec->PointerToRawData, sec->VirtualAddress) + secSize;
+            return end;
+        };
+
+        auto hInst_end = getSectionEnd(ntHeader, hInst);
+
+        for (size_t i = 0; i < nNumImports; i++)
+        {
+            if ((size_t)(hInst + (pImports + i)->Name) < hInst_end)
+            {
+                if (!_stricmp((const char*)(hInst + (pImports + i)->Name), "SHELL32.dll"))
+                    PatchIAT(hInst + (pImports + i)->FirstThunk, 0, hInst_end);
+            }
+        }
+    }
+}
+
 void __fastcall sub_4059F0(float* _this, uint32_t edx, float* a2)
 {
     _this[59] = 0.0f;
@@ -131,19 +202,34 @@ void Init()
     }
 }
 
-void InitSavePath()
+void InitSavePathExe()
 {
-    if (IniFile.FixSavePath)
-    {
-        static auto pF = &SHGetFolderPathAHook;
-        auto pattern = hook::pattern("FF 15 ? ? ? ? 85 C0 7C 4F 56 57 BE ? ? ? ? 56");
-        injector::WriteMemory(pattern.get_first(2), &pF, true);
-    }
+    InitSavePath(GetModuleHandle(NULL));
+}
+
+void InitSavePathEngineServer()
+{
+    InitSavePath(GetModuleHandle(L"EngineServer"));
+}
+
+void InitSavePathGameDatabase()
+{
+    InitSavePath(GetModuleHandle(L"GameDatabase"));
+}
+
+void InitSavePathGameServer()
+{
+    InitSavePath(GetModuleHandle(L"GameServer"));
+}
+
+void InitSavePathGameClient()
+{
+    InitSavePath(GetModuleHandle(L"GameClient"));
 }
 
 void InitGameClient()
 {
-    InitSavePath();
+    InitSavePathGameClient();
 
     if (IniFile.FixMenu)
     {
@@ -216,11 +302,11 @@ CEXP void InitializeASI()
 
             CallbackHandler::RegisterCallback(Init, hook::pattern("E8 ? ? ? ? 8B C6 5E 83 C4 10 C3"));
             CallbackHandler::RegisterCallback(InitConfig, hook::pattern("0F 85 ? ? ? ? 83 7C 24 2C 16 0F 85 ? ? ? ? 6A 7F"));
-            CallbackHandler::RegisterCallback(InitSavePath, hook::pattern("FF 15 ? ? ? ? 85 C0 7C 4F 56 57 BE ? ? ? ? 56"));
+            CallbackHandler::RegisterCallback(InitSavePathExe, hook::pattern("FF 15 ? ? ? ? 85 C0 7C 4F 56 57 BE ? ? ? ? 56"));
             CallbackHandler::RegisterCallback(L"GameClient.dll", InitGameClient);
-            CallbackHandler::RegisterCallback(L"EngineServer.dll", InitSavePath);
-            CallbackHandler::RegisterCallback(L"GameDatabase.dll", InitSavePath);
-            CallbackHandler::RegisterCallback(L"GameServer.dll", InitSavePath);
+            CallbackHandler::RegisterCallback(L"EngineServer.dll", InitSavePathEngineServer);
+            CallbackHandler::RegisterCallback(L"GameDatabase.dll", InitSavePathGameDatabase);
+            CallbackHandler::RegisterCallback(L"GameServer.dll", InitSavePathGameServer);
         });
 }
 
