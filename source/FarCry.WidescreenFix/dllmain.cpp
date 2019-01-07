@@ -903,6 +903,89 @@ void InitXRenderD3D9()
         }
     }; MakeInlineJMP<FOVHook>(pattern.get_first(0), pattern.get_first(14)); //0x100429DE, 0x100429EC
 #endif
+
+        //Language Switch (for controls)
+#ifndef _WIN64
+    pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "8B 83 ? ? ? ? 85 C0 75 16 A1");
+    struct LayoutSwitch
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.eax = *(uint32_t*)(regs.ebx + 0x1B614);
+
+            HKL* lpList = NULL;
+            wchar_t szBuf[512];
+
+            UINT uLayouts = GetKeyboardLayoutList(0, NULL);
+            lpList = (HKL*)LocalAlloc(LPTR, (uLayouts * sizeof(HKL)));
+            uLayouts = GetKeyboardLayoutList(uLayouts, lpList);
+
+            for (int i = 0; i < uLayouts; ++i)
+            {
+                GetLocaleInfo(MAKELCID(((UINT)lpList[i] & 0xffffffff), SORT_DEFAULT), LOCALE_SLANGUAGE, szBuf, 512);
+                if (wcsstr(szBuf, L"English") != NULL)
+                {
+                    PostMessage((HWND)regs.eax, WM_INPUTLANGCHANGEREQUEST, 0, (LPARAM)LoadKeyboardLayout(std::to_wstring((UINT)lpList[i]).c_str(), KLF_ACTIVATE));
+                    break;
+                }
+                memset(szBuf, 0, 512);
+            }
+
+            if (lpList)
+                LocalFree(lpList);
+        }
+    }; injector::MakeInline<LayoutSwitch>(pattern.get_first(0), pattern.get_first(6));
+#else
+    pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "48 83 BF ? ? ? ? ? 4C 8B 7C 24");
+    struct LayoutSwitch
+    {
+        std::tuple<Address, void*> operator()()
+        {
+            static uint8_t buffer[200];
+            injector::ProtectMemory(buffer, sizeof(buffer), PAGE_EXECUTE_READWRITE);
+            CodeBlock cb; cb.init((Address)buffer, sizeof(buffer));
+            X64Assembler a(cb);
+
+            pushad();
+
+            a.movq(reg::rcx[0x1FD18], reg::rcx);
+            a.movq((int64_t)static_cast<void(*)(HWND)>([](HWND hWnd)
+                {
+                    HKL* lpList = NULL;
+                    wchar_t szBuf[512];
+
+                    UINT uLayouts = GetKeyboardLayoutList(0, NULL);
+                    lpList = (HKL*)LocalAlloc(LPTR, (uLayouts * sizeof(HKL)));
+                    uLayouts = GetKeyboardLayoutList(uLayouts, lpList);
+
+                    for (int i = 0; i < uLayouts; ++i)
+                    {
+                        GetLocaleInfo(MAKELCID(((UINT)lpList[i] & 0xffffffff), SORT_DEFAULT), LOCALE_SLANGUAGE, szBuf, 512);
+                        if (wcsstr(szBuf, L"English") != NULL)
+                        {
+                            PostMessage(hWnd, WM_INPUTLANGCHANGEREQUEST, 0, (LPARAM)LoadKeyboardLayout(std::to_wstring((UINT)lpList[i]).c_str(), KLF_ACTIVATE));
+                            break;
+                        }
+                        memset(szBuf, 0, 512);
+                    }
+
+                    if (lpList)
+                        LocalFree(lpList);
+                }
+            ), reg::rax);
+            a.callq(reg::rax);
+
+            popad();
+
+            a.cmpq(0, reg::rdi[0x1FD18]);     // _asm cmp qword ptr [rdi+1FD18h], 0
+            a.movq(reg::rsp[0x78], reg::r15); // _asm mov r15, [rsp+78h]
+            a.movq(reg::rsp[0x80], reg::r14); // _asm mov r14, [rsp+80h]
+
+            assert(sizeof(buffer) > ((cb.frontier() + JMPSIZE) - cb.base()));
+            return std::make_tuple(cb.frontier(), &buffer);
+        }
+    }; MakeInlineJMP<LayoutSwitch>(pattern.get_first(0), pattern.get_first(21));
+#endif
 }
 
 void InitCryGame()
