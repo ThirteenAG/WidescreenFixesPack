@@ -140,7 +140,7 @@ CEXP void InitializeASI()
         {
             CallbackHandler::RegisterCallback(Init, hook::pattern("68 E0 01 00 00 8D 44 24 1C 68 80 02"));
 
-            if (!hook::pattern("FF 35 ? ? ? ? 51 68 ? ? ? ? 50 E8 ? ? ? ? 83 C4 18 8B C8 E8 ? ? ? ? C6 45 FC 05").empty()) //pcsx2
+            if (!PCSX2::pcsx2_crc_pattern.empty())
             {
                 void PCSX2Thread();
                 std::thread t(PCSX2Thread);
@@ -165,45 +165,11 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 
 void PCSX2Thread()
 {
-    static constexpr uint32_t SLES_510_CRC = 0x989192FE;
-
-    static PCSX2Data data = PCSX2GetData();
-
-    while (*data.pGameCRC != SLES_510_CRC)
-        std::this_thread::yield();
-
-    static std::vector<MagicNumberSt> addrVecStatic;
-
-    //Aspect Ratio
-    auto ps2pattern = hook::range_pattern(EEMainMemoryStart, EEMainMemoryEnd, "AA 3F ? 3C");
-    while (ps2pattern.clear().size() != 2) { std::this_thread::yield(); }
-    for (size_t i = 0; i < ps2pattern.size(); i++)
-        addrVecStatic.push_back(MagicNumberSt(ps2pattern.get(i).get<void>(0), 0x3FAAAAAB, &Screen.fAspectRatio));
-
-    ps2pattern = hook::range_pattern(EEMainMemoryStart, EEMainMemoryEnd, "AB AA AA 3F");
-    while (ps2pattern.clear().size() != 1) { std::this_thread::yield(); }
-    addrVecStatic.push_back(MagicNumberSt(ps2pattern.get(0).get<void>(0), &Screen.fAspectRatio));
-
-    //FOV
-    ps2pattern = hook::range_pattern(EEMainMemoryStart, EEMainMemoryEnd, "0E 3C 02 3C 36 FA 42 34 00 00 82 44 D0 FF BD 27");
-    while (ps2pattern.clear().size() != 2) { std::this_thread::yield(); }
-    addrVecStatic.push_back(MagicNumberSt(ps2pattern.get(0).get<void>(0), 0x3C0EFA36, &Screen.fFOVFactor));
-
-    static auto pnachname = GetThisModulePath<std::wstring>() + int_to_hex(*data.pGameCRC) + L".pnach";
-    static auto gametitle = L"Knight Rider (PAL-M6)(SLES-51011)";
-    static auto comment = L"Widescreen Fix by ThirteenAG https://thirteenag.github.io/wfp#kr";
-
-    while (true)
-    {
-        using namespace std::chrono_literals;
-        std::this_thread::sleep_for(10ms);
-        data = PCSX2GetData();
-
-        if (data.GameCRC == SLES_510_CRC)
+    static auto ps2 = PCSX2({ 0x989192FE }, NULL, [](PCSX2& ps2)
         {
-            Screen.nWidth = data.WindowWidth;
-            Screen.nHeight = data.WindowHeight;
-            Screen.fAspectRatio = data.AspectRatio;
+            Screen.nWidth = ps2.GetWindowWidth();
+            Screen.nHeight = ps2.GetWindowHeight();
+            Screen.fAspectRatio = ps2.GetAspectRatio();
             Screen.fWidth = static_cast<float>(Screen.nWidth);
             Screen.fHeight = static_cast<float>(Screen.nHeight);
             Screen.nWidth43 = static_cast<uint32_t>(Screen.fHeight * (4.0f / 3.0f));
@@ -213,23 +179,32 @@ void PCSX2Thread()
             float f = 80.0f;
             float t = AdjustFOV(f, Screen.fAspectRatio);
             Screen.fFOVFactor = 0.00872665f * (t / f);
+        });
 
-            MEMORY_BASIC_INFORMATION mbi;
-            if (VirtualQuery((LPCVOID)EEMainMemoryStart, &mbi, sizeof(MEMORY_BASIC_INFORMATION)) == 0)
-                return;
+    while (!ps2.isCRCValid())
+        std::this_thread::yield();
 
-            if (mbi.State != MEM_COMMIT || mbi.Protect == PAGE_NOACCESS)
-                return;
+    ps2.vecPatches.push_back(PCSX2Memory(L"gametitle=Knight Rider: The Game (PAL-M6)(SLES-51011)"));
+    ps2.vecPatches.push_back(PCSX2Memory(L"comment=Widescreen Fix by ThirteenAG https://thirteenag.github.io/wfp#kr"));
+    ps2.vecPatches.push_back(PCSX2Memory(L""));
+    ps2.vecPatches.push_back(PCSX2Memory(L"// Current Resolution: " + std::to_wstring(Screen.nWidth) + L"x" + std::to_wstring(Screen.nHeight) + L", Aspect Ratio: " + std::to_wstring(Screen.fAspectRatio)));
+    ps2.vecPatches.push_back(PCSX2Memory(L""));
 
-            if (!addrVecStatic.empty())
-            {
-                for each (auto addr in addrVecStatic)
-                {
-                    addr.WriteMemory();
-                }
-            }
-
-            WritePnach(pnachname, addrVecStatic, gametitle, comment);
-        }
+    auto ps2pattern = hook::range_pattern(ps2.EEMainMemoryStart, ps2.EEMainMemoryEnd, "AA 3F ? 3C");
+    while (ps2pattern.clear().size() != 2) { std::this_thread::yield(); }
+    for (size_t i = 0; i < ps2pattern.size(); i++)
+    {
+        ps2.vecPatches.push_back(PCSX2Memory(CONT, EE, ps2pattern.get(i).get<void>(0), WORD_T, LUI_ORI, &Screen.fAspectRatio, std::wstring(L"// Aspect Ratio: ") + std::to_wstring(Screen.fAspectRatio), 0x3FAAAAAB));
     }
+
+    ps2pattern = hook::range_pattern(ps2.EEMainMemoryStart, ps2.EEMainMemoryEnd, "AB AA AA 3F");
+    while (ps2pattern.clear().size() != 1) { std::this_thread::yield(); }
+    ps2.vecPatches.push_back(PCSX2Memory(CONT, EE, ps2pattern.get(0).get<void>(0), WORD_T, NONE, &Screen.fAspectRatio, std::wstring(L"// Aspect Ratio: ") + std::to_wstring(Screen.fAspectRatio), 0x3FAAAAAB));
+
+    ps2pattern = hook::range_pattern(ps2.EEMainMemoryStart, ps2.EEMainMemoryEnd, "0E 3C 02 3C 36 FA 42 34 00 00 82 44 D0 FF BD 27");
+    while (ps2pattern.clear().size() != 2) { std::this_thread::yield(); }
+    ps2.vecPatches.push_back(PCSX2Memory(CONT, EE, ps2pattern.get(0).get<void>(0), WORD_T, LUI_ORI, &Screen.fFOVFactor, std::wstring(L"// FOV: ") + std::to_wstring(Screen.fFOVFactor), 0x3C0EFA36));
+
+    ps2.WritePnach();
+    ps2.WriteMemoryLoop();
 }

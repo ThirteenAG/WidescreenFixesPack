@@ -10,3 +10,6 @@
 [submodule "external/spdlog"]
 	path = external/spdlog
 	url = https://github.com/gabime/spdlog
+[submodule "external/filewatch"]
+	path = external/filewatch
+	url = https://github.com/ThomasMonkman/filewatch

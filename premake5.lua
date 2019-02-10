@@ -30,6 +30,7 @@ workspace "WidescreenFixesPack"
    includedirs { "external/injector/include" }
    includedirs { "external/inireader" }
    includedirs { "external/spdlog/include" }
+   includedirs { "external/filewatch" }
    local dxsdk = os.getenv "DXSDK_DIR"
    if dxsdk then
       includedirs { dxsdk .. "/include" }
@@ -63,16 +64,20 @@ workspace "WidescreenFixesPack"
       targetdir ("data/%{prj.name}/" .. scriptspath)
    end
    
-   filter "configurations:Debug"
+   filter "configurations:Debug*"
       defines "DEBUG"
       symbols "On"
 
-   filter "configurations:Release"
+   filter "configurations:Release*"
       defines "NDEBUG"
       optimize "On"
 
 project "Bully.WidescreenFix"
    setpaths("Z:/WFP/Games/Bully Scholarship Edition/", "Bully.exe", "plugins/")
+project "Burnout3.WidescreenFix"
+   configurations { "ReleasePCSX2", "DebugPCSX2" }
+      setpaths("Z:/WFP/Games/PCSX2/", "pcsx2.exe")
+      files { "includes/pcsx2/pcsx2.h" }
 project "CallOfCthulhu.WidescreenFix"
    setpaths("Z:/WFP/Games/Call of Cthulhu/", "Engine/CoCMainWin32.exe", "Engine/scripts/")
 project "ColdFear.WidescreenFix"
@@ -125,13 +130,13 @@ project "KingKong.WidescreenFix"
 project "KnightRider.WidescreenFix"
    configurations { "Release", "Debug", "ReleasePCSX2", "DebugPCSX2" }
       setpaths("Z:/WFP/Games/Knight Rider/", "Knight Rider.exe")
-      files { "includes/pcsx2/pcsx2.h", "includes/pcsx2/pcsx2.cpp" }
+      files { "includes/pcsx2/pcsx2.h" }
    filter "configurations:*PCSX2"
       setpaths("Z:/WFP/Games/PCSX2/", "pcsx2.exe")
 project "KnightRider2.WidescreenFix"
    configurations { "Release", "Debug", "ReleasePCSX2", "DebugPCSX2" }
       setpaths("Z:/WFP/Games/Knight Rider 2/", "KR2.exe")
-      files { "includes/pcsx2/pcsx2.h", "includes/pcsx2/pcsx2.cpp" }
+      files { "includes/pcsx2/pcsx2.h" }
    filter "configurations:*PCSX2"
       setpaths("Z:/WFP/Games/PCSX2/", "pcsx2.exe")
 project "LARush.WidescreenFix"
@@ -193,6 +198,10 @@ project "SplinterCellDoubleAgent.WidescreenFix"
    setpaths("Z:/WFP/Games/Splinter Cell/Splinter Cell - Double Agent/", "SCDA-Offline/System/SplinterCell4.exe", "SCDA-Offline/System/scripts/")
    files { "textures/SCDA/icon.rc" }
    defines { "IDR_SCDAICON=200" }
+project "SplinterCellDoubleAgentPS2.WidescreenFix"
+   configurations { "ReleasePCSX2", "DebugPCSX2" }
+      setpaths("Z:/WFP/Games/PCSX2/", "pcsx2.exe")
+      files { "includes/pcsx2/pcsx2.h" }
 project "SplinterCellPandoraTomorrow.WidescreenFix"
    setpaths("Z:/WFP/Games/Splinter Cell/Splinter Cell Pandora Tomorrow/", "offline/system/SplinterCell2.exe", "offline/system/scripts/")
 project "StreetRacingSyndicate.WidescreenFix"

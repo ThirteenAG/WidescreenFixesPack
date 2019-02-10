@@ -40,7 +40,7 @@ bool IsUALPresent();
 void CreateThreadAutoClose(LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_T dwStackSize, LPTHREAD_START_ROUTINE lpStartAddress, LPVOID lpParameter, DWORD dwCreationFlags, LPDWORD lpThreadId);
 std::tuple<int32_t, int32_t> GetDesktopRes();
 void GetResolutionsList(std::vector<std::string>& list);
-std::string format(const char *fmt, ...);
+std::string format(const char* fmt, ...);
 HICON CreateIconFromBMP(UCHAR* data);
 HICON CreateIconFromResourceICO(UINT nID, int32_t cx, int32_t cy);
 
@@ -592,7 +592,7 @@ public:
         else
             return ::RegQueryValueExA(hKey, lpValueName, lpReserved, lpType, lpData, lpcbData);
     }
-    static LSTATUS WINAPI RegSetValueExA(HKEY hKey, LPCSTR lpValueName, DWORD Reserved, DWORD dwType, const BYTE *lpData, DWORD cbData)
+    static LSTATUS WINAPI RegSetValueExA(HKEY hKey, LPCSTR lpValueName, DWORD Reserved, DWORD dwType, const BYTE* lpData, DWORD cbData)
     {
         if (hKey == NULL)
         {
