@@ -50,6 +50,20 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 |
 [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/Bully.WidescreenFix/plugins/Bully.WidescreenFix.ini)
 
+## Burnout 3: Takedown Widescreen Fix [PCSX2]
+
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Aspect Ratio
+
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed HUD
+
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Field of View
+
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed FMVs
+
+[Download](http://thirteenag.github.io/wfp#burnout3)
+|
+[Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/Burnout3.WidescreenFix/dllmain.cpp)
+
 ## Call of Cthulhu Widescreen Fix
 
 ![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Aspect Ratio
@@ -1037,6 +1051,20 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/SplinterCellDoubleAgent.WidescreenFix/dllmain.cpp)
 |
 [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/SplinterCellDoubleAgent.WidescreenFix/SCDA-Offline/System/scripts/SplinterCellDoubleAgent.WidescreenFix.ini)
+
+## Splinter Cell Double Agent V2 Widescreen Fix [PCSX2]
+
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Aspect Ratio
+
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed HUD
+
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Field of View
+
+![](https://habrastorage.org/webt/31/qm/gv/31qmgv6q0kj8zie1itat5ygfsuq.png) Fixed FMVs
+
+[Download](http://thirteenag.github.io/wfp#scdaps2)
+|
+[Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/SplinterCellDoubleAgent.WidescreenFix/dllmain.cpp)
 
 ## Street Racing Syndicate Widescreen Fix
 

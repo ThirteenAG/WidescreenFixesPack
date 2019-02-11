@@ -1,0 +1,42 @@
+// To recreate this file with new settings, close PCSX2, then reopen it and load the game.
+gametitle=Knight Rider: The Game 2 (PAL-M6)(SLES-52836)
+comment=Widescreen Fix by ThirteenAG https://thirteenag.github.io/wfp#kr2
+
+// Current Resolution: 1280x720, Aspect Ratio: 1.777778
+
+patch=1,EE,0017F1EC,short,3FE3          // Aspect Ratio: 1.777778
+patch=1,EE,0017F204,short,8E39          // Aspect Ratio: 1.777778
+
+patch=1,EE,001B8E08,short,3FE3          // Aspect Ratio: 1.777778
+patch=1,EE,001B8E20,short,8E39          // Aspect Ratio: 1.777778
+
+patch=1,EE,00457740,short,3FE3          // Aspect Ratio: 1.777778
+patch=1,EE,00457744,short,8E39          // Aspect Ratio: 1.777778
+
+patch=1,EE,004606F4,short,3FE3          // Aspect Ratio: 1.777778
+patch=1,EE,00460704,short,8E39          // Aspect Ratio: 1.777778
+
+patch=1,EE,004F18AC,short,3FE3          // Aspect Ratio: 1.777778
+patch=1,EE,004F18C4,short,8E39          // Aspect Ratio: 1.777778
+
+patch=1,EE,004F196C,short,3FE3          // Aspect Ratio: 1.777778
+patch=1,EE,004F1984,short,8E39          // Aspect Ratio: 1.777778
+
+patch=1,EE,004F471C,short,3FE3          // Aspect Ratio: 1.777778
+patch=1,EE,004F4724,short,8E39          // Aspect Ratio: 1.777778
+
+patch=1,EE,004F5BD0,short,3FE3          // Aspect Ratio: 1.777778
+patch=1,EE,004F5BD8,short,8E39          // Aspect Ratio: 1.777778
+
+patch=1,EE,004F6F78,short,3FE3          // Aspect Ratio: 1.777778
+patch=1,EE,004F6F7C,short,8E39          // Aspect Ratio: 1.777778
+
+patch=1,EE,00505CEC,short,3FE3          // Aspect Ratio: 1.777778
+patch=1,EE,00505D04,short,8E39          // Aspect Ratio: 1.777778
+
+patch=1,EE,00506220,short,3FE3          // Aspect Ratio: 1.777778
+patch=1,EE,00506238,short,8E39          // Aspect Ratio: 1.777778
+
+patch=1,EE,004607B0,short,3C2C          // FOV: 0.010518
+patch=1,EE,004607B8,short,52D4          // FOV: 0.010518
+

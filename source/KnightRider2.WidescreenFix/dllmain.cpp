@@ -288,6 +288,8 @@ void PCSX2Thread()
     while (!ps2.isCRCValid())
         std::this_thread::yield();
 
+    ps2.EnableCallback();
+
     ps2.vecPatches.push_back(PCSX2Memory(L"gametitle=Knight Rider: The Game 2 (PAL-M6)(SLES-52836)"));
     ps2.vecPatches.push_back(PCSX2Memory(L"comment=Widescreen Fix by ThirteenAG https://thirteenag.github.io/wfp#kr2"));
     ps2.vecPatches.push_back(PCSX2Memory(L""));

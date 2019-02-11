@@ -7,13 +7,9 @@ struct Screen
     int32_t nHeight;
     float fWidth;
     float fHeight;
-    float fFieldOfView;
     float fAspectRatio;
-    int32_t nWidth43;
-    float fWidth43;
     float fHudScale;
     float fHudOffset;
-    float fHudOffsetNeg;
 } Screen;
 
 CEXP void InitializeASI()
@@ -46,7 +42,7 @@ void PCSX2Thread()
 {
     using namespace mips;
 
-    static auto ps2 = PCSX2({ 0xC0498D24, 0xABE2FDE9 }, 0x98531C, [](PCSX2& ps2)
+    static auto ps2 = PCSX2({ 0xC0498D24, 0xABE2FDE9 }, NULL, [](PCSX2& ps2)
         {
             float intResX = ps2.GV({ 640.0f, 512.0f });
             float intResY = ps2.GV({ 480.0f, 384.0f });
@@ -56,8 +52,6 @@ void PCSX2Thread()
             Screen.fAspectRatio = ps2.GetAspectRatio();
             Screen.fWidth = static_cast<float>(Screen.nWidth);
             Screen.fHeight = static_cast<float>(Screen.nHeight);
-            Screen.nWidth43 = static_cast<uint32_t>(intResY * (intResX / intResY));
-            Screen.fWidth43 = static_cast<float>(Screen.nWidth43);
             Screen.fHudScale = (((intResX / intResY)) / (Screen.fAspectRatio));
             Screen.fHudOffset = (((intResY * Screen.fAspectRatio) - intResX) / 2.0f) * Screen.fHudScale;
         });
@@ -65,7 +59,9 @@ void PCSX2Thread()
     while (!ps2.isCRCValid())
         std::this_thread::yield();
 
-    ps2.vecPatches.push_back(PCSX2Memory(L"gametitle=Tom Clancy's Splinter Cell Double Agent (SLUS-21356)"));
+    ps2.EnableCallback();
+
+    ps2.vecPatches.push_back(PCSX2Memory(L"gametitle=Tom Clancy's Splinter Cell Double Agent " + ps2.GV({ std::wstring(L"(SLUS-21356)"), std::wstring(L"(SLES-53827)") })));
     ps2.vecPatches.push_back(PCSX2Memory(L"comment=Widescreen Fix by ThirteenAG https://thirteenag.github.io/wfp#scdaps2"));
     ps2.vecPatches.push_back(PCSX2Memory(L""));
     ps2.vecPatches.push_back(PCSX2Memory(L"// Selected Resolution: " + std::to_wstring(Screen.nWidth) + L"x" + std::to_wstring(Screen.nHeight) + L", Aspect Ratio: " + std::to_wstring(Screen.fAspectRatio)));
@@ -235,8 +231,6 @@ void PCSX2Thread()
         }),
         L"// Text Scaling = TS / " + std::to_wstring(Screen.fHudScale) + L" + " + std::to_wstring(Screen.fHudOffset)));
 
-    ps2.WritePnach();
-
     []()
     {
         auto SC4_OFF_ELF_CHECK = (uint32_t*)(ps2.GV({ 0x25ECE0, 0x25ED50 }) + EEStart);
@@ -245,10 +239,20 @@ void PCSX2Thread()
             {
                 using namespace std::chrono_literals;
                 std::this_thread::sleep_for(100ms);
-                if (ps2.isCRCValid() && !ps2.GetWidescreenPatchesOption())
+                if (ps2.isCRCValid())
                 {
                     if (*SC4_OFF_ELF_CHECK == 0x27BDF4E0)
-                        ps2.WriteMemory();
+                    {
+                        static bool bOnce = false;
+                        if (!bOnce)
+                        {
+                            ps2.WritePnach();
+                            bOnce = true;
+                        }
+
+                        if (!ps2.GetWidescreenPatchesOption())
+                            ps2.WriteMemory();
+                    }
                 }
             }
         }

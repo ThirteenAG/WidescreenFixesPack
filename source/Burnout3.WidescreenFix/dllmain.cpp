@@ -87,6 +87,8 @@ void PCSX2Thread()
     while (!ps2.isCRCValid())
         std::this_thread::yield();
 
+    ps2.EnableCallback();
+
     ps2.vecPatches.push_back(PCSX2Memory(L"gametitle=Burnout 3: Takedown (SLUS-21050)"));
     ps2.vecPatches.push_back(PCSX2Memory(L"comment=Widescreen Fix by Aero_ https://thirteenag.github.io/wfp#burnout3"));
     ps2.vecPatches.push_back(PCSX2Memory(L""));
