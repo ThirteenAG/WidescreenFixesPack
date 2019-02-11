@@ -168,31 +168,30 @@ public:
         if (customCodeBufAddr != NULL)
             mBufAddr = (customCodeBufAddr >= EEMainMemoryStart) ? (customCodeBufAddr - EEMainMemoryStart) : customCodeBufAddr;
         pGameCRC = *pcsx2_crc_pattern.get_first<uint32_t*>(2);
-        GetPCSX2Data();
         DeletePnach();
         UpdateDataCallback = std::forward<std::function<void(PCSX2& ps2)>>(cb);
-        SetCallback();
     }
 
     uint32_t FindMemoryBuffer()
     {
-        auto test = [](char* buff, size_t size) -> size_t
+        auto test = [](uint8_t* begin, std::size_t bytes) -> bool
         {
-            return *(uint64_t*)buff || memcmp(buff, buff + sizeof(uint64_t), size - sizeof(uint64_t));
+            return std::all_of(begin, begin + bytes, [](uint8_t const byte) { return byte == 0; });
         };
 
-        size_t i = 0x00000000 + EEMainMemoryStart;
-        for (size_t s = 400;; i += s)
+        size_t i = 0x00100000 + EEMainMemoryStart;
+        for (size_t s = 2000;; i += s)
         {
-            if (!test((char*)i, s) || i >= (0x00FFFFFF + EEMainMemoryStart))
+            if (test((uint8_t*)i, s) || i >= (0x00FFFFFF - s + EEMainMemoryStart))
                 break;
         }
 
         return i - EEMainMemoryStart;
     }
 
-    void SetCallback()
+    void EnableCallback()
     {
+        GetPCSX2Data();
         UpdateDataCallback(*this);
 
         static filewatch::FileWatch<std::wstring> watchui(this->PCSX2_ui.wstring(), [this](const std::wstring& path, const filewatch::Event change_type)
@@ -203,8 +202,7 @@ public:
                     std::this_thread::sleep_for(500ms);
 
                     this->GetPCSX2Data();
-                    if (this->UpdateDataCallback)
-                        this->UpdateDataCallback(*this);
+                    this->UpdateDataCallback(*this);
                 }
             }
         );
@@ -218,11 +216,11 @@ public:
 
         static filewatch::FileWatch<std::wstring> watchvm(this->PCSX2_vm.wstring(), [this](const std::wstring& path, const filewatch::Event change_type)
             {
-                using namespace std::chrono_literals;
-                std::this_thread::sleep_for(500ms);
-
                 if (change_type == filewatch::Event::renamed_new)
                 {
+                    using namespace std::chrono_literals;
+                    std::this_thread::sleep_for(500ms);
+
                     if (fileExists(this->PCSX2_vm.string()))
                     {
                         char buf[32];
