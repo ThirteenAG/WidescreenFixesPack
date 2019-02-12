@@ -87,6 +87,21 @@ HRESULT __stdcall CreateDevice(IDirect3D9* d3ddev, UINT Adapter, D3DDEVTYPE Devi
     return retval;
 }
 
+
+void*(*CreateResourceFile)(const char* ResourceFileName, int32_t ResourceFileType, int, int, int);
+void(__fastcall *ResourceFileBeginLoading)(int a1, void* rsc, int a2);
+void LoadResourceFile(const char* ResourceFileName, int32_t ResourceFileType, int32_t nUnk1 = 0, int32_t nUnk2 = 0, int32_t nUnk3 = 0, int32_t nUnk4 = 0, int32_t nUnk5 = 0)
+{
+    auto r = CreateResourceFile(ResourceFileName, ResourceFileType, nUnk1, nUnk2, nUnk3);
+    _asm
+    {
+        mov     edx, r
+        mov     ecx, nUnk5
+        mov     eax, nUnk4
+        call    ResourceFileBeginLoading
+    }
+};
+
 void Init()
 {
     CIniReader iniReader("");
@@ -330,7 +345,7 @@ void Init()
                 fOffsetX /= (((16.0f / 9.0f) / Screen.fAspectRatio) * 1.5f);
 
             HudCoords.emplace_back(PosX, PosY, fOffsetX, fOffsetY);
-        });
+            });
 
         static float fMinimapPosX = 320.0f;
         static float fMinimapPosY = 240.0f;
@@ -468,20 +483,9 @@ void Init()
     if (nImproveGamepadSupport)
     {
         pattern = hook::pattern("6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 51 A1 ? ? ? ? 57");
-        static auto CreateResourceFile = (void*(*)(const char* ResourceFileName, int32_t ResourceFileType, int, int, int)) pattern.get_first(0); //0x004482F0
+        CreateResourceFile = (void*(*)(const char* ResourceFileName, int32_t ResourceFileType, int, int, int)) pattern.get_first(0); //0x004482F0
         pattern = hook::pattern("56 8B F2 89 8E 98 00 00 00 8B 0D ? ? ? ? 89 86 94 00 00 00 8B 86 9C 00 00 00");
-        static auto ResourceFileBeginLoading = (void(__fastcall *)(int a1, void* rsc, int a2)) pattern.get_first(0); //0x00448110;
-        static auto LoadResourceFile = [](const char* ResourceFileName, int32_t ResourceFileType, int32_t nUnk1 = 0, int32_t nUnk2 = 0, int32_t nUnk3 = 0, int32_t nUnk4 = 0, int32_t nUnk5 = 0)
-        {
-            auto r = CreateResourceFile(ResourceFileName, ResourceFileType, nUnk1, nUnk2, nUnk3);
-            _asm
-            {
-                mov     edx, r
-                mov     ecx, nUnk5
-                mov     eax, nUnk4
-                call    ResourceFileBeginLoading
-            }
-        };
+        ResourceFileBeginLoading = (void(__fastcall *)(int a1, void* rsc, int a2)) pattern.get_first(0); //0x00448110;
 
         static auto TPKPath = GetThisModulePath<std::string>().substr(GetExeModulePath<std::string>().length());
 
@@ -706,9 +710,9 @@ void Init()
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
-    {
-        CallbackHandler::RegisterCallback(Init, hook::pattern("68 20 03 00 00 BE 58 02 00 00").count_hint(1).empty(), 0x1100);
-    });
+        {
+            CallbackHandler::RegisterCallback(Init, hook::pattern("68 20 03 00 00 BE 58 02 00 00").count_hint(1).empty(), 0x1100);
+        });
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, uint32_t reason, LPVOID lpReserved)
