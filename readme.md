@@ -1064,7 +1064,7 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 
 [Download](http://thirteenag.github.io/wfp#scdaps2)
 |
-[Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/SplinterCellDoubleAgent.WidescreenFix/dllmain.cpp)
+[Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/SplinterCellDoubleAgentPS2.WidescreenFix/dllmain.cpp)
 
 ## Street Racing Syndicate Widescreen Fix
 

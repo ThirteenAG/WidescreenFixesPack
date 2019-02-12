@@ -19,11 +19,11 @@ struct Screen
     float fFMVOffsetH;
     float fFMVOffsetV;
     float fRadarVerticalOffset;
-    float fCutOffArea;
     bool bStretch;
     bool bWidescreenHud;
     float fIniHudOffset;
     float fWidescreenHudOffset;
+    float fFOV;
     float fIniFOV;
     float fFOVFactor;
 
@@ -41,10 +41,6 @@ struct Screen
         this->fHudOffset = (((600.0f * this->fAspectRatio) - 800.0f) / 2.0f) / this->fHudScale;
         this->fRadarVerticalOffset = this->fHudOffset * (4.0f / 3.0f);
         this->fFOVFactor = this->fHudScale * this->fIniFOV;
-        this->fCutOffArea = 0.5f / ((this->fAspectRatio / (4.0f / 3.0f)) * 0.5f) / this->fIniFOV;
-#ifndef _WIN64
-        this->fCutOffArea *= 2.0f;
-#endif
         this->fWidescreenHudOffset = fIniHudOffset / this->fHudScale;
         if (this->fAspectRatio < (16.0f / 9.0f))
             this->fWidescreenHudOffset = ((this->fWidescreenHudOffset * (this->fHudScale)) - this->fWidescreenHudOffset);
@@ -864,47 +860,7 @@ void InitXRenderD3D9()
     }; MakeInlineJMP<FMVHook>(pattern.get_first(0), pattern.get_first(17)); //0x1006A920, 0x1006A931
 #endif
 
-    //FOV
-#ifndef _WIN64
-    pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "D9 45 30 D8 4D 48 D9 1C 24 56 E8 ? ? ? ? 8B 83 ? ? ? ? 8B 08 56 6A 03");
-    struct FOVHook
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            float f1 = *(float*)(regs.ebp + 0x30);
-            float f2 = *(float*)(regs.ebp + 0x48);
-            _asm {fld dword ptr[f1]}
-            _asm {fmul dword ptr[f2]}
-            _asm {fmul dword ptr[Screen.fFOVFactor]}
-        }
-    }; injector::MakeInline<FOVHook>(pattern.get_first(0), pattern.get_first(6));
-#else
-    pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "F3 0F 59 4E 30 F3 0F 11 44 24 20 0F 28 D6");
-    struct FOVHook
-    {
-        std::tuple<Address, void*> operator()()
-        {
-            static uint8_t buffer[100];
-            injector::ProtectMemory(buffer, sizeof(buffer), PAGE_EXECUTE_READWRITE);
-            CodeBlock cb; cb.init((Address)buffer, sizeof(buffer));
-            X64Assembler a(cb);
-
-            a.pushq(reg::rax);
-            a.movq((int64_t)&Screen.fFOVFactor, reg::rax);
-            a.mulss(reg::rax[0], reg::xmm1);    //_asm mulss   xmm1,[Screen.fFOVFactor]
-            a.popq(reg::rax);
-
-            a.mulss(reg::rsi[0x30], reg::xmm1); //_asm mulss   xmm1, dword ptr [rsi+30h]
-            a.movss(reg::xmm0, reg::rsp[0x20]); //_asm movss   dword ptr [rsp+20h], xmm0
-            a.movaps(reg::xmm6, reg::xmm2);     //_asm movaps  xmm2, xmm6
-
-            assert(sizeof(buffer) > ((cb.frontier() + JMPSIZE) - cb.base()));
-            return std::make_tuple(cb.frontier(), &buffer);
-        }
-    }; MakeInlineJMP<FOVHook>(pattern.get_first(0), pattern.get_first(14)); //0x100429DE, 0x100429EC
-#endif
-
-        //Language Switch (for controls)
+    //Language Switch (for controls)
 #ifndef _WIN64
     pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "8B 83 ? ? ? ? 85 C0 75 16 A1");
     struct LayoutSwitch
@@ -1061,16 +1017,6 @@ void InitCryGame()
             }
         }
     }; injector::MakeInline<HUDHook>(pattern.get_first(0), pattern.get_first(6));
-
-    //pattern = hook::module_pattern(GetModuleHandle(L"CryGame"), "8B 45 10 89 41 30 8B 45 1C D9 51 40");
-    //struct FOVHook
-    //{
-    //    void operator()(injector::reg_pack& regs)
-    //    {
-    //        //auto f = *(float*)(regs.ebp + 0x10) / (M_PI / 180.0);
-    //        *(float*)(regs.ecx + 0x30) = AdjustFOV(f, Screen.fAspectRatio) * (M_PI / 180.0);
-    //    }
-    //}; injector::MakeInline<FOVHook>(pattern.get_first(0), pattern.get_first(6));
 #else
     auto pattern = hook::module_pattern(GetModuleHandle(L"CryGame"), "4C 8D A4 24 ? ? ? ? 4C 8D B4 24 ? ? ? ? 45 33 FF");
     struct HUDHook
@@ -1142,58 +1088,44 @@ void InitCryGame()
 void InitCry3DEngine()
 {
 #ifndef _WIN64
-    auto pattern = hook::module_pattern(GetModuleHandle(L"Cry3DEngine"), "D8 0D ? ? ? ? D9 C0 D9 FF D9 C9 D9 FE D9 C9 D9 C9 8D B4 24");
-    injector::WriteMemory(pattern.get_first(2), &Screen.fCutOffArea, true);
-    injector::WriteMemory<uint8_t>(pattern.get_first(1), 0x35i8, true); //fdiv
+    auto pattern = hook::module_pattern(GetModuleHandle(L"Cry3DEngine"), "8B 4A 30 89 48 30 8D 4A 34 8B 39");
+    struct FOVHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            *(float*)(regs.eax + 0x30) = Screen.fFOV;
+        }
+    }; injector::MakeInline<FOVHook>(pattern.get_first(0), pattern.get_first(6));
 #else
-    auto pattern = hook::module_pattern(GetModuleHandle(L"Cry3DEngine"), "F3 0F 11 43 58 F3 0F 10 43 48 F3 0F 59 43 30");
-    struct CutOffAreaHook1
+    auto pattern = hook::module_pattern(GetModuleHandle(L"Cry3DEngine"), "8B 42 30 89 41 30 8B 42 34 89 41 34 8B 42 38");
+    struct FOVHook
     {
         std::tuple<Address, void*> operator()()
         {
-            static uint8_t buffer[100];
+            static uint8_t buffer[200];
             injector::ProtectMemory(buffer, sizeof(buffer), PAGE_EXECUTE_READWRITE);
             CodeBlock cb; cb.init((Address)buffer, sizeof(buffer));
             X64Assembler a(cb);
 
-            a.movss(reg::xmm0, reg::rbx[0x58]); //_asm movss   dword ptr[rbx + 58h], xmm0
-            a.movss(reg::rbx[0x48], reg::xmm0); //_asm movss   xmm0, dword ptr[rbx + 48h]
-            a.mulss(reg::rbx[0x30], reg::xmm0); //_asm mulss   xmm0, dword ptr[rbx + 30h]
-            a.mulss(reg::xmm7, reg::xmm0);      //_asm mulss   xmm0, xmm7
+            a.movl(reg::rdx[0x30], reg::eax); // _asm mov eax, [rdx+30h]
+            {
+                a.pushq(reg::rcx);
+                a.movq((int64_t)&Screen.fFOV, reg::rcx); //regs.eax = Screen.fFOV
+                a.movl(reg::rcx[0], reg::eax);
+                a.popq(reg::rcx);
+            }
+            a.movl(reg::eax, reg::rcx[0x30]); // _asm mov [rcx+30h], eax
 
-            a.pushq(reg::rax);
-            a.movq((int64_t)&Screen.fCutOffArea, reg::rax);
-            a.divss(reg::rax[0], reg::xmm0);    //_asm mulss   xmm0,[Screen.fCutOffArea]
-            a.popq(reg::rax);
-
-            assert(sizeof(buffer) > ((cb.frontier() + JMPSIZE) - cb.base()));
-            return std::make_tuple(cb.frontier(), &buffer);
-        }
-    }; MakeInlineJMP<CutOffAreaHook1>(pattern.get_first(0), pattern.get_first(19)); //0x20050ACB, 0x20050ADE
-
-    pattern = hook::module_pattern(GetModuleHandle(L"Cry3DEngine"), "F3 0F 10 43 48 F3 0F 59 43 30 F3 0F 59 C7");
-    struct CutOffAreaHook2
-    {
-        std::tuple<Address, void*> operator()()
-        {
-            static uint8_t buffer[100];
-            injector::ProtectMemory(buffer, sizeof(buffer), PAGE_EXECUTE_READWRITE);
-            CodeBlock cb; cb.init((Address)buffer, sizeof(buffer));
-            X64Assembler a(cb);
-
-            a.movss(reg::rbx[0x48], reg::xmm0); //_asm movss   xmm0, dword ptr[rbx + 48h]
-            a.mulss(reg::rbx[0x30], reg::xmm0); //_asm mulss   xmm0, dword ptr[rbx + 30h]
-            a.mulss(reg::xmm7, reg::xmm0);      //_asm mulss   xmm0, xmm7
-
-            a.pushq(reg::rax);
-            a.movq((int64_t)&Screen.fCutOffArea, reg::rax);
-            a.divss(reg::rax[0], reg::xmm0);    //_asm mulss   xmm0,[Screen.fCutOffArea]
-            a.popq(reg::rax);
+            a.movl(reg::rdx[0x34], reg::eax); // _asm mov eax, [rdx+34h]
+            a.movl(reg::eax, reg::rcx[0x34]); // _asm mov [rcx+34h], eax
+            a.movl(reg::rdx[0x38], reg::eax); // _asm mov eax, [rdx+38h]
+            a.movl(reg::eax, reg::rcx[0x38]); // _asm mov [rcx+38h], eax
+            a.movl(reg::rdx[0x3C], reg::eax); // _asm mov eax, [rdx+3Ch]
 
             assert(sizeof(buffer) > ((cb.frontier() + JMPSIZE) - cb.base()));
             return std::make_tuple(cb.frontier(), &buffer);
         }
-    }; MakeInlineJMP<CutOffAreaHook2>(pattern.get_first(0), pattern.get_first(14)); //0x20050AE6, 0x20050AF4
+    }; MakeInlineJMP<FOVHook>(pattern.get_first(0), pattern.get_first(21));
 #endif
 }
 
@@ -1202,10 +1134,55 @@ void InitCrySystem()
 #ifndef _WIN64
     dword_36552A15 = hook::make_module_pattern(GetModuleHandle(L"CrySystem"), "83 7D F8 00 74 10 8B 4F 1C 8B 01 68 00 01 00 00 FF 90 38 02 00 00 8B 06 8B CE FF 50 40 5F 5E 5B C9 C2 04 00 55 8B EC 83 EC 30").get_first(0);
     dword_365526AD = hook::make_module_pattern(GetModuleHandle(L"CrySystem"), "83 7D F8 00 74 10 8B 4F 1C 8B 01 68 00 01 00 00 FF 90 38 02 00 00").get(1).get<void>(0);
+
+    auto pattern = hook::module_pattern(GetModuleHandle(L"CrySystem"), "89 50 30 8D 71 34 8D 78 34 A5 A5 A5");
+    struct FOVHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            Screen.fFOV = *(float*)&regs.edx;
+            *(float*)(regs.eax + 0x30) = Screen.fFOV * Screen.fFOVFactor;
+            regs.esi = regs.ecx + 0x34;
+        }
+    }; injector::MakeInline<FOVHook>(pattern.get_first(0), pattern.get_first(6));
 #else
     dword_100B0A58 = hook::make_module_pattern(GetModuleHandle(L"CrySystem"), "83 BC 24 ? ? ? ? ? 74 12 48 8B 4E 38 BA ? ? ? ? 48 8B 01").count(4).get(1).get<void*>(0);
     dword_100B1018 = hook::make_module_pattern(GetModuleHandle(L"CrySystem"), "83 BC 24 ? ? ? ? ? 74 12 48 8B 4E 38 BA ? ? ? ? 48 8B 01").count(4).get(3).get<void*>(0);
     dword_100B72BB = hook::make_module_pattern(GetModuleHandle(L"CrySystem"), "48 8B CB 4C 63 C0 48 8B 05 ? ? ? ? 42 FF 14 C0 48 83 C4 20 5B C3").count(7).get(5).get<void*>(17);
+
+    auto pattern = hook::module_pattern(GetModuleHandle(L"CrySystem"), "8B 42 30 89 41 30");
+    struct FOVHook
+    {
+        std::tuple<Address, void*> operator()()
+        {
+            static uint8_t buffer[200];
+            injector::ProtectMemory(buffer, sizeof(buffer), PAGE_EXECUTE_READWRITE);
+            CodeBlock cb; cb.init((Address)buffer, sizeof(buffer));
+            X64Assembler a(cb);
+
+            a.movl(reg::rdx[0x30], reg::eax); // _asm mov eax, [rdx+30h]
+            {
+                a.pushq(reg::rcx);
+                a.movq((int64_t)&Screen.fFOV, reg::rcx); //Screen.fFOV = regs.eax
+                a.movl(reg::eax, reg::rcx[0]);
+                a.movl(reg::eax, reg::xmm10);
+                a.movq((int64_t)&Screen.fFOVFactor, reg::rcx);
+                a.mulss(reg::rcx[0], reg::xmm10);
+                a.movl(reg::xmm10, reg::eax);
+                a.popq(reg::rcx);
+            }
+            a.movl(reg::eax, reg::rcx[0x30]); // _asm mov [rcx+30h], eax
+
+            a.movl(reg::rdx[0x34], reg::eax); // _asm mov eax, [rdx+34h]
+            a.movl(reg::eax, reg::rcx[0x34]); // _asm mov [rcx+34h], eax
+            a.movl(reg::rdx[0x38], reg::eax); // _asm mov eax, [rdx+38h]
+            a.movl(reg::eax, reg::rcx[0x38]); // _asm mov [rcx+38h], eax
+            a.movl(reg::rdx[0x3C], reg::eax); // _asm mov eax, [rdx+3Ch]
+
+            assert(sizeof(buffer) > ((cb.frontier() + JMPSIZE) - cb.base()));
+            return std::make_tuple(cb.frontier(), &buffer);
+        }
+    }; MakeInlineJMP<FOVHook>(pattern.get_first(0), pattern.get_first(21));
 #endif
 }
 
