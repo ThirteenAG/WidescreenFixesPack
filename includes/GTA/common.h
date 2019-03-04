@@ -53,3 +53,5 @@ struct RwV3d
 	float y;
 	float z;
 };
+
+class CSprite2d;
