@@ -446,6 +446,8 @@ void updateScreenAspectRatioWrapper()
         fCustomRadarWidthScaleDown = **pfWideScreenWidthScaleDown * fRadarWidthScale;
         fSubtitlesScaleX = **pfWideScreenWidthScaleDown * fHudWidthScale * fSubtitlesScale;
         fSubtitlesScaleY = **pfWideScreenHeightScaleDown * fHudHeightScale * fSubtitlesScale;
+
+		updateScriptAspectRatio();
     });
 }
 
@@ -492,6 +494,73 @@ void __cdecl WipeLocalVariableMemoryForMissionScriptHook()
 
     return hbWipeLocalVariableMemoryForMissionScript.fun();
 }
+
+// SCM_DRAWING_FIXES
+float fDefaultWidth = 1.33334;
+float fDefaultCoords = 0.0f;
+
+void updateScriptAspectRatio() {
+	float w;
+	if (*CDraw::pfScreenAspectRatio < fDefaultWidth)
+		w = static_cast<float>(RsGlobal->MaximumWidth);
+	else
+		w = RsGlobal->MaximumWidth * fDefaultWidth / *CDraw::pfScreenAspectRatio;
+
+	fDefaultCoords = 0.5f * (RsGlobal->MaximumWidth - w);
+}
+
+auto DrawRect = ((void(__cdecl *)(CRect const&, CRGBA const&))(0x727B60));
+void __cdecl DrawRectHook(CRect const& rect, CRGBA  const& color) {
+	DrawRect(CRect(fDefaultCoords + rect.m_fLeft * fDefaultWidth / *CDraw::pfScreenAspectRatio, rect.m_fBottom, fDefaultCoords + rect.m_fRight * fDefaultWidth / *CDraw::pfScreenAspectRatio, rect.m_fTop), color);
+}
+
+auto Draw = ((void(__thiscall *)(CSprite2d const&, CRect const&, CRGBA const&))(0x728350));
+void __fastcall DrawSpriteHook(CSprite2d const& sprite, int, CRect const& rect, CRGBA const& color) {
+	Draw(sprite, CRect(fDefaultCoords + rect.m_fLeft * fDefaultWidth / *CDraw::pfScreenAspectRatio, rect.m_fBottom, fDefaultCoords + rect.m_fRight * fDefaultWidth / *CDraw::pfScreenAspectRatio, rect.m_fTop), color);
+	
+	if (rect.m_fRight == RsGlobal->MaximumWidth / 2 && rect.m_fBottom == RsGlobal->MaximumHeight / 2) {
+		CSprite2dDrawRect(CRect(0.0f, RsGlobal->MaximumHeight, fDefaultCoords, 0.0f), CRGBA(0, 0, 0, 255));
+
+		CSprite2dDrawRect(CRect(fDefaultCoords + RsGlobal->MaximumWidth * fDefaultWidth / *CDraw::pfScreenAspectRatio, RsGlobal->MaximumHeight, RsGlobal->MaximumWidth, 0.0f), CRGBA(0, 0, 0, 255));
+	}
+}
+
+auto Draw2 = ((void(__thiscall *)(CSprite2d const&, float, float, float, float, float, float, float, float, CRGBA const&))(0x728520));
+void __fastcall DrawSpriteHook2(CSprite2d const& sprite, int, float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4, CRGBA const& color) {
+	Draw2(sprite, fDefaultCoords + x1 * fDefaultWidth / *CDraw::pfScreenAspectRatio, y1, fDefaultCoords + x2 * fDefaultWidth / *CDraw::pfScreenAspectRatio, y2,
+		fDefaultCoords + x3 * fDefaultWidth / *CDraw::pfScreenAspectRatio, y3, fDefaultCoords + x4 * fDefaultWidth / *CDraw::pfScreenAspectRatio, y4, color);
+}
+
+auto PrintString = ((char(__cdecl *)(float, float, const char*))(0x71A700));
+void __cdecl PrintStringHook(float x, float y, char* str) {
+	PrintString(fDefaultCoords + x * fDefaultWidth / *CDraw::pfScreenAspectRatio, y, str);
+}
+
+auto SetScale = ((char(__cdecl *)(float, float))(0x719380));
+void __cdecl SetScaleHook(float w, float h) {
+	SetScale(w * fDefaultWidth / *CDraw::pfScreenAspectRatio, h);
+}
+
+auto SetWrapx = ((void(__cdecl *)(float))(0x7194D0));
+void __cdecl SetWrapxHook(float fWrap) {
+	SetWrapx(fDefaultCoords + fWrap * fDefaultWidth / *CDraw::pfScreenAspectRatio);
+}
+
+auto DrawWindow = ((void(__stdcall *)(const CRect&, const char*, unsigned char, CRGBA, bool, bool))(0x573EE0));
+void __stdcall DrawWindowHook(CRect *rect, char *titleKey, char fadeState, CRGBA color, int a5, char bDrawBox) {
+	DrawWindow(CRect(fDefaultCoords + rect->m_fLeft * fDefaultWidth / *CDraw::pfScreenAspectRatio, rect->m_fBottom, fDefaultCoords + rect->m_fRight * fDefaultWidth / *CDraw::pfScreenAspectRatio, rect->m_fTop), titleKey, fadeState, color, a5, bDrawBox);
+}
+
+void InstallSCMDrawingFixes() {
+	injector::MakeCALL(0x464A53, DrawRectHook);
+	injector::MakeCALL(0x464A90, DrawSpriteHook);
+	injector::MakeCALL(0x464B7F, DrawSpriteHook2);
+	injector::MakeCALL(0x58C229, PrintStringHook);
+	injector::MakeCALL(0x58C0E8, SetScaleHook);
+	injector::MakeCALL(0x58C137, SetWrapxHook);
+	injector::MakeCALL(0x464A24, DrawWindowHook);
+}
+//
 
 DWORD WINAPI CompatHandler(LPVOID)
 {
@@ -643,8 +712,10 @@ DWORD WINAPI Init(LPVOID bDelay)
     InstallWSHPSFixes();
 
     // intro text scaling
-    hbWipeLocalVariableMemoryForMissionScript.fun = injector::MakeCALL(0x489A70, WipeLocalVariableMemoryForMissionScriptHook, true).get();
-    injector::MakeCALL(0x4899F0, WipeLocalVariableMemoryForMissionScriptHook, true);
+    // hbWipeLocalVariableMemoryForMissionScript.fun = injector::MakeCALL(0x489A70, WipeLocalVariableMemoryForMissionScriptHook, true).get();
+    // injector::MakeCALL(0x4899F0, WipeLocalVariableMemoryForMissionScriptHook, true);
+
+	InstallSCMDrawingFixes();
 
     return 0;
 }
