@@ -518,7 +518,7 @@ auto Draw = ((void(__thiscall *)(CSprite2d const&, CRect const&, CRGBA const&))(
 void __fastcall DrawSpriteHook(CSprite2d const& sprite, int, CRect const& rect, CRGBA const& color) {
 	Draw(sprite, CRect(fDefaultCoords + rect.m_fLeft * fDefaultWidth / *CDraw::pfScreenAspectRatio, rect.m_fBottom, fDefaultCoords + rect.m_fRight * fDefaultWidth / *CDraw::pfScreenAspectRatio, rect.m_fTop), color);
 	
-	if (rect.m_fRight == RsGlobal->MaximumWidth / 2 && rect.m_fBottom == RsGlobal->MaximumHeight / 2) {
+	if (rect.m_fRight / rect.m_fBottom >= fDefaultWidth) {
 		CSprite2dDrawRect(CRect(0.0f, RsGlobal->MaximumHeight, fDefaultCoords, 0.0f), CRGBA(0, 0, 0, 255));
 
 		CSprite2dDrawRect(CRect(fDefaultCoords + RsGlobal->MaximumWidth * fDefaultWidth / *CDraw::pfScreenAspectRatio, RsGlobal->MaximumHeight, RsGlobal->MaximumWidth, 0.0f), CRGBA(0, 0, 0, 255));
