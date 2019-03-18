@@ -2,373 +2,18 @@
 #include "GTA\common.h"
 #include "GTA\global.h"
 
-float** pfWideScreenWidthScaleDown;
-float** pfWideScreenHeightScaleDown;
-float fSubtitlesScaleX, fSubtitlesScaleY;
-float fCustomRadarWidthScaleDown;
-
-void InstallWSHPSFixes()
-{
-    //crash fixes
-    injector::WriteMemory<uint8_t>(0x57F884 + 1, 0x08, true);
-    injector::WriteMemory<uint8_t>(0x57FAE9, 0x14, true);
-    injector::WriteMemory(0x57FAF3, 0x456A006A, true);
-    injector::WriteMemory<uint8_t>(0x57FAF7, 0x8B, true);
-    injector::WriteMemory<short>(0x57FD02, (short)0xFF68, true);
-
-    //high speed bug
-    injector::WriteMemory<uint8_t>(0x574252, 0x3B, true);
-    injector::WriteMemory(0x574253, 0xD90875C7, true);
-
-    //Frame limiter bug
-    injector::WriteMemory<uint8_t>(0x58BB87, 0x0C, true);
-    injector::WriteMemory<uint8_t>(0x58BB88, 0x8A, true);
-
-    //Heat Haze bug
-    injector::WriteMemory(0x0070149D, 0x00859520, true);
-    injector::WriteMemory(0x007014C5, 0x00859524, true);
-
-    //Stats + - bug
-    static float f65 = 65.0f - 10.0f;
-    injector::WriteMemory(0x0058C004, &f65, true);
-}
-
-// COMMAND_GET_HEIGHT_PERCENT_IN_WORLD_LEVEL
-float getHeightPercentInWorldLevel(float fPosZ) {
-    float fHeightPerc;
-
-    if (fPosZ <= -100.0f) {
-        fHeightPerc = 100.0f;
-    }
-    else if (fPosZ <= 0.0f) {
-        fHeightPerc = -fPosZ;
-    }
-    else if (fPosZ <= 200.0f) {
-        fHeightPerc = fPosZ * (100.0f / 200.0f);
-    }
-    else if (fPosZ <= 950.0f) {
-        fHeightPerc = (fPosZ - 200.0f) * (100.0f / (950.0f - 200.0f));
-    }
-    else if (fPosZ < 1500.0f) {
-        fHeightPerc = (fPosZ - 950.0f) * (100.0f / (1500.0f - 950.0f));
-    }
-    else {
-        fHeightPerc = 100.0f;
-    }
-
-    return fHeightPerc;
-}
-
-void __declspec(naked) HOOK_PTR_0058A68F_drawMap() {
-    static const float fPosX = 15.0f;
-    static const float fPosY = 28.0f;
-    static const float fWidth = 20.0f;
-    static const float fHeight = 2.0f;
-    static const float fScrollHeight = 74.0f;
-    static const float fPercent = 0.01f;
-
-    __asm {
-        fild	ds : [0x00C17040 + 0x8]
-        fld		st
-        fmul	fWideScreenHeightScaleDown
-        mov		ecx, [eax + 8]
-        push	ecx
-        call	getHeightPercentInWorldLevel
-        add		esp, 4
-        fmul	fPercent
-        fmul	fScrollHeight
-        fadd	fPosY
-        fmul	st, st(1)
-        fsubp	st(2), st
-        fmul	fHeight
-        fsubr	st, st(1)
-        fstp	dword ptr[esp + 34h - 14h]
-        fstp	dword ptr[esp + 34h - 0x1C]
-        fild	ds : [0x00C17040 + 0x4]
-        fmul	fCustomWideScreenWidthScaleDown
-        fld		fPosX
-        fadd	fWidth
-        fmul	st, st(1)
-        fxch	st(1)
-        fmul	fPosX
-        mov		edx, 0x58A73B
-        jmp		edx
-    }
-}
-
-void WINAPI InstallCustomHooks() {
-    // Rampage (Kill Frenzy) counter.
-    injector::WriteMemory(0x0043CF49, &fCustomWideScreenHeightScaleDown, true);							// Text height scale.
-    injector::WriteMemory(0x0043CF59, &fCustomWideScreenWidthScaleDown, true);							// Text width scale.
-    injector::WriteMemory(0x0043D10B, &fCustomWideScreenWidthScaleDown, true);							// Time X position scale.
-    injector::WriteMemory(0x0043D163, &fCustomWideScreenWidthScaleDown, true);							// Kills X position scale.
-    // Collectable text.
-    injector::WriteMemory(0x004477B9, &fCustomWideScreenHeightScaleDown, true);							// Text height scale.
-    injector::WriteMemory(0x004477CF, &fCustomWideScreenWidthScaleDown, true);							// Text width scale.
-    injector::WriteMemory(0x004477F9, &fCustomWideScreenWidthScaleDown, true);							// Text centre size scale.
-    injector::WriteMemory(0x004478AE, &fCustomWideScreenHeightScaleDown, true);							// 2-numbered text Y position scale.
-    injector::WriteMemory(0x00447918, &fCustomWideScreenHeightScaleDown, true);							// 1-numbered text Y position scale.
-    injector::WriteMemory(0x0044795D, &fCustomWideScreenHeightScaleDown, true);							// 0-numbered text Y position scale.
-    // Replay text.
-    injector::WriteMemory(0x0045C241, &fCustomWideScreenHeightScaleDown, true);							// Text height scale.
-    injector::WriteMemory(0x0045C257, &fCustomWideScreenWidthScaleDown, true);							// Text width scale.
-    // Radar map zoomed coordinates.
-    injector::WriteMemory(0x005834BC, &fCustomRadarWidthScaleDown, true);	                			// Map width scale.
-    //injector::WriteMemory(0x005834EE, &fCustomWideScreenHeightScaleDown, true);						// Map height scale.
-    // Radar blip.
-    injector::WriteMemory(0x0058410D, &fCustomWideScreenWidthScaleDown, true);							// Squared radar blip border width scale.
-    injector::WriteMemory(0x0058412D, &fCustomWideScreenHeightScaleDown, true);							// Squared radar blip border height scale.
-    injector::WriteMemory(0x00584192, &fCustomWideScreenWidthScaleDown, true);							// Squared radar blip width scale.
-    injector::WriteMemory(0x005841B2, &fCustomWideScreenHeightScaleDown, true);							// Squared radar blip height scale.
-    injector::WriteMemory(0x00584209, &fCustomWideScreenHeightScaleDown, true);							// Fipped triangular radar blip border height scale.
-    injector::WriteMemory(0x0058424B, &fCustomWideScreenWidthScaleDown, true);							// Fipped triangular radar blip border width scale.
-    injector::WriteMemory(0x005842C8, &fCustomWideScreenHeightScaleDown, true);							// Fipped triangular radar blip height scale.
-    injector::WriteMemory(0x005842E8, &fCustomWideScreenWidthScaleDown, true);							// Fipped triangular radar blip width scale.
-    injector::WriteMemory(0x00584348, &fCustomWideScreenHeightScaleDown, true);							// Triangular radar blip border height scale.
-    injector::WriteMemory(0x0058439E, &fCustomWideScreenWidthScaleDown, true);							// Triangular radar blip border width scale.
-    injector::WriteMemory(0x0058440E, &fCustomWideScreenHeightScaleDown, true);							// Triangular radar blip height scale.
-    injector::WriteMemory(0x00584436, &fCustomWideScreenWidthScaleDown, true);							// Triangular radar blip width scale.
-    // Radar position.
-    injector::WriteMemory(0x005849FC, &fCustomWideScreenHeightScaleDown, true);							// Sprite height scale.
-    injector::WriteMemory(0x00584A14, &fCustomWideScreenWidthScaleDown, true);							// Sprite width scale.
-    // Radar sprite.
-    injector::WriteMemory(0x00586041, &fCustomWideScreenWidthScaleDown, true);							// Sprite width scale.
-    injector::WriteMemory(0x0058605A, &fCustomWideScreenHeightScaleDown, true);							// Sprite height scale.
-    // Radar blip for entity.
-    injector::WriteMemory(0x005876BE, &fCustomWideScreenHeightScaleDown, true);							// Radar centre sprite height scale.
-    injector::WriteMemory(0x005876D6, &fCustomWideScreenWidthScaleDown, true);							// Radar centre sprite width scale.
-    injector::WriteMemory(0x00587735, &fCustomWideScreenHeightScaleDown, true);							// Radar centre sprite height scale on camera locked behind the player.
-    injector::WriteMemory(0x0058774D, &fCustomWideScreenWidthScaleDown, true);							// Radar centre sprite width scale on camera locked behind the player.
-    injector::WriteMemory(0x0058780C, &fCustomWideScreenWidthScaleDown, true);							// Radar searchlight sprite X position scale.
-    injector::WriteMemory(0x00587891, &fCustomWideScreenWidthScaleDown, true);							// Radar searchlight sprite width scale.
-    injector::WriteMemory(0x00587918, &fCustomWideScreenHeightScaleDown, true);							// Radar moving light sprite height scale.
-    injector::WriteMemory(0x00587930, &fCustomWideScreenWidthScaleDown, true);							// Radar moving light sprite width scale.
-    injector::WriteMemory(0x00587A04, &fCustomWideScreenHeightScaleDown, true);							// Radar runway lights sprite height scale in menu.
-    injector::WriteMemory(0x00587A1C, &fCustomWideScreenWidthScaleDown, true);							// Radar runway lights sprite width scale in menu.
-    injector::WriteMemory(0x00587A94, &fCustomWideScreenHeightScaleDown, true);							// Radar runway lights sprite height scale.
-    injector::WriteMemory(0x00587AAC, &fCustomWideScreenWidthScaleDown, true);							// Radar runway lights sprite width scale.
-    // HUD component Y position computation.
-    injector::WriteMemory(0x00588B9E, &fCustomWideScreenHeightScaleDown, true);							// Component relative Y position scale.
-    // Armour meter.
-    injector::WriteMemory(0x00589140, &fCustomWideScreenHeightScaleDown, true);							// Meter height scale.
-    injector::WriteMemory(0x00589157, &fCustomWideScreenWidthScaleDown, true);							// Meter width scale.
-    // Breath meter.
-    injector::WriteMemory(0x00589218, &fCustomWideScreenHeightScaleDown, true);							// Meter height scale.
-    injector::WriteMemory(0x0058922F, &fCustomWideScreenWidthScaleDown, true);							// Meter width scale.
-    // Health meter.
-    injector::WriteMemory(0x005892CC, &fCustomWideScreenWidthScaleDown, true);							// Meter width scale.
-    injector::WriteMemory(0x00589348, &fCustomWideScreenHeightScaleDown, true);							// Meter height scale.
-    injector::WriteMemory(0x00589380, &fCustomWideScreenWidthScaleDown, true);							// Meter X position scale.
-    // Weapon ammo.
-    injector::WriteMemory(0x005894B1, &fCustomWideScreenHeightScaleDown, true);							// Text height scale.
-    injector::WriteMemory(0x005894C7, &fCustomWideScreenWidthScaleDown, true);							// Text width scale.
-    // Statistics.
-    injector::WriteMemory(0x00589705, &fCustomWideScreenWidthScaleDown, true);							// Texts and meters X position scale.
-    injector::WriteMemory(0x00589737, &fCustomWideScreenHeightScaleDown, true);							// Respect meter relative Y position scale.
-    injector::WriteMemory(0x0058978D, &fCustomWideScreenHeightScaleDown, true);							// 5-meters box height scale.
-    injector::WriteMemory(0x005897C5, &fCustomWideScreenWidthScaleDown, true);							// 5-meters box width scale.
-    injector::WriteMemory(0x00589815, &fCustomWideScreenHeightScaleDown, true);							// 5-meters box content relative Y position scale.
-    injector::WriteMemory(0x00589841, &fCustomWideScreenHeightScaleDown, true);							// 6-meters box height scale.
-    injector::WriteMemory(0x0058986F, &fCustomWideScreenWidthScaleDown, true);							// 6-meters box width scale.
-    injector::WriteMemory(0x005898BF, &fCustomWideScreenHeightScaleDown, true);							// 6-meters box content relative Y position scale.
-    injector::WriteMemory(0x005898F8, &fCustomWideScreenHeightScaleDown, true);							// Skill text height scale.
-    injector::WriteMemory(0x0058990E, &fCustomWideScreenWidthScaleDown, true);							// Skill text width scale.
-    injector::WriteMemory(0x00589A01, &fCustomWideScreenHeightScaleDown, true);							// Respect text and meter height scale.
-    injector::WriteMemory(0x00589A18, &fCustomWideScreenWidthScaleDown, true);							// Respect text and meter width scale.
-    injector::WriteMemory(0x00589A01, &fCustomWideScreenHeightScaleDown, true);							// Lung capacity/Weapon skill text and meter relative Y position scale.
-    injector::WriteMemory(0x00589B18, &fCustomWideScreenHeightScaleDown, true);							// Lung capacity text and meter height scale.
-    injector::WriteMemory(0x00589B2F, &fCustomWideScreenWidthScaleDown, true);							// Lung capacity text and meter width scale.
-    injector::WriteMemory(0x00589C5E, &fCustomWideScreenHeightScaleDown, true);							// Weapon skill text and meter height scale.
-    injector::WriteMemory(0x00589C75, &fCustomWideScreenWidthScaleDown, true);							// Weapon skill text and meter width scale.
-    injector::WriteMemory(0x00589CAA, &fCustomWideScreenHeightScaleDown, true);							// Stamina text and meter relative Y position scale.
-    injector::WriteMemory(0x00589D4C, &fCustomWideScreenHeightScaleDown, true);							// Stamina text and meter height scale.
-    injector::WriteMemory(0x00589D63, &fCustomWideScreenWidthScaleDown, true);							// Stamina text and meter width scale.
-    injector::WriteMemory(0x00589D94, &fCustomWideScreenHeightScaleDown, true);							// Muscle text and meter relative Y position scale.
-    injector::WriteMemory(0x00589E34, &fCustomWideScreenHeightScaleDown, true);							// Muscle text and meter height scale.
-    injector::WriteMemory(0x00589E4B, &fCustomWideScreenWidthScaleDown, true);							// Muscle text and meter width scale.
-    injector::WriteMemory(0x00589E7C, &fCustomWideScreenHeightScaleDown, true);							// Fat text and meter relative Y position scale.
-    injector::WriteMemory(0x00589F1C, &fCustomWideScreenHeightScaleDown, true);							// Fat text and meter height scale.
-    injector::WriteMemory(0x00589F33, &fCustomWideScreenWidthScaleDown, true);							// Fat text and meter width scale.
-    injector::WriteMemory(0x00589F64, &fCustomWideScreenHeightScaleDown, true);							// Sex appeal text and meter relative Y position scale.
-    injector::WriteMemory(0x00589FFE, &fCustomWideScreenHeightScaleDown, true);							// Sex appeal text and meter height scale.
-    injector::WriteMemory(0x0058A015, &fCustomWideScreenWidthScaleDown, true);							// Sex appeal text and meter width scale.
-    injector::WriteMemory(0x0058A042, &fCustomWideScreenHeightScaleDown, true);							// Weekday text relative Y position scale.
-    injector::WriteMemory(0x0058A07C, &fCustomWideScreenHeightScaleDown, true);							// Weekday text height scale.
-    injector::WriteMemory(0x0058A092, &fCustomWideScreenWidthScaleDown, true);							// Weekday text width scale.
-    injector::WriteMemory(0x0058A136, &fCustomWideScreenWidthScaleDown, true);							// Weekday text X position scale.
-    // Map.
-    injector::WriteMemory(0x0058A443, &fCustomRadarWidthScaleDown, true);						        // Radar ring plane sprite X position and width scale.
-    //injector::WriteMemory(0x0058A475, &fCustomWideScreenHeightScaleDown, true);						// Radar ring plane sprite Y position and height scale.
-    injector::WriteMemory(0x0058A5DA, &fCustomRadarWidthScaleDown, true);						        // Altimeter vertical bar X position and width scale.
-    //injector::WriteMemory(0x0058A602, &fCustomRadarWidthScaleDown, true);						        // Altimeter vertical bar Y position and height scale.
-    injector::MakeJMP(0x0058A68F, HOOK_PTR_0058A68F_drawMap, true);								        // Altimeter horizontal bar position and scale.
-    injector::WriteMemory(0x0058A793, &fCustomRadarWidthScaleDown, true);						        // Upper-left radar disc X position and width scale.
-    //injector::WriteMemory(0x0058A7BB, &fCustomWideScreenHeightScaleDown, true);						// Upper-left radar disc Y position and height scale.
-    injector::WriteMemory(0x0058A830, &fCustomRadarWidthScaleDown, true);						        // Upper-right radar disc X position and width scale.
-    //injector::WriteMemory(0x0058A85C, &fCustomWideScreenHeightScaleDown, true);						// Upper-right radar disc Y position and height scale.
-    injector::WriteMemory(0x0058A8E1, &fCustomRadarWidthScaleDown, true);							    // Lower-left radar disc X position and width scale.
-    //injector::WriteMemory(0x0058A90B, &fCustomWideScreenHeightScaleDown, true);						// Lower-left radar disc Y position and height scale.
-    injector::WriteMemory(0x0058A984, &fCustomRadarWidthScaleDown, true);						        // Lower-right radar disc X position and width scale.
-    //injector::WriteMemory(0x0058A9BF, &fCustomWideScreenHeightScaleDown, true);						// Lower-right radar disc Y position and height scale.
-    // Zone name.
-    injector::WriteMemory(0x0058AD26, &fCustomWideScreenHeightScaleDown, true);							// Text height scale.
-    injector::WriteMemory(0x0058AD3C, &fCustomWideScreenWidthScaleDown, true);							// Text width scale.
-    injector::WriteMemory(0x0058AD67, &fCustomWideScreenWidthScaleDown, true);							// Text centre X wrap scale.
-    injector::WriteMemory(0x0058AE0F, &fCustomWideScreenHeightScaleDown, true);							// Text Y position scale.
-    injector::WriteMemory(0x0058AE4C, &fCustomWideScreenWidthScaleDown, true);							// Text X position scale.
-    // Vehicle name.
-    injector::WriteMemory(0x0058B08B, &fCustomWideScreenHeightScaleDown, true);							// Text height scale.
-    injector::WriteMemory(0x0058B0A1, &fCustomWideScreenWidthScaleDown, true);							// Text width scale.
-    injector::WriteMemory(0x0058B12F, &fCustomWideScreenHeightScaleDown, true);							// Text Y position scale.
-    injector::WriteMemory(0x0058B141, &fCustomWideScreenWidthScaleDown, true);							// Text X position scale.
-    // On-screen displays.
-    injector::WriteMemory(0x0058B265, &fCustomWideScreenHeightScaleDown, true);							// Texts height scale.
-    injector::WriteMemory(0x0058B275, &fCustomWideScreenWidthScaleDown, true);							// Texts width scale.
-    injector::WriteMemory(0x0058B3B1, &fCustomWideScreenWidthScaleDown, true);							// Timer text X position scale.
-    injector::WriteMemory(0x0058B3FE, &fCustomWideScreenWidthScaleDown, true);							// Timer value text X position scale.
-    injector::WriteMemory(0x0058B538, &fCustomWideScreenHeightScaleDown, true);							// Counter relative Y position.
-    injector::WriteMemory(0x0058B56C, &fCustomWideScreenWidthScaleDown, true);							// Counter value text X position scale.
-    injector::WriteMemory(0x0058B5E0, &fCustomWideScreenHeightScaleDown, true);							// Counter meter relative Y position scale.
-    injector::WriteMemory(0x0058B5F0, &fCustomWideScreenWidthScaleDown, true);							// Counter meter X position scale.
-    injector::WriteMemory(0x0058B680, &fCustomWideScreenWidthScaleDown, true);							// Counter text X position scale.
-    // Message box.
-    injector::WriteMemory(0x0058B771, &fCustomWideScreenWidthScaleDown, true);							// Text X wrap scale.
-    injector::WriteMemory(0x0058B7BF, &fCustomWideScreenHeightScaleDown, true);							// Text Y position scale for the line count.
-    injector::WriteMemory(0x0058B7D8, &fCustomWideScreenWidthScaleDown, true);							// Text X position scale for the line count.
-    injector::WriteMemory(0x0058BA4E, &fCustomWideScreenHeightScaleDown, true);							// Text height scale.
-    injector::WriteMemory(0x0058BA64, &fCustomWideScreenWidthScaleDown, true);							// Text width scale.
-    injector::WriteMemory(0x0058BCB2, &fCustomWideScreenWidthScaleDown, true);							// Text width scale for the line width.
-    injector::WriteMemory(0x0058BD1B, &fCustomWideScreenHeightScaleDown, true);							// Statistic text Y position scale.
-    injector::WriteMemory(0x0058BD5A, &fCustomWideScreenWidthScaleDown, true);							// Statistic text X position scale.
-    injector::WriteMemory(0x0058BF1E, &fCustomWideScreenHeightScaleDown, true);							// Statistic increment/decrement foreground Y position and height scale.
-    injector::WriteMemory(0x0058BF80, &fCustomWideScreenWidthScaleDown, true);							// Statistic increment/decrement foreground X position and width scale.
-    //injector::WriteMemory(0x0058BFCD, &fCustomWideScreenHeightScaleDown, true);						// Statistic plus/minus text Y position scale.
-    //injector::WriteMemory(0x0058BFFE, &fCustomWideScreenWidthScaleDown, true);							// Statistic plus/minus text X position scale.
-    injector::WriteMemory(0x0058BAC8, &fCustomWideScreenWidthScaleDown, true);							// Message text X wrap scale.
-    injector::WriteMemory(0x0058BBA9, &fCustomWideScreenHeightScaleDown, true);							// Message text Y position scale.
-    injector::WriteMemory(0x0058BBDD, &fCustomWideScreenWidthScaleDown, true);							// Message text X position scale.
-    // Subtitle text.
-    injector::WriteMemory(0x0058C361, &fCustomWideScreenWidthScaleDown, true);							// Cutscene text centre size scale.
-    injector::WriteMemory(0x0058C381, &fCustomWideScreenHeightScaleDown, true);							// Cutscene text height scale.
-    injector::WriteMemory(0x0058C397, &fCustomWideScreenWidthScaleDown, true);							// Cutscene text width scale.
-    injector::WriteMemory(0x0058C3B6, &fCustomWideScreenHeightScaleDown, true);							// Cutscene text Y position scale.
-    injector::WriteMemory(0x0058C409, &fCustomWideScreenHeightScaleDown, true);							// Positioning/Normal text height scale.
-    injector::WriteMemory(0x0058C41F, &fCustomWideScreenWidthScaleDown, true);							// Positioning/Normal text width scale.
-    injector::WriteMemory(0x0058C451, &fCustomWideScreenWidthScaleDown, true);							// Positioning text centre size scale.
-    injector::WriteMemory(0x0058C470, &fCustomWideScreenHeightScaleDown, true);							// Positioning text Y position scale.
-    injector::WriteMemory(0x0058C4C8, &fCustomWideScreenHeightScaleDown, true);							// Stat box dependent text height scale.
-    injector::WriteMemory(0x0058C4DE, &fCustomWideScreenWidthScaleDown, true);							// Stat box dependent text width scale.
-    injector::WriteMemory(0x0058C501, &fCustomWideScreenWidthScaleDown, true);							// Stat box dependent text centre size scale.
-    injector::WriteMemory(0x0058C546, &fCustomWideScreenHeightScaleDown, true);							// Stat box dependent text Y position scale.
-    injector::WriteMemory(0x0058C5D4, &fCustomWideScreenWidthScaleDown, true);							// Normal text centre size scale.
-    injector::WriteMemory(0x0058C613, &fCustomWideScreenHeightScaleDown, true);							// Normal text Y position scale.
-    // Mission text.
-    injector::WriteMemory(0x0058C6CE, &fCustomWideScreenHeightScaleDown, true);							// Text initial relative Y position scale.
-    injector::WriteMemory(0x0058C76D, &fCustomWideScreenHeightScaleDown, true);							// Monoline text relative Y position scale.
-    injector::WriteMemory(0x0058C7AB, &fCustomWideScreenHeightScaleDown, true);							// Multiline text relative Y position scale.
-    injector::WriteMemory(0x0058C7F2, &fCustomWideScreenHeightScaleDown, true);							// Text relative Y position scale when the title text is printed.
-    injector::WriteMemory(0x0058C813, &fCustomWideScreenHeightScaleDown, true);							// Text relative Y position scale when the odd-job and reward texts (A) are printed.
-    injector::WriteMemory(0x0058C84F, &fCustomWideScreenHeightScaleDown, true);							// Text height scale.
-    injector::WriteMemory(0x0058C865, &fCustomWideScreenWidthScaleDown, true);							// Text width scale.
-    injector::WriteMemory(0x0058C897, &fCustomWideScreenWidthScaleDown, true);							// Text centre size scale.
-    // Title text.
-    injector::WriteMemory(0x0058CA8B, &fCustomWideScreenHeightScaleDown, true);							// Text initial relative Y position scale.
-    injector::WriteMemory(0x0058CB0E, &fCustomWideScreenHeightScaleDown, true);							// Text relative Y position scale.
-    injector::WriteMemory(0x0058CB36, &fCustomWideScreenHeightScaleDown, true);							// Text relative Y position scale when the mission text is printed.
-    injector::WriteMemory(0x0058CBAD, &fCustomWideScreenHeightScaleDown, true);							// Text height scale.
-    injector::WriteMemory(0x0058CBC3, &fCustomWideScreenWidthScaleDown, true);							// Text width scale.
-    // Secondary mission text.
-    injector::WriteMemory(0x0058CCC7, &fCustomWideScreenHeightScaleDown, true);							// Odd-job text (B) height scale.
-    injector::WriteMemory(0x0058CCDD, &fCustomWideScreenWidthScaleDown, true);							// Odd-job text (B) width scale.
-    injector::WriteMemory(0x0058CD08, &fCustomWideScreenWidthScaleDown, true);							// Odd-job text (B) centre size scale.
-    injector::WriteMemory(0x0058CDD2, &fCustomWideScreenHeightScaleDown, true);							// Reward text (B) height scale.
-    injector::WriteMemory(0x0058CDE8, &fCustomWideScreenWidthScaleDown, true);							// Reward text (B) width scale.
-    injector::WriteMemory(0x0058CE0D, &fCustomWideScreenWidthScaleDown, true);							// Reward text (B) centre size scale.
-    injector::WriteMemory(0x0058CECE, &fCustomWideScreenHeightScaleDown, true);							// Odd-job text (A) height scale.
-    injector::WriteMemory(0x0058CEE4, &fCustomWideScreenWidthScaleDown, true);							// Odd-job text (A) width scale.
-    injector::WriteMemory(0x0058CF0F, &fCustomWideScreenWidthScaleDown, true);							// Odd-job text (A) centre size scale.
-    injector::WriteMemory(0x0058D148, &fCustomWideScreenHeightScaleDown, true);							// Reward text (A) height scale.
-    injector::WriteMemory(0x0058D15E, &fCustomWideScreenWidthScaleDown, true);							// Reward text (A) width scale.
-    injector::WriteMemory(0x0058D189, &fCustomWideScreenWidthScaleDown, true);							// Reward text (A) centre size scale.
-    // Load mission text.
-    injector::WriteMemory(0x0058D2C7, &fCustomWideScreenHeightScaleDown, true);							// Text height scale.
-    injector::WriteMemory(0x0058D2DD, &fCustomWideScreenWidthScaleDown, true);							// Text width scale.
-    injector::WriteMemory(0x0058D449, &fCustomWideScreenHeightScaleDown, true);							// Text Y position scale.
-    injector::WriteMemory(0x0058D45B, &fCustomWideScreenWidthScaleDown, true);							// Text X position scale.
-    // Weapon icon.
-    injector::WriteMemory(0x0058D884, &fCustomWideScreenHeightScaleDown, true);							// Gun sprite height scale.
-    injector::WriteMemory(0x0058D8C5, &fCustomWideScreenWidthScaleDown, true);							// Gun sprite width scale.
-    injector::WriteMemory(0x0058D92F, &fCustomWideScreenWidthScaleDown, true);							// Fist sprite width scale.
-    injector::WriteMemory(0x0058D947, &fCustomWideScreenHeightScaleDown, true);							// Fist sprite height scale.
-    // Wanted level.
-    injector::WriteMemory(0x0058DD02, &fCustomWideScreenWidthScaleDown, true);							// Rightmost star X position scale.
-    injector::WriteMemory(0x0058DD6A, &fCustomWideScreenHeightScaleDown, true);							// Stars foreground text height scale.
-    injector::WriteMemory(0x0058DD80, &fCustomWideScreenWidthScaleDown, true);							// Stars foreground text width scale.
-    injector::WriteMemory(0x0058DF57, &fCustomWideScreenHeightScaleDown, true);							// Stars background text height scale.
-    injector::WriteMemory(0x0058DF73, &fCustomWideScreenWidthScaleDown, true);							// Stars background text width scale.
-    injector::WriteMemory(0x0058DF9D, &fCustomWideScreenHeightScaleDown, true);							// Stars background Y position scale.
-    injector::WriteMemory(0x0058DFE7, &fCustomWideScreenWidthScaleDown, true);							// Stars relative X position scale.
-    injector::WriteMemory(0x0058DEE6, &fCustomWideScreenHeightScaleDown, true);							// Stars foreground Y position scale.
-    // HUD interface.
-    injector::WriteMemory(0x0058EB2B, &fCustomWideScreenHeightScaleDown, true);							// Day time text height scale.
-    injector::WriteMemory(0x0058EB41, &fCustomWideScreenWidthScaleDown, true);							// Day time text width scale.
-    injector::WriteMemory(0x0058EBFB, &fCustomWideScreenHeightScaleDown, true);							// Day time text Y position scale.
-    injector::WriteMemory(0x0058EC0E, &fCustomWideScreenWidthScaleDown, true);							// Day time text X position scale.
-    injector::WriteMemory(0x0058EE62, &fCustomWideScreenHeightScaleDown, true);							// First player health meter Y position scale.
-    injector::WriteMemory(0x0058EE80, &fCustomWideScreenWidthScaleDown, true);							// First player health meter X position scale.
-    injector::WriteMemory(0x0058EECA, &fCustomWideScreenHeightScaleDown, true);							// Second player health meter Y position scale.
-    injector::WriteMemory(0x0058EEF6, &fCustomWideScreenWidthScaleDown, true);							// Second player health meter X position scale.
-    injector::WriteMemory(0x0058EF34, &fCustomWideScreenHeightScaleDown, true);							// First player armour meter Y position scale.
-    injector::WriteMemory(0x0058EF52, &fCustomWideScreenWidthScaleDown, true);							// First player armour meter X position scale.
-    injector::WriteMemory(0x0058EF9B, &fCustomWideScreenHeightScaleDown, true);							// Second player armour meter Y position scale.
-    injector::WriteMemory(0x0058EFC7, &fCustomWideScreenWidthScaleDown, true);							// Second player armour meter X position scale.
-    injector::WriteMemory(0x0058F0FA, &fCustomWideScreenHeightScaleDown, true);							// First player breath meter Y position scale.
-    injector::WriteMemory(0x0058F118, &fCustomWideScreenWidthScaleDown, true);							// First player breath meter X position scale.
-    injector::WriteMemory(0x0058F16A, &fCustomWideScreenHeightScaleDown, true);							// Second player breath meter Y position scale.
-    injector::WriteMemory(0x0058F196, &fCustomWideScreenWidthScaleDown, true);							// Second player breath meter X position scale.
-    injector::WriteMemory(0x0058F548, &fCustomWideScreenHeightScaleDown, true);							// Money text height scale.
-    injector::WriteMemory(0x0058F55E, &fCustomWideScreenWidthScaleDown, true);							// Money text width scale.
-    injector::WriteMemory(0x0058F5D0, &fCustomWideScreenHeightScaleDown, true);							// Money text Y position scale.
-    injector::WriteMemory(0x0058F5F6, &fCustomWideScreenWidthScaleDown, true);							// Money text X position scale.
-    injector::WriteMemory(0x0058F90D, &fCustomWideScreenHeightScaleDown, true);							// First player weapon icon Y position scale.
-    injector::WriteMemory(0x0058F91E, &fCustomWideScreenWidthScaleDown, true);							// First player weapon icon X position scale.
-    injector::WriteMemory(0x0058F974, &fCustomWideScreenHeightScaleDown, true);							// Second player weapon icon Y position scale.
-    injector::WriteMemory(0x0058F995, &fCustomWideScreenWidthScaleDown, true);							// Second player weapon icon X position scale.
-    injector::WriteMemory(0x0058F9C2, &fCustomWideScreenHeightScaleDown, true);							// First player weapon ammo Y position scale.
-    injector::WriteMemory(0x0058F9D2, &fCustomWideScreenWidthScaleDown, true);							// First player weapon ammo X position scale.
-    injector::WriteMemory(0x0058FA4C, &fCustomWideScreenHeightScaleDown, true);							// Second player weapon ammo Y position scale.
-    injector::WriteMemory(0x0058FA5F, &fCustomWideScreenWidthScaleDown, true);							// Second player weapon ammo X position scale.
-    // Meter.
-    /*injector::WriteMemory(0x00728866, &fCustomWideScreenHeightScaleDown, true);						// Top border height scale.
-    injector::WriteMemory(0x007288AB, &fCustomWideScreenHeightScaleDown, true);							// Bottom border height scale.
-    injector::WriteMemory(0x007288F7, &fCustomWideScreenWidthScaleDown, true);							// Left border width scale.
-    injector::WriteMemory(0x00728943, &fCustomWideScreenWidthScaleDown, true);							// Right border width scale.*/
-
-    injector::WriteMemory(0x0058C397, &fSubtitlesScaleX, true);								            // Cutscene text height scale.
-    injector::WriteMemory(0x0058C381, &fSubtitlesScaleY, true);								            // Cutscene text width scale.
-    injector::WriteMemory(0x0058C409, &fSubtitlesScaleY, true);								            // Positioning/Normal text height scale.
-    injector::WriteMemory(0x0058C41F, &fSubtitlesScaleX, true);								            // Positioning/Normal text width scale.
-
-    // Unknown 2D stuff (0x00719B40).
-    injector::WriteMemory(0x00719C0F, &fCustomWideScreenWidthScaleDown);								        // CFont::RenderString
-    injector::WriteMemory(0x00719C29, &fCustomWideScreenHeightScaleDown);
-    injector::WriteMemory(0x00719C5A, &fCustomWideScreenHeightScaleDown);
-    injector::WriteMemory(0x00719C70, &fCustomWideScreenWidthScaleDown);
-    injector::WriteMemory(0x00719D2F, &fCustomWideScreenWidthScaleDown);								        // text outline
-    injector::WriteMemory(0x00719D49, &fCustomWideScreenHeightScaleDown);
-    injector::WriteMemory(0x00719D7E, &fCustomWideScreenHeightScaleDown);
-    injector::WriteMemory(0x00719D96, &fCustomWideScreenWidthScaleDown);
-    injector::WriteMemory(0x00719DB7, &fCustomWideScreenHeightScaleDown);
-    injector::WriteMemory(0x00719DD3, &fCustomWideScreenWidthScaleDown);
-    injector::WriteMemory(0x00719DF4, &fCustomWideScreenHeightScaleDown);
-    injector::WriteMemory(0x00719E10, &fCustomWideScreenWidthScaleDown);
-    injector::WriteMemory(0x00719E31, &fCustomWideScreenHeightScaleDown);
-    injector::WriteMemory(0x00719E4D, &fCustomWideScreenWidthScaleDown);
-    injector::WriteMemory(0x00719E71, &fCustomWideScreenWidthScaleDown);
-    injector::WriteMemory(0x00719E99, &fCustomWideScreenWidthScaleDown);
-    injector::WriteMemory(0x00719EC1, &fCustomWideScreenHeightScaleDown);
-    injector::WriteMemory(0x00719EE5, &fCustomWideScreenHeightScaleDown);
-}
+float fWideScreenWidthScale, fWideScreenHeightScale;
+float fWideScreenWidthProperScale = 1.0f;
+float fWideScreenHeightProperScale = 480.0f / 448.0f;
+float fFrontendWidth[40], fFrontendHeight[40];
+float fMiscWidth[30], fMiscHeight[30];
+float fRadarWidth[16], fRadarHeight[16];
+float fHUDWidth[120], fHUDHeight[120];
+float fCameraWidth[2], fCameraHeight[2];
+float fDefaultWidth;
+float fDefaultCoords;
+float fFrontendDefaultCoords;
+float fFrontendDefaultWidth;
 
 int(__cdecl* FindPlayerVehicleSA)(int, char);
 int FindPlayerVehicle2()
@@ -386,8 +31,6 @@ void GetMemoryAddresses()
     FindPlayerVehicleSA = (int(__cdecl *)(int playerNum, char a2)) 0x56E0D0;
     FindPlayerVehicle = &FindPlayerVehicle2;
     bIsInCutscene = (bool*)0xB6F065;
-    pfWideScreenWidthScaleDown = (float**)0x00573F95;
-    pfWideScreenHeightScaleDown = (float**)0x00573F7F;
 }
 
 void OverwriteResolution()
@@ -432,28 +75,439 @@ void __declspec(naked) AllowMouseMovement()
     }
 }
 
+void UpdateFrontendFixes() {
+	fFrontendWidth[0] = 0.0020312499 * fWideScreenWidthScale;
+	fFrontendWidth[1] = 0.00065625005 * fWideScreenWidthScale;
+	fFrontendWidth[2] = 0.00109375 * fWideScreenWidthScale;
+	fFrontendWidth[3] = 0.00109375 * fWideScreenWidthScale;
+	fFrontendWidth[4] = 0.00087500003 * fWideScreenWidthScale;
+	fFrontendWidth[5] = 0.000546875 * fWideScreenWidthScale;
+	fFrontendWidth[6] = 0.00076562498 * fWideScreenWidthScale;
+	fFrontendWidth[7] = 0.00076562498 * fWideScreenWidthScale;
+	fFrontendWidth[8] = 0.00046875002 * fWideScreenWidthScale;
+	fFrontendWidth[9] = 0.00093750004 * fWideScreenWidthScale;
+	fFrontendWidth[10] = 0.0625;
+	fFrontendWidth[11] = 0.09375;
+	fFrontendWidth[12] = 0.0015625;
+	fFrontendWidth[13] = 0.0625;
+	fFrontendWidth[14] = 0.0015625 * fWideScreenWidthScale;
+	fFrontendWidth[15] = 0.0015625 * fWideScreenWidthScale;
+	fFrontendWidth[16] = 0.0015625 * fWideScreenWidthScale;
+	fFrontendWidth[17] = 0.0015625 * fWideScreenWidthScale;
+	fFrontendWidth[18] = 0.0015625 * fWideScreenWidthScale;
+	fFrontendWidth[19] = 0.0015625 * fWideScreenWidthScale;
+	fFrontendWidth[20] = 0.0015625 * fWideScreenWidthScale;
+	fFrontendWidth[21] = 0.00046875002 * fWideScreenWidthScale;
+	fFrontendWidth[22] = 0.78125 * fWideScreenWidthScale;
+	fFrontendWidth[23] = 0.78125 * fWideScreenWidthScale;
+	fFrontendWidth[24] = 0.78125 * fWideScreenWidthScale;
+	fFrontendWidth[25] = 0.78125 * fWideScreenWidthScale;
+	fFrontendWidth[26] = 0.78125 * fWideScreenWidthScale;
+	fFrontendWidth[27] = 0.78125 * fWideScreenWidthScale;
+	fFrontendWidth[28] = 0.0046875002 * fWideScreenWidthScale;
+	fFrontendWidth[29] = 0.15625 * fWideScreenWidthScale;
+	fFrontendWidth[30] = 0.0046875002 * fWideScreenWidthScale;
+	fFrontendWidth[31] = 0.15625 * fWideScreenWidthScale;
+	fFrontendWidth[32] = 0.0046875002 * fWideScreenWidthScale;
+	fFrontendWidth[33] = 0.15625 * fWideScreenWidthScale;
+	fFrontendWidth[34] = 0.0046875002 * fWideScreenWidthScale;
+	fFrontendWidth[35] = 0.15625 * fWideScreenWidthScale;
+	fFrontendWidth[36] = 0.0046875002 * fWideScreenWidthScale;
+	fFrontendWidth[37] = 0.15625 * fWideScreenWidthScale;
+	fFrontendWidth[38] = 0.0015625 * fWideScreenWidthScale;
+	fFrontendWidth[39] = 0.00087500003 * fWideScreenWidthScale;
+
+	fFrontendHeight[0] = 0.0046874997 * fWideScreenHeightScale;
+	fFrontendHeight[1] = 0.0021205356 * fWideScreenHeightScale;
+	fFrontendHeight[2] = 0.002232143 * fWideScreenHeightScale;
+	fFrontendHeight[3] = 0.002232143 * fWideScreenHeightScale;
+	fFrontendHeight[4] = 0.002232143 * fWideScreenHeightScale;
+	fFrontendHeight[5] = 0.0021205356 * fWideScreenHeightScale;
+	fFrontendHeight[6] = 0.0026785715 * fWideScreenHeightScale;
+	fFrontendHeight[7] = 0.0015625 * fWideScreenHeightScale;
+	fFrontendHeight[8] = 0.0016741072 * fWideScreenHeightScale;
+	fFrontendHeight[9] = 0.0017857143 * fWideScreenHeightScale;
+	fFrontendHeight[10] = 0.0625 * fWideScreenHeightScale;
+	fFrontendHeight[11] = 0.21651785 * fWideScreenHeightScale;
+	fFrontendHeight[12] = 0.002232143 * fWideScreenHeightScale;
+	fFrontendHeight[13] = 0.002232143 * fWideScreenHeightScale;
+	fFrontendHeight[14] = 0.002232143 * fWideScreenHeightScale;
+	fFrontendHeight[15] = 0.002232143 * fWideScreenHeightScale;
+	fFrontendHeight[16] = 0.002232143 * fWideScreenHeightScale;
+	fFrontendHeight[17] = 0.002232143 * fWideScreenHeightScale;
+	fFrontendHeight[18] = 0.002232143 * fWideScreenHeightScale;
+	fFrontendHeight[19] = 0.002232143 * fWideScreenHeightScale;
+	fFrontendHeight[20] = 0.002232143 * fWideScreenHeightScale;
+	fFrontendHeight[21] = 0.0012276786 * fWideScreenHeightScale;
+	fFrontendHeight[22] = 0.0017857143 * fWideScreenHeightScale;
+	fFrontendHeight[23] = 0.0017857143 * fWideScreenHeightScale;
+	fFrontendHeight[24] = 0.0017857143 * fWideScreenHeightScale;
+	fFrontendHeight[25] = 0.0017857143 * fWideScreenHeightScale;
+	fFrontendHeight[26] = 0.0017857143 * fWideScreenHeightScale;
+	fFrontendHeight[27] = 0.0017857143 * fWideScreenHeightScale;
+	fFrontendHeight[28] = 0.0017857143 * fWideScreenHeightScale;
+	fFrontendHeight[29] = 0.0017857143 * fWideScreenHeightScale;
+	fFrontendHeight[30] = 0.0017857143 * fWideScreenHeightScale;
+	fFrontendHeight[31] = 0.0017857143 * fWideScreenHeightScale;
+	fFrontendHeight[32] = 0.0017857143 * fWideScreenHeightScale;
+	fFrontendHeight[33] = 0.0017857143 * fWideScreenHeightScale;
+	fFrontendHeight[34] = 0.0017857143 * fWideScreenHeightScale;
+	fFrontendHeight[35] = 0.0017857143 * fWideScreenHeightScale;
+	fFrontendHeight[36] = 0.0017857143 * fWideScreenHeightScale;
+	fFrontendHeight[37] = 0.0017857143 * fWideScreenHeightScale;
+	fFrontendHeight[38] = 0.002232143 * fWideScreenHeightScale;
+	fFrontendHeight[39] = 0.002232143 * fWideScreenHeightScale;
+}
+
+void UpdateMiscFixes() {
+	// Aim point.
+	fCameraWidth[0] = 0.01403292;
+	fCameraHeight[0] = 0.0f;
+
+	fMiscWidth[0] = 0.0015625 * fWideScreenWidthScale; // StretchX
+	fMiscWidth[1] = 0.0546875 * fWideScreenWidthScale;
+	fMiscWidth[2] = 0.0015625;
+	fMiscWidth[3] = 0.09375 * fWideScreenWidthScale;
+	fMiscWidth[4] = 0.0015625;
+	fMiscWidth[5] = 0.078125 * fWideScreenWidthScale;
+	fMiscWidth[6] = 0.0703125 * fWideScreenWidthScale;
+	fMiscWidth[7] = 0.0859375 * fWideScreenWidthScale;
+	fMiscWidth[8] = 0.078125 * fWideScreenWidthScale;
+	fMiscWidth[9] = 0.078125 * fWideScreenWidthScale;
+	fMiscWidth[10] = 0.0703125 * fWideScreenWidthScale;
+	fMiscWidth[11] = 0.0859375 * fWideScreenWidthScale;
+	fMiscWidth[12] = 0.078125 * fWideScreenWidthScale;
+	fMiscWidth[13] = 0.625f;
+	fMiscWidth[14] = 0.0015625 * fWideScreenWidthScale;
+	fMiscWidth[15] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fMiscWidth[16] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fMiscWidth[17] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fMiscWidth[18] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fMiscWidth[19] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fMiscWidth[20] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fMiscWidth[21] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fMiscWidth[22] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fMiscWidth[23] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fMiscWidth[24] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fMiscWidth[25] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fMiscWidth[26] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fMiscWidth[27] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fMiscWidth[28] = 0.0015625 * fWideScreenWidthScale;
+
+	fMiscHeight[0] = 0.002232143 * fWideScreenHeightScale; // StretchY
+	fMiscHeight[1] = 0.078125 * fWideScreenHeightScale;
+	fMiscHeight[2] = 0.66964287 * fWideScreenHeightScale;
+	fMiscHeight[3] = 0.13392857 * fWideScreenHeightScale;
+	fMiscHeight[4] = 0.6473214 * fWideScreenHeightScale;
+	fMiscHeight[5] = 0.22321428 * fWideScreenHeightScale;
+	fMiscHeight[6] = 0.24553572 * fWideScreenHeightScale;
+	fMiscHeight[7] = 0.24553572 * fWideScreenHeightScale;
+	fMiscHeight[8] = 0.22321428 * fWideScreenHeightScale;
+	fMiscHeight[9] = 0.77678573 * fWideScreenHeightScale;
+	fMiscHeight[10] = 0.75446427 * fWideScreenHeightScale;
+	fMiscHeight[11] = 0.75446427 * fWideScreenHeightScale;
+	fMiscHeight[12] = 0.77678573 * fWideScreenHeightScale;
+	fMiscHeight[13] = 0.037946429 * fWideScreenHeightScale;
+	fMiscHeight[14] = 0.002232143 * fWideScreenHeightScale;
+	fMiscHeight[15] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fMiscHeight[16] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fMiscHeight[17] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fMiscHeight[18] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fMiscHeight[19] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fMiscHeight[20] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fMiscHeight[21] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fMiscHeight[22] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fMiscHeight[23] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fMiscHeight[24] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fMiscHeight[25] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fMiscHeight[26] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fMiscHeight[27] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fMiscHeight[28] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+}
+
+void UpdateHUDFixes() {
+	fRadarWidth[0] = 0.0015625 * fWideScreenWidthScale * fRadarWidthScale;
+	fRadarWidth[1] = 0.0015625 * fWideScreenWidthScale * fRadarWidthScale;
+	fRadarWidth[2] = 0.0015625 * fWideScreenWidthScale * fRadarWidthScale;
+	fRadarWidth[3] = 0.0015625 * fWideScreenWidthScale * fRadarWidthScale;
+	fRadarWidth[4] = 0.0015625 * fWideScreenWidthScale * fRadarWidthScale;
+	fRadarWidth[5] = 0.0015625 * fWideScreenWidthScale * fRadarWidthScale;
+	fRadarWidth[6] = 0.0015625 * fWideScreenWidthScale * fRadarWidthScale;
+	fRadarWidth[7] = 0.0015625 * fWideScreenWidthScale * fRadarWidthScale;
+	fRadarWidth[8] = 0.0015625 * fWideScreenWidthScale;
+	fRadarWidth[9] = 0.0015625 * fWideScreenWidthScale;
+	fRadarWidth[10] = 0.0015625 * fWideScreenWidthScale;
+	fRadarWidth[11] = 0.0015625 * fWideScreenWidthScale;
+	fRadarWidth[12] = 0.0015625 * fWideScreenWidthScale;
+	fRadarWidth[13] = 0.0015625 * fWideScreenWidthScale;
+	fRadarWidth[14] = 0.0015625 * fWideScreenWidthScale;
+	fRadarWidth[15] = 0.0015625 * fWideScreenWidthScale;
+	fRadarWidth[16] = 0.0015625 * fWideScreenWidthScale;
+
+	fRadarHeight[0] = 0.002232143 * fWideScreenHeightScale;
+	fRadarHeight[1] = 0.002232143 * fWideScreenHeightScale;
+	fRadarHeight[2] = 0.002232143 * fWideScreenHeightScale;
+	fRadarHeight[3] = 0.002232143 * fWideScreenHeightScale;
+	fRadarHeight[4] = 0.002232143 * fWideScreenHeightScale;
+	fRadarHeight[5] = 0.002232143 * fWideScreenHeightScale;
+	fRadarHeight[6] = 0.002232143 * fWideScreenHeightScale;
+	fRadarHeight[7] = 0.002232143 * fWideScreenHeightScale;
+	fRadarHeight[8] = 0.002232143 * fWideScreenHeightScale;
+	fRadarHeight[9] = 0.002232143 * fWideScreenHeightScale;
+	fRadarHeight[10] = 0.002232143 * fWideScreenHeightScale;
+	fRadarHeight[11] = 0.002232143 * fWideScreenHeightScale;
+	fRadarHeight[12] = 0.002232143 * fWideScreenHeightScale;
+	fRadarHeight[13] = 0.002232143 * fWideScreenHeightScale;
+	fRadarHeight[14] = 0.002232143 * fWideScreenHeightScale;
+	fRadarHeight[15] = 0.002232143 * fWideScreenHeightScale;
+	fRadarHeight[16] = 0.002232143 * fWideScreenHeightScale;
+
+	fHUDWidth[0] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[1] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[2] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[3] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[4] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[5] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[6] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[7] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[8] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[9] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[10] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[11] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[12] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[13] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[14] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[15] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[16] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[17] = 0.17343046 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[18] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[19] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[20] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[21] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[22] = 0.17343046 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[23] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[24] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[25] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[26] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[27] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[28] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[29] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[30] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[31] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[32] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[33] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[34] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[35] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale * fSubtitlesScale;
+	fHUDWidth[36] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale * fSubtitlesScale;
+	fHUDWidth[37] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale * fSubtitlesScale;
+	fHUDWidth[38] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[39] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[40] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[41] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[42] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[43] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[44] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[45] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[46] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[47] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[48] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[49] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[50] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[51] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[52] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[53] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[54] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[55] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[56] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[57] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[58] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[59] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[60] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[61] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[62] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[63] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[64] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[65] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[66] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[67] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[68] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[69] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[70] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[71] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[72] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[73] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[74] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[75] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[76] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[77] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[78] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[79] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[80] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[81] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[82] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[83] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[84] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[85] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[86] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[87] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[88] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[89] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[90] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[91] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[92] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[93] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[94] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[95] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[96] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[97] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[98] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[99] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[100] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[101] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[102] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[103] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[104] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+	fHUDWidth[105] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+
+	fHUDHeight[0] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[1] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[2] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[3] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[4] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[5] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[6] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[7] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[8] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[9] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[10] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[11] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[12] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[13] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[14] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[15] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[16] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[17] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[18] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[19] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[20] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[21] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[22] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[23] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[24] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[25] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[26] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[27] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[28] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[29] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[30] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[31] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[32] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[33] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[34] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[35] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale * fSubtitlesScale;
+	fHUDHeight[36] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale * fSubtitlesScale;
+	fHUDHeight[37] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale * fSubtitlesScale;
+	fHUDHeight[38] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[39] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[40] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[41] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[42] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[43] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[44] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[45] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[46] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[47] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[48] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[49] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[50] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[51] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[52] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[53] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[54] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[55] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[56] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[57] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[58] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[59] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[60] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[61] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[62] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[63] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[64] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[65] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[66] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[67] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[68] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[69] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[70] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[71] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[72] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[73] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[74] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[75] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[76] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[77] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[78] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[79] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[80] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[81] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[82] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[83] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[84] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[85] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[86] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[87] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[88] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[89] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[90] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[91] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[92] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[93] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[94] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[95] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[96] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[97] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[98] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[99] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[100] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[101] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[102] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[103] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[104] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+	fHUDHeight[105] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
+}
+
+void UpdateScriptFixes() {
+	float w;
+	if (*CDraw::pfScreenAspectRatio < fDefaultWidth)
+		w = static_cast<float>(RsGlobal->MaximumWidth);
+	else
+		w = RsGlobal->MaximumWidth * fDefaultWidth / *CDraw::pfScreenAspectRatio;
+
+	fDefaultCoords = 0.5f * (RsGlobal->MaximumWidth - w);
+}
+
 template<uintptr_t addr>
-void updateScreenAspectRatioWrapper()
-{
+void updateScreenAspectRatioWrapper() {
     using func_hook = injector::function_hooker<addr, void()>;
-    injector::make_static_hook<func_hook>([](func_hook::func_type updateScreenAspectRatio)
-    {
+    injector::make_static_hook<func_hook>([](func_hook::func_type updateScreenAspectRatio) {
         updateScreenAspectRatio();
 
-        fWideScreenHeightScaleDown = **pfWideScreenHeightScaleDown;
-        fCustomWideScreenWidthScaleDown = **pfWideScreenWidthScaleDown * fHudWidthScale;
-        fCustomWideScreenHeightScaleDown = **pfWideScreenHeightScaleDown * fHudHeightScale;
-        fCustomRadarWidthScaleDown = **pfWideScreenWidthScaleDown * fRadarWidthScale;
-        fSubtitlesScaleX = **pfWideScreenWidthScaleDown * fHudWidthScale * fSubtitlesScale;
-        fSubtitlesScaleY = **pfWideScreenHeightScaleDown * fHudHeightScale * fSubtitlesScale;
+		fWideScreenWidthScale = 640.0f / (*CDraw::pfScreenAspectRatio * 448.0f);
+		fWideScreenHeightScale = 448.0 / 448.0f;
+		fWideScreenWidthProperScale = static_cast<float>(RsGlobal->MaximumWidth) / (*CDraw::pfScreenAspectRatio * 448.0f);
+		fWideScreenHeightProperScale = static_cast<float>(RsGlobal->MaximumHeight) / 448.0f;
+		fDefaultWidth = 1.3334;
 
-		updateScriptAspectRatio();
+		UpdateFrontendFixes();
+		UpdateMiscFixes();
+		UpdateHUDFixes();
+		UpdateScriptFixes();
     });
 }
 
 uintptr_t SetEdgeAddr = 0x719590;
-void __declspec(naked) SetDropShadowPosition()
-{
+void __declspec(naked) SetDropShadowPosition() {
     _asm {
         mov eax, [esp + 4]
         cmp ReplaceTextShadowWithOutline, 2
@@ -468,105 +522,779 @@ void __declspec(naked) SetDropShadowPosition()
     }
 }
 
-injector::hook_back<void(__cdecl*)(void)> hbWipeLocalVariableMemoryForMissionScript;
-void __cdecl WipeLocalVariableMemoryForMissionScriptHook()
-{
-    uint8_t* ScriptSpace = *(uint8_t**)0x5D5380;
-    size_t ScriptFileSize = *(size_t*)0x468E75;
-    size_t ScriptMissionSize = *(size_t*)0x489A5B;
-    auto pattern = hook::range_pattern(uintptr_t(ScriptSpace + ScriptFileSize), uintptr_t(ScriptSpace + ScriptFileSize + ScriptMissionSize), "3F 03 06 CD CC 4C 3F 06 66 66 E6 3F").count_hint(3);
-    for (size_t i = 0; i < pattern.size(); i++)
-    {
-        float x = *pattern.get(i).get<float>(3) * (**pfWideScreenWidthScaleDown / (1.0f / 640.0f));
-        float y = *pattern.get(i).get<float>(8) * (**pfWideScreenHeightScaleDown / (1.0f / 480.0f));
-        injector::WriteMemory(pattern.get(i).get<float*>(3), x, true);
-        injector::WriteMemory(pattern.get(i).get<float*>(8), y, true);
-    }
-
-    pattern = hook::range_pattern(uintptr_t(ScriptSpace + ScriptFileSize), uintptr_t(ScriptSpace + ScriptFileSize + ScriptMissionSize), "3F 03 06 9A 99 19 3F 06 CD CC CC 3F").count_hint(1);
-    if (pattern.size() == 1)
-    {
-        float x = *pattern.get(0).get<float>(3) * (**pfWideScreenWidthScaleDown / (1.0f / 640.0f));
-        float y = *pattern.get(0).get<float>(8) * (**pfWideScreenHeightScaleDown / (1.0f / 480.0f));
-        injector::WriteMemory(pattern.get(0).get<float*>(3), x, true);
-        injector::WriteMemory(pattern.get(0).get<float*>(8), y, true);
-    }
-
-    return hbWipeLocalVariableMemoryForMissionScript.fun();
-}
-
 // SCM_DRAWING_FIXES
-float fDefaultWidth = 1.33334;
-float fDefaultCoords = 0.0f;
-
-void updateScriptAspectRatio() {
-	float w;
-	if (*CDraw::pfScreenAspectRatio < fDefaultWidth)
-		w = static_cast<float>(RsGlobal->MaximumWidth);
-	else
-		w = RsGlobal->MaximumWidth * fDefaultWidth / *CDraw::pfScreenAspectRatio;
-
-	fDefaultCoords = 0.5f * (RsGlobal->MaximumWidth - w);
-}
-
-auto DrawRect = ((void(__cdecl *)(CRect const&, CRGBA const&))(0x727B60));
+injector::hook_back<void(__cdecl*)(CRect const&, CRGBA const&)> hbDrawRect;
 void __cdecl DrawRectHook(CRect const& rect, CRGBA  const& color) {
-	DrawRect(CRect(fDefaultCoords + rect.m_fLeft * fDefaultWidth / *CDraw::pfScreenAspectRatio, rect.m_fBottom, fDefaultCoords + rect.m_fRight * fDefaultWidth / *CDraw::pfScreenAspectRatio, rect.m_fTop), color);
+	hbDrawRect.fun(CRect(fDefaultCoords + rect.m_fLeft * fDefaultWidth / *CDraw::pfScreenAspectRatio, rect.m_fBottom, fDefaultCoords + rect.m_fRight * fDefaultWidth / *CDraw::pfScreenAspectRatio, rect.m_fTop), color);
 }
 
-auto Draw = ((void(__thiscall *)(CSprite2d const&, CRect const&, CRGBA const&))(0x728350));
+injector::hook_back<void(__fastcall*)(CSprite2d const&, int, CRect const&, CRGBA const&)> hbDraw;
 void __fastcall DrawSpriteHook(CSprite2d const& sprite, int, CRect const& rect, CRGBA const& color) {
-	Draw(sprite, CRect(fDefaultCoords + rect.m_fLeft * fDefaultWidth / *CDraw::pfScreenAspectRatio, rect.m_fBottom, fDefaultCoords + rect.m_fRight * fDefaultWidth / *CDraw::pfScreenAspectRatio, rect.m_fTop), color);
+	hbDraw.fun(sprite, -1, CRect(fDefaultCoords + rect.m_fLeft * fDefaultWidth / *CDraw::pfScreenAspectRatio, rect.m_fBottom, fDefaultCoords + rect.m_fRight * fDefaultWidth / *CDraw::pfScreenAspectRatio, rect.m_fTop), color);
 	
-	if (rect.m_fRight / rect.m_fBottom >= fDefaultWidth) {
+	if (static_cast<int>(rect.m_fLeft) <= 0 && static_cast<int>(rect.m_fRight) >= 600) {
 		CSprite2dDrawRect(CRect(0.0f, RsGlobal->MaximumHeight, fDefaultCoords, 0.0f), CRGBA(0, 0, 0, 255));
 
 		CSprite2dDrawRect(CRect(fDefaultCoords + RsGlobal->MaximumWidth * fDefaultWidth / *CDraw::pfScreenAspectRatio, RsGlobal->MaximumHeight, RsGlobal->MaximumWidth, 0.0f), CRGBA(0, 0, 0, 255));
 	}
 }
 
-auto Draw2 = ((void(__thiscall *)(CSprite2d const&, float, float, float, float, float, float, float, float, CRGBA const&))(0x728520));
+injector::hook_back<void(__fastcall*)(CSprite2d const&, int, float, float, float, float, float, float, float, float, CRGBA const&)> hbDraw2;
 void __fastcall DrawSpriteHook2(CSprite2d const& sprite, int, float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4, CRGBA const& color) {
-	Draw2(sprite, fDefaultCoords + x1 * fDefaultWidth / *CDraw::pfScreenAspectRatio, y1, fDefaultCoords + x2 * fDefaultWidth / *CDraw::pfScreenAspectRatio, y2,
+	hbDraw2.fun(sprite, 0, fDefaultCoords + x1 * fDefaultWidth / *CDraw::pfScreenAspectRatio, y1, fDefaultCoords + x2 * fDefaultWidth / *CDraw::pfScreenAspectRatio, y2,
 		fDefaultCoords + x3 * fDefaultWidth / *CDraw::pfScreenAspectRatio, y3, fDefaultCoords + x4 * fDefaultWidth / *CDraw::pfScreenAspectRatio, y4, color);
 }
 
-auto PrintString = ((char(__cdecl *)(float, float, const char*))(0x71A700));
+injector::hook_back<void(__cdecl*)(float, float, const char*)> hbPrintString;
 void __cdecl PrintStringHook(float x, float y, char* str) {
-	PrintString(fDefaultCoords + x * fDefaultWidth / *CDraw::pfScreenAspectRatio, y, str);
+	hbPrintString.fun(fDefaultCoords + x * fDefaultWidth / *CDraw::pfScreenAspectRatio, y, str);
 }
 
-auto SetScale = ((char(__cdecl *)(float, float))(0x719380));
+injector::hook_back<void(__cdecl*)(float, float)> hbSetScale;
 void __cdecl SetScaleHook(float w, float h) {
-	SetScale(w * fDefaultWidth / *CDraw::pfScreenAspectRatio, h);
+	hbSetScale.fun(w * fDefaultWidth / *CDraw::pfScreenAspectRatio, h);
 }
 
-auto SetWrapx = ((void(__cdecl *)(float))(0x7194D0));
+injector::hook_back<void(__cdecl*)(float)> hbSetWrapx;
 void __cdecl SetWrapxHook(float fWrap) {
-	SetWrapx(fDefaultCoords + fWrap * fDefaultWidth / *CDraw::pfScreenAspectRatio);
+	hbSetWrapx.fun(fDefaultCoords + fWrap * fDefaultWidth / *CDraw::pfScreenAspectRatio);
 }
 
-auto DrawWindow = ((void(__stdcall *)(const CRect&, const char*, unsigned char, CRGBA, bool, bool))(0x573EE0));
+injector::hook_back<void(__stdcall*)(const CRect&, const char*, unsigned char, CRGBA, bool, bool)> hbDrawWindow;
 void __stdcall DrawWindowHook(CRect *rect, char *titleKey, char fadeState, CRGBA color, int a5, char bDrawBox) {
-	DrawWindow(CRect(fDefaultCoords + rect->m_fLeft * fDefaultWidth / *CDraw::pfScreenAspectRatio, rect->m_fBottom, fDefaultCoords + rect->m_fRight * fDefaultWidth / *CDraw::pfScreenAspectRatio, rect->m_fTop), titleKey, fadeState, color, a5, bDrawBox);
+	hbDrawWindow.fun(CRect(fDefaultCoords + rect->m_fLeft * fDefaultWidth / *CDraw::pfScreenAspectRatio, rect->m_fBottom, fDefaultCoords + rect->m_fRight * fDefaultWidth / *CDraw::pfScreenAspectRatio, rect->m_fTop), titleKey, fadeState, color, a5, bDrawBox);
 }
 
 void InstallSCMDrawingFixes() {
+	hbDrawRect.fun = injector::MakeCALL(0x464A53, DrawRectHook).get();
 	injector::MakeCALL(0x464A53, DrawRectHook);
+
+	hbDraw.fun = injector::MakeCALL(0x464A90, DrawSpriteHook).get();
 	injector::MakeCALL(0x464A90, DrawSpriteHook);
+
+	hbDraw2.fun = injector::MakeCALL(0x464B7F, DrawSpriteHook2).get();
 	injector::MakeCALL(0x464B7F, DrawSpriteHook2);
+
+	hbPrintString.fun = injector::MakeCALL(0x58C229, PrintStringHook).get();
 	injector::MakeCALL(0x58C229, PrintStringHook);
+
+	hbSetScale.fun = injector::MakeCALL(0x58C0E8, SetScaleHook).get();
 	injector::MakeCALL(0x58C0E8, SetScaleHook);
+
+	hbSetWrapx.fun = injector::MakeCALL(0x58C137, SetWrapxHook).get();
 	injector::MakeCALL(0x58C137, SetWrapxHook);
+
+	hbDrawWindow.fun = injector::MakeCALL(0x464A24, DrawWindowHook).get();
 	injector::MakeCALL(0x464A24, DrawWindowHook);
 }
-//
 
-DWORD WINAPI CompatHandler(LPVOID)
+void InstallAspectRatioFixes() {
+	// Unlock resolutions
+	injector::MakeJMP(0x745B5B, (void*)0x745BCB, true);
+	injector::WriteMemory<BYTE>(0x745BD1, 0x7D, true);
+	injector::WriteMemory<BYTE>(0x745BD9, 0x7C, true);
+
+	// Proportional coronas
+	injector::MakeNOP(0x6FB2C9, 4);
+	injector::WriteMemory<BYTE>(0x6FB2BD, 0x6C);
+	injector::WriteMemory<BYTE>(0x6FB2DC, 0x78);
+	injector::WriteMemory<BYTE>(0x713BE5, 0x20);
+	injector::WriteMemory<BYTE>(0x713B6D, 0x38);
+	injector::WriteMemory<BYTE>(0x713CFB, 0x38);
+	injector::WriteMemory<BYTE>(0x713EFC, 0x30);
+	injector::WriteMemory<BYTE>(0x714004, 0x38);
+
+	injector::MakeJMP(0x6FF420, CDraw::CalculateAspectRatio, true);
+
+	updateScreenAspectRatioWrapper<(0x0053D695 - 0x1)>();
+	updateScreenAspectRatioWrapper<(0x0053D7B2 - 0x1)>();
+	updateScreenAspectRatioWrapper<(0x0053D967 - 0x1)>();
+	updateScreenAspectRatioWrapper<(0x0053E771 - 0x1)>();
+	updateScreenAspectRatioWrapper<(0x0053EB1A - 0x1)>();
+}
+
+void __declspec(naked) CalculateAimingPoint() {
+	_asm {
+		fstp	st
+		mov		edx, [CDraw::pfScreenAspectRatio]
+		fmul[edx]
+		mov		edi, [esp + 1Ch + 14h]
+		mov     edx, edi
+		mov		ebx, 5149A6h
+		jmp		ebx
+	}
+}
+
+void InstallFieldOfViewFixes() {
+	injector::MakeJMP(0x6FF410, CDraw::SetFOV, true);
+
+	// Fix sky multitude
+	static const float fSkyMultFix = 10.0f;
+	injector::WriteMemory<const void*>(0x714843, &fSkyMultFix, true);
+	injector::WriteMemory<const void*>(0x714860, &fSkyMultFix, true);
+
+	// Set vehicle max FOV.
+	static const float fVehMaxFov = *CDraw::pfScreenFieldOfView + 30.0f;
+	injector::WriteMemory<const void*>(0x524BB4, &fVehMaxFov, true);
+	injector::WriteMemory<float>(0x524BC5, *CDraw::pfScreenFieldOfView + 30.0f, true);
+
+	// Aiming point
+	injector::MakeJMP(0x51499E, CalculateAimingPoint, true);
+	injector::MakeNOP(0x50AD79, 6, true);
+	injector::WriteMemory<const void*>(0x50AD59 + 0x2, &fCameraWidth[0]);
+	injector::WriteMemory<const void*>(0x51498D + 0x2, &fCameraWidth[0]);
+}
+
+float __stdcall StretchXHook(float fValue) {
+	double result; // st7
+
+	if (RsGlobal->MaximumWidth == 640)
+		result = fValue;
+	else
+		result = (float)RsGlobal->MaximumWidth * fValue * 0.0015625;
+	return result;
+}
+
+float __stdcall StretchYHook(float fValue) {
+	double result; // st7
+
+	if (RsGlobal->MaximumHeight == 448)
+		result = fValue;
+	else
+		result = (float)RsGlobal->MaximumHeight * fValue * 0.002232143;
+	return result;
+}
+
+injector::hook_back<void(__stdcall*)(float, float, float, float, float, float, signed int)> hbDisplaySlider;
+void __stdcall DisplaySliderHook(float x, float y, float unk0, float unk1, float width, float progress, signed int unk) {
+	hbDisplaySlider.fun(fWideScreenWidthProperScale * (-100.0f) + RsGlobal->MaximumWidth - RsGlobal->MaximumWidth * 0.0625, y, unk0, unk1, width, progress, unk);
+}
+
+injector::hook_back<void(__cdecl*)(float, float, unsigned __int16, unsigned int, float, int, bool, bool, CRGBA const& color, CRGBA const&)> hbDrawBarChart;
+void __cdecl DrawBarChartHook(float posX, float posY, unsigned __int16 width, unsigned int height, float progress, int progressAdded, bool drawPercentage, bool drawBlackBorder, CRGBA const& color, CRGBA const& progressAddedColor) {
+	hbDrawBarChart.fun(fWideScreenWidthProperScale * (-50.0f) + RsGlobal->MaximumWidth * 0.703125, posY, width, height, progress, progressAdded, drawPercentage, drawBlackBorder, color, progressAddedColor);
+}
+
+void InstallFrontendFixes() {
+	// Font Scales
+	int m_dwFrontendWidth[] = {		0x5795CF, // 0 Menu text
+									0x579981, // 1 Menu text
+									0x579A01, // 2 Menu text
+									0x57A36E, // 3 Menu text
+									0x57A319, // 4 Menu text
+									0x57A2A0, // 5 Menu text	
+									0x579718, // 6 Menu text
+									0x5763C0, // 7 Menu text
+									0x5749A5, // 8 Menu text
+									0x57500F, // 9 Menu text
+									0x579665, // 10 Menu text
+									0x579863, // 11 Menu text
+									0x57A1E3, // 12 Menu text
+									0x57A3EB, // 13 Menu text
+									0x582DDB, // 14 Legend
+									0x582E0D, // 15 Legend
+									0x582EB0, // 16 Legend
+									0x583019, // 17 Legend
+									0x58309C, // 18 Legend
+									0x583128, // 19 Legend
+									0x5831AD, // 20 Legend	
+									0x57613B, // 21 Legend
+									0x575EDF, // 22 Map zones
+									0x57A88D, // 23 Brightness slider posn
+									0x57AA81, // 24 Radio slider posn
+									0x57ACBE, // 25 Sfx slider posn
+									0x57AEB0, // 26 Draw slider posn
+									0x57B0E4, // 27 Mouse slider posn
+									0x57A807, // 28 Brightness slider
+									0x57A811, // 29 Brightness slider
+									0x57A9FE, // 30 Radio slider
+									0x57AA08, // 31 Radio slider
+									0x57AC2F, // 32 Sfx slider
+									0x57AC39, // 33 Sfx slider
+									0x57AE36, // 34 Draw distance slider
+									0x57AE40, // 35 Draw distance slider
+									0x57B064, // 36 Mouse acc slider
+									0x57B06E, // 37 Mouse acc slider
+									0x584A12, // 38 DrawYouAreHereSprite
+									0x5740BC, // 39 Message screen
+	};
+
+	int m_dwFrontendHeight[] = {	0x5795AD, // 0 Menu text
+									0x579958, // 1 Menu text								
+									0x5799D5, // 2 Menu text
+									0x57A345, // 3 Menu text
+									0x57A2DB, // 4 Menu text
+									0x57A25F, // 5 Menu text
+									0x5796F6, // 6 Menu text
+									0x576398, // 7 Menu text
+									0x57497D, // 8 Menu text
+									0x574FED, // 9 Menu text
+									0x579643, // 10 Menu text
+									0x579841, // 11 Menu text
+									0x57A1AE, // 12 Menu text
+									0x57A3C5, // 13 Menu text
+									0x582DC1, // 14 Legend
+									0x582ED3, // 15 Legend
+									0x582FA3, // 16 Legend
+									0x582FF5, // 17 Legend
+									0x583079, // 18 Legend
+									0x5830F6, // 19 Legend
+									0x58317B, // 20 Legend
+									0x576119, // 21 Legend
+									0x575EB7, // 22 Map zones
+									NULL,	  // 23
+									NULL,	  // 24
+									NULL,	  // 25
+									NULL,	  // 26
+									NULL,	  // 27
+									NULL,	  // 28
+									NULL,	  // 29
+									NULL,	  // 30
+									NULL,	  // 31
+									NULL,	  // 32
+									NULL,	  // 33
+									NULL,	  // 34
+									NULL,	  // 35
+									NULL,	  // 36
+									NULL,	  // 37
+									0x5849FA, // 38 DrawYouAreHereSprite
+									0x574096, // 39 Message screen
+	};
+
+	for (int i = 0; i < sizeof(m_dwFrontendWidth) / sizeof(const void*); i++) {
+		if (m_dwFrontendWidth[i] != NULL)
+			injector::WriteMemory<const void*>(m_dwFrontendWidth[i] + 0x2, &fFrontendWidth[i], true);
+	}
+
+	for (int i = 0; i < sizeof(m_dwFrontendHeight) / sizeof(const void*); i++) {
+		if (m_dwFrontendHeight[i] != NULL)
+			injector::WriteMemory<const void*>(m_dwFrontendHeight[i] + 0x2, &fFrontendHeight[i], true);
+	}
+
+	// StretchXY Restoration
+	int m_dwCallWidth[] = {		0x57E3A5,
+								0x577CB7,
+								0x577CD0,
+								0x577D6F,
+								0x577D99,
+								0x577DAB,
+								0x577FA6,
+								0x578031,
+								0x578052,
+								0x5780E1,
+								0x5788DF,
+								0x5788FB,
+	};
+
+	int m_dwCallHeight[] = {	0x57E391,
+								0x577C7B,
+								0x577C94,
+								0x577DEC,
+								0x577F6F,
+								0x577F81,
+								0x578106,
+								0x578199,
+								0x5781BA,
+								0x57824D,
+								0x5788ED,
+
+
+	};
+
+	for (int i = 0; i < sizeof(m_dwCallWidth) / sizeof(const void*); i++)
+		injector::MakeCALL(m_dwCallWidth[i], StretchXHook, true);
+
+	for (int i = 0; i < sizeof(m_dwCallHeight) / sizeof(const void*); i++)
+		injector::MakeCALL(m_dwCallHeight[i], StretchYHook, true);
+
+	// Fix sliders
+	hbDisplaySlider.fun = injector::MakeCALL(0x57A8D1, DisplaySliderHook).get();
+	injector::MakeCALL(0x57A8D1, DisplaySliderHook);
+
+	hbDisplaySlider.fun = injector::MakeCALL(0x57AACE, DisplaySliderHook).get();
+	injector::MakeCALL(0x57AACE, DisplaySliderHook);
+
+	hbDisplaySlider.fun = injector::MakeCALL(0x57AD0B, DisplaySliderHook).get();
+	injector::MakeCALL(0x57AD0B, DisplaySliderHook);
+
+	hbDisplaySlider.fun = injector::MakeCALL(0x57AEEE, DisplaySliderHook).get();
+	injector::MakeCALL(0x57AEEE, DisplaySliderHook);
+
+	hbDisplaySlider.fun = injector::MakeCALL(0x57B122, DisplaySliderHook).get();
+	injector::MakeCALL(0x57B122, DisplaySliderHook);
+
+	// Fix Stats bar chart.
+	hbDrawBarChart.fun = injector::MakeCALL(0x574F54, DrawBarChartHook).get();
+	injector::MakeCALL(0x574F54, DrawBarChartHook);
+}
+
+void InstallMiscFixes() {
+	// Misc
+	int m_dwMiscWidth[] = {		0x5733FD, // 0 StretchX
+								0x574761, // 1 Radio Icons
+								0x5747A6, // 2 Radio Icons
+								0x574857, // 3 Radio Icons
+								0x5748AA, // 4 Radio Icons
+								0x5765C0, // 5 2d Brief triangles
+								0x576603, // 6 2d Brief triangles
+								0x576646, // 7 2d Brief triangles
+								0x576689, // 8 2d Brief triangles
+								0x57672F, // 9 2d Brief triangles
+								0x576772, // 10 2d Brief triangles
+								0x5767B5, // 11 2d Brief triangles
+								0x5767F8, // 12 2d Brief triangles
+								0x574ECC, // 13 Stats bars
+								0x574F30, // 14 Stats bars
+								0x719D2D, // 15 Font fixes
+								0x719D94, // 16 Font fixes
+								0x719DD1, // 17 Font fixes
+								0x719E0E, // 18 Font fixes
+								0x719E4B, // 19 Font fixes
+								0x719E6F, // 20 Font fixes
+								0x719E97, // 21 Font fixes
+								0x719C0D, // 22 Font fixes
+								0x719C6E, // 23 Font fixes
+								0x7288F5, // 24 BarChart fixes
+								0x728941, // 25 BarChart fixes
+								0x573F93, // 26 DrawWindow header
+								0x573FF0, // 27 DrawWindow header
+	};
+
+	int m_dwMiscHeight[] = {	0x57342D, // 0 StretchY
+								0x57473B, // 1 Radio Icons
+								0x574783, // 2 Radio Icons
+								0x57482F, // 3 Radio Icons
+								0x574879, // 4 Radio Icons
+								0x57659A, // 5 2d Brief triangles
+								0x5765E2, // 6 2d Brief triangles
+								0x576625, // 7 2d Brief triangles
+								0x576668, // 8 2d Brief triangles
+								0x576709, // 9 2d Brief triangles
+								0x576751, // 10 2d Brief triangles
+								0x576794, // 11 2d Brief triangles
+								0x5767D7, // 12 2d Brief triangles
+								0x574EAA, // 13 Stats bars
+								0x574F0C, // 14 Stats bars
+								0x719D47, // 15 Font fixes
+								0x719D7C, // 16 Font fixes
+								0x719DB5, // 17 Font fixes
+								0x719DF2, // 18 Font fixes
+								0x719E2F, // 19 Font fixes
+								0x719EBF, // 20 Font fixes
+								0x719EE3, // 21 Font fixes
+								0x719C27, // 22 Font fixes
+								0x719C58, // 23 Font fixes
+								0x728864, // 24 BarChart fixes
+								0x7288A9, // 25 BarChart fixes
+								0x573F7D, // 26 DrawWindow header
+								0x573FD6, // 27 DrawWindow header
+	};
+
+	for (int i = 0; i < sizeof(m_dwMiscWidth) / sizeof(const void*); i++) {
+		if (m_dwMiscWidth[i] != NULL)
+			injector::WriteMemory<const void*>(m_dwMiscWidth[i] + 0x2, &fMiscWidth[i], true);
+	}
+
+	for (int i = 0; i < sizeof(m_dwMiscHeight) / sizeof(const void*); i++) {
+		if (m_dwMiscHeight[i] != NULL)
+			injector::WriteMemory<const void*>(m_dwMiscHeight[i] + 0x2, &fMiscHeight[i], true);
+	}
+}
+
+void InstallHUDFixes() {
+	int m_dwCrosshairWidth[] = {	0x58E7CE,
+									0x58E7F8,
+									0x58E2FA,
+									0x58E4ED,
+									0x58E75B,
+									0x58E28B,
+									0x58E2AC,
+									0x58E2BA,
+									0x53E472,
+									0x53E4AE,
+	};
+
+	int m_dwCrosshairHeight[] = {	0x58E7E4,
+									0x58E80E,
+									0x58E319,
+									0x58E527,
+									0x58E2C8,
+									0x53E3E7,
+									0x53E409,
+									NULL,
+									NULL,
+									NULL,
+	};
+
+	for (int i = 0; i < sizeof(m_dwCrosshairWidth) / sizeof(const void*); i++) {
+		if (m_dwCrosshairWidth[i] !=  NULL)
+			injector::WriteMemory<const void*>(m_dwCrosshairWidth[i] + 0x2, &fMiscWidth[0], true);
+	}
+
+	for (int i = 0; i < sizeof(m_dwCrosshairHeight) / sizeof(const void*); i++) {
+		if (m_dwCrosshairHeight[i] != NULL)
+			injector::WriteMemory<const void*>(m_dwCrosshairHeight[i] + 0x2, &fMiscHeight[0], true);
+	}
+
+	int m_dwRadarWidth[] = {		0x58A441, // Radar plane
+									0x58A791, // Radar disc
+									0x58A82E, // Radar disc
+									0x58A8DF, // Radar disc
+									0x58A982, // Radar disc
+									0x58A5D8,
+									0x58A6DE,
+									0x5834BA, // Radar point
+									0x58603F, // Radar point
+									0x5886CC, // Radar centre
+									0x58439C, // Radar Trace 0
+									0x584434, // Radar Trace 0
+									0x58410B, // Radar Trace 2
+									0x584190, // Radar Trace 2
+									0x584249, // Radar Trace 1
+									0x5842E6, // Radar Trace 1
+	};
+
+	int m_dwRadarHeight[] = {		0x58A473, // Radar plane
+									0x58A600, // Radar disc
+									0x58A69E, // Radar disc
+									0x58A704, // Radar disc
+									0x58A7B9, // Radar disc
+									0x58A85A,
+									0x58A909,
+									0x58A9BD, // Radar point
+									0x5834EC, // Radar point
+									0x586058, // Radar centre
+									0x584346, // Radar Trace 0
+									0x58440C, // Radar Trace 0
+									0x58412B, // Radar Trace 2
+									0x5841B0, // Radar Trace 2
+									0x584207, // Radar Trace 1
+									0x5842C6, // Radar Trace 1
+	};
+
+	for (int i = 0; i < sizeof(m_dwRadarWidth) / sizeof(const void*); i++) {
+		injector::WriteMemory<const void*>(m_dwRadarWidth[i] + 0x2, &fRadarWidth[i], true);
+	}
+
+	for (int i = 0; i < sizeof(m_dwRadarHeight) / sizeof(const void*); i++)
+		injector::WriteMemory<const void*>(m_dwRadarHeight[i] + 0x2, &fRadarHeight[i], true);
+
+	int m_dwHUDWidth[] = {		0x58EB3F, // 0 Clock 
+								0x58EC0C, // 1 Clock
+								0x58F55C, // 2 Money
+								0x58F5F4, // 3 Money
+								0x5892CA, // 4 Info bars
+								0x58937E, // 5 Info bars
+								0x58EE7E, // 6 Info bars
+								0x58EEF4, // 7 Info bars
+								0x589155, // 8 Info bars
+								0x58EF50, // 9 Info bars
+								0x58EFC5, // 10 Info bars
+								0x58922D, // 11 Info bars
+								0x58F116, // 12 Info bars
+								0x58F194, // 13 Info bars
+								0x58D92D, // 14 Weapon icons
+								0x58D8C3, // 15 Weapon icons
+								0x58F91C, // 16 Weapon icons
+								0x58F92D, // 17 Weapon icons
+								0x5894C5, // 18 Ammo
+								0x5894E9, // 19 Ammo
+								0x58F9D0, // 20 Ammo
+								0x58FA5D, // 21 Ammo
+								0x58F9F5, // 22 Ammo
+								0x58FA8E, // 23 Ammo
+								0x58DCB8, // 24 Wanted
+								0x58DD00, // 25 Wanted
+								0x58DD7E, // 26 Wanted
+								0x58DF71, // 27 Wanted
+								0x58DFE5, // 28 Wanted
+								NULL,	  // 29
+								0x58B09F, // 30 Vehicle names
+								0x58B13F, // 31 Vehicle names
+								0x58AD3A, // 32 Area names
+								0x58AD65, // 33 Area names
+								0x58AE4A, // 34 Area names
+								0x58C395, // 35 Subs
+								0x58C41D, // 36 Subs
+								0x58C4DC, // 37 Subs
+								0x5896D8, // 38
+								0x589703, // 39
+								0x58990C, // 40 Stats box
+								0x58986D, // 41 Stats box
+								0x5897C3, // 42 Stats box
+								0x589A16, // 43 Stats box
+								0x589B2D, // 44 Stats box
+								0x589C73, // 45 Stats box
+								0x589D61, // 46 Stats box
+								0x589E49, // 47 Stats box
+								0x589F31, // 48 Stats box
+								0x58A013, // 49 Stats box
+								0x58A090, // 50 Stats box
+								0x58A134, // 51 Stats box
+								NULL,	  // 52
+								NULL,	  // 53
+								NULL,	  // 54
+								NULL,	  // 55
+								NULL,	  // 56
+								NULL,	  // 57
+								NULL,	  // 58
+								NULL,	  // 59
+								NULL,	  // 60
+								NULL,	  // 61
+								0x58C863, // 62 SuccessFailed text
+								0x58D2DB, // 63 MissionTitle text
+								0x58D459, // 64 MissionTitle text
+								0x58CBC1, // 65 WastedBusted text
+								0x58B273, // 66 Timers
+								0x58B2A4, // 67 Timers
+								0x58B3AF, // 68 Timers
+								0x58B3FC, // 69 Timers
+								0x58B56A, // 70 Timers
+								0x58B5EE, // 71 Timers
+								0x58B67E, // 72 Timers
+								0x58B76F, // 73 Helptext
+								0x58B7D6, // 74 Helptext
+								0x58BA62, // 75 Helptext
+								0x58BAC6, // 76 Helptext
+								0x58BBDB, // 77 Helptext
+								0x58BCB0, // 78 Helptext
+								0x58BD58, // 79 Helptext
+								0x58BE8D, // 80 Helptext
+								0x58BF7E, // 81 Helptext
+								0x58BFFC, // 82 Helptext
+								0x580F16, // 83 Menu system
+								0x580F95, // 84
+								0x5810EF, // 85
+								0x581158, // 86
+								0x5811CD, // 87
+								0x58148A, // 88
+								0x5814F7, // 89
+								0x5815B1, // 90
+								0x5815EB, // 91
+								0x581633, // 92			
+								0x47AD2A, // 93
+								0x5818CF, // 94
+								0x58CCDB, // 95 OddJob
+								0x58CDE6, // 96 OddJob
+								0x58CEE2, // 97 OddJob
+								0x58D15C, // 98 OddJob
+								0x58A178, // 99 TripSkip
+								0x58A21D, // 100 TripSkip
+								0x58A2C0, // 101 TripSkip
+								0x4E9F30, // 102 RadioStation
+								0x43CF57, // 103 CDarkel
+								0x4477CD, // 104 CGarages
+								0x4477F7, // 105 CGarages
+	};								
+
+	int m_dwHUDHeight[] = {		0x58EB29, // 0 Clock
+								0x58EBF9, // 1 Clock
+								0x58F546, // 2 Money
+								0x58F5CE, // 3 Money
+								0x589346, // 4 Info bars
+								0x58EE60, // 5 Info bars
+								0x588B9C, // 6 Info bars
+								0x58EEC8, // 7 Info bars
+								0x58913E, // 8 Info bars
+								0x58EF32, // 9 Info bars
+								0x58EF99, // 10 Info bars
+								0x589216, // 11 Info bars
+								0x58F0F8, // 12 Info bars
+								0x58F168, // 13 Info bars
+								0x58D945, // 14 Weapon icons
+								0x58D882, // 15 Weapon icons
+								0x58F90B, // 16 Weapon icons
+								NULL,	  // 17
+								0x5894AF, // 18 Ammo
+								NULL,	  // 19
+								0x58F9C0, // 20 Ammo
+								0x58FA4A, // 21 Ammo
+								NULL,	  // 22
+								NULL,	  // 23
+								0x58DCA2, // 24 Wanted
+								0x58DD68, // 25 Wanted
+								0x58DDF4, // 26 Wanted
+								0x58DF55, // 27 Wanted
+								0x58DF9B, // 28 Wanted
+								0x58DEE4, // 29 Wanted
+								0x58B089, // 30 Vehicle names
+								0x58B12D, // 31 Vehicle names
+								0x58AD24, // 32 Area names
+								0x58AE0D, // 33 Area names
+								NULL,	  // 34
+								0x58C37F, // 35 Subs
+								0x58C407, // 36 Subs
+								0x58C4C6, // 37 Subs
+								NULL,	  // 38
+								NULL,	  // 39
+								0x5898F6, // 40 Stats box text
+								NULL,	  // 41
+								NULL,	  // 42
+								0x589735, // 43 Stats box
+								0x58978B, // 44 Stats box
+								0x589813, // 45 Stats box
+								0x58983F, // 46 Stats box
+								0x5898BD, // 47 Stats box
+								0x5899FF, // 48 Stats box
+								0x589A4B, // 49 Stats box
+								0x589B16, // 50 Stats box
+								0x589C5C, // 51 Stats box
+								0x589CA8, // 52 Stats box
+								0x589D4A, // 53 Stats box
+								0x589D92, // 54 Stats box
+								0x589E32, // 55 Stats box
+								0x589E7A, // 56 Stats box
+								0x589F1A, // 57 Stats box
+								0x589F62, // 58 Stats box
+								0x589FFC, // 59 Stats box
+								0x58A040, // 60 Stats box
+								0x58A07A, // 61 Stats box
+								0x58C84D, // 62 SuccessFailed text
+								0x58D2C5, // 63 MissionTitle text
+								0x58D447, // 64 MissionTitle text
+								0x58CBAB, // 65 WastedBusted text
+								0x58B1B7, // 66 Timers
+								0x58B263, // 67 Timers
+								0x58B435, // 68 Timers
+								0x58B536, // 69 Timers
+								0x58B5DE, // 70 Timers		
+								NULL,	  // 71
+								NULL,	  // 72
+								0x58B7BD, // 73 Help text
+								0x58BA4C, // 74 Help text
+								0x58BBA7, // 75 Help text
+								0x58BD19, // 76 Help text
+								0x58BE2B, // 77 Help text
+								0x58BF1C, // 78 Help text
+								0x58BFCB, // 79 Help text		
+								NULL,	  // 80
+								NULL,	  // 81
+								NULL,	  // 82
+								0x580E11, // 83 Menu system
+								0x580F85, // 84
+								0x5810CC, // 85
+								0x581132, // 86
+								0x5811A1, // 87
+								0x58147A, // 88
+								0x5814E7, // 89
+								0x581699, // 90
+								NULL,	  // 91
+								NULL,	  // 92
+								NULL,	  // 93
+								0x581889, // 94
+								0x58CCC5, // 95 OddJob
+								0x58CDD0, // 96 OddJob
+								0x58CECC, // 97 OddJob
+								0x58D146, // 98 OddJob
+								NULL, //0x58A199, // 99 TripSkip
+								NULL, //0x58A207, // 100 TripSkip
+								NULL, //0x58A2B0, // 101 TripSkip
+								0x4E9F1A, // 102 RadioStation
+								0x43CF47, // 103 CDarkel
+								0x4477B7, // 104 CGarages
+								0x4478AC, // 105 CGarages							
+	};
+
+	for (int i = 0; i < sizeof(m_dwHUDWidth) / sizeof(const void*); i++) {
+		if (m_dwHUDWidth[i] != NULL)
+			injector::WriteMemory<const void*>(m_dwHUDWidth[i] + 0x2, &fHUDWidth[i], true);
+	}
+
+	for (int i = 0; i < sizeof(m_dwHUDHeight) / sizeof(const void*); i++) {
+		if (m_dwHUDHeight[i] != NULL)
+			injector::WriteMemory<const void*>(m_dwHUDHeight[i] + 0x2, &fHUDHeight[i], true);
+	}
+
+	// Help text bar chart offset
+	static float fBarChartOffsetY = 160.0f;
+	injector::WriteMemory<const void*>(0x58BE9F + 0x2, &fBarChartOffsetY);
+
+	// Lock Subtitles Width
+	static float fSubtitlesMult = 1.0f;
+	injector::WriteMemory<const void*>(0x58C4E8 + 0x2, &fSubtitlesMult);
+}
+
+injector::hook_back<void(__cdecl*)(CRect&, CRGBA const&, CRGBA const&, CRGBA const&, CRGBA const&)> hbSetVertices;
+void __cdecl SetVerticesHook(CRect& a1, CRGBA const& a2, CRGBA const& a3, CRGBA const& a4, CRGBA const& a5)
 {
+	uint32_t pTexture = 0;
+	_asm mov pTexture, esi
+
+	if (static_cast<int>(a1.m_fLeft) <= 0 && static_cast<int>(a1.m_fTop) <= 0 && static_cast<int>(a1.m_fRight) >= RsGlobal->MaximumWidth && static_cast<int>(a1.m_fBottom) >= RsGlobal->MaximumHeight)
+	{
+		float fMiddleScrCoord = (float)RsGlobal->MaximumWidth / 2.0f;
+
+		float w = 16.0f;
+		float h = 9.0f;
+
+		if (FrontendAspectRatioWidth && FrontendAspectRatioHeight)
+		{
+			w = (float)FrontendAspectRatioWidth;
+			h = (float)FrontendAspectRatioHeight;
+		}
+		else
+		{
+			if (pTexture)
+			{
+				if (*(uint32_t*)pTexture)
+				{
+					pTexture = **(uint32_t**)pTexture;
+					w = (float)(*(uint32_t*)(pTexture + 0x28));
+					h = (float)(*(uint32_t*)(pTexture + 0x2C));
+					if (w == h && w > 0 && h > 0)
+					{
+						w = 4.0f;
+						h = 3.0f;
+					}
+				}
+			}
+		}
+
+		fFrontendDefaultCoords = fMiddleScrCoord - ((((float)RsGlobal->MaximumHeight * (w / h))) / 2.0f);
+		fFrontendDefaultWidth = w / h;
+
+		a1.m_fTop = 0.0f;
+		a1.m_fLeft = fMiddleScrCoord - ((((float)RsGlobal->MaximumHeight * (w / h))) / 2.0f);
+		a1.m_fBottom = (float)RsGlobal->MaximumHeight;
+		a1.m_fRight = fMiddleScrCoord + ((((float)RsGlobal->MaximumHeight * (w / h))) / 2.0f);
+
+		CSprite2dDrawRect(CRect(-5.0f, a1.m_fBottom, a1.m_fLeft, -5.0f), CRGBA(0, 0, 0, a2.alpha));
+		CSprite2dDrawRect(CRect((float)RsGlobal->MaximumWidth, a1.m_fBottom, a1.m_fRight, -5.0f), CRGBA(0, 0, 0, a2.alpha));
+
+		CSprite2dDrawRect(CRect(-5.0f, (float)RsGlobal->MaximumHeight + 5.0f, (float)RsGlobal->MaximumWidth + 5.0f, -5.0f), CRGBA(0, 0, 0, a2.alpha));
+	}
+
+	return hbSetVertices.fun(a1, a2, a3, a4, a5);
+}
+
+injector::hook_back<void(__cdecl*)(float, float, unsigned __int16, unsigned int, float, int, bool, bool, CRGBA const&, CRGBA const&)> hbDrawLoadingBar;
+void __cdecl DrawLoadingBarHook(float x, float y, unsigned int w, unsigned int h, float progress, int progressAdded, bool drawPercentage, bool drawBlackBorder, CRGBA const& color, CRGBA const& progressAddedColor) {
+	hbDrawLoadingBar.fun(fFrontendDefaultCoords + x * fFrontendDefaultWidth / *CDraw::pfScreenAspectRatio, y, w * fFrontendDefaultWidth / *CDraw::pfScreenAspectRatio, h, progress, progressAdded, drawPercentage, drawBlackBorder, color, progressAddedColor);
+}
+
+void Install2dSpriteFixes() {
+	CIniReader iniReader("");
+	szForceAspectRatio = iniReader.ReadString("MAIN", "FrontendAspectRatio", "auto");
+	if (strncmp(szForceAspectRatio.c_str(), "auto", 4) != 0) {
+		FrontendAspectRatioWidth = std::stoi(szForceAspectRatio.c_str());
+		FrontendAspectRatioHeight = std::stoi(strchr(szForceAspectRatio.c_str(), ':') + 1);
+	}
+	else {
+		FrontendAspectRatioWidth = 0;
+		FrontendAspectRatioHeight = 0;
+	}
+
+	hbSetVertices.fun = injector::MakeCALL(0x7284CC, SetVerticesHook).get();
+	injector::MakeCALL(0x728360, SetVerticesHook); 
+
+	// Loading bar fix
+	hbDrawLoadingBar.fun = injector::MakeCALL(0x590480, DrawLoadingBarHook).get();
+	injector::MakeCALL(0x590480, DrawLoadingBarHook);
+}
+
+DWORD WINAPI CompatHandler(LPVOID) {
     size_t i = 0;
-    while (GetModuleHandle(L"SilentPatchSA.asi") == NULL)
-    {
+    while (GetModuleHandle(L"SilentPatchSA.asi") == NULL) {
         Sleep(0);
         ++i;
 
@@ -578,146 +1306,90 @@ DWORD WINAPI CompatHandler(LPVOID)
     return 0;
 }
 
-DWORD WINAPI Init(LPVOID bDelay)
-{
-    if (!bDelay)
-    {
-        CIniReader iniReader("");
-        ResX = iniReader.ReadInteger("MAIN", "ResX", -1);
-        ResY = iniReader.ReadInteger("MAIN", "ResY", -1);
-        fHudWidthScale = iniReader.ReadFloat("MAIN", "HudWidthScale", 0.8f);
-        fHudHeightScale = iniReader.ReadFloat("MAIN", "HudHeightScale", 0.8f);
-        fRadarWidthScale = iniReader.ReadFloat("MAIN", "RadarWidthScale", 0.82f);
-        fSubtitlesScale = iniReader.ReadFloat("MAIN", "SubtitlesScale", 1.0f);
-        bRestoreCutsceneFOV = iniReader.ReadInteger("MAIN", "RestoreCutsceneFOV", 1) != 0;
-        fCarSpeedDependantFOV = iniReader.ReadFloat("MAIN", "CarSpeedDependantFOV", 0.0f);
-        bDontTouchFOV = iniReader.ReadInteger("MAIN", "DontTouchFOV", 0) != 0;
-        bool DisableWhiteCrosshairDot = iniReader.ReadInteger("MAIN", "DisableWhiteCrosshairDot", 1) != 0;
-        szForceAspectRatio = iniReader.ReadString("MAIN", "ForceAspectRatio", "auto");
-        nHideAABug = iniReader.ReadInteger("MAIN", "HideAABug", 1);
-        bSmartCutsceneBorders = iniReader.ReadInteger("MAIN", "SmartCutsceneBorders", 1) != 0;
-        ReplaceTextShadowWithOutline = iniReader.ReadInteger("MAIN", "ReplaceTextShadowWithOutline", 0);
-        bool bAltTab = iniReader.ReadInteger("MAIN", "AllowAltTabbingWithoutPausing", 0) != 0;
+void ApplyIniOptions() {
+	CIniReader iniReader("");
+	ResX = iniReader.ReadInteger("MAIN", "ResX", -1);
+	ResY = iniReader.ReadInteger("MAIN", "ResY", -1);
+	fHudWidthScale = iniReader.ReadFloat("MAIN", "HudWidthScale", 0.8f);
+	fHudHeightScale = iniReader.ReadFloat("MAIN", "HudHeightScale", 0.8f);
+	fRadarWidthScale = iniReader.ReadFloat("MAIN", "RadarWidthScale", 0.82f);
+	fSubtitlesScale = iniReader.ReadFloat("MAIN", "SubtitlesScale", 1.0f);
+	bRestoreCutsceneFOV = iniReader.ReadInteger("MAIN", "RestoreCutsceneFOV", 1) != 0;
+	fCarSpeedDependantFOV = iniReader.ReadFloat("MAIN", "CarSpeedDependantFOV", 0.0f);
+	bDontTouchFOV = iniReader.ReadInteger("MAIN", "DontTouchFOV", 0) != 0;
+	bool DisableWhiteCrosshairDot = iniReader.ReadInteger("MAIN", "DisableWhiteCrosshairDot", 1) != 0;
+	szForceAspectRatio = iniReader.ReadString("MAIN", "ForceAspectRatio", "auto");
+	nHideAABug = iniReader.ReadInteger("MAIN", "HideAABug", 1);
+	bSmartCutsceneBorders = iniReader.ReadInteger("MAIN", "SmartCutsceneBorders", 1) != 0;
+	ReplaceTextShadowWithOutline = iniReader.ReadInteger("MAIN", "ReplaceTextShadowWithOutline", 0);
+	bool bAltTab = iniReader.ReadInteger("MAIN", "AllowAltTabbingWithoutPausing", 0) != 0;
 
-        OverwriteResolution();
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&CompatHandler, NULL, 0, NULL);
-        GetMemoryAddresses();
+	if (bAltTab) {
+		//Windowed mode fix (from MTA sources)
+		if ((GetWindowLong((HWND)RsGlobal->ps, GWL_STYLE) & WS_POPUP) == 0) {
+			// Disable MENU AFTER alt + tab
+			//0053BC72   C605 7B67BA00 01 MOV BYTE PTR DS:[BA677B],1    
+			injector::WriteMemory<uint8_t>(0x53BC78, 0x00);
 
-        if (bAltTab)
-        {
-            //Windowed mode fix (from MTA sources)
-            if ((GetWindowLong((HWND)RsGlobal->ps, GWL_STYLE) & WS_POPUP) == 0)
-            {
-                // Disable MENU AFTER alt + tab
-                //0053BC72   C605 7B67BA00 01 MOV BYTE PTR DS:[BA677B],1    
-                injector::WriteMemory<uint8_t>(0x53BC78, 0x00);
+			// ALLOW ALT+TABBING WITHOUT PAUSING
+			injector::MakeNOP(0x748A8D, 6, true);
+			injector::MakeJMP(0x6194A0, AllowMouseMovement, true);
+		}
+	}
 
-                // ALLOW ALT+TABBING WITHOUT PAUSING
-                injector::MakeNOP(0x748A8D, 6, true);
-                injector::MakeJMP(0x6194A0, AllowMouseMovement, true);
-            }
-        }
+	if (strncmp(szForceAspectRatio.c_str(), "auto", 4) != 0) {
+		AspectRatioWidth = std::stoi(szForceAspectRatio.c_str());
+		AspectRatioHeight = std::stoi(strchr(szForceAspectRatio.c_str(), ':') + 1);
+		fCustomAspectRatioHor = static_cast<float>(AspectRatioWidth);
+		fCustomAspectRatioVer = static_cast<float>(AspectRatioHeight);
+	}
 
-        if (strncmp(szForceAspectRatio.c_str(), "auto", 4) != 0)
-        {
-            AspectRatioWidth = std::stoi(szForceAspectRatio.c_str());
-            AspectRatioHeight = std::stoi(strchr(szForceAspectRatio.c_str(), ':') + 1);
-        }
+	bFOVControl = iniReader.ReadInteger("MAIN", "FOVControl", 1) != 0;
+	FOVControl = (uint32_t*)0x6FF41B;
+	injector::WriteMemory<float>(FOVControl, 1.0f, true);
 
-        bFOVControl = iniReader.ReadInteger("MAIN", "FOVControl", 1) != 0;
-        FOVControl = (uint32_t*)0x6FF41B;
-        injector::WriteMemory<float>(FOVControl, 1.0f, true);
+	if (!fHudWidthScale || !fHudHeightScale) { fHudWidthScale = 0.8f; fHudHeightScale = 0.8f; }
+	if (!fRadarWidthScale) { fRadarWidthScale = 0.82f; }
+	if (!fSubtitlesScale) { fSubtitlesScale = 1.0f; }
 
-        if (!fHudWidthScale || !fHudHeightScale) { fHudWidthScale = 0.8f; fHudHeightScale = 0.8f; }
-        if (!fRadarWidthScale) { fRadarWidthScale = 0.82f; }
-        if (!fSubtitlesScale) { fSubtitlesScale = 1.0f; }
+	if (DisableWhiteCrosshairDot) {
+		injector::MakeNOP(0x58E2DD, 5, true);
+	}
 
-        if (fCarSpeedDependantFOV)
-        {
-            struct FOVHook
-            {
-                void operator()(injector::reg_pack& regs)
-                {
-                    _asm fstp dword ptr ds : [00BA8314h]
-                        fRadarScaling = *(float*)0xBA8314 - 180.0f;
-                }
-            }; injector::MakeInline<FOVHook>(0x586C6A, 0x586C70);
-        }
+	if (ReplaceTextShadowWithOutline) {
+		//CFont::SetDropShadowPosition -> CFont::SetEdge
+		injector::MakeJMP(0x719570, SetDropShadowPosition, true);
+	}
 
-        if (DisableWhiteCrosshairDot)
-        {
-            injector::MakeNOP(0x58E2DD, 5, true);
-        }
+	if (nHideAABug) {
+		injector::MakeJMP(0x53E90E, Hide1pxAABug, true);
+	}
 
-        if (ReplaceTextShadowWithOutline)
-        {
-            //CFont::SetDropShadowPosition -> CFont::SetEdge
-            injector::MakeJMP(0x719570, SetDropShadowPosition, true);
-        }
-    }
+	injector::WriteMemory<uint8_t>(0x53E2AD, 0x74, true); // Reverse g_MenuManager.widescreenOn to make widescreen off equal to borders off
+	injector::WriteMemory<uint8_t>(0x58BB90, 0x74, true); // for borders and text boxes.
 
-    if (!bDelay)
-    {
-        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&Init, (LPVOID)true, 0, NULL);
-        return 0;
-    }
+	if (bSmartCutsceneBorders) {
+		injector::MakeCALL(0x53E2B4, CCamera::DrawBordersForWideScreen, true);
+		injector::MakeCALL(0x5AF8C0, CCamera::DrawBordersForWideScreen, true);
+		injector::WriteMemory<uint8_t>(0x58BB93, 0x00, true); // Text box offset in cutscenes
+	}
+}
 
-    if (bDelay)
-        while (*(uint16_t*)0x0057B79C != 0x9090) { Sleep(10); };
+DWORD WINAPI Init(LPVOID bDelay) {
+	if (!bDelay) {
+		ApplyIniOptions();
+		GetMemoryAddresses();
+		OverwriteResolution();
+		InstallAspectRatioFixes();
+		InstallFieldOfViewFixes();
+		InstallFrontendFixes();
+		InstallMiscFixes();
+		InstallHUDFixes();
+		InstallSCMDrawingFixes();
+		Install2dSpriteFixes();
+	}
 
-    if (AspectRatioWidth && AspectRatioHeight)
-    {
-        auto TempPtr = injector::GetBranchDestination(0x0053D694, true);
-        for (size_t i = 1; i < 20; i++)
-        {
-            if (*(DWORD*)(TempPtr.as_int() + i) == 0x00C17044)
-            {
-                injector::WriteMemory(TempPtr.as_int() + i, &AspectRatioWidth, true);
-            }
-            if (*(DWORD*)(TempPtr.as_int() + i) == 0x00C17048)
-            {
-                injector::WriteMemory(TempPtr.as_int() + 8 + 4, &AspectRatioHeight, true);
-                break;
-            }
-        }
-    }
-
-    updateScreenAspectRatioWrapper<(0x0053D695 - 0x1)>();
-    updateScreenAspectRatioWrapper<(0x0053D7B2 - 0x1)>();
-    updateScreenAspectRatioWrapper<(0x0053D967 - 0x1)>();
-    updateScreenAspectRatioWrapper<(0x0053E771 - 0x1)>();
-    updateScreenAspectRatioWrapper<(0x0053EB1A - 0x1)>();
-
-    injector::MakeCALL(0x00460306 - 1, CDraw::SetFOV, true);
-    injector::MakeCALL(0x0052C977 - 1, CDraw::SetFOV, true);
-    injector::MakeCALL(0x0053BD7B - 1, CDraw::SetFOV, true);
-    injector::MakeCALL(0x005BA225 - 1, CDraw::SetFOV, true);
-
-    if (nHideAABug)
-    {
-        injector::MakeJMP(0x53E90E, Hide1pxAABug, true);
-    }
-
-    injector::WriteMemory<uint8_t>(0x53E2AD, 0x74, true); //Reverse g_MenuManager.widescreenOn to make widescreen off equal to borders off
-    injector::WriteMemory<uint8_t>(0x58BB90, 0x74, true); //for borders and text boxes.
-    if (bSmartCutsceneBorders)
-    {
-        injector::MakeCALL(0x53E2B4, CCamera::DrawBordersForWideScreen, true);
-        injector::MakeCALL(0x5AF8C0, CCamera::DrawBordersForWideScreen, true);
-        injector::WriteMemory<uint8_t>(0x58BB93, 0x00, true); //text box offset in cutscenes
-    }
-
-    InstallCustomHooks();
-
-    InstallWSHPSFixes();
-
-    // intro text scaling
-    // hbWipeLocalVariableMemoryForMissionScript.fun = injector::MakeCALL(0x489A70, WipeLocalVariableMemoryForMissionScriptHook, true).get();
-    // injector::MakeCALL(0x4899F0, WipeLocalVariableMemoryForMissionScriptHook, true);
-
-	InstallSCMDrawingFixes();
-
-    return 0;
+	return 0;
 }
 
 BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)

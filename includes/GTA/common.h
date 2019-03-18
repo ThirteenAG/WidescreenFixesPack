@@ -55,3 +55,5 @@ struct RwV3d
 };
 
 class CSprite2d;
+
+class CVector;
