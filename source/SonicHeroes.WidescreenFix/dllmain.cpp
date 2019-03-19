@@ -116,8 +116,9 @@ void Init()
                 fmul    dword ptr[eax08]
             }
         }
-    }; injector::MakeInline<CutOffAreaHORHook>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(17));
+    }; injector::MakeInline<CutOffAreaHORHook>(pattern.count(1).get(0).get<uint32_t>(17));
     
+    pattern = hook::pattern("D9 42 6C D8 48 10"); //0x64B006
     struct CutOffAreaVertHook
 	{
 		void operator()(injector::reg_pack& regs)
@@ -130,13 +131,13 @@ void Init()
                 fmul    dword ptr[eax10]
             }
          }
-    }; injector::MakeInline<CutOffAreaVertHook>(pattern.count(1).get(0).get<uint32_t>(42), pattern.count(1).get(0).get<uint32_t>(6));
+    }; injector::MakeInline<CutOffAreaVertHook>(pattern.count(1).get(0).get<uint32_t>(6));
     
     pattern = hook::pattern("83 C3 0C 53 56 E8 ? ? ? ? ?"); //0x6B7272
     struct ShadowFixHook
 	{
-		void operator()(injector::reg_pack& regs)
-		{
+	void operator()(injector::reg_pack& regs)
+	{
             float ebx00 = *(float*)(regs.ebx + 0x00);
             float ebx04 = *(float*)(regs.ebx + 0x04);
             _asm
@@ -148,12 +149,12 @@ void Init()
                 fld     dword ptr[ebx04]
                 fmul    dword ptr[Screen.fHudZoomScale]
                 fstp    dword ptr[Screen.ShadowFix + 0x4]
-                mov ebx, ShadowFix
+                mov ebx, Screen.ShadowFix
                 push ebx
                 push esi
             }
          }
-    }; injector::MakeInline<ShadowFixHook>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(5));
+    }; injector::MakeInline<ShadowFixHook>(pattern.count(1).get(0).get<uint32_t>(5));
     
     pattern = hook::pattern("D9 05 ? ? ? ? 89 4E 68 8B 50 04 D8 76 68"); //0x64AC8B
     injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &Screen.fHudScale, true);
