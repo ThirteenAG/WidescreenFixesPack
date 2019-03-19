@@ -10,6 +10,7 @@ struct Screen
     float fConditionalAspect;
     float fHudScale;
     float fHudZoomScale;
+    float ShadowFix;
 } Screen;
 
 void Init()
@@ -17,17 +18,11 @@ void Init()
     CIniReader iniReader("");
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
-    Screen.fConditionalAspect = iniReader.ReadFloat("MAIN", "ConditionalHorizontalAspect", 0.0f);
-    Screen.fHudZoomScale = iniReader.ReadFloat("MAIN", "ZoomFactor", 0.0f);
+    Screen.fConditionalAspect = iniReader.ReadFloat("MAIN", "ConditionalHorizontalAspect", 4.0f / 3.0f);
+    Screen.fHudZoomScale = iniReader.ReadFloat("MAIN", "ZoomFactor", 1.0f);
 
     if (!Screen.Width || !Screen.Height)
     	std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
-
-    if (!Screen.fConditionalAspect)
-    	Screen.fConditionalAspect = 4.0f / 3.0f;
-    
-    if (!Screen.fHudZoomScale)
-        Screen.fHudZoomScale = 1.0f;
 
     Screen.fWidth = static_cast<float>(Screen.Width);
     Screen.fHeight = static_cast<float>(Screen.Height);
@@ -102,7 +97,7 @@ void Init()
     }; injector::MakeInline<ResHook5>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
 
     pattern = hook::pattern("D9 42 68 D8 08 D9 42 68 D8 48 04 D9 42 68 D8 48 08"); //0x64AFDC
-    struct CutOffAreaHook
+    struct CutOffAreaHORHook
     {
         void operator()(injector::reg_pack& regs)
         {
@@ -121,8 +116,45 @@ void Init()
                 fmul    dword ptr[eax08]
             }
         }
-    }; injector::MakeInline<CutOffAreaHook>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(17));
-
+    }; injector::MakeInline<CutOffAreaHORHook>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(17));
+    
+    struct CutOffAreaVertHook
+	{
+		void operator()(injector::reg_pack& regs)
+		{
+            float edx6C = *(float*)(regs.edx + 0x6C) / Screen.fHudZoomScale;
+            float eax10 = *(float*)(regs.eax + 0x10);
+            _asm
+            {
+                fld     dword ptr[edx6C]
+                fmul    dword ptr[eax10]
+            }
+         }
+    }; injector::MakeInline<CutOffAreaVertHook>(pattern.count(1).get(0).get<uint32_t>(42), pattern.count(1).get(0).get<uint32_t>(6));
+    
+    pattern = hook::pattern("83 C3 0C 53 56 E8 ?? ?? ?? ?? ??"); //0x6B7272
+    struct ShadowFixHook
+	{
+		void operator()(injector::reg_pack& regs)
+		{
+            float ebx00 = *(float*)(regs.ebx + 0x00);
+            float ebx04 = *(float*)(regs.ebx + 0x04);
+            _asm
+            {
+                add ebx,0x0C
+                fld     dword ptr[ebx00]
+                fmul    dword ptr[Screen.fHudScale]
+                fstp    dword ptr[ShadowFix]
+                fld     dword ptr[ebx04]
+                fmul    dword ptr[Screen.fHudZoomScale]
+                fstp    dword ptr[ShadowFix + 0x4]
+                mov ebx, ShadowFix
+                push ebx
+                push esi
+            }
+         }
+    }; injector::MakeInline<ShadowFixHook>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(5));
+    
     pattern = hook::pattern("D9 05 ? ? ? ? 89 4E 68 8B 50 04 D8 76 68"); //0x64AC8B
     injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &Screen.fHudScale, true);
     injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(28), &Screen.fHudZoomScale, true);
