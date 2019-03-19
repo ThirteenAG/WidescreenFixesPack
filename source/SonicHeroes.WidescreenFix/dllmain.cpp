@@ -7,34 +7,34 @@ struct Screen
     float fWidth;
     float fHeight;
     float fAspectRatio;
-	float fConditionalAspect;
+    float fConditionalAspect;
     float fHudScale;
-	float fHudZoomScale;
+    float fHudZoomScale;
 } Screen;
 
 void Init()
 {
     CIniReader iniReader("");
-	Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
-	Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
-	Screen.fConditionalAspect = iniReader.ReadFloat("MAIN", "ConditionalHorizontalAspect", 0.0f);
+    Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
+    Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
+    Screen.fConditionalAspect = iniReader.ReadFloat("MAIN", "ConditionalHorizontalAspect", 0.0f);
     Screen.fHudZoomScale = iniReader.ReadFloat("MAIN", "ZoomFactor", 0.0f);
 
-	if (!Screen.Width || !Screen.Height)
-		std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
+    if (!Screen.Width || !Screen.Height)
+    	std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
 
-	if (!Screen.fConditionalAspect)
-		Screen.fConditionalAspect = 4.0f / 3.0f;
+    if (!Screen.fConditionalAspect)
+    	Screen.fConditionalAspect = 4.0f / 3.0f;
     
     if (!Screen.fHudZoomScale)
         Screen.fHudZoomScale = 1.0f;
 
-	Screen.fWidth = static_cast<float>(Screen.Width);
-	Screen.fHeight = static_cast<float>(Screen.Height);
-	Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
-	if (Screen.fAspectRatio < Screen.fConditionalAspect)
-		Screen.fHudZoomScale = Screen.fHudZoomScale * (Screen.fAspectRatio / Screen.fConditionalAspect);
-	Screen.fHudScale = ((Screen.fHudZoomScale / Screen.fAspectRatio) * (4.0f / 3.0f));
+    Screen.fWidth = static_cast<float>(Screen.Width);
+    Screen.fHeight = static_cast<float>(Screen.Height);
+    Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
+    if (Screen.fAspectRatio < Screen.fConditionalAspect)
+    	Screen.fHudZoomScale = Screen.fHudZoomScale * (Screen.fAspectRatio / Screen.fConditionalAspect);
+    Screen.fHudScale = ((Screen.fHudZoomScale / Screen.fAspectRatio) * (4.0f / 3.0f));
 
     //446B2A
     auto pattern = hook::pattern("0F BE 0D ? ? ? ? 8D 0C 89 8B");
