@@ -144,10 +144,10 @@ void Init()
                 add ebx,0x0C
                 fld     dword ptr[ebx00]
                 fmul    dword ptr[Screen.fHudScale]
-                fstp    dword ptr[ShadowFix]
+                fstp    dword ptr[Screen.ShadowFix]
                 fld     dword ptr[ebx04]
                 fmul    dword ptr[Screen.fHudZoomScale]
-                fstp    dword ptr[ShadowFix + 0x4]
+                fstp    dword ptr[Screen.ShadowFix + 0x4]
                 mov ebx, ShadowFix
                 push ebx
                 push esi
