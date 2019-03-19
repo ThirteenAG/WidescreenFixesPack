@@ -132,7 +132,7 @@ void Init()
          }
     }; injector::MakeInline<CutOffAreaVertHook>(pattern.count(1).get(0).get<uint32_t>(42), pattern.count(1).get(0).get<uint32_t>(6));
     
-    pattern = hook::pattern("83 C3 0C 53 56 E8 ?? ?? ?? ?? ??"); //0x6B7272
+    pattern = hook::pattern("83 C3 0C 53 56 E8 ? ? ? ? ?"); //0x6B7272
     struct ShadowFixHook
 	{
 		void operator()(injector::reg_pack& regs)
