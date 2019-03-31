@@ -7,12 +7,11 @@ float fWideScreenWidthProperScale = 1.0f;
 float fWideScreenHeightProperScale = 480.0f / 448.0f;
 float fFrontendWidth[40], fFrontendHeight[40];
 float fMiscWidth[30], fMiscHeight[30];
-float fRadarWidth[16], fRadarHeight[16];
+float fRadarWidth[23], fRadarHeight[23];
 float fHUDWidth[120], fHUDHeight[120];
 float fCameraWidth[2], fCameraHeight[2];
 float fDefaultWidth;
 float fDefaultCoords;
-float fFrontendDefaultCoords;
 float fFrontendDefaultWidth;
 
 int(__cdecl* FindPlayerVehicleSA)(int, char);
@@ -243,6 +242,12 @@ void UpdateHUDFixes() {
 	fRadarWidth[14] = 0.0015625 * fWideScreenWidthScale;
 	fRadarWidth[15] = 0.0015625 * fWideScreenWidthScale;
 	fRadarWidth[16] = 0.0015625 * fWideScreenWidthScale;
+	fRadarWidth[17] = 0.0015625 * fWideScreenWidthScale;
+	fRadarWidth[18] = 0.0015625 * fWideScreenWidthScale;
+	fRadarWidth[19] = 0.0015625 * fWideScreenWidthScale;
+	fRadarWidth[20] = 0.0015625 * fWideScreenWidthScale;
+	fRadarWidth[21] = 0.0015625 * fWideScreenWidthScale;
+	fRadarWidth[22] = 0.0015625 * fWideScreenWidthScale;
 
 	fRadarHeight[0] = 0.002232143 * fWideScreenHeightScale;
 	fRadarHeight[1] = 0.002232143 * fWideScreenHeightScale;
@@ -261,6 +266,12 @@ void UpdateHUDFixes() {
 	fRadarHeight[14] = 0.002232143 * fWideScreenHeightScale;
 	fRadarHeight[15] = 0.002232143 * fWideScreenHeightScale;
 	fRadarHeight[16] = 0.002232143 * fWideScreenHeightScale;
+	fRadarHeight[17] = 0.002232143 * fWideScreenHeightScale;
+	fRadarHeight[18] = 0.002232143 * fWideScreenHeightScale;
+	fRadarHeight[19] = 0.002232143 * fWideScreenHeightScale;
+	fRadarHeight[20] = 0.002232143 * fWideScreenHeightScale;
+	fRadarHeight[21] = 0.002232143 * fWideScreenHeightScale;
+	fRadarHeight[22] = 0.002232143 * fWideScreenHeightScale;
 
 	fHUDWidth[0] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
 	fHUDWidth[1] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
@@ -368,6 +379,9 @@ void UpdateHUDFixes() {
 	fHUDWidth[103] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
 	fHUDWidth[104] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
 	fHUDWidth[105] = 0.0015625 * fWideScreenWidthScale * fHudWidthScale;
+
+
+	fHUDWidth[110] = RsGlobal->MaximumWidth * 0.17343046 * fWideScreenWidthScale * fHudWidthScale;
 
 	fHUDHeight[0] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
 	fHUDHeight[1] = 0.002232143 * fWideScreenHeightScale * fHudHeightScale;
@@ -522,7 +536,6 @@ void __declspec(naked) SetDropShadowPosition() {
     }
 }
 
-// SCM_DRAWING_FIXES
 injector::hook_back<void(__cdecl*)(CRect const&, CRGBA const&)> hbDrawRect;
 void __cdecl DrawRectHook(CRect const& rect, CRGBA  const& color) {
 	hbDrawRect.fun(CRect(fDefaultCoords + rect.m_fLeft * fDefaultWidth / *CDraw::pfScreenAspectRatio, rect.m_fBottom, fDefaultCoords + rect.m_fRight * fDefaultWidth / *CDraw::pfScreenAspectRatio, rect.m_fTop), color);
@@ -532,7 +545,7 @@ injector::hook_back<void(__fastcall*)(CSprite2d const&, int, CRect const&, CRGBA
 void __fastcall DrawSpriteHook(CSprite2d const& sprite, int, CRect const& rect, CRGBA const& color) {
 	hbDraw.fun(sprite, -1, CRect(fDefaultCoords + rect.m_fLeft * fDefaultWidth / *CDraw::pfScreenAspectRatio, rect.m_fBottom, fDefaultCoords + rect.m_fRight * fDefaultWidth / *CDraw::pfScreenAspectRatio, rect.m_fTop), color);
 	
-	if (static_cast<int>(rect.m_fLeft) <= 0 && static_cast<int>(rect.m_fRight) >= 600) {
+	if (rect.m_fLeft <= 0.0f && rect.m_fRight >= (float)RsGlobal->MaximumWidth * 320.0f * 0.0015625) {
 		CSprite2dDrawRect(CRect(0.0f, RsGlobal->MaximumHeight, fDefaultCoords, 0.0f), CRGBA(0, 0, 0, 255));
 
 		CSprite2dDrawRect(CRect(fDefaultCoords + RsGlobal->MaximumWidth * fDefaultWidth / *CDraw::pfScreenAspectRatio, RsGlobal->MaximumHeight, RsGlobal->MaximumWidth, 0.0f), CRGBA(0, 0, 0, 255));
@@ -952,6 +965,13 @@ void InstallHUDFixes() {
 									0x584190, // Radar Trace 2
 									0x584249, // Radar Trace 1
 									0x5842E6, // Radar Trace 1
+									0x5876D4,
+									0x58774B,
+									0x58780A,
+									0x58788F,
+									0x58792E,
+									0x587A1A,
+									0x587AAA,							
 	};
 
 	int m_dwRadarHeight[] = {		0x58A473, // Radar plane
@@ -970,14 +990,24 @@ void InstallHUDFixes() {
 									0x5841B0, // Radar Trace 2
 									0x584207, // Radar Trace 1
 									0x5842C6, // Radar Trace 1
+									0x5876BC,
+									0x587733,
+									0x587916,
+									0x587A02,
+									0x587A92,
+									NULL,
+									NULL,
 	};
 
 	for (int i = 0; i < sizeof(m_dwRadarWidth) / sizeof(const void*); i++) {
-		injector::WriteMemory<const void*>(m_dwRadarWidth[i] + 0x2, &fRadarWidth[i], true);
+		if (m_dwRadarWidth[i] != NULL)
+			injector::WriteMemory<const void*>(m_dwRadarWidth[i] + 0x2, &fRadarWidth[i], true);
 	}
 
-	for (int i = 0; i < sizeof(m_dwRadarHeight) / sizeof(const void*); i++)
-		injector::WriteMemory<const void*>(m_dwRadarHeight[i] + 0x2, &fRadarHeight[i], true);
+	for (int i = 0; i < sizeof(m_dwRadarHeight) / sizeof(const void*); i++) {
+		if (m_dwRadarHeight[i] != NULL)
+			injector::WriteMemory<const void*>(m_dwRadarHeight[i] + 0x2, &fRadarHeight[i], true);
+	}
 
 	int m_dwHUDWidth[] = {		0x58EB3F, // 0 Clock 
 								0x58EC0C, // 1 Clock
@@ -1017,8 +1047,8 @@ void InstallHUDFixes() {
 								0x58C395, // 35 Subs
 								0x58C41D, // 36 Subs
 								0x58C4DC, // 37 Subs
-								0x5896D8, // 38
-								0x589703, // 39
+								0x5896D8, // 38	Stats box
+								0x589703, // 39	Stats box
 								0x58990C, // 40 Stats box
 								0x58986D, // 41 Stats box
 								0x5897C3, // 42 Stats box
@@ -1125,10 +1155,10 @@ void InstallHUDFixes() {
 								0x58C37F, // 35 Subs
 								0x58C407, // 36 Subs
 								0x58C4C6, // 37 Subs
-								NULL,	  // 38
-								NULL,	  // 39
+								//0x58C53B, // 38 Subs
+								//0x58C611, // 39 Subs
 								0x5898F6, // 40 Stats box text
-								NULL,	  // 41
+								//0x58C46E, // 41 Subs
 								NULL,	  // 42
 								0x589735, // 43 Stats box
 								0x58978B, // 44 Stats box
@@ -1151,12 +1181,12 @@ void InstallHUDFixes() {
 								0x58A07A, // 61 Stats box
 								0x58C84D, // 62 SuccessFailed text
 								0x58D2C5, // 63 MissionTitle text
-								0x58D447, // 64 MissionTitle text
+								NULL, // 0x58D447, // 64 MissionTitle text
 								0x58CBAB, // 65 WastedBusted text
-								0x58B1B7, // 66 Timers
+								NULL, // 0x58B1B7, // 66 Timers
 								0x58B263, // 67 Timers
-								0x58B435, // 68 Timers
-								0x58B536, // 69 Timers
+								NULL, //0x58B435, // 68 Timers
+								NULL, //0x58B536, // 69 Timers
 								0x58B5DE, // 70 Timers		
 								NULL,	  // 71
 								NULL,	  // 72
@@ -1212,6 +1242,12 @@ void InstallHUDFixes() {
 	// Lock Subtitles Width
 	static float fSubtitlesMult = 1.0f;
 	injector::WriteMemory<const void*>(0x58C4E8 + 0x2, &fSubtitlesMult);
+
+	// Second player fix.
+	injector::WriteMemory<const void*>(0x58F9A0 + 0x2, &fHUDWidth[110]); // Weapon icon X
+	injector::WriteMemory<const void*>(0x58F993 + 0x2, &fHUDWidth[16]); // Weapon icon X 
+	injector::WriteMemory<const void*>(0x58F972 + 0x2, &fHUDHeight[16]); // Weapon icon Y
+	injector::WriteMemory<const void*>(0x58FA8E + 0x2, &fHUDWidth[17]); // Ammo x
 }
 
 injector::hook_back<void(__cdecl*)(CRect&, CRGBA const&, CRGBA const&, CRGBA const&, CRGBA const&)> hbSetVertices;
@@ -1250,8 +1286,7 @@ void __cdecl SetVerticesHook(CRect& a1, CRGBA const& a2, CRGBA const& a3, CRGBA 
 			}
 		}
 
-		fFrontendDefaultCoords = fMiddleScrCoord - ((((float)RsGlobal->MaximumHeight * (w / h))) / 2.0f);
-		fFrontendDefaultWidth = w / h;
+		fFrontendDefaultWidth = ((((float)RsGlobal->MaximumHeight * (w / h))));
 
 		a1.m_fTop = 0.0f;
 		a1.m_fLeft = fMiddleScrCoord - ((((float)RsGlobal->MaximumHeight * (w / h))) / 2.0f);
@@ -1269,7 +1304,9 @@ void __cdecl SetVerticesHook(CRect& a1, CRGBA const& a2, CRGBA const& a3, CRGBA 
 
 injector::hook_back<void(__cdecl*)(float, float, unsigned __int16, unsigned int, float, int, bool, bool, CRGBA const&, CRGBA const&)> hbDrawLoadingBar;
 void __cdecl DrawLoadingBarHook(float x, float y, unsigned int w, unsigned int h, float progress, int progressAdded, bool drawPercentage, bool drawBlackBorder, CRGBA const& color, CRGBA const& progressAddedColor) {
-	hbDrawLoadingBar.fun(fFrontendDefaultCoords + x * fFrontendDefaultWidth / *CDraw::pfScreenAspectRatio, y, w * fFrontendDefaultWidth / *CDraw::pfScreenAspectRatio, h, progress, progressAdded, drawPercentage, drawBlackBorder, color, progressAddedColor);
+	x = RsGlobal->MaximumWidth * 0.5f - fFrontendDefaultWidth * 0.5f + fFrontendDefaultWidth * 0.079f;
+	w = fFrontendDefaultWidth * 0.279f;
+	hbDrawLoadingBar.fun(x, y, w, h, progress, progressAdded, drawPercentage, drawBlackBorder, color, progressAddedColor);
 }
 
 void Install2dSpriteFixes() {
@@ -1284,7 +1321,7 @@ void Install2dSpriteFixes() {
 		FrontendAspectRatioHeight = 0;
 	}
 
-	hbSetVertices.fun = injector::MakeCALL(0x7284CC, SetVerticesHook).get();
+	hbSetVertices.fun = injector::MakeCALL(0x728360, SetVerticesHook).get();
 	injector::MakeCALL(0x728360, SetVerticesHook); 
 
 	// Loading bar fix
