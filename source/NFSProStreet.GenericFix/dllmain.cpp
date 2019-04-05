@@ -71,13 +71,8 @@ void Init()
 {
     FreeConsole();
 
-    //Proper hud scaling
-    static constexpr double dbl_9FAAE8 = 4.0 / 3.0;
-    auto pattern = hook::pattern("DC 3D ? ? ? ? D9 5C 24 0C F3 0F 10 44 24 0C");
-    injector::WriteMemory(pattern.get_first(2), &dbl_9FAAE8, true);
-
     //Stop settings reset after crash
-    pattern = hook::pattern("C7 44 24 ? ? ? ? ? FF 15 ? ? ? ? 8D 54 24 0C 52");
+    auto pattern = hook::pattern("C7 44 24 ? ? ? ? ? FF 15 ? ? ? ? 8D 54 24 0C 52");
     injector::WriteMemory(pattern.get_first(4), 0, true);
 
     //Brake Light Fix
@@ -160,8 +155,9 @@ void Init()
         injector::MakeJMP(pattern.get_first(0), DamageModelMemoryCheck, true); //0x58DC10
     }
 
-
-    bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 1) != 0;
+	
+	bool bFixHUD = iniReader.ReadInteger("MISC", "FixHUD", 1) != 0;
+	bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 1) != 0;
     static int32_t nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
     static int32_t nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
@@ -170,6 +166,13 @@ void Init()
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
         szCustomUserFilesDirectoryInGameDir.clear();
+
+	if (bFixHUD)
+	{
+		static constexpr double dbl_9FAAE8 = 4.0 / 3.0;
+		auto pattern = hook::pattern("DC 3D ? ? ? ? D9 5C 24 0C F3 0F 10 44 24 0C");
+		injector::WriteMemory(pattern.get_first(2), &dbl_9FAAE8, true);
+	}
 
     if (bSkipIntro)
     {
