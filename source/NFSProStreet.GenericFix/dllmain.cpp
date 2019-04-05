@@ -156,8 +156,8 @@ void Init()
     }
 
 	
-	bool bFixHUD = iniReader.ReadInteger("MISC", "FixHUD", 1) != 0;
-	bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 1) != 0;
+    bool bFixHUD = iniReader.ReadInteger("MISC", "FixHUD", 1) != 0;
+    bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 1) != 0;
     static int32_t nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
     static int32_t nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
@@ -167,12 +167,12 @@ void Init()
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
         szCustomUserFilesDirectoryInGameDir.clear();
 
-	if (bFixHUD)
-	{
-		static constexpr double dbl_9FAAE8 = 4.0 / 3.0;
-		auto pattern = hook::pattern("DC 3D ? ? ? ? D9 5C 24 0C F3 0F 10 44 24 0C");
-		injector::WriteMemory(pattern.get_first(2), &dbl_9FAAE8, true);
-	}
+    if (bFixHUD)
+    {
+        static constexpr double dbl_9FAAE8 = 4.0 / 3.0;
+        auto pattern = hook::pattern("DC 3D ? ? ? ? D9 5C 24 0C F3 0F 10 44 24 0C");
+        injector::WriteMemory(pattern.get_first(2), &dbl_9FAAE8, true);
+    }
 
     if (bSkipIntro)
     {
