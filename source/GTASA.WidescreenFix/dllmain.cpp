@@ -22,10 +22,11 @@ int FindPlayerVehicle2()
 
 void GetMemoryAddresses()
 {
-    RsGlobal = (RsGlobalType *)0x00C17040;
-    CDraw::pfScreenAspectRatio = (float*)0x00C3EFA4;
-    CDraw::pfScreenFieldOfView = (float*)0x008D5038;
-    CSprite2dDrawRect = (int(__cdecl *)(CRect const &, CRGBA const &)) 0x00727B60;
+    RsGlobal = (RsGlobalType *)0xC17040;
+    CDraw::pfScreenAspectRatio = (float*)0xC3EFA4;
+    CDraw::pfScreenFieldOfView = (float*)0x8D5038;
+    CSprite2dDrawRect = (int(__cdecl *)(CRect const &, CRGBA const &)) 0x727B60;
+	CSprite2dDrawRect2 = (int(__cdecl *)(CRect const &, CRGBA const &, CRGBA const &, CRGBA const &, CRGBA const &)) 0x727C10;
     bWideScreen = (bool*)0xBA6793; BordersVar1 = (uint32_t*)0xB6F0B8; BordersVar2 = (uint32_t*)0xB6F0CC;
     FindPlayerVehicleSA = (int(__cdecl *)(int playerNum, char a2)) 0x56E0D0;
     FindPlayerVehicle = &FindPlayerVehicle2;
@@ -1293,10 +1294,10 @@ void __cdecl SetVerticesHook(CRect& a1, CRGBA const& a2, CRGBA const& a3, CRGBA 
 		a1.m_fBottom = (float)RsGlobal->MaximumHeight;
 		a1.m_fRight = fMiddleScrCoord + ((((float)RsGlobal->MaximumHeight * (w / h))) / 2.0f);
 
-		CSprite2dDrawRect(CRect(-5.0f, a1.m_fBottom, a1.m_fLeft, -5.0f), CRGBA(0, 0, 0, a2.alpha));
-		CSprite2dDrawRect(CRect((float)RsGlobal->MaximumWidth, a1.m_fBottom, a1.m_fRight, -5.0f), CRGBA(0, 0, 0, a2.alpha));
-
-		CSprite2dDrawRect(CRect(-5.0f, (float)RsGlobal->MaximumHeight + 5.0f, (float)RsGlobal->MaximumWidth + 5.0f, -5.0f), CRGBA(0, 0, 0, a2.alpha));
+		CRGBA RectColor = { 0, 0, 0, a2.alpha };
+		CSprite2dDrawRect2(CRect(-5.0f, a1.m_fBottom, a1.m_fLeft, -5.0f), RectColor, RectColor, RectColor, RectColor);
+		CSprite2dDrawRect2(CRect((float)RsGlobal->MaximumWidth, a1.m_fBottom, a1.m_fRight, -5.0f), RectColor, RectColor, RectColor, RectColor);
+		CSprite2dDrawRect2(CRect(-5.0f, (float)RsGlobal->MaximumHeight + 5.0f, (float)RsGlobal->MaximumWidth + 5.0f, -5.0f), RectColor, RectColor, RectColor, RectColor);
 	}
 
 	return hbSetVertices.fun(a1, a2, a3, a4, a5);
@@ -1304,8 +1305,15 @@ void __cdecl SetVerticesHook(CRect& a1, CRGBA const& a2, CRGBA const& a3, CRGBA 
 
 injector::hook_back<void(__cdecl*)(float, float, unsigned __int16, unsigned int, float, int, bool, bool, CRGBA const&, CRGBA const&)> hbDrawLoadingBar;
 void __cdecl DrawLoadingBarHook(float x, float y, unsigned int w, unsigned int h, float progress, int progressAdded, bool drawPercentage, bool drawBlackBorder, CRGBA const& color, CRGBA const& progressAddedColor) {
-	x = RsGlobal->MaximumWidth * 0.5f - fFrontendDefaultWidth * 0.5f + fFrontendDefaultWidth * 0.079f;
-	w = fFrontendDefaultWidth * 0.279f;
+	if (FrontendAspectRatioWidth && FrontendAspectRatioHeight) {
+		x = RsGlobal->MaximumWidth * 0.5f - fFrontendDefaultWidth * 0.5f + fFrontendDefaultWidth * 0.079f;
+		w = fFrontendDefaultWidth * 0.279f;
+	}
+	else {
+		x = RsGlobal->MaximumWidth * 0.5f - fFrontendDefaultWidth * 0.5f + x * (1.3334) / *CDraw::pfScreenAspectRatio;
+		w = w * (1.3334) / *CDraw::pfScreenAspectRatio;
+	}
+
 	hbDrawLoadingBar.fun(x, y, w, h, progress, progressAdded, drawPercentage, drawBlackBorder, color, progressAddedColor);
 }
 
@@ -1329,18 +1337,20 @@ void Install2dSpriteFixes() {
 	injector::MakeCALL(0x590480, DrawLoadingBarHook);
 }
 
-DWORD WINAPI CompatHandler(LPVOID) {
-    size_t i = 0;
-    while (GetModuleHandle(L"SilentPatchSA.asi") == NULL) {
-        Sleep(0);
-        ++i;
+DWORD WINAPI CompatHandler(LPVOID)
+{
+	size_t i = 0;
+	while (GetModuleHandle(L"SilentPatchSA.asi") == NULL)
+	{
+		Sleep(0);
+		++i;
 
-        if (i > 100000)
-            return 0;
-    }
+		if (i > 100000)
+			return 0;
+	}
 
-    OverwriteResolution();
-    return 0;
+	OverwriteResolution();
+	return 0;
 }
 
 void ApplyIniOptions() {
@@ -1414,9 +1424,10 @@ void ApplyIniOptions() {
 
 DWORD WINAPI Init(LPVOID bDelay) {
 	if (!bDelay) {
-		ApplyIniOptions();
 		GetMemoryAddresses();
 		OverwriteResolution();
+		CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&CompatHandler, NULL, 0, NULL);
+		ApplyIniOptions();
 		InstallAspectRatioFixes();
 		InstallFieldOfViewFixes();
 		InstallFrontendFixes();
