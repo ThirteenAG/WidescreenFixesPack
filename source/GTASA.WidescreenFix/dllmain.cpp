@@ -68,10 +68,10 @@ void __declspec(naked) AllowMouseMovement()
         mov eax, _EAX
         ret
 
-        label1:
+        label1 :
         mov eax, _EAX
-        mov _EAX, 0x7453F0
-        jmp _EAX
+            mov _EAX, 0x7453F0
+            jmp _EAX
     }
 }
 
@@ -519,7 +519,7 @@ void updateScreenAspectRatioWrapper()
         UpdateMiscFixes();
         UpdateHUDFixes();
         UpdateScriptFixes();
-    });
+        });
 }
 
 uintptr_t SetEdgeAddr = 0x719590;
@@ -538,6 +538,29 @@ void __declspec(naked) SetDropShadowPosition() {
     }
 }
 
+constexpr char* main_scm_tex[] = { "10ls", "10ls2", "10ls3", "10ls4", "10ls5", "10og", "10weed", "11dice", "11dice2", "11ggift", "11grov2", "11grov3", "11grove",
+    "11jail", "12angel", "12bndit", "12cross", "12dager", "12maybr", "12myfac", "4rip", "4spider", "4weed", "5cross", "5cross2", "5cross3", "5gun", "6africa", "6aztec",
+    "6clown", "6crown", "7cross", "7cross2", "7cross3", "7mary", "8gun", "8poker", "8sa", "8sa2", "8sa3", "8santos", "8westsd", "9bullt", "9crown", "9gun", "9gun2", "9homby",
+    "9rasta", "addcoin", "AirLogo", "arrow", "back2", "back3", "back4", "back5", "back6", "back7", "back8", "back8_right", "back8_top", "backbet", "backcyan", "backgnd",
+    "backred", "badchat", "ball", "bar1_o", "bar2_o", "bckgrnd", "bee1", "bee2", "beea", "bell", "black", "blkdot", "blue", "brboat", "brfly", "bride1", "bride2", "bride3",
+    "bride4", "bride5", "bride6", "bride7", "bride8", "bronze", "bstars", "bum1", "bum2", "bumble", "bushes", "butnA", "butnAo", "butnB", "butnBo", "butnC", "cbarl", "cbarm",
+    "cbarr", "cd10c", "cd10d", "cd10h", "cd10s", "cd11c", "cd11d", "cd11h", "cd11s", "cd12c", "cd12d", "cd12h", "cd12s", "cd13c", "cd13d", "cd13h", "cd13s", "cd1c", "cd1d",
+    "cd1h", "cd1s", "cd2c", "cd2d", "cd2h", "cd2s", "cd3c", "cd3d", "cd3h", "cd3s", "cd4c", "cd4d", "cd4h", "cd4s", "cd5c", "cd5d", "cd5h", "cd5s", "cd6c", "cd6d", "cd6h",
+    "cd6s", "cd7c", "cd7d", "cd7h", "cd7s", "cd8c", "cd8d", "cd8h", "cd8s", "cd9c", "cd9d", "cd9h", "cd9s", "cdback", "cherry", "chit", "circle", "cring", "cross", "crosshair",
+    "dark", "deal", "down", "downl", "downr", "dpad_64", "dpad_lr", "DUALITY", "eax", "ex1", "ex2", "ex3", "ex4", "exitw", "exity", "explm01", "explm02", "explm03", "explm04",
+    "explm05", "explm06", "explm07", "explm08", "explm09", "explm10", "explm11", "explm12", "fen", "fire", "flwr", "flwra", "force", "fstar", "ghost", "goboat", "gold", "golfly",
+    "goodcha", "grapes", "gride1", "gride2", "gride3", "gride4", "gride5", "gride6", "gride7", "gride8", "hbarl", "hbarm", "hbarr", "Health", "hiscorew", "hiscorey", "hive",
+    "hi_a", "hi_b", "hi_c", "holdmid", "holdoff", "holdon", "hon", "hrs1", "hrs2", "hrs3", "hrs4", "hrs5", "hrs6", "hrs7", "hrs8", "intro1", "intro2", "intro3", "intro4", "kami",
+    "layer", "leaf", "left", "light", "load0uk", "loadsc0", "loadsc1", "loadsc10", "loadsc11", "loadsc12", "loadsc13", "loadsc14", "loadsc2", "loadsc3", "loadsc4", "loadsc5",
+    "loadsc6", "loadsc7", "loadsc8", "loadsc9", "loadscuk", "map", "mouse", "naward", "nawtxt", "nib", "nmef", "nvidia", "outro", "pa", "playw", "playy", "pm2", "pm3", "pole2",
+    "power", "pride1", "pride2", "pride3", "pride4", "pride5", "pride6", "pride7", "pride8", "ps1", "ps2", "ps3", "race00", "race01", "race02", "race03", "race04", "race05", "race06",
+    "race07", "race08", "race09", "race10", "race11", "race12", "race13", "race14", "race15", "race16", "race17", "race18", "race19", "race20", "race21", "race22", "race23", "race24",
+    "radio_bounce", "radio_csr", "radio_KDST", "radio_kjah", "radio_krose", "radio_mastersounds", "radio_playback", "radio_RADIOX", "radio_RLS", "radio_SFUR", "radio_TPLAYER",
+    "radio_WCTR", "ribb", "ribbw", "Ric1", "Ric2", "Ric3", "Ric4", "Ric5", "right", "rockshp", "roulbla", "roulgre", "roulred", "rride1", "rride2", "rride3", "rride4", "rride5",
+    "rride6", "rride7", "rride8", "r_69", "ship", "ship2", "ship3", "shoot", "shpnorm", "shpwarp", "silboat", "silfly", "silver", "sky", "splash1", "splash2", "splsh", "square",
+    "thorn", "thrust", "thrustG", "thumbdn", "thumbup", "timer", "title", "title_pc_EU", "title_pc_US", "trees", "triang", "tvbase", "tvcorn", "tvl", "tvr", "ufo", "un_a", "un_b",
+    "un_c", "up", "upl", "upr", "warp", "white", "yride1", "yride2", "yride3", "yride4", "yride5", "yride6", "yride7", "yride8" };
+
 injector::hook_back<void(__cdecl*)(CRect const&, CRGBA const&)> hbDrawRect;
 void __cdecl DrawRectHook(CRect const& rect, CRGBA  const& color)
 {
@@ -547,12 +570,21 @@ void __cdecl DrawRectHook(CRect const& rect, CRGBA  const& color)
 injector::hook_back<void(__fastcall*)(CSprite2d const&, int, CRect const&, CRGBA const&)> hbDraw;
 void __fastcall DrawSpriteHook(CSprite2d const& sprite, int, CRect const& rect, CRGBA const& color)
 {
-    hbDraw.fun(sprite, -1, CRect(fDefaultCoords + rect.m_fLeft * fDefaultWidth / *CDraw::pfScreenAspectRatio, rect.m_fBottom, fDefaultCoords + rect.m_fRight * fDefaultWidth / *CDraw::pfScreenAspectRatio, rect.m_fTop), color);
-    
-    if (rect.m_fLeft <= 0.0f && rect.m_fRight >= (float)RsGlobal->MaximumWidth * 320.0f * 0.0015625) {
-        CSprite2dDrawRect(CRect(0.0f, (float)RsGlobal->MaximumHeight, fDefaultCoords, 0.0f), CRGBA(0, 0, 0, 255));
+    auto pTexture = *(uintptr_t*)&sprite;
 
-        CSprite2dDrawRect(CRect(fDefaultCoords + (float)RsGlobal->MaximumWidth * fDefaultWidth / *CDraw::pfScreenAspectRatio, (float)RsGlobal->MaximumHeight, (float)RsGlobal->MaximumWidth, 0.0f), CRGBA(0, 0, 0, 255));
+    if (pTexture && std::find(std::begin(main_scm_tex), std::end(main_scm_tex), std::string_view((const char*)(pTexture + 0x10))) != std::end(main_scm_tex))
+    {
+        hbDraw.fun(sprite, -1, CRect(fDefaultCoords + rect.m_fLeft * fDefaultWidth / *CDraw::pfScreenAspectRatio, rect.m_fBottom, fDefaultCoords + rect.m_fRight * fDefaultWidth / *CDraw::pfScreenAspectRatio, rect.m_fTop), color);
+
+        if (rect.m_fLeft <= 0.0f && rect.m_fRight >= (float)RsGlobal->MaximumWidth * 320.0f * 0.0015625) {
+            CSprite2dDrawRect(CRect(0.0f, (float)RsGlobal->MaximumHeight, fDefaultCoords, 0.0f), CRGBA(0, 0, 0, 255));
+
+            CSprite2dDrawRect(CRect(fDefaultCoords + (float)RsGlobal->MaximumWidth * fDefaultWidth / *CDraw::pfScreenAspectRatio, (float)RsGlobal->MaximumHeight, (float)RsGlobal->MaximumWidth, 0.0f), CRGBA(0, 0, 0, 255));
+        }
+    }
+    else
+    {
+        hbDraw.fun(sprite, -1, rect, color);
     }
 }
 
@@ -700,7 +732,7 @@ void __cdecl DrawBarChartHook(float posX, float posY, unsigned short width, unsi
 void InstallFrontendFixes()
 {
     // Font Scales
-    int m_dwFrontendWidth[] = {		0x5795CF, // 0 Menu text
+    int m_dwFrontendWidth[] = { 0x5795CF, // 0 Menu text
                                     0x579981, // 1 Menu text
                                     0x579A01, // 2 Menu text
                                     0x57A36E, // 3 Menu text
@@ -742,7 +774,7 @@ void InstallFrontendFixes()
                                     0x5740BC, // 39 Message screen
     };
 
-    int m_dwFrontendHeight[] = {	0x5795AD, // 0 Menu text
+    int m_dwFrontendHeight[] = { 0x5795AD, // 0 Menu text
                                     0x579958, // 1 Menu text								
                                     0x5799D5, // 2 Menu text
                                     0x57A345, // 3 Menu text
@@ -797,7 +829,7 @@ void InstallFrontendFixes()
     }
 
     // StretchXY Restoration
-    int m_dwCallWidth[] = {		0x57E3A5,
+    int m_dwCallWidth[] = { 0x57E3A5,
                                 0x577CB7,
                                 0x577CD0,
                                 0x577D6F,
@@ -811,7 +843,7 @@ void InstallFrontendFixes()
                                 0x5788FB,
     };
 
-    int m_dwCallHeight[] = {	0x57E391,
+    int m_dwCallHeight[] = { 0x57E391,
                                 0x577C7B,
                                 0x577C94,
                                 0x577DEC,
@@ -856,7 +888,7 @@ void InstallFrontendFixes()
 void InstallMiscFixes()
 {
     // Misc
-    int m_dwMiscWidth[] = {		0x5733FD, // 0 StretchX
+    int m_dwMiscWidth[] = { 0x5733FD, // 0 StretchX
                                 0x574761, // 1 Radio Icons
                                 0x5747A6, // 2 Radio Icons
                                 0x574857, // 3 Radio Icons
@@ -886,7 +918,7 @@ void InstallMiscFixes()
                                 0x573FF0, // 27 DrawWindow header
     };
 
-    int m_dwMiscHeight[] = {	0x57342D, // 0 StretchY
+    int m_dwMiscHeight[] = { 0x57342D, // 0 StretchY
                                 0x57473B, // 1 Radio Icons
                                 0x574783, // 2 Radio Icons
                                 0x57482F, // 3 Radio Icons
@@ -930,7 +962,7 @@ void InstallMiscFixes()
 }
 
 void InstallHUDFixes() {
-    int m_dwCrosshairWidth[] = {	0x58E7CE,
+    int m_dwCrosshairWidth[] = { 0x58E7CE,
                                     0x58E7F8,
                                     0x58E2FA,
                                     0x58E4ED,
@@ -942,7 +974,7 @@ void InstallHUDFixes() {
                                     0x53E4AE,
     };
 
-    int m_dwCrosshairHeight[] = {	0x58E7E4,
+    int m_dwCrosshairHeight[] = { 0x58E7E4,
                                     0x58E80E,
                                     0x58E319,
                                     0x58E527,
@@ -956,7 +988,7 @@ void InstallHUDFixes() {
 
     for (int i = 0; i < sizeof(m_dwCrosshairWidth) / sizeof(const void*); i++)
     {
-        if (m_dwCrosshairWidth[i] !=  NULL)
+        if (m_dwCrosshairWidth[i] != NULL)
             injector::WriteMemory<const void*>(m_dwCrosshairWidth[i] + 0x2, &fMiscWidth[0], true);
     }
 
@@ -966,7 +998,7 @@ void InstallHUDFixes() {
             injector::WriteMemory<const void*>(m_dwCrosshairHeight[i] + 0x2, &fMiscHeight[0], true);
     }
 
-    int m_dwRadarWidth[] = {		0x58A441, // Radar plane
+    int m_dwRadarWidth[] = { 0x58A441, // Radar plane
                                     0x58A791, // Radar disc
                                     0x58A82E, // Radar disc
                                     0x58A8DF, // Radar disc
@@ -988,10 +1020,10 @@ void InstallHUDFixes() {
                                     0x58788F,
                                     0x58792E,
                                     0x587A1A,
-                                    0x587AAA,							
+                                    0x587AAA,
     };
 
-    int m_dwRadarHeight[] = {		0x58A473, // Radar plane
+    int m_dwRadarHeight[] = { 0x58A473, // Radar plane
                                     0x58A600, // Radar disc
                                     0x58A69E, // Radar disc
                                     0x58A704, // Radar disc
@@ -1028,7 +1060,7 @@ void InstallHUDFixes() {
             injector::WriteMemory<const void*>(m_dwRadarHeight[i] + 0x2, &fRadarHeight[i], true);
     }
 
-    int m_dwHUDWidth[] = {		0x58EB3F, // 0 Clock 
+    int m_dwHUDWidth[] = { 0x58EB3F, // 0 Clock 
                                 0x58EC0C, // 1 Clock
                                 0x58F55C, // 2 Money
                                 0x58F5F4, // 3 Money
@@ -1134,9 +1166,9 @@ void InstallHUDFixes() {
                                 0x43CF57, // 103 CDarkel
                                 0x4477CD, // 104 CGarages
                                 0x4477F7, // 105 CGarages
-    };								
+    };
 
-    int m_dwHUDHeight[] = {		0x58EB29, // 0 Clock
+    int m_dwHUDHeight[] = { 0x58EB29, // 0 Clock
                                 0x58EBF9, // 1 Clock
                                 0x58F546, // 2 Money
                                 0x58F5CE, // 3 Money
@@ -1279,47 +1311,49 @@ void __cdecl SetVerticesHook(CRect& a1, CRGBA const& a2, CRGBA const& a3, CRGBA 
 
     if (static_cast<int>(a1.m_fLeft) <= 0 && static_cast<int>(a1.m_fTop) <= 0 && static_cast<int>(a1.m_fRight) >= RsGlobal->MaximumWidth && static_cast<int>(a1.m_fBottom) >= RsGlobal->MaximumHeight)
     {
-        float fMiddleScrCoord = (float)RsGlobal->MaximumWidth / 2.0f;
-
-        float w = 16.0f;
-        float h = 9.0f;
-
-        if (FrontendAspectRatioWidth && FrontendAspectRatioHeight)
+        if (pTexture && std::find(std::begin(main_scm_tex), std::end(main_scm_tex), std::string_view((const char*)(*(uintptr_t*)pTexture + 0x10))) != std::end(main_scm_tex))
         {
-            w = (float)FrontendAspectRatioWidth;
-            h = (float)FrontendAspectRatioHeight;
-        }
-        else
-        {
-            if (pTexture)
+            float fMiddleScrCoord = (float)RsGlobal->MaximumWidth / 2.0f;
+
+            float w = 16.0f;
+            float h = 9.0f;
+
+            if (FrontendAspectRatioWidth && FrontendAspectRatioHeight)
             {
-                if (*(uint32_t*)pTexture)
+                w = (float)FrontendAspectRatioWidth;
+                h = (float)FrontendAspectRatioHeight;
+            }
+            else
+            {
+                if (pTexture)
                 {
-                    pTexture = **(uint32_t**)pTexture;
-                    w = (float)(*(uint32_t*)(pTexture + 0x28));
-                    h = (float)(*(uint32_t*)(pTexture + 0x2C));
-                    if (w == h && w > 0 && h > 0)
+                    if (*(uint32_t*)pTexture)
                     {
-                        w = 4.0f;
-                        h = 3.0f;
+                        pTexture = **(uint32_t**)pTexture;
+                        w = (float)(*(uint32_t*)(pTexture + 0x28));
+                        h = (float)(*(uint32_t*)(pTexture + 0x2C));
+                        if (w == h && w > 0 && h > 0)
+                        {
+                            w = 4.0f;
+                            h = 3.0f;
+                        }
                     }
                 }
             }
+
+            fFrontendDefaultWidth = ((((float)RsGlobal->MaximumHeight * (w / h))));
+
+            a1.m_fTop = 0.0f;
+            a1.m_fLeft = fMiddleScrCoord - ((((float)RsGlobal->MaximumHeight * (w / h))) / 2.0f);
+            a1.m_fBottom = (float)RsGlobal->MaximumHeight;
+            a1.m_fRight = fMiddleScrCoord + ((((float)RsGlobal->MaximumHeight * (w / h))) / 2.0f);
+
+            CRGBA RectColor = { 0, 0, 0, a2.alpha };
+            CSprite2dDrawRect2(CRect(-5.0f, a1.m_fBottom, a1.m_fLeft, -5.0f), RectColor, RectColor, RectColor, RectColor);
+            CSprite2dDrawRect2(CRect((float)RsGlobal->MaximumWidth, a1.m_fBottom, a1.m_fRight, -5.0f), RectColor, RectColor, RectColor, RectColor);
+            CSprite2dDrawRect2(CRect(-5.0f, (float)RsGlobal->MaximumHeight + 5.0f, (float)RsGlobal->MaximumWidth + 5.0f, -5.0f), RectColor, RectColor, RectColor, RectColor);
         }
-
-        fFrontendDefaultWidth = ((((float)RsGlobal->MaximumHeight * (w / h))));
-
-        a1.m_fTop = 0.0f;
-        a1.m_fLeft = fMiddleScrCoord - ((((float)RsGlobal->MaximumHeight * (w / h))) / 2.0f);
-        a1.m_fBottom = (float)RsGlobal->MaximumHeight;
-        a1.m_fRight = fMiddleScrCoord + ((((float)RsGlobal->MaximumHeight * (w / h))) / 2.0f);
-
-        CRGBA RectColor = { 0, 0, 0, a2.alpha };
-        CSprite2dDrawRect2(CRect(-5.0f, a1.m_fBottom, a1.m_fLeft, -5.0f), RectColor, RectColor, RectColor, RectColor);
-        CSprite2dDrawRect2(CRect((float)RsGlobal->MaximumWidth, a1.m_fBottom, a1.m_fRight, -5.0f), RectColor, RectColor, RectColor, RectColor);
-        CSprite2dDrawRect2(CRect(-5.0f, (float)RsGlobal->MaximumHeight + 5.0f, (float)RsGlobal->MaximumWidth + 5.0f, -5.0f), RectColor, RectColor, RectColor, RectColor);
     }
-
     return hbSetVertices.fun(a1, a2, a3, a4, a5);
 }
 
@@ -1343,19 +1377,19 @@ void Install2dSpriteFixes()
 {
     CIniReader iniReader("");
     szForceAspectRatio = iniReader.ReadString("MAIN", "FrontendAspectRatio", "auto");
-    if (strncmp(szForceAspectRatio.c_str(), "auto", 4) != 0) 
+    if (strncmp(szForceAspectRatio.c_str(), "auto", 4) != 0)
     {
         FrontendAspectRatioWidth = std::stoi(szForceAspectRatio.c_str());
         FrontendAspectRatioHeight = std::stoi(strchr(szForceAspectRatio.c_str(), ':') + 1);
     }
-    else 
+    else
     {
         FrontendAspectRatioWidth = 0;
         FrontendAspectRatioHeight = 0;
     }
 
     hbSetVertices.fun = injector::MakeCALL(0x728360, SetVerticesHook).get();
-    injector::MakeCALL(0x728360, SetVerticesHook); 
+    injector::MakeCALL(0x728360, SetVerticesHook);
 
     // Loading bar fix
     hbDrawLoadingBar.fun = injector::MakeCALL(0x590480, DrawLoadingBarHook).get();
@@ -1438,18 +1472,18 @@ void ApplyIniOptions()
     }
 }
 
-void Init() 
+void Init()
 {
-        GetMemoryAddresses();
-        OverwriteResolution();
-        ApplyIniOptions();
-        InstallAspectRatioFixes();
-        InstallFieldOfViewFixes();
-        InstallFrontendFixes();
-        InstallMiscFixes();
-        InstallHUDFixes();
-        InstallSCMDrawingFixes();
-        Install2dSpriteFixes();
+    GetMemoryAddresses();
+    OverwriteResolution();
+    ApplyIniOptions();
+    InstallAspectRatioFixes();
+    InstallFieldOfViewFixes();
+    InstallFrontendFixes();
+    InstallMiscFixes();
+    InstallHUDFixes();
+    InstallSCMDrawingFixes();
+    Install2dSpriteFixes();
 }
 
 void CompatWarning()
