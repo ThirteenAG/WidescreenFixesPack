@@ -1497,12 +1497,19 @@ void CompatWarning()
     }
 }
 
+DWORD WINAPI CompatHandler(LPVOID)
+{
+    Sleep(0);
+    OverwriteResolution();
+    return 0;
+}
+
 BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
         Init();
-        CallbackHandler::RegisterCallback(L"SilentPatchSA.asi", OverwriteResolution);
+        CallbackHandler::RegisterCallback(L"SilentPatchSA.asi", []() {CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&CompatHandler, NULL, 0, NULL); });
         CallbackHandler::RegisterCallback(L"wshps.asi", CompatWarning);
     }
     return TRUE;
