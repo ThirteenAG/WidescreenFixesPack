@@ -69,7 +69,6 @@ void GetMemoryAddresses()
     bWideScreen = *hook::pattern("80 3D ? ? ? ? 00 DD D9 74 0D").count(1).get(0).get<bool*>(2);//0x95CD23
     BordersVar1 = *hook::pattern("A1 ? ? ? ? 53 83 EC 30 85 C0 89 CB").count(1).get(0).get<uint32_t*>(1); //0x6FADA0
     BordersVar2 = BordersVar1;
-    FindPlayerVehicle = (int(__cdecl *)()) hook::pattern("0F B6 ? ? ? ? ? 6B C0 ? 8B 0C ? ? ? ? ? 85 C9 74 10").count(1).get(0).get<uint32_t>(0);//0x4A10C0
     bIsInCutscene = *hook::pattern("80 3D ? ? ? ? ? 0F 84 84 00 00 00 8B 35").count(1).get(0).get<bool*>(2); //0x6FAD68
     dwGameLoadState = *dwGameLoadStatePattern.count(1).get(0).get<uint32_t*>(2);
     fCRadarRadarRange = *RadarScalingPattern.count(1).get(0).get<float*>(2);
@@ -191,19 +190,6 @@ void FixFOV()
             *(float*)(regs.ebx + 0xF0) = fEmergencyVehiclesFix;
         }
     }; injector::MakeInline<EmergencyVehiclesFix>(EmergencyVehiclesFixPattern.count(1).get(0).get<uint32_t>(0), EmergencyVehiclesFixPattern.count(1).get(0).get<uint32_t>(6));
-
-    struct RadarScaling
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            _asm
-            {
-                fstp    ds : fRadarScaling
-            }
-            *fCRadarRadarRange = fRadarScaling;
-            fRadarScaling -= 120.0f;
-        }
-    }; injector::MakeInline<RadarScaling>(RadarScalingPattern.count(1).get(0).get<uint32_t>(0), RadarScalingPattern.count(1).get(0).get<uint32_t>(6));
 }
 
 float __stdcall MenuScaleHook(float fScaleFactor)
@@ -505,7 +491,6 @@ void ApplyIniOptions()
     }
 
     bRestoreCutsceneFOV = iniReader.ReadInteger("MAIN", "RestoreCutsceneFOV", 1) != 0;
-    fCarSpeedDependantFOV = iniReader.ReadFloat("MAIN", "CarSpeedDependantFOV", 0.0f);
     bDontTouchFOV = iniReader.ReadInteger("MAIN", "DontTouchFOV", 0) != 0;
 
     szForceAspectRatio = iniReader.ReadString("MAIN", "ForceAspectRatio", "auto");
@@ -515,14 +500,6 @@ void ApplyIniOptions()
         AspectRatioHeight = std::stoi(strchr(szForceAspectRatio.c_str(), ':') + 1);
         fCustomAspectRatioHor = static_cast<float>(AspectRatioWidth);
         fCustomAspectRatioVer = static_cast<float>(AspectRatioHeight);
-    }
-
-    bFOVControl = iniReader.ReadInteger("MAIN", "FOVControl", 1) != 0;
-    auto pattern = hook::pattern("DE D9 DE D9 EB E9"); //0x513547 1.0
-    if (bFOVControl && pattern.size() > 0)
-    {
-        FOVControl = pattern.count(1).get(0).get<uint32_t>(6);
-        injector::WriteMemory<float>(FOVControl, 1.0f, true);
     }
 
     nHideAABug = iniReader.ReadInteger("MAIN", "HideAABug", 0);
@@ -592,7 +569,7 @@ void ApplyIniOptions()
         //0x592BD8?
     }
 
-    pattern = hook::pattern("A1 ? ? ? ? 3B C3"); //0x5B7D75
+    auto pattern = hook::pattern("A1 ? ? ? ? 3B C3"); //0x5B7D75
     if (pattern.size() > 0)
     {
         szForceAspectRatio = iniReader.ReadString("MAIN", "ForceMultisamplingLevel", "");

@@ -14,12 +14,6 @@ float fDefaultWidth;
 float fDefaultCoords;
 float fFrontendDefaultWidth;
 
-int(__cdecl* FindPlayerVehicleSA)(int, char);
-int FindPlayerVehicle2()
-{
-    return FindPlayerVehicleSA(-1, 0);
-}
-
 void GetMemoryAddresses()
 {
     RsGlobal = (RsGlobalType *)0xC17040;
@@ -28,8 +22,6 @@ void GetMemoryAddresses()
     CSprite2dDrawRect = (int(__cdecl *)(CRect const &, CRGBA const &)) 0x727B60;
     CSprite2dDrawRect2 = (int(__cdecl *)(CRect const &, CRGBA const &, CRGBA const &, CRGBA const &, CRGBA const &)) 0x727C10;
     bWideScreen = (bool*)0xBA6793; BordersVar1 = (uint32_t*)0xB6F0B8; BordersVar2 = (uint32_t*)0xB6F0CC;
-    FindPlayerVehicleSA = (int(__cdecl *)(int playerNum, char a2)) 0x56E0D0;
-    FindPlayerVehicle = &FindPlayerVehicle2;
     bIsInCutscene = (bool*)0xB6F065;
 }
 
@@ -234,45 +226,45 @@ void UpdateHUDFixes() {
     fRadarWidth[5] = 0.0015625f * fWideScreenWidthScale * fRadarWidthScale;
     fRadarWidth[6] = 0.0015625f * fWideScreenWidthScale * fRadarWidthScale;
     fRadarWidth[7] = 0.0015625f * fWideScreenWidthScale * fRadarWidthScale;
-    fRadarWidth[8] = 0.0015625f * fWideScreenWidthScale;
-    fRadarWidth[9] = 0.0015625f * fWideScreenWidthScale;
-    fRadarWidth[10] = 0.0015625f * fWideScreenWidthScale;
-    fRadarWidth[11] = 0.0015625f * fWideScreenWidthScale;
-    fRadarWidth[12] = 0.0015625f * fWideScreenWidthScale;
-    fRadarWidth[13] = 0.0015625f * fWideScreenWidthScale;
-    fRadarWidth[14] = 0.0015625f * fWideScreenWidthScale;
-    fRadarWidth[15] = 0.0015625f * fWideScreenWidthScale;
-    fRadarWidth[16] = 0.0015625f * fWideScreenWidthScale;
-    fRadarWidth[17] = 0.0015625f * fWideScreenWidthScale;
-    fRadarWidth[18] = 0.0015625f * fWideScreenWidthScale;
-    fRadarWidth[19] = 0.0015625f * fWideScreenWidthScale;
-    fRadarWidth[20] = 0.0015625f * fWideScreenWidthScale;
-    fRadarWidth[21] = 0.0015625f * fWideScreenWidthScale;
-    fRadarWidth[22] = 0.0015625f * fWideScreenWidthScale;
+    fRadarWidth[8] = 0.0015625f * fWideScreenWidthScale * fHudWidthScale;
+    fRadarWidth[9] = 0.0015625f * fWideScreenWidthScale * fHudWidthScale;
+    fRadarWidth[10] = 0.0015625f * fWideScreenWidthScale * fHudWidthScale;
+    fRadarWidth[11] = 0.0015625f * fWideScreenWidthScale * fHudWidthScale;
+    fRadarWidth[12] = 0.0015625f * fWideScreenWidthScale * fHudWidthScale;
+    fRadarWidth[13] = 0.0015625f * fWideScreenWidthScale * fHudWidthScale;
+    fRadarWidth[14] = 0.0015625f * fWideScreenWidthScale * fHudWidthScale;
+    fRadarWidth[15] = 0.0015625f * fWideScreenWidthScale * fHudWidthScale;
+    fRadarWidth[16] = 0.0015625f * fWideScreenWidthScale * fHudWidthScale;
+    fRadarWidth[17] = 0.0015625f * fWideScreenWidthScale * fHudWidthScale;
+    fRadarWidth[18] = 0.0015625f * fWideScreenWidthScale * fHudWidthScale;
+    fRadarWidth[19] = 0.0015625f * fWideScreenWidthScale * fHudWidthScale;
+    fRadarWidth[20] = 0.0015625f * fWideScreenWidthScale * fHudWidthScale;
+    fRadarWidth[21] = 0.0015625f * fWideScreenWidthScale * fHudWidthScale;
+    fRadarWidth[22] = 0.0015625f * fWideScreenWidthScale * fHudWidthScale;
 
-    fRadarHeight[0] = 0.002232143f * fWideScreenHeightScale;
-    fRadarHeight[1] = 0.002232143f * fWideScreenHeightScale;
-    fRadarHeight[2] = 0.002232143f * fWideScreenHeightScale;
-    fRadarHeight[3] = 0.002232143f * fWideScreenHeightScale;
-    fRadarHeight[4] = 0.002232143f * fWideScreenHeightScale;
-    fRadarHeight[5] = 0.002232143f * fWideScreenHeightScale;
-    fRadarHeight[6] = 0.002232143f * fWideScreenHeightScale;
-    fRadarHeight[7] = 0.002232143f * fWideScreenHeightScale;
-    fRadarHeight[8] = 0.002232143f * fWideScreenHeightScale;
-    fRadarHeight[9] = 0.002232143f * fWideScreenHeightScale;
-    fRadarHeight[10] = 0.002232143f * fWideScreenHeightScale;
-    fRadarHeight[11] = 0.002232143f * fWideScreenHeightScale;
-    fRadarHeight[12] = 0.002232143f * fWideScreenHeightScale;
-    fRadarHeight[13] = 0.002232143f * fWideScreenHeightScale;
-    fRadarHeight[14] = 0.002232143f * fWideScreenHeightScale;
-    fRadarHeight[15] = 0.002232143f * fWideScreenHeightScale;
-    fRadarHeight[16] = 0.002232143f * fWideScreenHeightScale;
-    fRadarHeight[17] = 0.002232143f * fWideScreenHeightScale;
-    fRadarHeight[18] = 0.002232143f * fWideScreenHeightScale;
-    fRadarHeight[19] = 0.002232143f * fWideScreenHeightScale;
-    fRadarHeight[20] = 0.002232143f * fWideScreenHeightScale;
-    fRadarHeight[21] = 0.002232143f * fWideScreenHeightScale;
-    fRadarHeight[22] = 0.002232143f * fWideScreenHeightScale;
+    fRadarHeight[0] = 0.002232143f * fWideScreenHeightScale * fRadarHeightScale;
+    fRadarHeight[1] = 0.002232143f * fWideScreenHeightScale * fRadarHeightScale;
+    fRadarHeight[2] = 0.002232143f * fWideScreenHeightScale * fRadarHeightScale;
+    fRadarHeight[3] = 0.002232143f * fWideScreenHeightScale * fRadarHeightScale;
+    fRadarHeight[4] = 0.002232143f * fWideScreenHeightScale * fRadarHeightScale;
+    fRadarHeight[5] = 0.002232143f * fWideScreenHeightScale * fRadarHeightScale;
+    fRadarHeight[6] = 0.002232143f * fWideScreenHeightScale * fRadarHeightScale;
+    fRadarHeight[7] = 0.002232143f * fWideScreenHeightScale * fRadarHeightScale;
+    fRadarHeight[8] = 0.002232143f * fWideScreenHeightScale * fRadarHeightScale;
+    fRadarHeight[9] = 0.002232143f * fWideScreenHeightScale * fHudHeightScale;
+    fRadarHeight[10] = 0.002232143f * fWideScreenHeightScale * fHudHeightScale;
+    fRadarHeight[11] = 0.002232143f * fWideScreenHeightScale * fHudHeightScale;
+    fRadarHeight[12] = 0.002232143f * fWideScreenHeightScale * fHudHeightScale;
+    fRadarHeight[13] = 0.002232143f * fWideScreenHeightScale * fHudHeightScale;
+    fRadarHeight[14] = 0.002232143f * fWideScreenHeightScale * fHudHeightScale;
+    fRadarHeight[15] = 0.002232143f * fWideScreenHeightScale * fHudHeightScale;
+    fRadarHeight[16] = 0.002232143f * fWideScreenHeightScale * fHudHeightScale;
+    fRadarHeight[17] = 0.002232143f * fWideScreenHeightScale * fHudHeightScale;
+    fRadarHeight[18] = 0.002232143f * fWideScreenHeightScale * fHudHeightScale;
+    fRadarHeight[19] = 0.002232143f * fWideScreenHeightScale * fHudHeightScale;
+    fRadarHeight[20] = 0.002232143f * fWideScreenHeightScale * fHudHeightScale;
+    fRadarHeight[21] = 0.002232143f * fWideScreenHeightScale * fHudHeightScale;
+    fRadarHeight[22] = 0.002232143f * fWideScreenHeightScale * fHudHeightScale;
 
     fHUDWidth[0] = 0.0015625f * fWideScreenWidthScale * fHudWidthScale;
     fHUDWidth[1] = 0.0015625f * fWideScreenWidthScale * fHudWidthScale;
@@ -1404,9 +1396,9 @@ void ApplyIniOptions()
     fHudWidthScale = iniReader.ReadFloat("MAIN", "HudWidthScale", 0.8f);
     fHudHeightScale = iniReader.ReadFloat("MAIN", "HudHeightScale", 0.8f);
     fRadarWidthScale = iniReader.ReadFloat("MAIN", "RadarWidthScale", 0.82f);
+    fRadarHeightScale = iniReader.ReadFloat("MAIN", "RadarHeightScale", 1.0f);
     fSubtitlesScale = iniReader.ReadFloat("MAIN", "SubtitlesScale", 1.0f);
     bRestoreCutsceneFOV = iniReader.ReadInteger("MAIN", "RestoreCutsceneFOV", 1) != 0;
-    fCarSpeedDependantFOV = iniReader.ReadFloat("MAIN", "CarSpeedDependantFOV", 0.0f);
     bDontTouchFOV = iniReader.ReadInteger("MAIN", "DontTouchFOV", 0) != 0;
     bool DisableWhiteCrosshairDot = iniReader.ReadInteger("MAIN", "DisableWhiteCrosshairDot", 1) != 0;
     szForceAspectRatio = iniReader.ReadString("MAIN", "ForceAspectRatio", "auto");
@@ -1437,12 +1429,9 @@ void ApplyIniOptions()
         fCustomAspectRatioVer = static_cast<float>(AspectRatioHeight);
     }
 
-    bFOVControl = iniReader.ReadInteger("MAIN", "FOVControl", 1) != 0;
-    FOVControl = (uint32_t*)0x6FF41B;
-    injector::WriteMemory<float>(FOVControl, 1.0f, true);
-
     if (!fHudWidthScale || !fHudHeightScale) { fHudWidthScale = 0.8f; fHudHeightScale = 0.8f; }
     if (!fRadarWidthScale) { fRadarWidthScale = 0.82f; }
+    if (!fRadarHeightScale) { fRadarHeightScale = 1.0f; }
     if (!fSubtitlesScale) { fSubtitlesScale = 1.0f; }
 
     if (DisableWhiteCrosshairDot)
