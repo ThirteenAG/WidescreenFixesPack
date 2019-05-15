@@ -90,7 +90,7 @@ void UpdateFrontendFixes() {
     fFrontendWidth[19] = 0.0015625f * fWideScreenWidthScale;
     fFrontendWidth[20] = 0.0015625f * fWideScreenWidthScale;
     fFrontendWidth[21] = 0.00046875002f * fWideScreenWidthScale;
-    fFrontendWidth[22] = 0.78125f * fWideScreenWidthScale;
+    fFrontendWidth[22] = 0.00125f * fWideScreenWidthScale;
     fFrontendWidth[23] = 0.78125f * fWideScreenWidthScale;
     fFrontendWidth[24] = 0.78125f * fWideScreenWidthScale;
     fFrontendWidth[25] = 0.78125f * fWideScreenWidthScale;
@@ -721,6 +721,17 @@ void __cdecl DrawBarChartHook(float posX, float posY, unsigned short width, unsi
     hbDrawBarChart.fun(fWideScreenWidthProperScale * (-50.0f) + (float)RsGlobal->MaximumWidth * 0.703125f, posY, width, height, progress, progressAdded, drawPercentage, drawBlackBorder, color, progressAddedColor);
 }
 
+injector::hook_back<void(__cdecl*)(float)> hbSetCentreSize;
+void __cdecl SetCentreSizeHook(float a1)
+{
+    if (*(bool*)0xA92D68) // CTheScripts::IntroRectangles[80]
+    {
+        hbSetCentreSize.fun(a1 * fDefaultWidth / *CDraw::pfScreenAspectRatio);
+    }
+    else
+        hbSetCentreSize.fun(a1);
+}
+
 void InstallFrontendFixes()
 {
     // Font Scales
@@ -1287,6 +1298,10 @@ void InstallHUDFixes() {
     // Lock Subtitles Width
     static float fSubtitlesMult = 1.0f;
     injector::WriteMemory<const void*>(0x58C4E8 + 0x2, &fSubtitlesMult);
+
+    // Check subs size for script stuff
+    hbSetCentreSize.fun = injector::MakeCALL(0x58C603, SetCentreSizeHook).get();
+    injector::MakeCALL(0x58C603, &SetCentreSizeHook);
 
     // Second player fix.
     injector::WriteMemory<const void*>(0x58F9A0 + 0x2, &fHUDWidth[110]); // Weapon icon X
