@@ -35,6 +35,9 @@ workspace "WidescreenFixesPack"
    if dxsdk then
       includedirs { dxsdk .. "/include" }
       libdirs { dxsdk .. "/lib/x86" }
+   else
+      includedirs { "C:/Program Files (x86)/Microsoft DirectX SDK (June 2010)/include" }
+      libdirs { "C:/Program Files (x86)/Microsoft DirectX SDK (June 2010)/lib/x86" }
    end
    
    pbcommands = { 
