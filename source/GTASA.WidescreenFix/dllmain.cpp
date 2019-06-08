@@ -1519,12 +1519,21 @@ DWORD WINAPI CompatHandler(LPVOID)
     liDueTime.QuadPart = -30 * 10000000LL;
     hTimer = CreateWaitableTimer(NULL, TRUE, NULL);
     SetWaitableTimer(hTimer, &liDueTime, 0, NULL, NULL, 0);
-    ModuleList moduleList;
     bool bSP = false, bWSHPS = false;
 
     while (true)
     {
-        Sleep(0);
+        if (!bSP && GetModuleHandle(L"SilentPatchSA.asi") != NULL)
+        {
+            OverwriteResolution();
+            bSP = true;
+        }
+
+        if (!bWSHPS && GetModuleHandle(L"wshps.asi") != NULL)
+        {
+            CompatWarning();
+            bWSHPS = true;
+        }
 
         if ((WaitForSingleObject(hTimer, 0) == WAIT_OBJECT_0) || (bSP && bWSHPS))
         {
@@ -1532,19 +1541,7 @@ DWORD WINAPI CompatHandler(LPVOID)
             return 0;
         }
 
-        moduleList.ReEnumerate();
-
-        if (!bSP && moduleList.Get(L"SilentPatchSA") != nullptr)
-        {
-            OverwriteResolution();
-            bSP = true;
-        }
-
-        if (!bWSHPS && moduleList.Get(L"wshps") != nullptr)
-        {
-            CompatWarning();
-            bWSHPS = true;
-        }
+        Sleep(0);
     };
 
     return 0;
