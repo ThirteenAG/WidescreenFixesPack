@@ -1514,8 +1514,39 @@ void CompatWarning()
 
 DWORD WINAPI CompatHandler(LPVOID)
 {
-    Sleep(0);
-    OverwriteResolution();
+    HANDLE hTimer = NULL;
+    LARGE_INTEGER liDueTime;
+    liDueTime.QuadPart = -30 * 10000000LL;
+    hTimer = CreateWaitableTimer(NULL, TRUE, NULL);
+    SetWaitableTimer(hTimer, &liDueTime, 0, NULL, NULL, 0);
+    ModuleList moduleList;
+    bool bSP = false, bWSHPS = false;
+
+    while (true)
+    {
+        Sleep(0);
+
+        if ((WaitForSingleObject(hTimer, 0) == WAIT_OBJECT_0) || (bSP && bWSHPS))
+        {
+            CloseHandle(hTimer);
+            return 0;
+        }
+
+        moduleList.ReEnumerate();
+
+        if (!bSP && moduleList.Get(L"SilentPatchSA") != nullptr)
+        {
+            OverwriteResolution();
+            bSP = true;
+        }
+
+        if (!bWSHPS && moduleList.Get(L"wshps") != nullptr)
+        {
+            CompatWarning();
+            bWSHPS = true;
+        }
+    };
+
     return 0;
 }
 
@@ -1524,8 +1555,7 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
     if (reason == DLL_PROCESS_ATTACH)
     {
         Init();
-        CallbackHandler::RegisterCallback(L"SilentPatchSA.asi", []() {CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&CompatHandler, NULL, 0, NULL); });
-        CallbackHandler::RegisterCallback(L"wshps.asi", CompatWarning);
+        CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&CompatHandler, NULL, 0, NULL);
     }
     return TRUE;
 }
