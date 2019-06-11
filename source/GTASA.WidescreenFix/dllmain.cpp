@@ -643,13 +643,13 @@ void InstallAspectRatioFixes()
 
     // Proportional coronas
     injector::MakeNOP(0x6FB2C9, 4);
-    injector::WriteMemory<BYTE>(0x6FB2BD, 0x6C);
-    injector::WriteMemory<BYTE>(0x6FB2DC, 0x78);
-    injector::WriteMemory<BYTE>(0x713BE5, 0x20);
-    injector::WriteMemory<BYTE>(0x713B6D, 0x38);
-    injector::WriteMemory<BYTE>(0x713CFB, 0x38);
-    injector::WriteMemory<BYTE>(0x713EFC, 0x30);
-    injector::WriteMemory<BYTE>(0x714004, 0x38);
+    injector::WriteMemory<BYTE>(0x6FB2BD, 0x6C, true);
+    injector::WriteMemory<BYTE>(0x6FB2DC, 0x78, true);
+    injector::WriteMemory<BYTE>(0x713BE5, 0x20, true);
+    injector::WriteMemory<BYTE>(0x713B6D, 0x38, true);
+    injector::WriteMemory<BYTE>(0x713CFB, 0x38, true);
+    injector::WriteMemory<BYTE>(0x713EFC, 0x30, true);
+    injector::WriteMemory<BYTE>(0x714004, 0x38, true);
 
     injector::MakeJMP(0x6FF420, CDraw::CalculateAspectRatio, true);
 
@@ -689,8 +689,8 @@ void InstallFieldOfViewFixes() {
     // Aiming point
     injector::MakeJMP(0x51499E, CalculateAimingPoint, true);
     injector::MakeNOP(0x50AD79, 6, true);
-    injector::WriteMemory<const void*>(0x50AD59 + 0x2, &fCameraWidth[0]);
-    injector::WriteMemory<const void*>(0x51498D + 0x2, &fCameraWidth[0]);
+    injector::WriteMemory<const void*>(0x50AD59 + 0x2, &fCameraWidth[0], true);
+    injector::WriteMemory<const void*>(0x51498D + 0x2, &fCameraWidth[0], true);
 }
 
 float __stdcall StretchXHook(float fValue)
@@ -1293,21 +1293,21 @@ void InstallHUDFixes() {
 
     // Help text bar chart offset
     static float fBarChartOffsetY = 160.0f;
-    injector::WriteMemory<const void*>(0x58BE9F + 0x2, &fBarChartOffsetY);
+    injector::WriteMemory<const void*>(0x58BE9F + 0x2, &fBarChartOffsetY, true);
 
     // Lock Subtitles Width
     static float fSubtitlesMult = 1.0f;
-    injector::WriteMemory<const void*>(0x58C4E8 + 0x2, &fSubtitlesMult);
+    injector::WriteMemory<const void*>(0x58C4E8 + 0x2, &fSubtitlesMult, true);
 
     // Check subs size for script stuff
     hbSetCentreSize.fun = injector::MakeCALL(0x58C603, SetCentreSizeHook).get();
     injector::MakeCALL(0x58C603, &SetCentreSizeHook);
 
     // Second player fix.
-    injector::WriteMemory<const void*>(0x58F9A0 + 0x2, &fHUDWidth[110]); // Weapon icon X
-    injector::WriteMemory<const void*>(0x58F993 + 0x2, &fHUDWidth[16]); // Weapon icon X 
-    injector::WriteMemory<const void*>(0x58F972 + 0x2, &fHUDHeight[16]); // Weapon icon Y
-    injector::WriteMemory<const void*>(0x58FA8E + 0x2, &fHUDWidth[17]); // Ammo x
+    injector::WriteMemory<const void*>(0x58F9A0 + 0x2, &fHUDWidth[110], true); // Weapon icon X
+    injector::WriteMemory<const void*>(0x58F993 + 0x2, &fHUDWidth[16], true); // Weapon icon X 
+    injector::WriteMemory<const void*>(0x58F972 + 0x2, &fHUDHeight[16], true); // Weapon icon Y
+    injector::WriteMemory<const void*>(0x58FA8E + 0x2, &fHUDWidth[17], true); // Ammo x
 }
 
 injector::hook_back<void(__cdecl*)(CRect&, CRGBA const&, CRGBA const&, CRGBA const&, CRGBA const&)> hbSetVertices;
@@ -1428,7 +1428,7 @@ void ApplyIniOptions()
         if ((GetWindowLong((HWND)RsGlobal->ps, GWL_STYLE) & WS_POPUP) == 0) {
             // Disable MENU AFTER alt + tab
             //0053BC72   C605 7B67BA00 01 MOV BYTE PTR DS:[BA677B],1    
-            injector::WriteMemory<uint8_t>(0x53BC78, 0x00);
+            injector::WriteMemory<uint8_t>(0x53BC78, 0x00, true);
 
             // ALLOW ALT+TABBING WITHOUT PAUSING
             injector::MakeNOP(0x748A8D, 6, true);
