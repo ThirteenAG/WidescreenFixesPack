@@ -673,7 +673,7 @@ void ApplyIniOptions()
 
         fCustomRadarPosYIV = 116.0f - 7.5f;
         pattern = hook::pattern("D9 05 ? ? ? ? D8 CB DA 2C 24 DE C1");
-        injector::WriteMemory<float>(*pattern.count(1).get(0).get<uint32_t*>(2), fCustomRadarPosYIV); //0x68FD34
+        injector::WriteMemory<float>(*pattern.count(1).get(0).get<uint32_t*>(2), fCustomRadarPosYIV, true); //0x68FD34
         fCustomRadarHeightIV = 76.0f + 5.0f;
         pattern = hook::pattern("D9 05 ? ? ? ? D8 C9 DD DB D9 C1 D8 CB");
         injector::WriteMemory<float>(*pattern.count(1).get(0).get<uint32_t*>(2), fCustomRadarHeightIV, true); //0x68FD30
