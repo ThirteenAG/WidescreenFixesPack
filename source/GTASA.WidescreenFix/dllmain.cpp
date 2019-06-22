@@ -691,6 +691,18 @@ void InstallFieldOfViewFixes() {
     injector::MakeNOP(0x50AD79, 6, true);
     injector::WriteMemory<const void*>(0x50AD59 + 0x2, &fCameraWidth[0], true);
     injector::WriteMemory<const void*>(0x51498D + 0x2, &fCameraWidth[0], true);
+
+    //Emergency Vehicles
+    static float f1 = 1.0f;
+    injector::WriteMemory(0x52C9D9 + 0x2, &f1, true);
+    struct EmergencyVehiclesFix
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            float f = 1.0f / fEmergencyVehiclesFix;
+            _asm {fdiv[f]}
+        }
+    }; injector::MakeInline<EmergencyVehiclesFix>(0x52C9DF, 0x52C9DF + 6);
 }
 
 float __stdcall StretchXHook(float fValue)
