@@ -8,14 +8,10 @@ float*  CDraw::pfScreenFieldOfView;
 extern float fWideScreenWidthScaleDown;
 extern float fCustomAspectRatioHor, fCustomAspectRatioVer;
 extern float fEmergencyVehiclesFix;
-extern float fFOVControlValue;
-extern uint32_t* FOVControl;
-extern float fCarSpeedDependantFOV;
-extern float fRadarScaling;
 extern bool bRestoreCutsceneFOV;
 extern bool bDontTouchFOV;
 extern bool* bIsInCutscene;
-extern int(__cdecl* FindPlayerVehicle)();
+extern std::map<void*, float> FOVMods;
 
 void CDraw::CalculateAspectRatio()
 {
@@ -23,7 +19,8 @@ void CDraw::CalculateAspectRatio()
     {
         *pfScreenAspectRatio = (float)RsGlobal->MaximumWidth / (float)RsGlobal->MaximumHeight;
     }
-    else {
+    else
+    {
         *pfScreenAspectRatio = fCustomAspectRatioHor / fCustomAspectRatioVer;
     }
 
@@ -34,22 +31,34 @@ void CDraw::SetFOV(float fFactor)
 {
     fEmergencyVehiclesFix = 70.0f / fFactor;
 
-    FOVControl ? fFOVControlValue = *(float*)FOVControl : fFOVControlValue = 1.0f;
-
     if ((*bIsInCutscene == true && bRestoreCutsceneFOV) || bDontTouchFOV)
-    {
-        *pfScreenFieldOfView = fFactor * fFOVControlValue;
-        return;
-    }
+        *pfScreenFieldOfView = fFactor;
+    else
+        *pfScreenFieldOfView = AdjustFOV(fFactor, *pfScreenAspectRatio);
 
-    if (fCarSpeedDependantFOV)
+    for each (auto var in FOVMods)
     {
-        if (FindPlayerVehicle())
-        {
-            *pfScreenFieldOfView = (AdjustFOV(fFactor, *pfScreenAspectRatio) * fFOVControlValue) + (fRadarScaling / fCarSpeedDependantFOV);
-            return;
-        }
+        *pfScreenFieldOfView *= var.second;
     }
+}
 
-    *pfScreenFieldOfView = AdjustFOV(fFactor, *pfScreenAspectRatio) * fFOVControlValue;
+CEXP void __cdecl GetCurrentFOV(float* out)
+{
+    *out = *CDraw::pfScreenFieldOfView;
+}
+
+CEXP void __cdecl SetFOVMultiplier(void* hash, float value)
+{
+    if (value <= 0.0f)
+        value = 1.0f;
+
+    if (!FOVMods.emplace(hash, value).second)
+    {
+        FOVMods[hash] = value;
+    }
+}
+
+CEXP void __cdecl RemoveFOVMultiplier(void* hash)
+{
+    FOVMods.erase(hash);
 }

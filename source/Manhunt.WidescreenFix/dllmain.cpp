@@ -165,7 +165,7 @@ void Init()
                 }; injector::MakeInline<FOVHook1>(pattern.get_first(0), pattern.get_first(6));
             }
 
-            if (!szCustomUserFilesDirectory.empty() || szCustomUserFilesDirectory != "0")
+            if (!szCustomUserFilesDirectory.empty() && szCustomUserFilesDirectory != "0")
             {
                 char moduleName[MAX_PATH];
                 GetModuleFileNameA(NULL, moduleName, MAX_PATH);
