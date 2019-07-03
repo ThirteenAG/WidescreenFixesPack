@@ -596,7 +596,6 @@ void Init()
 
         static uint32_t* unk_1DBFC50 = nullptr;
         static auto sub_401168 = (uint32_t*(*)())(injector::GetBranchDestination(hook::get_pattern("E8 ? ? ? ? 50 68 ? ? ? ? E8 ? ? ? ? 8B 0D ? ? ? ? 8B C6 C1", 0)).as_int());
-        static auto dword_935D78 = *hook::get_pattern<uint32_t*>("A1 ? ? ? ? BB 10 00 00 00 3B C3 0F 87 ? ? ? ? FF 24 85", 1);
 
         pattern = hook::pattern("FF 85 00 04 00 00 5F 5E 5D 5B C3 90 90 90 90 90");
         struct PtrHook
@@ -610,7 +609,7 @@ void Init()
 
         static auto isFullscreenImage = []() -> bool
         {
-            return unk_1DBFC50 && (*dword_935D78 == 4 || *dword_935D78 == 8) && std::any_of(std::begin(images), std::end(images), [](uint32_t i) { return i == *unk_1DBFC50; });
+			return std::any_of(std::begin(images), std::end(images), [](uint32_t i) { return i == *unk_1DBFC50; });
         };
 
         pattern = hook::pattern("DB 05 ? ? ? ? A1 ? ? ? ? 81 EC C4 00 00 00 84 C9");
