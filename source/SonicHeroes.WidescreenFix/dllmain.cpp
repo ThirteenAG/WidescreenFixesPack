@@ -54,12 +54,16 @@ void Init()
 	Screen.Width43 = (int)(Screen.Width * Screen.fHudScale);
 	Screen.Height43 = (int)(Screen.Height * Screen.fZoomFactor);
 
-	Screen.WidthFMV = (int)(Screen.Width * ((4.0f / 3.0f) / Screen.fAspectRatio));
+	Screen.WidthFMV = Screen.Width;
 	Screen.HeightFMV = Screen.Height;
 
 	if (Screen.fAspectRatio < (4.0f / 3.0f))
 	{
-		Screen.HeightFMV = (int)(Screen.HeightFMV / (4.0f / 3.0f));
+		Screen.HeightFMV = (int)(Screen.HeightFMV * (Screen.fAspectRatio / (4.0f / 3.0f)));
+	}
+	else
+	{
+		Screen.WidthFMV = (int)(Screen.WidthFMV / (Screen.fAspectRatio / (4.0f / 3.0f)));
 	}
 
     //446B2A
