@@ -485,6 +485,7 @@ void Init()
         injector::WriteMemory<uint8_t>(pattern.count(2).get(1).get<uint32_t>(0), 0xEB, true); //5AF936
     }
 
+    static uint8_t* dword_01F7E3C4 = nullptr;
     if (bLightingFix)
     {
         pattern = hook::pattern("8B 10 75 ? 8B 0D");
@@ -495,7 +496,7 @@ void Init()
 
         pattern = hook::pattern("0F B7 05 ? ? ? ? 48 C3");
         static uint16_t* word_9467F0 = *pattern.get_first<uint16_t*>(3);
-        static uint8_t* dword_01F7E3C4 = *hook::get_pattern<uint8_t*>("A1 ? ? ? ? 83 C4 18 83 C0 F9", 1);
+        dword_01F7E3C4 = *hook::get_pattern<uint8_t*>("A1 ? ? ? ? 83 C4 18 83 C0 F9", 1);
         struct LightingFixHook
         {
             void operator()(injector::reg_pack& regs)
@@ -609,7 +610,12 @@ void Init()
 
         static auto isFullscreenImage = []() -> bool
         {
-			return std::any_of(std::begin(images), std::end(images), [](uint32_t i) { return i == *unk_1DBFC50; });
+            return std::any_of(std::begin(images), std::end(images), [](uint32_t i) { return i == *unk_1DBFC50; });
+        };
+
+        static auto isFakeFading = []() -> bool
+        {
+            return (*dword_01F7E3C4 == 0x19 && *unk_1DBFC50 == 656550); //fading for cutscene id 0x19
         };
 
         pattern = hook::pattern("DB 05 ? ? ? ? A1 ? ? ? ? 81 EC C4 00 00 00 84 C9");
@@ -618,6 +624,14 @@ void Init()
             void operator()(injector::reg_pack& regs)
             {
                 int32_t z = static_cast<int32_t>(Screen.fHeight * (1440.0f / 810.0f));
+
+                if (isFakeFading())
+                {
+                    z = Screen.Width;
+                    _asm {fild dword ptr[z]}
+                    return;
+                }
+
                 if (isFullscreenImage())
                     _asm fild dword ptr[z]
                 else
@@ -647,6 +661,12 @@ void Init()
         {
             void operator()(injector::reg_pack& regs)
             {
+                if (isFakeFading())
+                {
+                    *(int32_t*)&regs.edx = 0 - static_cast<int32_t>(((Screen.fWidth - (Screen.fWidth * ((4.0f / 3.0f) / (Screen.fAspectRatio)))) / 2.0f) * ((Screen.fAspectRatio) / (4.0f / 3.0f)));
+                    return;
+                }
+
                 if (isFullscreenImage())
                     *(int32_t*)&regs.edx = 0 - Screen.FullscreenOffsetX;
                 else
