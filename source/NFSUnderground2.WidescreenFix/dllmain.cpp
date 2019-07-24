@@ -645,7 +645,7 @@ void Init()
         RegistryWrapper::AddDefault("g_MotionBlurEnable", "1");
         RegistryWrapper::AddDefault("g_LightStreaksEnable", "1");
         RegistryWrapper::AddDefault("g_LightGlowEnable", "1");
-        RegistryWrapper::AddDefault("g_AnimatedTextureEnable", "0");
+        RegistryWrapper::AddDefault("g_AnimatedTextureEnable", "1");
         RegistryWrapper::AddDefault("g_ParticleSystemEnable", "1");
         RegistryWrapper::AddDefault("g_DepthOfFieldEnable", "1");
         RegistryWrapper::AddDefault("g_WorldLodLevel", "3");
