@@ -27,6 +27,10 @@ void GetMemoryAddresses()
 
 void OverwriteResolution()
 {
+    CIniReader iniReader("");
+    ResX = iniReader.ReadInteger("MAIN", "ResX", -1);
+    ResY = iniReader.ReadInteger("MAIN", "ResY", -1);
+
     // Unlocked widescreen resolutions by Silent
     injector::WriteMemory(0x745B71, 0x9090687D, true);
     injector::WriteMemory(0x74596C, 0x9090127D, true);
@@ -34,10 +38,11 @@ void OverwriteResolution()
     injector::MakeNOP(0x745B75, 2, true);
     injector::MakeNOP(0x7459E1, 2, true);
 
-    if (!ResX || !ResY)
-        std::tie(ResX, ResY) = GetDesktopRes();
-    else if (ResX == -1 || ResY == -1)
+
+    if (ResX == -1 || ResY == -1)
         return;
+    else if (!ResX || !ResY)
+        std::tie(ResX, ResY) = GetDesktopRes();
 
     injector::WriteMemory(0x746362 + 0x1, ResX, true);
     injector::WriteMemory(0x746367 + 0x1, ResY, true);
