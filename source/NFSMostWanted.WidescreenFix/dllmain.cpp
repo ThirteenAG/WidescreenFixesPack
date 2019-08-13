@@ -257,22 +257,12 @@ void Init()
         injector::WriteMemory(dword_6DA8AE, &dx, true);
     }
 
-    uint32_t* dword_57CB82 = hook::pattern("3A 55 34 0F 85 0B 02 00 00 A1").count(1).get(0).get<uint32_t>(0);
-    uint32_t* dword_5696CB = hook::pattern("8A 41 34 38 86 30 03 00 00 74 52 84 C0").count(1).get(0).get<uint32_t>(0);
-    uint32_t* dword_58D883 = hook::pattern("8A 40 34 5F 5E 5D 3B CB 5B 75 12").count(1).get(0).get<uint32_t>(0);
-    uint32_t* dword_56885A = hook::pattern("38 48 34 74 31 8B 4E 38 68 7E 78 8E 90").count(1).get(0).get<uint32_t>(0); //wrong way
+    uint32_t* dword_57CB82 = hook::pattern("3A 55 34 0F 85 0B 02 00 00 A1").count(1).get(0).get<uint32_t>(0); // HUD
+    uint32_t* dword_5696CB = hook::pattern("8A 41 34 38 86 30 03 00 00 74 52 84 C0").count(1).get(0).get<uint32_t>(0); // HUD
+    uint32_t* dword_58D883 = hook::pattern("8A 40 34 5F 5E 5D 3B CB 5B 75 12").count(1).get(0).get<uint32_t>(0); // EA Trax
+    uint32_t* dword_56885A = hook::pattern("38 48 34 74 31 8B 4E 38 68 7E 78 8E 90").count(1).get(0).get<uint32_t>(0); // Wrong Way Sign
     if (bHudWidescreenMode)
     {
-        uint32_t* dword_56D675 = hook::pattern("89 5E 0C 88 5E 10 E8 ? ? ? ? 88 5E 19 88 5E 22").count(1).get(0).get<uint32_t>(0);
-        struct WidescreenHudHook
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                *(uint32_t*)(regs.esi + 0x0C) = regs.ebx;
-                *(uint8_t*)(regs.esi + 0x10) = 1;
-            }
-        }; injector::MakeInline<WidescreenHudHook>((uint32_t)dword_56D675, (uint32_t)dword_56D675 + 6);
-
         injector::WriteMemory<uint32_t>(dword_57CB82, 0x0F01FA80, true);
         injector::WriteMemory<uint32_t>(dword_5696CB, 0x389001B0, true);
         injector::WriteMemory<uint32_t>(dword_58D883, 0x5F9001B0, true);
