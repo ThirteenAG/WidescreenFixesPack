@@ -773,6 +773,7 @@ namespace mips
     {
         write_binary(os, 0x46200037 | (fs << OP_SH_FS) | (ft << OP_SH_FT));
         copDelayNop(os);
+        return os;
     }
 
     inline std::ostream& cultd(std::ostream& os, FPRegisterID fs, FPRegisterID ft)
@@ -855,6 +856,7 @@ namespace mips
     {
         write_binary(os, 0x46100037 | (fs << OP_SH_FS) | (ft << OP_SH_FT));
         copDelayNop(os);
+        return os;
     }
 
     inline std::ostream& cults(std::ostream& os, FPRegisterID fs, FPRegisterID ft)
