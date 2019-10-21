@@ -77,7 +77,7 @@ workspace "WidescreenFixesPack"
 
 project "Bully.WidescreenFix"
    setpaths("Z:/WFP/Games/Bully Scholarship Edition/", "Bully.exe", "plugins/")
-project "Burnout3.WidescreenFix"
+project "Burnout3.PCSX2.WidescreenFix"
    configurations { "ReleasePCSX2", "DebugPCSX2" }
       setpaths("Z:/WFP/Games/PCSX2/", "pcsx2.exe")
       files { "includes/pcsx2/pcsx2.h" }
@@ -122,6 +122,14 @@ project "GTAVC.WidescreenFix"
 project "GTASA.WidescreenFix"
    files { "includes/GTA/*.h", "includes/GTA/*.cpp" }
    setpaths("Z:/WFP/Games/Grand Theft Auto/GTA San Andreas/", "gta_sa.exe")
+project "GTALCS.PCSX2.WidescreenFix"
+   configurations { "ReleasePCSX2", "DebugPCSX2" }
+      setpaths("Z:/WFP/Games/PCSX2/", "pcsx2.exe")
+      files { "includes/pcsx2/pcsx2.h" }
+project "GTAVCS.PCSX2.WidescreenFix"
+   configurations { "ReleasePCSX2", "DebugPCSX2" }
+      setpaths("Z:/WFP/Games/PCSX2/", "pcsx2.exe")
+      files { "includes/pcsx2/pcsx2.h" }
 project "Gun.WidescreenFix"
    setpaths("Z:/WFP/Games/GUN/", "Gun.exe")
 project "HiddenandDangerous2.WidescreenFix"
@@ -149,6 +157,10 @@ project "Mafia.GenericFix"
    targetdir "data/Mafia.WidescreenFix/scripts"
 project "Mafia.WidescreenFix"
    setpaths("Z:/WFP/Games/Mafia/", "GameV12.exe")
+project "Mafia.CXBXR.WidescreenFix"
+   configurations { "ReleaseCXBXR", "DebugCXBXR" }
+      setpaths("Z:/WFP/Games/CXBXR/", "cxbx.exe")
+      files { "includes/cxbxr/cxbxr.h" }
 project "Manhunt.WidescreenFix"
    setpaths("Z:/WFP/Games/Manhunt/", "manhunt.exe")
 project "MassEffectTrilogy.FOVFix"
@@ -201,7 +213,7 @@ project "SplinterCellDoubleAgent.WidescreenFix"
    setpaths("Z:/WFP/Games/Splinter Cell/Splinter Cell - Double Agent/", "SCDA-Offline/System/SplinterCell4.exe", "SCDA-Offline/System/scripts/")
    files { "textures/SCDA/icon.rc" }
    defines { "IDR_SCDAICON=200" }
-project "SplinterCellDoubleAgentPS2.WidescreenFix"
+project "SplinterCellDoubleAgent.PCSX2.WidescreenFix"
    configurations { "ReleasePCSX2", "DebugPCSX2" }
       setpaths("Z:/WFP/Games/PCSX2/", "pcsx2.exe")
       files { "includes/pcsx2/pcsx2.h" }

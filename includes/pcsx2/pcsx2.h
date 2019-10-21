@@ -176,15 +176,27 @@ public:
     {
         auto test = [](uint8_t* begin, std::size_t bytes) -> bool
         {
-            return std::all_of(begin, begin + bytes, [](uint8_t const byte) { return byte == 0; });
+            return std::all_of(begin, begin + bytes, [](uint8_t const byte)
+            {
+                return byte == 0;
+            });
         };
 
-        size_t i = 0x00100000 + EEMainMemoryStart;
-        for (size_t s = 2000;; i += s)
+        constexpr size_t start = 0x00100000 + EEMainMemoryStart;
+        size_t i = 0;
+        do
         {
-            if (test((uint8_t*)i, s) || i >= (0x00FFFFFF - s + EEMainMemoryStart))
-                break;
+            i = start;
+
+            for (size_t s = 2000;; i += s)
+            {
+                if (test((uint8_t*)i, s) || i >= (0x00FFFFFF - s + EEMainMemoryStart))
+                    break;
+            }
+
+            std::this_thread::yield();
         }
+        while (i == start);
 
         return i - EEMainMemoryStart;
     }
@@ -193,19 +205,18 @@ public:
     {
         GetPCSX2Data();
         UpdateDataCallback(*this);
+        using namespace std::chrono_literals;
 
         static filewatch::FileWatch<std::wstring> watchui(this->PCSX2_ui.wstring(), [this](const std::wstring& path, const filewatch::Event change_type)
+        {
+            if (change_type == filewatch::Event::renamed_new)
             {
-                if (change_type == filewatch::Event::renamed_new)
-                {
-                    using namespace std::chrono_literals;
-                    std::this_thread::sleep_for(500ms);
+                std::this_thread::sleep_for(500ms);
 
-                    this->GetPCSX2Data();
-                    this->UpdateDataCallback(*this);
-                }
+                this->GetPCSX2Data();
+                this->UpdateDataCallback(*this);
             }
-        );
+        });
 
         if (fileExists(this->PCSX2_vm.string()))
         {
@@ -215,21 +226,19 @@ public:
         }
 
         static filewatch::FileWatch<std::wstring> watchvm(this->PCSX2_vm.wstring(), [this](const std::wstring& path, const filewatch::Event change_type)
+        {
+            if (change_type == filewatch::Event::renamed_new)
             {
-                if (change_type == filewatch::Event::renamed_new)
-                {
-                    using namespace std::chrono_literals;
-                    std::this_thread::sleep_for(500ms);
+                std::this_thread::sleep_for(500ms);
 
-                    if (fileExists(this->PCSX2_vm.string()))
-                    {
-                        char buf[32];
-                        GetPrivateProfileStringA("EmuCore", "EnableWideScreenPatches", "", buf, sizeof(buf), this->PCSX2_vm.string().c_str());
-                        this->IsEnableWidescreenPatchesChecked = std::string(buf) == "enabled";
-                    }
+                if (fileExists(this->PCSX2_vm.string()))
+                {
+                    char buf[32];
+                    GetPrivateProfileStringA("EmuCore", "EnableWideScreenPatches", "", buf, sizeof(buf), this->PCSX2_vm.string().c_str());
+                    this->IsEnableWidescreenPatchesChecked = std::string(buf) == "enabled";
                 }
             }
-        );
+        });
     }
 
     void GetPCSX2Data()
@@ -249,7 +258,8 @@ public:
         {
             std::string arg;
             std::string::size_type pos = val.find(delim);
-            if (val.npos != pos) {
+            if (val.npos != pos)
+            {
                 arg = val.substr(pos + 1);
                 val = val.substr(0, pos);
             }
@@ -262,7 +272,7 @@ public:
         };
 
         std::tie(WindowWidth, WindowHeight) = ToInt(splitInTwo(WindowSize, ","));
-        if (IsFullscreen || !WindowWidth || !WindowWidth)
+        if (IsFullscreen || !WindowWidth || !WindowHeight)
             std::tie(WindowWidth, WindowHeight) = GetDesktopRes();
 
         switch (AspectRatioIni == "Stretch")
@@ -282,7 +292,8 @@ public:
 
     void WriteMemoryLoop()
     {
-        __try {
+        __try
+        {
             while (true)
             {
                 using namespace std::chrono_literals;
@@ -420,7 +431,8 @@ public:
                         std::ostringstream ss;
                         mips::j(ss, mCurBufAddr); //MakeJMP to custom code
                         injector::WriteMemory(addr + EEMainMemoryStart, *(uint32_t*)(ss.str()).c_str(), true);
-                        ss.str(""); ss.clear();
+                        ss.str("");
+                        ss.clear();
                         auto makeInline = std::any_cast<std::function<void(std::ostringstream& buf)>>(obj.data);
                         makeInline(ss);
                         mips::j(ss, addr + 4); // MakeJMP back to original code
@@ -537,7 +549,8 @@ public:
                     pnach << L"patch=" << obj.place_type << L"," << obj.getCpuType() << L"," << int_to_hex(addr) << L"," << obj.getDataType() << L"," << int_to_hex(*(uint32_t*)(ss.str()).c_str());
                     pnach << std::setw(40 - (size_t)(pnach.tellp() - t)) << L"";
                     pnach << obj.comment << std::endl;
-                    ss.str(""); ss.clear();
+                    ss.str("");
+                    ss.clear();
                     auto makeInline = std::any_cast<std::function<void(std::ostringstream& buf)>>(obj.data);
                     makeInline(ss);
                     mips::j(ss, addr + 4); // MakeJMP back to original code
