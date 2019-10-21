@@ -15,14 +15,14 @@ bool __stdcall memory_readable(void *ptr, size_t byteCount)
         return false;
 
     // This checks that the start of memory block is in the same "region" as the
-    // end. If it isn't you "simplify" the problem into checking that the rest of 
+    // end. If it isn't you "simplify" the problem into checking that the rest of
     // the memory is readable.
     size_t blockOffset = (size_t)((char *)ptr - (char *)mbi.AllocationBase);
     size_t blockBytesPostPtr = mbi.RegionSize - blockOffset;
 
     if (blockBytesPostPtr < byteCount)
         return memory_readable((char *)ptr + blockBytesPostPtr,
-            byteCount - blockBytesPostPtr);
+                               byteCount - blockBytesPostPtr);
 
     return true;
 }
@@ -40,7 +40,7 @@ void __declspec(naked) DamageModelMemoryCheck()
     if (memory_readable((void*)StuffToCompare, 8))
         _asm jmp DamageModelFixExit
 
-    _asm
+        _asm
     {
         pop edi
         retn
@@ -53,9 +53,9 @@ void __declspec(naked) ExitPostRaceFixPropagator()
 {
     if (bAccessedPostRace)
         _asm jmp loc_5C479A
-    else
-        _asm jmp loc_5C47B0
-}
+        else
+            _asm jmp loc_5C47B0
+        }
 
 void __declspec(naked) ExitPostRaceFixPart2()
 {
@@ -155,7 +155,7 @@ void Init()
         injector::MakeJMP(pattern.get_first(0), DamageModelMemoryCheck, true); //0x58DC10
     }
 
-	
+
     bool bFixHUD = iniReader.ReadInteger("MISC", "FixHUD", 1) != 0;
     bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 1) != 0;
     static int32_t nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
@@ -163,6 +163,7 @@ void Init()
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
     bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 1) != 0;
     bool bDisableMotionBlur = iniReader.ReadInteger("MISC", "DisableMotionBlur", 0) != 0;
+    static int32_t nShadowRes = iniReader.ReadInteger("MISC", "ShadowRes", 0);
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
         szCustomUserFilesDirectoryInGameDir.clear();
@@ -327,7 +328,8 @@ void Init()
         }; injector::MakeInline<MenuRemap>(pattern.get_first(0), pattern.get_first(6));
 
         static injector::hook_back<int32_t(__cdecl*)(char*)> hb_4366E0;
-        auto padFix = [](char*) -> int32_t {
+        auto padFix = [](char*) -> int32_t
+        {
             return 0x2A5E19E0;
         };
         pattern = hook::pattern("E8 ? ? ? ? 83 C4 04 3D ? ? ? ? 0F 87 ? ? ? ? 0F 84 ? ? ? ? 3D");
@@ -340,7 +342,7 @@ void Init()
 
     if (fLeftStickDeadzone)
     {
-        // DInput [ 0 32767 | 32768 65535 ] 
+        // DInput [ 0 32767 | 32768 65535 ]
         fLeftStickDeadzone /= 200.0f;
 
         auto pattern = hook::pattern("89 86 34 02 00 00 8D 45 D4"); //0x892ACD 0x892ADF
@@ -375,11 +377,11 @@ void Init()
     if (bWriteSettingsToFile && injector::GetBranchDestination(GetFolderPathpattern.get(0).get<uintptr_t>(14), true).as_int() == 0)
     {
         auto msgboxID = MessageBox(
-            NULL,
-            (LPCWSTR)L"WriteSettingsToFile option will not work with your exe version. Use different exe or disable that option.\nDo you want to disable it now?",
-            (LPCWSTR)L"NFSProStreet.GenericFix",
-            MB_ICONWARNING | MB_YESNO | MB_DEFBUTTON1
-        );
+                            NULL,
+                            (LPCWSTR)L"WriteSettingsToFile option will not work with your exe version. Use different exe or disable that option.\nDo you want to disable it now?",
+                            (LPCWSTR)L"NFSProStreet.GenericFix",
+                            MB_ICONWARNING | MB_YESNO | MB_DEFBUTTON1
+                        );
 
         if (msgboxID == IDYES)
         {
@@ -464,14 +466,22 @@ void Init()
         pattern = hook::pattern("74 73 F3 0F 10 84 24 ? ? ? ? F3 0F 11 44 24");
         injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true); //4B153E jmp 4B15B3
     }
+
+    if (nShadowRes)
+    {
+        pattern = hook::pattern("B8 ? ? ? ? EB 0C B8 ? ? ? ? EB 05 B8 ? ? ? ? 57 6A 00");
+        injector::WriteMemory(pattern.get_first(1), nShadowRes, true);
+        injector::WriteMemory(pattern.get_first(8), nShadowRes, true);
+        injector::WriteMemory(pattern.get_first(15), nShadowRes, true);
+    }
 }
 
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
-        {
-            CallbackHandler::RegisterCallback(Init, hook::pattern("C7 46 ? ? ? ? ? E8 ? ? ? ? C6 86 ? ? ? ? ? 5E C2 04 00"));
-        });
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("C7 46 ? ? ? ? ? E8 ? ? ? ? C6 86 ? ? ? ? ? 5E C2 04 00"));
+    });
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
