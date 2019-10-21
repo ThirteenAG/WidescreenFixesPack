@@ -186,12 +186,37 @@ void Init()
     }; injector::MakeInline<AspectRatioHook>(pattern.get_first(0));
 }
 
+injector::hook_back<void(__cdecl*)(void**, void**, uint32_t, uint32_t, void*)> hb_211402EB;
+void __cdecl sub_211402EB(void** a1, void** a2, uint32_t a3, uint32_t a4, void* a5)
+{
+    __try
+    {
+        hb_211402EB.fun(a1, a2, a3, a4, a5);
+    }
+    __except ((GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION) ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
+    { }
+}
+
+void InitMSS()
+{
+    //Unhandled exception at 0x2114036A (mss32.dll) in manhunt.exe.20191006175924.dmp: 0xC0000005: Access violation reading location 0x211C1379.
+    auto mpattern = hook::module_pattern(GetModuleHandle(L"mss32"), "E8 ? ? ? ? EB 3C 8B 44 24 10 89 8C 24 ? ? ? ? 89 8C 24");
+    hb_211402EB.fun = injector::MakeCALL(mpattern.count_hint(1).get(0).get<void*>(0), sub_211402EB, true).get();
+    mpattern = hook::module_pattern(GetModuleHandle(L"mss32"), "E8 ? ? ? ? 8B 44 24 78 83 C4 14 85 C0 74 02 89 28 8B 44 24 60 85 C0");
+    hb_211402EB.fun = injector::MakeCALL(mpattern.count_hint(1).get(0).get<void*>(0), sub_211402EB, true).get();
+    mpattern = hook::module_pattern(GetModuleHandle(L"mss32"), "E8 ? ? ? ? 8B 4C 24 50 8B 03 2B C1 8B 4E E4 83 C4 14 3B C8 77 0E 8B");
+    hb_211402EB.fun = injector::MakeCALL(mpattern.count_hint(1).get(0).get<void*>(0), sub_211402EB, true).get();
+    mpattern = hook::module_pattern(GetModuleHandle(L"mss32"), "E8 ? ? ? ? 8B 7C 24 38 8B 46 40 8B 54 24 34 89 6C 24 20 8B 4C 86 0C");
+    hb_211402EB.fun = injector::MakeCALL(mpattern.count_hint(1).get(0).get<void*>(0), sub_211402EB, true).get();
+}
+
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
-        {
-            CallbackHandler::RegisterCallback(Init, hook::pattern("6A 02 6A 00 6A 00 68 01 20 00 00").count_hint(1).empty(), 0x1100);
-        });
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("6A 02 6A 00 6A 00 68 01 20 00 00").count_hint(1).empty(), 0x1100);
+        CallbackHandler::RegisterCallback(L"mss32.dll", InitMSS);
+    });
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
