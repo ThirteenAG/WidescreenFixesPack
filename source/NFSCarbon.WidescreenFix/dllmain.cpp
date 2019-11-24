@@ -41,7 +41,6 @@ void Init()
     Screen.fWidth = static_cast<float>(Screen.Width);
     Screen.fHeight = static_cast<float>(Screen.Height);
     Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
-    Screen.Width43 = static_cast<int32_t>(Screen.fHeight * (4.0f / 3.0f));
 
     //Resolution
     for (size_t i = 0; i < 2; i++)
@@ -92,6 +91,7 @@ void Init()
     //Water Reflections fix
     static uint32_t n768 = 768;
     static uint32_t n320 = 320;
+    static uint32_t n240 = 240;
     uint32_t* dword_71A9B1 = hook::pattern("8B 0D ? ? ? ? B8 56 55 55 55 89 15 ? ? ? ? F7 E9").count(2).get(1).get<uint32_t>(2);
     injector::WriteMemory(dword_71A9B1, &n768, true);
     auto pattern = hook::pattern("8B ? ? ? ? ? ? 50 FF ? ? 85 C0");
@@ -99,6 +99,11 @@ void Init()
     uint32_t* dword_71AA72 = pattern.count(4).get(3).get<uint32_t>(2);
     injector::WriteMemory(dword_71AA22, &n320, true);
     injector::WriteMemory(dword_71AA72, &n320, true);
+    pattern = hook::pattern("BA ? ? ? ? ? ? 85 FF 89 15");
+    uint32_t* dword_71A9F8 = pattern.count(1).get(0).get<uint32_t>(1);
+    injector::WriteMemory(dword_71A9F8, n240, true);
+    uint32_t* dword_71A9FC = pattern.count(1).get(0).get<uint32_t>(5);
+    injector::MakeNOP(dword_71A9FC, 2, true);
 
     //EA HD
     uint32_t* dword_9D51D8 = *hook::pattern("6A 01 6A 14 68 ? ? ? ? 8B CE").count(1).get(0).get<uint32_t*>(5);
@@ -142,10 +147,6 @@ void Init()
     //activates 00AB0C04
     pattern = hook::pattern("7E 05 E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8");
     injector::MakeNOP(pattern.count(1).get(0).get<uint32_t>(0), 2, true); // 0071B3E6
-
-    //PiP pixelation
-    uint32_t* dword_70DB0C = hook::pattern("8B 0D ? ? ? ? B8 56 55 55 55").count(1).get(0).get<uint32_t>(2);
-    injector::WriteMemory(dword_70DB0C, &Screen.Width43, true);
 
     //World map cursor
     uint32_t* dword_570DCD = hook::pattern("75 33 D9 44 24 14 D8 5C 24 08 DF E0 F6 C4 41").count(1).get(0).get<uint32_t>(0);
@@ -332,13 +333,13 @@ void Init()
     if (bLightingFix)
     {
         uint32_t* dword_7497B9 = hook::pattern("8B 0D ? ? ? ? 83 F8 06 89 0D ? ? ? ? C7 05 ? ? ? ? CD CC CC 3E").count(2).get(1).get<uint32_t>(2);
-        static float f25 = 2.5f;
-        injector::WriteMemory((uint32_t)dword_7497B9, &f25, true);
-        static float f15 = 1.5f;
+        static float f20 = 2.0f;
+        injector::WriteMemory((uint32_t)dword_7497B9, &f20, true);
+        static float f19 = 1.9f;
         uint32_t* dword_748A70 = hook::pattern("A1 ? ? ? ? A3 ? ? ? ? 83 3D ? ? ? ? 06 C7 05 ? ? ? ? CD CC CC 3E").count(2).get(1).get<uint32_t>(1);
-        injector::WriteMemory(dword_748A70, &f15, true);
+        injector::WriteMemory(dword_748A70, &f19, true);
         uint32_t* dword_73E7CB = *hook::pattern("C7 05 ? ? ? ? CD CC CC 3E B8 ? ? ? ? 74 05 B8 ? ? ? ? C3").count(1).get(0).get<uint32_t*>(11);
-        injector::WriteMemory<float>(dword_73E7CB, 1.6f, true);
+        injector::WriteMemory<float>(dword_73E7CB, 1.35f, true);
     }
 
     if (bCarShadowFix)
