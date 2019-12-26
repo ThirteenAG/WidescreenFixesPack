@@ -555,7 +555,7 @@ constexpr char* main_scm_tex[] = { "10ls", "10ls2", "10ls3", "10ls4", "10ls5", "
     "radio_bounce", "radio_csr", "radio_KDST", "radio_kjah", "radio_krose", "radio_mastersounds", "radio_playback", "radio_RADIOX", "radio_RLS", "radio_SFUR", "radio_TPLAYER",
     "radio_WCTR", "ribb", "ribbw", "Ric1", "Ric2", "Ric3", "Ric4", "Ric5", "right", "rockshp", "roulbla", "roulgre", "roulred", "rride1", "rride2", "rride3", "rride4", "rride5",
     "rride6", "rride7", "rride8", "r_69", "ship", "ship2", "ship3", "shoot", "shpnorm", "shpwarp", "silboat", "silfly", "silver", "sky", "splash1", "splash2", "splsh", "square",
-    "thorn", "thrust", "thrustG", "thumbdn", "thumbup", "timer", "title", "title_pc_EU", "title_pc_US", "trees", "triang", "tvbase", "tvcorn", "tvl", "tvr", "ufo", "un_a", "un_b",
+    "thorn", "thrust", "thrustG", "thumbdn", "thumbup", "timer", "title", "title_pc_EU", "title_pc_US", "trees", "triangle", "tvbase", "tvcorn", "tvl", "tvr", "ufo", "un_a", "un_b",
     "un_c", "up", "upl", "upr", "warp", "white", "yride1", "yride2", "yride3", "yride4", "yride5", "yride6", "yride7", "yride8" };
 
 injector::hook_back<void(__cdecl*)(CRect const&, CRGBA const&)> hbDrawRect;
