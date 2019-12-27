@@ -158,8 +158,14 @@ void UpdateFrontendFixes() {
 
 void UpdateMiscFixes() {
     // Aim point.
-    fCameraWidth[0] = 0.01403292f;
-    fCameraHeight[0] = 0.0f;
+    if (bDontTouchFOV) {
+        fCameraWidth[0] = 0.017453292f;
+        fCameraHeight[0] = 0.0f;
+    }
+    else {
+        fCameraWidth[0] = 0.01403292f;
+        fCameraHeight[0] = 0.0f;
+    }
 
     fMiscWidth[0] = 0.0015625f * fWideScreenWidthScale; // StretchX
     fMiscWidth[1] = 0.0546875f * fWideScreenWidthScale;
@@ -681,33 +687,38 @@ void __declspec(naked) CalculateAimingPoint()
 void InstallFieldOfViewFixes() {
     injector::MakeJMP(0x6FF410, CDraw::SetFOV, true);
 
-    // Fix sky multitude
-    static const float fSkyMultFix = 10.0f;
-    injector::WriteMemory<const void*>(0x714843, &fSkyMultFix, true);
-    injector::WriteMemory<const void*>(0x714860, &fSkyMultFix, true);
+    if (!bDontTouchFOV) {
+        // Fix sky multitude
+        static const float fSkyMultFix = 10.0f;
+        injector::WriteMemory<const void*>(0x714843, &fSkyMultFix, true);
+        injector::WriteMemory<const void*>(0x714860, &fSkyMultFix, true);
 
-    // Set vehicle max FOV.
-    static const float fVehMaxFov = *CDraw::pfScreenFieldOfView + 30.0f;
-    injector::WriteMemory<const void*>(0x524BB4, &fVehMaxFov, true);
-    injector::WriteMemory<float>(0x524BC5, *CDraw::pfScreenFieldOfView + 30.0f, true);
+        // Set vehicle max FOV.
+        static const float fVehMaxFov = *CDraw::pfScreenFieldOfView + 30.0f;
+        injector::WriteMemory<const void*>(0x524BB4, &fVehMaxFov, true);
+        injector::WriteMemory<float>(0x524BC5, *CDraw::pfScreenFieldOfView + 30.0f, true);
 
-    // Aiming point
-    injector::MakeJMP(0x51499E, CalculateAimingPoint, true);
-    injector::MakeNOP(0x50AD79, 6, true);
-    injector::WriteMemory<const void*>(0x50AD59 + 0x2, &fCameraWidth[0], true);
-    injector::WriteMemory<const void*>(0x51498D + 0x2, &fCameraWidth[0], true);
+        // Aiming point
+        injector::MakeJMP(0x51499E, CalculateAimingPoint, true);
+        injector::MakeNOP(0x50AD79, 6, true);
+        injector::WriteMemory<const void*>(0x50AD59 + 0x2, &fCameraWidth[0], true);
+        injector::WriteMemory<const void*>(0x51498D + 0x2, &fCameraWidth[0], true);
 
-    //Emergency Vehicles
-    static float f1 = 1.0f;
-    injector::WriteMemory(0x52C9D9 + 0x2, &f1, true);
-    struct EmergencyVehiclesFix
-    {
-        void operator()(injector::reg_pack& regs)
+        // Emergency Vehicles
+        static float f1 = 1.0f;
+        injector::WriteMemory(0x52C9D9 + 0x2, &f1, true);
+        struct EmergencyVehiclesFix
         {
-            float f = 1.0f / fEmergencyVehiclesFix;
-            _asm {fdiv[f]}
-        }
-    }; injector::MakeInline<EmergencyVehiclesFix>(0x52C9DF, 0x52C9DF + 6);
+            void operator()(injector::reg_pack& regs)
+            {
+                float f = 1.0f / fEmergencyVehiclesFix;
+                _asm {fdiv[f]}
+            }
+        }; injector::MakeInline<EmergencyVehiclesFix>(0x52C9DF, 0x52C9DF + 6);
+    }
+
+    // Entry exit transition
+    injector::WriteMemory<BYTE>(0x4403C2 + 1, EntryExitMode, true);
 }
 
 float __stdcall StretchXHook(float fValue)
@@ -1437,6 +1448,8 @@ void ApplyIniOptions()
     nHideAABug = iniReader.ReadInteger("MAIN", "HideAABug", 1);
     bSmartCutsceneBorders = iniReader.ReadInteger("MAIN", "SmartCutsceneBorders", 1) != 0;
     ReplaceTextShadowWithOutline = iniReader.ReadInteger("MAIN", "ReplaceTextShadowWithOutline", 0);
+    EntryExitMode = iniReader.ReadInteger("MAIN", "EntryExitMode", 1);
+
     bool bAltTab = iniReader.ReadInteger("MAIN", "AllowAltTabbingWithoutPausing", 0) != 0;
 
     if (bAltTab)
