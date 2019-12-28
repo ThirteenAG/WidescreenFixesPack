@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "GTA\common.h"
 #include "GTA\global.h"
+#include <d3d9.h>
+#include <control.h>
 
 float fWideScreenWidthScale, fWideScreenHeightScale;
 float fWideScreenWidthProperScale = 1.0f;
@@ -760,6 +762,37 @@ void __cdecl SetCentreSizeHook(float a1)
         hbSetCentreSize.fun(a1);
 }
 
+void VideoPlayerShowHook() {
+    IVideoWindow*& pvVideoWindow = *(IVideoWindow**)0xC920E0;
+
+    CDraw::CalculateAspectRatio();
+
+    long l, t, r, b;
+    pvVideoWindow->get_Width(&r);
+    pvVideoWindow->get_Height(&b);
+
+    float w, h;
+    if (*CDraw::pfScreenAspectRatio < (float)(r) / b) {
+        w = RsGlobal->MaximumWidth;
+        h = RsGlobal->MaximumHeight * *CDraw::pfScreenAspectRatio / ((float)(r) / b);
+    }
+    else {
+        w = RsGlobal->MaximumWidth * ((float)(r) / b) / *CDraw::pfScreenAspectRatio;
+        h = RsGlobal->MaximumHeight;
+    }
+
+    long Left = (RsGlobal->MaximumWidth - w) / 2;
+    long Bottom = (RsGlobal->MaximumHeight + h) / 2;
+    long Right = (RsGlobal->MaximumWidth + w) / 2;
+    long Top = (RsGlobal->MaximumHeight - h) / 2;
+
+    HRESULT wPos = pvVideoWindow->SetWindowPosition(Left, Top, Right - Left, Bottom);
+    if (wPos >= 0) {
+        pvVideoWindow->put_MessageDrain((OAHWND)RsGlobal->ps);
+        SetFocus((HWND)RsGlobal->ps);
+    }
+}
+
 void InstallFrontendFixes()
 {
     // Font Scales
@@ -914,6 +947,9 @@ void InstallFrontendFixes()
     // Fix Stats bar chart.
     hbDrawBarChart.fun = injector::MakeCALL(0x574F54, DrawBarChartHook).get();
     injector::MakeCALL(0x574F54, DrawBarChartHook);
+
+    // Fix intro videos.
+    injector::MakeJMP(0x7466D0, VideoPlayerShowHook);
 }
 
 void InstallMiscFixes()

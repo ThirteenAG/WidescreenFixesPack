@@ -42,5 +42,5 @@ bool bAllowAltTabbingWithoutPausing;
 uint32_t EntryExitMode;
 int(__cdecl* CSprite2dDrawRect)(class CRect const &, class CRGBA const &);
 int(__cdecl* CSprite2dDrawRect2)(class CRect const &, class CRGBA const &, class CRGBA const &, class CRGBA const &, class CRGBA const &);
-void(__thiscall *funcCCameraAvoidTheGeometry)(void* _this, RwV3d const&, RwV3d const&, RwV3d&, float);
+void(__thiscall *funcCCameraAvoidTheGeometry)(void*, RwV3d const&, RwV3d const&, RwV3d&, float);
 std::map<void*, float> FOVMods;
