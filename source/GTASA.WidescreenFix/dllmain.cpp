@@ -718,9 +718,6 @@ void InstallFieldOfViewFixes() {
             }
         }; injector::MakeInline<EmergencyVehiclesFix>(0x52C9DF, 0x52C9DF + 6);
     }
-
-    // Entry exit transition
-    injector::WriteMemory<BYTE>(0x4403C2 + 1, EntryExitMode, true);
 }
 
 float __stdcall StretchXHook(float fValue)
@@ -1470,23 +1467,30 @@ void Install2dSpriteFixes()
 void ApplyIniOptions()
 {
     CIniReader iniReader("");
+
+    // MAIN
     ResX = iniReader.ReadInteger("MAIN", "ResX", -1);
     ResY = iniReader.ReadInteger("MAIN", "ResY", -1);
-    fHudWidthScale = iniReader.ReadFloat("MAIN", "HudWidthScale", 0.8f);
-    fHudHeightScale = iniReader.ReadFloat("MAIN", "HudHeightScale", 0.8f);
-    fRadarWidthScale = iniReader.ReadFloat("MAIN", "RadarWidthScale", 0.82f);
-    fRadarHeightScale = iniReader.ReadFloat("MAIN", "RadarHeightScale", 1.0f);
-    fSubtitlesScale = iniReader.ReadFloat("MAIN", "SubtitlesScale", 1.0f);
-    bRestoreCutsceneFOV = iniReader.ReadInteger("MAIN", "RestoreCutsceneFOV", 1) != 0;
-    bDontTouchFOV = iniReader.ReadInteger("MAIN", "DontTouchFOV", 0) != 0;
-    bool DisableWhiteCrosshairDot = iniReader.ReadInteger("MAIN", "DisableWhiteCrosshairDot", 1) != 0;
     szForceAspectRatio = iniReader.ReadString("MAIN", "ForceAspectRatio", "auto");
-    nHideAABug = iniReader.ReadInteger("MAIN", "HideAABug", 1);
-    bSmartCutsceneBorders = iniReader.ReadInteger("MAIN", "SmartCutsceneBorders", 1) != 0;
-    ReplaceTextShadowWithOutline = iniReader.ReadInteger("MAIN", "ReplaceTextShadowWithOutline", 0);
-    EntryExitMode = iniReader.ReadInteger("MAIN", "EntryExitMode", 1);
 
-    bool bAltTab = iniReader.ReadInteger("MAIN", "AllowAltTabbingWithoutPausing", 0) != 0;
+    // HUD
+    bool DisableWhiteCrosshairDot = iniReader.ReadInteger("HUD", "DisableWhiteCrosshairDot", 0) != 0;
+    ReplaceTextShadowWithOutline = iniReader.ReadInteger("HUD", "ReplaceTextShadowWithOutline", 0);
+    fHudWidthScale = iniReader.ReadFloat("HUD", "HudWidthScale", 1.0f);
+    fHudHeightScale = iniReader.ReadFloat("HUD", "HudHeightScale", 1.0f);
+    fSubtitlesScale = iniReader.ReadFloat("HUD", "SubtitlesScale", 1.0f);
+
+    fRadarWidthScale = iniReader.ReadFloat("HUD", "RadarWidthScale", 1.0f);
+    fRadarHeightScale = iniReader.ReadFloat("HUD", "RadarHeightScale", 1.0f);
+
+    // FOV
+    bRestoreCutsceneFOV = iniReader.ReadInteger("FOV", "RestoreCutsceneFOV", 1) != 0;
+    bDontTouchFOV = iniReader.ReadInteger("FOV", "DontTouchFOV", 0) != 0;
+
+    // MISC
+    bool bAltTab = iniReader.ReadInteger("MISC", "AllowAltTabbingWithoutPausing", 0) != 0;
+    bSmartCutsceneBorders = iniReader.ReadInteger("MISC", "SmartCutsceneBorders", 1) != 0;
+    nHideAABug = iniReader.ReadInteger("MISC", "HideAABug", 0);
 
     if (bAltTab)
     {
@@ -1510,8 +1514,8 @@ void ApplyIniOptions()
         fCustomAspectRatioVer = static_cast<float>(AspectRatioHeight);
     }
 
-    if (!fHudWidthScale || !fHudHeightScale) { fHudWidthScale = 0.8f; fHudHeightScale = 0.8f; }
-    if (!fRadarWidthScale) { fRadarWidthScale = 0.82f; }
+    if (!fHudWidthScale || !fHudHeightScale) { fHudWidthScale = 1.0f; fHudHeightScale = 1.0f; }
+    if (!fRadarWidthScale) { fRadarWidthScale = 1.0f; }
     if (!fRadarHeightScale) { fRadarHeightScale = 1.0f; }
     if (!fSubtitlesScale) { fSubtitlesScale = 1.0f; }
 
