@@ -108,25 +108,6 @@ void GetMemoryAddresses()
 void SilentPatchCompatibility()
 {
     OverwriteResolution();
-    auto pattern = hook::pattern("66 8B 2D ? ? ? ? 0F BF C5");
-    if (bSmallerTextShadows && *(uint8_t*)pattern.count(1).get(0).get<uint8_t*>(10) != 0x89)
-    {
-        injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(10), 0x89, true); //0x5516FB
-        injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(11), 0x04DB2404, true); //0x5516FC
-        injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(15), 0xC81DD824, true); //0x5516FC + 4
-
-        pattern = hook::pattern("89 44 24 0C D8 05 ? ? ? ? D9 1D ? ? ? ?");
-        injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(16), 0xDB, true); //0x5517C4
-        injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(16 + 3), 0x0C, true); //0x5517C7
-        pattern = hook::pattern("0F BF C5 D9 1C 24 89 44 24 14 50");
-        injector::WriteMemory<uint8_t>(pattern.count(2).get(0).get<uint32_t>(11), 0xDB, true); //0x5517DF
-        injector::WriteMemory<uint8_t>(pattern.count(2).get(0).get<uint32_t>(11 + 3), 0x18, true); //0x5517E2
-        injector::WriteMemory<uint8_t>(pattern.count(2).get(1).get<uint32_t>(11), 0xDB, true); //0x551848
-        injector::WriteMemory<uint8_t>(pattern.count(2).get(1).get<uint32_t>(11 + 3), 0x18, true); //0x55184B
-        pattern = hook::pattern("FF 74 24 34 89 44 24 04 53");
-        injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(9), 0xDB, true); //0x551832
-        injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(9 + 3), 0x08, true); //0x551835
-    }
 }
 
 injector::hook_back<signed int(__cdecl*)(void)> hbRsSelectDevice;
@@ -141,7 +122,6 @@ void OverwriteResolution()
     CIniReader iniReader("");
     ResX = iniReader.ReadInteger("MAIN", "ResX", -1);
     ResY = iniReader.ReadInteger("MAIN", "ResY", -1);
-    //bSmallerTextShadows = iniReader.ReadInteger("MAIN", "SmallerTextShadows", 1) != 0;
 
     if (!ResX || !ResY)
         std::tie(ResX, ResY) = GetDesktopRes();
@@ -281,28 +261,30 @@ void RsSelectDeviceHook()
 
 void FixCoronas()
 {
-    auto pattern = hook::pattern("D8 0E D9 1E D9 05 ? ? ? ? D8 35 ? ? ? ? D8 0B D9 1B"); //0x57797A 
-    injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(1), 0x0B, true);
+    if (bFixVehicleLights) {
+        auto pattern = hook::pattern("D8 0E D9 1E D9 05 ? ? ? ? D8 35 ? ? ? ? D8 0B D9 1B"); //0x57797A 
+        injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(1), 0x0B, true);
 
-    auto pfCAutoPreRender = (uint32_t)hook::pattern("FF 35 ? ? ? ? 50 8D 84 24 24 05 00").count(1).get(0).get<uint32_t>(0);
-    auto pfCBikePreRender = (uint32_t)hook::pattern("D9 83 FC 03 00 00 D8 1D ? ? ? ? DF E0 F6 C4 45").count(1).get(0).get<uint32_t>(0);
-    auto pfCBrightLightsRegisterOne = (uint32_t)hook::pattern("D9 EE D9 EE 83 EC 20 8B 44 24").count(1).get(0).get<uint32_t>(0);
-    pattern = hook::range_pattern(pfCAutoPreRender, pfCAutoPreRender + 0x7E89, "E8 ? ? ? ?");
-    for (size_t i = 0; i < pattern.size(); ++i)
-    {
-        auto addr = pattern.get(i).get<uint32_t>(0);
-        auto dest = injector::GetBranchDestination(addr, true).as_int();
-        if (dest == pfCBrightLightsRegisterOne)
-            injector::MakeNOP(addr, 5, true); //CBrightLights::RegisterOne
-    }
+        auto pfCAutoPreRender = (uint32_t)hook::pattern("FF 35 ? ? ? ? 50 8D 84 24 24 05 00").count(1).get(0).get<uint32_t>(0);
+        auto pfCBikePreRender = (uint32_t)hook::pattern("D9 83 FC 03 00 00 D8 1D ? ? ? ? DF E0 F6 C4 45").count(1).get(0).get<uint32_t>(0);
+        auto pfCBrightLightsRegisterOne = (uint32_t)hook::pattern("D9 EE D9 EE 83 EC 20 8B 44 24").count(1).get(0).get<uint32_t>(0);
+        pattern = hook::range_pattern(pfCAutoPreRender, pfCAutoPreRender + 0x7E89, "E8 ? ? ? ?");
+        for (size_t i = 0; i < pattern.size(); ++i)
+        {
+            auto addr = pattern.get(i).get<uint32_t>(0);
+            auto dest = injector::GetBranchDestination(addr, true).as_int();
+            if (dest == pfCBrightLightsRegisterOne)
+                injector::MakeNOP(addr, 5, true); //CBrightLights::RegisterOne
+        }
 
-    pattern = hook::range_pattern(pfCBikePreRender, pfCBikePreRender + 0x2A54, "E8 ? ? ? ? ?");
-    for (size_t i = 0; i < pattern.size(); ++i)
-    {
-        auto addr = pattern.get(i).get<uint32_t>(0);
-        auto dest = injector::GetBranchDestination(addr, true).as_int();
-        if (dest == pfCBrightLightsRegisterOne)
-            injector::MakeNOP(addr, 5, true); //CBrightLights::RegisterOne
+        pattern = hook::range_pattern(pfCBikePreRender, pfCBikePreRender + 0x2A54, "E8 ? ? ? ? ?");
+        for (size_t i = 0; i < pattern.size(); ++i)
+        {
+            auto addr = pattern.get(i).get<uint32_t>(0);
+            auto dest = injector::GetBranchDestination(addr, true).as_int();
+            if (dest == pfCBrightLightsRegisterOne)
+                injector::MakeNOP(addr, 5, true); //CBrightLights::RegisterOne
+        }
     }
 }
 
@@ -493,8 +475,8 @@ void __cdecl SetDropShadowPosition(uint8_t Pos)
 void ApplyIniOptions()
 {
     CIniReader iniReader("");
-    fHudWidthScale = iniReader.ReadFloat("MAIN", "HudWidthScale", 0.0f); fHudWidthScale == 0.0f ? fHudWidthScale = 0.8f : fHudWidthScale;
-    fHudHeightScale = iniReader.ReadFloat("MAIN", "HudHeightScale", 0.0f); fHudHeightScale == 0.0f ? fHudHeightScale = 0.8f : fHudHeightScale;
+    fHudWidthScale = iniReader.ReadFloat("HUD", "HudWidthScale", 0.0f); fHudWidthScale == 0.0f ? fHudWidthScale = 1.0f : fHudWidthScale;
+    fHudHeightScale = iniReader.ReadFloat("HUD", "HudHeightScale", 0.0f); fHudHeightScale == 0.0f ? fHudHeightScale = 1.0f : fHudHeightScale;
 
     if (fHudWidthScale && fHudHeightScale)
     {
@@ -536,8 +518,8 @@ void ApplyIniOptions()
         }
     }
 
-    bIVRadarScaling = iniReader.ReadInteger("MAIN", "IVRadarScaling", 0) != 0;
-    fRadarWidthScale = iniReader.ReadFloat("MAIN", "RadarWidthScale", 0.0f); fRadarWidthScale == 0.0f ? fRadarWidthScale = 0.9f : fRadarWidthScale;
+    bIVRadarScaling = iniReader.ReadInteger("HUD", "IVRadarScaling", 0) != 0;
+    fRadarWidthScale = iniReader.ReadFloat("HUD", "RadarWidthScale", 0.0f); fRadarWidthScale == 0.0f ? fRadarWidthScale = 1.0f : fRadarWidthScale;
     if (fRadarWidthScale && !bIVRadarScaling)
     {
         for (size_t i = 0; i < CRadarPattern.size(); i++)
@@ -559,7 +541,7 @@ void ApplyIniOptions()
         injector::WriteMemory(pattern.count(2).get(1).get<uint32_t>(2), &fPlayerMarkerPos, true);
     }
 
-    fSubtitlesScale = iniReader.ReadFloat("MAIN", "SubtitlesScale", 0.0f); fSubtitlesScale == 0.0f ? fSubtitlesScale = 0.8f : fSubtitlesScale;
+    fSubtitlesScale = iniReader.ReadFloat("HUD", "SubtitlesScale", 0.0f); fSubtitlesScale == 0.0f ? fSubtitlesScale = 1.0f : fSubtitlesScale;
     if (fSubtitlesScale)
     {
         auto pattern = hook::pattern("D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59"); //0x556A02
@@ -572,8 +554,8 @@ void ApplyIniOptions()
         injector::WriteMemory<float>(*pattern.count(1).get(0).get<uint32_t*>(2), 0.57999998f * fSubtitlesScale, true);
     }
 
-    bRestoreCutsceneFOV = iniReader.ReadInteger("MAIN", "RestoreCutsceneFOV", 1) != 0;
-    bDontTouchFOV = iniReader.ReadInteger("MAIN", "DontTouchFOV", 0) != 0;
+    bRestoreCutsceneFOV = iniReader.ReadInteger("FOV", "RestoreCutsceneFOV", 1) != 0;
+    bDontTouchFOV = iniReader.ReadInteger("FOV", "DontTouchFOV", 0) != 0;
 
     szForceAspectRatio = iniReader.ReadString("MAIN", "ForceAspectRatio", "auto");
     if (strncmp(szForceAspectRatio.c_str(), "auto", 4) != 0)
@@ -584,21 +566,21 @@ void ApplyIniOptions()
         fCustomAspectRatioVer = static_cast<float>(AspectRatioHeight);
     }
 
-    nHideAABug = iniReader.ReadInteger("MAIN", "HideAABug", 0);
+    nHideAABug = iniReader.ReadInteger("MISC", "HideAABug", 0);
     if (nHideAABug)
     {
         auto pattern = hook::pattern("E8 ? ? ? ? A1 ? ? ? ? 50 E8"); //0x57FAA0
         injector::MakeJMP(injector::ReadRelativeOffset(pattern.count(16).get(15).get<uint32_t>(1), 4, true), Hide1pxAABug, true);
     }
 
-    bSmartCutsceneBorders = iniReader.ReadInteger("MAIN", "SmartCutsceneBorders", 1) != 0;
+    bSmartCutsceneBorders = iniReader.ReadInteger("MISC", "SmartCutsceneBorders", 1) != 0;
     if (bSmartCutsceneBorders)
     {
         injector::MakeCALL(BordersPattern.get(14).get<uint32_t>(7), CCamera::DrawBordersForWideScreen); //0x4A61EE 0x54A223
         injector::MakeCALL(BordersPattern.get(21).get<uint32_t>(7), CCamera::DrawBordersForWideScreen);
     }
 
-    ReplaceTextShadowWithOutline = iniReader.ReadInteger("MAIN", "ReplaceTextShadowWithOutline", 0);
+    ReplaceTextShadowWithOutline = iniReader.ReadInteger("HUD", "ReplaceTextShadowWithOutline", 0);
     if (ReplaceTextShadowWithOutline)
     {
         auto pattern = hook::pattern("D8 44 24 38 D9 1C 24 E8 ? ? ? ? 83 C4 18"); //0x551850 
@@ -639,10 +621,10 @@ void ApplyIniOptions()
     hbPrintString2.fun = injector::MakeCALL(pattern.count(1).get(0).get<uint32_t>(2), PrintStringHook2).get();
 
     pattern = hook::pattern("A1 ? ? ? ? 3B C3"); //0x65C321
-    szForceAspectRatio = iniReader.ReadString("MAIN", "ForceMultisamplingLevel", "");
+    szForceAspectRatio = iniReader.ReadString("MISC", "ForceMultisamplingLevel", "");
     if (strncmp(szForceAspectRatio.c_str(), "max", 3) != 0)
     {
-        SelectedMultisamplingLevels = iniReader.ReadInteger("MAIN", "ForceMultisamplingLevel", 0);
+        SelectedMultisamplingLevels = iniReader.ReadInteger("MISC", "ForceMultisamplingLevel", 0);
         injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(1), &SelectedMultisamplingLevels, true);
     }
     else
@@ -651,7 +633,8 @@ void ApplyIniOptions()
         injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(1), *pattern2.count(3).get(2).get<uint32_t*>(2), true);
     }
 
-    if (iniReader.ReadInteger("MAIN", "FixVehicleLights", 1))
+    bFixVehicleLights = iniReader.ReadInteger("MISC", "FixVehicleLights", 0);
+    if (bFixVehicleLights)
     {
         pattern = hook::pattern("D9 C2 DE CB D9 C2 DE CB D9 05");
         injector::WriteMemory<float>(*pattern.count(1).get(0).get<uint32_t*>(10), 2.0f, true); //car lights stretch 0x69590C
@@ -701,15 +684,14 @@ void ApplyIniOptions()
         injector::WriteMemory<float>(*pattern.count(1).get(0).get<uint32_t*>(2), fCustomRadarRingHeightIV, true); //0x697C20
     }
 
-    bSmallerTextShadows = iniReader.ReadInteger("MAIN", "SmallerTextShadows", 1) != 0;
-    if (bSmallerTextShadows || ReplaceTextShadowWithOutline)
+    if (ReplaceTextShadowWithOutline)
     {
         auto pattern = hook::pattern("8B 44 24 04 66 A3 ? ? ? ? C3"); //0x54FF20
         //injector::WriteMemory(pattern.get(0).get<uint32_t>(0), 0x0001B866, true); // mov ax, 0001
         injector::MakeJMP(pattern.count(1).get(0).get<uint32_t>(0), SetDropShadowPosition, true);
     }
 
-    bAllowAltTabbingWithoutPausing = iniReader.ReadInteger("MAIN", "AllowAltTabbingWithoutPausing", 0) != 0;
+    bAllowAltTabbingWithoutPausing = iniReader.ReadInteger("MISC", "AllowAltTabbingWithoutPausing", 0) != 0;
     if (bAllowAltTabbingWithoutPausing)
     {
         auto pattern = hook::pattern("A0 ? ? ? ? B9 ? ? ? ? A2 ? ? ? ? A0 ? ? ? ?"); //0x4A4FD0
