@@ -1,5 +1,14 @@
 #include "stdafx.h"
 #include <random>
+#include "CPatch.h"
+
+#define _USE_MATH_DEFINES
+#define DEGREE_TO_RADIAN(fAngle) \
+((fAngle)* (float)M_PI / 180.0f)
+#define RADIAN_TO_DEGREE(fAngle) \
+	((fAngle)* 180.0f / (float)M_PI)
+#define SCREEN_FOV_HORIZONTAL		1.9f
+#define SCREEN_FOV_VERTICAL			(2.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_HORIZONTAL * 0.5f)) / (4.0f / 3.0f))))
 
 struct Screen
 {
@@ -7,10 +16,9 @@ struct Screen
     int32_t Height;
     float fWidth;
     float fHeight;
-    int32_t Width43;
     float fAspectRatio;
     float fAspectRatioDiff;
-    float fFieldOfView;
+	float fDynamicScreenFieldOfViewScale;
     float fHUDScaleX;
     float fHudOffset;
     float fHudOffsetReal;
@@ -29,12 +37,13 @@ void Init()
 
     Screen.fWidth = static_cast<float>(Screen.Width);
     Screen.fHeight = static_cast<float>(Screen.Height);
-    Screen.Width43 = static_cast<int32_t>(Screen.fHeight * (4.0f / 3.0f));
-    Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
+	Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
+	if ((Screen.fWidth / Screen.fHeight) > (4.0f / 3.0f))
+		Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight) - ((Screen.fWidth / Screen.fHeight) / 10.0f);
     Screen.fAspectRatioDiff = 1.0f / (Screen.fAspectRatio / (4.0f / 3.0f));
     Screen.fHUDScaleX = 1.0f / Screen.fWidth * (Screen.fHeight / 480.0f);
     Screen.fHudOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
-    Screen.fHudOffsetReal = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
+    Screen.fHudOffsetReal = ((Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f) - 20;
 
     //Resolution
     auto pattern = hook::pattern("8B 4C B4 20 89 15");
@@ -64,16 +73,8 @@ void Init()
     injector::WriteMemory(pattern.get_first(1), Screen.fAspectRatio, true);
 
     //FOV
-    pattern = hook::pattern("D9 96 A4 00 00 00 5E 59 C3");
-    struct FovHook
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            float fov = 0.0f;
-            _asm {fst dword ptr[fov]}
-            *(float*)(regs.esi + 0xA4) = AdjustFOV(fov, Screen.fAspectRatio);
-        }
-    }; injector::MakeInline<FovHook>(pattern.get_first(0), pattern.get_first(6));
+	Screen.fDynamicScreenFieldOfViewScale = 180.0f * RADIAN_TO_DEGREE(atan(tan(DEGREE_TO_RADIAN(SCREEN_FOV_VERTICAL * 0.5f)) * Screen.fAspectRatio));
+	CPatch::SetPointer(0x45DF17 + 0x2, &Screen.fDynamicScreenFieldOfViewScale);
 
     //HUD
     if (bFixHUD)
