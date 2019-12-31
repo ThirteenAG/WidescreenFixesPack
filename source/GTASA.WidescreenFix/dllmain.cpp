@@ -7,7 +7,7 @@
 float fWideScreenWidthScale, fWideScreenHeightScale;
 float fWideScreenWidthProperScale = 1.0f;
 float fWideScreenHeightProperScale = 480.0f / 448.0f;
-float fFrontendWidth[40], fFrontendHeight[40];
+float fFrontendWidth[41], fFrontendHeight[41];
 float fMiscWidth[30], fMiscHeight[30];
 float fRadarWidth[23], fRadarHeight[23];
 float fHUDWidth[120], fHUDHeight[120];
@@ -96,25 +96,26 @@ void UpdateFrontendFixes() {
     fFrontendWidth[18] = 0.0015625f * fWideScreenWidthScale;
     fFrontendWidth[19] = 0.0015625f * fWideScreenWidthScale;
     fFrontendWidth[20] = 0.0015625f * fWideScreenWidthScale;
-    fFrontendWidth[21] = 0.00046875002f * fWideScreenWidthScale;
-    fFrontendWidth[22] = 0.00125f * fWideScreenWidthScale;
-    fFrontendWidth[23] = 0.78125f * fWideScreenWidthScale;
+    fFrontendWidth[21] = 0.0015625f * fWideScreenWidthScale;
+    fFrontendWidth[22] = 0.00046875002f * fWideScreenWidthScale;
+    fFrontendWidth[23] = 0.00125f * fWideScreenWidthScale;
     fFrontendWidth[24] = 0.78125f * fWideScreenWidthScale;
     fFrontendWidth[25] = 0.78125f * fWideScreenWidthScale;
     fFrontendWidth[26] = 0.78125f * fWideScreenWidthScale;
     fFrontendWidth[27] = 0.78125f * fWideScreenWidthScale;
-    fFrontendWidth[28] = 0.0046875002f * fWideScreenWidthScale;
-    fFrontendWidth[29] = 0.15625f * fWideScreenWidthScale;
-    fFrontendWidth[30] = 0.0046875002f * fWideScreenWidthScale;
-    fFrontendWidth[31] = 0.15625f * fWideScreenWidthScale;
-    fFrontendWidth[32] = 0.0046875002f * fWideScreenWidthScale;
-    fFrontendWidth[33] = 0.15625f * fWideScreenWidthScale;
-    fFrontendWidth[34] = 0.0046875002f * fWideScreenWidthScale;
-    fFrontendWidth[35] = 0.15625f * fWideScreenWidthScale;
-    fFrontendWidth[36] = 0.0046875002f * fWideScreenWidthScale;
-    fFrontendWidth[37] = 0.15625f * fWideScreenWidthScale;
-    fFrontendWidth[38] = 0.0015625f * fWideScreenWidthScale;
-    fFrontendWidth[39] = 0.00087500003f * fWideScreenWidthScale;
+    fFrontendWidth[28] = 0.78125f * fWideScreenWidthScale;
+    fFrontendWidth[29] = 0.0046875002f * fWideScreenWidthScale;
+    fFrontendWidth[30] = 0.15625f * fWideScreenWidthScale;
+    fFrontendWidth[31] = 0.0046875002f * fWideScreenWidthScale;
+    fFrontendWidth[32] = 0.15625f * fWideScreenWidthScale;
+    fFrontendWidth[33] = 0.0046875002f * fWideScreenWidthScale;
+    fFrontendWidth[34] = 0.15625f * fWideScreenWidthScale;
+    fFrontendWidth[35] = 0.0046875002f * fWideScreenWidthScale;
+    fFrontendWidth[36] = 0.15625f * fWideScreenWidthScale;
+    fFrontendWidth[37] = 0.0046875002f * fWideScreenWidthScale;
+    fFrontendWidth[38] = 0.15625f * fWideScreenWidthScale;
+    fFrontendWidth[39] = 0.0015625f * fWideScreenWidthScale;
+    fFrontendWidth[40] = 0.00087500003f * fWideScreenWidthScale;
 
     fFrontendHeight[0] = 0.0046874997f * fWideScreenHeightScale;
     fFrontendHeight[1] = 0.0021205356f * fWideScreenHeightScale;
@@ -812,27 +813,28 @@ void InstallFrontendFixes()
                                     0x582EB0, // 16 Legend
                                     0x583019, // 17 Legend
                                     0x58309C, // 18 Legend
-                                    0x583128, // 19 Legend
-                                    0x5831AD, // 20 Legend	
-                                    0x57613B, // 21 Legend
-                                    0x575EDF, // 22 Map zones
-                                    0x57A88D, // 23 Brightness slider posn
-                                    0x57AA81, // 24 Radio slider posn
-                                    0x57ACBE, // 25 Sfx slider posn
-                                    0x57AEB0, // 26 Draw slider posn
-                                    0x57B0E4, // 27 Mouse slider posn
-                                    0x57A807, // 28 Brightness slider
-                                    0x57A811, // 29 Brightness slider
-                                    0x57A9FE, // 30 Radio slider
-                                    0x57AA08, // 31 Radio slider
-                                    0x57AC2F, // 32 Sfx slider
-                                    0x57AC39, // 33 Sfx slider
-                                    0x57AE36, // 34 Draw distance slider
-                                    0x57AE40, // 35 Draw distance slider
-                                    0x57B064, // 36 Mouse acc slider
-                                    0x57B06E, // 37 Mouse acc slider
-                                    0x584A12, // 38 DrawYouAreHereSprite
-                                    0x5740BC, // 39 Message screen
+                                    0x582F82, // 19 Legend
+                                    0x583128, // 20 Legend
+                                    0x5831AD, // 21 Legend	
+                                    0x57613B, // 22 Legend
+                                    0x575EDF, // 23 Map zones
+                                    0x57A88D, // 24 Brightness slider posn
+                                    0x57AA81, // 25 Radio slider posn
+                                    0x57ACBE, // 26 Sfx slider posn
+                                    0x57AEB0, // 27 Draw slider posn
+                                    0x57B0E4, // 28 Mouse slider posn
+                                    0x57A807, // 29 Brightness slider
+                                    0x57A811, // 30 Brightness slider
+                                    0x57A9FE, // 31 Radio slider
+                                    0x57AA08, // 32 Radio slider
+                                    0x57AC2F, // 33 Sfx slider
+                                    0x57AC39, // 34 Sfx slider
+                                    0x57AE36, // 35 Draw distance slider
+                                    0x57AE40, // 36 Draw distance slider
+                                    0x57B064, // 37 Mouse acc slider
+                                    0x57B06E, // 38 Mouse acc slider
+                                    0x584A12, // 39 DrawYouAreHereSprite
+                                    0x5740BC, // 40 Message screen
     };
 
     int m_dwFrontendHeight[] = { 0x5795AD, // 0 Menu text
