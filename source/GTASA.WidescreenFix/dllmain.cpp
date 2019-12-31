@@ -1472,25 +1472,21 @@ void ApplyIniOptions()
     ResX = iniReader.ReadInteger("MAIN", "ResX", -1);
     ResY = iniReader.ReadInteger("MAIN", "ResY", -1);
     szForceAspectRatio = iniReader.ReadString("MAIN", "ForceAspectRatio", "auto");
+    fHudWidthScale = iniReader.ReadFloat("MAIN", "HudWidthScale", 1.0f);
+    fHudHeightScale = iniReader.ReadFloat("MAIN", "HudHeightScale", 1.0f);
+    fSubtitlesScale = iniReader.ReadFloat("MAIN", "SubtitlesScale", 1.0f);
 
-    // HUD
-    bool DisableWhiteCrosshairDot = iniReader.ReadInteger("HUD", "DisableWhiteCrosshairDot", 0) != 0;
-    ReplaceTextShadowWithOutline = iniReader.ReadInteger("HUD", "ReplaceTextShadowWithOutline", 0);
-    fHudWidthScale = iniReader.ReadFloat("HUD", "HudWidthScale", 1.0f);
-    fHudHeightScale = iniReader.ReadFloat("HUD", "HudHeightScale", 1.0f);
-    fSubtitlesScale = iniReader.ReadFloat("HUD", "SubtitlesScale", 1.0f);
-
-    fRadarWidthScale = iniReader.ReadFloat("HUD", "RadarWidthScale", 1.0f);
-    fRadarHeightScale = iniReader.ReadFloat("HUD", "RadarHeightScale", 1.0f);
-
-    // FOV
-    bRestoreCutsceneFOV = iniReader.ReadInteger("FOV", "RestoreCutsceneFOV", 1) != 0;
-    bDontTouchFOV = iniReader.ReadInteger("FOV", "DontTouchFOV", 0) != 0;
+    fRadarWidthScale = iniReader.ReadFloat("MAIN", "RadarWidthScale", 1.0f);
+    fRadarHeightScale = iniReader.ReadFloat("MAIN", "RadarHeightScale", 1.0f);
+    bRestoreCutsceneFOV = iniReader.ReadInteger("MAIN", "RestoreCutsceneFOV", 1) != 0;
+    bDontTouchFOV = iniReader.ReadInteger("MAIN", "DontTouchFOV", 0) != 0;
 
     // MISC
     bool bAltTab = iniReader.ReadInteger("MISC", "AllowAltTabbingWithoutPausing", 0) != 0;
     bSmartCutsceneBorders = iniReader.ReadInteger("MISC", "SmartCutsceneBorders", 1) != 0;
     nHideAABug = iniReader.ReadInteger("MISC", "HideAABug", 0);
+    bool DisableWhiteCrosshairDot = iniReader.ReadInteger("MISC", "DisableWhiteCrosshairDot", 0) != 0;
+    ReplaceTextShadowWithOutline = iniReader.ReadInteger("MISC", "ReplaceTextShadowWithOutline", 0);
 
     if (bAltTab)
     {
