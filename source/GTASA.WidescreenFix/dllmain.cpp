@@ -16,6 +16,30 @@ float fDefaultWidth;
 float fDefaultCoords;
 float fFrontendDefaultWidth;
 
+void ReadSettings()
+{
+    CIniReader iniReader("");
+    ResX = iniReader.ReadInteger("MAIN", "ResX", -1);
+    ResY = iniReader.ReadInteger("MAIN", "ResY", -1);
+    szForceAspectRatio = iniReader.ReadString("MAIN", "ForceAspectRatio", "auto");
+    szFrontendAspectRatio = iniReader.ReadString("MAIN", "FrontendAspectRatio", "auto");
+    bDontTouchFOV = iniReader.ReadInteger("MAIN", "DontTouchFOV", 0) != 0;
+    bRestoreCutsceneFOV = iniReader.ReadInteger("MAIN", "RestoreCutsceneFOV", 1) != 0;
+
+    fHudWidthScale = iniReader.ReadFloat("MAIN", "HudWidthScale", 1.0f); fHudWidthScale == 0.0f ? fHudWidthScale = 1.0f : fHudWidthScale;
+    fHudHeightScale = iniReader.ReadFloat("MAIN", "HudHeightScale", 1.0f); fHudHeightScale == 0.0f ? fHudHeightScale = 1.0f : fHudHeightScale;
+    fRadarWidthScale = iniReader.ReadFloat("MAIN", "RadarWidthScale", 1.0f); fRadarWidthScale == 0.0f ? fRadarWidthScale = 1.0f : fRadarWidthScale;
+    fRadarHeightScale = iniReader.ReadFloat("MAIN", "RadarHeightScale", 1.0f); fRadarHeightScale == 0.0f ? fRadarHeightScale = 1.0f : fRadarHeightScale;
+    fSubtitlesScale = iniReader.ReadFloat("MAIN", "SubtitlesScale", 1.0f); fSubtitlesScale == 0.0f ? fSubtitlesScale = 1.0f : fSubtitlesScale;
+
+    bSmartCutsceneBorders = iniReader.ReadInteger("MISC", "SmartCutsceneBorders", 1) != 0;
+    bAllowAltTabbingWithoutPausing = iniReader.ReadInteger("MISC", "AllowAltTabbingWithoutPausing", 0) != 0;
+    nHideAABug = iniReader.ReadInteger("MISC", "HideAABug", 0);
+    ReplaceTextShadowWithOutline = iniReader.ReadInteger("MISC", "ReplaceTextShadowWithOutline", 0);
+    DisableWhiteCrosshairDot = iniReader.ReadInteger("MISC", "DisableWhiteCrosshairDot", 0) != 0;
+    ReplaceTextShadowWithOutline = iniReader.ReadInteger("MISC", "ReplaceTextShadowWithOutline", 0);
+}
+
 void GetMemoryAddresses()
 {
     RsGlobal = (RsGlobalType *)0xC17040;
@@ -29,10 +53,6 @@ void GetMemoryAddresses()
 
 void OverwriteResolution()
 {
-    CIniReader iniReader("");
-    ResX = iniReader.ReadInteger("MAIN", "ResX", -1);
-    ResY = iniReader.ReadInteger("MAIN", "ResY", -1);
-
     // Unlocked widescreen resolutions by Silent
     injector::WriteMemory(0x745B71, 0x9090687D, true);
     injector::WriteMemory(0x74596C, 0x9090127D, true);
@@ -947,7 +967,7 @@ void InstallFrontendFixes()
     hbDrawBarChart.fun = injector::MakeCALL(0x574F54, DrawBarChartHook).get();
     injector::MakeCALL(0x574F54, DrawBarChartHook);
 
-    // Fix intro videos.
+    // Fix video player.
     injector::MakeJMP(0x7466D0, VideoPlayerShowHook);
 }
 
@@ -1445,12 +1465,10 @@ void __cdecl DrawLoadingBarHook(float x, float y, unsigned int w, unsigned int h
 
 void Install2dSpriteFixes()
 {
-    CIniReader iniReader("");
-    szForceAspectRatio = iniReader.ReadString("MAIN", "FrontendAspectRatio", "auto");
-    if (strncmp(szForceAspectRatio.c_str(), "auto", 4) != 0)
+    if (strncmp(szFrontendAspectRatio.c_str(), "auto", 4) != 0)
     {
-        FrontendAspectRatioWidth = std::stoi(szForceAspectRatio.c_str());
-        FrontendAspectRatioHeight = std::stoi(strchr(szForceAspectRatio.c_str(), ':') + 1);
+        FrontendAspectRatioWidth = std::stoi(szFrontendAspectRatio.c_str());
+        FrontendAspectRatioHeight = std::stoi(strchr(szFrontendAspectRatio.c_str(), ':') + 1);
     }
     else
     {
@@ -1468,29 +1486,7 @@ void Install2dSpriteFixes()
 
 void ApplyIniOptions()
 {
-    CIniReader iniReader("");
-
-    // MAIN
-    ResX = iniReader.ReadInteger("MAIN", "ResX", -1);
-    ResY = iniReader.ReadInteger("MAIN", "ResY", -1);
-    szForceAspectRatio = iniReader.ReadString("MAIN", "ForceAspectRatio", "auto");
-    fHudWidthScale = iniReader.ReadFloat("MAIN", "HudWidthScale", 1.0f);
-    fHudHeightScale = iniReader.ReadFloat("MAIN", "HudHeightScale", 1.0f);
-    fSubtitlesScale = iniReader.ReadFloat("MAIN", "SubtitlesScale", 1.0f);
-
-    fRadarWidthScale = iniReader.ReadFloat("MAIN", "RadarWidthScale", 1.0f);
-    fRadarHeightScale = iniReader.ReadFloat("MAIN", "RadarHeightScale", 1.0f);
-    bRestoreCutsceneFOV = iniReader.ReadInteger("MAIN", "RestoreCutsceneFOV", 1) != 0;
-    bDontTouchFOV = iniReader.ReadInteger("MAIN", "DontTouchFOV", 0) != 0;
-
-    // MISC
-    bool bAltTab = iniReader.ReadInteger("MISC", "AllowAltTabbingWithoutPausing", 0) != 0;
-    bSmartCutsceneBorders = iniReader.ReadInteger("MISC", "SmartCutsceneBorders", 1) != 0;
-    nHideAABug = iniReader.ReadInteger("MISC", "HideAABug", 0);
-    bool DisableWhiteCrosshairDot = iniReader.ReadInteger("MISC", "DisableWhiteCrosshairDot", 0) != 0;
-    ReplaceTextShadowWithOutline = iniReader.ReadInteger("MISC", "ReplaceTextShadowWithOutline", 0);
-
-    if (bAltTab)
+    if (bAllowAltTabbingWithoutPausing)
     {
         //Windowed mode fix (from MTA sources)
         if ((GetWindowLong((HWND)RsGlobal->ps, GWL_STYLE) & WS_POPUP) == 0) {
@@ -1546,6 +1542,7 @@ void ApplyIniOptions()
 
 void Init()
 {
+    ReadSettings();
     GetMemoryAddresses();
     OverwriteResolution();
     ApplyIniOptions();

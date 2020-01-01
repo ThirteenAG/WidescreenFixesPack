@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "GTA\common.h"
 #include "GTA\global.h"
+#include <d3d9.h>
+#include <control.h>
 
 hook::pattern dwGameLoadStatePattern, DxInputNeedsExclusive, EmergencyVehiclesFixPattern, RadarScalingPattern;
 hook::pattern MenuPattern, MenuPattern15625, RsSelectDevicePattern, CDarkelDrawMessagesPattern, CDarkelDrawMessagesPattern2, CParticleRenderPattern;
@@ -20,6 +22,32 @@ uint16_t* font94B924;
 uint32_t* CMenuManager_m_PrefsLanguage;
 void OverwriteResolution();
 void* pRwRenderStateSet;
+
+void ReadSettings() 
+{
+    CIniReader iniReader("");
+    ResX = iniReader.ReadInteger("MAIN", "ResX", -1);
+    ResY = iniReader.ReadInteger("MAIN", "ResY", -1);
+    szForceAspectRatio = iniReader.ReadString("MAIN", "ForceAspectRatio", "auto");
+    szFrontendAspectRatio = iniReader.ReadString("MAIN", "FrontendAspectRatio", "auto");
+    bDontTouchFOV = iniReader.ReadInteger("MAIN", "DontTouchFOV", 0) != 0;
+    bRestoreCutsceneFOV = iniReader.ReadInteger("MAIN", "RestoreCutsceneFOV", 1) != 0;
+
+    fHudWidthScale = iniReader.ReadFloat("MAIN", "HudWidthScale", 0.0f); fHudWidthScale == 0.0f ? fHudWidthScale = 1.0f : fHudWidthScale;
+    fHudHeightScale = iniReader.ReadFloat("MAIN", "HudHeightScale", 0.0f); fHudHeightScale == 0.0f ? fHudHeightScale = 1.0f : fHudHeightScale;
+    fRadarWidthScale = iniReader.ReadFloat("MAIN", "RadarWidthScale", 0.0f); fRadarWidthScale == 0.0f ? fRadarWidthScale = 1.0f : fRadarWidthScale;
+    fSubtitlesScale = iniReader.ReadFloat("MAIN", "SubtitlesScale", 0.0f); fSubtitlesScale == 0.0f ? fSubtitlesScale = 1.0f : fSubtitlesScale;
+
+    bSmartCutsceneBorders = iniReader.ReadInteger("MISC", "SmartCutsceneBorders", 1) != 0;
+    bAllowAltTabbingWithoutPausing = iniReader.ReadInteger("MISC", "AllowAltTabbingWithoutPausing", 0) != 0;
+    nHideAABug = iniReader.ReadInteger("MISC", "HideAABug", 0);
+    bSmallerVehicleCorona = iniReader.ReadInteger("MISC", "SmallerVehicleCorona", 0);
+    bNoLightSquare = iniReader.ReadInteger("MISC", "NoLightSquare", 0);
+    szSelectedMultisamplingLevels = iniReader.ReadString("MISC", "ForceMultisamplingLevel", "");
+    SelectedMultisamplingLevels = iniReader.ReadInteger("MISC", "ForceMultisamplingLevel", 0);
+    bIVRadarScaling = iniReader.ReadInteger("MISC", "IVRadarScaling", 0) != 0;
+    ReplaceTextShadowWithOutline = iniReader.ReadInteger("MISC", "ReplaceTextShadowWithOutline", 0);
+}
 
 void GetPatterns()
 {
@@ -119,10 +147,6 @@ signed int __cdecl RsSelectDeviceHook2()
 
 void OverwriteResolution()
 {
-    CIniReader iniReader("");
-    ResX = iniReader.ReadInteger("MAIN", "ResX", -1);
-    ResY = iniReader.ReadInteger("MAIN", "ResY", -1);
-
     if (!ResX || !ResY)
         std::tie(ResX, ResY) = GetDesktopRes();
     else if (ResX == -1 || ResY == -1)
@@ -261,7 +285,7 @@ void RsSelectDeviceHook()
 
 void FixCoronas()
 {
-    if (bFixVehicleLights) {
+    if (bNoLightSquare) {
         auto pattern = hook::pattern("D8 0E D9 1E D9 05 ? ? ? ? D8 35 ? ? ? ? D8 0B D9 1B"); //0x57797A 
         injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(1), 0x0B, true);
 
@@ -474,10 +498,6 @@ void __cdecl SetDropShadowPosition(uint8_t Pos)
 
 void ApplyIniOptions()
 {
-    CIniReader iniReader("");
-    fHudWidthScale = iniReader.ReadFloat("MAIN", "HudWidthScale", 0.0f); fHudWidthScale == 0.0f ? fHudWidthScale = 1.0f : fHudWidthScale;
-    fHudHeightScale = iniReader.ReadFloat("MAIN", "HudHeightScale", 0.0f); fHudHeightScale == 0.0f ? fHudHeightScale = 1.0f : fHudHeightScale;
-
     if (fHudWidthScale && fHudHeightScale)
     {
         for (size_t i = 0; i < DrawHudHorScalePattern.size(); i++)
@@ -518,8 +538,6 @@ void ApplyIniOptions()
         }
     }
 
-    bIVRadarScaling = iniReader.ReadInteger("MISC", "IVRadarScaling", 0) != 0;
-    fRadarWidthScale = iniReader.ReadFloat("MAIN", "RadarWidthScale", 0.0f); fRadarWidthScale == 0.0f ? fRadarWidthScale = 1.0f : fRadarWidthScale;
     if (fRadarWidthScale && !bIVRadarScaling)
     {
         for (size_t i = 0; i < CRadarPattern.size(); i++)
@@ -541,7 +559,6 @@ void ApplyIniOptions()
         injector::WriteMemory(pattern.count(2).get(1).get<uint32_t>(2), &fPlayerMarkerPos, true);
     }
 
-    fSubtitlesScale = iniReader.ReadFloat("MAIN", "SubtitlesScale", 0.0f); fSubtitlesScale == 0.0f ? fSubtitlesScale = 1.0f : fSubtitlesScale;
     if (fSubtitlesScale)
     {
         auto pattern = hook::pattern("D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59"); //0x556A02
@@ -554,10 +571,6 @@ void ApplyIniOptions()
         injector::WriteMemory<float>(*pattern.count(1).get(0).get<uint32_t*>(2), 0.57999998f * fSubtitlesScale, true);
     }
 
-    bRestoreCutsceneFOV = iniReader.ReadInteger("MAIN", "RestoreCutsceneFOV", 1) != 0;
-    bDontTouchFOV = iniReader.ReadInteger("MAIN", "DontTouchFOV", 0) != 0;
-
-    szForceAspectRatio = iniReader.ReadString("MAIN", "ForceAspectRatio", "auto");
     if (strncmp(szForceAspectRatio.c_str(), "auto", 4) != 0)
     {
         AspectRatioWidth = std::stoi(szForceAspectRatio.c_str());
@@ -566,21 +579,18 @@ void ApplyIniOptions()
         fCustomAspectRatioVer = static_cast<float>(AspectRatioHeight);
     }
 
-    nHideAABug = iniReader.ReadInteger("MISC", "HideAABug", 0);
     if (nHideAABug)
     {
         auto pattern = hook::pattern("E8 ? ? ? ? A1 ? ? ? ? 50 E8"); //0x57FAA0
         injector::MakeJMP(injector::ReadRelativeOffset(pattern.count(16).get(15).get<uint32_t>(1), 4, true), Hide1pxAABug, true);
     }
 
-    bSmartCutsceneBorders = iniReader.ReadInteger("MISC", "SmartCutsceneBorders", 1) != 0;
     if (bSmartCutsceneBorders)
     {
         injector::MakeCALL(BordersPattern.get(14).get<uint32_t>(7), CCamera::DrawBordersForWideScreen); //0x4A61EE 0x54A223
         injector::MakeCALL(BordersPattern.get(21).get<uint32_t>(7), CCamera::DrawBordersForWideScreen);
     }
 
-    ReplaceTextShadowWithOutline = iniReader.ReadInteger("MISC", "ReplaceTextShadowWithOutline", 0);
     if (ReplaceTextShadowWithOutline)
     {
         auto pattern = hook::pattern("D8 44 24 38 D9 1C 24 E8 ? ? ? ? 83 C4 18"); //0x551850 
@@ -621,10 +631,9 @@ void ApplyIniOptions()
     hbPrintString2.fun = injector::MakeCALL(pattern.count(1).get(0).get<uint32_t>(2), PrintStringHook2).get();
 
     pattern = hook::pattern("A1 ? ? ? ? 3B C3"); //0x65C321
-    szForceAspectRatio = iniReader.ReadString("MISC", "ForceMultisamplingLevel", "");
-    if (strncmp(szForceAspectRatio.c_str(), "max", 3) != 0)
+
+    if (strncmp(szSelectedMultisamplingLevels.c_str(), "max", 3) != 0)
     {
-        SelectedMultisamplingLevels = iniReader.ReadInteger("MISC", "ForceMultisamplingLevel", 0);
         injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(1), &SelectedMultisamplingLevels, true);
     }
     else
@@ -633,8 +642,7 @@ void ApplyIniOptions()
         injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(1), *pattern2.count(3).get(2).get<uint32_t*>(2), true);
     }
 
-    bFixVehicleLights = iniReader.ReadInteger("MISC", "FixVehicleLights", 0);
-    if (bFixVehicleLights)
+    if (bSmallerVehicleCorona)
     {
         pattern = hook::pattern("D9 C2 DE CB D9 C2 DE CB D9 05");
         injector::WriteMemory<float>(*pattern.count(1).get(0).get<uint32_t*>(10), 2.0f, true); //car lights stretch 0x69590C
@@ -691,7 +699,6 @@ void ApplyIniOptions()
         injector::MakeJMP(pattern.count(1).get(0).get<uint32_t>(0), SetDropShadowPosition, true);
     }
 
-    bAllowAltTabbingWithoutPausing = iniReader.ReadInteger("MISC", "AllowAltTabbingWithoutPausing", 0) != 0;
     if (bAllowAltTabbingWithoutPausing)
     {
         auto pattern = hook::pattern("A0 ? ? ? ? B9 ? ? ? ? A2 ? ? ? ? A0 ? ? ? ?"); //0x4A4FD0
@@ -752,12 +759,10 @@ void __cdecl SetVerticesHook(CRect& a1, CRGBA const& a2, CRGBA const& a3, CRGBA 
 
 void Fix2DSprites()
 {
-    CIniReader iniReader("");
-    szForceAspectRatio = iniReader.ReadString("MAIN", "FrontendAspectRatio", "auto");
-    if (strncmp(szForceAspectRatio.c_str(), "auto", 4) != 0)
+    if (strncmp(szFrontendAspectRatio.c_str(), "auto", 4) != 0)
     {
-        FrontendAspectRatioWidth = std::stoi(szForceAspectRatio.c_str());
-        FrontendAspectRatioHeight = std::stoi(strchr(szForceAspectRatio.c_str(), ':') + 1);
+        FrontendAspectRatioWidth = std::stoi(szFrontendAspectRatio.c_str());
+        FrontendAspectRatioHeight = std::stoi(strchr(szFrontendAspectRatio.c_str(), ':') + 1);
     }
     else
     {
@@ -775,6 +780,7 @@ void Fix2DSprites()
 void Init()
 {
     //Immediate changes
+    ReadSettings();
     GetPatterns();
     OverwriteResolution();
     DxInputNeedsExclusive.size() > 0 ? injector::WriteMemory<uint32_t>(DxInputNeedsExclusive.count(1).get(0).get<uint32_t>(0), 0xC3C030, true) : nullptr; //mouse fix
