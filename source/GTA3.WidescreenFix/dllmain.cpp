@@ -20,6 +20,31 @@ void* pRwRenderStateSet;
 float* pfScreenAspectRatioSkin;
 float* pfSkinX;
 
+void ReadSettings() 
+{
+    CIniReader iniReader("");
+    ResX = iniReader.ReadInteger("MAIN", "ResX", -1);
+    ResY = iniReader.ReadInteger("MAIN", "ResY", -1);
+    szForceAspectRatio = iniReader.ReadString("MAIN", "ForceAspectRatio", "auto");
+    szFrontendAspectRatio = iniReader.ReadString("MAIN", "FrontendAspectRatio", "auto");
+    bDontTouchFOV = iniReader.ReadInteger("MAIN", "DontTouchFOV", 0) != 0;
+    bRestoreCutsceneFOV = iniReader.ReadInteger("MAIN", "RestoreCutsceneFOV", 1) != 0;
+
+    fHudWidthScale = iniReader.ReadFloat("MAIN", "HudWidthScale", 0.0f); fHudWidthScale == 0.0f ? fHudWidthScale = 1.0f : fHudWidthScale;
+    fHudHeightScale = iniReader.ReadFloat("MAIN", "HudHeightScale", 0.0f); fHudHeightScale == 0.0f ? fHudHeightScale = 1.0f : fHudHeightScale;
+    fRadarWidthScale = iniReader.ReadFloat("MAIN", "RadarWidthScale", 0.0f); fRadarWidthScale == 0.0f ? fRadarWidthScale = 1.0f : fRadarWidthScale;
+    fSubtitlesScale = iniReader.ReadFloat("MAIN", "SubtitlesScale", 0.0f); fSubtitlesScale == 0.0f ? fSubtitlesScale = 1.0f : fSubtitlesScale;
+
+    bSmartCutsceneBorders = iniReader.ReadInteger("MISC", "SmartCutsceneBorders", 1) != 0;
+    nHideAABug = iniReader.ReadInteger("MISC", "HideAABug", 0);
+    bSmallerVehicleCorona = iniReader.ReadInteger("MISC", "SmallerVehicleCorona", 0);
+    bNoLightSquare = iniReader.ReadInteger("MISC", "NoLightSquare", 0);
+    szSelectedMultisamplingLevels = iniReader.ReadString("MISC", "ForceMultisamplingLevel", "");
+    SelectedMultisamplingLevels = iniReader.ReadInteger("MISC", "ForceMultisamplingLevel", 0);
+    bIVRadarScaling = iniReader.ReadInteger("MISC", "IVRadarScaling", 0) != 0;
+    ReplaceTextShadowWithOutline = iniReader.ReadInteger("MISC", "ReplaceTextShadowWithOutline", 0);
+}
+
 void GetPatterns()
 {
     dwGameLoadStatePattern = hook::pattern("C7 05 ? ? ? ? 09 00 00 00"); //0x582E78
@@ -119,10 +144,6 @@ signed int __cdecl RsSelectDeviceHook2()
 
 void OverwriteResolution()
 {
-    CIniReader iniReader("");
-    ResX = iniReader.ReadInteger("MAIN", "ResX", -1);
-    ResY = iniReader.ReadInteger("MAIN", "ResY", -1);
-
     if (!ResX || !ResY)
         std::tie(ResX, ResY) = GetDesktopRes();
     else if (ResX == -1 || ResY == -1)
@@ -257,7 +278,7 @@ void RsSelectDeviceHook()
 
 void FixCoronas()
 {
-    if (bFixVehicleLights) {
+    if (bNoLightSquare) {
         auto pattern = hook::pattern("D8 0E D9 1E D9 05 ? ? ? ? D8 35 ? ? ? ? D8 0B D9 1B"); //0x51C46A 
         injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(1), 0x0B, true);
 
@@ -420,10 +441,6 @@ void __cdecl PrintStringHook2(float PosX, float PosY, wchar_t* c)
 
 void ApplyIniOptions()
 {
-    CIniReader iniReader("");
-    fHudWidthScale = iniReader.ReadFloat("MAIN", "HudWidthScale", 0.0f); fHudWidthScale == 0.0f ? fHudWidthScale = 1.0f : fHudWidthScale;
-    fHudHeightScale = iniReader.ReadFloat("MAIN", "HudHeightScale", 0.0f); fHudHeightScale == 0.0f ? fHudHeightScale = 1.0f : fHudHeightScale;
-
     if (fHudWidthScale && fHudHeightScale)
     {
         for (size_t i = 0; i < DrawHudHorScalePattern.size(); i++)
@@ -466,8 +483,6 @@ void ApplyIniOptions()
         }
     }
 
-    bIVRadarScaling = iniReader.ReadInteger("MISC", "IVRadarScaling", 0) != 0;
-    fRadarWidthScale = iniReader.ReadFloat("MAIN", "RadarWidthScale", 0.0f); fRadarWidthScale == 0.0f ? fRadarWidthScale = 1.0f : fRadarWidthScale;
     if (fRadarWidthScale && !bIVRadarScaling)
     {
         uint32_t* p15625 = CRadarPattern.get(0).get<uint32_t>(2);
@@ -482,7 +497,6 @@ void ApplyIniOptions()
         injector::WriteMemory(pattern.get(1).get<uint32_t>(2), &fPlayerMarkerPos, true);*/
     }
 
-    fSubtitlesScale = iniReader.ReadFloat("MAIN", "SubtitlesScale", 0.0f); fSubtitlesScale == 0.0f ? fSubtitlesScale = 1.0f : fSubtitlesScale;
     if (fSubtitlesScale)
     {
         auto pattern = hook::pattern("D8 0D ? ? ? ? D9 1C 24 DB 05 ? ? ? ? 50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24"); //0x5FDC7C
@@ -491,10 +505,6 @@ void ApplyIniOptions()
         injector::WriteMemory<float>(*pattern.count(13).get(12).get<uint32_t*>(2), 0.47999999f * fSubtitlesScale, true);
     }
 
-    bRestoreCutsceneFOV = iniReader.ReadInteger("MAIN", "RestoreCutsceneFOV", 1) != 0;
-    bDontTouchFOV = iniReader.ReadInteger("MAIN", "DontTouchFOV", 0) != 0;
-
-    szForceAspectRatio = iniReader.ReadString("MAIN", "ForceAspectRatio", "auto");
     if (strncmp(szForceAspectRatio.c_str(), "auto", 4) != 0)
     {
         AspectRatioWidth = std::stoi(szForceAspectRatio);
@@ -503,21 +513,18 @@ void ApplyIniOptions()
         fCustomAspectRatioVer = static_cast<float>(AspectRatioHeight);
     }
 
-    nHideAABug = iniReader.ReadInteger("MISC", "HideAABug", 0);
     if (nHideAABug)
     {
         auto pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? C3 00 00 00 00"); //0x48E0DC
         injector::MakeJMP(pattern.count(4).get(3).get<uint32_t>(15), Hide1pxAABug, true);
     }
 
-    bSmartCutsceneBorders = iniReader.ReadInteger("MISC", "SmartCutsceneBorders", 1) != 0;
     if (bSmartCutsceneBorders)
     {
         injector::MakeCALL(BordersPattern.count(18).get(11).get<uint32_t>(7), CCamera::DrawBordersForWideScreen); //0x4A61EE 0x54A223
         injector::MakeCALL(BordersPattern.count(18).get(17).get<uint32_t>(7), CCamera::DrawBordersForWideScreen);
     }
 
-    ReplaceTextShadowWithOutline = iniReader.ReadInteger("MISC", "ReplaceTextShadowWithOutline", 0);
     if (ReplaceTextShadowWithOutline)
     {
         auto pattern = hook::pattern("E8 ? ? ? ? 83 C4 0C 89 E9 FF 35 ? ? ? ? E8 ? ? ? ? 89 E9");
@@ -573,10 +580,8 @@ void ApplyIniOptions()
     auto pattern = hook::pattern("A1 ? ? ? ? 3B C3"); //0x5B7D75
     if (pattern.size() > 0)
     {
-        szForceAspectRatio = iniReader.ReadString("MISC", "ForceMultisamplingLevel", "");
-        if (strncmp(szForceAspectRatio.c_str(), "max", 3) != 0)
+        if (strncmp(szSelectedMultisamplingLevels.c_str(), "max", 3) != 0)
         {
-            SelectedMultisamplingLevels = iniReader.ReadInteger("MISC", "ForceMultisamplingLevel", 0);
             injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(1), &SelectedMultisamplingLevels, true);
         }
         else
@@ -586,7 +591,7 @@ void ApplyIniOptions()
         }
     }
 
-    if (iniReader.ReadInteger("MISC", "FixVehicleLights", 0))
+    if (bSmallerVehicleCorona)
     {
         pattern = hook::pattern("D9 C2 DE CB D9 C2 DE CB D9 05");
         injector::WriteMemory<float>(*pattern.count(1).get(0).get<uint32_t*>(10), 2.0f, true); //car lights stretch 0x4F949C
@@ -627,12 +632,6 @@ void ApplyIniOptions()
         pattern = hook::pattern("D9 05 ? ? ? ? D8 C9 D9 05 ? ? ? ? D8 CA DA 6C 24 34");
         injector::WriteMemory<float>(*pattern.count(1).get(0).get<uint32_t*>(2), fCustomRadarRingHeightIV, true); //0x5FDC68
     }
-
-    /*bSmallerTextShadows = iniReader.ReadInteger("MAIN", "SmallerTextShadows", 1) != 0;
-    if (bSmallerTextShadows || ReplaceTextShadowWithOutline)
-    {
-
-    }*/
 }
 
 injector::hook_back<void(__cdecl*)(CRect&, CRGBA const&, CRGBA const&, CRGBA const&, CRGBA const&, unsigned int)> hbSetVertices;
@@ -688,12 +687,10 @@ static void __cdecl SetVerticesHook(CRect& a1, CRGBA const& a2, CRGBA const& a3,
 
 void Fix2DSprites()
 {
-    CIniReader iniReader("");
-    szForceAspectRatio = iniReader.ReadString("MAIN", "FrontendAspectRatio", "auto");
-    if (strncmp(szForceAspectRatio.c_str(), "auto", 4) != 0)
+    if (strncmp(szFrontendAspectRatio.c_str(), "auto", 4) != 0)
     {
-        FrontendAspectRatioWidth = std::stoi(szForceAspectRatio.c_str());
-        FrontendAspectRatioHeight = std::stoi(strchr(szForceAspectRatio.c_str(), ':') + 1);
+        FrontendAspectRatioWidth = std::stoi(szFrontendAspectRatio.c_str());
+        FrontendAspectRatioHeight = std::stoi(strchr(szFrontendAspectRatio.c_str(), ':') + 1);
     }
     else
     {
@@ -712,6 +709,7 @@ void Fix2DSprites()
 void Init()
 {
     //Immediate changes
+    ReadSettings();
     GetPatterns();
     OverwriteResolution();
     GetMemoryAddresses();
