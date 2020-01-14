@@ -789,20 +789,31 @@ void VideoPlayerShowHook() {
     pvVideoWindow->get_Width(&r);
     pvVideoWindow->get_Height(&b);
 
-    float w, h;
-    if (*CDraw::pfScreenAspectRatio < (float)(r) / b) {
-        w = RsGlobal->MaximumWidth;
-        h = RsGlobal->MaximumHeight * *CDraw::pfScreenAspectRatio / ((float)(r) / b);
+    float fMiddleScrCoord = (float)RsGlobal->MaximumWidth / 2.0f;
+
+    float w = r;
+    float h = b;
+
+    if (FrontendAspectRatioWidth && FrontendAspectRatioHeight)
+    {
+        w = (float)FrontendAspectRatioWidth;
+        h = (float)FrontendAspectRatioHeight;
     }
-    else {
-        w = RsGlobal->MaximumWidth * ((float)(r) / b) / *CDraw::pfScreenAspectRatio;
-        h = RsGlobal->MaximumHeight;
+    else
+    {
+        if (w == h && w > 0 && h > 0)
+        {
+            w = 4.0f;
+            h = 3.0f;
+        }
     }
 
-    long Left = (RsGlobal->MaximumWidth - w) / 2;
-    long Bottom = (RsGlobal->MaximumHeight + h) / 2;
-    long Right = (RsGlobal->MaximumWidth + w) / 2;
-    long Top = (RsGlobal->MaximumHeight - h) / 2;
+    fFrontendDefaultWidth = ((((float)RsGlobal->MaximumHeight * (w / h))));
+
+    long Top = 0.0f;
+    long Left = fMiddleScrCoord - ((((float)RsGlobal->MaximumHeight * (w / h))) / 2.0f);
+    long Bottom = (float)RsGlobal->MaximumHeight;
+    long Right = fMiddleScrCoord + ((((float)RsGlobal->MaximumHeight * (w / h))) / 2.0f);
 
     HRESULT wPos = pvVideoWindow->SetWindowPosition(Left, Top, Right - Left, Bottom);
     if (wPos >= 0) {
@@ -1385,6 +1396,9 @@ void InstallHUDFixes() {
     // Check subs size for script stuff
     hbSetCentreSize.fun = injector::MakeCALL(0x58C603, SetCentreSizeHook).get();
     injector::MakeCALL(0x58C603, &SetCentreSizeHook);
+
+    hbSetCentreSize.fun = injector::MakeCALL(0x58C45C, SetCentreSizeHook).get();
+    injector::MakeCALL(0x58C45C, &SetCentreSizeHook);
 
     // Second player fix.
     injector::WriteMemory<const void*>(0x58F9A0 + 0x2, &fHUDWidth[110], true); // Weapon icon X
