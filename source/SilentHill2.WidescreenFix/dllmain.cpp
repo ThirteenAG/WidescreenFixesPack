@@ -109,7 +109,7 @@ void Init()
         pattern = hook::pattern("A3 ? ? ? ? 89 44 24 14 A1 ? ? ? ? 8D 4C 24 0C 51");
         struct SetScaleHook
         {
-            void operator()(injector::reg_pack& regs)
+            void operator()(injector::reg_pack&)
             {
                 *dword_A37080 = Screen.Width43;
             }
@@ -118,7 +118,7 @@ void Init()
         pattern = hook::pattern("89 15 ? ? ? ? C6 05 ? ? ? ? 01 33 C0 C3");
         struct SetScaleHook2
         {
-            void operator()(injector::reg_pack& regs)
+            void operator()(injector::reg_pack&)
             {
                 *dword_A37080 = Screen.Width43;
             }
@@ -145,6 +145,7 @@ void Init()
         for (size_t i = 0; i < pattern.size(); ++i)
         {
             //logfile << std::dec << i << " " << std::hex << pattern.get(i).get<uint32_t>(2) << std::endl;
+#pragma warning(suppress: 4389)
             if (!(std::end(f05Indices) == std::find(std::begin(f05Indices), std::end(f05Indices), i)))
             {
                 injector::WriteMemory(pattern.get(i).get<uint32_t>(2), &Screen.fHudOffset, true);
@@ -192,7 +193,7 @@ void Init()
         static float temp = 0.0f;
         struct TextPosHook2
         {
-            void operator()(injector::reg_pack& regs)
+            void operator()(injector::reg_pack&)
             {
                 _asm {FSTP DWORD PTR[temp]}
                 *(float*)flt_807498 += Screen.TextOffset;
@@ -428,7 +429,7 @@ void Init()
         char moduleName[MAX_PATH];
         GetModuleFileNameA(NULL, moduleName, MAX_PATH);
         *(strrchr(moduleName, '\\') + 1) = '\0';
-        strcat(moduleName, "local.fix");
+        strcat_s(moduleName, MAX_PATH, "local.fix");
 
         auto FileExists = [](LPCSTR szPath) -> BOOL
         {
@@ -448,7 +449,7 @@ void Init()
     if (nFPSLimit)
     {
         pattern = hook::pattern("6A 00 6A ? 50 51");
-        injector::WriteMemory<uint8_t>(pattern.count(2).get(1).get<uint32_t>(3), nFPSLimit, true); //004F6F53
+        injector::WriteMemory<uint8_t>(pattern.count(2).get(1).get<uint32_t>(3), (uint8_t)nFPSLimit, true); //004F6F53
     }
 
     if (bPS2CameraSpeed)
@@ -476,7 +477,7 @@ void Init()
         injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &f1, true); //0051C302 
 
         pattern = hook::pattern("74 ? D9 05 ? ? ? ? E8 ? ? ? ? 50 E8");
-        injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(0), 0xEBi8, true); //0058C0E3
+        injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(0), (uint8_t)0xEBi8, true); //0058C0E3
     }
 
     if (bGamepadControlsFix)
@@ -525,7 +526,7 @@ void Init()
     if (bSteamCrashFix)
     {
         pattern = hook::pattern("57 33 C0 B9 0E 00 00 00"); //45826B
-        injector::WriteMemory<uint8_t>(pattern.get_first(-2), 0xEBi8, true);
+        injector::WriteMemory<uint8_t>(pattern.get_first(-2), (uint8_t)0xEBi8, true);
     }
 
     if (nIncreaseNoiseEffectRes)
@@ -573,7 +574,6 @@ void Init()
     if (bFullscreenImages)
     {
         static std::set<uint32_t> images;
-        CIniReader iniReader("");
         auto DataFilePath = iniReader.GetIniPath();
         auto pos = DataFilePath.rfind('.');
         DataFilePath.replace(pos, DataFilePath.length() - pos, ".dat");
@@ -584,8 +584,8 @@ void Init()
         LoadDatFile(DataFilePath, [&mPath](std::string_view line)
             {
                 auto texPath = mPath + std::string(line);
-                std::FILE* fp = std::fopen(texPath.c_str(), "rb");
-                if (fp)
+                std::FILE* fp;
+                if (fopen_s(&fp, texPath.c_str(), "rb") == 0)
                 {
                     uint16_t n;
                     std::fseek(fp, 0x10, SEEK_SET); // seek to start
@@ -601,7 +601,7 @@ void Init()
         pattern = hook::pattern("FF 85 00 04 00 00 5F 5E 5D 5B C3 90 90 90 90 90");
         struct PtrHook
         {
-            void operator()(injector::reg_pack& regs)
+            void operator()(injector::reg_pack&)
             {
                 unk_1DBFC50 = sub_401168() + 0x4;
             }
@@ -621,7 +621,7 @@ void Init()
         pattern = hook::pattern("DB 05 ? ? ? ? A1 ? ? ? ? 81 EC C4 00 00 00 84 C9");
         struct ImagesHook1
         {
-            void operator()(injector::reg_pack& regs)
+            void operator()(injector::reg_pack&)
             {
                 int32_t z = static_cast<int32_t>(Screen.fHeight * (1440.0f / 810.0f));
 
@@ -641,7 +641,7 @@ void Init()
 
         struct ImagesHook2
         {
-            void operator()(injector::reg_pack& regs)
+            void operator()(injector::reg_pack&)
             {
                 int32_t z = Screen.Height + Screen.FullscreenOffsetY + Screen.FullscreenOffsetY;
                 if (isFullscreenImage())
@@ -757,6 +757,8 @@ CEXP void InitializeASI()
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
+    UNREFERENCED_PARAMETER(hModule);
+    UNREFERENCED_PARAMETER(lpReserved);
     if (reason == DLL_PROCESS_ATTACH)
     {
         if (!IsUALPresent()) { InitializeASI(); }
