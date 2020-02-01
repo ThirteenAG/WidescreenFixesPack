@@ -107,6 +107,10 @@ void Init()
         injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &Screen.Width, true);
         pattern = hook::pattern("8B 0D ? ? ? ? 51 6A 00 03 D1 52 33 C0"); //00478B74 "screen position" overlay
         injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &Screen.Width, true);
+        pattern = hook::pattern("8B 0D ? ? ? ? 50 51 33 C0 6A 00 50"); //00478B98 "screen position" overlay
+        injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &Screen.Width, true);
+        pattern = hook::pattern("8B 15 ? ? ? ? 51 52 03 C1 50 33 C0 50"); //00478BB4 "screen position" overlay
+        injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &Screen.Width, true);
 
         pattern = hook::pattern("A3 ? ? ? ? 89 44 24 14 A1 ? ? ? ? 8D 4C 24 0C 51");
         struct SetScaleHook
