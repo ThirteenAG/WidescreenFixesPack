@@ -460,30 +460,11 @@ void Init()
 
     if (bPS2CameraSpeed)
     {
-        static float f15 = 1.5f; // new value 1.5; restores speed of tilting camera action
-        static float f009 = 0.09f; // new value 0.09; increases speed of all camera actions
-        static float f25 = 2.5f; // new value 2.5; restores speed of auto-panning camera action
-        static float f1 = 1.0f; // new value 1.00; reduces speed of auto-tilting camera action
+        uint32_t* dword_51C262 = hook::pattern("BE ? ? ? ? EB 19 8B 15").count(1).get(0).get<uint32_t>(1);
+        injector::WriteMemory<float>(*dword_51C262 + 0x08, 4.0f, true); //006C94C0 indoor camera pan speed
 
-        pattern = hook::pattern("D8 0D ? ? ? ? 8B 6C 24 5C D9 5C 24 38 D9 43 04 D8 0D ? ? ? ? D9 5C 24 3C E8");
-        injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &f15, true); //0051CF36 
-
-        struct CameraHook
-        {
-            void operator()(injector::reg_pack&)
-            {
-                _asm fld dword ptr[f009]
-            }
-        }; injector::MakeInline<CameraHook>(pattern.count(1).get(0).get<uint32_t>(27)); //0051CF51 
-
-        pattern = hook::pattern("D9 05 ? ? ? ? D8 C1 D9 1D ? ? ? ? DD D8 F6 47 08 01");
-        injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &f25, true); //0051C38C
-
-        pattern = hook::pattern("D8 05 ? ? ? ? D9 1D ? ? ? ? D9 44 24 14 D8 4E 04 D8 0D");
-        injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &f1, true); //0051C302 
-
-        pattern = hook::pattern("74 ? D9 05 ? ? ? ? E8 ? ? ? ? 50 E8");
-        injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(0), (uint8_t)0xEBi8, true); //0058C0E3
+        uint32_t* dword_51C276 = hook::pattern("BE ? ? ? ? 74 05 BE ? ? ? ? D9 05").count(1).get(0).get<uint32_t>(1);
+        injector::WriteMemory<float>(*dword_51C276 + 0x08, 4.0f, true); //006C94D0 outdoor camera pan speed
     }
 
     if (bGamepadControlsFix)
