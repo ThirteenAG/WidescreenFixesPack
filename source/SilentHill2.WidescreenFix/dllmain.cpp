@@ -347,24 +347,24 @@ void Init()
     //solves camera pan inconsistency for different resolutions
     //solves camera tilt inconsistency for different resolutions
     auto pattern = hook::pattern("51 E8 ? ? ? ? 89 44 24 00 DB 44 24 00 D9 1D"); //47CD30
-    struct Ret640
+    struct Ret512
     {
         void operator()(injector::reg_pack& regs)
         {
-            regs.eax = 640;
+            regs.eax = 512;
         }
     };
-    struct Ret480
+    struct Ret448
     {
         void operator()(injector::reg_pack& regs)
         {
-            regs.eax = 480;
+            regs.eax = 448;
         }
     };
-    injector::MakeInline<Ret640>(pattern.get_first(1));
-    injector::MakeInline<Ret640>(pattern.get_first(39));
-    injector::MakeInline<Ret480>(pattern.get_first(20));
-    injector::MakeInline<Ret480>(pattern.get_first(64));
+    injector::MakeInline<Ret512>(pattern.get_first(1));
+    injector::MakeInline<Ret512>(pattern.get_first(39));
+    injector::MakeInline<Ret448>(pattern.get_first(20));
+    injector::MakeInline<Ret448>(pattern.get_first(64));
 
     //FMV
     auto FMVpattern1 = hook::pattern("A1 ? ? ? ? D9 15 ? ? ? ? D9 C2 89 15 ? ? ? ? D9 1D");
