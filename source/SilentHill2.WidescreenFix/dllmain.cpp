@@ -38,7 +38,7 @@ void Init()
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
     bool bFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1) != 0;
-    bool bFMVWidescreenEnhancementPackCompatibility = iniReader.ReadInteger("MAIN", "FMVWidescreenEnhancementPackCompatibility", 0) != 0;
+    uint32_t nFMVWidescreenEnhancementPackCompatibility = iniReader.ReadInteger("MAIN", "FMVWidescreenEnhancementPackCompatibility", 0);
     bool bFix2D = iniReader.ReadInteger("MAIN", "Fix2D", 1) != 0;
     bool bDisableCutsceneBorders = iniReader.ReadInteger("MISC", "DisableCutsceneBorders", 1) != 0;
     bool bSingleCoreAffinity = iniReader.ReadInteger("MISC", "SingleCoreAffinity", 1) != 0;
@@ -342,6 +342,14 @@ void Init()
         pattern = hook::pattern("81 FE 80 02 00 00 7E 05 BE 80 02 00 00 3B 35 ? ? ? ? EB 17"); //0045A84F
         injector::WriteMemory(pattern.get_first(2), x, true);
         injector::WriteMemory(pattern.get_first(9), x, true);
+        
+        //FMV Width (Fix 2D)
+        auto FMVpattern1 = hook::pattern("A1 ? ? ? ? D9 15 ? ? ? ? D9 C2 89 15 ? ? ? ? D9 1D");
+        injector::WriteMemory(FMVpattern1.count(1).get(0).get<uint32_t>(1), &Screen.TextOffset, true); //0043E4D8
+        auto FMVpattern2 = hook::pattern("D8 25 ? ? ? ? 8B 0D ? ? ? ? 85 C9 8B 15");
+        injector::WriteMemory(FMVpattern2.count(1).get(0).get<uint32_t>(2), &Screen.TextOffset, true); //0043E4C5
+        auto FMVpattern3 = hook::pattern("8B 15 ? ? ? ? A1 ? ? ? ? 89 15 ? ? ? ? A3");
+        injector::WriteMemory(FMVpattern3.count(1).get(0).get<uint32_t>(2), &Screen.TextOffset, true); //0043E47F
     }
 
     //solves camera pan inconsistency for different resolutions
@@ -366,38 +374,55 @@ void Init()
     injector::MakeInline<Ret448>(pattern.get_first(20));
     injector::MakeInline<Ret448>(pattern.get_first(64));
 
-    //FMV
-    auto FMVpattern1 = hook::pattern("A1 ? ? ? ? D9 15 ? ? ? ? D9 C2 89 15 ? ? ? ? D9 1D");
-    injector::WriteMemory(FMVpattern1.count(1).get(0).get<uint32_t>(1), &Screen.TextOffset, true); //0x0043E4D8
-    auto FMVpattern2 = hook::pattern("D8 25 ? ? ? ? 8B 0D ? ? ? ? 85 C9 8B 15");
-    injector::WriteMemory(FMVpattern2.count(1).get(0).get<uint32_t>(2), &Screen.TextOffset, true); //0x0043E4C5
-    auto FMVpattern3 = hook::pattern("8B 15 ? ? ? ? A1 ? ? ? ? 89 15 ? ? ? ? A3");
-    injector::WriteMemory(FMVpattern3.count(1).get(0).get<uint32_t>(2), &Screen.TextOffset, true); //0x0043E47F
-
-    if (bFMVWidescreenMode || bFMVWidescreenEnhancementPackCompatibility)
+    if (bFMVWidescreenMode || nFMVWidescreenEnhancementPackCompatibility)
     {
-        pattern = hook::pattern("E9 ? ? ? ? A1 ? ? ? ? 3D ? ? ? ? 77 05 B8 ? ? ? ?");
-        injector::WriteMemory<uint16_t>(pattern.count(1).get(0).get<uint32_t>(0), 0x850F, true); //0x0043E47F
-        injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), 0x00000088, true); //0x0043E47F+2
-        injector::MakeNOP(pattern.count(1).get(0).get<uint32_t>(2 + 4), 4, true);
+        //FMV Width
+        auto FMVpattern1 = hook::pattern("A1 ? ? ? ? D9 15 ? ? ? ? D9 C2 89 15 ? ? ? ? D9 1D");
+        injector::WriteMemory(FMVpattern1.count(1).get(0).get<uint32_t>(1), &Screen.TextOffset, true); //0043E4D8
+        auto FMVpattern2 = hook::pattern("D8 25 ? ? ? ? 8B 0D ? ? ? ? 85 C9 8B 15");
+        injector::WriteMemory(FMVpattern2.count(1).get(0).get<uint32_t>(2), &Screen.TextOffset, true); //0043E4C5
+        auto FMVpattern3 = hook::pattern("8B 15 ? ? ? ? A1 ? ? ? ? 89 15 ? ? ? ? A3");
+        injector::WriteMemory(FMVpattern3.count(1).get(0).get<uint32_t>(2), &Screen.TextOffset, true); //0043E47F
 
-        static float fFMVOffset1 = (((480.0f * (16.0f / 9.0f)) / (640.0f / 384.0f)) / (4.0f / 3.0f));
-        pattern = hook::pattern("D8 0D ? ? ? ? D9 55 28 8B 0D ? ? ? ? DB 05 ? ? ? ? 85 C9 E9");
-        injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(-4), &fFMVOffset1, true); //43DBC5
-        static float TextOffsetWS = Screen.TextOffset - (((Screen.fHeight * (640.0f / 384.0f)) - Screen.fHeight * (4.0f / 3.0f)) / 2.0f);
-        if (bFMVWidescreenEnhancementPackCompatibility)
-            TextOffsetWS = Screen.TextOffset - (((Screen.fHeight * (1280.0f / 720.0f)) - Screen.fHeight * (4.0f / 3.0f)) / 2.0f);
-        injector::WriteMemory(FMVpattern1.count(1).get(0).get<uint32_t>(1), &TextOffsetWS, true); //0x0043E4D8
-        injector::WriteMemory(FMVpattern2.count(1).get(0).get<uint32_t>(2), &TextOffsetWS, true); //0x0043E4C5
-        injector::WriteMemory(FMVpattern3.count(1).get(0).get<uint32_t>(2), &TextOffsetWS, true); //0x0043E47F
+        static float FMVWidth = Screen.TextOffset - (((Screen.fHeight * (5.0f / 3.0f)) - Screen.fHeight * (4.0f / 3.0f)) / 2.0f);
 
-        static uint32_t fFMVOffset2 = static_cast<uint32_t>(fFMVOffset1 * (290.0f / 384.0f)); //?
-        if (bFMVWidescreenEnhancementPackCompatibility)
-            fFMVOffset2 = static_cast<uint32_t>(fFMVOffset1 * (480.0f / 384.0f));
-        pattern = hook::pattern("A1 ? ? ? ? 3D ? ? ? ? 77 05 B8 ? ? ? ? 2B 45 10");
-        injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(1), &fFMVOffset2, true); //43DC1E
-        injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(10), 0xEB, true); //43DC28
-        injector::MakeNOP(pattern.count(1).get(0).get<uint32_t>(30), 8, true);
+        if (nFMVWidescreenEnhancementPackCompatibility == 1)
+        {
+            FMVWidth = Screen.TextOffset - (((Screen.fHeight * (16.0f / 9.0f)) - Screen.fHeight * (4.0f / 3.0f)) / 2.0f);
+        }
+
+        if (nFMVWidescreenEnhancementPackCompatibility >= 2)
+        {
+            FMVWidth = Screen.TextOffset - (((Screen.fHeight * (16.0f / 9.0f * 1.14f)) - Screen.fHeight * (4.0f / 3.0f)) / 2.0f);
+        }
+
+        injector::WriteMemory(FMVpattern1.count(1).get(0).get<uint32_t>(1), &FMVWidth, true); //0043E4D8
+        injector::WriteMemory(FMVpattern2.count(1).get(0).get<uint32_t>(2), &FMVWidth, true); //0043E4C5
+        injector::WriteMemory(FMVpattern3.count(1).get(0).get<uint32_t>(2), &FMVWidth, true); //0043E47F
+
+        //FMV Height
+        auto FMVpattern4 = hook::pattern("A1 ? ? ? ? 89 15 ? ? ? ? A3 ? ? ? ? C7 05");
+        injector::WriteMemory(FMVpattern4.count(1).get(0).get<uint32_t>(1), &Screen.TextOffset, true); //0043E484
+        auto FMVpattern5 = hook::pattern("8B 15 ? ? ? ? A1 ? ? ? ? D9 15");
+        injector::WriteMemory(FMVpattern5.count(1).get(0).get<uint32_t>(2), &Screen.TextOffset, true); //0043E4D3
+        auto FMVpattern6 = hook::pattern("D8 25 ? ? ? ? A1 ? ? ? ? 68");
+        injector::WriteMemory(FMVpattern6.count(1).get(0).get<uint32_t>(2), &Screen.TextOffset, true); //0043E523
+
+        static float FMVHeight = (((Screen.fHeight * (4.0f / 3.0f)) - Screen.fHeight * (4.0f / 3.0f)) / 2.0f);
+
+        if (nFMVWidescreenEnhancementPackCompatibility == 1)
+        {
+            FMVHeight = (((Screen.fHeight * (4.0f / 3.0f)) - Screen.fHeight * (4.0f / 3.0f)) / 2.0f);
+        }
+
+        if (nFMVWidescreenEnhancementPackCompatibility >= 2)
+        {
+            FMVHeight = (((Screen.fHeight * (4.0f / 3.0f)) - Screen.fHeight * (4.0f / 3.0f)) / 2.0f) -75.3f;
+        }
+        
+        injector::WriteMemory(FMVpattern4.count(1).get(0).get<uint32_t>(1), &FMVHeight, true); //0043E4D8
+        injector::WriteMemory(FMVpattern5.count(1).get(0).get<uint32_t>(2), &FMVHeight, true); //0043E4C5
+        injector::WriteMemory(FMVpattern6.count(1).get(0).get<uint32_t>(2), &FMVHeight, true); //0043E47F
     }
 
     if (bDisableCutsceneBorders)
@@ -558,7 +583,7 @@ void Init()
         injector::WriteMemory(pattern.get_first(3), x, true);
     }
 
-    if (bFullscreenImages)
+    if (bFullscreenImages && bFix2D)
     {
         static std::set<uint32_t> images;
         auto DataFilePath = iniReader.GetIniPath();
