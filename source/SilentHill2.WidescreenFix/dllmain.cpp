@@ -378,11 +378,8 @@ void Init()
     {
         //FMV Width
         auto FMVpattern1 = hook::pattern("A1 ? ? ? ? D9 15 ? ? ? ? D9 C2 89 15 ? ? ? ? D9 1D");
-        injector::WriteMemory(FMVpattern1.count(1).get(0).get<uint32_t>(1), &Screen.TextOffset, true); //0043E4D8
         auto FMVpattern2 = hook::pattern("D8 25 ? ? ? ? 8B 0D ? ? ? ? 85 C9 8B 15");
-        injector::WriteMemory(FMVpattern2.count(1).get(0).get<uint32_t>(2), &Screen.TextOffset, true); //0043E4C5
         auto FMVpattern3 = hook::pattern("8B 15 ? ? ? ? A1 ? ? ? ? 89 15 ? ? ? ? A3");
-        injector::WriteMemory(FMVpattern3.count(1).get(0).get<uint32_t>(2), &Screen.TextOffset, true); //0043E47F
 
         static float FMVWidth = Screen.TextOffset - (((Screen.fHeight * (5.0f / 3.0f)) - Screen.fHeight * (4.0f / 3.0f)) / 2.0f);
 
@@ -402,22 +399,19 @@ void Init()
 
         //FMV Height
         auto FMVpattern4 = hook::pattern("A1 ? ? ? ? 89 15 ? ? ? ? A3 ? ? ? ? C7 05");
-        injector::WriteMemory(FMVpattern4.count(1).get(0).get<uint32_t>(1), &Screen.TextOffset, true); //0043E484
         auto FMVpattern5 = hook::pattern("8B 15 ? ? ? ? A1 ? ? ? ? D9 15");
-        injector::WriteMemory(FMVpattern5.count(1).get(0).get<uint32_t>(2), &Screen.TextOffset, true); //0043E4D3
         auto FMVpattern6 = hook::pattern("D8 25 ? ? ? ? A1 ? ? ? ? 68");
-        injector::WriteMemory(FMVpattern6.count(1).get(0).get<uint32_t>(2), &Screen.TextOffset, true); //0043E523
 
-        static float FMVHeight = (((Screen.fHeight * (4.0f / 3.0f)) - Screen.fHeight * (4.0f / 3.0f)) / 2.0f);
+        static float FMVHeight = 0.0f;
 
         if (nFMVWidescreenEnhancementPackCompatibility == 1)
         {
-            FMVHeight = (((Screen.fHeight * (4.0f / 3.0f)) - Screen.fHeight * (4.0f / 3.0f)) / 2.0f);
+            FMVHeight = 0.0f;
         }
 
         if (nFMVWidescreenEnhancementPackCompatibility >= 2)
         {
-            FMVHeight = (((Screen.fHeight * (4.0f / 3.0f)) - Screen.fHeight * (4.0f / 3.0f)) / 2.0f) -75.3f;
+            FMVHeight = ((Screen.fHeight * (4.0f / 3.0f)) / -19.1236f);
         }
         
         injector::WriteMemory(FMVpattern4.count(1).get(0).get<uint32_t>(1), &FMVHeight, true); //0043E4D8
