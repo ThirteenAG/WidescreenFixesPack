@@ -388,9 +388,14 @@ void Init()
             FMVWidth = Screen.TextOffset - (((Screen.fHeight * (16.0f / 9.0f)) - Screen.fHeight * (4.0f / 3.0f)) / 2.0f);
         }
 
-        if (nFMVWidescreenEnhancementPackCompatibility >= 2)
+        if (nFMVWidescreenEnhancementPackCompatibility == 2)
         {
             FMVWidth = Screen.TextOffset - (((Screen.fHeight * (16.0f / 9.0f * 1.14f)) - Screen.fHeight * (4.0f / 3.0f)) / 2.0f);
+        }
+        
+        if (nFMVWidescreenEnhancementPackCompatibility >= 3)
+        {
+            FMVWidth = Screen.TextOffset - (((Screen.fHeight * (16.0f / 9.0f * 0.86f)) - Screen.fHeight * (4.0f / 3.0f)) / 2.0f);
         }
 
         injector::WriteMemory(FMVpattern1.count(1).get(0).get<uint32_t>(1), &FMVWidth, true); //0043E4D8
@@ -409,9 +414,14 @@ void Init()
             FMVHeight = 0.0f;
         }
 
-        if (nFMVWidescreenEnhancementPackCompatibility >= 2)
+        if (nFMVWidescreenEnhancementPackCompatibility == 2)
         {
             FMVHeight = ((Screen.fHeight * (4.0f / 3.0f)) / -19.1236f);
+        }
+        
+        if (nFMVWidescreenEnhancementPackCompatibility >= 3)
+        {
+            FMVHeight = ((Screen.fHeight * (4.0f / 3.0f)) / 19.1236f);
         }
         
         injector::WriteMemory(FMVpattern4.count(1).get(0).get<uint32_t>(1), &FMVHeight, true); //0043E4D8
