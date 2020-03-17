@@ -494,6 +494,9 @@ void Init()
 
         uint32_t* dword_51C276 = hook::pattern("BE ? ? ? ? 74 05 BE ? ? ? ? D9 05").count(1).get(0).get<uint32_t>(1);
         injector::WriteMemory<float>(*dword_51C276 + 0x08, 4.0f, true); //006C94D0 outdoor camera pan speed
+        
+        pattern = hook::pattern("74 ? D9 05 ? ? ? ? E8 ? ? ? ? 50 E8");
+        injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(0), (uint8_t)0xEBi8, true); //0058C0E3 flesh lips cutscene fix
     }
 
     if (bGamepadControlsFix)
