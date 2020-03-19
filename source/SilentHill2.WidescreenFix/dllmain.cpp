@@ -497,6 +497,20 @@ void Init()
         
         pattern = hook::pattern("74 ? D9 05 ? ? ? ? E8 ? ? ? ? 50 E8");
         injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(0), (uint8_t)0xEBi8, true); //0058C0E3 flesh lips cutscene fix
+        
+        //camera bounce fix
+        pattern = hook::pattern("E8 ? ? ? ? D8 4C 24 60 83 C4 04");
+        static float CameraEaseMultiplier = 3.0f;
+        struct CameraEaseHook
+        {
+            void operator() (injector::reg_pack& regs)
+            {
+                float esp00 = *(float*)(regs.esp);
+                _asm fld dword ptr [esp00]
+                _asm fabs
+                _asm fmul dword ptr [CameraEaseMultiplier]
+            }
+        }; injector::MakeInline<CameraEaseHook>(pattern.get_first(0), pattern.get_first(9)); //0051C760
     }
 
     if (bGamepadControlsFix)
