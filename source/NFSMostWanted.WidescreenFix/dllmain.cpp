@@ -251,20 +251,20 @@ void Init()
         injector::WriteMemory(dword_6DA8AE, &dx, true);
 
         //Shadow pop-in fix
-        uint32_t* dword_8910C4 = hook::pattern("D8 0D ? ? ? ? D9 5C 24 ? E8 ? ? ? ? 8A").count(1).get(0).get<uint32_t>(2);
-        static float f360 = 360.0f;
-        injector::WriteMemory((uint32_t)dword_8910C4, &f360, true);
+        uint32_t* dword_6C9653 = hook::pattern("D8 0D ? ? ? ? D9 5C 24 ? E8 ? ? ? ? 8A").count(1).get(0).get<uint32_t>(2);
+        static float fShadowDistanceMultiplier = 10.0f;
+        injector::WriteMemory((uint32_t)dword_6C9653, &fShadowDistanceMultiplier, true);
 
         //Shadow tearing fix
         auto pattern = hook::pattern("0F B7 ? C4 00 00 00");
-        static float ShadowRatio;
-        ShadowRatio = (Screen.fHeight / Screen.fWidth) / 0.85f;
+        static float fShadowRatio;
+        fShadowRatio = (Screen.fHeight / Screen.fWidth) / 0.85f;
         struct ShadowFOVHookEAX
         {
             void operator()(injector::reg_pack& regs)
             {
                 int ebxC4 = *(int*)(regs.ebx + 0xC4);
-                regs.eax = (ebxC4 / ShadowRatio);
+                regs.eax = (ebxC4 / fShadowRatio);
             }
         };
         struct ShadowFOVHookECX
@@ -272,7 +272,7 @@ void Init()
             void operator()(injector::reg_pack& regs)
             {
                 int ebxC4 = *(int*)(regs.ebx + 0xC4);
-                regs.ecx = (ebxC4 / ShadowRatio);
+                regs.ecx = (ebxC4 / fShadowRatio);
             }
         };
         struct ShadowFOVHookEDX
@@ -280,7 +280,7 @@ void Init()
             void operator()(injector::reg_pack& regs)
             {
                 int ebxC4 = *(int*)(regs.ebx + 0xC4);
-                regs.edx = (ebxC4 / ShadowRatio);
+                regs.edx = (ebxC4 / fShadowRatio);
             }
         };
         injector::MakeInline<ShadowFOVHookEAX>(pattern.count(15).get(11).get<uint32_t>(0), pattern.count(15).get(11).get<uint32_t>(7));
