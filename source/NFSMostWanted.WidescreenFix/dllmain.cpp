@@ -72,11 +72,6 @@ void Init()
         injector::WriteMemory(dword_6C2866, Screen.Height, true);
     }
 
-    //restores missing geometry, causes bugs
-    //uint32_t* dword_6C69A7 = hook::pattern("A0 ? ? ? ? 84 C0 74 ? B3 01").count(1).get(0).get<uint32_t>(0);
-    //injector::MakeNOP(dword_6C69A7, 5, true);
-    //injector::WriteMemory<uint16_t>(dword_6C69A7, 0x00B0i16, true); //mov al,00
-
     //Autosculpt scaling
     uint32_t* dword_6C9C45 = *hook::pattern("D8 0D ? ? ? ? DA 74 24 18 E8 ? ? ? ? 89 46 04 EB 03").count(1).get(0).get<uint32_t*>(2);
     injector::WriteMemory<float>(dword_6C9C45, 480.0f * Screen.fAspectRatio, true);
@@ -348,17 +343,14 @@ void Init()
 
     if (bRearviewMirrorFix)
     {
+        //Enables mirror for all camera views
         uint32_t* dword_6CFB72 = hook::pattern("75 66 53 E8 ? ? ? ? 83 C4 04 84 C0 74 59").count(1).get(0).get<uint32_t>(0);
         injector::MakeNOP(dword_6CFB72, 2, true);
         uint32_t* dword_6CFBC5 = hook::pattern("75 0D 53 E8 ? ? ? ? 83 C4 04 84 C0 75 06 89 1D").count(1).get(0).get<uint32_t>(0);
         injector::MakeNOP(dword_6CFBC5, 2, true);
-
         uint32_t* dword_595DDA = hook::pattern("83 F8 02 74 2D 83 F8 03 74 28 83 F8 04 74 23 83 F8 05 74 1E 83 F8 06 74 19").count(1).get(0).get<uint32_t>(2);
         injector::WriteMemory<uint8_t>(dword_595DDA, 4, true);
         injector::WriteMemory<uint8_t>((uint32_t)dword_595DDA + 5, 4, true);
-
-        uint32_t* dword_6BFE33 = hook::pattern("74 22 8B 0D ? ? ? ? 85").count(1).get(0).get<uint32_t>(0);
-        injector::MakeNOP(dword_6BFE33, 2, true);
     }
 
     if (!szCustomUserFilesDirectoryInGameDir.empty())
