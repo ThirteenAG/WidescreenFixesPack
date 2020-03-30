@@ -43,7 +43,6 @@ void Init()
     Screen.fHudScaleX = (1.0f / Screen.fWidth * (Screen.fHeight / 480.0f)) * 2.0f;
     Screen.fHudPosX = 640.0f / (640.0f * Screen.fHudScaleX);
 
-
     for (size_t i = 0; i < 2; i++)
     {
         //game
@@ -255,6 +254,44 @@ void Init()
         static uint16_t dx = 16400;
         uint32_t* dword_6DA8AE = hook::pattern("66 8B 15 ? ? ? ? 66 89 93 C4 00 00 00").count(1).get(0).get<uint32_t>(3);
         injector::WriteMemory(dword_6DA8AE, &dx, true);
+
+        //Shadow pop-in fix
+        uint32_t* dword_8910C4 = hook::pattern("D8 0D ? ? ? ? D9 5C 24 ? E8 ? ? ? ? 8A").count(1).get(0).get<uint32_t>(2);
+        static float f360 = 360.0f;
+        injector::WriteMemory((uint32_t)dword_8910C4, &f360, true);
+
+        //Shadow tearing fix
+        auto pattern = hook::pattern("0F B7 ? C4 00 00 00");
+        static float ShadowRatio;
+        ShadowRatio = (Screen.fHeight / Screen.fWidth) / 0.85f;
+        struct ShadowFOVHookEAX
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                int ebxC4 = *(int*)(regs.ebx + 0xC4);
+                regs.eax = (ebxC4 / ShadowRatio);
+            }
+        };
+        struct ShadowFOVHookECX
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                int ebxC4 = *(int*)(regs.ebx + 0xC4);
+                regs.ecx = (ebxC4 / ShadowRatio);
+            }
+        };
+        struct ShadowFOVHookEDX
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                int ebxC4 = *(int*)(regs.ebx + 0xC4);
+                regs.edx = (ebxC4 / ShadowRatio);
+            }
+        };
+        injector::MakeInline<ShadowFOVHookEAX>(pattern.count(15).get(11).get<uint32_t>(0), pattern.count(15).get(11).get<uint32_t>(7));
+        injector::MakeInline<ShadowFOVHookECX>(pattern.count(15).get(12).get<uint32_t>(0), pattern.count(15).get(12).get<uint32_t>(7));
+        injector::MakeInline<ShadowFOVHookECX>(pattern.count(15).get(13).get<uint32_t>(0), pattern.count(15).get(13).get<uint32_t>(7));
+        injector::MakeInline<ShadowFOVHookEDX>(pattern.count(15).get(14).get<uint32_t>(0), pattern.count(15).get(14).get<uint32_t>(7));
     }
 
     uint32_t* dword_57CB82 = hook::pattern("3A 55 34 0F 85 0B 02 00 00 A1").count(1).get(0).get<uint32_t>(0); // HUD
@@ -319,10 +356,6 @@ void Init()
         uint32_t* dword_595DDA = hook::pattern("83 F8 02 74 2D 83 F8 03 74 28 83 F8 04 74 23 83 F8 05 74 1E 83 F8 06 74 19").count(1).get(0).get<uint32_t>(2);
         injector::WriteMemory<uint8_t>(dword_595DDA, 4, true);
         injector::WriteMemory<uint8_t>((uint32_t)dword_595DDA + 5, 4, true);
-
-        //render (causes issues)
-        //uint32_t* dword_4FAEB0 = hook::pattern("75 ? 83 CE 20 8B 7C 24 10 57 52").count(1).get(0).get<uint32_t>(0);
-        //injector::WriteMemory<uint8_t>(dword_4FAEB0, 0xEB, true);
 
         uint32_t* dword_6BFE33 = hook::pattern("74 22 8B 0D ? ? ? ? 85").count(1).get(0).get<uint32_t>(0);
         injector::MakeNOP(dword_6BFE33, 2, true);
