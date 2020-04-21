@@ -43,7 +43,6 @@ void Init()
     Screen.fHudScaleX = (1.0f / Screen.fWidth * (Screen.fHeight / 480.0f)) * 2.0f;
     Screen.fHudPosX = 640.0f / (640.0f * Screen.fHudScaleX);
 
-
     for (size_t i = 0; i < 2; i++)
     {
         //game
@@ -72,11 +71,6 @@ void Init()
         uint32_t dword_6C2866 = (uint32_t)dword_6C2860 + 6;
         injector::WriteMemory(dword_6C2866, Screen.Height, true);
     }
-
-    //restores missing geometry, causes bugs
-    //uint32_t* dword_6C69A7 = hook::pattern("A0 ? ? ? ? 84 C0 74 ? B3 01").count(1).get(0).get<uint32_t>(0);
-    //injector::MakeNOP(dword_6C69A7, 5, true);
-    //injector::WriteMemory<uint16_t>(dword_6C69A7, 0x00B0i16, true); //mov al,00
 
     //Autosculpt scaling
     uint32_t* dword_6C9C45 = *hook::pattern("D8 0D ? ? ? ? DA 74 24 18 E8 ? ? ? ? 89 46 04 EB 03").count(1).get(0).get<uint32_t*>(2);
@@ -255,6 +249,44 @@ void Init()
         static uint16_t dx = 16400;
         uint32_t* dword_6DA8AE = hook::pattern("66 8B 15 ? ? ? ? 66 89 93 C4 00 00 00").count(1).get(0).get<uint32_t>(3);
         injector::WriteMemory(dword_6DA8AE, &dx, true);
+
+        //Shadow pop-in fix
+        uint32_t* dword_6C9653 = hook::pattern("D8 0D ? ? ? ? D9 5C 24 ? E8 ? ? ? ? 8A").count(1).get(0).get<uint32_t>(2);
+        static float fShadowDistanceMultiplier = 10.0f;
+        injector::WriteMemory((uint32_t)dword_6C9653, &fShadowDistanceMultiplier, true);
+
+        //Shadow tearing fix
+        auto pattern = hook::pattern("0F B7 ? C4 00 00 00");
+        static float fShadowRatio;
+        fShadowRatio = (Screen.fHeight / Screen.fWidth) / 0.85f;
+        struct ShadowFOVHookEAX
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                int ebxC4 = *(int*)(regs.ebx + 0xC4);
+                regs.eax = (ebxC4 / fShadowRatio);
+            }
+        };
+        struct ShadowFOVHookECX
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                int ebxC4 = *(int*)(regs.ebx + 0xC4);
+                regs.ecx = (ebxC4 / fShadowRatio);
+            }
+        };
+        struct ShadowFOVHookEDX
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                int ebxC4 = *(int*)(regs.ebx + 0xC4);
+                regs.edx = (ebxC4 / fShadowRatio);
+            }
+        };
+        injector::MakeInline<ShadowFOVHookEAX>(pattern.count(15).get(11).get<uint32_t>(0), pattern.count(15).get(11).get<uint32_t>(7));
+        injector::MakeInline<ShadowFOVHookECX>(pattern.count(15).get(12).get<uint32_t>(0), pattern.count(15).get(12).get<uint32_t>(7));
+        injector::MakeInline<ShadowFOVHookECX>(pattern.count(15).get(13).get<uint32_t>(0), pattern.count(15).get(13).get<uint32_t>(7));
+        injector::MakeInline<ShadowFOVHookEDX>(pattern.count(15).get(14).get<uint32_t>(0), pattern.count(15).get(14).get<uint32_t>(7));
     }
 
     uint32_t* dword_57CB82 = hook::pattern("3A 55 34 0F 85 0B 02 00 00 A1").count(1).get(0).get<uint32_t>(0); // HUD
@@ -311,21 +343,14 @@ void Init()
 
     if (bRearviewMirrorFix)
     {
+        //Enables mirror for all camera views
         uint32_t* dword_6CFB72 = hook::pattern("75 66 53 E8 ? ? ? ? 83 C4 04 84 C0 74 59").count(1).get(0).get<uint32_t>(0);
         injector::MakeNOP(dword_6CFB72, 2, true);
         uint32_t* dword_6CFBC5 = hook::pattern("75 0D 53 E8 ? ? ? ? 83 C4 04 84 C0 75 06 89 1D").count(1).get(0).get<uint32_t>(0);
         injector::MakeNOP(dword_6CFBC5, 2, true);
-
         uint32_t* dword_595DDA = hook::pattern("83 F8 02 74 2D 83 F8 03 74 28 83 F8 04 74 23 83 F8 05 74 1E 83 F8 06 74 19").count(1).get(0).get<uint32_t>(2);
         injector::WriteMemory<uint8_t>(dword_595DDA, 4, true);
         injector::WriteMemory<uint8_t>((uint32_t)dword_595DDA + 5, 4, true);
-
-        //render (causes issues)
-        //uint32_t* dword_4FAEB0 = hook::pattern("75 ? 83 CE 20 8B 7C 24 10 57 52").count(1).get(0).get<uint32_t>(0);
-        //injector::WriteMemory<uint8_t>(dword_4FAEB0, 0xEB, true);
-
-        uint32_t* dword_6BFE33 = hook::pattern("74 22 8B 0D ? ? ? ? 85").count(1).get(0).get<uint32_t>(0);
-        injector::MakeNOP(dword_6BFE33, 2, true);
     }
 
     if (!szCustomUserFilesDirectoryInGameDir.empty())
