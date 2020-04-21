@@ -30,6 +30,7 @@ void Init()
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
     bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 1) != 0;
     static int32_t nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
+    bool bExpandControllerOptions = iniReader.ReadInteger("MISC", "ExpandControllerOptions", 0) != 0;
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
     static float fRainDropletsScale = iniReader.ReadFloat("MISC", "RainDropletsScale", 0.5f);
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
@@ -587,6 +588,12 @@ void Init()
                 *(uint32_t*)(*(uint32_t*)dword_A98874 + 0x20) = 3; // "1"; changed A to Y
             }
         }; injector::MakeInline<MenuRemap>(pattern.get_first(0), pattern.get_first(6));
+    }
+
+    if (bExpandControllerOptions)
+    {
+        uint32_t* dword_692539 = hook::pattern("B8 14 00 00 00 C2 08 00 B8").count(1).get(0).get<uint32_t>(1);
+        injector::WriteMemory((uint32_t)dword_692539, 0x1D, true); //lists all 29 options in the controller config menu
     }
 
     if (fLeftStickDeadzone)
