@@ -67,7 +67,7 @@ void Init()
     uint32_t nStatusScreenRes = iniReader.ReadInteger("MISC", "StatusScreenRes", 512);
     uint32_t nShadowsRes = iniReader.ReadInteger("MISC", "ShadowsRes", 1024);
     uint32_t nDOFRes = iniReader.ReadInteger("MISC", "DOFRes", 1024);
-    bool bFrameRateFluctuationFix = iniReader.ReadInteger("MISC", "FrameRateFluctuationFix", 1) != 0;
+    uint32_t nFrameRateFluctuationFix = iniReader.ReadInteger("MISC", "FrameRateFluctuationFix", 1);
     bool bSingleCoreAffinity = iniReader.ReadInteger("MISC", "SingleCoreAffinity", 0) != 0;
     static bool bReduceCutsceneFOV = iniReader.ReadInteger("MISC", "ReduceCutsceneFOV", 1) != 0;
     bool bSH2Reference = iniReader.ReadInteger("MISC", "SH2Reference", 1) != 0;
@@ -518,10 +518,38 @@ void Init()
         injector::WriteMemory(dword_6B1444 + 3, nDOFRes, true);
     }
 
-    if (bFrameRateFluctuationFix)
+    if (nFrameRateFluctuationFix)
     {
-        pattern = hook::pattern("4A 03 C8 A3 ? ? ? ? 89 15"); //41B5D1
-        injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(0), 0x42, true);
+        // 60fps
+        if (nFrameRateFluctuationFix == 1)
+        {
+            pattern = hook::pattern("4A 03 C8 A3 ? ? ? ? 89 15"); //41B5D1
+            injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(0), 0x42, true);
+        }
+
+        // 30fps
+        if (nFrameRateFluctuationFix > 1)
+        {
+            pattern = hook::pattern("8B 44 24 04 A3 ? ? ? ? 33 C0"); 
+            static auto dword_72C7E8 = *pattern.count(5).get(2).get<uintptr_t>(5);
+
+            pattern = hook::pattern("A1 ? ? ? ? 53 55 33 ED"); //41B2C9
+            struct FramerateLimit
+            {
+                void operator()(injector::reg_pack& regs)
+                    {
+                        // 0x00 = Unlocked (FMV)
+                        // 0x01 = 60 FPS 
+                        // 0x02 = 30 FPS
+                        regs.eax = *(uint32_t*)dword_72C7E8;
+                        
+                        if (regs.eax == 0x00)
+                            regs.eax = 0x00;
+                        else
+                            regs.eax = 0x02;
+                    }
+            }; injector::MakeInline<FramerateLimit>(pattern.count(2).get(0).get<uint32_t>(0));
+        }
     }
 
     if (bSingleCoreAffinity)
