@@ -21,9 +21,10 @@ void Init()
     bool bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) != 0;
     bool bHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1) == 1;
     bool bFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1) == 1;
-    int nScaling = iniReader.ReadInteger("MAIN", "Scaling", 2);
+    int nScaling = iniReader.ReadInteger("MAIN", "Scaling", 1);
     int ShadowsRes = iniReader.ReadInteger("MISC", "ShadowsRes", 1024);
-    bool bShadowsFix = iniReader.ReadInteger("MISC", "ShadowsFix", 1) == 1;
+    bool bShadowsFix = iniReader.ReadInteger("MISC", "ShadowsFix", 1) != 0;
+    bool bImproveShadowLOD = iniReader.ReadInteger("MISC", "ImproveShadowLOD", 0) != 0;
     bool bRearviewMirrorFix = iniReader.ReadInteger("MISC", "RearviewMirrorFix", 1) == 1;
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "");
     bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 1) != 0;
@@ -135,6 +136,22 @@ void Init()
             uint32_t* dword__93D898 = hook::pattern(pattern_str(to_bytes(dword_93D898))).count(1).get(0).get<uint32_t>(0);
             injector::WriteMemory(dword__93D898, dword_8F1CA0, true);
         }
+
+        // solves shadow acne problem for resolutions greater than 4096
+        if (ShadowsRes > 4096)
+        {
+            static float ShadowBias = (ShadowsRes / 4096.0f) * 4.0f;
+            uint32_t* dword_6E5509 = hook::pattern("8B 15 ? ? ? ? A1 ? ? ? ? 8B 08 52 68").count(1).get(0).get<uint32_t>(2);
+            injector::WriteMemory(dword_6E5509, &ShadowBias, true);
+        }
+    }
+
+    if (bImproveShadowLOD)
+    {
+        uint32_t* dword_6E5174 = hook::pattern("68 ? ? ? ? EB ? A1 ? ? ? ? 0D").count(1).get(0).get<uint32_t>(1);
+        injector::WriteMemory(dword_6E5174, 0x00000000, true);
+        uint32_t* dword_6BFFA2 = hook::pattern("68 ? ? ? ? 50 41 68").count(2).get(1).get<uint32_t>(1);
+        injector::WriteMemory(dword_6BFFA2, 0x00006102, true);
     }
 
     //HUD

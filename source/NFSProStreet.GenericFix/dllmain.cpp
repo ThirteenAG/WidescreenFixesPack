@@ -157,7 +157,7 @@ void Init()
 
 
     bool bFixHUD = iniReader.ReadInteger("MISC", "FixHUD", 1) != 0;
-    bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 1) != 0;
+    bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 0) != 0;
     static int32_t nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
     static int32_t nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
@@ -177,10 +177,13 @@ void Init()
 
     if (bSkipIntro)
     {
-        auto pattern = hook::pattern("A3 ? ? ? ? A1 ? ? ? ? 6A 20 50"); //0xA9E6D8
-        injector::WriteMemory(*pattern.count(3).get(2).get<uint32_t*>(1), 1, true);
-        pattern = hook::pattern("A1 ? ? ? ? 85 C0 74 ? 57 8B F8 E8"); //0xA97BC0
-        injector::WriteMemory(*pattern.count(1).get(0).get<uint32_t*>(1), 1, true);
+        // EA Bumper
+        uint32_t* dword_6FC24A = hook::pattern("68 ? ? ? ? 6A ? FF D2 D9 EE").count(1).get(0).get<uint32_t>(1);
+        injector::WriteMemory(dword_6FC24A, &"SkipThis", true);
+        
+        // Attract
+        uint32_t* dword_6FC264 = hook::pattern("68 ? ? ? ? 6A ? 8B CE FF D2").count(1).get(0).get<uint32_t>(1);
+        injector::WriteMemory(dword_6FC264, &"SkipThis", true);
     }
 
     if (nWindowedMode)
