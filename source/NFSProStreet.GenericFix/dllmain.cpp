@@ -75,10 +75,9 @@ void Init()
     auto pattern = hook::pattern("C7 44 24 ? ? ? ? ? FF 15 ? ? ? ? 8D 54 24 0C 52");
     injector::WriteMemory(pattern.get_first(4), 0, true);
 
-    //Brake Light Fix
-    static constexpr double d0 = 0.0f;
-    pattern = hook::pattern("DD 05 ? ? ? ? D9 C9 DF F1 DD D8 77 15 8B 86"); //717C9A
-    injector::WriteMemory(pattern.get_first(2), &d0, true);
+    //Enables HD_GROUP texture on start screen
+    uint32_t* dword_7E2C02 = hook::pattern("68 ? ? ? ? E8 ? ? ? ? 8B F8 8B 46 0C 57").count(1).get(0).get<uint32_t>(1);
+    injector::WriteMemory(dword_7E2C02, &"ENABLEHD", true);
 
     CIniReader iniReader("");
     auto bResDetect = iniReader.ReadInteger("MultiFix", "ResDetect", 1) != 0;
@@ -161,8 +160,9 @@ void Init()
     static int32_t nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
     static int32_t nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
-    bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 1) != 0;
+    bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 0) != 0;
     bool bDisableMotionBlur = iniReader.ReadInteger("MISC", "DisableMotionBlur", 0) != 0;
+    bool bBrakeLightFix = iniReader.ReadInteger("MISC", "BrakeLightFix", 1) != 0;
     static int32_t nShadowRes = iniReader.ReadInteger("MISC", "ShadowRes", 0);
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
@@ -341,6 +341,13 @@ void Init()
         //controls in photo mode
         //pattern = hook::pattern("D9 EE 6A 00 51 D9 1C 24 8B 8E D0 00 00 00 E8 ? ? ? ? D9 EE 6A 00 "); //0x59890A
         //injector::WriteMemory(pattern.get_first(0), 0xC3595E90, true); //pop esi  pop ecx  ret
+
+        // Start menu text
+        uint32_t* dword_7E2C9A = hook::pattern("68 ? ? ? ? 50 51 E8 ? ? ? ? 8D 54 24 2C").count(1).get(0).get<uint32_t>(1);
+        if (nImproveGamepadSupport == 1)
+            injector::WriteMemory(dword_7E2C9A, 0x25C22853, true); //"Press START to begin" (Xbox)
+        else
+            injector::WriteMemory(dword_7E2C9A, 0x703A92CC, true); //"Press START button" (PlayStation)
     }
 
     if (fLeftStickDeadzone)
@@ -468,6 +475,13 @@ void Init()
     {
         pattern = hook::pattern("74 73 F3 0F 10 84 24 ? ? ? ? F3 0F 11 44 24");
         injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true); //4B153E jmp 4B15B3
+    }
+
+    if (bBrakeLightFix)
+    {
+        static constexpr double d0 = 0.0f;
+        pattern = hook::pattern("DD 05 ? ? ? ? D9 C9 DF F1 DD D8 77 15 8B 86"); //717C9A
+        injector::WriteMemory(pattern.get_first(2), &d0, true);
     }
 
     if (nShadowRes)
