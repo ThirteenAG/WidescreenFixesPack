@@ -20,7 +20,7 @@ void Init()
     bool bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) != 0;
     bool bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) != 0;
     int32_t nScaling = iniReader.ReadInteger("MAIN", "Scaling", 2);
-    bool bHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1) != 0;
+    bool bHUDWidescreenMode = iniReader.ReadInteger("MAIN", "HUDWidescreenMode", 1) != 0;
     int32_t nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
     int32_t nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
     bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 1) != 0;
@@ -277,7 +277,7 @@ void Init()
         }
     }
 
-    if (bHudWidescreenMode)
+    if (bHUDWidescreenMode)
     {
         uint32_t* dword_5DC508 = hook::pattern("0F 95 C1 3A C1 75 2B 8B 0D ? ? ? ? 3B CE").count(1).get(0).get<uint32_t>(1);
         injector::WriteMemory<uint8_t>(dword_5DC508, 0x94, true);
@@ -588,6 +588,13 @@ void Init()
                 *(uint32_t*)(*(uint32_t*)dword_A98874 + 0x20) = 3; // "1"; changed A to Y
             }
         }; injector::MakeInline<MenuRemap>(pattern.get_first(0), pattern.get_first(6));
+
+        // Start menu text
+        uint32_t* dword_8577AC = hook::pattern("68 ? ? ? ? 68 ? ? ? ? 51 E8 ? ? ? ? 83 C4 14 E8").count(1).get(0).get<uint32_t>(1);
+        if (nImproveGamepadSupport == 1)
+            injector::WriteMemory(dword_8577AC, 0x186AAECC, true); //"Press START to begin" (Xbox)
+        else
+            injector::WriteMemory(dword_8577AC, 0x703A92CC, true); //"Press START button" (PlayStation)
     }
 
     if (bExpandControllerOptions)

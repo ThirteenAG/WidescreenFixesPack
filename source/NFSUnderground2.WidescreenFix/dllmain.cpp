@@ -73,13 +73,15 @@ void Init()
     bool bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) != 0;
     bool bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) != 0;
     bool bXbox360Scaling = iniReader.ReadInteger("MAIN", "Xbox360Scaling", 1) != 0;
-    bool bHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1) != 0;
+    bool bHUDWidescreenMode = iniReader.ReadInteger("MAIN", "HUDWidescreenMode", 1) != 0;
     bool bFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1) != 0;
     bool bDisableCutsceneBorders = iniReader.ReadInteger("MISC", "DisableCutsceneBorders", 1) != 0;
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
     bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 1) != 0;
     static int nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
+    bool b60FPSCutscenes = iniReader.ReadInteger("MISC", "60FPSCutscenes", 1) != 0;
+    bool bSingleCoreAffinity = iniReader.ReadInteger("MISC", "SingleCoreAffinity", 0) != 0;
     static float fRainDropletsScale = iniReader.ReadFloat("MISC", "RainDropletsScale", 0.5f);
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
         szCustomUserFilesDirectoryInGameDir.clear();
@@ -311,7 +313,7 @@ void Init()
         injector::WriteMemory<float>(dword_536A2E, -(0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
     }
 
-    if (bHudWidescreenMode)
+    if (bHUDWidescreenMode)
     {
         LoadDatFile();
 
@@ -494,7 +496,7 @@ void Init()
                     else
                         Qstate = false;
 
-                    if (PadKeyPresses->Y)
+                    /*if (PadKeyPresses->Y)
                     {
                         if (!Zstate)
                         {
@@ -505,6 +507,7 @@ void Init()
                     }
                     else
                         Zstate = false;
+                        */
                 }
             }
         }; injector::MakeInline<CatchPad>(pattern.get_first(0));
@@ -544,6 +547,35 @@ void Init()
                 }
             }
         }; injector::MakeInline<MenuText>(pattern.get_first(0), pattern.get_first(6));
+
+        // Start menu text
+        uint32_t* dword_4A91E7 = hook::pattern("68 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 50 55 E8").count(3).get(1).get<uint32_t>(1);
+        if (nImproveGamepadSupport == 1)
+            injector::WriteMemory(dword_4A91E7, 0xD18D4C4C, true); //"Please press START to begin" (Xbox)
+        if (nImproveGamepadSupport == 2)
+            injector::WriteMemory(dword_4A91E7, 0xDC64C04C, true); //"Press START Button" (PlayStation)
+
+
+        // FrontEnd button remap (through game code, not key emulation)
+        auto pattern = hook::pattern("89 4E ? 89 4E ? 8B E8"); // 005C1A07
+        struct FrontEndRemap
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                *(uintptr_t*)(regs.esi + 0x08) = regs.ecx;
+                *(uintptr_t*)(regs.esi + 0x0C) = regs.ecx;
+
+                int Y_Button = (regs.eax + 0x5064);
+                *(uintptr_t*)Y_Button = 0x2E; // FE Action "P"
+                int Start = (regs.eax + 0x5074);
+                *(uintptr_t*)Start = 0x24; // FE Action "Comma"
+                int LB = (regs.eax + 0x5068); 
+                *(uintptr_t*)LB = 0x26; // FE Action "Left Bracket"
+                int RB = (regs.eax + 0x506C);
+                *(uintptr_t*)RB = 0x27; // FE Action "Right Bracket"
+            }
+        };
+        injector::MakeInline<FrontEndRemap>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
     }
 
     const wchar_t* ControlsTexts[] = { L" 2", L" 3", L" 4", L" 5", L" 6", L" 7", L" 8", L" 9", L" 10", L" 1", L" Up", L" Down", L" Left", L" Right", L"X Rotation", L"Y Rotation", L"X Axis", L"Y Axis", L"Z Axis", L"Hat Switch" };
@@ -607,6 +639,18 @@ void Init()
                 }
             }
         }; injector::MakeInline<DeadzoneHook>(pattern.get_first(-2), pattern.get_first(4));
+    }
+
+    if (b60FPSCutscenes)
+    {
+        static float flt60 = 60.0f;
+        uint32_t* dword_435FA4 = hook::pattern("7C ? 68 ? ? ? ? E8 ? ? ? ? 83 C4 ? 5F 5E").count(1).get(0).get<uint32_t>(3);
+        injector::WriteMemory(dword_435FA4, flt60, true);
+    }
+
+    if (bSingleCoreAffinity)
+    {
+        SetProcessAffinityMask(GetCurrentProcess(), 1);
     }
 
     if (bWriteSettingsToFile)

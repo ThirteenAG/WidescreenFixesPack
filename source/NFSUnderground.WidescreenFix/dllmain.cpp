@@ -110,7 +110,7 @@ void Init()
     bool bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) != 0;
     bool bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) != 0;
     bool bXbox360Scaling = iniReader.ReadInteger("MAIN", "Xbox360Scaling", 1) != 0;
-    bool bHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1) != 0;
+    bool bHUDWidescreenMode = iniReader.ReadInteger("MAIN", "HUDWidescreenMode", 1) != 0;
     bool bFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1) != 0;
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
     static int nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
@@ -324,7 +324,7 @@ void Init()
         injector::WriteMemory<float>(pattern.get_first(6 + 15), -(0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
     }
 
-    if (bHudWidescreenMode && (Screen.fAspectRatio > (4.0f / 3.0f)))
+    if (bHUDWidescreenMode && (Screen.fAspectRatio > (4.0f / 3.0f)))
     {
         static std::vector<CDatEntry> HudCoords;
 
@@ -642,6 +642,22 @@ void Init()
                 }
             }
         }; if (pattern.size() > 0) { injector::MakeInline<Buttons>(pattern.get_first(0), pattern.get_first(7)); }
+
+        // FrontEnd button remap (through game code, not key emulation)
+        auto pattern = hook::pattern("8B 86 ? ? ? ? 8B 0C ? ? ? ? ? 85 C9 0F"); // 004071C5
+        struct FrontEndRemap
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                regs.eax = *(uintptr_t*)(regs.esi + 0x0130);
+
+                int LB = (regs.esi + 0x0130) - (0x88);
+                *(uintptr_t*)LB = 0x1A; // FE Action "Comma"
+                int RB = (regs.esi + 0x0130) - (0x84);
+                *(uintptr_t*)RB = 0x19; // FE Action "Period"
+            }
+        };
+        injector::MakeInline<FrontEndRemap>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
     }
 
     if (fLeftStickDeadzone)
