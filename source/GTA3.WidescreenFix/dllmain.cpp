@@ -20,7 +20,7 @@ void* pRwRenderStateSet;
 float* pfScreenAspectRatioSkin;
 float* pfSkinX;
 
-void ReadSettings() 
+void ReadSettings()
 {
     CIniReader iniReader("");
     ResX = iniReader.ReadInteger("MAIN", "ResX", -1);
@@ -40,9 +40,16 @@ void ReadSettings()
     bSmallerVehicleCorona = iniReader.ReadInteger("MISC", "SmallerVehicleCorona", 0);
     bNoLightSquare = iniReader.ReadInteger("MISC", "NoLightSquare", 0);
     szSelectedMultisamplingLevels = iniReader.ReadString("MISC", "ForceMultisamplingLevel", "");
-    SelectedMultisamplingLevels = iniReader.ReadInteger("MISC", "ForceMultisamplingLevel", 0);
     bIVRadarScaling = iniReader.ReadInteger("MISC", "IVRadarScaling", 0) != 0;
     ReplaceTextShadowWithOutline = iniReader.ReadInteger("MISC", "ReplaceTextShadowWithOutline", 0);
+
+    auto is_number = [](const std::string& s) -> bool
+    {
+        return !s.empty() && std::all_of(s.begin(), s.end(), ::isdigit);
+    };
+
+    if (is_number(szSelectedMultisamplingLevels))
+        SelectedMultisamplingLevels = iniReader.ReadInteger("MISC", "ForceMultisamplingLevel", 0);
 }
 
 void GetPatterns()
@@ -580,7 +587,7 @@ void ApplyIniOptions()
     auto pattern = hook::pattern("A1 ? ? ? ? 3B C3"); //0x5B7D75
     if (pattern.size() > 0)
     {
-        if (strncmp(szSelectedMultisamplingLevels.c_str(), "max", 3) != 0)
+        if (szSelectedMultisamplingLevels != "max")
         {
             injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(1), &SelectedMultisamplingLevels, true);
         }

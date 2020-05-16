@@ -23,7 +23,7 @@ uint32_t* CMenuManager_m_PrefsLanguage;
 void OverwriteResolution();
 void* pRwRenderStateSet;
 
-void ReadSettings() 
+void ReadSettings()
 {
     CIniReader iniReader("");
     ResX = iniReader.ReadInteger("MAIN", "ResX", -1);
@@ -44,9 +44,16 @@ void ReadSettings()
     bSmallerVehicleCorona = iniReader.ReadInteger("MISC", "SmallerVehicleCorona", 0);
     bNoLightSquare = iniReader.ReadInteger("MISC", "NoLightSquare", 0);
     szSelectedMultisamplingLevels = iniReader.ReadString("MISC", "ForceMultisamplingLevel", "");
-    SelectedMultisamplingLevels = iniReader.ReadInteger("MISC", "ForceMultisamplingLevel", 0);
     bIVRadarScaling = iniReader.ReadInteger("MISC", "IVRadarScaling", 0) != 0;
     ReplaceTextShadowWithOutline = iniReader.ReadInteger("MISC", "ReplaceTextShadowWithOutline", 0);
+
+    auto is_number = [](const std::string& s) -> bool
+    {
+        return !s.empty() && std::all_of(s.begin(), s.end(), ::isdigit);
+    };
+
+    if (is_number(szSelectedMultisamplingLevels))
+        SelectedMultisamplingLevels = iniReader.ReadInteger("MISC", "ForceMultisamplingLevel", 0);
 }
 
 void GetPatterns()
@@ -136,6 +143,26 @@ void GetMemoryAddresses()
 void SilentPatchCompatibility()
 {
     OverwriteResolution();
+
+    auto pattern = hook::pattern("66 8B 2D ? ? ? ? 0F BF C5");
+    if (ReplaceTextShadowWithOutline && *(uint8_t*)pattern.count(1).get(0).get<uint8_t*>(10) != 0x89)
+    {
+        injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(10), 0x89, true); //0x5516FB
+        injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(11), 0x04DB2404, true); //0x5516FC
+        injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(15), 0xC81DD824, true); //0x5516FC + 4
+
+        pattern = hook::pattern("89 44 24 0C D8 05 ? ? ? ? D9 1D ? ? ? ?");
+        injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(16), 0xDB, true); //0x5517C4
+        injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(16 + 3), 0x0C, true); //0x5517C7
+        pattern = hook::pattern("0F BF C5 D9 1C 24 89 44 24 14 50");
+        injector::WriteMemory<uint8_t>(pattern.count(2).get(0).get<uint32_t>(11), 0xDB, true); //0x5517DF
+        injector::WriteMemory<uint8_t>(pattern.count(2).get(0).get<uint32_t>(11 + 3), 0x18, true); //0x5517E2
+        injector::WriteMemory<uint8_t>(pattern.count(2).get(1).get<uint32_t>(11), 0xDB, true); //0x551848
+        injector::WriteMemory<uint8_t>(pattern.count(2).get(1).get<uint32_t>(11 + 3), 0x18, true); //0x55184B
+        pattern = hook::pattern("FF 74 24 34 89 44 24 04 53");
+        injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(9), 0xDB, true); //0x551832
+        injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(9 + 3), 0x08, true); //0x551835
+    }
 }
 
 injector::hook_back<signed int(__cdecl*)(void)> hbRsSelectDevice;
@@ -198,10 +225,10 @@ void __declspec(naked) funcCCameraAvoidTheGeometryHook()
 
 void FixFOV()
 {
-    auto pattern = hook::pattern("D9 44 24 04 D9 1D ? ? ? ? C3"); //0x54A2E0 
+    auto pattern = hook::pattern("D9 44 24 04 D9 1D ? ? ? ? C3"); //0x54A2E0
     injector::MakeJMP(pattern.count(1).get(0).get<uint32_t>(0), CDraw::SetFOV, true);
 
-    pattern = hook::pattern("E8 ? ? ? ? D9 EE D9 EE D9 44 24 38 D8 A3 7C 01 00 00 DD D9"); //0x480456 
+    pattern = hook::pattern("E8 ? ? ? ? D9 EE D9 EE D9 44 24 38 D8 A3 7C 01 00 00 DD D9"); //0x480456
     injector::MakeCALL(pattern.count(1).get(0).get<uint32_t>(0), funcCCameraAvoidTheGeometryHook, true);
 
     struct EmergencyVehiclesFix
@@ -285,8 +312,9 @@ void RsSelectDeviceHook()
 
 void FixCoronas()
 {
-    if (bNoLightSquare) {
-        auto pattern = hook::pattern("D8 0E D9 1E D9 05 ? ? ? ? D8 35 ? ? ? ? D8 0B D9 1B"); //0x57797A 
+    if (bNoLightSquare)
+    {
+        auto pattern = hook::pattern("D8 0E D9 1E D9 05 ? ? ? ? D8 35 ? ? ? ? D8 0B D9 1B"); //0x57797A
         injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(1), 0x0B, true);
 
         auto pfCAutoPreRender = (uint32_t)hook::pattern("FF 35 ? ? ? ? 50 8D 84 24 24 05 00").count(1).get(0).get<uint32_t>(0);
@@ -321,7 +349,7 @@ static void __fastcall DrawBordersForWideScreenHook(void* _this)
 
 void FixBorders()
 {
-    auto pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? DE E9 D9 5A 04"); //0x46FDA9 
+    auto pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? DE E9 D9 5A 04"); //0x46FDA9
     injector::MakeNOP(pattern.count(1).get(0).get<uint32_t>(0), 12, true);
     pattern = hook::pattern("D9 5A 0C 83 C4 08 5B C2 04 00"); //0x46FE09
     injector::MakeNOP(pattern.count(1).get(0).get<uint32_t>(0), 3, true);
@@ -593,7 +621,7 @@ void ApplyIniOptions()
 
     if (ReplaceTextShadowWithOutline)
     {
-        auto pattern = hook::pattern("D8 44 24 38 D9 1C 24 E8 ? ? ? ? 83 C4 18"); //0x551850 
+        auto pattern = hook::pattern("D8 44 24 38 D9 1C 24 E8 ? ? ? ? 83 C4 18"); //0x551850
         hbPrintString.fun = injector::MakeCALL(pattern.count(1).get(0).get<uint32_t>(7), PrintStringHook).get();
         injector::MakeJMP(pattern.count(1).get(0).get<uint32_t>(0), GetTextOriginalColor, true);
         jmpAddr = pattern.count(1).get(0).get<uint32_t>(7);
@@ -616,7 +644,7 @@ void ApplyIniOptions()
         //injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(11), 0x77, true); //shadow size 0x55B5A5 disabled due to bugs
 
         pattern = hook::pattern("6A 32 6A 64 6A 64 6A 64 E8");
-        injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(1), 0x00, true); // cursor shadow alpha 0x4A35A2 
+        injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(1), 0x00, true); // cursor shadow alpha 0x4A35A2
 
         pattern = hook::pattern("8D 4C 24 0C 68 FF 00 00 00 6A 00 6A 00 6A 00");
         injector::WriteMemory(pattern.count(3).get(2).get<uint32_t>(5), 0x00000000, true); //radio shadow 0x5FA1A5
@@ -631,8 +659,7 @@ void ApplyIniOptions()
     hbPrintString2.fun = injector::MakeCALL(pattern.count(1).get(0).get<uint32_t>(2), PrintStringHook2).get();
 
     pattern = hook::pattern("A1 ? ? ? ? 3B C3"); //0x65C321
-
-    if (strncmp(szSelectedMultisamplingLevels.c_str(), "max", 3) != 0)
+    if (szSelectedMultisamplingLevels != "max")
     {
         injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(1), &SelectedMultisamplingLevels, true);
     }
