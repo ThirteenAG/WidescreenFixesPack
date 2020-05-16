@@ -76,6 +76,11 @@ void Init()
     pattern = hook::pattern("E8 ? ? ? ? D9 04 24 D8 74 24 04 DE C9");
     injector::WriteMemory(injector::GetBranchDestination(pattern.get_first()).as_int() + 2, &Screen.fAspectRatio, true);
 
+    //Fixes (sort of) crash when using high resolutions
+    static uint8_t vec[100000];
+    pattern = hook::pattern("B9 ? ? ? ? 89 ? 24 14 ? ? 24");
+    injector::WriteMemory(pattern.get_first(1), &vec[0], true);
+
     //FOV
     if (bFixFOV)
     {

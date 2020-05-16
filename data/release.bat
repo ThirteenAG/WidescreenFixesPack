@@ -11,12 +11,12 @@ if errorlevel 1 (
    SET dll=!filepath:.ual=.dll!
    ECHO !dll! 	
    copy "..\..\Ultimate-ASI-Loader\bin\x86\Release\dinput8.dll" !dll!
-   SET "mu=%%~dpF\scripts\"
-   SET "mu2=%%~dpF\plugins\"
-   SET "mu3=%%~dpF\"
-   SET "mu4=modupdater.asi"
-   ECHO !mu!
-   IF EXIST !mu! (copy "..\..\modupdater\bin\Release\modupdater.asi" !mu!!mu4!) ELSE IF EXIST !mu2! (copy "..\..\modupdater\bin\Release\modupdater.asi" !mu2!!mu4!) ELSE (copy "..\..\modupdater\bin\Release\modupdater.asi" !mu3!!mu4!)
+   REM SET "mu=%%~dpF\scripts\"
+   REM SET "mu2=%%~dpF\plugins\"
+   REM SET "mu3=%%~dpF\"
+   REM SET "mu4=modupdater.asi"
+   REM ECHO !mu!
+   REM IF EXIST !mu! (copy "..\..\modupdater\bin\Release\modupdater.asi" !mu!!mu4!) ELSE IF EXIST !mu2! (copy "..\..\modupdater\bin\Release\modupdater.asi" !mu2!!mu4!) ELSE (copy "..\..\modupdater\bin\Release\modupdater.asi" !mu3!!mu4!)
 )
 )
 
@@ -58,16 +58,10 @@ if errorlevel 1 (
 )
 )
 
-rem Scarface PIX
-
-copy "%DXSDK_DIR%\Utilities\bin\x86\Detoured.dll" ".\Scarface.GenericFix\Detoured.dll"
-copy "%DXSDK_DIR%\Utilities\bin\x86\PIXHelper.dll" ".\Scarface.GenericFix\PIXHelper.dll"
-copy "%DXSDK_DIR%\Utilities\bin\x86\PIXWin.exe" ".\Scarface.GenericFix\PIXWin.exe"
-
 rem Creating archives
 
 FOR /d %%X IN (*) DO (
-7za a -tzip "Archives\%%X.zip" "%%X\" -r -xr^^!Archives -x^^!*.pdb -x^^!*.db -x^^!*.ipdb -x^^!*.iobj -x^^!*.tmp -x^^!*.iobj -x^^!*.ual -x^^!*.x64ual -x^^!*.iobj -x^^!*.wrapper -x^^!*.lib -x^^!*.exp -x^^!*.ilk
+7za a -tzip "Archives\%%X.zip" ".\%%X\*" -r -xr^^!Archives -x^^!*.pdb -x^^!*.db -x^^!*.ipdb -x^^!*.iobj -x^^!*.tmp -x^^!*.iobj -x^^!*.ual -x^^!*.x64ual -x^^!*.iobj -x^^!*.wrapper -x^^!*.lib -x^^!*.exp -x^^!*.ilk
 )
 
 rem Creating texture archives
