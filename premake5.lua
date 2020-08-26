@@ -191,8 +191,8 @@ project "PsiOpsTheMindgateConspiracy.WidescreenFix"
    setpaths("Z:/WFP/Games/PSI-OPS/", "PsiOps.exe")
 project "Psychonauts.WidescreenFix"
    setpaths("Z:/WFP/Games/Psychonauts/", "Psychonauts.exe")
-project "Scarface.GenericFix"
-   setpaths("Z:/WFP/Games/Scarface/", "Scarface.exe", "")
+--project "Scarface.GenericFix"
+--   setpaths("Z:/WFP/Games/Scarface/", "Scarface.exe", "")
 project "SecondSight.WidescreenFix"
    setpaths("Z:/WFP/Games/Second Sight/", "secondsight.exe")
 project "SilentHill2.WidescreenFix"
