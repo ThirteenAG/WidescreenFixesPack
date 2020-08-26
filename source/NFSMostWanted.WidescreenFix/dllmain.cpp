@@ -30,6 +30,7 @@ void Init()
     bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 1) != 0;
     static int nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
     bool bDisableMotionBlur = iniReader.ReadInteger("MISC", "DisableMotionBlur", 0) != 0;
+    bool bForceHighSpecAudio = iniReader.ReadInteger("MISC", "ForceHighSpecAudio", 1) != 0;
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
     static float fRainDropletsScale = iniReader.ReadFloat("MISC", "RainDropletsScale", 0.5f);
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
@@ -138,10 +139,9 @@ void Init()
             injector::WriteMemory(dword__93D898, dword_8F1CA0, true);
         }
 
-        // solves shadow acne problem for resolutions greater than 4096
-        if (ShadowsRes > 4096)
+        // solves shadow acne problem for resolutions greater than 1024
         {
-            static float ShadowBias = (ShadowsRes / 4096.0f) * 4.0f;
+            static float ShadowBias = (ShadowsRes / 1024.0f) * 4.0f;
             uint32_t* dword_6E5509 = hook::pattern("8B 15 ? ? ? ? A1 ? ? ? ? 8B 08 52 68").count(1).get(0).get<uint32_t>(2);
             injector::WriteMemory(dword_6E5509, &ShadowBias, true);
         }
@@ -371,6 +371,12 @@ void Init()
         uint32_t* dword_595DDA = hook::pattern("83 F8 02 74 2D 83 F8 03 74 28 83 F8 04 74 23 83 F8 05 74 1E 83 F8 06 74 19").count(1).get(0).get<uint32_t>(2);
         injector::WriteMemory<uint8_t>(dword_595DDA, 4, true);
         injector::WriteMemory<uint8_t>((uint32_t)dword_595DDA + 5, 4, true);
+    }
+
+    if (bForceHighSpecAudio)
+    {
+        uint32_t* dword_4C41F5 = hook::pattern("C7 05 ? ? ? ? ? ? 00 00 A1 ? ? ? ? 85 C0 ? ? A3 ? ? ? ? 8D 44 24 08").count(1).get(0).get<uint32_t>(6);
+        injector::WriteMemory<int>(dword_4C41F5, 44100, true);
     }
 
     if (!szCustomUserFilesDirectoryInGameDir.empty())
