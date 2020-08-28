@@ -10,6 +10,7 @@ struct Screen
     float fAspectRatio;
     float fHudScaleX;
     float fHudPosX;
+    float fShadowRatio;
 } Screen;
 
 void Init()
@@ -23,6 +24,7 @@ void Init()
     bool bFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1) == 1;
     int nScaling = iniReader.ReadInteger("MAIN", "Scaling", 1);
     int ShadowsRes = iniReader.ReadInteger("MISC", "ShadowsRes", 1024);
+    bool bAutoScaleShadowsRes = iniReader.ReadInteger("MISC", "AutoScaleShadowsRes", 0) != 0;
     bool bShadowsFix = iniReader.ReadInteger("MISC", "ShadowsFix", 1) != 0;
     bool bImproveShadowLOD = iniReader.ReadInteger("MISC", "ImproveShadowLOD", 0) != 0;
     bool bRearviewMirrorFix = iniReader.ReadInteger("MISC", "RearviewMirrorFix", 1) == 1;
@@ -45,6 +47,7 @@ void Init()
     Screen.Width43 = static_cast<int32_t>(Screen.fHeight * (4.0f / 3.0f));
     Screen.fHudScaleX = (1.0f / Screen.fWidth * (Screen.fHeight / 480.0f)) * 2.0f;
     Screen.fHudPosX = 640.0f / (640.0f * Screen.fHudScaleX);
+    Screen.fShadowRatio = (Screen.fHeight / Screen.fWidth) / 0.85f;
 
     for (size_t i = 0; i < 2; i++)
     {
@@ -110,24 +113,53 @@ void Init()
         }
     }; injector::MakeInline<RainDropletsYScaleHook>(pattern.get_first(30), pattern.get_first(30 + 8)); //6D482B
 
-
     if (ShadowsRes)
     {
         auto dword_8F1CA0 = *hook::pattern("8B 14 85 ? ? ? ? 0F AF 56 5C C1 FA 0F 89 56 5C").count(1).get(0).get<uint32_t*>(3);
         dword_8F1CA0 += 0x1D4;
 
+        int ShadowsResX = ShadowsRes;
+        int ShadowsResY = ShadowsRes;
+
+        if (bAutoScaleShadowsRes && bFixFOV)
+        {
+            ShadowsResX = ShadowsRes / Screen.fShadowRatio;
+        }
+        
+        /* 
+        
+        I'm delibrately not using a logical OR operator (ShadowsResX || ShadowsResY) to improve game performance in uncommon situations. 
+        Example: an aspect ratio of 32:9 with a shadow resolution of 8192, would have the shadow resolution be 24758x8192 when AutoScaleShadowsRes is enabled.
+        Because the ShadowResX variable exceeds 16384, both variables would default to 16384x16384 when using a logical OR. 
+        But by using an if statement for each variable, the resolution would instead default to 16384x8192. A massive 2x difference in resolution for the y-axis. 
+        
+        I also suck at programming, so that's another reason.
+        Aero_
+        
+        */
+
+        if (ShadowsResX > 16384)
+        {
+            ShadowsResX = 16384;
+        }
+
+        if (ShadowsResY > 16384)
+        {
+            ShadowsResX = 16384;
+        }
+
         uint32_t* dword_6C86B0 = hook::pattern("B8 00 04 00 00 C3").count(2).get(1).get<uint32_t>(1);
-        injector::WriteMemory(dword_6C86B0, ShadowsRes, true);
+        injector::WriteMemory(dword_6C86B0, ShadowsResX, true);
         uint32_t* dword_6C86C0 = hook::pattern("B8 00 04 00 00 C3").count(2).get(1).get<uint32_t>(1);
-        injector::WriteMemory(dword_6C86C0, ShadowsRes, true);
+        injector::WriteMemory(dword_6C86C0, ShadowsResY, true);
         uint32_t* dword_6C8786 = hook::pattern("68 00 04 00 00 68 00 04 00 00 50 FF 51 5C 85 C0 7C 32").count(1).get(0).get<uint32_t>(1);
-        injector::WriteMemory(dword_6C8786, ShadowsRes, true);
+        injector::WriteMemory(dword_6C8786, ShadowsResY, true);
         uint32_t dword_6C878B = (uint32_t)dword_6C8786 + 5;
-        injector::WriteMemory(dword_6C878B, ShadowsRes, true);
+        injector::WriteMemory(dword_6C878B, ShadowsResX, true);
         uint32_t* dword_6C87B8 = hook::pattern("68 00 04 00 00 68 00 04 00 00 50 FF 52 5C 85 C0 7D 36").count(1).get(0).get<uint32_t>(1);
-        injector::WriteMemory(dword_6C87B8, ShadowsRes, true);
+        injector::WriteMemory(dword_6C87B8, ShadowsResY, true);
         uint32_t dword_6C87BD = (uint32_t)dword_6C87B8 + 5;
-        injector::WriteMemory(dword_6C87BD, ShadowsRes, true);
+        injector::WriteMemory(dword_6C87BD, ShadowsResX, true);
 
         uint32_t* dword_93D898 = *hook::pattern("A1 ? ? ? ? 49 3D 02 10 00 00 89 0D").count(1).get(0).get<uint32_t*>(1);
         //char TempStr[10];
@@ -139,9 +171,10 @@ void Init()
             injector::WriteMemory(dword__93D898, dword_8F1CA0, true);
         }
 
-        // solves shadow acne problem for resolutions greater than 1024
+        // solves shadow acne problem for resolutions greater than 2048
+        if (ShadowsResX > 2048)
         {
-            static float ShadowBias = (ShadowsRes / 1024.0f) * 4.0f;
+            static float ShadowBias = (ShadowsResX / 2048.0f) * 4.0f;
             uint32_t* dword_6E5509 = hook::pattern("8B 15 ? ? ? ? A1 ? ? ? ? 8B 08 52 68").count(1).get(0).get<uint32_t>(2);
             injector::WriteMemory(dword_6E5509, &ShadowBias, true);
         }
@@ -275,14 +308,12 @@ void Init()
 
         //Shadow tearing fix
         auto pattern = hook::pattern("0F B7 ? C4 00 00 00");
-        static float fShadowRatio;
-        fShadowRatio = (Screen.fHeight / Screen.fWidth) / 0.85f;
         struct ShadowFOVHookEAX
         {
             void operator()(injector::reg_pack& regs)
             {
                 int ebxC4 = *(int*)(regs.ebx + 0xC4);
-                regs.eax = (ebxC4 / fShadowRatio);
+                regs.eax = (ebxC4 / Screen.fShadowRatio);
             }
         };
         struct ShadowFOVHookECX
@@ -290,7 +321,7 @@ void Init()
             void operator()(injector::reg_pack& regs)
             {
                 int ebxC4 = *(int*)(regs.ebx + 0xC4);
-                regs.ecx = (ebxC4 / fShadowRatio);
+                regs.ecx = (ebxC4 / Screen.fShadowRatio);
             }
         };
         struct ShadowFOVHookEDX
@@ -298,7 +329,7 @@ void Init()
             void operator()(injector::reg_pack& regs)
             {
                 int ebxC4 = *(int*)(regs.ebx + 0xC4);
-                regs.edx = (ebxC4 / fShadowRatio);
+                regs.edx = (ebxC4 / Screen.fShadowRatio);
             }
         };
         injector::MakeInline<ShadowFOVHookEAX>(pattern.count(15).get(11).get<uint32_t>(0), pattern.count(15).get(11).get<uint32_t>(7));
