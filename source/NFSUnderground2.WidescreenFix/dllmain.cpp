@@ -80,6 +80,7 @@ void Init()
     bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 1) != 0;
     static int nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
+    static float fFPSLimit= iniReader.ReadFloat("MISC", "FPSLimit", 120.0f);
     bool b60FPSCutscenes = iniReader.ReadInteger("MISC", "60FPSCutscenes", 1) != 0;
     bool bSingleCoreAffinity = iniReader.ReadInteger("MISC", "SingleCoreAffinity", 0) != 0;
     static float fRainDropletsScale = iniReader.ReadFloat("MISC", "RainDropletsScale", 0.5f);
@@ -641,11 +642,22 @@ void Init()
         }; injector::MakeInline<DeadzoneHook>(pattern.get_first(-2), pattern.get_first(4));
     }
 
+    if (fFPSLimit)
+    {
+        static float FrameTime = 1 / fFPSLimit;
+        uint32_t* dword_865558 = *hook::pattern("D9 05 ? ? ? ? B9 64 00 00 00 D8 64").count(1).get(0).get<uint32_t*>(2);
+        injector::WriteMemory(dword_865558, FrameTime, true);
+        uint32_t* dword_7FB710 = *hook::pattern("D9 05 ? ? ? ? D8 74 ? ? D9 1D ? ? ? ? C3").count(1).get(0).get<uint32_t*>(33);
+        injector::WriteMemory(dword_7FB710, FrameTime, true);
+    }
+
     if (b60FPSCutscenes)
     {
         static float flt60 = 60.0f;
         uint32_t* dword_435FA4 = hook::pattern("7C ? 68 ? ? ? ? E8 ? ? ? ? 83 C4 ? 5F 5E").count(1).get(0).get<uint32_t>(3);
         injector::WriteMemory(dword_435FA4, flt60, true);
+        uint32_t* dword_7A572C = *hook::pattern("8B 15 ? ? ? ? 52 A3 ? ? ? ? E8 ? ? ? ? 83 C4 14").count(1).get(0).get<uint32_t*>(2);
+        injector::WriteMemory(dword_7A572C, flt60, true);
     }
 
     if (bSingleCoreAffinity)
