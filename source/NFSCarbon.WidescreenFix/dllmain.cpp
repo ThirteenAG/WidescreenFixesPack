@@ -591,7 +591,7 @@ void Init()
 
         // Start menu text
         uint32_t* dword_8577AC = hook::pattern("68 ? ? ? ? 68 ? ? ? ? 51 E8 ? ? ? ? 83 C4 14 E8").count(1).get(0).get<uint32_t>(1);
-        if (nImproveGamepadSupport == 1)
+        if (nImproveGamepadSupport != 2)
             injector::WriteMemory(dword_8577AC, 0x186AAECC, true); //"Press START to begin" (Xbox)
         else
             injector::WriteMemory(dword_8577AC, 0x703A92CC, true); //"Press START button" (PlayStation)
