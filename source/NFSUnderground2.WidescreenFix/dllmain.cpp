@@ -441,17 +441,20 @@ void Init()
             ResourceFileBeginLoading(r, nUnk4, nUnk5);
         };
 
-        static auto TPKPath = GetThisModulePath<std::string>().substr(GetExeModulePath<std::string>().length()) + "test.tpk";
-
-        static injector::hook_back<void(__cdecl*)()> hb_57FA60;
-        auto LoadTPK = []()
+        if (nImproveGamepadSupport < 3)
         {
-            LoadResourceFile(TPKPath.c_str(), 1);
-            return hb_57FA60.fun();
-        };
+            static auto TPKPath = GetThisModulePath<std::string>().substr(GetExeModulePath<std::string>().length()) + "test.tpk";
 
-        pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 5F C6 05 ? ? ? ? ? C7 05 ? ? ? ? ? ? ? ? 5E"); //0x57ECEF
-        hb_57FA60.fun = injector::MakeCALL(pattern.get_first(0), static_cast<void(__cdecl*)()>(LoadTPK), true).get();
+            static injector::hook_back<void(__cdecl*)()> hb_57FA60;
+            auto LoadTPK = []()
+            {
+                LoadResourceFile(TPKPath.c_str(), 1);
+                return hb_57FA60.fun();
+            };
+
+            pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 5F C6 05 ? ? ? ? ? C7 05 ? ? ? ? ? ? ? ? 5E"); //0x57ECEF
+            hb_57FA60.fun = injector::MakeCALL(pattern.get_first(0), static_cast<void(__cdecl*)()>(LoadTPK), true).get();
+        }
 
         struct PadState
         {

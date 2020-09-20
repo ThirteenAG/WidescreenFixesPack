@@ -24,6 +24,7 @@ xcopy /S /Q /Y /F "../textures/view.dds" "unpacked/D444E031/PC_KEY_3.dds"
 xcopy /S /Q /Y /F "../textures/x.dds" "unpacked/D444E031/PC_KEY_2.dds"
 xcopy /S /Q /Y /F "../textures/y.dds" "unpacked/D444E031/PC_KEY_1.dds"
 xcopy /S /Q /Y /F "../textures/cursor.dds" "unpacked/D444E031/PC_CURSOR.dds"
+xcopy /S /Q /Y /F "../textures/cursordrag.dds" "unpacked/D444E031/PC_CLICKDRAG_ICON.dds"
 xcopy /S /Q /Y /F "../textures/dummy.dds" "unpacked/D444E031/PC_LOAD.dds"
 %XNFSTPKTool% -w unpacked/D444E031.ini ../../../data/NFSCarbon.WidescreenFix/scripts/buttons-xbox.tpk
 rmdir /Q /S unpacked
@@ -52,6 +53,7 @@ xcopy /S /Q /Y /F "../textures/share.dds" "unpacked/D444E031/PC_KEY_3.dds"
 xcopy /S /Q /Y /F "../textures/square.dds" "unpacked/D444E031/PC_KEY_2.dds"
 xcopy /S /Q /Y /F "../textures/triangle.dds" "unpacked/D444E031/PC_KEY_1.dds"
 xcopy /S /Q /Y /F "../textures/cursor.dds" "unpacked/D444E031/PC_CURSOR.dds"
+xcopy /S /Q /Y /F "../textures/cursordrag.dds" "unpacked/D444E031/PC_CLICKDRAG_ICON.dds"
 xcopy /S /Q /Y /F "../textures/dummy.dds" "unpacked/D444E031/PC_LOAD.dds"
 %XNFSTPKTool% -w unpacked/D444E031.ini ../../../data/NFSCarbon.WidescreenFix/scripts/buttons-playstation.tpk
 rmdir /Q /S unpacked

@@ -162,21 +162,24 @@ void Init2()
             ResourceFileBeginLoading(r, nUnk4, nUnk5);
         };
 
-        static auto TPKPath = GetThisModulePath<std::string>().substr(GetExeModulePath<std::string>().length());
-
-        if (nImproveGamepadSupport == 1)
-            TPKPath += "buttons-xbox.tpk";
-        else if (nImproveGamepadSupport == 2)
-            TPKPath += "buttons-playstation.tpk";
-
-        struct LoadTPK
+        if (nImproveGamepadSupport < 3)
         {
-            void operator()(injector::reg_pack& regs)
+            static auto TPKPath = GetThisModulePath<std::string>().substr(GetExeModulePath<std::string>().length());
+
+            if (nImproveGamepadSupport == 1)
+                TPKPath += "buttons-xbox.tpk";
+            else if (nImproveGamepadSupport == 2)
+                TPKPath += "buttons-playstation.tpk";
+
+            struct LoadTPK
             {
-                regs.edi = *dword_CC9364;
-                LoadResourceFile(TPKPath.c_str());
-            }
-        }; injector::MakeInline<LoadTPK>(pattern.get_first(0), pattern.get_first(6));
+                void operator()(injector::reg_pack& regs)
+                {
+                    regs.edi = *dword_CC9364;
+                    LoadResourceFile(TPKPath.c_str());
+                }
+            }; injector::MakeInline<LoadTPK>(pattern.get_first(0), pattern.get_first(6));
+        }
 
         const char* ControlsTexts[] = { " 2", " 3", " 4", " 5", " 6", " 7", " 8", " 9", " 10", " 1", " Up", " Down", " Left", " Right", "X Rotation", "Y Rotation", "X Axis", "Y Axis", "Z Axis", "Hat Switch" };
         const char* ControlsTextsXBOX[] = { "B", "X", "Y", "LB", "RB", "View (Select)", "Menu (Start)", "Left stick", "Right stick", "A", "D-pad Up", "D-pad Down", "D-pad Left", "D-pad Right", "Right stick Left/Right", "Right stick Up/Down", "Left stick Left/Right", "Left stick Up/Down", "LT / RT", "D-pad" };

@@ -269,22 +269,25 @@ void Init()
             ResourceFileBeginLoading(r, nUnk4, nUnk5);
         };
 
-        static auto TPKPath = GetThisModulePath<std::string>().substr(GetExeModulePath<std::string>().length());
-
-        if (nImproveGamepadSupport == 1)
-            TPKPath += "buttons-xbox.tpk";
-        else if (nImproveGamepadSupport == 2)
-            TPKPath += "buttons-playstation.tpk";
-
-        static injector::hook_back<void(__cdecl*)()> hb_6D98B0;
-        auto LoadTPK = []()
+        if (nImproveGamepadSupport < 3)
         {
-            LoadResourceFile(TPKPath.c_str(), 1);
-            return hb_6D98B0.fun();
-        };
+            static auto TPKPath = GetThisModulePath<std::string>().substr(GetExeModulePath<std::string>().length());
 
-        pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 8B 35 ? ? ? ? 6A 04 FF D6 83 C4 04 85 C0"); //0x6DABDE
-        hb_6D98B0.fun = injector::MakeCALL(pattern.get_first(0), static_cast<void(__cdecl*)()>(LoadTPK), true).get();
+            if (nImproveGamepadSupport == 1)
+                TPKPath += "buttons-xbox.tpk";
+            else if (nImproveGamepadSupport == 2)
+                TPKPath += "buttons-playstation.tpk";
+
+            static injector::hook_back<void(__cdecl*)()> hb_6D98B0;
+            auto LoadTPK = []()
+            {
+                LoadResourceFile(TPKPath.c_str(), 1);
+                return hb_6D98B0.fun();
+            };
+
+            pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 8B 35 ? ? ? ? 6A 04 FF D6 83 C4 04 85 C0"); //0x6DABDE
+            hb_6D98B0.fun = injector::MakeCALL(pattern.get_first(0), static_cast<void(__cdecl*)()>(LoadTPK), true).get();
+        }
 
         const char* ControlsTexts[] = { " 2", " 3", " 4", " 5", " 6", " 7", " 8", " 9", " 10", " 1", " Up", " Down", " Left", " Right", "X Rotation", "Y Rotation", "X Axis", "Y Axis", "Z Axis", "Hat Switch" };
         const char* ControlsTextsXBOX[] = { "B", "X", "Y", "LB", "RB", "View (Select)", "Menu (Start)", "Left stick", "Right stick", "A", "D-pad Up", "D-pad Down", "D-pad Left", "D-pad Right", "Right stick Left/Right", "Right stick Up/Down", "Left stick Left/Right", "Left stick Up/Down", "LT / RT", "D-pad" };
