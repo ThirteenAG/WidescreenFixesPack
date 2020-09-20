@@ -441,7 +441,7 @@ void Init()
             ResourceFileBeginLoading(r, nUnk4, nUnk5);
         };
 
-        if (nImproveGamepadSupport < 3)
+        if (nImproveGamepadSupport < 4)
         {
             static auto TPKPath = GetThisModulePath<std::string>().substr(GetExeModulePath<std::string>().length()) + "test.tpk";
 
