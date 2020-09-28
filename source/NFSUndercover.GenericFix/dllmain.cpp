@@ -471,6 +471,8 @@ void Init3()
 void Init4()
 {
     CIniReader iniReader("");
+    bool bFixAspectRatio = iniReader.ReadInteger("MAIN", "FixAspectRatio", 1) != 0;
+    bool bHUDWidescreenMode = iniReader.ReadInteger("MAIN", "HUDWidescreenMode", 1) != 0;
     static int32_t nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
 
     //HUD Refresh
@@ -478,6 +480,10 @@ void Init4()
     injector::MakeNOP(pattern.get_first(7), 2, true);
 
     //HUD Width
+    // Force 16:9 HUD Settings
+    uint32_t* dword_7454F1 = hook::pattern("D9 05 ? ? ? ? D9 C9 DF F1 DD D8 ? ?  B8 ? ? ? ? C3 33 C0 C3").count(1).get(0).get<uint32_t>(12);
+    injector::MakeNOP(dword_7454F1, 2, true); // 2 nops
+
     static float fHudScale = 1.0f;
     static float fHudWidth = 1280.0f;
     static float fHudXPos = -1.0f;
@@ -545,34 +551,102 @@ void Init4()
     //HUD X Pos
     pattern = GetPattern("F3 0F 11 44 24 0C E8 ? ? ? ? 0F 57 C0 F3 0F 10 0D ? ? ? ? F3 0F 10 15");
     injector::WriteMemory(pattern.get_first(26), &fHudXPos, true);
-#if 0
+
+    // HUD Render Fix
+    pattern = GetPattern("F3 0F 11 86 8C 05 00 00 F3 0F 11 86 90 05 00 00");
+    struct HUDRenderHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            *(float*)(regs.esi + 0x58C) = -99999.0f;
+        }
+    }; 
+    injector::MakeInline<HUDRenderHook>(pattern.count(8).get(0).get<uint32_t>(0), pattern.count(8).get(0).get<uint32_t>(8)); // 781C7D
+    injector::MakeInline<HUDRenderHook>(pattern.count(8).get(6).get<uint32_t>(0), pattern.count(8).get(6).get<uint32_t>(8)); // 7B1DD5
+
+    // GPS Map Background Width
+    static float fWidthPositive_99999 = 99999.0f;
+    static float fWidthNegative_99999 = -99999.0f;
+
+    pattern = GetPattern("E8 ? ? ? ? D9 5C 24 0C E8 ? ? ? ? D9 5C 24 10 6A 00");
+    struct GPSMapBackgroundHook1
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.esp = (fWidthPositive_99999);
+            float esp00 = regs.esp;
+            _asm fld dword ptr ds : [esp00]
+        }
+    };
+    struct GPSMapBackgroundHook2
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            float esp04 = (regs.esp + 0x04);
+
+            _asm
+            {
+                fld dword ptr ds : [fWidthNegative_99999]
+                fst dword ptr ds : [esp04]
+            }
+        }
+    };
+    injector::MakeInline<GPSMapBackgroundHook1>(pattern.count(1).get(0).get<uint32_t>(0)); // 830301
+    injector::MakeInline<GPSMapBackgroundHook2>(pattern.count(1).get(0).get<uint32_t>(126), pattern.count(1).get(0).get<uint32_t>(132)); // 83037F
+
+    // Transition Overlay Width
+    pattern = GetPattern("E8 ? ? ? ? D9 5C 24 14 E8 ? ? ? ? D9 5C 24 1C");
+    struct TransitionOverlayHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.esp = (fWidthPositive_99999);
+            float esp00 = regs.esp;
+            _asm fld dword ptr ds : [esp00]
+        }
+    }; injector::MakeInline<TransitionOverlayHook>(pattern.count(1).get(0).get<uint32_t>(0)); // 561A00
+
+    uint32_t* dword_561AA0 = hook::pattern("D9 05 ? ? ? ? D9 54 24 04 D9 1C 24 E8 ? ? ? ? 8B 0D").count(1).get(0).get<uint32_t>(2);
+    injector::WriteMemory(dword_561AA0, &fWidthNegative_99999, true);
+
     //FOV
-    pattern = GetPattern("F2 0F 10 0D ? ? ? ? 0F B7 C5 F2 0F 2A C0"); //0x74A81F
+    // Force 16:9 FOV Settings
+    uint32_t* dword_76B7FF = hook::pattern("A1 ? ? ? ? 83 EC 08 80 B8 ? ? ? ? 00 ? ? 6A 14 B9").count(1).get(0).get<uint32_t>(15);
+    injector::WriteMemory<uint8_t>(dword_76B7FF, 0xEB, true); // jmp
+    uint32_t* dword_74A81D = hook::pattern("D9 C9 DF F1 DD D8 ? ? F2 0F 10 0D").count(1).get(0).get<uint32_t>(6);
+    injector::MakeNOP(dword_74A81D, 2, true); // 2 nops
+
+    pattern = GetPattern("F3 0F 10 44 24 38 F3 0F 10 4C 24 28"); //0x74A959
     struct FOVHook
     {
         void operator()(injector::reg_pack& regs)
         {
-            static constexpr double qword_C1FD28 = 1.174999952316284;
-            static double qword_BE3DE8 = 0.005493164062500 * (1.0f / fHudScale);
-            static double qword_BD9D40 = 10.00000000000000 * (1.0f / fHudScale) * (1.0f / fHudScale) * (1.0f / fHudScale);
 
-            float f = (float)*(int32_t*)(regs.esp + 0x38) * (1.0f / fHudScale);
-
-            *(int32_t*)&regs.ebp = (int32_t)f;
-
-            double d = (double)LOWORD(regs.ebp);
-            _asm
-            {
-                movsd    xmm1, ds : qword_C1FD28
-                movsd    xmm0, ds : d
-                mulsd    xmm0, ds : qword_BE3DE8
-                cvtsd2ss xmm0, xmm0
-                cvtss2sd xmm0, xmm0
-                subsd    xmm0, ds : qword_BD9D40
-            }
+            float esp38 = *(float*)(regs.esp + 0x38);
+            *(float*)(regs.esp + 0x38) = (esp38 * fHudScale);
+            esp38 = *(float*)(regs.esp + 0x38);
+            _asm movss xmm0, esp38
         }
-    }; injector::MakeInline<FOVHook>(pattern.get_first(0), pattern.get_first(39));
-#endif
+    }; injector::MakeInline<FOVHook>(pattern.get_first(0), pattern.get_first(6));
+
+    //if (bHUDWidescreenMode)
+    {
+        static int WidescreenMode = bHUDWidescreenMode;
+
+        struct HUDWidescreenModeHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                regs.eax = WidescreenMode;
+            }
+        }; 
+
+        pattern = GetPattern("E8 ? ? ? ? 8B 4C 24 14 0F B6 C0");
+        injector::MakeInline<HUDWidescreenModeHook>(pattern.count(1).get(0).get<uint32_t>(0)); // 520C91
+        pattern = GetPattern("E8 ? ? ? ? 2C 01 F6 D8 1B C0 83");
+        injector::MakeInline<HUDWidescreenModeHook>(pattern.count(2).get(0).get<uint32_t>(0)); // 44C332
+    }
+
     if (nWindowedMode)
     {
         pattern = GetPattern("89 5D 3C 89 5D 18 89 5D 44"); //0x708379

@@ -80,9 +80,10 @@ void Init()
     bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 1) != 0;
     static int nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
-    static float fFPSLimit= iniReader.ReadFloat("MISC", "FPSLimit", 120.0f);
+    static int nFPSLimit= iniReader.ReadInteger("MISC", "FPSLimit", 120);
     bool b60FPSCutscenes = iniReader.ReadInteger("MISC", "60FPSCutscenes", 1) != 0;
     bool bSingleCoreAffinity = iniReader.ReadInteger("MISC", "SingleCoreAffinity", 0) != 0;
+    bool bNoOpticalDriveFix = iniReader.ReadInteger("MISC", "NoOpticalDriveFix", 1) != 0;
     static float fRainDropletsScale = iniReader.ReadFloat("MISC", "RainDropletsScale", 0.5f);
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
         szCustomUserFilesDirectoryInGameDir.clear();
@@ -646,9 +647,9 @@ void Init()
         }; injector::MakeInline<DeadzoneHook>(pattern.get_first(-2), pattern.get_first(4));
     }
 
-    if (fFPSLimit)
+    if (nFPSLimit)
     {
-        static float FrameTime = 1 / fFPSLimit;
+        static float FrameTime = 1 / nFPSLimit;
         uint32_t* dword_865558 = *hook::pattern("D9 05 ? ? ? ? B9 64 00 00 00 D8 64").count(1).get(0).get<uint32_t*>(2);
         injector::WriteMemory(dword_865558, FrameTime, true);
         uint32_t* dword_7FB710 = *hook::pattern("D9 05 ? ? ? ? D8 74 ? ? D9 1D ? ? ? ? C3").count(1).get(0).get<uint32_t*>(33);
@@ -667,6 +668,15 @@ void Init()
     if (bSingleCoreAffinity)
     {
         SetProcessAffinityMask(GetCurrentProcess(), 1);
+    }
+
+    if (bNoOpticalDriveFix)
+    {
+        auto pattern = hook::pattern("56 8B 35 ? ? ? ? A1 ? ? ? ? 85 C0 ? ? E8");
+        uint32_t* dword_5C0D3F = pattern.count(1).get(0).get<uint32_t>(15);
+        injector::WriteMemory<uint8_t>(dword_5C0D3F, 0x78, true);
+        uint32_t* dword_5C0D54 = pattern.count(1).get(0).get<uint32_t>(36);
+        injector::WriteMemory<uint8_t>(dword_5C0D54, 0x00, true);
     }
 
     if (bWriteSettingsToFile)
