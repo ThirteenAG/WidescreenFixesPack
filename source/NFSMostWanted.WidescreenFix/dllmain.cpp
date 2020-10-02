@@ -10,6 +10,7 @@ struct Screen
     float fAspectRatio;
     float fHudScaleX;
     float fHudPosX;
+    float fShadowRatio;
 } Screen;
 
 void Init()
@@ -23,13 +24,15 @@ void Init()
     bool bFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1) == 1;
     int nScaling = iniReader.ReadInteger("MAIN", "Scaling", 1);
     int ShadowsRes = iniReader.ReadInteger("MISC", "ShadowsRes", 1024);
+    bool bAutoScaleShadowsRes = iniReader.ReadInteger("MISC", "AutoScaleShadowsRes", 0) != 0;
     bool bShadowsFix = iniReader.ReadInteger("MISC", "ShadowsFix", 1) != 0;
     bool bImproveShadowLOD = iniReader.ReadInteger("MISC", "ImproveShadowLOD", 0) != 0;
-    bool bRearviewMirrorFix = iniReader.ReadInteger("MISC", "RearviewMirrorFix", 1) == 1;
+    bool bForceEnableMirror = iniReader.ReadInteger("MISC", "ForceEnableMirror", 1) == 1;
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "");
     bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 1) != 0;
     static int nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
     bool bDisableMotionBlur = iniReader.ReadInteger("MISC", "DisableMotionBlur", 0) != 0;
+    bool bForceHighSpecAudio = iniReader.ReadInteger("MISC", "ForceHighSpecAudio", 1) != 0;
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
     static float fRainDropletsScale = iniReader.ReadFloat("MISC", "RainDropletsScale", 0.5f);
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
@@ -44,6 +47,7 @@ void Init()
     Screen.Width43 = static_cast<int32_t>(Screen.fHeight * (4.0f / 3.0f));
     Screen.fHudScaleX = (1.0f / Screen.fWidth * (Screen.fHeight / 480.0f)) * 2.0f;
     Screen.fHudPosX = 640.0f / (640.0f * Screen.fHudScaleX);
+    Screen.fShadowRatio = (Screen.fHeight / Screen.fWidth) / 0.85f;
 
     for (size_t i = 0; i < 2; i++)
     {
@@ -109,24 +113,51 @@ void Init()
         }
     }; injector::MakeInline<RainDropletsYScaleHook>(pattern.get_first(30), pattern.get_first(30 + 8)); //6D482B
 
-
     if (ShadowsRes)
     {
         auto dword_8F1CA0 = *hook::pattern("8B 14 85 ? ? ? ? 0F AF 56 5C C1 FA 0F 89 56 5C").count(1).get(0).get<uint32_t*>(3);
         dword_8F1CA0 += 0x1D4;
 
+        int ShadowsResX = ShadowsRes;
+        int ShadowsResY = ShadowsRes;
+
+        if (bAutoScaleShadowsRes && bFixFOV)
+        {
+            ShadowsResX = ShadowsRes / Screen.fShadowRatio;
+        }
+        
+        /* 
+        I'm delibrately not using a logical operator (ShadowsResX || ShadowsResY) to improve game performance in uncommon situations. 
+        Example: an aspect ratio of 32:9 with a shadow resolution of 8192, would have the shadow resolution be 24758x8192 when AutoScaleShadowsRes is enabled.
+        Because the ShadowResX variable exceeds 16384, both variables would default to 16384x16384 when using a logical OR. 
+        But by using a relational operator for each variable, the resolution would instead default to 16384x8192. A massive 2x difference in resolution for the y-axis. 
+        
+        I also suck at programming, so that's another reason.
+        Aero_
+        */
+
+        if (ShadowsResX > 16384)
+        {
+            ShadowsResX = 16384;
+        }
+
+        if (ShadowsResY > 16384)
+        {
+            ShadowsResX = 16384;
+        }
+
         uint32_t* dword_6C86B0 = hook::pattern("B8 00 04 00 00 C3").count(2).get(1).get<uint32_t>(1);
-        injector::WriteMemory(dword_6C86B0, ShadowsRes, true);
+        injector::WriteMemory(dword_6C86B0, ShadowsResX, true);
         uint32_t* dword_6C86C0 = hook::pattern("B8 00 04 00 00 C3").count(2).get(1).get<uint32_t>(1);
-        injector::WriteMemory(dword_6C86C0, ShadowsRes, true);
+        injector::WriteMemory(dword_6C86C0, ShadowsResY, true);
         uint32_t* dword_6C8786 = hook::pattern("68 00 04 00 00 68 00 04 00 00 50 FF 51 5C 85 C0 7C 32").count(1).get(0).get<uint32_t>(1);
-        injector::WriteMemory(dword_6C8786, ShadowsRes, true);
+        injector::WriteMemory(dword_6C8786, ShadowsResY, true);
         uint32_t dword_6C878B = (uint32_t)dword_6C8786 + 5;
-        injector::WriteMemory(dword_6C878B, ShadowsRes, true);
+        injector::WriteMemory(dword_6C878B, ShadowsResX, true);
         uint32_t* dword_6C87B8 = hook::pattern("68 00 04 00 00 68 00 04 00 00 50 FF 52 5C 85 C0 7D 36").count(1).get(0).get<uint32_t>(1);
-        injector::WriteMemory(dword_6C87B8, ShadowsRes, true);
+        injector::WriteMemory(dword_6C87B8, ShadowsResY, true);
         uint32_t dword_6C87BD = (uint32_t)dword_6C87B8 + 5;
-        injector::WriteMemory(dword_6C87BD, ShadowsRes, true);
+        injector::WriteMemory(dword_6C87BD, ShadowsResX, true);
 
         uint32_t* dword_93D898 = *hook::pattern("A1 ? ? ? ? 49 3D 02 10 00 00 89 0D").count(1).get(0).get<uint32_t*>(1);
         //char TempStr[10];
@@ -138,10 +169,10 @@ void Init()
             injector::WriteMemory(dword__93D898, dword_8F1CA0, true);
         }
 
-        // solves shadow acne problem for resolutions greater than 4096
-        if (ShadowsRes > 4096)
+        // solves shadow acne problem for resolutions greater than 2048
+        if (ShadowsResX > 2048)
         {
-            static float ShadowBias = (ShadowsRes / 4096.0f) * 4.0f;
+            static float ShadowBias = (ShadowsResX / 2048.0f) * 4.0f;
             uint32_t* dword_6E5509 = hook::pattern("8B 15 ? ? ? ? A1 ? ? ? ? 8B 08 52 68").count(1).get(0).get<uint32_t>(2);
             injector::WriteMemory(dword_6E5509, &ShadowBias, true);
         }
@@ -155,7 +186,6 @@ void Init()
         injector::WriteMemory(dword_6BFFA2, 0x00006102, true);
     }
 
-    //HUD
     if (bFixHUD)
     {
         uint32_t* dword_8AF9A4 = *hook::pattern("D8 0D ? ? ? ? D8 25 ? ? ? ? D9 5C 24 20 D9 46 04").count(1).get(0).get<uint32_t*>(2);
@@ -180,18 +210,10 @@ void Init()
         uint32_t dword_6E70FF = (uint32_t)dword_6E70C0 + 63;
         uint32_t dword_6E70D3 = (uint32_t)dword_6E70C0 + 19;
         uint32_t dword_6E70E9 = (uint32_t)dword_6E70C0 + 41;
-        injector::WriteMemory<float>(dword_6E70C0, (Screen.fHudPosX - 320.0f) + 190.0f, true);
-        injector::WriteMemory<float>(dword_6E70FF, (Screen.fHudPosX - 320.0f) + 190.0f, true);
-        injector::WriteMemory<float>(dword_6E70D3, (Screen.fHudPosX - 320.0f) + 450.0f, true);
-        injector::WriteMemory<float>(dword_6E70E9, (Screen.fHudPosX - 320.0f) + 450.0f, true);
-
-        if (bRearviewMirrorFix)
-        {
-            injector::WriteMemory<float>(dword_6E70C0, (Screen.fHudPosX - 320.0f) + 450.0f, true);
-            injector::WriteMemory<float>(dword_6E70FF, (Screen.fHudPosX - 320.0f) + 450.0f, true);
-            injector::WriteMemory<float>(dword_6E70D3, (Screen.fHudPosX - 320.0f) + 190.0f, true);
-            injector::WriteMemory<float>(dword_6E70E9, (Screen.fHudPosX - 320.0f) + 190.0f, true);
-        }
+        injector::WriteMemory<float>(dword_6E70C0, (Screen.fHudPosX - 320.0f) + 450.0f, true);
+        injector::WriteMemory<float>(dword_6E70FF, (Screen.fHudPosX - 320.0f) + 450.0f, true);
+        injector::WriteMemory<float>(dword_6E70D3, (Screen.fHudPosX - 320.0f) + 190.0f, true);
+        injector::WriteMemory<float>(dword_6E70E9, (Screen.fHudPosX - 320.0f) + 190.0f, true);
     }
 
     if (bFixFOV)
@@ -275,14 +297,12 @@ void Init()
 
         //Shadow tearing fix
         auto pattern = hook::pattern("0F B7 ? C4 00 00 00");
-        static float fShadowRatio;
-        fShadowRatio = (Screen.fHeight / Screen.fWidth) / 0.85f;
         struct ShadowFOVHookEAX
         {
             void operator()(injector::reg_pack& regs)
             {
                 int ebxC4 = *(int*)(regs.ebx + 0xC4);
-                regs.eax = (ebxC4 / fShadowRatio);
+                regs.eax = (ebxC4 / Screen.fShadowRatio);
             }
         };
         struct ShadowFOVHookECX
@@ -290,7 +310,7 @@ void Init()
             void operator()(injector::reg_pack& regs)
             {
                 int ebxC4 = *(int*)(regs.ebx + 0xC4);
-                regs.ecx = (ebxC4 / fShadowRatio);
+                regs.ecx = (ebxC4 / Screen.fShadowRatio);
             }
         };
         struct ShadowFOVHookEDX
@@ -298,7 +318,7 @@ void Init()
             void operator()(injector::reg_pack& regs)
             {
                 int ebxC4 = *(int*)(regs.ebx + 0xC4);
-                regs.edx = (ebxC4 / fShadowRatio);
+                regs.edx = (ebxC4 / Screen.fShadowRatio);
             }
         };
         injector::MakeInline<ShadowFOVHookEAX>(pattern.count(15).get(11).get<uint32_t>(0), pattern.count(15).get(11).get<uint32_t>(7));
@@ -351,26 +371,31 @@ void Init()
 
     if (bShadowsFix)
     {
-        //dynamic shadow fix that stops them from disappearing when going into tunnels, under bridges by Aero_
+        //dynamic shadow fix that stops them from disappearing when going into tunnels, under bridges, etc.
         uint32_t* dword_6DE377 = hook::pattern("75 3B C7 05 ? ? ? ? 00 00 80 3F").count(1).get(0).get<uint32_t>(0);
         injector::MakeNOP(dword_6DE377, 2, true);
         injector::WriteMemory((uint32_t)dword_6DE377 + 8, 0, true);
 
-        //Car shadow opacity
+        //car shadow opacity
         uint32_t* dword_8A0E50 = *hook::pattern("D9 05 ? ? ? ? 8B 54 24 70 D9 1A E9 D1").count(1).get(0).get<uint32_t*>(2);
         injector::WriteMemory(dword_8A0E50, 60.0f, true);
     }
 
-    if (bRearviewMirrorFix)
+    if (bForceEnableMirror)
     {
         //Enables mirror for all camera views
         uint32_t* dword_6CFB72 = hook::pattern("75 66 53 E8 ? ? ? ? 83 C4 04 84 C0 74 59").count(1).get(0).get<uint32_t>(0);
         injector::MakeNOP(dword_6CFB72, 2, true);
         uint32_t* dword_6CFBC5 = hook::pattern("75 0D 53 E8 ? ? ? ? 83 C4 04 84 C0 75 06 89 1D").count(1).get(0).get<uint32_t>(0);
         injector::MakeNOP(dword_6CFBC5, 2, true);
-        uint32_t* dword_595DDA = hook::pattern("83 F8 02 74 2D 83 F8 03 74 28 83 F8 04 74 23 83 F8 05 74 1E 83 F8 06 74 19").count(1).get(0).get<uint32_t>(2);
-        injector::WriteMemory<uint8_t>(dword_595DDA, 4, true);
-        injector::WriteMemory<uint8_t>((uint32_t)dword_595DDA + 5, 4, true);
+        uint32_t* dword_595DDD = hook::pattern("83 F8 02 ? ? 83 F8 03 ? ? 83 F8 04 ? ? 83 F8 05 ? ? 83 F8 06 ? ?").count(1).get(0).get<uint32_t>(3);
+        injector::WriteMemory<uint16_t>(dword_595DDD, 0x14EB, true); // jmp 00595DF3
+    }
+
+    if (bForceHighSpecAudio)
+    {
+        uint32_t* dword_4C41F5 = hook::pattern("C7 05 ? ? ? ? ? ? 00 00 A1 ? ? ? ? 85 C0 ? ? A3 ? ? ? ? 8D 44 24 08").count(1).get(0).get<uint32_t>(6);
+        injector::WriteMemory<int>(dword_4C41F5, 44100, true);
     }
 
     if (!szCustomUserFilesDirectoryInGameDir.empty())
@@ -408,30 +433,35 @@ void Init()
             ResourceFileBeginLoading(r, nUnk4, nUnk5);
         };
 
-        static auto TPKPath = GetThisModulePath<std::string>().substr(GetExeModulePath<std::string>().length());
-
-        if (nImproveGamepadSupport == 1)
-            TPKPath += "buttons-xbox.tpk";
-        else if (nImproveGamepadSupport == 2)
-            TPKPath += "buttons-playstation.tpk";
-
-        static injector::hook_back<void(__cdecl*)()> hb_662B30;
-        auto LoadTPK = []()
+        if (nImproveGamepadSupport < 3)
         {
-            LoadResourceFile(TPKPath.c_str(), 1);
-            return hb_662B30.fun();
-        };
+            static auto TPKPath = GetThisModulePath<std::string>().substr(GetExeModulePath<std::string>().length());
 
-        pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 56 57 B9 ? ? ? ? E8"); //0x6660B6
-        hb_662B30.fun = injector::MakeCALL(pattern.get_first(0), static_cast<void(__cdecl*)()>(LoadTPK), true).get();
+            if (nImproveGamepadSupport == 1)
+                TPKPath += "buttons-xbox.tpk";
+            else if (nImproveGamepadSupport == 2)
+                TPKPath += "buttons-playstation.tpk";
 
-        //cursor
-        //constexpr float cursorScale = 1.0f * (128.0f / 16.0f);
-        //pattern = hook::pattern("C7 84 24 34 02 00 00 00 00 80 3F D9"); //5704F8
-        //injector::WriteMemory<float>(pattern.get_first(7), cursorScale, true);
-        //injector::WriteMemory<float>(pattern.get_first(36), cursorScale, true);
-        //injector::WriteMemory<float>(pattern.get_first(47), cursorScale, true);
-        //injector::WriteMemory<float>(pattern.get_first(69), cursorScale, true);
+            static injector::hook_back<void(__cdecl*)()> hb_662B30;
+            auto LoadTPK = []()
+            {
+                LoadResourceFile(TPKPath.c_str(), 1);
+                return hb_662B30.fun();
+            };
+
+            pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 56 57 B9 ? ? ? ? E8"); //0x6660B6
+            hb_662B30.fun = injector::MakeCALL(pattern.get_first(0), static_cast<void(__cdecl*)()>(LoadTPK), true).get();
+
+            /*
+            cursor
+            constexpr float cursorScale = 1.0f * (128.0f / 16.0f);
+            pattern = hook::pattern("C7 84 24 34 02 00 00 00 00 80 3F D9"); //5704F8
+            injector::WriteMemory<float>(pattern.get_first(7), cursorScale, true);
+            injector::WriteMemory<float>(pattern.get_first(36), cursorScale, true);
+            injector::WriteMemory<float>(pattern.get_first(47), cursorScale, true);
+            injector::WriteMemory<float>(pattern.get_first(69), cursorScale, true);
+            */
+        }
 
         struct PadState
         {
@@ -541,7 +571,7 @@ void Init()
                 static const auto f0078125 = 0.0078125f;
                 _asm fmul dword ptr[f0078125]
 
-                    auto dword_91FABC = &unk_91F7F4[178];
+                auto dword_91FABC = &unk_91F7F4[178];
                 auto dword_91FAF0 = &unk_91F7F4[191];
                 auto dword_91FC90 = &unk_91F7F4[295];
 
@@ -553,7 +583,7 @@ void Init()
 
         // Start menu text
         uint32_t* dword_5A313D = hook::pattern("68 ? ? ? ? 68 ? ? ? ? 51 E8 ? ? ? ? 83 C4 ? 3B FB").count(1).get(0).get<uint32_t>(1);
-        if (nImproveGamepadSupport == 1)
+        if (nImproveGamepadSupport != 2)
             injector::WriteMemory(dword_5A313D, 0xD18D4C4C, true); //"Press START to begin" (Xbox)
         else
             injector::WriteMemory(dword_5A313D, 0xDC64C04C, true); //"Press START button" (PlayStation)

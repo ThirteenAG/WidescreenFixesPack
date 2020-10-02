@@ -80,8 +80,10 @@ void Init()
     bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 1) != 0;
     static int nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
+    static int nFPSLimit= iniReader.ReadInteger("MISC", "FPSLimit", 120);
     bool b60FPSCutscenes = iniReader.ReadInteger("MISC", "60FPSCutscenes", 1) != 0;
     bool bSingleCoreAffinity = iniReader.ReadInteger("MISC", "SingleCoreAffinity", 0) != 0;
+    bool bNoOpticalDriveFix = iniReader.ReadInteger("MISC", "NoOpticalDriveFix", 1) != 0;
     static float fRainDropletsScale = iniReader.ReadFloat("MISC", "RainDropletsScale", 0.5f);
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
         szCustomUserFilesDirectoryInGameDir.clear();
@@ -440,17 +442,20 @@ void Init()
             ResourceFileBeginLoading(r, nUnk4, nUnk5);
         };
 
-        static auto TPKPath = GetThisModulePath<std::string>().substr(GetExeModulePath<std::string>().length()) + "test.tpk";
-
-        static injector::hook_back<void(__cdecl*)()> hb_57FA60;
-        auto LoadTPK = []()
+        if (nImproveGamepadSupport < 4)
         {
-            LoadResourceFile(TPKPath.c_str(), 1);
-            return hb_57FA60.fun();
-        };
+            static auto TPKPath = GetThisModulePath<std::string>().substr(GetExeModulePath<std::string>().length()) + "test.tpk";
 
-        pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 5F C6 05 ? ? ? ? ? C7 05 ? ? ? ? ? ? ? ? 5E"); //0x57ECEF
-        hb_57FA60.fun = injector::MakeCALL(pattern.get_first(0), static_cast<void(__cdecl*)()>(LoadTPK), true).get();
+            static injector::hook_back<void(__cdecl*)()> hb_57FA60;
+            auto LoadTPK = []()
+            {
+                LoadResourceFile(TPKPath.c_str(), 1);
+                return hb_57FA60.fun();
+            };
+
+            pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 5F C6 05 ? ? ? ? ? C7 05 ? ? ? ? ? ? ? ? 5E"); //0x57ECEF
+            hb_57FA60.fun = injector::MakeCALL(pattern.get_first(0), static_cast<void(__cdecl*)()>(LoadTPK), true).get();
+        }
 
         struct PadState
         {
@@ -512,49 +517,50 @@ void Init()
             }
         }; injector::MakeInline<CatchPad>(pattern.get_first(0));
 
-
-        const char* MenuTexts[] = { "Quit Game", "Continue", "Back", "Reset Keys To Default", "Activate GPS", "Deactivate GPS", "Install Package", "Install Part", "Install Paint", "Install Decal", "Reset To Default", "Delete Tuned Car", "Logoff", "Cancel Changes", "Customize", "Host LAN Server", "Read Message", "Delete", "Test N2O Purge", "Accept", "Reset to default", "Select", "Open/Close Doors", "Open/Close Hood" }; // "Tip", 
-        const char* MenuTextsPC[] = { "[Q] Quit Game", "[Enter] Continue", "[Esc] Back", "[P] Reset Keys To Default", "[C] Activate GPS", "[C] Deactivate GPS", "[Enter] Install Package", "[Enter] Install Part", "[Enter] Install Paint", "[Enter] Install Decal", "[C] Reset To Default", "[C] Delete Tuned Car", "[Esc] Logoff", "[C] Cancel Changes", "[C] Customize", "[C] Host LAN Server", "[Enter] Read Message", "[C] Delete", "[C] Test N2O Purge", "[Enter] Accept", "[C] Reset to default", "[Enter] Select", "[C] Open/Close Doors", "[C] Open/Close Hood" };
-        const char* MenuTextsXBOX[] = { "(LS+RS) Quit Game", "(A) Continue", "(B) Back", "(Y) Reset Keys To Default", "(X) Activate GPS", "(X) Deactivate GPS", "(A) Install Package", "(A) Install Part", "(A) Install Paint", "(A) Install Decal", "(X) Reset To Default", "(X) Delete Tuned Car", "(B) Logoff", "(X) Cancel Changes", "(X) Customize", "(X) Host LAN Server", "(A) Read Message", "(X) Delete", "(X) Test N2O Purge", "(A) Accept", "(X) Reset to default", "(A) Select", "(X) Open/Close Doors", "(X) Open/Close Hood" };
-        const char* MenuTextsPS[] = { "(L3+R3) Quit Game", "(Cross) Continue", "(Circle) Back", "(Triangle) Reset Keys To Default", "(Square) Activate GPS", "(Square) Deactivate GPS", "(Cross) Install Package", "(Cross) Install Part", "(Cross) Install Paint", "(Cross) Install Decal", "(Square) Reset To Default", "(Square) Delete Tuned Car", "(Circle) Logoff", "(Square) Cancel Changes", "(Square) Customize", "(Square) Host LAN Server", "(Cross) Read Message", "(Square) Delete", "(Square) Test N2O Purge", "(Cross) Accept", "(Square) Reset to default", "(Cross) Select", "(Square) Open/Close Doors", "(Square) Open/Close Hood" };
-
-        static std::vector<std::string> vMenuStrings(MenuTexts, std::end(MenuTexts));
-        static std::vector<std::string> vMenuStringsPC(MenuTextsPC, std::end(MenuTextsPC));
-        static std::vector<std::string> vMenuStringsXBOX(MenuTextsXBOX, std::end(MenuTextsXBOX));
-        static std::vector<std::string> vMenuStringsPS(MenuTextsPS, std::end(MenuTextsPS));
-
-        pattern = hook::pattern("8B 0D ? ? ? ? 85 C9 50 74 12 8B 44"); //0x5124DD (v1.1)
-        static auto dword_8383DC = *pattern.count(1).get(0).get<uint32_t>(2);
-        struct MenuText
+        if (nImproveGamepadSupport < 4)
         {
-            void operator()(injector::reg_pack& regs)
+            const char* MenuTexts[] = { "Quit Game", "Continue", "Back", "Reset Keys To Default", "Activate GPS", "Deactivate GPS", "Install Package", "Install Part", "Install Paint", "Install Decal", "Reset To Default", "Delete Tuned Car", "Logoff", "Cancel Changes", "Customize", "Host LAN Server", "Read Message", "Delete", "Test N2O Purge", "Accept", "Reset to default", "Select", "Open/Close Doors", "Open/Close Hood" }; // "Tip", 
+            const char* MenuTextsPC[] = { "[Q] Quit Game", "[Enter] Continue", "[Esc] Back", "[P] Reset Keys To Default", "[C] Activate GPS", "[C] Deactivate GPS", "[Enter] Install Package", "[Enter] Install Part", "[Enter] Install Paint", "[Enter] Install Decal", "[C] Reset To Default", "[C] Delete Tuned Car", "[Esc] Logoff", "[C] Cancel Changes", "[C] Customize", "[C] Host LAN Server", "[Enter] Read Message", "[C] Delete", "[C] Test N2O Purge", "[Enter] Accept", "[C] Reset to default", "[Enter] Select", "[C] Open/Close Doors", "[C] Open/Close Hood" };
+            const char* MenuTextsXBOX[] = { "(LS+RS) Quit Game", "(A) Continue", "(B) Back", "(Y) Reset Keys To Default", "(X) Activate GPS", "(X) Deactivate GPS", "(A) Install Package", "(A) Install Part", "(A) Install Paint", "(A) Install Decal", "(X) Reset To Default", "(X) Delete Tuned Car", "(B) Logoff", "(X) Cancel Changes", "(X) Customize", "(X) Host LAN Server", "(A) Read Message", "(X) Delete", "(X) Test N2O Purge", "(A) Accept", "(X) Reset to default", "(A) Select", "(X) Open/Close Doors", "(X) Open/Close Hood" };
+            const char* MenuTextsPS[] = { "(L3+R3) Quit Game", "(Cross) Continue", "(Circle) Back", "(Triangle) Reset Keys To Default", "(Square) Activate GPS", "(Square) Deactivate GPS", "(Cross) Install Package", "(Cross) Install Part", "(Cross) Install Paint", "(Cross) Install Decal", "(Square) Reset To Default", "(Square) Delete Tuned Car", "(Circle) Logoff", "(Square) Cancel Changes", "(Square) Customize", "(Square) Host LAN Server", "(Cross) Read Message", "(Square) Delete", "(Square) Test N2O Purge", "(Cross) Accept", "(Square) Reset to default", "(Cross) Select", "(Square) Open/Close Doors", "(Square) Open/Close Hood" };
+
+            static std::vector<std::string> vMenuStrings(MenuTexts, std::end(MenuTexts));
+            static std::vector<std::string> vMenuStringsPC(MenuTextsPC, std::end(MenuTextsPC));
+            static std::vector<std::string> vMenuStringsXBOX(MenuTextsXBOX, std::end(MenuTextsXBOX));
+            static std::vector<std::string> vMenuStringsPS(MenuTextsPS, std::end(MenuTextsPS));
+
+            pattern = hook::pattern("8B 0D ? ? ? ? 85 C9 50 74 12 8B 44"); //0x5124DD (v1.1)
+            static auto dword_8383DC = *pattern.count(1).get(0).get<uint32_t>(2);
+            struct MenuText
             {
-                regs.ecx = dword_8383DC;
-
-                auto pszStr = (char*)regs.eax;
-                auto it = std::find(vMenuStrings.begin(), vMenuStrings.end(), pszStr);
-                auto i = std::distance(vMenuStrings.begin(), it);
-
-                if (it != vMenuStrings.end())
+                void operator()(injector::reg_pack& regs)
                 {
-                    if (nImproveGamepadSupport == 3)
-                        regs.eax = (uint32_t)vMenuStringsPC[i].c_str();
-                    else
-                        if (nImproveGamepadSupport != 2)
-                            regs.eax = (uint32_t)vMenuStringsXBOX[i].c_str();
+                    regs.ecx = dword_8383DC;
+
+                    auto pszStr = (char*)regs.eax;
+                    auto it = std::find(vMenuStrings.begin(), vMenuStrings.end(), pszStr);
+                    auto i = std::distance(vMenuStrings.begin(), it);
+
+                    if (it != vMenuStrings.end())
+                    {
+                        if (nImproveGamepadSupport == 3)
+                            regs.eax = (uint32_t)vMenuStringsPC[i].c_str();
                         else
-                            regs.eax = (uint32_t)vMenuStringsPS[i].c_str();
+                            if (nImproveGamepadSupport != 2)
+                                regs.eax = (uint32_t)vMenuStringsXBOX[i].c_str();
+                            else
+                                regs.eax = (uint32_t)vMenuStringsPS[i].c_str();
+                    }
                 }
-            }
-        }; injector::MakeInline<MenuText>(pattern.get_first(0), pattern.get_first(6));
+            }; injector::MakeInline<MenuText>(pattern.get_first(0), pattern.get_first(6));
+        }
 
         // Start menu text
         uint32_t* dword_4A91E7 = hook::pattern("68 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 50 55 E8").count(3).get(1).get<uint32_t>(1);
-        if (nImproveGamepadSupport == 1)
+        if (nImproveGamepadSupport != 2)
             injector::WriteMemory(dword_4A91E7, 0xD18D4C4C, true); //"Please press START to begin" (Xbox)
-        if (nImproveGamepadSupport == 2)
+        else
             injector::WriteMemory(dword_4A91E7, 0xDC64C04C, true); //"Press START Button" (PlayStation)
-
 
         // FrontEnd button remap (through game code, not key emulation)
         auto pattern = hook::pattern("89 4E ? 89 4E ? 8B E8"); // 005C1A07
@@ -641,16 +647,36 @@ void Init()
         }; injector::MakeInline<DeadzoneHook>(pattern.get_first(-2), pattern.get_first(4));
     }
 
+    if (nFPSLimit)
+    {
+        static float FrameTime = 1 / nFPSLimit;
+        uint32_t* dword_865558 = *hook::pattern("D9 05 ? ? ? ? B9 64 00 00 00 D8 64").count(1).get(0).get<uint32_t*>(2);
+        injector::WriteMemory(dword_865558, FrameTime, true);
+        uint32_t* dword_7FB710 = *hook::pattern("D9 05 ? ? ? ? D8 74 ? ? D9 1D ? ? ? ? C3").count(1).get(0).get<uint32_t*>(33);
+        injector::WriteMemory(dword_7FB710, FrameTime, true);
+    }
+
     if (b60FPSCutscenes)
     {
         static float flt60 = 60.0f;
         uint32_t* dword_435FA4 = hook::pattern("7C ? 68 ? ? ? ? E8 ? ? ? ? 83 C4 ? 5F 5E").count(1).get(0).get<uint32_t>(3);
         injector::WriteMemory(dword_435FA4, flt60, true);
+        uint32_t* dword_7A572C = *hook::pattern("8B 15 ? ? ? ? 52 A3 ? ? ? ? E8 ? ? ? ? 83 C4 14").count(1).get(0).get<uint32_t*>(2);
+        injector::WriteMemory(dword_7A572C, flt60, true);
     }
 
     if (bSingleCoreAffinity)
     {
         SetProcessAffinityMask(GetCurrentProcess(), 1);
+    }
+
+    if (bNoOpticalDriveFix)
+    {
+        auto pattern = hook::pattern("56 8B 35 ? ? ? ? A1 ? ? ? ? 85 C0 ? ? E8");
+        uint32_t* dword_5C0D3F = pattern.count(1).get(0).get<uint32_t>(15);
+        injector::WriteMemory<uint8_t>(dword_5C0D3F, 0x78, true);
+        uint32_t* dword_5C0D54 = pattern.count(1).get(0).get<uint32_t>(36);
+        injector::WriteMemory<uint8_t>(dword_5C0D54, 0x00, true);
     }
 
     if (bWriteSettingsToFile)
