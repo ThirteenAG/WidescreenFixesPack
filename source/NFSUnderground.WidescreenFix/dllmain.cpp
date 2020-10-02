@@ -526,23 +526,26 @@ void Init()
         CreateResourceFile = (void*(*)(const char* ResourceFileName, int32_t ResourceFileType, int, int, int)) pattern.get_first(0); //0x004482F0
         pattern = hook::pattern("56 8B F2 89 8E 98 00 00 00 8B 0D ? ? ? ? 89 86 94 00 00 00 8B 86 9C 00 00 00");
         ResourceFileBeginLoading = (void(__fastcall *)(int a1, void* rsc, int a2)) pattern.get_first(0); //0x00448110;
-
-        static auto TPKPath = GetThisModulePath<std::string>().substr(GetExeModulePath<std::string>().length());
-
-        if (nImproveGamepadSupport == 1)
-            TPKPath += "buttons-xbox.tpk";
-        else if (nImproveGamepadSupport == 2)
-            TPKPath += "buttons-playstation.tpk";
-
-        static injector::hook_back<void(__cdecl*)()> hb_448600;
-        auto LoadTPK = []()
+        
+        if (nImproveGamepadSupport < 3)
         {
-            LoadResourceFile(TPKPath.c_str(), 1);
-            return hb_448600.fun();
-        };
+            static auto TPKPath = GetThisModulePath<std::string>().substr(GetExeModulePath<std::string>().length());
 
-        pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 6A 00 6A 00 6A 00 68 F0 59 00 00"); //0x447280
-        hb_448600.fun = injector::MakeCALL(pattern.get_first(0), static_cast<void(__cdecl*)()>(LoadTPK), true).get();
+            if (nImproveGamepadSupport == 1)
+                TPKPath += "buttons-xbox.tpk";
+            else if (nImproveGamepadSupport == 2)
+                TPKPath += "buttons-playstation.tpk";
+
+            static injector::hook_back<void(__cdecl*)()> hb_448600;
+            auto LoadTPK = []()
+            {
+                LoadResourceFile(TPKPath.c_str(), 1);
+                return hb_448600.fun();
+            };
+
+            pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 6A 00 6A 00 6A 00 68 F0 59 00 00"); //0x447280
+            hb_448600.fun = injector::MakeCALL(pattern.get_first(0), static_cast<void(__cdecl*)()>(LoadTPK), true).get();
+        }
 
         struct PadState
         {

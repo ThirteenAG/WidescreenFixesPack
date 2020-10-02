@@ -154,8 +154,12 @@ void Init()
         injector::MakeJMP(pattern.get_first(0), DamageModelMemoryCheck, true); //0x58DC10
     }
 
-
-    bool bFixHUD = iniReader.ReadInteger("MISC", "FixHUD", 1) != 0;
+    bool bFixAspectRatio = iniReader.ReadInteger("MAIN", "FixAspectRatio", 1) != 0;
+    bool bScaling = iniReader.ReadInteger("MAIN", "Scaling", 1) != 0;
+    bool bHUDWidescreenMode = iniReader.ReadInteger("MAIN", "HUDWidescreenMode", 1) != 0;
+    bool bFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1) != 0;
+    bool bConsoleHUDSize = iniReader.ReadInteger("MAIN", "ConsoleHUDSize", 1) != 0;
+    bool bGammaFix = iniReader.ReadInteger("MISC", "GammaFix", 1) != 0;
     bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 0) != 0;
     static int32_t nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
     static int32_t nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
@@ -168,11 +172,212 @@ void Init()
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
         szCustomUserFilesDirectoryInGameDir.clear();
 
-    if (bFixHUD)
+    if (bFixAspectRatio)
     {
-        static constexpr double dbl_9FAAE8 = 4.0 / 3.0;
-        auto pattern = hook::pattern("DC 3D ? ? ? ? D9 5C 24 0C F3 0F 10 44 24 0C");
-        injector::WriteMemory(pattern.get_first(2), &dbl_9FAAE8, true);
+        // Real-Time Aspect Ratio Calculation
+        static uint32_t* dword_BBADB4 = *hook::pattern("C7 05 ? ? ? ? 03 00 00 00 89 3D  ? ? ? ? 89 3D").get(0).get<uint32_t*>(35); // ResX
+        static uint32_t* dword_BBADB8 = *hook::pattern("C7 05 ? ? ? ? 03 00 00 00 89 3D  ? ? ? ? 89 3D").get(0).get<uint32_t*>(41); // ResY
+        static float fScreenAspectRatio, temp_xmm0;
+
+        auto pattern = hook::pattern("F3 0F 10 05 ? ? ? ? F3 0F 11 04 24 D9 04 24 83 C4 0C");
+        struct AspectRatioHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                _asm movss dword ptr ds : [temp_xmm0], xmm0 // moves xmm0 to temporary location so contents aren't lost
+                auto ResX = *(float*)(dword_BBADB4);
+                auto ResY = *(float*)(dword_BBADB8);
+                auto esp00 = regs.esp;
+                fScreenAspectRatio = (ResX / ResY) * 0.5625f;
+
+                _asm
+                {
+                    movss xmm0, dword ptr ds : [temp_xmm0] // restores xmm0
+                    movss dword ptr ds : [esp00], xmm0
+                    fld dword ptr ds : [esp00]
+                }
+            }
+        }; injector::MakeInline<AspectRatioHook>(pattern.get_first(8), pattern.get_first(16)); // 4BCB35
+
+
+        // Force 16:9 FOV, HUD & FMV Scaling
+        {
+        uint32_t* dword_4BCAEF = hook::pattern("A1 ? ? ? ? 83 EC 0C 80 B8 ? ? ? ? 00 ? ? B9 ? ? ? ? E8").count(1).get(0).get<uint32_t>(15);
+        injector::WriteMemory<uint8_t>(dword_4BCAEF, 0xEB, true); // jmp
+        uint32_t* dword_6FF9E3 = hook::pattern("D9 C9 DF F1 DD D8 ? ? 0F B7 C3").count(1).get(0).get<uint32_t>(6);
+        injector::MakeNOP(dword_6FF9E3, 2, true); // 2 nops
+        uint32_t* dword_4B51EB = hook::pattern("74 ? 8B 16 8B 42 ? FF D0 5E 5B").count(1).get(0).get<uint32_t>(0);
+        injector::WriteMemory<uint8_t>(dword_4B51EB, 0xEB, true); // jmp
+        }
+
+        // FOV Width & Height
+        {
+            static float dword_9FA868, temp_xmm0;
+
+            auto pattern = hook::pattern("0F 57 C0 F3 0F 10 ? ? ? ? ? F3 0F 10 ? ? ? F3 0F 10 ? ? ? ? ? 8D 7E");
+            struct FOVHook
+            {
+                void operator()(injector::reg_pack& regs)
+                {
+                    _asm movss dword ptr ds : [temp_xmm0], xmm0 // moves xmm0 to temporary location so contents aren't lost
+                    int ebp08 = *(int*)(regs.ebp + 0x08);
+                    float esp48 = *(float*)(regs.esp + 0x48);
+
+                    if (ebp08 == 1) // jne
+                        *(float*)(regs.esp + 0x48) = (esp48 / fScreenAspectRatio);
+
+                    _asm
+                    {
+                        movss xmm0, dword ptr ds : [temp_xmm0] // restores xmm0
+                        xorps xmm0, xmm0
+                        movss xmm1, dword ptr ds : [dword_9FA868]
+                    }
+                }
+            }; injector::MakeInline<FOVHook>(pattern.get_first(0), pattern.get_first(11)); // 6FFB1A
+
+            if (bScaling)
+            {
+                static constexpr double XB360_Hor = 1.26;
+                static constexpr double XB360_Ver = 1.50;
+
+                auto pattern = hook::pattern("DC 0D ? ? ? ? D9 5C 24 ? D9 44 24 ? DC 0D ? ? ? ? ? ? D9 44 24 ? DC 0D");
+                uint32_t* dword_6FFA12 = pattern.count(2).get(0).get<uint32_t>(2);
+                injector::WriteMemory(dword_6FFA12, &XB360_Hor, true);
+                uint32_t* dword_6FFA20 = pattern.count(2).get(0).get<uint32_t>(16);
+                injector::WriteMemory(dword_6FFA20, &XB360_Ver, true);
+            }
+        }
+
+        // HUD Width
+        {
+            static double dbl_HUDWidth = (4.0 / 3.0f);
+
+            auto pattern = hook::pattern("DC 3D ? ? ? ? D9 5C 24 0C F3 0F 10");
+            struct HUDWidthHook
+            {
+                void operator()(injector::reg_pack& regs)
+                {
+                    _asm
+                    {
+                        fdivr qword ptr ds : [dbl_HUDWidth]
+                        fdiv dword ptr ds : [fScreenAspectRatio]
+                    }
+                }
+            }; injector::MakeInline<HUDWidthHook>(pattern.get_first(0), pattern.get_first(6)); // 4B44F6
+        }
+
+        // FMV Width & Height
+        {
+            static float Width1 = -0.75f;
+            static float Width2 = 0.75f;
+            static float Height1 = 0.75f;
+            static float Height2 = -0.75f;
+            static float FMVWidthLeft, FMVWidthRight;
+
+            if (bFMVWidescreenMode)
+            {
+                Width1 = -1.00f;
+                Width2 = 1.00f;
+                Height1 = 1.00f;
+                Height2 = -1.00f;
+            }
+
+            // Real-Time FMV Aspect Ratio Calculation
+            auto pattern = hook::pattern("80 BC 24 ? ? ? ? 00 DE F9 D9");
+            struct FMVHook
+            {
+                void operator()(injector::reg_pack& regs)
+                {
+                    int espB0 = *(int*)(regs.esp + 0xB0);
+
+                    _asm
+                    {
+                        fld dword ptr ds : [Width1] // Loads Width1 value
+                        fdiv dword ptr ds : [fScreenAspectRatio] // Divides by ScreenAspectRatio 
+                        fstp dword ptr ds : [FMVWidthLeft] // Stores final result
+                        fld dword ptr ds : [Width2] // Loads Width2 value
+                        fdiv dword ptr ds : [fScreenAspectRatio] // Divides by ScreenAspectRatio 
+                        fstp dword ptr ds : [FMVWidthRight] // Stores final result
+                        cmp byte ptr ds : [espB0] , 0x00
+                    }
+                }
+            }; injector::MakeInline<FMVHook>(pattern.get_first(0), pattern.get_first(8)); // 70235A
+
+            {
+                auto pattern = hook::pattern("F3 0F 10 ? ? ? ? ? F3 0F 10 ? ? ? ? ? 0F 57 C0 F3 0F 10");
+                uint32_t* dword_702224 = pattern.count(1).get(0).get<uint32_t>(4);
+                injector::WriteMemory(dword_702224, &Height1, true);
+                uint32_t* dword_70222C = pattern.count(1).get(0).get<uint32_t>(12);
+                injector::WriteMemory(dword_70222C, &FMVWidthLeft, true);
+                uint32_t* dword_702237 = pattern.count(1).get(0).get<uint32_t>(23);
+                injector::WriteMemory(dword_702237, &FMVWidthRight, true);
+                uint32_t* dword_702261 = pattern.count(1).get(0).get<uint32_t>(65);
+                injector::WriteMemory(dword_702261, &Height2, true);
+            }
+        }
+
+        // Crowd Culling Fix
+        {
+            static float CrowdCullDist;
+
+            auto pattern = hook::pattern("F3 0F 10 05 ? ? ? ? F3 0F 11 44 24 7C ? ? ? ? ? ? 2B C3 83 E8 01");
+            struct CrowdCullHook
+            {
+                void operator()(injector::reg_pack& regs)
+                {
+                    CrowdCullDist = (0.6f / fScreenAspectRatio);
+                    *(float*)(regs.esp + 0x7C) = CrowdCullDist;
+                }
+            }; injector::MakeInline<CrowdCullHook>(pattern.get_first(0), pattern.get_first(8)); // 76CECB
+        }
+    }
+
+    //if (bHUDWidescreenMode)
+    {
+        static int WidescreenMode = bHUDWidescreenMode;
+
+        auto pattern = hook::pattern("0F B6 C0 89 01 B0 01");
+        struct HUDWidescreenModeHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                regs.eax = WidescreenMode;
+                *(int*)(regs.ecx) = regs.eax;
+            }
+        }; injector::MakeInline<HUDWidescreenModeHook>(pattern.count(7).get(0).get<uint32_t>(0)); // 44C332
+    }
+
+    if (bConsoleHUDSize)
+    {
+        static constexpr float HUDSize = 1.0875f;
+        uint32_t* dword_4B4455 = hook::pattern("F3 0F 10 ? ? ? ? ? 8B 3D ? ? ? ? C6 05 ? ? ? ? 00").count(1).get(0).get<uint32_t>(4);
+        injector::WriteMemory(dword_4B4455, &HUDSize, true);
+    }
+
+    if (bGammaFix)
+    {
+        static uint32_t* dword_AC6F0C = *hook::pattern("A1 ? ? ? ? 8B 4C 24 04 8B D0 B8 67 66 66 66").get(0).get<uint32_t*>(1); // Gamma Integer
+        static uint32_t* dword_AA9630 = *hook::pattern("F3 0F 11 44 24 04 D8 64 24 04 C6 ? 01 D9 5C").get(0).get<uint32_t*>(29); // Gamma Float
+        injector::WriteMemory(dword_AA9630, 1.0f, true); // sets default brightness to 50%
+
+        static float NewBrightness;
+
+        auto pattern = hook::pattern("55 8B EC 83 E4 F8 83 EC 10 ? ? ? ? ? ? ? ? 56 57 33 FF");
+        struct GammaHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                auto GammaInteger = *(int*)(dword_AC6F0C);
+                auto GammaFloat = *(float*)(dword_AA9630);
+                NewBrightness = 100.0f / (GammaInteger * 2.0f);
+                GammaFloat = NewBrightness;
+
+                _asm
+                {
+                    movss xmm0, [GammaFloat]
+                }
+            }
+        }; injector::MakeInline<GammaHook>(pattern.count(1).get(0).get<uint32_t>(9), pattern.count(1).get(0).get<uint32_t>(17)); // 4B3E89
     }
 
     if (bSkipIntro)
@@ -269,22 +474,25 @@ void Init()
             ResourceFileBeginLoading(r, nUnk4, nUnk5);
         };
 
-        static auto TPKPath = GetThisModulePath<std::string>().substr(GetExeModulePath<std::string>().length());
-
-        if (nImproveGamepadSupport == 1)
-            TPKPath += "buttons-xbox.tpk";
-        else if (nImproveGamepadSupport == 2)
-            TPKPath += "buttons-playstation.tpk";
-
-        static injector::hook_back<void(__cdecl*)()> hb_6D98B0;
-        auto LoadTPK = []()
+        if (nImproveGamepadSupport < 3)
         {
-            LoadResourceFile(TPKPath.c_str(), 1);
-            return hb_6D98B0.fun();
-        };
+            static auto TPKPath = GetThisModulePath<std::string>().substr(GetExeModulePath<std::string>().length());
 
-        pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 8B 35 ? ? ? ? 6A 04 FF D6 83 C4 04 85 C0"); //0x6DABDE
-        hb_6D98B0.fun = injector::MakeCALL(pattern.get_first(0), static_cast<void(__cdecl*)()>(LoadTPK), true).get();
+            if (nImproveGamepadSupport == 1)
+                TPKPath += "buttons-xbox.tpk";
+            else if (nImproveGamepadSupport == 2)
+                TPKPath += "buttons-playstation.tpk";
+
+            static injector::hook_back<void(__cdecl*)()> hb_6D98B0;
+            auto LoadTPK = []()
+            {
+                LoadResourceFile(TPKPath.c_str(), 1);
+                return hb_6D98B0.fun();
+            };
+
+            pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 8B 35 ? ? ? ? 6A 04 FF D6 83 C4 04 85 C0"); //0x6DABDE
+            hb_6D98B0.fun = injector::MakeCALL(pattern.get_first(0), static_cast<void(__cdecl*)()>(LoadTPK), true).get();
+        }
 
         const char* ControlsTexts[] = { " 2", " 3", " 4", " 5", " 6", " 7", " 8", " 9", " 10", " 1", " Up", " Down", " Left", " Right", "X Rotation", "Y Rotation", "X Axis", "Y Axis", "Z Axis", "Hat Switch" };
         const char* ControlsTextsXBOX[] = { "B", "X", "Y", "LB", "RB", "View (Select)", "Menu (Start)", "Left stick", "Right stick", "A", "D-pad Up", "D-pad Down", "D-pad Left", "D-pad Right", "Right stick Left/Right", "Right stick Up/Down", "Left stick Left/Right", "Left stick Up/Down", "LT / RT", "D-pad" };
@@ -338,13 +546,13 @@ void Init()
         pattern = hook::pattern("E8 ? ? ? ? 83 C4 04 3D ? ? ? ? 0F 87 ? ? ? ? 0F 84 ? ? ? ? 3D");
         hb_4366E0.fun = injector::MakeCALL(pattern.get_first(0), static_cast<int32_t(__cdecl*)(char*)>(padFix), true).get();
 
-        //controls in photo mode
+        // Enables controls for FE photo mode
         //pattern = hook::pattern("D9 EE 6A 00 51 D9 1C 24 8B 8E D0 00 00 00 E8 ? ? ? ? D9 EE 6A 00 "); //0x59890A
         //injector::WriteMemory(pattern.get_first(0), 0xC3595E90, true); //pop esi  pop ecx  ret
 
         // Start menu text
         uint32_t* dword_7E2C9A = hook::pattern("68 ? ? ? ? 50 51 E8 ? ? ? ? 8D 54 24 2C").count(1).get(0).get<uint32_t>(1);
-        if (nImproveGamepadSupport == 1)
+        if (nImproveGamepadSupport != 2)
             injector::WriteMemory(dword_7E2C9A, 0x25C22853, true); //"Press START to begin" (Xbox)
         else
             injector::WriteMemory(dword_7E2C9A, 0x703A92CC, true); //"Press START button" (PlayStation)

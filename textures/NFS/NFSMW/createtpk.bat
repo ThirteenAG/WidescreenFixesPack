@@ -40,8 +40,8 @@ xcopy /S /Q /Y /F "../textures/circle.dds" "unpacked/8C37F6B1/PC_KEY_ESC_FRENCH.
 xcopy /S /Q /Y /F "../textures/circle.dds" "unpacked/8C37F6B1/PC_KEY_ESC.dds"
 xcopy /S /Q /Y /F "../textures/triangle.dds" "unpacked/8C37F6B1/PC_KEY_1.dds"
 xcopy /S /Q /Y /F "../textures/square.dds" "unpacked/8C37F6B1/PC_KEY_2.dds"
-xcopy /S /Q /Y /F "../textures/select.dds" "unpacked/8C37F6B1/PC_KEY_3.dds"
-xcopy /S /Q /Y /F "../textures/start.dds" "unpacked/8C37F6B1/PC_KEY_4.dds"
+xcopy /S /Q /Y /F "../textures/share.dds" "unpacked/8C37F6B1/PC_KEY_3.dds"
+xcopy /S /Q /Y /F "../textures/options.dds" "unpacked/8C37F6B1/PC_KEY_4.dds"
 xcopy /S /Q /Y /F "../textures/pdpadud.dds" "unpacked/8C37F6B1/PC_ARROW_KEYS_UP_DOWN.dds"
 xcopy /S /Q /Y /F "../textures/dummy.dds" "unpacked/8C37F6B1/PC_LOAD.dds"
 %XNFSTPKTool% -w2 unpacked/8C37F6B1.ini unpacked/temp1.tpk

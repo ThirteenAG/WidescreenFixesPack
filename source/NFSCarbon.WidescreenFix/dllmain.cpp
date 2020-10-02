@@ -444,30 +444,33 @@ void Init()
             ResourceFileBeginLoading(r, nUnk4, nUnk5);
         };
 
-        static auto TPKPath = GetThisModulePath<std::string>().substr(GetExeModulePath<std::string>().length());
-
-        if (nImproveGamepadSupport == 1)
-            TPKPath += "buttons-xbox.tpk";
-        else if (nImproveGamepadSupport == 2)
-            TPKPath += "buttons-playstation.tpk";
-
-        static injector::hook_back<void(__cdecl*)()> hb_6B6D40;
-        auto LoadTPK = []()
+        if (nImproveGamepadSupport < 3)
         {
-            LoadResourceFile(TPKPath.c_str(), 1);
-            return hb_6B6D40.fun();
-        };
+            static auto TPKPath = GetThisModulePath<std::string>().substr(GetExeModulePath<std::string>().length());
 
-        pattern = hook::pattern("E8 ? ? ? ? 8B 35 ? ? ? ? 6A 04 FF D6 83 C4 04 85 C0 74 08 C7 00"); //0x6B7736
-        hb_6B6D40.fun = injector::MakeCALL(pattern.get_first(0), static_cast<void(__cdecl*)()>(LoadTPK), true).get();
+            if (nImproveGamepadSupport == 1)
+                TPKPath += "buttons-xbox.tpk";
+            else if (nImproveGamepadSupport == 2)
+                TPKPath += "buttons-playstation.tpk";
 
-        //cursor
-        constexpr float cursorScale = 1.0f * (128.0f / 16.0f);
-        pattern = hook::pattern("C7 44 24 74 00 00 80 3F D9 5C 24 60"); //585424
-        injector::WriteMemory<float>(pattern.get_first(4), cursorScale, true);
-        injector::WriteMemory<float>(pattern.get_first(24), cursorScale, true);
-        injector::WriteMemory<float>(pattern.get_first(35), cursorScale, true);
-        injector::WriteMemory<float>(pattern.get_first(57), cursorScale, true);
+            static injector::hook_back<void(__cdecl*)()> hb_6B6D40;
+            auto LoadTPK = []()
+            {
+                LoadResourceFile(TPKPath.c_str(), 1);
+                return hb_6B6D40.fun();
+            };
+
+            pattern = hook::pattern("E8 ? ? ? ? 8B 35 ? ? ? ? 6A 04 FF D6 83 C4 04 85 C0 74 08 C7 00"); //0x6B7736
+            hb_6B6D40.fun = injector::MakeCALL(pattern.get_first(0), static_cast<void(__cdecl*)()>(LoadTPK), true).get();
+
+            //cursor
+            constexpr float cursorScale = 1.0f * (128.0f / 16.0f);
+            pattern = hook::pattern("C7 44 24 74 00 00 80 3F D9 5C 24 60"); //585424
+            injector::WriteMemory<float>(pattern.get_first(4), cursorScale, true);
+            injector::WriteMemory<float>(pattern.get_first(24), cursorScale, true);
+            injector::WriteMemory<float>(pattern.get_first(35), cursorScale, true);
+            injector::WriteMemory<float>(pattern.get_first(57), cursorScale, true);
+        }
 
         struct PadState
         {
@@ -591,7 +594,7 @@ void Init()
 
         // Start menu text
         uint32_t* dword_8577AC = hook::pattern("68 ? ? ? ? 68 ? ? ? ? 51 E8 ? ? ? ? 83 C4 14 E8").count(1).get(0).get<uint32_t>(1);
-        if (nImproveGamepadSupport == 1)
+        if (nImproveGamepadSupport != 2)
             injector::WriteMemory(dword_8577AC, 0x186AAECC, true); //"Press START to begin" (Xbox)
         else
             injector::WriteMemory(dword_8577AC, 0x703A92CC, true); //"Press START button" (PlayStation)
