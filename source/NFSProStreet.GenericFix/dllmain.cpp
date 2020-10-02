@@ -159,6 +159,7 @@ void Init()
     bool bHUDWidescreenMode = iniReader.ReadInteger("MAIN", "HUDWidescreenMode", 1) != 0;
     bool bFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1) != 0;
     bool bConsoleHUDSize = iniReader.ReadInteger("MAIN", "ConsoleHUDSize", 1) != 0;
+    bool bGammaFix = iniReader.ReadInteger("MISC", "GammaFix", 1) != 0;
     bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 0) != 0;
     static int32_t nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
     static int32_t nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
@@ -176,26 +177,22 @@ void Init()
         // Real-Time Aspect Ratio Calculation
         static uint32_t* dword_BBADB4 = *hook::pattern("C7 05 ? ? ? ? 03 00 00 00 89 3D  ? ? ? ? 89 3D").get(0).get<uint32_t*>(35); // ResX
         static uint32_t* dword_BBADB8 = *hook::pattern("C7 05 ? ? ? ? 03 00 00 00 89 3D  ? ? ? ? 89 3D").get(0).get<uint32_t*>(41); // ResY
-        static float fScreenAspectResult, fScreenAspectRatio;
-        static float fScreenAspectRatioMultiplier = 0.5625f;
+        static float fScreenAspectRatio, temp_xmm0;
 
         auto pattern = hook::pattern("F3 0F 10 05 ? ? ? ? F3 0F 11 04 24 D9 04 24 83 C4 0C");
         struct AspectRatioHook
         {
             void operator()(injector::reg_pack& regs)
             {
-                auto ResX = *(uint32_t*)(dword_BBADB4);
-                auto ResY = *(uint32_t*)(dword_BBADB8);
+                _asm movss dword ptr ds : [temp_xmm0], xmm0 // moves xmm0 to temporary location so contents aren't lost
+                auto ResX = *(float*)(dword_BBADB4);
+                auto ResY = *(float*)(dword_BBADB8);
                 auto esp00 = regs.esp;
+                fScreenAspectRatio = (ResX / ResY) * 0.5625f;
 
                 _asm
                 {
-                    fild dword ptr ds : [ResX] // Resolution X
-                    fidiv dword ptr ds : [ResY] // Resolution Y
-                    fstp dword ptr ds : [fScreenAspectResult] // Stores result
-                    fld dword ptr ds : [fScreenAspectResult] // Loads result
-                    fmul dword ptr ds : [fScreenAspectRatioMultiplier] // Multiplies result by 0.5625
-                    fstp dword ptr ds : [fScreenAspectRatio] // Stores final result
+                    movss xmm0, dword ptr ds : [temp_xmm0] // restores xmm0
                     movss dword ptr ds : [esp00], xmm0
                     fld dword ptr ds : [esp00]
                 }
@@ -215,14 +212,14 @@ void Init()
 
         // FOV Width & Height
         {
-            static int dword_9FA868;
+            static float dword_9FA868, temp_xmm0;
 
             auto pattern = hook::pattern("0F 57 C0 F3 0F 10 ? ? ? ? ? F3 0F 10 ? ? ? F3 0F 10 ? ? ? ? ? 8D 7E");
             struct FOVHook
             {
                 void operator()(injector::reg_pack& regs)
                 {
-                    _asm movss xmm1, xmm0 // moves xmm0 value to xmm1 so it's not lost
+                    _asm movss dword ptr ds : [temp_xmm0], xmm0 // moves xmm0 to temporary location so contents aren't lost
                     int ebp08 = *(int*)(regs.ebp + 0x08);
                     float esp48 = *(float*)(regs.esp + 0x48);
 
@@ -231,9 +228,9 @@ void Init()
 
                     _asm
                     {
-                        movss xmm0, xmm1 // restores value of xmm0
+                        movss xmm0, dword ptr ds : [temp_xmm0] // restores xmm0
                         xorps xmm0, xmm0
-                        movss xmm1, [dword_9FA868]
+                        movss xmm1, dword ptr ds : [dword_9FA868]
                     }
                 }
             }; injector::MakeInline<FOVHook>(pattern.get_first(0), pattern.get_first(11)); // 6FFB1A
@@ -357,6 +354,31 @@ void Init()
         injector::WriteMemory(dword_4B4455, &HUDSize, true);
     }
 
+    if (bGammaFix)
+    {
+        static uint32_t* dword_AC6F0C = *hook::pattern("A1 ? ? ? ? 8B 4C 24 04 8B D0 B8 67 66 66 66").get(0).get<uint32_t*>(1); // Gamma Integer
+        static uint32_t* dword_AA9630 = *hook::pattern("F3 0F 11 44 24 04 D8 64 24 04 C6 ? 01 D9 5C").get(0).get<uint32_t*>(29); // Gamma Float
+        injector::WriteMemory(dword_AA9630, 1.0f, true); // sets default brightness to 50%
+
+        static float NewBrightness;
+
+        auto pattern = hook::pattern("55 8B EC 83 E4 F8 83 EC 10 ? ? ? ? ? ? ? ? 56 57 33 FF");
+        struct GammaHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                auto GammaInteger = *(int*)(dword_AC6F0C);
+                auto GammaFloat = *(float*)(dword_AA9630);
+                NewBrightness = 100.0f / (GammaInteger * 2.0f);
+                GammaFloat = NewBrightness;
+
+                _asm
+                {
+                    movss xmm0, [GammaFloat]
+                }
+            }
+        }; injector::MakeInline<GammaHook>(pattern.count(1).get(0).get<uint32_t>(9), pattern.count(1).get(0).get<uint32_t>(17)); // 4B3E89
+    }
 
     if (bSkipIntro)
     {
@@ -524,7 +546,7 @@ void Init()
         pattern = hook::pattern("E8 ? ? ? ? 83 C4 04 3D ? ? ? ? 0F 87 ? ? ? ? 0F 84 ? ? ? ? 3D");
         hb_4366E0.fun = injector::MakeCALL(pattern.get_first(0), static_cast<int32_t(__cdecl*)(char*)>(padFix), true).get();
 
-        //controls in photo mode
+        // Enables controls for FE photo mode
         //pattern = hook::pattern("D9 EE 6A 00 51 D9 1C 24 8B 8E D0 00 00 00 E8 ? ? ? ? D9 EE 6A 00 "); //0x59890A
         //injector::WriteMemory(pattern.get_first(0), 0xC3595E90, true); //pop esi  pop ecx  ret
 
