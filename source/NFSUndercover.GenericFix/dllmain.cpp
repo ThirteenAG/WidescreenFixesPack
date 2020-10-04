@@ -471,19 +471,16 @@ void Init3()
 void Init4()
 {
     CIniReader iniReader("");
-    bool bFixAspectRatio = iniReader.ReadInteger("MAIN", "FixAspectRatio", 1) != 0;
-    bool bHUDWidescreenMode = iniReader.ReadInteger("MAIN", "HUDWidescreenMode", 1) != 0;
+
+    bool bScaling = iniReader.ReadInteger("MAIN", "Scaling", 0) != 0;
     static int32_t nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
 
-    //HUD Refresh
+    // HUD Refresh
     auto pattern = GetPattern("38 86 E3 00 00 00 5F");
     injector::MakeNOP(pattern.get_first(7), 2, true);
 
-    //HUD Width
-    // Force 16:9 HUD Settings
-    uint32_t* dword_7454F1 = hook::pattern("D9 05 ? ? ? ? D9 C9 DF F1 DD D8 ? ?  B8 ? ? ? ? C3 33 C0 C3").count(1).get(0).get<uint32_t>(12);
-    injector::MakeNOP(dword_7454F1, 2, true); // 2 nops
-
+    // 00793251 = Widescreen FMV call. Will fix them later
+    // HUD Width
     static float fHudScale = 1.0f;
     static float fHudWidth = 1280.0f;
     static float fHudXPos = -1.0f;
@@ -514,15 +511,15 @@ void Init4()
                 float fAspectRatio = static_cast<float>(*Width) / static_cast<float>(*Height);
                 if (fAspectRatio <= 1.34)
                 {
-                    fHudScale = 1.0f;
-                    fHudWidth = 1280.0f;
-                    fHudXPos = -1.0f;
+                    fHudScale = 1280.0f / (720.0f * fAspectRatio);
+                    fHudWidth = 1280.0f / fHudScale;
+                    fHudXPos = -0.75f * fHudScale;
                 }
                 else
                 {
-                    fHudScale = 1280.0f / (720.0f * fAspectRatio);
-                    fHudWidth = 1280.0f / fHudScale;
-                    fHudXPos = -1.0f * fHudScale;
+                   fHudScale = 1280.0f / (720.0f * fAspectRatio);
+                   fHudWidth = 1280.0f / fHudScale;
+                   fHudXPos = -1.0f * fHudScale;
                 }
             }
 
@@ -548,11 +545,33 @@ void Init4()
         }
     }; injector::MakeInline<ResHook>(pattern.get_first(0), pattern.get_first(7));
 
+    // Force 16:9 HUD settings if aspect ratio is greater than 4:3
+    pattern = GetPattern("D9 05 ? ? ? ? D9 C9 DF F1 DD D8 ? ?  B8 ? ? ? ? C3 33 C0 C3");
+    struct HUDWidescreenModeHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            float fAspectRatio = static_cast<float>(*Width) / static_cast<float>(*Height);
+            if (fAspectRatio <= 1.333333373f)
+                regs.eax = 0;
+            else
+                regs.eax = 1;
+        }
+    };
+    injector::MakeInline<HUDWidescreenModeHook>(pattern.count(1).get(0).get<uint32_t>(12), pattern.count(1).get(0).get<uint32_t>(19)); // 7454F1
+
     //HUD X Pos
     pattern = GetPattern("F3 0F 11 44 24 0C E8 ? ? ? ? 0F 57 C0 F3 0F 10 0D ? ? ? ? F3 0F 10 15");
     injector::WriteMemory(pattern.get_first(26), &fHudXPos, true);
 
     // HUD Render Fix
+    static float fRenderWidth_99999 = 99999.0f;
+    pattern = hook::pattern("E8 ? ? ? ? 84 C0 74 0A F3 0F");
+    uint32_t* dword_781C61 = pattern.count(13).get(3).get<uint32_t>(13);
+    injector::WriteMemory(dword_781C61, &fRenderWidth_99999, true);
+    uint32_t* dword_7B1DB3 = pattern.count(13).get(11).get<uint32_t>(13);
+    injector::WriteMemory(dword_7B1DB3, &fRenderWidth_99999, true);
+
     pattern = GetPattern("F3 0F 11 86 8C 05 00 00 F3 0F 11 86 90 05 00 00");
     struct HUDRenderHook
     {
@@ -609,13 +628,24 @@ void Init4()
     uint32_t* dword_561AA0 = hook::pattern("D9 05 ? ? ? ? D9 54 24 04 D9 1C 24 E8 ? ? ? ? 8B 0D").count(1).get(0).get<uint32_t>(2);
     injector::WriteMemory(dword_561AA0, &fWidthNegative_99999, true);
 
-    //FOV
     // Force 16:9 FOV Settings
+    static float fVertFOV = 1.777777777f;
     uint32_t* dword_76B7FF = hook::pattern("A1 ? ? ? ? 83 EC 08 80 B8 ? ? ? ? 00 ? ? 6A 14 B9").count(1).get(0).get<uint32_t>(15);
     injector::WriteMemory<uint8_t>(dword_76B7FF, 0xEB, true); // jmp
     uint32_t* dword_74A81D = hook::pattern("D9 C9 DF F1 DD D8 ? ? F2 0F 10 0D").count(1).get(0).get<uint32_t>(6);
     injector::MakeNOP(dword_74A81D, 2, true); // 2 nops
+    uint32_t* dword_76B84C = hook::pattern("F3 0F 10 05 ? ? ? ? F3 0F 11 04 24 D9 04 24 83 C4 08").count(1).get(0).get<uint32_t>(4);
+    injector::WriteMemory(dword_76B84C, &fVertFOV, true); // 2 nops
+    
+    // FOV Scaling
+    if (bScaling)
+    {
+        static constexpr double Corrected_Hor = 1.3f;
+        uint32_t* dword_76B7FF = hook::pattern("F2 0F 10 0D ? ? ? ? 0F B7 C5 F2 0F 2A").count(1).get(0).get<uint32_t>(55);
+        injector::WriteMemory(dword_76B7FF, &Corrected_Hor, true);
+    }
 
+    // FOV
     pattern = GetPattern("F3 0F 10 44 24 38 F3 0F 10 4C 24 28"); //0x74A959
     struct FOVHook
     {
@@ -628,24 +658,6 @@ void Init4()
             _asm movss xmm0, esp38
         }
     }; injector::MakeInline<FOVHook>(pattern.get_first(0), pattern.get_first(6));
-
-    //if (bHUDWidescreenMode)
-    {
-        static int WidescreenMode = bHUDWidescreenMode;
-
-        struct HUDWidescreenModeHook
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                regs.eax = WidescreenMode;
-            }
-        }; 
-
-        pattern = GetPattern("E8 ? ? ? ? 8B 4C 24 14 0F B6 C0");
-        injector::MakeInline<HUDWidescreenModeHook>(pattern.count(1).get(0).get<uint32_t>(0)); // 520C91
-        pattern = GetPattern("E8 ? ? ? ? 2C 01 F6 D8 1B C0 83");
-        injector::MakeInline<HUDWidescreenModeHook>(pattern.count(2).get(0).get<uint32_t>(0)); // 44C332
-    }
 
     if (nWindowedMode)
     {
