@@ -155,7 +155,7 @@ void Init()
     }
 
     bool bFixAspectRatio = iniReader.ReadInteger("MAIN", "FixAspectRatio", 1) != 0;
-    bool bScaling = iniReader.ReadInteger("MAIN", "Scaling", 1) != 0;
+    int nScaling = iniReader.ReadInteger("MAIN", "Scaling", 1) != 0;
     bool bHUDWidescreenMode = iniReader.ReadInteger("MAIN", "HUDWidescreenMode", 1) != 0;
     bool bFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1) != 0;
     bool bConsoleHUDSize = iniReader.ReadInteger("MAIN", "ConsoleHUDSize", 1) != 0;
@@ -202,8 +202,12 @@ void Init()
 
         // Force 16:9 FOV, HUD & FMV Scaling
         {
-        uint32_t* dword_4BCAEF = hook::pattern("A1 ? ? ? ? 83 EC 0C 80 B8 ? ? ? ? 00 ? ? B9 ? ? ? ? E8").count(1).get(0).get<uint32_t>(15);
+        static float fRatio = 1.777777777f;
+        auto pattern = hook::pattern("A1 ? ? ? ? 83 EC 0C 80 B8 ? ? ? ? 00 ? ? B9 ? ? ? ? E8");
+        uint32_t* dword_4BCAEF = pattern.count(1).get(0).get<uint32_t>(15);
         injector::WriteMemory<uint8_t>(dword_4BCAEF, 0xEB, true); // jmp
+        uint32_t* dword_4BCB39 = pattern.count(1).get(0).get<uint32_t>(89);
+        injector::WriteMemory(dword_4BCB39, &fRatio, true);
         uint32_t* dword_6FF9E3 = hook::pattern("D9 C9 DF F1 DD D8 ? ? 0F B7 C3").count(1).get(0).get<uint32_t>(6);
         injector::MakeNOP(dword_6FF9E3, 2, true); // 2 nops
         uint32_t* dword_4B51EB = hook::pattern("74 ? 8B 16 8B 42 ? FF D0 5E 5B").count(1).get(0).get<uint32_t>(0);
@@ -235,10 +239,21 @@ void Init()
                 }
             }; injector::MakeInline<FOVHook>(pattern.get_first(0), pattern.get_first(11)); // 6FFB1A
 
-            if (bScaling)
+            if (nScaling)
             {
-                static constexpr double XB360_Hor = 1.26;
-                static constexpr double XB360_Ver = 1.50;
+                static double XB360_Hor;
+                static double XB360_Ver;
+
+                if (nScaling == 1)
+                {
+                    XB360_Hor = 1.26;
+                    XB360_Ver = 1.50;
+                }
+                if (nScaling >= 2)
+                {
+                    XB360_Hor = 1.30;
+                    XB360_Ver = 1.48;
+                }
 
                 auto pattern = hook::pattern("DC 0D ? ? ? ? D9 5C 24 ? D9 44 24 ? DC 0D ? ? ? ? ? ? D9 44 24 ? DC 0D");
                 uint32_t* dword_6FFA12 = pattern.count(2).get(0).get<uint32_t>(2);
