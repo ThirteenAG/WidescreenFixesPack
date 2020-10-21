@@ -21,7 +21,7 @@ void Init()
     bool bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) != 0;
     int32_t nScaling = iniReader.ReadInteger("MAIN", "Scaling", 2);
     bool bHUDWidescreenMode = iniReader.ReadInteger("MAIN", "HUDWidescreenMode", 1) != 0;
-    int32_t nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
+    int nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
     int32_t nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
     bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 1) != 0;
     bool bLightingFix = iniReader.ReadInteger("MISC", "LightingFix", 0) != 0;
@@ -311,19 +311,22 @@ void Init()
 
     if (nFMVWidescreenMode)
     {
+        // Widescreen FMV Text Placement
+        uint32_t* dword_5AB6D7 = hook::pattern("74 3C ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 68 D1 BC D5 FF").count(1).get(0).get<uint32_t>(0);
+        injector::WriteMemory<uint8_t>(dword_5AB6D7, 0xEB, true);
+
         if (nFMVWidescreenMode > 1)
         {
+            // HD FMV Support
             uint32_t* dword_598EB9 = hook::pattern("68 00 00 80 3F 68 00 00 00 3F 68 00 00 00 3F 68 00 00 00 BF 68 00 00 00 BF 8B CB E8 ? ? ? ? 8B CB C7").count(1).get(0).get<uint32_t>(6);
-            injector::WriteMemory<float>((uint32_t)dword_598EB9 + 0, (0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
-            injector::WriteMemory<float>((uint32_t)dword_598EB9 + 5, (0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
-            injector::WriteMemory<float>((uint32_t)dword_598EB9 + 10, -(0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
-            injector::WriteMemory<float>((uint32_t)dword_598EB9 + 15, -(0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true);
+            injector::WriteMemory<float>((uint32_t)dword_598EB9 + 0, (0.5f / ((4.0f / 3.0f) / (4.0f / 3.0f))), true); // Height (Bottom)
+            injector::WriteMemory<float>((uint32_t)dword_598EB9 + 5, (0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true); // Width (Right)
+            injector::WriteMemory<float>((uint32_t)dword_598EB9 + 10, -(0.5f / ((4.0f / 3.0f) / (4.0f / 3.0f))), true); // Height (Top)
+            injector::WriteMemory<float>((uint32_t)dword_598EB9 + 15, -(0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true); // Width (Left)
         }
         else
         {
-            //Native Fullscreen FMVs
-            uint32_t* dword_5AB6D7 = hook::pattern("74 3C ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 68 D1 BC D5 FF").count(1).get(0).get<uint32_t>(0);
-            injector::WriteMemory<uint8_t>(dword_5AB6D7, 0xEB, true);
+            // Native Widescreen FMV Support
             uint32_t* dword_5BB818 = hook::pattern("74 6A 8B CE E8 ? ? ? ? 84 C0 75 5F 68 ? ? ? ? 68").count(1).get(0).get<uint32_t>(0);
             injector::MakeNOP(dword_5BB818, 2, true);
             uint32_t* dword_5BD4A1 = hook::pattern("74 0D 68 ? ? ? ? E8 ? ? ? ? 5E 59 C3").count(1).get(0).get<uint32_t>(0);
@@ -463,6 +466,7 @@ void Init()
             pattern = hook::pattern("E8 ? ? ? ? 8B 35 ? ? ? ? 6A 04 FF D6 83 C4 04 85 C0 74 08 C7 00"); //0x6B7736
             hb_6B6D40.fun = injector::MakeCALL(pattern.get_first(0), static_cast<void(__cdecl*)()>(LoadTPK), true).get();
 
+            /*
             //cursor
             constexpr float cursorScale = 1.0f * (128.0f / 16.0f);
             pattern = hook::pattern("C7 44 24 74 00 00 80 3F D9 5C 24 60"); //585424
@@ -470,6 +474,7 @@ void Init()
             injector::WriteMemory<float>(pattern.get_first(24), cursorScale, true);
             injector::WriteMemory<float>(pattern.get_first(35), cursorScale, true);
             injector::WriteMemory<float>(pattern.get_first(57), cursorScale, true);
+            */
         }
 
         struct PadState

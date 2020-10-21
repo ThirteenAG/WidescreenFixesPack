@@ -454,9 +454,27 @@ void Init()
 
     if (bFastTransitions)
     {
-        pattern = hook::pattern("C7 44 24 08 9A 99 99 3F");
-        injector::MakeNOP(pattern.count(1).get(0).get<uint32_t>(-2), 2, true);
-        injector::WriteMemory<float>(pattern.count(1).get(0).get<float*>(4), 0.5f, true);
+        static uint32_t* dword_96ED1C = *hook::pattern("8A 0D ? ? ? ? 32 C0 3A C8 A2").count(1).get(0).get<uint32_t*>(11); // 0x4EEFDB
+        static auto& UFO_RA1 = *hook::pattern("68 CD CC CC 3D 6A ? E8").count(9).get(2).get<uint32_t>(12); // 0x57F2B1: return address
+        static auto& UFO_RA2 = *hook::pattern("68 CD CC CC 3D 6A ? E8").count(9).get(3).get<uint32_t>(12); // 0x57F2CD: return address
+        static auto& UFO_RA3 = *hook::pattern("68 CD CC CC 3D 6A ? E8").count(9).get(4).get<uint32_t>(12); // 0x57F427: return address
+        static auto& UFO_RA4 = *hook::pattern("68 CD CC CC 3D 6A ? E8").count(9).get(5).get<uint32_t>(12); // 0x57F443: return address
+
+        static float fGlobalTransitionSpeed = 0.5f;
+        pattern = hook::pattern("D9 44 24 08 D8 1D ? ? ? ? DF ? F6 ? 44 ? ? C7 44 24 08");
+        struct TransitionExclusionHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                int esp00 = *(int*)(regs.esp + 0x00);
+
+                if (esp00 == (int)&UFO_RA1 || esp00 == (int)&UFO_RA2 || esp00 == (int)&UFO_RA3 || esp00 == (int)&UFO_RA4)
+                    regs.eax = *dword_96ED1C;
+                else
+                    *(float*)(regs.esp + 0x08) = fGlobalTransitionSpeed;
+                    regs.eax = *dword_96ED1C;
+            }
+        }; injector::MakeInline<TransitionExclusionHook>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(30)); // 4EED60
     }
 
     if (bCreateLocalFix)
