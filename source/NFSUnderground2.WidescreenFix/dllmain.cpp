@@ -656,7 +656,7 @@ void Init()
 
     if (nFPSLimit)
     {
-        static float FrameTime = 1 / nFPSLimit;
+        static float FrameTime = 1.0f / nFPSLimit;
         uint32_t* dword_865558 = *hook::pattern("D9 05 ? ? ? ? B9 64 00 00 00 D8 64").count(1).get(0).get<uint32_t*>(2);
         injector::WriteMemory(dword_865558, FrameTime, true);
         uint32_t* dword_7FB710 = *hook::pattern("D9 05 ? ? ? ? D8 74 ? ? D9 1D ? ? ? ? C3").count(1).get(0).get<uint32_t*>(33);
