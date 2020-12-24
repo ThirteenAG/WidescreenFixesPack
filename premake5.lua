@@ -217,6 +217,10 @@ project "SplinterCellDoubleAgent.PCSX2.WidescreenFix"
    configurations { "ReleasePCSX2", "DebugPCSX2" }
       setpaths("Z:/WFP/Games/PCSX2/", "pcsx2.exe")
       files { "includes/pcsx2/pcsx2.h" }
+project "SplinterCellDoubleAgent.CXBXR.WidescreenFix"
+   configurations { "ReleaseCXBXR", "DebugCXBXR" }
+      setpaths("Z:/WFP/Games/CXBXR/", "cxbx.exe")
+      files { "includes/cxbxr/cxbxr.h" }
 project "SplinterCellPandoraTomorrow.WidescreenFix"
    setpaths("Z:/WFP/Games/Splinter Cell/Splinter Cell Pandora Tomorrow/", "offline/system/SplinterCell2.exe", "offline/system/scripts/")
 project "StreetRacingSyndicate.WidescreenFix"
