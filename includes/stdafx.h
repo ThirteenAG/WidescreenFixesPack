@@ -262,12 +262,12 @@ public:
             if (ptr == nullptr)
                 ptr = (uint32_t*)((DWORD)mh + ntHeader->OptionalHeader.BaseOfCode + ntHeader->OptionalHeader.SizeOfCode - offset);
             std::thread([](std::function<void()>&& fn, uint32_t* ptr, uint32_t val)
-                {
-                    while (*ptr == val)
-                        std::this_thread::yield();
+            {
+                while (*ptr == val)
+                    std::this_thread::yield();
 
-                    fn();
-                }, fn, ptr, *ptr).detach();
+                fn();
+            }, fn, ptr, *ptr).detach();
         }
     }
 
@@ -304,8 +304,10 @@ private:
     }
 
 private:
-    struct Comparator {
-        bool operator() (const std::wstring& s1, const std::wstring& s2) const {
+    struct Comparator
+    {
+        bool operator() (const std::wstring& s1, const std::wstring& s2) const
+        {
             std::wstring str1(s1.length(), ' ');
             std::wstring str2(s2.length(), ' ');
             std::transform(s1.begin(), s1.end(), str1.begin(), tolower);
@@ -329,7 +331,8 @@ private:
     typedef NTSTATUS(NTAPI* _LdrRegisterDllNotification) (ULONG, PVOID, PVOID, PVOID);
     typedef NTSTATUS(NTAPI* _LdrUnregisterDllNotification) (PVOID);
 
-    typedef struct _LDR_DLL_LOADED_NOTIFICATION_DATA {
+    typedef struct _LDR_DLL_LOADED_NOTIFICATION_DATA
+    {
         ULONG Flags;                    //Reserved.
         PUNICODE_STRING FullDllName;    //The full path name of the DLL module.
         PUNICODE_STRING BaseDllName;    //The base file name of the DLL module.
@@ -337,7 +340,8 @@ private:
         ULONG SizeOfImage;              //The size of the DLL image, in bytes.
     } LDR_DLL_LOADED_NOTIFICATION_DATA, LDR_DLL_UNLOADED_NOTIFICATION_DATA, *PLDR_DLL_LOADED_NOTIFICATION_DATA, *PLDR_DLL_UNLOADED_NOTIFICATION_DATA;
 
-    typedef union _LDR_DLL_NOTIFICATION_DATA {
+    typedef union _LDR_DLL_NOTIFICATION_DATA
+    {
         LDR_DLL_LOADED_NOTIFICATION_DATA Loaded;
         LDR_DLL_UNLOADED_NOTIFICATION_DATA Unloaded;
     } LDR_DLL_NOTIFICATION_DATA, *PLDR_DLL_NOTIFICATION_DATA;
@@ -438,7 +442,8 @@ public:
     }
     static LSTATUS WINAPI RegCloseKey(HKEY hKey)
     {
-        if (hKey == NULL) {
+        if (hKey == NULL)
+        {
             return ERROR_SUCCESS;
         }
         else
@@ -446,7 +451,8 @@ public:
     }
     static LSTATUS WINAPI RegCreateKeyA(HKEY hKey, LPCSTR lpSubKey, PHKEY phkResult)
     {
-        if (hKey == NULL) {
+        if (hKey == NULL)
+        {
             return ERROR_SUCCESS;
         }
         else
@@ -454,7 +460,8 @@ public:
     }
     static LSTATUS WINAPI RegOpenKeyA(HKEY hKey, LPCSTR lpSubKey, PHKEY phkResult)
     {
-        if (strstr(lpSubKey, filter.c_str()) != NULL) {
+        if (strstr(lpSubKey, filter.c_str()) != NULL)
+        {
             *phkResult = NULL;
             section = lpSubKey;
             section = section.substr(section.find_last_of('\\') + 1);
@@ -465,7 +472,8 @@ public:
     }
     static LSTATUS WINAPI RegOpenKeyExA(HKEY hKey, LPCSTR lpSubKey, DWORD ulOptions, REGSAM samDesired, PHKEY phkResult)
     {
-        if (strstr(lpSubKey, filter.c_str()) != NULL) {
+        if (strstr(lpSubKey, filter.c_str()) != NULL)
+        {
             *phkResult = NULL;
             section = lpSubKey;
             section = section.substr(section.find_last_of('\\') + 1);
@@ -514,17 +522,21 @@ public:
                     DWORD def = UINT_MAX;
                     if (!DefaultStrings[ValueName].empty())
                     {
-                        try {
+                        try
+                        {
                             def = (DWORD)std::stoul(DefaultStrings[ValueName]);
                         }
-                        catch (const std::invalid_argument&) {
+                        catch (const std::invalid_argument&)
+                        {
                             def = UINT_MAX;
                         }
                     }
-                    try {
+                    try
+                    {
                         *(DWORD*)lpData = RegistryReader.ReadInteger(section, ValueName, def);
                     }
-                    catch (const std::invalid_argument&) {
+                    catch (const std::invalid_argument&)
+                    {
                         *(DWORD*)lpData = UINT_MAX;
                     }
                     if (*(DWORD*)lpData == UINT_MAX)
@@ -650,7 +662,8 @@ public:
     }
     static LSTATUS WINAPI RegDeleteKeyA(HKEY hKey, LPCSTR lpSubKey)
     {
-        if (hKey == NULL) {
+        if (hKey == NULL)
+        {
             return ERROR_SUCCESS; //not implemented
         }
         else
@@ -658,7 +671,8 @@ public:
     }
     static LSTATUS WINAPI RegEnumKeyA(HKEY hKey, DWORD dwIndex, LPSTR lpName, DWORD cchName)
     {
-        if (hKey == NULL) {
+        if (hKey == NULL)
+        {
             return ERROR_SUCCESS; //not implemented
         }
         else
@@ -666,7 +680,8 @@ public:
     }
     static LSTATUS WINAPI RegQueryValueA(HKEY hKey, LPCSTR lpSubKey, LPSTR lpData, PLONG lpcbData)
     {
-        if (hKey == NULL) {
+        if (hKey == NULL)
+        {
             return ERROR_SUCCESS; //not implemented
         }
         else
@@ -674,7 +689,8 @@ public:
     }
     static LSTATUS WINAPI RegCreateKeyExA(HKEY hKey, LPCSTR lpSubKey, DWORD Reserved, LPSTR lpClass, DWORD dwOptions, REGSAM samDesired, CONST LPSECURITY_ATTRIBUTES lpSecurityAttributes, PHKEY phkResult, LPDWORD lpdwDisposition)
     {
-        if (strstr(lpSubKey, filter.c_str()) != NULL) {
+        if (strstr(lpSubKey, filter.c_str()) != NULL)
+        {
             *phkResult = NULL;
             section = lpSubKey;
             section = section.substr(section.find_last_of('\\') + 1);

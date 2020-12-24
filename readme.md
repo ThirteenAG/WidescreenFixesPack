@@ -62,7 +62,7 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 
 [Download](http://thirteenag.github.io/wfp#burnout3)
 |
-[Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/Burnout3.WidescreenFix/dllmain.cpp)
+[Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/Burnout3.PCSX2.WidescreenFix/dllmain.cpp)
 
 ## Call of Cthulhu Widescreen Fix
 
