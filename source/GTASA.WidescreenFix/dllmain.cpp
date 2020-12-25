@@ -89,12 +89,13 @@ void __declspec(naked) AllowMouseMovement()
 
         label1 :
         mov eax, _EAX
-            mov _EAX, 0x7453F0
-            jmp _EAX
+        mov _EAX, 0x7453F0
+        jmp _EAX
     }
 }
 
-void UpdateFrontendFixes() {
+void UpdateFrontendFixes()
+{
     fFrontendWidth[0] = 0.0020312499f * fWideScreenWidthScale;
     fFrontendWidth[1] = 0.00065625005f * fWideScreenWidthScale;
     fFrontendWidth[2] = 0.00109375f * fWideScreenWidthScale;
@@ -179,13 +180,16 @@ void UpdateFrontendFixes() {
     fFrontendHeight[39] = 0.002232143f * fWideScreenHeightScale;
 }
 
-void UpdateMiscFixes() {
+void UpdateMiscFixes()
+{
     // Aim point.
-    if (bDontTouchFOV) {
+    if (bDontTouchFOV)
+    {
         fCameraWidth[0] = 0.017453292f;
         fCameraHeight[0] = 0.0f;
     }
-    else {
+    else
+    {
         fCameraWidth[0] = 0.01403292f;
         fCameraHeight[0] = 0.0f;
     }
@@ -251,7 +255,8 @@ void UpdateMiscFixes() {
     fMiscHeight[28] = 0.002232143f * fWideScreenHeightScale * fHudHeightScale;
 }
 
-void UpdateHUDFixes() {
+void UpdateHUDFixes()
+{
     fRadarWidth[0] = 0.0015625f * fWideScreenWidthScale * fRadarWidthScale;
     fRadarWidth[1] = 0.0015625f * fWideScreenWidthScale * fRadarWidthScale;
     fRadarWidth[2] = 0.0015625f * fWideScreenWidthScale * fRadarWidthScale;
@@ -518,7 +523,8 @@ void UpdateHUDFixes() {
     fHUDHeight[105] = 0.002232143f * fWideScreenHeightScale * fHudHeightScale;
 }
 
-void UpdateScriptFixes() {
+void UpdateScriptFixes()
+{
     float w;
     if (*CDraw::pfScreenAspectRatio < fDefaultWidth)
         w = static_cast<float>(RsGlobal->MaximumWidth);
@@ -532,7 +538,8 @@ template<uintptr_t addr>
 void updateScreenAspectRatioWrapper()
 {
     using func_hook = injector::function_hooker<addr, void()>;
-    injector::make_static_hook<func_hook>([](func_hook::func_type updateScreenAspectRatio) {
+    injector::make_static_hook<func_hook>([](typename func_hook::func_type updateScreenAspectRatio)
+    {
         updateScreenAspectRatio();
 
         fWideScreenWidthScale = 640.0f / (*CDraw::pfScreenAspectRatio * 448.0f);
@@ -545,12 +552,14 @@ void updateScreenAspectRatioWrapper()
         UpdateMiscFixes();
         UpdateHUDFixes();
         UpdateScriptFixes();
-        });
+    });
 }
 
 uintptr_t SetEdgeAddr = 0x719590;
-void __declspec(naked) SetDropShadowPosition() {
-    _asm {
+void __declspec(naked) SetDropShadowPosition()
+{
+    _asm
+    {
         mov eax, [esp + 4]
         cmp ReplaceTextShadowWithOutline, 2
         jae label1
@@ -564,28 +573,29 @@ void __declspec(naked) SetDropShadowPosition() {
     }
 }
 
-constexpr char* main_scm_tex[] = { "10ls", "10ls2", "10ls3", "10ls4", "10ls5", "10og", "10weed", "11dice", "11dice2", "11ggift", "11grov2", "11grov3", "11grove",
-    "11jail", "12angel", "12bndit", "12cross", "12dager", "12maybr", "12myfac", "4rip", "4spider", "4weed", "5cross", "5cross2", "5cross3", "5gun", "6africa", "6aztec",
-    "6clown", "6crown", "7cross", "7cross2", "7cross3", "7mary", "8gun", "8poker", "8sa", "8sa2", "8sa3", "8santos", "8westsd", "9bullt", "9crown", "9gun", "9gun2", "9homby",
-    "9rasta", "addcoin", "AirLogo", "arrow", "back2", "back3", "back4", "back5", "back6", "back7", "back8", "back8_right", "back8_top", "backbet", "backcyan", "backgnd",
-    "backred", "badchat", "ball", "bar1_o", "bar2_o", "bckgrnd", "bee1", "bee2", "beea", "bell", "black", "blkdot", "blue", "brboat", "brfly", "bride1", "bride2", "bride3",
-    "bride4", "bride5", "bride6", "bride7", "bride8", "bronze", "bstars", "bum1", "bum2", "bumble", "bushes", "butnA", "butnAo", "butnB", "butnBo", "butnC", "cbarl", "cbarm",
-    "cbarr", "cd10c", "cd10d", "cd10h", "cd10s", "cd11c", "cd11d", "cd11h", "cd11s", "cd12c", "cd12d", "cd12h", "cd12s", "cd13c", "cd13d", "cd13h", "cd13s", "cd1c", "cd1d",
-    "cd1h", "cd1s", "cd2c", "cd2d", "cd2h", "cd2s", "cd3c", "cd3d", "cd3h", "cd3s", "cd4c", "cd4d", "cd4h", "cd4s", "cd5c", "cd5d", "cd5h", "cd5s", "cd6c", "cd6d", "cd6h",
-    "cd6s", "cd7c", "cd7d", "cd7h", "cd7s", "cd8c", "cd8d", "cd8h", "cd8s", "cd9c", "cd9d", "cd9h", "cd9s", "cdback", "cherry", "chit", "circle", "cring", "cross", "crosshair",
-    "dark", "deal", "down", "downl", "downr", "dpad_64", "dpad_lr", "DUALITY", "eax", "ex1", "ex2", "ex3", "ex4", "exitw", "exity", "explm01", "explm02", "explm03", "explm04",
-    "explm05", "explm06", "explm07", "explm08", "explm09", "explm10", "explm11", "explm12", "fen", "fire", "flwr", "flwra", "force", "fstar", "ghost", "goboat", "gold", "golfly",
-    "goodcha", "grapes", "gride1", "gride2", "gride3", "gride4", "gride5", "gride6", "gride7", "gride8", "hbarl", "hbarm", "hbarr", "Health", "hiscorew", "hiscorey", "hive",
-    "hi_a", "hi_b", "hi_c", "holdmid", "holdoff", "holdon", "hon", "hrs1", "hrs2", "hrs3", "hrs4", "hrs5", "hrs6", "hrs7", "hrs8", "intro1", "intro2", "intro3", "intro4", "kami",
-    "layer", "leaf", "left", "light", "load0uk", "loadsc0", "loadsc1", "loadsc10", "loadsc11", "loadsc12", "loadsc13", "loadsc14", "loadsc2", "loadsc3", "loadsc4", "loadsc5",
-    "loadsc6", "loadsc7", "loadsc8", "loadsc9", "loadscuk", "map", "mouse", "naward", "nawtxt", "nib", "nmef", "nvidia", "outro", "pa", "playw", "playy", "pm2", "pm3", "pole2",
-    "power", "pride1", "pride2", "pride3", "pride4", "pride5", "pride6", "pride7", "pride8", "ps1", "ps2", "ps3", "race00", "race01", "race02", "race03", "race04", "race05", "race06",
-    "race07", "race08", "race09", "race10", "race11", "race12", "race13", "race14", "race15", "race16", "race17", "race18", "race19", "race20", "race21", "race22", "race23", "race24",
-    "radio_bounce", "radio_csr", "radio_KDST", "radio_kjah", "radio_krose", "radio_mastersounds", "radio_playback", "radio_RADIOX", "radio_RLS", "radio_SFUR", "radio_TPLAYER",
-    "radio_WCTR", "ribb", "ribbw", "Ric1", "Ric2", "Ric3", "Ric4", "Ric5", "right", "rockshp", "roulbla", "roulgre", "roulred", "rride1", "rride2", "rride3", "rride4", "rride5",
-    "rride6", "rride7", "rride8", "r_69", "ship", "ship2", "ship3", "shoot", "shpnorm", "shpwarp", "silboat", "silfly", "silver", "sky", "splash1", "splash2", "splsh", "square",
-    "thorn", "thrust", "thrustG", "thumbdn", "thumbup", "timer", "title", "title_pc_EU", "title_pc_US", "trees", "triangle", "tvbase", "tvcorn", "tvl", "tvr", "ufo", "un_a", "un_b",
-    "un_c", "up", "upl", "upr", "warp", "white", "yride1", "yride2", "yride3", "yride4", "yride5", "yride6", "yride7", "yride8" };
+constexpr const char* main_scm_tex[] = { "10ls", "10ls2", "10ls3", "10ls4", "10ls5", "10og", "10weed", "11dice", "11dice2", "11ggift", "11grov2", "11grov3", "11grove",
+                                         "11jail", "12angel", "12bndit", "12cross", "12dager", "12maybr", "12myfac", "4rip", "4spider", "4weed", "5cross", "5cross2", "5cross3", "5gun", "6africa", "6aztec",
+                                         "6clown", "6crown", "7cross", "7cross2", "7cross3", "7mary", "8gun", "8poker", "8sa", "8sa2", "8sa3", "8santos", "8westsd", "9bullt", "9crown", "9gun", "9gun2", "9homby",
+                                         "9rasta", "addcoin", "AirLogo", "arrow", "back2", "back3", "back4", "back5", "back6", "back7", "back8", "back8_right", "back8_top", "backbet", "backcyan", "backgnd",
+                                         "backred", "badchat", "ball", "bar1_o", "bar2_o", "bckgrnd", "bee1", "bee2", "beea", "bell", "black", "blkdot", "blue", "brboat", "brfly", "bride1", "bride2", "bride3",
+                                         "bride4", "bride5", "bride6", "bride7", "bride8", "bronze", "bstars", "bum1", "bum2", "bumble", "bushes", "butnA", "butnAo", "butnB", "butnBo", "butnC", "cbarl", "cbarm",
+                                         "cbarr", "cd10c", "cd10d", "cd10h", "cd10s", "cd11c", "cd11d", "cd11h", "cd11s", "cd12c", "cd12d", "cd12h", "cd12s", "cd13c", "cd13d", "cd13h", "cd13s", "cd1c", "cd1d",
+                                         "cd1h", "cd1s", "cd2c", "cd2d", "cd2h", "cd2s", "cd3c", "cd3d", "cd3h", "cd3s", "cd4c", "cd4d", "cd4h", "cd4s", "cd5c", "cd5d", "cd5h", "cd5s", "cd6c", "cd6d", "cd6h",
+                                         "cd6s", "cd7c", "cd7d", "cd7h", "cd7s", "cd8c", "cd8d", "cd8h", "cd8s", "cd9c", "cd9d", "cd9h", "cd9s", "cdback", "cherry", "chit", "circle", "cring", "cross", "crosshair",
+                                         "dark", "deal", "down", "downl", "downr", "dpad_64", "dpad_lr", "DUALITY", "eax", "ex1", "ex2", "ex3", "ex4", "exitw", "exity", "explm01", "explm02", "explm03", "explm04",
+                                         "explm05", "explm06", "explm07", "explm08", "explm09", "explm10", "explm11", "explm12", "fen", "fire", "flwr", "flwra", "force", "fstar", "ghost", "goboat", "gold", "golfly",
+                                         "goodcha", "grapes", "gride1", "gride2", "gride3", "gride4", "gride5", "gride6", "gride7", "gride8", "hbarl", "hbarm", "hbarr", "Health", "hiscorew", "hiscorey", "hive",
+                                         "hi_a", "hi_b", "hi_c", "holdmid", "holdoff", "holdon", "hon", "hrs1", "hrs2", "hrs3", "hrs4", "hrs5", "hrs6", "hrs7", "hrs8", "intro1", "intro2", "intro3", "intro4", "kami",
+                                         "layer", "leaf", "left", "light", "load0uk", "loadsc0", "loadsc1", "loadsc10", "loadsc11", "loadsc12", "loadsc13", "loadsc14", "loadsc2", "loadsc3", "loadsc4", "loadsc5",
+                                         "loadsc6", "loadsc7", "loadsc8", "loadsc9", "loadscuk", "map", "mouse", "naward", "nawtxt", "nib", "nmef", "nvidia", "outro", "pa", "playw", "playy", "pm2", "pm3", "pole2",
+                                         "power", "pride1", "pride2", "pride3", "pride4", "pride5", "pride6", "pride7", "pride8", "ps1", "ps2", "ps3", "race00", "race01", "race02", "race03", "race04", "race05", "race06",
+                                         "race07", "race08", "race09", "race10", "race11", "race12", "race13", "race14", "race15", "race16", "race17", "race18", "race19", "race20", "race21", "race22", "race23", "race24",
+                                         "radio_bounce", "radio_csr", "radio_KDST", "radio_kjah", "radio_krose", "radio_mastersounds", "radio_playback", "radio_RADIOX", "radio_RLS", "radio_SFUR", "radio_TPLAYER",
+                                         "radio_WCTR", "ribb", "ribbw", "Ric1", "Ric2", "Ric3", "Ric4", "Ric5", "right", "rockshp", "roulbla", "roulgre", "roulred", "rride1", "rride2", "rride3", "rride4", "rride5",
+                                         "rride6", "rride7", "rride8", "r_69", "ship", "ship2", "ship3", "shoot", "shpnorm", "shpwarp", "silboat", "silfly", "silver", "sky", "splash1", "splash2", "splsh", "square",
+                                         "thorn", "thrust", "thrustG", "thumbdn", "thumbup", "timer", "title", "title_pc_EU", "title_pc_US", "trees", "triangle", "tvbase", "tvcorn", "tvl", "tvr", "ufo", "un_a", "un_b",
+                                         "un_c", "up", "upl", "upr", "warp", "white", "yride1", "yride2", "yride3", "yride4", "yride5", "yride6", "yride7", "yride8"
+                                       };
 
 injector::hook_back<void(__cdecl*)(CRect const&, CRGBA const&)> hbDrawRect;
 void __cdecl DrawRectHook(CRect const& rect, CRGBA  const& color)
@@ -602,7 +612,8 @@ void __fastcall DrawSpriteHook(CSprite2d const& sprite, int, CRect const& rect, 
     {
         hbDraw.fun(sprite, -1, CRect(fDefaultCoords + rect.m_fLeft * fDefaultWidth / *CDraw::pfScreenAspectRatio, rect.m_fBottom, fDefaultCoords + rect.m_fRight * fDefaultWidth / *CDraw::pfScreenAspectRatio, rect.m_fTop), color);
 
-        if (rect.m_fLeft <= 0.0f && rect.m_fRight >= (float)RsGlobal->MaximumWidth * 320.0f * 0.0015625) {
+        if (rect.m_fLeft <= 0.0f && rect.m_fRight >= (float)RsGlobal->MaximumWidth * 320.0f * 0.0015625)
+        {
             CSprite2dDrawRect(CRect(0.0f, (float)RsGlobal->MaximumHeight, fDefaultCoords, 0.0f), CRGBA(0, 0, 0, 255));
 
             CSprite2dDrawRect(CRect(fDefaultCoords + (float)RsGlobal->MaximumWidth * fDefaultWidth / *CDraw::pfScreenAspectRatio, (float)RsGlobal->MaximumHeight, (float)RsGlobal->MaximumWidth, 0.0f), CRGBA(0, 0, 0, 255));
@@ -618,7 +629,7 @@ injector::hook_back<void(__fastcall*)(CSprite2d const&, int, float, float, float
 void __fastcall DrawSpriteHook2(CSprite2d const& sprite, int, float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4, CRGBA const& color)
 {
     hbDraw2.fun(sprite, 0, fDefaultCoords + x1 * fDefaultWidth / *CDraw::pfScreenAspectRatio, y1, fDefaultCoords + x2 * fDefaultWidth / *CDraw::pfScreenAspectRatio, y2,
-        fDefaultCoords + x3 * fDefaultWidth / *CDraw::pfScreenAspectRatio, y3, fDefaultCoords + x4 * fDefaultWidth / *CDraw::pfScreenAspectRatio, y4, color);
+                fDefaultCoords + x3 * fDefaultWidth / *CDraw::pfScreenAspectRatio, y3, fDefaultCoords + x4 * fDefaultWidth / *CDraw::pfScreenAspectRatio, y4, color);
 }
 
 injector::hook_back<void(__cdecl*)(float, float, const char*)> hbPrintString;
@@ -645,7 +656,8 @@ void __stdcall DrawWindowHook(CRect *rect, char *titleKey, char fadeState, CRGBA
     hbDrawWindow.fun(CRect(fDefaultCoords + rect->m_fLeft * fDefaultWidth / *CDraw::pfScreenAspectRatio, rect->m_fBottom, fDefaultCoords + rect->m_fRight * fDefaultWidth / *CDraw::pfScreenAspectRatio, rect->m_fTop), titleKey, fadeState, color, a5, bDrawBox);
 }
 
-void InstallSCMDrawingFixes() {
+void InstallSCMDrawingFixes()
+{
     hbDrawRect.fun = injector::MakeCALL(0x464A53, DrawRectHook).get();
     injector::MakeCALL(0x464A53, DrawRectHook);
 
@@ -696,21 +708,24 @@ void InstallAspectRatioFixes()
 
 void __declspec(naked) CalculateAimingPoint()
 {
-    _asm {
-        fstp	st
-        mov		edx, [CDraw::pfScreenAspectRatio]
+    _asm
+    {
+        fstp    st
+        mov     edx, [CDraw::pfScreenAspectRatio]
         fmul[edx]
-        mov		edi, [esp + 1Ch + 14h]
+        mov     edi, [esp + 1Ch + 14h]
         mov     edx, edi
-        mov		ebx, 5149A6h
-        jmp		ebx
+        mov     ebx, 5149A6h
+        jmp     ebx
     }
 }
 
-void InstallFieldOfViewFixes() {
+void InstallFieldOfViewFixes()
+{
     injector::MakeJMP(0x6FF410, CDraw::SetFOV, true);
 
-    if (!bDontTouchFOV) {
+    if (!bDontTouchFOV)
+    {
         // Fix sky multitude
         static const float fSkyMultFix = 10.0f;
         injector::WriteMemory<const void*>(0x714843, &fSkyMultFix, true);
@@ -780,7 +795,8 @@ void __cdecl SetCentreSizeHook(float a1)
         hbSetCentreSize.fun(a1);
 }
 
-void VideoPlayerShowHook() {
+void VideoPlayerShowHook()
+{
     IVideoWindow*& pvVideoWindow = *(IVideoWindow**)0xC920E0;
 
     CDraw::CalculateAspectRatio();
@@ -816,7 +832,8 @@ void VideoPlayerShowHook() {
     long Right = fMiddleScrCoord + ((((float)RsGlobal->MaximumHeight * (w / h))) / 2.0f);
 
     HRESULT wPos = pvVideoWindow->SetWindowPosition(Left, Top, Right - Left, Bottom);
-    if (wPos >= 0) {
+    if (wPos >= 0)
+    {
         pvVideoWindow->put_MessageDrain((OAHWND)RsGlobal->ps);
         SetFocus((HWND)RsGlobal->ps);
     }
@@ -826,89 +843,89 @@ void InstallFrontendFixes()
 {
     // Font Scales
     int m_dwFrontendWidth[] = { 0x5795CF, // 0 Menu text
-                                    0x579981, // 1 Menu text
-                                    0x579A01, // 2 Menu text
-                                    0x57A36E, // 3 Menu text
-                                    0x57A319, // 4 Menu text
-                                    0x57A2A0, // 5 Menu text	
-                                    0x579718, // 6 Menu text
-                                    0x5763C0, // 7 Menu text
-                                    0x5749A5, // 8 Menu text
-                                    0x57500F, // 9 Menu text
-                                    0x579665, // 10 Menu text
-                                    0x579863, // 11 Menu text
-                                    0x57A1E3, // 12 Menu text
-                                    0x57A3EB, // 13 Menu text
-                                    0x582DDB, // 14 Legend
-                                    0x582E0D, // 15 Legend
-                                    0x582EB0, // 16 Legend
-                                    0x583019, // 17 Legend
-                                    0x58309C, // 18 Legend
-                                    0x582F82, // 19 Legend
-                                    0x583128, // 20 Legend
-                                    0x5831AD, // 21 Legend	
-                                    0x57613B, // 22 Legend
-                                    0x575EDF, // 23 Map zones
-                                    0x57A88D, // 24 Brightness slider posn
-                                    0x57AA81, // 25 Radio slider posn
-                                    0x57ACBE, // 26 Sfx slider posn
-                                    0x57AEB0, // 27 Draw slider posn
-                                    0x57B0E4, // 28 Mouse slider posn
-                                    0x57A807, // 29 Brightness slider
-                                    0x57A811, // 30 Brightness slider
-                                    0x57A9FE, // 31 Radio slider
-                                    0x57AA08, // 32 Radio slider
-                                    0x57AC2F, // 33 Sfx slider
-                                    0x57AC39, // 34 Sfx slider
-                                    0x57AE36, // 35 Draw distance slider
-                                    0x57AE40, // 36 Draw distance slider
-                                    0x57B064, // 37 Mouse acc slider
-                                    0x57B06E, // 38 Mouse acc slider
-                                    0x584A12, // 39 DrawYouAreHereSprite
-                                    0x5740BC, // 40 Message screen
-    };
+                                0x579981, // 1 Menu text
+                                0x579A01, // 2 Menu text
+                                0x57A36E, // 3 Menu text
+                                0x57A319, // 4 Menu text
+                                0x57A2A0, // 5 Menu text
+                                0x579718, // 6 Menu text
+                                0x5763C0, // 7 Menu text
+                                0x5749A5, // 8 Menu text
+                                0x57500F, // 9 Menu text
+                                0x579665, // 10 Menu text
+                                0x579863, // 11 Menu text
+                                0x57A1E3, // 12 Menu text
+                                0x57A3EB, // 13 Menu text
+                                0x582DDB, // 14 Legend
+                                0x582E0D, // 15 Legend
+                                0x582EB0, // 16 Legend
+                                0x583019, // 17 Legend
+                                0x58309C, // 18 Legend
+                                0x582F82, // 19 Legend
+                                0x583128, // 20 Legend
+                                0x5831AD, // 21 Legend
+                                0x57613B, // 22 Legend
+                                0x575EDF, // 23 Map zones
+                                0x57A88D, // 24 Brightness slider posn
+                                0x57AA81, // 25 Radio slider posn
+                                0x57ACBE, // 26 Sfx slider posn
+                                0x57AEB0, // 27 Draw slider posn
+                                0x57B0E4, // 28 Mouse slider posn
+                                0x57A807, // 29 Brightness slider
+                                0x57A811, // 30 Brightness slider
+                                0x57A9FE, // 31 Radio slider
+                                0x57AA08, // 32 Radio slider
+                                0x57AC2F, // 33 Sfx slider
+                                0x57AC39, // 34 Sfx slider
+                                0x57AE36, // 35 Draw distance slider
+                                0x57AE40, // 36 Draw distance slider
+                                0x57B064, // 37 Mouse acc slider
+                                0x57B06E, // 38 Mouse acc slider
+                                0x584A12, // 39 DrawYouAreHereSprite
+                                0x5740BC, // 40 Message screen
+                              };
 
     int m_dwFrontendHeight[] = { 0x5795AD, // 0 Menu text
-                                    0x579958, // 1 Menu text								
-                                    0x5799D5, // 2 Menu text
-                                    0x57A345, // 3 Menu text
-                                    0x57A2DB, // 4 Menu text
-                                    0x57A25F, // 5 Menu text
-                                    0x5796F6, // 6 Menu text
-                                    0x576398, // 7 Menu text
-                                    0x57497D, // 8 Menu text
-                                    0x574FED, // 9 Menu text
-                                    0x579643, // 10 Menu text
-                                    0x579841, // 11 Menu text
-                                    0x57A1AE, // 12 Menu text
-                                    0x57A3C5, // 13 Menu text
-                                    0x582DC1, // 14 Legend
-                                    0x582ED3, // 15 Legend
-                                    0x582FA3, // 16 Legend
-                                    0x582FF5, // 17 Legend
-                                    0x583079, // 18 Legend
-                                    0x5830F6, // 19 Legend
-                                    0x58317B, // 20 Legend
-                                    0x576119, // 21 Legend
-                                    0x575EB7, // 22 Map zones
-                                    NULL,	  // 23
-                                    NULL,	  // 24
-                                    NULL,	  // 25
-                                    NULL,	  // 26
-                                    NULL,	  // 27
-                                    NULL,	  // 28
-                                    NULL,	  // 29
-                                    NULL,	  // 30
-                                    NULL,	  // 31
-                                    NULL,	  // 32
-                                    NULL,	  // 33
-                                    NULL,	  // 34
-                                    NULL,	  // 35
-                                    NULL,	  // 36
-                                    NULL,	  // 37
-                                    0x5849FA, // 38 DrawYouAreHereSprite
-                                    0x574096, // 39 Message screen
-    };
+                                 0x579958, // 1 Menu text
+                                 0x5799D5, // 2 Menu text
+                                 0x57A345, // 3 Menu text
+                                 0x57A2DB, // 4 Menu text
+                                 0x57A25F, // 5 Menu text
+                                 0x5796F6, // 6 Menu text
+                                 0x576398, // 7 Menu text
+                                 0x57497D, // 8 Menu text
+                                 0x574FED, // 9 Menu text
+                                 0x579643, // 10 Menu text
+                                 0x579841, // 11 Menu text
+                                 0x57A1AE, // 12 Menu text
+                                 0x57A3C5, // 13 Menu text
+                                 0x582DC1, // 14 Legend
+                                 0x582ED3, // 15 Legend
+                                 0x582FA3, // 16 Legend
+                                 0x582FF5, // 17 Legend
+                                 0x583079, // 18 Legend
+                                 0x5830F6, // 19 Legend
+                                 0x58317B, // 20 Legend
+                                 0x576119, // 21 Legend
+                                 0x575EB7, // 22 Map zones
+                                 NULL,     // 23
+                                 NULL,     // 24
+                                 NULL,     // 25
+                                 NULL,     // 26
+                                 NULL,     // 27
+                                 NULL,     // 28
+                                 NULL,     // 29
+                                 NULL,     // 30
+                                 NULL,     // 31
+                                 NULL,     // 32
+                                 NULL,     // 33
+                                 NULL,     // 34
+                                 NULL,     // 35
+                                 NULL,     // 36
+                                 NULL,     // 37
+                                 0x5849FA, // 38 DrawYouAreHereSprite
+                                 0x574096, // 39 Message screen
+                               };
 
     for (int i = 0; i < sizeof(m_dwFrontendWidth) / sizeof(const void*); i++)
     {
@@ -924,33 +941,33 @@ void InstallFrontendFixes()
 
     // StretchXY Restoration
     int m_dwCallWidth[] = { 0x57E3A5,
-                                0x577CB7,
-                                0x577CD0,
-                                0x577D6F,
-                                0x577D99,
-                                0x577DAB,
-                                0x577FA6,
-                                0x578031,
-                                0x578052,
-                                0x5780E1,
-                                0x5788DF,
-                                0x5788FB,
-    };
+                            0x577CB7,
+                            0x577CD0,
+                            0x577D6F,
+                            0x577D99,
+                            0x577DAB,
+                            0x577FA6,
+                            0x578031,
+                            0x578052,
+                            0x5780E1,
+                            0x5788DF,
+                            0x5788FB,
+                          };
 
     int m_dwCallHeight[] = { 0x57E391,
-                                0x577C7B,
-                                0x577C94,
-                                0x577DEC,
-                                0x577F6F,
-                                0x577F81,
-                                0x578106,
-                                0x578199,
-                                0x5781BA,
-                                0x57824D,
-                                0x5788ED,
+                             0x577C7B,
+                             0x577C94,
+                             0x577DEC,
+                             0x577F6F,
+                             0x577F81,
+                             0x578106,
+                             0x578199,
+                             0x5781BA,
+                             0x57824D,
+                             0x5788ED,
 
 
-    };
+                           };
 
     for (int i = 0; i < sizeof(m_dwCallWidth) / sizeof(const void*); i++)
         injector::MakeCALL(m_dwCallWidth[i], StretchXHook, true);
@@ -986,64 +1003,64 @@ void InstallMiscFixes()
 {
     // Misc
     int m_dwMiscWidth[] = { 0x5733FD, // 0 StretchX
-                                0x574761, // 1 Radio Icons
-                                0x5747A6, // 2 Radio Icons
-                                0x574857, // 3 Radio Icons
-                                0x5748AA, // 4 Radio Icons
-                                0x5765C0, // 5 2d Brief triangles
-                                0x576603, // 6 2d Brief triangles
-                                0x576646, // 7 2d Brief triangles
-                                0x576689, // 8 2d Brief triangles
-                                0x57672F, // 9 2d Brief triangles
-                                0x576772, // 10 2d Brief triangles
-                                0x5767B5, // 11 2d Brief triangles
-                                0x5767F8, // 12 2d Brief triangles
-                                0x574ECC, // 13 Stats bars
-                                0x574F30, // 14 Stats bars
-                                0x719D2D, // 15 Font fixes
-                                0x719D94, // 16 Font fixes
-                                0x719DD1, // 17 Font fixes
-                                0x719E0E, // 18 Font fixes
-                                0x719E4B, // 19 Font fixes
-                                0x719E6F, // 20 Font fixes
-                                0x719E97, // 21 Font fixes
-                                0x719C0D, // 22 Font fixes
-                                0x719C6E, // 23 Font fixes
-                                0x7288F5, // 24 BarChart fixes
-                                0x728941, // 25 BarChart fixes
-                                0x573F93, // 26 DrawWindow header
-                                0x573FF0, // 27 DrawWindow header
-    };
+                            0x574761, // 1 Radio Icons
+                            0x5747A6, // 2 Radio Icons
+                            0x574857, // 3 Radio Icons
+                            0x5748AA, // 4 Radio Icons
+                            0x5765C0, // 5 2d Brief triangles
+                            0x576603, // 6 2d Brief triangles
+                            0x576646, // 7 2d Brief triangles
+                            0x576689, // 8 2d Brief triangles
+                            0x57672F, // 9 2d Brief triangles
+                            0x576772, // 10 2d Brief triangles
+                            0x5767B5, // 11 2d Brief triangles
+                            0x5767F8, // 12 2d Brief triangles
+                            0x574ECC, // 13 Stats bars
+                            0x574F30, // 14 Stats bars
+                            0x719D2D, // 15 Font fixes
+                            0x719D94, // 16 Font fixes
+                            0x719DD1, // 17 Font fixes
+                            0x719E0E, // 18 Font fixes
+                            0x719E4B, // 19 Font fixes
+                            0x719E6F, // 20 Font fixes
+                            0x719E97, // 21 Font fixes
+                            0x719C0D, // 22 Font fixes
+                            0x719C6E, // 23 Font fixes
+                            0x7288F5, // 24 BarChart fixes
+                            0x728941, // 25 BarChart fixes
+                            0x573F93, // 26 DrawWindow header
+                            0x573FF0, // 27 DrawWindow header
+                          };
 
     int m_dwMiscHeight[] = { 0x57342D, // 0 StretchY
-                                0x57473B, // 1 Radio Icons
-                                0x574783, // 2 Radio Icons
-                                0x57482F, // 3 Radio Icons
-                                0x574879, // 4 Radio Icons
-                                0x57659A, // 5 2d Brief triangles
-                                0x5765E2, // 6 2d Brief triangles
-                                0x576625, // 7 2d Brief triangles
-                                0x576668, // 8 2d Brief triangles
-                                0x576709, // 9 2d Brief triangles
-                                0x576751, // 10 2d Brief triangles
-                                0x576794, // 11 2d Brief triangles
-                                0x5767D7, // 12 2d Brief triangles
-                                0x574EAA, // 13 Stats bars
-                                0x574F0C, // 14 Stats bars
-                                0x719D47, // 15 Font fixes
-                                0x719D7C, // 16 Font fixes
-                                0x719DB5, // 17 Font fixes
-                                0x719DF2, // 18 Font fixes
-                                0x719E2F, // 19 Font fixes
-                                0x719EBF, // 20 Font fixes
-                                0x719EE3, // 21 Font fixes
-                                0x719C27, // 22 Font fixes
-                                0x719C58, // 23 Font fixes
-                                0x728864, // 24 BarChart fixes
-                                0x7288A9, // 25 BarChart fixes
-                                0x573F7D, // 26 DrawWindow header
-                                0x573FD6, // 27 DrawWindow header
-    };
+                             0x57473B, // 1 Radio Icons
+                             0x574783, // 2 Radio Icons
+                             0x57482F, // 3 Radio Icons
+                             0x574879, // 4 Radio Icons
+                             0x57659A, // 5 2d Brief triangles
+                             0x5765E2, // 6 2d Brief triangles
+                             0x576625, // 7 2d Brief triangles
+                             0x576668, // 8 2d Brief triangles
+                             0x576709, // 9 2d Brief triangles
+                             0x576751, // 10 2d Brief triangles
+                             0x576794, // 11 2d Brief triangles
+                             0x5767D7, // 12 2d Brief triangles
+                             0x574EAA, // 13 Stats bars
+                             0x574F0C, // 14 Stats bars
+                             0x719D47, // 15 Font fixes
+                             0x719D7C, // 16 Font fixes
+                             0x719DB5, // 17 Font fixes
+                             0x719DF2, // 18 Font fixes
+                             0x719E2F, // 19 Font fixes
+                             0x719EBF, // 20 Font fixes
+                             0x719EE3, // 21 Font fixes
+                             0x719C27, // 22 Font fixes
+                             0x719C58, // 23 Font fixes
+                             0x728864, // 24 BarChart fixes
+                             0x7288A9, // 25 BarChart fixes
+                             0x573F7D, // 26 DrawWindow header
+                             0x573FD6, // 27 DrawWindow header
+                           };
 
     for (int i = 0; i < sizeof(m_dwMiscWidth) / sizeof(const void*); i++)
     {
@@ -1058,30 +1075,31 @@ void InstallMiscFixes()
     }
 }
 
-void InstallHUDFixes() {
+void InstallHUDFixes()
+{
     int m_dwCrosshairWidth[] = { 0x58E7CE,
-                                    0x58E7F8,
-                                    0x58E2FA,
-                                    0x58E4ED,
-                                    0x58E75B,
-                                    0x58E28B,
-                                    0x58E2AC,
-                                    0x58E2BA,
-                                    0x53E472,
-                                    0x53E4AE,
-    };
+                                 0x58E7F8,
+                                 0x58E2FA,
+                                 0x58E4ED,
+                                 0x58E75B,
+                                 0x58E28B,
+                                 0x58E2AC,
+                                 0x58E2BA,
+                                 0x53E472,
+                                 0x53E4AE,
+                               };
 
     int m_dwCrosshairHeight[] = { 0x58E7E4,
-                                    0x58E80E,
-                                    0x58E319,
-                                    0x58E527,
-                                    0x58E2C8,
-                                    0x53E3E7,
-                                    0x53E409,
-                                    NULL,
-                                    NULL,
-                                    NULL,
-    };
+                                  0x58E80E,
+                                  0x58E319,
+                                  0x58E527,
+                                  0x58E2C8,
+                                  0x53E3E7,
+                                  0x53E409,
+                                  NULL,
+                                  NULL,
+                                  NULL,
+                                };
 
     for (int i = 0; i < sizeof(m_dwCrosshairWidth) / sizeof(const void*); i++)
     {
@@ -1096,54 +1114,54 @@ void InstallHUDFixes() {
     }
 
     int m_dwRadarWidth[] = { 0x58A441, // Radar plane
-                                    0x58A791, // Radar disc
-                                    0x58A82E, // Radar disc
-                                    0x58A8DF, // Radar disc
-                                    0x58A982, // Radar disc
-                                    0x58A5D8,
-                                    0x58A6DE,
-                                    0x5834BA, // Radar point
-                                    0x58603F, // Radar point
-                                    0x5886CC, // Radar centre
-                                    0x58439C, // Radar Trace 0
-                                    0x584434, // Radar Trace 0
-                                    0x58410B, // Radar Trace 2
-                                    0x584190, // Radar Trace 2
-                                    0x584249, // Radar Trace 1
-                                    0x5842E6, // Radar Trace 1
-                                    0x5876D4,
-                                    0x58774B,
-                                    0x58780A,
-                                    0x58788F,
-                                    0x58792E,
-                                    0x587A1A,
-                                    0x587AAA,
-    };
+                             0x58A791, // Radar disc
+                             0x58A82E, // Radar disc
+                             0x58A8DF, // Radar disc
+                             0x58A982, // Radar disc
+                             0x58A5D8,
+                             0x58A6DE,
+                             0x5834BA, // Radar point
+                             0x58603F, // Radar point
+                             0x5886CC, // Radar centre
+                             0x58439C, // Radar Trace 0
+                             0x584434, // Radar Trace 0
+                             0x58410B, // Radar Trace 2
+                             0x584190, // Radar Trace 2
+                             0x584249, // Radar Trace 1
+                             0x5842E6, // Radar Trace 1
+                             0x5876D4,
+                             0x58774B,
+                             0x58780A,
+                             0x58788F,
+                             0x58792E,
+                             0x587A1A,
+                             0x587AAA,
+                           };
 
     int m_dwRadarHeight[] = { 0x58A473, // Radar plane
-                                    0x58A600, // Radar disc
-                                    0x58A69E, // Radar disc
-                                    0x58A704, // Radar disc
-                                    0x58A7B9, // Radar disc
-                                    0x58A85A,
-                                    0x58A909,
-                                    0x58A9BD, // Radar point
-                                    0x5834EC, // Radar point
-                                    0x586058, // Radar centre
-                                    0x584346, // Radar Trace 0
-                                    0x58440C, // Radar Trace 0
-                                    0x58412B, // Radar Trace 2
-                                    0x5841B0, // Radar Trace 2
-                                    0x584207, // Radar Trace 1
-                                    0x5842C6, // Radar Trace 1
-                                    0x5876BC,
-                                    0x587733,
-                                    0x587916,
-                                    0x587A02,
-                                    0x587A92,
-                                    NULL,
-                                    NULL,
-    };
+                              0x58A600, // Radar disc
+                              0x58A69E, // Radar disc
+                              0x58A704, // Radar disc
+                              0x58A7B9, // Radar disc
+                              0x58A85A,
+                              0x58A909,
+                              0x58A9BD, // Radar point
+                              0x5834EC, // Radar point
+                              0x586058, // Radar centre
+                              0x584346, // Radar Trace 0
+                              0x58440C, // Radar Trace 0
+                              0x58412B, // Radar Trace 2
+                              0x5841B0, // Radar Trace 2
+                              0x584207, // Radar Trace 1
+                              0x5842C6, // Radar Trace 1
+                              0x5876BC,
+                              0x587733,
+                              0x587916,
+                              0x587A02,
+                              0x587A92,
+                              NULL,
+                              NULL,
+                            };
 
     for (int i = 0; i < sizeof(m_dwRadarWidth) / sizeof(const void*); i++)
     {
@@ -1157,221 +1175,221 @@ void InstallHUDFixes() {
             injector::WriteMemory<const void*>(m_dwRadarHeight[i] + 0x2, &fRadarHeight[i], true);
     }
 
-    int m_dwHUDWidth[] = { 0x58EB3F, // 0 Clock 
-                                0x58EC0C, // 1 Clock
-                                0x58F55C, // 2 Money
-                                0x58F5F4, // 3 Money
-                                0x5892CA, // 4 Info bars
-                                0x58937E, // 5 Info bars
-                                0x58EE7E, // 6 Info bars
-                                0x58EEF4, // 7 Info bars
-                                0x589155, // 8 Info bars
-                                0x58EF50, // 9 Info bars
-                                0x58EFC5, // 10 Info bars
-                                0x58922D, // 11 Info bars
-                                0x58F116, // 12 Info bars
-                                0x58F194, // 13 Info bars
-                                0x58D92D, // 14 Weapon icons
-                                0x58D8C3, // 15 Weapon icons
-                                0x58F91C, // 16 Weapon icons
-                                0x58F92D, // 17 Weapon icons
-                                0x5894C5, // 18 Ammo
-                                0x5894E9, // 19 Ammo
-                                0x58F9D0, // 20 Ammo
-                                0x58FA5D, // 21 Ammo
-                                0x58F9F5, // 22 Ammo
-                                0x58FA8E, // 23 Ammo
-                                0x58DCB8, // 24 Wanted
-                                0x58DD00, // 25 Wanted
-                                0x58DD7E, // 26 Wanted
-                                0x58DF71, // 27 Wanted
-                                0x58DFE5, // 28 Wanted
-                                NULL,	  // 29
-                                0x58B09F, // 30 Vehicle names
-                                0x58B13F, // 31 Vehicle names
-                                0x58AD3A, // 32 Area names
-                                0x58AD65, // 33 Area names
-                                0x58AE4A, // 34 Area names
-                                0x58C395, // 35 Subs
-                                0x58C41D, // 36 Subs
-                                0x58C4DC, // 37 Subs
-                                0x5896D8, // 38	Stats box
-                                0x589703, // 39	Stats box
-                                0x58990C, // 40 Stats box
-                                0x58986D, // 41 Stats box
-                                0x5897C3, // 42 Stats box
-                                0x589A16, // 43 Stats box
-                                0x589B2D, // 44 Stats box
-                                0x589C73, // 45 Stats box
-                                0x589D61, // 46 Stats box
-                                0x589E49, // 47 Stats box
-                                0x589F31, // 48 Stats box
-                                0x58A013, // 49 Stats box
-                                0x58A090, // 50 Stats box
-                                0x58A134, // 51 Stats box
-                                NULL,	  // 52
-                                NULL,	  // 53
-                                NULL,	  // 54
-                                NULL,	  // 55
-                                NULL,	  // 56
-                                NULL,	  // 57
-                                NULL,	  // 58
-                                NULL,	  // 59
-                                NULL,	  // 60
-                                NULL,	  // 61
-                                0x58C863, // 62 SuccessFailed text
-                                0x58D2DB, // 63 MissionTitle text
-                                0x58D459, // 64 MissionTitle text
-                                0x58CBC1, // 65 WastedBusted text
-                                0x58B273, // 66 Timers
-                                0x58B2A4, // 67 Timers
-                                0x58B3AF, // 68 Timers
-                                0x58B3FC, // 69 Timers
-                                0x58B56A, // 70 Timers
-                                0x58B5EE, // 71 Timers
-                                0x58B67E, // 72 Timers
-                                0x58B76F, // 73 Helptext
-                                0x58B7D6, // 74 Helptext
-                                0x58BA62, // 75 Helptext
-                                0x58BAC6, // 76 Helptext
-                                0x58BBDB, // 77 Helptext
-                                0x58BCB0, // 78 Helptext
-                                0x58BD58, // 79 Helptext
-                                0x58BE8D, // 80 Helptext
-                                0x58BF7E, // 81 Helptext
-                                0x58BFFC, // 82 Helptext
-                                0x580F16, // 83 Menu system
-                                0x580F95, // 84
-                                0x5810EF, // 85
-                                0x581158, // 86
-                                0x5811CD, // 87
-                                0x58148A, // 88
-                                0x5814F7, // 89
-                                0x5815B1, // 90
-                                0x5815EB, // 91
-                                0x581633, // 92			
-                                0x47AD2A, // 93
-                                0x5818CF, // 94
-                                0x58CCDB, // 95 OddJob
-                                0x58CDE6, // 96 OddJob
-                                0x58CEE2, // 97 OddJob
-                                0x58D15C, // 98 OddJob
-                                0x58A178, // 99 TripSkip
-                                0x58A21D, // 100 TripSkip
-                                0x58A2C0, // 101 TripSkip
-                                0x4E9F30, // 102 RadioStation
-                                0x43CF57, // 103 CDarkel
-                                0x4477CD, // 104 CGarages
-                                0x4477F7, // 105 CGarages
-    };
+    int m_dwHUDWidth[] = { 0x58EB3F, // 0 Clock
+                           0x58EC0C, // 1 Clock
+                           0x58F55C, // 2 Money
+                           0x58F5F4, // 3 Money
+                           0x5892CA, // 4 Info bars
+                           0x58937E, // 5 Info bars
+                           0x58EE7E, // 6 Info bars
+                           0x58EEF4, // 7 Info bars
+                           0x589155, // 8 Info bars
+                           0x58EF50, // 9 Info bars
+                           0x58EFC5, // 10 Info bars
+                           0x58922D, // 11 Info bars
+                           0x58F116, // 12 Info bars
+                           0x58F194, // 13 Info bars
+                           0x58D92D, // 14 Weapon icons
+                           0x58D8C3, // 15 Weapon icons
+                           0x58F91C, // 16 Weapon icons
+                           0x58F92D, // 17 Weapon icons
+                           0x5894C5, // 18 Ammo
+                           0x5894E9, // 19 Ammo
+                           0x58F9D0, // 20 Ammo
+                           0x58FA5D, // 21 Ammo
+                           0x58F9F5, // 22 Ammo
+                           0x58FA8E, // 23 Ammo
+                           0x58DCB8, // 24 Wanted
+                           0x58DD00, // 25 Wanted
+                           0x58DD7E, // 26 Wanted
+                           0x58DF71, // 27 Wanted
+                           0x58DFE5, // 28 Wanted
+                           NULL,     // 29
+                           0x58B09F, // 30 Vehicle names
+                           0x58B13F, // 31 Vehicle names
+                           0x58AD3A, // 32 Area names
+                           0x58AD65, // 33 Area names
+                           0x58AE4A, // 34 Area names
+                           0x58C395, // 35 Subs
+                           0x58C41D, // 36 Subs
+                           0x58C4DC, // 37 Subs
+                           0x5896D8, // 38 Stats box
+                           0x589703, // 39 Stats box
+                           0x58990C, // 40 Stats box
+                           0x58986D, // 41 Stats box
+                           0x5897C3, // 42 Stats box
+                           0x589A16, // 43 Stats box
+                           0x589B2D, // 44 Stats box
+                           0x589C73, // 45 Stats box
+                           0x589D61, // 46 Stats box
+                           0x589E49, // 47 Stats box
+                           0x589F31, // 48 Stats box
+                           0x58A013, // 49 Stats box
+                           0x58A090, // 50 Stats box
+                           0x58A134, // 51 Stats box
+                           NULL,     // 52
+                           NULL,     // 53
+                           NULL,     // 54
+                           NULL,     // 55
+                           NULL,     // 56
+                           NULL,     // 57
+                           NULL,     // 58
+                           NULL,     // 59
+                           NULL,     // 60
+                           NULL,     // 61
+                           0x58C863, // 62 SuccessFailed text
+                           0x58D2DB, // 63 MissionTitle text
+                           0x58D459, // 64 MissionTitle text
+                           0x58CBC1, // 65 WastedBusted text
+                           0x58B273, // 66 Timers
+                           0x58B2A4, // 67 Timers
+                           0x58B3AF, // 68 Timers
+                           0x58B3FC, // 69 Timers
+                           0x58B56A, // 70 Timers
+                           0x58B5EE, // 71 Timers
+                           0x58B67E, // 72 Timers
+                           0x58B76F, // 73 Helptext
+                           0x58B7D6, // 74 Helptext
+                           0x58BA62, // 75 Helptext
+                           0x58BAC6, // 76 Helptext
+                           0x58BBDB, // 77 Helptext
+                           0x58BCB0, // 78 Helptext
+                           0x58BD58, // 79 Helptext
+                           0x58BE8D, // 80 Helptext
+                           0x58BF7E, // 81 Helptext
+                           0x58BFFC, // 82 Helptext
+                           0x580F16, // 83 Menu system
+                           0x580F95, // 84
+                           0x5810EF, // 85
+                           0x581158, // 86
+                           0x5811CD, // 87
+                           0x58148A, // 88
+                           0x5814F7, // 89
+                           0x5815B1, // 90
+                           0x5815EB, // 91
+                           0x581633, // 92
+                           0x47AD2A, // 93
+                           0x5818CF, // 94
+                           0x58CCDB, // 95 OddJob
+                           0x58CDE6, // 96 OddJob
+                           0x58CEE2, // 97 OddJob
+                           0x58D15C, // 98 OddJob
+                           0x58A178, // 99 TripSkip
+                           0x58A21D, // 100 TripSkip
+                           0x58A2C0, // 101 TripSkip
+                           0x4E9F30, // 102 RadioStation
+                           0x43CF57, // 103 CDarkel
+                           0x4477CD, // 104 CGarages
+                           0x4477F7, // 105 CGarages
+                         };
 
     int m_dwHUDHeight[] = { 0x58EB29, // 0 Clock
-                                0x58EBF9, // 1 Clock
-                                0x58F546, // 2 Money
-                                0x58F5CE, // 3 Money
-                                0x589346, // 4 Info bars
-                                0x58EE60, // 5 Info bars
-                                0x588B9C, // 6 Info bars
-                                0x58EEC8, // 7 Info bars
-                                0x58913E, // 8 Info bars
-                                0x58EF32, // 9 Info bars
-                                0x58EF99, // 10 Info bars
-                                0x589216, // 11 Info bars
-                                0x58F0F8, // 12 Info bars
-                                0x58F168, // 13 Info bars
-                                0x58D945, // 14 Weapon icons
-                                0x58D882, // 15 Weapon icons
-                                0x58F90B, // 16 Weapon icons
-                                NULL,	  // 17
-                                0x5894AF, // 18 Ammo
-                                NULL,	  // 19
-                                0x58F9C0, // 20 Ammo
-                                0x58FA4A, // 21 Ammo
-                                NULL,	  // 22
-                                NULL,	  // 23
-                                0x58DCA2, // 24 Wanted
-                                0x58DD68, // 25 Wanted
-                                0x58DDF4, // 26 Wanted
-                                0x58DF55, // 27 Wanted
-                                0x58DF9B, // 28 Wanted
-                                0x58DEE4, // 29 Wanted
-                                0x58B089, // 30 Vehicle names
-                                0x58B12D, // 31 Vehicle names
-                                0x58AD24, // 32 Area names
-                                0x58AE0D, // 33 Area names
-                                NULL,	  // 34
-                                0x58C37F, // 35 Subs
-                                0x58C407, // 36 Subs
-                                0x58C4C6, // 37 Subs
-                                //0x58C53B, // 38 Subs
-                                //0x58C611, // 39 Subs
-                                0x5898F6, // 40 Stats box text
-                                //0x58C46E, // 41 Subs
-                                NULL,	  // 42
-                                0x589735, // 43 Stats box
-                                0x58978B, // 44 Stats box
-                                0x589813, // 45 Stats box
-                                0x58983F, // 46 Stats box
-                                0x5898BD, // 47 Stats box
-                                0x5899FF, // 48 Stats box
-                                0x589A4B, // 49 Stats box
-                                0x589B16, // 50 Stats box
-                                0x589C5C, // 51 Stats box
-                                0x589CA8, // 52 Stats box
-                                0x589D4A, // 53 Stats box
-                                0x589D92, // 54 Stats box
-                                0x589E32, // 55 Stats box
-                                0x589E7A, // 56 Stats box
-                                0x589F1A, // 57 Stats box
-                                0x589F62, // 58 Stats box
-                                0x589FFC, // 59 Stats box
-                                0x58A040, // 60 Stats box
-                                0x58A07A, // 61 Stats box
-                                0x58C84D, // 62 SuccessFailed text
-                                0x58D2C5, // 63 MissionTitle text
-                                NULL, // 0x58D447, // 64 MissionTitle text
-                                0x58CBAB, // 65 WastedBusted text
-                                NULL, // 0x58B1B7, // 66 Timers
-                                0x58B263, // 67 Timers
-                                NULL, //0x58B435, // 68 Timers
-                                NULL, //0x58B536, // 69 Timers
-                                0x58B5DE, // 70 Timers		
-                                NULL,	  // 71
-                                NULL,	  // 72
-                                0x58B7BD, // 73 Help text
-                                0x58BA4C, // 74 Help text
-                                0x58BBA7, // 75 Help text
-                                0x58BD19, // 76 Help text
-                                0x58BE2B, // 77 Help text
-                                0x58BF1C, // 78 Help text
-                                0x58BFCB, // 79 Help text		
-                                NULL,	  // 80
-                                NULL,	  // 81
-                                NULL,	  // 82
-                                0x580E11, // 83 Menu system
-                                0x580F85, // 84
-                                0x5810CC, // 85
-                                0x581132, // 86
-                                0x5811A1, // 87
-                                0x58147A, // 88
-                                0x5814E7, // 89
-                                0x581699, // 90
-                                NULL,	  // 91
-                                NULL,	  // 92
-                                NULL,	  // 93
-                                0x581889, // 94
-                                0x58CCC5, // 95 OddJob
-                                0x58CDD0, // 96 OddJob
-                                0x58CECC, // 97 OddJob
-                                0x58D146, // 98 OddJob
-                                NULL, //0x58A199, // 99 TripSkip
-                                NULL, //0x58A207, // 100 TripSkip
-                                NULL, //0x58A2B0, // 101 TripSkip
-                                0x4E9F1A, // 102 RadioStation
-                                0x43CF47, // 103 CDarkel
-                                0x4477B7, // 104 CGarages
-                                0x4478AC, // 105 CGarages							
-    };
+                            0x58EBF9, // 1 Clock
+                            0x58F546, // 2 Money
+                            0x58F5CE, // 3 Money
+                            0x589346, // 4 Info bars
+                            0x58EE60, // 5 Info bars
+                            0x588B9C, // 6 Info bars
+                            0x58EEC8, // 7 Info bars
+                            0x58913E, // 8 Info bars
+                            0x58EF32, // 9 Info bars
+                            0x58EF99, // 10 Info bars
+                            0x589216, // 11 Info bars
+                            0x58F0F8, // 12 Info bars
+                            0x58F168, // 13 Info bars
+                            0x58D945, // 14 Weapon icons
+                            0x58D882, // 15 Weapon icons
+                            0x58F90B, // 16 Weapon icons
+                            NULL,     // 17
+                            0x5894AF, // 18 Ammo
+                            NULL,     // 19
+                            0x58F9C0, // 20 Ammo
+                            0x58FA4A, // 21 Ammo
+                            NULL,     // 22
+                            NULL,     // 23
+                            0x58DCA2, // 24 Wanted
+                            0x58DD68, // 25 Wanted
+                            0x58DDF4, // 26 Wanted
+                            0x58DF55, // 27 Wanted
+                            0x58DF9B, // 28 Wanted
+                            0x58DEE4, // 29 Wanted
+                            0x58B089, // 30 Vehicle names
+                            0x58B12D, // 31 Vehicle names
+                            0x58AD24, // 32 Area names
+                            0x58AE0D, // 33 Area names
+                            NULL,     // 34
+                            0x58C37F, // 35 Subs
+                            0x58C407, // 36 Subs
+                            0x58C4C6, // 37 Subs
+                            //0x58C53B, // 38 Subs
+                            //0x58C611, // 39 Subs
+                            0x5898F6, // 40 Stats box text
+                            //0x58C46E, // 41 Subs
+                            NULL,     // 42
+                            0x589735, // 43 Stats box
+                            0x58978B, // 44 Stats box
+                            0x589813, // 45 Stats box
+                            0x58983F, // 46 Stats box
+                            0x5898BD, // 47 Stats box
+                            0x5899FF, // 48 Stats box
+                            0x589A4B, // 49 Stats box
+                            0x589B16, // 50 Stats box
+                            0x589C5C, // 51 Stats box
+                            0x589CA8, // 52 Stats box
+                            0x589D4A, // 53 Stats box
+                            0x589D92, // 54 Stats box
+                            0x589E32, // 55 Stats box
+                            0x589E7A, // 56 Stats box
+                            0x589F1A, // 57 Stats box
+                            0x589F62, // 58 Stats box
+                            0x589FFC, // 59 Stats box
+                            0x58A040, // 60 Stats box
+                            0x58A07A, // 61 Stats box
+                            0x58C84D, // 62 SuccessFailed text
+                            0x58D2C5, // 63 MissionTitle text
+                            NULL, // 0x58D447, // 64 MissionTitle text
+                            0x58CBAB, // 65 WastedBusted text
+                            NULL, // 0x58B1B7, // 66 Timers
+                            0x58B263, // 67 Timers
+                            NULL, //0x58B435, // 68 Timers
+                            NULL, //0x58B536, // 69 Timers
+                            0x58B5DE, // 70 Timers
+                            NULL,     // 71
+                            NULL,     // 72
+                            0x58B7BD, // 73 Help text
+                            0x58BA4C, // 74 Help text
+                            0x58BBA7, // 75 Help text
+                            0x58BD19, // 76 Help text
+                            0x58BE2B, // 77 Help text
+                            0x58BF1C, // 78 Help text
+                            0x58BFCB, // 79 Help text
+                            NULL,     // 80
+                            NULL,     // 81
+                            NULL,     // 82
+                            0x580E11, // 83 Menu system
+                            0x580F85, // 84
+                            0x5810CC, // 85
+                            0x581132, // 86
+                            0x5811A1, // 87
+                            0x58147A, // 88
+                            0x5814E7, // 89
+                            0x581699, // 90
+                            NULL,     // 91
+                            NULL,     // 92
+                            NULL,     // 93
+                            0x581889, // 94
+                            0x58CCC5, // 95 OddJob
+                            0x58CDD0, // 96 OddJob
+                            0x58CECC, // 97 OddJob
+                            0x58D146, // 98 OddJob
+                            NULL, //0x58A199, // 99 TripSkip
+                            NULL, //0x58A207, // 100 TripSkip
+                            NULL, //0x58A2B0, // 101 TripSkip
+                            0x4E9F1A, // 102 RadioStation
+                            0x43CF47, // 103 CDarkel
+                            0x4477B7, // 104 CGarages
+                            0x4478AC, // 105 CGarages
+                          };
 
     for (int i = 0; i < sizeof(m_dwHUDWidth) / sizeof(const void*); i++)
     {
@@ -1402,7 +1420,7 @@ void InstallHUDFixes() {
 
     // Second player fix.
     injector::WriteMemory<const void*>(0x58F9A0 + 0x2, &fHUDWidth[110], true); // Weapon icon X
-    injector::WriteMemory<const void*>(0x58F993 + 0x2, &fHUDWidth[16], true); // Weapon icon X 
+    injector::WriteMemory<const void*>(0x58F993 + 0x2, &fHUDWidth[16], true); // Weapon icon X
     injector::WriteMemory<const void*>(0x58F972 + 0x2, &fHUDHeight[16], true); // Weapon icon Y
     injector::WriteMemory<const void*>(0x58FA8E + 0x2, &fHUDWidth[17], true); // Ammo x
 }
@@ -1462,7 +1480,8 @@ void __cdecl SetVerticesHook(CRect& a1, CRGBA const& a2, CRGBA const& a3, CRGBA 
 }
 
 injector::hook_back<void(__cdecl*)(float, float, unsigned short, unsigned int, float, int, bool, bool, CRGBA const&, CRGBA const&)> hbDrawLoadingBar;
-void __cdecl DrawLoadingBarHook(float x, float y, unsigned int w, unsigned int h, float progress, int progressAdded, bool drawPercentage, bool drawBlackBorder, CRGBA const& color, CRGBA const& progressAddedColor) {
+void __cdecl DrawLoadingBarHook(float x, float y, unsigned int w, unsigned int h, float progress, int progressAdded, bool drawPercentage, bool drawBlackBorder, CRGBA const& color, CRGBA const& progressAddedColor)
+{
     if (FrontendAspectRatioWidth && FrontendAspectRatioHeight)
     {
         x = ((float)RsGlobal->MaximumWidth * 0.5f - fFrontendDefaultWidth * 0.5f + fFrontendDefaultWidth * 0.079f);
@@ -1503,9 +1522,10 @@ void ApplyIniOptions()
     if (bAllowAltTabbingWithoutPausing)
     {
         //Windowed mode fix (from MTA sources)
-        if ((GetWindowLong((HWND)RsGlobal->ps, GWL_STYLE) & WS_POPUP) == 0) {
+        if ((GetWindowLong((HWND)RsGlobal->ps, GWL_STYLE) & WS_POPUP) == 0)
+        {
             // Disable MENU AFTER alt + tab
-            //0053BC72   C605 7B67BA00 01 MOV BYTE PTR DS:[BA677B],1    
+            //0053BC72   C605 7B67BA00 01 MOV BYTE PTR DS:[BA677B],1
             injector::WriteMemory<uint8_t>(0x53BC78, 0x00, true);
 
             // ALLOW ALT+TABBING WITHOUT PAUSING

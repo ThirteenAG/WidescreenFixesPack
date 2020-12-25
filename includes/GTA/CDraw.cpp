@@ -36,7 +36,7 @@ void CDraw::SetFOV(float fFactor)
     else
         *pfScreenFieldOfView = AdjustFOV(fFactor, *pfScreenAspectRatio);
 
-    for each (auto var in FOVMods)
+    for (auto var : FOVMods)
     {
         *pfScreenFieldOfView *= var.second;
     }

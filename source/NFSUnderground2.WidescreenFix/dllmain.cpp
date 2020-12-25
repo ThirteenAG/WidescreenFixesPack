@@ -253,7 +253,7 @@ void Init()
             {
                 regs.eax = *(uint32_t*)(regs.ebp + 0x58);
 
-                if (regs.ecx == 1 || regs.ecx == 4) //Headlights stretching, reflections etc 
+                if (regs.ecx == 1 || regs.ecx == 4) //Headlights stretching, reflections etc
                 {
                     flt1 = hor3DScale;
                     flt2 = f06;
@@ -279,9 +279,9 @@ void Init()
 
                 if (regs.ecx == 3) //if rearview mirror
                     _asm fld ds : mirrorScale
-                else
-                    _asm fld ds : ver3DScale
-            }
+                    else
+                        _asm fld ds : ver3DScale
+                    }
         }; injector::MakeInline<FOVHook>((uint32_t)dword_5C7F56 - 6, (uint32_t)dword_5C7F56 + 3);
         injector::WriteMemory((uint32_t)dword_5C7F56 - 1, 0x9001F983, true); //cmp     ecx, 1
         injector::MakeNOP((uint32_t)dword_5C7F56 + 3 + 8, 3, true); //nop fidiv
@@ -329,8 +329,8 @@ void Init()
         static auto WidescreenHud = [](HudPos& HudPosX, HudPos& HudPosY)
         {
             auto it = std::find_if(HudCoords.begin(), HudCoords.end(),
-                [&cc = CDatEntry(std::floor(HudPosX.fPos), std::floor(HudPosY.fPos), 0.0f, 0.0f)]
-            (const CDatEntry& cde) -> bool { return (cc.fPosX == cde.fPosX && cc.fPosY == cde.fPosY); });
+                                   [cc = CDatEntry(std::floor(HudPosX.fPos), std::floor(HudPosY.fPos), 0.0f, 0.0f)]
+                                   (const CDatEntry& cde) -> bool { return (cc.fPosX == cde.fPosX && cc.fPosY == cde.fPosY); });
 
             if (it != HudCoords.end())
             {
@@ -526,7 +526,7 @@ void Init()
 
         if (nImproveGamepadSupport < 4)
         {
-            const char* MenuTexts[] = { "Quit Game", "Continue", "Back", "Reset Keys To Default", "Activate GPS", "Deactivate GPS", "Install Package", "Install Part", "Install Paint", "Install Decal", "Reset To Default", "Delete Tuned Car", "Logoff", "Cancel Changes", "Customize", "Host LAN Server", "Read Message", "Delete", "Test N2O Purge", "Accept", "Reset to default", "Select", "Open/Close Doors", "Open/Close Hood" }; // "Tip", 
+            const char* MenuTexts[] = { "Quit Game", "Continue", "Back", "Reset Keys To Default", "Activate GPS", "Deactivate GPS", "Install Package", "Install Part", "Install Paint", "Install Decal", "Reset To Default", "Delete Tuned Car", "Logoff", "Cancel Changes", "Customize", "Host LAN Server", "Read Message", "Delete", "Test N2O Purge", "Accept", "Reset to default", "Select", "Open/Close Doors", "Open/Close Hood" }; // "Tip",
             const char* MenuTextsPC[] = { "[Q] Quit Game", "[Enter] Continue", "[Esc] Back", "[P] Reset Keys To Default", "[C] Activate GPS", "[C] Deactivate GPS", "[Enter] Install Package", "[Enter] Install Part", "[Enter] Install Paint", "[Enter] Install Decal", "[C] Reset To Default", "[C] Delete Tuned Car", "[Esc] Logoff", "[C] Cancel Changes", "[C] Customize", "[C] Host LAN Server", "[Enter] Read Message", "[C] Delete", "[C] Test N2O Purge", "[Enter] Accept", "[C] Reset to default", "[Enter] Select", "[C] Open/Close Doors", "[C] Open/Close Hood" };
             const char* MenuTextsXBOX[] = { "(LS+RS) Quit Game", "(A) Continue", "(B) Back", "(Y) Reset Keys To Default", "(X) Activate GPS", "(X) Deactivate GPS", "(A) Install Package", "(A) Install Part", "(A) Install Paint", "(A) Install Decal", "(X) Reset To Default", "(X) Delete Tuned Car", "(B) Logoff", "(X) Cancel Changes", "(X) Customize", "(X) Host LAN Server", "(A) Read Message", "(X) Delete", "(X) Test N2O Purge", "(A) Accept", "(X) Reset to default", "(A) Select", "(X) Open/Close Doors", "(X) Open/Close Hood" };
             const char* MenuTextsPS[] = { "(L3+R3) Quit Game", "(Cross) Continue", "(Circle) Back", "(Triangle) Reset Keys To Default", "(Square) Activate GPS", "(Square) Deactivate GPS", "(Cross) Install Package", "(Cross) Install Part", "(Cross) Install Paint", "(Cross) Install Decal", "(Square) Reset To Default", "(Square) Delete Tuned Car", "(Circle) Logoff", "(Square) Cancel Changes", "(Square) Customize", "(Square) Host LAN Server", "(Cross) Read Message", "(Square) Delete", "(Square) Test N2O Purge", "(Cross) Accept", "(Square) Reset to default", "(Cross) Select", "(Square) Open/Close Doors", "(Square) Open/Close Hood" };
@@ -552,11 +552,10 @@ void Init()
                     {
                         if (nImproveGamepadSupport == 3)
                             regs.eax = (uint32_t)vMenuStringsPC[i].c_str();
+                        else if (nImproveGamepadSupport != 2)
+                            regs.eax = (uint32_t)vMenuStringsXBOX[i].c_str();
                         else
-                            if (nImproveGamepadSupport != 2)
-                                regs.eax = (uint32_t)vMenuStringsXBOX[i].c_str();
-                            else
-                                regs.eax = (uint32_t)vMenuStringsPS[i].c_str();
+                            regs.eax = (uint32_t)vMenuStringsPS[i].c_str();
                     }
                 }
             }; injector::MakeInline<MenuText>(pattern.get_first(0), pattern.get_first(6));
@@ -582,7 +581,7 @@ void Init()
                 *(uintptr_t*)Y_Button = 0x2E; // FE Action "P"
                 int Start = (regs.eax + 0x5074);
                 *(uintptr_t*)Start = 0x24; // FE Action "Comma"
-                int LB = (regs.eax + 0x5068); 
+                int LB = (regs.eax + 0x5068);
                 *(uintptr_t*)LB = 0x26; // FE Action "Left Bracket"
                 int RB = (regs.eax + 0x506C);
                 *(uintptr_t*)RB = 0x27; // FE Action "Right Bracket"
@@ -630,7 +629,7 @@ void Init()
 
     if (fLeftStickDeadzone)
     {
-        // [ -10000 | 10000 ] 
+        // [ -10000 | 10000 ]
         static int32_t nLeftStickDeadzone = static_cast<int32_t>(fLeftStickDeadzone * 100.0f);
         pattern = hook::pattern("85 F6 7D 38 53 68 ? ? ? ? E8"); //0x5C877D
         static auto loc_5C87B9 = (uint32_t)hook::get_pattern("83 FB 01 75 ? B9 04 00 00 00");
@@ -743,9 +742,9 @@ void Init()
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
-        {
-            CallbackHandler::RegisterCallback(Init, hook::pattern("C7 00 80 02 00 00 C7 01 E0 01 00 00"));
-        });
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("C7 00 80 02 00 00 C7 01 E0 01 00 00"));
+    });
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)

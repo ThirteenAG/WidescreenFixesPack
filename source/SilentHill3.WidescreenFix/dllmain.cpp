@@ -83,7 +83,7 @@ void Init()
 
     if (RenderResX >= 0 && RenderResY >= 0)
     {
-        auto pattern = hook::pattern("51 A1 ? ? ? ? 53 8B 5C 24 0C"); //00402E00 
+        auto pattern = hook::pattern("51 A1 ? ? ? ? 53 8B 5C 24 0C"); //00402E00
         injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(0), 0xC3, true);
         pattern = hook::pattern("8B 44 24 04 8B 4C 24 08 A3 ? ? ? ? 89 0D ? ? ? ? 33 C0 C3"); //00402B60
         injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(0), 0xC3, true);
@@ -137,11 +137,11 @@ void Init()
 
     ResXAddr1 = *hook::pattern("A1 ? ? ? ? 53 8B 5C 24 0C 3B C3 55 8B 6C 24 14").count(1).get(0).get<int32_t*>(1); //72BFD0 rendering res
     ResYAddr1 = ResXAddr1 + 1; //72BFD4
-    ResXAddr2 = *hook::pattern("BF ? ? ? ? F3 AB 52").count(1).get(0).get<int32_t*>(1); //0072C664 
+    ResXAddr2 = *hook::pattern("BF ? ? ? ? F3 AB 52").count(1).get(0).get<int32_t*>(1); //0072C664
     ResYAddr2 = ResXAddr2 + 1; //0072C668
-    ResXAddr3 = *hook::pattern("8B 0D ? ? ? ? 8B 44 24 04 3B C8 8B 4C 24 08 75 08 39 0D").count(1).get(0).get<int32_t*>(2); //0072C780 
+    ResXAddr3 = *hook::pattern("8B 0D ? ? ? ? 8B 44 24 04 3B C8 8B 4C 24 08 75 08 39 0D").count(1).get(0).get<int32_t*>(2); //0072C780
     ResYAddr3 = ResXAddr3 + 1; //0072C784
-    ResXAddr4 = ResYAddr3 + 1; //0072C788 
+    ResXAddr4 = ResYAddr3 + 1; //0072C788
     ResYAddr4 = ResXAddr4 + 1; //0072C78C
 
     //pattern = hook::pattern("A3 ? ? ? ? 89 0D ? ? ? ? 33 C0 C3");
@@ -219,7 +219,7 @@ void Init()
         SetResHook();
         pattern = hook::pattern("D9 05 ? ? ? ? D8 25 ? ? ? ? 83 C8 FF"); //4045B9
         injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &FMVOffset1, true);
-        pattern = hook::pattern("D9 05 ? ? ? ? C7 44 24 0C 00 00 00 00 D8 25"); //004045C8 
+        pattern = hook::pattern("D9 05 ? ? ? ? C7 44 24 0C 00 00 00 00 D8 25"); //004045C8
         injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &FMVOffset2, true);
 
         if (nFMVWidescreenMode)
@@ -295,18 +295,18 @@ void Init()
         static float w2 = RenderResX - fTextureOffset2;
         pattern = hook::pattern("A1 ? ? ? ? 6A 05 C7 44 24 18"); //005D744A
         injector::WriteMemory<float>(pattern.get_first(11), fTextureOffset2, true);
-        pattern = hook::pattern("C7 44 24 50 ? ? ? ? C7 44 24 58 ? ? ? ? C7 44 24 5C ? ? ? ? C7 44 24 64"); //005D74B0 
+        pattern = hook::pattern("C7 44 24 50 ? ? ? ? C7 44 24 58 ? ? ? ? C7 44 24 5C ? ? ? ? C7 44 24 64"); //005D74B0
         injector::WriteMemory<float>(pattern.get_first(4), fTextureOffset2, true);
-        pattern = hook::pattern("D8 25 ? ? ? ? 8D 54 24 0C 52 6A 02"); //005D7414 
+        pattern = hook::pattern("D8 25 ? ? ? ? 8D 54 24 0C 52 6A 02"); //005D7414
         injector::WriteMemory<uint16_t>(pattern.get_first(0), 0x05D9i16, true); //fsub -> fld
         injector::WriteMemory(pattern.get_first(2), &w2, true);
 
         //Credits
-        pattern = hook::pattern("6A 05 C7 44 24 1C"); //0059BE49 
+        pattern = hook::pattern("6A 05 C7 44 24 1C"); //0059BE49
         injector::WriteMemory<float>(pattern.get_first(6), fTextureOffset2, true);
-        pattern = hook::pattern("C7 44 24 54 ? ? ? ? C7 44 24 5C ? ? ? ? C7 44 24 60 ? ? ? ? C7 44 24 68"); //0059BEAF 
+        pattern = hook::pattern("C7 44 24 54 ? ? ? ? C7 44 24 5C ? ? ? ? C7 44 24 60 ? ? ? ? C7 44 24 68"); //0059BEAF
         injector::WriteMemory<float>(pattern.get_first(4), fTextureOffset2, true);
-        pattern = hook::pattern("D8 25 ? ? ? ? 8D 4C 24 10 51 6A 02 D9 54 24 34 "); //0059BE13 
+        pattern = hook::pattern("D8 25 ? ? ? ? 8D 4C 24 10 51 6A 02 D9 54 24 34 "); //0059BE13
         injector::WriteMemory<uint16_t>(pattern.get_first(0), 0x05D9i16, true); //fsub -> fld
         injector::WriteMemory(pattern.get_first(2), &w2, true);
 
@@ -398,7 +398,7 @@ void Init()
 
     if (bDisableSafeMode)
     {
-        static char* nullstr = "";
+        static const char* nullstr = "";
         pattern = hook::pattern("BF 01 00 00 00 68 ? ? ? ? 68 ? ? ? ? 6A 01"); //5F0A39
         injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(1), 0, true);
         injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(6), &nullstr, true);
@@ -443,7 +443,7 @@ void Init()
             }
         }; injector::MakeInline<PixelationFixHook2>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(24));
 
-        pattern = hook::pattern("D9 15 ? ? ? ? D9 1D ? ? ? ? D9 15 ? ? ? ? D9 1D ? ? ? ? 8B 10"); //41C0F4 
+        pattern = hook::pattern("D9 15 ? ? ? ? D9 1D ? ? ? ? D9 15 ? ? ? ? D9 1D ? ? ? ? 8B 10"); //41C0F4
         static float* flt_6B0BE4 = *pattern.count(1).get(0).get<float*>(2);
         static float* flt_6B0B94 = *pattern.count(1).get(0).get<float*>(8);
         static float* flt_6B0BF4 = *pattern.count(1).get(0).get<float*>(14);
@@ -476,9 +476,9 @@ void Init()
         pattern = hook::pattern("68 ? ? ? ? 6A 02 6A 05 50 FF 91 20 01 00 00 A1 ? ? ? ? 8B 10 6A 01");
         uintptr_t dword_6B0D00 = *pattern.count(2).get(1).get<uintptr_t>(1);
         injector::WriteMemory(dword_6B0D00 + 0x00, static_cast<float>(nStatusScreenRes), true); //006B0D00
-        injector::WriteMemory(dword_6B0D00 + 0x30, static_cast<float>(nStatusScreenRes), true); //006B0D30 
-        injector::WriteMemory(dword_6B0D00 + 0x34, static_cast<float>(nStatusScreenRes), true); //006B0D34 
-        injector::WriteMemory(dword_6B0D00 + 0x4C, static_cast<float>(nStatusScreenRes), true); //006B0D4C 
+        injector::WriteMemory(dword_6B0D00 + 0x30, static_cast<float>(nStatusScreenRes), true); //006B0D30
+        injector::WriteMemory(dword_6B0D00 + 0x34, static_cast<float>(nStatusScreenRes), true); //006B0D34
+        injector::WriteMemory(dword_6B0D00 + 0x4C, static_cast<float>(nStatusScreenRes), true); //006B0D4C
     }
 
     if (nShadowsRes)
@@ -531,24 +531,24 @@ void Init()
         // 30fps
         if (nFrameRateFluctuationFix > 1)
         {
-            pattern = hook::pattern("8B 44 24 04 A3 ? ? ? ? 33 C0"); 
+            pattern = hook::pattern("8B 44 24 04 A3 ? ? ? ? 33 C0");
             static auto dword_72C7E8 = *pattern.count(5).get(2).get<uintptr_t>(5);
 
             pattern = hook::pattern("A1 ? ? ? ? 53 55 33 ED"); //41B2C9
             struct FramerateLimit
             {
                 void operator()(injector::reg_pack& regs)
-                    {
-                        // 0x00 = Unlocked (FMV)
-                        // 0x01 = 60 FPS 
-                        // 0x02 = 30 FPS
-                        regs.eax = *(uint32_t*)dword_72C7E8;
-                        
-                        if (regs.eax == 0x00)
-                            regs.eax = 0x00;
-                        else
-                            regs.eax = 0x02;
-                    }
+                {
+                    // 0x00 = Unlocked (FMV)
+                    // 0x01 = 60 FPS
+                    // 0x02 = 30 FPS
+                    regs.eax = *(uint32_t*)dword_72C7E8;
+
+                    if (regs.eax == 0x00)
+                        regs.eax = 0x00;
+                    else
+                        regs.eax = 0x02;
+                }
             }; injector::MakeInline<FramerateLimit>(pattern.count(2).get(0).get<uint32_t>(0));
         }
     }
@@ -574,9 +574,9 @@ void Init()
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
-        {
-            CallbackHandler::RegisterCallback(Init, hook::pattern("89 65 E8 8B F4 89 3E 56"));
-        });
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("89 65 E8 8B F4 89 3E 56"));
+    });
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)

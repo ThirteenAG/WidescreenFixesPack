@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include <set>
 
-static char* GLExeStrings = "GL_ALWAYS GL_APPLE_transform_hint GL_ARB_fragment_program GL_ARB_multisample GL_ARB_multitexture GL_ARB_occlusion_query \
+static const char* GLExeStrings = "GL_ALWAYS GL_APPLE_transform_hint GL_ARB_fragment_program GL_ARB_multisample GL_ARB_multitexture GL_ARB_occlusion_query \
 GL_ARB_texture_compression GL_ARB_texture_mirrored_repeat GL_ARB_vertex_buffer_object GL_ATI_array_rev_comps_in_4_bytes GL_EXT_compiled_vertex_array \
 GL_EXT_texture_compression_s3tc GL_EXT_texture_env_add GL_EXT_texture_env_combine GL_EXT_texture_filter_anisotropic GL_EXT_texture_lod_bias GL_EXT_texture_rectangle \
 GL_GEQUAL GL_GREATER GL_LEQUAL GL_LESS GL_NEVER GL_NOTEQUAL GL_NV_multisample_filter_hint GL_NV_register_combiners2 GL_NV_texgen_reflection GL_NV_texture_rectangle \
@@ -123,9 +123,9 @@ void Init()
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
-        {
-            CallbackHandler::RegisterCallback(Init, hook::pattern("BF 94 00 00 00 8B C7"));
-        });
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("BF 94 00 00 00 8B C7"));
+    });
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)

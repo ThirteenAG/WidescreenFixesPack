@@ -7,7 +7,7 @@
 
 
 // ReadINI()
-void ReadINI(char*);
+void ReadINI(const char*);
 int fov_patch;
 int hud_patch;
 int borders_patch;
@@ -79,36 +79,44 @@ int temp = 0x0;
 float const half = 0.5f;
 
 
-bool Init() {
+bool Init()
+{
     // Detect game version
-    if ((*(unsigned int *)0x0063C000) == 0x004C6150) {
+    if ((*(unsigned int *)0x0063C000) == 0x004C6150)
+    {
         // 1.0 Eng
-        if ((*(unsigned int *)0x00401000) != 0x0424448B) {
+        if ((*(unsigned int *)0x00401000) != 0x0424448B)
+        {
             MessageBoxA(NULL, "Detected Game.exe: v.1.0 Eng.\n\nThis version of Game.exe infected with SafeDisc.\nWideScreen Fix will be disabled.", "Mafia WideScreen Fix", MB_ICONERROR | MB_SYSTEMMODAL | MB_SETFOREGROUND);
             return false;
         }
         game_version = MAFIA_1_0_ENG;
         WriteLog("Detected Game.exe: v.1.0 eng\n");
     }
-    else if ((*(unsigned int *)0x00623000) == 0x0044D570) {
+    else if ((*(unsigned int *)0x00623000) == 0x0044D570)
+    {
         // 1.1 Eng
-        if ((*(unsigned int *)0x00401000) != 0x79780D8A) {
+        if ((*(unsigned int *)0x00401000) != 0x79780D8A)
+        {
             MessageBoxA(NULL, "Detected Game.exe: v.1.1 Eng.\n\nThis version of Game.exe infected with SafeDisc.\nWideScreen Fix will be disabled.", "Mafia WideScreen Fix", MB_ICONERROR | MB_SYSTEMMODAL | MB_SETFOREGROUND);
             return false;
         }
         game_version = MAFIA_1_1_ENG;
         WriteLog("Detected Game.exe: v.1.1 eng\n");
     }
-    else if ((*(unsigned int *)0x00624000) == 0x0044E120) {
+    else if ((*(unsigned int *)0x00624000) == 0x0044E120)
+    {
         // 1.2 Eng, 1.2 Rus 1C
-        if ((*(unsigned int *)0x00401000) != 0x8A480D8A) {
+        if ((*(unsigned int *)0x00401000) != 0x8A480D8A)
+        {
             MessageBoxA(NULL, "Detected Game.exe: v.1.2 Eng.\n\nThis version of Game.exe infected with SafeDisc.\nWideScreen Fix will be disabled.", "Mafia WideScreen Fix", MB_ICONERROR | MB_SYSTEMMODAL | MB_SETFOREGROUND);
             return false;
         }
         game_version = MAFIA_1_2_ENG;
         WriteLog("Detected Game.exe: v.1.2 eng\n");
     }
-    else {
+    else
+    {
         //Disabling messagebox for setup.exe
         //MessageBoxA(NULL, "This version of Game.exe is not supported.\nWideScreen Fix will be disabled.", "Mafia WideScreen Fix", MB_ICONERROR | MB_SYSTEMMODAL | MB_SETFOREGROUND);
         WriteLog("This version of Game.exe is not supported. WideScreen Fix will be disabled.\n");
@@ -123,14 +131,16 @@ bool Init() {
     GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT | GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCSTR)LS3DF_TEV_addr, &hLS3DF);
     base_LS3DF = (unsigned int)hLS3DF;
     WriteLog("LS3DF.dll base address: 0x%X\n", base_LS3DF);
-    if (!base_LS3DF) {
+    if (!base_LS3DF)
+    {
         MessageBoxA(NULL, "Can't get LS3DF.dll base address.\nWideScreen Fix will be disabled.", "Mafia WideScreen Fix", MB_ICONERROR | MB_SYSTEMMODAL | MB_SETFOREGROUND);
         return false;
     }
     return true;
 }
 
-void GetGameResolution() {
+void GetGameResolution()
+{
     // Ставим главный хук - получаем разрешение игры и вызываем SetHooks()
     static void *Get_Game_Resolution[3] = { v10_Eng_Get_Game_Resolution, v11_Eng_Get_Game_Resolution, v12_Eng_Get_Game_Resolution };
 
@@ -138,7 +148,8 @@ void GetGameResolution() {
     CPatch::RedirectCall(v10_sub_005FA58C[game_version], Get_Game_Resolution[game_version]);
 
     // Прибиваем Matrox Parhelia
-    if (game_version != MAFIA_1_0_ENG) {
+    if (game_version != MAFIA_1_0_ENG)
+    {
         static int v11_sub_00600D8C[3] = { NULL, 0x00600D8C, 0x0060157C };
         static int v11_sub_00600DAE[3] = { NULL, 0x00600DAE, 0x0060159E };
         CPatch::SetUChar(v11_sub_00600D8C[game_version], 0xEB);
@@ -149,10 +160,12 @@ void GetGameResolution() {
     }
 }
 
-void FovHook() {
+void FovHook()
+{
     static void *FOV_Hook[3] = { v10_Eng_FOV_Hook, v11_Eng_FOV_Hook, v12_Eng_FOV_Hook };
 
-    if (game_version == MAFIA_1_0_ENG) {
+    if (game_version == MAFIA_1_0_ENG)
+    {
         static int v10_sub_1000ABEE[3] = { 0x0000ABEE, NULL, NULL };
         CPatch::RedirectCall(base_LS3DF + v10_sub_1000ABEE[game_version], FOV_Hook[game_version]);
         CPatch::Nop(base_LS3DF + v10_sub_1000ABEE[game_version] + 0x5, 0x1);
@@ -217,7 +230,8 @@ void FovHook() {
         CPatch::RedirectCall(base_LS3DF + v10_sub_1000BFD7[game_version], FOV_Hook[game_version]);
         CPatch::Nop(base_LS3DF + v10_sub_1000BFD7[game_version] + 0x5, 0x1);
     }
-    else {
+    else
+    {
         static int v11_sub_1000B0B9[3] = { NULL, 0x0000B0B9, 0x0000B519 };
         CPatch::RedirectCall(base_LS3DF + v11_sub_1000B0B9[game_version], FOV_Hook[game_version]);
         CPatch::Nop(base_LS3DF + v11_sub_1000B0B9[game_version] + 0x5, 0x1);
@@ -228,10 +242,11 @@ void FovHook() {
     }
 }
 
-void HUDHook() {
+void HUDHook()
+{
     // Устанавливаем правильные пропорции:
 
-    // HUD, титры авторов... 
+    // HUD, титры авторов...
     static int v10_sub_005533A7[3] = { 0x005533A7, 0x00600FBF, 0x006017AF };
     CPatch::SetPointer(v10_sub_005533A7[game_version] + 0x2, &one_p_cur_base_width);
 
@@ -243,47 +258,53 @@ void HUDHook() {
     float fix_hud_center;
     float fix_hud_right;
     float fix_hud_double;
-    if (hud_patch == 1) {
+    if (hud_patch == 1)
+    {
         fix_hud_left = (cur_base_width - ori_base_width) / 2.0f;
         fix_hud_center = (cur_base_width - ori_base_width) / 2.0f;
         fix_hud_right = (cur_base_width - ori_base_width) / 2.0f;
         fix_hud_double = cur_base_width - ori_base_width;
     }
-    else {
+    else
+    {
         fix_hud_left = 0.0f;
         fix_hud_center = (cur_base_width - ori_base_width) / 2.0f;
         fix_hud_right = cur_base_width - ori_base_width;
         fix_hud_double = cur_base_width - ori_base_width;
     }
 
-#pragma region *HUD*
-    // Спидометр:						Привязка к правому краю.
+    #pragma region *HUD*
+    // Спидометр:                      Привязка к правому краю.
     static float hud_speedometer_x = 189.0f + fix_hud_left;
     static int v10_sub_0055340C[3] = { 0x0055340C, 0x0060116A, 0x0060195A };
     CPatch::SetPointer(v10_sub_0055340C[game_version] + 0x2, &hud_speedometer_x);
 
-    // Тахометр:						Привязка к правому краю.
+    // Тахометр:                        Привязка к правому краю.
     static float hud_tachometer_x = 259.0f + fix_hud_left;
     static int v10_sub_0055344D[3] = { 0x0055344D, 0x006011AB, 0x0060199B };
     CPatch::SetPointer(v10_sub_0055344D[game_version] + 0x2, &hud_tachometer_x);
 
-    // Значок ограничителя скорости:	С версии 1.1 привязка к правому краю.
+    // Значок ограничителя скорости:  С версии 1.1 привязка к правому краю.
     float hud_speed_limiter_x;
-    if (game_version == MAFIA_1_0_ENG) {
+    if (game_version == MAFIA_1_0_ENG)
+    {
         hud_speed_limiter_x = 760.0f + fix_hud_right;
     }
-    else {
+    else
+    {
         hud_speed_limiter_x = -40.0f - fix_hud_left;
     }
     static int v10_sub_00553C2D[3] = { 0x00553C2D, 0x00601B21, 0x00602311 };
     CPatch::SetFloat(v10_sub_00553C2D[game_version] + 0x4, hud_speed_limiter_x);
 
-    // Часы:							С версии 1.1 привязка к правому краю.
+    // Часы:                            С версии 1.1 привязка к правому краю.
     float hud_timer_x;
-    if (game_version == MAFIA_1_0_ENG) {
+    if (game_version == MAFIA_1_0_ENG)
+    {
         hud_timer_x = 694.0f + fix_hud_right;
     }
-    else {
+    else
+    {
         hud_timer_x = -106.0f - fix_hud_left;
     }
     static int v10_sub_00553CAD[3] = { 0x00553CAD, 0x00601BB5, 0x006023A5 };
@@ -299,24 +320,28 @@ void HUDHook() {
     static int v10_sub_0054FDBC[3] = { 0x0054FDBC, 0x005FD5CF, 0x005FDDBF };
     CPatch::SetPointer(v10_sub_0054FDBC[game_version] + 0x2, &hud_minimap_x);
 
-    // Тип коробки передач:				С версии 1.1 привязка к правому краю.
+    // Тип коробки передач:                С версии 1.1 привязка к правому краю.
     static float hud_transmission_x;
     static int v10_sub_0054E9F5[3] = { 0x0054E9F5, 0x005FC142, 0x005FC932 };
-    if (game_version == MAFIA_1_0_ENG) {
+    if (game_version == MAFIA_1_0_ENG)
+    {
         hud_transmission_x = 758.0f + fix_hud_right;
     }
-    else {
+    else
+    {
         hud_transmission_x = 42.0f + fix_hud_left;
     }
     CPatch::SetPointer(v10_sub_0054E9F5[game_version] + 0x2, &hud_transmission_x);
 
-    // Индикатор отсутствия топлива:	С версии 1.1 привязка к правому краю.
+    // Индикатор отсутствия топлива:  С версии 1.1 привязка к правому краю.
     static float hud_fuel_led_x;
     static int v10_sub_0054EBD4[3] = { 0x0054EBD4, 0x005FC333, 0x005FCB23 };
-    if (game_version == MAFIA_1_0_ENG) {
+    if (game_version == MAFIA_1_0_ENG)
+    {
         hud_fuel_led_x = 668.0f + fix_hud_right;
     }
-    else {
+    else
+    {
         hud_fuel_led_x = 132.0f + fix_hud_left;
     }
     CPatch::SetPointer(v10_sub_0054EBD4[game_version] + 0x2, &hud_fuel_led_x);
@@ -351,10 +376,11 @@ void HUDHook() {
     static int v10_sub_0054E022[3] = { 0x0054E022, 0x005FB757, 0x005FBF47 };
     CPatch::SetPointer(v10_sub_0054E022[game_version] + 0x2, &hud_search_bar_x);
 
-    // Значок "Здоровье" (у машины):	С версии 1.1 привязка к центру.
+    // Значок "Здоровье" (у машины):   С версии 1.1 привязка к центру.
     static float hud_live_bar_x = 368.0f + fix_hud_center;
     static int v10_sub_0054ED61[3] = { 0x0054ED61, NULL, NULL };
-    if (game_version == MAFIA_1_0_ENG) {
+    if (game_version == MAFIA_1_0_ENG)
+    {
         CPatch::SetPointer(v10_sub_0054ED61[game_version] + 0x2, &hud_live_bar_x);
     }
 
@@ -377,18 +403,20 @@ void HUDHook() {
     static float hud_money_right_text_x = 760.0f + fix_hud_right;
     static int v10_sub_0054F086[3] = { 0x0054F086, 0x005FC81D, 0x005FD00D };
     CPatch::SetPointer(v10_sub_0054F086[game_version] + 0x2, &hud_money_right_text_x);
-#pragma endregion
+    #pragma endregion
 
-#pragma region *Race Mission Specific*
+    #pragma region *Race Mission Specific*
     // Гонка "3, 2, 1, Go":
     static float hud_race_321go_x = 400.0f + fix_hud_center;
     static int v10_sub_0055274A[3] = { 0x0055274A, 0x006000F0, 0x006008E0 };
     static int v10_sub_00552954[3] = { 0x00552954, 0x00600331, 0x00600B21 };
-    if (game_version == MAFIA_1_0_ENG) {
+    if (game_version == MAFIA_1_0_ENG)
+    {
         CPatch::SetPointer(v10_sub_0055274A[game_version] + 0x2, &hud_race_321go_x);
         CPatch::SetPointer(v10_sub_00552954[game_version] + 0x2, &hud_race_321go_x);
     }
-    else {
+    else
+    {
         CPatch::SetFloat(v10_sub_0055274A[game_version] + 0x1, hud_race_321go_x);
         CPatch::SetFloat(v10_sub_00552954[game_version] + 0x1, hud_race_321go_x);
     }
@@ -401,10 +429,12 @@ void HUDHook() {
     // Гонка, текст по центру ("Контрольная точка"):
     float hud_race_checkpoint_x = 390.0f + fix_hud_center;
     static int v10_sub_00552BFE[3] = { 0x00552BFE, 0x00600609, 0x00600DF9 };
-    if (game_version == MAFIA_1_0_ENG) {
+    if (game_version == MAFIA_1_0_ENG)
+    {
         CPatch::SetFloat(v10_sub_00552BFE[game_version] + 0x4, hud_race_checkpoint_x);
     }
-    else {
+    else
+    {
         CPatch::SetFloat(v10_sub_00552BFE[game_version] + 0x1, hud_race_checkpoint_x);
     }
 
@@ -412,16 +442,16 @@ void HUDHook() {
     static float hud_race_right_text_x = 780.0f + fix_hud_right;
     static int v10_sub_00552AEC[3] = { 0x00552AEC, 0x006004F0, 0x00600CE0 };
     CPatch::SetPointer(v10_sub_00552AEC[game_version] + 0x2, &hud_race_right_text_x);
-#pragma endregion
+    #pragma endregion
 
-#pragma region *Map*
+    #pragma region *Map*
     // Надпись "Нет карты":
     static float hud_map_text_x = 350.0f + fix_hud_center;
     static int v10_sub_00552017[3] = { 0x00552017, 0x005FF933, 0x00600123 };
     CPatch::SetPointer(v10_sub_00552017[game_version] + 0x2, &hud_map_text_x);
-#pragma endregion
+    #pragma endregion
 
-#pragma region *Black Borders, Text*
+    #pragma region *Black Borders, Text*
     // Черные полосы:
     static float hud_borders_width = cur_base_width + 1.0f;
     float hud_borders_1 = (ori_base_width * 0.540540516376495f) / cur_base_width;
@@ -431,7 +461,8 @@ void HUDHook() {
     static int v10_sub_00594899[3] = { 0x00594899, 0x00548C1D, 0x005492AD };
     static int v10_sub_00548E6C[3] = { 0x00548E6C, 0x005F661C, 0x005F6E0C };
     CPatch::SetPointer(v10_sub_0054C189[game_version] + 0x2, &hud_borders_width);
-    if (borders_patch) {
+    if (borders_patch)
+    {
         CPatch::SetFloat(v10_sub_005BC418[game_version] + 0x1, hud_borders_1);
         CPatch::SetFloat(v10_sub_00594899[game_version] + 0x1, hud_borders_1);
         CPatch::SetFloat(v10_sub_00548E6C[game_version] + 0x1, hud_borders_2);
@@ -466,42 +497,47 @@ void HUDHook() {
     CPatch::SetPointer(v10_sub_00560399[game_version] + 0x2, &hud_credits_text_3_x);
     CPatch::SetPointer(v10_sub_0056042C[game_version] + 0x2, &hud_credits_text_2_x);
     CPatch::SetFloat(v10_sub_00560461[game_version] + 0x1, hud_credits_text_2_x);
-    if (game_version == MAFIA_1_2_ENG) {
+    if (game_version == MAFIA_1_2_ENG)
+    {
         CPatch::SetFloat(v12_sub_0060E4C7[game_version] + 0x1, hud_credits_text_2_x);
     }
     CPatch::SetPointer(v10_sub_005604BD[game_version] + 0x2, &hud_credits_text_1_x);
     CPatch::SetPointer(v10_sub_00560510[game_version] + 0x2, &hud_credits_text_4_x);
-#pragma endregion
+    #pragma endregion
 
-#pragma region *Menus*
+    #pragma region *Menus*
     // Надпись "Пожалуйста подождите":
-    if (!menu_patch) {
+    if (!menu_patch)
+    {
         static float hud_please_wait_text_x = 780.0f + fix_hud_double;
         static int v10_sub_0055F47B[3] = { 0x0055F47B, 0x005A3741, 0x005A3D31 };
         static int v10_sub_005DF781[3] = { 0x005DF781, 0x0060CEF5, 0x0060D3E5 };
         CPatch::SetPointer(v10_sub_0055F47B[game_version] + 0x2, &hud_please_wait_text_x);
         CPatch::SetPointer(v10_sub_005DF781[game_version] + 0x2, &hud_please_wait_text_x);
     }
-#pragma endregion
+    #pragma endregion
 
 }
 
-void MapHook() {
+void MapHook()
+{
     float fix_map_left;
-    //	float fix_map_center;
-    //	float fix_map_right;
-    //	float fix_map_double;
-    if (map_patch == 1) {
+    //  float fix_map_center;
+    //  float fix_map_right;
+    //  float fix_map_double;
+    if (map_patch == 1)
+    {
         fix_map_left = (cur_base_width - ori_base_width) / 2.0f;
-        //		fix_map_center = (cur_base_width - ori_base_width) / 2.0f;
-        //		fix_map_right = (cur_base_width - ori_base_width) / 2.0f;
-        //		fix_map_double = cur_base_width - ori_base_width;
+        //      fix_map_center = (cur_base_width - ori_base_width) / 2.0f;
+        //      fix_map_right = (cur_base_width - ori_base_width) / 2.0f;
+        //      fix_map_double = cur_base_width - ori_base_width;
     }
-    else {
+    else
+    {
         fix_map_left = 0.0f;
-        //		fix_map_center = (cur_base_width - ori_base_width) / 2.0f;
-        //		fix_map_right = cur_base_width - ori_base_width;
-        //		fix_map_double = cur_base_width - ori_base_width;
+        //      fix_map_center = (cur_base_width - ori_base_width) / 2.0f;
+        //      fix_map_right = cur_base_width - ori_base_width;
+        //      fix_map_double = cur_base_width - ori_base_width;
     }
 
     // Левая граница карты:
@@ -552,9 +588,10 @@ void MapHook() {
     CPatch::SetPointer(v10_sub_0055206C[game_version] + 0x2, &map_target_pos_x);
 }
 
-void TextHook() {
+void TextHook()
+{
     static float text_width;
-    /*	if (text_patch == 1) {
+    /*  if (text_patch == 1) {
             text_width = (ori_base_width * 0.9f) / cur_base_width;
         }
         else {
@@ -577,16 +614,19 @@ void TextHook() {
     CPatch::SetPointer(v10_sub_0054BC0B[game_version] + 0x2, &text_width);
 }
 
-void MenuHook() {
+void MenuHook()
+{
     // Устанавливаем правильные пропорции:
 
     static int v11_sub_005E3303[3] = { NULL, 0x005E3303, 0x005E3B03 };
     static int v10_sub_0056E525[3] = { 0x0056E525, 0x005EB28B, 0x005EBA8B };
-    if (game_version == MAFIA_1_0_ENG) {
+    if (game_version == MAFIA_1_0_ENG)
+    {
         // Загрузочные экраны, меню, текст в машинопедии
         CPatch::SetPointer(v10_sub_0056E525[game_version] + 0x2, &one_p_cur_base_width);
     }
-    else {
+    else
+    {
         // Загрузочные экраны
         CPatch::SetPointer(v11_sub_005E3303[game_version] + 0x2, &one_p_cur_base_width);
         // Меню, текст в машинопедии
@@ -595,7 +635,7 @@ void MenuHook() {
 
     float fix_menu_right = (cur_base_width - ori_base_width) / 2.0f;
 
-#pragma region *Menus*
+    #pragma region *Menus*
     // Надпись "Пожалуйста подождите":
     static float menu_please_wait_text_x = 780.0f + fix_menu_right;
     static int v10_sub_0055F47B[3] = { 0x0055F47B, 0x005A3741, 0x005A3D31 };
@@ -608,7 +648,8 @@ void MenuHook() {
     static void *Menu_Hook_01[3] = { v10_Eng_Menu_Hook_01, v11_Eng_Menu_Hook_01, v12_Eng_Menu_Hook_01 };
     static void *Menu_Hook_02[3] = { v10_Eng_Menu_Hook_02, v11_Eng_Menu_Hook_02, v12_Eng_Menu_Hook_02 };
     static void *Menu_Hook_03[3] = { v10_Eng_Menu_Hook_03, nullptr, nullptr };
-    if (game_version == MAFIA_1_0_ENG) {
+    if (game_version == MAFIA_1_0_ENG)
+    {
         static int v10_sub_0056BF09[3] = { 0x0056BF09, NULL, NULL };
         static int v10_sub_0056BF95[3] = { 0x0056BF95, NULL, NULL };
         static int v10_sub_0056C007[3] = { 0x0056C007, NULL, NULL };
@@ -625,7 +666,8 @@ void MenuHook() {
         // Машинопедия, список авто
         CPatch::RedirectCall(v10_sub_005758DF[game_version], Menu_Hook_03[game_version]);
     }
-    else {
+    else
+    {
         static int v11_sub_005D8D5B[3] = { NULL, 0x005D8D5B, 0x005D950B };
         static int v11_sub_005D90CB[3] = { NULL, 0x005D90CB, 0x005D98DB };
         // Меню
@@ -633,26 +675,30 @@ void MenuHook() {
         // Загрузочные экраны, машинопедия
         CPatch::RedirectCall(v11_sub_005D90CB[game_version], Menu_Hook_02[game_version]);
     }
-#pragma endregion
+    #pragma endregion
 }
 
-void MovieHook() {
-#pragma region *Movies*
+void MovieHook()
+{
+    #pragma region *Movies*
     // Видео:
     movie_aspect = cur_width_p_height / ori_width_p_height;
     static void *Movie_Hook[3] = { v10_Eng_Movie_Hook, v11_Eng_Movie_Hook, v12_Eng_Movie_Hook };
     static int v10_sub_10070430[3] = { 0x00070430, 0x00071490, 0x000745A0 };
     CPatch::RedirectJump(base_LS3DF + v10_sub_10070430[game_version], Movie_Hook[game_version]);
-    if (game_version == MAFIA_1_0_ENG) {
+    if (game_version == MAFIA_1_0_ENG)
+    {
         CPatch::Nop(base_LS3DF + v10_sub_10070430[game_version] + 0x5, 0x73);
     }
-    else {
+    else
+    {
         CPatch::Nop(base_LS3DF + v10_sub_10070430[game_version] + 0x5, 0x8D);
     }
-#pragma endregion
+    #pragma endregion
 }
 
-void DrawDistanceHook() {
+void DrawDistanceHook()
+{
     static float draw_dist_value1 = draw_dist_value - 50.0f;
     static float draw_dist_value2 = draw_dist_value - 20.0f;
 
@@ -661,12 +707,14 @@ void DrawDistanceHook() {
     CPatch::RedirectCall(v10_sub_00600E99[game_version], Draw_Distance_Hook[game_version]);
     CPatch::Nop(v10_sub_00600E99[game_version] + 0x5, 0x2);
 
-    if ((300.0f > draw_dist_min) && (300.0f < draw_dist_max)) {
+    if ((300.0f > draw_dist_min) && (300.0f < draw_dist_max))
+    {
         static int v10_sub_00542FEB[3] = { 0x00542FEB, 0x0059A7B0, 0x0059ABD0 };
         CPatch::SetFloat(v10_sub_00542FEB[game_version] + 0x1, draw_dist_value);
     }
 
-    if (game_version == MAFIA_1_0_ENG) {
+    if (game_version == MAFIA_1_0_ENG)
+    {
         static int v10_sub_005A89C9[3] = { 0x005A89C9, NULL, NULL };
         CPatch::SetFloat(v10_sub_005A89C9[game_version] + 0x1, draw_dist_value1);
 
@@ -681,7 +729,8 @@ void DrawDistanceHook() {
         CPatch::SetPointer(v10_sub_005A892C[game_version] + 0x2, &draw_dist_value2);
         CPatch::SetPointer(v10_sub_005A895F[game_version] + 0x2, &draw_dist_value2);
     }
-    else {
+    else
+    {
         static int v11_sub_004021E1[3] = { NULL, 0x004021E1, 0x00402201 };
         CPatch::SetFloat(v11_sub_004021E1[game_version] + 0x4, draw_dist_value1);
 
@@ -690,11 +739,14 @@ void DrawDistanceHook() {
     }
 }
 
-void OtherHooks() {
+void OtherHooks()
+{
     // Frame limiter
-    if (fps_limit) {
+    if (fps_limit)
+    {
         static char fps_limit_ms = 1000 / fps_limit;
-        if (fps_limit_ms > 127) {
+        if (fps_limit_ms > 127)
+        {
             fps_limit_ms = 127;
         }
         static int v10_sub_005F95BC[3] = { 0x005F95BC, 0x005BE02C, 0x005BE7CC };
@@ -702,7 +754,8 @@ void OtherHooks() {
     }
 
     // Cyrillic credits
-    if (ru_credits && (game_version != MAFIA_1_2_ENG)) {
+    if (ru_credits && (game_version != MAFIA_1_2_ENG))
+    {
         static void *Ru_Credits_Hook[3] = { v10_Eng_Ru_Credits_Hook, v11_Eng_Ru_Credits_Hook, nullptr };
         static int v10_sub_0056017C[3] = { 0x0056017C, 0x0060DCAC, NULL };
         static int v10_sub_00560548[3] = { 0x00560548, 0x0060E09C, NULL };
@@ -711,43 +764,51 @@ void OtherHooks() {
     }
 }
 
-void SetHooks() {
+void SetHooks()
+{
     WriteLog("Detected game resolution: %.0fx%.0f\n", cur_game_width, cur_game_height);
 
     cur_width_p_height = cur_game_width / cur_game_height;
-    //	cur_height_p_width = cur_game_height / cur_game_width;
+    //  cur_height_p_width = cur_game_height / cur_game_width;
 
     cur_base_width = ori_base_height * cur_width_p_height;
 
     one_p_cur_base_width = 1.0f / cur_base_width;
-    //	one_p_cur_base_height = 1.0f / cur_base_height;
+    //  one_p_cur_base_height = 1.0f / cur_base_height;
 
     // Исправляем FOV
-    if (fov_patch) {
+    if (fov_patch)
+    {
         FovHook();
     }
     // Исправляем HUD
-    if (hud_patch) {
+    if (hud_patch)
+    {
         HUDHook();
     }
     // Исправляем карту
-    if (map_patch) {
+    if (map_patch)
+    {
         MapHook();
     }
     // Исправляем разбиение текста
-    if (text_patch) {
+    if (text_patch)
+    {
         TextHook();
     }
     // Исправляем загрузочные экраны и меню
-    if (menu_patch) {
+    if (menu_patch)
+    {
         MenuHook();
     }
     // Исправляем пропорции видеороликов
-    if (movie_patch) {
+    if (movie_patch)
+    {
         MovieHook();
     }
     // Меняем дальность прорисовки
-    if (draw_dist_patch) {
+    if (draw_dist_patch)
+    {
         DrawDistanceHook();
     }
     // Другие исправления
@@ -755,11 +816,14 @@ void SetHooks() {
 }
 
 
-BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved) {
-    if (ul_reason_for_call == DLL_PROCESS_ATTACH) {
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved)
+{
+    if (ul_reason_for_call == DLL_PROCESS_ATTACH)
+    {
         ReadINI("");
         ClearLog();
-        if (Init()) {
+        if (Init())
+        {
             GetGameResolution();
         }
     }
@@ -768,17 +832,19 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
 
 
 #pragma region some asm
-#define DW(d,c,b,a)			_asm _emit 0x ## a _asm _emit 0x ## b _asm _emit 0x ## c _asm _emit 0x ## d
-#define MOV_DL_BYTE_PTR		_asm _emit 0x8A _asm _emit 0x15
-#define MOV_EAX_DWORD_PTR	_asm _emit 0xA1
-#define FLD_DWORD_PTR		_asm _emit 0xD9 _asm _emit 0x05
-#define FSTP_DWORD_PTR		_asm _emit 0xD9 _asm _emit 0x1D
-#define FILD_DWORD_PTR		_asm _emit 0xDB _asm _emit 0x05
+#define DW(d,c,b,a)         _asm _emit 0x ## a _asm _emit 0x ## b _asm _emit 0x ## c _asm _emit 0x ## d
+#define MOV_DL_BYTE_PTR     _asm _emit 0x8A _asm _emit 0x15
+#define MOV_EAX_DWORD_PTR   _asm _emit 0xA1
+#define FLD_DWORD_PTR       _asm _emit 0xD9 _asm _emit 0x05
+#define FSTP_DWORD_PTR      _asm _emit 0xD9 _asm _emit 0x1D
+#define FILD_DWORD_PTR      _asm _emit 0xDB _asm _emit 0x05
 #pragma endregion
 
-void __declspec(naked)v10_Eng_Get_Game_Resolution() {
+void __declspec(naked)v10_Eng_Get_Game_Resolution()
+{
 
-    _asm {
+    _asm
+    {
         PUSHAD;
         PUSHFD;
         FILD_DWORD_PTR DW(00, 6F, 95, 2E);
@@ -794,9 +860,11 @@ void __declspec(naked)v10_Eng_Get_Game_Resolution() {
     }
 }
 
-void __declspec(naked)v11_Eng_Get_Game_Resolution() {
+void __declspec(naked)v11_Eng_Get_Game_Resolution()
+{
 
-    _asm {
+    _asm
+    {
         PUSHAD;
         PUSHFD;
         FILD_DWORD_PTR DW(00, 64, 6E, 16);
@@ -812,9 +880,11 @@ void __declspec(naked)v11_Eng_Get_Game_Resolution() {
     }
 }
 
-void __declspec(naked)v12_Eng_Get_Game_Resolution() {
+void __declspec(naked)v12_Eng_Get_Game_Resolution()
+{
 
-    _asm {
+    _asm
+    {
         PUSHAD;
         PUSHFD;
         FILD_DWORD_PTR DW(00, 64, 7E, E6);
@@ -830,25 +900,27 @@ void __declspec(naked)v12_Eng_Get_Game_Resolution() {
     }
 }
 
-void __declspec(naked)v10_Eng_FOV_Hook() {
+void __declspec(naked)v10_Eng_FOV_Hook()
+{
     static int init = 0x1;
 
     static int sub_1009756C = 0x0009756C;
 
-    _asm {
-        //					_emit 0xCC;
+    _asm
+    {
+        //                  _emit 0xCC;
         CMP init, 0;
         JZ label_begin;
         MOV init, 0;
         CALL label_init;
 
-    label_begin:
+        label_begin:
         ADD BYTE PTR[ESP], 0x1;
         //-------------------------------------------------------------------------
-        PUSH EAX;									//
-        MOV EAX, DWORD PTR[sub_1009756C];			// FMUL DWORD PTR[100985B0]
-        FMUL DWORD PTR[EAX];						//
-        POP EAX;									//
+        PUSH EAX;                                   //
+        MOV EAX, DWORD PTR[sub_1009756C];           // FMUL DWORD PTR[100985B0]
+        FMUL DWORD PTR[EAX];                        //
+        POP EAX;                                    //
         //-------------------------------------------------------------------------
         FLD ST;
         FCOS;
@@ -861,7 +933,7 @@ void __declspec(naked)v10_Eng_FOV_Hook() {
         FPATAN;
         RETN;
 
-    label_init:
+        label_init:
         PUSH EAX;
 
         MOV EAX, DWORD PTR[sub_1009756C];
@@ -873,25 +945,27 @@ void __declspec(naked)v10_Eng_FOV_Hook() {
     }
 }
 
-void __declspec(naked)v11_Eng_FOV_Hook() {
+void __declspec(naked)v11_Eng_FOV_Hook()
+{
     static int init = 0x1;
 
     static int sub_100985B0 = 0x000985B0;
 
-    _asm {
-        //					_emit 0xCC;
+    _asm
+    {
+        //                  _emit 0xCC;
         CMP init, 0;
         JZ label_begin;
         MOV init, 0;
         CALL label_init;
 
-    label_begin:
+        label_begin:
         ADD BYTE PTR[ESP], 0x1;
         //-------------------------------------------------------------------------
-        PUSH EAX;									//
-        MOV EAX, DWORD PTR[sub_100985B0];			// FMUL DWORD PTR[100985B0]
-        FMUL DWORD PTR[EAX];						//
-        POP EAX;									//
+        PUSH EAX;                                   //
+        MOV EAX, DWORD PTR[sub_100985B0];           // FMUL DWORD PTR[100985B0]
+        FMUL DWORD PTR[EAX];                        //
+        POP EAX;                                    //
         //-------------------------------------------------------------------------
         FLD ST;
         FCOS;
@@ -904,7 +978,7 @@ void __declspec(naked)v11_Eng_FOV_Hook() {
         FPATAN;
         RETN;
 
-    label_init:
+        label_init:
         PUSH EAX;
 
         MOV EAX, DWORD PTR[sub_100985B0];
@@ -916,25 +990,27 @@ void __declspec(naked)v11_Eng_FOV_Hook() {
     }
 }
 
-void __declspec(naked)v12_Eng_FOV_Hook() {
+void __declspec(naked)v12_Eng_FOV_Hook()
+{
     static int init = 0x1;
 
     static int sub_1009B5B0 = 0x0009B5B0;
 
-    _asm {
-        //					_emit 0xCC;
+    _asm
+    {
+        //                  _emit 0xCC;
         CMP init, 0;
         JZ label_begin;
         MOV init, 0;
         CALL label_init;
 
-    label_begin:
+        label_begin:
         ADD BYTE PTR[ESP], 0x1;
         //-------------------------------------------------------------------------
-        PUSH EAX;									//
-        MOV EAX, DWORD PTR[sub_1009B5B0];			// FMUL DWORD PTR[1009B5B0]
-        FMUL DWORD PTR[EAX];						//
-        POP EAX;									//
+        PUSH EAX;                                   //
+        MOV EAX, DWORD PTR[sub_1009B5B0];           // FMUL DWORD PTR[1009B5B0]
+        FMUL DWORD PTR[EAX];                        //
+        POP EAX;                                    //
         //-------------------------------------------------------------------------
         FLD ST;
         FCOS;
@@ -947,7 +1023,7 @@ void __declspec(naked)v12_Eng_FOV_Hook() {
         FPATAN;
         RETN;
 
-    label_init:
+        label_init:
         PUSH EAX;
 
         MOV EAX, DWORD PTR[sub_1009B5B0];
@@ -959,25 +1035,31 @@ void __declspec(naked)v12_Eng_FOV_Hook() {
     }
 }
 
-void __declspec(naked)v10_Eng_Map_Hook_Player_Marker_x() {
-    _asm {
+void __declspec(naked)v10_Eng_Map_Hook_Player_Marker_x()
+{
+    _asm
+    {
         FMUL DWORD PTR[map_player_marker_x];
         RETN;
     }
 }
 
-void __declspec(naked)v11_Eng_Map_Hook_Player_Marker_x() {
-    _asm {
+void __declspec(naked)v11_Eng_Map_Hook_Player_Marker_x()
+{
+    _asm
+    {
         FMUL DWORD PTR[map_player_marker_x];
         FXCH ST(1);
         RETN;
     }
 }
 
-void __declspec(naked)v10_Eng_Menu_Hook_01() {
+void __declspec(naked)v10_Eng_Menu_Hook_01()
+{
     static int sub_0057D850 = 0x0057D850;
 
-    _asm {
+    _asm
+    {
         MOV EAX, DWORD PTR[ESP + 0x8];
         SUB ESP, 0x8;
         PUSH ESI;
@@ -1003,11 +1085,11 @@ void __declspec(naked)v10_Eng_Menu_Hook_01() {
         MOV EDX, DWORD PTR[EAX + 0x14];
         MOV DWORD PTR[ESI + 0x1C], EDX;
         JMP SHORT label_0057052B;
-    label_005704FB:
+        label_005704FB:
         FLD_DWORD_PTR DW(00, 67, A4, C0);
         FMUL DWORD PTR[EAX + 0x8];
         //-------------------------------------------------------------------------
-        CALL label_filter;						// Correct value
+        CALL label_filter;                      // Correct value
         //-------------------------------------------------------------------------
         FSTP DWORD PTR[ESI + 0x10];
         FLD_DWORD_PTR DW(00, 67, A4, C4);
@@ -1019,7 +1101,7 @@ void __declspec(naked)v10_Eng_Menu_Hook_01() {
         FLD_DWORD_PTR DW(00, 67, A4, C4);
         FMUL DWORD PTR[EAX + 0x14];
         FSTP DWORD PTR[ESI + 0x1C];
-    label_0057052B:
+        label_0057052B:
         MOV EDX, DWORD PTR[EAX + 0x1C];
         MOV DWORD PTR[ESP + 0x8], ECX;
         MOV DWORD PTR[ESI + 0x20], EDX;
@@ -1036,79 +1118,81 @@ void __declspec(naked)v10_Eng_Menu_Hook_01() {
         PUSH EAX;
         MOV ECX, 0x0067A57C;
         //-------------------------------------------------------------------------
-        CALL DWORD PTR[sub_0057D850];				// CALL 0057D850
+        CALL DWORD PTR[sub_0057D850];               // CALL 0057D850
         //-------------------------------------------------------------------------
         MOV DWORD PTR[ESI + 0x30], EAX;
         MOV EAX, ESI;
         POP ESI;
         ADD ESP, 0x8;
         RETN 0x8;
-    label_0057056A:
+        label_0057056A:
         MOV DWORD PTR[ESI + 0x30], ECX;
         MOV EAX, ESI;
         POP ESI;
         ADD ESP, 0x8;
         RETN 0x8;
 
-    label_filter:
-        CMP EAX, 0x006728DC;		// Player Profile
+        label_filter:
+        CMP EAX, 0x006728DC;        // Player Profile
         JE label_add;
-        CMP EAX, 0x00672828;		// Player Profile -> Create New Profile
+        CMP EAX, 0x00672828;        // Player Profile -> Create New Profile
         JE label_add;
-        CMP EAX, 0x00672C60;		// Main Menu
+        CMP EAX, 0x00672C60;        // Main Menu
         JE label_add;
-        CMP EAX, 0x00674A9C;		// Main Menu -> Load Game
+        CMP EAX, 0x00674A9C;        // Main Menu -> Load Game
         JE label_add;
-        CMP EAX, 0x00674E68;		// Main Menu -> Free Ride
+        CMP EAX, 0x00674E68;        // Main Menu -> Free Ride
         JE label_add;
-        CMP EAX, 0x00678F84;		// Main Menu -> Free Ride -> Location
+        CMP EAX, 0x00678F84;        // Main Menu -> Free Ride -> Location
         JE label_add;
-        CMP EAX, 0x00676770;		// Main Menu -> Free Ride -> Garage
+        CMP EAX, 0x00676770;        // Main Menu -> Free Ride -> Garage
         JE label_add;
-        CMP EAX, 0x00676AAC;		// Main Menu -> Free Ride -> Garage -> Models
+        CMP EAX, 0x00676AAC;        // Main Menu -> Free Ride -> Garage -> Models
         JE label_add;
-        CMP EAX, 0x00676BF0;		// Main Menu -> Free Ride -> Garage -> Models -> Car Colors
+        CMP EAX, 0x00676BF0;        // Main Menu -> Free Ride -> Garage -> Models -> Car Colors
         JE label_add;
-        CMP EAX, 0x0067341C;		// Main Menu -> Options
+        CMP EAX, 0x0067341C;        // Main Menu -> Options
         JE label_add;
-        CMP EAX, 0x006734F4;		// Main Menu -> Options -> Player Controls
+        CMP EAX, 0x006734F4;        // Main Menu -> Options -> Player Controls
         JE label_add;
-        CMP EAX, 0x0067353C;		// Main Menu -> Options -> Car Controls
+        CMP EAX, 0x0067353C;        // Main Menu -> Options -> Car Controls
         JE label_add;
-        CMP EAX, 0x00673584;		// Main Menu -> Options -> Other Controls
+        CMP EAX, 0x00673584;        // Main Menu -> Options -> Other Controls
         JE label_add;
-        CMP EAX, 0x00672F0C;		// Main Menu -> Options -> Audio & Video
+        CMP EAX, 0x00672F0C;        // Main Menu -> Options -> Audio & Video
         JE label_add;
-        CMP EAX, 0x006792E4;		// Main Menu -> Quit Game, Game Menu -> Exit Game
+        CMP EAX, 0x006792E4;        // Main Menu -> Quit Game, Game Menu -> Exit Game
         JE label_add;
-        CMP EAX, 0x00672E34;		// Game Menu
+        CMP EAX, 0x00672E34;        // Game Menu
         JE label_add;
-        CMP EAX, 0x006750A8;		// Game -> Inventory
+        CMP EAX, 0x006750A8;        // Game -> Inventory
         JE label_add;
-        CMP EAX, 0x006750F0;		// Game -> Inventory
+        CMP EAX, 0x006750F0;        // Game -> Inventory
         JE label_add;
-        CMP EAX, 0x006774A8;		// Game -> Garage
+        CMP EAX, 0x006774A8;        // Game -> Garage
         JE label_add;
-        CMP EAX, 0x00677580;		// Game -> Garage
+        CMP EAX, 0x00677580;        // Game -> Garage
         JE label_add;
-        CMP EAX, 0x00675474;		// Game -> Pickup/Use
+        CMP EAX, 0x00675474;        // Game -> Pickup/Use
         JE label_add;
-        CMP EAX, 0x00678C00;		// Game -> Game Over
+        CMP EAX, 0x00678C00;        // Game -> Game Over
         JE label_add;
-        CMP EAX, 0x00678A98;		// Game Menu (in Race Mission)
+        CMP EAX, 0x00678A98;        // Game Menu (in Race Mission)
         JE label_add;
         RETN;
-    label_add:
+        label_add:
         FADD DWORD PTR[menu_menu_x];
         RETN;
     }
 }
 
-void __declspec(naked)v11_Eng_Menu_Hook_01() {
+void __declspec(naked)v11_Eng_Menu_Hook_01()
+{
     static int sub_0060F370 = 0x0060F370;
     static int sub_005E9650 = 0x005E9650;
 
-    _asm {
+    _asm
+    {
         PUSH - 0x1;
         PUSH 0x0062172B;
         MOV EAX, DWORD PTR FS : [0x0];
@@ -1135,7 +1219,7 @@ void __declspec(naked)v11_Eng_Menu_Hook_01() {
         FLD_DWORD_PTR DW(00, 6B, C7, B8);
         FMUL DWORD PTR[EAX + 0x8];
         //-------------------------------------------------------------------------
-        CALL label_filter;						// Correct value
+        CALL label_filter;                      // Correct value
         //-------------------------------------------------------------------------
         FST DWORD PTR[ESI + 0x24];
         FSTP DWORD PTR[ESI + 0x14];
@@ -1156,22 +1240,22 @@ void __declspec(naked)v11_Eng_Menu_Hook_01() {
         PUSH EAX;
         MOV ECX, 0x006D7644;
         //-------------------------------------------------------------------------
-        CALL DWORD PTR[sub_0060F370];				// CALL 0060F370
+        CALL DWORD PTR[sub_0060F370];               // CALL 0060F370
         //-------------------------------------------------------------------------
         MOV DWORD PTR[ESI + 0x10], EAX;
         JMP SHORT label_005E947C;
-    label_005E9479:
+        label_005E9479:
         MOV DWORD PTR[ESI + 0x10], EDI;
-    label_005E947C:
+        label_005E947C:
         MOV ECX, DWORD PTR[ESP + 0x20];
         CMP ECX, EDI;
         MOV DWORD PTR[ESI + 0x2C], ECX;
         JE SHORT label_005E948D;
         PUSH ESI;
         //-------------------------------------------------------------------------
-        CALL DWORD PTR[sub_005E9650];				// CALL 005E9650
+        CALL DWORD PTR[sub_005E9650];               // CALL 005E9650
         //-------------------------------------------------------------------------
-    label_005E948D:
+        label_005E948D:
         MOV ECX, DWORD PTR[ESP + 0x0C];
         MOV EAX, ESI;
         POP EDI;
@@ -1180,35 +1264,37 @@ void __declspec(naked)v11_Eng_Menu_Hook_01() {
         ADD ESP, 0x10;
         RETN 0x8;
 
-    label_filter:
-        CMP ECX, 0x1;				// Load Screens, Carcyclopedia
+        label_filter:
+        CMP ECX, 0x1;               // Load Screens, Carcyclopedia
         JE label_add;
-        CMP ECX, 0x2;				// Carcyclopedia - Show Mode
+        CMP ECX, 0x2;               // Carcyclopedia - Show Mode
         JE label_test;
-        CMP ECX, 0x3;				// Menu
+        CMP ECX, 0x3;               // Menu
         JE label_add;
-        CMP ECX, 0x82;				// Menu
-        JE label_add;
-        RETN;
-    label_test:
-        CMP EDX, 0x00FF00B2;		// Options
-        JE label_add;
-        CMP EDX, 0x00FF0032;		// Options -> Controls
-        JE label_add;
-        CMP EDX, 0x001F0032;		// Options -> Audio & Video
+        CMP ECX, 0x82;              // Menu
         JE label_add;
         RETN;
-    label_add:
+        label_test:
+        CMP EDX, 0x00FF00B2;        // Options
+        JE label_add;
+        CMP EDX, 0x00FF0032;        // Options -> Controls
+        JE label_add;
+        CMP EDX, 0x001F0032;        // Options -> Audio & Video
+        JE label_add;
+        RETN;
+        label_add:
         FADD DWORD PTR[menu_menu_x];
         RETN;
     }
 }
 
-void __declspec(naked)v12_Eng_Menu_Hook_01() {
+void __declspec(naked)v12_Eng_Menu_Hook_01()
+{
     static int sub_0060FB40 = 0x0060FB40;
     static int sub_005E9E50 = 0x005E9E50;
 
-    _asm {
+    _asm
+    {
         PUSH - 0x1;
         PUSH 0x00621EFB;
         MOV EAX, DWORD PTR FS : [0x0];
@@ -1235,7 +1321,7 @@ void __declspec(naked)v12_Eng_Menu_Hook_01() {
         FLD_DWORD_PTR DW(00, 6B, D8, 88);
         FMUL DWORD PTR[EAX + 0x8];
         //-------------------------------------------------------------------------
-        CALL label_filter;						// Correct value
+        CALL label_filter;                      // Correct value
         //-------------------------------------------------------------------------
         FST DWORD PTR[ESI + 0x24];
         FSTP DWORD PTR[ESI + 0x14];
@@ -1256,22 +1342,22 @@ void __declspec(naked)v12_Eng_Menu_Hook_01() {
         PUSH EAX;
         MOV ECX, 0x006D8714;
         //-------------------------------------------------------------------------
-        CALL DWORD PTR[sub_0060FB40];				// CALL 0060FB40
+        CALL DWORD PTR[sub_0060FB40];               // CALL 0060FB40
         //-------------------------------------------------------------------------
         MOV DWORD PTR[ESI + 0x10], EAX;
         JMP SHORT label_005E9C7C;
-    label_005E9C79:
+        label_005E9C79:
         MOV DWORD PTR[ESI + 0x10], EDI;
-    label_005E9C7C:
+        label_005E9C7C:
         MOV ECX, DWORD PTR[ESP + 0x20];
         CMP ECX, EDI;
         MOV DWORD PTR[ESI + 0x2C], ECX;
         JE SHORT label_005E9C8D;
         PUSH ESI;
         //-------------------------------------------------------------------------
-        CALL DWORD PTR[sub_005E9E50];				// CALL 005E9E50
+        CALL DWORD PTR[sub_005E9E50];               // CALL 005E9E50
         //-------------------------------------------------------------------------
-    label_005E9C8D:
+        label_005E9C8D:
         MOV ECX, DWORD PTR[ESP + 0x0C];
         MOV EAX, ESI;
         POP EDI;
@@ -1280,34 +1366,36 @@ void __declspec(naked)v12_Eng_Menu_Hook_01() {
         ADD ESP, 0x10;
         RETN 0x8;
 
-    label_filter:
-        CMP ECX, 0x1;				// Load Screens, Carcyclopedia
+        label_filter:
+        CMP ECX, 0x1;               // Load Screens, Carcyclopedia
         JE label_add;
-        CMP ECX, 0x2;				// Carcyclopedia - Show Mode
+        CMP ECX, 0x2;               // Carcyclopedia - Show Mode
         JE label_test;
-        CMP ECX, 0x3;				// Menu
+        CMP ECX, 0x3;               // Menu
         JE label_add;
-        CMP ECX, 0x82;				// Menu
-        JE label_add;
-        RETN;
-    label_test:
-        CMP EDX, 0x00FF00B2;		// Options
-        JE label_add;
-        CMP EDX, 0x00FF0032;		// Options -> Controls
-        JE label_add;
-        CMP EDX, 0x001F0032;		// Options -> Audio & Video
+        CMP ECX, 0x82;              // Menu
         JE label_add;
         RETN;
-    label_add:
+        label_test:
+        CMP EDX, 0x00FF00B2;        // Options
+        JE label_add;
+        CMP EDX, 0x00FF0032;        // Options -> Controls
+        JE label_add;
+        CMP EDX, 0x001F0032;        // Options -> Audio & Video
+        JE label_add;
+        RETN;
+        label_add:
         FADD DWORD PTR[menu_menu_x];
         RETN;
     }
 }
 
-void __declspec(naked)v10_Eng_Menu_Hook_02() {
+void __declspec(naked)v10_Eng_Menu_Hook_02()
+{
     static int sub_0057D850 = 0x0057D850;
 
-    _asm {
+    _asm
+    {
         MOV EAX, DWORD PTR[ESP + 0x8];
         SUB ESP, 0x8;
         PUSH ESI;
@@ -1333,11 +1421,11 @@ void __declspec(naked)v10_Eng_Menu_Hook_02() {
         MOV EDX, DWORD PTR[EAX + 0x14];
         MOV DWORD PTR[ESI + 0x1C], EDX;
         JMP SHORT label_0057052B;
-    label_005704FB:
+        label_005704FB:
         FLD_DWORD_PTR DW(00, 67, A4, C0);
         FMUL DWORD PTR[EAX + 0x8];
         //-------------------------------------------------------------------------
-        CALL label_filter;						// Correct value
+        CALL label_filter;                      // Correct value
         //-------------------------------------------------------------------------
         FSTP DWORD PTR[ESI + 0x10];
         FLD_DWORD_PTR DW(00, 67, A4, C4);
@@ -1349,7 +1437,7 @@ void __declspec(naked)v10_Eng_Menu_Hook_02() {
         FLD_DWORD_PTR DW(00, 67, A4, C4);
         FMUL DWORD PTR[EAX + 0x14];
         FSTP DWORD PTR[ESI + 0x1C];
-    label_0057052B:
+        label_0057052B:
         MOV EDX, DWORD PTR[EAX + 0x1C];
         MOV DWORD PTR[ESP + 0x8], ECX;
         MOV DWORD PTR[ESI + 0x20], EDX;
@@ -1366,37 +1454,39 @@ void __declspec(naked)v10_Eng_Menu_Hook_02() {
         PUSH EAX;
         MOV ECX, 0x0067A57C;
         //-------------------------------------------------------------------------
-        CALL DWORD PTR[sub_0057D850];				// CALL 0057D850
+        CALL DWORD PTR[sub_0057D850];               // CALL 0057D850
         //-------------------------------------------------------------------------
         MOV DWORD PTR[ESI + 0x30], EAX;
         MOV EAX, ESI;
         POP ESI;
         ADD ESP, 0x8;
         RETN 0x8;
-    label_0057056A:
+        label_0057056A:
         MOV DWORD PTR[ESI + 0x30], ECX;
         MOV EAX, ESI;
         POP ESI;
         ADD ESP, 0x8;
         RETN 0x8;
 
-    label_filter:
-        CMP EAX, 0x00678DB0;		// Load Screens
+        label_filter:
+        CMP EAX, 0x00678DB0;        // Load Screens
         JE label_add;
-        CMP EAX, 0x00674C94;		// Carcyclopedia
+        CMP EAX, 0x00674C94;        // Carcyclopedia
         JE label_add;
         RETN;
-    label_add:
+        label_add:
         FADD DWORD PTR[menu_menu_x];
         RETN;
     }
 }
 
-void __declspec(naked)v11_Eng_Menu_Hook_02() {
+void __declspec(naked)v11_Eng_Menu_Hook_02()
+{
     static int sub_0060F370 = 0x0060F370;
     static int sub_005E9650 = 0x005E9650;
 
-    _asm {
+    _asm
+    {
         PUSH - 0x1;
         PUSH 0x0062172B;
         MOV EAX, DWORD PTR FS : [0x0];
@@ -1423,7 +1513,7 @@ void __declspec(naked)v11_Eng_Menu_Hook_02() {
         FLD_DWORD_PTR DW(00, 6B, C7, B8);
         FMUL DWORD PTR[EAX + 0x8];
         //-------------------------------------------------------------------------
-        CALL label_filter;						// Correct value
+        CALL label_filter;                      // Correct value
         //-------------------------------------------------------------------------
         FST DWORD PTR[ESI + 0x24];
         FSTP DWORD PTR[ESI + 0x14];
@@ -1444,22 +1534,22 @@ void __declspec(naked)v11_Eng_Menu_Hook_02() {
         PUSH EAX;
         MOV ECX, 0x006D7644;
         //-------------------------------------------------------------------------
-        CALL DWORD PTR[sub_0060F370];				// CALL 0060F370
+        CALL DWORD PTR[sub_0060F370];               // CALL 0060F370
         //-------------------------------------------------------------------------
         MOV DWORD PTR[ESI + 0x10], EAX;
         JMP SHORT label_005E947C;
-    label_005E9479:
+        label_005E9479:
         MOV DWORD PTR[ESI + 0x10], EDI;
-    label_005E947C:
+        label_005E947C:
         MOV ECX, DWORD PTR[ESP + 0x20];
         CMP ECX, EDI;
         MOV DWORD PTR[ESI + 0x2C], ECX;
         JE SHORT label_005E948D;
         PUSH ESI;
         //-------------------------------------------------------------------------
-        CALL DWORD PTR[sub_005E9650];				// CALL 005E9650
+        CALL DWORD PTR[sub_005E9650];               // CALL 005E9650
         //-------------------------------------------------------------------------
-    label_005E948D:
+        label_005E948D:
         MOV ECX, DWORD PTR[ESP + 0x0C];
         MOV EAX, ESI;
         POP EDI;
@@ -1468,25 +1558,27 @@ void __declspec(naked)v11_Eng_Menu_Hook_02() {
         ADD ESP, 0x10;
         RETN 0x8;
 
-    label_filter:
-        CMP ECX, 0x1;				// Load Screens, Carcyclopedia
+        label_filter:
+        CMP ECX, 0x1;               // Load Screens, Carcyclopedia
         JE label_add;
-        CMP ECX, 0x2;				// Carcyclopedia - Show Mode
+        CMP ECX, 0x2;               // Carcyclopedia - Show Mode
         JE label_add;
-        CMP ECX, 0x3;				// Load Game
+        CMP ECX, 0x3;               // Load Game
         JE label_add;
         RETN;
-    label_add:
+        label_add:
         FADD DWORD PTR[menu_menu_x];
         RETN;
     }
 }
 
-void __declspec(naked)v12_Eng_Menu_Hook_02() {
+void __declspec(naked)v12_Eng_Menu_Hook_02()
+{
     static int sub_0060FB40 = 0x0060FB40;
     static int sub_005E9E50 = 0x005E9E50;
 
-    _asm {
+    _asm
+    {
         PUSH - 0x1;
         PUSH 0x00621EFB;
         MOV EAX, DWORD PTR FS : [0x0];
@@ -1513,7 +1605,7 @@ void __declspec(naked)v12_Eng_Menu_Hook_02() {
         FLD_DWORD_PTR DW(00, 6B, D8, 88);
         FMUL DWORD PTR[EAX + 0x8];
         //-------------------------------------------------------------------------
-        CALL label_filter;						// Correct value
+        CALL label_filter;                      // Correct value
         //-------------------------------------------------------------------------
         FST DWORD PTR[ESI + 0x24];
         FSTP DWORD PTR[ESI + 0x14];
@@ -1534,22 +1626,22 @@ void __declspec(naked)v12_Eng_Menu_Hook_02() {
         PUSH EAX;
         MOV ECX, 0x006D8714;
         //-------------------------------------------------------------------------
-        CALL DWORD PTR[sub_0060FB40];				// CALL 0060FB40
+        CALL DWORD PTR[sub_0060FB40];               // CALL 0060FB40
         //-------------------------------------------------------------------------
         MOV DWORD PTR[ESI + 0x10], EAX;
         JMP SHORT label_005E9C7C;
-    label_005E9C79:
+        label_005E9C79:
         MOV DWORD PTR[ESI + 0x10], EDI;
-    label_005E9C7C:
+        label_005E9C7C:
         MOV ECX, DWORD PTR[ESP + 0x20];
         CMP ECX, EDI;
         MOV DWORD PTR[ESI + 0x2C], ECX;
         JE SHORT label_005E9C8D;
         PUSH ESI;
         //-------------------------------------------------------------------------
-        CALL DWORD PTR[sub_005E9E50];				// CALL 005E9E50
+        CALL DWORD PTR[sub_005E9E50];               // CALL 005E9E50
         //-------------------------------------------------------------------------
-    label_005E9C8D:
+        label_005E9C8D:
         MOV ECX, DWORD PTR[ESP + 0x0C];
         MOV EAX, ESI;
         POP EDI;
@@ -1558,24 +1650,26 @@ void __declspec(naked)v12_Eng_Menu_Hook_02() {
         ADD ESP, 0x10;
         RETN 0x8;
 
-    label_filter:
-        CMP ECX, 0x1;				// Load Screens, Carcyclopedia
+        label_filter:
+        CMP ECX, 0x1;               // Load Screens, Carcyclopedia
         JE label_add;
-        CMP ECX, 0x2;				// Carcyclopedia - Show Mode
+        CMP ECX, 0x2;               // Carcyclopedia - Show Mode
         JE label_add;
-        CMP ECX, 0x3;				// Load Game
+        CMP ECX, 0x3;               // Load Game
         JE label_add;
         RETN;
-    label_add:
+        label_add:
         FADD DWORD PTR[menu_menu_x];
         RETN;
     }
 }
 
-void __declspec(naked)v10_Eng_Menu_Hook_03() {
+void __declspec(naked)v10_Eng_Menu_Hook_03()
+{
     static int sub_0057D850 = 0x0057D850;
 
-    _asm {
+    _asm
+    {
         MOV EAX, DWORD PTR[ESP + 0x8];
         SUB ESP, 0x8;
         PUSH ESI;
@@ -1601,11 +1695,11 @@ void __declspec(naked)v10_Eng_Menu_Hook_03() {
         MOV EDX, DWORD PTR[EAX + 0x14];
         MOV DWORD PTR[ESI + 0x1C], EDX;
         JMP SHORT label_0057052B;
-    label_005704FB:
+        label_005704FB:
         FLD_DWORD_PTR DW(00, 67, A4, C0);
         FMUL DWORD PTR[EAX + 0x8];
         //-------------------------------------------------------------------------
-        CALL label_filter;						// Correct value
+        CALL label_filter;                      // Correct value
         //-------------------------------------------------------------------------
         FSTP DWORD PTR[ESI + 0x10];
         FLD_DWORD_PTR DW(00, 67, A4, C4);
@@ -1617,7 +1711,7 @@ void __declspec(naked)v10_Eng_Menu_Hook_03() {
         FLD_DWORD_PTR DW(00, 67, A4, C4);
         FMUL DWORD PTR[EAX + 0x14];
         FSTP DWORD PTR[ESI + 0x1C];
-    label_0057052B:
+        label_0057052B:
         MOV EDX, DWORD PTR[EAX + 0x1C];
         MOV DWORD PTR[ESP + 0x8], ECX;
         MOV DWORD PTR[ESI + 0x20], EDX;
@@ -1634,35 +1728,36 @@ void __declspec(naked)v10_Eng_Menu_Hook_03() {
         PUSH EAX;
         MOV ECX, 0x0067A57C;
         //-------------------------------------------------------------------------
-        CALL DWORD PTR[sub_0057D850];				// CALL 0057D850
+        CALL DWORD PTR[sub_0057D850];               // CALL 0057D850
         //-------------------------------------------------------------------------
         MOV DWORD PTR[ESI + 0x30], EAX;
         MOV EAX, ESI;
         POP ESI;
         ADD ESP, 0x8;
         RETN 0x8;
-    label_0057056A:
+        label_0057056A:
         MOV DWORD PTR[ESI + 0x30], ECX;
         MOV EAX, ESI;
         POP ESI;
         ADD ESP, 0x8;
         RETN 0x8;
 
-    label_filter:
-        CMP EAX, 0x00677658;		// "New cars have been added to the garage"
+        label_filter:
+        CMP EAX, 0x00677658;        // "New cars have been added to the garage"
         JE label_add;
-        CMP EAX, 0x00676F98;		// Racing (in Race Mission)
+        CMP EAX, 0x00676F98;        // Racing (in Race Mission)
         JE label_add;
-        CMP EAX, 0x00674DB4;		// Carcyclopedia (Cars List)
+        CMP EAX, 0x00674DB4;        // Carcyclopedia (Cars List)
         JE label_add;
         RETN;
-    label_add:
+        label_add:
         FADD DWORD PTR[menu_menu_x];
         RETN;
     }
 }
 
-void __declspec(naked)v10_Eng_Movie_Hook() {
+void __declspec(naked)v10_Eng_Movie_Hook()
+{
     static int init = 0x1;
 
     static int sub_10070240 = 0x00070240;
@@ -1670,30 +1765,31 @@ void __declspec(naked)v10_Eng_Movie_Hook() {
     static int sub_101C13A8 = 0x001C13A8;
     static int sub_101C13F4 = 0x001C13F4;
     static int sub_101C1588 = 0x001C1588;
-    _asm {
-        //					_emit 0xCC;
+    _asm
+    {
+        //                  _emit 0xCC;
         CMP init, 0;
         JZ label_begin;
         MOV init, 0;
         CALL label_init;
 
-    label_begin:
+        label_begin:
         //-------------------------------------------------------------------------
-        MOV EAX, DWORD PTR[sub_101C1588];			//
-        MOV AL, BYTE PTR[EAX];						// MOV AL, BYTE PTR[101C1588]
+        MOV EAX, DWORD PTR[sub_101C1588];           //
+        MOV AL, BYTE PTR[EAX];                      // MOV AL, BYTE PTR[101C1588]
         //-------------------------------------------------------------------------
-        MOV ECX, DWORD PTR[sub_101C13A8];			//
-        MOV ECX, DWORD PTR[ECX];					// MOV ECX, DWORD PTR[101C13A8]
+        MOV ECX, DWORD PTR[sub_101C13A8];           //
+        MOV ECX, DWORD PTR[ECX];                    // MOV ECX, DWORD PTR[101C13A8]
         //-------------------------------------------------------------------------
         SUB ESP, 0x10;
         TEST AL, AL;
         JS label_10070448;
         //-------------------------------------------------------------------------
-        MOV ECX, DWORD PTR[sub_101C13F4];			//
-        MOV ECX, DWORD PTR[ECX];					// MOV ECX, DWORD PTR[101C13F4]
+        MOV ECX, DWORD PTR[sub_101C13F4];           //
+        MOV ECX, DWORD PTR[ECX];                    // MOV ECX, DWORD PTR[101C13F4]
         //-------------------------------------------------------------------------
 
-    label_10070448:
+        label_10070448:
         MOV EAX, DWORD PTR[ESP + 0x18];
         TEST EAX, EAX;
         JNZ label_1007045E;
@@ -1701,15 +1797,15 @@ void __declspec(naked)v10_Eng_Movie_Hook() {
         PUSH EAX;
         PUSH ECX;
         //-------------------------------------------------------------------------
-        PUSH EAX;									//
-        MOV EAX, DWORD PTR[sub_10097198];			//
-        MOV EAX, DWORD PTR[EAX];					// CALL DWORD PTR[10097198]
-        MOV DWORD PTR[temp], EAX;					//
-        POP EAX;									//
-        CALL DWORD PTR[temp];						//
+        PUSH EAX;                                   //
+        MOV EAX, DWORD PTR[sub_10097198];           //
+        MOV EAX, DWORD PTR[EAX];                    // CALL DWORD PTR[10097198]
+        MOV DWORD PTR[temp], EAX;                   //
+        POP EAX;                                    //
+        CALL DWORD PTR[temp];                       //
         //-------------------------------------------------------------------------
         JMP label_10070479;
-    label_1007045E:
+        label_1007045E:
         MOV ECX, DWORD PTR[EAX];
         MOV EDX, DWORD PTR[EAX + 0x4];
         MOV DWORD PTR[ESP], ECX;
@@ -1718,75 +1814,75 @@ void __declspec(naked)v10_Eng_Movie_Hook() {
         MOV EDX, DWORD PTR[EAX + 0x0C];
         MOV DWORD PTR[ESP + 0x8], ECX;
         MOV DWORD PTR[ESP + 0x0C], EDX;
-    label_10070479:
+        label_10070479:
         MOV ECX, DWORD PTR[ESP + 0x14];
-        //					MOV EDX,DWORD PTR [ESP];
+        //                  MOV EDX,DWORD PTR [ESP];
         LEA EAX, [ECX + 0x28];
-        //					MOV DWORD PTR [EAX],EDX;
-        //					MOV EDX,DWORD PTR [ESP+0x4];
-        //					MOV DWORD PTR [EAX+0x4],EDX;
-        //					MOV EDX,DWORD PTR [ESP+0x8];
-        //					MOV DWORD PTR [EAX+0x8],EDX;
-        //					MOV EDX,DWORD PTR [ESP+0x0C];
-        //					MOV DWORD PTR [EAX+0x0C],EDX;
-                            //-------------------------------------------------------------------------
+        //                  MOV DWORD PTR [EAX],EDX;
+        //                  MOV EDX,DWORD PTR [ESP+0x4];
+        //                  MOV DWORD PTR [EAX+0x4],EDX;
+        //                  MOV EDX,DWORD PTR [ESP+0x8];
+        //                  MOV DWORD PTR [EAX+0x8],EDX;
+        //                  MOV EDX,DWORD PTR [ESP+0x0C];
+        //                  MOV DWORD PTR [EAX+0x0C],EDX;
+        //-------------------------------------------------------------------------
         CMP movie_patch, 1;
         JA label_fix2;
         CALL label_movie_fix1;
         JMP label_end_fix;
-    label_fix2:
+        label_fix2:
         CALL label_movie_fix2;
-    label_end_fix:
+        label_end_fix:
         //-------------------------------------------------------------------------
-        CALL DWORD PTR[sub_10070240];				// CALL 10070240
+        CALL DWORD PTR[sub_10070240];               // CALL 10070240
         //-------------------------------------------------------------------------
         XOR EAX, EAX;
         ADD ESP, 0x10;
         RETN 0x8;
 
-    label_movie_fix1:
+        label_movie_fix1:
         //-------------------------------------------------------------------------
-        FLD DWORD PTR[cur_game_width];				// Левая сторона видео
+        FLD DWORD PTR[cur_game_width];              // Левая сторона видео
         FILD DWORD PTR[ESP + 0xC];
         FDIV DWORD PTR[movie_aspect];
         FSUBP ST(1), ST;
         FMUL DWORD PTR[half];
         FISTP DWORD PTR[EAX];
         //-------------------------------------------------------------------------
-        MOV EDX, DWORD PTR[ESP + 0x8];				// Верхняя сторона видео
+        MOV EDX, DWORD PTR[ESP + 0x8];              // Верхняя сторона видео
         MOV DWORD PTR[EAX + 0x4], EDX;
         //-------------------------------------------------------------------------
-        FILD DWORD PTR[ESP + 0xC];					// Ширина видео
+        FILD DWORD PTR[ESP + 0xC];                  // Ширина видео
         FDIV DWORD PTR[movie_aspect];
         FISTP DWORD PTR[EAX + 0x8];
         //-------------------------------------------------------------------------
-        MOV EDX, DWORD PTR[ESP + 0x10];				// Высота видео
+        MOV EDX, DWORD PTR[ESP + 0x10];             // Высота видео
         MOV DWORD PTR[EAX + 0x0C], EDX;
         //-------------------------------------------------------------------------
         RETN;
 
-    label_movie_fix2:
+        label_movie_fix2:
         //-------------------------------------------------------------------------
-        MOV EDX, DWORD PTR[ESP + 0x4];				// Левая сторона видео
+        MOV EDX, DWORD PTR[ESP + 0x4];              // Левая сторона видео
         MOV DWORD PTR[EAX], EDX;
         //-------------------------------------------------------------------------
-        FLD DWORD PTR[cur_game_height];				// Верхняя сторона видео
+        FLD DWORD PTR[cur_game_height];             // Верхняя сторона видео
         FILD DWORD PTR[ESP + 0x10];
         FMUL DWORD PTR[movie_aspect];
         FSUBP ST(1), ST;
         FMUL DWORD PTR[half];
         FISTP DWORD PTR[EAX + 0x4];
         //-------------------------------------------------------------------------
-        MOV EDX, DWORD PTR[ESP + 0xC];				// Ширина видео
+        MOV EDX, DWORD PTR[ESP + 0xC];              // Ширина видео
         MOV DWORD PTR[EAX + 0xC], EDX;
         //-------------------------------------------------------------------------
-        FILD DWORD PTR[ESP + 0x10];					// Высота видео
+        FILD DWORD PTR[ESP + 0x10];                 // Высота видео
         FMUL DWORD PTR[movie_aspect];
         FISTP DWORD PTR[EAX + 0x0C];
         //-------------------------------------------------------------------------
         RETN;
 
-    label_init:
+        label_init:
         PUSH EAX;
 
         MOV EAX, DWORD PTR[sub_10070240];
@@ -1810,7 +1906,8 @@ void __declspec(naked)v10_Eng_Movie_Hook() {
     }
 }
 
-void __declspec(naked)v11_Eng_Movie_Hook() {
+void __declspec(naked)v11_Eng_Movie_Hook()
+{
     static int init = 0x1;
 
     static int sub_10071270 = 0x00071270;
@@ -1818,29 +1915,30 @@ void __declspec(naked)v11_Eng_Movie_Hook() {
     static int sub_101C2508 = 0x001C2508;
     static int sub_101C2558 = 0x001C2558;
     static int sub_101C26E8 = 0x001C26E8;
-    _asm {
-        //					_emit 0xCC;
+    _asm
+    {
+        //                  _emit 0xCC;
         CMP init, 0;
         JZ label_begin;
         MOV init, 0;
         CALL label_init;
 
-    label_begin:
+        label_begin:
         //-------------------------------------------------------------------------
-        MOV EAX, DWORD PTR[sub_101C26E8];			//
-        MOV AL, BYTE PTR[EAX];						// MOV AL,BYTE PTR [101C26E8]
+        MOV EAX, DWORD PTR[sub_101C26E8];           //
+        MOV AL, BYTE PTR[EAX];                      // MOV AL,BYTE PTR [101C26E8]
         //-------------------------------------------------------------------------
-        MOV ECX, DWORD PTR[sub_101C2508];			//
-        MOV ECX, DWORD PTR[ECX];					// MOV ECX, DWORD PTR[101C2508]
+        MOV ECX, DWORD PTR[sub_101C2508];           //
+        MOV ECX, DWORD PTR[ECX];                    // MOV ECX, DWORD PTR[101C2508]
         //-------------------------------------------------------------------------
         SUB ESP, 0x10;
         TEST AL, AL;
         JS label_100714A8;
         //-------------------------------------------------------------------------
-        MOV ECX, DWORD PTR[sub_101C2558];			//
-        MOV ECX, DWORD PTR[ECX];					// MOV ECX, DWORD PTR[101C2558]
+        MOV ECX, DWORD PTR[sub_101C2558];           //
+        MOV ECX, DWORD PTR[ECX];                    // MOV ECX, DWORD PTR[101C2558]
         //-------------------------------------------------------------------------
-    label_100714A8:
+        label_100714A8:
         MOV EAX, DWORD PTR[ESP + 0x18];
         XOR EDX, EDX;
         CMP EAX, EDX;
@@ -1853,15 +1951,15 @@ void __declspec(naked)v11_Eng_Movie_Hook() {
         PUSH EAX;
         PUSH ECX;
         //-------------------------------------------------------------------------
-        PUSH EAX;									//
-        MOV EAX, DWORD PTR[sub_100981B0];			//
-        MOV EAX, DWORD PTR[EAX];					// CALL DWORD PTR[100981B0]
-        MOV DWORD PTR[temp], EAX;					//
-        POP EAX;									//
-        CALL DWORD PTR[temp];						//
+        PUSH EAX;                                   //
+        MOV EAX, DWORD PTR[sub_100981B0];           //
+        MOV EAX, DWORD PTR[EAX];                    // CALL DWORD PTR[100981B0]
+        MOV DWORD PTR[temp], EAX;                   //
+        POP EAX;                                    //
+        CALL DWORD PTR[temp];                       //
         //-------------------------------------------------------------------------
         JMP label_100714F3;
-    label_100714D8:
+        label_100714D8:
         MOV ECX, DWORD PTR[EAX];
         MOV EDX, DWORD PTR[EAX + 0x4];
         MOV DWORD PTR[ESP], ECX;
@@ -1870,75 +1968,75 @@ void __declspec(naked)v11_Eng_Movie_Hook() {
         MOV EDX, DWORD PTR[EAX + 0x0C];
         MOV DWORD PTR[ESP + 0x8], ECX;
         MOV DWORD PTR[ESP + 0x0C], EDX;
-    label_100714F3:
+        label_100714F3:
         MOV ECX, DWORD PTR[ESP + 0x14];
-        //					MOV EDX, DWORD PTR[ESP];
+        //                  MOV EDX, DWORD PTR[ESP];
         LEA EAX, [ECX + 0x28];
-        //					MOV DWORD PTR[EAX], EDX;
-        //					MOV EDX, DWORD PTR[ESP + 0x4];
-        //					MOV DWORD PTR[EAX + 0x4], EDX;
-        //					MOV EDX, DWORD PTR[ESP + 0x8];
-        //					MOV DWORD PTR[EAX + 0x8], EDX;
-        //					MOV EDX, DWORD PTR[ESP + 0x0C];
-        //					MOV DWORD PTR[EAX + 0x0C], EDX;
-                            //-------------------------------------------------------------------------
+        //                  MOV DWORD PTR[EAX], EDX;
+        //                  MOV EDX, DWORD PTR[ESP + 0x4];
+        //                  MOV DWORD PTR[EAX + 0x4], EDX;
+        //                  MOV EDX, DWORD PTR[ESP + 0x8];
+        //                  MOV DWORD PTR[EAX + 0x8], EDX;
+        //                  MOV EDX, DWORD PTR[ESP + 0x0C];
+        //                  MOV DWORD PTR[EAX + 0x0C], EDX;
+        //-------------------------------------------------------------------------
         CMP movie_patch, 1;
         JA label_fix2;
         CALL label_movie_fix1;
         JMP label_end_fix;
-    label_fix2:
+        label_fix2:
         CALL label_movie_fix2;
-    label_end_fix:
+        label_end_fix:
         //-------------------------------------------------------------------------
-        CALL DWORD PTR[sub_10071270];				// CALL 10071270
+        CALL DWORD PTR[sub_10071270];               // CALL 10071270
         //-------------------------------------------------------------------------
         XOR EAX, EAX;
         ADD ESP, 0x10;
         RETN 0x8;
 
-    label_movie_fix1:
+        label_movie_fix1:
         //-------------------------------------------------------------------------
-        FLD DWORD PTR[cur_game_width];				// Левая сторона видео
+        FLD DWORD PTR[cur_game_width];              // Левая сторона видео
         FILD DWORD PTR[ESP + 0xC];
         FDIV DWORD PTR[movie_aspect];
         FSUBP ST(1), ST;
         FMUL DWORD PTR[half];
         FISTP DWORD PTR[EAX];
         //-------------------------------------------------------------------------
-        MOV EDX, DWORD PTR[ESP + 0x8];				// Верхняя сторона видео
+        MOV EDX, DWORD PTR[ESP + 0x8];              // Верхняя сторона видео
         MOV DWORD PTR[EAX + 0x4], EDX;
         //-------------------------------------------------------------------------
-        FILD DWORD PTR[ESP + 0xC];					// Ширина видео
+        FILD DWORD PTR[ESP + 0xC];                  // Ширина видео
         FDIV DWORD PTR[movie_aspect];
         FISTP DWORD PTR[EAX + 0x8];
         //-------------------------------------------------------------------------
-        MOV EDX, DWORD PTR[ESP + 0x10];				// Высота видео
+        MOV EDX, DWORD PTR[ESP + 0x10];             // Высота видео
         MOV DWORD PTR[EAX + 0x0C], EDX;
         //-------------------------------------------------------------------------
         RETN;
 
-    label_movie_fix2:
+        label_movie_fix2:
         //-------------------------------------------------------------------------
-        MOV EDX, DWORD PTR[ESP + 0x4];				// Левая сторона видео
+        MOV EDX, DWORD PTR[ESP + 0x4];              // Левая сторона видео
         MOV DWORD PTR[EAX], EDX;
         //-------------------------------------------------------------------------
-        FLD DWORD PTR[cur_game_height];				// Верхняя сторона видео
+        FLD DWORD PTR[cur_game_height];             // Верхняя сторона видео
         FILD DWORD PTR[ESP + 0x10];
         FMUL DWORD PTR[movie_aspect];
         FSUBP ST(1), ST;
         FMUL DWORD PTR[half];
         FISTP DWORD PTR[EAX + 0x4];
         //-------------------------------------------------------------------------
-        MOV EDX, DWORD PTR[ESP + 0xC];				// Ширина видео
+        MOV EDX, DWORD PTR[ESP + 0xC];              // Ширина видео
         MOV DWORD PTR[EAX + 0xC], EDX;
         //-------------------------------------------------------------------------
-        FILD DWORD PTR[ESP + 0x10];					// Высота видео
+        FILD DWORD PTR[ESP + 0x10];                 // Высота видео
         FMUL DWORD PTR[movie_aspect];
         FISTP DWORD PTR[EAX + 0x0C];
         //-------------------------------------------------------------------------
         RETN;
 
-    label_init:
+        label_init:
         PUSH EAX;
 
         MOV EAX, DWORD PTR[sub_10071270];
@@ -1962,7 +2060,8 @@ void __declspec(naked)v11_Eng_Movie_Hook() {
     }
 }
 
-void __declspec(naked)v12_Eng_Movie_Hook() {
+void __declspec(naked)v12_Eng_Movie_Hook()
+{
     static int init = 0x1;
 
     static int sub_10074380 = 0x00074380;
@@ -1970,29 +2069,30 @@ void __declspec(naked)v12_Eng_Movie_Hook() {
     static int sub_101C5408 = 0x001C5408;
     static int sub_101C5458 = 0x001C5458;
     static int sub_101C55E8 = 0x001C55E8;
-    _asm {
-        //					_emit 0xCC;
+    _asm
+    {
+        //                  _emit 0xCC;
         CMP init, 0;
         JZ label_begin;
         MOV init, 0;
         CALL label_init;
 
-    label_begin:
+        label_begin:
         //-------------------------------------------------------------------------
-        MOV EAX, DWORD PTR[sub_101C55E8];			//
-        MOV AL, BYTE PTR[EAX];						// MOV AL, BYTE PTR[101C55E8]
+        MOV EAX, DWORD PTR[sub_101C55E8];           //
+        MOV AL, BYTE PTR[EAX];                      // MOV AL, BYTE PTR[101C55E8]
         //-------------------------------------------------------------------------
-        MOV ECX, DWORD PTR[sub_101C5408];			//
-        MOV ECX, DWORD PTR[ECX];					// MOV ECX, DWORD PTR[101C5408]
+        MOV ECX, DWORD PTR[sub_101C5408];           //
+        MOV ECX, DWORD PTR[ECX];                    // MOV ECX, DWORD PTR[101C5408]
         //-------------------------------------------------------------------------
         SUB ESP, 0x10;
         TEST AL, AL;
         JS label_100745B8;
         //-------------------------------------------------------------------------
-        MOV ECX, DWORD PTR[sub_101C5458];			//
-        MOV ECX, DWORD PTR[ECX];					// MOV ECX, DWORD PTR[101C5458]
+        MOV ECX, DWORD PTR[sub_101C5458];           //
+        MOV ECX, DWORD PTR[ECX];                    // MOV ECX, DWORD PTR[101C5458]
         //-------------------------------------------------------------------------
-    label_100745B8:
+        label_100745B8:
         MOV EAX, DWORD PTR[ESP + 0x18];
         XOR EDX, EDX;
         CMP EAX, EDX;
@@ -2005,15 +2105,15 @@ void __declspec(naked)v12_Eng_Movie_Hook() {
         PUSH EAX;
         PUSH ECX;
         //-------------------------------------------------------------------------
-        PUSH EAX;									//
-        MOV EAX, DWORD PTR[sub_1009B1B0];			//
-        MOV EAX, DWORD PTR[EAX];					// CALL DWORD PTR[1009B1B0]
-        MOV DWORD PTR[temp], EAX;					//
-        POP EAX;									//
-        CALL DWORD PTR[temp];						//
+        PUSH EAX;                                   //
+        MOV EAX, DWORD PTR[sub_1009B1B0];           //
+        MOV EAX, DWORD PTR[EAX];                    // CALL DWORD PTR[1009B1B0]
+        MOV DWORD PTR[temp], EAX;                   //
+        POP EAX;                                    //
+        CALL DWORD PTR[temp];                       //
         //-------------------------------------------------------------------------
         JMP label_10074603;
-    label_100745E8:
+        label_100745E8:
         MOV ECX, DWORD PTR[EAX];
         MOV EDX, DWORD PTR[EAX + 0x4];
         MOV DWORD PTR[ESP], ECX;
@@ -2022,75 +2122,75 @@ void __declspec(naked)v12_Eng_Movie_Hook() {
         MOV EDX, DWORD PTR[EAX + 0x0C];
         MOV DWORD PTR[ESP + 0x8], ECX;
         MOV DWORD PTR[ESP + 0x0C], EDX;
-    label_10074603:
+        label_10074603:
         MOV ECX, DWORD PTR[ESP + 0x14];
-        //					MOV EDX, DWORD PTR[ESP];
+        //                  MOV EDX, DWORD PTR[ESP];
         LEA EAX, [ECX + 0x2C];
-        //					MOV DWORD PTR[EAX], EDX;
-        //					MOV EDX, DWORD PTR[ESP + 0x4];
-        //					MOV DWORD PTR[EAX + 0x4], EDX;
-        //					MOV EDX, DWORD PTR[ESP + 0x8];
-        //					MOV DWORD PTR[EAX + 0x8], EDX;
-        //					MOV EDX, DWORD PTR[ESP + 0x0C];
-        //					MOV DWORD PTR[EAX + 0x0C], EDX;
-                            //-------------------------------------------------------------------------
+        //                  MOV DWORD PTR[EAX], EDX;
+        //                  MOV EDX, DWORD PTR[ESP + 0x4];
+        //                  MOV DWORD PTR[EAX + 0x4], EDX;
+        //                  MOV EDX, DWORD PTR[ESP + 0x8];
+        //                  MOV DWORD PTR[EAX + 0x8], EDX;
+        //                  MOV EDX, DWORD PTR[ESP + 0x0C];
+        //                  MOV DWORD PTR[EAX + 0x0C], EDX;
+        //-------------------------------------------------------------------------
         CMP movie_patch, 1;
         JA label_fix2;
         CALL label_movie_fix1;
         JMP label_end_fix;
-    label_fix2:
+        label_fix2:
         CALL label_movie_fix2;
-    label_end_fix:
+        label_end_fix:
         //-------------------------------------------------------------------------
-        CALL DWORD PTR[sub_10074380];				// CALL 10074380
+        CALL DWORD PTR[sub_10074380];               // CALL 10074380
         //-------------------------------------------------------------------------
         XOR EAX, EAX;
         ADD ESP, 0x10;
         RETN 0x8;
 
-    label_movie_fix1:
+        label_movie_fix1:
         //-------------------------------------------------------------------------
-        FLD DWORD PTR[cur_game_width];				// Левая сторона видео
+        FLD DWORD PTR[cur_game_width];              // Левая сторона видео
         FILD DWORD PTR[ESP + 0xC];
         FDIV DWORD PTR[movie_aspect];
         FSUBP ST(1), ST;
         FMUL DWORD PTR[half];
         FISTP DWORD PTR[EAX];
         //-------------------------------------------------------------------------
-        MOV EDX, DWORD PTR[ESP + 0x8];				// Верхняя сторона видео
+        MOV EDX, DWORD PTR[ESP + 0x8];              // Верхняя сторона видео
         MOV DWORD PTR[EAX + 0x4], EDX;
         //-------------------------------------------------------------------------
-        FILD DWORD PTR[ESP + 0xC];					// Ширина видео
+        FILD DWORD PTR[ESP + 0xC];                  // Ширина видео
         FDIV DWORD PTR[movie_aspect];
         FISTP DWORD PTR[EAX + 0x8];
         //-------------------------------------------------------------------------
-        MOV EDX, DWORD PTR[ESP + 0x10];				// Высота видео
+        MOV EDX, DWORD PTR[ESP + 0x10];             // Высота видео
         MOV DWORD PTR[EAX + 0x0C], EDX;
         //-------------------------------------------------------------------------
         RETN;
 
-    label_movie_fix2:
+        label_movie_fix2:
         //-------------------------------------------------------------------------
-        MOV EDX, DWORD PTR[ESP + 0x4];				// Левая сторона видео
+        MOV EDX, DWORD PTR[ESP + 0x4];              // Левая сторона видео
         MOV DWORD PTR[EAX], EDX;
         //-------------------------------------------------------------------------
-        FLD DWORD PTR[cur_game_height];				// Верхняя сторона видео
+        FLD DWORD PTR[cur_game_height];             // Верхняя сторона видео
         FILD DWORD PTR[ESP + 0x10];
         FMUL DWORD PTR[movie_aspect];
         FSUBP ST(1), ST;
         FMUL DWORD PTR[half];
         FISTP DWORD PTR[EAX + 0x4];
         //-------------------------------------------------------------------------
-        MOV EDX, DWORD PTR[ESP + 0xC];				// Ширина видео
+        MOV EDX, DWORD PTR[ESP + 0xC];              // Ширина видео
         MOV DWORD PTR[EAX + 0xC], EDX;
         //-------------------------------------------------------------------------
-        FILD DWORD PTR[ESP + 0x10];					// Высота видео
+        FILD DWORD PTR[ESP + 0x10];                 // Высота видео
         FMUL DWORD PTR[movie_aspect];
         FISTP DWORD PTR[EAX + 0x0C];
         //-------------------------------------------------------------------------
         RETN;
 
-    label_init:
+        label_init:
         PUSH EAX;
 
         MOV EAX, DWORD PTR[sub_10074380];
@@ -2115,16 +2215,20 @@ void __declspec(naked)v12_Eng_Movie_Hook() {
 }
 
 
-float __cdecl Draw_Distance_Hook_01(float dist) {
-    if ((dist > draw_dist_min) && (dist < draw_dist_max)) {
+float __cdecl Draw_Distance_Hook_01(float dist)
+{
+    if ((dist > draw_dist_min) && (dist < draw_dist_max))
+    {
         dist = draw_dist_value;
     }
     return dist;
 }
 
-void __declspec(naked)v10_Eng_Draw_Distance_Hook() {
+void __declspec(naked)v10_Eng_Draw_Distance_Hook()
+{
 
-    _asm {
+    _asm
+    {
         ADD BYTE PTR[ESP], 0x2;
         PUSHAD;
         PUSHFD;
@@ -2142,10 +2246,12 @@ void __declspec(naked)v10_Eng_Draw_Distance_Hook() {
 }
 
 
-void __declspec(naked)v10_Eng_Ru_Credits_Hook() {
+void __declspec(naked)v10_Eng_Ru_Credits_Hook()
+{
     static int sub_00560550 = 0x00560550;
 
-    _asm {
+    _asm
+    {
         MOV ECX, DWORD PTR[ESP + 0x0C];
         MOV EDX, DWORD PTR[ESI + 0x8];
         PUSH 0x0;
@@ -2160,10 +2266,10 @@ void __declspec(naked)v10_Eng_Ru_Credits_Hook() {
         JE label_ori;
         PUSH hud_credits_text_2_x;
         JMP label_end;
-    label_ori:
+        label_ori:
         PUSH 0x43C30000;
 
-    label_end:
+        label_end:
         PUSH EDX;
         MOV ECX, 0x00658330;
         CALL DWORD PTR[sub_00560550];
@@ -2173,10 +2279,12 @@ void __declspec(naked)v10_Eng_Ru_Credits_Hook() {
     }
 }
 
-void __declspec(naked)v11_Eng_Ru_Credits_Hook() {
+void __declspec(naked)v11_Eng_Ru_Credits_Hook()
+{
     static int sub_0060E0A0 = 0x0060E0A0;
 
-    _asm {
+    _asm
+    {
         MOV ECX, DWORD PTR[ESP + 0x0C];
         MOV EDX, DWORD PTR[ESI + 0x8];
         PUSH 0x0;
@@ -2191,10 +2299,10 @@ void __declspec(naked)v11_Eng_Ru_Credits_Hook() {
         JE label_ori;
         PUSH hud_credits_text_2_x;
         JMP label_end;
-    label_ori:
+        label_ori:
         PUSH 0x43C30000;
 
-    label_end:
+        label_end:
         PUSH EDX;
         MOV ECX, 0x006BE8B0;
         CALL DWORD PTR[sub_0060E0A0];
@@ -2205,7 +2313,8 @@ void __declspec(naked)v11_Eng_Ru_Credits_Hook() {
 }
 
 
-void ReadINI(char* name) {
+void ReadINI(const char* name)
+{
     CIniReader iniReader(name);
     fov_patch = iniReader.ReadInteger("WideScreen", "FOV Hor+", 1);
     hud_patch = iniReader.ReadInteger("WideScreen", "Fix HUD", 2);
@@ -2225,15 +2334,19 @@ void ReadINI(char* name) {
     ru_credits = iniReader.ReadInteger("Other", "Ru Credits Fix", 0);
 }
 
-void ClearLog() {
-    if (write_log) {
+void ClearLog()
+{
+    if (write_log)
+    {
         fopen_s(&LogFile, "mafia_widescreen_fix.log", "w");
         fclose(LogFile);
     }
 }
 
-void WriteLog(const char* str, ...) {
-    if (write_log) {
+void WriteLog(const char* str, ...)
+{
+    if (write_log)
+    {
         va_list args;
         va_start(args, str);
         fopen_s(&LogFile, "mafia_widescreen_fix.log", "a");

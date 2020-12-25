@@ -466,7 +466,7 @@ public:
 
         pnach << L"// To recreate this file with new settings, close PCSX2, then reopen it and load the game." << std::endl;
 
-        for each (auto obj in vecPatches)
+        for (auto obj : vecPatches)
         {
             if (obj.isOnlyComment)
             {
@@ -569,7 +569,7 @@ public:
 
     void DeletePnach()
     {
-        for each (auto crc in gameCRC)
+        for (auto crc : gameCRC)
         {
             auto pnach = GetExeModulePath<std::wstring>() + L"cheats_ws\\" + int_to_hex(crc) + L".pnach";
             if (fileExists(pnach))

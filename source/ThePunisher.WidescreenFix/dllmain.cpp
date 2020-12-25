@@ -1,8 +1,8 @@
 #include "stdafx.h"
 
 #ifdef _DEBUG
-#include <intrin.h>  
-#pragma intrinsic(_ReturnAddress)  
+#include <intrin.h>
+#pragma intrinsic(_ReturnAddress)
 std::map<uintptr_t, uint32_t> retXmap;
 std::map<uintptr_t, uint32_t> retYmap;
 #endif
@@ -13,13 +13,17 @@ char* memstr(char* block, char* pattern, size_t bsize)
     char*   start = block;
     char*   where;
 
-    while (!found) {
+    while (!found)
+    {
         where = (char*)memchr(start, (int32_t)pattern[0], (size_t)bsize - (size_t)(start - block));
-        if (where == NULL) {
+        if (where == NULL)
+        {
             found++;
         }
-        else {
-            if (memcmp(where, pattern, strlen(pattern)) == 0) {
+        else
+        {
+            if (memcmp(where, pattern, strlen(pattern)) == 0)
+            {
                 found++;
             }
         }
@@ -270,7 +274,7 @@ void Init()
             case SLAUGHTER_METER_COORDS_RELATIVE_TO_HEALTH_CLUSTER_BACKGROUND:
             case SKULL_ICON_RELATIVE_TO_HEALTH_CLUSTER_BACKGROUND:
                 break;
-                //case WEAPON_ICON_OFFSET_FROM_UPPER_LEFT_CORNER_OF_BOX:
+            //case WEAPON_ICON_OFFSET_FROM_UPPER_LEFT_CORNER_OF_BOX:
             case AMMO_COUNTER_OFFSET_FROM_UPPER_LEFT_CORNER_OF_BOX:
             case RESERVE_AMMO_BAR_OFFSET_FROM_UPPER_LEFT_CORNER_OF_BOX:
                 //case RETICLE_OFFSETS_FROM_CENTER_OF_SCREEN:
@@ -338,11 +342,13 @@ void Init()
 
     pattern = hook::pattern("A2 ? ? ? ? 8A 44 24 10 88 0D"); //0x510B6C
     static auto gTexColor = *pattern.get_first<uint32_t*>(1);
-    static auto GetTexColor = []() -> uint32_t {
+    static auto GetTexColor = []() -> uint32_t
+    {
         return *gTexColor;
     };
 
-    static auto SetTexColor = [](uint32_t argb) {
+    static auto SetTexColor = [](uint32_t argb)
+    {
         *gTexColor = argb;
     };
 
@@ -436,11 +442,11 @@ void Init()
         {
             regs.ecx = *(uint32_t*)(regs.edi + 0x8C);
             auto str = (char*)((*(uintptr_t*)(regs.edi)) + 0x30);
-            static char* menuBackgrounds[] = { "options_bg", "bf_detail_bg", "pc_controls_menu_bg", "gs_menu_bg", "av_menu_bg" };
+            static const char* menuBackgrounds[] = { "options_bg", "bf_detail_bg", "pc_controls_menu_bg", "gs_menu_bg", "av_menu_bg" };
 
             for (size_t i = 0; i < std::size(menuBackgrounds); ++i)
             {
-                if (memstr(str, menuBackgrounds[i], 0x60) != NULL)
+                if (memstr(str, const_cast<char*>(menuBackgrounds[i]), 0x60) != NULL)
                 {
                     regs.eax += 1;
                     break;
@@ -472,9 +478,9 @@ void Init()
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
-        {
-            CallbackHandler::RegisterCallback(Init, hook::pattern("89 1D ? ? ? ? A3 ? ? ? ? 88 0D"));
-        });
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("89 1D ? ? ? ? A3 ? ? ? ? 88 0D"));
+    });
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
