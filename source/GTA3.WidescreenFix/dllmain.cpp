@@ -114,20 +114,20 @@ void ShowRadarTrace(float fX, float fY, unsigned int nScale, BYTE r, BYTE g, BYT
 {
     if (*bWantsToDrawHud == true && !*bIsInCutscene)
     {
-        float	fWidthMult = fWideScreenWidthScaleDown;
-        float	fHeightMult = 1.0f / 480.0f;
+        float   fWidthMult = fWideScreenWidthScaleDown;
+        float   fHeightMult = 1.0f / 480.0f;
 
         CSprite2dDrawRect(CRect(fX - ((nScale + 1.0f) * fWidthMult * RsGlobal->MaximumWidth),
-            fY + ((nScale + 1.0f) * fHeightMult * RsGlobal->MaximumHeight),
-            fX + ((nScale + 1.0f) * fWidthMult * RsGlobal->MaximumWidth),
-            fY - ((nScale + 1.0f) * fHeightMult * RsGlobal->MaximumHeight)),
-            CRGBA(0, 0, 0, a));
+                                fY + ((nScale + 1.0f) * fHeightMult * RsGlobal->MaximumHeight),
+                                fX + ((nScale + 1.0f) * fWidthMult * RsGlobal->MaximumWidth),
+                                fY - ((nScale + 1.0f) * fHeightMult * RsGlobal->MaximumHeight)),
+                          CRGBA(0, 0, 0, a));
 
         CSprite2dDrawRect(CRect(fX - (nScale * fWidthMult * RsGlobal->MaximumWidth),
-            fY + (nScale * fHeightMult * RsGlobal->MaximumHeight),
-            fX + (nScale * fWidthMult * RsGlobal->MaximumWidth),
-            fY - (nScale * fHeightMult * RsGlobal->MaximumHeight)),
-            CRGBA(r, g, b, a));
+                                fY + (nScale * fHeightMult * RsGlobal->MaximumHeight),
+                                fX + (nScale * fWidthMult * RsGlobal->MaximumWidth),
+                                fY - (nScale * fHeightMult * RsGlobal->MaximumHeight)),
+                          CRGBA(r, g, b, a));
     }
 }
 
@@ -285,8 +285,9 @@ void RsSelectDeviceHook()
 
 void FixCoronas()
 {
-    if (bNoLightSquare) {
-        auto pattern = hook::pattern("D8 0E D9 1E D9 05 ? ? ? ? D8 35 ? ? ? ? D8 0B D9 1B"); //0x51C46A 
+    if (bNoLightSquare)
+    {
+        auto pattern = hook::pattern("D8 0E D9 1E D9 05 ? ? ? ? D8 35 ? ? ? ? D8 0B D9 1B"); //0x51C46A
         injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(1), 0x0B, true);
 
         auto pfCAutoPreRender = (uint32_t)hook::pattern("81 EC F8 06 00 00 0F BF 45 5C 3D 83 00 00 00").count(1).get(0).get<uint32_t>(0);
@@ -744,7 +745,7 @@ void Init()
                 auto pattern = hook::pattern("B9 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? C2 04 00");
                 auto GetTextCall = pattern.count(1).get(0).get<uint32_t>(10);
                 auto GetText = injector::GetBranchDestination(GetTextCall, true).as_int();
-                auto pfGetText = (wchar_t *(__thiscall *)(int, char *))GetText;
+                auto pfGetText = (wchar_t *(__thiscall *)(int, const char*))GetText;
                 auto TheText = *pattern.count(1).get(0).get<uint32_t*>(1);
 
                 wchar_t* ptr = pfGetText((int)TheText, "FED_WIS");
@@ -771,9 +772,9 @@ void Init()
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
-        {
-            CallbackHandler::RegisterCallback(Init, hook::pattern("6A 02 6A 00 6A 00 68 01 20 00 00"));
-        });
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("6A 02 6A 00 6A 00 68 01 20 00 00"));
+    });
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)

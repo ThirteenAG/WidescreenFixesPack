@@ -97,7 +97,7 @@ void Init()
         std::vector<std::string> list;
         GetResolutionsList(list);
         static std::vector<ScreenRes> list2;
-        for each (auto s in list)
+        for (auto s : list)
         {
             ScreenRes r;
             sscanf_s(s.c_str(), "%dx%d", &r.ResX, &r.ResY);
@@ -202,16 +202,16 @@ void Init()
 
         // Force 16:9 FOV, HUD & FMV Scaling
         {
-        static float fRatio = 1.777777777f;
-        auto pattern = hook::pattern("A1 ? ? ? ? 83 EC 0C 80 B8 ? ? ? ? 00 ? ? B9 ? ? ? ? E8");
-        uint32_t* dword_4BCAEF = pattern.count(1).get(0).get<uint32_t>(15);
-        injector::WriteMemory<uint8_t>(dword_4BCAEF, 0xEB, true); // jmp
-        uint32_t* dword_4BCB39 = pattern.count(1).get(0).get<uint32_t>(89);
-        injector::WriteMemory(dword_4BCB39, &fRatio, true);
-        uint32_t* dword_6FF9E3 = hook::pattern("D9 C9 DF F1 DD D8 ? ? 0F B7 C3").count(1).get(0).get<uint32_t>(6);
-        injector::MakeNOP(dword_6FF9E3, 2, true); // 2 nops
-        uint32_t* dword_4B51EB = hook::pattern("74 ? 8B 16 8B 42 ? FF D0 5E 5B").count(1).get(0).get<uint32_t>(0);
-        injector::WriteMemory<uint8_t>(dword_4B51EB, 0xEB, true); // jmp
+            static float fRatio = 1.777777777f;
+            auto pattern = hook::pattern("A1 ? ? ? ? 83 EC 0C 80 B8 ? ? ? ? 00 ? ? B9 ? ? ? ? E8");
+            uint32_t* dword_4BCAEF = pattern.count(1).get(0).get<uint32_t>(15);
+            injector::WriteMemory<uint8_t>(dword_4BCAEF, 0xEB, true); // jmp
+            uint32_t* dword_4BCB39 = pattern.count(1).get(0).get<uint32_t>(89);
+            injector::WriteMemory(dword_4BCB39, &fRatio, true);
+            uint32_t* dword_6FF9E3 = hook::pattern("D9 C9 DF F1 DD D8 ? ? 0F B7 C3").count(1).get(0).get<uint32_t>(6);
+            injector::MakeNOP(dword_6FF9E3, 2, true); // 2 nops
+            uint32_t* dword_4B51EB = hook::pattern("74 ? 8B 16 8B 42 ? FF D0 5E 5B").count(1).get(0).get<uint32_t>(0);
+            injector::WriteMemory<uint8_t>(dword_4B51EB, 0xEB, true); // jmp
         }
 
         // FOV Width & Height
@@ -308,12 +308,12 @@ void Init()
                     _asm
                     {
                         fld dword ptr ds : [Width1] // Loads Width1 value
-                        fdiv dword ptr ds : [fScreenAspectRatio] // Divides by ScreenAspectRatio 
+                        fdiv dword ptr ds : [fScreenAspectRatio] // Divides by ScreenAspectRatio
                         fstp dword ptr ds : [FMVWidthLeft] // Stores final result
                         fld dword ptr ds : [Width2] // Loads Width2 value
-                        fdiv dword ptr ds : [fScreenAspectRatio] // Divides by ScreenAspectRatio 
+                        fdiv dword ptr ds : [fScreenAspectRatio] // Divides by ScreenAspectRatio
                         fstp dword ptr ds : [FMVWidthRight] // Stores final result
-                        cmp byte ptr ds : [espB0] , 0x00
+                        cmp byte ptr ds : [espB0], 0x00
                     }
                 }
             }; injector::MakeInline<FMVHook>(pattern.get_first(0), pattern.get_first(8)); // 70235A
@@ -400,7 +400,7 @@ void Init()
         // EA Bumper
         uint32_t* dword_6FC24A = hook::pattern("68 ? ? ? ? 6A ? FF D2 D9 EE").count(1).get(0).get<uint32_t>(1);
         injector::WriteMemory(dword_6FC24A, &"SkipThis", true);
-        
+
         // Attract
         uint32_t* dword_6FC264 = hook::pattern("68 ? ? ? ? 6A ? 8B CE FF D2").count(1).get(0).get<uint32_t>(1);
         injector::WriteMemory(dword_6FC264, &"SkipThis", true);

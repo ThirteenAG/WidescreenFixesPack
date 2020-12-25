@@ -295,7 +295,7 @@ void Init()
                         auto i = injector::thiscall<uint32_t(uint32_t)>::call(dword_45E510, dword_5EC070); //save
                         injector::thiscall<uint32_t(uint32_t, uint32_t)>::call(dword_47EF40, *(uint32_t*)dword_6644BC, i);
 
-                        injector::thiscall<uint32_t(uint32_t, uint32_t, char*)>::call(dword_4C6750, *(uintptr_t*)dword_672F40 + 0xE4, 1, "svdone"); // text display
+                        injector::thiscall<uint32_t(uint32_t, uint32_t, const char*)>::call(dword_4C6750, *(uintptr_t*)dword_672F40 + 0xE4, 1, "svdone"); // text display
                     }
                 }
 
@@ -322,11 +322,11 @@ void InitD3DDim700()
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
-        {
-            CallbackHandler::RegisterCallback(Init, hook::pattern("83 EC 68 55 56 8B 74 24 74"));
-            CallbackHandler::RegisterCallback(L"d3dim.dll", InitD3DDim);       // crash fix for
-            CallbackHandler::RegisterCallback(L"d3dim700.dll", InitD3DDim700); // resolutions > 2048
-        });
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("83 EC 68 55 56 8B 74 24 74"));
+        CallbackHandler::RegisterCallback(L"d3dim.dll", InitD3DDim);       // crash fix for
+        CallbackHandler::RegisterCallback(L"d3dim700.dll", InitD3DDim700); // resolutions > 2048
+    });
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)

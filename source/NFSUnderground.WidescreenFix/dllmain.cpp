@@ -113,11 +113,11 @@ void __declspec(naked) CmpShouldClearSurfaceDuring3DRender()
         mov eax, dword_73645C
         cmp dword ptr [eax], 1
         jne resume
-        
+
         // byte_735768 is set if the magazine view screen is open.
         mov eax, byte_735768
         cmp byte ptr [eax], 0
-        
+
         resume:
         ret
     }
@@ -130,11 +130,11 @@ void __declspec(naked) MaybeClearSurfaceDuringBackgroundRender()
     {
         call CmpShouldClearSurfaceDuring3DRender
         jz resume
-        
+
         // In case 3D rendering won't clear the render surface, it must
         // be done during the 2D background rendering.
         mov dword ptr [esp+4], 1
-        
+
         resume:
         mov esi, off_71AA4C
         ret
@@ -244,7 +244,7 @@ void Init()
 
         //pattern = hook::pattern("8D 72 04 83 C0 60 E8 ? ? ? ? 5F 5E C3"); //menu (#179)
         //if (pattern.size() > 0)
-        //	injector::MakeNOP(pattern.get_first(), 11, true);
+        //  injector::MakeNOP(pattern.get_first(), 11, true);
 
         //mouse cursor fix
         pattern = hook::pattern("81 C2 C0 FE FF FF");
@@ -308,7 +308,7 @@ void Init()
                 *(float*)(regs.esp + 0x20) = 1.0f;
                 regs.eax = *(uint32_t*)(regs.ebp + 4);
 
-                if (regs.eax == 1 || regs.eax == 4) //Headlights stretching, reflections etc 
+                if (regs.eax == 1 || regs.eax == 4) //Headlights stretching, reflections etc
                 {
                     flt1 = hor3DScale;
                     flt2 = f06;
@@ -334,9 +334,9 @@ void Init()
 
                 if (regs.eax == 3) //if rearview mirror
                     _asm fld ds : mirrorScale
-                else
-                    _asm fld ds : ver3DScale
-            }
+                    else
+                        _asm fld ds : ver3DScale
+                    }
         }; injector::MakeInline<FOVHook>(pattern.get_first(0), pattern.get_first(14));
 
         pattern = hook::pattern("D8 3D ? ? ? ? D9 1F E8 ? ? ? ? D9");
@@ -384,7 +384,8 @@ void Init()
         else
             DataFilePath.append(".dat");
 
-        LoadDatFile(DataFilePath, [](std::string_view line) {
+        LoadDatFile(DataFilePath, [](std::string_view line)
+        {
             int32_t PosX, PosY;
             float fOffsetX, fOffsetY;
             sscanf_s(line.data(), "%*s %x %x %f %f %*f %*f", &PosX, &PosY, &fOffsetX, &fOffsetY);
@@ -393,7 +394,7 @@ void Init()
                 fOffsetX /= (((16.0f / 9.0f) / Screen.fAspectRatio) * 1.5f);
 
             HudCoords.emplace_back(PosX, PosY, fOffsetX, fOffsetY);
-            });
+        });
 
         static float fMinimapPosX = 320.0f;
         static float fMinimapPosY = 240.0f;
@@ -403,8 +404,8 @@ void Init()
             if (nGameState != 3)
             {
                 auto it = std::find_if(HudCoords.begin(), HudCoords.end(),
-                    [&cc = CDatEntry(HudPosX.dwPos, HudPosY.dwPos, 0.0f, 0.0f)]
-                (const CDatEntry& cde) -> bool { return (cc.dwPosX == cde.dwPosX && cc.dwPosY == cde.dwPosY); });
+                                       [cc = CDatEntry(HudPosX.dwPos, HudPosY.dwPos, 0.0f, 0.0f)]
+                                       (const CDatEntry& cde) -> bool { return (cc.dwPosX == cde.dwPosX && cc.dwPosY == cde.dwPosY); });
 
                 if (it != HudCoords.end())
                 {
@@ -534,7 +535,7 @@ void Init()
         CreateResourceFile = (void*(*)(const char* ResourceFileName, int32_t ResourceFileType, int, int, int)) pattern.get_first(0); //0x004482F0
         pattern = hook::pattern("56 8B F2 89 8E 98 00 00 00 8B 0D ? ? ? ? 89 86 94 00 00 00 8B 86 9C 00 00 00");
         ResourceFileBeginLoading = (void(__fastcall *)(int a1, void* rsc, int a2)) pattern.get_first(0); //0x00448110;
-        
+
         if (nImproveGamepadSupport < 3)
         {
             static auto TPKPath = GetThisModulePath<std::string>().substr(GetExeModulePath<std::string>().length());
@@ -584,7 +585,7 @@ void Init()
             void operator()(injector::reg_pack& regs)
             {
                 PadState* PadKeyPresses = *(PadState**)(regs.esp + 0x4);
-                //Keyboard 
+                //Keyboard
                 //006F9358 backspace
                 //006F931C enter
                 if (PadKeyPresses != nullptr && PadKeyPresses != (PadState*)0x1 && nGameState == 3)
@@ -713,7 +714,7 @@ void Init()
 
     if (fLeftStickDeadzone)
     {
-        // [ -10000 | 10000 ] 
+        // [ -10000 | 10000 ]
         static int32_t nLeftStickDeadzone = static_cast<int32_t>(fLeftStickDeadzone * 100.0f);
         pattern = hook::pattern("85 F6 7D 3D 8B 7C 24 18 57"); //0x4193B6
         static auto loc_4193F7 = (uint32_t)hook::get_pattern("83 7C 24 18 01 75 ? B9 04 00 00 00");
@@ -753,17 +754,17 @@ void Init()
             }
         }; injector::MakeInline<Direct3DDeviceHook>(pattern.get_first(0), pattern.get_first(5)); //40883C
     }
-    
+
     if (bBlackMagazineFix)
     {
-        pattern = hook::pattern("8B F8 A0 ? ? ? ? 84 C0 0F 85"); 
+        pattern = hook::pattern("8B F8 A0 ? ? ? ? 84 C0 0F 85");
         byte_735768 = *pattern.get_first<uint8_t*>(3);
-        
+
         pattern = hook::pattern("83 3D ? ? ? ? 01 8B 77 58");
         dword_73645C = *pattern.get_first<uint32_t*>(2);
         injector::MakeRangedNOP(pattern.get_first(0), pattern.get_first(7));
         injector::MakeCALL(pattern.get_first(0), CmpShouldClearSurfaceDuring3DRender); // 4098A2
-        
+
         pattern = hook::pattern("6A 00 BE ? ? ? ? 74 ? BE");
         off_71AA4C = *pattern.get_first<void*>(10);
         injector::MakeCALL(pattern.get_first(9), MaybeClearSurfaceDuringBackgroundRender); // 409CF2
@@ -792,9 +793,9 @@ void Init()
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
-        {
-            CallbackHandler::RegisterCallback(Init, hook::pattern("68 20 03 00 00 BE 58 02 00 00").count_hint(1).empty(), 0x1100);
-        });
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("68 20 03 00 00 BE 58 02 00 00").count_hint(1).empty(), 0x1100);
+    });
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, uint32_t reason, LPVOID lpReserved)

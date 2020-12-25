@@ -221,7 +221,7 @@ void __declspec(naked) funcCCameraAvoidTheGeometryHook()
     }
     else
         __asm ret 10h
-}
+    }
 
 void FixFOV()
 {
@@ -810,7 +810,7 @@ void Init()
     ReadSettings();
     GetPatterns();
     OverwriteResolution();
-    DxInputNeedsExclusive.size() > 0 ? injector::WriteMemory<uint32_t>(DxInputNeedsExclusive.count(1).get(0).get<uint32_t>(0), 0xC3C030, true) : nullptr; //mouse fix
+    if (DxInputNeedsExclusive.size() > 0) { injector::WriteMemory<uint32_t>(DxInputNeedsExclusive.count(1).get(0).get<uint32_t>(0), 0xC3C030, true); } //mouse fix
     GetMemoryAddresses();
     FixAspectRatio();
     FixFOV();
@@ -848,7 +848,7 @@ void Init()
                 pattern = hook::pattern("E8 ? ? ? ? DB 05 ? ? ? ? 50 89 C3 D8 0D");
                 auto GetTextCall = pattern.count(1).get(0).get<uint32_t>(0);
                 auto GetText = injector::GetBranchDestination(GetTextCall, true).as_int();
-                auto pfGetText = (wchar_t *(__thiscall *)(int, char *))GetText;
+                auto pfGetText = (wchar_t *(__thiscall *)(int, const char*))GetText;
                 auto TheText = *pattern.count(1).get(0).get<uint32_t*>(-9);
                 wchar_t* ptr = pfGetText((int)TheText, "FED_WIS");
                 wcscpy(ptr, L"BORDERS");
@@ -888,9 +888,9 @@ void Init()
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
-        {
-            CallbackHandler::RegisterCallback(Init, hook::pattern("6A 02 6A 00 6A 00 68 01 20 00 00"));
-        });
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("6A 02 6A 00 6A 00 68 01 20 00 00"));
+    });
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)

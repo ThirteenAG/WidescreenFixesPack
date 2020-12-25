@@ -16,7 +16,7 @@ struct Screen
     float fHudOffsetReal;
 } Screen;
 
-char* movies[] =
+const char* movies[] =
 {
     "B10_Trns_B11_27",
     "B11_Trns_B12_028",
@@ -59,7 +59,7 @@ char* movies[] =
     "WB_Green"
 };
 
-char* misc[] =
+const char* misc[] =
 {
     "film_scratch",
     "oldfilm_noise04"
@@ -77,7 +77,7 @@ void __cdecl sub_538E80(void* a1, void* a2, void* a3, void* a4, float a5, float 
     {
         bool bFound = false;
 
-        for each (auto var in movies)
+        for (auto var : movies)
         {
             if (*(uint32_t*)var == text)
             {
@@ -163,9 +163,9 @@ void Init()
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
-        {
-            CallbackHandler::RegisterCallback(Init, hook::pattern("33 84 24 08 04 00 00"));
-        });
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("33 84 24 08 04 00 00"));
+    });
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)

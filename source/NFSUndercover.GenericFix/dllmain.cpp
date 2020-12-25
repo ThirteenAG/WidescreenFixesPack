@@ -22,7 +22,7 @@ void InitRes()
     static std::vector<ScreenRes> list2;
     static std::vector<uint32_t> list3;
     GetResolutionsList(list);
-    for each (auto& s in list)
+    for (auto& s : list)
     {
         ScreenRes r;
         sscanf_s(s.c_str(), "%dx%d", &r.ResX, &r.ResY);
@@ -30,7 +30,7 @@ void InitRes()
     }
     list3.resize(list2.size() + 1);
     size_t i = 0;
-    for each (auto& s in list2)
+    for (auto& s : list2)
     {
         list3[i] = ((uint32_t)(&list2[i]));
         ++i;
@@ -210,7 +210,8 @@ void Init2()
         }; injector::MakeInline<Buttons>(pattern.get_first(16));
 
         static injector::hook_back<int32_t(__stdcall*)(int, int)> hb_666790;
-        auto padFix = [](int, int) -> int32_t {
+        auto padFix = [](int, int) -> int32_t
+        {
             return 0x2A5E19E0;
         };
         pattern = GetPattern("E8 ? ? ? ? 3D ? ? ? ? 0F 87 ? ? ? ? 0F 84 ? ? ? ? 3D ? ? ? ? 0F 87 ? ? ? ? 0F 84 ? ? ? ? 3D ? ? ? ? 0F 87"); //0x670B7A
@@ -453,11 +454,11 @@ void Init3()
         else
         {
             auto msgboxID = MessageBox(
-                NULL,
-                (LPCWSTR)L"WriteSettingsToFile option will not work with your exe version. Use different exe or disable that option.\nDo you want to disable it now?",
-                (LPCWSTR)L"NFSUndercover.GenericFix",
-                MB_ICONWARNING | MB_YESNO | MB_DEFBUTTON1
-            );
+                                NULL,
+                                (LPCWSTR)L"WriteSettingsToFile option will not work with your exe version. Use different exe or disable that option.\nDo you want to disable it now?",
+                                (LPCWSTR)L"NFSUndercover.GenericFix",
+                                MB_ICONWARNING | MB_YESNO | MB_DEFBUTTON1
+                            );
 
             if (msgboxID == IDYES)
             {
@@ -517,9 +518,9 @@ void Init4()
                 }
                 else
                 {
-                   fHudScale = 1280.0f / (720.0f * fAspectRatio);
-                   fHudWidth = 1280.0f / fHudScale;
-                   fHudXPos = -1.0f * fHudScale;
+                    fHudScale = 1280.0f / (720.0f * fAspectRatio);
+                    fHudWidth = 1280.0f / fHudScale;
+                    fHudXPos = -1.0f * fHudScale;
                 }
             }
 
@@ -579,7 +580,7 @@ void Init4()
         {
             *(float*)(regs.esi + 0x58C) = -99999.0f;
         }
-    }; 
+    };
     injector::MakeInline<HUDRenderHook>(pattern.count(8).get(0).get<uint32_t>(0), pattern.count(8).get(0).get<uint32_t>(8)); // 781C7D
     injector::MakeInline<HUDRenderHook>(pattern.count(8).get(6).get<uint32_t>(0), pattern.count(8).get(6).get<uint32_t>(8)); // 7B1DD5
 
@@ -636,7 +637,7 @@ void Init4()
     injector::MakeNOP(dword_74A81D, 2, true); // 2 nops
     uint32_t* dword_76B84C = hook::pattern("F3 0F 10 05 ? ? ? ? F3 0F 11 04 24 D9 04 24 83 C4 08").count(1).get(0).get<uint32_t>(4);
     injector::WriteMemory(dword_76B84C, &fVertFOV, true); // 2 nops
-    
+
     // FOV Scaling
     if (bScaling)
     {
@@ -700,27 +701,27 @@ void Init4()
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
+    {
+        //securom compatibility
+        auto ModuleStart = (uintptr_t)GetModuleHandle(NULL);
+        MEMORY_BASIC_INFORMATION mbi;
+        auto pattern = hook::pattern("FF 25"); //jmp
+        for (size_t i = 0; i < pattern.size(); i++)
         {
-            //securom compatibility
-            auto ModuleStart = (uintptr_t)GetModuleHandle(NULL);
-            MEMORY_BASIC_INFORMATION mbi;
-            auto pattern = hook::pattern("FF 25"); //jmp
-            for (size_t i = 0; i < pattern.size(); i++)
+            auto addr = injector::ReadMemory<uintptr_t>(pattern.get(i).get<void>(2), true);
+            VirtualQuery((PVOID)addr, &mbi, sizeof(MEMORY_BASIC_INFORMATION));
+            if (RangeEnd < addr && mbi.Protect == PAGE_EXECUTE_WRITECOPY && mbi.AllocationBase == (PVOID)ModuleStart)
             {
-                auto addr = injector::ReadMemory<uintptr_t>(pattern.get(i).get<void>(2), true);
-                VirtualQuery((PVOID)addr, &mbi, sizeof(MEMORY_BASIC_INFORMATION));
-                if (RangeEnd < addr && mbi.Protect == PAGE_EXECUTE_WRITECOPY && mbi.AllocationBase == (PVOID)ModuleStart)
-                {
-                    RangeStart = (uintptr_t)mbi.BaseAddress;
-                    RangeEnd = (uintptr_t)mbi.BaseAddress + mbi.RegionSize;
-                }
+                RangeStart = (uintptr_t)mbi.BaseAddress;
+                RangeEnd = (uintptr_t)mbi.BaseAddress + mbi.RegionSize;
             }
+        }
 
-            CallbackHandler::RegisterCallback(Init1, hook::range_pattern(ModuleStart, RangeEnd, "C7 44 24 ? ? ? ? ? FF 15 ? ? ? ? 8D 54 24 0C 52"));
-            CallbackHandler::RegisterCallback(Init2, hook::range_pattern(ModuleStart, RangeEnd, "E8 ? ? ? ? 8B 4E 04 83 C4 20 89 46 08 8B 15 ? ? ? ? 51 52 68 0B 20 00 00"));
-            CallbackHandler::RegisterCallback(Init3, hook::range_pattern(ModuleStart, RangeEnd, "FF 15 ? ? ? ? 8D 54 24 40 52 68 3F 00 0F 00"));
-            CallbackHandler::RegisterCallback(Init4, hook::range_pattern(ModuleStart, RangeEnd, "8B 0D ? ? ? ? 6A 01 51 8B C8"));
-        });
+        CallbackHandler::RegisterCallback(Init1, hook::range_pattern(ModuleStart, RangeEnd, "C7 44 24 ? ? ? ? ? FF 15 ? ? ? ? 8D 54 24 0C 52"));
+        CallbackHandler::RegisterCallback(Init2, hook::range_pattern(ModuleStart, RangeEnd, "E8 ? ? ? ? 8B 4E 04 83 C4 20 89 46 08 8B 15 ? ? ? ? 51 52 68 0B 20 00 00"));
+        CallbackHandler::RegisterCallback(Init3, hook::range_pattern(ModuleStart, RangeEnd, "FF 15 ? ? ? ? 8D 54 24 40 52 68 3F 00 0F 00"));
+        CallbackHandler::RegisterCallback(Init4, hook::range_pattern(ModuleStart, RangeEnd, "8B 0D ? ? ? ? 6A 01 51 8B C8"));
+    });
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
