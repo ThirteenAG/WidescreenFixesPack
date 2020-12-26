@@ -155,7 +155,7 @@ void Init()
     }
 
     bool bFixAspectRatio = iniReader.ReadInteger("MAIN", "FixAspectRatio", 1) != 0;
-    int nScaling = iniReader.ReadInteger("MAIN", "Scaling", 1) != 0;
+    static int32_t nScaling = iniReader.ReadInteger("MAIN", "Scaling", 1);
     bool bHUDWidescreenMode = iniReader.ReadInteger("MAIN", "HUDWidescreenMode", 1) != 0;
     bool bFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1) != 0;
     bool bConsoleHUDSize = iniReader.ReadInteger("MAIN", "ConsoleHUDSize", 1) != 0;
