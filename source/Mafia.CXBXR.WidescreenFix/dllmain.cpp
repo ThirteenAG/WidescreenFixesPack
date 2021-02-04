@@ -1,6 +1,12 @@
 #include "stdafx.h"
 #include "cxbxr/cxbxr.h"
 
+struct cxbxr
+{
+    uintptr_t begin;
+    uintptr_t end;
+} cxbxr;
+
 struct Screen
 {
     int32_t Width;
@@ -355,7 +361,12 @@ CEXP void InitializeASI()
         std::tie(Screen.Width, Screen.Height) = getWindowDimensions(pid);
         std::call_once(CallbackHandler::flag, []()
         {
-            CallbackHandler::RegisterCallback(Init, hook::pattern("8B 0D ? ? ? ? A1 ? ? ? ? 2B C1 05"));
+            cxbxr.begin = (uintptr_t)GetModuleHandle(nullptr);
+            PIMAGE_DOS_HEADER dosHeader = (IMAGE_DOS_HEADER*)(cxbxr.begin + 0);
+            PIMAGE_NT_HEADERS ntHeader = (IMAGE_NT_HEADERS*)(cxbxr.begin + dosHeader->e_lfanew);
+            cxbxr.end = cxbxr.begin + ntHeader->OptionalHeader.SizeOfImage;
+
+            CallbackHandler::RegisterCallback(Init, hook::range_pattern(cxbxr.begin, cxbxr.end, "8B 0D ? ? ? ? A1 ? ? ? ? 2B C1 05"));
         });
     }
 }
