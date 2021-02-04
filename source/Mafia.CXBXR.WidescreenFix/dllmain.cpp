@@ -356,7 +356,8 @@ void Init()
 CEXP void InitializeASI()
 {
     auto pid = getParentPID(GetCurrentProcessId());
-    if (getProcessName(pid).stem() == "cxbx")
+    auto name = getProcessName(pid).stem();
+    if (name == "cxbx" || name == "cxbxr-ldr")
     {
         std::tie(Screen.Width, Screen.Height) = getWindowDimensions(pid);
         std::call_once(CallbackHandler::flag, []()
