@@ -15,26 +15,24 @@ struct Screen
     float fHeight;
     float fAspectRatio;
     float fHudScale;
+    float fHudOffset;
 } Screen;
 
 uint32_t dword_28EE54;
 uint32_t dword_24024B;
 void __fastcall RenderHud(DWORD* _this, void* edx, float a2, float a3, float a4, float a5, int a6, float a7, float a8, float a9, float a10, int a11, float a12, float a13, float a14, float a15, int a16, float a17, float a18, float a19, float a20, int a21, int a22, int a23, float a24)
 {
-    ///////////////
-    a2 /= 1.3333f;
-    a2 += 106.3333f;
-    //a3 /= 2.0f;
-    a7 /= 1.3333f;
-    a7 += 106.3333f;
-    //a8 /= 2.0f;
-    a12 /= 1.3333f;
-    a12 += 106.3333f;
-    //a13 /= 2.0f;
-    a17 /= 1.3333f;
-    a17 += 106.3333f;
-    //a18 /= 2.0f;
-    ///////////////
+    a2 /= Screen.fHudScale;
+    a2 += Screen.fHudOffset;
+
+    a7 /= Screen.fHudScale;
+    a7 += Screen.fHudOffset;
+
+    a12 /= Screen.fHudScale;
+    a12 += Screen.fHudOffset;
+
+    a17 /= Screen.fHudScale;
+    a17 += Screen.fHudOffset;
 
     injector::thiscall<uint32_t(DWORD*, int, int)>::call(dword_28EE54, _this, 0, a23);
 
@@ -88,9 +86,9 @@ void __fastcall RenderHud(DWORD* _this, void* edx, float a2, float a3, float a4,
     {
         *(float*)(v28 + 0x00) = v37;
         *(float*)(v28 + 0x04) = v38;
-        *(float*)(v28 + 0x08) = a14;
-        *(DWORD*)(v28 + 0x0C) = a22;
-        *(DWORD*)(v28 + 0x10) = a16;
+        *(DWORD*)(v28 + 0x08) = a22;
+        *(DWORD*)(v28 + 0x0C) = a16;
+        *(float*)(v28 + 0x10) = a14;
         *(float*)(v28 + 0x14) = a15;
     }
     auto v29 = injector::cstd<uint32_t(int, DWORD*)>::call(dword_24024B, 24, _this + 45);
@@ -98,9 +96,9 @@ void __fastcall RenderHud(DWORD* _this, void* edx, float a2, float a3, float a4,
     {
         *(float*)(v29 + 0x00) = v40;
         *(float*)(v29 + 0x04) = v41;
-        *(float*)(v29 + 0x08) = a4;
-        *(DWORD*)(v29 + 0x0C) = a22;
-        *(DWORD*)(v29 + 0x10) = a6;
+        *(DWORD*)(v29 + 0x08) = a22;
+        *(DWORD*)(v29 + 0x0C) = a6;
+        *(float*)(v29 + 0x10) = a4;
         *(float*)(v29 + 0x14) = a5;
     }
     auto v30 = injector::cstd<uint32_t(int, DWORD*)>::call(dword_24024B, 24, _this + 45);
@@ -126,16 +124,18 @@ void __fastcall RenderHud(DWORD* _this, void* edx, float a2, float a3, float a4,
     _this[8] += 2;
 }
 
-
 void Init()
 {
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
 
+    float intResX = 640.0f;
+    float intResY = 480.0f;
     Screen.fWidth = static_cast<float>(Screen.Width);
     Screen.fHeight = static_cast<float>(Screen.Height);
     Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
     Screen.fHudScale = Screen.fAspectRatio / (4.0f / 3.0f);
+    Screen.fHudOffset = (((intResY * Screen.fAspectRatio) - intResX) / 2.0f) / Screen.fHudScale;
 
     auto rpattern = hook::range_pattern(cxbxr.begin, cxbxr.end, "E8 ? ? ? ? 80 3D ? ? ? ? ? 74 17");
     injector::MakeCALL(rpattern.get_first(0), &RenderHud, true); //0x2A1181
