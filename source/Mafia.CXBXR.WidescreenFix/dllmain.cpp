@@ -367,7 +367,7 @@ CEXP void InitializeASI()
             PIMAGE_NT_HEADERS ntHeader = (IMAGE_NT_HEADERS*)(cxbxr.begin + dosHeader->e_lfanew);
             cxbxr.end = cxbxr.begin + ntHeader->OptionalHeader.SizeOfImage;
 
-            CallbackHandler::RegisterCallback(Init, hook::range_pattern(cxbxr.begin, cxbxr.end, "8B 0D ? ? ? ? A1 ? ? ? ? 2B C1 05"));
+            CallbackHandler::RegisterCallback(Init, hook::range_pattern(cxbxr.begin, cxbxr.end, "D8 74 24 10 8B 83"));
         });
     }
 }
