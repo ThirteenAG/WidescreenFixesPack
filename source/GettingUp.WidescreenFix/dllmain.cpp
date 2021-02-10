@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "CPatch.h"
 
 struct Screen
 {
@@ -20,6 +21,35 @@ struct Screen
     int32_t* dword_A8F0CC;
 
 } Screen;
+
+class CRect
+{
+public:
+    float m_fLeft;
+    float m_fBottom;
+    float m_fRight;
+    float m_fTop;
+
+    bool operator==(const CRect& rect)
+    {
+        return ((*(uint32_t*)&this->m_fLeft == *(uint32_t*)&rect.m_fLeft) && (*(uint32_t*)&this->m_fBottom == *(uint32_t*)&rect.m_fBottom) &&
+                (*(uint32_t*)&this->m_fRight == *(uint32_t*)&rect.m_fRight) && (*(uint32_t*)&this->m_fTop == *(uint32_t*)&rect.m_fTop));
+    }
+
+    bool operator==(CRect& rect)
+    {
+        return ((*(uint32_t*)&this->m_fLeft == *(uint32_t*)&rect.m_fLeft) && (*(uint32_t*)&this->m_fBottom == *(uint32_t*)&rect.m_fBottom) &&
+                (*(uint32_t*)&this->m_fRight == *(uint32_t*)&rect.m_fRight) && (*(uint32_t*)&this->m_fTop == *(uint32_t*)&rect.m_fTop));
+    }
+
+    inline CRect() {}
+    inline CRect(float a, float b, float c, float d)
+        : m_fLeft(a), m_fBottom(b), m_fRight(c), m_fTop(d)
+    {}
+    inline CRect(uint32_t a, uint32_t b, uint32_t c, uint32_t d)
+        : m_fLeft(*(float*)&a), m_fBottom(*(float*)&b), m_fRight(*(float*)&c), m_fTop(*(float*)&d)
+    {}
+};
 
 HWND g_hWnd;
 HWND g_hWndInsertAfter;
@@ -51,6 +81,34 @@ static auto GetRes = []()
     Screen.g_res_w = Screen.nWidth;
 };
 
+
+///////////////////////
+DWORD jmpAddress, jmpAddress2;
+char in_menu;
+void __declspec(naked)menu_check()
+{
+    _asm
+    {
+        mov eax, 0xA909F9
+        cmp[eax], 0
+        je label1
+        mov eax, 0x65B45C
+        cmp[eax], 0
+        jne label1
+        mov in_menu, 1
+        push 255u
+        push 0x00544758
+        mov jmpAddress, 0x4B8EC7
+        jmp jmpAddress
+        label1 :
+        mov in_menu, 0
+        ret 8
+    }
+}
+//CPatch::RedirectJump(0x4B8EC0, menu_check);
+////////////////////////
+
+
 void Init()
 {
     CIniReader iniReader(".\\videomode.ini");
@@ -68,39 +126,67 @@ void Init()
     injector::MakeNOP(pattern.get_first(0), 6, true);
     injector::MakeCALL(pattern.get_first(0), SetWindowPosHook, true);
 
+    //windowed mode crash in gameplay workaround
+    static auto sub_4B8EC0 = hook::get_pattern("6A FF 68 ? ? ? ? 64 A1 ? ? ? ? 50 64 89 25 ? ? ? ? 51 53 56 57 8B F1", 0);
+    pattern = hook::pattern("8B 4C 24 10 5F 5E B0 01 5B 64 89 0D ? ? ? ? 83 C4 10 C2 08 00");
+    struct InitiatingWindowModeHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.ecx = *(uint32_t*)(regs.esp + 0x10);
+            regs.eax = 1;
+            injector::MakeRET(sub_4B8EC0, 8, true);
+        }
+    }; injector::MakeInline<InitiatingWindowModeHook>(pattern.get_first(0), pattern.get_first(8));
+    injector::WriteMemory<uint16_t>(pattern.get_first(5), 0x5E5F, true); // pop edi pop esi
+
     //Default Fullscreen Res Hook
     pattern = hook::pattern("A3 ? ? ? ? 8B 4F 0C");
     Screen.dword_A8F0C8 = *pattern.get_first<int32_t*>(1);
-    struct FullscreenResXHook
+    struct FullscreenResXHook1
     {
         void operator()(injector::reg_pack& regs)
         {
+            *(uint32_t*)(regs.edi + 8) = Screen.nWidth;
             *Screen.dword_A8F0C8 = Screen.nWidth;
         }
-    }; injector::MakeInline<FullscreenResXHook>(pattern.get_first(0), pattern.get_first(5));
-    pattern = hook::pattern("A3 ? ? ? ? 8B 86 ? ? ? ? 8D 14 40 8B 44 D1 04");
-    injector::MakeInline<FullscreenResXHook>(pattern.get_first(0), pattern.get_first(5));
+    }; injector::MakeInline<FullscreenResXHook1>(pattern.get_first(0));
 
     pattern = hook::pattern("89 0D ? ? ? ? C7 05 ? ? ? ? ? ? ? ? 75 27 8B CE 88 1D");
     Screen.dword_A8F0CC = *pattern.get_first<int32_t*>(2);
-    struct FullscreenResYHook
+    struct FullscreenResYHook1
     {
         void operator()(injector::reg_pack& regs)
         {
+            *(uint32_t*)(regs.edi + 0x0C) = Screen.nHeight;
             *Screen.dword_A8F0CC = Screen.nHeight;
         }
-    }; injector::MakeInline<FullscreenResYHook>(pattern.get_first(0), pattern.get_first(6));
+    }; injector::MakeInline<FullscreenResYHook1>(pattern.get_first(0), pattern.get_first(6));
+
+    pattern = hook::pattern("A3 ? ? ? ? 8B 86 ? ? ? ? 8D 14 40 8B 44 D1 04");
+    struct FullscreenResXHook2
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            *(uint32_t*)(regs.ecx + regs.edx * 8) = Screen.nWidth;
+            *Screen.dword_A8F0C8 = Screen.nWidth;
+        }
+    }; injector::MakeInline<FullscreenResXHook2>(pattern.get_first(0));
+
     pattern = hook::pattern("A3 ? ? ? ? A1 ? ? ? ? 85 C0 BF");
-    injector::MakeInline<FullscreenResYHook>(pattern.get_first(0), pattern.get_first(5));
+    struct FullscreenResYHook2
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            *(uint32_t*)(regs.ecx + regs.edx * 8 + 4) = Screen.nHeight;
+            *Screen.dword_A8F0CC = Screen.nHeight;
+        }
+    }; injector::MakeInline<FullscreenResYHook2>(pattern.get_first(0));
 
     //Default dimensions overwrite
     pattern = hook::pattern("8B 0D ? ? ? ? A1 ? ? ? ? 8D 5C 24 2C");
     injector::WriteMemory(pattern.get_first(2), &Screen.nHeight, true);
     injector::WriteMemory(pattern.get_first(7), &Screen.nWidth, true);
-
-    //Hwnd
-    pattern = hook::pattern("50 A3 ? ? ? ? FF 15");
-    static auto hWnd = *pattern.get_first<HWND>(2);
 
     pattern = hook::pattern("8B 08 89 4C 24 2C 8B 48 04 89 4C 24 30 38 9E ? ? ? ? 75 17 B9");
     struct FullscreenResHook
@@ -112,11 +198,31 @@ void Init()
         }
     }; injector::MakeInline<FullscreenResHook>(pattern.get_first(0), pattern.get_first(13));
 
+    //BINK
+    pattern = hook::pattern("8B 42 04 8B 48 14 51 8D 54 24 18 6A 04 52 E8 ? ? ? ? B8 ? ? ? ? 81 C4 ? ? ? ? C3");
+    struct BinkVideoHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.eax = *(uint32_t*)(regs.edx + 0x04);
+            regs.ecx = *(uint32_t*)(regs.eax + 0x14);
+
+            *(float*)(regs.esp + 0x14) += Screen.fHudOffsetReal;
+            *(float*)(regs.esp + 0x44) += Screen.fHudOffsetReal;
+            *(float*)(regs.esp + 0x2C) -= Screen.fHudOffsetReal;
+            *(float*)(regs.esp + 0x5C) -= Screen.fHudOffsetReal;
+        }
+    }; injector::MakeInline<BinkVideoHook>(pattern.get_first(0), pattern.get_first(6));
+
     //Do not pause on minimize
     pattern = hook::pattern("32 DB E8 ? ? ? ? 8B 4C 24 14 55 57 56 51");
     injector::WriteMemory<uint16_t>(pattern.get_first(0), 0x01B3, true); //mov bl,01
 
-
+#ifdef _DEBUG
+    //registry debugger crash
+    pattern = hook::pattern("E8 ? ? ? ? 57 57 8D 8D ? ? ? ? 51 8D 95 ? ? ? ? 52");
+    injector::MakeNOP(pattern.get_first(0), 5, true);
+#endif
 }
 
 void InitGCore()
@@ -149,18 +255,14 @@ void InitGCore()
                         Screen.video_mode--;
                     else if (regs.ebp == 0x27)
                         Screen.video_mode++;
+
+                    if (Screen.video_mode >= (int32_t)list.size())
+                        Screen.video_mode = 0;
+                    else if (Screen.video_mode < 0)
+                        Screen.video_mode = (int32_t)list.size() - 1;
                 }
 
-                if (Screen.video_mode >= (int32_t)list.size())
-                    Screen.video_mode = 0;
-                else if (Screen.video_mode < 0)
-                    Screen.video_mode = (int32_t)list.size() - 1;
-
                 sscanf_s(list[Screen.video_mode].c_str(), "%dx%d", &Screen.nWidth, &Screen.nHeight);
-                *Screen.dword_A8F0C8 = Screen.nWidth;
-                *Screen.dword_A8F0CC = Screen.nHeight;
-                regs.esi = Screen.nWidth;
-                regs.edi = Screen.nHeight;
                 Screen.g_res_w = regs.eax;
                 SetWindowPosHook(g_hWnd, g_hWndInsertAfter, 0, 0, 0, 0, g_uFlags);
                 GetRes();
@@ -169,12 +271,113 @@ void InitGCore()
                 iniWriter.WriteInteger("Settings", "Height", Screen.nHeight);
                 Screen.isMenu = false;
             }
+            *Screen.dword_A8F0C8 = Screen.nWidth;
+            *Screen.dword_A8F0CC = Screen.nHeight;
+            regs.esi = Screen.nWidth;
+            regs.edi = Screen.nHeight;
         }
     }; injector::MakeInline<ResHook>(pattern.get_first(0), pattern.get_first(9));
 
     //Fullscreen res change to windowed (hack!), but otherwise it's kinda weird
     pattern = hook::module_pattern(GetModuleHandle(L"GCore.dll"), "74 0B 57 56 FF 52 38 5F 5E 83 C4 0C C3 8D 44 24 08 50 8D 44 24 10");
     injector::MakeNOP(pattern.get_first(0), 2, true);
+
+    //Interface
+    pattern = hook::module_pattern(GetModuleHandle(L"GCore.dll"), "D9 44 24 54 D8 C9 D8 0D ? ? ? ? D9 5C 24 54 DB 44 24 28 D9 44 24 58 D8 C9");
+    struct TGuiTextureRendererRenderHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+#ifdef _DEBUG
+            float x1 = *(float*)(regs.esp + 0x54);
+            float y1 = *(float*)(regs.esp + 0x58);
+            float x2 = *(float*)(regs.esp + 0x5C);
+            float y2 = *(float*)(regs.esp + 0x60);
+#endif
+            CRect rect(*(float*)(regs.esp + 0x54), *(float*)(regs.esp + 0x58), *(float*)(regs.esp + 0x5C), *(float*)(regs.esp + 0x60));
+
+            static float temp = 0.0f;
+            if (rect == CRect(0.0f, 375.0f, 640.0f, 430.0f) || // menu black overlay texture
+                    rect == CRect(0.0f,  430.0f, 640.0f, 485.0f)    //menu black overlay texture
+               )
+            {
+                *(float*)(regs.esp + 0x54) = *(float*)(regs.esp + 0x54) * Screen.fWidth * ((1.0f / 640.0f));
+                *(float*)(regs.esp + 0x58) = *(float*)(regs.esp + 0x58) * Screen.fHeight * (1.0f / 480.0f);
+                *(float*)(regs.esp + 0x5C) = Screen.fWidth * *(float*)(regs.esp + 0x5C) * ((1.0f / 640.0f));
+                *(float*)(regs.esp + 0x60) = Screen.fHeight * *(float*)(regs.esp + 0x60) * (1.0f / 480.0f);
+            }
+            else
+            {
+                *(float*)(regs.esp + 0x54) = *(float*)(regs.esp + 0x54) * Screen.fWidth * ((1.0f / 640.0f) / Screen.fHudScale);
+                *(float*)(regs.esp + 0x58) = *(float*)(regs.esp + 0x58) * Screen.fHeight * (1.0f / 480.0f);
+                *(float*)(regs.esp + 0x5C) = Screen.fWidth * *(float*)(regs.esp + 0x5C) * ((1.0f / 640.0f) / Screen.fHudScale);
+                *(float*)(regs.esp + 0x60) = Screen.fHeight * *(float*)(regs.esp + 0x60) * (1.0f / 480.0f);
+                *(float*)(regs.esp + 0x54) += Screen.fHudOffsetReal;
+                *(float*)(regs.esp + 0x5C) += Screen.fHudOffsetReal;
+            }
+            _asm fstp dword ptr[temp]
+            _asm fstp dword ptr[temp]
+            _asm fstp dword ptr[temp]
+            _asm fstp dword ptr[temp]
+        }
+    }; injector::MakeInline<TGuiTextureRendererRenderHook>(pattern.get_first(0), pattern.get_first(66));
+
+    pattern = hook::module_pattern(GetModuleHandle(L"GCore.dll"), "D9 44 24 3C D8 C9 D8 0D ? ? ? ? D9 5C 24 3C DB 44 24 08 D9 44 24 40 D8 C9");
+    struct TGuiTextureRendererGroupRenderHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            static float temp = 0.0f;
+            *(float*)(regs.esp + 0x3C) = *(float*)(regs.esp + 0x3C) * Screen.fWidth * ((1.0f / 640.0f) / Screen.fHudScale);
+            *(float*)(regs.esp + 0x40) = *(float*)(regs.esp + 0x40) * Screen.fHeight * (1.0f / 480.0f);
+            *(float*)(regs.esp + 0x34) = Screen.fWidth * *(float*)(regs.esp + 0x34) * ((1.0f / 640.0f) / Screen.fHudScale);
+            *(float*)(regs.esp + 0x38) = Screen.fHeight * *(float*)(regs.esp + 0x38) * (1.0f / 480.0f);
+            *(float*)(regs.esp + 0x3C) += Screen.fHudOffsetReal;
+            *(float*)(regs.esp + 0x34) += Screen.fHudOffsetReal;
+            _asm fstp dword ptr[temp]
+            _asm fstp dword ptr[temp]
+            _asm fstp dword ptr[temp]
+            _asm fstp dword ptr[temp]
+        }
+    }; injector::MakeInline<TGuiTextureRendererGroupRenderHook>(pattern.get_first(0), pattern.get_first(66));
+
+
+    pattern = hook::module_pattern(GetModuleHandle(L"GCore.dll"), "D8 0D ? ? ? ? D9 44 24 24 D8 C9 D9 5C 24 18 D9 C1 D8 4C 24 28 D9 5C 24 1C");
+    struct TGOFontDrawStringHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            static float temp = 0.0f;
+            *(float*)(regs.esp + 0x18) = *(float*)(regs.esp + 0x24) * Screen.fWidth * ((1.0f / 640.0f) / Screen.fHudScale);
+            *(float*)(regs.esp + 0x1C) = *(float*)(regs.esp + 0x28) * Screen.fHeight * (1.0f / 480.0f);
+            *(float*)(regs.esp + 0x10) = Screen.fWidth * *(float*)(regs.esp + 0x34) * ((1.0f / 640.0f) / Screen.fHudScale);
+            *(float*)(regs.esp + 0x14) = Screen.fHeight * *(float*)(regs.esp + 0x38) * (1.0f / 480.0f);
+            *(float*)(regs.esp + 0x18) += Screen.fHudOffsetReal;
+            //*(float*)(regs.esp + 0x10) += Screen.fHudOffsetReal;
+            _asm fstp dword ptr[temp]
+            _asm fstp dword ptr[temp]
+            _asm fstp dword ptr[temp]
+            _asm fstp dword ptr[temp]
+            regs.eax = *(uint32_t*)(regs.esp + 0x10);
+        }
+    };
+    injector::MakeInline<TGOFontDrawStringHook>(pattern.count(2).get(0).get<void>(0), pattern.count(2).get(0).get<void>(46));
+    injector::MakeInline<TGOFontDrawStringHook>(pattern.count(2).get(1).get<void>(0), pattern.count(2).get(1).get<void>(46));
+
+    pattern = hook::module_pattern(GetModuleHandle(L"GCore.dll"), "D8 4C 24 34 D8 0D ? ? ? ? D9 5C 24 34 DB 44 24 10 D8 4C 24 38 D8 0D ? ? ? ? D9 5C 24 38");
+    struct IGuiManagerPostRenderHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            static float temp = 0.0f;
+            *(float*)(regs.esp + 0x34) = Screen.fWidth * *(float*)(regs.esp + 0x34) * ((1.0f / 640.0f) / Screen.fHudScale);
+            *(float*)(regs.esp + 0x38) = Screen.fHeight * *(float*)(regs.esp + 0x38) * (1.0f / 480.0f);
+            *(float*)(regs.esp + 0x3C) += Screen.fHudOffsetReal;
+            //*(float*)(regs.esp + 0x34) += Screen.fHudOffsetReal;
+            _asm fstp dword ptr[temp]
+        }
+    }; injector::MakeInline<IGuiManagerPostRenderHook>(pattern.get_first(0), pattern.get_first(32));
+
 }
 
 void Initg_Rhapsody()
