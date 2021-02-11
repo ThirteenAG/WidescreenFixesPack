@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "CPatch.h"
 
 struct Screen
 {
@@ -19,7 +18,7 @@ struct Screen
     bool isMenu;
     int32_t* dword_A8F0C8;
     int32_t* dword_A8F0CC;
-
+    bool bFix2D;
 } Screen;
 
 class CRect
@@ -114,7 +113,7 @@ void Init()
     CIniReader iniReader(".\\videomode.ini");
     Screen.nWidth = iniReader.ReadInteger("Settings", "Width", 0);
     Screen.nHeight = iniReader.ReadInteger("Settings", "Height", 0);
-    bool bFix2D = iniReader.ReadInteger("Settings", "WidescreenUIPatch", 1) != 0;
+    Screen.bFix2D = iniReader.ReadInteger("Settings", "WidescreenUIPatch", 1) != 0;
 
     if (!Screen.nWidth || !Screen.nHeight)
         std::tie(Screen.nWidth, Screen.nHeight) = GetDesktopRes();
@@ -207,10 +206,13 @@ void Init()
             regs.eax = *(uint32_t*)(regs.edx + 0x04);
             regs.ecx = *(uint32_t*)(regs.eax + 0x14);
 
-            *(float*)(regs.esp + 0x14) += Screen.fHudOffsetReal;
-            *(float*)(regs.esp + 0x44) += Screen.fHudOffsetReal;
-            *(float*)(regs.esp + 0x2C) -= Screen.fHudOffsetReal;
-            *(float*)(regs.esp + 0x5C) -= Screen.fHudOffsetReal;
+            if (Screen.bFix2D)
+            {
+                *(float*)(regs.esp + 0x14) += Screen.fHudOffsetReal;
+                *(float*)(regs.esp + 0x44) += Screen.fHudOffsetReal;
+                *(float*)(regs.esp + 0x2C) -= Screen.fHudOffsetReal;
+                *(float*)(regs.esp + 0x5C) -= Screen.fHudOffsetReal;
+            }
         }
     }; injector::MakeInline<BinkVideoHook>(pattern.get_first(0), pattern.get_first(6));
 
@@ -278,7 +280,7 @@ void InitGCore()
         }
     }; injector::MakeInline<ResHook>(pattern.get_first(0), pattern.get_first(9));
 
-    //Fullscreen res change to windowed (hack!), but otherwise it's kinda weird
+    //Fullscreen res change to windowed (in menu selector) (hack!), but otherwise it's kinda weird
     pattern = hook::module_pattern(GetModuleHandle(L"GCore.dll"), "74 0B 57 56 FF 52 38 5F 5E 83 C4 0C C3 8D 44 24 08 50 8D 44 24 10");
     injector::MakeNOP(pattern.get_first(0), 2, true);
 
@@ -294,26 +296,36 @@ void InitGCore()
             float x2 = *(float*)(regs.esp + 0x5C);
             float y2 = *(float*)(regs.esp + 0x60);
 #endif
-            CRect rect(*(float*)(regs.esp + 0x54), *(float*)(regs.esp + 0x58), *(float*)(regs.esp + 0x5C), *(float*)(regs.esp + 0x60));
-
             static float temp = 0.0f;
-            if (rect == CRect(0.0f, 375.0f, 640.0f, 430.0f) || // menu black overlay texture
-                    rect == CRect(0.0f,  430.0f, 640.0f, 485.0f)    //menu black overlay texture
-               )
+            if (Screen.bFix2D)
+            {
+                CRect rect(*(float*)(regs.esp + 0x54), *(float*)(regs.esp + 0x58), *(float*)(regs.esp + 0x5C), *(float*)(regs.esp + 0x60));
+
+                if (rect == CRect(0.0f, 375.0f, 640.0f, 430.0f) || // menu black overlay texture
+                        rect == CRect(0.0f, 430.0f, 640.0f, 485.0f)    //menu black overlay texture
+                   )
+                {
+                    *(float*)(regs.esp + 0x54) = *(float*)(regs.esp + 0x54) * Screen.fWidth * ((1.0f / 640.0f));
+                    *(float*)(regs.esp + 0x58) = *(float*)(regs.esp + 0x58) * Screen.fHeight * (1.0f / 480.0f);
+                    *(float*)(regs.esp + 0x5C) = Screen.fWidth * *(float*)(regs.esp + 0x5C) * ((1.0f / 640.0f));
+                    *(float*)(regs.esp + 0x60) = Screen.fHeight * *(float*)(regs.esp + 0x60) * (1.0f / 480.0f);
+                }
+                else
+                {
+                    *(float*)(regs.esp + 0x54) = *(float*)(regs.esp + 0x54) * Screen.fWidth * ((1.0f / 640.0f) / Screen.fHudScale);
+                    *(float*)(regs.esp + 0x58) = *(float*)(regs.esp + 0x58) * Screen.fHeight * (1.0f / 480.0f);
+                    *(float*)(regs.esp + 0x5C) = Screen.fWidth * *(float*)(regs.esp + 0x5C) * ((1.0f / 640.0f) / Screen.fHudScale);
+                    *(float*)(regs.esp + 0x60) = Screen.fHeight * *(float*)(regs.esp + 0x60) * (1.0f / 480.0f);
+                    *(float*)(regs.esp + 0x54) += Screen.fHudOffsetReal;
+                    *(float*)(regs.esp + 0x5C) += Screen.fHudOffsetReal;
+                }
+            }
+            else
             {
                 *(float*)(regs.esp + 0x54) = *(float*)(regs.esp + 0x54) * Screen.fWidth * ((1.0f / 640.0f));
                 *(float*)(regs.esp + 0x58) = *(float*)(regs.esp + 0x58) * Screen.fHeight * (1.0f / 480.0f);
                 *(float*)(regs.esp + 0x5C) = Screen.fWidth * *(float*)(regs.esp + 0x5C) * ((1.0f / 640.0f));
                 *(float*)(regs.esp + 0x60) = Screen.fHeight * *(float*)(regs.esp + 0x60) * (1.0f / 480.0f);
-            }
-            else
-            {
-                *(float*)(regs.esp + 0x54) = *(float*)(regs.esp + 0x54) * Screen.fWidth * ((1.0f / 640.0f) / Screen.fHudScale);
-                *(float*)(regs.esp + 0x58) = *(float*)(regs.esp + 0x58) * Screen.fHeight * (1.0f / 480.0f);
-                *(float*)(regs.esp + 0x5C) = Screen.fWidth * *(float*)(regs.esp + 0x5C) * ((1.0f / 640.0f) / Screen.fHudScale);
-                *(float*)(regs.esp + 0x60) = Screen.fHeight * *(float*)(regs.esp + 0x60) * (1.0f / 480.0f);
-                *(float*)(regs.esp + 0x54) += Screen.fHudOffsetReal;
-                *(float*)(regs.esp + 0x5C) += Screen.fHudOffsetReal;
             }
             _asm fstp dword ptr[temp]
             _asm fstp dword ptr[temp]
@@ -328,12 +340,22 @@ void InitGCore()
         void operator()(injector::reg_pack& regs)
         {
             static float temp = 0.0f;
-            *(float*)(regs.esp + 0x3C) = *(float*)(regs.esp + 0x3C) * Screen.fWidth * ((1.0f / 640.0f) / Screen.fHudScale);
-            *(float*)(regs.esp + 0x40) = *(float*)(regs.esp + 0x40) * Screen.fHeight * (1.0f / 480.0f);
-            *(float*)(regs.esp + 0x34) = Screen.fWidth * *(float*)(regs.esp + 0x34) * ((1.0f / 640.0f) / Screen.fHudScale);
-            *(float*)(regs.esp + 0x38) = Screen.fHeight * *(float*)(regs.esp + 0x38) * (1.0f / 480.0f);
-            *(float*)(regs.esp + 0x3C) += Screen.fHudOffsetReal;
-            *(float*)(regs.esp + 0x34) += Screen.fHudOffsetReal;
+            if (Screen.bFix2D)
+            {
+                *(float*)(regs.esp + 0x3C) = *(float*)(regs.esp + 0x3C) * Screen.fWidth * ((1.0f / 640.0f) / Screen.fHudScale);
+                *(float*)(regs.esp + 0x40) = *(float*)(regs.esp + 0x40) * Screen.fHeight * (1.0f / 480.0f);
+                *(float*)(regs.esp + 0x34) = Screen.fWidth * *(float*)(regs.esp + 0x34) * ((1.0f / 640.0f) / Screen.fHudScale);
+                *(float*)(regs.esp + 0x38) = Screen.fHeight * *(float*)(regs.esp + 0x38) * (1.0f / 480.0f);
+                *(float*)(regs.esp + 0x3C) += Screen.fHudOffsetReal;
+                *(float*)(regs.esp + 0x34) += Screen.fHudOffsetReal;
+            }
+            else
+            {
+                *(float*)(regs.esp + 0x3C) = *(float*)(regs.esp + 0x3C) * Screen.fWidth * ((1.0f / 640.0f));
+                *(float*)(regs.esp + 0x40) = *(float*)(regs.esp + 0x40) * Screen.fHeight * (1.0f / 480.0f);
+                *(float*)(regs.esp + 0x34) = Screen.fWidth * *(float*)(regs.esp + 0x34) * ((1.0f / 640.0f));
+                *(float*)(regs.esp + 0x38) = Screen.fHeight * *(float*)(regs.esp + 0x38) * (1.0f / 480.0f);
+            }
             _asm fstp dword ptr[temp]
             _asm fstp dword ptr[temp]
             _asm fstp dword ptr[temp]
@@ -341,19 +363,28 @@ void InitGCore()
         }
     }; injector::MakeInline<TGuiTextureRendererGroupRenderHook>(pattern.get_first(0), pattern.get_first(66));
 
-
     pattern = hook::module_pattern(GetModuleHandle(L"GCore.dll"), "D8 0D ? ? ? ? D9 44 24 24 D8 C9 D9 5C 24 18 D9 C1 D8 4C 24 28 D9 5C 24 1C");
     struct TGOFontDrawStringHook
     {
         void operator()(injector::reg_pack& regs)
         {
             static float temp = 0.0f;
-            *(float*)(regs.esp + 0x18) = *(float*)(regs.esp + 0x24) * Screen.fWidth * ((1.0f / 640.0f) / Screen.fHudScale);
-            *(float*)(regs.esp + 0x1C) = *(float*)(regs.esp + 0x28) * Screen.fHeight * (1.0f / 480.0f);
-            *(float*)(regs.esp + 0x10) = Screen.fWidth * *(float*)(regs.esp + 0x34) * ((1.0f / 640.0f) / Screen.fHudScale);
-            *(float*)(regs.esp + 0x14) = Screen.fHeight * *(float*)(regs.esp + 0x38) * (1.0f / 480.0f);
-            *(float*)(regs.esp + 0x18) += Screen.fHudOffsetReal;
-            //*(float*)(regs.esp + 0x10) += Screen.fHudOffsetReal;
+            if (Screen.bFix2D)
+            {
+                *(float*)(regs.esp + 0x18) = *(float*)(regs.esp + 0x24) * Screen.fWidth * ((1.0f / 640.0f) / Screen.fHudScale);
+                *(float*)(regs.esp + 0x1C) = *(float*)(regs.esp + 0x28) * Screen.fHeight * (1.0f / 480.0f);
+                *(float*)(regs.esp + 0x10) = Screen.fWidth * *(float*)(regs.esp + 0x34) * ((1.0f / 640.0f) / Screen.fHudScale);
+                *(float*)(regs.esp + 0x14) = Screen.fHeight * *(float*)(regs.esp + 0x38) * (1.0f / 480.0f);
+                *(float*)(regs.esp + 0x18) += Screen.fHudOffsetReal;
+                //*(float*)(regs.esp + 0x10) += Screen.fHudOffsetReal;
+            }
+            else
+            {
+                *(float*)(regs.esp + 0x18) = *(float*)(regs.esp + 0x24) * Screen.fWidth * ((1.0f / 640.0f));
+                *(float*)(regs.esp + 0x1C) = *(float*)(regs.esp + 0x28) * Screen.fHeight * (1.0f / 480.0f);
+                *(float*)(regs.esp + 0x10) = Screen.fWidth * *(float*)(regs.esp + 0x34) * ((1.0f / 640.0f));
+                *(float*)(regs.esp + 0x14) = Screen.fHeight * *(float*)(regs.esp + 0x38) * (1.0f / 480.0f);
+            }
             _asm fstp dword ptr[temp]
             _asm fstp dword ptr[temp]
             _asm fstp dword ptr[temp]
@@ -369,14 +400,30 @@ void InitGCore()
     {
         void operator()(injector::reg_pack& regs)
         {
+#ifdef DEBUG
+            float x1 = *(float*)(regs.esp + 0x34);
+            float y1 = *(float*)(regs.esp + 0x38);
+            float x2 = *(float*)(regs.esp + 0x3C);
+            float y2 = *(float*)(regs.esp + 0x40);
+#endif // DEBUG
+
             static float temp = 0.0f;
-            *(float*)(regs.esp + 0x34) = Screen.fWidth * *(float*)(regs.esp + 0x34) * ((1.0f / 640.0f) / Screen.fHudScale);
-            *(float*)(regs.esp + 0x38) = Screen.fHeight * *(float*)(regs.esp + 0x38) * (1.0f / 480.0f);
-            *(float*)(regs.esp + 0x3C) += Screen.fHudOffsetReal;
-            //*(float*)(regs.esp + 0x34) += Screen.fHudOffsetReal;
+            if (Screen.bFix2D)
+            {
+                *(float*)(regs.esp + 0x34) = Screen.fWidth * *(float*)(regs.esp + 0x34) * ((1.0f / 640.0f) / Screen.fHudScale);
+                *(float*)(regs.esp + 0x38) = Screen.fHeight * *(float*)(regs.esp + 0x38) * (1.0f / 480.0f);
+                *(float*)(regs.esp + 0x3C) += Screen.fHudOffsetReal;
+                //*(float*)(regs.esp + 0x34) += Screen.fHudOffsetReal;
+            }
+            else
+            {
+                *(float*)(regs.esp + 0x34) = Screen.fWidth * *(float*)(regs.esp + 0x34) * ((1.0f / 640.0f));
+                *(float*)(regs.esp + 0x38) = Screen.fHeight * *(float*)(regs.esp + 0x38) * (1.0f / 480.0f);
+            }
             _asm fstp dword ptr[temp]
         }
     }; injector::MakeInline<IGuiManagerPostRenderHook>(pattern.get_first(0), pattern.get_first(32));
+
 
 }
 

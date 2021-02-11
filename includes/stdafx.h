@@ -290,7 +290,7 @@ private:
         if (GetCallbackList().count(module_name.data()))
         {
             GetCallbackList().at(module_name.data())();
-            GetCallbackList().erase(module_name.data());
+            //GetCallbackList().erase(module_name.data()); //shouldn't do that in case dll with callback gets unloaded and loaded again
         }
 
         //if (GetCallbackList().empty()) //win7 crash in splinter cell
