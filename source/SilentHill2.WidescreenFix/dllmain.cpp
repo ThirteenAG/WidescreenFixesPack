@@ -76,7 +76,6 @@ void Init()
     bool bSteamCrashFix = iniReader.ReadInteger("MISC", "SteamCrashFix", 0) != 0;
     auto nIncreaseNoiseEffectRes = iniReader.ReadInteger("MISC", "IncreaseNoiseEffectRes", 1);
     bool bFullscreenImages = iniReader.ReadInteger("MISC", "FullscreenImages", 1) != 0;
-    bool bDisableResolutionListOverride = iniReader.ReadInteger("MISC", "DisableResolutionListOverride", 0) != 0;
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -90,15 +89,12 @@ void Init()
     Screen.FullscreenOffsetX = static_cast<int32_t>(((Screen.fWidth - (Screen.fWidth * ((4.0f / 3.0f) / (1440.0f / 810.0f)))) / 2.0f) * ((1440.0f / 810.0f) / (4.0f / 3.0f)));
     Screen.FullscreenOffsetY = static_cast<int32_t>(((Screen.fHeight - (Screen.fHeight * ((4.0f / 3.0f) / (1440.0f / 810.0f)))) / 2.0f) * ((1440.0f / 810.0f) / (4.0f / 3.0f)));
 
-    if (!bDisableResolutionListOverride)
+    static auto ResList = *hook::pattern("3B 93 ? ? ? ? 75 ? 8B 44 24 14 3B 83").count(1).get(0).get<uint32_t*>(2); //4F60A8
+    for (uint32_t i = (uint32_t)ResList; i <= (uint32_t)ResList + 0x2C; i += 4)
     {
-        static auto ResList = *hook::pattern("3B 93 ? ? ? ? 75 ? 8B 44 24 14 3B 83").count(1).get(0).get<uint32_t*>(2); //4F60A8
-        for (uint32_t i = (uint32_t)ResList; i <= (uint32_t)ResList + 0x2C; i += 4)
-        {
-            injector::WriteMemory(i, Screen.Width, true);
-            i += 4;
-            injector::WriteMemory(i, Screen.Height, true);
-        }
+        injector::WriteMemory(i, Screen.Width, true);
+        i += 4;
+        injector::WriteMemory(i, Screen.Height, true);
     }
 
     if (bFix2D)
