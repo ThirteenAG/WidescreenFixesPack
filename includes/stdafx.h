@@ -222,6 +222,14 @@ inline std::wstring int_to_hex(T val, size_t width = sizeof(T) * 2)
 }
 
 template <typename T>
+inline std::string int_to_hex_str(T val, size_t width = sizeof(T) * 2)
+{
+    std::stringstream ss;
+    ss << std::uppercase << std::setfill('0') << std::setw(width) << std::hex << (val | 0);
+    return ss.str();
+}
+
+template <typename T>
 bool fileExists(T fileName)
 {
     std::ifstream infile(fileName);

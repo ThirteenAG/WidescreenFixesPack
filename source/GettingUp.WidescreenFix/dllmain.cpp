@@ -1,5 +1,5 @@
 #include "stdafx.h"
-
+#include "spdlog/spdlog.h"
 struct Screen
 {
     int32_t nWidth;
@@ -80,7 +80,6 @@ static auto GetRes = []()
     Screen.g_res_w = Screen.nWidth;
 };
 
-
 ///////////////////////
 DWORD jmpAddress, jmpAddress2;
 char in_menu;
@@ -107,6 +106,94 @@ void __declspec(naked)menu_check()
 //CPatch::RedirectJump(0x4B8EC0, menu_check);
 ////////////////////////
 
+void __stdcall sub_4B6940(float a1, float a2, float a3)
+{
+
+    static void* stack[6];
+    CaptureStackBackTrace(0, 3, stack, NULL);
+
+    static auto GetModuleName = [](uint32_t addr) -> std::string
+    {
+        HMODULE hm = NULL;
+        GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCWSTR)addr, &hm);
+        const std::string moduleFileName = GetModulePath<std::string>(hm);
+        return moduleFileName.substr(moduleFileName.find_last_of("/\\") + 1);
+    };
+
+    auto module_name = GetModuleName((uint32_t)stack[1]);
+    auto module_base = ((uint32_t)GetModuleHandleA(module_name.c_str()));
+    std::transform(module_name.begin(), module_name.end(), module_name.begin(), tolower);
+
+    auto xref1 = (uint32_t)(stack[1]) - module_base;
+
+    if (module_name == "gcore.dll" || module_name == "g_rhapsody.sgl")
+        xref1 += 0x10000000;
+    else if (module_name == "gettingup.exe")
+        xref1 += 0x400000;
+
+    uint32_t xrefs_hud[] =
+    {
+        0x100E4F04, //red weapon icon half circle bar
+        0x100E4F70, //red weapon icon half circle bar
+        0x100E4FD6, //red weapon icon half circle bar
+        0x100E5042, //red weapon icon half circle bar
+        0x102C7DB8, //weapon icons
+        0x102C7E21, //weapon icons
+        0x102C7E8B, //weapon icons
+        0x102C7EF5, //weapon icons
+        0x102C8CEA, //weapon icons background
+        0x102C8D53, //weapon icons background
+        0x102C8DBD, //weapon icons background
+        0x102C8E27, //weapon icons background
+    };
+
+    if (!(std::end(xrefs_hud) == std::find(std::begin(xrefs_hud), std::end(xrefs_hud), xref1)))
+    {
+        //scaling handled in postrenderhook
+        a1 += (Screen.fWidth - 0.0f) / 2.0f;
+        a2 += (Screen.fHeight - 0.0f) / 2.0f;
+    }
+    else
+    {
+        DBGONLY(KEYPRESS(VK_F2) { spd::log()->info(int_to_hex_str(xref1)); });
+
+        uint32_t xrefs_fullscreen[] =
+        {
+            0x004e51da,
+            0x004e5249,
+            0x004e516b,
+            0x004e52c5,
+            0x004e516b,
+
+        };
+
+        //if ((((int32_t)a1 == 0 && (int32_t)a2 == Screen.nHeight)))
+        //{
+        //    _asm nop
+        //}
+
+        if ((std::end(xrefs_fullscreen) == std::find(std::begin(xrefs_fullscreen), std::end(xrefs_fullscreen), xref1)))
+        {
+            a1 /= Screen.fHudScale;
+            a1 += Screen.fHudOffsetReal;
+        }
+    }
+
+    auto dword_A909E4 = (float*)0xA909E4;
+    auto dword_A909E8 = (float*)0xA909E8;
+    auto dword_A909EC = (float*)0xA909EC;
+    auto dword_A909F0 = (float*)0xA909F0;
+    dword_A909E4[7 * *(uint32_t*)0xA90A1C] = a1;
+    dword_A909E8[7 * *(uint32_t*)0xA90A1C] = a2;
+    dword_A909EC[7 * *(uint32_t*)0xA90A1C] = a3;
+    dword_A909F0[7 * *(uint32_t*)0xA90A1C] = 1.0f;
+}
+
+void __cdecl TGORender__QueryResolutionHook(int32_t* x, int32_t* y)
+{
+    *x = 0; //640
+    *y = 0; //480
+}
 
 void Init()
 {
@@ -182,10 +269,10 @@ void Init()
         }
     }; injector::MakeInline<FullscreenResYHook2>(pattern.get_first(0));
 
-    //Default dimensions overwrite
-    pattern = hook::pattern("8B 0D ? ? ? ? A1 ? ? ? ? 8D 5C 24 2C");
-    injector::WriteMemory(pattern.get_first(2), &Screen.nHeight, true);
-    injector::WriteMemory(pattern.get_first(7), &Screen.nWidth, true);
+    //Default dimensions overwrite !BREAKS SOME LEVELS!
+    //pattern = hook::pattern("8B 0D ? ? ? ? A1 ? ? ? ? 8D 5C 24 2C");
+    //injector::WriteMemory(pattern.get_first(2), &Screen.nHeight, true);
+    //injector::WriteMemory(pattern.get_first(7), &Screen.nWidth, true);
 
     pattern = hook::pattern("8B 08 89 4C 24 2C 8B 48 04 89 4C 24 30 38 9E ? ? ? ? 75 17 B9");
     struct FullscreenResHook
@@ -225,6 +312,9 @@ void Init()
     pattern = hook::pattern("E8 ? ? ? ? 57 57 8D 8D ? ? ? ? 51 8D 95 ? ? ? ? 52");
     injector::MakeNOP(pattern.get_first(0), 5, true);
 #endif
+
+    injector::MakeJMP(0x4B6940, sub_4B6940, true);
+
 }
 
 void InitGCore()
@@ -280,11 +370,12 @@ void InitGCore()
         }
     }; injector::MakeInline<ResHook>(pattern.get_first(0), pattern.get_first(9));
 
-    //Fullscreen res change to windowed (in menu selector) (hack!), but otherwise it's kinda weird
-    pattern = hook::module_pattern(GetModuleHandle(L"GCore.dll"), "74 0B 57 56 FF 52 38 5F 5E 83 C4 0C C3 8D 44 24 08 50 8D 44 24 10");
-    injector::MakeNOP(pattern.get_first(0), 2, true);
+    //Fullscreen res change to windowed (in menu selector) (hack!)
+    //pattern = hook::module_pattern(GetModuleHandle(L"GCore.dll"), "74 0B 57 56 FF 52 38 5F 5E 83 C4 0C C3 8D 44 24 08 50 8D 44 24 10");
+    //injector::MakeNOP(pattern.get_first(0), 2, true);
 
     //Interface
+#if 0
     pattern = hook::module_pattern(GetModuleHandle(L"GCore.dll"), "D9 44 24 54 D8 C9 D8 0D ? ? ? ? D9 5C 24 54 DB 44 24 28 D9 44 24 58 D8 C9");
     struct TGuiTextureRendererRenderHook
     {
@@ -332,7 +423,7 @@ void InitGCore()
             _asm fstp dword ptr[temp]
             _asm fstp dword ptr[temp]
         }
-    }; injector::MakeInline<TGuiTextureRendererRenderHook>(pattern.get_first(0), pattern.get_first(66));
+    }; //injector::MakeInline<TGuiTextureRendererRenderHook>(pattern.get_first(0), pattern.get_first(66));
 
     pattern = hook::module_pattern(GetModuleHandle(L"GCore.dll"), "D9 44 24 3C D8 C9 D8 0D ? ? ? ? D9 5C 24 3C DB 44 24 08 D9 44 24 40 D8 C9");
     struct TGuiTextureRendererGroupRenderHook
@@ -361,7 +452,7 @@ void InitGCore()
             _asm fstp dword ptr[temp]
             _asm fstp dword ptr[temp]
         }
-    }; injector::MakeInline<TGuiTextureRendererGroupRenderHook>(pattern.get_first(0), pattern.get_first(66));
+    }; //injector::MakeInline<TGuiTextureRendererGroupRenderHook>(pattern.get_first(0), pattern.get_first(66));
 
     pattern = hook::module_pattern(GetModuleHandle(L"GCore.dll"), "D8 0D ? ? ? ? D9 44 24 24 D8 C9 D9 5C 24 18 D9 C1 D8 4C 24 28 D9 5C 24 1C");
     struct TGOFontDrawStringHook
@@ -392,21 +483,15 @@ void InitGCore()
             regs.eax = *(uint32_t*)(regs.esp + 0x10);
         }
     };
-    injector::MakeInline<TGOFontDrawStringHook>(pattern.count(2).get(0).get<void>(0), pattern.count(2).get(0).get<void>(46));
-    injector::MakeInline<TGOFontDrawStringHook>(pattern.count(2).get(1).get<void>(0), pattern.count(2).get(1).get<void>(46));
+    //injector::MakeInline<TGOFontDrawStringHook>(pattern.count(2).get(0).get<void>(0), pattern.count(2).get(0).get<void>(46));
+    //injector::MakeInline<TGOFontDrawStringHook>(pattern.count(2).get(1).get<void>(0), pattern.count(2).get(1).get<void>(46));
+#endif
 
     pattern = hook::module_pattern(GetModuleHandle(L"GCore.dll"), "D8 4C 24 34 D8 0D ? ? ? ? D9 5C 24 34 DB 44 24 10 D8 4C 24 38 D8 0D ? ? ? ? D9 5C 24 38");
     struct IGuiManagerPostRenderHook
     {
         void operator()(injector::reg_pack& regs)
         {
-#ifdef DEBUG
-            float x1 = *(float*)(regs.esp + 0x34);
-            float y1 = *(float*)(regs.esp + 0x38);
-            float x2 = *(float*)(regs.esp + 0x3C);
-            float y2 = *(float*)(regs.esp + 0x40);
-#endif // DEBUG
-
             static float temp = 0.0f;
             if (Screen.bFix2D)
             {
@@ -424,6 +509,44 @@ void InitGCore()
         }
     }; injector::MakeInline<IGuiManagerPostRenderHook>(pattern.get_first(0), pattern.get_first(32));
 
+    //Fixes for things that break on very high res
+    pattern = hook::module_pattern(GetModuleHandle(L"GCore.dll"), "51 E8 ? ? ? ? DB 44 24 0C");
+    injector::MakeCALL(pattern.get_first(1), TGORender__QueryResolutionHook, true); //positioning
+    //pattern = hook::module_pattern(GetModuleHandle(L"GCore.dll"), "E8 ? ? ? ? DB 44 24 1C");
+    //injector::MakeCALL(pattern.get_first(0), TGORender__QueryResolutionHook, true); //scaling (not needed)
+
+    pattern = hook::module_pattern(GetModuleHandle(L"GCore.dll"), "8D 44 24 18 89 4C 24 18 50 8B CF 89 74 24 20");
+    struct XMLParseHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.eax = regs.esp + 0x18;
+            *(uint32_t*)(regs.esp + 0x18) = regs.ecx;
+            std::string_view name(*(char**)(regs.esi + 0x08));
+
+            if (name == "item_arc-color" || name == "item_arc-trail" || name == "item-bak" || name == "item_icon")
+            {
+                auto x = float(*(int16_t*)(regs.esi + 0x8C + 0)) / 32.0f;
+                auto y = float(*(int16_t*)(regs.esi + 0x8C + 2)) / 32.0f;
+
+                x += (640.0f / 2.0f);
+                y -= (480.0f / 2.0f);
+
+                if (Screen.nWidth > 2560) //held item breaks on 4K still, moving it away from right edge
+                    x -= 60.0f;
+
+                if (name == "item_arc-color" || name == "item_arc-trail")
+                    y -= 1.0f;
+
+                *(int16_t*)(regs.esi + 0x8C + 0) = int16_t(x * 32.0f);
+                *(int16_t*)(regs.esi + 0x8C + 2) = int16_t(y * 32.0f);
+            }
+            else if (name == "crop01" || name == "crop02" || name == "crop03" || name == "crop04")
+            {
+                *(int32_t*)(regs.esi + 0xA0) = 0; //rgba, hiding tv surv cam overlay
+            }
+        }
+    }; injector::MakeInline<XMLParseHook>(pattern.get_first(0), pattern.get_first(8));
 
 }
 
@@ -456,6 +579,21 @@ void Initg_Rhapsody()
             swprintf((wchar_t*)(*(uint32_t*)(regs.eax) + 2), 18, L"%d x %d", Screen.nWidth, Screen.nHeight);
         }
     }; injector::MakeInline<ResTextOverwrite>(pattern.get_first(0), pattern.get_first(6));
+
+    //surv camera rotating thingy centering
+    static float f0 = 0.0f;
+    pattern = hook::module_pattern(GetModuleHandle(L"g_Rhapsody.sgl"), "D8 25 ? ? ? ? D8 4C 24 20 DB 44 24 74 D8 BC F4");
+    injector::WriteMemory(pattern.get_first(2), &f0, true);
+    pattern = hook::module_pattern(GetModuleHandle(L"g_Rhapsody.sgl"), "D8 25 ? ? ? ? D8 4C 24 48 D9 E0 D9 C9 D8 44 24 7C");
+    injector::WriteMemory(pattern.get_first(2), &f0, true);
+
+#if _DEBUG
+    //security camera force overlay
+    //pattern = hook::module_pattern(GetModuleHandle(L"g_Rhapsody.sgl"), "74 10 8B CF");
+    //injector::WriteMemory<uint8_t>(pattern.get_first(0), 0x75, true);
+#endif // _DEBUG
+
+
 }
 
 CEXP void InitializeASI()
