@@ -102,7 +102,7 @@ project "FarCry64.WidescreenFix"
    architecture "x64"
    files { "source/FarCry.WidescreenFix/*.cpp" }
    setpaths("Z:/WFP/Games/Far Cry/", "Bin64/FarCry.exe", "Bin64/")
-   targetdir "data/FarCry.WidescreenFix/Bin64"
+   targetdir "data/FarCry.WidescreenFix/Bin64/"
 project "Flatout.WidescreenFix"
    setpaths("Z:/WFP/Games/Flatout/FlatOut/", "flatout.exe")
 project "Flatout2.WidescreenFix"
@@ -110,7 +110,9 @@ project "Flatout2.WidescreenFix"
 project "FlatoutUltimateCarnage.WidescreenFix"
    setpaths("Z:/WFP/Games/Flatout/FlatOut - Ultimate Carnage/", "Fouc.exe")
 project "GettingUp.WidescreenFix"
-   setpaths("Z:/WFP/Games/Marc Ecko's Getting Up 2/_Bin/", "GettingUp.exe", "")
+   setpaths("Z:/WFP/Games/Marc Ecko's Getting Up 2/", "_Bin/GettingUp.exe", "_Bin/")
+   targetdir "data/GettingUp.WidescreenFix/_Bin/"
+   debugargs { "map=M01_HOO_Tranes_Hood_3" }
 project "GTA1.WidescreenFix"
    setpaths("Z:/WFP/Games/Grand Theft Auto/Grand Theft Auto 1 London 1969 1961/", "WINO/Grand Theft Auto.exe", "WINO/scripts/")
 project "GTA2.WidescreenFix"
