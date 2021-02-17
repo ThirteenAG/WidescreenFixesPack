@@ -396,8 +396,8 @@ private:
         std::wstring str(FullDllPath);
         call(str.substr(str.find_last_of(L"/\\") + 1));
 
-        if (!*ActivationContext)
-            return STATUS_INVALID_PARAMETER;
+        //if (!*ActivationContext)
+        //    return STATUS_INVALID_PARAMETER; // breaks on xp
 
         HANDLE actx = NULL;
         ACTCTXW act = { 0 };
@@ -434,7 +434,9 @@ private:
         {
             LdrSetDllManifestProber = (fnLdrSetDllManifestProber)GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "LdrSetDllManifestProber");
             if (LdrSetDllManifestProber)
+            {
                 LdrSetDllManifestProber(&ProbeCallback, NULL, &ReleaseActCtx);
+            }
         }
     }
 

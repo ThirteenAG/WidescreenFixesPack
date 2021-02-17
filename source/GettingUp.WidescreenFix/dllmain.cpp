@@ -16,6 +16,8 @@ struct Screen
     int32_t g_res_w;
     int32_t video_mode;
     bool isMenu;
+    int32_t* dword_A8F0C0;
+    int32_t* dword_A8F0C4;
     int32_t* dword_A8F0C8;
     int32_t* dword_A8F0CC;
     bool bFix2D;
@@ -81,23 +83,25 @@ static auto GetRes = []()
 };
 
 ///////////////////////
-DWORD jmpAddress, jmpAddress2;
+uint32_t dword_A909F9;
+uint32_t dword_65B45C;
+uint32_t dword_544758;
+uint32_t dword_4B8EC7;
 char in_menu;
-void __declspec(naked)menu_check()
+void __declspec(naked) menu_check()
 {
     _asm
     {
-        mov eax, 0xA909F9
+        mov eax, dword_A909F9
         cmp[eax], 0
         je label1
-        mov eax, 0x65B45C
+        mov eax, dword_65B45C
         cmp[eax], 0
         jne label1
         mov in_menu, 1
-        push 255u
-        push 0x00544758
-        mov jmpAddress, 0x4B8EC7
-        jmp jmpAddress
+        push 0xFF
+        push dword_544758
+        jmp dword_4B8EC7
         label1 :
         mov in_menu, 0
         ret 8
@@ -207,7 +211,13 @@ void Init()
     injector::MakeCALL(pattern.get_first(0), SetWindowPosHook, true);
 
     //windowed mode crash in gameplay workaround
-    static auto sub_4B8EC0 = hook::get_pattern("6A FF 68 ? ? ? ? 64 A1 ? ? ? ? 50 64 89 25 ? ? ? ? 51 53 56 57 8B F1", 0);
+    pattern = hook::pattern("6A FF 68 ? ? ? ? 64 A1 ? ? ? ? 50 64 89 25 ? ? ? ? 51 53 56 57 8B F1");
+    static auto sub_4B8EC0 = (uint32_t)pattern.get_first(0);
+    dword_4B8EC7 = (uint32_t)pattern.get_first(7);
+    dword_544758 = *pattern.get_first<uint32_t>(3);
+    pattern = hook::pattern("89 88 ? ? ? ? 8B 15 ? ? ? ? 8B 44 24 08 6B D2 1C 89 82");
+    dword_A909F9 = (uint32_t)(*pattern.count(4).get(1).get<void*>(2)) + 1;
+    dword_65B45C = (uint32_t)(*hook::get_pattern<void*>("B8 ? ? ? ? 57 8B FF", 1)) + 0x564;
     pattern = hook::pattern("8B 4C 24 10 5F 5E B0 01 5B 64 89 0D ? ? ? ? 83 C4 10 C2 08 00");
     struct InitiatingWindowModeHook
     {
@@ -215,10 +225,12 @@ void Init()
         {
             regs.ecx = *(uint32_t*)(regs.esp + 0x10);
             regs.eax = 1;
-            injector::MakeRET(sub_4B8EC0, 8, true);
+            //injector::MakeRET(sub_4B8EC0, 8, true);
+            injector::MakeJMP(sub_4B8EC0, menu_check, true);
         }
     }; injector::MakeInline<InitiatingWindowModeHook>(pattern.get_first(0), pattern.get_first(8));
     injector::WriteMemory<uint16_t>(pattern.get_first(5), 0x5E5F, true); // pop edi pop esi
+
 
     //Default Fullscreen Res Hook
     pattern = hook::pattern("A3 ? ? ? ? 8B 4F 0C");
@@ -262,6 +274,54 @@ void Init()
             *Screen.dword_A8F0CC = Screen.nHeight;
         }
     }; injector::MakeInline<FullscreenResYHook2>(pattern.get_first(0));
+
+    //
+    pattern = hook::pattern("89 15 ? ? ? ? 89 3D ? ? ? ? 8B 08");
+    Screen.dword_A8F0C0 = *pattern.get_first<int32_t*>(2);
+    struct FullscreenResXHook3
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            *Screen.dword_A8F0C0 = Screen.nWidth;
+        }
+    }; injector::MakeInline<FullscreenResXHook3>(pattern.get_first(0), pattern.get_first(6));
+
+    pattern = hook::pattern("89 0D ? ? ? ? EB 1D");
+    struct FullscreenResXHook4
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            *Screen.dword_A8F0C0 = Screen.nWidth;
+        }
+    }; injector::MakeInline<FullscreenResXHook4>(pattern.get_first(0), pattern.get_first(6));
+
+    pattern = hook::pattern("89 0D ? ? ? ? 8B 40 0C");
+    struct FullscreenResXHook5
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            *Screen.dword_A8F0C0 = Screen.nWidth;
+        }
+    }; injector::MakeInline<FullscreenResXHook5>(pattern.get_first(0), pattern.get_first(6));
+
+    pattern = hook::pattern("89 3D ? ? ? ? 8B 08");
+    Screen.dword_A8F0C4 = *pattern.get_first<int32_t*>(2);
+    struct FullscreenResYHook3
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            *Screen.dword_A8F0C4 = Screen.nHeight;
+        }
+    }; injector::MakeInline<FullscreenResYHook3>(pattern.get_first(0), pattern.get_first(6));
+
+    pattern = hook::pattern("A3 ? ? ? ? 89 3D");
+    struct FullscreenResYHook4
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            *Screen.dword_A8F0C4 = Screen.nHeight;
+        }
+    }; injector::MakeInline<FullscreenResYHook4>(pattern.get_first(0));
 
     //Default dimensions overwrite !BREAKS SOME LEVELS!
     //pattern = hook::pattern("8B 0D ? ? ? ? A1 ? ? ? ? 8D 5C 24 2C");
