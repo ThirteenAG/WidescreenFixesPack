@@ -113,6 +113,8 @@ project "GettingUp.WidescreenFix"
    setpaths("Z:/WFP/Games/Marc Ecko's Getting Up 2/", "_Bin/GettingUp.exe", "_Bin/")
    targetdir "data/GettingUp.WidescreenFix/_Bin/"
    debugargs { "map=M01_HOO_Tranes_Hood_3" }
+   defines { "WINVER=0x0501", "_WIN32_WINNT=0x0501" } -- Target WinXP
+   buildoptions { "/Zc:threadSafeInit-" }
 project "GTA1.WidescreenFix"
    setpaths("Z:/WFP/Games/Grand Theft Auto/Grand Theft Auto 1 London 1969 1961/", "WINO/Grand Theft Auto.exe", "WINO/scripts/")
 project "GTA2.WidescreenFix"

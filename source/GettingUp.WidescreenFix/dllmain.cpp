@@ -106,9 +106,13 @@ void __declspec(naked)menu_check()
 //CPatch::RedirectJump(0x4B8EC0, menu_check);
 ////////////////////////
 
+float* dword_A909E4;
+float* dword_A909E8;
+float* dword_A909EC;
+float* dword_A909F0;
+uint32_t* dword_A90A1C;
 void __stdcall sub_4B6940(float a1, float a2, float a3)
 {
-
     static void* stack[6];
     CaptureStackBackTrace(0, 3, stack, NULL);
 
@@ -164,13 +168,7 @@ void __stdcall sub_4B6940(float a1, float a2, float a3)
             0x004e516b,
             0x004e52c5,
             0x004e516b,
-
         };
-
-        //if ((((int32_t)a1 == 0 && (int32_t)a2 == Screen.nHeight)))
-        //{
-        //    _asm nop
-        //}
 
         if ((std::end(xrefs_fullscreen) == std::find(std::begin(xrefs_fullscreen), std::end(xrefs_fullscreen), xref1)))
         {
@@ -179,14 +177,10 @@ void __stdcall sub_4B6940(float a1, float a2, float a3)
         }
     }
 
-    auto dword_A909E4 = (float*)0xA909E4;
-    auto dword_A909E8 = (float*)0xA909E8;
-    auto dword_A909EC = (float*)0xA909EC;
-    auto dword_A909F0 = (float*)0xA909F0;
-    dword_A909E4[7 * *(uint32_t*)0xA90A1C] = a1;
-    dword_A909E8[7 * *(uint32_t*)0xA90A1C] = a2;
-    dword_A909EC[7 * *(uint32_t*)0xA90A1C] = a3;
-    dword_A909F0[7 * *(uint32_t*)0xA90A1C] = 1.0f;
+    dword_A909E4[7 * *dword_A90A1C] = a1;
+    dword_A909E8[7 * *dword_A90A1C] = a2;
+    dword_A909EC[7 * *dword_A90A1C] = a3;
+    dword_A909F0[7 * *dword_A90A1C] = 1.0f;
 }
 
 void __cdecl TGORender__QueryResolutionHook(int32_t* x, int32_t* y)
@@ -312,9 +306,13 @@ void Init()
     pattern = hook::pattern("E8 ? ? ? ? 57 57 8D 8D ? ? ? ? 51 8D 95 ? ? ? ? 52");
     injector::MakeNOP(pattern.get_first(0), 5, true);
 #endif
-
-    injector::MakeJMP(0x4B6940, sub_4B6940, true);
-
+    pattern = hook::pattern("A1 ? ? ? ? 8B 4C 24 04 6B C0 1C 89 88 ? ? ? ? 8B 15 ? ? ? ? 8B 44 24 08 6B D2 1C 89 82 ? ? ? ? 8B 0D ? ? ? ? 8B 54 24 0C 6B C9 1C 89 91 ? ? ? ? A1");
+    dword_A90A1C = *pattern.get_first<uint32_t*>(1);
+    dword_A909E4 = *pattern.get_first<float*>(14);
+    dword_A909E8 = dword_A909E4 + 1;
+    dword_A909EC = dword_A909E4 + 2;
+    dword_A909F0 = dword_A909E4 + 3;
+    injector::MakeJMP(pattern.get_first(0), sub_4B6940, true);
 }
 
 void InitGCore()
@@ -592,8 +590,6 @@ void Initg_Rhapsody()
     //pattern = hook::module_pattern(GetModuleHandle(L"g_Rhapsody.sgl"), "74 10 8B CF");
     //injector::WriteMemory<uint8_t>(pattern.get_first(0), 0x75, true);
 #endif // _DEBUG
-
-
 }
 
 CEXP void InitializeASI()
