@@ -22,6 +22,7 @@ struct Screen
     int32_t* dword_A8F0CC;
     bool bFix2D;
     bool bDrawPillarboxes;
+    bool bDisableCutsceneBorders;
 } Screen;
 
 class CRect
@@ -217,6 +218,7 @@ void Init()
     Screen.nHeight = iniReader.ReadInteger("Settings", "Height", 0);
     Screen.bFix2D = iniReader.ReadInteger("Settings", "WidescreenUIPatch", 1) != 0;
     Screen.bDrawPillarboxes = iniReader.ReadInteger("Settings", "DrawPillarboxes", 1) != 0;
+    Screen.bDisableCutsceneBorders = iniReader.ReadInteger("Settings", "DisableCutsceneBorders", 0) != 0;
     static int32_t nToggleHudKey = iniReader.ReadInteger("MAIN", "ToggleHudKey", VK_F2);
 
     if (!Screen.nWidth || !Screen.nHeight)
@@ -701,6 +703,24 @@ void InitGCore()
     xrefs_hud.push_back((uint32_t)pattern.get_first(0)); //0x102C8DBD, //weapon icons background
     pattern = hook::module_pattern(GetModuleHandle(L"GCore.dll"), "A1 ? ? ? ? 8B 48 38 8B 46 14");
     xrefs_hud.push_back((uint32_t)pattern.get_first(0)); //0x102C8E27, //weapon icons background
+
+    //borders
+    pattern = hook::module_pattern(GetModuleHandle(L"GCore.dll"), "8B 86 ? ? ? ? 83 F8 01 74 04 3B C1 75 0B");
+    struct ILetterBoxActivateHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.eax = *(uint32_t*)(regs.esi + 0x21C);
+
+            if (Screen.bDisableCutsceneBorders)
+            {
+                *(float*)(regs.esi + 0x214) = 0.0f;
+                *(float*)(regs.esi + 0x218) = 0.0f;
+                *(float*)(regs.esi + 0x220) = 0.0f;
+                *(float*)(regs.esi + 0x224) = 0.0f;
+            }
+        }
+    }; injector::MakeInline<ILetterBoxActivateHook>(pattern.get_first(0), pattern.get_first(6));
 }
 
 void Initg_Rhapsody()
