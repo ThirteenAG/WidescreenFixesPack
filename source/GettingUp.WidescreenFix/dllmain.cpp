@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "dxsdk\d3d8.h"
 
 struct Screen
 {
@@ -50,6 +51,12 @@ public:
         : m_fLeft(*(float*)&a), m_fBottom(*(float*)&b), m_fRight(*(float*)&c), m_fTop(*(float*)&d)
     {}
 };
+
+void DrawRect(LPDIRECT3DDEVICE8 pDevice, int32_t x, int32_t y, int32_t w, int32_t h, D3DCOLOR color = D3DCOLOR_XRGB(0, 0, 0))
+{
+    D3DRECT BarRect = { x, y, x + w, y + h };
+    pDevice->Clear(1, &BarRect, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, color, 0, 0);
+}
 
 HWND g_hWnd;
 HWND g_hWndInsertAfter;
@@ -365,6 +372,8 @@ void Init()
     pattern = hook::pattern("E8 ? ? ? ? 57 57 8D 8D ? ? ? ? 51 8D 95 ? ? ? ? 52");
     injector::MakeNOP(pattern.get_first(0), 5, true);
 #endif
+
+    //Interface scaling
     pattern = hook::pattern("A1 ? ? ? ? 8B 4C 24 04 6B C0 1C 89 88 ? ? ? ? 8B 15 ? ? ? ? 8B 44 24 08 6B D2 1C 89 82 ? ? ? ? 8B 0D ? ? ? ? 8B 54 24 0C 6B C9 1C 89 91 ? ? ? ? A1");
     dword_A90A1C = *pattern.get_first<uint32_t*>(1);
     dword_A909E4 = *pattern.get_first<float*>(14);
@@ -372,6 +381,25 @@ void Init()
     dword_A909EC = dword_A909E4 + 2;
     dword_A909F0 = dword_A909E4 + 3;
     injector::MakeJMP(pattern.get_first(0), sub_4B6940, true);
+
+    //D3D8 EndScene Hook
+    pattern = hook::pattern("A1 ? ? ? ? 8B 10 50 FF 92");
+    static LPDIRECT3DDEVICE8* pDevice = *pattern.get_first<LPDIRECT3DDEVICE8*>(1);
+    struct EndSceneHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.eax = *(uint32_t*)pDevice;
+            regs.edx = *(uint32_t*)(regs.eax);
+
+            if (*(uint32_t*)dword_65B45C == 0)
+            {
+                DrawRect(*pDevice, 0, 0, static_cast<int32_t>(Screen.fHudOffsetReal), Screen.nHeight);
+                DrawRect(*pDevice, static_cast<int32_t>(Screen.fWidth43 + Screen.fHudOffsetReal), 0, static_cast<int32_t>(Screen.fWidth43 + Screen.fHudOffsetReal + Screen.fHudOffsetReal), Screen.nHeight);
+            }
+        }
+    }; injector::MakeInline<EndSceneHook>(pattern.get_first(0), pattern.get_first(7));
+
 }
 
 void InitGCore()
@@ -657,19 +685,20 @@ void Initg_Rhapsody()
     pattern = hook::module_pattern(GetModuleHandle(L"g_Rhapsody.sgl"), "74 19 56");
     injector::MakeNOP(pattern.get_first(0), 2, true);
 
-    pattern = hook::module_pattern(GetModuleHandle(L"g_Rhapsody.sgl"), "81 C6 ? ? ? ? 56 68 ? ? ? ? 8B CF E8 ? ? ? ? 5F 5E C2 04 00");
-    struct DarkeningVeilXMLHook
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            *(float*)(regs.esi+0x9C) = 0.0f;
-            *(float*)(regs.esi+0xA0) = 0.0f;
-            *(float*)(regs.esi+0xA4) = 0.0f;
-            *(float*)(regs.esi+0xA8) = 0.0f;
-            static uint32_t temp = 0;
-            regs.esi = (uint32_t)&temp;
-        }
-    }; injector::MakeInline<DarkeningVeilXMLHook>(pattern.count(24).get(21).get<void>(0), pattern.count(24).get(21).get<void>(6));
+    //disabled in favor of EndScene borders
+    //pattern = hook::module_pattern(GetModuleHandle(L"g_Rhapsody.sgl"), "81 C6 ? ? ? ? 56 68 ? ? ? ? 8B CF E8 ? ? ? ? 5F 5E C2 04 00");
+    //struct DarkeningVeilXMLHook
+    //{
+    //    void operator()(injector::reg_pack& regs)
+    //    {
+    //        *(float*)(regs.esi+0x9C) = 0.0f;
+    //        *(float*)(regs.esi+0xA0) = 0.0f;
+    //        *(float*)(regs.esi+0xA4) = 0.0f;
+    //        *(float*)(regs.esi+0xA8) = 0.0f;
+    //        static uint32_t temp = 0;
+    //        regs.esi = (uint32_t)&temp;
+    //    }
+    //}; injector::MakeInline<DarkeningVeilXMLHook>(pattern.count(24).get(21).get<void>(0), pattern.count(24).get(21).get<void>(6));
 
 #if _DEBUG
     //security camera force overlay
