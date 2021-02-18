@@ -120,6 +120,69 @@ void __declspec(naked) menu_check()
 }
 //CPatch::RedirectJump(0x4B8EC0, menu_check);
 ////////////////////////
+bool bForceResChange;
+uint32_t* off_104CA954;
+void __cdecl TGORender__SetVideoMode(int a1, int a2, int a3)
+{
+    char v8;
+    int v9[4];
+    v9[0] = 0;
+    v9[1] = 0;
+    v9[2] = 0;
+    v9[3] = 0;
+    auto v3 = *(uint32_t*)(*(uint32_t*)(*off_104CA954 + 56) + 52);
+    (*(void(__thiscall**)(int, int*, char*))((*(uint32_t*)v3) + 8))(v3, v9, &v8);
+    auto v5 = 0;
+
+    if (bForceResChange)
+    {
+        auto v7 = (*(int(__thiscall**)(uint32_t, int))(**(uint32_t**)(*(uint32_t*)(*off_104CA954 + 56) + 52) + 52))(
+                      *(uint32_t*)(*(uint32_t*)(*off_104CA954 + 56) + 52),
+                      v5);
+        v9[3] = -1;
+        if (v7)
+        {
+            *(uint32_t*)(*(uint32_t*)(*(uint32_t*)(*off_104CA954 + 56) + 8) + 316) = a1;
+            *(uint32_t*)(*(uint32_t*)(*(uint32_t*)(*off_104CA954 + 56) + 8) + 320) = a2;
+            *(uint32_t*)(*(uint32_t*)(*(uint32_t*)(*off_104CA954 + 56) + 8) + 324) = a3;
+        }
+        (*(void(__cdecl**)(int))(*off_104CA954 + 84))(v9[2]);
+        bForceResChange = false;
+        return;
+    }
+
+    if (v9[1] <= 0)
+    {
+        v9[3] = -1;
+        (*(void(__cdecl**)(int))(*off_104CA954 + 84))(v9[2]);
+    }
+    else
+    {
+        auto v6 = (uint32_t*)(v9[2] + 8);
+        while (*(v6 - 2) != a1 || *(v6 - 1) != a2 || *v6 != a3)
+        {
+            ++v5;
+            v6 += 4;
+            if (v5 >= v9[1])
+            {
+                v9[3] = -1;
+                (*(void(__cdecl**)(int))(*off_104CA954 + 84))(v9[2]);
+                return;
+            }
+        }
+        auto v7 = (*(int(__thiscall**)(uint32_t, int))(**(uint32_t**)(*(uint32_t*)(*off_104CA954 + 56) + 52) + 52))(
+                      *(uint32_t*)(*(uint32_t*)(*off_104CA954 + 56) + 52),
+                      v5);
+        v9[3] = -1;
+        if (v7)
+        {
+            *(uint32_t*)(*(uint32_t*)(*(uint32_t*)(*off_104CA954 + 56) + 8) + 316) = a1;
+            *(uint32_t*)(*(uint32_t*)(*(uint32_t*)(*off_104CA954 + 56) + 8) + 320) = a2;
+            *(uint32_t*)(*(uint32_t*)(*(uint32_t*)(*off_104CA954 + 56) + 8) + 324) = a3;
+        }
+        (*(void(__cdecl**)(int))(*off_104CA954 + 84))(v9[2]);
+    }
+}
 
 float* dword_A909E4;
 float* dword_A909E8;
@@ -476,6 +539,8 @@ void InitGCore()
                         Screen.video_mode = 0;
                     else if (Screen.video_mode < 0)
                         Screen.video_mode = (int32_t)list.size() - 1;
+
+                    bForceResChange = true;
                 }
 
                 sscanf_s(list[Screen.video_mode].c_str(), "%dx%d", &Screen.nWidth, &Screen.nHeight);
@@ -677,10 +742,10 @@ void InitGCore()
     }; injector::MakeInline<XMLParseHook>(pattern.get_first(0), pattern.get_first(8));
 
     //fullscreen res switch always
-    pattern = hook::module_pattern(GetModuleHandle(L"GCore.dll"), "8B 0D ? ? ? ? 8B 41 38 8B 48 34 8B 01 52 FF 50 34 84 C0");
-    auto loc_10057B25 = pattern.get_first(0);
-    pattern = hook::module_pattern(GetModuleHandle(L"GCore.dll"), "3B CE 7E 25");
-    injector::MakeJMP(pattern.get_first(0), loc_10057B25, true);
+    pattern = hook::module_pattern(GetModuleHandle(L"GCore.dll"), "A1 ? ? ? ? 8B 48 38 8B 49 34 8B 11 8D 44 24 13 50 8D 44 24 18");
+    off_104CA954 = *pattern.get_first<uint32_t*>(1);
+    pattern = hook::module_pattern(GetModuleHandle(L"GCore.dll"), "6A FF 68 ? ? ? ? 64 A1 ? ? ? ? 50 64 89 25 ? ? ? ? 83 EC 10 53 55 56 33 F6 57 89 74 24");
+    injector::MakeJMP(pattern.get_first(0), TGORender__SetVideoMode, true);
 
     //Hide hud button
     pattern = hook::module_pattern(GetModuleHandle(L"GCore.dll"), "A0 ? ? ? ? 84 C0 74 16 E8 ? ? ? ? 8B C8 E8 ? ? ? ? 84 C0 75 06 B8");
