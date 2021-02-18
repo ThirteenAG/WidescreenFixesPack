@@ -13,7 +13,6 @@ struct Screen
     float fHudScale;
     float fHudOffset;
     float fHudOffsetReal;
-    int32_t g_res_w;
     int32_t video_mode;
     bool isMenu;
     int32_t* dword_A8F0C0;
@@ -79,7 +78,6 @@ static auto GetRes = []()
     Screen.fHudOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
     Screen.fHudOffsetReal = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
     Screen.fHudScale = 1.0f / (((4.0f / 3.0f)) / (Screen.fAspectRatio));
-    Screen.g_res_w = Screen.nWidth;
 };
 
 ///////////////////////
@@ -230,7 +228,6 @@ void Init()
         }
     }; injector::MakeInline<InitiatingWindowModeHook>(pattern.get_first(0), pattern.get_first(8));
     injector::WriteMemory<uint16_t>(pattern.get_first(5), 0x5E5F, true); // pop edi pop esi
-
 
     //Default Fullscreen Res Hook
     pattern = hook::pattern("A3 ? ? ? ? 8B 4F 0C");
@@ -399,7 +396,7 @@ void InitGCore()
     {
         void operator()(injector::reg_pack& regs)
         {
-            if (regs.eax != Screen.g_res_w)
+            if (regs.ebp == 0x26 || regs.ebp == 0x27)
             {
                 if (Screen.isMenu)
                 {
@@ -415,7 +412,6 @@ void InitGCore()
                 }
 
                 sscanf_s(list[Screen.video_mode].c_str(), "%dx%d", &Screen.nWidth, &Screen.nHeight);
-                Screen.g_res_w = regs.eax;
                 SetWindowPosHook(g_hWnd, g_hWndInsertAfter, 0, 0, 0, 0, g_uFlags);
                 GetRes();
                 CIniReader iniWriter(".\\videomode.ini");
@@ -423,6 +419,7 @@ void InitGCore()
                 iniWriter.WriteInteger("Settings", "Height", Screen.nHeight);
                 Screen.isMenu = false;
             }
+
             *Screen.dword_A8F0C0 = Screen.nWidth;
             *Screen.dword_A8F0C4 = Screen.nHeight;
             *Screen.dword_A8F0C8 = Screen.nWidth;
@@ -432,9 +429,11 @@ void InitGCore()
         }
     }; injector::MakeInline<ResHook>(pattern.get_first(0), pattern.get_first(9));
 
+#ifdef _DEBUG
     //Fullscreen res change to windowed (in menu selector) (hack!)
     //pattern = hook::module_pattern(GetModuleHandle(L"GCore.dll"), "74 0B 57 56 FF 52 38 5F 5E 83 C4 0C C3 8D 44 24 08 50 8D 44 24 10");
     //injector::MakeNOP(pattern.get_first(0), 2, true);
+#endif
 
     //Interface
 #if 0
@@ -610,6 +609,11 @@ void InitGCore()
         }
     }; injector::MakeInline<XMLParseHook>(pattern.get_first(0), pattern.get_first(8));
 
+    //fullscreen res switch always
+    pattern = hook::module_pattern(GetModuleHandle(L"GCore.dll"), "8B 0D ? ? ? ? 8B 41 38 8B 48 34 8B 01 52 FF 50 34 84 C0");
+    auto loc_10057B25 = pattern.get_first(0);
+    pattern = hook::module_pattern(GetModuleHandle(L"GCore.dll"), "3B CE 7E 25");
+    injector::MakeJMP(pattern.get_first(0), loc_10057B25, true);
 }
 
 void Initg_Rhapsody()
@@ -648,6 +652,24 @@ void Initg_Rhapsody()
     injector::WriteMemory(pattern.get_first(2), &f0, true);
     pattern = hook::module_pattern(GetModuleHandle(L"g_Rhapsody.sgl"), "D8 25 ? ? ? ? D8 4C 24 48 D9 E0 D9 C9 D8 44 24 7C");
     injector::WriteMemory(pattern.get_first(2), &f0, true);
+
+    //Fullscreen res change always
+    pattern = hook::module_pattern(GetModuleHandle(L"g_Rhapsody.sgl"), "74 19 56");
+    injector::MakeNOP(pattern.get_first(0), 2, true);
+
+    pattern = hook::module_pattern(GetModuleHandle(L"g_Rhapsody.sgl"), "81 C6 ? ? ? ? 56 68 ? ? ? ? 8B CF E8 ? ? ? ? 5F 5E C2 04 00");
+    struct DarkeningVeilXMLHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            *(float*)(regs.esi+0x9C) = 0.0f;
+            *(float*)(regs.esi+0xA0) = 0.0f;
+            *(float*)(regs.esi+0xA4) = 0.0f;
+            *(float*)(regs.esi+0xA8) = 0.0f;
+            static uint32_t temp = 0;
+            regs.esi = (uint32_t)&temp;
+        }
+    }; injector::MakeInline<DarkeningVeilXMLHook>(pattern.count(24).get(21).get<void>(0), pattern.count(24).get(21).get<void>(6));
 
 #if _DEBUG
     //security camera force overlay
