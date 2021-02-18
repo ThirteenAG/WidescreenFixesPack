@@ -481,7 +481,7 @@ private:
     static inline fnLdrSetDllManifestProber     LdrSetDllManifestProber;
 public:
     static inline std::once_flag flag;
-    static inline std::map<std::wstring, std::function<void()>, Comparator> functions;
+    static std::map<std::wstring, std::function<void()>, Comparator> functions;
 };
 
 class RegistryWrapper
