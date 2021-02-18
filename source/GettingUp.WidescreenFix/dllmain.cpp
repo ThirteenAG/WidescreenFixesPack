@@ -88,6 +88,7 @@ static auto GetRes = []()
 };
 
 ///////////////////////
+uint8_t* byte_104C8CFC;
 uint32_t dword_A909F9;
 uint32_t dword_65B45C;
 uint32_t dword_544758;
@@ -181,8 +182,11 @@ void __stdcall sub_4B6940(float a1, float a2, float a3)
 
         if ((std::end(xrefs_fullscreen) == std::find(std::begin(xrefs_fullscreen), std::end(xrefs_fullscreen), xref1)))
         {
-            a1 /= Screen.fHudScale;
-            a1 += Screen.fHudOffsetReal;
+            if (Screen.bFix2D)
+            {
+                a1 /= Screen.fHudScale;
+                a1 += Screen.fHudOffsetReal;
+            }
         }
     }
 
@@ -204,6 +208,7 @@ void Init()
     Screen.nWidth = iniReader.ReadInteger("Settings", "Width", 0);
     Screen.nHeight = iniReader.ReadInteger("Settings", "Height", 0);
     Screen.bFix2D = iniReader.ReadInteger("Settings", "WidescreenUIPatch", 1) != 0;
+    static int32_t nToggleHudKey = iniReader.ReadInteger("MAIN", "ToggleHudKey", VK_F2);
 
     if (!Screen.nWidth || !Screen.nHeight)
         std::tie(Screen.nWidth, Screen.nHeight) = GetDesktopRes();
@@ -383,6 +388,8 @@ void Init()
     injector::MakeJMP(pattern.get_first(0), sub_4B6940, true);
 
     //D3D8 EndScene Hook
+    static uint16_t oldState = 0;
+    static uint16_t curState = 0;
     pattern = hook::pattern("A1 ? ? ? ? 8B 10 50 FF 92");
     static LPDIRECT3DDEVICE8* pDevice = *pattern.get_first<LPDIRECT3DDEVICE8*>(1);
     struct EndSceneHook
@@ -392,10 +399,21 @@ void Init()
             regs.eax = *(uint32_t*)pDevice;
             regs.edx = *(uint32_t*)(regs.eax);
 
-            if (*(uint32_t*)dword_65B45C == 0)
+            if (Screen.bFix2D)
             {
-                DrawRect(*pDevice, 0, 0, static_cast<int32_t>(Screen.fHudOffsetReal), Screen.nHeight);
-                DrawRect(*pDevice, static_cast<int32_t>(Screen.fWidth43 + Screen.fHudOffsetReal), 0, static_cast<int32_t>(Screen.fWidth43 + Screen.fHudOffsetReal + Screen.fHudOffsetReal), Screen.nHeight);
+                if (*(uint32_t*)dword_65B45C == 0)
+                {
+                    DrawRect(*pDevice, 0, 0, static_cast<int32_t>(Screen.fHudOffsetReal), Screen.nHeight);
+                    DrawRect(*pDevice, static_cast<int32_t>(Screen.fWidth43 + Screen.fHudOffsetReal), 0, static_cast<int32_t>(Screen.fWidth43 + Screen.fHudOffsetReal + Screen.fHudOffsetReal), Screen.nHeight);
+                }
+            }
+
+            if (nToggleHudKey)
+            {
+                curState = GetAsyncKeyState(nToggleHudKey);
+                if (!curState && oldState)
+                    *byte_104C8CFC = !*byte_104C8CFC;
+                oldState = curState;
             }
         }
     }; injector::MakeInline<EndSceneHook>(pattern.get_first(0), pattern.get_first(7));
@@ -642,6 +660,10 @@ void InitGCore()
     auto loc_10057B25 = pattern.get_first(0);
     pattern = hook::module_pattern(GetModuleHandle(L"GCore.dll"), "3B CE 7E 25");
     injector::MakeJMP(pattern.get_first(0), loc_10057B25, true);
+
+    //Hide hud button
+    pattern = hook::module_pattern(GetModuleHandle(L"GCore.dll"), "A0 ? ? ? ? 84 C0 74 16 E8 ? ? ? ? 8B C8 E8 ? ? ? ? 84 C0 75 06 B8");
+    byte_104C8CFC = *pattern.get_first<uint8_t*>(1);
 }
 
 void Initg_Rhapsody()
