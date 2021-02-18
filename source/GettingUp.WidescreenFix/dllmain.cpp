@@ -87,6 +87,9 @@ static auto GetRes = []()
     Screen.fHudScale = 1.0f / (((4.0f / 3.0f)) / (Screen.fAspectRatio));
 };
 
+std::vector<uint32_t> xrefs_hud;
+std::vector<uint32_t> xrefs_fullscreen;
+
 ///////////////////////
 uint8_t* byte_104C8CFC;
 uint32_t dword_A909F9;
@@ -138,6 +141,7 @@ void __stdcall sub_4B6940(float a1, float a2, float a3)
     auto module_base = ((uint32_t)GetModuleHandleA(module_name.c_str()));
     std::transform(module_name.begin(), module_name.end(), module_name.begin(), tolower);
 
+#if 0
     auto xref1 = (uint32_t)(stack[1]) - module_base;
 
     if (module_name == "gcore.dll" || module_name == "g_rhapsody.sgl")
@@ -161,6 +165,18 @@ void __stdcall sub_4B6940(float a1, float a2, float a3)
         0x102C8E27, //weapon icons background
     };
 
+    uint32_t xrefs_fullscreen[] =
+    {
+        0x004e51da,
+        0x004e5249,
+        0x004e516b,
+        0x004e52c5,
+        0x004e516b,
+    };
+#endif
+
+    auto xref1 = (uint32_t)(stack[1]);
+
     if (!(std::end(xrefs_hud) == std::find(std::begin(xrefs_hud), std::end(xrefs_hud), xref1)))
     {
         //scaling handled in postrenderhook
@@ -169,16 +185,7 @@ void __stdcall sub_4B6940(float a1, float a2, float a3)
     }
     else
     {
-        DBGONLY(KEYPRESS(VK_F2) { spd::log()->info(int_to_hex_str(xref1)); });
-
-        uint32_t xrefs_fullscreen[] =
-        {
-            0x004e51da,
-            0x004e5249,
-            0x004e516b,
-            0x004e52c5,
-            0x004e516b,
-        };
+        //DBGONLY(KEYPRESS(VK_F2) { spd::log()->info(int_to_hex_str(xref1)); });
 
         if ((std::end(xrefs_fullscreen) == std::find(std::begin(xrefs_fullscreen), std::end(xrefs_fullscreen), xref1)))
         {
@@ -418,6 +425,16 @@ void Init()
         }
     }; injector::MakeInline<EndSceneHook>(pattern.get_first(0), pattern.get_first(7));
 
+    //xrefs
+    pattern = hook::pattern("8B 0D ? ? ? ? 8B 51 38 8B 8A ? ? ? ? 8B 01 FF 50 1C 8B 0D ? ? ? ? 8B 51 38 8B 8A ? ? ? ? 8B 01 33 D2");
+    xrefs_fullscreen.push_back((uint32_t)pattern.get_first(0)); //0x004e51da
+    pattern = hook::pattern("8B 0D ? ? ? ? 8B 51 38 8B 8A ? ? ? ? 8B 01 FF 50 1C 8B 0D ? ? ? ? 8B 51 38 8B 8A ? ? ? ? 33 D2 8A 56 03 8B 01");
+    xrefs_fullscreen.push_back((uint32_t)pattern.count(2).get(0).get<uint32_t>(0)); //0x004e516b
+    xrefs_fullscreen.push_back((uint32_t)pattern.count(2).get(1).get<uint32_t>(0)); //0x004e5249
+    pattern = hook::pattern("E9 ? ? ? ? 8B 0D ? ? ? ? 8B 51 38");
+    xrefs_fullscreen.push_back((uint32_t)pattern.get_first(0)); //0x004e52c5
+    pattern = hook::pattern("8B 0D ? ? ? ? 8B 51 38 8B 8A ? ? ? ? 8B 01 FF 50 1C 8B 0D ? ? ? ? 8B 51 38 8B 8A ? ? ? ? 33 D2 8A 56 03 8B 01 52");
+    xrefs_fullscreen.push_back((uint32_t)pattern.get_first(0)); //0x004e516b
 }
 
 void InitGCore()
@@ -664,6 +681,24 @@ void InitGCore()
     //Hide hud button
     pattern = hook::module_pattern(GetModuleHandle(L"GCore.dll"), "A0 ? ? ? ? 84 C0 74 16 E8 ? ? ? ? 8B C8 E8 ? ? ? ? 84 C0 75 06 B8");
     byte_104C8CFC = *pattern.get_first<uint8_t*>(1);
+
+    //xrefs
+    pattern = hook::module_pattern(GetModuleHandle(L"GCore.dll"), "A1 ? ? ? ? 8B 48 38 8B 46 04");
+    xrefs_hud.push_back((uint32_t)pattern.get_first(0)); //0x102C7DB8, //weapon icons
+    pattern = hook::module_pattern(GetModuleHandle(L"GCore.dll"), "8B 0D ? ? ? ? 8B 51 38 8B 8A ? ? ? ? 8B 56 1C");
+    xrefs_hud.push_back((uint32_t)pattern.get_first(0)); //0x102C7E21, //weapon icons
+    pattern = hook::module_pattern(GetModuleHandle(L"GCore.dll"), "A1 ? ? ? ? 8B 48 38 8B 46 0C");
+    xrefs_hud.push_back((uint32_t)pattern.get_first(0)); //0x102C7E8B, //weapon icons
+    pattern = hook::module_pattern(GetModuleHandle(L"GCore.dll"), "8B 0D ? ? ? ? 8B 51 38 8B 8A ? ? ? ? 8B 56 14");
+    xrefs_hud.push_back((uint32_t)pattern.get_first(0)); //0x102C7EF5, //weapon icons
+    pattern = hook::module_pattern(GetModuleHandle(L"GCore.dll"), "8B 0D ? ? ? ? 8B 51 38 8B 8A ? ? ? ? 8B 56 04");
+    xrefs_hud.push_back((uint32_t)pattern.get_first(0)); //0x102C8CEA, //weapon icons background
+    pattern = hook::module_pattern(GetModuleHandle(L"GCore.dll"), "A1 ? ? ? ? 8B 48 38 8B 46 1C");
+    xrefs_hud.push_back((uint32_t)pattern.get_first(0)); //0x102C8D53, //weapon icons background
+    pattern = hook::module_pattern(GetModuleHandle(L"GCore.dll"), "8B 0D ? ? ? ? 8B 51 38 8B 8A ? ? ? ? 8B 56 0C");
+    xrefs_hud.push_back((uint32_t)pattern.get_first(0)); //0x102C8DBD, //weapon icons background
+    pattern = hook::module_pattern(GetModuleHandle(L"GCore.dll"), "A1 ? ? ? ? 8B 48 38 8B 46 14");
+    xrefs_hud.push_back((uint32_t)pattern.get_first(0)); //0x102C8E27, //weapon icons background
 }
 
 void Initg_Rhapsody()
@@ -721,6 +756,15 @@ void Initg_Rhapsody()
     //        regs.esi = (uint32_t)&temp;
     //    }
     //}; injector::MakeInline<DarkeningVeilXMLHook>(pattern.count(24).get(21).get<void>(0), pattern.count(24).get(21).get<void>(6));
+
+    pattern = hook::module_pattern(GetModuleHandle(L"g_Rhapsody.sgl"), "A1 ? ? ? ? 8B 48 38 8B 44 24 5C");
+    xrefs_hud.push_back((uint32_t)pattern.get_first(0)); //0x100E4F04, //red weapon icon half circle bar
+    pattern = hook::module_pattern(GetModuleHandle(L"g_Rhapsody.sgl"), "A1 ? ? ? ? 8B 48 38 8B 44 24 7C");
+    xrefs_hud.push_back((uint32_t)pattern.get_first(0)); //0x100E4F70, //red weapon icon half circle bar
+    pattern = hook::module_pattern(GetModuleHandle(L"g_Rhapsody.sgl"), "A1 ? ? ? ? 8B 48 38 8B 44 24 74");
+    xrefs_hud.push_back((uint32_t)pattern.get_first(0)); //0x100E4FD6, //red weapon icon half circle bar
+    pattern = hook::module_pattern(GetModuleHandle(L"g_Rhapsody.sgl"), "A1 ? ? ? ? 8B 48 38 8B 84 24 ? ? ? ? 8B 89 ? ? ? ? 8B 11 50 8B 84 24");
+    xrefs_hud.push_back((uint32_t)pattern.get_first(0)); //0x100E5042, //red weapon icon half circle bar
 
 #if _DEBUG
     //security camera force overlay
