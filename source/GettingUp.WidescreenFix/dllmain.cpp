@@ -21,6 +21,7 @@ struct Screen
     int32_t* dword_A8F0C8;
     int32_t* dword_A8F0CC;
     bool bFix2D;
+    bool bDrawPillarboxes;
 } Screen;
 
 class CRect
@@ -215,6 +216,7 @@ void Init()
     Screen.nWidth = iniReader.ReadInteger("Settings", "Width", 0);
     Screen.nHeight = iniReader.ReadInteger("Settings", "Height", 0);
     Screen.bFix2D = iniReader.ReadInteger("Settings", "WidescreenUIPatch", 1) != 0;
+    Screen.bDrawPillarboxes = iniReader.ReadInteger("Settings", "DrawPillarboxes", 1) != 0;
     static int32_t nToggleHudKey = iniReader.ReadInteger("MAIN", "ToggleHudKey", VK_F2);
 
     if (!Screen.nWidth || !Screen.nHeight)
@@ -408,7 +410,7 @@ void Init()
 
             if (Screen.bFix2D)
             {
-                if (*(uint32_t*)dword_65B45C == 0)
+                if (Screen.bDrawPillarboxes && *(uint32_t*)dword_65B45C == 0)
                 {
                     DrawRect(*pDevice, 0, 0, static_cast<int32_t>(Screen.fHudOffsetReal), Screen.nHeight);
                     DrawRect(*pDevice, static_cast<int32_t>(Screen.fWidth43 + Screen.fHudOffsetReal), 0, static_cast<int32_t>(Screen.fWidth43 + Screen.fHudOffsetReal + Screen.fHudOffsetReal), Screen.nHeight);
