@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "spdlog/spdlog.h"
+
 struct Screen
 {
     int32_t nWidth;
@@ -357,9 +357,11 @@ void Init()
         }
     }; injector::MakeInline<BinkVideoHook>(pattern.get_first(0), pattern.get_first(6));
 
+#ifdef _DEBUG
     //Do not pause on minimize
     pattern = hook::pattern("32 DB E8 ? ? ? ? 8B 4C 24 14 55 57 56 51");
     injector::WriteMemory<uint16_t>(pattern.get_first(0), 0x01B3, true); //mov bl,01
+#endif
 
 #ifdef _DEBUG
     //registry debugger crash
@@ -421,6 +423,8 @@ void InitGCore()
                 iniWriter.WriteInteger("Settings", "Height", Screen.nHeight);
                 Screen.isMenu = false;
             }
+            *Screen.dword_A8F0C0 = Screen.nWidth;
+            *Screen.dword_A8F0C4 = Screen.nHeight;
             *Screen.dword_A8F0C8 = Screen.nWidth;
             *Screen.dword_A8F0CC = Screen.nHeight;
             regs.esi = Screen.nWidth;
