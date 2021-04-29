@@ -222,6 +222,14 @@ inline std::wstring int_to_hex(T val, size_t width = sizeof(T) * 2)
 }
 
 template <typename T>
+inline std::string int_to_hex_str(T val, size_t width = sizeof(T) * 2)
+{
+    std::stringstream ss;
+    ss << std::uppercase << std::setfill('0') << std::setw(width) << std::hex << (val | 0);
+    return ss.str();
+}
+
+template <typename T>
 bool fileExists(T fileName)
 {
     std::ifstream infile(fileName);
@@ -290,7 +298,7 @@ private:
         if (GetCallbackList().count(module_name.data()))
         {
             GetCallbackList().at(module_name.data())();
-            GetCallbackList().erase(module_name.data());
+            //GetCallbackList().erase(module_name.data()); //shouldn't do that in case dll with callback gets unloaded and loaded again
         }
 
         //if (GetCallbackList().empty()) //win7 crash in splinter cell
@@ -318,7 +326,6 @@ private:
 
     static std::map<std::wstring, std::function<void()>, Comparator>& GetCallbackList()
     {
-        static std::map<std::wstring, std::function<void()>, Comparator> functions;
         return functions;
     }
 
@@ -346,6 +353,32 @@ private:
         LDR_DLL_UNLOADED_NOTIFICATION_DATA Unloaded;
     } LDR_DLL_NOTIFICATION_DATA, *PLDR_DLL_NOTIFICATION_DATA;
 
+    typedef NTSTATUS(NTAPI* PLDR_MANIFEST_PROBER_ROUTINE)
+    (
+        IN HMODULE DllBase,
+        IN PCWSTR FullDllPath,
+        OUT PHANDLE ActivationContext
+    );
+
+    typedef NTSTATUS(NTAPI* PLDR_ACTX_LANGUAGE_ROURINE)
+    (
+        IN HANDLE Unk,
+        IN USHORT LangID,
+        OUT PHANDLE ActivationContext
+    );
+
+    typedef void(NTAPI* PLDR_RELEASE_ACT_ROUTINE)
+    (
+        IN HANDLE ActivationContext
+    );
+
+    typedef VOID(NTAPI* fnLdrSetDllManifestProber)
+    (
+        IN PLDR_MANIFEST_PROBER_ROUTINE ManifestProberRoutine,
+        IN PLDR_ACTX_LANGUAGE_ROURINE CreateActCtxLanguageRoutine,
+        IN PLDR_RELEASE_ACT_ROUTINE ReleaseActCtxRoutine
+    );
+
 private:
     static inline void CALLBACK LdrDllNotification(ULONG NotificationReason, PLDR_DLL_NOTIFICATION_DATA NotificationData, PVOID Context)
     {
@@ -356,11 +389,55 @@ private:
         }
     }
 
+    static inline NTSTATUS NTAPI ProbeCallback(IN HMODULE DllBase, IN PCWSTR FullDllPath, OUT PHANDLE ActivationContext)
+    {
+        //wprintf(L"ProbeCallback: Base %p, path '%ls', context %p\r\n", DllBase, FullDllPath, *ActivationContext);
+
+        std::wstring str(FullDllPath);
+        call(str.substr(str.find_last_of(L"/\\") + 1));
+
+        //if (!*ActivationContext)
+        //    return STATUS_INVALID_PARAMETER; // breaks on xp
+
+        HANDLE actx = NULL;
+        ACTCTXW act = { 0 };
+
+        act.cbSize = sizeof(act);
+        act.dwFlags = ACTCTX_FLAG_RESOURCE_NAME_VALID | ACTCTX_FLAG_HMODULE_VALID;
+        act.lpSource = FullDllPath;
+        act.hModule = DllBase;
+        act.lpResourceName = ISOLATIONAWARE_MANIFEST_RESOURCE_ID;
+
+        // Reset pointer, crucial for x64 version
+        *ActivationContext = 0;
+
+        actx = CreateActCtxW(&act);
+
+        // Report no manifest is present
+        if (actx == INVALID_HANDLE_VALUE)
+            return 0xC000008B; //STATUS_RESOURCE_NAME_NOT_FOUND;
+
+        *ActivationContext = actx;
+
+        return STATUS_SUCCESS;
+    }
+
     static inline void RegisterDllNotification()
     {
         LdrRegisterDllNotification = (_LdrRegisterDllNotification)GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "LdrRegisterDllNotification");
-        if (LdrRegisterDllNotification && !cookie)
-            LdrRegisterDllNotification(0, LdrDllNotification, 0, &cookie);
+        if (LdrRegisterDllNotification)
+        {
+            if (!cookie)
+                LdrRegisterDllNotification(0, LdrDllNotification, 0, &cookie);
+        }
+        else
+        {
+            LdrSetDllManifestProber = (fnLdrSetDllManifestProber)GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "LdrSetDllManifestProber");
+            if (LdrSetDllManifestProber)
+            {
+                LdrSetDllManifestProber(&ProbeCallback, NULL, &ReleaseActCtx);
+            }
+        }
     }
 
     static inline void UnRegisterDllNotification()
@@ -401,8 +478,10 @@ private:
     static inline _LdrRegisterDllNotification   LdrRegisterDllNotification;
     static inline _LdrUnregisterDllNotification LdrUnregisterDllNotification;
     static inline void* cookie;
+    static inline fnLdrSetDllManifestProber     LdrSetDllManifestProber;
 public:
     static inline std::once_flag flag;
+    static std::map<std::wstring, std::function<void()>, Comparator> functions;
 };
 
 class RegistryWrapper
