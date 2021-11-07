@@ -13,3 +13,6 @@
 [submodule "external/filewatch"]
 	path = external/filewatch
 	url = https://github.com/ThomasMonkman/filewatch
+[submodule "external/asmjit"]
+	path = external/asmjit
+	url = https://github.com/asmjit/asmjit
