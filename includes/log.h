@@ -5,6 +5,7 @@
 #define KEYPRESS(x) if (GetAsyncKeyState(x) & 0x8000)
 #define SPDLOG_WCHAR_FILENAMES
 #include "spdlog/spdlog.h"
+#include "spdlog/sinks/basic_file_sink.h"
 
 class spd
 {

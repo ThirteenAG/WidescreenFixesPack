@@ -20,7 +20,7 @@ Requirements:
 
 Run the following command in the root of this directory to generate the project files (or simply launch **premake5.bat**):
 
-    premake5 vs2017
+    premake5 vs2019
 
 The usage is as simple as inserting the files into game's root directory. Uninstalling is as easy as that too, delete the files and you are done.
 

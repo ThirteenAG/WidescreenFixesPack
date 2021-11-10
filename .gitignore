@@ -4,21 +4,27 @@ data/**/*.asi
 data/Scarface.GenericFix/PIXWin.exe
 data/Scarface.GenericFix/PIXHelper.dll
 data/Scarface.GenericFix/Detoured.dll
+data/Assembly64.TestApp/Assembly64.TestApp.exe
 
 #ASI Loader
-data/**/vorbisFile.dll
 data/**/d3d8.dll
 data/**/d3d9.dll
+data/**/d3d10.dll
 data/**/d3d11.dll
-data/**/winmmbase.dll
-data/**/msacm32.dll
+data/**/d3d12.dll
+data/**/ddraw.dll
+data/**/dinput.dll
 data/**/dinput8.dll
 data/**/dsound.dll
-data/**/ddraw.dll
-data/**/xlive.dll
-data/**/binkw32.dll
-data/**/version.dll
+data/**/msacm32.dll
 data/**/msvfw32.dll
+data/**/version.dll
+data/**/wininet.dll
+data/**/winmm.dll
+data/**/xlive.dll
+data/**/bink2w64.dll
+data/**/vorbisFile.dll
+data/**/binkw32.dll
 
 #Textures
 textures/**/*.txd

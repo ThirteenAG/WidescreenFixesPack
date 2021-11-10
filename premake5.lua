@@ -31,6 +31,8 @@ workspace "WidescreenFixesPack"
    includedirs { "external/inireader" }
    includedirs { "external/spdlog/include" }
    includedirs { "external/filewatch" }
+   includedirs { "external/modutils" }
+   
    local dxsdk = os.getenv "DXSDK_DIR"
    if dxsdk then
       includedirs { dxsdk .. "/include" }
@@ -51,7 +53,7 @@ workspace "WidescreenFixesPack"
       "if exist \"!target!\" copy /y \"!file!\" \"!target!\"",
       ")" }
 
-   function setpaths (gamepath, exepath, scriptspath)
+   function setpaths(gamepath, exepath, scriptspath)
       scriptspath = scriptspath or "scripts/"
       if (gamepath) then
          cmdcopy = { "set \"path=" .. gamepath .. scriptspath .. "\"" }
@@ -67,6 +69,11 @@ workspace "WidescreenFixesPack"
       targetdir ("data/%{prj.name}/" .. scriptspath)
    end
    
+   function add_asmjit()
+      files { "external/asmjit/src/**.cpp" }
+      includedirs { "external/asmjit/src" }
+   end
+   
    filter "configurations:Debug*"
       defines "DEBUG"
       symbols "On"
@@ -75,6 +82,17 @@ workspace "WidescreenFixesPack"
       defines "NDEBUG"
       optimize "On"
 
+project "Assembly64.TestApp"
+   kind "ConsoleApp"
+   targetextension ".exe"
+   platforms { "Win64" }
+   architecture "x64"
+   setpaths("./data/%{prj.name}", "%{prj.name}.exe", "")
+project "Assembly64.TestAsi"
+   platforms { "Win64" }
+   architecture "x64"
+   add_asmjit()
+   setpaths("./data/Assembly64.TestApp/", "Assembly64.TestApp.exe", "")
 project "Bully.WidescreenFix"
    setpaths("Z:/WFP/Games/Bully Scholarship Edition/", "Bully.exe", "plugins/")
 project "Burnout3.PCSX2.WidescreenFix"
@@ -196,8 +214,6 @@ project "PsiOpsTheMindgateConspiracy.WidescreenFix"
    setpaths("Z:/WFP/Games/PSI-OPS/", "PsiOps.exe")
 project "Psychonauts.WidescreenFix"
    setpaths("Z:/WFP/Games/Psychonauts/", "Psychonauts.exe")
---project "Scarface.GenericFix"
---   setpaths("Z:/WFP/Games/Scarface/", "Scarface.exe", "")
 project "SecondSight.WidescreenFix"
    setpaths("Z:/WFP/Games/Second Sight/", "secondsight.exe")
 project "SilentHill2.WidescreenFix"
