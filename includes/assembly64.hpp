@@ -126,6 +126,29 @@ namespace injector
         return MakeCALL(at, trampoline->Jump(dest));
     }
 
+    inline memory_pointer_raw ReadRelativeOffset(memory_pointer_tr at, size_t sizeof_addr = 4, size_t offset = 0, bool vp = true)
+    {
+        switch (sizeof_addr)
+        {
+        case 1: return (GetAbsoluteOffset(ReadMemory<int8_t>(at, vp), at + sizeof_addr + offset));
+        case 2: return (GetAbsoluteOffset(ReadMemory<int16_t>(at, vp), at + sizeof_addr + offset));
+        case 4: return (GetAbsoluteOffset(ReadMemory<int32_t>(at, vp), at + sizeof_addr + offset));
+        }
+        return nullptr;
+    }
+
+    inline injector::memory_pointer_raw ReadRelativeAddress(memory_pointer_tr at, size_t sizeof_addr = 4, bool vp = true)
+    {
+        uintptr_t base = (uintptr_t)GetModuleHandleA(NULL);
+        switch (sizeof_addr)
+        {
+        case 1: return (base + ReadMemory<int8_t>(at, vp));
+        case 2: return (base + ReadMemory<int16_t>(at, vp));
+        case 4: return (base + ReadMemory<int32_t>(at, vp));
+        }
+        return nullptr;
+    }
+
    struct reg_pack
     {
         // The ordering is very important, don't change

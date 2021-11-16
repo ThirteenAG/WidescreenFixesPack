@@ -139,12 +139,27 @@ project "GTA2.WidescreenFix"
 project "GTA3.WidescreenFix"
    files { "includes/GTA/*.h", "includes/GTA/*.cpp" }
    setpaths("Z:/WFP/Games/Grand Theft Auto/GTAIII/", "gta3.exe")
+project "GTA3DE.FusionMod"
+   platforms { "Win64" }
+   architecture "x64"
+   add_asmjit()
+   setpaths("Z:/WFP/Games/Grand Theft Auto The Definitive Edition/GTA III - Definitive Edition/", "Gameface/Binaries/Win64/LibertyCity.exe", "Gameface/Binaries/Win64/scripts/")
 project "GTAVC.WidescreenFix"
    files { "includes/GTA/*.h", "includes/GTA/*.cpp" }
    setpaths("Z:/WFP/Games/Grand Theft Auto/Grand Theft Auto Vice City/", "gta-vc.exe")
+project "GTAVCDE.FusionMod"
+   platforms { "Win64" }
+   architecture "x64"
+   add_asmjit()
+   setpaths("Z:/WFP/Games/Grand Theft Auto The Definitive Edition/GTA Vice City - Definitive Edition/", "Gameface/Binaries/Win64/ViceCity.exe", "Gameface/Binaries/Win64/scripts/")
 project "GTASA.WidescreenFix"
    files { "includes/GTA/*.h", "includes/GTA/*.cpp" }
    setpaths("Z:/WFP/Games/Grand Theft Auto/GTA San Andreas/", "gta_sa.exe")
+project "GTASADE.FusionMod"
+   platforms { "Win64" }
+   architecture "x64"
+   add_asmjit()
+   setpaths("Z:/WFP/Games/Grand Theft Auto The Definitive Edition/GTA San Andreas - Definitive Edition/", "Gameface/Binaries/Win64/SanAndreas.exe", "Gameface/Binaries/Win64/scripts/")
 project "GTALCS.PCSX2.WidescreenFix"
    configurations { "ReleasePCSX2", "DebugPCSX2" }
       setpaths("Z:/WFP/Games/PCSX2/", "pcsx2.exe")
