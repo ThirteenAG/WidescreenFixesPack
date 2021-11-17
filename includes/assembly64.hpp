@@ -85,22 +85,15 @@ namespace injector
 
     inline asmjit_Func asm_invoke(std::function<void(x86::Assembler& a)> asm_code_add)
     {
-        static asmjit_Func fn;
-        if (fn == nullptr)
-        {
-            static JitRuntime rt;
-            CodeHolder code;
-            code.init(rt.environment());
-            x86::Assembler a(&code);
-            using namespace x86;
-            asm_code_add(a);
-            rt.add(&fn, &code);
-            return fn;
-        }
-        else
-        {
-            return fn;
-        }
+        asmjit_Func fn = nullptr;
+        static JitRuntime rt;
+        CodeHolder code;
+        code.init(rt.environment());
+        x86::Assembler a(&code);
+        asm_code_add(a);
+        rt.add(&fn, &code);
+        rt.release(fn);
+        return fn;
     };
 
     inline injector::memory_pointer_raw MakeAbsCALL(injector::memory_pointer_tr at, injector::memory_pointer_raw dest, bool vp = true)
