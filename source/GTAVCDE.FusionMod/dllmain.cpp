@@ -15,6 +15,7 @@ void Init()
     static auto nIniSaveSlot = iniReader.ReadInteger("MAIN", "SaveSlot", 6) - 1;
     if (nIniSaveSlot < 1 || nIniSaveSlot > 8)
         nIniSaveSlot = 5;
+    static auto bSkipMenu = iniReader.ReadInteger("MAIN", "SkipMenu", 0);
 
     auto pattern = hook::pattern("8B 0D ? ? ? ? 42 8B 84 31 ? ? ? ? 85 C9 74 0B FF C8 83 F8 01 0F 86");
     OnAMissionFlag = (uint32_t*)injector::ReadRelativeOffset(pattern.get_first(2), 4, true).as_int();
@@ -48,10 +49,10 @@ void Init()
     {
         void operator()(injector::reg_pack& regs)
         {
-            static bool bCtrlAltLastState = false;
-            bool bCtrlAltCurState = GetKeyState(VK_F5) & 0x8000;
+            static bool bF5LastState = false;
+            bool bF5CurState = GetKeyState(VK_F5) & 0x8000;
 
-            if (!bCtrlAltLastState && bCtrlAltCurState)
+            if (!bF5LastState && bF5CurState)
             {
                 if (!IsPlayerOnAMission() && !*m_WideScreenOn)
                 {
@@ -71,9 +72,24 @@ void Init()
                 }
             }
 
-            bCtrlAltLastState = bCtrlAltCurState;
+            bF5LastState = bF5CurState;
         }
     }; injector::MakeInline<IdleHook>(pattern.get_first(0), pattern.get_first(8));
+
+
+    if (bSkipMenu)
+    {
+        pattern = hook::pattern("B8 ? ? ? ? F3 0F 11 05 ? ? ? ? 66 89 05 ? ? ? ? 48 8D 05 ? ? ? ? 48 89 05 ? ? ? ? 89 0D ? ? ? ? 89 0D");
+        struct KeyPressHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                regs.rax = 0xFFFFFFFF;
+                keybd_event(VK_RETURN, 0x45, KEYEVENTF_EXTENDEDKEY | 0, 0);
+                keybd_event(VK_RETURN, 0x45, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+            }
+        }; injector::MakeInline<KeyPressHook>(pattern.get_first(0));
+    }
 
 }
 
