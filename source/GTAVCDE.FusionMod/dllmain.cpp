@@ -13,9 +13,6 @@ void Init()
 {
     CIniReader iniReader("");
     static auto nIniSaveSlot = iniReader.ReadInteger("MAIN", "SaveSlot", 6) - 1;
-    if (nIniSaveSlot < 1 || nIniSaveSlot > 8)
-        nIniSaveSlot = 5;
-    static auto bSkipMenu = iniReader.ReadInteger("MAIN", "SkipMenu", 0);
 
     auto pattern = hook::pattern("8B 0D ? ? ? ? 42 8B 84 31 ? ? ? ? 85 C9 74 0B FF C8 83 F8 01 0F 86");
     OnAMissionFlag = (uint32_t*)injector::ReadRelativeOffset(pattern.get_first(2), 4, true).as_int();
@@ -39,16 +36,19 @@ void Init()
     static auto ret_addr = (uintptr_t)pattern.get_first(0);
 
     pattern = hook::pattern("E8 ? ? ? ? 32 C0 EB 46");
-    static auto SaveSlot = (void(__fastcall*)(int))(injector::GetBranchDestination(pattern.get_first(0)).as_int());
+    static auto SaveToSlot = (void(__fastcall*)(int))(injector::GetBranchDestination(pattern.get_first(0)).as_int());
 
     pattern = hook::pattern("BA ? ? ? ? E8 ? ? ? ? B0 01 C7 05 ? ? ? ? ? ? ? ? E9");
     static auto Slot = pattern.get_first(1);
 
-    pattern = hook::pattern("0F 1F 84 00 ? ? ? ? 41 0F B7 D0 4D 8D 49 18 66 41 FF C0 8D 42 01");
+    pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 48 8D 05 ? ? ? ? 48 89 05 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? EB 13");
+    static auto sub_140F3BA50 = (void(__fastcall*)())(injector::GetBranchDestination(pattern.get_first(0)).as_int());
     struct IdleHook
     {
         void operator()(injector::reg_pack& regs)
         {
+            sub_140F3BA50();
+
             static bool bF5LastState = false;
             bool bF5CurState = GetKeyState(VK_F5) & 0x8000;
 
@@ -57,7 +57,7 @@ void Init()
                 if (!IsPlayerOnAMission() && !*m_WideScreenOn)
                 {
                     injector::WriteMemory<uint32_t>(Slot, 5, true);
-                    SaveSlot(nIniSaveSlot);
+                    SaveToSlot(nIniSaveSlot);
                     injector::WriteMemory<uint32_t>(Slot, 8, true);
 
                     injector::WriteMemory<uint32_t>(ret_addr, 0x40C48348, true);     //add     rsp, 40h
@@ -74,23 +74,7 @@ void Init()
 
             bF5LastState = bF5CurState;
         }
-    }; injector::MakeInline<IdleHook>(pattern.get_first(0), pattern.get_first(8));
-
-
-    if (bSkipMenu)
-    {
-        pattern = hook::pattern("B8 ? ? ? ? F3 0F 11 05 ? ? ? ? 66 89 05 ? ? ? ? 48 8D 05 ? ? ? ? 48 89 05 ? ? ? ? 89 0D ? ? ? ? 89 0D");
-        struct KeyPressHook
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                regs.rax = 0xFFFFFFFF;
-                keybd_event(VK_RETURN, 0x45, KEYEVENTF_EXTENDEDKEY | 0, 0);
-                keybd_event(VK_RETURN, 0x45, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
-            }
-        }; injector::MakeInline<KeyPressHook>(pattern.get_first(0));
-    }
-
+    }; injector::MakeInline<IdleHook>(pattern.get_first(0));
 }
 
 CEXP void InitializeASI()
