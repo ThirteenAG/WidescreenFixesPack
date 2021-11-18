@@ -22,9 +22,9 @@ void Init()
     m_WideScreenOn = (uint8_t*)injector::ReadRelativeOffset(pattern.get_first(2), 4, true).as_int();
 
     pattern = hook::pattern("BA ? ? ? ? 48 89 5C 24 ? 48 8D 4C 24 ? 48 89 5C 24 ? E8 ? ? ? ? 8B 7C 24 58 83 C7 08");
-    static auto sub_140F7A567 = (void(__fastcall*)())(pattern.get_first(-6));
-    static uint8_t prologue_code[] = { 0x40, 0x53, 0x48, 0x83, 0xEC, 0x40 };
-    static uint8_t prologue_og_code[sizeof(prologue_code)] = {0};
+    static uint8_t prologue_code[] = { 0x40, 0x53, 0x48, 0x83, 0xEC, 0x40, 0x48, 0x31, 0xDB };
+    static auto sub_140F7A567 = (void(__fastcall*)())(pattern.get_first(-sizeof(prologue_code)));
+    static uint8_t prologue_og_code[] = {0};
     injector::ReadMemoryRaw(sub_140F7A567, prologue_og_code, sizeof(prologue_og_code), true);
     static auto gxt_offset = pattern.get_first(64);
     static auto gxt_location = (char*)injector::ReadRelativeOffset(gxt_offset, 4, true).as_int();
