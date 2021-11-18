@@ -35,7 +35,7 @@ void Init()
     static auto gxt_ptr = const_cast<char*>(gxt.data());
     
     pattern = hook::pattern("45 33 C0 B9 ? ? ? ? 41 8D 50 01 E8 ? ? ? ? 45 33 C0 B9 ? ? ? ? 41 8D 50 01 E8 ? ? ? ? 45 33 C0 B9");
-    static auto ret_addr = (uintptr_t)pattern.get_first(0);
+    static auto SetHelpMessageEpilogue = injector::raw_mem(pattern.get_first(0), { 0x48, 0x83, 0xC4, 0x40, 0x5B, 0xC3 });
 
     pattern = hook::pattern("E8 ? ? ? ? 32 C0 EB 46");
     static auto SaveToSlot = (void(__fastcall*)(int))(injector::GetBranchDestination(pattern.get_first(0)).as_int());
@@ -62,15 +62,11 @@ void Init()
                     SaveToSlot(nIniSaveSlot);
                     injector::WriteMemory<uint32_t>(Slot, 8, true);
 
-                    injector::WriteMemory<uint32_t>(ret_addr, 0x40C48348, true);     //add     rsp, 40h
-                    injector::WriteMemory<uint8_t>(ret_addr + 4, 0x5B, true);        //pop     rbx
-                    injector::WriteMemory<uint8_t>(ret_addr + 5, 0xC3, true);        //ret
+                    SetHelpMessageEpilogue.Write();
                     FESZ_WR.copy(gxt_ptr, gxt.length() + 1);
                     sub_140F19E90();
                     CHEAT2.copy(gxt_ptr, gxt.length() + 1);
-                    injector::WriteMemory<uint32_t>(ret_addr, 0xB9C03345, true);     //xor     r8d, r8d
-                    injector::WriteMemory<uint8_t>(ret_addr + 4, 0x0D, true);        //mov     ecx, 10Dh
-                    injector::WriteMemory<uint8_t>(ret_addr + 5, 0x01, true);        //
+                    SetHelpMessageEpilogue.Restore();
                 }
             }
 
