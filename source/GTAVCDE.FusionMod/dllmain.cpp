@@ -12,7 +12,9 @@ bool IsPlayerOnAMission()
 void Init()
 {
     CIniReader iniReader("");
-    static auto nIniSaveSlot = iniReader.ReadInteger("MAIN", "SaveSlot", 6) - 1;
+    static auto nIniSaveSlot = (int32_t)iniReader.ReadInteger("MAIN", "SaveSlot", 6) - 1;
+    if (nIniSaveSlot < 1 || nIniSaveSlot > 8)
+        nIniSaveSlot = 5;
 
     auto pattern = hook::pattern("8B 0D ? ? ? ? 42 8B 84 31 ? ? ? ? 85 C9 74 0B FF C8 83 F8 01 0F 86");
     OnAMissionFlag = (uint32_t*)injector::ReadRelativeOffset(pattern.get_first(2), 4, true).as_int();
