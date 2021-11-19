@@ -1,0 +1,23 @@
+name: Tony Hawks American Wasteland Widescreen Fix
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-2022
+    strategy:
+      matrix:
+        platform: [Win32]
+        buildtype: [Release]
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: ./.github/workflows/build_all
+    - uses: ncipollo/release-action@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        allowUpdates: true
+        tag: thaw
+        artifacts: data/Archives/TonyHawksAmericanWasteland.WidescreenFix.zip
+
