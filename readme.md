@@ -1,6 +1,6 @@
 # Widescreen Fixes Pack
 
-[![Build status](https://ci.appveyor.com/api/projects/status/ek3t29o34h5owslf?svg=true)](https://ci.appveyor.com/project/ThirteenAG/widescreenfixespack)
+[![Build status](https://ci.appveyor.com/api/projects/status/ek3t29o34h5owslf?svg=true&passingText=AppVeyor+build+passing)](https://ci.appveyor.com/project/ThirteenAG/widescreenfixespack) [![Main Workflow](https://github.com/ThirteenAG/WidescreenFixesPack/actions/workflows/main.yml/badge.svg)](https://github.com/ThirteenAG/WidescreenFixesPack/actions/workflows/main.yml)
 
 https://thirteenag.github.io/wfp
 
@@ -20,11 +20,41 @@ Requirements:
 
 Run the following command in the root of this directory to generate the project files (or simply launch **premake5.bat**):
 
-    premake5 vs2019
+    premake5 vs2022
 
 The usage is as simple as inserting the files into game's root directory. Uninstalling is as easy as that too, delete the files and you are done.
 
 # List of fixes:
+
+## GTA SA The Definitive Edition Fusion Mod
+
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Experimental release, so far only adds an ability to quicksave anywhere by pressing F5.
+
+[Website](http://thirteenag.github.io/wfp#gtasade)
+|
+[Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/GTASADE.FusionMod/dllmain.cpp)
+|
+[Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/GTASADE.FusionMod/Gameface/Binaries/Win64/scripts/GTASADE.FusionMod.ini)
+
+## GTA VC The Definitive Edition Fusion Mod
+
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Experimental release, so far only adds an ability to quicksave anywhere by pressing F5.
+
+[Website](http://thirteenag.github.io/wfp#gtavcde)
+|
+[Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/GTAVCDE.FusionMod/dllmain.cpp)
+|
+[Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/GTAVCDE.FusionMod/Gameface/Binaries/Win64/scripts/GTAVCDE.FusionMod.ini)
+
+## GTA III The Definitive Edition Fusion Mod
+
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Experimental release, so far only adds an ability to quicksave anywhere by pressing F5.
+
+[Download](http://thirteenag.github.io/wfp#gta3de)
+|
+[Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/GTA3DE.FusionMod/dllmain.cpp)
+|
+[Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/GTA3DE.FusionMod/Gameface/Binaries/Win64/scripts/GTA3DE.FusionMod.ini)
 
 ## Bully: Scholarship Edition Widescreen Fix
 
