@@ -82,21 +82,27 @@ void Init()
         {
             void operator()(injector::reg_pack& regs)
             {
-                enum eWeaponType
-                {
-                    WEAPONTYPE_M4 = 26,
-                    WEAPONTYPE_RUGER = 27,
-                    WEAPONTYPE_M60 = 32
-                };
+                regs.r12 = 0x600400000180;
 
-                switch (regs.rsi)
+                if (regs.rax)
                 {
-                case WEAPONTYPE_M4:
-                case WEAPONTYPE_RUGER:
-                case WEAPONTYPE_M60:
-                    regs.rax = 0;
-                default:
-                    break;
+                    enum eWeaponType
+                    {
+                        WEAPONTYPE_M4 = 26,
+                        WEAPONTYPE_RUGER = 27,
+                        WEAPONTYPE_M60 = 32
+                    };
+
+                    switch (regs.rsi)
+                    {
+                    case WEAPONTYPE_M4:
+                    case WEAPONTYPE_RUGER:
+                    case WEAPONTYPE_M60:
+                        regs.rax = 0;
+                        break;
+                    default:
+                        break;
+                    }
                 }
             }
         }; injector::MakeInline<ProcessPlayerWeaponHook>(pattern.get_first(0), pattern.get_first(10));

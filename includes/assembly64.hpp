@@ -116,7 +116,17 @@ namespace injector
     inline injector::memory_pointer_raw MakeCALLTrampoline(injector::memory_pointer_tr at, injector::memory_pointer_raw dest, bool vp = true)
     {
         auto trampoline = Trampoline::MakeTrampoline((void*)at.as_int());
-        return MakeCALL(at, trampoline->Jump(dest));
+
+        LPVOID addr;
+        memcpy(&addr, std::addressof(dest), sizeof(addr));
+        constexpr size_t SINGLE_TRAMPOLINE_SIZE = 14;
+        auto trampolineSpace = trampoline->RawSpace(SINGLE_TRAMPOLINE_SIZE, 1);
+        // Create trampoline code
+        const uint8_t prologue[] = { 0xFF, 0x25, 0x00, 0x00, 0x00, 0x00 };
+        memcpy(trampolineSpace, prologue, sizeof(prologue));
+        memcpy(trampolineSpace + sizeof(prologue), &addr, sizeof(addr));
+
+        return MakeCALL(at, trampolineSpace);
     }
 
     inline memory_pointer_raw ReadRelativeOffset(memory_pointer_tr at, size_t sizeof_addr = 4, size_t offset = 0, bool vp = true)
@@ -275,7 +285,9 @@ namespace injector
                 a.mov(r8, qword_ptr(rax, 7 * sizeof(uint64_t)));
                 a.mov(rbp, qword_ptr(rax, 8 * sizeof(uint64_t)));
                 a.mov(rsp, qword_ptr(rax, 9 * sizeof(uint64_t)));
+                a.pushfq();
                 a.add(rsp, 0x38);
+                a.popfq();
                 a.mov(rdi, qword_ptr(rax, 10 * sizeof(uint64_t)));
                 a.mov(rsi, qword_ptr(rax, 11 * sizeof(uint64_t)));
                 a.mov(rbx, qword_ptr(rax, 12 * sizeof(uint64_t)));
