@@ -15,6 +15,7 @@ void Init()
     static auto nIniSaveSlot = (int32_t)iniReader.ReadInteger("MAIN", "SaveSlot", 6) - 1;
     if (nIniSaveSlot < 1 || nIniSaveSlot > 8)
         nIniSaveSlot = 5;
+    static auto bIniDisableFirstPersonAimForRifles = iniReader.ReadInteger("MAIN", "DisableFirstPersonAimForRifles", 1) != 0;
 
     auto pattern = hook::pattern("8B 0D ? ? ? ? 42 8B 84 31 ? ? ? ? 85 C9 74 0B FF C8 83 F8 01 0F 86");
     OnAMissionFlag = (uint32_t*)injector::ReadRelativeOffset(pattern.get_first(2), 4, true).as_int();
@@ -73,6 +74,33 @@ void Init()
             bF5LastState = bF5CurState;
         }
     }; injector::MakeInline<IdleHook>(pattern.get_first(0));
+
+    if (bIniDisableFirstPersonAimForRifles)
+    {
+        pattern = hook::pattern("49 BC 80 01 00 00 04 60 00 00");
+        struct ProcessPlayerWeaponHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                enum eWeaponType
+                {
+                    WEAPONTYPE_M4 = 26,
+                    WEAPONTYPE_RUGER = 27,
+                    WEAPONTYPE_M60 = 32
+                };
+
+                switch (regs.rsi)
+                {
+                case WEAPONTYPE_M4:
+                case WEAPONTYPE_RUGER:
+                case WEAPONTYPE_M60:
+                    regs.rax = 0;
+                default:
+                    break;
+                }
+            }
+        }; injector::MakeInline<ProcessPlayerWeaponHook>(pattern.get_first(0), pattern.get_first(10));
+    }
 }
 
 CEXP void InitializeASI()
