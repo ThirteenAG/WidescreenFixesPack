@@ -14,10 +14,19 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - uses: ./.github/workflows/build_all
+    - name: Get release info
+      id: release_info
+      uses: cardinalby/git-get-release-action@v1.1
+      env:
+       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag: usm
     - uses: ncipollo/release-action@v1
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         allowUpdates: true
-        tag: usm
+        name: ${{ steps.release_info.outputs.name }}
+        body: ${{ steps.release_info.outputs.body }}
+        tag: ${{ steps.release_info.outputs.tag_name }}
         artifacts: data/Archives/UltimateSpiderMan.WidescreenFix.zip
 
