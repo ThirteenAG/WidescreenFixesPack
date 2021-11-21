@@ -92,7 +92,6 @@ namespace injector
         x86::Assembler a(&code);
         asm_code_add(a);
         rt.add(&fn, &code);
-        rt.release(fn);
         return fn;
     };
 
