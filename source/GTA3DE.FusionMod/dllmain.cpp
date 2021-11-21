@@ -15,6 +15,7 @@ void Init()
     static auto nIniSaveSlot = (int32_t)iniReader.ReadInteger("MAIN", "SaveSlot", 6) - 1;
     if (nIniSaveSlot < 1 || nIniSaveSlot > 8)
         nIniSaveSlot = 5;
+    static auto bIniDisableFirstPersonAimForRifles = iniReader.ReadInteger("MAIN", "DisableFirstPersonAimForRifles", 1) != 0;
 
     auto pattern = hook::pattern("8B 05 ? ? ? ? 85 C0 74 0F 42 83 BC 20");
     OnAMissionFlag = (uint32_t*)injector::ReadRelativeOffset(pattern.get_first(2), 4, true).as_int();
@@ -73,6 +74,12 @@ void Init()
             bF5LastState = bF5CurState;
         }
     }; injector::MakeInline<IdleHook>(pattern.get_first(0));
+
+    if (bIniDisableFirstPersonAimForRifles)
+    {
+        pattern = hook::pattern("B8 ? ? ? ? 66 89 05 ? ? ? ? 33 D2 4C 89 35 ? ? ? ? 0F 28 DE 48 8B 4B 58");
+        injector::WriteMemory<uint32_t>(pattern.get_first(1), 0x0B, true);
+    }
 }
 
 CEXP void InitializeASI()
