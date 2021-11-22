@@ -36,7 +36,12 @@ void Init()
     static auto gxt_ptr = const_cast<char*>(gxt.data());
     
     pattern = hook::pattern("0F B6 05 ? ? ? ? 48 8D 0D ? ? ? ? 48 69 C0 ? ? ? ? 48 8B 04 08 C7 80 ? ? ? ? ? ? ? ? E8");
-    static auto SetHelpMessageEpilogue = injector::raw_mem(pattern.get_first(0), { 0x48, 0x83, 0xC4, 0x40, 0x5B, 0xC3 });
+    static auto SetHelpMessageEpilogue = injector::raw_mem(pattern.get_first(0), [](x86::Assembler& a)
+    {
+        a.add(rsp, 0x40);
+        a.pop(rbx);
+        a.ret();
+    });
 
     pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? 8B 15 ? ? ? ? E8");
     static auto SaveToSlot = (void(__fastcall*)(int))(injector::GetBranchDestination(pattern.get_first(0)).as_int());
