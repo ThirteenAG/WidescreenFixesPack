@@ -77,8 +77,34 @@ void Init()
 
     if (bIniDisableFirstPersonAimForRifles)
     {
-        pattern = hook::pattern("B8 ? ? ? ? 66 89 05 ? ? ? ? 33 D2 4C 89 35 ? ? ? ? 0F 28 DE 48 8B 4B 58");
-        injector::WriteMemory<uint32_t>(pattern.get_first(1), 0x0B, true);
+        pattern = hook::pattern("48 03 F0 8D 47 FA 83 F8 02 0F 96 C0 45 33 F6 4C 39 B1");
+        struct ProcessPlayerWeaponHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                regs.rsi += regs.rax;
+                regs.rax = regs.rdi - 6;
+
+                if (regs.rdi)
+                {
+                    enum eWeaponType
+                    {
+                        WEAPONTYPE_AK47 = 5,
+                        WEAPONTYPE_M16 = 6
+                    };
+
+                    switch (regs.rdi)
+                    {
+                    case WEAPONTYPE_AK47:
+                    case WEAPONTYPE_M16:
+                        regs.rax = INT_MAX;
+                        break;
+                    default:
+                        break;
+                    }
+                }
+            }
+        }; injector::MakeInline<ProcessPlayerWeaponHook>(pattern.get_first(0), pattern.get_first(6));
     }
 }
 
