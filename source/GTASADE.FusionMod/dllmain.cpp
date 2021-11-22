@@ -24,7 +24,12 @@ void Init()
     m_WideScreenOn = (uint8_t*)injector::ReadRelativeOffset(pattern.get_first(2), 4, true).as_int();
 
     pattern = hook::pattern("BA ? ? ? ? 48 89 5C 24 ? 48 8D 4C 24 ? 48 89 5C 24 ? E8 ? ? ? ? 8B 7C 24 58 83 C7 08");
-    static auto SetHelpMessagePrologue = injector::raw_mem(pattern.get_first(0), { 0x40, 0x53, 0x48, 0x83, 0xEC, 0x40, 0x48, 0x31, 0xDB }, true);
+    static auto SetHelpMessagePrologue = injector::raw_mem(pattern.get_first(0), [](x86::Assembler& a)
+    {
+        a.push(rbx);
+        a.sub(rsp, 0x40);
+        a.xor_(rbx, rbx);
+    }, true);
     static auto sub_140F7A567 = (void(__fastcall*)())(pattern.get_first(-SetHelpMessagePrologue.Size()));
     static auto gxt_offset = pattern.get_first(64);
     static auto gxt_location = (char*)injector::ReadRelativeOffset(gxt_offset, 4, true).as_int();
@@ -35,7 +40,12 @@ void Init()
     static auto gxt_ptr = const_cast<char*>(gxt.data());
     
     pattern = hook::pattern("48 8D 15 ? ? ? ? E8 ? ? ? ? 48 85 C0 74 1E 41 B8 ? ? ? ? C7 44 24");
-    static auto SetHelpMessageEpilogue = injector::raw_mem(pattern.get_first(0), { 0x48, 0x83, 0xC4, 0x40, 0x5B, 0xC3 });
+    static auto SetHelpMessageEpilogue = injector::raw_mem(pattern.get_first(0), [](x86::Assembler& a)
+    {
+        a.add(rsp, 0x40);
+        a.pop(rbx);
+        a.ret();
+    });
 
     pattern = hook::pattern("40 53 48 83 EC 20 45 33 C0 8B DA E8 ? ? ? ? 0F B6 D3 E8 ? ? ? ? 48 83 C4 20 5B E9");
     static auto SaveToSlot = (void(__fastcall*)(int, int))(pattern.get_first(0));

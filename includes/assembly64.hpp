@@ -30,6 +30,7 @@
 #include "Trampoline.h"
 
 #include "asmjit/x86.h"
+#include <span>
 using namespace asmjit;
 typedef void (*asmjit_Func)();
 using namespace x86;
@@ -166,6 +167,23 @@ namespace injector
             new_code.assign(std::move(bytes));
             old_code.resize(new_code.size());
             ReadMemoryRaw(ptr, old_code.data(), old_code.size(), true);
+        }
+
+        raw_mem(memory_pointer_tr addr, std::function<void(x86::Assembler& a)> asm_code_add, bool offset_back = false)
+        {
+            asmjit_Func fn = nullptr;
+            JitRuntime rt;
+            CodeHolder code;
+            code.init(rt.environment());
+            x86::Assembler a(&code);
+            asm_code_add(a);
+            rt.add(&fn, &code);
+            std::span<uint8_t> bytes{ (uint8_t*)fn, code.codeSize() };
+            ptr = addr.as_int() - (offset_back ? bytes.size() : 0);
+            new_code.assign(bytes.begin(), bytes.end());
+            old_code.resize(new_code.size());
+            ReadMemoryRaw(ptr, old_code.data(), old_code.size(), true);
+            rt.release(fn);
         }
 
         void Write()
