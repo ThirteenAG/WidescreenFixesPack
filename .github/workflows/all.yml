@@ -61,7 +61,7 @@ jobs:
         body: ${{ steps.release_info.outputs.body }}
         tag: ${{ steps.release_info.outputs.tag_name }}
         artifacts: data/Archives/GTAVCDE.FusionMod.zip
-		
+
     - name: Get release info
       id: release_info
       uses: cardinalby/git-get-release-action@v1.1
@@ -77,7 +77,7 @@ jobs:
         body: ${{ steps.release_info.outputs.body }}
         tag: ${{ steps.release_info.outputs.tag_name }}
         artifacts: data/Archives/GTAVCS.PCSX2.WidescreenFix.zip
-		
+
     - name: Get release info
       id: release_info
       uses: cardinalby/git-get-release-action@v1.1
