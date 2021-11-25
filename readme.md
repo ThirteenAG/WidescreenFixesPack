@@ -368,6 +368,38 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 |
 [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/GTASA.WidescreenFix/scripts/GTASA.WidescreenFix.ini)
 
+## Grand Theft Auto Liberty City Stories Widescreen Fix [PCSX2]
+
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Aspect Ratio (Ultra-Wide)
+
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Field of View
+
+![](https://habrastorage.org/webt/31/qm/gv/31qmgv6q0kj8zie1itat5ygfsuq.png) Fixed HUD (Ultra-Wide)
+
+![](https://habrastorage.org/webt/31/qm/gv/31qmgv6q0kj8zie1itat5ygfsuq.png) Fixed FMVs
+
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Plugin automatically skips intro
+
+[Download](http://thirteenag.github.io/wfp#gtalcs)
+|
+[Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/GTALCS.PCSX2.WidescreenFix.WidescreenFix/dllmain.cpp)
+
+## Grand Theft Auto Vice City Stories Widescreen Fix [PCSX2]
+
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Aspect Ratio (Ultra-Wide)
+
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Field of View
+
+![](https://habrastorage.org/webt/31/qm/gv/31qmgv6q0kj8zie1itat5ygfsuq.png) Fixed HUD (Ultra-Wide)
+
+![](https://habrastorage.org/webt/31/qm/gv/31qmgv6q0kj8zie1itat5ygfsuq.png) Fixed FMVs
+
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Plugin automatically skips intro
+
+[Download](http://thirteenag.github.io/wfp#gtavcs)
+|
+[Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/GTAVCS.PCSX2.WidescreenFix.WidescreenFix/dllmain.cpp)
+
 ## Gun Widescreen Fix
 
 ![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Resolution
