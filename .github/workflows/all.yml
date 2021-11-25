@@ -61,6 +61,38 @@ jobs:
         body: ${{ steps.release_info.outputs.body }}
         tag: ${{ steps.release_info.outputs.tag_name }}
         artifacts: data/Archives/GTAVCDE.FusionMod.zip
+		
+    - name: Get release info
+      id: release_info
+      uses: cardinalby/git-get-release-action@v1.1
+      env:
+       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag: gtavcs
+    - uses: ncipollo/release-action@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        allowUpdates: true
+        name: ${{ steps.release_info.outputs.name }}
+        body: ${{ steps.release_info.outputs.body }}
+        tag: ${{ steps.release_info.outputs.tag_name }}
+        artifacts: data/Archives/GTAVCS.PCSX2.WidescreenFix.zip
+		
+    - name: Get release info
+      id: release_info
+      uses: cardinalby/git-get-release-action@v1.1
+      env:
+       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag: gtalcs
+    - uses: ncipollo/release-action@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        allowUpdates: true
+        name: ${{ steps.release_info.outputs.name }}
+        body: ${{ steps.release_info.outputs.body }}
+        tag: ${{ steps.release_info.outputs.tag_name }}
+        artifacts: data/Archives/GTALCS.PCSX2.WidescreenFix.zip
 
     - name: Get release info
       id: release_info
