@@ -53,6 +53,7 @@ public:
     {
         NONE,
         LUI_ORI,
+        LUI_ORI_MUL,
 
         MAKE_INLINE
     };
@@ -153,7 +154,7 @@ public:
 class PCSX2
 {
 public:
-    static inline hook::pattern pcsx2_crc_pattern = hook::pattern("FF 35 ? ? ? ? 51 68 ? ? ? ? 50 E8 ? ? ? ? 83 C4 18 8B C8 E8 ? ? ? ? C6 45 FC 05");
+    static inline hook::pattern pcsx2_crc_pattern = hook::pattern("83 3D ? ? ? ? ? 75 24");
     static inline const uint32_t EEMainMemoryStart = 0x20000000;
     static inline const uint32_t EEMainMemoryEnd = 0x21ffffff;
     static inline const uint32_t IOPMainMemoryStart = 0x24000000;
@@ -422,6 +423,56 @@ public:
                             }
                         }
                     }
+                    else if (obj.instr == PCSX2Memory::LUI_ORI_MUL)
+                    {
+                        for (size_t j = 0; j <= 0; j++)
+                        {
+                            auto data = isPtr(obj.data) ? **(uint32_t**)(&obj.data) : *(uint32_t*)(&obj.data);
+                            auto hi = *(uint32_t*)&obj.addr + j;
+                            if (hi < EEMainMemoryStart)
+                                hi += EEMainMemoryStart;
+
+                            uint32_t bytes = injector::ReadMemory<uint32_t>(hi, true);
+                            uint16_t instr = (uint16_t)(bytes >> 16);
+
+                            if (instr == 0x3C01)
+                            {
+                                auto originalValue = bytes;
+                                if (obj.originalValue.has_value())
+                                    originalValue = isPtr(obj.originalValue) ? **(uint32_t**)(&obj.originalValue) : *(uint32_t*)(&obj.originalValue);
+
+                                //if (LOWORD(bytes) == HIWORD(originalValue))
+                                {
+                                    for (uint32_t i = hi + 4; i < i + 24; i++)
+                                    {
+                                        bytes = injector::ReadMemory<uint32_t>(i, true);
+                                        uint16_t instr = (uint16_t)(bytes >> 16);
+
+                                        if ((instr == 0x4481 || instr == 0x3421) /* && (LOWORD(bytes) == LOWORD(originalValue))*/)
+                                        {
+                                            auto lo = i;
+
+                                            union {
+                                                struct {
+                                                    uint16_t low;
+                                                    uint16_t high;
+                                                };
+                                                float f;
+                                            } u;
+
+                                            u.high = injector::ReadMemory<uint16_t>(hi, true);
+                                            u.low = injector::ReadMemory<uint16_t>(lo, true);
+
+                                            float f = u.f /** *(float*)&data*/;
+                                            injector::WriteMemory<uint16_t>(hi, HIWORD(data), true);
+                                            injector::WriteMemory<uint16_t>(lo, LOWORD(data), true);
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                     else if (obj.instr == PCSX2Memory::MAKE_INLINE)
                     {
                         auto addr = *(uint32_t*)&obj.addr;
@@ -631,6 +682,7 @@ private:
     const uint8_t lui2 = 0x3F;
     const uint8_t ori1 = 0x34;
     const uint8_t ori2 = 0x37;
+    const uint8_t ori3 = 0x44;
 
     uint32_t mBufAddr = 0;
     uint32_t mCurBufAddr = 0;
@@ -655,6 +707,7 @@ static inline constexpr auto DOUBLE_T = PCSX2Memory::DOUBLE_T;
 static inline constexpr auto EXTENDED_T = PCSX2Memory::EXTENDED_T;
 static inline constexpr auto NONE = PCSX2Memory::NONE;
 static inline constexpr auto LUI_ORI = PCSX2Memory::LUI_ORI;
+static inline constexpr auto LUI_ORI_MUL = PCSX2Memory::LUI_ORI_MUL;
 static inline constexpr auto MAKE_INLINE = PCSX2Memory::MAKE_INLINE;
 typedef std::ostringstream oss;
 typedef std::function<void(oss& buf)> mips_asm;
