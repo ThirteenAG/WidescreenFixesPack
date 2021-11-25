@@ -155,10 +155,10 @@ class PCSX2
 {
 public:
     static inline hook::pattern pcsx2_crc_pattern = hook::pattern("83 3D ? ? ? ? ? 75 24");
-    static inline const uint32_t EEMainMemoryStart = 0x20000000;
-    static inline const uint32_t EEMainMemoryEnd = 0x21ffffff;
-    static inline const uint32_t IOPMainMemoryStart = 0x24000000;
-    static inline const uint32_t IOPMainMemoryEnd = 0x24211000;
+    static inline uintptr_t EEMainMemoryStart = 0/*0x20000000*/;
+    static inline uintptr_t EEMainMemoryEnd = 0/*0x21ffffff*/;
+    static inline const uintptr_t IOPMainMemoryStart = 0x24000000;
+    static inline const uintptr_t IOPMainMemoryEnd = 0x24211000;
     const std::filesystem::path PCSX2_ui = GetExeModulePath<std::wstring>() + L"inis\\PCSX2_ui.ini";
     const std::filesystem::path PCSX2_vm = GetExeModulePath<std::wstring>() + L"inis\\PCSX2_vm.ini";
     std::vector<PCSX2Memory> vecPatches;
@@ -166,24 +166,40 @@ public:
 
     PCSX2(std::initializer_list<uint32_t> crc_list, uint32_t customCodeBufAddr, std::function<void(PCSX2& ps2)>&& cb) : gameCRC(crc_list)
     {
-        if (customCodeBufAddr != NULL)
-            mBufAddr = (customCodeBufAddr >= EEMainMemoryStart) ? (customCodeBufAddr - EEMainMemoryStart) : customCodeBufAddr;
+        mBufAddr = customCodeBufAddr;
         pGameCRC = *pcsx2_crc_pattern.get_first<uint32_t*>(2);
         DeletePnach();
         UpdateDataCallback = std::forward<std::function<void(PCSX2& ps2)>>(cb);
     }
+
+    void FindHostMemoryMapEEmem()
+    {
+        uintptr_t curAddr = 0;
+        while (true)
+        {
+            MEMORY_BASIC_INFORMATION MemoryInf;
+            if (VirtualQuery((LPCVOID)curAddr, &MemoryInf, sizeof(MemoryInf)) == 0) break;
+            if (MemoryInf.AllocationProtect == PAGE_NOACCESS && MemoryInf.State == MEM_COMMIT &&
+                MemoryInf.Protect == PAGE_READONLY && MemoryInf.Type == MEM_PRIVATE)
+            {
+                EEMainMemoryStart = (uintptr_t)MemoryInf.AllocationBase;
+                EEMainMemoryEnd = EEMainMemoryStart + 0x1ffffff; //?
+                return;
+            }
+            curAddr += MemoryInf.RegionSize;
+        }
+    };
 
     uint32_t FindMemoryBuffer()
     {
         auto test = [](uint8_t* begin, std::size_t bytes) -> bool
         {
             return std::all_of(begin, begin + bytes, [](uint8_t const byte)
-            {
-                return byte == 0;
-            });
+                {
+                    return byte == 0;
+                });
         };
-
-        constexpr size_t start = 0x00100000 + EEMainMemoryStart;
+        size_t start = 0x00100000 + EEMainMemoryStart;
         size_t i = 0;
         do
         {
@@ -194,10 +210,8 @@ public:
                 if (test((uint8_t*)i, s) || i >= (0x00FFFFFF - s + EEMainMemoryStart))
                     break;
             }
-
             std::this_thread::yield();
-        }
-        while (i == start);
+        } while (i == start);
 
         return i - EEMainMemoryStart;
     }
@@ -309,12 +323,21 @@ public:
         { }
     }
 
-    void WriteMemory()
+    uintptr_t GetBuffer()
     {
+        FindHostMemoryMapEEmem();
+
         if (!mBufAddr)
             mBufAddr = FindMemoryBuffer();
+        else
+            mBufAddr = (mBufAddr >= EEMainMemoryStart) ? (mBufAddr - EEMainMemoryStart) : mBufAddr;
 
-        mCurBufAddr = mBufAddr;
+        return mBufAddr;
+    }
+
+    void WriteMemory()
+    {
+        mCurBufAddr = GetBuffer();
 
         for (auto& obj : vecPatches)
         {
@@ -452,8 +475,10 @@ public:
                                         {
                                             auto lo = i;
 
-                                            union {
-                                                struct {
+                                            union
+                                            {
+                                                struct
+                                                {
                                                     uint16_t low;
                                                     uint16_t high;
                                                 };
@@ -507,10 +532,7 @@ public:
 
     void WritePnach()
     {
-        if (!mBufAddr)
-            mBufAddr = FindMemoryBuffer();
-
-        mCurBufAddr = mBufAddr;
+        mCurBufAddr = GetBuffer();
 
         auto filename = GetExeModulePath<std::wstring>() + L"cheats_ws\\" + int_to_hex(*pGameCRC) + L".pnach";
         std::wofstream pnach(filename, std::ios_base::out);
@@ -684,8 +706,8 @@ private:
     const uint8_t ori2 = 0x37;
     const uint8_t ori3 = 0x44;
 
-    uint32_t mBufAddr = 0;
-    uint32_t mCurBufAddr = 0;
+    uintptr_t mBufAddr = 0;
+    uintptr_t mCurBufAddr = 0;
 
     bool isPtr(std::any& a)
     {
@@ -693,8 +715,8 @@ private:
     };
 };
 
-static inline constexpr auto EEStart = PCSX2::EEMainMemoryStart;
-static inline constexpr auto EEEnd = PCSX2::EEMainMemoryEnd;
+static inline auto EEStart = PCSX2::EEMainMemoryStart;
+static inline auto EEEnd = PCSX2::EEMainMemoryEnd;
 static inline constexpr auto ONCE = PCSX2Memory::PPT_ONCE_ON_LOAD;
 static inline constexpr auto CONT = PCSX2Memory::PPT_CONTINUOUSLY;
 static inline constexpr auto EE = PCSX2Memory::CPU_EE;
