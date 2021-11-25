@@ -76,8 +76,53 @@ void PCSX2Thread()
     }),
     L"// Skip Intro"));
 
-    //to do
+    ps2.vecPatches.push_back(PCSX2Memory(CONT, EE, ps2.GV({ 0x291994 }), WORD_T, MAKE_INLINE, mips_asm([](oss& buf)
+    {
+        li2(buf, t9, AdjustFOV(70.0f, Screen.fAspectRatio) / 70.0f);
+        mtc1(buf, t9, f30);
+        muls(buf, f12, f12, f30);
 
-    //ps2.WritePnach();
+        swc1(buf, f12, gp, -0x1AE8);
+    }),
+    L"// FOV Scaling"));
+
+    struct ws
+    {
+        enum _instr
+        {
+            ASPECT_RATIO,
+        };
+
+        uintptr_t ptr;
+        _instr instr;
+        union
+        {
+            float f;
+            int32_t i;
+        } value;
+    };
+
+    static std::vector<ws> lui_ori_addr_array
+    {
+        {0x2083C4, ws::ASPECT_RATIO, (16.0f / 9.0f)},
+    };
+
+    for (auto& w : lui_ori_addr_array)
+    {
+        switch (w.instr)
+        {
+        case ws::ASPECT_RATIO:
+            ps2.vecPatches.push_back(PCSX2Memory(CONT, EE, ps2.GV({ w.ptr + 4 }), WORD_T, MAKE_INLINE, mips_asm([&w](oss& buf)
+            {
+                li2(buf, at, Screen.fAspectRatio);
+            }),
+            L"// ASPECT_RATIO"));
+            break;
+        default:
+            break;
+        }
+    }
+
+    ps2.WritePnach();
     ps2.WriteMemoryLoop();
 }

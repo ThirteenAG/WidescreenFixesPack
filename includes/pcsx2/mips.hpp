@@ -175,6 +175,12 @@ namespace mips
 
     //Instruction set
 
+    inline std::ostream& write_directly(std::ostream& os, uint32_t data)
+    {
+        write_binary(os, swap32(data));
+        return os;
+    }
+
     inline std::ostream& nop(std::ostream& os)
     {
         write_binary(os, 0x00000000);
