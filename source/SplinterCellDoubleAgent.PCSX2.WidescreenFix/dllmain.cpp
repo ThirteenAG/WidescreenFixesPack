@@ -231,12 +231,14 @@ void PCSX2Thread()
     }),
     L"// Text Scaling = TS / " + std::to_wstring(Screen.fHudScale) + L" + " + std::to_wstring(Screen.fHudOffset)));
 
+    //this is ugly and needs to be rewritten somehow
     []()
     {
+        ps2.FindHostMemoryMapEEmem();
         auto SC4_OFF_ELF_CHECK = (uint32_t*)(ps2.GV({ 0x25ECE0, 0x25ED50 }) + EEStart);
-        __try
+        while (true)
         {
-            while (true)
+            __try
             {
                 using namespace std::chrono_literals;
                 std::this_thread::sleep_for(100ms);
@@ -256,8 +258,9 @@ void PCSX2Thread()
                     }
                 }
             }
+            __except (true)
+            {
+            }
         }
-        __except ((GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION) ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
-        { }
     }();
 }
