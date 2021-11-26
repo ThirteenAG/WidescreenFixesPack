@@ -2,6 +2,10 @@ name: Release All
 
 on:
   workflow_dispatch:
+    inputs:
+      tag_list:
+        description: 'Release specified tags:'     
+        required: true
 
 jobs:
   build:
@@ -12,1205 +16,539 @@ jobs:
         buildtype: [Release]
 
     steps:
-    - uses: actions/checkout@v2
-    - uses: ./.github/workflows/build_all
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: gtasade
-    - uses: ncipollo/release-action@v1
+    - name: Checkout Repo
+      uses: actions/checkout@v2
+    - name: Build All
+      uses: ./.github/workflows/build_all
+
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: gtasade
         artifacts: data/Archives/GTASADE.FusionMod.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: gta3de
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: gta3de
         artifacts: data/Archives/GTA3DE.FusionMod.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: gtavcde
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: gtavcde
         artifacts: data/Archives/GTAVCDE.FusionMod.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: gtavcs
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: gtavcs
         artifacts: data/Archives/GTAVCS.PCSX2.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: gtalcs
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: gtalcs
         artifacts: data/Archives/GTALCS.PCSX2.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: gtasa
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: gtasa
         artifacts: data/Archives/GTASA.WidescreenFix.zip, data/Archives/GTASA.WidescreenFrontend.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: scdaps2
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: scdaps2
         artifacts: data/Archives/SplinterCellDoubleAgent.PCSX2.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: burnout3
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: scdaxbox
+        artifacts: data/Archives/SplinterCellDoubleAgent.CXBXR.WidescreenFix.zip
+
+    - uses: ./.github/workflows/build_tag
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: burnout3
         artifacts: data/Archives/Burnout3.PCSX2.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: condemned
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: condemned
         artifacts: data/Archives/Condemned.MissingSteamFilesFix.Lite.zip, data/Archives/Condemned.MissingSteamFilesFix.zip, data/Archives/Condemned.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: kr2
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: kr2
         artifacts: data/Archives/KnightRider2.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: kr
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: kr
         artifacts: data/Archives/KnightRider.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: farcry
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: farcry
         artifacts: data/Archives/FarCry.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: nfsuc
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: nfsuc
         artifacts: data/Archives/NFSUndercover.GenericFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: nfsps
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: nfsps
         artifacts: data/Archives/NFSProStreet.GenericFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: masseffect
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: masseffect
         artifacts: data/Archives/MassEffectTrilogy.FOVFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: bully
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: bully
         artifacts: data/Archives/Bully.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: larush
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: larush
         artifacts: data/Archives/LARush.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: thegodfather
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: thegodfather
         artifacts: data/Archives/TheGodfather.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: psychonauts
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: psychonauts
         artifacts: data/Archives/Psychonauts.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: justcause
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: justcause
         artifacts: data/Archives/JustCause.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: thematrixpathofneo
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: thematrixpathofneo
         artifacts: data/Archives/TheMatrixPathOfNeo.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: enterthematrix
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: enterthematrix
         artifacts: data/Archives/EnterTheMatrix.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: hd2
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: hd2
         artifacts: data/Archives/HiddenandDangerous2.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: usm
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: usm
         artifacts: data/Archives/UltimateSpiderMan.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: driv3r
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: driv3r
         artifacts: data/Archives/Driv3r.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: thesuffering
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: thesuffering
         artifacts: data/Archives/TheSuffering.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: sh4
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: sh4
         artifacts: data/Archives/SilentHill4.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: driverpl
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: driverpl
         artifacts: data/Archives/DriverParallelLines.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: callofcthulhu
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: callofcthulhu
         artifacts: data/Archives/CallOfCthulhu.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: kingkong
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: kingkong
         artifacts: data/Archives/KingKong.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: onimusha3
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: onimusha3
         artifacts: data/Archives/Onimusha3.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: sh3
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: sh3
         artifacts: data/Archives/SilentHill3.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: sh2
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: sh2
         artifacts: data/Archives/SilentHill2.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: coldfear
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: coldfear
         artifacts: data/Archives/ColdFear.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: paradisecracked
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: paradisecracked
         artifacts: data/Archives/ParadiseCracked.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: nfsu
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: nfsu
         artifacts: data/Archives/NFSUnderground.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: nfsu2
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: nfsu2
         artifacts: data/Archives/NFSUnderground2.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: nfsmw
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: nfsmw
         artifacts: data/Archives/NFSMostWanted.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: nfsc
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: nfsc
         artifacts: data/Archives/NFSCarbon.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: manhunt
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: manhunt
         artifacts: data/Archives/Manhunt.WidescreenFix.zip, data/Archives/Manhunt.WidescreenFrontend.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: gun
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: gun
         artifacts: data/Archives/Gun.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: flatoutuc
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: flatoutuc
         artifacts: data/Archives/FlatoutUltimateCarnage.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: flatout2
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: flatout2
         artifacts: data/Archives/Flatout2.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: flatout
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: flatout
         artifacts: data/Archives/Flatout.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: fahrenheit
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: fahrenheit
         artifacts: data/Archives/Fahrenheit.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: dmc3se
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: dmc3se
         artifacts: data/Archives/DevilMayCry3.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: da4
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: da4
         artifacts: data/Archives/DeerAvenger4.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: mafia
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: mafia
         artifacts: data/Archives/Mafia.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: tod
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: tod
         artifacts: data/Archives/TotalOverdose.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: thug2
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: thug2
         artifacts: data/Archives/TonyHawksUnderground2.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: thug
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: thug
         artifacts: data/Archives/TonyHawksUnderground.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: thps4
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: thps4
         artifacts: data/Archives/TonyHawksProSkater4.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: thps3
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: thps3
         artifacts: data/Archives/TonyHawksProSkater3.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: thps2
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: thps2
         artifacts: data/Archives/TonyHawksProSkater2.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: thaw
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: thaw
         artifacts: data/Archives/TonyHawksAmericanWasteland.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: punisher
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: punisher
         artifacts: data/Archives/ThePunisher.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: secondsight
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: secondsight
         artifacts: data/Archives/SecondSight.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: psiops
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: psiops
         artifacts: data/Archives/PsiOpsTheMindgateConspiracy.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: mp2
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: mp2
         artifacts: data/Archives/MaxPayne2.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: mp1
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: mp1
         artifacts: data/Archives/MaxPayne.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: gtasa-wshps
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: gtasa-wshps
         artifacts: data/Archives/GTASA.WidescreenFix.Archived.zip, data/Archives/wshps.asi
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: gtavc
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: gtavc
         artifacts: data/Archives/GTAVC.WidescreenFix.zip, data/Archives/GTAVC.WidescreenFrontend.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: gta3
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: gta3
         artifacts: data/Archives/GTA3.WidescreenFix.zip, data/Archives/GTA3.WidescreenFrontend.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: gta2
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: gta2
         artifacts: data/Archives/GTA2.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: gta1
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: gta1
         artifacts: data/Archives/GTA1.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: truecrimesola
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: truecrimesola
         artifacts: data/Archives/TrueCrimeStreetsofLA.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: truecrimenyc
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: truecrimenyc
         artifacts: data/Archives/TrueCrimeNewYorkCity.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: stubbsthezombie
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: stubbsthezombie
         artifacts: data/Archives/StubbstheZombie.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: srs
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: srs
         artifacts: data/Archives/StreetRacingSyndicate.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: scda
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: scda
         artifacts: data/Archives/SplinterCellDoubleAgent.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: scct
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: scct
         artifacts: data/Archives/SplinterCellChaosTheory.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: scpt
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: scpt
         artifacts: data/Archives/SplinterCellPandoraTomorrow.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: sc
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: sc
         artifacts: data/Archives/SplinterCell.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: sniperelite
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: sniperelite
         artifacts: data/Archives/SniperElite.WidescreenFix.zip
 
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: sonicheroes
-    - uses: ncipollo/release-action@v1
+    - uses: ./.github/workflows/build_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag_list: "${{ github.event.inputs.tag_list }}"
+        tag: sonicheroes
         artifacts: data/Archives/SonicHeroes.WidescreenFix.zip
-

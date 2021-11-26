@@ -1,0 +1,144 @@
+name: "Build By Tag"
+description: "Pushes built artifacts to specified release"
+
+inputs:
+  token:
+    description: "Github's token"
+    required: true
+  tag:
+    description: "Tag of release on github"
+    required: true
+  tag_list:
+    description: "List of tags needed to release this time"
+    required: true
+  artifacts:
+    description: "List of artifacts for release"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Get release info
+      id: release_info
+      uses: cardinalby/git-get-release-action@v1.1
+      env:
+       GITHUB_TOKEN: ${{ inputs.token }}
+      with:
+        tag: ${{ inputs.tag }}
+    - name: Split tags
+      id: split
+      uses: rishabhgupta/split-by@v1
+      with:
+        split-by: ','
+        string: "${{ inputs.tag_list }}"
+    - name: Upload Release
+      if: |
+        (steps.split.outputs._0 == 'all') ||
+        (steps.split.outputs._0 == inputs.tag) ||
+        (steps.split.outputs._1 == inputs.tag) ||
+        (steps.split.outputs._2 == inputs.tag) ||
+        (steps.split.outputs._3 == inputs.tag) ||
+        (steps.split.outputs._4 == inputs.tag) ||
+        (steps.split.outputs._5 == inputs.tag) ||
+        (steps.split.outputs._6 == inputs.tag) ||
+        (steps.split.outputs._7 == inputs.tag) ||
+        (steps.split.outputs._8 == inputs.tag) ||
+        (steps.split.outputs._9 == inputs.tag) ||
+        (steps.split.outputs._10 == inputs.tag) ||
+        (steps.split.outputs._11 == inputs.tag) ||
+        (steps.split.outputs._12 == inputs.tag) ||
+        (steps.split.outputs._13 == inputs.tag) ||
+        (steps.split.outputs._14 == inputs.tag) ||
+        (steps.split.outputs._15 == inputs.tag) ||
+        (steps.split.outputs._16 == inputs.tag) ||
+        (steps.split.outputs._17 == inputs.tag) ||
+        (steps.split.outputs._18 == inputs.tag) ||
+        (steps.split.outputs._19 == inputs.tag) ||
+        (steps.split.outputs._20 == inputs.tag) ||
+        (steps.split.outputs._21 == inputs.tag) ||
+        (steps.split.outputs._22 == inputs.tag) ||
+        (steps.split.outputs._23 == inputs.tag) ||
+        (steps.split.outputs._24 == inputs.tag) ||
+        (steps.split.outputs._25 == inputs.tag) ||
+        (steps.split.outputs._26 == inputs.tag) ||
+        (steps.split.outputs._27 == inputs.tag) ||
+        (steps.split.outputs._28 == inputs.tag) ||
+        (steps.split.outputs._29 == inputs.tag) ||
+        (steps.split.outputs._30 == inputs.tag) ||
+        (steps.split.outputs._31 == inputs.tag) ||
+        (steps.split.outputs._32 == inputs.tag) ||
+        (steps.split.outputs._33 == inputs.tag) ||
+        (steps.split.outputs._34 == inputs.tag) ||
+        (steps.split.outputs._35 == inputs.tag) ||
+        (steps.split.outputs._36 == inputs.tag) ||
+        (steps.split.outputs._37 == inputs.tag) ||
+        (steps.split.outputs._38 == inputs.tag) ||
+        (steps.split.outputs._39 == inputs.tag) ||
+        (steps.split.outputs._40 == inputs.tag) ||
+        (steps.split.outputs._41 == inputs.tag) ||
+        (steps.split.outputs._42 == inputs.tag) ||
+        (steps.split.outputs._43 == inputs.tag) ||
+        (steps.split.outputs._44 == inputs.tag) ||
+        (steps.split.outputs._45 == inputs.tag) ||
+        (steps.split.outputs._46 == inputs.tag) ||
+        (steps.split.outputs._47 == inputs.tag) ||
+        (steps.split.outputs._48 == inputs.tag) ||
+        (steps.split.outputs._49 == inputs.tag) ||
+        (steps.split.outputs._50 == inputs.tag) ||
+        (steps.split.outputs._51 == inputs.tag) ||
+        (steps.split.outputs._52 == inputs.tag) ||
+        (steps.split.outputs._53 == inputs.tag) ||
+        (steps.split.outputs._54 == inputs.tag) ||
+        (steps.split.outputs._55 == inputs.tag) ||
+        (steps.split.outputs._56 == inputs.tag) ||
+        (steps.split.outputs._57 == inputs.tag) ||
+        (steps.split.outputs._58 == inputs.tag) ||
+        (steps.split.outputs._59 == inputs.tag) ||
+        (steps.split.outputs._60 == inputs.tag) ||
+        (steps.split.outputs._61 == inputs.tag) ||
+        (steps.split.outputs._62 == inputs.tag) ||
+        (steps.split.outputs._63 == inputs.tag) ||
+        (steps.split.outputs._64 == inputs.tag) ||
+        (steps.split.outputs._65 == inputs.tag) ||
+        (steps.split.outputs._66 == inputs.tag) ||
+        (steps.split.outputs._67 == inputs.tag) ||
+        (steps.split.outputs._68 == inputs.tag) ||
+        (steps.split.outputs._69 == inputs.tag) ||
+        (steps.split.outputs._70 == inputs.tag) ||
+        (steps.split.outputs._71 == inputs.tag) ||
+        (steps.split.outputs._72 == inputs.tag) ||
+        (steps.split.outputs._73 == inputs.tag) ||
+        (steps.split.outputs._74 == inputs.tag) ||
+        (steps.split.outputs._75 == inputs.tag) ||
+        (steps.split.outputs._76 == inputs.tag) ||
+        (steps.split.outputs._77 == inputs.tag) ||
+        (steps.split.outputs._78 == inputs.tag) ||
+        (steps.split.outputs._79 == inputs.tag) ||
+        (steps.split.outputs._80 == inputs.tag) ||
+        (steps.split.outputs._81 == inputs.tag) ||
+        (steps.split.outputs._82 == inputs.tag) ||
+        (steps.split.outputs._83 == inputs.tag) ||
+        (steps.split.outputs._84 == inputs.tag) ||
+        (steps.split.outputs._85 == inputs.tag) ||
+        (steps.split.outputs._86 == inputs.tag) ||
+        (steps.split.outputs._87 == inputs.tag) ||
+        (steps.split.outputs._88 == inputs.tag) ||
+        (steps.split.outputs._89 == inputs.tag) ||
+        (steps.split.outputs._90 == inputs.tag) ||
+        (steps.split.outputs._91 == inputs.tag) ||
+        (steps.split.outputs._92 == inputs.tag) ||
+        (steps.split.outputs._93 == inputs.tag) ||
+        (steps.split.outputs._94 == inputs.tag) ||
+        (steps.split.outputs._95 == inputs.tag) ||
+        (steps.split.outputs._96 == inputs.tag) ||
+        (steps.split.outputs._97 == inputs.tag) ||
+        (steps.split.outputs._98 == inputs.tag) ||
+        (steps.split.outputs._99 == inputs.tag)
+      uses: ncipollo/release-action@v1
+      with:
+        token: ${{ inputs.token }}
+        allowUpdates: true
+        name: ${{ steps.release_info.outputs.name }}
+        body: ${{ steps.release_info.outputs.body }}
+        tag: ${{ steps.release_info.outputs.tag_name }}
+        artifacts: ${{ inputs.artifacts }}
