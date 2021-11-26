@@ -715,8 +715,8 @@ private:
     };
 };
 
-static inline auto EEStart = PCSX2::EEMainMemoryStart;
-static inline auto EEEnd = PCSX2::EEMainMemoryEnd;
+static inline auto& EEStart = PCSX2::EEMainMemoryStart;
+static inline auto& EEEnd = PCSX2::EEMainMemoryEnd;
 static inline constexpr auto ONCE = PCSX2Memory::PPT_ONCE_ON_LOAD;
 static inline constexpr auto CONT = PCSX2Memory::PPT_CONTINUOUSLY;
 static inline constexpr auto EE = PCSX2Memory::CPU_EE;

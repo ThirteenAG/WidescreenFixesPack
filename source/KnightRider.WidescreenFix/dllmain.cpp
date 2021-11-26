@@ -185,6 +185,7 @@ void PCSX2Thread()
         std::this_thread::yield();
 
     ps2.EnableCallback();
+    ps2.FindHostMemoryMapEEmem();
 
     ps2.vecPatches.push_back(PCSX2Memory(L"gametitle=Knight Rider: The Game (PAL-M6)(SLES-51011)"));
     ps2.vecPatches.push_back(PCSX2Memory(L"comment=Widescreen Fix by ThirteenAG https://thirteenag.github.io/wfp#kr"));
@@ -200,11 +201,11 @@ void PCSX2Thread()
     }
 
     ps2pattern = hook::range_pattern(ps2.EEMainMemoryStart, ps2.EEMainMemoryEnd, "AB AA AA 3F");
-    while (ps2pattern.clear().size() != 1) { std::this_thread::yield(); }
+    while (ps2pattern.clear().size() < 1) { std::this_thread::yield(); }
     ps2.vecPatches.push_back(PCSX2Memory(CONT, EE, ps2pattern.get(0).get<void>(0), WORD_T, NONE, &Screen.fAspectRatio, std::wstring(L"// Aspect Ratio: ") + std::to_wstring(Screen.fAspectRatio), 0x3FAAAAAB));
 
     ps2pattern = hook::range_pattern(ps2.EEMainMemoryStart, ps2.EEMainMemoryEnd, "0E 3C 02 3C 36 FA 42 34 00 00 82 44 D0 FF BD 27");
-    while (ps2pattern.clear().size() != 2) { std::this_thread::yield(); }
+    while (ps2pattern.clear().size() < 2) { std::this_thread::yield(); }
     ps2.vecPatches.push_back(PCSX2Memory(CONT, EE, ps2pattern.get(0).get<void>(0), WORD_T, LUI_ORI, &Screen.fFOVFactor, std::wstring(L"// FOV: ") + std::to_wstring(Screen.fFOVFactor), 0x3C0EFA36));
 
     ps2.WritePnach();
