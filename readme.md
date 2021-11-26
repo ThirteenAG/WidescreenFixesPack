@@ -1162,6 +1162,18 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 |
 [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/SplinterCellDoubleAgentPS2.WidescreenFix/dllmain.cpp)
 
+## Splinter Cell Double Agent V2 Widescreen Fix [CXBXR]
+
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Aspect Ratio
+
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed HUD
+
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Field of View
+
+[Download](http://thirteenag.github.io/wfp#scdaxbox)
+|
+[Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/SplinterCellDoubleAgent.CXBXR.WidescreenFix/dllmain.cpp)
+
 ## Street Racing Syndicate Widescreen Fix
 
 ![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Resolution
