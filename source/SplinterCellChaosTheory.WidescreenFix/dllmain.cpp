@@ -2,24 +2,24 @@
 
 struct Screen
 {
-    int Width;
-    int Height;
-    float fWidth;
-    float fHeight;
-    float fAspectRatio;
-    float fHUDScaleX;
-    float fHudOffset;
+    int Width{};
+    int Height{};
+    float fWidth{};
+    float fHeight{};
+    float fAspectRatio{};
+    float fHUDScaleX{};
+    float fHudOffset{};
     const float fHUDScaleXOriginal = 0.003125f;
     const float fHudOffsetOriginal = 1.0f;
-    float fHUDScaleXDyn;
-    float fHudOffsetDyn;
-    float fTextScaleX;
-    int32_t nHudOffsetReal;
-    int32_t nScopeScale;
-    float fFMVoffsetStartX;
-    float fFMVoffsetEndX;
-    float fFMVoffsetStartY;
-    float fFMVoffsetEndY;
+    float fHUDScaleXDyn{};
+    float fHudOffsetDyn{};
+    float fTextScaleX{};
+    int32_t nHudOffsetReal{};
+    int32_t nScopeScale{};
+    float fFMVoffsetStartX{};
+    float fFMVoffsetEndX{};
+    float fFMVoffsetStartY{};
+    float fFMVoffsetEndY{};
 } Screen;
 
 union FColor
@@ -33,7 +33,7 @@ union FColor
 
 struct FLTColor
 {
-    float R, G, B, A = 1.0f;
+    float R{}, G{}, B{}, A = 1.0f;
     inline FLTColor() {}
     inline FLTColor(uint32_t color) {
         R = ((color >> 16) & 0xFF) / 255.0f;
@@ -56,9 +56,60 @@ struct WidescreenHudOffset
     float _float;
 } WidescreenHudOffset;
 
+struct TextOffset {
+    struct {
+        int32_t v1v1 = 435;
+        int32_t v1v2 = 436;
+        int32_t v1v3 = 437;
+        int32_t v2v1 = 3;
+        int32_t v2v2 = 21;
+        int32_t v3v1 = 313;
+        int32_t v3v2 = 329;
+        int32_t v3v3 = 345;
+        int32_t v3v4 = 361;
+        int32_t v3v5 = 377;
+        int32_t v3v6 = 393;
+        int32_t v3v7 = 416;
+    } topCorner;
+    struct {
+        int32_t v1v1 = 489;
+        int32_t v1v2 = 598;
+        int32_t v2v1 = 1;
+        int32_t v2v2 = 20;
+        int32_t v3v1 = 23;
+        int32_t v3v2 = 39;
+        int32_t v3v3 = 93;
+    } bottomCorner;
+    struct {
+        int32_t v1 = 598;
+        int32_t v2 = 3;
+        int32_t v3 = 93;
+    } icons;
+    struct {
+        int32_t v1v1 = 465;
+        int32_t v1v2 = 615;
+        int32_t v2v1 = 3;
+        int32_t v2v2 = 75;
+        int32_t v3v1 = 128;
+        int32_t v3v2 = 215;
+    } objPopup;
+} sTextOffset;
+
+enum class GameLang : int {
+    English,
+    French,
+    German,
+    Hungarian,
+    Italian,
+    Polish,
+    Russian,
+    Spanish
+} eGameLang;
+
 bool bHudWidescreenMode;
 int32_t nWidescreenHudOffset;
 float fWidescreenHudOffset;
+bool bDisableAltTabFix;
 
 FLTColor gColor;
 float* __cdecl FGetHSV(float* dest, uint8_t H, uint8_t S, uint8_t V)
@@ -72,18 +123,18 @@ float* __cdecl FGetHSV(float* dest, uint8_t H, uint8_t S, uint8_t V)
         return dest;
     }
 
-    float r, g, b, a = 1.0f;
-    float v14 = (float)H * 6.0f * 0.00390625f;
+    float r{}, g{}, b{}, a = 1.0f;
+    float v14 = static_cast<float>(H) * 6.0f * 0.00390625f;
     float v4 = floor(v14);
-    float v5 = (float)(255 - S) * 0.0039215689f;
-    float v6 = (float)V * 0.0039215689f;
+    float v5 = static_cast<float>(255 - S) * 0.0039215689f;
+    float v6 = static_cast<float>(V) * 0.0039215689f;
     float v16 = (1.0f - v5) * v6;
     float v10 = (1.0f - (v5 * (v14 - v4))) * v6;
     float v7 = (1.0f - (v14 - v4)) * v5;
-    float v15 = (float)V * 0.0039215689f;
+    float v15 = static_cast<float>(V) * 0.0039215689f;
     float v17 = (1.0f - v7) * v6;
 
-    switch ((uint32_t)v4)
+    switch (static_cast<uint32_t>(v4))
     {
     case 0:
         r = v15;
@@ -134,7 +185,9 @@ void Init()
     bHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1) != 0;
     nWidescreenHudOffset = iniReader.ReadInteger("MAIN", "WidescreenHudOffset", 100);
     fWidescreenHudOffset = static_cast<float>(nWidescreenHudOffset);
+    bDisableAltTabFix = iniReader.ReadInteger("MAIN", "DisableAltTabFix", 1) != 0;
     gColor = iniReader.ReadInteger("BONUS", "GogglesLightColor", 0);
+    eGameLang = static_cast<GameLang>(iniReader.ReadInteger("MAIN", "GameLanguage", 0));
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -153,17 +206,13 @@ void Init()
             if (Screen.Width < 640 || Screen.Height < 480)
                 return;
 
-            char pszPath[MAX_PATH];
-            wcstombs(pszPath, (const wchar_t*)regs.edi, wcslen((const wchar_t*)regs.edi));
-            pszPath[wcslen((const wchar_t*)regs.edi)] = '\0';
-            char ResX[20];
-            char ResY[20];
-            _snprintf(ResX, 20, "%d", Screen.Width);
-            _snprintf(ResY, 20, "%d", Screen.Height);
-            WritePrivateProfileStringA("WinDrv.WindowsClient", "WindowedViewportX", ResX, pszPath);
-            WritePrivateProfileStringA("WinDrv.WindowsClient", "WindowedViewportY", ResY, pszPath);
-            WritePrivateProfileStringA("WinDrv.WindowsClient", "FullscreenViewportX", ResX, pszPath);
-            WritePrivateProfileStringA("WinDrv.WindowsClient", "FullscreenViewportY", ResY, pszPath);
+            auto pszPath = (const wchar_t*)regs.edi;
+            auto ResX = std::to_wstring(Screen.Width);
+            auto ResY = std::to_wstring(Screen.Height);
+            WritePrivateProfileStringW(L"WinDrv.WindowsClient", L"WindowedViewportX", ResX.c_str(), pszPath);
+            WritePrivateProfileStringW(L"WinDrv.WindowsClient", L"WindowedViewportY", ResY.c_str(), pszPath);
+            WritePrivateProfileStringW(L"WinDrv.WindowsClient", L"FullscreenViewportX", ResX.c_str(), pszPath);
+            WritePrivateProfileStringW(L"WinDrv.WindowsClient", L"FullscreenViewportY", ResY.c_str(), pszPath);
         }
     }; injector::MakeInline<SetResHook>(pattern.get_first(0), pattern.get_first(7));
 
@@ -176,8 +225,8 @@ void Init()
     {
         void operator()(injector::reg_pack& regs)
         {
-            *(uint32_t*)(regs.ebx + 0x58) = regs.ebp;
-            *(uint32_t*)(regs.ebx + 0x5C) = regs.edi;
+            *reinterpret_cast<uint32_t*>(regs.ebx + 0x58) = regs.ebp;
+            *reinterpret_cast<uint32_t*>(regs.ebx + 0x5C) = regs.edi;
             Screen.Width = regs.ebp;
             Screen.Height = regs.edi;
             Screen.fWidth = static_cast<float>(Screen.Width);
@@ -198,8 +247,8 @@ void Init()
             }
             else
             {
-                WidescreenHudOffset._int = nWidescreenHudOffset;
                 WidescreenHudOffset._float = fWidescreenHudOffset;
+                WidescreenHudOffset._int = nWidescreenHudOffset;
             }
 
             //FMV
@@ -211,13 +260,13 @@ void Init()
 
 
     //HUD
-    static uint8_t* bIsInMenu;
+    static uint8_t* bIsInMenu = nullptr;
     pattern = hook::pattern("88 81 39 4D 00 00 C2 08 00");
     struct MenuCheckHook
     {
         void operator()(injector::reg_pack& regs)
         {
-            bIsInMenu = (uint8_t*)(regs.ecx + 0x4D39);
+            bIsInMenu = reinterpret_cast<uint8_t*>(regs.ecx + 0x4D39);
             *bIsInMenu = 0;
         }
     }; injector::MakeInline<MenuCheckHook>(pattern.get_first(0), pattern.get_first(6)); //0x10C7FC4C
@@ -244,16 +293,16 @@ void Init()
         void operator()(injector::reg_pack& regs)
         {
             regs.ecx ^= regs.edx;
-            *(uint32_t*)(regs.eax + 0x68) = regs.ecx;
+            *reinterpret_cast<uint32_t*>(regs.eax + 0x68) = regs.ecx;
 
             Screen.fHUDScaleXDyn = Screen.fHUDScaleX;
             Screen.fHudOffsetDyn = Screen.fHudOffset;
 
-            int32_t fLeft = *(int16_t*)(regs.esp + 0x40);    // 0
-            int32_t fRight = *(int16_t*)(regs.esp + 0x42);   // 640
-            int32_t fTop = *(int16_t*)(regs.esp + 0x44);     // 0
-            int32_t fBottom = *(int16_t*)(regs.esp + 0x46);  // 480
-            FColor Color; Color.RGBA = *(int32_t*)(regs.esp + 0x3C);
+            int16_t fLeft = *reinterpret_cast<int16_t*>(regs.esp + 0x40);    // 0
+            int16_t fRight = *reinterpret_cast<int16_t*>(regs.esp + 0x42);   // 640
+            int16_t fTop = *reinterpret_cast<int16_t*>(regs.esp + 0x44);     // 0
+            int16_t fBottom = *reinterpret_cast<int16_t*>(regs.esp + 0x46);  // 480
+            FColor Color{ *reinterpret_cast<uint32_t*>(regs.esp + 0x3C) };
 
             if ((fLeft == 0 && fRight == 640 /*&& fTop == 0 && fBottom == 480*/) || (fLeft == -2 && fRight == 639 && fTop == -2 && fBottom == 479)
                 || (fLeft == -1 && fRight == 640 && fTop == -2 && fBottom == 479) || (fTop == 0 && fBottom == 512)) //fullscreen images, 0 512 - camera feed overlay
@@ -267,31 +316,31 @@ void Init()
             {
                 if ((fLeft == -1 && fRight == 256) || (fLeft == -2 && fRight == 255) || (fLeft == -61 && fRight == 319) || (fLeft == -60 && fRight == 320)) //scopes image left
                 {
-                    *(int16_t*)(regs.esp + 0x40) -= Screen.nHudOffsetReal;
-                    *(int16_t*)(regs.esp + 0x42) -= Screen.nHudOffsetReal;
+                    *reinterpret_cast<int16_t*>(regs.esp + 0x40) -= Screen.nHudOffsetReal;
+                    *reinterpret_cast<int16_t*>(regs.esp + 0x42) -= Screen.nHudOffsetReal;
                     return;
                 }
                 else if (((fLeft == 382 || fLeft == 383 || fLeft == 384) && (fRight == 639 || fRight == 640 || fRight == 641)) || ((fLeft == 319 && fRight == 699) || (fLeft == 320 && fRight == 700))) //scopes image right
                 {
-                    *(int16_t*)(regs.esp + 0x40) += Screen.nHudOffsetReal;
-                    *(int16_t*)(regs.esp + 0x42) += Screen.nHudOffsetReal;
+                    *reinterpret_cast<int16_t*>(regs.esp + 0x40) += Screen.nHudOffsetReal;
+                    *reinterpret_cast<int16_t*>(regs.esp + 0x42) += Screen.nHudOffsetReal;
                     return;
                 }
 
                 if (fTop == 0 && fBottom == 480 && Color.A == 0x1E) // camera feed white overlay
                 {
                     if (fLeft == 0 && fRight == 65)
-                        *(int16_t*)(regs.esp + 0x40) -= Screen.nHudOffsetReal;
+                        *reinterpret_cast<int16_t*>(regs.esp + 0x40) -= Screen.nHudOffsetReal;
                     else if (fLeft == 575 && fRight == 640)
-                        *(int16_t*)(regs.esp + 0x42) += Screen.nHudOffsetReal;
+                        *reinterpret_cast<int16_t*>(regs.esp + 0x42) += Screen.nHudOffsetReal;
                 }
 
                 if ((fLeft == -1 || fLeft == 579) && (fRight == 62 || fRight == 649) && fTop == -3 && fBottom == 483 && Color.RGBA == 0x1bffffff)
                 {
                     if (fLeft == -1)
-                        *(int16_t*)(regs.esp + 0x40) -= Screen.nHudOffsetReal; //weapon scope
+                        *reinterpret_cast<int16_t*>(regs.esp + 0x40) -= Screen.nHudOffsetReal; //weapon scope
                     else
-                        *(int16_t*)(regs.esp + 0x42) += Screen.nHudOffsetReal;
+                        *reinterpret_cast<int16_t*>(regs.esp + 0x42) += Screen.nHudOffsetReal;
                 }
 
                 if (!bHudWidescreenMode)
@@ -299,19 +348,19 @@ void Init()
 
                 if (
                     (
-                    (Color.RGBA == 0x99ffffff || Color.RGBA == 0xc8ffffff || Color.RGBA == 0x59ffffff || Color.RGBA == 0x80ffffff || Color.RGBA == 0x32ffffff || Color.RGBA == 0x96ffffff) && //top right menus colors
+                        (Color.RGBA == 0x99ffffff || Color.RGBA == 0xc8ffffff || Color.RGBA == 0x59ffffff || Color.RGBA == 0x80ffffff || Color.RGBA == 0x32ffffff || Color.RGBA == 0x96ffffff) && //top right menus colors
                         ((fLeft >= 421 && fLeft <= 435) && (fRight >= 421 && fRight <= 435) && fTop >= 0 && fBottom <= 200) || //top right menu LEFT
                         ((fLeft >= 421 && fLeft <= 438) && (fRight <= 630) && fTop >= 0 && fBottom <= 200) || //top right menu MIDDLE
                         ((fLeft >= 600 && fLeft <= 635) && (fRight >= 600 && fRight <= 635) && fTop >= 0 && fBottom <= 200)    //top right menu RIGHT
                         )
                     ||
                     (
-                    (Color.RGBA == 0x4bb8fac8 || Color.RGBA == 0x32ffffff || Color.RGBA == 0x40ffffff || Color.RGBA == 0x59ffffff || Color.RGBA == 0x80ffffff || Color.RGBA == 0x96ffffff || Color.RGBA == 0x99ffffff || Color.RGBA == 0xc8ffffff || Color.RGBA == 0xffffffff || (Color.R == 0xb8 && Color.G == 0xf7 && Color.B == 0xc8)) &&
+                        (Color.RGBA == 0x4bb8fac8 || Color.RGBA == 0x32ffffff || Color.RGBA == 0x40ffffff || Color.RGBA == 0x59ffffff || Color.RGBA == 0x80ffffff || Color.RGBA == 0x96ffffff || Color.RGBA == 0x99ffffff || Color.RGBA == 0xc8ffffff || Color.RGBA == 0xffffffff || (Color.R == 0xb8 && Color.G == 0xf7 && Color.B == 0xc8)) &&
                         ((fLeft >= 465 && fLeft <= 622) && (fRight >= 468 && fRight <= 625) && fTop >= 360 && fBottom <= 465) //bottom right panel
                         )
                     ||
                     (
-                    (Color.R == 0xff && Color.G == 0xff && Color.B == 0xff) && //objective text popup
+                        (Color.R == 0xff && Color.G == 0xff && Color.B == 0xff) && //objective text popup
                         ((fLeft >= 465 && fLeft <= 622) && (fRight >= 468 && fRight <= 625) && fTop >= 250 && fBottom <= 351)
                         )
                     )
@@ -325,8 +374,8 @@ void Init()
                         )
                     {
                         DBGONLY(KEYPRESS(VK_F1) { spd::log()->info("{0:d} {1:d} {2:d} {3:d} {4:08x}", fLeft, fRight, fTop, fBottom, Color.RGBA); });
-                        *(int16_t*)(regs.esp + 0x40) += WidescreenHudOffset._int;
-                        *(int16_t*)(regs.esp + 0x42) += WidescreenHudOffset._int;
+                        *reinterpret_cast<int16_t*>(regs.esp + 0x40) += WidescreenHudOffset._int;
+                        *reinterpret_cast<int16_t*>(regs.esp + 0x42) += WidescreenHudOffset._int;
                     }
                 }
             }
@@ -338,8 +387,8 @@ void Init()
     {
         void operator()(injector::reg_pack& regs)
         {
-            regs.ecx = *(uint32_t*)(regs.esi + 0x1A4);
-            *(int32_t*)(regs.esp + 0x68) = Screen.nScopeScale;
+            regs.ecx = *reinterpret_cast<uint32_t*>(regs.esi + 0x1A4);
+            *reinterpret_cast<int32_t*>(regs.esp + 0x68) = Screen.nScopeScale;
         }
     }; injector::MakeInline<ScopeHook>(pattern.get_first(0), pattern.get_first(6)); //0x10C9A646
 
@@ -348,6 +397,15 @@ void Init()
     injector::WriteMemory(pattern.get_first(2), &Screen.fTextScaleX, true); //0x10B149CE + 0x2
     pattern = hook::pattern("D8 25 ? ? ? ? D9 44 24 24 D8 4C 24");
     injector::WriteMemory(pattern.get_first(2), &Screen.fHudOffset, true); //0x10B14BAD + 0x2
+
+    // TODO: Add more specific offsets for another languages
+    switch (eGameLang) {
+    case GameLang::Russian:
+        sTextOffset.bottomCorner.v1v1 = 480;
+        break;
+    default:
+        break;
+    }
 
     if (bHudWidescreenMode)
     {
@@ -358,23 +416,48 @@ void Init()
             {
                 regs.eax = *(uint32_t*)dword_11223A7C;
 
-                int32_t offset1 = *(int32_t*)(regs.esp + 0x4);
-                int32_t offset2 = *(int32_t*)(regs.esp + 0xC);
-                int32_t offset3 = static_cast<int32_t>(*(float*)(regs.esp + 0x1C));
-                FColor Color; Color.RGBA = *(int32_t*)(regs.esp + 0x160);
+                int32_t offset1 = *reinterpret_cast<int32_t*>(regs.esp + 0x4);
+                int32_t offset2 = *reinterpret_cast<int32_t*>(regs.esp + 0xC);
+                int32_t offset3 = static_cast<int32_t>(*reinterpret_cast<float*>(regs.esp + 0x1C));
+                FColor Color{ *reinterpret_cast<uint32_t*>(regs.esp + 0x160) };
+
+                // Aliases for compact view
+                auto tc = sTextOffset.topCorner;
+                auto bc = sTextOffset.bottomCorner;
+                auto ico = sTextOffset.icons;
+                auto obj = sTextOffset.objPopup;
 
                 DBGONLY(KEYPRESS(VK_F2) { spd::log()->info("{0:d} {1:d} {2:d} {4:08x}", offset1, offset2, offset3, Color.RGBA); });
 
                 if (bIsInMenu && *bIsInMenu == 0)
                 {
+                    // Color checks
+                    auto color1 = Color.R == 0xff && Color.G == 0xff && Color.B == 0xff;
+                    auto color2 = Color.R == 0xb8 && Color.G == 0xfa && Color.B == 0xc8;
+                    auto color3 = Color.R == 0x66 && Color.G == 0x66 && Color.B == 0x66;
+                    auto color4 = Color.R == 0xb8 && Color.G == 0xf7 && Color.B == 0xc8;
+                    // Top corner checks
+                    auto tcO1 = offset1 == tc.v1v1 || offset1 == tc.v1v2 || offset1 == tc.v1v3;
+                    auto tcO2 = offset2 >= tc.v2v1 && offset2 <= tc.v2v2;
+                    auto tcO3 = offset3 == tc.v3v1 || offset3 == tc.v3v2 || offset3 == tc.v3v3 || offset3 == tc.v3v4 || offset3 == tc.v3v5 || offset3 == tc.v3v6 || offset3 == tc.v3v7;
+                    // Bottom corner checks
+                    auto bcO1 = offset1 >= bc.v1v1 && offset1 <= bc.v1v2;
+                    auto bcO2 = offset2 >= bc.v2v1 && offset2 <= bc.v2v2;
+                    auto bcO3 = offset3 == bc.v3v1 || offset3 == bc.v3v2 || offset3 == bc.v3v3;
+                    // Icons text checks
+                    auto icoO = offset1 == ico.v1 && offset2 == ico.v2 && offset3 == ico.v3;
+                    // Objective popup text checks
+                    auto objO1 = offset1 >= obj.v1v1 && offset1 <= obj.v1v2;
+                    auto objO2 = offset2 >= obj.v2v1 && offset2 <= obj.v2v2;
+                    auto objO3 = offset3 >= obj.v3v1 && offset3 <= obj.v3v2;
                     if (
-                        ((offset1 == 435 || offset1 == 436 || offset1 == 437) && (offset2 >= 3 && offset2 <= 21) && (offset3 == 313 || offset3 == 329 || offset3 == 345 || offset3 == 361 || offset3 == 377 || offset3 == 393 || offset3 == 416) && ((Color.R == 0xff && Color.G == 0xff && Color.B == 0xff) || (Color.R == 0xb8 && Color.G == 0xfa && Color.B == 0xc8) || (Color.R == 0x66 && Color.G == 0x66 && Color.B == 0x66))) || // top corner
-                        ((offset1 >= 489 && offset1 <= 598) && ((offset2 >= 1 && offset2 <= 20)) && (offset3 == 23 || offset3 == 39 || offset3 == 93) && ((Color.R == 0xff && Color.G == 0xff && Color.B == 0xff) || (Color.R == 0xb8 && Color.G == 0xfa && Color.B == 0xc8))) || // bottom corner
-                        (offset1 == 598 && offset2 == 3 && offset3 == 93 && (Color.R == 0xb8 && Color.G == 0xf7 && Color.B == 0xc8)) || //icons text
-                        ((offset1 >= 465 && offset1 <= 615) && (offset2 >= 3 && offset2 <= 75) && (offset3 >= 128 && offset3 <= 215) && (Color.R == 0xb8 && Color.G == 0xf7 && Color.B == 0xc8)) // objective popup text
+                        (tcO1 && tcO2 && tcO3 && (color1 || color2 || color3)) || // top corner
+                        (bcO1 && bcO2 && bcO3 && (color1 || color2)) || // bottom corner
+                        (icoO && color4) || //icons text
+                        (objO1 && objO2 && objO3 && color4) // objective popup text
                         )
                     {
-                        *(float*)(regs.esp + 0x14) += WidescreenHudOffset._float;
+                        *reinterpret_cast<float*>(regs.esp + 0x14) += WidescreenHudOffset._float;
                     }
                 }
             }
@@ -387,7 +470,7 @@ void Init()
     {
         void operator()(injector::reg_pack& regs)
         {
-            *(float*)&regs.edx = AdjustFOV(*(float*)(regs.ecx + 0x2BC), Screen.fAspectRatio);
+            *reinterpret_cast<float*>(&regs.edx) = AdjustFOV(*reinterpret_cast<float*>(regs.ecx + 0x2BC), Screen.fAspectRatio);
         }
     }; injector::MakeInline<UGameEngine_Draw_Hook>(pattern.get_first(0), pattern.get_first(6)); //0x10A3E67F
 
@@ -396,26 +479,28 @@ void Init()
     {
         void operator()(injector::reg_pack& regs)
         {
-            *(float*)&regs.ecx = AdjustFOV(*(float*)(regs.eax + 0x2BC), Screen.fAspectRatio);
+            *reinterpret_cast<float*>(&regs.ecx) = AdjustFOV(*reinterpret_cast<float*>(regs.eax + 0x2BC), Screen.fAspectRatio);
         }
     }; injector::MakeInline<UGameEngine_Draw_Hook2>(pattern.get_first(0), pattern.get_first(6)); //0x10A3E8A0
 
     //windowed alt-tab fix
-    pattern = hook::pattern("8B 84 24 ? ? ? ? 50 53 57 52 74 50 FF 15 ? ? ? ? 5F 5E 5D 5B 81 C4 ? ? ? ? C2 0C 00");
-    struct WndProcHook
-    {
-        void operator()(injector::reg_pack& regs)
+    if (!bDisableAltTabFix) {
+        pattern = hook::pattern("8B 84 24 ? ? ? ? 50 53 57 52 74 50 FF 15 ? ? ? ? 5F 5E 5D 5B 81 C4 ? ? ? ? C2 0C 00");
+        struct WndProcHook
         {
-            regs.eax = *(uint32_t*)(regs.esp + 0x3A8);
-
-            if (regs.edi == WM_WINDOWPOSCHANGED)
+            void operator()(injector::reg_pack& regs)
             {
-                auto lpwp = (LPWINDOWPOS)regs.eax;
-                if (lpwp->x < 0 && lpwp->y < 0)
-                    ShowWindow((HWND)regs.edx, SW_RESTORE);
+                regs.eax = *reinterpret_cast<uint32_t*>(regs.esp + 0x3A8);
+
+                if (regs.edi == WM_WINDOWPOSCHANGED)
+                {
+                    auto lpwp = reinterpret_cast<LPWINDOWPOS>(regs.eax);
+                    if (lpwp->x < 0 && lpwp->y < 0)
+                        ShowWindow(reinterpret_cast<HWND>(regs.edx), SW_RESTORE);
+                }
             }
-        }
-    }; injector::MakeInline<WndProcHook>(pattern.get_first(0), pattern.get_first(7)); //0x10CC4EEA 
+        }; injector::MakeInline<WndProcHook>(pattern.get_first(0), pattern.get_first(7)); //0x10CC4EEA 
+    }
 
     //Goggles Light Color
     if (!gColor.empty())
