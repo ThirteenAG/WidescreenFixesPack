@@ -1122,6 +1122,10 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to change goggles' light color
 
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to disable Alt+Tab fix
+
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to adjust the offsets depending on game language
+
 [Download](http://thirteenag.github.io/wfp#scct)
 |
 [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/SplinterCellChaosTheory.WidescreenFix/dllmain.cpp)
