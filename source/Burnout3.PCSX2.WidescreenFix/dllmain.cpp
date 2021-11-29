@@ -31,7 +31,8 @@ struct Screen
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
-        {
+    {
+        CallbackHandler::RegisterCallback(L"WINSTA.dll", []() {
             if (!PCSX2::pcsx2_crc_pattern.empty())
             {
                 void PCSX2Thread();
@@ -39,6 +40,7 @@ CEXP void InitializeASI()
                 t.detach();
             }
         });
+    });
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)

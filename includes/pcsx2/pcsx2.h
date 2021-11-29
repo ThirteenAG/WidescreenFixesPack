@@ -182,8 +182,15 @@ public:
             if (MemoryInf.AllocationProtect == PAGE_NOACCESS && MemoryInf.State == MEM_COMMIT &&
                 MemoryInf.Protect == PAGE_READONLY && MemoryInf.Type == MEM_PRIVATE)
             {
-                EEMainMemoryStart = (uintptr_t)MemoryInf.AllocationBase;
-                EEMainMemoryEnd = EEMainMemoryStart + 0x1ffffff; //?
+                if (EEMainMemoryStart == 0)
+                {
+                    EEMainMemoryStart = (uintptr_t)MemoryInf.BaseAddress;
+                }
+            }
+            else if (EEMainMemoryStart != 0 && MemoryInf.AllocationProtect == PAGE_NOACCESS && MemoryInf.State == MEM_RESERVE &&
+                MemoryInf.Protect == 0 && MemoryInf.Type == MEM_PRIVATE)
+            {
+                EEMainMemoryEnd = (uintptr_t)MemoryInf.BaseAddress;
                 return;
             }
             curAddr += MemoryInf.RegionSize;
@@ -195,23 +202,22 @@ public:
         auto test = [](uint8_t* begin, std::size_t bytes) -> bool
         {
             return std::all_of(begin, begin + bytes, [](uint8_t const byte)
-                {
-                    return byte == 0;
-                });
+            {
+                return byte == 0;
+            });
         };
-        size_t start = 0x00100000 + EEMainMemoryStart;
+        size_t end = EEMainMemoryStart + 0x2000000 - 0x10000;
         size_t i = 0;
+        size_t NeededRegionSize = 10000;
         do
         {
-            i = start;
-
-            for (size_t s = 2000;; i += s)
+            for (i = end - NeededRegionSize; i >= EEMainMemoryStart; i -= 1)
             {
-                if (test((uint8_t*)i, s) || i >= (0x00FFFFFF - s + EEMainMemoryStart))
+                if (test((uint8_t*)i, NeededRegionSize))
                     break;
             }
             std::this_thread::yield();
-        } while (i == start);
+        } while (i == end);
 
         return i - EEMainMemoryStart;
     }
