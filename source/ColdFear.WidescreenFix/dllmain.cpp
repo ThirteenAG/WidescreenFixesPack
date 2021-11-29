@@ -217,6 +217,21 @@ int __cdecl sub_42BD11(float a1, float a2, int a3, char a4, unsigned __int8 a5)
     return 0; //?
 }
 
+float* flt_6A65B8;
+uintptr_t sub_62D480_addr;
+int __cdecl _sub_62BB30(int a1, float* a2)
+{
+    static auto sub_62D480 = (int(__cdecl*)(int)) sub_62D480_addr;
+
+    *(float*)(a1 + 104) = a2[0];
+    *(float*)(a1 + 108) = a2[1];
+    *(float*)(a1 + 112) = *flt_6A65B8 / *(float*)(a1 + 104);
+    *(float*)(a1 + 116) = *flt_6A65B8 / *(float*)(a1 + 108);
+    if (*(uint32_t*)(a1 + 4))
+        sub_62D480(*(uint32_t*)(a1 + 4));
+    return a1;
+}
+
 void Init()
 {
     CIniReader iniReader("");
@@ -329,6 +344,11 @@ void Init()
     injector::WriteMemory(pattern.get_first(2), &Screen.fDynamicScreenFieldOfViewScale, true);
     pattern = hook::pattern("D9 05 ? ? ? ? D8 76 6C D9 5E 74");
     injector::WriteMemory(pattern.get_first(2), &Screen.fDynamicScreenFieldOfViewScale, true);
+    pattern = hook::pattern("D9 05 ? ? ? ? 89 4E 68 8B 50 04 D8 76 68");
+    flt_6A65B8 = *pattern.get_first<float*>(2);
+    sub_62D480_addr = (uintptr_t)hook::pattern("8B 44 24 08 56 8B 74 24 08 8B 08 D9 05").count(1).get(0).get<uint32_t>(0);
+    pattern = hook::pattern("89 55 FC E8 ? ? ? ? 83 C4 14");
+    injector::MakeCALL(pattern.get_first(3), _sub_62BB30, true);
 
     //pattern = hook::pattern("8D 4D 9C 8D 55 DC 51 52 8B CE");
     //struct FOVHook
