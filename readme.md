@@ -1126,6 +1126,8 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to adjust the offsets depending on game language
 
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to adjust shadow map size and shadow filtering
+
 [Download](http://thirteenag.github.io/wfp#scct)
 |
 [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/SplinterCellChaosTheory.WidescreenFix/dllmain.cpp)
