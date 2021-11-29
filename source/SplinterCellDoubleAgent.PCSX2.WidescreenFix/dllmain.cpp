@@ -16,12 +16,14 @@ CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
-        if (!PCSX2::pcsx2_crc_pattern.empty())
-        {
-            void PCSX2Thread();
-            std::thread t(PCSX2Thread);
-            t.detach();
-        }
+        CallbackHandler::RegisterCallback(L"WINSTA.dll", []() {
+            if (!PCSX2::pcsx2_crc_pattern.empty())
+            {
+                void PCSX2Thread();
+                std::thread t(PCSX2Thread);
+                t.detach();
+            }
+        });
     });
 }
 

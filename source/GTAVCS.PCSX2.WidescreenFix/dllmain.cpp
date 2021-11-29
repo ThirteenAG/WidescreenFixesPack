@@ -16,12 +16,14 @@ CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
-        if (!PCSX2::pcsx2_crc_pattern.empty())
-        {
-            void PCSX2Thread();
-            std::thread t(PCSX2Thread);
-            t.detach();
-        }
+        CallbackHandler::RegisterCallback(L"WINSTA.dll", []() {
+            if (!PCSX2::pcsx2_crc_pattern.empty())
+            {
+                void PCSX2Thread();
+                std::thread t(PCSX2Thread);
+                t.detach();
+            }
+        });
     });
 }
 
@@ -47,8 +49,8 @@ void PCSX2Thread()
 
     static auto ps2 = PCSX2({ 0x4F32A11F }, NULL, [](PCSX2& ps2)
     {
-        float intResX = ps2.GV({ 640.0f, 512.0f });
-        float intResY = ps2.GV({ 480.0f, 384.0f });
+        float intResX = ps2.GV({ 640.0f, 640.0f });
+        float intResY = ps2.GV({ 480.0f, 480.0f });
 
         Screen.nWidth = ps2.GetWindowWidth();
         Screen.nHeight = ps2.GetWindowHeight();
