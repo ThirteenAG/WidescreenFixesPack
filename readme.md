@@ -39,6 +39,7 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 ## GTA VC The Definitive Edition Fusion Mod
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Adds an ability to quicksave anywhere by pressing F5.
+
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Adds an ability to disable first person aim mode for rifles.
 
 [Download](http://thirteenag.github.io/wfp#gtavcde)
@@ -50,6 +51,7 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 ## GTA III The Definitive Edition Fusion Mod
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Adds an ability to quicksave anywhere by pressing F5.
+
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Adds an ability to disable first person aim mode for rifles.
 
 [Download](http://thirteenag.github.io/wfp#gta3de)

@@ -21,7 +21,7 @@ void Init()
     OnAMissionFlag = (uint32_t*)injector::ReadRelativeOffset(pattern.get_first(2), 4, true).as_int();
     ScriptSpace = (uint8_t*)injector::ReadRelativeAddress(pattern.get_first(10), 4, true).as_int();
 
-    pattern = hook::pattern("38 1D ? ? ? ? 48 8D 3D ? ? ? ? 0F 57 FF 74 1D F3 0F 10 05 ? ? ? ? 0F 2F C7 76 10 45 33 C0");
+    pattern = hook::pattern("88 15 ? ? ? ? 89 15 ? ? ? ? 48 89 15");
     m_WideScreenOn = (uint8_t*)injector::ReadRelativeOffset(pattern.get_first(2), 4, true).as_int();
 
     pattern = hook::pattern("40 53 48 83 EC 40 33 DB 48 8D 4C 24 ? 48 89 5C 24 ? 48 89 5C 24 ? 8D 53 07");
