@@ -457,6 +457,8 @@ void Init()
     switch (eGameLang) {
     case GameLang::Russian:
         sTextOffset.bottomCorner.v1v1 = 480;
+        sTextOffset.objPopup.v2v2 = 79;
+        sTextOffset.topCorner.v2v2 = 23;
         break;
     default:
         break;
