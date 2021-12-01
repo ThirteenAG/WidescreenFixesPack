@@ -8,4 +8,4 @@ jobs:
     uses: ThirteenAG/WidescreenFixesPack/.github/workflows/all.yml@master
     with:
       tag_list: kr2
-
+      project: /t:KnightRider2_WidescreenFix

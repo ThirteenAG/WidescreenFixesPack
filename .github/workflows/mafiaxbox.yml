@@ -1,4 +1,4 @@
-name: dmc3se
+name: mafiaxbox
 
 on:
   workflow_dispatch:
@@ -7,5 +7,5 @@ jobs:
   call-workflow-passing-data:
     uses: ThirteenAG/WidescreenFixesPack/.github/workflows/all.yml@master
     with:
-      tag_list: dmc3se
-
+      tag_list: mafiaxbox
+      project: /t:Mafia_CXBXR_WidescreenFix

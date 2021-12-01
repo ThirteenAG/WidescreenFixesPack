@@ -1,5 +1,10 @@
 name: "Build All"
 
+inputs:
+  project:
+    description: "Project name"
+    required: false
+
 runs:
   using: "composite"
   steps:
@@ -26,7 +31,7 @@ runs:
   - name: Build
     shell: cmd
     run: |
-      msbuild -m build/WidescreenFixesPack.sln /property:Configuration=${{matrix.buildtype}} /property:Platform=${{matrix.platform}}
+      msbuild -m build/WidescreenFixesPack.sln ${{inputs.project}} /property:Configuration=${{matrix.buildtype}} /property:Platform=${{matrix.platform}}
   - name: Before Package
     shell: cmd
     run: |
