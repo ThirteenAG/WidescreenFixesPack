@@ -1,32 +1,11 @@
-name: The Punisher Widescreen Fix
+name: punisher
 
 on:
   workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: windows-2022
-    strategy:
-      matrix:
-        platform: [Win32]
-        buildtype: [Release]
-
-    steps:
-    - uses: actions/checkout@v2
-    - uses: ./.github/workflows/build_all
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
-      env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag: punisher
-    - uses: ncipollo/release-action@v1
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
-        artifacts: data/Archives/ThePunisher.WidescreenFix.zip
+  call-workflow-passing-data:
+    uses: ThirteenAG/WidescreenFixesPack/.github/workflows/all.yml@master
+    with:
+      tag_list: punisher
 
