@@ -6,6 +6,9 @@ on:
       tag_list:   
         required: true
         type: string
+      project:
+        required: false
+        type: string
   workflow_dispatch:
     inputs:
       tag_list:
@@ -25,7 +28,8 @@ jobs:
       uses: actions/checkout@v2
     - name: Build All
       uses: ./.github/workflows/build_all
-
+      with:
+        project: ${{ inputs.project }}
     - uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}

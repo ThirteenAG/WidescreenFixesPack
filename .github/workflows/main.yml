@@ -1,4 +1,4 @@
-name: Main GitHub Actions Build
+name: GitHub Actions Build
 
 on:
   pull_request:
