@@ -2,20 +2,23 @@
 
 [![wfp](https://thirteenag.github.io/img/logo-stroke.svg)](https://thirteenag.github.io/wfp)
 
+![GitHub Workflow Status](https://img.shields.io/github/workflow/status/ThirteenAG/WidescreenFixesPack/GitHub%20Actions%20Build?label=GitHub%20Actions%20Build&logo=GitHub)
 [![AppVeyor](https://img.shields.io/appveyor/build/ThirteenAG/WidescreenFixesPack?label=Appveyor%20Build&logo=Appveyor&logoColor=white)](https://ci.appveyor.com/project/ThirteenAG/widescreenfixespack)
-[![Main Workflow](https://github.com/ThirteenAG/WidescreenFixesPack/actions/workflows/main.yml/badge.svg)](https://github.com/ThirteenAG/WidescreenFixesPack/actions/workflows/main.yml)
-[![Build Status](https://dev.azure.com/thirteenag/WidescreenFixesPack/_apis/build/status/ThirteenAG.WidescreenFixesPack?branchName=master)](https://dev.azure.com/thirteenag/WidescreenFixesPack/_build/latest?definitionId=3&branchName=master)
+![Azure DevOps builds](https://img.shields.io/azure-devops/build/ThirteenAG/f555b128-da05-4bad-a972-90d529123a2e/3?label=Azure%20Pipelines%20Build&logo=Azure%20Pipelines)
+![CircleCI](https://img.shields.io/circleci/build/github/ThirteenAG/WidescreenFixesPack?label=CircleCI%20Build&logo=circleci)
 
 [![GitHub license](https://img.shields.io/github/license/ThirteenAG/WidescreenFixesPack?color=blue)](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/license)
 [![GitHub stars](https://img.shields.io/github/stars/ThirteenAG/WidescreenFixesPack)](https://github.com/ThirteenAG/WidescreenFixesPack/stargazers)
 [![Commits](https://img.shields.io/github/commit-activity/m/ThirteenAG/WidescreenFixesPack?label=commits)](https://github.com/ThirteenAG/WidescreenFixesPack/commits) ![GitHub last commit](https://img.shields.io/github/last-commit/ThirteenAG/WidescreenFixesPack?color=blue)
 ![GitHub top language](https://img.shields.io/github/languages/top/ThirteenAG/WidescreenFixesPack?color=blue)
 
+![Platform](https://img.shields.io/badge/platforms-WINDOWS%20%7C%20PCSX2%20%7C%20CXBXR-blue?color=blue)
+
 [![Downloads](https://img.shields.io/github/downloads/ThirteenAG/WidescreenFixesPack/total?color=red)](https://github.com/ThirteenAG/WidescreenFixesPack/releases/)
 
 https://thirteenag.github.io/wfp
 
-Plugins to make or improve widescreen resolutions support in PC games.
+Plugins to make or improve widescreen resolutions support in PC games, add more features or fix bugs.
 
 </div>
 
