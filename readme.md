@@ -1,6 +1,6 @@
 # Widescreen Fixes Pack
 
-[![Build status](https://ci.appveyor.com/api/projects/status/ek3t29o34h5owslf?svg=true&passingText=AppVeyor+build+passing)](https://ci.appveyor.com/project/ThirteenAG/widescreenfixespack) [![Main Workflow](https://github.com/ThirteenAG/WidescreenFixesPack/actions/workflows/main.yml/badge.svg)](https://github.com/ThirteenAG/WidescreenFixesPack/actions/workflows/main.yml)
+[![Build status](https://ci.appveyor.com/api/projects/status/ek3t29o34h5owslf?svg=true&passingText=AppVeyor+build+passing)](https://ci.appveyor.com/project/ThirteenAG/widescreenfixespack) [![Main Workflow](https://github.com/ThirteenAG/WidescreenFixesPack/actions/workflows/main.yml/badge.svg)](https://github.com/ThirteenAG/WidescreenFixesPack/actions/workflows/main.yml) [![Build Status](https://dev.azure.com/thirteenag/WidescreenFixesPack/_apis/build/status/ThirteenAG.WidescreenFixesPack?branchName=master)](https://dev.azure.com/thirteenag/WidescreenFixesPack/_build/latest?definitionId=3&branchName=master)
 
 https://thirteenag.github.io/wfp
 
