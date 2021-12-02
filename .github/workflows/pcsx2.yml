@@ -1,0 +1,10 @@
+name: PCSX2
+
+on:
+  workflow_dispatch:
+
+jobs:
+  call-workflow-passing-data:
+    uses: ThirteenAG/WidescreenFixesPack/.github/workflows/all.yml@master
+    with:
+      tag_list: burnout3,gtavcs,gtalcs,kr,kr2,scdaps2

@@ -1,0 +1,44 @@
+trigger:
+  branches:
+    include:
+    - '*'
+  paths:
+    exclude:
+    - .appveyor.yml
+
+pr:
+  branches:
+    include:
+    - '*'
+  paths:
+    exclude:
+    - .appveyor.yml
+
+jobs:
+- job:
+  pool:
+    vmImage: windows-latest
+  strategy:
+    matrix:
+      Release:
+        configuration: Release
+      Debug:
+        configuration: Debug
+
+  steps:
+  - task: CmdLine@2
+    displayName: Before build
+    inputs:
+      script: |
+        git submodule update --init --recursive
+        premake5.exe vs2019
+        curl -L https://download.microsoft.com/download/a/e/7/ae743f1f-632b-4809-87a9-aa1bb3458e31/DXSDK_Jun10.exe -o DX.exe
+        7z x DX.exe DXSDK/Include -oDX
+        7z x DX.exe DXSDK/Lib/x86 -oDX
+        mv DX/DXSDK "C:/Program Files (x86)/Microsoft DirectX SDK (June 2010)"
+        ./before_build.bat
+
+  - task: MSBuild@1
+    inputs:
+      solution: 'build/*.sln'
+      maximumCpuCount: true
