@@ -40,7 +40,16 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 - Not compatible with Windows XP.
 - If you're using WINE, you may want to check these issues: [#480](https://github.com/ThirteenAG/WidescreenFixesPack/issues/480#issuecomment-406734717), [#207](https://github.com/ThirteenAG/WidescreenFixesPack/issues/207).
 
-# List of fixes:
+# Screenshots
+
+|  [![mp](https://i.imgur.com/DYGxaZn.jpg)](https://i.imgur.com/DYGxaZn.jpg)  | [![scdaps2](https://i.imgur.com/zCTIuTz.jpg)](https://i.imgur.com/zCTIuTz.jpg) |
+| :-------------------------------------------------------------------------: | :----------------------------------------------------------------------------: |
+| [![nfsc](https://i.imgur.com/hlinBGF.jpg)](https://i.imgur.com/hlinBGF.jpg) | [![farcry](https://i.imgur.com/vh6BhM9.jpg)](https://i.imgur.com/vh6BhM9.jpg)  |
+
+# List of releases
+
+<details>
+<summary>Click to expand</summary>
 
 ## GTA SA The Definitive Edition Fusion Mod
 
@@ -1491,3 +1500,5 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/UltimateSpiderMan.WidescreenFix/dllmain.cpp)
 |
 [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/UltimateSpiderMan.WidescreenFix/scripts/UltimateSpiderMan.WidescreenFix.ini)
+
+</details>
