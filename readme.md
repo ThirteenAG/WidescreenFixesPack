@@ -1,15 +1,23 @@
-# Widescreen Fixes Pack
+<div align="center">
 
-[![Build status](https://ci.appveyor.com/api/projects/status/ek3t29o34h5owslf?svg=true&passingText=AppVeyor+build+passing)](https://ci.appveyor.com/project/ThirteenAG/widescreenfixespack) [![Main Workflow](https://github.com/ThirteenAG/WidescreenFixesPack/actions/workflows/main.yml/badge.svg)](https://github.com/ThirteenAG/WidescreenFixesPack/actions/workflows/main.yml) [![Build Status](https://dev.azure.com/thirteenag/WidescreenFixesPack/_apis/build/status/ThirteenAG.WidescreenFixesPack?branchName=master)](https://dev.azure.com/thirteenag/WidescreenFixesPack/_build/latest?definitionId=3&branchName=master)
+[![wfp](https://thirteenag.github.io/img/logo-stroke.svg)](https://thirteenag.github.io/wfp)
+
+[![AppVeyor](https://img.shields.io/appveyor/build/ThirteenAG/WidescreenFixesPack?label=Appveyor%20Build&logo=Appveyor&logoColor=white)](https://ci.appveyor.com/project/ThirteenAG/widescreenfixespack)
+[![Main Workflow](https://github.com/ThirteenAG/WidescreenFixesPack/actions/workflows/main.yml/badge.svg)](https://github.com/ThirteenAG/WidescreenFixesPack/actions/workflows/main.yml)
+[![Build Status](https://dev.azure.com/thirteenag/WidescreenFixesPack/_apis/build/status/ThirteenAG.WidescreenFixesPack?branchName=master)](https://dev.azure.com/thirteenag/WidescreenFixesPack/_build/latest?definitionId=3&branchName=master)
+
+[![GitHub license](https://img.shields.io/github/license/ThirteenAG/WidescreenFixesPack?color=blue)](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/license)
+[![GitHub stars](https://img.shields.io/github/stars/ThirteenAG/WidescreenFixesPack)](https://github.com/ThirteenAG/WidescreenFixesPack/stargazers)
+[![Commits](https://img.shields.io/github/commit-activity/m/ThirteenAG/WidescreenFixesPack?label=commits)](https://github.com/ThirteenAG/WidescreenFixesPack/commits) ![GitHub last commit](https://img.shields.io/github/last-commit/ThirteenAG/WidescreenFixesPack?color=blue)
+![GitHub top language](https://img.shields.io/github/languages/top/ThirteenAG/WidescreenFixesPack?color=blue)
+
+[![Downloads](https://img.shields.io/github/downloads/ThirteenAG/WidescreenFixesPack/total?color=red)](https://github.com/ThirteenAG/WidescreenFixesPack/releases/)
 
 https://thirteenag.github.io/wfp
 
 Plugins to make or improve widescreen resolutions support in PC games.
 
-# Important notes
-
-- Not compatible with Windows XP.
-- If you're using WINE, you may want to check these issues: [#480](https://github.com/ThirteenAG/WidescreenFixesPack/issues/480#issuecomment-406734717), [#207](https://github.com/ThirteenAG/WidescreenFixesPack/issues/207).
+</div>
 
 # Building and Installing
 
@@ -23,6 +31,11 @@ Run the following command in the root of this directory to generate the project 
     premake5 vs2022
 
 The usage is as simple as inserting the files into game's root directory. Uninstalling is as easy as that too, delete the files and you are done.
+
+# Important notes
+
+- Not compatible with Windows XP.
+- If you're using WINE, you may want to check these issues: [#480](https://github.com/ThirteenAG/WidescreenFixesPack/issues/480#issuecomment-406734717), [#207](https://github.com/ThirteenAG/WidescreenFixesPack/issues/207).
 
 # List of fixes:
 
