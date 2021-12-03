@@ -2,23 +2,27 @@
 
 [![wfp](https://thirteenag.github.io/img/logo-stroke.svg)](https://thirteenag.github.io/wfp)
 
-![GitHub Workflow Status](https://img.shields.io/github/workflow/status/ThirteenAG/WidescreenFixesPack/GitHub%20Actions%20Build?label=GitHub%20Actions%20Build&logo=GitHub)
-[![AppVeyor](https://img.shields.io/appveyor/build/ThirteenAG/WidescreenFixesPack?label=Appveyor%20Build&logo=Appveyor&logoColor=white)](https://ci.appveyor.com/project/ThirteenAG/widescreenfixespack)
-![Azure DevOps builds](https://img.shields.io/azure-devops/build/ThirteenAG/f555b128-da05-4bad-a972-90d529123a2e/3?label=Azure%20Pipelines%20Build&logo=Azure%20Pipelines)
-![CircleCI](https://img.shields.io/circleci/build/github/ThirteenAG/WidescreenFixesPack?label=CircleCI%20Build&logo=circleci)
+[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/ThirteenAG/WidescreenFixesPack/GitHub%20Actions%20Build?label=GitHub%20Actions%20Build&logo=GitHub)](https://github.com/ThirteenAG/WidescreenFixesPack/actions/workflows/main.yml)
+[![AppVeyor](https://img.shields.io/appveyor/build/ThirteenAG/WidescreenFixesPack?label=AppVeyor%20Build&logo=Appveyor&logoColor=white)](https://ci.appveyor.com/project/ThirteenAG/widescreenfixespack)
+[![Azure DevOps builds](https://img.shields.io/azure-devops/build/ThirteenAG/f555b128-da05-4bad-a972-90d529123a2e/3?label=Azure%20Pipelines%20Build&logo=Azure%20Pipelines)](https://dev.azure.com/thirteenag/WidescreenFixesPack/_build/latest?definitionId=3&branchName=master)
+[![CircleCI](https://img.shields.io/circleci/build/github/ThirteenAG/WidescreenFixesPack?label=CircleCI%20Build&logo=circleci)](https://circleci.com/gh/ThirteenAG/WidescreenFixesPack/tree/master)
 
 [![GitHub license](https://img.shields.io/github/license/ThirteenAG/WidescreenFixesPack?color=blue)](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/license)
 [![GitHub stars](https://img.shields.io/github/stars/ThirteenAG/WidescreenFixesPack)](https://github.com/ThirteenAG/WidescreenFixesPack/stargazers)
-[![Commits](https://img.shields.io/github/commit-activity/m/ThirteenAG/WidescreenFixesPack?label=commits)](https://github.com/ThirteenAG/WidescreenFixesPack/commits) ![GitHub last commit](https://img.shields.io/github/last-commit/ThirteenAG/WidescreenFixesPack?color=blue)
-![GitHub top language](https://img.shields.io/github/languages/top/ThirteenAG/WidescreenFixesPack?color=blue)
+[![Commits](https://img.shields.io/github/commit-activity/m/ThirteenAG/WidescreenFixesPack?label=commits)](https://github.com/ThirteenAG/WidescreenFixesPack/commits)
+[![GitHub last commit](https://img.shields.io/github/last-commit/ThirteenAG/WidescreenFixesPack?color=blue)](https://github.com/ThirteenAG/WidescreenFixesPack/commits)
+[![GitHub top language](https://img.shields.io/github/languages/top/ThirteenAG/WidescreenFixesPack?color=blue)](https://github.com/ThirteenAG/WidescreenFixesPack/search?l=c%2B%2B)
 
-![Platform](https://img.shields.io/badge/platforms-WINDOWS%20%7C%20PCSX2%20%7C%20CXBXR-blue?color=blue)
+![Platforms](https://img.shields.io/badge/platforms-grey)
+[![WINDOWS](https://img.shields.io/badge/WINDOWS-0078D4)](https://github.com/ThirteenAG/WidescreenFixesPack/releases?q=NOT+CXBXR+NOT+PCSX2&expanded=true)
+[![PCSX2](https://img.shields.io/badge/PCSX2-0271A6)](https://github.com/ThirteenAG/WidescreenFixesPack/releases?q=PCSX2&expanded=true)
+[![CXBXR](https://img.shields.io/badge/CXBXR-96CE49)](https://github.com/ThirteenAG/WidescreenFixesPack/releases?q=CXBXR&expanded=true)
 
 [![Downloads](https://img.shields.io/github/downloads/ThirteenAG/WidescreenFixesPack/total?color=red)](https://github.com/ThirteenAG/WidescreenFixesPack/releases/)
 
 https://thirteenag.github.io/wfp
 
-Plugins to make or improve widescreen resolutions support in PC games, add more features or fix bugs.
+Plugins to make or improve widescreen resolutions support in PC games, add more features and fix bugs.
 
 </div>
 
@@ -27,7 +31,7 @@ Plugins to make or improve widescreen resolutions support in PC games, add more 
 Requirements:
 
 - [Premake 5](https://premake.github.io/) _(pre-built executable available in this repository root)_
-- [Visual Studio](http://www.visualstudio.com/downloads).
+- [Visual Studio](http://www.visualstudio.com/downloads)
 
 Run the following command in the root of this directory to generate the project files (or simply launch **premake5.bat**):
 
@@ -42,9 +46,9 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 
 # Screenshots
 
-|  [![mp](https://i.imgur.com/DYGxaZn.jpg)](https://i.imgur.com/DYGxaZn.jpg)  | [![scdaps2](https://i.imgur.com/zCTIuTz.jpg)](https://i.imgur.com/zCTIuTz.jpg) |
-| :-------------------------------------------------------------------------: | :----------------------------------------------------------------------------: |
-| [![nfsc](https://i.imgur.com/hlinBGF.jpg)](https://i.imgur.com/hlinBGF.jpg) | [![farcry](https://i.imgur.com/vh6BhM9.jpg)](https://i.imgur.com/vh6BhM9.jpg)  |
+|    [![mp](https://i.imgur.com/lDPTxGo.jpg)](https://i.imgur.com/lDPTxGo.jpg)    |  [![farcry](https://i.imgur.com/5CMg1fG.jpg)](https://i.imgur.com/5CMg1fG.jpg)  |
+| :-----------------------------------------------------------------------------: | :-----------------------------------------------------------------------------: |
+| [![scdaxbox](https://i.imgur.com/IgPADzY.jpg)](https://i.imgur.com/IgPADzY.jpg) | [![burnout3](https://i.imgur.com/a1Ou0JH.jpg)](https://i.imgur.com/a1Ou0JH.jpg) |
 
 # List of releases
 
