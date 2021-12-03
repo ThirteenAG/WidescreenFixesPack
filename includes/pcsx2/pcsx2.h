@@ -207,19 +207,18 @@ public:
             });
         };
         size_t end = EEMainMemoryStart + 0x2000000 - 0x10000;
-        size_t i = 0;
         size_t NeededRegionSize = 10000;
         do
         {
-            for (i = end - NeededRegionSize; i >= EEMainMemoryStart; i -= 1)
+            for (auto i = end - NeededRegionSize; i >= EEMainMemoryStart; i -= 1)
             {
                 if (test((uint8_t*)i, NeededRegionSize))
-                    break;
+                    return i - EEMainMemoryStart;
             }
             std::this_thread::yield();
-        } while (i == end);
+        } while (true);
 
-        return i - EEMainMemoryStart;
+        return 0;
     }
 
     void EnableCallback()
