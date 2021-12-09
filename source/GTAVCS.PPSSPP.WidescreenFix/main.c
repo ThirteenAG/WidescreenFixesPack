@@ -8,12 +8,15 @@
 
 #include "includes/log.h"
 #include "includes/injector.h"
-
 #include "includes/patterns.h"
+#include "includes/inireader.h"
+#include "includes/gvm.h"
+#define gv(...) _get_addr_for_game_version(PP_NARG(__VA_ARGS__), __VA_ARGS__)
 
 #define MODULE_NAME_INTERNAL "GTA3"
 #define MODULE_NAME "GTAVCS.PPSSPP.WidescreenFix"
 #define LOG_PATH "ms0:/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/GTAVCS.PPSSPP.WidescreenFix.log"
+#define INI_PATH "ms0:/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/GTAVCS.PPSSPP.WidescreenFix.ini"
 
 PSP_MODULE_INFO(MODULE_NAME, 0x1007, 1, 0);
 
@@ -143,30 +146,55 @@ int OnModuleStart(SceKernelModuleInfo* mod) {
     logger.Write(LOG_PATH, "Hello...\n");
     injector.base_addr = mod->text_addr;
     pattern.base_addr = mod->text_addr;
+    inireader.SetIniPath(INI_PATH);
 
+    /*
+    enum GameVersion
+    {
+        ULUS10160,
+        ULES00502,
+    };
 
-    //Skip Intro
-    uintptr_t ptr = pattern.get_first(mod->text_addr, mod->text_size, "6A ? ? ? 00 00 00 00 05 00 00 12 00 00 00 00", 0);
-    injector.MakeNOP(ptr);
+    if (strcmp((char*)(mod->text_addr + 0x36F8D8), "GTA3") == 0) {
+        gvm.init(ULUS10160);
+    }
+    else if (strcmp((char*)(mod->text_addr + 0x36FCB8), "GTA3") == 0) {
+        gvm.init(ULES00502);
+    }
 
+    // --> gv(0x123, 0x456)
+    */
 
+    int SkipIntro = inireader.ReadInteger("MAIN", "SkipIntro", 1);
+    int DualAnalogPatch = inireader.ReadInteger("MAIN", "DualAnalogPatch", 1);
 
-    u32 text_addr = mod->text_addr;
+    if (SkipIntro)
+    {
+        uintptr_t ptr = pattern.get_first(mod->text_addr, mod->text_size, "00 00 00 00 ? ? ? ? 00 00 00 00 ? ? 04 3C 25 28 00 00", -4);
+        injector.MakeNOP(ptr);
+    }
 
-    int gta_version = -1;
+    if (DualAnalogPatch)
+    {
 
-    u32 i;
-    for (i = 0; i < mod->text_size; i += 4) {
-        u32 addr = text_addr + i;
+        /// ////////////////////////////////////////////
 
-        if ((gta_version == -1 || gta_version == 0) && PatchVCS(addr, text_addr)) {
-            gta_version = 0;
-            continue;
-        }
+        u32 text_addr = mod->text_addr;
+        int gta_version = -1;
 
-        if ((gta_version == -1 || gta_version == 1) && PatchLCS(addr, text_addr)) {
-            gta_version = 1;
-            continue;
+        u32 i;
+        for (i = 0; i < mod->text_size; i += 4) {
+            u32 addr = text_addr + i;
+
+            if ((gta_version == -1 || gta_version == 0) && PatchVCS(addr, text_addr)) {
+                gta_version = 0;
+                continue;
+            }
+
+            if ((gta_version == -1 || gta_version == 1) && PatchLCS(addr, text_addr)) {
+                gta_version = 1;
+                continue;
+            }
         }
     }
 

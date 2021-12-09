@@ -58,18 +58,44 @@ uint8_t* bytes_find(uint8_t* haystack, size_t haystackLen, uint8_t* needle, size
     return NULL;
 }
 
-uintptr_t get_first(uintptr_t range_start, size_t range_size, char* pattern_str, int32_t offset)
+uint8_t* bytes_find_nth(size_t count, uint8_t* haystack, size_t haystackLen, uint8_t* needle, size_t needleLen, uint8_t* wildcards) {
+    size_t n = 0;
+    size_t len = needleLen;
+    size_t limit = haystackLen - len;
+    for (size_t i = 0; i <= limit; i++) {
+        size_t k = 0;
+        for (; k < len; k++) {
+            if ((needle[k] != haystack[i + k]) && wildcards[k] != 1) break;
+        }
+        if (k == len)
+        {
+            if (n == count)
+                return haystack + i;
+            else
+                n++;
+        }
+    }
+    return NULL;
+}
+
+uintptr_t get(size_t count, uintptr_t range_start, size_t range_size, char* pattern_str, int32_t offset)
 {
     uint8_t wc[strlen(pattern_str)];
     remove_spaces_and_format(pattern_str);
     size_t len = strlen(pattern_str);
     uint8_t buf[len];
     uint8_t size = hextobin(pattern_str, buf, len, wc);
-    return bytes_find(range_start, range_size, buf, size, wc) - pattern.base_addr + offset;
+    return bytes_find_nth(count, range_start, range_size, buf, size, wc) - pattern.base_addr + offset;
+}
+
+uintptr_t get_first(uintptr_t range_start, size_t range_size, char* pattern_str, int32_t offset)
+{
+    return pattern.get(0, range_start, range_size, pattern_str, offset);
 }
 
 struct pattern_t pattern =
 {
     .base_addr = 0,
+    .get = get,
     .get_first = get_first
 };
