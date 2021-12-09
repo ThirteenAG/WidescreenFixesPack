@@ -3,10 +3,17 @@
 #include <pspctrl.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 #include <systemctrl.h>
+
+#include "includes/log.h"
+#include "includes/injector.h"
+
+#include "includes/patterns.h"
 
 #define MODULE_NAME_INTERNAL "GTA3"
 #define MODULE_NAME "GTAVCS.PPSSPP.WidescreenFix"
+#define LOG_PATH "ms0:/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/GTAVCS.PPSSPP.WidescreenFix.log"
 
 PSP_MODULE_INFO(MODULE_NAME, 0x1007, 1, 0);
 
@@ -133,6 +140,17 @@ static int PatchLCS(u32 addr, u32 text_addr) {
 }
 
 int OnModuleStart(SceKernelModuleInfo* mod) {
+    logger.Write(LOG_PATH, "Hello...\n");
+    injector.base_addr = mod->text_addr;
+    pattern.base_addr = mod->text_addr;
+
+
+    //Skip Intro
+    uintptr_t ptr = pattern.get_first(mod->text_addr, mod->text_size, "6A ? ? ? 00 00 00 00 05 00 00 12 00 00 00 00", 0);
+    injector.MakeNOP(ptr);
+
+
+
     u32 text_addr = mod->text_addr;
 
     int gta_version = -1;
