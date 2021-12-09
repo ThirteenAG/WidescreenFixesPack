@@ -27,12 +27,14 @@
 #include <pspsdk.h>
 #include <pspkernel.h>
 #include <stdint.h>
+#include <string.h>
 
 struct injector_t {
     uintptr_t base_addr;
     void (*WriteMemoryRaw)(uintptr_t addr, void* value, size_t size);
     void (*ReadMemoryRaw)(uintptr_t addr, void* ret, size_t size);
     void (*MemoryFill)(uintptr_t addr, uint8_t value, size_t size);
+    void (*WriteInstr)(uintptr_t addr, uint32_t value);
     void (*WriteMemory8)(uintptr_t addr, uint8_t value);
     void (*WriteMemory16)(uintptr_t addr, uint16_t value);
     void (*WriteMemory32)(uintptr_t addr, uint32_t value);
@@ -56,6 +58,7 @@ struct injector_t {
     void (*MakeNOP)(uintptr_t at);
     void (*MakeNOPWithSize)(uintptr_t at, size_t count);
     void (*MakeRangedNOP)(uintptr_t at, uintptr_t until);
+    void (*MakeInline)(uintptr_t at, uintptr_t functor);
 };
 
 extern struct injector_t injector;

@@ -12,6 +12,7 @@
 #include "includes/inireader.h"
 #include "includes/gvm.h"
 #define gv(...) _get_addr_for_game_version(PP_NARG(__VA_ARGS__), __VA_ARGS__)
+#include "includes/mips.h"
 
 #define MODULE_NAME_INTERNAL "GTA3"
 #define MODULE_NAME "GTAVCS.PPSSPP.WidescreenFix"
@@ -22,17 +23,12 @@ PSP_MODULE_INFO(MODULE_NAME, 0x1007, 1, 0);
 
 SceKernelModuleInfo ModuleInfo;
 
-#define MAKE_CALL(a, f) _sw(0x0C000000 | (((u32)(f) >> 2) & 0x03FFFFFF), a);
-
 enum GtaPad {
   PAD_LX = 1,
   PAD_LY = 2,
   PAD_RX = 3,
   PAD_RY = 4,
 };
-
-#define MAKE_SYSCALL(a, n) _sw(0x0000000C | ((n) << 6), a);
-#define MAKE_JAL(a, n) _sw(0x0C000000 | ((n) >> 2), a);
 
 short cameraX(short *pad) {
   return pad[PAD_RX];
@@ -50,101 +46,19 @@ short aimY(short *pad) {
   return pad[PAD_LY] ? pad[PAD_LY] : pad[PAD_RY];
 }
 
-static int PatchVCS(u32 addr, u32 text_addr) {
-  // Implement right analog stick
-  if (_lw(addr + 0x00) == 0x10000006 && _lw(addr + 0x04) == 0xA3A70003) {
-    _sw(0xA7A50000 | (_lh(addr + 0x1C)), addr + 0x24);      // sh $a1, X($sp)
-    _sw(0x97A50000 | (_lh(addr - 0xC) + 0x2), addr + 0x1C); // lhu $a1, X($sp)
-    return 1;
-  }
-
-  // Redirect camera movement
-  if (_lw(addr + 0x00) == 0x14800036 && _lw(addr + 0x10) == 0x10400016) {
-    _sw(0x00000000, addr + 0x00);
-    _sw(0x10000016, addr + 0x10);
-    MAKE_JAL(addr + 0x8C, (intptr_t)cameraX);
-    _sw(0x00000000, addr + 0x108);
-    _sw(0x10000002, addr + 0x118);
-    MAKE_JAL(addr + 0x144, (intptr_t)cameraY);
-    return 1;
-  }
-
-  // Redirect gun aim movement
-  if (_lw(addr + 0x00) == 0x04800040 && _lw(addr + 0x08) == 0x1080003E) {
-      MAKE_JAL(addr + 0x50, (intptr_t)aimX);
-      MAKE_JAL(addr + 0x7C, (intptr_t)aimX);
-      MAKE_JAL(addr + 0x8C, (intptr_t)aimX);
-      MAKE_JAL(addr + 0x158, (intptr_t)aimY);
-      MAKE_JAL(addr + 0x1BC, (intptr_t)aimY);
-    return 1;
-  }
-
-  // Allow using L trigger when walking
-  if (_lw(addr + 0x00) == 0x1480000E && _lw(addr + 0x10) == 0x10800008 &&
-      _lw(addr + 0x1C) == 0x04800003) {
-    _sw(0, addr + 0x10);
-    _sw(0, addr + 0x9C);
-    return 1;
-  }
-
-  // Force L trigger value in the L+camera movement function
-  if (_lw(addr + 0x00) == 0x84C7000A) {
-    _sw(0x2407FFFF, addr + 0x00);
-    return 1;
-  }
-
-  return 0;
-}
-
-static int PatchLCS(u32 addr, u32 text_addr) {
-  // Implement right analog stick
-  if (_lw(addr + 0x00) == 0x10000006 && _lw(addr + 0x04) == 0xA3A70013) {
-    _sw(0xA7A50000 | (_lh(addr + 0x1C)), addr + 0x24);      // sh $a1, X($sp)
-    _sw(0x97A50000 | (_lh(addr - 0xC) + 0x2), addr + 0x1C); // lhu $a1, X($sp)
-    return 1;
-  }
-
-  // Redirect camera movement
-  if (_lw(addr + 0x00) == 0x14800034 && _lw(addr + 0x10) == 0x10400014) {
-    _sw(0x00000000, addr + 0x00);
-    _sw(0x10000014, addr + 0x10);
-    MAKE_JAL(addr + 0x84, (intptr_t)cameraX);
-    _sw(0x00000000, addr + 0x100);
-    _sw(0x10000002, addr + 0x110);
-    MAKE_JAL(addr + 0x13C, (intptr_t)cameraY);
-    return 1;
-  }
-
-  // Redirect gun aim movement
-  if (_lw(addr + 0x00) == 0x04800036 && _lw(addr + 0x08) == 0x10800034) {
-    MAKE_JAL(addr + 0x3C, (intptr_t)aimX);
-    MAKE_JAL(addr + 0x68, (intptr_t)aimX);
-    MAKE_JAL(addr + 0x78, (intptr_t)aimX);
-    MAKE_JAL(addr + 0x130, (intptr_t)aimY);
-    MAKE_JAL(addr + 0x198, (intptr_t)aimY);
-    return 1;
-  }
-
-  // Allow using L trigger when walking
-  if (_lw(addr + 0x00) == 0x14A0000E && _lw(addr + 0x10) == 0x10A00008 &&
-      _lw(addr + 0x1C) == 0x04A00003) {
-    _sw(0, addr + 0x10);
-    _sw(0, addr + 0x74);
-    return 1;
-  }
-
-  // Force L trigger value in the L+camera movement function
-  if (_lw(addr + 0x00) == 0x850A000A) {
-    _sw(0x240AFFFF, addr + 0x00);
-    return 1;
-  }
-
-  return 0;
-}
+//void lambda(void* regs)
+//{
+//    __asm__ volatile (
+//        "nop\n\tnop\n\tnop\n\t"
+//        );
+//}
 
 int OnModuleStart(SceKernelModuleInfo* mod) {
     logger.Write(LOG_PATH, "Hello...\n");
-    logger.WriteF(LOG_PATH, "%d", 777);
+    logger.WriteF(LOG_PATH, "%x\n", 0);
+
+    //logger.WriteF(LOG_PATH, "%x %x\n", ptr + 0x24 + mod->text_addr, (intptr_t)lambda);
+    //injector.MakeInline(ptr + 0x24, (intptr_t)lambda);
 
     injector.base_addr = mod->text_addr;
     pattern.base_addr = mod->text_addr;
@@ -178,26 +92,47 @@ int OnModuleStart(SceKernelModuleInfo* mod) {
 
     if (DualAnalogPatch)
     {
+        // Implement right analog stick
+        uintptr_t ptr = pattern.get_first(mod->text_addr, mod->text_size, "06 00 00 10 03 00 A7 A3", 0);
+        injector.WriteInstr(ptr + 0x24, 
+            sh(a1, sp, 0)
+        );
+        injector.WriteInstr(ptr + 0x1C,
+            lhu(a1, sp, 0xE)
+        );
 
-        /// ////////////////////////////////////////////
+        // Redirect camera movement
+        ptr = pattern.get_first(mod->text_addr, mod->text_size, "36 00 80 14 ? ? ? ? ? ? ? ? ? ? ? ? 16 00 40 10", 0);
+        injector.MakeNOP(ptr + 0x00);
+        injector.WriteMemory8(ptr + 0x10 + 0x2, 0x00);  // beqz -> b
+        injector.MakeJAL(ptr + 0x8C, (intptr_t)cameraX);
+        injector.MakeNOP(ptr + 0x108);
+        injector.WriteMemory8(ptr + 0x118 + 0x2, 0x00); // beqz -> b
+        injector.MakeJAL(ptr + 0x144, (intptr_t)cameraY);
 
-        u32 text_addr = mod->text_addr;
-        int gta_version = -1;
+        // Redirect gun aim movement
+        ptr = pattern.get_first(mod->text_addr, mod->text_size, "40 00 80 04 ? ? ? ? 3E 00 80 10", 0);
+        injector.MakeJAL(ptr + 0x50, (intptr_t)aimX);
+        injector.MakeJAL(ptr + 0x7C, (intptr_t)aimX);
+        injector.MakeJAL(ptr + 0x8C, (intptr_t)aimX);
+        injector.MakeJAL(ptr + 0x158, (intptr_t)aimY);
+        injector.MakeJAL(ptr + 0x1BC, (intptr_t)aimY);
 
-        u32 i;
-        for (i = 0; i < mod->text_size; i += 4) {
-            u32 addr = text_addr + i;
+        // Allow using L trigger when walking
+        ptr = pattern.get_first(mod->text_addr, mod->text_size, "0E 00 80 14 ? ? ? ? ? ? ? ? ? ? ? ? 08 00 80 10 ? ? ? ? ? ? ? ? 03 00 80 04", 0);
+        injector.MakeNOP(ptr + 0x10);
+        injector.MakeNOP(ptr + 0x9C);
 
-            if ((gta_version == -1 || gta_version == 0) && PatchVCS(addr, text_addr)) {
-                gta_version = 0;
-                continue;
-            }
+        // Force L trigger value in the L+camera movement function
+        ptr = pattern.get_first(mod->text_addr, mod->text_size, "0A 00 C7 84", 0);
+        injector.WriteInstr(ptr + 0x00,
+            li(a3, -0x1)
+        );
+    }
 
-            if ((gta_version == -1 || gta_version == 1) && PatchLCS(addr, text_addr)) {
-                gta_version = 1;
-                continue;
-            }
-        }
+    if (true)
+    {
+
     }
 
     sceKernelDcacheWritebackAll();

@@ -15,6 +15,11 @@ void MemoryFill(uintptr_t addr, uint8_t value, size_t size)
     memset((addr + injector.base_addr), value, size);
 }
 
+void WriteInstr(uintptr_t addr, uint32_t value)
+{
+    *(uint32_t*)(addr + injector.base_addr) = value;
+}
+
 void WriteMemory8(uintptr_t addr, uint8_t value)
 {
     *(uint8_t*)(addr + injector.base_addr) = value;
@@ -102,17 +107,17 @@ uintptr_t GetBranchDestination(uintptr_t at)
 
 void MakeJMP(uintptr_t at, uintptr_t dest)
 {
-    WriteMemory32(at + injector.base_addr, (0x08000000 | (((u32)(dest) & 0x0FFFFFFC) >> 2)));
+    WriteMemory32(at, (0x08000000 | (((u32)(dest) & 0x0FFFFFFC) >> 2)));
 }
 
 void MakeJAL(uintptr_t at, uintptr_t dest)
 {
-    WriteMemory32(at + injector.base_addr, (0x0C000000 | ((dest) >> 2)));
+    WriteMemory32(at, (0x0C000000 | ((dest) >> 2)));
 }
 
 void MakeCALL(uintptr_t at, uintptr_t dest)
 {
-    WriteMemory32(at + injector.base_addr, (0x0C000000 | (((unsigned int)(dest) >> 2) & 0x03FFFFFF)));
+    WriteMemory32(at, (0x0C000000 | (((unsigned int)(dest) >> 2) & 0x03FFFFFF)));
 }
 
 void MakeNOP(uintptr_t at)
@@ -130,12 +135,18 @@ void MakeRangedNOP(uintptr_t at, uintptr_t until)
     return MakeNOPWithSize(at, (size_t)(until - at));
 }
 
+void MakeInline(uintptr_t at, uintptr_t dest)
+{
+    injector.MakeJAL(at, dest);
+}
+
 struct injector_t injector =
 {
     .base_addr = 0,
     .WriteMemoryRaw = WriteMemoryRaw,
     .ReadMemoryRaw = ReadMemoryRaw,
     .MemoryFill = MemoryFill,
+    .WriteInstr = WriteInstr,
     .WriteMemory8 = WriteMemory8,
     .WriteMemory16 = WriteMemory16,
     .WriteMemory32 = WriteMemory32,
@@ -158,5 +169,6 @@ struct injector_t injector =
     .MakeCALL = MakeCALL,
     .MakeNOP = MakeNOP,
     .MakeNOPWithSize = MakeNOPWithSize,
-    .MakeRangedNOP = MakeRangedNOP
+    .MakeRangedNOP = MakeRangedNOP,
+    .MakeInline = MakeInline
 };
