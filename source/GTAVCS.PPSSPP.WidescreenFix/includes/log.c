@@ -17,6 +17,17 @@ void Write(char* path, char* message)
     sceIoWrite(logger.log_uid, message, strlen(message));
 }
 
+void WriteFormatted(char* path, const char* format, ...)
+{
+    char buffer[100];
+    va_list val;
+    int rv;
+    va_start(val, format);
+    rv = npf_vsnprintf(buffer, sizeof(buffer), format, val);
+    logger.Write(path, buffer);
+    va_end(val);
+}
+
 void Close()
 {
     if (logger.log_uid >= 0) sceIoClose(logger.log_uid);
@@ -26,5 +37,6 @@ struct logger_t logger =
 {
     .log_uid = 0,
     .Write = Write,
+    .WriteF = WriteFormatted,
     .Close = Close
 };

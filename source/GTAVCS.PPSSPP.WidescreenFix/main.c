@@ -144,6 +144,8 @@ static int PatchLCS(u32 addr, u32 text_addr) {
 
 int OnModuleStart(SceKernelModuleInfo* mod) {
     logger.Write(LOG_PATH, "Hello...\n");
+    logger.WriteF(LOG_PATH, "%d", 777);
+
     injector.base_addr = mod->text_addr;
     pattern.base_addr = mod->text_addr;
     inireader.SetIniPath(INI_PATH);
