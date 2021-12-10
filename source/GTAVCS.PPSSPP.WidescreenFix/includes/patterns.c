@@ -78,8 +78,11 @@ uint8_t* bytes_find_nth(size_t count, uint8_t* haystack, size_t haystackLen, uin
     return NULL;
 }
 
-uintptr_t get(size_t count, uintptr_t range_start, size_t range_size, char* pattern_str, int32_t offset)
+uintptr_t get(size_t count, uintptr_t range_start, size_t range_size, const char* pattern_str, int32_t offset)
 {
+    char str[strlen(pattern_str)];
+    strcpy(str, pattern_str);
+    pattern_str = str;
     uint8_t wc[strlen(pattern_str)];
     remove_spaces_and_format(pattern_str);
     size_t len = strlen(pattern_str);
@@ -88,7 +91,7 @@ uintptr_t get(size_t count, uintptr_t range_start, size_t range_size, char* patt
     return bytes_find_nth(count, range_start, range_size, buf, size, wc) - pattern.base_addr + offset;
 }
 
-uintptr_t get_first(uintptr_t range_start, size_t range_size, char* pattern_str, int32_t offset)
+uintptr_t get_first(uintptr_t range_start, size_t range_size, const char* pattern_str, int32_t offset)
 {
     return pattern.get(0, range_start, range_size, pattern_str, offset);
 }

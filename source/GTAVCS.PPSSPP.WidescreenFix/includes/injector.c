@@ -140,6 +140,30 @@ void MakeInline(uintptr_t at, uintptr_t dest)
     injector.MakeJAL(at, dest);
 }
 
+u32 MakeSyscallStub(u32 numInstr) {
+    SceUID block_id = sceKernelAllocPartitionMemory(PSP_MEMORY_PARTITION_USER, "", PSP_SMEM_High, numInstr * sizeof(u32), NULL);
+    u32 stub = (u32)sceKernelGetBlockHeadAddr(block_id);
+    return stub;
+}
+
+void MakeInlineLUIORI(uintptr_t at, RegisterID reg, float imm)
+{
+    uintptr_t functor = MakeSyscallStub(3); // lui ori j
+    injector.WriteMemory32(functor + 0 - injector.base_addr, lui(reg, HIWORD(imm)));
+    injector.WriteMemory32(functor + 4 - injector.base_addr, ori(reg, reg, LOWORD(imm)));
+    injector.MakeJMP(functor + 8 - injector.base_addr, at + 4 + injector.base_addr);
+    injector.MakeJMP(at, functor);
+}
+
+void MakeInlineLI(uintptr_t at, RegisterID reg, int32_t imm)
+{
+    uintptr_t functor = MakeSyscallStub(3); // lui ori j
+    injector.WriteMemory32(functor + 0 - injector.base_addr, li(reg, imm));
+    injector.WriteMemory32(functor + 4 - injector.base_addr, ori(reg, zero, imm));
+    injector.MakeJMP(functor + 8 - injector.base_addr, at + 4 + injector.base_addr);
+    injector.MakeJMP(at, functor);
+}
+
 struct injector_t injector =
 {
     .base_addr = 0,
@@ -170,5 +194,7 @@ struct injector_t injector =
     .MakeNOP = MakeNOP,
     .MakeNOPWithSize = MakeNOPWithSize,
     .MakeRangedNOP = MakeRangedNOP,
-    .MakeInline = MakeInline
+    .MakeInline = MakeInline,
+    .MakeInlineLUIORI = MakeInlineLUIORI,
+    .MakeInlineLI = MakeInlineLI
 };

@@ -28,6 +28,10 @@
 #include <pspkernel.h>
 #include <stdint.h>
 #include <string.h>
+#include "mips.h"
+
+#define LOWORD(l)           ((uint16_t)((*(uint32_t*)(&l)) & 0xffff))
+#define HIWORD(l)           ((uint16_t)(((*(uint32_t*)(&l)) >> 16) & 0xffff))
 
 struct injector_t {
     uintptr_t base_addr;
@@ -59,6 +63,8 @@ struct injector_t {
     void (*MakeNOPWithSize)(uintptr_t at, size_t count);
     void (*MakeRangedNOP)(uintptr_t at, uintptr_t until);
     void (*MakeInline)(uintptr_t at, uintptr_t functor);
+    void (*MakeInlineLUIORI)(uintptr_t at, RegisterID reg, float imm);
+    void (*MakeInlineLI)(uintptr_t at, RegisterID reg, int32_t imm);
 };
 
 extern struct injector_t injector;
