@@ -70,10 +70,14 @@ workspace "WidescreenFixesPack"
    end
    
    function setbuildpaths_psp(gamepath, exepath, scriptspath, pspsdkpath, sourcepath, prj_name)
+      local pbcmd = {}
+      for k,v in pairs(pbcommands) do
+        pbcmd[k] = v
+      end
       if (gamepath) then
          cmdcopy = { "set \"path=" .. gamepath .. scriptspath .. "\"" }
-         pbcommands[2] = "set \"file=../data/" .. prj_name .. "/" .. scriptspath .. prj_name ..".prx\""
-         table.insert(cmdcopy, pbcommands)
+         pbcmd[2] = "set \"file=../data/" .. prj_name .. "/" .. scriptspath .. prj_name ..".prx\""
+         table.insert(cmdcopy, pbcmd)
          buildcommands   { "call " .. pspsdkpath .. " -C " .. sourcepath, cmdcopy }
          rebuildcommands { "call " .. pspsdkpath .. " -C " .. sourcepath .. " clean && " .. pspsdkpath .. " -C " .. sourcepath, cmdcopy }
          cleancommands   { "call " .. pspsdkpath .. " -C " .. sourcepath .. " clean" }
@@ -118,15 +122,20 @@ jobs:
       if (file) then
 str = [[
 TARGET = ..\..\data\%s\memstick\PSP\PLUGINS\%s\%s
-OBJS = main.o exports.o minIni.o code/pspmem.o code/mkdeception.o code/mkumenu.o code/eLog.o  code/mkuhook.o code/eSettingsMgr.o code/mkuplrinfo.o
-CFLAGS = -O2 -G0 -Wall -Wwrite-strings -Wdiscarded-qualifiers
+OBJS = main.o exports.o ../../includes/psp/injector.o ../../includes/psp/log.o ../../includes/psp/patterns.o ../../includes/psp/minIni.o ../../includes/psp/inireader.o ../../includes/psp/gvm.o ../../includes/psp/mips.o
+
+CFLAGS = -O2 -Os -G0 -Wall -fshort-wchar -fno-pic -mno-check-zero-division
 CXXFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti
 ASFLAGS = $(CFLAGS)
+
 BUILD_PRX = 1
 PRX_EXPORTS = exports.exp
+
 USE_PSPSDK_LIBC = 1
+
 LIBS = -lpspsystemctrl_kernel
-PSPSDK = ../../external/pspsdk/psp/sdk
+
+PSPSDK = $(shell psp-config --pspsdk-path)
 include $(PSPSDK)/lib/build_prx.mak
 ]]
          file:write(string.format(str, prj_name, prj_name, prj_name))
@@ -260,7 +269,9 @@ project "GTAVCS.PPSSPP.WidescreenFix"
    targetextension ".prx"
    setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.WidescreenFix")
    writemakefile("GTAVCS.PPSSPP.WidescreenFix")
-   --writeghaction("gtavcspsp", "GTAVCS.PPSSPP.WidescreenFix")
+   writeghaction("gtavcspsp", "GTAVCS.PPSSPP.WidescreenFix")
+project "GTASA.UWP.Test"
+   setpaths("Z:/WFP/Games/GTASAUWP/", "GTASA.exe")
 project "Gun.WidescreenFix"
    setpaths("Z:/WFP/Games/GUN/", "Gun.exe")
    writeghaction("gun", "Gun.WidescreenFix")

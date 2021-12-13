@@ -4,7 +4,7 @@
 #include <pspkernel.h>
 
 #define NANOPRINTF_IMPLEMENTATION
-#include "includes/nanoprintf.h"
+#include "nanoprintf.h"
 
 void SetPath(const char* szFileName)
 {

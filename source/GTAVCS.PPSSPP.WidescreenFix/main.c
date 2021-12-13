@@ -6,20 +6,21 @@
 #include <stdint.h>
 #include <systemctrl.h>
 
-#include "includes/log.h"
-#include "includes/injector.h"
-#include "includes/patterns.h"
-#include "includes/inireader.h"
-#include "includes/gvm.h"
-#define gv(...) _get_addr_for_game_version(PP_NARG(__VA_ARGS__), __VA_ARGS__)
-#include "includes/mips.h"
+#include "../../includes/psp/log.h"
+#include "../../includes/psp/injector.h"
+#include "../../includes/psp/patterns.h"
+#include "../../includes/psp/inireader.h"
+#include "../../includes/psp/gvm.h"
+#include "../../includes/psp/mips.h"
 
 #define MODULE_NAME_INTERNAL "GTA3"
 #define MODULE_NAME "GTAVCS.PPSSPP.WidescreenFix"
 #define LOG_PATH "ms0:/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/GTAVCS.PPSSPP.WidescreenFix.log"
 #define INI_PATH "ms0:/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/GTAVCS.PPSSPP.WidescreenFix.ini"
 
+#ifndef __INTELLISENSE__
 PSP_MODULE_INFO(MODULE_NAME, 0x1007, 1, 0);
+#endif
 
 SceKernelModuleInfo ModuleInfo;
 

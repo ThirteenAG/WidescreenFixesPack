@@ -44,3 +44,5 @@ struct gvm_t {
     void (*init)(int version);
 };
 extern struct gvm_t gvm;
+
+#define gv(...) _get_addr_for_game_version(PP_NARG(__VA_ARGS__), __VA_ARGS__)
