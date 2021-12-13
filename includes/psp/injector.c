@@ -227,10 +227,10 @@ void MakeInlineLI(uintptr_t at, int32_t imm)
 
     if (instr == ORI && reg_zero == ZERO)
     {
-        //if ((prev_instr >= 0x01 && prev_instr <= 0x07) || (prev_instr >= 0x14 && prev_instr <= 0x17)) //beq and such
+        if ((prev_instr >= 0x01 && prev_instr <= 0x07) || (prev_instr >= 0x14 && prev_instr <= 0x17)) //beq and such
             return WriteMemory16(at, LOWORD(imm));
-        //else
-        //    return MakeLI(at, reg_ori, imm);
+        else
+            return MakeLI(at, reg_ori, imm);
     }
 }
 
