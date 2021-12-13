@@ -140,28 +140,98 @@ void MakeInline(uintptr_t at, uintptr_t dest)
     injector.MakeJAL(at, dest);
 }
 
-u32 MakeSyscallStub(u32 numInstr) {
-    SceUID block_id = sceKernelAllocPartitionMemory(PSP_MEMORY_PARTITION_USER, "", PSP_SMEM_High, numInstr * sizeof(u32), NULL);
-    u32 stub = (u32)sceKernelGetBlockHeadAddr(block_id);
+uintptr_t MakeCallStub(uintptr_t numInstr) {
+    SceUID block_id = sceKernelAllocPartitionMemory(PSP_MEMORY_PARTITION_USER, "", PSP_SMEM_High, numInstr * sizeof(uintptr_t), NULL);
+    uintptr_t stub = (uintptr_t)sceKernelGetBlockHeadAddr(block_id);
     return stub;
 }
 
-void MakeInlineLUIORI(uintptr_t at, RegisterID reg, float imm)
+void MakeLUIORI(uintptr_t at, RegisterID reg, float imm)
 {
-    uintptr_t functor = MakeSyscallStub(3); // lui ori j
+    uintptr_t functor = MakeCallStub(4); // lui ori j nop
     injector.WriteMemory32(functor + 0 - injector.base_addr, lui(reg, HIWORD(imm)));
     injector.WriteMemory32(functor + 4 - injector.base_addr, ori(reg, reg, LOWORD(imm)));
     injector.MakeJMP(functor + 8 - injector.base_addr, at + 4 + injector.base_addr);
+    injector.MakeNOP(functor + 12 - injector.base_addr);
     injector.MakeJMP(at, functor);
 }
 
-void MakeInlineLI(uintptr_t at, RegisterID reg, int32_t imm)
+void MakeLI(uintptr_t at, RegisterID reg, int32_t imm)
 {
-    uintptr_t functor = MakeSyscallStub(3); // lui ori j
-    injector.WriteMemory32(functor + 0 - injector.base_addr, li(reg, imm));
-    injector.WriteMemory32(functor + 4 - injector.base_addr, ori(reg, zero, imm));
+    uintptr_t functor = MakeCallStub(4); // lui ori j nop
+    injector.WriteMemory32(functor + 0 - injector.base_addr, lui(reg, HIWORD(imm)));
+    injector.WriteMemory32(functor + 4 - injector.base_addr, ori(reg, reg, LOWORD(imm)));
     injector.MakeJMP(functor + 8 - injector.base_addr, at + 4 + injector.base_addr);
+    injector.MakeNOP(functor + 12 - injector.base_addr);
     injector.MakeJMP(at, functor);
+}
+
+uint32_t parseCommand(uint32_t command, uint32_t from, uint32_t to)
+{
+    uint32_t mask = ((1 << (to - from + 1)) - 1) << from;
+    return (command & mask) >> from;
+}
+
+void MakeInlineLUIORI(uintptr_t at, float imm)
+{
+    static const uint32_t instr_len = 4;
+
+    uint8_t LUI = parseCommand(lui(0, 0), 26, 32);
+    uint8_t ORI = parseCommand(ori(0, 0, 0), 26, 32);
+
+    uint32_t prev_instr = parseCommand(ReadMemory32(at - instr_len), 26, 32);
+    uint32_t bytes = ReadMemory32(at);
+    uint8_t instr = parseCommand(bytes, 26, 32);
+    uint8_t reg_lui = parseCommand(bytes, 16, 21);
+
+    if (instr == LUI)
+    {
+        for (uintptr_t i = at + instr_len; i <= (at + instr_len + (5 * instr_len)); i += instr_len)
+        {
+            bytes = ReadMemory32(i);
+            instr = parseCommand(bytes, 26, 32);
+            uint8_t reg_ori = parseCommand(bytes, 16, 21);
+
+            if (instr == LUI)
+                break;
+            else if (instr == ORI && reg_lui == reg_ori)
+            {
+                if ((prev_instr == 0x01) || (prev_instr >= 0x04 && prev_instr <= 0x07) || (prev_instr >= 0x14 && prev_instr <= 0x17)) //beq and such
+                {
+                    WriteMemory16(i, LOWORD(imm));
+                    break;
+                }
+                else
+                    return MakeLUIORI(i, reg_ori, imm);
+            }
+        }
+        if ((prev_instr >= 0x01 && prev_instr <= 0x07) || (prev_instr >= 0x14 && prev_instr <= 0x17)) //beq and such
+            WriteMemory16(at, HIWORD(imm));
+        else
+            return MakeLUIORI(at, reg_lui, imm);
+    }
+}
+
+void MakeInlineLI(uintptr_t at, int32_t imm)
+{
+    static const uint32_t instr_len = 4;
+
+    uint8_t ORI = parseCommand(ori(0, 0, 0), 26, 32);
+    uint8_t ZERO = parseCommand(ori(0, 0, 0), 21, 26);
+
+    uint32_t prev_instr = parseCommand(ReadMemory32(at - instr_len), 26, 32);
+    uint32_t bytes = ReadMemory32(at);
+    uint8_t instr = parseCommand(bytes, 26, 32);
+    uint8_t reg_ori = parseCommand(bytes, 16, 21);
+    uint8_t reg_zero = parseCommand(bytes, 21, 26);
+
+    if (instr == ORI && reg_zero == ZERO)
+    {
+        //if ((prev_instr >= 0x01 && prev_instr <= 0x07) || (prev_instr >= 0x14 && prev_instr <= 0x17)) //beq and such
+            return WriteMemory16(at, LOWORD(imm));
+        //else
+        //    return MakeLI(at, reg_ori, imm);
+    }
 }
 
 struct injector_t injector =

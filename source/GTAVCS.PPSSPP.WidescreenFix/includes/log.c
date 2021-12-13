@@ -6,25 +6,30 @@
 #define NANOPRINTF_IMPLEMENTATION
 #include "includes/nanoprintf.h"
 
-void Write(char* path, char* message)
+void SetPath(const char* szFileName)
+{
+    logger.path = szFileName;
+}
+
+void Write(char* message)
 {
     if (logger.log_uid == 0)
     {
-        logger.log_uid = sceIoOpen(path, PSP_O_WRONLY | PSP_O_CREAT | PSP_O_TRUNC, 0777);
+        logger.log_uid = sceIoOpen(logger.path, PSP_O_WRONLY | PSP_O_CREAT | PSP_O_TRUNC, 0777);
         if (logger.log_uid >= 0) sceIoClose(logger.log_uid);
-        logger.log_uid = sceIoOpen(path, PSP_O_WRONLY | PSP_O_CREAT | PSP_O_APPEND, 0777);
+        logger.log_uid = sceIoOpen(logger.path, PSP_O_WRONLY | PSP_O_CREAT | PSP_O_APPEND, 0777);
     }
     sceIoWrite(logger.log_uid, message, strlen(message));
 }
 
-void WriteFormatted(char* path, const char* format, ...)
+void WriteFormatted(const char* format, ...)
 {
     char buffer[100];
     va_list val;
     int rv;
     va_start(val, format);
     rv = npf_vsnprintf(buffer, sizeof(buffer), format, val);
-    logger.Write(path, buffer);
+    logger.Write(buffer);
     va_end(val);
 }
 
@@ -36,6 +41,8 @@ void Close()
 struct logger_t logger =
 {
     .log_uid = 0,
+    .path = 0,
+    .SetPath = SetPath,
     .Write = Write,
     .WriteF = WriteFormatted,
     .Close = Close

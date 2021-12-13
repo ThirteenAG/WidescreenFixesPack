@@ -1,5 +1,37 @@
 #include "inireader.h"
 #include "minIni.h"
+#include <errno.h>
+#include <limits.h>
+
+typedef enum {
+    STR2INT_SUCCESS,
+    STR2INT_OVERFLOW,
+    STR2INT_UNDERFLOW,
+    STR2INT_INCONVERTIBLE
+} str2int_errno;
+
+str2int_errno _str2int(int* out, char* s, int base) {
+    char* end;
+    if (s[0] == '\0' || isspace(s[0]))
+        return STR2INT_INCONVERTIBLE;
+    errno = 0;
+    long l = strtol(s, &end, base);
+    /* Both checks are needed because INT_MAX == LONG_MAX is possible. */
+    if (l > INT_MAX || (errno == ERANGE && l == LONG_MAX))
+        return STR2INT_OVERFLOW;
+    if (l < INT_MIN || (errno == ERANGE && l == LONG_MIN))
+        return STR2INT_UNDERFLOW;
+    if (*end != '\0')
+        return STR2INT_INCONVERTIBLE;
+    *out = l;
+    return STR2INT_SUCCESS;
+}
+
+int str2int(char* s, int base) {
+    int result;
+    _str2int(&result, s, base);
+    return result;
+}
 
 void SetIniPath(const char* szFileName)
 {
@@ -21,9 +53,10 @@ _Bool ReadBoolean(char* szSection, char* szKey, _Bool bolDefaultValue)
     return ini_getbool(szSection, szKey, bolDefaultValue, inireader.iniName);
 }
 
-char* ReadString(char* szSection, char* szKey, char* szDefaultValue)
+char* ReadString(char* szSection, char* szKey, char* szDefaultValue, char* Buffer, int BufferSize)
 {
-    return 0; //TODO
+    ini_gets(szSection, szKey, szDefaultValue, Buffer, BufferSize, inireader.iniName);
+    return Buffer;
 }
 
 void WriteInteger(char* szSection, char* szKey, int iValue)

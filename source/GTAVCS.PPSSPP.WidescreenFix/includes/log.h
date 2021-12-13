@@ -4,8 +4,10 @@
 
 struct logger_t {
     SceUID log_uid;
-    void (*Write)(char* path, char* message);
-    void (*WriteF)(char* path, const char* format, ...);
+    char* path;
+    void (*SetPath)(const char* szFileName);
+    void (*Write)(char* message);
+    void (*WriteF)(const char* format, ...);
     void (*Close)();
 };
 extern struct logger_t logger;

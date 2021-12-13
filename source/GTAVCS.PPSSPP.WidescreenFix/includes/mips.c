@@ -387,7 +387,7 @@ uint32_t daddu(RegisterID rd, RegisterID rs, RegisterID rt)
 {
     return (0x0000002d | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
 }
-uint32_t div(RegisterID rs, RegisterID rt)
+uint32_t _div(RegisterID rs, RegisterID rt)
 {
     return (0x0000001a | (rs << OP_SH_RS) | (rt << OP_SH_RT));
 }

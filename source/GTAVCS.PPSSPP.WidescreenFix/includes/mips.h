@@ -223,7 +223,7 @@ uint32_t add(RegisterID rd, RegisterID rs, RegisterID rt);
 uint32_t addu(RegisterID rd, RegisterID rs, RegisterID rt);
 uint32_t _and(RegisterID rd, RegisterID rs, RegisterID rt);
 uint32_t daddu(RegisterID rd, RegisterID rs, RegisterID rt);
-uint32_t div(RegisterID rs, RegisterID rt);
+uint32_t _div(RegisterID rs, RegisterID rt);
 uint32_t divu(RegisterID rs, RegisterID rt);
 uint32_t dsll(RegisterID rd, RegisterID rt, int32_t shamt);
 uint32_t dsll32(RegisterID rd, RegisterID rt, int32_t shamt);
