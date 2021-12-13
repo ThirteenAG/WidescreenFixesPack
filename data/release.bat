@@ -10,7 +10,7 @@ if errorlevel 1 (
    SET filepath=%%F
    SET dll=!filepath:.ual=.dll!
    ECHO !dll! 	
-   copy "..\..\Ultimate-ASI-Loader\bin\x86\Release\dinput8.dll" !dll!
+   copy "..\..\Ultimate-ASI-Loader\bin\Win32\Release\dinput8.dll" !dll!
    REM SET "mu=%%~dpF\scripts\"
    REM SET "mu2=%%~dpF\plugins\"
    REM SET "mu3=%%~dpF\"
@@ -61,7 +61,7 @@ if errorlevel 1 (
 rem Creating archives
 
 FOR /d %%X IN (*) DO (
-7za a -tzip "Archives\%%X.zip" ".\%%X\*" -r -xr^^!Archives -x^^!*.pdb -x^^!*.db -x^^!*.ipdb -x^^!*.iobj -x^^!*.tmp -x^^!*.iobj -x^^!*.ual -x^^!*.x64ual -x^^!*.iobj -x^^!*.wrapper -x^^!*.lib -x^^!*.exp -x^^!*.ilk
+7za a -tzip "Archives\%%X.zip" ".\%%X\*" -r -xr^^!Archives -x^^!*.pdb -x^^!*.db -x^^!*.ipdb -x^^!*.iobj -x^^!*.tmp -x^^!*.iobj -x^^!*.ual -x^^!*.x64ual -x^^!*.iobj -x^^!*.wrapper -x^^!*.lib -x^^!*.exp -x^^!*.ilk -x^^!*.elf
 )
 
 rem Creating texture archives

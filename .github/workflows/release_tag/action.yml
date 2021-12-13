@@ -20,7 +20,7 @@ runs:
   steps:
     - name: Get release info
       id: release_info
-      uses: cardinalby/git-get-release-action@v1.1
+      uses: cardinalby/git-get-release-action@1.1.1
       env:
        GITHUB_TOKEN: ${{ inputs.token }}
       with:

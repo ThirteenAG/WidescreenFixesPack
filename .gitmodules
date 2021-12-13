@@ -19,3 +19,6 @@
 [submodule "external/modutils"]
 	path = external/modutils
 	url = https://github.com/CookiePLMonster/ModUtils
+[submodule "external/pspsdk"]
+	path = external/pspsdk
+	url = https://github.com/ThirteenAG/pspsdk
