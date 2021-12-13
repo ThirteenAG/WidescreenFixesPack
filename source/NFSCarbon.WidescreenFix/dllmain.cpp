@@ -19,16 +19,16 @@ void Init()
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
     bool bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) != 0;
     bool bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) != 0;
-    int32_t nScaling = iniReader.ReadInteger("MAIN", "Scaling", 2);
+    int32_t nScaling = iniReader.ReadInteger("MAIN", "Scaling", 1);
     bool bHUDWidescreenMode = iniReader.ReadInteger("MAIN", "HUDWidescreenMode", 1) != 0;
     int nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
     int32_t nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
-    bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 1) != 0;
-    bool bLightingFix = iniReader.ReadInteger("MISC", "LightingFix", 0) != 0;
-    bool bCarShadowFix = iniReader.ReadInteger("MISC", "CarShadowFix", 0) != 0;
-    bool bExperimentalCrashFix = iniReader.ReadInteger("MISC", "CrashFix", 0) != 0;
+    bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 0) != 0;
+    bool bLightingFix = iniReader.ReadInteger("MISC", "LightingFix", 1) != 0;
+    bool bCarShadowFix = iniReader.ReadInteger("MISC", "CarShadowFix", 1) != 0;
+    bool bExperimentalCrashFix = iniReader.ReadInteger("MISC", "CrashFix", 1) != 0;
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
-    bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 1) != 0;
+    bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 0) != 0;
     static int32_t nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
     bool bExpandControllerOptions = iniReader.ReadInteger("MISC", "ExpandControllerOptions", 0) != 0;
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
@@ -225,7 +225,7 @@ void Init()
         static float hor3DScale = 1.0f / (Screen.fAspectRatio / (4.0f / 3.0f));
         static float ver3DScale = 0.75f;
         static float mirrorScale = 0.675f;
-        static float f1234 = 1.25f;
+        static float f125 = 1.25f;
         static float f06 = 0.6f;
         static float flt1 = 0.0f;
         static float flt2 = 0.0f;
@@ -242,7 +242,7 @@ void Init()
                 {
                     flt1 = hor3DScale;
                     flt2 = f06;
-                    flt3 = f1234;
+                    flt3 = f125;
                 }
                 else
                 {
@@ -271,9 +271,13 @@ void Init()
 
         if (nScaling)
         {
-            hor3DScale /= 1.0511562719f;
+            hor3DScale /= 1.033057809f;
+            ver3DScale = 0.735f;
+
             if (nScaling == 2)
-                f1234 = 1.315f;
+            {
+                ver3DScale = 0.71f;
+            }
         }
     }
 

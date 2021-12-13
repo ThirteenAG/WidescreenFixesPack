@@ -148,14 +148,14 @@ void Init()
     Screen.nHeight = iniReader.ReadInteger("MAIN", "ResY", 0);
     bool bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) != 0;
     bool bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) != 0;
-    bool bXbox360Scaling = iniReader.ReadInteger("MAIN", "Xbox360Scaling", 1) != 0;
+    bool bScaling = iniReader.ReadInteger("MAIN", "Scaling", 1);
     bool bHUDWidescreenMode = iniReader.ReadInteger("MAIN", "HUDWidescreenMode", 1) != 0;
     int nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
     static int nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
     bool bD3DHookBorders = iniReader.ReadInteger("MISC", "D3DHookBorders", 0) != 0;
-    bool bBlackMagazineFix = iniReader.ReadInteger("MISC", "BlackMagazineFix", 1) != 0;
+    bool bBlackMagazineFix = iniReader.ReadInteger("MISC", "BlackMagazineFix", 0) != 0;
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
         szCustomUserFilesDirectoryInGameDir.clear();
 
@@ -295,9 +295,9 @@ void Init()
         static float flt2 = 0.0f;
         static float flt3 = 0.0f;
 
-        if (bXbox360Scaling)
+        if (bScaling)
         {
-            hor3DScale /= 1.0511562719f;
+            hor3DScale /= 1.071428537f;
         }
 
         pattern = hook::pattern("DB 40 18 C7 44 24");
@@ -401,7 +401,7 @@ void Init()
 
         static auto WidescreenHud = [](HudPos& HudPosX, HudPos& HudPosY, bool bAddHudOffset = false)
         {
-            if (nGameState != 3)
+            //if (nGameState != 3) // Disables WidescreenHUD in FrontEnd
             {
                 auto it = std::find_if(HudCoords.begin(), HudCoords.end(),
                                        [cc = CDatEntry(HudPosX.dwPos, HudPosY.dwPos, 0.0f, 0.0f)]
