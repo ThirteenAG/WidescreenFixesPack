@@ -255,7 +255,7 @@ int OnModuleStart(SceKernelModuleInfo* mod) {
         uintptr_t ptr_1BB994 = pattern.get(0, mod->text_addr, mod->text_size, "12 00 06 34 ? ? ? ? ? ? ? ? 40 3F 04 3C", 0);
         uintptr_t ptr_1BB9A0 = pattern.get(1, mod->text_addr, mod->text_size, "40 3F 04 3C ? ? ? ? 00 60 84 44 25 20 00 02 6E 01 05 34", 0);
         uintptr_t ptr_1BB9B0 = pattern.get(0, mod->text_addr, mod->text_size, "6E 01 05 34 ? ? ? ? 17 00 06 34", 0);
-        uintptr_t ptr_1BB9B8 = pattern.get(0, mod->text_addr, mod->text_size, "6E 01 05 34 4E 20 0C 0C 17 00 06 34", 8);
+        uintptr_t ptr_1BB9B8 = pattern.get(0, mod->text_addr, mod->text_size, "6E 01 05 34 ? ? ? ? 17 00 06 34", 8);
         uintptr_t ptr_1C0EF8 = pattern.get(0, mod->text_addr, mod->text_size, "99 3F 04 3C 9A 99 84 34 ? ? ? ? 00 60 84 44 FF 00 04 34", 0);
         uintptr_t ptr_1C0F24 = pattern.get(0, mod->text_addr, mod->text_size, "ED 43 04 3C 00 80 84 34 00 B0 84 44 52 43 04 3C", 0);
         uintptr_t ptr_1C0F30 = pattern.get(0, mod->text_addr, mod->text_size, "52 43 04 3C ? ? ? ? 00 C0 84 44", 0);
