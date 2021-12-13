@@ -3,7 +3,7 @@ cd ..
 git clone https://github.com/ThirteenAG/Ultimate-ASI-Loader --recursive
 cd Ultimate-ASI-Loader
 premake5.exe vs2022
-msbuild.exe build/Ultimate-ASI-Loader-x86.sln /t:Build /p:Configuration=Release;Platform=Win32
+msbuild.exe build/Ultimate-ASI-Loader-Win32.sln /t:Build /p:Configuration=Release;Platform=Win32
 msbuild.exe build/Ultimate-ASI-Loader-x64.sln /t:Build /p:Configuration=Release;Platform=x64
 cd ..
 

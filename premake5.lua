@@ -50,7 +50,7 @@ workspace "WidescreenFixesPack"
       "set filename=%%~ni",
       "set fileextension=%%~xi",
       "set target=!path!!filename!!fileextension!",
-      "if exist \"!target!\" copy /y \"!file!\" \"!target!\"",
+      "if exist \"!target!\" copy /y \"%%~fi\" \"!target!\"",
       ")" }
 
    function setpaths(gamepath, exepath, scriptspath)
@@ -59,6 +59,28 @@ workspace "WidescreenFixesPack"
          cmdcopy = { "set \"path=" .. gamepath .. scriptspath .. "\"" }
          table.insert(cmdcopy, pbcommands)
          postbuildcommands (cmdcopy)
+         debugdir (gamepath)
+         if (exepath) then
+            debugcommand (gamepath .. exepath)
+            dir, file = exepath:match'(.*/)(.*)'
+            debugdir (gamepath .. (dir or ""))
+         end
+      end
+      targetdir ("data/%{prj.name}/" .. scriptspath)
+   end
+   
+   function setbuildpaths_psp(gamepath, exepath, scriptspath, pspsdkpath, sourcepath, prj_name)
+      local pbcmd = {}
+      for k,v in pairs(pbcommands) do
+        pbcmd[k] = v
+      end
+      if (gamepath) then
+         cmdcopy = { "set \"path=" .. gamepath .. scriptspath .. "\"" }
+         pbcmd[2] = "set \"file=../data/" .. prj_name .. "/" .. scriptspath .. prj_name ..".prx\""
+         table.insert(cmdcopy, pbcmd)
+         buildcommands   { "call " .. pspsdkpath .. " -C " .. sourcepath, cmdcopy }
+         rebuildcommands { "call " .. pspsdkpath .. " -C " .. sourcepath .. " clean && " .. pspsdkpath .. " -C " .. sourcepath, cmdcopy }
+         cleancommands   { "call " .. pspsdkpath .. " -C " .. sourcepath .. " clean" }
          debugdir (gamepath)
          if (exepath) then
             debugcommand (gamepath .. exepath)
@@ -91,6 +113,32 @@ jobs:
       project: /t:%s
 ]]
          file:write(string.format(str, tag, tag, prj_name:gsub("%.", "_")))
+         file:close()
+      end
+   end
+   
+   function writemakefile(prj_name)       
+      file = io.open("source/" .. prj_name .. "/makefile", "w")
+      if (file) then
+str = [[
+TARGET = ..\..\data\%s\memstick\PSP\PLUGINS\%s\%s
+OBJS = main.o exports.o ../../includes/psp/injector.o ../../includes/psp/log.o ../../includes/psp/patterns.o ../../includes/psp/minIni.o ../../includes/psp/inireader.o ../../includes/psp/gvm.o ../../includes/psp/mips.o
+
+CFLAGS = -O2 -Os -G0 -Wall -fshort-wchar -fno-pic -mno-check-zero-division
+CXXFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti
+ASFLAGS = $(CFLAGS)
+
+BUILD_PRX = 1
+PRX_EXPORTS = exports.exp
+
+USE_PSPSDK_LIBC = 1
+
+LIBS = -lpspsystemctrl_kernel
+
+PSPSDK = $(shell psp-config --pspsdk-path)
+include $(PSPSDK)/lib/build_prx.mak
+]]
+         file:write(string.format(str, prj_name, prj_name, prj_name))
          file:close()
       end
    end
@@ -212,6 +260,18 @@ project "GTAVCS.PCSX2.WidescreenFix"
       setpaths("Z:/WFP/Games/PCSX2/", "pcsx2.exe")
       files { "includes/pcsx2/pcsx2.h" }
       writeghaction("gtavcs", "GTAVCS.PCSX2.WidescreenFix")
+project "GTAVCS.PPSSPP.WidescreenFix"
+   kind "Makefile"
+   includedirs { "external/pspsdk/psp/sdk/include" }
+   includedirs { "external/pspsdk/bin" }
+   includedirs { "external/pspsdk/psp/sdk/include" }
+   files { "source/%{prj.name}/*.c" }
+   targetextension ".prx"
+   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.WidescreenFix")
+   writemakefile("GTAVCS.PPSSPP.WidescreenFix")
+   writeghaction("gtavcspsp", "GTAVCS.PPSSPP.WidescreenFix")
+project "GTASA.UWP.Test"
+   setpaths("Z:/WFP/Games/GTASAUWP/", "GTASA.exe")
 project "Gun.WidescreenFix"
    setpaths("Z:/WFP/Games/GUN/", "Gun.exe")
    writeghaction("gun", "Gun.WidescreenFix")
