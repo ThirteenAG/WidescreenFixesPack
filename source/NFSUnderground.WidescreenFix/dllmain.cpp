@@ -289,7 +289,7 @@ void Init()
         static float ver3DScale = 1.0f; // don't touch this
         static float mirrorScale = 0.45f;
         static float f129 = 1.29f;
-        static float f05 = 0.5f;
+        static float f04525 = 0.4525f;
         static float f1 = 1.0f; // horizontal for vehicle reflection
         static float flt1 = 0.0f;
         static float flt2 = 0.0f;
@@ -311,7 +311,7 @@ void Init()
                 if (regs.eax == 1 || regs.eax == 4) //Headlights stretching, reflections etc
                 {
                     flt1 = hor3DScale;
-                    flt2 = f05;
+                    flt2 = f04525;
                     flt3 = f129;
                 }
                 else
@@ -320,7 +320,7 @@ void Init()
                     {
                         flt1 = f1;
                         flt2 = 0.5f;
-                        flt3 = 0.8715f;
+                        flt3 = 1.0f;
                         _asm fld ds : f1
                         return;
                     }
@@ -344,8 +344,7 @@ void Init()
 
         // FOV being different in menus and in-game fix
         pattern = hook::pattern("D8 0D ? ? ? ? ? ? E8 ? ? ? ? DD D8");
-        static float flt_ratio = 0.45425f;
-        injector::WriteMemory(pattern.get_first(2), &flt_ratio, true);
+        injector::WriteMemory(pattern.get_first(2), &flt2, true);
 
         pattern = hook::pattern("D8 3D ? ? ? ? D9 E0 D9 5E 54 D9 44 24 20");
         injector::WriteMemory(pattern.get_first(2), &flt3, true);

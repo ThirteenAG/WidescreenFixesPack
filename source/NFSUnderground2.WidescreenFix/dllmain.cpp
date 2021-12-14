@@ -72,7 +72,7 @@ void Init()
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
     bool bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) != 0;
     bool bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) != 0;
-    bool bScaling = iniReader.ReadInteger("MAIN", "Scaling", 1) != 0;
+    bool bScaling = iniReader.ReadInteger("MAIN", "Scaling", 0) != 0;
     bool bHUDWidescreenMode = iniReader.ReadInteger("MAIN", "HUDWidescreenMode", 1) != 0;
     int nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
     bool bDisableCutsceneBorders = iniReader.ReadInteger("MISC", "DisableCutsceneBorders", 1) != 0;
@@ -232,10 +232,10 @@ void Init()
     if (bFixFOV)
     {
         static float hor3DScale = 1.0f / (Screen.fAspectRatio / (4.0f / 3.0f));
-        static float ver3DScale = 0.75f;
+        static float ver3DScale = 1.0f; // don't touch this
         static float mirrorScale = 0.45f;
-        static float f1234 = 1.25f;
-        static float f06 = 0.6f;
+        static float f129 = 1.29f;
+        static float f04525 = 0.4525f;
         static float f1 = 1.0f; // horizontal for vehicle reflection
         static float flt1 = 0.0f;
         static float flt2 = 0.0f;
@@ -243,7 +243,7 @@ void Init()
 
         if (bScaling)
         {
-            hor3DScale /= 1.094890475f;
+            hor3DScale /= 1.03f;
         }
 
         uint32_t* dword_5C7F56 = hook::pattern("DB 40 18 C7 44 24 20 00 00 80 3F DA 70 14").count(1).get(0).get<uint32_t>(0);
@@ -256,8 +256,8 @@ void Init()
                 if (regs.ecx == 1 || regs.ecx == 4) //Headlights stretching, reflections etc
                 {
                     flt1 = hor3DScale;
-                    flt2 = f06;
-                    flt3 = f1234;
+                    flt2 = f04525;
+                    flt3 = f129;
                 }
                 else
                 {
@@ -295,11 +295,6 @@ void Init()
 
         uint32_t* dword_5C801F = hook::pattern("D8 3D ? ? ? ? D9 5C 24 38 D9 44 24 24 D8 64 24 30 D8 7C 24 24 D9 5C 24 34").count(1).get(0).get<uint32_t>(2);
         injector::WriteMemory(dword_5C801F, &flt3, true);
-
-        //Fixes vehicle reflection so that they're no longer broken and look exactly as they do without the widescreen fix.
-        static uint16_t dx = 16400;
-        uint32_t* dword_5C4FC9 = hook::pattern("66 A1 ? ? ? ? 66 89 86 C4 00 00 00").count(1).get(0).get<uint32_t>(2);
-        injector::WriteMemory(dword_5C4FC9, &dx, true);
     }
 
     if (nFMVWidescreenMode)
