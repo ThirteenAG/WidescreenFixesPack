@@ -243,7 +243,7 @@ void Init()
 
         if (bScaling)
         {
-            hor3DScale /= 1.086956501f;
+            hor3DScale /= 1.094890475f;
         }
 
         uint32_t* dword_5C7F56 = hook::pattern("DB 40 18 C7 44 24 20 00 00 80 3F DA 70 14").count(1).get(0).get<uint32_t>(0);

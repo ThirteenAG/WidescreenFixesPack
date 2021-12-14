@@ -148,7 +148,7 @@ void Init()
     Screen.nHeight = iniReader.ReadInteger("MAIN", "ResY", 0);
     bool bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) != 0;
     bool bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) != 0;
-    bool bScaling = iniReader.ReadInteger("MAIN", "Scaling", 1);
+    bool bScaling = iniReader.ReadInteger("MAIN", "Scaling", 0);
     bool bHUDWidescreenMode = iniReader.ReadInteger("MAIN", "HUDWidescreenMode", 1) != 0;
     int nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
@@ -286,10 +286,10 @@ void Init()
     if (bFixFOV)
     {
         static float hor3DScale = 1.0f / (Screen.fAspectRatio / (4.0f / 3.0f));
-        static float ver3DScale = 0.75f;
+        static float ver3DScale = 1.0f; // don't touch this
         static float mirrorScale = 0.45f;
-        static float f1234 = 1.25f;
-        static float f06 = 0.6f;
+        static float f129 = 1.29f;
+        static float f05 = 0.5f;
         static float f1 = 1.0f; // horizontal for vehicle reflection
         static float flt1 = 0.0f;
         static float flt2 = 0.0f;
@@ -297,7 +297,7 @@ void Init()
 
         if (bScaling)
         {
-            hor3DScale /= 1.071428537f;
+            hor3DScale /= 1.03f;
         }
 
         pattern = hook::pattern("DB 40 18 C7 44 24");
@@ -311,8 +311,8 @@ void Init()
                 if (regs.eax == 1 || regs.eax == 4) //Headlights stretching, reflections etc
                 {
                     flt1 = hor3DScale;
-                    flt2 = f06;
-                    flt3 = f1234;
+                    flt2 = f05;
+                    flt3 = f129;
                 }
                 else
                 {
@@ -320,7 +320,7 @@ void Init()
                     {
                         flt1 = f1;
                         flt2 = 0.5f;
-                        flt3 = 1.0f;
+                        flt3 = 0.8715f;
                         _asm fld ds : f1
                         return;
                     }
@@ -344,15 +344,11 @@ void Init()
 
         // FOV being different in menus and in-game fix
         pattern = hook::pattern("D8 0D ? ? ? ? ? ? E8 ? ? ? ? DD D8");
-        injector::WriteMemory(pattern.get_first(2), &flt2, true);
+        static float flt_ratio = 0.45425f;
+        injector::WriteMemory(pattern.get_first(2), &flt_ratio, true);
 
         pattern = hook::pattern("D8 3D ? ? ? ? D9 E0 D9 5E 54 D9 44 24 20");
         injector::WriteMemory(pattern.get_first(2), &flt3, true);
-
-        //Fixes vehicle reflection so that they're no longer broken and look exactly as they do without the widescreen fix.
-        static uint16_t dx = 16400;
-        pattern = hook::pattern("66 8B 15 ? ? ? ? 66 89 90 C4 00 00 00");
-        injector::WriteMemory(pattern.get_first(3), &dx, true);
     }
 
     if (nFMVWidescreenMode)
