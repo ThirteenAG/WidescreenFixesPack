@@ -3,6 +3,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 
+#ifndef __INTELLISENSE__
 #define PP_NARG(...) \
          PP_NARG_(__VA_ARGS__,PP_RSEQ_N())
 #define PP_NARG_(...) \
@@ -37,7 +38,7 @@
          9,8,7,6,5,4,3,2,1,0
 
 uintptr_t _get_addr_for_game_version(size_t argc, ...);
-
+#endif
 
 struct gvm_t {
     uint32_t version;
@@ -45,4 +46,6 @@ struct gvm_t {
 };
 extern struct gvm_t gvm;
 
+#ifndef __INTELLISENSE__
 #define gv(...) _get_addr_for_game_version(PP_NARG(__VA_ARGS__), __VA_ARGS__)
+#endif

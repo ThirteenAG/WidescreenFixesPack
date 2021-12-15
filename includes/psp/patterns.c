@@ -3,6 +3,12 @@
 #include <pspsdk.h>
 #include <pspkernel.h>
 
+void PatternSetGameBaseAddress(uintptr_t addr, size_t size)
+{
+    pattern.text_addr = addr;
+    pattern.text_size = size;
+}
+
 void remove_spaces_and_format(char* str)
 {
     int count = 0;
@@ -78,7 +84,7 @@ uint8_t* bytes_find_nth(size_t count, uint8_t* haystack, size_t haystackLen, uin
     return NULL;
 }
 
-uintptr_t get(size_t count, uintptr_t range_start, size_t range_size, const char* pattern_str, int32_t offset)
+uintptr_t range_get(size_t count, uintptr_t range_start, size_t range_size, const char* pattern_str, int32_t offset)
 {
     char str[strlen(pattern_str)];
     strcpy(str, pattern_str);
@@ -88,17 +94,35 @@ uintptr_t get(size_t count, uintptr_t range_start, size_t range_size, const char
     size_t len = strlen(pattern_str);
     uint8_t buf[len];
     uint8_t size = hextobin(pattern_str, buf, len, wc);
-    return bytes_find_nth(count, range_start, range_size, buf, size, wc) - pattern.base_addr + offset;
+    return bytes_find_nth(count, range_start, range_size, buf, size, wc) + offset;
 }
 
-uintptr_t get_first(uintptr_t range_start, size_t range_size, const char* pattern_str, int32_t offset)
+uintptr_t range_get_first(uintptr_t range_start, size_t range_size, const char* pattern_str, int32_t offset)
 {
-    return pattern.get(0, range_start, range_size, pattern_str, offset);
+    return range_pattern.get(0, range_start, range_size, pattern_str, offset);
 }
+
+uintptr_t get(size_t count, const char* pattern_str, int32_t offset)
+{
+    return range_pattern.get(count, pattern.text_addr, pattern.text_size, pattern_str, offset);
+}
+
+uintptr_t get_first(const char* pattern_str, int32_t offset)
+{
+    return range_pattern.get_first(pattern.text_addr, pattern.text_size, pattern_str, offset);
+}
+
+struct range_pattern_t range_pattern =
+{
+    .get = range_get,
+    .get_first = range_get_first
+};
 
 struct pattern_t pattern =
 {
-    .base_addr = 0,
+    .text_addr = 0,
+    .text_size = 0,
     .get = get,
-    .get_first = get_first
+    .get_first = get_first,
+    .SetGameBaseAddress = PatternSetGameBaseAddress
 };

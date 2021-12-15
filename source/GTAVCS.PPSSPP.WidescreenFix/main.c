@@ -22,18 +22,20 @@
 PSP_MODULE_INFO(MODULE_NAME, 0x1007, 1, 0);
 #endif
 
-SceKernelModuleInfo ModuleInfo;
-
 static const float fPSPResW = 480.0f;
 static const float fPSPResH = 272.0f;
 
 enum GtaPad {
-  PAD_LX = 1,
-  PAD_LY = 2,
-  PAD_RX = 3,
-  PAD_RY = 4,
-  PAD_RTRIGGER = 7,
-  PAD_CROSS = 21,
+    PAD_LX = 1,
+    PAD_LY = 2,
+    PAD_RX = 3,
+    PAD_RY = 4,
+    PAD_LTRIGGER = 5,
+    PAD_RTRIGGER = 7,
+    PAD_SQUARE = 19,
+    PAD_TRIANGLE = 20,
+    PAD_CROSS = 21,
+    PAD_CIRCLE = 22,
 };
 
 short vcsAcceleration(short* pad) {
@@ -45,6 +47,18 @@ short vcsAcceleration(short* pad) {
 short vcsAccelerationNormal(short* pad) {
     if (pad[77] == 0)
         return pad[PAD_CROSS];
+    return 0;
+}
+
+short vcsBrake(short* pad) {
+    if (pad[77] == 0)
+        return pad[PAD_LTRIGGER];
+    return 0;
+}
+
+short vcsBrakeNormal(short* pad) {
+    if (pad[77] == 0)
+        return pad[PAD_SQUARE];
     return 0;
 }
 
@@ -81,11 +95,34 @@ float adjustBottomRightY(float in, float scale)
     return in + (fBottomOffset - (scale * fBottomOffset));
 }
 
-int OnModuleStart(SceKernelModuleInfo* mod) {
-    injector.base_addr = mod->text_addr;
-    pattern.base_addr = mod->text_addr;
-    inireader.SetIniPath(INI_PATH);
-    logger.SetPath(LOG_PATH);
+int module_thread(SceSize args, void* argp)
+{
+    /*
+    SceCtrlData pad;
+    sceCtrlSetSamplingCycle(0);
+    sceCtrlSetSamplingMode(PSP_CTRL_MODE_DIGITAL);
+    while (1)
+    {
+        sceCtrlPeekBufferPositive(&pad, 1);
+        if (pad.Buttons & PSP_CTRL_SQUARE)
+        {
+            if (pad.Buttons & PSP_CTRL_CIRCLE)
+            {
+                sceKernelDelayThread(1000000 / 10);
+                //logger.Write("Hello World\n");
+            }
+        }
+        sceKernelDelayThread(1000);
+    }
+    sceKernelExitDeleteThread(0);
+    */
+    return 0;
+}
+
+int OnModuleStart() {
+    //SceUID thid = sceKernelCreateThread(MODULE_NAME, module_thread, 0, 0x10000, 0, NULL);
+    //if (thid >= 0)
+    //    sceKernelStartThread(thid, 0, 0);
 
     /*
     enum GameVersion
@@ -101,29 +138,31 @@ int OnModuleStart(SceKernelModuleInfo* mod) {
         gvm.init(ULES00502);
     }
 
-    // --> gv(0x123, 0x456)
+    // --> gv(0x123, 0x456);
     */
 
     char szForceAspectRatio[100];
     int SkipIntro = inireader.ReadInteger("MAIN", "SkipIntro", 1);
     int DualAnalogPatch = inireader.ReadInteger("MAIN", "DualAnalogPatch", 1);
-    int SwapRBCross = inireader.ReadInteger("MAIN", "SwapRBCross", 0);
     char* ForceAspectRatio = inireader.ReadString("MAIN", "ForceAspectRatio", "auto", szForceAspectRatio, sizeof(szForceAspectRatio));
     int Enable60FPS = inireader.ReadInteger("MAIN", "Enable60FPS", 0);
+
+    int SwapRBCross = inireader.ReadInteger("VEHICLECONTROLS", "SwapRBCross", 0);
+    int SwapLBSquare = inireader.ReadInteger("VEHICLECONTROLS", "SwapLBSquare", 0);
 
     float fHudScale = inireader.ReadFloat("HUD", "HudScale", 1.0f);
     float fRadarScale = inireader.ReadFloat("HUD", "RadarScale", 1.0f);
 
     if (SkipIntro)
     {
-        uintptr_t ptr = pattern.get_first(mod->text_addr, mod->text_size, "00 00 00 00 ? ? ? ? 00 00 00 00 ? ? 04 3C 25 28 00 00", -4);
+        uintptr_t ptr = pattern.get_first("00 00 00 00 ? ? ? ? 00 00 00 00 ? ? 04 3C 25 28 00 00", -4);
         injector.MakeNOP(ptr);
     }
 
     if (DualAnalogPatch)
     {
         // Implement right analog stick
-        uintptr_t ptr = pattern.get_first(mod->text_addr, mod->text_size, "06 00 00 10 03 00 A7 A3", 0);
+        uintptr_t ptr = pattern.get_first("06 00 00 10 03 00 A7 A3", 0);
         injector.WriteInstr(ptr + 0x24, 
             sh(a1, sp, 0)
         );
@@ -132,7 +171,7 @@ int OnModuleStart(SceKernelModuleInfo* mod) {
         );
 
         // Redirect camera movement
-        ptr = pattern.get_first(mod->text_addr, mod->text_size, "36 00 80 14 ? ? ? ? ? ? ? ? ? ? ? ? 16 00 40 10", 0);
+        ptr = pattern.get_first("36 00 80 14 ? ? ? ? ? ? ? ? ? ? ? ? 16 00 40 10", 0);
         injector.MakeNOP(ptr + 0x00);
         injector.WriteMemory8(ptr + 0x10 + 0x2, 0x00);  // beqz -> b
         injector.MakeJAL(ptr + 0x8C, (intptr_t)cameraX);
@@ -141,7 +180,7 @@ int OnModuleStart(SceKernelModuleInfo* mod) {
         injector.MakeJAL(ptr + 0x144, (intptr_t)cameraY);
 
         // Redirect gun aim movement
-        ptr = pattern.get_first(mod->text_addr, mod->text_size, "40 00 80 04 ? ? ? ? 3E 00 80 10", 0);
+        ptr = pattern.get_first("40 00 80 04 ? ? ? ? 3E 00 80 10", 0);
         injector.MakeJAL(ptr + 0x50, (intptr_t)aimX);
         injector.MakeJAL(ptr + 0x7C, (intptr_t)aimX);
         injector.MakeJAL(ptr + 0x8C, (intptr_t)aimX);
@@ -149,12 +188,12 @@ int OnModuleStart(SceKernelModuleInfo* mod) {
         injector.MakeJAL(ptr + 0x1BC, (intptr_t)aimY);
 
         // Allow using L trigger when walking
-        ptr = pattern.get_first(mod->text_addr, mod->text_size, "0E 00 80 14 ? ? ? ? ? ? ? ? ? ? ? ? 08 00 80 10 ? ? ? ? ? ? ? ? 03 00 80 04", 0);
+        ptr = pattern.get_first("0E 00 80 14 ? ? ? ? ? ? ? ? ? ? ? ? 08 00 80 10 ? ? ? ? ? ? ? ? 03 00 80 04", 0);
         injector.MakeNOP(ptr + 0x10);
         injector.MakeNOP(ptr + 0x9C);
 
         // Force L trigger value in the L+camera movement function
-        ptr = pattern.get_first(mod->text_addr, mod->text_size, "0A 00 C7 84", 0);
+        ptr = pattern.get_first("0A 00 C7 84", 0);
         injector.WriteInstr(ptr + 0x00,
             li(a3, -0x1)
         );
@@ -163,22 +202,80 @@ int OnModuleStart(SceKernelModuleInfo* mod) {
     if (SwapRBCross)
     {
         // Swap R trigger and cross button
-        uintptr_t ptr = pattern.get_first(mod->text_addr, mod->text_size, "9A 00 85 94 2B 28 05 00 FF 00 A5 30 03 00 A0 10 00 00 00 00 02 00 00 10 25 10 00 00 2A 00 82 84", 0);
+        uintptr_t ptr = pattern.get_first("9A 00 85 94 2B 28 05 00 FF 00 A5 30 03 00 A0 10 00 00 00 00 02 00 00 10 25 10 00 00 2A 00 82 84", 0);
         injector.MakeJMP(ptr, (intptr_t)vcsAcceleration);
         
         // Use normal button for flying plane
-        ptr = pattern.get_first(mod->text_addr, mod->text_size, "80 07 0E C6 02 63 0D 46 42 73 0D 46", 0);
+        ptr = pattern.get_first("80 07 0E C6 02 63 0D 46 42 73 0D 46", 0);
         injector.MakeJAL(ptr + 0x1C, (intptr_t)vcsAccelerationNormal);
         injector.MakeJAL(ptr + 0x3D0, (intptr_t)vcsAccelerationNormal);
 
         // Use normal button for flying helicoper
-        ptr = pattern.get_first(mod->text_addr, mod->text_size, "18 00 40 16 ? ? ? ? ? ? ? ? 25 20 20 02", 0);
+        ptr = pattern.get_first("18 00 40 16 ? ? ? ? ? ? ? ? 25 20 20 02", 0);
         injector.MakeJAL(ptr + 0x14, (intptr_t)vcsAccelerationNormal);
         
-        ptr = pattern.get_first(mod->text_addr, mod->text_size, "0C 00 80 14 ? ? ? ? ? ? ? ? ? ? ? ? 0A 00 A0 50", 0);
+        ptr = pattern.get_first("0C 00 80 14 ? ? ? ? ? ? ? ? ? ? ? ? 0A 00 A0 50", 0);
         injector.WriteMemory16(ptr + 0x20, PAD_RTRIGGER * 2);
         injector.WriteMemory16(ptr + 0x68, PAD_RTRIGGER * 2);
         injector.WriteMemory16(ptr + 0x80, PAD_CROSS * 2);
+    }
+
+    if (SwapLBSquare)
+    {
+        // Swap L trigger and square button
+        uintptr_t ptr_187918 = pattern.get(0, "26 00 05 86 ? ? ? ? 00 00 04 34", 0);
+        uintptr_t ptr_18886C = pattern.get(0, "0A 00 04 86 ? ? ? ? 00 00 00 00 ? ? ? ? 25 10 00 00", 0); // count = 3
+        uintptr_t ptr_188AC0 = pattern.get(1, "0A 00 04 86 ? ? ? ? 00 00 00 00 ? ? ? ? 25 10 00 00", 0);
+        uintptr_t ptr_188DAC = pattern.get(0, "0A 00 04 86 ? ? ? ? 00 00 00 00 ? ? ? ? 25 20 00 02", 0);
+        uintptr_t ptr_189140 = pattern.get(4, "9A 00 85 94 2B 28 05 00 FF 00 A5 30 ? ? ? ? 00 00 00 00", 0); // count = 15
+        uintptr_t ptr_189BB0 = pattern.get(2, "0A 00 04 86 ? ? ? ? 00 00 00 00 ? ? ? ? 25 10 00 00", 0);
+        uintptr_t ptr_189D60 = pattern.get(0, "0A 00 04 86 ? ? ? ? 00 00 11 34", 0);
+        uintptr_t ptr_18AAAC = pattern.get(0, "26 00 04 86 ? ? ? ? 00 00 00 00", 0);
+        uintptr_t ptr_18B560 = pattern.get(2, "0A 00 04 86 ? ? ? ? ? ? ? ? ? ? ? ? 00 00 00 00", 0); // count = 3
+
+        uintptr_t ptr_1D5E44 = pattern.get(0, "25 20 40 00 23 20 62 02 00 60 84 44 7F 43 04 3C", 4);
+        uintptr_t ptr_1D610C = pattern.get(0, "25 20 40 00 ? ? ? ? ? ? ? ? B3 3E 04 3C", 4);
+        uintptr_t ptr_1D6144 = pattern.get(0, "25 20 40 00 00 60 82 44 00 3F 04 3C", 4);
+        uintptr_t ptr_1D6174 = pattern.get(0, "25 20 40 00 00 60 82 44 ? ? ? ? 03 63 14 46", 4);
+        uintptr_t ptr_1D61C8 = pattern.get(0, "25 20 40 00 0A 00 44 28", 4); // count = 2
+        uintptr_t ptr_1EB2BC = pattern.get(0, "25 20 20 02 23 20 42 02", 4);
+
+
+        injector.MakeJMP(ptr_189140, (intptr_t)vcsBrake);
+        injector.WriteMemory16(ptr_189D60, PAD_SQUARE * 2);
+        //driveby
+        MakeInlineWrapper(ptr_18886C, 
+            lh(a0, s0, PAD_SQUARE * 2),
+            lh(k0, s0, PAD_CIRCLE * 2),
+            _or(a0, a0, k0)
+        );
+        MakeInlineWrapper(ptr_188AC0,
+            lh(a0, s0, PAD_SQUARE * 2),
+            lh(k0, s0, PAD_CIRCLE * 2),
+            _or(a0, a0, k0)
+        );
+        MakeInlineWrapper(ptr_188DAC,
+            lh(a0, s0, PAD_SQUARE * 2),
+            lh(k0, s0, PAD_CIRCLE * 2),
+            _or(a0, a0, k0)
+        );
+        injector.WriteMemory16(ptr_189BB0, PAD_SQUARE * 2);
+        injector.WriteMemory16(ptr_18B560, PAD_SQUARE * 2);
+        
+        injector.WriteMemory16(ptr_187918, PAD_LTRIGGER * 2);
+        injector.WriteMemory16(ptr_18AAAC, PAD_LTRIGGER * 2);
+
+        // Use normal button for flying plane
+        uintptr_t ptr = pattern.get_first("80 07 0E C6 02 63 0D 46 42 73 0D 46", 0);
+        injector.MakeJAL(0x1D5AE4 + 0x360, (intptr_t)vcsBrakeNormal);
+        injector.MakeJAL(0x1D5AE4 + 0x628, (intptr_t)vcsBrakeNormal);
+        injector.MakeJAL(0x1D5AE4 + 0x660, (intptr_t)vcsBrakeNormal);
+        injector.MakeJAL(0x1D5AE4 + 0x690, (intptr_t)vcsBrakeNormal);
+        injector.MakeJAL(0x1D5AE4 + 0x6E4, (intptr_t)vcsBrakeNormal);
+        
+        // Use normal button for flying helicoper
+        ptr = pattern.get_first("18 00 40 16 ? ? ? ? ? ? ? ? 25 20 20 02", 0);
+        injector.MakeJAL(0x1EB2BC, (intptr_t)vcsBrakeNormal);
     }
 
     if (strcmp(ForceAspectRatio, "auto") != 0)
@@ -189,96 +286,96 @@ int OnModuleStart(SceKernelModuleInfo* mod) {
         ch = strtok(NULL, ":");
         int y = str2int(ch, 10);
         float fAspectRatio = (float)x / (float)y;
-        uintptr_t ptr_130C4C = pattern.get(0, mod->text_addr, mod->text_size, "E3 3F 05 3C 39 8E A5 34 00 68 85 44 25 28 00 00", 4);
+        uintptr_t ptr_130C4C = pattern.get(0, "E3 3F 05 3C 39 8E A5 34 00 68 85 44 25 28 00 00", 4);
         injector.MakeInlineLUIORI(ptr_130C4C, fAspectRatio);
     }
 
     if (Enable60FPS)
     {
         //60 fps
-        uintptr_t ptr_2030C8 = pattern.get(0, mod->text_addr, mod->text_size, "02 00 84 2C ? ? ? ? 00 00 00 00 ? ? ? ? 00 00 00 00", 20);
+        uintptr_t ptr_2030C8 = pattern.get(0, "02 00 84 2C ? ? ? ? 00 00 00 00 ? ? ? ? 00 00 00 00", 20);
         injector.MakeNOP(ptr_2030C8);
     }
 
     if (fHudScale > 0.0f)
     {
         /* Patterns */
-        uintptr_t ptr_1B74C8 = pattern.get(0, mod->text_addr, mod->text_size, "B8 43 05 3C", 0);
-        uintptr_t ptr_1B7570 = pattern.get(0, mod->text_addr, mod->text_size, "E0 40 07 3C 06 A3 00 46", 0);
-        uintptr_t ptr_1B7594 = pattern.get(0, mod->text_addr, mod->text_size, "70 42 07 3C 06 A3 00 46", 0);
-        uintptr_t ptr_1B7C98 = pattern.get(0, mod->text_addr, mod->text_size, "8B 3F 04 3C 80 42 04 3C 06 D6 00 46", 0);
-        uintptr_t ptr_1B7CA8 = pattern.get(0, mod->text_addr, mod->text_size, "8B 3F 04 3C 1F 85 84 34 00 60 84 44", 0); // count = 2
-        uintptr_t ptr_1B7CB8 = pattern.get(0, mod->text_addr, mod->text_size, "B0 43 04 3C ? ? ? ? 28 42 05 3C", 0);
-        uintptr_t ptr_1B7CC0 = pattern.get(0, mod->text_addr, mod->text_size, "28 42 05 3C 68 42 06 3C", 0);
-        uintptr_t ptr_1B7CC4 = pattern.get(0, mod->text_addr, mod->text_size, "68 42 06 3C", 0);
-        uintptr_t ptr_1B7D40 = pattern.get(0, mod->text_addr, mod->text_size, "D2 43 05 3C 06 F3 00 46 48 E1 A5 34 46 A3 00 46", 0);
-        uintptr_t ptr_1B7EEC = pattern.get(0, mod->text_addr, mod->text_size, "A0 3F 04 3C ? ? ? ? 00 60 84 44 25 20 00 02 6A 01 05 34", 0); // count = 2
-        uintptr_t ptr_1B7EFC = pattern.get(0, mod->text_addr, mod->text_size, "6A 01 05 34 ? ? ? ? 23 00 06 34", 0);
-        uintptr_t ptr_1B7F04 = pattern.get(0, mod->text_addr, mod->text_size, "23 00 06 34 ? ? ? ? ? ? ? ? 40 3F 04 3C", 0);
-        uintptr_t ptr_1B7F10 = pattern.get(0, mod->text_addr, mod->text_size, "40 3F 04 3C ? ? ? ? 00 60 84 44 25 20 00 02 6E 01 05 34", 0); // count = 2
-        uintptr_t ptr_1B7F20 = pattern.get(0, mod->text_addr, mod->text_size, "6E 01 05 34 ? ? ? ? 28 00 06 34", 0);
-        uintptr_t ptr_1B7F28 = pattern.get(0, mod->text_addr, mod->text_size, "6E 01 05 34 ? ? ? ? 28 00 06 34", 8); 
-        uintptr_t ptr_1B8A18 = pattern.get(0, mod->text_addr, mod->text_size, "D8 41 05 3C", 0);
-        uintptr_t ptr_1B8A1C = pattern.get(0, mod->text_addr, mod->text_size, "A0 42 06 3C ? ? ? ? D0 41 07 3C", 0);
-        uintptr_t ptr_1B8A24 = pattern.get(0, mod->text_addr, mod->text_size, "D0 41 07 3C 3A 43 08 3C", 0);
-        uintptr_t ptr_1B8A28 = pattern.get(0, mod->text_addr, mod->text_size, "3A 43 08 3C", 0);
-        uintptr_t ptr_1B8AF0 = pattern.get(0, mod->text_addr, mod->text_size, "4C 3F 04 3C 02 63 18 46", 0);
-        uintptr_t ptr_1B8B5C = pattern.get(0, mod->text_addr, mod->text_size, "24 42 05 3C 02 63 18 46", 0);
-        uintptr_t ptr_1B8B6C = pattern.get(0, mod->text_addr, mod->text_size, "20 42 06 3C 48 00 04 34", 0);
-        uintptr_t ptr_1B8B90 = pattern.get(0, mod->text_addr, mod->text_size, "F8 41 07 3C", 0);
-        uintptr_t ptr_1B8B94 = pattern.get(0, mod->text_addr, mod->text_size, "29 43 08 3C", 0);
-        uintptr_t ptr_1B8B98 = pattern.get(0, mod->text_addr, mod->text_size, "50 42 09 3C", 0);
-        uintptr_t ptr_1B8BB4 = pattern.get(0, mod->text_addr, mod->text_size, "1C 42 05 3C", 0);
-        uintptr_t ptr_1B96F8 = pattern.get(0, mod->text_addr, mod->text_size, "B8 43 07 3C", 0);
-        uintptr_t ptr_1B9708 = pattern.get(0, mod->text_addr, mod->text_size, "00 41 07 3C 25 28 A0 03", 0);
-        uintptr_t ptr_1B97A8 = pattern.get(0, mod->text_addr, mod->text_size, "50 41 04 3C ? ? ? ? 00 B0 84 44", 0);
-        uintptr_t ptr_1B992C = pattern.get(0, mod->text_addr, mod->text_size, "80 41 04 3C 00 78 84 44 25 20 A0 02", 0);
-        uintptr_t ptr_1B9B00 = pattern.get(0, mod->text_addr, mod->text_size, "E2 43 04 3C", 0);
-        uintptr_t ptr_1B9B0C = pattern.get(0, mod->text_addr, mod->text_size, "9A 42 04 3C", 0);
-        uintptr_t ptr_1B9B18 = pattern.get(0, mod->text_addr, mod->text_size, "88 41 04 3C 00 A0 84 44", 0);
-        uintptr_t ptr_1B9DB8 = pattern.get(0, mod->text_addr, mod->text_size, "B0 43 05 3C ? ? ? ? ? ? ? ? B0 43 05 3C 04 00 05 34", 0);
-        uintptr_t ptr_1B9DC4 = pattern.get(0, mod->text_addr, mod->text_size, "B0 43 05 3C 04 00 05 34", 0);
-        uintptr_t ptr_1B9DD0 = pattern.get(0, mod->text_addr, mod->text_size, "B0 43 05 3C 02 00 04 34", 0);
-        uintptr_t ptr_1B9DF8 = pattern.get(0, mod->text_addr, mod->text_size, "B0 43 05 3C 03 00 04 34", 0);
-        uintptr_t ptr_1B9E04 = pattern.get(0, mod->text_addr, mod->text_size, "B0 43 05 3C 00 60 85 44", 0);
-        uintptr_t ptr_1B9E10 = pattern.get(0, mod->text_addr, mod->text_size, "24 42 05 3C 00 68 85 44", 0);
-        uintptr_t ptr_1B9E18 = pattern.get(0, mod->text_addr, mod->text_size, "D0 43 05 3C", 0);
-        uintptr_t ptr_1B9E20 = pattern.get(0, mod->text_addr, mod->text_size, "C8 41 05 3C ? ? ? ? 00 78 85 44", 0);
-        uintptr_t ptr_1BB728 = pattern.get(0, mod->text_addr, mod->text_size, "8B 3F 04 3C 80 42 04 3C 86 A6 00 46", 0);
-        uintptr_t ptr_1BB738 = pattern.get(1, mod->text_addr, mod->text_size, "8B 3F 04 3C 1F 85 84 34 00 60 84 44", 0);
-        uintptr_t ptr_1BB748 = pattern.get(0, mod->text_addr, mod->text_size, "B0 43 04 3C ? ? ? ? C8 41 05 3C", 0);
-        uintptr_t ptr_1BB750 = pattern.get(0, mod->text_addr, mod->text_size, "C8 41 05 3C 24 42 06 3C", 0);
-        uintptr_t ptr_1BB754 = pattern.get(0, mod->text_addr, mod->text_size, "24 42 06 3C", 0);
-        uintptr_t ptr_1BB7D0 = pattern.get(0, mod->text_addr, mod->text_size, "D2 43 05 3C 06 F3 00 46 48 E1 A5 34 46 B3 00 46", 0);
-        uintptr_t ptr_1BB97C = pattern.get(1, mod->text_addr, mod->text_size, "A0 3F 04 3C ? ? ? ? 00 60 84 44 25 20 00 02 6A 01 05 34", 0);
-        uintptr_t ptr_1BB98C = pattern.get(0, mod->text_addr, mod->text_size, "6A 01 05 34 ? ? ? ? 12 00 06 34", 0);
-        uintptr_t ptr_1BB994 = pattern.get(0, mod->text_addr, mod->text_size, "12 00 06 34 ? ? ? ? ? ? ? ? 40 3F 04 3C", 0);
-        uintptr_t ptr_1BB9A0 = pattern.get(1, mod->text_addr, mod->text_size, "40 3F 04 3C ? ? ? ? 00 60 84 44 25 20 00 02 6E 01 05 34", 0);
-        uintptr_t ptr_1BB9B0 = pattern.get(0, mod->text_addr, mod->text_size, "6E 01 05 34 ? ? ? ? 17 00 06 34", 0);
-        uintptr_t ptr_1BB9B8 = pattern.get(0, mod->text_addr, mod->text_size, "6E 01 05 34 ? ? ? ? 17 00 06 34", 8);
-        uintptr_t ptr_1C0EF8 = pattern.get(0, mod->text_addr, mod->text_size, "99 3F 04 3C 9A 99 84 34 ? ? ? ? 00 60 84 44 FF 00 04 34", 0);
-        uintptr_t ptr_1C0F24 = pattern.get(0, mod->text_addr, mod->text_size, "ED 43 04 3C 00 80 84 34 00 B0 84 44 52 43 04 3C", 0);
-        uintptr_t ptr_1C0F30 = pattern.get(0, mod->text_addr, mod->text_size, "52 43 04 3C ? ? ? ? 00 C0 84 44", 0);
-        uintptr_t ptr_1C1274 = pattern.get(0, mod->text_addr, mod->text_size, "E3 43 04 3C", 0);
-        uintptr_t ptr_1C1280 = pattern.get(0, mod->text_addr, mod->text_size, "04 42 05 3C", 0);
-        uintptr_t ptr_1C1284 = pattern.get(0, mod->text_addr, mod->text_size, "1C 42 04 3C", 0);
-        uintptr_t ptr_1C128C = pattern.get(0, mod->text_addr, mod->text_size, "00 42 06 3C 00 68 84 44", 0);
-        uintptr_t ptr_1C1304 = pattern.get(0, mod->text_addr, mod->text_size, "D3 43 05 3C 00 60 85 44", 0);
-        uintptr_t ptr_1C1310 = pattern.get(0, mod->text_addr, mod->text_size, "E0 40 05 3C 00 68 85 44 25 20 A0 02", 0);
-        uintptr_t ptr_1C131C = pattern.get(0, mod->text_addr, mod->text_size, "F4 43 05 3C", 0);
-        uintptr_t ptr_1C1324 = pattern.get(0, mod->text_addr, mod->text_size, "8E 42 05 3C", 0);
-        uintptr_t ptr_1C13B8 = pattern.get(0, mod->text_addr, mod->text_size, "D4 3E 04 3C", 0);
-        uintptr_t ptr_1C14DC = pattern.get(0, mod->text_addr, mod->text_size, "EC 43 05 3C", 0);
-        uintptr_t ptr_1C14E8 = pattern.get(0, mod->text_addr, mod->text_size, "34 42 06 3C 6C 42 05 3C", 0);
-        uintptr_t ptr_1C14EC = pattern.get(0, mod->text_addr, mod->text_size, "6C 42 05 3C", 0);
-        uintptr_t ptr_1C162C = pattern.get(0, mod->text_addr, mod->text_size, "E0 43 05 3C", 0);
-        uintptr_t ptr_1C1644 = pattern.get(0, mod->text_addr, mod->text_size, "D4 43 05 3C 86 D3 00 46", 0);
-        uintptr_t ptr_1C1688 = pattern.get(0, mod->text_addr, mod->text_size, "E3 43 05 3C 06 D3 00 46", 0);
-        uintptr_t ptr_1C1744 = pattern.get(0, mod->text_addr, mod->text_size, "D3 43 05 3C 46 A3 00 46", 0);
-        uintptr_t ptr_1C1C30 = pattern.get(3, mod->text_addr, mod->text_size, "99 3F 04 3C 9A 99 84 34 ? ? ? ? 00 60 84 44", 0); // count = 4
-        uintptr_t ptr_1C1C7C = pattern.get(0, mod->text_addr, mod->text_size, "ED 43 04 3C 00 80 84 34 00 A0 84 44", 0);
-        uintptr_t ptr_1C1C88 = pattern.get(0, mod->text_addr, mod->text_size, "6A 43 04 3C", 0);
-        uintptr_t ptr_2ABCBC = pattern.get(0, mod->text_addr, mod->text_size, "8B 3F 04 3C 1F 85 84 34 ? ? ? ? 02 E3 0C 46", 0);
+        uintptr_t ptr_1B74C8 = pattern.get(0, "B8 43 05 3C", 0);
+        uintptr_t ptr_1B7570 = pattern.get(0, "E0 40 07 3C 06 A3 00 46", 0);
+        uintptr_t ptr_1B7594 = pattern.get(0, "70 42 07 3C 06 A3 00 46", 0);
+        uintptr_t ptr_1B7C98 = pattern.get(0, "8B 3F 04 3C 80 42 04 3C 06 D6 00 46", 0);
+        uintptr_t ptr_1B7CA8 = pattern.get(0, "8B 3F 04 3C 1F 85 84 34 00 60 84 44", 0); // count = 2
+        uintptr_t ptr_1B7CB8 = pattern.get(0, "B0 43 04 3C ? ? ? ? 28 42 05 3C", 0);
+        uintptr_t ptr_1B7CC0 = pattern.get(0, "28 42 05 3C 68 42 06 3C", 0);
+        uintptr_t ptr_1B7CC4 = pattern.get(0, "68 42 06 3C", 0);
+        uintptr_t ptr_1B7D40 = pattern.get(0, "D2 43 05 3C 06 F3 00 46 48 E1 A5 34 46 A3 00 46", 0);
+        uintptr_t ptr_1B7EEC = pattern.get(0, "A0 3F 04 3C ? ? ? ? 00 60 84 44 25 20 00 02 6A 01 05 34", 0); // count = 2
+        uintptr_t ptr_1B7EFC = pattern.get(0, "6A 01 05 34 ? ? ? ? 23 00 06 34", 0);
+        uintptr_t ptr_1B7F04 = pattern.get(0, "23 00 06 34 ? ? ? ? ? ? ? ? 40 3F 04 3C", 0);
+        uintptr_t ptr_1B7F10 = pattern.get(0, "40 3F 04 3C ? ? ? ? 00 60 84 44 25 20 00 02 6E 01 05 34", 0); // count = 2
+        uintptr_t ptr_1B7F20 = pattern.get(0, "6E 01 05 34 ? ? ? ? 28 00 06 34", 0);
+        uintptr_t ptr_1B7F28 = pattern.get(0, "6E 01 05 34 ? ? ? ? 28 00 06 34", 8); 
+        uintptr_t ptr_1B8A18 = pattern.get(0, "D8 41 05 3C", 0);
+        uintptr_t ptr_1B8A1C = pattern.get(0, "A0 42 06 3C ? ? ? ? D0 41 07 3C", 0);
+        uintptr_t ptr_1B8A24 = pattern.get(0, "D0 41 07 3C 3A 43 08 3C", 0);
+        uintptr_t ptr_1B8A28 = pattern.get(0, "3A 43 08 3C", 0);
+        uintptr_t ptr_1B8AF0 = pattern.get(0, "4C 3F 04 3C 02 63 18 46", 0);
+        uintptr_t ptr_1B8B5C = pattern.get(0, "24 42 05 3C 02 63 18 46", 0);
+        uintptr_t ptr_1B8B6C = pattern.get(0, "20 42 06 3C 48 00 04 34", 0);
+        uintptr_t ptr_1B8B90 = pattern.get(0, "F8 41 07 3C", 0);
+        uintptr_t ptr_1B8B94 = pattern.get(0, "29 43 08 3C", 0);
+        uintptr_t ptr_1B8B98 = pattern.get(0, "50 42 09 3C", 0);
+        uintptr_t ptr_1B8BB4 = pattern.get(0, "1C 42 05 3C", 0);
+        uintptr_t ptr_1B96F8 = pattern.get(0, "B8 43 07 3C", 0);
+        uintptr_t ptr_1B9708 = pattern.get(0, "00 41 07 3C 25 28 A0 03", 0);
+        uintptr_t ptr_1B97A8 = pattern.get(0, "50 41 04 3C ? ? ? ? 00 B0 84 44", 0);
+        uintptr_t ptr_1B992C = pattern.get(0, "80 41 04 3C 00 78 84 44 25 20 A0 02", 0);
+        uintptr_t ptr_1B9B00 = pattern.get(0, "E2 43 04 3C", 0);
+        uintptr_t ptr_1B9B0C = pattern.get(0, "9A 42 04 3C", 0);
+        uintptr_t ptr_1B9B18 = pattern.get(0, "88 41 04 3C 00 A0 84 44", 0);
+        uintptr_t ptr_1B9DB8 = pattern.get(0, "B0 43 05 3C ? ? ? ? ? ? ? ? B0 43 05 3C 04 00 05 34", 0);
+        uintptr_t ptr_1B9DC4 = pattern.get(0, "B0 43 05 3C 04 00 05 34", 0);
+        uintptr_t ptr_1B9DD0 = pattern.get(0, "B0 43 05 3C 02 00 04 34", 0);
+        uintptr_t ptr_1B9DF8 = pattern.get(0, "B0 43 05 3C 03 00 04 34", 0);
+        uintptr_t ptr_1B9E04 = pattern.get(0, "B0 43 05 3C 00 60 85 44", 0);
+        uintptr_t ptr_1B9E10 = pattern.get(0, "24 42 05 3C 00 68 85 44", 0);
+        uintptr_t ptr_1B9E18 = pattern.get(0, "D0 43 05 3C", 0);
+        uintptr_t ptr_1B9E20 = pattern.get(0, "C8 41 05 3C ? ? ? ? 00 78 85 44", 0);
+        uintptr_t ptr_1BB728 = pattern.get(0, "8B 3F 04 3C 80 42 04 3C 86 A6 00 46", 0);
+        uintptr_t ptr_1BB738 = pattern.get(1, "8B 3F 04 3C 1F 85 84 34 00 60 84 44", 0);
+        uintptr_t ptr_1BB748 = pattern.get(0, "B0 43 04 3C ? ? ? ? C8 41 05 3C", 0);
+        uintptr_t ptr_1BB750 = pattern.get(0, "C8 41 05 3C 24 42 06 3C", 0);
+        uintptr_t ptr_1BB754 = pattern.get(0, "24 42 06 3C", 0);
+        uintptr_t ptr_1BB7D0 = pattern.get(0, "D2 43 05 3C 06 F3 00 46 48 E1 A5 34 46 B3 00 46", 0);
+        uintptr_t ptr_1BB97C = pattern.get(1, "A0 3F 04 3C ? ? ? ? 00 60 84 44 25 20 00 02 6A 01 05 34", 0);
+        uintptr_t ptr_1BB98C = pattern.get(0, "6A 01 05 34 ? ? ? ? 12 00 06 34", 0);
+        uintptr_t ptr_1BB994 = pattern.get(0, "12 00 06 34 ? ? ? ? ? ? ? ? 40 3F 04 3C", 0);
+        uintptr_t ptr_1BB9A0 = pattern.get(1, "40 3F 04 3C ? ? ? ? 00 60 84 44 25 20 00 02 6E 01 05 34", 0);
+        uintptr_t ptr_1BB9B0 = pattern.get(0, "6E 01 05 34 ? ? ? ? 17 00 06 34", 0);
+        uintptr_t ptr_1BB9B8 = pattern.get(0, "6E 01 05 34 ? ? ? ? 17 00 06 34", 8);
+        uintptr_t ptr_1C0EF8 = pattern.get(0, "99 3F 04 3C 9A 99 84 34 ? ? ? ? 00 60 84 44 FF 00 04 34", 0);
+        uintptr_t ptr_1C0F24 = pattern.get(0, "ED 43 04 3C 00 80 84 34 00 B0 84 44 52 43 04 3C", 0);
+        uintptr_t ptr_1C0F30 = pattern.get(0, "52 43 04 3C ? ? ? ? 00 C0 84 44", 0);
+        uintptr_t ptr_1C1274 = pattern.get(0, "E3 43 04 3C", 0);
+        uintptr_t ptr_1C1280 = pattern.get(0, "04 42 05 3C", 0);
+        uintptr_t ptr_1C1284 = pattern.get(0, "1C 42 04 3C", 0);
+        uintptr_t ptr_1C128C = pattern.get(0, "00 42 06 3C 00 68 84 44", 0);
+        uintptr_t ptr_1C1304 = pattern.get(0, "D3 43 05 3C 00 60 85 44", 0);
+        uintptr_t ptr_1C1310 = pattern.get(0, "E0 40 05 3C 00 68 85 44 25 20 A0 02", 0);
+        uintptr_t ptr_1C131C = pattern.get(0, "F4 43 05 3C", 0);
+        uintptr_t ptr_1C1324 = pattern.get(0, "8E 42 05 3C", 0);
+        uintptr_t ptr_1C13B8 = pattern.get(0, "D4 3E 04 3C", 0);
+        uintptr_t ptr_1C14DC = pattern.get(0, "EC 43 05 3C", 0);
+        uintptr_t ptr_1C14E8 = pattern.get(0, "34 42 06 3C 6C 42 05 3C", 0);
+        uintptr_t ptr_1C14EC = pattern.get(0, "6C 42 05 3C", 0);
+        uintptr_t ptr_1C162C = pattern.get(0, "E0 43 05 3C", 0);
+        uintptr_t ptr_1C1644 = pattern.get(0, "D4 43 05 3C 86 D3 00 46", 0);
+        uintptr_t ptr_1C1688 = pattern.get(0, "E3 43 05 3C 06 D3 00 46", 0);
+        uintptr_t ptr_1C1744 = pattern.get(0, "D3 43 05 3C 46 A3 00 46", 0);
+        uintptr_t ptr_1C1C30 = pattern.get(3, "99 3F 04 3C 9A 99 84 34 ? ? ? ? 00 60 84 44", 0); // count = 4
+        uintptr_t ptr_1C1C7C = pattern.get(0, "ED 43 04 3C 00 80 84 34 00 A0 84 44", 0);
+        uintptr_t ptr_1C1C88 = pattern.get(0, "6A 43 04 3C", 0);
+        uintptr_t ptr_2ABCBC = pattern.get(0, "8B 3F 04 3C 1F 85 84 34 ? ? ? ? 02 E3 0C 46", 0);
 
 
         /* Health bar */
@@ -385,13 +482,13 @@ int OnModuleStart(SceKernelModuleInfo* mod) {
     if (fRadarScale > 0.0f)
     {
         /* Radar */
-        uintptr_t ptr_1B6A8C = pattern.get(0, mod->text_addr, mod->text_size, "40 41 05 3C ? ? ? ? 00 00 85 44", 0);
-        uintptr_t ptr_1B6AB4 = pattern.get(0, mod->text_addr, mod->text_size, "2A 43 04 3C ? ? ? ? 00 00 84 44", 0);
-        uintptr_t ptr_1B6AC0 = pattern.get(0, mod->text_addr, mod->text_size, "44 43 04 3C 00 00 84 44", 0);
-        uintptr_t ptr_1B6ADC = pattern.get(0, mod->text_addr, mod->text_size, "B8 42 04 3C ? ? ? ? 00 00 84 44", 0); // count = 2
-        uintptr_t ptr_1B6AE8 = pattern.get(0, mod->text_addr, mod->text_size, "83 42 04 3C 9A 99 84 34 00 00 84 44", 0); // count = 2
-        uintptr_t ptr_1B6B08 = pattern.get(1, mod->text_addr, mod->text_size, "B8 42 04 3C ? ? ? ? 00 00 84 44", 0);
-        uintptr_t ptr_1B6B14 = pattern.get(1, mod->text_addr, mod->text_size, "83 42 04 3C 9A 99 84 34 00 00 84 44", 0);
+        uintptr_t ptr_1B6A8C = pattern.get(0, "40 41 05 3C ? ? ? ? 00 00 85 44", 0);
+        uintptr_t ptr_1B6AB4 = pattern.get(0, "2A 43 04 3C ? ? ? ? 00 00 84 44", 0);
+        uintptr_t ptr_1B6AC0 = pattern.get(0, "44 43 04 3C 00 00 84 44", 0);
+        uintptr_t ptr_1B6ADC = pattern.get(0, "B8 42 04 3C ? ? ? ? 00 00 84 44", 0); // count = 2
+        uintptr_t ptr_1B6AE8 = pattern.get(0, "83 42 04 3C 9A 99 84 34 00 00 84 44", 0); // count = 2
+        uintptr_t ptr_1B6B08 = pattern.get(1, "B8 42 04 3C ? ? ? ? 00 00 84 44", 0);
+        uintptr_t ptr_1B6B14 = pattern.get(1, "83 42 04 3C 9A 99 84 34 00 00 84 44", 0);
 
         injector.MakeInlineLUIORI(ptr_1B6A8C, fRadarScale * 12.0f);  // Left X
         injector.MakeInlineLUIORI(ptr_1B6AC0, adjustBottomRightY(196.0f, fRadarScale)); // Top Y
@@ -408,34 +505,11 @@ int OnModuleStart(SceKernelModuleInfo* mod) {
     return 0;
 }
 
-int module_thread(SceSize args, void* argp)
-{
-    /*
-    SceCtrlData pad;
-    sceCtrlSetSamplingCycle(0);
-    sceCtrlSetSamplingMode(PSP_CTRL_MODE_DIGITAL);
-    while (1)
-    {
-        sceCtrlPeekBufferPositive(&pad, 1);
-        if (pad.Buttons & PSP_CTRL_SQUARE)
-        {
-            if (pad.Buttons & PSP_CTRL_CIRCLE)
-            {
-                sceKernelDelayThread(1000000 / 10);
-                //logger.Write("Hello World\n");
-            }
-        }
-        sceKernelDelayThread(1000);
-    }
-    sceKernelExitDeleteThread(0);
-    */
-    return 0;
-}
-
 int module_start(SceSize args, void* argp) {
     if (sceIoDevctl("kemulator:", 0x00000003, NULL, 0, NULL, 0) == 0) {
         SceUID modules[10];
         int count = 0;
+        int result = 0;
         if (sceKernelGetModuleIdList(modules, sizeof(modules), &count) >= 0) {
             int i;
             SceKernelModuleInfo info;
@@ -447,13 +521,20 @@ int module_start(SceSize args, void* argp) {
 
                 if (strcmp(info.name, MODULE_NAME_INTERNAL) == 0)
                 {
-                    ModuleInfo = info;
-                    OnModuleStart(&ModuleInfo);
-                    SceUID thid = sceKernelCreateThread(MODULE_NAME, module_thread, 0, 0x10000, 0, NULL);
-                    if (thid >= 0)
-                        sceKernelStartThread(thid, 0, argp);
+                    injector.SetGameBaseAddress(info.text_addr, info.text_size);
+                    pattern.SetGameBaseAddress(info.text_addr, info.text_size);
+                    inireader.SetIniPath(INI_PATH);
+                    logger.SetPath(LOG_PATH);
+                    result = 1;
+                }
+                else if (strcmp(info.name, MODULE_NAME) == 0)
+                {
+                    injector.SetModuleBaseAddress(info.text_addr, info.text_size);
                 }
             }
+
+            if (result)
+                OnModuleStart();
         }
     }
     return 0;
