@@ -35,10 +35,10 @@ textures/**/*.txd
 !data/SplinterCellDoubleAgent.WidescreenFix/SCDA-Offline/System/d3d9.dll
 
 #PSP
-data/GTAVCS.PPSSPP.WidescreenFix/**/*.elf
-data/GTAVCS.PPSSPP.WidescreenFix/**/*.prx
-source/GTAVCS.PPSSPP.WidescreenFix/**/*.o
-source/GTAVCS.PPSSPP.WidescreenFix/OBJS
+data/*.PPSSPP.*/**/*.elf
+data/*.PPSSPP.*/**/*.prx
+source/*.PPSSPP.*/**/*.o
+source/*.PPSSPP.*/**/OBJS
 includes/psp/**/*.o
 
 ## Ignore Visual Studio temporary files, build results, and

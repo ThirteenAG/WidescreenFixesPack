@@ -260,6 +260,16 @@ project "GTAVCS.PCSX2.WidescreenFix"
       setpaths("Z:/WFP/Games/PCSX2/", "pcsx2.exe")
       files { "includes/pcsx2/pcsx2.h" }
       writeghaction("gtavcs", "GTAVCS.PCSX2.WidescreenFix")
+project "GTALCS.PPSSPP.WidescreenFix"
+   kind "Makefile"
+   includedirs { "external/pspsdk/psp/sdk/include" }
+   includedirs { "external/pspsdk/bin" }
+   includedirs { "external/pspsdk/psp/sdk/include" }
+   files { "source/%{prj.name}/*.c" }
+   targetextension ".prx"
+   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTALCS.PPSSPP.WidescreenFix/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PPSSPP.WidescreenFix")
+   writemakefile("GTALCS.PPSSPP.WidescreenFix")
+   writeghaction("gtavcspsp", "GTALCS.PPSSPP.WidescreenFix")
 project "GTAVCS.PPSSPP.WidescreenFix"
    kind "Makefile"
    includedirs { "external/pspsdk/psp/sdk/include" }
