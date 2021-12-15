@@ -288,7 +288,7 @@ void Init()
         static float hor3DScale = 1.0f / (Screen.fAspectRatio / (4.0f / 3.0f));
         static float ver3DScale = 1.0f; // don't touch this
         static float mirrorScale = 0.45f;
-        static float f129 = 1.29f;
+        static float f129 = 1.28f;
         static float f04525 = 0.4525f;
         static float f1 = 1.0f; // horizontal for vehicle reflection
         static float flt1 = 0.0f;
