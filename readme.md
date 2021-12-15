@@ -14,8 +14,9 @@
 [![GitHub top language](https://img.shields.io/github/languages/top/ThirteenAG/WidescreenFixesPack?color=blue)](https://github.com/ThirteenAG/WidescreenFixesPack/search?l=c%2B%2B)
 
 [![Platforms](https://img.shields.io/badge/platforms-grey)](https://github.com/ThirteenAG/WidescreenFixesPack/releases)
-[![WINDOWS](https://img.shields.io/badge/WINDOWS-0078D4)](https://github.com/ThirteenAG/WidescreenFixesPack/releases?q=NOT+CXBXR+NOT+PCSX2&expanded=true)
+[![WINDOWS](https://img.shields.io/badge/WINDOWS-0078D4)](https://github.com/ThirteenAG/WidescreenFixesPack/releases?q=NOT+CXBXR+NOT+PCSX2+NOT+PPSSPP&expanded=true)
 [![PCSX2](https://img.shields.io/badge/PCSX2-0271A6)](https://github.com/ThirteenAG/WidescreenFixesPack/releases?q=PCSX2&expanded=true)
+[![PPSSPP](https://img.shields.io/badge/PPSSPP-33b5e5)](https://github.com/ThirteenAG/WidescreenFixesPack/releases?q=PPSSPP&expanded=true)
 [![CXBXR](https://img.shields.io/badge/CXBXR-96CE49)](https://github.com/ThirteenAG/WidescreenFixesPack/releases?q=CXBXR&expanded=true)
 
 [![Downloads](https://img.shields.io/github/downloads/ThirteenAG/WidescreenFixesPack/total?color=red)](https://github.com/ThirteenAG/WidescreenFixesPack/releases/)
@@ -413,7 +414,7 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 
 [Download](http://thirteenag.github.io/wfp#gtalcs)
 |
-[Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/GTALCS.PCSX2.WidescreenFix.WidescreenFix/dllmain.cpp)
+[Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/GTALCS.PCSX2.WidescreenFix/dllmain.cpp)
 
 ## Grand Theft Auto Vice City Stories Widescreen Fix [PCSX2]
 
@@ -429,7 +430,47 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 
 [Download](http://thirteenag.github.io/wfp#gtavcs)
 |
-[Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/GTAVCS.PCSX2.WidescreenFix.WidescreenFix/dllmain.cpp)
+[Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/GTAVCS.PCSX2.WidescreenFix/dllmain.cpp)
+
+## Grand Theft Auto Liberty City Stories Widescreen Fix [PPSSPP]
+
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to resize HUD
+
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to enable dual analog patch
+
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to swap L-button and Square (in vehicle)
+
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to swap R-button and Cross (in vehicle)
+
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to enable 60 fps
+
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Plugin automatically skips intro
+
+[Download](http://thirteenag.github.io/wfp#gtalcspsp)
+|
+[Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/GTALCS.PPSSPP.WidescreenFix/main.c)
+|
+[Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/GTALCS.PPSSPP.WidescreenFix/memstick/PSP/PLUGINS/GTALCS.PPSSPP.WidescreenFix/GTALCS.PPSSPP.WidescreenFix.ini)
+
+## Grand Theft Auto Vice City Stories Widescreen Fix [PPSSPP]
+
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to resize HUD
+
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to enable dual analog patch
+
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to swap L-button and Square (in vehicle)
+
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to swap R-button and Cross (in vehicle)
+
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to enable 60 fps
+
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Plugin automatically skips intro
+
+[Download](http://thirteenag.github.io/wfp#gtavcspsp)
+|
+[Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/GTAVCS.PPSSPP.WidescreenFix/main.c)
+|
+[Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/GTAVCS.PPSSPP.WidescreenFix/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/GTAVCS.PPSSPP.WidescreenFix.ini)
 
 ## Gun Widescreen Fix
 
@@ -1152,6 +1193,12 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 ![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed FMVs
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to change goggles' light color
+
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to disable Alt+Tab fix
+
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to adjust the offsets depending on game language
+
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to adjust shadow map size and shadow filtering
 
 [Download](http://thirteenag.github.io/wfp#scct)
 |

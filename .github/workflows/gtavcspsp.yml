@@ -1,0 +1,11 @@
+name: gtavcspsp
+
+on:
+  workflow_dispatch:
+
+jobs:
+  call-workflow-passing-data:
+    uses: ThirteenAG/WidescreenFixesPack/.github/workflows/all.yml@master
+    with:
+      tag_list: gtavcspsp
+      project: /t:GTAVCS_PPSSPP_WidescreenFix
