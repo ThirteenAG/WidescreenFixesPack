@@ -156,9 +156,8 @@ void Init()
 
     bool bFixAspectRatio = iniReader.ReadInteger("MAIN", "FixAspectRatio", 1) != 0;
     static int32_t nScaling = iniReader.ReadInteger("MAIN", "Scaling", 1);
-    bool bHUDWidescreenMode = iniReader.ReadInteger("MAIN", "HUDWidescreenMode", 1) != 0;
     bool bFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1) != 0;
-    bool bConsoleHUDSize = iniReader.ReadInteger("MAIN", "ConsoleHUDSize", 1) != 0;
+    bool bConsoleHUDSize = iniReader.ReadInteger("MAIN", "ConsoleHUDSize", 0) != 0;
     bool bGammaFix = iniReader.ReadInteger("MISC", "GammaFix", 1) != 0;
     bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 0) != 0;
     static int32_t nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
@@ -167,7 +166,7 @@ void Init()
     bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 0) != 0;
     bool bDisableMotionBlur = iniReader.ReadInteger("MISC", "DisableMotionBlur", 0) != 0;
     bool bBrakeLightFix = iniReader.ReadInteger("MISC", "BrakeLightFix", 1) != 0;
-    static int32_t nShadowRes = iniReader.ReadInteger("MISC", "ShadowRes", 0);
+    static int32_t nShadowRes = iniReader.ReadInteger("MISC", "ShadowRes", 2048);
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
         szCustomUserFilesDirectoryInGameDir.clear();
@@ -349,15 +348,30 @@ void Init()
 
     //if (bHUDWidescreenMode)
     {
-        static int WidescreenMode = bHUDWidescreenMode;
+        // Real-Time Aspect Ratio Calculation
+        static uint32_t* dword_BBADB4 = *hook::pattern("C7 05 ? ? ? ? 03 00 00 00 89 3D  ? ? ? ? 89 3D").get(0).get<uint32_t*>(35); // ResX
+        static uint32_t* dword_BBADB8 = *hook::pattern("C7 05 ? ? ? ? 03 00 00 00 89 3D  ? ? ? ? 89 3D").get(0).get<uint32_t*>(41); // ResY
+        static float fScreenAspectRatio;
 
         auto pattern = hook::pattern("0F B6 C0 89 01 B0 01");
         struct HUDWidescreenModeHook
         {
             void operator()(injector::reg_pack& regs)
             {
-                regs.eax = WidescreenMode;
-                *(int*)(regs.ecx) = regs.eax;
+                auto ResX = *(float*)(dword_BBADB4);
+                auto ResY = *(float*)(dword_BBADB8);
+                fScreenAspectRatio = (ResX / ResY);
+
+                if (fScreenAspectRatio >= 1.7777777f)
+                {
+                    regs.eax = (int)1;
+                    *(int*)(regs.ecx) = regs.eax;
+                }
+                else
+                {
+                    regs.eax = (int)0;
+                    *(int*)(regs.ecx) = regs.eax;
+                }
             }
         }; injector::MakeInline<HUDWidescreenModeHook>(pattern.count(7).get(0).get<uint32_t>(0)); // 44C332
     }

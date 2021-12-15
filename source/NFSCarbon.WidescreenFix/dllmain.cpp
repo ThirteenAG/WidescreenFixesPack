@@ -19,16 +19,16 @@ void Init()
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
     bool bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) != 0;
     bool bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) != 0;
-    int32_t nScaling = iniReader.ReadInteger("MAIN", "Scaling", 2);
+    int32_t nScaling = iniReader.ReadInteger("MAIN", "Scaling", 1);
     bool bHUDWidescreenMode = iniReader.ReadInteger("MAIN", "HUDWidescreenMode", 1) != 0;
     int nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
     int32_t nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
-    bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 1) != 0;
-    bool bLightingFix = iniReader.ReadInteger("MISC", "LightingFix", 0) != 0;
-    bool bCarShadowFix = iniReader.ReadInteger("MISC", "CarShadowFix", 0) != 0;
-    bool bExperimentalCrashFix = iniReader.ReadInteger("MISC", "CrashFix", 0) != 0;
+    bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 0) != 0;
+    bool bLightingFix = iniReader.ReadInteger("MISC", "LightingFix", 1) != 0;
+    bool bCarShadowFix = iniReader.ReadInteger("MISC", "CarShadowFix", 1) != 0;
+    bool bExperimentalCrashFix = iniReader.ReadInteger("MISC", "CrashFix", 1) != 0;
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
-    bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 1) != 0;
+    bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 0) != 0;
     static int32_t nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
     bool bExpandControllerOptions = iniReader.ReadInteger("MISC", "ExpandControllerOptions", 0) != 0;
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
@@ -223,13 +223,24 @@ void Init()
     if (bFixFOV)
     {
         static float hor3DScale = 1.0f / (Screen.fAspectRatio / (4.0f / 3.0f));
-        static float ver3DScale = 0.75f;
-        static float mirrorScale = 0.675f;
-        static float f1234 = 1.25f;
-        static float f06 = 0.6f;
+        static float ver3DScale = 1.0f; // don't touch this
+        static float mirrorScale = 0.925f;
+        static float f1205 = 1.205f;
+        static float f0434665 = 0.434665f;
         static float flt1 = 0.0f;
         static float flt2 = 0.0f;
         static float flt3 = 0.0f;
+
+        if (nScaling)
+        {
+            hor3DScale /= 1.034482718f;
+            f1205 = 1.225f;
+
+            if (nScaling == 2)
+            {
+                f1205 = 1.28f;
+            }
+        }
 
         uint32_t* dword_71B858 = hook::pattern("DB 05 ? ? ? ? 8B 45 08 83 F8 01 DA 35 ? ? ? ? D9 5C 24 24").count(1).get(0).get<uint32_t>(0);
         struct FOVHook
@@ -241,13 +252,13 @@ void Init()
                 if (regs.eax == 1 || regs.eax == 4) //Headlights stretching, reflections etc 
                 {
                     flt1 = hor3DScale;
-                    flt2 = f06;
-                    flt3 = f1234;
+                    flt2 = f0434665;
+                    flt3 = f1205;
                 }
                 else
                 {
                     flt1 = 1.0f;
-                    flt2 = 0.5f;
+                    flt2 = 0.375f;
                     flt3 = 1.0f;
                 }
 
@@ -268,13 +279,6 @@ void Init()
 
         uint32_t* dword_71B923 = hook::pattern("D8 3D ? ? ? ? D9 5C 24 2C 8B 54 24 2C 52 50 55").count(1).get(0).get<uint32_t>(2);
         injector::WriteMemory(dword_71B923, &flt3, true);
-
-        if (nScaling)
-        {
-            hor3DScale /= 1.0511562719f;
-            if (nScaling == 2)
-                f1234 = 1.315f;
-        }
     }
 
     if (bHUDWidescreenMode)

@@ -72,9 +72,10 @@ void Init()
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
     bool bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) != 0;
     bool bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) != 0;
-    bool bXbox360Scaling = iniReader.ReadInteger("MAIN", "Xbox360Scaling", 1) != 0;
+    bool bScaling = iniReader.ReadInteger("MAIN", "Scaling", 0) != 0;
     bool bHUDWidescreenMode = iniReader.ReadInteger("MAIN", "HUDWidescreenMode", 1) != 0;
     int nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
+    bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 0) != 0;
     bool bDisableCutsceneBorders = iniReader.ReadInteger("MISC", "DisableCutsceneBorders", 1) != 0;
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
     bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 1) != 0;
@@ -232,18 +233,18 @@ void Init()
     if (bFixFOV)
     {
         static float hor3DScale = 1.0f / (Screen.fAspectRatio / (4.0f / 3.0f));
-        static float ver3DScale = 0.75f;
+        static float ver3DScale = 1.0f; // don't touch this
         static float mirrorScale = 0.45f;
-        static float f1234 = 1.25f;
-        static float f06 = 0.6f;
+        static float f122 = 1.22f;
+        static float f043511 = 0.43511f;
         static float f1 = 1.0f; // horizontal for vehicle reflection
         static float flt1 = 0.0f;
         static float flt2 = 0.0f;
         static float flt3 = 0.0f;
 
-        if (bXbox360Scaling)
+        if (bScaling)
         {
-            hor3DScale /= 1.0511562719f;
+            hor3DScale /= 1.090909123f;
         }
 
         uint32_t* dword_5C7F56 = hook::pattern("DB 40 18 C7 44 24 20 00 00 80 3F DA 70 14").count(1).get(0).get<uint32_t>(0);
@@ -256,8 +257,8 @@ void Init()
                 if (regs.ecx == 1 || regs.ecx == 4) //Headlights stretching, reflections etc
                 {
                     flt1 = hor3DScale;
-                    flt2 = f06;
-                    flt3 = f1234;
+                    flt2 = f043511;
+                    flt3 = f122;
                 }
                 else
                 {
@@ -295,11 +296,6 @@ void Init()
 
         uint32_t* dword_5C801F = hook::pattern("D8 3D ? ? ? ? D9 5C 24 38 D9 44 24 24 D8 64 24 30 D8 7C 24 24 D9 5C 24 34").count(1).get(0).get<uint32_t>(2);
         injector::WriteMemory(dword_5C801F, &flt3, true);
-
-        //Fixes vehicle reflection so that they're no longer broken and look exactly as they do without the widescreen fix.
-        static uint16_t dx = 16400;
-        uint32_t* dword_5C4FC9 = hook::pattern("66 A1 ? ? ? ? 66 89 86 C4 00 00 00").count(1).get(0).get<uint32_t>(2);
-        injector::WriteMemory(dword_5C4FC9, &dx, true);
     }
 
     if (nFMVWidescreenMode)
@@ -419,6 +415,23 @@ void Init()
         //}; injector::MakeInline<HudHook3>((uint32_t)dword_52C1B0, (uint32_t)dword_52C1B0 + 6);
     }
 
+    if (bSkipIntro)
+    {
+        static constexpr auto SkipThis = "SkipThis";
+        auto pattern = hook::pattern("8B F1 50 89 74 24 08 E8 ? ? ? ? 8B 46 04 68 ? ? ? ? 68 ? ? ? ? 50");
+        uint32_t* dword_4A888B = pattern.count(3).get(0).get<uint32_t>(16);
+        uint32_t* dword_4A895B = pattern.count(3).get(1).get<uint32_t>(16);
+        injector::WriteMemory(dword_4A888B, &SkipThis, true); // FMV Opening
+        injector::WriteMemory(dword_4A895B, &SkipThis, true); // EA Bumper
+
+        // THX
+        uint32_t* dword_4A8CEB = hook::pattern("56 57 8B F1 50 89 74 24 0C E8 ? ? ? ? 68 ? ? ? ? 33 C0").count(1).get(0).get<uint32_t>(15);
+        injector::WriteMemory(dword_4A8CEB, &SkipThis, true);
+
+        // PSA
+        uint32_t* dword_4A8B74 = hook::pattern("C7 06 ? ? ? ? E8 ? ? ? ? 8B 46 04 68 ? ? ? ? 68 ? ? ? ? 50").count(1).get(0).get<uint32_t>(15);
+        injector::WriteMemory(dword_4A8B74, &SkipThis, true);
+    }
 
     if (!szCustomUserFilesDirectoryInGameDir.empty())
     {

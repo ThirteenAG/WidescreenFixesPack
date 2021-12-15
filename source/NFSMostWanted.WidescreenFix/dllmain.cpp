@@ -23,6 +23,7 @@ void Init()
     bool bHUDWidescreenMode = iniReader.ReadInteger("MAIN", "HUDWidescreenMode", 1) == 1;
     int nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
     int nScaling = iniReader.ReadInteger("MAIN", "Scaling", 1);
+    bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 0) != 0;
     int ShadowsRes = iniReader.ReadInteger("MISC", "ShadowsRes", 1024);
     bool bAutoScaleShadowsRes = iniReader.ReadInteger("MISC", "AutoScaleShadowsRes", 0) != 0;
     bool bShadowsFix = iniReader.ReadInteger("MISC", "ShadowsFix", 1) != 0;
@@ -219,10 +220,10 @@ void Init()
     if (bFixFOV)
     {
         static float hor3DScale = 1.0f / (Screen.fAspectRatio / (4.0f / 3.0f));
-        static float ver3DScale = 0.75f;
+        static float ver3DScale = 1.0f; // don't touch this
         static float mirrorScale = 0.4f;
-        static float f1234 = 1.25f;
-        static float f06 = 0.6f;
+        static float f1215 = 1.215f;
+        static float f043434 = 0.43434f;
         static float f1 = 1.0f; // horizontal for vehicle reflection
         static float flt1 = 0.0f;
         static float flt2 = 0.0f;
@@ -230,10 +231,13 @@ void Init()
 
         if (nScaling)
         {
-            hor3DScale /= 1.0511562719f;
-            f1234 = 1.25f;
+            hor3DScale /= 1.047485948f;
+            f1215 = 1.21f;
+
             if (nScaling == 2)
-                f1234 = 1.315f;
+            {
+                f1215 = 1.27f;
+            }
         }
 
         uint32_t* dword_6CF4F0 = hook::pattern("DB 40 18 DA 70 14").count(1).get(0).get<uint32_t>(0);
@@ -246,8 +250,8 @@ void Init()
                 if (regs.ecx == 1 || regs.ecx == 4) //Headlights stretching, reflections etc 
                 {
                     flt1 = hor3DScale;
-                    flt2 = f06;
-                    flt3 = f1234;
+                    flt2 = f043434;
+                    flt3 = f1215;
                 }
                 else
                 {
@@ -284,11 +288,6 @@ void Init()
 
         uint32_t* dword_6CF5DC = hook::pattern("D8 3D ? ? ? ? D9 44 24 20 D8 64 24 24").count(1).get(0).get<uint32_t>(2);
         injector::WriteMemory(dword_6CF5DC, &flt3, true);
-
-        //Fixes vehicle reflection so that they're no longer broken and look exactly as they do without the widescreen fix.
-        static uint16_t dx = 16400;
-        uint32_t* dword_6DA8AE = hook::pattern("66 8B 15 ? ? ? ? 66 89 93 C4 00 00 00").count(1).get(0).get<uint32_t>(3);
-        injector::WriteMemory(dword_6DA8AE, &dx, true);
 
         //Shadow pop-in fix
         uint32_t* dword_6C9653 = hook::pattern("D8 0D ? ? ? ? D9 5C 24 ? E8 ? ? ? ? 8A").count(1).get(0).get<uint32_t>(2);
@@ -427,6 +426,33 @@ void Init()
             injector::MakeCALL((uint32_t)dword_6CBF17, static_cast<HRESULT(WINAPI*)(HWND, int, HANDLE, DWORD, LPSTR)>(SHGetFolderPathAHook), true);
             injector::MakeNOP((uint32_t)dword_6CBF17 + 5, 1, true);
         }
+    }
+
+    if (bSkipIntro)
+    {
+        static auto counter = 0;
+        static auto og_value = 0;
+        pattern = hook::pattern("A1 ? ? ? ? 85 C0 74 1C 8B 45 04");
+        static uint32_t* dword_926144 = *pattern.get_first<uint32_t*>(1);
+        struct SkipIntroHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                if (counter < 3)
+                {
+                    if (counter == 0)
+                        og_value = *dword_926144;
+                    *dword_926144 = 1;
+                    counter++;
+                }
+                else
+                {
+                    *dword_926144 = og_value;
+                }
+
+                regs.eax = *(uint32_t*)dword_926144;
+            }
+        }; injector::MakeInline<SkipIntroHook>(pattern.get_first(0));
     }
 
     if (nImproveGamepadSupport)
