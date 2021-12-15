@@ -234,8 +234,8 @@ void Init()
         static float hor3DScale = 1.0f / (Screen.fAspectRatio / (4.0f / 3.0f));
         static float ver3DScale = 1.0f; // don't touch this
         static float mirrorScale = 0.45f;
-        static float f129 = 1.29f;
-        static float f04525 = 0.4525f;
+        static float f122 = 1.22f;
+        static float f043511 = 0.43511f;
         static float f1 = 1.0f; // horizontal for vehicle reflection
         static float flt1 = 0.0f;
         static float flt2 = 0.0f;
@@ -243,7 +243,7 @@ void Init()
 
         if (bScaling)
         {
-            hor3DScale /= 1.03f;
+            hor3DScale /= 1.090909123f;
         }
 
         uint32_t* dword_5C7F56 = hook::pattern("DB 40 18 C7 44 24 20 00 00 80 3F DA 70 14").count(1).get(0).get<uint32_t>(0);
@@ -256,8 +256,8 @@ void Init()
                 if (regs.ecx == 1 || regs.ecx == 4) //Headlights stretching, reflections etc
                 {
                     flt1 = hor3DScale;
-                    flt2 = f04525;
-                    flt3 = f129;
+                    flt2 = f043511;
+                    flt3 = f122;
                 }
                 else
                 {

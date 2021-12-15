@@ -219,10 +219,10 @@ void Init()
     if (bFixFOV)
     {
         static float hor3DScale = 1.0f / (Screen.fAspectRatio / (4.0f / 3.0f));
-        static float ver3DScale = 0.75f;
+        static float ver3DScale = 1.0f; // don't touch this
         static float mirrorScale = 0.4f;
-        static float f125 = 1.25f;
-        static float f06 = 0.6f;
+        static float f1215 = 1.215f;
+        static float f043434 = 0.43434f;
         static float f1 = 1.0f; // horizontal for vehicle reflection
         static float flt1 = 0.0f;
         static float flt2 = 0.0f;
@@ -231,11 +231,11 @@ void Init()
         if (nScaling)
         {
             hor3DScale /= 1.047485948f;
-            ver3DScale = 0.7425f;
+            f1215 = 1.21f;
 
             if (nScaling == 2)
             {
-                ver3DScale = 0.715f;
+                f1215 = 1.27f;
             }
         }
 
@@ -249,8 +249,8 @@ void Init()
                 if (regs.ecx == 1 || regs.ecx == 4) //Headlights stretching, reflections etc 
                 {
                     flt1 = hor3DScale;
-                    flt2 = f06;
-                    flt3 = f125;
+                    flt2 = f043434;
+                    flt3 = f1215;
                 }
                 else
                 {
@@ -287,11 +287,6 @@ void Init()
 
         uint32_t* dword_6CF5DC = hook::pattern("D8 3D ? ? ? ? D9 44 24 20 D8 64 24 24").count(1).get(0).get<uint32_t>(2);
         injector::WriteMemory(dword_6CF5DC, &flt3, true);
-
-        //Fixes vehicle reflection so that they're no longer broken and look exactly as they do without the widescreen fix.
-        static uint16_t dx = 16400;
-        uint32_t* dword_6DA8AE = hook::pattern("66 8B 15 ? ? ? ? 66 89 93 C4 00 00 00").count(1).get(0).get<uint32_t>(3);
-        injector::WriteMemory(dword_6DA8AE, &dx, true);
 
         //Shadow pop-in fix
         uint32_t* dword_6C9653 = hook::pattern("D8 0D ? ? ? ? D9 5C 24 ? E8 ? ? ? ? 8A").count(1).get(0).get<uint32_t>(2);

@@ -223,13 +223,24 @@ void Init()
     if (bFixFOV)
     {
         static float hor3DScale = 1.0f / (Screen.fAspectRatio / (4.0f / 3.0f));
-        static float ver3DScale = 0.75f;
-        static float mirrorScale = 0.675f;
-        static float f125 = 1.25f;
-        static float f06 = 0.6f;
+        static float ver3DScale = 1.0f; // don't touch this
+        static float mirrorScale = 0.925f;
+        static float f1205 = 1.205f;
+        static float f0434665 = 0.434665f;
         static float flt1 = 0.0f;
         static float flt2 = 0.0f;
         static float flt3 = 0.0f;
+
+        if (nScaling)
+        {
+            hor3DScale /= 1.034482718f;
+            f1205 = 1.225f;
+
+            if (nScaling == 2)
+            {
+                f1205 = 1.28f;
+            }
+        }
 
         uint32_t* dword_71B858 = hook::pattern("DB 05 ? ? ? ? 8B 45 08 83 F8 01 DA 35 ? ? ? ? D9 5C 24 24").count(1).get(0).get<uint32_t>(0);
         struct FOVHook
@@ -241,13 +252,13 @@ void Init()
                 if (regs.eax == 1 || regs.eax == 4) //Headlights stretching, reflections etc 
                 {
                     flt1 = hor3DScale;
-                    flt2 = f06;
-                    flt3 = f125;
+                    flt2 = f0434665;
+                    flt3 = f1205;
                 }
                 else
                 {
                     flt1 = 1.0f;
-                    flt2 = 0.5f;
+                    flt2 = 0.375f;
                     flt3 = 1.0f;
                 }
 
@@ -268,17 +279,6 @@ void Init()
 
         uint32_t* dword_71B923 = hook::pattern("D8 3D ? ? ? ? D9 5C 24 2C 8B 54 24 2C 52 50 55").count(1).get(0).get<uint32_t>(2);
         injector::WriteMemory(dword_71B923, &flt3, true);
-
-        if (nScaling)
-        {
-            hor3DScale /= 1.033057809f;
-            ver3DScale = 0.735f;
-
-            if (nScaling == 2)
-            {
-                ver3DScale = 0.71f;
-            }
-        }
     }
 
     if (bHUDWidescreenMode)

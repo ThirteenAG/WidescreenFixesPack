@@ -297,7 +297,7 @@ void Init()
 
         if (bScaling)
         {
-            hor3DScale /= 1.03f;
+            hor3DScale /= 1.0252904893f;
         }
 
         pattern = hook::pattern("DB 40 18 C7 44 24");
