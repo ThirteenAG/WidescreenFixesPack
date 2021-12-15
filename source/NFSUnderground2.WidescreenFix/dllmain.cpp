@@ -75,6 +75,7 @@ void Init()
     bool bScaling = iniReader.ReadInteger("MAIN", "Scaling", 0) != 0;
     bool bHUDWidescreenMode = iniReader.ReadInteger("MAIN", "HUDWidescreenMode", 1) != 0;
     int nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
+    bool bSkipIntro = iniReader.ReadInteger("MISC", "bSkipIntro", 0) != 0;
     bool bDisableCutsceneBorders = iniReader.ReadInteger("MISC", "DisableCutsceneBorders", 1) != 0;
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
     bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 1) != 0;
@@ -414,6 +415,24 @@ void Init()
         //}; injector::MakeInline<HudHook3>((uint32_t)dword_52C1B0, (uint32_t)dword_52C1B0 + 6);
     }
 
+    if (bSkipIntro)
+    {
+        // EA Bumper
+        uint32_t* dword_4A895B = hook::pattern("8B F1 50 89 74 24 08 E8 ? ? ? ? 8B 46 04 68 ? ? ? ? 68 ? ? ? ? 50").count(3).get(1).get<uint32_t>(16);
+        injector::WriteMemory(dword_4A895B, &"SkipThis", true);
+
+        // THX
+        uint32_t* dword_4A8CEB = hook::pattern("56 57 8B F1 50 89 74 24 0C E8 ? ? ? ? 68 ? ? ? ? 33 C0").count(1).get(0).get<uint32_t>(15);
+        injector::WriteMemory(dword_4A8CEB, &"SkipThis", true);
+
+        // PSA
+        uint32_t* dword_4A8B74 = hook::pattern("C7 06 ? ? ? ? E8 ? ? ? ? 8B 46 04 68 ? ? ? ? 68 ? ? ? ? 50").count(1).get(0).get<uint32_t>(15);
+        injector::WriteMemory(dword_4A8B74, &"SkipThis", true);
+
+        // FMV Opening
+        uint32_t* dword_4A888B = hook::pattern("8B F1 50 89 74 24 08 E8 ? ? ? ? 8B 46 04 68 ? ? ? ? 68 ? ? ? ? 50").count(1).get(0).get<uint32_t>(16);
+        injector::WriteMemory(dword_4A888B, &"SkipThis", true);
+    }
 
     if (!szCustomUserFilesDirectoryInGameDir.empty())
     {
