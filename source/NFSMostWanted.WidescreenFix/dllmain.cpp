@@ -23,6 +23,7 @@ void Init()
     bool bHUDWidescreenMode = iniReader.ReadInteger("MAIN", "HUDWidescreenMode", 1) == 1;
     int nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
     int nScaling = iniReader.ReadInteger("MAIN", "Scaling", 1);
+    bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 0) != 0;
     int ShadowsRes = iniReader.ReadInteger("MISC", "ShadowsRes", 1024);
     bool bAutoScaleShadowsRes = iniReader.ReadInteger("MISC", "AutoScaleShadowsRes", 0) != 0;
     bool bShadowsFix = iniReader.ReadInteger("MISC", "ShadowsFix", 1) != 0;
@@ -425,6 +426,33 @@ void Init()
             injector::MakeCALL((uint32_t)dword_6CBF17, static_cast<HRESULT(WINAPI*)(HWND, int, HANDLE, DWORD, LPSTR)>(SHGetFolderPathAHook), true);
             injector::MakeNOP((uint32_t)dword_6CBF17 + 5, 1, true);
         }
+    }
+
+    if (bSkipIntro)
+    {
+        static auto counter = 0;
+        static auto og_value = 0;
+        pattern = hook::pattern("A1 ? ? ? ? 85 C0 74 1C 8B 45 04");
+        static uint32_t* dword_926144 = *pattern.get_first<uint32_t*>(1);
+        struct SkipIntroHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                if (counter < 3)
+                {
+                    if (counter == 0)
+                        og_value = *dword_926144;
+                    *dword_926144 = 1;
+                    counter++;
+                }
+                else
+                {
+                    *dword_926144 = og_value;
+                }
+
+                regs.eax = *(uint32_t*)dword_926144;
+            }
+        }; injector::MakeInline<SkipIntroHook>(pattern.get_first(0));
     }
 
     if (nImproveGamepadSupport)
