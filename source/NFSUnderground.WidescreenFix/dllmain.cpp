@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "GTA\CFileMgr.h"
 #include <d3d9.h>
-#include "dxsdk\d3dvtbl.h"
 
 struct Screen
 {
@@ -54,39 +53,11 @@ void LoadDatFile(std::string_view str, std::function<void(std::string_view line)
     }
 }
 
-std::reference_wrapper<int32_t> nGameState = std::ref(Screen.nWidth);
-
-typedef HRESULT(STDMETHODCALLTYPE* CreateDevice_t)(IDirect3D9*, UINT, D3DDEVTYPE, HWND, DWORD, D3DPRESENT_PARAMETERS*, IDirect3DDevice9**);
-CreateDevice_t RealD3D9CreateDevice = NULL;
-typedef HRESULT(STDMETHODCALLTYPE* EndScene_t)(LPDIRECT3DDEVICE9);
-EndScene_t RealEndScene = NULL;
-
 void DrawRect(LPDIRECT3DDEVICE9 pDevice, int32_t x, int32_t y, int32_t w, int32_t h, D3DCOLOR color = D3DCOLOR_XRGB(0, 0, 0))
 {
     D3DRECT BarRect = { x, y, x + w, y + h };
     pDevice->Clear(1, &BarRect, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, color, 0, 0);
 }
-
-HRESULT WINAPI EndScene(LPDIRECT3DDEVICE9 pDevice)
-{
-    if (nGameState == 3)
-    {
-        DrawRect(pDevice, 0, 0, static_cast<int32_t>(Screen.fHudOffsetReal), Screen.nHeight);
-        DrawRect(pDevice, static_cast<int32_t>(Screen.fWidth43 + Screen.fHudOffsetReal), 0, static_cast<int32_t>(Screen.fWidth43 + Screen.fHudOffsetReal + Screen.fHudOffsetReal), Screen.nHeight);
-    }
-
-    return RealEndScene(pDevice);
-}
-
-HRESULT __stdcall CreateDevice(IDirect3D9* d3ddev, UINT Adapter, D3DDEVTYPE DeviceType, HWND hFocusWindow, DWORD BehaviorFlags, D3DPRESENT_PARAMETERS* pPresentationParameters, IDirect3DDevice9** ppReturnedDeviceInterface)
-{
-    HRESULT retval = RealD3D9CreateDevice(d3ddev, Adapter, DeviceType, hFocusWindow, BehaviorFlags, pPresentationParameters, ppReturnedDeviceInterface);
-    UINT_PTR* pVTable = (UINT_PTR*)(*((UINT_PTR*)*ppReturnedDeviceInterface));
-    RealEndScene = (EndScene_t)pVTable[IDirect3DDevice9VTBL::EndScene];
-    injector::WriteMemory(&pVTable[IDirect3DDevice9VTBL::EndScene], &EndScene, true);
-    return retval;
-}
-
 
 void*(*CreateResourceFile)(const char* ResourceFileName, int32_t ResourceFileType, int, int, int);
 void(__fastcall *ResourceFileBeginLoading)(int a1, void* rsc, int a2);
@@ -154,7 +125,7 @@ void Init()
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
     static int nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
-    bool bD3DHookBorders = iniReader.ReadInteger("MISC", "D3DHookBorders", 0) != 0;
+    bool bDrawBorders = iniReader.ReadInteger("MISC", "DrawBorders", 0) != 0;
     bool bBlackMagazineFix = iniReader.ReadInteger("MISC", "BlackMagazineFix", 0) != 0;
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
         szCustomUserFilesDirectoryInGameDir.clear();
@@ -172,7 +143,7 @@ void Init()
     Screen.fHudOffsetReal = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
 
     //Game state
-    nGameState = std::ref(**hook::get_pattern<int32_t*>("83 3D ? ? ? ? 06 ? ? A1", 2)); //0x77A920
+    static auto nGameState = std::ref(**hook::get_pattern<int32_t*>("83 3D ? ? ? ? 06 ? ? A1", 2)); //0x77A920
 
     //Resolution
     //menu
@@ -396,7 +367,7 @@ void Init()
 
         static auto WidescreenHud = [](HudPos& HudPosX, HudPos& HudPosY, bool bAddHudOffset = false)
         {
-            //if (nGameState != 3) // Disables WidescreenHUD in FrontEnd
+            if (nGameState != 3) // Disables WidescreenHUD in FrontEnd
             {
                 auto it = std::find_if(HudCoords.begin(), HudCoords.end(),
                                        [cc = CDatEntry(HudPosX.dwPos, HudPosY.dwPos, 0.0f, 0.0f)]
@@ -733,21 +704,25 @@ void Init()
         }; injector::MakeInline<DeadzoneHook>(pattern.get_first(-2), pattern.get_first(4));
     }
 
-    if (bD3DHookBorders)
+    if (bDrawBorders)
     {
-        pattern = hook::pattern("A3 ? ? ? ? E8 ? ? ? ? 68 1F 00 08 00 6A 03 E8");
-        static auto dword_736368 = *pattern.get_first<IDirect3D9**>(1);
-        struct Direct3DDeviceHook
+        //D3D9 EndScene Hook
+        pattern = hook::pattern("A1 ? ? ? ? 8B 08 83 C4 04 50");
+        static LPDIRECT3DDEVICE9* pDevice = *pattern.get_first<LPDIRECT3DDEVICE9*>(1);
+        struct EndSceneHook
         {
             void operator()(injector::reg_pack& regs)
             {
-                auto pID3D9 = (IDirect3D9*)regs.eax;
-                *dword_736368 = pID3D9;
-                UINT_PTR* pVTable = (UINT_PTR*)(*((UINT_PTR*)pID3D9));
-                RealD3D9CreateDevice = (CreateDevice_t)pVTable[IDirect3D9VTBL::CreateDevice];
-                injector::WriteMemory(&pVTable[IDirect3D9VTBL::CreateDevice], &CreateDevice, true);
+                regs.eax = *(uint32_t*)pDevice;
+                regs.ecx = *(uint32_t*)(regs.eax);
+
+                if (nGameState == 3)
+                {
+                    DrawRect(*pDevice, 0, 0, static_cast<int32_t>(Screen.fHudOffsetReal), Screen.nHeight);
+                    DrawRect(*pDevice, static_cast<int32_t>(Screen.fWidth43 + Screen.fHudOffsetReal), 0, static_cast<int32_t>(Screen.fWidth43 + Screen.fHudOffsetReal + Screen.fHudOffsetReal), Screen.nHeight);
+                }
             }
-        }; injector::MakeInline<Direct3DDeviceHook>(pattern.get_first(0), pattern.get_first(5)); //40883C
+        }; injector::MakeInline<EndSceneHook>(pattern.get_first(0), pattern.get_first(7));
     }
 
     if (bBlackMagazineFix)
