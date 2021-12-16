@@ -298,7 +298,7 @@ void PCSX2Thread()
     ps2.vecPatches.push_back(PCSX2Memory(L""));
 
     auto ps2pattern = hook::range_pattern(ps2.EEMainMemoryStart, ps2.EEMainMemoryEnd, "AA 3F ? 3C");
-    while (ps2pattern.clear().size() != 11) { std::this_thread::yield(); }
+    while (ps2pattern.clear().size() < 11) { std::this_thread::yield(); }
     for (size_t i = 0; i < ps2pattern.size(); i++)
     {
         ps2.vecPatches.push_back(PCSX2Memory(CONT, EE, ps2pattern.get(i).get<void>(0), WORD_T, LUI_ORI, &Screen.fAspectRatio,
@@ -306,13 +306,13 @@ void PCSX2Thread()
     }
 
     ps2pattern = hook::range_pattern(ps2.EEMainMemoryStart, ps2.EEMainMemoryEnd, "0E 3C 02 3C D0 FF BD 27 36 FA 42 34");
-    while (ps2pattern.clear().size() != 2) { std::this_thread::yield(); }
+    while (ps2pattern.clear().size() < 2) { std::this_thread::yield(); }
     ps2.vecPatches.push_back(PCSX2Memory(CONT, EE, ps2pattern.get(0).get<void>(0), WORD_T, LUI_ORI, &Screen.fFOVFactor, std::wstring(L"// FOV: ") + std::to_wstring(Screen.fFOVFactor), 0x3C0EFA36));
 
     ps2.WritePnach(); //writing pnach with addresses so far
 
     ps2pattern = hook::range_pattern(ps2.EEMainMemoryStart, ps2.EEMainMemoryEnd, "00 40 02 3C E0 00 40 C6 57 00 05 3C"); //lui $v0, 0x4000
-    while (ps2pattern.clear().size() != 1) { std::this_thread::yield(); }
+    while (ps2pattern.clear().size() < 1) { std::this_thread::yield(); }
     ps2.vecPatches.push_back(PCSX2Memory(CONT, EE, ps2pattern.get(0).get<void>(0), WORD_T, NONE, &Screen.PointSizeInstr, std::wstring(L"// Point Size Instr: ") + int_to_hex(Screen.PointSizeInstr)));
 
     //HUD

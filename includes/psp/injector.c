@@ -197,21 +197,21 @@ void MakeInlineLUIORI(uintptr_t at, float imm)
 {
     static const uint32_t instr_len = 4;
 
-    uint8_t LUI = parseCommand(lui(0, 0), 26, 32);
-    uint8_t ORI = parseCommand(ori(0, 0, 0), 26, 32);
+    uint8_t LUI = parseCommand(lui(0, 0), 26, 31);
+    uint8_t ORI = parseCommand(ori(0, 0, 0), 26, 31);
 
-    uint32_t prev_instr = parseCommand(ReadMemory32(at - instr_len), 26, 32);
+    uint32_t prev_instr = parseCommand(ReadMemory32(at - instr_len), 26, 31);
     uint32_t bytes = ReadMemory32(at);
-    uint8_t instr = parseCommand(bytes, 26, 32);
-    uint8_t reg_lui = parseCommand(bytes, 16, 21);
+    uint8_t instr = parseCommand(bytes, 26, 31);
+    uint8_t reg_lui = parseCommand(bytes, 16, 20);
 
     if (instr == LUI)
     {
         for (uintptr_t i = at + instr_len; i <= (at + instr_len + (5 * instr_len)); i += instr_len)
         {
             bytes = ReadMemory32(i);
-            instr = parseCommand(bytes, 26, 32);
-            uint8_t reg_ori = parseCommand(bytes, 16, 21);
+            instr = parseCommand(bytes, 26, 31);
+            uint8_t reg_ori = parseCommand(bytes, 16, 20);
 
             if (instr == LUI)
                 break;
@@ -237,14 +237,14 @@ void MakeInlineLI(uintptr_t at, int32_t imm)
 {
     static const uint32_t instr_len = 4;
 
-    uint8_t ORI = parseCommand(ori(0, 0, 0), 26, 32);
-    uint8_t ZERO = parseCommand(ori(0, 0, 0), 21, 26);
+    uint8_t ORI = parseCommand(ori(0, 0, 0), 26, 31);
+    uint8_t ZERO = parseCommand(ori(0, 0, 0), 21, 25);
 
-    uint32_t prev_instr = parseCommand(ReadMemory32(at - instr_len), 26, 32);
+    uint32_t prev_instr = parseCommand(ReadMemory32(at - instr_len), 26, 31);
     uint32_t bytes = ReadMemory32(at);
-    uint8_t instr = parseCommand(bytes, 26, 32);
-    uint8_t reg_ori = parseCommand(bytes, 16, 21);
-    uint8_t reg_zero = parseCommand(bytes, 21, 26);
+    uint8_t instr = parseCommand(bytes, 26, 31);
+    uint8_t reg_ori = parseCommand(bytes, 16, 20);
+    uint8_t reg_zero = parseCommand(bytes, 21, 25);
 
     if (instr == ORI && reg_zero == ZERO)
     {
