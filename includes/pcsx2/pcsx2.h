@@ -6,6 +6,9 @@
 #include <iostream>
 #include "FileWatch.hpp"
 
+#define _LOWORD(l)           ((uint16_t)((*(uint32_t*)(&l)) & 0xffff))
+#define _HIWORD(l)           ((uint16_t)(((*(uint32_t*)(&l)) >> 16) & 0xffff))
+
 class PCSX2MemoryDyn
 {
 public:
@@ -53,7 +56,7 @@ public:
     {
         NONE,
         LUI_ORI,
-        LUI_ORI_MUL,
+        LI,
 
         MAKE_INLINE
     };
@@ -174,6 +177,9 @@ public:
 
     void FindHostMemoryMapEEmem()
     {
+        if (EEMainMemoryStart && EEMainMemoryEnd)
+            return;
+
         uintptr_t curAddr = 0;
         while (true)
         {
@@ -187,7 +193,7 @@ public:
                     EEMainMemoryStart = (uintptr_t)MemoryInf.BaseAddress;
                 }
             }
-            else if (EEMainMemoryStart != 0 && MemoryInf.AllocationProtect == PAGE_NOACCESS && MemoryInf.State == MEM_RESERVE &&
+            else if (EEMainMemoryStart != 0 && EEMainMemoryEnd == 0 && MemoryInf.AllocationProtect == PAGE_NOACCESS && MemoryInf.State == MEM_RESERVE &&
                 MemoryInf.Protect == 0 && MemoryInf.Type == MEM_PRIVATE)
             {
                 EEMainMemoryEnd = (uintptr_t)MemoryInf.BaseAddress;
@@ -312,9 +318,9 @@ public:
 
     void WriteMemoryLoop()
     {
-        __try
+        while (true)
         {
-            while (true)
+            __try
             {
                 using namespace std::chrono_literals;
                 std::this_thread::sleep_for(100ms);
@@ -323,9 +329,9 @@ public:
                     WriteMemory();
                 }
             }
+            __except ((GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION) ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
+            {}
         }
-        __except ((GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION) ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
-        { }
     }
 
     uintptr_t GetBuffer()
@@ -338,6 +344,77 @@ public:
             mBufAddr = (mBufAddr >= EEMainMemoryStart) ? (mBufAddr - EEMainMemoryStart) : mBufAddr;
 
         return mBufAddr;
+    }
+
+    template <typename T>
+    void MakeLUIORI(uintptr_t addr, mips::RegisterID reg, T imm)
+    {
+        if (addr >= EEMainMemoryStart)
+            addr -= EEMainMemoryStart;
+
+        std::ostringstream ss;
+        mips::j(ss, mCurBufAddr); //MakeJMP to custom code
+        injector::WriteMemory(addr + EEMainMemoryStart, *(uint32_t*)(ss.str()).c_str(), true);
+        ss.str("");
+        ss.clear();
+        mips::lui(ss, reg, _HIWORD(imm));
+        mips::ori(ss, reg, reg, _LOWORD(imm));
+        mips::j(ss, addr + 4); // MakeJMP back to original code
+        mips::nop(ss);
+        injector::WriteMemoryRaw(mCurBufAddr + EEMainMemoryStart, (void*)(ss.str()).c_str(), (size_t)ss.tellp(), true);
+        mCurBufAddr += (size_t)ss.tellp();
+    }
+
+    template <typename T>
+    void MakeLI(uintptr_t addr, mips::RegisterID reg, T imm)
+    {
+        return MakeLUIORI(addr, reg, imm);
+    }
+
+    template <typename T>
+    void MakeLUIORI(std::wofstream& pnach, PCSX2Memory& obj, uintptr_t addr, mips::RegisterID reg, T imm)
+    {
+        if (addr >= EEMainMemoryStart)
+            addr -= EEMainMemoryStart;
+
+        std::ostringstream ss;
+        mips::j(ss, mCurBufAddr); //MakeJMP to custom code
+        injector::WriteMemory(addr + EEMainMemoryStart, *(uint32_t*)(ss.str()).c_str(), true);
+        auto t = pnach.tellp();
+        pnach << L"patch=" << obj.place_type << L"," << obj.getCpuType() << L"," << int_to_hex(addr) << L"," << obj.getDataType() << L"," << int_to_hex(*(uint32_t*)(ss.str()).c_str());
+        pnach << std::setw(40 - (size_t)(pnach.tellp() - t)) << L"";
+        pnach << obj.comment << std::endl;
+        ss.str("");
+        ss.clear();
+        mips::lui(ss, reg, _HIWORD(imm));
+        mips::ori(ss, reg, reg, _LOWORD(imm));
+        mips::j(ss, addr + 4); // MakeJMP back to original code
+        mips::nop(ss);
+        injector::WriteMemoryRaw(mCurBufAddr + EEMainMemoryStart, (void*)(ss.str()).c_str(), (size_t)ss.tellp(), true);
+        for (size_t i = 0; i < (ss.str().size()); i += 4)
+        {
+            pnach << L"patch=" << obj.place_type << L"," << obj.getCpuType() << L"," << int_to_hex(mCurBufAddr + i) << L"," << obj.getDataType(PCSX2Memory::WORD_T) << L"," << int_to_hex(*(uint32_t*)&ss.str().at(i)) << std::endl;
+        }
+        mCurBufAddr += (size_t)ss.tellp();
+    }
+
+    template <typename T>
+    void MakeLI(std::wofstream& pnach, PCSX2Memory& obj, uintptr_t addr, mips::RegisterID reg, T imm)
+    {
+        return MakeLUIORI(pnach, obj, addr, reg, imm);
+    }
+
+    uint32_t parseCommand(uint32_t command, uint32_t from, uint32_t to)
+    {
+        uint32_t mask = ((1 << (to - from + 1)) - 1) << from;
+        return (command & mask) >> from;
+    };
+
+    uint32_t constructCommand(std::function<void(std::ostringstream& buf)> asm_code_sample)
+    {
+        std::ostringstream buf;
+        asm_code_sample(buf);
+        return *(uint32_t*)buf.str().data();
     }
 
     void WriteMemory()
@@ -413,94 +490,102 @@ public:
                     else if (obj.instr == PCSX2Memory::LUI_ORI)
                     {
                         auto data = isPtr(obj.data) ? **(uint32_t**)(&obj.data) : *(uint32_t*)(&obj.data);
-                        auto hi = *(uint32_t*)&obj.addr;
-                        if (hi < EEMainMemoryStart)
-                            hi += EEMainMemoryStart;
+                        auto at = *(uint32_t*)&obj.addr;
+                        if (at < EEMainMemoryStart)
+                            at += EEMainMemoryStart;
 
-                        uint32_t bytes = injector::ReadMemory<uint32_t>(hi, true);
-                        uint8_t instr = (bytes >> (3 * 8)) & 0xFF;
+                        //auto originalValue = bytes;
+                        //    if (obj.originalValue.has_value())
+                        //        originalValue = isPtr(obj.originalValue) ? **(uint32_t**)(&obj.originalValue) : *(uint32_t*)(&obj.originalValue);
 
-                        if (instr == 0x08) //j
+                        static const uint32_t instr_len = 4;
+
+                        uint8_t LUI = parseCommand(constructCommand(([](std::ostringstream& buf) { mips::lui(buf, mips::zero, 0);})), 26, 31);
+                        uint8_t ORI = parseCommand(constructCommand(([](std::ostringstream& buf) { mips::ori(buf, mips::zero, mips::zero, 0);})), 26, 31);
+                        uint8_t J   = parseCommand(constructCommand(([](std::ostringstream& buf) { mips::j(buf, 0);})), 26, 31);
+
+                        uint32_t prev_instr = parseCommand(injector::ReadMemory<uint32_t>(at - instr_len), 26, 31);
+                        uint32_t next_instr = parseCommand(injector::ReadMemory<uint32_t>(at + instr_len), 26, 31);
+                        uint32_t bytes = injector::ReadMemory<uint32_t>(at);
+                        uint8_t instr = parseCommand(bytes, 26, 31);
+                        uint8_t reg_lui = parseCommand(bytes, 16, 20);
+
+                        if (instr == J)
                         {
-                            hi = ((bytes & 0x00FFFFFF) * 4) + EEMainMemoryStart; // jumping to address
-                            bytes = injector::ReadMemory<uint32_t>(hi, true);
-                            instr = (bytes >> (3 * 8)) & 0xFF;
+                            at = ((bytes & 0x00FFFFFF) * 4) + EEMainMemoryStart; // jumping to address
+                            bytes = injector::ReadMemory<uint32_t>(at, true);
+                            instr = parseCommand(bytes, 26, 31);
+                            reg_lui = parseCommand(bytes, 16, 20);
+                            prev_instr = 0x01;
+                        }
+                        else if (instr == 0 && next_instr == J)
+                        {
+                            at = ((injector::ReadMemory<uint32_t>(at + instr_len) & 0x00FFFFFF) * 4) + EEMainMemoryStart; // jumping to address
+                            bytes = injector::ReadMemory<uint32_t>(at, true);
+                            instr = parseCommand(bytes, 26, 31);
+                            reg_lui = parseCommand(bytes, 16, 20);
+                            prev_instr = 0x01;
                         }
 
-                        if (instr >= lui1 && instr <= lui2)
+                        
+                        if (instr == LUI)
                         {
-                            auto originalValue = bytes;
-                            if (obj.originalValue.has_value())
-                                originalValue = isPtr(obj.originalValue) ? **(uint32_t**)(&obj.originalValue) : *(uint32_t*)(&obj.originalValue);
-
-                            if (LOWORD(bytes) == HIWORD(originalValue))
+                            for (uintptr_t i = at + instr_len; i <= (at + instr_len + (5 * instr_len)); i += instr_len)
                             {
-                                for (uint32_t i = hi + 4; i < i + 24; i++)
+                                bytes = injector::ReadMemory<uint32_t>(i);
+                                instr = parseCommand(bytes, 26, 31);
+                                uint8_t reg_ori = parseCommand(bytes, 16, 20);
+                        
+                                if (instr == LUI)
+                                    break;
+                                else if (instr == ORI && reg_lui == reg_ori)
                                 {
-                                    bytes = injector::ReadMemory<uint32_t>(i, true);
-                                    instr = (bytes >> (3 * 8)) & 0xFF;
-
-                                    if ((instr >= ori1 && instr <= ori2) && (LOWORD(bytes) == LOWORD(originalValue)))
+                                    if ((prev_instr == 0x01) || (prev_instr >= 0x04 && prev_instr <= 0x07) || (prev_instr >= 0x14 && prev_instr <= 0x17)) //beq and such
                                     {
-                                        auto lo = i;
-                                        injector::WriteMemory<uint16_t>(hi, HIWORD(data), true);
-                                        injector::WriteMemory<uint16_t>(lo, LOWORD(data), true);
+                                        injector::WriteMemory<uint16_t>(i, _LOWORD(data), true);
                                         break;
                                     }
-                                }
-                            }
-                        }
-                    }
-                    else if (obj.instr == PCSX2Memory::LUI_ORI_MUL)
-                    {
-                        for (size_t j = 0; j <= 0; j++)
-                        {
-                            auto data = isPtr(obj.data) ? **(uint32_t**)(&obj.data) : *(uint32_t*)(&obj.data);
-                            auto hi = *(uint32_t*)&obj.addr + j;
-                            if (hi < EEMainMemoryStart)
-                                hi += EEMainMemoryStart;
-
-                            uint32_t bytes = injector::ReadMemory<uint32_t>(hi, true);
-                            uint16_t instr = (uint16_t)(bytes >> 16);
-
-                            if (instr == 0x3C01)
-                            {
-                                auto originalValue = bytes;
-                                if (obj.originalValue.has_value())
-                                    originalValue = isPtr(obj.originalValue) ? **(uint32_t**)(&obj.originalValue) : *(uint32_t*)(&obj.originalValue);
-
-                                //if (LOWORD(bytes) == HIWORD(originalValue))
-                                {
-                                    for (uint32_t i = hi + 4; i < i + 24; i++)
+                                    else
                                     {
-                                        bytes = injector::ReadMemory<uint32_t>(i, true);
-                                        uint16_t instr = (uint16_t)(bytes >> 16);
-
-                                        if ((instr == 0x4481 || instr == 0x3421) /* && (LOWORD(bytes) == LOWORD(originalValue))*/)
-                                        {
-                                            auto lo = i;
-
-                                            union
-                                            {
-                                                struct
-                                                {
-                                                    uint16_t low;
-                                                    uint16_t high;
-                                                };
-                                                float f;
-                                            } u;
-
-                                            u.high = injector::ReadMemory<uint16_t>(hi, true);
-                                            u.low = injector::ReadMemory<uint16_t>(lo, true);
-
-                                            float f = u.f /** *(float*)&data*/;
-                                            injector::WriteMemory<uint16_t>(hi, HIWORD(data), true);
-                                            injector::WriteMemory<uint16_t>(lo, LOWORD(data), true);
-                                            break;
-                                        }
+                                        injector::WriteMemory<uint32_t>(at, constructCommand(([](std::ostringstream& buf) { mips::nop(buf); })), true);
+                                        MakeLUIORI(i, (mips::RegisterID)reg_ori, *(float*)&data);
+                                        goto end;
                                     }
                                 }
                             }
+                            if ((prev_instr >= 0x01 && prev_instr <= 0x07) || (prev_instr >= 0x14 && prev_instr <= 0x17)) //beq and such
+                                injector::WriteMemory<uint16_t>(at, _HIWORD(data), true);
+                            else
+                                MakeLUIORI(at, (mips::RegisterID)reg_lui, *(float*)&data);
+
+                        end:
+                            nullptr;
+                        }
+                    }
+                    else if (obj.instr == PCSX2Memory::LI)
+                    {
+                        auto data = isPtr(obj.data) ? **(uint32_t**)(&obj.data) : *(uint32_t*)(&obj.data);
+                        auto at = *(uint32_t*)&obj.addr;
+                        if (at < EEMainMemoryStart)
+                            at += EEMainMemoryStart;
+
+                        static const uint32_t instr_len = 4;
+
+                        uint8_t ORI = parseCommand(constructCommand(([](std::ostringstream& buf) { mips::ori(buf, mips::zero, mips::zero, 0); })), 26, 31);
+                        uint8_t ZERO = parseCommand(constructCommand(([](std::ostringstream& buf) { mips::ori(buf, mips::zero, mips::zero, 0); })), 21, 25);
+
+                        uint32_t prev_instr = parseCommand(injector::ReadMemory<uint32_t>(at - instr_len), 26, 31);
+                        uint32_t bytes = injector::ReadMemory<uint32_t>(at);
+                        uint8_t instr = parseCommand(bytes, 26, 31);
+                        uint8_t reg_ori = parseCommand(bytes, 16, 20);
+                        uint8_t reg_zero = parseCommand(bytes, 21, 25);
+
+                        if (instr == ORI && reg_zero == ZERO)
+                        {
+                            if ((prev_instr >= 0x01 && prev_instr <= 0x07) || (prev_instr >= 0x14 && prev_instr <= 0x17)) //beq and such
+                                injector::WriteMemory<uint16_t>(at, _LOWORD(data), true);
+                            else
+                                MakeLI(at, (mips::RegisterID)reg_ori, data);
                         }
                     }
                     else if (obj.instr == PCSX2Memory::MAKE_INLINE)
@@ -569,48 +654,117 @@ public:
                 else if (obj.instr == PCSX2Memory::LUI_ORI)
                 {
                     auto data = isPtr(obj.data) ? **(uint32_t**)(&obj.data) : *(uint32_t*)(&obj.data);
-                    auto hi = *(uint32_t*)&obj.addr;
-                    if (hi < EEMainMemoryStart)
-                        hi += EEMainMemoryStart;
-                    uint32_t bytes = injector::ReadMemory<uint32_t>(hi, true);
-                    uint8_t instr = (bytes >> (3 * 8)) & 0xFF;
+                    auto at = *(uint32_t*)&obj.addr;
+                    if (at < EEMainMemoryStart)
+                        at += EEMainMemoryStart;
 
-                    if (instr == 0x08) //j
+                    //auto originalValue = bytes;
+                    //    if (obj.originalValue.has_value())
+                    //        originalValue = isPtr(obj.originalValue) ? **(uint32_t**)(&obj.originalValue) : *(uint32_t*)(&obj.originalValue);
+
+                    static const uint32_t instr_len = 4;
+
+                    uint8_t LUI = parseCommand(constructCommand(([](std::ostringstream& buf) { mips::lui(buf, mips::zero, 0); })), 26, 31);
+                    uint8_t ORI = parseCommand(constructCommand(([](std::ostringstream& buf) { mips::ori(buf, mips::zero, mips::zero, 0); })), 26, 31);
+                    uint8_t J = parseCommand(constructCommand(([](std::ostringstream& buf) { mips::j(buf, 0); })), 26, 31);
+
+                    uint32_t prev_instr = parseCommand(injector::ReadMemory<uint32_t>(at - instr_len), 26, 31);
+                    uint32_t next_instr = parseCommand(injector::ReadMemory<uint32_t>(at + instr_len), 26, 31);
+                    uint32_t bytes = injector::ReadMemory<uint32_t>(at);
+                    uint8_t instr = parseCommand(bytes, 26, 31);
+                    uint8_t reg_lui = parseCommand(bytes, 16, 20);
+
+                    if (instr == J)
                     {
-                        hi = ((bytes & 0x00FFFFFF) * 4) + EEMainMemoryStart; // jumping to address
-                        bytes = injector::ReadMemory<uint32_t>(hi, true);
-                        instr = (bytes >> (3 * 8)) & 0xFF;
+                        at = ((bytes & 0x00FFFFFF) * 4) + EEMainMemoryStart; // jumping to address
+                        bytes = injector::ReadMemory<uint32_t>(at, true);
+                        instr = parseCommand(bytes, 26, 31);
+                        reg_lui = parseCommand(bytes, 16, 20);
+                        prev_instr = 0x01;
+                    }
+                    else if (instr == 0 && next_instr == J)
+                    {
+                        at = ((injector::ReadMemory<uint32_t>(at + instr_len) & 0x00FFFFFF) * 4) + EEMainMemoryStart; // jumping to address
+                        bytes = injector::ReadMemory<uint32_t>(at, true);
+                        instr = parseCommand(bytes, 26, 31);
+                        reg_lui = parseCommand(bytes, 16, 20);
+                        prev_instr = 0x01;
                     }
 
-                    if (instr >= lui1 && instr <= lui2)
+
+                    if (instr == LUI)
                     {
-                        auto originalValue = bytes;
-                        if (obj.originalValue.has_value())
-                            originalValue = isPtr(obj.originalValue) ? **(uint32_t**)(&obj.originalValue) : *(uint32_t*)(&obj.originalValue);
-
-                        if (LOWORD(bytes) == HIWORD(originalValue))
+                        for (uintptr_t i = at + instr_len; i <= (at + instr_len + (5 * instr_len)); i += instr_len)
                         {
-                            for (uint32_t i = hi + 4; i < i + 24; i++)
-                            {
-                                bytes = injector::ReadMemory<uint32_t>(i, true);
-                                instr = (bytes >> (3 * 8)) & 0xFF;
+                            bytes = injector::ReadMemory<uint32_t>(i);
+                            instr = parseCommand(bytes, 26, 31);
+                            uint8_t reg_ori = parseCommand(bytes, 16, 20);
 
-                                if ((instr >= ori1 && instr <= ori2) && (LOWORD(bytes) == LOWORD(originalValue)))
+                            if (instr == LUI)
+                                break;
+                            else if (instr == ORI && reg_lui == reg_ori)
+                            {
+                                if ((prev_instr == 0x01) || (prev_instr >= 0x04 && prev_instr <= 0x07) || (prev_instr >= 0x14 && prev_instr <= 0x17)) //beq and such
                                 {
-                                    auto lo = i;
                                     auto t = pnach.tellp();
-                                    pnach << L"patch=" << obj.place_type << L"," << obj.getCpuType() << L"," << int_to_hex(hi - EEMainMemoryStart) << L"," << obj.getDataType(PCSX2Memory::SHORT_T) << L"," << int_to_hex(HIWORD(data));
-                                    pnach << std::setw(40 - (size_t)(pnach.tellp() - t)) << L"";
-                                    pnach << obj.comment << std::endl;
-                                    t = pnach.tellp();
-                                    pnach << L"patch=" << obj.place_type << L"," << obj.getCpuType() << L"," << int_to_hex(lo - EEMainMemoryStart) << L"," << obj.getDataType(PCSX2Memory::SHORT_T) << L"," << int_to_hex(LOWORD(data));
+                                    pnach << L"patch=" << obj.place_type << L"," << obj.getCpuType() << L"," << int_to_hex(i - EEMainMemoryStart) << L"," << obj.getDataType(PCSX2Memory::SHORT_T) << L"," << int_to_hex(_LOWORD(data));
                                     pnach << std::setw(40 - (size_t)(pnach.tellp() - t)) << L"";
                                     pnach << obj.comment << std::endl;
                                     pnach << std::endl;
                                     break;
                                 }
+                                else
+                                {
+                                    injector::WriteMemory<uint32_t>(at, constructCommand(([](std::ostringstream& buf) { mips::nop(buf); })), true);
+                                    MakeLUIORI(pnach, obj, i, (mips::RegisterID)reg_ori, *(float*)&data);
+                                    goto end;
+                                }
                             }
                         }
+                        if ((prev_instr >= 0x01 && prev_instr <= 0x07) || (prev_instr >= 0x14 && prev_instr <= 0x17)) //beq and such
+                        {
+                            auto t = pnach.tellp();
+                            pnach << L"patch=" << obj.place_type << L"," << obj.getCpuType() << L"," << int_to_hex(at - EEMainMemoryStart) << L"," << obj.getDataType(PCSX2Memory::SHORT_T) << L"," << int_to_hex(_HIWORD(data));
+                            pnach << std::setw(40 - (size_t)(pnach.tellp() - t)) << L"";
+                            pnach << obj.comment << std::endl;
+                            t = pnach.tellp();
+                        }
+                        else
+                            MakeLUIORI(pnach, obj, at, (mips::RegisterID)reg_lui, *(float*)&data);
+                    end:
+                        nullptr;
+                    }
+                }
+                else if (obj.instr == PCSX2Memory::LI)
+                {
+                    auto data = isPtr(obj.data) ? **(uint32_t**)(&obj.data) : *(uint32_t*)(&obj.data);
+                    auto at = *(uint32_t*)&obj.addr;
+                    if (at < EEMainMemoryStart)
+                        at += EEMainMemoryStart;
+
+                    static const uint32_t instr_len = 4;
+
+                    uint8_t ORI = parseCommand(constructCommand(([](std::ostringstream& buf) { mips::ori(buf, mips::zero, mips::zero, 0); })), 26, 31);
+                    uint8_t ZERO = parseCommand(constructCommand(([](std::ostringstream& buf) { mips::ori(buf, mips::zero, mips::zero, 0); })), 21, 25);
+
+                    uint32_t prev_instr = parseCommand(injector::ReadMemory<uint32_t>(at - instr_len), 26, 31);
+                    uint32_t bytes = injector::ReadMemory<uint32_t>(at);
+                    uint8_t instr = parseCommand(bytes, 26, 31);
+                    uint8_t reg_ori = parseCommand(bytes, 16, 20);
+                    uint8_t reg_zero = parseCommand(bytes, 21, 25);
+
+                    if (instr == ORI && reg_zero == ZERO)
+                    {
+                        if ((prev_instr >= 0x01 && prev_instr <= 0x07) || (prev_instr >= 0x14 && prev_instr <= 0x17)) //beq and such
+                        {
+                            auto t = pnach.tellp();
+                            pnach << L"patch=" << obj.place_type << L"," << obj.getCpuType() << L"," << int_to_hex(at - EEMainMemoryStart) << L"," << obj.getDataType(PCSX2Memory::SHORT_T) << L"," << int_to_hex(_LOWORD(data));
+                            pnach << std::setw(40 - (size_t)(pnach.tellp() - t)) << L"";
+                            pnach << obj.comment << std::endl;
+                            pnach << std::endl;
+                        }
+                        else
+                            MakeLI(pnach, obj, at, (mips::RegisterID)reg_ori, data);
                     }
                 }
                 else if (obj.instr == PCSX2Memory::MAKE_INLINE)
@@ -734,7 +888,7 @@ static inline constexpr auto DOUBLE_T = PCSX2Memory::DOUBLE_T;
 static inline constexpr auto EXTENDED_T = PCSX2Memory::EXTENDED_T;
 static inline constexpr auto NONE = PCSX2Memory::NONE;
 static inline constexpr auto LUI_ORI = PCSX2Memory::LUI_ORI;
-static inline constexpr auto LUI_ORI_MUL = PCSX2Memory::LUI_ORI_MUL;
+static inline constexpr auto LI = PCSX2Memory::LI;
 static inline constexpr auto MAKE_INLINE = PCSX2Memory::MAKE_INLINE;
 typedef std::ostringstream oss;
 typedef std::function<void(oss& buf)> mips_asm;

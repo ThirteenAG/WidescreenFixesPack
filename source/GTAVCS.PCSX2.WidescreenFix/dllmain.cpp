@@ -148,7 +148,7 @@ void PCSX2Thread()
         //{0x114838, ws::LUI_ORI, 0.56f},
         //{0x1147B8, ws::LUI_ORI, -0.42561f},
         //{0x1149B0, ws::LUI_ORI, 0.56f},
-        
+
         {0x115878, ws::LUI_ORI, 0.85f},
         {0x118454, ws::LUI_LUI, 3.0f},
         {0x118950, ws::LUI_LUI, 12.0f},
@@ -232,7 +232,7 @@ void PCSX2Thread()
         //idk
         {0x119060, ws::LUI_LUI, 12.0f},
         {0x322E38, ws::LUI_ORI, 34.0f},
-        
+
         //int stuff
         {0x21F6A8, ws::LI_V1, 0xAA},
         {0x31E0D0, ws::LI_A1, 0x181},
@@ -241,7 +241,7 @@ void PCSX2Thread()
         {0x31EAD0, ws::LI_A1, 0x185},
         {0x320E6C, ws::LI_A0, 0x19f},
         {0x321424, ws::LI_A0, 0x19f},
-        
+
         //??
         {0x003b8660, ws::ADDIU_A1_S1, 0x6},
         {0x003b5914, ws::ADDIU_A0_S0, 0x6},
@@ -259,46 +259,20 @@ void PCSX2Thread()
         switch (w.instr)
         {
         case ws::LUI_ORI:
-            ps2.vecPatches.push_back(PCSX2Memory(CONT, EE, ps2.GV({ w.ptr + 4 }), WORD_T, MAKE_INLINE, mips_asm([&w](oss& buf)
-            {
-                li2(buf, at, w.value.f * Screen.fHudScale);
-            }),
-            L"// LUI_ORI"));
-            break;
         case ws::LUI_LUI:
-            ps2.vecPatches.push_back(PCSX2Memory(CONT, EE, ps2.GV({ w.ptr }), WORD_T, MAKE_INLINE, mips_asm([&w](oss& buf)
-            {
-                li2(buf, at, w.value.f * Screen.fHudScale);
-            }),
-            L"// LUI_LUI"));
+            ps2.vecPatches.push_back(PCSX2Memory(CONT, EE, ps2.GV({ w.ptr }), WORD_T, LUI_ORI, w.value.f * Screen.fHudScale,
+                std::wstring(L"// LUI_ORI: ") + std::to_wstring(w.value.f * Screen.fHudScale)));
             break;
         case ws::ASPECT_RATIO:
-            ps2.vecPatches.push_back(PCSX2Memory(CONT, EE, ps2.GV({ w.ptr + 4 }), WORD_T, MAKE_INLINE, mips_asm([&w](oss& buf)
-            {
-                li2(buf, at, Screen.fAspectRatio);
-            }),
-            L"// ASPECT_RATIO"));
+            ps2.vecPatches.push_back(PCSX2Memory(CONT, EE, ps2.GV({ w.ptr }), WORD_T, LUI_ORI, Screen.fAspectRatio,
+                std::wstring(L"// ASPECT_RATIO: ") + std::to_wstring(Screen.fAspectRatio)));
+            
             break;
         case ws::LI_A0:
-            ps2.vecPatches.push_back(PCSX2Memory(CONT, EE, ps2.GV({ w.ptr }), WORD_T, MAKE_INLINE, mips_asm([&w](oss& buf)
-            {
-                li(buf, a0, int32_t((float)w.value.i * Screen.fHudScale));
-            }),
-            L"// LI_A0"));
-            break;
         case ws::LI_A1:
-            ps2.vecPatches.push_back(PCSX2Memory(CONT, EE, ps2.GV({ w.ptr }), WORD_T, MAKE_INLINE, mips_asm([&w](oss& buf)
-            {
-                li(buf, a1, int32_t((float)w.value.i * Screen.fHudScale));
-            }),
-            L"// LI_A1"));
-            break;
         case ws::LI_V1:
-            ps2.vecPatches.push_back(PCSX2Memory(CONT, EE, ps2.GV({ w.ptr }), WORD_T, MAKE_INLINE, mips_asm([&w](oss& buf)
-            {
-                li(buf, v1, int32_t((float)w.value.i * Screen.fHudScale));
-            }),
-            L"// LI_V1"));
+            ps2.vecPatches.push_back(PCSX2Memory(CONT, EE, ps2.GV({ w.ptr }), WORD_T, LI, (int32_t((float)w.value.i * Screen.fHudScale)),
+                std::wstring(L"// LI: ") + std::to_wstring(int32_t((float)w.value.i * Screen.fHudScale))));
             break;
         case ws::ADDIU_A1_S1:
             ps2.vecPatches.push_back(PCSX2Memory(CONT, EE, ps2.GV({ w.ptr }), WORD_T, MAKE_INLINE, mips_asm([&w](oss& buf)
@@ -326,6 +300,7 @@ void PCSX2Thread()
         }
     }
 
+    
     ps2.vecPatches.push_back(PCSX2Memory(CONT, EE, ps2.GV({ 0x31F800 }), WORD_T, MAKE_INLINE, mips_asm([](oss& buf)
         {
             li2(buf, t9, Screen.fHudOffset);
@@ -397,6 +372,7 @@ void PCSX2Thread()
         L"// GetRadarPosX"));
     }
     
+
     ps2.WritePnach();
     ps2.WriteMemoryLoop();
 }
