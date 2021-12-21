@@ -331,6 +331,15 @@ project "MassEffectTrilogy.FOVFix"
 project "MaxPayne.WidescreenFix"
    setpaths("Z:/WFP/Games/Max Payne/Max Payne/", "MaxPayne.exe")
    writeghaction("mp1", "MaxPayne.WidescreenFix")
+project "MidnightClubLARemix.PPSSPP.DualAnalogPatch"
+   kind "Makefile"
+   includedirs { "external/pspsdk/psp/sdk/include" }
+   includedirs { "external/pspsdk/bin" }
+   includedirs { "external/pspsdk/psp/sdk/include" }
+   files { "source/%{prj.name}/*.c" }
+   targetextension ".prx"
+   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/MidnightClubLARemix.PPSSPP.DualAnalogPatch/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "MidnightClubLARemix.PPSSPP.DualAnalogPatch")
+   writemakefile("MidnightClubLARemix.PPSSPP.DualAnalogPatch")
 project "MaxPayne2.WidescreenFix"
    setpaths("Z:/WFP/Games/Max Payne/Max Payne 2 The Fall of Max Payne/", "MaxPayne2.exe")
    writeghaction("mp2", "MaxPayne2.WidescreenFix")
@@ -408,6 +417,15 @@ project "SplinterCellDoubleAgent.CXBXR.WidescreenFix"
 project "SplinterCellPandoraTomorrow.WidescreenFix"
    setpaths("Z:/WFP/Games/Splinter Cell/Splinter Cell Pandora Tomorrow/", "offline/system/SplinterCell2.exe", "offline/system/scripts/")
    writeghaction("scpt", "SplinterCellPandoraTomorrow.WidescreenFix")
+project "SplinterCellEssentials.PPSSPP.DualAnalogPatch"
+   kind "Makefile"
+   includedirs { "external/pspsdk/psp/sdk/include" }
+   includedirs { "external/pspsdk/bin" }
+   includedirs { "external/pspsdk/psp/sdk/include" }
+   files { "source/%{prj.name}/*.c" }
+   targetextension ".prx"
+   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.DualAnalogPatch/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "SplinterCellEssentials.PPSSPP.DualAnalogPatch")
+   writemakefile("SplinterCellEssentials.PPSSPP.DualAnalogPatch")
 project "StreetRacingSyndicate.WidescreenFix"
    setpaths("Z:/WFP/Games/Street Racing Syndicate/", "Bin/srs.exe", "Bin/scripts/")
    writeghaction("srs", "StreetRacingSyndicate.WidescreenFix")
@@ -426,6 +444,15 @@ project "ThePunisher.WidescreenFix"
 project "TheSuffering.WidescreenFix"
    setpaths("Z:/WFP/Games/The Suffering/The Suffering/", "suffering.exe")
    writeghaction("thesuffering", "TheSuffering.WidescreenFix")
+project "TheWarriors.PPSSPP.DualAnalogPatch"
+   kind "Makefile"
+   includedirs { "external/pspsdk/psp/sdk/include" }
+   includedirs { "external/pspsdk/bin" }
+   includedirs { "external/pspsdk/psp/sdk/include" }
+   files { "source/%{prj.name}/*.c" }
+   targetextension ".prx"
+   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/TheWarriors.PPSSPP.DualAnalogPatch/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "TheWarriors.PPSSPP.DualAnalogPatch")
+   writemakefile("TheWarriors.PPSSPP.DualAnalogPatch")
 project "TonyHawksAmericanWasteland.WidescreenFix"
    setpaths("Z:/WFP/Games/Tony Hawks/Tony Hawk's American Wasteland/", "Game/THAW.exe", "Game/scripts/")
    writeghaction("thaw", "TonyHawksAmericanWasteland.WidescreenFix")

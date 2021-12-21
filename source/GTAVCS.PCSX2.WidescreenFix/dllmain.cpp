@@ -115,6 +115,7 @@ void PCSX2Thread()
         }),
         L"// Force Widescreen"));
 
+    
     static uint32_t xrefs[] = {
         //0x104C40, 0x104DE4, 0x106610, 0x1066F8, 0x107788, 0x1125A0, 0x112940, 0x1129B4, 0x1165B0, 0x1166C4, 0x1167D8, 
         //0x116D50, radar blips
@@ -129,7 +130,7 @@ void PCSX2Thread()
         0x31DD5C, 0x31DE7C, 0x31DFB8, // top...
         0x31E2CC, 0x31E70C, 0x31E82C, // ...right...
         0x31E968, 0x31F12C, 0x31F67C, // ...hud
-        //0x31FB64, 0x31FBB8, 0x31FC04, 0x31FC8C,
+        0x31FB64, 0x31FBB8, 0x31FC04, 0x31FC8C, //ammo text
         //0x3206B4, 0x320994, 0x320B84, 0x320D58, 0x320D80, 0x320EB8, 0x321090, 0x3210B8, 0x3211D0, 0x321248, 0x321340, 0x321478, 
          0x321650, //radardisc
         //0x3218A0, 0x32194C, 0x321980,
@@ -138,6 +139,7 @@ void PCSX2Thread()
         //0x3B56F8, 0x3B69C4, 0x3B69FC, 0x3B6A60, 0x3B8F24, 0x3B93D0, 0x3B946C, 0x3B94BC, 0x3B950C, 0x3B955C, 0x3BA4C0, 0x3D8270, 0x3DFEA0, 0x3F3C78, 0x3F3F28, 0x3F4594,
         //0x411DF0, 0x411F78, 0x41D3B0, 0x42E2D4, 0x42E3D4, 0x42E5CC, 0x42E628,
     };
+
     for (auto& i : xrefs)
     {
         ps2.vecPatches.push_back(PCSX2Memory(CONT, EE, ps2.GV({ i }), WORD_T, MAKE_INLINE, mips_asm([&](oss& buf)
@@ -162,6 +164,9 @@ void PCSX2Thread()
         }),
         L"// HUD"));
     }
+
+    //ps2.vecPatches.push_back(PCSX2Memory(CONT, EE, ps2.GV({ 0x31F8D8 }), WORD_T, LUI_ORI, Screen.fHudScale * 0.2392578f, L"Ammo Font Scale"));
+    ps2.vecPatches.push_back(PCSX2Memory(CONT, EE, ps2.GV({ 0x2625AC }), WORD_T, LUI_ORI, Screen.fHudScale * 0.75f, L"Game Text Scale"));
 
     ps2.vecPatches.push_back(PCSX2Memory(CONT, EE, ps2.GV({ 0x1148d8 }), WORD_T, MAKE_INLINE, mips_asm([&](oss& buf)
     {
@@ -211,7 +216,14 @@ void PCSX2Thread()
     }),
     L"// DrawRadarSprite"));
 
-
+    //
+    //injector.MakeInlineLUIORI(ptr_1C1744, adjustRightX(422.0f, fHudScale)); // Single clip ammo number Left X
+    //injector.MakeInlineLUIORI(ptr_1C1644, adjustRightX(425.0f, fHudScale)); // Ammo Left X
+    //injector.MakeInlineLUIORI(ptr_1C162C, adjustRightX(449.0f, fHudScale)); // '-' Left X
+    //injector.MakeInlineLUIORI(ptr_1C1688, adjustRightX(455.0f, fHudScale)); // Clip ammo Left X
+    //injector.MakeInlineLUIORI(ptr_1C14DC, adjustRightX(473.0f, fHudScale)); // Clip ammo Right X
+    //injector.MakeInlineLUIORI(ptr_1C13B8, fHudScale * 0.415f); // Font scale
+    
     //ps2.WritePnach(); //broken, generated too early, some memory is still zeroes
     ps2.WriteMemoryLoop();
 }
