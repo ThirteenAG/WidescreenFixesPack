@@ -426,6 +426,7 @@ project "SplinterCellEssentials.PPSSPP.DualAnalogPatch"
    targetextension ".prx"
    setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.DualAnalogPatch/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "SplinterCellEssentials.PPSSPP.DualAnalogPatch")
    writemakefile("SplinterCellEssentials.PPSSPP.DualAnalogPatch")
+   writeghaction("sce", "SplinterCellEssentials.PPSSPP.DualAnalogPatch")
 project "StreetRacingSyndicate.WidescreenFix"
    setpaths("Z:/WFP/Games/Street Racing Syndicate/", "Bin/srs.exe", "Bin/scripts/")
    writeghaction("srs", "StreetRacingSyndicate.WidescreenFix")
