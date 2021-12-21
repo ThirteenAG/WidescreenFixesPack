@@ -104,6 +104,13 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag: sce
+        artifacts: data/Archives/SplinterCellEssentials.PPSSPP.DualAnalogPatch.zip
+
+    - uses: ./.github/workflows/release_tag
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
         tag: burnout3
         artifacts: data/Archives/Burnout3.PCSX2.WidescreenFix.zip
 
