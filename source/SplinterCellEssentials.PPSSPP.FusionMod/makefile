@@ -1,4 +1,4 @@
-TARGET = ..\..\data\TheWarriors.PPSSPP.DualAnalogPatch\memstick\PSP\PLUGINS\TheWarriors.PPSSPP.DualAnalogPatch\TheWarriors.PPSSPP.DualAnalogPatch
+TARGET = ..\..\data\SplinterCellEssentials.PPSSPP.FusionMod\memstick\PSP\PLUGINS\SplinterCellEssentials.PPSSPP.FusionMod\SplinterCellEssentials.PPSSPP.FusionMod
 OBJS = main.o exports.o ../../includes/psp/injector.o ../../includes/psp/log.o ../../includes/psp/patterns.o ../../includes/psp/minIni.o ../../includes/psp/inireader.o ../../includes/psp/gvm.o ../../includes/psp/mips.o
 
 CFLAGS = -O2 -Os -G0 -Wall -fshort-wchar -fno-pic -mno-check-zero-division
