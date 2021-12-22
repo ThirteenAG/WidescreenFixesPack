@@ -1,4 +1,4 @@
-TARGET = ..\..\data\MidnightClubLARemix.PPSSPP.DualAnalogPatch\memstick\PSP\PLUGINS\MidnightClubLARemix.PPSSPP.DualAnalogPatch\MidnightClubLARemix.PPSSPP.DualAnalogPatch
+TARGET = ..\..\data\TheWarriors.PPSSPP.FusionMod\memstick\PSP\PLUGINS\TheWarriors.PPSSPP.FusionMod\TheWarriors.PPSSPP.FusionMod
 OBJS = main.o exports.o ../../includes/psp/injector.o ../../includes/psp/log.o ../../includes/psp/patterns.o ../../includes/psp/minIni.o ../../includes/psp/inireader.o ../../includes/psp/gvm.o ../../includes/psp/mips.o
 
 CFLAGS = -O2 -Os -G0 -Wall -fshort-wchar -fno-pic -mno-check-zero-division
