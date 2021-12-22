@@ -110,6 +110,7 @@ int PSPLoaderHandler()
         //ptr = pattern.get(1, "25 28 00 00 25 30 00 00 25 38 00 00", 12);
         //injector.MakeNOP(ptr); //game gets stuck if no intros are played
     }
+    return 0;
 }
 
 int OnModuleStart() 
