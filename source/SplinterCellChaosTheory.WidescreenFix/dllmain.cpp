@@ -455,7 +455,7 @@ void Init()
 
     // TODO: Add more specific offsets for another languages
     switch (eGameLang) {
-    case GameLang::Russian:
+    case GameLang::Polish:
         sTextOffset.bottomCorner.v1v1 -= 10;
         break;
     case GameLang::Russian:
