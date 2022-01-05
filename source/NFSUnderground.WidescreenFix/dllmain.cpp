@@ -112,6 +112,34 @@ void __declspec(naked) MaybeClearSurfaceDuringBackgroundRender()
     }
 }
 
+void* _CreateFileA;
+void* CreateFileA_xref1;
+void* CreateFileA_xref2;
+HANDLE WINAPI CreateFileAHook(LPCSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile)
+{
+    std::filesystem::path newPath("scripts\\nointro.mad");
+    std::filesystem::path filePath(lpFileName);
+    std::string s = filePath.stem().string();
+    std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return std::tolower(c); });
+
+    if (s.ends_with("e3_title") || s.ends_with("na_boot") || s.ends_with("psa"))
+    {
+        static auto counter = 0;
+        if (s.ends_with("e3_title") && dwShareMode == 1)
+        {
+            counter++;
+            if (counter > 1)
+            {
+                injector::WriteMemory(CreateFileA_xref1, _CreateFileA, true);
+                injector::WriteMemory(CreateFileA_xref2, _CreateFileA, true);
+            }
+        }
+        if (std::filesystem::exists(newPath))
+            return CreateFileA(newPath.string().c_str(), dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+    }
+    return CreateFileA(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+}
+
 void Init()
 {
     CIniReader iniReader("");
@@ -122,6 +150,7 @@ void Init()
     bool bScaling = iniReader.ReadInteger("MAIN", "Scaling", 0);
     bool bHUDWidescreenMode = iniReader.ReadInteger("MAIN", "HUDWidescreenMode", 1) != 0;
     int nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
+    bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 0) != 0;
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
     static int nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
@@ -473,6 +502,18 @@ void Init()
                 }
             }; injector::MakeInline<LapsHook>(pattern.get_first(0), pattern.get_first(7));
         }
+    }
+
+    if (bSkipIntro)
+    {
+        static auto ptr = &CreateFileAHook;
+        pattern = hook::pattern("8D 7E 04 FF 15");
+        CreateFileA_xref1 = pattern.get_first(5);
+        _CreateFileA = injector::ReadMemory<void*>(CreateFileA_xref1, true);
+        pattern = hook::pattern("FF 75 10 FF 15 ? ? ? ? 8B F0");
+        CreateFileA_xref2 = pattern.get_first(5);
+        injector::WriteMemory(CreateFileA_xref1, &ptr, true);
+        injector::WriteMemory(CreateFileA_xref2, &ptr, true);
     }
 
     if (!szCustomUserFilesDirectoryInGameDir.empty())
