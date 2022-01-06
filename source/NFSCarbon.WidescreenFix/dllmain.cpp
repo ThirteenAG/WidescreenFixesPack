@@ -421,14 +421,33 @@ void Init()
             injector::MakeNOP(pattern.get_first(8), 6, true);
             injector::MakeCALL(pattern.get_first(8), static_cast<void(WINAPI*)(HWND, int, LONG)>(SetWindowLongHook), true);
         }
+    }
 
-        if (bSkipIntro)
+    if (bSkipIntro)
+    {
+        static auto counter = 0;
+        static auto og_value = 0;
+        pattern = hook::pattern("8B 0D ? ? ? ? 53 33 DB 3B CB ? ? 8B 47 04");
+        static uint32_t* dword_A9E6D8 = *pattern.get_first<uint32_t*>(2);
+        struct SkipIntroHook
         {
-            auto pattern = hook::pattern("A3 ? ? ? ? A1 ? ? ? ? 6A 20 50"); //0xA9E6D8
-            injector::WriteMemory(*pattern.count(3).get(2).get<uint32_t*>(1), 1, true);
-            pattern = hook::pattern("A1 ? ? ? ? 85 C0 74 ? 57 8B F8 E8"); //0xA97BC0
-            injector::WriteMemory(*pattern.count(1).get(0).get<uint32_t*>(1), 1, true);
-        }
+            void operator()(injector::reg_pack& regs)
+            {
+                if (counter < 3)
+                {
+                    if (counter == 0)
+                        og_value = *dword_A9E6D8;
+                    *dword_A9E6D8 = 1;
+                    counter++;
+                }
+                else
+                {
+                    *dword_A9E6D8 = og_value;
+                }
+
+                regs.ecx = *(uint32_t*)dword_A9E6D8;
+            }
+        }; injector::MakeInline<SkipIntroHook>(pattern.get_first(0), pattern.get_first(6));;
     }
 
     if (bExperimentalCrashFix)
