@@ -22,3 +22,6 @@
 [submodule "external/pspsdk"]
 	path = external/pspsdk
 	url = https://github.com/ThirteenAG/pspsdk
+[submodule "external/minidx9"]
+	path = external/minidx9
+	url = https://github.com/hrydgard/minidx9
