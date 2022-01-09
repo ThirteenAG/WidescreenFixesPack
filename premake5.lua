@@ -284,6 +284,16 @@ project "GTAVCS.PPSSPP.WidescreenFix"
    setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.WidescreenFix")
    writemakefile("GTAVCS.PPSSPP.WidescreenFix")
    writeghaction("gtavcspsp", "GTAVCS.PPSSPP.WidescreenFix")
+project "GTACTW.PPSSPP.FusionMod"
+   kind "Makefile"
+   includedirs { "external/pspsdk/psp/sdk/include" }
+   includedirs { "external/pspsdk/bin" }
+   includedirs { "external/pspsdk/psp/sdk/include" }
+   files { "source/%{prj.name}/*.c" }
+   targetextension ".prx"
+   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionMod/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "GTACTW.PPSSPP.FusionMod")
+   writemakefile("GTACTW.PPSSPP.FusionMod")
+   --writeghaction("gtactwpsp", "GTACTW.PPSSPP.FusionMod")
 project "GTASA.UWP.Test"
    setpaths("Z:/WFP/Games/GTASAUWP/", "GTASA.exe")
 project "Gun.WidescreenFix"
