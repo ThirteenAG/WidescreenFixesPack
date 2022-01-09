@@ -58,7 +58,8 @@ public:
         LUI_ORI,
         LI,
 
-        MAKE_INLINE
+        MAKE_INLINE,
+        MAKE_INLINE_CALL
     };
 
     PCSX2Memory(patch_place_type place_type, patch_cpu_type cpu_type, std::any addr, patch_data_type data_type, patch_instruction instr, std::any data, std::wstring comment, std::any originalValue = std::any(), bool writeToPnach = true)
@@ -610,6 +611,24 @@ public:
                         injector::WriteMemoryRaw(mCurBufAddr + EEMainMemoryStart, (void*)(ss.str()).c_str(), (size_t)ss.tellp(), true);
                         mCurBufAddr += (size_t)ss.tellp();
                     }
+                    else if (obj.instr == PCSX2Memory::MAKE_INLINE_CALL)
+                    {
+                        auto addr = *(uint32_t*)&obj.addr;
+                        if (addr >= EEMainMemoryStart)
+                            addr -= EEMainMemoryStart;
+
+                        std::ostringstream ss;
+                        mips::jal(ss, mCurBufAddr); //MakeCALL to custom code
+                        injector::WriteMemory(addr + EEMainMemoryStart, *(uint32_t*)(ss.str()).c_str(), true);
+                        ss.str("");
+                        ss.clear();
+                        auto makeInline = std::any_cast<std::function<void(std::ostringstream& buf)>>(obj.data);
+                        makeInline(ss);
+                        mips::jr(ss, mips::ra); // return
+                        mips::nop(ss);
+                        injector::WriteMemoryRaw(mCurBufAddr + EEMainMemoryStart, (void*)(ss.str()).c_str(), (size_t)ss.tellp(), true);
+                        mCurBufAddr += (size_t)ss.tellp();
+                    }
                 }
                 else if (obj.dynAddr.size > 0)
                 {
@@ -892,5 +911,6 @@ static inline constexpr auto NONE = PCSX2Memory::NONE;
 static inline constexpr auto LUI_ORI = PCSX2Memory::LUI_ORI;
 static inline constexpr auto LI = PCSX2Memory::LI;
 static inline constexpr auto MAKE_INLINE = PCSX2Memory::MAKE_INLINE;
+static inline constexpr auto MAKE_INLINE_CALL = PCSX2Memory::MAKE_INLINE_CALL;
 typedef std::ostringstream oss;
 typedef std::function<void(oss& buf)> mips_asm;
