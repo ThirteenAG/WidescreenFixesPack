@@ -286,8 +286,9 @@ int OnModuleStart() {
         ch = strtok(NULL, ":");
         int y = str2int(ch, 10);
         float fAspectRatio = (float)x / (float)y;
-        uintptr_t ptr_130C4C = pattern.get(0, "E3 3F 05 3C 39 8E A5 34 00 68 85 44 25 28 00 00", 4);
+        uintptr_t ptr_130C4C = pattern.get(0, "E3 3F 05 3C 39 8E A5 34 00 68 85 44 25 28 00 00", 0);
         injector.MakeInlineLUIORI(ptr_130C4C, fAspectRatio);
+        logger.WriteF("%x", ptr_130C4C);
     }
 
     if (Enable60FPS)
