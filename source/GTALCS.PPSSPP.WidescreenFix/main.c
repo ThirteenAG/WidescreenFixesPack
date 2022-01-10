@@ -416,16 +416,16 @@ int OnModuleStart() {
         injector.MakeInlineLUIORI(ptr_185D08, fHudScale * 0.57f); // Font scale
 
         /* Zone name */
-        injector.MakeInlineLUIORI(ptr_1872D4, adjustRightX(470.0f, fHudScale)); // Right X
-        //injector.MakeInlineLUIORI(ptr_1872E0, adjustBottomRightY(268.0f, fHudScale)); // Top Y
-        injector.MakeInlineLUIORI(ptr_18721C, fHudScale * 0.48576f); // Font scale
-        injector.MakeInlineLUIORI(ptr_187228, fHudScale * 1.056f); // Font scale
+        //injector.MakeInlineLUIORI(ptr_1872D4, adjustRightX(470.0f, fHudScale)); // Right X
+        ////injector.MakeInlineLUIORI(ptr_1872E0, adjustBottomRightY(268.0f, fHudScale)); // Top Y
+        //injector.MakeInlineLUIORI(ptr_18721C, fHudScale * 0.48576f); // Font scale
+        //injector.MakeInlineLUIORI(ptr_187228, fHudScale * 1.056f); // Font scale
 
         /* Vehicle name */
-        injector.MakeInlineLUIORI(ptr_1878BC, adjustRightX(470.0f, fHudScale)); // Right X
-        injector.MakeInlineLUIORI(ptr_1878C4, adjustBottomRightY(250.0f, fHudScale)); // Top Y
-        injector.MakeInlineLUIORI(ptr_18788C, fHudScale * 0.48576f); // Font scale
-        injector.MakeInlineLUIORI(ptr_187898, fHudScale * 1.056f); // Font scale
+        //injector.MakeInlineLUIORI(ptr_1878BC, adjustRightX(470.0f, fHudScale)); // Right X
+        //injector.MakeInlineLUIORI(ptr_1878C4, adjustBottomRightY(250.0f, fHudScale)); // Top Y
+        //injector.MakeInlineLUIORI(ptr_18788C, fHudScale * 0.48576f); // Font scale
+        //injector.MakeInlineLUIORI(ptr_187898, fHudScale * 1.056f); // Font scale
     }
 
     if (fRadarScale > 0.0f)

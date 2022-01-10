@@ -42,8 +42,8 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 
 # Important notes
 
-- Not compatible with Windows XP.
-- If you're using WINE, you may want to check these issues: [#480](https://github.com/ThirteenAG/WidescreenFixesPack/issues/480#issuecomment-406734717), [#207](https://github.com/ThirteenAG/WidescreenFixesPack/issues/207).
+- Not compatible with Windows XP (without recompiling with `_xp` toolset and `/Zc:threadSafeInit-`).
+- For using with WINE, follow [this guide](https://cookieplmonster.github.io/setup-instructions/#proton-wine).
 
 # Screenshots
 
