@@ -312,14 +312,14 @@ project "KnightRider.WidescreenFix"
    configurations { "Release", "Debug", "ReleasePCSX2", "DebugPCSX2" }
       setpaths("Z:/WFP/Games/Knight Rider/", "Knight Rider.exe")
       files { "includes/pcsx2/pcsx2.h" }
-	  writeghaction("kr", "KnightRider.WidescreenFix")
+      writeghaction("kr", "KnightRider.WidescreenFix")
    filter "configurations:*PCSX2"
       setpaths("Z:/WFP/Games/PCSX2/", "pcsx2.exe")
 project "KnightRider2.WidescreenFix"
    configurations { "Release", "Debug", "ReleasePCSX2", "DebugPCSX2" }
       setpaths("Z:/WFP/Games/Knight Rider 2/", "KR2.exe")
       files { "includes/pcsx2/pcsx2.h" }
-	  writeghaction("kr2", "KnightRider2.WidescreenFix")
+      writeghaction("kr2", "KnightRider2.WidescreenFix")
    filter "configurations:*PCSX2"
       setpaths("Z:/WFP/Games/PCSX2/", "pcsx2.exe")
 project "LARush.WidescreenFix"
@@ -394,7 +394,7 @@ project "ResidentEvil3.Dolphin.FusionMod"
    architecture "x64"
    add_asmjit()
    setpaths("Z:/WFP/Games/Dolphin-x64/", "Dolphin.exe", "scripts/")
-   --writeghaction("re3gc", "GTAVCDE.FusionMod")
+   --writeghaction("re3gc", "ResidentEvil3.Dolphin.FusionMod")
 project "SecondSight.WidescreenFix"
    setpaths("Z:/WFP/Games/Second Sight/", "secondsight.exe")
    writeghaction("secondsight", "SecondSight.WidescreenFix")

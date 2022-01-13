@@ -154,9 +154,10 @@ uintptr_t MakeInline(size_t instrCount, uintptr_t at, ...)
     }
     va_end(ap);
 
-    injector.MakeJMP(functor + i * 4, at + 4);
+    injector.MakeJMP(functor + i * 4, at + 8); // should be +8, cuz next instruction is executed before jump
     i++;
-    injector.MakeNOP(functor + i * 4);
+    injector.WriteMemory32(functor + i * 4, injector.ReadMemory32(at + 4)); //so we write it here
+    injector.MakeNOP(at + 4); //and nop here, so it won't be executed twice
     injector.MakeJMP(at, functor);
     return functor;
 }
@@ -172,7 +173,7 @@ void MakeLUIORI(uintptr_t at, RegisterID reg, float imm)
     uintptr_t functor = MakeCallStub(4); // lui ori j nop
     injector.WriteMemory32(functor + 0, lui(reg, HIWORD(imm)));
     injector.WriteMemory32(functor + 4, ori(reg, reg, LOWORD(imm)));
-    injector.MakeJMP(functor + 8, at + 4);
+    injector.MakeJMP(functor + 8, at + 4); // should be +8 as well, but it won't work, e.g. two lui instructions in a row
     injector.MakeNOP(functor + 12);
     injector.MakeJMP(at, functor);
 }
@@ -182,7 +183,7 @@ void MakeLI(uintptr_t at, RegisterID reg, int32_t imm)
     uintptr_t functor = MakeCallStub(4); // lui ori j nop
     injector.WriteMemory32(functor + 0, lui(reg, HIWORD(imm)));
     injector.WriteMemory32(functor + 4, ori(reg, reg, LOWORD(imm)));
-    injector.MakeJMP(functor + 8, at + 4);
+    injector.MakeJMP(functor + 8, at + 4); // should be +8 as well, but it won't work as well
     injector.MakeNOP(functor + 12);
     injector.MakeJMP(at, functor);
 }
