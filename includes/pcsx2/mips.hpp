@@ -176,1592 +176,3227 @@ namespace mips
 
     //Instruction set
     //With __***__ marked functions without tests below
+    inline uint32_t write_directly(uint32_t data)
+    {
+        return (swap32(data));
+    }
+
+    inline uint32_t nop()
+    {
+        return (0x00000000);
+    }
+
+    inline uint32_t __mfbpc__(RegisterID rt)
+    {
+        return (0x4000c000 | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __mfdab__(RegisterID rt)
+    {
+        return (0x4000c004 | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __mfdabm__(RegisterID rt)
+    {
+        return (0x4000c005 | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __mfdvb__(RegisterID rt)
+    {
+        return (0x4000c006 | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __mfdvbm__(RegisterID rt)
+    {
+        return (0x4000c007 | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __mfiab__(RegisterID rt)
+    {
+        return (0x4000c002 | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __mfiabm__(RegisterID rt)
+    {
+        return (0x4000c003 | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __mfpc__(RegisterID rt, int32_t i)
+    {
+        return (0x4000c801 | (rt << OP_SH_RT) | (i & 0xffff));
+    }
+
+    inline uint32_t __mfps__(RegisterID rt, int32_t i)
+    {
+        return (0x4000c800 | (rt << OP_SH_RT) | (i & 0xffff));
+    }
+
+    inline uint32_t __mtbpc__(RegisterID rt)
+    {
+        return (0x4080c000 | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __mtdab__(RegisterID rt)
+    {
+        return (0x4080c004 | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __mtdabm__(RegisterID rt)
+    {
+        return (0x4080c005 | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __mtdvb__(RegisterID rt)
+    {
+        return (0x4080c006 | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __mtdvbm__(RegisterID rt)
+    {
+        return (0x4080c007 | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __mtpc__(RegisterID rt, int32_t i)
+    {
+        return (0x4080c801 | (rt << OP_SH_RT) | (i & 0xffff));
+    }
+
+    inline uint32_t __mtps__(RegisterID rt, int32_t i)
+    {
+        return (0x4080c800 | (rt << OP_SH_RT) | (i & 0xffff));
+    }
+
+    inline uint32_t bc0f(int32_t offset)
+    {
+        return (0x4100FF00 | (offset & 0xffff));
+    }
+
+    inline uint32_t __bc0fl__(int32_t offset)
+    {
+        return (0x41020000 | (offset & 0xffff));
+    }
+
+    inline uint32_t __bc0t__(int32_t offset)
+    {
+        return (0x41010000 | (offset & 0xffff));
+    }
+
+    inline uint32_t __bc0tl__(int32_t offset)
+    {
+        return (0x41030000 | (offset & 0xffff));
+    }
+
+    inline uint32_t __bc2f__(int32_t offset)
+    {
+        return (0x49000000 | (offset & 0xffff));
+    }
+
+    inline uint32_t __bc2fl__(int32_t offset)
+    {
+        return (0x49020000 | (offset & 0xffff));
+    }
+
+    inline uint32_t __bc2t__(int32_t offset)
+    {
+        return (0x49010000 | (offset & 0xffff));
+    }
+
+    inline uint32_t __bc2tl__(int32_t offset)
+    {
+        return (0x49030000 | (offset & 0xffff));
+    }
+
+    inline uint32_t di()
+    {
+        return (0x42000039);
+    }
+
+    inline uint32_t div1(RegisterID rs, RegisterID rt)
+    {
+        return (0x7000001a | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __divu1__(RegisterID rs, RegisterID rt)
+    {
+        return (0x7000001b | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t ei()
+    {
+        return (0x42000038);
+    }
+
+    inline uint32_t eret()
+    {
+        return (0x42000018);
+    }
+
+    inline uint32_t madd(RegisterID rs, RegisterID rt)
+    {
+        return (0x70000000 | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t madd(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000000 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __madd1__(RegisterID rs, RegisterID rt)
+    {
+        return (0x70000020 | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __madd1__(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000020 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t maddu(RegisterID rs, RegisterID rt)
+    {
+        return (0x70000001 | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t maddu(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000001 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __maddu1__(RegisterID rs, RegisterID rt)
+    {
+        return (0x70000021 | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __maddu1__(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000021 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __mfc0__(RegisterID rt, RegisterID rd)
+    {
+        return (0x40000000 | (rt << OP_SH_RT) | (rd << OP_SH_RD));
+    }
+
+    inline uint32_t mfhi1(RegisterID rd)
+    {
+        return (0x70000010 | (rd << OP_SH_RD));
+    }
+
+    inline uint32_t mflo1(RegisterID rd)
+    {
+        return (0x70000012 | (rd << OP_SH_RD));
+    }
+
+    inline uint32_t mfsa(RegisterID rd)
+    {
+        return (0x00000028 | (rd << OP_SH_RD));
+    }
+
+    inline uint32_t __mtc0__(RegisterID rt, RegisterID rd)
+    {
+        return (0x40800000 | (rt << OP_SH_RT) | (rd << OP_SH_RD));
+    }
+
+    inline uint32_t __mtiab__(RegisterID rt)
+    {
+        return (0x4080c002 | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __mtiabm__(RegisterID rt)
+    {
+        return (0x4080c003 | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t mthi1(RegisterID rs)
+    {
+        return (0x70000011 | (rs << OP_SH_RS));
+    }
+
+    inline uint32_t mtlo1(RegisterID rs)
+    {
+        return (0x70000013 | (rs << OP_SH_RS));
+    }
+
+    inline uint32_t mtsa(RegisterID rs)
+    {
+        return (0x00000029 | (rs << OP_SH_RS));
+    }
+
+    template<typename T>
+    inline uint32_t mtsab(RegisterID rs, T imm)
+    {
+        return (0x04180000 | (rs << OP_SH_RS) | (*(int32_t*)&imm & 0xffff));
+    }
+
+    template<typename T>
+    inline uint32_t __mtsah__(RegisterID rs, T imm)
+    {
+        return (0x04190000 | (rs << OP_SH_RS) | (*(int32_t*)&imm & 0xffff));
+    }
+
+    inline uint32_t mult(RegisterID rs, RegisterID rt)
+    {
+        return (0x00000018 | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t mult(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x00000018 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t mult1(RegisterID rs, RegisterID rt)
+    {
+        return (0x70000018 | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t mult1(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000018 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t multu(RegisterID rs, RegisterID rt)
+    {
+        return (0x00000019 | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t multu(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x00000019 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t multu1(RegisterID rs, RegisterID rt)
+    {
+        return (0x70000019 | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t multu1(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000019 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __syncl__()
+    {
+        return (0x0000000f);
+    }
+
+    inline uint32_t sync()
+    {
+        return (0x0000000f);
+    }
+
+    inline uint32_t __syncp__()
+    {
+        return (0x0000040f);
+    }
+
+    inline uint32_t syscall()
+    {
+        return (0x0000000c);
+    }
+
+    inline uint32_t __teq__(RegisterID rs, RegisterID rt)
+    {
+        return (0x00000034 | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    template<typename T>
+    inline uint32_t __teqi__(RegisterID rs, T imm)
+    {
+        return (0x040c0000 | (rs << OP_SH_RS) | (*(int32_t*)&imm & 0xffff));
+    }
+
+    inline uint32_t tge(RegisterID rs, RegisterID rt)
+    {
+        return (0x0000bb30 | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    template<typename T>
+    inline uint32_t __tgei__(RegisterID rs, T imm)
+    {
+        return (0x04080000 | (rs << OP_SH_RS) | (*(int32_t*)&imm & 0xffff));
+    }
+
+    template<typename T>
+    inline uint32_t __tgeiu__(RegisterID rs, T imm)
+    {
+        return (0x04090000 | (rs << OP_SH_RS) | (*(int32_t*)&imm & 0xffff));
+    }
+
+    inline uint32_t __tgeu__(RegisterID rs, RegisterID rt)
+    {
+        return (0x00000031 | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __tlt__(RegisterID rs, RegisterID rt)
+    {
+        return (0x00000032 | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    template<typename T>
+    inline uint32_t __tlti__(RegisterID rs, T imm)
+    {
+        return (0x040a0000 | (rs << OP_SH_RS) | (*(int32_t*)&imm & 0xffff));
+    }
+
+    template<typename T>
+    inline uint32_t __tltiu__(RegisterID rs, T imm)
+    {
+        return (0x040b0000 | (rs << OP_SH_RS) | (*(int32_t*)&imm & 0xffff));
+    }
+
+    inline uint32_t __tltu__(RegisterID rs, RegisterID rt)
+    {
+        return (0x00000033 | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __tne__(RegisterID rs, RegisterID rt)
+    {
+        return (0x00000036 | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    template<typename T>
+    inline uint32_t __tnei__(RegisterID rs, T imm)
+    {
+        return (0x040e0000 | (rs << OP_SH_RS) | (*(int32_t*)&imm & 0xffff));
+    }
+
+    inline uint32_t __tlbp__()
+    {
+        return (0x42000008);
+    }
+
+    inline uint32_t __tlbr__()
+    {
+        return (0x42000001);
+    }
+
+    inline uint32_t tlbwi()
+    {
+        return (0x42000002);
+    }
+
+    inline uint32_t __tlbwr__()
+    {
+        return (0x42000006);
+    }
+
+    inline uint32_t abss(FPRegisterID fd, FPRegisterID fs)
+    {
+        return (0x46000005 | (fd << OP_SH_FD) | (fs << OP_SH_FS));
+    }
+
+    inline uint32_t __absd__(FPRegisterID fd, FPRegisterID fs)
+    {
+        return (0x46200005 | (fd << OP_SH_FD) | (fs << OP_SH_FS));
+    }
+
+    inline uint32_t adds(FPRegisterID fd, FPRegisterID fs, FPRegisterID ft)
+    {
+        return (0x46000000 | (fd << OP_SH_FD) | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+    }
+
+    inline uint32_t __addd__(FPRegisterID fd, FPRegisterID fs, FPRegisterID ft)
+    {
+        return (0x46200000 | (fd << OP_SH_FD) | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+    }
+
+    inline uint32_t addas(FPRegisterID fs, FPRegisterID ft)
+    {
+        return (0x46000018 | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+    }
+
+    inline uint32_t bc1f(int32_t offset)
+    {
+        return (0x45000000 | (offset & 0xffff));
+    }
+
+    inline uint32_t bc1fl(int32_t offset)
+    {
+        return (0x45020000 | (offset & 0xffff));
+    }
+
+    inline uint32_t __bc1t__(int32_t offset)
+    {
+        return (0x45010000 | (offset & 0xffff));
+    }
+
+    inline uint32_t bc1tl(int32_t offset)
+    {
+        return (0x45030000 | (offset & 0xffff));
+    }
+
+    inline uint32_t ceqs(FPRegisterID fs, FPRegisterID ft)
+    {
+        return (0x46000032 | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+    }
+
+    inline uint32_t __cfs__(FPRegisterID fs, FPRegisterID ft)
+    {
+        return (0x46000030 | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+    }
+
+    inline uint32_t __cfc1__(RegisterID rt, FPRegisterID fs)
+    {
+        return (0x44400000 | (rt << OP_SH_RT) | (fs << OP_SH_FS));
+    }
+
+    inline uint32_t __ctc1__(RegisterID rt, FPRegisterID fs)
+    {
+        return (0x44c00000 | (rt << OP_SH_RT) | (fs << OP_SH_FS));
+    }
+
+    inline uint32_t cvtsw(FPRegisterID fd, FPRegisterID fs)
+    {
+        return (0x46800020 | (fd << OP_SH_FD) | (fs << OP_SH_FS));
+    }
+
+    inline uint32_t cvtws(FPRegisterID fd, FPRegisterID fs)
+    {
+        return (0x46000024 | (fd << OP_SH_FD) | (fs << OP_SH_FS));
+    }
+
+    inline uint32_t divs(FPRegisterID fd, FPRegisterID fs, FPRegisterID ft)
+    {
+        return (0x46000003 | (fd << OP_SH_FD) | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+    }
+
+    inline uint32_t madds(FPRegisterID fd, FPRegisterID fs, FPRegisterID ft)
+    {
+        return (0x4600001c | (fd << OP_SH_FD) | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+    }
+
+    inline uint32_t maddas(FPRegisterID fs, FPRegisterID ft)
+    {
+        return (0x4600001e | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+    }
+
+    inline uint32_t maxs(FPRegisterID fd, FPRegisterID fs, FPRegisterID ft)
+    {
+        return (0x46000028 | (fd << OP_SH_FD) | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+    }
+
+    inline uint32_t mfc1(RegisterID rt, FPRegisterID fs)
+    {
+        return (0x44000000 | (rt << OP_SH_RT) | (fs << OP_SH_FS));
+    }
+
+    inline uint32_t mins(FPRegisterID fd, FPRegisterID fs, FPRegisterID ft)
+    {
+        return (0x46000029 | (fd << OP_SH_FD) | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+    }
+
+    inline uint32_t movs(FPRegisterID fd, FPRegisterID fs)
+    {
+        return (0x46000006 | (fd << OP_SH_FD) | (fs << OP_SH_FS));
+    }
+
+    inline uint32_t msubs(FPRegisterID fd, FPRegisterID fs, FPRegisterID ft)
+    {
+        return (0x4600001d | (fd << OP_SH_FD) | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+    }
+
+    inline uint32_t msubas(FPRegisterID fs, FPRegisterID ft)
+    {
+        return (0x4600001f | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+    }
+
+    inline uint32_t mtc1(RegisterID rt, FPRegisterID fs)
+    {
+        return (0x44800000 | (rt << OP_SH_RT) | (fs << OP_SH_FS));
+    }
+
+    inline uint32_t muls(FPRegisterID fd, FPRegisterID fs, FPRegisterID ft)
+    {
+        return (0x46000002 | (fd << OP_SH_FD) | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+    }
+
+    inline uint32_t mulas(FPRegisterID fs, FPRegisterID ft)
+    {
+        return (0x4600001a | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+    }
+
+    inline uint32_t negs(FPRegisterID fd, FPRegisterID fs)
+    {
+        return (0x46000007 | (fd << OP_SH_FD) | (fs << OP_SH_FS));
+    }
+
+    inline uint32_t rsqrts(FPRegisterID fd, FPRegisterID fs, FPRegisterID ft)
+    {
+        return (0x46000016 | (fd << OP_SH_FD) | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+    }
+
+    inline uint32_t sqrts(FPRegisterID fd, FPRegisterID ft)
+    {
+        return (0x46000004 | (fd << OP_SH_FD) | (ft << OP_SH_FT));
+    }
+
+    inline uint32_t subs(FPRegisterID fd, FPRegisterID fs, FPRegisterID ft)
+    {
+        return (0x46000001 | (fd << OP_SH_FD) | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+    }
+
+    inline uint32_t __subd__(FPRegisterID fd, FPRegisterID fs, FPRegisterID ft)
+    {
+        return (0x46200001 | (fd << OP_SH_FD) | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+    }
+
+    inline uint32_t __subas__(FPRegisterID fs, FPRegisterID ft)
+    {
+        return (0x46000019 | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+    }
+
+    inline uint32_t __sqrtd__(FPRegisterID fd, FPRegisterID fs)
+    {
+        return (0x46202004 | (fd << OP_SH_FD) | (fs << OP_SH_FS));
+    }
+
+    inline uint32_t __rsqrtd__(FPRegisterID fd, FPRegisterID fs)
+    {
+        return (0x46200016 | (fd << OP_SH_FD) | (fs << OP_SH_FS));
+    }
+
+    inline uint32_t __pabsh__(RegisterID rd, RegisterID rt)
+    {
+        return (0x70000168 | (rd << OP_SH_RD) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __pabsw__(RegisterID rd, RegisterID rt)
+    {
+        return (0x70000068 | (rd << OP_SH_RD) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __paddb__(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000208 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t paddh(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000108 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __paddsb__(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000608 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __paddsh__(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000508 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t paddsw(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000408 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __paddub__(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000628 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __padduh__(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000528 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __padduw__(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000428 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t paddw(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000008 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __padsbh__(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000128 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t pand(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000489 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __pceqb__(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x700002a8 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __pceqh__(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x700001a8 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __pceqw__(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x700000a8 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __pcgtb__(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000288 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t pcgth(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000188 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __pcgtw__(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000088 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t pcpyh(RegisterID rd, RegisterID rt)
+    {
+        return (0x700006e9 | (rd << OP_SH_RD) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t pcpyld(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000389 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t pcpyud(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x700003a9 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __pdivbw__(RegisterID rs, RegisterID rt)
+    {
+        return (0x70000749 | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __pdivuw__(RegisterID rs, RegisterID rt)
+    {
+        return (0x70000369 | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __pdivw__(RegisterID rs, RegisterID rt)
+    {
+        return (0x70000349 | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t pexch(RegisterID rd, RegisterID rt)
+    {
+        return (0x700006a9 | (rd << OP_SH_RD) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __pexeh__(RegisterID rd, RegisterID rt)
+    {
+        return (0x70000689 | (rd << OP_SH_RD) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t pexew(RegisterID rd, RegisterID rt)
+    {
+        return (0x70000789 | (rd << OP_SH_RD) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __pext5__(RegisterID rd, RegisterID rt)
+    {
+        return (0x70000788 | (rd << OP_SH_RD) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t pextlb(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000688 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t pextlh(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000588 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t pextlw(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000488 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t pextub(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x700006a8 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __pextuh__(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x700005a8 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t pextuw(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x700004a8 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __phmadh__(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000449 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __phmsbh__(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000549 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __pinteh__(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x700002a9 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __pinth__(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000289 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __plzcw__(RegisterID rd, RegisterID rs)
+    {
+        return (0x70000004 | (rd << OP_SH_RD) | (rs << OP_SH_RS));
+    }
+
+    inline uint32_t __pmaddh__(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000409 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __pmadduw__(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000029 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __pmaddw__(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000009 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t pmaxh(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x700001c8 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t pmaxw(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x700000c8 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t pmfhi(RegisterID rd)
+    {
+        return (0x70000209 | (rd << OP_SH_RD));
+    }
+
+    inline uint32_t __pmfhllh__(RegisterID rd)
+    {
+        return (0x700000f0 | (rd << OP_SH_RD));
+    }
+
+    inline uint32_t __pmfhllw__(RegisterID rd)
+    {
+        return (0x70000030 | (rd << OP_SH_RD));
+    }
+
+    inline uint32_t __pmfhlsh__(RegisterID rd)
+    {
+        return (0x70000130 | (rd << OP_SH_RD));
+    }
+
+    inline uint32_t __pmfhlslw__(RegisterID rd)
+    {
+        return (0x700000b0 | (rd << OP_SH_RD));
+    }
+
+    inline uint32_t __pmfhluw__(RegisterID rd)
+    {
+        return (0x70000070 | (rd << OP_SH_RD));
+    }
+
+    inline uint32_t pmflo(RegisterID rd)
+    {
+        return (0x70000249 | (rd << OP_SH_RD));
+    }
+
+    inline uint32_t pminh(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x700001e8 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t pminw(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x700000e8 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __pmsubh__(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000509 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __pmsubw__(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000109 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __pmthi__(RegisterID rs)
+    {
+        return (0x70000229 | (rs << OP_SH_RS));
+    }
+
+    inline uint32_t __pmthllw__(RegisterID rs)
+    {
+        return (0x70000031 | (rs << OP_SH_RS));
+    }
+
+    inline uint32_t __pmtlo__(RegisterID rs)
+    {
+        return (0x70000269 | (rs << OP_SH_RS));
+    }
+
+    inline uint32_t pmulth(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000709 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __pmultuw__(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000329 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __pmultw__(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000309 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t pnor(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x700004e9 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t por(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x700004a9 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __ppac5__(RegisterID rd, RegisterID rt)
+    {
+        return (0x700007c8 | (rd << OP_SH_RD) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t ppacb(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x700006c8 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t ppach(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x700005c8 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __ppacw__(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x700004c8 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __prevh__(RegisterID rd, RegisterID rt)
+    {
+        return (0x700006c9 | (rd << OP_SH_RD) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t prot3w(RegisterID rd, RegisterID rt)
+    {
+        return (0x700007c9 | (rd << OP_SH_RD) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t psllh(RegisterID rd, RegisterID rt, int32_t shamt)
+    {
+        return (0x70000034 | (rd << OP_SH_RD) | (rt << OP_SH_RT) | ((shamt & 0x1f) << OP_SH_SHAMT));
+    }
+
+    inline uint32_t __psllvw__(RegisterID rd, RegisterID rt, RegisterID rs)
+    {
+        return (0x70000089 | (rd << OP_SH_RD) | (rt << OP_SH_RT) | (rs << OP_SH_RS));
+    }
+
+    inline uint32_t psllw(RegisterID rd, RegisterID rt, int32_t shamt)
+    {
+        return (0x7000003c | (rd << OP_SH_RD) | (rt << OP_SH_RT) | ((shamt & 0x1f) << OP_SH_SHAMT));
+    }
+
+    inline uint32_t psrah(RegisterID rd, RegisterID rt, int32_t shamt)
+    {
+        return (0x70000037 | (rd << OP_SH_RD) | (rt << OP_SH_RT) | ((shamt & 0x1f) << OP_SH_SHAMT));
+    }
+
+    inline uint32_t __psravw__(RegisterID rd, RegisterID rt, RegisterID rs)
+    {
+        return (0x700000e9 | (rd << OP_SH_RD) | (rt << OP_SH_RT) | (rs << OP_SH_RS));
+    }
+
+    inline uint32_t psraw(RegisterID rd, RegisterID rt, int32_t shamt)
+    {
+        return (0x7000003f | (rd << OP_SH_RD) | (rt << OP_SH_RT) | ((shamt & 0x1f) << OP_SH_SHAMT));
+    }
+
+    inline uint32_t psrlh(RegisterID rd, RegisterID rt, int32_t shamt)
+    {
+        return (0x70000036 | (rd << OP_SH_RD) | (rt << OP_SH_RT) | ((shamt & 0x1f) << OP_SH_SHAMT));
+    }
+
+    inline uint32_t __psrlvw__(RegisterID rd, RegisterID rt, RegisterID rs)
+    {
+        return (0x700000c9 | (rd << OP_SH_RD) | (rt << OP_SH_RT) | (rs << OP_SH_RS));
+    }
+
+    inline uint32_t psrlw(RegisterID rd, RegisterID rt, int32_t shamt)
+    {
+        return (0x7000003e | (rd << OP_SH_RD) | (rt << OP_SH_RT) | ((shamt & 0x1f) << OP_SH_SHAMT));
+    }
+
+    inline uint32_t psubb(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000248 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __psubh__(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000148 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __psubsb__(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000648 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __psubsh__(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000548 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __psubsw__(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000448 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __psubub__(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000668 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __psubuh__(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000568 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __psubuw__(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000468 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t psubw(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x70000048 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t pxor(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x700004c9 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t qfsrv(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x700006e8 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t __cfc2__(RegisterID rt, RegisterID rd)
+    {
+        return (0x48400000 | (rt << OP_SH_RT) | (rd << OP_SH_RD));
+    }
+
+    inline uint32_t __cfc2ni__(RegisterID rt, RegisterID rd)
+    {
+        return (0x48400000 | (rt << OP_SH_RT) | (rd << OP_SH_RD));
+    }
+
+    inline uint32_t __cfc2i__(RegisterID rt, RegisterID rd)
+    {
+        return (0x48400001 | (rt << OP_SH_RT) | (rd << OP_SH_RD));
+    }
+
+    inline uint32_t __ctc2__(RegisterID rt, RegisterID rd)
+    {
+        return (0x48c00000 | (rt << OP_SH_RT) | (rd << OP_SH_RD));
+    }
+
+    inline uint32_t __ctc2ni__(RegisterID rt, RegisterID rd)
+    {
+        return (0x48c00000 | (rt << OP_SH_RT) | (rd << OP_SH_RD));
+    }
+
+    inline uint32_t __ctc2i__(RegisterID rt, RegisterID rd)
+    {
+        return (0x48c00001 | (rt << OP_SH_RT) | (rd << OP_SH_RD));
+    }
+
+    inline uint32_t __lqc2__(FPRegisterID ft, int32_t offset)
+    {
+        return (0xd8000000 | (ft << OP_SH_FT) | (offset & 0xffff));
+    }
+
+    inline uint32_t __qmfc2__(RegisterID rt, FPRegisterID fs)
+    {
+        return (0x48200000 | (rt << OP_SH_RT) | (fs << OP_SH_FS));
+    }
+
+    inline uint32_t __qmfc2ni__(RegisterID rt, FPRegisterID fs)
+    {
+        return (0x48200000 | (rt << OP_SH_RT) | (fs << OP_SH_FS));
+    }
+
+    inline uint32_t __qmfc2i__(RegisterID rt, FPRegisterID fs)
+    {
+        return (0x48200001 | (rt << OP_SH_RT) | (fs << OP_SH_FS));
+    }
+
+    inline uint32_t __qmtc2__(RegisterID rt, FPRegisterID fs)
+    {
+        return (0x48a00000 | (rt << OP_SH_RT) | (fs << OP_SH_FS));
+    }
+
+    inline uint32_t __qmtc2ni__(RegisterID rt, FPRegisterID fs)
+    {
+        return (0x48a00000 | (rt << OP_SH_RT) | (fs << OP_SH_FS));
+    }
+
+    inline uint32_t __qmtc2i__(RegisterID rt, FPRegisterID fs)
+    {
+        return (0x48a00001 | (rt << OP_SH_RT) | (fs << OP_SH_FS));
+    }
+
+    inline uint32_t __sqc2__(FPRegisterID ft, int32_t offset)
+    {
+        return (0xf8000000 | (ft << OP_SH_FT) | (offset & 0xffff));
+    }
+
+    inline uint32_t cles(FPRegisterID fs, FPRegisterID ft)
+    {
+        return (0x46000036 | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+    }
+
+    inline uint32_t clts(FPRegisterID fs, FPRegisterID ft)
+    {
+        return (0x46000034 | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+    }
+
+    inline uint32_t add(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x00000020 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t addu(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x00000021 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t _and(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x00000024 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t ___break__()
+    {
+        return (0x0000000d);
+    }
+
+    inline uint32_t __dadd__(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x0000002c | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t daddu(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x0000002d | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t div(RegisterID rs, RegisterID rt)
+    {
+        return (0x0000001a | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t divu(RegisterID rs, RegisterID rt)
+    {
+        return (0x0000001b | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t dsll(RegisterID rd, RegisterID rt, int32_t shamt)
+    {
+        return (0x00000038 | (rd << OP_SH_RD) | (rt << OP_SH_RT) | ((shamt & 0x1f) << OP_SH_SHAMT));
+    }
+
+    inline uint32_t dsll32(RegisterID rd, RegisterID rt, int32_t shamt)
+    {
+        return (0x0000003c | (rd << OP_SH_RD) | (rt << OP_SH_RT) | ((shamt & 0x1f) << OP_SH_SHAMT));
+    }
+
+    inline uint32_t dsllv(RegisterID rd, RegisterID rt, RegisterID rs)
+    {
+        return (0x00000014 | (rd << OP_SH_RD) | (rt << OP_SH_RT) | (rs << OP_SH_RS));
+    }
+
+    inline uint32_t dsra(RegisterID rd, RegisterID rt, int32_t shamt)
+    {
+        return (0x0000003b | (rd << OP_SH_RD) | (rt << OP_SH_RT) | ((shamt & 0x1f) << OP_SH_SHAMT));
+    }
+
+    inline uint32_t dsra32(RegisterID rd, RegisterID rt, int32_t shamt)
+    {
+        return (0x0000003f | (rd << OP_SH_RD) | (rt << OP_SH_RT) | ((shamt & 0x1f) << OP_SH_SHAMT));
+    }
+
+    inline uint32_t __dsrav__(RegisterID rd, RegisterID rt, RegisterID rs)
+    {
+        return (0x00000017 | (rd << OP_SH_RD) | (rt << OP_SH_RT) | (rs << OP_SH_RS));
+    }
+
+    inline uint32_t dsrl(RegisterID rd, RegisterID rt, int32_t shamt)
+    {
+        return (0x0000003a | (rd << OP_SH_RD) | (rt << OP_SH_RT) | ((shamt & 0x1f) << OP_SH_SHAMT));
+    }
+
+    inline uint32_t dsrl32(RegisterID rd, RegisterID rt, int32_t shamt)
+    {
+        return (0x0000003e | (rd << OP_SH_RD) | (rt << OP_SH_RT) | ((shamt & 0x1f) << OP_SH_SHAMT));
+    }
+
+    inline uint32_t dsrlv(RegisterID rd, RegisterID rt, RegisterID rs)
+    {
+        return (0x00000016 | (rd << OP_SH_RD) | (rt << OP_SH_RT) | (rs << OP_SH_RS));
+    }
+
+    inline uint32_t __dsub__(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x0000002e | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t dsubu(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x0000002f | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t jalr(RegisterID rs)
+    {
+        return (0x0000f809 | (rs << OP_SH_RS));
+    }
+
+    inline uint32_t jr(RegisterID rs)
+    {
+        return (0x00000008 | (rs << OP_SH_RS));
+    }
+
+    inline uint32_t mfhi(RegisterID rd)
+    {
+        return (0x00000010 | (rd << OP_SH_RD));
+    }
+
+    inline uint32_t mflo(RegisterID rd)
+    {
+        return (0x00000012 | (rd << OP_SH_RD));
+    }
+
+    inline uint32_t movn(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x0000000b | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t movz(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x0000000a | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t mthi(RegisterID rs)
+    {
+        return (0x00000011 | (rs << OP_SH_RS));
+    }
+
+    inline uint32_t mtlo(RegisterID rs)
+    {
+        return (0x00000013 | (rs << OP_SH_RS));
+    }
+
+    inline uint32_t nor(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x00000027 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t _or(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x00000025 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t sll(RegisterID rd, RegisterID rt, int32_t shamt)
+    {
+        return (0000000000 | (rd << OP_SH_RD) | (rt << OP_SH_RT) | ((shamt & 0x1f) << OP_SH_SHAMT));
+    }
+
+    inline uint32_t sllv(RegisterID rd, RegisterID rt, RegisterID rs)
+    {
+        return (0x00000004 | (rd << OP_SH_RD) | (rt << OP_SH_RT) | (rs << OP_SH_RS));
+    }
+
+    inline uint32_t slt(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x0000002a | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t sltu(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x0000002b | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t sra(RegisterID rd, RegisterID rt, int32_t shamt)
+    {
+        return (0x00000003 | (rd << OP_SH_RD) | (rt << OP_SH_RT) | ((shamt & 0x1f) << OP_SH_SHAMT));
+    }
+
+    inline uint32_t srav(RegisterID rd, RegisterID rt, RegisterID rs)
+    {
+        return (0x00000007 | (rd << OP_SH_RD) | (rt << OP_SH_RT) | (rs << OP_SH_RS));
+    }
+
+    inline uint32_t srl(RegisterID rd, RegisterID rt, int32_t shamt)
+    {
+        return (0x00000002 | (rd << OP_SH_RD) | (rt << OP_SH_RT) | ((shamt & 0x1f) << OP_SH_SHAMT));
+    }
+
+    inline uint32_t srlv(RegisterID rd, RegisterID rt, RegisterID rs)
+    {
+        return (0x00000006 | (rd << OP_SH_RD) | (rt << OP_SH_RT) | (rs << OP_SH_RS));
+    }
+
+    inline uint32_t sub(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x00000022 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t subu(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x00000023 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    inline uint32_t _xor(RegisterID rd, RegisterID rs, RegisterID rt)
+    {
+        return (0x00000026 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+    }
+
+    template<typename T>
+    inline uint32_t addi(RegisterID rt, RegisterID rs, T imm)
+    {
+        return (0x20000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (*(int32_t*)&imm & 0xffff));
+    }
+
+    template<typename T>
+    inline uint32_t addiu(RegisterID rt, RegisterID rs, T imm)
+    {
+        return (0x24000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (*(int32_t*)&imm & 0xffff));
+    }
+
+    template<typename T>
+    inline uint32_t andi(RegisterID rt, RegisterID rs, T imm)
+    {
+        return (0x30000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (*(int32_t*)&imm & 0xffff));
+    }
+
+    inline uint32_t __cache__(RegisterID rs, int32_t offset)
+    {
+        return (0x0000002f | (rs << OP_SH_CODE) | (offset & 0xffff));
+    }
+
+    template<typename T>
+    inline uint32_t daddi(RegisterID rt, RegisterID rs, T imm)
+    {
+        return (0x60000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (*(int32_t*)&imm & 0xffff));
+    }
+
+    template<typename T>
+    inline uint32_t daddiu(RegisterID rt, RegisterID rs, T imm)
+    {
+        return (0x64000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (*(int32_t*)&imm & 0xffff));
+    }
+
+    inline uint32_t lb(RegisterID rt, RegisterID rs, int32_t offset)
+    {
+        return (0x80000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (offset & 0xffff));
+    }
+
+    inline uint32_t lbu(RegisterID rt, RegisterID rs, int32_t offset)
+    {
+        return (0x90000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (offset & 0xffff));
+    }
+
+    inline uint32_t ld(RegisterID rt, RegisterID rs, int32_t offset)
+    {
+        return (0xDC000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (offset & 0xffff));
+    }
+
+    inline uint32_t ldl(RegisterID rt, RegisterID rs, int32_t offset)
+    {
+        return (0x68000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (offset & 0xffff));
+    }
+
+    inline uint32_t ldr(RegisterID rt, RegisterID rs, int32_t offset)
+    {
+        return (0x6C000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (offset & 0xffff));
+    }
+
+    inline uint32_t lh(RegisterID rt, RegisterID rs, int32_t offset)
+    {
+        return (0x84000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (offset & 0xffff));
+    }
+
+    inline uint32_t lhu(RegisterID rt, int32_t offset)
+    {
+        return (0x00000025 | (rt << OP_SH_RT) | (offset & 0xffff));
+    }
+
+    inline uint32_t lhu(RegisterID rt, RegisterID rs, int32_t offset)
+    {
+        return (0x94000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (offset & 0xffff));
+    }
+
+    inline uint32_t __lq__(RegisterID rt, int32_t offset)
+    {
+        return (0x0000001e | (rt << OP_SH_RT) | (offset & 0xffff));
+    }
+
+    template<typename T>
+    inline uint32_t lui(RegisterID rt, T imm)
+    {
+        return (0x3c000000 | (rt << OP_SH_RT) | (*(int32_t*)&imm & 0xffff));
+    }
+
+    inline uint32_t __ll__(RegisterID rt, int32_t offset)
+    {
+        return (0x00000030 | (rt << OP_SH_RT) | (offset & 0xffff));
+    }
+
+    inline uint32_t lw(RegisterID rt, int32_t offset)
+    {
+        return (0x00000023 | (rt << OP_SH_RT) | (offset & 0xffff));
+    }
+
+    inline uint32_t lw(RegisterID rt, RegisterID rs, int32_t offset)
+    {
+        return (0x8c000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (offset & 0xffff));
+    }
+
+    inline uint32_t lwc1(FPRegisterID ft, int32_t offset)
+    {
+        return (0x00000031 | (ft << OP_SH_FT) | (offset & 0xffff));
+    }
+
+    inline uint32_t lwl(RegisterID rt, int32_t offset)
+    {
+        return (0x00000022 | (rt << OP_SH_RT) | (offset & 0xffff));
+    }
+
+    inline uint32_t lwl(RegisterID rt, RegisterID rs, int32_t offset)
+    {
+        return (0x88000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (offset & 0xffff));
+    }
+
+    inline uint32_t lwr(RegisterID rt, int32_t offset)
+    {
+        return (0x00000026 | (rt << OP_SH_RT) | (offset & 0xffff));
+    }
+
+    inline uint32_t lwr(RegisterID rt, RegisterID rs, int32_t offset)
+    {
+        return (0x98000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (offset & 0xffff));
+    }
+
+    inline uint32_t lwu(RegisterID rt, int32_t offset)
+    {
+        return (0x00000027 | (rt << OP_SH_RT) | (offset & 0xffff));
+    }
+
+    inline uint32_t lwu(RegisterID rt, RegisterID rs, int32_t offset)
+    {
+        return (0x9C000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (offset & 0xffff));
+    }
+
+    template<typename T>
+    inline uint32_t ori(RegisterID rt, RegisterID rs, T imm)
+    {
+        return (0x34000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (*(int32_t*)&imm & 0xffff));
+    }
+
+    inline uint32_t __pref__(RegisterID rs, int32_t offset)
+    {
+        return (0x00000033 | (rs << OP_SH_CODE) | (offset & 0xffff));
+    }
+
+    inline uint32_t sb(RegisterID rt, int32_t offset)
+    {
+        return (0x00000028 | (rt << OP_SH_RT) | (offset & 0xffff));
+    }
+
+    inline uint32_t __sc__(RegisterID rt, int32_t offset)
+    {
+        return (0x00000038 | (rt << OP_SH_RT) | (offset & 0xffff));
+    }
+
+    inline uint32_t __sd__(RegisterID rt, int32_t offset)
+    {
+        return (0x0000003f | (rt << OP_SH_RT) | (offset & 0xffff));
+    }
+
+    inline uint32_t sq(RegisterID rt, int32_t offset)
+    {
+        return (0x0000001f | (rt << OP_SH_RT) | (offset & 0xffff));
+    }
+
+    inline uint32_t sq(RegisterID rt, RegisterID rs, int32_t offset)
+    {
+        return (0x7C000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (offset & 0xffff));
+    }
+
+    inline uint32_t __sdl__(RegisterID rt, int32_t offset)
+    {
+        return (0x0000002c | (rt << OP_SH_RT) | (offset & 0xffff));
+    }
+
+    inline uint32_t __sdl__(RegisterID rt, RegisterID rs, int32_t offset)
+    {
+        return (0xB3000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (offset & 0xffff));
+    }
+
+    inline uint32_t __sdr__(RegisterID rt, int32_t offset)
+    {
+        return (0x0000002d | (rt << OP_SH_RT) | (offset & 0xffff));
+    }
+
+    inline uint32_t __sdr__(RegisterID rt, RegisterID rs, int32_t offset)
+    {
+        return (0xB7000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (offset & 0xffff));
+    }
+
+    inline uint32_t sh(RegisterID rt, int32_t offset)
+    {
+        return (0x00000029 | (rt << OP_SH_RT) | (offset & 0xffff));
+    }
+
+    template<typename T>
+    inline uint32_t slti(RegisterID rt, RegisterID rs, T imm)
+    {
+        return (0x28000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (*(int32_t*)&imm & 0xffff));
+    }
+
+    template<typename T>
+    inline uint32_t sltiu(RegisterID rt, RegisterID rs, T imm)
+    {
+        return (0x2c000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (*(int32_t*)&imm & 0xffff));
+    }
+
+    inline uint32_t sw(RegisterID rt, int32_t offset)
+    {
+        return (0x0000002b | (rt << OP_SH_RT) | (offset & 0xffff));
+    }
+
+    inline uint32_t sb(RegisterID rt, RegisterID rs, int32_t offset)
+    {
+        return (0xa0000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (offset & 0xffff));
+    }
+
+    inline uint32_t sh(RegisterID rt, RegisterID rs, int32_t offset)
+    {
+        return (0xa4000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (offset & 0xffff));
+    }
+
+    inline uint32_t sw(RegisterID rt, RegisterID rs, int32_t offset)
+    {
+        return (0xac000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (offset & 0xffff));
+    }
+
+    inline uint32_t __swl__(RegisterID rt, int32_t offset)
+    {
+        return (0x0000002a | (rt << OP_SH_RT) | (offset & 0xffff));
+    }
+
+    inline uint32_t __swl__(RegisterID rt, RegisterID rs, int32_t offset)
+    {
+        return (0xa9000000 | (rt << OP_SH_FT) | (rs << OP_SH_RS) | (offset & 0xffff));
+    }
+
+    inline uint32_t __swr__(RegisterID rt, int32_t offset)
+    {
+        return (0x0000002e | (rt << OP_SH_RT) | (offset & 0xffff));
+    }
+
+    inline uint32_t __swr__(RegisterID rt, RegisterID rs, int32_t offset)
+    {
+        return (0xB9000000 | (rt << OP_SH_FT) | (rs << OP_SH_RS) | (offset & 0xffff));
+    }
+
+    inline uint32_t swc1(FPRegisterID ft, int32_t offset)
+    {
+        return (0x00000039 | (ft << OP_SH_FT) | (offset & 0xffff));
+    }
+
+    inline uint32_t lwc1(FPRegisterID ft, RegisterID rs, int32_t offset)
+    {
+        return (0xc4000000 | (ft << OP_SH_FT) | (rs << OP_SH_RS) | (offset & 0xffff));
+    }
+
+    inline uint32_t __ldc1__(FPRegisterID ft, RegisterID rs, int32_t offset)
+    {
+        return (0xd4000000 | (ft << OP_SH_FT) | (rs << OP_SH_RS) | (offset & 0xffff));
+    }
+
+    inline uint32_t swc1(FPRegisterID ft, RegisterID rs, int32_t offset)
+    {
+        return (0xe4000000 | (ft << OP_SH_FT) | (rs << OP_SH_RS) | (offset & 0xffff));
+    }
+
+    inline uint32_t __sdc1__(FPRegisterID ft, RegisterID rs, int32_t offset)
+    {
+        return (0xf4000000 | (ft << OP_SH_FT) | (rs << OP_SH_RS) | (offset & 0xffff));
+    }
+
+    template<typename T>
+    inline uint32_t xori(RegisterID rt, RegisterID rs, T imm)
+    {
+        return (0x38000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (*(int32_t*)&imm & 0xffff));
+    }
+
+    inline uint32_t j(int32_t address)
+    {
+        return ((0x08000000 | ((address & 0x0fffffff) >> 2)));
+    }
+
+    inline uint32_t jal(int32_t address)
+    {
+        return ((0x0C000000 | ((address & 0x0fffffff) >> 2)));
+    }
+
+    inline uint32_t b(int32_t imm)
+    {
+        return (0x10000000 | (imm & 0xffff));
+    }
+
+    inline uint32_t beq(RegisterID rs, RegisterID rt, int32_t imm)
+    {
+        return (0x10000000 | (rs << OP_SH_RS) | (rt << OP_SH_RT) | (imm & 0xffff));
+    }
+
+    inline uint32_t __bltz__(RegisterID rs, int32_t imm)
+    {
+        return (0x04000000 | (rs << OP_SH_RS) | (imm & 0xffff));
+    }
+
+    inline uint32_t bne(RegisterID rs, RegisterID rt, int32_t imm)
+    {
+        return (0x14000000 | (rs << OP_SH_RS) | (rt << OP_SH_RT) | (imm & 0xffff));
+    }
+
+    inline uint32_t __bnel__(RegisterID rs, RegisterID rt, int32_t imm)
+    {
+        return (0x54000000 | (rs << OP_SH_RS) | (rt << OP_SH_RT) | (imm & 0xffff));
+    }
+
+    inline uint32_t move(RegisterID rd, RegisterID rs)
+    {
+        /* addu */
+        return (0x00000021 | (rd << OP_SH_RD) | (rs << OP_SH_RS));
+    }
+
+    inline uint32_t moveq(RegisterID rd, RegisterID rs)
+    {
+        return (0x700004a9 | (rd << OP_SH_RD) | (rs << OP_SH_RS));
+    }
+
+    ///////////////////////////////////////////////////
     inline std::ostream& write_directly(std::ostream& os, uint32_t data)
     {
-        return write_binary(os, swap32(data));
+        return write_binary(os, write_directly(data));
     }
 
     inline std::ostream& nop(std::ostream& os)
     {
-        return write_binary(os, 0x00000000);
+        return write_binary(os, nop());
     }
 
     inline std::ostream& __mfbpc__(std::ostream& os, RegisterID rt)
     {
-        return write_binary(os, 0x4000c000 | (rt << OP_SH_RT));
+        return write_binary(os, __mfbpc__(rt));
     }
 
     inline std::ostream& __mfdab__(std::ostream& os, RegisterID rt)
     {
-        return write_binary(os, 0x4000c004 | (rt << OP_SH_RT));
+        return write_binary(os, __mfdab__(rt));
     }
 
     inline std::ostream& __mfdabm__(std::ostream& os, RegisterID rt)
     {
-        return write_binary(os, 0x4000c005 | (rt << OP_SH_RT));
+        return write_binary(os, __mfdabm__(rt));
     }
 
     inline std::ostream& __mfdvb__(std::ostream& os, RegisterID rt)
     {
-        return write_binary(os, 0x4000c006 | (rt << OP_SH_RT));
+        return write_binary(os, __mfdvb__(rt));
     }
 
     inline std::ostream& __mfdvbm__(std::ostream& os, RegisterID rt)
     {
-        return write_binary(os, 0x4000c007 | (rt << OP_SH_RT));
+        return write_binary(os, __mfdvbm__(rt));
     }
 
     inline std::ostream& __mfiab__(std::ostream& os, RegisterID rt)
     {
-        return write_binary(os, 0x4000c002 | (rt << OP_SH_RT));
+        return write_binary(os, __mfiab__(rt));
     }
 
     inline std::ostream& __mfiabm__(std::ostream& os, RegisterID rt)
     {
-        return write_binary(os, 0x4000c003 | (rt << OP_SH_RT));
+        return write_binary(os, __mfiabm__(rt));
     }
 
     inline std::ostream& __mfpc__(std::ostream& os, RegisterID rt, int32_t i)
     {
-        return write_binary(os, 0x4000c801 | (rt << OP_SH_RT) | (i & 0xffff));
+        return write_binary(os, __mfpc__(rt, i));
     }
 
     inline std::ostream& __mfps__(std::ostream& os, RegisterID rt, int32_t i)
     {
-        return write_binary(os, 0x4000c800 | (rt << OP_SH_RT) | (i & 0xffff));
+        return write_binary(os, __mfps__(rt, i));
     }
 
     inline std::ostream& __mtbpc__(std::ostream& os, RegisterID rt)
     {
-        return write_binary(os, 0x4080c000 | (rt << OP_SH_RT));
+        return write_binary(os, __mtbpc__(rt));
     }
 
     inline std::ostream& __mtdab__(std::ostream& os, RegisterID rt)
     {
-        return write_binary(os, 0x4080c004 | (rt << OP_SH_RT));
+        return write_binary(os, __mtdab__(rt));
     }
 
     inline std::ostream& __mtdabm__(std::ostream& os, RegisterID rt)
     {
-        return write_binary(os, 0x4080c005 | (rt << OP_SH_RT));
+        return write_binary(os, __mtdabm__(rt));
     }
 
     inline std::ostream& __mtdvb__(std::ostream& os, RegisterID rt)
     {
-        return write_binary(os, 0x4080c006 | (rt << OP_SH_RT));
+        return write_binary(os, __mtdvb__(rt));
     }
 
     inline std::ostream& __mtdvbm__(std::ostream& os, RegisterID rt)
     {
-        return write_binary(os, 0x4080c007 | (rt << OP_SH_RT));
+        return write_binary(os, __mtdvbm__(rt));
     }
 
     inline std::ostream& __mtpc__(std::ostream& os, RegisterID rt, int32_t i)
     {
-        return write_binary(os, 0x4080c801 | (rt << OP_SH_RT) | (i & 0xffff));
+        return write_binary(os, __mtpc__(rt, i));
     }
 
     inline std::ostream& __mtps__(std::ostream& os, RegisterID rt, int32_t i)
     {
-        return write_binary(os, 0x4080c800 | (rt << OP_SH_RT) | (i & 0xffff));
+        return write_binary(os, __mtps__(rt, i));
     }
 
     inline std::ostream& bc0f(std::ostream& os, int32_t offset)
     {
-        return write_binary(os, 0x4100FF00 | (offset & 0xffff));
+        return write_binary(os, bc0f(offset));
     }
 
     inline std::ostream& __bc0fl__(std::ostream& os, int32_t offset)
     {
-        return write_binary(os, 0x41020000 | (offset & 0xffff));
+        return write_binary(os, __bc0fl__(offset));
     }
 
     inline std::ostream& __bc0t__(std::ostream& os, int32_t offset)
     {
-        return write_binary(os, 0x41010000 | (offset & 0xffff));
+        return write_binary(os, __bc0t__(offset));
     }
 
     inline std::ostream& __bc0tl__(std::ostream& os, int32_t offset)
     {
-        return write_binary(os, 0x41030000 | (offset & 0xffff));
+        return write_binary(os, __bc0tl__(offset));
     }
 
     inline std::ostream& __bc2f__(std::ostream& os, int32_t offset)
     {
-        return write_binary(os, 0x49000000 | (offset & 0xffff));
+        return write_binary(os, __bc2f__(offset));
     }
 
     inline std::ostream& __bc2fl__(std::ostream& os, int32_t offset)
     {
-        return write_binary(os, 0x49020000 | (offset & 0xffff));
+        return write_binary(os, __bc2fl__(offset));
     }
 
     inline std::ostream& __bc2t__(std::ostream& os, int32_t offset)
     {
-        return write_binary(os, 0x49010000 | (offset & 0xffff));
+        return write_binary(os, __bc2t__(offset));
     }
 
     inline std::ostream& __bc2tl__(std::ostream& os, int32_t offset)
     {
-        return write_binary(os, 0x49030000 | (offset & 0xffff));
+        return write_binary(os, __bc2tl__(offset));
     }
 
     inline std::ostream& di(std::ostream& os)
     {
-        return write_binary(os, 0x42000039);
+        return write_binary(os, di());
     }
 
     inline std::ostream& div1(std::ostream& os, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x7000001a | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, div1(rs, rt));
     }
 
     inline std::ostream& __divu1__(std::ostream& os, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x7000001b | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __divu1__(rs, rt));
     }
 
     inline std::ostream& ei(std::ostream& os)
     {
-        return write_binary(os, 0x42000038);
+        return write_binary(os, ei());
     }
 
     inline std::ostream& eret(std::ostream& os)
     {
-        return write_binary(os, 0x42000018);
+        return write_binary(os, eret());
     }
 
     inline std::ostream& madd(std::ostream& os, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000000 | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, madd(rs, rt));
     }
 
     inline std::ostream& madd(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000000 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, madd(rd, rs, rt));
     }
 
     inline std::ostream& __madd1__(std::ostream& os, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000020 | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __madd1__(rs, rt));
     }
 
     inline std::ostream& __madd1__(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000020 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __madd1__(rd, rs, rt));
     }
 
     inline std::ostream& maddu(std::ostream& os, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000001 | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, maddu(rs, rt));
     }
 
     inline std::ostream& maddu(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000001 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, maddu(rd, rs, rt));
     }
 
     inline std::ostream& __maddu1__(std::ostream& os, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000021 | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __maddu1__(rs, rt));
     }
 
     inline std::ostream& __maddu1__(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000021 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __maddu1__(rd, rs, rt));
     }
 
     inline std::ostream& __mfc0__(std::ostream& os, RegisterID rt, RegisterID rd)
     {
-        return write_binary(os, 0x40000000 | (rt << OP_SH_RT) | (rd << OP_SH_RD));
+        return write_binary(os, __mfc0__(rt, rd));
     }
 
     inline std::ostream& mfhi1(std::ostream& os, RegisterID rd)
     {
-        return write_binary(os, 0x70000010 | (rd << OP_SH_RD));
+        return write_binary(os, mfhi1(rd));
     }
 
     inline std::ostream& mflo1(std::ostream& os, RegisterID rd)
     {
-        return write_binary(os, 0x70000012 | (rd << OP_SH_RD));
+        return write_binary(os, mflo1(rd));
     }
 
     inline std::ostream& mfsa(std::ostream& os, RegisterID rd)
     {
-        return write_binary(os, 0x00000028 | (rd << OP_SH_RD));
+        return write_binary(os, mfsa(rd));
     }
 
     inline std::ostream& __mtc0__(std::ostream& os, RegisterID rt, RegisterID rd)
     {
-        return write_binary(os, 0x40800000 | (rt << OP_SH_RT) | (rd << OP_SH_RD));
+        return write_binary(os, __mtc0__(rt, rd));
     }
 
     inline std::ostream& __mtiab__(std::ostream& os, RegisterID rt)
     {
-        return write_binary(os, 0x4080c002 | (rt << OP_SH_RT));
+        return write_binary(os, __mtiab__(rt));
     }
 
     inline std::ostream& __mtiabm__(std::ostream& os, RegisterID rt)
     {
-        return write_binary(os, 0x4080c003 | (rt << OP_SH_RT));
+        return write_binary(os, __mtiabm__(rt));
     }
 
     inline std::ostream& mthi1(std::ostream& os, RegisterID rs)
     {
-        return write_binary(os, 0x70000011 | (rs << OP_SH_RS));
+        return write_binary(os, mthi1(rs));
     }
 
     inline std::ostream& mtlo1(std::ostream& os, RegisterID rs)
     {
-        return write_binary(os, 0x70000013 | (rs << OP_SH_RS));
+        return write_binary(os, mtlo1(rs));
     }
 
     inline std::ostream& mtsa(std::ostream& os, RegisterID rs)
     {
-        return write_binary(os, 0x00000029 | (rs << OP_SH_RS));
+        return write_binary(os, mtsa(rs));
     }
 
     template<typename T>
     inline std::ostream& mtsab(std::ostream& os, RegisterID rs, T imm)
     {
-        return write_binary(os, 0x04180000 | (rs << OP_SH_RS) | (*(int32_t*)&imm & 0xffff));
+        return write_binary(os, mtsab(rs, imm));
     }
 
     template<typename T>
     inline std::ostream& __mtsah__(std::ostream& os, RegisterID rs, T imm)
     {
-        return write_binary(os, 0x04190000 | (rs << OP_SH_RS) | (*(int32_t*)&imm & 0xffff));
+        return write_binary(os, __mtsah__(rs, imm));
     }
 
     inline std::ostream& mult(std::ostream& os, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x00000018 | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, mult(rs, rt));
     }
 
     inline std::ostream& mult(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x00000018 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, mult(rd, rs, rt));
     }
 
     inline std::ostream& mult1(std::ostream& os, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000018 | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, mult1(rs, rt));
     }
 
     inline std::ostream& mult1(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000018 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, mult1(rd, rs, rt));
     }
 
     inline std::ostream& multu(std::ostream& os, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x00000019 | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, multu(rs, rt));
     }
 
     inline std::ostream& multu(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x00000019 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, multu(rd, rs, rt));
     }
 
     inline std::ostream& multu1(std::ostream& os, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000019 | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, multu1(rs, rt));
     }
 
     inline std::ostream& multu1(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000019 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, multu1(rd, rs, rt));
     }
 
     inline std::ostream& __syncl__(std::ostream& os)
     {
-        return write_binary(os, 0x0000000f);
+        return write_binary(os, __syncl__());
     }
 
     inline std::ostream& sync(std::ostream& os)
     {
-        return write_binary(os, 0x0000000f);
+        return write_binary(os, sync());
     }
 
     inline std::ostream& __syncp__(std::ostream& os)
     {
-        return write_binary(os, 0x0000040f);
+        return write_binary(os, __syncp__());
     }
 
     inline std::ostream& syscall(std::ostream& os)
     {
-        return write_binary(os, 0x0000000c);
+        return write_binary(os, syscall());
     }
 
     inline std::ostream& __teq__(std::ostream& os, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x00000034 | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __teq__(rs, rt));
     }
 
     template<typename T>
     inline std::ostream& __teqi__(std::ostream& os, RegisterID rs, T imm)
     {
-        return write_binary(os, 0x040c0000 | (rs << OP_SH_RS) | (*(int32_t*)&imm & 0xffff));
+        return write_binary(os, __teqi__(rs, imm));
     }
 
     inline std::ostream& tge(std::ostream& os, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x0000bb30 | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, tge(rs, rt));
     }
 
     template<typename T>
     inline std::ostream& __tgei__(std::ostream& os, RegisterID rs, T imm)
     {
-        return write_binary(os, 0x04080000 | (rs << OP_SH_RS) | (*(int32_t*)&imm & 0xffff));
+        return write_binary(os, __tgei__(rs, imm));
     }
 
     template<typename T>
     inline std::ostream& __tgeiu__(std::ostream& os, RegisterID rs, T imm)
     {
-        return write_binary(os, 0x04090000 | (rs << OP_SH_RS) | (*(int32_t*)&imm & 0xffff));
+        return write_binary(os, __tgeiu__(rs, imm));
     }
 
     inline std::ostream& __tgeu__(std::ostream& os, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x00000031 | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __tgeu__(rs, rt));
     }
 
     inline std::ostream& __tlt__(std::ostream& os, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x00000032 | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __tlt__(rs, rt));
     }
 
     template<typename T>
     inline std::ostream& __tlti__(std::ostream& os, RegisterID rs, T imm)
     {
-        return write_binary(os, 0x040a0000 | (rs << OP_SH_RS) | (*(int32_t*)&imm & 0xffff));
+        return write_binary(os, __tlti__(rs, imm));
     }
 
     template<typename T>
     inline std::ostream& __tltiu__(std::ostream& os, RegisterID rs, T imm)
     {
-        return write_binary(os, 0x040b0000 | (rs << OP_SH_RS) | (*(int32_t*)&imm & 0xffff));
+        return write_binary(os, __tltiu__(rs, imm));
     }
 
     inline std::ostream& __tltu__(std::ostream& os, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x00000033 | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __tltu__(rs, rt));
     }
 
     inline std::ostream& __tne__(std::ostream& os, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x00000036 | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __tne__(rs, rt));
     }
 
     template<typename T>
     inline std::ostream& __tnei__(std::ostream& os, RegisterID rs, T imm)
     {
-        return write_binary(os, 0x040e0000 | (rs << OP_SH_RS) | (*(int32_t*)&imm & 0xffff));
+        return write_binary(os, __tnei__(rs, imm));
     }
 
     inline std::ostream& __tlbp__(std::ostream& os)
     {
-        return write_binary(os, 0x42000008);
+        return write_binary(os, __tlbp__());
     }
 
     inline std::ostream& __tlbr__(std::ostream& os)
     {
-        return write_binary(os, 0x42000001);
+        return write_binary(os, __tlbr__());
     }
 
     inline std::ostream& tlbwi(std::ostream& os)
     {
-        return write_binary(os, 0x42000002);
+        return write_binary(os, tlbwi());
     }
 
     inline std::ostream& __tlbwr__(std::ostream& os)
     {
-        return write_binary(os, 0x42000006);
+        return write_binary(os, __tlbwr__());
     }
 
     inline std::ostream& abss(std::ostream& os, FPRegisterID fd, FPRegisterID fs)
     {
-        return write_binary(os, 0x46000005 | (fd << OP_SH_FD) | (fs << OP_SH_FS));
+        return write_binary(os, abss(fd, fs));
     }
 
     inline std::ostream& __absd__(std::ostream& os, FPRegisterID fd, FPRegisterID fs)
     {
-        return write_binary(os, 0x46200005 | (fd << OP_SH_FD) | (fs << OP_SH_FS));
+        return write_binary(os, __absd__(fd, fs));
     }
 
     inline std::ostream& adds(std::ostream& os, FPRegisterID fd, FPRegisterID fs, FPRegisterID ft)
     {
-        return write_binary(os, 0x46000000 | (fd << OP_SH_FD) | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+        return write_binary(os, adds(fd, fs, ft));
     }
 
     inline std::ostream& __addd__(std::ostream& os, FPRegisterID fd, FPRegisterID fs, FPRegisterID ft)
     {
-        return write_binary(os, 0x46200000 | (fd << OP_SH_FD) | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+        return write_binary(os, __addd__(fd, fs, ft));
     }
 
     inline std::ostream& addas(std::ostream& os, FPRegisterID fs, FPRegisterID ft)
     {
-        return write_binary(os, 0x46000018 | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+        return write_binary(os, addas(fs, ft));
     }
 
     inline std::ostream& bc1f(std::ostream& os, int32_t offset)
     {
-        return write_binary(os, 0x45000000 | (offset & 0xffff));
+        return write_binary(os, bc1f(offset));
     }
 
     inline std::ostream& bc1fl(std::ostream& os, int32_t offset)
     {
-        return write_binary(os, 0x45020000 | (offset & 0xffff));
+        return write_binary(os, bc1fl(offset));
     }
 
     inline std::ostream& __bc1t__(std::ostream& os, int32_t offset)
     {
-        return write_binary(os, 0x45010000 | (offset & 0xffff));
+        return write_binary(os, __bc1t__(offset));
     }
 
     inline std::ostream& bc1tl(std::ostream& os, int32_t offset)
     {
-        return write_binary(os, 0x45030000 | (offset & 0xffff));
+        return write_binary(os, bc1tl(offset));
     }
 
     inline std::ostream& ceqs(std::ostream& os, FPRegisterID fs, FPRegisterID ft)
     {
-        return write_binary(os, 0x46000032 | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+        return write_binary(os, ceqs(fs, ft));
     }
 
     inline std::ostream& __cfs__(std::ostream& os, FPRegisterID fs, FPRegisterID ft)
     {
-        return write_binary(os, 0x46000030 | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+        return write_binary(os, __cfs__(fs, ft));
     }
 
     inline std::ostream& __cfc1__(std::ostream& os, RegisterID rt, FPRegisterID fs)
     {
-        return write_binary(os, 0x44400000 | (rt << OP_SH_RT) | (fs << OP_SH_FS));
+        return write_binary(os, __cfc1__(rt, fs));
     }
 
     inline std::ostream& __ctc1__(std::ostream& os, RegisterID rt, FPRegisterID fs)
     {
-        return write_binary(os, 0x44c00000 | (rt << OP_SH_RT) | (fs << OP_SH_FS));
+        return write_binary(os, __ctc1__(rt, fs));
     }
 
     inline std::ostream& cvtsw(std::ostream& os, FPRegisterID fd, FPRegisterID fs)
     {
-        return write_binary(os, 0x46800020 | (fd << OP_SH_FD) | (fs << OP_SH_FS));
+        return write_binary(os, cvtsw(fd, fs));
     }
 
     inline std::ostream& cvtws(std::ostream& os, FPRegisterID fd, FPRegisterID fs)
     {
-        return write_binary(os, 0x46000024 | (fd << OP_SH_FD) | (fs << OP_SH_FS));
+        return write_binary(os, cvtws(fd, fs));
     }
 
     inline std::ostream& divs(std::ostream& os, FPRegisterID fd, FPRegisterID fs, FPRegisterID ft)
     {
-        return write_binary(os, 0x46000003 | (fd << OP_SH_FD) | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+        return write_binary(os, divs(fd, fs, ft));
     }
 
     inline std::ostream& madds(std::ostream& os, FPRegisterID fd, FPRegisterID fs, FPRegisterID ft)
     {
-        return write_binary(os, 0x4600001c | (fd << OP_SH_FD) | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+        return write_binary(os, madds(fd, fs, ft));
     }
 
     inline std::ostream& maddas(std::ostream& os, FPRegisterID fs, FPRegisterID ft)
     {
-        return write_binary(os, 0x4600001e | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+        return write_binary(os, maddas(fs, ft));
     }
 
     inline std::ostream& maxs(std::ostream& os, FPRegisterID fd, FPRegisterID fs, FPRegisterID ft)
     {
-        return write_binary(os, 0x46000028 | (fd << OP_SH_FD) | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+        return write_binary(os, maxs(fd, fs, ft));
     }
 
     inline std::ostream& mfc1(std::ostream& os, RegisterID rt, FPRegisterID fs)
     {
-        return write_binary(os, 0x44000000 | (rt << OP_SH_RT) | (fs << OP_SH_FS));
+        return write_binary(os, mfc1(rt, fs));
     }
 
     inline std::ostream& mins(std::ostream& os, FPRegisterID fd, FPRegisterID fs, FPRegisterID ft)
     {
-        return write_binary(os, 0x46000029 | (fd << OP_SH_FD) | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+        return write_binary(os, mins(fd, fs, ft));
     }
 
     inline std::ostream& movs(std::ostream& os, FPRegisterID fd, FPRegisterID fs)
     {
-        return write_binary(os, 0x46000006 | (fd << OP_SH_FD) | (fs << OP_SH_FS));
+        return write_binary(os, movs(fd, fs));
     }
 
     inline std::ostream& msubs(std::ostream& os, FPRegisterID fd, FPRegisterID fs, FPRegisterID ft)
     {
-        return write_binary(os, 0x4600001d | (fd << OP_SH_FD) | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+        return write_binary(os, msubs(fd, fs, ft));
     }
 
     inline std::ostream& msubas(std::ostream& os, FPRegisterID fs, FPRegisterID ft)
     {
-        return write_binary(os, 0x4600001f | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+        return write_binary(os, msubas(fs, ft));
     }
 
     inline std::ostream& mtc1(std::ostream& os, RegisterID rt, FPRegisterID fs)
     {
-        return write_binary(os, 0x44800000 | (rt << OP_SH_RT) | (fs << OP_SH_FS));
+        return write_binary(os, mtc1(rt, fs));
     }
 
     inline std::ostream& muls(std::ostream& os, FPRegisterID fd, FPRegisterID fs, FPRegisterID ft)
     {
-        return write_binary(os, 0x46000002 | (fd << OP_SH_FD) | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+        return write_binary(os, muls(fd, fs, ft));
     }
 
     inline std::ostream& mulas(std::ostream& os, FPRegisterID fs, FPRegisterID ft)
     {
-        return write_binary(os, 0x4600001a | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+        return write_binary(os, mulas(fs, ft));
     }
 
     inline std::ostream& negs(std::ostream& os, FPRegisterID fd, FPRegisterID fs)
     {
-        return write_binary(os, 0x46000007 | (fd << OP_SH_FD) | (fs << OP_SH_FS));
+        return write_binary(os, negs(fd, fs));
     }
 
     inline std::ostream& rsqrts(std::ostream& os, FPRegisterID fd, FPRegisterID fs, FPRegisterID ft)
     {
-        return write_binary(os, 0x46000016 | (fd << OP_SH_FD) | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+        return write_binary(os, rsqrts(fd, fs, ft));
     }
 
     inline std::ostream& sqrts(std::ostream& os, FPRegisterID fd, FPRegisterID ft)
     {
-        return write_binary(os, 0x46000004 | (fd << OP_SH_FD) | (ft << OP_SH_FT));
+        return write_binary(os, sqrts(fd, ft));
     }
 
     inline std::ostream& subs(std::ostream& os, FPRegisterID fd, FPRegisterID fs, FPRegisterID ft)
     {
-        return write_binary(os, 0x46000001 | (fd << OP_SH_FD) | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+        return write_binary(os, subs(fd, fs, ft));
     }
 
     inline std::ostream& __subd__(std::ostream& os, FPRegisterID fd, FPRegisterID fs, FPRegisterID ft)
     {
-        return write_binary(os, 0x46200001 | (fd << OP_SH_FD) | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+        return write_binary(os, __subd__(fd, fs, ft));
     }
 
     inline std::ostream& __subas__(std::ostream& os, FPRegisterID fs, FPRegisterID ft)
     {
-        return write_binary(os, 0x46000019 | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+        return write_binary(os, __subas__(fs, ft));
     }
 
     inline std::ostream& __sqrtd__(std::ostream& os, FPRegisterID fd, FPRegisterID fs)
     {
-        return write_binary(os, 0x46202004 | (fd << OP_SH_FD) | (fs << OP_SH_FS));
+        return write_binary(os, __sqrtd__(fd, fs));
     }
 
     inline std::ostream& __rsqrtd__(std::ostream& os, FPRegisterID fd, FPRegisterID fs)
     {
-        return write_binary(os, 0x46200016 | (fd << OP_SH_FD) | (fs << OP_SH_FS));
+        return write_binary(os, __rsqrtd__(fd, fs));
     }
 
     inline std::ostream& __pabsh__(std::ostream& os, RegisterID rd, RegisterID rt)
     {
-        return write_binary(os, 0x70000168 | (rd << OP_SH_RD) | (rt << OP_SH_RT));
+        return write_binary(os, __pabsh__(rd, rt));
     }
 
     inline std::ostream& __pabsw__(std::ostream& os, RegisterID rd, RegisterID rt)
     {
-        return write_binary(os, 0x70000068 | (rd << OP_SH_RD) | (rt << OP_SH_RT));
+        return write_binary(os, __pabsw__(rd, rt));
     }
 
     inline std::ostream& __paddb__(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000208 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __paddb__(rd, rs, rt));
     }
 
     inline std::ostream& paddh(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000108 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, paddh(rd, rs, rt));
     }
 
     inline std::ostream& __paddsb__(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000608 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __paddsb__(rd, rs, rt));
     }
 
     inline std::ostream& __paddsh__(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000508 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __paddsh__(rd, rs, rt));
     }
 
     inline std::ostream& paddsw(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000408 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, paddsw(rd, rs, rt));
     }
 
     inline std::ostream& __paddub__(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000628 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __paddub__(rd, rs, rt));
     }
 
     inline std::ostream& __padduh__(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000528 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __padduh__(rd, rs, rt));
     }
 
     inline std::ostream& __padduw__(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000428 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __padduw__(rd, rs, rt));
     }
 
     inline std::ostream& paddw(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000008 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, paddw(rd, rs, rt));
     }
 
     inline std::ostream& __padsbh__(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000128 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __padsbh__(rd, rs, rt));
     }
 
     inline std::ostream& pand(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000489 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, pand(rd, rs, rt));
     }
 
     inline std::ostream& __pceqb__(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x700002a8 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __pceqb__(rd, rs, rt));
     }
 
     inline std::ostream& __pceqh__(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x700001a8 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __pceqh__(rd, rs, rt));
     }
 
     inline std::ostream& __pceqw__(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x700000a8 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __pceqw__(rd, rs, rt));
     }
 
     inline std::ostream& __pcgtb__(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000288 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __pcgtb__(rd, rs, rt));
     }
 
     inline std::ostream& pcgth(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000188 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, pcgth(rd, rs, rt));
     }
 
     inline std::ostream& __pcgtw__(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000088 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __pcgtw__(rd, rs, rt));
     }
 
     inline std::ostream& pcpyh(std::ostream& os, RegisterID rd, RegisterID rt)
     {
-        return write_binary(os, 0x700006e9 | (rd << OP_SH_RD) | (rt << OP_SH_RT));
+        return write_binary(os, pcpyh(rd, rt));
     }
 
     inline std::ostream& pcpyld(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000389 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, pcpyld(rd, rs, rt));
     }
 
     inline std::ostream& pcpyud(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x700003a9 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, pcpyud(rd, rs, rt));
     }
 
     inline std::ostream& __pdivbw__(std::ostream& os, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000749 | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __pdivbw__(rs, rt));
     }
 
     inline std::ostream& __pdivuw__(std::ostream& os, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000369 | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __pdivuw__(rs, rt));
     }
 
     inline std::ostream& __pdivw__(std::ostream& os, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000349 | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __pdivw__(rs, rt));
     }
 
     inline std::ostream& pexch(std::ostream& os, RegisterID rd, RegisterID rt)
     {
-        return write_binary(os, 0x700006a9 | (rd << OP_SH_RD) | (rt << OP_SH_RT));
+        return write_binary(os, pexch(rd, rt));
     }
 
     inline std::ostream& __pexeh__(std::ostream& os, RegisterID rd, RegisterID rt)
     {
-        return write_binary(os, 0x70000689 | (rd << OP_SH_RD) | (rt << OP_SH_RT));
+        return write_binary(os, __pexeh__(rd, rt));
     }
 
     inline std::ostream& pexew(std::ostream& os, RegisterID rd, RegisterID rt)
     {
-        return write_binary(os, 0x70000789 | (rd << OP_SH_RD) | (rt << OP_SH_RT));
+        return write_binary(os, pexew(rd, rt));
     }
 
     inline std::ostream& __pext5__(std::ostream& os, RegisterID rd, RegisterID rt)
     {
-        return write_binary(os, 0x70000788 | (rd << OP_SH_RD) | (rt << OP_SH_RT));
+        return write_binary(os, __pext5__(rd, rt));
     }
 
     inline std::ostream& pextlb(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000688 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, pextlb(rd, rs, rt));
     }
 
     inline std::ostream& pextlh(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000588 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, pextlh(rd, rs, rt));
     }
 
     inline std::ostream& pextlw(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000488 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, pextlw(rd, rs, rt));
     }
 
     inline std::ostream& pextub(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x700006a8 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, pextub(rd, rs, rt));
     }
 
     inline std::ostream& __pextuh__(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x700005a8 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __pextuh__(rd, rs, rt));
     }
 
     inline std::ostream& pextuw(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x700004a8 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, pextuw(rd, rs, rt));
     }
 
     inline std::ostream& __phmadh__(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000449 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __phmadh__(rd, rs, rt));
     }
 
     inline std::ostream& __phmsbh__(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000549 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __phmsbh__(rd, rs, rt));
     }
 
     inline std::ostream& __pinteh__(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x700002a9 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __pinteh__(rd, rs, rt));
     }
 
     inline std::ostream& __pinth__(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000289 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __pinth__(rd, rs, rt));
     }
 
     inline std::ostream& __plzcw__(std::ostream& os, RegisterID rd, RegisterID rs)
     {
-        return write_binary(os, 0x70000004 | (rd << OP_SH_RD) | (rs << OP_SH_RS));
+        return write_binary(os, __plzcw__(rd, rs));
     }
 
     inline std::ostream& __pmaddh__(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000409 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __pmaddh__(rd, rs, rt));
     }
 
     inline std::ostream& __pmadduw__(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000029 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __pmadduw__(rd, rs, rt));
     }
 
     inline std::ostream& __pmaddw__(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000009 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __pmaddw__(rd, rs, rt));
     }
 
     inline std::ostream& pmaxh(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x700001c8 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, pmaxh(rd, rs, rt));
     }
 
     inline std::ostream& pmaxw(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x700000c8 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, pmaxw(rd, rs, rt));
     }
 
     inline std::ostream& pmfhi(std::ostream& os, RegisterID rd)
     {
-        return write_binary(os, 0x70000209 | (rd << OP_SH_RD));
+        return write_binary(os, pmfhi(rd));
     }
 
     inline std::ostream& __pmfhllh__(std::ostream& os, RegisterID rd)
     {
-        return write_binary(os, 0x700000f0 | (rd << OP_SH_RD));
+        return write_binary(os, __pmfhllh__(rd));
     }
 
     inline std::ostream& __pmfhllw__(std::ostream& os, RegisterID rd)
     {
-        return write_binary(os, 0x70000030 | (rd << OP_SH_RD));
+        return write_binary(os, __pmfhllw__(rd));
     }
 
     inline std::ostream& __pmfhlsh__(std::ostream& os, RegisterID rd)
     {
-        return write_binary(os, 0x70000130 | (rd << OP_SH_RD));
+        return write_binary(os, __pmfhlsh__(rd));
     }
 
     inline std::ostream& __pmfhlslw__(std::ostream& os, RegisterID rd)
     {
-        return write_binary(os, 0x700000b0 | (rd << OP_SH_RD));
+        return write_binary(os, __pmfhlslw__(rd));
     }
 
     inline std::ostream& __pmfhluw__(std::ostream& os, RegisterID rd)
     {
-        return write_binary(os, 0x70000070 | (rd << OP_SH_RD));
+        return write_binary(os, __pmfhluw__(rd));
     }
 
     inline std::ostream& pmflo(std::ostream& os, RegisterID rd)
     {
-        return write_binary(os, 0x70000249 | (rd << OP_SH_RD));
+        return write_binary(os, pmflo(rd));
     }
 
     inline std::ostream& pminh(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x700001e8 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, pminh(rd, rs, rt));
     }
 
     inline std::ostream& pminw(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x700000e8 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, pminw(rd, rs, rt));
     }
 
     inline std::ostream& __pmsubh__(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000509 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __pmsubh__(rd, rs, rt));
     }
 
     inline std::ostream& __pmsubw__(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000109 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __pmsubw__(rd, rs, rt));
     }
 
     inline std::ostream& __pmthi__(std::ostream& os, RegisterID rs)
     {
-        return write_binary(os, 0x70000229 | (rs << OP_SH_RS));
+        return write_binary(os, __pmthi__(rs));
     }
 
     inline std::ostream& __pmthllw__(std::ostream& os, RegisterID rs)
     {
-        return write_binary(os, 0x70000031 | (rs << OP_SH_RS));
+        return write_binary(os, __pmthllw__(rs));
     }
 
     inline std::ostream& __pmtlo__(std::ostream& os, RegisterID rs)
     {
-        return write_binary(os, 0x70000269 | (rs << OP_SH_RS));
+        return write_binary(os, __pmtlo__(rs));
     }
 
     inline std::ostream& pmulth(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000709 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, pmulth(rd, rs, rt));
     }
 
     inline std::ostream& __pmultuw__(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000329 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __pmultuw__(rd, rs, rt));
     }
 
     inline std::ostream& __pmultw__(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000309 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __pmultw__(rd, rs, rt));
     }
 
     inline std::ostream& pnor(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x700004e9 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, pnor(rd, rs, rt));
     }
 
     inline std::ostream& por(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x700004a9 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, por(rd, rs, rt));
     }
 
     inline std::ostream& __ppac5__(std::ostream& os, RegisterID rd, RegisterID rt)
     {
-        return write_binary(os, 0x700007c8 | (rd << OP_SH_RD) | (rt << OP_SH_RT));
+        return write_binary(os, __ppac5__(rd, rt));
     }
 
     inline std::ostream& ppacb(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x700006c8 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, ppacb(rd, rs, rt));
     }
 
     inline std::ostream& ppach(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x700005c8 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, ppach(rd, rs, rt));
     }
 
     inline std::ostream& __ppacw__(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x700004c8 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __ppacw__(rd, rs, rt));
     }
 
     inline std::ostream& __prevh__(std::ostream& os, RegisterID rd, RegisterID rt)
     {
-        return write_binary(os, 0x700006c9 | (rd << OP_SH_RD) | (rt << OP_SH_RT));
+        return write_binary(os, __prevh__(rd, rt));
     }
 
     inline std::ostream& prot3w(std::ostream& os, RegisterID rd, RegisterID rt)
     {
-        return write_binary(os, 0x700007c9 | (rd << OP_SH_RD) | (rt << OP_SH_RT));
+        return write_binary(os, prot3w(rd, rt));
     }
 
     inline std::ostream& psllh(std::ostream& os, RegisterID rd, RegisterID rt, int32_t shamt)
     {
-        return write_binary(os, 0x70000034 | (rd << OP_SH_RD) | (rt << OP_SH_RT) | ((shamt & 0x1f) << OP_SH_SHAMT));
+        return write_binary(os, psllh(rd, rt, shamt));
     }
 
     inline std::ostream& __psllvw__(std::ostream& os, RegisterID rd, RegisterID rt, RegisterID rs)
     {
-        return write_binary(os, 0x70000089 | (rd << OP_SH_RD) | (rt << OP_SH_RT) | (rs << OP_SH_RS));
+        return write_binary(os, __psllvw__(rd, rt, rs));
     }
 
     inline std::ostream& psllw(std::ostream& os, RegisterID rd, RegisterID rt, int32_t shamt)
     {
-        return write_binary(os, 0x7000003c | (rd << OP_SH_RD) | (rt << OP_SH_RT) | ((shamt & 0x1f) << OP_SH_SHAMT));
+        return write_binary(os, psllw(rd, rt, shamt));
     }
 
     inline std::ostream& psrah(std::ostream& os, RegisterID rd, RegisterID rt, int32_t shamt)
     {
-        return write_binary(os, 0x70000037 | (rd << OP_SH_RD) | (rt << OP_SH_RT) | ((shamt & 0x1f) << OP_SH_SHAMT));
+        return write_binary(os, psrah(rd, rt, shamt));
     }
 
     inline std::ostream& __psravw__(std::ostream& os, RegisterID rd, RegisterID rt, RegisterID rs)
     {
-        return write_binary(os, 0x700000e9 | (rd << OP_SH_RD) | (rt << OP_SH_RT) | (rs << OP_SH_RS));
+        return write_binary(os, __psravw__(rd, rt, rs));
     }
 
     inline std::ostream& psraw(std::ostream& os, RegisterID rd, RegisterID rt, int32_t shamt)
     {
-        return write_binary(os, 0x7000003f | (rd << OP_SH_RD) | (rt << OP_SH_RT) | ((shamt & 0x1f) << OP_SH_SHAMT));
+        return write_binary(os, psraw(rd, rt, shamt));
     }
 
     inline std::ostream& psrlh(std::ostream& os, RegisterID rd, RegisterID rt, int32_t shamt)
     {
-        return write_binary(os, 0x70000036 | (rd << OP_SH_RD) | (rt << OP_SH_RT) | ((shamt & 0x1f) << OP_SH_SHAMT));
+        return write_binary(os, psrlh(rd, rt, shamt));
     }
 
     inline std::ostream& __psrlvw__(std::ostream& os, RegisterID rd, RegisterID rt, RegisterID rs)
     {
-        return write_binary(os, 0x700000c9 | (rd << OP_SH_RD) | (rt << OP_SH_RT) | (rs << OP_SH_RS));
+        return write_binary(os, __psrlvw__(rd, rt, rs));
     }
 
     inline std::ostream& psrlw(std::ostream& os, RegisterID rd, RegisterID rt, int32_t shamt)
     {
-        return write_binary(os, 0x7000003e | (rd << OP_SH_RD) | (rt << OP_SH_RT) | ((shamt & 0x1f) << OP_SH_SHAMT));
+        return write_binary(os, psrlw(rd, rt, shamt));
     }
 
     inline std::ostream& psubb(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000248 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, psubb(rd, rs, rt));
     }
 
     inline std::ostream& __psubh__(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000148 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __psubh__(rd, rs, rt));
     }
 
     inline std::ostream& __psubsb__(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000648 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __psubsb__(rd, rs, rt));
     }
 
     inline std::ostream& __psubsh__(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000548 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __psubsh__(rd, rs, rt));
     }
 
     inline std::ostream& __psubsw__(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000448 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __psubsw__(rd, rs, rt));
     }
 
     inline std::ostream& __psubub__(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000668 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __psubub__(rd, rs, rt));
     }
 
     inline std::ostream& __psubuh__(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000568 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __psubuh__(rd, rs, rt));
     }
 
     inline std::ostream& __psubuw__(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000468 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __psubuw__(rd, rs, rt));
     }
 
     inline std::ostream& psubw(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x70000048 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, psubw(rd, rs, rt));
     }
 
     inline std::ostream& pxor(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x700004c9 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, pxor(rd, rs, rt));
     }
 
     inline std::ostream& qfsrv(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x700006e8 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, qfsrv(rd, rs, rt));
     }
 
     inline std::ostream& __cfc2__(std::ostream& os, RegisterID rt, RegisterID rd)
     {
-        return write_binary(os, 0x48400000 | (rt << OP_SH_RT) | (rd << OP_SH_RD));
+        return write_binary(os, __cfc2__(rt, rd));
     }
 
     inline std::ostream& __cfc2ni__(std::ostream& os, RegisterID rt, RegisterID rd)
     {
-        return write_binary(os, 0x48400000 | (rt << OP_SH_RT) | (rd << OP_SH_RD));
+        return write_binary(os, __cfc2ni__(rt, rd));
     }
 
     inline std::ostream& __cfc2i__(std::ostream& os, RegisterID rt, RegisterID rd)
     {
-        return write_binary(os, 0x48400001 | (rt << OP_SH_RT) | (rd << OP_SH_RD));
+        return write_binary(os, __cfc2i__(rt, rd));
     }
 
     inline std::ostream& __ctc2__(std::ostream& os, RegisterID rt, RegisterID rd)
     {
-        return write_binary(os, 0x48c00000 | (rt << OP_SH_RT) | (rd << OP_SH_RD));
+        return write_binary(os, __ctc2__(rt, rd));
     }
 
     inline std::ostream& __ctc2ni__(std::ostream& os, RegisterID rt, RegisterID rd)
     {
-        return write_binary(os, 0x48c00000 | (rt << OP_SH_RT) | (rd << OP_SH_RD));
+        return write_binary(os, __ctc2ni__(rt, rd));
     }
 
     inline std::ostream& __ctc2i__(std::ostream& os, RegisterID rt, RegisterID rd)
     {
-        return write_binary(os, 0x48c00001 | (rt << OP_SH_RT) | (rd << OP_SH_RD));
+        return write_binary(os, __ctc2i__(rt, rd));
     }
 
     inline std::ostream& __lqc2__(std::ostream& os, FPRegisterID ft, int32_t offset)
     {
-        return write_binary(os, 0xd8000000 | (ft << OP_SH_FT) | (offset & 0xffff));
+        return write_binary(os, __lqc2__(ft, offset));
     }
 
     inline std::ostream& __qmfc2__(std::ostream& os, RegisterID rt, FPRegisterID fs)
     {
-        return write_binary(os, 0x48200000 | (rt << OP_SH_RT) | (fs << OP_SH_FS));
+        return write_binary(os, __qmfc2__(rt, fs));
     }
 
     inline std::ostream& __qmfc2ni__(std::ostream& os, RegisterID rt, FPRegisterID fs)
     {
-        return write_binary(os, 0x48200000 | (rt << OP_SH_RT) | (fs << OP_SH_FS));
+        return write_binary(os, __qmfc2ni__(rt, fs));
     }
 
     inline std::ostream& __qmfc2i__(std::ostream& os, RegisterID rt, FPRegisterID fs)
     {
-        return write_binary(os, 0x48200001 | (rt << OP_SH_RT) | (fs << OP_SH_FS));
+        return write_binary(os, __qmfc2i__(rt, fs));
     }
 
     inline std::ostream& __qmtc2__(std::ostream& os, RegisterID rt, FPRegisterID fs)
     {
-        return write_binary(os, 0x48a00000 | (rt << OP_SH_RT) | (fs << OP_SH_FS));
+        return write_binary(os, __qmtc2__(rt, fs));
     }
 
     inline std::ostream& __qmtc2ni__(std::ostream& os, RegisterID rt, FPRegisterID fs)
     {
-        return write_binary(os, 0x48a00000 | (rt << OP_SH_RT) | (fs << OP_SH_FS));
+        return write_binary(os, __qmtc2ni__(rt, fs));
     }
 
     inline std::ostream& __qmtc2i__(std::ostream& os, RegisterID rt, FPRegisterID fs)
     {
-        return write_binary(os, 0x48a00001 | (rt << OP_SH_RT) | (fs << OP_SH_FS));
+        return write_binary(os, __qmtc2i__(rt, fs));
     }
 
     inline std::ostream& __sqc2__(std::ostream& os, FPRegisterID ft, int32_t offset)
     {
-        return write_binary(os, 0xf8000000 | (ft << OP_SH_FT) | (offset & 0xffff));
+        return write_binary(os, __sqc2__(ft, offset));
     }
 
     inline std::ostream& cles(std::ostream& os, FPRegisterID fs, FPRegisterID ft)
     {
-        return write_binary(os, 0x46000036 | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+        return write_binary(os, cles(fs, ft));
     }
 
     inline std::ostream& clts(std::ostream& os, FPRegisterID fs, FPRegisterID ft)
     {
-        return write_binary(os, 0x46000034 | (fs << OP_SH_FS) | (ft << OP_SH_FT));
+        return write_binary(os, clts(fs, ft));
     }
 
     inline std::ostream& add(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x00000020 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, add(rd, rs, rt));
     }
 
     inline std::ostream& addu(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x00000021 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, addu(rd, rs, rt));
     }
 
     inline std::ostream& _and(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x00000024 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, _and(rd, rs, rt));
     }
 
     inline std::ostream& ___break__(std::ostream& os)
     {
-        return write_binary(os, 0x0000000d);
+        return write_binary(os, ___break__());
     }
 
     inline std::ostream& __dadd__(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x0000002c | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __dadd__(rd, rs, rt));
     }
 
     inline std::ostream& daddu(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x0000002d | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, daddu(rd, rs, rt));
     }
 
     inline std::ostream& div(std::ostream& os, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x0000001a | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, div(rs, rt));
     }
 
     inline std::ostream& divu(std::ostream& os, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x0000001b | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, divu(rs, rt));
     }
 
     inline std::ostream& dsll(std::ostream& os, RegisterID rd, RegisterID rt, int32_t shamt)
     {
-        return write_binary(os, 0x00000038 | (rd << OP_SH_RD) | (rt << OP_SH_RT) | ((shamt & 0x1f) << OP_SH_SHAMT));
+        return write_binary(os, dsll(rd, rt, shamt));
     }
 
     inline std::ostream& dsll32(std::ostream& os, RegisterID rd, RegisterID rt, int32_t shamt)
     {
-        return write_binary(os, 0x0000003c | (rd << OP_SH_RD) | (rt << OP_SH_RT) | ((shamt & 0x1f) << OP_SH_SHAMT));
+        return write_binary(os, dsll32(rd, rt, shamt));
     }
 
     inline std::ostream& dsllv(std::ostream& os, RegisterID rd, RegisterID rt, RegisterID rs)
     {
-        return write_binary(os, 0x00000014 | (rd << OP_SH_RD) | (rt << OP_SH_RT) | (rs << OP_SH_RS));
+        return write_binary(os, dsllv(rd, rt, rs));
     }
 
     inline std::ostream& dsra(std::ostream& os, RegisterID rd, RegisterID rt, int32_t shamt)
     {
-        return write_binary(os, 0x0000003b | (rd << OP_SH_RD) | (rt << OP_SH_RT) | ((shamt & 0x1f) << OP_SH_SHAMT));
+        return write_binary(os, dsra(rd, rt, shamt));
     }
 
     inline std::ostream& dsra32(std::ostream& os, RegisterID rd, RegisterID rt, int32_t shamt)
     {
-        return write_binary(os, 0x0000003f | (rd << OP_SH_RD) | (rt << OP_SH_RT) | ((shamt & 0x1f) << OP_SH_SHAMT));
+        return write_binary(os, dsra32(rd, rt, shamt));
     }
 
     inline std::ostream& __dsrav__(std::ostream& os, RegisterID rd, RegisterID rt, RegisterID rs)
     {
-        return write_binary(os, 0x00000017 | (rd << OP_SH_RD) | (rt << OP_SH_RT) | (rs << OP_SH_RS));
+        return write_binary(os, __dsrav__(rd, rt, rs));
     }
 
     inline std::ostream& dsrl(std::ostream& os, RegisterID rd, RegisterID rt, int32_t shamt)
     {
-        return write_binary(os, 0x0000003a | (rd << OP_SH_RD) | (rt << OP_SH_RT) | ((shamt & 0x1f) << OP_SH_SHAMT));
+        return write_binary(os, dsrl(rd, rt, shamt));
     }
 
     inline std::ostream& dsrl32(std::ostream& os, RegisterID rd, RegisterID rt, int32_t shamt)
     {
-        return write_binary(os, 0x0000003e | (rd << OP_SH_RD) | (rt << OP_SH_RT) | ((shamt & 0x1f) << OP_SH_SHAMT));
+        return write_binary(os, dsrl32(rd, rt, shamt));
     }
 
     inline std::ostream& dsrlv(std::ostream& os, RegisterID rd, RegisterID rt, RegisterID rs)
     {
-        return write_binary(os, 0x00000016 | (rd << OP_SH_RD) | (rt << OP_SH_RT) | (rs << OP_SH_RS));
+        return write_binary(os, dsrlv(rd, rt, rs));
     }
 
     inline std::ostream& __dsub__(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x0000002e | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, __dsub__(rd, rs, rt));
     }
 
     inline std::ostream& dsubu(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x0000002f | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, dsubu(rd, rs, rt));
     }
 
     inline std::ostream& jalr(std::ostream& os, RegisterID rs)
     {
-        return write_binary(os, 0x0000f809 | (rs << OP_SH_RS));
+        return write_binary(os, jalr(rs));
     }
 
     inline std::ostream& jr(std::ostream& os, RegisterID rs)
     {
-        return write_binary(os, 0x00000008 | (rs << OP_SH_RS));
+        return write_binary(os, jr(rs));
     }
 
     inline std::ostream& mfhi(std::ostream& os, RegisterID rd)
     {
-        return write_binary(os, 0x00000010 | (rd << OP_SH_RD));
+        return write_binary(os, mfhi(rd));
     }
 
     inline std::ostream& mflo(std::ostream& os, RegisterID rd)
     {
-        return write_binary(os, 0x00000012 | (rd << OP_SH_RD));
+        return write_binary(os, mflo(rd));
     }
 
     inline std::ostream& movn(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x0000000b | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, movn(rd, rs, rt));
     }
 
     inline std::ostream& movz(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x0000000a | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, movz(rd, rs, rt));
     }
 
     inline std::ostream& mthi(std::ostream& os, RegisterID rs)
     {
-        return write_binary(os, 0x00000011 | (rs << OP_SH_RS));
+        return write_binary(os, mthi(rs));
     }
 
     inline std::ostream& mtlo(std::ostream& os, RegisterID rs)
     {
-        return write_binary(os, 0x00000013 | (rs << OP_SH_RS));
+        return write_binary(os, mtlo(rs));
     }
 
     inline std::ostream& nor(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x00000027 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, nor(rd, rs, rt));
     }
 
     inline std::ostream& _or(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x00000025 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, _or(rd, rs, rt));
     }
 
     inline std::ostream& sll(std::ostream& os, RegisterID rd, RegisterID rt, int32_t shamt)
     {
-        return write_binary(os, 0000000000 | (rd << OP_SH_RD) | (rt << OP_SH_RT) | ((shamt & 0x1f) << OP_SH_SHAMT));
+        return write_binary(os, sll(rd, rt, shamt));
     }
 
     inline std::ostream& sllv(std::ostream& os, RegisterID rd, RegisterID rt, RegisterID rs)
     {
-        return write_binary(os, 0x00000004 | (rd << OP_SH_RD) | (rt << OP_SH_RT) | (rs << OP_SH_RS));
+        return write_binary(os, sllv(rd, rt, rs));
     }
 
     inline std::ostream& slt(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x0000002a | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, slt(rd, rs, rt));
     }
 
     inline std::ostream& sltu(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x0000002b | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, sltu(rd, rs, rt));
     }
 
     inline std::ostream& sra(std::ostream& os, RegisterID rd, RegisterID rt, int32_t shamt)
     {
-        return write_binary(os, 0x00000003 | (rd << OP_SH_RD) | (rt << OP_SH_RT) | ((shamt & 0x1f) << OP_SH_SHAMT));
+        return write_binary(os, sra(rd, rt, shamt));
     }
 
     inline std::ostream& srav(std::ostream& os, RegisterID rd, RegisterID rt, RegisterID rs)
     {
-        return write_binary(os, 0x00000007 | (rd << OP_SH_RD) | (rt << OP_SH_RT) | (rs << OP_SH_RS));
+        return write_binary(os, srav(rd, rt, rs));
     }
 
     inline std::ostream& srl(std::ostream& os, RegisterID rd, RegisterID rt, int32_t shamt)
     {
-        return write_binary(os, 0x00000002 | (rd << OP_SH_RD) | (rt << OP_SH_RT) | ((shamt & 0x1f) << OP_SH_SHAMT));
+        return write_binary(os, srl(rd, rt, shamt));
     }
 
     inline std::ostream& srlv(std::ostream& os, RegisterID rd, RegisterID rt, RegisterID rs)
     {
-        return write_binary(os, 0x00000006 | (rd << OP_SH_RD) | (rt << OP_SH_RT) | (rs << OP_SH_RS));
+        return write_binary(os, srlv(rd, rt, rs));
     }
 
     inline std::ostream& sub(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x00000022 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, sub(rd, rs, rt));
     }
 
     inline std::ostream& subu(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x00000023 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, subu(rd, rs, rt));
     }
 
     inline std::ostream& _xor(std::ostream& os, RegisterID rd, RegisterID rs, RegisterID rt)
     {
-        return write_binary(os, 0x00000026 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
+        return write_binary(os, _xor(rd, rs, rt));
     }
 
     template<typename T>
     inline std::ostream& addi(std::ostream& os, RegisterID rt, RegisterID rs, T imm)
     {
-        return write_binary(os, 0x20000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (*(int32_t*)&imm & 0xffff));
+        return write_binary(os, addi(rt, rs, imm));
     }
 
     template<typename T>
     inline std::ostream& addiu(std::ostream& os, RegisterID rt, RegisterID rs, T imm)
     {
-        return write_binary(os, 0x24000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (*(int32_t*)&imm & 0xffff));
+        return write_binary(os, addiu(rt, rs, imm));
     }
 
     template<typename T>
     inline std::ostream& andi(std::ostream& os, RegisterID rt, RegisterID rs, T imm)
     {
-        return write_binary(os, 0x30000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (*(int32_t*)&imm & 0xffff));
+        return write_binary(os, andi(rt, rs, imm));
     }
 
     inline std::ostream& __cache__(std::ostream& os, RegisterID rs, int32_t offset)
     {
-        return write_binary(os, 0x0000002f | (rs << OP_SH_CODE) | (offset & 0xffff));
+        return write_binary(os, __cache__(rs, offset));
     }
 
     template<typename T>
     inline std::ostream& daddi(std::ostream& os, RegisterID rt, RegisterID rs, T imm)
     {
-        return write_binary(os, 0x60000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (*(int32_t*)&imm & 0xffff));
+        return write_binary(os, daddi(rt, rs, imm));
     }
 
     template<typename T>
     inline std::ostream& daddiu(std::ostream& os, RegisterID rt, RegisterID rs, T imm)
     {
-        return write_binary(os, 0x64000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (*(int32_t*)&imm & 0xffff));
+        return write_binary(os, daddiu(rt, rs, imm));
     }
 
     inline std::ostream& lb(std::ostream& os, RegisterID rt, RegisterID rs, int32_t offset)
     {
-        return write_binary(os, 0x80000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (offset & 0xffff));
+        return write_binary(os, lb(rt, rs, offset));
     }
 
     inline std::ostream& lbu(std::ostream& os, RegisterID rt, RegisterID rs, int32_t offset)
     {
-        return write_binary(os, 0x90000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (offset & 0xffff));
+        return write_binary(os, lbu(rt, rs, offset));
     }
 
     inline std::ostream& ld(std::ostream& os, RegisterID rt, RegisterID rs, int32_t offset)
     {
-        return write_binary(os, 0xDC000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (offset & 0xffff));
+        return write_binary(os, ld(rt, rs, offset));
     }
 
     inline std::ostream& ldl(std::ostream& os, RegisterID rt, RegisterID rs, int32_t offset)
     {
-        return write_binary(os, 0x68000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (offset & 0xffff));
+        return write_binary(os, ldl(rt, rs, offset));
     }
 
     inline std::ostream& ldr(std::ostream& os, RegisterID rt, RegisterID rs, int32_t offset)
     {
-        return write_binary(os, 0x6C000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (offset & 0xffff));
+        return write_binary(os, ldr(rt, rs, offset));
     }
 
     inline std::ostream& lh(std::ostream& os, RegisterID rt, RegisterID rs, int32_t offset)
     {
-        return write_binary(os, 0x84000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (offset & 0xffff));
+        return write_binary(os, lh(rt, rs, offset));
     }
 
     inline std::ostream& lhu(std::ostream& os, RegisterID rt, int32_t offset)
     {
-        return write_binary(os, 0x00000025 | (rt << OP_SH_RT) | (offset & 0xffff));
+        return write_binary(os, lhu(rt, offset));
     }
 
     inline std::ostream& lhu(std::ostream& os, RegisterID rt, RegisterID rs, int32_t offset)
     {
-        return write_binary(os, 0x94000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (offset & 0xffff));
+        return write_binary(os, lhu(rt, rs, offset));
     }
 
     inline std::ostream& __lq__(std::ostream& os, RegisterID rt, int32_t offset)
     {
-        return write_binary(os, 0x0000001e | (rt << OP_SH_RT) | (offset & 0xffff));
+        return write_binary(os, __lq__(rt, offset));
     }
 
     template<typename T>
     inline std::ostream& lui(std::ostream& os, RegisterID rt, T imm)
     {
-        return write_binary(os, 0x3c000000 | (rt << OP_SH_RT) | (*(int32_t*)&imm & 0xffff));
+        return write_binary(os, lui(rt, imm));
     }
 
     inline std::ostream& __ll__(std::ostream& os, RegisterID rt, int32_t offset)
     {
-        return write_binary(os, 0x00000030 | (rt << OP_SH_RT) | (offset & 0xffff));
+        return write_binary(os, __ll__(rt, offset));
     }
 
     inline std::ostream& lw(std::ostream& os, RegisterID rt, int32_t offset)
     {
-        return write_binary(os, 0x00000023 | (rt << OP_SH_RT) | (offset & 0xffff));
+        return write_binary(os, lw(rt, offset));
     }
 
     inline std::ostream& lw(std::ostream& os, RegisterID rt, RegisterID rs, int32_t offset)
     {
-        return write_binary(os, 0x8c000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (offset & 0xffff));
+        return write_binary(os, lw(rt, rs, offset));
     }
 
     inline std::ostream& lwc1(std::ostream& os, FPRegisterID ft, int32_t offset)
     {
-        return write_binary(os, 0x00000031 | (ft << OP_SH_FT) | (offset & 0xffff));
+        return write_binary(os, lwc1(ft, offset));
     }
 
     inline std::ostream& lwl(std::ostream& os, RegisterID rt, int32_t offset)
     {
-        return write_binary(os, 0x00000022 | (rt << OP_SH_RT) | (offset & 0xffff));
+        return write_binary(os, lwl(rt, offset));
     }
 
     inline std::ostream& lwl(std::ostream& os, RegisterID rt, RegisterID rs, int32_t offset)
     {
-        return write_binary(os, 0x88000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (offset & 0xffff));
+        return write_binary(os, lwl(rt, rs, offset));
     }
 
     inline std::ostream& lwr(std::ostream& os, RegisterID rt, int32_t offset)
     {
-        return write_binary(os, 0x00000026 | (rt << OP_SH_RT) | (offset & 0xffff));
+        return write_binary(os, lwr(rt, offset));
     }
 
     inline std::ostream& lwr(std::ostream& os, RegisterID rt, RegisterID rs, int32_t offset)
     {
-        return write_binary(os, 0x98000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (offset & 0xffff));
+        return write_binary(os, lwr(rt, rs, offset));
     }
 
     inline std::ostream& lwu(std::ostream& os, RegisterID rt, int32_t offset)
     {
-        return write_binary(os, 0x00000027 | (rt << OP_SH_RT) | (offset & 0xffff));
+        return write_binary(os, lwu(rt, offset));
     }
 
     inline std::ostream& lwu(std::ostream& os, RegisterID rt, RegisterID rs, int32_t offset)
     {
-        return write_binary(os, 0x9C000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (offset & 0xffff));
+        return write_binary(os, lwu(rt, rs, offset));
     }
 
     template<typename T>
     inline std::ostream& ori(std::ostream& os, RegisterID rt, RegisterID rs, T imm)
     {
-        return write_binary(os, 0x34000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (*(int32_t*)&imm & 0xffff));
+        return write_binary(os, ori(rt, rs, imm));
     }
 
     inline std::ostream& __pref__(std::ostream& os, RegisterID rs, int32_t offset)
     {
-        return write_binary(os, 0x00000033 | (rs << OP_SH_CODE) | (offset & 0xffff));
+        return write_binary(os, __pref__(rs, offset));
     }
 
     inline std::ostream& sb(std::ostream& os, RegisterID rt, int32_t offset)
     {
-        return write_binary(os, 0x00000028 | (rt << OP_SH_RT) | (offset & 0xffff));
+        return write_binary(os, sb(rt, offset));
     }
 
     inline std::ostream& __sc__(std::ostream& os, RegisterID rt, int32_t offset)
     {
-        return write_binary(os, 0x00000038 | (rt << OP_SH_RT) | (offset & 0xffff));
+        return write_binary(os, __sc__(rt, offset));
     }
 
     inline std::ostream& __sd__(std::ostream& os, RegisterID rt, int32_t offset)
     {
-        return write_binary(os, 0x0000003f | (rt << OP_SH_RT) | (offset & 0xffff));
+        return write_binary(os, __sd__(rt, offset));
     }
 
     inline std::ostream& sq(std::ostream& os, RegisterID rt, int32_t offset)
     {
-        return write_binary(os, 0x0000001f | (rt << OP_SH_RT) | (offset & 0xffff));
+        return write_binary(os, sq(rt, offset));
     }
 
     inline std::ostream& sq(std::ostream& os, RegisterID rt, RegisterID rs, int32_t offset)
     {
-        return write_binary(os, 0x7C000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (offset & 0xffff));
+        return write_binary(os, sq(rt, rs, offset));
     }
 
     inline std::ostream& __sdl__(std::ostream& os, RegisterID rt, int32_t offset)
     {
-        return write_binary(os, 0x0000002c | (rt << OP_SH_RT) | (offset & 0xffff));
+        return write_binary(os, __sdl__(rt, offset));
     }
 
     inline std::ostream& __sdl__(std::ostream& os, RegisterID rt, RegisterID rs, int32_t offset)
     {
-        return write_binary(os, 0xB3000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (offset & 0xffff));
+        return write_binary(os, __sdl__(rt, rs, offset));
     }
 
     inline std::ostream& __sdr__(std::ostream& os, RegisterID rt, int32_t offset)
     {
-        return write_binary(os, 0x0000002d | (rt << OP_SH_RT) | (offset & 0xffff));
+        return write_binary(os, __sdr__(rt, offset));
     }
 
     inline std::ostream& __sdr__(std::ostream& os, RegisterID rt, RegisterID rs, int32_t offset)
     {
-        return write_binary(os, 0xB7000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (offset & 0xffff));
+        return write_binary(os, __sdr__(rt, rs, offset));
     }
 
     inline std::ostream& sh(std::ostream& os, RegisterID rt, int32_t offset)
     {
-        return write_binary(os, 0x00000029 | (rt << OP_SH_RT) | (offset & 0xffff));
+        return write_binary(os, sh(rt, offset));
     }
 
     template<typename T>
     inline std::ostream& slti(std::ostream& os, RegisterID rt, RegisterID rs, T imm)
     {
-        return write_binary(os, 0x28000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (*(int32_t*)&imm & 0xffff));
+        return write_binary(os, slti(rt, rs, imm));
     }
 
     template<typename T>
     inline std::ostream& sltiu(std::ostream& os, RegisterID rt, RegisterID rs, T imm)
     {
-        return write_binary(os, 0x2c000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (*(int32_t*)&imm & 0xffff));
+        return write_binary(os, sltiu(rt, rs, imm));
     }
 
     inline std::ostream& sw(std::ostream& os, RegisterID rt, int32_t offset)
     {
-        return write_binary(os, 0x0000002b | (rt << OP_SH_RT) | (offset & 0xffff));
+        return write_binary(os, sw(rt, offset));
     }
 
     inline std::ostream& sb(std::ostream& os, RegisterID rt, RegisterID rs, int32_t offset)
     {
-        return write_binary(os, 0xa0000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (offset & 0xffff));
+        return write_binary(os, sb(rt, rs, offset));
     }
 
     inline std::ostream& sh(std::ostream& os, RegisterID rt, RegisterID rs, int32_t offset)
     {
-        return write_binary(os, 0xa4000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (offset & 0xffff));
+        return write_binary(os, sh(rt, rs, offset));
     }
 
     inline std::ostream& sw(std::ostream& os, RegisterID rt, RegisterID rs, int32_t offset)
     {
-        return write_binary(os, 0xac000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (offset & 0xffff));
+        return write_binary(os, sw(rt, rs, offset));
     }
 
     inline std::ostream& __swl__(std::ostream& os, RegisterID rt, int32_t offset)
     {
-        return write_binary(os, 0x0000002a | (rt << OP_SH_RT) | (offset & 0xffff));
+        return write_binary(os, __swl__(rt, offset));
     }
 
     inline std::ostream& __swl__(std::ostream& os, RegisterID rt, RegisterID rs, int32_t offset)
     {
-        return write_binary(os, 0xa9000000 | (rt << OP_SH_FT) | (rs << OP_SH_RS) | (offset & 0xffff));
+        return write_binary(os, __swl__(rt, rs, offset));
     }
 
     inline std::ostream& __swr__(std::ostream& os, RegisterID rt, int32_t offset)
     {
-        return write_binary(os, 0x0000002e | (rt << OP_SH_RT) | (offset & 0xffff));
+        return write_binary(os, __swr__(rt, offset));
     }
 
     inline std::ostream& __swr__(std::ostream& os, RegisterID rt, RegisterID rs, int32_t offset)
     {
-        return write_binary(os, 0xB9000000 | (rt << OP_SH_FT) | (rs << OP_SH_RS) | (offset & 0xffff));
+        return write_binary(os, __swr__(rt, rs, offset));
     }
 
     inline std::ostream& swc1(std::ostream& os, FPRegisterID ft, int32_t offset)
     {
-        return write_binary(os, 0x00000039 | (ft << OP_SH_FT) | (offset & 0xffff));
+        return write_binary(os, swc1(ft, offset));
     }
 
     inline std::ostream& lwc1(std::ostream& os, FPRegisterID ft, RegisterID rs, int32_t offset)
     {
-        return write_binary(os, 0xc4000000 | (ft << OP_SH_FT) | (rs << OP_SH_RS) | (offset & 0xffff));
+        return write_binary(os, lwc1(ft, rs, offset));
     }
 
     inline std::ostream& __ldc1__(std::ostream& os, FPRegisterID ft, RegisterID rs, int32_t offset)
     {
-        return write_binary(os, 0xd4000000 | (ft << OP_SH_FT) | (rs << OP_SH_RS) | (offset & 0xffff));
+        return write_binary(os, __ldc1__(ft, rs, offset));
     }
 
     inline std::ostream& swc1(std::ostream& os, FPRegisterID ft, RegisterID rs, int32_t offset)
     {
-        return write_binary(os, 0xe4000000 | (ft << OP_SH_FT) | (rs << OP_SH_RS) | (offset & 0xffff));
+        return write_binary(os, swc1(ft, rs, offset));
     }
 
     inline std::ostream& __sdc1__(std::ostream& os, FPRegisterID ft, RegisterID rs, int32_t offset)
     {
-        return write_binary(os, 0xf4000000 | (ft << OP_SH_FT) | (rs << OP_SH_RS) | (offset & 0xffff));
+        return write_binary(os, __sdc1__(ft, rs, offset));
     }
 
     template<typename T>
     inline std::ostream& xori(std::ostream& os, RegisterID rt, RegisterID rs, T imm)
     {
-        return write_binary(os, 0x38000000 | (rt << OP_SH_RT) | (rs << OP_SH_RS) | (*(int32_t*)&imm & 0xffff));
+        return write_binary(os, xori(rt, rs, imm));
     }
 
     /* Set an immediate value to a register. This may generate 1 or 2 instructions.  */
@@ -1793,48 +3428,47 @@ namespace mips
 
     inline std::ostream& j(std::ostream& os, int32_t address)
     {
-        return write_binary(os, (0x08000000 | ((address & 0x0fffffff) >> 2)));
+        return write_binary(os, j(address));
     }
 
     inline std::ostream& jal(std::ostream& os, int32_t address)
     {
-        return write_binary(os, (0x0C000000 | ((address & 0x0fffffff) >> 2)));
+        return write_binary(os, jal(address));
     }
 
     inline std::ostream& b(std::ostream& os, int32_t imm)
     {
-        return write_binary(os, 0x10000000 | (imm & 0xffff));
+        return write_binary(os, b(imm));
     }
 
     inline std::ostream& beq(std::ostream& os, RegisterID rs, RegisterID rt, int32_t imm)
     {
-        return write_binary(os, 0x10000000 | (rs << OP_SH_RS) | (rt << OP_SH_RT) | (imm & 0xffff));
+        return write_binary(os, beq(rs, rt, imm));
     }
 
     inline std::ostream& __bltz__(std::ostream& os, RegisterID rs, int32_t imm)
     {
-        return write_binary(os, 0x04000000 | (rs << OP_SH_RS) | (imm & 0xffff));
+        return write_binary(os, __bltz__(rs, imm));
     }
 
     inline std::ostream& bne(std::ostream& os, RegisterID rs, RegisterID rt, int32_t imm)
     {
-        return write_binary(os, 0x14000000 | (rs << OP_SH_RS) | (rt << OP_SH_RT) | (imm & 0xffff));
+        return write_binary(os, bne(rs, rt, imm));
     }
 
     inline std::ostream& __bnel__(std::ostream& os, RegisterID rs, RegisterID rt, int32_t imm)
     {
-        return write_binary(os, 0x54000000 | (rs << OP_SH_RS) | (rt << OP_SH_RT) | (imm & 0xffff));
+        return write_binary(os, __bnel__(rs, rt, imm));
     }
 
     inline std::ostream& move(std::ostream& os, RegisterID rd, RegisterID rs)
     {
-        /* addu */
-        return write_binary(os, 0x00000021 | (rd << OP_SH_RD) | (rs << OP_SH_RS));
+        return write_binary(os, move(rd, rs));
     }
 
     inline std::ostream& moveq(std::ostream& os, RegisterID rd, RegisterID rs)
     {
-        return write_binary(os, 0x700004a9 | (rd << OP_SH_RD) | (rs << OP_SH_RS));
+        return write_binary(os, moveq(rd, rs));
     }
 
     // Tests
