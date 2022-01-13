@@ -133,635 +133,6 @@ namespace powerpc
     };
 
     //Instruction set
-    inline std::ostream& nop(std::ostream& os)
-    {
-        return write_binary(os, (0x60000000));
-    }
-
-    inline std::ostream& blr(std::ostream& os)
-    {
-        return write_binary(os, (0x4E800020));
-    }
-
-    template<typename T>
-    inline std::ostream& li(std::ostream& os, RegisterID rd, T simm)
-    {
-        return write_binary(os, (0x38000000 | (rd << 21) | (*(int32_t*)&simm & 0xffff)));
-    }
-
-    inline std::ostream& add(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C000214 | (rd << 21) | (ra << 16) | (rb << 11)) | 1);
-    }
-
-    inline std::ostream& addo(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C000614 | (rd << 21) | (ra << 16) | (rb << 11)) | 1);
-    }
-
-    inline std::ostream& addc(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C000014 | (rd << 21) | (ra << 16) | (rb << 11)) | 1);
-    }
-
-    inline std::ostream& addco(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C000414 | (rd << 21) | (ra << 16) | (rb << 11)) | 1);
-    }
-
-    inline std::ostream& adde(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C000114 | (rd << 21) | (ra << 16) | (rb << 11)) | 1);
-    }
-
-    inline std::ostream& addeo(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C000514 | (rd << 21) | (ra << 16) | (rb << 11)) | 1);
-    }
-
-    template<typename T>
-    inline std::ostream& addi(std::ostream& os, RegisterID rd, RegisterID ra, T simm)
-    {
-        return write_binary(os, (0x38000000 | (rd << 21) | (ra << 16) | (*(int32_t*)&simm & 0xffff)));
-    }
-
-    template<typename T>
-    inline std::ostream& addic(std::ostream& os, RegisterID rd, RegisterID ra, T simm)
-    {
-        return write_binary(os, (0x30000000 | (rd << 21) | (ra << 16) | (*(int32_t*)&simm & 0xffff)));
-    }
-
-    template<typename T>
-    inline std::ostream& addis(std::ostream& os, RegisterID rd, RegisterID ra, T simm)
-    {
-        return write_binary(os, (0x3C000000 | (rd << 21) | (ra << 16) | (*(int32_t*)&simm & 0xffff)));
-    }
-
-    inline std::ostream& addme(std::ostream& os, RegisterID rd, RegisterID ra)
-    {
-        return write_binary(os, (0x7C0001D4 | (rd << 21) | (ra << 16)) | 1);
-    }
-
-    inline std::ostream& addmeo(std::ostream& os, RegisterID rd, RegisterID ra)
-    {
-        return write_binary(os, (0x7C0005D4 | (rd << 21) | (ra << 16)) | 1);
-    }
-
-    inline std::ostream& addze(std::ostream& os, RegisterID rd, RegisterID ra)
-    {
-        return write_binary(os, (0x7C000194 | (rd << 21) | (ra << 16)) | 1);
-    }
-
-    inline std::ostream& addzeo(std::ostream& os, RegisterID rd, RegisterID ra)
-    {
-        return write_binary(os, (0x7C000594 | (rd << 21) | (ra << 16)) | 1);
-    }
-
-    inline std::ostream& _and(std::ostream& os, RegisterID ra, RegisterID rs, RegisterID rb)
-    {
-        return write_binary(os, (0x7C000038 | (rs << 21) | (ra << 16) | (rb << 11)) | 1);
-    }
-
-    template<typename T>
-    inline std::ostream& andi(std::ostream& os, RegisterID ra, RegisterID rs, T uimm)
-    {
-        return write_binary(os, (0x70000000 | (rs << 21) | (ra << 16) | (*(uint32_t*)&uimm & 0xffff)));
-    }
-
-    template<typename T>
-    inline std::ostream& andis(std::ostream& os, RegisterID ra, RegisterID rs, T uimm)
-    {
-        return write_binary(os, (0x74000000 | (rs << 21) | (ra << 16) | (*(uint32_t*)&uimm & 0xffff)));
-    }
-
-    inline std::ostream& cntlzw(std::ostream& os, RegisterID ra, RegisterID rs)
-    {
-        return write_binary(os, (0x7C000034 | (rs << 21) | (ra << 16)) | 1);
-    }
-
-    inline std::ostream& divw(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C0003D6 | (rd << 21) | (ra << 16) | (rb << 11)) | 1);
-    }
-
-    inline std::ostream& divwo(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C0007D6 | (rd << 21) | (ra << 16) | (rb << 11)) | 1);
-    }
-
-    inline std::ostream& divwu(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C000396 | (rd << 21) | (ra << 16) | (rb << 11)) | 1);
-    }
-
-    inline std::ostream& divwuo(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C000796 | (rd << 21) | (ra << 16) | (rb << 11)) | 1);
-    }
-
-    inline std::ostream& eieio(std::ostream& os)
-    {
-        return write_binary(os, (0x7C0006AC));
-    }
-
-    inline std::ostream& eqv(std::ostream& os, RegisterID ra, RegisterID rs, RegisterID rb)
-    {
-        return write_binary(os, (0x7C000238 | (rs << 21) | (ra << 16) | (rb << 11)) | 1);
-    }
-
-    inline std::ostream& extsb(std::ostream& os, RegisterID ra, RegisterID rs)
-    {
-        return write_binary(os, (0x7C000774 | (rs << 21) | (ra << 16)) | 1);
-    }
-
-    inline std::ostream& extsh(std::ostream& os, RegisterID ra, RegisterID rs)
-    {
-        return write_binary(os, (0x7C000734 | (rs << 21) | (ra << 16)) | 1);
-    }
-
-    inline std::ostream& lbzux(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C0000EE | (rd << 21) | (ra << 16) | (rb << 11)));
-    }
-
-    inline std::ostream& lbzx(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C0000AE | (rd << 21) | (ra << 16) | (rb << 11)));
-    }
-
-    inline std::ostream& lhaux(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C0002EE | (rd << 21) | (ra << 16) | (rb << 11)));
-    }
-
-    inline std::ostream& lhax(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C0002AE | (rd << 21) | (ra << 16) | (rb << 11)));
-    }
-
-    inline std::ostream& lhbrx(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C00062C | (rd << 21) | (ra << 16) | (rb << 11)));
-    }
-
-    inline std::ostream& lhzux(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C00026E | (rd << 21) | (ra << 16) | (rb << 11)));
-    }
-
-    inline std::ostream& lhzx(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C00022E | (rd << 21) | (ra << 16) | (rb << 11)));
-    }
-
-    inline std::ostream& lswx(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C00042A | (rd << 21) | (ra << 16) | (rb << 11)));
-    }
-
-    inline std::ostream& lwbrx(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C00042C | (rd << 21) | (ra << 16) | (rb << 11)));
-    }
-
-    inline std::ostream& lwzux(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C00006E | (rd << 21) | (ra << 16) | (rb << 11)));
-    }
-
-    inline std::ostream& lwzx(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C00002E | (rd << 21) | (ra << 16) | (rb << 11)));
-    }
-
-    inline std::ostream& mfcr(std::ostream& os, RegisterID rd)
-    {
-        return write_binary(os, (0x7C000026 | (rd << 21)));
-    }
-
-    inline std::ostream& mulhw(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C000096 | (rd << 21) | (ra << 16) | (rb << 11)) | 1);
-    }
-
-    inline std::ostream& mulhwu(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C000016 | (rd << 21) | (ra << 16) | (rb << 11)) | 1);
-    }
-
-    template<typename T>
-    inline std::ostream& mulli(std::ostream& os, RegisterID rd, RegisterID ra, T simm)
-    {
-        return write_binary(os, (0x1C000000 | (rd << 21) | (ra << 16) | (*(int32_t*)&simm & 0xffff)));
-    }
-
-    inline std::ostream& mullw(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C0001D6 | (rd << 21) | (ra << 16) | (rb << 11)) | 1);
-    }
-
-    inline std::ostream& mullwo(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C0005D6 | (rd << 21) | (ra << 16) | (rb << 11)) | 1);
-    }
-
-    inline std::ostream& nand(std::ostream& os, RegisterID ra, RegisterID rs, RegisterID rb)
-    {
-        return write_binary(os, (0x7C0003B8 | (rs << 21) | (ra << 16) | (rb << 11)) | 1);
-    }
-
-    inline std::ostream& nor(std::ostream& os, RegisterID ra, RegisterID rs, RegisterID rb)
-    {
-        return write_binary(os, (0x7C0000F8 | (rs << 21) | (ra << 16) | (rb << 11)) | 1);
-    }
-
-    inline std::ostream& _or(std::ostream& os, RegisterID ra, RegisterID rs, RegisterID rb)
-    {
-        return write_binary(os, (0x7C000378 | (rs << 21) | (ra << 16) | (rb << 11)) | 1);
-    }
-
-    inline std::ostream& orc(std::ostream& os, RegisterID ra, RegisterID rs, RegisterID rb)
-    {
-        return write_binary(os, (0x7C000338 | (rs << 21) | (ra << 16) | (rb << 11)) | 1);
-    }
-
-    template<typename T>
-    inline std::ostream& ori(std::ostream& os, RegisterID ra, RegisterID rs, T uimm)
-    {
-        return write_binary(os, (0x60000000 | (rs << 21) | (ra << 16) | (*(uint32_t*)&uimm & 0xffff)));
-    }
-
-    template<typename T>
-    inline std::ostream& oris(std::ostream& os, RegisterID ra, RegisterID rs, T uimm)
-    {
-        return write_binary(os, (0x64000000 | (rs << 21) | (ra << 16) | (*(uint32_t*)&uimm & 0xffff)));
-    }
-
-    inline std::ostream& slw(std::ostream& os, RegisterID ra, RegisterID rs, RegisterID rb)
-    {
-        return write_binary(os, (0x7C000030 | (rs << 21) | (ra << 16) | (rb << 11)) | 1);
-    }
-
-    inline std::ostream& sraw(std::ostream& os, RegisterID ra, RegisterID rs, RegisterID rb)
-    {
-        return write_binary(os, (0x7C000630 | (rs << 21) | (ra << 16) | (rb << 11)) | 1);
-    }
-
-    inline std::ostream& srw(std::ostream& os, RegisterID ra, RegisterID rs, RegisterID rb)
-    {
-        return write_binary(os, (0x7C000430 | (rs << 21) | (ra << 16) | (rb << 11)) | 1);
-    }
-
-    inline std::ostream& stbux(std::ostream& os, RegisterID rs, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C0001EE | (rs << 21) | (ra << 16) | (rb << 11)));
-    }
-
-    inline std::ostream& stbx(std::ostream& os, RegisterID rs, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C0001AE | (rs << 21) | (ra << 16) | (rb << 11)));
-    }
-
-    inline std::ostream& sthbrx(std::ostream& os, RegisterID rs, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C00072C | (rs << 21) | (ra << 16) | (rb << 11)));
-    }
-
-    inline std::ostream& sthux(std::ostream& os, RegisterID rs, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C00036E | (rs << 21) | (ra << 16) | (rb << 11)));
-    }
-
-    inline std::ostream& sthx(std::ostream& os, RegisterID rs, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C00032E | (rs << 21) | (ra << 16) | (rb << 11)));
-    }
-
-    inline std::ostream& stswx(std::ostream& os, RegisterID rs, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C00052A | (rs << 21) | (ra << 16) | (rb << 11)));
-    }
-
-    inline std::ostream& stwbrx(std::ostream& os, RegisterID rs, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C00052C | (rs << 21) | (ra << 16) | (rb << 11)));
-    }
-
-    inline std::ostream& stwux(std::ostream& os, RegisterID rs, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C00016E | (rs << 21) | (ra << 16) | (rb << 11)));
-    }
-
-    inline std::ostream& stwx(std::ostream& os, RegisterID rs, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C00012E | (rs << 21) | (ra << 16) | (rb << 11)));
-    }
-
-    inline std::ostream& subf(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C000050 | (rd << 21) | (ra << 16) | (rb << 11)) | 1);
-    }
-
-    inline std::ostream& subfo(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C000450 | (rd << 21) | (ra << 16) | (rb << 11)) | 1);
-    }
-
-    inline std::ostream& subfc(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C000010 | (rd << 21) | (ra << 16) | (rb << 11)) | 1);
-    }
-
-    inline std::ostream& subfco(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C000410 | (rd << 21) | (ra << 16) | (rb << 11)) | 1);
-    }
-
-    inline std::ostream& subfe(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C000110 | (rd << 21) | (ra << 16) | (rb << 11)) | 1);
-    }
-
-    inline std::ostream& subfeo(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C000510 | (rd << 21) | (ra << 16) | (rb << 11)) | 1);
-    }
-
-    template<typename T>
-    inline std::ostream& subfic(std::ostream& os, RegisterID rd, RegisterID ra, T simm)
-    {
-        return write_binary(os, (0x20000000 | (rd << 21) | (ra << 16) | (*(int32_t*)&simm & 0xffff)));
-    }
-
-    inline std::ostream& subfme(std::ostream& os, RegisterID rd, RegisterID ra)
-    {
-        return write_binary(os, (0x7C0001D0 | (rd << 21) | (ra << 16)) | 1);
-    }
-
-    inline std::ostream& subfmeo(std::ostream& os, RegisterID rd, RegisterID ra)
-    {
-        return write_binary(os, (0x7C0005D0 | (rd << 21) | (ra << 16)) | 1);
-    }
-
-    inline std::ostream& subfze(std::ostream& os, RegisterID rd, RegisterID ra)
-    {
-        return write_binary(os, (0x7C000190 | (rd << 21) | (ra << 16)) | 1);
-    }
-
-    inline std::ostream& subfzeo(std::ostream& os, RegisterID rd, RegisterID ra)
-    {
-        return write_binary(os, (0x7C000590 | (rd << 21) | (ra << 16)) | 1);
-    }
-
-    inline std::ostream& sync(std::ostream& os)
-    {
-        return write_binary(os, (0x7C0004AC));
-    }
-
-    inline std::ostream& _xor(std::ostream& os, RegisterID ra, RegisterID rs, RegisterID rb)
-    {
-        return write_binary(os, (0x7C000278 | (rs << 21) | (ra << 16) | (rb << 11)) | 1);
-    }
-
-    template<typename T>
-    inline std::ostream& xori(std::ostream& os, RegisterID ra, RegisterID rs, T uimm)
-    {
-        return write_binary(os, (0x68000000 | (rs << 21) | (ra << 16) | (*(uint32_t*)&uimm & 0xffff)));
-    }
-
-    template<typename T>
-    inline std::ostream& xoris(std::ostream& os, RegisterID ra, RegisterID rs, T uimm)
-    {
-        return write_binary(os, (0x6C000000 | (rs << 21) | (ra << 16) | (*(uint32_t*)&uimm & 0xffff)));
-    }
-
-    inline std::ostream& lfsx(std::ostream& os, FPRegisterID frt, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C00042E | (frt << 21) | (ra << 16) | (rb << 11)));
-    }
-
-    inline std::ostream& lfsux(std::ostream& os, FPRegisterID frt, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C00046E | (frt << 21) | (ra << 16) | (rb << 11)));
-    }
-
-    inline std::ostream& lfdx(std::ostream& os, FPRegisterID frt, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C0004AE | (frt << 21) | (ra << 16) | (rb << 11)));
-    }
-
-    inline std::ostream& lfdux(std::ostream& os, FPRegisterID frt, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C0004EE | (frt << 21) | (ra << 16) | (rb << 11)));
-    }
-
-    inline std::ostream& stfsx(std::ostream& os, FPRegisterID frt, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C00052E | (frt << 21) | (ra << 16) | (rb << 11)));
-    }
-
-    inline std::ostream& stfsux(std::ostream& os, FPRegisterID frt, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C00056E | (frt << 21) | (ra << 16) | (rb << 11)));
-    }
-
-    inline std::ostream& stfdx(std::ostream& os, FPRegisterID frt, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C0005AE | (frt << 21) | (ra << 16) | (rb << 11)));
-    }
-
-    inline std::ostream& stfdux(std::ostream& os, FPRegisterID frt, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C0005EE | (frt << 21) | (ra << 16) | (rb << 11)));
-    }
-
-    inline std::ostream& stfiwx(std::ostream& os, FPRegisterID frt, RegisterID ra, RegisterID rb)
-    {
-        return write_binary(os, (0x7C0007AE | (frt << 21) | (ra << 16) | (rb << 11)));
-    }
-
-    inline std::ostream& fmr(std::ostream& os, FPRegisterID frt, FPRegisterID frb)
-    {
-        return write_binary(os, (0xFC000090 | (frt << 21) | (frb << 11)) | 1);
-    }
-
-    inline std::ostream& fneg(std::ostream& os, FPRegisterID frt, FPRegisterID frb)
-    {
-        return write_binary(os, (0xFC000050 | (frt << 21) | (frb << 11)) | 1);
-    }
-
-    inline std::ostream& fabs(std::ostream& os, FPRegisterID frt, FPRegisterID frb)
-    {
-        return write_binary(os, (0xFC000210 | (frt << 21) | (frb << 11)) | 1);
-    }
-
-    inline std::ostream& fnabs(std::ostream& os, FPRegisterID frt, FPRegisterID frb)
-    {
-        return write_binary(os, (0xFC000110 | (frt << 21) | (frb << 11)) | 1);
-    }
-
-    inline std::ostream& fadd(std::ostream& os, FPRegisterID frt, FPRegisterID fra, FPRegisterID frb)
-    {
-        return write_binary(os, (0xFC00002A | (frt << 21) | (fra << 16)) | 1);
-    }
-
-    inline std::ostream& fsub(std::ostream& os, FPRegisterID frt, FPRegisterID fra, FPRegisterID frb)
-    {
-        return write_binary(os, (0xFC000028 | (frt << 21) | (fra << 16)) | 1);
-    }
-
-    inline std::ostream& fadds(std::ostream& os, FPRegisterID frt, FPRegisterID fra, FPRegisterID frb)
-    {
-        return write_binary(os, (0xEC00002A | (frt << 21) | (fra << 16)) | 1);
-    }
-
-    inline std::ostream& fsubs(std::ostream& os, FPRegisterID frt, FPRegisterID fra, FPRegisterID frb)
-    {
-        return write_binary(os, (0xEC000028 | (frt << 21) | (fra << 16)) | 1);
-    }
-
-    inline std::ostream& fmul(std::ostream& os, FPRegisterID frt, FPRegisterID fra, FPRegisterID frc)
-    {
-        return write_binary(os, (0xFC000032 | (frt << 21) | (fra << 16)) | 1);
-    }
-
-    inline std::ostream& fdiv(std::ostream& os, FPRegisterID frt, FPRegisterID fra, FPRegisterID frb)
-    {
-        return write_binary(os, (0xFC000024 | (frt << 21) | (fra << 16)) | 1);
-    }
-
-    inline std::ostream& fmuls(std::ostream& os, FPRegisterID frt, FPRegisterID fra, FPRegisterID frc)
-    {
-        return write_binary(os, (0xEC000032 | (frt << 21) | (fra << 16)) | 1);
-    }
-
-    inline std::ostream& fdivs(std::ostream& os, FPRegisterID frt, FPRegisterID fra, FPRegisterID frb)
-    {
-        return write_binary(os, (0xEC000024 | (frt << 21) | (fra << 16)) | 1);
-    }
-
-    inline std::ostream& fmadd(std::ostream& os, FPRegisterID frt, FPRegisterID fra, FPRegisterID frc, FPRegisterID frb)
-    {
-        return write_binary(os, (0xFC00003A | (frt << 21) | (fra << 16) | (frc << 6) | (frb << 11)) | 1);
-    }
-
-    inline std::ostream& fmsub(std::ostream& os, FPRegisterID frt, FPRegisterID fra, FPRegisterID frc, FPRegisterID frb)
-    {
-        return write_binary(os, (0xFC000038 | (frt << 21) | (fra << 16) | (frc << 6) | (frb << 11)) | 1);
-    }
-
-    inline std::ostream& fmadds(std::ostream& os, FPRegisterID frt, FPRegisterID fra, FPRegisterID frc, FPRegisterID frb)
-    {
-        return write_binary(os, (0xEC00003A | (frt << 21) | (fra << 16) | (frc << 6) | (frb << 11)) | 1);
-    }
-
-    inline std::ostream& fmsubs(std::ostream& os, FPRegisterID frt, FPRegisterID fra, FPRegisterID frc, FPRegisterID frb)
-    {
-        return write_binary(os, (0xEC000038 | (frt << 21) | (fra << 16) | (frc << 6) | (frb << 11)) | 1);
-    }
-
-    inline std::ostream& fnmadd(std::ostream& os, FPRegisterID frt, FPRegisterID fra, FPRegisterID frc, FPRegisterID frb)
-    {
-        return write_binary(os, (0xFC00003E | (frt << 21) | (fra << 16) | (frc << 6) | (frb << 11)) | 1);
-    }
-
-    inline std::ostream& fnmsub(std::ostream& os, FPRegisterID frt, FPRegisterID fra, FPRegisterID frc, FPRegisterID frb)
-    {
-        return write_binary(os, (0xFC00003C | (frt << 21) | (fra << 16) | (frc << 6) | (frb << 11)) | 1);
-    }
-
-    inline std::ostream& fnmadds(std::ostream& os, FPRegisterID frt, FPRegisterID fra, FPRegisterID frc, FPRegisterID frb)
-    {
-        return write_binary(os, (0xEC00003E | (frt << 21) | (fra << 16) | (frc << 6) | (frb << 11)) | 1);
-    }
-
-    inline std::ostream& fnmsubs(std::ostream& os, FPRegisterID frt, FPRegisterID fra, FPRegisterID frc, FPRegisterID frb)
-    {
-        return write_binary(os, (0xEC00003C | (frt << 21) | (fra << 16) | (frc << 6) | (frb << 11)) | 1);
-    }
-
-    inline std::ostream& frsp(std::ostream& os, FPRegisterID frt, FPRegisterID frb)
-    {
-        return write_binary(os, (0xFC000018 | (frt << 21) | (frb << 11)) | 1);
-    }
-
-    inline std::ostream& fctid(std::ostream& os, FPRegisterID frt, FPRegisterID frb)
-    {
-        return write_binary(os, (0xFC00065C | (frt << 21) | (frb << 11)) | 1);
-    }
-
-    inline std::ostream& fctidz(std::ostream& os, FPRegisterID frt, FPRegisterID frb)
-    {
-        return write_binary(os, (0xFC00065E | (frt << 21) | (frb << 11)) | 1);
-    }
-
-    inline std::ostream& fctiw(std::ostream& os, FPRegisterID frt, FPRegisterID frb)
-    {
-        return write_binary(os, (0xFC00001C | (frt << 21) | (frb << 11)) | 1);
-    }
-
-    inline std::ostream& fctiwz(std::ostream& os, FPRegisterID frt, FPRegisterID frb)
-    {
-        return write_binary(os, (0xFC00001E | (frt << 21) | (frb << 11)) | 1);
-    }
-
-    inline std::ostream& fctfid(std::ostream& os, FPRegisterID frt, FPRegisterID frb)
-    {
-        return write_binary(os, (0xFC00069C | (frt << 21) | (frb << 11)) | 1);
-    }
-
-    inline std::ostream& mffs(std::ostream& os, FPRegisterID frt)
-    {
-        return write_binary(os, (0xFC00048E | (frt << 21)) | 1);
-    }
-
-    inline std::ostream& mtfsf(std::ostream& os, FPRegisterID flm, FPRegisterID frb)
-    {
-        return write_binary(os, (0xFC00058E | (flm << 17) | (frb << 11)) | 1);
-    }
-
-    inline std::ostream& fsqrt(std::ostream& os, FPRegisterID frt, FPRegisterID frb)
-    {
-        return write_binary(os, (0xFC00002C | (frt << 21) | (frb << 11)) | 1);
-    }
-
-    inline std::ostream& fre(std::ostream& os, FPRegisterID frt, FPRegisterID frb)
-    {
-        return write_binary(os, (0xFC000030 | (frt << 21) | (frb << 11)) | 1);
-    }
-
-    inline std::ostream& fsqrts(std::ostream& os, FPRegisterID frt, FPRegisterID frb)
-    {
-        return write_binary(os, (0xEC00002C | (frt << 21) | (frb << 11)) | 1);
-    }
-
-    inline std::ostream& fres(std::ostream& os, FPRegisterID frt, FPRegisterID frb)
-    {
-        return write_binary(os, (0xEC000030 | (frt << 21) | (frb << 11)) | 1);
-    }
-
-    inline std::ostream& frsqrte(std::ostream& os, FPRegisterID frt, FPRegisterID frb)
-    {
-        return write_binary(os, (0xFC000034 | (frt << 21) | (frb << 11)) | 1);
-    }
-
-    inline std::ostream& frsqrtes(std::ostream& os, FPRegisterID frt, FPRegisterID frb)
-    {
-        return write_binary(os, (0xEC000034 | (frt << 21) | (frb << 11)) | 1);
-    }
-
-    inline std::ostream& fsel(std::ostream& os, FPRegisterID frt, FPRegisterID fra, FPRegisterID frc, FPRegisterID frb)
-    {
-        return write_binary(os, (0xFC00002E | (frt << 21) | (fra << 16) | (frc << 6) | (frb << 11)) | 1);
-    }
-
-    inline std::ostream& dssall(std::ostream& os)
-    {
-        return write_binary(os, (0x7E00066C));
-    }
-
-    ///////////////////////////////
-
     inline uint32_t nop()
     {
         return swap32((0x60000000));
@@ -1387,5 +758,634 @@ namespace powerpc
     inline uint32_t dssall()
     {
         return swap32((0x7E00066C));
+    }
+
+    ////////////////////////////////////////////
+
+    inline std::ostream& nop(std::ostream& os)
+    {
+        return write_binary(os, nop());
+    }
+
+    inline std::ostream& blr(std::ostream& os)
+    {
+        return write_binary(os, blr());
+    }
+
+    template<typename T>
+    inline std::ostream& li(std::ostream& os, RegisterID rd, T simm)
+    {
+        return write_binary(os, li(rd, simm));
+    }
+
+    inline std::ostream& add(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, add(rd, ra, rb));
+    }
+
+    inline std::ostream& addo(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, addo(rd, ra, rb));
+    }
+
+    inline std::ostream& addc(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, addc(rd, ra, rb));
+    }
+
+    inline std::ostream& addco(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, addco(rd, ra, rb));
+    }
+
+    inline std::ostream& adde(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, adde(rd, ra, rb));
+    }
+
+    inline std::ostream& addeo(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, addeo(rd, ra, rb));
+    }
+
+    template<typename T>
+    inline std::ostream& addi(std::ostream& os, RegisterID rd, RegisterID ra, T simm)
+    {
+        return write_binary(os, addi(rd, ra, simm));
+    }
+
+    template<typename T>
+    inline std::ostream& addic(std::ostream& os, RegisterID rd, RegisterID ra, T simm)
+    {
+        return write_binary(os, addic(rd, ra, simm));
+    }
+
+    template<typename T>
+    inline std::ostream& addis(std::ostream& os, RegisterID rd, RegisterID ra, T simm)
+    {
+        return write_binary(os, addis(rd, ra, simm));
+    }
+
+    inline std::ostream& addme(std::ostream& os, RegisterID rd, RegisterID ra)
+    {
+        return write_binary(os, addme(rd, ra));
+    }
+
+    inline std::ostream& addmeo(std::ostream& os, RegisterID rd, RegisterID ra)
+    {
+        return write_binary(os, addmeo(rd, ra));
+    }
+
+    inline std::ostream& addze(std::ostream& os, RegisterID rd, RegisterID ra)
+    {
+        return write_binary(os, addze(rd, ra));
+    }
+
+    inline std::ostream& addzeo(std::ostream& os, RegisterID rd, RegisterID ra)
+    {
+        return write_binary(os, addzeo(rd, ra));
+    }
+
+    inline std::ostream& _and(std::ostream& os, RegisterID ra, RegisterID rs, RegisterID rb)
+    {
+        return write_binary(os, _and(ra, rs, rb));
+    }
+
+    template<typename T>
+    inline std::ostream& andi(std::ostream& os, RegisterID ra, RegisterID rs, T uimm)
+    {
+        return write_binary(os, andi(ra, rs, uimm));
+    }
+
+    template<typename T>
+    inline std::ostream& andis(std::ostream& os, RegisterID ra, RegisterID rs, T uimm)
+    {
+        return write_binary(os, andis(ra, rs, uimm));
+    }
+
+    inline std::ostream& cntlzw(std::ostream& os, RegisterID ra, RegisterID rs)
+    {
+        return write_binary(os, cntlzw(ra, rs));
+    }
+
+    inline std::ostream& divw(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, divw(rd, ra, rb));
+    }
+
+    inline std::ostream& divwo(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, divwo(rd, ra, rb));
+    }
+
+    inline std::ostream& divwu(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, divwu(rd, ra, rb));
+    }
+
+    inline std::ostream& divwuo(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, divwuo(rd, ra, rb));
+    }
+
+    inline std::ostream& eieio(std::ostream& os)
+    {
+        return write_binary(os, eieio());
+    }
+
+    inline std::ostream& eqv(std::ostream& os, RegisterID ra, RegisterID rs, RegisterID rb)
+    {
+        return write_binary(os, eqv(ra, rs, rb));
+    }
+
+    inline std::ostream& extsb(std::ostream& os, RegisterID ra, RegisterID rs)
+    {
+        return write_binary(os, extsb(ra, rs));
+    }
+
+    inline std::ostream& extsh(std::ostream& os, RegisterID ra, RegisterID rs)
+    {
+        return write_binary(os, extsh(ra, rs));
+    }
+
+    inline std::ostream& lbzux(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, lbzux(rd, ra, rb));
+    }
+
+    inline std::ostream& lbzx(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, lbzx(rd, ra, rb));
+    }
+
+    inline std::ostream& lhaux(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, lhaux(rd, ra, rb));
+    }
+
+    inline std::ostream& lhax(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, lhax(rd, ra, rb));
+    }
+
+    inline std::ostream& lhbrx(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, lhbrx(rd, ra, rb));
+    }
+
+    inline std::ostream& lhzux(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, lhzux(rd, ra, rb));
+    }
+
+    inline std::ostream& lhzx(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, lhzx(rd, ra, rb));
+    }
+
+    inline std::ostream& lswx(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, lswx(rd, ra, rb));
+    }
+
+    inline std::ostream& lwbrx(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, lwbrx(rd, ra, rb));
+    }
+
+    inline std::ostream& lwzux(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, lwzux(rd, ra, rb));
+    }
+
+    inline std::ostream& lwzx(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, lwzx(rd, ra, rb));
+    }
+
+    inline std::ostream& mfcr(std::ostream& os, RegisterID rd)
+    {
+        return write_binary(os, mfcr(rd));
+    }
+
+    inline std::ostream& mulhw(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, mulhw(rd, ra, rb));
+    }
+
+    inline std::ostream& mulhwu(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, mulhwu(rd, ra, rb));
+    }
+
+    template<typename T>
+    inline std::ostream& mulli(std::ostream& os, RegisterID rd, RegisterID ra, T simm)
+    {
+        return write_binary(os, mulli(rd, ra, simm));
+    }
+
+    inline std::ostream& mullw(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, mullw(rd, ra, rb));
+    }
+
+    inline std::ostream& mullwo(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, mullwo(rd, ra, rb));
+    }
+
+    inline std::ostream& nand(std::ostream& os, RegisterID ra, RegisterID rs, RegisterID rb)
+    {
+        return write_binary(os, nand(ra, rs, rb));
+    }
+
+    inline std::ostream& nor(std::ostream& os, RegisterID ra, RegisterID rs, RegisterID rb)
+    {
+        return write_binary(os, nor(ra, rs, rb));
+    }
+
+    inline std::ostream& _or(std::ostream& os, RegisterID ra, RegisterID rs, RegisterID rb)
+    {
+        return write_binary(os, _or(ra, rs, rb));
+    }
+
+    inline std::ostream& orc(std::ostream& os, RegisterID ra, RegisterID rs, RegisterID rb)
+    {
+        return write_binary(os, orc(ra, rs, rb));
+    }
+
+    template<typename T>
+    inline std::ostream& ori(std::ostream& os, RegisterID ra, RegisterID rs, T uimm)
+    {
+        return write_binary(os, ori(ra, rs, uimm));
+    }
+
+    template<typename T>
+    inline std::ostream& oris(std::ostream& os, RegisterID ra, RegisterID rs, T uimm)
+    {
+        return write_binary(os, oris(ra, rs, uimm));
+    }
+
+    inline std::ostream& slw(std::ostream& os, RegisterID ra, RegisterID rs, RegisterID rb)
+    {
+        return write_binary(os, slw(ra, rs, rb));
+    }
+
+    inline std::ostream& sraw(std::ostream& os, RegisterID ra, RegisterID rs, RegisterID rb)
+    {
+        return write_binary(os, sraw(ra, rs, rb));
+    }
+
+    inline std::ostream& srw(std::ostream& os, RegisterID ra, RegisterID rs, RegisterID rb)
+    {
+        return write_binary(os, srw(ra, rs, rb));
+    }
+
+    inline std::ostream& stbux(std::ostream& os, RegisterID rs, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, stbux(rs, ra, rb));
+    }
+
+    inline std::ostream& stbx(std::ostream& os, RegisterID rs, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, stbx(rs, ra, rb));
+    }
+
+    inline std::ostream& sthbrx(std::ostream& os, RegisterID rs, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, sthbrx(rs, ra, rb));
+    }
+
+    inline std::ostream& sthux(std::ostream& os, RegisterID rs, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, sthux(rs, ra, rb));
+    }
+
+    inline std::ostream& sthx(std::ostream& os, RegisterID rs, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, sthx(rs, ra, rb));
+    }
+
+    inline std::ostream& stswx(std::ostream& os, RegisterID rs, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, stswx(rs, ra, rb));
+    }
+
+    inline std::ostream& stwbrx(std::ostream& os, RegisterID rs, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, stwbrx(rs, ra, rb));
+    }
+
+    inline std::ostream& stwux(std::ostream& os, RegisterID rs, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, stwux(rs, ra, rb));
+    }
+
+    inline std::ostream& stwx(std::ostream& os, RegisterID rs, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, stwx(rs, ra, rb));
+    }
+
+    inline std::ostream& subf(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, subf(rd, ra, rb));
+    }
+
+    inline std::ostream& subfo(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, subfo(rd, ra, rb));
+    }
+
+    inline std::ostream& subfc(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, subfc(rd, ra, rb));
+    }
+
+    inline std::ostream& subfco(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, subfco(rd, ra, rb));
+    }
+
+    inline std::ostream& subfe(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, subfe(rd, ra, rb));
+    }
+
+    inline std::ostream& subfeo(std::ostream& os, RegisterID rd, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, subfeo(rd, ra, rb));
+    }
+
+    template<typename T>
+    inline std::ostream& subfic(std::ostream& os, RegisterID rd, RegisterID ra, T simm)
+    {
+        return write_binary(os, subfic(rd, ra, simm));
+    }
+
+    inline std::ostream& subfme(std::ostream& os, RegisterID rd, RegisterID ra)
+    {
+        return write_binary(os, subfme(rd, ra));
+    }
+
+    inline std::ostream& subfmeo(std::ostream& os, RegisterID rd, RegisterID ra)
+    {
+        return write_binary(os, subfmeo(rd, ra));
+    }
+
+    inline std::ostream& subfze(std::ostream& os, RegisterID rd, RegisterID ra)
+    {
+        return write_binary(os, subfze(rd, ra));
+    }
+
+    inline std::ostream& subfzeo(std::ostream& os, RegisterID rd, RegisterID ra)
+    {
+        return write_binary(os, subfzeo(rd, ra));
+    }
+
+    inline std::ostream& sync(std::ostream& os)
+    {
+        return write_binary(os, sync());
+    }
+
+    inline std::ostream& _xor(std::ostream& os, RegisterID ra, RegisterID rs, RegisterID rb)
+    {
+        return write_binary(os, _xor(ra, rs, rb));
+    }
+
+    template<typename T>
+    inline std::ostream& xori(std::ostream& os, RegisterID ra, RegisterID rs, T uimm)
+    {
+        return write_binary(os, xori(ra, rs, uimm));
+    }
+
+    template<typename T>
+    inline std::ostream& xoris(std::ostream& os, RegisterID ra, RegisterID rs, T uimm)
+    {
+        return write_binary(os, xoris(ra, rs, uimm));
+    }
+
+    inline std::ostream& lfsx(std::ostream& os, FPRegisterID frt, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, lfsx(frt, ra, rb));
+    }
+
+    inline std::ostream& lfsux(std::ostream& os, FPRegisterID frt, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, lfsux(frt, ra, rb));
+    }
+
+    inline std::ostream& lfdx(std::ostream& os, FPRegisterID frt, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, lfdx(frt, ra, rb));
+    }
+
+    inline std::ostream& lfdux(std::ostream& os, FPRegisterID frt, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, lfdux(frt, ra, rb));
+    }
+
+    inline std::ostream& stfsx(std::ostream& os, FPRegisterID frt, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, stfsx(frt, ra, rb));
+    }
+
+    inline std::ostream& stfsux(std::ostream& os, FPRegisterID frt, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, stfsux(frt, ra, rb));
+    }
+
+    inline std::ostream& stfdx(std::ostream& os, FPRegisterID frt, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, stfdx(frt, ra, rb));
+    }
+
+    inline std::ostream& stfdux(std::ostream& os, FPRegisterID frt, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, stfdux(frt, ra, rb));
+    }
+
+    inline std::ostream& stfiwx(std::ostream& os, FPRegisterID frt, RegisterID ra, RegisterID rb)
+    {
+        return write_binary(os, stfiwx(frt, ra, rb));
+    }
+
+    inline std::ostream& fmr(std::ostream& os, FPRegisterID frt, FPRegisterID frb)
+    {
+        return write_binary(os, fmr(frt, frb));
+    }
+
+    inline std::ostream& fneg(std::ostream& os, FPRegisterID frt, FPRegisterID frb)
+    {
+        return write_binary(os, fneg(frt, frb));
+    }
+
+    inline std::ostream& fabs(std::ostream& os, FPRegisterID frt, FPRegisterID frb)
+    {
+        return write_binary(os, fabs(frt, frb));
+    }
+
+    inline std::ostream& fnabs(std::ostream& os, FPRegisterID frt, FPRegisterID frb)
+    {
+        return write_binary(os, fnabs(frt, frb));
+    }
+
+    inline std::ostream& fadd(std::ostream& os, FPRegisterID frt, FPRegisterID fra, FPRegisterID frb)
+    {
+        return write_binary(os, fadd(frt, fra, frb));
+    }
+
+    inline std::ostream& fsub(std::ostream& os, FPRegisterID frt, FPRegisterID fra, FPRegisterID frb)
+    {
+        return write_binary(os, fsub(frt, fra, frb));
+    }
+
+    inline std::ostream& fadds(std::ostream& os, FPRegisterID frt, FPRegisterID fra, FPRegisterID frb)
+    {
+        return write_binary(os, fadds(frt, fra, frb));
+    }
+
+    inline std::ostream& fsubs(std::ostream& os, FPRegisterID frt, FPRegisterID fra, FPRegisterID frb)
+    {
+        return write_binary(os, fsubs(frt, fra, frb));
+    }
+
+    inline std::ostream& fmul(std::ostream& os, FPRegisterID frt, FPRegisterID fra, FPRegisterID frc)
+    {
+        return write_binary(os, fmul(frt, fra, frc));
+    }
+
+    inline std::ostream& fdiv(std::ostream& os, FPRegisterID frt, FPRegisterID fra, FPRegisterID frb)
+    {
+        return write_binary(os, fdiv(frt, fra, frb));
+    }
+
+    inline std::ostream& fmuls(std::ostream& os, FPRegisterID frt, FPRegisterID fra, FPRegisterID frc)
+    {
+        return write_binary(os, fmuls(frt, fra, frc));
+    }
+
+    inline std::ostream& fdivs(std::ostream& os, FPRegisterID frt, FPRegisterID fra, FPRegisterID frb)
+    {
+        return write_binary(os, fdivs(frt, fra, frb));
+    }
+
+    inline std::ostream& fmadd(std::ostream& os, FPRegisterID frt, FPRegisterID fra, FPRegisterID frc, FPRegisterID frb)
+    {
+        return write_binary(os, fmadd(frt, fra, frc, frb));
+    }
+
+    inline std::ostream& fmsub(std::ostream& os, FPRegisterID frt, FPRegisterID fra, FPRegisterID frc, FPRegisterID frb)
+    {
+        return write_binary(os, fmsub(frt, fra, frc, frb));
+    }
+
+    inline std::ostream& fmadds(std::ostream& os, FPRegisterID frt, FPRegisterID fra, FPRegisterID frc, FPRegisterID frb)
+    {
+        return write_binary(os, fmadds(frt, fra, frc, frb));
+    }
+
+    inline std::ostream& fmsubs(std::ostream& os, FPRegisterID frt, FPRegisterID fra, FPRegisterID frc, FPRegisterID frb)
+    {
+        return write_binary(os, fmsubs(frt, fra, frc, frb));
+    }
+
+    inline std::ostream& fnmadd(std::ostream& os, FPRegisterID frt, FPRegisterID fra, FPRegisterID frc, FPRegisterID frb)
+    {
+        return write_binary(os, fnmadd(frt, fra, frc, frb));
+    }
+
+    inline std::ostream& fnmsub(std::ostream& os, FPRegisterID frt, FPRegisterID fra, FPRegisterID frc, FPRegisterID frb)
+    {
+        return write_binary(os, fnmsub(frt, fra, frc, frb));
+    }
+
+    inline std::ostream& fnmadds(std::ostream& os, FPRegisterID frt, FPRegisterID fra, FPRegisterID frc, FPRegisterID frb)
+    {
+        return write_binary(os, fnmadds(frt, fra, frc, frb));
+    }
+
+    inline std::ostream& fnmsubs(std::ostream& os, FPRegisterID frt, FPRegisterID fra, FPRegisterID frc, FPRegisterID frb)
+    {
+        return write_binary(os, fnmsubs(frt, fra, frc, frb));
+    }
+
+    inline std::ostream& frsp(std::ostream& os, FPRegisterID frt, FPRegisterID frb)
+    {
+        return write_binary(os, frsp(frt, frb));
+    }
+
+    inline std::ostream& fctid(std::ostream& os, FPRegisterID frt, FPRegisterID frb)
+    {
+        return write_binary(os, fctid(frt, frb));
+    }
+
+    inline std::ostream& fctidz(std::ostream& os, FPRegisterID frt, FPRegisterID frb)
+    {
+        return write_binary(os, fctidz(frt, frb));
+    }
+
+    inline std::ostream& fctiw(std::ostream& os, FPRegisterID frt, FPRegisterID frb)
+    {
+        return write_binary(os, fctiw(frt, frb));
+    }
+
+    inline std::ostream& fctiwz(std::ostream& os, FPRegisterID frt, FPRegisterID frb)
+    {
+        return write_binary(os, fctiwz(frt, frb));
+    }
+
+    inline std::ostream& fctfid(std::ostream& os, FPRegisterID frt, FPRegisterID frb)
+    {
+        return write_binary(os, fctfid(frt, frb));
+    }
+
+    inline std::ostream& mffs(std::ostream& os, FPRegisterID frt)
+    {
+        return write_binary(os, mffs(frt));
+    }
+
+    inline std::ostream& mtfsf(std::ostream& os, FPRegisterID flm, FPRegisterID frb)
+    {
+        return write_binary(os, mtfsf(flm, frb));
+    }
+
+    inline std::ostream& fsqrt(std::ostream& os, FPRegisterID frt, FPRegisterID frb)
+    {
+        return write_binary(os, fsqrt(frt, frb));
+    }
+
+    inline std::ostream& fre(std::ostream& os, FPRegisterID frt, FPRegisterID frb)
+    {
+        return write_binary(os, fre(frt, frb));
+    }
+
+    inline std::ostream& fsqrts(std::ostream& os, FPRegisterID frt, FPRegisterID frb)
+    {
+        return write_binary(os, fsqrts(frt, frb));
+    }
+
+    inline std::ostream& fres(std::ostream& os, FPRegisterID frt, FPRegisterID frb)
+    {
+        return write_binary(os, fres(frt, frb));
+    }
+
+    inline std::ostream& frsqrte(std::ostream& os, FPRegisterID frt, FPRegisterID frb)
+    {
+        return write_binary(os, frsqrte(frt, frb));
+    }
+
+    inline std::ostream& frsqrtes(std::ostream& os, FPRegisterID frt, FPRegisterID frb)
+    {
+        return write_binary(os, frsqrtes(frt, frb));
+    }
+
+    inline std::ostream& fsel(std::ostream& os, FPRegisterID frt, FPRegisterID fra, FPRegisterID frc, FPRegisterID frb)
+    {
+        return write_binary(os, fsel(frt, fra, frc, frb));
+    }
+
+    inline std::ostream& dssall(std::ostream& os)
+    {
+        return write_binary(os, dssall());
     }
 }
