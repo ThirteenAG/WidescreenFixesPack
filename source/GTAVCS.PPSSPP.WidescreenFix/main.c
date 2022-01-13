@@ -456,6 +456,17 @@ int OnModuleStart() {
 
         /* Time, cash numbers, wanted stars */
         injector.MakeInlineLUIORI(ptr_1B97A8, fHudScale * 13.0f / fARDiff); // Width
+        float fSpacingHack = fARDiff - 1.0f;
+        if (fSpacingHack > 0.0f)
+        {
+            MakeInlineWrapper(0x1b9924,
+                adds(f14, f20, f12),
+                lui(t9, HIWORD(fSpacingHack)),
+                ori(t9, t9, LOWORD(fSpacingHack)),
+                mtc1(t9, f23),
+                adds(f20, f20, f23)
+            );
+        }
         injector.MakeInlineLUIORI(ptr_1B992C, fHudScale * 16.0f); // Height
 
         injector.MakeInlineLUIORI(ptr_1B96F8, adjustRightX(369.0f, fHudScale)); // Time Left X
@@ -467,7 +478,7 @@ int OnModuleStart() {
 
         injector.MakeInlineLUIORI(ptr_1B9B00, adjustRightX(452.0f, fHudScale)); // Wanted stars Right X
         injector.MakeInlineLUIORI(ptr_1B9B0C, adjustTopRightY(77.0f, fHudScale)); // Wanted stars Top Y
-        injector.MakeInlineLUIORI(ptr_1B9B18, fHudScale * 17.0f); // Wanted stars Width
+        injector.MakeInlineLUIORI(ptr_1B9B18, fHudScale * 17.0f / fARDiff); // Wanted stars Width
 
         /* Weapon icon & ammo numbers */
         injector.MakeInlineLUIORI(ptr_1C1304, adjustRightX(422.0f, fHudScale)); // Fist icon Left X
