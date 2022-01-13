@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+#include <math.h>
 #include <systemctrl.h>
 
 #include "../../includes/psp/log.h"
@@ -78,10 +79,13 @@ short aimY(short *pad) {
   return pad[PAD_LY] ? pad[PAD_LY] : pad[PAD_RY];
 }
 
+float fAspectRatio = 16.0f / 9.0f;
+float fFOVFactor = 1.0f;
+float fARDiff;
 float adjustRightX(float in, float scale)
 {
     float fRightOffset = fPSPResW - in;
-    return in + (fRightOffset - (scale * fRightOffset));
+    return in + (fRightOffset - (scale / fARDiff * fRightOffset));
 }
 
 float adjustTopRightY(float in, float scale)
@@ -93,6 +97,16 @@ float adjustBottomRightY(float in, float scale)
 {
     float fBottomOffset = fPSPResH - in;
     return in + (fBottomOffset - (scale * fBottomOffset));
+}
+
+float AdjustFOV(float f, float ar)
+{
+    return round((2.0f * atan(((ar) / (4.0f / 3.0f)) * tan(f / 2.0f * ((float)M_PI / 180.0f)))) * (180.0f / (float)M_PI) * 100.0f) / 100.0f;
+}
+
+float sub_171D44(float a1)
+{
+    return a1 * fFOVFactor * (AdjustFOV(70.0f, fAspectRatio) / 70.0f);
 }
 
 int module_thread(SceSize args, void* argp)
@@ -162,6 +176,10 @@ int OnModuleStart() {
     float fRadarScale = inireader.ReadFloat("RADAR", "RadarScale", 1.0f);
     float fRadarPosX = inireader.ReadFloat("RADAR", "RadarPosX", 12.0f);
     float fRadarPosY = inireader.ReadFloat("RADAR", "RadarPosY", 196.0f);
+
+    fFOVFactor = inireader.ReadFloat("FOV", "FOVFactor", 0.0f);
+    if (fFOVFactor <= 0.0f)
+        fFOVFactor = 1.0f;
 
     if (DualAnalogPatch)
     {
@@ -289,10 +307,19 @@ int OnModuleStart() {
         int x = str2int(ch, 10);
         ch = strtok(NULL, ":");
         int y = str2int(ch, 10);
-        float fAspectRatio = (float)x / (float)y;
+        fAspectRatio = (float)x / (float)y;
         uintptr_t ptr_130C4C = pattern.get(0, "E3 3F 05 3C 39 8E A5 34 00 68 85 44 25 28 00 00", 0);
         injector.MakeInlineLUIORI(ptr_130C4C, fAspectRatio);
-        logger.WriteF("%x", ptr_130C4C);
+    }
+
+    if (strcmp(ForceAspectRatio, "auto") != 0 || fFOVFactor)
+    {
+        uintptr_t ptr_21FE98 = pattern.get(0, "00 63 00 46 ? ? ? ? ? ? ? ? 25 88 40 00", -4);
+        MakeInlineWrapper(ptr_21FE98,
+            jal((intptr_t)sub_171D44),
+            nop(),
+            swc1(f0, gp, -0x4250)
+        );
     }
 
     if (Enable60FPS)
@@ -301,6 +328,8 @@ int OnModuleStart() {
         uintptr_t ptr_2030C8 = pattern.get(0, "02 00 84 2C ? ? ? ? 00 00 00 00 ? ? ? ? 00 00 00 00", 20);
         injector.MakeNOP(ptr_2030C8);
     }
+
+    fARDiff = fAspectRatio / (16.0f / 9.0f);
 
     if (fHudScale > 0.0f)
     {
@@ -382,16 +411,15 @@ int OnModuleStart() {
         uintptr_t ptr_1C1C88 = pattern.get(0, "6A 43 04 3C", 0);
         uintptr_t ptr_2ABCBC = pattern.get(0, "8B 3F 04 3C 1F 85 84 34 ? ? ? ? 02 E3 0C 46", 0);
 
-
         /* Health bar */
         injector.MakeInlineLUIORI(ptr_1B7CB8, adjustRightX(352.0f, fHudScale)); // Left X
         injector.MakeInlineLUIORI(ptr_1B7CC0, adjustTopRightY(42.0f, fHudScale)); // Top Y
         injector.MakeInlineLUIORI(ptr_1B7D40, adjustRightX(421.76f, fHudScale)); // Right X
         injector.MakeInlineLUIORI(ptr_1B7CC4, adjustTopRightY(58.0f, fHudScale)); // Bottom Y
-        injector.MakeInlineLUIORI(ptr_1B7CA8, fHudScale * 1.09f); // 1%
-        injector.MakeInlineLUIORI(ptr_1B7C98, fHudScale * 1.085938f); // 1%
+        injector.MakeInlineLUIORI(ptr_1B7CA8, fHudScale * 1.09f / fARDiff); // 1%
+        injector.MakeInlineLUIORI(ptr_1B7C98, fHudScale * 1.085938f / fARDiff); // 1%
 
-        injector.MakeInlineLI(ptr_1B7F20, (int32_t)(adjustRightX(366.0f, fHudScale)));
+        injector.MakeInlineLI(ptr_1B7F20, (int32_t)(adjustRightX(366.0f, fHudScale / fARDiff)));
         injector.MakeInlineLI(ptr_1B7F28, (int32_t)(adjustTopRightY(40.0f, fHudScale)));
         injector.MakeInlineLUIORI(ptr_1B7F10, fHudScale * 0.75f); // Small "+" Font scale
 
@@ -404,8 +432,8 @@ int OnModuleStart() {
         injector.MakeInlineLUIORI(ptr_1BB750, adjustTopRightY(25.0f, fHudScale)); // Top Y
         injector.MakeInlineLUIORI(ptr_1BB7D0, adjustRightX(421.76f, fHudScale)); // Right X
         injector.MakeInlineLUIORI(ptr_1BB754, adjustTopRightY(41.0f, fHudScale)); // Bottom Y
-        injector.MakeInlineLUIORI(ptr_1BB738, fHudScale * 1.09f); // 1%
-        injector.MakeInlineLUIORI(ptr_1BB728, fHudScale * 1.085938f); // 1%
+        injector.MakeInlineLUIORI(ptr_1BB738, fHudScale * 1.09f / fARDiff); // 1%
+        injector.MakeInlineLUIORI(ptr_1BB728, fHudScale * 1.085938f / fARDiff); // 1%
 
         injector.MakeInlineLI(ptr_1BB9B0, (int32_t)(adjustRightX(366.0f, fHudScale)));
         injector.MakeInlineLI(ptr_1BB9B8, (int32_t)(adjustTopRightY(23.0f, fHudScale)));
@@ -424,10 +452,10 @@ int OnModuleStart() {
         injector.MakeInlineLUIORI(ptr_1B9E20, adjustTopRightY(25.0f, fHudScale)); // Top Y
         injector.MakeInlineLUIORI(ptr_1B9E18, adjustRightX(352.0f, fHudScale) + 64.0f); // Right X
         injector.MakeInlineLUIORI(ptr_1B9E10, adjustTopRightY(41.0f, fHudScale)); // Bottom Y
-        injector.MakeInlineLUIORI(ptr_2ABCBC, fHudScale * 1.09f); // 1%
+        injector.MakeInlineLUIORI(ptr_2ABCBC, fHudScale * 1.09f / fARDiff); // 1%
 
         /* Time, cash numbers, wanted stars */
-        injector.MakeInlineLUIORI(ptr_1B97A8, fHudScale * 13.0f); // Width
+        injector.MakeInlineLUIORI(ptr_1B97A8, fHudScale * 13.0f / fARDiff); // Width
         injector.MakeInlineLUIORI(ptr_1B992C, fHudScale * 16.0f); // Height
 
         injector.MakeInlineLUIORI(ptr_1B96F8, adjustRightX(369.0f, fHudScale)); // Time Left X
@@ -449,7 +477,7 @@ int OnModuleStart() {
 
         injector.MakeInlineLUIORI(ptr_1C1274, adjustRightX(455.0f, fHudScale)); // Weapon icon Center X
         injector.MakeInlineLUIORI(ptr_1C1284, adjustTopRightY(39.0f, fHudScale));  // Weapon icon Center Y
-        injector.MakeInlineLUIORI(ptr_1C1280, fHudScale * 33.0f); // Weapon icon Width
+        injector.MakeInlineLUIORI(ptr_1C1280, fHudScale * 33.0f / fARDiff); // Weapon icon Width
         injector.MakeInlineLUIORI(ptr_1C128C, fHudScale * 32.0f); // Weapon icon Height
         injector.MakeInlineLUIORI(ptr_1C14E8, adjustTopRightY(45.0f, fHudScale)); // Ammo Top Y
         injector.MakeInlineLUIORI(ptr_1C14EC, adjustTopRightY(59.0f, fHudScale)); // Ammo Bottom Y
@@ -511,8 +539,8 @@ int OnModuleStart() {
             injector.MakeInlineLUIORI(ptr_1B6A8C, fRadarScale * 12.0f);  // Left X
             injector.MakeInlineLUIORI(ptr_1B6AC0, adjustBottomRightY(196.0f, fRadarScale)); // Top Y
             injector.MakeInlineLUIORI(ptr_1B6AB4, adjustBottomRightY(170.0f, fRadarScale)); // Top Y (Multiplayer)
-            injector.MakeInlineLUIORI(ptr_1B6AE8, fRadarScale * 65.8f);  // Size X
-            injector.MakeInlineLUIORI(ptr_1B6ADC, fRadarScale * 92.0f);  // Size X (Multiplayer)
+            injector.MakeInlineLUIORI(ptr_1B6AE8, fRadarScale * 65.8f / fARDiff);  // Size X
+            injector.MakeInlineLUIORI(ptr_1B6ADC, fRadarScale * 92.0f / fARDiff);  // Size X (Multiplayer)
             injector.MakeInlineLUIORI(ptr_1B6B14, fRadarScale * 65.8f);  // Size Y
             injector.MakeInlineLUIORI(ptr_1B6B08, fRadarScale * 92.0f);  // Size Y (Multiplayer)
         }

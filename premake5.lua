@@ -137,7 +137,7 @@ PRX_EXPORTS = exports.exp
 
 USE_PSPSDK_LIBC = 1
 
-LIBS = -lpspsystemctrl_kernel
+LIBS = -lpspsystemctrl_kernel -lm
 
 PSPSDK = $(shell psp-config --pspsdk-path)
 include $(PSPSDK)/lib/build_prx.mak
