@@ -131,6 +131,13 @@ int OnModuleStart() {
 
     char szForceAspectRatio[100];
     int SkipIntro = inireader.ReadInteger("MAIN", "SkipIntro", 1);
+
+    if (SkipIntro)
+    {
+        uintptr_t ptr = pattern.get_first("00 00 00 00 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 25 20 00 00 ? ? ? ? 00 00 00 00 ? ? ? ? 00 00 00 00 25 10 00 00", -4);
+        injector.MakeNOP(ptr);
+    }
+
     int DualAnalogPatch = inireader.ReadInteger("MAIN", "DualAnalogPatch", 1);
     char* ForceAspectRatio = inireader.ReadString("MAIN", "ForceAspectRatio", "auto", szForceAspectRatio, sizeof(szForceAspectRatio));
     int Enable60FPS = inireader.ReadInteger("MAIN", "Enable60FPS", 0);
@@ -139,13 +146,10 @@ int OnModuleStart() {
     int SwapLBSquare = inireader.ReadInteger("VEHICLECONTROLS", "SwapLBSquare", 0);
 
     float fHudScale = inireader.ReadFloat("HUD", "HudScale", 1.0f);
-    float fRadarScale = inireader.ReadFloat("HUD", "RadarScale", 1.0f);
 
-    if (SkipIntro)
-    {
-        uintptr_t ptr = pattern.get_first("00 00 00 00 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 25 20 00 00 ? ? ? ? 00 00 00 00 ? ? ? ? 00 00 00 00 25 10 00 00", -4);
-        injector.MakeNOP(ptr);
-    }
+    float fRadarScale = inireader.ReadFloat("RADAR", "RadarScale", 1.0f);
+    float fRadarPosX = inireader.ReadFloat("RADAR", "RadarPosX", 12.0f);
+    float fRadarPosY = inireader.ReadFloat("RADAR", "RadarPosY", 196.0f);
 
     if (DualAnalogPatch)
     {
@@ -266,6 +270,13 @@ int OnModuleStart() {
         //60 fps
         uintptr_t ptr_2030C8 = pattern.get(0, "02 00 84 2C ? ? ? ? 00 00 00 00 ? ? ? ? 00 00 00 00", 20);
         injector.MakeNOP(ptr_2030C8);
+
+        //sound issue?
+        //uintptr_t ptr_298C1C = pattern.get(0, "1B 00 85 00 ? ? ? ? ? ? ? ? 12 B8 00 00", 0);
+        //MakeInlineWrapper(ptr_298C1C,
+        //    srl(a1, a1, 1),
+        //    divu(a0, a1)
+        //);
     }
 
     if (fHudScale > 0.0f)
@@ -428,7 +439,7 @@ int OnModuleStart() {
         //injector.MakeInlineLUIORI(ptr_187898, fHudScale * 1.056f); // Font scale
     }
 
-    if (fRadarScale > 0.0f)
+    if (fRadarScale > 0.0f || fRadarPosX != 0.0f || fRadarPosY != 0.0f)
     {
         /* Radar */
         uintptr_t ptr_182F94 = pattern.get(0, "B8 42 04 3C ? ? ? ? 00 00 84 44", 0); // count = 2
@@ -439,13 +450,27 @@ int OnModuleStart() {
         uintptr_t ptr_183018 = pattern.get(0, "2A 43 04 3C ? ? ? ? 00 00 84 44", 0);
         uintptr_t ptr_183024 = pattern.get(0, "44 43 04 3C 00 00 84 44", 0);
 
-        injector.MakeInlineLUIORI(ptr_182FEC, fRadarScale * 12.0f);  // Left X
-        injector.MakeInlineLUIORI(ptr_183024, adjustBottomRightY(196.0f, fRadarScale)); // Top Y
-        injector.MakeInlineLUIORI(ptr_183018, adjustBottomRightY(170.0f, fRadarScale)); // Top Y (Multiplayer)
-        injector.MakeInlineLUIORI(ptr_182FA0, fRadarScale * 65.8f);  // Size X
-        injector.MakeInlineLUIORI(ptr_182F94, fRadarScale * 92.0f);  // Size X (Multiplayer)
-        injector.MakeInlineLUIORI(ptr_182FD0, fRadarScale * 65.8f);  // Size Y
-        injector.MakeInlineLUIORI(ptr_182FC4, fRadarScale * 92.0f);  // Size Y (Multiplayer)
+        if (fRadarPosX)
+        {
+            injector.MakeInlineLUIORI(ptr_182FEC, (fRadarScale ? fRadarScale : 1.0f) * fRadarPosX);  // Left X
+        }
+
+        if (fRadarPosY)
+        {
+            injector.MakeInlineLUIORI(ptr_183024, adjustBottomRightY(fRadarPosY, (fRadarScale ? fRadarScale : 1.0f))); // Top Y
+            injector.MakeInlineLUIORI(ptr_183018, adjustBottomRightY(fRadarPosY, (fRadarScale ? fRadarScale : 1.0f))); // Top Y (Multiplayer)
+        }
+
+        if (fRadarScale)
+        {
+            injector.MakeInlineLUIORI(ptr_182FEC, fRadarScale * 12.0f);  // Left X
+            injector.MakeInlineLUIORI(ptr_183024, adjustBottomRightY(196.0f, fRadarScale)); // Top Y
+            injector.MakeInlineLUIORI(ptr_183018, adjustBottomRightY(170.0f, fRadarScale)); // Top Y (Multiplayer)
+            injector.MakeInlineLUIORI(ptr_182FA0, fRadarScale * 65.8f);  // Size X
+            injector.MakeInlineLUIORI(ptr_182F94, fRadarScale * 92.0f);  // Size X (Multiplayer)
+            injector.MakeInlineLUIORI(ptr_182FD0, fRadarScale * 65.8f);  // Size Y
+            injector.MakeInlineLUIORI(ptr_182FC4, fRadarScale * 92.0f);  // Size Y (Multiplayer)
+        }
     }
 
     sceKernelDcacheWritebackAll();
