@@ -119,35 +119,6 @@ namespace injector
         return MakeCALL(at, trampoline->Jump(dest));
     }
 
-    inline memory_pointer_raw ReadRelativeOffset(memory_pointer_tr at, size_t sizeof_addr = 4, size_t offset = 0, bool vp = true)
-    {
-        switch (sizeof_addr)
-        {
-        case 1: return (GetAbsoluteOffset(ReadMemory<int8_t>(at, vp), at + sizeof_addr + offset));
-        case 2: return (GetAbsoluteOffset(ReadMemory<int16_t>(at, vp), at + sizeof_addr + offset));
-        case 4: return (GetAbsoluteOffset(ReadMemory<int32_t>(at, vp), at + sizeof_addr + offset));
-        }
-        return nullptr;
-    }
-
-    inline injector::memory_pointer_raw ReadRelativeAddress(memory_pointer_tr at, size_t sizeof_addr = 4, bool vp = true)
-    {
-        uintptr_t base = (uintptr_t)GetModuleHandleA(NULL);
-        switch (sizeof_addr)
-        {
-        case 1: return (base + ReadMemory<int8_t>(at, vp));
-        case 2: return (base + ReadMemory<int16_t>(at, vp));
-        case 4: return (base + ReadMemory<int32_t>(at, vp));
-        }
-        return nullptr;
-    }
-
-    inline bool UnprotectMemory(memory_pointer_tr addr, size_t size)
-    {
-        DWORD out_oldprotect = 0;
-        return VirtualProtect(addr.get(), size, PAGE_EXECUTE_READWRITE, &out_oldprotect) != 0;
-    }
-
     class raw_mem
     {
     public:

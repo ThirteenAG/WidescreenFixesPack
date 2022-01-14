@@ -389,6 +389,12 @@ project "PsiOpsTheMindgateConspiracy.WidescreenFix"
 project "Psychonauts.WidescreenFix"
    setpaths("Z:/WFP/Games/Psychonauts/", "Psychonauts.exe")
    writeghaction("psychonauts", "Psychonauts.WidescreenFix")
+project "ResidentEvil2.Dolphin.FusionMod"
+   platforms { "Win64" }
+   architecture "x64"
+   add_asmjit()
+   setpaths("Z:/WFP/Games/Dolphin-x64/", "Dolphin.exe", "scripts/")
+   --writeghaction("re2gc", "ResidentEvil2.Dolphin.FusionMod")
 project "ResidentEvil3.Dolphin.FusionMod"
    platforms { "Win64" }
    architecture "x64"

@@ -16,6 +16,25 @@ void Init()
     if (!pattern.empty())
         SetIsThrottlerTempDisabled = (void(__fastcall*)(bool disable))(injector::GetBranchDestination(pattern.get_first(3)).as_int());
 
+    static auto MenuBarClearCache = (void(__fastcall*)())(nullptr);
+    pattern = hook::pattern("45 33 C9 45 33 C0 33 D2");
+    if (!pattern.empty())
+    {
+        for (size_t i = 0; i < pattern.size(); i++)
+        {
+            auto range_pattern = hook::pattern((uintptr_t)pattern.get(i).get<uintptr_t>(0), (uintptr_t)pattern.get(i).get<uintptr_t>(200), "45 ? ? ? 8D");
+            if (!range_pattern.empty())
+            {
+                std::string_view str(injector::ReadRelativeOffset(range_pattern.get(0).get<uintptr_t>(6)).get_raw<char>());
+                if (str == "Clear Cache")
+                {
+                    MenuBarClearCache = (void(__fastcall*)())(injector::ReadRelativeOffset(pattern.get(i).get<uintptr_t>(22)).as_int());
+                    break;
+                }
+            }
+        }        
+    }
+
     std::thread([]()
     {
         using namespace powerpc;
@@ -50,7 +69,7 @@ void Init()
         };
 
         static MEMORY_BASIC_INFORMATION MemoryInf;
-        static uint8_t* data = nullptr;
+        static uint32_t* data = nullptr;
 
         while (true)
         {
@@ -64,9 +83,11 @@ void Init()
             }
 
             auto GameID = std::string_view(reinterpret_cast<char*>(MainMemoryStart));
-            if (GameID == "GLEE08"/*||GameID == "GLEJ08"*/)
+            if (GameID == "GHAE08" || GameID == "GHAP08")
             {
-                if (data == nullptr)
+                static uint32_t* memcheck = nullptr;
+                static uint32_t bytes = 0;
+                if (data == nullptr || (memcheck && *memcheck != bytes))
                 {
                     std::this_thread::yield();
                     auto swap16 = [](uint16_t n) -> uint16_t
@@ -78,27 +99,31 @@ void Init()
                         auto ptr = (unsigned char*)&n;
                         return (ptr[1] << 24) | (ptr[0] << 16) | 0 | 0;
                     };
-                    auto pattern = hook::pattern(MainMemoryStart, MainMemoryEnd, "38 00 00 01 3c 60 ? ? 38 63 ? ? ? ? 00 00 3c 60");
-                    if (pattern.size() > 1)
+                    auto pattern = hook::pattern(MainMemoryStart, MainMemoryEnd, "38 a0 00 01 3c 60 ? ? 38 83 ? ? 90 a4 00 00 3c 60");
+                    if (pattern.size() >= 1)
                     {
-                        uint16_t a = swap16(*pattern.get(1).get<uint16_t>(6));
-                        uint16_t b = swap16(*pattern.get(1).get<uint16_t>(10));
-                        uint16_t c = swap16(*pattern.get(1).get<uint16_t>(14));
+                        memcheck = pattern.get(0).get<uint32_t>(4);
+                        bytes = injector::ReadMemory<uint32_t>(memcheck, true);
+                        uint16_t a = swap16(*pattern.get(0).get<uint16_t>(6));
+                        uint16_t b = swap16(*pattern.get(0).get<uint16_t>(10));
+                        uint16_t c = swap16(*pattern.get(0).get<uint16_t>(14));
                         if (a != 0 && b != 0)
-                            data = (uint8_t*)((convert(a) - int16_t(0 - b) + c) - ImageBase + MainMemoryStart);
+                            data = (uint32_t*)((convert(a) - int16_t(0 - b) + c) - ImageBase + MainMemoryStart);
                     }
                     if (bEnableDoorSkip)
                     {
-                        pattern = hook::pattern(MainMemoryStart, MainMemoryEnd, "94 21 ff f0 7c 08 02 a6 ? ? ? ? ? ? ? ? 38 60 00 01");
-                        if (pattern.size() > 1)
+                        pattern = hook::pattern(MainMemoryStart, MainMemoryEnd, "54 7d 04 3e 38 00 00 01 98 1f 00 01");
+                        if (pattern.size() >= 1)
                         {
-                            injector::WriteMemory(pattern.get(0).get<void>(0), blr(), true); //return
+                            injector::WriteMemory(pattern.get(0).get<void>(4), li(r0, 0), true);
                         }
                     }
+                    if (MenuBarClearCache)
+                        MenuBarClearCache();
                 }
                 else
                 {
-                    while (bUnthrottleEmuDuringDoorSkip && SetIsThrottlerTempDisabled && data[0] == 1)
+                    while (bUnthrottleEmuDuringDoorSkip && SetIsThrottlerTempDisabled && data[0] == 0x01000000)
                     {
                         SetIsThrottlerTempDisabled(true);
                     }
