@@ -11,8 +11,10 @@ void Init()
     if (!bEnableDoorSkip && !bUnthrottleEmuDuringDoorSkip)
         return;
 
+    static auto SetIsThrottlerTempDisabled = (void(__fastcall*)(bool disable))(nullptr);
     auto pattern = hook::pattern("0F B6 C8 E8 ? ? ? ? 33 D2");
-    static auto SetIsThrottlerTempDisabled = (void(__fastcall*)(bool disable))(injector::GetBranchDestination(pattern.get_first(3)).as_int());
+    if (!pattern.empty())
+        SetIsThrottlerTempDisabled = (void(__fastcall*)(bool disable))(injector::GetBranchDestination(pattern.get_first(3)).as_int());
 
     std::thread([]()
     {
@@ -82,7 +84,8 @@ void Init()
                         uint16_t a = swap16(*pattern.get(1).get<uint16_t>(6));
                         uint16_t b = swap16(*pattern.get(1).get<uint16_t>(10));
                         uint16_t c = swap16(*pattern.get(1).get<uint16_t>(14));
-                        data = (uint8_t*)((convert(a) - int16_t(0 - b) + c) - ImageBase + MainMemoryStart);
+                        if (a != 0 && b != 0)
+                            data = (uint8_t*)((convert(a) - int16_t(0 - b) + c) - ImageBase + MainMemoryStart);
                     }
                     if (bEnableDoorSkip)
                     {
@@ -95,7 +98,7 @@ void Init()
                 }
                 else
                 {
-                    while (bUnthrottleEmuDuringDoorSkip && data[0] == 1)
+                    while (bUnthrottleEmuDuringDoorSkip && SetIsThrottlerTempDisabled && data[0] == 1)
                     {
                         SetIsThrottlerTempDisabled(true);
                     }
