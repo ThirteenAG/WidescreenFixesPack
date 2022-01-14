@@ -52,7 +52,7 @@ void Init()
 
         while (true)
         {
-            std::this_thread::sleep_for(0ms);
+            std::this_thread::yield();
             while (VirtualQuery((LPCVOID)MainMemoryStart, &MemoryInf, sizeof(MemoryInf)) == 0 || MemoryInf.AllocationProtect != PAGE_READWRITE)
             {
                 MainMemoryStart = 0;
@@ -61,40 +61,44 @@ void Init()
                 std::this_thread::yield();
             }
 
-            if (data == nullptr)
+            auto GameID = std::string_view(reinterpret_cast<char*>(MainMemoryStart));
+            if (GameID == "GLEE08"/*||GameID == "GLEJ08"*/)
             {
-                std::this_thread::yield();
-                auto swap16 = [](uint16_t n) -> uint16_t
+                if (data == nullptr)
                 {
-                    return (n >> 8) | (n << 8);
-                };
-                auto convert = [](uint32_t n) -> uint32_t
-                {
-                    auto ptr = (unsigned char*)&n;
-                    return (ptr[1] << 24) | (ptr[0] << 16) | 0 | 0;
-                };
-                auto pattern = hook::pattern(MainMemoryStart, MainMemoryEnd, "38 00 00 01 3c 60 ? ? 38 63 ? ? ? ? 00 00 3c 60");
-                if (pattern.size() > 1)
-                {
-                    uint16_t a = swap16(*pattern.get(1).get<uint16_t>(6));
-                    uint16_t b = swap16(*pattern.get(1).get<uint16_t>(10));
-                    uint16_t c = swap16(*pattern.get(1).get<uint16_t>(14));
-                    data = (uint8_t*)((convert(a) - int16_t(0 - b) + c) - ImageBase + MainMemoryStart);
-                }
-                if (bEnableDoorSkip)
-                {
-                    pattern = hook::pattern(MainMemoryStart, MainMemoryEnd, "94 21 ff f0 7c 08 02 a6 ? ? ? ? ? ? ? ? 38 60 00 01");
+                    std::this_thread::yield();
+                    auto swap16 = [](uint16_t n) -> uint16_t
+                    {
+                        return (n >> 8) | (n << 8);
+                    };
+                    auto convert = [](uint32_t n) -> uint32_t
+                    {
+                        auto ptr = (unsigned char*)&n;
+                        return (ptr[1] << 24) | (ptr[0] << 16) | 0 | 0;
+                    };
+                    auto pattern = hook::pattern(MainMemoryStart, MainMemoryEnd, "38 00 00 01 3c 60 ? ? 38 63 ? ? ? ? 00 00 3c 60");
                     if (pattern.size() > 1)
                     {
-                        injector::WriteMemory(pattern.get(0).get<void>(0), blr(), true); //return
+                        uint16_t a = swap16(*pattern.get(1).get<uint16_t>(6));
+                        uint16_t b = swap16(*pattern.get(1).get<uint16_t>(10));
+                        uint16_t c = swap16(*pattern.get(1).get<uint16_t>(14));
+                        data = (uint8_t*)((convert(a) - int16_t(0 - b) + c) - ImageBase + MainMemoryStart);
+                    }
+                    if (bEnableDoorSkip)
+                    {
+                        pattern = hook::pattern(MainMemoryStart, MainMemoryEnd, "94 21 ff f0 7c 08 02 a6 ? ? ? ? ? ? ? ? 38 60 00 01");
+                        if (pattern.size() > 1)
+                        {
+                            injector::WriteMemory(pattern.get(0).get<void>(0), blr(), true); //return
+                        }
                     }
                 }
-            }
-            else
-            {
-                while (bUnthrottleEmuDuringDoorSkip && data[0] == 1)
+                else
                 {
-                    SetIsThrottlerTempDisabled(true);
+                    while (bUnthrottleEmuDuringDoorSkip && data[0] == 1)
+                    {
+                        SetIsThrottlerTempDisabled(true);
+                    }
                 }
             }
         }

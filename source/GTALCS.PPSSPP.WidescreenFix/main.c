@@ -270,13 +270,6 @@ int OnModuleStart() {
         //60 fps
         uintptr_t ptr_2030C8 = pattern.get(0, "02 00 84 2C ? ? ? ? 00 00 00 00 ? ? ? ? 00 00 00 00", 20);
         injector.MakeNOP(ptr_2030C8);
-
-        //sound issue fix #1028
-        uintptr_t ptr_298C1C = pattern.get(0, "1B 00 85 00 ? ? ? ? ? ? ? ? 12 B8 00 00", 0);
-        MakeInlineWrapper(ptr_298C1C,
-            srl(a1, a1, 1),
-            divu(a0, a1)
-        );
     }
 
     if (fHudScale > 0.0f)
