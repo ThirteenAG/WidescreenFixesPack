@@ -113,6 +113,24 @@ namespace injector
         return at.as_int() + JMPSIZE;
     }
 
+    inline injector::memory_pointer_raw ReadRelativeAddress(memory_pointer_tr at, size_t sizeof_addr = 4, bool vp = true)
+    {
+        uintptr_t base = (uintptr_t)GetModuleHandleA(NULL);
+        switch (sizeof_addr)
+        {
+        case 1: return (base + ReadMemory<int8_t>(at, vp));
+        case 2: return (base + ReadMemory<int16_t>(at, vp));
+        case 4: return (base + ReadMemory<int32_t>(at, vp));
+        }
+        return nullptr;
+    }
+
+    inline bool UnprotectMemory(memory_pointer_tr addr, size_t size)
+    {
+        DWORD out_oldprotect = 0;
+        return VirtualProtect(addr.get(), size, PAGE_EXECUTE_READWRITE, &out_oldprotect) != 0;
+    }
+
     inline injector::memory_pointer_raw MakeCALLTrampoline(injector::memory_pointer_tr at, injector::memory_pointer_raw dest, bool vp = true)
     {
         auto trampoline = Trampoline::MakeTrampoline((void*)at.as_int());
