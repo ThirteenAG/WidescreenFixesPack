@@ -990,6 +990,30 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 |
 [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/Psychonauts.WidescreenFix/scripts/Psychonauts.WidescreenFix.ini)
 
+## Resident Evil 2 Fusion Mod [Dolphin]
+
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to skip doors animation
+
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to unthrottle emulator during door skip (speeds up loading) 
+
+[Download](http://thirteenag.github.io/wfp#re2gc)
+|
+[Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/ResidentEvil2.Dolphin.FusionMod/dllmain.cpp)
+|
+[Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/ResidentEvil2.Dolphin.FusionMod/scripts/ResidentEvil2.Dolphin.FusionMod.ini)
+
+## Resident Evil 3: Nemesis Fusion Mod [Dolphin]
+
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to skip doors animation
+
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to unthrottle emulator during door skip (speeds up loading) 
+
+[Website](http://thirteenag.github.io/wfp#re3gc)
+|
+[Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/ResidentEvil3.Dolphin.FusionMod/dllmain.cpp)
+|
+[Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/ResidentEvil3.Dolphin.FusionMod/scripts/ResidentEvil3.Dolphin.FusionMod.ini)
+
 ## Second Sight Widescreen Fix
 
 ![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Resolution

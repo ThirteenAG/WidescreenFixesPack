@@ -1,0 +1,11 @@
+name: re2gc
+
+on:
+  workflow_dispatch:
+
+jobs:
+  call-workflow-passing-data:
+    uses: ThirteenAG/WidescreenFixesPack/.github/workflows/all.yml@master
+    with:
+      tag_list: re2gc
+      project: /t:ResidentEvil2_Dolphin_FusionMod

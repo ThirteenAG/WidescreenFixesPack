@@ -394,13 +394,13 @@ project "ResidentEvil2.Dolphin.FusionMod"
    architecture "x64"
    add_asmjit()
    setpaths("Z:/WFP/Games/Dolphin-x64/", "Dolphin.exe", "scripts/")
-   --writeghaction("re2gc", "ResidentEvil2.Dolphin.FusionMod")
+   writeghaction("re2gc", "ResidentEvil2.Dolphin.FusionMod")
 project "ResidentEvil3.Dolphin.FusionMod"
    platforms { "Win64" }
    architecture "x64"
    add_asmjit()
    setpaths("Z:/WFP/Games/Dolphin-x64/", "Dolphin.exe", "scripts/")
-   --writeghaction("re3gc", "ResidentEvil3.Dolphin.FusionMod")
+   writeghaction("re3gc", "ResidentEvil3.Dolphin.FusionMod")
 project "SecondSight.WidescreenFix"
    setpaths("Z:/WFP/Games/Second Sight/", "secondsight.exe")
    writeghaction("secondsight", "SecondSight.WidescreenFix")

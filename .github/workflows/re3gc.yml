@@ -1,0 +1,11 @@
+name: re3gc
+
+on:
+  workflow_dispatch:
+
+jobs:
+  call-workflow-passing-data:
+    uses: ThirteenAG/WidescreenFixesPack/.github/workflows/all.yml@master
+    with:
+      tag_list: re3gc
+      project: /t:ResidentEvil3_Dolphin_FusionMod
