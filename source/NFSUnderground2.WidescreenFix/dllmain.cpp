@@ -65,12 +65,14 @@ void LoadDatFile()
     }
 }
 
-const DWORD AffinityMask = 1;
-HANDLE _stdcall CreateThread_Hook(LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_T dwStackSize, LPTHREAD_START_ROUTINE lpStartAddress,
-		LPVOID lpParameter, DWORD dwCreationFlags, LPDWORD lpThreadId) {
-	HANDLE hThread = CreateThread(lpThreadAttributes, dwStackSize, lpStartAddress, lpParameter, dwCreationFlags, lpThreadId);
-	SetThreadAffinityMask(hThread, AffinityMask);
-	return hThread;
+static constexpr DWORD AffinityMask = 1;
+HANDLE WINAPI CustomCreateThread(LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_T dwStackSize, LPTHREAD_START_ROUTINE lpStartAddress,
+    LPVOID lpParameter, DWORD dwCreationFlags, LPDWORD lpThreadId)
+{
+    HANDLE hThread = CreateThread(lpThreadAttributes, dwStackSize, lpStartAddress, lpParameter, dwCreationFlags, lpThreadId);
+    if (hThread)
+        SetThreadAffinityMask(hThread, AffinityMask);
+    return hThread;
 }
 
 void Init()
@@ -694,19 +696,35 @@ void Init()
 
     if (bSingleCoreAffinity)
     {
-		IMAGE_DOS_HEADER* Imagebase = (IMAGE_DOS_HEADER*)GetModuleHandle(NULL);
-		IMAGE_NT_HEADERS* ntHeader = (IMAGE_NT_HEADERS*)((uintptr_t)Imagebase + Imagebase->e_lfanew);
-		IMAGE_SECTION_HEADER* rdataHeader = ((IMAGE_SECTION_HEADER*)(ntHeader + 1)) + 1;
-		uintptr_t rdata = (uintptr_t)Imagebase + rdataHeader->VirtualAddress;
-		uintptr_t* rdata_end = (uintptr_t*)(rdata + rdataHeader->SizeOfRawData);
-		uintptr_t* imp_CreateThread = std::find((uintptr_t*)rdata, rdata_end, (uintptr_t)CreateThread);
-		if (imp_CreateThread != rdata_end) {
-			SetThreadAffinityMask(GetCurrentThread(), AffinityMask);
-			injector::WriteMemory(imp_CreateThread, CreateThread_Hook, true);
-		}
-		else {
-			SetProcessAffinityMask(GetCurrentProcess(), AffinityMask);
-		}
+        HINSTANCE					hInstance = GetModuleHandle(nullptr);
+        PIMAGE_NT_HEADERS			ntHeader = (PIMAGE_NT_HEADERS)((DWORD_PTR)hInstance + ((PIMAGE_DOS_HEADER)hInstance)->e_lfanew);
+        PIMAGE_IMPORT_DESCRIPTOR	pImports = (PIMAGE_IMPORT_DESCRIPTOR)((DWORD_PTR)hInstance + ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress);
+
+        // Find KERNEL32.DLL
+        for (; pImports->Name != 0; pImports++)
+        {
+            if (!_stricmp((const char*)((DWORD_PTR)hInstance + pImports->Name), "KERNEL32.DLL"))
+            {
+                if (pImports->OriginalFirstThunk != 0)
+                {
+                    PIMAGE_IMPORT_BY_NAME* pFunctions = (PIMAGE_IMPORT_BY_NAME*)((DWORD_PTR)hInstance + pImports->OriginalFirstThunk);
+                    for (ptrdiff_t j = 0; pFunctions[j] != nullptr; j++)
+                    {
+                        if (!strcmp((const char*)((DWORD_PTR)hInstance + pFunctions[j]->Name), "CreateThread"))
+                        {
+                            // Overwrite the address with the address to a custom CreateThread
+                            DWORD dwProtect[2];
+                            DWORD_PTR* pAddress = &((DWORD_PTR*)((DWORD_PTR)hInstance + pImports->FirstThunk))[j];
+                            VirtualProtect(pAddress, sizeof(DWORD_PTR), PAGE_EXECUTE_READWRITE, &dwProtect[0]);
+                            *pAddress = (DWORD_PTR)CustomCreateThread;
+                            VirtualProtect(pAddress, sizeof(DWORD_PTR), dwProtect[0], &dwProtect[1]);
+                            SetThreadAffinityMask(GetCurrentThread(), AffinityMask);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     if (bNoOpticalDriveFix)
