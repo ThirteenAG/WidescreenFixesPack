@@ -694,12 +694,13 @@ void Init()
 
     if (bSingleCoreAffinity)
     {
-        IMAGE_DOS_HEADER* Imagebase = (IMAGE_DOS_HEADER*)GetModuleHandle(NULL);
-	    IMAGE_NT_HEADERS* ntHeader = (IMAGE_NT_HEADERS*)((uintptr_t)Imagebase + Imagebase->e_lfanew);
-	    IMAGE_SECTION_HEADER* rdataHeader = ((IMAGE_SECTION_HEADER*)(ntHeader+1)) + 1;
-	    uintptr_t rdata = (uintptr_t)Imagebase + rdataHeader->VirtualAddress;
-        uintptr_t* imp_CreateThread = std::find((uintptr_t*)rdata, (uintptr_t*)((BYTE*)rdata + rdataHeader->SizeOfRawData), (uintptr_t)CreateThread);
-		if (imp_CreateThread != NULL) {
+		IMAGE_DOS_HEADER* Imagebase = (IMAGE_DOS_HEADER*)GetModuleHandle(NULL);
+		IMAGE_NT_HEADERS* ntHeader = (IMAGE_NT_HEADERS*)((uintptr_t)Imagebase + Imagebase->e_lfanew);
+		IMAGE_SECTION_HEADER* rdataHeader = ((IMAGE_SECTION_HEADER*)(ntHeader + 1)) + 1;
+		uintptr_t rdata = (uintptr_t)Imagebase + rdataHeader->VirtualAddress;
+		uintptr_t* rdata_end = (uintptr_t*)(rdata + rdataHeader->SizeOfRawData);
+		uintptr_t* imp_CreateThread = std::find((uintptr_t*)rdata, rdata_end, (uintptr_t)CreateThread);
+		if (imp_CreateThread != rdata_end) {
 			SetThreadAffinityMask(GetCurrentThread(), AffinityMask);
 			injector::WriteMemory(imp_CreateThread, CreateThread_Hook, true);
 		}
