@@ -65,6 +65,14 @@ void LoadDatFile()
     }
 }
 
+const DWORD AffinityMask = 1;
+HANDLE _stdcall CreateThread_Hook(LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_T dwStackSize, LPTHREAD_START_ROUTINE lpStartAddress,
+		LPVOID lpParameter, DWORD dwCreationFlags, LPDWORD lpThreadId) {
+	HANDLE hThread = CreateThread(lpThreadAttributes, dwStackSize, lpStartAddress, lpParameter, dwCreationFlags, lpThreadId);
+	SetThreadAffinityMask(hThread, AffinityMask);
+	return hThread;
+}
+
 void Init()
 {
     CIniReader iniReader("");
@@ -686,7 +694,18 @@ void Init()
 
     if (bSingleCoreAffinity)
     {
-        SetProcessAffinityMask(GetCurrentProcess(), 1);
+        IMAGE_DOS_HEADER* Imagebase = (IMAGE_DOS_HEADER*)GetModuleHandle(NULL);
+	    IMAGE_NT_HEADERS* ntHeader = (IMAGE_NT_HEADERS*)((uintptr_t)Imagebase + Imagebase->e_lfanew);
+	    IMAGE_SECTION_HEADER* rdataHeader = ((IMAGE_SECTION_HEADER*)(ntHeader+1)) + 1;
+	    uintptr_t rdata = (uintptr_t)Imagebase + rdataHeader->VirtualAddress;
+        uintptr_t* imp_CreateThread = std::find((uintptr_t*)rdata, (uintptr_t*)((BYTE*)rdata + rdataHeader->SizeOfRawData), (uintptr_t)CreateThread);
+		if (imp_CreateThread != NULL) {
+			SetThreadAffinityMask(GetCurrentThread(), AffinityMask);
+			injector::WriteMemory(imp_CreateThread, CreateThread_Hook, true);
+		}
+		else {
+			SetProcessAffinityMask(GetCurrentProcess(), AffinityMask);
+		}
     }
 
     if (bNoOpticalDriveFix)
