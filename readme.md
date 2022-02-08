@@ -13,11 +13,12 @@
 [![GitHub last commit](https://img.shields.io/github/last-commit/ThirteenAG/WidescreenFixesPack?color=blue)](https://github.com/ThirteenAG/WidescreenFixesPack/commits)
 [![GitHub top language](https://img.shields.io/github/languages/top/ThirteenAG/WidescreenFixesPack?color=blue)](https://github.com/ThirteenAG/WidescreenFixesPack/search?l=c%2B%2B)
 
-[![Platforms](https://img.shields.io/badge/platforms-grey)](https://github.com/ThirteenAG/WidescreenFixesPack/releases)
+[![Platforms](https://img.shields.io/badge/platforms:-grey)](https://github.com/ThirteenAG/WidescreenFixesPack/releases)
 [![WINDOWS](https://img.shields.io/badge/WINDOWS-0078D4)](https://github.com/ThirteenAG/WidescreenFixesPack/releases?q=NOT+CXBXR+NOT+PCSX2+NOT+PPSSPP&expanded=true)
 [![PCSX2](https://img.shields.io/badge/PCSX2-0271A6)](https://github.com/ThirteenAG/WidescreenFixesPack/releases?q=PCSX2&expanded=true)
 [![PPSSPP](https://img.shields.io/badge/PPSSPP-33b5e5)](https://github.com/ThirteenAG/WidescreenFixesPack/releases?q=PPSSPP&expanded=true)
 [![CXBXR](https://img.shields.io/badge/CXBXR-96CE49)](https://github.com/ThirteenAG/WidescreenFixesPack/releases?q=CXBXR&expanded=true)
+[![DOLPHIN](https://img.shields.io/badge/DOLPHIN-30b5ff)](https://github.com/ThirteenAG/WidescreenFixesPack/releases?q=DOLPHIN&expanded=true)
 
 [![Downloads](https://img.shields.io/github/downloads/ThirteenAG/WidescreenFixesPack/total?color=red)](https://github.com/ThirteenAG/WidescreenFixesPack/releases/)
 
