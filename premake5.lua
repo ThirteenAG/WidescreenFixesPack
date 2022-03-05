@@ -279,7 +279,7 @@ project "GTALCS.PPSSPP.WidescreenFix"
    targetextension ".prx"
    setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTALCS.PPSSPP.WidescreenFix/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PPSSPP.WidescreenFix")
    writemakefile("GTALCS.PPSSPP.WidescreenFix", "lodl.c")
-   writeghaction("gtavcspsp", "GTALCS.PPSSPP.WidescreenFix")
+   writeghaction("gtalcspsp", "GTALCS.PPSSPP.WidescreenFix")
 project "GTAVCS.PPSSPP.WidescreenFix"
    kind "Makefile"
    includedirs { "external/pspsdk/psp/sdk/include" }

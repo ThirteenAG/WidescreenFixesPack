@@ -1,0 +1,11 @@
+name: gtalcspsp
+
+on:
+  workflow_dispatch:
+
+jobs:
+  call-workflow-passing-data:
+    uses: ThirteenAG/WidescreenFixesPack/.github/workflows/all.yml@master
+    with:
+      tag_list: gtalcspsp
+      project: /t:GTALCS_PPSSPP_WidescreenFix
