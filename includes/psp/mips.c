@@ -625,7 +625,7 @@ uint32_t xori(RegisterID rt, RegisterID rs, int32_t imm)
 }
 uint32_t li(RegisterID dest, int32_t imm)
 {
-    return (0x3C000000 | (dest << OP_SH_RT) | (*(int32_t*)&imm & 0xffff));
+    return (0x34000000 | (dest << OP_SH_RT) | (*(int32_t*)&imm & 0xffff));
 }
 uint32_t j(int32_t address)
 {

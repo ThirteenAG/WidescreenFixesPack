@@ -16,6 +16,7 @@ struct injector_t {
     size_t base_size;
     uintptr_t module_addr;
     size_t module_size;
+    void*(*GetGP)();
     void (*SetModuleBaseAddress)(uintptr_t addr, size_t size);
     void (*SetGameBaseAddress)(uintptr_t addr, size_t size);
     void (*WriteMemoryRaw)(uintptr_t addr, void* value, size_t size);

@@ -121,12 +121,18 @@ jobs:
       end
    end
    
-   function writemakefile(prj_name)       
+   function writemakefile(prj_name, ...)
+      local args = {...}
+      local files = "main.o";
+      for i, v in ipairs( args ) do
+          files = files .. " " .. v:gsub(v:match("^.+(%..+)$"), ".o")
+      end
+	  files = string.gsub(files, "^%s*(.-)%s*$", "%1")
       file = io.open("source/" .. prj_name .. "/makefile", "w")
       if (file) then
 str = [[
 TARGET = ..\..\data\%s\memstick\PSP\PLUGINS\%s\%s
-OBJS = main.o exports.o ../../includes/psp/injector.o ../../includes/psp/log.o ../../includes/psp/patterns.o ../../includes/psp/minIni.o ../../includes/psp/inireader.o ../../includes/psp/gvm.o ../../includes/psp/mips.o
+OBJS = %s exports.o ../../includes/psp/injector.o ../../includes/psp/log.o ../../includes/psp/patterns.o ../../includes/psp/minIni.o ../../includes/psp/inireader.o ../../includes/psp/gvm.o ../../includes/psp/mips.o
 
 CFLAGS = -O2 -Os -G0 -Wall -fshort-wchar -fno-pic -mno-check-zero-division
 CXXFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti
@@ -142,7 +148,7 @@ LIBS = -lpspsystemctrl_kernel -lm
 PSPSDK = $(shell psp-config --pspsdk-path)
 include $(PSPSDK)/lib/build_prx.mak
 ]]
-         file:write(string.format(str, prj_name, prj_name, prj_name))
+         file:write(string.format(str, prj_name, prj_name, prj_name, files))
          file:close()
       end
    end
@@ -282,7 +288,7 @@ project "GTAVCS.PPSSPP.WidescreenFix"
    files { "source/%{prj.name}/*.c" }
    targetextension ".prx"
    setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.WidescreenFix")
-   writemakefile("GTAVCS.PPSSPP.WidescreenFix")
+   writemakefile("GTAVCS.PPSSPP.WidescreenFix", "lodl.c")
    writeghaction("gtavcspsp", "GTAVCS.PPSSPP.WidescreenFix")
 project "GTACTW.PPSSPP.FusionMod"
    kind "Makefile"

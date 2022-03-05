@@ -3,6 +3,16 @@
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
+void* GetGP()
+{
+    unsigned int gp;
+    asm(
+        "move %0, $gp\n"
+        : "=r"(gp)
+    );
+    return gp;
+}
+
 void SetModuleBaseAddress(uintptr_t addr, size_t size)
 {
     injector.module_addr = addr;
@@ -262,6 +272,7 @@ struct injector_t injector =
     .base_size = 0,
     .module_addr = 0,
     .module_size = 0,
+    .GetGP = GetGP,
     .SetModuleBaseAddress = SetModuleBaseAddress,
     .SetGameBaseAddress = SetGameBaseAddress,
     .WriteMemoryRaw = WriteMemoryRaw,
