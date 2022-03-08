@@ -153,6 +153,10 @@ int OnModuleStart() {
         uintptr_t ptr_38358 = pattern.get(0, "0C 00 04 34 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 80 3F 04 3C 00 60 84 44", 4);
         CurrentTimeHoursOffset = (uintptr_t)((uint32_t)(*(uint16_t*)(ptr_38358 + 0)) << 16) + *(int16_t*)(ptr_38358 + 4);
         CurrentTimeMinutesOffset = (uintptr_t)((uint32_t)(*(uint16_t*)(ptr_38358 + 8)) << 16) + *(int16_t*)(ptr_38358 + 12);
+        uintptr_t ptr_2723C = pattern.get(0, "34 00 B0 AE 00 60 84 44", -8);
+        CTimer__m_snTimeInMillisecondsPauseModeOffset = (uintptr_t)((uint32_t)(*(uint16_t*)(ptr_2723C + 0)) << 16) + *(int16_t*)(ptr_2723C + 4);
+        uintptr_t ptr_15E4E4 = pattern.get(0, "48 42 04 3C 00 68 84 44 C3 63 0D 46", -8);
+        CTimer__ms_fTimeStepOffset = (uintptr_t)((uint32_t)(*(uint16_t*)(ptr_15E4E4 + 0)) << 16) + *(int16_t*)(ptr_15E4E4 + 4);
 
         const int corona_struct_size = 112;
         SceUID block_id = sceKernelAllocPartitionMemory(PSP_MEMORY_PARTITION_USER, "", PSP_SMEM_High, corona_struct_size * CoronaLimit, NULL);
