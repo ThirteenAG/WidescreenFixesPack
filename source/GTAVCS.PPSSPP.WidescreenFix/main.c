@@ -176,8 +176,10 @@ int OnModuleStart() {
         uintptr_t ptr_3CF00 = pattern.get(0, "FF 00 A5 30 60 08 A9 27", 8);
         uintptr_t TheCamera= (uintptr_t)((uint32_t)(*(uint16_t*)(ptr_3CF00 + 0)) << 16 | (uint32_t)(*(uint16_t*)(ptr_3CF00 + 4)));
         pCamPos = (CVector*)(TheCamera + 0x9B0); //0x9B0 at 0x218648
-        CurrentTimeHoursOffset = *(uint16_t*)pattern.get(0, "0C 00 04 34 ? ? ? ? ? ? ? ? ? ? ? ? 80 3F 04 3C", 4);
-        CurrentTimeMinutesOffset = *(uint16_t*)pattern.get(0, "0C 00 04 34 ? ? ? ? ? ? ? ? ? ? ? ? 80 3F 04 3C", 8);
+        CurrentTimeHoursOffset = *(int16_t*)pattern.get(0, "0C 00 04 34 ? ? ? ? ? ? ? ? ? ? ? ? 80 3F 04 3C", 4);
+        CurrentTimeMinutesOffset = *(int16_t*)pattern.get(0, "0C 00 04 34 ? ? ? ? ? ? ? ? ? ? ? ? 80 3F 04 3C", 8);
+        CTimer__m_snTimeInMillisecondsPauseModeOffset = *(int16_t*)pattern.get(0, "34 00 B0 AE 00 60 84 44", -4);
+        CTimer__ms_fTimeStepOffset = *(int16_t*)pattern.get(0, "48 42 04 3C 00 68 84 44 C3 63 0D 46", -4);
 
         const int corona_struct_size = 112;
         SceUID block_id = sceKernelAllocPartitionMemory(PSP_MEMORY_PARTITION_USER, "", PSP_SMEM_High, corona_struct_size * CoronaLimit, NULL);
