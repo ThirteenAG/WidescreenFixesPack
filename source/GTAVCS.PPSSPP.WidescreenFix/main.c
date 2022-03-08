@@ -173,8 +173,8 @@ int OnModuleStart() {
     {
         uintptr_t ptr_17D324 = pattern.get(0, "E0 FF BD 27 20 00 A2 8F", 0);
         CCoronas__RegisterCorona = (void*)ptr_17D324;
-        uintptr_t ptr_3CF00 = pattern.get(0, "FF 00 A5 30 60 08 A9 27", 8);
-        uintptr_t TheCamera= (uintptr_t)((uint32_t)(*(uint16_t*)(ptr_3CF00 + 0)) << 16 | (uint32_t)(*(uint16_t*)(ptr_3CF00 + 4)));
+        uintptr_t ptr_3CF00 = pattern.get(0, "25 20 20 02 30 00 64 26 00 00 80 D8 00 00 41 D8", -16);
+        uintptr_t TheCamera = (uintptr_t)((uint32_t)(*(uint16_t*)(ptr_3CF00 + 0)) << 16) + *(int16_t*)(ptr_3CF00 + 4);
         pCamPos = (CVector*)(TheCamera + 0x9B0); //0x9B0 at 0x218648
         CurrentTimeHoursOffset = *(int16_t*)pattern.get(0, "0C 00 04 34 ? ? ? ? ? ? ? ? ? ? ? ? 80 3F 04 3C", 4);
         CurrentTimeMinutesOffset = *(int16_t*)pattern.get(0, "0C 00 04 34 ? ? ? ? ? ? ? ? ? ? ? ? 80 3F 04 3C", 8);
