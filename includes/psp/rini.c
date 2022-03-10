@@ -191,7 +191,7 @@ static bool rini_get_node(char* node, char* name, void* out,
             *name_buf++ = *node_buf;
         }
 
-        if (strncmp(name_parsed, name, MAX_NAME) == 0)
+        if (strncmp(name_parsed, name, strlen(name)) == 0)
         {
             break;
         }
@@ -306,7 +306,8 @@ static bool rini_get_node(char* node, char* name, void* out,
 
                 if (*node_buf < '0' || *node_buf > '9')
                 {
-                    return false;
+                    if (*node_buf != ' ')
+                        return false;
                 }
 
                 *int_buf++ = *node_buf;
@@ -364,7 +365,7 @@ static bool rini_get_node(char* node, char* name, void* out,
  * @param type The type of data that the key holds.
  * @return On success 1 is returned
  */
-bool rini_get_key(const char* parent, const char* key, const char* config,
+int rini_get_key(const char* parent, const char* key, const char* config,
                  unsigned config_size, const void* out, unsigned out_size,
                  value_types_t type)
 {

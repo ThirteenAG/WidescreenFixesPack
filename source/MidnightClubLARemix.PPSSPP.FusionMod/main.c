@@ -14,9 +14,9 @@
 #include "../../includes/psp/mips.h"
 
 #define MODULE_NAME_INTERNAL "MC3"
-#define MODULE_NAME "MidnightClubLARemix.PPSSPP.DualAnalogPatch"
-#define LOG_PATH "ms0:/PSP/PLUGINS/MidnightClubLARemix.PPSSPP.DualAnalogPatch/MidnightClubLARemix.PPSSPP.DualAnalogPatch.log"
-#define INI_PATH "ms0:/PSP/PLUGINS/MidnightClubLARemix.PPSSPP.DualAnalogPatch/MidnightClubLARemix.PPSSPP.DualAnalogPatch.ini"
+#define MODULE_NAME "MidnightClubLARemix.PPSSPP.FusionMod"
+#define LOG_PATH "ms0:/PSP/PLUGINS/MidnightClubLARemix.PPSSPP.FusionMod/MidnightClubLARemix.PPSSPP.FusionMod.log"
+#define INI_PATH "ms0:/PSP/PLUGINS/MidnightClubLARemix.PPSSPP.FusionMod/MidnightClubLARemix.PPSSPP.FusionMod.ini"
 
 #ifndef __INTELLISENSE__
 PSP_MODULE_INFO(MODULE_NAME, 0x1007, 1, 0);

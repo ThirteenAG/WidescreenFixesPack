@@ -3,6 +3,22 @@
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
+int AllocMemBlock(int size, int* id) {
+    *id = sceKernelAllocPartitionMemory(PSP_MEMORY_PARTITION_USER, "alloc", PSP_SMEM_Low, size, NULL);
+    if (*id < 0) {
+        *id = sceKernelAllocPartitionMemory(PSP_MEMORY_PARTITION_USER, "alloc", PSP_SMEM_High, size, NULL);
+    }
+    if (*id < 0) {
+        return 0;
+    }
+    return sceKernelGetBlockHeadAddr(*id);
+}
+
+void FreeMemBlock(int id)
+{
+    sceKernelFreePartitionMemory(id);
+}
+
 void* GetGP()
 {
     unsigned int gp;
@@ -272,6 +288,8 @@ struct injector_t injector =
     .base_size = 0,
     .module_addr = 0,
     .module_size = 0,
+    .AllocMemBlock = AllocMemBlock,
+    .FreeMemBlock = FreeMemBlock,
     .GetGP = GetGP,
     .SetModuleBaseAddress = SetModuleBaseAddress,
     .SetGameBaseAddress = SetGameBaseAddress,

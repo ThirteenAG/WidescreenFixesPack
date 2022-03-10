@@ -1,6 +1,7 @@
 #pragma once
 #include <pspsdk.h>
 #include <pspkernel.h>
+#include <pspmodulemgr.h>
 #include <stdint.h>
 #include <stdarg.h>
 #include <string.h>
@@ -16,6 +17,8 @@ struct injector_t {
     size_t base_size;
     uintptr_t module_addr;
     size_t module_size;
+    int  (*AllocMemBlock)(int size, int* id);
+    void (*FreeMemBlock)();
     void*(*GetGP)();
     void (*SetModuleBaseAddress)(uintptr_t addr, size_t size);
     void (*SetGameBaseAddress)(uintptr_t addr, size_t size);
