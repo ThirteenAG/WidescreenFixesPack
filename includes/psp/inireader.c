@@ -1,5 +1,4 @@
 #include "inireader.h"
-#include "minIni.h"
 #include <errno.h>
 #include <limits.h>
 
@@ -36,59 +35,82 @@ int str2int(char* s, int base) {
 void SetIniPath(const char* szFileName)
 {
     inireader.iniName = szFileName;
+
+    static char buf[2000];
+    inireader.iniBufSize = sizeof(buf);
+    inireader.iniBuf = &buf;
+    
+    SceUID fileId = sceIoOpen(inireader.iniName, PSP_O_RDONLY, 0777);
+    if (fileId < 0)
+    {
+        return;
+    }
+    sceIoRead(fileId, inireader.iniBuf, inireader.iniBufSize);
+    sceIoClose(fileId);
 }
 
 int ReadInteger(char* szSection, char* szKey, int iDefaultValue)
 {
-    return ini_getl(szSection, szKey, iDefaultValue, inireader.iniName);
+    int result = iDefaultValue;
+    if (rini_get_key(szSection, szKey, inireader.iniBuf, inireader.iniBufSize, &result, sizeof(result), INT_VAL))
+    {
+        return result;
+    }
+    else
+    {
+        return iDefaultValue;
+    }
 }
 
 float ReadFloat(char* szSection, char* szKey, float fltDefaultValue)
 {
-    return ini_getf(szSection, szKey, fltDefaultValue, inireader.iniName);
+    int BufferSize = 30;
+    char Buffer[BufferSize];
+    if (rini_get_key(szSection, szKey, inireader.iniBuf, inireader.iniBufSize, Buffer, BufferSize, STRING_VAL))
+    {
+        return (float)strtod(Buffer, NULL);
+    }
+    else
+    {
+        return fltDefaultValue;
+    }
 }
 
-_Bool ReadBoolean(char* szSection, char* szKey, _Bool bolDefaultValue)
+bool ReadBoolean(char* szSection, char* szKey, bool bDefaultValue)
 {
-    return ini_getbool(szSection, szKey, bolDefaultValue, inireader.iniName);
+    bool result = bDefaultValue;
+    if (rini_get_key(szSection, szKey, inireader.iniBuf, inireader.iniBufSize, &result, sizeof(result), BOOL_VAL))
+    {
+        return result;
+    }
+    else
+    {
+        return bDefaultValue;
+    }
 }
 
 char* ReadString(char* szSection, char* szKey, char* szDefaultValue, char* Buffer, int BufferSize)
 {
-    ini_gets(szSection, szKey, szDefaultValue, Buffer, BufferSize, inireader.iniName);
-    return Buffer;
-}
-
-void WriteInteger(char* szSection, char* szKey, int iValue)
-{
-    ini_putl(szSection, szKey, iValue, inireader.iniName);
-}
-
-void WriteFloat(char* szSection, char* szKey, float fltValue)
-{
-    ini_putf(szSection, szKey, fltValue, inireader.iniName);
-}
-
-void WriteBoolean(char* szSection, char* szKey, _Bool bolValue)
-{
-    ini_putl(szSection, szKey, bolValue, inireader.iniName);
-}
-
-void WriteString(char* szSection, char* szKey, char* szValue)
-{
-    ini_puts(szSection, szKey, szValue, inireader.iniName);
+    if (rini_get_key(szSection, szKey, inireader.iniBuf, inireader.iniBufSize, Buffer, BufferSize, STRING_VAL))
+    {
+        while (*Buffer == ' ')
+            *Buffer++;
+        return Buffer;
+    }
+    else
+    {
+        return szDefaultValue;
+    }
 }
 
 struct inireader_t inireader =
 {
     .iniName = 0,
+    .iniBuf = 0,
+    .iniBufSize = 0,
     .SetIniPath = SetIniPath,
     .ReadInteger = ReadInteger,
     .ReadFloat = ReadFloat,
     .ReadBoolean = ReadBoolean,
     .ReadString = ReadString,
-    .WriteInteger = WriteInteger,
-    .WriteFloat = WriteFloat,
-    .WriteBoolean = WriteBoolean,
-    .WriteString = WriteString
 };

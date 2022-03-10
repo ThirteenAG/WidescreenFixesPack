@@ -14,9 +14,9 @@
 #include "../../includes/psp/mips.h"
 
 #define MODULE_NAME_INTERNAL "WARR"
-#define MODULE_NAME "TheWarriors.PPSSPP.DualAnalogPatch"
-#define LOG_PATH "ms0:/PSP/PLUGINS/TheWarriors.PPSSPP.DualAnalogPatch/TheWarriors.PPSSPP.DualAnalogPatch.log"
-#define INI_PATH "ms0:/PSP/PLUGINS/TheWarriors.PPSSPP.DualAnalogPatch/TheWarriors.PPSSPP.DualAnalogPatch.ini"
+#define MODULE_NAME "TheWarriors.PPSSPP.FusionMod"
+#define LOG_PATH "ms0:/PSP/PLUGINS/TheWarriors.PPSSPP.FusionMod/TheWarriors.PPSSPP.FusionMod.log"
+#define INI_PATH "ms0:/PSP/PLUGINS/TheWarriors.PPSSPP.FusionMod/TheWarriors.PPSSPP.FusionMod.ini"
 
 #ifndef __INTELLISENSE__
 PSP_MODULE_INFO(MODULE_NAME, 0x1007, 1, 0);
@@ -35,7 +35,7 @@ int OnModuleStart()
         injector.MakeNOP(ptr + 28);
         injector.MakeNOP(ptr + 44);
     }
-
+    
     if (DualAnalogPatch)
     {
         uintptr_t ptr = pattern.get_first("21 10 51 00 ? ? ? ? 1C 00 50 A4", 4);
@@ -45,14 +45,17 @@ int OnModuleStart()
             lbu(a2, sp, 0x1B),
             lbu(a1, sp, 0x1A)
         );
-        injector.WriteInstr(ptr + 0x04, b(22));
+
+        injector.MakeNOP(ptr + 0x04);
+        injector.WriteInstr(ptr + 0x08, b(21));
+        injector.MakeNOP(ptr + 0x0C);
     
         injector.WriteInstr(ptr + 0x6C, sb(a2, s1, 0x1B));
         injector.WriteInstr(ptr + 0x8C, sb(a1, s1, 0x1A));
-
+    
         sceKernelIcacheInvalidateRange((const void*)ptr, 0x90);
     }
-
+    
     if (Enable60FPS)
     {
         uintptr_t ptr = pattern.get_first("02 00 42 2C ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 00 00 A2 8C", 4);
@@ -84,7 +87,8 @@ int module_start(SceSize args, void* argp)
                 {
                     injector.SetGameBaseAddress(info.text_addr, info.text_size);
                     pattern.SetGameBaseAddress(info.text_addr, info.text_size);
-                    inireader.SetIniPath(INI_PATH);
+                    inireader.SetIniPath(INI_PATH); //crashes on sceIoClose for some reason
+                    inireader.SetIniPath(INI_PATH); //but works if called twice (!?)
                     logger.SetPath(LOG_PATH);
                     result = 1;
                 }

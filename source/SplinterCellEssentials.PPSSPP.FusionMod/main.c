@@ -16,9 +16,9 @@
 
 #define MODULE_NAME_INTERNAL "SplinterCellPSP"
 #define MODULE_NAME_INTERNAL2 "PSPLoader"
-#define MODULE_NAME "SplinterCellEssentials.PPSSPP.DualAnalogPatch"
-#define LOG_PATH "ms0:/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.DualAnalogPatch/SplinterCellEssentials.PPSSPP.DualAnalogPatch.log"
-#define INI_PATH "ms0:/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.DualAnalogPatch/SplinterCellEssentials.PPSSPP.DualAnalogPatch.ini"
+#define MODULE_NAME "SplinterCellEssentials.PPSSPP.FusionMod"
+#define LOG_PATH "ms0:/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.FusionMod/SplinterCellEssentials.PPSSPP.FusionMod.log"
+#define INI_PATH "ms0:/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.FusionMod/SplinterCellEssentials.PPSSPP.FusionMod.ini"
 
 #ifndef __INTELLISENSE__
 PSP_MODULE_INFO(MODULE_NAME, 0x1007, 1, 0);
@@ -39,7 +39,7 @@ static float getAxis(float axis, float deadzone, float speed) {
     return 0.0f;
 }
 
-int __0fGUInputKDirectAxis6JEInputKeyfTCPatched(int _this, int axis) {
+void __0fGUInputKDirectAxis6JEInputKeyfTCPatched(int _this, int axis, int unk) {
     int param = *(uint32_t*)(_this) + 0x130;
     int arg1 = _this + *(uint16_t*)(param);
     int arg2 = *(uint32_t*)(*(uint32_t*)(_this + 0x12A0) + 0x34);
@@ -75,33 +75,11 @@ int __0fGUInputKDirectAxis6JEInputKeyfTCPatched(int _this, int axis) {
                 *aLookUp = getAxis(Ry, DEADZONE, -1.0f);
         }
     }
-
-    return 0;
-}
-
-char* strnstr(char* s, char* find, size_t slen)
-{
-    char c, sc;
-    size_t len;
-
-    if ((c = *find++) != '\0') {
-        len = strlen(find);
-        do {
-            do {
-                if ((sc = *s++) == '\0' || slen-- < 1)
-                    return (NULL);
-            } while (sc != c);
-            if (len > slen)
-                return (NULL);
-        } while (strncmp(s, find, len) != 0);
-        s--;
-    }
-    return ((char*)s);
 }
 
 int PSPLoaderHandler()
 {
-    //int SkipIntro = ini_getl("MAIN", "SkipIntro", 0, INI_PATH);
+    //int SkipIntro = inireader.ReadInteger("MAIN", "SkipIntro", 0);
 
     //if (SkipIntro)
     {
@@ -110,6 +88,7 @@ int PSPLoaderHandler()
         //ptr = pattern.get(1, "25 28 00 00 25 30 00 00 25 38 00 00", 12);
         //injector.MakeNOP(ptr); //game gets stuck if no intros are played
     }
+
     return 0;
 }
 
@@ -120,18 +99,11 @@ int OnModuleStart()
     if (!ptr)
         return 0;
 
-    //doesn't work here idk
-    //int SkipIntro = inireader.ReadInteger("MAIN", "SkipIntro", 1);
-    //int DualAnalogPatch = inireader.ReadInteger("MAIN", "DualAnalogPatch", 1);
-    //int Enable60FPS = inireader.ReadInteger("MAIN", "Enable60FPS", 0);
+    int SkipIntro = inireader.ReadInteger("MAIN", "SkipIntro", 1);
+    int DualAnalogPatch = inireader.ReadInteger("MAIN", "DualAnalogPatch", 1);
+    int Enable60FPS = inireader.ReadInteger("MAIN", "Enable60FPS", 0);
 
-    char ini[255];
-    SceUID fd = sceIoOpen(INI_PATH, PSP_O_RDONLY, 0777);
-    sceIoRead(fd, &ini, sizeof(ini));
-    sceIoClose(fd);
-
-    //if (DualAnalogPatch)
-    if (strnstr(ini, "DualAnalogPatch = 1", 255) != NULL)
+    if (DualAnalogPatch)
     {
         sceCtrlSetSamplingMode(PSP_CTRL_MODE_ANALOG);
 
@@ -143,8 +115,7 @@ int OnModuleStart()
         injector.MakeJMP(ptr, (uintptr_t)__0fGUInputKDirectAxis6JEInputKeyfTCPatched);
     }
 
-    //if (Enable60FPS)
-    if (strnstr(ini, "Enable60FPS = 1", 255) != NULL)
+    if (Enable60FPS)
     {
         float f = 1.0f / 75.0f;
         uintptr_t ptr = pattern.get_first("08 3D 05 3C 89 88 A5 34", 0);
@@ -190,8 +161,8 @@ int module_start(SceSize args, void* argp)
                 {
                     injector.SetGameBaseAddress(info.text_addr, info.text_size);
                     pattern.SetGameBaseAddress(info.text_addr, info.text_size);
-                    inireader.SetIniPath(INI_PATH);
-                    logger.SetPath(LOG_PATH);
+                    //inireader.SetIniPath(INI_PATH);
+                    //logger.SetPath(LOG_PATH);
                     return PSPLoaderHandler();
                 }
                 else if (strcmp(info.name, MODULE_NAME_INTERNAL) == 0)
