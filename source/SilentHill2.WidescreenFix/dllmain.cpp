@@ -568,8 +568,8 @@ void Init()
     if (bLightingFix)
     {
         static auto pattern_1 = hook::pattern("8B 10 75 ? 8B 0D");
-        auto dword_1F81298 = *pattern_1.count(2).get(0).get<uintptr_t>(6) - 0x10;
-        auto dword_1F8129C = *pattern_1.count(2).get(1).get<uintptr_t>(6) - 0x10;
+        static auto dword_1F81298 = *pattern_1.count(2).get(0).get<uintptr_t>(6) - 0x10;
+        static auto dword_1F8129C = *pattern_1.count(2).get(1).get<uintptr_t>(6) - 0x10;
         injector::WriteMemory(pattern_1.count(2).get(0).get<void*>(6), dword_1F81298, true); //50002A solves flashlight bug for NPCs
         injector::WriteMemory(pattern_1.count(2).get(1).get<void*>(6), dword_1F8129C, true); //5039FB solves flashlight bug for reflective objects
 
