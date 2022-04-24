@@ -18,17 +18,20 @@ struct Screen
 
 bool bEndProcess;
 int32_t nQuicksaveKey;
+int32_t nZoomIncreaseKey;
+int32_t nZoomDecreaseKey;
 int32_t nZoom = 0;
+int32_t nZoomMax = 0;
 WNDPROC wndProcOld = NULL;
 LRESULT APIENTRY WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     switch (uMsg)
     {
     case WM_KEYDOWN:
-        if (wParam == VK_ADD && nZoom < 200000)
-            nZoom += 4000;
-        else if (wParam == VK_SUBTRACT && nZoom > 0)
-            nZoom -= 4000;
+        if (wParam == nZoomIncreaseKey && nZoom < 4915200)
+            nZoom += 16384;
+        else if (wParam == nZoomDecreaseKey && nZoom > 0)
+            nZoom -= 16384;
         break;
     case WM_CLOSE:
         if (bEndProcess)
@@ -114,6 +117,10 @@ void Init()
     static auto bFixHud = iniReader.ReadInteger("MAIN", "FixHud", 1) != 0;
     auto bFixMenu = iniReader.ReadInteger("MAIN", "FixMenu", 1) != 0;
     nQuicksaveKey = iniReader.ReadInteger("MAIN", "QuicksaveKey", VK_F5);
+    nZoomIncreaseKey = iniReader.ReadInteger("MAIN", "ZoomIncreaseKey", VK_OEM_PLUS);
+    nZoomDecreaseKey = iniReader.ReadInteger("MAIN", "ZoomDecreaseKey", VK_OEM_MINUS);
+    nZoom = iniReader.ReadInteger("MAIN", "ZoomMin", 0) * 16384;
+    nZoomMax = iniReader.ReadInteger("MAIN", "ZoomMax", 30) * 16384;
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -179,6 +186,8 @@ void Init()
             {
                 *(int32_t*)(regs.esi + 0x8) = static_cast<int32_t>(static_cast<float>(*(int32_t*)(regs.esi + 0x8)) * Screen.fCameraZoom);
                 *(int32_t*)(regs.esi + 0x8) += nZoom;
+                if (*(int32_t*)(regs.esi + 0x8) > nZoomMax)
+                    *(int32_t*)(regs.esi + 0x8) = nZoomMax;
             }
         }
     }; injector::MakeInline<CameraZoom>(pattern.count(2).get(1).get<void*>(0));
