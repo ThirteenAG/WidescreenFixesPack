@@ -1,6 +1,4 @@
 #include "stdafx.h"
-#include "pcsx2/pcsx2.h"
-#include <chrono>
 
 struct Screen
 {
@@ -139,13 +137,6 @@ CEXP void InitializeASI()
     std::call_once(CallbackHandler::flag, []()
         {
             CallbackHandler::RegisterCallback(Init, hook::pattern("68 E0 01 00 00 8D 44 24 1C 68 80 02"));
-
-            if (!PCSX2::pcsx2_crc_pattern.empty())
-            {
-                void PCSX2Thread();
-                std::thread t(PCSX2Thread);
-                t.detach();
-            }
         });
 }
 
@@ -156,58 +147,4 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
         if (!IsUALPresent()) { InitializeASI(); }
     }
     return TRUE;
-}
-
-
-///////////////////////////////////////////////////////////////////////
-//////////////////////Experimental PCSX2 support///////////////////////
-///////////////////////////////////////////////////////////////////////
-
-void PCSX2Thread()
-{
-    static auto ps2 = PCSX2({ 0x989192FE }, NULL, [](PCSX2& ps2)
-        {
-            Screen.nWidth = ps2.GetWindowWidth();
-            Screen.nHeight = ps2.GetWindowHeight();
-            Screen.fAspectRatio = ps2.GetAspectRatio();
-            Screen.fWidth = static_cast<float>(Screen.nWidth);
-            Screen.fHeight = static_cast<float>(Screen.nHeight);
-            Screen.nWidth43 = static_cast<uint32_t>(Screen.fHeight * (4.0f / 3.0f));
-            Screen.fWidth43 = static_cast<float>(Screen.nWidth43);
-            Screen.fHudScale = (((4.0f / 3.0f)) / (Screen.fAspectRatio));
-            Screen.fHudOffsetReal = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
-            float f = 80.0f;
-            float t = AdjustFOV(f, Screen.fAspectRatio);
-            Screen.fFOVFactor = 0.00872665f * (t / f);
-        });
-
-    while (!ps2.isCRCValid())
-        std::this_thread::yield();
-
-    ps2.EnableCallback();
-    ps2.FindHostMemoryMapEEmem();
-
-    ps2.vecPatches.push_back(PCSX2Memory(L"gametitle=Knight Rider: The Game (PAL-M6)(SLES-51011)"));
-    ps2.vecPatches.push_back(PCSX2Memory(L"comment=Widescreen Fix by ThirteenAG https://thirteenag.github.io/wfp#kr"));
-    ps2.vecPatches.push_back(PCSX2Memory(L""));
-    ps2.vecPatches.push_back(PCSX2Memory(L"// Current Resolution: " + std::to_wstring(Screen.nWidth) + L"x" + std::to_wstring(Screen.nHeight) + L", Aspect Ratio: " + std::to_wstring(Screen.fAspectRatio)));
-    ps2.vecPatches.push_back(PCSX2Memory(L""));
-
-    auto ps2pattern = hook::range_pattern(ps2.EEMainMemoryStart, ps2.EEMainMemoryEnd, "AA 3F ? 3C");
-    while (ps2pattern.clear().size() != 2) { std::this_thread::yield(); }
-    for (size_t i = 0; i < ps2pattern.size(); i++)
-    {
-        ps2.vecPatches.push_back(PCSX2Memory(CONT, EE, ps2pattern.get(i).get<void>(0), WORD_T, LUI_ORI, &Screen.fAspectRatio, std::wstring(L"// Aspect Ratio: ") + std::to_wstring(Screen.fAspectRatio), 0x3FAAAAAB));
-    }
-
-    ps2pattern = hook::range_pattern(ps2.EEMainMemoryStart, ps2.EEMainMemoryEnd, "AB AA AA 3F");
-    while (ps2pattern.clear().size() < 1) { std::this_thread::yield(); }
-    ps2.vecPatches.push_back(PCSX2Memory(CONT, EE, ps2pattern.get(0).get<void>(0), WORD_T, NONE, &Screen.fAspectRatio, std::wstring(L"// Aspect Ratio: ") + std::to_wstring(Screen.fAspectRatio), 0x3FAAAAAB));
-
-    ps2pattern = hook::range_pattern(ps2.EEMainMemoryStart, ps2.EEMainMemoryEnd, "0E 3C 02 3C 36 FA 42 34 00 00 82 44 D0 FF BD 27");
-    while (ps2pattern.clear().size() < 2) { std::this_thread::yield(); }
-    ps2.vecPatches.push_back(PCSX2Memory(CONT, EE, ps2pattern.get(0).get<void>(0), WORD_T, LUI_ORI, &Screen.fFOVFactor, std::wstring(L"// FOV: ") + std::to_wstring(Screen.fFOVFactor), 0x3C0EFA36));
-
-    ps2.WritePnach();
-    ps2.WriteMemoryLoop();
 }

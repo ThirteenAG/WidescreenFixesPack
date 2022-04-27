@@ -8,4 +8,4 @@ jobs:
     uses: ThirteenAG/WidescreenFixesPack/.github/workflows/all.yml@master
     with:
       tag_list: scdaps2
-      project: /t:SplinterCellDoubleAgent_PCSX2_WidescreenFix
+      project: /t:SplinterCellDoubleAgent_PCSX2F_WidescreenFix

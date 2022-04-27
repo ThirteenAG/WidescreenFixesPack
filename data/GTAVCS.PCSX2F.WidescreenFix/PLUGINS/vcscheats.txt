@@ -1,0 +1,83 @@
+Weapon Set 1
+			NAKEDGUN
+
+Weapon Set 2
+			LETHALWEAPON
+
+Weapon Set 3
+			TOPGUN
+
+Full Health
+			CODEINE
+
+Full Armor
+			KEVLAR
+
+Get $250,000
+			ALWAYSCARRYCASH
+
+Raise Wanted Level
+			COMEATME
+
+Lower Wanted Level
+			LAYOFFME
+
+Commit Suicide 
+			YOUAREALREADYDEAD
+
+Spawn Rhino
+			TANKYOU
+
+Spawn Trashmaster
+			MENATWORK
+
+Black Vehicles
+			NIGHTRIDERS
+
+Chrome Vehicles
+			SOSHINYSOCHROME
+
+No Traction
+			GRIPISEVERYTHING
+
+Cars Avoid You 
+			EMERGENCY101
+
+Destroy All Cars
+			FINALFLASH
+
+Green Traffic Lights
+			NOTIMETOSTOP			
+
+Agressive Drivers
+			ROADWARRIOR
+
+Peds Attack You
+			PUBLICENEMY1
+
+Peds Have Weapons
+			AMMUSUPERSALE			
+
+Guys Follow You
+			CLASSOF84
+
+Ride With Me
+			ESCORTSERVICE
+
+Slow Down Game
+			LIKEADRENALINE
+
+Speed Up Game
+			LIKEARUSH
+
+Speed Up Clock
+			POLARITYREVERSED
+
+Sunny Weather
+			VICEHEAT
+
+Rainy Weather
+			INMANCHESTER
+
+Foggy Weather
+			SEAMIST

@@ -56,7 +56,7 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
         tag: gtavcs
-        artifacts: data/Archives/GTAVCS.PCSX2.WidescreenFix.zip
+        artifacts: data/Archives/GTAVCS.PCSX2F.WidescreenFix.zip
 
     - uses: ./.github/workflows/release_tag
       with:
@@ -77,7 +77,7 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
         tag: gtalcs
-        artifacts: data/Archives/GTALCS.PCSX2.WidescreenFix.zip
+        artifacts: data/Archives/GTALCS.PCSX2F.WidescreenFix.zip
 
     - uses: ./.github/workflows/release_tag
       with:
@@ -91,7 +91,7 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
         tag: scdaps2
-        artifacts: data/Archives/SplinterCellDoubleAgent.PCSX2.WidescreenFix.zip
+        artifacts: data/Archives/SplinterCellDoubleAgent.PCSX2F.WidescreenFix.zip
 
     - uses: ./.github/workflows/release_tag
       with:
@@ -112,7 +112,7 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
         tag: burnout3
-        artifacts: data/Archives/Burnout3.PCSX2.WidescreenFix.zip
+        artifacts: data/Archives/Burnout3.PCSX2F.WidescreenFix.zip
 
     - uses: ./.github/workflows/release_tag
       with:
@@ -133,7 +133,7 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
         tag: kr
-        artifacts: data/Archives/KnightRider.WidescreenFix.zip
+        artifacts: data/Archives/KnightRider.WidescreenFix.zip, data/Archives/KnightRider.PCSX2F.WidescreenFix.zip
 
     - uses: ./.github/workflows/release_tag
       with:

@@ -7,6 +7,7 @@ workspace "WidescreenFixesPack"
    buildlog ("build/log/%{prj.name}.log")
    buildoptions {"-std:c++latest"}
    flags { "MultiProcessorCompile" }
+   include "makefile.lua"
    
    kind "SharedLib"
    language "C++"
@@ -95,6 +96,28 @@ workspace "WidescreenFixesPack"
       targetdir ("data/%{prj.name}/" .. scriptspath)
    end
    
+   function setbuildpaths_ps2(gamepath, exepath, scriptspath, ps2sdkpath, sourcepath, prj_name)
+      local pbcmd = {}
+      for k,v in pairs(pbcommands) do
+        pbcmd[k] = v
+      end
+      if (gamepath) then
+         cmdcopy = { "set \"path=" .. gamepath .. scriptspath .. "\"" }
+         pbcmd[2] = "set \"file=../data/" .. prj_name .. "/" .. scriptspath .. prj_name ..".elf\""
+         table.insert(cmdcopy, pbcmd)
+         buildcommands   { "call " .. ps2sdkpath .. " -C " .. sourcepath, cmdcopy }
+         rebuildcommands { "call " .. ps2sdkpath .. " -C " .. sourcepath .. " clean && " .. ps2sdkpath .. " -C " .. sourcepath, cmdcopy }
+         cleancommands   { "call " .. ps2sdkpath .. " -C " .. sourcepath .. " clean" }
+         debugdir (gamepath)
+         if (exepath) then
+            debugcommand (gamepath .. exepath)
+            dir, file = exepath:match'(.*/)(.*)'
+            debugdir (gamepath .. (dir or ""))
+         end
+      end
+      targetdir ("data/" .. scriptspath)
+   end
+   
    function add_asmjit()
       files { "external/asmjit/src/**.cpp" }
       includedirs { "external/asmjit/src" }
@@ -121,38 +144,6 @@ jobs:
       end
    end
    
-   function writemakefile(prj_name, ...)
-      local args = {...}
-      local files = "main.o";
-      for i, v in ipairs( args ) do
-          files = files .. " " .. v:gsub(v:match("^.+(%..+)$"), ".o")
-      end
-      files = string.gsub(files, "^%s*(.-)%s*$", "%1")
-      file = io.open("source/" .. prj_name .. "/makefile", "w")
-      if (file) then
-str = [[
-TARGET = ..\..\data\%s\memstick\PSP\PLUGINS\%s\%s
-OBJS = %s exports.o ../../includes/psp/injector.o ../../includes/psp/log.o ../../includes/psp/patterns.o ../../includes/psp/rini.o ../../includes/psp/inireader.o ../../includes/psp/gvm.o ../../includes/psp/mips.o
-
-CFLAGS = -O2 -Os -G0 -Wall -fshort-wchar -fno-pic -mno-check-zero-division
-CXXFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti
-ASFLAGS = $(CFLAGS)
-
-BUILD_PRX = 1
-PRX_EXPORTS = exports.exp
-
-USE_PSPSDK_LIBC = 1
-
-LIBS = -lpspsystemctrl_kernel -lm
-
-PSPSDK = $(shell psp-config --pspsdk-path)
-include $(PSPSDK)/lib/build_prx.mak
-]]
-         file:write(string.format(str, prj_name, prj_name, prj_name, files))
-         file:close()
-      end
-   end
-   
    filter "configurations:Debug*"
       defines "DEBUG"
       symbols "On"
@@ -175,11 +166,18 @@ project "Assembly64.TestAsi"
 project "Bully.WidescreenFix"
    setpaths("Z:/WFP/Games/Bully Scholarship Edition/", "Bully.exe", "plugins/")
    writeghaction("bully", "Bully.WidescreenFix")
-project "Burnout3.PCSX2.WidescreenFix"
-   configurations { "ReleasePCSX2", "DebugPCSX2" }
-      setpaths("Z:/WFP/Games/PCSX2/", "pcsx2.exe")
-      files { "includes/pcsx2/pcsx2.h" }
-      writeghaction("burnout3", "Burnout3.PCSX2.WidescreenFix")
+project "Burnout3.PCSX2F.WidescreenFix"
+   kind "Makefile"
+   includedirs { "external/ps2sdk/ps2sdk/ee" }
+   files { "source/%{prj.name}/*.h" }
+   files { "source/%{prj.name}/*.c" }
+   targetextension ".elf"
+   setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin/", "pcsx2x64.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "Burnout3.PCSX2F.WidescreenFix")
+   writemakefile_ps2("Burnout3.PCSX2F.WidescreenFix", "PLUGINS/", "0x02100000", "../../includes/pcsx2/log.o",
+   "../../includes/pcsx2/memalloc.o", "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o",
+   "../../includes/pcsx2/inireader.o", "../../includes/pcsx2/mips.o")
+   writelinkfile_ps2("Burnout3.PCSX2F.WidescreenFix")
+   writeghaction("burnout3", "Burnout3.PCSX2F.WidescreenFix")
 project "CallOfCthulhu.WidescreenFix"
    setpaths("Z:/WFP/Games/Call of Cthulhu/", "Engine/CoCMainWin32.exe", "Engine/scripts/")
    writeghaction("callofcthulhu", "CallOfCthulhu.WidescreenFix")
@@ -260,16 +258,30 @@ project "GTASADE.FusionMod"
    add_asmjit()
    setpaths("Z:/WFP/Games/Grand Theft Auto The Definitive Edition/GTA San Andreas - Definitive Edition/", "Gameface/Binaries/Win64/SanAndreas.exe", "Gameface/Binaries/Win64/scripts/")
    writeghaction("gtasade", "GTASADE.FusionMod")
-project "GTALCS.PCSX2.WidescreenFix"
-   configurations { "ReleasePCSX2", "DebugPCSX2" }
-      setpaths("Z:/WFP/Games/PCSX2/", "pcsx2.exe")
-      files { "includes/pcsx2/pcsx2.h" }
-      writeghaction("gtalcs", "GTALCS.PCSX2.WidescreenFix")
-project "GTAVCS.PCSX2.WidescreenFix"
-   configurations { "ReleasePCSX2", "DebugPCSX2" }
-      setpaths("Z:/WFP/Games/PCSX2/", "pcsx2.exe")
-      files { "includes/pcsx2/pcsx2.h" }
-      writeghaction("gtavcs", "GTAVCS.PCSX2.WidescreenFix")
+project "GTALCS.PCSX2F.WidescreenFix"
+   kind "Makefile"
+   includedirs { "external/ps2sdk/ps2sdk/ee" }
+   files { "source/%{prj.name}/*.h" }
+   files { "source/%{prj.name}/*.c" }
+   targetextension ".elf"
+   setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin/", "pcsx2x64.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PCSX2F.WidescreenFix")
+   writemakefile_ps2("GTALCS.PCSX2F.WidescreenFix", "PLUGINS/", "0x02100000", "lodl.o", "cpad.o", "../../includes/pcsx2/log.o",
+   "../../includes/pcsx2/memalloc.o", "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o",
+   "../../includes/pcsx2/inireader.o", "../../includes/pcsx2/mips.o")
+   writelinkfile_ps2("GTALCS.PCSX2F.WidescreenFix")
+   writeghaction("gtalcs", "GTALCS.PCSX2F.WidescreenFix")
+project "GTAVCS.PCSX2F.WidescreenFix"
+   kind "Makefile"
+   includedirs { "external/ps2sdk/ps2sdk/ee" }
+   files { "source/%{prj.name}/*.h" }
+   files { "source/%{prj.name}/*.c" }
+   targetextension ".elf"
+   setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin/", "pcsx2x64.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PCSX2F.WidescreenFix")
+   writemakefile_ps2("GTAVCS.PCSX2F.WidescreenFix", "PLUGINS/", "0x02100000", "lodl.o", "cpad.o", "ckey.o", "../../includes/pcsx2/log.o",
+   "../../includes/pcsx2/memalloc.o", "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o",
+   "../../includes/pcsx2/inireader.o", "../../includes/pcsx2/mips.o")
+   writelinkfile_ps2("GTAVCS.PCSX2F.WidescreenFix")
+   writeghaction("gtavcs", "GTAVCS.PCSX2F.WidescreenFix")
 project "GTALCS.PPSSPP.WidescreenFix"
    kind "Makefile"
    includedirs { "external/pspsdk/psp/sdk/include" }
@@ -278,7 +290,7 @@ project "GTALCS.PPSSPP.WidescreenFix"
    files { "source/%{prj.name}/*.c" }
    targetextension ".prx"
    setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTALCS.PPSSPP.WidescreenFix/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PPSSPP.WidescreenFix")
-   writemakefile("GTALCS.PPSSPP.WidescreenFix", "lodl.c")
+   writemakefile_psp("GTALCS.PPSSPP.WidescreenFix", "lodl.c")
    writeghaction("gtalcspsp", "GTALCS.PPSSPP.WidescreenFix")
 project "GTAVCS.PPSSPP.WidescreenFix"
    kind "Makefile"
@@ -288,7 +300,7 @@ project "GTAVCS.PPSSPP.WidescreenFix"
    files { "source/%{prj.name}/*.c" }
    targetextension ".prx"
    setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.WidescreenFix")
-   writemakefile("GTAVCS.PPSSPP.WidescreenFix", "lodl.c")
+   writemakefile_psp("GTAVCS.PPSSPP.WidescreenFix", "lodl.c")
    writeghaction("gtavcspsp", "GTAVCS.PPSSPP.WidescreenFix")
 project "GTACTW.PPSSPP.FusionMod"
    kind "Makefile"
@@ -298,7 +310,7 @@ project "GTACTW.PPSSPP.FusionMod"
    files { "source/%{prj.name}/*.c" }
    targetextension ".prx"
    setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionMod/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "GTACTW.PPSSPP.FusionMod")
-   writemakefile("GTACTW.PPSSPP.FusionMod")
+   writemakefile_psp("GTACTW.PPSSPP.FusionMod")
    --writeghaction("gtactwpsp", "GTACTW.PPSSPP.FusionMod")
 project "GTASA.UWP.Test"
    setpaths("Z:/WFP/Games/GTASAUWP/", "GTASA.exe")
@@ -315,19 +327,24 @@ project "KingKong.WidescreenFix"
    setpaths("Z:/WFP/Games/King Kong/", "CheckApplication.exe")
    writeghaction("kingkong", "KingKong.WidescreenFix")
 project "KnightRider.WidescreenFix"
-   configurations { "Release", "Debug", "ReleasePCSX2", "DebugPCSX2" }
+   configurations { "Release", "Debug" }
       setpaths("Z:/WFP/Games/Knight Rider/", "Knight Rider.exe")
-      files { "includes/pcsx2/pcsx2.h" }
-      writeghaction("kr", "KnightRider.WidescreenFix")
-   filter "configurations:*PCSX2"
-      setpaths("Z:/WFP/Games/PCSX2/", "pcsx2.exe")
+      writeghaction("kr", "KnightRider.WidescreenFix /t:KnightRider.PCSX2F.WidescreenFix")
+project "KnightRider.PCSX2F.WidescreenFix"
+   kind "Makefile"
+   includedirs { "external/ps2sdk/ps2sdk/ee" }
+   files { "source/%{prj.name}/*.h" }
+   files { "source/%{prj.name}/*.c" }
+   targetextension ".elf"
+   setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin/", "pcsx2x64.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "KnightRider.PCSX2F.WidescreenFix")
+   writemakefile_ps2("KnightRider.PCSX2F.WidescreenFix", "PLUGINS/", "0x02100000", "../../includes/pcsx2/log.o",
+   "../../includes/pcsx2/memalloc.o", "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o",
+   "../../includes/pcsx2/inireader.o", "../../includes/pcsx2/mips.o")
+   writelinkfile_ps2("KnightRider.PCSX2F.WidescreenFix")
 project "KnightRider2.WidescreenFix"
-   configurations { "Release", "Debug", "ReleasePCSX2", "DebugPCSX2" }
+   configurations { "Release", "Debug" }
       setpaths("Z:/WFP/Games/Knight Rider 2/", "KR2.exe")
-      files { "includes/pcsx2/pcsx2.h" }
       writeghaction("kr2", "KnightRider2.WidescreenFix")
-   filter "configurations:*PCSX2"
-      setpaths("Z:/WFP/Games/PCSX2/", "pcsx2.exe")
 project "LARush.WidescreenFix"
    setpaths("Z:/WFP/Games/LA Rush/", "LARush.exe", "plugins/")
    writeghaction("larush", "LARush.WidescreenFix")
@@ -359,7 +376,7 @@ project "MidnightClubLARemix.PPSSPP.FusionMod"
    files { "source/%{prj.name}/*.c" }
    targetextension ".prx"
    setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/MidnightClubLARemix.PPSSPP.FusionMod/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "MidnightClubLARemix.PPSSPP.FusionMod")
-   writemakefile("MidnightClubLARemix.PPSSPP.FusionMod")
+   writemakefile_psp("MidnightClubLARemix.PPSSPP.FusionMod")
 project "MaxPayne2.WidescreenFix"
    setpaths("Z:/WFP/Games/Max Payne/Max Payne 2 The Fall of Max Payne/", "MaxPayne2.exe")
    writeghaction("mp2", "MaxPayne2.WidescreenFix")
@@ -436,11 +453,18 @@ project "SplinterCellDoubleAgent.WidescreenFix"
    files { "textures/SCDA/icon.rc" }
    defines { "IDR_SCDAICON=200" }
    writeghaction("scda", "SplinterCellDoubleAgent.WidescreenFix")
-project "SplinterCellDoubleAgent.PCSX2.WidescreenFix"
-   configurations { "ReleasePCSX2", "DebugPCSX2" }
-      setpaths("Z:/WFP/Games/PCSX2/", "pcsx2.exe")
-      files { "includes/pcsx2/pcsx2.h" }
-   writeghaction("scdaps2", "SplinterCellDoubleAgent.PCSX2.WidescreenFix")
+project "SplinterCellDoubleAgent.PCSX2F.WidescreenFix"
+   kind "Makefile"
+   includedirs { "external/ps2sdk/ps2sdk/ee" }
+   files { "source/%{prj.name}/*.h" }
+   files { "source/%{prj.name}/*.c" }
+   targetextension ".elf"
+   setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin/", "pcsx2x64.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "SplinterCellDoubleAgent.PCSX2F.WidescreenFix")
+   writemakefile_ps2("SplinterCellDoubleAgent.PCSX2F.WidescreenFix", "PLUGINS/", "0x02100000", "../../includes/pcsx2/log.o",
+   "../../includes/pcsx2/memalloc.o", "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o",
+   "../../includes/pcsx2/inireader.o", "../../includes/pcsx2/mips.o")
+   writelinkfile_ps2("SplinterCellDoubleAgent.PCSX2F.WidescreenFix")
+   writeghaction("scdaps2", "SplinterCellDoubleAgent.PCSX2F.WidescreenFix")
 project "SplinterCellDoubleAgent.CXBXR.WidescreenFix"
    configurations { "ReleaseCXBXR", "DebugCXBXR" }
       setpaths("Z:/WFP/Games/CXBXR/", "cxbx.exe")
@@ -457,7 +481,7 @@ project "SplinterCellEssentials.PPSSPP.FusionMod"
    files { "source/%{prj.name}/*.c" }
    targetextension ".prx"
    setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.FusionMod/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "SplinterCellEssentials.PPSSPP.FusionMod")
-   writemakefile("SplinterCellEssentials.PPSSPP.FusionMod")
+   writemakefile_psp("SplinterCellEssentials.PPSSPP.FusionMod")
    writeghaction("sce", "SplinterCellEssentials.PPSSPP.FusionMod")
 project "StreetRacingSyndicate.WidescreenFix"
    setpaths("Z:/WFP/Games/Street Racing Syndicate/", "Bin/srs.exe", "Bin/scripts/")
@@ -485,7 +509,7 @@ project "TheWarriors.PPSSPP.FusionMod"
    files { "source/%{prj.name}/*.c" }
    targetextension ".prx"
    setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/TheWarriors.PPSSPP.FusionMod/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "TheWarriors.PPSSPP.FusionMod")
-   writemakefile("TheWarriors.PPSSPP.FusionMod")
+   writemakefile_psp("TheWarriors.PPSSPP.FusionMod")
 project "TonyHawksAmericanWasteland.WidescreenFix"
    setpaths("Z:/WFP/Games/Tony Hawks/Tony Hawk's American Wasteland/", "Game/THAW.exe", "Game/scripts/")
    writeghaction("thaw", "TonyHawksAmericanWasteland.WidescreenFix")
@@ -515,4 +539,4 @@ project "TrueCrimeStreetsofLA.WidescreenFix"
    writeghaction("truecrimesola", "TrueCrimeStreetsofLA.WidescreenFix")
 project "UltimateSpiderMan.WidescreenFix"
    setpaths("Z:/WFP/Games/Ultimate Spider-Man/", "USM.exe")
-   writeghaction("usm", "UltimateSpiderMan.WidescreenFix")   
+   writeghaction("usm", "UltimateSpiderMan.WidescreenFix")

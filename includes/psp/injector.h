@@ -39,6 +39,7 @@ struct injector_t {
     float (*ReadMemoryFloat)(uintptr_t addr);
     double (*ReadMemoryDouble)(uintptr_t addr);
     void (*MakeJMP)(uintptr_t at, uintptr_t dest);
+    void (*MakeJMPwNOP)(uintptr_t at, uintptr_t dest);
     void (*MakeJAL)(uintptr_t at, uintptr_t dest);
     void (*MakeCALL)(uintptr_t at, uintptr_t dest);
     void (*MakeNOP)(uintptr_t at);
