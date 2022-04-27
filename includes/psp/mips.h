@@ -151,7 +151,7 @@ uint32_t mult(RegisterID rd, RegisterID rs, RegisterID rt);
 uint32_t mult1(RegisterID rd, RegisterID rs, RegisterID rt);
 uint32_t multu(RegisterID rd, RegisterID rs, RegisterID rt);
 uint32_t multu1(RegisterID rd, RegisterID rs, RegisterID rt);
-uint32_t sync();
+uint32_t _sync();
 uint32_t syscall();
 uint32_t tge(RegisterID rs, RegisterID rt);
 uint32_t tlbwi();

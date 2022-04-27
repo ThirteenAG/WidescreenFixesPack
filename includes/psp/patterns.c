@@ -1,7 +1,5 @@
 #include "patterns.h"
 #include <string.h>
-#include <pspsdk.h>
-#include <pspkernel.h>
 
 void PatternSetGameBaseAddress(uintptr_t addr, size_t size)
 {

@@ -28,57 +28,116 @@ PSP_MODULE_INFO(MODULE_NAME, 0x1007, 1, 0);
 static const float fPSPResW = 480.0f;
 static const float fPSPResH = 272.0f;
 
-enum GtaPad {
-    PAD_LX = 1,
-    PAD_LY = 2,
-    PAD_RX = 3,
-    PAD_RY = 4,
-    PAD_LTRIGGER = 5,
-    PAD_RTRIGGER = 7,
-    PAD_SQUARE = 19,
-    PAD_TRIANGLE = 20,
-    PAD_CROSS = 21,
-    PAD_CIRCLE = 22,
+enum CControllerState
+{
+    LEFTSTICKX = 1,
+    LEFTSTICKY,
+    RIGHTSTICKX,
+    RIGHTSTICKY,
+    LEFTSHOULDER1,
+    LEFTSHOULDER2,
+    RIGHTSHOULDER1,
+    RIGHTSHOULDER2,
+    DPADUP,
+    DPADDOWN,
+    DPADLEFT,
+    DPADRIGHT,
+    unk1,
+    unk2,
+    unk3,
+    unk4,
+    START,
+    SELECT,
+    SQUARE,
+    TRIANGLE,
+    CROSS,
+    CIRCLE,
+    LEFTSHOCK,
+    RIGHTSHOCK
 };
 
-short vcsAcceleration(short* pad) {
+short CPad__GetAccelerate(short* pad) {
     if (pad[77] == 0)
-        return pad[PAD_RTRIGGER];
+        return pad[RIGHTSHOULDER1];
     return 0;
 }
 
-short vcsAccelerationNormal(short* pad) {
+short CPad__GetAccelerateNormal(short* pad) {
     if (pad[77] == 0)
-        return pad[PAD_CROSS];
+        return pad[CROSS];
     return 0;
 }
 
-short vcsBrake(short* pad) {
+short CPad__GetBrake(short* pad) {
     if (pad[77] == 0)
-        return pad[PAD_LTRIGGER];
+        return pad[LEFTSHOULDER1];
     return 0;
 }
 
-short vcsBrakeNormal(short* pad) {
+short CPad__GetBrakeNormal(short* pad) {
     if (pad[77] == 0)
-        return pad[PAD_SQUARE];
+        return pad[SQUARE];
     return 0;
 }
 
-short cameraX(short *pad) {
-  return pad[PAD_RX];
+short cameraX(short* pad) {
+    return pad[RIGHTSTICKX];
 }
 
-short cameraY(short *pad) {
-  return pad[PAD_RY];
+short cameraY(short* pad) {
+    return pad[RIGHTSTICKY];
 }
 
-short aimX(short *pad) {
-  return pad[PAD_LX] ? pad[PAD_LX] : pad[PAD_RX];
+short aimX(short* pad) {
+    return pad[LEFTSTICKX] ? pad[LEFTSTICKX] : pad[RIGHTSTICKX];
 }
 
-short aimY(short *pad) {
-  return pad[PAD_LY] ? pad[PAD_LY] : pad[PAD_RY];
+short aimY(short* pad) {
+    return pad[LEFTSTICKY] ? pad[LEFTSTICKY] : pad[RIGHTSTICKY];
+}
+
+short CPad__GetTarget(short* pad)
+{
+    if (pad[77])
+        return 0;
+    //if (CPad__ForceCameraBehindPlayer(pad))
+    //    return 0;
+    return pad[LEFTSHOULDER1] != 0;
+}
+
+short CPad__TargetJustDown(short* pad)
+{
+    if (pad[77])
+        return 0;
+    //if (CPad__ForceCameraBehindPlayer(a1, 0, v1))
+    //    return 0;
+    if (pad[LEFTSHOULDER1])
+        return pad[LEFTSHOULDER1 * 6] == 0; //old state
+    return 0;
+}
+
+short CPad__GetWeapon(short* pad)
+{
+    if (pad[77] == 0)
+        return pad[RIGHTSHOULDER1];
+    return 0;
+}
+
+short CPad__WeaponJustDown(short* pad)
+{
+    if (pad[77])
+        return 0;
+    //if (CPad__ForceCameraBehindPlayer(a1, 0, v1))
+    //    return 0;
+    if (pad[RIGHTSHOULDER1])
+        return pad[RIGHTSHOULDER1 * 6] == 0; //old state
+}
+
+short CPad__GetLookBehindForPed(short* pad)
+{
+    if (pad[77] == 0)
+        return pad[CIRCLE];
+    return 0;
 }
 
 float fAspectRatio = 16.0f / 9.0f;
@@ -109,6 +168,22 @@ float AdjustFOV(float f, float ar)
 float sub_171D44(float a1)
 {
     return a1 * fFOVFactor * (AdjustFOV(70.0f, fAspectRatio) / 70.0f);
+}
+
+float TextScaling(int a1)
+{
+    return *(float*)(a1 + 32) / fARDiff;
+}
+
+float TextScalingVertical(int a1)
+{
+    return *(float*)(a1 + 32);
+}
+
+void isLittleWillie(uintptr_t a1)
+{
+    if (*(float*)(a1 + 1944) == 1.0f && (*(int16_t*)(*(uint32_t*)(a1 + 1984) + 86) == 0xAD))
+        *(float*)(a1 + 1944) = *(float*)(a1 + 1944) + 1.0f;
 }
 
 int module_thread(SceSize args, void* argp)
@@ -170,8 +245,7 @@ int OnModuleStart() {
     char* ForceAspectRatio = inireader.ReadString("MAIN", "ForceAspectRatio", "auto", szForceAspectRatio, sizeof(szForceAspectRatio));
     int Enable60FPS = inireader.ReadInteger("MAIN", "Enable60FPS", 0);
 
-    int SwapRBCross = inireader.ReadInteger("VEHICLECONTROLS", "SwapRBCross", 0);
-    int SwapLBSquare = inireader.ReadInteger("VEHICLECONTROLS", "SwapLBSquare", 0);
+    int ModernControlScheme = inireader.ReadInteger("CONTROLS", "ModernControlScheme", 0);
 
     float fHudScale = inireader.ReadFloat("HUD", "HudScale", 1.0f);
 
@@ -192,7 +266,7 @@ int OnModuleStart() {
     {
         // Implement right analog stick
         uintptr_t ptr = pattern.get_first("06 00 00 10 03 00 A7 A3", 0);
-        injector.WriteInstr(ptr + 0x24, 
+        injector.WriteInstr(ptr + 0x24,
             sh(a1, sp, 0)
         );
         injector.WriteInstr(ptr + 0x1C,
@@ -228,29 +302,26 @@ int OnModuleStart() {
         );
     }
 
-    if (SwapRBCross)
+    if (ModernControlScheme)
     {
         // Swap R trigger and cross button
-        uintptr_t ptr = pattern.get_first("9A 00 85 94 2B 28 05 00 FF 00 A5 30 03 00 A0 10 00 00 00 00 02 00 00 10 25 10 00 00 2A 00 82 84", 0);
-        injector.MakeJMP(ptr, (intptr_t)vcsAcceleration);
-        
+        uintptr_t ptr_1892D8 = pattern.get_first("9A 00 85 94 2B 28 05 00 FF 00 A5 30 03 00 A0 10 00 00 00 00 02 00 00 10 25 10 00 00 2A 00 82 84", 0);
+        injector.MakeJMPwNOP(ptr_1892D8, (intptr_t)CPad__GetAccelerate);
+
         // Use normal button for flying plane
-        ptr = pattern.get_first("80 07 0E C6 02 63 0D 46 42 73 0D 46", 0);
-        injector.MakeJAL(ptr + 0x1C, (intptr_t)vcsAccelerationNormal);
-        injector.MakeJAL(ptr + 0x3D0, (intptr_t)vcsAccelerationNormal);
+        uintptr_t ptr_1D5E14 = pattern.get_first("80 07 0E C6 02 63 0D 46 42 73 0D 46", 0);
+        injector.MakeJAL(ptr_1D5E14 + 0x1C, (intptr_t)CPad__GetAccelerateNormal);
+        injector.MakeJAL(ptr_1D5E14 + 0x3D0, (intptr_t)CPad__GetAccelerateNormal);
 
         // Use normal button for flying helicoper
-        ptr = pattern.get_first("18 00 40 16 ? ? ? ? ? ? ? ? 25 20 20 02", 0);
-        injector.MakeJAL(ptr + 0x14, (intptr_t)vcsAccelerationNormal);
-        
-        ptr = pattern.get_first("0C 00 80 14 ? ? ? ? ? ? ? ? ? ? ? ? 0A 00 A0 50", 0);
-        injector.WriteMemory16(ptr + 0x20, PAD_RTRIGGER * 2);
-        injector.WriteMemory16(ptr + 0x68, PAD_RTRIGGER * 2);
-        injector.WriteMemory16(ptr + 0x80, PAD_CROSS * 2);
-    }
+        uintptr_t ptr_1EB29C = pattern.get_first("18 00 40 16 ? ? ? ? ? ? ? ? 25 20 20 02", 0);
+        injector.MakeJAL(ptr_1EB29C + 0x14, (intptr_t)CPad__GetAccelerateNormal);
 
-    if (SwapLBSquare)
-    {
+        uintptr_t ptr_18906C = pattern.get_first("0C 00 80 14 ? ? ? ? ? ? ? ? ? ? ? ? 0A 00 A0 50", 0);
+        injector.WriteMemory16(ptr_18906C + 0x20, RIGHTSHOULDER1 * 2);
+        injector.WriteMemory16(ptr_18906C + 0x68, RIGHTSHOULDER1 * 2);
+        injector.WriteMemory16(ptr_18906C + 0x80, CROSS * 2);
+
         // Swap L trigger and square button
         uintptr_t ptr_187918 = pattern.get(0, "26 00 05 86 ? ? ? ? 00 00 04 34", 0);
         uintptr_t ptr_18886C = pattern.get(0, "0A 00 04 86 ? ? ? ? 00 00 00 00 ? ? ? ? 25 10 00 00", 0); // count = 3
@@ -262,49 +333,86 @@ int OnModuleStart() {
         uintptr_t ptr_18AAAC = pattern.get(0, "26 00 04 86 ? ? ? ? 00 00 00 00", 0);
         uintptr_t ptr_18B560 = pattern.get(2, "0A 00 04 86 ? ? ? ? ? ? ? ? ? ? ? ? 00 00 00 00", 0); // count = 3
 
-        uintptr_t ptr_1D5E44 = pattern.get(0, "25 20 40 00 23 20 62 02 00 60 84 44 7F 43 04 3C", 4);
-        uintptr_t ptr_1D610C = pattern.get(0, "25 20 40 00 ? ? ? ? ? ? ? ? B3 3E 04 3C", 4);
-        uintptr_t ptr_1D6144 = pattern.get(0, "25 20 40 00 00 60 82 44 00 3F 04 3C", 4);
-        uintptr_t ptr_1D6174 = pattern.get(0, "25 20 40 00 00 60 82 44 ? ? ? ? 03 63 14 46", 4);
-        uintptr_t ptr_1D61C8 = pattern.get(0, "25 20 40 00 0A 00 44 28", 4); // count = 2
-        uintptr_t ptr_1EB2BC = pattern.get(0, "25 20 20 02 23 20 42 02", 4);
+        uintptr_t ptr_1EB2BC = pattern.get(0, "25 20 20 02 23 20 42 02", -4);
+        uintptr_t ptr_188904 = pattern.get(0, "25 20 00 02 F6 FF 42 28 00 00 B0 8F", -4);
+        uintptr_t ptr_188B58 = pattern.get(0, "25 20 00 02 0B 00 42 28 01 00 42 38", -4);
+        uintptr_t ptr_188DFC = pattern.get(0, "01 00 42 38 25 10 00 00 04 00 B0 8F 08 00 B1 8F 0C 00 BF 8F 08 00 E0 03 10 00 BD 27", 4);
+        uintptr_t ptr_1D5AE4 = pattern.get(0, "80 FF BD 27 54 00 B4 E7 58 00 B6 E7 5C 00 B8 E7", 0);
 
+        uintptr_t ptr_5EE58 = pattern.get(0, "2C 00 82 84 ? ? ? ? 2E 00 82 84", 0);
+        uintptr_t ptr_14CCA8 = pattern.get(2, "04 00 84 8C 27 00 05 34", 36);
+        uintptr_t ptr_14D3F4 = pattern.get(1, "0A 00 64 86 ? ? ? ? 00 00 00 00", 0); // count = 2
+        uintptr_t ptr_188118 = pattern.get(1, "02 00 07 34 ? ? ? ? 00 00 00 00 ? ? ? ? 00 00 00 00", 12); // count = 2
+        uintptr_t ptr_188078 = pattern.get(1, "2C 00 85 84 ? ? ? ? 00 00 06 34 5E 00 85 84", 0); // count = 2
+        uintptr_t ptr_188084 = pattern.get(1, "5E 00 85 84 ? ? ? ? 28 00 87 84 01 00 06 34 28 00 87 84", 0); // count = 2
+        uintptr_t ptr_188E14 = pattern.get(0, "EC FB 85 8F ? ? ? ? 00 00 00 00 9A 00 85 94", 0);
+        uintptr_t ptr_18922C = pattern.get(6, "9A 00 85 94 2B 28 05 00 FF 00 A5 30 ? ? ? ? 00 00 00 00", 0); // count = 15
+        uintptr_t ptr_189270 = pattern.get(7, "9A 00 85 94 2B 28 05 00 FF 00 A5 30 ? ? ? ? 00 00 00 00", 0); // count = 15
+        uintptr_t ptr_189560 = pattern.get(7, "F0 FF BD 27 9A 00 85 94 00 00 B0 AF 25 80 80 00 2B 20 05 00", 0); // count = 11
+        uintptr_t ptr_1895BC = pattern.get(8, "F0 FF BD 27 9A 00 85 94 00 00 B0 AF 25 80 80 00 2B 20 05 00", 0); // count = 11
 
-        injector.MakeJMP(ptr_189140, (intptr_t)vcsBrake);
-        injector.WriteMemory16(ptr_189D60, PAD_SQUARE * 2);
+        injector.MakeJMPwNOP(ptr_189140, (intptr_t)CPad__GetBrake);
+        injector.WriteMemory16(ptr_189D60, SQUARE * 2);
         //driveby
-        MakeInlineWrapper(ptr_18886C, 
-            lh(a0, s0, PAD_SQUARE * 2),
-            lh(k0, s0, PAD_CIRCLE * 2),
-            _or(a0, a0, k0)
+        injector.MakeNOP(ptr_18886C+4);
+        MakeInlineWrapper(ptr_18886C,
+            lh(a0, s0, SQUARE * 2),
+            lh(k0, s0, CIRCLE * 2),
+            _or(a0, a0, k0),
+            beq(a0, zero, 2),
+            nop(),
+            j(ptr_188904),
+            nop()
         );
+        injector.MakeNOP(ptr_188AC0+4);
         MakeInlineWrapper(ptr_188AC0,
-            lh(a0, s0, PAD_SQUARE * 2),
-            lh(k0, s0, PAD_CIRCLE * 2),
-            _or(a0, a0, k0)
+            lh(a0, s0, SQUARE * 2),
+            lh(k0, s0, CIRCLE * 2),
+            _or(a0, a0, k0),
+            beq(a0, zero, 2),
+            nop(),
+            j(ptr_188B58),
+            nop()
         );
+        injector.MakeNOP(ptr_188DAC+4);
         MakeInlineWrapper(ptr_188DAC,
-            lh(a0, s0, PAD_SQUARE * 2),
-            lh(k0, s0, PAD_CIRCLE * 2),
-            _or(a0, a0, k0)
+            lh(a0, s0, SQUARE * 2),
+            lh(k0, s0, CIRCLE * 2),
+            _or(a0, a0, k0),
+            bne(a0, zero, 2),
+            nop(),
+            j(ptr_188DFC),
+            nop()
         );
-        injector.WriteMemory16(ptr_189BB0, PAD_SQUARE * 2);
-        injector.WriteMemory16(ptr_18B560, PAD_SQUARE * 2);
-        
-        injector.WriteMemory16(ptr_187918, PAD_LTRIGGER * 2);
-        injector.WriteMemory16(ptr_18AAAC, PAD_LTRIGGER * 2);
+        injector.WriteMemory16(ptr_189BB0, SQUARE * 2);
+        injector.WriteMemory16(ptr_18B560, SQUARE * 2);
+
+        injector.WriteMemory16(ptr_187918, LEFTSHOULDER1 * 2);
+        injector.WriteMemory16(ptr_18AAAC, LEFTSHOULDER1 * 2);
 
         // Use normal button for flying plane
-        uintptr_t ptr = pattern.get_first("80 07 0E C6 02 63 0D 46 42 73 0D 46", 0);
-        injector.MakeJAL(0x1D5AE4 + 0x360, (intptr_t)vcsBrakeNormal);
-        injector.MakeJAL(0x1D5AE4 + 0x628, (intptr_t)vcsBrakeNormal);
-        injector.MakeJAL(0x1D5AE4 + 0x660, (intptr_t)vcsBrakeNormal);
-        injector.MakeJAL(0x1D5AE4 + 0x690, (intptr_t)vcsBrakeNormal);
-        injector.MakeJAL(0x1D5AE4 + 0x6E4, (intptr_t)vcsBrakeNormal);
-        
+        injector.MakeJAL(ptr_1D5AE4 + 0x360, (intptr_t)CPad__GetBrakeNormal);
+        injector.MakeJAL(ptr_1D5AE4 + 0x628, (intptr_t)CPad__GetBrakeNormal);
+        injector.MakeJAL(ptr_1D5AE4 + 0x660, (intptr_t)CPad__GetBrakeNormal);
+        injector.MakeJAL(ptr_1D5AE4 + 0x690, (intptr_t)CPad__GetBrakeNormal);
+        injector.MakeJAL(ptr_1D5AE4 + 0x6E4, (intptr_t)CPad__GetBrakeNormal);
+
         // Use normal button for flying helicoper
-        ptr = pattern.get_first("18 00 40 16 ? ? ? ? ? ? ? ? 25 20 20 02", 0);
-        injector.MakeJAL(0x1EB2BC, (intptr_t)vcsBrakeNormal);
+        injector.MakeJAL(ptr_1EB2BC, (intptr_t)CPad__GetBrakeNormal);
+
+        //Shooting with triggers
+        injector.MakeJMPwNOP(ptr_189560, (intptr_t)CPad__GetTarget);
+        injector.MakeJMPwNOP(ptr_1895BC, (intptr_t)CPad__TargetJustDown);
+        injector.MakeJMPwNOP(ptr_18922C, (intptr_t)CPad__GetWeapon);
+        injector.MakeJMPwNOP(ptr_189270, (intptr_t)CPad__WeaponJustDown);
+        injector.MakeJMPwNOP(ptr_188E14, (intptr_t)CPad__GetLookBehindForPed);
+        injector.WriteMemory16(ptr_188078, RIGHTSHOULDER1 * 2);
+        injector.WriteMemory16(ptr_188084, RIGHTSHOULDER1 * 6);
+        injector.WriteMemory16(ptr_5EE58, RIGHTSHOULDER1 * 2);
+        injector.WriteMemory16(ptr_188118 + 2, 0x1000);
+        injector.WriteMemory16(ptr_14CCA8 + 2, 0x1000);
+        injector.MakeNOP(ptr_14D3F4);
+        //injector.MakeNOP(0x1880F8);
     }
 
     if (strcmp(ForceAspectRatio, "auto") != 0)
@@ -355,7 +463,7 @@ int OnModuleStart() {
         uintptr_t ptr_1B7F04 = pattern.get(0, "23 00 06 34 ? ? ? ? ? ? ? ? 40 3F 04 3C", 0);
         uintptr_t ptr_1B7F10 = pattern.get(0, "40 3F 04 3C ? ? ? ? 00 60 84 44 25 20 00 02 6E 01 05 34", 0); // count = 2
         uintptr_t ptr_1B7F20 = pattern.get(0, "6E 01 05 34 ? ? ? ? 28 00 06 34", 0);
-        uintptr_t ptr_1B7F28 = pattern.get(0, "6E 01 05 34 ? ? ? ? 28 00 06 34", 8); 
+        uintptr_t ptr_1B7F28 = pattern.get(0, "6E 01 05 34 ? ? ? ? 28 00 06 34", 8);
         uintptr_t ptr_1B8A18 = pattern.get(0, "D8 41 05 3C", 0);
         uintptr_t ptr_1B8A1C = pattern.get(0, "A0 42 06 3C ? ? ? ? D0 41 07 3C", 0);
         uintptr_t ptr_1B8A24 = pattern.get(0, "D0 41 07 3C 3A 43 08 3C", 0);
@@ -371,6 +479,7 @@ int OnModuleStart() {
         uintptr_t ptr_1B9708 = pattern.get(0, "00 41 07 3C 25 28 A0 03", 0);
         uintptr_t ptr_1B97A8 = pattern.get(0, "50 41 04 3C ? ? ? ? 00 B0 84 44", 0);
         uintptr_t ptr_1B992C = pattern.get(0, "80 41 04 3C 00 78 84 44 25 20 A0 02", 0);
+        uintptr_t ptr_1B99B4 = pattern.get(0, "80 40 04 3C 00 60 84 44 01 A5 0C 46", 0);
         uintptr_t ptr_1B9B00 = pattern.get(0, "E2 43 04 3C", 0);
         uintptr_t ptr_1B9B0C = pattern.get(0, "9A 42 04 3C", 0);
         uintptr_t ptr_1B9B18 = pattern.get(0, "88 41 04 3C 00 A0 84 44", 0);
@@ -417,6 +526,17 @@ int OnModuleStart() {
         uintptr_t ptr_1C1C7C = pattern.get(0, "ED 43 04 3C 00 80 84 34 00 A0 84 44", 0);
         uintptr_t ptr_1C1C88 = pattern.get(0, "6A 43 04 3C", 0);
         uintptr_t ptr_2ABCBC = pattern.get(0, "8B 3F 04 3C 1F 85 84 34 ? ? ? ? 02 E3 0C 46", 0);
+        uintptr_t ptr_1B9924 = pattern.get(0, "80 A3 0C 46 1C 00 AD C7", 0);
+        uintptr_t ptr_17013C = pattern.get(0, "08 00 E0 03 20 00 80 C4 08 00 E0 03 24 00 85 A0 08 00 E0 03 24 00 82 90", 0);
+        uintptr_t ptr_16F9B0 = pattern.get(0, "06 00 24 96 00 68 84 44", -8);
+        uintptr_t ptr_170DD8 = pattern.get(0, "25 20 20 02 06 06 00 46 ? ? ? ? 25 20 20 02", -4); // count = 2
+        uintptr_t ptr_170FF4 = pattern.get(1, "25 20 20 02 06 06 00 46 ? ? ? ? 25 20 20 02", -4); // count = 2
+        uintptr_t ptr_9804 = pattern.get(0, "00 78 85 44 80 63 0F 46", -4);
+        uintptr_t ptr_C9CC = pattern.get(0, "06 E4 00 46 86 B4 00 46", 0);
+        uintptr_t ptr_214638 = pattern.get(0, "00 78 89 44 00 60 8A 44 00 68 8B 44", 0);
+        uintptr_t ptr_2A43F0 = pattern.get(0, "F0 43 04 3C 02 63 0D 46", 0);
+        uintptr_t ptr_1B9438 = pattern.get(0, "80 40 04 3C 00 A0 84 44 25 20 00 02", 0);
+        uintptr_t ptr_1B97C0 = pattern.get(0, "01 B3 0C 46 24 00 A4 AF", 0);
 
         /* Health bar */
         injector.MakeInlineLUIORI(ptr_1B7CB8, adjustRightX(352.0f, fHudScale)); // Left X
@@ -462,19 +582,20 @@ int OnModuleStart() {
         injector.MakeInlineLUIORI(ptr_2ABCBC, fHudScale * 1.09f / fARDiff); // 1%
 
         /* Time, cash numbers, wanted stars */
-        injector.MakeInlineLUIORI(ptr_1B97A8, fHudScale * 13.0f / fARDiff); // Width
-        float fSpacingHack = fARDiff - 1.0f;
-        if (fSpacingHack > 0.0f)
-        {
-            MakeInlineWrapper(0x1b9924,
-                adds(f14, f20, f12),
-                lui(t9, HIWORD(fSpacingHack)),
-                ori(t9, t9, LOWORD(fSpacingHack)),
-                mtc1(t9, f23),
-                adds(f20, f20, f23)
-            );
-        }
+        MakeInlineWrapper(ptr_1B97C0,
+            lui(t9, HIWORD(fARDiff)),
+            ori(t9, t9, LOWORD(fARDiff)),
+            mtc1(t9, f30),
+            divs(f22, f22, f30),
+            divs(f12, f12, f30),
+            lui(t9, HIWORD(fHudScale)),
+            ori(t9, t9, LOWORD(fHudScale)),
+            mtc1(t9, f30),
+            muls(f22, f22, f30),
+            subs(f12, f22, f12)
+        );
         injector.MakeInlineLUIORI(ptr_1B992C, fHudScale * 16.0f); // Height
+        injector.MakeInlineLUIORI(ptr_1B99B4, 4.0f / fARDiff);
 
         injector.MakeInlineLUIORI(ptr_1B96F8, adjustRightX(369.0f, fHudScale)); // Time Left X
         injector.MakeInlineLUIORI(ptr_1B9708, adjustTopRightY(8.0f, fHudScale)); // Time Top Y
@@ -528,6 +649,75 @@ int OnModuleStart() {
         //injector.MakeInlineLUIORI(ptr_1B8B94, fHudScale * 169.0f); // Text rectangle Right X
         //injector.MakeInlineLUIORI(ptr_1B8B98, fHudScale * 52.0f); // Text rectangle Bottom Y
         //injector.MakeInlineLUIORI(ptr_1B8AF0, fHudScale * 0.8f); // Font scale
+
+        /* Text */
+        injector.MakeJMPwNOP(ptr_17013C, (intptr_t)TextScaling);
+        injector.MakeJAL(ptr_16F9B0, (intptr_t)TextScalingVertical);
+        injector.MakeJAL(ptr_170FF4, (intptr_t)TextScalingVertical);
+        injector.MakeJAL(ptr_170DD8, (intptr_t)TextScalingVertical);
+        //injector.MakeJAL(0x16F8F4, (intptr_t)TextScalingVertical);
+        //injector.MakeJAL(0x16F91C, (intptr_t)TextScalingVertical);
+        //injector.MakeJAL(0x16F958, (intptr_t)TextScalingVertical);
+        //injector.MakeJAL(0x16F980, (intptr_t)TextScalingVertical);
+        //injector.MakeJAL(0x16FBF8, (intptr_t)TextScalingVertical);
+        //injector.MakeJAL(0x16FC38, (intptr_t)TextScalingVertical);
+        //injector.MakeJAL(0x170264, (intptr_t)TextScalingVertical);
+        //injector.MakeJAL(0x17029C, (intptr_t)TextScalingVertical);
+        //injector.MakeJAL(0x17032C, (intptr_t)TextScalingVertical);
+        //injector.MakeJAL(0x170364, (intptr_t)TextScalingVertical);
+        //injector.MakeJAL(0x170548, (intptr_t)TextScalingVertical);
+        //injector.MakeJAL(0x170580, (intptr_t)TextScalingVertical);
+        //injector.MakeJAL(0x170628, (intptr_t)TextScalingVertical);
+        //injector.MakeJAL(0x170660, (intptr_t)TextScalingVertical);
+        //injector.MakeJAL(0x170BAC, (intptr_t)TextScalingVertical);
+        //injector.MakeJAL(0x170C20, (intptr_t)TextScalingVertical);
+
+        /*Radar Blips*/
+        float f6 = 6.0f;
+        float f6_new = ((6.0f / (4.0f / 3.0f)) / (fAspectRatio));
+        MakeInlineWrapper(ptr_9804,
+            lui(a1, HIWORD(f6_new)),
+            ori(a1, a1, LOWORD(f6_new)),
+            mtc1(a1, f30),
+            lui(a1, HIWORD(f6)),
+            ori(a1, a1, LOWORD(f6))
+        );
+        injector.WriteInstr(ptr_9804 + 8, adds(f14, f12, f30));
+        injector.WriteInstr(ptr_9804 + 0x24, subs(f12, f12, f15));
+
+        //Crosshair
+        MakeInlineWrapper(ptr_C9CC,
+            movs(f16, f28),
+            lui(t9, HIWORD(fARDiff)),
+            ori(t9, t9, LOWORD(fARDiff)),
+            mtc1(t9, f29),
+            divs(f28, f28, f29)
+        );
+        MakeInlineWrapper(ptr_214638,
+            mtc1(t1, f15),
+            mtc1(t1, f16),
+            lui(t1, HIWORD(fARDiff)),
+            ori(t1, t1, LOWORD(fARDiff)),
+            mtc1(t1, f29),
+            divs(f15, f15, f29)
+        );
+        injector.MakeNOP(ptr_214638 + 0x10);
+
+        //Sprites
+        injector.MakeInlineLUIORI(ptr_2A43F0, 480.0f * fARDiff);
+
+        // Radar Disc
+        float f4 = 4.0f;
+        float f4_new = 4.0f / fARDiff;
+        MakeInlineWrapper(ptr_1B9438,
+            lui(a0, HIWORD(f4_new)),
+            ori(a0, a0, LOWORD(f4_new)),
+            mtc1(a0, f30),
+            lui(a0, HIWORD(f4)),
+            ori(a0, a0, LOWORD(f4))
+        );
+        injector.WriteInstr(ptr_1B9438 + 0x10, subs(f22, f0, f30));
+        injector.WriteInstr(ptr_1B9438 + 0x38, adds(f28, f12, f30));
     }
 
     if (fRadarScale > 0.0f)
@@ -635,6 +825,16 @@ int OnModuleStart() {
         // Heli Height Limit
         injector.MakeInlineLUIORI(ptr_2FDD50, 800.0f);
         injector.MakeInlineLUIORI(ptr_2FDDA0, 800.0f);
+    }
+
+    //Little Willie Cam Fix
+    {
+        //MakeInlineWrapper(0x225130,
+        //    move(a0, s1),
+        //    jal(isLittleWillie),
+        //    nop(),
+        //    lui(a0, 0x40A0)
+        //);
     }
 
     sceKernelDcacheWritebackAll();

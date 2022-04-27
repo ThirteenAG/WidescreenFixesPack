@@ -221,24 +221,42 @@ int OnModuleStart() {
         uintptr_t ptr_293EB4 = pattern.get(1, "86 00 85 94 ? ? ? ? ? ? ? ? ? ? ? ? 25 10 00 00", 0); // count = 3
         uintptr_t ptr_2949A0 = pattern.get(0, "0A 00 85 84 ? ? ? ? 00 00 10 34", 0);
         uintptr_t ptr_2955F4 = pattern.get(1, "26 00 04 86", 0); // count = 2
+        uintptr_t ptr_293884 = pattern.get(0, "25 20 00 02 F6 FF 42 28 10 00 B0 8F 14 00 BF 8F", -4);
+        uintptr_t ptr_293A58 = pattern.get(0, "25 20 00 02 0B 00 42 28 01 00 42 38", -4);
+        uintptr_t ptr_293C18 = pattern.get(0, "01 00 42 38 25 10 00 00 14 00 B0 8F 18 00 BF 8F 08 00 E0 03 20 00 BD 27", 4);
 
         injector.MakeJMP(ptr_293EB4, (intptr_t)lcsBrake);
         injector.WriteMemory16(ptr_2949A0, PAD_SQUARE * 2);
         //driveby
+        injector.MakeNOP(ptr_2937EC+4);
         MakeInlineWrapper(ptr_2937EC,
             lh(a0, s0, PAD_SQUARE * 2),
             lh(k0, s0, PAD_CIRCLE * 2),
-            _or(a0, a0, k0)
+            _or(a0, a0, k0),
+            beq(a0, zero, 2),
+            nop(),
+            j(ptr_293884),
+            nop()
         );
+        injector.MakeNOP(ptr_2939C0+4);
         MakeInlineWrapper(ptr_2939C0,
             lh(a0, s0, PAD_SQUARE * 2),
             lh(k0, s0, PAD_CIRCLE * 2),
-            _or(a0, a0, k0)
+            _or(a0, a0, k0),
+            beq(a0, zero, 2),
+            nop(),
+            j(ptr_293A58),
+            nop()
         );
+        injector.MakeNOP(ptr_293BC8+4);
         MakeInlineWrapper(ptr_293BC8,
             lh(a0, s0, PAD_SQUARE * 2),
             lh(k0, s0, PAD_CIRCLE * 2),
-            _or(a0, a0, k0)
+            _or(a0, a0, k0),
+            bne(a0, zero, 2),
+            nop(),
+            j(ptr_293C18),
+            nop()
         );
         injector.WriteMemory16(ptr_294868, PAD_SQUARE * 2);
         injector.WriteMemory16(ptr_2932A4, PAD_SQUARE * 2);

@@ -3760,6 +3760,11 @@ CVector* GetCamPos()
     return pCamPos;
 }
 
+int IsSphereVisible(float radius, CVector* origin)
+{
+
+}
+
 int IsBlinkingNeeded(int BlinkType)
 {
     signed int nOnDuration = 0;
@@ -3854,6 +3859,9 @@ void RegisterLODLights()
                     //if (pCamPos->z >= 60.0f && (fDistSqr > 150.0f * 150.0f))
                     //    vec.z += (pCamPos->z - 60.0f) / 20.0f;
                     //CVector* pos = &vec;
+
+                    //if (!IsSphereVisible(fRadius, (CVector*)pos))
+                    //    continue;
 
                     if (aLodLights[i].fCustomSizeMult != 0.45f)
                     {
