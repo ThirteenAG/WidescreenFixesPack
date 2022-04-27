@@ -99,7 +99,7 @@ uint32_t multu1(RegisterID rd, RegisterID rs, RegisterID rt)
 {
     return (0x70000019 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
 }
-uint32_t sync()
+uint32_t _sync()
 {
     return (0x0000000f);
 }

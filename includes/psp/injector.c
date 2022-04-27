@@ -142,6 +142,12 @@ void MakeJMP(uintptr_t at, uintptr_t dest)
     WriteMemory32(adjustAddress(at), (0x08000000 | ((adjustAddress(dest) & 0x0FFFFFFC) >> 2)));
 }
 
+void MakeJMPwNOP(uintptr_t at, uintptr_t dest)
+{
+    WriteMemory32(adjustAddress(at), (0x08000000 | ((adjustAddress(dest) & 0x0FFFFFFC) >> 2)));
+    MakeNOP(adjustAddress(at + 4));
+}
+
 void MakeJAL(uintptr_t at, uintptr_t dest)
 {
     WriteMemory32(adjustAddress(at), (0x0C000000 | ((adjustAddress(dest)) >> 2)));
@@ -310,6 +316,7 @@ struct injector_t injector =
     .ReadMemoryFloat = ReadMemoryFloat,
     .ReadMemoryDouble = ReadMemoryDouble,
     .MakeJMP = MakeJMP,
+    .MakeJMPwNOP = MakeJMPwNOP,
     .MakeJAL = MakeJAL,
     .MakeCALL = MakeCALL,
     .MakeNOP = MakeNOP,

@@ -14,8 +14,8 @@
 [![GitHub top language](https://img.shields.io/github/languages/top/ThirteenAG/WidescreenFixesPack?color=blue)](https://github.com/ThirteenAG/WidescreenFixesPack/search?l=c%2B%2B)
 
 [![Platforms](https://img.shields.io/badge/platforms:-grey)](https://github.com/ThirteenAG/WidescreenFixesPack/releases)
-[![WINDOWS](https://img.shields.io/badge/WINDOWS-0078D4)](https://github.com/ThirteenAG/WidescreenFixesPack/releases?q=NOT+CXBXR+NOT+PCSX2+NOT+PPSSPP&expanded=true)
-[![PCSX2](https://img.shields.io/badge/PCSX2-0271A6)](https://github.com/ThirteenAG/WidescreenFixesPack/releases?q=PCSX2&expanded=true)
+[![WINDOWS](https://img.shields.io/badge/WINDOWS-0078D4)](https://github.com/ThirteenAG/WidescreenFixesPack/releases?q=NOT+CXBXR+NOT+PCSX2F+NOT+PPSSPP&expanded=true)
+[![PCSX2F](https://img.shields.io/badge/PCSX2F-0271A6)](https://github.com/ThirteenAG/WidescreenFixesPack/releases?q=PCSX2F&expanded=true)
 [![PPSSPP](https://img.shields.io/badge/PPSSPP-33b5e5)](https://github.com/ThirteenAG/WidescreenFixesPack/releases?q=PPSSPP&expanded=true)
 [![CXBXR](https://img.shields.io/badge/CXBXR-96CE49)](https://github.com/ThirteenAG/WidescreenFixesPack/releases?q=CXBXR&expanded=true)
 [![DOLPHIN](https://img.shields.io/badge/DOLPHIN-30b5ff)](https://github.com/ThirteenAG/WidescreenFixesPack/releases?q=DOLPHIN&expanded=true)
@@ -115,7 +115,7 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 |
 [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/Bully.WidescreenFix/plugins/Bully.WidescreenFix.ini)
 
-## Burnout 3: Takedown Widescreen Fix [PCSX2]
+## Burnout 3: Takedown Widescreen Fix [PCSX2F]
 
 ![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Aspect Ratio
 
@@ -401,7 +401,7 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 |
 [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/GTASA.WidescreenFix/scripts/GTASA.WidescreenFix.ini)
 
-## Grand Theft Auto Liberty City Stories Widescreen Fix [PCSX2]
+## Grand Theft Auto Liberty City Stories Widescreen Fix [PCSX2F]
 
 ![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Aspect Ratio (Ultra-Wide)
 
@@ -415,7 +415,7 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 |
 [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/GTALCS.PCSX2.WidescreenFix/dllmain.cpp)
 
-## Grand Theft Auto Vice City Stories Widescreen Fix [PCSX2]
+## Grand Theft Auto Vice City Stories Widescreen Fix [PCSX2F]
 
 ![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Aspect Ratio (Ultra-Wide)
 
@@ -1247,7 +1247,7 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 |
 [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/SplinterCellDoubleAgent.WidescreenFix/SCDA-Offline/System/scripts/SplinterCellDoubleAgent.WidescreenFix.ini)
 
-## Splinter Cell Double Agent V2 Widescreen Fix [PCSX2]
+## Splinter Cell Double Agent V2 Widescreen Fix [PCSX2F]
 
 ![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Aspect Ratio
 
