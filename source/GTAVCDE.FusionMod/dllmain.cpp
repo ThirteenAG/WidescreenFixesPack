@@ -17,9 +17,9 @@ void Init()
         nIniSaveSlot = 5;
     static auto bIniDisableFirstPersonAimForRifles = iniReader.ReadInteger("MAIN", "DisableFirstPersonAimForRifles", 1) != 0;
 
-    auto pattern = hook::pattern("8B 0D ? ? ? ? 42 8B 84 31 ? ? ? ? 85 C9 74 0B FF C8 83 F8 01 0F 86");
+    auto pattern = hook::pattern("8B 0D ? ? ? ? 8B 84 39 ? ? ? ? 85 C9 74 0B FF C8 83 F8 01");
     OnAMissionFlag = (uint32_t*)injector::ReadRelativeOffset(pattern.get_first(2), 4, true).as_int();
-    ScriptSpace = (uint8_t*)injector::ReadRelativeAddress(pattern.get_first(10), 4, true).as_int();
+    ScriptSpace = (uint8_t*)injector::ReadRelativeAddress(pattern.get_first(9), 4, true).as_int();
 
     pattern = hook::pattern("88 15 ? ? ? ? 89 15 ? ? ? ? 48 89 15");
     m_WideScreenOn = (uint8_t*)injector::ReadRelativeOffset(pattern.get_first(2), 4, true).as_int();
@@ -35,7 +35,7 @@ void Init()
     static auto CHEAT2 = std::string("CHEAT2");
     static auto gxt_ptr = const_cast<char*>(gxt.data());
     
-    pattern = hook::pattern("45 33 C0 B9 ? ? ? ? 41 8D 50 01 E8 ? ? ? ? 45 33 C0 B9 ? ? ? ? 41 8D 50 01 E8 ? ? ? ? 45 33 C0 B9");
+    pattern = hook::pattern("45 33 C0 B9 ? ? ? ? 41 8D 50 01 E8 ? ? ? ? 45 33 C0 B9 ? ? ? ? 41 8D 50 01 E8 ? ? ? ? 45 33 C0 B9 ? ? ? ? 41 8D 50 01 E8 ? ? ? ? 45 33 C0 B9 ? ? ? ? 41 8D 50 01 E8 ? ? ? ? 45 33 C0 B9 ? ? ? ? 41 8D 50 01 E8 ? ? ? ? 45 33 C0 B9 ? ? ? ? 41 8D 50 01 E8 ? ? ? ? 45 33 C0 B9 ? ? ? ? 41 8D 50 01 E8 ? ? ? ? 45 33 C0 B9 ? ? ? ? 41 8D 50 01 E8 ? ? ? ? 45 33 C0 B9 ? ? ? ? 41 8D 50 01 E8 ? ? ? ? 48 8B 0D ? ? ? ? 48 8B 01 FF 90 ? ? ? ? 48 8B C8 B2 01 E8 ? ? ? ? 48 8B 0D ? ? ? ? E8 ? ? ? ? 0F B6 05 ? ? ? ? 48 8D 1D ? ? ? ? 48 69 C8 ? ? ? ? BA ? ? ? ? 44 8B C2");
     static auto SetHelpMessageEpilogue = injector::raw_mem(pattern.get_first(0), [](x86::Assembler& a)
     {
         a.add(rsp, 0x40);
@@ -82,12 +82,12 @@ void Init()
 
     if (bIniDisableFirstPersonAimForRifles)
     {
-        pattern = hook::pattern("49 BC 80 01 00 00 04 60 00 00");
+        pattern = hook::pattern("49 BD ? ? ? ? ? ? ? ? 48 89 BC 24");
         struct ProcessPlayerWeaponHook
         {
             void operator()(injector::reg_pack& regs)
             {
-                regs.r12 = 0x600400000180;
+                regs.r13 = 0x600400000180;
 
                 if (regs.rax)
                 {
