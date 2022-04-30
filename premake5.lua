@@ -173,7 +173,7 @@ project "Burnout3.PCSX2F.WidescreenFix"
    files { "source/%{prj.name}/*.c" }
    targetextension ".elf"
    setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin/", "pcsx2x64.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "Burnout3.PCSX2F.WidescreenFix")
-   writemakefile_ps2("Burnout3.PCSX2F.WidescreenFix", "PLUGINS/", "0x02100000", "../../includes/pcsx2/log.o",
+   writemakefile_ps2("Burnout3.PCSX2F.WidescreenFix", "PLUGINS/", "0x02100000", "-l:libc.a -l:libm.a -l:libgcc.a", "../../includes/pcsx2/log.o",
    "../../includes/pcsx2/memalloc.o", "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o",
    "../../includes/pcsx2/inireader.o", "../../includes/pcsx2/mips.o")
    writelinkfile_ps2("Burnout3.PCSX2F.WidescreenFix")
@@ -265,7 +265,7 @@ project "GTALCS.PCSX2F.WidescreenFix"
    files { "source/%{prj.name}/*.c" }
    targetextension ".elf"
    setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin/", "pcsx2x64.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PCSX2F.WidescreenFix")
-   writemakefile_ps2("GTALCS.PCSX2F.WidescreenFix", "PLUGINS/", "0x02100000", "lodl.o", "cpad.o", "../../includes/pcsx2/log.o",
+   writemakefile_ps2("GTALCS.PCSX2F.WidescreenFix", "PLUGINS/", "0x02100000", "-l:libc.a -l:libm.a -l:libgcc.a", "lodl.o", "cpad.o", "../../includes/pcsx2/log.o",
    "../../includes/pcsx2/memalloc.o", "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o",
    "../../includes/pcsx2/inireader.o", "../../includes/pcsx2/mips.o")
    writelinkfile_ps2("GTALCS.PCSX2F.WidescreenFix")
@@ -277,11 +277,22 @@ project "GTAVCS.PCSX2F.WidescreenFix"
    files { "source/%{prj.name}/*.c" }
    targetextension ".elf"
    setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin/", "pcsx2x64.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PCSX2F.WidescreenFix")
-   writemakefile_ps2("GTAVCS.PCSX2F.WidescreenFix", "PLUGINS/", "0x02100000", "lodl.o", "cpad.o", "ckey.o", "../../includes/pcsx2/log.o",
-   "../../includes/pcsx2/memalloc.o", "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o",
-   "../../includes/pcsx2/inireader.o", "../../includes/pcsx2/mips.o")
+   writemakefile_ps2("GTAVCS.PCSX2F.WidescreenFix", "PLUGINS/", "0x02100000", "-l:libc.a", "cpad.o", "ckey.o", "../../includes/pcsx2/memalloc.o",
+   "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o","../../includes/pcsx2/inireader.o",
+   "../../includes/pcsx2/mips.o")
    writelinkfile_ps2("GTAVCS.PCSX2F.WidescreenFix")
-   writeghaction("gtavcs", "GTAVCS.PCSX2F.WidescreenFix")
+   writeghaction("gtavcs", "GTAVCS.PCSX2F.WidescreenFix /t:GTAVCS.PCSX2F.Project2DFX")
+project "GTAVCS.PCSX2F.Project2DFX"
+   kind "Makefile"
+   includedirs { "external/ps2sdk/ps2sdk/ee" }
+   files { "source/%{prj.name}/*.h" }
+   files { "source/%{prj.name}/*.c" }
+   targetextension ".elf"
+   setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin/", "pcsx2x64.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PCSX2F.Project2DFX")
+   writemakefile_ps2("GTAVCS.PCSX2F.Project2DFX", "PLUGINS/", "0x03100000", "-l:libc.a", "lodl.o", "../../includes/pcsx2/memalloc.o",
+   "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o","../../includes/pcsx2/inireader.o",
+   "../../includes/pcsx2/mips.o")
+   writelinkfile_ps2("GTAVCS.PCSX2F.Project2DFX")
 project "GTALCS.PPSSPP.WidescreenFix"
    kind "Makefile"
    includedirs { "external/pspsdk/psp/sdk/include" }
@@ -337,7 +348,7 @@ project "KnightRider.PCSX2F.WidescreenFix"
    files { "source/%{prj.name}/*.c" }
    targetextension ".elf"
    setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin/", "pcsx2x64.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "KnightRider.PCSX2F.WidescreenFix")
-   writemakefile_ps2("KnightRider.PCSX2F.WidescreenFix", "PLUGINS/", "0x02100000", "../../includes/pcsx2/log.o",
+   writemakefile_ps2("KnightRider.PCSX2F.WidescreenFix", "PLUGINS/", "0x02100000", "-l:libc.a -l:libm.a -l:libgcc.a", "../../includes/pcsx2/log.o",
    "../../includes/pcsx2/memalloc.o", "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o",
    "../../includes/pcsx2/inireader.o", "../../includes/pcsx2/mips.o")
    writelinkfile_ps2("KnightRider.PCSX2F.WidescreenFix")
@@ -460,7 +471,7 @@ project "SplinterCellDoubleAgent.PCSX2F.WidescreenFix"
    files { "source/%{prj.name}/*.c" }
    targetextension ".elf"
    setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin/", "pcsx2x64.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "SplinterCellDoubleAgent.PCSX2F.WidescreenFix")
-   writemakefile_ps2("SplinterCellDoubleAgent.PCSX2F.WidescreenFix", "PLUGINS/", "0x02100000", "../../includes/pcsx2/log.o",
+   writemakefile_ps2("SplinterCellDoubleAgent.PCSX2F.WidescreenFix", "PLUGINS/", "0x02100000", "-l:libc.a -l:libm.a -l:libgcc.a", "../../includes/pcsx2/log.o",
    "../../includes/pcsx2/memalloc.o", "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o",
    "../../includes/pcsx2/inireader.o", "../../includes/pcsx2/mips.o")
    writelinkfile_ps2("SplinterCellDoubleAgent.PCSX2F.WidescreenFix")
