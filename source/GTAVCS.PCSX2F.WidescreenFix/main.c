@@ -5,15 +5,14 @@
 #include "../../includes/pcsx2/pcsx2f_api.h"
 
 //#define NANOPRINTF_IMPLEMENTATION
-#include "../../includes/pcsx2/nanoprintf.h"
-#include "../../includes/pcsx2/log.h"
+//#include "../../includes/pcsx2/nanoprintf.h"
+//#include "../../includes/pcsx2/log.h"
 #include "../../includes/pcsx2/memalloc.h"
 #include "../../includes/pcsx2/patterns.h"
 #include "../../includes/pcsx2/mips.h"
 #include "../../includes/pcsx2/injector.h"
 #include "../../includes/pcsx2/inireader.h"
 
-#include "lodl.h"
 #include "cpad.h"
 #include "ckey.h"
 
@@ -36,6 +35,11 @@ struct ScreenX
     float fHudScale;
     float fHudOffset;
 } Screen;
+
+float round_f(float num)
+{
+    return (float)(int)(num < 0 ? num - 0.5f : num + 0.5f);
+}
 
 float BlipsScale = 0.0f;
 float __f6 = 6.0f;
@@ -86,9 +90,10 @@ uintptr_t GetAbsoluteAddress(uintptr_t at, int32_t offs_hi, int32_t offs_lo)
     return (uintptr_t)((uint32_t)(*(uint16_t*)(at + offs_hi)) << 16) + *(int16_t*)(at + offs_lo);
 }
 
+float (*game_atan2f)(float a1, float a2);
 float AdjustFOV(float f, float ar, float t)
 {
-    return ((2.0f * atanf(((ar) / (4.0f / 3.0f)) * t)) * (180.0f / (float)M_PI) * 100.0f) / 100.0f;
+    return ((2.0f * game_atan2f(((ar) / (4.0f / 3.0f)) * t, 1.0f)) * (180.0f / (float)M_PI) * 100.0f) / 100.0f;
 }
 
 const float fDefaultFOV = 70.0f;
@@ -112,7 +117,7 @@ void GameLoopStuff()
 {
     if (log_cleared != 1)
     {
-        logger.ClearLog();
+        //logger.ClearLog();
         log_cleared = 1;
     }
 
@@ -150,8 +155,8 @@ void test(int a1, struct CPad* a2)
 
 void init()
 {
-    logger.SetBuffer(OSDText, sizeof(OSDText) / sizeof(OSDText[0]), sizeof(OSDText[0]));
-    logger.Write("Loading GTAVCS.PCSX2F.WidescreenFix...");
+    //logger.SetBuffer(OSDText, sizeof(OSDText) / sizeof(OSDText[0]), sizeof(OSDText[0]));
+    //logger.Write("Loading GTAVCS.PCSX2F.WidescreenFix...");
 
     uint32_t DesktopSizeX = PCSX2Data[PCSX2Data_DesktopSizeX];
     uint32_t DesktopSizeY = PCSX2Data[PCSX2Data_DesktopSizeY];
@@ -188,8 +193,8 @@ void init()
         break;
     }
 
-    logger.WriteF("Resolution: %dx%d", Screen.nWidth, Screen.nHeight);
-    logger.WriteF("Aspect Ratio: %f", Screen.fAspectRatio);
+    //logger.WriteF("Resolution: %dx%d", Screen.nWidth, Screen.nHeight);
+    //logger.WriteF("Aspect Ratio: %f", Screen.fAspectRatio);
 
     Screen.fDefaultAR = (4.0f / 3.0f); //Screen.fAspectRatio >= (16.0f / 9.0f) ? (16.0f / 9.0f) : (4.0f / 3.0f);
     Screen.fHudScale = 1.0f / ((Screen.fAspectRatio) / (Screen.fDefaultAR));
@@ -202,7 +207,7 @@ void init()
 
     if (SkipIntro)
     {
-        logger.Write("Skipping intro...");
+        //logger.Write("Skipping intro...");
         uintptr_t ptr = pattern.get_first("00 00 00 00 ? ? ? ? 2D 20 00 00 ? ? ? ? 00 00 00 00 ? ? ? ? 00 00 00 00 2D 10 00", -4);
         injector.MakeNOP(ptr);
     }
@@ -213,18 +218,15 @@ void init()
     int ModernControlScheme = inireader.ReadInteger("CONTROLS", "ModernControlScheme", 1);
     PCControlScheme = inireader.ReadInteger("CONTROLS", "PCControlScheme", 1);
 
-    int RenderLodLights = inireader.ReadInteger("PROJECT2DFX", "RenderLodLights", 0);
-    int CoronaLimit = inireader.ReadInteger("PROJECT2DFX", "CoronaLimit", 900);
-    fCoronaRadiusMultiplier = inireader.ReadFloat("PROJECT2DFX", "CoronaRadiusMultiplier", 1.0f);
-    fCoronaFarClip = inireader.ReadFloat("PROJECT2DFX", "CoronaFarClip", 500.0f);
-
     if (ImprovedWidescreenSupport)
     {
-        logger.Write("Enabling Improved Widescreen Support...");
+        //logger.Write("Enabling Improved Widescreen Support...");
 
         //Proper FOV Scaling
         {
-            logger.Write("Fixing FOV...");
+            //logger.Write("Fixing FOV...");
+            uintptr_t ptr_44A648 = pattern.get(0, "90 FF BD 27 58 00 B5 E7 50 00 B4 E7 46 6D 00 46", 0);
+            game_atan2f = (float (*)(float))ptr_44A648;
             uintptr_t ptr_21CD68 = pattern.get(0, "03 84 10 00 03 8C 11 00 03 94 12 00 03 9C 13 00 03 A4 14 00 03 AC 15 00", 0);
             flt_487484 = (float*)GetAbsoluteAddress(ptr_21CD68, 32, 48);
             temp_t = tan(fDefaultFOV / 2.0f * ((float)M_PI / 180.0f));
@@ -233,7 +235,7 @@ void init()
 
         //Current res aspect ratio
         {
-            logger.Write("Overriding aspect ratio...");
+            //logger.Write("Overriding aspect ratio...");
             flt_487488 = (float*)0x487488;
             injector.MakeJAL(0x21CD80, (intptr_t)sub_2653F0);
             injector.MakeJAL(0x21CF10, (intptr_t)sub_2653F0);
@@ -307,7 +309,7 @@ void init()
             MakeInlineWrapper(0x11900c, mtc1(at, f0), lui(at, HIWORD(Screen.fHudScale)), addiu(at, at, LOWORD(Screen.fHudScale)), mtc1(at, f31), muls(f0, f0, f31));
             injector.MakeInlineLUIORI(0x119034, ((5.333333f * Screen.fHudScale)));
             MakeInlineWrapper(0x119174, mtc1(at, f0), lui(at, HIWORD(Screen.fHudScale)), addiu(at, at, LOWORD(Screen.fHudScale)), mtc1(at, f31), muls(f0, f0, f31));
-            injector.WriteInstr(0x21f654, (li(s1, (int16_t)round(210.0f * Screen.fHudScale))));
+            injector.WriteInstr(0x21f654, (li(s1, (int16_t)round_f(210.0f * Screen.fHudScale))));
             injector.MakeInlineLUIORI(0x2625BC, Screen.fHudScale); // game text
             //injector.MakeInlineLUIORI(0x265460, Screen.fAspectRatio); //ar
             //0x2AEC9C todo menu or script
@@ -359,7 +361,7 @@ void init()
             injector.MakeInlineLUIORI(0x31f648, fWeaponIconSize); // weapon icon size
             injector.MakeInlineLUIORI(0x31ff94, 13.5f - 2.5f);
             injector.MakeInlineLUIORI(0x320b40, (405.0f + 10.0f));
-            injector.MakeInlineLUIORI(0x31f2ac, (float)round((64.0f * Screen.fHudScale))); //radar scale
+            injector.MakeInlineLUIORI(0x31f2ac, (float)round_f((64.0f * Screen.fHudScale))); //radar scale
             injector.MakeInlineLUIORI(0x32116c, 35.0f); //script bars, taxi tip, ped health etc
             injector.MakeInlineLUIORI(0x321310, 29.0f);
             injector.MakeInlineLUIORI(0x3211a4, 425.0f); //413 / 425
@@ -387,9 +389,9 @@ void init()
             injector.MakeJAL(0x116D50, (intptr_t)BlipsScaling);
 
             // Crosshair
-            injector.MakeInlineLUIORI(0x3193CC, (float)round((14.0f / (Screen.fAspectRatio / (4.0f / 3.0f)))));
-            injector.MakeInlineLUIORI(0x3193DC, (float)round((14.0f / (Screen.fAspectRatio / (4.0f / 3.0f)))));
-            //injector.MakeInlineLUIORI(0x319400, (float)round((14.0f * Screen.fHudScale)));
+            injector.MakeInlineLUIORI(0x3193CC, (float)round_f((14.0f / (Screen.fAspectRatio / (4.0f / 3.0f)))));
+            injector.MakeInlineLUIORI(0x3193DC, (float)round_f((14.0f / (Screen.fAspectRatio / (4.0f / 3.0f)))));
+            //injector.MakeInlineLUIORI(0x319400, (float)round_f((14.0f * Screen.fHudScale)));
 
             // Radar Disc
             injector.MakeInlineLUIORI(0x3215E8, (4.0f * Screen.fHudScale));
@@ -403,7 +405,7 @@ void init()
 
     if (Enable60FPS)
     {
-        logger.Write("Enabling 60fps...");
+        //logger.Write("Enabling 60fps...");
         uintptr_t ptr_370314 = pattern.get(0, "6F 00 03 3C 01 00 02 24 68 42 62 AC", -8);
         if (ptr_370314)
             injector.MakeNOP(ptr_370314);
@@ -413,43 +415,14 @@ void init()
     pCPad__GetLookBehindForCar = (void*)0x285C20;
     if (!PCControlScheme && ModernControlScheme)
     {
-        logger.Write("Enabling Modern Control Scheme...");
+        //logger.Write("Enabling Modern Control Scheme...");
         ReplacePadFuncsWithModernControls();
     }
 
     if (PCControlScheme)
     {
-        logger.Write("Enabling PC Control Scheme, Gamepad controls will stop working!");
+        //logger.Write("Enabling PC Control Scheme, Gamepad controls will stop working!");
         ReplacePadFuncsWithPCControls();
-    }
-
-    if (RenderLodLights)
-    {
-        logger.Write("Enabling Project2DFX VCS...");
-        uintptr_t ptr_27DD10 = pattern.get(0, "FF 00 4A 31 ? ? ? ? ? ? ? ? ? ? ? ? 80 50 0A 00 ? ? ? ? 21 50 42 01", 0);
-        CCoronas__RegisterCoronaINT = (void*)ptr_27DD10;
-        uintptr_t ptr_2A2ED4 = pattern.get(0, "10 01 B2 FF 08 01 B1 FF 2D 90 40 00 28 01 B5 FF", -4);
-        uintptr_t TheCamera = GetAbsoluteAddress(ptr_2A2ED4, 0, 20);
-        pCamPos = (CVector*)(TheCamera + 0xA50); //0xA50 at 0x377460
-        uintptr_t ptr_228700 = pattern.get(0, "80 3F 01 3C 00 00 81 44 ? ? ? ? ? ? ? 3C ? ? ? 3C ? ? ? 3C ? ? ? ? ? ? ? 3C ? ? ? 3C ? ? ? 3C ? ? ? 3C ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 08 00 E0 03", -4);
-        CurrentTimeHoursOffset = GetAbsoluteAddress(ptr_228700, 24, 56);
-        CurrentTimeMinutesOffset = GetAbsoluteAddress(ptr_228700, 32, 64);
-        uintptr_t ptr_101EC0 = pattern.get(0, "FF EF 04 3C FF FF 84 34 24 10 45 00", 0);
-        CTimer__m_snTimeInMillisecondsPauseModeOffset = GetAbsoluteAddress(ptr_101EC0, 12, 36);
-        uintptr_t ptr_132678 = pattern.get(0, "02 08 00 46 82 08 02 46 42 08 03 46 00 21 00 46", 0);
-        CTimer__ms_fTimeStepOffset = GetAbsoluteAddress(ptr_132678, -20, -8);
-
-        IncreaseCoronasLimit(CoronaLimit);
-
-        // Coronas Render
-        uintptr_t ptr_21ED38 = pattern.get(0, "00 00 00 00 48 00 02 3C 48 7A 43 8C", -4);
-        injector.MakeJAL(ptr_21ED38, (intptr_t)RegisterLODLights);
-
-        // Heli Height Limit
-        uintptr_t ptr_3EA644 = pattern.get(1, "A0 42 01 3C 00 00 81 44 00 00 00 00", 0); // count = 3
-        uintptr_t ptr_3EA690 = pattern.get(2, "A0 42 01 3C 00 00 81 44 00 00 00 00", 0); // count = 3
-        injector.MakeInlineLUIORI(ptr_3EA644, 800.0f);
-        injector.MakeInlineLUIORI(ptr_3EA690, 800.0f);
     }
 
     {
@@ -489,7 +462,7 @@ void init()
         injector.MakeJAL(0x23152C, test);
     }
 
-    logger.Write("GTAVCS.PCSX2F.WidescreenFix loaded");
+    //logger.Write("GTAVCS.PCSX2F.WidescreenFix loaded");
 }
 
 int main()

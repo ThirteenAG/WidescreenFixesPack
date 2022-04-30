@@ -8,4 +8,4 @@ jobs:
     uses: ThirteenAG/WidescreenFixesPack/.github/workflows/all.yml@master
     with:
       tag_list: gtavcs
-      project: /t:GTAVCS_PCSX2F_WidescreenFix
+      project: /t:GTAVCS_PCSX2F_WidescreenFix /t:GTAVCS_PCSX2F_Project2DFX
