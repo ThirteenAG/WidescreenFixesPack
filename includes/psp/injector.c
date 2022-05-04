@@ -226,6 +226,30 @@ uint32_t parseCommand(uint32_t command, uint32_t from, uint32_t to)
     return (command & mask) >> from;
 }
 
+uint32_t isDelaySlotNearby(uintptr_t at)
+{
+    static const uint32_t instr_len = 4;
+
+    uint8_t J = parseCommand(j(0x123456), 26, 31);
+    uint8_t JAL = parseCommand(jal(0x123456), 26, 31);
+    uint8_t B = parseCommand(b(10), 26, 31);
+    uint8_t BEQ = parseCommand(beq(v0, v1, 1), 26, 31);
+    uint8_t BNE = parseCommand(bne(v0, v1, 1), 26, 31);
+    uint8_t BC1F = parseCommand(bc1f(10), 26, 31);
+    uint8_t BC1FL = parseCommand(bc1fl(10), 26, 31);
+    uint8_t BC1TL = parseCommand(bc1tl(10), 26, 31);
+
+    uint32_t prev_instr = parseCommand(ReadMemory32(at - instr_len), 26, 31);
+    uint32_t next_instr = parseCommand(ReadMemory32(at + instr_len), 26, 31);
+
+    if (prev_instr == J || prev_instr == JAL || prev_instr == B || prev_instr == BEQ || prev_instr == BNE || prev_instr == BC1F || prev_instr == BC1FL || prev_instr == BC1TL)
+        return 1;
+    else if (next_instr == J || next_instr == JAL || next_instr == B || next_instr == BEQ || next_instr == BNE || next_instr == BC1F || next_instr == BC1FL || next_instr == BC1TL)
+        return 1;
+
+    return 0;
+}
+
 void MakeInlineLUIORI(uintptr_t at, float imm)
 {
     static const uint32_t instr_len = 4;
@@ -233,7 +257,6 @@ void MakeInlineLUIORI(uintptr_t at, float imm)
     uint8_t LUI = parseCommand(lui(0, 0), 26, 31);
     uint8_t ORI = parseCommand(ori(0, 0, 0), 26, 31);
 
-    uint32_t prev_instr = parseCommand(ReadMemory32(at - instr_len), 26, 31);
     uint32_t bytes = ReadMemory32(at);
     uint8_t instr = parseCommand(bytes, 26, 31);
     uint8_t reg_lui = parseCommand(bytes, 16, 20);
@@ -246,20 +269,20 @@ void MakeInlineLUIORI(uintptr_t at, float imm)
             instr = parseCommand(bytes, 26, 31);
             uint8_t reg_ori = parseCommand(bytes, 16, 20);
 
-            if (instr == LUI)
-                break;
-            else if (instr == ORI && reg_lui == reg_ori)
+            if (instr == ORI && reg_lui == reg_ori)
             {
-                if ((prev_instr == 0x01) || (prev_instr >= 0x04 && prev_instr <= 0x07) || (prev_instr >= 0x14 && prev_instr <= 0x17)) //beq and such
+                if (isDelaySlotNearby(i))
                 {
+                    WriteMemory16(at, HIWORD(imm));
                     WriteMemory16(i, LOWORD(imm));
-                    break;
+                    return;
                 }
                 else
                     return MakeLUIORI(i, reg_ori, imm);
             }
         }
-        if ((prev_instr >= 0x01 && prev_instr <= 0x07) || (prev_instr >= 0x14 && prev_instr <= 0x17)) //beq and such
+
+        if (isDelaySlotNearby(at))
             WriteMemory16(at, HIWORD(imm));
         else
             return MakeLUIORI(at, reg_lui, imm);
@@ -273,7 +296,6 @@ void MakeInlineLI(uintptr_t at, int32_t imm)
     uint8_t ORI = parseCommand(ori(0, 0, 0), 26, 31);
     uint8_t ZERO = parseCommand(ori(0, 0, 0), 21, 25);
 
-    uint32_t prev_instr = parseCommand(ReadMemory32(at - instr_len), 26, 31);
     uint32_t bytes = ReadMemory32(at);
     uint8_t instr = parseCommand(bytes, 26, 31);
     uint8_t reg_ori = parseCommand(bytes, 16, 20);
@@ -281,7 +303,7 @@ void MakeInlineLI(uintptr_t at, int32_t imm)
 
     if (instr == ORI && reg_zero == ZERO)
     {
-        if ((prev_instr >= 0x01 && prev_instr <= 0x07) || (prev_instr >= 0x14 && prev_instr <= 0x17)) //beq and such
+        if (isDelaySlotNearby(at))
             return WriteMemory16(at, LOWORD(imm));
         else
             return MakeLI(at, reg_ori, imm);
