@@ -674,10 +674,12 @@ int OnModuleStart() {
 
         /*Radar Blips*/
         float f6 = 6.0f;
-        float f6_new = ((6.0f / (4.0f / 3.0f)) / (fAspectRatio));
+        if (fRadarScale)
+            f6 = f6 * fRadarScale;
+        float f6_pequeno = f6 / fARDiff;
         MakeInlineWrapper(ptr_9804,
-            lui(a1, HIWORD(f6_new)),
-            ori(a1, a1, LOWORD(f6_new)),
+            lui(a1, HIWORD(f6_pequeno)),
+            ori(a1, a1, LOWORD(f6_pequeno)),
             mtc1(a1, f30),
             lui(a1, HIWORD(f6)),
             ori(a1, a1, LOWORD(f6))
