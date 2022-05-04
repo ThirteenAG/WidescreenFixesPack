@@ -3723,22 +3723,22 @@ LodLights aLodLights[] = {
 
 char CurrentTimeHours()
 {
-    return *(char*)(injector.GetGP() + CurrentTimeHoursOffset);
+    return *(char*)((uintptr_t)injector.GetGP() + CurrentTimeHoursOffset);
 }
 
 char CurrentTimeMinutes()
 {
-    return *(char*)(injector.GetGP() + CurrentTimeMinutesOffset);
+    return *(char*)((uintptr_t)injector.GetGP() + CurrentTimeMinutesOffset);
 }
 
 uint32_t CTimer__m_snTimeInMillisecondsPauseMode()
 {
-    return *(uint32_t*)(injector.GetGP() + CTimer__m_snTimeInMillisecondsPauseModeOffset);
+    return *(uint32_t*)((uintptr_t)injector.GetGP() + CTimer__m_snTimeInMillisecondsPauseModeOffset);
 }
 
 float CTimer__ms_fTimeStep()
 {
-    return *(float*)(injector.GetGP() + CTimer__ms_fTimeStepOffset);
+    return *(float*)((uintptr_t)injector.GetGP() + CTimer__ms_fTimeStepOffset);
 }
 
 char GetIsTimeInRange(int hourA, int hourB)
@@ -3855,6 +3855,7 @@ void RegisterLODLights()
                         fRadius = SolveEqSys(min_radius_distance, min_radius_value, max_radius_distance, max_radius_value, sqrt(fDistSqr));
 
                     void* pos = &aLodLights[i];
+                    unsigned char alpha = (bAlpha * (aLodLights[i].a / 255.0f));
                     //CVector vec = { aLodLights[i].x, aLodLights[i].y, aLodLights[i].z };
                     //if (pCamPos->z >= 60.0f && (fDistSqr > 150.0f * 150.0f))
                     //    vec.z += (pCamPos->z - 60.0f) / 20.0f;
@@ -3867,7 +3868,7 @@ void RegisterLODLights()
                     {
                         if (!aLodLights[i].nCoronaShowMode)
                         {
-                            CCoronas__RegisterCorona(&aLodLights[i], aLodLights[i].r, aLodLights[i].g, aLodLights[i].b, (bAlpha * (aLodLights[i].a / 255.0f)), pos, 0, 0, (fRadius * aLodLights[i].fCustomSizeMult * fCoronaRadiusMultiplier), fCoronaFarClip, fUnkDist1, fUnkDist2, 1, 0, 0, 0);
+                            CCoronas__RegisterCorona(&aLodLights[i], aLodLights[i].r, aLodLights[i].g, aLodLights[i].b, alpha, pos, 0, 0, (fRadius * aLodLights[i].fCustomSizeMult * fCoronaRadiusMultiplier), fCoronaFarClip, fUnkDist1, fUnkDist2, 1, 0, 0, 0);
                         }
                         else
                         {
@@ -3876,17 +3877,20 @@ void RegisterLODLights()
                                 blinking -= CTimer__ms_fTimeStep() / 1000.0f;
                             else
                                 blinking += CTimer__ms_fTimeStep() / 1000.0f;
-
-                            (blinking > 1.0f) ? blinking = 1.0f : (blinking < 0.0f) ? blinking = 0.0f : 0.0f;
-
-                            CCoronas__RegisterCorona(&aLodLights[i], aLodLights[i].r, aLodLights[i].g, aLodLights[i].b, blinking * (bAlpha * (aLodLights[i].a / 255.0f)), pos, 0, 0, (fRadius * aLodLights[i].fCustomSizeMult * fCoronaRadiusMultiplier), fCoronaFarClip, fUnkDist1, fUnkDist2, 1, 0, 0, 0);
+                            
+                            if (blinking > 1.0f)
+                                blinking = 1.0f;
+                            else if (blinking < 0.0f)
+                                blinking = 0.0f;
+                        
+                            CCoronas__RegisterCorona(&aLodLights[i], aLodLights[i].r, aLodLights[i].g, aLodLights[i].b, blinking * alpha, pos, 0, 0, (fRadius * aLodLights[i].fCustomSizeMult * fCoronaRadiusMultiplier), fCoronaFarClip, fUnkDist1, fUnkDist2, 1, 0, 0, 0);
                         }
                     }
                     else
                     {
                         if ((aLodLights[i].r >= 250 && aLodLights[i].g >= 100 && aLodLights[i].b <= 100) && ((curMin == 9 || curMin == 19 || curMin == 29 || curMin == 39 || curMin == 49 || curMin == 59))) //yellow
                         {
-                            CCoronas__RegisterCorona(&aLodLights[i], aLodLights[i].r, aLodLights[i].g, aLodLights[i].b, (bAlpha * (aLodLights[i].a / 255.0f)), pos, 0, 0, (fRadius * aLodLights[i].fCustomSizeMult * fCoronaRadiusMultiplier), fCoronaFarClip, fUnkDist1, fUnkDist2, 1, 0, 0, 0);
+                            CCoronas__RegisterCorona(&aLodLights[i], aLodLights[i].r, aLodLights[i].g, aLodLights[i].b, alpha, pos, 0, 0, (fRadius * aLodLights[i].fCustomSizeMult * fCoronaRadiusMultiplier), fCoronaFarClip, fUnkDist1, fUnkDist2, 1, 0, 0, 0);
                         }
                         else
                         {
@@ -3895,13 +3899,13 @@ void RegisterLODLights()
                             {
                                 if ((aLodLights[i].r >= 250 && aLodLights[i].g < 100 && aLodLights[i].b == 0) && (((curMin >= 0 && curMin < 9) || (curMin >= 20 && curMin < 29) || (curMin >= 40 && curMin < 49)))) //red
                                 {
-                                    CCoronas__RegisterCorona(&aLodLights[i], aLodLights[i].r, aLodLights[i].g, aLodLights[i].b, (bAlpha * (aLodLights[i].a / 255.0f)), pos, 0, 0, (fRadius * aLodLights[i].fCustomSizeMult * fCoronaRadiusMultiplier), fCoronaFarClip, fUnkDist1, fUnkDist2, 1, 0, 0, 0);
+                                    CCoronas__RegisterCorona(&aLodLights[i], aLodLights[i].r, aLodLights[i].g, aLodLights[i].b, alpha, pos, 0, 0, (fRadius * aLodLights[i].fCustomSizeMult * fCoronaRadiusMultiplier), fCoronaFarClip, fUnkDist1, fUnkDist2, 1, 0, 0, 0);
                                 }
                                 else
                                 {
                                     if ((aLodLights[i].r == 0 && aLodLights[i].g >= 250 && aLodLights[i].b == 0) && (((curMin > 9 && curMin < 19) || (curMin > 29 && curMin < 39) || (curMin > 49 && curMin < 59)))) //green
                                     {
-                                        CCoronas__RegisterCorona(&aLodLights[i], aLodLights[i].r, aLodLights[i].g, aLodLights[i].b, (bAlpha * (aLodLights[i].a / 255.0f)), pos, 0, 0, (fRadius * aLodLights[i].fCustomSizeMult * fCoronaRadiusMultiplier), fCoronaFarClip, fUnkDist1, fUnkDist2, 1, 0, 0, 0);
+                                        CCoronas__RegisterCorona(&aLodLights[i], aLodLights[i].r, aLodLights[i].g, aLodLights[i].b, alpha, pos, 0, 0, (fRadius * aLodLights[i].fCustomSizeMult * fCoronaRadiusMultiplier), fCoronaFarClip, fUnkDist1, fUnkDist2, 1, 0, 0, 0);
                                     }
                                 }
                             }
@@ -3909,13 +3913,13 @@ void RegisterLODLights()
                             {
                                 if ((aLodLights[i].r == 0 && aLodLights[i].g >= 250 && aLodLights[i].b == 0) && (((curMin >= 0 && curMin < 9) || (curMin >= 20 && curMin < 29) || (curMin >= 40 && curMin < 49)))) //red
                                 {
-                                    CCoronas__RegisterCorona(&aLodLights[i], aLodLights[i].r, aLodLights[i].g, aLodLights[i].b, (bAlpha * (aLodLights[i].a / 255.0f)), pos, 0, 0, (fRadius * aLodLights[i].fCustomSizeMult * fCoronaRadiusMultiplier), fCoronaFarClip, fUnkDist1, fUnkDist2, 1, 0, 0, 0);
+                                    CCoronas__RegisterCorona(&aLodLights[i], aLodLights[i].r, aLodLights[i].g, aLodLights[i].b, alpha, pos, 0, 0, (fRadius * aLodLights[i].fCustomSizeMult * fCoronaRadiusMultiplier), fCoronaFarClip, fUnkDist1, fUnkDist2, 1, 0, 0, 0);
                                 }
                                 else
                                 {
                                     if ((aLodLights[i].r >= 250 && aLodLights[i].g < 100 && aLodLights[i].b == 0) && (((curMin > 9 && curMin < 19) || (curMin > 29 && curMin < 39) || (curMin > 49 && curMin < 59)))) //green
                                     {
-                                        CCoronas__RegisterCorona(&aLodLights[i], aLodLights[i].r, aLodLights[i].g, aLodLights[i].b, (bAlpha * (aLodLights[i].a / 255.0f)), pos, 0, 0, (fRadius * aLodLights[i].fCustomSizeMult * fCoronaRadiusMultiplier), fCoronaFarClip, fUnkDist1, fUnkDist2, 1, 0, 0, 0);
+                                        CCoronas__RegisterCorona(&aLodLights[i], aLodLights[i].r, aLodLights[i].g, aLodLights[i].b, alpha, pos, 0, 0, (fRadius * aLodLights[i].fCustomSizeMult * fCoronaRadiusMultiplier), fCoronaFarClip, fUnkDist1, fUnkDist2, 1, 0, 0, 0);
                                     }
                                 }
                             }
