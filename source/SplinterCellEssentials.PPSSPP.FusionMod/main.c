@@ -112,7 +112,7 @@ int OnModuleStart()
         injector.WriteInstr(ptr + 0x04, li(v0, 0));
 
         ptr = pattern.get_first("70 FF BD 27 68 00 B0 AF", 0);
-        injector.MakeJMP(ptr, (uintptr_t)__0fGUInputKDirectAxis6JEInputKeyfTCPatched);
+        injector.MakeJMPwNOP(ptr, (uintptr_t)__0fGUInputKDirectAxis6JEInputKeyfTCPatched);
     }
 
     if (Enable60FPS)

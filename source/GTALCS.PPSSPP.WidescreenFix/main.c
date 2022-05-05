@@ -202,7 +202,7 @@ int OnModuleStart() {
     {
         // Swap R trigger and cross button
         uintptr_t ptr = pattern.get_first("86 00 85 94 03 00 A0 10 00 00 00 00 02 00 00 10 25 10 00 00 2A 00 82 84", 0);
-        injector.MakeJMP(ptr, (intptr_t)lcsAcceleration);
+        injector.MakeJMPwNOP(ptr, (intptr_t)lcsAcceleration);
         
         ptr = pattern.get_first("0E 00 A0 14 ? ? ? ? ? ? ? ? ? ? ? ? 0C 00 C0 50", 0);
         injector.WriteMemory16(ptr + 0x20, PAD_RTRIGGER * 2);
@@ -225,7 +225,7 @@ int OnModuleStart() {
         uintptr_t ptr_293A58 = pattern.get(0, "25 20 00 02 0B 00 42 28 01 00 42 38", -4);
         uintptr_t ptr_293C18 = pattern.get(0, "01 00 42 38 25 10 00 00 14 00 B0 8F 18 00 BF 8F 08 00 E0 03 20 00 BD 27", 4);
 
-        injector.MakeJMP(ptr_293EB4, (intptr_t)lcsBrake);
+        injector.MakeJMPwNOP(ptr_293EB4, (intptr_t)lcsBrake);
         injector.WriteMemory16(ptr_2949A0, PAD_SQUARE * 2);
         //driveby
         injector.MakeNOP(ptr_2937EC+4);
