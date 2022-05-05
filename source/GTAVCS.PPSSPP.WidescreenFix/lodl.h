@@ -40,12 +40,17 @@ enum BlinkTypes
 extern float fCoronaFarClip;
 extern float fCoronaRadiusMultiplier;
 extern void(*CCoronas__RegisterCorona)(int id, char r, char g, char b, char a, void* pos, char coronaType, char flareType, float radius, float farClip, float unk3, float unk4, char reflection, char LOScheck, char drawStreak, char flag4);
+extern uintptr_t TheCamera;
 extern CVector* pCamPos;
+extern uintptr_t CDraw__ms_fNearClipZOffset;
+extern uintptr_t CDraw__ms_fFarClipZOffset;
 extern uintptr_t CurrentTimeHoursOffset;
 extern uintptr_t CurrentTimeMinutesOffset;
 extern uintptr_t CTimer__m_snTimeInMillisecondsPauseModeOffset;
 extern uintptr_t CTimer__ms_fTimeStepOffset;
 
+float CDraw__ms_fNearClipZ();
+float CDraw__ms_fFarClipZ();
 char CurrentTimeHours();
 char CurrentTimeMinutes();
 uint32_t CTimer__m_snTimeInMillisecondsPauseMode();
