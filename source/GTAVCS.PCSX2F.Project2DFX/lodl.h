@@ -1,7 +1,6 @@
 #ifndef H_LODLIGHTS
 #define H_LODLIGHTS
 #include <stdlib.h>
-//#include <math.h>
 #include "../../includes/pcsx2/injector.h"
 #include "../../includes/pcsx2/patterns.h"
 

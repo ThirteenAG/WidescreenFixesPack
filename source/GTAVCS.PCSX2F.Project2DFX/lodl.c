@@ -1,6 +1,4 @@
 #include "lodl.h"
-#include "../../includes/pcsx2/nanoprintf.h"
-#include "../../includes/pcsx2/log.h"
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))

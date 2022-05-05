@@ -14,7 +14,10 @@ float SolveEqSys(float a, float b, float c, float d, float value)
 float fCoronaFarClip = 500.0f;
 float fCoronaRadiusMultiplier = 1.0f;
 void(*CCoronas__RegisterCorona)(int id, char r, char g, char b, char a, void* pos, char coronaType, char flareType, float radius, float farClip, float unk3, float unk4, char reflection, char LOScheck, char drawStreak, char flag4);
+uintptr_t TheCamera;
 CVector* pCamPos;
+uintptr_t CDraw__ms_fNearClipZOffset;
+uintptr_t CDraw__ms_fFarClipZOffset;
 uintptr_t CurrentTimeHoursOffset;
 uintptr_t CurrentTimeMinutesOffset;
 uintptr_t CTimer__m_snTimeInMillisecondsPauseModeOffset;
@@ -3721,6 +3724,16 @@ LodLights aLodLights[] = {
 { -282.82100f, -927.90200f, 15.2548000f, 1.00f, 180.00f, 1.000f, 255,   0, 255, 255, 0, 1 /*, "additional_coronas"*/ },
 };
 
+float CDraw__ms_fNearClipZ()
+{
+    return *(float*)((uintptr_t)injector.GetGP() + CDraw__ms_fNearClipZOffset);
+}
+
+float CDraw__ms_fFarClipZ()
+{
+    return *(float*)((uintptr_t)injector.GetGP() + CDraw__ms_fFarClipZOffset);
+}
+
 char CurrentTimeHours()
 {
     return *(char*)((uintptr_t)injector.GetGP() + CurrentTimeHoursOffset);
@@ -3760,9 +3773,29 @@ CVector* GetCamPos()
     return pCamPos;
 }
 
-int IsSphereVisible(float radius, CVector* origin)
+int IsSphereVisible(float radius, CVector* center)
 {
+    CVector* m_vecFrustumNormals0 = (CVector*)(TheCamera + 0xAB0);
+    CVector* m_vecFrustumNormals1 = (CVector*)(TheCamera + 0xAC0);
+    CVector* m_vecFrustumNormals2 = (CVector*)(TheCamera + 0xAD0);
+    CVector* m_vecFrustumNormals3 = (CVector*)(TheCamera + 0xAE0);
 
+    float* m_cameraMatrix1 = (float*)(TheCamera + 0xA00);
+    float* m_cameraMatrix2 = (float*)(TheCamera + 0xA10);
+    float* m_cameraMatrix3 = (float*)(TheCamera + 0xA20);
+    float* m_cameraMatrix4 = (float*)(TheCamera + 0xA30);
+
+    float x = m_cameraMatrix1[0] * center->x + m_cameraMatrix2[0] * center->y + m_cameraMatrix3[0] * center->z + m_cameraMatrix4[0] * 1.0f;
+    float y = m_cameraMatrix1[1] * center->x + m_cameraMatrix2[1] * center->y + m_cameraMatrix3[1] * center->z + m_cameraMatrix4[1] * 1.0f;
+    float z = m_cameraMatrix1[2] * center->x + m_cameraMatrix2[2] * center->y + m_cameraMatrix3[2] * center->z + m_cameraMatrix4[2] * 1.0f;
+
+    if (y + radius < *(float*)CDraw__ms_fNearClipZ()) return 0;
+    if (y - radius > *(float*)CDraw__ms_fFarClipZ()) return 0;
+    if (x * m_vecFrustumNormals0->x + y * m_vecFrustumNormals0->y > radius) return 0;
+    if (x * m_vecFrustumNormals1->x + y * m_vecFrustumNormals1->y > radius) return 0;
+    if (y * m_vecFrustumNormals2->y + z * m_vecFrustumNormals2->z > radius) return 0;
+    if (y * m_vecFrustumNormals3->y + z * m_vecFrustumNormals3->z > radius) return 0;
+    return 1;
 }
 
 int IsBlinkingNeeded(int BlinkType)
@@ -3861,8 +3894,8 @@ void RegisterLODLights()
                     //    vec.z += (pCamPos->z - 60.0f) / 20.0f;
                     //CVector* pos = &vec;
 
-                    //if (!IsSphereVisible(fRadius, (CVector*)pos))
-                    //    continue;
+                    if (!IsSphereVisible(fRadius, (CVector*)pos))
+                        continue;
 
                     if (aLodLights[i].fCustomSizeMult != 0.45f)
                     {
