@@ -211,6 +211,7 @@ int module_thread(SceSize args, void* argp)
 }
 
 int OnModuleStart() {
+    sceKernelDelayThread(100000);
     //SceUID thid = sceKernelCreateThread(MODULE_NAME, module_thread, 0, 0x10000, 0, NULL);
     //if (thid >= 0)
     //    sceKernelStartThread(thid, 0, 0);
