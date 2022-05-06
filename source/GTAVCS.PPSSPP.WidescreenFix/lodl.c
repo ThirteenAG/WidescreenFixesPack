@@ -3789,8 +3789,8 @@ int IsSphereVisible(float radius, CVector* center)
     float y = m_cameraMatrix1[1] * center->x + m_cameraMatrix2[1] * center->y + m_cameraMatrix3[1] * center->z + m_cameraMatrix4[1] * 1.0f;
     float z = m_cameraMatrix1[2] * center->x + m_cameraMatrix2[2] * center->y + m_cameraMatrix3[2] * center->z + m_cameraMatrix4[2] * 1.0f;
 
-    if (y + radius < *(float*)CDraw__ms_fNearClipZ()) return 0;
-    if (y - radius > *(float*)CDraw__ms_fFarClipZ()) return 0;
+    if (y + radius < CDraw__ms_fNearClipZ()) return 0;
+    if (y - radius > CDraw__ms_fFarClipZ()) return 0;
     if (x * m_vecFrustumNormals0->x + y * m_vecFrustumNormals0->y > radius) return 0;
     if (x * m_vecFrustumNormals1->x + y * m_vecFrustumNormals1->y > radius) return 0;
     if (y * m_vecFrustumNormals2->y + z * m_vecFrustumNormals2->z > radius) return 0;
