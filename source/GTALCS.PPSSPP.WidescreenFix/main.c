@@ -110,26 +110,7 @@ int module_thread(SceSize args, void* argp)
 }
 
 int OnModuleStart() {
-    //SceUID thid = sceKernelCreateThread(MODULE_NAME, module_thread, 0, 0x10000, 0, NULL);
-    //if (thid >= 0)
-    //    sceKernelStartThread(thid, 0, 0);
-
-    /*
-    enum GameVersion
-    {
-        ULUS10160,
-        ULES00502,
-    };
-
-    if (strcmp((char*)(mod->text_addr + 0x36F8D8), "GTA3") == 0) {
-        gvm.init(ULUS10160);
-    }
-    else if (strcmp((char*)(mod->text_addr + 0x36FCB8), "GTA3") == 0) {
-        gvm.init(ULES00502);
-    }
-
-    // --> gv(0x123, 0x456);
-    */
+    sceKernelDelayThread(100000); //added cuz game gets stuck on a loadscreen between islands otherwise, idk why
 
     int SkipIntro = inireader.ReadInteger("MAIN", "SkipIntro", 1);
 
