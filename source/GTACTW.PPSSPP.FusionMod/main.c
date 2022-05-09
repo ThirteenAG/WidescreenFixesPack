@@ -221,11 +221,23 @@ int Check_Button_Action(int a1, int a2)
         {
             switch (a2)
             {
+            //case 1:
+            //    a2 = 50;
+            //    break;
             case 4:
                 a2 = 26;
                 break;
+            //case 10:
+            //    a2 = 4;
+            //    break;
             case 26:
                 a2 = 4;
+                break;
+            //case 38:
+            //    a2 = 1;
+            //    break;
+            case 50:
+                a2 = 1;
                 break;
             default:
                 break;
