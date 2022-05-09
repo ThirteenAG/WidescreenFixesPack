@@ -1,4 +1,4 @@
-#include "inireader.h"
+#include "inireader_alt.h"
 #include "minIni.h"
 #include <errno.h>
 #include <limits.h>
@@ -33,9 +33,11 @@ int str2int(char* s, int base) {
     return result;
 }
 
+char iniReaderIniName[255];
 void SetIniPath(const char* szFileName)
 {
-    inireader.iniName = szFileName;
+    strcpy(iniReaderIniName, szFileName);
+    inireader.iniName = iniReaderIniName;
 }
 
 int ReadInteger(char* szSection, char* szKey, int iDefaultValue)

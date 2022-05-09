@@ -3906,6 +3906,9 @@ void RegisterLODLights()
                         else
                         {
                             static float blinking = 1.0f;
+                            static volatile float blinking_a = 1.0f;
+                            static volatile float blinking_b = 1.0f;
+                            static volatile float blinking_c = 1.0f;
                             if (IsBlinkingNeeded(aLodLights[i].nCoronaShowMode))
                                 blinking -= CTimer__ms_fTimeStep() / 1000.0f;
                             else
