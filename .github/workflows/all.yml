@@ -69,6 +69,13 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag: gtactwpsp
+        artifacts: data/Archives/GTACTW.PPSSPP.FusionMod.zip
+
+    - uses: ./.github/workflows/release_tag
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
         tag: gtavcspsp
         artifacts: data/Archives/GTAVCS.PPSSPP.WidescreenFix.zip
 

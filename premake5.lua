@@ -322,7 +322,7 @@ project "GTACTW.PPSSPP.FusionMod"
    targetextension ".prx"
    setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionMod/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "GTACTW.PPSSPP.FusionMod")
    writemakefile_psp("GTACTW.PPSSPP.FusionMod")
-   --writeghaction("gtactwpsp", "GTACTW.PPSSPP.FusionMod")
+   writeghaction("gtactwpsp", "GTACTW.PPSSPP.FusionMod")
 project "GTASA.UWP.Test"
    setpaths("Z:/WFP/Games/GTASAUWP/", "GTASA.exe")
 project "Gun.WidescreenFix"
