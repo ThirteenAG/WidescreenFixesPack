@@ -255,7 +255,7 @@ void init()
         }
 
         //ammo font
-        injector.WriteMemory8(0x31F8C4, 0x1);
+        //injector.WriteMemory8(0x31F8C4, 0x1);
 
         //static uint32_t xrefs[] = {
         //   //0x1147E0, 0x1149E8, 0x11589C, 0x118598, 0x118624, 0x1186A0, 0x118784, 0x1187EC, 0x118938, 0x118998, 0x118A10,
@@ -394,7 +394,7 @@ void init()
             //injector.MakeInlineLUIORI(0x319400, (float)round_f((14.0f * Screen.fHudScale)));
 
             // Radar Disc
-            injector.MakeInlineLUIORI(0x3215E8, (4.0f * ARDiff));
+            injector.MakeInlineLUIORI(0x3215E8, (4.0f * Screen.fHudScale));
 
             // Clock Text Thingies
             injector.MakeInlineLUIORI(0x31F1D4, (2.0f * ARDiff));
