@@ -88,3 +88,4 @@ extern struct injector_t injector;
 #endif
 
 #define MakeInlineWrapper(at, ...) MakeInline(PP_NARG(__VA_ARGS__), at, __VA_ARGS__)
+#define MakeInlineWrapperWithNOP(at, ...) MakeNOP(at + 4); MakeInline(PP_NARG(__VA_ARGS__), at, __VA_ARGS__)

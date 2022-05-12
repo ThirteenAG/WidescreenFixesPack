@@ -380,26 +380,26 @@ int OnModuleStart() {
         injector.MakeJAL(0x88559F0, (uintptr_t)sub_8933468);
 
         uintptr_t pCamZ = &CamZ;
-        MakeInlineWrapper(0x88CDC80,
-            lw(a2, sp, 0x34),
-            jal((uintptr_t)FindPlayerVehicleCheckCam),
-            nop(),
-            beq(v0, zero, 4), //-->
-            move(a0, a2),
-            lui(a0, HIWORD(pCamZ)),
-            ori(a0, a0, LOWORD(pCamZ)),
-            lw(a0, a0, 0)
-        );
+        //MakeInlineWrapper(0x88CDC80,
+        //    lw(a2, sp, 0x34),
+        //    jal((uintptr_t)FindPlayerVehicleCheckCam),
+        //    nop(),
+        //    beq(v0, zero, 4), //-->
+        //    move(a0, a2),
+        //    lui(a0, HIWORD(pCamZ)),
+        //    ori(a0, a0, LOWORD(pCamZ)),
+        //    lw(a0, a0, 0)
+        //);
 
-        MakeInlineWrapper(0x88CCDA8,
-            jal((uintptr_t)FindPlayerVehicleCheckCam),
-            nop(),
-            beq(v0, zero, 4), //-->
-            addu(a1, a1, a0),
-            lui(a1, HIWORD(pCamZ)),
-            ori(a1, a1, LOWORD(pCamZ)),
-            lw(a1, a1, 0)
-        );
+        //MakeInlineWrapper(0x88CCDA8,
+        //    jal((uintptr_t)FindPlayerVehicleCheckCam),
+        //    nop(),
+        //    beq(v0, zero, 4), //-->
+        //    addu(a1, a1, a0),
+        //    lui(a1, HIWORD(pCamZ)),
+        //    ori(a1, a1, LOWORD(pCamZ)),
+        //    lw(a1, a1, 0)
+        //);
 
         MakeInlineWrapper(0x088CBFA8,
             lw(a2, sp, 0xB4),
@@ -416,9 +416,11 @@ int OnModuleStart() {
     if (RadioInAllVehicles)
     {
         uintptr_t ptr = pattern.get_first("2B 10 02 00 25 10 00 00 00 00 BF 8F 08 00 E0 03 10 00 BD 27", 8);
-        MakeInlineWrapper(ptr,
+        MakeInlineWrapperWithNOP(ptr,
             lw(ra, sp, 0),
-            li(v0, 0x1)
+            li(v0, 0x1),
+            jr(ra),
+            addiu(sp, sp, 0x10)
         );
 
         ptr = pattern.get_first("01 00 A5 24 2A 20 85 00", 8);
