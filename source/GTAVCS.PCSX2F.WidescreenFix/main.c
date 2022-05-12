@@ -440,27 +440,27 @@ void init()
     }
 
     // Allow camera movement durin reloading
-    {
-        injector.MakeNOP(0x235304);
-        injector.MakeNOP(0x235404);
-        injector.MakeNOP(0x2352E4);
-        injector.MakeNOP(0x2355D8);
-        injector.MakeNOP(0x2355a8);
-        injector.MakeNOP(0x234674);
-        injector.MakeNOP(0x23446C);
-        injector.MakeNOP(0x235650);
-
-        injector.MakeNOP(0x235318);
-        injector.MakeNOP(0x2355E8);
-
-        injector.WriteMemory16(0x235660 + 2, 0x1000); // beq -> b
-    }
+    //{
+    //    injector.MakeNOP(0x235304);
+    //    injector.MakeNOP(0x235404);
+    //    injector.MakeNOP(0x2352E4);
+    //    injector.MakeNOP(0x2355D8);
+    //    injector.MakeNOP(0x2355a8);
+    //    injector.MakeNOP(0x234674);
+    //    injector.MakeNOP(0x23446C);
+    //    injector.MakeNOP(0x235650);
+    //
+    //    injector.MakeNOP(0x235318);
+    //    injector.MakeNOP(0x2355E8);
+    //
+    //    injector.WriteMemory16(0x235660 + 2, 0x1000); // beq -> b
+    //}
 
     //test
-    {
-        injector.WriteMemory16(0x232E60+2, 0x1000); // beq -> b
-        injector.MakeJAL(0x23152C, test);
-    }
+    //{
+    //    injector.WriteMemory16(0x232E60+2, 0x1000); // beq -> b
+    //    injector.MakeJAL(0x23152C, test);
+    //}
 
     //logger.Write("GTAVCS.PCSX2F.WidescreenFix loaded");
 }
