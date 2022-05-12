@@ -394,12 +394,12 @@ void init()
             //injector.MakeInlineLUIORI(0x319400, (float)round_f((14.0f * Screen.fHudScale)));
 
             // Radar Disc
-            injector.MakeInlineLUIORI(0x3215E8, (4.0f * Screen.fHudScale));
+            injector.MakeInlineLUIORI(0x3215E8, (4.0f * ARDiff));
 
             // Clock Text Thingies
-            injector.MakeInlineLUIORI(0x31F1D4, (2.0f * Screen.fHudScale));
-            injector.MakeInlineLUIORI(0x31F1EC, (4.0f * Screen.fHudScale));
-            injector.MakeInlineLUIORI(0x31F10C, (3.0f * Screen.fHudScale));
+            injector.MakeInlineLUIORI(0x31F1D4, (2.0f * ARDiff));
+            //injector.MakeInlineLUIORI(0x31F1EC, (4.0f * ARDiff));
+            injector.MakeInlineLUIORI(0x31F10C, (3.0f * ARDiff));
         }
     }
 
