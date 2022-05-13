@@ -867,7 +867,7 @@ int16_t CPad__KBGetHorn(struct CPad* pad)
     if (pad->DisablePlayerControls)
         return 0;
     if (isKeyDown(VK_KEY_H))
-        return BtnMaxValue;
+        return 1;
     return 0;
 }
 
@@ -876,7 +876,7 @@ int16_t CPad__KBHornJustDown(struct CPad* pad)
     if (pad->DisablePlayerControls)
         return 0;
     if (isKeyFirstPressed(VK_KEY_H))
-        return BtnMaxValue;
+        return 1;
     return 0;
 }
 
@@ -885,7 +885,7 @@ int16_t CPad__KBGetCarGunFired(struct CPad* pad)
     if (pad->DisablePlayerControls)
         return 0;
     if (isKeyDown(VK_NUMPAD0) || isKeyDown(VK_LMENU) || isMouseKeyDown(offsetof(struct CMouseControllerState, lmb)))
-        return BtnMaxValue;
+        return 1;
     return 0;
 }
 
@@ -894,7 +894,7 @@ int16_t CPad__KBCarGunJustDown(struct CPad* pad)
     if (pad->DisablePlayerControls)
         return 0;
     if (isKeyFirstPressed(VK_NUMPAD0) || isMouseKeyFirstPressed(offsetof(struct CMouseControllerState, lmb)))
-        return BtnMaxValue;
+        return 1;
     return 0;
 }
 
@@ -903,7 +903,7 @@ int16_t CPad__KBCarGunJustUp(struct CPad* pad)
     if (pad->DisablePlayerControls)
         return 0;
     if (isMouseKeyFirstReleased(VK_NUMPAD0) || isMouseKeyFirstReleased(offsetof(struct CMouseControllerState, lmb)))
-        return BtnMaxValue;
+        return 1;
     return 0;
 }
 
@@ -912,7 +912,7 @@ int16_t CPad__KBGetHandBrake(struct CPad* pad)
     if (pad->DisablePlayerControls)
         return 0;
     if (isKeyDown(VK_SPACE))
-        return BtnMaxValue;
+        return 1;
     return 0;
 }
 
@@ -930,7 +930,7 @@ int16_t CPad__KBJumpJustDown(struct CPad* pad)
     if (pad->DisablePlayerControls)
         return 0;
     if (isKeyFirstPressed(VK_SPACE))
-        return BtnMaxValue;
+        return 1;
     return 0;
 }
 
@@ -939,7 +939,7 @@ int16_t CPad__KBGetExitVehicle(struct CPad* pad)
     if (pad->DisablePlayerControls)
         return 0;
     if (isKeyDown(VK_KEY_F))
-        return BtnMaxValue;
+        return 1;
     return 0;
 }
 
@@ -948,7 +948,7 @@ int16_t CPad__KBExitVehicleJustDown(struct CPad* pad)
     if (pad->DisablePlayerControls)
         return 0;
     if (isKeyFirstPressed(VK_KEY_F))
-        return BtnMaxValue;
+        return 1;
     return 0;
 }
 
@@ -957,9 +957,9 @@ int16_t CPad__KBGetWeapon(struct CPad* pad)
     if (pad->DisablePlayerControls)
         return 0;
     if (isMouseKeyDown(offsetof(struct CMouseControllerState, lmb)))
-        return BtnMaxValue;
+        return 1;
     if (pad->NewState.CIRCLE)
-        return BtnMaxValue;
+        return 1;
     return 0;
 }
 
@@ -968,7 +968,7 @@ int16_t CPad__KBWeaponJustDown(struct CPad* pad)
     if (pad->DisablePlayerControls)
         return 0;
     if (isMouseKeyFirstPressed(offsetof(struct CMouseControllerState, lmb)))
-        return BtnMaxValue;
+        return 1;
     if (pad->NewState.CIRCLE)
         return pad->OldState.CIRCLE == 0;
     return 0;
@@ -988,7 +988,7 @@ int16_t CPad__KBCycleCameraModeUpJustDown(struct CPad* pad)
     if (pad->DisablePlayerControls)
         return 0;
     if (isKeyFirstPressed(VK_KEY_V))
-        return BtnMaxValue;
+        return 1;
     return 0;
 }
 
@@ -1000,13 +1000,13 @@ int16_t CPad__KBChangeStationUpJustDown(struct CPad* pad)
     if (lastStationState == 1)
     {
         lastStationState = 0;
-        return BtnMaxValue;
+        return 1;
     }
     if (isMouseWheelUp())
     {
         lastStationState = 1;
         MouseState[CurrentState].Z = 0.0f;
-        return BtnMaxValue;
+        return 1;
     }
     return 0;
 }
@@ -1021,7 +1021,7 @@ int16_t CPad__KBChangeStationDownJustDown(struct CPad* pad)
     {
         lastStationState = 2;
         MouseState[CurrentState].Z = 0.0f;
-        return BtnMaxValue;
+        return 1;
     }
     return 0;
 }
@@ -1034,7 +1034,7 @@ int16_t CPad__KBCycleWeaponLeftJustDown(struct CPad* pad)
     {
         if (!CPad__KBGetTarget(pad))
             MouseState[CurrentState].Z = 0.0f;
-        return BtnMaxValue;
+        return 1;
     }
     return 0;
 }
@@ -1047,7 +1047,7 @@ int16_t CPad__KBCycleWeaponRightJustDown(struct CPad* pad)
     {
         if (!CPad__KBGetTarget(pad))
             MouseState[CurrentState].Z = 0.0f;
-        return BtnMaxValue;
+        return 1;
     }
     return 0;
 }
@@ -1057,7 +1057,7 @@ int16_t CPad__KBGetTarget(struct CPad* pad)
     if (pad->DisablePlayerControls)
         return 0;
     if (isMouseKeyDown(offsetof(struct CMouseControllerState, rmb)))
-        return BtnMaxValue;
+        return 1;
     return 0;
 }
 
@@ -1066,7 +1066,7 @@ int16_t CPad__KBTargetJustDown(struct CPad* pad)
     if (pad->DisablePlayerControls)
         return 0;
     if (isMouseKeyDown(offsetof(struct CMouseControllerState, rmb)))
-        return BtnMaxValue;
+        return 1;
     return 0;
 }
 
@@ -1084,7 +1084,7 @@ int16_t CPad__KBGetSprint(struct CPad* pad)
     if (pad->DisablePlayerControls)
         return 0;
     if (isKeyDown(VK_LSHIFT) || isKeyDown(VK_RSHIFT))
-        return BtnMaxValue;
+        return 1;
     return 0;
 }
 
@@ -1151,52 +1151,50 @@ int16_t CPad__KBLookAroundUpDown(struct CPad* pad)
 
 int16_t CPad__KBGuiLeft(struct CPad* pad)
 {
-    if (KeyboardState[CurrentState][VK_LEFT])
-        return KeyboardState[PreviousState][VK_LEFT] == 0;
-    if (KeyboardState[CurrentState][VK_KEY_A])
-        return KeyboardState[PreviousState][VK_KEY_A] == 0;
+    if (isKeyFirstPressed(VK_LEFT) || isKeyFirstPressed(VK_KEY_A))
+        return 1;
     return 0;
 }
 
 int16_t CPad__KBGuiRight(struct CPad* pad)
 {
     if (isKeyFirstPressed(VK_RIGHT) || isKeyFirstPressed(VK_KEY_D))
-        return BtnMaxValue;
+        return 1;
     return 0;
 }
 
 int16_t CPad__KBGuiUp(struct CPad* pad)
 {
     if (isKeyFirstPressed(VK_UP) || isKeyFirstPressed(VK_KEY_W))
-        return BtnMaxValue;
+        return 1;
     return 0;
 }
 
 int16_t CPad__KBGuiDown(struct CPad* pad)
 {
     if (isKeyFirstPressed(VK_DOWN) || isKeyFirstPressed(VK_KEY_S))
-        return BtnMaxValue;
+        return 1;
     return 0;
 }
 
 int16_t CPad__KBGuiSelect(struct CPad* pad)
 {
     if (isKeyFirstPressed(VK_RETURN))
-        return BtnMaxValue;
+        return 1;
     return 0;
 }
 
 int16_t CPad__KBGuiBack(struct CPad* pad)
 {
     if (isKeyFirstPressed(VK_BACK))
-        return BtnMaxValue;
+        return 1;
     return 0;
 }
 
 int16_t CPad__KBGetSkipCutscene(struct CPad* pad)
 {
     if (isKeyFirstPressed(VK_RETURN) || isKeyFirstPressed(VK_SPACE))
-        return BtnMaxValue;
+        return 1;
     return 0;
 }
 
@@ -1204,8 +1202,8 @@ int16_t CPad__KBGetOddJobTrigger(struct CPad* pad)
 {
     if (pad->DisablePlayerControls)
         return 0;
-    if (isKeyFirstPressed(VK_ADD) || isKeyFirstPressed(VK_KEY_2))
-        return BtnMaxValue;
+    if (isKeyDown(VK_ADD) || isKeyDown(VK_KEY_2))
+        return 1;
     return 0;
 }
 
