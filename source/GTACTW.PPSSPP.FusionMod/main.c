@@ -53,7 +53,7 @@ char refresh_dat = 0;
 void WriteDAT()
 {
     SceUID dat_uid = sceIoOpen(DAT_PATH, PSP_O_WRONLY | PSP_O_CREAT | PSP_O_TRUNC, 0777);
-    if (dat_uid != 0)
+    if (dat_uid > 0)
     {
         char buffer[100];
         npf_snprintf(buffer, sizeof(buffer), "%d %d %d", CamMode, CamAngle, CamZ);
@@ -66,7 +66,7 @@ void WriteDAT()
 void ReadDAT()
 {
     SceUID dat_uid = sceIoOpen(DAT_PATH, PSP_O_RDONLY, 0777);
-    if (dat_uid != 0)
+    if (dat_uid > 0)
     {
         char buffer[100];
         sceIoRead(dat_uid, buffer, sizeof(buffer));
