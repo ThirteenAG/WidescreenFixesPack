@@ -144,9 +144,9 @@ void init()
         addu(v0, s1, s2)
     );
 
-    MakeInlineWrapper(0x1D5180,
+    MakeInlineWrapperWithNOP(0x1D5180,
         jal(0x2B6E20),
-        nop(),
+        sq(v0, v1, 0x30),
         jal((intptr_t)WriteHudValues),
         nop()
     );
