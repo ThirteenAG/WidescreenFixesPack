@@ -107,7 +107,8 @@ void init()
     MakeInlineWrapper(gv == SLUS21356 ? 0x2EACE4 : 0x2EAD30,
         //filtering out 0-640 textures (fading etc)
         move(k0, v0), //x
-        move(k1, v1), //w
+        //move(k1, v1), //w
+        move(s7, s6), //?
         lui(s6, HIWORD(i640)),
         addiu(s6, s6, LOWORD(i640)),
         lh(v0, sp, (gv == SLUS21356 ? 0x12E : 0x13E)),
@@ -122,10 +123,11 @@ void init()
         nop(),
         b(3), //-->
         nop(),
-        beq(k1, s6, 3),
+        beq(v1, s6, 3),
         nop(),
         muls(f0, f0, f30), //<--
-        adds(f0, f0, f31)
+        adds(f0, f0, f31),
+        move(s6, s7)
     );
 
     //Hud Scaling 1 X2 = X2
