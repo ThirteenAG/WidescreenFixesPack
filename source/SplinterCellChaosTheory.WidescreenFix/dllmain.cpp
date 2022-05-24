@@ -491,7 +491,7 @@ void Init()
                 auto ico = sTextOffset.icons;
                 auto obj = sTextOffset.objPopup;
 
-                DBGONLY(KEYPRESS(VK_F2) { spd::log()->info("{0:d} {1:d} {2:d} {4:08x}", offset1, offset2, offset3, Color.RGBA); });
+                //DBGONLY(KEYPRESS(VK_F2) { spd::log()->info("{0:d} {1:d} {2:d} {4:08x}", offset1, offset2, offset3, Color.RGBA); });
 
                 if (bIsInMenu && *bIsInMenu == 0)
                 {
