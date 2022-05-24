@@ -6,7 +6,6 @@ workspace "WidescreenFixesPack"
    objdir ("build/obj")
    buildlog ("build/log/%{prj.name}.log")
    buildoptions {"-std:c++latest"}
-   flags { "MultiProcessorCompile" }
    include "makefile.lua"
    
    kind "SharedLib"

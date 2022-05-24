@@ -170,7 +170,7 @@ void Init()
                             }
                             else
                             {
-                                DBGONLY(KEYPRESS(VK_F2) { spd::log()->info("0x{0:08x} 0x{1:08x}", stack[3], stack[4]); });
+                                //DBGONLY(KEYPRESS(VK_F2) { spd::log()->info("0x{0:08x} 0x{1:08x}", stack[3], stack[4]); });
 
                                 if (stack[idx] == dw_61EA8F || stack[idx] == dw_616FB7 || stack[idx] == dw_4FD37D)
                                 {

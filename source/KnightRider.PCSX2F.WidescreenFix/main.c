@@ -6,6 +6,7 @@
 #include "../../includes/pcsx2/patterns.h"
 #include "../../includes/pcsx2/log.h"
 #include "../../includes/pcsx2/injector.h"
+#include "../../includes/pcsx2/inireader.h"
 
 int CompatibleCRCList[] = { 0x989192FE };
 int PCSX2Data[PCSX2Data_Size] = { 1 };
