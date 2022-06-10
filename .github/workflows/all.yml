@@ -377,13 +377,6 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
-        tag: fahrenheit
-        artifacts: data/Archives/Fahrenheit.WidescreenFix.zip
-
-    - uses: ./.github/workflows/release_tag
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
         tag: dmc3se
         artifacts: data/Archives/DevilMayCry3.WidescreenFix.zip
 
