@@ -134,6 +134,9 @@ int OnModuleStart() {
     float fRadarPosX = inireader.ReadFloat("RADAR", "RadarPosX", 12.0f);
     float fRadarPosY = inireader.ReadFloat("RADAR", "RadarPosY", 196.0f);
 
+    float fMPRadarScale = inireader.ReadFloat("MPRADAR", "RadarScale", 1.0f);
+    float fMPRadarPosY = inireader.ReadFloat("MPRADAR", "RadarPosY", 170.0f);
+
     int RenderLodLights = inireader.ReadInteger("PROJECT2DFX", "RenderLodLights", 0);
     int CoronaLimit = inireader.ReadInteger("PROJECT2DFX", "CoronaLimit", 900);
     fCoronaRadiusMultiplier = inireader.ReadFloat("PROJECT2DFX", "CoronaRadiusMultiplier", 1.0f);
@@ -438,9 +441,8 @@ int OnModuleStart() {
         //injector.MakeInlineLUIORI(ptr_187898, fHudScale * 1.056f); // Font scale
     }
 
-    if (fRadarScale > 0.0f || fRadarPosX != 0.0f || fRadarPosY != 0.0f)
+    /* Radar */
     {
-        /* Radar */
         uintptr_t ptr_182F94 = pattern.get(0, "B8 42 04 3C ? ? ? ? 00 00 84 44", 0); // count = 2
         uintptr_t ptr_182FA0 = pattern.get(0, "83 42 04 3C 9A 99 84 34 00 00 84 44", 0); // count = 2
         uintptr_t ptr_182FC4 = pattern.get(1, "B8 42 04 3C ? ? ? ? 00 00 84 44", 0);
@@ -449,26 +451,29 @@ int OnModuleStart() {
         uintptr_t ptr_183018 = pattern.get(0, "2A 43 04 3C ? ? ? ? 00 00 84 44", 0);
         uintptr_t ptr_183024 = pattern.get(0, "44 43 04 3C 00 00 84 44", 0);
 
-        if (fRadarPosX)
+        if (fRadarScale > 0.0f)
         {
-            injector.MakeInlineLUIORI(ptr_182FEC, (fRadarScale ? fRadarScale : 1.0f) * fRadarPosX);  // Left X
-        }
+            if (fRadarPosX)
+                injector.MakeInlineLUIORI(ptr_182FEC, fRadarScale * fRadarPosX);  // Left X
+            else
+                injector.MakeInlineLUIORI(ptr_182FEC, fRadarScale * 12.0f);  // Left X
 
-        if (fRadarPosY)
-        {
-            injector.MakeInlineLUIORI(ptr_183024, adjustBottomRightY(fRadarPosY, (fRadarScale ? fRadarScale : 1.0f))); // Top Y
-            injector.MakeInlineLUIORI(ptr_183018, adjustBottomRightY(fRadarPosY, (fRadarScale ? fRadarScale : 1.0f))); // Top Y (Multiplayer)
-        }
+            if (fRadarPosY)
+                injector.MakeInlineLUIORI(ptr_183024, adjustBottomRightY(fRadarPosY, fRadarScale)); // Top Y
+            else
+                injector.MakeInlineLUIORI(ptr_183024, adjustBottomRightY(196.0f, fRadarScale)); // Top Y
 
-        if (fRadarScale)
-        {
-            injector.MakeInlineLUIORI(ptr_182FEC, fRadarScale * 12.0f);  // Left X
-            injector.MakeInlineLUIORI(ptr_183024, adjustBottomRightY(196.0f, fRadarScale)); // Top Y
-            injector.MakeInlineLUIORI(ptr_183018, adjustBottomRightY(170.0f, fRadarScale)); // Top Y (Multiplayer)
             injector.MakeInlineLUIORI(ptr_182FA0, fRadarScale * 65.8f);  // Size X
-            injector.MakeInlineLUIORI(ptr_182F94, fRadarScale * 92.0f);  // Size X (Multiplayer)
             injector.MakeInlineLUIORI(ptr_182FD0, fRadarScale * 65.8f);  // Size Y
-            injector.MakeInlineLUIORI(ptr_182FC4, fRadarScale * 92.0f);  // Size Y (Multiplayer)
+
+        }
+
+        if (fMPRadarScale > 0.0f)
+        {
+            if (fMPRadarPosY)
+                injector.MakeInlineLUIORI(ptr_183018, adjustBottomRightY(fMPRadarPosY, (fMPRadarScale ? fMPRadarScale : 1.0f))); // Top Y (Multiplayer)
+            injector.MakeInlineLUIORI(ptr_182F94, fMPRadarScale * 92.0f);  // Size X (Multiplayer)
+            injector.MakeInlineLUIORI(ptr_182FC4, fMPRadarScale * 92.0f);  // Size Y (Multiplayer)
         }
     }
 
