@@ -23,6 +23,7 @@ char KeyboardState[StateNum][StateSize] = { {1} };
 struct CMouseControllerState MouseState[StateNum] = { {1} };
 char CheatString[CheatStringLen] = { 1 };
 char OSDText[OSDStringNum][OSDStringSize] = { {1} };
+char FrameLimitUnthrottle;
 
 struct ScreenX
 {
@@ -153,6 +154,16 @@ void test(int a1, struct CPad* a2)
     PlayerControlFreeAim(a1, a2);
 }
 
+void UnthrottleEmuEnable()
+{
+    FrameLimitUnthrottle = 1;
+}
+
+void UnthrottleEmuDisable()
+{
+    FrameLimitUnthrottle = 0;
+}
+
 void init()
 {
     //logger.SetBuffer(OSDText, sizeof(OSDText) / sizeof(OSDText[0]), sizeof(OSDText[0]));
@@ -214,6 +225,13 @@ void init()
 
     int ImprovedWidescreenSupport = inireader.ReadInteger("MAIN", "ImprovedWidescreenSupport", 0);
     int Enable60FPS = inireader.ReadInteger("MAIN", "Enable60FPS", 0);
+    int UnthrottleEmuDuringLoading = inireader.ReadInteger("MAIN", "UnthrottleEmuDuringLoading", 1);
+
+    if (UnthrottleEmuDuringLoading)
+    {
+        UnthrottleEmuEnable();
+        injector.MakeJAL(0x21EDD4, (intptr_t)UnthrottleEmuDisable);
+    }
 
     int ModernControlScheme = inireader.ReadInteger("CONTROLS", "ModernControlScheme", 1);
     PCControlScheme = inireader.ReadInteger("CONTROLS", "PCControlScheme", 1);

@@ -24,10 +24,20 @@ struct PluginInfo
     uint32_t CheatStringSize;
     uint32_t OSDTextAddr;
     uint32_t OSDTextSize;
+    uint32_t FrameLimitUnthrottleAddr;
+    uint32_t FrameLimitUnthrottleSize;
+    uint32_t CLEOScriptsAddr;
+    uint32_t CLEOScriptsSize;
 
 #ifdef __cplusplus
     bool isValid() { return (Base != 0 && EntryPoint != 0 && Size != 0); }
 #endif
+};
+
+struct PluginInfoInvoker
+{
+    uint32_t Base;
+    uint32_t EntryPoint;
 };
 
 enum PCSX2DataType
@@ -111,5 +121,6 @@ extern char KeyboardState[StateNum][StateSize];
 extern struct CMouseControllerState MouseState[StateNum];
 extern char CheatString[CheatStringLen];
 extern char OSDText[OSDStringNum][OSDStringSize];
+extern char FrameLimitUnthrottle;
 
 #endif
