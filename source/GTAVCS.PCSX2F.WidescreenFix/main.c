@@ -112,6 +112,16 @@ float sub_2653F0(int a1)
     return *flt_487488;
 }
 
+void UnthrottleEmuEnable()
+{
+    FrameLimitUnthrottle = 1;
+}
+
+void UnthrottleEmuDisable()
+{
+    FrameLimitUnthrottle = 0;
+}
+
 int PCControlScheme = 0;
 int log_cleared = 0;
 void GameLoopStuff()
@@ -126,6 +136,15 @@ void GameLoopStuff()
     {
         //extern CVector* GetCamPos();
         //npf_snprintf(OSDText[0], 255, "Cam Pos: %f %f %f", GetCamPos()->x, GetCamPos()->y, GetCamPos()->z);
+    }
+
+    // gBlackScreenTime
+    {
+        static float* gBlackScreenTime = (float*)0x486E24;
+        if (*gBlackScreenTime)
+            UnthrottleEmuEnable();
+        else
+            UnthrottleEmuDisable();
     }
 
     // PC Cheats
@@ -152,16 +171,6 @@ void test(int a1, struct CPad* a2)
 
     PlayerControlZelda(a1, a2);
     PlayerControlFreeAim(a1, a2);
-}
-
-void UnthrottleEmuEnable()
-{
-    FrameLimitUnthrottle = 1;
-}
-
-void UnthrottleEmuDisable()
-{
-    FrameLimitUnthrottle = 0;
 }
 
 void init()
