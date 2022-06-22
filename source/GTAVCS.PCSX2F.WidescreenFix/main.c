@@ -122,6 +122,7 @@ void UnthrottleEmuDisable()
     FrameLimitUnthrottle = 0;
 }
 
+int UnthrottleEmuDuringLoading = 0;
 int PCControlScheme = 0;
 int log_cleared = 0;
 void GameLoopStuff()
@@ -138,7 +139,7 @@ void GameLoopStuff()
         //npf_snprintf(OSDText[0], 255, "Cam Pos: %f %f %f", GetCamPos()->x, GetCamPos()->y, GetCamPos()->z);
     }
 
-    // gBlackScreenTime
+    if (UnthrottleEmuDuringLoading)
     {
         static float* gBlackScreenTime = (float*)0x486E24;
         if (*gBlackScreenTime)
@@ -234,7 +235,7 @@ void init()
 
     int ImprovedWidescreenSupport = inireader.ReadInteger("MAIN", "ImprovedWidescreenSupport", 0);
     int Enable60FPS = inireader.ReadInteger("MAIN", "Enable60FPS", 0);
-    int UnthrottleEmuDuringLoading = inireader.ReadInteger("MAIN", "UnthrottleEmuDuringLoading", 1);
+    UnthrottleEmuDuringLoading = inireader.ReadInteger("MAIN", "UnthrottleEmuDuringLoading", 1);
 
     if (UnthrottleEmuDuringLoading)
     {
