@@ -130,6 +130,8 @@ void GameLoopStuff()
     if (log_cleared != 1)
     {
         //logger.ClearLog();
+        if (UnthrottleEmuDuringLoading)
+            UnthrottleEmuDisable();
         log_cleared = 1;
     }
 
@@ -141,8 +143,12 @@ void GameLoopStuff()
 
     if (UnthrottleEmuDuringLoading)
     {
+        int(*sub_471400)() = (void*)0x471400;
+        int(*sub_3B5130)(int a1) = (void*)0x3B5130;
+            
         static float* gBlackScreenTime = (float*)0x486E24;
-        if (*gBlackScreenTime)
+        uint32_t gMenuActivated = sub_3B5130(sub_471400());
+        if (*gBlackScreenTime && !gMenuActivated)
             UnthrottleEmuEnable();
         else
             UnthrottleEmuDisable();
@@ -240,7 +246,7 @@ void init()
     if (UnthrottleEmuDuringLoading)
     {
         UnthrottleEmuEnable();
-        injector.MakeJAL(0x21EDD4, (intptr_t)UnthrottleEmuDisable);
+        //injector.MakeJAL(0x21EDD4, (intptr_t)UnthrottleEmuDisable);
     }
 
     int ModernControlScheme = inireader.ReadInteger("CONTROLS", "ModernControlScheme", 1);
