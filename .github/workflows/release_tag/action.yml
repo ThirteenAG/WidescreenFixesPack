@@ -18,20 +18,15 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Get release info
-      id: release_info
-      uses: cardinalby/git-get-release-action@1.1.1
-      env:
-       GITHUB_TOKEN: ${{ inputs.token }}
-      with:
-        tag: ${{ inputs.tag }}
     - name: Split tags
       id: split
       uses: rishabhgupta/split-by@v1
       with:
         split-by: ','
         string: "${{ inputs.tag_list }}"
-    - name: Upload Release
+    - name: Set condition variable
+      id: tag_requires_updating
+      shell: bash
       if: |
         (steps.split.outputs._0 == 'all') ||
         (steps.split.outputs._0 == inputs.tag) ||
@@ -134,6 +129,18 @@ runs:
         (steps.split.outputs._97 == inputs.tag) ||
         (steps.split.outputs._98 == inputs.tag) ||
         (steps.split.outputs._99 == inputs.tag)
+      run: |
+        echo ::set-output name=split_value::"True"
+    - name: Get release info
+      if: ${{ steps.tag_requires_updating.outputs.split_value == 'True' }}
+      id: release_info
+      uses: cardinalby/git-get-release-action@1.1.1
+      env:
+       GITHUB_TOKEN: ${{ inputs.token }}
+      with:
+        tag: ${{ inputs.tag }}
+    - name: Upload Release
+      if: ${{ steps.tag_requires_updating.outputs.split_value == 'True' }}
       uses: ncipollo/release-action@v1
       with:
         token: ${{ inputs.token }}
@@ -142,3 +149,10 @@ runs:
         body: ${{ steps.release_info.outputs.body }}
         tag: ${{ steps.release_info.outputs.tag_name }}
         artifacts: ${{ inputs.artifacts }}
+    - name: Update Tag
+      if: ${{ steps.tag_requires_updating.outputs.split_value == 'True' }}
+      uses: richardsimko/update-tag@v1
+      with:
+        tag_name: ${{ steps.release_info.outputs.tag_name }}
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
