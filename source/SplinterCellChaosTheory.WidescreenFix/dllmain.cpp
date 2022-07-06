@@ -110,14 +110,14 @@ bool bHudWidescreenMode;
 int32_t nWidescreenHudOffset;
 float fWidescreenHudOffset;
 bool bDisableAltTabFix;
-int32_t nSetShadowMapSize;
+int32_t nShadowMapResolution;
 bool bEnableShadowFiltering;
 bool bOriginalExe;
 
 FLTColor gColor;
 float* __cdecl FGetHSV(float* dest, uint8_t H, uint8_t S, uint8_t V)
 {
-    if ((H == 0x41 && S == 0xC8) || (H == 0x2C && S == 0xCC))
+    if ((H == 0x41 && S == 0xC8) || (H == 0x2C && S == 0xCC) || (H == 0x00 && S == 0xFF))
     {
         dest[0] = gColor.R;
         dest[1] = gColor.G;
@@ -189,60 +189,10 @@ void Init()
     nWidescreenHudOffset = iniReader.ReadInteger("MAIN", "WidescreenHudOffset", 100);
     fWidescreenHudOffset = static_cast<float>(nWidescreenHudOffset);
     bDisableAltTabFix = iniReader.ReadInteger("MAIN", "DisableAltTabFix", 1) != 0;
-    gColor = iniReader.ReadInteger("BONUS", "GogglesLightColor", 0);
     eGameLang = static_cast<GameLang>(iniReader.ReadInteger("MAIN", "GameLanguage", 0));
-    nSetShadowMapSize = iniReader.ReadInteger("MAIN", "SetShadowMapSize", 0);
-    bEnableShadowFiltering = iniReader.ReadInteger("MAIN", "EnableShadowFiltering", 0) != 0;
-    bOriginalExe = iniReader.ReadInteger("MAIN", "OriginalExe", 1) != 0;
-
-    auto pattern = hook::pattern();
-
-    if (nSetShadowMapSize == 3072 ||
-        nSetShadowMapSize == 4096 ||
-        nSetShadowMapSize == 5120 ||
-        nSetShadowMapSize == 6144 ||
-        nSetShadowMapSize == 7168 ||
-        nSetShadowMapSize == 8192)
-    {
-        if (bOriginalExe) {
-            // Set shadow map size
-            pattern = hook::pattern("68 00 08 00 00 68 00 08 00 00").count(1); // 0x10b6086c - 0x10b60871: push 800h; push 800h;
-            injector::WriteMemory(pattern.get_first(1), nSetShadowMapSize, true); // 0x10b6086c = push 1000h;
-            injector::WriteMemory(pattern.get_first(6), nSetShadowMapSize, true); // 0x10b60871 = push 1000h;
-
-            if (!bEnableShadowFiltering) {
-                // Disable adjusting contrast and shadow filtering according to the angle of the camera. This only works if the "Soft shadows" option is disabled.
-                pattern = hook::pattern("89 8C 24 E0 00 00 00 B9 00 01 00 00").count(1); // 0x10c9c566 - 0x10c9c56d: mov dword ptr [esp+0E0h],ecx; mov ecx, 100h;
-                injector::WriteMemory(pattern.get_first(8), 0x10000, true); // 0x10c9c56d = mov ecx, 10000h;
-
-                // For "Soft shadows" option enabled will make the shadows less soft, but will fix them for a multi-monitor screen resolution.
-                pattern = hook::pattern("BB 9A 99 99 3F").count(1); // 0x10aaace8: mov ebx,3F99999Ah;
-                injector::WriteMemory(pattern.get_first(1), 0x3e800000, true); // 0x10aaace8 = mov ebx,3E800000h;
-                // Changes in same function
-                pattern = hook::pattern("C7 86 C8 07 00 00 9A 99 99 BE").count(1); // 0x10aaad40: mov dword ptr [esi+7C8h],0BE99999Ah;
-                injector::WriteMemory(pattern.get_first(6), 0xbe19999a, true); // 0x10aaad40 = mov dword ptr [esi+7C8h],0BE19999Ah;
-            }
-        }
-        else {
-            // Set shadow map size
-            pattern = hook::pattern("83 F8 02 75 21 8B 16 68 00 ? 00 00 68 00 ? 00 00 8B CE").count(1); // 0x10b60865 - 0x10b60876: cmp eax,2; jne 10B6088B; mov edx, dword ptr[esi]; push 800h; push 800h; movecx,esi;
-            injector::WriteMemory(pattern.get_first(8), nSetShadowMapSize, true); // 0x10b6086c = push 1000h;
-            injector::WriteMemory(pattern.get_first(13), nSetShadowMapSize, true); // 0x10b60871 = push 1000h;
-
-            if (!bEnableShadowFiltering) {
-                // Disable adjusting contrast and shadow filtering according to the angle of the camera. This only works if the "Soft shadows" option is disabled.
-                pattern = hook::pattern("89 8C 24 E0 00 00 00 B9 00 ? ? 00").count(1); // 0x10c9c566 - 0x10c9c56d: mov dword ptr [esp+0E0h],ecx; mov ecx, 100h;
-                injector::WriteMemory(pattern.get_first(8), 0x10000, true); // 0x10c9c56d = mov ecx, 10000h;
-
-                // For "Soft shadows" option enabled will make the shadows less soft, but will fix them for a multi-monitor screen resolution.
-                pattern = hook::pattern("C6 86 AA 07 00 00 96 BB ? ? ? ?").count(1); // 0x10aaace1 - 0x10aaace8: mov byte ptr [esi+7AAh],96h; mov ebx,3F99999Ah;
-                injector::WriteMemory(pattern.get_first(8), 0x3e800000, true); // 0x10aaace8 = mov ebx,3E800000h;
-                // Changes in same function
-                pattern = hook::pattern("C7 86 C8 07 00 00 9A 99 ? BE").count(1); // 0x10aaad40: mov dword ptr [esi+7C8h],0BE99999Ah;
-                injector::WriteMemory(pattern.get_first(6), 0xbe19999a, true); // 0x10aaad40 = mov dword ptr [esi+7C8h],0BE19999Ah;
-            }
-        }
-    }
+    nShadowMapResolution = iniReader.ReadInteger("GRAPHICS", "ShadowMapResolution", 0);
+    bEnableShadowFiltering = iniReader.ReadInteger("GRAPHICS", "EnableShadowFiltering", 0) != 0;
+    gColor = iniReader.ReadInteger("BONUS", "GogglesLightColor", 0);
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -251,7 +201,7 @@ void Init()
     Screen.fHeight = static_cast<float>(Screen.Height);
     Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
 
-    pattern = hook::pattern("8D 84 24 34 04 00 00 68 ? ? ? ? 50 E8 ? ? ? ? 83 C4 14"); //0x10CD09C5
+    auto pattern = hook::pattern("8D 84 24 34 04 00 00 68 ? ? ? ? 50 E8 ? ? ? ? 83 C4 14"); //0x10CD09C5
     struct SetResHook
     {
         void operator()(injector::reg_pack& regs)
@@ -564,6 +514,34 @@ void Init()
                 }
             }
         }; injector::MakeInline<WndProcHook>(pattern.get_first(0), pattern.get_first(7)); //0x10CC4EEA 
+    }
+
+    if (nShadowMapResolution)
+    {
+        // Set shadow map size
+        auto pattern = hook::pattern("68 ? ? ? ? 68 ? ? ? ? 8B CE FF 92 ? ? ? ? 5F 5E C7 43 ? ? ? ? ? 5B C2 04 00 C7 87"); // 0x10b6086c - 0x10b60871: push 800h; push 800h;
+        if (!pattern.empty())
+        {
+            injector::WriteMemory(pattern.get_first(1), nShadowMapResolution, true); // 0x10b6086c = push 1000h;
+            injector::WriteMemory(pattern.get_first(6), nShadowMapResolution, true); // 0x10b60871 = push 1000h;
+        }
+
+        if (!bEnableShadowFiltering) {
+            // Disable adjusting contrast and shadow filtering according to the angle of the camera. This only works if the "Soft shadows" option is disabled.
+            pattern = hook::pattern("B9 ? ? ? ? 89 94 24"); // 0x10c9c566 - 0x10c9c56d: mov dword ptr [esp+0E0h],ecx; mov ecx, 100h;
+            if (!pattern.empty())
+                injector::WriteMemory(pattern.get_first(1), 0x10000, true); // 0x10c9c56d = mov ecx, 10000h;
+
+            // For "Soft shadows" option enabled will make the shadows less soft, but will fix them for a multi-monitor screen resolution.
+            pattern = hook::pattern("C6 86 ? ? ? ? ? BB"); // 0x10aaace8: mov ebx,3F99999Ah;
+            if (!pattern.empty())
+                injector::WriteMemory<float>(pattern.get_first(8), 0.25f, true); // 0x10aaace8 = mov ebx,3E800000h;
+
+            // Changes in same function
+            pattern = hook::pattern("C7 86 ? ? ? ? ? ? ? ? C7 86 ? ? ? ? ? ? ? ? 89 8E ? ? ? ? C7 86"); // 0x10aaad40: mov dword ptr [esi+7C8h],0BE99999Ah;
+            if (!pattern.empty())
+                injector::WriteMemory<float>(pattern.get_first(16), -0.15f, true); // 0x10aaad40 = mov dword ptr [esi+7C8h],0BE19999Ah;
+        }
     }
 
     //Goggles Light Color
