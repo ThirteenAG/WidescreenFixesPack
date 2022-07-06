@@ -192,6 +192,7 @@ void Init()
     eGameLang = static_cast<GameLang>(iniReader.ReadInteger("MAIN", "GameLanguage", 0));
     nShadowMapResolution = iniReader.ReadInteger("GRAPHICS", "ShadowMapResolution", 0);
     bEnableShadowFiltering = iniReader.ReadInteger("GRAPHICS", "EnableShadowFiltering", 0) != 0;
+    auto nFPSLimit = iniReader.ReadInteger("MISC", "FPSLimit", 1000);
     gColor = iniReader.ReadInteger("BONUS", "GogglesLightColor", 0);
 
     if (!Screen.Width || !Screen.Height)
@@ -544,6 +545,13 @@ void Init()
         }
     }
 
+    if (nFPSLimit)
+    {
+        static float fFPSLimit = 1.0f / static_cast<float>(nFPSLimit);
+        auto pattern = hook::pattern("8B 15 ? ? ? ? A1 ? ? ? ? 89 54 24 10 89 44 24 18");
+        injector::WriteMemory(pattern.get_first(2), &fFPSLimit, true);
+    }
+    
     //Goggles Light Color
     if (!gColor.empty())
     {
