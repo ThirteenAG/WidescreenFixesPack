@@ -23,6 +23,7 @@ workspace "WidescreenFixesPack"
    defines { "rsc_UpdateUrl=\"https://github.com/ThirteenAG/WidescreenFixesPack\"" }
    
    files { "source/%{prj.name}/*.cpp" }
+   files { "data/%{prj.name}/**" }
    files { "Resources/*.rc" }
    files { "external/hooking/Hooking.Patterns.h", "external/hooking/Hooking.Patterns.cpp" }
    files { "includes/stdafx.h", "includes/stdafx.cpp" }
