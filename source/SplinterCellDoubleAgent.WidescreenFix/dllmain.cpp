@@ -140,7 +140,7 @@ void Init()
     {
         static float fFPSLimit = 1.0f / static_cast<float>(nFPSLimit);
         auto pattern = hook::pattern("A1 ? ? ? ? 8B 0D ? ? ? ? 89 45 DC 89 4D C4");
-        injector::WriteMemory(pattern.get_first(1), &nFPSLimit, true);
+        injector::WriteMemory(pattern.get_first(1), &fFPSLimit, true);
     }
 
     //for test only (steam version)
