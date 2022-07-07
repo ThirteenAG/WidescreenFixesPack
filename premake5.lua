@@ -284,6 +284,7 @@ project "GTAVCS.PCSX2F.WidescreenFix"
    writeghaction("gtavcs", "GTAVCS.PCSX2F.WidescreenFix /t:GTAVCS.PCSX2F.Project2DFX")
 project "GTAVCS.PCSX2F.Project2DFX"
    kind "Makefile"
+   dependson { "GTAVCS.PCSX2F.WidescreenFix" }
    includedirs { "external/ps2sdk/ps2sdk/ee" }
    files { "source/%{prj.name}/*.h" }
    files { "source/%{prj.name}/*.c" }

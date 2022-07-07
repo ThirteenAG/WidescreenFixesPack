@@ -27,6 +27,9 @@ int OnModuleStart()
     int SkipIntro = inireader.ReadInteger("MAIN", "SkipIntro", 1);
     int DualAnalogPatch = inireader.ReadInteger("MAIN", "DualAnalogPatch", 1);
     int Enable60FPS = inireader.ReadInteger("MAIN", "Enable60FPS", 0);
+    
+    char szForceAspectRatio[100];
+    char* ForceAspectRatio = inireader.ReadString("MAIN", "ForceAspectRatio", "auto", szForceAspectRatio, sizeof(szForceAspectRatio));
 
     if (SkipIntro)
     {
@@ -60,6 +63,41 @@ int OnModuleStart()
     {
         uintptr_t ptr = pattern.get_first("02 00 42 2C ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 00 00 A2 8C", 4);
         injector.MakeNOP(ptr);
+    }
+
+    if (strlen(ForceAspectRatio))
+    {
+        // Default is 512/320 for some reason
+        int x = 512;
+        int y = 320;
+        float fAspectRatio = (float)x / (float)y;
+        
+        if (strcmp(ForceAspectRatio, "auto") != 0)
+        {
+            char* ch;
+            ch = strtok(ForceAspectRatio, ":");
+            if (ch)
+            {
+                x = str2int(ch, 10);
+                ch = strtok(NULL, ":");
+                if (ch)
+                {
+                    y = str2int(ch, 10);
+                    fAspectRatio = (float)x / (float)y;
+                }
+            }
+        }
+        else
+        {
+            fAspectRatio = 16.0f / 9.0f;
+        }
+
+        uintptr_t ptr_28C = pattern.get(0, "94 18 C1 E7 03 03 01 46", 4);       
+        MakeInlineWrapper(ptr_28C,
+            lui(t9, HIWORD(fAspectRatio)),
+            ori(t9, t9, LOWORD(fAspectRatio)),
+            mtc1(t9, f12)
+        );
     }
 
     sceKernelDcacheWritebackAll();
