@@ -65,7 +65,7 @@ int OnModuleStart()
         injector.MakeNOP(ptr);
     }
 
-    if (strlen(ForceAspectRatio))
+    if (strlen(ForceAspectRatio) && ForceAspectRatio[0] != '0')
     {
         // Default is 512/320 for some reason
         int x = 512;
@@ -92,11 +92,19 @@ int OnModuleStart()
             fAspectRatio = 16.0f / 9.0f;
         }
 
-        uintptr_t ptr_28C = pattern.get(0, "94 18 C1 E7 03 03 01 46", 4);       
+        uintptr_t ptr_28C = pattern.get(0, "94 18 C1 E7 03 03 01 46", 4);
         MakeInlineWrapper(ptr_28C,
             lui(t9, HIWORD(fAspectRatio)),
             ori(t9, t9, LOWORD(fAspectRatio)),
             mtc1(t9, f12)
+        );
+
+        float fHudScale = fAspectRatio;
+        uintptr_t ptr_ = pattern.get(0, "02 00 02 46 00 00 C3 8F", -4);
+        MakeInlineWrapper(ptr_,
+            lui(t9, HIWORD(fHudScale)),
+            ori(t9, t9, LOWORD(fHudScale)),
+            mtc1(t9, f1)
         );
     }
 
