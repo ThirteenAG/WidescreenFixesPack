@@ -522,6 +522,7 @@ project "TheWarriors.PPSSPP.FusionMod"
    targetextension ".prx"
    setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/TheWarriors.PPSSPP.FusionMod/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "TheWarriors.PPSSPP.FusionMod")
    writemakefile_psp("TheWarriors.PPSSPP.FusionMod")
+   writeghaction("thewarriors", "TheWarriors.PPSSPP.FusionMod")
 project "TonyHawksAmericanWasteland.WidescreenFix"
    setpaths("Z:/WFP/Games/Tony Hawks/Tony Hawk's American Wasteland/", "Game/THAW.exe", "Game/scripts/")
    writeghaction("thaw", "TonyHawksAmericanWasteland.WidescreenFix")
