@@ -100,13 +100,23 @@ int OnModuleStart()
         );
 
         float fHudScale = fAspectRatio;
-        uintptr_t ptr_ = pattern.get(0, "02 00 02 46 00 00 C3 8F", -4);
-        MakeInlineWrapper(ptr_,
+        uintptr_t ptr_B90 = pattern.get(0, "02 00 02 46 00 00 C3 8F", -4);
+        MakeInlineWrapper(ptr_B90,
             lui(t9, HIWORD(fHudScale)),
             ori(t9, t9, LOWORD(fHudScale)),
             mtc1(t9, f1)
         );
     }
+
+    //{
+    //    float fHudSize = 1.5f;
+    //    uintptr_t ptr_2FC = pattern.get(0, "CD 08 00 46 ? ? ? ? ? ? ? ? ? ? ? ? 05 00 63 34", 8);
+    //    MakeInlineWrapper(ptr_2FC,
+    //        lui(v0, HIWORD(fHudSize)),
+    //        ori(v0, v0, LOWORD(fHudSize)),
+    //        mtc1(v0, f4)
+    //    );
+    //}
 
     sceKernelDcacheWritebackAll();
     sceKernelIcacheClearAll();
