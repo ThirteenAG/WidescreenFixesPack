@@ -11,7 +11,6 @@
 [![GitHub stars](https://img.shields.io/github/stars/ThirteenAG/WidescreenFixesPack)](https://github.com/ThirteenAG/WidescreenFixesPack/stargazers)
 [![Commits](https://img.shields.io/github/commit-activity/m/ThirteenAG/WidescreenFixesPack?label=commits)](https://github.com/ThirteenAG/WidescreenFixesPack/commits)
 [![GitHub last commit](https://img.shields.io/github/last-commit/ThirteenAG/WidescreenFixesPack?color=blue)](https://github.com/ThirteenAG/WidescreenFixesPack/commits)
-[![GitHub top language](https://img.shields.io/github/languages/top/ThirteenAG/WidescreenFixesPack?color=blue)](https://github.com/ThirteenAG/WidescreenFixesPack/search?l=c%2B%2B)
 
 [![Platforms](https://img.shields.io/badge/platforms:-grey)](https://github.com/ThirteenAG/WidescreenFixesPack/releases)
 [![WINDOWS](https://img.shields.io/badge/WINDOWS-0078D4)](https://github.com/ThirteenAG/WidescreenFixesPack/releases?q=NOT+CXBXR+NOT+PCSX2F+NOT+PPSSPP&expanded=true)
