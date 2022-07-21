@@ -620,52 +620,43 @@ void Init()
         }; injector::MakeInline<DeadzoneHookY>(pattern.get_first(18 + 0), pattern.get_first(18 + 6));
     }
 
-    auto GetFolderPathpattern = hook::pattern("50 6A 00 6A 00 68 ? 80 00 00 6A 00");
-    if (bWriteSettingsToFile && injector::GetBranchDestination(GetFolderPathpattern.get(0).get<uintptr_t>(14), true).as_int() == 0)
-    {
-        auto msgboxID = MessageBox(
-                            NULL,
-                            (LPCWSTR)L"WriteSettingsToFile option will not work with your exe version. Use different exe or disable that option.\nDo you want to disable it now?",
-                            (LPCWSTR)L"NFSProStreet.GenericFix",
-                            MB_ICONWARNING | MB_YESNO | MB_DEFBUTTON1
-                        );
-
-        if (msgboxID == IDYES)
-        {
-            iniReader.WriteInteger("MISC", "WriteSettingsToFile", 0);
-            bWriteSettingsToFile = false;
-        }
-    }
-
-    if (!szCustomUserFilesDirectoryInGameDir.empty())
-    {
-        szCustomUserFilesDirectoryInGameDir = GetExeModulePath<std::string>() + szCustomUserFilesDirectoryInGameDir;
-
-        auto SHGetFolderPathAHook = [](HWND /*hwnd*/, int /*csidl*/, HANDLE /*hToken*/, DWORD /*dwFlags*/, LPSTR pszPath) -> HRESULT
-        {
-            CreateDirectoryA(szCustomUserFilesDirectoryInGameDir.c_str(), NULL);
-            strcpy(pszPath, szCustomUserFilesDirectoryInGameDir.c_str());
-            return S_OK;
-        };
-
-        for (size_t i = 0; i < GetFolderPathpattern.size(); i++)
-        {
-            uint32_t* dword_6CBF17 = GetFolderPathpattern.get(i).get<uint32_t>(12);
-            if (*(BYTE*)dword_6CBF17 != 0xFF)
-                dword_6CBF17 = GetFolderPathpattern.get(i).get<uint32_t>(14);
-
-            injector::MakeCALL((uint32_t)dword_6CBF17, static_cast<HRESULT(WINAPI*)(HWND, int, HANDLE, DWORD, LPSTR)>(SHGetFolderPathAHook), true);
-            injector::MakeNOP((uint32_t)dword_6CBF17 + 5, 1, true);
-        }
-    }
-
     if (bWriteSettingsToFile)
     {
-        auto[DesktopResW, DesktopResH] = GetDesktopRes();
-        char szSettingsSavePath[MAX_PATH];
-        uintptr_t GetFolderPathCallDest = injector::GetBranchDestination(GetFolderPathpattern.get(0).get<uintptr_t>(14), true).as_int();
-        if (GetFolderPathCallDest)
+      struct LazyHook
+      {
+        static void hook()
         {
+          auto GetFolderPathpattern = hook::pattern("50 6A 00 6A 00 68 ? 80 00 00 6A 00");
+          while (!injector::GetBranchDestination(GetFolderPathpattern.get(0).get<uintptr_t>(14), true).as_int())
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+
+          if (!szCustomUserFilesDirectoryInGameDir.empty())
+          {
+            szCustomUserFilesDirectoryInGameDir = GetExeModulePath<std::string>() + szCustomUserFilesDirectoryInGameDir;
+
+            auto SHGetFolderPathAHook = [](HWND /*hwnd*/, int /*csidl*/, HANDLE /*hToken*/, DWORD /*dwFlags*/, LPSTR pszPath) -> HRESULT
+            {
+              CreateDirectoryA(szCustomUserFilesDirectoryInGameDir.c_str(), NULL);
+              strcpy(pszPath, szCustomUserFilesDirectoryInGameDir.c_str());
+              return S_OK;
+            };
+
+            for (size_t i = 0; i < GetFolderPathpattern.size(); i++)
+            {
+              uint32_t* dword_6CBF17 = GetFolderPathpattern.get(i).get<uint32_t>(12);
+              if (*(BYTE*)dword_6CBF17 != 0xFF)
+                dword_6CBF17 = GetFolderPathpattern.get(i).get<uint32_t>(14);
+
+              injector::MakeCALL((uint32_t)dword_6CBF17, static_cast<HRESULT(WINAPI*)(HWND, int, HANDLE, DWORD, LPSTR)>(SHGetFolderPathAHook), true);
+              injector::MakeNOP((uint32_t)dword_6CBF17 + 5, 1, true);
+            }
+          }
+
+          auto[DesktopResW, DesktopResH] = GetDesktopRes();
+          char szSettingsSavePath[MAX_PATH];
+          uintptr_t GetFolderPathCallDest = injector::GetBranchDestination(GetFolderPathpattern.get(0).get<uintptr_t>(14), true).as_int();
+          if (GetFolderPathCallDest)
+          {
             injector::stdcall<HRESULT(HWND, int, HANDLE, DWORD, LPSTR)>::call(GetFolderPathCallDest, NULL, 0x8005, NULL, NULL, szSettingsSavePath);
             strcat(szSettingsSavePath, "\\NFS ProStreet");
             strcat(szSettingsSavePath, "\\Settings.ini");
@@ -705,7 +696,11 @@ void Init()
             RegistryWrapper::AddDefault("g_Width", std::to_string(DesktopResW));
             RegistryWrapper::AddDefault("g_Height", std::to_string(DesktopResH));
             RegistryWrapper::AddDefault("g_Refresh", "60");
+          }
         }
+      };
+
+      std::thread(LazyHook::hook).detach();
     }
 
     if (bDisableMotionBlur)
