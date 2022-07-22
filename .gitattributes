@@ -22,4 +22,4 @@
 *.RTF	 diff=astextplain
 
 # Stats
-includes/* linguist-vendored
+includes/** linguist-vendored
