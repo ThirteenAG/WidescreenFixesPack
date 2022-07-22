@@ -117,7 +117,7 @@ bool bOriginalExe;
 FLTColor gColor;
 float* __cdecl FGetHSV(float* dest, uint8_t H, uint8_t S, uint8_t V)
 {
-    if ((H == 0x41 && S == 0xC8) || (H == 0x2C && S == 0xCC) || (H == 0x00 && S == 0xFF))
+    if ((H == 0x41 && S == 0xC8) || (H == 0x2C && S == 0xCC) || (H == 0x00 && S == 0xFF && V == 0xFF))
     {
         dest[0] = gColor.R;
         dest[1] = gColor.G;
