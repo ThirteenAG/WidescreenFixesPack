@@ -115,15 +115,23 @@ bool bEnableShadowFiltering;
 bool bOriginalExe;
 
 FLTColor gColor;
-float* __cdecl FGetHSV(float* dest, uint8_t H, uint8_t S, uint8_t V)
+float* __cdecl FGetHSV(float* dest, uint8_t H, uint8_t S, uint8_t V, uint32_t unk)
 {
-    if ((H == 0x41 && S == 0xC8) || (H == 0x2C && S == 0xCC) || (H == 0x00 && S == 0xFF && V == 0xFF))
+    if ((H == 0x41 && S == 0xC8) || (H == 0x2C && S == 0xCC)  || (H == 0x00 && S == 0xFF && V == 0xFF))
     {
-        dest[0] = gColor.R;
-        dest[1] = gColor.G;
-        dest[2] = gColor.B;
-        dest[3] = 1.0f;
-        return dest;
+        auto unk_ptr = unk + 20;
+        if (!IsBadReadPtr((const void*)unk_ptr, sizeof(uint32_t)))
+        {
+            uint32_t unk_val = *(uint32_t*)(unk_ptr);
+            if (unk_val == 862 ||unk_val == 879 || unk_val == 881 || unk_val == 875)
+            {
+                dest[0] = gColor.R;
+                dest[1] = gColor.G;
+                dest[2] = gColor.B;
+                dest[3] = 1.0f;
+                return dest;
+            }
+        }
     }
 
     float r{}, g{}, b{}, a = 1.0f;
