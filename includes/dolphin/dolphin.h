@@ -42,8 +42,8 @@ public:
                     auto range_pattern = hook::pattern((uintptr_t)pattern.get(i).get<uintptr_t>(0), (uintptr_t)pattern.get(i).get<uintptr_t>(200), "45 ? ? ? 8D");
                     if (!range_pattern.empty())
                     {
-                        std::string_view str(injector::ReadRelativeOffset(range_pattern.get(0).get<uintptr_t>(6)).get_raw<char>());
-                        if (str == "Clear Cache")
+                        auto str = injector::ReadRelativeOffset(range_pattern.get(0).get<uintptr_t>(6)).get_raw<char>();
+                        if (MemoryValid(str) && std::string_view(str) == "Clear Cache")
                         {
                             _MenuBarClearCache = (void(__fastcall*)())(injector::ReadRelativeOffset(pattern.get(i).get<uintptr_t>(22)).as_int());
                             break;
@@ -104,6 +104,10 @@ public:
 
     static std::string_view GameID()
     {
-        return std::string_view(reinterpret_cast<char*>(GameMemoryStart));
+        static auto default_id = "";
+        if (MemoryValid(GameMemoryStart))
+            return std::string_view(reinterpret_cast<char*>(GameMemoryStart));
+        else
+            return default_id;
     }
 };
