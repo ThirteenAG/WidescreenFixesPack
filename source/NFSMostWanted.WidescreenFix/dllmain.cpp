@@ -13,6 +13,50 @@ struct Screen
     float fShadowRatio;
 } Screen;
 
+bool bBorderlessWindowed = true;
+bool bEnableWindowResize = false;
+
+BOOL WINAPI AdjustWindowRect_Hook(LPRECT lpRect, DWORD dwStyle, BOOL bMenu)
+{
+    DWORD newStyle = 0;
+
+    if (!bBorderlessWindowed)
+        newStyle = WS_CAPTION;
+
+    return AdjustWindowRect(lpRect, newStyle, bMenu);
+}
+
+HWND WINAPI CreateWindowExA_Hook(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam)
+{
+    HWND GameHWND = NULL;
+
+    // fix the window to open at the center of the screen...
+    int DesktopX = 0;
+    int DesktopY = 0;
+
+    std::tie(DesktopX, DesktopY) = GetDesktopRes();
+
+    int WindowPosX = (int)(((float)DesktopX / 2.0f) - ((float)nWidth / 2.0f));
+    int WindowPosY = (int)(((float)DesktopY / 2.0f) - ((float)nHeight / 2.0f));
+
+    GameHWND = CreateWindowExA(dwExStyle, lpClassName, lpWindowName, 0, WindowPosX, WindowPosY, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
+    LONG lStyle = GetWindowLong(GameHWND, GWL_STYLE);
+
+    if (bBorderlessWindowed)
+        lStyle &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU);
+    else
+    {
+        lStyle |= (WS_MINIMIZEBOX | WS_SYSMENU);
+        if (bEnableWindowResize)
+            lStyle |= (WS_MAXIMIZEBOX | WS_THICKFRAME);
+    }
+
+    SetWindowLong(GameHWND, GWL_STYLE, lStyle);
+    SetWindowPos(GameHWND, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
+
+    return GameHWND;
+}
+
 void Init()
 {
     CIniReader iniReader("");
@@ -38,6 +82,7 @@ void Init()
     static float fRainDropletsScale = iniReader.ReadFloat("MISC", "RainDropletsScale", 0.5f);
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
         szCustomUserFilesDirectoryInGameDir.clear();
+    int nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -627,6 +672,30 @@ void Init()
     {
         uint32_t* dword_6DF1D2 = hook::pattern("FF 91 ? ? ? ? 89 1D ? ? ? ? 39 1D ? ? ? ? ? ? 39 1D").count(1).get(0).get<uint32_t>(18);
         injector::WriteMemory<uint8_t>(dword_6DF1D2, 0xEB, true);
+    }
+
+    if (nWindowedMode)
+    {
+        uint32_t* dword_6E6D77 = hook::pattern("A1 ? ? ? ? 68 00 00 00 10 6A F0 50").count(1).get(0).get<uint32_t>(0);
+        uint32_t* dword_6E6D8A = (uint32_t*)((uint32_t)dword_6E6D77 + 0x13);
+        uint32_t* dword_6E6C94 = hook::pattern("FF 15 ? ? ? ? 50 A3 ? ? ? ? FF 15 ? ? ? ? 39 1D ? ? ? ? 75 0E").count(1).get(0).get<uint32_t>(0);
+        uint32_t* dword_6E6C3A = hook::pattern("FF 15 ? ? ? ? 6A 0D 6A 0D E8 ? ? ? ? 50 68 04 67 DD 08").count(1).get(0).get<uint32_t>(0);
+        uint32_t* dword_982BF0 = *(uint32_t**)((uint32_t)dword_6E6C94 + 0x14);
+
+        // skip SetWindowLong because it messes things up
+        injector::MakeJMP(dword_6E6D77, dword_6E6D8A, true);
+        // hook the offending functions
+        injector::MakeNOP(dword_6E6C94, 6, true);
+        injector::MakeCALL(dword_6E6C94, CreateWindowExA_Hook, true);
+        injector::MakeNOP(dword_6E6C3A, 6, true);
+        injector::MakeCALL(dword_6E6C3A, AdjustWindowRect_Hook, true);
+
+        *(int*)dword_982BF0 = 1;
+
+        if (nWindowedMode > 1)
+            bBorderlessWindowed = false;
+        if (nWindowedMode > 2)
+            bEnableWindowResize = true;
     }
 
     if (fLeftStickDeadzone)
