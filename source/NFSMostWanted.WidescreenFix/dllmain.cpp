@@ -13,16 +13,166 @@ struct Screen
     float fShadowRatio;
 } Screen;
 
+bool bBorderlessWindowed = true;
+bool bEnableWindowResize = false;
+bool bIsResizing = false;
+bool bFixHUD = true;
+bool bFixFOV = true;
+int nScaling = 1;
+
+static float hor3DScale = 4.0f / 3.0f;
+static float fRainScaleX = ((0.75f) * (4.0f / 3.0f));
+float* HudScaleX_8AF9A4 = (float*)0x8AF9A4;
+float* FE_Xpos_894B40 = (float*)0x894B40;
+float* AutosculptScale_8AE8F8 = (float*)0x8AE8F8;
+float* ArrestBlurScale_8AFA08 = (float*)0x8AFA08;
+
+bool* DrawHUD_57CAA8 = (bool*)0x57CAA8;
+
+void updateValues(const float& newWidth, const float& newHeight)
+{
+    //Screen resolution
+    Screen.Width = newWidth;
+    Screen.Height = newHeight;
+    Screen.fWidth = static_cast<float>(Screen.Width);
+    Screen.fHeight = static_cast<float>(Screen.Height);
+    Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
+    Screen.Width43 = static_cast<int32_t>(Screen.fHeight * (4.0f / 3.0f));
+    Screen.fHudScaleX = (1.0f / Screen.fWidth * (Screen.fHeight / 480.0f)) * 2.0f;
+    Screen.fHudPosX = 640.0f / (640.0f * Screen.fHudScaleX);
+    Screen.fShadowRatio = (Screen.fHeight / Screen.fWidth) / 0.85f;
+
+    //Autosculpt scaling
+    *AutosculptScale_8AE8F8 = 480.0f * Screen.fAspectRatio;
+
+    //Arrest blur
+    *ArrestBlurScale_8AFA08 = (1.0f / 640.0f) * ((4.0f / 3.0f) / Screen.fAspectRatio);
+
+    //Rain droplets
+    fRainScaleX = ((0.75f / Screen.fAspectRatio) * (4.0f / 3.0f));
+
+    if (bFixFOV)
+    {
+        hor3DScale = 1.0f / (Screen.fAspectRatio / (4.0f / 3.0f));
+        if (nScaling)
+            hor3DScale /= 1.047485948f;
+    }
+
+    if (bFixHUD)
+    {
+        *HudScaleX_8AF9A4 = Screen.fHudScaleX;
+        *FE_Xpos_894B40 = Screen.fHudPosX;
+    }
+}
+
+void __stdcall RacingResolution_Hook(int *width, int *height)
+{
+    *width = Screen.Width;
+    *height = Screen.Height;
+}
+
+BOOL WINAPI AdjustWindowRect_Hook(LPRECT lpRect, DWORD dwStyle, BOOL bMenu)
+{
+    DWORD newStyle = 0;
+
+    if (!bBorderlessWindowed)
+        newStyle = WS_CAPTION;
+
+    return AdjustWindowRect(lpRect, newStyle, bMenu);
+}
+
+HWND WINAPI CreateWindowExA_Hook(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam)
+{
+    HWND GameHWND = NULL;
+
+    // fix the window to open at the center of the screen...
+    int DesktopX = 0;
+    int DesktopY = 0;
+
+    std::tie(DesktopX, DesktopY) = GetDesktopRes();
+
+    int WindowPosX = (int)(((float)DesktopX / 2.0f) - ((float)nWidth / 2.0f));
+    int WindowPosY = (int)(((float)DesktopY / 2.0f) - ((float)nHeight / 2.0f));
+
+    GameHWND = CreateWindowExA(dwExStyle, lpClassName, lpWindowName, 0, WindowPosX, WindowPosY, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
+    LONG lStyle = GetWindowLong(GameHWND, GWL_STYLE);
+
+    if (bBorderlessWindowed)
+        lStyle &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU);
+    else
+    {
+        lStyle |= (WS_MINIMIZEBOX | WS_SYSMENU);
+        if (bEnableWindowResize)
+            lStyle |= (WS_MAXIMIZEBOX | WS_THICKFRAME);
+    }
+
+    SetWindowLong(GameHWND, GWL_STYLE, lStyle);
+    SetWindowPos(GameHWND, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
+
+    return GameHWND;
+}
+
+// cave at 0x6E726B - in eDisplayFrame
+// for skipping shader recompilation
+uint32_t FastWndReset_Exit_True = 0x6E728D;
+uint32_t FastWndReset_Exit_False = 0x6E7272;
+uint32_t* ResetWnd_982C39 = (uint32_t*)0x00982C39;
+void __declspec(naked) FastWndReset_Cave()
+{
+    if (bIsResizing)
+        _asm jmp FastWndReset_Exit_True
+    _asm
+    {
+        mov eax, ResetWnd_982C39
+        mov al, byte ptr [eax]
+        test al, al
+        jmp FastWndReset_Exit_False
+    }
+}
+
+// cave at 0x6E72C6 - in eDisplayFrame
+// at the end of the reset procedure
+uint32_t FastWndReset_Finish_Exit = 0x006E72CD;
+void __declspec(naked) FastWndReset_Finish_Cave()
+{
+    bIsResizing = false;
+    *DrawHUD_57CAA8 = true;
+    _asm
+    {
+        mov eax, ResetWnd_982C39
+        mov [eax], 0
+        jmp FastWndReset_Finish_Exit
+    }
+}
+
+unsigned int GameWndProcAddr = 0;
+LRESULT(WINAPI* GameWndProc)(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+LRESULT WINAPI WSFixWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg)
+    {
+        case WM_SIZE:
+        {
+            bIsResizing = true;
+            *DrawHUD_57CAA8 = false;
+            updateValues((float)LOWORD(lParam), (float)HIWORD(lParam));
+        }
+        return TRUE;
+    }
+
+    return GameWndProc(hWnd, msg, wParam, lParam);
+}
+
 void Init()
 {
     CIniReader iniReader("");
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
-    bool bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) != 0;
-    bool bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) != 0;
+    bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) != 0;
+    bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) != 0;
     bool bHUDWidescreenMode = iniReader.ReadInteger("MAIN", "HUDWidescreenMode", 1) == 1;
     int nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
-    int nScaling = iniReader.ReadInteger("MAIN", "Scaling", 1);
+    nScaling = iniReader.ReadInteger("MAIN", "Scaling", 1);
     bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 0) != 0;
     int ShadowsRes = iniReader.ReadInteger("MISC", "ShadowsRes", 1024);
     bool bAutoScaleShadowsRes = iniReader.ReadInteger("MISC", "AutoScaleShadowsRes", 0) != 0;
@@ -38,6 +188,7 @@ void Init()
     static float fRainDropletsScale = iniReader.ReadFloat("MISC", "RainDropletsScale", 0.5f);
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
         szCustomUserFilesDirectoryInGameDir.clear();
+    int nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -50,45 +201,28 @@ void Init()
     Screen.fHudPosX = 640.0f / (640.0f * Screen.fHudScaleX);
     Screen.fShadowRatio = (Screen.fHeight / Screen.fWidth) / 0.85f;
 
+    // 08/2022. - keep memory areas unprotected to allow updating of values without constantly calling VirtualProtect ~ Xan
+    DWORD oldprotect = 0;
+
+    //Screen resolution
     for (size_t i = 0; i < 2; i++)
     {
-        //game
-        uint32_t* dword_6C27ED = hook::pattern("C7 00 80 02 00 00 C7 01 E0 01 00 00 C2 08 00").count(1).get(0).get<uint32_t>(2);
-        injector::WriteMemory(dword_6C27ED, Screen.Width, true);
-        uint32_t dword_6C27F3 = (uint32_t)dword_6C27ED + 6;
-        injector::WriteMemory(dword_6C27F3, Screen.Height, true);
-        uint32_t* dword_6C2804 = hook::pattern("C7 02 20 03 00 00 C7 00 58 02 00 00 C2 08 00").count(1).get(0).get<uint32_t>(2);
-        injector::WriteMemory(dword_6C2804, Screen.Width, true);
-        uint32_t dword_6C280A = (uint32_t)dword_6C2804 + 6;
-        injector::WriteMemory(dword_6C280A, Screen.Height, true);
-        uint32_t* dword_6C281B = hook::pattern("C7 01 00 04 00 00 C7 02 00 03 00 00 C2 08 00").count(1).get(0).get<uint32_t>(2);
-        injector::WriteMemory(dword_6C281B, Screen.Width, true);
-        uint32_t dword_6C2821 = (uint32_t)dword_6C281B + 6;
-        injector::WriteMemory(dword_6C2821, Screen.Height, true);
-        uint32_t* dword_6C2832 = hook::pattern("C7 00 00 05 00 00 C7 01 C0 03 00 00 C2 08 00").count(1).get(0).get<uint32_t>(2);
-        injector::WriteMemory(dword_6C2832, Screen.Width, true);
-        uint32_t dword_6C2838 = (uint32_t)dword_6C2832 + 6;
-        injector::WriteMemory(dword_6C2838, Screen.Height, true);
-        uint32_t* dword_6C2849 = hook::pattern("C7 02 00 05 00 00 C7 00 00 04 00 00 C2 08 00").count(1).get(0).get<uint32_t>(2);
-        injector::WriteMemory(dword_6C2849, Screen.Width, true);
-        uint32_t dword_6C284F = (uint32_t)dword_6C2849 + 6;
-        injector::WriteMemory(dword_6C284F, Screen.Height, true);
-        uint32_t* dword_6C2860 = hook::pattern("C7 01 40 06 00 00 C7 02 B0 04 00 00 C2 08 00").count(1).get(0).get<uint32_t>(2);
-        injector::WriteMemory(dword_6C2860, Screen.Width, true);
-        uint32_t dword_6C2866 = (uint32_t)dword_6C2860 + 6;
-        injector::WriteMemory(dword_6C2866, Screen.Height, true);
+        uint32_t* sub_6C27D0 = hook::pattern("A1 ? ? ? ? 83 F8 05 0F ? ? 00 00 00 FF 24 85 ? ? ? ? 8B 44 24 04").count(1).get(0).get<uint32_t>(0);
+        injector::MakeJMP(sub_6C27D0, RacingResolution_Hook, true);
     }
 
     //Autosculpt scaling
-    uint32_t* dword_6C9C45 = *hook::pattern("D8 0D ? ? ? ? DA 74 24 18 E8 ? ? ? ? 89 46 04 EB 03").count(1).get(0).get<uint32_t*>(2);
-    injector::WriteMemory<float>(dword_6C9C45, 480.0f * Screen.fAspectRatio, true);
+    AutosculptScale_8AE8F8 = *hook::pattern("D8 0D ? ? ? ? DA 74 24 18 E8 ? ? ? ? 89 46 04 EB 03").count(1).get(0).get<float*>(2);
+    injector::UnprotectMemory(AutosculptScale_8AE8F8, sizeof(float), oldprotect);
+    *AutosculptScale_8AE8F8 = 480.0f * Screen.fAspectRatio;
 
     //Arrest blur
-    uint32_t* dword_6D4C1B = *hook::pattern("D8 0D ? ? ? ? 8B 4C 24 18 8B 54 24 1C").count(1).get(0).get<uint32_t*>(2);
-    injector::WriteMemory<float>(dword_6D4C1B, (1.0f / 640.0f) * ((4.0f / 3.0f) / Screen.fAspectRatio), true);
+    ArrestBlurScale_8AFA08 = *hook::pattern("D8 0D ? ? ? ? 8B 4C 24 18 8B 54 24 1C").count(1).get(0).get<float*>(2);
+    injector::UnprotectMemory(ArrestBlurScale_8AFA08, sizeof(float), oldprotect);
+    *ArrestBlurScale_8AFA08 = (1.0f / 640.0f) * ((4.0f / 3.0f) / Screen.fAspectRatio);
 
     //Rain droplets
-    static float fRainScaleX = ((0.75f / Screen.fAspectRatio) * (4.0f / 3.0f));
+    fRainScaleX = ((0.75f / Screen.fAspectRatio) * (4.0f / 3.0f));
     auto pattern = hook::pattern("D9 44 24 0C D8 44 24 10 8B 4C 24 08 8B 44 24 10 8B D1");
     struct RainDropletsHook
     {
@@ -189,37 +323,98 @@ void Init()
 
     if (bFixHUD)
     {
-        uint32_t* dword_8AF9A4 = *hook::pattern("D8 0D ? ? ? ? D8 25 ? ? ? ? D9 5C 24 20 D9 46 04").count(1).get(0).get<uint32_t*>(2);
-        injector::WriteMemory<float>(dword_8AF9A4, Screen.fHudScaleX, true);
+        HudScaleX_8AF9A4 = *hook::pattern("D8 0D ? ? ? ? D8 25 ? ? ? ? D9 5C 24 20 D9 46 04").count(1).get(0).get<float*>(2);
+        injector::UnprotectMemory(HudScaleX_8AF9A4, sizeof(float), oldprotect);
+        *HudScaleX_8AF9A4 = Screen.fHudScaleX;
 
         //fHudScaleY = *(float*)0x8AF9A0;
         //injector::WriteMemory<float>(0x8AF9A0, fHudScaleY, true);
 
-        for (size_t i = 0; i < 6; i++)
-        {
-            uint32_t* dword_56FED4 = hook::pattern("C7 ? ? ? ? 00 00 00 00 A0 43 C7 ? ? ? ? 00 00 00 00 70 43").count(1).get(0).get<uint32_t>(7);
-            injector::WriteMemory<float>(dword_56FED4, Screen.fHudPosX, true);
-        }
+        FE_Xpos_894B40 = *hook::pattern("D8 25 ? ? ? ? D9 5C 24 14 DB 05 ? ? ? ? D8 25 ? ? ? ? D9 5C 24 1C 74 20").count(1).get(0).get<float*>(2);
+        injector::UnprotectMemory(FE_Xpos_894B40, sizeof(float), oldprotect);
+        *FE_Xpos_894B40 = Screen.fHudPosX;
 
-        uint32_t* dword_5A44CC = hook::pattern("C7 ? ? ? 00 00 A0 43 C7 ? ? ? 00 00 70 43").count(1).get(0).get<uint32_t>(4);
-        injector::WriteMemory<float>(dword_5A44CC, Screen.fHudPosX, true);
-        uint32_t* dword_894B40 = *hook::pattern("D8 25 ? ? ? ? D9 5C 24 14 DB 05 ? ? ? ? D8 25 ? ? ? ? D9 5C 24 1C 74 20").count(1).get(0).get<uint32_t*>(2);
-        injector::WriteMemory<float>(dword_894B40, Screen.fHudPosX, true);
+        // make code read the FE X position from the variable
+        pattern = hook::pattern("C7 ? ? ? ? 00 00 00 00 A0 43 C7 ? ? ? ? 00 00 00 00 70 43"); // 0x56FED4
+        struct HudPosXHook1
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                *(float*)(regs.esp + 0x19C) = *(float*)(FE_Xpos_894B40);
+            }
+        }; injector::MakeInline<HudPosXHook1>(pattern.get_first(0), pattern.get_first(11));
+       
+        pattern = hook::pattern("C7 ? ? ? ? 00 00 00 00 A0 43 C7 ? ? ? ? 00 00 00 00 70 43"); // 0x584EEF
+        struct HudPosXHook2
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                *(float*)(regs.esp + 0x90) = *(float*)(FE_Xpos_894B40);
+            }
+        }; injector::MakeInline<HudPosXHook2>(pattern.get_first(0), pattern.get_first(11));
+       
+        pattern = hook::pattern("C7 ? ? ? ? 00 00 00 00 A0 43 C7 ? ? ? ? 00 00 00 00 70 43"); // 0x599E79
+        struct HudPosXHook3
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                *(float*)(regs.esp + 0x84) = *(float*)(FE_Xpos_894B40);
+            }
+        }; injector::MakeInline<HudPosXHook3>(pattern.get_first(0), pattern.get_first(11));
+
+        pattern = hook::pattern("C7 ? ? ? ? 00 00 00 00 A0 43 C7 ? ? ? ? 00 00 00 00 70 43"); // 0x0059A120
+        struct HudPosXHook4
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                *(float*)(regs.esp + 0xC4) = *(float*)(FE_Xpos_894B40);
+            }
+        }; injector::MakeInline<HudPosXHook4>(pattern.get_first(0), pattern.get_first(11));
+
+        pattern = hook::pattern("C7 ? ? ? ? 00 00 00 00 A0 43 C7 ? ? ? ? 00 00 00 00 70 43"); // 0x0059A5AB
+        struct HudPosXHook5
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                *(float*)(regs.esp + 0x94) = *(float*)(FE_Xpos_894B40);
+            }
+        }; injector::MakeInline<HudPosXHook5>(pattern.get_first(0), pattern.get_first(11));
+
+        pattern = hook::pattern("C7 ? ? ? ? 00 00 00 00 A0 43 C7 ? ? ? ? 00 00 00 00 70 43"); // 0x0059A83E
+        injector::MakeInline<HudPosXHook5>(pattern.get_first(0), pattern.get_first(11));
+
+        pattern = hook::pattern("C7 ? ? ? 00 00 A0 43 C7 ? ? ? 00 00 70 43"); // 0x005A44C8
+        struct HudPosXHook6
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                *(float*)(regs.esp + 0x64) = *(float*)(FE_Xpos_894B40);
+            }
+        }; injector::MakeInline<HudPosXHook6>(pattern.get_first(0), pattern.get_first(8));
+
 
         //mirror position fix
-        uint32_t* dword_6E70C0 = hook::pattern("C7 44 24 70 00 00 E1 43 C7 44 24 74 00 00 98 41 C7 84 24 80 00 00 00 00 00 3E 43").count(1).get(0).get<uint32_t>(4);
-        uint32_t dword_6E70FF = (uint32_t)dword_6E70C0 + 63;
-        uint32_t dword_6E70D3 = (uint32_t)dword_6E70C0 + 19;
-        uint32_t dword_6E70E9 = (uint32_t)dword_6E70C0 + 41;
-        injector::WriteMemory<float>(dword_6E70C0, (Screen.fHudPosX - 320.0f) + 450.0f, true);
-        injector::WriteMemory<float>(dword_6E70FF, (Screen.fHudPosX - 320.0f) + 450.0f, true);
-        injector::WriteMemory<float>(dword_6E70D3, (Screen.fHudPosX - 320.0f) + 190.0f, true);
-        injector::WriteMemory<float>(dword_6E70E9, (Screen.fHudPosX - 320.0f) + 190.0f, true);
+        pattern = hook::pattern("C7 44 24 70 00 00 E1 43 C7 44 24 74 00 00 98 41 C7 84 24 80 00 00 00 00 00 3E 43"); // 0x6E70C0
+        struct MirrorPosXHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                *(float*)(regs.esp + 0x70) = (*(float*)(FE_Xpos_894B40) - 320.0f) + 450.0f;
+                *(float*)(regs.esp + 0xA0) = (*(float*)(FE_Xpos_894B40) - 320.0f) + 450.0f;
+                *(float*)(regs.esp + 0x80) = (*(float*)(FE_Xpos_894B40) - 320.0f) + 190.0f;
+                *(float*)(regs.esp + 0x90) = (*(float*)(FE_Xpos_894B40) - 320.0f) + 190.0f;
+                // others
+                *(float*)(regs.esp + 0x74) = 19.0;
+                *(float*)(regs.esp + 0x84) = 19.0;
+                *(float*)(regs.esp + 0x94) = 89.0;
+                *(float*)(regs.esp + 0xA4) = 89.0;
+            }
+        }; injector::MakeInline<MirrorPosXHook>(pattern.get_first(0), pattern.get_first(82));
     }
 
     if (bFixFOV)
     {
-        static float hor3DScale = 1.0f / (Screen.fAspectRatio / (4.0f / 3.0f));
+        hor3DScale = 1.0f / (Screen.fAspectRatio / (4.0f / 3.0f));
         static float ver3DScale = 1.0f; // don't touch this
         static float mirrorScale = 0.4f;
         static float f1215 = 1.215f;
@@ -627,6 +822,53 @@ void Init()
     {
         uint32_t* dword_6DF1D2 = hook::pattern("FF 91 ? ? ? ? 89 1D ? ? ? ? 39 1D ? ? ? ? ? ? 39 1D").count(1).get(0).get<uint32_t>(18);
         injector::WriteMemory<uint8_t>(dword_6DF1D2, 0xEB, true);
+    }
+
+    if (nWindowedMode)
+    {
+        uint32_t* dword_6E6D77 = hook::pattern("A1 ? ? ? ? 68 00 00 00 10 6A F0 50").count(1).get(0).get<uint32_t>(0);
+        uint32_t* dword_6E6D8A = (uint32_t*)((uint32_t)dword_6E6D77 + 0x13);
+        uint32_t* dword_6E6C94 = hook::pattern("FF 15 ? ? ? ? 50 A3 ? ? ? ? FF 15 ? ? ? ? 39 1D ? ? ? ? 75 0E").count(1).get(0).get<uint32_t>(0);
+        uint32_t* dword_6E6C3A = hook::pattern("FF 15 ? ? ? ? 6A 0D 6A 0D E8 ? ? ? ? 50 68 04 67 DD 08").count(1).get(0).get<uint32_t>(0);
+        uint32_t* dword_982BF0 = *(uint32_t**)((uint32_t)dword_6E6C94 + 0x14);
+
+        // skip SetWindowLong because it messes things up
+        injector::MakeJMP(dword_6E6D77, dword_6E6D8A, true);
+        // hook the offending functions
+        injector::MakeNOP(dword_6E6C94, 6, true);
+        injector::MakeCALL(dword_6E6C94, CreateWindowExA_Hook, true);
+        injector::MakeNOP(dword_6E6C3A, 6, true);
+        injector::MakeCALL(dword_6E6C3A, AdjustWindowRect_Hook, true);
+
+        *(int*)dword_982BF0 = 1;
+
+        if (nWindowedMode > 1)
+            bBorderlessWindowed = false;
+        if (nWindowedMode > 2)
+        {
+            bEnableWindowResize = true;
+
+            // dereference the current WndProc from the game executable and write to the function pointer (to maximize compatibility)
+            uint32_t* wndproc_addr = hook::pattern("C7 44 24 44 ? ? ? ? 89 5C 24 48 89 5C 24 4C").count(1).get(0).get<uint32_t>(4);
+            GameWndProcAddr = *(unsigned int*)wndproc_addr;
+            GameWndProc = (LRESULT(WINAPI*)(HWND, UINT, WPARAM, LPARAM))GameWndProcAddr;
+            injector::WriteMemory<unsigned int>(wndproc_addr, (unsigned int)&WSFixWndProc, true);
+
+
+            DrawHUD_57CAA8 = hook::pattern("8B 41 0C BD 01 00 00 00 3B C5").count(1).get(0).get<bool>(4);
+            ResetWnd_982C39 = *hook::pattern("A0 ? ? ? ? 84 C0 74 59 E8 ? ? ? ?").count(1).get(0).get<uint32_t*>(1);
+            injector::UnprotectMemory(DrawHUD_57CAA8, 1, oldprotect);
+
+            // cave entrypoints
+            uint32_t* dword_6E726B = hook::pattern("A0 ? ? ? ? 84 C0 74 59 E8 ? ? ? ?").count(1).get(0).get<uint32_t>(0);
+            uint32_t* dword_6E72C6 = hook::pattern("C6 05 ? ? ? ? 00 39 2D ? ? ? ? 89 2D ? ? ? ?").count(1).get(0).get<uint32_t>(0);;
+            FastWndReset_Exit_True = ((uint32_t)dword_6E726B) + 0x22;
+            FastWndReset_Exit_False = ((uint32_t)dword_6E726B) + 0x7;
+            FastWndReset_Finish_Exit = ((uint32_t)dword_6E72C6) + 0x7;
+
+            injector::MakeJMP(dword_6E726B, FastWndReset_Cave, true);
+            injector::MakeJMP(dword_6E72C6, FastWndReset_Finish_Cave, true);
+        }
     }
 
     if (fLeftStickDeadzone)
