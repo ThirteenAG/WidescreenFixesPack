@@ -1,4 +1,6 @@
 #include "stdafx.h"
+#include <mmsystem.h>
+#pragma comment(lib, "winmm.lib") // needed for timeBeginPeriod()/timeEndPeriod()
 
 struct Screen
 {
@@ -20,14 +22,122 @@ int32_t __cdecl SetLanguage(LPCSTR lpValueName)
     return nLanguage;
 }
 
+int32_t nFrameLimitType;
+float fFpsLimit;
+float fGameSpeed = 1.0f;
+
+class FrameLimiter
+{
+public:
+    enum FPSLimitMode { FPS_NONE, FPS_REALTIME, FPS_ACCURATE };
+    FPSLimitMode mFPSLimitMode = FPS_NONE;
+private:
+    double TIME_Frequency = 0.0;
+    double TIME_Ticks = 0.0;
+    double TIME_Frametime = 0.0;
+    float  fFPSLimit = 0.0f;
+public:
+    void Init(FPSLimitMode mode, float fps_limit)
+    {
+        mFPSLimitMode = mode;
+        fFPSLimit = fps_limit;
+
+        LARGE_INTEGER frequency;
+        QueryPerformanceFrequency(&frequency);
+        static constexpr auto TICKS_PER_FRAME = 1;
+        auto TICKS_PER_SECOND = (TICKS_PER_FRAME * fFPSLimit);
+        if (mFPSLimitMode == FPS_ACCURATE)
+        {
+            TIME_Frametime = 1000.0 / (double)fFPSLimit;
+            TIME_Frequency = (double)frequency.QuadPart / 1000.0; // ticks are milliseconds
+        }
+        else // FPS_REALTIME
+        {
+            TIME_Frequency = (double)frequency.QuadPart / (double)TICKS_PER_SECOND; // ticks are 1/n frames (n = fFPSLimit)
+        }
+        Ticks();
+    }
+    DWORD Sync_RT()
+    {
+        DWORD lastTicks, currentTicks;
+        LARGE_INTEGER counter;
+
+        QueryPerformanceCounter(&counter);
+        lastTicks = (DWORD)TIME_Ticks;
+        TIME_Ticks = (double)counter.QuadPart / TIME_Frequency;
+        currentTicks = (DWORD)TIME_Ticks;
+
+        return (currentTicks > lastTicks) ? currentTicks - lastTicks : 0;
+    }
+    DWORD Sync_SLP()
+    {
+        LARGE_INTEGER counter;
+        QueryPerformanceCounter(&counter);
+        double millis_current = (double)counter.QuadPart / TIME_Frequency;
+        double millis_delta = millis_current - TIME_Ticks;
+        if (TIME_Frametime <= millis_delta)
+        {
+            TIME_Ticks = millis_current;
+            return 1;
+        }
+        else if (TIME_Frametime - millis_delta > 2.0) // > 2ms
+            Sleep(1); // Sleep for ~1ms
+        else
+            Sleep(0); // yield thread's time-slice (does not actually sleep)
+        
+        return 0;
+    }
+    void Sync()
+    {
+        if (mFPSLimitMode == FPS_REALTIME)
+            while (!Sync_RT());
+        else if (mFPSLimitMode == FPS_ACCURATE)
+            while (!Sync_SLP());
+    }
+private:
+    void Ticks()
+    {
+        LARGE_INTEGER counter;
+        QueryPerformanceCounter(&counter);
+        TIME_Ticks = (double)counter.QuadPart / TIME_Frequency;
+    }
+};
+
+FrameLimiter FpsLimiter;
+void __cdecl sub_648AC0(int a1)
+{
+    if (fFpsLimit)
+        FpsLimiter.Sync();
+
+    static std::chrono::time_point<std::chrono::steady_clock> oldTime = std::chrono::high_resolution_clock::now();
+    static int fps; fps++;
+
+    if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - oldTime) >= std::chrono::seconds{ 1 }) {
+        oldTime = std::chrono::high_resolution_clock::now();
+        fGameSpeed = (30.0f / (float)fps) / 1.8f;
+        fps = 0;
+    }
+}
+
 void Init()
 {
     CIniReader iniReader("");
+    bool bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
     bool bDoNotUseRegistryPath = iniReader.ReadInteger("MAIN", "DoNotUseRegistryPath", 1) != 0;
     nLanguage = iniReader.ReadInteger("MAIN", "Language", -1);
     static bool bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) != 0;
     static bool bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) != 0;
-    static float fGameSpeed = iniReader.ReadFloat("MAIN", "GameSpeed", 128.0f);
+
+    static bool bFixGameSpeed = iniReader.ReadInteger("FRAMELIMIT", "FixGameSpeed", 1) != 0;
+    nFrameLimitType = iniReader.ReadInteger("FRAMELIMIT", "FrameLimitType", 1);
+    fFpsLimit = static_cast<float>(iniReader.ReadInteger("FRAMELIMIT", "FpsLimit", 30));
+
+
+    if (bSkipIntro)
+    {
+        auto pattern = hook::pattern("6A 01 6A 01 68 ? ? ? ? E8 ? ? ? ? 6A 01 6A 01");
+        injector::MakeJMP(pattern.get_first(0), hook::get_pattern("68 ? ? ? ? E8 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 83 C4 08 E8 ? ? ? ? A1 ? ? ? ? 3B C3 75 23 6A 10"));
+    }
 
     if (bDoNotUseRegistryPath)
     {
@@ -84,13 +194,13 @@ void Init()
                 int32_t a2 = *(int32_t*)(regs.esp + 4);
                 if (a2 == Screen.Width)
                     a2 = Screen.Width43;
-
+        
                 *(float*)(regs.ecx + 0xE0) = (float)a2 * (1.0f / 640.0f);
                 *(int32_t*)(regs.ecx + 0xD8) = a2;
                 *(float*)(regs.ecx + 0xE8) = (1.0f / (float)a2);
             }
         }; injector::MakeInline<HudScaleHook>(dword_654780, dword_654780 + 53);
-
+        
         pattern = hook::pattern("F3 0F 11 44 24 24 F3 0F 11 44 24 20 F3 0F 11"); //0x65E870
         struct HudPosHook
         {
@@ -119,21 +229,37 @@ void Init()
         }; injector::MakeInline<FOVHook>(pattern.get_first(0));
     }
 
-    if (fGameSpeed)
+    if (fFpsLimit)
     {
-        pattern = hook::pattern("D8 2D ? ? ? ? DE F9 C3");
-        injector::WriteMemory(pattern.count(3).get(0).get<void>(2), &fGameSpeed, true); //0x40C930 + 0x2 + 0x32
-        injector::WriteMemory(pattern.count(3).get(1).get<void>(2), &fGameSpeed, true); //0x40C930 + 0x2 + 0x64
-        injector::WriteMemory(pattern.count(3).get(2).get<void>(2), &fGameSpeed, true); //0x40C930 + 0x2 + 0x4D
+        auto mode = (nFrameLimitType == 2) ? FrameLimiter::FPSLimitMode::FPS_ACCURATE : FrameLimiter::FPSLimitMode::FPS_REALTIME;
+        if (mode == FrameLimiter::FPSLimitMode::FPS_ACCURATE)
+            timeBeginPeriod(1);
+
+        FpsLimiter.Init(mode, fFpsLimit);
+
+        pattern = hook::pattern("A1 ? ? ? ? 83 EC 1C");
+        injector::MakeJMP(pattern.get_first(), sub_648AC0, true);
+    }
+
+    if (bFixGameSpeed)
+    {
+        pattern = hook::pattern("E8 ? ? ? ? D8 4E 1C");
+        struct GameSpeedHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                _asm fld dword ptr[fGameSpeed]
+            }
+        }; injector::MakeInline<GameSpeedHook>(pattern.get_first(0), pattern.get_first(8));
     }
 }
 
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
-        {
-            CallbackHandler::RegisterCallback(Init, hook::pattern("BF 94 00 00 00 8B C7"));
-        });
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("BF 94 00 00 00 8B C7"));
+    });
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
@@ -141,6 +267,11 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
     if (reason == DLL_PROCESS_ATTACH)
     {
         if (!IsUALPresent()) { InitializeASI(); }
+    }
+    if (reason == DLL_PROCESS_DETACH)
+    {
+        if (nFrameLimitType == FrameLimiter::FPSLimitMode::FPS_ACCURATE)
+            timeEndPeriod(1);
     }
     return TRUE;
 }
