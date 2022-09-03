@@ -9,6 +9,40 @@ hook::pattern GetPattern(std::string_view pattern)
     return p;
 }
 
+static float CSMScale = 1.0f;
+static uint32_t ShadowsRes = 1024;
+float* CSM_fScaleLerp_D531B4 = (float*)0x00D531B4;
+
+// entrypoint: 0x00780DCC
+uint32_t* CSMScaleCaveEntry = (uint32_t*)0x00780DCC;
+uint32_t CSMScaleCaveExit = 0x00780DD4;
+void __declspec(naked) CSMScaleCave()
+{
+    _asm
+    {
+        mov eax, CSM_fScaleLerp_D531B4
+        movss xmm0, [eax]
+        movss xmm1, CSMScale
+        mulss xmm0, xmm1
+        jmp CSMScaleCaveExit
+    }
+}
+
+// entrypoint 0x00793E29
+uint32_t* ShadowTexCaveEntry = (uint32_t*)0x00793E29;
+uint32_t ShadowTexCaveExit = 0x00793E2F;
+void __declspec(naked) ShadowTexCave()
+{
+    _asm
+    {
+        mov ecx, ShadowsRes
+        mul ecx
+        push eax
+        push 0x4B
+        jmp ShadowTexCaveExit
+    }
+}
+
 void InitRes()
 {
     struct ScreenRes
@@ -696,6 +730,60 @@ void Init4()
         pattern = GetPattern("89 46 08 89 4E 0C E8 ? ? ? ? 83 C4 08 8B F8 6A 00");
         injector::MakeNOP(pattern.get_first(0), 6, true);
     }
+
+    // Cascade Shadow Maps - resolution and scale adjustments
+    ShadowsRes = iniReader.ReadInteger("MISC", "ShadowsRes", 1024);
+    CSMScale = iniReader.ReadFloat("MISC", "CSMScale", 1.0f);
+
+    // limit the resolution - maximum possible resolution is 16384, but as the game has 3 cascades along the X axis, the res is limited by that
+    if (ShadowsRes > (16384 / 3))
+        ShadowsRes = (16384 / 3);
+    if (ShadowsRes <= 1)
+        ShadowsRes = 2;
+
+    // 0x00793E21 - shadow texture creation
+    pattern = hook::pattern("51 6A 01 68 00 04 00 00 C1 E0 0A");
+
+    uint32_t* dword_793E25 = pattern.count(1).get(0).get<uint32_t>(4);
+    injector::WriteMemory(dword_793E25, ShadowsRes, true);
+
+    ShadowTexCaveEntry = pattern.count(1).get(0).get<uint32_t>(8);
+    ShadowTexCaveExit = (uint32_t)ShadowTexCaveEntry + 6;
+
+    injector::MakeJMP(ShadowTexCaveEntry, ShadowTexCave, true);
+
+    // 0x79230D - shadow rendering
+    pattern = hook::pattern("8B 46 08 0F 57 C0 C1 E0 0A");
+
+    struct ShadowsResHook2
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            *(uint32_t*)(regs.esp + 4) = ShadowsRes * regs.eax;
+            *(uint32_t*)(regs.esp + 0xC) = ShadowsRes;
+            *(uint32_t*)(regs.esp + 0x10) = ShadowsRes;
+        }
+    }; injector::MakeInline<ShadowsResHook2>(pattern.get_first(6), pattern.get_first(26));
+
+    // 0x00780DC0 - shadow cascade scale - CSM::Update()
+    pattern = hook::pattern("55 8B EC 83 E4 F0 81 EC 24 02 00 00 F3 0F 10 05 ? ? ? ?");
+    CSM_fScaleLerp_D531B4 = *pattern.count(1).get(0).get<float*>(16);
+    CSMScaleCaveEntry = pattern.count(1).get(0).get<uint32_t>(12);
+    CSMScaleCaveExit = (uint32_t)CSMScaleCaveEntry + 8;
+    injector::MakeJMP(CSMScaleCaveEntry, CSMScaleCave, true);
+
+    // 0x00780663 - force isShadowMapMeshVisible() to true 
+    pattern = hook::pattern("F2 0F 5A D2 F3 0F 5A D2 0F 5A D9 66 0F 2F D3 77 15");
+    uint32_t* dword_780672 = pattern.count(0).get(0).get<uint32_t>(15);
+    uint32_t* dword_780681 = (uint32_t*)((uint32_t)dword_780672 + 9);
+    injector::MakeJMP(dword_780672, dword_780681, true);
+
+    // Shadow resolution during CSM::Update() -- some distant shadows are affected by this
+    pattern = hook::pattern("68 00 04 00 00 68 00 04 00 00");
+    uint32_t* dword_780FF6 = pattern.count(0).get(0).get<uint32_t>(1);
+    uint32_t* dword_780FFB = pattern.count(0).get(0).get<uint32_t>(6);
+    injector::WriteMemory(dword_780FF6, ShadowsRes, true);
+    injector::WriteMemory(dword_780FFB, ShadowsRes, true);
 }
 
 CEXP void InitializeASI()
