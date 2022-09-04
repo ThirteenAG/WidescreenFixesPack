@@ -9,24 +9,7 @@ hook::pattern GetPattern(std::string_view pattern)
     return p;
 }
 
-static float CSMScale = 1.0f;
 static uint32_t ShadowsRes = 1024;
-float* CSM_fScaleLerp_D531B4 = (float*)0x00D531B4;
-
-// entrypoint: 0x00780DCC
-uint32_t* CSMScaleCaveEntry = (uint32_t*)0x00780DCC;
-uint32_t CSMScaleCaveExit = 0x00780DD4;
-void __declspec(naked) CSMScaleCave()
-{
-    _asm
-    {
-        mov eax, CSM_fScaleLerp_D531B4
-        movss xmm0, [eax]
-        movss xmm1, CSMScale
-        mulss xmm0, xmm1
-        jmp CSMScaleCaveExit
-    }
-}
 
 // entrypoint 0x00793E29
 uint32_t* ShadowTexCaveEntry = (uint32_t*)0x00793E29;
@@ -733,7 +716,11 @@ void Init4()
 
     // Cascade Shadow Maps - resolution and scale adjustments
     ShadowsRes = iniReader.ReadInteger("MISC", "ShadowsRes", 1024);
-    CSMScale = iniReader.ReadFloat("MISC", "CSMScale", 1.0f);
+    static float CSMScale = iniReader.ReadFloat("MISC", "CSMScale", 1.0f);
+    static float CSMScaleNear = iniReader.ReadFloat("MISC", "CSMScaleNear", 5.0f) * CSMScale;
+    static float CSMScaleMid = iniReader.ReadFloat("MISC", "CSMScaleMid", 30.0f) * CSMScale;
+    static float CSMScaleFar = iniReader.ReadFloat("MISC", "CSMScaleFar", 170.0f) * CSMScale;
+
 
     // limit the resolution - maximum possible resolution is 16384, but as the game has 3 cascades along the X axis, the res is limited by that
     if (ShadowsRes > (16384 / 3))
@@ -767,10 +754,22 @@ void Init4()
 
     // 0x00780DC0 - shadow cascade scale - CSM::Update()
     pattern = hook::pattern("55 8B EC 83 E4 F0 81 EC 24 02 00 00 F3 0F 10 05 ? ? ? ?");
-    CSM_fScaleLerp_D531B4 = *pattern.count(1).get(0).get<float*>(16);
-    CSMScaleCaveEntry = pattern.count(1).get(0).get<uint32_t>(12);
-    CSMScaleCaveExit = (uint32_t)CSMScaleCaveEntry + 8;
-    injector::MakeJMP(CSMScaleCaveEntry, CSMScaleCave, true);
+    //static float* CSM_fScaleLerp_D531B4 = *pattern.count(1).get(0).get<float*>(16);
+
+    // 0x00D53F38 - float CSM::fCSMScaleLevel[] -- individual cascade scales
+    static float* CSM_fCSMScaleLevel = *pattern.count(1).get(0).get<float*>(47);
+    // disable writes to the array -- MIGHT BREAK CUTSCENES as they have their own scales!
+    uint32_t* dword_780DEB = pattern.count(1).get(0).get<uint32_t>(43);
+    uint32_t* dword_780E29 = pattern.count(1).get(0).get<uint32_t>(105);
+    uint32_t* dword_780E31 = pattern.count(1).get(0).get<uint32_t>(113);
+    injector::MakeNOP(dword_780DEB, 8);
+    injector::MakeNOP(dword_780E29, 8);
+    injector::MakeNOP(dword_780E31, 8);
+
+    CSM_fCSMScaleLevel[0] = CSMScaleNear;
+    CSM_fCSMScaleLevel[1] = CSMScaleMid;
+    CSM_fCSMScaleLevel[2] = CSMScaleFar;
+
 
     // 0x00780663 - force isShadowMapMeshVisible() to true 
     pattern = hook::pattern("F2 0F 5A D2 F3 0F 5A D2 0F 5A D9 66 0F 2F D3 77 15");
