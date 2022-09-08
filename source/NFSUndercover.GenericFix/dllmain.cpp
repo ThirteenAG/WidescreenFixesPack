@@ -747,6 +747,7 @@ void Init4()
     static float CSMScaleNear = iniReader.ReadFloat("GRAPHICS", "CSMScaleNear", 5.0f) * CSMScale;
     static float CSMScaleMid = iniReader.ReadFloat("GRAPHICS", "CSMScaleMid", 30.0f) * CSMScale;
     static float CSMScaleFar = iniReader.ReadFloat("GRAPHICS", "CSMScaleFar", 170.0f) * CSMScale;
+    bool bImproveShadowLOD = iniReader.ReadInteger("GRAPHICS", "ImproveShadowLOD", 1);
 
     // limit the resolution - maximum possible resolution is 16384, but as the game has (up to) 3 cascades along the X axis, the res is limited by that
     if (ShadowsRes > (16384 / ShadowLevel))
@@ -811,6 +812,14 @@ void Init4()
     };
 
     injector::MakeCALL(dword_780FFF, static_cast<uint32_t(__cdecl*)(uint32_t, uint32_t)>(CSMUpdateHook), true);
+
+    // adjust flags in RenderShadowView() to render shadows for more (all?) objects
+    if (bImproveShadowLOD)
+    {
+        pattern = hook::pattern("6A FF 6A FF 68 00 02 00 00 51 8B 4D 08");
+        uint32_t* dword_79E31E = pattern.count(0).get(0).get<uint32_t>(5);
+        injector::WriteMemory(dword_79E31E, 0xFFFFFFFF, true);
+    }
 }
 
 CEXP void InitializeASI()
