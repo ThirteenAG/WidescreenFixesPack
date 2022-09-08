@@ -11,7 +11,21 @@ hook::pattern GetPattern(std::string_view pattern)
 
 uint32_t ShadowLevel = 3;
 static uint32_t ShadowsRes = 1024;
+static uint32_t ShadowsResX = 3072;
+static float fShadowsRes = 1024.0;
+static float fShadowsResX = 3072.0;
 static uint32_t iniShadowsRes = 1024;
+
+void UpdateShadowsRes()
+{
+    ShadowsRes = iniShadowsRes;
+    fShadowsRes = ShadowsRes;
+    if (fShadowsRes > (16384.0f / (float)ShadowLevel))
+        fShadowsRes = (16384.0f / (float)ShadowLevel);
+    ShadowsRes = (uint32_t)fShadowsRes;
+    fShadowsResX = (float)ShadowLevel * fShadowsRes;
+    ShadowsResX = (uint32_t)fShadowsResX;
+}
 
 // entrypoint 0x00793E24
 uint32_t ShadowTexCaveExit = 0x00793E2D;
@@ -20,18 +34,13 @@ void __declspec(naked) ShadowTexCave()
     _asm mov ShadowLevel, eax
 
     // Update ShadowsRes dynamically during texture creation! This is to ensure that when the user increases the shadow quality it won't fail due to too high resolution!
-    ShadowsRes = iniShadowsRes;
-    if (ShadowsRes > (16384 / ShadowLevel))
-        ShadowsRes = (16384 / ShadowLevel);  
+    UpdateShadowsRes();
 
     _asm
     {
-        mov eax, ShadowLevel
+        mov eax, ShadowsResX
         mov ecx, iniShadowsRes
         push ecx
-        mov ecx, ShadowsRes
-        //push ecx
-        mul ecx
         push eax
         jmp ShadowTexCaveExit
     }
@@ -751,8 +760,7 @@ void Init4()
     static float CSMScaleFar = iniReader.ReadFloat("GRAPHICS", "CSMScaleFar", 170.0f) * CSMScale;
 
     // limit the resolution - maximum possible resolution is 16384, but as the game has (up to) 3 cascades along the X axis, the res is limited by that
-    if (ShadowsRes > (16384 / ShadowLevel))
-        ShadowsRes = (16384 / ShadowLevel);
+    UpdateShadowsRes();
     if (ShadowsRes < 1)
         ShadowsRes = 1;
 
@@ -772,7 +780,7 @@ void Init4()
     {
         void operator()(injector::reg_pack& regs)
         {
-            *(uint32_t*)(regs.esp + 4) = ShadowsRes * regs.eax;
+            *(uint32_t*)(regs.esp + 4) = (uint32_t)(fShadowsRes * (float)(regs.eax));
             *(uint32_t*)(regs.esp + 0xC) = ShadowsRes;
             *(uint32_t*)(regs.esp + 0x10) = iniShadowsRes;
         }
