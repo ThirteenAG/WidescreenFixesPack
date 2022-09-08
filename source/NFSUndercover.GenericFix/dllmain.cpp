@@ -9,19 +9,28 @@ hook::pattern GetPattern(std::string_view pattern)
     return p;
 }
 
+uint32_t ShadowLevel = 3;
 static uint32_t ShadowsRes = 1024;
+static uint32_t iniShadowsRes = 1024;
 
-// entrypoint 0x00793E29
-uint32_t* ShadowTexCaveEntry = (uint32_t*)0x00793E29;
-uint32_t ShadowTexCaveExit = 0x00793E2F;
+// entrypoint 0x00793E24
+uint32_t ShadowTexCaveExit = 0x00793E2D;
 void __declspec(naked) ShadowTexCave()
 {
+    _asm mov ShadowLevel, eax
+
+    // Update ShadowsRes dynamically during texture creation! This is to ensure that when the user increases the shadow quality it won't fail due to too high resolution!
+    ShadowsRes = iniShadowsRes;
+    if (ShadowsRes > (16384 / ShadowLevel))
+        ShadowsRes = (16384 / ShadowLevel);  
+
     _asm
     {
+        mov eax, ShadowLevel
         mov ecx, ShadowsRes
+        push ecx
         mul ecx
         push eax
-        push 0x4B
         jmp ShadowTexCaveExit
     }
 }
@@ -467,6 +476,10 @@ void Init3()
             RegistryWrapper::AddDefault("g_CarDamageDetail", "2");
             RegistryWrapper::AddDefault("AllowR32FAA", "0");
             RegistryWrapper::AddDefault("ForceR32AA", "0");
+
+            // get the ShadowLevel setting from the settings ini -- it's important to get this before the game uses it
+            CIniReader shadowini(szSettingsSavePath);
+            ShadowLevel = shadowini.ReadInteger("Need for Speed Undercover", "g_ShadowEnable", 3);
         }
         else
         {
@@ -482,6 +495,19 @@ void Init3()
                 iniReader.WriteInteger("MISC", "WriteSettingsToFile", 0);
                 bWriteSettingsToFile = false;
             }
+        }
+    }
+    else
+    {
+        // get the ShadowLevel setting from the registry -- it's important to get this before the game uses it
+        HKEY hUCKey = 0;
+        DWORD type = REG_DWORD;
+        DWORD cbtype = REG_DWORD;
+        LSTATUS status = RegOpenKeyA(HKEY_LOCAL_MACHINE, "Software\\EA Games\\Need for Speed Undercover", &hUCKey);
+        if (status == ERROR_SUCCESS)
+        {
+            RegQueryValueExA(hUCKey, "g_ShadowEnable", NULL, &type, (LPBYTE)&ShadowLevel, &cbtype);
+            RegCloseKey(hUCKey);
         }
     }
 }
@@ -716,26 +742,24 @@ void Init4()
 
     // Cascade Shadow Maps - resolution and scale adjustments
     ShadowsRes = iniReader.ReadInteger("MISC", "ShadowsRes", 1024);
+    iniShadowsRes = ShadowsRes; // save the ShadowsRes from the ini
     static float CSMScale = iniReader.ReadFloat("MISC", "CSMScale", 1.0f);
     static float CSMScaleNear = iniReader.ReadFloat("MISC", "CSMScaleNear", 5.0f) * CSMScale;
     static float CSMScaleMid = iniReader.ReadFloat("MISC", "CSMScaleMid", 30.0f) * CSMScale;
     static float CSMScaleFar = iniReader.ReadFloat("MISC", "CSMScaleFar", 170.0f) * CSMScale;
 
-
-    // limit the resolution - maximum possible resolution is 16384, but as the game has 3 cascades along the X axis, the res is limited by that
-    if (ShadowsRes > (16384 / 3))
-        ShadowsRes = (16384 / 3);
-    if (ShadowsRes <= 1)
-        ShadowsRes = 2;
+    // limit the resolution - maximum possible resolution is 16384, but as the game has (up to) 3 cascades along the X axis, the res is limited by that
+    if (ShadowsRes > (16384 / ShadowLevel))
+        ShadowsRes = (16384 / ShadowLevel);
+    if (ShadowsRes < 1)
+        ShadowsRes = 1;
 
     // 0x00793E21 - shadow texture creation
     pattern = hook::pattern("51 6A 01 68 00 04 00 00 C1 E0 0A");
 
-    uint32_t* dword_793E25 = pattern.count(1).get(0).get<uint32_t>(4);
-    injector::WriteMemory(dword_793E25, ShadowsRes, true);
-
-    ShadowTexCaveEntry = pattern.count(1).get(0).get<uint32_t>(8);
-    ShadowTexCaveExit = (uint32_t)ShadowTexCaveEntry + 6;
+    // 0x00793E24
+    uint32_t* ShadowTexCaveEntry = pattern.count(1).get(0).get<uint32_t>(3);
+    ShadowTexCaveExit = (uint32_t)ShadowTexCaveEntry + 9;
 
     injector::MakeJMP(ShadowTexCaveEntry, ShadowTexCave, true);
 
@@ -779,10 +803,14 @@ void Init4()
 
     // Shadow resolution during CSM::Update() -- some distant shadows are affected by this
     pattern = hook::pattern("68 00 04 00 00 68 00 04 00 00");
-    uint32_t* dword_780FF6 = pattern.count(0).get(0).get<uint32_t>(1);
-    uint32_t* dword_780FFB = pattern.count(0).get(0).get<uint32_t>(6);
-    injector::WriteMemory(dword_780FF6, ShadowsRes, true);
-    injector::WriteMemory(dword_780FFB, ShadowsRes, true);
+    uint32_t* dword_780FFF = pattern.count(0).get(0).get<uint32_t>(10);
+
+    auto CSMUpdateHook = [](uint32_t, uint32_t)->uint32_t
+    {
+        return ShadowsRes;
+    };
+
+    injector::MakeCALL(dword_780FFF, static_cast<uint32_t(__cdecl*)(uint32_t, uint32_t)>(CSMUpdateHook), true);
 }
 
 CEXP void InitializeASI()
