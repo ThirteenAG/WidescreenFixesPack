@@ -100,7 +100,7 @@ void Init1()
 
     CIniReader iniReader("");
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
-    static float fBloomIntensity = iniReader.ReadFloat("MISC", "BloomIntensity", 1.0f);
+    static float fBloomIntensity = iniReader.ReadFloat("GRAPHICS", "BloomIntensity", 1.0f);
 
     pattern = GetPattern("D9 05 ? ? ? ? 50 83 EC 08 D9 5C 24 04"); //0x766FC5
     injector::WriteMemory(pattern.get_first(2), &fBloomIntensity, true);
@@ -741,12 +741,12 @@ void Init4()
     }
 
     // Cascade Shadow Maps - resolution and scale adjustments
-    ShadowsRes = iniReader.ReadInteger("MISC", "ShadowsRes", 1024);
+    ShadowsRes = iniReader.ReadInteger("GRAPHICS", "ShadowsRes", 1024);
     iniShadowsRes = ShadowsRes; // save the ShadowsRes from the ini
-    static float CSMScale = iniReader.ReadFloat("MISC", "CSMScale", 1.0f);
-    static float CSMScaleNear = iniReader.ReadFloat("MISC", "CSMScaleNear", 5.0f) * CSMScale;
-    static float CSMScaleMid = iniReader.ReadFloat("MISC", "CSMScaleMid", 30.0f) * CSMScale;
-    static float CSMScaleFar = iniReader.ReadFloat("MISC", "CSMScaleFar", 170.0f) * CSMScale;
+    static float CSMScale = iniReader.ReadFloat("GRAPHICS", "CSMScale", 1.0f);
+    static float CSMScaleNear = iniReader.ReadFloat("GRAPHICS", "CSMScaleNear", 5.0f) * CSMScale;
+    static float CSMScaleMid = iniReader.ReadFloat("GRAPHICS", "CSMScaleMid", 30.0f) * CSMScale;
+    static float CSMScaleFar = iniReader.ReadFloat("GRAPHICS", "CSMScaleFar", 170.0f) * CSMScale;
 
     // limit the resolution - maximum possible resolution is 16384, but as the game has (up to) 3 cascades along the X axis, the res is limited by that
     if (ShadowsRes > (16384 / ShadowLevel))
