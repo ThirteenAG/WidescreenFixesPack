@@ -27,8 +27,10 @@ void __declspec(naked) ShadowTexCave()
     _asm
     {
         mov eax, ShadowLevel
-        mov ecx, ShadowsRes
+        mov ecx, iniShadowsRes
         push ecx
+        mov ecx, ShadowsRes
+        //push ecx
         mul ecx
         push eax
         jmp ShadowTexCaveExit
@@ -772,7 +774,7 @@ void Init4()
         {
             *(uint32_t*)(regs.esp + 4) = ShadowsRes * regs.eax;
             *(uint32_t*)(regs.esp + 0xC) = ShadowsRes;
-            *(uint32_t*)(regs.esp + 0x10) = ShadowsRes;
+            *(uint32_t*)(regs.esp + 0x10) = iniShadowsRes;
         }
     }; injector::MakeInline<ShadowsResHook2>(pattern.get_first(6), pattern.get_first(26));
 
