@@ -104,18 +104,28 @@ private:
 };
 
 FrameLimiter FpsLimiter;
+float fGameSpeedFactor = 1.0f;
 void __cdecl sub_648AC0(int a1)
 {
     if (fFpsLimit)
         FpsLimiter.Sync();
 
-    static std::chrono::time_point<std::chrono::steady_clock> oldTime = std::chrono::high_resolution_clock::now();
-    static int fps; fps++;
+    static std::list<int> m_times;
+    LARGE_INTEGER frequency;
+    LARGE_INTEGER time;
+    QueryPerformanceFrequency(&frequency);
+    QueryPerformanceCounter(&time);
 
-    if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - oldTime) >= std::chrono::seconds{ 1 }) {
-        oldTime = std::chrono::high_resolution_clock::now();
-        fGameSpeed = (30.0f / (float)fps) / 1.8f;
-        fps = 0;
+    if (m_times.size() == 50)
+        m_times.pop_front();
+    m_times.push_back(static_cast<int>(time.QuadPart));
+
+    if (m_times.size() >= 2)
+    {
+        auto fps = (0.5f + (static_cast<float>(m_times.size() - 1) * static_cast<float>(frequency.QuadPart)) / static_cast<float>(m_times.back() - m_times.front()));
+        fGameSpeed = (30.0f / fps);
+        if (fGameSpeedFactor > 0.0f)
+            fGameSpeed /= fGameSpeedFactor;
     }
 }
 
@@ -129,8 +139,11 @@ void Init()
     static bool bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) != 0;
 
     static bool bFixGameSpeed = iniReader.ReadInteger("FRAMELIMIT", "FixGameSpeed", 1) != 0;
+    fGameSpeedFactor = iniReader.ReadFloat("FRAMELIMIT", "GameSpeedFactor", 0.0f);
     nFrameLimitType = iniReader.ReadInteger("FRAMELIMIT", "FrameLimitType", 1);
     fFpsLimit = static_cast<float>(iniReader.ReadInteger("FRAMELIMIT", "FpsLimit", 30));
+    
+    static auto fSensitivityFactor = iniReader.ReadFloat("MOUSE", "SensitivityFactor", 0.0f);
 
 
     if (bSkipIntro)
@@ -251,6 +264,18 @@ void Init()
                 _asm fld dword ptr[fGameSpeed]
             }
         }; injector::MakeInline<GameSpeedHook>(pattern.get_first(0), pattern.get_first(8));
+    }
+
+    if (fSensitivityFactor)
+    {
+        pattern = hook::pattern("D8 0D ? ? ? ? 6A 00 68 ? ? ? ? 8B CE D9 1D ? ? ? ? E8 ? ? ? ? D8 0D ? ? ? ? 6A 00");
+        injector::WriteMemory(pattern.get_first(2), &fSensitivityFactor, true);
+        pattern = hook::pattern("D8 0D ? ? ? ? 6A 00 68 ? ? ? ? 8B CE D9 1D ? ? ? ? E8 ? ? ? ? D9 1D ? ? ? ? 6A 00");
+        injector::WriteMemory(pattern.get_first(2), &fSensitivityFactor, true);
+        pattern = hook::pattern("D8 0D ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? D8 0D ? ? ? ? 8B CE D9 1D ? ? ? ? E8");
+        injector::WriteMemory(pattern.get_first(2), &fSensitivityFactor, true);
+        pattern = hook::pattern("D8 0D ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 8B CE D9 1D ? ? ? ? E8 ? ? ? ? 68");
+        injector::WriteMemory(pattern.get_first(2), &fSensitivityFactor, true);
     }
 }
 
