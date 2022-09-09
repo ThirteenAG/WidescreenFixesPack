@@ -9,6 +9,43 @@ hook::pattern GetPattern(std::string_view pattern)
     return p;
 }
 
+uint32_t ShadowLevel = 3;
+static uint32_t ShadowsRes = 1024;
+static uint32_t ShadowsResX = 3072;
+static float fShadowsRes = 1024.0;
+static float fShadowsResX = 3072.0;
+static uint32_t iniShadowsRes = 1024;
+
+void UpdateShadowsRes()
+{
+    ShadowsRes = iniShadowsRes;
+    fShadowsRes = ShadowsRes;
+    if (fShadowsRes > (16384.0f / (float)ShadowLevel))
+        fShadowsRes = (16384.0f / (float)ShadowLevel);
+    ShadowsRes = (uint32_t)fShadowsRes;
+    fShadowsResX = (float)ShadowLevel * fShadowsRes;
+    ShadowsResX = (uint32_t)fShadowsResX;
+}
+
+// entrypoint 0x00793E24
+uint32_t ShadowTexCaveExit = 0x00793E2D;
+void __declspec(naked) ShadowTexCave()
+{
+    _asm mov ShadowLevel, eax
+
+    // Update ShadowsRes dynamically during texture creation! This is to ensure that when the user increases the shadow quality it won't fail due to too high resolution!
+    UpdateShadowsRes();
+
+    _asm
+    {
+        mov eax, ShadowsResX
+        mov ecx, iniShadowsRes
+        push ecx
+        push eax
+        jmp ShadowTexCaveExit
+    }
+}
+
 void InitRes()
 {
     struct ScreenRes
@@ -74,7 +111,7 @@ void Init1()
 
     CIniReader iniReader("");
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
-    static float fBloomIntensity = iniReader.ReadFloat("MISC", "BloomIntensity", 1.0f);
+    static float fBloomIntensity = iniReader.ReadFloat("GRAPHICS", "BloomIntensity", 1.0f);
 
     pattern = GetPattern("D9 05 ? ? ? ? 50 83 EC 08 D9 5C 24 04"); //0x766FC5
     injector::WriteMemory(pattern.get_first(2), &fBloomIntensity, true);
@@ -450,6 +487,10 @@ void Init3()
             RegistryWrapper::AddDefault("g_CarDamageDetail", "2");
             RegistryWrapper::AddDefault("AllowR32FAA", "0");
             RegistryWrapper::AddDefault("ForceR32AA", "0");
+
+            // get the ShadowLevel setting from the settings ini -- it's important to get this before the game uses it
+            CIniReader shadowini(szSettingsSavePath);
+            ShadowLevel = shadowini.ReadInteger("Need for Speed Undercover", "g_ShadowEnable", 3);
         }
         else
         {
@@ -465,6 +506,19 @@ void Init3()
                 iniReader.WriteInteger("MISC", "WriteSettingsToFile", 0);
                 bWriteSettingsToFile = false;
             }
+        }
+    }
+    else
+    {
+        // get the ShadowLevel setting from the registry -- it's important to get this before the game uses it
+        HKEY hUCKey = 0;
+        DWORD type = REG_DWORD;
+        DWORD cbtype = REG_DWORD;
+        LSTATUS status = RegOpenKeyA(HKEY_LOCAL_MACHINE, "Software\\EA Games\\Need for Speed Undercover", &hUCKey);
+        if (status == ERROR_SUCCESS)
+        {
+            RegQueryValueExA(hUCKey, "g_ShadowEnable", NULL, &type, (LPBYTE)&ShadowLevel, &cbtype);
+            RegCloseKey(hUCKey);
         }
     }
 }
@@ -696,6 +750,77 @@ void Init4()
         pattern = GetPattern("89 46 08 89 4E 0C E8 ? ? ? ? 83 C4 08 8B F8 6A 00");
         injector::MakeNOP(pattern.get_first(0), 6, true);
     }
+
+    // Cascade Shadow Maps - resolution and scale adjustments
+    ShadowsRes = iniReader.ReadInteger("GRAPHICS", "ShadowsRes", 1024);
+    iniShadowsRes = ShadowsRes; // save the ShadowsRes from the ini
+    static float CSMScale = iniReader.ReadFloat("GRAPHICS", "CSMScale", 1.0f);
+    static float CSMScaleNear = iniReader.ReadFloat("GRAPHICS", "CSMScaleNear", 5.0f) * CSMScale;
+    static float CSMScaleMid = iniReader.ReadFloat("GRAPHICS", "CSMScaleMid", 30.0f) * CSMScale;
+    static float CSMScaleFar = iniReader.ReadFloat("GRAPHICS", "CSMScaleFar", 170.0f) * CSMScale;
+
+    // limit the resolution - maximum possible resolution is 16384, but as the game has (up to) 3 cascades along the X axis, the res is limited by that
+    UpdateShadowsRes();
+    if (ShadowsRes < 1)
+        ShadowsRes = 1;
+
+    // 0x00793E21 - shadow texture creation
+    pattern = hook::pattern("51 6A 01 68 00 04 00 00 C1 E0 0A");
+
+    // 0x00793E24
+    uint32_t* ShadowTexCaveEntry = pattern.count(1).get(0).get<uint32_t>(3);
+    ShadowTexCaveExit = (uint32_t)ShadowTexCaveEntry + 9;
+
+    injector::MakeJMP(ShadowTexCaveEntry, ShadowTexCave, true);
+
+    // 0x79230D - shadow rendering
+    pattern = hook::pattern("8B 46 08 0F 57 C0 C1 E0 0A");
+
+    struct ShadowsResHook2
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            *(uint32_t*)(regs.esp + 4) = (uint32_t)(fShadowsRes * (float)(regs.eax));
+            *(uint32_t*)(regs.esp + 0xC) = ShadowsRes;
+            *(uint32_t*)(regs.esp + 0x10) = iniShadowsRes;
+        }
+    }; injector::MakeInline<ShadowsResHook2>(pattern.get_first(6), pattern.get_first(26));
+
+    // 0x00780DC0 - shadow cascade scale - CSM::Update()
+    pattern = hook::pattern("55 8B EC 83 E4 F0 81 EC 24 02 00 00 F3 0F 10 05 ? ? ? ?");
+    //static float* CSM_fScaleLerp_D531B4 = *pattern.count(1).get(0).get<float*>(16);
+
+    // 0x00D53F38 - float CSM::fCSMScaleLevel[] -- individual cascade scales
+    static float* CSM_fCSMScaleLevel = *pattern.count(1).get(0).get<float*>(47);
+    // disable writes to the array -- MIGHT BREAK CUTSCENES as they have their own scales!
+    uint32_t* dword_780DEB = pattern.count(1).get(0).get<uint32_t>(43);
+    uint32_t* dword_780E29 = pattern.count(1).get(0).get<uint32_t>(105);
+    uint32_t* dword_780E31 = pattern.count(1).get(0).get<uint32_t>(113);
+    injector::MakeNOP(dword_780DEB, 8);
+    injector::MakeNOP(dword_780E29, 8);
+    injector::MakeNOP(dword_780E31, 8);
+
+    CSM_fCSMScaleLevel[0] = CSMScaleNear;
+    CSM_fCSMScaleLevel[1] = CSMScaleMid;
+    CSM_fCSMScaleLevel[2] = CSMScaleFar;
+
+
+    // 0x00780663 - force isShadowMapMeshVisible() to true 
+    pattern = hook::pattern("F2 0F 5A D2 F3 0F 5A D2 0F 5A D9 66 0F 2F D3 77 15");
+    uint32_t* dword_780672 = pattern.count(0).get(0).get<uint32_t>(15);
+    uint32_t* dword_780681 = (uint32_t*)((uint32_t)dword_780672 + 9);
+    injector::MakeJMP(dword_780672, dword_780681, true);
+
+    // Shadow resolution during CSM::Update() -- some distant shadows are affected by this
+    pattern = hook::pattern("68 00 04 00 00 68 00 04 00 00");
+    uint32_t* dword_780FFF = pattern.count(0).get(0).get<uint32_t>(10);
+
+    auto CSMUpdateHook = [](uint32_t, uint32_t)->uint32_t
+    {
+        return ShadowsRes;
+    };
+
+    injector::MakeCALL(dword_780FFF, static_cast<uint32_t(__cdecl*)(uint32_t, uint32_t)>(CSMUpdateHook), true);
 }
 
 CEXP void InitializeASI()
