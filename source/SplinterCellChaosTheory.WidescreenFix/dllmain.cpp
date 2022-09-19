@@ -2,24 +2,24 @@
 
 struct Screen
 {
-    int Width{};
-    int Height{};
-    float fWidth{};
-    float fHeight{};
-    float fAspectRatio{};
-    float fHUDScaleX{};
-    float fHudOffset{};
+    int Width;
+    int Height;
+    float fWidth;
+    float fHeight;
+    float fAspectRatio;
+    float fHUDScaleX;
+    float fHudOffset;
     const float fHUDScaleXOriginal = 0.003125f;
     const float fHudOffsetOriginal = 1.0f;
-    float fHUDScaleXDyn{};
-    float fHudOffsetDyn{};
-    float fTextScaleX{};
-    int32_t nHudOffsetReal{};
-    int32_t nScopeScale{};
-    float fFMVoffsetStartX{};
-    float fFMVoffsetEndX{};
-    float fFMVoffsetStartY{};
-    float fFMVoffsetEndY{};
+    float fHUDScaleXDyn;
+    float fHudOffsetDyn;
+    float fTextScaleX;
+    int32_t nHudOffsetReal;
+    int32_t nScopeScale;
+    float fFMVoffsetStartX;
+    float fFMVoffsetEndX;
+    float fFMVoffsetStartY;
+    float fFMVoffsetEndY;
 } Screen;
 
 union FColor
@@ -33,7 +33,7 @@ union FColor
 
 struct FLTColor
 {
-    float R{}, G{}, B{}, A = 1.0f;
+    float R, G, B, A = 1.0f;
     inline FLTColor() {}
     inline FLTColor(uint32_t color) {
         R = ((color >> 16) & 0xFF) / 255.0f;
@@ -114,6 +114,8 @@ int32_t nShadowMapResolution;
 bool bEnableShadowFiltering;
 bool bOriginalExe;
 
+float gVisibility = 1.0f;
+int32_t gBlacklistIndicators = 0;
 FLTColor gColor;
 float* __cdecl FGetHSV(float* dest, uint8_t H, uint8_t S, uint8_t V, uint32_t unk)
 {
@@ -125,16 +127,26 @@ float* __cdecl FGetHSV(float* dest, uint8_t H, uint8_t S, uint8_t V, uint32_t un
             uint32_t unk_val = *(uint32_t*)(unk_ptr);
             if (unk_val == 862 ||unk_val == 879 || unk_val == 881 || unk_val == 875)
             {
-                dest[0] = gColor.R;
-                dest[1] = gColor.G;
-                dest[2] = gColor.B;
-                dest[3] = 1.0f;
+                if (!gColor.empty())
+                {
+                    dest[0] = gColor.R;
+                    dest[1] = gColor.G;
+                    dest[2] = gColor.B;
+                    dest[3] = 1.0f;
+                }
+                if (gBlacklistIndicators)
+                {
+                    dest[0] *= gVisibility;
+                    dest[1] *= gVisibility;
+                    dest[2] *= gVisibility;
+                    dest[3] *= gVisibility;
+                }
                 return dest;
             }
         }
     }
 
-    float r{}, g{}, b{}, a = 1.0f;
+    float r, g, b, a = 1.0f;
     float v14 = static_cast<float>(H) * 6.0f * 0.00390625f;
     float v4 = floor(v14);
     float v5 = static_cast<float>(255 - S) * 0.0039215689f;
@@ -202,6 +214,7 @@ void Init()
     bEnableShadowFiltering = iniReader.ReadInteger("GRAPHICS", "EnableShadowFiltering", 0) != 0;
     auto nFPSLimit = iniReader.ReadInteger("MISC", "FPSLimit", 1000);
     gColor = iniReader.ReadInteger("BONUS", "GogglesLightColor", 0);
+    gBlacklistIndicators = iniReader.ReadInteger("BONUS", "BlacklistIndicators", 0);
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -523,7 +536,7 @@ void Init()
                         ShowWindow(reinterpret_cast<HWND>(regs.edx), SW_RESTORE);
                 }
             }
-        }; injector::MakeInline<WndProcHook>(pattern.get_first(0), pattern.get_first(7)); //0x10CC4EEA 
+        }; injector::MakeInline<WndProcHook>(pattern.get_first(0), pattern.get_first(7)); //0x10CC4EEA
     }
 
     if (nShadowMapResolution)
@@ -562,12 +575,27 @@ void Init()
     }
     
     //Goggles Light Color
-    if (!gColor.empty())
+    if (!gColor.empty() || gBlacklistIndicators)
     {
         pattern = hook::pattern("E8 ? ? ? ? 8B 8E ? ? ? ? 8B 11 83 C4 10 6A 01 50 6A 14 51");
         injector::MakeCALL(pattern.get_first(0), FGetHSV, true); //0x10CB4325
         pattern = hook::pattern("E8 ? ? ? ? 8B 45 48 83 C4 10 3B C7 C7 44 24");
         injector::MakeCALL(pattern.get_first(0), FGetHSV, true); //0x10CB4798
+
+        pattern = hook::pattern("66 89 44 24 ? 8B 17");
+        struct BlacklistIndicatorsHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                auto ax = *reinterpret_cast<int16_t*>(&regs.eax);
+                *reinterpret_cast<int16_t*>(regs.esp + 0xC) = ax;
+                auto v = ax - 446;
+                if (v <= 10) v = 10;
+                gVisibility = 1.0f - ((float)v / 134.0f);
+                if (gBlacklistIndicators == 2)
+                    gVisibility = ((float)v / 134.0f);
+            }
+        }; injector::MakeInline<BlacklistIndicatorsHook>(pattern.get_first()); //0x10B66B97
     }
 }
 
