@@ -3,28 +3,46 @@
 #include <D3dx9.h>
 #pragma comment(lib, "D3dx9.lib")
 
+float gVisibility = 1.0f;
+int32_t gBlacklistIndicators = 0;
 uint32_t gColor;
 float* __cdecl FGetHSV(float* dest, uint8_t H, uint8_t S, uint8_t V)
 {
-    if (H == 0x41 && S == 0x33)
+    auto bChangeColor = ((H == 0x41 && S == 0x33) || (H == 0x5B && S == 0 && V == 0xFF) || (H == 0x2B && S == 0x40 && V == 0xFF)); //goggles || green ind || yellow ind
+    if (bChangeColor)
     {
-        switch (gColor)
+        if (gColor)
         {
-        case 2:
-            dest[0] = 1.0f;
-            dest[1] = 0.5f;
-            dest[2] = 0.0f;
-            dest[3] = 1.0f;
-            break;
-        default:
-            dest[0] = 1.0f;
-            dest[1] = 0.0f;
-            dest[2] = 0.0f;
-            dest[3] = 1.0f;
-            break;
+            switch (gColor)
+            {
+            case 2:
+                dest[0] = 1.0f;
+                dest[1] = 0.0f;
+                dest[2] = 0.0f;
+                dest[3] = 1.0f;
+                break;
+            case 3:
+                dest[0] = 1.0f;
+                dest[1] = 0.5f;
+                dest[2] = 0.0f;
+                dest[3] = 1.0f;
+                break;
+            default:
+                dest[0] = 0.0f;
+                dest[1] = 1.0f;
+                dest[2] = 0.0f;
+                dest[3] = 1.0f;
+                break;
+            }
+            if (gBlacklistIndicators)
+            {
+                dest[0] *= gVisibility;
+                dest[1] *= gVisibility;
+                dest[2] *= gVisibility;
+                dest[3] *= gVisibility;
+            }
+            return dest;
         }
-
-        return dest;
     }
 
     float r, g, b, a = 1.0f;
@@ -78,6 +96,15 @@ float* __cdecl FGetHSV(float* dest, uint8_t H, uint8_t S, uint8_t V)
     dest[1] = g;
     dest[2] = b;
     dest[3] = a;
+
+    if (bChangeColor && gBlacklistIndicators)
+    {
+        dest[0] *= gVisibility;
+        dest[1] *= gVisibility;
+        dest[2] *= gVisibility;
+        dest[3] *= gVisibility;
+    }
+
     return dest;
 }
 
@@ -113,6 +140,7 @@ void Init()
     auto nFPSLimit = iniReader.ReadInteger("MISC", "FPSLimit", 1000);
     Screen.szLoadscPath = iniReader.GetIniPath();
     Screen.szLoadscPath = Screen.szLoadscPath.substr(0, Screen.szLoadscPath.find_last_of('.')) + ".png";
+    gBlacklistIndicators = iniReader.ReadInteger("BONUS", "BlacklistIndicators", 0);
     gColor = iniReader.ReadInteger("BONUS", "GogglesLightColor", 0);
 
     if (!Screen.Width || !Screen.Height)
@@ -563,7 +591,7 @@ void InitD3DDrv()
     injector::MakeNOP(pattern.get_first(0), 2, true);
 
     //Goggles Light Color
-    if (gColor)
+    if (gColor || gBlacklistIndicators)
     {
         pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "FF 15 ? ? ? ? 83 C4 10 8D AE ? ? ? ? 6A 01 8B CD 8B D8 E8");
         injector::MakeNOP(pattern.get(0).get<void>(0), 6, true);
@@ -841,6 +869,37 @@ void InitEchelonMenus()
     }; injector::MakeInline<ResListHook>(pattern.get_first(0), pattern.get_first(6));
 }
 
+void InitEchelon()
+{
+    CIniReader iniReader("");
+    gBlacklistIndicators = iniReader.ReadInteger("BONUS", "BlacklistIndicators", 0);
+    
+    if (gBlacklistIndicators)
+    {
+        auto pattern = hook::module_pattern(GetModuleHandle(L"Echelon"), "8B 96 ? ? ? ? 8D 0C 80");
+        struct BlacklistIndicatorsHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                regs.edx = *(uint32_t*)(regs.esi + 0x15B8);
+                regs.ecx = regs.eax + regs.eax * 4;
+                
+                if (regs.ecx == 0)
+                {
+                    auto fPlayerLuminosity = *(float*)(regs.edx + regs.ecx * 4 + 4);
+                    if (fPlayerLuminosity > 120.0f) fPlayerLuminosity = 120.0f;
+
+                    auto v = 120.0f - fPlayerLuminosity;
+                    if (v <= 10.0f) v = 10.0f;
+                    gVisibility = ((float)v / 120.0f);
+                    if (gBlacklistIndicators == 2)
+                        gVisibility = 1.0f - ((float)v / 120.0f);
+                }
+            }
+        }; injector::MakeInline<BlacklistIndicatorsHook>(pattern.get_first(0), pattern.get_first(6));
+    }
+}
+
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
@@ -850,6 +909,7 @@ CEXP void InitializeASI()
             CallbackHandler::RegisterCallback(L"Engine.dll", InitEngine);
             CallbackHandler::RegisterCallback(L"D3DDrv.dll", InitD3DDrv);
             CallbackHandler::RegisterCallback(L"EchelonMenus.dll", InitEchelonMenus);
+            CallbackHandler::RegisterCallback(L"Echelon.dll", InitEchelon);
         });
 }
 
