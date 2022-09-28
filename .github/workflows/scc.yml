@@ -1,0 +1,11 @@
+name: scc
+
+on:
+  workflow_dispatch:
+
+jobs:
+  call-workflow-passing-data:
+    uses: ThirteenAG/WidescreenFixesPack/.github/workflows/all.yml@master
+    with:
+      tag_list: scc
+      project: /t:SplinterCellConviction_FusionMod
