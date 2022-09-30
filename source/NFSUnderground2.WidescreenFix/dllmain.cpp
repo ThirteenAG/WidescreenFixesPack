@@ -14,6 +14,9 @@ struct Screen
     float fHudOffset;
 } Screen;
 
+bool bBorderlessWindowed = true;
+bool bEnableWindowResize = false;
+
 union HudPos
 {
     uint32_t dwPos;
@@ -75,6 +78,48 @@ HANDLE WINAPI CustomCreateThread(LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_
     return hThread;
 }
 
+BOOL WINAPI AdjustWindowRect_Hook(LPRECT lpRect, DWORD dwStyle, BOOL bMenu)
+{
+    DWORD newStyle = 0;
+
+    if (!bBorderlessWindowed)
+        newStyle = WS_CAPTION;
+
+    return AdjustWindowRect(lpRect, newStyle, bMenu);
+}
+
+HWND WINAPI CreateWindowExA_Hook(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam)
+{
+    HWND GameHWND = NULL;
+
+    // fix the window to open at the center of the screen...
+    int DesktopX = 0;
+    int DesktopY = 0;
+
+    std::tie(DesktopX, DesktopY) = GetDesktopRes();
+
+    int WindowPosX = (int)(((float)DesktopX / 2.0f) - ((float)nWidth / 2.0f));
+    int WindowPosY = (int)(((float)DesktopY / 2.0f) - ((float)nHeight / 2.0f));
+
+    GameHWND = CreateWindowExA(dwExStyle, lpClassName, lpWindowName, 0, WindowPosX, WindowPosY, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
+    LONG lStyle = GetWindowLong(GameHWND, GWL_STYLE);
+
+    if (bBorderlessWindowed)
+        lStyle &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU);
+    else
+    {
+        lStyle |= (WS_MINIMIZEBOX | WS_SYSMENU);
+        if (bEnableWindowResize)
+            lStyle |= (WS_MAXIMIZEBOX | WS_THICKFRAME);
+    }
+
+    SetWindowLong(GameHWND, GWL_STYLE, lStyle);
+
+    SetWindowPos(GameHWND, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
+
+    return GameHWND;
+}
+
 void Init()
 {
     CIniReader iniReader("");
@@ -98,6 +143,7 @@ void Init()
     static float fRainDropletsScale = iniReader.ReadFloat("MISC", "RainDropletsScale", 0.5f);
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
         szCustomUserFilesDirectoryInGameDir.clear();
+    int nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -611,7 +657,7 @@ void Init()
             }
         };
         injector::MakeInline<FrontEndRemap>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
-    }
+}
 
     const wchar_t* ControlsTexts[] = { L" 2", L" 3", L" 4", L" 5", L" 6", L" 7", L" 8", L" 9", L" 10", L" 1", L" Up", L" Down", L" Left", L" Right", L"X Rotation", L"Y Rotation", L"X Axis", L"Y Axis", L"Z Axis", L"Hat Switch" };
     const wchar_t* ControlsTextsXBOX[] = { L"B", L"X", L"Y", L"LB", L"RB", L"View (Select)", L"Menu (Start)", L"Left stick", L"Right stick", L"A", L"D-pad Up", L"D-pad Down", L"D-pad Left", L"D-pad Right", L"Right stick Left/Right", L"Right stick Up/Down", L"Left stick Left/Right", L"Left stick Up/Down", L"LT / RT", L"D-pad" };
@@ -787,6 +833,32 @@ void Init()
         RegistryWrapper::AddDefault("g_RacingResolution", "4");
         RegistryWrapper::AddDefault("g_PerformanceLevel", "5");
         RegistryWrapper::AddDefault("g_VSyncOn", "0");
+    }
+
+    // windowed mode
+    if (nWindowedMode)
+    {
+        uint32_t* dword_5D2795 = hook::pattern("A1 ? ? ? ? 68 00 00 00 10").count(1).get(0).get<uint32_t>(0);
+        uint32_t* dword_5D27A8 = (uint32_t*)((uint32_t)dword_5D2795 + 0x13);
+
+        uint32_t* dword_5D2674 = hook::pattern("68 00 00 00 80 68 ? ? ? ? 68 ? ? ? ? 56 FF 15").count(1).get(0).get<uint32_t>(16);
+        uint32_t* dword_5D2638 = hook::pattern("68 00 00 00 80 8D 4C 24 20 8D 43 64 51 89 54 24 2C 89 44 24 30 FF 15").count(1).get(0).get<uint32_t>(21);
+        uint32_t* WindowedMode_87098C = *hook::pattern("B9 0E 00 00 00 BF ? ? ? ? F3 AB A1 ? ? ? ?").count(1).get(0).get<uint32_t*>(13);
+
+        // skip SetWindowLong because it messes things up
+        injector::MakeJMP(dword_5D2795, dword_5D27A8, true);
+        // hook the offending functions
+        injector::MakeNOP(dword_5D2674, 6, true);
+        injector::MakeCALL(dword_5D2674, CreateWindowExA_Hook, true);
+        injector::MakeNOP(dword_5D2638, 6, true);
+        injector::MakeCALL(dword_5D2638, AdjustWindowRect_Hook, true);
+        // enable windowed mode variable
+        *WindowedMode_87098C = 1;
+
+        if (nWindowedMode > 1)
+            bBorderlessWindowed = false;
+        if (nWindowedMode > 2) // TODO: implement dynamic resizing (like in MW)
+            bEnableWindowResize = true;
     }
 }
 
