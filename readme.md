@@ -734,6 +734,8 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to improve gamepad support (gamepad icons, fixed bindings etc)
 
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to change fps limit
+
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to increase deadzone for left stick
 
 [Download](http://thirteenag.github.io/wfp#nfsu)

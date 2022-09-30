@@ -354,6 +354,7 @@ void Init()
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
     static int nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
+    static int nFPSLimit = iniReader.ReadInteger("MISC", "FPSLimit", 120);
     int nHideDebugObjects = iniReader.ReadInteger("MISC", "HideDebugObjects", 0);
     bool bBlackMagazineFix = iniReader.ReadInteger("MISC", "BlackMagazineFix", 0) != 0;
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
@@ -1009,6 +1010,33 @@ void Init()
     {
         injector::MakeCALL(pattern.get_first(0), strlen, true);
     }
+
+    if (nFPSLimit)
+    {
+        // the game limits FPS 2x over the frametime (or just reports it that way to D3D) -- this is the real game framerate here!
+        static float FrameTime = 1.0f / nFPSLimit;
+        // Video mode frametime
+        uint32_t* dword_6CC7B0 = *hook::pattern("83 EC 10 A1 ? ? ? ? 89 44 24 04").count(1).get(0).get<uint32_t*>(31);
+        injector::WriteMemory(dword_6CC7B0, FrameTime, true);
+        // RealTimestep frametime
+        uint32_t* dword_6F0890 = *hook::pattern("99 D9 05 ? ? ? ? B9 64 00 00 00").count(1).get(0).get<uint32_t*>(3);
+        injector::WriteMemory(dword_6F0890, FrameTime, true);
+        uint32_t* dword_6CCDEC = *hook::pattern("99 D9 05 ? ? ? ? B9 64 00 00 00").count(1).get(0).get<uint32_t*>(63);
+        injector::WriteMemory(dword_6CCDEC, FrameTime * 2.0f, true);
+        // a function in eDisplayFrame (particle effects?) frametime
+        uint32_t* dword_40A744 = hook::pattern("68 89 88 88 3C").count(1).get(0).get<uint32_t>(1);
+        injector::WriteMemory(dword_40A744, FrameTime, true);
+        // something related to framerate and/or seconds. This value has to be an integer multiple of 60, otherwise the game can freeze. This affects some gameplay features such as NOS and menus.
+        uint32_t* dword_6CC8B0 = *hook::pattern("83 E1 01 0B F9 D9 44 24 28 D8 1D ? ? ? ?").count(1).get(0).get<uint32_t*>(11);
+        static float FrameSeconds = nFPSLimit - (nFPSLimit % 60);
+        if (FrameSeconds < 60.0)
+            FrameSeconds = 60.0;
+        injector::WriteMemory(dword_6CC8B0, FrameSeconds, true);
+        // another frametime -- seems to affect some gameplay elements...
+        uint32_t* dword_6B5C08 = *hook::pattern("DF E0 F6 C4 41 7A ? 8A 44 24 12 D9 05 ? ? ? ?").count(1).get(0).get<uint32_t*>(13);
+        injector::WriteMemory(dword_6B5C08, FrameTime, true);
+    }
+
     // windowed mode
     if (nWindowedMode)
     {
