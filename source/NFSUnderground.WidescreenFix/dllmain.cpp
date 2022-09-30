@@ -1026,6 +1026,12 @@ void Init()
         // a function in eDisplayFrame (particle effects?) frametime
         uint32_t* dword_40A744 = hook::pattern("68 89 88 88 3C").count(1).get(0).get<uint32_t>(1);
         injector::WriteMemory(dword_40A744, FrameTime, true);
+        // something related to framerate and/or seconds. This value has to be an integer multiple of 60, otherwise the game can freeze. This affects some gameplay features such as NOS and menus.
+        uint32_t* dword_6CC8B0 = *hook::pattern("83 E1 01 0B F9 D9 44 24 28 D8 1D ? ? ? ?").count(1).get(0).get<uint32_t*>(11);
+        static float FrameSeconds = nFPSLimit - (nFPSLimit % 60);
+        if (FrameSeconds < 60.0)
+            FrameSeconds = 60.0;
+        injector::WriteMemory(dword_6CC8B0, FrameSeconds, true);
     }
 
     // windowed mode
