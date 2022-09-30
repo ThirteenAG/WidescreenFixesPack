@@ -1032,6 +1032,9 @@ void Init()
         if (FrameSeconds < 60.0)
             FrameSeconds = 60.0;
         injector::WriteMemory(dword_6CC8B0, FrameSeconds, true);
+        // another frametime -- seems to affect some gameplay elements...
+        uint32_t* dword_6B5C08 = *hook::pattern("DF E0 F6 C4 41 7A ? 8A 44 24 12 D9 05 ? ? ? ?").count(1).get(0).get<uint32_t*>(13);
+        injector::WriteMemory(dword_6B5C08, FrameTime, true);
     }
 
     // windowed mode
