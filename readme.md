@@ -47,8 +47,8 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 
 # Screenshots
 
-|    [![mp](https://i.imgur.com/lDPTxGo.jpg)](https://i.imgur.com/lDPTxGo.jpg)    |  [![farcry](https://i.imgur.com/5CMg1fG.jpg)](https://i.imgur.com/5CMg1fG.jpg)  |
-| :-----------------------------------------------------------------------------: | :-----------------------------------------------------------------------------: |
+| [![mp](https://i.imgur.com/lDPTxGo.jpg)](https://i.imgur.com/lDPTxGo.jpg)       | [![farcry](https://i.imgur.com/5CMg1fG.jpg)](https://i.imgur.com/5CMg1fG.jpg)   |
+|:-------------------------------------------------------------------------------:|:-------------------------------------------------------------------------------:|
 | [![scdaxbox](https://i.imgur.com/IgPADzY.jpg)](https://i.imgur.com/IgPADzY.jpg) | [![burnout3](https://i.imgur.com/a1Ou0JH.jpg)](https://i.imgur.com/a1Ou0JH.jpg) |
 
 # List of releases
@@ -726,6 +726,8 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to switch between different 3D scaling
 
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to enable windowed mode
+
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to make FMVs fullscreen
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to change save game directory
@@ -753,6 +755,8 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 ![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed FMVs
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to switch between different 3D scaling
+
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to enable windowed mode
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to disable cutscene borders
 
@@ -791,6 +795,8 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 ![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed FMVs
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to switch between different 3D scaling
+
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to enable windowed mode
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to increase shadow resolution
 
@@ -914,6 +920,10 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to enable windowed mode
 
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to increase shadow resolution
+
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to change the scale of the shadow map
+
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to change save game directory
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to write registry settings to a file
@@ -923,6 +933,8 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to increase deadzone for left stick
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to set bloom intensity
+
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to improve scenery LOD
 
 [Download](http://thirteenag.github.io/wfp#nfsuc)
 |
