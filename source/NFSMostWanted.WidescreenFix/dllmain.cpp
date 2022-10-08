@@ -912,15 +912,22 @@ void Init()
 
         // Frame times
         // PrepareRealTimestep() NTSC video mode frametime .rdata
-        float* flt_8970F0 = *hook::pattern("D9 05 ? ? ? ? B9 ? ? ? ? D8 44 24 14 D9 5C 24 14").count(1).get(0).get<float*>(53); //0x006612B7
+        uint32_t* dword_6612EC = hook::pattern("D9 05 ? ? ? ? B9 ? ? ? ? D8 44 24 14 D9 5C 24 14").count(1).get(0).get<uint32_t>(53); //0x006612B7 anchor
         // MainLoop frametime .text
         float* flt_666100 = hook::pattern("E8 ? ? ? ? 68 89 88 88 3C").count(1).get(0).get<float>(6);
         // World_Service UglyTimestepHack initial state .data
         float* flt_903290 = *hook::pattern("8B 0D ? ? ? ? 85 C9 C7 05 ? ? ? ? 00 00 00 00 74 05").count(1).get(0).get<float*>(10); //0x0075AAD8 dereference
+        // GetDebugRealTime() NTSC frametime 1 .text
+        uint32_t* dword_65C78F = hook::pattern("83 EC 08 A1 ? ? ? ? 89 44 24 04 A1 ? ? ? ? 85 C0 75 08").count(1).get(0).get<uint32_t>(0x1F); //0x0065C770 anchor
+        // GetDebugRealTime() NTSC frametime 2 .text
+        uint32_t* dword_65C7D9 = hook::pattern("83 EC 08 A1 ? ? ? ? 89 44 24 04 A1 ? ? ? ? 85 C0 75 08").count(1).get(0).get<uint32_t>(0x69); //0x0065C770 anchor
 
-        injector::WriteMemory(flt_8970F0, FrameTime, true);
+        injector::WriteMemory(dword_6612EC, &FrameTime, true);
+        //injector::WriteMemory(flt_8970F0, FrameTime, true);
         injector::WriteMemory(flt_666100, FrameTime, true);
         *flt_903290 = FrameTime;
+        injector::WriteMemory(dword_65C78F, &FrameTime, true);
+        injector::WriteMemory(dword_65C7D9, &FrameTime, true);
 
         // Frame rates
         // TODO: if any issues arise, figure out where 60.0 values are used and update the constants...
