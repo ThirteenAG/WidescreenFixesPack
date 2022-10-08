@@ -186,6 +186,7 @@ void Init()
     bool bForceHighSpecAudio = iniReader.ReadInteger("MISC", "ForceHighSpecAudio", 1) != 0;
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
     static float fRainDropletsScale = iniReader.ReadFloat("MISC", "RainDropletsScale", 0.5f);
+    static int nFPSLimit = iniReader.ReadInteger("MISC", "FPSLimit", 60);
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
         szCustomUserFilesDirectoryInGameDir.clear();
     int nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
@@ -902,6 +903,27 @@ void Init()
                 *(uint32_t*)(regs.esi + 0x238) = (uint32_t)(dStickState * 65535.0);
             }
         }; injector::MakeInline<DeadzoneHookY>(pattern.get_first(18 + 0), pattern.get_first(18 + 6));
+    }
+
+    if (nFPSLimit)
+    {
+        static float FrameTime = 1.0f / nFPSLimit;
+        //static float fnFPSLimit = (float)nFPSLimit;
+
+        // Frame times
+        // PrepareRealTimestep() NTSC video mode frametime .rdata
+        float* flt_8970F0 = *hook::pattern("D9 05 ? ? ? ? B9 ? ? ? ? D8 44 24 14 D9 5C 24 14").count(1).get(0).get<float*>(53); //0x006612B7
+        // MainLoop frametime .text
+        float* flt_666100 = hook::pattern("E8 ? ? ? ? 68 89 88 88 3C").count(1).get(0).get<float>(6);
+        // World_Service UglyTimestepHack initial state .data
+        float* flt_903290 = *hook::pattern("8B 0D ? ? ? ? 85 C9 C7 05 ? ? ? ? 00 00 00 00 74 05").count(1).get(0).get<float*>(10); //0x0075AAD8 dereference
+
+        injector::WriteMemory(flt_8970F0, FrameTime, true);
+        injector::WriteMemory(flt_666100, FrameTime, true);
+        *flt_903290 = FrameTime;
+
+        // Frame rates
+        // TODO: if any issues arise, figure out where 60.0 values are used and update the constants...
     }
 
     if (bWriteSettingsToFile)
