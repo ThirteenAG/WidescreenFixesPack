@@ -89,6 +89,21 @@ void GetResolutionsList(std::vector<std::string>& list)
     list.erase(std::unique(std::begin(list), std::end(list)), list.end());
 }
 
+// gets primary monitor's current refresh rate
+// default return value = 60
+uint32_t GetDesktopRefreshRate()
+{
+    uint32_t rate = 60;
+    DEVMODE dm = { 0 };
+
+    if (!EnumDisplaySettings(NULL, ENUM_CURRENT_SETTINGS, &dm))
+        return rate;
+
+    rate = dm.dmDisplayFrequency;
+
+    return rate;
+}
+
 std::string format(const char *fmt, ...)
 {
     va_list args;

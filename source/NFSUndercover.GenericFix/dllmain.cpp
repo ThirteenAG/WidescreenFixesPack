@@ -848,6 +848,14 @@ void Init4()
     static int nFPSLimit = iniReader.ReadInteger("GRAPHICS", "FPSLimit", 60);
     if (nFPSLimit)
     {
+        if (nFPSLimit < 0)
+        {
+            if (nFPSLimit == -1)
+                nFPSLimit = GetDesktopRefreshRate();
+            else
+                nFPSLimit = 60;
+        }
+
         static float FrameTime = 1.0f / nFPSLimit;
         static double dFrameTime = 1.0 / nFPSLimit;
         //static float fnFPSLimit = (float)nFPSLimit;
