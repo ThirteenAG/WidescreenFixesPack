@@ -1013,6 +1013,14 @@ void Init()
 
     if (nFPSLimit)
     {
+        if (nFPSLimit < 0)
+        {
+            if (nFPSLimit == -1)
+                nFPSLimit = GetDesktopRefreshRate();
+            else
+                nFPSLimit = 60;
+        }
+
         // the game limits FPS 2x over the frametime (or just reports it that way to D3D) -- this is the real game framerate here!
         static float FrameTime = 1.0f / nFPSLimit;
         // Video mode frametime
