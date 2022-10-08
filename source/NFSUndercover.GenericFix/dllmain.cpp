@@ -807,13 +807,13 @@ void Init4()
 
     // 0x00780663 - force isShadowMapMeshVisible() to true 
     pattern = hook::pattern("F2 0F 5A D2 F3 0F 5A D2 0F 5A D9 66 0F 2F D3 77 15");
-    uint32_t* dword_780672 = pattern.count(0).get(0).get<uint32_t>(15);
+    uint32_t* dword_780672 = pattern.count(1).get(0).get<uint32_t>(15);
     uint32_t* dword_780681 = (uint32_t*)((uint32_t)dword_780672 + 9);
     injector::MakeJMP(dword_780672, dword_780681, true);
 
     // Shadow resolution during CSM::Update() -- some distant shadows are affected by this
     pattern = hook::pattern("68 00 04 00 00 68 00 04 00 00");
-    uint32_t* dword_780FFF = pattern.count(0).get(0).get<uint32_t>(10);
+    uint32_t* dword_780FFF = pattern.count(1).get(0).get<uint32_t>(10);
 
     auto CSMUpdateHook = [](uint32_t, uint32_t)->uint32_t
     {
@@ -829,20 +829,61 @@ void Init4()
         // there is 1 more step left after 0xE, with this it should actually show all scenery
         // the top nibble doesn't affect anything, only the bottom, so 0x10 will cause everything to dissapear, while 0x1F will have the same effect as below
         pattern = hook::pattern("83 F8 01 C6 44 24 0F 0E");
-        uint32_t* dword_82B0AA = pattern.count(0).get(0).get<uint32_t>(7);
+        uint32_t* dword_82B0AA = pattern.count(1).get(0).get<uint32_t>(7);
         injector::WriteMemory<uint8_t>(dword_82B0AA, 0x0F, true);
 
         // force the game to use ScenerySectionHeader::CullBruteForce and disable ScenerySectionHeader::TreeCull
         // this reduces excessive culling in the game caused by the VisibleSections in a track
         // this does NOT fix flickering scenery in shadows/reflections/weird parts of map/etc.
         pattern = hook::pattern("84 C0 57 8B CE 74 07");
-        uint32_t* dword_82B03F = pattern.count(0).get(0).get<uint32_t>(5);
+        uint32_t* dword_82B03F = pattern.count(1).get(0).get<uint32_t>(5);
         injector::MakeNOP(dword_82B03F, 2, true);
 
         // disable the preculler to potentially increase scenery rendered on screen (the thing that uses PrecullerBooBooScript.hoo)
         pattern = hook::pattern("8B 6E CC D9 45 10 88 56 14 D9 5E 0C 8B 0D ? ? ? ?");
-        uint32_t* PrecullerMode = *pattern.count(0).get(0).get<uint32_t*>(14);
+        uint32_t* PrecullerMode = *pattern.count(1).get(0).get<uint32_t*>(14);
         *PrecullerMode = 0;
+    }
+
+    static int nFPSLimit = iniReader.ReadInteger("GRAPHICS", "FPSLimit", 60);
+    if (nFPSLimit)
+    {
+        static float FrameTime = 1.0f / nFPSLimit;
+        static double dFrameTime = 1.0 / nFPSLimit;
+        //static float fnFPSLimit = (float)nFPSLimit;
+        static double dnFPSLimit = (double)nFPSLimit;
+
+        // Frame times
+        // PrepareRealTimestep() NTSC video mode framerate, .text
+        uint32_t* dword_6ADFEB = hook::pattern("F3 0F 10 0D ? ? ? ? 0F 5A C0 0F 5A C9 F2 0F 58 C8 66 0F 5A C1").count(1).get(0).get<uint32_t>(0x66); //0x6ADF85 anchor, 0x6ADFEB pointer write
+        // MainLoop double frametime (FPS lock) .rdata
+        pattern = hook::pattern("6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 83 EC 18 57 A1 ? ? ? ? 33 C4"); //0x6795D0 anchor
+        double* dbl_BE4208 = *pattern.count(1).get(0).get<double*>(0x184); //0x679754 location dereference
+        // MainLoop float frametime (FPS lock) .rdata
+        float* flt_C05E7C = *pattern.count(1).get(0).get<float*>(0x5E); //0x67962E location dereference
+        // FullSpeedMode frametime (10x speed) .rdata
+        float* flt_C0CEB4 = *pattern.count(1).get(0).get<float*>(0x1B6); //0x679786 location dereference
+        // Unknown frametime 1 .rdata
+        float* flt_BE491C = *hook::pattern("80 62 15 F7 83 C0 01 3B 41 64 7C DA").count(1).get(0).get<float*>(0xE); //0x50FE5A anchor, 0x50FE68 location dereference
+        // Unknown frametime 2 .rdata
+        pattern = hook::pattern("0F 5A C2 F3 0F 10 56 6C 0F 5A D2 F2 0F 5C C2 66 0F 5A C0 0F 2F C8 77 03"); //0x83C6CD anchor
+        double* dbl_C31908 = *pattern.count(1).get(0).get<double*>(0x1F); //0x83C6EC location dereference
+        // Unknown frametime 3 .rdata
+        float* flt_C31904 = *pattern.count(1).get(0).get<float*>(0x31); //0x83C6FE location dereference
+        // Sim::QueueEvents frametime .rdata (this affects gameplay smoothness noticeably)
+        float* flt_C23F94 = *hook::pattern("0F 57 C0 F3 0F 10 4C 24 30 0F 2F C1 73 2B").count(1).get(0).get<float*>(0x28); //0x7B89BC anchor, 0x7B89E4 location dereference
+
+        injector::WriteMemory(dword_6ADFEB, &dnFPSLimit, true);
+        injector::WriteMemory(dbl_BE4208, dFrameTime, true);
+        injector::WriteMemory(flt_C05E7C, FrameTime, true);
+        injector::WriteMemory(flt_C0CEB4, FrameTime * 10.0f, true);
+        injector::WriteMemory(flt_BE491C, FrameTime, true);
+        injector::WriteMemory(dbl_C31908, -dFrameTime, true);
+        injector::WriteMemory(flt_C31904, -FrameTime, true);
+        injector::WriteMemory(flt_C23F94, FrameTime, true);
+
+        // Frame rates
+        // TODO: if any issues arise, figure out where 60.0 values are used and update the constants...
     }
 }
 
