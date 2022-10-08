@@ -816,6 +816,8 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to disable motion blur
 
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to change fps limit
+
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to force 44100Hz sample rate audio
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to increase deadzone for left stick
