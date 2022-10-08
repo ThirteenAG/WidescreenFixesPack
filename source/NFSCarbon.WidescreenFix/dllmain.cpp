@@ -682,7 +682,8 @@ void Init()
 
         // Frame times
         // PrepareRealTimestep() NTSC video mode frametime, .rdata
-        float* flt_9CBC14 = *hook::pattern("D9 05 ? ? ? ? B9 ? ? ? ? D8 44 24 14 D9 5C 24 14").count(1).get(0).get<float*>(53); //0x006B4CFB
+        //float* flt_9CBC14 = *hook::pattern("D9 05 ? ? ? ? B9 ? ? ? ? D8 44 24 14 D9 5C 24 14").count(1).get(0).get<float*>(53); //0x006B4CFB
+        uint32_t* dword_6B4D30 = hook::pattern("D9 05 ? ? ? ? B9 ? ? ? ? D8 44 24 14 D9 5C 24 14").count(1).get(0).get<uint32_t>(53); //0x006B4CFB
         // MainLoop frametime (FPS lock) .text
         float* flt_6B79E3 = hook::pattern("C7 44 24 1C 89 88 88 3C").count(1).get(0).get<float>(4); //0x6B79DF
         // FullSpeedMode frametime (10x speed) .text
@@ -698,7 +699,8 @@ void Init()
         // Sim::QueueEvents frametime .text (this affects gameplay smoothness noticeably)
         float* flt_9EBB6C = *hook::pattern("D9 46 1C 8B 46 24 83 F8 03 D8 0D ? ? ? ?").count(1).get(0).get<float*>(11); //0x0076AD57
 
-        injector::WriteMemory(flt_9CBC14, FrameTime, true);
+        //injector::WriteMemory(flt_9CBC14, FrameTime, true);
+        injector::WriteMemory(dword_6B4D30, &FrameTime, true);
         injector::WriteMemory(flt_6B79E3, FrameTime, true);
         injector::WriteMemory(flt_6B79F4, FrameTime * 10.0f, true);
         injector::WriteMemory(flt_764A42, FrameTime, true);
