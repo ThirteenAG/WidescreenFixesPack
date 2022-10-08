@@ -678,7 +678,7 @@ void Init()
     if (nFPSLimit)
     {
         static float FrameTime = 1.0f / nFPSLimit;
-        //static float fnFPSLimit = (float)nFPSLimit;
+        static float fnFPSLimit = (float)nFPSLimit;
 
         // Frame times
         // PrepareRealTimestep() NTSC video mode frametime, .rdata
@@ -717,6 +717,34 @@ void Init()
         //injector::WriteMemory(flt_9E2500, fnFPSLimit, true);
 
         // NOTE: drift scoring system has 60.0 values... it may be affected by this... it needs thorough testing to see if parts like that are affected!
+
+        // fix WorldMap cursor & scale the update constants with frametime to keep consistent movement
+        // WorldMap::UpdateAnalogInput()
+        pattern = hook::pattern("D9 05 ? ? ? ? 83 EC 08 D8 0D ? ? ? ? 56 8B F1");//0x0058F770 anchor
+        // WorldMap framerate .text
+        uint32_t* dword_58F779 = pattern.count(1).get(0).get<uint32_t>(0xB); //0x0058F779
+        // constants
+        float* flt_9CEDF4 = *pattern.count(1).get(0).get<float*>(0x1B); //0x0058F789 dereference
+        uint32_t* dword_58F78F = pattern.count(1).get(0).get<uint32_t>(0x21); //0x0058F78F
+        uint32_t* dword_58F79E = pattern.count(1).get(0).get<uint32_t>(0x2E); //0x0058F79E
+        uint32_t* dword_58F7A8 = pattern.count(1).get(0).get<uint32_t>(0x38); //0x0058F7A8
+        uint32_t* dword_58F7B5 = pattern.count(1).get(0).get<uint32_t>(0x45); //0x0058F7B5
+
+        injector::WriteMemory(dword_58F779, &fnFPSLimit, true);
+
+        injector::WriteMemory(flt_9CEDF4, (212.5f * FrameTime), true);
+
+        static float WorldMapConst1 = 24.37499375f * FrameTime;
+        injector::WriteMemory(dword_58F78F, &WorldMapConst1, true);
+
+        static float WorldMapConst2 = 42.5f * FrameTime;
+        injector::WriteMemory(dword_58F79E, &WorldMapConst2, true);
+
+        static float WorldMapConst3 = 68.75f * FrameTime;
+        injector::WriteMemory(dword_58F7A8, &WorldMapConst3, true);
+
+        static float WorldMapConst4 = 125.0f * FrameTime;
+        injector::WriteMemory(dword_58F7B5, &WorldMapConst4, true);
     }
 
     if (bWriteSettingsToFile)
