@@ -168,6 +168,7 @@ void Init()
     bool bBrakeLightFix = iniReader.ReadInteger("MISC", "BrakeLightFix", 1) != 0;
     static int32_t nShadowRes = iniReader.ReadInteger("MISC", "ShadowRes", 2048);
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
+    static int nFPSLimit = iniReader.ReadInteger("MISC", "FPSLimit", 60);
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
         szCustomUserFilesDirectoryInGameDir.clear();
 
@@ -618,6 +619,58 @@ void Init()
                 *(uint32_t*)(regs.esi + 0x238) = (uint32_t)(dStickState * 65535.0);
             }
         }; injector::MakeInline<DeadzoneHookY>(pattern.get_first(18 + 0), pattern.get_first(18 + 6));
+    }
+
+    if (nFPSLimit)
+    {
+        static float FrameTime = 1.0f / nFPSLimit;
+        static double dFrameTime = 1.0 / nFPSLimit;
+        //static float fnFPSLimit = (float)nFPSLimit;
+        static double dnFPSLimit = (double)nFPSLimit;
+
+        // Frame times
+        // PrepareRealTimestep() NTSC video mode framerate, .text
+        uint32_t* dword_6D8B8F = hook::pattern("D9 05 ? ? ? ? B9 ? ? ? ? D8 44 24 14 D9 5C 24 14").count(1).get(0).get<uint32_t>(53); //0x6D8B5A anchor, 0x6D8B8F pointer write
+        // MainLoop double frametime (FPS lock) .rdata
+        double* dbl_9FABF8 = *hook::pattern("D8 44 24 08 D9 5C 24 20 EB 47 83 3D").count(1).get(0).get<double*>(0x1B); //0x006DAEE8 anchor, 0x6DAF03 location dereference
+        // MainLoop float frametime (FPS lock) .rdata
+        float* flt_98C218 = *hook::pattern("D8 44 24 08 D9 5C 24 20 EB 47 83 3D").count(1).get(0).get<float*>(0x30); //0x006DAEE8 anchor, 0x6DAF18 location dereference
+        // FullSpeedMode frametime (10x speed) .rdata
+        float* flt_98D868 = *hook::pattern("D8 44 24 08 D9 5C 24 20 EB 47 83 3D").count(1).get(0).get<float*>(0x47); //0x006DAEE8 anchor, 0x6DAF2F location dereference
+        // Unknown frametime 1 .rdata
+        float* flt_996F48 = *hook::pattern("D8 66 7C D9 5C 24 14 D9 44 24 14 D9 05 ? ? ? ? DF F1").count(1).get(0).get<float*>(0xD); //0x74F3F4 anchor, 0x74F401 location dereference
+        // Unknown frametime 2 .rdata
+        double* dbl_996F40 = *hook::pattern("D8 66 7C D9 5C 24 14 D9 44 24 14 D9 05 ? ? ? ? DF F1").count(1).get(0).get<double*>(0x33); //0x74F3F4 anchor, 0x74F427 location dereference
+        // Unknown frametime 3 .rdata
+        float* flt_996F3C = *hook::pattern("D8 66 7C D9 5C 24 14 D9 44 24 14 D9 05 ? ? ? ? DF F1").count(1).get(0).get<float*>(0x41); //0x74F3F4 anchor, 0x0074F435 location dereference
+        // NIS related frametime .rdata
+        float* flt_9FB408 = *hook::pattern("D9 EE 51 D9 1C 24 E8 ? ? ? ? D9 05 ? ? ? ? D9 1C 24").count(1).get(0).get<float*>(0xD); //0x4D9B7F anchor, 0x004D9B8C location dereference
+        // Sim::QueueEvents frametime .rdata (this affects gameplay smoothness noticeably)
+        float* flt_9EE934 = *hook::pattern("D9 46 1C 8B 10 83 EC 08 D9 5C 24 04 8B C8 D9 05 ? ? ? ?").count(1).get(0).get<float*>(16); //0x004CE576 anchor, 0x004CE586 location dereference
+
+        injector::WriteMemory(dword_6D8B8F, &dnFPSLimit, true);
+        injector::WriteMemory(dbl_9FABF8, dFrameTime, true);
+        injector::WriteMemory(flt_98C218, FrameTime, true);
+        injector::WriteMemory(flt_98D868, FrameTime * 10.0f, true);
+        injector::WriteMemory(flt_996F48, FrameTime, true);
+        injector::WriteMemory(dbl_996F40, -dFrameTime, true);
+        injector::WriteMemory(flt_996F3C, -FrameTime, true);
+        injector::WriteMemory(flt_9FB408, FrameTime, true);
+        injector::WriteMemory(flt_9EE934, FrameTime, true);
+
+        // Frame rates
+        // TODO: if any issues arise, figure out where 60.0 values are used and update the constants...
+        
+        // scale boost grip values with frametime to make staging (drag burnout) normal difficulty and not broken and too easy (.rdata)
+        // using 60fps as the basis for scaling
+        double* dbl_9FB3B8 = *hook::pattern("D9 83 80 03 00 00 DC 05 ? ? ? ? D9 5C 24 14").count(1).get(0).get<double*>(8); //0x483707 anchor, 0x48370F location dereference, value at 0x009FB3B8
+        double* dbl_9FB3C0 = *hook::pattern("D9 83 80 03 00 00 DC 25 ? ? ? ? D9 5C 24 14").count(1).get(0).get<double*>(8); //0x4836DD anchor, 0x4836E3 location dereference, value at 0x009FB3C0
+
+        static double BoostGripAdder = 0.5312500288709998125 * dFrameTime;
+        injector::WriteMemory(dbl_9FB3B8, BoostGripAdder, true);
+
+        static double BoostGripSubtractor = 0.1250000059371814375 * dFrameTime;
+        injector::WriteMemory(dbl_9FB3C0, BoostGripSubtractor, true);
     }
 
     if (bWriteSettingsToFile)
