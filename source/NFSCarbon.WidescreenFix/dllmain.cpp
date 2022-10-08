@@ -33,6 +33,7 @@ void Init()
     bool bExpandControllerOptions = iniReader.ReadInteger("MISC", "ExpandControllerOptions", 0) != 0;
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
     static float fRainDropletsScale = iniReader.ReadFloat("MISC", "RainDropletsScale", 0.5f);
+    bool bDisableMotionBlur = iniReader.ReadInteger("MISC", "DisableMotionBlur", 0) != 0;
     static int nFPSLimit = iniReader.ReadInteger("MISC", "FPSLimit", 60);
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
         szCustomUserFilesDirectoryInGameDir.clear();
@@ -378,6 +379,12 @@ void Init()
             injector::MakeCALL((uint32_t)dword_6CBF17, static_cast<HRESULT(WINAPI*)(HWND, int, HANDLE, DWORD, LPSTR)>(SHGetFolderPathAHook), true);
             injector::MakeNOP((uint32_t)dword_6CBF17 + 5, 1, true);
         }
+    }
+
+    if (bDisableMotionBlur)
+    {
+        uint32_t* dword_71356B = hook::pattern("D9 87 B4 00 00 00 D8 1D ? ? ? ? DF E0 F6 C4 41 75 76").count(1).get(0).get<uint32_t>(17); //0x0071355A
+        injector::WriteMemory<uint8_t>(dword_71356B, 0xEB, true);
     }
 
     if (nWindowedMode)
