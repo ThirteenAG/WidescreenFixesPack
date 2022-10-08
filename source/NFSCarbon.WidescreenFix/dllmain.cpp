@@ -33,6 +33,7 @@ void Init()
     bool bExpandControllerOptions = iniReader.ReadInteger("MISC", "ExpandControllerOptions", 0) != 0;
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
     static float fRainDropletsScale = iniReader.ReadFloat("MISC", "RainDropletsScale", 0.5f);
+    static int nFPSLimit = iniReader.ReadInteger("MISC", "FPSLimit", 60);
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
         szCustomUserFilesDirectoryInGameDir.clear();
 
@@ -665,6 +666,50 @@ void Init()
                 *(uint32_t*)(regs.esi + 0x238) = (uint32_t)(dStickState * 65535.0);
             }
         }; injector::MakeInline<DeadzoneHookY>(pattern.get_first(18 + 0), pattern.get_first(18 + 6));
+    }
+
+    if (nFPSLimit)
+    {
+        static float FrameTime = 1.0f / nFPSLimit;
+        //static float fnFPSLimit = (float)nFPSLimit;
+
+        // Frame times
+        // PrepareRealTimestep() NTSC video mode frametime, .rdata
+        float* flt_9CBC14 = *hook::pattern("D9 05 ? ? ? ? B9 ? ? ? ? D8 44 24 14 D9 5C 24 14").count(1).get(0).get<float*>(53); //0x006B4CFB
+        // MainLoop frametime (FPS lock) .text
+        float* flt_6B79E3 = hook::pattern("C7 44 24 1C 89 88 88 3C").count(1).get(0).get<float>(4); //0x6B79DF
+        // FullSpeedMode frametime (10x speed) .text
+        float* flt_6B79F4 = hook::pattern("C7 44 24 1C AB AA 2A 3E").count(1).get(0).get<float>(4); //0x6B79F0
+        // Unknown frametime 1 .text
+        float* flt_764A42 = hook::pattern("C7 46 14 89 88 88 3C").count(1).get(0).get<float>(3); //0x00764A3F
+        // Unknown frametime 2 .text
+        float* flt_76AD08 = hook::pattern("68 89 88 88 3C").count(1).get(0).get<float>(1); //0x76AD07
+        // ESimTask frametime .rdata
+        float* flt_9DB360 = *hook::pattern("83 C4 04 D9 46 14 42 D8 05 ? ? ? ?").count(1).get(0).get<float*>(9); //0x672EFB
+        // Unknown frametime 3 .rdata (in some data structure, these values may need to be scaled up from 60.0 accordingly)
+        //float* flt_9E24F0 = hook::pattern("00 00 70 42 89 88 88 3C 00 00 20 40 00 00 E0 40").count(1).get(0).get<float>(4); //0x9E24EC
+        // Sim::QueueEvents frametime .text (this affects gameplay smoothness noticeably)
+        float* flt_9EBB6C = *hook::pattern("D9 46 1C 8B 46 24 83 F8 03 D8 0D ? ? ? ?").count(1).get(0).get<float*>(11); //0x0076AD57
+
+        injector::WriteMemory(flt_9CBC14, FrameTime, true);
+        injector::WriteMemory(flt_6B79E3, FrameTime, true);
+        injector::WriteMemory(flt_6B79F4, FrameTime * 10.0f, true);
+        injector::WriteMemory(flt_764A42, FrameTime, true);
+        injector::WriteMemory(flt_76AD08, FrameTime, true);
+        injector::WriteMemory(flt_9DB360, FrameTime, true);
+        //injector::WriteMemory(flt_9E24F0, FrameTime, true);
+        injector::WriteMemory(flt_9EBB6C, FrameTime, true);
+
+        // Frame rates
+        // Unknown framerate 1 .rdata (in some data structure, these values may need to be scaled up from 60.0 accordingly)
+        //float* flt_9E24EC = hook::pattern("00 00 70 42 89 88 88 3C").count(1).get(0).get<float>(0); //0x9E24EC
+        // Unknown framerate 2 .rdata (in some data structure, these values may need to be scaled up from 60.0 accordingly)
+        //float* flt_9E2500 = hook::pattern("00 00 70 42 89 88 88 3C").count(1).get(0).get<float>(20); //0x9E24EC
+
+        //injector::WriteMemory(flt_9E24EC, fnFPSLimit, true);
+        //injector::WriteMemory(flt_9E2500, fnFPSLimit, true);
+
+        // NOTE: drift scoring system has 60.0 values... it may be affected by this... it needs thorough testing to see if parts like that are affected!
     }
 
     if (bWriteSettingsToFile)
