@@ -885,6 +885,14 @@ void Init4()
         // Frame rates
         // TODO: if any issues arise, figure out where 60.0 values are used and update the constants...
     }
+
+    bool bDisableMotionBlur = iniReader.ReadInteger("GRAPHICS", "DisableMotionBlur", 0) != 0;
+    if (bDisableMotionBlur)
+    {
+        uint32_t* dword_7B2972 = hook::pattern("F3 0F 7E 84 24 44 01 00 00 6A 0C 68 ? ? ? ? 8D 84 24 40 01 00 00 50").count(1).get(0).get<uint32_t>(0x35); //0x7B293D anchor, 0x7B2972 pointer write
+        uint32_t* dword_7B2AAC = hook::pattern("F3 0F 7E 84 24 44 01 00 00 6A 0C 68 ? ? ? ? 8D 84 24 40 01 00 00 50").count(1).get(0).get<uint32_t>(0x16F);
+        injector::MakeJMP(dword_7B2972, dword_7B2AAC, true);
+    }
 }
 
 CEXP void InitializeASI()
