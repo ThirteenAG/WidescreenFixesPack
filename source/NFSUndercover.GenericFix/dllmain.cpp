@@ -46,54 +46,10 @@ void __declspec(naked) ShadowTexCave()
     }
 }
 
-bool bBorderlessWindowed = true;
-bool bEnableWindowResize = false;
-HWND GameHWND = NULL;
-
-BOOL WINAPI AdjustWindowRect_Hook(LPRECT lpRect, DWORD dwStyle, BOOL bMenu)
-{
-    DWORD newStyle = 0;
-
-    if (!bBorderlessWindowed)
-        newStyle = WS_CAPTION;
-
-    return AdjustWindowRect(lpRect, newStyle, bMenu);
-}
-
-HWND WINAPI CreateWindowExA_Hook(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam)
-{
-    // fix the window to open at the center of the screen...
-    int DesktopX = 0;
-    int DesktopY = 0;
-
-    std::tie(DesktopX, DesktopY) = GetDesktopRes();
-
-    int WindowPosX = (int)(((float)DesktopX / 2.0f) - ((float)nWidth / 2.0f));
-    int WindowPosY = (int)(((float)DesktopY / 2.0f) - ((float)nHeight / 2.0f));
-
-    GameHWND = CreateWindowExA(dwExStyle, lpClassName, lpWindowName, 0, WindowPosX, WindowPosY, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
-    LONG lStyle = GetWindowLong(GameHWND, GWL_STYLE);
-
-    if (bBorderlessWindowed)
-        lStyle &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU);
-    else
-    {
-        lStyle |= (WS_MINIMIZEBOX | WS_SYSMENU);
-        if (bEnableWindowResize)
-            lStyle |= (WS_MAXIMIZEBOX | WS_THICKFRAME);
-    }
-
-    SetWindowLong(GameHWND, GWL_STYLE, lStyle);
-
-    SetWindowPos(GameHWND, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
-
-    return GameHWND;
-}
-
 // Undercover-specific version which also corrects the window position
 BOOL WINAPI AdjustWindowRect_Hook_UC(LPRECT lpRect, DWORD dwStyle, BOOL bMenu)
 {
-    BOOL retval = AdjustWindowRect_Hook(lpRect, dwStyle, bMenu);
+    BOOL retval = WindowedModeWrapper::AdjustWindowRect_Hook(lpRect, dwStyle, bMenu);
 
     // fix the window to adjust at the center of the screen...
     int DesktopX = 0;
@@ -106,7 +62,7 @@ BOOL WINAPI AdjustWindowRect_Hook_UC(LPRECT lpRect, DWORD dwStyle, BOOL bMenu)
     int WindowPosX = (int)(((float)DesktopX / 2.0f) - ((float)WindowX / 2.0f));
     int WindowPosY = (int)(((float)DesktopY / 2.0f) - ((float)WindowY / 2.0f));
 
-    SetWindowPos(GameHWND, 0, WindowPosX, WindowPosY, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+    SetWindowPos(WindowedModeWrapper::GameHWND, 0, WindowPosX, WindowPosY, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
 
     return retval;
 }
@@ -793,16 +749,16 @@ void Init4()
 
         // hook the offending functions
         injector::MakeNOP(dword_7563AD, 6, true);
-        injector::MakeCALL(dword_7563AD, CreateWindowExA_Hook, true);
+        injector::MakeCALL(dword_7563AD, WindowedModeWrapper::CreateWindowExA_Hook, true);
         injector::MakeNOP(dword_755E87, 6, true);
         injector::MakeCALL(dword_755E87, AdjustWindowRect_Hook_UC, true);
         // enable windowed mode variable
         *WindowedMode_DF1E1C = 1;
 
         if (nWindowedMode > 1)
-            bBorderlessWindowed = false;
+            WindowedModeWrapper::bBorderlessWindowed = false;
         if (nWindowedMode > 2) // TODO: implement dynamic resizing (like in MW)
-            bEnableWindowResize = true;
+            WindowedModeWrapper::bEnableWindowResize = true;
 
         // actually what enforces the windowed mode
         auto pattern = hook::pattern("89 5D 3C 89 5D 18 89 5D 44"); //0x74FD5C

@@ -14,9 +14,6 @@ struct Screen
     float fHudOffset;
 } Screen;
 
-bool bBorderlessWindowed = true;
-bool bEnableWindowResize = false;
-
 union HudPos
 {
     uint32_t dwPos;
@@ -76,48 +73,6 @@ HANDLE WINAPI CustomCreateThread(LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_
     if (hThread)
         SetThreadAffinityMask(hThread, AffinityMask);
     return hThread;
-}
-
-BOOL WINAPI AdjustWindowRect_Hook(LPRECT lpRect, DWORD dwStyle, BOOL bMenu)
-{
-    DWORD newStyle = 0;
-
-    if (!bBorderlessWindowed)
-        newStyle = WS_CAPTION;
-
-    return AdjustWindowRect(lpRect, newStyle, bMenu);
-}
-
-HWND WINAPI CreateWindowExA_Hook(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam)
-{
-    HWND GameHWND = NULL;
-
-    // fix the window to open at the center of the screen...
-    int DesktopX = 0;
-    int DesktopY = 0;
-
-    std::tie(DesktopX, DesktopY) = GetDesktopRes();
-
-    int WindowPosX = (int)(((float)DesktopX / 2.0f) - ((float)nWidth / 2.0f));
-    int WindowPosY = (int)(((float)DesktopY / 2.0f) - ((float)nHeight / 2.0f));
-
-    GameHWND = CreateWindowExA(dwExStyle, lpClassName, lpWindowName, 0, WindowPosX, WindowPosY, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
-    LONG lStyle = GetWindowLong(GameHWND, GWL_STYLE);
-
-    if (bBorderlessWindowed)
-        lStyle &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU);
-    else
-    {
-        lStyle |= (WS_MINIMIZEBOX | WS_SYSMENU);
-        if (bEnableWindowResize)
-            lStyle |= (WS_MAXIMIZEBOX | WS_THICKFRAME);
-    }
-
-    SetWindowLong(GameHWND, GWL_STYLE, lStyle);
-
-    SetWindowPos(GameHWND, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
-
-    return GameHWND;
 }
 
 void Init()
@@ -889,16 +844,16 @@ void Init()
         injector::MakeJMP(dword_5D2795, dword_5D27A8, true);
         // hook the offending functions
         injector::MakeNOP(dword_5D2674, 6, true);
-        injector::MakeCALL(dword_5D2674, CreateWindowExA_Hook, true);
+        injector::MakeCALL(dword_5D2674, WindowedModeWrapper::CreateWindowExA_Hook, true);
         injector::MakeNOP(dword_5D2638, 6, true);
-        injector::MakeCALL(dword_5D2638, AdjustWindowRect_Hook, true);
+        injector::MakeCALL(dword_5D2638, WindowedModeWrapper::AdjustWindowRect_Hook, true);
         // enable windowed mode variable
         *WindowedMode_87098C = 1;
 
         if (nWindowedMode > 1)
-            bBorderlessWindowed = false;
+            WindowedModeWrapper::bBorderlessWindowed = false;
         if (nWindowedMode > 2) // TODO: implement dynamic resizing (like in MW)
-            bEnableWindowResize = true;
+            WindowedModeWrapper::bEnableWindowResize = true;
     }
 }
 
