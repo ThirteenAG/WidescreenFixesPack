@@ -137,7 +137,7 @@ void Init()
     static int nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
     static int nFPSLimit= iniReader.ReadInteger("MISC", "FPSLimit", 120);
-    bool b60FPSCutscenes = iniReader.ReadInteger("MISC", "60FPSCutscenes", 1) != 0;
+    bool bHighFPSCutscenes = iniReader.ReadInteger("MISC", "HighFPSCutscenes", 1) != 0;
     bool bSingleCoreAffinity = iniReader.ReadInteger("MISC", "SingleCoreAffinity", 0) != 0;
     bool bNoOpticalDriveFix = iniReader.ReadInteger("MISC", "NoOpticalDriveFix", 1) != 0;
     static float fRainDropletsScale = iniReader.ReadFloat("MISC", "RainDropletsScale", 0.5f);
@@ -737,15 +737,47 @@ void Init()
         injector::WriteMemory(dword_865558, FrameTime, true);
         uint32_t* dword_7FB710 = *hook::pattern("D9 05 ? ? ? ? D8 74 ? ? D9 1D ? ? ? ? C3").count(1).get(0).get<uint32_t*>(33);
         injector::WriteMemory(dword_7FB710, FrameTime, true);
+        // Video mode frametime
+        float* flt_7875BC = *hook::pattern("8B 44 24 14 D9 05 ? ? ? ? 8B 0D ? ? ? ? D8 44 24 14 8B 15 ? ? ? ? D9 05 ? ? ? ?").count(1).get(0).get<float*>(0x55); //0x57EB8B anchor, 0x57EBE0 dereference
+        injector::WriteMemory(flt_7875BC, FrameTime, true);
+        // a function in eDisplayFrame (particle effects?) frametime
+        uint32_t* dword_40A744 = hook::pattern("68 89 88 88 3C").count(1).get(0).get<uint32_t>(1);
+        injector::WriteMemory(dword_40A744, FrameTime, true);
+        // Smokeable frametime
+        float* flt_7FC858 = hook::pattern("8B F1 E8 ? ? ? ? 8A 86 06 05 00 00 84 C0 0F 84 ? ? ? ?").count(1).get(0).get<float>(0x2F); //0x5B1DE0 anchor, 0x005B1E0F dereference
+        injector::WriteMemory(flt_7FC858, FrameTime, true);
+
+        // GAME BUGFIX: disable player steering autocentering to prevent sticky input
+        // same thing as NFSU fix, check its dllmain.cpp for more info
+        uint32_t* dword_416D82 = hook::pattern("DD D8 D9 44 24 18 D9 54 24 1C D9 E1 D8 1D ? ? ? ? DF E0 F6 C4 05").count(1).get(0).get<uint32_t>(0x17); //0x416D6B anchor
+        injector::WriteMemory<uint8_t>(dword_416D82, 0xEB, true);
     }
 
-    if (b60FPSCutscenes)
+    if (bHighFPSCutscenes)
     {
-        static float flt60 = 60.0f;
+        static int AnimSceneFPS = 120;
+        static float fAnimSceneFPS = 120.0f;
+
+        if (nFPSLimit > 0)
+            AnimSceneFPS = nFPSLimit;
+
+        if (AnimSceneFPS % 30)
+            AnimSceneFPS = AnimSceneFPS - (AnimSceneFPS % 30);
+
+        // car physics are buggy above 120 FPS
+        // TODO: bugfix this if possible
+        if (AnimSceneFPS > 120)
+            AnimSceneFPS = 120;
+
+        if (AnimSceneFPS < 30)
+            AnimSceneFPS = 30;
+
+        fAnimSceneFPS = (float)AnimSceneFPS;
+
         uint32_t* dword_435FA4 = hook::pattern("7C ? 68 ? ? ? ? E8 ? ? ? ? 83 C4 ? 5F 5E").count(1).get(0).get<uint32_t>(3);
-        injector::WriteMemory(dword_435FA4, flt60, true);
+        injector::WriteMemory(dword_435FA4, fAnimSceneFPS, true);
         uint32_t* dword_7A572C = *hook::pattern("8B 15 ? ? ? ? 52 A3 ? ? ? ? E8 ? ? ? ? 83 C4 14").count(1).get(0).get<uint32_t*>(2);
-        injector::WriteMemory(dword_7A572C, flt60, true);
+        injector::WriteMemory(dword_7A572C, fAnimSceneFPS, true);
     }
 
     if (bSingleCoreAffinity)
