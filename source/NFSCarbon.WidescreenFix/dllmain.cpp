@@ -12,6 +12,50 @@ struct Screen
     float fHudPosX;
 } Screen;
 
+bool bBorderlessWindowed = true;
+bool bEnableWindowResize = false;
+HWND GameHWND = NULL;
+
+BOOL WINAPI AdjustWindowRect_Hook(LPRECT lpRect, DWORD dwStyle, BOOL bMenu)
+{
+    DWORD newStyle = 0;
+
+    if (!bBorderlessWindowed)
+        newStyle = WS_CAPTION;
+
+    return AdjustWindowRect(lpRect, newStyle, bMenu);
+}
+
+HWND WINAPI CreateWindowExA_Hook(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam)
+{
+    // fix the window to open at the center of the screen...
+    int DesktopX = 0;
+    int DesktopY = 0;
+
+    std::tie(DesktopX, DesktopY) = GetDesktopRes();
+
+    int WindowPosX = (int)(((float)DesktopX / 2.0f) - ((float)nWidth / 2.0f));
+    int WindowPosY = (int)(((float)DesktopY / 2.0f) - ((float)nHeight / 2.0f));
+
+    GameHWND = CreateWindowExA(dwExStyle, lpClassName, lpWindowName, 0, WindowPosX, WindowPosY, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
+    LONG lStyle = GetWindowLong(GameHWND, GWL_STYLE);
+
+    if (bBorderlessWindowed)
+        lStyle &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU);
+    else
+    {
+        lStyle |= (WS_MINIMIZEBOX | WS_SYSMENU);
+        if (bEnableWindowResize)
+            lStyle |= (WS_MAXIMIZEBOX | WS_THICKFRAME);
+    }
+
+    SetWindowLong(GameHWND, GWL_STYLE, lStyle);
+
+    SetWindowPos(GameHWND, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
+
+    return GameHWND;
+}
+
 void Init()
 {
     CIniReader iniReader("");
@@ -389,46 +433,28 @@ void Init()
 
     if (nWindowedMode)
     {
-        int32_t DesktopX = 0;
-        int32_t DesktopY = 0;
-        std::tie(DesktopX, DesktopY) = GetDesktopRes();
+        pattern = hook::pattern("68 06 2D 05 54 68 06 2D 05 54 E8 ? ? ? ? 83 C4 08 50"); //0x730A07 anchor
+        uint32_t* dword_730A7B = pattern.count(1).get(0).get<uint32_t>(0x74);
+        uint32_t* dword_730A1F = pattern.count(1).get(0).get<uint32_t>(0x18);
+        uint32_t* dword_730B82 = pattern.count(1).get(0).get<uint32_t>(0x17B);
+        uint32_t* dword_730B90 = pattern.count(1).get(0).get<uint32_t>(0x189);
+        uint32_t* WindowedMode_AB0AD4 = *hook::pattern("8B 4C 24 28 8B 44 24 30 8B 7C 24 2C 8B 54 24 24 2B C1 8B 0D ? ? ? ? 2B FA").count(1).get(0).get<uint32_t*>(0x14); //0x7315F1 anchor, 0x731605 dereference
+        // note: searching some of the patterns in a different build (arcade version) yields no results... functions are slightly different because they were compiled with different compilers and settings, perhaps a more universal pattern could be made?
 
-        static tagRECT REKT;
-        REKT.left = (LONG)(((float)DesktopX / 2.0f) - ((float)Screen.Width / 2.0f));
-        REKT.top = (LONG)(((float)DesktopY / 2.0f) - ((float)Screen.Height / 2.0f));
-        REKT.right = (LONG)(REKT.left + Screen.Width);
-        REKT.bottom = (LONG)(REKT.top + Screen.Height);
-
-        auto pattern = hook::pattern("A1 ? ? ? ? 33 FF 3B C7 74"); //0xAB0AD4
-        injector::WriteMemory(*pattern.count(3).get(2).get<uint32_t*>(1), 1, true);
-
-        pattern = hook::pattern("B8 64 00 00 00 89 44 24 28"); //0x7309B4
-        injector::MakeNOP(pattern.count(1).get(0).get<uint32_t>(27), 3, true);
-        struct WindowedMode
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                *(uint32_t*)(regs.esp + 0x28) = REKT.left;
-                *(uint32_t*)(regs.esp + 0x2C) = REKT.top;
-                regs.eax = REKT.right;
-                regs.ecx = REKT.bottom;
-            }
-        }; injector::MakeInline<WindowedMode>(pattern.get_first(0), pattern.get_first(16));
+        // skip SetWindowLong because it messes things up
+        injector::MakeJMP(dword_730B82, dword_730B90, true);
+        // hook the offending functions
+        injector::MakeNOP(dword_730A7B, 6, true);
+        injector::MakeCALL(dword_730A7B, CreateWindowExA_Hook, true);
+        injector::MakeNOP(dword_730A1F, 6, true);
+        injector::MakeCALL(dword_730A1F, AdjustWindowRect_Hook, true);
+        // enable windowed mode variable
+        *WindowedMode_AB0AD4 = 1;
 
         if (nWindowedMode > 1)
-        {
-            auto SetWindowLongHook = [](HWND hWndl, int nIndex, LONG dwNewLong)
-            {
-                dwNewLong |= WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU;
-
-                SetWindowLong(hWndl, nIndex, dwNewLong);
-                SetWindowPos(hWndl, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
-            };
-
-            auto pattern = hook::pattern("68 00 00 00 10 6A F0 50"); //0x730B8A
-            injector::MakeNOP(pattern.get_first(8), 6, true);
-            injector::MakeCALL(pattern.get_first(8), static_cast<void(WINAPI*)(HWND, int, LONG)>(SetWindowLongHook), true);
-        }
+            bBorderlessWindowed = false;
+        if (nWindowedMode > 2) // TODO: implement dynamic resizing (like in MW)
+            bEnableWindowResize = true;
     }
 
     if (bSkipIntro)
