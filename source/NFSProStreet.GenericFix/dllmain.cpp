@@ -671,13 +671,14 @@ void Init()
         
         // scale boost grip values with frametime to make staging (drag burnout) normal difficulty and not broken and too easy (.rdata)
         // using 60fps as the basis for scaling
+        static double ScaleFPS = 60.0;
         double* dbl_9FB3B8 = *hook::pattern("D9 83 80 03 00 00 DC 05 ? ? ? ? D9 5C 24 14").count(1).get(0).get<double*>(8); //0x483707 anchor, 0x48370F location dereference, value at 0x009FB3B8
         double* dbl_9FB3C0 = *hook::pattern("D9 83 80 03 00 00 DC 25 ? ? ? ? D9 5C 24 14").count(1).get(0).get<double*>(8); //0x4836DD anchor, 0x4836E3 location dereference, value at 0x009FB3C0
 
-        static double BoostGripAdder = 0.5312500288709998125 * dFrameTime;
+        static double BoostGripAdder = ((*dbl_9FB3B8) / (1 / ScaleFPS)) * dFrameTime;
         injector::WriteMemory(dbl_9FB3B8, BoostGripAdder, true);
 
-        static double BoostGripSubtractor = 0.1250000059371814375 * dFrameTime;
+        static double BoostGripSubtractor = ((*dbl_9FB3C0) / (1 / ScaleFPS)) * dFrameTime;
         injector::WriteMemory(dbl_9FB3C0, BoostGripSubtractor, true);
     }
 
