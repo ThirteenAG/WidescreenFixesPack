@@ -744,7 +744,7 @@ void Init()
         uint32_t* dword_40A744 = hook::pattern("68 89 88 88 3C").count(1).get(0).get<uint32_t>(1);
         injector::WriteMemory(dword_40A744, FrameTime, true);
         // Smokeable frametime
-        float* flt_7FC858 = hook::pattern("8B F1 E8 ? ? ? ? 8A 86 06 05 00 00 84 C0 0F 84 ? ? ? ?").count(1).get(0).get<float>(0x2F); //0x5B1DE0 anchor, 0x005B1E0F dereference
+        float* flt_7FC858 = *hook::pattern("8B F1 E8 ? ? ? ? 8A 86 06 05 00 00 84 C0 0F 84 ? ? ? ?").count(1).get(0).get<float*>(0x2F); //0x5B1DE0 anchor, 0x005B1E0F dereference
         injector::WriteMemory(flt_7FC858, FrameTime, true);
 
         // GAME BUGFIX: disable player steering autocentering to prevent sticky input
