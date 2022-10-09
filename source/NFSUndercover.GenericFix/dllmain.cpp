@@ -823,7 +823,7 @@ void Init4()
     injector::MakeCALL(dword_780FFF, static_cast<uint32_t(__cdecl*)(uint32_t, uint32_t)>(CSMUpdateHook), true);
 
     // Scenery LOD hacks
-    bool bImproveSceneryLOD = iniReader.ReadInteger("GRAPHICS", "ImproveSceneryLOD", 1);
+    bool bImproveSceneryLOD = iniReader.ReadInteger("GRAPHICS", "ImproveSceneryLOD", 0);
     if (bImproveSceneryLOD)
     {
         // there is 1 more step left after 0xE, with this it should actually show all scenery
@@ -831,18 +831,26 @@ void Init4()
         pattern = hook::pattern("83 F8 01 C6 44 24 0F 0E");
         uint32_t* dword_82B0AA = pattern.count(1).get(0).get<uint32_t>(7);
         injector::WriteMemory<uint8_t>(dword_82B0AA, 0x0F, true);
+    }
 
+    bool bDisablePreculler = iniReader.ReadInteger("GRAPHICS", "DisablePreculler", 0);
+    if (bDisablePreculler)
+    {
+        // disable the preculler to potentially increase scenery rendered on screen (the thing that uses PrecullerBooBooScript.hoo)
+        pattern = hook::pattern("8B 6E CC D9 45 10 88 56 14 D9 5E 0C 8B 0D ? ? ? ?");
+        uint32_t* PrecullerMode = *pattern.count(1).get(0).get<uint32_t*>(14);
+        *PrecullerMode = 0;
+    }
+
+    bool bBruteforceCulling = iniReader.ReadInteger("GRAPHICS", "BruteforceCulling", 0);
+    if (bBruteforceCulling)
+    {
         // force the game to use ScenerySectionHeader::CullBruteForce and disable ScenerySectionHeader::TreeCull
         // this reduces excessive culling in the game caused by the VisibleSections in a track
         // this does NOT fix flickering scenery in shadows/reflections/weird parts of map/etc.
         pattern = hook::pattern("84 C0 57 8B CE 74 07");
         uint32_t* dword_82B03F = pattern.count(1).get(0).get<uint32_t>(5);
         injector::MakeNOP(dword_82B03F, 2, true);
-
-        // disable the preculler to potentially increase scenery rendered on screen (the thing that uses PrecullerBooBooScript.hoo)
-        pattern = hook::pattern("8B 6E CC D9 45 10 88 56 14 D9 5E 0C 8B 0D ? ? ? ?");
-        uint32_t* PrecullerMode = *pattern.count(1).get(0).get<uint32_t*>(14);
-        *PrecullerMode = 0;
     }
 
     static int nFPSLimit = iniReader.ReadInteger("GRAPHICS", "FPSLimit", 60);
