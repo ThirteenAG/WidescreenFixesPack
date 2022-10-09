@@ -53,29 +53,11 @@ HWND GameHWND = NULL;
 BOOL WINAPI AdjustWindowRect_Hook(LPRECT lpRect, DWORD dwStyle, BOOL bMenu)
 {
     DWORD newStyle = 0;
-    BOOL retval = 0;
 
     if (!bBorderlessWindowed)
         newStyle = WS_CAPTION;
 
-    retval = AdjustWindowRect(lpRect, newStyle, bMenu);
-
-    // fix the window to adjust at the center of the screen...
-    int DesktopX = 0;
-    int DesktopY = 0;
-    int WindowX = lpRect->right - lpRect->left;
-    int WindowY = lpRect->bottom - lpRect->top;
-
-    std::tie(DesktopX, DesktopY) = GetDesktopRes();
-
-    int WindowPosX = (int)(((float)DesktopX / 2.0f) - ((float)WindowX / 2.0f));
-    int WindowPosY = (int)(((float)DesktopY / 2.0f) - ((float)WindowY / 2.0f));
-
-    
-    SetWindowPos(GameHWND, 0, WindowPosX, WindowPosY, 0, 0, SWP_NOZORDER | SWP_FRAMECHANGED);
-
-
-    return retval;
+    return AdjustWindowRect(lpRect, newStyle, bMenu);
 }
 
 HWND WINAPI CreateWindowExA_Hook(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam)
@@ -106,6 +88,27 @@ HWND WINAPI CreateWindowExA_Hook(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpW
     SetWindowPos(GameHWND, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
 
     return GameHWND;
+}
+
+// Undercover-specific version which also corrects the window position
+BOOL WINAPI AdjustWindowRect_Hook_UC(LPRECT lpRect, DWORD dwStyle, BOOL bMenu)
+{
+    BOOL retval = AdjustWindowRect_Hook(lpRect, dwStyle, bMenu);
+
+    // fix the window to adjust at the center of the screen...
+    int DesktopX = 0;
+    int DesktopY = 0;
+    int WindowX = lpRect->right - lpRect->left;
+    int WindowY = lpRect->bottom - lpRect->top;
+
+    std::tie(DesktopX, DesktopY) = GetDesktopRes();
+
+    int WindowPosX = (int)(((float)DesktopX / 2.0f) - ((float)WindowX / 2.0f));
+    int WindowPosY = (int)(((float)DesktopY / 2.0f) - ((float)WindowY / 2.0f));
+
+    SetWindowPos(GameHWND, 0, WindowPosX, WindowPosY, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+
+    return retval;
 }
 
 void InitRes()
@@ -787,13 +790,12 @@ void Init4()
         uint32_t* dword_7563AD = hook::pattern("8B 4C 24 28 55 55 2B D1 52 8B 54 24 30 2B FA").count(1).get(0).get<uint32_t>(0x1A); //0x756393 anchor
         uint32_t* dword_755E87 = hook::pattern("68 00 00 C0 80 68 00 00 C0 80 89 46 08").count(1).get(0).get<uint32_t>(0x28); //0x755E5F anchor
         uint32_t* WindowedMode_DF1E1C = *hook::pattern("8B 54 24 1C 8B 4C 24 20 2B 54 24 14 2B 4C 24 18 A1 ? ? ? ? F7 D8").count(1).get(0).get<uint32_t*>(0x11); //0x7565DE anchor, 0x7565EF dereference
-        uint32_t* dword_74FD5C = hook::pattern("C7 85 D0 04 00 00 18 00 00 00 89 9D C4 04 00 00").count(1).get(0).get<uint32_t>(0x27); //0x74FD35 anchor
 
         // hook the offending functions
         injector::MakeNOP(dword_7563AD, 6, true);
         injector::MakeCALL(dword_7563AD, CreateWindowExA_Hook, true);
         injector::MakeNOP(dword_755E87, 6, true);
-        injector::MakeCALL(dword_755E87, AdjustWindowRect_Hook, true);
+        injector::MakeCALL(dword_755E87, AdjustWindowRect_Hook_UC, true);
         // enable windowed mode variable
         *WindowedMode_DF1E1C = 1;
 
@@ -803,7 +805,15 @@ void Init4()
             bEnableWindowResize = true;
 
         // actually what enforces the windowed mode
-        injector::MakeNOP(dword_74FD5C, 3, true);
+        auto pattern = hook::pattern("89 5D 3C 89 5D 18 89 5D 44"); //0x74FD5C
+        struct WindowedMode
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                *(uint32_t*)(regs.ebp + 0x3C) = 1;
+                *(uint32_t*)(regs.ebp + 0x18) = regs.ebx;
+            }
+        }; injector::MakeInline<WindowedMode>(pattern.get_first(0), pattern.get_first(6));
     }
 
     // Cascade Shadow Maps - resolution and scale adjustments

@@ -67,6 +67,50 @@ void __declspec(naked) ExitPostRaceFixPart2()
     }
 }
 
+bool bBorderlessWindowed = true;
+bool bEnableWindowResize = false;
+HWND GameHWND = NULL;
+
+BOOL WINAPI AdjustWindowRect_Hook(LPRECT lpRect, DWORD dwStyle, BOOL bMenu)
+{
+    DWORD newStyle = 0;
+
+    if (!bBorderlessWindowed)
+        newStyle = WS_CAPTION;
+
+    return AdjustWindowRect(lpRect, newStyle, bMenu);
+}
+
+HWND WINAPI CreateWindowExA_Hook(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam)
+{
+    // fix the window to open at the center of the screen...
+    int DesktopX = 0;
+    int DesktopY = 0;
+
+    std::tie(DesktopX, DesktopY) = GetDesktopRes();
+
+    int WindowPosX = (int)(((float)DesktopX / 2.0f) - ((float)nWidth / 2.0f));
+    int WindowPosY = (int)(((float)DesktopY / 2.0f) - ((float)nHeight / 2.0f));
+
+    GameHWND = CreateWindowExA(dwExStyle, lpClassName, lpWindowName, 0, WindowPosX, WindowPosY, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
+    LONG lStyle = GetWindowLong(GameHWND, GWL_STYLE);
+
+    if (bBorderlessWindowed)
+        lStyle &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU);
+    else
+    {
+        lStyle |= (WS_MINIMIZEBOX | WS_SYSMENU);
+        if (bEnableWindowResize)
+            lStyle |= (WS_MAXIMIZEBOX | WS_THICKFRAME);
+    }
+
+    SetWindowLong(GameHWND, GWL_STYLE, lStyle);
+
+    SetWindowPos(GameHWND, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
+
+    return GameHWND;
+}
+
 void Init()
 {
     FreeConsole();
@@ -423,6 +467,25 @@ void Init()
 
     if (nWindowedMode)
     {
+        pattern = hook::pattern("83 C4 18 8B 0B 55 52 8B 54 24 24 55 55 2B F2");//0x70E3C8 anchor
+        uint32_t* dword_70E3E9 = pattern.count(1).get(0).get<uint32_t>(0x21);
+        uint32_t* dword_70E39B = pattern.count(1).get(0).get<uint32_t>(-0x2D);
+        uint32_t* WindowedMode_AC6EFC = *hook::pattern("8B 7C 24 28 2B 7C 24 20 8B 44 24 2C 2B 44 24 24 8B 15 ? ? ? ? F7 DA").count(1).get(0).get<uint32_t*>(0x12); //0x70E5D1 anchor, 0x70E5E3 dereference
+
+        // hook the offending functions
+        injector::MakeNOP(dword_70E3E9, 6, true);
+        injector::MakeCALL(dword_70E3E9, CreateWindowExA_Hook, true);
+        injector::MakeNOP(dword_70E39B, 6, true);
+        injector::MakeCALL(dword_70E39B, AdjustWindowRect_Hook, true);
+        // enable windowed mode variable
+        *WindowedMode_AC6EFC = 1;
+
+        if (nWindowedMode > 1)
+            bBorderlessWindowed = false;
+        if (nWindowedMode > 2) // TODO: implement dynamic resizing (like in MW)
+            bEnableWindowResize = true;
+
+        // actually what enforces the windowed mode
         auto pattern = hook::pattern("89 5D 3C 89 5D 18 89 5D 44"); //0x708379
         struct WindowedMode
         {
@@ -433,63 +496,25 @@ void Init()
             }
         }; injector::MakeInline<WindowedMode>(pattern.get_first(0), pattern.get_first(6));
 
-        static auto hGameHWND = *hook::get_pattern<HWND*>("8B 0D ? ? ? ? 51 8B C8 E8 ? ? ? ? EB 02 33 C0", 2); //0x00AC6ED8
         pattern = hook::pattern("A3 ? ? ? ? 89 35 ? ? ? ? 88 1D ? ? ? ? B9 ? ? ? ? 74 0B 6A 15");
         static auto Width = *pattern.get_first<int32_t*>(1);
         static auto Height = *pattern.get_first<int32_t*>(7);
-
         struct ResHook
         {
             void operator()(injector::reg_pack& regs)
             {
                 *Width = regs.eax;
                 *Height = regs.esi;
-
+        
                 tagRECT rc;
                 auto[DesktopResW, DesktopResH] = GetDesktopRes();
                 rc.left = (LONG)(((float)DesktopResW / 2.0f) - ((float)*Width / 2.0f));
                 rc.top = (LONG)(((float)DesktopResH / 2.0f) - ((float)*Height / 2.0f));
                 rc.right = *Width;
                 rc.bottom = *Height;
-                SetWindowPos(*hGameHWND, NULL, rc.left, rc.top, rc.right, rc.bottom, SWP_NOACTIVATE | SWP_NOZORDER);
-                if (nWindowedMode > 1)
-                {
-                    SetWindowLong(*hGameHWND, GWL_STYLE, GetWindowLong(*hGameHWND, GWL_STYLE) | WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU);
-                    SetWindowPos(*hGameHWND, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
-                }
-                else
-                {
-                    SetWindowLong(*hGameHWND, GWL_STYLE, GetWindowLong(*hGameHWND, GWL_STYLE) & ~WS_OVERLAPPEDWINDOW);
-                }
+                SetWindowPos(GameHWND, NULL, rc.left, rc.top, rc.right, rc.bottom, SWP_NOACTIVATE | SWP_NOZORDER);
             }
         }; injector::MakeInline<ResHook>(pattern.get_first(0), pattern.get_first(11));
-
-        pattern = hook::pattern("89 74 24 18 89 74 24 1C 74 08 8B 53 54 8B 4A 6C"); //0x70E303
-        struct WindowedModeRect
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                regs.eax = 1;
-                *(uint32_t*)(regs.ebx + 0x3C) = 1;
-
-                tagRECT rc;
-                auto[DesktopResW, DesktopResH] = GetDesktopRes();
-                rc.left = (LONG)(((float)DesktopResW / 2.0f) - ((float)*Width / 2.0f));
-                rc.top = (LONG)(((float)DesktopResH / 2.0f) - ((float)*Height / 2.0f));
-                rc.right = *Width;
-                rc.bottom = *Height;
-
-                *(uint32_t*)(regs.esp + 0x18) = rc.left;
-                *(uint32_t*)(regs.esp + 0x1C) = rc.top;
-                *(uint32_t*)(regs.esp + 0x20) = rc.right;
-                *(uint32_t*)(regs.esp + 0x24) = rc.bottom;
-            }
-        }; injector::MakeInline<WindowedModeRect>(pattern.get_first(0), pattern.get_first(8));
-        pattern = hook::pattern("89 4C 24 20 74 08 8B 53 54 8B 4A 70");
-        injector::MakeNOP(pattern.get_first(0), 4, true);
-        pattern = hook::pattern("01 74 24 20 03 CE 3B C5");
-        injector::MakeNOP(pattern.get_first(0), 4, true);
-        injector::MakeNOP(pattern.get_first(8), 4, true);
     }
 
     if (nImproveGamepadSupport)
