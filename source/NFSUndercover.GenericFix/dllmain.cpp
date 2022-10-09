@@ -46,6 +46,68 @@ void __declspec(naked) ShadowTexCave()
     }
 }
 
+bool bBorderlessWindowed = true;
+bool bEnableWindowResize = false;
+HWND GameHWND = NULL;
+
+BOOL WINAPI AdjustWindowRect_Hook(LPRECT lpRect, DWORD dwStyle, BOOL bMenu)
+{
+    DWORD newStyle = 0;
+    BOOL retval = 0;
+
+    if (!bBorderlessWindowed)
+        newStyle = WS_CAPTION;
+
+    retval = AdjustWindowRect(lpRect, newStyle, bMenu);
+
+    // fix the window to adjust at the center of the screen...
+    int DesktopX = 0;
+    int DesktopY = 0;
+    int WindowX = lpRect->right - lpRect->left;
+    int WindowY = lpRect->bottom - lpRect->top;
+
+    std::tie(DesktopX, DesktopY) = GetDesktopRes();
+
+    int WindowPosX = (int)(((float)DesktopX / 2.0f) - ((float)WindowX / 2.0f));
+    int WindowPosY = (int)(((float)DesktopY / 2.0f) - ((float)WindowY / 2.0f));
+
+    
+    SetWindowPos(GameHWND, 0, WindowPosX, WindowPosY, 0, 0, SWP_NOZORDER | SWP_FRAMECHANGED);
+
+
+    return retval;
+}
+
+HWND WINAPI CreateWindowExA_Hook(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam)
+{
+    // fix the window to open at the center of the screen...
+    int DesktopX = 0;
+    int DesktopY = 0;
+
+    std::tie(DesktopX, DesktopY) = GetDesktopRes();
+
+    int WindowPosX = (int)(((float)DesktopX / 2.0f) - ((float)nWidth / 2.0f));
+    int WindowPosY = (int)(((float)DesktopY / 2.0f) - ((float)nHeight / 2.0f));
+
+    GameHWND = CreateWindowExA(dwExStyle, lpClassName, lpWindowName, 0, WindowPosX, WindowPosY, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
+    LONG lStyle = GetWindowLong(GameHWND, GWL_STYLE);
+
+    if (bBorderlessWindowed)
+        lStyle &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU);
+    else
+    {
+        lStyle |= (WS_MINIMIZEBOX | WS_SYSMENU);
+        if (bEnableWindowResize)
+            lStyle |= (WS_MAXIMIZEBOX | WS_THICKFRAME);
+    }
+
+    SetWindowLong(GameHWND, GWL_STYLE, lStyle);
+
+    SetWindowPos(GameHWND, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
+
+    return GameHWND;
+}
+
 void InitRes()
 {
     struct ScreenRes
@@ -547,7 +609,6 @@ void Init4()
         injector::WriteMemory(pattern.get(i).get<uint32_t>(4), &fHudWidth, true);
     }
 
-    static auto hGameHWND = *hook::get_pattern<HWND*>("8B 0D ? ? ? ? 6A 01 51 8B C8", 2);
     pattern = GetPattern("C7 40 ? ? ? ? ? 88 50 20");
     static uint32_t* Width = nullptr;
     static uint32_t* Height = nullptr;
@@ -575,26 +636,6 @@ void Init4()
                     fHudScale = 1280.0f / (720.0f * fAspectRatio);
                     fHudWidth = 1280.0f / fHudScale;
                     fHudXPos = -1.0f * fHudScale;
-                }
-            }
-
-            if (nWindowedMode)
-            {
-                tagRECT rc;
-                auto[DesktopResW, DesktopResH] = GetDesktopRes();
-                rc.left = (LONG)(((float)DesktopResW / 2.0f) - ((float)*Width / 2.0f));
-                rc.top = (LONG)(((float)DesktopResH / 2.0f) - ((float)*Height / 2.0f));
-                rc.right = *Width;
-                rc.bottom = *Height;
-                SetWindowPos(*hGameHWND, NULL, rc.left, rc.top, rc.right, rc.bottom, SWP_NOACTIVATE | SWP_NOZORDER);
-                if (nWindowedMode > 1)
-                {
-                    SetWindowLong(*hGameHWND, GWL_STYLE, GetWindowLong(*hGameHWND, GWL_STYLE) | WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU);
-                    SetWindowPos(*hGameHWND, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
-                }
-                else
-                {
-                    SetWindowLong(*hGameHWND, GWL_STYLE, GetWindowLong(*hGameHWND, GWL_STYLE) & ~WS_OVERLAPPEDWINDOW);
                 }
             }
         }
@@ -716,39 +757,26 @@ void Init4()
 
     if (nWindowedMode)
     {
-        pattern = GetPattern("89 5D 3C 89 5D 18 89 5D 44"); //0x708379
-        struct WindowedMode
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                *(uint32_t*)(regs.ebp + 0x3C) = 1;
-                *(uint32_t*)(regs.ebp + 0x18) = regs.ebx;
-            }
-        }; injector::MakeInline<WindowedMode>(pattern.get_first(0), pattern.get_first(6));
+        uint32_t* dword_7563AD = hook::pattern("8B 4C 24 28 55 55 2B D1 52 8B 54 24 30 2B FA").count(1).get(0).get<uint32_t>(0x1A); //0x756393 anchor
+        uint32_t* dword_755E87 = hook::pattern("68 00 00 C0 80 68 00 00 C0 80 89 46 08").count(1).get(0).get<uint32_t>(0x28); //0x755E5F anchor
+        uint32_t* WindowedMode_DF1E1C = *hook::pattern("8B 54 24 1C 8B 4C 24 20 2B 54 24 14 2B 4C 24 18 A1 ? ? ? ? F7 D8").count(1).get(0).get<uint32_t*>(0x11); //0x7565DE anchor, 0x7565EF dereference
+        uint32_t* dword_74FD5C = hook::pattern("C7 85 D0 04 00 00 18 00 00 00 89 9D C4 04 00 00").count(1).get(0).get<uint32_t>(0x27); //0x74FD35 anchor
 
-        pattern = GetPattern("C7 06 ? ? ? ? C7 46 ? ? ? ? ? 83 79 3C 00 57");
-        struct WindowedModeRect
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                tagRECT rc;
-                auto[DesktopResW, DesktopResH] = GetDesktopRes();
+        // hook the offending functions
+        injector::MakeNOP(dword_7563AD, 6, true);
+        injector::MakeCALL(dword_7563AD, CreateWindowExA_Hook, true);
+        injector::MakeNOP(dword_755E87, 6, true);
+        injector::MakeCALL(dword_755E87, AdjustWindowRect_Hook, true);
+        // enable windowed mode variable
+        *WindowedMode_DF1E1C = 1;
 
-                rc.left = 0;
-                rc.top = 0;
-                rc.right = DesktopResW;
-                rc.bottom = DesktopResH;
+        if (nWindowedMode > 1)
+            bBorderlessWindowed = false;
+        if (nWindowedMode > 2) // TODO: implement dynamic resizing (like in MW)
+            bEnableWindowResize = true;
 
-                *(uint32_t*)(regs.esi + 0x00) = rc.left;
-                *(uint32_t*)(regs.esi + 0x04) = rc.top;
-                *(uint32_t*)(regs.esi + 0x08) = rc.right;
-                *(uint32_t*)(regs.esi + 0x0C) = rc.bottom;
-            }
-        }; injector::MakeInline<WindowedModeRect>(pattern.get_first(0), pattern.get_first(13));
-        pattern = GetPattern("89 46 08 83 79 3C 00 74 08 8B 49 54");
-        injector::MakeNOP(pattern.get_first(0), 3, true);
-        pattern = GetPattern("89 46 08 89 4E 0C E8 ? ? ? ? 83 C4 08 8B F8 6A 00");
-        injector::MakeNOP(pattern.get_first(0), 6, true);
+        // actually what enforces the windowed mode
+        injector::MakeNOP(dword_74FD5C, 3, true);
     }
 
     // Cascade Shadow Maps - resolution and scale adjustments
