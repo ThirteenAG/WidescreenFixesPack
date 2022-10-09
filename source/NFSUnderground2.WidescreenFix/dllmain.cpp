@@ -737,6 +737,11 @@ void Init()
         injector::WriteMemory(dword_865558, FrameTime, true);
         uint32_t* dword_7FB710 = *hook::pattern("D9 05 ? ? ? ? D8 74 ? ? D9 1D ? ? ? ? C3").count(1).get(0).get<uint32_t*>(33);
         injector::WriteMemory(dword_7FB710, FrameTime, true);
+
+        // GAME BUGFIX: disable player steering autocentering to prevent sticky input
+        // same thing as NFSU fix, check its dllmain.cpp for more info
+        uint32_t* dword_416D82 = hook::pattern("DD D8 D9 44 24 18 D9 54 24 1C D9 E1 D8 1D ? ? ? ? DF E0 F6 C4 05").count(1).get(0).get<uint32_t>(0x17); //0x416D6B anchor
+        injector::WriteMemory<uint8_t>(dword_416D82, 0xEB, true);
     }
 
     if (b60FPSCutscenes)
