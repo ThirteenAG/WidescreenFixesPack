@@ -104,10 +104,10 @@ void Init()
             list2.emplace_back(r);
         }
 
-        auto pattern = hook::pattern("83 C0 08 83 F8 58 72 E8 E9 ? ? ? ? 8B 53 3C 8B 43 10");
-        injector::WriteMemory(pattern.get_first(-6), &list2[0].ResX, true); //0x0070B3EA
-        injector::WriteMemory(pattern.get_first(-14), &list2[0].ResY, true);
-        injector::WriteMemory<uint8_t>(pattern.get_first(5), 0xFFi8, true); //0x70B3F3+2
+        auto pattern = hook::pattern("83 C0 08 83 F8 58 72 E8 E9 ? ? ? ? 8B 53 3C 8B 43 10"); //0x70B3F0
+        injector::WriteMemory(pattern.get_first(-0x6), &list2[0].ResX, true); //0x70B3EA
+        injector::WriteMemory(pattern.get_first(-0xE), &list2[0].ResY, true); //0x70B3E2
+        injector::WriteMemory<uint8_t>(pattern.get_first(0x5), 0xFFi8, true); //0x70B3F5
     }
 
     // PostRaceStateManagerFix
