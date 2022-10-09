@@ -755,8 +755,8 @@ void Init()
 
     if (bHighFPSCutscenes)
     {
-        static int AnimSceneFPS = 120;
-        static float fAnimSceneFPS = 120.0f;
+        static int AnimSceneFPS = 60;
+        static float fAnimSceneFPS = 60.0f;
 
         if (nFPSLimit > 0)
             AnimSceneFPS = nFPSLimit;
@@ -764,10 +764,10 @@ void Init()
         if (AnimSceneFPS % 30)
             AnimSceneFPS = AnimSceneFPS - (AnimSceneFPS % 30);
 
-        // car physics are buggy above 120 FPS
+        // car physics are buggy above 60 FPS
         // TODO: bugfix this if possible
-        if (AnimSceneFPS > 120)
-            AnimSceneFPS = 120;
+        if (AnimSceneFPS > 60)
+            AnimSceneFPS = 60;
 
         if (AnimSceneFPS < 30)
             AnimSceneFPS = 30;
