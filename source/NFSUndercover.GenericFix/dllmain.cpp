@@ -165,6 +165,30 @@ void InitRes()
     }; injector::MakeInline<GetPackedStringHook>(pattern.get_first(0));
 }
 
+void InitRes2()
+{
+    struct ScreenRes
+    {
+        uint32_t ResX;
+        uint32_t ResY;
+    };
+
+    std::vector<std::string> list;
+    GetResolutionsList(list);
+    static std::vector<ScreenRes> list2;
+    for (auto s : list)
+    {
+        ScreenRes r;
+        sscanf_s(s.c_str(), "%dx%d", &r.ResX, &r.ResY);
+        list2.emplace_back(r);
+    }
+
+    auto pattern = hook::pattern("83 C0 08 83 F8 78 72 E8 E9 ? ? ? ? 8B 56 3C 8B 46 10"); //0x753021
+    injector::WriteMemory(pattern.get_first(-0x6), &list2[0].ResX, true); //0x75301B
+    injector::WriteMemory(pattern.get_first(-0xE), &list2[0].ResY, true); //0x753013
+    injector::WriteMemory<uint8_t>(pattern.get_first(0x5), 0xFFi8, true); //0x753026
+}
+
 void Init1()
 {
     //Stop settings reset after crash
@@ -234,7 +258,10 @@ void Init2()
             if (!bOnce)
             {
                 if (bResDetect)
+                {
                     InitRes();
+                    InitRes2();
+                }
                 if (bSkipIntro)
                     *dword_12BB200 = 1;
             }
