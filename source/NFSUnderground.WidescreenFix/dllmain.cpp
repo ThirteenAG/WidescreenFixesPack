@@ -1051,6 +1051,23 @@ void Init()
         // another frametime -- seems to affect some gameplay elements...
         uint32_t* dword_6B5C08 = *hook::pattern("DF E0 F6 C4 41 7A ? 8A 44 24 12 D9 05 ? ? ? ?").count(1).get(0).get<uint32_t*>(13);
         injector::WriteMemory(dword_6B5C08, FrameTime, true);
+
+        // GAME BUGFIX: fix sticky steering (especially on high FPS)
+        // kill the autocentering!
+        uint32_t* dword_460A3D = hook::pattern("D9 54 24 14 D9 E1 D8 1D ? ? ? ? DF E0 F6 C4 05 7A 08").count(1).get(0).get<uint32_t>(0x11); //0x460A2C anchor
+        injector::WriteMemory<uint8_t>(dword_460A3D, 0xEB, true);
+
+        // explanation:
+        // this is a native game bug which can sadly happen on a bone-stock game, it's just been exaggerated by the higher FPS and faster input
+        // what happens is this: if the steering curve isn't finished with the steering (if the wheels aren't centered), it will outright ignore the other direction you're pressing
+        // to exaggerate the issue even further: nop out the instruction at 00460DFA which will make the steering extremely slow, then try steering all the way to the left, then quickly go and hold right. Notice how it *won't* continue to go right.
+        // so to summarize in a chain of events:
+        // 1. game controller sets steering value (-1.0 to 1.0)
+        // 2. World::DoTimestep updates the player info and somewhere
+        // 3. Somewhere in that chain it calls PlayerSteering::DoUndergroundSteering with the steering value as argument
+        // 4. Steering curves get processed at PlayerSteering::CalculateSteeringSpeed                                          <-- THIS IS WHERE THE BUG HAPPENS (or shortly thereafter)
+        // 5. Steering value gets passed to the car
+        // Skipping 4. is possible by enabling the bool at 00736514, but that is intended exclusively for wheel input and not gamepad/keyboard input.
     }
 
     // windowed mode
