@@ -130,7 +130,7 @@ void Init()
     {
         const CRect fs = CRect(0.0f, 0.0f, 640.0f, 480.0f); // fullscreen images
         const CRect fl = CRect(0.0f, 0.0f, 20.0f, 15.0f);   // strike flash
-		const CRect flbv = CRect( 0.0f, 0.0f, 2.5f, 1.875f );   // strike flash (black velvetopia variant)
+        const CRect flbv = CRect( 0.0f, 0.0f, 2.5f, 1.875f );   // strike flash (black velvetopia variant)
 
         void operator()(injector::reg_pack& regs)
         {
