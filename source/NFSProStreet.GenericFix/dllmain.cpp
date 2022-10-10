@@ -168,7 +168,7 @@ void Init()
     bool bBrakeLightFix = iniReader.ReadInteger("MISC", "BrakeLightFix", 1) != 0;
     static int32_t nShadowRes = iniReader.ReadInteger("MISC", "ShadowRes", 2048);
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
-    static int nFPSLimit = iniReader.ReadInteger("MISC", "FPSLimit", 60);
+    static int nFPSLimit = iniReader.ReadInteger("MISC", "FPSLimit", -1);
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
         szCustomUserFilesDirectoryInGameDir.clear();
 
