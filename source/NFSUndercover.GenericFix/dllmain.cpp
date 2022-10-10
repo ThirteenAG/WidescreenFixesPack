@@ -874,7 +874,7 @@ void Init4()
         injector::MakeNOP(dword_82B03F, 2, true);
     }
 
-    static int nFPSLimit = iniReader.ReadInteger("GRAPHICS", "FPSLimit", 60);
+    static int nFPSLimit = iniReader.ReadInteger("GRAPHICS", "FPSLimit", -1);
     if (nFPSLimit)
     {
         if (nFPSLimit < 0)

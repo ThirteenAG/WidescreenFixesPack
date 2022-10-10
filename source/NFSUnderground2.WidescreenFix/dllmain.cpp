@@ -91,7 +91,7 @@ void Init()
     bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 1) != 0;
     static int nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
-    static int nFPSLimit= iniReader.ReadInteger("MISC", "FPSLimit", 120);
+    static int nFPSLimit= iniReader.ReadInteger("MISC", "FPSLimit", -1);
     bool bHighFPSCutscenes = iniReader.ReadInteger("MISC", "HighFPSCutscenes", 1) != 0;
     bool bSingleCoreAffinity = iniReader.ReadInteger("MISC", "SingleCoreAffinity", 0) != 0;
     bool bNoOpticalDriveFix = iniReader.ReadInteger("MISC", "NoOpticalDriveFix", 1) != 0;
