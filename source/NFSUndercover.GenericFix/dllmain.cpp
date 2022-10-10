@@ -881,6 +881,8 @@ void Init4()
         {
             if (nFPSLimit == -1)
                 nFPSLimit = GetDesktopRefreshRate();
+            else if (nFPSLimit == -2)
+                nFPSLimit = GetDesktopRefreshRate() * 2;
             else
                 nFPSLimit = 60;
         }
