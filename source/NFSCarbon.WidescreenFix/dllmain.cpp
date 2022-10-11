@@ -34,7 +34,7 @@ void Init()
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
     static float fRainDropletsScale = iniReader.ReadFloat("MISC", "RainDropletsScale", 0.5f);
     bool bDisableMotionBlur = iniReader.ReadInteger("MISC", "DisableMotionBlur", 0) != 0;
-    static int nFPSLimit = iniReader.ReadInteger("MISC", "FPSLimit", -1);
+    static int SimRate = iniReader.ReadInteger("MISC", "SimRate", -1);
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
         szCustomUserFilesDirectoryInGameDir.clear();
 
@@ -657,20 +657,26 @@ void Init()
         }; injector::MakeInline<DeadzoneHookY>(pattern.get_first(18 + 0), pattern.get_first(18 + 6));
     }
 
-    if (nFPSLimit)
+    if (SimRate)
     {
-        if (nFPSLimit < 0)
+        if (SimRate < 0)
         {
-            if (nFPSLimit == -1)
-                nFPSLimit = GetDesktopRefreshRate();
-            else if (nFPSLimit == -2)
-                nFPSLimit = GetDesktopRefreshRate() * 2;
+            if (SimRate == -1)
+                SimRate = GetDesktopRefreshRate();
+            else if (SimRate == -2)
+                SimRate = GetDesktopRefreshRate() * 2;
             else
-                nFPSLimit = 60;
+                SimRate = 60;
         }
 
-        static float FrameTime = 1.0f / nFPSLimit;
-        static float fnFPSLimit = (float)nFPSLimit;
+        // limit rate to avoid issues...
+        if (SimRate > 360)
+            SimRate = 360;
+        if (SimRate < 60)
+            SimRate = 60;
+
+        static float FrameTime = 1.0f / SimRate;
+        static float fSimRate = (float)SimRate;
 
         // Frame times
         // PrepareRealTimestep() NTSC video mode frametime, .rdata
@@ -707,8 +713,8 @@ void Init()
         // Unknown framerate 2 .rdata (in some data structure, these values may need to be scaled up from 60.0 accordingly)
         //float* flt_9E2500 = hook::pattern("00 00 70 42 89 88 88 3C").count(1).get(0).get<float>(20); //0x9E24EC
 
-        //injector::WriteMemory(flt_9E24EC, fnFPSLimit, true);
-        //injector::WriteMemory(flt_9E2500, fnFPSLimit, true);
+        //injector::WriteMemory(flt_9E24EC, fSimRate, true);
+        //injector::WriteMemory(flt_9E2500, fSimRate, true);
 
         // NOTE: drift scoring system has 60.0 values... it may be affected by this... it needs thorough testing to see if parts like that are affected!
 
@@ -724,7 +730,7 @@ void Init()
         uint32_t* dword_58F7A8 = pattern.count(1).get(0).get<uint32_t>(0x38); //0x0058F7A8
         uint32_t* dword_58F7B5 = pattern.count(1).get(0).get<uint32_t>(0x45); //0x0058F7B5
 
-        injector::WriteMemory(dword_58F779, &fnFPSLimit, true);
+        injector::WriteMemory(dword_58F779, &fSimRate, true);
 
         injector::WriteMemory(flt_9CEDF4, (212.5f * FrameTime), true);
 
