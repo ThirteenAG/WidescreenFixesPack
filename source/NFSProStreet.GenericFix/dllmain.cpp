@@ -168,7 +168,7 @@ void Init()
     bool bBrakeLightFix = iniReader.ReadInteger("MISC", "BrakeLightFix", 1) != 0;
     static int32_t nShadowRes = iniReader.ReadInteger("MISC", "ShadowRes", 2048);
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
-    static int nFPSLimit = iniReader.ReadInteger("MISC", "FPSLimit", -1);
+    static int SimRate = iniReader.ReadInteger("MISC", "SimRate", -1);
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
         szCustomUserFilesDirectoryInGameDir.clear();
 
@@ -602,22 +602,28 @@ void Init()
         }; injector::MakeInline<DeadzoneHookY>(pattern.get_first(18 + 0), pattern.get_first(18 + 6));
     }
 
-    if (nFPSLimit)
+    if (SimRate)
     {
-        if (nFPSLimit < 0)
+        if (SimRate < 0)
         {
-            if (nFPSLimit == -1)
-                nFPSLimit = GetDesktopRefreshRate();
-            else if (nFPSLimit == -2)
-                nFPSLimit = GetDesktopRefreshRate() * 2;
+            if (SimRate == -1)
+                SimRate = GetDesktopRefreshRate();
+            else if (SimRate == -2)
+                SimRate = GetDesktopRefreshRate() * 2;
             else
-                nFPSLimit = 60;
+                SimRate = 60;
         }
 
-        static float FrameTime = 1.0f / nFPSLimit;
-        static double dFrameTime = 1.0 / nFPSLimit;
-        //static float fnFPSLimit = (float)nFPSLimit;
-        static double dnFPSLimit = (double)nFPSLimit;
+        // limit rate to avoid issues...
+        if (SimRate > 360)
+            SimRate = 360;
+        if (SimRate < 60)
+            SimRate = 60;
+
+        static float FrameTime = 1.0f / SimRate;
+        static double dFrameTime = 1.0 / SimRate;
+        //static float fSimRate = (float)SimRate;
+        static double dSimRate = (double)SimRate;
 
         // Frame times
         // PrepareRealTimestep() NTSC video mode framerate, .text
@@ -639,7 +645,7 @@ void Init()
         // Sim::QueueEvents frametime .rdata (this affects gameplay smoothness noticeably)
         float* flt_9EE934 = *hook::pattern("D9 46 1C 8B 10 83 EC 08 D9 5C 24 04 8B C8 D9 05 ? ? ? ?").count(1).get(0).get<float*>(16); //0x004CE576 anchor, 0x004CE586 location dereference
 
-        injector::WriteMemory(dword_6D8B8F, &dnFPSLimit, true);
+        injector::WriteMemory(dword_6D8B8F, &dSimRate, true);
         injector::WriteMemory(dbl_9FABF8, dFrameTime, true);
         injector::WriteMemory(flt_98C218, FrameTime, true);
         injector::WriteMemory(flt_98D868, FrameTime * 10.0f, true);
@@ -654,7 +660,7 @@ void Init()
         
         // scale boost grip values with frametime to make staging (drag burnout) normal difficulty and not broken and too easy (.rdata)
         // using 60fps as the basis for scaling
-        static double ScaleFPS = 60.0;
+        constexpr double ScaleFPS = 60.0;
         double* dbl_9FB3B8 = *hook::pattern("D9 83 80 03 00 00 DC 05 ? ? ? ? D9 5C 24 14").count(1).get(0).get<double*>(8); //0x483707 anchor, 0x48370F location dereference, value at 0x009FB3B8
         double* dbl_9FB3C0 = *hook::pattern("D9 83 80 03 00 00 DC 25 ? ? ? ? D9 5C 24 14").count(1).get(0).get<double*>(8); //0x4836DD anchor, 0x4836E3 location dereference, value at 0x009FB3C0
 

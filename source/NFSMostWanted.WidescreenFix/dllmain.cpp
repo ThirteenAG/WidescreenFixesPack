@@ -143,7 +143,7 @@ void Init()
     bool bForceHighSpecAudio = iniReader.ReadInteger("MISC", "ForceHighSpecAudio", 1) != 0;
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
     static float fRainDropletsScale = iniReader.ReadFloat("MISC", "RainDropletsScale", 0.5f);
-    static int nFPSLimit = iniReader.ReadInteger("MISC", "FPSLimit", -1);
+    static int SimRate = iniReader.ReadInteger("MISC", "SimRate", -1);
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
         szCustomUserFilesDirectoryInGameDir.clear();
     int nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
@@ -862,20 +862,26 @@ void Init()
         }; injector::MakeInline<DeadzoneHookY>(pattern.get_first(18 + 0), pattern.get_first(18 + 6));
     }
 
-    if (nFPSLimit)
+    if (SimRate)
     {
-        if (nFPSLimit < 0)
+        if (SimRate < 0)
         {
-            if (nFPSLimit == -1)
-                nFPSLimit = GetDesktopRefreshRate();
-            else if (nFPSLimit == -2)
-                nFPSLimit = GetDesktopRefreshRate() * 2;
+            if (SimRate == -1)
+                SimRate = GetDesktopRefreshRate();
+            else if (SimRate == -2)
+                SimRate = GetDesktopRefreshRate() * 2;
             else
-                nFPSLimit = 60;
+                SimRate = 60;
         }
 
-        static float FrameTime = 1.0f / nFPSLimit;
-        //static float fnFPSLimit = (float)nFPSLimit;
+        // limit rate to avoid issues...
+        if (SimRate > 360)
+            SimRate = 360;
+        if (SimRate < 60)
+            SimRate = 60;
+
+        static float FrameTime = 1.0f / SimRate;
+        //static float fnFPSLimit = (float)SimRate;
 
         // Frame times
         // PrepareRealTimestep() NTSC video mode frametime .rdata

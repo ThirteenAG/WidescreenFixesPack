@@ -874,23 +874,29 @@ void Init4()
         injector::MakeNOP(dword_82B03F, 2, true);
     }
 
-    static int nFPSLimit = iniReader.ReadInteger("GRAPHICS", "FPSLimit", -1);
-    if (nFPSLimit)
+    static int SimRate = iniReader.ReadInteger("GRAPHICS", "SimRate", -1);
+    if (SimRate)
     {
-        if (nFPSLimit < 0)
+        if (SimRate < 0)
         {
-            if (nFPSLimit == -1)
-                nFPSLimit = GetDesktopRefreshRate();
-            else if (nFPSLimit == -2)
-                nFPSLimit = GetDesktopRefreshRate() * 2;
+            if (SimRate == -1)
+                SimRate = GetDesktopRefreshRate();
+            else if (SimRate == -2)
+                SimRate = GetDesktopRefreshRate() * 2;
             else
-                nFPSLimit = 60;
+                SimRate = 60;
         }
 
-        static float FrameTime = 1.0f / nFPSLimit;
-        static double dFrameTime = 1.0 / nFPSLimit;
-        //static float fnFPSLimit = (float)nFPSLimit;
-        static double dnFPSLimit = (double)nFPSLimit;
+        // limit rate to avoid issues...
+        if (SimRate > 360)
+            SimRate = 360;
+        if (SimRate < 60)
+            SimRate = 60;
+
+        static float FrameTime = 1.0f / SimRate;
+        static double dFrameTime = 1.0 / SimRate;
+        //static float fSimRate = (float)SimRate;
+        static double dSimRate = (double)SimRate;
 
         // Frame times
         // PrepareRealTimestep() NTSC video mode framerate, .text
@@ -912,7 +918,7 @@ void Init4()
         // Sim::QueueEvents frametime .rdata (this affects gameplay smoothness noticeably)
         float* flt_C23F94 = *hook::pattern("0F 57 C0 F3 0F 10 4C 24 30 0F 2F C1 73 2B").count(1).get(0).get<float*>(0x28); //0x7B89BC anchor, 0x7B89E4 location dereference
 
-        injector::WriteMemory(dword_6ADFEB, &dnFPSLimit, true);
+        injector::WriteMemory(dword_6ADFEB, &dSimRate, true);
         injector::WriteMemory(dbl_BE4208, dFrameTime, true);
         injector::WriteMemory(flt_C05E7C, FrameTime, true);
         injector::WriteMemory(flt_C0CEB4, FrameTime * 10.0f, true);
