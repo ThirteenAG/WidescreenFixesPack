@@ -733,18 +733,22 @@ void Init()
 
         injector::WriteMemory(dword_58F779, &fSimRate, true);
 
-        injector::WriteMemory(flt_9CEDF4, (212.5f * FrameTime), true);
+        // Scalar target FPS
+        constexpr float TargetFPS = 60.0f;
 
-        static float WorldMapConst1 = 24.37499375f * FrameTime;
+        static float WorldMapConst5 = ((*flt_9CEDF4) / (1 / TargetFPS)) * FrameTime;
+        injector::WriteMemory(flt_9CEDF4, WorldMapConst5, true);
+
+        static float WorldMapConst1 = ((*(float*)dword_58F78F) / (1 / TargetFPS)) * FrameTime;
         injector::WriteMemory(dword_58F78F, &WorldMapConst1, true);
 
-        static float WorldMapConst2 = 42.5f * FrameTime;
+        static float WorldMapConst2 = ((*(float*)dword_58F79E) / (1 / TargetFPS)) * FrameTime;
         injector::WriteMemory(dword_58F79E, &WorldMapConst2, true);
 
-        static float WorldMapConst3 = 68.75f * FrameTime;
+        static float WorldMapConst3 = ((*(float*)dword_58F7A8) / (1 / TargetFPS)) * FrameTime;
         injector::WriteMemory(dword_58F7A8, &WorldMapConst3, true);
 
-        static float WorldMapConst4 = 125.0f * FrameTime;
+        static float WorldMapConst4 = ((*(float*)dword_58F7B5) / (1 / TargetFPS)) * FrameTime;
         injector::WriteMemory(dword_58F7B5, &WorldMapConst4, true);
     }
 
