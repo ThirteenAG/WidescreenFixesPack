@@ -874,11 +874,12 @@ void Init()
                 SimRate = 60;
         }
 
+        // this shouldn't be necessary - if the game frametime/rate is matched with the sim frametime/rate, then everything is fine.
         // limit rate to avoid issues...
-        if (SimRate > 360)
-            SimRate = 360;
-        if (SimRate < 60)
-            SimRate = 60;
+        //if (SimRate > 360)
+        //    SimRate = 360;
+        //if (SimRate < 60)
+        //    SimRate = 60;
 
         static float FrameTime = 1.0f / SimRate;
         //static float fnFPSLimit = (float)SimRate;
