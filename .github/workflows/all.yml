@@ -461,6 +461,13 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag: scarface
+        artifacts: data/Archives/Scarface.FusionFix.zip
+
+    - uses: ./.github/workflows/release_tag
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
         tag: secondsight
         artifacts: data/Archives/SecondSight.WidescreenFix.zip
 
