@@ -436,6 +436,9 @@ project "ResidentEvil3.Dolphin.FusionMod"
    add_asmjit()
    setpaths("Z:/WFP/Games/Dolphin-x64/", "Dolphin.exe", "scripts/")
    writeghaction("re3gc", "ResidentEvil3.Dolphin.FusionMod")
+project "Scarface.FusionFix"
+   setpaths("Z:/WFP/Games/Scarface/", "scarface.exe", "scripts/")
+   writeghaction("scarface", "Scarface.FusionFix")
 project "SecondSight.WidescreenFix"
    setpaths("Z:/WFP/Games/Second Sight/", "secondsight.exe")
    writeghaction("secondsight", "SecondSight.WidescreenFix")
