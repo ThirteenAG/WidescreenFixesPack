@@ -13,8 +13,6 @@ struct Screen
     float fShadowRatio;
 } Screen;
 
-bool bBorderlessWindowed = true;
-bool bEnableWindowResize = false;
 bool bIsResizing = false;
 bool bFixHUD = true;
 bool bFixFOV = true;
@@ -69,47 +67,6 @@ void __stdcall RacingResolution_Hook(int *width, int *height)
 {
     *width = Screen.Width;
     *height = Screen.Height;
-}
-
-BOOL WINAPI AdjustWindowRect_Hook(LPRECT lpRect, DWORD dwStyle, BOOL bMenu)
-{
-    DWORD newStyle = 0;
-
-    if (!bBorderlessWindowed)
-        newStyle = WS_CAPTION;
-
-    return AdjustWindowRect(lpRect, newStyle, bMenu);
-}
-
-HWND WINAPI CreateWindowExA_Hook(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam)
-{
-    HWND GameHWND = NULL;
-
-    // fix the window to open at the center of the screen...
-    int DesktopX = 0;
-    int DesktopY = 0;
-
-    std::tie(DesktopX, DesktopY) = GetDesktopRes();
-
-    int WindowPosX = (int)(((float)DesktopX / 2.0f) - ((float)nWidth / 2.0f));
-    int WindowPosY = (int)(((float)DesktopY / 2.0f) - ((float)nHeight / 2.0f));
-
-    GameHWND = CreateWindowExA(dwExStyle, lpClassName, lpWindowName, 0, WindowPosX, WindowPosY, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
-    LONG lStyle = GetWindowLong(GameHWND, GWL_STYLE);
-
-    if (bBorderlessWindowed)
-        lStyle &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU);
-    else
-    {
-        lStyle |= (WS_MINIMIZEBOX | WS_SYSMENU);
-        if (bEnableWindowResize)
-            lStyle |= (WS_MAXIMIZEBOX | WS_THICKFRAME);
-    }
-
-    SetWindowLong(GameHWND, GWL_STYLE, lStyle);
-    SetWindowPos(GameHWND, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
-
-    return GameHWND;
 }
 
 // cave at 0x6E726B - in eDisplayFrame
@@ -186,7 +143,7 @@ void Init()
     bool bForceHighSpecAudio = iniReader.ReadInteger("MISC", "ForceHighSpecAudio", 1) != 0;
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
     static float fRainDropletsScale = iniReader.ReadFloat("MISC", "RainDropletsScale", 0.5f);
-    static int nFPSLimit = iniReader.ReadInteger("MISC", "FPSLimit", 60);
+    static int SimRate = iniReader.ReadInteger("MISC", "SimRate", -1);
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
         szCustomUserFilesDirectoryInGameDir.clear();
     int nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
@@ -837,17 +794,17 @@ void Init()
         injector::MakeJMP(dword_6E6D77, dword_6E6D8A, true);
         // hook the offending functions
         injector::MakeNOP(dword_6E6C94, 6, true);
-        injector::MakeCALL(dword_6E6C94, CreateWindowExA_Hook, true);
+        injector::MakeCALL(dword_6E6C94, WindowedModeWrapper::CreateWindowExA_Hook, true);
         injector::MakeNOP(dword_6E6C3A, 6, true);
-        injector::MakeCALL(dword_6E6C3A, AdjustWindowRect_Hook, true);
+        injector::MakeCALL(dword_6E6C3A, WindowedModeWrapper::AdjustWindowRect_Hook, true);
 
         *(int*)dword_982BF0 = 1;
 
         if (nWindowedMode > 1)
-            bBorderlessWindowed = false;
+            WindowedModeWrapper::bBorderlessWindowed = false;
         if (nWindowedMode > 2)
         {
-            bEnableWindowResize = true;
+            WindowedModeWrapper::bEnableWindowResize = true;
 
             // dereference the current WndProc from the game executable and write to the function pointer (to maximize compatibility)
             uint32_t* wndproc_addr = hook::pattern("C7 44 24 44 ? ? ? ? 89 5C 24 48 89 5C 24 4C").count(1).get(0).get<uint32_t>(4);
@@ -905,18 +862,27 @@ void Init()
         }; injector::MakeInline<DeadzoneHookY>(pattern.get_first(18 + 0), pattern.get_first(18 + 6));
     }
 
-    if (nFPSLimit)
+    if (SimRate)
     {
-        if (nFPSLimit < 0)
+        if (SimRate < 0)
         {
-            if (nFPSLimit == -1)
-                nFPSLimit = GetDesktopRefreshRate();
+            if (SimRate == -1)
+                SimRate = GetDesktopRefreshRate();
+            else if (SimRate == -2)
+                SimRate = GetDesktopRefreshRate() * 2;
             else
-                nFPSLimit = 60;
+                SimRate = 60;
         }
 
-        static float FrameTime = 1.0f / nFPSLimit;
-        //static float fnFPSLimit = (float)nFPSLimit;
+        // this shouldn't be necessary - if the game frametime/rate is matched with the sim frametime/rate, then everything is fine.
+        // limit rate to avoid issues...
+        //if (SimRate > 360)
+        //    SimRate = 360;
+        //if (SimRate < 60)
+        //    SimRate = 60;
+
+        static float FrameTime = 1.0f / SimRate;
+        //static float fnFPSLimit = (float)SimRate;
 
         // Frame times
         // PrepareRealTimestep() NTSC video mode frametime .rdata

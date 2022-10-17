@@ -46,6 +46,27 @@ void __declspec(naked) ShadowTexCave()
     }
 }
 
+// Undercover-specific version which also corrects the window position
+BOOL WINAPI AdjustWindowRect_Hook_UC(LPRECT lpRect, DWORD dwStyle, BOOL bMenu)
+{
+    BOOL retval = WindowedModeWrapper::AdjustWindowRect_Hook(lpRect, dwStyle, bMenu);
+
+    // fix the window to adjust at the center of the screen...
+    int DesktopX = 0;
+    int DesktopY = 0;
+    int WindowX = lpRect->right - lpRect->left;
+    int WindowY = lpRect->bottom - lpRect->top;
+
+    std::tie(DesktopX, DesktopY) = GetDesktopRes();
+
+    int WindowPosX = (int)(((float)DesktopX / 2.0f) - ((float)WindowX / 2.0f));
+    int WindowPosY = (int)(((float)DesktopY / 2.0f) - ((float)WindowY / 2.0f));
+
+    SetWindowPos(WindowedModeWrapper::GameHWND, 0, WindowPosX, WindowPosY, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+
+    return retval;
+}
+
 void InitRes()
 {
     struct ScreenRes
@@ -101,6 +122,30 @@ void InitRes()
             *(char**)&regs.eax = list[regs.edi].data();
         }
     }; injector::MakeInline<GetPackedStringHook>(pattern.get_first(0));
+}
+
+void InitRes2()
+{
+    struct ScreenRes
+    {
+        uint32_t ResX;
+        uint32_t ResY;
+    };
+
+    std::vector<std::string> list;
+    GetResolutionsList(list);
+    static std::vector<ScreenRes> list2;
+    for (auto s : list)
+    {
+        ScreenRes r;
+        sscanf_s(s.c_str(), "%dx%d", &r.ResX, &r.ResY);
+        list2.emplace_back(r);
+    }
+
+    auto pattern = hook::pattern("83 C0 08 83 F8 78 72 E8 E9 ? ? ? ? 8B 56 3C 8B 46 10"); //0x753021
+    injector::WriteMemory(pattern.get_first(-0x6), &list2[0].ResX, true); //0x75301B
+    injector::WriteMemory(pattern.get_first(-0xE), &list2[0].ResY, true); //0x753013
+    injector::WriteMemory<uint8_t>(pattern.get_first(0x5), 0xFFi8, true); //0x753026
 }
 
 void Init1()
@@ -172,7 +217,10 @@ void Init2()
             if (!bOnce)
             {
                 if (bResDetect)
+                {
                     InitRes();
+                    InitRes2();
+                }
                 if (bSkipIntro)
                     *dword_12BB200 = 1;
             }
@@ -547,7 +595,6 @@ void Init4()
         injector::WriteMemory(pattern.get(i).get<uint32_t>(4), &fHudWidth, true);
     }
 
-    static auto hGameHWND = *hook::get_pattern<HWND*>("8B 0D ? ? ? ? 6A 01 51 8B C8", 2);
     pattern = GetPattern("C7 40 ? ? ? ? ? 88 50 20");
     static uint32_t* Width = nullptr;
     static uint32_t* Height = nullptr;
@@ -575,26 +622,6 @@ void Init4()
                     fHudScale = 1280.0f / (720.0f * fAspectRatio);
                     fHudWidth = 1280.0f / fHudScale;
                     fHudXPos = -1.0f * fHudScale;
-                }
-            }
-
-            if (nWindowedMode)
-            {
-                tagRECT rc;
-                auto[DesktopResW, DesktopResH] = GetDesktopRes();
-                rc.left = (LONG)(((float)DesktopResW / 2.0f) - ((float)*Width / 2.0f));
-                rc.top = (LONG)(((float)DesktopResH / 2.0f) - ((float)*Height / 2.0f));
-                rc.right = *Width;
-                rc.bottom = *Height;
-                SetWindowPos(*hGameHWND, NULL, rc.left, rc.top, rc.right, rc.bottom, SWP_NOACTIVATE | SWP_NOZORDER);
-                if (nWindowedMode > 1)
-                {
-                    SetWindowLong(*hGameHWND, GWL_STYLE, GetWindowLong(*hGameHWND, GWL_STYLE) | WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU);
-                    SetWindowPos(*hGameHWND, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
-                }
-                else
-                {
-                    SetWindowLong(*hGameHWND, GWL_STYLE, GetWindowLong(*hGameHWND, GWL_STYLE) & ~WS_OVERLAPPEDWINDOW);
                 }
             }
         }
@@ -716,7 +743,25 @@ void Init4()
 
     if (nWindowedMode)
     {
-        pattern = GetPattern("89 5D 3C 89 5D 18 89 5D 44"); //0x708379
+        uint32_t* dword_7563AD = hook::pattern("8B 4C 24 28 55 55 2B D1 52 8B 54 24 30 2B FA").count(1).get(0).get<uint32_t>(0x1A); //0x756393 anchor
+        uint32_t* dword_755E87 = hook::pattern("68 00 00 C0 80 68 00 00 C0 80 89 46 08").count(1).get(0).get<uint32_t>(0x28); //0x755E5F anchor
+        uint32_t* WindowedMode_DF1E1C = *hook::pattern("8B 54 24 1C 8B 4C 24 20 2B 54 24 14 2B 4C 24 18 A1 ? ? ? ? F7 D8").count(1).get(0).get<uint32_t*>(0x11); //0x7565DE anchor, 0x7565EF dereference
+
+        // hook the offending functions
+        injector::MakeNOP(dword_7563AD, 6, true);
+        injector::MakeCALL(dword_7563AD, WindowedModeWrapper::CreateWindowExA_Hook, true);
+        injector::MakeNOP(dword_755E87, 6, true);
+        injector::MakeCALL(dword_755E87, AdjustWindowRect_Hook_UC, true);
+        // enable windowed mode variable
+        *WindowedMode_DF1E1C = 1;
+
+        if (nWindowedMode > 1)
+            WindowedModeWrapper::bBorderlessWindowed = false;
+        if (nWindowedMode > 2) // TODO: implement dynamic resizing (like in MW)
+            WindowedModeWrapper::bEnableWindowResize = true;
+
+        // actually what enforces the windowed mode
+        auto pattern = hook::pattern("89 5D 3C 89 5D 18 89 5D 44"); //0x74FD5C
         struct WindowedMode
         {
             void operator()(injector::reg_pack& regs)
@@ -725,30 +770,6 @@ void Init4()
                 *(uint32_t*)(regs.ebp + 0x18) = regs.ebx;
             }
         }; injector::MakeInline<WindowedMode>(pattern.get_first(0), pattern.get_first(6));
-
-        pattern = GetPattern("C7 06 ? ? ? ? C7 46 ? ? ? ? ? 83 79 3C 00 57");
-        struct WindowedModeRect
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                tagRECT rc;
-                auto[DesktopResW, DesktopResH] = GetDesktopRes();
-
-                rc.left = 0;
-                rc.top = 0;
-                rc.right = DesktopResW;
-                rc.bottom = DesktopResH;
-
-                *(uint32_t*)(regs.esi + 0x00) = rc.left;
-                *(uint32_t*)(regs.esi + 0x04) = rc.top;
-                *(uint32_t*)(regs.esi + 0x08) = rc.right;
-                *(uint32_t*)(regs.esi + 0x0C) = rc.bottom;
-            }
-        }; injector::MakeInline<WindowedModeRect>(pattern.get_first(0), pattern.get_first(13));
-        pattern = GetPattern("89 46 08 83 79 3C 00 74 08 8B 49 54");
-        injector::MakeNOP(pattern.get_first(0), 3, true);
-        pattern = GetPattern("89 46 08 89 4E 0C E8 ? ? ? ? 83 C4 08 8B F8 6A 00");
-        injector::MakeNOP(pattern.get_first(0), 6, true);
     }
 
     // Cascade Shadow Maps - resolution and scale adjustments
@@ -823,7 +844,7 @@ void Init4()
     injector::MakeCALL(dword_780FFF, static_cast<uint32_t(__cdecl*)(uint32_t, uint32_t)>(CSMUpdateHook), true);
 
     // Scenery LOD hacks
-    bool bImproveSceneryLOD = iniReader.ReadInteger("GRAPHICS", "ImproveSceneryLOD", 1);
+    bool bImproveSceneryLOD = iniReader.ReadInteger("GRAPHICS", "ImproveSceneryLOD", 0);
     if (bImproveSceneryLOD)
     {
         // there is 1 more step left after 0xE, with this it should actually show all scenery
@@ -831,35 +852,52 @@ void Init4()
         pattern = hook::pattern("83 F8 01 C6 44 24 0F 0E");
         uint32_t* dword_82B0AA = pattern.count(1).get(0).get<uint32_t>(7);
         injector::WriteMemory<uint8_t>(dword_82B0AA, 0x0F, true);
+    }
 
-        // force the game to use ScenerySectionHeader::CullBruteForce and disable ScenerySectionHeader::TreeCull
-        // this reduces excessive culling in the game caused by the VisibleSections in a track
-        // this does NOT fix flickering scenery in shadows/reflections/weird parts of map/etc.
-        pattern = hook::pattern("84 C0 57 8B CE 74 07");
-        uint32_t* dword_82B03F = pattern.count(1).get(0).get<uint32_t>(5);
-        injector::MakeNOP(dword_82B03F, 2, true);
-
+    bool bDisablePreculler = iniReader.ReadInteger("GRAPHICS", "DisablePreculler", 0);
+    if (bDisablePreculler)
+    {
         // disable the preculler to potentially increase scenery rendered on screen (the thing that uses PrecullerBooBooScript.hoo)
         pattern = hook::pattern("8B 6E CC D9 45 10 88 56 14 D9 5E 0C 8B 0D ? ? ? ?");
         uint32_t* PrecullerMode = *pattern.count(1).get(0).get<uint32_t*>(14);
         *PrecullerMode = 0;
     }
 
-    static int nFPSLimit = iniReader.ReadInteger("GRAPHICS", "FPSLimit", 60);
-    if (nFPSLimit)
+    bool bBruteforceCulling = iniReader.ReadInteger("GRAPHICS", "BruteforceCulling", 0);
+    if (bBruteforceCulling)
     {
-        if (nFPSLimit < 0)
+        // force the game to use ScenerySectionHeader::CullBruteForce and disable ScenerySectionHeader::TreeCull
+        // this reduces excessive culling in the game caused by the VisibleSections in a track
+        // this does NOT fix flickering scenery in shadows/reflections/weird parts of map/etc.
+        pattern = hook::pattern("84 C0 57 8B CE 74 07");
+        uint32_t* dword_82B03F = pattern.count(1).get(0).get<uint32_t>(5);
+        injector::MakeNOP(dword_82B03F, 2, true);
+    }
+
+    static int SimRate = iniReader.ReadInteger("GRAPHICS", "SimRate", -1);
+    if (SimRate)
+    {
+        if (SimRate < 0)
         {
-            if (nFPSLimit == -1)
-                nFPSLimit = GetDesktopRefreshRate();
+            if (SimRate == -1)
+                SimRate = GetDesktopRefreshRate();
+            else if (SimRate == -2)
+                SimRate = GetDesktopRefreshRate() * 2;
             else
-                nFPSLimit = 60;
+                SimRate = 60;
         }
 
-        static float FrameTime = 1.0f / nFPSLimit;
-        static double dFrameTime = 1.0 / nFPSLimit;
-        //static float fnFPSLimit = (float)nFPSLimit;
-        static double dnFPSLimit = (double)nFPSLimit;
+        // this shouldn't be necessary - if the game frametime/rate is matched with the sim frametime/rate, then everything is fine.
+        // limit rate to avoid issues...
+        //if (SimRate > 360)
+        //    SimRate = 360;
+        //if (SimRate < 60)
+        //    SimRate = 60;
+
+        static float FrameTime = 1.0f / SimRate;
+        static double dFrameTime = 1.0 / SimRate;
+        //static float fSimRate = (float)SimRate;
+        static double dSimRate = (double)SimRate;
 
         // Frame times
         // PrepareRealTimestep() NTSC video mode framerate, .text
@@ -881,7 +919,7 @@ void Init4()
         // Sim::QueueEvents frametime .rdata (this affects gameplay smoothness noticeably)
         float* flt_C23F94 = *hook::pattern("0F 57 C0 F3 0F 10 4C 24 30 0F 2F C1 73 2B").count(1).get(0).get<float*>(0x28); //0x7B89BC anchor, 0x7B89E4 location dereference
 
-        injector::WriteMemory(dword_6ADFEB, &dnFPSLimit, true);
+        injector::WriteMemory(dword_6ADFEB, &dSimRate, true);
         injector::WriteMemory(dbl_BE4208, dFrameTime, true);
         injector::WriteMemory(flt_C05E7C, FrameTime, true);
         injector::WriteMemory(flt_C0CEB4, FrameTime * 10.0f, true);

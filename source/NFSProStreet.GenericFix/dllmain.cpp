@@ -104,10 +104,10 @@ void Init()
             list2.emplace_back(r);
         }
 
-        auto pattern = hook::pattern("83 C0 08 83 F8 58 72 E8 E9 ? ? ? ? 8B 53 3C 8B 43 10");
-        injector::WriteMemory(pattern.get_first(-6), &list2[0].ResX, true); //0x0070B3EA
-        injector::WriteMemory(pattern.get_first(-14), &list2[0].ResY, true);
-        injector::WriteMemory<uint8_t>(pattern.get_first(5), 0xFFi8, true); //0x70B3F3+2
+        auto pattern = hook::pattern("83 C0 08 83 F8 58 72 E8 E9 ? ? ? ? 8B 53 3C 8B 43 10"); //0x70B3F0
+        injector::WriteMemory(pattern.get_first(-0x6), &list2[0].ResX, true); //0x70B3EA
+        injector::WriteMemory(pattern.get_first(-0xE), &list2[0].ResY, true); //0x70B3E2
+        injector::WriteMemory<uint8_t>(pattern.get_first(0x5), 0xFFi8, true); //0x70B3F5
     }
 
     // PostRaceStateManagerFix
@@ -168,7 +168,7 @@ void Init()
     bool bBrakeLightFix = iniReader.ReadInteger("MISC", "BrakeLightFix", 1) != 0;
     static int32_t nShadowRes = iniReader.ReadInteger("MISC", "ShadowRes", 2048);
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
-    static int nFPSLimit = iniReader.ReadInteger("MISC", "FPSLimit", 60);
+    static int SimRate = iniReader.ReadInteger("MISC", "SimRate", -1);
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
         szCustomUserFilesDirectoryInGameDir.clear();
 
@@ -423,6 +423,25 @@ void Init()
 
     if (nWindowedMode)
     {
+        pattern = hook::pattern("83 C4 18 8B 0B 55 52 8B 54 24 24 55 55 2B F2");//0x70E3C8 anchor
+        uint32_t* dword_70E3E9 = pattern.count(1).get(0).get<uint32_t>(0x21);
+        uint32_t* dword_70E39B = pattern.count(1).get(0).get<uint32_t>(-0x2D);
+        uint32_t* WindowedMode_AC6EFC = *hook::pattern("8B 7C 24 28 2B 7C 24 20 8B 44 24 2C 2B 44 24 24 8B 15 ? ? ? ? F7 DA").count(1).get(0).get<uint32_t*>(0x12); //0x70E5D1 anchor, 0x70E5E3 dereference
+
+        // hook the offending functions
+        injector::MakeNOP(dword_70E3E9, 6, true);
+        injector::MakeCALL(dword_70E3E9, WindowedModeWrapper::CreateWindowExA_Hook, true);
+        injector::MakeNOP(dword_70E39B, 6, true);
+        injector::MakeCALL(dword_70E39B, WindowedModeWrapper::AdjustWindowRect_Hook, true);
+        // enable windowed mode variable
+        *WindowedMode_AC6EFC = 1;
+
+        if (nWindowedMode > 1)
+            WindowedModeWrapper::bBorderlessWindowed = false;
+        if (nWindowedMode > 2) // TODO: implement dynamic resizing (like in MW)
+            WindowedModeWrapper::bEnableWindowResize = true;
+
+        // actually what enforces the windowed mode
         auto pattern = hook::pattern("89 5D 3C 89 5D 18 89 5D 44"); //0x708379
         struct WindowedMode
         {
@@ -433,63 +452,25 @@ void Init()
             }
         }; injector::MakeInline<WindowedMode>(pattern.get_first(0), pattern.get_first(6));
 
-        static auto hGameHWND = *hook::get_pattern<HWND*>("8B 0D ? ? ? ? 51 8B C8 E8 ? ? ? ? EB 02 33 C0", 2); //0x00AC6ED8
         pattern = hook::pattern("A3 ? ? ? ? 89 35 ? ? ? ? 88 1D ? ? ? ? B9 ? ? ? ? 74 0B 6A 15");
         static auto Width = *pattern.get_first<int32_t*>(1);
         static auto Height = *pattern.get_first<int32_t*>(7);
-
         struct ResHook
         {
             void operator()(injector::reg_pack& regs)
             {
                 *Width = regs.eax;
                 *Height = regs.esi;
-
+        
                 tagRECT rc;
                 auto[DesktopResW, DesktopResH] = GetDesktopRes();
                 rc.left = (LONG)(((float)DesktopResW / 2.0f) - ((float)*Width / 2.0f));
                 rc.top = (LONG)(((float)DesktopResH / 2.0f) - ((float)*Height / 2.0f));
                 rc.right = *Width;
                 rc.bottom = *Height;
-                SetWindowPos(*hGameHWND, NULL, rc.left, rc.top, rc.right, rc.bottom, SWP_NOACTIVATE | SWP_NOZORDER);
-                if (nWindowedMode > 1)
-                {
-                    SetWindowLong(*hGameHWND, GWL_STYLE, GetWindowLong(*hGameHWND, GWL_STYLE) | WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU);
-                    SetWindowPos(*hGameHWND, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
-                }
-                else
-                {
-                    SetWindowLong(*hGameHWND, GWL_STYLE, GetWindowLong(*hGameHWND, GWL_STYLE) & ~WS_OVERLAPPEDWINDOW);
-                }
+                SetWindowPos(WindowedModeWrapper::GameHWND, NULL, rc.left, rc.top, rc.right, rc.bottom, SWP_NOACTIVATE | SWP_NOZORDER);
             }
         }; injector::MakeInline<ResHook>(pattern.get_first(0), pattern.get_first(11));
-
-        pattern = hook::pattern("89 74 24 18 89 74 24 1C 74 08 8B 53 54 8B 4A 6C"); //0x70E303
-        struct WindowedModeRect
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                regs.eax = 1;
-                *(uint32_t*)(regs.ebx + 0x3C) = 1;
-
-                tagRECT rc;
-                auto[DesktopResW, DesktopResH] = GetDesktopRes();
-                rc.left = (LONG)(((float)DesktopResW / 2.0f) - ((float)*Width / 2.0f));
-                rc.top = (LONG)(((float)DesktopResH / 2.0f) - ((float)*Height / 2.0f));
-                rc.right = *Width;
-                rc.bottom = *Height;
-
-                *(uint32_t*)(regs.esp + 0x18) = rc.left;
-                *(uint32_t*)(regs.esp + 0x1C) = rc.top;
-                *(uint32_t*)(regs.esp + 0x20) = rc.right;
-                *(uint32_t*)(regs.esp + 0x24) = rc.bottom;
-            }
-        }; injector::MakeInline<WindowedModeRect>(pattern.get_first(0), pattern.get_first(8));
-        pattern = hook::pattern("89 4C 24 20 74 08 8B 53 54 8B 4A 70");
-        injector::MakeNOP(pattern.get_first(0), 4, true);
-        pattern = hook::pattern("01 74 24 20 03 CE 3B C5");
-        injector::MakeNOP(pattern.get_first(0), 4, true);
-        injector::MakeNOP(pattern.get_first(8), 4, true);
     }
 
     if (nImproveGamepadSupport)
@@ -621,20 +602,29 @@ void Init()
         }; injector::MakeInline<DeadzoneHookY>(pattern.get_first(18 + 0), pattern.get_first(18 + 6));
     }
 
-    if (nFPSLimit)
+    if (SimRate)
     {
-        if (nFPSLimit < 0)
+        if (SimRate < 0)
         {
-            if (nFPSLimit == -1)
-                nFPSLimit = GetDesktopRefreshRate();
+            if (SimRate == -1)
+                SimRate = GetDesktopRefreshRate();
+            else if (SimRate == -2)
+                SimRate = GetDesktopRefreshRate() * 2;
             else
-                nFPSLimit = 60;
+                SimRate = 60;
         }
 
-        static float FrameTime = 1.0f / nFPSLimit;
-        static double dFrameTime = 1.0 / nFPSLimit;
-        //static float fnFPSLimit = (float)nFPSLimit;
-        static double dnFPSLimit = (double)nFPSLimit;
+        // this shouldn't be necessary - if the game frametime/rate is matched with the sim frametime/rate, then everything is fine.
+        // limit rate to avoid issues...
+        //if (SimRate > 360)
+        //    SimRate = 360;
+        //if (SimRate < 60)
+        //    SimRate = 60;
+
+        static float FrameTime = 1.0f / SimRate;
+        static double dFrameTime = 1.0 / SimRate;
+        //static float fSimRate = (float)SimRate;
+        static double dSimRate = (double)SimRate;
 
         // Frame times
         // PrepareRealTimestep() NTSC video mode framerate, .text
@@ -656,7 +646,7 @@ void Init()
         // Sim::QueueEvents frametime .rdata (this affects gameplay smoothness noticeably)
         float* flt_9EE934 = *hook::pattern("D9 46 1C 8B 10 83 EC 08 D9 5C 24 04 8B C8 D9 05 ? ? ? ?").count(1).get(0).get<float*>(16); //0x004CE576 anchor, 0x004CE586 location dereference
 
-        injector::WriteMemory(dword_6D8B8F, &dnFPSLimit, true);
+        injector::WriteMemory(dword_6D8B8F, &dSimRate, true);
         injector::WriteMemory(dbl_9FABF8, dFrameTime, true);
         injector::WriteMemory(flt_98C218, FrameTime, true);
         injector::WriteMemory(flt_98D868, FrameTime * 10.0f, true);
@@ -671,7 +661,7 @@ void Init()
         
         // scale boost grip values with frametime to make staging (drag burnout) normal difficulty and not broken and too easy (.rdata)
         // using 60fps as the basis for scaling
-        static double ScaleFPS = 60.0;
+        constexpr double ScaleFPS = 60.0;
         double* dbl_9FB3B8 = *hook::pattern("D9 83 80 03 00 00 DC 05 ? ? ? ? D9 5C 24 14").count(1).get(0).get<double*>(8); //0x483707 anchor, 0x48370F location dereference, value at 0x009FB3B8
         double* dbl_9FB3C0 = *hook::pattern("D9 83 80 03 00 00 DC 25 ? ? ? ? D9 5C 24 14").count(1).get(0).get<double*>(8); //0x4836DD anchor, 0x4836E3 location dereference, value at 0x009FB3C0
 
