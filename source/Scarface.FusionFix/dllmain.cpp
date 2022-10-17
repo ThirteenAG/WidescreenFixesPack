@@ -106,8 +106,8 @@ void Init()
     auto pattern = hook::pattern("A2 ? ? ? ? A2 ? ? ? ? A2 ? ? ? ? A2 ? ? ? ? A2 ? ? ? ? A2 ? ? ? ? A3");
     OptionManager::bIsInvertX = *pattern.get_first<bool*>(1);
     OptionManager::bIsInvertY = *pattern.get_first<bool*>(6);
-    pattern = hook::pattern("8B 0D ? ? ? ? 85 C9 D8 4C 24 14");
-    OptionManager::nMouseLookSensitivity = *pattern.get_first<int*>(2);
+    pattern = hook::pattern("E8 ? ? ? ? 56 68 ? ? ? ? E8 ? ? ? ? 83 C4 10");
+    OptionManager::nMouseLookSensitivity = *(int**)(injector::GetBranchDestination(pattern.get_first()).as_int() + 5);
     
     pattern = hook::pattern("A3 ? ? ? ? 5B 74 0F");
     OptionManager::hWnd = *pattern.get_first<HWND*>(1);
@@ -159,8 +159,8 @@ void InitXidi()
     auto SetScarfaceData = (void (*)(uint32_t* menu, uint8_t* state))GetProcAddress(GetModuleHandleW(L"dinput8.dll"), "SetScarfaceData");
     if (SetScarfaceData)
     {
-        auto nMenuCheck = *hook::get_pattern<uint32_t*>("A2 ? ? ? ? 50 A1 ? ? ? ? 8B 48 10 E8", 1);
-        auto bStateCheck = *hook::get_pattern<uint8_t*>("6A 01 B9 ? ? ? ? E8 ? ? ? ? 5E", 3);
+        auto nMenuCheck = *(uint32_t**)(injector::GetBranchDestination(hook::get_pattern("E8 ? ? ? ? 88 43 60")).as_int() + 1);
+        auto bStateCheck = *hook::get_pattern<uint8_t*>("B9 ? ? ? ? E8 ? ? ? ? 5E C3", 1);
         SetScarfaceData(nMenuCheck, bStateCheck);
     }
 }
@@ -169,7 +169,7 @@ CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
-        CallbackHandler::RegisterCallback(Init, hook::pattern("75 58 A1 ? ? ? ? DB 05"));
+        CallbackHandler::RegisterCallback(Init, hook::pattern("B9 ? ? ? ? E8 ? ? ? ? 5E C3"));
         CallbackHandler::RegisterCallback(L"dinput8.dll", InitXidi);
     });
 }
