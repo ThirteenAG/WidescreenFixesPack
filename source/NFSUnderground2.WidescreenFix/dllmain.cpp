@@ -14,9 +14,6 @@ struct Screen
     float fHudOffset;
 } Screen;
 
-bool bBorderlessWindowed = true;
-bool bEnableWindowResize = false;
-
 union HudPos
 {
     uint32_t dwPos;
@@ -78,48 +75,6 @@ HANDLE WINAPI CustomCreateThread(LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_
     return hThread;
 }
 
-BOOL WINAPI AdjustWindowRect_Hook(LPRECT lpRect, DWORD dwStyle, BOOL bMenu)
-{
-    DWORD newStyle = 0;
-
-    if (!bBorderlessWindowed)
-        newStyle = WS_CAPTION;
-
-    return AdjustWindowRect(lpRect, newStyle, bMenu);
-}
-
-HWND WINAPI CreateWindowExA_Hook(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam)
-{
-    HWND GameHWND = NULL;
-
-    // fix the window to open at the center of the screen...
-    int DesktopX = 0;
-    int DesktopY = 0;
-
-    std::tie(DesktopX, DesktopY) = GetDesktopRes();
-
-    int WindowPosX = (int)(((float)DesktopX / 2.0f) - ((float)nWidth / 2.0f));
-    int WindowPosY = (int)(((float)DesktopY / 2.0f) - ((float)nHeight / 2.0f));
-
-    GameHWND = CreateWindowExA(dwExStyle, lpClassName, lpWindowName, 0, WindowPosX, WindowPosY, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
-    LONG lStyle = GetWindowLong(GameHWND, GWL_STYLE);
-
-    if (bBorderlessWindowed)
-        lStyle &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU);
-    else
-    {
-        lStyle |= (WS_MINIMIZEBOX | WS_SYSMENU);
-        if (bEnableWindowResize)
-            lStyle |= (WS_MAXIMIZEBOX | WS_THICKFRAME);
-    }
-
-    SetWindowLong(GameHWND, GWL_STYLE, lStyle);
-
-    SetWindowPos(GameHWND, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
-
-    return GameHWND;
-}
-
 void Init()
 {
     CIniReader iniReader("");
@@ -136,7 +91,7 @@ void Init()
     bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 1) != 0;
     static int nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
-    static int nFPSLimit= iniReader.ReadInteger("MISC", "FPSLimit", 120);
+    static int nFPSLimit= iniReader.ReadInteger("MISC", "FPSLimit", -1);
     bool bHighFPSCutscenes = iniReader.ReadInteger("MISC", "HighFPSCutscenes", 1) != 0;
     bool bSingleCoreAffinity = iniReader.ReadInteger("MISC", "SingleCoreAffinity", 0) != 0;
     bool bNoOpticalDriveFix = iniReader.ReadInteger("MISC", "NoOpticalDriveFix", 1) != 0;
@@ -728,6 +683,8 @@ void Init()
         {
             if (nFPSLimit == -1)
                 nFPSLimit = GetDesktopRefreshRate();
+            else if (nFPSLimit == -2)
+                nFPSLimit = GetDesktopRefreshRate() * 2;
             else
                 nFPSLimit = 60;
         }
@@ -889,16 +846,16 @@ void Init()
         injector::MakeJMP(dword_5D2795, dword_5D27A8, true);
         // hook the offending functions
         injector::MakeNOP(dword_5D2674, 6, true);
-        injector::MakeCALL(dword_5D2674, CreateWindowExA_Hook, true);
+        injector::MakeCALL(dword_5D2674, WindowedModeWrapper::CreateWindowExA_Hook, true);
         injector::MakeNOP(dword_5D2638, 6, true);
-        injector::MakeCALL(dword_5D2638, AdjustWindowRect_Hook, true);
+        injector::MakeCALL(dword_5D2638, WindowedModeWrapper::AdjustWindowRect_Hook, true);
         // enable windowed mode variable
         *WindowedMode_87098C = 1;
 
         if (nWindowedMode > 1)
-            bBorderlessWindowed = false;
+            WindowedModeWrapper::bBorderlessWindowed = false;
         if (nWindowedMode > 2) // TODO: implement dynamic resizing (like in MW)
-            bEnableWindowResize = true;
+            WindowedModeWrapper::bEnableWindowResize = true;
     }
 }
 

@@ -130,6 +130,7 @@ void Init()
     {
         const CRect fs = CRect(0.0f, 0.0f, 640.0f, 480.0f); // fullscreen images
         const CRect fl = CRect(0.0f, 0.0f, 20.0f, 15.0f);   // strike flash
+        const CRect flbv = CRect( 0.0f, 0.0f, 2.5f, 1.875f );   // strike flash (black velvetopia variant)
 
         void operator()(injector::reg_pack& regs)
         {
@@ -145,7 +146,7 @@ void Init()
 
                 DBGONLY(KEYPRESS(VK_F1) { spd::log()->info("{0:f} {1:f} {2:f} {3:f} {4:08x} {5:08x} {6:08x} {7:08x}", r->m_fLeft, r->m_fBottom, r->m_fRight, r->m_fTop, *(uint32_t*)&r->m_fLeft, *(uint32_t*)&r->m_fBottom, *(uint32_t*)&r->m_fRight, *(uint32_t*)&r->m_fTop); });
 
-                if (*r == fs || *r == fl)
+                if (*r == fs || *r == fl || *r == flbv )
                 {
                     flt_7933E0.a01 = Screen.fHudScale;
                     flt_7933E0.a13 = -Screen.fHudOffset;

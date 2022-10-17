@@ -42,6 +42,7 @@ std::tuple<int32_t, int32_t> GetDesktopRes();
 void GetResolutionsList(std::vector<std::string>& list);
 uint32_t GetDesktopRefreshRate();
 std::string format(const char* fmt, ...);
+
 HICON CreateIconFromBMP(UCHAR* data);
 HICON CreateIconFromResourceICO(UINT nID, int32_t cx, int32_t cy);
 
@@ -778,5 +779,51 @@ public:
         }
         else
             return ::RegCreateKeyExA(hKey, lpSubKey, Reserved, lpClass, dwOptions, samDesired, lpSecurityAttributes, phkResult, lpdwDisposition);
+    }
+};
+
+namespace WindowedModeWrapper
+{
+    static bool bBorderlessWindowed = true;
+    static bool bEnableWindowResize = false;
+    static HWND GameHWND = NULL;
+
+    static BOOL WINAPI AdjustWindowRect_Hook(LPRECT lpRect, DWORD dwStyle, BOOL bMenu)
+    {
+        DWORD newStyle = 0;
+
+        if (!bBorderlessWindowed)
+            newStyle = WS_CAPTION;
+
+        return AdjustWindowRect(lpRect, newStyle, bMenu);
+    }
+
+    static HWND WINAPI CreateWindowExA_Hook(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam)
+    {
+        // fix the window to open at the center of the screen...
+        int DesktopX = 0;
+        int DesktopY = 0;
+
+        std::tie(DesktopX, DesktopY) = GetDesktopRes();
+
+        int WindowPosX = (int)(((float)DesktopX / 2.0f) - ((float)nWidth / 2.0f));
+        int WindowPosY = (int)(((float)DesktopY / 2.0f) - ((float)nHeight / 2.0f));
+
+        GameHWND = CreateWindowExA(dwExStyle, lpClassName, lpWindowName, 0, WindowPosX, WindowPosY, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
+        LONG lStyle = GetWindowLong(GameHWND, GWL_STYLE);
+
+        if (bBorderlessWindowed)
+            lStyle &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU);
+        else
+        {
+            lStyle |= (WS_MINIMIZEBOX | WS_SYSMENU);
+            if (bEnableWindowResize)
+                lStyle |= (WS_MAXIMIZEBOX | WS_THICKFRAME);
+        }
+
+        SetWindowLong(GameHWND, GWL_STYLE, lStyle);
+        SetWindowPos(GameHWND, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
+
+        return GameHWND;
     }
 };

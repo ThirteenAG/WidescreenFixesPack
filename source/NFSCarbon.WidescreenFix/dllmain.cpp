@@ -34,7 +34,7 @@ void Init()
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
     static float fRainDropletsScale = iniReader.ReadFloat("MISC", "RainDropletsScale", 0.5f);
     bool bDisableMotionBlur = iniReader.ReadInteger("MISC", "DisableMotionBlur", 0) != 0;
-    static int nFPSLimit = iniReader.ReadInteger("MISC", "FPSLimit", 60);
+    static int SimRate = iniReader.ReadInteger("MISC", "SimRate", -1);
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
         szCustomUserFilesDirectoryInGameDir.clear();
 
@@ -389,46 +389,28 @@ void Init()
 
     if (nWindowedMode)
     {
-        int32_t DesktopX = 0;
-        int32_t DesktopY = 0;
-        std::tie(DesktopX, DesktopY) = GetDesktopRes();
+        pattern = hook::pattern("68 06 2D 05 54 68 06 2D 05 54 E8 ? ? ? ? 83 C4 08 50"); //0x730A07 anchor
+        uint32_t* dword_730A7B = pattern.count(1).get(0).get<uint32_t>(0x74);
+        uint32_t* dword_730A1F = pattern.count(1).get(0).get<uint32_t>(0x18);
+        uint32_t* dword_730B82 = pattern.count(1).get(0).get<uint32_t>(0x17B);
+        uint32_t* dword_730B90 = pattern.count(1).get(0).get<uint32_t>(0x189);
+        uint32_t* WindowedMode_AB0AD4 = *hook::pattern("8B 4C 24 28 8B 44 24 30 8B 7C 24 2C 8B 54 24 24 2B C1 8B 0D ? ? ? ? 2B FA").count(1).get(0).get<uint32_t*>(0x14); //0x7315F1 anchor, 0x731605 dereference
+        // note: searching some of the patterns in a different build (arcade version) yields no results... functions are slightly different because they were compiled with different compilers and settings, perhaps a more universal pattern could be made?
 
-        static tagRECT REKT;
-        REKT.left = (LONG)(((float)DesktopX / 2.0f) - ((float)Screen.Width / 2.0f));
-        REKT.top = (LONG)(((float)DesktopY / 2.0f) - ((float)Screen.Height / 2.0f));
-        REKT.right = (LONG)(REKT.left + Screen.Width);
-        REKT.bottom = (LONG)(REKT.top + Screen.Height);
-
-        auto pattern = hook::pattern("A1 ? ? ? ? 33 FF 3B C7 74"); //0xAB0AD4
-        injector::WriteMemory(*pattern.count(3).get(2).get<uint32_t*>(1), 1, true);
-
-        pattern = hook::pattern("B8 64 00 00 00 89 44 24 28"); //0x7309B4
-        injector::MakeNOP(pattern.count(1).get(0).get<uint32_t>(27), 3, true);
-        struct WindowedMode
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                *(uint32_t*)(regs.esp + 0x28) = REKT.left;
-                *(uint32_t*)(regs.esp + 0x2C) = REKT.top;
-                regs.eax = REKT.right;
-                regs.ecx = REKT.bottom;
-            }
-        }; injector::MakeInline<WindowedMode>(pattern.get_first(0), pattern.get_first(16));
+        // skip SetWindowLong because it messes things up
+        injector::MakeJMP(dword_730B82, dword_730B90, true);
+        // hook the offending functions
+        injector::MakeNOP(dword_730A7B, 6, true);
+        injector::MakeCALL(dword_730A7B, WindowedModeWrapper::CreateWindowExA_Hook, true);
+        injector::MakeNOP(dword_730A1F, 6, true);
+        injector::MakeCALL(dword_730A1F, WindowedModeWrapper::AdjustWindowRect_Hook, true);
+        // enable windowed mode variable
+        *WindowedMode_AB0AD4 = 1;
 
         if (nWindowedMode > 1)
-        {
-            auto SetWindowLongHook = [](HWND hWndl, int nIndex, LONG dwNewLong)
-            {
-                dwNewLong |= WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU;
-
-                SetWindowLong(hWndl, nIndex, dwNewLong);
-                SetWindowPos(hWndl, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
-            };
-
-            auto pattern = hook::pattern("68 00 00 00 10 6A F0 50"); //0x730B8A
-            injector::MakeNOP(pattern.get_first(8), 6, true);
-            injector::MakeCALL(pattern.get_first(8), static_cast<void(WINAPI*)(HWND, int, LONG)>(SetWindowLongHook), true);
-        }
+            WindowedModeWrapper::bBorderlessWindowed = false;
+        if (nWindowedMode > 2) // TODO: implement dynamic resizing (like in MW)
+            WindowedModeWrapper::bEnableWindowResize = true;
     }
 
     if (bSkipIntro)
@@ -675,18 +657,27 @@ void Init()
         }; injector::MakeInline<DeadzoneHookY>(pattern.get_first(18 + 0), pattern.get_first(18 + 6));
     }
 
-    if (nFPSLimit)
+    if (SimRate)
     {
-        if (nFPSLimit < 0)
+        if (SimRate < 0)
         {
-            if (nFPSLimit == -1)
-                nFPSLimit = GetDesktopRefreshRate();
+            if (SimRate == -1)
+                SimRate = GetDesktopRefreshRate();
+            else if (SimRate == -2)
+                SimRate = GetDesktopRefreshRate() * 2;
             else
-                nFPSLimit = 60;
+                SimRate = 60;
         }
 
-        static float FrameTime = 1.0f / nFPSLimit;
-        static float fnFPSLimit = (float)nFPSLimit;
+        // this shouldn't be necessary - if the game frametime/rate is matched with the sim frametime/rate, then everything is fine.
+        // limit rate to avoid issues...
+        //if (SimRate > 360)
+        //    SimRate = 360;
+        //if (SimRate < 60)
+        //    SimRate = 60;
+
+        static float FrameTime = 1.0f / SimRate;
+        static float fSimRate = (float)SimRate;
 
         // Frame times
         // PrepareRealTimestep() NTSC video mode frametime, .rdata
@@ -723,8 +714,8 @@ void Init()
         // Unknown framerate 2 .rdata (in some data structure, these values may need to be scaled up from 60.0 accordingly)
         //float* flt_9E2500 = hook::pattern("00 00 70 42 89 88 88 3C").count(1).get(0).get<float>(20); //0x9E24EC
 
-        //injector::WriteMemory(flt_9E24EC, fnFPSLimit, true);
-        //injector::WriteMemory(flt_9E2500, fnFPSLimit, true);
+        //injector::WriteMemory(flt_9E24EC, fSimRate, true);
+        //injector::WriteMemory(flt_9E2500, fSimRate, true);
 
         // NOTE: drift scoring system has 60.0 values... it may be affected by this... it needs thorough testing to see if parts like that are affected!
 
@@ -740,20 +731,24 @@ void Init()
         uint32_t* dword_58F7A8 = pattern.count(1).get(0).get<uint32_t>(0x38); //0x0058F7A8
         uint32_t* dword_58F7B5 = pattern.count(1).get(0).get<uint32_t>(0x45); //0x0058F7B5
 
-        injector::WriteMemory(dword_58F779, &fnFPSLimit, true);
+        injector::WriteMemory(dword_58F779, &fSimRate, true);
 
-        injector::WriteMemory(flt_9CEDF4, (212.5f * FrameTime), true);
+        // Scalar target FPS
+        constexpr float TargetFPS = 60.0f;
 
-        static float WorldMapConst1 = 24.37499375f * FrameTime;
+        static float WorldMapConst5 = ((*flt_9CEDF4) / (1 / TargetFPS)) * FrameTime;
+        injector::WriteMemory(flt_9CEDF4, WorldMapConst5, true);
+
+        static float WorldMapConst1 = ((*(float*)dword_58F78F) / (1 / TargetFPS)) * FrameTime;
         injector::WriteMemory(dword_58F78F, &WorldMapConst1, true);
 
-        static float WorldMapConst2 = 42.5f * FrameTime;
+        static float WorldMapConst2 = ((*(float*)dword_58F79E) / (1 / TargetFPS)) * FrameTime;
         injector::WriteMemory(dword_58F79E, &WorldMapConst2, true);
 
-        static float WorldMapConst3 = 68.75f * FrameTime;
+        static float WorldMapConst3 = ((*(float*)dword_58F7A8) / (1 / TargetFPS)) * FrameTime;
         injector::WriteMemory(dword_58F7A8, &WorldMapConst3, true);
 
-        static float WorldMapConst4 = 125.0f * FrameTime;
+        static float WorldMapConst4 = ((*(float*)dword_58F7B5) / (1 / TargetFPS)) * FrameTime;
         injector::WriteMemory(dword_58F7B5, &WorldMapConst4, true);
     }
 
