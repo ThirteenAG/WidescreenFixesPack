@@ -8,6 +8,7 @@ public:
     static inline bool* bIsInvertY = nullptr;
     static inline int* nMouseLookSensitivity = nullptr;
     static inline bool bGamepadUsed = false;
+    static inline bool (*pScarfaceHook_GetMenuActive)() = nullptr;
     
     static inline bool IsInvertX()
     {
@@ -23,18 +24,6 @@ public:
     }
     static inline bool ScarfaceHook_GetMenuActive()
     {
-        static bool (*pScarfaceHook_GetMenuActive)() = nullptr;
-        static std::once_flag flag;
-        std::call_once(flag, []()
-        {
-            auto GetScarfaceHook = []() -> HMODULE {
-                constexpr auto dll = L"ScarfaceHook.asi";
-                auto hm = GetModuleHandleW(dll);
-                return (hm ? hm : LoadLibraryW(dll));
-            };
-            pScarfaceHook_GetMenuActive = (bool (*)())GetProcAddress(GetScarfaceHook(), "ScarfaceHook_GetMenuActive");
-        });
-        
         if (pScarfaceHook_GetMenuActive)
             return pScarfaceHook_GetMenuActive();
         else
@@ -95,7 +84,10 @@ char __fastcall GenericVehicleCamera_ApplyRightStickMotion(float* mInputs, void*
 
 void Init()
 {
-    //skipintro
+    CIniReader iniReader("");
+    auto bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
+    
+    if (bSkipIntro)
     {
         auto pattern = hook::pattern("E8 ? ? ? ? 83 C4 20 5F 5E C7 45");
         injector::MakeNOP(pattern.get_first(), 5); //movies
@@ -156,13 +148,24 @@ void Init()
 
 void InitXidi()
 {
-    auto SetScarfaceData = (void (*)(uint32_t* menu, uint8_t* state))GetProcAddress(GetModuleHandleW(L"dinput8.dll"), "SetScarfaceData");
-    if (SetScarfaceData)
+    CIniReader iniReader("");
+    auto bModernControlScheme = iniReader.ReadInteger("MAIN", "ModernControlScheme", 1) != 0;
+    
+    if (bModernControlScheme)
     {
-        auto nMenuCheck = *(uint32_t**)(injector::GetBranchDestination(hook::get_pattern("E8 ? ? ? ? 88 43 60")).as_int() + 1);
-        auto bStateCheck = *hook::get_pattern<uint8_t*>("B9 ? ? ? ? E8 ? ? ? ? 5E C3", 1);
-        SetScarfaceData(nMenuCheck, bStateCheck);
+        auto SetScarfaceData = (void (*)(uint32_t* menu, uint8_t* state))GetProcAddress(GetModuleHandleW(L"dinput8.dll"), "SetScarfaceData");
+        if (SetScarfaceData)
+        {
+            auto nMenuCheck = *(uint32_t**)(injector::GetBranchDestination(hook::get_pattern("E8 ? ? ? ? 88 43 60")).as_int() + 1);
+            auto bStateCheck = *hook::get_pattern<uint8_t*>("B9 ? ? ? ? E8 ? ? ? ? 5E C3", 1);
+            SetScarfaceData(nMenuCheck, bStateCheck);
+        }
     }
+}
+
+void InitScarfaceHook()
+{
+    OptionManager::pScarfaceHook_GetMenuActive = (bool (*)())GetProcAddress(GetModuleHandleW(L"ScarfaceHook.asi"), "ScarfaceHook_GetMenuActive");
 }
 
 CEXP void InitializeASI()
@@ -171,6 +174,7 @@ CEXP void InitializeASI()
     {
         CallbackHandler::RegisterCallback(Init, hook::pattern("B9 ? ? ? ? E8 ? ? ? ? 5E C3"));
         CallbackHandler::RegisterCallback(L"dinput8.dll", InitXidi);
+        CallbackHandler::RegisterCallback(L"ScarfaceHook.asi", InitScarfaceHook);
     });
 }
 
