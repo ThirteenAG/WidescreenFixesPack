@@ -1,4 +1,6 @@
 #include "stdafx.h"
+#define DIRECTINPUT_VERSION 0x0800
+#include <dinput.h>
 
 class OptionManager
 {
@@ -86,6 +88,7 @@ void Init()
 {
     CIniReader iniReader("");
     auto bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
+    auto bScrollWeaponsWithMouseWheel = iniReader.ReadInteger("MAIN", "ScrollWeaponsWithMouseWheel", 1) != 0;
     
     if (bSkipIntro)
     {
@@ -144,6 +147,69 @@ void Init()
             OptionManager::bGamepadUsed = (*(float*)(regs.esp + 0x1C) + *(float*)(regs.esp + 0x18)) != 0.0f;
         }
     }; injector::MakeInline<GamepadCheck>(pattern.get_first(0));
+
+    if (bScrollWeaponsWithMouseWheel)
+    {
+        static int nMouseWheelValue = 0;
+        pattern = hook::pattern("8B B7 ? ? ? ? 85 F6 74 21 90");
+        struct GetDeviceDataHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                regs.esi = *(uint32_t*)(regs.edi + 0x264);
+
+                auto rgdod = (LPDIDEVICEOBJECTDATA)(regs.esp + 0x10);
+                if (rgdod)
+                {
+                    nMouseWheelValue = 0;
+                    switch (rgdod->dwOfs)
+                    {
+                    case DIMOFS_Z:
+                        nMouseWheelValue = rgdod->dwData;
+                        break;
+                    default:
+                        break;
+                    }
+                }
+            }
+        }; injector::MakeInline<GetDeviceDataHook>(pattern.get_first(0), pattern.get_first(6));
+
+        pattern = hook::pattern("0F BF 54 24 08 ? ? ? ? 03");
+        if (pattern.empty()) pattern = hook::pattern("0F BF 54 24 ? E9");
+        struct MouseScroll
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                *(int32_t*)&regs.edx = *(int16_t*)(regs.esp + 0x8);
+
+                enum
+                {
+                    weaponleft = 0x9,
+                    weaponright = 0xA
+                };
+
+                static auto counter = 0;
+                if (nMouseWheelValue >= WHEEL_DELTA)
+                    counter++;
+                else if (nMouseWheelValue <= -WHEEL_DELTA)
+                    counter--;
+                else
+                    counter = 0;
+
+                static constexpr auto duration = 30;
+                if (counter > 0 && counter < duration)
+                    *(int16_t*)(regs.ecx + weaponleft * 2) = 1; // 1
+                else if (counter < 0 && counter > -duration)
+                    *(int16_t*)(regs.ecx + weaponright * 2) = 1; // 3
+
+                if (counter < -duration || counter > duration)
+                {
+                    counter = 0;
+                    nMouseWheelValue = 0;
+                }
+            }
+        }; injector::MakeInline<MouseScroll>(pattern.get_first(0));
+    }
 }
 
 void InitXidi()
