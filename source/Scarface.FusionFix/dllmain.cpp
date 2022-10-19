@@ -186,7 +186,7 @@ void Init()
             {
                 *(int32_t*)&regs.edx = *(int16_t*)(regs.esp + 0x8);
 
-                if (OptionManager::bGamepadUsed)
+                if (OptionManager::bGamepadUsed || OptionManager::ScarfaceHook_GetMenuActive())
                     return;
                 
                 enum
@@ -226,12 +226,12 @@ void InitXidi()
     
     if (bModernControlScheme)
     {
-        auto SetScarfaceData = (void (*)(uint32_t* menu, uint8_t* state))GetProcAddress(GetModuleHandleW(L"dinput8.dll"), "SetScarfaceData");
+        auto SetScarfaceData = (void (*)(bool(*menu)(), void** player, uint32_t struct_offset))GetProcAddress(GetModuleHandleW(L"dinput8.dll"), "SetScarfaceData");
         if (SetScarfaceData)
         {
-            auto nMenuCheck = *(uint32_t**)(injector::GetBranchDestination(hook::get_pattern("E8 ? ? ? ? 88 43 60")).as_int() + 1);
-            auto bStateCheck = *hook::get_pattern<uint8_t*>("B9 ? ? ? ? E8 ? ? ? ? 5E C3", 1);
-            SetScarfaceData(nMenuCheck, bStateCheck);
+            auto fnMenuCheck = (bool(*)())injector::GetBranchDestination(hook::get_pattern("E8 ? ? ? ? 84 C0 75 A4")).as_int();
+            auto CharacterObject = *hook::get_pattern<void**>("A1 ? ? ? ? 85 C0 74 50", 1);
+            SetScarfaceData(fnMenuCheck, CharacterObject, 0x2E8);
         }
     }
 }
