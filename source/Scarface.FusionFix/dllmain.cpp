@@ -157,18 +157,22 @@ void Init()
             void operator()(injector::reg_pack& regs)
             {
                 regs.esi = *(uint32_t*)(regs.edi + 0x264);
+                auto controller = std::string_view((char*)regs.edi + 0x40);
 
-                auto rgdod = (LPDIDEVICEOBJECTDATA)(regs.esp + 0x10);
-                if (rgdod)
+                if (controller.starts_with("Mouse"))
                 {
-                    nMouseWheelValue = 0;
-                    switch (rgdod->dwOfs)
+                    auto rgdod = (LPDIDEVICEOBJECTDATA)(regs.esp + 0x10);
+                    if (rgdod)
                     {
-                    case DIMOFS_Z:
-                        nMouseWheelValue = rgdod->dwData;
-                        break;
-                    default:
-                        break;
+                        nMouseWheelValue = 0;
+                        switch (rgdod->dwOfs)
+                        {
+                        case DIMOFS_Z:
+                            nMouseWheelValue = rgdod->dwData;
+                            break;
+                        default:
+                            break;
+                        }
                     }
                 }
             }
@@ -182,6 +186,9 @@ void Init()
             {
                 *(int32_t*)&regs.edx = *(int16_t*)(regs.esp + 0x8);
 
+                if (OptionManager::bGamepadUsed)
+                    return;
+                
                 enum
                 {
                     weaponleft = 0x9,
