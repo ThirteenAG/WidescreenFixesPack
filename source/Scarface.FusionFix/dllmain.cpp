@@ -44,8 +44,8 @@ void SetMouseInput(float* dest_x, float* dest_y, float value_x = 0.0f, float val
         POINT MousePos;
         GetCursorPos(&MousePos);
         GetWindowRect(*OptionManager::hWnd, &windowRect);
-        int CenterX = ((windowRect.right - windowRect.left) / 2) + windowRect.left;
-        int CenterY = ((windowRect.bottom - windowRect.top) / 2) + windowRect.top;
+        auto CenterX = ((windowRect.right - windowRect.left) / 2) + windowRect.left;
+        auto CenterY = ((windowRect.bottom - windowRect.top) / 2) + windowRect.top;
 
         float sign_x = 1.0f;
         float sign_y = 1.0f;
@@ -149,6 +149,38 @@ void Init()
         }
     }; injector::MakeInline<GamepadCheck>(pattern.get_first(0));
 
+    pattern = hook::pattern("B8 ? ? ? ? C6 05 ? ? ? ? ? A3 ? ? ? ? A3 ? ? ? ? E8");
+    struct CursorReset1
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.eax = 0x18;
+            RECT windowRect;
+            GetWindowRect(*OptionManager::hWnd, &windowRect);
+            auto CenterX = ((windowRect.right - windowRect.left) / 2) + windowRect.left;
+            auto CenterY = ((windowRect.bottom - windowRect.top) / 2) + windowRect.top;
+            SetCursorPos(CenterX, CenterY);
+        }
+    }; injector::MakeInline<CursorReset1>(pattern.get_first(0));
+
+    pattern = hook::pattern("83 C4 0C 88 9E ? ? ? ? 5E 5B C2 08 00");
+    struct CursorReset2
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            *(uint8_t*)(regs.esi + 0x177) = regs.ebx & 0xFF;
+
+            if ((regs.ebx & 0xFF) == 0)
+            {
+                RECT windowRect;
+                GetWindowRect(*OptionManager::hWnd, &windowRect);
+                auto CenterX = ((windowRect.right - windowRect.left) / 2) + windowRect.left;
+                auto CenterY = ((windowRect.bottom - windowRect.top) / 2) + windowRect.top;
+                SetCursorPos(CenterX, CenterY);
+            }
+        }
+    }; injector::MakeInline<CursorReset2>(pattern.get_first(3), pattern.get_first(9));
+
     if (bScrollWeaponsWithMouseWheel)
     {
         static int nMouseWheelValue = 0;
@@ -208,7 +240,7 @@ void Init()
                 if (counter > 0 && counter < duration)
                     *(int16_t*)(regs.ecx + weaponleft * 2) = 1; // 1
                 else if (counter < 0 && counter > -duration)
-                    *(int16_t*)(regs.ecx + weaponright * 2) = 1; // 3
+                    *(int16_t*)(regs.ecx + weaponright * 2) = 1; // 2
 
                 if (counter < -duration || counter > duration)
                 {
