@@ -89,6 +89,7 @@ void Init()
     CIniReader iniReader("");
     auto bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
     auto bScrollWeaponsWithMouseWheel = iniReader.ReadInteger("MAIN", "ScrollWeaponsWithMouseWheel", 1) != 0;
+    static auto fForceAlphaRef = iniReader.ReadFloat("MAIN", "ForceAlphaRef", 0.0f);
     
     if (bSkipIntro)
     {
@@ -97,7 +98,7 @@ void Init()
         pattern = hook::pattern("75 22 E8 ? ? ? ? 8B C8");
         injector::MakeNOP(pattern.get_first(), 2); //press to start
     }
-
+    
     auto pattern = hook::pattern("A2 ? ? ? ? A2 ? ? ? ? A2 ? ? ? ? A2 ? ? ? ? A2 ? ? ? ? A2 ? ? ? ? A3");
     OptionManager::bIsInvertX = *pattern.get_first<bool*>(1);
     OptionManager::bIsInvertY = *pattern.get_first<bool*>(6);
@@ -216,6 +217,12 @@ void Init()
                 }
             }
         }; injector::MakeInline<MouseScroll>(pattern.get_first(0));
+    }
+
+    if (fForceAlphaRef)
+    {
+        pattern = hook::pattern("D9 05 ? ? ? ? 8B 4E 14 D9 7C 24 12");
+        injector::WriteMemory(pattern.get_first(2), &fForceAlphaRef, true);
     }
 }
 
