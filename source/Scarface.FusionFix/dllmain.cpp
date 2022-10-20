@@ -89,7 +89,7 @@ void Init()
     CIniReader iniReader("");
     auto bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
     auto bScrollWeaponsWithMouseWheel = iniReader.ReadInteger("MAIN", "ScrollWeaponsWithMouseWheel", 1) != 0;
-    static auto fForceAlphaRef = iniReader.ReadFloat("MAIN", "ForceAlphaRef", 0.0f);
+    static auto fForceAlphaRef = iniReader.ReadFloat("TEST", "ForceAlphaRef", 0.0f);
     
     if (bSkipIntro)
     {
