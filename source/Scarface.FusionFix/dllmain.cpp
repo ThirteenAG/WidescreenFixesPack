@@ -33,6 +33,21 @@ public:
     }
 };
 
+void CenterMouse()
+{
+    if (OptionManager::bGamepadUsed)
+        return;
+
+    if ((*OptionManager::hWnd == GetForegroundWindow()) && !OptionManager::ScarfaceHook_GetMenuActive())
+    {
+        RECT windowRect;
+        GetWindowRect(*OptionManager::hWnd, &windowRect);
+        auto CenterX = ((windowRect.right - windowRect.left) / 2) + windowRect.left;
+        auto CenterY = ((windowRect.bottom - windowRect.top) / 2) + windowRect.top;
+        SetCursorPos(CenterX, CenterY);
+    }
+}
+
 void SetMouseInput(float* dest_x, float* dest_y, float value_x = 0.0f, float value_y = 0.0f)
 {
     if (OptionManager::bGamepadUsed)
@@ -155,11 +170,7 @@ void Init()
         void operator()(injector::reg_pack& regs)
         {
             regs.eax = 0x18;
-            RECT windowRect;
-            GetWindowRect(*OptionManager::hWnd, &windowRect);
-            auto CenterX = ((windowRect.right - windowRect.left) / 2) + windowRect.left;
-            auto CenterY = ((windowRect.bottom - windowRect.top) / 2) + windowRect.top;
-            SetCursorPos(CenterX, CenterY);
+            CenterMouse();
         }
     }; injector::MakeInline<CursorReset1>(pattern.get_first(0));
 
@@ -169,17 +180,32 @@ void Init()
         void operator()(injector::reg_pack& regs)
         {
             *(uint8_t*)(regs.esi + 0x177) = regs.ebx & 0xFF;
-
             if ((regs.ebx & 0xFF) == 0)
-            {
-                RECT windowRect;
-                GetWindowRect(*OptionManager::hWnd, &windowRect);
-                auto CenterX = ((windowRect.right - windowRect.left) / 2) + windowRect.left;
-                auto CenterY = ((windowRect.bottom - windowRect.top) / 2) + windowRect.top;
-                SetCursorPos(CenterX, CenterY);
-            }
+                CenterMouse();
         }
     }; injector::MakeInline<CursorReset2>(pattern.get_first(3), pattern.get_first(9));
+    
+    pattern = hook::pattern("8B 47 0C 50 8D 4C 24 38 51 8B CE E8 ? ? ? ? 80 BE");
+    struct CursorReset3
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.eax = *(uint32_t*)(regs.edi + 0xC);
+            regs.ecx = regs.esp + 0x38 - 4;
+            CenterMouse();
+        }
+    }; injector::MakeInline<CursorReset3>(pattern.get_first(0), pattern.get_first(8));
+    injector::WriteMemory<uint8_t>(pattern.get_first(5), 0x50, true);
+
+    pattern = hook::pattern("8B 97 ? ? ? ? 52 8B CE E8 ? ? ? ? 5F");
+    struct CursorReset4
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.edx = *(uint32_t*)(regs.edi + 0x84);
+            CenterMouse();
+        }
+    }; injector::MakeInline<CursorReset4>(pattern.get_first(0), pattern.get_first(6));
 
     if (bScrollWeaponsWithMouseWheel)
     {
