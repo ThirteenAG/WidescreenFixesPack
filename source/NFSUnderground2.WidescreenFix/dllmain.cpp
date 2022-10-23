@@ -82,7 +82,7 @@ uint32_t* NOSTrailCaveExitTrue = (uint32_t*)0x0061AD91;
 uint32_t* NOSTrailCaveExitFalse = (uint32_t*)0x61AE8E;
 void __declspec(naked) NOSTrailCave()
 {
-    if ((*fc_12989_8A44EC + NOSTrailFrameDelay) < *eFrameCounter_870818)
+    if ((*fc_12989_8A44EC + NOSTrailFrameDelay) <= *eFrameCounter_870818)
         _asm
         {
             mov eax, ds:eFrameCounter_870818
