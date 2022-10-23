@@ -12,6 +12,83 @@ struct Screen
     float fHudPosX;
 } Screen;
 
+struct bVector3
+{
+    float x;
+    float y;
+    float z;
+    float pad;
+};
+
+struct bVector4
+{
+    float x;
+    float y;
+    float z;
+    float w;
+};
+
+struct bMatrix4
+{
+    bVector4 v0;
+    bVector4 v1;
+    bVector4 v2;
+    bVector4 v3;
+};
+
+#pragma runtime_checks( "", off )
+float NOSTrailScalar = 2.0f;
+float NOSTrailPositionScalar = 0.3f;
+bMatrix4 carbody_nos;
+
+void(__thiscall* CarRenderInfo_RenderFlaresOnCar)(void* CarRenderInfo, void* eView, bVector3* position, bMatrix4* body_matrix, int force_light_state, int reflexion, int renderFlareFlags, int nonplayercar) = (void(__thiscall*)(void*, void*, bVector3*, bMatrix4*, int, int, int, int))0x007CBC40;
+void __stdcall CarRenderInfo_RenderFlaresOnCar_Hook(void* eView, bVector3* position, bMatrix4* body_matrix, int force_light_state, int reflexion, int renderFlareFlags, int nonplayercar)
+{
+    uint32_t thethis = 0;
+    _asm mov thethis, ecx
+    memcpy(&carbody_nos, body_matrix, sizeof(bMatrix4));
+
+    float pos_scale = (NOSTrailScalar * NOSTrailPositionScalar);
+    if (pos_scale < 1.0f)
+        pos_scale = 1.0f;
+
+    carbody_nos.v0.x *= pos_scale;
+    carbody_nos.v0.y *= pos_scale;
+    carbody_nos.v0.z *= pos_scale;
+
+    carbody_nos.v2.x *= pos_scale;
+    carbody_nos.v2.y *= pos_scale;
+
+    return CarRenderInfo_RenderFlaresOnCar((void*)thethis, eView, position, &carbody_nos, force_light_state, reflexion, renderFlareFlags, nonplayercar);
+}
+
+bVector3* WorldPos1;
+bVector3* WorldPos2;
+bVector3* NOSFlarePos;
+
+uint32_t* NOSTrailCave2Exit = (uint32_t*)0x007CCD30;
+void __declspec(naked) NOSTrailCave2()
+{
+    _asm
+    {
+        mov WorldPos1, edx
+        mov WorldPos2, esi
+        lea edx, [esp + 0x40]
+        mov NOSFlarePos, edx
+    }
+
+    (*NOSFlarePos).x = ((*WorldPos1).x - (*WorldPos2).x) * NOSTrailScalar;
+    (*NOSFlarePos).y = ((*WorldPos1).y - (*WorldPos2).y) * NOSTrailScalar;
+    (*NOSFlarePos).z = ((*WorldPos1).z - (*WorldPos2).z) * NOSTrailScalar;
+
+    _asm
+    {
+        xor eax, eax
+        jmp NOSTrailCave2Exit
+    }
+}
+#pragma runtime_checks( "", restore )
+
 void Init()
 {
     CIniReader iniReader("");
@@ -37,6 +114,10 @@ void Init()
     static int SimRate = iniReader.ReadInteger("MISC", "SimRate", -1);
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
         szCustomUserFilesDirectoryInGameDir.clear();
+    bool bFixNOSTrailLength = iniReader.ReadInteger("NOSTrail", "FixNOSTrailLength", 1) == 1;
+    bool bFixNOSTrailPosition = iniReader.ReadInteger("NOSTrail", "FixNOSTrailPosition", 0) != 0;
+    static float fCustomNOSTrailLength = iniReader.ReadFloat("NOSTrail", "CustomNOSTrailLength", 1.0f);
+    NOSTrailPositionScalar = iniReader.ReadFloat("NOSTrail", "NOSTrailPositionScalar", 0.3f);
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -750,6 +831,29 @@ void Init()
 
         static float WorldMapConst4 = ((*(float*)dword_58F7B5) / (1 / TargetFPS)) * FrameTime;
         injector::WriteMemory(dword_58F7B5, &WorldMapConst4, true);
+    }
+
+    if (bFixNOSTrailLength)
+    {
+        static int TargetRate = 60;
+
+        if (SimRate)
+            TargetRate = SimRate;
+
+        constexpr float NOSTargetFPS = 60.0f; // original FPS we're targeting from. Consoles target 60 but run at 30, hence have longer trails than PC. Targeting 60 is smarter due to less issues with shorter trails. Use SimRate -2 to get the same effect as console versions.
+        NOSTrailScalar = (TargetRate / NOSTargetFPS) * fCustomNOSTrailLength;
+
+        pattern = hook::pattern("EB 06 8D 9B 00 00 00 00 40 89 44 24 24"); // 0x007CCD28
+        injector::MakeJMP(pattern.get_first(0), NOSTrailCave2, true);
+        NOSTrailCave2Exit = (uint32_t*)pattern.get_first(8);
+
+        if (bFixNOSTrailPosition)
+        {
+            pattern = hook::pattern("D9 44 24 40 6A 01 D8 4C 24 1C"); // 0x007CCD78
+            injector::MakeCALL(pattern.get_first(0x5E), CarRenderInfo_RenderFlaresOnCar_Hook, true);
+            pattern = hook::pattern("55 8B EC 83 E4 F0 83 EC 64 8B 45 08 53 56 83 C0 44"); // 0x007CBC40
+            CarRenderInfo_RenderFlaresOnCar = (void(__thiscall*)(void*, void*, bVector3*, bMatrix4*, int, int, int, int))pattern.get_first(0);
+        }
     }
 
     if (bWriteSettingsToFile)
