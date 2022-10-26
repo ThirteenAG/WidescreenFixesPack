@@ -99,6 +99,20 @@ char __fastcall GenericVehicleCamera_ApplyRightStickMotion(float* mInputs, void*
         return ret;
 }
 
+float __cdecl math__ClampX(float* value, float* min, float* max)
+{
+    float dummyY = 0.0f;
+    SetMouseInput(value, &dummyY, 0.0f, 0.0f);
+    return *value;
+}
+
+float __cdecl math__ClampY(float* value, float* min, float* max)
+{
+    float dummyX = 0.0f;
+    SetMouseInput(&dummyX, value, 0.0f, 0.0f);
+    return *value;
+}
+
 void Init()
 {
     CIniReader iniReader("");
@@ -153,6 +167,22 @@ void Init()
             SetMouseInput((float*)(regs.ecx + 0x0C), (float*)(regs.ecx + 0x10));
         }
     }; injector::MakeInline<SetOutput_Update_MeleeTarget>(pattern.get_first(3), pattern.get_first(10));
+
+    //map camera
+    pattern = hook::pattern("E8 ? ? ? ? D9 5C 24 2C 83 C4 0C D9 05");
+    injector::MakeCALL(pattern.get_first(0), math__ClampX, true); //mousePanXID
+    pattern = hook::pattern("E8 ? ? ? ? D9 5C 24 24 D9 05 ? ? ? ? 83");
+    injector::MakeCALL(pattern.get_first(0), math__ClampY, true); //mousePanYID
+    pattern = hook::pattern("7A 0E D9 44 24 1C B1 01");
+    injector::MakeNOP(pattern.get_first(0), 2);
+    pattern = hook::pattern("75 2B 8B 44 24 20 89 44 24 10");
+    injector::MakeNOP(pattern.get_first(0), 2);
+    pattern = hook::pattern("75 2B 8B 44 24 18 89 44 24 10 21 54 24 10");
+    injector::MakeNOP(pattern.get_first(0), 2);
+    pattern = hook::pattern("7A 0E D9 44 24 1C D8 4C 24 18");
+    injector::MakeNOP(pattern.get_first(0), 2);
+    pattern = hook::pattern("7A 08 DD D8 D9 05 ? ? ? ? D9 44 24 20 8D BE ? ? ? ? D8 C9");
+    injector::MakeNOP(pattern.get_first(0), 2);
 
     pattern = hook::pattern("B9 ? ? ? ? 21 4C 24 10 D9 44 24 10 89 54 24 14");
     struct GamepadCheck

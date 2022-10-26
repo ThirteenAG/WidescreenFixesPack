@@ -1,3 +1,5 @@
+includes/* linguist-vendored
+
 # Auto detect text files and perform LF normalization
 * text=auto
 
@@ -20,6 +22,3 @@
 *.PDF	 diff=astextplain
 *.rtf	 diff=astextplain
 *.RTF	 diff=astextplain
-
-# Stats
-includes/** linguist-vendored
