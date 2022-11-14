@@ -134,7 +134,7 @@ runs:
     - name: Get release info
       if: ${{ steps.tag_requires_updating.outputs.split_value == 'True' }}
       id: release_info
-      uses: cardinalby/git-get-release-action@1.1.1
+      uses: cardinalby/git-get-release-action@1.2.4
       env:
        GITHUB_TOKEN: ${{ inputs.token }}
       with:
@@ -151,7 +151,7 @@ runs:
         artifacts: ${{ inputs.artifacts }}
     - name: Update Tag
       if: ${{ steps.tag_requires_updating.outputs.split_value == 'True' }}
-      uses: richardsimko/update-tag@v1
+      uses: richardsimko/update-tag@v1.0.6
       with:
         tag_name: ${{ steps.release_info.outputs.tag_name }}
       env:
