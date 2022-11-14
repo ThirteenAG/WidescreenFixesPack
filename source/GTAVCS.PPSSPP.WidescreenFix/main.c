@@ -241,7 +241,7 @@ int OnModuleStart() {
         injector.MakeNOP(ptr);
     }
 
-    char szForceAspectRatio[10];
+    char szForceAspectRatio[100];
     int DualAnalogPatch = inireader.ReadInteger("MAIN", "DualAnalogPatch", 1);
     char* ForceAspectRatio = inireader.ReadString("MAIN", "ForceAspectRatio", "auto", szForceAspectRatio, sizeof(szForceAspectRatio));
     int Enable60FPS = inireader.ReadInteger("MAIN", "Enable60FPS", 0);
