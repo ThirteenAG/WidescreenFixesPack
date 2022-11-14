@@ -25,7 +25,7 @@ jobs:
 
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Build All
       uses: ./.github/workflows/build_all
       with:

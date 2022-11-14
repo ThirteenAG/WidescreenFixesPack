@@ -13,7 +13,7 @@ jobs:
         buildtype: [Release]
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - uses: ./.github/workflows/build_all
     - uses: ThirteenAG/update-tags@v1
       env:
