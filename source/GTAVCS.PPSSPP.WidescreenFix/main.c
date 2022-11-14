@@ -410,7 +410,7 @@ int OnModuleStart() {
         injector.MakeJMPwNOP(ptr_18922C, (intptr_t)CPad__GetWeapon);
         injector.MakeJMPwNOP(ptr_189270, (intptr_t)CPad__WeaponJustDown);
         injector.MakeJMPwNOP(ptr_188E14, (intptr_t)CPad__GetLookBehindForPed);
-        injector.WriteMemory16(ptr_188078, RIGHTSHOULDER1 * 2);
+        //injector.WriteMemory16(ptr_188078, RIGHTSHOULDER1 * 2);
         injector.WriteMemory16(ptr_188084, RIGHTSHOULDER1 * 6);
         injector.WriteMemory16(ptr_5EE58, RIGHTSHOULDER1 * 2);
         injector.WriteMemory16(ptr_188118 + 2, 0x1000);
