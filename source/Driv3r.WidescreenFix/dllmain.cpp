@@ -78,13 +78,15 @@ void Init()
     static auto pFOV = *hook::get_pattern<float*>("D9 05 ? ? ? ? EB 06 D9 05 ? ? ? ? 33 C0", 2); //78EA78
     static auto dword_8D7DF0 = *hook::get_pattern<uintptr_t*>("8B 0D ? ? ? ? 8B 44 24 14 8D 54 24 2C", 2);
     static auto pGameResWidth = dword_8D7DF0 + 2;
+    static auto GameResWidth = 0;
     static auto pGameResHeight = dword_8D7DF0 + 3;
+    static auto GameResHeight = 0;
     //Screen.FMVStatus = *hook::get_pattern<int32_t*>("BE ? ? ? ? 33 C0 B9 20 01 00 00 8B FE F3 AB", 1) + 0x1D; // 0x70C8B8?
 
     static auto GetRes = []()
     {
-        Screen.Width = *pGameResWidth;
-        Screen.Height = *pGameResHeight;
+        Screen.Width = GameResWidth;
+        Screen.Height = GameResHeight;
         Screen.fWidth = static_cast<float>(Screen.Width);
         Screen.fHeight = static_cast<float>(Screen.Height);
         Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
@@ -109,20 +111,27 @@ void Init()
     };
 
     pattern = hook::pattern("89 8B 80 01 00 00"); //0x5E4C73
+    struct GetResHook1
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            *(uint32_t*)(regs.ebx + 0x180) = regs.ecx;
+            *pGameResWidth = GameResWidth;
+            *pGameResHeight = GameResHeight;
+            GetRes();
+        }
+    };
     struct GetResHook2
     {
         void operator()(injector::reg_pack& regs)
         {
             *(uint32_t*)(regs.ebx + 0x180) = regs.ecx;
-            if (Screen.Width && Screen.Height)
-            {
-                Screen.Width = *(uint32_t*)(regs.ebx + 0x160);
-                Screen.Height = *(uint32_t*)(regs.ebx + 0x164);
-            }
+            GameResWidth = *(uint32_t*)(regs.ebx + 0x160);
+            GameResHeight = *(uint32_t*)(regs.ebx + 0x164);
             GetRes();
         }
     };
-    injector::MakeInline<GetResHook2>(pattern.count(2).get(0).get<void*>(0), pattern.count(2).get(0).get<void*>(6));
+    injector::MakeInline<GetResHook1>(pattern.count(2).get(0).get<void*>(0), pattern.count(2).get(0).get<void*>(6));
     injector::MakeInline<GetResHook2>(pattern.count(2).get(1).get<void*>(0), pattern.count(2).get(1).get<void*>(6));
 
     pattern = hook::pattern("8B 44 24 04 89 41 ? B0 01 C2 04 00"); //0x580C00
@@ -207,8 +216,8 @@ void Init()
             }
             else
             {
-                *(float*)(regs.esi + 0x0C) = t6;
-                *(float*)(regs.esi + 0x14) = t5;
+                //*(float*)(regs.esi + 0x0C) = t6;
+                //*(float*)(regs.esi + 0x14) = t5;
             }
         }
     }; injector::MakeInline<RadarHook>(pattern.get_first(0), pattern.get_first(12));
@@ -279,9 +288,9 @@ void Init()
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
-        {
-            CallbackHandler::RegisterCallback(Init, hook::pattern("55 8B EC 83 EC 60 53 56 57"));
-        });
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("55 8B EC 83 EC 60 53 56 57"));
+    });
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)

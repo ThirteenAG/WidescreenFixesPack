@@ -109,8 +109,34 @@ float __stdcall sub_4BAA87(float a1)
         return a1;
 }
 
-void Init()
+int __fastcall sub_4C5838(int* _this, void* edx, int* a2)
 {
+    __try
+    {
+        int result = 0;
+        if (*_this <= 0)
+            return -1;
+        for (auto i = (int*)(_this[1] + 72); ; i += 21)
+        {
+            if (*a2 == *(i - 1) && a2[1] == *i && a2[2] == i[1])
+            {
+                auto v5 = a2[3];
+                if (v5 == i[2] || !v5)
+                    break;
+            }
+            if (++result >= *_this)
+                return -1;
+        }
+        return result;
+    }
+    __except ((GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION) ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
+    {
+        return -1;
+    }
+}
+
+void Init()
+{  
     CIniReader iniReader("");
     Screen.fCustomFieldOfView = iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f);
     Screen.bFixFMVs = iniReader.ReadInteger("MAIN", "FixFMVs", 1) != 0;
@@ -119,8 +145,23 @@ void Init()
 
     std::tie(Screen.DesktopResW, Screen.DesktopResH) = GetDesktopRes();
 
+    if (!nMinResX && !nMinResY)
+    {
+        nMinResX = Screen.DesktopResW;
+        nMinResY = Screen.DesktopResH;
+    }
+    else if (nMinResX < 0 && nMinResY < 0)
+    {
+        nMinResX = 0;
+        nMinResY = 0;
+    }
+
+    //crash fix?
+    auto pattern = hook::pattern("53 8B 19 56 33 C0 85 DB 57"); //0x4C5838
+    injector::MakeJMP(pattern.get_first(0), sub_4C5838, true);
+
     //uncapping resolutions
-    auto pattern = hook::pattern("68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? FF 75 F8 BF"); //4C5A89
+    pattern = hook::pattern("68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? FF 75 F8 BF"); //4C5A89
     injector::WriteMemory(pattern.get_first<int32_t*>(1 + 0), INT_MAX, true);
     injector::WriteMemory(pattern.get_first<int32_t*>(1 + 5), INT_MAX, true);
     injector::WriteMemory(pattern.get_first<int32_t*>(1 + 10), nMinResY, true);
