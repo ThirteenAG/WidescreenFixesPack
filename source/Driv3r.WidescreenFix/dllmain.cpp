@@ -33,11 +33,18 @@ void copyControlsData(uint8_t* dest);
 void Init()
 {
     CIniReader iniReader("");
+    auto bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
     Screen.fCustomFieldOfView = iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f);
     static float fDrawDistanceFactor = iniReader.ReadFloat("MAIN", "DrawDistanceFactor", 1.0f);
     int32_t nMinResX = iniReader.ReadInteger("MAIN", "MinResX", 0);
     int32_t nMinResY = iniReader.ReadInteger("MAIN", "MinResY", 0);
 
+    if (bSkipIntro)
+    {
+        auto pattern = hook::pattern("77 7B FF 24 85 ? ? ? ? 8B 06");
+        injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true); //jmp
+    }
+    
     std::tie(Screen.DesktopResW, Screen.DesktopResH) = GetDesktopRes();
 
     //uncapping resolutions
