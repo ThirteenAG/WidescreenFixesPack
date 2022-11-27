@@ -504,7 +504,7 @@ int OnModuleStart() {
     uintptr_t ptr_130C4C = pattern.get(0, "E3 3F 05 3C 39 8E A5 34 00 68 85 44 25 28 00 00", 0);
     injector.MakeInlineLUIORI(ptr_130C4C, fAspectRatio);
 
-    if (strcmp(ForceAspectRatio, "auto") != 0 || fFOVFactor)
+    //if (strcmp(ForceAspectRatio, "auto") != 0 || fFOVFactor)
     {
         uintptr_t ptr_21FE98 = pattern.get(0, "00 63 00 46 ? ? ? ? ? ? ? ? 25 88 40 00", -4);
         MakeInlineWrapper(ptr_21FE98,
