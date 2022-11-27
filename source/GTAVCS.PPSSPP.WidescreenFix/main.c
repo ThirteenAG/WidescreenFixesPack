@@ -28,6 +28,15 @@ PSP_MODULE_INFO(MODULE_NAME, 0x1007, 1, 0);
 static const float fPSPResW = 480.0f;
 static const float fPSPResH = 272.0f;
 
+enum
+{
+    EMULATOR_DEVCTL__TOGGLE_FASTFORWARD = 0x30,
+    EMULATOR_DEVCTL__GET_ASPECT_RATIO,
+    EMULATOR_DEVCTL__GET_SCALE,
+    EMULATOR_DEVCTL__GET_LTRIGGER,
+    EMULATOR_DEVCTL__GET_RTRIGGER
+};
+
 enum CControllerState
 {
     LEFTSTICKX = 1,
@@ -186,6 +195,55 @@ void isLittleWillie(uintptr_t a1)
         *(float*)(a1 + 1944) = *(float*)(a1 + 1944) + 1.0f;
 }
 
+void UnthrottleEmuEnable()
+{
+    sceIoDevctl("kemulator:", EMULATOR_DEVCTL__TOGGLE_FASTFORWARD, (void*)1, 0, NULL, 0);
+}
+
+void UnthrottleEmuDisable()
+{
+    sceIoDevctl("kemulator:", EMULATOR_DEVCTL__TOGGLE_FASTFORWARD, (void*)0, 0, NULL, 0);
+}
+
+int sub_2A9B4(int a1)
+{
+    return *(uint8_t*)(a1 + 0x20);
+}
+
+int16_t ptr_1334C4 = 0;
+uintptr_t ptr_3C5100 = 0;
+uintptr_t sub_471400()
+{
+    return ptr_3C5100;
+}
+
+int UnthrottleEmuDuringLoading = 0;
+int once = 0;
+void GameLoopStuff()
+{
+    if (once != 1)
+    {
+        if (UnthrottleEmuDuringLoading)
+            UnthrottleEmuDisable();
+        once = 1;
+    }
+
+    if (UnthrottleEmuDuringLoading)
+    {
+        uint32_t gMenuActivated = sub_2A9B4(sub_471400()); //inlined on psp
+        float gBlackScreenTime = *(float*)(injector.GetGP() + ptr_1334C4);
+        if (gBlackScreenTime && !gMenuActivated)
+            UnthrottleEmuEnable();
+        else
+            UnthrottleEmuDisable();
+    }
+}
+
+uintptr_t GetAbsoluteAddress(uintptr_t at, int32_t offs_hi, int32_t offs_lo)
+{
+    return (uintptr_t)((uint32_t)(*(uint16_t*)(at + offs_hi)) << 16) + *(int16_t*)(at + offs_lo);
+}
+
 int module_thread(SceSize args, void* argp)
 {
     /*
@@ -239,6 +297,13 @@ int OnModuleStart() {
     {
         uintptr_t ptr = pattern.get_first("00 00 00 00 ? ? ? ? 00 00 00 00 ? ? 04 3C 25 28 00 00", -4);
         injector.MakeNOP(ptr);
+    }
+
+    UnthrottleEmuDuringLoading = inireader.ReadInteger("MAIN", "UnthrottleEmuDuringLoading", 1);
+
+    if (UnthrottleEmuDuringLoading)
+    {
+        UnthrottleEmuEnable();
     }
 
     char szForceAspectRatio[100];
@@ -427,9 +492,17 @@ int OnModuleStart() {
         ch = strtok(NULL, ":");
         int y = str2int(ch, 10);
         fAspectRatio = (float)x / (float)y;
-        uintptr_t ptr_130C4C = pattern.get(0, "E3 3F 05 3C 39 8E A5 34 00 68 85 44 25 28 00 00", 0);
-        injector.MakeInlineLUIORI(ptr_130C4C, fAspectRatio);
     }
+    else
+    {
+        float ar = 0.0f;
+        sceIoDevctl("kemulator:", EMULATOR_DEVCTL__GET_ASPECT_RATIO, NULL, 0, &ar, sizeof(ar));
+        if (ar)
+            fAspectRatio = ar;
+    }
+    
+    uintptr_t ptr_130C4C = pattern.get(0, "E3 3F 05 3C 39 8E A5 34 00 68 85 44 25 28 00 00", 0);
+    injector.MakeInlineLUIORI(ptr_130C4C, fAspectRatio);
 
     if (strcmp(ForceAspectRatio, "auto") != 0 || fFOVFactor)
     {
@@ -834,6 +907,15 @@ int OnModuleStart() {
         // Heli Height Limit
         injector.MakeInlineLUIORI(ptr_2FDD50, 800.0f);
         injector.MakeInlineLUIORI(ptr_2FDDA0, 800.0f);
+    }
+
+    {
+        uintptr_t ptr_133A5C = pattern.get(0, "1C 00 BF AF ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 01 00 15 34", 16);
+        injector.MakeJAL(ptr_133A5C, (intptr_t)GameLoopStuff);
+
+        ptr_1334C4 = *(int16_t*)pattern.get(0, "00 60 80 44 ? ? ? ? 25 20 80 02 ? ? ? ? 25 28 00 00 ? ? ? ? ? ? ? ? 25 20 80 02", 4);
+        uintptr_t ptr_1336C4 = pattern.get(0, "00 00 04 34 00 00 05 34 ? ? ? ? 00 00 04 34 ? ? ? ? FF 00 05 34", 0);
+        ptr_3C5100 = GetAbsoluteAddress(ptr_1336C4, -12, -4);
     }
 
     //Little Willie Cam Fix
