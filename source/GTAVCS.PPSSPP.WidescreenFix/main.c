@@ -609,6 +609,7 @@ int OnModuleStart() {
         uintptr_t ptr_170DD8 = pattern.get(0, "25 20 20 02 06 06 00 46 ? ? ? ? 25 20 20 02", -4); // count = 2
         uintptr_t ptr_170FF4 = pattern.get(1, "25 20 20 02 06 06 00 46 ? ? ? ? 25 20 20 02", -4); // count = 2
         uintptr_t ptr_9804 = pattern.get(0, "00 78 85 44 80 63 0F 46", -4);
+        uintptr_t ptr_B6DC = pattern.get(0, "02 00 0E 46 00 60 00 46 04 00 00 E5", 0);
         uintptr_t ptr_C9CC = pattern.get(0, "06 E4 00 46 86 B4 00 46", 0);
         uintptr_t ptr_214638 = pattern.get(0, "00 78 89 44 00 60 8A 44 00 68 8B 44", 0);
         uintptr_t ptr_2A43F0 = pattern.get(0, "F0 43 04 3C 02 63 0D 46", 0);
@@ -751,9 +752,12 @@ int OnModuleStart() {
 
         /*Radar Blips*/
         float f6 = 6.0f;
-        if (fRadarScale)
-            f6 = f6 * fRadarScale;
         float f6_pequeno = f6 / fARDiff;
+        if (fRadarScale)
+        {
+            f6 = f6 * fRadarScale;
+            f6_pequeno = f6_pequeno * fRadarScale;
+        }
         MakeInlineWrapper(ptr_9804,
             lui(a1, HIWORD(f6_pequeno)),
             ori(a1, a1, LOWORD(f6_pequeno)),
@@ -762,7 +766,18 @@ int OnModuleStart() {
             ori(a1, a1, LOWORD(f6))
         );
         injector.WriteInstr(ptr_9804 + 8, adds(f14, f12, f30));
-        injector.WriteInstr(ptr_9804 + 0x24, subs(f12, f12, f15));
+        injector.WriteInstr(ptr_9804 + 0x24, subs(f12, f12, f30));
+
+        //CRadar::DrawRotatingRadarSprite
+        MakeInlineWrapper(ptr_B6DC,
+            lui(t2, HIWORD(f6_pequeno)),
+            ori(t2, t2, LOWORD(f6_pequeno)),
+            mtc1(t2, f14),
+            muls(f0, f0, f14),
+            lui(t2, HIWORD(f6)),
+            ori(t2, t2, LOWORD(f6)),
+            mtc1(t2, f14)
+        );
 
         //Crosshair
         MakeInlineWrapper(ptr_C9CC,
