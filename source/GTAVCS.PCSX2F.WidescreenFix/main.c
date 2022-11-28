@@ -422,6 +422,15 @@ void init()
 
             injector.MakeJAL(0x116D50, (intptr_t)BlipsScaling);
 
+            //CRadar::DrawRotatingRadarSprite
+            float f6 = 6.0f;
+            float f6_pequeno = f6 / (1.0f / BlipsScale);
+            MakeInlineWrapperWithNOP(0x116BE0,
+                lui(v0, HIWORD(f6_pequeno)),
+                ori(v0, v0, LOWORD(f6_pequeno)),
+                mtc1(v0, f3)
+            );
+
             // Crosshair
             injector.MakeInlineLUIORI(0x3193CC, (float)round_f((14.0f / (Screen.fAspectRatio / (4.0f / 3.0f)))));
             injector.MakeInlineLUIORI(0x3193DC, (float)round_f((14.0f / (Screen.fAspectRatio / (4.0f / 3.0f)))));
