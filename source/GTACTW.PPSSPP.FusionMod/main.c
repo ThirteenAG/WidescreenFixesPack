@@ -24,6 +24,25 @@
 PSP_MODULE_INFO(MODULE_NAME, 0x1007, 1, 0);
 #endif
 
+enum
+{
+    EMULATOR_DEVCTL__TOGGLE_FASTFORWARD = 0x30,
+    EMULATOR_DEVCTL__GET_ASPECT_RATIO,
+    EMULATOR_DEVCTL__GET_SCALE,
+    EMULATOR_DEVCTL__GET_LTRIGGER,
+    EMULATOR_DEVCTL__GET_RTRIGGER
+};
+
+void UnthrottleEmuEnable()
+{
+    sceIoDevctl("kemulator:", EMULATOR_DEVCTL__TOGGLE_FASTFORWARD, (void*)1, 0, NULL, 0);
+}
+
+void UnthrottleEmuDisable()
+{
+    sceIoDevctl("kemulator:", EMULATOR_DEVCTL__TOGGLE_FASTFORWARD, (void*)0, 0, NULL, 0);
+}
+
 uint32_t cPed__Vehicle(uint32_t a1)
 {
     return **(uint32_t**)(a1 + 0x1CC);
@@ -278,6 +297,28 @@ int OnModuleStart() {
     SwapRBCircle = inireader.ReadInteger("MAIN", "SwapRBCircle", 1);
     int Enable3rdPersonCamera = inireader.ReadInteger("MAIN", "Enable3rdPersonCamera", 1);
     int RadioInAllVehicles = inireader.ReadInteger("MAIN", "RadioInAllVehicles", 1);
+    int UnthrottleEmuDuringLoading = inireader.ReadInteger("MAIN", "UnthrottleEmuDuringLoading", 1);
+    int UnlockXinMissionsInReplayBoard = inireader.ReadInteger("MAIN", "UnlockXinMissionsInReplayBoard", 1);
+
+    if (UnthrottleEmuDuringLoading)
+    {
+        UnthrottleEmuEnable();
+        injector.MakeJAL(0x88CFC1C, (intptr_t)UnthrottleEmuDisable);
+
+        MakeInlineWrapperWithNOP(0x089924A0,
+            jalr(a2),
+            addu(a0, s0, a1),
+            jal((intptr_t)UnthrottleEmuEnable),
+            nop()
+        );
+
+        MakeInlineWrapper(0x089924C0,
+            jalr(a2),
+            addu(a0, s0, a1),
+            jal((intptr_t)UnthrottleEmuDisable),
+            nop()
+        );
+    }
 
     injector.MakeNOP(0x08B15788); //?
 
@@ -426,6 +467,19 @@ int OnModuleStart() {
         ptr = pattern.get_first("01 00 A5 24 2A 20 85 00", 8);
         injector.MakeNOP(ptr);
         injector.MakeNOP(ptr + 16);
+    }
+
+    if (UnlockXinMissionsInReplayBoard)
+    {
+        MakeInlineWrapper(0x08A06040,
+            li(t5, 0x60),
+            li(t6, 0xFF),
+            bne(a2, t5, 3), //-->
+            nop(),
+            sw(t6, a3, 0x1),
+            sw(t6, a3, 0x2),
+            lw(a3, a3, 0x0)
+        );
     }
 
     sceKernelDcacheWritebackAll();
