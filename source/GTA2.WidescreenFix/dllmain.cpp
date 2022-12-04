@@ -1,37 +1,49 @@
 #include "stdafx.h"
 
-struct Screen
-{
-    int32_t Width;
-    int32_t Height;
-    int32_t Width43;
-    int32_t Height43;
-    float fWidth;
-    float fHeight;
-    float fAspectRatio;
-    float fHudScale;
-    int32_t nHudScale;
-    float fHudOffset;
-    float fMenuOffset;
-    float fCameraZoom;
-} Screen;
+int& window_width = *(int*)0x673578;
+int& window_height = *(int*)0x6732E8;
+int** gGame = (int**)0x5EB4FC;
 
+#define default_window_width (640.0f)
+#define default_window_height (480.0f)
+#define default_aspect_ratio (default_window_width / default_window_height)
+
+#define aspect_ratio (float)window_width / window_height
+
+#define one (int)(1 << 14)
+#define camera_scale (int)(((one * ((float)window_width / default_window_width)) / (default_aspect_ratio / (aspect_ratio))))
+#define hud_scale (int)(((one * ((float)window_width / default_window_width)) / (aspect_ratio / (default_aspect_ratio))))
+#define hud_offset ((window_width - window_height * (default_aspect_ratio)) / 2.0f);
+#define menu_offsetx ((window_width / 2) - default_window_width / 2)
+#define menu_offsety  ((window_height / 2) - default_window_height / 2)
+
+int nResX;
+int nResY;
 bool bEndProcess;
 int32_t nQuicksaveKey;
 int32_t nZoomIncreaseKey;
 int32_t nZoomDecreaseKey;
-int32_t nZoom = 0;
-int32_t nZoomMax = 0;
+int32_t nZoom;
 WNDPROC wndProcOld = NULL;
+bool keyPressed = false;
 LRESULT APIENTRY WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     switch (uMsg)
     {
     case WM_KEYDOWN:
-        if (wParam == nZoomIncreaseKey && nZoom < 4915200)
-            nZoom += 16384;
-        else if (wParam == nZoomDecreaseKey && nZoom > 0)
-            nZoom -= 16384;
+        if (!keyPressed) {
+            if (wParam == nZoomIncreaseKey)
+                nZoom += one;
+            else if (wParam == nZoomDecreaseKey)
+                nZoom -= one;
+
+            keyPressed = true;
+        }
+
+        nZoom = max(-one, min(nZoom, one * 25));
+        break;
+    case WM_KEYUP:
+        keyPressed = false;
         break;
     case WM_CLOSE:
         if (bEndProcess)
@@ -65,21 +77,28 @@ void __declspec(naked) gbh_DrawQuad()
     _asm {mov ecx, [esp + 0x68]}
     _asm {mov esp68, ecx}
 
-    if (esp68 == dword_45379E || esp68 == dword_453A22 || esp68 == dword_4580C6 || esp68 == dword_4567E1 || esp68 == dword_458426 || esp40 == dword_4582F3)
+    if ((!(*gGame) || esp68 == dword_45379E || esp68 == dword_453A22 || esp68 == dword_4580C6 || esp68 == dword_4567E1 || esp68 == dword_458426 || esp40 == dword_4582F3))
     {
-        *(float*)(dword_6733F0 + 0x00) += Screen.fMenuOffset;
-        *(float*)(dword_6733F0 + 0x20) += Screen.fMenuOffset;
-        *(float*)(dword_6733F0 + 0x40) += Screen.fMenuOffset;
-        *(float*)(dword_6733F0 + 0x60) += Screen.fMenuOffset;
+        *(float*)(dword_6733F0 + 0x00) += menu_offsetx;
+        *(float*)(dword_6733F0 + 0x04) += menu_offsety;
+
+        *(float*)(dword_6733F0 + 0x20) += menu_offsetx;
+        *(float*)(dword_6733F0 + 0x24) += menu_offsety;
+
+        *(float*)(dword_6733F0 + 0x40) += menu_offsetx;
+        *(float*)(dword_6733F0 + 0x44) += menu_offsety;
+
+        *(float*)(dword_6733F0 + 0x60) += menu_offsetx;
+        *(float*)(dword_6733F0 + 0x64) += menu_offsety;
     }
-    else
+    else if (((*gGame)))
     {
-        if (esp40 != dword_4C834B && esp44 != dword_4C74EA && esp40 != dword_4C83B2)
+        if (esp44 != dword_4C834B && esp40 != dword_4C74EA && esp44 != dword_4C83B2)
         {
-            *(float*)(dword_6733F0 + 0x00) += Screen.fHudOffset;
-            *(float*)(dword_6733F0 + 0x20) += Screen.fHudOffset;
-            *(float*)(dword_6733F0 + 0x40) += Screen.fHudOffset;
-            *(float*)(dword_6733F0 + 0x60) += Screen.fHudOffset;
+            *(float*)(dword_6733F0 + 0x00) += hud_offset;
+            *(float*)(dword_6733F0 + 0x20) += hud_offset;
+            *(float*)(dword_6733F0 + 0x40) += hud_offset;
+            *(float*)(dword_6733F0 + 0x60) += hud_offset;
         }
     }
 
@@ -99,8 +118,8 @@ void __declspec(naked) gbh_BlitImage()
     //*(int32_t*)(esp00 + 0x0C) += Screen.fHudOffset; //int srcTop
     //*(int32_t*)(esp00 + 0x10) += Screen.fHudOffset; //int srcRight
     //*(int32_t*)(esp00 + 0x14) += Screen.fHudOffset; //int srcBottom
-    *(int32_t*)(esp00 + 0x18) += (int32_t)Screen.fMenuOffset; //int dstX
-    //*(int32_t*)(esp00 + 0x1C) += Screen.fHudOffset; //int dstY
+    *(int32_t*)(esp00 + 0x18) += (int32_t)menu_offsetx; //int dstX
+    *(int32_t*)(esp00 + 0x1C) += (int32_t)menu_offsety; //int dstY
 
     gbh_BlitImageAddr = *(uintptr_t*)off_59533C;
     _asm jmp gbh_BlitImageAddr;
@@ -109,150 +128,100 @@ void __declspec(naked) gbh_BlitImage()
 void Init()
 {
     CIniReader iniReader("");
-    Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
-    Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
-    bEndProcess = iniReader.ReadInteger("MAIN", "EndProcessOnWindowClose", 0) != 0;
-    auto szCameraZoom = iniReader.ReadString("MAIN", "CameraZoomFactor", "auto");
-    auto bSkipMovie = iniReader.ReadInteger("MAIN", "SkipMovie", 1) != 0;
-    static auto bFixHud = iniReader.ReadInteger("MAIN", "FixHud", 1) != 0;
-    auto bFixMenu = iniReader.ReadInteger("MAIN", "FixMenu", 1) != 0;
-    nQuicksaveKey = iniReader.ReadInteger("MAIN", "QuicksaveKey", VK_F5);
-    nZoomIncreaseKey = iniReader.ReadInteger("MAIN", "ZoomIncreaseKey", VK_OEM_PLUS);
-    nZoomDecreaseKey = iniReader.ReadInteger("MAIN", "ZoomDecreaseKey", VK_OEM_MINUS);
-    nZoom = iniReader.ReadInteger("MAIN", "ZoomMin", 0) * 16384;
-    nZoomMax = iniReader.ReadInteger("MAIN", "ZoomMax", 30) * 16384;
+    nResX = iniReader.ReadInteger("MAIN", "ResX", 0);
+    nResY = iniReader.ReadInteger("MAIN", "ResY", 0);
 
-    if (!Screen.Width || !Screen.Height)
-        std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
+    auto bSkipMovie = iniReader.ReadInteger("MISC", "SkipMovie", 1) != 0;
+    bEndProcess = iniReader.ReadInteger("MISC", "EndProcessOnWindowClose", 0) != 0;
+    nQuicksaveKey = iniReader.ReadInteger("MISC", "QuicksaveKey", VK_F5);
+    nZoomIncreaseKey = iniReader.ReadInteger("MISC", "ZoomIncreaseKey", VK_OEM_PLUS);
+    nZoomDecreaseKey = iniReader.ReadInteger("MISC", "ZoomDecreaseKey", VK_OEM_MINUS);
 
-    Screen.fWidth = static_cast<float>(Screen.Width);
-    Screen.fHeight = static_cast<float>(Screen.Height);
-    Screen.fAspectRatio = Screen.fWidth / Screen.fHeight;
-    Screen.Width43 = static_cast<int32_t>(Screen.fHeight * (4.0f / 3.0f));
-    Screen.fHudScale = ((16384.0f * (Screen.fWidth / 640.0f)) / (Screen.fAspectRatio / (4.0f / 3.0f)));
-    Screen.nHudScale = static_cast<int32_t>(Screen.fHudScale);
-    Screen.fHudOffset = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
-    Screen.fMenuOffset = (Screen.fWidth - 480.0f * (4.0f / 3.0f)) / 2.0f;
-    if (strncmp(szCameraZoom.c_str(), "auto", 4) != 0)
-        Screen.fCameraZoom = iniReader.ReadFloat("MAIN", "CameraZoomFactor", 1.0f);
-    else
-        Screen.fCameraZoom = (Screen.fAspectRatio / (4.0f / 3.0f)) * 2.5f;
+    if (!nResX || !nResY)
+        std::tie(nResX, nResY) = GetDesktopRes();
 
-    //Res change
-    auto pattern = hook::pattern("8B 2D ? ? ? ? 56 8B 35 ? ? ? ? 57 8B 3D"); //0x4CB29F
-    static auto dword_6732E0 = *pattern.get_first<uint32_t*>(2);
-    pattern = hook::pattern("89 0D ? ? ? ? A3 ? ? ? ? 89 0D ? ? ? ? EB 5F"); //0x4CB2D5
-    static auto dword_673578 = *pattern.get_first<uint32_t*>(2);
-    static auto dword_6732E8 = *pattern.get_first<uint32_t*>(7);
-    static auto dword_6732E4 = *pattern.get_first<uint32_t*>(13);
-    struct SetResHook
-    {
-        void operator()(injector::reg_pack& regs)
+    // Res change
+    if (nResX && nResY) {
+        auto pattern = hook::pattern("8B 2D ? ? ? ? 56 8B 35 ? ? ? ? 57 8B 3D"); //0x4CB29F
+        static auto dword_6732E0 = *pattern.get_first<uint32_t*>(2);
+        pattern = hook::pattern("89 0D ? ? ? ? A3 ? ? ? ? 89 0D ? ? ? ? EB 5F"); //0x4CB2D5
+        static auto dword_673578 = *pattern.get_first<uint32_t*>(2);
+        static auto dword_6732E8 = *pattern.get_first<uint32_t*>(7);
+        static auto dword_6732E4 = *pattern.get_first<uint32_t*>(13);
+        struct SetResHook
         {
-            regs.eax = Screen.Height;
-            *dword_673578 = Screen.Width;
-            *dword_6732E8 = Screen.Height;
-            *dword_6732E4 = Screen.Width;
-        }
-    }; injector::MakeInline<SetResHook>(pattern.get_first(-12), pattern.get_first(17));
+            void operator()(injector::reg_pack& regs)
+            {
+                regs.eax = nResY;
+                *dword_673578 = nResX;
+                *dword_6732E8 = nResY;
+                *dword_6732E4 = nResX;
+                *dword_6732E0 = nResY;
+            }
+        }; injector::MakeInline<SetResHook>(pattern.get_first(-12), pattern.get_first(17));
 
-    pattern = hook::pattern("74 49 A3 ? ? ? ? ? ? ? ? ? ? ? ? ? ? E8 ? ? ? ? 84 C0");
-    injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true); //0x4CC61E
-    injector::WriteMemory<uint8_t>(pattern.get_first(24), 0xEB, true); //0x4CC636
-    pattern = hook::pattern("74 2B A1 ? ? ? ? B9 ? ? ? ? 50 68");
-    injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true); //0x4CB692
-    pattern = hook::pattern("B8 ? ? ? ? 3B C8 74 2B 6A 10 68");
-    injector::WriteMemory(pattern.get_first(1), Screen.Width, true); //0x4CB59C + 1
-    injector::WriteMemory<uint8_t>(pattern.get_first(10), 32, true); //0x4CB5A5+1
-    injector::WriteMemory(pattern.get_first(12), Screen.Height, true); //0x4CB5A7 + 1
-    pattern = hook::pattern("6A ? 50 51 52 32 DB"); //0x4CB583
-    //injector::WriteMemory<uint8_t>(pattern.get_first(1), 32, true); // causes green menu
-    injector::MakeNOP(pattern.get_first(32), 2, true); //0x4CB5A3
+        pattern = hook::pattern("74 49 A3 ? ? ? ? ? ? ? ? ? ? ? ? ? ? E8 ? ? ? ? 84 C0");
+        injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true); //0x4CC61E
+        injector::WriteMemory<uint8_t>(pattern.get_first(24), 0xEB, true); //0x4CC636
+        pattern = hook::pattern("74 2B A1 ? ? ? ? B9 ? ? ? ? 50 68");
+        injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true); //0x4CB692
+        pattern = hook::pattern("B8 ? ? ? ? 3B C8 74 2B 6A 10 68");
+        injector::WriteMemory(pattern.get_first(1), nResX, true); //0x4CB59C + 1
+        injector::WriteMemory<uint8_t>(pattern.get_first(10), 32, true); //0x4CB5A5+1
+        injector::WriteMemory(pattern.get_first(12), nResY, true); //0x4CB5A7 + 1
+        pattern = hook::pattern("6A ? 50 51 52 32 DB"); //0x4CB583
+        //injector::WriteMemory<uint8_t>(pattern.get_first(1), 32, true); // causes green menu
+        injector::MakeNOP(pattern.get_first(32), 2, true); //0x4CB5A3
+    }
 
-    pattern = hook::pattern("B9 2F 00 00 00 F3 A5"); //0x4A80CD 0x4A6257
+    auto pattern = hook::pattern("B9 2F 00 00 00 F3 A5"); //0x4A80CD 0x4A6257
     struct CameraZoom
     {
         void operator()(injector::reg_pack& regs)
         {
             regs.ecx = 0x2F;
 
-            if (bFixHud)
-            {
-                *(int32_t*)(regs.ebp + 0x138) = Screen.nHudScale;
-                *(int32_t*)(regs.ebp + 0x2B0) = Screen.nHudScale; // for Zaibatsu [It was an Accident!] mission
-            }
+            *(int32_t*)(regs.ebp + 0x138) = hud_scale;
+            *(int32_t*)(regs.ebp + 0x2B0) = hud_scale; // for Zaibatsu [It was an Accident!] mission
 
-            if (Screen.fCameraZoom)
-            {
-                *(int32_t*)(regs.esi + 0x8) = static_cast<int32_t>(static_cast<float>(*(int32_t*)(regs.esi + 0x8)) * Screen.fCameraZoom);
-                *(int32_t*)(regs.esi + 0x8) += nZoom;
-                if (*(int32_t*)(regs.esi + 0x8) > nZoomMax)
-                    *(int32_t*)(regs.esi + 0x8) = nZoomMax;
-            }
+            *(int32_t*)(regs.esi + 0x8) += camera_scale - one;
+            *(int32_t*)(regs.esi + 0x8) += nZoom;
+
+            *(int32_t*)(regs.esi + 0x8) = min(*(int32_t*)(regs.esi + 0x8), one * 25);
         }
     }; injector::MakeInline<CameraZoom>(pattern.count(2).get(1).get<void*>(0));
 
-    if (bFixHud)
+    dword_6733F0 = *hook::pattern("68 ? ? ? ? 52 C7 05").get_first<uintptr_t>(1);
+
+    pattern = hook::pattern("83 3D ? ? ? ? 00 75 ? 68 ? ? ? ? 68 ? ? ? ? 8D 85 B0 FC FF FF");
+    off_5952C4 = *pattern.count(1).get(0).get<uintptr_t>(2);
+
+    pattern = hook::pattern(pattern_str(0xFF, 0x15, to_bytes(off_5952C4)));
+    for (size_t i = 3; i < pattern.size(); ++i) //0x4CBD9A 0x4CC0B1 0x4CC546
     {
-        dword_6733F0 = *hook::pattern("68 ? ? ? ? 52 C7 05").get_first<uintptr_t>(1);
-
-        pattern = hook::pattern("83 3D ? ? ? ? 00 75 ? 68 ? ? ? ? 68 ? ? ? ? 8D 85 B0 FC FF FF");
-        off_5952C4 = *pattern.count(1).get(0).get<uintptr_t>(2);
-
-        pattern = hook::pattern(pattern_str(0xFF, 0x15, to_bytes(off_5952C4)));
-        for (size_t i = 3; i < pattern.size(); ++i) //0x4CBD9A 0x4CC0B1 0x4CC546
-        {
-            injector::MakeNOP(pattern.get(i).get<uint32_t>(0), 6, true);
-            injector::MakeCALL(pattern.get(i).get<uint32_t>(0), gbh_DrawQuad, true);
-        }
-
-        dword_4C834B = (uintptr_t)hook::pattern("8B 46 20 48 83 F8 04").get_first(0);
-        dword_4C83B2 = (uintptr_t)hook::pattern("5F 5E 83 C4 08 C3").count(10).get(9).get<uintptr_t>(0);
-        dword_4C74EA = (uintptr_t)hook::pattern("6A 06 E8 ? ? ? ? 5E 59 C3").get_first(7);
-        dword_4582F3 = (uintptr_t)hook::pattern("E9 ? ? ? ? 66 8B 5D 6A").get_first(0);
-        dword_458426 = (uintptr_t)hook::pattern("8B 44 24 18 40 66 3B 47 02").get_first(0);
-
-        dword_45379E = (uintptr_t)hook::pattern("8B 44 24 1C 8B 54 24 20 40").get_first(0);
-        dword_453A22 = (uintptr_t)hook::pattern("C7 ? ? ? 02 00 00 00 E8 ? ? ? ? 59 C2 14 00").get_first(13);
-        dword_4580C6 = (uintptr_t)hook::pattern("8B 4C 24 18 41 66 3B 0F").get_first(0);
-        dword_4567E1 = (uintptr_t)hook::pattern("8B 44 24 30 8B 4C 24 18 03 F8").get_first(0);
-
-        //menu (ret 24h)
-        //injector::MakeCALL(0x453590 + 0x209, test, true); //credits
-        //injector::MakeCALL(0x4539F0 + 0x2D , test, true); //main menu text
-        //injector::MakeCALL(0x4566C0 + 0x11C, test, true); //red text
-        //injector::MakeCALL(0x4568C0 + 0x157, test, true);
-        //injector::MakeCALL(0x456FB0 + 0xF7 , test, true);
-        //injector::MakeCALL(0x4580C1 + 0x00 , test, true); //main menu greyed out text
-        //injector::MakeCALL(0x457920 + 0xB01, test, true); // player quit text
-        //injector::MakeCALL(0x4BA2C0 + 0x57 , test, true);
-        //injector::MakeCALL(0x4C7280 + 0x56 , test, true); //ingame text when press esc
-
-        //injector::MakeCALL(0x453590 + 0x175, test, true);
-        //injector::MakeCALL(0x453590 + 0x1C3, test, true);
-        //injector::MakeCALL(0x457920 + 0x9CE, test, true); //red circle
-        //injector::MakeCALL(0x4B92B0 + 0x174, test, true);
-        //injector::MakeCALL(0x4C71B0 + 0x5D, test, true);
-        //injector::MakeCALL(0x4C74A0 + 0x45, test, true); // player arrow
-        //injector::MakeCALL(0x4C82C0 + 0x86, test, true); // mission arrrows
-        //injector::MakeCALL(0x4C82C0 + 0xED, test, true); // small arrow when near mission
-        //void __declspec(naked) test()
-        //{
-        //    _asm ret 0x2C
-        //}
+        injector::MakeNOP(pattern.get(i).get<uint32_t>(0), 6, true);
+        injector::MakeCALL(pattern.get(i).get<uint32_t>(0), gbh_DrawQuad, true);
     }
 
-    if (bFixMenu)
-    {
-        pattern = hook::pattern("FF 15 ? ? ? ? 83 F8 F6 ? ? 66 0F B6 C3");
-        off_59533C = *pattern.count(1).get(0).get<uintptr_t>(2);
+    dword_4C834B = (uintptr_t)hook::pattern("8B 46 20 48 83 F8 04").get_first(0);
+    dword_4C83B2 = (uintptr_t)hook::pattern("5F 5E 83 C4 08 C3").count(10).get(9).get<uintptr_t>(0);
+    dword_4C74EA = (uintptr_t)hook::pattern("6A 06 E8 ? ? ? ? 5E 59 C3").get_first(7);
+    dword_4582F3 = (uintptr_t)hook::pattern("E9 ? ? ? ? 66 8B 5D 6A").get_first(0);
+    dword_458426 = (uintptr_t)hook::pattern("8B 44 24 18 40 66 3B 47 02").get_first(0);
 
-        pattern = hook::pattern(pattern_str(0xFF, 0x15, to_bytes(off_59533C)));
-        for (size_t i = 0; i < pattern.size(); ++i)
-        {
-            injector::MakeNOP(pattern.get(i).get<uint32_t>(0), 6, true);
-            injector::MakeCALL(pattern.get(i).get<uint32_t>(0), gbh_BlitImage, true);
-        }
+    dword_45379E = (uintptr_t)hook::pattern("8B 44 24 1C 8B 54 24 20 40").get_first(0);
+    dword_453A22 = (uintptr_t)hook::pattern("C7 ? ? ? 02 00 00 00 E8 ? ? ? ? 59 C2 14 00").get_first(13);
+    dword_4580C6 = (uintptr_t)hook::pattern("8B 4C 24 18 41 66 3B 0F").get_first(0);
+    dword_4567E1 = (uintptr_t)hook::pattern("8B 44 24 30 8B 4C 24 18 03 F8").get_first(0);
+
+    pattern = hook::pattern("FF 15 ? ? ? ? 83 F8 F6 ? ? 66 0F B6 C3");
+    off_59533C = *pattern.count(1).get(0).get<uintptr_t>(2);
+
+    pattern = hook::pattern(pattern_str(0xFF, 0x15, to_bytes(off_59533C)));
+    for (size_t i = 0; i < pattern.size(); ++i)
+    {
+        injector::MakeNOP(pattern.get(i).get<uint32_t>(0), 6, true);
+        injector::MakeCALL(pattern.get(i).get<uint32_t>(0), gbh_BlitImage, true);
     }
 
     pattern = hook::pattern("8B 15 ? ? ? ? 6A 06 52 8B 08 50"); //0x4B4FB8
