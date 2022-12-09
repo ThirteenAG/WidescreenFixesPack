@@ -93,7 +93,7 @@ void __declspec(naked) gbh_DrawQuad()
     }
     else if (((*gGame)))
     {
-        if (esp44 != dword_4C834B && esp40 != dword_4C74EA && esp44 != dword_4C83B2)
+        if (esp44 != dword_4C834B && esp40 != dword_4C74EA && esp44 != dword_4C83B2 && esp40 != dword_4C834B && esp44 != dword_4C74EA && esp40 != dword_4C83B2)
         {
             *(float*)(dword_6733F0 + 0x00) += hud_offset;
             *(float*)(dword_6733F0 + 0x20) += hud_offset;
