@@ -1,6 +1,9 @@
 #include "stdafx.h"
 #include <assembly64.hpp>
 
+float fHudScale = 1.0f;
+float fRadarScale = 1.0f;
+
 uint32_t* OnAMissionFlag;
 uint8_t* ScriptSpace;
 uint8_t* m_WideScreenOn;
@@ -9,10 +12,72 @@ bool IsPlayerOnAMission()
     return *OnAMissionFlag && (ScriptSpace[*OnAMissionFlag] == 1);
 }
 
+int vscanf_hook(char* Buffer, char* Format, ...)
+{
+    std::string temp;
+    std::string_view buf(Buffer);
+    if (buf.contains("WIDGET_POSITION_PLAYER_INFO") || buf.contains("WIDGET_POSITION_RADAR"))
+    {
+        std::string PositionAndScale(255, '\0');
+        float OriginX, OriginY, ScaleX, ScaleY;
+        std::string Separator(255, '\0');
+        std::string Name(255, '\0');
+        auto r = sscanf(Buffer, Format, PositionAndScale.data(), &OriginX, &OriginY, &ScaleX, &ScaleY, Separator.data(), Name.data());
+        if (r == 7)
+        {
+            if (buf.contains("WIDGET_POSITION_PLAYER_INFO"))
+            {
+                OriginX = OriginX + (ScaleX - (ScaleX * fHudScale));
+                OriginY = OriginY - (ScaleY - (ScaleY * fHudScale));
+                ScaleX *= fHudScale;
+                ScaleY *= fHudScale;
+            } 
+            else if (buf.contains("WIDGET_POSITION_RADAR"))
+            {
+                OriginX = OriginX - (ScaleX - (ScaleX * fRadarScale));
+                OriginY = OriginY + (ScaleY - (ScaleY * fRadarScale));
+                ScaleX *= fRadarScale;
+                ScaleY *= fRadarScale;
+            }
+
+            PositionAndScale.resize(PositionAndScale.find('\0'));
+            Separator.resize(Separator.find('\0'));
+            Name.resize(Name.find('\0'));
+            temp += PositionAndScale;
+            temp += " ";
+            temp += std::to_string(OriginX);
+            temp += " ";
+            temp += std::to_string(OriginY);
+            temp += " ";
+            temp += std::to_string(ScaleX);
+            temp += " ";
+            temp += std::to_string(ScaleY);
+            temp += " ";
+            temp += Separator;
+            temp += " ";
+            temp += Name;
+            Buffer = temp.data();
+        }
+    }
+
+    int result;
+    va_list arglist;
+    va_start(arglist, Format);
+    result = vsscanf(Buffer, Format, arglist);
+    va_end(arglist);
+    return result;
+}
+
 void Init()
 {
     CIniReader iniReader("");
     static auto nIniSaveSlot = (int32_t)iniReader.ReadInteger("MAIN", "SaveSlot", 6) - 1;
+    fHudScale = iniReader.ReadFloat("MAIN", "HudScale", 0.88f);
+    fRadarScale = iniReader.ReadFloat("MAIN", "RadarScale", 0.78f);
+    if (fHudScale <= 0.0f) 
+        fHudScale = 1.0f;
+    if (fRadarScale <= 0.0f) 
+        fRadarScale = 1.0f;
     if (nIniSaveSlot < 1 || nIniSaveSlot > 8)
         nIniSaveSlot = 5;
 
@@ -85,6 +150,12 @@ void Init()
             bF5LastState = bF5CurState;
         }
     }; injector::MakeInline<IdleHook>(pattern.get_first(0));
+
+    if (fHudScale != 1.0f || fRadarScale != 1.0f)
+    {
+        pattern = hook::pattern("E8 ? ? ? ? E9 ? ? ? ? 48 8D 45 90");
+        injector::MakeCALLTrampoline(pattern.get_first(0), vscanf_hook, true);
+    }
 }
 
 CEXP void InitializeASI()
