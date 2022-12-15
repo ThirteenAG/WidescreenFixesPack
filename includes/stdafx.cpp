@@ -2,12 +2,12 @@
 
 float GetFOV(float f, float ar)
 {
-    return atan2(tan(atan2(tan(f * 0.5f) / (4.0f / 3.0f), 1.0f)) * (ar), 1.0f);
+    return atan(3.0f / 4.0f * ar * tan(f * 0.5f));
 }
 
 float GetFOV2(float f, float ar)
 {
-    return f * (2.0f * ((180.0f / (float)M_PI) * (atan(tan(((float)M_PI / 180.0f) * ((2.0f * ((180.0f / (float)M_PI) * (atan(tan(((float)M_PI / 180.0f) * (90.0f * 0.5f)) / (4.0f / 3.0f))))) * 0.5f)) * (ar)))) * (1.0f / 90.0f));
+    return 4.0f * f * atan(ar * (3.0f / 4.0f)) / (float)M_PI;
 }
 
 float AdjustFOV(float f, float ar)
