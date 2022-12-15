@@ -1,7 +1,7 @@
 version: 2.1
 
 orbs:
-  win: circleci/windows@2.4.1
+  win: circleci/windows@5.0
 
 jobs:
   build:
@@ -14,12 +14,13 @@ jobs:
           name: Before build
           command: |
             git submodule update --init --recursive
-            ./premake5.exe vs2019
+            ./premake5.exe vs2022
+            choco feature enable -n allowGlobalConfirmation
             choco install directx-sdk
             ./before_build.bat
       - run:
           name: MSBuild
           command: |
-            cd "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\msbuild\current\bin\"
+            cd "C:\Program Files\Microsoft Visual Studio\2022\Community\msbuild\current\bin\"
             .\msbuild.exe "C:\Users\circleci\project\build\WidescreenFixesPack.sln"
  
