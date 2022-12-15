@@ -21,5 +21,5 @@ jobs:
       - run:
           name: MSBuild
           command: |
-            "C:\Program Files\Microsoft Visual Studio\2022\Community\msbuild\current\bin\msbuild.exe build\WidescreenFixesPack.sln"
+            cmd.exe /c 'C:\Program Files\Microsoft Visual Studio\2022\Community\msbuild\current\bin\msbuild.exe' 'build\WidescreenFixesPack.sln'
  
