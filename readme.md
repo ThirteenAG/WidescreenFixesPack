@@ -2,7 +2,7 @@
 
 [![wfp](https://thirteenag.github.io/img/logo-stroke.svg)](https://thirteenag.github.io/wfp)
 
-[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/ThirteenAG/WidescreenFixesPack/GitHub%20Actions%20Build?label=GitHub%20Actions%20Build&logo=GitHub)](https://github.com/ThirteenAG/WidescreenFixesPack/actions/workflows/main.yml)
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/ThirteenAG/WidescreenFixesPack/main.yml?branch=master&label=GitHub%20Actions%20Build&logo=GitHub)](https://github.com/ThirteenAG/WidescreenFixesPack/actions/workflows/main.yml)
 [![AppVeyor](https://img.shields.io/appveyor/build/ThirteenAG/WidescreenFixesPack?label=AppVeyor%20Build&logo=Appveyor&logoColor=white)](https://ci.appveyor.com/project/ThirteenAG/widescreenfixespack)
 [![Azure DevOps builds](https://img.shields.io/azure-devops/build/ThirteenAG/f555b128-da05-4bad-a972-90d529123a2e/3?label=Azure%20Pipelines%20Build&logo=Azure%20Pipelines)](https://dev.azure.com/thirteenag/WidescreenFixesPack/_build/latest?definitionId=3&branchName=master)
 [![CircleCI](https://img.shields.io/circleci/build/github/ThirteenAG/WidescreenFixesPack?label=CircleCI%20Build&logo=circleci)](https://circleci.com/gh/ThirteenAG/WidescreenFixesPack/tree/master)
@@ -60,6 +60,8 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Adds an ability to quicksave anywhere by pressing F5.
 
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Adds an ability to resize HUD.
+
 [Download](http://thirteenag.github.io/wfp#gtasade)
 |
 [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/GTASADE.FusionMod/dllmain.cpp)
@@ -72,6 +74,8 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Adds an ability to disable first person aim mode for rifles.
 
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Adds an ability to resize HUD.
+
 [Download](http://thirteenag.github.io/wfp#gtavcde)
 |
 [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/GTAVCDE.FusionMod/dllmain.cpp)
@@ -83,6 +87,8 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Adds an ability to quicksave anywhere by pressing F5.
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Adds an ability to disable first person aim mode for rifles.
+
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Adds an ability to resize HUD.
 
 [Download](http://thirteenag.github.io/wfp#gta3de)
 |
