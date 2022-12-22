@@ -33,8 +33,6 @@ enum
     EMULATOR_DEVCTL__TOGGLE_FASTFORWARD = 0x30,
     EMULATOR_DEVCTL__GET_ASPECT_RATIO,
     EMULATOR_DEVCTL__GET_SCALE,
-    EMULATOR_DEVCTL__GET_LTRIGGER,
-    EMULATOR_DEVCTL__GET_RTRIGGER
 };
 
 enum CControllerState
@@ -174,9 +172,13 @@ float AdjustFOV(float f, float ar)
     return round((2.0f * atan(((ar) / (4.0f / 3.0f)) * tan(f / 2.0f * ((float)M_PI / 180.0f)))) * (180.0f / (float)M_PI) * 100.0f) / 100.0f;
 }
 
+int RestoreCutsceneFOV = 1;
 float sub_171D44(float a1)
 {
-    return a1 * fFOVFactor * (AdjustFOV(70.0f, fAspectRatio) / 70.0f);
+    if (RestoreCutsceneFOV && *(uint8_t*)(TheCamera + 0x804)) //switch_widescreen opcode
+        return a1;
+    else
+        return a1 * fFOVFactor * (AdjustFOV(70.0f, fAspectRatio) / 70.0f);
 }
 
 float TextScaling(int a1)
@@ -217,6 +219,16 @@ uintptr_t sub_471400()
     return ptr_3C5100;
 }
 
+int sub_218770(uintptr_t Camera)
+{
+    float fadeAlpha = *(float*)(Camera + 0xA54); //m_fFadeAlpha
+    if (fadeAlpha == 0.0f)
+        return 0;
+    if (fadeAlpha == 255.0f)
+        return 1;
+    return 2;
+}
+
 int UnthrottleEmuDuringLoading = 0;
 int once = 0;
 void GameLoopStuff()
@@ -232,7 +244,9 @@ void GameLoopStuff()
     {
         uint32_t gMenuActivated = sub_2A9B4(sub_471400()); //inlined on psp
         float gBlackScreenTime = *(float*)(injector.GetGP() + ptr_1334C4);
-        if (gBlackScreenTime && !gMenuActivated)
+        int ScreenFadeStatus = sub_218770(TheCamera);
+            
+        if ((gBlackScreenTime || ScreenFadeStatus == UnthrottleEmuDuringLoading) && !gMenuActivated)
             UnthrottleEmuEnable();
         else
             UnthrottleEmuDisable();
@@ -325,6 +339,7 @@ int OnModuleStart() {
     fFOVFactor = inireader.ReadFloat("FOV", "FOVFactor", 0.0f);
     if (fFOVFactor <= 0.0f)
         fFOVFactor = 1.0f;
+    RestoreCutsceneFOV = inireader.ReadInteger("FOV", "RestoreCutsceneFOV", 1);
 
     int RenderLodLights = inireader.ReadInteger("PROJECT2DFX", "RenderLodLights", 0);
     int CoronaLimit = inireader.ReadInteger("PROJECT2DFX", "CoronaLimit", 900);
@@ -849,13 +864,14 @@ int OnModuleStart() {
         }
     }
 
+    uintptr_t ptr_3CF00 = pattern.get(0, "25 20 20 02 30 00 64 26 00 00 80 D8 00 00 41 D8", -16);
+    TheCamera = (uintptr_t)((uint32_t)(*(uint16_t*)(ptr_3CF00 + 0)) << 16) + *(int16_t*)(ptr_3CF00 + 4);
+    pCamPos = (CVector*)(TheCamera + 0x9B0); //0x9B0 at 0x218648
+    
     if (RenderLodLights)
     {
         uintptr_t ptr_17D324 = pattern.get(0, "E0 FF BD 27 20 00 A2 8F", 0);
         CCoronas__RegisterCorona = (void*)ptr_17D324;
-        uintptr_t ptr_3CF00 = pattern.get(0, "25 20 20 02 30 00 64 26 00 00 80 D8 00 00 41 D8", -16);
-        TheCamera = (uintptr_t)((uint32_t)(*(uint16_t*)(ptr_3CF00 + 0)) << 16) + *(int16_t*)(ptr_3CF00 + 4);
-        pCamPos = (CVector*)(TheCamera + 0x9B0); //0x9B0 at 0x218648
         CDraw__ms_fNearClipZOffset = *(int16_t*)pattern.get(0, "25 90 A0 00 25 30 80 00 FF 00 13 31", 12);
         CDraw__ms_fFarClipZOffset = *(int16_t*)pattern.get(0, "25 90 A0 00 25 30 80 00 FF 00 13 31", 24);
         CurrentTimeHoursOffset = *(int16_t*)pattern.get(0, "0C 00 04 34 ? ? ? ? ? ? ? ? ? ? ? ? 80 3F 04 3C", 4);
@@ -925,12 +941,12 @@ int OnModuleStart() {
     }
 
     {
-        uintptr_t ptr_133A5C = pattern.get(0, "1C 00 BF AF ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 01 00 15 34", 16);
-        injector.MakeJAL(ptr_133A5C, (intptr_t)GameLoopStuff);
-
         ptr_1334C4 = *(int16_t*)pattern.get(0, "00 60 80 44 ? ? ? ? 25 20 80 02 ? ? ? ? 25 28 00 00 ? ? ? ? ? ? ? ? 25 20 80 02", 4);
         uintptr_t ptr_1336C4 = pattern.get(0, "00 00 04 34 00 00 05 34 ? ? ? ? 00 00 04 34 ? ? ? ? FF 00 05 34", 0);
         ptr_3C5100 = GetAbsoluteAddress(ptr_1336C4, -12, -4);
+        
+        uintptr_t ptr_133A5C = pattern.get(0, "1C 00 BF AF ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 01 00 15 34", 16);
+        injector.MakeJAL(ptr_133A5C, (intptr_t)GameLoopStuff);
     }
 
     //Little Willie Cam Fix

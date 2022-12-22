@@ -27,6 +27,13 @@ PSP_MODULE_INFO(MODULE_NAME, 0x1007, 1, 0);
 static const float fPSPResW = 480.0f;
 static const float fPSPResH = 272.0f;
 
+enum
+{
+    EMULATOR_DEVCTL__TOGGLE_FASTFORWARD = 0x30,
+    EMULATOR_DEVCTL__GET_ASPECT_RATIO,
+    EMULATOR_DEVCTL__GET_SCALE,
+};
+
 enum GtaPad {
   PAD_LX = 1,
   PAD_LY = 2,
@@ -85,6 +92,46 @@ float adjustBottomRightY(float in, float scale)
     return in + (fBottomOffset - (scale * fBottomOffset));
 }
 
+void UnthrottleEmuEnable()
+{
+    sceIoDevctl("kemulator:", EMULATOR_DEVCTL__TOGGLE_FASTFORWARD, (void*)1, 0, NULL, 0);
+}
+
+void UnthrottleEmuDisable()
+{
+    sceIoDevctl("kemulator:", EMULATOR_DEVCTL__TOGGLE_FASTFORWARD, (void*)0, 0, NULL, 0);
+}
+
+float fAspectRatio = 16.0f / 9.0f;
+int UnthrottleEmuDuringLoading = 0;
+int once = 0;
+float* flt_3450E4;
+uint8_t* byte_38AF51;
+void GameLoopStuff()
+{
+    if (once != 1)
+    {
+        if (UnthrottleEmuDuringLoading)
+            UnthrottleEmuDisable();
+        once = 1;
+    }
+
+    if (UnthrottleEmuDuringLoading)
+    {
+        uint8_t gMenuActivated = *byte_38AF51;
+        float gBlackScreenTime = *flt_3450E4;
+        if (gBlackScreenTime && !gMenuActivated)
+            UnthrottleEmuEnable();
+        else
+            UnthrottleEmuDisable();
+    }
+}
+
+uintptr_t GetAbsoluteAddress(uintptr_t at, int32_t offs_hi, int32_t offs_lo)
+{
+    return (uintptr_t)((uint32_t)(*(uint16_t*)(at + offs_hi)) << 16) + *(int16_t*)(at + offs_lo);
+}
+
 int module_thread(SceSize args, void* argp)
 {
     /*
@@ -118,6 +165,13 @@ int OnModuleStart() {
     {
         uintptr_t ptr = pattern.get_first("00 00 00 00 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 25 20 00 00 ? ? ? ? 00 00 00 00 ? ? ? ? 00 00 00 00 25 10 00 00", -4);
         injector.MakeNOP(ptr);
+    }
+
+    UnthrottleEmuDuringLoading = inireader.ReadInteger("MAIN", "UnthrottleEmuDuringLoading", 1);
+
+    if (UnthrottleEmuDuringLoading)
+    {
+        UnthrottleEmuEnable();
     }
 
     char szForceAspectRatio[100];
@@ -269,11 +323,18 @@ int OnModuleStart() {
         int x = str2int(ch, 10);
         ch = strtok(NULL, ":");
         int y = str2int(ch, 10);
-        float fAspectRatio = (float)x / (float)y;
-        uintptr_t ptr_130C4C = pattern.get(0, "E3 3F 05 3C 39 8E A5 34 00 68 85 44 25 28 00 00", 0);
-        injector.MakeInlineLUIORI(ptr_130C4C, fAspectRatio);
+        fAspectRatio = (float)x / (float)y;
     }
-
+    else
+    {
+        float ar = 0.0f;
+        sceIoDevctl("kemulator:", EMULATOR_DEVCTL__GET_ASPECT_RATIO, NULL, 0, &ar, sizeof(ar));
+        if (ar)
+            fAspectRatio = ar;
+    }
+    uintptr_t ptr_130C4C = pattern.get(0, "E3 3F 05 3C 39 8E A5 34 00 68 85 44 25 28 00 00", 0);
+    injector.MakeInlineLUIORI(ptr_130C4C, fAspectRatio);
+    
     if (Enable60FPS)
     {
         //60 fps
@@ -549,6 +610,18 @@ int OnModuleStart() {
         injector.MakeJAL(ptr_1C0E78, (intptr_t)RegisterLODLights);
     }
 
+    {
+        uintptr_t ptr_1BEE84 = pattern.get(1, "B0 FF BD 27 ? ? ? ? ? ? ? ? ? ? ? ? 44 00 B0 AF 48 00 BF AF", 0);
+        uintptr_t unk_38AE20 = GetAbsoluteAddress(ptr_1BEE84, 4, 8);
+        byte_38AF51 = (uint8_t*)(unk_38AE20 + *(int16_t*)(ptr_1BEE84 + 12));
+
+        uintptr_t ptr_1BD52C = pattern.get(1, "00 00 00 00 ? ? ? ? 00 60 80 44 ? ? ? ? 32 68 0C 46 00 00 00 00", 0);
+        flt_3450E4 = (float*)GetAbsoluteAddress(ptr_1BD52C, 4, 12);
+        
+        uintptr_t ptr_1C086C = pattern.get(0, "A4 00 BE AF A8 00 BF AF ? ? ? ? 00 00 00 00", 8);
+        injector.MakeJAL(ptr_1C086C, (intptr_t)GameLoopStuff);
+    }
+    
     sceKernelDcacheWritebackAll();
     sceKernelIcacheClearAll();
 
