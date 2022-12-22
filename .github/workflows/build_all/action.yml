@@ -13,13 +13,13 @@ runs:
   - uses: actions/checkout@v3
     with:
       submodules: 'true'
-  - name: DX SDK
-    shell: bash
-    run:  |
-      curl -L https://download.microsoft.com/download/a/e/7/ae743f1f-632b-4809-87a9-aa1bb3458e31/DXSDK_Jun10.exe -o DX.exe
-      7z x DX.exe DXSDK/Include -oDX
-      7z x DX.exe DXSDK/Lib/x86 -oDX
-      mv DX/DXSDK "C:/Program Files (x86)/Microsoft DirectX SDK (June 2010)"
+#  - name: DX SDK
+#    shell: bash
+#    run:  |
+#      curl -L https://download.microsoft.com/download/a/e/7/ae743f1f-632b-4809-87a9-aa1bb3458e31/DXSDK_Jun10.exe -o DX.exe
+#      7z x DX.exe DXSDK/Include -oDX
+#      7z x DX.exe DXSDK/Lib/x86 -oDX
+#      mv DX/DXSDK "C:/Program Files (x86)/Microsoft DirectX SDK (June 2010)"
   - name: Configure build
     shell: cmd
     run: |
