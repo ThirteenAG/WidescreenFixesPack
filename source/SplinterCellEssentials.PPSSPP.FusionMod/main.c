@@ -24,6 +24,9 @@
 PSP_MODULE_INFO(MODULE_NAME, 0x1007, 1, 0);
 #endif
 
+#define max(a,b) ((a)<(b)) ? (b) : (a)
+#define min(a,b) ((a)<(b)) ? (a) : (b)
+
 enum
 {
     EMULATOR_DEVCTL__TOGGLE_FASTFORWARD = 0x30,
@@ -41,8 +44,6 @@ void UnthrottleEmuDisable()
     sceIoDevctl("kemulator:", EMULATOR_DEVCTL__TOGGLE_FASTFORWARD, (void*)0, 0, NULL, 0);
 }
 
-#define DEADZONE 0.3f
-
 static float getAxis(float axis, float deadzone, float speed) {
     if (fabsf(axis) >= deadzone) {
         if (axis < 0.0f) {
@@ -55,7 +56,7 @@ static float getAxis(float axis, float deadzone, float speed) {
 
     return 0.0f;
 }
-
+float fStickDeadzone = 0.1f;
 void __0fGUInputKDirectAxis6JEInputKeyfTCPatched(int _this, int axis, int unk) {
     int param = *(uint32_t*)(_this) + 0x130;
     int arg1 = _this + *(uint16_t*)(param);
@@ -75,9 +76,9 @@ void __0fGUInputKDirectAxis6JEInputKeyfTCPatched(int _this, int axis, int unk) {
             float* aTurn = __0fGUInputMFindAxisNameP6GAActorPCcK(arg1, arg2, "aTurn");
 
             if (aStrafe)
-                *aStrafe = getAxis(Lx, DEADZONE, 1.0f);
+                *aStrafe = getAxis(Lx, fStickDeadzone, 1.0f);
             if (aTurn)
-                *aTurn = getAxis(Rx, DEADZONE, 1.0f);
+                *aTurn = getAxis(Rx, fStickDeadzone, 1.0f);
         }
         else if (axis == 0xE1) {
             float Ly = -(((float)pad.Ly - 128.0f) / 128.0f);
@@ -87,9 +88,9 @@ void __0fGUInputKDirectAxis6JEInputKeyfTCPatched(int _this, int axis, int unk) {
             float* aLookUp = __0fGUInputMFindAxisNameP6GAActorPCcK(arg1, arg2, "aLookUp");
 
             if (aForward)
-                *aForward = getAxis(Ly, DEADZONE, 1.0f);
+                *aForward = getAxis(Ly, fStickDeadzone, 1.0f);
             if (aLookUp)
-                *aLookUp = getAxis(Ry, DEADZONE, -1.0f);
+                *aLookUp = getAxis(Ry, fStickDeadzone, -1.0f);
         }
     }
 }
@@ -117,6 +118,15 @@ int CheckFloatParams(float X, float Y, float SizeX, float SizeY)
         return 0;
 }
 
+float ForcePlayerSpeed()
+{
+    SceCtrlData pad;
+    sceCtrlPeekBufferNegative(&pad, 1);
+    float Lx = fabs((float)pad.Lx - 128.0f) / 128.0f;
+    float Ly = fabs(((float)pad.Ly - 128.0f) / 128.0f);
+    return max(getAxis(Lx, fStickDeadzone, 1.0f), getAxis(Ly, fStickDeadzone, 1.0f));
+}
+
 float AdjustFOV(float f, float ar)
 {
     return round((2.0f * atan(((ar) / (4.0f / 3.0f)) * tan(f / 2.0f * ((float)M_PI / 180.0f)))) * (180.0f / (float)M_PI) * 100.0f) / 100.0f;
@@ -131,6 +141,8 @@ int OnModuleStart()
 
     int SkipIntro = inireader.ReadInteger("MAIN", "SkipIntro", 1);
     int DualAnalogPatch = inireader.ReadInteger("MAIN", "DualAnalogPatch", 1);
+    fStickDeadzone = inireader.ReadFloat("MAIN", "StickDeadzone", 0.1f);
+    int SpeedStickControl = inireader.ReadInteger("MAIN", "SpeedStickControl", 1);
     int Enable60FPS = inireader.ReadInteger("MAIN", "Enable60FPS", 0);
     int UnthrottleEmuDuringLoading = inireader.ReadInteger("MAIN", "UnthrottleEmuDuringLoading", 1);
 
@@ -236,7 +248,6 @@ int OnModuleStart()
 
                     jal((intptr_t)CheckFloatParams),
                     nop(),
-
                     movs(f0, f31),
 
                     bne(v0, 0, 17), //-->
@@ -281,6 +292,20 @@ int OnModuleStart()
                     movs(f12, f0)
                 );
             }
+        }
+    }
+
+    if (SpeedStickControl)
+    {
+        ptr = pattern.get(1, "83 73 0F 46 3E 70 0C 46 00 00 00 00 ? ? ? ? 86 63 00 46", 0);
+        if (ptr)
+        {
+            injector.MakeNOPWithSize(ptr, 36);
+            MakeInlineWrapperWithNOP(ptr,
+                jal((intptr_t)ForcePlayerSpeed),
+                nop(),
+                movs(f14, f0)
+            );
         }
     }
 
