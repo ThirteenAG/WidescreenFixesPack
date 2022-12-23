@@ -22,11 +22,51 @@
 PSP_MODULE_INFO(MODULE_NAME, 0x1007, 1, 0);
 #endif
 
+enum
+{
+    EMULATOR_DEVCTL__TOGGLE_FASTFORWARD = 0x30,
+    EMULATOR_DEVCTL__GET_ASPECT_RATIO,
+    EMULATOR_DEVCTL__GET_SCALE
+};
+
+void UnthrottleEmuEnable()
+{
+    sceIoDevctl("kemulator:", EMULATOR_DEVCTL__TOGGLE_FASTFORWARD, (void*)1, 0, NULL, 0);
+}
+
+void UnthrottleEmuDisable()
+{
+    sceIoDevctl("kemulator:", EMULATOR_DEVCTL__TOGGLE_FASTFORWARD, (void*)0, 0, NULL, 0);
+}
+
+uintptr_t GetAbsoluteAddress(uintptr_t at, int32_t offs_hi, int32_t offs_lo)
+{
+    return (uintptr_t)((uint32_t)(*(uint16_t*)(at + offs_hi)) << 16) + *(int16_t*)(at + offs_lo);
+}
+
+uintptr_t byte_8E8C2FC;
+void GetRs(uintptr_t addr, char a1, char a2)
+{
+    SceCtrlData pad;
+    sceCtrlPeekBufferPositive(&pad, 1);
+
+    //*(int8_t*)(addr + 0x1A) = a1;//pad.Rsrv[0];
+    //*(int8_t*)(addr + 0x1B) = a2;//pad.Rsrv[1];
+
+    *(uint8_t*)(addr + 0x1A) = pad.Rsrv[0];
+    float Ry = -(((float)pad.Rsrv[1] - 255.0f) / 255.0f);
+    if (byte_8E8C2FC && *(uint8_t*)byte_8E8C2FC == 0)
+        *(uint8_t*)(addr + 0x1B) = Ry * 255.0f;
+    else
+        *(uint8_t*)(addr + 0x1B) = -pad.Rsrv[1] + -1;
+}
+
 int OnModuleStart() 
 {
     int SkipIntro = inireader.ReadInteger("MAIN", "SkipIntro", 1);
     int DualAnalogPatch = inireader.ReadInteger("MAIN", "DualAnalogPatch", 1);
     int Enable60FPS = inireader.ReadInteger("MAIN", "Enable60FPS", 0);
+    int UnthrottleEmuDuringLoading = inireader.ReadInteger("MAIN", "UnthrottleEmuDuringLoading", 1);
     
     char szForceAspectRatio[100];
     char* ForceAspectRatio = inireader.ReadString("MAIN", "ForceAspectRatio", "auto", szForceAspectRatio, sizeof(szForceAspectRatio));
@@ -41,8 +81,11 @@ int OnModuleStart()
     
     if (DualAnalogPatch)
     {
-        uintptr_t ptr = pattern.get_first("21 10 51 00 ? ? ? ? 1C 00 50 A4", 4);
-    
+        uintptr_t ptr = pattern.get_first("21 10 A2 00 FF 00 C6 30 21 28 A4 00 28 04 A6 A0 08 00 E0 03 00 00 46 A0", 0);
+        byte_8E8C2FC = GetAbsoluteAddress(ptr, -8, -4);
+        
+        ptr = pattern.get_first("21 10 51 00 ? ? ? ? 1C 00 50 A4", 4);
+
         MakeInlineWrapper(ptr + 0x00,
             sh(s0, v0, 0x1C),
             lbu(a2, sp, 0x1B),
@@ -52,10 +95,21 @@ int OnModuleStart()
         injector.MakeNOP(ptr + 0x04);
         injector.WriteInstr(ptr + 0x08, b(21));
         injector.MakeNOP(ptr + 0x0C);
-    
-        injector.WriteInstr(ptr + 0x6C, sb(a2, s1, 0x1B));
-        injector.WriteInstr(ptr + 0x8C, sb(a1, s1, 0x1A));
-    
+
+        MakeInlineWrapperWithNOP(ptr + 0x80,
+            sw(zero, s1, 0x10),
+            sw(zero, s1, 0x14),
+            move(a0, s1),
+            jal((intptr_t)GetRs),
+            nop()
+
+        );
+
+        //injector.WriteInstr(ptr + 0x6C, sb(a2, s1, 0x1B));
+        //injector.WriteInstr(ptr + 0x8C, sb(a1, s1, 0x1A));
+
+        injector.MakeNOP(ptr + 0x8C);
+
         sceKernelIcacheInvalidateRange((const void*)ptr, 0x90);
     }
     
@@ -89,7 +143,12 @@ int OnModuleStart()
         }
         else
         {
-            fAspectRatio = 16.0f / 9.0f;
+            float ar = 0.0f;
+            sceIoDevctl("kemulator:", EMULATOR_DEVCTL__GET_ASPECT_RATIO, NULL, 0, &ar, sizeof(ar));
+            if (ar)
+                fAspectRatio = ar;
+            else
+                fAspectRatio = 16.0f / 9.0f;
         }
 
         uintptr_t ptr_28C = pattern.get(0, "94 18 C1 E7 03 03 01 46", 4);
@@ -117,6 +176,25 @@ int OnModuleStart()
     //        mtc1(v0, f4)
     //    );
     //}
+
+    if (UnthrottleEmuDuringLoading)
+    {
+        uintptr_t ptr = pattern.get_first("01 00 05 24 08 00 B2 AF 00 00 B0 AF", 0);
+        MakeInlineWrapperWithNOP(ptr,
+            addiu(a1, zero, 1),
+            sw(s2, sp, 8),
+            jal((uintptr_t)UnthrottleEmuEnable),
+            nop()
+        );
+
+        ptr = pattern.get_first("08 00 BF AF 04 00 B1 AF ? ? ? ? 00 00 B0 AF 06 00 03 24", 0);
+        MakeInlineWrapperWithNOP(ptr,
+            sw(ra, sp, 8),
+            sw(s1, sp, 4),
+            jal((uintptr_t)UnthrottleEmuDisable),
+            nop()
+        );
+    }
 
     sceKernelDcacheWritebackAll();
     sceKernelIcacheClearAll();
