@@ -121,7 +121,7 @@ int CheckFloatParams(float X, float Y, float SizeX, float SizeY)
 float ForcePlayerSpeed()
 {
     SceCtrlData pad;
-    sceCtrlPeekBufferNegative(&pad, 1);
+    sceCtrlPeekBufferPositive(&pad, 1);
     float Lx = fabs((float)pad.Lx - 128.0f) / 128.0f;
     float Ly = fabs(((float)pad.Ly - 128.0f) / 128.0f);
     return max(getAxis(Lx, fStickDeadzone, 1.0f), getAxis(Ly, fStickDeadzone, 1.0f));
