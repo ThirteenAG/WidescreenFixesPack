@@ -18,7 +18,7 @@ jobs:
     - name: Build Solution
       uses: ./.github/workflows/build_all
     - name: Update Tags
-      if: ${{ github.event_name == 'push' }}
+      if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
       uses: ThirteenAG/update-tags@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
