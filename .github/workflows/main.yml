@@ -21,7 +21,7 @@ jobs:
       uses: 8BitJonny/gh-get-current-pr@2.2.0
       id: pr
     - name: Update Tags
-      if: ${{ github.ref == 'refs/heads/main' }} && steps.pr.outputs.pr_found == 'false'
+      if: ${{ github.ref == 'refs/heads/master' }} && steps.pr.outputs.number != 'null'
       uses: ThirteenAG/update-tags@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
