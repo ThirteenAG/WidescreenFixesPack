@@ -23,7 +23,11 @@ uintptr_t CurrentTimeMinutesOffset;
 uintptr_t CTimer__m_snTimeInMillisecondsPauseModeOffset;
 uintptr_t CTimer__ms_fTimeStepOffset;
 
-LodLights aLodLights[] = {
+LodLights 
+#ifndef __INTELLISENSE__
+__attribute__((aligned(16))) 
+#endif
+aLodLights[] = {
 { -1088.4790f, -786.94684f, 20.0041866f, 1.20f, 100.00f, 1.000f, 237, 205, 163, 255, 0, 0 /*, "dr_sunbunt"*/ },
 { -1088.4790f, -785.25775f, 20.0041866f, 1.20f, 100.00f, 1.000f, 237, 205, 163, 255, 0, 0 /*, "dr_sunbunt"*/ },
 { -1100.9861f, -785.25775f, 20.0661869f, 1.20f, 100.00f, 1.000f, 237, 205, 163, 255, 0, 0 /*, "dr_sunbunt"*/ },

@@ -35,7 +35,7 @@ enum
     EMULATOR_DEVCTL__GET_SCALE,
 };
 
-enum CControllerState
+enum
 {
     LEFTSTICKX = 1,
     LEFTSTICKY,
@@ -63,88 +63,140 @@ enum CControllerState
     RIGHTSHOCK
 };
 
-short CPad__GetAccelerate(short* pad) {
-    if (pad[77] == 0)
-        return pad[RIGHTSHOULDER1];
-    return 0;
-}
-
-short CPad__GetAccelerateNormal(short* pad) {
-    if (pad[77] == 0)
-        return pad[CROSS];
-    return 0;
-}
-
-short CPad__GetBrake(short* pad) {
-    if (pad[77] == 0)
-        return pad[LEFTSHOULDER1];
-    return 0;
-}
-
-short CPad__GetBrakeNormal(short* pad) {
-    if (pad[77] == 0)
-        return pad[SQUARE];
-    return 0;
-}
-
-short cameraX(short* pad) {
-    return pad[RIGHTSTICKX];
-}
-
-short cameraY(short* pad) {
-    return pad[RIGHTSTICKY];
-}
-
-short aimX(short* pad) {
-    return pad[LEFTSTICKX] ? pad[LEFTSTICKX] : pad[RIGHTSTICKX];
-}
-
-short aimY(short* pad) {
-    return pad[LEFTSTICKY] ? pad[LEFTSTICKY] : pad[RIGHTSTICKY];
-}
-
-short CPad__GetTarget(short* pad)
+struct CControllerState
 {
-    if (pad[77])
+    short LEFTSTICKX;
+    short LEFTSTICKY;
+    short RIGHTSTICKX;
+    short RIGHTSTICKY;
+
+    short LEFTSHOULDER1;
+    short LEFTSHOULDER2;
+    short RIGHTSHOULDER1;
+    short RIGHTSHOULDER2;
+
+    short DPADUP;
+    short DPADDOWN;
+    short DPADLEFT;
+    short DPADRIGHT;
+
+    short unk1;
+    short unk2;
+    short unk3;
+    short unk4;
+
+    short START;
+    short SELECT;
+
+    short SQUARE;
+    short TRIANGLE;
+    short CROSS;
+    short CIRCLE;
+
+    short LEFTSHOCK;
+    short RIGHTSHOCK;
+};
+
+struct CPad
+{
+    char unk[2];
+    struct CControllerState NewState;
+    char unk2[2];
+    struct CControllerState OldState;
+    char pad[50];
+    int16_t Mode;
+    int16_t ShakeDur;
+    int16_t DisablePlayerControls;
+};
+
+int16_t CPad__GetAccelerate(struct CPad* pad)
+{
+    if (pad->DisablePlayerControls)
         return 0;
-    //if (CPad__ForceCameraBehindPlayer(pad))
-    //    return 0;
-    return pad[LEFTSHOULDER1] != 0;
+    else
+        return pad->NewState.RIGHTSHOULDER1;
 }
 
-short CPad__TargetJustDown(short* pad)
+int16_t CPad__GetAccelerateNormal(struct CPad* pad)
 {
-    if (pad[77])
+    if (pad->DisablePlayerControls)
         return 0;
-    //if (CPad__ForceCameraBehindPlayer(a1, 0, v1))
-    //    return 0;
-    if (pad[LEFTSHOULDER1])
-        return pad[LEFTSHOULDER1 * 6] == 0; //old state
-    return 0;
+    else
+        return pad->NewState.CROSS;
 }
 
-short CPad__GetWeapon(short* pad)
+int16_t CPad__GetBrake(struct CPad* pad)
 {
-    if (pad[77] == 0)
-        return pad[RIGHTSHOULDER1];
-    return 0;
-}
-
-short CPad__WeaponJustDown(short* pad)
-{
-    if (pad[77])
+    if (pad->DisablePlayerControls)
         return 0;
-    //if (CPad__ForceCameraBehindPlayer(a1, 0, v1))
-    //    return 0;
-    if (pad[RIGHTSHOULDER1])
-        return pad[RIGHTSHOULDER1 * 6] == 0; //old state
+    else
+        return pad->NewState.LEFTSHOULDER1;
 }
 
-short CPad__GetLookBehindForPed(short* pad)
+int16_t CPad__GetBrakeNormal(struct CPad* pad)
 {
-    if (pad[77] == 0)
-        return pad[CIRCLE];
+    if (pad->DisablePlayerControls)
+        return 0;
+    else
+        return pad->NewState.SQUARE;
+}
+
+int16_t CPad__GetRightStickX(struct CPad* pad)
+{
+    return pad->NewState.RIGHTSTICKX;
+}
+
+int16_t CPad__GetRightStickY(struct CPad* pad)
+{
+    return pad->NewState.RIGHTSTICKY;
+}
+
+int16_t aimX(struct CPad* pad) {
+    return pad->NewState.LEFTSTICKX ? pad->NewState.LEFTSTICKX : pad->NewState.RIGHTSTICKX;
+}
+
+int16_t aimY(struct CPad* pad) {
+    return pad->NewState.LEFTSTICKY ? pad->NewState.LEFTSTICKY : pad->NewState.RIGHTSTICKY;
+}
+
+int16_t CPad__GetTarget(struct CPad* pad)
+{
+    if (pad->DisablePlayerControls)
+        return 0;
+    else
+        return pad->NewState.LEFTSHOULDER1 != 0;
+}
+
+int16_t CPad__TargetJustDown(struct CPad* pad)
+{
+    if (pad->DisablePlayerControls)
+        return 0;
+    if (pad->NewState.LEFTSHOULDER1)
+        return pad->OldState.LEFTSHOULDER1 == 0;
     return 0;
+}
+
+int16_t CPad__GetWeapon(struct CPad* pad)
+{
+    if (pad->DisablePlayerControls)
+        return 0;
+    return pad->NewState.RIGHTSHOULDER1;
+}
+
+int16_t CPad__WeaponJustDown(struct CPad* pad)
+{
+    if (pad->DisablePlayerControls)
+        return 0;
+    if (pad->NewState.RIGHTSHOULDER1)
+        return pad->OldState.RIGHTSHOULDER1 == 0;
+    return 0;
+}
+
+int16_t CPad__GetLookBehindForPed(struct CPad* pad)
+{
+    if (pad->DisablePlayerControls)
+        return 0;
+    return pad->NewState.CIRCLE != 0;
 }
 
 float fAspectRatio = 16.0f / 9.0f;
@@ -361,10 +413,10 @@ int OnModuleStart() {
         ptr = pattern.get_first("36 00 80 14 ? ? ? ? ? ? ? ? ? ? ? ? 16 00 40 10", 0);
         injector.MakeNOP(ptr + 0x00);
         injector.WriteMemory8(ptr + 0x10 + 0x2, 0x00);  // beqz -> b
-        injector.MakeJAL(ptr + 0x8C, (intptr_t)cameraX);
+        injector.MakeJAL(ptr + 0x8C, (intptr_t)CPad__GetRightStickX);
         injector.MakeNOP(ptr + 0x108);
         injector.WriteMemory8(ptr + 0x118 + 0x2, 0x00); // beqz -> b
-        injector.MakeJAL(ptr + 0x144, (intptr_t)cameraY);
+        injector.MakeJAL(ptr + 0x144, (intptr_t)CPad__GetRightStickY);
 
         // Redirect gun aim movement
         ptr = pattern.get_first("40 00 80 04 ? ? ? ? 3E 00 80 10", 0);
@@ -434,6 +486,7 @@ int OnModuleStart() {
         uintptr_t ptr_189270 = pattern.get(7, "9A 00 85 94 2B 28 05 00 FF 00 A5 30 ? ? ? ? 00 00 00 00", 0); // count = 15
         uintptr_t ptr_189560 = pattern.get(7, "F0 FF BD 27 9A 00 85 94 00 00 B0 AF 25 80 80 00 2B 20 05 00", 0); // count = 11
         uintptr_t ptr_1895BC = pattern.get(8, "F0 FF BD 27 9A 00 85 94 00 00 B0 AF 25 80 80 00 2B 20 05 00", 0); // count = 11
+        uintptr_t ptr_236F58 = pattern.get(0, "2C 00 44 86 ? ? ? ? 2C 00 45 86 2C 00 45 86 ? ? ? ? 00 00 04 34", 0);
 
         injector.MakeJMPwNOP(ptr_189140, (intptr_t)CPad__GetBrake);
         injector.WriteMemory16(ptr_189D60, SQUARE * 2);
@@ -497,6 +550,11 @@ int OnModuleStart() {
         injector.WriteMemory16(ptr_14CCA8 + 2, 0x1000);
         injector.MakeNOP(ptr_14D3F4);
         //injector.MakeNOP(0x1880F8);
+
+        //melee
+        injector.WriteMemory16(ptr_236F58 + 0, RIGHTSHOULDER1 * 2);
+        injector.WriteMemory16(ptr_236F58 + 8, RIGHTSHOULDER1 * 2);
+        injector.WriteMemory16(ptr_236F58 + 12, RIGHTSHOULDER1 * 2);
     }
 
     if (strcmp(ForceAspectRatio, "auto") != 0)
