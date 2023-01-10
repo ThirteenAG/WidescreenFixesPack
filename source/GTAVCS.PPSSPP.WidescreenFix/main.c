@@ -322,6 +322,7 @@ int applyMissionFixes()
         { "0A 00 ? ? ? 0A D7 23 3D", 5 }, // Hose the Hoes 1
         { "0A 00 ? ? ? 8F C2 F5 3C", 5 }, // Hose the Hoes 2
         { "0A 00 ? ? ? 0A D7 23 3C", 5 }, // Hose the Hoes 3
+        { "08 00 ? ? ? 0A D7 A3 3B", 5 }, // Balls / Farewell To Arms
     };
 
     uintptr_t ScriptSpace = *(uintptr_t*)(injector.GetGP() + ptr_8BAAB84); //*(uintptr_t*)0x8BAAB84;
