@@ -305,6 +305,39 @@ void GameLoopStuff()
     }
 }
 
+int16_t ptr_8BAAB84 = 0;
+uintptr_t ptr_8BB3CA0 = 0;
+int applyMissionFixes()
+{
+    struct MisFix
+    {
+        char* pattern;
+        int32_t offset;
+    };
+
+    struct MisFix mission_fixes[] =
+    {
+        { "08 00 ? ? ? 8F C2 75 3C", 5 }, // Boomshine Blowout
+        { "0A 00 ? ? ? 8F C2 75 3D", 5 }, // The Exchange
+        { "0A 00 ? ? ? 0A D7 23 3D", 5 }, // Hose the Hoes 1
+        { "0A 00 ? ? ? 8F C2 F5 3C", 5 }, // Hose the Hoes 2
+        { "0A 00 ? ? ? 0A D7 23 3C", 5 }, // Hose the Hoes 3
+    };
+
+    uintptr_t ScriptSpace = *(uintptr_t*)(injector.GetGP() + ptr_8BAAB84); //*(uintptr_t*)0x8BAAB84;
+    uint32_t MainScriptSize = *(uint32_t*)(injector.GetGP() + ptr_8BB3CA0 + 4);
+    uint32_t LargestMissionScriptSize = *(uint32_t*)(injector.GetGP() + ptr_8BB3CA0 + 8);
+
+    for (size_t i = 0; i < sizeof(mission_fixes) / sizeof(mission_fixes[0]); i++)
+    {
+        uintptr_t addr = range_pattern.get_first(ScriptSpace + MainScriptSize, LargestMissionScriptSize, mission_fixes[i].pattern, mission_fixes[i].offset);
+        if (addr)
+            injector.WriteMemoryFloat(addr, *(float*)addr / (60.0f / 30.0f));
+    }
+
+    return 0;
+}
+
 uintptr_t GetAbsoluteAddress(uintptr_t at, int32_t offs_hi, int32_t offs_lo)
 {
     return (uintptr_t)((uint32_t)(*(uint16_t*)(at + offs_hi)) << 16) + *(int16_t*)(at + offs_lo);
@@ -514,7 +547,7 @@ int OnModuleStart() {
         injector.MakeNOP(ptr_188DAC+4);
         MakeInlineWrapper(ptr_188DAC,
             lh(a0, s0, SQUARE * 2),
-            lh(k0, s0, CIRCLE * 2),
+            //lh(k0, s0, CIRCLE * 2), // fix for firetruck cannon
             _or(a0, a0, k0),
             bne(a0, zero, 2),
             nop(),
@@ -592,6 +625,17 @@ int OnModuleStart() {
         //60 fps
         uintptr_t ptr_2030C8 = pattern.get(0, "02 00 84 2C ? ? ? ? 00 00 00 00 ? ? ? ? 00 00 00 00", 20);
         injector.MakeNOP(ptr_2030C8);
+
+        ptr_8BAAB84 = *(int16_t*)pattern.get(0, "25 10 80 02 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 00 A0 80 44", 4);
+        ptr_8BB3CA0 = *(int16_t*)pattern.get(0, "25 20 00 00 ? ? ? ? ? ? ? ? 00 00 10 34 00 00 40 AE", 8);
+
+        //mission fixes
+        uintptr_t ptr_2B8180 = pattern.get(0, "25 28 00 00 ? ? ? ? 25 20 00 02 25 10 00 00", 16);
+        MakeInlineWrapper(ptr_2B8180,
+            jal((intptr_t)applyMissionFixes),
+            nop(),
+            lw(s0, sp, 0)
+        );
     }
 
     fARDiff = fAspectRatio / (16.0f / 9.0f);
@@ -853,18 +897,19 @@ int OnModuleStart() {
         );
 
         //Crosshair
+        float fCross = fARDiff * 1.125f;
         MakeInlineWrapper(ptr_C9CC,
             movs(f16, f28),
-            lui(t9, HIWORD(fARDiff)),
-            ori(t9, t9, LOWORD(fARDiff)),
+            lui(t9, HIWORD(fCross)),
+            ori(t9, t9, LOWORD(fCross)),
             mtc1(t9, f29),
             divs(f28, f28, f29)
         );
         MakeInlineWrapper(ptr_214638,
             mtc1(t1, f15),
             mtc1(t1, f16),
-            lui(t1, HIWORD(fARDiff)),
-            ori(t1, t1, LOWORD(fARDiff)),
+            lui(t1, HIWORD(fCross)),
+            ori(t1, t1, LOWORD(fCross)),
             mtc1(t1, f29),
             divs(f15, f15, f29)
         );

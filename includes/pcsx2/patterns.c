@@ -84,6 +84,8 @@ uint8_t* bytes_find_nth(size_t count, uint8_t* haystack, size_t haystackLen, uin
 
 uintptr_t range_get(size_t count, uintptr_t range_start, size_t range_size, const char* pattern_str, int32_t offset)
 {
+    if (pattern_str[0] == '\0')
+        return 0;
 #define buf_size 1000
     static char str[buf_size/*strlen(pattern_str)*/];
     strcpy(str, pattern_str);
@@ -93,7 +95,11 @@ uintptr_t range_get(size_t count, uintptr_t range_start, size_t range_size, cons
     size_t len = strlen(pattern_str);
     static uint8_t buf[buf_size/*len*/];
     uint8_t size = hextobin(pattern_str, buf, len, wc);
-    return bytes_find_nth(count, range_start, range_size, buf, size, wc) + offset;
+    uint8_t* result = bytes_find_nth(count, range_start, range_size, buf, size, wc);
+    if (result)
+        return result + offset;
+    else
+        return 0;
 }
 
 uintptr_t range_get_first(uintptr_t range_start, size_t range_size, const char* pattern_str, int32_t offset)
