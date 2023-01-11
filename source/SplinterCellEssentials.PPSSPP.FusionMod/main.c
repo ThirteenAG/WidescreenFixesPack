@@ -129,7 +129,7 @@ float ForcePlayerSpeed()
 
 float AdjustFOV(float f, float ar)
 {
-    return round((2.0f * atan(((ar) / (4.0f / 3.0f)) * tan(f / 2.0f * ((float)M_PI / 180.0f)))) * (180.0f / (float)M_PI) * 100.0f) / 100.0f;
+    return round((2.0f * atan(((ar) / (16.0f / 9.0f)) * tan(f / 2.0f * ((float)M_PI / 180.0f)))) * (180.0f / (float)M_PI) * 100.0f) / 100.0f;
 }
 
 int OnModuleStart() 
