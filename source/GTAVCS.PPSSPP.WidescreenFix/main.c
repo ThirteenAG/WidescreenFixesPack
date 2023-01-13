@@ -109,6 +109,57 @@ struct CPad
     int16_t DisablePlayerControls;
 };
 
+int (*sub_8B1FD70)(int a1);
+int (*FindPlayerPed)();
+int dword_8BB3B4C;
+char bManualReloadTriggered = 0;
+void handleReload(struct CPad* pad)
+{
+    if (!sub_8B1FD70 || !FindPlayerPed)
+        return;
+
+    int v2 = FindPlayerPed();
+    if (!v2)
+        return;
+    uint8_t m_currentWeapon = *(uint8_t*)(v2 + 0x789);
+    if (!(m_currentWeapon >= 3 && m_currentWeapon <= 8))
+        return;
+    v2 += 0x574;
+    v2 += m_currentWeapon * 0x1C;
+
+    int32_t m_nAmmoInClip = *(int32_t*)(v2 + 0x0C);
+    int32_t m_nAmmoTotal = *(int32_t*)(v2 + 0x10);
+    if (m_nAmmoInClip == m_nAmmoTotal || m_nAmmoTotal == 0)
+        return;
+
+    if (!bManualReloadTriggered)
+    {
+        if (pad->NewState.LEFTSHOULDER1 && pad->NewState.DPADUP && pad->OldState.DPADUP == 0)
+        {
+            bManualReloadTriggered = 1;
+            injector.WriteMemory32(v2 + 0x08, 2);
+            int m_nShotTimer = *(int*)(injector.GetGP() + dword_8BB3B4C) + *(int*)(sub_8B1FD70(*(int*)((v2 + 4) + 4)) + 16);
+            injector.WriteMemory32(v2 + 0x14, m_nShotTimer + 1000); //hack
+            pad->NewState.RIGHTSHOULDER1 = 0;
+        }
+    }
+    else
+    {
+        if (*(int*)(injector.GetGP() + dword_8BB3B4C) > *(int*)(v2 + 0x14))
+        {
+            injector.WriteMemory32(v2 + 0x08, 2);
+            bManualReloadTriggered = 0;
+        }
+        else
+        {
+            //*(int32_t*)(v2 + 0x10) += m_nAmmoInClip;
+            //*(int32_t*)(v2 + 0x0C) = 0;
+            pad->NewState.RIGHTSHOULDER1 = 1;
+            injector.WriteMemory32(v2 + 0x08, 2);
+        }
+    }
+}
+
 int16_t CPad__GetAccelerate(struct CPad* pad)
 {
     if (pad->DisablePlayerControls)
@@ -152,11 +203,17 @@ int16_t CPad__GetRightStickY(struct CPad* pad)
 }
 
 int16_t aimX(struct CPad* pad) {
-    return pad->NewState.LEFTSTICKX ? pad->NewState.LEFTSTICKX : pad->NewState.RIGHTSTICKX;
+    if (pad->NewState.CROSS || pad->NewState.DPADDOWN)
+        return pad->NewState.LEFTSTICKX ? pad->NewState.LEFTSTICKX : pad->NewState.RIGHTSTICKX;
+    else
+        return pad->NewState.LEFTSTICKX ? pad->NewState.LEFTSTICKX * 2 : pad->NewState.RIGHTSTICKX * 2;
 }
 
 int16_t aimY(struct CPad* pad) {
-    return pad->NewState.LEFTSTICKY ? pad->NewState.LEFTSTICKY : pad->NewState.RIGHTSTICKY;
+    if (pad->NewState.CROSS || pad->NewState.DPADDOWN)
+        return pad->NewState.LEFTSTICKY ? pad->NewState.LEFTSTICKY : pad->NewState.RIGHTSTICKY;
+    else
+        return pad->NewState.LEFTSTICKY ? pad->NewState.LEFTSTICKY * 2 : pad->NewState.RIGHTSTICKY * 2;
 }
 
 int16_t CPad__GetTarget(struct CPad* pad)
@@ -164,7 +221,10 @@ int16_t CPad__GetTarget(struct CPad* pad)
     if (pad->DisablePlayerControls)
         return 0;
     else
+    {
+        handleReload(pad);
         return pad->NewState.LEFTSHOULDER1 != 0;
+    }
 }
 
 int16_t CPad__TargetJustDown(struct CPad* pad)
@@ -589,7 +649,12 @@ int OnModuleStart() {
         injector.WriteMemory16(ptr_236F58 + 0, RIGHTSHOULDER1 * 2);
         injector.WriteMemory16(ptr_236F58 + 8, RIGHTSHOULDER1 * 2);
         injector.WriteMemory16(ptr_236F58 + 12, RIGHTSHOULDER1 * 2);
-    }
+
+        //reloading
+        sub_8B1FD70 = (void*)pattern.get(0, "00 21 04 00 ? ? ? ? ? ? ? ? 23 20 E4 00 00 00 A2 8C", -8);
+        FindPlayerPed = (void*)pattern.get(0, "00 32 04 00 21 20 85 00 40 21 04 00 ? ? ? ? 21 20 C4 00 ? ? ? ? 21 20 85 00 08 00 E0 03 00 00 82 8C", -8);
+        dword_8BB3B4C = *(int16_t*)pattern.get(0, "25 B8 40 00 ? ? ? ? 70 00 05 8E 23 20 85 00", 4);
+}
 
     if (strcmp(ForceAspectRatio, "auto") != 0)
     {
