@@ -35,34 +35,6 @@ enum
     EMULATOR_DEVCTL__GET_SCALE,
 };
 
-enum
-{
-    LEFTSTICKX = 1,
-    LEFTSTICKY,
-    RIGHTSTICKX,
-    RIGHTSTICKY,
-    LEFTSHOULDER1,
-    LEFTSHOULDER2,
-    RIGHTSHOULDER1,
-    RIGHTSHOULDER2,
-    DPADUP,
-    DPADDOWN,
-    DPADLEFT,
-    DPADRIGHT,
-    unk1,
-    unk2,
-    unk3,
-    unk4,
-    START,
-    SELECT,
-    SQUARE,
-    TRIANGLE,
-    CROSS,
-    CIRCLE,
-    LEFTSHOCK,
-    RIGHTSHOCK
-};
-
 struct CControllerState
 {
     short LEFTSTICKX;
@@ -109,8 +81,10 @@ struct CPad
     int16_t DisablePlayerControls;
 };
 
+uintptr_t ptr_E2D44, ptr_E2D44_data;
 int (*sub_8B1FD70)(int a1);
 int (*FindPlayerPed)();
+int (*FindPlayerVehicle)();
 int dword_8BB3B4C;
 char bManualReloadTriggered = 0;
 void handleReload(struct CPad* pad)
@@ -134,7 +108,8 @@ void handleReload(struct CPad* pad)
 
     if (!bManualReloadTriggered)
     {
-        if (pad->NewState.LEFTSHOULDER1 && pad->NewState.DPADUP && pad->OldState.DPADUP == 0)
+        //if (pad->NewState.LEFTSHOULDER1 && pad->NewState.DPADUP && pad->OldState.DPADUP == 0)
+        if (pad->NewState.LEFTSHOULDER1 && pad->NewState.SQUARE && pad->OldState.SQUARE == 0)
         {
             bManualReloadTriggered = 1;
             injector.WriteMemory32(v2 + 0x08, 2);
@@ -147,6 +122,7 @@ void handleReload(struct CPad* pad)
     {
         if (*(int*)(injector.GetGP() + dword_8BB3B4C) > *(int*)(v2 + 0x14))
         {
+            injector.WriteMemory32(ptr_E2D44, ptr_E2D44_data); // PlayOneShot enable
             injector.WriteMemory32(v2 + 0x08, 2);
             bManualReloadTriggered = 0;
         }
@@ -154,6 +130,7 @@ void handleReload(struct CPad* pad)
         {
             //*(int32_t*)(v2 + 0x10) += m_nAmmoInClip;
             //*(int32_t*)(v2 + 0x0C) = 0;
+            injector.MakeNOP(ptr_E2D44); // PlayOneShot disable
             pad->NewState.RIGHTSHOULDER1 = 1;
             injector.WriteMemory32(v2 + 0x08, 2);
         }
@@ -176,6 +153,14 @@ int16_t CPad__GetAccelerateNormal(struct CPad* pad)
         return pad->NewState.CROSS;
 }
 
+int16_t CPad__GetAccelerateBovver(struct CPad* pad)
+{
+    if (*(int16_t*)(FindPlayerVehicle() + 0x56) == 198)
+        return CPad__GetAccelerate(pad);
+    else
+        return CPad__GetAccelerateNormal(pad);
+}
+
 int16_t CPad__GetBrake(struct CPad* pad)
 {
     if (pad->DisablePlayerControls)
@@ -190,6 +175,14 @@ int16_t CPad__GetBrakeNormal(struct CPad* pad)
         return 0;
     else
         return pad->NewState.SQUARE;
+}
+
+int16_t CPad__GetBrakeBovver(struct CPad* pad)
+{
+    if (*(int16_t*)(FindPlayerVehicle() + 0x56) == 198)
+        return CPad__GetBrake(pad);
+    else
+        return CPad__GetBrakeNormal(pad);
 }
 
 int16_t CPad__GetRightStickX(struct CPad* pad)
@@ -227,6 +220,22 @@ int16_t CPad__GetTarget(struct CPad* pad)
     }
 }
 
+int16_t CPad__JumpJustDown(struct CPad* pad)
+{
+    if (pad->DisablePlayerControls)
+        return 0;
+    if (pad->NewState.SQUARE)
+    {
+        if (!pad->OldState.SQUARE)
+        {
+            if (CPad__GetTarget(pad)) // for reloading
+                return 0;
+            return 1;
+        }
+    }
+    return 0;
+}
+
 int16_t CPad__TargetJustDown(struct CPad* pad)
 {
     if (pad->DisablePlayerControls)
@@ -257,6 +266,13 @@ int16_t CPad__GetLookBehindForPed(struct CPad* pad)
     if (pad->DisablePlayerControls)
         return 0;
     return pad->NewState.CIRCLE != 0;
+}
+
+int16_t CPad__EnterFreeAim(struct CPad* pad)
+{
+    if (pad->DisablePlayerControls)
+        return 0;
+    return pad->NewState.LEFTSHOULDER1 && (pad->NewState.DPADDOWN != 0/* || pad->NewState.RIGHTSTICKX || pad->NewState.RIGHTSTICKY*/);
 }
 
 float fAspectRatio = 16.0f / 9.0f;
@@ -341,6 +357,27 @@ int sub_218770(uintptr_t Camera)
     return 2;
 }
 
+uintptr_t ptr_1C5584;
+uintptr_t ptr_1C547C;
+float LODDistMultiplier = 2.0f;
+float sub_8A1E990(uintptr_t a1)
+{
+    //uintptr_t dword_8BAEF30 = injector.GetGP() + *(int16_t*)ptr_1C5584;
+    //uintptr_t MaxNumberOfCarsInUse = injector.GetGP() + *(int16_t*)ptr_1C547C;
+    //*(int32_t*)(0x08BAEF30 + 0) = 25 * (int)LODDistMultiplier; // MaxNumberOfPedsInUse interior
+    //*(int32_t*)(dword_8BAEF30 + 4) = 30 * (int)LODDistMultiplier; // MaxNumberOfPedsInUse exterior
+    //*(int32_t*)(MaxNumberOfCarsInUse) = 16 * (int)LODDistMultiplier; // 08BB32BC
+
+    *(float*)(a1 + 0x7A0) = *(float*)(a1 + 0x7A8) * LODDistMultiplier;
+    return LODDistMultiplier;
+}
+
+int Enable60FPS;
+uintptr_t ptr_2030C8;
+uint32_t ptr_2030C8_data;
+uintptr_t* dword_8BAF748;
+uintptr_t ptr_14F7E8;
+int (*sub_89F6390)(int a1, char* a2);
 int UnthrottleEmuDuringLoading = 0;
 int once = 0;
 void GameLoopStuff()
@@ -363,9 +400,32 @@ void GameLoopStuff()
         else
             UnthrottleEmuDisable();
     }
+
+    if (Enable60FPS == 2)
+    {
+        uintptr_t str = sub_89F6390(*dword_8BAF748, "REN7_O9");
+        if (IsPlayerOnAMission() && *(uint16_t*)str)
+            injector.WriteMemory32(ptr_2030C8, ptr_2030C8_data);
+        else
+        {
+            Enable60FPS = 1;
+            injector.MakeNOP(ptr_2030C8);
+        }
+    }
 }
 
-int16_t ptr_8BAAB84 = 0;
+uintptr_t* ScriptSpace;
+uintptr_t* OnAMissionFlag;
+uint32_t MainScriptSize;
+uint32_t LargestMissionScriptSize;
+int IsPlayerOnAMission()
+{
+    if (OnAMissionFlag)
+        return *(uint32_t*)(*ScriptSpace + *OnAMissionFlag) == 1;
+    return 0;
+}
+
+uintptr_t ptr_2B7F48;
 uintptr_t ptr_8BB3CA0 = 0;
 int applyMissionFixes()
 {
@@ -383,17 +443,45 @@ int applyMissionFixes()
         { "0A 00 ? ? ? 8F C2 F5 3C", 5 }, // Hose the Hoes 2
         { "0A 00 ? ? ? 0A D7 23 3C", 5 }, // Hose the Hoes 3
         { "08 00 ? ? ? 0A D7 A3 3B", 5 }, // Balls / Farewell To Arms
+        { "08 00 ? ? ? 09 04 40 3F", 5 }, // In The Air Tonight
     };
 
-    uintptr_t ScriptSpace = *(uintptr_t*)(injector.GetGP() + ptr_8BAAB84); //*(uintptr_t*)0x8BAAB84;
-    uint32_t MainScriptSize = *(uint32_t*)(injector.GetGP() + ptr_8BB3CA0 + 4);
-    uint32_t LargestMissionScriptSize = *(uint32_t*)(injector.GetGP() + ptr_8BB3CA0 + 8);
+    if (!ScriptSpace)
+        ScriptSpace = (injector.GetGP() + *(int16_t*)(ptr_2B7F48 + 0));
+    if (!OnAMissionFlag)
+        OnAMissionFlag = (injector.GetGP() + *(int16_t*)(ptr_2B7F48 + 8));
+    if (!MainScriptSize)
+        MainScriptSize = *(uint32_t*)(injector.GetGP() + ptr_8BB3CA0 + 4);
+    if (!LargestMissionScriptSize)
+        LargestMissionScriptSize = *(uint32_t*)(injector.GetGP() + ptr_8BB3CA0 + 8);
+    if (!dword_8BAF748)
+        dword_8BAF748 = (injector.GetGP() + *(int16_t*)(ptr_14F7E8));
 
     for (size_t i = 0; i < sizeof(mission_fixes) / sizeof(mission_fixes[0]); i++)
     {
-        uintptr_t addr = range_pattern.get_first(ScriptSpace + MainScriptSize, LargestMissionScriptSize, mission_fixes[i].pattern, mission_fixes[i].offset);
+        uintptr_t addr = range_pattern.get_first(*ScriptSpace + MainScriptSize, LargestMissionScriptSize, mission_fixes[i].pattern, mission_fixes[i].offset);
         if (addr)
+        {
             injector.WriteMemoryFloat(addr, *(float*)addr / (60.0f / 30.0f));
+    
+            if (i == 6 && Enable60FPS) // In The Air Tonight
+                Enable60FPS = 2;
+        }
+    }
+    
+    //Farewell To Arms (truck health)
+    uintptr_t addr = range_pattern.get_first(*ScriptSpace + MainScriptSize, LargestMissionScriptSize, "2F 04 11 08 58 1B 4C 01 11 08 58 1B", 0);
+    if (addr)
+    {
+        injector.WriteMemory16(addr + 4, 7000 * (int)(60.0f / 30.0f));
+        injector.WriteMemory16(addr + 10, 7000 * (int)(60.0f / 30.0f));
+    }
+
+    //Light My Pyre (Lance's health)
+    addr = range_pattern.get_first(*ScriptSpace + MainScriptSize, LargestMissionScriptSize, "0B 00 ? ? ? 0B", 0);
+    if (addr)
+    {
+        injector.WriteMemory8(addr + 5, 11 * (int)(60.0f / 15.0f)); // adding extra health here
     }
 
     return 0;
@@ -469,7 +557,7 @@ int OnModuleStart() {
     char szForceAspectRatio[100];
     int DualAnalogPatch = inireader.ReadInteger("MAIN", "DualAnalogPatch", 1);
     char* ForceAspectRatio = inireader.ReadString("MAIN", "ForceAspectRatio", "auto", szForceAspectRatio, sizeof(szForceAspectRatio));
-    int Enable60FPS = inireader.ReadInteger("MAIN", "Enable60FPS", 0);
+    Enable60FPS = inireader.ReadInteger("MAIN", "Enable60FPS", 0);
 
     int ModernControlScheme = inireader.ReadInteger("CONTROLS", "ModernControlScheme", 0);
 
@@ -491,6 +579,8 @@ int OnModuleStart() {
     int CoronaLimit = inireader.ReadInteger("PROJECT2DFX", "CoronaLimit", 900);
     fCoronaRadiusMultiplier = inireader.ReadFloat("PROJECT2DFX", "CoronaRadiusMultiplier", 1.0f);
     fCoronaFarClip = inireader.ReadFloat("PROJECT2DFX", "CoronaFarClip", 500.0f);
+
+    LODDistMultiplier = inireader.ReadFloat("MISC", "LODDistMultiplier", 0.0f);
 
     if (DualAnalogPatch)
     {
@@ -540,7 +630,7 @@ int OnModuleStart() {
 
         // Use normal button for flying plane
         uintptr_t ptr_1D5E14 = pattern.get_first("80 07 0E C6 02 63 0D 46 42 73 0D 46", 0);
-        injector.MakeJAL(ptr_1D5E14 + 0x1C, (intptr_t)CPad__GetAccelerateNormal);
+        injector.MakeJAL(ptr_1D5E14 + 0x1C, (intptr_t)CPad__GetAccelerateBovver); //bovver64 and maybe more?
         injector.MakeJAL(ptr_1D5E14 + 0x3D0, (intptr_t)CPad__GetAccelerateNormal);
 
         // Use normal button for flying helicoper
@@ -548,9 +638,9 @@ int OnModuleStart() {
         injector.MakeJAL(ptr_1EB29C + 0x14, (intptr_t)CPad__GetAccelerateNormal);
 
         uintptr_t ptr_18906C = pattern.get_first("0C 00 80 14 ? ? ? ? ? ? ? ? ? ? ? ? 0A 00 A0 50", 0);
-        injector.WriteMemory16(ptr_18906C + 0x20, RIGHTSHOULDER1 * 2);
-        injector.WriteMemory16(ptr_18906C + 0x68, RIGHTSHOULDER1 * 2);
-        injector.WriteMemory16(ptr_18906C + 0x80, CROSS * 2);
+        injector.WriteMemory16(ptr_18906C + 0x20, offsetof(struct CPad, NewState.RIGHTSHOULDER1));
+        injector.WriteMemory16(ptr_18906C + 0x68, offsetof(struct CPad, NewState.RIGHTSHOULDER1));
+        injector.WriteMemory16(ptr_18906C + 0x80, offsetof(struct CPad, NewState.CROSS));
 
         // Swap L trigger and square button
         uintptr_t ptr_187918 = pattern.get(0, "26 00 05 86 ? ? ? ? 00 00 04 34", 0);
@@ -581,14 +671,19 @@ int OnModuleStart() {
         uintptr_t ptr_189560 = pattern.get(7, "F0 FF BD 27 9A 00 85 94 00 00 B0 AF 25 80 80 00 2B 20 05 00", 0); // count = 11
         uintptr_t ptr_1895BC = pattern.get(8, "F0 FF BD 27 9A 00 85 94 00 00 B0 AF 25 80 80 00 2B 20 05 00", 0); // count = 11
         uintptr_t ptr_236F58 = pattern.get(0, "2C 00 44 86 ? ? ? ? 2C 00 45 86 2C 00 45 86 ? ? ? ? 00 00 04 34", 0);
+        uintptr_t ptr_1898BC = pattern.get(0, "FF 00 A5 30 ? ? ? ? ? ? ? ? 00 00 00 00 0E 00 85 84 ? ? ? ? 00 00 00 00", 16); // count = 2
+        uintptr_t ptr_189914 = pattern.get(1, "FF 00 A5 30 ? ? ? ? ? ? ? ? 00 00 00 00 0E 00 85 84 ? ? ? ? 00 00 00 00", 16); // count = 2
 
         injector.MakeJMPwNOP(ptr_189140, (intptr_t)CPad__GetBrake);
-        injector.WriteMemory16(ptr_189D60, SQUARE * 2);
+        injector.WriteMemory16(ptr_189D60, offsetof(struct CPad, NewState.SQUARE));
         //driveby
+        injector.WriteMemory16(0x0898C90C, -110); // look left threshold
+        injector.WriteMemory16(0x0898CB60, 110);  // look right threshold
+
         injector.MakeNOP(ptr_18886C+4);
         MakeInlineWrapper(ptr_18886C,
-            lh(a0, s0, SQUARE * 2),
-            lh(k0, s0, CIRCLE * 2),
+            lh(a0, s0, offsetof(struct CPad, NewState.SQUARE)),
+            lh(k0, s0, offsetof(struct CPad, NewState.CIRCLE)),
             _or(a0, a0, k0),
             beq(a0, zero, 2),
             nop(),
@@ -597,8 +692,8 @@ int OnModuleStart() {
         );
         injector.MakeNOP(ptr_188AC0+4);
         MakeInlineWrapper(ptr_188AC0,
-            lh(a0, s0, SQUARE * 2),
-            lh(k0, s0, CIRCLE * 2),
+            lh(a0, s0, offsetof(struct CPad, NewState.SQUARE)),
+            lh(k0, s0, offsetof(struct CPad, NewState.CIRCLE)),
             _or(a0, a0, k0),
             beq(a0, zero, 2),
             nop(),
@@ -607,22 +702,22 @@ int OnModuleStart() {
         );
         injector.MakeNOP(ptr_188DAC+4);
         MakeInlineWrapper(ptr_188DAC,
-            lh(a0, s0, SQUARE * 2),
-            //lh(k0, s0, CIRCLE * 2), // fix for firetruck cannon
+            lh(a0, s0, offsetof(struct CPad, NewState.SQUARE)),
+            //lh(k0, s0, offsetof(struct CPad, NewState.CIRCLE)), // fix for firetruck cannon
             _or(a0, a0, k0),
             bne(a0, zero, 2),
             nop(),
             j(ptr_188DFC),
             nop()
         );
-        injector.WriteMemory16(ptr_189BB0, SQUARE * 2);
-        injector.WriteMemory16(ptr_18B560, SQUARE * 2);
+        injector.WriteMemory16(ptr_189BB0, offsetof(struct CPad, NewState.SQUARE));
+        injector.WriteMemory16(ptr_18B560, offsetof(struct CPad, NewState.SQUARE));
 
-        injector.WriteMemory16(ptr_187918, LEFTSHOULDER1 * 2);
-        injector.WriteMemory16(ptr_18AAAC, LEFTSHOULDER1 * 2);
+        injector.WriteMemory16(ptr_187918, offsetof(struct CPad, NewState.LEFTSHOULDER1));
+        injector.WriteMemory16(ptr_18AAAC, offsetof(struct CPad, NewState.LEFTSHOULDER1));
 
         // Use normal button for flying plane
-        injector.MakeJAL(ptr_1D5AE4 + 0x360, (intptr_t)CPad__GetBrakeNormal);
+        injector.MakeJAL(ptr_1D5AE4 + 0x360, (intptr_t)CPad__GetBrakeBovver); //bovver64
         injector.MakeJAL(ptr_1D5AE4 + 0x628, (intptr_t)CPad__GetBrakeNormal);
         injector.MakeJAL(ptr_1D5AE4 + 0x660, (intptr_t)CPad__GetBrakeNormal);
         injector.MakeJAL(ptr_1D5AE4 + 0x690, (intptr_t)CPad__GetBrakeNormal);
@@ -638,23 +733,41 @@ int OnModuleStart() {
         injector.MakeJMPwNOP(ptr_189270, (intptr_t)CPad__WeaponJustDown);
         injector.MakeJMPwNOP(ptr_188E14, (intptr_t)CPad__GetLookBehindForPed);
         //injector.WriteMemory16(ptr_188078, RIGHTSHOULDER1 * 2);
-        injector.WriteMemory16(ptr_188084, RIGHTSHOULDER1 * 6);
-        injector.WriteMemory16(ptr_5EE58, RIGHTSHOULDER1 * 2);
+        injector.WriteMemory16(ptr_188084, offsetof(struct CPad, OldState.RIGHTSHOULDER1));
+        injector.WriteMemory16(ptr_5EE58, offsetof(struct CPad, NewState.RIGHTSHOULDER1));
         injector.WriteMemory16(ptr_188118 + 2, 0x1000);
         injector.WriteMemory16(ptr_14CCA8 + 2, 0x1000);
         injector.MakeNOP(ptr_14D3F4);
         //injector.MakeNOP(0x1880F8);
+        //ShiftTargetJustDown
+        injector.WriteMemory16(ptr_1898BC, offsetof(struct CPad, OldState.LEFTSHOULDER1));
+        injector.WriteMemory16(ptr_189914, offsetof(struct CPad, OldState.LEFTSHOULDER1));
 
         //melee
-        injector.WriteMemory16(ptr_236F58 + 0, RIGHTSHOULDER1 * 2);
-        injector.WriteMemory16(ptr_236F58 + 8, RIGHTSHOULDER1 * 2);
-        injector.WriteMemory16(ptr_236F58 + 12, RIGHTSHOULDER1 * 2);
+        injector.WriteMemory16(ptr_236F58 + 0, offsetof(struct CPad, NewState.RIGHTSHOULDER1));
+        injector.WriteMemory16(ptr_236F58 + 8, offsetof(struct CPad, NewState.RIGHTSHOULDER1));
+        injector.WriteMemory16(ptr_236F58 + 12, offsetof(struct CPad, NewState.RIGHTSHOULDER1));
 
         //reloading
+        ptr_E2D44 = pattern.get(0, "39 00 06 34 ? ? ? ? 00 00 00 00 28 00 8C C6", -4);
+        ptr_E2D44_data = *(uint32_t*)ptr_E2D44;
         sub_8B1FD70 = (void*)pattern.get(0, "00 21 04 00 ? ? ? ? ? ? ? ? 23 20 E4 00 00 00 A2 8C", -8);
         FindPlayerPed = (void*)pattern.get(0, "00 32 04 00 21 20 85 00 40 21 04 00 ? ? ? ? 21 20 C4 00 ? ? ? ? 21 20 85 00 08 00 E0 03 00 00 82 8C", -8);
+        FindPlayerVehicle = (void*)pattern.get(0, "21 28 84 00 00 32 04 00 21 20 85 00 00 00 B0 AF", -8);
         dword_8BB3B4C = *(int16_t*)pattern.get(0, "25 B8 40 00 ? ? ? ? 70 00 05 8E 23 20 85 00", 4);
-}
+        uintptr_t ptr_14AF54 = pattern.get(0, "25 20 20 02 ? ? ? ? 00 00 00 00 B4 08 04 8E", -4);
+        injector.MakeJAL(ptr_14AF54, (intptr_t)CPad__JumpJustDown);
+
+        //allow camera move while reloading
+        uintptr_t ptr_1477DC = pattern.get(1, "01 00 05 34 ? ? ? ? 00 00 00 00 ? ? ? ? 20 00 84 30 ? ? ? ? 00 00 00 00", 0);
+        injector.MakeNOP(ptr_1477DC + 4);
+        injector.MakeNOP(ptr_1477DC + 20);
+        injector.MakeNOP(ptr_1477DC + 32);
+
+        // Free aim
+        uintptr_t ptr_1880E8 = pattern.get(0, "96 00 86 94 ? ? ? ? ? ? ? ? 0A 00 85 84", -4);
+        injector.MakeJMPwNOP(ptr_1880E8, (intptr_t)CPad__EnterFreeAim);
+    }
 
     if (strcmp(ForceAspectRatio, "auto") != 0)
     {
@@ -689,11 +802,15 @@ int OnModuleStart() {
     if (Enable60FPS)
     {
         //60 fps
-        uintptr_t ptr_2030C8 = pattern.get(0, "02 00 84 2C ? ? ? ? 00 00 00 00 ? ? ? ? 00 00 00 00", 20);
+        ptr_2030C8 = pattern.get(0, "02 00 84 2C ? ? ? ? 00 00 00 00 ? ? ? ? 00 00 00 00", 20);
+        ptr_2030C8_data = *(uint32_t*)ptr_2030C8;
         injector.MakeNOP(ptr_2030C8);
 
-        ptr_8BAAB84 = *(int16_t*)pattern.get(0, "25 10 80 02 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 00 A0 80 44", 4);
+        ptr_2B7F48 = pattern.get(0, "23 20 44 00 ? ? ? ? 25 10 00 00", -4);
         ptr_8BB3CA0 = *(int16_t*)pattern.get(0, "25 20 00 00 ? ? ? ? ? ? ? ? 00 00 10 34 00 00 40 AE", 8);
+
+        sub_89F6390 = (void*)pattern.get(0, "04 00 B0 AF 08 00 B1 AF 25 80 A0 00 25 88 80 00 00 00 A0 A3", -4);
+        ptr_14F7E8 = pattern.get(0, "80 20 04 00 21 20 A4 00 00 00 90 8C ? ? ? ? 58 01 10 26", -8);
 
         //mission fixes
         uintptr_t ptr_2B8180 = pattern.get(0, "25 28 00 00 ? ? ? ? 25 20 00 02 25 10 00 00", 16);
@@ -1120,12 +1237,30 @@ int OnModuleStart() {
 
     //Little Willie Cam Fix
     {
-        //MakeInlineWrapper(0x225130,
-        //    move(a0, s1),
-        //    jal(isLittleWillie),
-        //    nop(),
-        //    lui(a0, 0x40A0)
-        //);
+        uintptr_t ptr_225130 = pattern.get(0, "A0 40 04 3C 00 68 84 44 3E 60 0D 46 00 00 00 00 ? ? ? ? 00 00 00 00 00 60 80 44", 0);
+        MakeInlineWrapper(ptr_225130,
+            move(a0, s1),
+            jal(isLittleWillie),
+            nop(),
+            lui(a0, 0x40A0)
+        );
+    }
+
+    if (LODDistMultiplier)
+    {
+        uintptr_t ptr_220130 = pattern.get(0, "00 00 00 00 A8 07 0C C6", -4);
+        injector.MakeJAL(ptr_220130, (intptr_t)sub_8A1E990);
+        injector.WriteInstr(ptr_220130 + 4, move(a0, s0));
+
+        //ptr_1C5584 = pattern.get(0, "00 00 00 00 ? ? ? ? 00 00 00 00 80 3F 04 3C 00 F0 84 44", -16);
+        //ptr_1C547C = pattern.get(0, "2A 20 85 00 ? ? ? ? 00 00 00 00 ? ? ? ? 00 00 00 00 01 00 14 34", -4);
+
+        uintptr_t ptr_341AC0 = pattern.get(0, "70 42 04 3C 00 60 84 44 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 66 BF 04 3C", -0);
+        injector.MakeInlineLUIORI(ptr_341AC0, 60.0f * LODDistMultiplier); //vehicle offscr despawn range
+        uintptr_t ptr_1C73A0 = pattern.get(0, "4C 42 04 3C 00 E0 84 44", 0);
+        injector.MakeInlineLUIORI(ptr_1C73A0 + 0, 51.0f * LODDistMultiplier);
+        injector.MakeInlineLUIORI(ptr_1C73A0 + 8, 25.0f * LODDistMultiplier);
+        injector.MakeInlineLUIORI(ptr_1C73A0 + 16, 80.0f * LODDistMultiplier);
     }
 
     sceKernelDcacheWritebackAll();
