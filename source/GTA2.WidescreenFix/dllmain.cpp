@@ -94,7 +94,7 @@ centered:
         x += (hud_offset / 2);
     }
     else if (posType == 2) {
-        x /= *scale;
+        x /= hud_scale;
         x *= default_hud_scale;
     }
     posType = 0;
