@@ -243,6 +243,12 @@ void Init()
     SetPosType<(0x4BAE7B)>(2); // 3d Text
     SetPosType<(0x4BAF3D)>(2); // 3d Text
 
+    SetPosType<(0x4C98F0)>(1); // Zone name
+    SetPosType<(0x4C9933)>(1); // Zone name
+    SetPosType<(0x4C997E)>(1); // Zone name
+    SetPosType<(0x4C99C4)>(1); // Zone name
+    SetPosType<(0x4C9A29)>(1); // Zone name
+
     // Frontend
     ScaleFontCall<(0x453799)>();
     ScaleFontCall<(0x453A1D)>();
