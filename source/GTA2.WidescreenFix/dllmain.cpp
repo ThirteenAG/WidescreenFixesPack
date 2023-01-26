@@ -1,14 +1,14 @@
 #include "stdafx.h"
 
-int& window_width = *(int*)0x673578;
-int& window_height = *(int*)0x6732E8;
+uint32_t* window_width;
+uint32_t* window_height;
 
 #define default_screen_width (640.0f)
 #define default_screen_height (480.0f)
 #define default_aspect_ratio (default_screen_width / default_screen_height)
 
-#define screen_width ((float)window_width)
-#define screen_height ((float)window_height)
+#define screen_width ((float)*window_width)
+#define screen_height ((float)*window_height)
 #define screen_aspect_ratio (screen_width / screen_height)
 
 #define fone (16384.0f)
@@ -69,38 +69,44 @@ DWORD WINAPI WindowCheck(LPVOID hWnd)
 }
 
 int posType = 0; // 0 = default, 1 = centered, 2 = unscaled
-injector::hook_back<int*(__fastcall*)(int*, int, int*, int*)> hbRePositionElement;
-int* __fastcall RePositionElement(int* in, int, int* out, int* scale) {
-    out = hbRePositionElement.fun(in, 0, out, scale);
 
-    float x = *out / one;
-    if (posType == 0) {
-        // Shift this element approximatively.
-        if (bExtendHud) {
-            if (x <= screen_width * 0.15f) {
+void RePositionElement(void* addr) {
+    static injector::hook_back<int* (__fastcall*)(int*, int, int*, int*)> rePositionElement;
+    auto f = [](int* in, int, int* out, int* scale) {
+        out = rePositionElement.fun(in, 0, out, scale);
+
+        float x = *out / fone;
+        if (posType == 0) {
+            // Shift this element approximatively.
+            if (bExtendHud) {
+                float f = screen_height / default_screen_height;
+                if (x <= 140.0f * f) {
+                }
+                else if (x > 140.0f * f && x < 500.0f * f) {
+                    x += hud_offset / 2;
+                }
+                else if (x >= 500.0f * f) {
+                    x += hud_offset;
+                }
             }
-            else if (x > screen_width * 0.15f && x < screen_width * 0.585f) {
-                x += hud_offset / 2;
-            }
-            else if (x >= screen_width * 0.585f) {
-                x += hud_offset;
-            }
+            else
+                goto centered;
         }
-        else
-            goto centered;
-    }
-    else if (posType == 1) {
+        else if (posType == 1) {
 centered:
-        x += (hud_offset / 2);
-    }
-    else if (posType == 2) {
-        x /= hud_scale;
-        x *= default_hud_scale;
-    }
-    posType = 0;
+            x += (hud_offset / 2);
+        }
+        else if (posType == 2) {
+            x /= hud_scale;
+            x *= default_hud_scale;
+        }
+        posType = 0;
 
-    *out = (uint32_t)(x * one);
-    return out;
+        *out = (uint32_t)(x * one);
+        return out;
+    };
+    rePositionElement.fun = injector::GetBranchDestination(addr).get();
+    injector::MakeCALL(addr, (int*(__fastcall*)(int*, int, int*, int*))f);
 }
 
 void Rescale(int& x, int& y, int& scale) {
@@ -114,34 +120,38 @@ void Rescale(int& x, int& y, int& scale) {
     scale = (int32_t)(fs * one);
 }
 
-template<uintptr_t addr>
-void SetPosType(int te)
+template<int te>
+void SetPosType(void* addr)
 {
-    using func_hook = injector::function_hooker_thiscall<addr, void(int*, int)>;
-    injector::make_static_hook<func_hook>([=](typename func_hook::func_type encodeFlt, int* a, int b) {
-        encodeFlt(a, b);
+    static injector::hook_back<int* (__fastcall*)(int*, int, int)> encodeFlt;
+    auto f = [](int* a, int, int b) {
+        encodeFlt.fun(a, 0, b);
         posType = te;
-    });
+    };
+    encodeFlt.fun = injector::GetBranchDestination(addr).get();
+    injector::MakeCALL(addr, (void(__fastcall*)(int*, int, int))f);
 }
 
-template<uintptr_t addr>
-void ScaleFontCall()
+void ScaleFontCall(void* addr)
 {
-    using func_hook = injector::function_hooker_stdcall<addr, void(const wchar_t*, int, int, int, int, const int*, int, bool, int)>;
-    injector::make_static_hook<func_hook>([=](typename func_hook::func_type printString, const wchar_t* str, int x, int y, int style, int scale, const int* mode, int palette, bool enableAlpha, int alpha) {
-    Rescale(x, y, scale);
-    printString(str, x, y, style, scale, mode, palette, enableAlpha, alpha);
-        });
+    static injector::hook_back<void(__stdcall*)(const wchar_t*, int, int, int, int, const int*, int, bool, int)> printString;
+    auto f = [](const wchar_t* str, int x, int y, int style, int scale, const int* mode, int palette, bool enableAlpha, int alpha) {
+        Rescale(x, y, scale);
+        printString.fun(str, x, y, style, scale, mode, palette, enableAlpha, alpha);
+    };
+    printString.fun = injector::GetBranchDestination(addr).get();
+    injector::MakeCALL(addr, (void(__stdcall*)(const wchar_t*, int, int, int, int, const int*, int, bool, int))f);
 }
 
-template<uintptr_t addr>
-void ScaleSpriteCall()
+void ScaleSpriteCall(void* addr)
 {
-    using func_hook = injector::function_hooker_stdcall<addr, void(int, int, int, int, int, int, const int*, int, int, int, int)>;
-    injector::make_static_hook<func_hook>([=](typename func_hook::func_type drawSprite, int id1, int id2, int x, int y, int angle, int scale, const int* mode, int enableAlpha, int alpha, int a10, int lightFlag) {
-    Rescale(x, y, scale);
-    drawSprite(id1, id2, x, y, angle, scale, mode, enableAlpha, alpha, a10, lightFlag);
-        });
+    static injector::hook_back<void(__stdcall*)(int, int, int, int, int, int, const int*, int, int, int, int)> drawSprite;
+    auto f = [](int id1, int id2, int x, int y, int angle, int scale, const int* mode, int enableAlpha, int alpha, int a10, int lightFlag) {
+        Rescale(x, y, scale);
+        drawSprite.fun(id1, id2, x, y, angle, scale, mode, enableAlpha, alpha, a10, lightFlag);
+    };
+    drawSprite.fun = injector::GetBranchDestination(addr).get();
+    injector::MakeCALL(addr, (void(__stdcall*)(int, int, int, int, int, int, const int*, int, int, int, int))f);
 }
 
 void Init()
@@ -164,6 +174,9 @@ void Init()
 
     if (!nResX || !nResY)
         std::tie(nResX, nResY) = GetDesktopRes();
+    
+    window_width = *hook::pattern("8B 3D ? ? ? ? 8B 4C 24 1C").get_first<uint32_t*>(2);
+    window_height = *hook::pattern("8B 0D ? ? ? ? 2B F8").get_first<uint32_t*>(2);
 
     // Res change
     if (nResX && nResY) {
@@ -217,73 +230,99 @@ void Init()
     }; injector::MakeInline<CameraZoom>(pattern.count(2).get(1).get<void*>(0));
 
     // Hud
-    hbRePositionElement.fun = injector::MakeCALL(0x4C72AA, RePositionElement).get();
-    injector::MakeCALL(0x4C72AA, RePositionElement);
-    
-    hbRePositionElement.fun = injector::MakeCALL(0x4BA2F4, RePositionElement).get();
-    injector::MakeCALL(0x4BA2F4, RePositionElement);
-    
-    hbRePositionElement.fun = injector::MakeCALL(0x4C71DA, RePositionElement).get();
-    injector::MakeCALL(0x4C71DA, RePositionElement);
-    
-    hbRePositionElement.fun = injector::MakeCALL(0x44B4BA, RePositionElement).get();
-    injector::MakeCALL(0x44B4BA, RePositionElement);
-    
-    SetPosType<(0x4C8A7D)>(1); // Big messages
-    SetPosType<(0x4C946F)>(1); // Subtitle sprite
-    SetPosType<(0x4C94D7)>(1); // Subtitle text
-    SetPosType<(0x4C87A5)>(1); // Quit text 1
-    SetPosType<(0x4C8805)>(1); // Quit text 2
-    SetPosType<(0x4C8867)>(1); // Quit text 3
-    SetPosType<(0x4CA1BC)>(1); // Stats sprite
-    SetPosType<(0x4CA40C)>(1); // Stats text
+    pattern = hook::pattern("E8 ? ? ? ? 2B FB");
+    RePositionElement(pattern.get_first(-5962)); // 0x4C72AA
 
-    SetPosType<(0x4BAD41)>(2); // 3d Text
-    SetPosType<(0x4BADD2)>(2); // 3d Text
-    SetPosType<(0x4BAE7B)>(2); // 3d Text
-    SetPosType<(0x4BAF3D)>(2); // 3d Text
+    pattern = hook::pattern("E8 ? ? ? ? 8B 76 54");
+    RePositionElement(pattern.get_first(-3233)); // 0x4BA2F4
 
-    SetPosType<(0x4C98F0)>(1); // Zone name
-    SetPosType<(0x4C9933)>(1); // Zone name
-    SetPosType<(0x4C997E)>(1); // Zone name
-    SetPosType<(0x4C99C4)>(1); // Zone name
-    SetPosType<(0x4C9A29)>(1); // Zone name
+    pattern = hook::pattern("E8 ? ? ? ? 81 3B ? ? ? ?");
+    RePositionElement(pattern.get_first(-7509)); // 0x4C71DA
+
+    pattern = hook::pattern("E8 ? ? ? ? C6 44 24 ? ? EB 7C");
+    RePositionElement(pattern.get_first(-359)); // 0x44B4BA
+
+    pattern = hook::pattern("E8 ? ? ? ? 81 C6 ? ? ? ? 56");
+    SetPosType<1>(pattern.get_first(0)); // Big messages 0x4C8A7D
+
+    pattern = hook::pattern("E8 ? ? ? ? 66 0F B6 86 ? ? ? ?");
+    SetPosType<1>(pattern.get_first(0)); // Subtitle sprite 0x4C946F
+
+    pattern = hook::pattern("6A 40 E8 ? ? ? ? 56");
+    SetPosType<1>(pattern.get_first(2)); // Subtitle text 0x4C94D7
+
+    pattern = hook::pattern("E8 ? ? ? ? A0 ? ? ? ? 84 C0 74 0B 8B 0D ? ? ? ? E8 ? ? ? ? FF 15 ? ? ? ?");
+    SetPosType<1>(pattern.get_first(450950)); // Quit text 1 0x4C87A5
+
+    pattern = hook::pattern("E8 ? ? ? ? A0 ? ? ? ? 84 C0 74 0B 8B 0D ? ? ? ? E8 ? ? ? ? FF 15 ? ? ? ?");
+    SetPosType<1>(pattern.get_first(451046)); // Quit text 2 0x4C8805
+
+    pattern = hook::pattern("50 E8 ? ? ? ? 57 E8 ? ? ? ? 5F");
+    SetPosType<1>(pattern.get_first(1)); // Quit text 3 0x4C8867
+
+    pattern = hook::pattern("E8 ? ? ? ? 56 53");
+    SetPosType<1>(pattern.get_first(0)); // Stats sprite 0x4CA1BC
+
+    pattern = hook::pattern("57 E8 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 5F");
+    SetPosType<1>(pattern.get_first(1)); // Stats text 0x4CA40C
+
+    pattern = hook::pattern("E8 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 8B CB E8 ? ? ? ? 5D");
+    SetPosType<2>(pattern.get_first(-14347)); // 3d Text 0x4BAD41
+
+    pattern = hook::pattern("E8 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 8B CB E8 ? ? ? ? 5D");
+    SetPosType<2>(pattern.get_first(-14202)); // 3d Text 0x4BADD2
+
+    pattern = hook::pattern("E8 ? ? ? ? A1 ? ? ? ? 89 5C 24 18");
+    SetPosType<2>(pattern.get_first(0)); // 3d Text 0x4BAE7B
+
+    pattern = hook::pattern("E8 ? ? ? ? 8B 15 ? ? ? ? 8B 44 24 1C");
+    SetPosType<2>(pattern.get_first(0)); // 3d Text 0x4BAF3D
+
+    pattern = hook::pattern("E8 ? ? ? ? 8B CE E8 ? ? ? ? 8D 8E ? ? ? ? E8 ? ? ? ? 8D 8E ? ? ? ?");
+    SetPosType<1>(pattern.get_first(-2986)); // Zone name 0x4C98F0
+
+    pattern = hook::pattern("55 E8 ? ? ? ? 68 ? ? ? ?");
+    SetPosType<1>(pattern.get_first(1)); // Zone name 0x4C9933
+
+    pattern = hook::pattern("E8 ? ? ? ? 8B CE E8 ? ? ? ? 8D 8E ? ? ? ? E8 ? ? ? ? 8D 8E ? ? ? ?");
+    SetPosType<1>(pattern.get_first(-2844)); // Zone name 0x4C997E
+
+    pattern = hook::pattern("E8 ? ? ? ? 8B CE E8 ? ? ? ? 8D 8E ? ? ? ? E8 ? ? ? ? 8D 8E ? ? ? ?");
+    SetPosType<1>(pattern.get_first(-2774)); // Zone name 0x4C99C4
+
+    pattern = hook::pattern("E8 ? ? ? ? 03 F5 56");
+    SetPosType<1>(pattern.get_first(0)); // Zone name 0x4C9A29
 
     // Frontend
-    ScaleFontCall<(0x453799)>();
-    ScaleFontCall<(0x453A1D)>();
-    ScaleFontCall<(0x4567DC)>();
-    ScaleFontCall<(0x456A17)>();
-    ScaleFontCall<(0x4570A7)>();
-    ScaleFontCall<(0x4580C1)>();
-    ScaleFontCall<(0x458421)>();
+    pattern = hook::pattern("E8 ? ? ? ? 8B 44 24 1C 8B 54 24 20");
+    ScaleFontCall(pattern.get_first(0)); // 0x453799
 
-    ScaleSpriteCall<(0x453705)>();
-    ScaleSpriteCall<(0x453753)>();
-    ScaleSpriteCall<(0x4582EE)>();
+    pattern = hook::pattern("E8 ? ? ? ? FE 44 24 11");
+    ScaleFontCall(pattern.get_first(-9210)); // 0x453A1D
 
-    // Frontend
-    //pattern = hook::pattern("8B 4C 24 18 8B 54 24 14"); // 0x4539F1
-    //struct PrintStringHook
-    //{
-    //    void operator()(injector::reg_pack& regs)
-    //    {
-    //        int32_t& nx = *(int32_t*)(regs.esp + 0x4 + 0x8);
-    //        int32_t& ny = *(int32_t*)(regs.esp + 0x4 + 0xC);
-    //        int32_t& ns = *(int32_t*)(regs.esp + 0x4 + 0x14);
-    //
-    //        float fx = (nx / one) * hud_scale;
-    //        float fy = (ny / one) * hud_scale;
-    //        float fs = (ns / one) * hud_scale;
-    //        fx += ((int32_t)(hud_offset / 2));
-    //
-    //        regs.ecx = (int32_t)(fs * one);
-    //        regs.edx = *(uint32_t*)(regs.esp + 0x4 + 0x10);
-    //
-    //        nx = (int32_t)fx * one;
-    //        ny = (int32_t)fy * one;
-    //    }
-    //}; injector::MakeInline<PrintStringHook>(pattern.count(11).get(5).get<void*>(0), pattern.count(11).get(5).get<void*>(8));
+    pattern = hook::pattern("E8 ? ? ? ? 8B 44 24 30 8B 4C 24 18");
+    ScaleFontCall(pattern.get_first(0)); // 0x4567DC
+    
+    pattern = hook::pattern("E8 ? ? ? ? 66 A1 ? ? ? ? 68 ? ? ? ?");
+    ScaleFontCall(pattern.get_first(-4085)); // 0x456A17
+    
+    pattern = hook::pattern("E8 ? ? ? ? 8B 7C 24 1C 8A 44 24 30");
+    ScaleFontCall(pattern.get_first(0)); // 0x4570A7
+    
+    pattern = hook::pattern("EB 7E 66 8B 6D 6C");
+    ScaleFontCall(pattern.get_first(128)); // 0x4580C1
+    
+    pattern = hook::pattern("E8 ? ? ? ? 8B 44 24 18 40");
+    ScaleFontCall(pattern.get_first(0)); // 0x458421
+    
+    pattern = hook::pattern("E8 ? ? ? ? E9 ? ? ? ? 68 ? ? ? ? 57");
+    ScaleSpriteCall(pattern.get_first(0)); // 0x453705
+
+    pattern = hook::pattern(" E8 ? ? ? ? EB 44 8B 44 24 10");
+    ScaleSpriteCall(pattern.get_first(0)); // 0x453753
+
+    pattern = hook::pattern("E8 ? ? ? ? E9 ? ? ? ? 66 8B 5D 6A");
+    ScaleSpriteCall(pattern.get_first(0)); // 0x4582EE
 
     pattern = hook::pattern("8B 15 ? ? ? ? 6A 06 52 8B 08 50"); //0x4B4FB8
     auto hwnd = *pattern.get_first<HWND*>(2);
@@ -309,7 +348,8 @@ void Init()
     }
 
     // Intro crash fix
-    injector::MakeNOP(0x481E28, 2, true);
+    pattern = hook::pattern("74 66 E8 ? ? ? ?");
+    injector::MakeNOP(pattern.get_first(0), 2, true);
 
     static int mode = 0;
     pattern = hook::pattern("A1 ? ? ? ? 8B 0D ? ? ? ? EB 06"); // 0x4CAEF2
@@ -317,8 +357,8 @@ void Init()
     {
         void operator()(injector::reg_pack& regs)
         {
-            regs.eax = window_width;
-            regs.ecx = window_height;
+            regs.eax = *window_width;
+            regs.ecx = *window_height;
             mode = -2;
         }
     }; injector::MakeInline<ClearScreenHook>(pattern.get_first(0), pattern.get_first(11));
