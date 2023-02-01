@@ -82,10 +82,10 @@ void RePositionElement(void* addr) {
                 float f = screen_height / default_screen_height;
                 if (x <= 140.0f * f) {
                 }
-                else if (x > 140.0f * f && x < 500.0f * f) {
+                else if (x > 140.0f * f && x < 490.0f * f) {
                     x += hud_offset / 2;
                 }
-                else if (x >= 500.0f * f) {
+                else if (x >= 490.0f * f) {
                     x += hud_offset;
                 }
             }
@@ -109,15 +109,27 @@ centered:
     injector::MakeCALL(addr, (int*(__fastcall*)(int*, int, int*, int*))f);
 }
 
-void Rescale(int& x, int& y, int& scale) {
+void Rescale(int& scale) {
+    float fs = (scale / fone) * hud_scale;
+    scale = (int32_t)(fs * one);
+}
+
+void Repos(int& x, int& y) {
     float fx = (x / fone) * hud_scale;
     float fy = (y / fone) * hud_scale;
-    float fs = (scale / fone) * hud_scale;
     fx += ((int32_t)(hud_offset / 2));
 
     x = (int32_t)(fx * one);
     y = (int32_t)(fy * one);
-    scale = (int32_t)(fs * one);
+}
+
+void Repos3d(int& x, int& y) {
+    float fx = (x / fone) * hud_scale;
+    float fy = (y / fone);
+    //fx += ((int32_t)(hud_offset / 2));
+
+    x = (int32_t)(fx * one);
+    y = (int32_t)(fy * one);
 }
 
 template<int te>
@@ -132,22 +144,35 @@ void SetPosType(void* addr)
     injector::MakeCALL(addr, (void(__fastcall*)(int*, int, int))f);
 }
 
-void ScaleFontCall(void* addr)
+void ReposAndScaleFontCall(void* addr)
 {
     static injector::hook_back<void(__stdcall*)(const wchar_t*, int, int, int, int, const int*, int, bool, int)> printString;
     auto f = [](const wchar_t* str, int x, int y, int style, int scale, const int* mode, int palette, bool enableAlpha, int alpha) {
-        Rescale(x, y, scale);
+        Repos(x, y);
+        Rescale(scale);
         printString.fun(str, x, y, style, scale, mode, palette, enableAlpha, alpha);
     };
     printString.fun = injector::GetBranchDestination(addr).get();
     injector::MakeCALL(addr, (void(__stdcall*)(const wchar_t*, int, int, int, int, const int*, int, bool, int))f);
 }
 
-void ScaleSpriteCall(void* addr)
+void ReposAndScaleSpriteCall(void* addr)
 {
     static injector::hook_back<void(__stdcall*)(int, int, int, int, int, int, const int*, int, int, int, int)> drawSprite;
     auto f = [](int id1, int id2, int x, int y, int angle, int scale, const int* mode, int enableAlpha, int alpha, int a10, int lightFlag) {
-        Rescale(x, y, scale);
+        Repos(x, y);
+        Rescale(scale);
+        drawSprite.fun(id1, id2, x, y, angle, scale, mode, enableAlpha, alpha, a10, lightFlag);
+    };
+    drawSprite.fun = injector::GetBranchDestination(addr).get();
+    injector::MakeCALL(addr, (void(__stdcall*)(int, int, int, int, int, int, const int*, int, int, int, int))f);
+}
+
+void ReposSpriteCall3D(void* addr)
+{
+    static injector::hook_back<void(__stdcall*)(int, int, int, int, int, int, const int*, int, int, int, int)> drawSprite;
+    auto f = [](int id1, int id2, int x, int y, int angle, int scale, const int* mode, int enableAlpha, int alpha, int a10, int lightFlag) {
+        Repos3d(x, y);
         drawSprite.fun(id1, id2, x, y, angle, scale, mode, enableAlpha, alpha, a10, lightFlag);
     };
     drawSprite.fun = injector::GetBranchDestination(addr).get();
@@ -293,36 +318,45 @@ void Init()
     pattern = hook::pattern("E8 ? ? ? ? 03 F5 56");
     SetPosType<1>(pattern.get_first(0)); // Zone name 0x4C9A29
 
+    pattern = hook::pattern("E8 ? ? ? ? 8B 46 04 6A 00");
+    ReposSpriteCall3D(pattern.get_first(-495)); // Money messages 0x4B9424
+
+    pattern = hook::pattern("74 7B 68 ? ? ? ?");
+    injector::MakeNOP(pattern.get_first(0), 2, true); // 0x4B93AC
+
+    pattern = hook::pattern("74 4D 8D 4C 24 14");
+    injector::MakeNOP(pattern.get_first(0), 2, true); // 0x4B93DA
+
     // Frontend
     pattern = hook::pattern("E8 ? ? ? ? 8B 44 24 1C 8B 54 24 20");
-    ScaleFontCall(pattern.get_first(0)); // 0x453799
+    ReposAndScaleFontCall(pattern.get_first(0)); // 0x453799
 
     pattern = hook::pattern("E8 ? ? ? ? FE 44 24 11");
-    ScaleFontCall(pattern.get_first(-9210)); // 0x453A1D
+    ReposAndScaleFontCall(pattern.get_first(-9210)); // 0x453A1D
 
     pattern = hook::pattern("E8 ? ? ? ? 8B 44 24 30 8B 4C 24 18");
-    ScaleFontCall(pattern.get_first(0)); // 0x4567DC
+    ReposAndScaleFontCall(pattern.get_first(0)); // 0x4567DC
     
     pattern = hook::pattern("E8 ? ? ? ? 66 A1 ? ? ? ? 68 ? ? ? ?");
-    ScaleFontCall(pattern.get_first(-4085)); // 0x456A17
+    ReposAndScaleFontCall(pattern.get_first(-4085)); // 0x456A17
     
     pattern = hook::pattern("E8 ? ? ? ? 8B 7C 24 1C 8A 44 24 30");
-    ScaleFontCall(pattern.get_first(0)); // 0x4570A7
+    ReposAndScaleFontCall(pattern.get_first(0)); // 0x4570A7
     
     pattern = hook::pattern("EB 7E 66 8B 6D 6C");
-    ScaleFontCall(pattern.get_first(128)); // 0x4580C1
+    ReposAndScaleFontCall(pattern.get_first(128)); // 0x4580C1
     
     pattern = hook::pattern("E8 ? ? ? ? 8B 44 24 18 40");
-    ScaleFontCall(pattern.get_first(0)); // 0x458421
+    ReposAndScaleFontCall(pattern.get_first(0)); // 0x458421
     
     pattern = hook::pattern("E8 ? ? ? ? E9 ? ? ? ? 68 ? ? ? ? 57");
-    ScaleSpriteCall(pattern.get_first(0)); // 0x453705
+    ReposAndScaleSpriteCall(pattern.get_first(0)); // 0x453705
 
     pattern = hook::pattern(" E8 ? ? ? ? EB 44 8B 44 24 10");
-    ScaleSpriteCall(pattern.get_first(0)); // 0x453753
+    ReposAndScaleSpriteCall(pattern.get_first(0)); // 0x453753
 
     pattern = hook::pattern("E8 ? ? ? ? E9 ? ? ? ? 66 8B 5D 6A");
-    ScaleSpriteCall(pattern.get_first(0)); // 0x4582EE
+    ReposAndScaleSpriteCall(pattern.get_first(0)); // 0x4582EE
 
     pattern = hook::pattern("8B 15 ? ? ? ? 6A 06 52 8B 08 50"); //0x4B4FB8
     auto hwnd = *pattern.get_first<HWND*>(2);
