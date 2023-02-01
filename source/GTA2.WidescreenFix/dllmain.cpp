@@ -26,28 +26,24 @@ bool bEndProcess;
 int32_t nQuicksaveKey;
 int32_t nZoomIncreaseKey;
 int32_t nZoomDecreaseKey;
-int32_t nZoom;
+float fZoom;
 WNDPROC wndProcOld = NULL;
-bool keyPressed = false;
 
 LRESULT APIENTRY WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     switch (uMsg)
     {
     case WM_KEYDOWN:
-        if (!keyPressed) {
-            if (wParam == nZoomIncreaseKey)
-                nZoom += one;
-            else if (wParam == nZoomDecreaseKey)
-                nZoom -= one;
-
-            keyPressed = true;
+        if (wParam == nZoomIncreaseKey) {
+            fZoom += 1.0f;
+        }
+        else if (wParam == nZoomDecreaseKey) {
+            fZoom -= 1.0f;
         }
 
-        nZoom = max(-one, min(nZoom, one * 25));
+        fZoom = max(0.0f, min(fZoom, 10.0f));
         break;
     case WM_KEYUP:
-        keyPressed = false;
         break;
     case WM_CLOSE:
         if (bEndProcess)
@@ -248,9 +244,7 @@ void Init()
             *(int32_t*)(regs.ebp + 0x2B0) = (uint32_t)(hud_scale * one); // for Zaibatsu [It was an Accident!] mission
 
             *(int32_t*)(regs.esi + 0x8) += (uint32_t)((camera_scale - 1.0f) * one);
-            *(int32_t*)(regs.esi + 0x8) += nZoom;
-
-            *(int32_t*)(regs.esi + 0x8) = min(*(int32_t*)(regs.esi + 0x8), one * 25);
+            *(int32_t*)(regs.esi + 0x8) += (uint32_t)(fZoom * one);
         }
     }; injector::MakeInline<CameraZoom>(pattern.count(2).get(1).get<void*>(0));
 
