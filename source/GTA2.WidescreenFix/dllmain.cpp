@@ -467,22 +467,39 @@ void InitD3DDim700()
         injector::WriteMemory(pattern.get(0).get<void>(1), -1, true);
 }
 
-void InitD3DDLL() {
+void InitD3DDLL() 
+{
     auto pattern = hook::module_pattern(GetModuleHandle(L"d3ddll"), "89 7C 24 28 89 74 24 2C");
     struct gbh_BlitImageHook
     {
         void operator()(injector::reg_pack& regs)
         {
             RECT& dest = (*(RECT*)(regs.esp + 0x30 - 0x10));
-            dest.left = regs.ebp * hud_scale;
-            dest.top = regs.ebx * hud_scale;
-            dest.right = regs.edi * hud_scale;
-            dest.bottom = regs.esi * hud_scale;
+            dest.left = regs.ebp * (int32_t)hud_scale;
+            dest.top = regs.ebx * (int32_t)hud_scale;
+            dest.right = regs.edi * (int32_t)hud_scale;
+            dest.bottom = regs.esi * (int32_t)hud_scale;
 
             dest.left += (int32_t)(hud_offset / 2);
             dest.right += (int32_t)(hud_offset / 2);
         }
     }; injector::MakeInline<gbh_BlitImageHook>(pattern.get_first(0), pattern.get_first(8));
+}
+
+void InitBinkw32()
+{
+    auto pattern = hook::module_pattern(GetModuleHandle(L"binkw32"), "8B 7D 1C 83 BE ? ? ? ? ?"); // 0x10007B49
+    struct BinkCopyToBufferHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            *(uint32_t*)(regs.ebp + 0x18) += (int32_t)((screen_width / 2) - default_screen_width / 2);
+            *(uint32_t*)(regs.ebp + 0x1C) += (int32_t)((screen_height / 2) - default_screen_height / 2);
+            //regs.ebx * (int32_t)hud_scale;
+
+            _asm { cmp     dword ptr[esi + 0x1D8], 0x0FFFFFFFF };
+        }
+    }; injector::MakeInline<BinkCopyToBufferHook>(pattern.get_first(3), pattern.get_first(10));
 }
 
 CEXP void InitializeASI()
@@ -493,6 +510,7 @@ CEXP void InitializeASI()
         CallbackHandler::RegisterCallback(L"d3dim.dll", InitD3DDim);       // crash fix for
         CallbackHandler::RegisterCallback(L"d3dim700.dll", InitD3DDim700); // resolutions > 2048
         CallbackHandler::RegisterCallback(L"d3ddll.dll", InitD3DDLL); // frontend background scale
+        CallbackHandler::RegisterCallback(L"binkw32.dll", InitBinkw32); // intro video pos
     });
 }
 
