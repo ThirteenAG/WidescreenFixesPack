@@ -111,6 +111,7 @@ void Init()
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
     static float fRainDropletsScale = iniReader.ReadFloat("MISC", "RainDropletsScale", 0.5f);
     bool bDisableMotionBlur = iniReader.ReadInteger("MISC", "DisableMotionBlur", 0) != 0;
+    bool bDisableContrails = iniReader.ReadInteger("MISC", "DisableContrails", 0) != 0;
     static int SimRate = iniReader.ReadInteger("MISC", "SimRate", -1);
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
         szCustomUserFilesDirectoryInGameDir.clear();
@@ -466,6 +467,14 @@ void Init()
     {
         uint32_t* dword_71356B = hook::pattern("D9 87 B4 00 00 00 D8 1D ? ? ? ? DF E0 F6 C4 41 75 76").count(1).get(0).get<uint32_t>(17); //0x0071355A
         injector::WriteMemory<uint8_t>(dword_71356B, 0xEB, true);
+    }
+
+    if (bDisableContrails)
+    {
+        pattern = hook::pattern("8A 87 9C 01 00 00 84 C0");
+        uint32_t* dword_7E1281 = pattern.count(1).get(0).get<uint32_t>(0);
+        uint32_t* dword_7E13A9 = pattern.count(1).get(0).get<uint32_t>(0x128);
+        injector::MakeJMP(dword_7E1281, dword_7E13A9, true);
     }
 
     if (nWindowedMode)
