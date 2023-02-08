@@ -21,7 +21,7 @@
 #define INI_PATH "ms0:/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.FusionMod/SplinterCellEssentials.PPSSPP.FusionMod.ini"
 
 #ifndef __INTELLISENSE__
-PSP_MODULE_INFO(MODULE_NAME, 0x1007, 1, 0);
+PSP_MODULE_INFO(MODULE_NAME, PSP_MODULE_USER, 1, 0);
 #endif
 
 #define max(a,b) ((a)<(b)) ? (b) : (a)

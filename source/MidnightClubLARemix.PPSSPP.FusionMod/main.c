@@ -19,7 +19,7 @@
 #define INI_PATH "ms0:/PSP/PLUGINS/MidnightClubLARemix.PPSSPP.FusionMod/MidnightClubLARemix.PPSSPP.FusionMod.ini"
 
 #ifndef __INTELLISENSE__
-PSP_MODULE_INFO(MODULE_NAME, 0x1007, 1, 0);
+PSP_MODULE_INFO(MODULE_NAME, PSP_MODULE_USER, 1, 0);
 #endif
 
 int OnModuleStart() 
