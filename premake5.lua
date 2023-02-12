@@ -313,7 +313,16 @@ project "GTAVCS.PPSSPP.WidescreenFix"
    targetextension ".prx"
    setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.WidescreenFix")
    writemakefile_psp("GTAVCS.PPSSPP.WidescreenFix", "lodl.c")
-   writeghaction("gtavcspsp", "GTAVCS.PPSSPP.WidescreenFix")
+   writeghaction("gtavcspsp", "GTAVCS.PPSSPP.WidescreenFix /t:GTAVCS.PPSSPP.ImVehLM")
+project "GTAVCS.PPSSPP.ImVehLM"
+   kind "Makefile"
+   includedirs { "external/pspsdk/psp/sdk/include" }
+   includedirs { "external/pspsdk/bin" }
+   includedirs { "external/pspsdk/psp/sdk/include" }
+   files { "source/%{prj.name}/*.c", "source/%{prj.name}/*.cpp" }
+   targetextension ".prx"
+   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.ImVehLM/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.ImVehLM")
+   writemakefile_psp("GTAVCS.PPSSPP.ImVehLM")
 project "GTACTW.PPSSPP.FusionMod"
    kind "Makefile"
    includedirs { "external/pspsdk/psp/sdk/include" }
