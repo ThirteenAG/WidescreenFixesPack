@@ -374,6 +374,82 @@ float sub_8A1E990(uintptr_t a1)
     return LODDistMultiplier;
 }
 
+enum CheatTable
+{
+    Weapon1,
+    Weapon2,
+    Weapon3,
+    Money,
+    Armour,
+    Health,
+    WantedUp,
+    NeverWanted,
+    SunnyWeather,
+    ExtraSunny,
+    CloudyWeather,
+    RainyWeather,
+    FoggyWeather,
+    Tank,
+    FastWeather,
+    BlowUpCars,
+    Mayhem,
+    PedsAttackVic,
+    WeaponsForAll,
+    FastTime,
+    SlowTime,
+    StrongGrip,
+    Suicide,
+    TrafficLights,
+    MadCars,
+    BlackCars,
+    Trashmaster,
+    PickUpChicks,
+    FannyMagnet,
+    GlassCars,
+    TopsyTurvy,
+
+    CheatsNum
+};
+
+const char
+#ifndef __INTELLISENSE__
+__attribute__((aligned(16)))
+#endif
+cheat_inputs[CheatsNum][9] =
+{
+    "LRXUDSLR",
+    "LRSUDTLR",
+    "LRTUDCLR",
+    "UDLRXX12",
+    "UDLRSS12",
+    "UDLRCC12",
+    "URSSDLCC",
+    "URTTDLXX",
+    "LD21RULC",
+    "LD21RULX",
+    "LD12RULS",
+    "LD12RULT",
+    "LDTXRUL1",
+    "U1D2L1R2",
+    "211DUXD1",
+    "122LRSD2",
+    "211DLCD1",
+    "DTUX1212",
+    "U1D2LCRT",
+    "LL22UTDX",
+    "LLCCDUTX",
+    "DLU12TCX",
+    "RRCC12DX",
+    "UDTX12LC",
+    "UURLTCCS",
+    "1212LCUX",
+    "DURT1T1T",
+    "DUR11SU1",
+    "R1D1CU1S",
+    "RULDTT12",
+    "SSS112LR",
+};
+
 int Enable60FPS;
 uintptr_t ptr_2030C8;
 uint32_t ptr_2030C8_data;
@@ -382,6 +458,11 @@ uintptr_t ptr_14F7E8;
 int (*sub_89F6390)(int a1, char* a2);
 int UnthrottleEmuDuringLoading = 0;
 int once = 0;
+int PCCheats;
+char cheatString[20];
+int32_t cheat_id = -1;
+struct CPad* (*pCPad__GetPad)(int padNumber);
+void(*pCPad__AddToCheatString)(struct CPad* pad, char a2);
 void GameLoopStuff()
 {
     if (once != 1)
@@ -413,6 +494,15 @@ void GameLoopStuff()
             Enable60FPS = 1;
             injector.MakeNOP(ptr_2030C8);
         }
+    }
+
+    if (cheat_id >= 0)
+    {
+        struct CPad* pad = pCPad__GetPad(0);
+        for (size_t j = 0; j < 8; j++)
+            pCPad__AddToCheatString(pad, cheat_inputs[cheat_id][j]);
+        cheatString[0] = 0;
+        cheat_id = -1;
     }
 }
 
@@ -494,36 +584,112 @@ uintptr_t GetAbsoluteAddress(uintptr_t at, int32_t offs_hi, int32_t offs_lo)
     return (uintptr_t)((uint32_t)(*(uint16_t*)(at + offs_hi)) << 16) + *(int16_t*)(at + offs_lo);
 }
 
+int NKCODE_A = 29;
+int NKCODE_Z = 54;
 int module_thread(SceSize args, void* argp)
 {
-    /*
-    SceCtrlData pad;
-    sceCtrlSetSamplingCycle(0);
-    sceCtrlSetSamplingMode(PSP_CTRL_MODE_DIGITAL);
+    int cheatStringSize = sizeof(cheatString) / sizeof(cheatString[0]);
     while (1)
     {
-        sceCtrlPeekBufferPositive(&pad, 1);
-        if (pad.Buttons & PSP_CTRL_SQUARE)
+        sceKernelDelayThread(1000);
+
+        for (size_t i = NKCODE_A; i <= NKCODE_Z; i++)
         {
-            if (pad.Buttons & PSP_CTRL_CIRCLE)
+            char key = 0;
+            sceIoDevctl("kemulator:", EMULATOR_DEVCTL__GET_VKEY, (void*)i, 0, &key, sizeof(key));
+            if (key)
             {
-                sceKernelDelayThread(1000000 / 10);
-                //logger.Write("Hello World\n");
+                while (key)
+                {
+                    sceKernelDelayThread(1000);
+                    sceIoDevctl("kemulator:", EMULATOR_DEVCTL__GET_VKEY, (void*)i, 0, &key, sizeof(key));
+                }
+                char cheatString2[20];
+                memcpy(&cheatString2[0], &cheatString[0], cheatStringSize);
+                memcpy(&cheatString[1], &cheatString2[0], cheatStringSize - 1);
+                cheatString[0] = i + 36;
+                cheatString[cheatStringSize - 1] = 0;
+                HandlePCCheats();
+                break;
             }
         }
-        sceKernelDelayThread(1000);
     }
     sceKernelExitDeleteThread(0);
-    */
     return 0;
+}
+
+void HandlePCCheats()
+{
+#define _CHEATCMP(str) strncmp(str, cheatString, sizeof(str)-1)
+
+    if (!_CHEATCMP("SLOOTSGUHT") || !_CHEATCMP("NUGDEKAN")) // THUGSTOOLS || NAKEDGUN                                          
+        cheat_id = Weapon1;
+    else if (!_CHEATCMP("SLOOTLANOISSEFORP") || !_CHEATCMP("NOPAEWLAHTEL")) // PROFESSIONALTOOLS || LETHALWEAPON                                  
+        cheat_id = Weapon2;
+    else if (!_CHEATCMP("SLOOTRETTUN") || !_CHEATCMP("NUGPOT")) // NUTTERTOOLS || TOPGUN                                                          
+        cheat_id = Weapon3;
+    else if (!_CHEATCMP("PLEHEMOSDEENI") || !_CHEATCMP("HSACYRRACSYAWLA")) // INEEDSOMEHELP|| ALWAYSCARRYCASH                                     
+        cheat_id = Money;
+    else if (!_CHEATCMP("NOITCETORPSUOICERP") || !_CHEATCMP("RALVEK")) // PRECIOUSPROTECTION || KEVLAR                              
+        cheat_id = Armour;
+    else if (!_CHEATCMP("ENIRIPSA") || !_CHEATCMP("ENIEDOC")) // ASPIRINE || CODEINE                                                 
+        cheat_id = Health;
+    else if (!_CHEATCMP("EVILAEMEKATTNOWUOY") || !_CHEATCMP("EMTAEMOC")) // YOUWONTTAKEMEALIVE || COMEATME                          
+        cheat_id = WantedUp;
+    else if (!_CHEATCMP("ENOLAEMEVAEL") || !_CHEATCMP("EMFFOYAL")) // LEAVEMEALONE || LAYOFFME                                      
+        cheat_id = NeverWanted;
+    else if (!_CHEATCMP("YADYLEVOLA") || !_CHEATCMP("TAEHECIV")) // ALOVELYDAY || VICEHEAT                                          
+        cheat_id = SunnyWeather;
+    else if (!_CHEATCMP("TOHNMADOOT") || !_CHEATCMP("YNNUSARTXE")) // TOODAMNHOT || EXTRASUNNY                                      
+        cheat_id = ExtraSunny;
+    else if (!_CHEATCMP("YADLLUDLLUD") || !_CHEATCMP("REHTAEWYDUOLC")) // DULLDULLDAY|| CLOUDYWEATHER                                             
+        cheat_id = CloudyWeather;
+    else if (!_CHEATCMP("VTHCTAWDNANIYATS") || !_CHEATCMP("RETSEHCNAMNI")) // STAYINANDWATCHTV || INMANCHESTER                      
+        cheat_id = RainyWeather;
+    else if (!_CHEATCMP("GNIHTAEESTNAC") || !_CHEATCMP("TSIMAES")) // CANTSEEATHING|| SEAMIST                                                     
+        cheat_id = FoggyWeather;
+    else if (!_CHEATCMP("REZNAP") || !_CHEATCMP("UOYKNAT")) // PANZER || TANKYOU                                                     
+        cheat_id = Tank;
+    else if (!_CHEATCMP("YBSEILFTSUJEMIT") || !_CHEATCMP("DESREVERYTIRALOP")) // TIMEJUSTFLIESBY|| POLARITYREVERSED                              
+        cheat_id = FastWeather;
+    else if (!_CHEATCMP("GNABGIB") || !_CHEATCMP("HSALFLANIF")) // BIGBANG|| FINALFLASH                                                          
+        cheat_id = BlowUpCars;
+    else if (!_CHEATCMP("SROODNIYATSRETTEB") || !_CHEATCMP("MEHYAM")) // BETTERSTAYINDOORS || MAYHEM                                              
+        cheat_id = Mayhem;
+    else if (!_CHEATCMP("DOOHRUOBHGIENHGUOR") || !_CHEATCMP("1YMENECILBUP")) // ROUGHNEIGHBOURHOOD || PUBLICENEMY1                  
+        cheat_id = PedsAttackVic;
+    else if (!_CHEATCMP("SRETTUNYBDEDNUORRUS") || !_CHEATCMP("ELASREPUSUMMA")) // SURROUNDEDBYNUTTERS || AMMUSUPERSALE                             
+        cheat_id = WeaponsForAll;
+    else if (!_CHEATCMP("PUTIDEEPS") || !_CHEATCMP("HSURAEKIL")) // SPEEDITUP|| LIKEARUSH                                                         
+        cheat_id = FastTime;
+    else if (!_CHEATCMP("NWODTIWOLS") || !_CHEATCMP("ENILANERDAEKIL")) // SLOWITDOWN || LIKEADRENALINE                              
+        cheat_id = SlowTime;
+    else if (!_CHEATCMP("GNIHTYREVESIPIRG") || !_CHEATCMP("PIRGGNORTS")) // GRIPISEVERYTHING || STRONGGRIP                          
+        cheat_id = StrongGrip;
+    else if (!_CHEATCMP("DLROWLEURCEYBDOOG") || !_CHEATCMP("DAEDYDAERLAERAUOY")) // GOODBYECRUELWORLD || YOUAREALREADYDEAD                         
+        cheat_id = Suicide;
+    else if (!_CHEATCMP("EMPOTSDNAYRTTNOD") || !_CHEATCMP("POTSOTEMITON")) // DONTTRYANDSTOPME || NOTIMETOSTOP                      
+        cheat_id = TrafficLights;
+    else if (!_CHEATCMP("SLANIMIRCERASREVIRDLLA") || !_CHEATCMP("ROIRRAWDAOR")) // ALLDRIVERSARECRIMINALS || ROADWARRIOR             
+        cheat_id = MadCars;
+    else if (!_CHEATCMP("KCALBDETNIAPTITNAWI") || !_CHEATCMP("SREDIRTHGIN")) // IWANTITPAINTEDBLACK || NIGHTRIDERS                                 
+        cheat_id = BlackCars;
+    else if (!_CHEATCMP("RACHSIBBUR") || !_CHEATCMP("KROWTANEM")) // RUBBISHCAR || MENATWORK                                         
+        cheat_id = Trashmaster;
+    else if (!_CHEATCMP("LLASREUQNOCEVOL") || !_CHEATCMP("ECIVRESTROCSE")) // LOVECONQUERSALL || ESCORTSERVICE                                     
+        cheat_id = PickUpChicks;
+    else if (!_CHEATCMP("TENGAMYNNAF") || !_CHEATCMP("48FOSSALC")) // FANNYMAGNET || CLASSOF84                                                     
+        cheat_id = FannyMagnet;
+    else if (!_CHEATCMP("EMORHCOSYNIHSOS")) // SOSHINYSOCHROME || SOSHINYSOCHROME                                 
+        cheat_id = GlassCars;
+    else if (!_CHEATCMP("YVRUTYSPOT")) // TOPSYTURVY || TOPSYTURVY                                                       
+        cheat_id = TopsyTurvy;
+    else
+        cheat_id = -1;
 }
 
 int OnModuleStart() {
     sceKernelDelayThread(100000);
-    //SceUID thid = sceKernelCreateThread(MODULE_NAME, module_thread, 0, 0x10000, 0, NULL);
-    //if (thid >= 0)
-    //    sceKernelStartThread(thid, 0, 0);
-
     /*
     enum GameVersion
     {
@@ -562,6 +728,7 @@ int OnModuleStart() {
     Enable60FPS = inireader.ReadInteger("MAIN", "Enable60FPS", 0);
 
     int ModernControlScheme = inireader.ReadInteger("CONTROLS", "ModernControlScheme", 0);
+    PCCheats = inireader.ReadInteger("CONTROLS", "PCCheats", 0);
 
     float fHudScale = inireader.ReadFloat("HUD", "HudScale", 1.0f);
 
@@ -1263,6 +1430,18 @@ int OnModuleStart() {
         injector.MakeInlineLUIORI(ptr_1C73A0 + 0, 51.0f * LODDistMultiplier);
         injector.MakeInlineLUIORI(ptr_1C73A0 + 8, 25.0f * LODDistMultiplier);
         injector.MakeInlineLUIORI(ptr_1C73A0 + 16, 80.0f * LODDistMultiplier);
+    }
+
+    if (PCCheats)
+    {
+        uintptr_t ptr_18742C = pattern.get(0, "23 20 A4 00 C0 20 04 00", -4);
+        pCPad__GetPad = (struct CPad* (*)(int))ptr_18742C;
+        uintptr_t ptr_18ABC0 = pattern.get(0, "04 00 B1 AF 00 2E 05 00", -4);
+        pCPad__AddToCheatString = (void(*)(struct CPad*, char))ptr_18ABC0;
+
+        SceUID thid = sceKernelCreateThread(MODULE_NAME, module_thread, 0x18, 0x10000, THREAD_ATTR_USER, NULL);
+        if (thid >= 0)
+            sceKernelStartThread(thid, 0, 0);
     }
 
     sceKernelDcacheWritebackAll();

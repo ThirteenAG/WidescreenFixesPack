@@ -35,6 +35,7 @@ data/*.PPSSPP.*/**/*.prx
 source/*.PPSSPP.*/**/*.o
 source/*.PPSSPP.*/**/OBJS
 includes/psp/**/*.o
+data/*.PPSSPP.*/**/TEXTURES/**/*.zip
 
 #PS2
 data/*.PCSX2F.*/**/*.elf
