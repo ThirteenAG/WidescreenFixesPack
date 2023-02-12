@@ -3,6 +3,98 @@
 #include <D3dx9.h>
 #pragma comment(lib, "D3dx9.lib")
 
+namespace AffinityChanges
+{
+    DWORD_PTR gameThreadAffinity = 0;
+    static bool Init()
+    {
+        DWORD_PTR processAffinity, systemAffinity;
+        if (!GetProcessAffinityMask(GetCurrentProcess(), &processAffinity, &systemAffinity))
+        {
+            return false;
+        }
+
+        DWORD_PTR otherCoresAff = (processAffinity - 1) & processAffinity;
+        if (otherCoresAff == 0) // Only one core is available for the game
+        {
+            return false;
+        }
+        gameThreadAffinity = processAffinity & ~otherCoresAff;
+
+        SetThreadAffinityMask(GetCurrentThread(), gameThreadAffinity);
+
+        return true;
+    }
+
+    static HANDLE WINAPI CreateThread_GameThread(LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_T dwStackSize, LPTHREAD_START_ROUTINE lpStartAddress,
+        PVOID lpParameter, DWORD dwCreationFlags, LPDWORD lpThreadId)
+    {
+        HANDLE hThread = CreateThread(lpThreadAttributes, dwStackSize, lpStartAddress, lpParameter, dwCreationFlags | CREATE_SUSPENDED, lpThreadId);
+        if (hThread != nullptr)
+        {
+            SetThreadAffinityMask(hThread, gameThreadAffinity);
+            if ((dwCreationFlags & CREATE_SUSPENDED) == 0) // Resume only if the game didn't pass CREATE_SUSPENDED
+            {
+                ResumeThread(hThread);
+            }
+        }
+        return hThread;
+    }
+
+    static void ReplaceFunction(void** funcPtr)
+    {
+        DWORD dwProtect;
+
+        VirtualProtect(funcPtr, sizeof(*funcPtr), PAGE_READWRITE, &dwProtect);
+        *funcPtr = &CreateThread_GameThread;
+        VirtualProtect(funcPtr, sizeof(*funcPtr), dwProtect, &dwProtect);
+    }
+
+    static bool RedirectImports(HMODULE module_handle)
+    {
+        const DWORD_PTR instance = reinterpret_cast<DWORD_PTR>(module_handle);
+        const PIMAGE_NT_HEADERS ntHeader = reinterpret_cast<PIMAGE_NT_HEADERS>(instance + reinterpret_cast<PIMAGE_DOS_HEADER>(instance)->e_lfanew);
+
+        // Find IAT
+        PIMAGE_IMPORT_DESCRIPTOR pImports = reinterpret_cast<PIMAGE_IMPORT_DESCRIPTOR>(instance + ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress);
+
+        for (; pImports->Name != 0; pImports++)
+        {
+            if (_stricmp(reinterpret_cast<const char*>(instance + pImports->Name), "kernel32.dll") == 0)
+            {
+                if (pImports->OriginalFirstThunk != 0)
+                {
+                    const PIMAGE_THUNK_DATA pThunk = reinterpret_cast<PIMAGE_THUNK_DATA>(instance + pImports->OriginalFirstThunk);
+
+                    for (ptrdiff_t j = 0; pThunk[j].u1.AddressOfData != 0; j++)
+                    {
+                        if (strcmp(reinterpret_cast<PIMAGE_IMPORT_BY_NAME>(instance + pThunk[j].u1.AddressOfData)->Name, "CreateThread") == 0)
+                        {
+                            void** pAddress = reinterpret_cast<void**>(instance + pImports->FirstThunk) + j;
+                            ReplaceFunction(pAddress);
+                            return true;
+                        }
+                    }
+                }
+                else
+                {
+                    void** pFunctions = reinterpret_cast<void**>(instance + pImports->FirstThunk);
+
+                    for (ptrdiff_t j = 0; pFunctions[j] != nullptr; j++)
+                    {
+                        if (pFunctions[j] == &CreateThread)
+                        {
+                            ReplaceFunction(&pFunctions[j]);
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
+    }
+}
+
 float gVisibility = 1.0f;
 int32_t gBlacklistIndicators = 0;
 uint32_t gColor;
@@ -195,6 +287,8 @@ void InitD3DDrv()
     //https://github.com/ThirteenAG/WidescreenFixesPack/issues/725#issuecomment-612613927
     if (nShadowMapResolution)
     {
+        //causes bugs #1251
+
         if (nShadowMapResolution > 8192)
             nShadowMapResolution = 8192;
 
@@ -210,15 +304,15 @@ void InitD3DDrv()
         pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "0F B6 8E ? ? ? ? B8");
         if (!pattern.empty())
             injector::WriteMemory(pattern.get_first(3), nShadowMapResolution, true);
-
+        
         pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "6A 00 B8 ? ? ? ? D3 F8 8B 8E ? ? ? ? 8B 11");
         if (!pattern.empty())
             injector::WriteMemory(pattern.get_first(3), nShadowMapResolution, true);
-
+        
         pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "6A 02 B8");
         if (!pattern.empty())
             injector::WriteMemory(pattern.get_first(3), nShadowMapResolution, true);
-
+        
         pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "B8 ? ? ? ? D3 F8 8D 8E ? ? ? ? 51 8B 8E");
         if (!pattern.empty())
             injector::WriteMemory(pattern.get_first(1), nShadowMapResolution, true);
@@ -226,15 +320,15 @@ void InitD3DDrv()
         pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "B8 ? ? ? ? D3 F8 8B 8E ? ? ? ? 8B 11 6A 01 50 50 51 FF 52 5C 0F B6 8E");
         if (!pattern.empty())
             injector::WriteMemory(pattern.get_first(1), nShadowMapResolution, true);
-
+        
         pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "B8 ? ? ? ? D3 F8 8B 8E ? ? ? ? 8B 09 6A 50");
         if (!pattern.empty())
             injector::WriteMemory(pattern.get_first(1), nShadowMapResolution, true);
-
+        
         pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "B8 ? ? ? ? D3 F8 8D 8E ? ? ? ? 51 6A 00");
         if (!pattern.empty())
             injector::WriteMemory(pattern.get_first(1), nShadowMapResolution, true);
-
+        
         pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "B8 ? ? ? ? EB 11");
         if (!pattern.empty())
             injector::WriteMemory(pattern.get_first(1), nShadowMapResolution, true);
@@ -616,6 +710,9 @@ void InitD3DDrv()
 
 void InitEngine()
 {
+    CIniReader iniReader("");
+    bool bSingleCoreAffinity = iniReader.ReadInteger("MAIN", "SingleCoreAffinity", 1);
+
     static bool bIsOPSAT = false;
     static bool bIsVideoPlaying = false;
     static auto GIsWideScreen = *hook::module_pattern(GetModuleHandle(L"Engine"), "8B 0D ? ? ? ? F3 0F 59 D9 F3 0F 10 0D ? ? ? ? F3 0F 5C D8 F3 0F 58 DC").get_first<uint8_t*>(2);
@@ -793,6 +890,12 @@ void InitEngine()
             *(float*)&regs.edx = AdjustFOV(*(float*)(regs.ecx + 0x628), Screen.fAspectRatio);
         }
     }; injector::MakeInline<UGameEngine_Draw_Hook>(pattern.get_first(0), pattern.get_first(6));
+
+    if (bSingleCoreAffinity)
+    {
+        AffinityChanges::Init();
+        AffinityChanges::RedirectImports(GetModuleHandle(L"Engine"));
+    }
 }
 
 void InitWindow()
