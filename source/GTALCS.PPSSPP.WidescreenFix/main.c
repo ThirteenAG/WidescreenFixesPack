@@ -619,7 +619,7 @@ int OnModuleStart() {
         flt_3450E4 = (float*)GetAbsoluteAddress(ptr_1BD52C, 4, 12);
         
         uintptr_t ptr_1C0E78 = pattern.get(0, "25 20 60 02 ? ? ? ? 00 00 00 00 ? ? ? ? ? ? ? ? ? ? ? ? 00 00 00 00 ? ? ? ? 00 00 00 00 25 10 20 02", 4);
-        injector.MakeJAL(ptr_1C0E78, (intptr_t)GameLoopStuff);
+        injector.MakeJAL(ptr_1C0E78 - 8, (intptr_t)GameLoopStuff);
     }
     
     sceKernelDcacheWritebackAll();
