@@ -618,8 +618,8 @@ int OnModuleStart() {
         uintptr_t ptr_1BD52C = pattern.get(1, "00 00 00 00 ? ? ? ? 00 60 80 44 ? ? ? ? 32 68 0C 46 00 00 00 00", 0);
         flt_3450E4 = (float*)GetAbsoluteAddress(ptr_1BD52C, 4, 12);
         
-        uintptr_t ptr_1C086C = pattern.get(0, "A4 00 BE AF A8 00 BF AF ? ? ? ? 00 00 00 00", 8);
-        injector.MakeJAL(ptr_1C086C, (intptr_t)GameLoopStuff);
+        uintptr_t ptr_1C0E78 = pattern.get(0, "25 20 60 02 ? ? ? ? 00 00 00 00 ? ? ? ? ? ? ? ? ? ? ? ? 00 00 00 00 ? ? ? ? 00 00 00 00 25 10 20 02", 4);
+        injector.MakeJAL(ptr_1C0E78, (intptr_t)GameLoopStuff);
     }
     
     sceKernelDcacheWritebackAll();
