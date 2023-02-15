@@ -302,8 +302,26 @@ project "GTALCS.PPSSPP.WidescreenFix"
    files { "source/%{prj.name}/*.c" }
    targetextension ".prx"
    setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTALCS.PPSSPP.WidescreenFix/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PPSSPP.WidescreenFix")
-   writemakefile_psp("GTALCS.PPSSPP.WidescreenFix", "lodl.c")
-   writeghaction("gtalcspsp", "GTALCS.PPSSPP.WidescreenFix")
+   writemakefile_psp("GTALCS.PPSSPP.WidescreenFix")
+   writeghaction("gtalcspsp", "GTALCS.PPSSPP.WidescreenFix /t:GTALCS.PPSSPP.Project2DFX")
+project "GTALCS.PPSSPP.Project2DFX"
+   kind "Makefile"
+   includedirs { "external/pspsdk/psp/sdk/include" }
+   includedirs { "external/pspsdk/bin" }
+   includedirs { "external/pspsdk/psp/sdk/include" }
+   files { "source/%{prj.name}/*.c", "source/%{prj.name}/*.cpp" }
+   targetextension ".prx"
+   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTALCS.PPSSPP.Project2DFX/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PPSSPP.Project2DFX")
+   writemakefile_psp("GTALCS.PPSSPP.Project2DFX", "lodl.c")
+project "GTALCS.PPSSPP.ImVehLM"
+   kind "Makefile"
+   includedirs { "external/pspsdk/psp/sdk/include" }
+   includedirs { "external/pspsdk/bin" }
+   includedirs { "external/pspsdk/psp/sdk/include" }
+   files { "source/%{prj.name}/*.c", "source/%{prj.name}/*.cpp" }
+   targetextension ".prx"
+   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTALCS.PPSSPP.ImVehLM/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PPSSPP.ImVehLM")
+   writemakefile_psp("GTALCS.PPSSPP.ImVehLM")
 project "GTAVCS.PPSSPP.WidescreenFix"
    kind "Makefile"
    includedirs { "external/pspsdk/psp/sdk/include" }
@@ -312,8 +330,17 @@ project "GTAVCS.PPSSPP.WidescreenFix"
    files { "source/%{prj.name}/*.c" }
    targetextension ".prx"
    setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.WidescreenFix")
-   writemakefile_psp("GTAVCS.PPSSPP.WidescreenFix", "lodl.c")
-   writeghaction("gtavcspsp", "GTAVCS.PPSSPP.WidescreenFix /t:GTAVCS.PPSSPP.ImVehLM")
+   writemakefile_psp("GTAVCS.PPSSPP.WidescreenFix")
+   writeghaction("gtavcspsp", "GTAVCS.PPSSPP.WidescreenFix /t:GTAVCS.PPSSPP.Project2DFX /t:GTAVCS.PPSSPP.ImVehLM")
+project "GTAVCS.PPSSPP.Project2DFX"
+   kind "Makefile"
+   includedirs { "external/pspsdk/psp/sdk/include" }
+   includedirs { "external/pspsdk/bin" }
+   includedirs { "external/pspsdk/psp/sdk/include" }
+   files { "source/%{prj.name}/*.c", "source/%{prj.name}/*.cpp" }
+   targetextension ".prx"
+   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.Project2DFX/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.Project2DFX")
+   writemakefile_psp("GTAVCS.PPSSPP.Project2DFX", "lodl.c")
 project "GTAVCS.PPSSPP.ImVehLM"
    kind "Makefile"
    includedirs { "external/pspsdk/psp/sdk/include" }
