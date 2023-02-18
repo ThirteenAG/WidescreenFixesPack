@@ -607,8 +607,6 @@ int GetLightStatus(int damage_manager, char light)
 int gCounter = 0;
 #endif
 
-struct RslTexture** gTex;
-struct RslTexture* gTexData;
 struct RslMaterial* SetCarTextureCB(struct RslMaterial* material, void* data)
 {
     int16_t m_modelIndex = *(int16_t*)((int)data + 0x56);
@@ -634,66 +632,61 @@ struct RslMaterial* SetCarTextureCB(struct RslMaterial* material, void* data)
 
             arrayofData[arrayIndex].bInitialized = 1;
         }
-        else
+
+        #ifdef DUMPER_MODE
+        material->texture = &arrayofData[arrayIndex].lights[gCounter].texture;
+        #else
+        struct m_nVehicleFlags m_nVehicleFlags = *(struct m_nVehicleFlags*)((int)data + 0x265);
+        float m_fGasPedal = *(float*)((int)data + 0x25C);
+        float m_fBreakPedal = *(float*)((int)data + 0x260);
+        int m_carDamage = ((int)data + 0x3B0);
+
+        int front_status = !(GetLightStatus(m_carDamage, LIGHT_FRONT_LEFT) == LIGHT_STATUS_BROKEN && GetLightStatus(m_carDamage, LIGHT_FRONT_RIGHT) == LIGHT_STATUS_BROKEN);
+        int rear_status = !(GetLightStatus(m_carDamage, LIGHT_REAR_LEFT) == LIGHT_STATUS_BROKEN && GetLightStatus(m_carDamage, LIGHT_REAR_RIGHT) == LIGHT_STATUS_BROKEN);
+
+        if (m_nVehicleFlags.bEngineOn)
         {
-#ifdef DUMPER_MODE
-            material->texture = &arrayofData[arrayIndex].lights[gCounter].texture;
-#else
-            struct m_nVehicleFlags m_nVehicleFlags = *(struct m_nVehicleFlags*)((int)data + 0x265);
-            float m_fGasPedal = *(float*)((int)data + 0x25C);
-            float m_fBreakPedal = *(float*)((int)data + 0x260);
-            int m_carDamage = ((int)data + 0x3B0);
-
-            int front_status = !(GetLightStatus(m_carDamage, LIGHT_FRONT_LEFT) == LIGHT_STATUS_BROKEN && GetLightStatus(m_carDamage, LIGHT_FRONT_RIGHT) == LIGHT_STATUS_BROKEN);
-            int rear_status = !(GetLightStatus(m_carDamage, LIGHT_REAR_LEFT) == LIGHT_STATUS_BROKEN && GetLightStatus(m_carDamage, LIGHT_REAR_RIGHT) == LIGHT_STATUS_BROKEN);
-
-            gTex = &material->texture;
-            gTexData = material->texture;
-
-            if (m_nVehicleFlags.bEngineOn)
+            if (m_nVehicleFlags.bLightsOn)
             {
-                if (m_nVehicleFlags.bLightsOn)
+                if (front_status)
                 {
-                    if (front_status)
-                    {
-                        if (rear_status)
-                            material->texture = &arrayofData[arrayIndex].lights[HEADL_ON__TAILLIGHTS_ON].texture;
-                        else
-                            material->texture = &arrayofData[arrayIndex].lights[HEADL_ON__TAILLIGHTS_OFF].texture;
-                    }
+                    if (rear_status)
+                        material->texture = &arrayofData[arrayIndex].lights[HEADL_ON__TAILLIGHTS_ON].texture;
                     else
-                    {
-                        if (rear_status)
-                            material->texture = &arrayofData[arrayIndex].lights[HEADL_OFF__TAILLIGHTS_ON].texture;
-                        else
-                            material->texture = &arrayofData[arrayIndex].lights[HEADL_OFF__TAILLIGHTS_OFF].texture;
-                    }
+                        material->texture = &arrayofData[arrayIndex].lights[HEADL_ON__TAILLIGHTS_OFF].texture;
                 }
                 else
-                    material->texture = &arrayofData[arrayIndex].lights[HEADL_OFF__TAILLIGHTS_OFF].texture;
-
-                if (rear_status)
                 {
-                    if (m_fBreakPedal > 0.0 || m_nVehicleFlags.bIsHandbrakeOn)
-                    {
-                        if (m_nVehicleFlags.bLightsOn && front_status)
-                            material->texture = &arrayofData[arrayIndex].lights[HEADL_ON__TAILLIGHTS_BREAK].texture;
-                        else
-                            material->texture = &arrayofData[arrayIndex].lights[HEADL_OFF__TAILLIGHTS_BREAK].texture;
-                    }
-                    if (m_fGasPedal < 0.0)
-                    {
-                        if (m_nVehicleFlags.bLightsOn && front_status)
-                            material->texture = &arrayofData[arrayIndex].lights[HEADL_ON__TAILLIGHTS_REVERSE].texture;
-                        else
-                            material->texture = &arrayofData[arrayIndex].lights[HEADL_OFF__TAILLIGHTS_REVERSE].texture;
-                    }
+                    if (rear_status)
+                        material->texture = &arrayofData[arrayIndex].lights[HEADL_OFF__TAILLIGHTS_ON].texture;
+                    else
+                        material->texture = &arrayofData[arrayIndex].lights[HEADL_OFF__TAILLIGHTS_OFF].texture;
                 }
             }
             else
                 material->texture = &arrayofData[arrayIndex].lights[HEADL_OFF__TAILLIGHTS_OFF].texture;
-#endif
+
+            if (rear_status)
+            {
+                if (m_fBreakPedal > 0.0 || m_nVehicleFlags.bIsHandbrakeOn)
+                {
+                    if (m_nVehicleFlags.bLightsOn && front_status)
+                        material->texture = &arrayofData[arrayIndex].lights[HEADL_ON__TAILLIGHTS_BREAK].texture;
+                    else
+                        material->texture = &arrayofData[arrayIndex].lights[HEADL_OFF__TAILLIGHTS_BREAK].texture;
+                }
+                if (m_fGasPedal < 0.0)
+                {
+                    if (m_nVehicleFlags.bLightsOn && front_status)
+                        material->texture = &arrayofData[arrayIndex].lights[HEADL_ON__TAILLIGHTS_REVERSE].texture;
+                    else
+                        material->texture = &arrayofData[arrayIndex].lights[HEADL_OFF__TAILLIGHTS_REVERSE].texture;
+                }
+            }
         }
+        else
+            material->texture = &arrayofData[arrayIndex].lights[HEADL_OFF__TAILLIGHTS_OFF].texture;
+        #endif
     }
     return material;
 }
@@ -708,6 +701,8 @@ void* SetElementRendererCB_ImVehLM(struct RslElement* atomic, void* data)
 
 int CEntity__Render(void* car)
 {
+    int res = 0;
+
 #ifdef DUMPER_MODE
     int (*FindPlayerVehicle)() = (void*)0x089602C8;
     if (FindPlayerVehicle() == (int)car)
@@ -717,7 +712,7 @@ int CEntity__Render(void* car)
         struct RslElement* m_pRwClump = *(struct RslElement**)((int)car + 0x50);
         RslElementGroupForAllElements(m_pRwClump, SetElementRendererCB_ImVehLM, car);
         // Render
-        CEntityRender(car);
+        res = CEntityRender(car);
 
 #ifdef DUMPER_MODE
         enum
@@ -745,12 +740,10 @@ int CEntity__Render(void* car)
 #endif
 
         //PostRender
-        if (gTex)
-        {
-            *gTex = gTexData;
-            gTex = 0;
-        }
+
     }
+
+    return res;
 }
 
 int OnModuleStart() {

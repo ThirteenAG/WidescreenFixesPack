@@ -1,0 +1,8 @@
+000000009d2c8d747fabdd51 = replacements/sentinel8bit128/headl_on__taillights_reverse.png
+000000009d2c8d7437097cdb = replacements/sentinel8bit128/headl_on__taillights_break.png
+000000009d2c8d749b20dfb0 = replacements/sentinel8bit128/headl_on__taillights_on.png
+000000009d2c8d744864126d = replacements/sentinel8bit128/headl_on__taillights_off.png
+000000009d2c8d7456d88199 = replacements/sentinel8bit128/headl_off__taillights_reverse.png
+000000009d2c8d7429ea4e16 = replacements/sentinel8bit128/headl_off__taillights_break.png
+000000009d2c8d7411f80cf9 = replacements/sentinel8bit128/headl_off__taillights_on.png
+000000009d2c8d749822dfc2 = replacements/sentinel8bit128/headl_off__taillights_off.png

@@ -67,6 +67,7 @@ FOR /D /r %%G in ("*PPSSPP*") DO (
 )
 
 rem Additional texture archives
+7za a "GTALCS.PPSSPP.ImVehLM\memstick\PSP\TEXTURES\ULUS10041\textures.zip" -mx=0 "..\textures\GTALCS\*"
 7za a "GTAVCS.PPSSPP.ImVehLM\memstick\PSP\TEXTURES\ULUS10160\textures.zip" -mx=0 "..\textures\GTAVCS\*"
 
 FOR /d %%X IN (*) DO (
