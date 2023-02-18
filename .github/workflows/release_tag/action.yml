@@ -151,7 +151,7 @@ runs:
         artifacts: ${{ inputs.artifacts }}
     - name: Update Tag
       if: ${{ steps.tag_requires_updating.outputs.split_value == 'True' }}
-      uses: richardsimko/update-tag@v1.0.6
+      uses: richardsimko/update-tag@v1.0.7
       with:
         tag_name: ${{ steps.release_info.outputs.tag_name }}
       env:
