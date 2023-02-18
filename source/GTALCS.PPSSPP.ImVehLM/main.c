@@ -14,6 +14,7 @@
 #include "../../includes/psp/gvm.h"
 #include "../../includes/psp/mips.h"
 
+#define LCS
 #define MODULE_NAME_INTERNAL "GTA3"
 #define MODULE_NAME "GTALCS.PPSSPP.ImVehLM"
 #define LOG_PATH "ms0:/PSP/PLUGINS/GTALCS.PPSSPP.ImVehLM/GTALCS.PPSSPP.ImVehLM.log"
@@ -110,7 +111,7 @@ struct RslNode {
 
     // RwHAnimNodeExtension
 #ifdef LCS
-    int32              nodeId;
+    int32_t              nodeId;
 #else
     int32_t		   unknown1;
     int32_t		   unknown2;
@@ -256,229 +257,181 @@ struct m_nVehicleFlags {
 
 enum VEHICLES
 {
-    _6ATV = 170,
-    ADMIRAL = 171,
-    CHEETAH = 172,
-    AUTOGYRO = 173,
-    BAGGAGE = 174,
-    BANSHEE = 175,
-    PEREN = 176,
-    BLISTAC = 177,
-    BMXBOY = 178,
-    BMXGIRL = 179,
-    BOBCAT = 180,
-    BULLDOZE = 181,
-    BURRITO = 182,
-    CABBIE = 183,
-    CADDY = 184,
-    SPEEDER2 = 185,
-    PIMP = 186,
-    DELUXO = 187,
-    HUEY = 188,
-    HUEYHOSP = 189,
-    ELECTRAG = 190,
-    ELECTRAP = 191,
-    ESPERANT = 192,
-    FBICAR = 193,
-    FIRETRUK = 194,
-    GLENDALE = 195,
-    GREENWOO = 196,
-    HERMES = 197,
-    HOVERCR = 198,
-    IDAHO = 199,
-    LANDSTAL = 200,
-    MANANA = 201,
-    MOP50 = 202,
-    OCEANIC = 203,
-    VICECHEE = 204,
-    SANCHEZ = 205,
-    STALLION = 206,
-    POLICEM = 207,
-    BOBO = 208,
-    PATRIOT = 209,
-    PONY = 210,
-    SENTINEL = 211,
-    PCJ600 = 212,
-    MAVERICK = 213,
-    REEFER = 214,
-    SPEEDER = 215,
-    LINERUN = 216,
-    WALTON = 217,
-    BARRACKS = 218,
-    PREDATOR = 219,
-    FLATBED = 220,
-    AMMOTRUK = 221,
-    BIPLANE = 222,
-    MOONBEAM = 223,
-    RUMPO = 224,
-    YOLA = 225,
-    TAXI = 226,
-    AMBULAN = 227,
-    STRETCH = 228,
-    FAGGIO = 229,
-    QUAD = 230,
-    ANGEL = 231,
-    FREEWAY = 232,
-    JETSKI = 233,
-    ENFORCE = 234,
-    BOXVIL = 235,
-    BENSON = 236,
-    COACH = 237,
-    MULE = 238,
-    VOODOO = 239,
-    SECURICA = 240,
-    TRASH = 241,
-    TOPFUN = 242,
-    YANKEE = 243,
-    MRWHOO = 244,
-    SANDKING = 245,
-    RHINO = 246,
-    DINGHY = 247,
-    MARQUIS = 248,
-    RIO = 249,
-    TROPIC = 250,
-    FORKLIFT = 251,
-    STREETFI = 252,
-    VIRGO = 253,
-    STINGER = 254,
-    BFINJECT = 255,
-    PHEONIX = 256,
-    SQUALO = 257,
-    JETMAX = 258,
-    MESA = 259,
-    VCNMAV = 260,
-    POLMAV = 261,
-    SPARROW = 262,
-    SESPAROW = 263,
-    SCARAB = 264,
-    CHOLLO = 265,
-    COMET = 266,
-    CUBAN = 267,
-    FBIRAN = 268,
-    GANGBUR = 269,
-    INFERNUS = 270,
-    REGINA = 271,
-    SABRE = 272,
-    SABRETB = 273,
-    SENTXS = 274,
-    HUNTER = 275,
-    WASHIN = 276,
-    COASTG = 277,
-    SKIMMER = 278,
-    CHOPPER = 279,
-    AIRTRAIN = 280,
+    SPIDER = 130,
+    LANDSTAL = 131,
+    IDAHO = 132,
+    STINGER = 133,
+    LINERUN = 134,
+    PEREN = 135,
+    SENTINEL = 136,
+    PATRIOT = 137,
+    FIRETRUK = 138,
+    TRASH = 139,
+    STRETCH = 140,
+    MANANA = 141,
+    INFERNUS = 142,
+    BLISTA = 143,
+    PONY = 144,
+    MULE = 145,
+    CHEETAH = 146,
+    AMBULAN = 147,
+    FBICAR = 148,
+    MOONBEAM = 149,
+    ESPERANT = 150,
+    TAXI = 151,
+    KURUMA = 152,
+    BOBCAT = 153,
+    MRWHOOP = 154,
+    BFINJECT = 155,
+    HEARSE = 156,
+    POLICE = 157,
+    ENFORCER = 158,
+    SECURICA = 159,
+    BANSHEE = 160,
+    BUS = 161,
+    RHINO = 162,
+    BARRACKS = 163,
+    DODO = 164,
+    COACH = 165,
+    CABBIE = 166,
+    STALLION = 167,
+    RUMPO = 168,
+    RCBANDIT = 169,
+    BELLYUP = 170,
+    MRWONGS = 171,
+    MAFIA = 172,
+    YARDIE = 173,
+    YAKUZA = 174,
+    DIABLOS = 175,
+    COLUMB = 176,
+    HOODS = 177,
+    PANLANT = 178,
+    FLATBED = 179,
+    YANKEE = 180,
+    BORGNINE = 181,
+    TOYZ = 182,
+    CAMPVAN = 183,
+    BALLOT = 184,
+    SHELBY = 185,
+    PONTIAC = 186,
+    ESPRIT = 187,
+    AMMOTRUK = 188,
+    HOTROD = 189,
+    SINDACCO_CAR = 190,
+    FORELLI_CAR = 191,
+    FERRY = 192,
+    GHOST = 193,
+    SPEEDER = 194,
+    REEFER = 195,
+    PREDATOR = 196,
+    TRAIN = 197,
+    ESCAPE = 198,
+    CHOPPER = 199,
+    AIRTRAIN = 200,
+    DEADDODO = 201,
+    ANGEL = 202,
+    PIZZABOY = 203,
+    NOODLEBOY = 204,
+    PCJ600 = 205,
+    FAGGIO = 206,
+    FREEWAY = 207,
+    ANGEL2 = 208,
+    SANCHEZ2 = 209,
+    SANCHEZ = 210,
+    RCGOBLIN = 211,
+    RCRAIDER = 212,
+    HUNTER = 213,
+    MAVERICK = 214,
+    POLMAV = 215,
+    VCNMAV = 216,
 
     NUM_VEHICLES
 };
 
 char* carTextures[] = {
-    "vcs_6atvbit",
-    "admiral868bit_sl",
-    "vicechee868bit128",
-    "NA",
-    "baggage8bit128",
-    "banshee868bit_sl",
-    "iz_perennial_interior",
-    "blistac868bit_sl",
-    "NA",
-    "NA",
-    "vcs_bobcatbit",
-    "vcs_dozerbit2",
-    "burritobit",
-    "cabbie8bit",
-    "caddy8bit128",
-    "NA",
-    "pimpbit",
-    "deluxobit",
-    "NA",
-    "NA",
-    "NA",
-    "NA",
-    "esperanto",
-    "vc_vehicledoors_sl",
+    "ferrarif3558bit128",
+    "landstal8bit128",
+    "idaho8bit128",
+    "stinger8bit128",
+    "linerun8bit128",
+    "peren8bit128",
+    "sentinel8bit128",
+    "patriot8bit128",
     "firetruk8bit128",
-    "glendale_main64x64",
-    "greenwoodbit",
-    "hermesbody64detail_ca",
+    "trash8bit128",
+    "stretch8bit128",
+    "mananab8bit128",
+    "infernus8bit128",
+    "blista8bit128",
+    "pony8bit128",
+    "mule8bit128",
+    "cheetah8bit128",
+    "ambulan8bit128",
+    "police8bit128",
+    "moonbeam8bit128",
+    "esperanto8bit128",
+    "taxi8bit128",
+    "kuruma8bit128",
+    "bobcat8bit128",
+    "mrwhoop8bit128",
+    "bfinject8bit128",
+    "peren8bit128",
+    "police8bit128",
+    "enforcer8bit128",
+    "securica8bit128",
+    "banshee8bit128",
+    "bus8bit128",
     "NA",
-    "iz_idaho_interior",
-    "iz_landstalker_interior",
-    "iz_manana_interior",
-    "vcs_mopedbit",
-    "vcs_oceanicbit",
-    "vicechee868bit128",
-    "sanchez8bit128",
-    "stallion868bit128",
-    "policebits",
-    "NA",
-    "patriotbit",
-    "ponybits_ca",
-    "iz_sentinel86_interior",
-    "pcj6008bit128",
-    "NA",
-    "NA",
-    "NA",
-    "linerun_lights",
-    "waltonbit",
-    "barracksbits",
-    "NA",
-    "flatbed868bit128",
     "armytruk8bit128",
     "NA",
-    "iz_moonbeam_interior",
-    "rumpobits_ca",
+    "coach8bit128",
+    "cabbie8bit128",
+    "stallion8bit128",
+    "rumpo8bit128",
     "NA",
-    "miami_cabbietex128",
-    "ambulan8bit128",
-    "stretchbit",
-    "faggio8bit128",
-    "vcs_quadbitv3_sjl",
-    "angel8bit128",
-    "angel8bit128",
-    "NA",
-    "enforcer868bit128",
-    "boxville868bit128",
-    "benson_bits",
-    "coach868bit128",
     "mule8bit128",
-    "voodoobit",
-    "securica868bit128",
-    "trash868bit128",
-    "NA",
-    "yankee_bits",
-    "mrwhoo868bit128",
-    "sandkingbit",
-    "NA",
-    "NA",
-    "NA",
-    "NA",
-    "NA",
-    "forkbit",
-    "vcs_streetfighterbit",
-    "virgobit",
-    "stingerbit",
-    "bfinject868bit128",
-    "pheonixbit",
-    "NA",
-    "NA",
-    "mesabit",
-    "NA",
-    "NA",
+    "mule8bit128",
+    "mafia8bit128",
+    "yardie8bit128",
+    "yakuza8bit128",
+    "diablos8bit128",
+    "columb8bit128",
+    "rumpo8bit128",
+    "pony8bit128",
+    "flatbed4bit128",
+    "yankee8bit128",
+    "IJB_brg",
+    "pony8bit128",
+    "rumpo8bit128",
+    "pony8bit128",
+    "typhoon_128_interior",
+    "jm_firebirdintertior1256",
+    "lotus8bit128",
+    "armytruk8bit128",
+    "hotrod8bit128",
+    "sindaccoi8bit128",
+    "kuruma8bit128",
     "NA",
     "NA",
     "NA",
-    "chollo_details1",
-    "vcs_cometbit",
-    "cubanbody64detail_ca",
-    "ca_fbi_rancherbits",
-    "gangburbit2",
-    "infernus_bitsca",
-    "vcs_reginabit",
-    "sabre_details1",
-    "sabre_details1",
-    "vcs_sentbit",
     "NA",
-    "vc_vehicledoors_sl",
+    "NA",
+    "NA",
+    "NA",
+    "NA",
+    "NA",
+    "NA",
+    "freeway8bit128",
+    "pizzaboy8bit128",
+    "pizzaboy8bit128",
+    "IJB_sportbike8bit128",
+    "faggio8bit128",
+    "freeway8bit128",
+    "freeway8bit128",
+    "sanchez8bit128",
+    "sanchez8bit128",
+    "NA",
+    "NA",
     "NA",
     "NA",
     "NA",
@@ -520,10 +473,10 @@ struct VehicleLightsData
 {
     char bInitialized;
     struct Texture align16 lights[NUM_LIGHTS];
-    uint8_t align16 rasterBuffer[NUM_LIGHTS][16384];
+    uint8_t align16 rasterBuffer[NUM_LIGHTS][32768];
 };
 
-struct VehicleLightsData align16 arrayofData[NUM_VEHICLES - _6ATV] = { 0 };
+struct VehicleLightsData align16 arrayofData[NUM_VEHICLES - SPIDER] = { 0 };
 
 size_t getRasterSize(struct RslRaster* raster)
 {
@@ -607,14 +560,21 @@ int GetLightStatus(int damage_manager, char light)
 int gCounter = 0;
 #endif
 
-struct RslTexture** gTex;
-struct RslTexture* gTexData;
 struct RslMaterial* SetCarTextureCB(struct RslMaterial* material, void* data)
 {
-    int16_t m_modelIndex = *(int16_t*)((int)data + 0x56);
-    int16_t arrayIndex = m_modelIndex - _6ATV;
+    int16_t m_modelIndex = *(int16_t*)((int)data + 0x58);
+    int16_t arrayIndex = m_modelIndex - SPIDER;
 
-    if (m_modelIndex >= _6ATV && m_modelIndex < NUM_VEHICLES && material && material->texture && !strcmp(carTextures[arrayIndex], material->texture->name))
+    //int (*FindPlayerVehicle)() = (void*)0x089D57B4;
+    //logger.WriteF("%x\n", FindPlayerVehicle());
+
+    if (m_modelIndex == BFINJECT && !strcmp("freeway8bit128", material->texture->name))
+    {
+        m_modelIndex = FREEWAY;
+        arrayIndex = m_modelIndex - SPIDER;
+    }
+
+    if (m_modelIndex >= SPIDER && m_modelIndex < NUM_VEHICLES && material && material->texture && !strcmp(carTextures[arrayIndex], material->texture->name))
     {
         if (!arrayofData[arrayIndex].bInitialized)
         {
@@ -634,66 +594,61 @@ struct RslMaterial* SetCarTextureCB(struct RslMaterial* material, void* data)
 
             arrayofData[arrayIndex].bInitialized = 1;
         }
-        else
+
+        #ifdef DUMPER_MODE
+        material->texture = &arrayofData[arrayIndex].lights[gCounter].texture;
+        #else
+        struct m_nVehicleFlags m_nVehicleFlags = *(struct m_nVehicleFlags*)((int)data + 0x255);
+        float m_fGasPedal = *(float*)((int)data + 0x24C);
+        float m_fBreakPedal = *(float*)((int)data + 0x250);
+        int m_carDamage = ((int)data + 0x350);
+
+        int front_status = !(GetLightStatus(m_carDamage, LIGHT_FRONT_LEFT) == LIGHT_STATUS_BROKEN && GetLightStatus(m_carDamage, LIGHT_FRONT_RIGHT) == LIGHT_STATUS_BROKEN);
+        int rear_status = !(GetLightStatus(m_carDamage, LIGHT_REAR_LEFT) == LIGHT_STATUS_BROKEN && GetLightStatus(m_carDamage, LIGHT_REAR_RIGHT) == LIGHT_STATUS_BROKEN);
+
+        if (m_nVehicleFlags.bEngineOn)
         {
-#ifdef DUMPER_MODE
-            material->texture = &arrayofData[arrayIndex].lights[gCounter].texture;
-#else
-            struct m_nVehicleFlags m_nVehicleFlags = *(struct m_nVehicleFlags*)((int)data + 0x265);
-            float m_fGasPedal = *(float*)((int)data + 0x25C);
-            float m_fBreakPedal = *(float*)((int)data + 0x260);
-            int m_carDamage = ((int)data + 0x3B0);
-
-            int front_status = !(GetLightStatus(m_carDamage, LIGHT_FRONT_LEFT) == LIGHT_STATUS_BROKEN && GetLightStatus(m_carDamage, LIGHT_FRONT_RIGHT) == LIGHT_STATUS_BROKEN);
-            int rear_status = !(GetLightStatus(m_carDamage, LIGHT_REAR_LEFT) == LIGHT_STATUS_BROKEN && GetLightStatus(m_carDamage, LIGHT_REAR_RIGHT) == LIGHT_STATUS_BROKEN);
-
-            gTex = &material->texture;
-            gTexData = material->texture;
-
-            if (m_nVehicleFlags.bEngineOn)
+            if (m_nVehicleFlags.bLightsOn)
             {
-                if (m_nVehicleFlags.bLightsOn)
+                if (front_status)
                 {
-                    if (front_status)
-                    {
-                        if (rear_status)
-                            material->texture = &arrayofData[arrayIndex].lights[HEADL_ON__TAILLIGHTS_ON].texture;
-                        else
-                            material->texture = &arrayofData[arrayIndex].lights[HEADL_ON__TAILLIGHTS_OFF].texture;
-                    }
+                    if (rear_status)
+                        material->texture = &arrayofData[arrayIndex].lights[HEADL_ON__TAILLIGHTS_ON].texture;
                     else
-                    {
-                        if (rear_status)
-                            material->texture = &arrayofData[arrayIndex].lights[HEADL_OFF__TAILLIGHTS_ON].texture;
-                        else
-                            material->texture = &arrayofData[arrayIndex].lights[HEADL_OFF__TAILLIGHTS_OFF].texture;
-                    }
+                        material->texture = &arrayofData[arrayIndex].lights[HEADL_ON__TAILLIGHTS_OFF].texture;
                 }
                 else
-                    material->texture = &arrayofData[arrayIndex].lights[HEADL_OFF__TAILLIGHTS_OFF].texture;
-
-                if (rear_status)
                 {
-                    if (m_fBreakPedal > 0.0 || m_nVehicleFlags.bIsHandbrakeOn)
-                    {
-                        if (m_nVehicleFlags.bLightsOn && front_status)
-                            material->texture = &arrayofData[arrayIndex].lights[HEADL_ON__TAILLIGHTS_BREAK].texture;
-                        else
-                            material->texture = &arrayofData[arrayIndex].lights[HEADL_OFF__TAILLIGHTS_BREAK].texture;
-                    }
-                    if (m_fGasPedal < 0.0)
-                    {
-                        if (m_nVehicleFlags.bLightsOn && front_status)
-                            material->texture = &arrayofData[arrayIndex].lights[HEADL_ON__TAILLIGHTS_REVERSE].texture;
-                        else
-                            material->texture = &arrayofData[arrayIndex].lights[HEADL_OFF__TAILLIGHTS_REVERSE].texture;
-                    }
+                    if (rear_status)
+                        material->texture = &arrayofData[arrayIndex].lights[HEADL_OFF__TAILLIGHTS_ON].texture;
+                    else
+                        material->texture = &arrayofData[arrayIndex].lights[HEADL_OFF__TAILLIGHTS_OFF].texture;
                 }
             }
             else
                 material->texture = &arrayofData[arrayIndex].lights[HEADL_OFF__TAILLIGHTS_OFF].texture;
-#endif
+
+            if (rear_status)
+            {
+                if (m_fBreakPedal > 0.0 || m_nVehicleFlags.bIsHandbrakeOn)
+                {
+                    if (m_nVehicleFlags.bLightsOn && front_status)
+                        material->texture = &arrayofData[arrayIndex].lights[HEADL_ON__TAILLIGHTS_BREAK].texture;
+                    else
+                        material->texture = &arrayofData[arrayIndex].lights[HEADL_OFF__TAILLIGHTS_BREAK].texture;
+                }
+                if (m_fGasPedal < 0.0)
+                {
+                    if (m_nVehicleFlags.bLightsOn && front_status)
+                        material->texture = &arrayofData[arrayIndex].lights[HEADL_ON__TAILLIGHTS_REVERSE].texture;
+                    else
+                        material->texture = &arrayofData[arrayIndex].lights[HEADL_OFF__TAILLIGHTS_REVERSE].texture;
+                }
+            }
         }
+        else
+            material->texture = &arrayofData[arrayIndex].lights[HEADL_OFF__TAILLIGHTS_OFF].texture;
+        #endif
     }
     return material;
 }
@@ -708,16 +663,19 @@ void* SetElementRendererCB_ImVehLM(struct RslElement* atomic, void* data)
 
 int CEntity__Render(void* car)
 {
+    int res = 0;
+
 #ifdef DUMPER_MODE
-    int (*FindPlayerVehicle)() = (void*)0x089602C8;
+    int (*FindPlayerVehicle)() = (void*)0x089D57B4;
     if (FindPlayerVehicle() == (int)car)
 #endif
     {
         // PreRender
         struct RslElement* m_pRwClump = *(struct RslElement**)((int)car + 0x50);
         RslElementGroupForAllElements(m_pRwClump, SetElementRendererCB_ImVehLM, car);
+
         // Render
-        CEntityRender(car);
+        res = CEntityRender(car);
 
 #ifdef DUMPER_MODE
         enum
@@ -745,29 +703,27 @@ int CEntity__Render(void* car)
 #endif
 
         //PostRender
-        if (gTex)
-        {
-            *gTex = gTexData;
-            gTex = 0;
-        }
+
     }
+
+    return res;
 }
 
 int OnModuleStart() {
-    //sceKernelDelayThread(100000);
-    return 0;
-    PreFillRasters();
-    uintptr_t ptr_19CD0 = pattern.get(0, "00 00 B0 AF 04 00 B1 AF 08 00 B2 AF 25 90 80 00 25 88 A0 00 25 80 C0 00 0C 00 B3 AF 10 00 B4 AF 14 00 B5 AF", -4);
-    RslGeometryForAllMaterials = (struct RslGeometry* (*)(struct RslGeometry*, struct RslMaterial* (*)(struct RslMaterial*, void*), void*))ptr_19CD0;
-    uintptr_t ptr_1D4700 = pattern.get(0, "0C 00 B3 AF 08 00 93 8C 04 00 B1 AF", -4);
-    RslElementGroupForAllElements = (struct RslElement* (*)(struct RslElement*, void* (*)(struct RslElement*, void*), void*))ptr_1D4700;
-    uintptr_t ptr_2CC938 = pattern.get(0, "00 00 BF AF 50 00 85 8C ? ? ? ? 00 00 00 00 4C 00 84 8C", -4);
-    CEntityRender = (int (*)(void*))ptr_2CC938;
+    sceKernelDelayThread(100000);
 
-    uintptr_t ptr_40744 = pattern.get(0, "25 20 00 02 10 00 B4 C7", -4);
-    injector.MakeJAL(ptr_40744, (uintptr_t)CEntity__Render); //cars
-    uintptr_t ptr_254D84 = pattern.get(0, "B8 0B C6 24", 16);
-    injector.MakeJAL(ptr_254D84, (uintptr_t)CEntity__Render); //bikes
+    PreFillRasters();
+    uintptr_t ptr_1C14F8 = pattern.get(0, "18 00 B2 AF 25 80 C0 00 25 90 80 00 14 00 B1 AF 1C 00 B3 AF", -8);
+    RslGeometryForAllMaterials = (struct RslGeometry* (*)(struct RslGeometry*, struct RslMaterial* (*)(struct RslMaterial*, void*), void*))ptr_1C14F8;
+    uintptr_t ptr_2A0FDC = pattern.get(0, "08 00 93 8C 14 00 B1 AF", -8);
+    RslElementGroupForAllElements = (struct RslElement* (*)(struct RslElement*, void* (*)(struct RslElement*, void*), void*))ptr_2A0FDC;
+    uintptr_t ptr_22BA80 = pattern.get(0, "50 00 84 8C ? ? ? ? 00 00 00 00 00 00 85 90 01 00 06 34 ? ? ? ? 00 00 00 00", -8);
+    CEntityRender = (int (*)(void*))ptr_22BA80;
+
+    uintptr_t ptr_19820 = pattern.get(0, "25 20 00 02 20 00 B4 C7 24 00 B6 C7", -4);
+    injector.MakeJAL(ptr_19820, (uintptr_t)CEntity__Render); //cars
+    uintptr_t ptr_2326EC = pattern.get(0, "F1 01 06 92 ? ? ? ? 25 20 00 02", 4);
+    injector.MakeJAL(ptr_2326EC, (uintptr_t)CEntity__Render); //bikes
 
     sceKernelDcacheWritebackAll();
     sceKernelIcacheClearAll();

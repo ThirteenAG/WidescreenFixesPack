@@ -1,0 +1,8 @@
+0000000078b84a4010d7540c = replacements/patriot8bit128/headl_on__taillights_reverse.png
+0000000078b84a40b36ce3f8 = replacements/patriot8bit128/headl_on__taillights_break.png
+0000000078b84a409820af1b = replacements/patriot8bit128/headl_on__taillights_on.png
+0000000078b84a40c1a82d82 = replacements/patriot8bit128/headl_on__taillights_off.png
+0000000078b84a4071fdc1db = replacements/patriot8bit128/headl_off__taillights_reverse.png
+0000000078b84a4000843a70 = replacements/patriot8bit128/headl_off__taillights_break.png
+0000000078b84a40ba8e214d = replacements/patriot8bit128/headl_off__taillights_on.png
+0000000078b84a40858d660f = replacements/patriot8bit128/headl_off__taillights_off.png

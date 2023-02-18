@@ -824,8 +824,10 @@ int OnModuleStart() {
         injector.MakeJMPwNOP(ptr_189140, (intptr_t)CPad__GetBrake);
         injector.WriteMemory16(ptr_189D60, offsetof(struct CPad, NewState.SQUARE));
         //driveby
-        injector.WriteMemory16(0x0898C90C, -110); // look left threshold
-        injector.WriteMemory16(0x0898CB60, 110);  // look right threshold
+        uintptr_t ptr_18890C = pattern.get(0, "FF 00 82 30 ? ? ? ? 25 20 00 02 ? ? ? ? 00 00 B0 8F", 12);
+        injector.WriteMemory16(ptr_18890C, -110); // look left threshold
+        uintptr_t ptr_188B60 = pattern.get(0, "0B 00 42 28 01 00 42 38", -0);
+        injector.WriteMemory16(ptr_188B60, 110);  // look right threshold
 
         injector.MakeNOP(ptr_18886C+4);
         MakeInlineWrapper(ptr_18886C,
