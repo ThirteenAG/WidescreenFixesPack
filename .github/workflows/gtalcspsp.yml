@@ -8,4 +8,4 @@ jobs:
     uses: ThirteenAG/WidescreenFixesPack/.github/workflows/all.yml@master
     with:
       tag_list: gtalcspsp
-      project: /t:GTALCS_PPSSPP_WidescreenFix /t:GTALCS_PPSSPP_Project2DFX
+      project: /t:GTALCS_PPSSPP_WidescreenFix /t:GTALCS_PPSSPP_Project2DFX /t:GTALCS_PPSSPP_ImVehLM
