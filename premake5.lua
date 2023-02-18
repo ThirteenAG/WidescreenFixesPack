@@ -296,6 +296,7 @@ project "GTAVCS.PCSX2F.Project2DFX"
    writelinkfile_ps2("GTAVCS.PCSX2F.Project2DFX")
 project "GTALCS.PPSSPP.WidescreenFix"
    kind "Makefile"
+   dependson { "GTALCS.PPSSPP.Project2DFX", "GTALCS.PPSSPP.ImVehLM" }
    includedirs { "external/pspsdk/psp/sdk/include" }
    includedirs { "external/pspsdk/bin" }
    includedirs { "external/pspsdk/psp/sdk/include" }
@@ -324,6 +325,7 @@ project "GTALCS.PPSSPP.ImVehLM"
    writemakefile_psp("GTALCS.PPSSPP.ImVehLM")
 project "GTAVCS.PPSSPP.WidescreenFix"
    kind "Makefile"
+   dependson { "GTAVCS.PPSSPP.Project2DFX", "GTAVCS.PPSSPP.ImVehLM" }
    includedirs { "external/pspsdk/psp/sdk/include" }
    includedirs { "external/pspsdk/bin" }
    includedirs { "external/pspsdk/psp/sdk/include" }
