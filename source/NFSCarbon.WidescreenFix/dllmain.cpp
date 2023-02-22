@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include <d3d9.h>
 
 struct Screen
 {
@@ -87,6 +88,18 @@ void __declspec(naked) NOSTrailCave2()
         jmp NOSTrailCave2Exit
     }
 }
+
+uint32_t* dword_AB0ABC = (uint32_t*)0x00AB0ABC;
+void(__thiscall* sub_723380)(void* that, void* texture) = (void(__thiscall*)(void*, void*))0x723380;
+void __stdcall sub_723380_hook(void* texture)
+{
+    void* that;
+    _asm mov that, ecx
+
+    sub_723380(that, texture);
+    LPDIRECT3DDEVICE9 gDevice = *(LPDIRECT3DDEVICE9*)dword_AB0ABC;
+    gDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
+}
 #pragma runtime_checks( "", restore )
 
 void Init()
@@ -112,6 +125,7 @@ void Init()
     static float fRainDropletsScale = iniReader.ReadFloat("MISC", "RainDropletsScale", 0.5f);
     bool bDisableMotionBlur = iniReader.ReadInteger("MISC", "DisableMotionBlur", 0) != 0;
     bool bDisableContrails = iniReader.ReadInteger("MISC", "DisableContrails", 0) != 0;
+    bool bFixXenonEffects = iniReader.ReadInteger("MISC", "FixXenonEffects", 1) != 0;
     static int SimRate = iniReader.ReadInteger("MISC", "SimRate", -1);
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
         szCustomUserFilesDirectoryInGameDir.clear();
@@ -475,6 +489,16 @@ void Init()
         uint32_t* dword_7E1281 = pattern.count(1).get(0).get<uint32_t>(0);
         uint32_t* dword_7E13A9 = pattern.count(1).get(0).get<uint32_t>(0x128);
         injector::MakeJMP(dword_7E1281, dword_7E13A9, true);
+    }
+
+    if (bFixXenonEffects)
+    {
+        uint32_t* dword_749BC5 = hook::pattern("FF 91 90 01 00 00 8B 4B 04 8B 07 51 57 FF 90 A0 01 00 00").count(1).get(0).get<uint32_t>(0x1D); //0x00749BA8
+        pattern = hook::pattern("A1 ? ? ? ? 8B 08 6A 01 6A 16 50 FF 91 E4 00 00 00 5F 5E C2 04 00"); //0x007233A1
+        dword_AB0ABC = *pattern.count(1).get(0).get<uint32_t*>(1);
+        sub_723380 = (void(__thiscall*)(void*, void*))pattern.count(1).get(0).get<uint32_t>(-0x21);
+
+        injector::MakeCALL(dword_749BC5, sub_723380_hook, true);
     }
 
     if (nWindowedMode)
