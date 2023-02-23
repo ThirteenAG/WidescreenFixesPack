@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include <d3d9.h>
 
 static bool bAccessedPostRace;
 uint32_t StuffToCompare = 0;
@@ -40,7 +41,7 @@ void __declspec(naked) DamageModelMemoryCheck()
     if (memory_readable((void*)StuffToCompare, 8))
         _asm jmp DamageModelFixExit
 
-        _asm
+    _asm
     {
         pop edi
         retn
@@ -64,6 +65,33 @@ void __declspec(naked) ExitPostRaceFixPart2()
         mov bAccessedPostRace, 0
         pop esi
         retn 4
+    }
+}
+
+uint32_t* dword_AC6ED4 = (uint32_t*)0x00AC6ED4;
+static bool bInSparkRender = false;
+void(__thiscall* sub_706550)(void* that, void* texture) = (void(__thiscall*)(void*, void*))0x706550;
+void(__thiscall* XSpriteManager_DrawBatch)(void* that, void* view) = (void(__thiscall*)(void*, void*))0x004B61C0;
+void __stdcall XSpriteManager_DrawBatch_Hook(void* view)
+{
+    void* that;
+    _asm mov that, ecx
+
+    bInSparkRender = true;
+    XSpriteManager_DrawBatch(that, view);
+    bInSparkRender = false;
+}
+
+void __stdcall sub_706550_hook(void* texture)
+{
+    void* that;
+    _asm mov that, ecx
+
+    sub_706550(that, texture);
+    if (bInSparkRender)
+    {
+        LPDIRECT3DDEVICE9 gDevice = **(LPDIRECT3DDEVICE9**)dword_AC6ED4;
+        gDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
     }
 }
 
@@ -165,6 +193,7 @@ void Init()
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
     bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 0) != 0;
     bool bDisableMotionBlur = iniReader.ReadInteger("MISC", "DisableMotionBlur", 0) != 0;
+    bool bFixXenonEffects = iniReader.ReadInteger("MISC", "FixXenonEffects", 1) != 0;
     bool bBrakeLightFix = iniReader.ReadInteger("MISC", "BrakeLightFix", 1) != 0;
     static int32_t nShadowRes = iniReader.ReadInteger("MISC", "ShadowRes", 2048);
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
@@ -759,6 +788,19 @@ void Init()
     {
         pattern = hook::pattern("74 73 F3 0F 10 84 24 ? ? ? ? F3 0F 11 44 24");
         injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true); //4B153E jmp 4B15B3
+    }
+
+    if (bFixXenonEffects)
+    {
+        uint32_t* dword_4CA335 = hook::pattern("E8 ? ? ? ? 8B 4E 08 83 C4 04 51 E8 ? ? ? ? 8B 56 08 5E").count(1).get(0).get<uint32_t>(0xC);
+        uint32_t* dword_4C8B45 = hook::pattern("6A 20 6A 00 53 6A 00 57 FF D1 8B 46 14 8B 17").count(1).get(0).get<uint32_t>(0x25);
+        pattern = hook::pattern("A1 ? ? ? ? 53 8B 5C 24 08 56 57 8B 38 74 19");
+        XSpriteManager_DrawBatch = (void(__thiscall*)(void*, void*))pattern.count(1).get(0).get<uint32_t>(-7);
+        dword_AC6ED4 = *pattern.count(1).get(0).get<uint32_t*>(1);
+        sub_706550 = (void(__thiscall*)(void*, void*))hook::pattern("56 57 8B 7C 24 0C 8B 17 8B 52 10 8B F1 8B 46 18 8B 08 52").count(2).get(0).get<uint32_t>(0);
+
+        injector::MakeCALL(dword_4CA335, XSpriteManager_DrawBatch_Hook, true);
+        injector::MakeCALL(dword_4C8B45, sub_706550_hook, true);
     }
 
     if (bBrakeLightFix)
