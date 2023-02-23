@@ -254,16 +254,6 @@ void Init()
     injector::WriteMemory(dword_5BD4B0, dword_9D51D8, true);
     injector::WriteMemory(hook::pattern("68 ? ? ? ? E8 ? ? ? ? 8B 4E 0C 50 51").count(3).get(2).get<uint32_t>(1), 0, true);
 
-    //Lighting Fix Update (mirror)
-    pattern = hook::pattern("8B 4F 6C 8B 91 8C 02 00 00 52 6A 6C 8B CE"); //0x00748C17
-    uint32_t* dword_748C2A = pattern.count(1).get(0).get<uint32_t>(0x13); 
-    ptr_dword_AB095C = *pattern.count(1).get(0).get<uint32_t*>(0x1C);
-    ptr_dword_AB0914 = *hook::pattern("52 50 FF 51 5C A1 ? ? ? ? 8B 08").count(1).get(0).get<uint32_t*>(6);
-    sub_713AA0 = hook::pattern("C2 08 00 CC 8B 54 24 08 8B 41 44 56").count(1).get(0).get<uint32_t>(4);
-    sub_713A30 = hook::pattern("89 81 84 17 00 00 C3 CC CC").count(1).get(0).get<uint32_t>(9);
-    LightingFixUpdateMirrorCave_Exit = hook::pattern("A1 ? ? ? ? 8B 15 ? ? ? ? 83 F8 06 89 15 ? ? ? ? C7 05 ? ? ? ? CD CC CC 3E").count(1).get(0).get<uint32_t>(0); //0x00748C5D
-    injector::MakeJMP(dword_748C2A, LightingFixUpdateMirrorCave, true);
-
     //World map cursor
     uint32_t* dword_570DCD = hook::pattern("75 33 D9 44 24 14 D8 5C 24 08 DF E0 F6 C4 41").count(1).get(0).get<uint32_t>(0);
     injector::MakeNOP(dword_570DCD, 2, true);
@@ -463,6 +453,19 @@ void Init()
         injector::WriteMemory(dword_748A70, &f19, true);
         uint32_t* dword_73E7CB = *hook::pattern("C7 05 ? ? ? ? CD CC CC 3E B8 ? ? ? ? 74 05 B8 ? ? ? ? C3").count(1).get(0).get<uint32_t*>(11);
         injector::WriteMemory<float>(dword_73E7CB, 1.35f, true);
+
+        //Lighting Fix Update (mirror)
+        pattern = hook::pattern("8B 4F 6C 8B 91 8C 02 00 00 52 6A 6C 8B CE"); //0x00748C17
+        uint32_t* dword_748C2A = pattern.count(1).get(0).get<uint32_t>(0x13);
+        ptr_dword_AB095C = *pattern.count(1).get(0).get<uint32_t*>(0x1C);
+        ptr_dword_AB0914 = *hook::pattern("52 50 FF 51 5C A1 ? ? ? ? 8B 08").count(1).get(0).get<uint32_t*>(6);
+        sub_713AA0 = hook::pattern("C2 08 00 CC 8B 54 24 08 8B 41 44 56").count(1).get(0).get<uint32_t>(4);
+        sub_713A30 = hook::pattern("89 81 84 17 00 00 C3 CC CC").count(1).get(0).get<uint32_t>(9);
+        LightingFixUpdateMirrorCave_Exit = hook::pattern("A1 ? ? ? ? 8B 15 ? ? ? ? 83 F8 06 89 15 ? ? ? ? C7 05 ? ? ? ? CD CC CC 3E").count(1).get(0).get<uint32_t>(0); //0x00748C5D
+        injector::MakeJMP(dword_748C2A, LightingFixUpdateMirrorCave, true);
+
+        uint32_t* dword_72E382 = hook::pattern("C7 05 ? ? ? ? 01 00 00 00 C7 05 ? ? ? ? 00 00 80").count(1).get(0).get<uint32_t>(6);
+        injector::WriteMemory(dword_72E382, 0, true);
     }
 
     if (bCarShadowFix)
