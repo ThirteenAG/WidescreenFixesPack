@@ -100,6 +100,45 @@ void __stdcall sub_723380_hook(void* texture)
     LPDIRECT3DDEVICE9 gDevice = *(LPDIRECT3DDEVICE9*)dword_AB0ABC;
     gDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
 }
+
+uint32_t* LightingFixUpdateMirrorCave_Exit = (uint32_t*)0x00748C5D;
+uint32_t* sub_713AA0 = (uint32_t*)0x713AA0;
+uint32_t* sub_713A30 = (uint32_t*)0x713A30;
+uint32_t* ptr_dword_AB095C = (uint32_t*)0x00AB095C;
+uint32_t* ptr_dword_AB0914 = (uint32_t*)0x00AB0914;
+void __declspec(naked) LightingFixUpdateMirrorCave()
+{
+    _asm
+    {
+        cmp dword ptr[edi+8], 01
+        mov ecx, esi
+        jne IsMirror
+        mov eax, ds:ptr_dword_AB095C
+        mov eax, [eax]
+        push eax
+        push 0x59
+        call sub_713AA0
+        jmp ExitCode
+
+    IsMirror:
+        mov eax, ds:ptr_dword_AB0914
+        mov eax, [eax]
+        push eax
+        push 0x59
+        call sub_713AA0
+        mov eax, [esi + 0x1330]
+        test eax, eax
+        je ExitCode
+        push 0
+        push 0x80
+        mov ecx, esi
+        call sub_713A30
+
+    ExitCode:
+        jmp LightingFixUpdateMirrorCave_Exit
+    }
+}
+
 #pragma runtime_checks( "", restore )
 
 void Init()
@@ -216,36 +255,14 @@ void Init()
     injector::WriteMemory(hook::pattern("68 ? ? ? ? E8 ? ? ? ? 8B 4E 0C 50 51").count(3).get(2).get<uint32_t>(1), 0, true);
 
     //Lighting Fix Update (mirror)
-    pattern = hook::pattern("C7 05 ? ? ? ? 01 00 00 00 C7 05 ? ? ? ? 00 00 80");
-    uint32_t* dword_72E382 = pattern.count(1).get(0).get<uint32_t>(6);
-    injector::WriteMemory(dword_72E382, 0, true);
-    uint32_t* dword_748C99 = hook::pattern("0F 85 A5 00 00 00 A1 ? ? ? ? C7 44 24 14 00 00 00 00").count(1).get(0).get<uint32_t>(1);
-    injector::WriteMemory<uint8_t>(dword_748C99, 0x84, true);
-    pattern = hook::pattern("7E 52 8B 0D ? ? ? ? 83 79 04 01");
-    uint32_t* dword_748D4B = pattern.count(1).get(0).get<uint32_t>(0);
-    injector::MakeNOP(dword_748D4B, 2, true);
-    uint32_t* dword_748D57 = pattern.count(1).get(0).get<uint32_t>(12);
-    injector::WriteMemory<uint8_t>(dword_748D57, 0x74, true);
-    uint32_t* dword_748D5A = pattern.count(1).get(0).get<uint32_t>(15);
-    uint32_t* dword_AB0958 = *hook::pattern("A1 ? ? ? ? 3B C6 74 0C 8B 08 50 FF 51 08 89 35").get(0).get<uint32_t*>(1);
-    injector::WriteMemory(dword_748D5A, dword_AB0958, true);
-    uint32_t* dword_748D66 = pattern.count(1).get(0).get<uint32_t>(27);
-    uint32_t* dword_AB0C04 = *hook::pattern("68 ? ? ? ? 6A 00 6A 15 6A 01 6A 01").get(0).get<uint32_t*>(1);
-    injector::WriteMemory(dword_748D66, dword_AB0C04, true);
-    uint32_t* dword_748D6E = pattern.count(1).get(0).get<uint32_t>(35);
-    uint32_t* dword_AB095C = *hook::pattern("A1 ? ? ? ? 8B 08 68 ? ? ? ? 6A 00 50 FF 51 48").count(4).get(3).get<uint32_t*>(1);
-    injector::WriteMemory(dword_748D6E, dword_AB095C, true);
-    uint32_t* dword_748D74 = pattern.count(1).get(0).get<uint32_t>(41);
-    injector::WriteMemory<uint8_t>(dword_748D74, 0x59, true);
-    // activates 00AB0C04 pointer
-    pattern = hook::pattern("E8 ? ? ? ? B9 ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 85 C0 7E 05");
-    injector::MakeNOP(pattern.count(2).get(1).get<uint32_t>(22), 2, true); //72B4E1
-    // prevents crash for Intel gpu
-    pattern = hook::pattern("75 2E A1 ? ? ? ? 8B 10 6A 00 68 ? ? ? ? 6A 00");
-    injector::MakeNOP(pattern.count(1).get(0).get<uint32_t>(0), 2, true); //715180    
-    //activates 00AB0C04
-    pattern = hook::pattern("7E 05 E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8");
-    injector::MakeNOP(pattern.count(1).get(0).get<uint32_t>(0), 2, true); // 0071B3E6
+    pattern = hook::pattern("8B 4F 6C 8B 91 8C 02 00 00 52 6A 6C 8B CE"); //0x00748C17
+    uint32_t* dword_748C2A = pattern.count(1).get(0).get<uint32_t>(0x13); 
+    ptr_dword_AB095C = *pattern.count(1).get(0).get<uint32_t*>(0x1C);
+    ptr_dword_AB0914 = *hook::pattern("52 50 FF 51 5C A1 ? ? ? ? 8B 08").count(1).get(0).get<uint32_t*>(6);
+    sub_713AA0 = hook::pattern("C2 08 00 CC 8B 54 24 08 8B 41 44 56").count(1).get(0).get<uint32_t>(4);
+    sub_713A30 = hook::pattern("89 81 84 17 00 00 C3 CC CC").count(1).get(0).get<uint32_t>(9);
+    LightingFixUpdateMirrorCave_Exit = hook::pattern("A1 ? ? ? ? 8B 15 ? ? ? ? 83 F8 06 89 15 ? ? ? ? C7 05 ? ? ? ? CD CC CC 3E").count(1).get(0).get<uint32_t>(0); //0x00748C5D
+    injector::MakeJMP(dword_748C2A, LightingFixUpdateMirrorCave, true);
 
     //World map cursor
     uint32_t* dword_570DCD = hook::pattern("75 33 D9 44 24 14 D8 5C 24 08 DF E0 F6 C4 41").count(1).get(0).get<uint32_t>(0);
