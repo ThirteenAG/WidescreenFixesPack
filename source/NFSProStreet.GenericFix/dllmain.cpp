@@ -99,8 +99,6 @@ void __stdcall sub_706550_hook(void* texture)
 
 void Init()
 {
-    //FreeConsole();
-
     //Stop settings reset after crash
     auto pattern = hook::pattern("C7 44 24 ? ? ? ? ? FF 15 ? ? ? ? 8D 54 24 0C 52");
     injector::WriteMemory(pattern.get_first(4), 0, true);
@@ -110,11 +108,15 @@ void Init()
     injector::WriteMemory(dword_7E2C02, &"ENABLEHD", true);
 
     CIniReader iniReader("");
+    auto bShowConsole = iniReader.ReadInteger("MultiFix", "ShowConsole", 0) != 0;
     auto bResDetect = iniReader.ReadInteger("MultiFix", "ResDetect", 1) != 0;
     auto bPostRaceFix = iniReader.ReadInteger("MultiFix", "PostRaceFix", 1) != 0;
     auto bFramerateUncap = iniReader.ReadInteger("MultiFix", "FramerateUncap", 1) != 0;
     auto bAntiTrackStreamerCrash = iniReader.ReadInteger("MultiFix", "AntiTrackStreamerCrash", 1) != 0;
     auto bAntiDamageModelCrash = iniReader.ReadInteger("MultiFix", "AntiDamageModelCrash", 1) != 0;
+
+    if (!bShowConsole)
+        FreeConsole();
 
     if (bResDetect)
     {
