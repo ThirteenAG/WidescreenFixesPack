@@ -72,6 +72,7 @@ uint32_t* dword_AC6ED4 = (uint32_t*)0x00AC6ED4;
 static bool bInSparkRender = false;
 void(__thiscall* sub_706550)(void* that, void* texture) = (void(__thiscall*)(void*, void*))0x706550;
 void(__thiscall* XSpriteManager_DrawBatch)(void* that, void* view) = (void(__thiscall*)(void*, void*))0x004B61C0;
+#pragma runtime_checks( "", disable )
 void __stdcall XSpriteManager_DrawBatch_Hook(void* view)
 {
     void* that;
@@ -94,10 +95,11 @@ void __stdcall sub_706550_hook(void* texture)
         gDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
     }
 }
+#pragma runtime_checks( "", restore )
 
 void Init()
 {
-    FreeConsole();
+    //FreeConsole();
 
     //Stop settings reset after crash
     auto pattern = hook::pattern("C7 44 24 ? ? ? ? ? FF 15 ? ? ? ? 8D 54 24 0C 52");
@@ -463,7 +465,8 @@ void Init()
         injector::MakeNOP(dword_70E39B, 6, true);
         injector::MakeCALL(dword_70E39B, WindowedModeWrapper::AdjustWindowRect_Hook, true);
         // enable windowed mode variable
-        *WindowedMode_AC6EFC = 1;
+        //*WindowedMode_AC6EFC = 1;
+        injector::WriteMemory<uint32_t>(0xAC6EFC, 1, true);
 
         if (nWindowedMode > 1)
             WindowedModeWrapper::bBorderlessWindowed = false;
