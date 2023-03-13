@@ -91,6 +91,7 @@ void __declspec(naked) NOSTrailCave2()
 
 uint32_t* dword_AB0ABC = (uint32_t*)0x00AB0ABC;
 void(__thiscall* sub_723380)(void* that, void* texture) = (void(__thiscall*)(void*, void*))0x723380;
+#pragma runtime_checks( "", disable )
 void __stdcall sub_723380_hook(void* texture)
 {
     void* that;
@@ -100,6 +101,7 @@ void __stdcall sub_723380_hook(void* texture)
     LPDIRECT3DDEVICE9 gDevice = *(LPDIRECT3DDEVICE9*)dword_AB0ABC;
     gDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
 }
+#pragma runtime_checks( "", restore )
 
 uint32_t* LightingFixUpdateMirrorCave_Exit = (uint32_t*)0x00748C5D;
 uint32_t* sub_713AA0 = (uint32_t*)0x713AA0;
