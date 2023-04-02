@@ -798,16 +798,37 @@ namespace WindowedModeWrapper
         return AdjustWindowRect(lpRect, newStyle, bMenu);
     }
 
+    static float GetMonitorScalingRatio(HMONITOR monitor)
+    {
+        MONITORINFOEX info = { sizeof(MONITORINFOEX) };
+        GetMonitorInfo(monitor, &info);
+        DEVMODE devmode = {};
+        devmode.dmSize = sizeof(DEVMODE);
+        EnumDisplaySettings(info.szDevice, ENUM_CURRENT_SETTINGS, &devmode);
+        return (info.rcMonitor.right - info.rcMonitor.left) / static_cast<float>(devmode.dmPelsWidth);
+    }
+
     static HWND WINAPI CreateWindowExA_Hook(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam)
     {
         // fix the window to open at the center of the screen...
-        int DesktopX = 0;
-        int DesktopY = 0;
+        //int DesktopX = 0;
+        //int DesktopY = 0;
+        //
+        //std::tie(DesktopX, DesktopY) = GetDesktopRes();
 
-        std::tie(DesktopX, DesktopY) = GetDesktopRes();
+        HMONITOR monitor = MonitorFromWindow(GetDesktopWindow(), MONITOR_DEFAULTTONEAREST);
+        MONITORINFOEX info = { sizeof(MONITORINFOEX) };
+        GetMonitorInfo(monitor, &info);
+        DEVMODE devmode = {};
+        devmode.dmSize = sizeof(DEVMODE);
+        EnumDisplaySettings(info.szDevice, ENUM_CURRENT_SETTINGS, &devmode);
+        DWORD DesktopX = devmode.dmPelsWidth;
+        DWORD DesktopY = devmode.dmPelsHeight;
 
         int WindowPosX = (int)(((float)DesktopX / 2.0f) - ((float)nWidth / 2.0f));
         int WindowPosY = (int)(((float)DesktopY / 2.0f) - ((float)nHeight / 2.0f));
+
+        SetProcessDPIAware();
 
         GameHWND = CreateWindowExA(dwExStyle, lpClassName, lpWindowName, 0, WindowPosX, WindowPosY, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
         LONG lStyle = GetWindowLong(GameHWND, GWL_STYLE);
