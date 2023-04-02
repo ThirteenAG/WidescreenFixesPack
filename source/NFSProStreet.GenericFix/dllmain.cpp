@@ -485,26 +485,6 @@ void Init()
                 *(uint32_t*)(regs.ebp + 0x18) = regs.ebx;
             }
         }; injector::MakeInline<WindowedMode>(pattern.get_first(0), pattern.get_first(6));
-
-        pattern = hook::pattern("A3 ? ? ? ? 89 35 ? ? ? ? 88 1D ? ? ? ? B9 ? ? ? ? 74 0B 6A 15");
-        static auto Width = *pattern.get_first<int32_t*>(1);
-        static auto Height = *pattern.get_first<int32_t*>(7);
-        struct ResHook
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                *Width = regs.eax;
-                *Height = regs.esi;
-        
-                tagRECT rc;
-                auto[DesktopResW, DesktopResH] = GetDesktopRes();
-                rc.left = (LONG)(((float)DesktopResW / 2.0f) - ((float)*Width / 2.0f));
-                rc.top = (LONG)(((float)DesktopResH / 2.0f) - ((float)*Height / 2.0f));
-                rc.right = *Width;
-                rc.bottom = *Height;
-                SetWindowPos(WindowedModeWrapper::GameHWND, NULL, rc.left, rc.top, rc.right, rc.bottom, SWP_NOACTIVATE | SWP_NOZORDER);
-            }
-        }; injector::MakeInline<ResHook>(pattern.get_first(0), pattern.get_first(11));
     }
 
     if (nImproveGamepadSupport)
