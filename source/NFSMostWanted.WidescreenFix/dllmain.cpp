@@ -884,15 +884,14 @@ void Init()
         switch (nWindowedMode)
         {
         case 5:
-        case 4:
-            WindowedModeWrapper::bBorderlessWindowed = false;
-        case 3:
-            WindowedModeWrapper::bStretchWindow = false;
-            WindowedModeWrapper::bScaleWindow = false;
-            break;
-        case 2:
             WindowedModeWrapper::bStretchWindow = true;
-            WindowedModeWrapper::bScaleWindow = false;
+            break;
+        case 4:
+            WindowedModeWrapper::bScaleWindow = true;
+            break;
+        case 3:
+        case 2:
+            WindowedModeWrapper::bBorderlessWindowed = false;
             break;
         default:
             break;

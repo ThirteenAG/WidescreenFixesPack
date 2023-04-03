@@ -786,7 +786,7 @@ namespace WindowedModeWrapper
 {
     static bool bBorderlessWindowed = true;
     static bool bEnableWindowResize = false;
-    static bool bScaleWindow = true;
+    static bool bScaleWindow = false;
     static bool bStretchWindow = false;
     static HWND GameHWND = NULL;
 
