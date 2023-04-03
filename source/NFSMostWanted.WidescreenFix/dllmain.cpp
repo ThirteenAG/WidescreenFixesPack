@@ -881,9 +881,24 @@ void Init()
 
         *(int*)dword_982BF0 = 1;
 
-        if (nWindowedMode > 1)
+        switch (nWindowedMode)
+        {
+        case 5:
+        case 4:
             WindowedModeWrapper::bBorderlessWindowed = false;
-        if (nWindowedMode > 2)
+        case 3:
+            WindowedModeWrapper::bStretchWindow = false;
+            WindowedModeWrapper::bScaleWindow = false;
+            break;
+        case 2:
+            WindowedModeWrapper::bStretchWindow = true;
+            WindowedModeWrapper::bScaleWindow = false;
+            break;
+        default:
+            break;
+        }
+
+        if (nWindowedMode > 4)
         {
             WindowedModeWrapper::bEnableWindowResize = true;
 
