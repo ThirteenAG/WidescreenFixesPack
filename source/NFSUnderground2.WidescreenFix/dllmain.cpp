@@ -874,17 +874,16 @@ void Init()
 
         switch (nWindowedMode)
         {
-        case 5:  // TODO: implement dynamic resizing (like in MW)
-            WindowedModeWrapper::bEnableWindowResize = true;
-        case 4:
-            WindowedModeWrapper::bBorderlessWindowed = false;
-        case 3:
-            WindowedModeWrapper::bStretchWindow = false;
-            WindowedModeWrapper::bScaleWindow = false;
-            break;
-        case 2:
+        case 5:
             WindowedModeWrapper::bStretchWindow = true;
-            WindowedModeWrapper::bScaleWindow = false;
+            break;
+        case 4:
+            WindowedModeWrapper::bScaleWindow = true;
+            break;
+        case 3:  // TODO: implement dynamic resizing (like in MW)
+            WindowedModeWrapper::bEnableWindowResize = true;
+        case 2:
+            WindowedModeWrapper::bBorderlessWindowed = false;
             break;
         default:
             break;
