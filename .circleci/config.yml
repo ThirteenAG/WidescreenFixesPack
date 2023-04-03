@@ -15,8 +15,6 @@ jobs:
           command: |
             git submodule update --init --recursive
             ./premake5.exe vs2022
-            choco feature enable -n allowGlobalConfirmation
-            choco install directx-sdk
             ./before_build.bat
       - run:
           name: MSBuild
