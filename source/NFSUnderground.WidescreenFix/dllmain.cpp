@@ -1054,10 +1054,23 @@ void Init()
         // enable windowed mode variable
         *WindowedMode_73637C = 1;
 
-        if (nWindowedMode > 1)
-            WindowedModeWrapper::bBorderlessWindowed = false;
-        if (nWindowedMode > 2) // TODO: implement dynamic resizing (like in MW)
+        switch (nWindowedMode)
+        {
+        case 5:  // TODO: implement dynamic resizing (like in MW)
             WindowedModeWrapper::bEnableWindowResize = true;
+        case 4:
+            WindowedModeWrapper::bBorderlessWindowed = false;
+        case 3:
+            WindowedModeWrapper::bStretchWindow = false;
+            WindowedModeWrapper::bScaleWindow = false;
+            break;
+        case 2:
+            WindowedModeWrapper::bStretchWindow = true;
+            WindowedModeWrapper::bScaleWindow = false;
+            break;
+        default:
+            break;
+        }
     }
     else
     {
