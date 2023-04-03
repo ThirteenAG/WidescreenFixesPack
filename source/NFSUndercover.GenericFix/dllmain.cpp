@@ -755,10 +755,23 @@ void Init4()
         // enable windowed mode variable
         *WindowedMode_DF1E1C = 1;
 
-        if (nWindowedMode > 1)
-            WindowedModeWrapper::bBorderlessWindowed = false;
-        if (nWindowedMode > 2) // TODO: implement dynamic resizing (like in MW)
+        switch (nWindowedMode)
+        {
+        case 5:  // TODO: implement dynamic resizing (like in MW)
             WindowedModeWrapper::bEnableWindowResize = true;
+        case 4:
+            WindowedModeWrapper::bBorderlessWindowed = false;
+        case 3:
+            WindowedModeWrapper::bStretchWindow = false;
+            WindowedModeWrapper::bScaleWindow = false;
+            break;
+        case 2:
+            WindowedModeWrapper::bStretchWindow = true;
+            WindowedModeWrapper::bScaleWindow = false;
+            break;
+        default:
+            break;
+        }
 
         // actually what enforces the windowed mode
         auto pattern = hook::pattern("89 5D 3C 89 5D 18 89 5D 44"); //0x74FD5C
