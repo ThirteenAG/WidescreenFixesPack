@@ -72,7 +72,7 @@ uint32_t* dword_AC6ED4 = (uint32_t*)0x00AC6ED4;
 static bool bInSparkRender = false;
 void(__thiscall* sub_706550)(void* that, void* texture) = (void(__thiscall*)(void*, void*))0x706550;
 void(__thiscall* XSpriteManager_DrawBatch)(void* that, void* view) = (void(__thiscall*)(void*, void*))0x004B61C0;
-#pragma runtime_checks( "", disable )
+#pragma runtime_checks( "", off )
 void __stdcall XSpriteManager_DrawBatch_Hook(void* view)
 {
     void* that;
@@ -470,10 +470,24 @@ void Init()
         //*WindowedMode_AC6EFC = 1;
         injector::WriteMemory<uint32_t>(0xAC6EFC, 1, true);
 
-        if (nWindowedMode > 1)
-            WindowedModeWrapper::bBorderlessWindowed = false;
-        if (nWindowedMode > 2) // TODO: implement dynamic resizing (like in MW)
+        switch (nWindowedMode)
+        {
+        case 5:  // TODO: implement dynamic resizing (like in MW)
             WindowedModeWrapper::bEnableWindowResize = true;
+        case 4:
+            WindowedModeWrapper::bBorderlessWindowed = false;
+            break;
+        case 3:
+            WindowedModeWrapper::bStretchWindow = false;
+            WindowedModeWrapper::bScaleWindow = false;
+            break;
+        case 2:
+            WindowedModeWrapper::bStretchWindow = true;
+            WindowedModeWrapper::bScaleWindow = false;
+            break;
+        default:
+            break;
+        }
 
         // actually what enforces the windowed mode
         auto pattern = hook::pattern("89 5D 3C 89 5D 18 89 5D 44"); //0x708379
@@ -485,6 +499,20 @@ void Init()
                 *(uint32_t*)(regs.ebp + 0x18) = regs.ebx;
             }
         }; injector::MakeInline<WindowedMode>(pattern.get_first(0), pattern.get_first(6));
+
+        pattern = hook::pattern("A3 ? ? ? ? 89 35 ? ? ? ? 88 1D ? ? ? ? B9 ? ? ? ? 74 0B 6A 15");
+        static auto Width = *pattern.get_first<int32_t*>(1);
+        static auto Height = *pattern.get_first<int32_t*>(7);
+        struct ResHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                *Width = regs.eax;
+                *Height = regs.esi;
+
+                WindowedModeWrapper::CenterWindowPosition(*Width, *Height);
+            }
+        }; injector::MakeInline<ResHook>(pattern.get_first(0), pattern.get_first(11));
     }
 
     if (nImproveGamepadSupport)
