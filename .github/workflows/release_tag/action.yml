@@ -20,10 +20,11 @@ runs:
   steps:
     - name: Split tags
       id: split
-      uses: rishabhgupta/split-by@v1
+      uses: xom9ikk/split@v1.1
       with:
-        split-by: ','
         string: "${{ inputs.tag_list }}"
+        separator: ,
+        limit: -1
     - name: Set condition variable
       id: tag_requires_updating
       shell: bash
