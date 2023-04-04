@@ -23,7 +23,7 @@ runs:
       uses: xom9ikk/split@v1.1
       with:
         string: "${{ inputs.tag_list }}"
-        separator: ,
+        separator: ","
         limit: -1
     - name: Set condition variable
       id: tag_requires_updating
