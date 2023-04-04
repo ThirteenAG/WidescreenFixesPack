@@ -131,7 +131,7 @@ runs:
         (steps.split.outputs._98 == inputs.tag) ||
         (steps.split.outputs._99 == inputs.tag)
       run: |
-        echo ::set-output name=split_value::"True"
+        echo "split_value=True" >> $GITHUB_OUTPUT
     - name: Get release info
       if: ${{ steps.tag_requires_updating.outputs.split_value == 'True' }}
       id: release_info
