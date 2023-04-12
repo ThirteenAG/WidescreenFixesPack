@@ -28,8 +28,8 @@ bool __stdcall memory_readable(void *ptr, size_t byteCount)
     return true;
 }
 
-uint32_t DamageModelFixExit;
-void __declspec(naked) DamageModelMemoryCheck()
+uint32_t FEScriptFixExit;
+void __declspec(naked) FEScriptMemoryCheck()
 {
     _asm
     {
@@ -39,7 +39,7 @@ void __declspec(naked) DamageModelMemoryCheck()
     }
 
     if (memory_readable((void*)StuffToCompare, 8))
-        _asm jmp DamageModelFixExit
+        _asm jmp FEScriptFixExit
 
     _asm
     {
@@ -107,7 +107,6 @@ void __stdcall SinglePlayerPostRaceStateManager_HandleScreenConstructed_Hook()
     // set mbScreenConstructed to true because the game has anxiety setting it
     *(bool*)(that + 0xC6) = true;
 }
-
 #pragma runtime_checks( "", restore )
 
 void Init()
@@ -126,7 +125,7 @@ void Init()
     auto bPostRaceFix = iniReader.ReadInteger("MultiFix", "PostRaceFix", 1) != 0;
     auto bFramerateUncap = iniReader.ReadInteger("MultiFix", "FramerateUncap", 1) != 0;
     auto bAntiTrackStreamerCrash = iniReader.ReadInteger("MultiFix", "AntiTrackStreamerCrash", 1) != 0;
-    auto bAntiDamageModelCrash = iniReader.ReadInteger("MultiFix", "AntiDamageModelCrash", 1) != 0;
+    auto bAntiFEScriptCrash = (iniReader.ReadInteger("MultiFix", "AntiFEScriptCrash", 1) != 0) || (iniReader.ReadInteger("MultiFix", "AntiDamageModelCrash", 1) != 0);
 
     if (!bShowConsole)
         FreeConsole();
@@ -189,11 +188,11 @@ void Init()
         injector::MakeNOP(pattern.get_first(0), 2, true); //0x007489FD
     }
 
-    if (bAntiDamageModelCrash)
+    if (bAntiFEScriptCrash)
     {
         auto pattern = hook::pattern("57 8B 7C 24 08 85 FF 74 2C 8B 44 24 0C 56");
-        injector::MakeJMP(pattern.get_first(0), DamageModelMemoryCheck, true); //0x58DC10
-        DamageModelFixExit = (uint32_t)hook::get_pattern("85 FF 74 2C 8B 44 24 0C 56 50 8B CF", 0); //0x0058DC15
+        injector::MakeJMP(pattern.get_first(0), FEScriptMemoryCheck, true); //0x58DC10
+        FEScriptFixExit = (uint32_t)hook::get_pattern("85 FF 74 2C 8B 44 24 0C 56 50 8B CF", 0); //0x0058DC15
     }
 
     bool bFixAspectRatio = iniReader.ReadInteger("MAIN", "FixAspectRatio", 1) != 0;
