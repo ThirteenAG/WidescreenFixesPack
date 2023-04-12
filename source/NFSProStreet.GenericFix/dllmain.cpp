@@ -119,6 +119,21 @@ void __stdcall OnlinePostRaceStateManager_HandleScreenConstructed_Hook()
     // set mbScreenConstructed to true because the game has anxiety setting it
     *(bool*)(that + 0xC6) = true;
 }
+
+int32_t RetZero()
+{
+    return 0;
+}
+
+void __declspec(naked) UpdateAchievements_Hook()
+{
+    _asm
+    {
+        pop eax
+        pop eax
+        ret
+    }
+}
 #pragma runtime_checks( "", restore )
 
 void Init()
@@ -137,7 +152,10 @@ void Init()
     auto bPostRaceFix = iniReader.ReadInteger("MultiFix", "PostRaceFix", 1) != 0;
     auto bFramerateUncap = iniReader.ReadInteger("MultiFix", "FramerateUncap", 1) != 0;
     auto bAntiTrackStreamerCrash = iniReader.ReadInteger("MultiFix", "AntiTrackStreamerCrash", 1) != 0;
-    auto bAntiFEScriptCrash = (iniReader.ReadInteger("MultiFix", "AntiFEScriptCrash", 1) != 0) || (iniReader.ReadInteger("MultiFix", "AntiDamageModelCrash", 1) != 0);
+    auto bAntiFEScriptCrash = (iniReader.ReadInteger("MultiFix", "AntiFEScriptCrash", 1) != 0);
+    auto bDisableAchievements = iniReader.ReadInteger("MultiFix", "DisableAchievements", 1) != 0;
+    //auto bDisableMassiveAds = iniReader.ReadInteger("MultiFix", "DisableMassiveAds", 1) != 0;
+    auto bDisableBoosterPackThanks = iniReader.ReadInteger("MultiFix", "DisableBoosterPackThanks", 1) != 0;
 
     if (!bShowConsole)
         FreeConsole();
@@ -166,37 +184,6 @@ void Init()
         injector::WriteMemory<uint8_t>(pattern.get_first(0x5), 0xFFi8, true); //0x70B3F5
     }
 
-    // PostRaceStateManagerFix
-    if (bPostRaceFix)
-    {
-        uintptr_t loc_5A783C = reinterpret_cast<uintptr_t>(hook::pattern("75 07 C6 86 C5 00 00 00 01").get_first(0));
-        uintptr_t loc_5A7845 = loc_5A783C + 9;
-        uintptr_t loc_5A788A = loc_5A783C + 0x4E;
-
-        uintptr_t vTable = reinterpret_cast<uintptr_t>(hook::pattern("6A 2C C6 44 24 1C 01 C7 06 ? ? ? ?").get_first(0)) + 9;
-        uintptr_t vTableLoc = *reinterpret_cast<uintptr_t*>(vTable) + 0x128;
-
-        uintptr_t vTableOnline = reinterpret_cast<uintptr_t>(hook::pattern("C7 86 CC 00 00 00 ? ? ? ? C7 06 ? ? ? ? C7 86 CC 00 00 00 ? ? ? ? C7 86 D0 00 00").get_first(0)) + 0xC;
-        uintptr_t vTableOnlineLoc = *reinterpret_cast<uintptr_t*>(vTableOnline) + 0x128;
-
-        SinglePlayerPostRaceStateManager_HandleScreenConstructed = *reinterpret_cast<uintptr_t*>(vTableLoc);
-        OnlinePostRaceStateManager_HandleScreenConstructed = *reinterpret_cast<uintptr_t*>(vTableOnlineLoc);
-
-        // skip shadow & stat uploading to avoid memory leaks
-        injector::MakeNOP(loc_5A783C, 2, true);
-        injector::MakeJMP(loc_5A7845, loc_5A788A, true);
-        // fix FEPostRaceStateManager::mbScreenConstructed from not being set after the screen's constructed
-        injector::WriteMemory<uintptr_t>(vTableLoc, reinterpret_cast<uintptr_t>(&SinglePlayerPostRaceStateManager_HandleScreenConstructed_Hook), true);
-        injector::WriteMemory<uintptr_t>(vTableOnlineLoc, reinterpret_cast<uintptr_t>(&OnlinePostRaceStateManager_HandleScreenConstructed_Hook), true);
-    }
-
-    if (bFramerateUncap) // Framerate unlock
-    {
-        auto pattern = hook::pattern("83 3D ? ? ? ? ? 75 05 E8 ? ? ? ? 8B 0D ? ? ? ? 85 C9 74 0F 6A 09");
-        if (!pattern.empty())
-            injector::MakeJMP(pattern.get_first(0), pattern.get_first(14), true); //0x004B42FA, 0x4B4308
-    }
-
     if (bAntiTrackStreamerCrash)
     {
         auto pattern = hook::pattern("80 7C 24 ? ? 74 10 68 ? ? ? ? 55");
@@ -210,6 +197,79 @@ void Init()
         auto pattern = hook::pattern("57 8B 7C 24 08 85 FF 74 2C 8B 44 24 0C 56");
         injector::MakeJMP(pattern.get_first(0), FEScriptMemoryCheck, true); //0x58DC10
         FEScriptFixExit = (uint32_t)hook::get_pattern("85 FF 74 2C 8B 44 24 0C 56 50 8B CF", 0); //0x0058DC15
+    }
+
+    if (bDisableAchievements)
+    {
+        uintptr_t loc_7B3A90 = reinterpret_cast<uintptr_t>(hook::pattern("A1 ? ? ? ? C3 CC CC CC CC CC CC CC CC CC CC 53 56 57 8B D9").get_first(0));
+        uintptr_t loc_7C2607 = reinterpret_cast<uintptr_t>(hook::pattern("8B F1 80 7E 20 00 75 05").get_first(0)) - 0x1B;
+        uintptr_t loc_691F20 = reinterpret_cast<uintptr_t>(hook::pattern("8B F9 33 ED 80 3D ? ? ? ? 00 74 30").get_first(0)) - 0x27;
+
+        injector::MakeJMP(loc_7B3A90, RetZero, true); // AchievementManager::Get
+        injector::MakeJMP(loc_7C2607, UpdateAchievements_Hook, true); // AchievementManager::UpdateAchievements
+        injector::MakeRET(loc_691F20, 4, true); // GProStreetAchievments::Check
+    }
+
+    // this "multifix" portion is only for v1.1 (and newer?)! checking version number here (addresses: v1.0 = 0x6B95E6, v1.1 = 0x6CC3A6)
+    uintptr_t VersionLoc = reinterpret_cast<uintptr_t>(hook::pattern("6A ? 6A ? 8D 4C 24 18 68 ? ? ? ? 51").get_first(0));
+
+    uint8_t MinorVer = *(uint8_t*)(VersionLoc + 1);
+    uint8_t MajorVer = *(uint8_t*)(VersionLoc + 3);
+
+    if ((MajorVer >= 1) && (MinorVer >= 1))
+    {
+        // PostRaceStateManagerFix
+        if (bPostRaceFix)
+        {
+            uintptr_t loc_5A783C = reinterpret_cast<uintptr_t>(hook::pattern("75 07 C6 86 C5 00 00 00 01").get_first(0));
+            uintptr_t loc_5A7845 = loc_5A783C + 9;
+            uintptr_t loc_5A788A = loc_5A783C + 0x4E;
+
+            uintptr_t vTable = reinterpret_cast<uintptr_t>(hook::pattern("6A 2C C6 44 24 1C 01 C7 06 ? ? ? ?").get_first(0)) + 9;
+            uintptr_t vTableLoc = *reinterpret_cast<uintptr_t*>(vTable) + 0x128;
+
+            uintptr_t vTableOnline = reinterpret_cast<uintptr_t>(hook::pattern("C7 86 CC 00 00 00 ? ? ? ? C7 06 ? ? ? ? C7 86 CC 00 00 00 ? ? ? ? C7 86 D0 00 00").get_first(0)) + 0xC;
+            uintptr_t vTableOnlineLoc = *reinterpret_cast<uintptr_t*>(vTableOnline) + 0x128;
+
+            SinglePlayerPostRaceStateManager_HandleScreenConstructed = *reinterpret_cast<uintptr_t*>(vTableLoc);
+            OnlinePostRaceStateManager_HandleScreenConstructed = *reinterpret_cast<uintptr_t*>(vTableOnlineLoc);
+
+            // skip shadow & stat uploading to avoid memory leaks
+            injector::MakeNOP(loc_5A783C, 2, true);
+            injector::MakeJMP(loc_5A7845, loc_5A788A, true);
+            // fix FEPostRaceStateManager::mbScreenConstructed from not being set after the screen's constructed
+            injector::WriteMemory<uintptr_t>(vTableLoc, reinterpret_cast<uintptr_t>(&SinglePlayerPostRaceStateManager_HandleScreenConstructed_Hook), true);
+            injector::WriteMemory<uintptr_t>(vTableOnlineLoc, reinterpret_cast<uintptr_t>(&OnlinePostRaceStateManager_HandleScreenConstructed_Hook), true);
+        }
+
+        if (bFramerateUncap) // Framerate unlock
+        {
+            auto pattern = hook::pattern("83 3D ? ? ? ? ? 75 05 E8 ? ? ? ? 8B 0D ? ? ? ? 85 C9 74 0F 6A 09");
+            if (!pattern.empty())
+                injector::MakeJMP(pattern.get_first(0), pattern.get_first(14), true); //0x004B42FA, 0x4B4308
+        }
+
+        // causes the game randomly not to launch so not a good idea to disable
+        //if (bDisableMassiveAds)
+        //{
+        //    injector::MakeRET(0x007BE4F0, 0, true); // DynamicAds
+        //    injector::MakeJMP(0x70E515, 0x70E541, true); // MassiveAds
+        //    injector::MakeJMP(0x004B03B5, 0x4B03D3, true);
+        //    injector::MakeJMP(0x698D28, 0x698D50, true);
+        //    injector::MakeJMP(0x006FA940, 0x6D8A30, true);
+        //    injector::MakeRET(0x007B6510, 0, true);
+        //}
+
+        if (bDisableBoosterPackThanks)
+        {
+            uintptr_t loc_7E2380 = reinterpret_cast<uintptr_t>(hook::pattern("50 8B F1 68 E6 2E 00 00").get_first(0)) - 0xC;
+            uintptr_t loc_7E2382 = loc_7E2380 + 2;
+            uintptr_t loc_7E23A3 = loc_7E2380 + 0x23;
+            uintptr_t loc_7E23A5 = loc_7E2380 + 0x25;
+
+            injector::MakeJMP(loc_7E2382, loc_7E23A3, true);
+            injector::MakeNOP(loc_7E23A5, 4, true);
+        }
     }
 
     bool bFixAspectRatio = iniReader.ReadInteger("MAIN", "FixAspectRatio", 1) != 0;
@@ -539,7 +599,11 @@ void Init()
         }; injector::MakeInline<ResHook>(pattern.get_first(0), pattern.get_first(11));
     }
 
+    bool bXtendedInputExists = false;
     if (nImproveGamepadSupport)
+        bXtendedInputExists = (::GetModuleHandleA("NFS_XtendedInput.asi") != NULL) || std::filesystem::exists("NFS_XtendedInput.asi");
+
+    if (nImproveGamepadSupport && !bXtendedInputExists)
     {
         auto pattern = hook::pattern("6A FF 68 ? ? ? ? 64 A1 ? ? ? ? 50 51 A1 ? ? ? ? 33 C4 50 8D 44 24 08 64 A3 ? ? ? ? A1 ? ? ? ? 50");
         static auto CreateResourceFile = (void*(*)(const char* ResourceFileName, int32_t ResourceFileType, int, int, int)) pattern.get_first(0); //0x006D6DE0
