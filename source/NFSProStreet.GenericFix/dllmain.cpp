@@ -28,8 +28,8 @@ bool __stdcall memory_readable(void *ptr, size_t byteCount)
     return true;
 }
 
-uint32_t DamageModelFixExit;
-void __declspec(naked) DamageModelMemoryCheck()
+uint32_t FEScriptFixExit;
+void __declspec(naked) FEScriptMemoryCheck()
 {
     _asm
     {
@@ -39,7 +39,7 @@ void __declspec(naked) DamageModelMemoryCheck()
     }
 
     if (memory_readable((void*)StuffToCompare, 8))
-        _asm jmp DamageModelFixExit
+        _asm jmp FEScriptFixExit
 
     _asm
     {
@@ -95,6 +95,18 @@ void __stdcall sub_706550_hook(void* texture)
         gDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
     }
 }
+
+uintptr_t SinglePlayerPostRaceStateManager_HandleScreenConstructed = 0x5A7750;
+void __stdcall SinglePlayerPostRaceStateManager_HandleScreenConstructed_Hook() 
+{
+    uintptr_t that;
+    _asm mov that, ecx
+
+    reinterpret_cast<void(__thiscall*)(uintptr_t)>(SinglePlayerPostRaceStateManager_HandleScreenConstructed)(that);
+
+    // set mbScreenConstructed to true because the game has anxiety setting it
+    *(bool*)(that + 0xC6) = true;
+}
 #pragma runtime_checks( "", restore )
 
 void Init()
@@ -113,7 +125,7 @@ void Init()
     auto bPostRaceFix = iniReader.ReadInteger("MultiFix", "PostRaceFix", 1) != 0;
     auto bFramerateUncap = iniReader.ReadInteger("MultiFix", "FramerateUncap", 1) != 0;
     auto bAntiTrackStreamerCrash = iniReader.ReadInteger("MultiFix", "AntiTrackStreamerCrash", 1) != 0;
-    auto bAntiDamageModelCrash = iniReader.ReadInteger("MultiFix", "AntiDamageModelCrash", 1) != 0;
+    auto bAntiFEScriptCrash = (iniReader.ReadInteger("MultiFix", "AntiFEScriptCrash", 1) != 0) || (iniReader.ReadInteger("MultiFix", "AntiDamageModelCrash", 1) != 0);
 
     if (!bShowConsole)
         FreeConsole();
@@ -145,24 +157,20 @@ void Init()
     // PostRaceStateManagerFix
     if (bPostRaceFix)
     {
-        auto pattern = hook::pattern("C6 44 24 ? ? E8 ? ? ? ? 6A 0A");
-        struct PostRaceFix1
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                bAccessedPostRace = true;
-                *(uint8_t*)(regs.esp + 0x30) = 4;
-            }
-        }; injector::MakeInline<PostRaceFix1>(pattern.get_first(0));
+        uintptr_t loc_5A783C = reinterpret_cast<uintptr_t>(hook::pattern("75 07 C6 86 C5 00 00 00 01").get_first(0));
+        uintptr_t loc_5A7845 = loc_5A783C + 9;
+        uintptr_t loc_5A788A = loc_5A783C + 0x4E;
 
-        pattern = hook::pattern("C7 46 ? ? ? ? ? E8 ? ? ? ? C6 86 ? ? ? ? ? 5E C2 04 00");
-        injector::MakeJMP(pattern.get_first(19), ExitPostRaceFixPart2, true); //0x005C47EA
-        pattern = hook::pattern("80 BE ? ? ? ? ? E9");
-        injector::MakeJMP(pattern.count_hint(6).get(2).get<void>(7), ExitPostRaceFixPropagator, true); //0x004CEAAD
+        uintptr_t vTable = reinterpret_cast<uintptr_t>(hook::pattern("6A 2C C6 44 24 1C 01 C7 06 ? ? ? ?").get_first(0)) + 9;
+        uintptr_t vTableLoc = *reinterpret_cast<uintptr_t*>(vTable) + 0x128;
 
-        DamageModelFixExit = (uint32_t)hook::get_pattern("85 FF 74 2C 8B 44 24 0C 56 50 8B CF", 0); //0x0058DC15
-        loc_5C479A = (uint32_t)hook::get_pattern("75 0B C6 86 ? ? ? ? ? 5E C2 04 00", 0);//0x5C479A
-        loc_5C47B0 = (uint32_t)hook::get_pattern("8B 46 04 8B 4C 24 08 8B 16 89 46 14 8B 82 ? ? ? ? 89 4E 04 8B CE FF D0 8B 8E", 0); //0x5C47B0
+        SinglePlayerPostRaceStateManager_HandleScreenConstructed = *reinterpret_cast<uintptr_t*>(vTableLoc);
+
+        // skip shadow & stat uploading to avoid memory leaks
+        injector::MakeNOP(loc_5A783C, 2, true);
+        injector::MakeJMP(loc_5A7845, loc_5A788A, true);
+        // fix FEPostRaceStateManager::mbScreenConstructed from not being set after the screen's constructed
+        injector::WriteMemory<uintptr_t>(vTableLoc, reinterpret_cast<uintptr_t>(&SinglePlayerPostRaceStateManager_HandleScreenConstructed_Hook), true);
     }
 
     if (bFramerateUncap) // Framerate unlock
@@ -180,10 +188,11 @@ void Init()
         injector::MakeNOP(pattern.get_first(0), 2, true); //0x007489FD
     }
 
-    if (bAntiDamageModelCrash)
+    if (bAntiFEScriptCrash)
     {
         auto pattern = hook::pattern("57 8B 7C 24 08 85 FF 74 2C 8B 44 24 0C 56");
-        injector::MakeJMP(pattern.get_first(0), DamageModelMemoryCheck, true); //0x58DC10
+        injector::MakeJMP(pattern.get_first(0), FEScriptMemoryCheck, true); //0x58DC10
+        FEScriptFixExit = (uint32_t)hook::get_pattern("85 FF 74 2C 8B 44 24 0C 56 50 8B CF", 0); //0x0058DC15
     }
 
     bool bFixAspectRatio = iniReader.ReadInteger("MAIN", "FixAspectRatio", 1) != 0;
