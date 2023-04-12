@@ -107,6 +107,18 @@ void __stdcall SinglePlayerPostRaceStateManager_HandleScreenConstructed_Hook()
     // set mbScreenConstructed to true because the game has anxiety setting it
     *(bool*)(that + 0xC6) = true;
 }
+
+uintptr_t OnlinePostRaceStateManager_HandleScreenConstructed = 0x5FA460;
+void __stdcall OnlinePostRaceStateManager_HandleScreenConstructed_Hook()
+{
+    uintptr_t that;
+    _asm mov that, ecx
+
+    reinterpret_cast<void(__thiscall*)(uintptr_t)>(OnlinePostRaceStateManager_HandleScreenConstructed)(that);
+
+    // set mbScreenConstructed to true because the game has anxiety setting it
+    *(bool*)(that + 0xC6) = true;
+}
 #pragma runtime_checks( "", restore )
 
 void Init()
@@ -164,13 +176,18 @@ void Init()
         uintptr_t vTable = reinterpret_cast<uintptr_t>(hook::pattern("6A 2C C6 44 24 1C 01 C7 06 ? ? ? ?").get_first(0)) + 9;
         uintptr_t vTableLoc = *reinterpret_cast<uintptr_t*>(vTable) + 0x128;
 
+        uintptr_t vTableOnline = reinterpret_cast<uintptr_t>(hook::pattern("C7 86 CC 00 00 00 ? ? ? ? C7 06 ? ? ? ? C7 86 CC 00 00 00 ? ? ? ? C7 86 D0 00 00").get_first(0)) + 0xC;
+        uintptr_t vTableOnlineLoc = *reinterpret_cast<uintptr_t*>(vTableOnline) + 0x128;
+
         SinglePlayerPostRaceStateManager_HandleScreenConstructed = *reinterpret_cast<uintptr_t*>(vTableLoc);
+        OnlinePostRaceStateManager_HandleScreenConstructed = *reinterpret_cast<uintptr_t*>(vTableOnlineLoc);
 
         // skip shadow & stat uploading to avoid memory leaks
         injector::MakeNOP(loc_5A783C, 2, true);
         injector::MakeJMP(loc_5A7845, loc_5A788A, true);
         // fix FEPostRaceStateManager::mbScreenConstructed from not being set after the screen's constructed
         injector::WriteMemory<uintptr_t>(vTableLoc, reinterpret_cast<uintptr_t>(&SinglePlayerPostRaceStateManager_HandleScreenConstructed_Hook), true);
+        injector::WriteMemory<uintptr_t>(vTableOnlineLoc, reinterpret_cast<uintptr_t>(&OnlinePostRaceStateManager_HandleScreenConstructed_Hook), true);
     }
 
     if (bFramerateUncap) // Framerate unlock
