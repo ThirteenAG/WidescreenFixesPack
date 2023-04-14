@@ -1,6 +1,212 @@
 #include "stdafx.h"
 #include <d3d9.h>
 
+namespace DamageFix
+{
+    inline uintptr_t ptrGameFlowManagerStatus = 0x00ABB510;
+    inline uintptr_t ptrbFree = 0x00436130;
+    inline intptr_t ptrMemoryPoolClose = 0x00435D20;
+    inline uintptr_t ptr_g_AttachmentVBMemoryPool = 0x00BFBCE0;
+    inline uintptr_t ptr_g_AttachmentMemoryPool = 0x00BFBCE4;
+
+    void* ptrDamageVBPool = 0;
+    void* ptrDamagePool = 0;
+
+    inline const char* aDamagevbpool = "OptimizedDamageVBPool";
+    inline const char* aDamagepool = "OptimizedDamagePool";
+
+    inline intptr_t bGetFreeMemoryPoolNum  = 0x00435C70;
+    inline intptr_t bWareMalloc            = 0x00435EB0;
+    inline uintptr_t MemoryPoolInfoTable   = 0x00B4D9F0;
+    inline uintptr_t MemoryPoolMem         = 0x00B4DD10;
+    inline uintptr_t MemoryPools           = 0x00B4DBF0;
+    inline uintptr_t MemoryPool_Init       = 0x00435140;
+
+#define g_AttachmentVBMemoryPool_Val *reinterpret_cast<uint32_t*>(ptr_g_AttachmentVBMemoryPool)
+#define g_AttachmentMemoryPool_Val *reinterpret_cast<uint32_t*>(ptr_g_AttachmentMemoryPool)
+
+    void __declspec(naked) DamagePublic_Init()
+    {
+        // clang-format off
+        _asm
+        {
+            push    ebx
+            push    esi
+            call    bGetFreeMemoryPoolNum; bGetFreeMemoryPoolNum(void)
+            xor ebx, ebx
+            push    ebx; allocation_params
+            push    1000000h; size
+            mov ebx, ptr_g_AttachmentVBMemoryPool
+            mov     dword ptr [ebx], eax; int g_AttachmentVBMemoryPool
+            call    bWareMalloc; bWareMalloc(int, char const*, int, int)
+            mov ptrDamageVBPool, eax
+            mov edx, ptr_g_AttachmentVBMemoryPool
+            mov     edx, dword ptr [edx]; memory
+            mov     ecx, edx
+            shl     ecx, 4
+            add     ecx, MemoryPoolInfoTable; MemoryPoolInfo* MemoryPoolInfoTable
+            mov[ecx + 1], bl
+            mov     dword ptr[ecx + 4], 0FFFFFFFFh
+            mov     dword ptr[ecx + 8], 10h
+            mov     ecx, edx
+            imul    ecx, 7Ch; '|'; mempool
+            add     esp, 8
+            push    aDamagevbpool; "DamageVBPool"
+            push    1000000h; memory_size
+            mov esi, MemoryPoolMem
+            lea     esi, dword ptr[esi + ecx]
+            push    eax; memory
+            mov eax, MemoryPools
+            mov     dword ptr[eax + edx * 4], esi; MemoryPool** MemoryPools
+            call    MemoryPool_Init; MemoryPool::Init(void*, int, char const*)
+            mov eax, ptr_g_AttachmentVBMemoryPool
+            mov eax, dword ptr [eax]
+            mov     esi, eax
+            and eax, 1Fh
+            or eax, 40h
+            push    eax; allocation_params
+            push    10h; size
+            call    bWareMalloc; bWareMalloc(int, char const*, int, int)
+            mov edx, MemoryPools
+            mov     edx, dword ptr[edx + esi * 4]; MemoryPool** MemoryPools
+            push    eax
+            mov[edx + 45h], bl
+            call    ptrbFree; bFree(void*)
+            call    bGetFreeMemoryPoolNum; bGetFreeMemoryPoolNum(void)
+            push    ebx; allocation_params
+            push    700000h; size
+            mov ebx, ptr_g_AttachmentMemoryPool
+            mov dword ptr [ebx], eax
+            call    bWareMalloc; bWareMalloc(int, char const*, int, int)
+            mov ptrDamagePool, eax
+            mov edx, ptr_g_AttachmentMemoryPool
+            mov edx, dword ptr [edx]
+            mov     ecx, edx
+            shl     ecx, 4
+            add     ecx, MemoryPoolInfoTable; MemoryPoolInfo* MemoryPoolInfoTable
+            mov[ecx + 1], bl
+            mov     dword ptr[ecx + 4], 0FFFFFFFFh
+            mov     dword ptr[ecx + 8], 10h
+            mov     ecx, edx
+            imul    ecx, 7Ch; '|'; mempool
+            add     esp, 14h
+            push    aDamagepool; "DamagePool"
+            push    700000h; memory_size
+            mov esi, MemoryPoolMem
+            lea     esi, dword ptr[esi + ecx]
+            push    eax; memory
+            mov eax, MemoryPools
+            mov     dword ptr[eax + edx * 4], esi; MemoryPool** MemoryPools
+            call    MemoryPool_Init; MemoryPool::Init(void*, int, char const*)
+            mov eax, ptr_g_AttachmentMemoryPool
+            mov eax, dword ptr [eax]
+            mov     esi, eax
+            and eax, 1Fh
+            or eax, 40h
+            push    eax; allocation_params
+            push    10h; size
+            call    bWareMalloc; bWareMalloc(int, char const*, int, int)
+            mov edx, MemoryPools
+            mov     edx, dword ptr[edx + esi * 4]; MemoryPool** MemoryPools
+            push    eax
+            mov[edx + 45h], bl
+            call    ptrbFree; bFree(void*)
+            add     esp, 0Ch
+            pop     esi
+            pop     ebx
+            retn
+        }
+        // clang-format on
+    }
+
+    bool bReInitFlag = false;
+    void __stdcall QuitToFEHook()
+    {
+        bReInitFlag = true;
+    }
+
+    void GameLoopExecutor()
+    {
+        if (!bReInitFlag) return;
+
+        if (*reinterpret_cast<uint32_t*>(ptrGameFlowManagerStatus) == 3)
+        {
+            //*(bool*)0x00A9D6A7 = false; // g_AttachmentInPhysics
+
+            //printf("Re-initing damage memory pools\n");
+
+            // close the memory pools first
+            reinterpret_cast<void(*)(uint32_t)>(ptrMemoryPoolClose)(g_AttachmentMemoryPool_Val);   // MemoryPool::Close
+            reinterpret_cast<void(*)(uint32_t)>(ptrMemoryPoolClose)(g_AttachmentVBMemoryPool_Val); // MemoryPool::Close
+
+            
+            g_AttachmentVBMemoryPool_Val = -1;
+            g_AttachmentMemoryPool_Val = -1;
+
+            reinterpret_cast<void(*)(void*)>(ptrbFree)(ptrDamageVBPool); // bFree
+            reinterpret_cast<void(*)(void*)>(ptrbFree)(ptrDamagePool);   // bFree
+            DamagePublic_Init();
+            bReInitFlag = false;
+            //*(bool*)0x00A9D6A7 = true; // g_AttachmentInPhysics
+        }
+    }
+
+    int Init()
+    {
+        uintptr_t loc_6DAB0E = reinterpret_cast<uintptr_t>(hook::pattern("68 00 60 00 00 E8 ? ? ? ? D9 05 ? ? ? ?").get_first(0)) + 0x5A;
+        uintptr_t loc_6A7976 = reinterpret_cast<uintptr_t>(hook::pattern("8B 11 8B 43 08 8B 92 54 01 00 00 50 FF D2").get_first(0)) - 0xB;
+        uintptr_t loc_4351CC = reinterpret_cast<uintptr_t>(hook::pattern("7E 18 68 FF FF FF 7F").get_first(0));
+        uintptr_t loc_4351E6 = loc_4351CC + 0x1A;
+        uintptr_t loc_4482FC = reinterpret_cast<uintptr_t>(hook::pattern("66 F7 46 0E 00 20 0F").get_first(0)) + 6;
+        uintptr_t loc_6DB10F = reinterpret_cast<uintptr_t>(hook::pattern("E8 ? ? ? ? E8 ? ? ? ? 8B 4C 24 10 64 89 0D 00 00 00 00 59 5E 83 C4 14 C3 CC").get_first(0)) - 0xA;
+        uintptr_t loc_4AD80F = reinterpret_cast<uintptr_t>(hook::pattern("E8 ? ? ? ? 83 3D ? ? ? ? 06 0F").get_first(0)) + 7;
+        ptrGameFlowManagerStatus = *reinterpret_cast<uintptr_t*>(loc_4AD80F);
+        ptrbFree = reinterpret_cast<uintptr_t>(hook::pattern("80 7E F5 22").get_first(0)) - 0x74;
+
+        uintptr_t loc_7907EA = reinterpret_cast<uintptr_t>(hook::pattern("E8 ? ? ? ? 8B 4E 60 51").get_first(0));
+        ptrMemoryPoolClose = loc_7907EA + 5 + *reinterpret_cast<intptr_t*>(loc_7907EA + 1);
+
+        uintptr_t loc_65F770 = reinterpret_cast<uintptr_t>(hook::pattern("6A 47 68 00 40 16 00").get_first(0)) + 0x12;
+        bGetFreeMemoryPoolNum = loc_65F770 + 5 + *reinterpret_cast<intptr_t*>(loc_65F770 + 1);
+
+        uintptr_t loc_436538 = reinterpret_cast<uintptr_t>(hook::pattern("C1 E8 02 25 FF 07 00 00").get_first(0)) + 0x40;
+        bWareMalloc = loc_436538 + 5 + *reinterpret_cast<intptr_t*>(loc_436538 + 1);
+
+        uintptr_t loc_1C45036 = reinterpret_cast<uintptr_t>(hook::pattern("8B C8 C1 E1 04 81 C1 ? ? ? ?").get_first(0)); // securom section, in drm-free demo: 0x00436188
+        MemoryPoolInfoTable = *reinterpret_cast<uintptr_t*>(loc_1C45036 + 7);
+        MemoryPoolMem = *reinterpret_cast<uintptr_t*>(loc_1C45036 + 0x2A);
+        MemoryPools = *reinterpret_cast<uintptr_t*>(loc_1C45036 + 0x37);
+
+        uintptr_t loc_435F84 = reinterpret_cast<uintptr_t>(hook::pattern("C6 05 ? ? ? ? 00 C7 05 ? ? ? ? FF FF FF FF C7 05 ? ? ? ? 10 00 00 00 89 35 ? ? ? ? E8").get_first(0)) + 0x21; // 2 hits in DRM-free, which is OK
+        MemoryPool_Init = loc_435F84 + 5 + *reinterpret_cast<intptr_t*>(loc_435F84 + 1);
+
+        uintptr_t sub_438AE0 = reinterpret_cast<uintptr_t>(hook::pattern("A1 ? ? ? ? 83 E0 1F 0D 00 04 00 00 89 44 24 08 E9 ? ? ? ?").get_first(0));
+        ptr_g_AttachmentVBMemoryPool = *reinterpret_cast<uintptr_t*>(sub_438AE0 + 1);
+
+        uintptr_t loc_438962 = reinterpret_cast<uintptr_t>(hook::pattern("A1 ? ? ? ? 83 E0 1F 0D 00 04 00 00 50 68 C4 0A 00 00").get_first(0));
+        ptr_g_AttachmentMemoryPool = *reinterpret_cast<uintptr_t*>(loc_438962 + 1);
+
+        // DamagePublic init DRM-free code
+        injector::MakeCALL(loc_6DAB0E, DamagePublic_Init, true);
+
+        // Hook for EQuitToFE to tell the game it's ready to free memory
+        injector::MakeCALL(loc_6A7976, QuitToFEHook, true);
+
+        // remove free assert
+        injector::MakeJMP(loc_4351CC, loc_4351E6, true);
+
+        // force damage skin recreation!
+        //injector::MakeNOP(0x00448D85, 6, true);
+        //injector::MakeNOP(0x00448D7B, 6, true);
+        injector::MakeNOP(loc_4482FC, 6, true);
+
+        // game loop
+        injector::MakeCALL(loc_6DB10F, GameLoopExecutor, true);
+
+        return 0;
+    }
+}
+
 static bool bAccessedPostRace;
 uint32_t StuffToCompare = 0;
 bool __stdcall memory_readable(void *ptr, size_t byteCount)
@@ -136,6 +342,16 @@ void __declspec(naked) UpdateAchievements_Hook()
 }
 #pragma runtime_checks( "", restore )
 
+bool bCheckDemoVersion()
+{
+    // demo version check
+    uintptr_t sub_6DBA80 = reinterpret_cast<uintptr_t>(hook::pattern("83 EC 08 6A 01 68 ? ? ? ? C7 44 24 0C 00 00 00 00").get_first(0));
+    char* nfsc_demo_str = *reinterpret_cast<char**>(sub_6DBA80 + 6); // yes, we're checking for nfsc_demo.exe, this is correct for Pro Street
+    if ((strstr(nfsc_demo_str, "demo.exe") == nullptr) && (nfsc_demo_str != nullptr))
+        return false;
+    return true;
+}
+
 void Init()
 {
     //Stop settings reset after crash
@@ -156,6 +372,8 @@ void Init()
     auto bDisableAchievements = iniReader.ReadInteger("MultiFix", "DisableAchievements", 1) != 0;
     //auto bDisableMassiveAds = iniReader.ReadInteger("MultiFix", "DisableMassiveAds", 1) != 0;
     auto bDisableBoosterPackThanks = iniReader.ReadInteger("MultiFix", "DisableBoosterPackThanks", 1) != 0;
+    auto bDisablePunkBuster = iniReader.ReadInteger("MultiFix", "DisablePunkBuster", 1) != 0;
+    auto bDamageMemoryLeakFix = iniReader.ReadInteger("MultiFix", "DamageMemoryLeakFix", 1) != 0;
 
     if (!bShowConsole)
         FreeConsole();
@@ -209,6 +427,15 @@ void Init()
         injector::MakeJMP(loc_7C2607, UpdateAchievements_Hook, true); // AchievementManager::UpdateAchievements
         injector::MakeRET(loc_691F20, 4, true); // GProStreetAchievments::Check
     }
+
+    if (bDisablePunkBuster)
+    {
+        uintptr_t loc_704667 = reinterpret_cast<uintptr_t>(hook::pattern("83 B9 80 03 00 00 00").get_first(0)) - 0x36;
+        injector::MakeRET(loc_704667, 0, true);
+    }
+
+    if (bDamageMemoryLeakFix)
+        DamageFix::Init();
 
     // this "multifix" portion is only for v1.1 (and newer?)! checking version number here (addresses: v1.0 = 0x6B95E6, v1.1 = 0x6CC3A6)
     uintptr_t VersionLoc = reinterpret_cast<uintptr_t>(hook::pattern("6A ? 6A ? 8D 4C 24 18 68 ? ? ? ? 51").get_first(0));
@@ -278,6 +505,7 @@ void Init()
     bool bConsoleHUDSize = iniReader.ReadInteger("MAIN", "ConsoleHUDSize", 0) != 0;
     bool bGammaFix = iniReader.ReadInteger("MISC", "GammaFix", 1) != 0;
     bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 0) != 0;
+    bool bSkipFEBootflow = iniReader.ReadInteger("MISC", "SkipFEBootflow", 0) != 0;
     static int32_t nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
     static int32_t nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
@@ -505,7 +733,13 @@ void Init()
 
     if (bGammaFix)
     {
-        static uint32_t* dword_AC6F0C = *hook::pattern("A1 ? ? ? ? 8B 4C 24 04 8B D0 B8 67 66 66 66").get(0).get<uint32_t*>(1); // Gamma Integer
+        static uint32_t* dword_AC6F0C;  // Gamma Integer
+
+        if (bCheckDemoVersion())
+            dword_AC6F0C = *hook::pattern("A1 ? ? ? ? 8B 4C 24 04 8B D0 83 C2 04 B8 CD CC CC CC").get(0).get<uint32_t*>(1);
+        else
+            dword_AC6F0C = *hook::pattern("A1 ? ? ? ? 8B 4C 24 04 8B D0 B8 67 66 66 66").get(0).get<uint32_t*>(1);
+
         static uint32_t* dword_AA9630 = *hook::pattern("F3 0F 11 44 24 04 D8 64 24 04 C6 ? 01 D9 5C").get(0).get<uint32_t*>(29); // Gamma Float
         injector::WriteMemory(dword_AA9630, 1.0f, true); // sets default brightness to 50%
 
@@ -540,12 +774,18 @@ void Init()
         injector::WriteMemory(dword_6FC264, &"SkipThis", true);
     }
 
+    if (bSkipFEBootflow)
+    {
+        uintptr_t loc_5B52A3 = reinterpret_cast<uintptr_t>(hook::pattern("38 1D ? ? ? ? 74 1F 6A 03 8B CE").get_first(0));
+        *reinterpret_cast<bool*>(*reinterpret_cast<uintptr_t*>(loc_5B52A3 + 2)) = true;
+    }
+
     if (nWindowedMode)
     {
         pattern = hook::pattern("83 C4 18 8B 0B 55 52 8B 54 24 24 55 55 2B F2");//0x70E3C8 anchor
         uint32_t* dword_70E3E9 = pattern.count(1).get(0).get<uint32_t>(0x21);
         uint32_t* dword_70E39B = pattern.count(1).get(0).get<uint32_t>(-0x2D);
-        uint32_t* WindowedMode_AC6EFC = *hook::pattern("8B 7C 24 28 2B 7C 24 20 8B 44 24 2C 2B 44 24 24 8B 15 ? ? ? ? F7 DA").count(1).get(0).get<uint32_t*>(0x12); //0x70E5D1 anchor, 0x70E5E3 dereference
+        uint32_t* WindowedMode_AC6EFC = *hook::pattern("8B 7C 24 ? 2B 7C 24 ? 8B 44 24 ? 2B 44 24 ? 8B ? ? ? ? ? ? ?").count(1).get(0).get<uint32_t*>(0x12); //0x70E5D1 anchor, 0x70E5E3 dereference
 
         // hook the offending functions
         injector::MakeNOP(dword_70E3E9, 6, true);
@@ -866,7 +1106,7 @@ void Init()
             RegistryWrapper::AddDefault("g_VSyncOn", "0");
             RegistryWrapper::AddDefault("g_ShadowEnable", "3");
             RegistryWrapper::AddDefault("g_ShaderDetailLevel", "1");
-            RegistryWrapper::AddDefault("g_AudioDetail", "0");
+            RegistryWrapper::AddDefault("g_AudioDetail", "1");
             RegistryWrapper::AddDefault("g_Brightness", "68");
             RegistryWrapper::AddDefault("g_AudioMode", "1");
             RegistryWrapper::AddDefault("g_Width", std::to_string(DesktopResW));
