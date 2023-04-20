@@ -574,7 +574,7 @@ void Init()
                     int ebp08 = *(int*)(regs.ebp + 0x08);
                     float esp48 = *(float*)(regs.esp + 0x48);
 
-                    if (ebp08 == 1) // jne
+                    if (ebp08 < 0x1D) // jump not less than
                         *(float*)(regs.esp + 0x48) = (esp48 / fScreenAspectRatio);
 
                     _asm
