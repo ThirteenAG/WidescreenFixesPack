@@ -101,7 +101,7 @@ void Init()
     static auto CHEAT3 = std::string("CHEAT3");
     static auto gxt_ptr = const_cast<char*>(gxt.data());
     
-    pattern = hook::pattern("0F B6 05 ? ? ? ? 48 8D 0D ? ? ? ? 48 69 C0 ? ? ? ? 48 8B 04 08 C7 80 ? ? ? ? ? ? ? ? E8");
+    pattern = hook::pattern("0F B6 05 ? ? ? ? 48 8D ? ? ? ? ? 48 69 ? ? ? ? ? 48 8B 04 ? C7 80");
     static auto SetHelpMessageEpilogue = injector::raw_mem(pattern.get_first(0), [](x86::Assembler& a)
     {
         a.add(rsp, 0x40);
