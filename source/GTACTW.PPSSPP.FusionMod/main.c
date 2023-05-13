@@ -21,7 +21,7 @@
 #define DAT_PATH "ms0:/PSP/PLUGINS/GTACTW.PPSSPP.FusionMod/GTACTW.PPSSPP.FusionMod.dat"
 
 #ifndef __INTELLISENSE__
-PSP_MODULE_INFO(MODULE_NAME, PSP_MODULE_USER, 1, 0);
+PSP_MODULE_INFO(MODULE_NAME, PSP_MODULE_KERNEL, 1, 0); // PSP_MODULE_USER crashes for some reason
 #endif
 
 enum
@@ -296,7 +296,7 @@ int OnModuleStart() {
     int Enable3rdPersonCamera = inireader.ReadInteger("MAIN", "Enable3rdPersonCamera", 1);
     int RadioInAllVehicles = inireader.ReadInteger("MAIN", "RadioInAllVehicles", 1);
     int UnthrottleEmuDuringLoading = inireader.ReadInteger("MAIN", "UnthrottleEmuDuringLoading", 1);
-    int UnlockXinMissionsInReplayBoard = inireader.ReadInteger("MAIN", "UnlockXinMissionsInReplayBoard", 1);
+    int UnlockXinMissionsInReplayBoard = inireader.ReadInteger("MAIN", "UnlockXinMissionsInReplayBoard", 0);
 
     if (UnthrottleEmuDuringLoading)
     {
