@@ -35,6 +35,10 @@ void Init()
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
 	Screen.fConditionalAspectRatio = iniReader.ReadFloat("MAIN", "Horizontal_Aspect_Lock", (4.0f / 3.0f));
 	Screen.fZoomFactor = iniReader.ReadFloat("MAIN", "FOV_Zoom_Factor", 1.0f);
+	static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
+
+	if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
+		szCustomUserFilesDirectoryInGameDir.clear();
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -651,6 +655,46 @@ void Init()
 	};
 
 	injector::MakeInline<WindowPos>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
+
+
+	if (!szCustomUserFilesDirectoryInGameDir.empty())
+	{
+		szCustomUserFilesDirectoryInGameDir = GetExeModulePath<std::string>() + szCustomUserFilesDirectoryInGameDir;
+
+		auto SHGetFolderPathAHook = [](HWND /*hwnd*/, int /*csidl*/, HANDLE /*hToken*/, DWORD /*dwFlags*/, LPSTR pszPath) -> HRESULT
+		{
+			CreateDirectoryA(szCustomUserFilesDirectoryInGameDir.c_str(), NULL);
+			strcpy_s(pszPath, MAX_PATH, szCustomUserFilesDirectoryInGameDir.c_str());
+			return S_OK;
+		};
+
+		auto PathAppendAHook = [](LPSTR pszPath, LPSTR) -> HRESULT
+		{
+			strcat_s(pszPath, MAX_PATH, "\\");
+			return S_OK;
+		};
+
+		uintptr_t loc_629D17 = reinterpret_cast<uintptr_t>(hook::pattern("? ? ? 6A 1A ? FF 15").get_first(0)) + 6;
+		uintptr_t loc_62A3FC = reinterpret_cast<uintptr_t>(hook::pattern("50 6A 00 6A 00 6A 1A 6A 00 FF 15").get_first(0)) + 9;
+		uintptr_t loc_62DF99 = reinterpret_cast<uintptr_t>(hook::pattern("56 6A 00 6A 00 6A 1A 6A 00 FF 15").get_first(0)) + 9;
+		uintptr_t loc_62DFAC = loc_62DF99 + 0x13;
+		uintptr_t str_7468D0 = *reinterpret_cast<uintptr_t*>(loc_629D17 + 0xD);
+
+		injector::MakeCALL(loc_629D17, static_cast<HRESULT(WINAPI*)(HWND, int, HANDLE, DWORD, LPSTR)>(SHGetFolderPathAHook), true);
+		injector::MakeNOP(loc_629D17 + 5, 1, true);
+
+		injector::MakeCALL(loc_62A3FC, static_cast<HRESULT(WINAPI*)(HWND, int, HANDLE, DWORD, LPSTR)>(SHGetFolderPathAHook), true);
+		injector::MakeNOP(loc_62A3FC + 5, 1, true);
+
+		injector::MakeCALL(loc_62DF99, static_cast<HRESULT(WINAPI*)(HWND, int, HANDLE, DWORD, LPSTR)>(SHGetFolderPathAHook), true);
+		injector::MakeNOP(loc_62DF99 + 5, 1, true);
+		
+		injector::WriteMemory<uint8_t>(str_7468D0 + 2, 0, true);
+
+		injector::MakeCALL(loc_62DFAC, static_cast<HRESULT(WINAPI*)(LPSTR, LPSTR)>(PathAppendAHook), true);
+		injector::MakeNOP(loc_62DFAC + 5, 1, true);
+	}
+
 }
 
 CEXP void InitializeASI()
