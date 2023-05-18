@@ -21,11 +21,105 @@ struct Screen
     float fHudScale;
 } Screen;
 
-void WidescreenHud(const char* byteArray, int WidthOffset, int HeightOffset)
+float iniZoomFactor = 1.0f;
+
+void updateValues(const float& newWidth, const float& newHeight)
 {
-	auto pattern = hook::pattern(byteArray);
-	injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(WidthOffset), &Screen.Width43, true);
-	injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(HeightOffset), &Screen.Height43, true);
+	//Screen resolution
+	Screen.Width = newWidth;
+	Screen.Height = newHeight;
+	Screen.fWidth = static_cast<float>(Screen.Width);
+	Screen.fHeight = static_cast<float>(Screen.Height);
+	Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
+	// Screen.Width43 = static_cast<int32_t>(Screen.fHeight * (4.0f / 3.0f));
+	// Screen.Height43 = (int)(Screen.Height * Screen.fZoomFactor);
+
+	if (Screen.fAspectRatio < Screen.fConditionalAspectRatio)
+	{
+		Screen.fZoomFactor = iniZoomFactor * (Screen.fAspectRatio / Screen.fConditionalAspectRatio);
+	}
+	Screen.fHudScale = ((1.0f / Screen.fAspectRatio) * (4.0f / 3.0f)) * Screen.fZoomFactor;
+
+	Screen.OffsetX = (int)(Screen.Width - (Screen.Width * Screen.fHudScale)) / 2;
+	Screen.OffsetY = (int)(Screen.Height - (Screen.Height * Screen.fZoomFactor)) / 2;
+
+	Screen.Width43 = (int)(Screen.Width * Screen.fHudScale);
+	Screen.Height43 = (int)(Screen.Height * Screen.fZoomFactor);
+
+	Screen.WidthFMV = Screen.Width;
+	Screen.HeightFMV = Screen.Height;
+
+	if (Screen.fAspectRatio < (4.0f / 3.0f))
+	{
+		Screen.HeightFMV = (int)(Screen.HeightFMV * (Screen.fAspectRatio / (4.0f / 3.0f)));
+	}
+	else
+	{
+		Screen.WidthFMV = (int)(Screen.WidthFMV / (Screen.fAspectRatio / (4.0f / 3.0f)));
+	}
+
+	// write resolution vars
+	*(uint32_t*)0x00A7793C = Screen.Width;
+	*(uint32_t*)0x00A77940 = Screen.Height;
+
+	*(float*)0x0078A08C = 1.0f / (480.0f * Screen.fAspectRatio);
+}
+
+unsigned int GameWndProcAddr = 0;
+LRESULT(WINAPI* GameWndProc)(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+LRESULT WINAPI WSFixWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	switch (msg)
+	{
+	case WM_SIZE:
+	{
+		if (!WindowedModeWrapper::bEnableWindowResize) return TRUE;
+
+		updateValues((float)LOWORD(lParam), (float)HIWORD(lParam));
+		return GameWndProc(hWnd, msg, wParam, lParam);
+		// bIsResizing = true;
+		// *DrawHUD_57CAA8 = false;
+		// updateValues((float)LOWORD(lParam), (float)HIWORD(lParam));
+	}
+
+	case WM_SIZING:
+	{
+		if (!WindowedModeWrapper::bEnableWindowResize) return TRUE;
+		return GameWndProc(hWnd, msg, wParam, lParam);
+	}
+	
+	}
+
+	return GameWndProc(hWnd, msg, wParam, lParam);
+}
+
+BOOL WINAPI GetClientRectHook(HWND hWnd, LPRECT lpRect)
+{
+	lpRect->top = 0;
+	lpRect->left = 0;
+	
+	lpRect->right = Screen.Width;
+	lpRect->bottom = Screen.Height;
+	return TRUE;
+}
+
+bool bStretchOnBootFlag = false;
+uintptr_t ptrWindowSizeX = 0x00AA5384;
+uintptr_t loc_6567BF = 0x6567BF;
+void __declspec(naked) StretchOnBoot()
+{
+	if (!bStretchOnBootFlag)
+	{
+		bStretchOnBootFlag = true;
+		*(uint32_t*)ptrWindowSizeX = 640; // invalidate it on purpose to trigger the window to update & device reset
+	}
+	_asm
+	{
+		mov edx, [esp + 0x20]
+		mov eax, ptrWindowSizeX
+		mov eax, [eax]
+		jmp loc_6567BF
+	}
 }
 
 void Init()
@@ -35,6 +129,9 @@ void Init()
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
 	Screen.fConditionalAspectRatio = iniReader.ReadFloat("MAIN", "Horizontal_Aspect_Lock", (4.0f / 3.0f));
 	Screen.fZoomFactor = iniReader.ReadFloat("MAIN", "FOV_Zoom_Factor", 1.0f);
+	iniZoomFactor = Screen.fZoomFactor;
+	int nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
+
 	static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
 
 	if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
@@ -70,72 +167,19 @@ void Init()
 		Screen.WidthFMV = (int)(Screen.WidthFMV / (Screen.fAspectRatio / (4.0f / 3.0f)));
 	}
 
-    //446B2A
-    auto pattern = hook::pattern("0F BE 0D ? ? ? ? 8D 0C 89 8B");
-    struct ResHook
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            regs.edx = Screen.Width;
-            regs.ecx = Screen.Height;
-        }
-    }; injector::MakeInline<ResHook>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(27));
+	// disable writes to resolution vars
+	injector::MakeNOP(0x427722, 10);
+	injector::MakeNOP(0x00427735, 10);
+	injector::MakeNOP(0x00444892, 5);
+	injector::MakeNOP(0x00444897, 5);
 
-    pattern = hook::pattern("74 ? 8B 4C 24 04 8B 54 24 08 89 0D"); // 0x446B06
-    injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true);
+	injector::MakeJMP(0x446B06, 0x446B51);
 
-    pattern = hook::pattern("A3 ? ? ? ? 8B 42 08 A3 ? ? ? ? 8B"); // 655123
-    static auto pResY = *pattern.count(1).get(0).get<uint32_t*>(1);
-    struct ResHook2
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            *(pResY - 1) = Screen.Width;
-            *(pResY - 0) = Screen.Height;
-        }
-    }; injector::MakeInline<ResHook2>(pattern.count(1).get(0).get<uint32_t>(0));
+	// write resolution vars
+	*(uint32_t*)0x00A7793C = Screen.Width;
+	*(uint32_t*)0x00A77940 = Screen.Height;
 
-    pattern = hook::pattern("A3 ? ? ? ? A1 ? ? ? ? 68 ? ? ? ? 50 8B 08"); // 6557A8
-    struct ResHook2A
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            *(pResY - 1) = Screen.Width;
-            *(pResY - 0) = Screen.Height;
-        }
-    }; injector::MakeInline<ResHook2A>(pattern.count(1).get(0).get<uint32_t>(0));
-
-    pattern = hook::pattern("89 0D ? ? ? ? 8B 6C 24 7C 8B 75 60 80 7E 20 05"); // 657047
-    struct ResHook3
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            *(pResY - 1) = Screen.Width;
-            *(pResY - 0) = Screen.Height;
-        }
-    }; injector::MakeInline<ResHook3>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
-
-    pattern = hook::pattern("89 15 ? ? ? ? 8B 51 08 89 15 ? ? ? ? 8B 49 0C");
-    struct ResHook4
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            *(pResY - 1) = Screen.Width;
-            *(pResY - 0) = Screen.Height;
-        }
-    }; injector::MakeInline<ResHook4>(pattern.count(3).get(2).get<uint32_t>(0), pattern.count(3).get(2).get<uint32_t>(6));
-
-    pattern = hook::pattern("89 0D ? ? ? ? 5F 5E 5D B8 01 00 00 00"); // 657CAF
-    struct ResHook5
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            *(pResY - 1) = Screen.Width;
-            *(pResY - 0) = Screen.Height;
-        }
-    }; injector::MakeInline<ResHook5>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
-
-	pattern = hook::pattern("0F BF 4E ? 0F BF C0 89 44 ? ? DB 44 ? ? 89 4C ? ? 85 DB"); // 662C2D
+	auto pattern = hook::pattern("0F BF 4E ? 0F BF C0 89 44 ? ? DB 44 ? ? 89 4C ? ? 85 DB"); // 662C2D
 	struct ResHook6
 	{
 		void operator()(injector::reg_pack& regs)
@@ -314,11 +358,6 @@ void Init()
 
 	injector::MakeInline<CreditPicturePos2>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(5));
 
-	// Movies
-	WidescreenHud("85 C0 89 44 ? ? 74 40 DB 05 ? ? ? ? DA 0D ? ? ? ? D8 0D ? ? ? ?", 10, 33); // 0x64457E
-	WidescreenHud("8B 44 ? ? EB 10 8B 1D ? ? ? ? 8B 2D ? ? ? ? 89 5C ? ?", 198, 170);
-	WidescreenHud("8B 44 ? ? EB 10 8B 1D ? ? ? ? 8B 2D ? ? ? ? 89 5C ? ?", 261, 223);
-
 	pattern = hook::pattern("8B 44 ? ? EB 10 8B 1D ? ? ? ? 8B 2D ? ? ? ? 89 5C ? ?"); //0x6445C0
 
 	injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(8), &Screen.WidthFMV, true);
@@ -386,9 +425,6 @@ void Init()
 	pattern = hook::pattern("DB 41 0C 8B B6 ? ? ? ? 83 C4 08 83 EE 02"); // 0x44296C
 	injector::MakeInline<MissionTextHor>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(9));
 	injector::MakeInline<MissionTextVert>(pattern.count(1).get(0).get<uint32_t>(19), pattern.count(1).get(0).get<uint32_t>(26));
-
-	// Now Loading text
-	WidescreenHud("DB 05 ? ? ? ? D9 5C ? ? DB 47 ? D8 4C ? ? D8 0D ? ? ? ? D9 5C ? ? DB 05 ? ? ? ?",2,29); // 0x44EBE6
 
 	struct NowLoadingTextPos
 	{
@@ -519,9 +555,6 @@ void Init()
 	injector::MakeInline<CreditPicturePos>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
 	injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(40), &Screen.Height43, true);
 
-	WidescreenHud("54 00 DB 05 ? ? ? ? D8 0D ? ? ? ? D9 5E ? DB 05 ? ? ? ?", 4, 19); // 0x52C50E
-	WidescreenHud("4C 00 DB 05 ? ? ? ? D8 0D ? ? ? ? D9 5E ? DB 05 ? ? ? ?", 4, 19); // 0x52C30E
-
 	injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(236), &Screen.Width43, true);
 
 	pattern = hook::pattern("8A 0E C1 E1 08 0B CA C1 E1 08 0B C8 89 0D ? ? ? ? E8 ? ? ? ? 6A 03"); // 0x525AD7
@@ -574,7 +607,7 @@ void Init()
 		{
 			Screen.PreserveHorizontalPosition = false;
 			regs.eax = *(int*)(regs.esi + 0x28);
-			if (regs.eax == false)
+			if (regs.eax == 0)
 			{
 				Screen.PreserveHorizontalPosition = true;
 				*(float*)(regs.esp + 4) = 507.0f;
@@ -601,11 +634,6 @@ void Init()
 	};
 
 	injector::MakeInline<LevelUpPos2>(pattern.count(1).get(0).get<uint32_t>(40), pattern.count(1).get(0).get<uint32_t>(46));
-
-	// Window
-	WidescreenHud("33 C9 89 08 89 48 04 89 48 08 89 48 0C 89 48 10 89 48 14 89 48 18 89 48 1C 89 48 20 89 48 24 89 48 28 89 48 2C 8B 15", 39, 48); // 0x456AA0
-	WidescreenHud("8B F5 F3 A5 DB 05 ? ? ? ? D8 4D ? D8 0D ? ? ? ? D9 5B ? DB 05 ? ? ? ? BF 01 00 00 00", 6, 24); // 0x456CF6
-	WidescreenHud("8B F5 F3 A5 DB 05 ? ? ? ? D8 4D ? D8 0D ? ? ? ? D9 5B ? DB 05 ? ? ? ? BF 01 00 00 00", 55, 73);
 
 	pattern = hook::pattern("D9 C9 C1 E0 08 D9 5C ? ? 0B C1 C1 E0 08 D9 5C ? ? 0B C2 8D 4C ? ? BA"); //0x4578A3
 
@@ -657,6 +685,11 @@ void Init()
 	injector::MakeInline<WindowPos>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
 
 
+	DWORD dummy = 0;
+	injector::UnprotectMemory(0x0078A08C, sizeof(float), dummy);
+	*(float*)0x0078A08C = 1.0f / (480.0f * Screen.fAspectRatio);
+
+
 	if (!szCustomUserFilesDirectoryInGameDir.empty())
 	{
 		szCustomUserFilesDirectoryInGameDir = GetExeModulePath<std::string>() + szCustomUserFilesDirectoryInGameDir;
@@ -694,7 +727,83 @@ void Init()
 		injector::MakeCALL(loc_62DFAC, static_cast<HRESULT(WINAPI*)(LPSTR, LPSTR)>(PathAppendAHook), true);
 		injector::MakeNOP(loc_62DFAC + 5, 1, true);
 	}
+	if (nWindowedMode)
+	{
+		injector::MakeJMP(0x446D87, 0x446DA5, true);
+		injector::MakeJMP(0x446E11, 0x446E24, true);
+		injector::MakeNOP(0x4462F8, 6, true);
+		injector::MakeCALL(0x4462F8, WindowedModeWrapper::CreateWindowExA_Hook, true);
+		injector::MakeNOP(0x4462B5, 6, true);
+		injector::MakeCALL(0x4462B5, WindowedModeWrapper::AdjustWindowRect_Hook, true);
+		injector::MakeNOP(0x446DD7, 6, true);
+		injector::MakeCALL(0x446DD7, WindowedModeWrapper::AdjustWindowRect_Hook, true);
 
+		// disable cursor centering on boot
+		injector::MakeNOP(0x00446EA8, 5, true);
+
+		// dereference the current WndProc from the game executable and write to the function pointer (to maximize compatibility)
+		uint32_t* wndproc_addr = hook::pattern("C7 44 24 14 ? ? ? ? 89 74 24 18 89 74 24 1C").count(1).get(0).get<uint32_t>(4);
+		GameWndProcAddr = *(unsigned int*)wndproc_addr;
+		GameWndProc = (LRESULT(WINAPI*)(HWND, UINT, WPARAM, LPARAM))GameWndProcAddr;
+		injector::WriteMemory<unsigned int>(wndproc_addr, (unsigned int)&WSFixWndProc, true);
+
+		if ((nWindowedMode == 4) || (nWindowedMode == 5))
+		{
+			uintptr_t addr = 0x004460A9;
+			injector::MakeNOP(addr, 6, true);
+			injector::MakeCALL(addr, GetClientRectHook, true);
+			addr = 0x655794;
+			injector::MakeNOP(addr, 6, true);
+			injector::MakeCALL(addr, GetClientRectHook, true);
+			// addr = 0x656644;
+			// injector::MakeNOP(addr, 6, true);
+			// injector::MakeCALL(addr, GetClientRectHook, true);
+			addr = 0x656787;
+			injector::MakeNOP(addr, 6, true);
+			injector::MakeCALL(addr, GetClientRectHook, true);
+			addr = 0x657C9C;
+			injector::MakeNOP(addr, 6, true);
+			injector::MakeCALL(addr, GetClientRectHook, true);
+			addr = 0x658172;
+			injector::MakeNOP(addr, 6, true);
+			injector::MakeCALL(addr, GetClientRectHook, true);
+			addr = 0x65822F;
+			injector::MakeNOP(addr, 6, true);
+			injector::MakeCALL(addr, GetClientRectHook, true);
+			addr = 0x65DBE7;
+			injector::MakeNOP(addr, 6, true);
+			injector::MakeCALL(addr, GetClientRectHook, true);
+			addr = 0x65DC2F;
+			injector::MakeNOP(addr, 6, true);
+			injector::MakeCALL(addr, GetClientRectHook, true);
+			addr = 0x65E152;
+			injector::MakeNOP(addr, 6, true);
+			injector::MakeCALL(addr, GetClientRectHook, true);
+			addr = 0x65E783;
+			injector::MakeNOP(addr, 6, true);
+			injector::MakeCALL(addr, GetClientRectHook, true);
+
+			injector::MakeJMP(0x6567B6, StretchOnBoot, true);
+		}
+
+		switch (nWindowedMode)
+		{
+		case 5:
+			WindowedModeWrapper::bStretchWindow = true;
+			break;
+		case 4:
+			WindowedModeWrapper::bScaleWindow = true;
+			break;
+		case 3:
+			WindowedModeWrapper::bEnableWindowResize = true;
+		case 2:
+			WindowedModeWrapper::bBorderlessWindowed = false;
+			break;
+		default:
+			break;
+		}
+
+	}
 }
 
 CEXP void InitializeASI()
