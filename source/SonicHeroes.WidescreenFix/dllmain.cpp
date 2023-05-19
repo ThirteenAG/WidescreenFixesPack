@@ -684,11 +684,32 @@ void Init()
 
 	injector::MakeInline<WindowPos>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
 
-
+	// unprotect and set scaled X res divider for Advertise
 	DWORD dummy = 0;
 	injector::UnprotectMemory(0x0078A08C, sizeof(float), dummy);
 	*(float*)0x0078A08C = 1.0f / (480.0f * Screen.fAspectRatio);
 
+	//injector::MakeNOP(0x63B097, 8);
+
+	// struct ShadowFix1
+	// {
+	// 	void operator()(injector::reg_pack& regs)
+	// 	{
+	// 		*(float*)(regs.esp + 0x40) = 512.0f;
+	// 		*(float*)(regs.esp + 0x58) = 512.0f;
+	// 		*(float*)(regs.esp + 0x74) = 512.0f;
+	// 		*(float*)(regs.esp + 0x78) = 512.0f;
+	// 	}
+	// }; injector::MakeInline<ShadowFix1>(0x63B097, 0x63B09F);
+
+
+	struct ShadowFix2
+	{
+		void operator()(injector::reg_pack& regs)
+		{
+			*(float*)(regs.esp + 4) = (5.0f / 480.0f) * Screen.fHeight;
+		}
+	}; injector::MakeInline<ShadowFix2>(0x0063B11B, 0x0063B123);
 
 	if (!szCustomUserFilesDirectoryInGameDir.empty())
 	{
