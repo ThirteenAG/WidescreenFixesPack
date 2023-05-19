@@ -66,6 +66,9 @@ void updateValues(const float& newWidth, const float& newHeight)
 
 	*(float*)0x0078A08C = 1.0f / (480.0f * Screen.fAspectRatio);
 
+	*(float*)0x00AA7140 = Screen.fWidth;
+	*(float*)0x00AA7144 = Screen.fHeight;
+
 	if (bFixLensFlare)
 	{
 		*(float*)0x0078A184 = Screen.fWidth;
@@ -725,30 +728,65 @@ void Init()
 
 	if (bShadowFix)
 	{
-		struct ShadowFix
+		//fShadowHalfScale = 0;
+		//fShadowScalar2 = (0.025f / 480.0f) * Screen.fHeight;
+
+		// struct ShadowFix
+		// {
+		// 	void operator()(injector::reg_pack& regs)
+		// 	{
+		// 		//*(float*)(regs.esp + 4) = (5.0f / 480.0f) * Screen.fHeight;
+		// 		*(float*)(regs.esp + 4) = 0;
+		// 	}
+		// }; injector::MakeInline<ShadowFix>(0x0063B11B, 0x0063B123);
+
+		// TODO - fix shadows from squishing (stretching vertically) - this is very visible on ultrawide
+
+		struct ShadowFix2
 		{
 			void operator()(injector::reg_pack& regs)
 			{
-				*(float*)(regs.esp + 4) = (5.0f / 480.0f) * Screen.fHeight;
-			}
-		}; injector::MakeInline<ShadowFix>(0x0063B11B, 0x0063B123);
-	}
+				//*(float*)(regs.esp + 0x10) *= Screen.fHeight / 480.0f;
 
-	//struct LensFlareFix
-	//{
-	//	void operator()(injector::reg_pack& regs)
-	//	{
-	//		*(float*)(regs.esp + 0x28) = (0.00999999977648f / 480.0f) * Screen.fHeight;
-	//		*(float*)(regs.esp + 0x2C) = (0.00999999977648f / 480.0f) * Screen.fHeight;
-	//		*(float*)(regs.esp + 0x64) = (0.00999999977648f / 480.0f) * Screen.fHeight;
-	//		*(float*)(regs.esp + 0x44) = (0.00999999977648f / 480.0f) * Screen.fHeight;
-	//
-	//		*(float*)(regs.esp + 0x60) = (0.990000009537f / 480.0f) * Screen.fHeight;
-	//		*(float*)(regs.esp + 0x7C) = (0.990000009537f / 480.0f) * Screen.fHeight;
-	//		*(float*)(regs.esp + 0x48) = (0.990000009537f / 480.0f) * Screen.fHeight;
-	//		*(float*)(regs.esp + 0x80) = (0.990000009537f / 480.0f) * Screen.fHeight;
-	//	}
-	//}; injector::MakeInline<LensFlareFix>(0x0048F4E2, 0x0048F4ED);
+				//float val = *(float*)(regs.esp + 0x10);
+				//float scfactor = Screen.fHeight / 480.0f;
+				float val = ((5.0f / 480.0f) * Screen.fHeight) - ((4 - regs.esi) * (Screen.fHeight * 0.0016339869281046));
+				float val2 = val * 0.025;
+
+				
+				// 0.278645843267
+				*(float*)(regs.esp + 0x3C) = val2;
+				*(float*)(regs.esp + 0x40) = val2;
+				*(float*)(regs.esp + 0x58) = val2;
+				*(float*)(regs.esp + 0x78) = val2;
+				// // 0.72135412693
+				*(float*)(regs.esp + 0x5C) = 1.0f - val2;
+				*(float*)(regs.esp + 0x74) = 1.0f - val2;
+				*(float*)(regs.esp + 0x90) = 1.0f - val2;
+				*(float*)(regs.esp + 0x94) = 1.0f - val2;
+		
+				// // -256.0f
+				// *(float*)(regs.esp + 0x34) *= 2.0f;
+				// *(float*)(regs.esp + 0x50) *= 2.0f;
+				// *(float*)(regs.esp + 0x6C) *= 2.0f;
+				// *(float*)(regs.esp + 0x88) *= 2.0f;
+				// 
+				// // 256.0f
+				// *(float*)(regs.esp + 0x48) *= 2.0f;
+				// *(float*)(regs.esp + 0x60) *= 2.0f;
+				// *(float*)(regs.esp + 0x7C) *= 2.0f;
+				// *(float*)(regs.esp + 0x80) *= 2.0f;
+		
+				reinterpret_cast<void(__cdecl*)(uint32_t, uint32_t, uint32_t)>(0x64CA10)(4, regs.edx, 4);
+				_asm fld [val]
+			}
+		}; injector::MakeInline<ShadowFix2>(0x0063B173, 0x0063B17C);
+
+
+
+		//injector::WriteMemory<float*>(0x63B182, &fShadowHalfScale, true);
+		//injector::WriteMemory<float*>(0x63B138, &fShadowScalar2, true);
+	}
 
 	if (!szCustomUserFilesDirectoryInGameDir.empty())
 	{
