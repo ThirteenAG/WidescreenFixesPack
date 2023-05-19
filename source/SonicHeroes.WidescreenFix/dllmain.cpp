@@ -179,6 +179,7 @@ void Init()
 	static bool bDisableMouseInput = iniReader.ReadInteger("MISC", "DisableMouseInput", 1) != 0;
 	static bool bDisableFrameSkipping = iniReader.ReadInteger("MISC", "DisableFrameSkipping", 1) != 0;
 	static bool bRestoreDemos = iniReader.ReadInteger("MISC", "RestoreDemos", 1) != 0;
+	static bool bDebugMenu = iniReader.ReadInteger("MISC", "DebugMenu", 0) != 0;
 
 	static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
 
@@ -923,17 +924,17 @@ void Init()
 	}
 
 	if (bDisableMouseInput)
-	{
 		// corrupt GUID_SysMouse on purpose
 		injector::WriteMemory<uint32_t>(0x00722FA0, 0, true);
-	}
 
 	if (bDisableFrameSkipping)
-	{
 		injector::MakeJMP(0x402CF5, 0x402D20);
-	}
 
-	injector::MakeJMP(0x456989, RestoreDemos, true);
+	if (bRestoreDemos)
+		injector::MakeJMP(0x456989, RestoreDemos, true);
+
+	if (bDebugMenu)
+		injector::WriteMemory<uint32_t>(0x0042712D, 3, true);
 
 }
 
