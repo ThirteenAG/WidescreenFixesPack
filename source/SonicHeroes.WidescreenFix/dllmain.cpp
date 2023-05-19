@@ -22,6 +22,8 @@ struct Screen
 } Screen;
 
 float iniZoomFactor = 1.0f;
+bool bFixLensFlare = true;
+float fLensFlareScalar;
 
 void updateValues(const float& newWidth, const float& newHeight)
 {
@@ -63,6 +65,14 @@ void updateValues(const float& newWidth, const float& newHeight)
 	*(uint32_t*)0x00A77940 = Screen.Height;
 
 	*(float*)0x0078A08C = 1.0f / (480.0f * Screen.fAspectRatio);
+
+	if (bFixLensFlare)
+	{
+		*(float*)0x0078A184 = Screen.fWidth;
+		*(float*)0x0078A180 = Screen.fHeight;
+		// lens flare size
+		fLensFlareScalar = Screen.fHeight / 480.0f;
+	}
 }
 
 unsigned int GameWndProcAddr = 0;
@@ -122,15 +132,30 @@ void __declspec(naked) StretchOnBoot()
 	}
 }
 
+uintptr_t loc_48F41F = 0x48F41F;
+void __declspec(naked) LensFlareScale()
+{
+	_asm
+	{
+		fmul[fLensFlareScalar]
+		mov eax, [esi + 0x1C]
+		fmul dword ptr[esi + 0x10]
+		jmp loc_48F41F
+	}
+}
+
 void Init()
 {
     CIniReader iniReader("");
+	DWORD dummyoldprotect = 0;
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
 	Screen.fConditionalAspectRatio = iniReader.ReadFloat("MAIN", "Horizontal_Aspect_Lock", (4.0f / 3.0f));
 	Screen.fZoomFactor = iniReader.ReadFloat("MAIN", "FOV_Zoom_Factor", 1.0f);
 	iniZoomFactor = Screen.fZoomFactor;
 	int nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
+	static bool bShadowFix = iniReader.ReadInteger("MISC", "ShadowFix", 1) != 0;
+	bFixLensFlare = iniReader.ReadInteger("MISC", "LensFlareFix", 1) != 0;
 
 	static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
 
@@ -179,6 +204,16 @@ void Init()
 	*(uint32_t*)0x00A7793C = Screen.Width;
 	*(uint32_t*)0x00A77940 = Screen.Height;
 
+	if (bFixLensFlare)
+	{
+		injector::UnprotectMemory(0x0078A180, 2 * sizeof(float), dummyoldprotect);
+		*(float*)0x0078A184 = Screen.fWidth;
+		*(float*)0x0078A180 = Screen.fHeight;
+		// lens flare size
+		fLensFlareScalar = Screen.fHeight / 480.0f;
+
+		injector::MakeJMP(0x0048F419, LensFlareScale, true);
+	}
 	auto pattern = hook::pattern("0F BF 4E ? 0F BF C0 89 44 ? ? DB 44 ? ? 89 4C ? ? 85 DB"); // 662C2D
 	struct ResHook6
 	{
@@ -685,31 +720,35 @@ void Init()
 	injector::MakeInline<WindowPos>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
 
 	// unprotect and set scaled X res divider for Advertise
-	DWORD dummy = 0;
-	injector::UnprotectMemory(0x0078A08C, sizeof(float), dummy);
+	injector::UnprotectMemory(0x0078A08C, sizeof(float), dummyoldprotect);
 	*(float*)0x0078A08C = 1.0f / (480.0f * Screen.fAspectRatio);
 
-	//injector::MakeNOP(0x63B097, 8);
-
-	// struct ShadowFix1
-	// {
-	// 	void operator()(injector::reg_pack& regs)
-	// 	{
-	// 		*(float*)(regs.esp + 0x40) = 512.0f;
-	// 		*(float*)(regs.esp + 0x58) = 512.0f;
-	// 		*(float*)(regs.esp + 0x74) = 512.0f;
-	// 		*(float*)(regs.esp + 0x78) = 512.0f;
-	// 	}
-	// }; injector::MakeInline<ShadowFix1>(0x63B097, 0x63B09F);
-
-
-	struct ShadowFix2
+	if (bShadowFix)
 	{
-		void operator()(injector::reg_pack& regs)
+		struct ShadowFix
 		{
-			*(float*)(regs.esp + 4) = (5.0f / 480.0f) * Screen.fHeight;
-		}
-	}; injector::MakeInline<ShadowFix2>(0x0063B11B, 0x0063B123);
+			void operator()(injector::reg_pack& regs)
+			{
+				*(float*)(regs.esp + 4) = (5.0f / 480.0f) * Screen.fHeight;
+			}
+		}; injector::MakeInline<ShadowFix>(0x0063B11B, 0x0063B123);
+	}
+
+	//struct LensFlareFix
+	//{
+	//	void operator()(injector::reg_pack& regs)
+	//	{
+	//		*(float*)(regs.esp + 0x28) = (0.00999999977648f / 480.0f) * Screen.fHeight;
+	//		*(float*)(regs.esp + 0x2C) = (0.00999999977648f / 480.0f) * Screen.fHeight;
+	//		*(float*)(regs.esp + 0x64) = (0.00999999977648f / 480.0f) * Screen.fHeight;
+	//		*(float*)(regs.esp + 0x44) = (0.00999999977648f / 480.0f) * Screen.fHeight;
+	//
+	//		*(float*)(regs.esp + 0x60) = (0.990000009537f / 480.0f) * Screen.fHeight;
+	//		*(float*)(regs.esp + 0x7C) = (0.990000009537f / 480.0f) * Screen.fHeight;
+	//		*(float*)(regs.esp + 0x48) = (0.990000009537f / 480.0f) * Screen.fHeight;
+	//		*(float*)(regs.esp + 0x80) = (0.990000009537f / 480.0f) * Screen.fHeight;
+	//	}
+	//}; injector::MakeInline<LensFlareFix>(0x0048F4E2, 0x0048F4ED);
 
 	if (!szCustomUserFilesDirectoryInGameDir.empty())
 	{
