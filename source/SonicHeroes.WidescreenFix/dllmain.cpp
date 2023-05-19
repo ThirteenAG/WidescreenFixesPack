@@ -90,9 +90,6 @@ LRESULT WINAPI WSFixWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 		updateValues((float)LOWORD(lParam), (float)HIWORD(lParam));
 		return GameWndProc(hWnd, msg, wParam, lParam);
-		// bIsResizing = true;
-		// *DrawHUD_57CAA8 = false;
-		// updateValues((float)LOWORD(lParam), (float)HIWORD(lParam));
 	}
 
 	case WM_SIZING:
