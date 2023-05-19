@@ -159,6 +159,7 @@ void Init()
 	int nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
 	static bool bShadowFix = iniReader.ReadInteger("MISC", "ShadowFix", 1) != 0;
 	bFixLensFlare = iniReader.ReadInteger("MISC", "LensFlareFix", 1) != 0;
+	static bool bDisableMouseInput = iniReader.ReadInteger("MISC", "DisableMouseInput", 1) != 0;
 
 	static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
 
@@ -900,8 +901,14 @@ void Init()
 		default:
 			break;
 		}
-
 	}
+
+	if (bDisableMouseInput)
+	{
+		// corrupt GUID_SysMouse on purpose
+		injector::WriteMemory<uint32_t>(0x00722FA0, 0, true);
+	}
+
 }
 
 CEXP void InitializeASI()
