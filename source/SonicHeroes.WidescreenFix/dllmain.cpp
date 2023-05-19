@@ -147,6 +147,23 @@ void __declspec(naked) LensFlareScale()
 	}
 }
 
+
+uintptr_t DemoRestoreExit1 = 0x00456990;
+void __declspec(naked) RestoreDemos()
+{
+	_asm
+	{
+		inc ecx
+		cmp cl, 06
+		cmovge ecx, ebx
+		//cmp ecx, ebx
+		//jle thyjle
+		//xor ecx, ecx
+		//thyjle:
+		jmp DemoRestoreExit1
+	}
+}
+
 void Init()
 {
     CIniReader iniReader("");
@@ -161,6 +178,7 @@ void Init()
 	bFixLensFlare = iniReader.ReadInteger("MISC", "LensFlareFix", 1) != 0;
 	static bool bDisableMouseInput = iniReader.ReadInteger("MISC", "DisableMouseInput", 1) != 0;
 	static bool bDisableFrameSkipping = iniReader.ReadInteger("MISC", "DisableFrameSkipping", 1) != 0;
+	static bool bRestoreDemos = iniReader.ReadInteger("MISC", "RestoreDemos", 1) != 0;
 
 	static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
 
@@ -914,6 +932,8 @@ void Init()
 	{
 		injector::MakeJMP(0x402CF5, 0x402D20);
 	}
+
+	injector::MakeJMP(0x456989, RestoreDemos, true);
 
 }
 
