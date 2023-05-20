@@ -891,9 +891,9 @@ void Init()
 			addr = 0x655794;
 			injector::MakeNOP(addr, 6, true);
 			injector::MakeCALL(addr, GetClientRectHook, true);
-			// addr = 0x656644;
-			// injector::MakeNOP(addr, 6, true);
-			// injector::MakeCALL(addr, GetClientRectHook, true);
+			addr = 0x656644;
+			injector::MakeNOP(addr, 6, true);
+			injector::MakeCALL(addr, GetClientRectHook, true);
 			addr = 0x656787;
 			injector::MakeNOP(addr, 6, true);
 			injector::MakeCALL(addr, GetClientRectHook, true);
@@ -912,12 +912,12 @@ void Init()
 			addr = 0x65DC2F;
 			injector::MakeNOP(addr, 6, true);
 			injector::MakeCALL(addr, GetClientRectHook, true);
-			// addr = 0x65E152;
-			// injector::MakeNOP(addr, 6, true);
-			// injector::MakeCALL(addr, GetClientRectHook, true);
-			// addr = 0x65E783;
-			// injector::MakeNOP(addr, 6, true);
-			// injector::MakeCALL(addr, GetClientRectHook, true);
+			addr = 0x65E152;
+			injector::MakeNOP(addr, 6, true);
+			injector::MakeCALL(addr, GetClientRectHook, true);
+			addr = 0x65E783;
+			injector::MakeNOP(addr, 6, true);
+			injector::MakeCALL(addr, GetClientRectHook, true);
 
 			injector::MakeJMP(0x6567B6, StretchOnBoot, true);
 		}
