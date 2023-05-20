@@ -680,7 +680,6 @@ void Init()
 
 	// Special Stage
 	// TODO: distance bar at the bottom is incorrect
-	// TODO: boost gauge
 	fDustWidth = 40.0f * Screen.fAspectRatio;
 	static float fDustHeight = 40.0f;
 	injector::WriteMemory<float*>(0x0052C5FB + 2, &fDustWidth, true);
@@ -1027,6 +1026,17 @@ void Init()
 	static float fInv640 = 1.0f / 640.0f;
 	// 2P fix -- ignore aspect change for screen texture
 	injector::WriteMemory<float*>(0x0061D533 + 2, &fInv640, true);
+
+	// ignore aspect change for special stage gauge
+	injector::WriteMemory<float*>(0x005262B9 + 2, &fInv640, true);
+	injector::WriteMemory<float*>(0x005262F9 + 2, &fInv640, true);
+	injector::WriteMemory<float*>(0x0052640A + 2, &fInv640, true);
+	injector::WriteMemory<float*>(0x00526459 + 2, &fInv640, true);
+
+	// ignore aspect change for results screen
+	injector::WriteMemory<float*>(0x458961 + 2, &fInv640, true);
+	injector::WriteMemory<float*>(0x00458993 + 2, &fInv640, true);
+
 
 	// injector::WriteMemory<int*>(0x00456CFA + 2, &Screen.Width43, true);
 	// injector::WriteMemory<int*>(0x00456D2B + 2, &Screen.Width43, true);
