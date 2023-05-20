@@ -219,13 +219,6 @@ enum SystemMode
 	MaxSysMode
 };
 
-void WidescreenHud(const char* byteArray, int WidthOffset, int HeightOffset)
-{
-	auto pattern = hook::pattern(byteArray);
-	injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(WidthOffset), &Screen.Width43, true);
-	injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(HeightOffset), &Screen.Height, true);
-}
-
 void Init()
 {
 	CIniReader iniReader("");
