@@ -24,7 +24,7 @@ struct Screen
 float iniZoomFactor = 1.0f;
 bool bLensFlareFix = true;
 float fLensFlareScalar;
-
+bool bShadowFix = true;
 float fShadowScale = 1.7f;
 
 void updateValues(const float& newWidth, const float& newHeight)
@@ -184,7 +184,7 @@ void Init()
 	Screen.fZoomFactor = iniReader.ReadFloat("MAIN", "FOV_Zoom_Factor", 1.0f);
 	iniZoomFactor = Screen.fZoomFactor;
 	int nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
-	static bool bShadowFix = iniReader.ReadInteger("MISC", "ShadowFix", 1) != 0;
+	bShadowFix = iniReader.ReadInteger("MISC", "ShadowFix", 1) != 0;
 	fShadowScale = iniReader.ReadFloat("MISC", "ShadowScale", 1.7f);
 	bLensFlareFix = iniReader.ReadInteger("MISC", "LensFlareFix", 1) != 0;
 	static bool bDisableMouseInput = iniReader.ReadInteger("MISC", "DisableMouseInput", 1) != 0;
@@ -247,6 +247,13 @@ void Init()
 	// write resolution vars
 	*(uint32_t*)0x00A7793C = Screen.Width;
 	*(uint32_t*)0x00A77940 = Screen.Height;
+
+	// fix for a stencil buffer -- force read the current res
+	injector::MakeNOP(0x0061D418, 2);
+
+	// 2p fixes -- TODO: hook and read current values for window resizing!
+	injector::WriteMemory<uint32_t>(0x004463E2 + 1, Screen.Width, true);
+	injector::WriteMemory<uint32_t>(0x004463E7 + 1, Screen.Height, true);
 
 	if (bLensFlareFix)
 	{
@@ -348,11 +355,34 @@ void Init()
 	injector::MakeInline<CutOffAreaHookY2>(pattern.count(1).get(0).get<uint32_t>(54), pattern.count(1).get(0).get<uint32_t>(60));
 	injector::MakeInline<CutOffAreaHookY3>(pattern.count(1).get(0).get<uint32_t>(64), pattern.count(1).get(0).get<uint32_t>(70));
 
-    pattern = hook::pattern("D9 05 ? ? ? ? 89 4E 68 8B 50 04 D8 76 68"); // 0x64AC8B
-    injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &Screen.fHudScale, true);
-	injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(28), &Screen.fZoomFactor, true);
+	uintptr_t loc_64AC8B = reinterpret_cast<uintptr_t>(hook::pattern("D9 05 ? ? ? ? 89 4E 68 8B 50 04 D8 76 68").get_first(0));
+	uintptr_t loc_64ACA5 = loc_64AC8B + 0x1A;
+	static uintptr_t ShadowStuffAddr = 0x7476C4;
 
-	pattern = hook::pattern("83 EC ? 56 57 E8 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 83 C4 04 BF"); // 0x63AA30
+	// TODO - if any more things break thanks to this jank here, target function at 64AC80 in specific places instead
+	struct ExceptionalHudScale1
+	{
+		void operator()(injector::reg_pack& regs)
+		{
+			float one = 1.0f;
+			if (*(uint32_t*)(regs.esp + 8 + 4) == ShadowStuffAddr)
+				_asm fld one
+			else
+				_asm fld Screen.fHudScale
+		}
+	}; injector::MakeInline<ExceptionalHudScale1>(loc_64AC8B, loc_64AC8B + 6);
+
+	struct ExceptionalHudScale2
+	{
+		void operator()(injector::reg_pack& regs)
+		{
+			float one = 1.0f;
+			if (*(uint32_t*)(regs.esp + 8 + 4) == ShadowStuffAddr)
+				_asm fld one
+			else
+				_asm fld Screen.fZoomFactor
+		}
+	}; injector::MakeInline<ExceptionalHudScale2>(loc_64ACA5, loc_64ACA5 + 6);
 
 	// 2P Interface
 	pattern = hook::pattern("8B 48 60 DB 41 0C 83 C4 ? BF ? ? ? ? BE ? ? ? ? D9 5C"); // 0x422C2B
@@ -771,20 +801,6 @@ void Init()
 
 	if (bShadowFix)
 	{
-		//fShadowHalfScale = 0;
-		//fShadowScalar2 = (0.025f / 480.0f) * Screen.fHeight;
-
-		// struct ShadowFix
-		// {
-		// 	void operator()(injector::reg_pack& regs)
-		// 	{
-		// 		//*(float*)(regs.esp + 4) = (5.0f / 480.0f) * Screen.fHeight;
-		// 		*(float*)(regs.esp + 4) = 0;
-		// 	}
-		// }; injector::MakeInline<ShadowFix>(0x0063B11B, 0x0063B123);
-
-		// TODO - fix shadows from squishing (stretching vertically) - this is very visible on ultrawide
-
 		struct ShadowFix2
 		{
 			void operator()(injector::reg_pack& regs)
@@ -811,27 +827,10 @@ void Init()
 				*(float*)(regs.esp + 0x90) = 1.0f - val2;
 				*(float*)(regs.esp + 0x94) = 1.0f - val2;
 		
-				// // -256.0f
-				// *(float*)(regs.esp + 0x34) *= 2.0f;
-				// *(float*)(regs.esp + 0x50) *= 2.0f;
-				// *(float*)(regs.esp + 0x6C) *= 2.0f;
-				// *(float*)(regs.esp + 0x88) *= 2.0f;
-				// 
-				// // 256.0f
-				// *(float*)(regs.esp + 0x48) *= 2.0f;
-				// *(float*)(regs.esp + 0x60) *= 2.0f;
-				// *(float*)(regs.esp + 0x7C) *= 2.0f;
-				// *(float*)(regs.esp + 0x80) *= 2.0f;
-		
 				reinterpret_cast<void(__cdecl*)(uint32_t, uint32_t, uint32_t)>(0x64CA10)(4, regs.edx, 4);
 				_asm fld [val]
 			}
 		}; injector::MakeInline<ShadowFix2>(0x0063B143, 0x0063B17C);
-
-
-
-		//injector::WriteMemory<float*>(0x63B182, &fShadowHalfScale, true);
-		//injector::WriteMemory<float*>(0x63B138, &fShadowScalar2, true);
 	}
 
 	if (!szCustomUserFilesDirectoryInGameDir.empty())
@@ -920,12 +919,12 @@ void Init()
 			addr = 0x65DC2F;
 			injector::MakeNOP(addr, 6, true);
 			injector::MakeCALL(addr, GetClientRectHook, true);
-			addr = 0x65E152;
-			injector::MakeNOP(addr, 6, true);
-			injector::MakeCALL(addr, GetClientRectHook, true);
-			addr = 0x65E783;
-			injector::MakeNOP(addr, 6, true);
-			injector::MakeCALL(addr, GetClientRectHook, true);
+			// addr = 0x65E152;
+			// injector::MakeNOP(addr, 6, true);
+			// injector::MakeCALL(addr, GetClientRectHook, true);
+			// addr = 0x65E783;
+			// injector::MakeNOP(addr, 6, true);
+			// injector::MakeCALL(addr, GetClientRectHook, true);
 
 			injector::MakeJMP(0x6567B6, StretchOnBoot, true);
 		}
@@ -972,15 +971,18 @@ void Init()
 
 		if (SysMode == SystemMode::InGame)
 		{
-			injector::WriteMemory<int32_t>(0x8D6720, Stage, true);
-			injector::WriteMemory<int32_t>(0x8D6920, Team1, true);
-			injector::WriteMemory<int32_t>(0x8D6924, Team2, true);
-			injector::WriteMemory<int32_t>(0x8D6928, Team3, true);
-			injector::WriteMemory<int32_t>(0x8D692C, Team4, true);
+			*(int32_t*)0x8D6720 = Stage;
+			*(int32_t*)0x8D6920 = Team1;
+			*(int32_t*)0x8D6924 = Team2;
+			*(int32_t*)0x8D6928 = Team3;
+			*(int32_t*)0x8D692C = Team4;
 		}
 	}
 	if (bDisableCDCheck)
 		injector::MakeJMP(0x00629B72, 0x629C36, true);
+
+	// injector::WriteMemory<uint32_t>(0x0044479C + 1, Screen.Height, true);
+	// injector::WriteMemory<uint32_t>(0x004447A8 + 1, Screen.Width, true);
 }
 
 CEXP void InitializeASI()
