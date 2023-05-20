@@ -186,13 +186,14 @@ void Init()
 	int nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
 	bShadowFix = iniReader.ReadInteger("MISC", "ShadowFix", 1) != 0;
 	fShadowScale = iniReader.ReadFloat("MISC", "ShadowScale", 1.7f);
+	static uint32_t ShadowRes = iniReader.ReadInteger("MISC", "ShadowRes", 256);
 	bLensFlareFix = iniReader.ReadInteger("MISC", "LensFlareFix", 1) != 0;
 	static bool bDisableMouseInput = iniReader.ReadInteger("MISC", "DisableMouseInput", 1) != 0;
 	static bool bDisableFrameSkipping = iniReader.ReadInteger("MISC", "DisableFrameSkipping", 1) != 0;
 	static bool bRestoreDemos = iniReader.ReadInteger("MISC", "RestoreDemos", 1) != 0;
 	static bool bDisableCDCheck = iniReader.ReadInteger("MISC", "DisableCDCheck", 1) != 0;
-	static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
 
+	static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
 	if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
 		szCustomUserFilesDirectoryInGameDir.clear();
 
@@ -805,17 +806,9 @@ void Init()
 		{
 			void operator()(injector::reg_pack& regs)
 			{
-				//*(float*)(regs.esp + 0x10) *= Screen.fHeight / 480.0f;
-
-				//float val = *(float*)(regs.esp + 0x10);
-				//float scfactor = Screen.fHeight / 480.0f;
-				//float val = ((5.0f / 480.0f) * Screen.fHeight) - ((4 - regs.esi) * (Screen.fHeight * 0.0016339869281046));
-				//float val = ((5.0f / 480.0f) * Screen.fHeight) - 2.5;
-				//float val = (5.0f * fShadowScale) - ((2.5f * (480.0f / Screen.fHeight)) * (4 - regs.esi));
 				float val = (5.0f * fShadowScale) - ((2.5f / fShadowScale) * (4 - regs.esi));
-				float val2 = val * 0.025;
-
-				
+				float val2 = val * 0.025f;
+	
 				// 0.278645843267
 				*(float*)(regs.esp + 0x3C) = val2;
 				*(float*)(regs.esp + 0x40) = val2;
@@ -981,8 +974,19 @@ void Init()
 	if (bDisableCDCheck)
 		injector::MakeJMP(0x00629B72, 0x629C36, true);
 
-	// injector::WriteMemory<uint32_t>(0x0044479C + 1, Screen.Height, true);
-	// injector::WriteMemory<uint32_t>(0x004447A8 + 1, Screen.Width, true);
+	if (ShadowRes != 256)
+	{
+		injector::WriteMemory<uint32_t>(0x63BF6B + 1, ShadowRes, true);
+		injector::WriteMemory<uint32_t>(0x63BF8F + 1, ShadowRes - 4, true);
+		injector::WriteMemory<uint32_t>(0x7476CC, ShadowRes, true);
+
+		injector::WriteMemory<float>(0x0063B077 + 4, (float)ShadowRes, true);
+		injector::WriteMemory<float>(0x0063B07F + 4, (float)ShadowRes, true);
+		injector::WriteMemory<float>(0x0063B08F + 4, (float)ShadowRes, true);
+		injector::WriteMemory<float>(0x0063B097 + 4, (float)ShadowRes, true);
+
+		injector::WriteMemory<float>(0x006B7237 + 1, (float)ShadowRes, true);
+	}
 }
 
 CEXP void InitializeASI()
