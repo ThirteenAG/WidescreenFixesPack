@@ -25,6 +25,8 @@ float iniZoomFactor = 1.0f;
 bool bLensFlareFix = true;
 float fLensFlareScalar;
 
+float fShadowScale = 1.7f;
+
 void updateValues(const float& newWidth, const float& newHeight)
 {
 	//Screen resolution
@@ -172,6 +174,7 @@ void Init()
 	iniZoomFactor = Screen.fZoomFactor;
 	int nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
 	static bool bShadowFix = iniReader.ReadInteger("MISC", "ShadowFix", 1) != 0;
+	fShadowScale = iniReader.ReadFloat("MISC", "ShadowScale", 1.7f);
 	bLensFlareFix = iniReader.ReadInteger("MISC", "LensFlareFix", 1) != 0;
 	static bool bDisableMouseInput = iniReader.ReadInteger("MISC", "DisableMouseInput", 1) != 0;
 	static bool bDisableFrameSkipping = iniReader.ReadInteger("MISC", "DisableFrameSkipping", 1) != 0;
@@ -771,7 +774,10 @@ void Init()
 
 				//float val = *(float*)(regs.esp + 0x10);
 				//float scfactor = Screen.fHeight / 480.0f;
-				float val = ((5.0f / 480.0f) * Screen.fHeight) - ((4 - regs.esi) * (Screen.fHeight * 0.0016339869281046));
+				//float val = ((5.0f / 480.0f) * Screen.fHeight) - ((4 - regs.esi) * (Screen.fHeight * 0.0016339869281046));
+				//float val = ((5.0f / 480.0f) * Screen.fHeight) - 2.5;
+				//float val = (5.0f * fShadowScale) - ((2.5f * (480.0f / Screen.fHeight)) * (4 - regs.esi));
+				float val = (5.0f * fShadowScale) - ((2.5f / fShadowScale) * (4 - regs.esi));
 				float val2 = val * 0.025;
 
 				
@@ -780,7 +786,7 @@ void Init()
 				*(float*)(regs.esp + 0x40) = val2;
 				*(float*)(regs.esp + 0x58) = val2;
 				*(float*)(regs.esp + 0x78) = val2;
-				// // 0.72135412693
+				// 0.72135412693
 				*(float*)(regs.esp + 0x5C) = 1.0f - val2;
 				*(float*)(regs.esp + 0x74) = 1.0f - val2;
 				*(float*)(regs.esp + 0x90) = 1.0f - val2;
@@ -801,7 +807,7 @@ void Init()
 				reinterpret_cast<void(__cdecl*)(uint32_t, uint32_t, uint32_t)>(0x64CA10)(4, regs.edx, 4);
 				_asm fld [val]
 			}
-		}; injector::MakeInline<ShadowFix2>(0x0063B173, 0x0063B17C);
+		}; injector::MakeInline<ShadowFix2>(0x0063B143, 0x0063B17C);
 
 
 
@@ -938,6 +944,11 @@ void Init()
 
 	if (bDisableCDCheck)
 		injector::MakeJMP(0x00629B72, 0x629C36, true);
+
+	// char strbuf[1024];
+	// sprintf(strbuf, "\nfShadowScale: 0x%X\n", &fShadowScale);
+	// OutputDebugStringA(strbuf);
+
 }
 
 CEXP void InitializeASI()
