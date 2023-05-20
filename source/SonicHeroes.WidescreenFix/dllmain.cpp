@@ -7,14 +7,17 @@ struct Screen
 	int WidthFMV;
 	int OffsetX;
 	int Height;
-	int Height43;
 	int HeightFMV;
+	int HeightHUD;
 	int OffsetY;
 	bool AspectRatioAffected;
 	bool PreserveHorizontalPosition;
 	int ContinuePositionChange;
 	float fWidth;
 	float fHeight;
+	float fInvWidth;
+	float fInvHeight;
+	float fInvWidth43;
 	float fAspectRatio;
 	float fConditionalAspectRatio;
 	float fZoomFactor;
@@ -34,21 +37,21 @@ void updateValues(const float& newWidth, const float& newHeight)
 	Screen.Height = newHeight;
 	Screen.fWidth = static_cast<float>(Screen.Width);
 	Screen.fHeight = static_cast<float>(Screen.Height);
+	Screen.fInvWidth = 1.0f / Screen.fWidth;
+	Screen.fInvHeight = 1.0f / Screen.fInvHeight;
 	Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
-	// Screen.Width43 = static_cast<int32_t>(Screen.fHeight * (4.0f / 3.0f));
-	// Screen.Height43 = (int)(Screen.Height * Screen.fZoomFactor);
+	Screen.Width43 = static_cast<int32_t>(Screen.fHeight * (4.0f / 3.0f));
+	Screen.fInvWidth43 = 1.0f / (Screen.fHeight * (4.0f * 3.0f));
 
 	if (Screen.fAspectRatio < Screen.fConditionalAspectRatio)
 	{
 		Screen.fZoomFactor = iniZoomFactor * (Screen.fAspectRatio / Screen.fConditionalAspectRatio);
 	}
-	Screen.fHudScale = ((1.0f / Screen.fAspectRatio) * (4.0f / 3.0f)) * Screen.fZoomFactor;
+	Screen.fHudScale = ((4.0f / 3.0f) / Screen.fAspectRatio) * Screen.fZoomFactor;
+	Screen.HeightHUD = (int)(Screen.Height * Screen.fZoomFactor);
 
 	Screen.OffsetX = (int)(Screen.Width - (Screen.Width * Screen.fHudScale)) / 2;
 	Screen.OffsetY = (int)(Screen.Height - (Screen.Height * Screen.fZoomFactor)) / 2;
-
-	Screen.Width43 = (int)(Screen.Width * Screen.fHudScale);
-	Screen.Height43 = (int)(Screen.Height * Screen.fZoomFactor);
 
 	Screen.WidthFMV = Screen.Width;
 	Screen.HeightFMV = Screen.Height;
@@ -65,6 +68,11 @@ void updateValues(const float& newWidth, const float& newHeight)
 	// write resolution vars
 	*(uint32_t*)0x00A7793C = Screen.Width;
 	*(uint32_t*)0x00A77940 = Screen.Height;
+	*(uint32_t*)0x007C931C = Screen.Width;
+	*(uint32_t*)0x007C9320 = Screen.Height;
+
+	injector::WriteMemory(0x004463E2 + 1, Screen.Width, true);
+	injector::WriteMemory(0x004463E7 + 1, Screen.Height, true);
 
 	*(float*)0x0078A08C = 1.0f / (480.0f * Screen.fAspectRatio);
 
@@ -163,6 +171,14 @@ void __declspec(naked) RestoreDemos()
 	}
 }
 
+void* __cdecl AdvertiseWindowHook(uint32_t a0, uintptr_t a1)
+{
+	if (Screen.Width > Screen.Height)
+		*(float*)(a1 + 0x14) *= (Screen.Width43 / 640.0f);
+
+	return reinterpret_cast<void*(__cdecl*)(uint32_t, uintptr_t)>(0x456C80)(a0, a1);
+}
+
 static BOOL WINAPI UpdateWindowHook(HWND hWnd)
 {
 	// fix the window to open at the center of the screen...
@@ -200,14 +216,21 @@ enum SystemMode
 	MaxSysMode
 };
 
+void WidescreenHud(const char* byteArray, int WidthOffset, int HeightOffset)
+{
+	auto pattern = hook::pattern(byteArray);
+	injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(WidthOffset), &Screen.Width43, true);
+	injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(HeightOffset), &Screen.Height, true);
+}
+
 void Init()
 {
 	CIniReader iniReader("");
 	DWORD dummyoldprotect = 0;
 	Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
 	Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
-	Screen.fConditionalAspectRatio = iniReader.ReadFloat("MAIN", "Horizontal_Aspect_Lock", (4.0f / 3.0f));
-	Screen.fZoomFactor = iniReader.ReadFloat("MAIN", "FOV_Zoom_Factor", 1.0f);
+	Screen.fConditionalAspectRatio = iniReader.ReadFloat("MAIN", "MinAspectRatio", (4.0f / 3.0f));
+	Screen.fZoomFactor = iniReader.ReadFloat("MAIN", "FOVScale", 1.0f);
 	iniZoomFactor = Screen.fZoomFactor;
 	int nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
 	// bShadowFix = iniReader.ReadInteger("MISC", "ShadowFix", 1) != 0;
@@ -229,32 +252,43 @@ void Init()
 	// credit to: https://github.com/Sewer56/Heroes.Utils.DebugBoot.ReloadedII
 	static bool bSkipFE = iniReader.ReadInteger("SkipFE", "Enabled", 0) != 0;
 	static int32_t SysMode = iniReader.ReadInteger("SkipFE", "SystemMode", SystemMode::EasyMenu);
-	static int32_t Stage = iniReader.ReadInteger("SkipFE", "Stage", 2);
-	static int32_t Team1 = iniReader.ReadInteger("SkipFE", "Team1", 0);
-	static int32_t Team2 = iniReader.ReadInteger("SkipFE", "Team2", -1);
-	static int32_t Team3 = iniReader.ReadInteger("SkipFE", "Team3", -1);
-	static int32_t Team4 = iniReader.ReadInteger("SkipFE", "Team4", -1);
+
+	if ((SysMode == SystemMode::InGame) && bSkipFE)
+	{
+		*(int32_t*)0x8D6720 = iniReader.ReadInteger("SkipFE", "Stage", 2);
+		*(int32_t*)0x8D6920 = iniReader.ReadInteger("SkipFE", "Team1", 0);
+		*(int32_t*)0x8D6924 = iniReader.ReadInteger("SkipFE", "Team2", -1);
+		*(int32_t*)0x8D6928 = iniReader.ReadInteger("SkipFE", "Team3", -1);
+		*(int32_t*)0x8D692C = iniReader.ReadInteger("SkipFE", "Team4", -1);
+	}
 
 	if (!Screen.Width || !Screen.Height)
 		std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
 
+	Screen.Width43 = static_cast<int32_t>(Screen.fHeight * (4.0f / 3.0f));
 	Screen.fWidth = static_cast<float>(Screen.Width);
 	Screen.fHeight = static_cast<float>(Screen.Height);
+	Screen.fInvWidth = 1.0f / Screen.fWidth;
+	Screen.fInvHeight = 1.0f / Screen.fInvHeight;
+	Screen.fInvWidth43 = 1.0f / (Screen.fHeight * (4.0f * 3.0f));
 	Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
+
 	if (Screen.fAspectRatio < Screen.fConditionalAspectRatio)
 	{
 		Screen.fZoomFactor *= (Screen.fAspectRatio / Screen.fConditionalAspectRatio);
 	}
-	Screen.fHudScale = ((1.0f / Screen.fAspectRatio) * (4.0f / 3.0f)) * Screen.fZoomFactor;
+
+	// TODO: it is kind of stupid to tie HUD scale with the FOV
+	Screen.fHudScale = ((4.0f / 3.0f) / Screen.fAspectRatio) * Screen.fZoomFactor;
 
 	Screen.OffsetX = (int)(Screen.Width - (Screen.Width * Screen.fHudScale)) / 2;
 	Screen.OffsetY = (int)(Screen.Height - (Screen.Height * Screen.fZoomFactor)) / 2;
 
-	Screen.Width43 = (int)(Screen.Width * Screen.fHudScale);
-	Screen.Height43 = (int)(Screen.Height * Screen.fZoomFactor);
+	Screen.HeightHUD = (int)(Screen.Height * Screen.fZoomFactor);
 
 	Screen.WidthFMV = Screen.Width;
 	Screen.HeightFMV = Screen.Height;
+	
 
 	if (Screen.fAspectRatio < (4.0f / 3.0f))
 	{
@@ -280,7 +314,7 @@ void Init()
 	*(uint32_t*)0x007C931C = Screen.Width;
 	*(uint32_t*)0x007C9320 = Screen.Height;
 
-	*(uint8_t*)0x008CAEE0 = 7; // Screen_Size_Selection -- force it to 7 (1024x768 32-bit)
+	*(uint8_t*)0x008CAEE0 = 7; // Screen_Size_Selection -- force it to 7 (1280x960 32-bit)
 
 	// fix for a stencil buffer -- force read the current res
 	injector::MakeNOP(0x0061D418, 2);
@@ -341,55 +375,57 @@ void Init()
 	pattern = hook::pattern("66 8B ? ? 66 85 C0 75 29 66 39 ? ? 75 23"); // 662BFB
 	injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<int8_t>(7), 0xEB, true);
 
-	pattern = hook::pattern("D9 42 68 D8 08 D9 42 68 D8 48 04 D9 42 68 D8 48 08"); // 0x64AFDC
-	struct CutOffAreaHook
-	{
-		void operator()(injector::reg_pack& regs)
-		{
-			float edx68 = *(float*)(regs.edx + 0x68) / Screen.fHudScale;
-			float eax00 = *(float*)(regs.eax + 0);
-			float eax04 = *(float*)(regs.eax + 4);
-			float eax08 = *(float*)(regs.eax + 8);
-			_asm
-			{
-				fld     dword ptr[edx68]
-				fmul    dword ptr[eax00]
-				fld     dword ptr[edx68]
-				fmul    dword ptr[eax04]
-				fld     dword ptr[edx68]
-				fmul    dword ptr[eax08]
-			}
-		}
-	};
 
-	struct CutOffAreaHookY
-	{
-		void operator()(injector::reg_pack& regs)
-		{
-			float yScale = *(float*)(regs.edx + 0x6C) / Screen.fZoomFactor * *(float*)(regs.eax + 0x10);
-		}
-	};
 
-	struct CutOffAreaHookY2
-	{
-		void operator()(injector::reg_pack& regs)
-		{
-			float yScale = *(float*)(regs.edx + 0x6C) / Screen.fZoomFactor * *(float*)(regs.eax + 0x14);
-		}
-	};
-
-	struct CutOffAreaHookY3
-	{
-		void operator()(injector::reg_pack& regs)
-		{
-			float yScale = *(float*)(regs.edx + 0x6C) / Screen.fZoomFactor * *(float*)(regs.eax + 0x18);
-		}
-	};
-	
-	injector::MakeInline<CutOffAreaHook>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(17));
-	injector::MakeInline<CutOffAreaHookY>(pattern.count(1).get(0).get<uint32_t>(42), pattern.count(1).get(0).get<uint32_t>(48));
-	injector::MakeInline<CutOffAreaHookY2>(pattern.count(1).get(0).get<uint32_t>(54), pattern.count(1).get(0).get<uint32_t>(60));
-	injector::MakeInline<CutOffAreaHookY3>(pattern.count(1).get(0).get<uint32_t>(64), pattern.count(1).get(0).get<uint32_t>(70));
+	//pattern = hook::pattern("D9 42 68 D8 08 D9 42 68 D8 48 04 D9 42 68 D8 48 08"); // 0x64AFDC
+	//struct CutOffAreaHook
+	//{
+	//	void operator()(injector::reg_pack& regs)
+	//	{
+	//		float edx68 = *(float*)(regs.edx + 0x68) / Screen.fHudScale;
+	//		float eax00 = *(float*)(regs.eax + 0);
+	//		float eax04 = *(float*)(regs.eax + 4);
+	//		float eax08 = *(float*)(regs.eax + 8);
+	//		_asm
+	//		{
+	//			fld     dword ptr[edx68]
+	//			fmul    dword ptr[eax00]
+	//			fld     dword ptr[edx68]
+	//			fmul    dword ptr[eax04]
+	//			fld     dword ptr[edx68]
+	//			fmul    dword ptr[eax08]
+	//		}
+	//	}
+	//};
+	//
+	//struct CutOffAreaHookY
+	//{
+	//	void operator()(injector::reg_pack& regs)
+	//	{
+	//		float yScale = *(float*)(regs.edx + 0x6C) / Screen.fZoomFactor * *(float*)(regs.eax + 0x10);
+	//	}
+	//};
+	//
+	//struct CutOffAreaHookY2
+	//{
+	//	void operator()(injector::reg_pack& regs)
+	//	{
+	//		float yScale = *(float*)(regs.edx + 0x6C) / Screen.fZoomFactor * *(float*)(regs.eax + 0x14);
+	//	}
+	//};
+	//
+	//struct CutOffAreaHookY3
+	//{
+	//	void operator()(injector::reg_pack& regs)
+	//	{
+	//		float yScale = *(float*)(regs.edx + 0x6C) / Screen.fZoomFactor * *(float*)(regs.eax + 0x18);
+	//	}
+	//};
+	//
+	//injector::MakeInline<CutOffAreaHook>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(17));
+	//injector::MakeInline<CutOffAreaHookY>(pattern.count(1).get(0).get<uint32_t>(42), pattern.count(1).get(0).get<uint32_t>(48));
+	//injector::MakeInline<CutOffAreaHookY2>(pattern.count(1).get(0).get<uint32_t>(54), pattern.count(1).get(0).get<uint32_t>(60));
+	//injector::MakeInline<CutOffAreaHookY3>(pattern.count(1).get(0).get<uint32_t>(64), pattern.count(1).get(0).get<uint32_t>(70));
 
 	uintptr_t loc_64AC8B = reinterpret_cast<uintptr_t>(hook::pattern("D9 05 ? ? ? ? 89 4E 68 8B 50 04 D8 76 68").get_first(0));
 	uintptr_t loc_64ACA5 = loc_64AC8B + 0x1A;
@@ -487,7 +523,7 @@ void Init()
 	};
 
 	injector::MakeInline<CreditPicturePos>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
-	injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(12), &Screen.Height43, true);
+	injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(12), &Screen.HeightHUD, true);
 
 	pattern = hook::pattern("8B D1 C1 EA 10 0F B6 C6 C1 E0 08 0F B6 F9 0B C7 89 4C ? ? C1 E0 08"); // 0x454FFD
 
@@ -696,11 +732,11 @@ void Init()
 	// TODO: distance bar at the bottom is incorrect
 	pattern = hook::pattern("DB 05 ? ? ? ? 8B 00 D9 84 ? ? ? ? ? 53 55 D8 C9 57 50 6A 01 D8 0D ? ? ? ? D9 9C"); // 0x45894A
 	injector::MakeInline<CreditPicturePos>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
-	injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(38), &Screen.Height43, true);
+	injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(38), &Screen.HeightHUD, true);
 
 	pattern = hook::pattern("DB 05 ? ? ? ? A1 ? ? ? ? 83 C4 08 D9 54 ? ? D8 8C"); // 0x526F83
 	injector::MakeInline<CreditPicturePos>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
-	injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(40), &Screen.Height43, true);
+	injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(40), &Screen.HeightHUD, true);
 
 	injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(236), &Screen.Width43, true);
 
@@ -716,7 +752,7 @@ void Init()
 		}
 	};
 
-	injector::MakeInline<DashStreaks>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(5));
+	//injector::MakeInline<DashStreaks>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(5));
 
 	pattern = hook::pattern("E8 ? ? ? ? 83 C4 10 E8 ? ? ? ? 5F C3 CC CC CC CC CC CC 83 EC 0C 56 33 F6 89 74"); // 0x527470
 
@@ -739,12 +775,12 @@ void Init()
 	pattern = hook::pattern("DB 05 ? ? ? ? A1 ? ? ? ? 0F B6 9C 24 ? ? ? ? D9 54 24 ? C1 E3 18"); // 0x5263DE
 
 	injector::MakeInline<CreditPicturePos>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
-	injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(63), &Screen.Height43, true);
+	injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(63), &Screen.HeightHUD, true);
 
 	pattern = hook::pattern("DB 05 ? ? ? ? A1 ? ? ? ? 83 C4 08 D9 54 24 ? BF ? ? ? ? D8 8C 24 ? ? ? ? 8D 74 24 ?"); // 0x526297
 
 	injector::MakeInline<CreditPicturePos>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
-	injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(49), &Screen.Height43, true);
+	injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(49), &Screen.HeightHUD, true);
 
 	pattern = hook::pattern("85 C0 74 0F 8B 46 28 85 C0 75 08 C7 44 24 04 00 80 FD 43 8A 42 1E 84 C0 74 0E"); // 0x527936
 
@@ -782,54 +818,72 @@ void Init()
 
 	injector::MakeInline<LevelUpPos2>(pattern.count(1).get(0).get<uint32_t>(40), pattern.count(1).get(0).get<uint32_t>(46));
 
-	pattern = hook::pattern("D9 C9 C1 E0 08 D9 5C ? ? 0B C1 C1 E0 08 D9 5C ? ? 0B C2 8D 4C ? ? BA"); //0x4578A3
+	//pattern = hook::pattern("D9 C9 C1 E0 08 D9 5C ? ? 0B C1 C1 E0 08 D9 5C ? ? 0B C2 8D 4C ? ? BA"); //0x4578A3
+	//
+	//struct WindowTextPos
+	//{
+	//	void operator()(injector::reg_pack& regs)
+	//	{
+	//		_asm
+	//		{
+	//			fxch st(1)
+	//		}
+	//		Screen.AspectRatioAffected = true;
+	//		regs.eax <<= 8;
+	//	}
+	//};
+	//
+	//injector::MakeInline<WindowTextPos>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(5));
+	//
+	//pattern = hook::pattern("C1 E0 08 0B C2 D9 54 ? ? C1 E0 08 D9 41 ? 0F B6 D3 D8 05 ? ? ? ? 0B C2 8B 54"); //0x4583FB
+	//
+	//struct WindowTextPos2
+	//{
+	//	void operator()(injector::reg_pack& regs)
+	//	{
+	//		Screen.AspectRatioAffected = true;
+	//		regs.eax <<= 8;
+	//		regs.eax |= regs.edx;
+	//	}
+	//};
+	//
+	//injector::MakeInline<WindowTextPos2>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(5));
+	//
+	//pattern = hook::pattern("D9 00 8B 39 D8 02 8B 50 04 89 54 ? ? 8B 50 08 89 7C ? ? D9 54"); //0x4574F9
+	//
+	//struct WindowPos
+	//{
+	//	void operator()(injector::reg_pack& regs)
+	//	{
+	//		Screen.AspectRatioAffected = true;
+	//		float Temp = *(float*)(regs.eax) + *(float*)(regs.edx);
+	//		regs.edi = *(int*)(regs.ecx);
+	//		_asm
+	//		{
+	//			fld dword ptr[Temp]
+	//		}
+	//	}
+	//};
+	//
+	//injector::MakeInline<WindowPos>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
 
-	struct WindowTextPos
-	{
-		void operator()(injector::reg_pack& regs)
-		{
-			_asm
-			{
-				fxch st(1)
-			}
-			Screen.AspectRatioAffected = true;
-			regs.eax <<= 8;
-		}
-	};
+	// injector::WriteMemory<int*>(0x00456CFA + 2, &Screen.Width43, true);
+	// injector::WriteMemory<int*>(0x00456D2B + 2, &Screen.Width43, true);
+	// injector::WriteMemory<float*>(0x00456D03 + 2, &Screen.fInvWidth43, true);
+	// injector::WriteMemory<float*>(0x00456D34 + 2, &Screen.fInvWidth43, true);
 
-	injector::MakeInline<WindowTextPos>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(5));
+	//injector::WriteMemory<float*>(0x00456D2B + 2, &Screen.fInvHeight, true);
 
-	pattern = hook::pattern("C1 E0 08 0B C2 D9 54 ? ? C1 E0 08 D9 41 ? 0F B6 D3 D8 05 ? ? ? ? 0B C2 8B 54"); //0x4583FB
 
-	struct WindowTextPos2
-	{
-		void operator()(injector::reg_pack& regs)
-		{
-			Screen.AspectRatioAffected = true;
-			regs.eax <<= 8;
-			regs.eax |= regs.edx;
-		}
-	};
+	//injector::MakeCALL(0x44D380, AdvertiseWindowHook);
+	//injector::MakeCALL(0x44E06D, AdvertiseWindowHook);
+	//injector::MakeCALL(0x44E1A0, AdvertiseWindowHook);
+	//injector::MakeCALL(0x44F8BC, AdvertiseWindowHook);
+	//injector::MakeCALL(0x45208D, AdvertiseWindowHook);
+	//injector::MakeCALL(0x45224B, AdvertiseWindowHook);
+	//injector::MakeCALL(0x643176, AdvertiseWindowHook);
+	//injector::MakeCALL(0x643298, AdvertiseWindowHook);
 
-	injector::MakeInline<WindowTextPos2>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(5));
-
-	pattern = hook::pattern("D9 00 8B 39 D8 02 8B 50 04 89 54 ? ? 8B 50 08 89 7C ? ? D9 54"); //0x4574F9
-
-	struct WindowPos
-	{
-		void operator()(injector::reg_pack& regs)
-		{
-			Screen.AspectRatioAffected = true;
-			float Temp = *(float*)(regs.eax) + *(float*)(regs.edx);
-			regs.edi = *(int*)(regs.ecx);
-			_asm
-			{
-				fld dword ptr[Temp]
-			}
-		}
-	};
-
-	injector::MakeInline<WindowPos>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
 
 	// unprotect and set scaled X res divider for Advertise
 	injector::UnprotectMemory(0x0078A08C, sizeof(float), dummyoldprotect);
@@ -1003,15 +1057,6 @@ void Init()
 				*(uint32_t*)(regs.esi + 4) = regs.edi;
 			}
 		}; injector::MakeInline<SysModeHook>(0x42713E, 0x427149);
-
-		if (SysMode == SystemMode::InGame)
-		{
-			*(int32_t*)0x8D6720 = Stage;
-			*(int32_t*)0x8D6920 = Team1;
-			*(int32_t*)0x8D6924 = Team2;
-			*(int32_t*)0x8D6928 = Team3;
-			*(int32_t*)0x8D692C = Team4;
-		}
 	}
 	if (bDisableCDCheck)
 		injector::MakeJMP(0x00629B72, 0x629C36, true);
@@ -1035,6 +1080,10 @@ void Init()
 
 	// custom clip range
 	injector::WriteMemory<float>(0x007869B4, ClipRange, true);
+
+	static float test = 1.0f / 640.0f;
+	injector::WriteMemory<float*>(0x0061D533 + 2, &test, true);
+
 }
 
 CEXP void InitializeASI()
