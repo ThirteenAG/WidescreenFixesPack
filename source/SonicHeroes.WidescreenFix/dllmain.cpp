@@ -163,6 +163,17 @@ void __declspec(naked) RestoreDemos()
 	}
 }
 
+enum SystemMode
+{
+	PalSelect,
+	MainMenu,
+	InGame,
+	EasyMenu,
+	Credits,
+	EasyMenuMovie,
+	MaxSysMode
+};
+
 void Init()
 {
     CIniReader iniReader("");
@@ -179,13 +190,21 @@ void Init()
 	static bool bDisableMouseInput = iniReader.ReadInteger("MISC", "DisableMouseInput", 1) != 0;
 	static bool bDisableFrameSkipping = iniReader.ReadInteger("MISC", "DisableFrameSkipping", 1) != 0;
 	static bool bRestoreDemos = iniReader.ReadInteger("MISC", "RestoreDemos", 1) != 0;
-	static bool bDebugMenu = iniReader.ReadInteger("MISC", "DebugMenu", 0) != 0;
 	static bool bDisableCDCheck = iniReader.ReadInteger("MISC", "DisableCDCheck", 1) != 0;
-
 	static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
 
 	if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
 		szCustomUserFilesDirectoryInGameDir.clear();
+
+	// SkipFE-like functions for Sonic Heroes
+	// credit to: https://github.com/Sewer56/Heroes.Utils.DebugBoot.ReloadedII
+	static bool bSkipFE = iniReader.ReadInteger("SkipFE", "Enabled", 0) != 0;
+	static int32_t SysMode = iniReader.ReadInteger("SkipFE", "SystemMode", SystemMode::EasyMenu);
+	static int32_t Stage = iniReader.ReadInteger("SkipFE", "Stage", 2);
+	static int32_t Team1 = iniReader.ReadInteger("SkipFE", "Team1", 0);
+	static int32_t Team2 = iniReader.ReadInteger("SkipFE", "Team2", -1);
+	static int32_t Team3 = iniReader.ReadInteger("SkipFE", "Team3", -1);
+	static int32_t Team4 = iniReader.ReadInteger("SkipFE", "Team4", -1);
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -939,16 +958,29 @@ void Init()
 	if (bRestoreDemos)
 		injector::MakeJMP(0x456989, RestoreDemos, true);
 
-	if (bDebugMenu)
-		injector::WriteMemory<uint32_t>(0x0042712D, 3, true);
+	if (bSkipFE)
+	{
+		struct SysModeHook
+		{
+			void operator()(injector::reg_pack& regs)
+			{
+				*(uint32_t*)(regs.eax + 0x38) = SysMode;
+				reinterpret_cast<void(*)()>(0x42A9F0)();
+				*(uint32_t*)(regs.esi + 4) = regs.edi;
+			}
+		}; injector::MakeInline<SysModeHook>(0x42713E, 0x427149);
 
+		if (SysMode == SystemMode::InGame)
+		{
+			injector::WriteMemory<int32_t>(0x8D6720, Stage, true);
+			injector::WriteMemory<int32_t>(0x8D6920, Team1, true);
+			injector::WriteMemory<int32_t>(0x8D6924, Team2, true);
+			injector::WriteMemory<int32_t>(0x8D6928, Team3, true);
+			injector::WriteMemory<int32_t>(0x8D692C, Team4, true);
+		}
+	}
 	if (bDisableCDCheck)
 		injector::MakeJMP(0x00629B72, 0x629C36, true);
-
-	// char strbuf[1024];
-	// sprintf(strbuf, "\nfShadowScale: 0x%X\n", &fShadowScale);
-	// OutputDebugStringA(strbuf);
-
 }
 
 CEXP void InitializeASI()
