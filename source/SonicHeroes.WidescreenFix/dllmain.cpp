@@ -2,23 +2,23 @@
 
 struct Screen
 {
-    int Width;
+	int Width;
 	int Width43;
 	int WidthFMV;
 	int OffsetX;
-    int Height;
+	int Height;
 	int Height43;
 	int HeightFMV;
 	int OffsetY;
 	bool AspectRatioAffected;
 	bool PreserveHorizontalPosition;
 	int ContinuePositionChange;
-    float fWidth;
-    float fHeight;
-    float fAspectRatio;
+	float fWidth;
+	float fHeight;
+	float fAspectRatio;
 	float fConditionalAspectRatio;
 	float fZoomFactor;
-    float fHudScale;
+	float fHudScale;
 } Screen;
 
 float iniZoomFactor = 1.0f;
@@ -163,6 +163,32 @@ void __declspec(naked) RestoreDemos()
 	}
 }
 
+static BOOL WINAPI UpdateWindowHook(HWND hWnd)
+{
+	// fix the window to open at the center of the screen...
+	HMONITOR monitor = MonitorFromWindow(GetDesktopWindow(), MONITOR_DEFAULTTONEAREST);
+	MONITORINFOEX info = { sizeof(MONITORINFOEX) };
+	GetMonitorInfo(monitor, &info);
+	DEVMODE devmode = {};
+	devmode.dmSize = sizeof(DEVMODE);
+	EnumDisplaySettings(info.szDevice, ENUM_CURRENT_SETTINGS, &devmode);
+	DWORD DesktopX = devmode.dmPelsWidth;
+	DWORD DesktopY = devmode.dmPelsHeight;
+
+	RECT wndRect = { 0 };
+	GetWindowRect(hWnd, &wndRect);
+
+	int Width = wndRect.right - wndRect.left;
+	int Height = wndRect.bottom - wndRect.top;
+
+	int WindowPosX = (int)(((float)DesktopX / 2.0f) - ((float)Width / 2.0f));
+	int WindowPosY = (int)(((float)DesktopY / 2.0f) - ((float)Height / 2.0f));
+
+	SetWindowPos(hWnd, 0, WindowPosX, WindowPosY, 0, 0, SWP_NOSIZE | SWP_FRAMECHANGED);
+
+	return UpdateWindow(hWnd);
+}
+
 enum SystemMode
 {
 	PalSelect,
@@ -176,22 +202,24 @@ enum SystemMode
 
 void Init()
 {
-    CIniReader iniReader("");
+	CIniReader iniReader("");
 	DWORD dummyoldprotect = 0;
-    Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
-    Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
+	Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
+	Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
 	Screen.fConditionalAspectRatio = iniReader.ReadFloat("MAIN", "Horizontal_Aspect_Lock", (4.0f / 3.0f));
 	Screen.fZoomFactor = iniReader.ReadFloat("MAIN", "FOV_Zoom_Factor", 1.0f);
 	iniZoomFactor = Screen.fZoomFactor;
 	int nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
-	bShadowFix = iniReader.ReadInteger("MISC", "ShadowFix", 1) != 0;
+	// bShadowFix = iniReader.ReadInteger("MISC", "ShadowFix", 1) != 0;
 	fShadowScale = iniReader.ReadFloat("MISC", "ShadowScale", 1.7f);
 	static uint32_t ShadowRes = iniReader.ReadInteger("MISC", "ShadowRes", 256);
+	static float ClipRange = iniReader.ReadFloat("MISC", "ClipRange", 1.0f);
 	bLensFlareFix = iniReader.ReadInteger("MISC", "LensFlareFix", 1) != 0;
 	static bool bDisableMouseInput = iniReader.ReadInteger("MISC", "DisableMouseInput", 1) != 0;
 	static bool bDisableFrameSkipping = iniReader.ReadInteger("MISC", "DisableFrameSkipping", 1) != 0;
 	static bool bRestoreDemos = iniReader.ReadInteger("MISC", "RestoreDemos", 1) != 0;
 	static bool bDisableCDCheck = iniReader.ReadInteger("MISC", "DisableCDCheck", 1) != 0;
+	static bool bDisableQuitDialog = iniReader.ReadInteger("MISC", "DisableQuitDialog", 0) != 0;
 
 	static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
 	if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
@@ -207,17 +235,17 @@ void Init()
 	static int32_t Team3 = iniReader.ReadInteger("SkipFE", "Team3", -1);
 	static int32_t Team4 = iniReader.ReadInteger("SkipFE", "Team4", -1);
 
-    if (!Screen.Width || !Screen.Height)
-        std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
+	if (!Screen.Width || !Screen.Height)
+		std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
 
-    Screen.fWidth = static_cast<float>(Screen.Width);
-    Screen.fHeight = static_cast<float>(Screen.Height);
-    Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
+	Screen.fWidth = static_cast<float>(Screen.Width);
+	Screen.fHeight = static_cast<float>(Screen.Height);
+	Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
 	if (Screen.fAspectRatio < Screen.fConditionalAspectRatio)
 	{
 		Screen.fZoomFactor *= (Screen.fAspectRatio / Screen.fConditionalAspectRatio);
 	}
-    Screen.fHudScale = ((1.0f / Screen.fAspectRatio) * (4.0f / 3.0f)) * Screen.fZoomFactor;
+	Screen.fHudScale = ((1.0f / Screen.fAspectRatio) * (4.0f / 3.0f)) * Screen.fZoomFactor;
 
 	Screen.OffsetX = (int)(Screen.Width - (Screen.Width * Screen.fHudScale)) / 2;
 	Screen.OffsetY = (int)(Screen.Height - (Screen.Height * Screen.fZoomFactor)) / 2;
@@ -242,19 +270,25 @@ void Init()
 	injector::MakeNOP(0x00427735, 10);
 	injector::MakeNOP(0x00444892, 5);
 	injector::MakeNOP(0x00444897, 5);
+	injector::MakeNOP(0x00629F5F, 5);
 
 	injector::MakeJMP(0x446B06, 0x446B51);
 
 	// write resolution vars
 	*(uint32_t*)0x00A7793C = Screen.Width;
 	*(uint32_t*)0x00A77940 = Screen.Height;
+	*(uint32_t*)0x007C931C = Screen.Width;
+	*(uint32_t*)0x007C9320 = Screen.Height;
+
+	*(uint8_t*)0x008CAEE0 = 7; // Screen_Size_Selection -- force it to 7 (1024x768 32-bit)
 
 	// fix for a stencil buffer -- force read the current res
 	injector::MakeNOP(0x0061D418, 2);
 
-	// 2p fixes -- TODO: hook and read current values for window resizing!
-	injector::WriteMemory<uint32_t>(0x004463E2 + 1, Screen.Width, true);
-	injector::WriteMemory<uint32_t>(0x004463E7 + 1, Screen.Height, true);
+	// fix "end the game" dialog to open at the center & have focus (disabling the minimize because minimized windows and their children lose focus!)
+	injector::MakeNOP(0x00446C85, 6, true);
+	injector::MakeCALL(0x00446C85, UpdateWindowHook);
+	injector::MakeJMP(0x446F33, 0x446F38);
 
 	if (bLensFlareFix)
 	{
@@ -266,6 +300,7 @@ void Init()
 
 		injector::MakeJMP(0x0048F419, LensFlareScale, true);
 	}
+
 	auto pattern = hook::pattern("0F BF 4E ? 0F BF C0 89 44 ? ? DB 44 ? ? 89 4C ? ? 85 DB"); // 662C2D
 	struct ResHook6
 	{
@@ -306,26 +341,26 @@ void Init()
 	pattern = hook::pattern("66 8B ? ? 66 85 C0 75 29 66 39 ? ? 75 23"); // 662BFB
 	injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<int8_t>(7), 0xEB, true);
 
-    pattern = hook::pattern("D9 42 68 D8 08 D9 42 68 D8 48 04 D9 42 68 D8 48 08"); // 0x64AFDC
-    struct CutOffAreaHook
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            float edx68 = *(float*)(regs.edx + 0x68) / Screen.fHudScale;
-            float eax00 = *(float*)(regs.eax + 0);
-            float eax04 = *(float*)(regs.eax + 4);
-            float eax08 = *(float*)(regs.eax + 8);
-            _asm
-            {
-                fld     dword ptr[edx68]
-                fmul    dword ptr[eax00]
-                fld     dword ptr[edx68]
-                fmul    dword ptr[eax04]
-                fld     dword ptr[edx68]
-                fmul    dword ptr[eax08]
-            }
-        }
-    };
+	pattern = hook::pattern("D9 42 68 D8 08 D9 42 68 D8 48 04 D9 42 68 D8 48 08"); // 0x64AFDC
+	struct CutOffAreaHook
+	{
+		void operator()(injector::reg_pack& regs)
+		{
+			float edx68 = *(float*)(regs.edx + 0x68) / Screen.fHudScale;
+			float eax00 = *(float*)(regs.eax + 0);
+			float eax04 = *(float*)(regs.eax + 4);
+			float eax08 = *(float*)(regs.eax + 8);
+			_asm
+			{
+				fld     dword ptr[edx68]
+				fmul    dword ptr[eax00]
+				fld     dword ptr[edx68]
+				fmul    dword ptr[eax04]
+				fld     dword ptr[edx68]
+				fmul    dword ptr[eax08]
+			}
+		}
+	};
 
 	struct CutOffAreaHookY
 	{
@@ -863,6 +898,48 @@ void Init()
 		injector::MakeCALL(loc_62DFAC, static_cast<HRESULT(WINAPI*)(LPSTR, LPSTR)>(PathAppendAHook), true);
 		injector::MakeNOP(loc_62DFAC + 5, 1, true);
 	}
+
+	// set Screen_Full & override game config
+	injector::MakeNOP(0x00629F8E, 5);
+	*(uint32_t*)0x008CAEDC = nWindowedMode == 0;
+
+	if ((nWindowedMode == 4) || (nWindowedMode == 5) || !nWindowedMode)
+	{
+		uintptr_t addr = 0x004460A9;
+		injector::MakeNOP(addr, 6, true);
+		injector::MakeCALL(addr, GetClientRectHook, true);
+		addr = 0x655794;
+		injector::MakeNOP(addr, 6, true);
+		injector::MakeCALL(addr, GetClientRectHook, true);
+		addr = 0x656644;
+		injector::MakeNOP(addr, 6, true);
+		injector::MakeCALL(addr, GetClientRectHook, true);
+		addr = 0x656787;
+		injector::MakeNOP(addr, 6, true);
+		injector::MakeCALL(addr, GetClientRectHook, true);
+		addr = 0x657C9C;
+		injector::MakeNOP(addr, 6, true);
+		injector::MakeCALL(addr, GetClientRectHook, true);
+		addr = 0x658172;
+		injector::MakeNOP(addr, 6, true);
+		injector::MakeCALL(addr, GetClientRectHook, true);
+		addr = 0x65822F;
+		injector::MakeNOP(addr, 6, true);
+		injector::MakeCALL(addr, GetClientRectHook, true);
+		addr = 0x65DBE7;
+		injector::MakeNOP(addr, 6, true);
+		injector::MakeCALL(addr, GetClientRectHook, true);
+		addr = 0x65DC2F;
+		injector::MakeNOP(addr, 6, true);
+		injector::MakeCALL(addr, GetClientRectHook, true);
+		addr = 0x65E152;
+		injector::MakeNOP(addr, 6, true);
+		injector::MakeCALL(addr, GetClientRectHook, true);
+		addr = 0x65E783;
+		injector::MakeNOP(addr, 6, true);
+		injector::MakeCALL(addr, GetClientRectHook, true);
+	}
+
 	if (nWindowedMode)
 	{
 		injector::MakeJMP(0x446D87, 0x446DA5, true);
@@ -883,55 +960,20 @@ void Init()
 		GameWndProc = (LRESULT(WINAPI*)(HWND, UINT, WPARAM, LPARAM))GameWndProcAddr;
 		injector::WriteMemory<unsigned int>(wndproc_addr, (unsigned int)&WSFixWndProc, true);
 
-		if ((nWindowedMode == 4) || (nWindowedMode == 5))
-		{
-			uintptr_t addr = 0x004460A9;
-			injector::MakeNOP(addr, 6, true);
-			injector::MakeCALL(addr, GetClientRectHook, true);
-			addr = 0x655794;
-			injector::MakeNOP(addr, 6, true);
-			injector::MakeCALL(addr, GetClientRectHook, true);
-			addr = 0x656644;
-			injector::MakeNOP(addr, 6, true);
-			injector::MakeCALL(addr, GetClientRectHook, true);
-			addr = 0x656787;
-			injector::MakeNOP(addr, 6, true);
-			injector::MakeCALL(addr, GetClientRectHook, true);
-			addr = 0x657C9C;
-			injector::MakeNOP(addr, 6, true);
-			injector::MakeCALL(addr, GetClientRectHook, true);
-			addr = 0x658172;
-			injector::MakeNOP(addr, 6, true);
-			injector::MakeCALL(addr, GetClientRectHook, true);
-			addr = 0x65822F;
-			injector::MakeNOP(addr, 6, true);
-			injector::MakeCALL(addr, GetClientRectHook, true);
-			addr = 0x65DBE7;
-			injector::MakeNOP(addr, 6, true);
-			injector::MakeCALL(addr, GetClientRectHook, true);
-			addr = 0x65DC2F;
-			injector::MakeNOP(addr, 6, true);
-			injector::MakeCALL(addr, GetClientRectHook, true);
-			addr = 0x65E152;
-			injector::MakeNOP(addr, 6, true);
-			injector::MakeCALL(addr, GetClientRectHook, true);
-			addr = 0x65E783;
-			injector::MakeNOP(addr, 6, true);
-			injector::MakeCALL(addr, GetClientRectHook, true);
-
-			injector::MakeJMP(0x6567B6, StretchOnBoot, true);
-		}
-
 		switch (nWindowedMode)
 		{
 		case 5:
 			WindowedModeWrapper::bStretchWindow = true;
+			injector::MakeJMP(0x6567B6, StretchOnBoot, true);
 			break;
 		case 4:
 			WindowedModeWrapper::bScaleWindow = true;
+			injector::MakeJMP(0x6567B6, StretchOnBoot, true);
 			break;
 		case 3:
 			WindowedModeWrapper::bEnableWindowResize = true;
+			injector::MakeJMP(0x00445B32, 0x00445B3A);
+			injector::MakeJMP(0x00446EBF, 0x00446EC6);
 		case 2:
 			WindowedModeWrapper::bBorderlessWindowed = false;
 			break;
@@ -987,21 +1029,27 @@ void Init()
 
 		injector::WriteMemory<float>(0x006B7237 + 1, (float)ShadowRes, true);
 	}
+
+	if (bDisableQuitDialog)
+		injector::MakeJMP(0x446EFB, 0x446FFB);
+
+	// custom clip range
+	injector::WriteMemory<float>(0x007869B4, ClipRange, true);
 }
 
 CEXP void InitializeASI()
 {
-    std::call_once(CallbackHandler::flag, []()
-        {
-            CallbackHandler::RegisterCallback(Init, hook::pattern("0F BE 0D ? ? ? ? 8D 0C 89 8B"));
-        });
+	std::call_once(CallbackHandler::flag, []()
+		{
+			CallbackHandler::RegisterCallback(Init, hook::pattern("0F BE 0D ? ? ? ? 8D 0C 89 8B"));
+		});
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
-    if (reason == DLL_PROCESS_ATTACH)
-    {
-        if (!IsUALPresent()) { InitializeASI(); }
-    }
-    return TRUE;
+	if (reason == DLL_PROCESS_ATTACH)
+	{
+		if (!IsUALPresent()) { InitializeASI(); }
+	}
+	return TRUE;
 }
