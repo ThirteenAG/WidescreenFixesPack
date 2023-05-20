@@ -22,7 +22,7 @@ struct Screen
 } Screen;
 
 float iniZoomFactor = 1.0f;
-bool bFixLensFlare = true;
+bool bLensFlareFix = true;
 float fLensFlareScalar;
 
 void updateValues(const float& newWidth, const float& newHeight)
@@ -69,7 +69,7 @@ void updateValues(const float& newWidth, const float& newHeight)
 	*(float*)0x00AA7140 = Screen.fWidth;
 	*(float*)0x00AA7144 = Screen.fHeight;
 
-	if (bFixLensFlare)
+	if (bLensFlareFix)
 	{
 		*(float*)0x0078A184 = Screen.fWidth;
 		*(float*)0x0078A180 = Screen.fHeight;
@@ -172,11 +172,12 @@ void Init()
 	iniZoomFactor = Screen.fZoomFactor;
 	int nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
 	static bool bShadowFix = iniReader.ReadInteger("MISC", "ShadowFix", 1) != 0;
-	bFixLensFlare = iniReader.ReadInteger("MISC", "LensFlareFix", 1) != 0;
+	bLensFlareFix = iniReader.ReadInteger("MISC", "LensFlareFix", 1) != 0;
 	static bool bDisableMouseInput = iniReader.ReadInteger("MISC", "DisableMouseInput", 1) != 0;
 	static bool bDisableFrameSkipping = iniReader.ReadInteger("MISC", "DisableFrameSkipping", 1) != 0;
 	static bool bRestoreDemos = iniReader.ReadInteger("MISC", "RestoreDemos", 1) != 0;
 	static bool bDebugMenu = iniReader.ReadInteger("MISC", "DebugMenu", 0) != 0;
+	static bool bDisableCDCheck = iniReader.ReadInteger("MISC", "DisableCDCheck", 1) != 0;
 
 	static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
 
@@ -225,7 +226,7 @@ void Init()
 	*(uint32_t*)0x00A7793C = Screen.Width;
 	*(uint32_t*)0x00A77940 = Screen.Height;
 
-	if (bFixLensFlare)
+	if (bLensFlareFix)
 	{
 		injector::UnprotectMemory(0x0078A180, 2 * sizeof(float), dummyoldprotect);
 		*(float*)0x0078A184 = Screen.fWidth;
@@ -497,7 +498,7 @@ void Init()
 	pattern = hook::pattern("DB 05 ? ? ? ? D9 5C ? ? DB 47 ? D8 4C ? ? D8 0D ? ? ? ? D9 5C ? ? DB 05 ? ? ? ?");
 	injector::MakeInline<NowLoadingTextPos>(pattern.count(1).get(0).get<uint32_t>(69), pattern.count(1).get(0).get<uint32_t>(75));
 
-	// Powerup Icons
+	// Powerup Icons -- TODO: broken, powerup icons are too close to each other!
 
 	struct PowerupIcon1
 	{
@@ -603,6 +604,8 @@ void Init()
 	injector::MakeInline<ResultsPos>(pattern.count(1).get(0).get<uint32_t>(4), pattern.count(1).get(0).get<uint32_t>(9));
 
 	// Special Stage
+	// TODO: broken streaks, they render at the bottom right of the screen constantly
+	// TODO: distance bar at the bottom is incorrect
 	pattern = hook::pattern("DB 05 ? ? ? ? 8B 00 D9 84 ? ? ? ? ? 53 55 D8 C9 57 50 6A 01 D8 0D ? ? ? ? D9 9C"); // 0x45894A
 	injector::MakeInline<CreditPicturePos>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
 	injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(38), &Screen.Height43, true);
@@ -933,6 +936,8 @@ void Init()
 	if (bDebugMenu)
 		injector::WriteMemory<uint32_t>(0x0042712D, 3, true);
 
+	if (bDisableCDCheck)
+		injector::MakeJMP(0x00629B72, 0x629C36, true);
 }
 
 CEXP void InitializeASI()
