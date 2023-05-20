@@ -29,6 +29,7 @@ bool bLensFlareFix = true;
 float fLensFlareScalar;
 bool bShadowFix = true;
 float fShadowScale = 1.7f;
+float fDustWidth = 40.0f;
 
 void updateValues(const float& newWidth, const float& newHeight)
 {
@@ -64,6 +65,8 @@ void updateValues(const float& newWidth, const float& newHeight)
 	{
 		Screen.WidthFMV = (int)(Screen.WidthFMV / (Screen.fAspectRatio / (4.0f / 3.0f)));
 	}
+
+	fDustWidth = 40.0f * Screen.fAspectRatio;
 
 	// write resolution vars
 	*(uint32_t*)0x00A7793C = Screen.Width;
@@ -316,7 +319,7 @@ void Init()
 
 	*(uint8_t*)0x008CAEE0 = 7; // Screen_Size_Selection -- force it to 7 (1280x960 32-bit)
 
-	// fix for a stencil buffer -- force read the current res
+	// fix for the split screen screen buffer -- force read the current res
 	injector::MakeNOP(0x0061D418, 2);
 
 	// fix "end the game" dialog to open at the center & have focus (disabling the minimize because minimized windows and their children lose focus!)
@@ -374,58 +377,6 @@ void Init()
 	injector::MakeInline<ResHook6>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(7));
 	pattern = hook::pattern("66 8B ? ? 66 85 C0 75 29 66 39 ? ? 75 23"); // 662BFB
 	injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<int8_t>(7), 0xEB, true);
-
-
-
-	//pattern = hook::pattern("D9 42 68 D8 08 D9 42 68 D8 48 04 D9 42 68 D8 48 08"); // 0x64AFDC
-	//struct CutOffAreaHook
-	//{
-	//	void operator()(injector::reg_pack& regs)
-	//	{
-	//		float edx68 = *(float*)(regs.edx + 0x68) / Screen.fHudScale;
-	//		float eax00 = *(float*)(regs.eax + 0);
-	//		float eax04 = *(float*)(regs.eax + 4);
-	//		float eax08 = *(float*)(regs.eax + 8);
-	//		_asm
-	//		{
-	//			fld     dword ptr[edx68]
-	//			fmul    dword ptr[eax00]
-	//			fld     dword ptr[edx68]
-	//			fmul    dword ptr[eax04]
-	//			fld     dword ptr[edx68]
-	//			fmul    dword ptr[eax08]
-	//		}
-	//	}
-	//};
-	//
-	//struct CutOffAreaHookY
-	//{
-	//	void operator()(injector::reg_pack& regs)
-	//	{
-	//		float yScale = *(float*)(regs.edx + 0x6C) / Screen.fZoomFactor * *(float*)(regs.eax + 0x10);
-	//	}
-	//};
-	//
-	//struct CutOffAreaHookY2
-	//{
-	//	void operator()(injector::reg_pack& regs)
-	//	{
-	//		float yScale = *(float*)(regs.edx + 0x6C) / Screen.fZoomFactor * *(float*)(regs.eax + 0x14);
-	//	}
-	//};
-	//
-	//struct CutOffAreaHookY3
-	//{
-	//	void operator()(injector::reg_pack& regs)
-	//	{
-	//		float yScale = *(float*)(regs.edx + 0x6C) / Screen.fZoomFactor * *(float*)(regs.eax + 0x18);
-	//	}
-	//};
-	//
-	//injector::MakeInline<CutOffAreaHook>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(17));
-	//injector::MakeInline<CutOffAreaHookY>(pattern.count(1).get(0).get<uint32_t>(42), pattern.count(1).get(0).get<uint32_t>(48));
-	//injector::MakeInline<CutOffAreaHookY2>(pattern.count(1).get(0).get<uint32_t>(54), pattern.count(1).get(0).get<uint32_t>(60));
-	//injector::MakeInline<CutOffAreaHookY3>(pattern.count(1).get(0).get<uint32_t>(64), pattern.count(1).get(0).get<uint32_t>(70));
 
 	uintptr_t loc_64AC8B = reinterpret_cast<uintptr_t>(hook::pattern("D9 05 ? ? ? ? 89 4E 68 8B 50 04 D8 76 68").get_first(0));
 	uintptr_t loc_64ACA5 = loc_64AC8B + 0x1A;
@@ -728,8 +679,13 @@ void Init()
 	injector::MakeInline<ResultsPos>(pattern.count(1).get(0).get<uint32_t>(4), pattern.count(1).get(0).get<uint32_t>(9));
 
 	// Special Stage
-	// TODO: broken streaks, they render at the bottom right of the screen constantly
 	// TODO: distance bar at the bottom is incorrect
+	// TODO: boost gauge
+	fDustWidth = 40.0f * Screen.fAspectRatio;
+	static float fDustHeight = 40.0f;
+	injector::WriteMemory<float*>(0x0052C5FB + 2, &fDustWidth, true);
+	injector::WriteMemory<float*>(0x0052C607 + 2, &fDustHeight, true);
+
 	pattern = hook::pattern("DB 05 ? ? ? ? 8B 00 D9 84 ? ? ? ? ? 53 55 D8 C9 57 50 6A 01 D8 0D ? ? ? ? D9 9C"); // 0x45894A
 	injector::MakeInline<CreditPicturePos>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
 	injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(38), &Screen.HeightHUD, true);
@@ -740,19 +696,6 @@ void Init()
 
 	injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(236), &Screen.Width43, true);
 
-	pattern = hook::pattern("8A 0E C1 E1 08 0B CA C1 E1 08 0B C8 89 0D ? ? ? ? E8 ? ? ? ? 6A 03"); // 0x525AD7
-
-	struct DashStreaks
-	{
-		void operator()(injector::reg_pack& regs)
-		{
-			Screen.AspectRatioAffected = true;
-			regs.ecx = *(int8_t*)(regs.esi);
-			regs.ecx <<= 8;
-		}
-	};
-
-	//injector::MakeInline<DashStreaks>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(5));
 
 	pattern = hook::pattern("E8 ? ? ? ? 83 C4 10 E8 ? ? ? ? 5F C3 CC CC CC CC CC CC 83 EC 0C 56 33 F6 89 74"); // 0x527470
 
@@ -1081,9 +1024,17 @@ void Init()
 	// custom clip range
 	injector::WriteMemory<float>(0x007869B4, ClipRange, true);
 
-	static float test = 1.0f / 640.0f;
-	injector::WriteMemory<float*>(0x0061D533 + 2, &test, true);
+	static float fInv640 = 1.0f / 640.0f;
+	// 2P fix -- ignore aspect change for screen texture
+	injector::WriteMemory<float*>(0x0061D533 + 2, &fInv640, true);
 
+	// injector::WriteMemory<int*>(0x00456CFA + 2, &Screen.Width43, true);
+	// injector::WriteMemory<int*>(0x00456D2B + 2, &Screen.Width43, true);
+
+	
+	// 
+	// injector::WriteMemory<float*>(0x00456D03 + 2, &fInv640, true);
+	// injector::WriteMemory<float*>(0x00456D34 + 2, &fInv640, true);
 }
 
 CEXP void InitializeASI()
