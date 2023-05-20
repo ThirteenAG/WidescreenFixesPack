@@ -1026,6 +1026,10 @@ void Init()
 	injector::WriteMemory<float*>(0x0052640A + 2, &fInv640, true);
 	injector::WriteMemory<float*>(0x00526459 + 2, &fInv640, true);
 
+	// ignore aspect change for special stage link counter
+	injector::WriteMemory<float*>(0x00526F9C + 2, &fInv640, true);
+	injector::WriteMemory<float*>(0x00526FEA + 2, &fInv640, true);
+
 	// ignore aspect change for results screen
 	injector::WriteMemory<float*>(0x458961 + 2, &fInv640, true);
 	injector::WriteMemory<float*>(0x00458993 + 2, &fInv640, true);
