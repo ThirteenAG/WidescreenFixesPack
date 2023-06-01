@@ -211,6 +211,36 @@ namespace AdvertiseWindowFix
 		float y;
 	};
 
+
+	char* AdvWindowObj;
+	void AdvWindowConstructorHook()
+	{
+		//printf("ADV WINDOW CONSTRUCTOR!!!\n");
+		AdvWindowObj = (char*)malloc(0x848);
+	}
+
+	void __stdcall AdvWindowDestructorHook(char unk)
+	{
+		void* that;
+		_asm mov that, ecx
+
+		free(AdvWindowObj);
+
+		return reinterpret_cast<void(__thiscall*)(void*, char)>(0x00456F90)(that, unk);
+	}
+
+	uintptr_t sub_456AA0 = 0x456AA0;
+	void __declspec(naked) hkAdvWindowConstructor()
+	{
+		_asm
+		{
+			pushad
+			call AdvWindowConstructorHook
+			popad
+			jmp sub_456AA0
+		}
+	}
+
 	uintptr_t AdvertiseWindowDrawFunc2Addr = 0x004575C0;
 	// this is a fastcall
 	// arg0 = eax
@@ -315,8 +345,7 @@ namespace AdvertiseWindowFix
 		_asm mov that, ecx
 
 		// make a copy of the object
-		char* WindowObj = (char*)malloc(0x848);
-		memcpy(WindowObj, (void*)that, 0x848);
+		memcpy(AdvWindowObj, (void*)that, 0x848);
 
 		float Xscale = Screen.Width43 / 640.0f;
 		float Yscale = Screen.fHeight / 480.0f;
@@ -328,59 +357,19 @@ namespace AdvertiseWindowFix
 			Yscalesize = Screen.fWidth / 480.0f;
 		}
 
-		*(float*)(&WindowObj[0x48]) *= Yscalesize; // Xsize
-		*(float*)(&WindowObj[0x4C]) *= Yscalesize; // Ysize
-		*(float*)(&WindowObj[0x3C]) *= Xscale; // Xpos
+		*(float*)(&AdvWindowObj[0x48]) *= Yscalesize; // Xsize
+		*(float*)(&AdvWindowObj[0x4C]) *= Yscalesize; // Ysize
+		*(float*)(&AdvWindowObj[0x3C]) *= Xscale; // Xpos
 		if (Screen.fAspectRatio != (4.0f / 3.0f))
 		{
-			*(float*)(&WindowObj[0x3C]) += static_cast<float>((Screen.Width - Screen.Width43) / 2.0f);
+			*(float*)(&AdvWindowObj[0x3C]) += static_cast<float>((Screen.Width - Screen.Width43) / 2.0f);
 			if (Screen.fAspectRatio < (4.0f / 3.0f))
-				if (*(float*)(&WindowObj[0x3C]) < 0) *(float*)(&WindowObj[0x3C]) = 0;
+				if (*(float*)(&AdvWindowObj[0x3C]) < 0) *(float*)(&AdvWindowObj[0x3C]) = 0;
 		}
-		*(float*)(&WindowObj[0x40]) *= Yscale; // Ypos
+		*(float*)(&AdvWindowObj[0x40]) *= Yscale; // Ypos
 
-		reinterpret_cast<void(__thiscall*)(char*)>(0x004570D0)(WindowObj);
-
-		free(WindowObj);
+		reinterpret_cast<void(__thiscall*)(char*)>(0x004570D0)(AdvWindowObj);
 	}
-}
-
-uintptr_t TextDrawFunc2Addr = 0x00458200;
-// this is a fastcall
-// arg0 = eax
-void __stdcall TextDrawFunc2(uintptr_t a0, uintptr_t a1, float posX, float posY, float sizeX, float sizeY, uintptr_t a3)
-{
-	_asm
-	{
-		push a3
-		push sizeY
-		push sizeX
-		push posY
-		push posX
-		push a1
-		mov eax, a0
-		call TextDrawFunc2Addr
-	}
-}
-
-void __stdcall TextDrawFunc2Hook(uintptr_t a1, float posX, float posY, float sizeX, float sizeY, uintptr_t a3)
-{
-	uintptr_t a0;
-	_asm mov a0, eax
-
-	float scalar = (Screen.fHeight / 480.0f);
-	//float posXscalar = (Screen.fAspectRatio / (4.0f / 3.0f));
-
-	if (Screen.fAspectRatio < (4.0f / 3.0f))
-		scalar = (Screen.fWidth / 480.0f);
-
-	float newSizeX = sizeX * scalar;
-	float newSizeY = sizeY * scalar;
-	//float newPosX = posX * TestFloat1;
-
-	//printf("PosX: %.2f\tNewPosX: %.2f\n", posX, newPosX);
-
-	return TextDrawFunc2(a0, a1, posX, posY, newSizeX, newSizeY, a3);
 }
 
 namespace AdvStaffRollFix
@@ -465,6 +454,44 @@ namespace AdvStaffRollFix
 
 		reinterpret_cast<void(__thiscall*)(char*)>(0x4545F0)(StaffrollObjCopy);
 	}
+}
+
+uintptr_t TextDrawFunc2Addr = 0x00458200;
+// this is a fastcall
+// arg0 = eax
+void __stdcall TextDrawFunc2(uintptr_t a0, uintptr_t a1, float posX, float posY, float sizeX, float sizeY, uintptr_t a3)
+{
+	_asm
+	{
+		push a3
+		push sizeY
+		push sizeX
+		push posY
+		push posX
+		push a1
+		mov eax, a0
+		call TextDrawFunc2Addr
+	}
+}
+
+void __stdcall TextDrawFunc2Hook(uintptr_t a1, float posX, float posY, float sizeX, float sizeY, uintptr_t a3)
+{
+	uintptr_t a0;
+	_asm mov a0, eax
+
+	float scalar = (Screen.fHeight / 480.0f);
+	//float posXscalar = (Screen.fAspectRatio / (4.0f / 3.0f));
+
+	if (Screen.fAspectRatio < (4.0f / 3.0f))
+		scalar = (Screen.fWidth / 480.0f);
+
+	float newSizeX = sizeX * scalar;
+	float newSizeY = sizeY * scalar;
+	//float newPosX = posX * TestFloat1;
+
+	//printf("PosX: %.2f\tNewPosX: %.2f\n", posX, newPosX);
+
+	return TextDrawFunc2(a0, a1, posX, posY, newSizeX, newSizeY, a3);
 }
 
 void __stdcall HookAConsole()
@@ -1495,6 +1522,9 @@ void Init()
 
 		injector::MakeCALL(0x00457F1B, TextDrawFunc2Hook);
 		injector::MakeCALL(0x00457F3C, TextDrawFunc2Hook);
+
+		injector::MakeCALL(0x00456CC7, AdvertiseWindowFix::hkAdvWindowConstructor);
+		injector::WriteMemory<uintptr_t>(0x00750244, (uintptr_t)&AdvertiseWindowFix::AdvWindowDestructorHook, true);
 	}
 
 	// Staff roll text
@@ -1504,6 +1534,7 @@ void Init()
 		injector::MakeCALL(0x0045448B, AdvStaffRollFix::hkStaffrollConstructor);
 		injector::WriteMemory<uintptr_t>(0x0074F8FC, (uintptr_t)&AdvStaffRollFix::AdvStaffrollDrawHook, true);
 		injector::WriteMemory<uintptr_t>(0x0074F8F4, (uintptr_t)&AdvStaffRollFix::AdvStaffrollDestructorHook, true);
+		// TODO: staff roll textures & video
 	}
 }
 
