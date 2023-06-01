@@ -1567,7 +1567,7 @@ void Init()
 		injector::WriteMemory<uintptr_t>(0x00750244, (uintptr_t)&AdvertiseWindowFix::AdvWindowDestructorHook, true);
 	}
 
-	// Staff roll text
+	// Staff roll
 	if (bFixStaffRoll)
 	{
 		injector::MakeCALL(0x00454744, TextDrawFunc2Hook);
@@ -1576,7 +1576,6 @@ void Init()
 		injector::WriteMemory<uintptr_t>(0x0074F8F4, (uintptr_t)&AdvStaffRollFix::AdvStaffrollDestructorHook, true);
 
 		injector::MakeCALL(0x0045475C, AdvStaffRollFix::AdvStaffrollLogoHook);
-
 	}
 }
 
