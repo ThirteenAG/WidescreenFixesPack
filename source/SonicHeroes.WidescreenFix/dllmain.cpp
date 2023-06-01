@@ -39,6 +39,7 @@ float AdvWindowButtonTextYOffset = 16.0f;
 float AdvWindowButton2TextYOffset = 8.0f;
 float AdvWindowButton2Offset = 40.0f;
 float AdvWindowButton3Offset = 72.0f;
+float AdvStaffRollLogoScale = 1.0f;
 
 void updateValues(const float& newWidth, const float& newHeight)
 {
@@ -378,9 +379,9 @@ namespace AdvStaffRollFix
 	{
 		uint32_t unk1;
 		uint32_t unk2;
-		uint32_t unk3;
-		float spaceY;
+		float posX;
 		float posY;
+		float size;
 		uint32_t unk4;
 	};
 
@@ -443,16 +444,55 @@ namespace AdvStaffRollFix
 			for (int i = 0; i < objCount; i++)
 			{
 				float scalar = Screen.fHeight / 480.0f;
-				if (Screen.Width < Screen.Height)
-					scalar = Screen.fWidth / 480.0f;
+				float Xscale = Screen.Width / 640.0f;
 
-				scaledStaffRollObjs[i].spaceY *= scalar;
+				if (Screen.Width < Screen.Height)
+				{
+					scalar = Screen.fWidth / 480.0f;
+					Xscale = Screen.fWidth / 640.0f;
+				}
+
+				scaledStaffRollObjs[i].posX *= Xscale;
+				scaledStaffRollObjs[i].posY *= scalar;
 			}
 
 			*(typeStaffrollTextObj**)(&StaffrollObjCopy[0x84]) = scaledStaffRollObjs;
 		}
 
 		reinterpret_cast<void(__thiscall*)(char*)>(0x4545F0)(StaffrollObjCopy);
+	}
+
+	uintptr_t AdvStaffrollLogoFuncAddr = 0x00454FB0;
+	// this is a fastcall
+	// arg0 = esi
+	void __stdcall AdvStaffrollLogoFunc(void* obj, float sizeX, float sizeY)
+	{
+		_asm
+		{
+			push sizeY
+			push sizeX
+			mov esi, obj
+			call AdvStaffrollLogoFuncAddr
+		}
+	}
+
+	void __stdcall AdvStaffrollLogoHook(float sizeX, float sizeY)
+	{
+		typeStaffrollTextObj* that;
+		_asm mov that, esi
+
+		float scalar = Screen.fHeight / 480.0f;
+		float posscalar = (4.0f / 3.0f) / Screen.fAspectRatio;
+
+		that->posX *= posscalar;
+
+		if (Screen.Width < Screen.Height)
+		{
+			scalar = Screen.fWidth / 480.0f;
+			that->posX = 0;
+		}				
+
+		return AdvStaffrollLogoFunc(that, sizeX * scalar, sizeY * scalar);
 	}
 }
 
@@ -1379,8 +1419,8 @@ void Init()
 	injector::WriteMemory<float*>(0x00456D34 + 2, &fInv640, true);
 
 	// staff roll
-	//injector::WriteMemory<int*>(0x004543FF + 2, &OrigWidth, true);
-	//injector::WriteMemory<float*>(0x00454407 + 2, &fInv640, true);
+	injector::WriteMemory<int*>(0x004543FF + 2, &OrigWidth, true);
+	injector::WriteMemory<float*>(0x00454407 + 2, &fInv640, true);
 	//injector::WriteMemory<int*>(0x004546F5 + 2, &OrigHeight, true);
 
 	// fix window icon
@@ -1531,10 +1571,12 @@ void Init()
 	if (bFixStaffRoll)
 	{
 		injector::MakeCALL(0x00454744, TextDrawFunc2Hook);
-		injector::MakeCALL(0x0045448B, AdvStaffRollFix::hkStaffrollConstructor);
 		injector::WriteMemory<uintptr_t>(0x0074F8FC, (uintptr_t)&AdvStaffRollFix::AdvStaffrollDrawHook, true);
+		injector::MakeCALL(0x0045448B, AdvStaffRollFix::hkStaffrollConstructor);
 		injector::WriteMemory<uintptr_t>(0x0074F8F4, (uintptr_t)&AdvStaffRollFix::AdvStaffrollDestructorHook, true);
-		// TODO: staff roll textures & video
+
+		injector::MakeCALL(0x0045475C, AdvStaffRollFix::AdvStaffrollLogoHook);
+
 	}
 }
 
