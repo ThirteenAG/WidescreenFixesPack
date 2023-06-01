@@ -32,6 +32,7 @@ float fShadowScale = 1.7f;
 float fDustWidth = 40.0f;
 
 bool bFixAdvertiseWindows = true;
+bool bFixStaffRoll = true;
 float WindowBezelSize = 1.0f / 32.0f;
 float ButtonBezelOffset = 8.0f;
 float AdvWindowButtonTextYOffset = 16.0f;
@@ -196,271 +197,152 @@ void __declspec(naked) RestoreDemos()
 	}
 }
 
-void* __cdecl AdvertiseWindowHook(uint32_t a0, uintptr_t a1)
-{
-	//if (Screen.Width > Screen.Height)
-
-	// X
-	*(float*)(a1 + 0x14) = 0;   // left edge
-	*(float*)(a1 + 0x20) = 320; // right edge
-
-	// Y
-	*(float*)(a1 + 0x18) = 0;   // top edge
-	*(float*)(a1 + 0x24) = 240; // bottom edge
-
-	return reinterpret_cast<void*(__cdecl*)(uint32_t, uintptr_t)>(0x456C80)(a0, a1);
-}
-
 #pragma runtime_checks( "", off )
-uintptr_t AdvertiseWindowDrawFuncAddr = 0x4574E0;
-// this is a fastcall
-// arg0 = eax
-// arg1 = edx
-// arg2 = ecx
-void __stdcall AdvertiseWindowDrawFunc(uintptr_t a0, uintptr_t a1, uintptr_t a2, uint32_t a3)
-{
-	_asm
-	{
-		push a3
-		mov ecx, a2
-		mov edx, a1
-		mov eax, a0
-		call AdvertiseWindowDrawFuncAddr
-	}
-}
-
-void Print4Floats(uintptr_t addr)
-{
-	printf("f1: %.2f\nf2: %.2f\nf3: %.2f\nf4: %.2f\n", *(float*)(addr), *(float*)(addr + 4), *(float*)(addr + 8), *(float*)(addr + 0xC));
-}
-
 float TestFloat1 = 1.0f;
 float TestFloat2 = 1.0f;
 float TestFloat3 = 1.0f;
 float TestFloat4 = 1.0f;
 
-void __stdcall AdvertiseWindowDrawHook(uint32_t a3)
+namespace AdvertiseWindowFix
 {
-	// EAX = position
-	// EDX = window size stuff
-	// ECX = border
-
-	uintptr_t rEAX, rEDX, rECX;
-	_asm
+	struct Vector2
 	{
-		mov rEAX, eax
-		mov rEDX, edx
-		mov rECX, ecx
+		float x;
+		float y;
+	};
+
+	uintptr_t AdvertiseWindowDrawFunc2Addr = 0x004575C0;
+	// this is a fastcall
+	// arg0 = eax
+	// arg1 = ecx
+	void __stdcall AdvertiseWindowDrawFunc2(Vector2* a0, Vector2* a1, uintptr_t a2)
+	{
+		_asm
+		{
+			push a2
+			mov ecx, a1
+			mov eax, a0
+			call AdvertiseWindowDrawFunc2Addr
+		}
 	}
 
-	//printf("rEAX: 0x%X\trEDX: 0x%X\trECX: 0x%X\n", rEAX, rEDX, rECX);
-
-	//Print4Floats(rECX);
-
-	// uintptr_t addr = rEAX;
-
-	//*(float*)(rEAX) *= 2.0f;
-	//*(float*)(rEAX + 4) *= 2.0f;
-	//*(float*)(rEAX + 8) *= 2.0f;
-	//*(float*)(rEAX + 0xC) *= 2.0f;
-	//*(float*)(rEAX + 0x10) *= 2.0f;
-	// moves the entirety of the bottom of the window
-	//*(float*)(rEAX + 0x1C) *= 2.0f;
-	//*(float*)(rEAX + 0x20) *= 2.0f;
-
-	//*(float*)(rEAX + 0x24) *= 2.0f;
-	//*(float*)(rEAX + 0x28) *= 2.0f;
-	//*(float*)(rEAX + 0x2C) *= 2.0f;
-	// size of upper right edge
-	//*(float*)(rEAX + 0x34) *= 2.0f;
-	// size of upper left edge
-	//*(float*)(rEAX + 0x38) *= 2.0f;
-
-	// something with size
-	//*(float*)(rEDX-4) *= 2.0f;
-	//*(float*)(rEDX) *= 2.0f;
-	//*(float*)(rEDX + 4) *= 2.0f;
-
-	// top left corner position
-	//*(float*)(rEDX + 8) *= 2.0f;
-	//*(float*)(rEDX + 0xC) *= 2.0f;
-	//*(float*)(rEDX + 0x10) *= 2.0f;
-
-	// top right corner position
-	//*(float*)(rEDX + 0x14) *= 2.0f;
-	//*(float*)(rEDX + 0x18) *= 2.0f;
-	//*(float*)(rEDX + 0x1C) *= 2.0f;
-
-	// bottom left
-	// *(float*)(rEDX + 0x20) *= 2.0f;
-	// *(float*)(rEDX + 0x24) *= 2.0f;
-	// *(float*)(rEDX + 0x28) *= 2.0f;
-
-	// bottom right
-	// *(float*)(rEDX + 0x2C) *= 2.0f;
-	// *(float*)(rEDX + 0x30) *= 2.0f;
-	// *(float*)(rEDX + 0x34) *= 2.0f;
-
-	// *(float*)(rEDX + 0x3C) *= 2.0f;
-	// *(float*)(rEDX + 0x40) *= 2.0f;
-	// *(float*)(rEDX + 0x44) *= 2.0f;
-
-	// *(float*)(rECX)       /= 2.0f;
-	// *(float*)(rECX + 4)   /= 2.0f;
-	// *(float*)(rECX + 8)   /= 2.0f;
-	// *(float*)(rECX + 0xC) /= 2.0f;
-
-	//*(float*)(rECX + 0x14) /= 2.0f;
-
-	return AdvertiseWindowDrawFunc(rEAX, rEDX, rECX, a3);
-}
-
-struct Vector2
-{
-	float x;
-	float y;
-};
-
-uintptr_t AdvertiseWindowDrawFunc2Addr = 0x004575C0;
-// this is a fastcall
-// arg0 = eax
-// arg1 = ecx
-void __stdcall AdvertiseWindowDrawFunc2(Vector2* a0, Vector2* a1, uintptr_t a2)
-{
-	_asm
+	void __stdcall AdvertiseWindowDrawHook2(uintptr_t a2)
 	{
-		push a2
-		mov ecx, a1
-		mov eax, a0
-		call AdvertiseWindowDrawFunc2Addr
-	}
-}
+		// EAX = pos
+		// ECX = size
+		Vector2* inPos, * inSize;
+		_asm
+		{
+			mov inPos, eax
+			mov inSize, ecx
+		}
 
-void __stdcall AdvertiseWindowDrawHook2(uintptr_t a2)
-{
-	// EAX = pos
-	// ECX = size
-	Vector2 *inPos, *inSize;
-	_asm
-	{
-		mov inPos, eax
-		mov inSize, ecx
+
+		Vector2 newPos, newSize;
+		memcpy(&newPos, inPos, sizeof(Vector2));
+		memcpy(&newSize, inSize, sizeof(Vector2));
+
+		float Xscale = Screen.Width43 / 640.0f;
+		float Yscale = Screen.fHeight / 480.0f;
+		float Yscalesize = Yscale;
+
+		if (Screen.Width < Screen.Height)
+		{
+			Xscale = Screen.fWidth / 640.0f;
+			Yscalesize = Screen.fWidth / 480.0f;
+		}
+
+		newSize.x *= Yscalesize; // Xsize
+		newSize.y *= Yscalesize; // Ysize
+
+		newPos.x *= Xscale; // Xpos
+		if (Screen.fAspectRatio != (4.0f / 3.0f))
+		{
+			newPos.x += static_cast<float>((Screen.Width - Screen.Width43) / 2.0f);
+			if (Screen.fAspectRatio < (4.0f / 3.0f))
+				if (newPos.x < 0) newPos.x = 0;
+		}
+		newPos.y *= Yscale; // Ypos
+
+		return AdvertiseWindowDrawFunc2(&newPos, &newSize, a2);
 	}
 
-	
-	Vector2 newPos, newSize;
-	memcpy(&newPos, inPos, sizeof(Vector2));
-	memcpy(&newSize, inSize, sizeof(Vector2));
-
-	float Xscale = Screen.Width43 / 640.0f;
-	float Yscale = Screen.fHeight / 480.0f;
-	float Yscalesize = Yscale;
-
-	if (Screen.Width < Screen.Height)
+	uintptr_t AdvertiseWindowDrawFunc3Addr = 0x457710;
+	// this is a fastcall
+	// arg0 = eax
+	// arg1 = ecx
+	void __stdcall AdvertiseWindowDrawFunc3(Vector2* a0, Vector2* a1, uintptr_t a2)
 	{
-		Xscale = Screen.fWidth / 640.0f;
-		Yscalesize = Screen.fWidth / 480.0f;
+		_asm
+		{
+			push a2
+			mov ecx, a1
+			mov eax, a0
+			call AdvertiseWindowDrawFunc3Addr
+		}
 	}
 
-	newSize.x *= Yscalesize; // Xsize
-	newSize.y *= Yscalesize; // Ysize
-
-	newPos.x *= Xscale; // Xpos
-	if (Screen.fAspectRatio != (4.0f / 3.0f))
+	void __stdcall AdvButtonDrawHook(uintptr_t a2)
 	{
-		newPos.x += static_cast<float>((Screen.Width - Screen.Width43) / 2.0f);
-		if (Screen.fAspectRatio < (4.0f / 3.0f))
-			if (newPos.x < 0) newPos.x = 0;
-	}
-	newPos.y *= Yscale; // Ypos
+		// EAX = pos
+		// ECX = size
+		Vector2* inPos, * inSize;
+		_asm
+		{
+			mov inPos, eax
+			mov inSize, ecx
+		}
 
-	return AdvertiseWindowDrawFunc2(&newPos, &newSize, a2);
-}
+		Vector2 newSize;
+		memcpy(&newSize, inSize, sizeof(Vector2));
 
-uintptr_t AdvertiseWindowDrawFunc3Addr = 0x457710;
-// this is a fastcall
-// arg0 = eax
-// arg1 = ecx
-void __stdcall AdvertiseWindowDrawFunc3(Vector2* a0, Vector2* a1, uintptr_t a2)
-{
-	_asm
-	{
-		push a2
-		mov ecx, a1
-		mov eax, a0
-		call AdvertiseWindowDrawFunc3Addr
-	}
-}
+		float Yscalesize = Screen.fHeight / 480.0f;
 
-void __stdcall AdvButtonDrawHook(uintptr_t a2)
-{
-	// EAX = pos
-	// ECX = size
-	Vector2 *inPos, *inSize;
-	_asm
-	{
-		mov inPos, eax
-		mov inSize, ecx
+		if (Screen.Width < Screen.Height)
+			Yscalesize = Screen.fWidth / 480.0f;
+
+		newSize.y *= Yscalesize;
+
+		// since the button is shifted already to the right by the bezel size, we disregard the bezel size on the left, so it's half the bezel size!
+		newSize.x -= ((32.0f * Yscalesize) / 2) - 16.0f;
+
+		return AdvertiseWindowDrawFunc3(inPos, &newSize, a2);
 	}
 
-	Vector2 newSize;
-	memcpy(&newSize, inSize, sizeof(Vector2));
-
-	float Yscalesize = Screen.fHeight / 480.0f;
-	
-	if (Screen.Width < Screen.Height)
-		Yscalesize = Screen.fWidth / 480.0f;
-
-	newSize.y *= Yscalesize;
-
-	//printf("SizeX: %.2f\tNewSizeX: %.2f\n", newSize.x, newSize.x * TestFloat1);
-	//newSize.x *= TestFloat1;
-	// since the button is shifted already to the right by the bezel size, we disregard the bezel size on the left, so it's half the bezel size!
-	newSize.x -= ((32.0f * Yscalesize) / 2) - 16.0f; 
-
-	return AdvertiseWindowDrawFunc3(inPos, &newSize, a2);
-}
-
-uintptr_t TextDrawFunc1Addr = 0x004583B0;
-// this is a fastcall
-// arg0 = eax
-// arg1 = ecx
-void __stdcall TextDrawFunc1(uintptr_t a0, uintptr_t a1, float posX, float posY, uintptr_t a2, uintptr_t a3, float sizeX, float sizeY)
-{
-	_asm
+	void __stdcall AdvWindowDrawHook()
 	{
-		push sizeY
-		push sizeX
-		push a3
-		push a2
-		push posY
-		push posX
-		mov ecx, a1
-		mov eax, a0
-		call TextDrawFunc1Addr
+		uintptr_t that;
+		_asm mov that, ecx
+
+		// make a copy of the object
+		char* WindowObj = (char*)malloc(0x848);
+		memcpy(WindowObj, (void*)that, 0x848);
+
+		float Xscale = Screen.Width43 / 640.0f;
+		float Yscale = Screen.fHeight / 480.0f;
+		float Yscalesize = Yscale;
+
+		if (Screen.Width < Screen.Height)
+		{
+			Xscale = Screen.fWidth / 640.0f;
+			Yscalesize = Screen.fWidth / 480.0f;
+		}
+
+		*(float*)(&WindowObj[0x48]) *= Yscalesize; // Xsize
+		*(float*)(&WindowObj[0x4C]) *= Yscalesize; // Ysize
+		*(float*)(&WindowObj[0x3C]) *= Xscale; // Xpos
+		if (Screen.fAspectRatio != (4.0f / 3.0f))
+		{
+			*(float*)(&WindowObj[0x3C]) += static_cast<float>((Screen.Width - Screen.Width43) / 2.0f);
+			if (Screen.fAspectRatio < (4.0f / 3.0f))
+				if (*(float*)(&WindowObj[0x3C]) < 0) *(float*)(&WindowObj[0x3C]) = 0;
+		}
+		*(float*)(&WindowObj[0x40]) *= Yscale; // Ypos
+
+		reinterpret_cast<void(__thiscall*)(char*)>(0x004570D0)(WindowObj);
+
+		free(WindowObj);
 	}
-}
-
-void __stdcall TextDrawFunc1Hook(float posX, float posY, uintptr_t a2, uintptr_t a3, float sizeX, float sizeY)
-{
-	uint32_t a0, a1;
-	_asm
-	{
-		mov a0, eax
-		mov a1, ecx
-	}
-
-	float scalar = (Screen.fHeight / 480.0f);
-	float posXscalar = (Screen.fAspectRatio / (4.0f / 3.0f));
-
-	if (Screen.fAspectRatio < (4.0f / 3.0f))
-		scalar = (Screen.fWidth / 480.0f);
-
-	float newSizeX = sizeX * scalar;
-	float newSizeY = sizeY * scalar;
-	float newPosX = posX * posXscalar;
-
-	return TextDrawFunc1(a0, a1, posX, posY, a2, a3, sizeX, sizeY);
 }
 
 uintptr_t TextDrawFunc2Addr = 0x00458200;
@@ -501,76 +383,88 @@ void __stdcall TextDrawFunc2Hook(uintptr_t a1, float posX, float posY, float siz
 	return TextDrawFunc2(a0, a1, posX, posY, newSizeX, newSizeY, a3);
 }
 
-uintptr_t TextDrawFunc3Addr = 0x457EC0;
-// this is a fastcall
-// arg0 = eax
-// arg1 = edi
-void __stdcall TextDrawFunc3(uintptr_t a0, uintptr_t a1, float posX, float posY, uintptr_t a2, uintptr_t a3)
+namespace AdvStaffRollFix
 {
-	_asm
+	struct typeStaffrollTextObj
 	{
-		push a3
-		push a2
-		push posY
-		push posX
-		mov edi, a1
-		mov eax, a0
-		call TextDrawFunc3Addr
-	}
-}
+		uint32_t unk1;
+		uint32_t unk2;
+		uint32_t unk3;
+		float spaceY;
+		float posY;
+		uint32_t unk4;
+	};
 
-void __stdcall TextDrawFunc3Hook(float posX, float posY, uintptr_t a2, uintptr_t a3)
-{
-	uintptr_t a0, a1;
-	_asm mov a0, eax
-	_asm mov a1, edi
-
-	float Yscalesize = Screen.fHeight / 480.0f;
-
-	if (Screen.Width < Screen.Height)
-		Yscalesize = Screen.fWidth / 480.0f;
-
-	posX -= ((32.0f * Yscalesize) / 2) - 16.0f;
-
-	return TextDrawFunc3(a0, a1, posX, posY, a2, a3);
-}
-
-void __stdcall AdvWindowDrawHook()
-{
-	uintptr_t that;
-	_asm mov that, ecx
-
-	// make a copy of the object
-	char* WindowObj = (char*)malloc(0x848);
-	memcpy(WindowObj, (void*)that, 0x848);
-
-	//*(float*)(&WindowObj[0x14]) ;
-
-
-	float Xscale = Screen.Width43 / 640.0f;
-	float Yscale = Screen.fHeight / 480.0f;
-	float Yscalesize = Yscale;
-
-	if (Screen.Width < Screen.Height)
+	char* StaffrollObjCopy;
+	typeStaffrollTextObj* scaledStaffRollObjs;
+	void __stdcall AdvStaffrollConstructorHook(char* StaffrollObj)
 	{
-		Xscale = Screen.fWidth / 640.0f;
-		Yscalesize = Screen.fWidth / 480.0f;
+		StaffrollObjCopy = (char*)malloc(0xA4);
+
+		int objCount = *(uint32_t*)(&StaffrollObj[0x88]);
+		uint32_t TextObjSize = sizeof(typeStaffrollTextObj) * objCount;
+
+		typeStaffrollTextObj* TextObjs = *(typeStaffrollTextObj**)(&StaffrollObj[0x84]);
+		scaledStaffRollObjs = (typeStaffrollTextObj*)malloc(TextObjSize);
 	}
 
-	*(float*)(&WindowObj[0x48]) *= Yscalesize; // Xsize
-	*(float*)(&WindowObj[0x4C]) *= Yscalesize; // Ysize
-	*(float*)(&WindowObj[0x3C]) *= Xscale; // Xpos
-	if (Screen.fAspectRatio != (4.0f / 3.0f))
+	uintptr_t sub_454F10 = 0x454F10;
+	void __declspec(naked) hkStaffrollConstructor()
 	{
-		*(float*)(&WindowObj[0x3C]) += static_cast<float>((Screen.Width - Screen.Width43) / 2.0f);
-		if (Screen.fAspectRatio < (4.0f / 3.0f))
-			if (*(float*)(&WindowObj[0x3C]) < 0) *(float*)(&WindowObj[0x3C]) = 0;
+		_asm
+		{
+			call sub_454F10
+			pushad
+			push esi
+			call AdvStaffrollConstructorHook
+			popad
+			retn
+		}
 	}
-	*(float*)(&WindowObj[0x40]) *= Yscale; // Ypos
 
-	reinterpret_cast<void(__thiscall*)(char*)>(0x004570D0)(WindowObj);
+	void __stdcall AdvStaffrollDestructorHook(char unk)
+	{
+		void* that;
+		_asm mov that, ecx
 
-	free(WindowObj);
+		free(StaffrollObjCopy);
+		free(scaledStaffRollObjs);
+
+		return reinterpret_cast<void(__thiscall*)(void*, char)>(0x4544B0)(that, unk);
+	}
+
+	void __stdcall AdvStaffrollDrawHook()
+	{
+		char* that;
+		_asm mov that, ecx
+
+		// make a copy of the object
+		memcpy(StaffrollObjCopy, that, 0xA4);
+
+		uint32_t objtype = *(uint32_t*)(&StaffrollObjCopy[0x28]);
+
+		if (objtype == 5)
+		{
+			int objCount = *(uint32_t*)(&StaffrollObjCopy[0x88]);
+			uint32_t TextObjSize = sizeof(typeStaffrollTextObj) * objCount;
+
+			typeStaffrollTextObj* TextObjs = *(typeStaffrollTextObj**)(&StaffrollObjCopy[0x84]);
+			memcpy(scaledStaffRollObjs, TextObjs, TextObjSize);
+
+			for (int i = 0; i < objCount; i++)
+			{
+				float scalar = Screen.fHeight / 480.0f;
+				if (Screen.Width < Screen.Height)
+					scalar = Screen.fWidth / 480.0f;
+
+				scaledStaffRollObjs[i].spaceY *= scalar;
+			}
+
+			*(typeStaffrollTextObj**)(&StaffrollObjCopy[0x84]) = scaledStaffRollObjs;
+		}
+
+		reinterpret_cast<void(__thiscall*)(char*)>(0x4545F0)(StaffrollObjCopy);
+	}
 }
 
 void __stdcall HookAConsole()
@@ -651,6 +545,7 @@ void Init()
 	static float ClipRange = iniReader.ReadFloat("MISC", "ClipRange", 1.0f);
 	bLensFlareFix = iniReader.ReadInteger("MISC", "LensFlareFix", 1) != 0;
 	bFixAdvertiseWindows = iniReader.ReadInteger("MISC", "FixAdvertiseWindows", 1) != 0;
+	bFixStaffRoll = iniReader.ReadInteger("MISC", "FixStaffRoll", 1) != 0;
 	static bool bDisableMouseInput = iniReader.ReadInteger("MISC", "DisableMouseInput", 1) != 0;
 	static bool bDisableFrameSkipping = iniReader.ReadInteger("MISC", "DisableFrameSkipping", 1) != 0;
 	static bool bRestoreDemos = iniReader.ReadInteger("MISC", "RestoreDemos", 1) != 0;
@@ -1227,16 +1122,6 @@ void Init()
 	//injector::WriteMemory<float*>(0x00456D2B + 2, &Screen.fInvHeight, true);
 
 
-	// injector::MakeCALL(0x44D380, AdvertiseWindowHook);
-	// injector::MakeCALL(0x44E06D, AdvertiseWindowHook);
-	// injector::MakeCALL(0x44E1A0, AdvertiseWindowHook);
-	// injector::MakeCALL(0x44F8BC, AdvertiseWindowHook);
-	// injector::MakeCALL(0x45208D, AdvertiseWindowHook);
-	// injector::MakeCALL(0x45224B, AdvertiseWindowHook);
-	// injector::MakeCALL(0x643176, AdvertiseWindowHook);
-	// injector::MakeCALL(0x643298, AdvertiseWindowHook);
-
-
 	// unprotect and set scaled X res divider for Advertise
 	injector::UnprotectMemory(0x0078A08C, sizeof(float), dummyoldprotect);
 	*(float*)0x0078A08C = 1.0f / (480.0f * Screen.fAspectRatio);
@@ -1466,22 +1351,10 @@ void Init()
 	injector::WriteMemory<int*>(0x00456D3D + 2, &OrigHeight, true);
 	injector::WriteMemory<float*>(0x00456D34 + 2, &fInv640, true);
 
-
-	//struct AdvWindowFix
-	//{
-	//	void operator()(injector::reg_pack& regs)
-	//	{
-	//		*(float*)(regs.esi + 0x48) /= 2;
-	//
-	//		regs.edi = regs.esi + 0x3C;
-	//		regs.ecx = regs.esi + 0x48;
-	//	}
-	//}; injector::MakeInline<AdvWindowFix>(0x00457116, 0x0045711C);
-
-	// injector::MakeCALL(0x004576CA, AdvertiseWindowDrawHook);
-	// injector::MakeCALL(0x004576DC, AdvertiseWindowDrawHook);
-	// injector::MakeCALL(0x004576EE, AdvertiseWindowDrawHook);
-	// injector::MakeCALL(0x00457700, AdvertiseWindowDrawHook);
+	// staff roll
+	//injector::WriteMemory<int*>(0x004543FF + 2, &OrigWidth, true);
+	//injector::WriteMemory<float*>(0x00454407 + 2, &fInv640, true);
+	//injector::WriteMemory<int*>(0x004546F5 + 2, &OrigHeight, true);
 
 	// fix window icon
 	injector::MakeNOP(0x00446229, 6);
@@ -1534,9 +1407,9 @@ void Init()
 			}
 		}; injector::MakeInline<AdvWindowHook2>(0x004571C4, 0x004571CC);
 
-		injector::MakeCALL(0x00457278, AdvButtonDrawHook);
-		injector::MakeCALL(0x00457357, AdvButtonDrawHook);
-		injector::MakeCALL(0x0045743C, AdvButtonDrawHook);
+		injector::MakeCALL(0x00457278, AdvertiseWindowFix::AdvButtonDrawHook);
+		injector::MakeCALL(0x00457357, AdvertiseWindowFix::AdvButtonDrawHook);
+		injector::MakeCALL(0x0045743C, AdvertiseWindowFix::AdvButtonDrawHook);
 
 		ButtonBezelOffset = 8.0f * scalar;
 		injector::WriteMemory<float*>(0x0045720A + 2, &ButtonBezelOffset, true);
@@ -1559,7 +1432,7 @@ void Init()
 		injector::WriteMemory<float*>(0x0045731F + 2, &AdvWindowButton2Offset, true);
 		injector::WriteMemory<float*>(0x00457404 + 2, &AdvWindowButton3Offset, true);
 
-		injector::WriteMemory<uintptr_t>(0x0075024C, (uintptr_t)&AdvWindowDrawHook, true);
+		injector::WriteMemory<uintptr_t>(0x0075024C, (uintptr_t)&AdvertiseWindowFix::AdvWindowDrawHook, true);
 
 		struct AdvButtonTextHook1
 		{
@@ -1624,6 +1497,14 @@ void Init()
 		injector::MakeCALL(0x00457F3C, TextDrawFunc2Hook);
 	}
 
+	// Staff roll text
+	if (bFixStaffRoll)
+	{
+		injector::MakeCALL(0x00454744, TextDrawFunc2Hook);
+		injector::MakeCALL(0x0045448B, AdvStaffRollFix::hkStaffrollConstructor);
+		injector::WriteMemory<uintptr_t>(0x0074F8FC, (uintptr_t)&AdvStaffRollFix::AdvStaffrollDrawHook, true);
+		injector::WriteMemory<uintptr_t>(0x0074F8F4, (uintptr_t)&AdvStaffRollFix::AdvStaffrollDestructorHook, true);
+	}
 }
 
 CEXP void InitializeASI()
