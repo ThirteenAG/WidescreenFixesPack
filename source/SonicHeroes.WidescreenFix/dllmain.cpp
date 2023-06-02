@@ -773,6 +773,56 @@ void Init()
 	pattern = hook::pattern("66 8B ? ? 66 85 C0 75 29 66 39 ? ? 75 23"); // 662BFB
 	injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<int8_t>(7), 0xEB, true);
 
+	pattern = hook::pattern("D9 42 68 D8 08 D9 42 68 D8 48 04 D9 42 68 D8 48 08"); // 0x64AFDC
+	struct CutOffAreaHook
+	{
+		void operator()(injector::reg_pack& regs)
+		{
+			float edx68 = *(float*)(regs.edx + 0x68) / Screen.fHudScale;
+			float eax00 = *(float*)(regs.eax + 0);
+			float eax04 = *(float*)(regs.eax + 4);
+			float eax08 = *(float*)(regs.eax + 8);
+			_asm
+			{
+				fld     dword ptr[edx68]
+				fmul    dword ptr[eax00]
+				fld     dword ptr[edx68]
+				fmul    dword ptr[eax04]
+				fld     dword ptr[edx68]
+				fmul    dword ptr[eax08]
+			}
+		}
+	};
+
+	struct CutOffAreaHookY
+	{
+		void operator()(injector::reg_pack& regs)
+		{
+			float yScale = *(float*)(regs.edx + 0x6C) / Screen.fZoomFactor * *(float*)(regs.eax + 0x10);
+		}
+	};
+
+	struct CutOffAreaHookY2
+	{
+		void operator()(injector::reg_pack& regs)
+		{
+			float yScale = *(float*)(regs.edx + 0x6C) / Screen.fZoomFactor * *(float*)(regs.eax + 0x14);
+		}
+	};
+
+	struct CutOffAreaHookY3
+	{
+		void operator()(injector::reg_pack& regs)
+		{
+			float yScale = *(float*)(regs.edx + 0x6C) / Screen.fZoomFactor * *(float*)(regs.eax + 0x18);
+		}
+	};
+
+	injector::MakeInline<CutOffAreaHook>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(17));
+	injector::MakeInline<CutOffAreaHookY>(pattern.count(1).get(0).get<uint32_t>(42), pattern.count(1).get(0).get<uint32_t>(48));
+	injector::MakeInline<CutOffAreaHookY2>(pattern.count(1).get(0).get<uint32_t>(54), pattern.count(1).get(0).get<uint32_t>(60));
+	injector::MakeInline<CutOffAreaHookY3>(pattern.count(1).get(0).get<uint32_t>(64), pattern.count(1).get(0).get<uint32_t>(70));
+
 	uintptr_t loc_64AC8B = reinterpret_cast<uintptr_t>(hook::pattern("D9 05 ? ? ? ? 89 4E 68 8B 50 04 D8 76 68").get_first(0));
 	uintptr_t loc_64ACA5 = loc_64AC8B + 0x1A;
 	static uintptr_t ShadowStuffAddr = 0x7476C4;
@@ -1353,10 +1403,13 @@ void Init()
 	injector::WriteMemory<int*>(0x00456D3D + 2, &OrigHeight, true);
 	injector::WriteMemory<float*>(0x00456D34 + 2, &fInv640, true);
 
-	// staff roll
+	// Advertise staff roll
 	injector::WriteMemory<int*>(0x004543FF + 2, &OrigWidth, true);
 	injector::WriteMemory<float*>(0x00454407 + 2, &fInv640, true);
-	//injector::WriteMemory<int*>(0x004546F5 + 2, &OrigHeight, true);
+	
+	// ignore aspect change for power up icons
+	injector::WriteMemory<float*>(0x00479F34 + 2, &fInv640, true);
+	
 
 	// fix window icon
 	injector::MakeNOP(0x00446229, 6);
