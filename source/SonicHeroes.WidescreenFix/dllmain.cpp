@@ -15,6 +15,8 @@ struct Screen
 	int ContinuePositionChange;
 	float fWidth;
 	float fHeight;
+	float fHalfWidth;
+	float fHalfHeight;
 	float fInvWidth;
 	float fInvHeight;
 	float fInvWidth43;
@@ -48,6 +50,8 @@ void updateValues(const float& newWidth, const float& newHeight)
 	Screen.Height = newHeight;
 	Screen.fWidth = static_cast<float>(Screen.Width);
 	Screen.fHeight = static_cast<float>(Screen.Height);
+	Screen.fHalfWidth = Screen.fWidth * 0.5f;
+	Screen.fHalfHeight = Screen.fHeight * 0.5f;
 	Screen.fInvWidth = 1.0f / Screen.fWidth;
 	Screen.fInvHeight = 1.0f / Screen.fInvHeight;
 	Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
@@ -94,10 +98,10 @@ void updateValues(const float& newWidth, const float& newHeight)
 
 	if (bLensFlareFix)
 	{
-		*(float*)0x0078A184 = Screen.fWidth;
-		*(float*)0x0078A180 = Screen.fHeight;
 		// lens flare size
 		fLensFlareScalar = Screen.fHeight / 480.0f;
+		if (Screen.Width < Screen.Height)
+			fLensFlareScalar = Screen.fWidth / 480.0f;
 	}
 	if (bFixAdvertiseWindows)
 	{
@@ -646,6 +650,8 @@ void Init()
 
 	Screen.fWidth = static_cast<float>(Screen.Width);
 	Screen.fHeight = static_cast<float>(Screen.Height);
+	Screen.fHalfWidth = Screen.fWidth * 0.5f;
+	Screen.fHalfHeight = Screen.fHeight * 0.5f;
 	Screen.fInvWidth = 1.0f / Screen.fWidth;
 	Screen.fInvHeight = 1.0f / Screen.fInvHeight;
 	Screen.fInvWidth43 = 1.0f / (Screen.fHeight * (4.0f * 3.0f));
@@ -705,11 +711,24 @@ void Init()
 
 	if (bLensFlareFix)
 	{
-		injector::UnprotectMemory(0x0078A180, 2 * sizeof(float), dummyoldprotect);
-		*(float*)0x0078A184 = Screen.fWidth;
-		*(float*)0x0078A180 = Screen.fHeight;
+		// injector::UnprotectMemory(0x0078A180, 2 * sizeof(float), dummyoldprotect);
+		// *(float*)0x0078A184 = Screen.fWidth;
+		// *(float*)0x0078A180 = Screen.fHeight;
+
+
+		injector::WriteMemory<float*>(0x0048EF31 + 2, &Screen.fWidth, true);
+		injector::WriteMemory<float*>(0x0048EF3F + 2, &Screen.fHeight, true);
+
+		injector::WriteMemory<float*>(0x0048F454 + 2, &Screen.fWidth, true);
+		injector::WriteMemory<float*>(0x0048F47C + 2, &Screen.fHeight, true);
+
+		injector::WriteMemory<float*>(0x0048EFE6 + 2, &Screen.fHalfWidth, true);
+		injector::WriteMemory<float*>(0x0048EFF4 + 2, &Screen.fHalfHeight, true);
+
 		// lens flare size
 		fLensFlareScalar = Screen.fHeight / 480.0f;
+		if (Screen.Width < Screen.Height)
+			fLensFlareScalar = Screen.fWidth / 480.0f;
 
 		injector::MakeJMP(0x0048F419, LensFlareScale, true);
 	}
