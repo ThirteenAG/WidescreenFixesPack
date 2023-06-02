@@ -27,7 +27,7 @@ struct Screen
 } Screen;
 
 float iniZoomFactor = 1.0f;
-bool bLensFlareFix = true;
+bool bFixLensFlare = true;
 float fLensFlareScalar;
 bool bShadowFix = true;
 float fShadowScale = 1.7f;
@@ -96,7 +96,7 @@ void updateValues(const float& newWidth, const float& newHeight)
 	*(float*)0x00AA7140 = Screen.fWidth;
 	*(float*)0x00AA7144 = Screen.fHeight;
 
-	if (bLensFlareFix)
+	if (bFixLensFlare)
 	{
 		// lens flare size
 		fLensFlareScalar = Screen.fHeight / 480.0f;
@@ -137,6 +137,11 @@ LRESULT WINAPI WSFixWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 		if (!WindowedModeWrapper::bEnableWindowResize) return TRUE;
 		return GameWndProc(hWnd, msg, wParam, lParam);
+	}
+
+	case WM_ACTIVATE:
+	{
+		return TRUE;
 	}
 	
 	}
@@ -614,7 +619,7 @@ void Init()
 	fShadowScale = iniReader.ReadFloat("MISC", "ShadowScale", 1.7f);
 	static uint32_t ShadowRes = iniReader.ReadInteger("MISC", "ShadowRes", 256);
 	static float ClipRange = iniReader.ReadFloat("MISC", "ClipRange", 1.0f);
-	bLensFlareFix = iniReader.ReadInteger("MISC", "LensFlareFix", 1) != 0;
+	bFixLensFlare = iniReader.ReadInteger("MISC", "FixLensFlare", 1) != 0;
 	bFixAdvertiseWindows = iniReader.ReadInteger("MISC", "FixAdvertiseWindows", 1) != 0;
 	bFixStaffRoll = iniReader.ReadInteger("MISC", "FixStaffRoll", 1) != 0;
 	static bool bDisableMouseInput = iniReader.ReadInteger("MISC", "DisableMouseInput", 1) != 0;
@@ -622,6 +627,10 @@ void Init()
 	static bool bRestoreDemos = iniReader.ReadInteger("MISC", "RestoreDemos", 1) != 0;
 	static bool bDisableCDCheck = iniReader.ReadInteger("MISC", "DisableCDCheck", 1) != 0;
 	static bool bDisableQuitDialog = iniReader.ReadInteger("MISC", "DisableQuitDialog", 0) != 0;
+	static bool bDisableLoadingTimer = iniReader.ReadInteger("MISC", "DisableLoadingTimer", 0) != 0;
+	static bool bDisableSubtitles = iniReader.ReadInteger("MISC", "DisableSubtitles", 0) != 0;
+	static bool bIncreaseObjectDistance = iniReader.ReadInteger("MISC", "IncreaseObjectDistance", 1) != 0;
+	static uint8_t MinObjDistance = iniReader.ReadInteger("MISC", "MinObjDistance", 255) & 0xFF;
 	
 	static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
 	if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
@@ -709,13 +718,8 @@ void Init()
 	injector::MakeCALL(0x00446C85, UpdateWindowHook);
 	injector::MakeJMP(0x446F33, 0x446F38);
 
-	if (bLensFlareFix)
+	if (bFixLensFlare)
 	{
-		// injector::UnprotectMemory(0x0078A180, 2 * sizeof(float), dummyoldprotect);
-		// *(float*)0x0078A184 = Screen.fWidth;
-		// *(float*)0x0078A180 = Screen.fHeight;
-
-
 		injector::WriteMemory<float*>(0x0048EF31 + 2, &Screen.fWidth, true);
 		injector::WriteMemory<float*>(0x0048EF3F + 2, &Screen.fHeight, true);
 
@@ -832,9 +836,8 @@ void Init()
 	{
 		void operator()(injector::reg_pack& regs)
 		{
-			float one = 1.0f;
 			if (*(uint32_t*)(regs.esp + 8 + 4) == ShadowStuffAddr)
-				_asm fld one
+				_asm fld1
 			else
 				_asm fld Screen.fHudScale
 		}
@@ -844,9 +847,8 @@ void Init()
 	{
 		void operator()(injector::reg_pack& regs)
 		{
-			float one = 1.0f;
 			if (*(uint32_t*)(regs.esp + 8 + 4) == ShadowStuffAddr)
-				_asm fld one
+				_asm fld1
 			else
 				_asm fld Screen.fZoomFactor
 		}
@@ -987,8 +989,6 @@ void Init()
 	pattern = hook::pattern("DB 05 ? ? ? ? D9 5C ? ? DB 47 ? D8 4C ? ? D8 0D ? ? ? ? D9 5C ? ? DB 05 ? ? ? ?");
 	injector::MakeInline<NowLoadingTextPos>(pattern.count(1).get(0).get<uint32_t>(69), pattern.count(1).get(0).get<uint32_t>(75));
 
-	// Powerup Icons -- TODO: broken, powerup icons are too close to each other!
-
 	struct PowerupIcon1
 	{
 		void operator()(injector::reg_pack& regs)
@@ -1093,7 +1093,6 @@ void Init()
 	injector::MakeInline<ResultsPos>(pattern.count(1).get(0).get<uint32_t>(4), pattern.count(1).get(0).get<uint32_t>(9));
 
 	// Special Stage
-	// TODO: distance bar at the bottom is incorrect
 	fDustWidth = 40.0f * Screen.fAspectRatio;
 	static float fDustHeight = 40.0f;
 	injector::WriteMemory<float*>(0x0052C5FB + 2, &fDustWidth, true);
@@ -1374,7 +1373,7 @@ void Init()
 	static int OrigWidth = 640;
 	static int OrigHeight = 480;
 	static int Width43_480 = 480.0f * Screen.fAspectRatio;
-	// 2P fix -- ignore aspect change for screen texture
+	// 2P fix -- ignore aspect change for screen texture -- TODO: dynamic resizing of screen texture
 	injector::WriteMemory<float*>(0x0061D533 + 2, &fInv640, true);
 
 	// ignore aspect change for special stage gauge
@@ -1391,25 +1390,31 @@ void Init()
 	injector::WriteMemory<float*>(0x458961 + 2, &fInv640, true);
 	injector::WriteMemory<float*>(0x00458993 + 2, &fInv640, true);
 
-	// ignore aspect change for Advertise windows
-	// position
-	//injector::WriteMemory<int*>(0x00456CFA + 2, &Width43_480, true);
-	injector::WriteMemory<int*>(0x00456CFA + 2, &OrigWidth, true);
-	injector::WriteMemory<int*>(0x00456D0C + 2, &OrigHeight, true);
-	injector::WriteMemory<float*>(0x00456D03 + 2, &fInv640, true);
-	// size
-	//injector::WriteMemory<int*>(0x00456D2B + 2, &Width43_480, true);
-	injector::WriteMemory<int*>(0x00456D2B + 2, &OrigWidth, true);
-	injector::WriteMemory<int*>(0x00456D3D + 2, &OrigHeight, true);
-	injector::WriteMemory<float*>(0x00456D34 + 2, &fInv640, true);
 
-	// Advertise staff roll
-	injector::WriteMemory<int*>(0x004543FF + 2, &OrigWidth, true);
-	injector::WriteMemory<float*>(0x00454407 + 2, &fInv640, true);
-	
+	if (bFixAdvertiseWindows)
+	{
+		// ignore aspect change for Advertise windows
+		// position
+		//injector::WriteMemory<int*>(0x00456CFA + 2, &Width43_480, true);
+		injector::WriteMemory<int*>(0x00456CFA + 2, &OrigWidth, true);
+		injector::WriteMemory<int*>(0x00456D0C + 2, &OrigHeight, true);
+		injector::WriteMemory<float*>(0x00456D03 + 2, &fInv640, true);
+		// size
+		//injector::WriteMemory<int*>(0x00456D2B + 2, &Width43_480, true);
+		injector::WriteMemory<int*>(0x00456D2B + 2, &OrigWidth, true);
+		injector::WriteMemory<int*>(0x00456D3D + 2, &OrigHeight, true);
+		injector::WriteMemory<float*>(0x00456D34 + 2, &fInv640, true);
+	}
+
+	if (bFixStaffRoll)
+	{
+		// Advertise staff roll
+		injector::WriteMemory<int*>(0x004543FF + 2, &OrigWidth, true);
+		injector::WriteMemory<float*>(0x00454407 + 2, &fInv640, true);
+	}
+
 	// ignore aspect change for power up icons
 	injector::WriteMemory<float*>(0x00479F34 + 2, &fInv640, true);
-	
 
 	// fix window icon
 	injector::MakeNOP(0x00446229, 6);
@@ -1554,6 +1559,57 @@ void Init()
 		injector::MakeCALL(0x00456CC7, AdvertiseWindowFix::hkAdvWindowConstructor);
 		injector::WriteMemory<uintptr_t>(0x00750244, (uintptr_t)&AdvertiseWindowFix::AdvWindowDestructorHook, true);
 	}
+	else
+	{
+		// old Advertise window fix
+		pattern = hook::pattern("D9 C9 C1 E0 08 D9 5C ? ? 0B C1 C1 E0 08 D9 5C ? ? 0B C2 8D 4C ? ? BA"); //0x4578A3
+
+		struct WindowTextPos
+		{
+			void operator()(injector::reg_pack& regs)
+			{
+				_asm
+				{
+					fxch st(1)
+				}
+				Screen.AspectRatioAffected = true;
+				regs.eax <<= 8;
+			}
+		};
+
+		injector::MakeInline<WindowTextPos>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(5));
+
+		pattern = hook::pattern("C1 E0 08 0B C2 D9 54 ? ? C1 E0 08 D9 41 ? 0F B6 D3 D8 05 ? ? ? ? 0B C2 8B 54"); //0x4583FB
+
+		struct WindowTextPos2
+		{
+			void operator()(injector::reg_pack& regs)
+			{
+				Screen.AspectRatioAffected = true;
+				regs.eax <<= 8;
+				regs.eax |= regs.edx;
+			}
+		};
+
+		injector::MakeInline<WindowTextPos2>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(5));
+
+		pattern = hook::pattern("D9 00 8B 39 D8 02 8B 50 04 89 54 ? ? 8B 50 08 89 7C ? ? D9 54"); //0x4574F9
+		struct WindowPos
+		{
+			void operator()(injector::reg_pack& regs)
+			{
+				Screen.AspectRatioAffected = true;
+				float Temp = *(float*)(regs.eax) + *(float*)(regs.edx);
+				regs.edi = *(int*)(regs.ecx);
+				_asm
+				{
+					fld dword ptr[Temp]
+				}
+			}
+		};
+
+		injector::MakeInline<WindowPos>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
+	}
 
 	// Staff roll
 	if (bFixStaffRoll)
@@ -1564,6 +1620,27 @@ void Init()
 		injector::WriteMemory<uintptr_t>(0x0074F8F4, (uintptr_t)&AdvStaffRollFix::AdvStaffrollDestructorHook, true);
 
 		injector::MakeCALL(0x0045475C, AdvStaffRollFix::AdvStaffrollLogoHook);
+	}
+
+	if (bDisableLoadingTimer)
+		injector::MakeJMP(0x00419734, 0x4198BC);
+
+	if (bDisableSubtitles)
+		injector::MakeRET(0x00428560, 0x1C);
+
+	if (bIncreaseObjectDistance)
+	{
+		struct ObjDrawDistanceHook
+		{
+			void operator()(injector::reg_pack& regs)
+			{
+				if (*(uint8_t*)(regs.ecx) < MinObjDistance)
+					*(uint8_t*)(regs.ecx) = MinObjDistance;
+
+				regs.eax = *(uint32_t*)0x008CAEC0;
+				regs.ebp = 1;
+			}
+		}; injector::MakeInline<ObjDrawDistanceHook>(0x43DF60, 0x43DF6A);
 	}
 }
 
