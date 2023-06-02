@@ -635,7 +635,11 @@ void Init()
 		*(int32_t*)0x8D6924 = iniReader.ReadInteger("SkipFE", "Team2", -1);
 		*(int32_t*)0x8D6928 = iniReader.ReadInteger("SkipFE", "Team3", -1);
 		*(int32_t*)0x8D692C = iniReader.ReadInteger("SkipFE", "Team4", -1);
+		
 	}
+
+	if ((SysMode == SystemMode::EasyMenuMovie) && bSkipFE)
+		*(int32_t*)0x8DB5B0 = iniReader.ReadInteger("SkipFE", "Movie", -1);
 
 	if (!Screen.Width || !Screen.Height)
 		std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -827,13 +831,12 @@ void Init()
 
 	injector::MakeInline<HUDPos>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(8));
 
-	// Credits
 	pattern = hook::pattern("DB 05 ? ? ? ? D8 0F D8 0D ? ? ? ? D9 9E ? ? ? ? 8B 57 04 89 96 ? ? ? ?"); // 0x4543FF
 	injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &Screen.Width43, true);
 
 	pattern = hook::pattern("DB 05 ? ? ? ? D9 5C ? ? DB 05 ? ? ? ? D9 5C ? ? E8 ? ? ? ? D9 05 ? ? ? ?"); // 0x4548B1
 
-	struct CreditPicturePos
+	struct UIHook
 	{
 		void operator()(injector::reg_pack& regs)
 		{
@@ -845,12 +848,12 @@ void Init()
 		}
 	};
 
-	injector::MakeInline<CreditPicturePos>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
+	injector::MakeInline<UIHook>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
 	injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(12), &Screen.HeightHUD, true);
 
 	pattern = hook::pattern("8B D1 C1 EA 10 0F B6 C6 C1 E0 08 0F B6 F9 0B C7 89 4C ? ? C1 E0 08"); // 0x454FFD
 
-	struct CreditPicturePos2
+	struct UIHook2
 	{
 		void operator()(injector::reg_pack& regs)
 		{
@@ -860,43 +863,13 @@ void Init()
 		}
 	};
 
-	injector::MakeInline<CreditPicturePos2>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(5));
+	injector::MakeInline<UIHook2>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(5));
 
 	pattern = hook::pattern("8B 44 ? ? EB 10 8B 1D ? ? ? ? 8B 2D ? ? ? ? 89 5C ? ?"); //0x6445C0
 
 	injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(8), &Screen.WidthFMV, true);
 	injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(14), &Screen.HeightFMV, true);
-
-	pattern = hook::pattern("83 EC ? 56 57 E8 ? ? ? ? D9 05 ? ? ? ? D8 B0 ? ? ? ? 8B 84 ?"); // 0x6445C0
-	struct CreditFMVPos
-	{
-		void operator()(injector::reg_pack& regs)
-		{
-			Screen.AspectRatioAffected = true;
-			_asm
-			{
-				fld1
-			}
-		}
-	};
-	struct CreditFMVPos2
-	{
-		void operator()(injector::reg_pack& regs)
-		{
-			if (!Screen.AspectRatioAffected)
-			{
-				Screen.AspectRatioAffected = true;
-			}
-			regs.ecx = *(int*)(regs.esp + 8);
-			_asm
-			{
-				fstp dword ptr[esi - 8]
-			}
-		}
-	};
-	injector::MakeInline<CreditFMVPos>(pattern.count(1).get(0).get<uint32_t>(10), pattern.count(1).get(0).get<uint32_t>(16));
-	injector::MakeInline<CreditFMVPos2>(pattern.count(1).get(0).get<uint32_t>(332), pattern.count(1).get(0).get<uint32_t>(339));
-
+	
 	// Mission text
 
 	struct MissionTextHor
@@ -1058,11 +1031,11 @@ void Init()
 	injector::WriteMemory<float*>(0x0052C607 + 2, &fDustHeight, true);
 
 	pattern = hook::pattern("DB 05 ? ? ? ? 8B 00 D9 84 ? ? ? ? ? 53 55 D8 C9 57 50 6A 01 D8 0D ? ? ? ? D9 9C"); // 0x45894A
-	injector::MakeInline<CreditPicturePos>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
+	injector::MakeInline<UIHook>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
 	injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(38), &Screen.HeightHUD, true);
 
 	pattern = hook::pattern("DB 05 ? ? ? ? A1 ? ? ? ? 83 C4 08 D9 54 ? ? D8 8C"); // 0x526F83
-	injector::MakeInline<CreditPicturePos>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
+	injector::MakeInline<UIHook>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
 	injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(40), &Screen.HeightHUD, true);
 
 	injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(236), &Screen.Width43, true);
@@ -1088,12 +1061,12 @@ void Init()
 
 	pattern = hook::pattern("DB 05 ? ? ? ? A1 ? ? ? ? 0F B6 9C 24 ? ? ? ? D9 54 24 ? C1 E3 18"); // 0x5263DE
 
-	injector::MakeInline<CreditPicturePos>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
+	injector::MakeInline<UIHook>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
 	injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(63), &Screen.HeightHUD, true);
 
 	pattern = hook::pattern("DB 05 ? ? ? ? A1 ? ? ? ? 83 C4 08 D9 54 24 ? BF ? ? ? ? D8 8C 24 ? ? ? ? 8D 74 24 ?"); // 0x526297
 
-	injector::MakeInline<CreditPicturePos>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
+	injector::MakeInline<UIHook>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
 	injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(49), &Screen.HeightHUD, true);
 
 	pattern = hook::pattern("85 C0 74 0F 8B 46 28 85 C0 75 08 C7 44 24 04 00 80 FD 43 8A 42 1E 84 C0 74 0E"); // 0x527936
@@ -1131,63 +1104,6 @@ void Init()
 	};
 
 	injector::MakeInline<LevelUpPos2>(pattern.count(1).get(0).get<uint32_t>(40), pattern.count(1).get(0).get<uint32_t>(46));
-
-	//pattern = hook::pattern("D9 C9 C1 E0 08 D9 5C ? ? 0B C1 C1 E0 08 D9 5C ? ? 0B C2 8D 4C ? ? BA"); //0x4578A3
-	//
-	//struct WindowTextPos
-	//{
-	//	void operator()(injector::reg_pack& regs)
-	//	{
-	//		_asm
-	//		{
-	//			fxch st(1)
-	//		}
-	//		Screen.AspectRatioAffected = true;
-	//		regs.eax <<= 8;
-	//	}
-	//};
-	//
-	//injector::MakeInline<WindowTextPos>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(5));
-	//
-	//pattern = hook::pattern("C1 E0 08 0B C2 D9 54 ? ? C1 E0 08 D9 41 ? 0F B6 D3 D8 05 ? ? ? ? 0B C2 8B 54"); //0x4583FB
-	//
-	//struct WindowTextPos2
-	//{
-	//	void operator()(injector::reg_pack& regs)
-	//	{
-	//		Screen.AspectRatioAffected = true;
-	//		regs.eax <<= 8;
-	//		regs.eax |= regs.edx;
-	//	}
-	//};
-	//
-	//injector::MakeInline<WindowTextPos2>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(5));
-	//
-	//pattern = hook::pattern("D9 00 8B 39 D8 02 8B 50 04 89 54 ? ? 8B 50 08 89 7C ? ? D9 54"); //0x4574F9
-	//
-	//struct WindowPos
-	//{
-	//	void operator()(injector::reg_pack& regs)
-	//	{
-	//		Screen.AspectRatioAffected = true;
-	//		float Temp = *(float*)(regs.eax) + *(float*)(regs.edx);
-	//		regs.edi = *(int*)(regs.ecx);
-	//		_asm
-	//		{
-	//			fld dword ptr[Temp]
-	//		}
-	//	}
-	//};
-	//
-	//injector::MakeInline<WindowPos>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
-
-	// injector::WriteMemory<int*>(0x00456CFA + 2, &Screen.Width43, true);
-	// injector::WriteMemory<int*>(0x00456D2B + 2, &Screen.Width43, true);
-	// injector::WriteMemory<float*>(0x00456D03 + 2, &Screen.fInvWidth43, true);
-	// injector::WriteMemory<float*>(0x00456D34 + 2, &Screen.fInvWidth43, true);
-
-	//injector::WriteMemory<float*>(0x00456D2B + 2, &Screen.fInvHeight, true);
-
 
 	// unprotect and set scaled X res divider for Advertise
 	injector::UnprotectMemory(0x0078A08C, sizeof(float), dummyoldprotect);
