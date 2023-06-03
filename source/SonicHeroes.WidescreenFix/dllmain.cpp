@@ -17,9 +17,6 @@ struct Screen
 	float fHeight;
 	float fHalfWidth;
 	float fHalfHeight;
-	float fInvWidth;
-	float fInvHeight;
-	float fInvWidth43;
 	float fAspectRatio;
 	float fConditionalAspectRatio;
 	float fZoomFactor;
@@ -43,20 +40,28 @@ float AdvWindowButton2Offset = 40.0f;
 float AdvWindowButton3Offset = 72.0f;
 float AdvStaffRollLogoScale = 1.0f;
 
+uintptr_t ptrResX = 0xA7793C;
+uintptr_t ptrResY = 0xA77940;
+
+uintptr_t ptrResX2 = 0x7C931C;
+uintptr_t ptrResY2 = 0x7C9320;
+
+uintptr_t ptrMaestroResX = 0x00AA7140;
+uintptr_t ptrMaestroResY = 0x00AA7144;
+
+uintptr_t ptrOneDiv640 = 0x78A08C;
+
 void updateValues(const float& newWidth, const float& newHeight)
 {
 	//Screen resolution
-	Screen.Width = newWidth;
-	Screen.Height = newHeight;
+	Screen.Width = static_cast<int>(newWidth);
+	Screen.Height = static_cast<int>(newHeight);
 	Screen.fWidth = static_cast<float>(Screen.Width);
 	Screen.fHeight = static_cast<float>(Screen.Height);
 	Screen.fHalfWidth = Screen.fWidth * 0.5f;
 	Screen.fHalfHeight = Screen.fHeight * 0.5f;
-	Screen.fInvWidth = 1.0f / Screen.fWidth;
-	Screen.fInvHeight = 1.0f / Screen.fInvHeight;
 	Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
 	Screen.Width43 = static_cast<int32_t>(Screen.fHeight * (4.0f / 3.0f));
-	Screen.fInvWidth43 = 1.0f / (Screen.fHeight * (4.0f * 3.0f));
 
 	if (Screen.fAspectRatio < Screen.fConditionalAspectRatio)
 	{
@@ -83,18 +88,18 @@ void updateValues(const float& newWidth, const float& newHeight)
 	fDustWidth = 40.0f * Screen.fAspectRatio;
 
 	// write resolution vars
-	*(uint32_t*)0x00A7793C = Screen.Width;
-	*(uint32_t*)0x00A77940 = Screen.Height;
-	*(uint32_t*)0x007C931C = Screen.Width;
-	*(uint32_t*)0x007C9320 = Screen.Height;
+	*(uint32_t*)ptrResX = Screen.Width;
+	*(uint32_t*)ptrResY = Screen.Height;
+	*(uint32_t*)ptrResX2 = Screen.Width;
+	*(uint32_t*)ptrResY2 = Screen.Height;
 
-	injector::WriteMemory(0x004463E2 + 1, Screen.Width, true);
-	injector::WriteMemory(0x004463E7 + 1, Screen.Height, true);
+	// injector::WriteMemory(0x004463E2 + 1, Screen.Width, true);
+	// injector::WriteMemory(0x004463E7 + 1, Screen.Height, true);
 
-	*(float*)0x0078A08C = 1.0f / (480.0f * Screen.fAspectRatio);
+	*(float*)ptrOneDiv640 = 1.0f / (480.0f * Screen.fAspectRatio);
 
-	*(float*)0x00AA7140 = Screen.fWidth;
-	*(float*)0x00AA7144 = Screen.fHeight;
+	*(float*)ptrMaestroResX = Screen.fWidth;
+	*(float*)ptrMaestroResY = Screen.fHeight;
 
 	if (bFixLensFlare)
 	{
@@ -229,6 +234,7 @@ namespace AdvertiseWindowFix
 		AdvWindowObj = (char*)malloc(0x848);
 	}
 
+	uintptr_t ptrAdvWindowDestructorFunc = 0x00456F90;
 	void __stdcall AdvWindowDestructorHook(char unk)
 	{
 		void* that;
@@ -236,7 +242,7 @@ namespace AdvertiseWindowFix
 
 		free(AdvWindowObj);
 
-		return reinterpret_cast<void(__thiscall*)(void*, char)>(0x00456F90)(that, unk);
+		return reinterpret_cast<void(__thiscall*)(void*, char)>(ptrAdvWindowDestructorFunc)(that, unk);
 	}
 
 	uintptr_t sub_456AA0 = 0x456AA0;
@@ -249,62 +255,6 @@ namespace AdvertiseWindowFix
 			popad
 			jmp sub_456AA0
 		}
-	}
-
-	uintptr_t AdvertiseWindowDrawFunc2Addr = 0x004575C0;
-	// this is a fastcall
-	// arg0 = eax
-	// arg1 = ecx
-	void __stdcall AdvertiseWindowDrawFunc2(Vector2* a0, Vector2* a1, uintptr_t a2)
-	{
-		_asm
-		{
-			push a2
-			mov ecx, a1
-			mov eax, a0
-			call AdvertiseWindowDrawFunc2Addr
-		}
-	}
-
-	void __stdcall AdvertiseWindowDrawHook2(uintptr_t a2)
-	{
-		// EAX = pos
-		// ECX = size
-		Vector2* inPos, * inSize;
-		_asm
-		{
-			mov inPos, eax
-			mov inSize, ecx
-		}
-
-
-		Vector2 newPos, newSize;
-		memcpy(&newPos, inPos, sizeof(Vector2));
-		memcpy(&newSize, inSize, sizeof(Vector2));
-
-		float Xscale = Screen.Width43 / 640.0f;
-		float Yscale = Screen.fHeight / 480.0f;
-		float Yscalesize = Yscale;
-
-		if (Screen.Width < Screen.Height)
-		{
-			Xscale = Screen.fWidth / 640.0f;
-			Yscalesize = Screen.fWidth / 480.0f;
-		}
-
-		newSize.x *= Yscalesize; // Xsize
-		newSize.y *= Yscalesize; // Ysize
-
-		newPos.x *= Xscale; // Xpos
-		if (Screen.fAspectRatio != (4.0f / 3.0f))
-		{
-			newPos.x += static_cast<float>((Screen.Width - Screen.Width43) / 2.0f);
-			if (Screen.fAspectRatio < (4.0f / 3.0f))
-				if (newPos.x < 0) newPos.x = 0;
-		}
-		newPos.y *= Yscale; // Ypos
-
-		return AdvertiseWindowDrawFunc2(&newPos, &newSize, a2);
 	}
 
 	uintptr_t AdvertiseWindowDrawFunc3Addr = 0x457710;
@@ -349,6 +299,7 @@ namespace AdvertiseWindowFix
 		return AdvertiseWindowDrawFunc3(inPos, &newSize, a2);
 	}
 
+	uintptr_t ptrAdvWindowDrawFunc = 0x004570D0;
 	void __stdcall AdvWindowDrawHook()
 	{
 		uintptr_t that;
@@ -378,7 +329,7 @@ namespace AdvertiseWindowFix
 		}
 		*(float*)(&AdvWindowObj[0x40]) *= Yscale; // Ypos
 
-		reinterpret_cast<void(__thiscall*)(char*)>(0x004570D0)(AdvWindowObj);
+		reinterpret_cast<void(__thiscall*)(char*)>(ptrAdvWindowDrawFunc)(AdvWindowObj);
 	}
 }
 
@@ -421,6 +372,7 @@ namespace AdvStaffRollFix
 		}
 	}
 
+	uintptr_t ptrAdvStaffrollDestructorFunc = 0x4544B0;
 	void __stdcall AdvStaffrollDestructorHook(char unk)
 	{
 		void* that;
@@ -429,9 +381,10 @@ namespace AdvStaffRollFix
 		free(StaffrollObjCopy);
 		free(scaledStaffRollObjs);
 
-		return reinterpret_cast<void(__thiscall*)(void*, char)>(0x4544B0)(that, unk);
+		return reinterpret_cast<void(__thiscall*)(void*, char)>(ptrAdvStaffrollDestructorFunc)(that, unk);
 	}
 
+	uintptr_t ptrAdvStaffrollDrawFunc = 0x4545F0;
 	void __stdcall AdvStaffrollDrawHook()
 	{
 		char* that;
@@ -468,7 +421,7 @@ namespace AdvStaffRollFix
 			*(typeStaffrollTextObj**)(&StaffrollObjCopy[0x84]) = scaledStaffRollObjs;
 		}
 
-		reinterpret_cast<void(__thiscall*)(char*)>(0x4545F0)(StaffrollObjCopy);
+		reinterpret_cast<void(__thiscall*)(char*)>(ptrAdvStaffrollDrawFunc)(StaffrollObjCopy);
 	}
 
 	uintptr_t AdvStaffrollLogoFuncAddr = 0x00454FB0;
@@ -542,7 +495,7 @@ void __stdcall TextDrawFunc2Hook(uintptr_t a1, float posX, float posY, float siz
 
 	return TextDrawFunc2(a0, a1, posX, posY, newSizeX, newSizeY, a3);
 }
-
+#ifdef _DEBUG
 void __stdcall HookAConsole()
 {
 	AllocConsole();
@@ -556,7 +509,7 @@ void __stdcall HookAConsole()
 	printf("TestFloat3: 0x%X\n", &TestFloat3);
 	printf("TestFloat4: 0x%X\n", &TestFloat4);
 }
-
+#endif
 #pragma runtime_checks( "", restore )
 
 ATOM WINAPI RegisterClassHook(WNDCLASSEXA* wcex) 
@@ -591,8 +544,6 @@ static BOOL WINAPI UpdateWindowHook(HWND hWnd)
 
 	return UpdateWindow(hWnd);
 }
-
-
 
 enum SystemMode
 {
@@ -643,17 +594,31 @@ void Init()
 
 	if ((SysMode == SystemMode::InGame) && bSkipFE)
 	{
-		*(int32_t*)0x8D6720 = iniReader.ReadInteger("SkipFE", "Stage", 2);
-		*(int32_t*)0x8D6920 = iniReader.ReadInteger("SkipFE", "Team1", 0);
-		*(int32_t*)0x8D6924 = iniReader.ReadInteger("SkipFE", "Team2", -1);
-		*(int32_t*)0x8D6928 = iniReader.ReadInteger("SkipFE", "Team3", -1);
-		*(int32_t*)0x8D692C = iniReader.ReadInteger("SkipFE", "Team4", -1);
+		uintptr_t StageIDPtr = *(uintptr_t*)(reinterpret_cast<uintptr_t>(hook::pattern("8B 04 85 ? ? ? ? 83 F8 ? 7C 0B").get_first(0)) + 3);
+		uintptr_t loc_41A6FC = reinterpret_cast<uintptr_t>(hook::pattern("83 F8 05 7D 05 A3 ? ? ? ? A1").get_first(0)) + 5;
+		uintptr_t loc_41A70B = loc_41A6FC + 0xF;
+		uintptr_t loc_41A71B = loc_41A6FC + 0x1F;
+		uintptr_t loc_41A72C = loc_41A6FC + 0x30;
+
+		uintptr_t Team1Ptr = *reinterpret_cast<uintptr_t*>(loc_41A6FC + 1);
+		uintptr_t Team2Ptr = *reinterpret_cast<uintptr_t*>(loc_41A70B + 1);
+		uintptr_t Team3Ptr = *reinterpret_cast<uintptr_t*>(loc_41A71B + 2);
+		uintptr_t Team4Ptr = *reinterpret_cast<uintptr_t*>(loc_41A72C + 2);
+
+
+		*(int32_t*)StageIDPtr = iniReader.ReadInteger("SkipFE", "Stage", 2);
+		*(int32_t*)Team1Ptr = iniReader.ReadInteger("SkipFE", "Team1", 0);
+		*(int32_t*)Team2Ptr = iniReader.ReadInteger("SkipFE", "Team2", -1);
+		*(int32_t*)Team3Ptr = iniReader.ReadInteger("SkipFE", "Team3", -1);
+		*(int32_t*)Team4Ptr = iniReader.ReadInteger("SkipFE", "Team4", -1);
 		
 	}
 
 	if ((SysMode == SystemMode::EasyMenuMovie) && bSkipFE)
-		*(int32_t*)0x8DB5B0 = iniReader.ReadInteger("SkipFE", "Movie", -1);
-
+	{
+		uintptr_t MovieIDPtr = *(uintptr_t*)(reinterpret_cast<uintptr_t>(hook::pattern("C7 40 3C 05 00 00 00 5D C7 05 ? ? ? ? FF FF FF FF").get_first(0)) + 0xA);
+		*(int32_t*)MovieIDPtr = iniReader.ReadInteger("SkipFE", "Movie", -1);
+	}
 	if (!Screen.Width || !Screen.Height)
 		std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
 
@@ -661,9 +626,6 @@ void Init()
 	Screen.fHeight = static_cast<float>(Screen.Height);
 	Screen.fHalfWidth = Screen.fWidth * 0.5f;
 	Screen.fHalfHeight = Screen.fHeight * 0.5f;
-	Screen.fInvWidth = 1.0f / Screen.fWidth;
-	Screen.fInvHeight = 1.0f / Screen.fInvHeight;
-	Screen.fInvWidth43 = 1.0f / (Screen.fHeight * (4.0f * 3.0f));
 	Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
 	Screen.Width43 = static_cast<int32_t>(Screen.fHeight * (4.0f / 3.0f));
 
@@ -694,47 +656,82 @@ void Init()
 	}
 
 	// disable writes to resolution vars
-	injector::MakeNOP(0x427722, 10);
-	injector::MakeNOP(0x00427735, 10);
-	injector::MakeNOP(0x00444892, 5);
-	injector::MakeNOP(0x00444897, 5);
-	injector::MakeNOP(0x00629F5F, 5);
-
-	injector::MakeJMP(0x446B06, 0x446B51);
+	uintptr_t loc_427719 = reinterpret_cast<uintptr_t>(hook::pattern("A1 ? ? ? ? 85 C0 75 0A C7 05 ? ? ? ? 80 02 00 00").get_first(0));
+	injector::MakeJMP(loc_427719, loc_427719 + 0x26);
+	uintptr_t sub_444890 = reinterpret_cast<uintptr_t>(hook::pattern("C7 05 ? ? ? ? ? ? ? ? C7 05 ? ? ? ? 01 00 00 00 C7 05 ? ? ? ? 02 00 00 00 C7 05 ? ? ? ? ? ? ? ? B8 01 00 00 00").get_first(0)) - 0x48;
+	injector::MakeNOP(sub_444890 + 2, 5);
+	injector::MakeNOP(sub_444890 + 7, 5);
+	uintptr_t loc_446B04 = reinterpret_cast<uintptr_t>(hook::pattern("B8 01 00 00 00 83 C4 08 84 C8 74 22").get_first(0)) + 8;
+	injector::MakeJMP(loc_446B04, loc_446B04 + 0x4D);
 
 	// write resolution vars
-	*(uint32_t*)0x00A7793C = Screen.Width;
-	*(uint32_t*)0x00A77940 = Screen.Height;
-	*(uint32_t*)0x007C931C = Screen.Width;
-	*(uint32_t*)0x007C9320 = Screen.Height;
+	uintptr_t loc_446DB1 = reinterpret_cast<uintptr_t>(hook::pattern("A1 ? ? ? ? 8B 0D ? ? ? ? 53 68 00 00 C8 00").get_first(0));
+	ptrResX = *reinterpret_cast<uintptr_t*>(loc_446DB1 + 1);
+	ptrResY = *reinterpret_cast<uintptr_t*>(loc_446DB1 + 7);
+	uintptr_t loc_446369 = reinterpret_cast<uintptr_t>(hook::pattern("E8 ? ? ? ? 8B D8 33 ED 3B DE 7E 5A").get_first(0)) - 0x10;
+	ptrResX2 = *reinterpret_cast<uintptr_t*>(loc_446369) + 4;
+	ptrResY2 = *reinterpret_cast<uintptr_t*>(loc_446369) + 8;
 
-	*(uint8_t*)0x008CAEE0 = 7; // Screen_Size_Selection -- force it to 7 (1280x960 32-bit)
+	uintptr_t loc_6A9C7D = reinterpret_cast<uintptr_t>(hook::pattern("C7 44 24 00 00 00 80 3F EB 0A 8B 0D ? ? ? ? 89 4C 24 00 8B 15 ? ? ? ? A1").get_first(0)) + 0x1F;
+	uintptr_t loc_6A9C87 = loc_6A9C7D + 0xA;
+	ptrMaestroResX = *reinterpret_cast<uintptr_t*>(loc_6A9C7D + 2);
+	ptrMaestroResY = *reinterpret_cast<uintptr_t*>(loc_6A9C87 + 2);
+
+	*(uint32_t*)ptrResX = Screen.Width;
+	*(uint32_t*)ptrResY = Screen.Height;
+	*(uint32_t*)ptrResX2 = Screen.Width;
+	*(uint32_t*)ptrResY2 = Screen.Height;
+	*(float*)ptrMaestroResX = Screen.fWidth;
+	*(float*)ptrMaestroResY = Screen.fHeight;
+
+	uintptr_t loc_629F5F = reinterpret_cast<uintptr_t>(hook::pattern("50 FF 92 30 01 00 00 8A 44 24 1C 83 C4 0C A2 ? ? ? ? E9 ? ? ? ?").get_first(0)) + 0xE;
+	uintptr_t Screen_Size_Selection = *reinterpret_cast<uintptr_t*>(loc_629F5F + 1);
+	*(uint8_t*)Screen_Size_Selection = 7; // Screen_Size_Selection -- force it to 7 (1280x960 32-bit)
+	// disable the write
+	injector::MakeNOP(loc_629F5F, 5);
 
 	// fix for the split screen screen buffer -- force read the current res
-	injector::MakeNOP(0x0061D418, 2);
+	uintptr_t loc_61D422 = reinterpret_cast<uintptr_t>(hook::pattern("BD 80 02 00 00 C7 44 24 18 E0 01 00 00").get_first(0));
+	injector::MakeJMP(loc_61D422, loc_61D422 - 8);
 
 	// fix "end the game" dialog to open at the center & have focus (disabling the minimize because minimized windows and their children lose focus!)
-	injector::MakeNOP(0x00446C85, 6, true);
-	injector::MakeCALL(0x00446C85, UpdateWindowHook);
-	injector::MakeJMP(0x446F33, 0x446F38);
+	uintptr_t loc_446C85 = reinterpret_cast<uintptr_t>(hook::pattern("FF 15 ? ? ? ? 8B 54 24 14 8B 44 24 10 52 50 68 10 01 00 00").get_first(0));
+	injector::MakeNOP(loc_446C85, 6);
+	injector::MakeCALL(loc_446C85, UpdateWindowHook);
+	uintptr_t loc_446F33 = reinterpret_cast<uintptr_t>(hook::pattern("6A 06 50 FF D5 A1 ? ? ? ? 3B C3 C6 05 ? ? ? ? 01").get_first(0));
+	injector::MakeJMP(loc_446F33, loc_446F33 + 5);
 
 	if (bFixLensFlare)
 	{
-		injector::WriteMemory<float*>(0x0048EF31 + 2, &Screen.fWidth, true);
-		injector::WriteMemory<float*>(0x0048EF3F + 2, &Screen.fHeight, true);
+		uintptr_t loc_48EF26 = reinterpret_cast<uintptr_t>(hook::pattern("BF 00 00 00 3F D9 44 24 18 D8 C9").get_first(0));
+		uintptr_t loc_48EF31 = loc_48EF26 + 0xB;
+		uintptr_t loc_48EF3F = loc_48EF26 + 0x19;
 
-		injector::WriteMemory<float*>(0x0048F454 + 2, &Screen.fWidth, true);
-		injector::WriteMemory<float*>(0x0048F47C + 2, &Screen.fHeight, true);
+		uintptr_t loc_48EFE6 = loc_48EF26 + 0xC0;
+		uintptr_t loc_48EFF4 = loc_48EF26 + 0xCE;
 
-		injector::WriteMemory<float*>(0x0048EFE6 + 2, &Screen.fHalfWidth, true);
-		injector::WriteMemory<float*>(0x0048EFF4 + 2, &Screen.fHalfHeight, true);
+		uintptr_t loc_48F497 = reinterpret_cast<uintptr_t>(hook::pattern("C7 44 24 28 0A D7 23 3C").get_first(0));
+		uintptr_t loc_48F454 = loc_48F497 - 0x43;
+		uintptr_t loc_48F47C = loc_48F497 - 0x1B;
+		uintptr_t loc_48F419 = loc_48F497 - 0x7E;
+
+		loc_48F41F = loc_48F497 - 0x78;
+
+		injector::WriteMemory<float*>(loc_48EF31 + 2, &Screen.fWidth, true);
+		injector::WriteMemory<float*>(loc_48EF3F + 2, &Screen.fHeight, true);
+
+		injector::WriteMemory<float*>(loc_48EFE6 + 2, &Screen.fHalfWidth, true);
+		injector::WriteMemory<float*>(loc_48EFF4 + 2, &Screen.fHalfHeight, true);
+
+		injector::WriteMemory<float*>(loc_48F454 + 2, &Screen.fWidth, true);
+		injector::WriteMemory<float*>(loc_48F47C + 2, &Screen.fHeight, true);
 
 		// lens flare size
 		fLensFlareScalar = Screen.fHeight / 480.0f;
 		if (Screen.Width < Screen.Height)
 			fLensFlareScalar = Screen.fWidth / 480.0f;
 
-		injector::MakeJMP(0x0048F419, LensFlareScale, true);
+		injector::MakeJMP(loc_48F419, LensFlareScale, true);
 	}
 
 	auto pattern = hook::pattern("0F BF 4E ? 0F BF C0 89 44 ? ? DB 44 ? ? 89 4C ? ? 85 DB"); // 662C2D
@@ -829,7 +826,9 @@ void Init()
 
 	uintptr_t loc_64AC8B = reinterpret_cast<uintptr_t>(hook::pattern("D9 05 ? ? ? ? 89 4E 68 8B 50 04 D8 76 68").get_first(0));
 	uintptr_t loc_64ACA5 = loc_64AC8B + 0x1A;
-	static uintptr_t ShadowStuffAddr = 0x7476C4;
+
+	uintptr_t loc_63AA3B = reinterpret_cast<uintptr_t>(hook::pattern("83 EC 14 56 57 E8 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ?").get_first(0)) + 0xB;
+	static uintptr_t ShadowStuffAddr = *reinterpret_cast<uintptr_t*>(loc_63AA3B) + 0xC;
 
 	// TODO - if any more things break thanks to this jank here, target function at 64AC80 in specific places instead
 	struct ExceptionalHudScale1
@@ -1095,8 +1094,12 @@ void Init()
 	// Special Stage
 	fDustWidth = 40.0f * Screen.fAspectRatio;
 	static float fDustHeight = 40.0f;
-	injector::WriteMemory<float*>(0x0052C5FB + 2, &fDustWidth, true);
-	injector::WriteMemory<float*>(0x0052C607 + 2, &fDustHeight, true);
+
+	uintptr_t loc_52C5FB = reinterpret_cast<uintptr_t>(hook::pattern("66 C7 46 1E 54 00 DB 05").get_first(0)) + 0xF3;
+	uintptr_t loc_52C607 = loc_52C5FB + 0xC;
+
+	injector::WriteMemory<float*>(loc_52C5FB + 2, &fDustWidth, true);
+	injector::WriteMemory<float*>(loc_52C607 + 2, &fDustHeight, true);
 
 	pattern = hook::pattern("DB 05 ? ? ? ? 8B 00 D9 84 ? ? ? ? ? 53 55 D8 C9 57 50 6A 01 D8 0D ? ? ? ? D9 9C"); // 0x45894A
 	injector::MakeInline<UIHook>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
@@ -1174,11 +1177,17 @@ void Init()
 	injector::MakeInline<LevelUpPos2>(pattern.count(1).get(0).get<uint32_t>(40), pattern.count(1).get(0).get<uint32_t>(46));
 
 	// unprotect and set scaled X res divider for Advertise
-	injector::UnprotectMemory(0x0078A08C, sizeof(float), dummyoldprotect);
-	*(float*)0x0078A08C = 1.0f / (480.0f * Screen.fAspectRatio);
+	uintptr_t loc_456D03 = reinterpret_cast<uintptr_t>(hook::pattern("D8 0D ? ? ? ? D9 5B 3C DB 05 ? ? ? ? BF 01 00 00 00").get_first(0));
+	ptrOneDiv640 = *reinterpret_cast<uintptr_t*>(loc_456D03 + 2);
+
+	injector::UnprotectMemory(ptrOneDiv640, sizeof(float), dummyoldprotect);
+	*(float*)ptrOneDiv640 = 1.0f / (480.0f * Screen.fAspectRatio);
 
 	if (bShadowFix)
 	{
+		uintptr_t loc_63B143 = reinterpret_cast<uintptr_t>(hook::pattern("D9 54 24 3C D9 54 24 40 D9 54 24 58").get_first(0));
+		static uintptr_t sub_64CA10 = static_cast<uintptr_t>(injector::GetBranchDestination(loc_63B143 + 0x30));
+
 		struct ShadowFix2
 		{
 			void operator()(injector::reg_pack& regs)
@@ -1197,10 +1206,10 @@ void Init()
 				*(float*)(regs.esp + 0x90) = 1.0f - val2;
 				*(float*)(regs.esp + 0x94) = 1.0f - val2;
 		
-				reinterpret_cast<void(__cdecl*)(uint32_t, uint32_t, uint32_t)>(0x64CA10)(4, regs.edx, 4);
+				reinterpret_cast<void(__cdecl*)(uint32_t, uint32_t, uint32_t)>(sub_64CA10)(4, regs.edx, 4);
 				_asm fld [val]
 			}
-		}; injector::MakeInline<ShadowFix2>(0x0063B143, 0x0063B17C);
+		}; injector::MakeInline<ShadowFix2>(loc_63B143, loc_63B143 + 0x39);
 	}
 
 	if (!szCustomUserFilesDirectoryInGameDir.empty())
@@ -1242,80 +1251,106 @@ void Init()
 	}
 
 	// set Screen_Full & override game config
-	injector::MakeNOP(0x00629F8E, 5);
-	*(uint32_t*)0x008CAEDC = nWindowedMode == 0;
+	pattern = hook::pattern("8B 15 ? ? ? ? 8D 4C 24 10 51 68 ? ? ? ? 50 FF 92 30 01 00 00 8B 4C 24 1C 33 C0 83 C4 0C 3B CD 0F 95 C0 A3 ? ? ? ? E9").count(9);
+	uintptr_t loc_629F8E = reinterpret_cast<uintptr_t>(pattern.get(3).get<uint32_t>(0)) + 0x25;
+	uintptr_t Screen_Full = *reinterpret_cast<uintptr_t*>(loc_629F8E + 1);
+
+	*(uint32_t*)Screen_Full = nWindowedMode == 0;
+	injector::MakeNOP(loc_629F8E, 5);	
 
 	if ((nWindowedMode == 4) || (nWindowedMode == 5) || !nWindowedMode)
 	{
-		uintptr_t addr = 0x004460A9;
-		injector::MakeNOP(addr, 6, true);
-		injector::MakeCALL(addr, GetClientRectHook, true);
-		addr = 0x655794;
-		injector::MakeNOP(addr, 6, true);
-		injector::MakeCALL(addr, GetClientRectHook, true);
-		addr = 0x656644;
-		injector::MakeNOP(addr, 6, true);
-		injector::MakeCALL(addr, GetClientRectHook, true);
-		addr = 0x656787;
-		injector::MakeNOP(addr, 6, true);
-		injector::MakeCALL(addr, GetClientRectHook, true);
-		addr = 0x657C9C;
-		injector::MakeNOP(addr, 6, true);
-		injector::MakeCALL(addr, GetClientRectHook, true);
-		addr = 0x658172;
-		injector::MakeNOP(addr, 6, true);
-		injector::MakeCALL(addr, GetClientRectHook, true);
-		addr = 0x65822F;
-		injector::MakeNOP(addr, 6, true);
-		injector::MakeCALL(addr, GetClientRectHook, true);
-		addr = 0x65DBE7;
-		injector::MakeNOP(addr, 6, true);
-		injector::MakeCALL(addr, GetClientRectHook, true);
-		addr = 0x65DC2F;
-		injector::MakeNOP(addr, 6, true);
-		injector::MakeCALL(addr, GetClientRectHook, true);
-		addr = 0x65E152;
-		injector::MakeNOP(addr, 6, true);
-		injector::MakeCALL(addr, GetClientRectHook, true);
-		addr = 0x65E783;
-		injector::MakeNOP(addr, 6, true);
-		injector::MakeCALL(addr, GetClientRectHook, true);
+		// hook GetClientRect via IAT
+		uintptr_t loc_65E783 = reinterpret_cast<uintptr_t>(hook::pattern("C6 43 08 00 8B 0D ? ? ? ? 51 FF 15").get_first(0)) + 0xB;
+		uintptr_t GetClientRectIAT = *reinterpret_cast<uintptr_t*>(loc_65E783 + 2);
+		injector::WriteMemory(GetClientRectIAT, &GetClientRectHook, true);
+
+		//uintptr_t addr = 0x004460A9;
+		//injector::MakeNOP(addr, 6, true);
+		//injector::MakeCALL(addr, GetClientRectHook, true);
+		//addr = 0x655794;
+		//injector::MakeNOP(addr, 6, true);
+		//injector::MakeCALL(addr, GetClientRectHook, true);
+		//addr = 0x656644;
+		//injector::MakeNOP(addr, 6, true);
+		//injector::MakeCALL(addr, GetClientRectHook, true);
+		//addr = 0x656787;
+		//injector::MakeNOP(addr, 6, true);
+		//injector::MakeCALL(addr, GetClientRectHook, true);
+		//addr = 0x657C9C;
+		//injector::MakeNOP(addr, 6, true);
+		//injector::MakeCALL(addr, GetClientRectHook, true);
+		//addr = 0x658172;
+		//injector::MakeNOP(addr, 6, true);
+		//injector::MakeCALL(addr, GetClientRectHook, true);
+		//addr = 0x65822F;
+		//injector::MakeNOP(addr, 6, true);
+		//injector::MakeCALL(addr, GetClientRectHook, true);
+		//addr = 0x65DBE7;
+		//injector::MakeNOP(addr, 6, true);
+		//injector::MakeCALL(addr, GetClientRectHook, true);
+		//addr = 0x65DC2F;
+		//injector::MakeNOP(addr, 6, true);
+		//injector::MakeCALL(addr, GetClientRectHook, true);
+		//addr = 0x65E152;
+		//injector::MakeNOP(addr, 6, true);
+		//injector::MakeCALL(addr, GetClientRectHook, true);
+		//addr = 0x65E783;
+		//injector::MakeNOP(addr, 6, true);
+		//injector::MakeCALL(addr, GetClientRectHook, true);
 	}
 
 	if (nWindowedMode)
 	{
-		injector::MakeJMP(0x446D87, 0x446DA5, true);
-		injector::MakeJMP(0x446E11, 0x446E24, true);
-		injector::MakeNOP(0x4462F8, 6, true);
-		injector::MakeCALL(0x4462F8, WindowedModeWrapper::CreateWindowExA_Hook, true);
-		injector::MakeNOP(0x4462B5, 6, true);
-		injector::MakeCALL(0x4462B5, WindowedModeWrapper::AdjustWindowRect_Hook, true);
-		injector::MakeNOP(0x446DD7, 6, true);
-		injector::MakeCALL(0x446DD7, WindowedModeWrapper::AdjustWindowRect_Hook, true);
+		uintptr_t loc_446D87 = reinterpret_cast<uintptr_t>(hook::pattern("68 00 00 C8 00 6A F0 56 FF 15").get_first(0));
+		uintptr_t loc_446E11 = loc_446D87 + 0x8A;
+		uintptr_t loc_446DD7 = loc_446D87 + 0x50;
+		uintptr_t loc_446EA8 = loc_446D87 + 0x121;
+		uintptr_t loc_4462B5 = reinterpret_cast<uintptr_t>(hook::pattern("68 00 00 C8 00 8D 4C 24 08 51 C7 44 24 10 00 00 00 00").get_first(0)) + 0x22;
+		uintptr_t loc_4462F8 = loc_4462B5 + 0x43;
+
+		injector::MakeJMP(loc_446D87, loc_446D87 + 0x1E, true);
+		injector::MakeJMP(loc_446E11, loc_446E11 + 0x13, true);
+
+		injector::MakeNOP(loc_446DD7, 6, true);
+		injector::MakeCALL(loc_446DD7, WindowedModeWrapper::AdjustWindowRect_Hook, true);
+
+		injector::MakeNOP(loc_4462B5, 6, true);
+		injector::MakeCALL(loc_4462B5, WindowedModeWrapper::AdjustWindowRect_Hook, true);
+
+		injector::MakeNOP(loc_4462F8, 6, true);
+		injector::MakeCALL(loc_4462F8, WindowedModeWrapper::CreateWindowExA_Hook, true);
 
 		// disable cursor centering on boot
-		injector::MakeNOP(0x00446EA8, 5, true);
+		injector::MakeNOP(loc_446EA8, 5, true);
 
 		// dereference the current WndProc from the game executable and write to the function pointer (to maximize compatibility)
 		uint32_t* wndproc_addr = hook::pattern("C7 44 24 14 ? ? ? ? 89 74 24 18 89 74 24 1C").count(1).get(0).get<uint32_t>(4);
-		GameWndProcAddr = *(unsigned int*)wndproc_addr;
+		GameWndProcAddr = *(uint32_t*)wndproc_addr;
 		GameWndProc = (LRESULT(WINAPI*)(HWND, UINT, WPARAM, LPARAM))GameWndProcAddr;
-		injector::WriteMemory<unsigned int>(wndproc_addr, (unsigned int)&WSFixWndProc, true);
+		injector::WriteMemory<uint32_t>(wndproc_addr, (uint32_t)&WSFixWndProc, true);
+
+		uintptr_t loc_6567B6 = reinterpret_cast<uintptr_t>(hook::pattern("8B 54 24 20 A1 ? ? ? ? 3B D0 75 12 8B 44 24 24").get_first(0));
+		loc_6567BF = loc_6567B6 + 9;
+		ptrWindowSizeX = *reinterpret_cast<uintptr_t*>(loc_6567B6 + 5);
+
+		uintptr_t loc_445B32 = reinterpret_cast<uintptr_t>(hook::pattern("85 C0 7E 12 48 85 C0 A3").get_first(0)) + 0xE;
+		uintptr_t loc_446EBF = reinterpret_cast<uintptr_t>(hook::pattern("68 AB AA AA 3F 68 00 00 00 3F 8D 44 24 28 E8 ? ? ? ? 83").get_first(0)) + 0x75;
 
 		switch (nWindowedMode)
 		{
 		case 5:
 			WindowedModeWrapper::bStretchWindow = true;
-			injector::MakeJMP(0x6567B6, StretchOnBoot, true);
+			injector::MakeJMP(loc_6567B6, StretchOnBoot, true);
 			break;
 		case 4:
 			WindowedModeWrapper::bScaleWindow = true;
-			injector::MakeJMP(0x6567B6, StretchOnBoot, true);
+			injector::MakeJMP(loc_6567B6, StretchOnBoot, true);
 			break;
 		case 3:
 			WindowedModeWrapper::bEnableWindowResize = true;
-			injector::MakeJMP(0x00445B32, 0x00445B3A);
-			injector::MakeJMP(0x00446EBF, 0x00446EC6);
+			injector::MakeJMP(loc_445B32, loc_445B32 + 8);
+			injector::MakeJMP(loc_446EBF, loc_446EBF + 7);
 		case 2:
 			WindowedModeWrapper::bBorderlessWindowed = false;
 			break;
@@ -1325,100 +1360,158 @@ void Init()
 	}
 
 	if (bDisableMouseInput)
+	{
+		uintptr_t loc_444E32 = reinterpret_cast<uintptr_t>(hook::pattern("8D 54 24 14 52 6A 02 C7 44 24 1C 14 00 00 00 C7 44 24 20 10").get_first(0)) - 0x8A;
+		uintptr_t ptr_722FA0 = *reinterpret_cast<uintptr_t*>(loc_444E32 + 1);
+
 		// corrupt GUID_SysMouse on purpose
-		injector::WriteMemory<uint32_t>(0x00722FA0, 0, true);
+		injector::WriteMemory<uint32_t>(ptr_722FA0, 0, true);
+	}
 
 	if (bDisableFrameSkipping)
-		injector::MakeJMP(0x402CF5, 0x402D20);
+	{
+		uintptr_t loc_402CF5 = reinterpret_cast<uintptr_t>(hook::pattern("8A 48 1E 84 C9 74 24 A1").get_first(0));
+		injector::MakeJMP(loc_402CF5, loc_402CF5 + 0x2B);
+	}
 
 	if (bRestoreDemos)
-		injector::MakeJMP(0x456989, RestoreDemos, true);
+	{
+		uintptr_t loc_456989 = reinterpret_cast<uintptr_t>(hook::pattern("C7 05 ? ? ? ? 06 00 00 00 EB 14 C7 05 ? ? ? ? 03 00 00 00 C7 05 ? ? ? ? 0A 00 00 00").get_first(0)) + 0x23;
+		DemoRestoreExit1 = loc_456989 + 7;
+		injector::MakeJMP(loc_456989, RestoreDemos, true);
+	}
 
 	if (bSkipFE)
 	{
+		uintptr_t loc_42713E = reinterpret_cast<uintptr_t>(hook::pattern("8B 46 04 53 55 33 ED 3B C5 57 89 2E BF 01 00 00 00 75 16").get_first(0)) + 0x1E;
+		static uintptr_t sub_42A9F0 = static_cast<uintptr_t>(injector::GetBranchDestination(loc_42713E + 3));
+
 		struct SysModeHook
 		{
 			void operator()(injector::reg_pack& regs)
 			{
 				*(uint32_t*)(regs.eax + 0x38) = SysMode;
-				reinterpret_cast<void(*)()>(0x42A9F0)();
+				reinterpret_cast<void(*)()>(sub_42A9F0)();
 				*(uint32_t*)(regs.esi + 4) = regs.edi;
 			}
-		}; injector::MakeInline<SysModeHook>(0x42713E, 0x427149);
+		}; injector::MakeInline<SysModeHook>(loc_42713E, loc_42713E + 0xB);
 	}
+
 	if (bDisableCDCheck)
-		injector::MakeJMP(0x00629B72, 0x629C36, true);
+	{
+		uintptr_t loc_629B72 = reinterpret_cast<uintptr_t>(hook::pattern("55 8B EC 83 E4 F8 83 EC 50 53 55 56 57 68 00 00 40 00 6A 00 6A 00").get_first(0)) + 0x42;
+		injector::MakeJMP(loc_629B72, loc_629B72 + 0xC4, true);
+	}
 
 	if (ShadowRes != 256)
 	{
-		injector::WriteMemory<uint32_t>(0x63BF6B + 1, ShadowRes, true);
-		injector::WriteMemory<uint32_t>(0x63BF8F + 1, ShadowRes - 4, true);
-		injector::WriteMemory<uint32_t>(0x7476CC, ShadowRes, true);
+		uintptr_t loc_63BF6B = reinterpret_cast<uintptr_t>(hook::pattern("83 EC 10 85 F6 74 76 85 FF 74 72 68 00 01 00 00").get_first(0)) + 0xB;
+		uintptr_t loc_63BF8F = loc_63BF6B + 0x24;
 
-		injector::WriteMemory<float>(0x0063B077 + 4, (float)ShadowRes, true);
-		injector::WriteMemory<float>(0x0063B07F + 4, (float)ShadowRes, true);
-		injector::WriteMemory<float>(0x0063B08F + 4, (float)ShadowRes, true);
-		injector::WriteMemory<float>(0x0063B097 + 4, (float)ShadowRes, true);
+		uintptr_t loc_63B077 = reinterpret_cast<uintptr_t>(hook::pattern("C7 44 24 40 00 00 80 43").get_first(0));
+		uintptr_t loc_63B07F = loc_63B077 + 8;
+		uintptr_t loc_63B08F = loc_63B077 + 0x18;
+		uintptr_t loc_63B097 = loc_63B077 + 0x20;
 
-		injector::WriteMemory<float>(0x006B7237 + 1, (float)ShadowRes, true);
+		injector::WriteMemory<uint32_t>(loc_63BF6B + 1, ShadowRes, true);
+		injector::WriteMemory<uint32_t>(loc_63BF8F + 1, ShadowRes - 4, true);
+		injector::WriteMemory<uint32_t>(ShadowStuffAddr + 8, ShadowRes, true);
+
+		injector::WriteMemory<float>(loc_63B077 + 4, (float)ShadowRes, true);
+		injector::WriteMemory<float>(loc_63B07F + 4, (float)ShadowRes, true);
+		injector::WriteMemory<float>(loc_63B08F + 4, (float)ShadowRes, true);
+		injector::WriteMemory<float>(loc_63B097 + 4, (float)ShadowRes, true);
+
+		uintptr_t loc_6B7237 = reinterpret_cast<uintptr_t>(hook::pattern("68 00 00 80 43 56").get_first(0));
+		injector::WriteMemory<float>(loc_6B7237 + 1, (float)ShadowRes, true);
 	}
 
 	if (bDisableQuitDialog)
-		injector::MakeJMP(0x446EFB, 0x446FFB);
+	{
+		uintptr_t loc_446EFB = reinterpret_cast<uintptr_t>(hook::pattern("85 C0 0F 84 ? ? ? ? 83 7C 24 34 12 0F 85 ? ? ? ?").get_first(0)) + 0x13;
+		injector::MakeJMP(loc_446EFB, loc_446EFB + 0x100);
+	}
 
 	// custom clip range
-	injector::WriteMemory<float>(0x007869B4, ClipRange, true);
+	uintptr_t loc_4EE3CA = reinterpret_cast<uintptr_t>(hook::pattern("B9 00 01 00 00 33 C0 8B FE F3 AB A1").get_first(0)) + 0x16;
+	uintptr_t ptr_7869B4 = *reinterpret_cast<uintptr_t*>(loc_4EE3CA + 3) + 0xC;
+	injector::WriteMemory<float>(ptr_7869B4, ClipRange, true);
 
 	static float fInv640 = 1.0f / 640.0f;
 	static int OrigWidth = 640;
 	static int OrigHeight = 480;
-	static int Width43_480 = 480.0f * Screen.fAspectRatio;
+	static int Width43_480 = static_cast<int>(480.0f * Screen.fAspectRatio);
+
 	// 2P fix -- ignore aspect change for screen texture -- TODO: dynamic resizing of screen texture
-	injector::WriteMemory<float*>(0x0061D533 + 2, &fInv640, true);
+	uintptr_t loc_61D533 = reinterpret_cast<uintptr_t>(hook::pattern("83 C4 20 83 F9 02").get_first(0)) + 6;
+	injector::WriteMemory<float*>(loc_61D533 + 2, &fInv640, true);
 
 	// ignore aspect change for special stage gauge
-	injector::WriteMemory<float*>(0x005262B9 + 2, &fInv640, true);
-	injector::WriteMemory<float*>(0x005262F9 + 2, &fInv640, true);
-	injector::WriteMemory<float*>(0x0052640A + 2, &fInv640, true);
-	injector::WriteMemory<float*>(0x00526459 + 2, &fInv640, true);
+	uintptr_t loc_5262B9 = reinterpret_cast<uintptr_t>(hook::pattern("83 EC 78 85 C0 75 04 83 C4 78 C3 8B 00").get_first(0)) + 0x39;
+	uintptr_t loc_5262F9 = loc_5262B9 + 0x40;
+	uintptr_t loc_52640A = reinterpret_cast<uintptr_t>(hook::pattern("81 EC 98 00 00 00 85 C0 75 07 81 C4 98 00 00 00 C3 8B 00 53").get_first(0)) + 0x4A;
+	uintptr_t loc_526459 = loc_52640A + 0x4F;
+
+	injector::WriteMemory<float*>(loc_5262B9 + 2, &fInv640, true);
+	injector::WriteMemory<float*>(loc_5262F9 + 2, &fInv640, true);
+	injector::WriteMemory<float*>(loc_52640A + 2, &fInv640, true);
+	injector::WriteMemory<float*>(loc_526459 + 2, &fInv640, true);
 
 	// ignore aspect change for special stage link counter
-	injector::WriteMemory<float*>(0x00526F9C + 2, &fInv640, true);
-	injector::WriteMemory<float*>(0x00526FEA + 2, &fInv640, true);
+	uintptr_t loc_526F9C = reinterpret_cast<uintptr_t>(hook::pattern("81 EC A0 00 00 00 53 33 DB 3B C3 75 0C 33 C0 5B 81 C4 A0 00 00 00").get_first(0)) + 0x3C;
+	uintptr_t loc_526FEA = loc_526F9C + 0x4E;
+
+	injector::WriteMemory<float*>(loc_526F9C + 2, &fInv640, true);
+	injector::WriteMemory<float*>(loc_526FEA + 2, &fInv640, true);
 
 	// ignore aspect change for results screen
-	injector::WriteMemory<float*>(0x458961 + 2, &fInv640, true);
-	injector::WriteMemory<float*>(0x00458993 + 2, &fInv640, true);
+	uintptr_t loc_458961 = reinterpret_cast<uintptr_t>(hook::pattern("8A 51 08 81 EC 98 00 00 00 84 D2").get_first(0)) + 0x3B;
+	uintptr_t loc_458993 = loc_458961 + 0x32;
 
+	injector::WriteMemory<float*>(loc_458961 + 2, &fInv640, true);
+	injector::WriteMemory<float*>(loc_458993 + 2, &fInv640, true);
 
 	if (bFixAdvertiseWindows)
 	{
 		// ignore aspect change for Advertise windows
 		// position
-		//injector::WriteMemory<int*>(0x00456CFA + 2, &Width43_480, true);
-		injector::WriteMemory<int*>(0x00456CFA + 2, &OrigWidth, true);
-		injector::WriteMemory<int*>(0x00456D0C + 2, &OrigHeight, true);
-		injector::WriteMemory<float*>(0x00456D03 + 2, &fInv640, true);
+		uintptr_t loc_456CFA = reinterpret_cast<uintptr_t>(hook::pattern("66 C7 43 1E 48 08").get_first(0)) + 0x11;
+		uintptr_t loc_456D0C = loc_456CFA + 0x12;
+		uintptr_t loc_456D03 = loc_456CFA + 9;
+
+		uintptr_t loc_456D2B = loc_456CFA + 0x31;
+		uintptr_t loc_456D3D = loc_456CFA + 0x43;
+		uintptr_t loc_456D34 = loc_456CFA + 0x3A;
+
+		injector::WriteMemory<int*>(loc_456CFA + 2, &OrigWidth, true);
+		injector::WriteMemory<int*>(loc_456D0C + 2, &OrigHeight, true);
+		injector::WriteMemory<float*>(loc_456D03 + 2, &fInv640, true);
 		// size
-		//injector::WriteMemory<int*>(0x00456D2B + 2, &Width43_480, true);
-		injector::WriteMemory<int*>(0x00456D2B + 2, &OrigWidth, true);
-		injector::WriteMemory<int*>(0x00456D3D + 2, &OrigHeight, true);
-		injector::WriteMemory<float*>(0x00456D34 + 2, &fInv640, true);
+		injector::WriteMemory<int*>(loc_456D2B + 2, &OrigWidth, true);
+		injector::WriteMemory<int*>(loc_456D3D + 2, &OrigHeight, true);
+		injector::WriteMemory<float*>(loc_456D34 + 2, &fInv640, true);
 	}
 
 	if (bFixStaffRoll)
 	{
+		uintptr_t loc_4543FF = reinterpret_cast<uintptr_t>(hook::pattern("66 C7 46 1E A4 00").get_first(0)) + 0x28;
+		uintptr_t loc_454407 = loc_4543FF + 8;
+
 		// Advertise staff roll
-		injector::WriteMemory<int*>(0x004543FF + 2, &OrigWidth, true);
-		injector::WriteMemory<float*>(0x00454407 + 2, &fInv640, true);
+		injector::WriteMemory<int*>(loc_4543FF + 2, &OrigWidth, true);
+		injector::WriteMemory<float*>(loc_454407 + 2, &fInv640, true);
 	}
 
 	// ignore aspect change for power up icons
-	injector::WriteMemory<float*>(0x00479F34 + 2, &fInv640, true);
+	uintptr_t loc_479F34 = reinterpret_cast<uintptr_t>(hook::pattern("8B 40 60 DB 40 0C 8B 54 24 10 8B 44 24").get_first(0)) + 0x11;
+	injector::WriteMemory<float*>(loc_479F34 + 2, &fInv640, true);
 
 	// fix window icon
-	injector::MakeNOP(0x00446229, 6);
-	injector::MakeCALL(0x00446229, RegisterClassHook);
+	uintptr_t loc_446229 = reinterpret_cast<uintptr_t>(hook::pattern("68 00 7F 00 00 56 C7 44 24 0C 30 00 00 00").get_first(0)) + 0x53;
+
+	injector::MakeNOP(loc_446229, 6);
+	injector::MakeCALL(loc_446229, RegisterClassHook);
+
 #ifdef _DEBUG
 	injector::MakeRangedNOP(0x00446CC6, 0x00446CD3);
 	injector::MakeCALL(0x00446CC8, HookAConsole);
@@ -1433,9 +1526,13 @@ void Init()
 		}
 
 		WindowBezelSize = 1.0f / (32.0f * scalar);
-		injector::WriteMemory<float*>(0x0045764D + 2, &WindowBezelSize, true);
-		injector::WriteMemory<float*>(0x00457658 + 2, &WindowBezelSize, true);
+		uintptr_t loc_45764D = reinterpret_cast<uintptr_t>(hook::pattern("D9 41 04 D8 0D ? ? ? ? D9 5C 24 10 D9 01").get_first(0)) + 0xF;
+		uintptr_t loc_457658 = loc_45764D + 0xB;
 
+		injector::WriteMemory<float*>(loc_45764D + 2, &WindowBezelSize, true);
+		injector::WriteMemory<float*>(loc_457658 + 2, &WindowBezelSize, true);
+
+		uintptr_t loc_4571A0 = reinterpret_cast<uintptr_t>(hook::pattern("C7 44 24 20 00 00 E0 42").get_first(0));
 		struct AdvWindowHook1
 		{
 			void operator()(injector::reg_pack& regs)
@@ -1449,9 +1546,9 @@ void Init()
 				}
 				*(float*)(regs.esp + 0x20) = 112.0f * Yscalesize; // Ysize
 			}
-		}; injector::MakeInline<AdvWindowHook1>(0x004571A0, 0x004571A8);
+		}; injector::MakeInline<AdvWindowHook1>(loc_4571A0, loc_4571A0 + 8);
 
-
+		uintptr_t loc_4571C4 = reinterpret_cast<uintptr_t>(hook::pattern("C7 44 24 18 00 00 A0 42 E8 ? ? ? ? 8B 15").get_first(0));
 		struct AdvWindowHook2
 		{
 			void operator()(injector::reg_pack& regs)
@@ -1465,35 +1562,60 @@ void Init()
 
 				*(float*)(regs.esp + 0x18) = 80.0f * Yscalesize; // Ysize
 			}
-		}; injector::MakeInline<AdvWindowHook2>(0x004571C4, 0x004571CC);
+		}; injector::MakeInline<AdvWindowHook2>(loc_4571C4, loc_4571C4 + 8);
 
-		injector::MakeCALL(0x00457278, AdvertiseWindowFix::AdvButtonDrawHook);
-		injector::MakeCALL(0x00457357, AdvertiseWindowFix::AdvButtonDrawHook);
-		injector::MakeCALL(0x0045743C, AdvertiseWindowFix::AdvButtonDrawHook);
+
+		uintptr_t loc_457278 = reinterpret_cast<uintptr_t>(hook::pattern("E8 ? ? ? ? E8 ? ? ? ? D9 44 24 20 D8 05 ? ? ? ? 8B 46 70").get_first(0));
+		uintptr_t loc_457357 = loc_457278 + 0xDF;
+		uintptr_t loc_45743C = loc_457278 + 0x1C4;
+
+		uintptr_t loc_45720A = loc_457278 - 0x6E;
+		uintptr_t loc_457230 = loc_457278 - 0x48;
+		uintptr_t loc_45730F = loc_457278 + 0x97;
+		uintptr_t loc_4573F4 = loc_457278 + 0x17C;
+
+		uintptr_t loc_457286 = loc_457278 + 0xE;
+		uintptr_t loc_457365 = loc_457278 + 0xED;
+		uintptr_t loc_45744A = loc_457278 + 0x1D2;
+
+		uintptr_t loc_457372 = loc_457278 + 0xFA;
+		uintptr_t loc_457457 = loc_457278 + 0x1DF;
+
+		uintptr_t loc_45731F = loc_457278 + 0xA7;
+		uintptr_t loc_457404 = loc_457278 + 0x18C;
+
+		injector::MakeCALL(loc_457278, AdvertiseWindowFix::AdvButtonDrawHook);
+		injector::MakeCALL(loc_457357, AdvertiseWindowFix::AdvButtonDrawHook);
+		injector::MakeCALL(loc_45743C, AdvertiseWindowFix::AdvButtonDrawHook);
 
 		ButtonBezelOffset = 8.0f * scalar;
-		injector::WriteMemory<float*>(0x0045720A + 2, &ButtonBezelOffset, true);
-		injector::WriteMemory<float*>(0x00457230 + 2, &ButtonBezelOffset, true);
-		injector::WriteMemory<float*>(0x0045730F + 2, &ButtonBezelOffset, true);
-		injector::WriteMemory<float*>(0x004573F4 + 2, &ButtonBezelOffset, true);
+		injector::WriteMemory<float*>(loc_45720A + 2, &ButtonBezelOffset, true);
+		injector::WriteMemory<float*>(loc_457230 + 2, &ButtonBezelOffset, true);
+		injector::WriteMemory<float*>(loc_45730F + 2, &ButtonBezelOffset, true);
+		injector::WriteMemory<float*>(loc_4573F4 + 2, &ButtonBezelOffset, true);
 
 		AdvWindowButtonTextYOffset = 16.0f * scalar;
 		AdvWindowButton2TextYOffset = 8.0f * scalar;
 		AdvWindowButton2Offset = 40.0f * scalar;
 		AdvWindowButton3Offset = 72.0f * scalar;
 
-		injector::WriteMemory<float*>(0x00457286 + 2, &AdvWindowButtonTextYOffset, true);
-		injector::WriteMemory<float*>(0x00457365 + 2, &AdvWindowButtonTextYOffset, true);
-		injector::WriteMemory<float*>(0x0045744A + 2, &AdvWindowButtonTextYOffset, true);
+		injector::WriteMemory<float*>(loc_457286 + 2, &AdvWindowButtonTextYOffset, true);
+		injector::WriteMemory<float*>(loc_457365 + 2, &AdvWindowButtonTextYOffset, true);
+		injector::WriteMemory<float*>(loc_45744A + 2, &AdvWindowButtonTextYOffset, true);
 
-		injector::WriteMemory<float*>(0x00457372 + 2, &AdvWindowButton2TextYOffset, true);
-		injector::WriteMemory<float*>(0x00457457 + 2, &AdvWindowButton2TextYOffset, true);
+		injector::WriteMemory<float*>(loc_457372 + 2, &AdvWindowButton2TextYOffset, true);
+		injector::WriteMemory<float*>(loc_457457 + 2, &AdvWindowButton2TextYOffset, true);
 
-		injector::WriteMemory<float*>(0x0045731F + 2, &AdvWindowButton2Offset, true);
-		injector::WriteMemory<float*>(0x00457404 + 2, &AdvWindowButton3Offset, true);
+		injector::WriteMemory<float*>(loc_45731F + 2, &AdvWindowButton2Offset, true);
+		injector::WriteMemory<float*>(loc_457404 + 2, &AdvWindowButton3Offset, true);
 
-		injector::WriteMemory<uintptr_t>(0x0075024C, (uintptr_t)&AdvertiseWindowFix::AdvWindowDrawHook, true);
+		uintptr_t loc_456CC1 = reinterpret_cast<uintptr_t>(hook::pattern("66 C7 43 1E 48 08").get_first(0)) - 0x28;
+		uintptr_t ptrAdvWindowVTable = *reinterpret_cast<uintptr_t*>(loc_456CC1 + 2);
 
+		AdvertiseWindowFix::ptrAdvWindowDrawFunc = *reinterpret_cast<uintptr_t*>(ptrAdvWindowVTable + 8);
+		injector::WriteMemory<uintptr_t>(ptrAdvWindowVTable + 8, (uintptr_t)&AdvertiseWindowFix::AdvWindowDrawHook, true);
+
+		uintptr_t loc_45729C = loc_457278 + 0x24;
 		struct AdvButtonTextHook1
 		{
 			void operator()(injector::reg_pack& regs)
@@ -1512,8 +1634,9 @@ void Init()
 				regs.edi = regs.esi + 0x520;
 				_asm fld[Xsize]
 			}
-		}; injector::MakeInline<AdvButtonTextHook1>(0x0045729C, 0x004572AC);
+		}; injector::MakeInline<AdvButtonTextHook1>(loc_45729C, loc_45729C + 0x10);
 
+		uintptr_t loc_45738C = loc_457278 + 0x114;
 		struct AdvButtonTextHook2
 		{
 			void operator()(injector::reg_pack& regs)
@@ -1531,9 +1654,9 @@ void Init()
 
 				_asm fld[Xsize]
 			}
-		}; injector::MakeInline<AdvButtonTextHook2>(0x0045738C, 0x00457396);
+		}; injector::MakeInline<AdvButtonTextHook2>(loc_45738C, loc_45738C + 0xA);
 
-
+		uintptr_t loc_457471 = loc_457278 + 0x1F9;
 		struct AdvButtonTextHook3
 		{
 			void operator()(injector::reg_pack& regs)
@@ -1551,13 +1674,21 @@ void Init()
 
 				_asm fld[Xsize]
 			}
-		}; injector::MakeInline<AdvButtonTextHook3>(0x00457471, 0x0045747B);
+		}; injector::MakeInline<AdvButtonTextHook3>(loc_457471, loc_457471 + 0xA);
 
-		injector::MakeCALL(0x00457F1B, TextDrawFunc2Hook);
-		injector::MakeCALL(0x00457F3C, TextDrawFunc2Hook);
+		uintptr_t loc_457F1B = reinterpret_cast<uintptr_t>(hook::pattern("8D 44 24 10 50 68 00 00 80 3F 68 00 00 80 3F 83 EC 08").get_first(0)) + 0x2B;
+		uintptr_t loc_457F3C = loc_457F1B + 0x21;
+		TextDrawFunc2Addr = static_cast<uintptr_t>(injector::GetBranchDestination(loc_457F1B));
 
-		injector::MakeCALL(0x00456CC7, AdvertiseWindowFix::hkAdvWindowConstructor);
-		injector::WriteMemory<uintptr_t>(0x00750244, (uintptr_t)&AdvertiseWindowFix::AdvWindowDestructorHook, true);
+		injector::MakeCALL(loc_457F1B, TextDrawFunc2Hook);
+		injector::MakeCALL(loc_457F3C, TextDrawFunc2Hook);
+
+		uintptr_t loc_456CC7 = loc_456CC1 + 6;
+		AdvertiseWindowFix::sub_456AA0 = static_cast<uintptr_t>(injector::GetBranchDestination(loc_456CC7));
+		injector::MakeCALL(loc_456CC7, AdvertiseWindowFix::hkAdvWindowConstructor);
+
+		AdvertiseWindowFix::ptrAdvWindowDestructorFunc = *reinterpret_cast<uintptr_t*>(ptrAdvWindowVTable);
+		injector::WriteMemory<uintptr_t>(ptrAdvWindowVTable, (uintptr_t)&AdvertiseWindowFix::AdvWindowDestructorHook, true);
 	}
 	else
 	{
@@ -1614,22 +1745,41 @@ void Init()
 	// Staff roll
 	if (bFixStaffRoll)
 	{
-		injector::MakeCALL(0x00454744, TextDrawFunc2Hook);
-		injector::WriteMemory<uintptr_t>(0x0074F8FC, (uintptr_t)&AdvStaffRollFix::AdvStaffrollDrawHook, true);
-		injector::MakeCALL(0x0045448B, AdvStaffRollFix::hkStaffrollConstructor);
-		injector::WriteMemory<uintptr_t>(0x0074F8F4, (uintptr_t)&AdvStaffRollFix::AdvStaffrollDestructorHook, true);
+		uintptr_t loc_454744 = reinterpret_cast<uintptr_t>(hook::pattern("8B 56 0C 8B 46 08 56 68 00 00 80 3F 68 00 00 80 3F 52 50 8B 46 14").get_first(0)) + 0x1B;
+		TextDrawFunc2Addr = static_cast<uintptr_t>(injector::GetBranchDestination(loc_454744));
 
-		injector::MakeCALL(0x0045475C, AdvStaffRollFix::AdvStaffrollLogoHook);
+		uintptr_t loc_4543D1 = reinterpret_cast<uintptr_t>(hook::pattern("66 C7 46 1E A4 00").get_first(0)) - 6;
+		uintptr_t loc_45448B = loc_4543D1 + 0xBA;
+		uintptr_t ptrAdvStaffRollVTable = *reinterpret_cast<uintptr_t*>(loc_4543D1 + 2);
+
+		uintptr_t loc_45475C = reinterpret_cast<uintptr_t>(hook::pattern("68 00 00 00 43 EB 05 68 00 00 80 43 68 00 00 80 43").get_first(0)) + 0x11;
+		AdvStaffRollFix::AdvStaffrollLogoFuncAddr = static_cast<uintptr_t>(injector::GetBranchDestination(loc_45475C));
+
+		AdvStaffRollFix::ptrAdvStaffrollDrawFunc = *reinterpret_cast<uintptr_t*>(ptrAdvStaffRollVTable + 8);
+		AdvStaffRollFix::ptrAdvStaffrollDestructorFunc = *reinterpret_cast<uintptr_t*>(ptrAdvStaffRollVTable);
+
+		injector::MakeCALL(loc_454744, TextDrawFunc2Hook);
+		injector::WriteMemory<uintptr_t>(ptrAdvStaffRollVTable + 8, (uintptr_t)&AdvStaffRollFix::AdvStaffrollDrawHook, true);
+		injector::MakeCALL(loc_45448B, AdvStaffRollFix::hkStaffrollConstructor);
+		injector::WriteMemory<uintptr_t>(ptrAdvStaffRollVTable, (uintptr_t)&AdvStaffRollFix::AdvStaffrollDestructorHook, true);
+		injector::MakeCALL(loc_45475C, AdvStaffRollFix::AdvStaffrollLogoHook);
 	}
 
 	if (bDisableLoadingTimer)
-		injector::MakeJMP(0x00419734, 0x4198BC);
-
+	{
+		uintptr_t loc_419734 = reinterpret_cast<uintptr_t>(hook::pattern("DC 05 ? ? ? ? DC 1D ? ? ? ? DF E0 F6 C4 05").get_first(0)) - 0x44;
+		injector::MakeJMP(loc_419734, loc_419734 + 0x188);
+	}
 	if (bDisableSubtitles)
-		injector::MakeRET(0x00428560, 0x1C);
+	{
+		uintptr_t loc_428560 = reinterpret_cast<uintptr_t>(hook::pattern("D8 80 50 6B 7C 00 D9 5C 24 30").get_first(0)) - 0x22D;
+		injector::MakeRET(loc_428560, 0x1C);
+	}
 
 	if (bIncreaseObjectDistance)
 	{
+		uintptr_t loc_43DF60 = reinterpret_cast<uintptr_t>(hook::pattern("BF 00 08 00 00 BB 0F 00 00 00 EB 06 8D 9B 00 00 00 00").get_first(0)) + 0x12;
+		static uintptr_t Clip_Range = *reinterpret_cast<uintptr_t*>(loc_43DF60 + 1);
 		struct ObjDrawDistanceHook
 		{
 			void operator()(injector::reg_pack& regs)
@@ -1637,10 +1787,10 @@ void Init()
 				if (*(uint8_t*)(regs.ecx) < MinObjDistance)
 					*(uint8_t*)(regs.ecx) = MinObjDistance;
 
-				regs.eax = *(uint32_t*)0x008CAEC0;
+				regs.eax = *(uint32_t*)Clip_Range;
 				regs.ebp = 1;
 			}
-		}; injector::MakeInline<ObjDrawDistanceHook>(0x43DF60, 0x43DF6A);
+		}; injector::MakeInline<ObjDrawDistanceHook>(loc_43DF60, loc_43DF60 + 0xA);
 	}
 }
 
