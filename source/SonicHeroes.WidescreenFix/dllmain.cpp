@@ -581,7 +581,8 @@ void Init()
 	static bool bDisableLoadingTimer = iniReader.ReadInteger("MISC", "DisableLoadingTimer", 0) != 0;
 	static bool bDisableSubtitles = iniReader.ReadInteger("MISC", "DisableSubtitles", 0) != 0;
 	static bool bIncreaseObjectDistance = iniReader.ReadInteger("MISC", "IncreaseObjectDistance", 1) != 0;
-	static uint8_t MinObjDistance = iniReader.ReadInteger("MISC", "MinObjDistance", 255) & 0xFF;
+	static uint8_t MinObjDistance = iniReader.ReadInteger("MISC", "MinObjDistance", 0) & 0xFF;
+	static float fObjDistanceScale = iniReader.ReadFloat("MISC", "ObjDistanceScale", 2.0f);
 	
 	static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
 	if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
@@ -1778,15 +1779,30 @@ void Init()
 
 	if (bIncreaseObjectDistance)
 	{
+		if (fObjDistanceScale < 0.0f)
+			fObjDistanceScale = 0.0f;
+
+		if (fObjDistanceScale > 255.0f)
+			fObjDistanceScale = 255.0f;
+
 		uintptr_t loc_43DF60 = reinterpret_cast<uintptr_t>(hook::pattern("BF 00 08 00 00 BB 0F 00 00 00 EB 06 8D 9B 00 00 00 00").get_first(0)) + 0x12;
 		static uintptr_t Clip_Range = *reinterpret_cast<uintptr_t*>(loc_43DF60 + 1);
 		struct ObjDrawDistanceHook
 		{
 			void operator()(injector::reg_pack& regs)
 			{
-				if (*(uint8_t*)(regs.ecx) < MinObjDistance)
-					*(uint8_t*)(regs.ecx) = MinObjDistance;
+				float fDistance = static_cast<float>(*(uint8_t*)(regs.ecx));
+				uint32_t iDistance;
+				fDistance *= fObjDistanceScale;
 
+				iDistance = static_cast<uint32_t>(fDistance);
+				if (iDistance > 255)
+					iDistance = 255;
+
+				if (iDistance < MinObjDistance)
+					iDistance = MinObjDistance;
+
+				*(uint8_t*)(regs.ecx) = iDistance & 0xFF;
 				regs.eax = *(uint32_t*)Clip_Range;
 				regs.ebp = 1;
 			}
