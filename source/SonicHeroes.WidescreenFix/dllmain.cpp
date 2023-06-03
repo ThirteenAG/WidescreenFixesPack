@@ -93,9 +93,6 @@ void updateValues(const float& newWidth, const float& newHeight)
 	*(uint32_t*)ptrResX2 = Screen.Width;
 	*(uint32_t*)ptrResY2 = Screen.Height;
 
-	// injector::WriteMemory(0x004463E2 + 1, Screen.Width, true);
-	// injector::WriteMemory(0x004463E7 + 1, Screen.Height, true);
-
 	*(float*)ptrOneDiv640 = 1.0f / (480.0f * Screen.fAspectRatio);
 
 	*(float*)ptrMaestroResX = Screen.fWidth;
@@ -213,11 +210,6 @@ void __declspec(naked) RestoreDemos()
 }
 
 #pragma runtime_checks( "", off )
-float TestFloat1 = 1.0f;
-float TestFloat2 = 1.0f;
-float TestFloat3 = 1.0f;
-float TestFloat4 = 1.0f;
-
 namespace AdvertiseWindowFix
 {
 	struct Vector2
@@ -495,21 +487,6 @@ void __stdcall TextDrawFunc2Hook(uintptr_t a1, float posX, float posY, float siz
 
 	return TextDrawFunc2(a0, a1, posX, posY, newSizeX, newSizeY, a3);
 }
-#ifdef _DEBUG
-void __stdcall HookAConsole()
-{
-	AllocConsole();
-	AttachConsole(ATTACH_PARENT_PROCESS);
-
-	freopen("CON", "wb", stdout);
-	freopen("CON", "wb", stderr);
-
-	printf("TestFloat1: 0x%X\n", &TestFloat1);
-	printf("TestFloat2: 0x%X\n", &TestFloat2);
-	printf("TestFloat3: 0x%X\n", &TestFloat3);
-	printf("TestFloat4: 0x%X\n", &TestFloat4);
-}
-#endif
 #pragma runtime_checks( "", restore )
 
 ATOM WINAPI RegisterClassHook(WNDCLASSEXA* wcex) 
@@ -1512,11 +1489,6 @@ void Init()
 
 	injector::MakeNOP(loc_446229, 6);
 	injector::MakeCALL(loc_446229, RegisterClassHook);
-
-#ifdef _DEBUG
-	injector::MakeRangedNOP(0x00446CC6, 0x00446CD3);
-	injector::MakeCALL(0x00446CC8, HookAConsole);
-#endif
 
 	if (bFixAdvertiseWindows)
 	{
