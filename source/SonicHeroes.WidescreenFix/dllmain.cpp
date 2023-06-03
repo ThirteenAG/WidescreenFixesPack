@@ -129,17 +129,17 @@ LRESULT WINAPI WSFixWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 	case WM_SIZE:
 	{
-		//if (!WindowedModeWrapper::bEnableWindowResize) return TRUE;
+		if (WindowedModeWrapper::bScaleWindow || WindowedModeWrapper::bStretchWindow) return TRUE;
 
 		updateValues((float)LOWORD(lParam), (float)HIWORD(lParam));
 		return GameWndProc(hWnd, msg, wParam, lParam);
 	}
 
-	//case WM_SIZING:
-	//{
-	//	if (!WindowedModeWrapper::bEnableWindowResize) return TRUE;
-	//	return GameWndProc(hWnd, msg, wParam, lParam);
-	//}
+	case WM_SIZING:
+	{
+		if (WindowedModeWrapper::bScaleWindow || WindowedModeWrapper::bStretchWindow) return TRUE;
+		return GameWndProc(hWnd, msg, wParam, lParam);
+	}
 
 	case WM_ACTIVATE:
 	{
