@@ -490,11 +490,17 @@ void __stdcall TextDrawFunc2Hook(uintptr_t a1, float posX, float posY, float siz
 
 namespace BetterSync
 {
+	uintptr_t sub_6C4FC0 = 0x6C4FC0;
+	uintptr_t MovieIDPtr = 0x8DB5B0;
+
 	LONGLONG FrameTimeMicrosecs = 16667;
 	LARGE_INTEGER oldTime;
 
 	void CustomSyncFunc()
 	{
+		if ((*(int32_t*)MovieIDPtr > 0))
+			return reinterpret_cast<void(*)()>(sub_6C4FC0)();
+
 		LARGE_INTEGER elapsedTime, curTime, frameTime, Frequency;
 
 		QueryPerformanceFrequency(&Frequency);
@@ -1821,9 +1827,13 @@ void Init()
 	}
 	else if (bBetterFrameSync)
 	{
-		uintptr_t sub_6C4FC0 = reinterpret_cast<uintptr_t>(hook::pattern("68 40 42 0F 00 51 50 E8 ? ? ? ? 8B 0D").get_first(0)) - 0xE2;
 		BetterSync::FrameTimeMicrosecs = static_cast<LONGLONG>((1.0 / fFPSLimit) * 1e6);
-		injector::MakeJMP(sub_6C4FC0, BetterSync::CustomSyncFunc);
+
+		BetterSync::sub_6C4FC0 = reinterpret_cast<uintptr_t>(hook::pattern("68 40 42 0F 00 51 50 E8 ? ? ? ? 8B 0D").get_first(0)) - 0xE2;		
+		BetterSync::MovieIDPtr = *(uintptr_t*)(reinterpret_cast<uintptr_t>(hook::pattern("C7 40 3C 05 00 00 00 5D C7 05 ? ? ? ? FF FF FF FF").get_first(0)) + 0xA);
+		uintptr_t loc_443169 = reinterpret_cast<uintptr_t>(hook::pattern("83 C4 08 E8 ? ? ? ? E8 ? ? ? ? FF 0D ? ? ? ? E8").get_first(0)) + 0x13;
+		
+		injector::MakeCALL(loc_443169, BetterSync::CustomSyncFunc);
 	}
 }
 
