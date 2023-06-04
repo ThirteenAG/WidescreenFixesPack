@@ -490,50 +490,12 @@ void __stdcall TextDrawFunc2Hook(uintptr_t a1, float posX, float posY, float siz
 
 namespace BetterSync
 {
-	void timerSleep(double seconds) {
-		using namespace std::chrono;
-
-		static HANDLE timer = CreateWaitableTimer(NULL, FALSE, NULL);
-		static double estimate = 5e-3;
-		static double mean = 5e-3;
-		static double m2 = 0;
-		static int64_t count = 1;
-
-		while (seconds - estimate > 1e-7) {
-			double toWait = seconds - estimate;
-			LARGE_INTEGER due;
-			due.QuadPart = -int64_t(toWait * 1e7);
-			auto start = high_resolution_clock::now();
-			//SetWaitableTimerEx(timer, &due, 0, NULL, NULL, NULL, 0);
-			SetWaitableTimer(timer, &due, 0, NULL, NULL, FALSE);
-			WaitForSingleObject(timer, INFINITE);
-			auto end = high_resolution_clock::now();
-
-			double observed = (end - start).count() / 1e9;
-			seconds -= observed;
-
-			++count;
-			double error = observed - toWait;
-			double delta = error - mean;
-			mean += delta / count;
-			m2 += delta * (error - mean);
-			double stddev = sqrt(m2 / (count - 1));
-			estimate = mean + stddev;
-		}
-
-		// spin lock
-		auto start = high_resolution_clock::now();
-		while ((high_resolution_clock::now() - start).count() / 1e9 < seconds);
-	}
-
-	LARGE_INTEGER oldTime, curTime;
-	LARGE_INTEGER Frequency;
-
 	LONGLONG FrameTimeMicrosecs = 16667;
+	LARGE_INTEGER oldTime;
 
 	void CustomSyncFunc()
 	{
-		LARGE_INTEGER elapsedTime;
+		LARGE_INTEGER elapsedTime, curTime, frameTime, Frequency;
 
 		QueryPerformanceFrequency(&Frequency);
 		QueryPerformanceCounter(&curTime);
@@ -542,13 +504,14 @@ namespace BetterSync
 			oldTime.QuadPart = curTime.QuadPart;
 
 		elapsedTime.QuadPart = curTime.QuadPart - oldTime.QuadPart;
+		frameTime.QuadPart = (FrameTimeMicrosecs * Frequency.QuadPart) / 1000000;
 
-		elapsedTime.QuadPart *= 1000000;
-		elapsedTime.QuadPart /= Frequency.QuadPart;
-
-		if (elapsedTime.QuadPart < FrameTimeMicrosecs)
+		while (elapsedTime.QuadPart < frameTime.QuadPart)
 		{
-			timerSleep(static_cast<double>(FrameTimeMicrosecs - elapsedTime.QuadPart) / 1e6);
+			QueryPerformanceFrequency(&Frequency);
+			QueryPerformanceCounter(&curTime);
+			elapsedTime.QuadPart = curTime.QuadPart - oldTime.QuadPart;
+			frameTime.QuadPart = (FrameTimeMicrosecs * Frequency.QuadPart) / 1000000;
 		}
 
 		QueryPerformanceCounter(&oldTime);
@@ -702,9 +665,6 @@ void Init()
 	{
 		Screen.WidthFMV = (int)(Screen.WidthFMV / (Screen.fAspectRatio / (4.0f / 3.0f)));
 	}
-
-	if (bBetterFrameSync)
-		BetterSync::FrameTimeMicrosecs = static_cast<LONGLONG>((1.0 / fFPSLimit) * 1e6);
 
 	// disable writes to resolution vars
 	uintptr_t loc_427719 = reinterpret_cast<uintptr_t>(hook::pattern("A1 ? ? ? ? 85 C0 75 0A C7 05 ? ? ? ? 80 02 00 00").get_first(0));
@@ -1862,6 +1822,7 @@ void Init()
 	else if (bBetterFrameSync)
 	{
 		uintptr_t sub_6C4FC0 = reinterpret_cast<uintptr_t>(hook::pattern("68 40 42 0F 00 51 50 E8 ? ? ? ? 8B 0D").get_first(0)) - 0xE2;
+		BetterSync::FrameTimeMicrosecs = static_cast<LONGLONG>((1.0 / fFPSLimit) * 1e6);
 		injector::MakeJMP(sub_6C4FC0, BetterSync::CustomSyncFunc);
 	}
 }
