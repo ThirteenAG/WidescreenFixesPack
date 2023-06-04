@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include <timeapi.h>
 
 struct Screen
 {
