@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include <timeapi.h>
 
 struct Screen
 {
@@ -487,6 +488,73 @@ void __stdcall TextDrawFunc2Hook(uintptr_t a1, float posX, float posY, float siz
 
 	return TextDrawFunc2(a0, a1, posX, posY, newSizeX, newSizeY, a3);
 }
+
+namespace BetterSync
+{
+	void timerSleep(double seconds) {
+		using namespace std::chrono;
+
+		static HANDLE timer = CreateWaitableTimer(NULL, FALSE, NULL);
+		static double estimate = 5e-3;
+		static double mean = 5e-3;
+		static double m2 = 0;
+		static int64_t count = 1;
+
+		while (seconds - estimate > 1e-7) {
+			double toWait = seconds - estimate;
+			LARGE_INTEGER due;
+			due.QuadPart = -int64_t(toWait * 1e7);
+			auto start = high_resolution_clock::now();
+			//SetWaitableTimerEx(timer, &due, 0, NULL, NULL, NULL, 0);
+			SetWaitableTimer(timer, &due, 0, NULL, NULL, FALSE);
+			WaitForSingleObject(timer, INFINITE);
+			auto end = high_resolution_clock::now();
+
+			double observed = (end - start).count() / 1e9;
+			seconds -= observed;
+
+			++count;
+			double error = observed - toWait;
+			double delta = error - mean;
+			mean += delta / count;
+			m2 += delta * (error - mean);
+			double stddev = sqrt(m2 / (count - 1));
+			estimate = mean + stddev;
+		}
+
+		// spin lock
+		auto start = high_resolution_clock::now();
+		while ((high_resolution_clock::now() - start).count() / 1e9 < seconds);
+	}
+
+	LARGE_INTEGER oldTime, curTime;
+	LARGE_INTEGER Frequency;
+
+	LONGLONG FrameTimeMicrosecs = 16667;
+
+	void CustomSyncFunc()
+	{
+		LARGE_INTEGER elapsedTime;
+
+		QueryPerformanceFrequency(&Frequency);
+		QueryPerformanceCounter(&curTime);
+
+		if (oldTime.QuadPart == 0)
+			oldTime.QuadPart = curTime.QuadPart;
+
+		elapsedTime.QuadPart = curTime.QuadPart - oldTime.QuadPart;
+
+		elapsedTime.QuadPart *= 1000000;
+		elapsedTime.QuadPart /= Frequency.QuadPart;
+
+		if (elapsedTime.QuadPart < FrameTimeMicrosecs)
+		{
+			timerSleep(static_cast<double>(FrameTimeMicrosecs - elapsedTime.QuadPart) / 1e6);
+		}
+
+		QueryPerformanceCounter(&oldTime);
+	}
+}
 #pragma runtime_checks( "", restore )
 
 ATOM WINAPI RegisterClassHook(WNDCLASSEXA* wcex) 
@@ -560,6 +628,9 @@ void Init()
 	static bool bIncreaseObjectDistance = iniReader.ReadInteger("MISC", "IncreaseObjectDistance", 1) != 0;
 	static uint8_t MinObjDistance = iniReader.ReadInteger("MISC", "MinObjDistance", 0) & 0xFF;
 	static float fObjDistanceScale = iniReader.ReadFloat("MISC", "ObjDistanceScale", 2.0f);
+	static bool bBetterFrameSync = iniReader.ReadInteger("MISC", "BetterFrameSync", 1) != 0;
+	static bool bDisableFrameSync = iniReader.ReadInteger("MISC", "DisableFrameSync", 0) != 0;
+	static float fFPSLimit = iniReader.ReadFloat("MISC", "FPSLimit", 60.0f);
 	
 	static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
 	if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
@@ -632,6 +703,9 @@ void Init()
 	{
 		Screen.WidthFMV = (int)(Screen.WidthFMV / (Screen.fAspectRatio / (4.0f / 3.0f)));
 	}
+
+	if (bBetterFrameSync)
+		BetterSync::FrameTimeMicrosecs = static_cast<LONGLONG>((1.0 / fFPSLimit) * 1e6);
 
 	// disable writes to resolution vars
 	uintptr_t loc_427719 = reinterpret_cast<uintptr_t>(hook::pattern("A1 ? ? ? ? 85 C0 75 0A C7 05 ? ? ? ? 80 02 00 00").get_first(0));
@@ -1779,6 +1853,17 @@ void Init()
 				regs.ebp = 1;
 			}
 		}; injector::MakeInline<ObjDrawDistanceHook>(loc_43DF60, loc_43DF60 + 0xA);
+	}
+
+	if (bDisableFrameSync)
+	{
+		uintptr_t sub_6C4FC0 = reinterpret_cast<uintptr_t>(hook::pattern("68 40 42 0F 00 51 50 E8 ? ? ? ? 8B 0D").get_first(0)) - 0xE2;
+		injector::MakeRET(sub_6C4FC0);
+	}
+	else if (bBetterFrameSync)
+	{
+		uintptr_t sub_6C4FC0 = reinterpret_cast<uintptr_t>(hook::pattern("68 40 42 0F 00 51 50 E8 ? ? ? ? 8B 0D").get_first(0)) - 0xE2;
+		injector::MakeJMP(sub_6C4FC0, BetterSync::CustomSyncFunc);
 	}
 }
 
