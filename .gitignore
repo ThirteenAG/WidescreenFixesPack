@@ -30,19 +30,19 @@ data/**/binkw32.dll
 textures/**/*.txd
 
 #PSP
-data/*.PPSSPP.*/**/*.elf
-data/*.PPSSPP.*/**/*.prx
-source/*.PPSSPP.*/**/*.o
-source/*.PPSSPP.*/**/OBJS
+data/*PPSSPP.*/**/*.elf
+data/*PPSSPP.*/**/*.prx
+source/*PPSSPP.*/**/*.o
+source/*PPSSPP.*/**/OBJS
 includes/psp/**/*.o
-data/*.PPSSPP.*/**/TEXTURES/**/*.zip
+data/*PPSSPP.*/**/TEXTURES/**/*.zip
 
 #PS2
-data/*.PCSX2F.*/**/*.elf
-data/*.PCSX2F.*/**/*.map
-source/*.PCSX2F.*/**/*.o
-source/*.PCSX2F.*/**/*.map
-source/*.PCSX2F.*/**/linkfile
+data/*PCSX2F.*/**/*.elf
+data/*PCSX2F.*/**/*.map
+source/*PCSX2F.*/**/*.o
+source/*PCSX2F.*/**/*.map
+source/*PCSX2F.*/**/linkfile
 includes/pcsx2/**/*.o
 
 #Misc

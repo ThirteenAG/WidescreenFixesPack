@@ -427,6 +427,15 @@ project "MidnightClubLARemix.PPSSPP.FusionMod"
    targetextension ".prx"
    setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/MidnightClubLARemix.PPSSPP.FusionMod/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "MidnightClubLARemix.PPSSPP.FusionMod")
    writemakefile_psp("MidnightClubLARemix.PPSSPP.FusionMod")
+project "PPSSPP.XboxRainDroplets"
+   kind "Makefile"
+   includedirs { "external/pspsdk/psp/sdk/include" }
+   includedirs { "external/pspsdk/bin" }
+   includedirs { "external/pspsdk/psp/sdk/include" }
+   files { "source/%{prj.name}/*.c" }
+   targetextension ".prx"
+   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/PPSSPP.XboxRainDroplets/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "PPSSPP.XboxRainDroplets")
+   writemakefile_psp("PPSSPP.XboxRainDroplets")
 project "MaxPayne2.WidescreenFix"
    setpaths("Z:/WFP/Games/Max Payne/Max Payne 2 The Fall of Max Payne/", "MaxPayne2.exe")
    writeghaction("mp2", "MaxPayne2.WidescreenFix")
@@ -474,6 +483,9 @@ project "ResidentEvil3.Dolphin.FusionMod"
    add_asmjit()
    setpaths("Z:/WFP/Games/Dolphin-x64/", "Dolphin.exe", "scripts/")
    writeghaction("re3gc", "ResidentEvil3.Dolphin.FusionMod")
+project "ResidentEvilRevelations2.FusionFix"
+   setpaths("Z:/WFP/Games/ResidentEvilRevelations2/", "rerev2.exe", "scripts/")
+   writeghaction("rerev2", "ResidentEvilRevelations2.FusionFix")
 project "Scarface.FusionFix"
    setpaths("Z:/WFP/Games/Scarface/", "scarface.exe", "scripts/")
    writeghaction("scarface", "Scarface.FusionFix")
