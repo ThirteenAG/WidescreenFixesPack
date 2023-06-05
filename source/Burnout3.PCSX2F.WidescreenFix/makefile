@@ -1,6 +1,10 @@
 EE_BIN = ../../data/Burnout3.PCSX2F.WidescreenFix/PLUGINS/Burnout3.PCSX2F.WidescreenFix.elf
 EE_OBJS = main.o ../../includes/pcsx2/log.o ../../includes/pcsx2/memalloc.o ../../includes/pcsx2/patterns.o ../../includes/pcsx2/injector.o ../../includes/pcsx2/rini.o ../../includes/pcsx2/inireader.o ../../includes/pcsx2/mips.o 
 
+CFLAGS = -O2 -Os -G0 -Wall -fshort-wchar -fno-pic -mno-check-zero-division -fpack-struct=16
+CXXFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti
+ASFLAGS = $(CFLAGS)
+
 BASE_ADDRESS = 0x02100000
 EE_LINKFILE = linkfile
 EE_LIBS += -l:libc.a -l:libm.a -l:libgcc.a
