@@ -1334,40 +1334,6 @@ void Init()
 		uintptr_t loc_65E783 = reinterpret_cast<uintptr_t>(hook::pattern("C6 43 08 00 8B 0D ? ? ? ? 51 FF 15").get_first(0)) + 0xB;
 		uintptr_t GetClientRectIAT = *reinterpret_cast<uintptr_t*>(loc_65E783 + 2);
 		injector::WriteMemory(GetClientRectIAT, &GetClientRectHook, true);
-
-		//uintptr_t addr = 0x004460A9;
-		//injector::MakeNOP(addr, 6, true);
-		//injector::MakeCALL(addr, GetClientRectHook, true);
-		//addr = 0x655794;
-		//injector::MakeNOP(addr, 6, true);
-		//injector::MakeCALL(addr, GetClientRectHook, true);
-		//addr = 0x656644;
-		//injector::MakeNOP(addr, 6, true);
-		//injector::MakeCALL(addr, GetClientRectHook, true);
-		//addr = 0x656787;
-		//injector::MakeNOP(addr, 6, true);
-		//injector::MakeCALL(addr, GetClientRectHook, true);
-		//addr = 0x657C9C;
-		//injector::MakeNOP(addr, 6, true);
-		//injector::MakeCALL(addr, GetClientRectHook, true);
-		//addr = 0x658172;
-		//injector::MakeNOP(addr, 6, true);
-		//injector::MakeCALL(addr, GetClientRectHook, true);
-		//addr = 0x65822F;
-		//injector::MakeNOP(addr, 6, true);
-		//injector::MakeCALL(addr, GetClientRectHook, true);
-		//addr = 0x65DBE7;
-		//injector::MakeNOP(addr, 6, true);
-		//injector::MakeCALL(addr, GetClientRectHook, true);
-		//addr = 0x65DC2F;
-		//injector::MakeNOP(addr, 6, true);
-		//injector::MakeCALL(addr, GetClientRectHook, true);
-		//addr = 0x65E152;
-		//injector::MakeNOP(addr, 6, true);
-		//injector::MakeCALL(addr, GetClientRectHook, true);
-		//addr = 0x65E783;
-		//injector::MakeNOP(addr, 6, true);
-		//injector::MakeCALL(addr, GetClientRectHook, true);
 	}
 
 	if (nWindowedMode)
