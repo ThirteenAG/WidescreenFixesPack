@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include <d3d9.h>
+#include <regex>
 
 namespace DamageFix
 {
@@ -340,6 +341,33 @@ void __declspec(naked) UpdateAchievements_Hook()
         ret
     }
 }
+
+namespace LANFix
+{
+    uintptr_t ptrDataConnection = 0x827190;
+    uint32_t AddrFamily = 2; // 2 = AF_INET, 23 = AF_INET6
+
+    uint32_t CheckAddressFamily(std::string addr)
+    {
+        if (std::regex_match(addr, std::regex("(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))")))
+        {
+            return 23;
+        }
+        // default to AF_INET because it doesn't work otherwise...
+        return 2;
+    }
+
+    bool __stdcall DataConnectionHook(char* addr, void* unk)
+    {
+        uintptr_t that;
+        _asm mov that, ecx
+
+        // attempt to detect address family
+        AddrFamily = CheckAddressFamily(addr);
+
+        return reinterpret_cast<bool(__thiscall*)(uintptr_t, char*, void*)>(ptrDataConnection)(that, addr, unk);
+    }
+}
 #pragma runtime_checks( "", restore )
 
 bool bCheckDemoVersion()
@@ -374,6 +402,7 @@ void Init()
     auto bDisableBoosterPackThanks = iniReader.ReadInteger("MultiFix", "DisableBoosterPackThanks", 1) != 0;
     auto bDisablePunkBuster = iniReader.ReadInteger("MultiFix", "DisablePunkBuster", 1) != 0;
     auto bDamageMemoryLeakFix = iniReader.ReadInteger("MultiFix", "DamageMemoryLeakFix", 1) != 0;
+    bool bWin11LANFix = iniReader.ReadInteger("MultiFix", "Win11LANFix", 1) != 0;
 
     if (!bShowConsole)
         FreeConsole();
@@ -496,6 +525,43 @@ void Init()
 
             injector::MakeJMP(loc_7E2382, loc_7E23A3, true);
             injector::MakeNOP(loc_7E23A5, 4, true);
+        }
+
+
+        if (bWin11LANFix)
+        {
+            LANFix::ptrDataConnection = reinterpret_cast<uintptr_t>(hook::pattern("83 EC 20 33 C0 56 6A 11 6A 02 89 44 24 10").get_first(0));
+            uintptr_t loc_82719A = LANFix::ptrDataConnection + 0xA;
+            uintptr_t loc_8271A6 = LANFix::ptrDataConnection + 0x16;
+            uintptr_t loc_8271A9 = LANFix::ptrDataConnection + 0x19;
+            uintptr_t loc_8271D1 = LANFix::ptrDataConnection + 0x41;
+
+            uintptr_t loc_823C54 = reinterpret_cast<uintptr_t>(hook::pattern("C7 44 24 1C FF FF FF FF 89 46 04 E8 ? ? ? ? 84 C0 0F 84").get_first(0)) + 0xB;
+
+            struct LANFixHook1
+            {
+                void operator()(injector::reg_pack& regs)
+                {
+                    *(uint32_t*)(regs.esp + 0x10) = LANFix::AddrFamily;
+                    regs.eax = LANFix::AddrFamily;
+                }
+            }; injector::MakeInline<LANFixHook1>(loc_82719A, loc_8271A6);
+
+            struct LANFixHook2
+            {
+                void operator()(injector::reg_pack& regs)
+                {
+                    *(uint32_t*)(regs.esp + 0x10) = 0;
+                    *(uint32_t*)(regs.esp + 0x20) = 0;
+                    *(uint32_t*)(regs.esp + 0x24) = 0;
+                    *(uint32_t*)(regs.esp + 0x28) = 0;
+                    *(uint32_t*)(regs.esp + 0x2C) = 0;
+                    *(uint32_t*)(regs.esp + 0x18) = 2;
+                    *(uint32_t*)(regs.esp + 0x1C) = 17;
+                }
+            }; injector::MakeInline<LANFixHook2>(loc_8271A9, loc_8271D1);
+
+            injector::MakeCALL(loc_823C54, LANFix::DataConnectionHook);
         }
     }
 
