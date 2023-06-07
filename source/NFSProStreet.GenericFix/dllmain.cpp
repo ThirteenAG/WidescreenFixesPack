@@ -368,6 +368,98 @@ namespace LANFix
         return reinterpret_cast<bool(__thiscall*)(uintptr_t, char*, void*)>(ptrDataConnection)(that, addr, unk);
     }
 }
+
+namespace OnlineInputBlocker
+{
+    HMODULE mhXtendedInput;
+    bool(__cdecl* XtendedInputSetPollingState)(bool state);
+    bool bLookedForXInput = false;
+    bool bFoundXInput = false;
+    bool bPollingEnabledOnline = true;
+
+    void LookForXtendedInput()
+    {
+        if (!mhXtendedInput)
+        {
+            mhXtendedInput = GetModuleHandleA("NFS_XtendedInput.asi");
+            if (mhXtendedInput)
+            {
+                XtendedInputSetPollingState = reinterpret_cast<bool(__cdecl*)(bool)>(GetProcAddress(mhXtendedInput, "SetPollingState"));
+                bFoundXInput = XtendedInputSetPollingState != nullptr;
+            }
+        }
+    }
+
+    uintptr_t ptrGameDevicePoll = 0x006C0D10;
+    void __stdcall GameDevice_PollDevice_Hook()
+    {
+        uintptr_t that;
+        _asm mov that, ecx
+
+        if (!bPollingEnabledOnline)
+            return;
+
+        return reinterpret_cast<void(__thiscall*)(uintptr_t)>(ptrGameDevicePoll)(that);
+    }
+
+    uintptr_t ptrSteeringWheelDevicePoll = 0x006A6180;
+    uint32_t __stdcall SteeringWheelDevice_PollDevice_Hook()
+    {
+        uintptr_t that;
+        _asm mov that, ecx
+
+        if (!bPollingEnabledOnline)
+            return 0;
+
+        return reinterpret_cast<uint32_t(__thiscall*)(uintptr_t)>(ptrSteeringWheelDevicePoll)(that);
+    }
+}
+
+uintptr_t OnlineActiveGameManager_msInstance = 0x00B3082C;
+unsigned int GameWndProcAddr = 0;
+LRESULT(WINAPI* GameWndProc)(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+LRESULT WINAPI WSFixWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg)
+    {
+
+    case WM_ACTIVATEAPP:
+    case WM_ACTIVATE:
+        if (LOWORD(wParam) == WA_INACTIVE || wParam == FALSE)
+        {
+            if (*(uint32_t*)OnlineActiveGameManager_msInstance)
+            {
+                if (!OnlineInputBlocker::bLookedForXInput)
+                {
+                    OnlineInputBlocker::LookForXtendedInput();
+                    OnlineInputBlocker::bLookedForXInput = true;
+                }
+
+                if (OnlineInputBlocker::bFoundXInput)
+                    OnlineInputBlocker::XtendedInputSetPollingState(false);
+                else
+                    OnlineInputBlocker::bPollingEnabledOnline = false;
+
+                return TRUE;
+            }
+        }
+        else
+        {
+            if (!OnlineInputBlocker::bLookedForXInput)
+            {
+                OnlineInputBlocker::LookForXtendedInput();
+                OnlineInputBlocker::bLookedForXInput = true;
+            }
+
+            if (OnlineInputBlocker::bFoundXInput)
+                OnlineInputBlocker::XtendedInputSetPollingState(true);
+            else
+                OnlineInputBlocker::bPollingEnabledOnline = true;
+        }
+    }
+
+    return GameWndProc(hWnd, msg, wParam, lParam);
+}
 #pragma runtime_checks( "", restore )
 
 bool bCheckDemoVersion()
@@ -860,7 +952,7 @@ void Init()
         injector::MakeCALL(dword_70E39B, WindowedModeWrapper::AdjustWindowRect_Hook, true);
         // enable windowed mode variable
         //*WindowedMode_AC6EFC = 1;
-        injector::WriteMemory<uint32_t>(0xAC6EFC, 1, true);
+        injector::WriteMemory<uint32_t>(WindowedMode_AC6EFC, 1, true);
 
         switch (nWindowedMode)
         {
@@ -1214,6 +1306,26 @@ void Init()
         injector::WriteMemory(pattern.get_first(8), nShadowRes, true);
         injector::WriteMemory(pattern.get_first(15), nShadowRes, true);
     }
+
+    // WndProc hook to disable freezing on focus loss during Online/LAN & to block inputs during that
+    uint32_t* wndproc_addr = hook::pattern("C7 44 24 2C 30 00 00 00 C7 44 24 30 40 00 00 00 C7 44 24 34 ? ? ? ? 89 6C 24 38").count(1).get(0).get<uint32_t>(0x14);
+    GameWndProcAddr = *(uint32_t*)wndproc_addr;
+    GameWndProc = (LRESULT(WINAPI*)(HWND, UINT, WPARAM, LPARAM))GameWndProcAddr;
+    injector::WriteMemory<uint32_t>(wndproc_addr, (uint32_t)&WSFixWndProc, true);
+
+    uintptr_t GameDevice_PollDevice_vTable = reinterpret_cast<uintptr_t>(hook::pattern("64 A3 00 00 00 00 8B F1 89 74 24 10 8D 7E 2C C7 06").get_first(0)) + 0x11;
+    GameDevice_PollDevice_vTable = *reinterpret_cast<uintptr_t*>(GameDevice_PollDevice_vTable);
+    uintptr_t GameDevice_PollDevice_vTableLoc = GameDevice_PollDevice_vTable + 0x10;
+    OnlineInputBlocker::ptrGameDevicePoll = *(uintptr_t*)GameDevice_PollDevice_vTableLoc;
+
+
+    uintptr_t SteeringWheelDevice_PollDevice_vTable = reinterpret_cast<uintptr_t>(hook::pattern("8B 44 24 20 0F 57 C0 89 46 18 C7 06").get_first(0)) + 0xC;
+    SteeringWheelDevice_PollDevice_vTable = *reinterpret_cast<uintptr_t*>(SteeringWheelDevice_PollDevice_vTable);
+    uintptr_t SteeringWheelDevice_PollDevice_vTableLoc = SteeringWheelDevice_PollDevice_vTable + 0x10;
+    OnlineInputBlocker::ptrSteeringWheelDevicePoll = *(uintptr_t*)SteeringWheelDevice_PollDevice_vTableLoc;
+
+    injector::WriteMemory<uint32_t>(GameDevice_PollDevice_vTableLoc, (uint32_t)&OnlineInputBlocker::GameDevice_PollDevice_Hook, true);
+    injector::WriteMemory<uint32_t>(SteeringWheelDevice_PollDevice_vTableLoc, (uint32_t)&OnlineInputBlocker::SteeringWheelDevice_PollDevice_Hook, true);
 }
 
 CEXP void InitializeASI()
