@@ -1326,6 +1326,10 @@ void Init()
 
     injector::WriteMemory<uint32_t>(GameDevice_PollDevice_vTableLoc, (uint32_t)&OnlineInputBlocker::GameDevice_PollDevice_Hook, true);
     injector::WriteMemory<uint32_t>(SteeringWheelDevice_PollDevice_vTableLoc, (uint32_t)&OnlineInputBlocker::SteeringWheelDevice_PollDevice_Hook, true);
+
+    uintptr_t OnlineActiveGameManager_msInstance = reinterpret_cast<uintptr_t>(hook::pattern("8B 0D ? ? ? ? 89 3D ? ? ? ? 3B CF 5F 5E").get_first(0)) + 2;
+    OnlineActiveGameManager_msInstance = *reinterpret_cast<uintptr_t*>(OnlineActiveGameManager_msInstance);
+
 }
 
 CEXP void InitializeASI()
