@@ -538,17 +538,6 @@ void Init()
         FEScriptFixExit = (uint32_t)hook::get_pattern("85 FF 74 2C 8B 44 24 0C 56 50 8B CF", 0); //0x0058DC15
     }
 
-    if (bDisableAchievements)
-    {
-        uintptr_t loc_7B3A90 = reinterpret_cast<uintptr_t>(hook::pattern("A1 ? ? ? ? C3 CC CC CC CC CC CC CC CC CC CC 53 56 57 8B D9").get_first(0));
-        uintptr_t loc_7C2607 = reinterpret_cast<uintptr_t>(hook::pattern("8B F1 80 7E 20 00 75 05").get_first(0)) - 0x1B;
-        uintptr_t loc_691F20 = reinterpret_cast<uintptr_t>(hook::pattern("8B F9 33 ED 80 3D ? ? ? ? 00 74 30").get_first(0)) - 0x27;
-
-        injector::MakeJMP(loc_7B3A90, RetZero, true); // AchievementManager::Get
-        injector::MakeJMP(loc_7C2607, UpdateAchievements_Hook, true); // AchievementManager::UpdateAchievements
-        injector::MakeRET(loc_691F20, 4, true); // GProStreetAchievments::Check
-    }
-
     if (bDisablePunkBuster)
     {
         uintptr_t loc_704667 = reinterpret_cast<uintptr_t>(hook::pattern("83 B9 80 03 00 00 00").get_first(0)) - 0x36;
@@ -566,6 +555,17 @@ void Init()
 
     if ((MajorVer >= 1) && (MinorVer >= 1))
     {
+        if (bDisableAchievements)
+        {
+            uintptr_t loc_7B3A90 = reinterpret_cast<uintptr_t>(hook::pattern("A1 ? ? ? ? C3 CC CC CC CC CC CC CC CC CC CC 53 56 57 8B D9").get_first(0));
+            uintptr_t loc_7C2607 = reinterpret_cast<uintptr_t>(hook::pattern("8B F1 80 7E 20 00 75 05").get_first(0)) - 0x1B;
+            uintptr_t loc_691F20 = reinterpret_cast<uintptr_t>(hook::pattern("8B F9 33 ED 80 3D ? ? ? ? 00 74 30").get_first(0)) - 0x27;
+
+            injector::MakeJMP(loc_7B3A90, RetZero, true); // AchievementManager::Get
+            injector::MakeJMP(loc_7C2607, UpdateAchievements_Hook, true); // AchievementManager::UpdateAchievements
+            injector::MakeRET(loc_691F20, 4, true); // GProStreetAchievments::Check
+        }
+
         // PostRaceStateManagerFix
         if (bPostRaceFix)
         {
