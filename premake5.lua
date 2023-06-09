@@ -486,6 +486,9 @@ project "ResidentEvil3.Dolphin.FusionMod"
 project "ResidentEvilRevelations2.FusionFix"
    setpaths("Z:/WFP/Games/ResidentEvilRevelations2/", "rerev2.exe", "scripts/")
    writeghaction("rerev2", "ResidentEvilRevelations2.FusionFix")
+project "ResidentEvil6.FusionFix"
+   setpaths("Z:/WFP/Games/ResidentEvil6/", "BH6.exe", "scripts/")
+   writeghaction("re6", "ResidentEvil6.FusionFix")
 project "Scarface.FusionFix"
    setpaths("Z:/WFP/Games/Scarface/", "scarface.exe", "scripts/")
    writeghaction("scarface", "Scarface.FusionFix")
