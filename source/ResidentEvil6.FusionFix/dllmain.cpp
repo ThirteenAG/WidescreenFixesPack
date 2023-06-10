@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include <d3d9.h>
 #include <vector>
+#include <D3DX9Shader.h>
+#pragma comment(lib, "D3dx9.lib")
 
 bool IsSplitScreenActive()
 {
@@ -77,7 +79,10 @@ int32_t GetRelativeSplitScreenResY()
 
 int32_t GetHudOffset()
 {
-    return (int32_t)((((float)GetCurrentSplitScreenResX() - ((float)GetNativeSplitScreenResY() * ((float)GetNativeSplitScreenResX() / (float)GetNativeSplitScreenResY())))) / 2.0f);
+    if (IsSplitScreenActive())
+        return (int32_t)((((float)GetCurrentSplitScreenResX() - ((float)GetNativeSplitScreenResY() * ((float)GetNativeSplitScreenResX() / (float)GetNativeSplitScreenResY())))) / 2.0f);
+    else
+        return 0;
 }
 
 void __fastcall sub_4F8C60(int _this, int edx, int a2, int32_t* a3)
@@ -160,7 +165,6 @@ float __stdcall sub_55DB40_stretch(int a1)
     return sub_974C80(a1) + (GetHudOffset() * 2.0f);
 }
 
-
 void __stdcall sub_58DDF0(uint32_t * a1, int* a2, int a3, uint16_t a4)
 {
     int v4; // eax
@@ -241,9 +245,6 @@ void Init()
     injector::MakeCALL(0x50079E, sub_4F8C60, true);
 
     //hud fix
-    //injector::MakeCALL(0x58ED00, sub_58DDF0, true);
-    //injector::MakeCALL(0x58EDC3, sub_58DDF0, true);
-
     injector::MakeJMP(0x974C80, sub_974C80, true);
     injector::MakeJMP(0x974CD0, sub_974CD0, true);
 
@@ -260,7 +261,7 @@ void Init()
                 if (IsSplitScreenActive())
                 {
                     auto pConstantData = (float*)regs.eax;
-                    if ((fabs(pConstantData[0] - (1.0f / (float)GetResX())) < FLT_EPSILON) /*&& fabs(pConstantData[1] - (1.0f / (float)GetResY())) < FLT_EPSILON*/)
+                    if ((fabs(pConstantData[0] - (1.0f / (float)GetResX())) < FLT_EPSILON))
                     {
                         bDisableShader = true;
                     }
@@ -270,45 +271,13 @@ void Init()
         }; injector::MakeInline<SetVertexShaderConstantFHook>(0xF3CD03, 0xF3CD03+6);
 
         static std::vector<uint8_t> pbFunc;
-        //struct SetPixelShaderHook
-        //{
-        //    void operator()(injector::reg_pack& regs)
-        //    {
-        //        if (IsSplitScreenActive(0))
-        //        {
-        //            auto pShader = (IDirect3DPixelShader9*)regs.eax;
-        //            if (pShader != nullptr)
-        //            {
-        //                UINT len;
-        //                pShader->GetFunction(nullptr, &len);
-        //                if (pbFunc.size() < len)
-        //                    pbFunc.resize(len);
-        //
-        //                pShader->GetFunction(pbFunc.data(), &len);
-        //
-        //                uint32_t crc32(uint32_t crc, const void* buf, size_t size);
-        //                auto crc = crc32(0, pbFunc.data(), len);
-        //
-        //                if (crc == 0x793BE067) // red blood overlay on low health
-        //                {
-        //                    regs.eax = 0;
-        //                }
-        //
-        //                pbFunc.clear();
-        //            }
-        //        }
-        //        *(uint32_t*)(regs.edi + 0x28) = regs.eax;
-        //        regs.ecx = *(uint32_t*)(regs.ebp + 0x0);
-        //    }
-        //}; injector::MakeInline<SetPixelShaderHook>(0xF3CA8E, 0xF3CA8E + 6);
-
-        struct SetVertexShaderHook
+        struct SetPixelShaderHook
         {
             void operator()(injector::reg_pack& regs)
             {
                 if (bDisableShader && IsSplitScreenActive())
                 {
-                    auto pShader = (IDirect3DVertexShader9*)regs.eax;
+                    auto pShader = (IDirect3DPixelShader9*)regs.eax;
                     if (pShader != nullptr)
                     {
                         UINT len;
@@ -321,22 +290,76 @@ void Init()
                         uint32_t crc32(uint32_t crc, const void* buf, size_t size);
                         auto crc = crc32(0, pbFunc.data(), len);
         
-                        if (crc == 0x4F0EE939)
+                        if (crc == 0x498080AC || crc == 0x793BE067 || crc == 0xFD473559) // overlay on low health
                         {
-                            regs.eax = 0;
+                            unsigned char dummyShader[156] = {
+                                0x00, 0x03, 0xFF, 0xFF, 0xFE, 0xFF, 0x16, 0x00, 0x43, 0x54, 0x41, 0x42, 0x1C, 0x00, 0x00, 0x00,
+                                0x23, 0x00, 0x00, 0x00, 0x00, 0x03, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                0x00, 0x01, 0x00, 0x00, 0x1C, 0x00, 0x00, 0x00, 0x70, 0x73, 0x5F, 0x33, 0x5F, 0x30, 0x00, 0x4D,
+                                0x69, 0x63, 0x72, 0x6F, 0x73, 0x6F, 0x66, 0x74, 0x20, 0x28, 0x52, 0x29, 0x20, 0x48, 0x4C, 0x53,
+                                0x4C, 0x20, 0x53, 0x68, 0x61, 0x64, 0x65, 0x72, 0x20, 0x43, 0x6F, 0x6D, 0x70, 0x69, 0x6C, 0x65,
+                                0x72, 0x20, 0x39, 0x2E, 0x32, 0x39, 0x2E, 0x39, 0x35, 0x32, 0x2E, 0x33, 0x31, 0x31, 0x31, 0x00,
+                                0x51, 0x00, 0x00, 0x05, 0x00, 0x00, 0x0F, 0xA0, 0x00, 0x00, 0x80, 0xBF, 0x00, 0x00, 0x00, 0x00,
+                                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x02, 0x00, 0x00, 0x0F, 0x80,
+                                0x00, 0x00, 0x00, 0xA0, 0x41, 0x00, 0x00, 0x01, 0x00, 0x00, 0x0F, 0x80, 0x01, 0x00, 0x00, 0x02,
+                                0x00, 0x08, 0x0F, 0x80, 0x00, 0x00, 0x55, 0xA0, 0xFF, 0xFF, 0x00, 0x00
+                            };
+
+                            static IDirect3DPixelShader9* g_pPixelShader = nullptr;
+                            if (!g_pPixelShader)
+                            {
+                                auto g_pd3dDevice = (IDirect3DDevice9*)regs.ebp;
+                                auto hr = g_pd3dDevice->CreatePixelShader((DWORD*)&dummyShader[0], &g_pPixelShader);
+                                if (SUCCEEDED(hr))
+                                {
+                                    regs.eax = (uint32_t)g_pPixelShader;
+                                }
+                            }
+                            else
+                                regs.eax = (uint32_t)g_pPixelShader;
                         }
-        
-                        pbFunc.clear();
+                        //pbFunc.clear();
                     }
-                    bDisableShader = false;
                 }
-                *(uint32_t*)(regs.edi + 0x24) = regs.eax;
+                *(uint32_t*)(regs.edi + 0x28) = regs.eax;
                 regs.ecx = *(uint32_t*)(regs.ebp + 0x0);
             }
-        }; injector::MakeInline<SetVertexShaderHook>(0xF3CA40, 0xF3CA40 + 6);
+        }; injector::MakeInline<SetPixelShaderHook>(0xF3CA8E, 0xF3CA8E + 6);
+
+        //struct SetVertexShaderHook
+        //{
+        //    void operator()(injector::reg_pack& regs)
+        //    {
+        //        if (bDisableShader && IsSplitScreenActive())
+        //        {
+        //            auto pShader = (IDirect3DVertexShader9*)regs.eax;
+        //            if (pShader != nullptr)
+        //            {
+        //                UINT len;
+        //                pShader->GetFunction(nullptr, &len);
+        //                if (pbFunc.size() < len)
+        //                    pbFunc.resize(len);
+        //
+        //                pShader->GetFunction(pbFunc.data(), &len);
+        //
+        //                uint32_t crc32(uint32_t crc, const void* buf, size_t size);
+        //                auto crc = crc32(0, pbFunc.data(), len);
+        //
+        //                if (crc == 0x4F0EE939)
+        //                {
+        //                    regs.eax = 0;
+        //                }
+        //
+        //                pbFunc.clear();
+        //            }
+        //            bDisableShader = false;
+        //        }
+        //        *(uint32_t*)(regs.edi + 0x24) = regs.eax;
+        //        regs.ecx = *(uint32_t*)(regs.ebp + 0x0);
+        //    }
+        //}; injector::MakeInline<SetVertexShaderHook>(0xF3CA40, 0xF3CA40 + 6);
     }
 
-  
     {
         //injector::MakeCALL(0x5103C3, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
         injector::MakeCALL(0x58DE0F, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
@@ -353,9 +376,9 @@ void Init()
         //injector::MakeCALL(0x58E127, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
         //injector::MakeCALL(0x58E145, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
         //injector::MakeCALL(0x58E178, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
-        injector::MakeCALL(0x96CB66, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
+        //injector::MakeCALL(0x96CB66, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80 //press ok to continue
         //injector::MakeCALL(0x96CBB4, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
-        injector::MakeCALL(0x97A188, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
+        //injector::MakeCALL(0x97A188, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80 // skills background
         //injector::MakeCALL(0x97A1A2, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
         injector::MakeCALL(0x97A787, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
         //injector::MakeCALL(0x97A7A1, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
