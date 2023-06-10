@@ -633,6 +633,13 @@ LABEL_20:
     }
 }
 
+void __fastcall sub_B82960(void* _this, void* edx, float a2, float a3, int a4, float a5)
+{
+    if (IsSplitScreenActive())
+        a2 /= fDiff;
+    return injector::fastcall<void(void*, void*, float, float, int, float)>::call(0xB82960, _this, edx, a2, a3, a4, a5);
+}
+
 void Init()
 {
     CIniReader iniReader("");
@@ -677,6 +684,20 @@ void Init()
         injector::WriteMemory(uGUIDamage, sub_E18040_splitscreen_stretch, true);
         injector::WriteMemory(uGUIDamage2, sub_E18040_splitscreen_stretch, true);
     }
+
+    //Camera near clip fix
+    injector::MakeCALL(0x4B17CA,  sub_B82960, true);
+    injector::MakeCALL(0x4B6F67,  sub_B82960, true);
+    injector::MakeCALL(0x9D543D,  sub_B82960, true);
+    injector::MakeCALL(0xC89DE9,  sub_B82960, true);
+    injector::MakeCALL(0xCA97D5,  sub_B82960, true);
+    injector::MakeCALL(0xDFEA3A,  sub_B82960, true);
+    injector::MakeCALL(0xE0C9ED,  sub_B82960, true);
+    injector::MakeCALL(0xE720D2,  sub_B82960, true);
+    injector::MakeCALL(0xF0A652,  sub_B82960, true);
+    injector::MakeCALL(0xF28D7B,  sub_B82960, true);
+    injector::MakeCALL(0xF4E190,  sub_B82960, true);
+    injector::MakeCALL(0x102F9D9, sub_B82960, true);
 
     //3d items in the inventory
     injector::MakeCALL(0x8931DE, sub_96C410, true);

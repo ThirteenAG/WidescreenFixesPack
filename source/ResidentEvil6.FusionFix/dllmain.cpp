@@ -224,6 +224,13 @@ void __stdcall sub_58DDF0(uint32_t * a1, int* a2, int a3, uint16_t a4)
     }
 }
 
+void __fastcall sub_E6E800(float* _this, void* edx, float a2, float a3, int a4, float a5)
+{
+    if (IsSplitScreenActive())
+        a2 /= GetDiff();
+    return injector::fastcall<void(float*, void*, float, float, int, float)>::call(0xE6E800, _this, edx, a2, a3, a4, a5);
+}
+
 void Init()
 {
     CIniReader iniReader("");
@@ -250,6 +257,19 @@ void Init()
 
     injector::MakeJMP(0x55DB40, sub_55DB40, true);
     injector::MakeJMP(0x55DBA0, sub_55DBA0, true);
+
+    //Camera near clip fix
+    injector::MakeCALL(0x5F816C,  sub_E6E800, true);
+    injector::MakeCALL(0x96B347,  sub_E6E800, true);
+    injector::MakeCALL(0x104357D, sub_E6E800, true);
+    injector::MakeCALL(0x104866C, sub_E6E800, true);
+    injector::MakeCALL(0x104F1F7, sub_E6E800, true);
+    injector::MakeCALL(0x107A275, sub_E6E800, true);
+    injector::MakeCALL(0x109B17D, sub_E6E800, true);
+    injector::MakeCALL(0x111366D, sub_E6E800, true);
+    injector::MakeCALL(0x117789C, sub_E6E800, true);
+    injector::MakeCALL(0x1197937, sub_E6E800, true);
+    injector::MakeCALL(0x123F3CF, sub_E6E800, true);
 
     //disable shader overlays (don't scale to fullscreen)
     {
