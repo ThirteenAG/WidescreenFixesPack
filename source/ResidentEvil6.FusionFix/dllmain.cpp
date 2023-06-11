@@ -231,6 +231,61 @@ void __fastcall sub_E6E800(float* _this, void* edx, float a2, float a3, int a4, 
     return injector::fastcall<void(float*, void*, float, float, int, float)>::call(0xE6E800, _this, edx, a2, a3, a4, a5);
 }
 
+IDirect3DPixelShader9* shader_dummy = nullptr;
+IDirect3DPixelShader9* shader_498080AC = nullptr;
+IDirect3DPixelShader9* shader_793BE067 = nullptr;
+IDirect3DPixelShader9* shader_FD473559 = nullptr;
+IDirect3DPixelShader9* __stdcall CreatePixelShaderHook(const DWORD** a1)
+{
+    if (!a1)
+        return nullptr;
+
+    auto pDevice = (IDirect3DDevice9*)*(uint32_t*)(*(uint32_t*)0x186E8BC + 256);
+    IDirect3DPixelShader9* pShader = nullptr;
+    pDevice->CreatePixelShader(a1[2], &pShader);
+
+    if (pShader != nullptr)
+    {
+        if (!shader_dummy)
+        {
+            unsigned char dummyShader[] = {
+                0x00, 0x03, 0xFF, 0xFF, 0xFE, 0xFF, 0x16, 0x00, 0x43, 0x54, 0x41, 0x42, 0x1C, 0x00, 0x00, 0x00,
+                0x23, 0x00, 0x00, 0x00, 0x00, 0x03, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x01, 0x00, 0x00, 0x1C, 0x00, 0x00, 0x00, 0x70, 0x73, 0x5F, 0x33, 0x5F, 0x30, 0x00, 0x4D,
+                0x69, 0x63, 0x72, 0x6F, 0x73, 0x6F, 0x66, 0x74, 0x20, 0x28, 0x52, 0x29, 0x20, 0x48, 0x4C, 0x53,
+                0x4C, 0x20, 0x53, 0x68, 0x61, 0x64, 0x65, 0x72, 0x20, 0x43, 0x6F, 0x6D, 0x70, 0x69, 0x6C, 0x65,
+                0x72, 0x20, 0x39, 0x2E, 0x32, 0x39, 0x2E, 0x39, 0x35, 0x32, 0x2E, 0x33, 0x31, 0x31, 0x31, 0x00,
+                0x51, 0x00, 0x00, 0x05, 0x00, 0x00, 0x0F, 0xA0, 0x00, 0x00, 0x80, 0xBF, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x02, 0x00, 0x00, 0x0F, 0x80,
+                0x00, 0x00, 0x00, 0xA0, 0x41, 0x00, 0x00, 0x01, 0x00, 0x00, 0x0F, 0x80, 0x01, 0x00, 0x00, 0x02,
+                0x00, 0x08, 0x0F, 0x80, 0x00, 0x00, 0x55, 0xA0, 0xFF, 0xFF, 0x00, 0x00
+            };
+            pDevice->CreatePixelShader((DWORD*)&dummyShader[0], &shader_dummy);
+        }
+
+        static std::vector<uint8_t> pbFunc;
+        UINT len;
+        pShader->GetFunction(nullptr, &len);
+        if (pbFunc.size() < len)
+            pbFunc.resize(len);
+
+        pShader->GetFunction(pbFunc.data(), &len);
+
+        uint32_t crc32(uint32_t crc, const void* buf, size_t size);
+        auto crc = crc32(0, pbFunc.data(), len);
+
+        // various overlays
+        if (crc == 0x498080AC) // low health
+            shader_498080AC = pShader;
+        else if (crc == 0x793BE067)
+            shader_793BE067 = pShader;
+        else if (crc == 0xFD473559) // waiting for partner
+            shader_FD473559 = pShader;
+    }
+
+    return pShader;
+}
+
 void Init()
 {
     CIniReader iniReader("");
@@ -273,6 +328,8 @@ void Init()
 
     //disable shader overlays (don't scale to fullscreen)
     {
+        injector::MakeCALL(0x01291614, CreatePixelShaderHook, true);
+
         static bool bDisableShader = false;
         struct SetVertexShaderConstantFHook
         {
@@ -290,7 +347,6 @@ void Init()
             }
         }; injector::MakeInline<SetVertexShaderConstantFHook>(0xF3CD03, 0xF3CD03+6);
 
-        static std::vector<uint8_t> pbFunc;
         struct SetPixelShaderHook
         {
             void operator()(injector::reg_pack& regs)
@@ -298,47 +354,10 @@ void Init()
                 if (bDisableShader && IsSplitScreenActive())
                 {
                     auto pShader = (IDirect3DPixelShader9*)regs.eax;
-                    if (pShader != nullptr)
+                    if (pShader == shader_498080AC || pShader == shader_793BE067 || pShader == shader_FD473559)
                     {
-                        UINT len;
-                        pShader->GetFunction(nullptr, &len);
-                        if (pbFunc.size() < len)
-                            pbFunc.resize(len);
-        
-                        pShader->GetFunction(pbFunc.data(), &len);
-        
-                        uint32_t crc32(uint32_t crc, const void* buf, size_t size);
-                        auto crc = crc32(0, pbFunc.data(), len);
-        
-                        if (crc == 0x498080AC || crc == 0x793BE067 || crc == 0xFD473559) // overlay on low health
-                        {
-                            unsigned char dummyShader[156] = {
-                                0x00, 0x03, 0xFF, 0xFF, 0xFE, 0xFF, 0x16, 0x00, 0x43, 0x54, 0x41, 0x42, 0x1C, 0x00, 0x00, 0x00,
-                                0x23, 0x00, 0x00, 0x00, 0x00, 0x03, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                0x00, 0x01, 0x00, 0x00, 0x1C, 0x00, 0x00, 0x00, 0x70, 0x73, 0x5F, 0x33, 0x5F, 0x30, 0x00, 0x4D,
-                                0x69, 0x63, 0x72, 0x6F, 0x73, 0x6F, 0x66, 0x74, 0x20, 0x28, 0x52, 0x29, 0x20, 0x48, 0x4C, 0x53,
-                                0x4C, 0x20, 0x53, 0x68, 0x61, 0x64, 0x65, 0x72, 0x20, 0x43, 0x6F, 0x6D, 0x70, 0x69, 0x6C, 0x65,
-                                0x72, 0x20, 0x39, 0x2E, 0x32, 0x39, 0x2E, 0x39, 0x35, 0x32, 0x2E, 0x33, 0x31, 0x31, 0x31, 0x00,
-                                0x51, 0x00, 0x00, 0x05, 0x00, 0x00, 0x0F, 0xA0, 0x00, 0x00, 0x80, 0xBF, 0x00, 0x00, 0x00, 0x00,
-                                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x02, 0x00, 0x00, 0x0F, 0x80,
-                                0x00, 0x00, 0x00, 0xA0, 0x41, 0x00, 0x00, 0x01, 0x00, 0x00, 0x0F, 0x80, 0x01, 0x00, 0x00, 0x02,
-                                0x00, 0x08, 0x0F, 0x80, 0x00, 0x00, 0x55, 0xA0, 0xFF, 0xFF, 0x00, 0x00
-                            };
-
-                            static IDirect3DPixelShader9* g_pPixelShader = nullptr;
-                            if (!g_pPixelShader)
-                            {
-                                auto g_pd3dDevice = (IDirect3DDevice9*)regs.ebp;
-                                auto hr = g_pd3dDevice->CreatePixelShader((DWORD*)&dummyShader[0], &g_pPixelShader);
-                                if (SUCCEEDED(hr))
-                                {
-                                    regs.eax = (uint32_t)g_pPixelShader;
-                                }
-                            }
-                            else
-                                regs.eax = (uint32_t)g_pPixelShader;
-                        }
-                        //pbFunc.clear();
+                        regs.eax = (uint32_t)shader_dummy;
+                        bDisableShader = false;
                     }
                 }
                 *(uint32_t*)(regs.edi + 0x28) = regs.eax;
