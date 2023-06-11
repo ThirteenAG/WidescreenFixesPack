@@ -5,7 +5,7 @@ workspace "WidescreenFixesPack"
    location "build"
    objdir ("build/obj")
    buildlog ("build/log/%{prj.name}.log")
-   buildoptions {"-std:c++latest"}
+   cppdialect "C++latest"
    include "makefile.lua"
    
    kind "SharedLib"
