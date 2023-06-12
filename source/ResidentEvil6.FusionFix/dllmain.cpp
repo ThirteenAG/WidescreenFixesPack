@@ -278,7 +278,7 @@ IDirect3DPixelShader9* __stdcall CreatePixelShaderHook(const DWORD** a1)
         if (crc == 0x498080AC) // low health
             shader_498080AC = pShader;
         else if (crc == 0x793BE067)
-            shader_793BE067 = pShader;
+            shader_793BE067 = pShader; // low health red overlay, also removes lasers
         else if (crc == 0xFD473559) // waiting for partner
             shader_FD473559 = pShader;
     }
@@ -354,7 +354,7 @@ void Init()
                 if (bDisableShader && IsSplitScreenActive())
                 {
                     auto pShader = (IDirect3DPixelShader9*)regs.eax;
-                    if (pShader == shader_498080AC || pShader == shader_793BE067 || pShader == shader_FD473559)
+                    if (pShader == shader_498080AC /*|| pShader == shader_793BE067*/ || pShader == shader_FD473559)
                     {
                         regs.eax = (uint32_t)shader_dummy;
                         bDisableShader = false;
