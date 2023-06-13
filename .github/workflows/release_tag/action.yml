@@ -132,6 +132,7 @@ runs:
         (steps.split.outputs._99 == inputs.tag)
       run: |
         echo "split_value=True" >> $GITHUB_OUTPUT
+        echo "readme_path=.github/docs/${{ inputs.tag }}.md" >> $GITHUB_OUTPUT
     - name: Get release info
       if: ${{ steps.tag_requires_updating.outputs.split_value == 'True' }}
       id: release_info
@@ -147,7 +148,8 @@ runs:
         token: ${{ inputs.token }}
         allowUpdates: true
         name: ${{ steps.release_info.outputs.name }}
-        body: ${{ steps.release_info.outputs.body }}
+#        body: ${{ steps.release_info.outputs.body }}
+        bodyFile: ${{ steps.tag_requires_updating.outputs.readme_path }}
         tag: ${{ steps.release_info.outputs.tag_name }}
         artifacts: ${{ inputs.artifacts }}
 #    - name: Update Tag

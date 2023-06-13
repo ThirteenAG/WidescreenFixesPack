@@ -1,0 +1,199 @@
+name: Release By Tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: The tag of the release
+        required: true
+        type: choice
+        options:
+        - bully
+        - burnout3
+        - callofcthulhu
+        - coldfear
+        - condemned
+        - da4
+        - driv3r
+        - driverpl
+        - enterthematrix
+        - farcry
+        - flatout
+        - flatout2
+        - flatoutuc
+        - gta1
+        - gta2
+        - gta3
+        - gta3de
+        - gtactwpsp
+        - gtalcs
+        - gtalcspsp
+        - gtasa
+        - gtasade
+        - gtavc
+        - gtavcde
+        - gtavcs
+        - gtavcspsp
+        - gun
+        - hd2
+        - justcause
+        - kingkong
+        - kr
+        - kr2
+        - larush
+        - mafia
+        - mafiaxbox
+        - manhunt
+        - masseffect
+        - mp1
+        - mp2
+        - nfsc
+        - nfsmw
+        - nfsps
+        - nfsu
+        - nfsu2
+        - nfsuc
+        - onimusha3
+        - paradisecracked
+        - psiops
+        - psychonauts
+        - punisher
+        - re2gc
+        - re3gc
+        - re6
+        - rerev2
+        - sc
+        - scarface
+        - scc
+        - scct
+        - scda
+        - scdaps2
+        - scdaxbox
+        - sce
+        - scpt
+        - secondsight
+        - sh2
+        - sh3
+        - sh4
+        - sniperelite
+        - sonicheroes
+        - srs
+        - stubbsthezombie
+        - thaw
+        - thegodfather
+        - thematrixpathofneo
+        - thesuffering
+        - thewarriors
+        - thps2
+        - thps3
+        - thps4
+        - thug
+        - thug2
+        - tod
+        - truecrimenyc
+        - truecrimesola
+        - usm
+
+env:
+  bully: "/t:Bully_WidescreenFix"
+  burnout3: "/t:Burnout3_PCSX2F_WidescreenFix"
+  callofcthulhu: "/t:CallOfCthulhu_WidescreenFix"
+  coldfear: "/t:ColdFear_WidescreenFix"
+  condemned: "/t:Condemned_WidescreenFix"
+  da4: "/t:DeerAvenger4_WidescreenFix"
+  driv3r: "/t:Driv3r_WidescreenFix"
+  driverpl: "/t:DriverParallelLines_WidescreenFix"
+  enterthematrix: "/t:EnterTheMatrix_WidescreenFix"
+  farcry: "/t:FarCry_WidescreenFix"
+  flatout: "/t:Flatout_WidescreenFix"
+  flatout2: "/t:Flatout2_WidescreenFix"
+  flatoutuc: "/t:FlatoutUltimateCarnage_WidescreenFix"
+  gta1: "/t:GTA1_WidescreenFix"
+  gta2: "/t:GTA2_WidescreenFix"
+  gta3: "/t:GTA3_WidescreenFix"
+  gta3de: "/t:GTA3DE_FusionMod"
+  gtactwpsp: "/t:GTACTW_PPSSPP_FusionMod"
+  gtalcs: "/t:GTALCS_PCSX2F_WidescreenFix"
+  gtalcspsp: "/t:GTALCS_PPSSPP_WidescreenFix /t:GTALCS_PPSSPP_Project2DFX /t:GTALCS_PPSSPP_ImVehLM"
+  gtasa: "/t:GTASA_WidescreenFix"
+  gtasade: "/t:GTASADE_FusionMod"
+  gtavc: "/t:GTAVC_WidescreenFix"
+  gtavcde: "/t:GTAVCDE_FusionMod"
+  gtavcs: "/t:GTAVCS_PCSX2F_WidescreenFix /t:GTAVCS_PCSX2F_Project2DFX"
+  gtavcspsp: "/t:GTAVCS_PPSSPP_WidescreenFix /t:GTAVCS_PPSSPP_Project2DFX /t:GTAVCS_PPSSPP_ImVehLM"
+  gun: "/t:Gun_WidescreenFix"
+  hd2: "/t:HiddenandDangerous2_WidescreenFix"
+  justcause: "/t:JustCause_WidescreenFix"
+  kingkong: "/t:KingKong_WidescreenFix"
+  kr: "/t:KnightRider_WidescreenFix /t:KnightRider_PCSX2F_WidescreenFix"
+  kr2: "/t:KnightRider2_WidescreenFix"
+  larush: "/t:LARush_WidescreenFix"
+  mafia: "/t:Mafia_WidescreenFix"
+  mafiaxbox: "/t:Mafia_CXBXR_WidescreenFix"
+  manhunt: "/t:Manhunt_WidescreenFix"
+  masseffect: "/t:MassEffectTrilogy_FOVFix"
+  mp1: "/t:MaxPayne_WidescreenFix"
+  mp2: "/t:MaxPayne2_WidescreenFix"
+  nfsc: "/t:NFSCarbon_WidescreenFix"
+  nfsmw: "/t:NFSMostWanted_WidescreenFix"
+  nfsps: "/t:NFSProStreet_GenericFix"
+  nfsu: "/t:NFSUnderground_WidescreenFix"
+  nfsu2: "/t:NFSUnderground2_WidescreenFix"
+  nfsuc: "/t:NFSUndercover_GenericFix"
+  onimusha3: "/t:Onimusha3_WidescreenFix"
+  paradisecracked: "/t:ParadiseCracked_WidescreenFix"
+  psiops: "/t:PsiOpsTheMindgateConspiracy_WidescreenFix"
+  psychonauts: "/t:Psychonauts_WidescreenFix"
+  punisher: "/t:ThePunisher_WidescreenFix"
+  re2gc: "/t:ResidentEvil2_Dolphin_FusionMod"
+  re3gc: "/t:ResidentEvil3_Dolphin_FusionMod"
+  re6: "/t:ResidentEvil6_FusionFix"
+  rerev2: "/t:ResidentEvilRevelations2_FusionFix"
+  sc: "/t:SplinterCell_WidescreenFix"
+  scarface: "/t:Scarface_FusionFix"
+  scc: "/t:SplinterCellConviction_FusionMod"
+  scct: "/t:SplinterCellChaosTheory_WidescreenFix"
+  scda: "/t:SplinterCellDoubleAgent_WidescreenFix"
+  scdaps2: "/t:SplinterCellDoubleAgent_PCSX2F_WidescreenFix"
+  scdaxbox: "/t:SplinterCellDoubleAgent_CXBXR_WidescreenFix"
+  sce: "/t:SplinterCellEssentials_PPSSPP_FusionMod"
+  scpt: "/t:SplinterCellPandoraTomorrow_WidescreenFix"
+  secondsight: "/t:SecondSight_WidescreenFix"
+  sh2: "/t:SilentHill2_WidescreenFix"
+  sh3: "/t:SilentHill3_WidescreenFix"
+  sh4: "/t:SilentHill4_WidescreenFix"
+  sniperelite: "/t:SniperElite_WidescreenFix"
+  sonicheroes: "/t:SonicHeroes_WidescreenFix"
+  srs: "/t:StreetRacingSyndicate_WidescreenFix"
+  stubbsthezombie: "/t:StubbstheZombie_WidescreenFix"
+  thaw: "/t:TonyHawksAmericanWasteland_WidescreenFix"
+  thegodfather: "/t:TheGodfather_WidescreenFix"
+  thematrixpathofneo: "/t:TheMatrixPathOfNeo_WidescreenFix"
+  thesuffering: "/t:TheSuffering_WidescreenFix"
+  thewarriors: "/t:TheWarriors_PPSSPP_FusionMod"
+  thps2: "/t:TonyHawksProSkater2_WidescreenFix"
+  thps3: "/t:TonyHawksProSkater3_WidescreenFix"
+  thps4: "/t:TonyHawksProSkater4_WidescreenFix"
+  thug: "/t:TonyHawksUnderground_WidescreenFix"
+  thug2: "/t:TonyHawksUnderground2_WidescreenFix"
+  tod: "/t:TotalOverdose_WidescreenFix"
+  truecrimenyc: "/t:TrueCrimeNewYorkCity_WidescreenFix"
+  truecrimesola: "/t:TrueCrimeStreetsofLA_WidescreenFix"
+  usm: "/t:UltimateSpiderMan_WidescreenFix"
+
+jobs:
+  setup_project_name:
+    runs-on: ubuntu-latest
+    outputs:
+      project_name: ${{ steps.prj_name.outputs.project_name }}
+    steps:
+      - name: Print inputs passed to the reusable workflow
+        id: prj_name
+        run: |
+          echo "project_name=${{ env[inputs.tag_name] }}" >> $GITHUB_OUTPUT
+  call-workflow-passing-data:
+    needs: setup_project_name
+    uses: ThirteenAG/WidescreenFixesPack/.github/workflows/all.yml@master
+    with:
+      tag_list: ${{ inputs.tag_name }}
+      project: ${{ needs.setup_project_name.outputs.project_name }}
