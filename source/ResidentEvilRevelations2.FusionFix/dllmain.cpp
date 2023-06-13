@@ -643,36 +643,18 @@ void __fastcall sub_B82960(void* _this, void* edx, float a2, float a3, int a4, f
     return injector::fastcall<void(void*, void*, float, float, int, float)>::call(0xB82960, _this, edx, a2, a3, a4, a5);
 }
 
-IDirect3DPixelShader9* shader_dummy = nullptr;
-IDirect3DPixelShader9* shader_595E9EB7 = nullptr;
-IDirect3DPixelShader9* __stdcall CreatePixelShaderHook(const DWORD** a1)
+IDirect3DVertexShader9* shader_4F0EE939 = nullptr;
+IDirect3DVertexShader9* __stdcall CreateVertexShaderHook(const DWORD** a1)
 {
     if (!a1)
         return nullptr;
 
     auto pDevice = (IDirect3DDevice9*)*((uint32_t*)*(uint32_t*)0x15E0388 + 0x26);
-    IDirect3DPixelShader9* pShader = nullptr;
-    pDevice->CreatePixelShader(a1[2], &pShader);
+    IDirect3DVertexShader9* pShader = nullptr;
+    pDevice->CreateVertexShader(a1[2], &pShader);
 
     if (pShader != nullptr)
     {
-        if (!shader_dummy)
-        {
-            unsigned char dummyShader[] = {
-                0x00, 0x03, 0xFF, 0xFF, 0xFE, 0xFF, 0x16, 0x00, 0x43, 0x54, 0x41, 0x42, 0x1C, 0x00, 0x00, 0x00,
-                0x23, 0x00, 0x00, 0x00, 0x00, 0x03, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                0x00, 0x01, 0x00, 0x00, 0x1C, 0x00, 0x00, 0x00, 0x70, 0x73, 0x5F, 0x33, 0x5F, 0x30, 0x00, 0x4D,
-                0x69, 0x63, 0x72, 0x6F, 0x73, 0x6F, 0x66, 0x74, 0x20, 0x28, 0x52, 0x29, 0x20, 0x48, 0x4C, 0x53,
-                0x4C, 0x20, 0x53, 0x68, 0x61, 0x64, 0x65, 0x72, 0x20, 0x43, 0x6F, 0x6D, 0x70, 0x69, 0x6C, 0x65,
-                0x72, 0x20, 0x39, 0x2E, 0x32, 0x39, 0x2E, 0x39, 0x35, 0x32, 0x2E, 0x33, 0x31, 0x31, 0x31, 0x00,
-                0x51, 0x00, 0x00, 0x05, 0x00, 0x00, 0x0F, 0xA0, 0x00, 0x00, 0x80, 0xBF, 0x00, 0x00, 0x00, 0x00,
-                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x02, 0x00, 0x00, 0x0F, 0x80,
-                0x00, 0x00, 0x00, 0xA0, 0x41, 0x00, 0x00, 0x01, 0x00, 0x00, 0x0F, 0x80, 0x01, 0x00, 0x00, 0x02,
-                0x00, 0x08, 0x0F, 0x80, 0x00, 0x00, 0x55, 0xA0, 0xFF, 0xFF, 0x00, 0x00
-            };
-            pDevice->CreatePixelShader((DWORD*)&dummyShader[0], &shader_dummy);
-        }
-
         static std::vector<uint8_t> pbFunc;
         UINT len;
         pShader->GetFunction(nullptr, &len);
@@ -684,9 +666,9 @@ IDirect3DPixelShader9* __stdcall CreatePixelShaderHook(const DWORD** a1)
         uint32_t crc32(uint32_t crc, const void* buf, size_t size);
         auto crc = crc32(0, pbFunc.data(), len);
 
-        // various overlays (heat, invisible enemy, low health)
-        if (crc == 0x595E9EB7)
-            shader_595E9EB7 = pShader;
+        // various overlays (low health, waiting for partner, pause text, maybe more)
+        if (crc == 0x4F0EE939)
+            shader_4F0EE939 = pShader;
     }
 
     return pShader;
@@ -762,45 +744,24 @@ void Init()
 
     //disable shader overlays (don't scale to fullscreen)
     {
-        injector::MakeCALL(0xFFBA31, CreatePixelShaderHook, true);
+        injector::MakeCALL(0xFFB9E2, CreateVertexShaderHook, true);
 
-        static bool bDisableShader = false;
-        struct SetPixelShaderHook
+        struct SetVertexShaderHook
         {
             void operator()(injector::reg_pack& regs)
             {
-                if (bDisableShader && IsSplitScreenActive())
+                if (IsSplitScreenActive())
                 {
-                    auto pShader = (IDirect3DPixelShader9*)regs.ecx;
-                    if (pShader == shader_595E9EB7)
+                    auto pShader = (IDirect3DVertexShader9*)regs.ecx;
+                    if (pShader == shader_4F0EE939)
                     {
-                        regs.ecx = (uint32_t)shader_dummy;
-                        bDisableShader = false;
+                        regs.ecx = 0;
                     }
                 }
-                *(uint32_t*)(regs.ebx + 0x28) = regs.ecx;
-                regs.eax = *(uint32_t*)(regs.esi);
+                *(uint32_t*)(regs.ebx + 0x24) = regs.ecx;
+                regs.eax = *(uint32_t*)(regs.esi + 0x0);
             }
-        }; injector::MakeInline<SetPixelShaderHook>(0xCCD0E0);
-
-        struct SetVertexShaderConstantFHook
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                auto ptr = *(uintptr_t*)0x15DF9CC;
-                if (ptr)
-                {
-                    RECT Rect;
-                    GetClientRect(*(HWND*)(ptr + 0x12C), &Rect);
-                    auto pConstantData = (float*)regs.eax;
-                    if (IsSplitScreenActive() && (fabs(pConstantData[0] - (1.0f / (float)Rect.right)) < FLT_EPSILON))
-                    {
-                        bDisableShader = true;
-                    }
-                }
-                regs.eax = *(uint8_t*)(regs.edx + regs.ebx * 4 + 2);
-            }
-        }; injector::MakeInline<SetVertexShaderConstantFHook>(0xCCD567);
+        }; injector::MakeInline<SetVertexShaderHook>(0xCCD0A4);
     }
 
     if (bDisableFilmGrain)
