@@ -400,7 +400,6 @@ project "PPSSPP.XboxRainDroplets"
    writemakefile_psp("PPSSPP.XboxRainDroplets")
 project "PCSX2F.XboxRainDroplets"
    kind "Makefile"
-   dependson { "PCSX2F.XboxRainDroplets" }
    includedirs { "external/ps2sdk/ps2sdk/ee" }
    files { "source/%{prj.name}/*.h" }
    files { "source/%{prj.name}/*.c" }
