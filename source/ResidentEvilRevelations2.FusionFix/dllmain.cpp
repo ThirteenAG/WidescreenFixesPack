@@ -142,6 +142,16 @@ enum GUI
     VirtualScreen = 0x141AC10
 };
 
+int32_t GetResX()
+{
+    return *(int32_t*)(*(uint32_t*)0x15DE88C + 0xD28);
+}
+
+int32_t GetResY()
+{
+    return *(int32_t*)(*(uint32_t*)0x15DE88C + 0xD2C);
+}
+
 bool IsSplitScreenActive()
 {
     auto ptr = *(uint32_t*)0x157AE00;
@@ -286,20 +296,14 @@ void __fastcall sub_E18040_splitscreen(int _this, int edx, int a2)
         v13[3] = (float)(v15 * v7) + 1.0;
         *((uint32_t*)v2 + 19) &= ~2u;
 
-        auto ptr = *(uintptr_t*)0x15DF9CC;
-        if (ptr)
+        if (IsSplitScreenActive() && (v21 == (uint32_t)((GetResX() / (16.0f / 9.0f)) / 2.0f)))
         {
-            RECT Rect;
-            GetClientRect(*(HWND*)(ptr + 0x12C), &Rect);
-            if (IsSplitScreenActive() && (v21 == (uint32_t)((Rect.right / (16.0f / 9.0f)) / 2.0f)))
-            {
-                v14 = 2.0 / (float)(v28 - v19);
-                v15 = -2.0 / (float)(v21 - v29);
-                v13[0] = v14 * v4;
-                v13[1] = v15 * v5;
-                v13[2] = (float)(v14 * v6) - fDiffInv;
-                v13[3] = (float)(v15 * v7) + 1.0;
-            }
+            v14 = 2.0 / (float)(v28 - v19);
+            v15 = -2.0 / (float)(v21 - v29);
+            v13[0] = v14 * v4;
+            v13[1] = v15 * v5;
+            v13[2] = (float)(v14 * v6) - fDiffInv;
+            v13[3] = (float)(v15 * v7) + 1.0;
         }
     }
     v16 = a2;
@@ -442,18 +446,14 @@ void __fastcall sub_E18040_splitscreen_stretch(int _this, int edx, int a2)
         v13[3] = (float)(v15 * v7) + 1.0;
         *((uint32_t*)v2 + 19) &= ~2u;
 
-        auto ptr = *(uintptr_t*)0x15DF9CC;
-        if (ptr)
+        if (IsSplitScreenActive())
         {
-            if (IsSplitScreenActive())
-            {
-                v14 = (2.0 * fDiff) / (float)(v28 - v19);
-                v15 = -2.0 / (float)(v21 - v29);
-                v13[0] = v14 * v4;
-                v13[1] = v15 * v5;
-                v13[2] = -1.0f; //(float)(v14 * v6) - fDiffInv;
-                v13[3] = (float)(v15 * v7) + 1.0;
-            }
+            v14 = (2.0 * fDiff) / (float)(v28 - v19);
+            v15 = -2.0 / (float)(v21 - v29);
+            v13[0] = v14 * v4;
+            v13[1] = v15 * v5;
+            v13[2] = -1.0f; //(float)(v14 * v6) - fDiffInv;
+            v13[3] = (float)(v15 * v7) + 1.0;
         }
     }
     v16 = a2;
