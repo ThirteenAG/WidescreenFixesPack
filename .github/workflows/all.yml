@@ -617,3 +617,17 @@ jobs:
         tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
         tag: re3gc
         artifacts: data/Archives/ResidentEvil3.Dolphin.FusionMod.zip
+
+    - uses: ./.github/workflows/release_tag
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag: rerev2
+        artifacts: data/Archives/ResidentEvilRevelations2.FusionFix.zip
+        
+    - uses: ./.github/workflows/release_tag
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag: re6
+        artifacts: data/Archives/ResidentEvil6.FusionFix.zip
