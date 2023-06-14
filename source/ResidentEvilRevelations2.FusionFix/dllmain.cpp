@@ -795,6 +795,9 @@ void Init()
         injector::MakeCALL(0xCCB08B, WindowedModeWrapper::AdjustWindowRect_Hook, true);
         //0xCCB0BA: needs WindowedModeWrapper::SetWindowPos_Hook here
     }
+
+    //Episode 4 finale stuck controls fix
+    injector::WriteMemory<uint8_t>(0xC21007 + 1, 0x79, true);
 }
 
 CEXP void InitializeASI()
