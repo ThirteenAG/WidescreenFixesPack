@@ -338,6 +338,7 @@ void Init()
 {
     CIniReader iniReader("");
     auto bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
+    auto bBorderlessWindowed = iniReader.ReadInteger("MAIN", "BorderlessWindowed", 1) != 0;
     
     if (bSkipIntro)
     {
@@ -500,6 +501,22 @@ void Init()
     
     //3d blips fix
     injector::MakeNOP(0x97D139, 2);
+
+    if (bBorderlessWindowed)
+    {
+        injector::MakeNOP(0x01292227, 6, true);
+        injector::MakeCALL(0x01292227, WindowedModeWrapper::CreateWindowExA_Hook, true);
+        injector::MakeNOP(0xF35DF6, 6, true);
+        injector::MakeCALL(0xF35DF6, WindowedModeWrapper::CreateWindowExW_Hook, true);
+        injector::MakeNOP(0xF35EEC, 6, true);
+        injector::MakeCALL(0xF35EEC, WindowedModeWrapper::CreateWindowExW_Hook, true);
+        injector::MakeNOP(0xF4228A, 6, true);
+        injector::MakeCALL(0xF4228A, WindowedModeWrapper::SetWindowLongA_Hook, true);
+        injector::MakeNOP(0xF4227E, 6, true);
+        injector::MakeCALL(0xF4227E, WindowedModeWrapper::AdjustWindowRect_Hook, true);
+        injector::MakeNOP(0xF422B1, 6, true);
+        injector::MakeCALL(0xF422B1, WindowedModeWrapper::SetWindowPos_Hook, true);
+    }
 }
 
 CEXP void InitializeASI()

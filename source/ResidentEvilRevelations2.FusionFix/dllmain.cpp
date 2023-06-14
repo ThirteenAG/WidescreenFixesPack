@@ -678,6 +678,7 @@ void Init()
 {
     CIniReader iniReader("");
     auto bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
+    auto bBorderlessWindowed = iniReader.ReadInteger("MAIN", "BorderlessWindowed", 1) != 0;
     auto bDisableDamageOverlay = iniReader.ReadInteger("MAIN", "DisableDamageOverlay", 1) != 0;
     auto bDisableFilmGrain = iniReader.ReadInteger("MAIN", "DisableFilmGrain", 1) != 0;
     auto bDisableFade = iniReader.ReadInteger("MAIN", "DisableFade", 0) != 0;
@@ -778,6 +779,21 @@ void Init()
     if (bDisableGUICommandFar)
     {
         injector::WriteMemory(uGUICommandFar, sub_E18040_nop, true);
+    }
+
+    if (bBorderlessWindowed)
+    {
+        injector::MakeNOP(0xC74C0C, 6, true);
+        injector::MakeCALL(0xC74C0C, WindowedModeWrapper::CreateWindowExA_Hook, true);
+        injector::MakeNOP(0xC75D67, 6, true);
+        injector::MakeCALL(0xC75D67, WindowedModeWrapper::CreateWindowExW_Hook, true);
+        injector::MakeNOP(0xC75EE5, 6, true);
+        injector::MakeCALL(0xC75EE5, WindowedModeWrapper::CreateWindowExW_Hook, true);
+        injector::MakeNOP(0xCCB096, 6, true);
+        injector::MakeCALL(0xCCB096, WindowedModeWrapper::SetWindowLongA_Hook, true);
+        injector::MakeNOP(0xCCB08B, 6, true);
+        injector::MakeCALL(0xCCB08B, WindowedModeWrapper::AdjustWindowRect_Hook, true);
+        //0xCCB0BA: needs WindowedModeWrapper::SetWindowPos_Hook here
     }
 }
 
