@@ -12,4 +12,6 @@
 
 ![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to disable film grain
 
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to enable borderless windowed mode
+
 [Website](http://thirteenag.github.io/wfp#rerev2) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/ResidentEvilRevelations2.FusionFix/dllmain.cpp) | [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/ResidentEvilRevelations2.FusionFix/scripts/ResidentEvilRevelations2.FusionFix.ini)
