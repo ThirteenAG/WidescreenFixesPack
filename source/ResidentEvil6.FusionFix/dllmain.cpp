@@ -1,8 +1,6 @@
 #include "stdafx.h"
 #include <d3d9.h>
 #include <vector>
-#include <D3DX9Shader.h>
-#pragma comment(lib, "D3dx9.lib")
 
 bool IsSplitScreenActive()
 {

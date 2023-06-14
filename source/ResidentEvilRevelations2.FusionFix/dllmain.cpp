@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include <d3d9.h>
 #include <vector>
-#include <D3DX9Shader.h>
 
 static constexpr float fDiff = (1280.0f / (936.0f - 136.0f));
 static constexpr float fDiffInv = 1.0f / fDiff;
