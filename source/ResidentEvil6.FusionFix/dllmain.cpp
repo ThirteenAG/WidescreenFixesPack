@@ -222,11 +222,11 @@ void __stdcall sub_58DDF0(uint32_t * a1, int* a2, int a3, uint16_t a4)
     }
 }
 
-void __fastcall sub_E6E800(float* _this, void* edx, float a2, float a3, int a4, float a5)
+void __fastcall sub_E6E800(float* _this, void* edx, float a2, float a3, float a4, float a5)
 {
     if (IsSplitScreenActive())
         a2 /= GetDiff();
-    return injector::fastcall<void(float*, void*, float, float, int, float)>::call(0xE6E800, _this, edx, a2, a3, a4, a5);
+    return injector::fastcall<void(float*, void*, float, float, float, float)>::call(0xE6E800, _this, edx, a2, a3, a4, a5);
 }
 
 //IDirect3DPixelShader9* shader_dummy = nullptr;
