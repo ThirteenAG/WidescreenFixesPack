@@ -4,6 +4,7 @@
 
 static constexpr float fDiff = (1280.0f / (936.0f - 136.0f));
 static constexpr float fDiffInv = 1.0f / fDiff;
+float fFOVFactor = 1.0f;
 
 enum GUI
 {
@@ -635,11 +636,14 @@ LABEL_20:
     }
 }
 
-void __fastcall sub_B82960(void* _this, void* edx, float a2, float a3, int a4, float a5)
+void __fastcall sub_B82960(void* _this, void* edx, float a2, float a3, float a4, float a5)
 {
+    a4 *= fFOVFactor;
+    a2 /= fFOVFactor;
+
     if (IsSplitScreenActive())
         a2 /= fDiff;
-    return injector::fastcall<void(void*, void*, float, float, int, float)>::call(0xB82960, _this, edx, a2, a3, a4, a5);
+    return injector::fastcall<void(void*, void*, float, float, float, float)>::call(0xB82960, _this, edx, a2, a3, a4, a5);
 }
 
 IDirect3DVertexShader9* shader_4F0EE939 = nullptr;
@@ -682,12 +686,18 @@ void Init()
     auto bDisableFilmGrain = iniReader.ReadInteger("MAIN", "DisableFilmGrain", 1) != 0;
     auto bDisableFade = iniReader.ReadInteger("MAIN", "DisableFade", 0) != 0;
     auto bDisableGUICommandFar = iniReader.ReadInteger("MAIN", "DisableGUICommandFar", 0) != 0;
+    auto fFOVFactor= iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f);
+    if (fFOVFactor <= 0.0f) fFOVFactor = 1.0f;
     
     if (bSkipIntro)
     {
         injector::WriteMemory<uint8_t>(0xA62A74, 0xEB, true);
         injector::WriteMemory<uint16_t>(0xA62A9D, 0x9090, true);
     }
+
+    // unrestrict resolutons
+    injector::MakeNOP(0xCC63CA, 2);
+    injector::MakeNOP(0xCC63D1, 2);
 
     // split screen windows dimensions
     injector::WriteMemory(0x4AE6C8 + 4, 0, true);
