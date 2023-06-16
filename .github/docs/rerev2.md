@@ -23,3 +23,7 @@
 ![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to increase FOV
 
 [Website](http://thirteenag.github.io/wfp#rerev2) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/ResidentEvilRevelations2.FusionFix/dllmain.cpp) | [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/ResidentEvilRevelations2.FusionFix/scripts/ResidentEvilRevelations2.FusionFix.ini)
+
+![](https://github.com/ThirteenAG/WidescreenFixesPack/assets/4904157/9b21870b-06f2-4deb-bf41-53b38a87c336)
+
+![](https://github.com/ThirteenAG/WidescreenFixesPack/assets/4904157/8b852cab-627e-4712-88fd-a112132555d7)

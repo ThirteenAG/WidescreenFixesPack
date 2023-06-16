@@ -2,6 +2,10 @@
 #include <d3d9.h>
 #include <vector>
 
+constexpr auto defaultAspectRatio = 16.0f / 9.0f;
+int32_t ResX = 0;
+int32_t ResY = 0;
+
 bool IsSplitScreenActive()
 {
     auto ptr = *(uint32_t*)0x17CF454;
@@ -60,7 +64,20 @@ int32_t GetNativeSplitScreenResY(int32_t val = 0)
     return NativeSplitScreenResY;
 }
 
+float GetAspectRatio()
+{
+    return (float)GetResX() / (float)GetResY();
+}
+
 float GetDiff()
+{
+    if (GetAspectRatio() >= defaultAspectRatio)
+        return GetAspectRatio() / defaultAspectRatio;
+    else
+        return 1.0f;
+}
+
+float GetSplitScreenDiff()
 {
     return (float)GetCurrentSplitScreenResX() / (float)GetNativeSplitScreenResX();
 }
@@ -80,7 +97,7 @@ int32_t GetHudOffset()
     if (IsSplitScreenActive())
         return (int32_t)((((float)GetCurrentSplitScreenResX() - ((float)GetNativeSplitScreenResY() * ((float)GetNativeSplitScreenResX() / (float)GetNativeSplitScreenResY())))) / 2.0f);
     else
-        return 0;
+        return (int32_t)((GetResX() - (GetResY() * defaultAspectRatio)) / 2.0f);
 }
 
 void __fastcall sub_4F8C60(int _this, int edx, int a2, int32_t* a3)
@@ -121,9 +138,9 @@ void __fastcall sub_4F8C60(int _this, int edx, int a2, int32_t* a3)
 float __cdecl sub_974C80(int a1)
 {
     if (IsSplitScreenActive())
-        return (float)(*(uint32_t*)(*(uint32_t*)0x186E23C + 80) - *(uint32_t*)(*(uint32_t*)0x186E23C + 72)) * (float)a1 * (1.0f / GetRelativeSplitScreenResX());
+        return (float)(*(uint32_t*)(*(uint32_t*)0x186E23C + 80) - *(uint32_t*)(*(uint32_t*)0x186E23C + 72)) * (float)a1 * (1.0f / (GetRelativeSplitScreenResX() * GetDiff()));
     else
-        return (float)(a1 * *(uint32_t*)(*(uint32_t*)0x186E8BC + 288)) * ((1.0f / GetRelativeResX()));
+        return (float)(a1 * *(uint32_t*)(*(uint32_t*)0x186E8BC + 288)) * ((1.0f / (GetRelativeResX() * GetDiff())));
 }
 
 float __cdecl sub_974CD0(int a1)
@@ -131,7 +148,7 @@ float __cdecl sub_974CD0(int a1)
     if (IsSplitScreenActive())
         return (float)(*(uint32_t*)(*(uint32_t*)0x186E23C + 80) - *(uint32_t*)(*(uint32_t*)0x186E23C + 72))
             * GetRelativeSplitScreenResY()
-            * (1.0f / GetRelativeSplitScreenResX())
+            * (1.0f / (GetRelativeSplitScreenResX() * GetDiff()))
             * (float)a1
             * (1.0f / GetRelativeSplitScreenResY());
     else
@@ -163,6 +180,7 @@ float __stdcall sub_55DB40_stretch(int a1)
     return sub_974C80(a1) + (GetHudOffset() * 2.0f);
 }
 
+float fAspectRatioInv = (1.0f / (16.0f / 9.0f));
 void __stdcall sub_58DDF0(uint32_t * a1, int* a2, int a3, uint16_t a4)
 {
     int v4; // eax
@@ -181,16 +199,18 @@ void __stdcall sub_58DDF0(uint32_t * a1, int* a2, int a3, uint16_t a4)
     int v17; // [esp-10h] [ebp-1Ch]
     float v18; // [esp+4h] [ebp-8h]
 
+    fAspectRatioInv = 1.0f / GetAspectRatio();
+
     if (IsSplitScreenActive())
     {
-        *a1 = (int)sub_974C80(*a1);
+        *a1 = (int)sub_974C80(*a1) + GetHudOffset();
         *a2 = (int)sub_974CD0(*a2);
         *(float*)(a3 + 16) = sub_974C80((int)*(float*)(a3 + 16));
         *(float*)(a3 + 20) = sub_974CD0((int)*(float*)(a3 + 20));
         v4 = (int)sub_974C80(*(uint32_t*)(a3 + 8));
         v14 = *(uint32_t*)(a3 + 12);
-        *(uint32_t*)(a3 + 8) = v4;
-        *(uint32_t*)(a3 + 12) = (int)sub_974CD0(v14);
+        *(uint32_t*)(a3 + 8) = (int32_t)((float)v4);
+        *(uint32_t*)(a3 + 12) = (int32_t)(sub_974CD0(v14));
         v5 = sub_974C80(*(uint32_t*)(a3 + 32));
         v12 = *(uint32_t*)(a3 + 36);
         *(uint32_t*)(a3 + 32) = (int32_t)v5;
@@ -199,8 +219,8 @@ void __stdcall sub_58DDF0(uint32_t * a1, int* a2, int a3, uint16_t a4)
     else
     {
         v6 = *(uint32_t*)(*(uint32_t*)0x186E8BC + 292);
-        v18 = 0.5625f / (float)((float)v6 / (float)*(int*)(*(uint32_t*)0x186E8BC + 288));
-        *a1 = (int)sub_974C80(*a1);
+        v18 = fAspectRatioInv / (float)((float)v6 / (float)*(int*)(*(uint32_t*)0x186E8BC + 288));
+        *a1 = (int)sub_974C80(*a1) + GetHudOffset();
         v7 = (int)sub_974CD0(*a2);
         *a2 = v7;
         if (a4)
@@ -211,7 +231,7 @@ void __stdcall sub_58DDF0(uint32_t * a1, int* a2, int a3, uint16_t a4)
         *(float*)(a3 + 20) = v8 * v18;
         v9 = (int)sub_974C80(v17);
         v16 = *(uint32_t*)(a3 + 12);
-        *(uint32_t*)(a3 + 8) = v9;
+        *(int32_t*)(a3 + 8) = (int32_t)((float)v9);
         v10 = sub_974CD0(v16);
         v15 = *(uint32_t*)(a3 + 32);
         *(uint32_t*)(a3 + 12) = (int)(float)((float)(int)v10 * v18);
@@ -225,6 +245,8 @@ void __stdcall sub_58DDF0(uint32_t * a1, int* a2, int a3, uint16_t a4)
 void __fastcall sub_E6E800(float* _this, void* edx, float a2, float a3, float a4, float a5)
 {
     if (IsSplitScreenActive())
+        a2 /= GetSplitScreenDiff();
+    else
         a2 /= GetDiff();
     return injector::fastcall<void(float*, void*, float, float, float, float)>::call(0xE6E800, _this, edx, a2, a3, a4, a5);
 }
@@ -274,17 +296,42 @@ void Init()
         injector::WriteMemory<uint16_t>(0xD23CFB, 0xE990, true);
     }
 
+    // overwriting aspect ratio
+    hook::pattern("0F 84 ? ? ? ? 48 ? ? 48 ? ? 89 8E").for_each_result([](hook::pattern_match match)
+    {
+        struct hook_ecx_edx { void operator()(injector::reg_pack& regs) { ResX = regs.ecx; ResY = regs.edx; fAspectRatioInv = 1.0f / GetAspectRatio(); } };
+        injector::MakeInline<hook_ecx_edx>(match.get<void>(0), match.get<void>(12));
+    });
+
+    hook::pattern("0F 84 ? ? ? ? 48 ? ? 48 ? ? 89 AE").for_each_result([](hook::pattern_match match)
+    {
+        struct hook_ebp_edi { void operator()(injector::reg_pack& regs) { ResX = regs.ebp; ResY = regs.edi; fAspectRatioInv = 1.0f / GetAspectRatio(); } };
+        injector::MakeInline<hook_ebp_edi>(match.get<void>(0), match.get<void>(12));
+    });
+
+    // interface scaling
+    injector::MakeCALL(0x58ED00, sub_58DDF0, true);
+    injector::MakeCALL(0x58EDC3, sub_58DDF0, true);
+    injector::WriteMemory(0x5103E5,  &fAspectRatioInv, true);  // fmul    ds : dword_151B5D8
+    injector::WriteMemory(0x55DF21,  &fAspectRatioInv, true);  // movss   xmm2, ds : dword_151B5D8
+    injector::WriteMemory(0x58DF02,  &fAspectRatioInv, true);  // movss   xmm0, ds : dword_151B5D8
+    injector::WriteMemory(0x58E118,  &fAspectRatioInv, true);  // movss   xmm0, ds : dword_151B5D8
+    injector::WriteMemory(0x9FC4F3,  &fAspectRatioInv, true);  // mulss   xmm0, ds : dword_151B5D8
+    injector::WriteMemory(0x116A33B, &fAspectRatioInv, true);  // movss   xmm1, ds : dword_151B5D8
+    injector::WriteMemory(0x116A378, &fAspectRatioInv, true);  // movss   xmm0, ds : dword_151B5D8
+
+    // split screen setup
     injector::MakeCALL(0x50076B, sub_4F8C60, true);
     injector::MakeCALL(0x50079E, sub_4F8C60, true);
 
-    //hud fix
+    // hud fix
     injector::MakeJMP(0x974C80, sub_974C80, true);
     injector::MakeJMP(0x974CD0, sub_974CD0, true);
 
     injector::MakeJMP(0x55DB40, sub_55DB40, true);
     injector::MakeJMP(0x55DBA0, sub_55DBA0, true);
 
-    //Camera near clip fix
+    // Camera near clip fix
     injector::MakeCALL(0x5F816C,  sub_E6E800, true);
     injector::MakeCALL(0x96B347,  sub_E6E800, true);
     injector::MakeCALL(0x104357D, sub_E6E800, true);
@@ -315,7 +362,7 @@ void Init()
         {
             void operator()(injector::reg_pack& regs)
             {
-                if (IsSplitScreenActive() && !bIsPaused)
+                if ((IsSplitScreenActive() || GetDiff() > 1.0f) && !bIsPaused)
                 {
                     auto pShader = (IDirect3DVertexShader9*)regs.eax;
                     if (pShader == shader_4F0EE939)
