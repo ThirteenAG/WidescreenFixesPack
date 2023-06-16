@@ -2,9 +2,10 @@
 #include <d3d9.h>
 #include <vector>
 
-static constexpr float fDiff = (1280.0f / (936.0f - 136.0f));
-static constexpr float fDiffInv = 1.0f / fDiff;
+constexpr auto defaultAspectRatio = 16.0f / 9.0f;
 float fFOVFactor = 1.0f;
+int32_t ResX = 0;
+int32_t ResY = 0;
 
 enum GUI
 {
@@ -142,20 +143,81 @@ enum GUI
     VirtualScreen = 0x141AC10
 };
 
-int32_t GetResX()
-{
-    return *(int32_t*)(*(uint32_t*)0x15DE88C + 0xD28);
-}
-
-int32_t GetResY()
-{
-    return *(int32_t*)(*(uint32_t*)0x15DE88C + 0xD2C);
-}
-
 bool IsSplitScreenActive()
 {
     auto ptr = *(uint32_t*)0x157AE00;
     return ptr && *(uint32_t*)(ptr + 0x8F4) == 1;
+}
+
+int32_t GetResX()
+{
+    if (ResX)
+        return ResX;
+    else
+        return *(int32_t*)(*(uint32_t*)0x15DE88C + 0x1E0);
+}
+
+int32_t GetResY()
+{
+    if (ResY)
+        return ResY;
+    else
+        return *(int32_t*)(*(uint32_t*)0x15DE88C + 0x1E4);
+}
+
+int32_t GetRelativeResX()
+{
+    return 1280;
+}
+
+int32_t GetRelativeResY()
+{
+    return 720;
+}
+
+int32_t GetCurrentSplitScreenResX()
+{
+    return *(int32_t*)(*(uint32_t*)0x15DE88C + 0x50);
+}
+
+int32_t GetCurrentSplitScreenResY()
+{
+    return *(int32_t*)(*(uint32_t*)0x15DE88C + 0x54);
+}
+
+int32_t GetNativeSplitScreenResX()
+{
+    return 936 - 136;
+}
+
+int32_t GetNativeSplitScreenResY()
+{
+    return 360;
+}
+
+float GetAspectRatio()
+{
+    return (float)GetResX() / (float)GetResY();
+}
+
+float GetDiff()
+{
+    if (IsSplitScreenActive())
+    {
+        static constexpr float fDiffSplitScreen = (1280.0f / (936.0f - 136.0f));
+        return (GetAspectRatio() / defaultAspectRatio) * fDiffSplitScreen;
+    }
+    else
+    {
+        if (GetAspectRatio() >= defaultAspectRatio)
+        {
+            return GetAspectRatio() / defaultAspectRatio;
+        }
+        else
+        {
+            return 1.0f;
+        }
+    }
 }
 
 void __fastcall sub_96C410(int _this, int edx, int a2, int a3)
@@ -185,10 +247,252 @@ void __fastcall sub_96C410(int _this, int edx, int a2, int a3)
         v9 = v10;
 
     if (IsSplitScreenActive())
-        a2 += (1280 - 936) + 136;
+        a2 += (int32_t)(720.0f * GetAspectRatio()) - (1280.0f / (1280.0f / GetNativeSplitScreenResX()));
+    else
+        a2 += (int32_t)(((720.0f * GetAspectRatio()) - 1280.0f) / 2.0f);
 
     *(int32_t*)(_this + 164) = (int32_t)(((float)a2 * v9) + (float)v4);
     *(int32_t*)(_this + 168) = (int32_t)(((float)a3 * v9) + (float)v5);
+}
+
+enum
+{
+    RESCALE = 0xAAAAEEEE,
+    STRETCH = 0xBBBBFFFF,
+    OFFSET = 0xCCCCDDDD
+};
+
+void __fastcall sub_E18040(int _this, int edx, int a2)
+{
+    char* v2; // esi
+    float v4; // xmm5_4
+    float v5; // xmm6_4
+    float v6; // xmm7_4
+    float v7; // xmm0_4
+    int v8; // ecx
+    uint32_t* v9; // eax
+    int v10; // edi
+    int v11; // ecx
+    int v12; // ecx
+    float* v13; // edx
+    float v14; // xmm4_4
+    float v15; // xmm3_4
+    int v16; // eax
+    int v17; // edi
+    float v18; // xmm0_4
+    int v19; // [esp+8h] [ebp-3Ch]
+    float v20; // [esp+8h] [ebp-3Ch]
+    int v21; // [esp+Ch] [ebp-38h]
+    int v22; // [esp+10h] [ebp-34h]
+    int v23; // [esp+14h] [ebp-30h]
+    int v24; // [esp+18h] [ebp-2Ch]
+    int v25; // [esp+18h] [ebp-2Ch]
+    float v26; // [esp+1Ch] [ebp-28h]
+    float v27; // [esp+28h] [ebp-1Ch]
+    int v28; // [esp+2Ch] [ebp-18h]
+    int v29; // [esp+30h] [ebp-14h]
+
+    auto sub_D7A340 = (int(__fastcall*) (char*, int, int))0xD7A340;
+    auto sub_D79650 = (float(__fastcall*) (char*, int))0xD79650;
+    auto sub_D79630 = (float(__fastcall*) (char*, int))0xD79630;
+    auto sub_E67E20 = (void(__fastcall*) (uint32_t*, int, int))0xE67E20;
+
+    v2 = *(char**)(a2 + 4);
+    v19 = *(uint32_t*)0x15DDFD8;
+    v21 = *(uint32_t*)0x15DDFDC + *((uint32_t*)v2 + 50) - *((uint32_t*)v2 + 48);
+    v29 = *(uint32_t*)0x15DDFDC;
+    v24 = *(uint32_t*)0x15DDFDC;
+    v28 = *(uint32_t*)0x15DDFD8 + *((uint32_t*)v2 + 49) - *((uint32_t*)v2 + 47);
+    v4 = *(float*)(_this + 0x60) * *(float*)&*(uint32_t*)0x153C628;
+    v5 = *(float*)(_this + 100) * *(float*)&*(uint32_t*)0x153C62C;
+    v6 = *(float*)(_this + 64);
+    v7 = *(float*)(_this + 68);
+    v22 = *(uint32_t*)0x15DDFD8;
+    v8 = v28;
+    v23 = v21;
+    v9 = *(uint32_t**)(_this + 240);
+    v10 = 2;
+    v26 = v4;
+    v27 = v5;
+    if (v9)
+    {
+        v8 = v9[30];
+        v10 = (v9[28] >> 1) & 3;
+        v23 = v9[31];
+        v22 = 0;
+        v24 = 0;
+    }
+    if ((*(uint32_t*)(_this + 328) & 4) != 0)
+    {
+        v4 = (float)((float)(*((uint32_t*)v2 + 49) - *((uint32_t*)v2 + 47)) / (float)(v8 - v22)) * v4;
+        v26 = v4;
+        v27 = (float)((float)(*((uint32_t*)v2 + 50) - *((uint32_t*)v2 + 48)) / (float)(v23 - v24)) * v5;
+        v5 = v27;
+    }
+    *((uint32_t*)v2 + 19) |= 2u;
+    if (v2[76] < 0)
+    {
+        *(uint32_t*)&v2[12 * *((uint32_t*)v2 + 23) + 199884] = *(uint32_t*)&v2[12 * *((uint32_t*)v2 + 23) + 199884] & 0x80000000 | 0x2C4;
+        *(uint32_t*)&v2[12 * *((uint32_t*)v2 + 23) + 199884] &= ~0x80000000;
+        v11 = 3 * *((uint32_t*)v2 + 23);
+        *(uint32_t*)&v2[4 * v11 + 199888] = *((uint32_t*)v2 + 1542);
+        *(uint32_t*)&v2[4 * v11 + 199892] = *((uint32_t*)v2 + 1543);
+        ++*((uint32_t*)v2 + 23);
+    }
+    v12 = (4 * *(uint16_t*)(*(uint32_t*)(*((uint32_t*)v2 + 2) + 2832) + 24) + 15) & 0xFFFFFFF0;
+    v25 = v12;
+    if ((unsigned int)(v12 + *((uint32_t*)v2 + 5)) > *((uint32_t*)v2 + 6))
+    {
+        sub_D7A340(v2, edx, v12);
+        v4 = v26;
+        v5 = v27;
+        v12 = v25;
+    }
+    v13 = (float*)*((uint32_t*)v2 + 5);
+    *(char**)((uint32_t*)v2 + 5) = (char*)v13 + v12;
+    *(float**)((uint32_t*)v2 + 1542) = v13;
+    *((uint32_t*)v2 + 81) |= 1u;
+    if (v13)
+    {
+        v14 = 2.0 / (float)(v28 - v19);
+        v15 = -2.0 / (float)(v21 - v29);
+        v13[0] = v14 * v4;
+        v13[1] = v15 * v5;
+        v13[2] = (float)(v14 * v6) - 1.0;
+        v13[3] = (float)(v15 * v7) + 1.0;
+        *((uint32_t*)v2 + 19) &= ~2u;
+
+        switch (edx)
+        {
+        case RESCALE:
+        {
+            if (IsSplitScreenActive())
+            {
+                if (v21 == GetCurrentSplitScreenResY())
+                {
+                    v14 = 2.0 / (float)(v28 - v19);
+                    v15 = -2.0 / (float)(v21 - v29);
+                    v13[0] = v14 * v4;
+                    v13[1] = v15 * v5;
+                    v13[2] = (float)(v14 * v6) - (1.0f / GetDiff());
+                    v13[3] = (float)(v15 * v7) + 1.0;
+                }
+                else if (v21 == GetResY())
+                {
+                    if (GetAspectRatio() >= defaultAspectRatio)
+                    {
+                        v14 = 2.0 / (float)(v28 - v19);
+                        v15 = -2.0 / (float)(v21 - v29);
+                        v13[0] = v14 * v4;
+                        v13[1] = v15 * v5;
+                        v13[2] = (float)(v14 * v6) - (1.0f / (GetAspectRatio() / defaultAspectRatio));
+                        v13[3] = (float)(v15 * v7) + 1.0;
+                    }
+                }
+            }
+            else
+            {
+                v14 = 2.0 / (float)(v28 - v19);
+                v15 = -2.0 / (float)(v21 - v29);
+                v13[0] = v14 * v4;
+                v13[1] = v15 * v5;
+                v13[2] = (float)(v14 * v6) - (1.0f / GetDiff());
+                v13[3] = (float)(v15 * v7) + 1.0;
+            }
+        }
+        break;
+        case STRETCH:
+        {
+            v14 = (2.0 * GetDiff()) / (float)(v28 - v19);
+            v15 = -2.0 / (float)(v21 - v29);
+            v13[0] = v14 * v4;
+            v13[1] = v15 * v5;
+            v13[2] = -1.0f; //(float)(v14 * v6) - fDiffInv;
+            v13[3] = (float)(v15 * v7) + 1.0;
+        }
+        break;
+        case OFFSET:
+        {
+            if (IsSplitScreenActive())
+            {
+                if (v21 == GetCurrentSplitScreenResY())
+                {
+                    v14 = 2.0 / (float)(v28 - v19);
+                    v15 = -2.0 / (float)(v21 - v29);
+                    v13[0] = v14 * v4;
+                    v13[1] = v15 * v5;
+                    v13[2] = (float)(v14 * v6) - (1.0f / GetDiff());
+                    v13[3] = (float)(v15 * v7) + 1.0;
+                }
+                else if (v21 == GetResY())
+                {
+                    if (GetAspectRatio() >= defaultAspectRatio)
+                    {
+                        v14 = 2.0 / (float)(v28 - v19);
+                        v15 = -2.0 / (float)(v21 - v29);
+                        v13[0] = v14 * v4;
+                        v13[1] = v15 * v5;
+                        v13[2] = (float)(v14 * v6) - (1.0f / (GetAspectRatio() / defaultAspectRatio));
+                        v13[3] = (float)(v15 * v7) + 1.0;
+                    }
+                }
+            }
+            else
+            {
+                if (v21 == GetResY())
+                {
+                    v14 = 2.0 / (float)(v28 - v19);
+                    v15 = -2.0 / (float)(v21 - v29);
+                    v13[0] = v14 * v4;
+                    v13[1] = v15 * v5;
+                    v13[2] = (float)(v14 * v6) - (1.0f / GetDiff());
+                    v13[3] = (float)(v15 * v7) + 1.0;
+                }
+            }
+        }
+        break;
+        default:
+            break;
+        }
+    }
+    v16 = a2;
+    *(float*)(a2 + 184) = v6;
+    *(float*)(a2 + 188) = v7;
+    *(float*)(a2 + 192) = v4;
+    *(float*)(a2 + 196) = v5;
+    v17 = v10 - 1;
+    if (!v17)
+    {
+        v20 = sub_D79650(v2, edx);
+    LABEL_18:
+        v18 = v20;
+        goto LABEL_19;
+    }
+    if (v17 != 1)
+    {
+        v18 = 0.0;
+        goto LABEL_20;
+    }
+    v20 = sub_D79630(v2, edx);
+    if ((uint8_t) * ((uint32_t*)v2 + 86) < 8u
+        && !*(uint32_t*)(400 * (uint8_t) * ((uint32_t*)v2 + 86) + *(uint32_t*)0x15DE88C + 52))
+    {
+        goto LABEL_18;
+    }
+    v18 = v20 + 0.25;
+LABEL_19:
+    v16 = a2;
+LABEL_20:
+    *(float*)(v16 + 96) = v18;
+    if ((*(uint8_t*)(_this + 328) & 1) != 0)
+    {
+        if (*(uint32_t*)(_this + 244))
+        {
+            *((uint32_t*)v2 + 85) = *((uint32_t*)v2 + 85) & 0x1F ^ (32
+                * (*(uint32_t*)(_this + 332) + (*(uint32_t*)(_this + 336) << 20)));
+            sub_E67E20(*(uint32_t**)(_this + 244), edx, a2);
+        }
+    }
 }
 
 void __fastcall sub_E18040_nop(int _this, int edx, int a2)
@@ -196,453 +500,26 @@ void __fastcall sub_E18040_nop(int _this, int edx, int a2)
     return;
 }
 
-void __fastcall sub_E18040_splitscreen(int _this, int edx, int a2)
+void __fastcall sub_E18040_rescale(int _this, int edx, int a2)
 {
-    char* v2; // esi
-    float v4; // xmm5_4
-    float v5; // xmm6_4
-    float v6; // xmm7_4
-    float v7; // xmm0_4
-    int v8; // ecx
-    uint32_t* v9; // eax
-    int v10; // edi
-    int v11; // ecx
-    int v12; // ecx
-    float* v13; // edx
-    float v14; // xmm4_4
-    float v15; // xmm3_4
-    int v16; // eax
-    int v17; // edi
-    float v18; // xmm0_4
-    int v19; // [esp+8h] [ebp-3Ch]
-    float v20; // [esp+8h] [ebp-3Ch]
-    int v21; // [esp+Ch] [ebp-38h]
-    int v22; // [esp+10h] [ebp-34h]
-    int v23; // [esp+14h] [ebp-30h]
-    int v24; // [esp+18h] [ebp-2Ch]
-    int v25; // [esp+18h] [ebp-2Ch]
-    float v26; // [esp+1Ch] [ebp-28h]
-    float v27; // [esp+28h] [ebp-1Ch]
-    int v28; // [esp+2Ch] [ebp-18h]
-    int v29; // [esp+30h] [ebp-14h]
-
-    auto sub_D7A340 = (int(__fastcall*) (char*, int, int))0xD7A340;
-    auto sub_D79650 = (float(__fastcall*) (char*, int))0xD79650;
-    auto sub_D79630 = (float(__fastcall*) (char*, int))0xD79630;
-    auto sub_E67E20 = (void(__fastcall*) (uint32_t*, int, int))0xE67E20;
-
-    v2 = *(char**)(a2 + 4);
-    v19 = *(uint32_t*)0x15DDFD8;
-    v21 = *(uint32_t*)0x15DDFDC + *((uint32_t*)v2 + 50) - *((uint32_t*)v2 + 48);
-    v29 = *(uint32_t*)0x15DDFDC;
-    v24 = *(uint32_t*)0x15DDFDC;
-    v28 = *(uint32_t*)0x15DDFD8 + *((uint32_t*)v2 + 49) - *((uint32_t*)v2 + 47);
-    v4 = *(float*)(_this + 0x60) * *(float*)&*(uint32_t*)0x153C628;
-    v5 = *(float*)(_this + 100) * *(float*)&*(uint32_t*)0x153C62C;
-    v6 = *(float*)(_this + 64);
-    v7 = *(float*)(_this + 68);
-    v22 = *(uint32_t*)0x15DDFD8;
-    v8 = v28;
-    v23 = v21;
-    v9 = *(uint32_t**)(_this + 240);
-    v10 = 2;
-    v26 = v4;
-    v27 = v5;
-    if (v9)
-    {
-        v8 = v9[30];
-        v10 = (v9[28] >> 1) & 3;
-        v23 = v9[31];
-        v22 = 0;
-        v24 = 0;
-    }
-    if ((*(uint32_t*)(_this + 328) & 4) != 0)
-    {
-        v4 = (float)((float)(*((uint32_t*)v2 + 49) - *((uint32_t*)v2 + 47)) / (float)(v8 - v22)) * v4;
-        v26 = v4;
-        v27 = (float)((float)(*((uint32_t*)v2 + 50) - *((uint32_t*)v2 + 48)) / (float)(v23 - v24)) * v5;
-        v5 = v27;
-    }
-    *((uint32_t*)v2 + 19) |= 2u;
-    if (v2[76] < 0)
-    {
-        *(uint32_t*)&v2[12 * *((uint32_t*)v2 + 23) + 199884] = *(uint32_t*)&v2[12 * *((uint32_t*)v2 + 23) + 199884] & 0x80000000 | 0x2C4;
-        *(uint32_t*)&v2[12 * *((uint32_t*)v2 + 23) + 199884] &= ~0x80000000;
-        v11 = 3 * *((uint32_t*)v2 + 23);
-        *(uint32_t*)&v2[4 * v11 + 199888] = *((uint32_t*)v2 + 1542);
-        *(uint32_t*)&v2[4 * v11 + 199892] = *((uint32_t*)v2 + 1543);
-        ++*((uint32_t*)v2 + 23);
-    }
-    v12 = (4 * *(uint16_t*)(*(uint32_t*)(*((uint32_t*)v2 + 2) + 2832) + 24) + 15) & 0xFFFFFFF0;
-    v25 = v12;
-    if ((unsigned int)(v12 + *((uint32_t*)v2 + 5)) > *((uint32_t*)v2 + 6))
-    {
-        sub_D7A340(v2, edx, v12);
-        v4 = v26;
-        v5 = v27;
-        v12 = v25;
-    }
-    v13 = (float*)*((uint32_t*)v2 + 5);
-    *(char**)((uint32_t*)v2 + 5) = (char*)v13 + v12;
-    *(float**)((uint32_t*)v2 + 1542) = v13;
-    *((uint32_t*)v2 + 81) |= 1u;
-    if (v13)
-    {
-        v14 = 2.0 / (float)(v28 - v19);
-        v15 = -2.0 / (float)(v21 - v29);
-        v13[0] = v14 * v4;
-        v13[1] = v15 * v5;
-        v13[2] = (float)(v14 * v6) - 1.0;
-        v13[3] = (float)(v15 * v7) + 1.0;
-        *((uint32_t*)v2 + 19) &= ~2u;
-
-        if (IsSplitScreenActive() && (v21 == (uint32_t)((GetResX() / (16.0f / 9.0f)) / 2.0f)))
-        {
-            v14 = 2.0 / (float)(v28 - v19);
-            v15 = -2.0 / (float)(v21 - v29);
-            v13[0] = v14 * v4;
-            v13[1] = v15 * v5;
-            v13[2] = (float)(v14 * v6) - fDiffInv;
-            v13[3] = (float)(v15 * v7) + 1.0;
-        }
-    }
-    v16 = a2;
-    *(float*)(a2 + 184) = v6;
-    *(float*)(a2 + 188) = v7;
-    *(float*)(a2 + 192) = v4;
-    *(float*)(a2 + 196) = v5;
-    v17 = v10 - 1;
-    if (!v17)
-    {
-        v20 = sub_D79650(v2, edx);
-    LABEL_18:
-        v18 = v20;
-        goto LABEL_19;
-    }
-    if (v17 != 1)
-    {
-        v18 = 0.0;
-        goto LABEL_20;
-    }
-    v20 = sub_D79630(v2, edx);
-    if ((uint8_t) * ((uint32_t*)v2 + 86) < 8u
-        && !*(uint32_t*)(400 * (uint8_t) * ((uint32_t*)v2 + 86) + *(uint32_t*)0x15DE88C + 52))
-    {
-        goto LABEL_18;
-    }
-    v18 = v20 + 0.25;
-LABEL_19:
-    v16 = a2;
-LABEL_20:
-    *(float*)(v16 + 96) = v18;
-    if ((*(uint8_t*)(_this + 328) & 1) != 0)
-    {
-        if (*(uint32_t*)(_this + 244))
-        {
-            *((uint32_t*)v2 + 85) = *((uint32_t*)v2 + 85) & 0x1F ^ (32
-                * (*(uint32_t*)(_this + 332) + (*(uint32_t*)(_this + 336) << 20)));
-            sub_E67E20(*(uint32_t**)(_this + 244), edx, a2);
-        }
-    }
+    return sub_E18040(_this, RESCALE, a2);
 }
 
-void __fastcall sub_E18040_splitscreen_stretch(int _this, int edx, int a2)
+void __fastcall sub_E18040_stretch(int _this, int edx, int a2)
 {
-    char* v2; // esi
-    float v4; // xmm5_4
-    float v5; // xmm6_4
-    float v6; // xmm7_4
-    float v7; // xmm0_4
-    int v8; // ecx
-    uint32_t* v9; // eax
-    int v10; // edi
-    int v11; // ecx
-    int v12; // ecx
-    float* v13; // edx
-    float v14; // xmm4_4
-    float v15; // xmm3_4
-    int v16; // eax
-    int v17; // edi
-    float v18; // xmm0_4
-    int v19; // [esp+8h] [ebp-3Ch]
-    float v20; // [esp+8h] [ebp-3Ch]
-    int v21; // [esp+Ch] [ebp-38h]
-    int v22; // [esp+10h] [ebp-34h]
-    int v23; // [esp+14h] [ebp-30h]
-    int v24; // [esp+18h] [ebp-2Ch]
-    int v25; // [esp+18h] [ebp-2Ch]
-    float v26; // [esp+1Ch] [ebp-28h]
-    float v27; // [esp+28h] [ebp-1Ch]
-    int v28; // [esp+2Ch] [ebp-18h]
-    int v29; // [esp+30h] [ebp-14h]
-
-    auto sub_D7A340 = (int(__fastcall*) (char*, int, int))0xD7A340;
-    auto sub_D79650 = (float(__fastcall*) (char*, int))0xD79650;
-    auto sub_D79630 = (float(__fastcall*) (char*, int))0xD79630;
-    auto sub_E67E20 = (void(__fastcall*) (uint32_t*, int, int))0xE67E20;
-
-    v2 = *(char**)(a2 + 4);
-    v19 = *(uint32_t*)0x15DDFD8;
-    v21 = *(uint32_t*)0x15DDFDC + *((uint32_t*)v2 + 50) - *((uint32_t*)v2 + 48);
-    v29 = *(uint32_t*)0x15DDFDC;
-    v24 = *(uint32_t*)0x15DDFDC;
-    v28 = *(uint32_t*)0x15DDFD8 + *((uint32_t*)v2 + 49) - *((uint32_t*)v2 + 47);
-    v4 = *(float*)(_this + 0x60) * *(float*)&*(uint32_t*)0x153C628;
-    v5 = *(float*)(_this + 100) * *(float*)&*(uint32_t*)0x153C62C;
-    v6 = *(float*)(_this + 64);
-    v7 = *(float*)(_this + 68);
-    v22 = *(uint32_t*)0x15DDFD8;
-    v8 = v28;
-    v23 = v21;
-    v9 = *(uint32_t**)(_this + 240);
-    v10 = 2;
-    v26 = v4;
-    v27 = v5;
-    if (v9)
-    {
-        v8 = v9[30];
-        v10 = (v9[28] >> 1) & 3;
-        v23 = v9[31];
-        v22 = 0;
-        v24 = 0;
-    }
-    if ((*(uint32_t*)(_this + 328) & 4) != 0)
-    {
-        v4 = (float)((float)(*((uint32_t*)v2 + 49) - *((uint32_t*)v2 + 47)) / (float)(v8 - v22)) * v4;
-        v26 = v4;
-        v27 = (float)((float)(*((uint32_t*)v2 + 50) - *((uint32_t*)v2 + 48)) / (float)(v23 - v24)) * v5;
-        v5 = v27;
-    }
-    *((uint32_t*)v2 + 19) |= 2u;
-    if (v2[76] < 0)
-    {
-        *(uint32_t*)&v2[12 * *((uint32_t*)v2 + 23) + 199884] = *(uint32_t*)&v2[12 * *((uint32_t*)v2 + 23) + 199884] & 0x80000000 | 0x2C4;
-        *(uint32_t*)&v2[12 * *((uint32_t*)v2 + 23) + 199884] &= ~0x80000000;
-        v11 = 3 * *((uint32_t*)v2 + 23);
-        *(uint32_t*)&v2[4 * v11 + 199888] = *((uint32_t*)v2 + 1542);
-        *(uint32_t*)&v2[4 * v11 + 199892] = *((uint32_t*)v2 + 1543);
-        ++*((uint32_t*)v2 + 23);
-    }
-    v12 = (4 * *(uint16_t*)(*(uint32_t*)(*((uint32_t*)v2 + 2) + 2832) + 24) + 15) & 0xFFFFFFF0;
-    v25 = v12;
-    if ((unsigned int)(v12 + *((uint32_t*)v2 + 5)) > *((uint32_t*)v2 + 6))
-    {
-        sub_D7A340(v2, edx, v12);
-        v4 = v26;
-        v5 = v27;
-        v12 = v25;
-    }
-    v13 = (float*)*((uint32_t*)v2 + 5);
-    *(char**)((uint32_t*)v2 + 5) = (char*)v13 + v12;
-    *(float**)((uint32_t*)v2 + 1542) = v13;
-    *((uint32_t*)v2 + 81) |= 1u;
-    if (v13)
-    {
-        v14 = 2.0 / (float)(v28 - v19);
-        v15 = -2.0 / (float)(v21 - v29);
-        v13[0] = v14 * v4;
-        v13[1] = v15 * v5;
-        v13[2] = (float)(v14 * v6) - 1.0;
-        v13[3] = (float)(v15 * v7) + 1.0;
-        *((uint32_t*)v2 + 19) &= ~2u;
-
-        if (IsSplitScreenActive())
-        {
-            v14 = (2.0 * fDiff) / (float)(v28 - v19);
-            v15 = -2.0 / (float)(v21 - v29);
-            v13[0] = v14 * v4;
-            v13[1] = v15 * v5;
-            v13[2] = -1.0f; //(float)(v14 * v6) - fDiffInv;
-            v13[3] = (float)(v15 * v7) + 1.0;
-        }
-    }
-    v16 = a2;
-    *(float*)(a2 + 184) = v6;
-    *(float*)(a2 + 188) = v7;
-    *(float*)(a2 + 192) = v4;
-    *(float*)(a2 + 196) = v5;
-    v17 = v10 - 1;
-    if (!v17)
-    {
-        v20 = sub_D79650(v2, edx);
-    LABEL_18:
-        v18 = v20;
-        goto LABEL_19;
-    }
-    if (v17 != 1)
-    {
-        v18 = 0.0;
-        goto LABEL_20;
-    }
-    v20 = sub_D79630(v2, edx);
-    if ((uint8_t)*((uint32_t*)v2 + 86) < 8u
-        && !*(uint32_t*)(400 * (uint8_t)*((uint32_t*)v2 + 86) + *(uint32_t*)0x15DE88C + 52))
-    {
-        goto LABEL_18;
-    }
-    v18 = v20 + 0.25;
-LABEL_19:
-    v16 = a2;
-LABEL_20:
-    *(float*)(v16 + 96) = v18;
-    if ((*(uint8_t*)(_this + 328) & 1) != 0)
-    {
-        if (*(uint32_t*)(_this + 244))
-        {
-            *((uint32_t*)v2 + 85) = *((uint32_t*)v2 + 85) & 0x1F ^ (32
-                * (*(uint32_t*)(_this + 332) + (*(uint32_t*)(_this + 336) << 20)));
-            sub_E67E20(*(uint32_t**)(_this + 244), edx, a2);
-        }
-    }
+    return sub_E18040(_this, STRETCH, a2);
 }
 
-void __fastcall sub_E18040_original(int _this, int edx, int a2)
+void __fastcall sub_E18040_offset(int _this, int edx, int a2)
 {
-    char* v2; // esi
-    float v4; // xmm5_4
-    float v5; // xmm6_4
-    float v6; // xmm7_4
-    float v7; // xmm0_4
-    int v8; // ecx
-    uint32_t* v9; // eax
-    int v10; // edi
-    int v11; // ecx
-    int v12; // ecx
-    float* v13; // edx
-    float v14; // xmm4_4
-    float v15; // xmm3_4
-    int v16; // eax
-    int v17; // edi
-    float v18; // xmm0_4
-    int v19; // [esp+8h] [ebp-3Ch]
-    float v20; // [esp+8h] [ebp-3Ch]
-    int v21; // [esp+Ch] [ebp-38h]
-    int v22; // [esp+10h] [ebp-34h]
-    int v23; // [esp+14h] [ebp-30h]
-    int v24; // [esp+18h] [ebp-2Ch]
-    int v25; // [esp+18h] [ebp-2Ch]
-    float v26; // [esp+1Ch] [ebp-28h]
-    float v27; // [esp+28h] [ebp-1Ch]
-    int v28; // [esp+2Ch] [ebp-18h]
-    int v29; // [esp+30h] [ebp-14h]
-
-    auto sub_D7A340 = (int(__fastcall*) (char*, int, int))0xD7A340;
-    auto sub_D79650 = (float(__fastcall*) (char*, int))0xD79650;
-    auto sub_D79630 = (float(__fastcall*) (char*, int))0xD79630;
-    auto sub_E67E20 = (void(__fastcall*) (uint32_t*, int, int))0xE67E20;
-
-    v2 = *(char**)(a2 + 4);
-    v19 = *(uint32_t*)0x15DDFD8;
-    v21 = *(uint32_t*)0x15DDFDC + *((uint32_t*)v2 + 50) - *((uint32_t*)v2 + 48);
-    v29 = *(uint32_t*)0x15DDFDC;
-    v24 = *(uint32_t*)0x15DDFDC;
-    v28 = *(uint32_t*)0x15DDFD8 + *((uint32_t*)v2 + 49) - *((uint32_t*)v2 + 47);
-    v4 = *(float*)(_this + 0x60) * *(float*)&*(uint32_t*)0x153C628;
-    v5 = *(float*)(_this + 100) * *(float*)&*(uint32_t*)0x153C62C;
-    v6 = *(float*)(_this + 64);
-    v7 = *(float*)(_this + 68);
-    v22 = *(uint32_t*)0x15DDFD8;
-    v8 = v28;
-    v23 = v21;
-    v9 = *(uint32_t**)(_this + 240);
-    v10 = 2;
-    v26 = v4;
-    v27 = v5;
-    if (v9)
-    {
-        v8 = v9[30];
-        v10 = (v9[28] >> 1) & 3;
-        v23 = v9[31];
-        v22 = 0;
-        v24 = 0;
-    }
-    if ((*(uint32_t*)(_this + 328) & 4) != 0)
-    {
-        v4 = (float)((float)(*((uint32_t*)v2 + 49) - *((uint32_t*)v2 + 47)) / (float)(v8 - v22)) * v4;
-        v26 = v4;
-        v27 = (float)((float)(*((uint32_t*)v2 + 50) - *((uint32_t*)v2 + 48)) / (float)(v23 - v24)) * v5;
-        v5 = v27;
-    }
-    *((uint32_t*)v2 + 19) |= 2u;
-    if (v2[76] < 0)
-    {
-        *(uint32_t*)&v2[12 * *((uint32_t*)v2 + 23) + 199884] = *(uint32_t*)&v2[12 * *((uint32_t*)v2 + 23) + 199884] & 0x80000000 | 0x2C4;
-        *(uint32_t*)&v2[12 * *((uint32_t*)v2 + 23) + 199884] &= ~0x80000000;
-        v11 = 3 * *((uint32_t*)v2 + 23);
-        *(uint32_t*)&v2[4 * v11 + 199888] = *((uint32_t*)v2 + 1542);
-        *(uint32_t*)&v2[4 * v11 + 199892] = *((uint32_t*)v2 + 1543);
-        ++*((uint32_t*)v2 + 23);
-    }
-    v12 = (4 * *(uint16_t*)(*(uint32_t*)(*((uint32_t*)v2 + 2) + 2832) + 24) + 15) & 0xFFFFFFF0;
-    v25 = v12;
-    if ((unsigned int)(v12 + *((uint32_t*)v2 + 5)) > *((uint32_t*)v2 + 6))
-    {
-        sub_D7A340(v2, edx, v12);
-        v4 = v26;
-        v5 = v27;
-        v12 = v25;
-    }
-    v13 = (float*)*((uint32_t*)v2 + 5);
-    *(char**)((uint32_t*)v2 + 5) = (char*)v13 + v12;
-    *(float**)((uint32_t*)v2 + 1542) = v13;
-    *((uint32_t*)v2 + 81) |= 1u;
-    if (v13)
-    {
-        v14 = 2.0 / (float)(v28 - v19);
-        v15 = -2.0 / (float)(v21 - v29);
-        v13[0] = v14 * v4;
-        v13[1] = v15 * v5;
-        v13[2] = (float)(v14 * v6) - 1.0;
-        v13[3] = (float)(v15 * v7) + 1.0;
-        *((uint32_t*)v2 + 19) &= ~2u;
-    }
-    v16 = a2;
-    *(float*)(a2 + 184) = v6;
-    *(float*)(a2 + 188) = v7;
-    *(float*)(a2 + 192) = v4;
-    *(float*)(a2 + 196) = v5;
-    v17 = v10 - 1;
-    if (!v17)
-    {
-        v20 = sub_D79650(v2, edx);
-    LABEL_18:
-        v18 = v20;
-        goto LABEL_19;
-    }
-    if (v17 != 1)
-    {
-        v18 = 0.0;
-        goto LABEL_20;
-    }
-    v20 = sub_D79630(v2, edx);
-    if ((uint8_t) * ((uint32_t*)v2 + 86) < 8u
-        && !*(uint32_t*)(400 * (uint8_t) * ((uint32_t*)v2 + 86) + *(uint32_t*)0x15DE88C + 52))
-    {
-        goto LABEL_18;
-    }
-    v18 = v20 + 0.25;
-LABEL_19:
-    v16 = a2;
-LABEL_20:
-    *(float*)(v16 + 96) = v18;
-    if ((*(uint8_t*)(_this + 328) & 1) != 0)
-    {
-        if (*(uint32_t*)(_this + 244))
-        {
-            *((uint32_t*)v2 + 85) = *((uint32_t*)v2 + 85) & 0x1F ^ (32
-                * (*(uint32_t*)(_this + 332) + (*(uint32_t*)(_this + 336) << 20)));
-            sub_E67E20(*(uint32_t**)(_this + 244), edx, a2);
-        }
-    }
+    return sub_E18040(_this, OFFSET, a2);
 }
 
 void __fastcall sub_B82960(void* _this, void* edx, float a2, float a3, float a4, float a5)
 {
     a4 *= fFOVFactor;
     a2 /= fFOVFactor;
-
-    if (IsSplitScreenActive())
-        a2 /= fDiff;
+    a2 /= GetDiff();
     return injector::fastcall<void(void*, void*, float, float, float, float)>::call(0xB82960, _this, edx, a2, a3, a4, a5);
 }
 
@@ -677,6 +554,24 @@ IDirect3DVertexShader9* __stdcall CreateVertexShaderHook(const DWORD** a1)
     return pShader;
 }
 
+void __stdcall SplitScreenSetupTop(void* a1, int32_t* a2)
+{
+    a2[0] = 0;
+    a2[1] = 0;
+    a2[2] = (int32_t)(720.0f * GetAspectRatio());
+    a2[3] = (int32_t)(720.0f / 2.0f);
+    return injector::stdcall<void(void*, int32_t*)>::call(0x4AC310, a1, a2);
+}
+
+void __stdcall SplitScreenSetupBottom(void* a1, int32_t* a2)
+{
+    a2[0] = 0;
+    a2[1] = (int32_t)(720.0f / 2.0f);
+    a2[2] = (int32_t)(720.0f * GetAspectRatio());
+    a2[3] = (int32_t)(720.0f);
+    return injector::stdcall<void(void*, int32_t*)>::call(0x4AC310, a1, a2);
+}
+
 void Init()
 {
     CIniReader iniReader("");
@@ -686,7 +581,7 @@ void Init()
     auto bDisableFilmGrain = iniReader.ReadInteger("MAIN", "DisableFilmGrain", 1) != 0;
     auto bDisableFade = iniReader.ReadInteger("MAIN", "DisableFade", 0) != 0;
     auto bDisableGUICommandFar = iniReader.ReadInteger("MAIN", "DisableGUICommandFar", 0) != 0;
-    auto fFOVFactor= iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f);
+    fFOVFactor= iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f);
     if (fFOVFactor <= 0.0f) fFOVFactor = 1.0f;
     
     if (bSkipIntro)
@@ -699,24 +594,33 @@ void Init()
     injector::MakeNOP(0xCC63CA, 2);
     injector::MakeNOP(0xCC63D1, 2);
 
-    // split screen windows dimensions
-    injector::WriteMemory(0x4AE6C8 + 4, 0, true);
-    injector::WriteMemory(0x4AE6D0 + 4, 0, true);
-    injector::WriteMemory(0x4AE6D8 + 4, 1280, true);
-    injector::WriteMemory(0x4AE6E0 + 4, 360, true);
+    // overwriting aspect ratio
+    hook::pattern("0F 84 ? ? ? ? 48 ? ? 48 ? ? 89 8E").for_each_result([](hook::pattern_match match)
+    {
+        struct hook_ecx_edx { void operator()(injector::reg_pack& regs) { ResX = regs.ecx; ResY = regs.edx; } };
+        injector::MakeInline<hook_ecx_edx>(match.get<void>(0), match.get<void>(12));
+    });
 
-    injector::WriteMemory(0x4AE712 + 4, 0, true);
-    injector::WriteMemory(0x4AE71A + 4, 360, true);
-    injector::WriteMemory(0x4AE722 + 4, 1280, true);
-    injector::WriteMemory(0x4AE72A + 4, 720, true);
+    hook::pattern("0F 84 ? ? ? ? 48 ? ? 48 ? ? 89 9E").for_each_result([](hook::pattern_match match)
+    {
+        struct hook_ebx_edi { void operator()(injector::reg_pack& regs) { ResX = regs.ebx; ResY = regs.edi; } };
+        injector::MakeInline<hook_ebx_edi>(match.get<void>(0), match.get<void>(12));
+    });
+
+    // movies fix for ultra wide
+    // ?
+
+    // split screen windows dimensions
+    injector::MakeCALL(0x4AE6E8, SplitScreenSetupTop, true);
+    injector::MakeCALL(0x4AE732, SplitScreenSetupBottom, true);
 
     // GUI
-    injector::MakeJMP(0xE18040, sub_E18040_splitscreen, true);
-    injector::WriteMemory(uGUIFade, sub_E18040_splitscreen_stretch, true);
+    injector::MakeJMP(0xE18040, sub_E18040_rescale, true);
 
-    injector::WriteMemory(uGUICommandBase, sub_E18040_original, true);
-    injector::WriteMemory(uGUICommandFar, sub_E18040_splitscreen_stretch, true);
-    injector::WriteMemory(uGUICommandNear, sub_E18040_original, true);
+    injector::WriteMemory(uGUIFade, sub_E18040_stretch, true);
+    injector::WriteMemory(uGUICommandBase, sub_E18040, true);
+    injector::WriteMemory(uGUICommandFar, sub_E18040_offset, true);
+    injector::WriteMemory(uGUICommandNear, sub_E18040, true);
 
     if (bDisableDamageOverlay)
     {
@@ -725,8 +629,8 @@ void Init()
     }
     else
     {
-        injector::WriteMemory(uGUIDamage, sub_E18040_splitscreen_stretch, true);
-        injector::WriteMemory(uGUIDamage2, sub_E18040_splitscreen_stretch, true);
+        injector::WriteMemory(uGUIDamage, sub_E18040_stretch, true);
+        injector::WriteMemory(uGUIDamage2, sub_E18040_stretch, true);
     }
 
     //Camera near clip fix
@@ -760,7 +664,7 @@ void Init()
         {
             void operator()(injector::reg_pack& regs)
             {
-                if (IsSplitScreenActive())
+                if (IsSplitScreenActive() || GetDiff() > 1.0f)
                 {
                     auto pShader = (IDirect3DVertexShader9*)regs.ecx;
                     if (pShader == shader_4F0EE939)
