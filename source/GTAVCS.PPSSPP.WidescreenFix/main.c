@@ -1322,6 +1322,12 @@ int OnModuleStart() {
         );
     }
 
+    // Cars dissapearing from garages fix
+    {
+        uintptr_t ptr_2D0EF4 = pattern.get(0, "25 20 00 02 00 00 12 34 25 20 20 02", -4);
+        injector.MakeNOP(ptr_2D0EF4);
+    }
+
     if (LODDistMultiplier)
     {
         uintptr_t ptr_220130 = pattern.get(0, "00 00 00 00 A8 07 0C C6", -4);
