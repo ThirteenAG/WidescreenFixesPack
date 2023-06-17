@@ -9,7 +9,8 @@
 #include "../../includes/pcsx2/injector.h"
 
 int CompatibleCRCList[] = { 0xC0498D24, 0xABE2FDE9 };
-char ElfPattern[] = "00 00 00 00 ? ? ? ? 00 00 00 00 ? ? ? ? 2D 28 00 00 ? ? ? ? 2D 30 00 00 2D 38 00 00";
+int CompatibleElfCRCList[] = { 0xC0498D24, 0xABE2FDE9 };
+
 char OSDText[OSDStringNum][OSDStringSize] = { {1} };
 
 void init()
@@ -17,6 +18,7 @@ void init()
     logger.SetBuffer(OSDText, sizeof(OSDText) / sizeof(OSDText[0]), sizeof(OSDText[0]));
     logger.Write("Loading SplinterCellDoubleAgent.PCSX2F.SkipIntro...");
 
+    char ElfPattern[] = "00 00 00 00 ? ? ? ? 00 00 00 00 ? ? ? ? 2D 28 00 00 ? ? ? ? 2D 30 00 00 2D 38 00 00";
     uintptr_t ptr_222DB8 = pattern.get_first((const char*)&ElfPattern, -12);
 
     if (ptr_222DB8 != 0)

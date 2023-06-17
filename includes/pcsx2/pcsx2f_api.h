@@ -14,8 +14,8 @@ struct PluginInfo
     uint32_t PCSX2DataSize;
     uint32_t CompatibleCRCListAddr;
     uint32_t CompatibleCRCListSize;
-    uint32_t PatternDataAddr;
-    uint32_t PatternDataSize;
+    uint32_t CompatibleElfCRCListAddr;
+    uint32_t CompatibleElfCRCListSize;
     uint32_t KeyboardStateAddr;
     uint32_t KeyboardStateSize;
     uint32_t MouseStateAddr;
