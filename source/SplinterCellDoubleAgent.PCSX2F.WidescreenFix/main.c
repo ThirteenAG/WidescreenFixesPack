@@ -7,7 +7,7 @@
 #include "../../includes/pcsx2/injector.h"
 
 int CompatibleCRCList[] = { 0xC0498D24, 0xABE2FDE9 };
-char ElfPattern[] = "10 00 BF FF 00 00 B0 7F 30 00 A4 AF 40 00 A5 AF";
+int CompatibleElfCRCList[] = { 0x198F1AD, 0x6BD0E9C2 };
 int PCSX2Data[PCSX2Data_Size] = { 1 };
 char OSDText[OSDStringNum][OSDStringSize] = { {1} };
 
