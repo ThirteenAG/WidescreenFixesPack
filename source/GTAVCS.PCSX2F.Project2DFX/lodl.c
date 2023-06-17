@@ -28,11 +28,48 @@ void __attribute__((optimize("O0"))) CCoronas__RegisterCoronaFLT(float radius, f
     (float)unk4;
 }
 
-int(*pIsSphereVisible)(void* _this, void* pos, void* _this2) = (void*)0x3816f8;
-int IsSphereVisible(float radius, void* pos)
+//int(*pIsSphereVisible)(void* _this, void* pos, void* _this2) = (void*)0x3816f8;
+//int IsSphereVisible(float radius, void* pos)
+//{
+//    //CCoronas__RegisterCoronaFLT(radius, radius, radius, radius);
+//    return pIsSphereVisible((void*)0x6f44d0, pos, (void*)0x6F4F70);
+//}
+
+float CDraw__ms_fNearClipZ()
 {
-    CCoronas__RegisterCoronaFLT(radius, radius, radius, radius);
-    return pIsSphereVisible((void*)0x6f44d0, pos, (void*)0x6F4F70);
+    return *(float*)0x4cd130;
+}
+
+float CDraw__ms_fFarClipZ()
+{
+    return *(float*)0x4cd12c;
+}
+
+int IsSphereVisible(float radius, CVector* center)
+{
+    int TheCamera = 0x6F44D0;
+
+    CVector* m_vecFrustumNormals0 = (CVector*)(TheCamera + 0xB60);
+    CVector* m_vecFrustumNormals1 = (CVector*)(TheCamera + 0xB70);
+    CVector* m_vecFrustumNormals2 = (CVector*)(TheCamera + 0xB80);
+    CVector* m_vecFrustumNormals3 = (CVector*)(TheCamera + 0xB90);
+
+    float* m_cameraMatrix1 = (float*)(TheCamera + 0xAA0);
+    float* m_cameraMatrix2 = (float*)(TheCamera + 0xAB0);
+    float* m_cameraMatrix3 = (float*)(TheCamera + 0xAC0);
+    float* m_cameraMatrix4 = (float*)(TheCamera + 0xAD0);
+
+    float x = m_cameraMatrix1[0] * center->x + m_cameraMatrix2[0] * center->y + m_cameraMatrix3[0] * center->z + m_cameraMatrix4[0] * 1.0f;
+    float y = m_cameraMatrix1[1] * center->x + m_cameraMatrix2[1] * center->y + m_cameraMatrix3[1] * center->z + m_cameraMatrix4[1] * 1.0f;
+    float z = m_cameraMatrix1[2] * center->x + m_cameraMatrix2[2] * center->y + m_cameraMatrix3[2] * center->z + m_cameraMatrix4[2] * 1.0f;
+
+    if (y + radius < CDraw__ms_fNearClipZ()) return 0;
+    if (y - radius > CDraw__ms_fFarClipZ()) return 0;
+    if (x * m_vecFrustumNormals0->x + y * m_vecFrustumNormals0->y > radius) return 0;
+    if (x * m_vecFrustumNormals1->x + y * m_vecFrustumNormals1->y > radius) return 0;
+    if (y * m_vecFrustumNormals2->y + z * m_vecFrustumNormals2->z > radius) return 0;
+    if (y * m_vecFrustumNormals3->y + z * m_vecFrustumNormals3->z > radius) return 0;
+    return 1;
 }
 
 void CCoronas__RegisterCorona(int id, unsigned char r, unsigned char g, unsigned char b, unsigned char a, void* pos, char coronaType, char flareType, float radius, float farClip, float unk3, float unk4, char reflection, char LOScheck, char drawStreak, char flag4)
@@ -4052,7 +4089,7 @@ void RegisterLODLights()
                     unsigned char alpha = (bAlpha * (aLodLights[i].a / 255.0f));
                     float radius = (fRadius * aLodLights[i].fCustomSizeMult * fCoronaRadiusMultiplier * 1.5f);
 
-                    if (!IsSphereVisible(radius * 1.2f, pos))
+                    if (!IsSphereVisible(radius * 1.2f, (CVector*)pos))
                         continue;
 
                     if (aLodLights[i].fCustomSizeMult != 0.45f)
