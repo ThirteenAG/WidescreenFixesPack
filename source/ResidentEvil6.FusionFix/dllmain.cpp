@@ -3,6 +3,7 @@
 #include <vector>
 
 constexpr auto defaultAspectRatio = 16.0f / 9.0f;
+bool bSplitScreenSwapTopBottom = false;
 int32_t ResX = 0;
 int32_t ResY = 0;
 
@@ -110,6 +111,14 @@ void __fastcall sub_4F8C60(int _this, int edx, int a2, int32_t* a3)
     v4[19] = a3[1];
     v4[20] = a3[2];
     v4[21] = a3[3];
+
+    if (bSplitScreenSwapTopBottom)
+    {
+        if (a2 == 0)
+            a2 = 1;
+        else
+            a2 = 0;
+    }
 
     if (a2 == 0)
     {
@@ -335,6 +344,7 @@ void Init()
     CIniReader iniReader("");
     auto bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
     auto bBorderlessWindowed = iniReader.ReadInteger("MAIN", "BorderlessWindowed", 1) != 0;
+    bSplitScreenSwapTopBottom = iniReader.ReadInteger("MAIN", "SplitScreenSwapTopBottom", 0) != 0;
     
     if (bSkipIntro)
     {
