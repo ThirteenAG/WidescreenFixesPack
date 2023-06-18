@@ -45,8 +45,8 @@ enum BlinkTypes
 
 extern float fCoronaFarClip;
 extern float fCoronaRadiusMultiplier;
-extern void CCoronas__RegisterCorona(int id, unsigned char r, unsigned char g, unsigned char b, unsigned char a, void* pos, char coronaType, char flareType, float radius, float farClip, float unk3, float unk4, char reflection, char LOScheck, char drawStreak, char flag4);
-extern void(*CCoronas__RegisterCoronaINT)(unsigned int id, unsigned char r, unsigned char g, unsigned char b, unsigned char a, void* pos, unsigned char coronaType, unsigned char flareType, unsigned char reflection, unsigned char LOScheck, unsigned char drawStreak, unsigned char flag4);
+extern void CCoronas__RegisterCorona(int id, unsigned char r, unsigned char g, unsigned char b, unsigned char a, void* pos, char coronaType, char flareType, float radius, float farClip, float unk3, float unk4, char reflection, char LOScheck, char drawStreak, char flag4, char flag5);
+extern void(*CCoronas__RegisterCoronaINT)(unsigned int id, unsigned char r, unsigned char g, unsigned char b, unsigned char a, void* pos, unsigned char coronaType, unsigned char flareType, unsigned char reflection, unsigned char LOScheck, unsigned char drawStreak, unsigned char flag4, unsigned char flag5);
 extern CVector* pCamPos;
 extern uintptr_t CurrentTimeHoursOffset;
 extern uintptr_t CurrentTimeMinutesOffset;
