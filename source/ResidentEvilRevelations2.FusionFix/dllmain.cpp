@@ -710,7 +710,14 @@ void Init()
     }
 
     //Episode 4 finale stuck controls fix
-    injector::WriteMemory<uint8_t>(0xC21007 + 1, 0x79, true);
+    {
+        injector::WriteMemory<uint8_t>(0xC21007 + 1, 0x79, true);
+    }
+
+    {
+        injector::WriteMemory(0xA97206 + 4, 1000, true); //max fps
+        injector::WriteMemory(0xA9796C + 4, 1000, true); //max fps
+    }
 }
 
 CEXP void InitializeASI()

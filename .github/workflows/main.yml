@@ -3,6 +3,8 @@ name: GitHub Actions Build
 on:
   pull_request:
   push:
+    tags-ignore:
+      - '**'
 
 jobs:
   build:

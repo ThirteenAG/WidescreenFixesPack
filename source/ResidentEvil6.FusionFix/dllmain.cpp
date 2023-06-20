@@ -529,6 +529,15 @@ void Init()
         injector::MakeNOP(0xF422B1, 6, true);
         injector::MakeCALL(0xF422B1, WindowedModeWrapper::SetWindowPos_Hook, true);
     }
+
+    {
+        static float fps = 1000.0f;
+        injector::WriteMemory(0x514CDB + 4, &fps, true);
+        injector::WriteMemory(0xD583AB + 4, &fps, true);
+        injector::WriteMemory(0xEE17C5 + 2, &fps, true);
+        injector::WriteMemory(0x9DBE9D + 2, &fps, true);
+        injector::WriteMemory(0x016E62D8, (int)fps, true);
+    }
 }
 
 CEXP void InitializeASI()
