@@ -443,6 +443,8 @@ project "ResidentEvil3.Dolphin.FusionMod"
    architecture "x64"
    add_asmjit()
    setpaths("Z:/WFP/Games/Dolphin-x64/", "Dolphin.exe", "scripts/")
+project "ResidentEvilRevelations.FusionFix"
+   setpaths("Z:/WFP/Games/ResidentEvilRevelations/", "rerev.exe", "scripts/")
 project "ResidentEvilRevelations2.FusionFix"
    setpaths("Z:/WFP/Games/ResidentEvilRevelations2/", "rerev2.exe", "scripts/")
 project "ResidentEvil6.FusionFix"
