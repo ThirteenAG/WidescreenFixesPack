@@ -212,7 +212,6 @@ void Init()
     bool bAutoScaleShadowsRes = iniReader.ReadInteger("MISC", "AutoScaleShadowsRes", 0) != 0;
     bool bShadowsFix = iniReader.ReadInteger("MISC", "ShadowsFix", 1) != 0;
     bool bImproveShadowLOD = iniReader.ReadInteger("MISC", "ImproveShadowLOD", 0) != 0;
-    bool bForceEnableMirror = iniReader.ReadInteger("MISC", "ForceEnableMirror", 1) == 1;
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "");
     bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 1) != 0;
     static int nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
@@ -620,17 +619,6 @@ void Init()
         //car shadow opacity
         uint32_t* dword_8A0E50 = *hook::pattern("D9 05 ? ? ? ? 8B 54 24 70 D9 1A E9 D1").count(1).get(0).get<uint32_t*>(2);
         injector::WriteMemory(dword_8A0E50, 60.0f, true);
-    }
-
-    if (bForceEnableMirror)
-    {
-        //Enables mirror for all camera views
-        uint32_t* dword_6CFB72 = hook::pattern("75 66 53 E8 ? ? ? ? 83 C4 04 84 C0 74 59").count(1).get(0).get<uint32_t>(0);
-        injector::MakeNOP(dword_6CFB72, 2, true);
-        uint32_t* dword_6CFBC5 = hook::pattern("75 0D 53 E8 ? ? ? ? 83 C4 04 84 C0 75 06 89 1D").count(1).get(0).get<uint32_t>(0);
-        injector::MakeNOP(dword_6CFBC5, 2, true);
-        uint32_t* dword_595DDD = hook::pattern("83 F8 02 ? ? 83 F8 03 ? ? 83 F8 04 ? ? 83 F8 05 ? ? 83 F8 06 ? ?").count(1).get(0).get<uint32_t>(3);
-        injector::WriteMemory<uint16_t>(dword_595DDD, 0x14EB, true); // jmp 00595DF3
     }
 
     if (bForceHighSpecAudio)
