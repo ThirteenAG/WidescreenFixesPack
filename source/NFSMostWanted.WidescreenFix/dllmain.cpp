@@ -62,10 +62,7 @@ void updateValues(const float& newWidth, const float& newHeight)
     Screen.Width43 = static_cast<int32_t>(Screen.fHeight * (4.0f / 3.0f));
     Screen.fHudScaleX = (1.0f / Screen.fWidth * (Screen.fHeight / 480.0f)) * 2.0f;
     Screen.fHudPosX = 640.0f / (640.0f * Screen.fHudScaleX);
-    Screen.fShadowRatio = ((Screen.fWidth / Screen.fHeight) * 0.75f);
-    if (Screen.fShadowRatio > (16.0f / 9.0f))
-    {Screen.fShadowRatio = (16.0f / 9.0f);}
-    
+
     //Autosculpt scaling
     *AutosculptScale_8AE8F8 = 480.0f * Screen.fAspectRatio;
 
@@ -240,7 +237,7 @@ void Init()
     Screen.fHudScaleX = (1.0f / Screen.fWidth * (Screen.fHeight / 480.0f)) * 2.0f;
     Screen.fHudPosX = 640.0f / (640.0f * Screen.fHudScaleX);
     Screen.fShadowRatio = ((Screen.fWidth / Screen.fHeight) * 0.75f);
-    if (Screen.fShadowRatio > (16.0f / 9.0f))
+    if (Screen.fShadowRatio > (16.0f / 9.0f));
     {Screen.fShadowRatio = (16.0f / 9.0f);}
 
     // 08/2022. - keep memory areas unprotected to allow updating of values without constantly calling VirtualProtect ~ Xan
