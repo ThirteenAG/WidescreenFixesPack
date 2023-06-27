@@ -62,7 +62,6 @@ void updateValues(const float& newWidth, const float& newHeight)
     Screen.Width43 = static_cast<int32_t>(Screen.fHeight * (4.0f / 3.0f));
     Screen.fHudScaleX = (1.0f / Screen.fWidth * (Screen.fHeight / 480.0f)) * 2.0f;
     Screen.fHudPosX = 640.0f / (640.0f * Screen.fHudScaleX);
-    Screen.fShadowRatio = (Screen.fHeight / Screen.fWidth) / 0.85f;
 
     //Autosculpt scaling
     *AutosculptScale_8AE8F8 = 480.0f * Screen.fAspectRatio;
@@ -208,7 +207,7 @@ void Init()
     int nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
     nScaling = iniReader.ReadInteger("MAIN", "Scaling", 1);
     bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 0) != 0;
-    int ShadowsRes = iniReader.ReadInteger("MISC", "ShadowsRes", 1024);
+    int ShadowsRes = iniReader.ReadInteger("MISC", "ShadowsRes", 2048);
     bool bAutoScaleShadowsRes = iniReader.ReadInteger("MISC", "AutoScaleShadowsRes", 0) != 0;
     bool bShadowsFix = iniReader.ReadInteger("MISC", "ShadowsFix", 1) != 0;
     bool bImproveShadowLOD = iniReader.ReadInteger("MISC", "ImproveShadowLOD", 0) != 0;
@@ -237,7 +236,9 @@ void Init()
     Screen.Width43 = static_cast<int32_t>(Screen.fHeight * (4.0f / 3.0f));
     Screen.fHudScaleX = (1.0f / Screen.fWidth * (Screen.fHeight / 480.0f)) * 2.0f;
     Screen.fHudPosX = 640.0f / (640.0f * Screen.fHudScaleX);
-    Screen.fShadowRatio = (Screen.fHeight / Screen.fWidth) / 0.85f;
+    Screen.fShadowRatio = ((Screen.fWidth / Screen.fHeight) * 0.75f);
+    if (Screen.fShadowRatio > (16.0f / 9.0f));
+    {Screen.fShadowRatio = (16.0f / 9.0f);}
 
     // 08/2022. - keep memory areas unprotected to allow updating of values without constantly calling VirtualProtect ~ Xan
     DWORD oldprotect = 0;
@@ -296,7 +297,7 @@ void Init()
 
         if (bAutoScaleShadowsRes && bFixFOV)
         {
-            ShadowsResX = ShadowsRes / Screen.fShadowRatio;
+            ShadowsResX = (ShadowsRes * Screen.fShadowRatio);
         }
         
         /* 
@@ -342,10 +343,10 @@ void Init()
             injector::WriteMemory(dword__93D898, dword_8F1CA0, true);
         }
 
-        // solves shadow acne problem for resolutions greater than 2048
-        if (ShadowsResX > 2048)
+        // solves shadow acne problem for resolutions greater than 3072
+        if (ShadowsResX > 3072)
         {
-            static float ShadowBias = (ShadowsResX / 2048.0f) * 4.0f;
+            static float ShadowBias = (ShadowsResX / 3072.0f) * 4.0f;
             uint32_t* dword_6E5509 = hook::pattern("8B 15 ? ? ? ? A1 ? ? ? ? 8B 08 52 68").count(1).get(0).get<uint32_t>(2);
             injector::WriteMemory(dword_6E5509, &ShadowBias, true);
         }
@@ -534,7 +535,7 @@ void Init()
             void operator()(injector::reg_pack& regs)
             {
                 int ebxC4 = *(int*)(regs.ebx + 0xC4);
-                regs.eax = (ebxC4 / Screen.fShadowRatio);
+                regs.eax = (ebxC4 * Screen.fShadowRatio);
             }
         };
         struct ShadowFOVHookECX
@@ -542,7 +543,7 @@ void Init()
             void operator()(injector::reg_pack& regs)
             {
                 int ebxC4 = *(int*)(regs.ebx + 0xC4);
-                regs.ecx = (ebxC4 / Screen.fShadowRatio);
+                regs.ecx = (ebxC4 * Screen.fShadowRatio);
             }
         };
         struct ShadowFOVHookEDX
@@ -550,7 +551,7 @@ void Init()
             void operator()(injector::reg_pack& regs)
             {
                 int ebxC4 = *(int*)(regs.ebx + 0xC4);
-                regs.edx = (ebxC4 / Screen.fShadowRatio);
+                regs.edx = (ebxC4 * Screen.fShadowRatio);
             }
         };
         injector::MakeInline<ShadowFOVHookEAX>(pattern.count(15).get(11).get<uint32_t>(0), pattern.count(15).get(11).get<uint32_t>(7));
