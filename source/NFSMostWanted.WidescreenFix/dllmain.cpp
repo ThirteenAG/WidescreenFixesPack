@@ -886,7 +886,7 @@ void Init()
             break;
         }
 
-        if (nWindowedMode > 4)
+        if (nWindowedMode == 3)
         {
             WindowedModeWrapper::bEnableWindowResize = true;
 
