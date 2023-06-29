@@ -536,6 +536,7 @@ void Init()
         injector::WriteMemory(0xD583AB + 4, &fps, true);
         injector::WriteMemory(0xEE17C5 + 2, &fps, true);
         injector::WriteMemory(0x9DBE9D + 4, &fps, true);
+        injector::WriteMemory(0x9DB8E8 + 4, &fps, true);
         injector::WriteMemory(0x016E62D8, (int)fps, true);
     }
 }
