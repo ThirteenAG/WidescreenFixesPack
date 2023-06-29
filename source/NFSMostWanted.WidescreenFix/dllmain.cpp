@@ -10,7 +10,6 @@ struct Screen
     float fAspectRatio;
     float fHudScaleX;
     float fHudPosX;
-    float fShadowRatio;
 } Screen;
 
 struct bVector3
@@ -51,6 +50,63 @@ float* ArrestBlurScale_8AFA08 = (float*)0x8AFA08;
 
 bool* DrawHUD_57CAA8 = (bool*)0x57CAA8;
 
+namespace ShadowRes
+{
+    constexpr uint32_t ShadowDepthCheckRes = 3072;
+
+    uint32_t Resolution = 2048;
+    bool bAutoScaleShadowsRes = true;
+    bool bDisableShadowTextureFilterOnRadeon = true;
+
+    uintptr_t dword_6C86B1; // X
+    uint32_t dword_6C878B; // X
+    uint32_t dword_6C87BD; // X
+
+    uintptr_t dword_6C86C1; // Y
+    uint32_t* dword_6C8786; // Y
+    uint32_t* dword_6C87B8; // Y
+
+    uintptr_t DepthBiasAddr_901AC0 = 0x901AC0;
+    uintptr_t DepthBiasSlopeAddr_901ABC = 0x901ABC;
+    float DepthBias = 4.0f;
+    float DepthBiasSlope = 4.0f;
+
+    void update(uint32_t res)
+    {
+        uint32_t resval = res;
+        if (resval > 16384)
+            resval = 16384;
+
+        uint32_t resX = resval;
+        if (bAutoScaleShadowsRes)
+        {
+            float newShadowX = resval * (Screen.fAspectRatio / (4.0f / 3.0f));
+            resX = static_cast<uint32_t>(newShadowX);
+        }
+        uint32_t resY = resval;
+        
+        if (resX > 16384)
+            resX = 16384;
+
+        *(uint32_t*)dword_6C86B1 = resX;
+        *(uint32_t*)dword_6C878B = resX;
+        *(uint32_t*)dword_6C87BD = resX;
+
+        *(uint32_t*)dword_6C86C1 = resY;
+        *(uint32_t*)dword_6C8786 = resY;
+        *(uint32_t*)dword_6C87B8 = resY;
+
+        if (resX > resval)
+            resval = resX;
+
+        if (resval > ShadowDepthCheckRes)
+        {
+            DepthBias = *(int32_t*)DepthBiasAddr_901AC0 * (static_cast<float>(resval) / static_cast<float>(ShadowDepthCheckRes));
+            DepthBiasSlope = *(float*)DepthBiasSlopeAddr_901ABC * (static_cast<float>(resval) / static_cast<float>(ShadowDepthCheckRes));
+        }
+    }
+}
+
 void updateValues(const float& newWidth, const float& newHeight)
 {
     //Screen resolution
@@ -62,7 +118,6 @@ void updateValues(const float& newWidth, const float& newHeight)
     Screen.Width43 = static_cast<int32_t>(Screen.fHeight * (4.0f / 3.0f));
     Screen.fHudScaleX = (1.0f / Screen.fWidth * (Screen.fHeight / 480.0f)) * 2.0f;
     Screen.fHudPosX = 640.0f / (640.0f * Screen.fHudScaleX);
-    Screen.fShadowRatio = (Screen.fHeight / Screen.fWidth) / 0.85f;
 
     //Autosculpt scaling
     *AutosculptScale_8AE8F8 = 480.0f * Screen.fAspectRatio;
@@ -85,6 +140,9 @@ void updateValues(const float& newWidth, const float& newHeight)
         *HudScaleX_8AF9A4 = Screen.fHudScaleX;
         *FE_Xpos_894B40 = Screen.fHudPosX;
     }
+
+    if (ShadowRes::Resolution)
+        ShadowRes::update(ShadowRes::Resolution);
 }
 
 void __stdcall RacingResolution_Hook(int *width, int *height)
@@ -208,11 +266,11 @@ void Init()
     int nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
     nScaling = iniReader.ReadInteger("MAIN", "Scaling", 1);
     bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 0) != 0;
-    int ShadowsRes = iniReader.ReadInteger("MISC", "ShadowsRes", 1024);
-    bool bAutoScaleShadowsRes = iniReader.ReadInteger("MISC", "AutoScaleShadowsRes", 0) != 0;
+    ShadowRes::Resolution = iniReader.ReadInteger("MISC", "ShadowsRes", 2048);
+    ShadowRes::bAutoScaleShadowsRes = iniReader.ReadInteger("MISC", "AutoScaleShadowsRes", 1) != 0;
+    ShadowRes::bDisableShadowTextureFilterOnRadeon = iniReader.ReadInteger("MISC", "DisableShadowTextureFilterOnRadeon", 1) != 0;
     bool bShadowsFix = iniReader.ReadInteger("MISC", "ShadowsFix", 1) != 0;
-    bool bImproveShadowLOD = iniReader.ReadInteger("MISC", "ImproveShadowLOD", 0) != 0;
-    bool bForceEnableMirror = iniReader.ReadInteger("MISC", "ForceEnableMirror", 1) == 1;
+    bool bImproveShadowLOD = iniReader.ReadInteger("MISC", "ImproveShadowLOD", 1) != 0;
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "");
     bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 1) != 0;
     static int nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
@@ -238,7 +296,6 @@ void Init()
     Screen.Width43 = static_cast<int32_t>(Screen.fHeight * (4.0f / 3.0f));
     Screen.fHudScaleX = (1.0f / Screen.fWidth * (Screen.fHeight / 480.0f)) * 2.0f;
     Screen.fHudPosX = 640.0f / (640.0f * Screen.fHudScaleX);
-    Screen.fShadowRatio = (Screen.fHeight / Screen.fWidth) / 0.85f;
 
     // 08/2022. - keep memory areas unprotected to allow updating of values without constantly calling VirtualProtect ~ Xan
     DWORD oldprotect = 0;
@@ -270,9 +327,9 @@ void Init()
             float esp0C = *(float*)(regs.esp + 0x0C);
             float esp10 = *(float*)(regs.esp + 0x10);
             _asm fld dword ptr[esp0C]
-                _asm fmul dword ptr[fRainScaleX]
-                _asm fmul dword ptr[fRainDropletsScale]
-                _asm fadd dword ptr[esp10]
+            _asm fmul dword ptr[fRainScaleX]
+            _asm fmul dword ptr[fRainDropletsScale]
+            _asm fadd dword ptr[esp10]
         }
     }; injector::MakeInline<RainDropletsHook>(pattern.get_first(0), pattern.get_first(8)); //6D480D
 
@@ -287,68 +344,62 @@ void Init()
         }
     }; injector::MakeInline<RainDropletsYScaleHook>(pattern.get_first(30), pattern.get_first(30 + 8)); //6D482B
 
-    if (ShadowsRes)
+    if (ShadowRes::Resolution)
     {
+        uintptr_t loc_6E5507 = reinterpret_cast<uintptr_t>(hook::pattern("52 68 C3 00 00 00 50 FF 91 E4 00 00 00").get_first(0)) + 0xD;
+        uintptr_t loc_6E54E1 = loc_6E5507 - 0x26;
+
+        ShadowRes::DepthBiasAddr_901AC0 = *(uintptr_t*)(loc_6E54E1 + 2);
+        ShadowRes::DepthBiasSlopeAddr_901ABC = *(uintptr_t*)(loc_6E5507 + 2);
+
+        struct ShadowDepthBiasHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                _asm fld ShadowRes::DepthBias
+            }
+        }; injector::MakeInline<ShadowDepthBiasHook>(loc_6E54E1, loc_6E54E1 + 6);
+
+        struct ShadowDepthBiasSlopeHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                regs.edx = *(uint32_t*)(&ShadowRes::DepthBiasSlope);
+            }
+        }; injector::MakeInline<ShadowDepthBiasSlopeHook>(loc_6E5507, loc_6E5507 + 6);
+
+        uintptr_t loc_6BD32B = reinterpret_cast<uintptr_t>(hook::pattern("89 56 08 89 46 0C C7 46 04 0F 00 00 00 89 7E 10 E8").get_first(0)) + 0x10;
+        uintptr_t loc_6BD333 = loc_6BD32B + 8;
+
+        ShadowRes::dword_6C86B1 = static_cast<uintptr_t>(injector::GetBranchDestination(loc_6BD32B)) + 1;
+        ShadowRes::dword_6C86C1 = static_cast<uintptr_t>(injector::GetBranchDestination(loc_6BD333)) + 1;
+
+        ShadowRes::dword_6C8786 = hook::pattern("68 00 04 00 00 68 00 04 00 00 50 FF 51 5C 85 C0 7C 32").count(1).get(0).get<uint32_t>(1);
+        ShadowRes::dword_6C878B = (uint32_t)ShadowRes::dword_6C8786 + 5;
+        ShadowRes::dword_6C87B8 = hook::pattern("68 00 04 00 00 68 00 04 00 00 50 FF 52 5C 85 C0 7D 36").count(1).get(0).get<uint32_t>(1);
+        ShadowRes::dword_6C87BD = (uint32_t)ShadowRes::dword_6C87B8 + 5;
+
+        injector::UnprotectMemory(ShadowRes::dword_6C86B1, sizeof(uint32_t), oldprotect);
+        injector::UnprotectMemory(ShadowRes::dword_6C86C1, sizeof(uint32_t), oldprotect);
+        injector::UnprotectMemory(ShadowRes::dword_6C8786, sizeof(uint32_t), oldprotect);
+        injector::UnprotectMemory(ShadowRes::dword_6C878B, sizeof(uint32_t), oldprotect);
+        injector::UnprotectMemory(ShadowRes::dword_6C87B8, sizeof(uint32_t), oldprotect);
+        injector::UnprotectMemory(ShadowRes::dword_6C87BD, sizeof(uint32_t), oldprotect);
+
+        ShadowRes::update(ShadowRes::Resolution);
+    }
+    
+    // this disables shadow texture filtering on Radeon (vendor 0x1002) cards
+    if (ShadowRes::bDisableShadowTextureFilterOnRadeon)
+    {
+        uint32_t* dword_93D898 = *hook::pattern("A1 ? ? ? ? 49 3D 02 10 00 00 89 0D").count(1).get(0).get<uint32_t*>(1);
         auto dword_8F1CA0 = *hook::pattern("8B 14 85 ? ? ? ? 0F AF 56 5C C1 FA 0F 89 56 5C").count(1).get(0).get<uint32_t*>(3);
         dword_8F1CA0 += 0x1D4;
-
-        int ShadowsResX = ShadowsRes;
-        int ShadowsResY = ShadowsRes;
-
-        if (bAutoScaleShadowsRes && bFixFOV)
-        {
-            ShadowsResX = ShadowsRes / Screen.fShadowRatio;
-        }
-        
-        /* 
-        I'm delibrately not using a logical operator (ShadowsResX || ShadowsResY) to improve game performance in uncommon situations. 
-        Example: an aspect ratio of 32:9 with a shadow resolution of 8192, would have the shadow resolution be 24758x8192 when AutoScaleShadowsRes is enabled.
-        Because the ShadowResX variable exceeds 16384, both variables would default to 16384x16384 when using a logical OR. 
-        But by using a relational operator for each variable, the resolution would instead default to 16384x8192. A massive 2x difference in resolution for the y-axis. 
-        
-        I also suck at programming, so that's another reason.
-        Aero_
-        */
-
-        if (ShadowsResX > 16384)
-        {
-            ShadowsResX = 16384;
-        }
-
-        if (ShadowsResY > 16384)
-        {
-            ShadowsResX = 16384;
-        }
-
-        uint32_t* dword_6C86B0 = hook::pattern("B8 00 04 00 00 C3").count(2).get(1).get<uint32_t>(1);
-        injector::WriteMemory(dword_6C86B0, ShadowsResX, true);
-        uint32_t* dword_6C86C0 = hook::pattern("B8 00 04 00 00 C3").count(2).get(1).get<uint32_t>(1);
-        injector::WriteMemory(dword_6C86C0, ShadowsResY, true);
-        uint32_t* dword_6C8786 = hook::pattern("68 00 04 00 00 68 00 04 00 00 50 FF 51 5C 85 C0 7C 32").count(1).get(0).get<uint32_t>(1);
-        injector::WriteMemory(dword_6C8786, ShadowsResY, true);
-        uint32_t dword_6C878B = (uint32_t)dword_6C8786 + 5;
-        injector::WriteMemory(dword_6C878B, ShadowsResX, true);
-        uint32_t* dword_6C87B8 = hook::pattern("68 00 04 00 00 68 00 04 00 00 50 FF 52 5C 85 C0 7D 36").count(1).get(0).get<uint32_t>(1);
-        injector::WriteMemory(dword_6C87B8, ShadowsResY, true);
-        uint32_t dword_6C87BD = (uint32_t)dword_6C87B8 + 5;
-        injector::WriteMemory(dword_6C87BD, ShadowsResX, true);
-
-        uint32_t* dword_93D898 = *hook::pattern("A1 ? ? ? ? 49 3D 02 10 00 00 89 0D").count(1).get(0).get<uint32_t*>(1);
-        //char TempStr[10];
-        //sprintf(TempStr, "%x %x %x %x", ((DWORD)dword_93D898 >> 0) & 0xff, ((DWORD)dword_93D898 >> 8) & 0xff, ((DWORD)dword_93D898 >> 16) & 0xff, ((DWORD)dword_93D898 >> 24) & 0xff);
 
         for (size_t i = 0; i < 20; i++)
         {
             uint32_t* dword__93D898 = hook::pattern(pattern_str(to_bytes(dword_93D898))).count(1).get(0).get<uint32_t>(0);
             injector::WriteMemory(dword__93D898, dword_8F1CA0, true);
-        }
-
-        // solves shadow acne problem for resolutions greater than 2048
-        if (ShadowsResX > 2048)
-        {
-            static float ShadowBias = (ShadowsResX / 2048.0f) * 4.0f;
-            uint32_t* dword_6E5509 = hook::pattern("8B 15 ? ? ? ? A1 ? ? ? ? 8B 08 52 68").count(1).get(0).get<uint32_t>(2);
-            injector::WriteMemory(dword_6E5509, &ShadowBias, true);
         }
     }
 
@@ -474,7 +525,12 @@ void Init()
             }
         }
 
+        // Xan's note: please, write direct addresses in names whereever possible. Obfuscating it behind math or pattern detector is stupid and just makes maintainence harder.
+        
         uint32_t* dword_6CF4F0 = hook::pattern("DB 40 18 DA 70 14").count(1).get(0).get<uint32_t>(0);
+        uintptr_t loc_6CF4EA = (uintptr_t)dword_6CF4F0 - 6;
+        uintptr_t loc_6CF4F6 = (uintptr_t)dword_6CF4F0 + 6;
+        
         struct FOVHook
         {
             void operator()(injector::reg_pack& regs)
@@ -510,7 +566,7 @@ void Init()
                 else
                     _asm fld ds : ver3DScale
             }
-        }; injector::MakeInline<FOVHook>((uint32_t)dword_6CF4F0 - 6, (uint32_t)dword_6CF4F0 + 6);
+        }; injector::MakeInline<FOVHook>(loc_6CF4EA, loc_6CF4F6);
         injector::WriteMemory(dword_6CF4F0, 0x9001F983, true); //cmp     ecx, 1
 
         uint32_t* dword_6CF566 = hook::pattern("D8 3D ? ? ? ? D9 5C 24 20 DB 44 24 30 D8 4C 24 2C").count(1).get(0).get<uint32_t>(2);
@@ -528,36 +584,38 @@ void Init()
         static float fShadowDistanceMultiplier = 10.0f;
         injector::WriteMemory((uint32_t)dword_6C9653, &fShadowDistanceMultiplier, true);
 
-        //Shadow tearing fix
-        auto pattern = hook::pattern("0F B7 ? C4 00 00 00");
-        struct ShadowFOVHookEAX
+        // Shadow camera FOV fix
+        uintptr_t loc_6E4652 = reinterpret_cast<uintptr_t>(hook::pattern("8B 46 60 8B 48 18 8B 50 14 89 4C 24 14 DB 44 24 14").get_first(0)) + 9;
+        uintptr_t loc_6E4668 = loc_6E4652 + 0x16;
+
+        uintptr_t loc_6E47E4 = reinterpret_cast<uintptr_t>(hook::pattern("8B 40 60 8B 50 18 8B 40 14 89 54 24 14 89 44 24 18 0F B7 8B C4 00 00 00").get_first(0)) + 0x18;
+        uintptr_t loc_6E47EC = loc_6E47E4 + 8;
+
+        uintptr_t loc_6E46B0 = reinterpret_cast<uintptr_t>(hook::pattern("D8 7C 24 1C 0F B7 8B C4 00 00 00 89 4C 24 1C").get_first(0)) + 0xF;
+        uintptr_t loc_6E4830 = reinterpret_cast<uintptr_t>(hook::pattern("D8 7C 24 1C 0F B7 93 C4 00 00 00 89 54 24 1C").get_first(0)) + 0xF;
+
+        
+        struct ShadowCameraFix1
         {
             void operator()(injector::reg_pack& regs)
             {
-                int ebxC4 = *(int*)(regs.ebx + 0xC4);
-                regs.eax = (ebxC4 / Screen.fShadowRatio);
+                _asm fld ver3DScale
             }
-        };
-        struct ShadowFOVHookECX
+        }; injector::MakeInline<ShadowCameraFix1>(loc_6E4652, loc_6E4652 + 8);
+        injector::MakeNOP(loc_6E4668, 4);
+
+        struct ShadowCameraFix2
         {
             void operator()(injector::reg_pack& regs)
             {
-                int ebxC4 = *(int*)(regs.ebx + 0xC4);
-                regs.ecx = (ebxC4 / Screen.fShadowRatio);
+                *(uint32_t*)(regs.esp + 0x14) = regs.ecx;
+                _asm fld ver3DScale
             }
-        };
-        struct ShadowFOVHookEDX
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                int ebxC4 = *(int*)(regs.ebx + 0xC4);
-                regs.edx = (ebxC4 / Screen.fShadowRatio);
-            }
-        };
-        injector::MakeInline<ShadowFOVHookEAX>(pattern.count(15).get(11).get<uint32_t>(0), pattern.count(15).get(11).get<uint32_t>(7));
-        injector::MakeInline<ShadowFOVHookECX>(pattern.count(15).get(12).get<uint32_t>(0), pattern.count(15).get(12).get<uint32_t>(7));
-        injector::MakeInline<ShadowFOVHookECX>(pattern.count(15).get(13).get<uint32_t>(0), pattern.count(15).get(13).get<uint32_t>(7));
-        injector::MakeInline<ShadowFOVHookEDX>(pattern.count(15).get(14).get<uint32_t>(0), pattern.count(15).get(14).get<uint32_t>(7));
+        }; injector::MakeInline<ShadowCameraFix2>(loc_6E47E4, loc_6E47E4 + 8);
+        injector::MakeNOP(loc_6E47EC, 4);
+
+        injector::WriteMemory<uintptr_t>(loc_6E46B0 + 2, (uintptr_t)&hor3DScale, true);
+        injector::WriteMemory<uintptr_t>(loc_6E4830 + 2, (uintptr_t)&hor3DScale, true);
     }
 
     uint32_t* dword_57CB82 = hook::pattern("3A 55 34 0F 85 0B 02 00 00 A1").count(1).get(0).get<uint32_t>(0); // HUD
@@ -616,21 +674,10 @@ void Init()
         uint32_t* dword_6DE377 = hook::pattern("75 3B C7 05 ? ? ? ? 00 00 80 3F").count(1).get(0).get<uint32_t>(0);
         injector::MakeNOP(dword_6DE377, 2, true);
         injector::WriteMemory((uint32_t)dword_6DE377 + 8, 0, true);
-
+    
         //car shadow opacity
         uint32_t* dword_8A0E50 = *hook::pattern("D9 05 ? ? ? ? 8B 54 24 70 D9 1A E9 D1").count(1).get(0).get<uint32_t*>(2);
         injector::WriteMemory(dword_8A0E50, 60.0f, true);
-    }
-
-    if (bForceEnableMirror)
-    {
-        //Enables mirror for all camera views
-        uint32_t* dword_6CFB72 = hook::pattern("75 66 53 E8 ? ? ? ? 83 C4 04 84 C0 74 59").count(1).get(0).get<uint32_t>(0);
-        injector::MakeNOP(dword_6CFB72, 2, true);
-        uint32_t* dword_6CFBC5 = hook::pattern("75 0D 53 E8 ? ? ? ? 83 C4 04 84 C0 75 06 89 1D").count(1).get(0).get<uint32_t>(0);
-        injector::MakeNOP(dword_6CFBC5, 2, true);
-        uint32_t* dword_595DDD = hook::pattern("83 F8 02 ? ? 83 F8 03 ? ? 83 F8 04 ? ? 83 F8 05 ? ? 83 F8 06 ? ?").count(1).get(0).get<uint32_t>(3);
-        injector::WriteMemory<uint16_t>(dword_595DDD, 0x14EB, true); // jmp 00595DF3
     }
 
     if (bForceHighSpecAudio)
@@ -897,7 +944,7 @@ void Init()
             break;
         }
 
-        if (nWindowedMode > 4)
+        if (nWindowedMode == 3)
         {
             WindowedModeWrapper::bEnableWindowResize = true;
 
