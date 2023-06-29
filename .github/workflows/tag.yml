@@ -60,8 +60,9 @@ on:
         - punisher
         - re2gc
         - re3gc
-        - re6
+        - rerev
         - rerev2
+        - re6
         - sc
         - scarface
         - scc
@@ -147,8 +148,9 @@ env:
   punisher: "/t:ThePunisher_WidescreenFix"
   re2gc: "/t:ResidentEvil2_Dolphin_FusionMod"
   re3gc: "/t:ResidentEvil3_Dolphin_FusionMod"
-  re6: "/t:ResidentEvil6_FusionFix"
+  rerev: "/t:ResidentEvilRevelations_FusionFix"
   rerev2: "/t:ResidentEvilRevelations2_FusionFix"
+  re6: "/t:ResidentEvil6_FusionFix"
   sc: "/t:SplinterCell_WidescreenFix"
   scarface: "/t:Scarface_FusionFix"
   scc: "/t:SplinterCellConviction_FusionMod"

@@ -1265,7 +1265,7 @@ void Init()
             RegistryWrapper::AddDefault("g_ShadowEnable", "3");
             RegistryWrapper::AddDefault("g_ShaderDetailLevel", "1");
             RegistryWrapper::AddDefault("g_AudioDetail", "1");
-            RegistryWrapper::AddDefault("g_Brightness", "68");
+            RegistryWrapper::AddDefault("g_Brightness", "50");
             RegistryWrapper::AddDefault("g_AudioMode", "1");
             RegistryWrapper::AddDefault("g_Width", std::to_string(DesktopResW));
             RegistryWrapper::AddDefault("g_Height", std::to_string(DesktopResH));
