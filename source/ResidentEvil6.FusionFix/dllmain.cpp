@@ -260,39 +260,41 @@ void __fastcall sub_E6E800(float* _this, void* edx, float a2, float a3, float a4
     return injector::fastcall<void(float*, void*, float, float, float, float)>::call(0xE6E800, _this, edx, a2, a3, a4, a5);
 }
 
-IDirect3DVertexShader9* shader_4F0EE939 = nullptr;
-IDirect3DVertexShader9* __stdcall CreateVertexShaderHook(const DWORD** a1)
-{
-    if (!a1)
-        return nullptr;
-
-    auto pDevice = (IDirect3DDevice9*)*(uint32_t*)(*(uint32_t*)0x186E8BC + 256);
-    IDirect3DVertexShader9* pShader = nullptr;
-    pDevice->CreateVertexShader(a1[2], &pShader);
-
-    if (pShader != nullptr)
-    {
-        static std::vector<uint8_t> pbFunc;
-        UINT len;
-        pShader->GetFunction(nullptr, &len);
-        if (pbFunc.size() < len)
-            pbFunc.resize(len);
-
-        pShader->GetFunction(pbFunc.data(), &len);
-
-        uint32_t crc32(uint32_t crc, const void* buf, size_t size);
-        auto crc = crc32(0, pbFunc.data(), len);
-
-        // various overlays (low health, waiting for partner, pause text, maybe more)
-        if (crc == 0x4F0EE939)
-            shader_4F0EE939 = pShader;
-    }
-
-    return pShader;
-}
+//IDirect3DVertexShader9* shader_4F0EE939 = nullptr;
+//IDirect3DVertexShader9* __stdcall CreateVertexShaderHook(const DWORD** a1)
+//{
+//    if (!a1)
+//        return nullptr;
+//
+//    auto pDevice = (IDirect3DDevice9*)*(uint32_t*)(*(uint32_t*)0x186E8BC + 256);
+//    IDirect3DVertexShader9* pShader = nullptr;
+//    pDevice->CreateVertexShader(a1[2], &pShader);
+//
+//    if (pShader != nullptr)
+//    {
+//        static std::vector<uint8_t> pbFunc;
+//        UINT len;
+//        pShader->GetFunction(nullptr, &len);
+//        if (pbFunc.size() < len)
+//            pbFunc.resize(len);
+//
+//        pShader->GetFunction(pbFunc.data(), &len);
+//
+//        uint32_t crc32(uint32_t crc, const void* buf, size_t size);
+//        auto crc = crc32(0, pbFunc.data(), len);
+//
+//        // various overlays (low health, waiting for partner, pause text, maybe more)
+//        if (crc == 0x4F0EE939)
+//            shader_4F0EE939 = pShader;
+//    }
+//
+//    return pShader;
+//}
 
 IDirect3DPixelShader9* shader_dummy = nullptr;
 IDirect3DPixelShader9* shader_498080AC = nullptr;
+IDirect3DPixelShader9* shader_FD473559 = nullptr;
+IDirect3DPixelShader9* shader_793BE067 = nullptr;
 IDirect3DPixelShader9* __stdcall CreatePixelShaderHook(const DWORD** a1)
 {
     if (!a1)
@@ -313,10 +315,9 @@ IDirect3DPixelShader9* __stdcall CreatePixelShaderHook(const DWORD** a1)
                 0x69, 0x63, 0x72, 0x6F, 0x73, 0x6F, 0x66, 0x74, 0x20, 0x28, 0x52, 0x29, 0x20, 0x48, 0x4C, 0x53,
                 0x4C, 0x20, 0x53, 0x68, 0x61, 0x64, 0x65, 0x72, 0x20, 0x43, 0x6F, 0x6D, 0x70, 0x69, 0x6C, 0x65,
                 0x72, 0x20, 0x39, 0x2E, 0x32, 0x39, 0x2E, 0x39, 0x35, 0x32, 0x2E, 0x33, 0x31, 0x31, 0x31, 0x00,
-                0x51, 0x00, 0x00, 0x05, 0x00, 0x00, 0x0F, 0xA0, 0x00, 0x00, 0x80, 0xBF, 0x00, 0x00, 0x00, 0x00,
-                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x02, 0x00, 0x00, 0x0F, 0x80,
-                0x00, 0x00, 0x00, 0xA0, 0x41, 0x00, 0x00, 0x01, 0x00, 0x00, 0x0F, 0x80, 0x01, 0x00, 0x00, 0x02,
-                0x00, 0x08, 0x0F, 0x80, 0x00, 0x00, 0x55, 0xA0, 0xFF, 0xFF, 0x00, 0x00
+                0x51, 0x00, 0x00, 0x05, 0x00, 0x00, 0x0F, 0xA0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x02, 0x00, 0x08, 0x0F, 0x80,
+                0x00, 0x00, 0x00, 0xA0, 0xFF, 0xFF, 0x00, 0x00
             };
             pDevice->CreatePixelShader((DWORD*)&dummyShader[0], &shader_dummy);
         }
@@ -332,8 +333,12 @@ IDirect3DPixelShader9* __stdcall CreatePixelShaderHook(const DWORD** a1)
         uint32_t crc32(uint32_t crc, const void* buf, size_t size);
         auto crc = crc32(0, pbFunc.data(), len);
 
-        if (crc == 0x498080AC) // low health rotating blurry rectangle
+        if (crc == 0x498080AC)      // low health rotating blurry rectangle
             shader_498080AC = pShader;
+        else if (crc == 0xFD473559) // waiting for partner overlay
+            shader_FD473559 = pShader;
+        else if (crc == 0x793BE067) // injured overlay
+            shader_793BE067 = pShader;
     }
 
     return pShader;
@@ -404,7 +409,7 @@ void Init()
 
     //disable shader overlays (don't scale to fullscreen)
     {
-        injector::MakeCALL(0x012915D1, CreateVertexShaderHook, true);
+        //injector::MakeCALL(0x012915D1, CreateVertexShaderHook, true);
         injector::MakeCALL(0x01291614, CreatePixelShaderHook, true);
         
         static bool bIsPaused = false;
@@ -417,22 +422,22 @@ void Init()
             }
         }; injector::MakeInline<GameStateHook>(0x511DAA, 0x511DAA + 6);
 
-        struct SetVertexShaderHook
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                if ((IsSplitScreenActive() || GetDiff() > 1.0f) && !bIsPaused)
-                {
-                    auto pShader = (IDirect3DVertexShader9*)regs.eax;
-                    if (pShader == shader_4F0EE939)
-                    {
-                        regs.eax = 0;
-                    }
-                }
-                *(uint32_t*)(regs.edi + 0x24) = regs.eax;
-                regs.ecx = *(uint32_t*)(regs.ebp + 0x0);
-            }
-        }; injector::MakeInline<SetVertexShaderHook>(0xF3CA40, 0xF3CA40 + 6);
+        //struct SetVertexShaderHook
+        //{
+        //    void operator()(injector::reg_pack& regs)
+        //    {
+        //        if ((IsSplitScreenActive() || GetDiff() > 1.0f) && !bIsPaused)
+        //        {
+        //            auto pShader = (IDirect3DVertexShader9*)regs.eax;
+        //            if (pShader == shader_4F0EE939)
+        //            {
+        //                regs.eax = 0;
+        //            }
+        //        }
+        //        *(uint32_t*)(regs.edi + 0x24) = regs.eax;
+        //        regs.ecx = *(uint32_t*)(regs.ebp + 0x0);
+        //    }
+        //}; injector::MakeInline<SetVertexShaderHook>(0xF3CA40, 0xF3CA40 + 6);
 
         struct SetPixelShaderHook
         {
@@ -441,7 +446,7 @@ void Init()
                 if ((IsSplitScreenActive() || GetDiff() > 1.0f) && !bIsPaused)
                 {
                     auto pShader = (IDirect3DPixelShader9*)regs.eax;
-                    if (pShader == shader_498080AC)
+                    if (pShader == shader_498080AC || pShader == shader_FD473559 || pShader == shader_793BE067)
                     {
                         regs.eax = (uint32_t)shader_dummy;
                     }
