@@ -294,7 +294,6 @@ void __fastcall sub_E6E800(float* _this, void* edx, float a2, float a3, float a4
 IDirect3DPixelShader9* shader_dummy = nullptr;
 IDirect3DPixelShader9* shader_498080AC = nullptr;
 IDirect3DPixelShader9* shader_FD473559 = nullptr;
-IDirect3DPixelShader9* shader_793BE067 = nullptr;
 IDirect3DPixelShader9* __stdcall CreatePixelShaderHook(const DWORD** a1)
 {
     if (!a1)
@@ -337,8 +336,8 @@ IDirect3DPixelShader9* __stdcall CreatePixelShaderHook(const DWORD** a1)
             shader_498080AC = pShader;
         else if (crc == 0xFD473559) // waiting for partner overlay
             shader_FD473559 = pShader;
-        else if (crc == 0x793BE067) // injured overlay
-            shader_793BE067 = pShader;
+        //else if (crc == 0x793BE067) // injured overlay
+        //    shader_793BE067 = pShader;
     }
 
     return pShader;
@@ -350,6 +349,8 @@ void Init()
     auto bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
     auto bBorderlessWindowed = iniReader.ReadInteger("MAIN", "BorderlessWindowed", 1) != 0;
     bSplitScreenSwapTopBottom = iniReader.ReadInteger("MAIN", "SplitScreenSwapTopBottom", 0) != 0;
+    auto bDisableDamageOverlay = iniReader.ReadInteger("MAIN", "DisableDamageOverlay", 1) != 0;
+    auto bDisableDBNOEffects = iniReader.ReadInteger("MAIN", "DisableDBNOEffects", 0) != 0;
     
     if (bSkipIntro)
     {
@@ -446,7 +447,7 @@ void Init()
                 if ((IsSplitScreenActive() || GetDiff() > 1.0f) && !bIsPaused)
                 {
                     auto pShader = (IDirect3DPixelShader9*)regs.eax;
-                    if (pShader == shader_498080AC || pShader == shader_FD473559 || pShader == shader_793BE067)
+                    if (pShader == shader_498080AC || pShader == shader_FD473559)
                     {
                         regs.eax = (uint32_t)shader_dummy;
                     }
@@ -455,6 +456,16 @@ void Init()
                 regs.ecx = *(uint32_t*)(regs.ebp + 0x0);
             }
         }; injector::MakeInline<SetPixelShaderHook>(0xF3CA8E, 0xF3CA8E + 6);
+
+        // disabling injured overlay
+        if (bDisableDamageOverlay)
+        {
+            injector::WriteMemory<uint8_t>(0x98410A + 3, 0x16, true);
+            injector::WriteMemory<uint8_t>(0x9842C3 + 3, 0x16, true);
+        }
+
+        if (bDisableDBNOEffects)
+            injector::WriteMemory<uint8_t>(0x9840F5 + 3, 0x16, true);
     }
 
     {
