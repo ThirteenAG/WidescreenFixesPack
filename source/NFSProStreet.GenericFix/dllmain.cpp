@@ -683,8 +683,9 @@ void Init()
         // Real-Time Aspect Ratio Calculation
         static uint32_t* dword_BBADB4 = *hook::pattern("C7 05 ? ? ? ? 03 00 00 00 89 3D  ? ? ? ? 89 3D").get(0).get<uint32_t*>(35); // ResX
         static uint32_t* dword_BBADB8 = *hook::pattern("C7 05 ? ? ? ? 03 00 00 00 89 3D  ? ? ? ? 89 3D").get(0).get<uint32_t*>(41); // ResY
-        static float fScreenAspectOrigin = 9f / 16f;
+        static float fScreenAspectOrigin = 9.0f / 16.0f;
         static float fScreenAspectRatio, fScreenZoom, temp_xmm0;
+        static float fScreenHeight = 1.0f;
 
         auto pattern = hook::pattern("F3 0F 10 05 ? ? ? ? F3 0F 11 04 24 D9 04 24 83 C4 0C");
         struct AspectRatioHook
@@ -700,7 +701,7 @@ void Init()
 
                 if (bOpenMatte)
                 {
-                    fScreenZoom *= fScreenAspectRatio < 0.9f ? 0.85f : 0.75f;
+                    fScreenZoom *= fScreenAspectRatio < 0.9f ? 0.8f : 0.75f;
                 }
 
                 _asm
@@ -789,6 +790,7 @@ void Init()
         // HUD Width
         {
             static double dbl_HUDWidth = (4.0 / 3.0f);
+            static float defaultHUDWidth = 1.0f;
 
             auto pattern = hook::pattern("DC 3D ? ? ? ? D9 5C 24 0C F3 0F 10");
             struct HUDWidthHook
@@ -799,9 +801,30 @@ void Init()
                     {
                         fdivr qword ptr ds : [dbl_HUDWidth]
                         fdiv dword ptr ds : [fScreenAspectRatio]
+                        fdiv dword ptr ds : [fScreenZoom]
                     }
+
+                    fHUDHeight = fScreenZoom;
                 }
-            }; injector::MakeInline<HUDWidthHook>(pattern.get_first(0), pattern.get_first(6)); // 4B44F6
+            };
+
+            struct HUDDefaultWidthHook
+            {
+                void operator()(injector::reg_pack& regs)
+                {
+                    _asm
+                    {
+                        movss xmm0,[defaultHUDWidth]
+                    }
+
+                    fHUDHeight = defaultHUDWidth;
+                }
+            };
+            
+            injector::MakeInline<HUDWidthHook>(pattern.get_first(0), pattern.get_first(6)); // 4B44F6
+            injector::MakeInline<HUDDefaultWidthHook>(pattern.get_first(18), pattern.get_first(26)); // 4B4508
+            uint32_t* dword_4B451C = pattern.count(1).get(0).get<uint32_t>(43); // 4B451C
+            injector::WriteMemory(dword_4B451C, &fHUDHeight, true);
         }
 
         // FMV Width & Height
