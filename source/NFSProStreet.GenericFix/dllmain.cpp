@@ -916,7 +916,7 @@ void Init()
                 }
                 else
                 {
-                    regs.eax = (int)0;
+                    regs.eax = fScreenZoom < 1.0f ? (int)1 : (int)0;
                     *(int*)(regs.ecx) = regs.eax;
                 }
             }
