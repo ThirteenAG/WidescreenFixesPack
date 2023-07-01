@@ -658,6 +658,7 @@ void Init()
     }
 
     bool bFixAspectRatio = iniReader.ReadInteger("MAIN", "FixAspectRatio", 1) != 0;
+    bool bOpenMatte = iniReader.ReadInteger("MAIN", "OpenMatteMode", 1) != 0;
     static int32_t nScaling = iniReader.ReadInteger("MAIN", "Scaling", 1);
     bool bFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1) != 0;
     bool bConsoleHUDSize = iniReader.ReadInteger("MAIN", "ConsoleHUDSize", 0) != 0;
@@ -682,7 +683,8 @@ void Init()
         // Real-Time Aspect Ratio Calculation
         static uint32_t* dword_BBADB4 = *hook::pattern("C7 05 ? ? ? ? 03 00 00 00 89 3D  ? ? ? ? 89 3D").get(0).get<uint32_t*>(35); // ResX
         static uint32_t* dword_BBADB8 = *hook::pattern("C7 05 ? ? ? ? 03 00 00 00 89 3D  ? ? ? ? 89 3D").get(0).get<uint32_t*>(41); // ResY
-        static float fScreenAspectRatio, temp_xmm0;
+        static float fScreenAspectOrigin = 9f / 16f;
+        static float fScreenAspectRatio, fScreenZoom, temp_xmm0;
 
         auto pattern = hook::pattern("F3 0F 10 05 ? ? ? ? F3 0F 11 04 24 D9 04 24 83 C4 0C");
         struct AspectRatioHook
@@ -693,7 +695,13 @@ void Init()
                 auto ResX = *(float*)(dword_BBADB4);
                 auto ResY = *(float*)(dword_BBADB8);
                 auto esp00 = regs.esp;
-                fScreenAspectRatio = (ResX / ResY) * 0.5625f;
+                fScreenAspectRatio = (ResX / ResY) * fScreenAspectOrigin;
+                fScreenZoom = fScreenAspectRatio < 1.0f ? fScreenAspectRatio : 1.0f;
+
+                if (bOpenMatte)
+                {
+                    fScreenZoom *= fScreenAspectRatio < 0.9f ? 0.85f : 0.75f;
+                }
 
                 _asm
                 {
@@ -728,15 +736,25 @@ void Init()
             {
                 void operator()(injector::reg_pack& regs)
                 {
-                    _asm movss dword ptr ds : [temp_xmm0], xmm0 // moves xmm0 to temporary location so contents aren't lost
                     int ebp08 = *(int*)(regs.ebp + 0x08);
+                    float esp3C = *(float*)(regs.esp + 0x3C);
                     float esp48 = *(float*)(regs.esp + 0x48);
+                    
+                    _asm 
+                    {
+                        fstp dword ptr ds : [esp3C] // store floating point to scale y-fov
+                        movss dword ptr ds : [temp_xmm0], xmm0 // moves xmm0 to temporary location so contents aren't lost
+                    }
 
                     if (ebp08 <= 0x19) // jump if greater than
-                        *(float*)(regs.esp + 0x48) = (esp48 / fScreenAspectRatio);
+                    {
+                        *(float*)(regs.esp + 0x3C) = (esp3C / fScreenZoom);
+                        *(float*)(regs.esp + 0x48) = (esp48 / (fScreenAspectRatio / fScreenZoom));
+                    }
 
                     _asm
                     {
+                        fld dword ptr ds : [esp3C] // load scaled y-fov
                         movss xmm0, dword ptr ds : [temp_xmm0] // restores xmm0
                         xorps xmm0, xmm0
                         movss xmm1, dword ptr ds : [dword_9FA868]
