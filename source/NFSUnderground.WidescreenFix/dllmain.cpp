@@ -263,34 +263,30 @@ namespace DebugTags
     }
 }
 
-void* _CreateFileA;
-void* CreateFileA_xref1;
-void* CreateFileA_xref2;
-HANDLE WINAPI CreateFileAHook(LPCSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile)
+namespace IntroFMVScreen
 {
-    std::filesystem::path newPath("scripts\\nointro.mad");
-    std::filesystem::path filePath(lpFileName);
-    std::string s = filePath.stem().string();
-    std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return std::tolower(c); });
+#pragma runtime_checks( "", off )
+    bool bOnceFlag = false;
+    uintptr_t NotificationMessageFuncAddr = 0x004DE9F0;
+    uintptr_t FEngPopPackageAddr = 0x004DE4A0;
 
-    if (s.ends_with("e3_title") || s.ends_with("na_boot") || s.ends_with("psa"))
+    void __stdcall hkNotificationMessage(uint32_t msg, void* FEObject, uint32_t unk1, uint32_t unk2)
     {
-        static auto counter = 0;
-        if (s.ends_with("e3_title") && dwShareMode == 1)
-        {
-            counter++;
-            if (counter > 1)
-            {
-                injector::WriteMemory(CreateFileA_xref1, _CreateFileA, true);
-                injector::WriteMemory(CreateFileA_xref2, _CreateFileA, true);
-            }
-        }
-        if (std::filesystem::exists(newPath))
-            return CreateFileA(newPath.string().c_str(), dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
-    }
-    return CreateFileA(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
-}
+        uintptr_t that;
+        _asm mov that, ecx
 
+        // pop the package once for the intro skip
+        if (!bOnceFlag)
+        {
+            bOnceFlag = true;
+            reinterpret_cast<void(__cdecl*)(char* pkgname)>(FEngPopPackageAddr)(*(char**)(that + 0xC));
+            return;
+        }
+
+        return reinterpret_cast<void(__thiscall*)(uintptr_t, uint32_t, void*, uint32_t, uint32_t)>(NotificationMessageFuncAddr)(that, msg, FEObject, unk1, unk2);
+    }
+#pragma runtime_checks( "", restore )
+}
 HWND WINAPI CreateWindowExA_Hook_NFSU(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam)
 {
     HWND retval = WindowedModeWrapper::CreateWindowExA_Hook(dwExStyle, lpClassName, lpWindowName, 0, X, Y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
@@ -313,6 +309,7 @@ void Init()
     bool bHUDWidescreenMode = iniReader.ReadInteger("MAIN", "HUDWidescreenMode", 1) != 0;
     int nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
     bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 0) != 0;
+    bool bShowLangSelect = iniReader.ReadInteger("MISC", "ShowLangSelect", 0) != 0;
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
     static int nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
@@ -675,14 +672,61 @@ void Init()
 
     if (bSkipIntro)
     {
-        static auto ptr = &CreateFileAHook;
-        pattern = hook::pattern("8D 7E 04 FF 15");
-        CreateFileA_xref1 = pattern.get_first(5);
-        _CreateFileA = injector::ReadMemory<void*>(CreateFileA_xref1, true);
-        pattern = hook::pattern("FF 75 10 FF 15 ? ? ? ? 8B F0");
-        CreateFileA_xref2 = pattern.get_first(5);
-        injector::WriteMemory(CreateFileA_xref1, &ptr, true);
-        injector::WriteMemory(CreateFileA_xref2, &ptr, true);
+        // patch bootflow
+
+        // LS_IntroFMV.fng NEEDS to be there in order to hear the splash screen music!
+        // This means that the intro video technically still plays, which means e3_title.mad still needs to be in the movies folder
+        static const char* BootFlowScreens[] = { "LS_IntroFMV.fng", "LS_Splash_PC.fng", "MU_UG_NEwOrLoad_PC2.fng" , "BootFlowEnd" };
+        static const char* BootFlowScreensLangSelect[] = { "LS_LangSelect.fng", "LS_IntroFMV.fng", "LS_Splash_PC.fng", "MU_UG_NEwOrLoad_PC2.fng" , "BootFlowEnd"};
+
+        const char** outScreens = BootFlowScreens;
+        const char** outLastScreen = &BootFlowScreens[_countof(BootFlowScreens) - 1];
+        if (bShowLangSelect)
+        {
+            outScreens = BootFlowScreensLangSelect;
+            outLastScreen = &BootFlowScreensLangSelect[_countof(BootFlowScreensLangSelect) - 1];
+        }
+
+        uintptr_t loc_4DE21A = reinterpret_cast<uintptr_t>(hook::pattern("89 36 89 76 04 A1 ? ? ? ? 83 F8 05").get_first(0)) + 0x15;
+        uintptr_t loc_4DE273 = loc_4DE21A + 0x59;
+        uintptr_t loc_4DE2A0 = reinterpret_cast<uintptr_t>(hook::pattern("8B 4E 04 89 01 83 C7 04 81 FF ? ? ? ? 89 46 04 89 48 04 89 30 7C C8 8B 36").get_first(0)) + 8;
+
+        // force US Retail bootflow
+        injector::MakeJMP(loc_4DE21A, loc_4DE273);
+
+        // list start
+        injector::WriteMemory<const char**>(loc_4DE273 + 1, outScreens, true);
+
+        // list end
+        injector::WriteMemory<const char**>(loc_4DE2A0 + 2, outLastScreen, true);
+
+        // IntroFMV NotificationMessage Hook -- for skipping the video for the first time it plays
+        // dereference instruction at 0x004DE985 (IntroFMVScreen constructor) for the vtable
+        uintptr_t loc_4DE985 = reinterpret_cast<uintptr_t>(hook::pattern("A1 ? ? ? ? 85 C0 C7 44 24 10 00 00 00 00 C7 07 ? ? ? ? 74 49 68 ? ? ? ? B8").get_first(0)) + 0xF;
+        uintptr_t IntroFMVScreenVTable = *reinterpret_cast<uintptr_t*>(loc_4DE985 + 2);
+        IntroFMVScreen::NotificationMessageFuncAddr = *reinterpret_cast<uintptr_t*>(IntroFMVScreenVTable + 8);
+        // dereference instruction at 0x004DEA5A
+        uintptr_t loc_4DEA5A = reinterpret_cast<uintptr_t>(hook::pattern("5F 5E C2 10 00 8B 49 0C 51 E8 ? ? ? ? 83 C4 04 5E C2 10 00").get_first(0)) + 9;
+        IntroFMVScreen::FEngPopPackageAddr = static_cast<uintptr_t>(injector::GetBranchDestination(loc_4DEA5A));
+
+        injector::WriteMemory<uintptr_t>(IntroFMVScreenVTable + 8, (uintptr_t)&IntroFMVScreen::hkNotificationMessage, true);
+    }
+    else if (bShowLangSelect)
+    {
+        static const char* BootFlowScreensLangSelect[] = { "LS_LangSelect.fng", "LS_EAlogo.fng", "LS_PSAMovie.fng", "LS_IntroFMV.fng", "LS_Splash_PC.fng", "MU_UG_NEwOrLoad_PC2.fng" , "BootFlowEnd" };
+        
+        uintptr_t loc_4DE21A = reinterpret_cast<uintptr_t>(hook::pattern("89 36 89 76 04 A1 ? ? ? ? 83 F8 05").get_first(0)) + 0x15;
+        uintptr_t loc_4DE273 = loc_4DE21A + 0x59;
+        uintptr_t loc_4DE2A0 = reinterpret_cast<uintptr_t>(hook::pattern("8B 4E 04 89 01 83 C7 04 81 FF ? ? ? ? 89 46 04 89 48 04 89 30 7C C8 8B 36").get_first(0)) + 8;
+
+        // force US Retail bootflow
+        injector::MakeJMP(loc_4DE21A, loc_4DE273);
+
+        // list start
+        injector::WriteMemory<const char**>(loc_4DE273 + 1, BootFlowScreensLangSelect, true);
+
+        // list end
+        injector::WriteMemory<const char**>(loc_4DE2A0 + 2, &BootFlowScreensLangSelect[_countof(BootFlowScreensLangSelect) - 1], true);
     }
 
     if (!szCustomUserFilesDirectoryInGameDir.empty())
@@ -724,7 +768,10 @@ void Init()
             static injector::hook_back<void(__cdecl*)()> hb_448600;
             auto LoadTPK = []()
             {
-                LoadResourceFile(TPKPath.c_str(), 1);
+                if (std::filesystem::exists(TPKPath))
+                {
+                    LoadResourceFile(TPKPath.c_str(), 1);
+                }
                 return hb_448600.fun();
             };
 
