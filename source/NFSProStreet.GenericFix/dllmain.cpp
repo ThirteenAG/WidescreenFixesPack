@@ -255,26 +255,6 @@ void __declspec(naked) FEScriptMemoryCheck()
     }
 }
 
-uint32_t loc_5C479A;
-uint32_t loc_5C47B0;
-void __declspec(naked) ExitPostRaceFixPropagator()
-{
-    if (bAccessedPostRace)
-        _asm jmp loc_5C479A
-        else
-            _asm jmp loc_5C47B0
-        }
-
-void __declspec(naked) ExitPostRaceFixPart2()
-{
-    _asm
-    {
-        mov bAccessedPostRace, 0
-        pop esi
-        retn 4
-    }
-}
-
 uint32_t* dword_AC6ED4 = (uint32_t*)0x00AC6ED4;
 static bool bInSparkRender = false;
 void(__thiscall* sub_706550)(void* that, void* texture) = (void(__thiscall*)(void*, void*))0x706550;
