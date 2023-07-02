@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include <d3d9.h>
-#include <regex>
 
 namespace DamageFix
 {
@@ -255,26 +254,6 @@ void __declspec(naked) FEScriptMemoryCheck()
     }
 }
 
-uint32_t loc_5C479A;
-uint32_t loc_5C47B0;
-void __declspec(naked) ExitPostRaceFixPropagator()
-{
-    if (bAccessedPostRace)
-        _asm jmp loc_5C479A
-        else
-            _asm jmp loc_5C47B0
-        }
-
-void __declspec(naked) ExitPostRaceFixPart2()
-{
-    _asm
-    {
-        mov bAccessedPostRace, 0
-        pop esi
-        retn 4
-    }
-}
-
 uint32_t* dword_AC6ED4 = (uint32_t*)0x00AC6ED4;
 static bool bInSparkRender = false;
 void(__thiscall* sub_706550)(void* that, void* texture) = (void(__thiscall*)(void*, void*))0x706550;
@@ -345,14 +324,10 @@ void __declspec(naked) UpdateAchievements_Hook()
 namespace LANFix
 {
     uintptr_t ptrDataConnection = 0x827190;
-    uint32_t AddrFamily = 2; // 2 = AF_INET, 23 = AF_INET6
+    uint32_t AddrFamily = 2; // 2 = AF_INET, 23 = AF_INET6 (to add v6, the string needs to be extended, as the input box is limited to 15 chars!)
 
     uint32_t CheckAddressFamily(std::string addr)
     {
-        if (std::regex_match(addr, std::regex("(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))")))
-        {
-            return 23;
-        }
         // default to AF_INET because it doesn't work otherwise...
         return 2;
     }
