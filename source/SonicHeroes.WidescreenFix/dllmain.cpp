@@ -29,6 +29,7 @@ float fLensFlareScalar;
 bool bShadowFix = true;
 float fShadowScale = 1.7f;
 float fDustWidth = 40.0f;
+uint8_t WarpSwitchEffectMode = 1;
 
 bool bFixAdvertiseWindows = true;
 bool bFixStaffRoll = true;
