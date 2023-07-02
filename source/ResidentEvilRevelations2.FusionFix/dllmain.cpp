@@ -209,14 +209,7 @@ float GetDiff()
     }
     else
     {
-        if (GetAspectRatio() >= defaultAspectRatio)
-        {
-            return GetAspectRatio() / defaultAspectRatio;
-        }
-        else
-        {
-            return 1.0f;
-        }
+        return GetAspectRatio() / defaultAspectRatio;
     }
 }
 
@@ -368,7 +361,7 @@ void __fastcall sub_E18040(int _this, int edx, int a2)
         {
             if (IsSplitScreenActive())
             {
-                if (v21 == GetCurrentSplitScreenResY())
+                if (v21 == GetCurrentSplitScreenResY() || v21 == (GetCurrentSplitScreenResY() + 1))
                 {
                     v14 = 2.0 / (float)(v28 - v19);
                     v15 = -2.0 / (float)(v21 - v29);
@@ -379,15 +372,12 @@ void __fastcall sub_E18040(int _this, int edx, int a2)
                 }
                 else if (v21 == GetResY())
                 {
-                    if (GetAspectRatio() >= defaultAspectRatio)
-                    {
-                        v14 = 2.0 / (float)(v28 - v19);
-                        v15 = -2.0 / (float)(v21 - v29);
-                        v13[0] = v14 * v4;
-                        v13[1] = v15 * v5;
-                        v13[2] = (float)(v14 * v6) - (1.0f / (GetAspectRatio() / defaultAspectRatio));
-                        v13[3] = (float)(v15 * v7) + 1.0;
-                    }
+                    v14 = 2.0 / (float)(v28 - v19);
+                    v15 = -2.0 / (float)(v21 - v29);
+                    v13[0] = v14 * v4;
+                    v13[1] = v15 * v5;
+                    v13[2] = (float)(v14 * v6) - (1.0f / (GetAspectRatio() / defaultAspectRatio));
+                    v13[3] = (float)(v15 * v7) + 1.0;
                 }
             }
             else
@@ -415,7 +405,7 @@ void __fastcall sub_E18040(int _this, int edx, int a2)
         {
             if (IsSplitScreenActive())
             {
-                if (v21 == GetCurrentSplitScreenResY())
+                if (v21 == GetCurrentSplitScreenResY() || v21 == (GetCurrentSplitScreenResY() + 1))
                 {
                     v14 = 2.0 / (float)(v28 - v19);
                     v15 = -2.0 / (float)(v21 - v29);
@@ -426,15 +416,12 @@ void __fastcall sub_E18040(int _this, int edx, int a2)
                 }
                 else if (v21 == GetResY())
                 {
-                    if (GetAspectRatio() >= defaultAspectRatio)
-                    {
-                        v14 = 2.0 / (float)(v28 - v19);
-                        v15 = -2.0 / (float)(v21 - v29);
-                        v13[0] = v14 * v4;
-                        v13[1] = v15 * v5;
-                        v13[2] = (float)(v14 * v6) - (1.0f / (GetAspectRatio() / defaultAspectRatio));
-                        v13[3] = (float)(v15 * v7) + 1.0;
-                    }
+                    v14 = 2.0 / (float)(v28 - v19);
+                    v15 = -2.0 / (float)(v21 - v29);
+                    v13[0] = v14 * v4;
+                    v13[1] = v15 * v5;
+                    v13[2] = (float)(v14 * v6) - (1.0f / (GetAspectRatio() / defaultAspectRatio));
+                    v13[3] = (float)(v15 * v7) + 1.0;
                 }
             }
             else
@@ -597,13 +584,31 @@ void Init()
     // overwriting aspect ratio
     hook::pattern("0F 84 ? ? ? ? 48 ? ? 48 ? ? 89 8E").for_each_result([](hook::pattern_match match)
     {
-        struct hook_ecx_edx { void operator()(injector::reg_pack& regs) { ResX = regs.ecx; ResY = regs.edx; } };
+        struct hook_ecx_edx { void operator()(injector::reg_pack& regs) { 
+            ResX = regs.ecx;
+            ResY = regs.edx;
+
+            if (((float)ResX / (float)ResY) < defaultAspectRatio)
+            {
+                ResY = 9 * ResX / 16;
+                regs.edx = ResY;
+            }
+        } };
         injector::MakeInline<hook_ecx_edx>(match.get<void>(0), match.get<void>(12));
     });
 
     hook::pattern("0F 84 ? ? ? ? 48 ? ? 48 ? ? 89 9E").for_each_result([](hook::pattern_match match)
     {
-        struct hook_ebx_edi { void operator()(injector::reg_pack& regs) { ResX = regs.ebx; ResY = regs.edi; } };
+        struct hook_ebx_edi { void operator()(injector::reg_pack& regs) {
+            ResX = regs.ebx;
+            ResY = regs.edi;
+
+            if (((float)ResX / (float)ResY) < defaultAspectRatio)
+            {
+                ResY = 9 * ResX / 16;
+                regs.edi = ResY;
+            }
+        } };
         injector::MakeInline<hook_ebx_edi>(match.get<void>(0), match.get<void>(12));
     });
 
