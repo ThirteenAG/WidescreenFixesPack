@@ -1,36 +1,123 @@
 #include "stdafx.h"
 #include <d3d9.h>
 #include <vector>
+#include <map>
 
 constexpr auto defaultAspectRatio = 16.0f / 9.0f;
 bool bSplitScreenSwapTopBottom = false;
 int32_t ResX = 0;
 int32_t ResY = 0;
 
+std::map<uintptr_t, uintptr_t> addrTbl;
+
+void FillAddressTable()
+{
+    addrTbl[0x17CF454] = (uintptr_t)*hook::get_pattern<uint32_t>("8B 0D ? ? ? ? E8 ? ? ? ? 84 C0 75 0E", 2);
+    addrTbl[0x186E8BC] = (uintptr_t)*hook::get_pattern<uint32_t>("8B 0D ? ? ? ? 6A 00 E8 ? ? ? ? EB 5E", 2);
+    addrTbl[0x186E5D0] = (uintptr_t)*hook::get_pattern<uint32_t>("38 1D ? ? ? ? 74 0A 83 C7 04 57 FF 15 ? ? ? ? A1 ? ? ? ? 8D 70 1C 8B F8 38 1E 75 08 38 1D ? ? ? ? 74 0A 83 C0 04 50 FF 15 ? ? ? ? 89 9F ? ? ? ? 38 1E 75 08 38 1D ? ? ? ? 74 0A 83 C7 04 57 FF 15 ? ? ? ? 5F", 2);
+    addrTbl[0x186E23C] = (uintptr_t)*hook::get_pattern<uint32_t>("8B 0D ? ? ? ? 56 E8 ? ? ? ? 3B C5", 2);
+    addrTbl[0xE6E800] = (uintptr_t)injector::GetBranchDestination(hook::get_pattern("E8 ? ? ? ? 80 7D 10 00 74 23")).as_int();
+    addrTbl[0x97BE91] = (uintptr_t)hook::get_pattern("0F 84 ? ? ? ? 48 74 0C 8B 04 8D");
+    addrTbl[0x97BFDA] = (uintptr_t)hook::get_pattern("FF D0 89 87 ? ? ? ? 5F", 8);
+    addrTbl[0xD23CFB] = (uintptr_t)hook::get_pattern("0F 8C ? ? ? ? 83 FA 04");
+    addrTbl[0x58ED00] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? 8B CE E8 ? ? ? ? 8B 54 24 24");
+    addrTbl[0x58EDC3] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? 8B CE E8 ? ? ? ? 66 0F 6E 44 24 ? 8B 54 24 10");
+    addrTbl[0x5103E5] = (uintptr_t)hook::get_pattern("D8 0D ? ? ? ? 6A 00 83 EC 08", 2);
+    addrTbl[0x55DF21] = (uintptr_t)hook::get_pattern("F3 0F 10 15 ? ? ? ? 2B C2", 4);
+    addrTbl[0x58DF02] = (uintptr_t)hook::get_pattern("F3 0F 10 05 ? ? ? ? F3 0F 5E C1 51 F3 0F 11 44 24", 4);
+    addrTbl[0x58E118] = (uintptr_t)hook::get_pattern("F3 0F 10 05 ? ? ? ? F3 0F 5E C1 52", 4);
+    addrTbl[0x9FC4F3] = (uintptr_t)hook::get_pattern("F3 0F 59 05 ? ? ? ? F3 0F 11 44 24 ? F3 0F 10 05 ? ? ? ? F3 0F 11 44 24", 4);
+    addrTbl[0x116A33B] = (uintptr_t)hook::get_pattern("F3 0F 10 0D ? ? ? ? F3 0F 5E C8 0F 2F CB", 4);
+    addrTbl[0x116A378] = (uintptr_t)hook::get_pattern("F3 0F 10 05 ? ? ? ? F3 0F 5E C1 F3 0F 11 44 24 ? F3 0F 11 44 24", 4);
+    addrTbl[0x50076B] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? 8B 44 24 14 89 44 24 24");
+    addrTbl[0x50079E] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? C7 86 ? ? ? ? ? ? ? ? C7 86 ? ? ? ? ? ? ? ? 8B 0D");
+    addrTbl[0x974C80] = (uintptr_t)hook::get_pattern("51 8B 0D ? ? ? ? E8 ? ? ? ? 83 F8 01 75 1F");
+    addrTbl[0x974CD0] = (uintptr_t)hook::get_pattern("8B 0D ? ? ? ? 83 EC 08 E8 ? ? ? ? 83 F8 01 75 2D");
+    addrTbl[0x55DB40] = (uintptr_t)hook::get_pattern("51 8B 0D ? ? ? ? E8 ? ? ? ? 83 F8 01 75 21");
+    addrTbl[0x55DBA0] = (uintptr_t)hook::get_pattern("8B 0D ? ? ? ? 83 EC 08 E8 ? ? ? ? 83 F8 01 75 2F");
+    addrTbl[0x5F816C] = (uintptr_t)hook::get_pattern("8B 74 24 18 8B CE F3 0F 11 04 24", 11);
+    addrTbl[0x96B347] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? 83 BE ? ? ? ? ? 8B C7 74 28 F3 0F 10 0F F3 0F 10 05 ? ? ? ? F3 0F 5E 46 ? F3 0F 5E C8 F3 0F 11 0F F3 0F 10 47 ? F3 0F 59 46 ? F3 0F 11 47 ? 5F 5E 83 C4 10");
+    addrTbl[0x104357D] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? 80 7D 10 00 74 23");
+    addrTbl[0x104866C] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? 8B 7D 08 38 9E");
+    addrTbl[0x104F1F7] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? F3 0F 10 83 ? ? ? ? F3 0F 10 94 24");
+    addrTbl[0x107A275] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? 83 BE ? ? ? ? ? 8B C7 74 28 F3 0F 10 0F F3 0F 10 05 ? ? ? ? F3 0F 5E 46 ? F3 0F 5E C8 F3 0F 11 0F F3 0F 10 47 ? F3 0F 59 46 ? F3 0F 11 47 ? 5F 5E C2 04 00");
+    addrTbl[0x109B17D] = (uintptr_t)hook::get_pattern("F3 0F 10 41 ? 8B CE F3 0F 11 04 24", 12);
+    addrTbl[0x111366D] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? F3 0F 10 44 24 ? F3 0F 10 4C 24 ? F3 0F 10 7C 24 ? F3 0F 10 6C 24 ? F3 0F 10 74 24 ? 0F 28 D8 F3 0F 59 5C 24 ? 0F 28 D1");
+    addrTbl[0x117789C] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? F3 0F 10 44 24 ? F3 0F 10 4C 24 ? F3 0F 10 7C 24 ? F3 0F 10 6C 24 ? 0F 28 D1");
+    addrTbl[0x1197937] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? F3 0F 10 8C 24 ? ? ? ? F3 0F 10 94 24 ? ? ? ? F3 0F 10 A4 24 ? ? ? ? F3 0F 10 AC 24 ? ? ? ? F3 0F 10 BC 24");
+    addrTbl[0x123F3CF] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? 8B 7C 24 1C 8B CF");
+    addrTbl[0x012915D1] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? 89 47 08 0F B7 44 24");
+    addrTbl[0x01291614] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? 89 47 08 0F B7 4C 24");
+    addrTbl[0x511DAA] = (uintptr_t)hook::get_pattern("8A 85 ? ? ? ? 33 DB");
+    addrTbl[0xF3CA40] = (uintptr_t)hook::get_pattern("89 47 24 8B 4D 00");
+    addrTbl[0xF3CA8E] = (uintptr_t)hook::get_pattern("89 47 28 8B 4D 00");
+    addrTbl[0x98410A] = (uintptr_t)hook::get_pattern("C6 46 38 14 E9 ? ? ? ? F3 0F 10 05");
+    addrTbl[0x9842C3] = (uintptr_t)hook::get_pattern("C6 46 38 14 8B 4E 40");
+    addrTbl[0x9840F5] = (uintptr_t)hook::get_pattern("C6 46 38 0A 8B 4E 40");
+    addrTbl[0x58DE0F] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? E8 ? ? ? ? 89 06 8B 74 24 18");
+    addrTbl[0x58E052] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? D9 5E 10 F3 0F 2C 4E");
+    addrTbl[0x97A787] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? D9 5C 24 3C 8B 45 0C");
+    addrTbl[0x55DCC7] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? D9 5E 04 8B 4C 24 14");
+    addrTbl[0x55DCE5] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? D9 5E 0C 8B 44 24 1C");
+    addrTbl[0x55DE28] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? D9 5E 04 8B 4C 24 18 51 8B CF E8 ? ? ? ? D9 5E 08 8B 54 24 1C 52 8B CF E8 ? ? ? ? D9 5E 0C");
+    addrTbl[0x55E09C] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? D9 5E 04 8B 54 24 18 52 8B CF E8 ? ? ? ? 83 EC 08");
+    addrTbl[0x97D139] = (uintptr_t)hook::get_pattern("75 0A F3 0F 10 05 ? ? ? ? EB 43");
+    addrTbl[0x01292227] = (uintptr_t)hook::get_pattern("FF 15 ? ? ? ? 56 68");
+    addrTbl[0xF35DF6] = (uintptr_t)hook::get_pattern("FF 15 ? ? ? ? 8B D8 6A 00");
+    addrTbl[0xF35EEC] = (uintptr_t)hook::get_pattern("FF 15 ? ? ? ? 89 86 ? ? ? ? EB 0A");
+    addrTbl[0xF4228A] = (uintptr_t)hook::get_pattern("FF 15 ? ? ? ? 8B 44 24 20 2B 44 24 18");
+    addrTbl[0xF4227E] = (uintptr_t)hook::get_pattern("FF 15 ? ? ? ? 8B 17 55");
+    addrTbl[0xF422B1] = (uintptr_t)hook::get_pattern("FF 15 ? ? ? ? 8B 44 24 10 40");
+    addrTbl[0x514CDB] = (uintptr_t)hook::get_pattern("F3 0F 10 05 ? ? ? ? 51 F3 0F 11 04 24 68 ? ? ? ? 68 ? ? ? ? B9 ? ? ? ? E8 ? ? ? ? A1");
+    addrTbl[0xD583AB] = (uintptr_t)hook::get_pattern("F3 0F 10 05 ? ? ? ? 51 F3 0F 11 04 24 68 ? ? ? ? 68 ? ? ? ? B9 ? ? ? ? E8 ? ? ? ? 8B 0D");
+    addrTbl[0xEE17C5] = (uintptr_t)hook::get_pattern("D9 05 ? ? ? ? 5F 5E C2 0C 00");
+    addrTbl[0x9DBE9D] = (uintptr_t)hook::get_pattern("F3 0F 10 05 ? ? ? ? F3 0F 11 40 ? EB 28");
+    addrTbl[0x9DB8E8] = (uintptr_t)hook::get_pattern("F3 0F 5C 05 ? ? ? ? F3 0F 10 0D ? ? ? ? 0F 54 C1");
+
+    hook::pattern("6A 03 53 53 68").for_each_result([](hook::pattern_match match)
+    {
+        if (std::string_view((const char*)injector::ReadMemory<uint32_t>(*match.get<void*>(5), true)) == "VARIABLE")
+        {
+            addrTbl[0x016E62D8] = *match.get<uint32_t>(5) + 4;
+            return;
+        }
+    });
+
+#if _DEBUG
+    if (std::string_view((const char*)0x016E1608, 9) == "VARIABLE")
+    {
+        for (auto& it : addrTbl)
+        {
+            assert(it.first == it.second);
+        }
+    }
+#endif // _DEBUG
+}
+
 bool IsSplitScreenActive()
 {
-    auto ptr = *(uint32_t*)0x17CF454;
+    auto ptr = *(uint32_t*)addrTbl[0x17CF454];
     return ptr && *(uint32_t*)(ptr + 0x86C) == 1;
 }
 
 int32_t GetResX()
 {
-    return *(int32_t*)(*(uint32_t*)0x186E8BC + 0x120);
+    return *(int32_t*)(*(uint32_t*)addrTbl[0x186E8BC] + 0x120);
 }
 
 int32_t GetResY()
 {
-    return *(int32_t*)(*(uint32_t*)0x186E8BC + 0x124);
+    return *(int32_t*)(*(uint32_t*)addrTbl[0x186E8BC] + 0x124);
 }
 
 int32_t GetRelativeResX()
 {
-    return *(int32_t*)(*(uint32_t*)0x186E8BC + 0x128);
+    return *(int32_t*)(*(uint32_t*)addrTbl[0x186E8BC] + 0x128);
 }
 
 int32_t GetRelativeResY()
 {
-    return *(int32_t*)(*(uint32_t*)0x186E8BC + 0x12C);
+    return *(int32_t*)(*(uint32_t*)addrTbl[0x186E8BC] + 0x12C);
 }
 
 int32_t GetCurrentSplitScreenResX(int32_t val = 0)
@@ -103,7 +190,7 @@ int32_t GetHudOffset()
 
 void __fastcall sub_4F8C60(int _this, int edx, int a2, int32_t* a3)
 {
-    if (*(uint8_t*)(_this + 28) || *(uint8_t*)0x186E5D0)
+    if (*(uint8_t*)(_this + 28) || *(uint8_t*)addrTbl[0x186E5D0])
         EnterCriticalSection((LPCRITICAL_SECTION)(_this + 4));
     *(uint8_t*)(400 * a2 + _this + 67) = 1;
     auto v4 = (int32_t*)(_this + 400 * a2);
@@ -140,28 +227,28 @@ void __fastcall sub_4F8C60(int _this, int edx, int a2, int32_t* a3)
     GetCurrentSplitScreenResX(v4[20] - v4[18]);
     GetCurrentSplitScreenResY(v4[21] - v4[19]);
 
-    if (*(uint8_t*)(_this + 28) || *(uint8_t*)0x186E5D0)
+    if (*(uint8_t*)(_this + 28) || *(uint8_t*)addrTbl[0x186E5D0])
         LeaveCriticalSection((LPCRITICAL_SECTION)(_this + 4));
 }
 
 float __cdecl sub_974C80(int a1)
 {
     if (IsSplitScreenActive())
-        return (float)(*(uint32_t*)(*(uint32_t*)0x186E23C + 80) - *(uint32_t*)(*(uint32_t*)0x186E23C + 72)) * (float)a1 * (1.0f / (GetRelativeSplitScreenResX() * GetDiff()));
+        return (float)(*(uint32_t*)(*(uint32_t*)addrTbl[0x186E23C] + 80) - *(uint32_t*)(*(uint32_t*)addrTbl[0x186E23C] + 72)) * (float)a1 * (1.0f / (GetRelativeSplitScreenResX() * GetDiff()));
     else
-        return (float)(a1 * *(uint32_t*)(*(uint32_t*)0x186E8BC + 288)) * ((1.0f / (GetRelativeResX() * GetDiff())));
+        return (float)(a1 * *(uint32_t*)(*(uint32_t*)addrTbl[0x186E8BC] + 288)) * ((1.0f / (GetRelativeResX() * GetDiff())));
 }
 
 float __cdecl sub_974CD0(int a1)
 {
     if (IsSplitScreenActive())
-        return (float)(*(uint32_t*)(*(uint32_t*)0x186E23C + 80) - *(uint32_t*)(*(uint32_t*)0x186E23C + 72))
+        return (float)(*(uint32_t*)(*(uint32_t*)addrTbl[0x186E23C] + 80) - *(uint32_t*)(*(uint32_t*)addrTbl[0x186E23C] + 72))
             * GetRelativeSplitScreenResY()
             * (1.0f / (GetRelativeSplitScreenResX() * GetDiff()))
             * (float)a1
             * (1.0f / GetRelativeSplitScreenResY());
     else
-        return (float)(a1 * *(uint32_t*)(*(uint32_t*)0x186E8BC + 292)) * (1.0f / GetRelativeResY());
+        return (float)(a1 * *(uint32_t*)(*(uint32_t*)addrTbl[0x186E8BC] + 292)) * (1.0f / GetRelativeResY());
 }
 
 float __stdcall sub_55DB40(int a1)
@@ -227,8 +314,8 @@ void __stdcall sub_58DDF0(uint32_t * a1, int* a2, int a3, uint16_t a4)
     }
     else
     {
-        v6 = *(uint32_t*)(*(uint32_t*)0x186E8BC + 292);
-        v18 = fAspectRatioInv / (float)((float)v6 / (float)*(int*)(*(uint32_t*)0x186E8BC + 288));
+        v6 = *(uint32_t*)(*(uint32_t*)addrTbl[0x186E8BC] + 292);
+        v18 = fAspectRatioInv / (float)((float)v6 / (float)*(int*)(*(uint32_t*)addrTbl[0x186E8BC] + 288));
         *a1 = (int)sub_974C80(*a1) + GetHudOffset();
         v7 = (int)sub_974CD0(*a2);
         *a2 = v7;
@@ -257,7 +344,7 @@ void __fastcall sub_E6E800(float* _this, void* edx, float a2, float a3, float a4
         a2 /= GetSplitScreenDiff();
     else
         a2 /= GetDiff();
-    return injector::fastcall<void(float*, void*, float, float, float, float)>::call(0xE6E800, _this, edx, a2, a3, a4, a5);
+    return injector::fastcall<void(float*, void*, float, float, float, float)>::call(addrTbl[0xE6E800], _this, edx, a2, a3, a4, a5);
 }
 
 //IDirect3DVertexShader9* shader_4F0EE939 = nullptr;
@@ -266,7 +353,7 @@ void __fastcall sub_E6E800(float* _this, void* edx, float a2, float a3, float a4
 //    if (!a1)
 //        return nullptr;
 //
-//    auto pDevice = (IDirect3DDevice9*)*(uint32_t*)(*(uint32_t*)0x186E8BC + 256);
+//    auto pDevice = (IDirect3DDevice9*)*(uint32_t*)(*(uint32_t*)addrTbl[0x186E8BC] + 256);
 //    IDirect3DVertexShader9* pShader = nullptr;
 //    pDevice->CreateVertexShader(a1[2], &pShader);
 //
@@ -299,7 +386,7 @@ IDirect3DPixelShader9* __stdcall CreatePixelShaderHook(const DWORD** a1)
     if (!a1)
         return nullptr;
 
-    auto pDevice = (IDirect3DDevice9*)*(uint32_t*)(*(uint32_t*)0x186E8BC + 256);
+    auto pDevice = (IDirect3DDevice9*)*(uint32_t*)(*(uint32_t*)addrTbl[0x186E8BC] + 256);
     IDirect3DPixelShader9* pShader = nullptr;
     pDevice->CreatePixelShader(a1[2], &pShader);
 
@@ -351,13 +438,15 @@ void Init()
     bSplitScreenSwapTopBottom = iniReader.ReadInteger("MAIN", "SplitScreenSwapTopBottom", 0) != 0;
     auto bDisableDamageOverlay = iniReader.ReadInteger("MAIN", "DisableDamageOverlay", 1) != 0;
     auto bDisableDBNOEffects = iniReader.ReadInteger("MAIN", "DisableDBNOEffects", 0) != 0;
+
+    FillAddressTable();
     
     if (bSkipIntro)
     {
-        injector::MakeNOP(0x97BE91, 6);
-        injector::MakeJMP(0x97BE91, 0x97BFDA);
+        injector::MakeNOP(addrTbl[0x97BE91], 6);
+        injector::MakeJMP(addrTbl[0x97BE91], addrTbl[0x97BFDA]);
 
-        injector::WriteMemory<uint16_t>(0xD23CFB, 0xE990, true);
+        injector::WriteMemory<uint16_t>(addrTbl[0xD23CFB], 0xE990, true);
     }
 
     // overwriting aspect ratio
@@ -374,44 +463,44 @@ void Init()
     });
 
     // interface scaling
-    injector::MakeCALL(0x58ED00, sub_58DDF0, true);
-    injector::MakeCALL(0x58EDC3, sub_58DDF0, true);
-    injector::WriteMemory(0x5103E5,  &fAspectRatioInv, true);  // fmul    ds : dword_151B5D8
-    injector::WriteMemory(0x55DF21,  &fAspectRatioInv, true);  // movss   xmm2, ds : dword_151B5D8
-    injector::WriteMemory(0x58DF02,  &fAspectRatioInv, true);  // movss   xmm0, ds : dword_151B5D8
-    injector::WriteMemory(0x58E118,  &fAspectRatioInv, true);  // movss   xmm0, ds : dword_151B5D8
-    injector::WriteMemory(0x9FC4F3,  &fAspectRatioInv, true);  // mulss   xmm0, ds : dword_151B5D8
-    injector::WriteMemory(0x116A33B, &fAspectRatioInv, true);  // movss   xmm1, ds : dword_151B5D8
-    injector::WriteMemory(0x116A378, &fAspectRatioInv, true);  // movss   xmm0, ds : dword_151B5D8
+    injector::MakeCALL(addrTbl[0x58ED00], sub_58DDF0, true);
+    injector::MakeCALL(addrTbl[0x58EDC3], sub_58DDF0, true);
+    injector::WriteMemory(addrTbl[0x5103E5],  &fAspectRatioInv, true);  // fmul    ds : dword_151B5D8
+    injector::WriteMemory(addrTbl[0x55DF21],  &fAspectRatioInv, true);  // movss   xmm2, ds : dword_151B5D8
+    injector::WriteMemory(addrTbl[0x58DF02],  &fAspectRatioInv, true);  // movss   xmm0, ds : dword_151B5D8
+    injector::WriteMemory(addrTbl[0x58E118],  &fAspectRatioInv, true);  // movss   xmm0, ds : dword_151B5D8
+    injector::WriteMemory(addrTbl[0x9FC4F3],  &fAspectRatioInv, true);  // mulss   xmm0, ds : dword_151B5D8
+    injector::WriteMemory(addrTbl[0x116A33B], &fAspectRatioInv, true);  // movss   xmm1, ds : dword_151B5D8
+    injector::WriteMemory(addrTbl[0x116A378], &fAspectRatioInv, true);  // movss   xmm0, ds : dword_151B5D8
 
     // split screen setup
-    injector::MakeCALL(0x50076B, sub_4F8C60, true);
-    injector::MakeCALL(0x50079E, sub_4F8C60, true);
+    injector::MakeCALL(addrTbl[0x50076B], sub_4F8C60, true);
+    injector::MakeCALL(addrTbl[0x50079E], sub_4F8C60, true);
 
     // hud fix
-    injector::MakeJMP(0x974C80, sub_974C80, true);
-    injector::MakeJMP(0x974CD0, sub_974CD0, true);
+    injector::MakeJMP(addrTbl[0x974C80], sub_974C80, true);
+    injector::MakeJMP(addrTbl[0x974CD0], sub_974CD0, true);
 
-    injector::MakeJMP(0x55DB40, sub_55DB40, true);
-    injector::MakeJMP(0x55DBA0, sub_55DBA0, true);
+    injector::MakeJMP(addrTbl[0x55DB40], sub_55DB40, true);
+    injector::MakeJMP(addrTbl[0x55DBA0], sub_55DBA0, true);
 
     // Camera near clip fix
-    injector::MakeCALL(0x5F816C,  sub_E6E800, true);
-    injector::MakeCALL(0x96B347,  sub_E6E800, true);
-    injector::MakeCALL(0x104357D, sub_E6E800, true);
-    injector::MakeCALL(0x104866C, sub_E6E800, true);
-    injector::MakeCALL(0x104F1F7, sub_E6E800, true);
-    injector::MakeCALL(0x107A275, sub_E6E800, true);
-    injector::MakeCALL(0x109B17D, sub_E6E800, true);
-    injector::MakeCALL(0x111366D, sub_E6E800, true);
-    injector::MakeCALL(0x117789C, sub_E6E800, true);
-    injector::MakeCALL(0x1197937, sub_E6E800, true);
-    injector::MakeCALL(0x123F3CF, sub_E6E800, true);
+    injector::MakeCALL(addrTbl[0x5F816C],  sub_E6E800, true);
+    injector::MakeCALL(addrTbl[0x96B347],  sub_E6E800, true);
+    injector::MakeCALL(addrTbl[0x104357D], sub_E6E800, true);
+    injector::MakeCALL(addrTbl[0x104866C], sub_E6E800, true);
+    injector::MakeCALL(addrTbl[0x104F1F7], sub_E6E800, true);
+    injector::MakeCALL(addrTbl[0x107A275], sub_E6E800, true);
+    injector::MakeCALL(addrTbl[0x109B17D], sub_E6E800, true);
+    injector::MakeCALL(addrTbl[0x111366D], sub_E6E800, true);
+    injector::MakeCALL(addrTbl[0x117789C], sub_E6E800, true);
+    injector::MakeCALL(addrTbl[0x1197937], sub_E6E800, true);
+    injector::MakeCALL(addrTbl[0x123F3CF], sub_E6E800, true);
 
     //disable shader overlays (don't scale to fullscreen)
     {
-        //injector::MakeCALL(0x012915D1, CreateVertexShaderHook, true);
-        injector::MakeCALL(0x01291614, CreatePixelShaderHook, true);
+        //injector::MakeCALL(addrTbl[0x012915D1], CreateVertexShaderHook, true);
+        injector::MakeCALL(addrTbl[0x01291614], CreatePixelShaderHook, true);
         
         static bool bIsPaused = false;
         struct GameStateHook
@@ -421,7 +510,7 @@ void Init()
                 regs.eax = *(uint8_t*)(regs.ebp + 0x104A9);
                 bIsPaused = !!regs.eax;
             }
-        }; injector::MakeInline<GameStateHook>(0x511DAA, 0x511DAA + 6);
+        }; injector::MakeInline<GameStateHook>(addrTbl[0x511DAA], addrTbl[0x511DAA] + 6);
 
         //struct SetVertexShaderHook
         //{
@@ -438,7 +527,7 @@ void Init()
         //        *(uint32_t*)(regs.edi + 0x24) = regs.eax;
         //        regs.ecx = *(uint32_t*)(regs.ebp + 0x0);
         //    }
-        //}; injector::MakeInline<SetVertexShaderHook>(0xF3CA40, 0xF3CA40 + 6);
+        //}; injector::MakeInline<SetVertexShaderHook>(addrTbl[0xF3CA40], addrTbl[0xF3CA40] + 6);
 
         struct SetPixelShaderHook
         {
@@ -455,22 +544,22 @@ void Init()
                 *(uint32_t*)(regs.edi + 0x28) = regs.eax;
                 regs.ecx = *(uint32_t*)(regs.ebp + 0x0);
             }
-        }; injector::MakeInline<SetPixelShaderHook>(0xF3CA8E, 0xF3CA8E + 6);
+        }; injector::MakeInline<SetPixelShaderHook>(addrTbl[0xF3CA8E], addrTbl[0xF3CA8E] + 6);
 
         // disabling injured overlay
         if (bDisableDamageOverlay)
         {
-            injector::WriteMemory<uint8_t>(0x98410A + 3, 0x16, true);
-            injector::WriteMemory<uint8_t>(0x9842C3 + 3, 0x16, true);
+            injector::WriteMemory<uint8_t>(addrTbl[0x98410A] + 3, 0x16, true);
+            injector::WriteMemory<uint8_t>(addrTbl[0x9842C3] + 3, 0x16, true);
         }
 
         if (bDisableDBNOEffects)
-            injector::WriteMemory<uint8_t>(0x9840F5 + 3, 0x16, true);
+            injector::WriteMemory<uint8_t>(addrTbl[0x9840F5] + 3, 0x16, true);
     }
 
     {
         //injector::MakeCALL(0x5103C3, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
-        injector::MakeCALL(0x58DE0F, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
+        injector::MakeCALL(addrTbl[0x58DE0F], sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
         //injector::MakeCALL(0x58DE38, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
         //injector::MakeCALL(0x58DE52, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
         //injector::MakeCALL(0x58DE74, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
@@ -478,7 +567,7 @@ void Init()
         //injector::MakeCALL(0x58DF6D, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
         //injector::MakeCALL(0x58DF8B, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
         //injector::MakeCALL(0x58DFBE, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
-        injector::MakeCALL(0x58E052, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
+        injector::MakeCALL(addrTbl[0x58E052], sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
         //injector::MakeCALL(0x58E06C, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
         //injector::MakeCALL(0x58E08E, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
         //injector::MakeCALL(0x58E127, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
@@ -488,7 +577,7 @@ void Init()
         //injector::MakeCALL(0x96CBB4, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
         //injector::MakeCALL(0x97A188, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80 // skills background
         //injector::MakeCALL(0x97A1A2, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
-        injector::MakeCALL(0x97A787, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
+        injector::MakeCALL(addrTbl[0x97A787], sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
         //injector::MakeCALL(0x97A7A1, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
         //injector::MakeCALL(0x98B263, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
         //injector::MakeCALL(0x98B898, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
@@ -513,47 +602,47 @@ void Init()
         //injector::MakeCALL(0xA1611E, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
         //injector::MakeCALL(0xA1A84A, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
 
-        injector::MakeCALL(0x55DCC7, sub_55DB40, true); // 0x55DB40 + 0x0->call    sub_55DB40
-        injector::MakeCALL(0x55DCE5, sub_55DB40_stretch, true); // 0x55DB40 + 0x0->call    sub_55DB40
+        injector::MakeCALL(addrTbl[0x55DCC7], sub_55DB40, true); // 0x55DB40 + 0x0->call    sub_55DB40
+        injector::MakeCALL(addrTbl[0x55DCE5], sub_55DB40_stretch, true); // 0x55DB40 + 0x0->call    sub_55DB40
         //injector::MakeCALL(0x55DD52, sub_55DB40_center, true); // 0x55DB40 + 0x0->call    sub_55DB40
         //injector::MakeCALL(0x55DD8F, sub_55DB40_center, true); // 0x55DB40 + 0x0->call    sub_55DB40
-        injector::MakeCALL(0x55DE28, sub_55DB40_center, true); // 0x55DB40 + 0x0->call    sub_55DB40
+        injector::MakeCALL(addrTbl[0x55DE28], sub_55DB40_center, true); // 0x55DB40 + 0x0->call    sub_55DB40
         //injector::MakeCALL(0x55DE46, sub_55DB40_center, true); // 0x55DB40 + 0x0->call    sub_55DB40
         //injector::MakeCALL(0x55DEDC, sub_55DB40_center, true); // 0x55DB40 + 0x0->call    sub_55DB40
         //injector::MakeCALL(0x55DF52, sub_55DB40_center, true); // 0x55DB40 + 0x0->call    sub_55DB40
         //injector::MakeCALL(0x55DFE8, sub_55DB40_center, true); // 0x55DB40 + 0x0->call    sub_55DB40
         //injector::MakeCALL(0x55E006, sub_55DB40_center, true); // 0x55DB40 + 0x0->call    sub_55DB40
-        injector::MakeCALL(0x55E09C, sub_55DB40_center, true); // 0x55DB40 + 0x0->call    sub_55DB40
+        injector::MakeCALL(addrTbl[0x55E09C], sub_55DB40_center, true); // 0x55DB40 + 0x0->call    sub_55DB40
         //injector::MakeCALL(0x55E0C8, sub_55DB40_center, true); // 0x55DB40 + 0x0->call    sub_55DB40
     }
     
     //3d blips fix
-    injector::MakeNOP(0x97D139, 2);
+    injector::MakeNOP(addrTbl[0x97D139], 2);
 
     if (bBorderlessWindowed)
     {
-        injector::MakeNOP(0x01292227, 6, true);
-        injector::MakeCALL(0x01292227, WindowedModeWrapper::CreateWindowExA_Hook, true);
-        injector::MakeNOP(0xF35DF6, 6, true);
-        injector::MakeCALL(0xF35DF6, WindowedModeWrapper::CreateWindowExW_Hook, true);
-        injector::MakeNOP(0xF35EEC, 6, true);
-        injector::MakeCALL(0xF35EEC, WindowedModeWrapper::CreateWindowExW_Hook, true);
-        injector::MakeNOP(0xF4228A, 6, true);
-        injector::MakeCALL(0xF4228A, WindowedModeWrapper::SetWindowLongA_Hook, true);
-        injector::MakeNOP(0xF4227E, 6, true);
-        injector::MakeCALL(0xF4227E, WindowedModeWrapper::AdjustWindowRect_Hook, true);
-        injector::MakeNOP(0xF422B1, 6, true);
-        injector::MakeCALL(0xF422B1, WindowedModeWrapper::SetWindowPos_Hook, true);
+        injector::MakeNOP(addrTbl[0x01292227], 6, true);
+        injector::MakeCALL(addrTbl[0x01292227], WindowedModeWrapper::CreateWindowExA_Hook, true);
+        injector::MakeNOP(addrTbl[0xF35DF6], 6, true);
+        injector::MakeCALL(addrTbl[0xF35DF6], WindowedModeWrapper::CreateWindowExW_Hook, true);
+        injector::MakeNOP(addrTbl[0xF35EEC], 6, true);
+        injector::MakeCALL(addrTbl[0xF35EEC], WindowedModeWrapper::CreateWindowExW_Hook, true);
+        injector::MakeNOP(addrTbl[0xF4228A], 6, true);
+        injector::MakeCALL(addrTbl[0xF4228A], WindowedModeWrapper::SetWindowLongA_Hook, true);
+        injector::MakeNOP(addrTbl[0xF4227E], 6, true);
+        injector::MakeCALL(addrTbl[0xF4227E], WindowedModeWrapper::AdjustWindowRect_Hook, true);
+        injector::MakeNOP(addrTbl[0xF422B1], 6, true);
+        injector::MakeCALL(addrTbl[0xF422B1], WindowedModeWrapper::SetWindowPos_Hook, true);
     }
 
     {
         static float fps = 1000.0f;
-        injector::WriteMemory(0x514CDB + 4, &fps, true);
-        injector::WriteMemory(0xD583AB + 4, &fps, true);
-        injector::WriteMemory(0xEE17C5 + 2, &fps, true);
-        injector::WriteMemory(0x9DBE9D + 4, &fps, true);
-        injector::WriteMemory(0x9DB8E8 + 4, &fps, true);
-        injector::WriteMemory(0x016E62D8, (int)fps, true);
+        injector::WriteMemory(addrTbl[0x514CDB] + 4, &fps, true);
+        injector::WriteMemory(addrTbl[0xD583AB] + 4, &fps, true);
+        injector::WriteMemory(addrTbl[0xEE17C5] + 2, &fps, true);
+        injector::WriteMemory(addrTbl[0x9DBE9D] + 4, &fps, true);
+        injector::WriteMemory(addrTbl[0x9DB8E8] + 4, &fps, true);
+        injector::WriteMemory(addrTbl[0x016E62D8], (int)fps, true);
     }
 }
 
