@@ -29,7 +29,6 @@ float fLensFlareScalar;
 bool bShadowFix = true;
 float fShadowScale = 1.7f;
 float fDustWidth = 40.0f;
-uint8_t WarpSwitchEffectMode = 1;
 
 bool bFixAdvertiseWindows = true;
 bool bFixStaffRoll = true;
@@ -640,7 +639,7 @@ void Init()
 	bFixLensFlare = iniReader.ReadInteger("MISC", "FixLensFlare", 1) != 0;
 	bFixAdvertiseWindows = iniReader.ReadInteger("MISC", "FixAdvertiseWindows", 1) != 0;
 	bFixStaffRoll = iniReader.ReadInteger("MISC", "FixStaffRoll", 1) != 0;
-	static uint32_t WarpSwitchEffectMode = iniReader.ReadInteger("MISC", "WarpSwitchEffectMode", 1) != 0;
+	static uint32_t WarpSwitchEffectMode = iniReader.ReadInteger("MISC", "WarpSwitchEffectMode", 2);
 	static bool bDisableMouseInput = iniReader.ReadInteger("MISC", "DisableMouseInput", 1) != 0;
 	static bool bDisableFrameSkipping = iniReader.ReadInteger("MISC", "DisableFrameSkipping", 1) != 0;
 	static bool bRestoreDemos = iniReader.ReadInteger("MISC", "RestoreDemos", 1) != 0;
@@ -1409,12 +1408,11 @@ void Init()
 	if (WarpSwitchEffectMode)
 	{
 		uintptr_t loc_41BAD5 = reinterpret_cast<uintptr_t>(hook::pattern("83 7F 50 04 75 0D 6A 02 6A 0A E8 ? ? ? ? 6A 06 EB 0B 6A 05 6A 0A E8 ? ? ? ? 6A 02 6A 0B").get_first(0)) + 0x10;
-		int8_t EffectMode = 2;
 
-		if (WarpSwitchEffectMode >=2)
-			EffectMode = 1;
+		if (WarpSwitchEffectMode > 2)
+			WarpSwitchEffectMode = 2;
 		
-		injector::WriteMemory<uint8_t>(loc_41BAD5, EffectMode, true);
+		injector::WriteMemory<uint8_t>(loc_41BAD5, WarpSwitchEffectMode, true);
 	}
 
 	if (bDisableFrameSkipping)
