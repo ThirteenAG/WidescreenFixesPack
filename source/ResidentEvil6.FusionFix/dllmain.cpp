@@ -159,10 +159,7 @@ float GetAspectRatio()
 
 float GetDiff()
 {
-    if (GetAspectRatio() >= defaultAspectRatio)
-        return GetAspectRatio() / defaultAspectRatio;
-    else
-        return 1.0f;
+    return GetAspectRatio() / defaultAspectRatio;
 }
 
 float GetSplitScreenDiff()
