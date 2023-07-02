@@ -261,7 +261,10 @@ void Init2()
                 void operator()(injector::reg_pack& regs)
                 {
                     regs.edi = *dword_CC9364;
-                    LoadResourceFile(TPKPath.c_str());
+                    if (std::filesystem::exists(TPKPath))
+                    {
+                        LoadResourceFile(TPKPath.c_str());
+                    }
                 }
             }; injector::MakeInline<LoadTPK>(pattern.get_first(0), pattern.get_first(6));
         }

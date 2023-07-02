@@ -760,7 +760,10 @@ void Init()
             static injector::hook_back<void(__cdecl*)()> hb_662B30;
             auto LoadTPK = []()
             {
-                LoadResourceFile(TPKPath.c_str(), 1);
+                if (std::filesystem::exists(TPKPath))
+                {
+                    LoadResourceFile(TPKPath.c_str(), 1);
+                }
                 return hb_662B30.fun();
             };
 
