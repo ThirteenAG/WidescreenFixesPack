@@ -282,56 +282,78 @@ void CParticle__AddParticleHook(uint32_t type, uint32_t vecPos)
     }
 }
 
+intptr_t dword_08BC9100 = 0;
+intptr_t dword_08BB3C38 = 0;
+intptr_t dword_08BB456C = 0;
+intptr_t dword_08BB4570 = 0;
+intptr_t dword_08BB345C = 0;
+intptr_t dword_08BB194C = 0;
+intptr_t TheCamera = 0;
 void GameLoopStuff()
 {
-    struct XRData* data = (struct XRData*)sync_buf;
-    uint8_t gMenuActivated = *(uint8_t*)(0x08BC9100 + 0x20);
-    data->ms_enabled = gMenuActivated == 0;
-
-    float CWeather_Rain = *(float*)(0x08BB3C38);
-    uint8_t CCullZones_CamNoRain =  (*(uint32_t*)(0x8BB456C) & 8) != 0;
-    uint8_t CCullZones_PlayerNoRain = (*(uint32_t*)(0x8BB4570) & 8) != 0;
-    uint8_t CCutsceneMgr__ms_running = *(uint8_t*)((*(uint32_t*)(0x8BB345C) + 0x13));
-    uint32_t CGame__currArea = *(uint32_t*)(0x08BB194C);
-    
-    if (CGame__currArea != 0 || CCullZones_CamNoRain || CCullZones_PlayerNoRain || CCutsceneMgr__ms_running)
-        data->ms_rainIntensity = 0.0f;
-    else
-        data->ms_rainIntensity = CWeather_Rain;
-
-    uint32_t TheCamera = 0x08BC7E30;
-    uint32_t RslCamera = *(uint32_t*)(TheCamera + 0x7BC);
-    if (RslCamera)
+    if (sync_buf[0] != 'X')
     {
-        uint32_t Node = RslCameraGetNode(RslCamera);
-        struct RwMatrix* pCamMatrix = (struct RwMatrix*)(sub_8A1A5D4(Node));
+        struct XRData* data = (struct XRData*)sync_buf;
+        uint8_t gMenuActivated = *(uint8_t*)(dword_08BC9100 + 0x20);
+        data->ms_enabled = gMenuActivated == 0;
 
-        data->p_right_x = (uint32_t)&pCamMatrix->right.x;
-        data->p_right_y = (uint32_t)&pCamMatrix->right.y;
-        data->p_right_z = (uint32_t)&pCamMatrix->right.z;
-        data->p_up_x = (uint32_t)&pCamMatrix->up.x;
-        data->p_up_y = (uint32_t)&pCamMatrix->up.y;
-        data->p_up_z = (uint32_t)&pCamMatrix->up.z;
-        data->p_at_x = (uint32_t)&pCamMatrix->at.x;
-        data->p_at_y = (uint32_t)&pCamMatrix->at.y;
-        data->p_at_z = (uint32_t)&pCamMatrix->at.z;
-        data->p_pos_x = (uint32_t)&pCamMatrix->pos.x;
-        data->p_pos_y = (uint32_t)&pCamMatrix->pos.y;
-        data->p_pos_z = (uint32_t)&pCamMatrix->pos.z;
+        float CWeather_Rain = *(float*)(injector.GetGP() + dword_08BB3C38);
+        uint8_t CCullZones_CamNoRain = (*(uint32_t*)(injector.GetGP() + dword_08BB456C) & 8) != 0;
+        uint8_t CCullZones_PlayerNoRain = (*(uint32_t*)(injector.GetGP() + dword_08BB4570) & 8) != 0;
+        uint8_t CCutsceneMgr__ms_running = *(uint8_t*)((*(uint32_t*)(injector.GetGP() + dword_08BB345C) + 0x13));
+        uint32_t CGame__currArea = *(uint32_t*)(injector.GetGP() + dword_08BB194C);
+
+        if (CGame__currArea != 0 || CCullZones_CamNoRain || CCullZones_PlayerNoRain || CCutsceneMgr__ms_running)
+            data->ms_rainIntensity = 0.0f;
+        else
+            data->ms_rainIntensity = CWeather_Rain;
+
+        uint32_t RslCamera = *(uint32_t*)(TheCamera + 0x7BC);
+        if (RslCamera)
+        {
+            uint32_t Node = RslCameraGetNode(RslCamera);
+            struct RwMatrix* pCamMatrix = (struct RwMatrix*)(sub_8A1A5D4(Node));
+
+            data->p_right_x = (uint32_t)&pCamMatrix->right.x;
+            data->p_right_y = (uint32_t)&pCamMatrix->right.y;
+            data->p_right_z = (uint32_t)&pCamMatrix->right.z;
+            data->p_up_x = (uint32_t)&pCamMatrix->up.x;
+            data->p_up_y = (uint32_t)&pCamMatrix->up.y;
+            data->p_up_z = (uint32_t)&pCamMatrix->up.z;
+            data->p_at_x = (uint32_t)&pCamMatrix->at.x;
+            data->p_at_y = (uint32_t)&pCamMatrix->at.y;
+            data->p_at_z = (uint32_t)&pCamMatrix->at.z;
+            data->p_pos_x = (uint32_t)&pCamMatrix->pos.x;
+            data->p_pos_y = (uint32_t)&pCamMatrix->pos.y;
+            data->p_pos_z = (uint32_t)&pCamMatrix->pos.z;
+        }
     }
+}
 
+uintptr_t GetAbsoluteAddress(uintptr_t at, int32_t offs_hi, int32_t offs_lo)
+{
+    return (uintptr_t)((uint32_t)(*(uint16_t*)(at + offs_hi)) << 16) + *(int16_t*)(at + offs_lo);
 }
 
 int OnModuleStart() {
-
-    memset(sync_buf, 0, sizeof(sync_buf));
-
     //vcs
+    uintptr_t ptr_8937A50 = pattern.get(0, "1C 00 BF AF ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 01 00 15 34", 4);
+    if (ptr_8937A50)
     {
-        uintptr_t ptr_8937A50 = pattern.get(0, "1C 00 BF AF ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 01 00 15 34", 4);
         injector.MakeJAL(ptr_8937A50, (intptr_t)GameLoopStuff);
-        
-        MakeInlineWrapper(0x089004B4,
+
+        uintptr_t ptr_6710 = pattern.get(0, "00 00 B0 AF 08 00 BF AF ? ? ? ? 25 80 80 00 01 00 04 34 ? ? ? ? ? ? ? ? 25 20 20 02 ? ? ? ? ? ? ? ? ? ? ? ? 25 20 20 02 ? ? ? ? 00 00 00 00", -8);
+        dword_08BC9100 = GetAbsoluteAddress(ptr_6710, 0, 4);
+        dword_08BB3C38 = *(int16_t*)pattern.get(0, "A3 3C 04 3C 0A D7 84 34 00 68 84 44 3E 60 0D 46 00 00 00 00 ? ? ? ? 00 00 00 00 ? ? ? ? 25 20 20 02", -4);
+        dword_08BB456C = *(int16_t*)pattern.get(0, "80 00 44 30 ? ? ? ? 00 00 00 00 ? ? ? ? 01 00 10 34", -4);
+        dword_08BB4570 = *(int16_t*)pattern.get(0, "00 00 00 00 20 00 B0 27 ? ? ? ? 25 20 00 02 00 00 00 DA", -20);
+        dword_08BB345C = *(int16_t*)pattern.get(0, "00 00 00 00 ? ? ? ? 1C 00 85 8C 02 00 A5 38", -20);
+        dword_08BB194C = *(int16_t*)pattern.get(0, "02 00 04 34 ? ? ? ? 01 00 04 34 30 00 A7 93", -4);
+        uintptr_t ptr_1F0C = pattern.get(0, "00 00 B0 AF 04 00 B1 AF 0C 00 B3 AF 10 00 B4 AF 14 00 B5 AF 18 00 B6 AF 1C 00 BF AF", -8);
+        TheCamera = GetAbsoluteAddress(ptr_1F0C, 0, 4);
+
+        uintptr_t ptr_FC4B4 = pattern.get(0, "C0 29 10 00 80 38 10 00", 0);
+        MakeInlineWrapper(ptr_FC4B4,
             move(s7, a0),
             move(k1, a1),
             move(a0, s0),

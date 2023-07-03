@@ -62,10 +62,9 @@ struct XRData {
 
 void init()
 {
-    memset(XboxRainDropletsData, 0, sizeof(XboxRainDropletsData));
-
     struct XRData* data = (struct XRData*)XboxRainDropletsData;
     data->ms_enabled = 1;
+    data->ms_rainIntensity = 1.0f;
 }
 
 int main()
