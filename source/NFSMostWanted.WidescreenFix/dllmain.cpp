@@ -282,6 +282,10 @@ void Init()
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
         szCustomUserFilesDirectoryInGameDir.clear();
     int nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
+
+    bool bLightStreaksEnable = iniReader.ReadInteger("GRAPHICS", "LightStreaksEnable", 0) != 0;
+    bool bBleachByPassEnable = iniReader.ReadInteger("GRAPHICS", "BleachByPassEnable", 0) != 0;
+
     bool bFixNOSTrailLength = iniReader.ReadInteger("NOSTrail", "FixNOSTrailLength", 1) == 1;
     bool bFixNOSTrailPosition = iniReader.ReadInteger("NOSTrail", "FixNOSTrailPosition", 0) != 0;
     static float fCustomNOSTrailLength = iniReader.ReadFloat("NOSTrail", "CustomNOSTrailLength", 1.0f);
@@ -1073,6 +1077,24 @@ void Init()
             pattern = hook::pattern("55 8B EC 83 E4 F0 83 EC 74 53 56 57 8B F9 89 7C 24 3C"); // 0x00742950
             CarRenderInfo_RenderFlaresOnCar = (void(__thiscall*)(void*, void*, bVector3*, bMatrix4*, int, int, int))pattern.get_first(0);
         }
+    }
+
+    if (bLightStreaksEnable)
+    {
+        uintptr_t loc_6C1841 = reinterpret_cast<uintptr_t>(hook::pattern("A1 ? ? ? ? 8B 0C 85 ? ? ? ? 85 C9 75 20 85 C0").get_first(0)) - 0x113;
+        uintptr_t loc_6C19EC = reinterpret_cast<uintptr_t>(hook::pattern("C7 44 24 10 40 00 00 00 FF 15 ? ? ? ? 39 7C 24 18").get_first(0)) - 0x134;
+        uintptr_t loc_6C1AD8 = loc_6C19EC + 0xEC;
+        uintptr_t loc_6C310B = reinterpret_cast<uintptr_t>(hook::pattern("99 83 E2 03 03 C2 8B C8 8B C7 99 83 E2 03 03 C2 C1 F8 02 A3").get_first(0)) - 0x20;
+
+        uintptr_t g_LightStreaksEnable = *reinterpret_cast<uintptr_t*>(loc_6C1841 + 1);
+
+        // disable control of the variable
+        injector::MakeNOP(loc_6C1841, 5);
+        injector::MakeNOP(loc_6C19EC, 6);
+        injector::MakeNOP(loc_6C1AD8, 6);
+        injector::MakeNOP(loc_6C310B, 6);
+
+        *(uint32_t*)g_LightStreaksEnable = 1;
     }
 
     if (bWriteSettingsToFile)
