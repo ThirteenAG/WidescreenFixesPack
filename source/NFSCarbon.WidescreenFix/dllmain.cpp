@@ -155,21 +155,25 @@ void Init()
     int nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
     int32_t nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
     bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 0) != 0;
-    bool bLightingFix = iniReader.ReadInteger("MISC", "LightingFix", 1) != 0;
-    bool bCarShadowFix = iniReader.ReadInteger("MISC", "CarShadowFix", 1) != 0;
+
     bool bExperimentalCrashFix = iniReader.ReadInteger("MISC", "CrashFix", 1) != 0;
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
     bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 0) != 0;
     static int32_t nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
     bool bExpandControllerOptions = iniReader.ReadInteger("MISC", "ExpandControllerOptions", 0) != 0;
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
-    static float fRainDropletsScale = iniReader.ReadFloat("MISC", "RainDropletsScale", 0.5f);
-    bool bDisableMotionBlur = iniReader.ReadInteger("MISC", "DisableMotionBlur", 0) != 0;
-    bool bDisableContrails = iniReader.ReadInteger("MISC", "DisableContrails", 0) != 0;
-    bool bFixXenonEffects = iniReader.ReadInteger("MISC", "FixXenonEffects", 1) != 0;
+
     static int SimRate = iniReader.ReadInteger("MISC", "SimRate", -1);
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
         szCustomUserFilesDirectoryInGameDir.clear();
+
+    bool bLightingFix = iniReader.ReadInteger("GRAPHICS", "LightingFix", 1) != 0;
+    bool bCarShadowFix = iniReader.ReadInteger("GRAPHICS", "CarShadowFix", 1) != 0;
+    static float fRainDropletsScale = iniReader.ReadFloat("GRAPHICS", "RainDropletsScale", 0.5f);
+    bool bDisableMotionBlur = iniReader.ReadInteger("GRAPHICS", "DisableMotionBlur", 0) != 0;
+    bool bDisableContrails = iniReader.ReadInteger("GRAPHICS", "DisableContrails", 0) != 0;
+    bool bFixXenonEffects = iniReader.ReadInteger("GRAPHICS", "FixXenonEffects", 1) != 0;
+
     bool bFixNOSTrailLength = iniReader.ReadInteger("NOSTrail", "FixNOSTrailLength", 1) == 1;
     bool bFixNOSTrailPosition = iniReader.ReadInteger("NOSTrail", "FixNOSTrailPosition", 0) != 0;
     static float fCustomNOSTrailLength = iniReader.ReadFloat("NOSTrail", "CustomNOSTrailLength", 1.0f);
