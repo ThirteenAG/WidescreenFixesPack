@@ -507,10 +507,10 @@ void Init()
 
     if (bDisableContrails)
     {
-        pattern = hook::pattern("8A 87 9C 01 00 00 84 C0");
-        uint32_t* dword_7E1281 = pattern.count(1).get(0).get<uint32_t>(0);
-        uint32_t* dword_7E13A9 = pattern.count(1).get(0).get<uint32_t>(0x128);
-        injector::MakeJMP(dword_7E1281, dword_7E13A9, true);
+        uintptr_t loc_7E1351 = reinterpret_cast<uintptr_t>(hook::pattern("8A 87 9C 01 00 00 84 C0").get_first(0)) + 0xD0;
+        uintptr_t loc_7E13A9 = loc_7E1351 + 0x58;
+
+        injector::MakeJMP(loc_7E1351, loc_7E13A9, true);
     }
 
     if (bFixXenonEffects)
