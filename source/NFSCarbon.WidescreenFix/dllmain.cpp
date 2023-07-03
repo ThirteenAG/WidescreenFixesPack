@@ -141,6 +141,76 @@ void __declspec(naked) LightingFixUpdateMirrorCave()
     }
 }
 
+namespace ContrailHook
+{
+    float *fContrailSpeed;
+    bool bLimitContrailRate;
+    float fContrailTargetFPS;
+    float fContrailMinIntensity;
+    float fContrailMaxIntensity;
+
+    uintptr_t AddXenonEffect = 0x00754CD0;
+
+    uint32_t ContrailFrameDelay = 1;
+
+    uint32_t ContrailFC = 0;
+    uint32_t RenderConnFC = 0;
+    void AddXenonEffect_Contrail_Hook(void* piggyback_fx, void* spec, bMatrix4* mat, bVector4* vel, float intensity)
+    {
+        float newintensity = fContrailMaxIntensity;
+
+        double carspeed = ((sqrt((*vel).x * (*vel).x + (*vel).y * (*vel).y + (*vel).z * (*vel).z) - *fContrailSpeed)) / *fContrailSpeed;
+        newintensity = std::lerp(fContrailMinIntensity, fContrailMaxIntensity, carspeed);
+        if (newintensity > fContrailMaxIntensity)
+            newintensity = fContrailMaxIntensity;
+
+
+        if (!bLimitContrailRate)
+            return reinterpret_cast<void(*)(void*, void*, bMatrix4*, bVector4*, float)>(AddXenonEffect)(piggyback_fx, spec, mat, vel, newintensity);
+
+        // TODO: this could use actual timers instead of a simple framecounter to make it better, but it is good enough for this purpose
+        if ((ContrailFC + ContrailFrameDelay) <= RenderConnFC)
+        {
+            if (ContrailFC != RenderConnFC)
+            {
+                ContrailFC = RenderConnFC;
+                reinterpret_cast<void(*)(void*, void*, bMatrix4*, bVector4*, float)>(AddXenonEffect)(piggyback_fx, spec, mat, vel, newintensity);
+            }
+        }
+        RenderConnFC++;
+    }
+}
+
+namespace SparkHook
+{
+    bool bLimitSparkRate = false;
+    float fSparkTargetFPS = 60.0f;
+    float fSparkIntensity = 1.0f;
+
+    uintptr_t AddXenonEffect = 0x00754CD0;
+
+    uint32_t SparkFrameDelay = 1;
+
+    uint32_t SparkFC = 0;
+    uint32_t RenderConnFC = 0;
+    void AddXenonEffect_Spark_Hook(void* piggyback_fx, void* spec, bMatrix4* mat, bVector4* vel, float intensity)
+    {
+        if (!bLimitSparkRate)
+            return reinterpret_cast<void(*)(void*, void*, bMatrix4*, bVector4*, float)>(AddXenonEffect)(piggyback_fx, spec, mat, vel, fSparkIntensity);
+
+        // TODO: this could use actual timers instead of a simple framecounter to make it better, but it is good enough for this purpose
+        if ((SparkFC + SparkFrameDelay) <= RenderConnFC)
+        {
+            if (SparkFC != RenderConnFC)
+            {
+                SparkFC = RenderConnFC;
+                reinterpret_cast<void(*)(void*, void*, bMatrix4*, bVector4*, float)>(AddXenonEffect)(piggyback_fx, spec, mat, vel, fSparkIntensity);
+            }
+        }
+        RenderConnFC++;
+    }
+}
+
 #pragma runtime_checks( "", restore )
 
 void Init()
@@ -155,21 +225,35 @@ void Init()
     int nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
     int32_t nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
     bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 0) != 0;
-    bool bLightingFix = iniReader.ReadInteger("MISC", "LightingFix", 1) != 0;
-    bool bCarShadowFix = iniReader.ReadInteger("MISC", "CarShadowFix", 1) != 0;
+
     bool bExperimentalCrashFix = iniReader.ReadInteger("MISC", "CrashFix", 1) != 0;
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
     bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 0) != 0;
     static int32_t nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
     bool bExpandControllerOptions = iniReader.ReadInteger("MISC", "ExpandControllerOptions", 0) != 0;
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
-    static float fRainDropletsScale = iniReader.ReadFloat("MISC", "RainDropletsScale", 0.5f);
-    bool bDisableMotionBlur = iniReader.ReadInteger("MISC", "DisableMotionBlur", 0) != 0;
-    bool bDisableContrails = iniReader.ReadInteger("MISC", "DisableContrails", 0) != 0;
-    bool bFixXenonEffects = iniReader.ReadInteger("MISC", "FixXenonEffects", 1) != 0;
+
     static int SimRate = iniReader.ReadInteger("MISC", "SimRate", -1);
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
         szCustomUserFilesDirectoryInGameDir.clear();
+
+    bool bLightingFix = iniReader.ReadInteger("GRAPHICS", "LightingFix", 1) != 0;
+    bool bCarShadowFix = iniReader.ReadInteger("GRAPHICS", "CarShadowFix", 1) != 0;
+    static float fRainDropletsScale = iniReader.ReadFloat("GRAPHICS", "RainDropletsScale", 0.5f);
+    bool bDisableMotionBlur = iniReader.ReadInteger("GRAPHICS", "DisableMotionBlur", 0) != 0;
+    bool bDisableContrails = iniReader.ReadInteger("GRAPHICS", "DisableContrails", 0) != 0;
+    bool bFixXenonEffects = iniReader.ReadInteger("GRAPHICS", "FixXenonEffects", 1) != 0;
+
+    float cfgContrailSpeed = iniReader.ReadFloat("Contrails", "ContrailSpeed", 35.0f);
+    ContrailHook::bLimitContrailRate = iniReader.ReadInteger("Contrails", "LimitContrailRate", 1) != 0;
+    ContrailHook::fContrailTargetFPS = iniReader.ReadFloat("Contrails", "ContrailTargetFPS", 30.0f);
+    ContrailHook::fContrailMinIntensity = iniReader.ReadFloat("Contrails", "ContrailMinIntensity", 0.1f);
+    ContrailHook::fContrailMaxIntensity = iniReader.ReadFloat("Contrails", "ContrailMaxIntensity", 0.75f);
+
+    SparkHook::bLimitSparkRate = iniReader.ReadInteger("Sparks", "LimitSparkRate", 0) != 0;
+    SparkHook::fSparkTargetFPS = iniReader.ReadFloat("Sparks", "SparkTargetFPS", 60.0f);
+    SparkHook::fSparkIntensity = iniReader.ReadFloat("Sparks", "SparkIntensity", 1.0f);
+
     bool bFixNOSTrailLength = iniReader.ReadInteger("NOSTrail", "FixNOSTrailLength", 1) == 1;
     bool bFixNOSTrailPosition = iniReader.ReadInteger("NOSTrail", "FixNOSTrailPosition", 0) != 0;
     static float fCustomNOSTrailLength = iniReader.ReadFloat("NOSTrail", "CustomNOSTrailLength", 1.0f);
@@ -503,14 +587,6 @@ void Init()
     {
         uint32_t* dword_71356B = hook::pattern("D9 87 B4 00 00 00 D8 1D ? ? ? ? DF E0 F6 C4 41 75 76").count(1).get(0).get<uint32_t>(17); //0x0071355A
         injector::WriteMemory<uint8_t>(dword_71356B, 0xEB, true);
-    }
-
-    if (bDisableContrails)
-    {
-        pattern = hook::pattern("8A 87 9C 01 00 00 84 C0");
-        uint32_t* dword_7E1281 = pattern.count(1).get(0).get<uint32_t>(0);
-        uint32_t* dword_7E13A9 = pattern.count(1).get(0).get<uint32_t>(0x128);
-        injector::MakeJMP(dword_7E1281, dword_7E13A9, true);
     }
 
     if (bFixXenonEffects)
@@ -899,6 +975,68 @@ void Init()
         static float WorldMapConst4 = ((*(float*)dword_58F7B5) / (1 / TargetFPS)) * FrameTime;
         injector::WriteMemory(dword_58F7B5, &WorldMapConst4, true);
     }
+
+
+    if (bDisableContrails)
+    {
+        uintptr_t loc_7E1351 = reinterpret_cast<uintptr_t>(hook::pattern("8A 87 9C 01 00 00 84 C0").get_first(0)) + 0xD0;
+        uintptr_t loc_7E13A9 = loc_7E1351 + 0x58;
+
+        injector::MakeJMP(loc_7E1351, loc_7E13A9, true);
+    }
+    else if (ContrailHook::bLimitContrailRate && (ContrailHook::fContrailTargetFPS > 0.0f))
+    {
+        uintptr_t loc_6B4D30 = reinterpret_cast<uintptr_t>(hook::pattern("D9 05 ? ? ? ? B9 ? ? ? ? D8 44 24 14 D9 5C 24 14").get_first(0)) + 0x35;
+        static float fGameTargetFPS = 1.0f / **reinterpret_cast<float**>(loc_6B4D30);
+
+        if (fGameTargetFPS != ContrailHook::fContrailTargetFPS)
+        {
+            // TODO: use a timer instead of this because of rounding errors!
+            float fContrailFrameDelay = (fGameTargetFPS / ContrailHook::fContrailTargetFPS);
+            ContrailHook::ContrailFrameDelay = static_cast<uint32_t>(round(fContrailFrameDelay));
+
+            uintptr_t loc_7E139A = reinterpret_cast<uintptr_t>(hook::pattern("8A 87 9C 01 00 00 84 C0").get_first(0)) + 0x119;
+            ContrailHook::AddXenonEffect = static_cast<uintptr_t>(injector::GetBranchDestination(loc_7E139A));
+            injector::MakeCALL(loc_7E139A, ContrailHook::AddXenonEffect_Contrail_Hook, true);
+        }
+    }
+    else
+    {
+        uintptr_t loc_7E136D = reinterpret_cast<uintptr_t>(hook::pattern("8A 87 9C 01 00 00 84 C0").get_first(0)) + 0xEC;
+        uintptr_t loc_7E1372 = loc_7E136D + 5;
+
+        injector::WriteMemory<float>(loc_7E136D + 1, ContrailHook::fContrailMaxIntensity, true);
+        injector::WriteMemory<float>(loc_7E1372 + 1, ContrailHook::fContrailMinIntensity, true);
+    }
+
+    uintptr_t loc_7E1364 = reinterpret_cast<uintptr_t>(hook::pattern("8A 87 9C 01 00 00 84 C0").get_first(0)) + 0xE3;
+    ContrailHook::fContrailSpeed = *reinterpret_cast<float**>(loc_7E1364 + 2);
+    DWORD oldprotect;
+    injector::UnprotectMemory(ContrailHook::fContrailSpeed, sizeof(float), oldprotect);
+    *ContrailHook::fContrailSpeed = cfgContrailSpeed;
+
+    if (SparkHook::bLimitSparkRate)
+    {
+        uintptr_t loc_6B4D30 = reinterpret_cast<uintptr_t>(hook::pattern("D9 05 ? ? ? ? B9 ? ? ? ? D8 44 24 14 D9 5C 24 14").get_first(0)) + 0x35;
+        static float fGameTargetFPS = 1.0f / **reinterpret_cast<float**>(loc_6B4D30);
+        
+        if (fGameTargetFPS != SparkHook::fSparkTargetFPS)
+        {
+            // TODO: use a timer instead of this because of rounding errors!
+            float fSparkFrameDelay = (fGameTargetFPS / SparkHook::fSparkTargetFPS);
+            SparkHook::SparkFrameDelay = static_cast<uint32_t>(round(fSparkFrameDelay));
+
+            uintptr_t loc_755C99 = reinterpret_cast<uintptr_t>(hook::pattern("8B 4E 3C 57 68 37 E6 40 FE E8").get_first(0)) + 0x39;
+            SparkHook::AddXenonEffect = static_cast<uintptr_t>(injector::GetBranchDestination(loc_755C99));
+            injector::MakeCALL(loc_755C99, SparkHook::AddXenonEffect_Spark_Hook, true);
+        }
+    }
+    else
+    {
+        uintptr_t loc_755C8A = reinterpret_cast<uintptr_t>(hook::pattern("8B 4E 3C 57 68 37 E6 40 FE E8").get_first(0)) + 0x2A;
+        injector::WriteMemory<float>(loc_755C8A + 1, SparkHook::fSparkIntensity, true);
+    }
+
 
     if (bFixNOSTrailLength)
     {
