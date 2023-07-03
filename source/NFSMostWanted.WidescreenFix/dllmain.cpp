@@ -266,15 +266,10 @@ void Init()
     int nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
     nScaling = iniReader.ReadInteger("MAIN", "Scaling", 1);
     bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 0) != 0;
-    ShadowRes::Resolution = iniReader.ReadInteger("MISC", "ShadowsRes", 2048);
-    ShadowRes::bAutoScaleShadowsRes = iniReader.ReadInteger("MISC", "AutoScaleShadowsRes", 1) != 0;
-    ShadowRes::bDisableShadowTextureFilterOnRadeon = iniReader.ReadInteger("MISC", "DisableShadowTextureFilterOnRadeon", 1) != 0;
-    bool bShadowsFix = iniReader.ReadInteger("MISC", "ShadowsFix", 1) != 0;
-    bool bImproveShadowLOD = iniReader.ReadInteger("MISC", "ImproveShadowLOD", 1) != 0;
+
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "");
     bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 1) != 0;
     static int nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
-    bool bDisableMotionBlur = iniReader.ReadInteger("MISC", "DisableMotionBlur", 0) != 0;
     bool bForceHighSpecAudio = iniReader.ReadInteger("MISC", "ForceHighSpecAudio", 1) != 0;
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
     static float fRainDropletsScale = iniReader.ReadFloat("MISC", "RainDropletsScale", 0.5f);
@@ -283,6 +278,12 @@ void Init()
         szCustomUserFilesDirectoryInGameDir.clear();
     int nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
 
+    ShadowRes::Resolution = iniReader.ReadInteger("GRAPHICS", "ShadowsRes", 2048);
+    ShadowRes::bAutoScaleShadowsRes = iniReader.ReadInteger("GRAPHICS", "AutoScaleShadowsRes", 1) != 0;
+    ShadowRes::bDisableShadowTextureFilterOnRadeon = iniReader.ReadInteger("GRAPHICS", "DisableShadowTextureFilterOnRadeon", 1) != 0;
+    bool bShadowsFix = iniReader.ReadInteger("GRAPHICS", "ShadowsFix", 1) != 0;
+    bool bImproveShadowLOD = iniReader.ReadInteger("GRAPHICS", "ImproveShadowLOD", 1) != 0;
+    bool bDisableMotionBlur = iniReader.ReadInteger("GRAPHICS", "DisableMotionBlur", 0) != 0;
     bool bLightStreaksEnable = iniReader.ReadInteger("GRAPHICS", "LightStreaksEnable", 0) != 0;
     bool bBleachByPassEnable = iniReader.ReadInteger("GRAPHICS", "BleachByPassEnable", 0) != 0;
 
