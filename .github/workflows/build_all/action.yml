@@ -41,7 +41,7 @@ runs:
     run: |
       cd ./data
       release.bat
-  - name: Upload artifacts to actions
-    uses: actions/upload-artifact@v3.1.2
-    with:
-      path: ./data/Archives/*.zip
+#  - name: Upload artifacts to actions
+#    uses: actions/upload-artifact@v3.1.2
+#    with:
+#      path: ./data/Archives/*.zip
