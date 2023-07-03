@@ -93,6 +93,7 @@ on:
         - tod
         - truecrimenyc
         - truecrimesola
+        - xrd
         - usm
 
 env:
@@ -181,6 +182,7 @@ env:
   tod: "/t:TotalOverdose_WidescreenFix"
   truecrimenyc: "/t:TrueCrimeNewYorkCity_WidescreenFix"
   truecrimesola: "/t:TrueCrimeStreetsofLA_WidescreenFix"
+  xrd: "/t:PPSSPP_XboxRainDroplets /t:PCSX2F_XboxRainDroplets"
   usm: "/t:UltimateSpiderMan_WidescreenFix"
 
 jobs:
