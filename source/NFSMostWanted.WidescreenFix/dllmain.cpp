@@ -1104,7 +1104,6 @@ void Init()
         uintptr_t loc_6C1B0E = loc_6C1A9F + 0x6F;
         uintptr_t loc_6C2FC0 = reinterpret_cast<uintptr_t>(hook::pattern("99 83 E2 03 03 C2 8B C8 8B C7 99 83 E2 03 03 C2 C1 F8 02 A3").get_first(0)) - 0x16B;
 
-
         uintptr_t g_BleachByPassEnable = *reinterpret_cast<uintptr_t*>(loc_6C18D1 + 1);
 
         // disable control of the variable
