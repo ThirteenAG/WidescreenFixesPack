@@ -266,7 +266,7 @@ void Init()
     int nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
     nScaling = iniReader.ReadInteger("MAIN", "Scaling", 1);
     bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 0) != 0;
-
+    bool bFixResolutionText = iniReader.ReadInteger("MISC", "FixResolutionText", 1) != 0;
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "");
     bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 1) != 0;
     static int nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
@@ -1114,6 +1114,47 @@ void Init()
         injector::MakeNOP(loc_6C2FC0, 6);
 
         *(uint32_t*)g_BleachByPassEnable = 1;
+    }
+
+    if (bFixResolutionText)
+    {
+        uintptr_t loc_51B81F = reinterpret_cast<uintptr_t>(hook::pattern("B8 12 7B 66 76 8B 77 30 85").get_first(0)) + 0xC;
+
+        // Video Options Resolution text
+        static wchar_t CurrResString[16];
+        struct ResolutionTextFix
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                *(uint32_t*)(regs.esi + 0x1C) |= 0x400000;
+                *(uint32_t*)(regs.esi + 0x60) = 0;
+
+                swprintf(CurrResString, L"%ux%u", Screen.Width, Screen.Height);
+                *(wchar_t**)(regs.esi + 0x64) = CurrResString;
+            }
+        }; injector::MakeInline<ResolutionTextFix>(loc_51B81F, loc_51B81F + 0xA);
+
+        uintptr_t loc_5297B0 = reinterpret_cast<uintptr_t>(hook::pattern("8B F0 83 C4 04 89 74 24 10 85 F6 C7 44 24 20 01 00 00 00 74 11 6A 01").get_first(0)) + 0x1E;
+        uintptr_t VOptionsVTable = *reinterpret_cast<uintptr_t*>(loc_5297B0 + 2);
+        uintptr_t loc_528430 = *reinterpret_cast<uintptr_t*>(VOptionsVTable);
+        uintptr_t loc_528431 = loc_528430 + 1;
+        uintptr_t loc_528433 = loc_528430 + 3;
+
+        static uintptr_t VOResFreeAddr = static_cast<uintptr_t>(injector::GetBranchDestination(loc_528433));
+        
+        struct ResolutionTextFreeHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                // [obj + 0x30] = FEString
+                uintptr_t FEString = *(uintptr_t*)(regs.ecx + 0x30);
+                *(wchar_t**)(FEString + 0x64) = nullptr; // null the string so it doesn't get freed by the game!
+
+                regs.esi = regs.ecx;
+
+                reinterpret_cast<void(__thiscall*)(uintptr_t)>(VOResFreeAddr)(regs.ecx);
+            }
+        }; injector::MakeInline<ResolutionTextFreeHook>(loc_528431, loc_528431 + 7);
     }
 
     if (bWriteSettingsToFile)
