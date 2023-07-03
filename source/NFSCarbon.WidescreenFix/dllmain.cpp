@@ -262,6 +262,13 @@ void Init()
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
 
+    // clamp the size because below 32x32 the game crashes!
+    if (Screen.Width < 32)
+        Screen.Width = 32;
+
+    if (Screen.Height < 32)
+        Screen.Height = 32;
+
     Screen.fWidth = static_cast<float>(Screen.Width);
     Screen.fHeight = static_cast<float>(Screen.Height);
     Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);

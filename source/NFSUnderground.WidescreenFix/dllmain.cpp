@@ -323,6 +323,13 @@ void Init()
     if (!Screen.nWidth || !Screen.nHeight)
         std::tie(Screen.nWidth, Screen.nHeight) = GetDesktopRes();
 
+    // clamp the size because below 32x32 the game crashes!
+    if (Screen.nWidth < 32)
+        Screen.nWidth = 32;
+
+    if (Screen.nHeight < 32)
+        Screen.nHeight = 32;
+
     Screen.fWidth = static_cast<float>(Screen.nWidth);
     Screen.fHeight = static_cast<float>(Screen.nHeight);
     Screen.nWidth43 = static_cast<uint32_t>(Screen.fHeight * (4.0f / 3.0f));
