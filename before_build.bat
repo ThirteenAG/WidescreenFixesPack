@@ -2,10 +2,6 @@ cd textures/NFS/NFSUC
 createtpk.bat
 cd ../../..
 
-cd textures/NFS/NFSPS
-createtpk.bat
-cd ../../..
-
 cd textures/NFS/NFSC
 createtpk.bat
 cd ../../..
