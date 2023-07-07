@@ -640,7 +640,7 @@ void Init()
     bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 0) != 0;
     bool bSkipFEBootflow = iniReader.ReadInteger("MISC", "SkipFEBootflow", 0) != 0;
     static int32_t nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
-    static int32_t nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
+    //static int32_t nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
     bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 0) != 0;
     bool bDisableMotionBlur = iniReader.ReadInteger("MISC", "DisableMotionBlur", 0) != 0;
@@ -972,108 +972,112 @@ void Init()
         }; injector::MakeInline<ResHook>(pattern.get_first(0), pattern.get_first(11));
     }
 
-    bool bXtendedInputExists = false;
-    if (nImproveGamepadSupport)
-        bXtendedInputExists = (::GetModuleHandleA("NFS_XtendedInput.asi") != NULL) || std::filesystem::exists("NFS_XtendedInput.asi");
+    // 2023/07/07 - nImproveGamepadSupport is deprecated in Pro Street.
+    // Use NFS_XtendedInput instead for proper controller configuration.
+    // https://github.com/xan1242/NFS-XtendedInput
 
-    if (nImproveGamepadSupport && !bXtendedInputExists)
-    {
-        auto pattern = hook::pattern("6A FF 68 ? ? ? ? 64 A1 ? ? ? ? 50 51 A1 ? ? ? ? 33 C4 50 8D 44 24 08 64 A3 ? ? ? ? A1 ? ? ? ? 50");
-        static auto CreateResourceFile = (void*(*)(const char* ResourceFileName, int32_t ResourceFileType, int, int, int)) pattern.get_first(0); //0x006D6DE0
-        pattern = hook::pattern("8B 44 24 04 56 8B F1 8B 4C 24 0C 89 46 38 89 4E 3C");
-        static auto ResourceFileBeginLoading = (void(__thiscall *)(void* rsc, int a1, int a2)) pattern.get_first(0); //0x006D9430
-        static auto LoadResourceFile = [](const char* ResourceFileName, int32_t ResourceFileType, int32_t nUnk1 = 0, int32_t nUnk2 = 0, int32_t nUnk3 = 0, int32_t nUnk4 = 0, int32_t nUnk5 = 0)
-        {
-            auto r = CreateResourceFile(ResourceFileName, ResourceFileType, nUnk1, nUnk2, nUnk3);
-            ResourceFileBeginLoading(r, nUnk4, nUnk5);
-        };
-
-        if (nImproveGamepadSupport < 3)
-        {
-            static auto TPKPath = GetThisModulePath<std::string>().substr(GetExeModulePath<std::string>().length());
-
-            if (nImproveGamepadSupport == 1)
-                TPKPath += "buttons-xbox.tpk";
-            else if (nImproveGamepadSupport == 2)
-                TPKPath += "buttons-playstation.tpk";
-
-            static injector::hook_back<void(__cdecl*)()> hb_6D98B0;
-            auto LoadTPK = []()
-            {
-                if (std::filesystem::exists(TPKPath))
-                {
-                    LoadResourceFile(TPKPath.c_str(), 1);
-                }
-                return hb_6D98B0.fun();
-            };
-
-            pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 8B 35 ? ? ? ? 6A 04 FF D6 83 C4 04 85 C0"); //0x6DABDE
-            hb_6D98B0.fun = injector::MakeCALL(pattern.get_first(0), static_cast<void(__cdecl*)()>(LoadTPK), true).get();
-        }
-
-        const char* ControlsTexts[] = { " 2", " 3", " 4", " 5", " 6", " 7", " 8", " 9", " 10", " 1", " Up", " Down", " Left", " Right", "X Rotation", "Y Rotation", "X Axis", "Y Axis", "Z Axis", "Hat Switch" };
-        const char* ControlsTextsXBOX[] = { "B", "X", "Y", "LB", "RB", "View (Select)", "Menu (Start)", "Left stick", "Right stick", "A", "D-pad Up", "D-pad Down", "D-pad Left", "D-pad Right", "Right stick Left/Right", "Right stick Up/Down", "Left stick Left/Right", "Left stick Up/Down", "LT / RT", "D-pad" };
-        const char* ControlsTextsPS[] = { "Circle", "Square", "Triangle", "L1", "R1", "Select", "Start", "L3", "R3", "Cross", "D-pad Up", "D-pad Down", "D-pad Left", "D-pad Right", "Right stick Left/Right", "Right stick Up/Down", "Left stick Left/Right", "Left stick Up/Down", "L2 / R2", "D-pad" };
-
-        static std::vector<std::string> Texts(ControlsTexts, std::end(ControlsTexts));
-        static std::vector<std::string> TextsXBOX(ControlsTextsXBOX, std::end(ControlsTextsXBOX));
-        static std::vector<std::string> TextsPS(ControlsTextsPS, std::end(ControlsTextsPS));
-
-        pattern = hook::pattern("68 04 01 00 00 51 E8 ? ? ? ? 83 C4 10 5F 5E C3"); //0x679B53
-        injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(16 + 5), 0xC3, true);
-        struct Buttons
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                auto pszStr = *(char**)(regs.esp + 4);
-                auto it = std::find_if(Texts.begin(), Texts.end(), [&](const std::string& str) { std::string s(pszStr); return s.find(str) != std::string::npos; });
-                auto i = std::distance(Texts.begin(), it);
-
-                if (it != Texts.end())
-                {
-                    if (nImproveGamepadSupport != 2)
-                        strcpy(pszStr, TextsXBOX[i].c_str());
-                    else
-                        strcpy(pszStr, TextsPS[i].c_str());
-                }
-            }
-        }; injector::MakeInline<Buttons>(pattern.get_first(16));
-
-        pattern = hook::pattern("8B 0F 8B 54 0E 08 DB 44 90 0C"); //0x6A5E4C
-        static auto unk_ABA3E4 = *hook::get_pattern<void**>("81 FE ? ? ? ? 0F 8C ? ? ? ? 8B 44 24 14 83 B8", 2);
-        struct MenuRemap
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                regs.ecx = *(uint32_t*)regs.edi;
-                regs.edx = *(uint32_t*)(regs.esi + regs.ecx + 0x08);
-
-                auto dword_ABA4C4 = &unk_ABA3E4[26];
-                auto dword_ABA454 = &unk_ABA3E4[28];
-                *(uint32_t*)(*(uint32_t*)dword_ABA4C4 + 0x20) = 4; // changes RB to LB
-                *(uint32_t*)(*(uint32_t*)dword_ABA454 + 0x20) = 5; // changes LB to RB
-            }
-        }; injector::MakeInline<MenuRemap>(pattern.get_first(0), pattern.get_first(6));
-
-        static injector::hook_back<int32_t(__cdecl*)(char*)> hb_4366E0;
-        auto padFix = [](char*) -> int32_t
-        {
-            return 0x2A5E19E0;
-        };
-        pattern = hook::pattern("E8 ? ? ? ? 83 C4 04 3D ? ? ? ? 0F 87 ? ? ? ? 0F 84 ? ? ? ? 3D");
-        hb_4366E0.fun = injector::MakeCALL(pattern.get_first(0), static_cast<int32_t(__cdecl*)(char*)>(padFix), true).get();
-
-        // Enables controls for FE photo mode
-        //pattern = hook::pattern("D9 EE 6A 00 51 D9 1C 24 8B 8E D0 00 00 00 E8 ? ? ? ? D9 EE 6A 00 "); //0x59890A
-        //injector::WriteMemory(pattern.get_first(0), 0xC3595E90, true); //pop esi  pop ecx  ret
-
-        // Start menu text
-        uint32_t* dword_7E2C9A = hook::pattern("68 ? ? ? ? 50 51 E8 ? ? ? ? 8D 54 24 2C").count(1).get(0).get<uint32_t>(1);
-        if (nImproveGamepadSupport != 2)
-            injector::WriteMemory(dword_7E2C9A, 0x25C22853, true); //"Press START to begin" (Xbox)
-        else
-            injector::WriteMemory(dword_7E2C9A, 0x703A92CC, true); //"Press START button" (PlayStation)
-    }
+    //bool bXtendedInputExists = false;
+    //if (nImproveGamepadSupport)
+    //    bXtendedInputExists = (::GetModuleHandleA("NFS_XtendedInput.asi") != NULL) || std::filesystem::exists("NFS_XtendedInput.asi");
+    //
+    //if (nImproveGamepadSupport && !bXtendedInputExists)
+    //{
+    //    auto pattern = hook::pattern("6A FF 68 ? ? ? ? 64 A1 ? ? ? ? 50 51 A1 ? ? ? ? 33 C4 50 8D 44 24 08 64 A3 ? ? ? ? A1 ? ? ? ? 50");
+    //    static auto CreateResourceFile = (void*(*)(const char* ResourceFileName, int32_t ResourceFileType, int, int, int)) pattern.get_first(0); //0x006D6DE0
+    //    pattern = hook::pattern("8B 44 24 04 56 8B F1 8B 4C 24 0C 89 46 38 89 4E 3C");
+    //    static auto ResourceFileBeginLoading = (void(__thiscall *)(void* rsc, int a1, int a2)) pattern.get_first(0); //0x006D9430
+    //    static auto LoadResourceFile = [](const char* ResourceFileName, int32_t ResourceFileType, int32_t nUnk1 = 0, int32_t nUnk2 = 0, int32_t nUnk3 = 0, int32_t nUnk4 = 0, int32_t nUnk5 = 0)
+    //    {
+    //        auto r = CreateResourceFile(ResourceFileName, ResourceFileType, nUnk1, nUnk2, nUnk3);
+    //        ResourceFileBeginLoading(r, nUnk4, nUnk5);
+    //    };
+    //
+    //    if (nImproveGamepadSupport < 3)
+    //    {
+    //        static auto TPKPath = GetThisModulePath<std::string>().substr(GetExeModulePath<std::string>().length());
+    //
+    //        if (nImproveGamepadSupport == 1)
+    //            TPKPath += "buttons-xbox.tpk";
+    //        else if (nImproveGamepadSupport == 2)
+    //            TPKPath += "buttons-playstation.tpk";
+    //
+    //        static injector::hook_back<void(__cdecl*)()> hb_6D98B0;
+    //        auto LoadTPK = []()
+    //        {
+    //            if (std::filesystem::exists(TPKPath))
+    //            {
+    //                LoadResourceFile(TPKPath.c_str(), 1);
+    //            }
+    //            return hb_6D98B0.fun();
+    //        };
+    //
+    //        pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 8B 35 ? ? ? ? 6A 04 FF D6 83 C4 04 85 C0"); //0x6DABDE
+    //        hb_6D98B0.fun = injector::MakeCALL(pattern.get_first(0), static_cast<void(__cdecl*)()>(LoadTPK), true).get();
+    //    }
+    //
+    //    const char* ControlsTexts[] = { " 2", " 3", " 4", " 5", " 6", " 7", " 8", " 9", " 10", " 1", " Up", " Down", " Left", " Right", "X Rotation", "Y Rotation", "X Axis", "Y Axis", "Z Axis", "Hat Switch" };
+    //    const char* ControlsTextsXBOX[] = { "B", "X", "Y", "LB", "RB", "View (Select)", "Menu (Start)", "Left stick", "Right stick", "A", "D-pad Up", "D-pad Down", "D-pad Left", "D-pad Right", "Right stick Left/Right", "Right stick Up/Down", "Left stick Left/Right", "Left stick Up/Down", "LT / RT", "D-pad" };
+    //    const char* ControlsTextsPS[] = { "Circle", "Square", "Triangle", "L1", "R1", "Select", "Start", "L3", "R3", "Cross", "D-pad Up", "D-pad Down", "D-pad Left", "D-pad Right", "Right stick Left/Right", "Right stick Up/Down", "Left stick Left/Right", "Left stick Up/Down", "L2 / R2", "D-pad" };
+    //
+    //    static std::vector<std::string> Texts(ControlsTexts, std::end(ControlsTexts));
+    //    static std::vector<std::string> TextsXBOX(ControlsTextsXBOX, std::end(ControlsTextsXBOX));
+    //    static std::vector<std::string> TextsPS(ControlsTextsPS, std::end(ControlsTextsPS));
+    //
+    //    pattern = hook::pattern("68 04 01 00 00 51 E8 ? ? ? ? 83 C4 10 5F 5E C3"); //0x679B53
+    //    injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(16 + 5), 0xC3, true);
+    //    struct Buttons
+    //    {
+    //        void operator()(injector::reg_pack& regs)
+    //        {
+    //            auto pszStr = *(char**)(regs.esp + 4);
+    //            auto it = std::find_if(Texts.begin(), Texts.end(), [&](const std::string& str) { std::string s(pszStr); return s.find(str) != std::string::npos; });
+    //            auto i = std::distance(Texts.begin(), it);
+    //
+    //            if (it != Texts.end())
+    //            {
+    //                if (nImproveGamepadSupport != 2)
+    //                    strcpy(pszStr, TextsXBOX[i].c_str());
+    //                else
+    //                    strcpy(pszStr, TextsPS[i].c_str());
+    //            }
+    //        }
+    //    }; injector::MakeInline<Buttons>(pattern.get_first(16));
+    //
+    //    pattern = hook::pattern("8B 0F 8B 54 0E 08 DB 44 90 0C"); //0x6A5E4C
+    //    static auto unk_ABA3E4 = *hook::get_pattern<void**>("81 FE ? ? ? ? 0F 8C ? ? ? ? 8B 44 24 14 83 B8", 2);
+    //    struct MenuRemap
+    //    {
+    //        void operator()(injector::reg_pack& regs)
+    //        {
+    //            regs.ecx = *(uint32_t*)regs.edi;
+    //            regs.edx = *(uint32_t*)(regs.esi + regs.ecx + 0x08);
+    //
+    //            auto dword_ABA4C4 = &unk_ABA3E4[26];
+    //            auto dword_ABA454 = &unk_ABA3E4[28];
+    //            *(uint32_t*)(*(uint32_t*)dword_ABA4C4 + 0x20) = 4; // changes RB to LB
+    //            *(uint32_t*)(*(uint32_t*)dword_ABA454 + 0x20) = 5; // changes LB to RB
+    //        }
+    //    }; injector::MakeInline<MenuRemap>(pattern.get_first(0), pattern.get_first(6));
+    //
+    //    static injector::hook_back<int32_t(__cdecl*)(char*)> hb_4366E0;
+    //    auto padFix = [](char*) -> int32_t
+    //    {
+    //        return 0x2A5E19E0;
+    //    };
+    //    pattern = hook::pattern("E8 ? ? ? ? 83 C4 04 3D ? ? ? ? 0F 87 ? ? ? ? 0F 84 ? ? ? ? 3D");
+    //    hb_4366E0.fun = injector::MakeCALL(pattern.get_first(0), static_cast<int32_t(__cdecl*)(char*)>(padFix), true).get();
+    //
+    //    // Enables controls for FE photo mode
+    //    //pattern = hook::pattern("D9 EE 6A 00 51 D9 1C 24 8B 8E D0 00 00 00 E8 ? ? ? ? D9 EE 6A 00 "); //0x59890A
+    //    //injector::WriteMemory(pattern.get_first(0), 0xC3595E90, true); //pop esi  pop ecx  ret
+    //
+    //    // Start menu text
+    //    uint32_t* dword_7E2C9A = hook::pattern("68 ? ? ? ? 50 51 E8 ? ? ? ? 8D 54 24 2C").count(1).get(0).get<uint32_t>(1);
+    //    if (nImproveGamepadSupport != 2)
+    //        injector::WriteMemory(dword_7E2C9A, 0x25C22853, true); //"Press START to begin" (Xbox)
+    //    else
+    //        injector::WriteMemory(dword_7E2C9A, 0x703A92CC, true); //"Press START button" (PlayStation)
+    //}
 
     if (fLeftStickDeadzone)
     {
