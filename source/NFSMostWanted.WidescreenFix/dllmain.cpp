@@ -60,6 +60,7 @@ namespace ShadowRes
     // 3 = DF24 (Depth Buffer as Texture, Radeon Only)
     uint32_t ShadowMapTexFormats[] = {75, 0x5A544E49, 0x36314644, 0x34324644};
     int CurrentTexFormat = 0;
+    bool bForceSharpShadows = false;
 
     uint32_t Resolution = 2048;
     bool bAutoScaleShadowsRes = true;
@@ -112,7 +113,7 @@ namespace ShadowRes
         if (resX > resval)
             resval = resX;
 
-        if (CurrentTexFormat > 0)
+        if ((CurrentTexFormat > 0) && !bForceSharpShadows)
         {
             DepthBias = *(int32_t*)DepthBiasAddr_901AC0 * (static_cast<float>(resval) / 1024.0f);
             DepthBiasSlope = *(float*)DepthBiasSlopeAddr_901ABC * (static_cast<float>(resval) / 1024.0f);
@@ -307,6 +308,7 @@ void Init()
     ShadowRes::Resolution = iniReader.ReadInteger("GRAPHICS", "ShadowsRes", 2048);
     ShadowRes::bAutoScaleShadowsRes = iniReader.ReadInteger("GRAPHICS", "AutoScaleShadowsRes", 1) != 0;
     ShadowRes::CurrentTexFormat = iniReader.ReadInteger("GRAPHICS", "ShadowMapTextureFormat", 0);
+    ShadowRes::bForceSharpShadows = iniReader.ReadInteger("GRAPHICS", "ForceSharpShadows", 0) != 0;
     static float fRainDropletsScale = iniReader.ReadFloat("GRAPHICS", "RainDropletsScale", 0.5f);
     bool bShadowsFix = iniReader.ReadInteger("GRAPHICS", "ShadowsFix", 1) != 0;
     bool bImproveShadowLOD = iniReader.ReadInteger("GRAPHICS", "ImproveShadowLOD", 1) != 0;
@@ -495,6 +497,12 @@ void Init()
             uint32_t* dword__93D898 = hook::pattern(pattern_str(to_bytes(dword_93D898))).count(1).get(0).get<uint32_t>(0);
             injector::WriteMemory(dword__93D898, &ForcedGPUVendor, true);
         }
+    }
+
+    if (ShadowRes::bForceSharpShadows)
+    {
+        uintptr_t loc_6D5F3A = reinterpret_cast<uintptr_t>(hook::pattern("83 E8 03 89 44 24 14 EB 04 3B C3 7F 44").get_first(0));
+        injector::WriteMemory<uint8_t>(loc_6D5F3A + 2, 2, true);
     }
 
     if (bImproveShadowLOD)
