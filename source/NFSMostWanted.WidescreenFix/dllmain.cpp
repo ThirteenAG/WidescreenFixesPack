@@ -54,17 +54,29 @@ namespace ShadowRes
 {
     constexpr uint32_t ShadowDepthCheckRes = 3072;
 
+    // 0 = D24S8 (Shadow Map)
+    // 1 = INTZ (Depth Buffer as Texture)
+    // 2 = DF16 (Depth Buffer as Texture, Radeon Only)
+    // 3 = DF24 (Depth Buffer as Texture, Radeon Only)
+    uint32_t ShadowMapTexFormats[] = {75, 0x5A544E49, 0x36314644, 0x34324644};
+    int CurrentTexFormat = 0;
+    bool bForceSharpShadows = false;
+
     uint32_t Resolution = 2048;
     bool bAutoScaleShadowsRes = true;
-    bool bDisableShadowTextureFilterOnRadeon = true;
 
-    uintptr_t dword_6C86B1; // X
-    uint32_t dword_6C878B; // X
-    uint32_t dword_6C87BD; // X
+    // X resolution ptrs
+    uintptr_t dword_6C86B1;
+    uint32_t dword_6C878B;
+    uint32_t dword_6C87BD;
+    uintptr_t dword_6C87F4;
 
-    uintptr_t dword_6C86C1; // Y
-    uint32_t* dword_6C8786; // Y
-    uint32_t* dword_6C87B8; // Y
+    // Y resolution ptrs
+    uintptr_t dword_6C86C1;
+    uint32_t* dword_6C8786;
+    uint32_t* dword_6C87B8;
+    uintptr_t dword_6C87EF;
+
 
     uintptr_t DepthBiasAddr_901AC0 = 0x901AC0;
     uintptr_t DepthBiasSlopeAddr_901ABC = 0x901ABC;
@@ -91,15 +103,22 @@ namespace ShadowRes
         *(uint32_t*)dword_6C86B1 = resX;
         *(uint32_t*)dword_6C878B = resX;
         *(uint32_t*)dword_6C87BD = resX;
+        *(uint32_t*)dword_6C87F4 = resX;
 
         *(uint32_t*)dword_6C86C1 = resY;
         *(uint32_t*)dword_6C8786 = resY;
         *(uint32_t*)dword_6C87B8 = resY;
+        *(uint32_t*)dword_6C87EF = resY;
 
         if (resX > resval)
             resval = resX;
 
-        if (resval > ShadowDepthCheckRes)
+        if ((CurrentTexFormat > 0) && !bForceSharpShadows)
+        {
+            DepthBias = *(int32_t*)DepthBiasAddr_901AC0 * (static_cast<float>(resval) / 1024.0f);
+            DepthBiasSlope = *(float*)DepthBiasSlopeAddr_901ABC * (static_cast<float>(resval) / 1024.0f);
+        }
+        else if (resval > ShadowDepthCheckRes)
         {
             DepthBias = *(int32_t*)DepthBiasAddr_901AC0 * (static_cast<float>(resval) / static_cast<float>(ShadowDepthCheckRes));
             DepthBiasSlope = *(float*)DepthBiasSlopeAddr_901ABC * (static_cast<float>(resval) / static_cast<float>(ShadowDepthCheckRes));
@@ -288,13 +307,15 @@ void Init()
 
     ShadowRes::Resolution = iniReader.ReadInteger("GRAPHICS", "ShadowsRes", 2048);
     ShadowRes::bAutoScaleShadowsRes = iniReader.ReadInteger("GRAPHICS", "AutoScaleShadowsRes", 1) != 0;
-    ShadowRes::bDisableShadowTextureFilterOnRadeon = iniReader.ReadInteger("GRAPHICS", "DisableShadowTextureFilterOnRadeon", 1) != 0;
+    ShadowRes::CurrentTexFormat = iniReader.ReadInteger("GRAPHICS", "ShadowMapTextureFormat", 0);
+    ShadowRes::bForceSharpShadows = iniReader.ReadInteger("GRAPHICS", "ForceSharpShadows", 0) != 0;
     static float fRainDropletsScale = iniReader.ReadFloat("GRAPHICS", "RainDropletsScale", 0.5f);
     bool bShadowsFix = iniReader.ReadInteger("GRAPHICS", "ShadowsFix", 1) != 0;
     bool bImproveShadowLOD = iniReader.ReadInteger("GRAPHICS", "ImproveShadowLOD", 1) != 0;
     bool bDisableMotionBlur = iniReader.ReadInteger("GRAPHICS", "DisableMotionBlur", 0) != 0;
     bool bLightStreaksEnable = iniReader.ReadInteger("GRAPHICS", "LightStreaksEnable", 0) != 0;
     bool bBleachByPassEnable = iniReader.ReadInteger("GRAPHICS", "BleachByPassEnable", 0) != 0;
+    static uint32_t ForcedGPUVendor = static_cast<uint32_t>(iniReader.ReadInteger("GRAPHICS", "ForcedGPUVendor", 0x10DE));
 
     bool bFixNOSTrailLength = iniReader.ReadInteger("NOSTrail", "FixNOSTrailLength", 1) == 1;
     bool bFixNOSTrailPosition = iniReader.ReadInteger("NOSTrail", "FixNOSTrailPosition", 0) != 0;
@@ -400,28 +421,88 @@ void Init()
         ShadowRes::dword_6C87B8 = hook::pattern("68 00 04 00 00 68 00 04 00 00 50 FF 52 5C 85 C0 7D 36").count(1).get(0).get<uint32_t>(1);
         ShadowRes::dword_6C87BD = (uint32_t)ShadowRes::dword_6C87B8 + 5;
 
+        uintptr_t loc_6C87E5 = reinterpret_cast<uintptr_t>(hook::pattern("68 44 46 31 36 6A 02 6A 01 68").get_first(0));
+        ShadowRes::dword_6C87EF = loc_6C87E5 + 0xA;
+        ShadowRes::dword_6C87F4 = ShadowRes::dword_6C87EF + 5;
+
         injector::UnprotectMemory(ShadowRes::dword_6C86B1, sizeof(uint32_t), oldprotect);
         injector::UnprotectMemory(ShadowRes::dword_6C86C1, sizeof(uint32_t), oldprotect);
         injector::UnprotectMemory(ShadowRes::dword_6C8786, sizeof(uint32_t), oldprotect);
         injector::UnprotectMemory(ShadowRes::dword_6C878B, sizeof(uint32_t), oldprotect);
         injector::UnprotectMemory(ShadowRes::dword_6C87B8, sizeof(uint32_t), oldprotect);
         injector::UnprotectMemory(ShadowRes::dword_6C87BD, sizeof(uint32_t), oldprotect);
+        injector::UnprotectMemory(ShadowRes::dword_6C87F4, sizeof(uint32_t), oldprotect);
+        injector::UnprotectMemory(ShadowRes::dword_6C87EF, sizeof(uint32_t), oldprotect);
 
         ShadowRes::update(ShadowRes::Resolution);
     }
-    
-    // this disables shadow texture filtering on Radeon (vendor 0x1002) cards
-    if (ShadowRes::bDisableShadowTextureFilterOnRadeon)
+
+    if (ShadowRes::CurrentTexFormat >= 0)
+    {
+        uintptr_t loc_6C87E5 = reinterpret_cast<uintptr_t>(hook::pattern("68 44 46 31 36 6A 02 6A 01 68").get_first(0));
+        uintptr_t loc_6C8798 = loc_6C87E5 - 0x4D;
+        uintptr_t loc_6C87D5 = loc_6C87E5 - 0x10;
+        uintptr_t loc_6C87A2 = loc_6C87E5 - 0x43;
+        uintptr_t loc_6C87B2 = loc_6C87E5 - 0x33;
+
+        uintptr_t loc_6C174E = reinterpret_cast<uintptr_t>(hook::pattern("68 44 46 31 36 6A 03 6A 02 6A 16 6A 01 52 50 FF").get_first(0));
+        uintptr_t loc_6C1703 = loc_6C174E - 0x4B;
+        uintptr_t loc_6C170A = loc_6C174E - 0x44;
+        uintptr_t loc_6C1719 = loc_6C174E - 0x35;
+        uintptr_t loc_6C172C = loc_6C174E - 0x22;
+        uintptr_t loc_6C1741 = loc_6C174E - 0xD;
+        uintptr_t loc_6C1764 = loc_6C174E + 0x16;
+
+        uintptr_t dword_982C08 = *reinterpret_cast<uintptr_t*>(loc_6C172C + 2);
+
+        if (ShadowRes::CurrentTexFormat > (_countof(ShadowRes::ShadowMapTexFormats) - 1))
+            ShadowRes::CurrentTexFormat = (_countof(ShadowRes::ShadowMapTexFormats) - 1);
+
+        // disable writes to the shadow map texture type variable
+        injector::MakeNOP(loc_6C1703, 6);
+        injector::MakeNOP(loc_6C172C, 10);
+        injector::MakeNOP(loc_6C1764, 10);
+
+        if (ShadowRes::ShadowMapTexFormats[ShadowRes::CurrentTexFormat] < 0x7F)
+        {
+            injector::MakeJMP(loc_6C8798, loc_6C87A2);
+            injector::WriteMemory<uint8_t>(loc_6C87B2 + 1, ShadowRes::ShadowMapTexFormats[ShadowRes::CurrentTexFormat] & 0xFF, true);
+
+            injector::MakeNOP(loc_6C170A, 2);
+            injector::WriteMemory<uint8_t>(loc_6C1719 + 1, ShadowRes::ShadowMapTexFormats[ShadowRes::CurrentTexFormat] & 0xFF, true);
+        }
+        else
+        {
+            injector::MakeJMP(loc_6C8798, loc_6C87D5);
+            injector::WriteMemory<uint32_t>(loc_6C87E5 + 1, ShadowRes::ShadowMapTexFormats[ShadowRes::CurrentTexFormat], true);
+
+            injector::MakeJMP(loc_6C170A, loc_6C1741);
+            injector::WriteMemory<uint32_t>(loc_6C174E + 1, ShadowRes::ShadowMapTexFormats[ShadowRes::CurrentTexFormat], true);
+        }
+
+        // Var at 0x00982C08
+        // 1 = Sample Shadow Map Directly, 2 = Depth Buffer as Texture
+        if (ShadowRes::CurrentTexFormat == 0)
+            *(uint32_t*)dword_982C08 = 1;
+        else
+            *(uint32_t*)dword_982C08 = 2;
+    }
+
+    if (ForcedGPUVendor)
     {
         uint32_t* dword_93D898 = *hook::pattern("A1 ? ? ? ? 49 3D 02 10 00 00 89 0D").count(1).get(0).get<uint32_t*>(1);
-        auto dword_8F1CA0 = *hook::pattern("8B 14 85 ? ? ? ? 0F AF 56 5C C1 FA 0F 89 56 5C").count(1).get(0).get<uint32_t*>(3);
-        dword_8F1CA0 += 0x1D4;
 
         for (size_t i = 0; i < 20; i++)
         {
             uint32_t* dword__93D898 = hook::pattern(pattern_str(to_bytes(dword_93D898))).count(1).get(0).get<uint32_t>(0);
-            injector::WriteMemory(dword__93D898, dword_8F1CA0, true);
+            injector::WriteMemory(dword__93D898, &ForcedGPUVendor, true);
         }
+    }
+
+    if (ShadowRes::bForceSharpShadows)
+    {
+        uintptr_t loc_6D5F3A = reinterpret_cast<uintptr_t>(hook::pattern("83 E8 03 89 44 24 14 EB 04 3B C3 7F 44").get_first(0));
+        injector::WriteMemory<uint8_t>(loc_6D5F3A + 2, 2, true);
     }
 
     if (bImproveShadowLOD)
