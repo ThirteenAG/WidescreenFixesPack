@@ -4,6 +4,9 @@
 #include "../../includes/pcsx2/injector.h"
 #include "../../includes/pcsx2/patterns.h"
 
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MAX(a,b) (((a)>(b))?(a):(b))
+
 #define corona_struct_size 144
 #define CoronaLimitMax 10000
 #define aCoronasSizeMax corona_struct_size * CoronaLimitMax

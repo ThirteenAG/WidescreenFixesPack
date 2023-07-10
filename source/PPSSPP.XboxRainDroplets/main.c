@@ -29,9 +29,9 @@ PSP_MODULE_INFO(MODULE_NAME, PSP_MODULE_USER, 1, 0);
 #define align16
 #endif
 
-char align16 sync_buf[255] = "XBOXRAINDROPLETSDATA";
+char align16 XboxRainDropletsData[255] = "XBOXRAINDROPLETSDATA";
 
-typedef enum eParticleVCS
+enum eParticleVCS
 {
     SPARK,
     SPARK_SMALL,
@@ -123,7 +123,7 @@ typedef enum eParticleVCS
     MULTIPLAYER_HIT,
     HYDRANT_STEAM,
     FLOOR_HIT
-} eParticleVCS;
+};
 
 enum eParticleLCS
 {
@@ -339,7 +339,7 @@ uint32_t sub_8A1A5D4(uint32_t a1)
 
 void CParticle__AddParticleHookVCS(uint32_t type, uint32_t vecPos)
 {
-    struct XRData* data = (struct XRData*)sync_buf;
+    struct XRData* data = (struct XRData*)XboxRainDropletsData;
     RwV3d* point = (RwV3d*)vecPos;
 
     if (type == WATER_SPARK || type == WHEEL_WATER || type == WATER || type == WATER_HYDRANT ||
@@ -370,7 +370,7 @@ void CParticle__AddParticleHookVCS(uint32_t type, uint32_t vecPos)
 
 void CParticle__AddParticleHookLCS(uint32_t type, uint32_t vecPos)
 {
-    struct XRData* data = (struct XRData*)sync_buf;
+    struct XRData* data = (struct XRData*)XboxRainDropletsData;
     RwV3d* point = (RwV3d*)vecPos;
 
     if (type == LCS_WATER_SPARK || type == LCS_WHEEL_WATER || type == LCS_WATER || type == LCS_WATER_HYDRANT ||
@@ -407,9 +407,9 @@ intptr_t dword_08BB194C = 0;
 intptr_t TheCamera = 0;
 void GameLoopStuffVCS()
 {
-    if (sync_buf[0] != 'X')
+    if (XboxRainDropletsData[0] != 'X')
     {
-        struct XRData* data = (struct XRData*)sync_buf;
+        struct XRData* data = (struct XRData*)XboxRainDropletsData;
         uint8_t gMenuActivated = *(uint8_t*)(dword_08BC9100 + 0x20);
         data->ms_enabled = gMenuActivated == 0;
 
@@ -454,9 +454,9 @@ intptr_t dword_8B303A7 = 0;
 intptr_t dword_8B58DF0 = 0;
 void GameLoopStuffLCS()
 {
-    if (sync_buf[0] != 'X')
+    if (XboxRainDropletsData[0] != 'X')
     {
-        struct XRData* data = (struct XRData*)sync_buf;
+        struct XRData* data = (struct XRData*)XboxRainDropletsData;
         uint8_t gMenuActivated = *(uint8_t*)(dword_8B8EE20 + 0x131);
         data->ms_enabled = gMenuActivated == 0;
 
