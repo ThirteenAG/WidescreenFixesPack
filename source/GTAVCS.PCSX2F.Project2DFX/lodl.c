@@ -4099,25 +4099,25 @@ void RegisterLODLights()
 
                     if (aLodLights[i].fCustomSizeMult != 0.45f)
                     {
-                        if (!aLodLights[i].nCoronaShowMode)
+                        //if (!aLodLights[i].nCoronaShowMode)
                         {
                             CCoronas__RegisterCorona(&aLodLights[i], aLodLights[i].r, aLodLights[i].g, aLodLights[i].b, alpha, pos, 0, 0, radius, fCoronaFarClip, fUnkDist1, fUnkDist2, 1, 0, 0, 0, 0);
                         }
-                        else
-                        {
-                            static float blinking = 1.0f;
-                            static volatile float blinking_a = 1.0f;
-                            static volatile float blinking_b = 1.0f;
-                            static volatile float blinking_c = 1.0f;
-                            if (IsBlinkingNeeded(aLodLights[i].nCoronaShowMode))
-                                blinking -= CTimer__ms_fTimeStep() / 1000.0f;
-                            else
-                                blinking += CTimer__ms_fTimeStep() / 1000.0f;
-                        
-                            (blinking > 1.0f) ? blinking = 1.0f : (blinking < 0.0f) ? blinking = 0.0f : 0.0f;
-                        
-                            CCoronas__RegisterCorona(&aLodLights[i], aLodLights[i].r, aLodLights[i].g, aLodLights[i].b, blinking * alpha, pos, 0, 0, radius, fCoronaFarClip, fUnkDist1, fUnkDist2, 1, 0, 0, 0, 0);
-                        }
+                        //else //causes crashing for some reason
+                        //{
+                        //    static float blinking = 1.0f;
+                        //    static volatile float blinking_a = 1.0f;
+                        //    static volatile float blinking_b = 1.0f;
+                        //    static volatile float blinking_c = 1.0f;
+                        //    if (IsBlinkingNeeded(aLodLights[i].nCoronaShowMode))
+                        //        blinking -= CTimer__ms_fTimeStep() / 1000.0f;
+                        //    else
+                        //        blinking += CTimer__ms_fTimeStep() / 1000.0f;
+                        //
+                        //    (blinking > 1.0f) ? blinking = 1.0f : (blinking < 0.0f) ? blinking = 0.0f : 0.0f;
+                        //
+                        //    CCoronas__RegisterCorona(&aLodLights[i], aLodLights[i].r, aLodLights[i].g, aLodLights[i].b, blinking * alpha, pos, 0, 0, radius, fCoronaFarClip, fUnkDist1, fUnkDist2, 1, 0, 0, 0, 0);
+                        //}
                     }
                     else
                     {

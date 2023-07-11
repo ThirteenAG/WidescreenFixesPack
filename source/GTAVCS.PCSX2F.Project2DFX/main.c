@@ -104,7 +104,7 @@ void CSprite__FlushSpriteBufferHook()
                     int a0 = brightness;
                     int a1 = brightness;
                     int a2 = brightness;
-                    int a3 = starintens;
+                    int a3 = 255;
                     int a4 = 255;
                     float f12 = ScreenPos.x;
                     float f13 = ScreenPos.y;
@@ -195,6 +195,20 @@ void init()
         fBiggestStars = clampf(inireader.ReadFloat("STARS", "BiggestStarsSize", 1.2f), 0.03f, 2.5f);
         fBiggestStarsSpawnChance = 1.0f - 0.01f * clampf(inireader.ReadFloat("STARS", "BiggestStarsChance", 20), 0.0f, 100.0f);
 
+        uintptr_t ptr_18CFC4 = pattern.get(0, "4D 00 02 3C 4D 00 03 3C ? ? ? ? 20 00 A4 27", -0);
+        CWeather__CloudCoverage = (float*)GetAbsoluteAddress(ptr_18CFC4, 0, 8);
+        CWeather__Foggyness = (float*)GetAbsoluteAddress(ptr_18CFC4, 0, 16);
+
+        uintptr_t ptr_408058 = pattern.get(0, "49 00 08 3C 01 00 03 3C", -0);
+        base__Random = (int(*)())ptr_408058;
+
+        uintptr_t ptr_39FDE8 = pattern.get(0, "49 00 02 3C ? ? ? ? ? ? ? ? 00 00 B0 FF ? ? ? ? 08 00 BF FF 52 00 04 3C", -0);
+        CSprite__FlushSpriteBuffer = (void(*)())ptr_39FDE8;
+        uintptr_t ptr_39FC48 = pattern.get(0, "70 00 02 3C 10 00 B0 FF", -4);
+        CSprite__CalcScreenCoors = (int(*)(CVector*, CVector*, float*, float*, uint8_t))ptr_39FC48;
+        uintptr_t ptr_39FF48 = pattern.get(0, "80 68 10 46 ? ? ? ? 40 60 0F 46 80 3F 01 3C 00 00 81 44 01 63 0F 46 20 00 A0 AF 41 6B 10 46 68 00 B5 FF", -0);
+        CSprite__RenderBufferedOneXLUSprite = (void(*)())ptr_39FF48;
+
         for (int side = 0; side < STAR_SKYBOX_SIDES; ++side)
         {
             for (int i = 0; i < AMOUNT_OF_STARS; ++i)
@@ -211,19 +225,6 @@ void init()
             }
         }
 
-        uintptr_t ptr_18CFC4 = pattern.get(0, "4D 00 02 3C 4D 00 03 3C ? ? ? ? 20 00 A4 27", -0);
-        CWeather__CloudCoverage = (float*)GetAbsoluteAddress(ptr_18CFC4, 0, 8);
-        CWeather__Foggyness = (float*)GetAbsoluteAddress(ptr_18CFC4, 0, 16);
-
-        uintptr_t ptr_408058 = pattern.get(0, "49 00 08 3C 01 00 03 3C", -0);
-        base__Random = (int(*)())ptr_408058;
-
-        uintptr_t ptr_39FDE8 = pattern.get(0, "49 00 02 3C ? ? ? ? ? ? ? ? 00 00 B0 FF ? ? ? ? 08 00 BF FF 52 00 04 3C", -0);
-        CSprite__FlushSpriteBuffer = (void(*)())ptr_39FDE8;
-        uintptr_t ptr_39FC48 = pattern.get(0, "70 00 02 3C 10 00 B0 FF", -4);
-        CSprite__CalcScreenCoors = (int(*)(CVector*, CVector*, float*, float*, uint8_t))ptr_39FC48;
-        uintptr_t ptr_39FF48 = pattern.get(0, "80 68 10 46 ? ? ? ? 40 60 0F 46 80 3F 01 3C 00 00 81 44 01 63 0F 46 20 00 A0 AF 41 6B 10 46 68 00 B5 FF", -0);
-        CSprite__RenderBufferedOneXLUSprite = (void(*)())ptr_39FF48;
         uintptr_t ptr_18D450 = pattern.get(0, "00 00 00 00 48 00 03 3C 01 00 04 24 ? ? ? ? ? ? ? ? 00 00 45 8C", -4);
         injector.MakeJAL(ptr_18D450, (uintptr_t)CSprite__FlushSpriteBufferHook);
     }
