@@ -747,7 +747,7 @@ int CEntity__Render(void* car)
 }
 
 int OnModuleStart() {
-    //sceKernelDelayThread(100000);
+    sceKernelDelayThread(120000);
 
     PreFillRasters();
     uintptr_t ptr_19CD0 = pattern.get(0, "00 00 B0 AF 04 00 B1 AF 08 00 B2 AF 25 90 80 00 25 88 A0 00 25 80 C0 00 0C 00 B3 AF 10 00 B4 AF 14 00 B5 AF", -4);
