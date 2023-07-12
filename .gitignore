@@ -336,4 +336,4 @@ __pycache__/
 # tools/**
 # !tools/packages.config
 
-!source/*.PPSSPP.*/**/*.exp
+!source/*PPSSPP.*/**/*.exp
