@@ -77,6 +77,7 @@ void Init()
 
     //Resolution
     static auto nWidthPtr = *hook::pattern("8B 0D ? ? ? ? 6A 00 50 51").count(1).get(0).get<uint32_t*>(2);
+    auto test = pattern_str(0xC7, 0x05, to_bytes(nWidthPtr));
     auto pattern = hook::pattern(pattern_str(0xC7, 0x05, to_bytes(nWidthPtr))); //0x4141E3
 
     for (size_t i = 0; i < pattern.size(); i++)
@@ -92,7 +93,6 @@ void Init()
         injector::WriteMemory(pattern.get(i).get<uint32_t>(6), Screen.Height, true);
     }
 
-    pattern = hook::pattern("89 35 ? ? ? ? 33 C0 5E C3"); //0x414A38
     struct SetResHook
     {
         void operator()(injector::reg_pack&)
@@ -100,15 +100,32 @@ void Init()
             *nWidthPtr = Screen.Width;
             *nHeightPtr = Screen.Height;
         }
-    }; injector::MakeInline<SetResHook>(pattern.count(1).get(0).get<uintptr_t>(0), pattern.count(1).get(0).get<uintptr_t>(6));
+    };
+
+    pattern = hook::pattern("00 5F 89 35 ? ? ? ? 33 C0 5E C3"); //0x4149C8 GOG
+    if(pattern.empty())
+        pattern = hook::pattern("89 35 ? ? ? ? 33 C0 5E C3"); //0x414A38
+
+    injector::MakeInline<SetResHook>(pattern.count(1).get(0).get<uintptr_t>(0), pattern.count(1).get(0).get<uintptr_t>(6));   
 
     if (bFixFOV)
     {
-        pattern = hook::pattern("83 C4 14 68 ? ? ? ? E8 ? ? ? ? 68"); //0x55BC74 
-        injector::MakeNOP(pattern.count(1).get(0).get<uint32_t>(8), 5, true);
-        injector::WriteMemory<float>(pattern.count(1).get(0).get<uint32_t>(14), Screen.fFieldOfView, true);
+        pattern = hook::pattern("83 C4 14 68 ? ? ? ? E8 ? ? ? ? E9"); //0x55BDA4 GOG
+        if (pattern.empty()) {
+            pattern = hook::pattern("83 C4 14 68 ? ? ? ? E8 ? ? ? ? 68"); //0x55BC74 
+            injector::MakeNOP(pattern.count(1).get(0).get<uint32_t>(8), 5, true);
+            injector::WriteMemory<float>(pattern.count(1).get(0).get<uint32_t>(14), Screen.fFieldOfView, true);
+        }
+        else {
+            injector::MakeNOP(pattern.count(1).get(0).get<uint32_t>(8), 5, true);
+            //GOG version has a jmp to 0x5A9360 for FOV
+            pattern = hook::pattern("B8 00 00 80 3F 80 3D F0  1A 09 01 02 72 05 B8");
+            injector::WriteMemory<float>(pattern.count(1).get(0).get<uint32_t>(1), Screen.fFieldOfView, true);
+        }
 
-        pattern = hook::pattern("C7 46 48 ? ? ? ? C7 46 44"); //0x41D295
+        pattern = hook::pattern("C7 46 48 55 55 95"); //0x41D182 GOG
+        if (pattern.empty())
+            pattern = hook::pattern("C7 46 48 ? ? ? ? C7 46 44"); //0x41D295
         injector::WriteMemory<float>(pattern.count(1).get(0).get<uint32_t>(3), 0.78125f * Screen.fHudScale, true);
     }
 
@@ -276,7 +293,8 @@ void Init()
     if (bCutsceneFrameRateFix)
     {
         pattern = hook::pattern("0F 94 C0 A3 ? ? ? ? EB ? C3"); //0x004EFA85
-        injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(1), 0x95, true);
+        if(!pattern.empty())// Already patched on GOG version
+            injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(1), 0x95, true);
     }
 
     if (bDisableCheckSpec)
@@ -290,14 +308,20 @@ void Init()
         auto RegIATpat = hook::pattern("FF 15 ? ? ? ? 8B 44 24 00 50");
         if (RegIATpat.size() > 0)
         {
-            RegistryWrapper("KONAMI", "");
-            RegistryWrapper::AddPathWriter("Install Path", "Movie Install");
-            uintptr_t* RegIAT = *RegIATpat.count(1).get(0).get<uintptr_t*>(2); //0x413D67
-            injector::WriteMemory(&RegIAT[0], RegQueryValueExA, true);
-            injector::WriteMemory(&RegIAT[1], RegOpenKeyA, true);
-            injector::WriteMemory(&RegIAT[2], RegSetValueExA, true);
-            injector::WriteMemory(&RegIAT[3], RegDeleteValueA, true);
-            injector::WriteMemory(&RegIAT[4], RegCloseKey, true);
+            try {
+                RegistryWrapper("KONAMI", "");
+                RegistryWrapper::AddPathWriter("Install Path", "Movie Install");
+                uintptr_t* RegIAT = *RegIATpat.count(1).get(0).get<uintptr_t*>(2); //0x413D67
+                injector::WriteMemory(&RegIAT[0], RegQueryValueExA, true);
+                injector::WriteMemory(&RegIAT[1], RegOpenKeyA, true);
+                injector::WriteMemory(&RegIAT[2], RegSetValueExA, true);
+                injector::WriteMemory(&RegIAT[3], RegDeleteValueA, true);
+                injector::WriteMemory(&RegIAT[4], RegCloseKey, true);
+            }
+            catch (std::exception&)
+            {
+                //Throws error on GOG version
+            }
         }
     }
 
