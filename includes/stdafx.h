@@ -558,12 +558,6 @@ private:
 public:
     static inline DWORD OverrideTypeREG_NONE = REG_NONE;
 
-    RegistryWrapper(std::string_view searchString, std::string_view iniPath)
-    {
-        filter = searchString;
-        RegistryReader.SetIniPath(iniPath);
-        std::filesystem::create_directories(std::filesystem::path(iniPath).parent_path());
-    }
     RegistryWrapper(std::string_view searchString, std::filesystem::path iniPath)
     {
         filter = searchString;
