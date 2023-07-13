@@ -214,7 +214,7 @@ struct Screen
     int32_t FilmstripScaleX;
     int32_t FilmstripOffset;
     uint32_t pFilmstripTex;
-    std::string szLoadscPath;
+    std::filesystem::path szLoadscPath;
 } Screen;
 
 void InitLL()
@@ -231,7 +231,7 @@ void Init()
     bool bForceLL = iniReader.ReadInteger("MAIN", "ForceLL", 1) != 0;
     auto nFPSLimit = iniReader.ReadInteger("MISC", "FPSLimit", 1000);
     Screen.szLoadscPath = iniReader.GetIniPath();
-    Screen.szLoadscPath = Screen.szLoadscPath.substr(0, Screen.szLoadscPath.find_last_of('.')) + ".png";
+    Screen.szLoadscPath.replace_extension(".png");
     gBlacklistIndicators = iniReader.ReadInteger("BONUS", "BlacklistIndicators", 0);
     gColor = iniReader.ReadInteger("BONUS", "GogglesLightColor", 0);
 
@@ -668,7 +668,7 @@ void InitD3DDrv()
                         {
                             IDirect3DDevice9* ppDevice = nullptr;
                             pTex->GetDevice(&ppDevice);
-                            if (D3DXCreateTextureFromFileA(ppDevice, Screen.szLoadscPath.c_str(), &pTexLoadscreenCustom) == D3D_OK)
+                            if (D3DXCreateTextureFromFileW(ppDevice, (LPCWSTR)(Screen.szLoadscPath.u16string().c_str()), &pTexLoadscreenCustom) == D3D_OK)
                                 regs.edi = (uint32_t)pTexLoadscreenCustom;
                         }
                         else
