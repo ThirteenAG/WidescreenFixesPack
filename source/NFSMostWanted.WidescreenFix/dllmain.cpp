@@ -294,15 +294,17 @@ void Init()
     nScaling = iniReader.ReadInteger("MAIN", "Scaling", 1);
     bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 0) != 0;
     bool bFixResolutionText = iniReader.ReadInteger("MISC", "FixResolutionText", 1) != 0;
+
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "");
+    static std::filesystem::path CustomUserDir;
+    if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
+        szCustomUserFilesDirectoryInGameDir.clear();
+
     bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 1) != 0;
     static int nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
     bool bForceHighSpecAudio = iniReader.ReadInteger("MISC", "ForceHighSpecAudio", 1) != 0;
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
-    
     static int SimRate = iniReader.ReadInteger("MISC", "SimRate", -1);
-    if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
-        szCustomUserFilesDirectoryInGameDir.clear();
     int nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
 
     ShadowRes::Resolution = iniReader.ReadInteger("GRAPHICS", "ShadowsRes", 2048);
@@ -790,12 +792,14 @@ void Init()
 
     if (!szCustomUserFilesDirectoryInGameDir.empty())
     {
-        szCustomUserFilesDirectoryInGameDir = GetExeModulePath<std::string>() + szCustomUserFilesDirectoryInGameDir;
+        CustomUserDir = GetExeModulePath<std::filesystem::path>();
+        CustomUserDir.append(szCustomUserFilesDirectoryInGameDir);
 
         auto SHGetFolderPathAHook = [](HWND /*hwnd*/, int /*csidl*/, HANDLE /*hToken*/, DWORD /*dwFlags*/, LPSTR pszPath) -> HRESULT
         {
-            CreateDirectoryA(szCustomUserFilesDirectoryInGameDir.c_str(), NULL);
-            strcpy(pszPath, szCustomUserFilesDirectoryInGameDir.c_str());
+            CreateDirectoryW((LPCWSTR)(CustomUserDir.u16string().c_str()), NULL);
+            memcpy(pszPath, CustomUserDir.u8string().data(), CustomUserDir.u8string().size() + 1);
+
             return S_OK;
         };
 
@@ -1256,14 +1260,24 @@ void Init()
 
     if (bWriteSettingsToFile)
     {
-        char szSettingsSavePath[MAX_PATH];
+        std::filesystem::path SettingsSavePath;
+        if (!szCustomUserFilesDirectoryInGameDir.empty())
+            SettingsSavePath = CustomUserDir;
+
         auto GetFolderPathpattern = hook::pattern("50 6A 00 6A 00 68 ? 80 00 00 6A 00");
         uintptr_t GetFolderPathCallDest = injector::GetBranchDestination(GetFolderPathpattern.count(1).get(0).get<uintptr_t>(14), true).as_int();
-        injector::stdcall<HRESULT(HWND, int, HANDLE, DWORD, LPSTR)>::call(GetFolderPathCallDest, NULL, 0x8005, NULL, NULL, szSettingsSavePath);
-        strcat(szSettingsSavePath, "\\NFS Most Wanted");
-        strcat(szSettingsSavePath, "\\Settings.ini");
 
-        RegistryWrapper("Need for Speed", szSettingsSavePath);
+        if (GetFolderPathCallDest && szCustomUserFilesDirectoryInGameDir.empty())
+        {
+            char szSettingsSavePath[MAX_PATH];
+            injector::stdcall<HRESULT(HWND, int, HANDLE, DWORD, LPSTR)>::call(GetFolderPathCallDest, NULL, 0x8005, NULL, NULL, szSettingsSavePath);
+            SettingsSavePath = szSettingsSavePath;
+        }
+
+        SettingsSavePath.append("NFS Most Wanted");
+        SettingsSavePath.append("Settings.ini");
+
+        RegistryWrapper("Need for Speed", SettingsSavePath);
         auto RegIAT = *hook::pattern("FF 15 ? ? ? ? 8D 54 24 04 52").get(0).get<uintptr_t*>(2);
         injector::WriteMemory(&RegIAT[0], RegistryWrapper::RegCreateKeyA, true);
         injector::WriteMemory(&RegIAT[1], RegistryWrapper::RegOpenKeyExA, true);
