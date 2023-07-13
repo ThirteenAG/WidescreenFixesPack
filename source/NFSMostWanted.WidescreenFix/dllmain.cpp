@@ -294,15 +294,17 @@ void Init()
     nScaling = iniReader.ReadInteger("MAIN", "Scaling", 1);
     bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 0) != 0;
     bool bFixResolutionText = iniReader.ReadInteger("MISC", "FixResolutionText", 1) != 0;
+
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "");
+    static std::filesystem::path CustomUserDir;
+    if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
+        szCustomUserFilesDirectoryInGameDir.clear();
+
     bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 1) != 0;
     static int nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
     bool bForceHighSpecAudio = iniReader.ReadInteger("MISC", "ForceHighSpecAudio", 1) != 0;
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
-    
     static int SimRate = iniReader.ReadInteger("MISC", "SimRate", -1);
-    if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
-        szCustomUserFilesDirectoryInGameDir.clear();
     int nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
 
     ShadowRes::Resolution = iniReader.ReadInteger("GRAPHICS", "ShadowsRes", 2048);
@@ -790,12 +792,14 @@ void Init()
 
     if (!szCustomUserFilesDirectoryInGameDir.empty())
     {
-        szCustomUserFilesDirectoryInGameDir = GetExeModulePath<std::string>() + szCustomUserFilesDirectoryInGameDir;
+        CustomUserDir = GetExeModulePath<std::filesystem::path>();
+        CustomUserDir.append(szCustomUserFilesDirectoryInGameDir);
 
         auto SHGetFolderPathAHook = [](HWND /*hwnd*/, int /*csidl*/, HANDLE /*hToken*/, DWORD /*dwFlags*/, LPSTR pszPath) -> HRESULT
         {
-            CreateDirectoryA(szCustomUserFilesDirectoryInGameDir.c_str(), NULL);
-            strcpy(pszPath, szCustomUserFilesDirectoryInGameDir.c_str());
+            CreateDirectoryW((LPCWSTR)(CustomUserDir.u16string().c_str()), NULL);
+            memcpy(pszPath, CustomUserDir.u8string().data(), CustomUserDir.u8string().size() + 1);
+
             return S_OK;
         };
 
@@ -1256,46 +1260,59 @@ void Init()
 
     if (bWriteSettingsToFile)
     {
-        char szSettingsSavePath[MAX_PATH];
+        std::filesystem::path SettingsSavePath;
+        if (!szCustomUserFilesDirectoryInGameDir.empty())
+            SettingsSavePath = CustomUserDir;
+
         auto GetFolderPathpattern = hook::pattern("50 6A 00 6A 00 68 ? 80 00 00 6A 00");
         uintptr_t GetFolderPathCallDest = injector::GetBranchDestination(GetFolderPathpattern.count(1).get(0).get<uintptr_t>(14), true).as_int();
-        injector::stdcall<HRESULT(HWND, int, HANDLE, DWORD, LPSTR)>::call(GetFolderPathCallDest, NULL, 0x8005, NULL, NULL, szSettingsSavePath);
-        strcat(szSettingsSavePath, "\\NFS Most Wanted");
-        strcat(szSettingsSavePath, "\\Settings.ini");
 
-        RegistryWrapper("Need for Speed", szSettingsSavePath);
-        auto RegIAT = *hook::pattern("FF 15 ? ? ? ? 8D 54 24 04 52").get(0).get<uintptr_t*>(2);
-        injector::WriteMemory(&RegIAT[0], RegistryWrapper::RegCreateKeyA, true);
-        injector::WriteMemory(&RegIAT[1], RegistryWrapper::RegOpenKeyExA, true);
-        injector::WriteMemory(&RegIAT[2], RegistryWrapper::RegCloseKey, true);
-        injector::WriteMemory(&RegIAT[3], RegistryWrapper::RegSetValueExA, true);
-        injector::WriteMemory(&RegIAT[4], RegistryWrapper::RegQueryValueExA, true);
-        RegistryWrapper::AddPathWriter("Install Dir", "InstallDir", "Path");
-        RegistryWrapper::AddDefault("@", "INSERTYOURCDKEYHERE");
-        RegistryWrapper::AddDefault("CD Drive", "D:\\");
-        RegistryWrapper::AddDefault("CacheSize", "2936691712");
-        RegistryWrapper::AddDefault("SwapSize", "73400320");
-        RegistryWrapper::AddDefault("Language", "English");
-        RegistryWrapper::AddDefault("StreamingInstall", "0");
-        RegistryWrapper::AddDefault("VTMode", "0");
-        RegistryWrapper::AddDefault("VERSION", "0");
-        RegistryWrapper::AddDefault("SIZE", "0");
-        RegistryWrapper::AddDefault("g_CarEnvironmentMapEnable", "3");
-        RegistryWrapper::AddDefault("g_CarEnvironmentMapUpdateData", "1");
-        RegistryWrapper::AddDefault("g_RoadReflectionEnable", "3");
-        RegistryWrapper::AddDefault("g_MotionBlurEnable", "1");
-        RegistryWrapper::AddDefault("g_ParticleSystemEnable", "1");
-        RegistryWrapper::AddDefault("g_WorldLodLevel", "3");
-        RegistryWrapper::AddDefault("g_CarLodLevel", "1");
-        RegistryWrapper::AddDefault("g_OverBrightEnable", "1");
-        RegistryWrapper::AddDefault("g_FSAALevel", "7");
-        RegistryWrapper::AddDefault("g_RainEnable", "1");
-        RegistryWrapper::AddDefault("g_TextureFiltering", "2");
-        RegistryWrapper::AddDefault("g_RacingResolution", "1");
-        RegistryWrapper::AddDefault("g_PerformanceLevel", "5");
-        RegistryWrapper::AddDefault("g_VSyncOn", "0");
-        RegistryWrapper::AddDefault("g_ShadowDetail", "2");
-        RegistryWrapper::AddDefault("g_VisualTreatment", "1");
+        if (GetFolderPathCallDest && szCustomUserFilesDirectoryInGameDir.empty())
+        {
+            char szSettingsSavePath[MAX_PATH];
+            injector::stdcall<HRESULT(HWND, int, HANDLE, DWORD, LPSTR)>::call(GetFolderPathCallDest, NULL, 0x8005, NULL, NULL, szSettingsSavePath);
+            SettingsSavePath = szSettingsSavePath;
+        }
+
+        SettingsSavePath.append("NFS Most Wanted");
+        SettingsSavePath.append("Settings.ini");
+
+        if (GetFolderPathCallDest || !szCustomUserFilesDirectoryInGameDir.empty())
+        {
+            RegistryWrapper("Need for Speed", SettingsSavePath);
+            auto RegIAT = *hook::pattern("FF 15 ? ? ? ? 8D 54 24 04 52").get(0).get<uintptr_t*>(2);
+            injector::WriteMemory(&RegIAT[0], RegistryWrapper::RegCreateKeyA, true);
+            injector::WriteMemory(&RegIAT[1], RegistryWrapper::RegOpenKeyExA, true);
+            injector::WriteMemory(&RegIAT[2], RegistryWrapper::RegCloseKey, true);
+            injector::WriteMemory(&RegIAT[3], RegistryWrapper::RegSetValueExA, true);
+            injector::WriteMemory(&RegIAT[4], RegistryWrapper::RegQueryValueExA, true);
+            RegistryWrapper::AddPathWriter("Install Dir", "InstallDir", "Path");
+            RegistryWrapper::AddDefault("@", "INSERTYOURCDKEYHERE");
+            RegistryWrapper::AddDefault("CD Drive", "D:\\");
+            RegistryWrapper::AddDefault("CacheSize", "2936691712");
+            RegistryWrapper::AddDefault("SwapSize", "73400320");
+            RegistryWrapper::AddDefault("Language", "English");
+            RegistryWrapper::AddDefault("StreamingInstall", "0");
+            RegistryWrapper::AddDefault("VTMode", "0");
+            RegistryWrapper::AddDefault("VERSION", "0");
+            RegistryWrapper::AddDefault("SIZE", "0");
+            RegistryWrapper::AddDefault("g_CarEnvironmentMapEnable", "3");
+            RegistryWrapper::AddDefault("g_CarEnvironmentMapUpdateData", "1");
+            RegistryWrapper::AddDefault("g_RoadReflectionEnable", "3");
+            RegistryWrapper::AddDefault("g_MotionBlurEnable", "1");
+            RegistryWrapper::AddDefault("g_ParticleSystemEnable", "1");
+            RegistryWrapper::AddDefault("g_WorldLodLevel", "3");
+            RegistryWrapper::AddDefault("g_CarLodLevel", "1");
+            RegistryWrapper::AddDefault("g_OverBrightEnable", "1");
+            RegistryWrapper::AddDefault("g_FSAALevel", "7");
+            RegistryWrapper::AddDefault("g_RainEnable", "1");
+            RegistryWrapper::AddDefault("g_TextureFiltering", "2");
+            RegistryWrapper::AddDefault("g_RacingResolution", "1");
+            RegistryWrapper::AddDefault("g_PerformanceLevel", "5");
+            RegistryWrapper::AddDefault("g_VSyncOn", "0");
+            RegistryWrapper::AddDefault("g_ShadowDetail", "2");
+            RegistryWrapper::AddDefault("g_VisualTreatment", "1");
+        }
     }
 }
 
