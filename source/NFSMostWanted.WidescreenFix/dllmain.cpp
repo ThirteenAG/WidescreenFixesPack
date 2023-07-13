@@ -1277,39 +1277,42 @@ void Init()
         SettingsSavePath.append("NFS Most Wanted");
         SettingsSavePath.append("Settings.ini");
 
-        RegistryWrapper("Need for Speed", SettingsSavePath);
-        auto RegIAT = *hook::pattern("FF 15 ? ? ? ? 8D 54 24 04 52").get(0).get<uintptr_t*>(2);
-        injector::WriteMemory(&RegIAT[0], RegistryWrapper::RegCreateKeyA, true);
-        injector::WriteMemory(&RegIAT[1], RegistryWrapper::RegOpenKeyExA, true);
-        injector::WriteMemory(&RegIAT[2], RegistryWrapper::RegCloseKey, true);
-        injector::WriteMemory(&RegIAT[3], RegistryWrapper::RegSetValueExA, true);
-        injector::WriteMemory(&RegIAT[4], RegistryWrapper::RegQueryValueExA, true);
-        RegistryWrapper::AddPathWriter("Install Dir", "InstallDir", "Path");
-        RegistryWrapper::AddDefault("@", "INSERTYOURCDKEYHERE");
-        RegistryWrapper::AddDefault("CD Drive", "D:\\");
-        RegistryWrapper::AddDefault("CacheSize", "2936691712");
-        RegistryWrapper::AddDefault("SwapSize", "73400320");
-        RegistryWrapper::AddDefault("Language", "English");
-        RegistryWrapper::AddDefault("StreamingInstall", "0");
-        RegistryWrapper::AddDefault("VTMode", "0");
-        RegistryWrapper::AddDefault("VERSION", "0");
-        RegistryWrapper::AddDefault("SIZE", "0");
-        RegistryWrapper::AddDefault("g_CarEnvironmentMapEnable", "3");
-        RegistryWrapper::AddDefault("g_CarEnvironmentMapUpdateData", "1");
-        RegistryWrapper::AddDefault("g_RoadReflectionEnable", "3");
-        RegistryWrapper::AddDefault("g_MotionBlurEnable", "1");
-        RegistryWrapper::AddDefault("g_ParticleSystemEnable", "1");
-        RegistryWrapper::AddDefault("g_WorldLodLevel", "3");
-        RegistryWrapper::AddDefault("g_CarLodLevel", "1");
-        RegistryWrapper::AddDefault("g_OverBrightEnable", "1");
-        RegistryWrapper::AddDefault("g_FSAALevel", "7");
-        RegistryWrapper::AddDefault("g_RainEnable", "1");
-        RegistryWrapper::AddDefault("g_TextureFiltering", "2");
-        RegistryWrapper::AddDefault("g_RacingResolution", "1");
-        RegistryWrapper::AddDefault("g_PerformanceLevel", "5");
-        RegistryWrapper::AddDefault("g_VSyncOn", "0");
-        RegistryWrapper::AddDefault("g_ShadowDetail", "2");
-        RegistryWrapper::AddDefault("g_VisualTreatment", "1");
+        if (GetFolderPathCallDest || !szCustomUserFilesDirectoryInGameDir.empty())
+        {
+            RegistryWrapper("Need for Speed", SettingsSavePath);
+            auto RegIAT = *hook::pattern("FF 15 ? ? ? ? 8D 54 24 04 52").get(0).get<uintptr_t*>(2);
+            injector::WriteMemory(&RegIAT[0], RegistryWrapper::RegCreateKeyA, true);
+            injector::WriteMemory(&RegIAT[1], RegistryWrapper::RegOpenKeyExA, true);
+            injector::WriteMemory(&RegIAT[2], RegistryWrapper::RegCloseKey, true);
+            injector::WriteMemory(&RegIAT[3], RegistryWrapper::RegSetValueExA, true);
+            injector::WriteMemory(&RegIAT[4], RegistryWrapper::RegQueryValueExA, true);
+            RegistryWrapper::AddPathWriter("Install Dir", "InstallDir", "Path");
+            RegistryWrapper::AddDefault("@", "INSERTYOURCDKEYHERE");
+            RegistryWrapper::AddDefault("CD Drive", "D:\\");
+            RegistryWrapper::AddDefault("CacheSize", "2936691712");
+            RegistryWrapper::AddDefault("SwapSize", "73400320");
+            RegistryWrapper::AddDefault("Language", "English");
+            RegistryWrapper::AddDefault("StreamingInstall", "0");
+            RegistryWrapper::AddDefault("VTMode", "0");
+            RegistryWrapper::AddDefault("VERSION", "0");
+            RegistryWrapper::AddDefault("SIZE", "0");
+            RegistryWrapper::AddDefault("g_CarEnvironmentMapEnable", "3");
+            RegistryWrapper::AddDefault("g_CarEnvironmentMapUpdateData", "1");
+            RegistryWrapper::AddDefault("g_RoadReflectionEnable", "3");
+            RegistryWrapper::AddDefault("g_MotionBlurEnable", "1");
+            RegistryWrapper::AddDefault("g_ParticleSystemEnable", "1");
+            RegistryWrapper::AddDefault("g_WorldLodLevel", "3");
+            RegistryWrapper::AddDefault("g_CarLodLevel", "1");
+            RegistryWrapper::AddDefault("g_OverBrightEnable", "1");
+            RegistryWrapper::AddDefault("g_FSAALevel", "7");
+            RegistryWrapper::AddDefault("g_RainEnable", "1");
+            RegistryWrapper::AddDefault("g_TextureFiltering", "2");
+            RegistryWrapper::AddDefault("g_RacingResolution", "1");
+            RegistryWrapper::AddDefault("g_PerformanceLevel", "5");
+            RegistryWrapper::AddDefault("g_VSyncOn", "0");
+            RegistryWrapper::AddDefault("g_ShadowDetail", "2");
+            RegistryWrapper::AddDefault("g_VisualTreatment", "1");
+        }
     }
 }
 
