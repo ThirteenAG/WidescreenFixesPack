@@ -564,6 +564,12 @@ public:
         RegistryReader.SetIniPath(iniPath);
         std::filesystem::create_directories(std::filesystem::path(iniPath).parent_path());
     }
+    RegistryWrapper(std::string_view searchString, std::filesystem::path iniPath)
+    {
+        filter = searchString;
+        RegistryReader.SetIniPath(iniPath);
+        std::filesystem::create_directories(std::filesystem::path(iniPath).parent_path());
+    }
     static void AddDefault(std::string_view key, std::string_view value)
     {
         DefaultStrings.emplace(key, value);
