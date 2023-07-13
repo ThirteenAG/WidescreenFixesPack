@@ -1212,15 +1212,27 @@ void Init()
         }
 
         auto [DesktopResW, DesktopResH] = GetDesktopRes();
-        char szSettingsSavePath[MAX_PATH];
+        
         uintptr_t GetFolderPathCallDest = injector::GetBranchDestination(GetFolderPathpattern.get(0).get<uintptr_t>(14), true).as_int();
         if (GetFolderPathCallDest)
         {
-            injector::stdcall<HRESULT(HWND, int, HANDLE, DWORD, LPSTR)>::call(GetFolderPathCallDest, NULL, 0x8005, NULL, NULL, szSettingsSavePath);
-            strcat(szSettingsSavePath, "\\NFS ProStreet");
-            strcat(szSettingsSavePath, "\\Settings.ini");
+            std::filesystem::path SettingsSavePath;
+            if (!szCustomUserFilesDirectoryInGameDir.empty())
+            {
+                SettingsSavePath = CustomUserDir;
+                SettingsSavePath.append("NFS ProStreet");
+                SettingsSavePath.append("Settings.ini");
+            }
+            else
+            {
+                char szSettingsSavePath[MAX_PATH];
+                injector::stdcall<HRESULT(HWND, int, HANDLE, DWORD, LPSTR)>::call(GetFolderPathCallDest, NULL, 0x8005, NULL, NULL, szSettingsSavePath);
+                strcat(szSettingsSavePath, "\\NFS ProStreet");
+                strcat(szSettingsSavePath, "\\Settings.ini");
+                SettingsSavePath = szSettingsSavePath;
+            }
 
-            RegistryWrapper("Need for Speed", szSettingsSavePath);
+            RegistryWrapper("Need for Speed", SettingsSavePath);
             auto RegIAT = *hook::pattern("FF 15 ? ? ? ? 8D 54 24 40 52 68 3F 00 0F 00").get(0).get<uintptr_t*>(2);
             injector::WriteMemory(&RegIAT[0], RegistryWrapper::RegCreateKeyA, true);
             injector::WriteMemory(&RegIAT[1], RegistryWrapper::RegOpenKeyExA, true);
