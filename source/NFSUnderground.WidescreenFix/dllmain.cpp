@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "GTA\CFileMgr.h"
 #include <d3d9.h>
 
 struct Screen
@@ -37,18 +36,21 @@ public:
     {}
 };
 
-void LoadDatFile(std::string_view str, std::function<void(std::string_view line)>&& cb)
+void LoadDatFile(std::filesystem::path strPath, std::function<void(std::string_view line)>&& cb)
 {
-    if (FILE* hFile = CFileMgr::OpenFile(str.data(), "r"))
+    std::ifstream hFile;
+    hFile.open(strPath);
+    if (hFile.is_open())
     {
-        while (const char* pLine = CFileMgr::LoadLine(hFile))
+        std::string line;
+        while (std::getline(hFile, line))
         {
-            if (pLine[0] && pLine[0] != '#')
+            if (line[0] && line[0] != '#')
             {
-                cb(pLine);
+                cb(line);
             }
         }
-        CFileMgr::CloseFile(hFile);
+        hFile.close();
     }
 }
 
@@ -310,14 +312,17 @@ void Init()
     int nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
     bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 0) != 0;
     bool bShowLangSelect = iniReader.ReadInteger("MISC", "ShowLangSelect", 0) != 0;
+    static std::filesystem::path CustomUserDir;
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
+
+    if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
+        szCustomUserFilesDirectoryInGameDir.clear();
+
     static int nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
     static int nFPSLimit = iniReader.ReadInteger("MISC", "FPSLimit", -1);
     int nHideDebugObjects = iniReader.ReadInteger("MISC", "HideDebugObjects", 0);
     bool bBlackMagazineFix = iniReader.ReadInteger("MISC", "BlackMagazineFix", 0) != 0;
-    if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
-        szCustomUserFilesDirectoryInGameDir.clear();
     int nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
 
     if (!Screen.nWidth || !Screen.nHeight)
@@ -546,11 +551,7 @@ void Init()
 
         CIniReader iniReader("");
         auto DataFilePath = iniReader.GetIniPath();
-        auto pos = DataFilePath.rfind('.');
-        if (pos != std::string::npos)
-            DataFilePath.replace(pos, DataFilePath.length() - pos, ".dat");
-        else
-            DataFilePath.append(".dat");
+        DataFilePath.replace_extension(".dat");
 
         LoadDatFile(DataFilePath, [](std::string_view line)
         {
@@ -738,12 +739,14 @@ void Init()
 
     if (!szCustomUserFilesDirectoryInGameDir.empty())
     {
-        szCustomUserFilesDirectoryInGameDir = GetExeModulePath<std::string>() + szCustomUserFilesDirectoryInGameDir;
+        CustomUserDir = GetExeModulePath<std::filesystem::path>();
+        CustomUserDir.append(szCustomUserFilesDirectoryInGameDir);
 
         auto SHGetFolderPathAHook = [](HWND /*hwnd*/, int /*csidl*/, HANDLE /*hToken*/, DWORD /*dwFlags*/, LPSTR pszPath) -> HRESULT
         {
-            CreateDirectoryA(szCustomUserFilesDirectoryInGameDir.c_str(), NULL);
-            strcpy(pszPath, szCustomUserFilesDirectoryInGameDir.c_str());
+            CreateDirectoryW((LPCWSTR)(CustomUserDir.u16string().c_str()), NULL);
+            memcpy(pszPath, CustomUserDir.u8string().data(), CustomUserDir.u8string().size() + 1);
+
             return S_OK;
         };
 

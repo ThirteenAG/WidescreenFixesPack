@@ -51,18 +51,10 @@ BOOL WINAPI AdjustWindowRect_Hook_UC(LPRECT lpRect, DWORD dwStyle, BOOL bMenu)
 {
     BOOL retval = WindowedModeWrapper::AdjustWindowRect_Hook(lpRect, dwStyle, bMenu);
 
-    // fix the window to adjust at the center of the screen...
-    int DesktopX = 0;
-    int DesktopY = 0;
-    int WindowX = lpRect->right - lpRect->left;
-    int WindowY = lpRect->bottom - lpRect->top;
+    int WindowSizeX = lpRect->right - lpRect->left;
+    int WindowSizeY = lpRect->bottom - lpRect->top;
 
-    std::tie(DesktopX, DesktopY) = GetDesktopRes();
-
-    int WindowPosX = (int)(((float)DesktopX / 2.0f) - ((float)WindowX / 2.0f));
-    int WindowPosY = (int)(((float)DesktopY / 2.0f) - ((float)WindowY / 2.0f));
-
-    SetWindowPos(WindowedModeWrapper::GameHWND, 0, WindowPosX, WindowPosY, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+    WindowedModeWrapper::CenterWindowPosition(WindowSizeX, WindowSizeY);
 
     return retval;
 }
@@ -458,18 +450,22 @@ void Init3()
     CIniReader iniReader("");
     bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 1) != 0;
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
+    static std::filesystem::path CustomUserDir;
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
         szCustomUserFilesDirectoryInGameDir.clear();
 
     auto GetFolderPathpattern = GetPattern("50 6A 00 6A 00 68 ? 80 00 00 6A 00");
     if (!szCustomUserFilesDirectoryInGameDir.empty())
     {
-        szCustomUserFilesDirectoryInGameDir = GetExeModulePath<std::string>() + szCustomUserFilesDirectoryInGameDir;
+        //szCustomUserFilesDirectoryInGameDir = GetExeModulePath<std::string>() + szCustomUserFilesDirectoryInGameDir;
+        CustomUserDir = GetExeModulePath<std::filesystem::path>();
+        CustomUserDir.append(szCustomUserFilesDirectoryInGameDir);
 
         auto SHGetFolderPathAHook = [](HWND /*hwnd*/, int /*csidl*/, HANDLE /*hToken*/, DWORD /*dwFlags*/, LPSTR pszPath)->HRESULT
         {
-            CreateDirectoryA(szCustomUserFilesDirectoryInGameDir.c_str(), NULL);
-            strcpy(pszPath, szCustomUserFilesDirectoryInGameDir.c_str());
+            CreateDirectoryW((LPCWSTR)(CustomUserDir.u16string().c_str()), NULL);
+            memcpy(pszPath, CustomUserDir.u8string().data(), CustomUserDir.u8string().size() + 1);
+
             return S_OK;
         };
 
@@ -487,7 +483,6 @@ void Init3()
     if (bWriteSettingsToFile)
     {
         auto[DesktopResW, DesktopResH] = GetDesktopRes();
-        char szSettingsSavePath[MAX_PATH];
         uintptr_t GetFolderPathCallDest = injector::GetBranchDestination(GetFolderPathpattern.get(0).get<uintptr_t>(14), true).as_int();
 
         MEMORY_BASIC_INFORMATION mbi;
@@ -497,51 +492,64 @@ void Init3()
 
         if (mbi.AllocationBase == hm || mbi.AllocationBase == GetModuleHandle(L"shfolder"))
         {
-            injector::stdcall<HRESULT(HWND, int, HANDLE, DWORD, LPSTR)>::call(GetFolderPathCallDest, NULL, 0x8005, NULL, NULL, szSettingsSavePath);
-            strcat(szSettingsSavePath, "\\NFS Undercover");
-            strcat(szSettingsSavePath, "\\Settings.ini");
+            std::filesystem::path SettingsSavePath;
+            if (!szCustomUserFilesDirectoryInGameDir.empty())
+                SettingsSavePath = CustomUserDir;
 
-            RegistryWrapper("Need for Speed", szSettingsSavePath);
-            auto RegIAT = *GetPattern("FF 15 ? ? ? ? 8D 54 24 40 52 68 3F 00 0F 00").get(0).get<uintptr_t*>(2);
-            injector::WriteMemory(&RegIAT[0], RegistryWrapper::RegCreateKeyA, true);
-            injector::WriteMemory(&RegIAT[2], RegistryWrapper::RegOpenKeyExA, true);
-            injector::WriteMemory(&RegIAT[4], RegistryWrapper::RegCloseKey, true);
-            injector::WriteMemory(&RegIAT[1], RegistryWrapper::RegSetValueExA, true);
-            injector::WriteMemory(&RegIAT[3], RegistryWrapper::RegQueryValueExA, true);
-            RegistryWrapper::AddPathWriter("Install Dir", "InstallDir", "Path");
-            RegistryWrapper::AddDefault("@", "INSERTYOURCDKEYHERE");
-            RegistryWrapper::AddDefault("CD Drive", "D:\\");
-            RegistryWrapper::AddDefault("FirstTime", "0");
-            RegistryWrapper::AddDefault("CacheSize", "5697825792");
-            RegistryWrapper::AddDefault("SwapSize", "73400320");
-            RegistryWrapper::AddDefault("Language", "Engish (US)");
-            RegistryWrapper::AddDefault("StreamingInstall", "0");
-            RegistryWrapper::AddDefault("g_CarEffects", "3");
-            RegistryWrapper::AddDefault("g_WorldFXLevel", "3");
-            RegistryWrapper::AddDefault("g_RoadReflectionEnable", "0");
-            RegistryWrapper::AddDefault("g_WorldLodLevel", "2");
-            RegistryWrapper::AddDefault("g_CarLodLevel", "0");
-            RegistryWrapper::AddDefault("g_FSAALevel", "3");
-            RegistryWrapper::AddDefault("g_RainEnable", "0");
-            RegistryWrapper::AddDefault("g_TextureFiltering", "2");
-            RegistryWrapper::AddDefault("g_PerformanceLevel", "0");
-            RegistryWrapper::AddDefault("g_VSyncOn", "0");
-            RegistryWrapper::AddDefault("g_ShadowEnable", "3");
-            RegistryWrapper::AddDefault("g_SmokeEnable", "1");
-            RegistryWrapper::AddDefault("g_Brightness", "68");
-            RegistryWrapper::AddDefault("g_ShaderDetailLevel", "0");
-            RegistryWrapper::AddDefault("g_AudioDetail", "0");
-            RegistryWrapper::AddDefault("g_AudioMode", "1");
-            RegistryWrapper::AddDefault("g_Width", std::to_string(DesktopResW));
-            RegistryWrapper::AddDefault("g_Height", std::to_string(DesktopResH));
-            RegistryWrapper::AddDefault("g_Refresh", "60");
-            RegistryWrapper::AddDefault("g_CarDamageDetail", "2");
-            RegistryWrapper::AddDefault("AllowR32FAA", "0");
-            RegistryWrapper::AddDefault("ForceR32AA", "0");
+            if (GetFolderPathCallDest && szCustomUserFilesDirectoryInGameDir.empty())
+            {
+                char szSettingsSavePath[MAX_PATH];
+                injector::stdcall<HRESULT(HWND, int, HANDLE, DWORD, LPSTR)>::call(GetFolderPathCallDest, NULL, 0x8005, NULL, NULL, szSettingsSavePath);
+                SettingsSavePath = szSettingsSavePath;
+            }
 
-            // get the ShadowLevel setting from the settings ini -- it's important to get this before the game uses it
-            CIniReader shadowini(szSettingsSavePath);
-            ShadowLevel = shadowini.ReadInteger("Need for Speed Undercover", "g_ShadowEnable", 3);
+            SettingsSavePath.append("NFS Undercover");
+            SettingsSavePath.append("Settings.ini");
+
+            if (GetFolderPathCallDest || !szCustomUserFilesDirectoryInGameDir.empty())
+            {
+                RegistryWrapper("Need for Speed", SettingsSavePath);
+                auto RegIAT = *GetPattern("FF 15 ? ? ? ? 8D 54 24 40 52 68 3F 00 0F 00").get(0).get<uintptr_t*>(2);
+                injector::WriteMemory(&RegIAT[0], RegistryWrapper::RegCreateKeyA, true);
+                injector::WriteMemory(&RegIAT[2], RegistryWrapper::RegOpenKeyExA, true);
+                injector::WriteMemory(&RegIAT[4], RegistryWrapper::RegCloseKey, true);
+                injector::WriteMemory(&RegIAT[1], RegistryWrapper::RegSetValueExA, true);
+                injector::WriteMemory(&RegIAT[3], RegistryWrapper::RegQueryValueExA, true);
+                RegistryWrapper::AddPathWriter("Install Dir", "InstallDir", "Path");
+                RegistryWrapper::AddDefault("@", "INSERTYOURCDKEYHERE");
+                RegistryWrapper::AddDefault("CD Drive", "D:\\");
+                RegistryWrapper::AddDefault("FirstTime", "0");
+                RegistryWrapper::AddDefault("CacheSize", "5697825792");
+                RegistryWrapper::AddDefault("SwapSize", "73400320");
+                RegistryWrapper::AddDefault("Language", "Engish (US)");
+                RegistryWrapper::AddDefault("StreamingInstall", "0");
+                RegistryWrapper::AddDefault("g_CarEffects", "3");
+                RegistryWrapper::AddDefault("g_WorldFXLevel", "3");
+                RegistryWrapper::AddDefault("g_RoadReflectionEnable", "0");
+                RegistryWrapper::AddDefault("g_WorldLodLevel", "2");
+                RegistryWrapper::AddDefault("g_CarLodLevel", "0");
+                RegistryWrapper::AddDefault("g_FSAALevel", "3");
+                RegistryWrapper::AddDefault("g_RainEnable", "0");
+                RegistryWrapper::AddDefault("g_TextureFiltering", "2");
+                RegistryWrapper::AddDefault("g_PerformanceLevel", "0");
+                RegistryWrapper::AddDefault("g_VSyncOn", "0");
+                RegistryWrapper::AddDefault("g_ShadowEnable", "3");
+                RegistryWrapper::AddDefault("g_SmokeEnable", "1");
+                RegistryWrapper::AddDefault("g_Brightness", "68");
+                RegistryWrapper::AddDefault("g_ShaderDetailLevel", "0");
+                RegistryWrapper::AddDefault("g_AudioDetail", "0");
+                RegistryWrapper::AddDefault("g_AudioMode", "1");
+                RegistryWrapper::AddDefault("g_Width", std::to_string(DesktopResW));
+                RegistryWrapper::AddDefault("g_Height", std::to_string(DesktopResH));
+                RegistryWrapper::AddDefault("g_Refresh", "60");
+                RegistryWrapper::AddDefault("g_CarDamageDetail", "2");
+                RegistryWrapper::AddDefault("AllowR32FAA", "0");
+                RegistryWrapper::AddDefault("ForceR32AA", "0");
+
+                // get the ShadowLevel setting from the settings ini -- it's important to get this before the game uses it
+                CIniReader shadowini(SettingsSavePath);
+                ShadowLevel = shadowini.ReadInteger("Need for Speed Undercover", "g_ShadowEnable", 3);
+            }
         }
         else
         {
@@ -588,15 +596,13 @@ void Init4()
     // 00793251 = Widescreen FMV call. Will fix them later
     // HUD Width
     static float fHudScale = 1.0f;
-    static float fHudWidth = 1280.0f;
     static float fHudXPos = -1.0f;
-    pattern = GetPattern("E8 ? ? ? ? 84 C0 74 0A F3 0F 10 05");
-    auto dword_C21B00 = *pattern.get_first<void*>(13);
-    pattern = GetPattern(pattern_str(0xF3, 0x0F, 0x10, 0x05, to_bytes(dword_C21B00))); //movss   xmm0, ds:dword_C21B00
-    for (size_t i = 0; i < pattern.size(); ++i)
-    {
-        injector::WriteMemory(pattern.get(i).get<uint32_t>(4), &fHudWidth, true);
-    }
+
+    uintptr_t loc_764436 = reinterpret_cast<uintptr_t>(hook::pattern("C7 41 04 06 00 00 00 C7 01 04 00 00 00 C7 81 BC 00 00 00 04 00 00 00").get_first(0)) + 0x20;
+    static float* fHudWidth = *reinterpret_cast<float**>(loc_764436 + 4);
+    DWORD oldprotect;
+    injector::UnprotectMemory(fHudWidth, sizeof(float), oldprotect);
+
 
     pattern = GetPattern("C7 40 ? ? ? ? ? 88 50 20");
     static uint32_t* Width = nullptr;
@@ -611,21 +617,18 @@ void Init4()
                 Width = (uint32_t*)(regs.eax + 0x18);
                 Height = (uint32_t*)(regs.eax + 0x1C);
             }
+            float fAspectRatio = static_cast<float>(*Width) / static_cast<float>(*Height);
+            if (fAspectRatio <= 1.34)
+            {
+                fHudScale = 1280.0f / (720.0f * fAspectRatio);
+                *fHudWidth = 1280.0f / fHudScale;
+                fHudXPos = -0.75f * fHudScale;
+            }
             else
             {
-                float fAspectRatio = static_cast<float>(*Width) / static_cast<float>(*Height);
-                if (fAspectRatio <= 1.34)
-                {
-                    fHudScale = 1280.0f / (720.0f * fAspectRatio);
-                    fHudWidth = 1280.0f / fHudScale;
-                    fHudXPos = -0.75f * fHudScale;
-                }
-                else
-                {
-                    fHudScale = 1280.0f / (720.0f * fAspectRatio);
-                    fHudWidth = 1280.0f / fHudScale;
-                    fHudXPos = -1.0f * fHudScale;
-                }
+                fHudScale = 1280.0f / (720.0f * fAspectRatio);
+                *fHudWidth = 1280.0f / fHudScale;
+                fHudXPos = -1.0f * fHudScale;
             }
         }
     }; injector::MakeInline<ResHook>(pattern.get_first(0), pattern.get_first(7));

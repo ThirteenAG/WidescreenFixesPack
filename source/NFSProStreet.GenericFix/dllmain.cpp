@@ -648,10 +648,11 @@ void Init()
     bool bBrakeLightFix = iniReader.ReadInteger("MISC", "BrakeLightFix", 1) != 0;
     static int32_t nShadowRes = iniReader.ReadInteger("MISC", "ShadowRes", 2048);
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
-    static int SimRate = iniReader.ReadInteger("MISC", "SimRate", -1);
+    static std::filesystem::path CustomUserDir;
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
         szCustomUserFilesDirectoryInGameDir.clear();
 
+    static int SimRate = iniReader.ReadInteger("MISC", "SimRate", -1);
     if (bFixAspectRatio)
     {
         // Real-Time Aspect Ratio Calculation
@@ -1182,42 +1183,54 @@ void Init()
         injector::WriteMemory(dbl_9FB3C0, BoostGripSubtractor, true);
     }
 
+    if (!szCustomUserFilesDirectoryInGameDir.empty())
+    {
+        auto GetFolderPathpattern = hook::pattern("50 6A 00 6A 00 68 ? 80 00 00 6A 00");
+        CustomUserDir = GetExeModulePath<std::filesystem::path>();
+        CustomUserDir.append(szCustomUserFilesDirectoryInGameDir);
+
+        auto SHGetFolderPathAHook = [](HWND /*hwnd*/, int /*csidl*/, HANDLE /*hToken*/, DWORD /*dwFlags*/, LPSTR pszPath) -> HRESULT
+        {
+            CreateDirectoryW((LPCWSTR)(CustomUserDir.u16string().c_str()), NULL);
+            memcpy(pszPath, CustomUserDir.u8string().data(), CustomUserDir.u8string().size() + 1);
+
+            return S_OK;
+        };
+
+        for (size_t i = 0; i < GetFolderPathpattern.size(); i++)
+        {
+            uint32_t* dword_6CBF17 = GetFolderPathpattern.get(i).get<uint32_t>(12);
+            if (*(BYTE*)dword_6CBF17 != 0xFF)
+                dword_6CBF17 = GetFolderPathpattern.get(i).get<uint32_t>(14);
+
+            injector::MakeCALL((uint32_t)dword_6CBF17, static_cast<HRESULT(WINAPI*)(HWND, int, HANDLE, DWORD, LPSTR)>(SHGetFolderPathAHook), true);
+            injector::MakeNOP((uint32_t)dword_6CBF17 + 5, 1, true);
+        }
+    }
+
     if (bWriteSettingsToFile)
     {
         auto GetFolderPathpattern = hook::pattern("50 6A 00 6A 00 68 ? 80 00 00 6A 00");
+        auto [DesktopResW, DesktopResH] = GetDesktopRes();
 
+        std::filesystem::path SettingsSavePath;
         if (!szCustomUserFilesDirectoryInGameDir.empty())
+            SettingsSavePath = CustomUserDir;
+        
+        uintptr_t GetFolderPathCallDest = injector::GetBranchDestination(GetFolderPathpattern.get(0).get<uintptr_t>(14), true).as_int();
+        if (GetFolderPathCallDest && szCustomUserFilesDirectoryInGameDir.empty())
         {
-            szCustomUserFilesDirectoryInGameDir = GetExeModulePath<std::string>() + szCustomUserFilesDirectoryInGameDir;
-
-            auto SHGetFolderPathAHook = [](HWND /*hwnd*/, int /*csidl*/, HANDLE /*hToken*/, DWORD /*dwFlags*/, LPSTR pszPath) -> HRESULT
-            {
-                CreateDirectoryA(szCustomUserFilesDirectoryInGameDir.c_str(), NULL);
-                strcpy(pszPath, szCustomUserFilesDirectoryInGameDir.c_str());
-                return S_OK;
-            };
-
-            for (size_t i = 0; i < GetFolderPathpattern.size(); i++)
-            {
-                uint32_t* dword_6CBF17 = GetFolderPathpattern.get(i).get<uint32_t>(12);
-                if (*(BYTE*)dword_6CBF17 != 0xFF)
-                    dword_6CBF17 = GetFolderPathpattern.get(i).get<uint32_t>(14);
-
-                injector::MakeCALL((uint32_t)dword_6CBF17, static_cast<HRESULT(WINAPI*)(HWND, int, HANDLE, DWORD, LPSTR)>(SHGetFolderPathAHook), true);
-                injector::MakeNOP((uint32_t)dword_6CBF17 + 5, 1, true);
-            }
+            char szSettingsSavePath[MAX_PATH];
+            injector::stdcall<HRESULT(HWND, int, HANDLE, DWORD, LPSTR)>::call(GetFolderPathCallDest, NULL, 0x8005, NULL, NULL, szSettingsSavePath);
+            SettingsSavePath = szSettingsSavePath;
         }
 
-        auto [DesktopResW, DesktopResH] = GetDesktopRes();
-        char szSettingsSavePath[MAX_PATH];
-        uintptr_t GetFolderPathCallDest = injector::GetBranchDestination(GetFolderPathpattern.get(0).get<uintptr_t>(14), true).as_int();
-        if (GetFolderPathCallDest)
-        {
-            injector::stdcall<HRESULT(HWND, int, HANDLE, DWORD, LPSTR)>::call(GetFolderPathCallDest, NULL, 0x8005, NULL, NULL, szSettingsSavePath);
-            strcat(szSettingsSavePath, "\\NFS ProStreet");
-            strcat(szSettingsSavePath, "\\Settings.ini");
+        SettingsSavePath.append("NFS ProStreet");
+        SettingsSavePath.append("Settings.ini");
 
-            RegistryWrapper("Need for Speed", szSettingsSavePath);
+        if (GetFolderPathCallDest || !szCustomUserFilesDirectoryInGameDir.empty())
+        {
+            RegistryWrapper("Need for Speed", SettingsSavePath);
             auto RegIAT = *hook::pattern("FF 15 ? ? ? ? 8D 54 24 40 52 68 3F 00 0F 00").get(0).get<uintptr_t*>(2);
             injector::WriteMemory(&RegIAT[0], RegistryWrapper::RegCreateKeyA, true);
             injector::WriteMemory(&RegIAT[1], RegistryWrapper::RegOpenKeyExA, true);

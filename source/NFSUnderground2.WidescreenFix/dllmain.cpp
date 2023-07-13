@@ -39,29 +39,29 @@ std::vector<CDatEntry> HudCoords;
 void LoadDatFile()
 {
     CIniReader iniReader("");
-    char* DataFilePath = (char*)iniReader.GetIniPath().c_str();
-    *strrchr(DataFilePath, '.') = '\0';
-    strcat(DataFilePath, ".dat");
+    auto DataFilePath = iniReader.GetIniPath();
+    DataFilePath.replace_extension(".dat");
 
-    if (FILE* hFile = CFileMgr::OpenFile(DataFilePath, "r"))
+    std::ifstream hFile;
+    hFile.open(DataFilePath);
+    if (hFile.is_open())
     {
-        while (const char* pLine = CFileMgr::LoadLine(hFile))
+        std::string line;
+        while (std::getline(hFile, line))
         {
-            if (pLine[0] && pLine[0] != '#')
+            if (line[0] && line[0] != '#')
             {
                 float PosX, PosY;
                 float fOffsetX, fOffsetY;
-                sscanf(pLine, "%*s %f %f %f %f", &PosX, &PosY, &fOffsetX, &fOffsetY);
+                sscanf_s(line.data(), "%*s %f %f %f %f", &PosX, &PosY, &fOffsetX, &fOffsetY);
 
                 if (Screen.fAspectRatio < (16.0f / 9.0f))
-                {
                     fOffsetX /= (((16.0f / 9.0f) / Screen.fAspectRatio) * 1.5f);
-                }
 
                 HudCoords.push_back(CDatEntry(PosX, PosY, fOffsetX, fOffsetY));
             }
         }
-        CFileMgr::CloseFile(hFile);
+        hFile.close();
     }
 }
 
@@ -105,7 +105,12 @@ void Init()
     int nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
     bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 0) != 0;
     bool bDisableCutsceneBorders = iniReader.ReadInteger("MISC", "DisableCutsceneBorders", 1) != 0;
+
+    static std::filesystem::path CustomUserDir;
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
+    if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
+        szCustomUserFilesDirectoryInGameDir.clear();
+
     bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 1) != 0;
     static int nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
@@ -114,8 +119,6 @@ void Init()
     bool bSingleCoreAffinity = iniReader.ReadInteger("MISC", "SingleCoreAffinity", 0) != 0;
     bool bNoOpticalDriveFix = iniReader.ReadInteger("MISC", "NoOpticalDriveFix", 1) != 0;
     static float fRainDropletsScale = iniReader.ReadFloat("MISC", "RainDropletsScale", 0.5f);
-    if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
-        szCustomUserFilesDirectoryInGameDir.clear();
     int nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
     bool bFixNOSTrailLength = iniReader.ReadInteger("NOSTrail", "FixNOSTrailLength", 1) == 1;
     static float fCustomNOSTrailLength = iniReader.ReadFloat("NOSTrail", "CustomNOSTrailLength", 1.0f);
@@ -473,12 +476,14 @@ void Init()
 
     if (!szCustomUserFilesDirectoryInGameDir.empty())
     {
-        szCustomUserFilesDirectoryInGameDir = GetExeModulePath<std::string>() + szCustomUserFilesDirectoryInGameDir;
+        CustomUserDir = GetExeModulePath<std::filesystem::path>();
+        CustomUserDir.append(szCustomUserFilesDirectoryInGameDir);
 
         auto SHGetFolderPathAHook = [](HWND /*hwnd*/, int /*csidl*/, HANDLE /*hToken*/, DWORD /*dwFlags*/, LPSTR pszPath) -> HRESULT
         {
-            CreateDirectoryA(szCustomUserFilesDirectoryInGameDir.c_str(), NULL);
-            strcpy(pszPath, szCustomUserFilesDirectoryInGameDir.c_str());
+            CreateDirectoryW((LPCWSTR)(CustomUserDir.u16string().c_str()), NULL);
+            memcpy(pszPath, CustomUserDir.u8string().data(), CustomUserDir.u8string().size() + 1);
+
             return S_OK;
         };
 
@@ -811,55 +816,68 @@ void Init()
 
     if (bWriteSettingsToFile)
     {
-        char szSettingsSavePath[MAX_PATH];
+        std::filesystem::path SettingsSavePath;
+        if (!szCustomUserFilesDirectoryInGameDir.empty())
+            SettingsSavePath = CustomUserDir;
+
         auto GetFolderPathpattern = hook::pattern("50 6A 00 6A 00 68 ? 80 00 00 6A 00");
         uintptr_t GetFolderPathCallDest = injector::GetBranchDestination(GetFolderPathpattern.count(1).get(0).get<uintptr_t>(12), true).as_int();
-        injector::stdcall<HRESULT(HWND, int, HANDLE, DWORD, LPSTR)>::call(GetFolderPathCallDest, NULL, 0x801C, NULL, NULL, szSettingsSavePath);
-        strcat(szSettingsSavePath, "\\NFS Underground 2");
-        strcat(szSettingsSavePath, "\\Settings.ini");
 
-        RegistryWrapper("Need for Speed", szSettingsSavePath);
-        uintptr_t* RegIAT = *hook::pattern("FF 15 ? ? ? ? 8D 54 24 04 52").get(0).get<uintptr_t*>(2);
-        injector::WriteMemory(&RegIAT[0], RegistryWrapper::RegCreateKeyA, true);
-        injector::WriteMemory(&RegIAT[-1], RegistryWrapper::RegOpenKeyA, true);
-        injector::WriteMemory(&RegIAT[-2], RegistryWrapper::RegOpenKeyExA, true);
-        injector::WriteMemory(&RegIAT[1], RegistryWrapper::RegCloseKey, true);
-        injector::WriteMemory(&RegIAT[-4], RegistryWrapper::RegSetValueExA, true);
-        injector::WriteMemory(&RegIAT[-3], RegistryWrapper::RegQueryValueExA, true);
-        RegistryWrapper::AddPathWriter("Install Dir", "InstallDir", "Path");
-        RegistryWrapper::AddDefault("@", "INSERTYOURCDKEYHERE");
-        RegistryWrapper::AddDefault("CD Drive", "D:\\");
-        RegistryWrapper::AddDefault("CacheSize", "1879040000");
-        RegistryWrapper::AddDefault("SwapSize", "0");
-        RegistryWrapper::AddDefault("Language", "English US");
-        RegistryWrapper::AddDefault("StreamingInstall", "0");
-        RegistryWrapper::AddDefault("g_CarEnvironmentMapEnable", "3");
-        RegistryWrapper::AddDefault("g_CarEnvironmentMapUpdateData", "1");
-        RegistryWrapper::AddDefault("g_CarShadowEnable", "2");
-        RegistryWrapper::AddDefault("g_CarHeadlightEnable", "1");
-        RegistryWrapper::AddDefault("g_CarLightingEnable", "0");
-        RegistryWrapper::AddDefault("g_CarDamageEnable", "0");
-        RegistryWrapper::AddDefault("g_CrowdEnable", "1");
-        RegistryWrapper::AddDefault("g_RoadReflectionEnable", "3");
-        RegistryWrapper::AddDefault("g_FogEnable", "1");
-        RegistryWrapper::AddDefault("g_MotionBlurEnable", "1");
-        RegistryWrapper::AddDefault("g_LightStreaksEnable", "1");
-        RegistryWrapper::AddDefault("g_LightGlowEnable", "1");
-        RegistryWrapper::AddDefault("g_AnimatedTextureEnable", "1");
-        RegistryWrapper::AddDefault("g_ParticleSystemEnable", "1");
-        RegistryWrapper::AddDefault("g_DepthOfFieldEnable", "1");
-        RegistryWrapper::AddDefault("g_WorldLodLevel", "3");
-        RegistryWrapper::AddDefault("g_CarLodLevel", "1");
-        RegistryWrapper::AddDefault("g_OverBrightEnable", "1");
-        RegistryWrapper::AddDefault("g_BleachByPassEnable", "1");
-        RegistryWrapper::AddDefault("g_TintingEnable", "1");
-        RegistryWrapper::AddDefault("g_FSAALevel", "7");
-        RegistryWrapper::AddDefault("g_HorizonFogEnable", "1");
-        RegistryWrapper::AddDefault("g_RainEnable", "1");
-        RegistryWrapper::AddDefault("g_TextureFiltering", "2");
-        RegistryWrapper::AddDefault("g_RacingResolution", "4");
-        RegistryWrapper::AddDefault("g_PerformanceLevel", "5");
-        RegistryWrapper::AddDefault("g_VSyncOn", "0");
+        if (GetFolderPathCallDest && szCustomUserFilesDirectoryInGameDir.empty())
+        {
+            char szSettingsSavePath[MAX_PATH];
+            injector::stdcall<HRESULT(HWND, int, HANDLE, DWORD, LPSTR)>::call(GetFolderPathCallDest, NULL, 0x8005, NULL, NULL, szSettingsSavePath);
+            SettingsSavePath = szSettingsSavePath;
+        }
+
+        SettingsSavePath.append("NFS Underground 2");
+        SettingsSavePath.append("Settings.ini");
+
+        if (GetFolderPathCallDest || !szCustomUserFilesDirectoryInGameDir.empty())
+        {
+            RegistryWrapper("Need for Speed", SettingsSavePath);
+            uintptr_t* RegIAT = *hook::pattern("FF 15 ? ? ? ? 8D 54 24 04 52").get(0).get<uintptr_t*>(2);
+            injector::WriteMemory(&RegIAT[0], RegistryWrapper::RegCreateKeyA, true);
+            injector::WriteMemory(&RegIAT[-1], RegistryWrapper::RegOpenKeyA, true);
+            injector::WriteMemory(&RegIAT[-2], RegistryWrapper::RegOpenKeyExA, true);
+            injector::WriteMemory(&RegIAT[1], RegistryWrapper::RegCloseKey, true);
+            injector::WriteMemory(&RegIAT[-4], RegistryWrapper::RegSetValueExA, true);
+            injector::WriteMemory(&RegIAT[-3], RegistryWrapper::RegQueryValueExA, true);
+            RegistryWrapper::AddPathWriter("Install Dir", "InstallDir", "Path");
+            RegistryWrapper::AddDefault("@", "INSERTYOURCDKEYHERE");
+            RegistryWrapper::AddDefault("CD Drive", "D:\\");
+            RegistryWrapper::AddDefault("CacheSize", "1879040000");
+            RegistryWrapper::AddDefault("SwapSize", "0");
+            RegistryWrapper::AddDefault("Language", "English US");
+            RegistryWrapper::AddDefault("StreamingInstall", "0");
+            RegistryWrapper::AddDefault("g_CarEnvironmentMapEnable", "3");
+            RegistryWrapper::AddDefault("g_CarEnvironmentMapUpdateData", "1");
+            RegistryWrapper::AddDefault("g_CarShadowEnable", "2");
+            RegistryWrapper::AddDefault("g_CarHeadlightEnable", "1");
+            RegistryWrapper::AddDefault("g_CarLightingEnable", "0");
+            RegistryWrapper::AddDefault("g_CarDamageEnable", "0");
+            RegistryWrapper::AddDefault("g_CrowdEnable", "1");
+            RegistryWrapper::AddDefault("g_RoadReflectionEnable", "3");
+            RegistryWrapper::AddDefault("g_FogEnable", "1");
+            RegistryWrapper::AddDefault("g_MotionBlurEnable", "1");
+            RegistryWrapper::AddDefault("g_LightStreaksEnable", "1");
+            RegistryWrapper::AddDefault("g_LightGlowEnable", "1");
+            RegistryWrapper::AddDefault("g_AnimatedTextureEnable", "1");
+            RegistryWrapper::AddDefault("g_ParticleSystemEnable", "1");
+            RegistryWrapper::AddDefault("g_DepthOfFieldEnable", "1");
+            RegistryWrapper::AddDefault("g_WorldLodLevel", "3");
+            RegistryWrapper::AddDefault("g_CarLodLevel", "1");
+            RegistryWrapper::AddDefault("g_OverBrightEnable", "1");
+            RegistryWrapper::AddDefault("g_BleachByPassEnable", "1");
+            RegistryWrapper::AddDefault("g_TintingEnable", "1");
+            RegistryWrapper::AddDefault("g_FSAALevel", "7");
+            RegistryWrapper::AddDefault("g_HorizonFogEnable", "1");
+            RegistryWrapper::AddDefault("g_RainEnable", "1");
+            RegistryWrapper::AddDefault("g_TextureFiltering", "2");
+            RegistryWrapper::AddDefault("g_RacingResolution", "4");
+            RegistryWrapper::AddDefault("g_PerformanceLevel", "5");
+            RegistryWrapper::AddDefault("g_VSyncOn", "0");
+        }
     }
 
     // windowed mode

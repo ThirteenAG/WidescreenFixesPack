@@ -654,6 +654,7 @@ void Init()
 	BetterSync::mFPSLimitMode = (BetterSync::FrameLimiter::FPSLimitMode)iniReader.ReadInteger("MISC", "FPSLimitMode", BetterSync::FrameLimiter::FPSLimitMode::FPS_ACCURATE);
 	BetterSync::fFPSLimit = iniReader.ReadFloat("MISC", "FPSLimit", 60.0f);
 	
+	static std::filesystem::path CustomUserDir;
 	static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
 	if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
 		szCustomUserFilesDirectoryInGameDir.clear();
@@ -1285,12 +1286,14 @@ void Init()
 
 	if (!szCustomUserFilesDirectoryInGameDir.empty())
 	{
-		szCustomUserFilesDirectoryInGameDir = GetExeModulePath<std::string>() + szCustomUserFilesDirectoryInGameDir;
+		CustomUserDir = GetExeModulePath<std::filesystem::path>();
+		CustomUserDir.append(szCustomUserFilesDirectoryInGameDir);
 
 		auto SHGetFolderPathAHook = [](HWND /*hwnd*/, int /*csidl*/, HANDLE /*hToken*/, DWORD /*dwFlags*/, LPSTR pszPath) -> HRESULT
 		{
-			CreateDirectoryA(szCustomUserFilesDirectoryInGameDir.c_str(), NULL);
-			strcpy_s(pszPath, MAX_PATH, szCustomUserFilesDirectoryInGameDir.c_str());
+			CreateDirectoryW((LPCWSTR)(CustomUserDir.u16string().c_str()), NULL);
+			memcpy(pszPath, CustomUserDir.u8string().data(), CustomUserDir.u8string().size() + 1);
+
 			return S_OK;
 		};
 

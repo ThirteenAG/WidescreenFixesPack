@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "GTA\CFileMgr.h"
 #include <set>
 
 struct Screen
@@ -40,18 +39,21 @@ namespace injector
     }
 }
 
-void LoadDatFile(std::string_view str, std::function<void(std::string_view line)>&& cb)
+void LoadDatFile(std::filesystem::path str, std::function<void(std::string_view line)>&& cb)
 {
-    if (FILE* hFile = CFileMgr::OpenFile(str.data(), "r"))
+    std::ifstream hFile;
+    hFile.open(str);
+    if (hFile.is_open())
     {
-        while (const char* pLine = CFileMgr::LoadLine(hFile))
+        std::string line;
+        while (std::getline(hFile, line))
         {
-            if (pLine[0] && pLine[0] != '#')
+            if (line[0] && line[0] != '#')
             {
-                cb(pLine);
+                cb(line);
             }
         }
-        CFileMgr::CloseFile(hFile);
+        hFile.close();
     }
 }
 
@@ -664,8 +666,9 @@ void Init()
     {
         static std::set<uint32_t> images;
         auto DataFilePath = iniReader.GetIniPath();
-        auto pos = DataFilePath.rfind('.');
-        DataFilePath.replace(pos, DataFilePath.length() - pos, ".dat");
+        DataFilePath.replace_extension(".dat");
+        //auto pos = DataFilePath.rfind('.');
+        //DataFilePath.replace(pos, DataFilePath.length() - pos, ".dat");
         char buf[MAX_PATH];
         GetModuleFileNameA(NULL, buf, MAX_PATH);
         *(strrchr(buf, '\\') + 1) = '\0';
