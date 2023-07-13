@@ -648,10 +648,11 @@ void Init()
     bool bBrakeLightFix = iniReader.ReadInteger("MISC", "BrakeLightFix", 1) != 0;
     static int32_t nShadowRes = iniReader.ReadInteger("MISC", "ShadowRes", 2048);
     static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
-    static int SimRate = iniReader.ReadInteger("MISC", "SimRate", -1);
+    static std::filesystem::path CustomUserDir;
     if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
         szCustomUserFilesDirectoryInGameDir.clear();
 
+    static int SimRate = iniReader.ReadInteger("MISC", "SimRate", -1);
     if (bFixAspectRatio)
     {
         // Real-Time Aspect Ratio Calculation
@@ -1188,12 +1189,14 @@ void Init()
 
         if (!szCustomUserFilesDirectoryInGameDir.empty())
         {
-            szCustomUserFilesDirectoryInGameDir = GetExeModulePath<std::string>() + szCustomUserFilesDirectoryInGameDir;
+            CustomUserDir = GetExeModulePath<std::filesystem::path>();
+            CustomUserDir.append(szCustomUserFilesDirectoryInGameDir);
 
             auto SHGetFolderPathAHook = [](HWND /*hwnd*/, int /*csidl*/, HANDLE /*hToken*/, DWORD /*dwFlags*/, LPSTR pszPath) -> HRESULT
             {
-                CreateDirectoryA(szCustomUserFilesDirectoryInGameDir.c_str(), NULL);
-                strcpy(pszPath, szCustomUserFilesDirectoryInGameDir.c_str());
+                CreateDirectoryW((LPCWSTR)(CustomUserDir.u16string().c_str()), NULL);
+                memcpy(pszPath, CustomUserDir.u8string().data(), CustomUserDir.u8string().size() + 1);
+
                 return S_OK;
             };
 
