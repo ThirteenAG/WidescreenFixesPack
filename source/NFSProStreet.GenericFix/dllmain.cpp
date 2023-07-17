@@ -635,7 +635,8 @@ void Init()
     bool bFixAspectRatio = iniReader.ReadInteger("MAIN", "FixAspectRatio", 1) != 0;
     static int32_t nScaling = iniReader.ReadInteger("MAIN", "Scaling", 1);
     bool bFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1) != 0;
-    bool bConsoleHUDSize = iniReader.ReadInteger("MAIN", "ConsoleHUDSize", 0) != 0;
+    //bool bConsoleHUDSize = iniReader.ReadInteger("MAIN", "ConsoleHUDSize", 0) != 0;
+    static float FEScale = iniReader.ReadFloat("MAIN", "FEScale", 1.0f);
     bool bGammaFix = iniReader.ReadInteger("MISC", "GammaFix", 1) != 0;
     bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 0) != 0;
     bool bSkipFEBootflow = iniReader.ReadInteger("MISC", "SkipFEBootflow", 0) != 0;
@@ -858,12 +859,16 @@ void Init()
         }; injector::MakeInline<HUDWidescreenModeHook>(pattern.count(7).get(0).get<uint32_t>(0)); // 44C332
     }
 
-    if (bConsoleHUDSize)
+    uintptr_t loc_4B4518 = reinterpret_cast<uintptr_t>(hook::pattern("F3 0F 11 44 24 14 F3 0F 10 05 ? ? ? ? 6A 00").get_first(0)) + 6;
+    struct FEScaleHook
     {
-        static constexpr float HUDSize = 1.0875f;
-        uint32_t* dword_4B4455 = hook::pattern("F3 0F 10 ? ? ? ? ? 8B 3D ? ? ? ? C6 05 ? ? ? ? 00").count(1).get(0).get<uint32_t>(4);
-        injector::WriteMemory(dword_4B4455, &HUDSize, true);
-    }
+        void operator()(injector::reg_pack& regs)
+        {
+            *(float*)(regs.esp + 0x14) *= FEScale;
+            _asm movss xmm0, ds: [FEScale];
+
+        }
+    }; injector::MakeInline<FEScaleHook>(loc_4B4518, loc_4B4518 + 8);
 
     if (bGammaFix)
     {
