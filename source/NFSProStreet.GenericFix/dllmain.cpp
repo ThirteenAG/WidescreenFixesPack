@@ -637,6 +637,7 @@ void Init()
     bool bFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1) != 0;
     //bool bConsoleHUDSize = iniReader.ReadInteger("MAIN", "ConsoleHUDSize", 0) != 0;
     static float FEScale = iniReader.ReadFloat("MAIN", "FEScale", 1.0f);
+    static float fCalcFEScale = FEScale;
     static bool bAutoFitFE = iniReader.ReadInteger("MAIN", "AutoFitFE", 1) != 0;
     static int ForceFEMode = iniReader.ReadInteger("MAIN", "ForceFEMode", 0);
     bool bGammaFix = iniReader.ReadInteger("MISC", "GammaFix", 1) != 0;
@@ -781,6 +782,11 @@ void Init()
                 Height2 = -1.00f;
             }
 
+            static float CalcWidth1 = Width1;
+            static float CalcWidth2 = Width2;
+            static float CalcHeight1 = Height1;
+            static float CalcHeight2 = Height2;
+
             // Real-Time FMV Aspect Ratio Calculation
             auto pattern = hook::pattern("80 BC 24 ? ? ? ? 00 DE F9 D9");
             struct FMVHook
@@ -789,29 +795,28 @@ void Init()
                 {
                     int espB0 = *(int*)(regs.esp + 0xB0);
 
-                    _asm
-                    {
-                        fld dword ptr ds : [Width1] // Loads Width1 value
-                        fdiv dword ptr ds : [fScreenAspectRatio] // Divides by ScreenAspectRatio
-                        fstp dword ptr ds : [FMVWidthLeft] // Stores final result
-                        fld dword ptr ds : [Width2] // Loads Width2 value
-                        fdiv dword ptr ds : [fScreenAspectRatio] // Divides by ScreenAspectRatio
-                        fstp dword ptr ds : [FMVWidthRight] // Stores final result
-                        cmp byte ptr ds : [espB0], 0x00
-                    }
+                    CalcWidth1 = Width1 * fCalcFEScale;
+                    CalcWidth2 = Width2 * fCalcFEScale;
+                    CalcHeight1 = Height1 * fCalcFEScale;
+                    CalcHeight2 = Height2 * fCalcFEScale;
+
+                    FMVWidthLeft = CalcWidth1 / fScreenAspectRatio;
+                    FMVWidthRight = CalcWidth2 / fScreenAspectRatio;
+
+                    _asm cmp byte ptr ds : [espB0] , 0x00;
                 }
             }; injector::MakeInline<FMVHook>(pattern.get_first(0), pattern.get_first(8)); // 70235A
 
             {
                 auto pattern = hook::pattern("F3 0F 10 ? ? ? ? ? F3 0F 10 ? ? ? ? ? 0F 57 C0 F3 0F 10");
                 uint32_t* dword_702224 = pattern.count(1).get(0).get<uint32_t>(4);
-                injector::WriteMemory(dword_702224, &Height1, true);
+                injector::WriteMemory(dword_702224, &CalcHeight1, true);
                 uint32_t* dword_70222C = pattern.count(1).get(0).get<uint32_t>(12);
                 injector::WriteMemory(dword_70222C, &FMVWidthLeft, true);
                 uint32_t* dword_702237 = pattern.count(1).get(0).get<uint32_t>(23);
                 injector::WriteMemory(dword_702237, &FMVWidthRight, true);
                 uint32_t* dword_702261 = pattern.count(1).get(0).get<uint32_t>(65);
-                injector::WriteMemory(dword_702261, &Height2, true);
+                injector::WriteMemory(dword_702261, &CalcHeight2, true);
             }
         }
 
@@ -842,9 +847,7 @@ void Init()
     if (ForceFEMode >= 2)
         WidescreenCheckThreshold = +INFINITY;
     if (ForceFEMode == 1)
-        WidescreenCheckThreshold = -INFINITY;
-
-    static float fCalcFEScale = FEScale;
+        WidescreenCheckThreshold = -INFINITY;  
 
     pattern = hook::pattern("0F B6 C0 89 01 B0 01");
     struct HUDWidescreenModeHook
@@ -886,8 +889,7 @@ void Init()
         void operator()(injector::reg_pack& regs)
         {
             *(float*)(regs.esp + 0x14) *= fCalcFEScale;
-            _asm movss xmm0, ds: [fCalcFEScale];
-
+            _asm movss xmm0, ds: [fCalcFEScale] ;
         }
     }; injector::MakeInline<FEScaleHook>(loc_4B4518, loc_4B4518 + 8);
 
