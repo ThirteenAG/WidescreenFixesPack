@@ -829,35 +829,37 @@ void Init()
         }
     }
 
-    //if (bHUDWidescreenMode)
+    // Real-Time Aspect Ratio Calculation
+    static uint32_t* dword_BBADB4 = *hook::pattern("C7 05 ? ? ? ? 03 00 00 00 89 3D  ? ? ? ? 89 3D").get(0).get<uint32_t*>(35); // ResX
+    static uint32_t* dword_BBADB8 = *hook::pattern("C7 05 ? ? ? ? 03 00 00 00 89 3D  ? ? ? ? 89 3D").get(0).get<uint32_t*>(41); // ResY
+
+    // the game normally checks against 1.34, but this breaks 16:10 aspect ratios
+    static float WidescreenCheckThershold = 1.7777777f;
+
+    auto pattern = hook::pattern("0F B6 C0 89 01 B0 01");
+    struct HUDWidescreenModeHook
     {
-        // Real-Time Aspect Ratio Calculation
-        static uint32_t* dword_BBADB4 = *hook::pattern("C7 05 ? ? ? ? 03 00 00 00 89 3D  ? ? ? ? 89 3D").get(0).get<uint32_t*>(35); // ResX
-        static uint32_t* dword_BBADB8 = *hook::pattern("C7 05 ? ? ? ? 03 00 00 00 89 3D  ? ? ? ? 89 3D").get(0).get<uint32_t*>(41); // ResY
-        static float fScreenAspectRatio;
-
-        auto pattern = hook::pattern("0F B6 C0 89 01 B0 01");
-        struct HUDWidescreenModeHook
+        void operator()(injector::reg_pack& regs)
         {
-            void operator()(injector::reg_pack& regs)
+            auto ResX = *(float*)(dword_BBADB4);
+            auto ResY = *(float*)(dword_BBADB8);
+            float fScreenAspectRatio = (ResX / ResY);
+    
+            if (fScreenAspectRatio >= WidescreenCheckThershold)
             {
-                auto ResX = *(float*)(dword_BBADB4);
-                auto ResY = *(float*)(dword_BBADB8);
-                fScreenAspectRatio = (ResX / ResY);
-
-                if (fScreenAspectRatio >= 1.7777777f)
-                {
-                    regs.eax = (int)1;
-                    *(int*)(regs.ecx) = regs.eax;
-                }
-                else
-                {
-                    regs.eax = (int)0;
-                    *(int*)(regs.ecx) = regs.eax;
-                }
+                regs.eax = (int)1;
+                *(int*)(regs.ecx) = regs.eax;
             }
-        }; injector::MakeInline<HUDWidescreenModeHook>(pattern.count(7).get(0).get<uint32_t>(0)); // 44C332
-    }
+            else
+            {
+                regs.eax = (int)0;
+                *(int*)(regs.ecx) = regs.eax;
+            }
+        }
+    }; injector::MakeInline<HUDWidescreenModeHook>(pattern.count(7).get(0).get<uint32_t>(0)); // 44C332
+
+    uintptr_t loc_6F9545 = reinterpret_cast<uintptr_t>(hook::pattern("D9 05 ? ? ? ? D9 C9 DF F1 DD D8 76 ? B8 01 00 00 00").get_first(0));
+    injector::WriteMemory<float*>(loc_6F9545 + 2, &WidescreenCheckThershold, true);
 
     uintptr_t loc_4B4518 = reinterpret_cast<uintptr_t>(hook::pattern("F3 0F 11 44 24 14 F3 0F 10 05 ? ? ? ? 6A 00").get_first(0)) + 6;
     struct FEScaleHook
