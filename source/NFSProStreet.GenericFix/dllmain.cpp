@@ -635,7 +635,11 @@ void Init()
     bool bFixAspectRatio = iniReader.ReadInteger("MAIN", "FixAspectRatio", 1) != 0;
     static int32_t nScaling = iniReader.ReadInteger("MAIN", "Scaling", 1);
     bool bFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1) != 0;
-    bool bConsoleHUDSize = iniReader.ReadInteger("MAIN", "ConsoleHUDSize", 0) != 0;
+    //bool bConsoleHUDSize = iniReader.ReadInteger("MAIN", "ConsoleHUDSize", 0) != 0;
+    static float FEScale = iniReader.ReadFloat("MAIN", "FEScale", 1.0f);
+    static float fCalcFEScale = FEScale;
+    static bool bAutoFitFE = iniReader.ReadInteger("MAIN", "AutoFitFE", 1) != 0;
+    static int ForceFEMode = iniReader.ReadInteger("MAIN", "ForceFEMode", 0);
     bool bGammaFix = iniReader.ReadInteger("MISC", "GammaFix", 1) != 0;
     bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 0) != 0;
     bool bSkipFEBootflow = iniReader.ReadInteger("MISC", "SkipFEBootflow", 0) != 0;
@@ -778,6 +782,11 @@ void Init()
                 Height2 = -1.00f;
             }
 
+            static float CalcWidth1 = Width1;
+            static float CalcWidth2 = Width2;
+            static float CalcHeight1 = Height1;
+            static float CalcHeight2 = Height2;
+
             // Real-Time FMV Aspect Ratio Calculation
             auto pattern = hook::pattern("80 BC 24 ? ? ? ? 00 DE F9 D9");
             struct FMVHook
@@ -786,29 +795,28 @@ void Init()
                 {
                     int espB0 = *(int*)(regs.esp + 0xB0);
 
-                    _asm
-                    {
-                        fld dword ptr ds : [Width1] // Loads Width1 value
-                        fdiv dword ptr ds : [fScreenAspectRatio] // Divides by ScreenAspectRatio
-                        fstp dword ptr ds : [FMVWidthLeft] // Stores final result
-                        fld dword ptr ds : [Width2] // Loads Width2 value
-                        fdiv dword ptr ds : [fScreenAspectRatio] // Divides by ScreenAspectRatio
-                        fstp dword ptr ds : [FMVWidthRight] // Stores final result
-                        cmp byte ptr ds : [espB0], 0x00
-                    }
+                    CalcWidth1 = Width1 * fCalcFEScale;
+                    CalcWidth2 = Width2 * fCalcFEScale;
+                    CalcHeight1 = Height1 * fCalcFEScale;
+                    CalcHeight2 = Height2 * fCalcFEScale;
+
+                    FMVWidthLeft = CalcWidth1 / fScreenAspectRatio;
+                    FMVWidthRight = CalcWidth2 / fScreenAspectRatio;
+
+                    _asm cmp byte ptr ds : [espB0] , 0x00;
                 }
             }; injector::MakeInline<FMVHook>(pattern.get_first(0), pattern.get_first(8)); // 70235A
 
             {
                 auto pattern = hook::pattern("F3 0F 10 ? ? ? ? ? F3 0F 10 ? ? ? ? ? 0F 57 C0 F3 0F 10");
                 uint32_t* dword_702224 = pattern.count(1).get(0).get<uint32_t>(4);
-                injector::WriteMemory(dword_702224, &Height1, true);
+                injector::WriteMemory(dword_702224, &CalcHeight1, true);
                 uint32_t* dword_70222C = pattern.count(1).get(0).get<uint32_t>(12);
                 injector::WriteMemory(dword_70222C, &FMVWidthLeft, true);
                 uint32_t* dword_702237 = pattern.count(1).get(0).get<uint32_t>(23);
                 injector::WriteMemory(dword_702237, &FMVWidthRight, true);
                 uint32_t* dword_702261 = pattern.count(1).get(0).get<uint32_t>(65);
-                injector::WriteMemory(dword_702261, &Height2, true);
+                injector::WriteMemory(dword_702261, &CalcHeight2, true);
             }
         }
 
@@ -828,42 +836,62 @@ void Init()
         }
     }
 
-    //if (bHUDWidescreenMode)
-    {
-        // Real-Time Aspect Ratio Calculation
-        static uint32_t* dword_BBADB4 = *hook::pattern("C7 05 ? ? ? ? 03 00 00 00 89 3D  ? ? ? ? 89 3D").get(0).get<uint32_t*>(35); // ResX
-        static uint32_t* dword_BBADB8 = *hook::pattern("C7 05 ? ? ? ? 03 00 00 00 89 3D  ? ? ? ? 89 3D").get(0).get<uint32_t*>(41); // ResY
-        static float fScreenAspectRatio;
+    // Real-Time Aspect Ratio Calculation
+    static uint32_t* dword_BBADB4 = *hook::pattern("C7 05 ? ? ? ? 03 00 00 00 89 3D  ? ? ? ? 89 3D").get(0).get<uint32_t*>(35); // ResX
+    static uint32_t* dword_BBADB8 = *hook::pattern("C7 05 ? ? ? ? 03 00 00 00 89 3D  ? ? ? ? 89 3D").get(0).get<uint32_t*>(41); // ResY
 
-        auto pattern = hook::pattern("0F B6 C0 89 01 B0 01");
-        struct HUDWidescreenModeHook
+    // the game normally checks against 1.34, but this breaks 16:10 aspect ratios
+    // 1.5555555 is halfway between 4:3 and 16:9
+    static float WidescreenCheckThreshold = 1.5555555f;
+
+    if (ForceFEMode >= 2)
+        WidescreenCheckThreshold = +INFINITY;
+    if (ForceFEMode == 1)
+        WidescreenCheckThreshold = -INFINITY;  
+
+    pattern = hook::pattern("0F B6 C0 89 01 B0 01");
+    struct HUDWidescreenModeHook
+    {
+        void operator()(injector::reg_pack& regs)
         {
-            void operator()(injector::reg_pack& regs)
+            auto ResX = *(float*)(dword_BBADB4);
+            auto ResY = *(float*)(dword_BBADB8);
+            float fScreenAspectRatio = (ResX / ResY);
+            fCalcFEScale = FEScale;
+            
+            if ((fScreenAspectRatio >= WidescreenCheckThreshold))
             {
-                auto ResX = *(float*)(dword_BBADB4);
-                auto ResY = *(float*)(dword_BBADB8);
-                fScreenAspectRatio = (ResX / ResY);
-
-                if (fScreenAspectRatio >= 1.7777777f)
-                {
-                    regs.eax = (int)1;
-                    *(int*)(regs.ecx) = regs.eax;
-                }
-                else
-                {
-                    regs.eax = (int)0;
-                    *(int*)(regs.ecx) = regs.eax;
-                }
+                if (bAutoFitFE)
+                    fCalcFEScale *= fScreenAspectRatio / (16.0f / 9.0f);
+                regs.eax = (int)1;
+                *(int*)(regs.ecx) = regs.eax;
             }
-        }; injector::MakeInline<HUDWidescreenModeHook>(pattern.count(7).get(0).get<uint32_t>(0)); // 44C332
-    }
+            else
+            {
+                if (bAutoFitFE)
+                    fCalcFEScale *= fScreenAspectRatio / (4.0f / 3.0f);
+                regs.eax = (int)0;
+                *(int*)(regs.ecx) = regs.eax;
+            }
 
-    if (bConsoleHUDSize)
+            if (fCalcFEScale > FEScale)
+                fCalcFEScale = FEScale;
+        }
+    }; injector::MakeInline<HUDWidescreenModeHook>(pattern.count(7).get(0).get<uint32_t>(0)); // 44C332
+
+    // this sets the actual value used to check the aspect ratio, but will cause stuff to stretch if forced in one way or the other
+    //uintptr_t loc_6F9545 = reinterpret_cast<uintptr_t>(hook::pattern("D9 05 ? ? ? ? D9 C9 DF F1 DD D8 76 ? B8 01 00 00 00").get_first(0));
+    //injector::WriteMemory<float*>(loc_6F9545 + 2, &WidescreenCheckThreshold, true);
+
+    uintptr_t loc_4B4518 = reinterpret_cast<uintptr_t>(hook::pattern("F3 0F 11 44 24 14 F3 0F 10 05 ? ? ? ? 6A 00").get_first(0)) + 6;
+    struct FEScaleHook
     {
-        static constexpr float HUDSize = 1.0875f;
-        uint32_t* dword_4B4455 = hook::pattern("F3 0F 10 ? ? ? ? ? 8B 3D ? ? ? ? C6 05 ? ? ? ? 00").count(1).get(0).get<uint32_t>(4);
-        injector::WriteMemory(dword_4B4455, &HUDSize, true);
-    }
+        void operator()(injector::reg_pack& regs)
+        {
+            *(float*)(regs.esp + 0x14) *= fCalcFEScale;
+            _asm movss xmm0, ds: [fCalcFEScale] ;
+        }
+    }; injector::MakeInline<FEScaleHook>(loc_4B4518, loc_4B4518 + 8);
 
     if (bGammaFix)
     {
