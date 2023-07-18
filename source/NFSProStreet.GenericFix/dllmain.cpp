@@ -635,10 +635,12 @@ void Init()
     bool bFixAspectRatio = iniReader.ReadInteger("MAIN", "FixAspectRatio", 1) != 0;
     static int32_t nScaling = iniReader.ReadInteger("MAIN", "Scaling", 1);
     bool bFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1) != 0;
-    //bool bConsoleHUDSize = iniReader.ReadInteger("MAIN", "ConsoleHUDSize", 0) != 0;
     static float FEScale = iniReader.ReadFloat("MAIN", "FEScale", 1.0f);
     static float fCalcFEScale = FEScale;
+    static float FMVScale = iniReader.ReadFloat("MAIN", "FMVScale", 1.0f);
+    static float fCalcFMVScale = FMVScale;
     static bool bAutoFitFE = iniReader.ReadInteger("MAIN", "AutoFitFE", 1) != 0;
+    static bool bAutoFitFMV = iniReader.ReadInteger("MAIN", "AutoFitFMV", 1) != 0;
     static int ForceFEMode = iniReader.ReadInteger("MAIN", "ForceFEMode", 0);
     bool bGammaFix = iniReader.ReadInteger("MISC", "GammaFix", 1) != 0;
     bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 0) != 0;
@@ -795,10 +797,10 @@ void Init()
                 {
                     int espB0 = *(int*)(regs.esp + 0xB0);
 
-                    CalcWidth1 = Width1 * fCalcFEScale;
-                    CalcWidth2 = Width2 * fCalcFEScale;
-                    CalcHeight1 = Height1 * fCalcFEScale;
-                    CalcHeight2 = Height2 * fCalcFEScale;
+                    CalcWidth1 = Width1 * fCalcFMVScale;
+                    CalcWidth2 = Width2 * fCalcFMVScale;
+                    CalcHeight1 = Height1 * fCalcFMVScale;
+                    CalcHeight2 = Height2 * fCalcFMVScale;
 
                     FMVWidthLeft = CalcWidth1 / fScreenAspectRatio;
                     FMVWidthRight = CalcWidth2 / fScreenAspectRatio;
@@ -847,7 +849,7 @@ void Init()
     if (ForceFEMode >= 2)
         WidescreenCheckThreshold = +INFINITY;
     if (ForceFEMode == 1)
-        WidescreenCheckThreshold = -INFINITY;  
+        WidescreenCheckThreshold = -INFINITY;
 
     pattern = hook::pattern("0F B6 C0 89 01 B0 01");
     struct HUDWidescreenModeHook
@@ -858,11 +860,14 @@ void Init()
             auto ResY = *(float*)(dword_BBADB8);
             float fScreenAspectRatio = (ResX / ResY);
             fCalcFEScale = FEScale;
+            fCalcFMVScale = FMVScale;
             
             if ((fScreenAspectRatio >= WidescreenCheckThreshold))
             {
                 if (bAutoFitFE)
                     fCalcFEScale *= fScreenAspectRatio / (16.0f / 9.0f);
+                if (bAutoFitFMV)
+                    fCalcFMVScale *= fScreenAspectRatio / (16.0f / 9.0f);
                 regs.eax = (int)1;
                 *(int*)(regs.ecx) = regs.eax;
             }
@@ -870,12 +875,17 @@ void Init()
             {
                 if (bAutoFitFE)
                     fCalcFEScale *= fScreenAspectRatio / (4.0f / 3.0f);
+                if (bAutoFitFMV)
+                    fCalcFMVScale *= fScreenAspectRatio / (4.0f / 3.0f);
                 regs.eax = (int)0;
                 *(int*)(regs.ecx) = regs.eax;
             }
 
             if (fCalcFEScale > FEScale)
                 fCalcFEScale = FEScale;
+
+            if (fCalcFMVScale > FMVScale)
+                fCalcFMVScale = FMVScale;
         }
     }; injector::MakeInline<HUDWidescreenModeHook>(pattern.count(7).get(0).get<uint32_t>(0)); // 44C332
 
@@ -883,15 +893,59 @@ void Init()
     //uintptr_t loc_6F9545 = reinterpret_cast<uintptr_t>(hook::pattern("D9 05 ? ? ? ? D9 C9 DF F1 DD D8 76 ? B8 01 00 00 00").get_first(0));
     //injector::WriteMemory<float*>(loc_6F9545 + 2, &WidescreenCheckThreshold, true);
 
+    static bool bMovieFlag = false;
     uintptr_t loc_4B4518 = reinterpret_cast<uintptr_t>(hook::pattern("F3 0F 11 44 24 14 F3 0F 10 05 ? ? ? ? 6A 00").get_first(0)) + 6;
     struct FEScaleHook
     {
         void operator()(injector::reg_pack& regs)
         {
-            *(float*)(regs.esp + 0x14) *= fCalcFEScale;
-            _asm movss xmm0, ds: [fCalcFEScale] ;
+            float Xscale = fCalcFEScale;
+            float Yscale = fCalcFEScale;
+
+            if (bMovieFlag)
+            {
+                Xscale = fCalcFMVScale;
+                Yscale = fCalcFMVScale;
+            }
+
+            *(float*)(regs.esp + 0x14) *= Xscale;
+            _asm movss xmm0, ds: [Yscale] ;
         }
     }; injector::MakeInline<FEScaleHook>(loc_4B4518, loc_4B4518 + 8);
+
+    uintptr_t loc_5CE7DA = reinterpret_cast<uintptr_t>(hook::pattern("8D 94 24 7C 01 00 00 55").get_first(0));
+    static uintptr_t sub_4B4430 = reinterpret_cast<uintptr_t>(hook::pattern("8D 4C 24 18 51 68 89 13 00 00").get_first(0)) - 0x9E;
+    struct FEMovieStarterCallbackHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            // ignore FE_BG (splash screen) movie
+            std::string filename = (char*)(regs.esp + 0x13C);
+            if ((filename.find("FE_BG") == std::string::npos) && !bMovieFlag)
+            {
+                bMovieFlag = true;
+
+                // trigger the FE transform before the movie player locks it!
+                // this calls render functions inside the main thread, so if things become unstable when movies play, this could be the reason!
+                // calling render stuff in non-render threads is unsafe
+                // it's only math stuff though, so it shouldn't be unstable
+                reinterpret_cast<void(*)()>(sub_4B4430)();
+            }
+
+            regs.edx = regs.esp + 0x17C;
+        }
+    }; injector::MakeInline<FEMovieStarterCallbackHook>(loc_5CE7DA, loc_5CE7DA + 0x7);
+
+    uintptr_t loc_59AD04 = reinterpret_cast<uintptr_t>(hook::pattern("C7 05 ? ? ? ? 01 00 00 00 A1 ? ? ? ? 85 C0 0F 84 ? ? ? ? 8B 35").get_first(0));
+    static uintptr_t ptr_movieshuttingdown = *reinterpret_cast<uintptr_t*>(loc_59AD04 + 2);
+    struct MoviePlayerShutdownHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            bMovieFlag = false;
+            *(uint32_t*)ptr_movieshuttingdown = 1;
+        }
+    }; injector::MakeInline<MoviePlayerShutdownHook>(loc_59AD04, loc_59AD04 + 0xA);
 
     if (bGammaFix)
     {
