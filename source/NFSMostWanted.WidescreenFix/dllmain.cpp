@@ -1,4 +1,5 @@
 ﻿#include "stdafx.h"
+#include <d3d9.h>
 
 struct Screen
 {
@@ -37,6 +38,7 @@ struct bMatrix4
 };
 
 bool bIsResizing = false;
+bool bHUDWidescreenMode = true;
 bool bFixHUD = true;
 bool bFixFOV = true;
 int nScaling = 1;
@@ -126,6 +128,66 @@ namespace ShadowRes
     }
 }
 
+namespace FEScale
+{
+    float fFEScale = 1.0f;
+    float fCalcFEScale = 1.0f;
+    float fFMVScale = 1.0f;
+    float fCalcFMVScale = 1.0f;
+    bool bEnabled = false;
+    bool bAutoFitFE = true;
+    bool bAutoFitFMV = true;
+
+    uintptr_t SetTransformAddr = 0x6C8000;
+    uintptr_t gMoviePlayerAddr = 0x91CB10;
+    
+    void __cdecl SetTransformHook(D3DMATRIX* mat, uint32_t EVIEW_ID)
+    {
+        D3DMATRIX cMat;
+        memcpy(&cMat, mat, sizeof(D3DMATRIX));
+
+        if (*(uintptr_t*)gMoviePlayerAddr)
+        {
+            cMat._11 *= fCalcFMVScale;
+            cMat._22 *= fCalcFMVScale;
+        }
+        else
+        {
+            cMat._11 *= fCalcFEScale;
+            cMat._22 *= fCalcFEScale;
+        }
+
+        return reinterpret_cast<void(__cdecl*)(D3DMATRIX*, uint32_t)>(SetTransformAddr)(&cMat, EVIEW_ID);
+    }
+
+    void Update()
+    {
+        fCalcFEScale = fFEScale;
+        fCalcFMVScale = fFMVScale;
+
+        if (bHUDWidescreenMode)
+        {
+            if (bAutoFitFE)
+                fCalcFEScale *= Screen.fAspectRatio / (16.0f / 9.0f);
+            if (bAutoFitFMV)
+                fCalcFMVScale *= Screen.fAspectRatio / (16.0f / 9.0f);
+        }
+        else
+        {
+            if (bAutoFitFE)
+                fCalcFEScale *= Screen.fAspectRatio / (4.0f / 3.0f);
+            if (bAutoFitFMV)
+                fCalcFMVScale *= Screen.fAspectRatio / (4.0f / 3.0f);
+        }
+
+        if (fCalcFEScale > fFEScale)
+            fCalcFEScale = fFEScale;
+
+        if (fCalcFMVScale > fFMVScale)
+            fCalcFMVScale = fFMVScale;
+    }
+}
+
 void updateValues(const float& newWidth, const float& newHeight)
 {
     //Screen resolution
@@ -170,6 +232,9 @@ void updateValues(const float& newWidth, const float& newHeight)
 
     if (ShadowRes::Resolution)
         ShadowRes::update(ShadowRes::Resolution);
+
+    if (FEScale::bEnabled)
+        FEScale::Update();
 }
 
 void __stdcall RacingResolution_Hook(int *width, int *height)
@@ -289,8 +354,14 @@ void Init()
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
     bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) != 0;
     bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) != 0;
-    bool bHUDWidescreenMode = iniReader.ReadInteger("MAIN", "HUDWidescreenMode", 1) == 1;
+    bHUDWidescreenMode = iniReader.ReadInteger("MAIN", "HUDWidescreenMode", 1) == 1;
     int nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
+    FEScale::fFEScale = iniReader.ReadFloat("MAIN", "FEScale", 1.0f);
+    FEScale::fCalcFEScale = FEScale::fFEScale;
+    FEScale::fFMVScale = iniReader.ReadFloat("MAIN", "FMVScale", 1.0f);
+    FEScale::fCalcFMVScale = FEScale::fFMVScale;
+    FEScale::bAutoFitFE = iniReader.ReadInteger("MAIN", "AutoFitFE", 1) != 0;
+    FEScale::bAutoFitFMV = iniReader.ReadInteger("MAIN", "AutoFitFMV", 1) != 0;
     nScaling = iniReader.ReadInteger("MAIN", "Scaling", 1);
     bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 0) != 0;
     bool bFixResolutionText = iniReader.ReadInteger("MISC", "FixResolutionText", 1) != 0;
@@ -1256,6 +1327,23 @@ void Init()
                 reinterpret_cast<void(__thiscall*)(uintptr_t)>(VOResFreeAddr)(regs.ecx);
             }
         }; injector::MakeInline<ResolutionTextFreeHook>(loc_528431, loc_528431 + 7);
+    }
+
+    if ((FEScale::fFEScale != 1.0f) || (FEScale::fFMVScale != 1.0f) || (FEScale::bAutoFitFE) || (FEScale::bAutoFitFMV))
+    {
+        FEScale::bEnabled = true;
+
+        uintptr_t loc_6E6FB7 = reinterpret_cast<uintptr_t>(hook::pattern("C7 44 24 10 00 00 80 3F C7 44 24 24 00 00 80 3F").get_first(0)) + 0x66;
+        uintptr_t loc_6E7011 = loc_6E6FB7 + 0x5A;
+        uintptr_t loc_559789 = reinterpret_cast<uintptr_t>(hook::pattern("C7 44 24 60 00 00 0A 00 88 5C 24 70").get_first(0)) + 0x2D;
+
+        FEScale::SetTransformAddr = static_cast<uintptr_t>(injector::GetBranchDestination(loc_6E6FB7));
+        FEScale::gMoviePlayerAddr = *reinterpret_cast<uintptr_t*>(loc_559789 + 2);
+
+        injector::MakeCALL(loc_6E6FB7, FEScale::SetTransformHook);
+        injector::MakeCALL(loc_6E7011, FEScale::SetTransformHook);
+
+        FEScale::Update();
     }
 
     if (bWriteSettingsToFile)
