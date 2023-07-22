@@ -73,7 +73,7 @@ namespace NOSTrailFix
     bVector3* WorldPos2;
     bVector3* NOSFlarePos;
 
-    uint32_t* NOSTrailCave2Exit = (uint32_t*)0x007CCD30;
+    uintptr_t NOSTrailCave2Exit = 0x007CCD30;
     void __declspec(naked) NOSTrailCave2()
     {
         _asm
@@ -1167,9 +1167,9 @@ void Init()
         constexpr float NOSTargetFPS = 60.0f; // original FPS we're targeting from. Consoles target 60 but run at 30, hence have longer trails than PC. Targeting 60 is smarter due to less issues with shorter trails. Use SimRate -2 to get the same effect as console versions.
         NOSTrailFix::NOSTrailScalar = (TargetRate / NOSTargetFPS) * fCustomNOSTrailLength;
 
-        pattern = hook::pattern("EB 06 8D 9B 00 00 00 00 40 89 44 24 24"); // 0x007CCD28
-        injector::MakeJMP(pattern.get_first(0), NOSTrailFix::NOSTrailCave2, true);
-        NOSTrailFix::NOSTrailCave2Exit = (uint32_t*)pattern.get_first(8);
+        uintptr_t loc_7CCD28 = reinterpret_cast<uintptr_t>(hook::pattern("EB 06 8D 9B 00 00 00 00 40 89 44 24 24").get_first(0));
+        injector::MakeJMP(loc_7CCD28, NOSTrailFix::NOSTrailCave2, true);
+        NOSTrailFix::NOSTrailCave2Exit = loc_7CCD28 + 8;
 
         if (bFixNOSTrailPosition)
         {
