@@ -128,6 +128,29 @@ namespace ShadowRes
     }
 }
 
+namespace XtendedInput
+{
+    HMODULE mhXtendedInput;
+    float(__cdecl* SetFEScale)(float val);
+    bool(__cdecl* GetUseWin32Cursor)();
+    bool bLookedForXInput = false;
+    bool bFoundXInput = false;
+
+    void LookForXtendedInput()
+    {
+        if (!mhXtendedInput)
+        {
+            mhXtendedInput = GetModuleHandleA("NFS_XtendedInput.asi");
+            if (mhXtendedInput)
+            {
+                SetFEScale = reinterpret_cast<float(__cdecl*)(float)>(GetProcAddress(mhXtendedInput, "SetFEScale"));
+                GetUseWin32Cursor = reinterpret_cast<bool(__cdecl*)()>(GetProcAddress(mhXtendedInput, "GetUseWin32Cursor"));
+                bFoundXInput = (SetFEScale != nullptr) && (GetUseWin32Cursor != nullptr);
+            }
+        }
+    }
+}
+
 namespace FEScale
 {
     float fFEScale = 1.0f;
@@ -185,6 +208,13 @@ namespace FEScale
 
         if (fCalcFMVScale > fFMVScale)
             fCalcFMVScale = fFMVScale;
+
+        if (!XtendedInput::bLookedForXInput)
+            XtendedInput::LookForXtendedInput();
+        if (!XtendedInput::bFoundXInput) return;
+        if (!XtendedInput::GetUseWin32Cursor()) return;
+
+        XtendedInput::SetFEScale(fCalcFEScale);
     }
 }
 
@@ -351,6 +381,14 @@ namespace NOSTrailFix
 }
 #pragma runtime_checks( "", restore )
 
+uintptr_t PostStartFunc = 0x739600;
+void InitPostStart()
+{
+    if (FEScale::bEnabled)
+        FEScale::Update();
+    return reinterpret_cast<void(*)()>(PostStartFunc)();
+}
+
 void Init()
 {
     CIniReader iniReader("");
@@ -418,6 +456,11 @@ void Init()
 
     // 08/2022. - keep memory areas unprotected to allow updating of values without constantly calling VirtualProtect ~ Xan
     DWORD oldprotect = 0;
+
+    // Post-start init function hook
+    uintptr_t loc_66616E = reinterpret_cast<uintptr_t>(hook::pattern("68 89 88 88 3C E8 ? ? ? ? E8 ? ? ? ? 6A 00").get_first(0)) + 0x6F;
+    PostStartFunc = static_cast<uintptr_t>(injector::GetBranchDestination(loc_66616E));
+    injector::MakeCALL(loc_66616E, InitPostStart);
 
     //Screen resolution
     for (size_t i = 0; i < 2; i++)
@@ -1346,7 +1389,7 @@ void Init()
         injector::MakeCALL(loc_6E6FB7, FEScale::SetTransformHook);
         injector::MakeCALL(loc_6E7011, FEScale::SetTransformHook);
 
-        FEScale::Update();
+        //FEScale::Update();
     }
 
     if (bWriteSettingsToFile)
