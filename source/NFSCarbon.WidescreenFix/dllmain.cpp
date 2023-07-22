@@ -13,6 +13,8 @@ struct Screen
     float fHudPosX;
 } Screen;
 
+bool bHUDWidescreenMode = true;
+
 struct bVector3
 {
     float x;
@@ -211,6 +213,94 @@ namespace SparkHook
     }
 }
 
+namespace FEScale
+{
+    float fFEScale = 1.0f;
+    float fCalcFEScale = 1.0f;
+    float fFMVScale = 1.0f;
+    float fCalcFMVScale = 1.0f;
+    bool bEnabled = false;
+    bool bAutoFitFE = true;
+    bool bAutoFitFMV = true;
+
+    uintptr_t gMoviePlayerAddr = 0x00A97BB4;
+
+    void ScaleMat(D3DMATRIX* cMat)
+    {
+        if (*(uintptr_t*)gMoviePlayerAddr)
+        {
+            cMat->_11 *= fCalcFMVScale;
+            cMat->_22 *= fCalcFMVScale;
+        }
+        else
+        {
+            cMat->_11 *= fCalcFEScale;
+            cMat->_22 *= fCalcFEScale;
+        }
+    }
+
+    struct FEScaleHook1
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            uintptr_t vTable = *reinterpret_cast<uintptr_t*>(regs.ecx);
+            uintptr_t SetTransformAddr = *reinterpret_cast<uintptr_t*>(vTable + 8);
+
+            D3DMATRIX* mat = reinterpret_cast<D3DMATRIX*>(regs.esp + 0x30);
+            D3DMATRIX cMat;
+            memcpy(&cMat, mat, sizeof(D3DMATRIX));
+
+            ScaleMat(&cMat);
+
+            reinterpret_cast<void(__thiscall*)(uintptr_t, D3DMATRIX*, uintptr_t, uint32_t)>(SetTransformAddr)(regs.ecx, &cMat, regs.ebx, 0);
+        }
+    };
+
+    struct FEScaleHook2
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            uintptr_t vTable = *reinterpret_cast<uintptr_t*>(regs.esi);
+            uintptr_t SetTransformAddr = *reinterpret_cast<uintptr_t*>(vTable + 8);
+
+            D3DMATRIX* mat = reinterpret_cast<D3DMATRIX*>(regs.esp + 0x30);
+            D3DMATRIX cMat;
+            memcpy(&cMat, mat, sizeof(D3DMATRIX));
+
+            ScaleMat(&cMat);
+
+            reinterpret_cast<void(__thiscall*)(uintptr_t, D3DMATRIX*, uintptr_t, uint32_t)>(SetTransformAddr)(regs.esi, &cMat, regs.ebx, 0);
+        }
+    };
+
+    void Update()
+    {
+        fCalcFEScale = fFEScale;
+        fCalcFMVScale = fFMVScale;
+
+        if (bHUDWidescreenMode)
+        {
+            if (bAutoFitFE)
+                fCalcFEScale *= Screen.fAspectRatio / (16.0f / 9.0f);
+            if (bAutoFitFMV)
+                fCalcFMVScale *= Screen.fAspectRatio / (16.0f / 9.0f);
+        }
+        else
+        {
+            if (bAutoFitFE)
+                fCalcFEScale *= Screen.fAspectRatio / (4.0f / 3.0f);
+            if (bAutoFitFMV)
+                fCalcFMVScale *= Screen.fAspectRatio / (4.0f / 3.0f);
+        }
+
+        if (fCalcFEScale > fFEScale)
+            fCalcFEScale = fFEScale;
+
+        if (fCalcFMVScale > fFMVScale)
+            fCalcFMVScale = fFMVScale;
+    }
+}
+
 #pragma runtime_checks( "", restore )
 
 void Init()
@@ -221,8 +311,14 @@ void Init()
     bool bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) != 0;
     bool bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) != 0;
     int32_t nScaling = iniReader.ReadInteger("MAIN", "Scaling", 1);
-    bool bHUDWidescreenMode = iniReader.ReadInteger("MAIN", "HUDWidescreenMode", 1) != 0;
+    bHUDWidescreenMode = iniReader.ReadInteger("MAIN", "HUDWidescreenMode", 1) != 0;
     int nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
+    FEScale::fFEScale = iniReader.ReadFloat("MAIN", "FEScale", 1.0f);
+    FEScale::fCalcFEScale = FEScale::fFEScale;
+    FEScale::fFMVScale = iniReader.ReadFloat("MAIN", "FMVScale", 1.0f);
+    FEScale::fCalcFMVScale = FEScale::fFMVScale;
+    FEScale::bAutoFitFE = iniReader.ReadInteger("MAIN", "AutoFitFE", 1) != 0;
+    FEScale::bAutoFitFMV = iniReader.ReadInteger("MAIN", "AutoFitFMV", 1) != 0;
     int32_t nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
     bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 0) != 0;
 
@@ -1070,6 +1166,22 @@ void Init()
             pattern = hook::pattern("55 8B EC 83 E4 F0 83 EC 64 8B 45 08 53 56 83 C0 44"); // 0x007CBC40
             CarRenderInfo_RenderFlaresOnCar = (void(__thiscall*)(void*, void*, bVector3*, bMatrix4*, int, int, int, int))pattern.get_first(0);
         }
+    }
+
+    if ((FEScale::fFEScale != 1.0f) || (FEScale::fFMVScale != 1.0f) || (FEScale::bAutoFitFE) || (FEScale::bAutoFitFMV))
+    {
+        FEScale::bEnabled = true;
+
+        uintptr_t loc_730E4D = reinterpret_cast<uintptr_t>(hook::pattern("C7 44 24 60 00 00 80 3F C7 44 24 74 00 00 80 3F B9 10 00 00 00").get_first(0)) + 0x57;
+        uintptr_t loc_730ECE = loc_730E4D + 0x81;
+        uintptr_t loc_54B895 = reinterpret_cast<uintptr_t>(hook::pattern("3D 91 FA C3 01 74 ? 8B 0D").get_first(0)) + 7;
+
+        FEScale::gMoviePlayerAddr = *reinterpret_cast<uintptr_t*>(loc_54B895 + 2);
+
+        injector::MakeInline<FEScale::FEScaleHook1>(loc_730E4D, loc_730E4D + 0xB);
+        injector::MakeInline<FEScale::FEScaleHook2>(loc_730ECE, loc_730ECE + 0xC);
+
+        FEScale::Update();
     }
 
     if (bWriteSettingsToFile)
