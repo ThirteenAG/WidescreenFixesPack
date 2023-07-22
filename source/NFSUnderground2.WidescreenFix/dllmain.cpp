@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "GTA\CFileMgr.h"
+#include <d3d9.h>
 
 struct Screen
 {
@@ -13,6 +13,102 @@ struct Screen
     float fHudPosX;
     float fHudOffset;
 } Screen;
+
+bool bHUDWidescreenMode;
+
+#pragma runtime_checks( "", off )
+namespace FEScale
+{
+    float fFEScale = 1.0f;
+    float fCalcFEScale = 1.0f;
+    float fFMVScale = 1.0f;
+    float fCalcFMVScale = 1.0f;
+    bool bEnabled = false;
+    bool bAutoFitFE = false;
+    bool bAutoFitFMV = true;
+    bool bMovieFlag = false;
+
+    uintptr_t SetTransformAddr = 0x005BDDE0;
+    uintptr_t MovieIsStartedAddr = 0x008383AC;
+
+    void __cdecl SetTransformHook(D3DMATRIX* mat, uint32_t EVIEW_ID)
+    {
+        D3DMATRIX cMat;
+        memcpy(&cMat, mat, sizeof(D3DMATRIX));
+
+        if (bMovieFlag)
+        {
+            cMat._11 = fCalcFMVScale;
+            cMat._22 = fCalcFMVScale;
+        }
+        else
+        {
+            cMat._11 *= fCalcFEScale;
+            cMat._22 *= fCalcFEScale;
+        }
+
+        return reinterpret_cast<void(__cdecl*)(D3DMATRIX*, uint32_t)>(SetTransformAddr)(&cMat, EVIEW_ID);
+    }
+
+    void Update()
+    {
+        fCalcFEScale = fFEScale;
+        fCalcFMVScale = fFMVScale;
+
+        if (bHUDWidescreenMode)
+        {
+            if (bAutoFitFE)
+                fCalcFEScale *= Screen.fAspectRatio / (16.0f / 9.0f);
+            if (bAutoFitFMV)
+                fCalcFMVScale *= Screen.fAspectRatio / (16.0f / 9.0f);
+        }
+        else
+        {
+            if (bAutoFitFE)
+                fCalcFEScale *= Screen.fAspectRatio / (4.0f / 3.0f);
+            if (bAutoFitFMV)
+                fCalcFMVScale *= Screen.fAspectRatio / (4.0f / 3.0f);
+        }
+
+        if (fCalcFEScale > fFEScale)
+            fCalcFEScale = fFEScale;
+
+        if (fCalcFMVScale > fFMVScale)
+            fCalcFMVScale = fFMVScale;
+    }
+
+    uintptr_t DrawFEAddr = 0x005CBF40;
+    uintptr_t eWaitUntilRenderingDone = 0x004022C0;
+
+    void SetMovieFlag()
+    {
+        bMovieFlag = true;
+        // execute a draw call for the FE to set the transform (similar to Pro Street)
+        reinterpret_cast<void(__cdecl*)(uint32_t)>(DrawFEAddr)(0);
+    }
+
+    void UnsetMovieFlag()
+    {
+        bMovieFlag = false;
+        reinterpret_cast<void(__cdecl*)(uint32_t)>(DrawFEAddr)(0);
+    }
+
+    struct MovieStartHook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            *(uint32_t*)MovieIsStartedAddr = 1;
+            SetMovieFlag();
+        }
+    };
+
+    void eWaitUntilRenderingDoneHook()
+    {
+        UnsetMovieFlag();
+        reinterpret_cast<void(*)()>(eWaitUntilRenderingDone)();
+    }
+}
+#pragma runtime_checks( "", restore )
 
 union HudPos
 {
@@ -75,22 +171,25 @@ HANDLE WINAPI CustomCreateThread(LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_
     return hThread;
 }
 
-static uint32_t NOSTrailFrameDelay = 1;
-uint32_t* eFrameCounter_870818 = (uint32_t*)0x00870818;
-uint32_t* fc_12989_8A44EC = (uint32_t*)0x008A44EC;
-uint32_t* NOSTrailCaveExitTrue = (uint32_t*)0x0061AD91;
-uint32_t* NOSTrailCaveExitFalse = (uint32_t*)0x61AE8E;
-void __declspec(naked) NOSTrailCave()
+namespace NOSTrailFix
 {
-    if ((*fc_12989_8A44EC + NOSTrailFrameDelay) <= *eFrameCounter_870818)
-        _asm
+    static uint32_t NOSTrailFrameDelay = 1;
+    uint32_t* eFrameCounter_870818 = (uint32_t*)0x00870818;
+    uint32_t* fc_12989_8A44EC = (uint32_t*)0x008A44EC;
+    uint32_t* NOSTrailCaveExitTrue = (uint32_t*)0x0061AD91;
+    uint32_t* NOSTrailCaveExitFalse = (uint32_t*)0x61AE8E;
+    void __declspec(naked) NOSTrailCave()
+    {
+        if ((*fc_12989_8A44EC + NOSTrailFrameDelay) <= *eFrameCounter_870818)
+            _asm
         {
             mov eax, ds:eFrameCounter_870818
             mov eax, [eax]
             jmp NOSTrailCaveExitTrue
         }
-    else
-        _asm jmp NOSTrailCaveExitFalse
+        else
+            _asm jmp NOSTrailCaveExitFalse
+    }
 }
 
 void Init()
@@ -101,8 +200,15 @@ void Init()
     bool bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) != 0;
     bool bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) != 0;
     bool bScaling = iniReader.ReadInteger("MAIN", "Scaling", 0) != 0;
-    bool bHUDWidescreenMode = iniReader.ReadInteger("MAIN", "HUDWidescreenMode", 1) != 0;
+    bHUDWidescreenMode = iniReader.ReadInteger("MAIN", "HUDWidescreenMode", 1) != 0;
     int nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
+    FEScale::fFEScale = iniReader.ReadFloat("MAIN", "FEScale", 1.0f);
+    FEScale::fCalcFEScale = FEScale::fFEScale;
+    FEScale::fFMVScale = iniReader.ReadFloat("MAIN", "FMVScale", 1.0f);
+    FEScale::fCalcFMVScale = FEScale::fFMVScale;
+    FEScale::bAutoFitFE = iniReader.ReadInteger("MAIN", "AutoFitFE", 0) != 0;
+    FEScale::bAutoFitFMV = iniReader.ReadInteger("MAIN", "AutoFitFMV", 1) != 0;
+
     bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 0) != 0;
     bool bDisableCutsceneBorders = iniReader.ReadInteger("MISC", "DisableCutsceneBorders", 1) != 0;
 
@@ -814,6 +920,30 @@ void Init()
         injector::WriteMemory<uint8_t>(dword_5C0D54, 0x00, true);
     }
 
+    if ((FEScale::fFEScale != 1.0f) || (FEScale::fFMVScale != 1.0f) || (FEScale::bAutoFitFE) || (FEScale::bAutoFitFMV))
+    {
+        FEScale::bEnabled = true;
+
+        uintptr_t loc_5CC08D = reinterpret_cast<uintptr_t>(hook::pattern("C7 44 24 2C 00 00 80 3F 8B 10 50").get_first(0)) + 0xDE;
+        uintptr_t loc_566042 = reinterpret_cast<uintptr_t>(hook::pattern("6A 00 68 B9 0E 96 C3 B9 ? ? ? ? E8 ? ? ? ? 59").get_first(0)) + 0x18;
+        uintptr_t loc_5D2B18 = reinterpret_cast<uintptr_t>(hook::pattern("FF 91 A4 00 00 00 6A 01 E8").get_first(0)) + 8;
+        uintptr_t loc_511BD9 = reinterpret_cast<uintptr_t>(hook::pattern("8A 48 34 84 C9 0F 85 ? ? ? ? 55").get_first(0)) + 0xC;
+        uintptr_t loc_566197 = reinterpret_cast<uintptr_t>(hook::pattern("68 00 01 00 00 51 8D 54 24 14").get_first(0)) + 0x13;
+
+
+        FEScale::SetTransformAddr = static_cast<uintptr_t>(injector::GetBranchDestination(loc_5CC08D));
+        FEScale::MovieIsStartedAddr = *reinterpret_cast<uintptr_t*>(loc_566042 + 2);
+        FEScale::DrawFEAddr = static_cast<uintptr_t>(injector::GetBranchDestination(loc_5D2B18));
+        FEScale::eWaitUntilRenderingDone = static_cast<uintptr_t>(injector::GetBranchDestination(loc_511BD9));
+        
+        injector::MakeInline<FEScale::MovieStartHook>(loc_566042, loc_566042 + 0xA);
+        injector::MakeCALL(loc_511BD9, FEScale::eWaitUntilRenderingDoneHook);
+        injector::MakeCALL(loc_566197, FEScale::eWaitUntilRenderingDoneHook);
+        injector::MakeCALL(loc_5CC08D, FEScale::SetTransformHook);
+
+        FEScale::Update();
+    }
+
     if (bWriteSettingsToFile)
     {
         std::filesystem::path SettingsSavePath;
@@ -927,14 +1057,14 @@ void Init()
 
         static uint32_t NOSTargetFPS = 60; // original FPS we're targeting from. Consoles target 60 but run at 30, hence have longer trails than PC. Targeting 60 is smarter due to less issues with shorter trails. Use SimRate -2 to get the same effect as console versions.
         static float fNOSTrailFrameDelay = ((float)TargetRate / (float)NOSTargetFPS) * fCustomNOSTrailLength;
-        NOSTrailFrameDelay = (uint32_t)round(fNOSTrailFrameDelay);
+        NOSTrailFix::NOSTrailFrameDelay = (uint32_t)round(fNOSTrailFrameDelay);
 
         pattern = hook::pattern("81 C1 15 02 00 00 C1 E1 04"); // 0x0061AE69
-        eFrameCounter_870818 = *pattern.count(1).get(0).get<uint32_t*>(-0xE8);
-        fc_12989_8A44EC = *pattern.count(1).get(0).get<uint32_t*>(-0xE2);
-        NOSTrailCaveExitTrue = (uint32_t*)pattern.get_first(-0xD8);
-        NOSTrailCaveExitFalse = (uint32_t*)pattern.get_first(0x25);
-        injector::MakeJMP(pattern.get_first(-0xE9), NOSTrailCave, true);
+        NOSTrailFix::eFrameCounter_870818 = *pattern.count(1).get(0).get<uint32_t*>(-0xE8);
+        NOSTrailFix::fc_12989_8A44EC = *pattern.count(1).get(0).get<uint32_t*>(-0xE2);
+        NOSTrailFix::NOSTrailCaveExitTrue = (uint32_t*)pattern.get_first(-0xD8);
+        NOSTrailFix::NOSTrailCaveExitFalse = (uint32_t*)pattern.get_first(0x25);
+        injector::MakeJMP(pattern.get_first(-0xE9), NOSTrailFix::NOSTrailCave, true);
     }
 }
 
