@@ -1388,8 +1388,6 @@ void Init()
 
         injector::MakeCALL(loc_6E6FB7, FEScale::SetTransformHook);
         injector::MakeCALL(loc_6E7011, FEScale::SetTransformHook);
-
-        //FEScale::Update();
     }
 
     if (bWriteSettingsToFile)
