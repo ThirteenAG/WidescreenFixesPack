@@ -16,6 +16,7 @@ struct Screen
 
 bool bHUDWidescreenMode;
 
+#pragma runtime_checks( "", off )
 namespace FEScale
 {
     float fFEScale = 1.0f;
@@ -107,6 +108,7 @@ namespace FEScale
         reinterpret_cast<void(*)()>(eWaitUntilRenderingDone)();
     }
 }
+#pragma runtime_checks( "", restore )
 
 union HudPos
 {
