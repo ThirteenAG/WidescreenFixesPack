@@ -225,6 +225,29 @@ namespace SparkHook
     }
 }
 
+namespace XtendedInput
+{
+    HMODULE mhXtendedInput;
+    float(__cdecl* SetFEScale)(float val);
+    bool(__cdecl* GetUseWin32Cursor)();
+    bool bLookedForXInput = false;
+    bool bFoundXInput = false;
+
+    void LookForXtendedInput()
+    {
+        if (!mhXtendedInput)
+        {
+            mhXtendedInput = GetModuleHandleA("NFS_XtendedInput.asi");
+            if (mhXtendedInput)
+            {
+                SetFEScale = reinterpret_cast<float(__cdecl*)(float)>(GetProcAddress(mhXtendedInput, "SetFEScale"));
+                GetUseWin32Cursor = reinterpret_cast<bool(__cdecl*)()>(GetProcAddress(mhXtendedInput, "GetUseWin32Cursor"));
+                bFoundXInput = (SetFEScale != nullptr) && (GetUseWin32Cursor != nullptr);
+            }
+        }
+    }
+}
+
 namespace FEScale
 {
     float fFEScale = 1.0f;
@@ -310,10 +333,25 @@ namespace FEScale
 
         if (fCalcFMVScale > fFMVScale)
             fCalcFMVScale = fFMVScale;
+
+        if (!XtendedInput::bLookedForXInput)
+            XtendedInput::LookForXtendedInput();
+        if (!XtendedInput::bFoundXInput) return;
+        if (!XtendedInput::GetUseWin32Cursor()) return;
+
+        XtendedInput::SetFEScale(fCalcFEScale);
     }
 }
 
 #pragma runtime_checks( "", restore )
+
+uintptr_t PostStartFunc = 0x7AFEF0;
+void InitPostStart()
+{
+    if (FEScale::bEnabled)
+        FEScale::Update();
+    return reinterpret_cast<void(*)()>(PostStartFunc)();
+}
 
 void Init()
 {
@@ -382,6 +420,11 @@ void Init()
     Screen.fWidth = static_cast<float>(Screen.Width);
     Screen.fHeight = static_cast<float>(Screen.Height);
     Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
+
+    // Post-start init function hook
+    uintptr_t loc_6B783F = reinterpret_cast<uintptr_t>(hook::pattern("6A 01 C7 44 24 14 FF FF FF FF A3").get_first(0)) + 0x9D;
+    PostStartFunc = static_cast<uintptr_t>(injector::GetBranchDestination(loc_6B783F));
+    injector::MakeCALL(loc_6B783F, InitPostStart);
 
     //Resolution
     for (size_t i = 0; i < 2; i++)
@@ -1191,8 +1234,6 @@ void Init()
 
         injector::MakeInline<FEScale::FEScaleHook1>(loc_730E4D, loc_730E4D + 0xB);
         injector::MakeInline<FEScale::FEScaleHook2>(loc_730ECE, loc_730ECE + 0xC);
-
-        FEScale::Update();
     }
 
     if (bWriteSettingsToFile)

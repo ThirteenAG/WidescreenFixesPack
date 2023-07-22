@@ -321,6 +321,31 @@ void __declspec(naked) UpdateAchievements_Hook()
     }
 }
 
+namespace XtendedInput
+{
+    HMODULE mhXtendedInput;
+    float(__cdecl* SetFEScale)(float val);
+    bool(__cdecl* GetUseWin32Cursor)();
+    bool(__cdecl* SetPollingState)(bool state);
+    bool bLookedForXInput = false;
+    bool bFoundXInput = false;
+
+    void LookForXtendedInput()
+    {
+        if (!mhXtendedInput)
+        {
+            mhXtendedInput = GetModuleHandleA("NFS_XtendedInput.asi");
+            if (mhXtendedInput)
+            {
+                SetFEScale = reinterpret_cast<float(__cdecl*)(float)>(GetProcAddress(mhXtendedInput, "SetFEScale"));
+                GetUseWin32Cursor = reinterpret_cast<bool(__cdecl*)()>(GetProcAddress(mhXtendedInput, "GetUseWin32Cursor"));
+                SetPollingState = reinterpret_cast<bool(__cdecl*)(bool)>(GetProcAddress(mhXtendedInput, "SetPollingState"));
+                bFoundXInput = (SetFEScale != nullptr) && (GetUseWin32Cursor != nullptr) && (SetPollingState != nullptr);
+            }
+        }
+    }
+}
+
 namespace LANFix
 {
     uintptr_t ptrDataConnection = 0x827190;
@@ -344,26 +369,29 @@ namespace LANFix
     }
 }
 
+namespace FEScale
+{
+    float fFEScale = 1.0f;
+    float fCalcFEScale = 1.0f;
+    float fFMVScale = 1.0f;
+    float fCalcFMVScale = 1.0f;
+    bool bAutoFitFE = true;
+    bool bAutoFitFMV = true;
+
+    void UpdateXtendedInput()
+    {
+        if (!XtendedInput::bLookedForXInput)
+            XtendedInput::LookForXtendedInput();
+        if (!XtendedInput::bFoundXInput) return;
+        if (!XtendedInput::GetUseWin32Cursor()) return;
+
+        XtendedInput::SetFEScale(fCalcFEScale);
+    }
+}
+
 namespace OnlineInputBlocker
 {
-    HMODULE mhXtendedInput;
-    bool(__cdecl* XtendedInputSetPollingState)(bool state);
-    bool bLookedForXInput = false;
-    bool bFoundXInput = false;
     bool bPollingEnabledOnline = true;
-
-    void LookForXtendedInput()
-    {
-        if (!mhXtendedInput)
-        {
-            mhXtendedInput = GetModuleHandleA("NFS_XtendedInput.asi");
-            if (mhXtendedInput)
-            {
-                XtendedInputSetPollingState = reinterpret_cast<bool(__cdecl*)(bool)>(GetProcAddress(mhXtendedInput, "SetPollingState"));
-                bFoundXInput = XtendedInputSetPollingState != nullptr;
-            }
-        }
-    }
 
     uintptr_t ptrGameDevicePoll = 0x006C0D10;
     void __stdcall GameDevice_PollDevice_Hook()
@@ -404,14 +432,14 @@ LRESULT WINAPI WSFixWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         {
             if (*(uint32_t*)OnlineActiveGameManager_msInstance)
             {
-                if (!OnlineInputBlocker::bLookedForXInput)
+                if (!XtendedInput::bLookedForXInput)
                 {
-                    OnlineInputBlocker::LookForXtendedInput();
-                    OnlineInputBlocker::bLookedForXInput = true;
+                    XtendedInput::LookForXtendedInput();
+                    XtendedInput::bLookedForXInput = true;
                 }
 
-                if (OnlineInputBlocker::bFoundXInput)
-                    OnlineInputBlocker::XtendedInputSetPollingState(false);
+                if (XtendedInput::bFoundXInput)
+                    XtendedInput::SetPollingState(false);
                 else
                     OnlineInputBlocker::bPollingEnabledOnline = false;
 
@@ -420,14 +448,14 @@ LRESULT WINAPI WSFixWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         }
         else
         {
-            if (!OnlineInputBlocker::bLookedForXInput)
+            if (!XtendedInput::bLookedForXInput)
             {
-                OnlineInputBlocker::LookForXtendedInput();
-                OnlineInputBlocker::bLookedForXInput = true;
+                XtendedInput::LookForXtendedInput();
+                XtendedInput::bLookedForXInput = true;
             }
 
-            if (OnlineInputBlocker::bFoundXInput)
-                OnlineInputBlocker::XtendedInputSetPollingState(true);
+            if (XtendedInput::bFoundXInput)
+                XtendedInput::SetPollingState(true);
             else
                 OnlineInputBlocker::bPollingEnabledOnline = true;
         }
@@ -635,10 +663,10 @@ void Init()
     bool bFixAspectRatio = iniReader.ReadInteger("MAIN", "FixAspectRatio", 1) != 0;
     static int32_t nScaling = iniReader.ReadInteger("MAIN", "Scaling", 1);
     bool bFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1) != 0;
-    static float FEScale = iniReader.ReadFloat("MAIN", "FEScale", 1.0f);
-    static float fCalcFEScale = FEScale;
-    static float FMVScale = iniReader.ReadFloat("MAIN", "FMVScale", 1.0f);
-    static float fCalcFMVScale = FMVScale;
+    FEScale::fFEScale = iniReader.ReadFloat("MAIN", "FEScale", 1.0f);
+    FEScale::fCalcFEScale = FEScale::fFEScale;
+    FEScale::fFMVScale = iniReader.ReadFloat("MAIN", "FMVScale", 1.0f);
+    FEScale::fCalcFMVScale = FEScale::fFMVScale;
     static bool bAutoFitFE = iniReader.ReadInteger("MAIN", "AutoFitFE", 1) != 0;
     static bool bAutoFitFMV = iniReader.ReadInteger("MAIN", "AutoFitFMV", 1) != 0;
     static int ForceFEMode = iniReader.ReadInteger("MAIN", "ForceFEMode", 0);
@@ -797,10 +825,10 @@ void Init()
                 {
                     int espB0 = *(int*)(regs.esp + 0xB0);
 
-                    CalcWidth1 = Width1 * fCalcFMVScale;
-                    CalcWidth2 = Width2 * fCalcFMVScale;
-                    CalcHeight1 = Height1 * fCalcFMVScale;
-                    CalcHeight2 = Height2 * fCalcFMVScale;
+                    CalcWidth1 = Width1 * FEScale::fCalcFMVScale;
+                    CalcWidth2 = Width2 * FEScale::fCalcFMVScale;
+                    CalcHeight1 = Height1 * FEScale::fCalcFMVScale;
+                    CalcHeight2 = Height2 * FEScale::fCalcFMVScale;
 
                     FMVWidthLeft = CalcWidth1 / fScreenAspectRatio;
                     FMVWidthRight = CalcWidth2 / fScreenAspectRatio;
@@ -859,33 +887,35 @@ void Init()
             auto ResX = *(float*)(dword_BBADB4);
             auto ResY = *(float*)(dword_BBADB8);
             float fScreenAspectRatio = (ResX / ResY);
-            fCalcFEScale = FEScale;
-            fCalcFMVScale = FMVScale;
+            FEScale::fCalcFEScale = FEScale::fFEScale;
+            FEScale::fCalcFMVScale = FEScale::fFMVScale;
             
             if ((fScreenAspectRatio >= WidescreenCheckThreshold))
             {
                 if (bAutoFitFE)
-                    fCalcFEScale *= fScreenAspectRatio / (16.0f / 9.0f);
+                    FEScale::fCalcFEScale *= fScreenAspectRatio / (16.0f / 9.0f);
                 if (bAutoFitFMV)
-                    fCalcFMVScale *= fScreenAspectRatio / (16.0f / 9.0f);
+                    FEScale::fCalcFMVScale *= fScreenAspectRatio / (16.0f / 9.0f);
                 regs.eax = (int)1;
                 *(int*)(regs.ecx) = regs.eax;
             }
             else
             {
                 if (bAutoFitFE)
-                    fCalcFEScale *= fScreenAspectRatio / (4.0f / 3.0f);
+                    FEScale::fCalcFEScale *= fScreenAspectRatio / (4.0f / 3.0f);
                 if (bAutoFitFMV)
-                    fCalcFMVScale *= fScreenAspectRatio / (4.0f / 3.0f);
+                    FEScale::fCalcFMVScale *= fScreenAspectRatio / (4.0f / 3.0f);
                 regs.eax = (int)0;
                 *(int*)(regs.ecx) = regs.eax;
             }
 
-            if (fCalcFEScale > FEScale)
-                fCalcFEScale = FEScale;
+            if (FEScale::fCalcFEScale > FEScale::fFEScale)
+                FEScale::fCalcFEScale = FEScale::fFEScale;
 
-            if (fCalcFMVScale > FMVScale)
-                fCalcFMVScale = FMVScale;
+            if (FEScale::fCalcFMVScale > FEScale::fFMVScale)
+                FEScale::fCalcFMVScale = FEScale::fFMVScale;
+
+            FEScale::UpdateXtendedInput();
         }
     }; injector::MakeInline<HUDWidescreenModeHook>(pattern.count(7).get(0).get<uint32_t>(0)); // 44C332
 
@@ -899,13 +929,13 @@ void Init()
     {
         void operator()(injector::reg_pack& regs)
         {
-            float Xscale = fCalcFEScale;
-            float Yscale = fCalcFEScale;
+            float Xscale = FEScale::fCalcFEScale;
+            float Yscale = FEScale::fCalcFEScale;
 
             if (bMovieFlag)
             {
-                Xscale = fCalcFMVScale;
-                Yscale = fCalcFMVScale;
+                Xscale = FEScale::fCalcFMVScale;
+                Yscale = FEScale::fCalcFMVScale;
             }
 
             *(float*)(regs.esp + 0x14) *= Xscale;
