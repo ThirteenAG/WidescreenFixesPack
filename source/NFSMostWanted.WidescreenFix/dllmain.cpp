@@ -1,4 +1,5 @@
 ﻿#include "stdafx.h"
+#include <d3d9.h>
 
 struct Screen
 {
@@ -37,6 +38,7 @@ struct bMatrix4
 };
 
 bool bIsResizing = false;
+bool bHUDWidescreenMode = true;
 bool bFixHUD = true;
 bool bFixFOV = true;
 int nScaling = 1;
@@ -126,6 +128,66 @@ namespace ShadowRes
     }
 }
 
+namespace FEScale
+{
+    float fFEScale = 1.0f;
+    float fCalcFEScale = 1.0f;
+    float fFMVScale = 1.0f;
+    float fCalcFMVScale = 1.0f;
+    bool bEnabled = false;
+    bool bAutoFitFE = true;
+    bool bAutoFitFMV = true;
+
+    uintptr_t SetTransformAddr = 0x6C8000;
+    uintptr_t gMoviePlayerAddr = 0x91CB10;
+    
+    void __cdecl SetTransformHook(D3DMATRIX* mat, uint32_t EVIEW_ID)
+    {
+        D3DMATRIX cMat;
+        memcpy(&cMat, mat, sizeof(D3DMATRIX));
+
+        if (*(uintptr_t*)gMoviePlayerAddr)
+        {
+            cMat._11 *= fCalcFMVScale;
+            cMat._22 *= fCalcFMVScale;
+        }
+        else
+        {
+            cMat._11 *= fCalcFEScale;
+            cMat._22 *= fCalcFEScale;
+        }
+
+        return reinterpret_cast<void(__cdecl*)(D3DMATRIX*, uint32_t)>(SetTransformAddr)(&cMat, EVIEW_ID);
+    }
+
+    void Update()
+    {
+        fCalcFEScale = fFEScale;
+        fCalcFMVScale = fFMVScale;
+
+        if (bHUDWidescreenMode)
+        {
+            if (bAutoFitFE)
+                fCalcFEScale *= Screen.fAspectRatio / (16.0f / 9.0f);
+            if (bAutoFitFMV)
+                fCalcFMVScale *= Screen.fAspectRatio / (16.0f / 9.0f);
+        }
+        else
+        {
+            if (bAutoFitFE)
+                fCalcFEScale *= Screen.fAspectRatio / (4.0f / 3.0f);
+            if (bAutoFitFMV)
+                fCalcFMVScale *= Screen.fAspectRatio / (4.0f / 3.0f);
+        }
+
+        if (fCalcFEScale > fFEScale)
+            fCalcFEScale = fFEScale;
+
+        if (fCalcFMVScale > fFMVScale)
+            fCalcFMVScale = fFMVScale;
+    }
+}
+
 void updateValues(const float& newWidth, const float& newHeight)
 {
     //Screen resolution
@@ -170,6 +232,9 @@ void updateValues(const float& newWidth, const float& newHeight)
 
     if (ShadowRes::Resolution)
         ShadowRes::update(ShadowRes::Resolution);
+
+    if (FEScale::bEnabled)
+        FEScale::Update();
 }
 
 void __stdcall RacingResolution_Hook(int *width, int *height)
@@ -230,54 +295,58 @@ LRESULT WINAPI WSFixWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma runtime_checks( "", off )
-float NOSTrailScalar = 2.0f;
-float NOSTrailPositionScalar = 0.3f;
-bMatrix4 carbody_nos;
-
-void(__thiscall* CarRenderInfo_RenderFlaresOnCar)(void* CarRenderInfo, void* eView, bVector3* vec, bMatrix4* matrix, int unk1, int unk2, int unk3) = (void(__thiscall*)(void*, void*, bVector3*, bMatrix4*, int, int, int))0x00742950;
-void __stdcall CarRenderInfo_RenderFlaresOnCar_Hook(void* eView, bVector3 *position, bMatrix4 *body_matrix, int unk1, int unk2, int unk3)
+namespace NOSTrailFix
 {
-    uint32_t thethis = 0;
-    _asm mov thethis, ecx
-    memcpy(&carbody_nos, body_matrix, sizeof(bMatrix4));
+    float NOSTrailScalar = 2.0f;
+    float NOSTrailPositionScalar = 0.3f;
+    bMatrix4 carbody_nos;
 
-    float pos_scale = (NOSTrailScalar * NOSTrailPositionScalar);
-    if (pos_scale < 1.0f)
-        pos_scale = 1.0f;
+    uintptr_t CarRenderInfo_RenderFlaresOnCar_Addr = 0x00742950;
 
-    carbody_nos.v0.x *= pos_scale;
-    carbody_nos.v0.y *= pos_scale;
-    carbody_nos.v0.z *= pos_scale;
-
-    carbody_nos.v2.x *= pos_scale;
-    carbody_nos.v2.y *= pos_scale;
-
-    return CarRenderInfo_RenderFlaresOnCar((void*)thethis, eView, position, &carbody_nos, unk1, unk2, unk3);
-}
-
-bVector3* WorldPos1;
-bVector3* WorldPos2;
-bVector3* NOSFlarePos;
-
-uint32_t* NOSTrailCave2Exit = (uint32_t*)0x745040;
-void __declspec(naked) NOSTrailCave2()
-{
-    _asm
+    void __stdcall CarRenderInfo_RenderFlaresOnCar_Hook(void* eView, bVector3* position, bMatrix4* body_matrix, int unk1, int unk2, int unk3)
     {
-        mov WorldPos1, edx
-        mov WorldPos2, esi
-        lea edx, [esp+0x30]
-        mov NOSFlarePos, edx
+        void* thethis = 0;
+        _asm mov thethis, ecx
+        memcpy(&carbody_nos, body_matrix, sizeof(bMatrix4));
+
+        float pos_scale = (NOSTrailScalar * NOSTrailPositionScalar);
+        if (pos_scale < 1.0f)
+            pos_scale = 1.0f;
+
+        carbody_nos.v0.x *= pos_scale;
+        carbody_nos.v0.y *= pos_scale;
+        carbody_nos.v0.z *= pos_scale;
+
+        carbody_nos.v2.x *= pos_scale;
+        carbody_nos.v2.y *= pos_scale;
+
+        return reinterpret_cast<void(__thiscall*)(void*, void*, bVector3*, bMatrix4*, int, int, int)>(CarRenderInfo_RenderFlaresOnCar_Addr)(thethis, eView, position, &carbody_nos, unk1, unk2, unk3);
     }
 
-    (*NOSFlarePos).x = ((*WorldPos1).x - (*WorldPos2).x) * NOSTrailScalar;
-    (*NOSFlarePos).y = ((*WorldPos1).y - (*WorldPos2).y) * NOSTrailScalar;
-    (*NOSFlarePos).z = ((*WorldPos1).z - (*WorldPos2).z) * NOSTrailScalar;
+    bVector3* WorldPos1;
+    bVector3* WorldPos2;
+    bVector3* NOSFlarePos;
 
-    _asm
+    uintptr_t NOSTrailCave2Exit = 0x745040;
+    void __declspec(naked) NOSTrailCave2()
     {
-        xor eax, eax
-        jmp NOSTrailCave2Exit
+        _asm
+        {
+            mov WorldPos1, edx
+            mov WorldPos2, esi
+            lea edx, [esp + 0x30]
+            mov NOSFlarePos, edx
+        }
+
+        (*NOSFlarePos).x = ((*WorldPos1).x - (*WorldPos2).x) * NOSTrailScalar;
+        (*NOSFlarePos).y = ((*WorldPos1).y - (*WorldPos2).y) * NOSTrailScalar;
+        (*NOSFlarePos).z = ((*WorldPos1).z - (*WorldPos2).z) * NOSTrailScalar;
+
+        _asm
+        {
+            xor eax, eax
+            jmp NOSTrailCave2Exit
+        }
     }
 }
 #pragma runtime_checks( "", restore )
@@ -289,8 +358,14 @@ void Init()
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
     bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) != 0;
     bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) != 0;
-    bool bHUDWidescreenMode = iniReader.ReadInteger("MAIN", "HUDWidescreenMode", 1) == 1;
+    bHUDWidescreenMode = iniReader.ReadInteger("MAIN", "HUDWidescreenMode", 1) == 1;
     int nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
+    FEScale::fFEScale = iniReader.ReadFloat("MAIN", "FEScale", 1.0f);
+    FEScale::fCalcFEScale = FEScale::fFEScale;
+    FEScale::fFMVScale = iniReader.ReadFloat("MAIN", "FMVScale", 1.0f);
+    FEScale::fCalcFMVScale = FEScale::fFMVScale;
+    FEScale::bAutoFitFE = iniReader.ReadInteger("MAIN", "AutoFitFE", 1) != 0;
+    FEScale::bAutoFitFMV = iniReader.ReadInteger("MAIN", "AutoFitFMV", 1) != 0;
     nScaling = iniReader.ReadInteger("MAIN", "Scaling", 1);
     bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 0) != 0;
     bool bFixResolutionText = iniReader.ReadInteger("MISC", "FixResolutionText", 1) != 0;
@@ -322,7 +397,7 @@ void Init()
     bool bFixNOSTrailLength = iniReader.ReadInteger("NOSTrail", "FixNOSTrailLength", 1) == 1;
     bool bFixNOSTrailPosition = iniReader.ReadInteger("NOSTrail", "FixNOSTrailPosition", 0) != 0;
     static float fCustomNOSTrailLength = iniReader.ReadFloat("NOSTrail", "CustomNOSTrailLength", 1.0f);
-    NOSTrailPositionScalar = iniReader.ReadFloat("NOSTrail", "NOSTrailPositionScalar", 0.3f);
+    NOSTrailFix::NOSTrailPositionScalar = iniReader.ReadFloat("NOSTrail", "NOSTrailPositionScalar", 0.3f);
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -1166,18 +1241,17 @@ void Init()
             TargetRate = SimRate;
 
         constexpr float NOSTargetFPS = 60.0f; // original FPS we're targeting from. Consoles target 60 but run at 30, hence have longer trails than PC. Targeting 60 is smarter due to less issues with shorter trails. Use SimRate -2 to get the same effect as console versions.
-        NOSTrailScalar = (TargetRate / NOSTargetFPS) * fCustomNOSTrailLength;
+        NOSTrailFix::NOSTrailScalar = (TargetRate / NOSTargetFPS) * fCustomNOSTrailLength;
 
-        pattern = hook::pattern("EB 06 8D 9B 00 00 00 00 40 89 44 24 18"); // 0x00745038
-        injector::MakeJMP(pattern.get_first(0), NOSTrailCave2, true);
-        NOSTrailCave2Exit = (uint32_t*)pattern.get_first(8);
+        uintptr_t loc_745038 = reinterpret_cast<uintptr_t>(hook::pattern("EB 06 8D 9B 00 00 00 00 40 89 44 24 18").get_first(0));
+        injector::MakeJMP(loc_745038, NOSTrailFix::NOSTrailCave2, true);
+        NOSTrailFix::NOSTrailCave2Exit = loc_745038 + 8;
 
         if (bFixNOSTrailPosition)
         {
-            pattern = hook::pattern("D9 44 24 30 6A 02 D8 4C 24 10 6A 00 8B CB C1 E1 06"); // 0x00745088
-            injector::MakeCALL(pattern.get_first(0x60), CarRenderInfo_RenderFlaresOnCar_Hook, true);
-            pattern = hook::pattern("55 8B EC 83 E4 F0 83 EC 74 53 56 57 8B F9 89 7C 24 3C"); // 0x00742950
-            CarRenderInfo_RenderFlaresOnCar = (void(__thiscall*)(void*, void*, bVector3*, bMatrix4*, int, int, int))pattern.get_first(0);
+            uintptr_t loc_7450E8 = reinterpret_cast<uintptr_t>(hook::pattern("D9 44 24 30 6A 02 D8 4C 24 10 6A 00 8B CB C1 E1 06").get_first(0)) + 0x60;
+            NOSTrailFix::CarRenderInfo_RenderFlaresOnCar_Addr = static_cast<uintptr_t>(injector::GetBranchDestination(loc_7450E8));
+            injector::MakeCALL(loc_7450E8, NOSTrailFix::CarRenderInfo_RenderFlaresOnCar_Hook, true);
         }
     }
 
@@ -1256,6 +1330,23 @@ void Init()
                 reinterpret_cast<void(__thiscall*)(uintptr_t)>(VOResFreeAddr)(regs.ecx);
             }
         }; injector::MakeInline<ResolutionTextFreeHook>(loc_528431, loc_528431 + 7);
+    }
+
+    if ((FEScale::fFEScale != 1.0f) || (FEScale::fFMVScale != 1.0f) || (FEScale::bAutoFitFE) || (FEScale::bAutoFitFMV))
+    {
+        FEScale::bEnabled = true;
+
+        uintptr_t loc_6E6FB7 = reinterpret_cast<uintptr_t>(hook::pattern("C7 44 24 10 00 00 80 3F C7 44 24 24 00 00 80 3F").get_first(0)) + 0x66;
+        uintptr_t loc_6E7011 = loc_6E6FB7 + 0x5A;
+        uintptr_t loc_559789 = reinterpret_cast<uintptr_t>(hook::pattern("C7 44 24 60 00 00 0A 00 88 5C 24 70").get_first(0)) + 0x2D;
+
+        FEScale::SetTransformAddr = static_cast<uintptr_t>(injector::GetBranchDestination(loc_6E6FB7));
+        FEScale::gMoviePlayerAddr = *reinterpret_cast<uintptr_t*>(loc_559789 + 2);
+
+        injector::MakeCALL(loc_6E6FB7, FEScale::SetTransformHook);
+        injector::MakeCALL(loc_6E7011, FEScale::SetTransformHook);
+
+        FEScale::Update();
     }
 
     if (bWriteSettingsToFile)
