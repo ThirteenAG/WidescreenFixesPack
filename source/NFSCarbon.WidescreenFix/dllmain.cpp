@@ -15,14 +15,6 @@ struct Screen
 
 bool bHUDWidescreenMode = true;
 
-struct bVector3
-{
-    float x;
-    float y;
-    float z;
-    float pad;
-};
-
 struct bVector4
 {
     float x;
@@ -39,107 +31,127 @@ struct bMatrix4
     bVector4 v3;
 };
 
-#pragma runtime_checks( "", off )
-float NOSTrailScalar = 2.0f;
-float NOSTrailPositionScalar = 0.3f;
-bMatrix4 carbody_nos;
-
-void(__thiscall* CarRenderInfo_RenderFlaresOnCar)(void* CarRenderInfo, void* eView, bVector3* position, bMatrix4* body_matrix, int force_light_state, int reflexion, int renderFlareFlags, int nonplayercar) = (void(__thiscall*)(void*, void*, bVector3*, bMatrix4*, int, int, int, int))0x007CBC40;
-void __stdcall CarRenderInfo_RenderFlaresOnCar_Hook(void* eView, bVector3* position, bMatrix4* body_matrix, int force_light_state, int reflexion, int renderFlareFlags, int nonplayercar)
+namespace NOSTrailFix
 {
-    uint32_t thethis = 0;
-    _asm mov thethis, ecx
-    memcpy(&carbody_nos, body_matrix, sizeof(bMatrix4));
-
-    float pos_scale = (NOSTrailScalar * NOSTrailPositionScalar);
-    if (pos_scale < 1.0f)
-        pos_scale = 1.0f;
-
-    carbody_nos.v0.x *= pos_scale;
-    carbody_nos.v0.y *= pos_scale;
-    carbody_nos.v0.z *= pos_scale;
-
-    carbody_nos.v2.x *= pos_scale;
-    carbody_nos.v2.y *= pos_scale;
-
-    return CarRenderInfo_RenderFlaresOnCar((void*)thethis, eView, position, &carbody_nos, force_light_state, reflexion, renderFlareFlags, nonplayercar);
-}
-
-bVector3* WorldPos1;
-bVector3* WorldPos2;
-bVector3* NOSFlarePos;
-
-uint32_t* NOSTrailCave2Exit = (uint32_t*)0x007CCD30;
-void __declspec(naked) NOSTrailCave2()
-{
-    _asm
+    struct bVector3
     {
-        mov WorldPos1, edx
-        mov WorldPos2, esi
-        lea edx, [esp + 0x40]
-        mov NOSFlarePos, edx
+        float x;
+        float y;
+        float z;
+        float pad;
+    };
+
+#pragma runtime_checks( "", off )
+    float NOSTrailScalar = 2.0f;
+    float NOSTrailPositionScalar = 0.3f;
+    bMatrix4 carbody_nos;
+
+    uintptr_t CarRenderInfo_RenderFlaresOnCar_Addr = 0x007CBC40;
+
+    void __stdcall CarRenderInfo_RenderFlaresOnCar_Hook(void* eView, bVector3* position, bMatrix4* body_matrix, int force_light_state, int reflexion, int renderFlareFlags, int nonplayercar)
+    {
+        void* thethis = 0;
+        _asm mov thethis, ecx
+        memcpy(&carbody_nos, body_matrix, sizeof(bMatrix4));
+
+        float pos_scale = (NOSTrailScalar * NOSTrailPositionScalar);
+        if (pos_scale < 1.0f)
+            pos_scale = 1.0f;
+
+        carbody_nos.v0.x *= pos_scale;
+        carbody_nos.v0.y *= pos_scale;
+        carbody_nos.v0.z *= pos_scale;
+
+        carbody_nos.v2.x *= pos_scale;
+        carbody_nos.v2.y *= pos_scale;
+
+
+        return reinterpret_cast<void(__thiscall*)(void*, void*, bVector3*, bMatrix4*, int, int, int, int)>(CarRenderInfo_RenderFlaresOnCar_Addr)(thethis, eView, position, &carbody_nos, force_light_state, reflexion, renderFlareFlags, nonplayercar);
     }
 
-    (*NOSFlarePos).x = ((*WorldPos1).x - (*WorldPos2).x) * NOSTrailScalar;
-    (*NOSFlarePos).y = ((*WorldPos1).y - (*WorldPos2).y) * NOSTrailScalar;
-    (*NOSFlarePos).z = ((*WorldPos1).z - (*WorldPos2).z) * NOSTrailScalar;
+    bVector3* WorldPos1;
+    bVector3* WorldPos2;
+    bVector3* NOSFlarePos;
 
-    _asm
+    uint32_t* NOSTrailCave2Exit = (uint32_t*)0x007CCD30;
+    void __declspec(naked) NOSTrailCave2()
     {
-        xor eax, eax
-        jmp NOSTrailCave2Exit
+        _asm
+        {
+            mov WorldPos1, edx
+            mov WorldPos2, esi
+            lea edx, [esp + 0x40]
+            mov NOSFlarePos, edx
+        }
+
+        (*NOSFlarePos).x = ((*WorldPos1).x - (*WorldPos2).x) * NOSTrailScalar;
+        (*NOSFlarePos).y = ((*WorldPos1).y - (*WorldPos2).y) * NOSTrailScalar;
+        (*NOSFlarePos).z = ((*WorldPos1).z - (*WorldPos2).z) * NOSTrailScalar;
+
+        _asm
+        {
+            xor eax, eax
+            jmp NOSTrailCave2Exit
+        }
     }
 }
 
-uint32_t* dword_AB0ABC = (uint32_t*)0x00AB0ABC;
-void(__thiscall* sub_723380)(void* that, void* texture) = (void(__thiscall*)(void*, void*))0x723380;
-#pragma runtime_checks( "", off )
-void __stdcall sub_723380_hook(void* texture)
+namespace XenonEffectFix
 {
-    void* that;
-    _asm mov that, ecx
+    uint32_t* dword_AB0ABC = (uint32_t*)0x00AB0ABC;
+    void(__thiscall* sub_723380)(void* that, void* texture) = (void(__thiscall*)(void*, void*))0x723380;
+#pragma runtime_checks( "", off )
+    void __stdcall sub_723380_hook(void* texture)
+    {
+        void* that;
+        _asm mov that, ecx
 
-    sub_723380(that, texture);
-    LPDIRECT3DDEVICE9 gDevice = *(LPDIRECT3DDEVICE9*)dword_AB0ABC;
-    gDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
-}
+        sub_723380(that, texture);
+        LPDIRECT3DDEVICE9 gDevice = *(LPDIRECT3DDEVICE9*)dword_AB0ABC;
+        gDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
+    }
+
 #pragma runtime_checks( "", restore )
+}
 
-uint32_t* LightingFixUpdateMirrorCave_Exit = (uint32_t*)0x00748C5D;
-uint32_t* sub_713AA0 = (uint32_t*)0x713AA0;
-uint32_t* sub_713A30 = (uint32_t*)0x713A30;
-uint32_t* ptr_dword_AB095C = (uint32_t*)0x00AB095C;
-uint32_t* ptr_dword_AB0914 = (uint32_t*)0x00AB0914;
-void __declspec(naked) LightingFixUpdateMirrorCave()
+namespace LightingFixMirror
 {
-    _asm
+    uint32_t* LightingFixUpdateMirrorCave_Exit = (uint32_t*)0x00748C5D;
+    uint32_t* sub_713AA0 = (uint32_t*)0x713AA0;
+    uint32_t* sub_713A30 = (uint32_t*)0x713A30;
+    uint32_t* ptr_dword_AB095C = (uint32_t*)0x00AB095C;
+    uint32_t* ptr_dword_AB0914 = (uint32_t*)0x00AB0914;
+    void __declspec(naked) LightingFixUpdateMirrorCave()
     {
-        cmp dword ptr[edi+8], 01
-        mov ecx, esi
-        jne IsMirror
-        mov eax, ds:ptr_dword_AB095C
-        mov eax, [eax]
-        push eax
-        push 0x59
-        call sub_713AA0
-        jmp ExitCode
+        _asm
+        {
+            cmp dword ptr[edi + 8], 01
+            mov ecx, esi
+            jne IsMirror
+            mov eax, ds:ptr_dword_AB095C
+            mov eax, [eax]
+            push eax
+            push 0x59
+            call sub_713AA0
+            jmp ExitCode
 
-    IsMirror:
-        mov eax, ds:ptr_dword_AB0914
-        mov eax, [eax]
-        push eax
-        push 0x59
-        call sub_713AA0
-        mov eax, [esi + 0x1330]
-        test eax, eax
-        je ExitCode
-        push 0
-        push 0x80
-        mov ecx, esi
-        call sub_713A30
+            IsMirror :
+            mov eax, ds : ptr_dword_AB0914
+                mov eax, [eax]
+                push eax
+                push 0x59
+                call sub_713AA0
+                mov eax, [esi + 0x1330]
+                test eax, eax
+                je ExitCode
+                push 0
+                push 0x80
+                mov ecx, esi
+                call sub_713A30
 
-    ExitCode:
-        jmp LightingFixUpdateMirrorCave_Exit
+                ExitCode :
+            jmp LightingFixUpdateMirrorCave_Exit
+        }
     }
 }
 
@@ -355,7 +367,7 @@ void Init()
     bool bFixNOSTrailLength = iniReader.ReadInteger("NOSTrail", "FixNOSTrailLength", 1) == 1;
     bool bFixNOSTrailPosition = iniReader.ReadInteger("NOSTrail", "FixNOSTrailPosition", 0) != 0;
     static float fCustomNOSTrailLength = iniReader.ReadFloat("NOSTrail", "CustomNOSTrailLength", 1.0f);
-    NOSTrailPositionScalar = iniReader.ReadFloat("NOSTrail", "NOSTrailPositionScalar", 0.3f);
+    NOSTrailFix::NOSTrailPositionScalar = iniReader.ReadFloat("NOSTrail", "NOSTrailPositionScalar", 0.3f);
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -648,12 +660,12 @@ void Init()
         //Lighting Fix Update (mirror)
         pattern = hook::pattern("8B 4F 6C 8B 91 8C 02 00 00 52 6A 6C 8B CE"); //0x00748C17
         uint32_t* dword_748C2A = pattern.count(1).get(0).get<uint32_t>(0x13);
-        ptr_dword_AB095C = *pattern.count(1).get(0).get<uint32_t*>(0x1C);
-        ptr_dword_AB0914 = *hook::pattern("52 50 FF 51 5C A1 ? ? ? ? 8B 08").count(1).get(0).get<uint32_t*>(6);
-        sub_713AA0 = hook::pattern("C2 08 00 CC 8B 54 24 08 8B 41 44 56").count(1).get(0).get<uint32_t>(4);
-        sub_713A30 = hook::pattern("89 81 84 17 00 00 C3 CC CC").count(1).get(0).get<uint32_t>(9);
-        LightingFixUpdateMirrorCave_Exit = hook::pattern("A1 ? ? ? ? 8B 15 ? ? ? ? 83 F8 06 89 15 ? ? ? ? C7 05 ? ? ? ? CD CC CC 3E").count(1).get(0).get<uint32_t>(0); //0x00748C5D
-        injector::MakeJMP(dword_748C2A, LightingFixUpdateMirrorCave, true);
+        LightingFixMirror::ptr_dword_AB095C = *pattern.count(1).get(0).get<uint32_t*>(0x1C);
+        LightingFixMirror::ptr_dword_AB0914 = *hook::pattern("52 50 FF 51 5C A1 ? ? ? ? 8B 08").count(1).get(0).get<uint32_t*>(6);
+        LightingFixMirror::sub_713AA0 = hook::pattern("C2 08 00 CC 8B 54 24 08 8B 41 44 56").count(1).get(0).get<uint32_t>(4);
+        LightingFixMirror::sub_713A30 = hook::pattern("89 81 84 17 00 00 C3 CC CC").count(1).get(0).get<uint32_t>(9);
+        LightingFixMirror::LightingFixUpdateMirrorCave_Exit = hook::pattern("A1 ? ? ? ? 8B 15 ? ? ? ? 83 F8 06 89 15 ? ? ? ? C7 05 ? ? ? ? CD CC CC 3E").count(1).get(0).get<uint32_t>(0); //0x00748C5D
+        injector::MakeJMP(dword_748C2A, LightingFixMirror::LightingFixUpdateMirrorCave, true);
 
         uint32_t* dword_72E382 = hook::pattern("C7 05 ? ? ? ? 01 00 00 00 C7 05 ? ? ? ? 00 00 80").count(1).get(0).get<uint32_t>(6);
         injector::WriteMemory(dword_72E382, 0, true);
@@ -700,10 +712,10 @@ void Init()
     {
         uint32_t* dword_749BC5 = hook::pattern("FF 91 90 01 00 00 8B 4B 04 8B 07 51 57 FF 90 A0 01 00 00").count(1).get(0).get<uint32_t>(0x1D); //0x00749BA8
         pattern = hook::pattern("A1 ? ? ? ? 8B 08 6A 01 6A 16 50 FF 91 E4 00 00 00 5F 5E C2 04 00"); //0x007233A1
-        dword_AB0ABC = *pattern.count(1).get(0).get<uint32_t*>(1);
-        sub_723380 = (void(__thiscall*)(void*, void*))pattern.count(1).get(0).get<uint32_t>(-0x21);
+        XenonEffectFix::dword_AB0ABC = *pattern.count(1).get(0).get<uint32_t*>(1);
+        XenonEffectFix::sub_723380 = (void(__thiscall*)(void*, void*))pattern.count(1).get(0).get<uint32_t>(-0x21);
 
-        injector::MakeCALL(dword_749BC5, sub_723380_hook, true);
+        injector::MakeCALL(dword_749BC5, XenonEffectFix::sub_723380_hook, true);
     }
 
     if (nWindowedMode)
@@ -1153,18 +1165,17 @@ void Init()
             TargetRate = SimRate;
 
         constexpr float NOSTargetFPS = 60.0f; // original FPS we're targeting from. Consoles target 60 but run at 30, hence have longer trails than PC. Targeting 60 is smarter due to less issues with shorter trails. Use SimRate -2 to get the same effect as console versions.
-        NOSTrailScalar = (TargetRate / NOSTargetFPS) * fCustomNOSTrailLength;
+        NOSTrailFix::NOSTrailScalar = (TargetRate / NOSTargetFPS) * fCustomNOSTrailLength;
 
         pattern = hook::pattern("EB 06 8D 9B 00 00 00 00 40 89 44 24 24"); // 0x007CCD28
-        injector::MakeJMP(pattern.get_first(0), NOSTrailCave2, true);
-        NOSTrailCave2Exit = (uint32_t*)pattern.get_first(8);
+        injector::MakeJMP(pattern.get_first(0), NOSTrailFix::NOSTrailCave2, true);
+        NOSTrailFix::NOSTrailCave2Exit = (uint32_t*)pattern.get_first(8);
 
         if (bFixNOSTrailPosition)
         {
-            pattern = hook::pattern("D9 44 24 40 6A 01 D8 4C 24 1C"); // 0x007CCD78
-            injector::MakeCALL(pattern.get_first(0x5E), CarRenderInfo_RenderFlaresOnCar_Hook, true);
-            pattern = hook::pattern("55 8B EC 83 E4 F0 83 EC 64 8B 45 08 53 56 83 C0 44"); // 0x007CBC40
-            CarRenderInfo_RenderFlaresOnCar = (void(__thiscall*)(void*, void*, bVector3*, bMatrix4*, int, int, int, int))pattern.get_first(0);
+            uintptr_t loc_7CCDD6 = reinterpret_cast<uintptr_t>(hook::pattern("D9 44 24 40 6A 01 D8 4C 24 1C").get_first(0)) + 0x5E;
+            NOSTrailFix::CarRenderInfo_RenderFlaresOnCar_Addr = static_cast<uintptr_t>(injector::GetBranchDestination(loc_7CCDD6));
+            injector::MakeCALL(loc_7CCDD6, NOSTrailFix::CarRenderInfo_RenderFlaresOnCar_Hook, true);
         }
     }
 
