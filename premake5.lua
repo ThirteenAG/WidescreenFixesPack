@@ -47,7 +47,7 @@ workspace "WidescreenFixesPack"
       libdirs { "C:/Program Files (x86)/Microsoft DirectX SDK (June 2010)/lib/x86" }
    end
    
-   pbcommands = { 
+   pbcommands = {
       "setlocal EnableDelayedExpansion",
       --"set \"path=" .. (gamepath) .. "\"",
       "set file=$(TargetPath)",
@@ -56,7 +56,8 @@ workspace "WidescreenFixesPack"
       "set fileextension=%%~xi",
       "set target=!path!!filename!!fileextension!",
       "if exist \"!target!\" copy /y \"%%~fi\" \"!target!\"",
-      ")" }
+      ")" 
+	  }
 
    function setpaths(gamepath, exepath, scriptspath)
       scriptspath = scriptspath or "scripts/"
@@ -75,17 +76,36 @@ workspace "WidescreenFixesPack"
    end
    
    function setbuildpaths_psp(gamepath, exepath, scriptspath, pspsdkpath, sourcepath, prj_name)
-      local pbcmd = {}
-      for k,v in pairs(pbcommands) do
-        pbcmd[k] = v
-      end
+      -- local pbcmd = {}
+      -- for k,v in pairs(pbcommands) do
+      --   pbcmd[k] = v
+      -- end
       if (gamepath) then
-         cmdcopy = { "set \"path=" .. gamepath .. scriptspath .. "\"" }
-         pbcmd[2] = "set \"file=../data/" .. prj_name .. "/" .. scriptspath .. prj_name ..".prx\""
-         table.insert(cmdcopy, pbcmd)
-         buildcommands   { "call " .. pspsdkpath .. " -C " .. sourcepath, cmdcopy }
-         rebuildcommands { "call " .. pspsdkpath .. " -C " .. sourcepath .. " clean && " .. pspsdkpath .. " -C " .. sourcepath, cmdcopy }
-         cleancommands   { "call " .. pspsdkpath .. " -C " .. sourcepath .. " clean" }
+         --cmdcopy = { "set \"path=" .. gamepath .. scriptspath .. "\"" }
+         --pbcmd[2] = "set \"file=../data/" .. prj_name .. "/" .. scriptspath .. prj_name ..".prx\""
+         --table.insert(cmdcopy, pbcmd)
+		 buildcommands {
+		 "setlocal EnableDelayedExpansion\n" ..
+		 "call " .. pspsdkpath .. " -C " .. sourcepath .. "\n" ..
+		 "if !errorlevel! neq 0 exit /b !errorlevel!\n" ..
+		 "if not defined PPSSPPMemstick goto :eof\n" ..
+		 "if not exist $(PPSSPPMemstick)/PLUGINS/$(ProjectName) mkdir $(PPSSPPMemstick)/PLUGINS/$(ProjectName)\n" ..
+		 "copy /y $(NMakeOutput) $(PPSSPPMemstick)/PLUGINS/$(ProjectName)"
+		 }
+		 rebuildcommands {
+		 "setlocal EnableDelayedExpansion\n" ..
+		 "call " .. pspsdkpath .. " -C " .. sourcepath .. " clean\n" ..
+		 "call " .. pspsdkpath .. " -C " .. sourcepath .. "\n" ..
+		 "if !errorlevel! neq 0 exit /b !errorlevel!\n" ..
+		 "if not defined PPSSPPMemstick goto :eof\n" ..
+		 "if not exist $(PPSSPPMemstick)/PLUGINS mkdir $(PPSSPPMemstick)/PLUGINS/$(ProjectName)\n" ..
+		 "copy /y $(NMakeOutput) $(PPSSPPMemstick)/PLUGINS/$(ProjectName)"
+		 }
+		 cleancommands {
+		 "setlocal EnableDelayedExpansion\n" ..
+		 "call " .. pspsdkpath .. " -C " .. sourcepath .. " clean\n" ..
+		 "if !errorlevel! neq 0 exit /b !errorlevel!"
+		 }
          debugdir (gamepath)
          if (exepath) then
             debugcommand (gamepath .. exepath)
@@ -97,17 +117,33 @@ workspace "WidescreenFixesPack"
    end
    
    function setbuildpaths_ps2(gamepath, exepath, scriptspath, ps2sdkpath, sourcepath, prj_name)
-      local pbcmd = {}
-      for k,v in pairs(pbcommands) do
-        pbcmd[k] = v
-      end
+      -- local pbcmd = {}
+      -- for k,v in pairs(pbcommands) do
+      --   pbcmd[k] = v
+      -- end
       if (gamepath) then
-         cmdcopy = { "set \"path=" .. gamepath .. scriptspath .. "\"" }
-         pbcmd[2] = "set \"file=../data/" .. prj_name .. "/" .. scriptspath .. prj_name ..".elf\""
-         table.insert(cmdcopy, pbcmd)
-         buildcommands   { "call " .. ps2sdkpath .. " -C " .. sourcepath, cmdcopy }
-         rebuildcommands { "call " .. ps2sdkpath .. " -C " .. sourcepath .. " clean && " .. ps2sdkpath .. " -C " .. sourcepath, cmdcopy }
-         cleancommands   { "call " .. ps2sdkpath .. " -C " .. sourcepath .. " clean" }
+		 buildcommands {
+		 "setlocal EnableDelayedExpansion\n" ..
+		 "call " .. ps2sdkpath .. " -C " .. sourcepath .. "\n" ..
+		 "if !errorlevel! neq 0 exit /b !errorlevel!\n" ..
+		 "if not defined PCSX2FDir goto :eof\n" ..
+		 "if not exist $(PCSX2FDir)/PLUGINS mkdir $(PCSX2FDir)/PLUGINS\n" ..
+		 "copy /y $(NMakeOutput) $(PCSX2FDir)/PLUGINS"
+		 }
+		 rebuildcommands {
+		 "setlocal EnableDelayedExpansion\n" ..
+		 "call " .. ps2sdkpath .. " -C " .. sourcepath .. " clean\n" ..
+		 "call " .. ps2sdkpath .. " -C " .. sourcepath .. "\n" ..
+		 "if !errorlevel! neq 0 exit /b !errorlevel!\n" ..
+		 "if not defined PCSX2FDir goto :eof\n" ..
+		 "if not exist $(PCSX2FDir)/PLUGINS mkdir $(PCSX2FDir)/PLUGINS\n" ..
+		 "copy /y $(NMakeOutput) $(PCSX2FDir)/PLUGINS"
+		 }
+		 cleancommands {
+		 "setlocal EnableDelayedExpansion\n" ..
+		 "call " .. ps2sdkpath .. " -C " .. sourcepath .. " clean\n" ..
+		 "if !errorlevel! neq 0 exit /b !errorlevel!"
+		 }
          debugdir (gamepath)
          if (exepath) then
             debugcommand (gamepath .. exepath)
