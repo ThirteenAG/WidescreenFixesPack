@@ -81,37 +81,45 @@ workspace "WidescreenFixesPack"
       --   pbcmd[k] = v
       -- end
       if (gamepath) then
-         --cmdcopy = { "set \"path=" .. gamepath .. scriptspath .. "\"" }
-         --pbcmd[2] = "set \"file=../data/" .. prj_name .. "/" .. scriptspath .. prj_name ..".prx\""
-         --table.insert(cmdcopy, pbcmd)
-		 buildcommands {
-		 "setlocal EnableDelayedExpansion\n" ..
-		 "call " .. pspsdkpath .. " -C " .. sourcepath .. "\n" ..
-		 "if !errorlevel! neq 0 exit /b !errorlevel!\n" ..
-		 "if not defined PPSSPPMemstick goto :eof\n" ..
-		 "if not exist $(PPSSPPMemstick)/PLUGINS/$(ProjectName) mkdir $(PPSSPPMemstick)/PLUGINS/$(ProjectName)\n" ..
-		 "copy /y $(NMakeOutput) $(PPSSPPMemstick)/PLUGINS/$(ProjectName)"
-		 }
-		 rebuildcommands {
-		 "setlocal EnableDelayedExpansion\n" ..
-		 "call " .. pspsdkpath .. " -C " .. sourcepath .. " clean\n" ..
-		 "call " .. pspsdkpath .. " -C " .. sourcepath .. "\n" ..
-		 "if !errorlevel! neq 0 exit /b !errorlevel!\n" ..
-		 "if not defined PPSSPPMemstick goto :eof\n" ..
-		 "if not exist $(PPSSPPMemstick)/PLUGINS mkdir $(PPSSPPMemstick)/PLUGINS/$(ProjectName)\n" ..
-		 "copy /y $(NMakeOutput) $(PPSSPPMemstick)/PLUGINS/$(ProjectName)"
-		 }
-		 cleancommands {
-		 "setlocal EnableDelayedExpansion\n" ..
-		 "call " .. pspsdkpath .. " -C " .. sourcepath .. " clean\n" ..
-		 "if !errorlevel! neq 0 exit /b !errorlevel!"
-		 }
-         debugdir (gamepath)
-         if (exepath) then
-            debugcommand (gamepath .. exepath)
-            dir, file = exepath:match'(.*/)(.*)'
-            debugdir (gamepath .. (dir or ""))
-         end
+        buildcommands {"setlocal EnableDelayedExpansion"}
+        rebuildcommands {"setlocal EnableDelayedExpansion"}
+        local ppsspppath = os.getenv "PPSSPPMemstick"
+        if (ppsspppath == nil) then
+            buildcommands {"set _PPSSPPMemstick=" .. gamepath}
+            rebuildcommands {"set _PPSSPPMemstick=" .. gamepath}
+        else
+            buildcommands {"set _PPSSPPMemstick=!PPSSPPMemstick!"}
+            rebuildcommands {"set _PPSSPPMemstick=!PPSSPPMemstick!"}
+        end
+         
+		buildcommands {
+		"powershell -ExecutionPolicy Bypass -File \"" .. pspsdkpath .. "\" -C \"" .. sourcepath .. "\"\n" ..
+		"if !errorlevel! neq 0 exit /b !errorlevel!\n" ..
+		"if not defined _PPSSPPMemstick goto :eof\n" ..
+        "if not exist !_PPSSPPMemstick! goto :eof\n" ..
+		"if not exist !_PPSSPPMemstick!/PLUGINS/$(ProjectName) mkdir !_PPSSPPMemstick!/PLUGINS/$(ProjectName)\n" ..
+		"copy /y $(NMakeOutput) !_PPSSPPMemstick!/PLUGINS/$(ProjectName)\n"
+		}
+		rebuildcommands {
+		"powershell -ExecutionPolicy Bypass -File \"" .. pspsdkpath .. "\" -C \"" .. sourcepath .. "\" clean\n" ..
+		"powershell -ExecutionPolicy Bypass -File \"" .. pspsdkpath .. "\" -C \"" .. sourcepath .. "\"\n" ..
+		"if !errorlevel! neq 0 exit /b !errorlevel!\n" ..
+		"if not defined _PPSSPPMemstick goto :eof\n" ..
+        "if not exist !_PPSSPPMemstick! goto :eof\n" ..
+		"if not exist !_PPSSPPMemstick!/PLUGINS/$(ProjectName) mkdir !_PPSSPPMemstick!/PLUGINS/$(ProjectName)\n" ..
+		"copy /y $(NMakeOutput) !_PPSSPPMemstick!/PLUGINS/$(ProjectName)\n"
+		}
+		cleancommands {
+		"setlocal EnableDelayedExpansion\n" ..
+		"powershell -ExecutionPolicy Bypass -File \"" .. pspsdkpath .. "\" -C \"" .. sourcepath .. "\" clean\n" ..
+		"if !errorlevel! neq 0 exit /b !errorlevel!\n"
+		}
+        debugdir (gamepath)
+        if (exepath) then
+           debugcommand (gamepath .. exepath)
+           dir, file = exepath:match'(.*/)(.*)'
+           debugdir (gamepath .. (dir or ""))
+        end
       end
       targetdir ("data/%{prj.name}/" .. scriptspath)
    end
@@ -122,28 +130,39 @@ workspace "WidescreenFixesPack"
       --   pbcmd[k] = v
       -- end
       if (gamepath) then
-		 buildcommands {
-		 "setlocal EnableDelayedExpansion\n" ..
-		 "call " .. ps2sdkpath .. " -C " .. sourcepath .. "\n" ..
-		 "if !errorlevel! neq 0 exit /b !errorlevel!\n" ..
-		 "if not defined PCSX2FDir goto :eof\n" ..
-		 "if not exist $(PCSX2FDir)/PLUGINS mkdir $(PCSX2FDir)/PLUGINS\n" ..
-		 "copy /y $(NMakeOutput) $(PCSX2FDir)/PLUGINS"
-		 }
-		 rebuildcommands {
-		 "setlocal EnableDelayedExpansion\n" ..
-		 "call " .. ps2sdkpath .. " -C " .. sourcepath .. " clean\n" ..
-		 "call " .. ps2sdkpath .. " -C " .. sourcepath .. "\n" ..
-		 "if !errorlevel! neq 0 exit /b !errorlevel!\n" ..
-		 "if not defined PCSX2FDir goto :eof\n" ..
-		 "if not exist $(PCSX2FDir)/PLUGINS mkdir $(PCSX2FDir)/PLUGINS\n" ..
-		 "copy /y $(NMakeOutput) $(PCSX2FDir)/PLUGINS"
-		 }
-		 cleancommands {
-		 "setlocal EnableDelayedExpansion\n" ..
-		 "call " .. ps2sdkpath .. " -C " .. sourcepath .. " clean\n" ..
-		 "if !errorlevel! neq 0 exit /b !errorlevel!"
-		 }
+        buildcommands {"setlocal EnableDelayedExpansion"}
+        rebuildcommands {"setlocal EnableDelayedExpansion"}
+        local pcsx2fpath = os.getenv "PCSX2FDir"
+        if (pcsx2fpath == nil) then
+            buildcommands {"set _PCSX2FDir=" .. gamepath}
+            rebuildcommands {"set _PCSX2FDir=" .. gamepath}
+        else
+            buildcommands {"set _PCSX2FDir=!PCSX2FDir!"}
+            rebuildcommands {"set _PCSX2FDir=!PCSX2FDir!"}
+        end
+        buildcommands {
+        "powershell -ExecutionPolicy Bypass -File \"" .. ps2sdkpath .. "\" -C \"" .. sourcepath .. "\"\n" ..
+        "if !errorlevel! neq 0 exit /b !errorlevel!\n" ..
+        "if not defined _PCSX2FDir goto :eof\n" ..
+        "if not exist !_PCSX2FDir! goto :eof\n" ..
+        "if not exist !_PCSX2FDir!/PLUGINS mkdir !_PCSX2FDir!/PLUGINS\n" ..
+        "copy /y $(NMakeOutput) !_PCSX2FDir!/PLUGINS"
+        }
+        rebuildcommands {
+        "powershell -ExecutionPolicy Bypass -File \"" .. ps2sdkpath .. "\" -C \"" .. sourcepath .. "\" clean\n" ..
+        "powershell -ExecutionPolicy Bypass -File \"" .. ps2sdkpath .. "\" -C \"" .. sourcepath .. "\"\n" ..
+        "if !errorlevel! neq 0 exit /b !errorlevel!\n" ..
+        "if not defined _PCSX2FDir goto :eof\n" ..
+        "if not exist !_PCSX2FDir! goto :eof\n" ..
+        "if not exist !_PCSX2FDir!/PLUGINS mkdir !_PCSX2FDir!/PLUGINS\n" ..
+        "copy /y $(NMakeOutput) !_PCSX2FDir!/PLUGINS"
+        }
+        cleancommands {
+        "setlocal EnableDelayedExpansion\n" ..
+        "powershell -ExecutionPolicy Bypass -File \"" .. ps2sdkpath .. "\" -C \"" .. sourcepath .. "\" clean\n" ..
+        "if !errorlevel! neq 0 exit /b !errorlevel!"
+        }
+         
          debugdir (gamepath)
          if (exepath) then
             debugcommand (gamepath .. exepath)
@@ -205,9 +224,9 @@ project "Burnout3.PCSX2F.WidescreenFix"
    kind "Makefile"
    includedirs { "external/ps2sdk/ps2sdk/ee" }
    files { "source/%{prj.name}/*.h" }
-   files { "source/%{prj.name}/*.c" }
+   files { "source/%{prj.name}/*.c", "source/%{prj.name}/makefile" }
    targetextension ".elf"
-   setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin/", "pcsx2x64.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "Burnout3.PCSX2F.WidescreenFix")
+   setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin", "pcsx2x64.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "Burnout3.PCSX2F.WidescreenFix")
    writemakefile_ps2("Burnout3.PCSX2F.WidescreenFix", "PLUGINS/", "0x02100000", "-l:libc.a -l:libm.a -l:libgcc.a", "../../includes/pcsx2/log.o",
    "../../includes/pcsx2/memalloc.o", "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o",
    "../../includes/pcsx2/inireader.o", "../../includes/pcsx2/mips.o")
@@ -277,9 +296,9 @@ project "GTALCS.PCSX2F.WidescreenFix"
    kind "Makefile"
    includedirs { "external/ps2sdk/ps2sdk/ee" }
    files { "source/%{prj.name}/*.h" }
-   files { "source/%{prj.name}/*.c" }
+   files { "source/%{prj.name}/*.c", "source/%{prj.name}/makefile" }
    targetextension ".elf"
-   setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin/", "pcsx2x64.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PCSX2F.WidescreenFix")
+   setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin", "pcsx2x64.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PCSX2F.WidescreenFix")
    writemakefile_ps2("GTALCS.PCSX2F.WidescreenFix", "PLUGINS/", "0x02100000", "-l:libc.a -l:libm.a -l:libgcc.a", "lodl.o", "cpad.o", "../../includes/pcsx2/log.o",
    "../../includes/pcsx2/memalloc.o", "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o",
    "../../includes/pcsx2/inireader.o", "../../includes/pcsx2/mips.o")
@@ -288,9 +307,9 @@ project "GTAVCS.PCSX2F.WidescreenFix"
    kind "Makefile"
    includedirs { "external/ps2sdk/ps2sdk/ee" }
    files { "source/%{prj.name}/*.h" }
-   files { "source/%{prj.name}/*.c" }
+   files { "source/%{prj.name}/*.c", "source/%{prj.name}/makefile" }
    targetextension ".elf"
-   setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin/", "pcsx2x64.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PCSX2F.WidescreenFix")
+   setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin", "pcsx2x64.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PCSX2F.WidescreenFix")
    writemakefile_ps2("GTAVCS.PCSX2F.WidescreenFix", "PLUGINS/", "0x02100000", "-l:libc.a", "cpad.o", "ckey.o", "../../includes/pcsx2/memalloc.o",
    "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o","../../includes/pcsx2/inireader.o",
    "../../includes/pcsx2/mips.o")
@@ -300,9 +319,9 @@ project "GTAVCS.PCSX2F.Project2DFX"
    dependson { "GTAVCS.PCSX2F.WidescreenFix" }
    includedirs { "external/ps2sdk/ps2sdk/ee" }
    files { "source/%{prj.name}/*.h" }
-   files { "source/%{prj.name}/*.c" }
+   files { "source/%{prj.name}/*.c", "source/%{prj.name}/makefile" }
    targetextension ".elf"
-   setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin/", "pcsx2x64.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PCSX2F.Project2DFX")
+   setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin", "pcsx2x64.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PCSX2F.Project2DFX")
    writemakefile_ps2("GTAVCS.PCSX2F.Project2DFX", "PLUGINS/", "0x03100000", "-l:libc.a", "lodl.o", "../../includes/pcsx2/memalloc.o",
    "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o","../../includes/pcsx2/inireader.o",
    "../../includes/pcsx2/mips.o")
@@ -310,67 +329,67 @@ project "GTAVCS.PCSX2F.Project2DFX"
 project "GTALCS.PPSSPP.WidescreenFix"
    kind "Makefile"
    dependson { "GTALCS.PPSSPP.Project2DFX", "GTALCS.PPSSPP.ImVehLM" }
-   includedirs { "external/pspsdk/psp/sdk/include" }
-   includedirs { "external/pspsdk/bin" }
-   includedirs { "external/pspsdk/psp/sdk/include" }
-   files { "source/%{prj.name}/*.c" }
+   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
+   includedirs { "external/pspsdk/usr/local/pspdev/bin" }
+   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
+   files { "source/%{prj.name}/*.c", "source/%{prj.name}/makefile" }
    targetextension ".prx"
-   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTALCS.PPSSPP.WidescreenFix/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PPSSPP.WidescreenFix")
+   setbuildpaths_psp("Z:/WFP/Games/PPSSPP", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTALCS.PPSSPP.WidescreenFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PPSSPP.WidescreenFix")
    writemakefile_psp("GTALCS.PPSSPP.WidescreenFix")
 project "GTALCS.PPSSPP.Project2DFX"
    kind "Makefile"
-   includedirs { "external/pspsdk/psp/sdk/include" }
-   includedirs { "external/pspsdk/bin" }
-   includedirs { "external/pspsdk/psp/sdk/include" }
-   files { "source/%{prj.name}/*.c", "source/%{prj.name}/*.cpp" }
+   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
+   includedirs { "external/pspsdk/usr/local/pspdev/bin" }
+   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
+   files { "source/%{prj.name}/*.c", "source/%{prj.name}/makefile", "source/%{prj.name}/*.cpp" }
    targetextension ".prx"
-   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTALCS.PPSSPP.Project2DFX/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PPSSPP.Project2DFX")
+   setbuildpaths_psp("Z:/WFP/Games/PPSSPP", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTALCS.PPSSPP.Project2DFX/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PPSSPP.Project2DFX")
    writemakefile_psp("GTALCS.PPSSPP.Project2DFX", "lodl.c")
 project "GTALCS.PPSSPP.ImVehLM"
    kind "Makefile"
-   includedirs { "external/pspsdk/psp/sdk/include" }
-   includedirs { "external/pspsdk/bin" }
-   includedirs { "external/pspsdk/psp/sdk/include" }
-   files { "source/%{prj.name}/*.c", "source/%{prj.name}/*.cpp" }
+   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
+   includedirs { "external/pspsdk/usr/local/pspdev/bin" }
+   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
+   files { "source/%{prj.name}/*.c", "source/%{prj.name}/makefile", "source/%{prj.name}/*.cpp" }
    targetextension ".prx"
-   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTALCS.PPSSPP.ImVehLM/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PPSSPP.ImVehLM")
+   setbuildpaths_psp("Z:/WFP/Games/PPSSPP", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTALCS.PPSSPP.ImVehLM/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PPSSPP.ImVehLM")
    writemakefile_psp("GTALCS.PPSSPP.ImVehLM")
 project "GTAVCS.PPSSPP.WidescreenFix"
    kind "Makefile"
    dependson { "GTAVCS.PPSSPP.Project2DFX", "GTAVCS.PPSSPP.ImVehLM" }
-   includedirs { "external/pspsdk/psp/sdk/include" }
-   includedirs { "external/pspsdk/bin" }
-   includedirs { "external/pspsdk/psp/sdk/include" }
-   files { "source/%{prj.name}/*.c" }
+   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
+   includedirs { "external/pspsdk/usr/local/pspdev/bin" }
+   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
+   files { "source/%{prj.name}/*.c", "source/%{prj.name}/makefile" }
    targetextension ".prx"
-   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.WidescreenFix")
+   setbuildpaths_psp("Z:/WFP/Games/PPSSPP", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.WidescreenFix")
    writemakefile_psp("GTAVCS.PPSSPP.WidescreenFix")
 project "GTAVCS.PPSSPP.Project2DFX"
    kind "Makefile"
-   includedirs { "external/pspsdk/psp/sdk/include" }
-   includedirs { "external/pspsdk/bin" }
-   includedirs { "external/pspsdk/psp/sdk/include" }
-   files { "source/%{prj.name}/*.c", "source/%{prj.name}/*.cpp" }
+   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
+   includedirs { "external/pspsdk/usr/local/pspdev/bin" }
+   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
+   files { "source/%{prj.name}/*.c", "source/%{prj.name}/makefile", "source/%{prj.name}/*.cpp" }
    targetextension ".prx"
-   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.Project2DFX/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.Project2DFX")
+   setbuildpaths_psp("Z:/WFP/Games/PPSSPP", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.Project2DFX/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.Project2DFX")
    writemakefile_psp("GTAVCS.PPSSPP.Project2DFX", "lodl.c")
 project "GTAVCS.PPSSPP.ImVehLM"
    kind "Makefile"
-   includedirs { "external/pspsdk/psp/sdk/include" }
-   includedirs { "external/pspsdk/bin" }
-   includedirs { "external/pspsdk/psp/sdk/include" }
-   files { "source/%{prj.name}/*.c", "source/%{prj.name}/*.cpp" }
+   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
+   includedirs { "external/pspsdk/usr/local/pspdev/bin" }
+   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
+   files { "source/%{prj.name}/*.c", "source/%{prj.name}/makefile", "source/%{prj.name}/*.cpp" }
    targetextension ".prx"
-   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.ImVehLM/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.ImVehLM")
+   setbuildpaths_psp("Z:/WFP/Games/PPSSPP", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.ImVehLM/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.ImVehLM")
    writemakefile_psp("GTAVCS.PPSSPP.ImVehLM")
 project "GTACTW.PPSSPP.FusionMod"
    kind "Makefile"
-   includedirs { "external/pspsdk/psp/sdk/include" }
-   includedirs { "external/pspsdk/bin" }
-   includedirs { "external/pspsdk/psp/sdk/include" }
-   files { "source/%{prj.name}/*.c" }
+   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
+   includedirs { "external/pspsdk/usr/local/pspdev/bin" }
+   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
+   files { "source/%{prj.name}/*.c", "source/%{prj.name}/makefile" }
    targetextension ".prx"
-   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionMod/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "GTACTW.PPSSPP.FusionMod")
+   setbuildpaths_psp("Z:/WFP/Games/PPSSPP", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionMod/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTACTW.PPSSPP.FusionMod")
    writemakefile_psp("GTACTW.PPSSPP.FusionMod")
 project "GTASA.UWP.Test"
    setpaths("Z:/WFP/Games/GTASAUWP/", "GTASA.exe")
@@ -389,9 +408,9 @@ project "KnightRider.PCSX2F.WidescreenFix"
    kind "Makefile"
    includedirs { "external/ps2sdk/ps2sdk/ee" }
    files { "source/%{prj.name}/*.h" }
-   files { "source/%{prj.name}/*.c" }
+   files { "source/%{prj.name}/*.c", "source/%{prj.name}/makefile" }
    targetextension ".elf"
-   setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin/", "pcsx2x64.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "KnightRider.PCSX2F.WidescreenFix")
+   setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin", "pcsx2x64.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "KnightRider.PCSX2F.WidescreenFix")
    writemakefile_ps2("KnightRider.PCSX2F.WidescreenFix", "PLUGINS/", "0x02100000", "-l:libc.a -l:libm.a -l:libgcc.a", "../../includes/pcsx2/log.o",
    "../../includes/pcsx2/memalloc.o", "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o",
    "../../includes/pcsx2/inireader.o", "../../includes/pcsx2/mips.o")
@@ -418,29 +437,29 @@ project "MaxPayne.WidescreenFix"
    setpaths("Z:/WFP/Games/Max Payne/Max Payne/", "MaxPayne.exe")
 project "MidnightClubLARemix.PPSSPP.FusionMod"
    kind "Makefile"
-   includedirs { "external/pspsdk/psp/sdk/include" }
-   includedirs { "external/pspsdk/bin" }
-   includedirs { "external/pspsdk/psp/sdk/include" }
-   files { "source/%{prj.name}/*.c" }
+   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
+   includedirs { "external/pspsdk/usr/local/pspdev/bin" }
+   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
+   files { "source/%{prj.name}/*.c", "source/%{prj.name}/makefile" }
    targetextension ".prx"
-   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/MidnightClubLARemix.PPSSPP.FusionMod/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "MidnightClubLARemix.PPSSPP.FusionMod")
+   setbuildpaths_psp("Z:/WFP/Games/PPSSPP", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/MidnightClubLARemix.PPSSPP.FusionMod/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "MidnightClubLARemix.PPSSPP.FusionMod")
    writemakefile_psp("MidnightClubLARemix.PPSSPP.FusionMod")
 project "PPSSPP.XboxRainDroplets"
    kind "Makefile"
-   includedirs { "external/pspsdk/psp/sdk/include" }
-   includedirs { "external/pspsdk/bin" }
-   includedirs { "external/pspsdk/psp/sdk/include" }
-   files { "source/%{prj.name}/*.c" }
+   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
+   includedirs { "external/pspsdk/usr/local/pspdev/bin" }
+   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
+   files { "source/%{prj.name}/*.c", "source/%{prj.name}/makefile" }
    targetextension ".prx"
-   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/PPSSPP.XboxRainDroplets/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "PPSSPP.XboxRainDroplets")
+   setbuildpaths_psp("Z:/WFP/Games/PPSSPP", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/PPSSPP.XboxRainDroplets/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "PPSSPP.XboxRainDroplets")
    writemakefile_psp("PPSSPP.XboxRainDroplets")
 project "PCSX2F.XboxRainDroplets"
    kind "Makefile"
    includedirs { "external/ps2sdk/ps2sdk/ee" }
    files { "source/%{prj.name}/*.h" }
-   files { "source/%{prj.name}/*.c" }
+   files { "source/%{prj.name}/*.c", "source/%{prj.name}/makefile" }
    targetextension ".elf"
-   setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin/", "pcsx2x64.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "PCSX2F.XboxRainDroplets")
+   setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin", "pcsx2x64.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "PCSX2F.XboxRainDroplets")
    writemakefile_ps2("PCSX2F.XboxRainDroplets", "PLUGINS/", "0x03F00000", "-l:libc.a", "../../includes/pcsx2/memalloc.o",
    "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o","../../includes/pcsx2/inireader.o",
    "../../includes/pcsx2/mips.o")
@@ -513,9 +532,9 @@ project "SplinterCellDoubleAgent.PCSX2F.WidescreenFix"
    kind "Makefile"
    includedirs { "external/ps2sdk/ps2sdk/ee" }
    files { "source/%{prj.name}/*.h" }
-   files { "source/%{prj.name}/*.c" }
+   files { "source/%{prj.name}/*.c", "source/%{prj.name}/makefile" }
    targetextension ".elf"
-   setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin/", "pcsx2x64.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "SplinterCellDoubleAgent.PCSX2F.WidescreenFix")
+   setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin", "pcsx2x64.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SplinterCellDoubleAgent.PCSX2F.WidescreenFix")
    writemakefile_ps2("SplinterCellDoubleAgent.PCSX2F.WidescreenFix", "PLUGINS/", "0x02100000", "-l:libc.a -l:libm.a -l:libgcc.a", "../../includes/pcsx2/log.o",
    "../../includes/pcsx2/memalloc.o", "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o",
    "../../includes/pcsx2/inireader.o", "../../includes/pcsx2/mips.o")
@@ -528,12 +547,12 @@ project "SplinterCellPandoraTomorrow.WidescreenFix"
    setpaths("Z:/WFP/Games/Splinter Cell/Splinter Cell Pandora Tomorrow/", "offline/system/SplinterCell2.exe", "offline/system/scripts/")
 project "SplinterCellEssentials.PPSSPP.FusionMod"
    kind "Makefile"
-   includedirs { "external/pspsdk/psp/sdk/include" }
-   includedirs { "external/pspsdk/bin" }
-   includedirs { "external/pspsdk/psp/sdk/include" }
-   files { "source/%{prj.name}/*.c" }
+   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
+   includedirs { "external/pspsdk/usr/local/pspdev/bin" }
+   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
+   files { "source/%{prj.name}/*.c", "source/%{prj.name}/makefile" }
    targetextension ".prx"
-   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.FusionMod/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "SplinterCellEssentials.PPSSPP.FusionMod")
+   setbuildpaths_psp("Z:/WFP/Games/PPSSPP", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.FusionMod/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SplinterCellEssentials.PPSSPP.FusionMod")
    writemakefile_psp("SplinterCellEssentials.PPSSPP.FusionMod")
 project "StreetRacingSyndicate.WidescreenFix"
    setpaths("Z:/WFP/Games/Street Racing Syndicate/", "Bin/srs.exe", "Bin/scripts/")
@@ -549,12 +568,12 @@ project "TheSuffering.WidescreenFix"
    setpaths("Z:/WFP/Games/The Suffering/The Suffering/", "suffering.exe")
 project "TheWarriors.PPSSPP.FusionMod"
    kind "Makefile"
-   includedirs { "external/pspsdk/psp/sdk/include" }
-   includedirs { "external/pspsdk/bin" }
-   includedirs { "external/pspsdk/psp/sdk/include" }
-   files { "source/%{prj.name}/*.c" }
+   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
+   includedirs { "external/pspsdk/usr/local/pspdev/bin" }
+   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
+   files { "source/%{prj.name}/*.c", "source/%{prj.name}/makefile" }
    targetextension ".prx"
-   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/TheWarriors.PPSSPP.FusionMod/", "%{wks.location}/../external/pspsdk/bin/vsmake", "%{wks.location}/../source/%{prj.name}/", "TheWarriors.PPSSPP.FusionMod")
+   setbuildpaths_psp("Z:/WFP/Games/PPSSPP", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/TheWarriors.PPSSPP.FusionMod/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "TheWarriors.PPSSPP.FusionMod")
    writemakefile_psp("TheWarriors.PPSSPP.FusionMod")
 project "TonyHawksAmericanWasteland.WidescreenFix"
    setpaths("Z:/WFP/Games/Tony Hawks/Tony Hawk's American Wasteland/", "Game/THAW.exe", "Game/scripts/")
