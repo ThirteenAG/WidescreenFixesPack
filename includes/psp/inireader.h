@@ -1,6 +1,5 @@
-#pragma once
 #include "rini.h"
-#include <psptypes.h>
+#include <pspuser.h>
 #include <stdlib.h>
 
 int str2int(char* s, int base);
