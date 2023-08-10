@@ -1313,6 +1313,13 @@ void Init()
         injector::MakeNOP(pattern.get_first(0), 6, true);
         injector::MakeCALL(pattern.get_first(0), static_cast<void(WINAPI*)(HWND, int, LONG)>(SetWindowLongHook), true);
     }
+
+    // Disable the best lap time counter at the end of the race for better ultrawide support
+    // (this element is not visible during 16:9 play)
+    auto loc_49A222 = hook::pattern("8A 44 24 24 8B 6C 24 68 8B 7D 0C 83 CE FF 84 C0 8D 4C 24 24 74 ? 6B F6 21");
+    pattern = hook::pattern("0F 84 B8 00 00 00 8D 4C 24 44");
+    injector::MakeNOP(pattern.get_first(0), 6, true);
+    injector::MakeJMP(pattern.get_first(0), loc_49A222.get_first(0), true);
 }
 
 CEXP void InitializeASI()
