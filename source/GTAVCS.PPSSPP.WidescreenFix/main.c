@@ -763,10 +763,12 @@ int OnModuleStart() {
         injector.MakeNOP(ptr + 0x9C);
 
         // Force L trigger value in the L+camera movement function
-        ptr = pattern.get_first("0A 00 C7 84", 0);
-        injector.WriteInstr(ptr + 0x00,
-            li(a3, -0x1)
-        );
+        //ptr = pattern.get_first("0A 00 C7 84", 0);
+        //injector.WriteInstr(ptr + 0x00,
+        //    li(a3, -0x1)
+        //);
+        ptr = pattern.get(0, "02 00 04 34 25 30 80 00", -4);
+        injector.MakeNOP(ptr + 0x00);
     }
 
     if (ModernControlScheme)
