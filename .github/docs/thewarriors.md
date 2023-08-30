@@ -13,3 +13,5 @@
 ![PPSSPPWindows64_2022_12_23_16_04_26](https://user-images.githubusercontent.com/4904157/209387701-75952568-fcdf-4a3c-876d-46c8cb38d645.png)
 
 [Website](http://thirteenag.github.io/wfp#thewarriors) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/TheWarriors.PPSSPP.FusionMod/main.c) | [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/TheWarriors.PPSSPP.FusionMod/memstick/PSP/PLUGINS/TheWarriors.PPSSPP.FusionMod/TheWarriors.PPSSPP.FusionMod.ini)
+
+<a href="https://ko-fi.com/thirteenag"><img src="https://github.com/ThirteenAG/thirteenag.github.io/raw/master/img/buttons/kofi.svg" height="40"></a> <a href="https://paypal.me/SergeyP13"><img src="https://github.com/ThirteenAG/thirteenag.github.io/raw/master/img/buttons/paypal.svg" height="40"></a> <a href="https://www.patreon.com/ThirteenAG"><img src="https://github.com/ThirteenAG/thirteenag.github.io/raw/master/img/buttons/patreon.svg" height="40"></a> <a href="https://boosty.to/thirteenag/donate"><img src="https://github.com/ThirteenAG/thirteenag.github.io/raw/master/img/buttons/boosty.svg" height="40"></a>

@@ -18,3 +18,5 @@ Installation:
 2. Download and unpack [Scarface.FusionFix.zip](https://github.com/ThirteenAG/WidescreenFixesPack/releases/download/scarface/Scarface.FusionFix.zip) to game's root folder.
 
 [Website](http://thirteenag.github.io/wfp#scarface) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/Scarface.FusionFix/dllmain.cpp) | [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/Scarface.FusionFix/scripts/Scarface.FusionFix.ini)
+
+<a href="https://ko-fi.com/thirteenag"><img src="https://github.com/ThirteenAG/thirteenag.github.io/raw/master/img/buttons/kofi.svg" height="40"></a> <a href="https://paypal.me/SergeyP13"><img src="https://github.com/ThirteenAG/thirteenag.github.io/raw/master/img/buttons/paypal.svg" height="40"></a> <a href="https://www.patreon.com/ThirteenAG"><img src="https://github.com/ThirteenAG/thirteenag.github.io/raw/master/img/buttons/patreon.svg" height="40"></a> <a href="https://boosty.to/thirteenag/donate"><img src="https://github.com/ThirteenAG/thirteenag.github.io/raw/master/img/buttons/boosty.svg" height="40"></a>

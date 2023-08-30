@@ -13,3 +13,5 @@
 https://user-images.githubusercontent.com/4904157/192846910-6ddfb3fb-3089-4553-ba94-b8d031855fc7.mp4
 
 [Website](http://thirteenag.github.io/wfp#scc) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/SplinterCellConviction.FusionMod/dllmain.cpp) | [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/SplinterCellConviction.FusionMod/src/system/scripts/SplinterCellConviction.FusionMod.ini)
+
+<a href="https://ko-fi.com/thirteenag"><img src="https://github.com/ThirteenAG/thirteenag.github.io/raw/master/img/buttons/kofi.svg" height="40"></a> <a href="https://paypal.me/SergeyP13"><img src="https://github.com/ThirteenAG/thirteenag.github.io/raw/master/img/buttons/paypal.svg" height="40"></a> <a href="https://www.patreon.com/ThirteenAG"><img src="https://github.com/ThirteenAG/thirteenag.github.io/raw/master/img/buttons/patreon.svg" height="40"></a> <a href="https://boosty.to/thirteenag/donate"><img src="https://github.com/ThirteenAG/thirteenag.github.io/raw/master/img/buttons/boosty.svg" height="40"></a>
