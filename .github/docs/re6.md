@@ -14,6 +14,8 @@
 
 [Website](http://thirteenag.github.io/wfp#re6) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/ResidentEvil6.FusionFix/dllmain.cpp) | [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/ResidentEvil6.FusionFix/scripts/ResidentEvil6.FusionFix.ini)
 
+<a href="https://ko-fi.com/thirteenag"><img src="https://github.com/ThirteenAG/thirteenag.github.io/raw/master/img/buttons/kofi.svg" height="40"></a> <a href="https://paypal.me/SergeyP13"><img src="https://github.com/ThirteenAG/thirteenag.github.io/raw/master/img/buttons/paypal.svg" height="40"></a> <a href="https://www.patreon.com/ThirteenAG"><img src="https://github.com/ThirteenAG/thirteenag.github.io/raw/master/img/buttons/patreon.svg" height="40"></a> <a href="https://boosty.to/thirteenag/donate"><img src="https://github.com/ThirteenAG/thirteenag.github.io/raw/master/img/buttons/boosty.svg" height="40"></a>
+
 ![](https://github.com/ThirteenAG/WidescreenFixesPack/assets/4904157/47f7d7ba-adc8-45c1-a601-b80e3d7b9c42)
 
 ![](https://github.com/ThirteenAG/WidescreenFixesPack/assets/4904157/31c645bd-a501-4efc-960b-0dfa216d2007)

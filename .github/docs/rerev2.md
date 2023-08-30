@@ -26,6 +26,8 @@
 
 [Website](http://thirteenag.github.io/wfp#rerev2) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/ResidentEvilRevelations2.FusionFix/dllmain.cpp) | [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/ResidentEvilRevelations2.FusionFix/scripts/ResidentEvilRevelations2.FusionFix.ini)
 
+<a href="https://ko-fi.com/thirteenag"><img src="https://github.com/ThirteenAG/thirteenag.github.io/raw/master/img/buttons/kofi.svg" height="40"></a> <a href="https://paypal.me/SergeyP13"><img src="https://github.com/ThirteenAG/thirteenag.github.io/raw/master/img/buttons/paypal.svg" height="40"></a> <a href="https://www.patreon.com/ThirteenAG"><img src="https://github.com/ThirteenAG/thirteenag.github.io/raw/master/img/buttons/patreon.svg" height="40"></a> <a href="https://boosty.to/thirteenag/donate"><img src="https://github.com/ThirteenAG/thirteenag.github.io/raw/master/img/buttons/boosty.svg" height="40"></a>
+
 ![](https://github.com/ThirteenAG/WidescreenFixesPack/assets/4904157/9b21870b-06f2-4deb-bf41-53b38a87c336)
 
 ![](https://github.com/ThirteenAG/WidescreenFixesPack/assets/4904157/8b852cab-627e-4712-88fd-a112132555d7)

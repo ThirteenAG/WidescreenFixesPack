@@ -15,3 +15,5 @@
 ![PPSSPPWindows64_2022_12_22_21_55_46](https://user-images.githubusercontent.com/4904157/209209073-9fd0d3f6-70a9-4991-83ae-390ceb696960.png)
 
 [Website](http://thirteenag.github.io/wfp#sce) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/SplinterCellEssentials.PPSSPP.FusionMod/main.c) | [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/SplinterCellEssentials.PPSSPP.FusionMod/memstick/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.FusionMod/SplinterCellEssentials.PPSSPP.FusionMod.ini)
+
+<a href="https://ko-fi.com/thirteenag"><img src="https://github.com/ThirteenAG/thirteenag.github.io/raw/master/img/buttons/kofi.svg" height="40"></a> <a href="https://paypal.me/SergeyP13"><img src="https://github.com/ThirteenAG/thirteenag.github.io/raw/master/img/buttons/paypal.svg" height="40"></a> <a href="https://www.patreon.com/ThirteenAG"><img src="https://github.com/ThirteenAG/thirteenag.github.io/raw/master/img/buttons/patreon.svg" height="40"></a> <a href="https://boosty.to/thirteenag/donate"><img src="https://github.com/ThirteenAG/thirteenag.github.io/raw/master/img/buttons/boosty.svg" height="40"></a>
