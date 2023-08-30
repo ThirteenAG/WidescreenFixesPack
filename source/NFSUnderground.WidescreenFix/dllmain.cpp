@@ -457,6 +457,7 @@ void Init()
 
     static int nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
+    bool bForceHighAudioRate = iniReader.ReadInteger("MISC", "ForceHighAudioRate", 1);
     static int nFPSLimit = iniReader.ReadInteger("MISC", "FPSLimit", -1);
     int nHideDebugObjects = iniReader.ReadInteger("MISC", "HideDebugObjects", 0);
     bool bBlackMagazineFix = iniReader.ReadInteger("MISC", "BlackMagazineFix", 0) != 0;
@@ -1106,6 +1107,16 @@ void Init()
                 }
             }
         }; injector::MakeInline<DeadzoneHook>(pattern.get_first(-2), pattern.get_first(4));
+    }
+
+    if (bForceHighAudioRate)
+    {
+        constexpr uint32_t NewSamplingRate = 44100;
+        pattern = hook::pattern("C7 05 ? ? ? ? 22 56 00 00");
+        uint32_t* SamplingRateAddress = pattern.count(2).get(0).get<uint32_t>(6);
+        injector::WriteMemory(SamplingRateAddress, &NewSamplingRate, true);
+        SamplingRateAddress = pattern.count(2).get(1).get<uint32_t>(6);
+        injector::WriteMemory(SamplingRateAddress, &NewSamplingRate, true);
     }
 
     if (nHideDebugObjects)
