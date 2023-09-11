@@ -97,7 +97,7 @@ workspace "WidescreenFixesPack"
         "if !errorlevel! neq 0 exit /b !errorlevel!\r\n" ..
         "if not defined _PPSSPPMemstick goto :eof\r\n" ..
         "if not exist !_PPSSPPMemstick! goto :eof\r\n" ..
-        "if not exist !_PPSSPPMemstick!/PLUGINS/$(ProjectName) mkdir !_PPSSPPMemstick!/PLUGINS/$(ProjectName)\r\n" ..
+        "if not exist !_PPSSPPMemstick!/PLUGINS/ mkdir !_PPSSPPMemstick!/PLUGINS/\r\n" ..
         "set target=!_PPSSPPMemstick!/PLUGINS/$(ProjectName)\r\n" ..
         "copy /y $(NMakeOutput) \"!target!\"\r\n"
         }
@@ -147,7 +147,7 @@ workspace "WidescreenFixesPack"
         "if not defined _PCSX2FDir goto :eof\r\n" ..
         "if not exist !_PCSX2FDir! goto :eof\r\n" ..
         "if not exist !_PCSX2FDir!/PLUGINS mkdir !_PCSX2FDir!/PLUGINS\r\n" ..
-        "set target=!_PCSX2FDir!/PLUGINS\r\n" ..
+        "set target=!_PCSX2FDir!/PLUGINS/\r\n" ..
         "copy /y $(NMakeOutput) \"!target!\"\r\n"
         }
         rebuildcommands {
@@ -157,7 +157,7 @@ workspace "WidescreenFixesPack"
         "if not defined _PCSX2FDir goto :eof\r\n" ..
         "if not exist !_PCSX2FDir! goto :eof\r\n" ..
         "if not exist !_PCSX2FDir!/PLUGINS mkdir !_PCSX2FDir!/PLUGINS\r\n" ..
-        "set target=!_PCSX2FDir!/PLUGINS\r\n" ..
+        "set target=!_PCSX2FDir!/PLUGINS/\r\n" ..
         "copy /y $(NMakeOutput) \"!target!\"\r\n"
         }
         cleancommands {
@@ -173,7 +173,7 @@ workspace "WidescreenFixesPack"
             debugdir (gamepath .. (dir or ""))
          end
       end
-      targetdir ("data/" .. scriptspath)
+      targetdir ("data/%{prj.name}/" .. scriptspath)
    end
    
    function add_asmjit()
