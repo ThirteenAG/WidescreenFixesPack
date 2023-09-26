@@ -16,7 +16,7 @@ jobs:
 
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: Build Solution
       uses: ./.github/workflows/build_all
     - name: Update Tags
