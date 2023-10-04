@@ -25,6 +25,7 @@ https://thirteenag.github.io/wfp
 
 Plugins to make or improve widescreen resolutions support in PC games, add more features and fix bugs.
 
+<a href="https://github.com/sponsors/ThirteenAG"><img src="https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86" height="40"></a> <br>
 <a href="https://ko-fi.com/thirteenag"><img src="https://github.com/ThirteenAG/thirteenag.github.io/raw/master/img/buttons/kofi.svg" height="40"></a> <a href="https://paypal.me/SergeyP13"><img src="https://github.com/ThirteenAG/thirteenag.github.io/raw/master/img/buttons/paypal.svg" height="40"></a> <a href="https://www.patreon.com/ThirteenAG"><img src="https://github.com/ThirteenAG/thirteenag.github.io/raw/master/img/buttons/patreon.svg" height="40"></a> <a href="https://boosty.to/thirteenag/donate"><img src="https://github.com/ThirteenAG/thirteenag.github.io/raw/master/img/buttons/boosty.svg" height="40"></a>
 
 </div>

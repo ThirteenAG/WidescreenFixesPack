@@ -35,6 +35,9 @@ workspace "WidescreenFixesPack"
    includedirs { "external/filewatch" }
    includedirs { "external/modutils" }
    
+   includedirs { "includes/LED" }
+   libdirs { "includes/LED" }
+   
    local dxsdk = os.getenv "DXSDK_DIR"
    if dxsdk then
       includedirs { dxsdk .. "/include" }
