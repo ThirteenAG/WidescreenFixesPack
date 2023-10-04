@@ -337,3 +337,5 @@ __pycache__/
 # !tools/packages.config
 
 !source/*PPSSPP.*/**/*.exp
+!includes/LED/LogitechLEDLib_x64.lib
+!includes/LED/LogitechLEDLib_x86.lib
