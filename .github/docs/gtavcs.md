@@ -1,4 +1,4 @@
-![gtavcs](http://thirteenag.github.io/screens/gtavcs/main2.jpg)
+![gtavcs](https://thirteenag.github.io/screens/gtavcs/main2.jpg)
 
 ![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Aspect Ratio (Ultra-Wide)
 
@@ -18,7 +18,7 @@
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Plugin automatically skips intro
 
-[Website](http://thirteenag.github.io/wfp#gtavcs) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/GTAVCS.PCSX2F.WidescreenFix/main.c)
+[Website](https://thirteenag.github.io/wfp#gtavcs) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/GTAVCS.PCSX2F.WidescreenFix/main.c)
 
 ## Useful information
 
