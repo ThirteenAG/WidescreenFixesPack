@@ -198,11 +198,11 @@ void Init()
                             if (health > 1)
                             {
                                 if (health == 2)
-                                    LogiLedSetLighting(52, 8, 8); //red
+                                    LogiLedSetLighting(26, 4, 4); //red
                                 else if (health <= 250)
-                                    LogiLedSetLighting(100, 51, 5); //orange
+                                    LogiLedSetLighting(25, 15, 2); //orange
                                 else
-                                    LogiLedSetLighting(20, 60, 10);  //green
+                                    LogiLedSetLighting(5, 15, 2);  //green
 
                                 for (auto& key : keys)
                                 {

@@ -1,4 +1,4 @@
-![sonicheroes](http://thirteenag.github.io/screens/sonicheroes/main2.jpg)
+![sonicheroes](https://thirteenag.github.io/screens/sonicheroes/main2.jpg)
 
 ![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Resolution
 
@@ -8,6 +8,6 @@
 
 ![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Field of View
 
-[Website](http://thirteenag.github.io/wfp#sonicheroes) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/SonicHeroes.WidescreenFix/dllmain.cpp) | [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/SonicHeroes.WidescreenFix/scripts/SonicHeroes.WidescreenFix.ini)
+[Website](https://thirteenag.github.io/wfp#sonicheroes) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/SonicHeroes.WidescreenFix/dllmain.cpp) | [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/SonicHeroes.WidescreenFix/scripts/SonicHeroes.WidescreenFix.ini)
 
-<a href="https://ko-fi.com/thirteenag"><img src="https://github.com/ThirteenAG/thirteenag.github.io/raw/master/img/buttons/kofi.svg" height="40"></a> <a href="https://paypal.me/SergeyP13"><img src="https://github.com/ThirteenAG/thirteenag.github.io/raw/master/img/buttons/paypal.svg" height="40"></a> <a href="https://www.patreon.com/ThirteenAG"><img src="https://github.com/ThirteenAG/thirteenag.github.io/raw/master/img/buttons/patreon.svg" height="40"></a> <a href="https://boosty.to/thirteenag/donate"><img src="https://github.com/ThirteenAG/thirteenag.github.io/raw/master/img/buttons/boosty.svg" height="40"></a>
+<a href="https://github.com/sponsors/xan1242"><img src="https://img.shields.io/badge/Sponsor_xan1242_on_GitHub-5c5c5c?style=for-the-badge&logo=github&logoColor=white" height="40"></a><br>

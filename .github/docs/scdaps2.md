@@ -1,4 +1,4 @@
-![scdaps2](http://thirteenag.github.io/screens/scdaps2/main2.jpg)
+![scdaps2](https://thirteenag.github.io/screens/scdaps2/main2.jpg)
 
 ![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Aspect Ratio
 
@@ -8,7 +8,7 @@
 
 ![](https://habrastorage.org/webt/31/qm/gv/31qmgv6q0kj8zie1itat5ygfsuq.png) Fixed FMVs
 
-[Website](http://thirteenag.github.io/wfp#scdaps2) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/SplinterCellDoubleAgent.PCSX2F.WidescreenFix/main.c)
+[Website](https://thirteenag.github.io/wfp#scdaps2) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/SplinterCellDoubleAgent.PCSX2F.WidescreenFix/main.c)
 
 ## Useful information
 
