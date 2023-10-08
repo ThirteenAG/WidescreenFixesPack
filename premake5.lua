@@ -508,8 +508,13 @@ project "ResidentEvilRevelations.FusionFix"
    setpaths("Z:/WFP/Games/ResidentEvilRevelations/", "rerev.exe", "scripts/")
 project "ResidentEvilRevelations2.FusionFix"
    setpaths("Z:/WFP/Games/ResidentEvilRevelations2/", "rerev2.exe", "scripts/")
---project "ResidentEvil5.FusionFix"
---   setpaths("Z:/WFP/Games/ResidentEvil5/", "re5dx9.exe", "scripts/")
+project "ResidentEvil4.FusionMod"
+   platforms { "Win64" }
+   architecture "x64"
+   add_asmjit()
+   setpaths("Z:/WFP/Games/ResidentEvil4/", "re4.exe", "scripts/")
+project "ResidentEvil5.FusionFix"
+   setpaths("Z:/WFP/Games/ResidentEvil5/", "re5dx9.exe", "scripts/")
 project "ResidentEvil6.FusionFix"
    setpaths("Z:/WFP/Games/ResidentEvil6/", "BH6.exe", "scripts/")
 project "Scarface.FusionFix"
