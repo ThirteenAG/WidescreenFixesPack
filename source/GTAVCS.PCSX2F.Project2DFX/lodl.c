@@ -4085,14 +4085,14 @@ void RegisterLODLights()
                     if (aLodLights[i].nNoDistance)
                         fRadius = 3.5f;
                     else
-                        fRadius = SolveEqSys(min_radius_distance, min_radius_value, max_radius_distance, max_radius_value, Q_rsqrt(fDistSqr));
+                        fRadius = SolveEqSys(min_radius_distance, min_radius_value, max_radius_distance, max_radius_value, 1.0f / Q_rsqrt(fDistSqr));
 
                     if (fRadius > 3.5f)
                         fRadius = 3.5f;
 
                     void* pos = &aLodLights[i];
                     unsigned char alpha = (bAlpha * (aLodLights[i].a / 255.0f));
-                    float radius = (fRadius * aLodLights[i].fCustomSizeMult * fCoronaRadiusMultiplier * 1.5f);
+                    float radius = (fRadius * aLodLights[i].fCustomSizeMult * fCoronaRadiusMultiplier);
 
                     if (!IsSphereVisible(radius * 1.2f, (CVector*)pos))
                         continue;
