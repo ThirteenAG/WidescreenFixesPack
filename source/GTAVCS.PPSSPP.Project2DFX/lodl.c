@@ -1,8 +1,5 @@
 #include ".\lodl.h"
 
-#define MIN(a,b) (((a)<(b))?(a):(b))
-#define MAX(a,b) (((a)>(b))?(a):(b))
-
 float SolveEqSys(float a, float b, float c, float d, float value)
 {
     float determinant = a - c;

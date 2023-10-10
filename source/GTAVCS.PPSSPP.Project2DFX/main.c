@@ -25,18 +25,156 @@
 PSP_MODULE_INFO(MODULE_NAME, PSP_MODULE_USER, 1, 0);
 #endif
 
+#ifndef __INTELLISENSE__
+#define align16 __attribute__((aligned(16)))
+#else
+#define align16
+#endif
+
+// https://github.com/AndroidModLoader/GTA_StarrySkies/blob/main/main.cpp
+#define AMOUNT_OF_STARS 100
+#define STAR_SKYBOX_SIDES 5
+float StarCoorsX[STAR_SKYBOX_SIDES][AMOUNT_OF_STARS], StarCoorsY[STAR_SKYBOX_SIDES][AMOUNT_OF_STARS], StarSizes[STAR_SKYBOX_SIDES][AMOUNT_OF_STARS];
+float fSmallStars, fMiddleStars, fBiggestStars, fBiggestStarsSpawnChance;
+CVector PositionsTable[5] =
+{
+    { 100.0f,  0.0f,   10.0f}, // Left
+    {-100.0f,  0.0f,   10.0f}, // Right
+    {   0.0f,  100.0f, 10.0f}, // Front
+    {   0.0f, -100.0f, 10.0f}, // Back
+    {   0.0f,  0.0f,   95.0f}, // Up
+};
+
+float clampf(float f, float min, float max)
+{
+    if (f > max) return max;
+    if (f < min) return min;
+    return f;
+}
+
+int (*base__Random)();
+float randf(float min, float max)
+{
+    return (((float)base__Random()) / (float)RAND_MAX) * (max - min) + min;
+}
+
+int16_t CWeather__Foggyness;
+int16_t CWeather__CloudCoverage;
+void (*CSprite__FlushSpriteBuffer)();
+int (*CSprite__CalcScreenCoors)(CVector* in, CVector* out, float* outW, float* outH, uint8_t farClip);
+void (*CSprite__RenderBufferedOneXLUSprite)();
+void CSprite__FlushSpriteBufferHook()
+{
+    CSprite__FlushSpriteBuffer();
+
+    CVector align16 ScreenPos, WorldPos, WorldStarPos;
+    volatile float align16 SZ;
+    volatile float align16 SZX;
+    volatile float align16 SZY;
+
+    for (int side = 0; side < STAR_SKYBOX_SIDES; ++side)
+    {
+        WorldPos.x = PositionsTable[side].x + GetCamPos()->x;
+        WorldPos.y = PositionsTable[side].y + GetCamPos()->y;
+        WorldPos.z = PositionsTable[side].z + GetCamPos()->z;
+        for (int i = 0; i < AMOUNT_OF_STARS; ++i)
+        {
+            WorldStarPos = WorldPos;
+            SZ = StarSizes[side][i];
+            switch (side)
+            {
+            case 0:
+            case 1:
+                WorldStarPos.y -= StarCoorsX[side][i];
+                WorldStarPos.z += StarCoorsY[side][i];
+                break;
+
+            case 2:
+            case 3:
+                WorldStarPos.x -= StarCoorsX[side][i];
+                WorldStarPos.z += StarCoorsY[side][i];
+                break;
+
+            default:
+                WorldStarPos.x += StarCoorsX[side][i];
+                WorldStarPos.y += StarCoorsY[side][i];
+                break;
+            }
+
+            if (CSprite__CalcScreenCoors(&WorldStarPos, &ScreenPos, &SZX, &SZY, true))
+            {
+                int starintens = 0;
+                if (CurrentTimeHours() < 22 && CurrentTimeHours() > 5)
+                    starintens = 0;
+                else if (CurrentTimeHours() > 22 || CurrentTimeHours() < 5)
+                    starintens = 255;
+                else if (CurrentTimeHours() == 22)
+                    starintens = 255 * CurrentTimeMinutes() / 60.0f;
+                else if (CurrentTimeHours() == 5)
+                    starintens = 255 * (60 - CurrentTimeMinutes()) / 60.0f;
+                if (starintens != 0) {
+                    float coverage = MAX(*(float*)((uintptr_t)injector.GetGP() + CWeather__Foggyness), *(float*)((uintptr_t)injector.GetGP() + CWeather__CloudCoverage));
+                    int brightness = (1.0f - coverage) * starintens;
+
+                    brightness = 255;
+
+                    int a0 = brightness;
+                    int a1 = brightness;
+                    int a2 = brightness;
+                    int a3 = 255;
+                    int a4 = 255;
+                    float f12 = ScreenPos.x;
+                    float f13 = ScreenPos.y;
+                    float f14 = ScreenPos.z;
+                    float f15 = SZX * SZ;
+                    float f16 = SZY * SZ;
+                    float f17 = 1.0f / ScreenPos.z;
+
+                    asm volatile ("lw $v0,  %[x]" ::[x] "m" (a0));
+                    asm volatile ("move $a0, $v0");
+                    asm volatile ("lw $v0,  %[x]" ::[x] "m" (a1));
+                    asm volatile ("move $a1, $v0");
+                    asm volatile ("lw $v0,  %[x]" ::[x] "m" (a2));
+                    asm volatile ("move $a2, $v0");
+                    asm volatile ("lw $v0,  %[x]" ::[x] "m" (a3));
+                    asm volatile ("move $a3, $v0");
+                    asm volatile ("lw $v0,  %[x]" ::[x] "m" (a4));
+                    asm volatile ("move $t0, $v0");
+
+                    asm volatile ("lw $v0,  %[x]" ::[x] "m" (f12));
+                    asm volatile ("mtc1 $v0, $f12");
+                    asm volatile ("lw $v0,  %[x]" ::[x] "m" (f13));
+                    asm volatile ("mtc1 $v0, $f13");
+                    asm volatile ("lw $v0,  %[x]" ::[x] "m" (f14));
+                    asm volatile ("mtc1 $v0, $f14");
+                    asm volatile ("lw $v0,  %[x]" ::[x] "m" (f15));
+                    asm volatile ("mtc1 $v0, $f15");
+                    asm volatile ("lw $v0,  %[x]" ::[x] "m" (f16));
+                    asm volatile ("mtc1 $v0, $f16");
+                    asm volatile ("lw $v0,  %[x]" ::[x] "m" (f17));
+                    asm volatile ("mtc1 $v0, $f17");
+                    asm volatile ("lw $v0,  %[x]" ::[x] "m" (CSprite__RenderBufferedOneXLUSprite));
+                    asm volatile ("jalr $v0");
+                }
+            }
+        }
+    }
+}
+
 uintptr_t GetAbsoluteAddress(uintptr_t at, int32_t offs_hi, int32_t offs_lo)
 {
     return (uintptr_t)((uint32_t)(*(uint16_t*)(at + offs_hi)) << 16) + *(int16_t*)(at + offs_lo);
 }
 
 int OnModuleStart() {
-    sceKernelDelayThread(100000);
+    sceKernelDelayThread(250000);
 
     int RenderLodLights = inireader.ReadInteger("PROJECT2DFX", "RenderLodLights", 1);
     int CoronaLimit = inireader.ReadInteger("PROJECT2DFX", "CoronaLimit", 1000);
     fCoronaRadiusMultiplier = inireader.ReadFloat("PROJECT2DFX", "CoronaRadiusMultiplier", 1.0f);
     fCoronaFarClip = inireader.ReadFloat("PROJECT2DFX", "CoronaFarClip", 1000.0f);
+
+    int SkyGfx = inireader.ReadInteger("PROJECT2DFX", "SkyGfx", 0);
 
     uintptr_t ptr_3CF00 = pattern.get(0, "25 20 20 02 30 00 64 26 00 00 80 D8 00 00 41 D8", -16);
     TheCamera = (uintptr_t)((uint32_t)(*(uint16_t*)(ptr_3CF00 + 0)) << 16) + *(int16_t*)(ptr_3CF00 + 4);
@@ -112,6 +250,46 @@ int OnModuleStart() {
         // Heli Height Limit
         injector.MakeInlineLUIORI(ptr_2FDD50, 800.0f);
         injector.MakeInlineLUIORI(ptr_2FDDA0, 800.0f);
+    }
+
+    if (SkyGfx)
+    {
+        fSmallStars = clampf(inireader.ReadFloat("STARS", "SmallestStarsSize", 0.15f), 0.03f, 2.5f);
+        fMiddleStars = clampf(inireader.ReadFloat("STARS", "MiddleStarsSize", 0.6f), 0.03f, 2.5f);
+        fBiggestStars = clampf(inireader.ReadFloat("STARS", "BiggestStarsSize", 1.2f), 0.03f, 2.5f);
+        fBiggestStarsSpawnChance = 1.0f - 0.01f * clampf(inireader.ReadFloat("STARS", "BiggestStarsChance", 20), 0.0f, 100.0f);
+
+        CWeather__CloudCoverage = *(int16_t*)pattern.get(0, "00 60 84 44 3C 70 0F 46", -4);
+        CWeather__Foggyness = *(int16_t*)pattern.get(0, "23 20 A4 00 ? ? ? ? 00 60 84 44", -4);
+
+        uintptr_t ptr_8B20938 = pattern.get(0, "02 00 05 3C ? ? ? ? 1A 00 85 00", -4);
+        base__Random = (int(*)())ptr_8B20938;
+
+        uintptr_t ptr_8AA8BDC = pattern.get(0, "00 00 B0 AF 04 00 B1 AF 08 00 BF AF ? ? ? ? 00 00 00 00 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 04 00 04 34", -8);
+        CSprite__FlushSpriteBuffer = (void(*)())ptr_8AA8BDC;
+        uintptr_t ptr_8AA82D8 = pattern.get(0, "10 00 B4 E7 14 00 B6 E7 18 00 B0 AF 1C 00 B1 AF 20 00 B2 AF 24 00 B3 AF 28 00 BF AF", -4);
+        CSprite__CalcScreenCoors = (int(*)(CVector*, CVector*, float*, float*, uint8_t))ptr_8AA82D8;
+        uintptr_t ptr_8AA9B24 = pattern.get(0, "4C 00 B1 AF FF 00 B1 30", -4);
+        CSprite__RenderBufferedOneXLUSprite = (void(*)())ptr_8AA9B24;
+
+        for (int side = 0; side < STAR_SKYBOX_SIDES; ++side)
+        {
+            for (int i = 0; i < AMOUNT_OF_STARS; ++i)
+            {
+                StarCoorsX[side][i] = 95.0f * randf(-1.0f, 1.0f);
+
+                // Side=4 is when rendering stars directly ABOVE us
+                if (side == 4) StarCoorsY[side][i] = 95.0f * randf(-1.0f, 1.0f);
+                else StarCoorsY[side][i] = 95.0f * randf(-0.35f, 1.0f);
+
+                // Smaller chances for a bigger star (this is more life-like)
+                if (randf(0.0f, 1.0f) > fBiggestStarsSpawnChance) StarSizes[side][i] = 0.8f * randf(fSmallStars, fBiggestStars);
+                else StarSizes[side][i] = 0.8f * randf(fSmallStars, fMiddleStars);
+            }
+        }
+        
+        uintptr_t ptr_888D604 = pattern.get(0, "00 F0 84 44 ? ? ? ? 01 00 04 34", -4);
+        injector.MakeJAL(ptr_888D604, (uintptr_t)CSprite__FlushSpriteBufferHook);
     }
 
     sceKernelDcacheWritebackAll();
