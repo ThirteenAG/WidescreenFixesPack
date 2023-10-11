@@ -202,8 +202,6 @@ void init()
         uintptr_t ptr_408058 = pattern.get(0, "49 00 08 3C 01 00 03 3C", -0);
         base__Random = (int(*)())ptr_408058;
 
-        uintptr_t ptr_39FDE8 = pattern.get(0, "49 00 02 3C ? ? ? ? ? ? ? ? 00 00 B0 FF ? ? ? ? 08 00 BF FF 52 00 04 3C", -0);
-        CSprite__FlushSpriteBuffer = (void(*)())ptr_39FDE8;
         uintptr_t ptr_39FC48 = pattern.get(0, "70 00 02 3C 10 00 B0 FF", -4);
         CSprite__CalcScreenCoors = (int(*)(CVector*, CVector*, float*, float*, uint8_t))ptr_39FC48;
         uintptr_t ptr_39FF48 = pattern.get(0, "80 68 10 46 ? ? ? ? 40 60 0F 46 80 3F 01 3C 00 00 81 44 01 63 0F 46 20 00 A0 AF 41 6B 10 46 68 00 B5 FF", -0);
@@ -226,7 +224,7 @@ void init()
         }
 
         uintptr_t ptr_18D450 = pattern.get(0, "00 00 00 00 48 00 03 3C 01 00 04 24 ? ? ? ? ? ? ? ? 00 00 45 8C", -4);
-        injector.MakeJAL(ptr_18D450, (uintptr_t)CSprite__FlushSpriteBufferHook);
+        CSprite__FlushSpriteBuffer = (void(*)())injector.MakeJAL(ptr_18D450, (uintptr_t)CSprite__FlushSpriteBufferHook);
     }
 }
 
