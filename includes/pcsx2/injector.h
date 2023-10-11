@@ -29,10 +29,10 @@ struct injector_t {
     uint64_t(*ReadMemory64)(uintptr_t addr);
     float (*ReadMemoryFloat)(uintptr_t addr);
     double (*ReadMemoryDouble)(uintptr_t addr);
-    void (*MakeJMP)(uintptr_t at, uintptr_t dest);
-    void (*MakeJMPwNOP)(uintptr_t at, uintptr_t dest);
-    void (*MakeJAL)(uintptr_t at, uintptr_t dest);
-    void (*MakeCALL)(uintptr_t at, uintptr_t dest);
+    uintptr_t (*GetBranchDestination)(uintptr_t at);
+    uintptr_t (*MakeJMP)(uintptr_t at, uintptr_t dest);
+    uintptr_t (*MakeJMPwNOP)(uintptr_t at, uintptr_t dest);
+    uintptr_t (*MakeJAL)(uintptr_t at, uintptr_t dest);
     void (*MakeNOP)(uintptr_t at);
     void (*MakeNOPWithSize)(uintptr_t at, size_t count);
     void (*MakeRangedNOP)(uintptr_t at, uintptr_t until);

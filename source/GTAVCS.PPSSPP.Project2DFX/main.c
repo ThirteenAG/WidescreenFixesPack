@@ -265,8 +265,6 @@ int OnModuleStart() {
         uintptr_t ptr_8B20938 = pattern.get(0, "02 00 05 3C ? ? ? ? 1A 00 85 00", -4);
         base__Random = (int(*)())ptr_8B20938;
 
-        uintptr_t ptr_8AA8BDC = pattern.get(0, "00 00 B0 AF 04 00 B1 AF 08 00 BF AF ? ? ? ? 00 00 00 00 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 04 00 04 34", -8);
-        CSprite__FlushSpriteBuffer = (void(*)())ptr_8AA8BDC;
         uintptr_t ptr_8AA82D8 = pattern.get(0, "10 00 B4 E7 14 00 B6 E7 18 00 B0 AF 1C 00 B1 AF 20 00 B2 AF 24 00 B3 AF 28 00 BF AF", -4);
         CSprite__CalcScreenCoors = (int(*)(CVector*, CVector*, float*, float*, uint8_t))ptr_8AA82D8;
         uintptr_t ptr_8AA9B24 = pattern.get(0, "4C 00 B1 AF FF 00 B1 30", -4);
@@ -289,7 +287,7 @@ int OnModuleStart() {
         }
         
         uintptr_t ptr_888D604 = pattern.get(0, "00 F0 84 44 ? ? ? ? 01 00 04 34", -4);
-        injector.MakeJAL(ptr_888D604, (uintptr_t)CSprite__FlushSpriteBufferHook);
+        CSprite__FlushSpriteBuffer = (void(*)())injector.MakeJAL(ptr_888D604, (uintptr_t)CSprite__FlushSpriteBufferHook);        
     }
 
     sceKernelDcacheWritebackAll();
