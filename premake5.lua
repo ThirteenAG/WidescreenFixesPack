@@ -204,7 +204,17 @@ jobs:
          file:close()
       end
    end
-   
+
+   vpaths {
+      ["source"] = { "source/**.*" },
+      ["data"] = { "data/**.*" },
+      ["ini"] = { "data/**.ini" },
+      ["resources"] = { "resources/**.*" },
+      ["includes"] = { "includes/**.*" },
+      ["external"] = { "external/**.*" },
+      ["resources"] = { "resources/**.*" },
+   }
+
    filter "configurations:Debug*"
       defines "DEBUG"
       symbols "On"
