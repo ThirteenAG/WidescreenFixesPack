@@ -1023,3 +1023,108 @@ namespace WindowedModeWrapper
         return res;
     }
 };
+
+class IATHook
+{
+public:
+    template <class... Ts>
+    static void Replace(HMODULE target_module, std::string_view dll_name, Ts&& ... inputs)
+    {
+        auto hExecutableInstance = (size_t)target_module;
+        IMAGE_NT_HEADERS* ntHeader = (IMAGE_NT_HEADERS*)(hExecutableInstance + ((IMAGE_DOS_HEADER*)hExecutableInstance)->e_lfanew);
+        IMAGE_IMPORT_DESCRIPTOR* pImports = (IMAGE_IMPORT_DESCRIPTOR*)(hExecutableInstance + ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress);
+        size_t nNumImports = ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].Size / sizeof(IMAGE_IMPORT_DESCRIPTOR) - 1;
+    
+        auto PatchIAT = [&](size_t start, size_t end, size_t exe_end)
+        {
+            for (size_t i = 0; i < nNumImports; i++)
+            {
+                if (hExecutableInstance + (pImports + i)->FirstThunk > start && !(end && hExecutableInstance + (pImports + i)->FirstThunk > end))
+                    end = hExecutableInstance + (pImports + i)->FirstThunk;
+            }
+    
+            if (!end) { end = start + 0x100; }
+            if (end > exe_end)
+            {
+                start = hExecutableInstance;
+                end = exe_end;
+            }
+    
+            for (auto i = start; i < end; i += sizeof(size_t))
+            {
+                DWORD dwProtect[2];
+                VirtualProtect((size_t*)i, sizeof(size_t), PAGE_EXECUTE_READWRITE, &dwProtect[0]);
+    
+                auto ptr = *(size_t*)i;
+                if (!ptr)
+                    continue;
+    
+                ([&]
+                {
+                    auto func_name = std::get<0>(inputs);
+                    auto func_hook = std::get<1>(inputs);
+                    if (func_hook && ptr == (size_t)GetProcAddress(GetModuleHandleA(dll_name.data()), func_name))
+                        *(size_t*)i = (size_t)func_hook;
+                } (), ...);
+
+                VirtualProtect((size_t*)i, sizeof(size_t), dwProtect[0], &dwProtect[1]);
+            }
+        };
+    
+        static auto getSection = [](const PIMAGE_NT_HEADERS nt_headers, unsigned section) -> PIMAGE_SECTION_HEADER
+        {
+            return reinterpret_cast<PIMAGE_SECTION_HEADER>(
+                (UCHAR*)nt_headers->OptionalHeader.DataDirectory +
+                nt_headers->OptionalHeader.NumberOfRvaAndSizes * sizeof(IMAGE_DATA_DIRECTORY) +
+                section * sizeof(IMAGE_SECTION_HEADER));
+        };
+    
+        static auto getSectionEnd = [](IMAGE_NT_HEADERS* ntHeader, size_t inst) -> auto
+        {
+            auto sec = getSection(ntHeader, ntHeader->FileHeader.NumberOfSections - 1);
+            while (sec->Misc.VirtualSize == 0) sec--;
+    
+            auto secSize = max(sec->SizeOfRawData, sec->Misc.VirtualSize);
+            auto end = inst + max(sec->PointerToRawData, sec->VirtualAddress) + secSize;
+            return end;
+        };
+    
+        auto hExecutableInstance_end = getSectionEnd(ntHeader, hExecutableInstance);
+    
+        // Find DLL
+        for (size_t i = 0; i < nNumImports; i++)
+        {
+            if ((size_t)(hExecutableInstance + (pImports + i)->Name) < hExecutableInstance_end)
+            {
+                if (!_stricmp((const char*)(hExecutableInstance + (pImports + i)->Name), dll_name.data()))
+                    PatchIAT(hExecutableInstance + (pImports + i)->FirstThunk, 0, hExecutableInstance_end);
+            }
+        }
+    }
+};
+
+template <typename T, typename PtrSize = uintptr_t>
+std::optional<T> PtrWalkthrough(auto addr, std::convertible_to<ptrdiff_t> auto&& ...offsets)
+{
+    auto list = std::vector<ptrdiff_t>{ offsets... };
+    auto last = list.back(); list.pop_back();
+    auto a = injector::ReadMemory<PtrSize>(addr, true);
+    if (a)
+    {
+        for (auto v : list)
+        {
+            auto ptr = injector::ReadMemory<PtrSize>(a + v, true);
+            if (ptr)
+                a = ptr;
+            else
+            {
+                a = 0;
+                break;
+            }
+        }
+
+        if (a)
+            return injector::ReadMemory<T>(a + last, true);
+    }
+    return std::nullopt;
+};

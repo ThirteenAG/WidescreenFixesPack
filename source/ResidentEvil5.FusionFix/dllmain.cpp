@@ -1,6 +1,5 @@
 #include "stdafx.h"
-#include "LogitechLEDLib.h"
-#pragma comment(lib, "LogitechLEDLib_x86.lib")
+#include "LEDEffects.h"
 
 static bool bLogiLedInitialized = false;
 
@@ -26,30 +25,6 @@ void __fastcall sub_6D1650(float* _this, void* edx, float a2, float a3, float a4
     a2 /= 1280.0f / 800.0f;
     return injector::fastcall<void(float*, void*, float, float, float, float)>::call(p6D1650, _this, edx, a2, a3, a4, a5);
 }
-
-template <typename T, typename PtrSize = uint32_t>
-std::optional<T> PtrWalkthrough(auto addr, std::convertible_to<ptrdiff_t> auto&& ...offsets)
-{
-    auto list = std::vector<ptrdiff_t>{ offsets... };
-    auto last = list.back(); list.pop_back();
-    auto a = injector::ReadMemory<PtrSize>(addr);
-    for (auto v : list)
-    {
-        auto ptr = injector::ReadMemory<PtrSize>(a + v);
-        if (ptr)
-            a = ptr;
-        else
-        {
-            a = 0;
-            break;
-        }
-    }
-
-    if (a)
-        return injector::ReadMemory<T>(a + last);
-    else
-        return std::nullopt;
-};
 
 void Init()
 {
@@ -85,7 +60,7 @@ void Init()
                 break;
             }
         }
-        //MessageBox(0,0,0,0);
+
         auto start = (uintptr_t)injector::ReadMemory<uint32_t>(hook::get_pattern("FF 15 ? ? ? ? 85 C0 75 66", 2));
         auto end = start + 0x47C;
 
@@ -143,95 +118,72 @@ void Init()
 
     if (bLogiLedInitialized)
     {
-        static std::vector<LogiLed::KeyName> keys = {
-            LogiLed::KeyName::CAPS_LOCK,
-            LogiLed::KeyName::A,
-            LogiLed::KeyName::S,
-            LogiLed::KeyName::D,
-            LogiLed::KeyName::F,
-            LogiLed::KeyName::T,
-            LogiLed::KeyName::SIX,
-            LogiLed::KeyName::Y,
-            LogiLed::KeyName::H,
-            LogiLed::KeyName::N,
-            LogiLed::KeyName::J,
-            LogiLed::KeyName::I,
-            LogiLed::KeyName::NINE,
-            LogiLed::KeyName::O,
-            LogiLed::KeyName::L,
-            LogiLed::KeyName::SEMICOLON,
-            LogiLed::KeyName::APOSTROPHE,
-            LogiLed::KeyName::ENTER,
-        };
-
-        static std::vector<LogiLed::KeyName> keys_dead = {
-            LogiLed::KeyName::CAPS_LOCK,
-            LogiLed::KeyName::A,
-            LogiLed::KeyName::S,
-            LogiLed::KeyName::D,
-            LogiLed::KeyName::F,
-            LogiLed::KeyName::G,
-            LogiLed::KeyName::H,
-            LogiLed::KeyName::J,
-            LogiLed::KeyName::K,
-            LogiLed::KeyName::L,
-            LogiLed::KeyName::SEMICOLON,
-            LogiLed::KeyName::APOSTROPHE,
-            LogiLed::KeyName::ENTER,
-        };
-
         static auto sPlayerPtr = *hook::get_pattern<void*>("8B 0D ? ? ? ? 56 E8 ? ? ? ? A1 ? ? ? ? 8B 48 20 69 C9 ? ? ? ? 8B 94 01", 2);
 
         std::thread t([]() 
         {
             while (true)
             {
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
                 if (bLogiLedInitialized)
                 {
                     if (sPlayerPtr)
                     {
-                        auto PlayerHealth = PtrWalkthrough<int16_t>(sPlayerPtr, 0x28, 0x2A74, 0x1364);
+                        auto Player1Health = PtrWalkthrough<int16_t>(sPlayerPtr, 0x28, 0x2A74, 0x1364);
+                        auto Player2Health = PtrWalkthrough<int16_t>(sPlayerPtr, 0x28, 0x1364);
 
-                        if (PlayerHealth)
+                        if (Player1Health && Player2Health)
                         {
-                            auto health = *PlayerHealth;
-                            if (health > 1)
+                            auto health1 = *Player1Health;
+                            auto health2 = *Player2Health;
+                            if (health1 > 1)
                             {
-                                if (health == 2)
-                                    LogiLedSetLighting(26, 4, 4); //red
-                                else if (health <= 250)
-                                    LogiLedSetLighting(25, 15, 2); //orange
-                                else
-                                    LogiLedSetLighting(5, 15, 2);  //green
-
-                                for (auto& key : keys)
-                                {
-                                    auto s = 5 * keys.size();
-                                    std::this_thread::sleep_for(std::chrono::milliseconds(s));
-                                    if (health == 2)
-                                        LogiLedPulseSingleKey(key, 255, 0, 0, 0, 0, 0, s * 50, false); //red
-                                    else if (health <= 250)
-                                        LogiLedPulseSingleKey(key, 67, 0, 0, 0, 0, 0, s * 50, false); //orange
-                                    else
-                                        LogiLedPulseSingleKey(key, 0, 255, 0, 0, 0, 0, s * 50, false); //green
+                                if (health1 == 2) {
+                                    LEDEffects::SetLightingLeftSide(26, 4, 4, true, false); //red
+                                    LEDEffects::DrawCardiogram(100, 0, 0, 0, 0, 0); //red
                                 }
+                                else if (health1 <= 250) {
+                                    LEDEffects::SetLightingLeftSide(50, 30, 4, true, false); //orange
+                                    LEDEffects::DrawCardiogram(67, 0, 0, 0, 0, 0); //orange
+                                }
+                                else {
+                                    LEDEffects::SetLightingLeftSide(10, 30, 4, true, false);  //green
+                                    LEDEffects::DrawCardiogram(0, 100, 0, 0, 0, 0); //green
+                                }                                   
                             }
                             else
                             {
-                                for (auto& key : keys_dead)
-                                {
-                                    auto s = 5 * keys_dead.size();
-                                    std::this_thread::sleep_for(std::chrono::milliseconds(s));
-                                    LogiLedPulseSingleKey(key, 255, 0, 0, 0, 0, 0, s * 50, false);
+                                LEDEffects::SetLightingLeftSide(26, 4, 4, false, true); //red
+                                LEDEffects::DrawCardiogram(100, 0, 0, 0, 0, 0, true);
+                            }
+
+                            if (health2 > 1)
+                            {
+                                if (health2 == 2) {
+                                    LEDEffects::SetLightingRightSide(26, 4, 4, true, false); //red
+                                    LEDEffects::DrawCardiogramNumpad(100, 0, 0, 0, 0, 0); //red
                                 }
+                                else if (health2 <= 250) {
+                                    LEDEffects::SetLightingRightSide(50, 30, 4, true, false); //orange
+                                    LEDEffects::DrawCardiogramNumpad(67, 0, 0, 0, 0, 0); //orange
+                                }
+                                else {
+                                    LEDEffects::SetLightingRightSide(10, 30, 4, true, false);  //green
+                                    LEDEffects::DrawCardiogramNumpad(0, 100, 0, 0, 0, 0); //green
+                                }                                    
+                            }
+                            else
+                            {
+                                LEDEffects::SetLightingRightSide(26, 4, 4, false, true); //red
+                                LEDEffects::DrawCardiogramNumpad(100, 0, 0, 0, 0, 0, true);
                             }
                         }
                         else
                         {
-                            LogiLedSetLighting(98, 87, 24); //logo gold
+                            LEDEffects::SetLighting(98, 87, 24); //logo gold
                         }
                     }
-                    std::this_thread::sleep_for(std::chrono::milliseconds(500));
                 }
                 else
                     break;
