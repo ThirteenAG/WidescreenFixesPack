@@ -1,34 +1,7 @@
 #include "stdafx.h"
-#include "LogitechLEDLib.h"
-#pragma comment(lib, "LogitechLEDLib_x64.lib")
+#include "LEDEffects.h"
 
 static bool bLogiLedInitialized = false;
-
-template <typename T, typename PtrSize = uint64_t>
-std::optional<T> PtrWalkthrough(auto addr, std::convertible_to<ptrdiff_t> auto&& ...offsets)
-{
-    auto list = std::vector<ptrdiff_t>{ offsets... };
-    auto last = list.back(); list.pop_back();
-    auto a = injector::ReadMemory<PtrSize>(addr, true);
-    if (a)
-    {
-        for (auto v : list)
-        {
-            auto ptr = injector::ReadMemory<PtrSize>(a + v, true);
-            if (ptr)
-                a = ptr;
-            else
-            {
-                a = 0;
-                break;
-            }
-        }
-
-        if (a)
-            return injector::ReadMemory<T>(a + last, true);
-    }
-    return std::nullopt;
-};
 
 void Init()
 {
@@ -82,6 +55,8 @@ void Init()
         {
             while (true)
             {
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
                 if (bLogiLedInitialized)
                 {
                     if (sPlayerPtr)
@@ -94,29 +69,19 @@ void Init()
                             auto Health = *PlayerHealth;
                             if (Health > 0)
                             {
-                                if (Health < 400)
-                                    LogiLedSetLighting(26, 4, 4); //red
-                                else
-                                    LogiLedSetLighting(5, 15, 2);  //green
-
-                                for (auto& key : keys)
-                                {
-                                    auto s = 5 * keys.size();
-                                    std::this_thread::sleep_for(std::chrono::milliseconds(s));
-                                    if (Health < 400)
-                                        LogiLedPulseSingleKey(key, 255, 0, 0, 0, 0, 0, s * 50, false); //red
-                                    else
-                                        LogiLedPulseSingleKey(key, 0, 255, 0, 0, 0, 0, s * 50, false); //green
+                                if (Health < 400) {
+                                    LEDEffects::SetLighting(26, 4, 4, true); //red
+                                    LEDEffects::DrawCardiogram(100, 0, 0, 0, 0, 0); //red
+                                }
+                                else {
+                                    LEDEffects::SetLighting(10, 30, 4, true);  //green
+                                    LEDEffects::DrawCardiogram(0, 100, 0, 0, 0, 0); //green
                                 }
                             }
                             else
                             {
-                                for (auto& key : keys_dead)
-                                {
-                                    auto s = 5 * keys_dead.size();
-                                    std::this_thread::sleep_for(std::chrono::milliseconds(s));
-                                    LogiLedPulseSingleKey(key, 255, 0, 0, 0, 0, 0, s * 50, false);
-                                }
+                                LEDEffects::SetLighting(26, 4, 4, false, true); //red
+                                LEDEffects::DrawCardiogram(100, 0, 0, 0, 0, 0, true);
                             }
                         }
                         else
@@ -124,7 +89,6 @@ void Init()
                             LogiLedSetLighting(76, 12, 18); //logo red
                         }
                     }
-                    std::this_thread::sleep_for(std::chrono::milliseconds(500));
                 }
                 else
                     break;
