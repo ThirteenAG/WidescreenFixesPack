@@ -2,7 +2,6 @@
 #include "LEDEffects.h"
 #include <vector>
 #include <algorithm>
-#include <ranges>
 
 static bool bLogiLedInitialized = false;
 
@@ -162,19 +161,20 @@ void Init()
                 *(uint32_t*)(regs.esp + 0x58) = regs.ebx;
 
                 std::sort(resList.begin(), resList.end(), [](const std::string& lhs, const std::string& rhs)
-                    {
-                        int32_t x1, y1, x2, y2;
-                        sscanf_s(lhs.c_str(), "%dx%d", &x1, &y1);
-                        sscanf_s(rhs.c_str(), "%dx%d", &x2, &y2);
-                        return (x1 != x2) ? (x1 < x2) : (x1 * y1 < x2 * y2);
-                    });
+                {
+                    int32_t x1, y1, x2, y2;
+                    sscanf_s(lhs.c_str(), "%dx%d", &x1, &y1);
+                    sscanf_s(rhs.c_str(), "%dx%d", &x2, &y2);
+                    return (x1 != x2) ? (x1 < x2) : (x1 * y1 < x2 * y2);
+                });
                 resList.erase(std::unique(std::begin(resList), std::end(resList)), resList.end());
 
-                for (auto&& [idx, str] : std::ranges::views::enumerate(resList))
+                for (auto idx = 0; idx < resList.size(); idx++)
                 {
                     int x = 0, y = 0;
-                    sscanf_s(str.c_str(), "%dx%d", &x, &y);
-                    resListString.emplace_back(str.c_str(), idx);
+                    auto str = resList[idx].c_str();
+                    sscanf_s(str, "%dx%d", &x, &y);
+                    resListString.emplace_back(str, idx);
                     resListNum.emplace_back(x, y, idx);
                 }
 
