@@ -58,11 +58,15 @@ on:
         - psiops
         - psychonauts
         - punisher
+        - re0
+        - re1
         - re2gc
         - re3gc
+        - re4
+        - re5
+        - re6
         - rerev
         - rerev2
-        - re6
         - sc
         - scarface
         - scc
@@ -147,11 +151,15 @@ env:
   psiops: "/t:PsiOpsTheMindgateConspiracy_WidescreenFix"
   psychonauts: "/t:Psychonauts_WidescreenFix"
   punisher: "/t:ThePunisher_WidescreenFix"
+  re0: "/t:ResidentEvil0_FusionFix"
+  re1: "/t:ResidentEvil_FusionFix"
   re2gc: "/t:ResidentEvil2_Dolphin_FusionMod"
   re3gc: "/t:ResidentEvil3_Dolphin_FusionMod"
+  re4: "/t:ResidentEvil4_FusionMod"
+  re5: "/t:ResidentEvil5_FusionFix"
+  re6: "/t:ResidentEvil6_FusionFix"
   rerev: "/t:ResidentEvilRevelations_FusionFix"
   rerev2: "/t:ResidentEvilRevelations2_FusionFix"
-  re6: "/t:ResidentEvil6_FusionFix"
   sc: "/t:SplinterCell_WidescreenFix"
   scarface: "/t:Scarface_FusionFix"
   scc: "/t:SplinterCellConviction_FusionMod"

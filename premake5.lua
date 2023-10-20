@@ -504,6 +504,10 @@ project "PsiOpsTheMindgateConspiracy.WidescreenFix"
    setpaths("Z:/WFP/Games/PSI-OPS/", "PsiOps.exe")
 project "Psychonauts.WidescreenFix"
    setpaths("Z:/WFP/Games/Psychonauts/", "Psychonauts.exe")
+project "ResidentEvil0.FusionFix"
+   setpaths("Z:/WFP/Games/ResidentEvil0/", "re0hd.exe", "scripts/")
+project "ResidentEvil.FusionFix"
+   setpaths("Z:/WFP/Games/ResidentEvil/", "bhd.exe", "scripts/")
 project "ResidentEvil2.Dolphin.FusionMod"
    platforms { "Win64" }
    architecture "x64"

@@ -621,18 +621,14 @@ void Init()
 
     if (bBorderlessWindowed)
     {
-        injector::MakeNOP(addrTbl[0x01292227], 6, true);
-        injector::MakeCALL(addrTbl[0x01292227], WindowedModeWrapper::CreateWindowExA_Hook, true);
-        injector::MakeNOP(addrTbl[0xF35DF6], 6, true);
-        injector::MakeCALL(addrTbl[0xF35DF6], WindowedModeWrapper::CreateWindowExW_Hook, true);
-        injector::MakeNOP(addrTbl[0xF35EEC], 6, true);
-        injector::MakeCALL(addrTbl[0xF35EEC], WindowedModeWrapper::CreateWindowExW_Hook, true);
-        injector::MakeNOP(addrTbl[0xF4228A], 6, true);
-        injector::MakeCALL(addrTbl[0xF4228A], WindowedModeWrapper::SetWindowLongA_Hook, true);
-        injector::MakeNOP(addrTbl[0xF4227E], 6, true);
-        injector::MakeCALL(addrTbl[0xF4227E], WindowedModeWrapper::AdjustWindowRect_Hook, true);
-        injector::MakeNOP(addrTbl[0xF422B1], 6, true);
-        injector::MakeCALL(addrTbl[0xF422B1], WindowedModeWrapper::SetWindowPos_Hook, true);
+        IATHook::Replace(GetModuleHandleA(NULL), "USER32.DLL",
+            std::forward_as_tuple("CreateWindowExA", WindowedModeWrapper::CreateWindowExA_Hook),
+            std::forward_as_tuple("CreateWindowExW", WindowedModeWrapper::CreateWindowExW_Hook),
+            std::forward_as_tuple("SetWindowLongA", WindowedModeWrapper::SetWindowLongA_Hook),
+            std::forward_as_tuple("SetWindowLongW", WindowedModeWrapper::SetWindowLongW_Hook),
+            std::forward_as_tuple("AdjustWindowRect", WindowedModeWrapper::AdjustWindowRect_Hook),
+            std::forward_as_tuple("SetWindowPos", WindowedModeWrapper::SetWindowPos_Hook)
+        );
     }
 
     {
@@ -751,6 +747,7 @@ void Init()
                             }
                             else
                             {
+                                LogiLedStopEffects();
                                 LogiLedSetLighting(31, 25, 70); //logo purple
                             }
                         }

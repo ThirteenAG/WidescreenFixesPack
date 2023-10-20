@@ -86,6 +86,7 @@ void Init()
                         }
                         else
                         {
+                            LogiLedStopEffects();
                             LogiLedSetLighting(76, 12, 18); //logo red
                         }
                     }

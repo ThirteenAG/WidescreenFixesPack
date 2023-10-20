@@ -704,17 +704,14 @@ void Init()
 
     if (bBorderlessWindowed)
     {
-        injector::MakeNOP(0xC74C0C, 6, true);
-        injector::MakeCALL(0xC74C0C, WindowedModeWrapper::CreateWindowExA_Hook, true);
-        injector::MakeNOP(0xC75D67, 6, true);
-        injector::MakeCALL(0xC75D67, WindowedModeWrapper::CreateWindowExW_Hook, true);
-        injector::MakeNOP(0xC75EE5, 6, true);
-        injector::MakeCALL(0xC75EE5, WindowedModeWrapper::CreateWindowExW_Hook, true);
-        injector::MakeNOP(0xCCB096, 6, true);
-        injector::MakeCALL(0xCCB096, WindowedModeWrapper::SetWindowLongA_Hook, true);
-        injector::MakeNOP(0xCCB08B, 6, true);
-        injector::MakeCALL(0xCCB08B, WindowedModeWrapper::AdjustWindowRect_Hook, true);
-        //0xCCB0BA: needs WindowedModeWrapper::SetWindowPos_Hook here
+        IATHook::Replace(GetModuleHandleA(NULL), "USER32.DLL",
+            std::forward_as_tuple("CreateWindowExA", WindowedModeWrapper::CreateWindowExA_Hook),
+            std::forward_as_tuple("CreateWindowExW", WindowedModeWrapper::CreateWindowExW_Hook),
+            std::forward_as_tuple("SetWindowLongA", WindowedModeWrapper::SetWindowLongA_Hook),
+            std::forward_as_tuple("SetWindowLongW", WindowedModeWrapper::SetWindowLongW_Hook),
+            std::forward_as_tuple("AdjustWindowRect", WindowedModeWrapper::AdjustWindowRect_Hook),
+            std::forward_as_tuple("SetWindowPos", WindowedModeWrapper::SetWindowPos_Hook)
+        );
     }
 
     //Episode 4 finale stuck controls fix
@@ -812,17 +809,19 @@ void Init()
                                 }
                                 else
                                 {
+                                    LogiLedStopEffects();
                                     LEDEffects::SetLighting(90, 36, 3);
                                 }
                             }
                             else
                             {
+                                LogiLedStopEffects();
                                 LEDEffects::SetLighting(90, 36, 3);
                             }
                         }
-                        else
-                            break;
                     }
+                    else
+                        break;
                 }
             });
 

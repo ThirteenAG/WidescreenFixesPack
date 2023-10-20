@@ -5,6 +5,11 @@
 
 Plugin should be compatible with any recent version of the emulator, but if not, open an issue.
 
+    Installation:
+        Download and extract the archive to the directory, where Dolphin x64 executable is located.
+        Check the ini file for available features.
+        Launch the game.
+
 Known Issues:
 
 - Game softlocks at certain places, no solution yet.
