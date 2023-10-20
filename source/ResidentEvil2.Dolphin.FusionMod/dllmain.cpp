@@ -50,7 +50,14 @@ void Init()
                         }
                         if (bEnableDoorSkip)
                         {
-                            pattern = hook::pattern(Dolphin::GameMemoryStart, Dolphin::GameMemoryEnd, "54 7d 04 3e 38 00 00 01 98 1f 00 01");
+                            pattern = hook::pattern(Dolphin::GameMemoryStart, Dolphin::GameMemoryEnd, "7f a0 22 14 ? ? ? ? ? ? ? ? 38 00 00 00 ? ? ? ? 38 00 00 00");
+                            if (pattern.size() >= 1)
+                            {
+                                injector::WriteMemory(pattern.get(0).get<void>(4), li(r0, 10), true);
+                                Dolphin::MenuBarClearCache();
+                            }
+
+                            pattern = hook::pattern(Dolphin::GameMemoryStart, Dolphin::GameMemoryEnd, "54 7d 04 3e 38 00 00 01 98 1f 00 01 38 00 00 00");
                             if (pattern.size() >= 1)
                             {
                                 injector::WriteMemory(pattern.get(0).get<void>(4), li(r0, 0), true);
