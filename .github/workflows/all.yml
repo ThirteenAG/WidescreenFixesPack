@@ -17,7 +17,7 @@ on:
 
 jobs:
   build:
-    runs-on: windows-2022
+    runs-on: windows-latest
     strategy:
       matrix:
         platform: [Win32]
@@ -687,6 +687,22 @@ jobs:
         tag: sonicheroes
         artifacts: data/Archives/SonicHeroes.WidescreenFix.zip
 
+    - name: Resident Evil 0 Fusion Fix
+      uses: ./.github/workflows/release_tag
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag: re0
+        artifacts: data/Archives/ResidentEvil0.FusionFix.zip
+
+    - name: Resident Evil Fusion Fix
+      uses: ./.github/workflows/release_tag
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag: re1
+        artifacts: data/Archives/ResidentEvil.FusionFix.zip
+
     - name: Resident Evil 2 Fusion Mod [Dolphin]
       uses: ./.github/workflows/release_tag
       with:
@@ -703,6 +719,30 @@ jobs:
         tag: re3gc
         artifacts: data/Archives/ResidentEvil3.Dolphin.FusionMod.zip
 
+    - name: Resident Evil 4 Fusion Mod
+      uses: ./.github/workflows/release_tag
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag: re4
+        artifacts: data/Archives/ResidentEvil4.FusionMod.zip
+
+    - name: Resident Evil 5 Fusion Fix
+      uses: ./.github/workflows/release_tag
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag: re5
+        artifacts: data/Archives/ResidentEvil5.FusionFix.zip
+
+    - name: Resident Evil 6 Fusion Fix
+      uses: ./.github/workflows/release_tag
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag: re6
+        artifacts: data/Archives/ResidentEvil6.FusionFix.zip
+
     - name: Resident Evil Revelations Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
@@ -718,14 +758,6 @@ jobs:
         tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
         tag: rerev2
         artifacts: data/Archives/ResidentEvilRevelations2.FusionFix.zip
-
-    - name: Resident Evil 6 Fusion Fix
-      uses: ./.github/workflows/release_tag
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
-        tag: re6
-        artifacts: data/Archives/ResidentEvil6.FusionFix.zip
 
     - name: Xbox Rain Droplets Plugins
       uses: ./.github/workflows/release_tag

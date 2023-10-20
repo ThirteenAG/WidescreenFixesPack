@@ -502,25 +502,21 @@ void Init()
     
     if (bBorderlessWindowed)
     {
-        injector::MakeNOP(0x9BBE0D, 6, true);
-        injector::MakeCALL(0x9BBE0D, WindowedModeWrapper::CreateWindowExA_Hook, true);
-        injector::MakeNOP(0x9BC1F5, 6, true);
-        injector::MakeCALL(0x9BC1F5, WindowedModeWrapper::CreateWindowExW_Hook, true);
-        injector::MakeNOP(0x9BC377, 6, true);
-        injector::MakeCALL(0x9BC377, WindowedModeWrapper::CreateWindowExW_Hook, true);
-        injector::MakeNOP(0xB71198, 6, true);
-        injector::MakeCALL(0xB71198, WindowedModeWrapper::SetWindowLongA_Hook, true);
-        injector::MakeNOP(0xB7118C, 6, true);
-        injector::MakeCALL(0xB7118C, WindowedModeWrapper::AdjustWindowRect_Hook, true);
-        injector::MakeNOP(0xB711BF, 6, true);
-        injector::MakeCALL(0xB711BF, WindowedModeWrapper::SetWindowPos_Hook, true);
+        IATHook::Replace(GetModuleHandleA(NULL), "USER32.DLL",
+            std::forward_as_tuple("CreateWindowExA", WindowedModeWrapper::CreateWindowExA_Hook),
+            std::forward_as_tuple("CreateWindowExW", WindowedModeWrapper::CreateWindowExW_Hook),
+            std::forward_as_tuple("SetWindowLongA", WindowedModeWrapper::SetWindowLongA_Hook),
+            std::forward_as_tuple("SetWindowLongW", WindowedModeWrapper::SetWindowLongW_Hook),
+            std::forward_as_tuple("AdjustWindowRect", WindowedModeWrapper::AdjustWindowRect_Hook),
+            std::forward_as_tuple("SetWindowPos", WindowedModeWrapper::SetWindowPos_Hook)
+        );
     }
 
     {
         injector::WriteMemory(0x0107FF78, 1000, true); //max fps
     }
 
-        {
+    {
         bLogiLedInitialized = LogiLedInit();
 
         if (bLogiLedInitialized)
@@ -603,17 +599,19 @@ void Init()
                                 }
                                 else
                                 {
+                                    LogiLedStopEffects();
                                     LogiLedSetLighting(76, 12, 18); //logo red
                                 }
                             }
                             else
                             {
+                                LogiLedStopEffects();
                                 LEDEffects::SetLighting(90, 36, 3);
                             }
                         }
-                        else
-                            break;
                     }
+                    else
+                        break;
                 }
             });
 

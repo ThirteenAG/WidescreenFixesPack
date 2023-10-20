@@ -131,6 +131,23 @@ private:
         LogiLed::KeyName::NUM_ZERO,
         LogiLed::KeyName::NUM_PERIOD,
     };
+    static inline std::vector<LogiLed::KeyName> FSide = {
+        LogiLed::KeyName::F1,
+        LogiLed::KeyName::F2,
+        LogiLed::KeyName::F3,
+        LogiLed::KeyName::F4,
+        LogiLed::KeyName::F5,
+        LogiLed::KeyName::F6,
+        LogiLed::KeyName::F7,
+        LogiLed::KeyName::F8,
+        LogiLed::KeyName::F9,
+        LogiLed::KeyName::F10,
+        LogiLed::KeyName::F11,
+        LogiLed::KeyName::F12,
+        LogiLed::KeyName::PRINT_SCREEN,
+        LogiLed::KeyName::SCROLL_LOCK,
+        LogiLed::KeyName::PAUSE_BREAK,
+    };
     static inline std::vector<LogiLed::KeyName> keysCardiogram = {
         LogiLed::KeyName::CAPS_LOCK,
         LogiLed::KeyName::A,
@@ -177,6 +194,7 @@ private:
         LogiLed::KeyName::NUM_SIX,
     };
 
+public:
     class Timer
     {
     public:
@@ -224,8 +242,7 @@ private:
         bool m_bRunning = false;
     };
 
-public:
-    static auto RGBtoPercent(auto R, auto G, auto B, float dim = 1.0f)
+    static inline auto RGBtoPercent(auto R, auto G, auto B, float dim = 1.0f)
     {
         return std::make_tuple(
             static_cast<uint32_t>(static_cast<float>(R) / 255.0f * 100.0f * dim),
@@ -234,7 +251,7 @@ public:
         );
     }
 
-    static void SetLightingLeftSide(int redPercentage, int greenPercentage, int bluePercentage, bool ignoreCardiogram = false, bool ignoreCardiogramDead = false)
+    static inline void SetLightingLeftSide(int redPercentage, int greenPercentage, int bluePercentage, bool ignoreCardiogram = false, bool ignoreCardiogramDead = false, bool ignoreFSide = false)
     {
         for (auto key : leftSide)
         {
@@ -244,11 +261,14 @@ public:
             if (ignoreCardiogramDead && std::any_of(std::begin(keysCardiogramDead), std::end(keysCardiogramDead), [key](auto i) { return i == key; }))
                 continue;
 
+            if (ignoreFSide && std::any_of(std::begin(FSide), std::end(FSide), [key](auto i) { return i == key; }))
+                continue;
+
             LogiLedSetLightingForKeyWithKeyName(key, redPercentage, greenPercentage, bluePercentage);
         }
     }
 
-    static void SetLightingRightSide(int redPercentage, int greenPercentage, int bluePercentage, bool ignoreCardiogram = false, bool ignoreCardiogramDead = false)
+    static inline void SetLightingRightSide(int redPercentage, int greenPercentage, int bluePercentage, bool ignoreCardiogram = false, bool ignoreCardiogramDead = false, bool ignoreFSide = false)
     {
         for (auto key : rightSide)
         {
@@ -258,18 +278,26 @@ public:
             if (ignoreCardiogramDead && std::any_of(std::begin(keysCardiogramNumpadDead), std::end(keysCardiogramNumpadDead), [key](auto i) { return i == key; }))
                 continue;
 
+            if (ignoreFSide && std::any_of(std::begin(FSide), std::end(FSide), [key](auto i) { return i == key; }))
+                continue;
+
             LogiLedSetLightingForKeyWithKeyName(key, redPercentage, greenPercentage, bluePercentage);
         }
     }
 
-    static void SetLighting(int redPercentage, int greenPercentage, int bluePercentage, bool ignoreCardiogram = false, bool ignoreCardiogramDead = false)
+    static inline void SetLighting(int redPercentage, int greenPercentage, int bluePercentage, bool ignoreCardiogram = false, bool ignoreCardiogramDead = false, bool ignoreFSide = false)
     {
-        SetLightingLeftSide(redPercentage, greenPercentage, bluePercentage, ignoreCardiogram, ignoreCardiogramDead);
+        SetLightingLeftSide(redPercentage, greenPercentage, bluePercentage, ignoreCardiogram, ignoreCardiogramDead, ignoreFSide);
         for (auto key : rightSide)
+        {
+            if (ignoreFSide && std::any_of(std::begin(FSide), std::end(FSide), [key](auto i) { return i == key; }))
+                continue;
+
             LogiLedSetLightingForKeyWithKeyName(key, redPercentage, greenPercentage, bluePercentage);
+        }
     }
     
-    static void DrawCardiogram(int startRedPercentage, int startGreenPercentage, int startBluePercentage, int finishRedPercentage, int finishGreenPercentage, int finishBluePercentage, bool dead = false)
+    static inline void DrawCardiogram(int startRedPercentage, int startGreenPercentage, int startBluePercentage, int finishRedPercentage, int finishGreenPercentage, int finishBluePercentage, bool dead = false)
     {
         auto& arr = dead ? keysCardiogramDead : keysCardiogram;
         static auto TIMERA = Timer();
@@ -286,7 +314,7 @@ public:
         }
     }
 
-    static void DrawCardiogramNumpad(int startRedPercentage, int startGreenPercentage, int startBluePercentage, int finishRedPercentage, int finishGreenPercentage, int finishBluePercentage, bool dead = false)
+    static inline void DrawCardiogramNumpad(int startRedPercentage, int startGreenPercentage, int startBluePercentage, int finishRedPercentage, int finishGreenPercentage, int finishBluePercentage, bool dead = false)
     {
         auto& arr = dead ? keysCardiogramNumpadDead : keysCardiogramNumpad;
         static auto TIMERB = Timer();
@@ -303,20 +331,20 @@ public:
         }
     }
 
-    static void DrawPoliceSirenMouse()
+    static inline void DrawPoliceSirenMouse()
     {
         static bool bColorRed = false;
         static auto TIMERC = Timer();
         static auto TIMERD = Timer();
         if (TIMERC >= 400)
         {
-            static constexpr auto redVal = 255;
+            static constexpr auto redVal = 100;
             static constexpr auto greenVal = 0;
             static constexpr auto blueVal = 0;
 
             static constexpr auto redFinishVal = 0;
             static constexpr auto greenFinishVal = 0;
-            static constexpr auto blueFinishVal = 255;
+            static constexpr auto blueFinishVal = 100;
 
             LogiLedSetTargetDevice(LOGI_DEVICETYPE_RGB);
             if (bColorRed)
@@ -336,13 +364,13 @@ public:
 
         if (TIMERD >= duration || isInfinite)
         {
-            static constexpr auto redVal = 255;
+            static constexpr auto redVal = 100;
             static constexpr auto greenVal = 0;
             static constexpr auto blueVal = 0;
 
             static constexpr auto redFinishVal = 0;
             static constexpr auto greenFinishVal = 0;
-            static constexpr auto blueFinishVal = 255;
+            static constexpr auto blueFinishVal = 100;
 
             LogiLedPulseSingleKey(LogiLed::KeyName::F1, redFinishVal, greenFinishVal, blueFinishVal, redVal, greenVal, blueVal, duration, isInfinite);
             LogiLedPulseSingleKey(LogiLed::KeyName::F2, redFinishVal, greenFinishVal, blueFinishVal, redVal, greenVal, blueVal, duration, isInfinite);
@@ -351,10 +379,10 @@ public:
 
             if (withWhiteStrip)
             {
-                LogiLedSetLightingForKeyWithKeyName(LogiLed::KeyName::F5, 255, 255, 255);
-                LogiLedSetLightingForKeyWithKeyName(LogiLed::KeyName::F6, 255, 255, 255);
-                LogiLedSetLightingForKeyWithKeyName(LogiLed::KeyName::F7, 255, 255, 255);
-                LogiLedSetLightingForKeyWithKeyName(LogiLed::KeyName::F8, 255, 255, 255);
+                LogiLedSetLightingForKeyWithKeyName(LogiLed::KeyName::F5, 100, 100, 100);
+                LogiLedSetLightingForKeyWithKeyName(LogiLed::KeyName::F6, 100, 100, 100);
+                LogiLedSetLightingForKeyWithKeyName(LogiLed::KeyName::F7, 100, 100, 100);
+                LogiLedSetLightingForKeyWithKeyName(LogiLed::KeyName::F8, 100, 100, 100);
             }
             else
             {
