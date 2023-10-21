@@ -18,7 +18,7 @@ public:
         return hook::pattern("0F B6 C8 E8 ? ? ? ? 33 D2");
     }
 
-    static void SetIsThrottlerTempDisabled(bool disable)
+    static inline void SetIsThrottlerTempDisabled(bool disable)
     {
         if (!_SetIsThrottlerTempDisabled)
         {
@@ -30,33 +30,42 @@ public:
             return _SetIsThrottlerTempDisabled(disable);
     }
 
-    static void MenuBarClearCache()
+    static inline void MenuBarClearCache()
     {
-        if (!_MenuBarClearCache)
+        __try
         {
-            auto pattern = hook::pattern("45 33 C9 45 33 C0 33 D2");
-            if (!pattern.empty())
+            []()
             {
-                for (size_t i = 0; i < pattern.size(); i++)
+                if (!_MenuBarClearCache)
                 {
-                    auto range_pattern = hook::pattern((uintptr_t)pattern.get(i).get<uintptr_t>(0), (uintptr_t)pattern.get(i).get<uintptr_t>(200), "45 ? ? ? 8D");
-                    if (!range_pattern.empty())
+                    auto pattern = hook::pattern("45 33 C9 45 33 C0 33 D2");
+                    if (!pattern.empty())
                     {
-                        auto str = injector::ReadRelativeOffset(range_pattern.get(0).get<uintptr_t>(6)).get_raw<char>();
-                        if (MemoryValid(str) && std::string_view(str) == "Clear Cache")
+                        for (size_t i = 0; i < pattern.size(); i++)
                         {
-                            _MenuBarClearCache = (void(__fastcall*)())(injector::ReadRelativeOffset(pattern.get(i).get<uintptr_t>(22)).as_int());
-                            break;
+                            auto range_pattern = hook::pattern((uintptr_t)pattern.get(i).get<uintptr_t>(0), (uintptr_t)pattern.get(i).get<uintptr_t>(200), "45 ? ? ? 8D");
+                            if (!range_pattern.empty())
+                            {
+                                auto str = injector::ReadRelativeOffset(range_pattern.get(0).get<uintptr_t>(6)).get_raw<char>();
+                                if (MemoryValid(str) && std::string_view(str) == "Clear Cache")
+                                {
+                                    _MenuBarClearCache = (void(__fastcall*)())(injector::ReadRelativeOffset(pattern.get(i).get<uintptr_t>(22)).as_int());
+                                    break;
+                                }
+                            }
                         }
                     }
                 }
-            }
+                else
+                    return _MenuBarClearCache();
+            }();
         }
-        else
-            return _MenuBarClearCache();
+        __except ((GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION) ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
+        {
+        }
     }
 
-    static void FindEmulatorMemory()
+    static inline void FindEmulatorMemory()
     {
         while (GameMemoryStart == 0)
         {
@@ -81,7 +90,7 @@ public:
         }
     }
 
-    static bool MemoryValid()
+    static inline bool MemoryValid()
     {
         static MEMORY_BASIC_INFORMATION MemoryInf;
         if (GameMemoryStart == 0 || VirtualQuery((LPCVOID)GameMemoryStart, &MemoryInf, sizeof(MemoryInf)) == 0 || MemoryInf.AllocationProtect != PAGE_READWRITE)
@@ -94,7 +103,7 @@ public:
     }
 
     template <typename T>
-    static bool MemoryValid(T addr)
+    static inline bool MemoryValid(T addr)
     {
         static MEMORY_BASIC_INFORMATION MemoryInf;
         if (addr == 0 || VirtualQuery((LPCVOID)addr, &MemoryInf, sizeof(MemoryInf)) == 0 || MemoryInf.AllocationProtect != PAGE_READWRITE)
@@ -102,7 +111,7 @@ public:
         return true;
     }
 
-    static std::string_view GameID()
+    static inline std::string_view GameID()
     {
         static auto default_id = "";
         if (MemoryValid(GameMemoryStart))

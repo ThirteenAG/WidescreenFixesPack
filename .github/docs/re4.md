@@ -2,6 +2,8 @@
 
 ![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to enable [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html)
 
+https://github.com/ThirteenAG/WidescreenFixesPack/assets/4904157/92ea000b-4646-40d6-9133-05e57e517e18
+
     Installation:
         Download and extract the archive to the game directory, where the exe is located.
 
