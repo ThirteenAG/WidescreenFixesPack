@@ -60,8 +60,7 @@ on:
         - punisher
         - re0
         - re1
-        - re2gc
-        - re3gc
+        - re2re3gc
         - re4
         - re5
         - re6

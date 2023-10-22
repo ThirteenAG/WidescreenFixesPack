@@ -2,6 +2,9 @@
 #include "LEDEffects.h"
 #include <vector>
 #include <algorithm>
+#include <d3d9.h>
+#include <d3dx9.h>
+#pragma comment(lib, "d3dx9.lib")
 
 static bool bLogiLedInitialized = false;
 
@@ -135,6 +138,109 @@ int __fastcall sub_663820(uint32_t* _this, void* edx)
     return result;
 }
 
+bool bDisableNoise = false;
+bool bDisableColorCorrection = false;
+uintptr_t pD3D9DeviceAddr;
+IDirect3DPixelShader9* __stdcall CreatePixelShaderHook(const DWORD** a1)
+{
+    if (!a1)
+        return nullptr;
+
+    auto pDevice = (IDirect3DDevice9*)*(uint32_t*)(*(uint32_t*)pD3D9DeviceAddr + 152);
+    IDirect3DPixelShader9* pShader = nullptr;
+    pDevice->CreatePixelShader(a1[2], &pShader);
+
+    if (pShader != nullptr)
+    {
+        static constexpr unsigned char dummyShader[] = {
+            0x00, 0x03, 0xFF, 0xFF, 0xFE, 0xFF, 0x16, 0x00, 0x43, 0x54, 0x41, 0x42, 0x1C, 0x00, 0x00, 0x00,
+            0x23, 0x00, 0x00, 0x00, 0x00, 0x03, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x01, 0x00, 0x00, 0x1C, 0x00, 0x00, 0x00, 0x70, 0x73, 0x5F, 0x33, 0x5F, 0x30, 0x00, 0x4D,
+            0x69, 0x63, 0x72, 0x6F, 0x73, 0x6F, 0x66, 0x74, 0x20, 0x28, 0x52, 0x29, 0x20, 0x48, 0x4C, 0x53,
+            0x4C, 0x20, 0x53, 0x68, 0x61, 0x64, 0x65, 0x72, 0x20, 0x43, 0x6F, 0x6D, 0x70, 0x69, 0x6C, 0x65,
+            0x72, 0x20, 0x39, 0x2E, 0x32, 0x39, 0x2E, 0x39, 0x35, 0x32, 0x2E, 0x33, 0x31, 0x31, 0x31, 0x00,
+            0x51, 0x00, 0x00, 0x05, 0x00, 0x00, 0x0F, 0xA0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x02, 0x00, 0x08, 0x0F, 0x80,
+            0x00, 0x00, 0x00, 0xA0, 0xFF, 0xFF, 0x00, 0x00
+        };
+   
+        static std::vector<uint8_t> pbFunc;
+        UINT len;
+        pShader->GetFunction(nullptr, &len);
+        if (pbFunc.size() < len)
+            pbFunc.resize(len);
+
+        pShader->GetFunction(pbFunc.data(), &len);
+
+        auto crc = crc32(0, pbFunc.data(), len);
+
+        if (crc == 0x59FA1317 && bDisableColorCorrection)
+        {
+            const char* shader_text =
+                "ps_3_0\n"
+                "dcl_texcoord v0.xy\n"
+                "dcl_2d s0\n"
+                "dcl_2d s1\n"
+                "texld r0, v0, s0\n"
+                "mov oC0, r0\n";
+
+            LPD3DXBUFFER pCode;
+            LPD3DXBUFFER pErrorMsgs;
+            LPDWORD shader_data;
+            auto result = D3DXAssembleShader(shader_text, strlen(shader_text), NULL, NULL, 0, &pCode, &pErrorMsgs);
+            if (FAILED(result)) {
+                shader_data = (DWORD*)&dummyShader[0];
+            }
+            shader_data = (DWORD*)pCode->GetBufferPointer();
+
+            IDirect3DPixelShader9* shader = nullptr;
+            result = pDevice->CreatePixelShader(shader_data, &shader);
+            if (FAILED(result)) {
+                return pShader;
+            }
+            else
+            {
+                pShader->Release();
+                return shader;
+            }
+        }
+        else if (crc == 0x2C3893DD && bDisableNoise)
+        {
+            const char* shader_text =
+                "ps_3_0\n"
+                "dcl_texcoord v0\n"
+                "dcl_2d s0\n"
+                "dcl_2d s1\n"
+                "dcl_2d s2\n"
+                "texld r0, v0, s2\n"
+                "mov oC0.xyz, r0\n"
+                "mov oC0.w, c0.y\n";
+
+            LPD3DXBUFFER pCode;
+            LPD3DXBUFFER pErrorMsgs;
+            LPDWORD shader_data;
+            auto result = D3DXAssembleShader(shader_text, strlen(shader_text), NULL, NULL, 0, &pCode, &pErrorMsgs);
+            if (FAILED(result)) {
+                shader_data = (DWORD*)&dummyShader[0];
+            }
+            shader_data = (DWORD*)pCode->GetBufferPointer();
+
+            IDirect3DPixelShader9* shader = nullptr;
+            result = pDevice->CreatePixelShader(shader_data, &shader);
+            if (FAILED(result)) {
+                return pShader;
+            }
+            else
+            {
+                pShader->Release();
+                return shader;
+            }
+        }
+    }
+
+    return pShader;
+}
+
 void Init()
 {
     CIniReader iniReader("");
@@ -143,6 +249,8 @@ void Init()
     auto bDoorSkip = iniReader.ReadInteger("MAIN", "DoorSkip", 1) != 0;
     auto bBorderlessWindowed = iniReader.ReadInteger("MAIN", "BorderlessWindowed", 1) != 0;
     auto bLightSyncRGB = iniReader.ReadInteger("MAIN", "LightSyncRGB", 1) != 0;
+    bDisableNoise = iniReader.ReadInteger("MAIN", "DisableNoise", 0) != 0;
+    bDisableColorCorrection = iniReader.ReadInteger("MAIN", "DisableColorCorrection", 0) != 0;
 
     if (bUnlockAllResolutions)
     {
@@ -299,6 +407,12 @@ void Init()
             std::forward_as_tuple("AdjustWindowRect", WindowedModeWrapper::AdjustWindowRect_Hook),
             std::forward_as_tuple("SetWindowPos", WindowedModeWrapper::SetWindowPos_Hook)
         );
+    }
+
+    if (bDisableNoise || bDisableColorCorrection)
+    {
+        pD3D9DeviceAddr = (uintptr_t)*hook::get_pattern<uint32_t>("A1 ? ? ? ? 56 66 0F 6E 80", 1);
+        injector::MakeCALL(hook::get_pattern("E8 ? ? ? ? 89 47 08 66 8B 4C 24 ? 0F B7 C1 43 83 C5 0C 3B D8 72 C7 33 C0"), CreatePixelShaderHook, true);
     }
 
     if (bLightSyncRGB)
