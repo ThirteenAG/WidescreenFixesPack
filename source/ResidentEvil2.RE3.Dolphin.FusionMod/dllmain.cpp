@@ -160,7 +160,7 @@ void PluginThread(std::future<void> futureObj)
                                     auto poisoned = *(int8_t*)((uintptr_t)sPlayerHealth + 0xC2);
 
                                     if (Dolphin::GameID() == "GLEE08" /* || Dolphin::GameID() == "GLEJ08"*/)
-                                        poisoned = *(int8_t*)((uintptr_t)sPlayerHealth + 0x6) == 1;
+                                        poisoned = *(int8_t*)((uintptr_t)sPlayerHealth + 0x6) % 4 != 0;
 
                                     if (health1 > 1)
                                     {
