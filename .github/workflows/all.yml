@@ -703,21 +703,13 @@ jobs:
         tag: re1
         artifacts: data/Archives/ResidentEvil.FusionFix.zip
 
-    - name: Resident Evil 2 Fusion Mod [Dolphin]
+    - name: Resident Evil 2 and RE3 Nemesis Fusion Mod [Dolphin]
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
-        tag: re2gc
-        artifacts: data/Archives/ResidentEvil2.Dolphin.FusionMod.zip
-
-    - name: Resident Evil 3 Nemesis Fusion Mod [Dolphin]
-      uses: ./.github/workflows/release_tag
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
-        tag: re3gc
-        artifacts: data/Archives/ResidentEvil3.Dolphin.FusionMod.zip
+        tag: re2re3gc
+        artifacts: data/Archives/ResidentEvil2.RE3.Dolphin.FusionMod.zip
 
     - name: Resident Evil 4 Fusion Mod
       uses: ./.github/workflows/release_tag

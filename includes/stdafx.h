@@ -307,16 +307,19 @@ public:
         fn();
     }
 
-    static inline void RegisterCallback(std::wstring_view module_name, std::function<void()>&& fn)
+    static inline void RegisterCallback(std::wstring_view module_name, std::function<void()>&& fn, bool bOnUnload = false)
     {
-        if (module_name.empty() || GetModuleHandleW(module_name.data()) != NULL)
+        if (!bOnUnload && (module_name.empty() || GetModuleHandleW(module_name.data()) != NULL))
         {
             fn();
         }
         else
         {
             RegisterDllNotification();
-            GetCallbackList().emplace(module_name, std::forward<std::function<void()>>(fn));
+            if (!bOnUnload)
+                GetCallbackList().emplace(module_name, std::forward<std::function<void()>>(fn));
+            else
+                GetUnloadCallbackList().emplace(module_name, std::forward<std::function<void()>>(fn));
         }
     }
 
@@ -368,6 +371,14 @@ private:
         //    UnRegisterDllNotification();
     }
 
+    static inline void call_onunload(std::wstring_view module_name)
+    {
+        if (GetUnloadCallbackList().count(module_name.data()))
+        {
+            GetUnloadCallbackList().at(module_name.data())();
+        }
+    }
+
     static inline void invoke_all()
     {
         for (auto&& fn : GetCallbackList())
@@ -390,6 +401,11 @@ private:
     static std::map<std::wstring, std::function<void()>, Comparator>& GetCallbackList()
     {
         return functions;
+    }
+
+    static std::map<std::wstring, std::function<void()>, Comparator>& GetUnloadCallbackList()
+    {
+        return functions_unload;
     }
 
     struct ThreadParams
@@ -446,9 +462,14 @@ private:
     static inline void CALLBACK LdrDllNotification(ULONG NotificationReason, PLDR_DLL_NOTIFICATION_DATA NotificationData, PVOID Context)
     {
         static constexpr auto LDR_DLL_NOTIFICATION_REASON_LOADED = 1;
+        static constexpr auto LDR_DLL_NOTIFICATION_REASON_UNLOADED = 2;
         if (NotificationReason == LDR_DLL_NOTIFICATION_REASON_LOADED)
         {
             call(NotificationData->Loaded.BaseDllName->Buffer);
+        }
+        else if (NotificationReason == LDR_DLL_NOTIFICATION_REASON_UNLOADED)
+        {
+            call_onunload(NotificationData->Loaded.BaseDllName->Buffer);
         }
     }
 
@@ -545,6 +566,7 @@ private:
 public:
     static inline std::once_flag flag;
     static std::map<std::wstring, std::function<void()>, Comparator> functions;
+    static std::map<std::wstring, std::function<void()>, Comparator> functions_unload;
 };
 
 class RegistryWrapper

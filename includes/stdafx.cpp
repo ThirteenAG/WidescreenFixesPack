@@ -165,3 +165,4 @@ CIniReader RegistryWrapper::RegistryReader;
 std::map<std::string, std::string> RegistryWrapper::DefaultStrings;
 std::set<std::string, std::less<>> RegistryWrapper::PathStrings;
 std::map<std::wstring, std::function<void()>, CallbackHandler::Comparator> CallbackHandler::functions;
+std::map<std::wstring, std::function<void()>, CallbackHandler::Comparator> CallbackHandler::functions_unload;
