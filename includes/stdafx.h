@@ -42,6 +42,7 @@ std::tuple<int32_t, int32_t> GetDesktopRes();
 void GetResolutionsList(std::vector<std::string>& list);
 uint32_t GetDesktopRefreshRate();
 std::string format(const char* fmt, ...);
+uint32_t crc32(uint32_t crc, const void* buf, size_t size);
 
 HICON CreateIconFromBMP(UCHAR* data);
 HICON CreateIconFromResourceICO(UINT nID, int32_t cx, int32_t cy);
