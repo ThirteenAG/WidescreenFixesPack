@@ -47,7 +47,7 @@ public:
                             if (!range_pattern.empty())
                             {
                                 auto str = injector::ReadRelativeOffset(range_pattern.get(0).get<uintptr_t>(6)).get_raw<char>();
-                                if (MemoryValid(str) && std::string_view(str) == "Clear Cache")
+                                if (MemoryAddrValid(str) && std::string_view(str) == "Clear Cache")
                                 {
                                     _MenuBarClearCache = (void(__fastcall*)())(injector::ReadRelativeOffset(pattern.get(i).get<uintptr_t>(22)).as_int());
                                     break;
@@ -65,9 +65,9 @@ public:
         }
     }
 
-    static inline void FindEmulatorMemory()
+    static inline void FindEmulatorMemory(std::future<void>& futureObj)
     {
-        while (GameMemoryStart == 0)
+        while (GameMemoryStart == 0 && futureObj.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout)
         {
             uintptr_t curAddr = 0;
             do
@@ -86,24 +86,24 @@ public:
                     }
                 }
                 curAddr += MemoryInf.RegionSize;
-            } while (true);
+            } while (futureObj.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout);
         }
     }
 
-    static inline bool MemoryValid()
+    static inline bool MemoryValid(std::future<void>& futureObj)
     {
         static MEMORY_BASIC_INFORMATION MemoryInf;
         if (GameMemoryStart == 0 || VirtualQuery((LPCVOID)GameMemoryStart, &MemoryInf, sizeof(MemoryInf)) == 0 || MemoryInf.AllocationProtect != PAGE_READWRITE)
         {
             GameMemoryStart = 0;
-            FindEmulatorMemory();
+            FindEmulatorMemory(futureObj);
             return false;
         }
         return true;
     }
 
     template <typename T>
-    static inline bool MemoryValid(T addr)
+    static inline bool MemoryAddrValid(T addr)
     {
         static MEMORY_BASIC_INFORMATION MemoryInf;
         if (addr == 0 || VirtualQuery((LPCVOID)addr, &MemoryInf, sizeof(MemoryInf)) == 0 || MemoryInf.AllocationProtect != PAGE_READWRITE)
@@ -114,7 +114,7 @@ public:
     static inline std::string_view GameID()
     {
         static auto default_id = "";
-        if (MemoryValid(GameMemoryStart))
+        if (MemoryAddrValid(GameMemoryStart))
             return std::string_view(reinterpret_cast<char*>(GameMemoryStart));
         else
             return default_id;

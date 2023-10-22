@@ -508,15 +508,9 @@ project "ResidentEvil0.FusionFix"
    setpaths("Z:/WFP/Games/ResidentEvil0/", "re0hd.exe", "scripts/")
 project "ResidentEvil.FusionFix"
    setpaths("Z:/WFP/Games/ResidentEvil/", "bhd.exe", "scripts/")
-project "ResidentEvil2.Dolphin.FusionMod"
+project "ResidentEvil2.RE3.Dolphin.FusionMod"
    platforms { "Win64" }
    architecture "x64"
-   add_asmjit()
-   setpaths("Z:/WFP/Games/Dolphin-x64/", "Dolphin.exe", "scripts/")
-project "ResidentEvil3.Dolphin.FusionMod"
-   platforms { "Win64" }
-   architecture "x64"
-   add_asmjit()
    setpaths("Z:/WFP/Games/Dolphin-x64/", "Dolphin.exe", "scripts/")
 project "ResidentEvilRevelations.FusionFix"
    setpaths("Z:/WFP/Games/ResidentEvilRevelations/", "rerev.exe", "scripts/")
