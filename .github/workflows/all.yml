@@ -671,6 +671,14 @@ jobs:
         tag: sc
         artifacts: data/Archives/SplinterCell.WidescreenFix.zip
 
+    - name: Spyro Reignited Trilogy Widescreen Fix
+      uses: ./.github/workflows/release_tag
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag: spyro
+        artifacts: data/Archives/SpyroReignitedTrilogy.WidescreenFix.zip
+
     - name: Sniper Elite Widescreen Fix
       uses: ./.github/workflows/release_tag
       with:
