@@ -16,4 +16,7 @@
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Adjustable FOV via ini
 
+    Installation:
+        Download and extract the archive to the game directory, where the exe is located.
+
 [Website](https://thirteenag.github.io/wfp#bully) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/Bully.WidescreenFix/dllmain.cpp) | [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/Bully.WidescreenFix/plugins/Bully.WidescreenFix.ini)
