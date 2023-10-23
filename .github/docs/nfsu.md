@@ -20,6 +20,9 @@
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to increase deadzone for left stick
 
+    Installation:
+        Download and extract the archive to the game directory, where the exe is located.
+
 [Website](https://thirteenag.github.io/wfp#nfsu) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/NFSUnderground.WidescreenFix/dllmain.cpp) | [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/NFSUnderground.WidescreenFix/scripts/NFSUnderground.WidescreenFix.ini)
 
 <a href="https://github.com/sponsors/xan1242"><img src="https://img.shields.io/badge/Sponsor_xan1242_on_GitHub-5c5c5c?style=for-the-badge&logo=github&logoColor=white" height="40"></a><br>
