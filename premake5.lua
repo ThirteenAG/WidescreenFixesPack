@@ -575,6 +575,11 @@ project "SplinterCellEssentials.PPSSPP.FusionMod"
    targetextension ".prx"
    setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.FusionMod/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SplinterCellEssentials.PPSSPP.FusionMod")
    writemakefile_psp("SplinterCellEssentials.PPSSPP.FusionMod")
+project "SpyroReignitedTrilogy.WidescreenFix"
+   platforms { "Win64" }
+   architecture "x64"
+   add_asmjit()
+   setpaths("Z:/WFP/Games/Spyro Reignited Trilogy/", "Falcon/Binaries/Win64/Spyro-Win64-Shipping.exe", "Falcon/Binaries/Win64/scripts/")
 project "StreetRacingSyndicate.WidescreenFix"
    setpaths("Z:/WFP/Games/Street Racing Syndicate/", "Bin/srs.exe", "Bin/scripts/")
 project "StubbstheZombie.WidescreenFix"
