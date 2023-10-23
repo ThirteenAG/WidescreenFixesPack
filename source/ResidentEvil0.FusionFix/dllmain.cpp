@@ -2,7 +2,9 @@
 #include "LEDEffects.h"
 #include <vector>
 #include <algorithm>
-#include <ranges>
+#include <d3d9.h>
+#include <d3dx9.h>
+#pragma comment(lib, "d3dx9.lib")
 
 static bool bLogiLedInitialized = false;
 
@@ -17,6 +19,165 @@ void __fastcall sub_529250(uint32_t* _this, void* edx, int32_t a2)
     _this[0x40C] = a2;
 }
 
+bool bDisableNoise = false;
+bool bDisableColorCorrection = false;
+uintptr_t pD3D9DeviceAddr;
+IDirect3DPixelShader9* __stdcall CreatePixelShaderHook(const DWORD** a1)
+{
+    if (!a1)
+        return nullptr;
+
+    auto pDevice = *(IDirect3DDevice9**)(*(uint32_t*)pD3D9DeviceAddr + 152);
+    IDirect3DPixelShader9* pShader = nullptr;
+    pDevice->CreatePixelShader(a1[2], &pShader);
+
+    if (pShader != nullptr)
+    {
+        static std::vector<uint8_t> pbFunc;
+        UINT len;
+        pShader->GetFunction(nullptr, &len);
+        if (pbFunc.size() < len)
+            pbFunc.resize(len);
+
+        pShader->GetFunction(pbFunc.data(), &len);
+
+        auto crc = crc32(0, pbFunc.data(), len);
+
+        if (crc == 0x59FA1317 && bDisableColorCorrection)
+        {
+            const char* shader_text =
+                "ps_3_0\n"
+                "dcl_texcoord v0.xy\n"
+                "dcl_2d s0\n"
+                "dcl_2d s1\n"
+                "texld r0, v0, s0\n"
+                "mul r0.xyz, r0, r0\n"
+                "mov oC0.w, r0.w\n"
+                "mul r1.xyz, r0.y, c2\n"
+                "mad r1.xyz, r0.x, c1, r1\n"
+                "mad r1.xyz, r0.z, c3, r1\n"
+                "add r1.xyz, r1, c4\n"
+                "texld r2, r1.x, s1\n"
+                "mul r2.x, r2.x, r2.x\n"
+                "texld r3, r1.y, s1\n"
+                "texld r1, r1.z, s1\n"
+                "mul r2.z, r1.z, r1.z\n"
+                "mul r2.y, r3.y, r3.y\n"
+                "rsq r0.x, r0.x\n"
+                "rcp oC0.x, r0.x\n"
+                "rsq r0.x, r0.y\n"
+                "rsq r0.y, r0.z\n"
+                "rcp oC0.z, r0.y\n"
+                "rcp oC0.y, r0.x\n";
+
+            LPD3DXBUFFER pCode;
+            LPD3DXBUFFER pErrorMsgs;
+            LPDWORD shader_data;
+            auto result = D3DXAssembleShader(shader_text, strlen(shader_text), NULL, NULL, 0, &pCode, &pErrorMsgs);
+            if (SUCCEEDED(result))
+            {
+                shader_data = (DWORD*)pCode->GetBufferPointer();
+                IDirect3DPixelShader9* shader = nullptr;
+                result = pDevice->CreatePixelShader(shader_data, &shader);
+                if (FAILED(result)) {
+                    return pShader;
+                }
+                else
+                {
+                    pShader->Release();
+                    return shader;
+                }
+            }
+        }
+        else if (crc == 0x2C3893DD && bDisableNoise)
+        {
+            const char* shader_text =
+                "ps_3_0\n"
+                "def c0, -0.5, 1, -1, -0\n"
+                "def c7, 0.298999995, 0.587000012, 0.114, 0\n"
+                "def c8, -0.169, -0.331, 0.5, 0\n"
+                "def c9, 0.5, -0.419, -0.0810000002, 0\n"
+                "def c10, 1, 1.40199995, 0, 1.77199996\n"
+                "def c11, 1, -0.344000012, -0.713999987, 0\n"
+                "dcl_texcoord v0\n"
+                "dcl_2d s0\n"
+                "dcl_2d s1\n"
+                "dcl_2d s2\n"
+                "mov r0.x, c3.w\n"
+                "mov r0.y, v0.w\n"
+                "texld r0, r0, s0\n"
+                "add r0.x, r0.x, c0.x\n"
+                "dp2add r0.x, r0.x, c3.x, v0.x\n"
+                "add r0.y, c3.y, v0.y\n"
+                "rcp r1.x, c4.x\n"
+                "rcp r1.y, c4.y\n"
+                "mul r0.xy, r0, r1\n"
+                "frc r0.xy, r0\n"
+                "mov r1.y, c0.y\n"
+                "mad r0.zw, r0.xyxy, -c4.xyxy, r1.y\n"
+                "mul r0.xy, r0, c4\n"
+                "cmp r0.w, r0.w, c0.z, c0.w\n"
+                "cmp r0.w, r0.y, r0.w, c0.w\n"
+                "cmp r0.z, r0.z, r0.w, c0.w\n"
+                "cmp r0.z, r0.x, r0.z, c0.w\n"
+                "lrp r1.xz, r0.xyyw, c6.zyww, c6.xyyw\n"
+                "texld r2, r1.xzzw, s2\n"
+                "mul r0.xyw, r2.xyzz, r2.xyzz\n"
+                "cmp r0.xyz, r0.z, c5, r0.xyww\n"
+                "dp3 r0.w, r0, c7\n"
+                "mov r2, c2.xyxy\n"
+                "texld r3, r2, s0\n"
+                "texld r2, r2.zwzw, s0\n"
+                "add r1.xz, r2.yyzw, c0.x\n"
+                "add r1.w, r3.x, c0.x\n"
+                "add r2.x, r1.y, c3.z\n"
+                "mul r1.xzw, r1, r2.x\n"
+                "mov r2.x, r0.w\n"
+                "dp3 r0.w, r0, c8\n"
+                "dp3 r0.x, r0, c9\n"
+                "mov r2.z, r0.x\n"
+                "mov r2.y, r0.w\n"
+                "dp3 r0.y, r2, c11\n"
+                "dp2add r0.z, r2, c10.xwzw, c10.z\n"
+                "dp2add r0.x, r2.xzzw, c10, c10.z\n"
+                "rcp r0.w, c2.z\n"
+                "mul r1.xz, r0.w, v0.zyww\n"
+                "texld r2, r1.xzzw, s1\n"
+                "add r0.w, -r2.x, c0.y\n"
+                "mad r0.w, r0.w, -c2.w, r1.y\n"
+                "mul r0.xyz, r0.w, r0\n"
+                "rsq r0.x, r0.x\n"
+                "rcp oC0.x, r0.x\n"
+                "rsq r0.x, r0.y\n"
+                "rsq r0.y, r0.z\n"
+                "rcp oC0.z, r0.y\n"
+                "rcp oC0.y, r0.x\n"
+                "mov oC0.w, c0.y\n";
+
+            LPD3DXBUFFER pCode;
+            LPD3DXBUFFER pErrorMsgs;
+            LPDWORD shader_data;
+            auto result = D3DXAssembleShader(shader_text, strlen(shader_text), NULL, NULL, 0, &pCode, &pErrorMsgs);
+            if (SUCCEEDED(result))
+            {
+                shader_data = (DWORD*)pCode->GetBufferPointer();
+                IDirect3DPixelShader9* shader = nullptr;
+                result = pDevice->CreatePixelShader(shader_data, &shader);
+                if (FAILED(result)) {
+                    return pShader;
+                }
+                else
+                {
+                    pShader->Release();
+                    return shader;
+                }
+            }
+        }
+    }
+
+    return pShader;
+}
+
 void Init()
 {
     CIniReader iniReader("");
@@ -24,6 +185,8 @@ void Init()
     auto bDoorSkip = iniReader.ReadInteger("MAIN", "DoorSkip", 1) != 0;
     auto bBorderlessWindowed = iniReader.ReadInteger("MAIN", "BorderlessWindowed", 1) != 0;
     auto bLightSyncRGB = iniReader.ReadInteger("MAIN", "LightSyncRGB", 1) != 0;
+    bDisableNoise = iniReader.ReadInteger("MAIN", "DisableNoise", 0) != 0;
+    bDisableColorCorrection = iniReader.ReadInteger("MAIN", "DisableColorCorrection", 0) != 0;
 
     if (nHideMouseCursorAfterMs)
     {
@@ -98,6 +261,12 @@ void Init()
             std::forward_as_tuple("AdjustWindowRect", WindowedModeWrapper::AdjustWindowRect_Hook),
             std::forward_as_tuple("SetWindowPos", WindowedModeWrapper::SetWindowPos_Hook)
         );
+    }
+
+    if (bDisableNoise || bDisableColorCorrection)
+    {
+        pD3D9DeviceAddr = (uintptr_t)*hook::get_pattern<uint32_t>("8B 0D ? ? ? ? E8 ? ? ? ? 0F B6 C0 F7 D8", 2);
+        injector::MakeCALL(hook::get_pattern("E8 ? ? ? ? 89 46 08 66 8B 4C 24 ? 0F B7 C1 43 83 C5 0C 3B D8 72 C7 33 C0"), CreatePixelShaderHook, true);
     }
 
     if (bLightSyncRGB)
@@ -194,13 +363,13 @@ void Init()
                             }
                             else
                             {
-                                LEDEffects::SetLightingRightSide(32, 10, 4); // rebecca's red cross
+                                LEDEffects::SetLightingRightSide(64, 20, 8); // rebecca's red cross
                             }
                         }
                         else
                         {
                             LogiLedStopEffects();
-                            LEDEffects::SetLighting(32, 10, 4); // rebecca's red cross
+                            LEDEffects::SetLighting(64, 20, 8); // rebecca's red cross
                         }
                     }
                     else
