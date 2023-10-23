@@ -11,6 +11,20 @@ bool bLightSyncRGB;
 static bool bLogiLedInitialized = false;
 std::promise<void> exitSignal;
 
+std::vector<HWND> windows;
+BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam)
+{
+    DWORD lpdwProcessId;
+    GetWindowThreadProcessId(hwnd, &lpdwProcessId);
+    if (lpdwProcessId == lParam)
+    {
+        if (IsWindowVisible(hwnd))
+            windows.push_back(hwnd);
+        return FALSE;
+    }
+    return TRUE;
+}
+
 void PluginThread(std::future<void> futureObj)
 {
     [&]()
@@ -221,18 +235,10 @@ void PluginThread(std::future<void> futureObj)
 
             if (bLogiLedInitialized) {
                 bLogiLedInitialized = false;
-                []()
-                {
-                    auto future = std::async(std::launch::async, []() { LogiLedShutdown(); });
-                    std::future_status status;
-                    do {
-                        switch (status = future.wait_for(0ms); status) {
-                        case std::future_status::deferred: break;
-                        case std::future_status::ready: break;
-                        case std::future_status::timeout: ExitProcess(0);
-                       }
-                    } while (status != std::future_status::ready);
-                }();
+                //LogiLedShutdown(); // hangs
+                EnumWindows(EnumWindowsProc, GetCurrentProcessId());
+                if (windows.empty())
+                    TerminateProcess(GetCurrentProcess(), 0);
             }
         }
         __except ((GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION) ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
