@@ -20,13 +20,20 @@ void CreateThreadAutoClose(LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_T dwSt
     CloseHandle(CreateThread(lpThreadAttributes, dwStackSize, lpStartAddress, lpParameter, dwCreationFlags, lpThreadId));
 }
 
+bool IsModuleUAL(HMODULE mod)
+{
+    if (GetProcAddress(mod, "DirectInput8Create") != NULL && GetProcAddress(mod, "DirectSoundCreate8") != NULL && GetProcAddress(mod, "InternetOpenA") != NULL)
+        return true;
+    return false;
+}
+
 bool IsUALPresent()
 {
     ModuleList dlls;
     dlls.Enumerate(ModuleList::SearchLocation::LocalOnly);
     for (auto& e : dlls.m_moduleList)
     {
-        if (GetProcAddress(std::get<HMODULE>(e), "DirectInput8Create") != NULL && GetProcAddress(std::get<HMODULE>(e), "DirectSoundCreate8") != NULL && GetProcAddress(std::get<HMODULE>(e), "InternetOpenA") != NULL)
+        if (IsModuleUAL(std::get<HMODULE>(e)))
             return true;
     }
     return false;
@@ -223,5 +230,5 @@ std::string RegistryWrapper::section;
 CIniReader RegistryWrapper::RegistryReader;
 std::map<std::string, std::string> RegistryWrapper::DefaultStrings;
 std::set<std::string, std::less<>> RegistryWrapper::PathStrings;
-std::map<std::wstring, std::function<void()>, CallbackHandler::Comparator> CallbackHandler::functions;
-std::map<std::wstring, std::function<void()>, CallbackHandler::Comparator> CallbackHandler::functions_unload;
+std::map<std::wstring, std::function<void()>, CallbackHandler::Comparator> CallbackHandler::onModuleLoad;
+std::map<std::wstring, std::function<void()>, CallbackHandler::Comparator> CallbackHandler::onModuleUnload;
