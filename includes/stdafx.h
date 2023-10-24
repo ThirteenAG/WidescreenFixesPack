@@ -36,6 +36,7 @@ float GetFOV(float f, float ar);
 float GetFOV2(float f, float ar);
 float AdjustFOV(float f, float ar);
 
+bool IsModuleUAL(HMODULE mod);
 bool IsUALPresent();
 void CreateThreadAutoClose(LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_T dwStackSize, LPTHREAD_START_ROUTINE lpStartAddress, LPVOID lpParameter, DWORD dwCreationFlags, LPDWORD lpThreadId);
 std::tuple<int32_t, int32_t> GetDesktopRes();
@@ -318,10 +319,16 @@ public:
         {
             RegisterDllNotification();
             if (!bOnUnload)
-                GetCallbackList().emplace(module_name, std::forward<std::function<void()>>(fn));
+                GetOnModuleLoadCallbackList().emplace(module_name, std::forward<std::function<void()>>(fn));
             else
-                GetUnloadCallbackList().emplace(module_name, std::forward<std::function<void()>>(fn));
+                GetOnModuleUnloadCallbackList().emplace(module_name, std::forward<std::function<void()>>(fn));
         }
+    }
+
+    static inline void RegisterCallback(std::function<void(HMODULE)>&& fn)
+    {
+        RegisterDllNotification();
+        GetOnAnyModuleLoadCallbackList().emplace_back(std::forward<std::function<void(HMODULE)>>(fn));
     }
 
     static inline void RegisterCallback(std::function<void()>&& fn, bool bPatternNotFound, ptrdiff_t offset = 0x1100, uint32_t* ptr = nullptr)
@@ -360,29 +367,47 @@ public:
     }
 
 private:
-    static inline void call(std::wstring_view module_name)
+    static inline void invokeOnModuleLoad(std::wstring_view module_name)
     {
-        if (GetCallbackList().count(module_name.data()))
+        if (GetOnModuleLoadCallbackList().count(module_name.data()))
         {
-            GetCallbackList().at(module_name.data())();
-            //GetCallbackList().erase(module_name.data()); //shouldn't do that in case dll with callback gets unloaded and loaded again
-        }
-
-        //if (GetCallbackList().empty()) //win7 crash in splinter cell
-        //    UnRegisterDllNotification();
-    }
-
-    static inline void call_onunload(std::wstring_view module_name)
-    {
-        if (GetUnloadCallbackList().count(module_name.data()))
-        {
-            GetUnloadCallbackList().at(module_name.data())();
+            GetOnModuleLoadCallbackList().at(module_name.data())();
         }
     }
 
-    static inline void invoke_all()
+    static inline void invokeOnUnload(std::wstring_view module_name)
     {
-        for (auto&& fn : GetCallbackList())
+        if (GetOnModuleUnloadCallbackList().count(module_name.data()))
+        {
+            GetOnModuleUnloadCallbackList().at(module_name.data())();
+        }
+    }
+
+    static inline void invokeOnAnyModuleLoad(HMODULE mod)
+    {
+        if (!GetOnAnyModuleLoadCallbackList().empty())
+        {
+            for (auto& f : GetOnAnyModuleLoadCallbackList())
+            {
+                f(mod);
+            }
+        }
+    }
+
+    static inline void invokeOnAnyModuleUnload(HMODULE mod)
+    {
+        if (!GetOnAnyModuleUnloadCallbackList().empty())
+        {
+            for (auto& f : GetOnAnyModuleUnloadCallbackList())
+            {
+                f(mod);
+            }
+        }
+    }
+
+    static inline void InvokeAll()
+    {
+        for (auto&& fn : GetOnModuleLoadCallbackList())
             fn.second();
     }
 
@@ -399,14 +424,24 @@ private:
         }
     };
 
-    static std::map<std::wstring, std::function<void()>, Comparator>& GetCallbackList()
+    static std::map<std::wstring, std::function<void()>, Comparator>& GetOnModuleLoadCallbackList()
     {
-        return functions;
+        return onModuleLoad;
     }
 
-    static std::map<std::wstring, std::function<void()>, Comparator>& GetUnloadCallbackList()
+    static std::map<std::wstring, std::function<void()>, Comparator>& GetOnModuleUnloadCallbackList()
     {
-        return functions_unload;
+        return onModuleUnload;
+    }
+
+    static inline std::vector<std::function<void(HMODULE)>>& GetOnAnyModuleLoadCallbackList()
+    {
+        return onAnyModuleLoad;
+    }
+
+    static inline std::vector<std::function<void(HMODULE)>>& GetOnAnyModuleUnloadCallbackList()
+    {
+        return onAnyModuleUnload;
     }
 
     struct ThreadParams
@@ -466,11 +501,13 @@ private:
         static constexpr auto LDR_DLL_NOTIFICATION_REASON_UNLOADED = 2;
         if (NotificationReason == LDR_DLL_NOTIFICATION_REASON_LOADED)
         {
-            call(NotificationData->Loaded.BaseDllName->Buffer);
+            invokeOnModuleLoad(NotificationData->Loaded.BaseDllName->Buffer);
+            invokeOnAnyModuleLoad((HMODULE)NotificationData->Loaded.DllBase);
         }
         else if (NotificationReason == LDR_DLL_NOTIFICATION_REASON_UNLOADED)
         {
-            call_onunload(NotificationData->Loaded.BaseDllName->Buffer);
+            invokeOnUnload(NotificationData->Loaded.BaseDllName->Buffer);
+            invokeOnAnyModuleUnload((HMODULE)NotificationData->Loaded.DllBase);
         }
     }
 
@@ -479,7 +516,8 @@ private:
         //wprintf(L"ProbeCallback: Base %p, path '%ls', context %p\r\n", DllBase, FullDllPath, *ActivationContext);
 
         std::wstring str(FullDllPath);
-        call(str.substr(str.find_last_of(L"/\\") + 1));
+        invokeOnModuleLoad(str.substr(str.find_last_of(L"/\\") + 1));
+        invokeOnAnyModuleLoad(DllBase);
 
         //if (!*ActivationContext)
         //    return STATUS_INVALID_PARAMETER; // breaks on xp
@@ -532,6 +570,7 @@ private:
             LdrUnregisterDllNotification(cookie);
     }
 
+private:
     static inline DWORD WINAPI ThreadProc(LPVOID ptr)
     {
         auto paramsPtr = static_cast<CallbackHandler::ThreadParams*>(ptr);
@@ -566,8 +605,10 @@ private:
     static inline fnLdrSetDllManifestProber     LdrSetDllManifestProber;
 public:
     static inline std::once_flag flag;
-    static std::map<std::wstring, std::function<void()>, Comparator> functions;
-    static std::map<std::wstring, std::function<void()>, Comparator> functions_unload;
+    static std::map<std::wstring, std::function<void()>, Comparator> onModuleLoad;
+    static std::map<std::wstring, std::function<void()>, Comparator> onModuleUnload;
+    static inline std::vector<std::function<void(HMODULE)>> onAnyModuleLoad;
+    static inline std::vector<std::function<void(HMODULE)>> onAnyModuleUnload;
 };
 
 class RegistryWrapper
