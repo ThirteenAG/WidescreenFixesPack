@@ -228,10 +228,20 @@ void Init()
 
                     if (bHideCur)
                     {
-                        SetCursorPos(9999, 9999);
-                        hiddenPoint.cbSize = sizeof(CURSORINFO);
-                        GetCursorInfo(&hiddenPoint);
-                        SetCursorPos(hiddenPoint.ptScreenPos.x - 1, hiddenPoint.ptScreenPos.x - 1);
+                        if (!hiddenPoint.hCursor)
+                        {
+                            SetCursorPos(99999, 99999);
+                            hiddenPoint.cbSize = sizeof(CURSORINFO);
+                            GetCursorInfo(&hiddenPoint);
+                            hiddenPoint.ptScreenPos.x -= 1;
+                            hiddenPoint.ptScreenPos.y -= 1;
+                            SetCursorPos(hiddenPoint.ptScreenPos.x, hiddenPoint.ptScreenPos.y);
+                        }
+                        CURSORINFO Point = {};
+                        Point.cbSize = sizeof(CURSORINFO);
+                        GetCursorInfo(&Point);
+                        if (Point.ptScreenPos.x != hiddenPoint.ptScreenPos.x || Point.ptScreenPos.y != hiddenPoint.ptScreenPos.y)
+                            SetCursorPos(hiddenPoint.ptScreenPos.x, hiddenPoint.ptScreenPos.x);
                     }
                 }
             }
