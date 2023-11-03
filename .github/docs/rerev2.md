@@ -8,8 +8,6 @@
 
 ![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added UltraWide support
 
-![](https://habrastorage.org/webt/31/qm/gv/31qmgv6q0kj8zie1itat5ygfsuq.png) Some on-screen effects will be disabled in coop and UltraWide (damage, blood etc)
-
 ![](https://habrastorage.org/webt/31/qm/gv/31qmgv6q0kj8zie1itat5ygfsuq.png) FMVs are stretched in UltraWide
 
 ![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixes a game breaking bug in episode 4, where player's controls get stuck before the final boss battle
