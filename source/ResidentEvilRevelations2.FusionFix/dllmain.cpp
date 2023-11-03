@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "LEDEffects.h"
 #include <d3d9.h>
+#include <d3dx9.h>
+#pragma comment(lib, "d3dx9.lib")
 #include <vector>
 
 static bool bLogiLedInitialized = false;
@@ -513,7 +515,7 @@ void __fastcall sub_B82960(void* _this, void* edx, float a2, float a3, float a4,
     return injector::fastcall<void(void*, void*, float, float, float, float)>::call(0xB82960, _this, edx, a2, a3, a4, a5);
 }
 
-IDirect3DVertexShader9* shader_4F0EE939 = nullptr;
+//IDirect3DVertexShader9* shader_4F0EE939 = nullptr;
 IDirect3DVertexShader9* __stdcall CreateVertexShaderHook(const DWORD** a1)
 {
     if (!a1)
@@ -538,7 +540,74 @@ IDirect3DVertexShader9* __stdcall CreateVertexShaderHook(const DWORD** a1)
 
         // various overlays (low health, waiting for partner, pause text, maybe more)
         if (crc == 0x4F0EE939)
-            shader_4F0EE939 = pShader;
+        {
+            const char* shader_text =
+                "vs_3_0\n"
+                "def c0, 32768, -128, 0.00390625, 0.25\n"
+                "def c4, 1, 0, -128, 4\n"
+                "def c5, 0.000244140654, 0.5, 6.28318548, -3.14159274\n"
+                "def c6, 2, -1, 1, 9.99999997e-007\n"
+                "def c7, 1.8, 0.28125, 0, 0\n" // 1.8 instead of 1.6 to cover the gaps in ultra wide
+                "dcl_position v0\n"
+                "dcl_normal v1\n"
+                "dcl_tangent v2\n"
+                "dcl_binormal v3\n"
+                "dcl_texcoord v4\n"
+                "dcl_position o0\n"
+                "dcl_texcoord o1\n"
+                "dcl_texcoord1 o2\n"
+                "mov r0.x, v3.x\n"
+                "add o0.z, r0.x, v0.z\n"
+                "add r0.xyz, c0.x, v3.zwyw\n"
+                "mul r0.xz, r0, c0.z\n"
+                "mad r0.y, r0.y, c5.x, c5.y\n"
+                "frc r0.y, r0.y\n"
+                "mad r0.y, r0.y, c5.z, c5.w\n"
+                "sincos r1.xy, r0.y\n"
+                "mul o1.xyz, r0.z, v1\n"
+                "mul o2.xy, c3, v2\n"
+                "add r0.yz, c0.y, v4.xxyw\n"
+                "mul r0.xy, r0.x, r0.yzzw\n"
+                "mad r0.zw, v4.z, c4.xyxy, c4\n"
+                "mul r0.xy, r0.zwzw, r0\n"
+                "mul r0.x, r0.x, c0.w\n"
+                "mul r0.yz, r1.xyxw, r0.y\n"
+                "mad r2.x, r0.x, r1.x, -r0.y\n"
+                "mad r2.y, r0.x, r1.y, r0.z\n"
+                "mov r0.xy, v0\n"
+                "mul r0.xy, r0, c2\n"
+                "mad r0.xy, r0, c6.x, c6.yzzw\n"
+                "slt r0.z, v1.w, c6.w\n"
+                "add r0.z, -r0.z, c4.x\n"
+                "rcp r10.x, c2.x\n"
+                "mul r10.x, c2.y, r10.x\n"
+                "mul r10.x, r10.x, c7.y\n"
+                "mul r0.x, r0.x, r10.x\n"
+                "mul o0.x, r0.x, c7.x\n"
+                "mad o0.y, c1.y, r0.z, r0.y\n"
+                "mov o0.w, r0.z\n"
+                "mov o1.w, v1.w\n"
+                "mov o2.zw, c4.y\n";
+
+            LPD3DXBUFFER pCode;
+            LPD3DXBUFFER pErrorMsgs;
+            LPDWORD pShaderData;
+            auto result = D3DXAssembleShader(shader_text, strlen(shader_text), NULL, NULL, 0, &pCode, &pErrorMsgs);
+            if (SUCCEEDED(result))
+            {
+                pShaderData = (DWORD*)pCode->GetBufferPointer();
+                IDirect3DVertexShader9* shader = nullptr;
+                result = pDevice->CreateVertexShader(pShaderData, &shader);
+                if (FAILED(result)) {
+                    return pShader;
+                }
+                else
+                {
+                    pShader->Release();
+                    return shader;
+                }
+            }
+        }
     }
 
     return pShader;
@@ -668,22 +737,22 @@ void Init()
     {
         injector::MakeCALL(0xFFB9E2, CreateVertexShaderHook, true);
 
-        struct SetVertexShaderHook
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                if (IsSplitScreenActive() || GetDiff() > 1.0f)
-                {
-                    auto pShader = (IDirect3DVertexShader9*)regs.ecx;
-                    if (pShader == shader_4F0EE939)
-                    {
-                        regs.ecx = 0;
-                    }
-                }
-                *(uint32_t*)(regs.ebx + 0x24) = regs.ecx;
-                regs.eax = *(uint32_t*)(regs.esi + 0x0);
-            }
-        }; injector::MakeInline<SetVertexShaderHook>(0xCCD0A4);
+        //struct SetVertexShaderHook
+        //{
+        //    void operator()(injector::reg_pack& regs)
+        //    {
+        //        if (IsSplitScreenActive() || GetDiff() > 1.0f)
+        //        {
+        //            auto pShader = (IDirect3DVertexShader9*)regs.ecx;
+        //            if (pShader == shader_4F0EE939)
+        //            {
+        //                regs.ecx = 0;
+        //            }
+        //        }
+        //        *(uint32_t*)(regs.ebx + 0x24) = regs.ecx;
+        //        regs.eax = *(uint32_t*)(regs.esi + 0x0);
+        //    }
+        //}; injector::MakeInline<SetVertexShaderHook>(0xCCD0A4);
     }
 
     if (bDisableFilmGrain)

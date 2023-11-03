@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "LEDEffects.h"
 #include <d3d9.h>
+#include <d3dx9.h>
+#pragma comment(lib, "d3dx9.lib")
 #include <vector>
 #include <map>
 
@@ -59,9 +61,11 @@ void FillAddressTable()
     addrTbl[0x9840F5] = (uintptr_t)hook::get_pattern("C6 46 38 0A 8B 4E 40");
     addrTbl[0x58DE0F] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? E8 ? ? ? ? 89 06 8B 74 24 18");
     addrTbl[0x58E052] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? D9 5E 10 F3 0F 2C 4E");
+    addrTbl[0x97A188] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? D9 5C 24 24 8B 55 0C");
     addrTbl[0x97A787] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? D9 5C 24 3C 8B 45 0C");
     addrTbl[0x55DCC7] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? D9 5E 04 8B 4C 24 14");
     addrTbl[0x55DCE5] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? D9 5E 0C 8B 44 24 1C");
+    addrTbl[0x55DD52] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? D9 5E 04 A1");
     addrTbl[0x55DE28] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? D9 5E 04 8B 4C 24 18 51 8B CF E8 ? ? ? ? D9 5E 08 8B 54 24 1C 52 8B CF E8 ? ? ? ? D9 5E 0C");
     addrTbl[0x55E09C] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? D9 5E 04 8B 54 24 18 52 8B CF E8 ? ? ? ? 83 EC 08");
     addrTbl[0x97D139] = (uintptr_t)hook::get_pattern("75 0A F3 0F 10 05 ? ? ? ? EB 43");
@@ -348,39 +352,106 @@ void __fastcall sub_E6E800(float* _this, void* edx, float a2, float a3, float a4
 }
 
 //IDirect3DVertexShader9* shader_4F0EE939 = nullptr;
-//IDirect3DVertexShader9* __stdcall CreateVertexShaderHook(const DWORD** a1)
-//{
-//    if (!a1)
-//        return nullptr;
-//
-//    auto pDevice = (IDirect3DDevice9*)*(uint32_t*)(*(uint32_t*)addrTbl[0x186E8BC] + 256);
-//    IDirect3DVertexShader9* pShader = nullptr;
-//    pDevice->CreateVertexShader(a1[2], &pShader);
-//
-//    if (pShader != nullptr)
-//    {
-//        static std::vector<uint8_t> pbFunc;
-//        UINT len;
-//        pShader->GetFunction(nullptr, &len);
-//        if (pbFunc.size() < len)
-//            pbFunc.resize(len);
-//
-//        pShader->GetFunction(pbFunc.data(), &len);
-//
-//        uint32_t crc32(uint32_t crc, const void* buf, size_t size);
-//        auto crc = crc32(0, pbFunc.data(), len);
-//
-//        // various overlays (low health, waiting for partner, pause text, maybe more)
-//        if (crc == 0x4F0EE939)
-//            shader_4F0EE939 = pShader;
-//    }
-//
-//    return pShader;
-//}
+IDirect3DVertexShader9* __stdcall CreateVertexShaderHook(const DWORD** a1)
+{
+    if (!a1)
+        return nullptr;
 
-IDirect3DPixelShader9* shader_dummy = nullptr;
-IDirect3DPixelShader9* shader_498080AC = nullptr;
-IDirect3DPixelShader9* shader_FD473559 = nullptr;
+    auto pDevice = (IDirect3DDevice9*)*(uint32_t*)(*(uint32_t*)addrTbl[0x186E8BC] + 256);
+    IDirect3DVertexShader9* pShader = nullptr;
+    pDevice->CreateVertexShader(a1[2], &pShader);
+
+    if (pShader != nullptr)
+    {
+        static std::vector<uint8_t> pbFunc;
+        UINT len;
+        pShader->GetFunction(nullptr, &len);
+        if (pbFunc.size() < len)
+            pbFunc.resize(len);
+
+        pShader->GetFunction(pbFunc.data(), &len);
+
+        uint32_t crc32(uint32_t crc, const void* buf, size_t size);
+        auto crc = crc32(0, pbFunc.data(), len);
+
+        // various overlays (low health, waiting for partner, pause text, maybe more)
+        if (crc == 0x4F0EE939)
+        {
+            const char* shader_text =
+                "vs_3_0\n"
+                "def c0, 32768, -128, 0.00390625, 0.25\n"
+                "def c4, 1, 0, -128, 4\n"
+                "def c5, 0.000244140654, 0.5, 6.28318548, -3.14159274\n"
+                "def c6, 2, -1, 1, 9.99999997e-007\n"
+                "def c7, 1.8, 0.28125, 0, 0\n" // 1.8 instead of 1.6 to cover the gaps in ultra wide
+                "dcl_position v0\n"
+                "dcl_normal v1\n"
+                "dcl_tangent v2\n"
+                "dcl_binormal v3\n"
+                "dcl_texcoord v4\n"
+                "dcl_position o0\n"
+                "dcl_texcoord o1\n"
+                "dcl_texcoord1 o2\n"
+                "mov r0.x, v3.x\n"
+                "add o0.z, r0.x, v0.z\n"
+                "add r0.xyz, c0.x, v3.zwyw\n"
+                "mul r0.xz, r0, c0.z\n"
+                "mad r0.y, r0.y, c5.x, c5.y\n"
+                "frc r0.y, r0.y\n"
+                "mad r0.y, r0.y, c5.z, c5.w\n"
+                "sincos r1.xy, r0.y\n"
+                "mul o1.xyz, r0.z, v1\n"
+                "mul o2.xy, c3, v2\n"
+                "add r0.yz, c0.y, v4.xxyw\n"
+                "mul r0.xy, r0.x, r0.yzzw\n"
+                "mad r0.zw, v4.z, c4.xyxy, c4\n"
+                "mul r0.xy, r0.zwzw, r0\n"
+                "mul r0.x, r0.x, c0.w\n"
+                "mul r0.yz, r1.xyxw, r0.y\n"
+                "mad r2.x, r0.x, r1.x, -r0.y\n"
+                "mad r2.y, r0.x, r1.y, r0.z\n"
+                "mov r0.xy, v0\n"
+                "mul r0.xy, r0, c2\n"
+                "mad r0.xy, r0, c6.x, c6.yzzw\n"
+                "slt r0.z, v1.w, c6.w\n"
+                "add r0.z, -r0.z, c4.x\n"
+                "rcp r10.x, c2.x\n"
+                "mul r10.x, c2.y, r10.x\n"
+                "mul r10.x, r10.x, c7.y\n"
+                "mul r0.x, r0.x, r10.x\n"
+                "mul o0.x, r0.x, c7.x\n"
+                "mad o0.y, c1.y, r0.z, r0.y\n"
+                "mov o0.w, r0.z\n"
+                "mov o1.w, v1.w\n"
+                "mov o2.zw, c4.y\n";
+
+            LPD3DXBUFFER pCode;
+            LPD3DXBUFFER pErrorMsgs;
+            LPDWORD pShaderData;
+            auto result = D3DXAssembleShader(shader_text, strlen(shader_text), NULL, NULL, 0, &pCode, &pErrorMsgs);
+            if (SUCCEEDED(result))
+            {
+                pShaderData = (DWORD*)pCode->GetBufferPointer();
+                IDirect3DVertexShader9* shader = nullptr;
+                result = pDevice->CreateVertexShader(pShaderData, &shader);
+                if (FAILED(result)) {
+                    return pShader;
+                }
+                else
+                {
+                    pShader->Release();
+                    return shader;
+                }
+            }
+        }
+    }
+
+    return pShader;
+}
+
+//IDirect3DPixelShader9* shader_dummy = nullptr;
+//IDirect3DPixelShader9* shader_498080AC = nullptr;
+//IDirect3DPixelShader9* shader_FD473559 = nullptr;
 IDirect3DPixelShader9* __stdcall CreatePixelShaderHook(const DWORD** a1)
 {
     if (!a1)
@@ -392,22 +463,6 @@ IDirect3DPixelShader9* __stdcall CreatePixelShaderHook(const DWORD** a1)
 
     if (pShader != nullptr)
     {
-        if (!shader_dummy)
-        {
-            unsigned char dummyShader[] = {
-                0x00, 0x03, 0xFF, 0xFF, 0xFE, 0xFF, 0x16, 0x00, 0x43, 0x54, 0x41, 0x42, 0x1C, 0x00, 0x00, 0x00,
-                0x23, 0x00, 0x00, 0x00, 0x00, 0x03, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                0x00, 0x01, 0x00, 0x00, 0x1C, 0x00, 0x00, 0x00, 0x70, 0x73, 0x5F, 0x33, 0x5F, 0x30, 0x00, 0x4D,
-                0x69, 0x63, 0x72, 0x6F, 0x73, 0x6F, 0x66, 0x74, 0x20, 0x28, 0x52, 0x29, 0x20, 0x48, 0x4C, 0x53,
-                0x4C, 0x20, 0x53, 0x68, 0x61, 0x64, 0x65, 0x72, 0x20, 0x43, 0x6F, 0x6D, 0x70, 0x69, 0x6C, 0x65,
-                0x72, 0x20, 0x39, 0x2E, 0x32, 0x39, 0x2E, 0x39, 0x35, 0x32, 0x2E, 0x33, 0x31, 0x31, 0x31, 0x00,
-                0x51, 0x00, 0x00, 0x05, 0x00, 0x00, 0x0F, 0xA0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x02, 0x00, 0x08, 0x0F, 0x80,
-                0x00, 0x00, 0x00, 0xA0, 0xFF, 0xFF, 0x00, 0x00
-            };
-            pDevice->CreatePixelShader((DWORD*)&dummyShader[0], &shader_dummy);
-        }
-
         static std::vector<uint8_t> pbFunc;
         UINT len;
         pShader->GetFunction(nullptr, &len);
@@ -420,9 +475,54 @@ IDirect3DPixelShader9* __stdcall CreatePixelShaderHook(const DWORD** a1)
         auto crc = crc32(0, pbFunc.data(), len);
 
         if (crc == 0x498080AC)      // low health rotating blurry rectangle
-            shader_498080AC = pShader;
-        else if (crc == 0xFD473559) // waiting for partner overlay
-            shader_FD473559 = pShader;
+        {
+            const char* shader_text =
+                "ps_3_0\n"
+                "dcl_texcoord v0.xy\n"
+                "dcl_2d s0\n"
+                "dcl_2d s1\n"
+                "texld r0, v0, s0\n"
+                "mul r0.xyz, r0, r0\n"
+                "mov oC0.w, r0.w\n"
+                "mul r1.xyz, r0.y, c2\n"
+                "mad r1.xyz, r0.x, c1, r1\n"
+                "mad r1.xyz, r0.z, c3, r1\n"
+                "add r1.xyz, r1, c4\n"
+                "texld r2, r1.x, s1\n"
+                "mul r2.x, r2.x, r2.x\n"
+                "texld r3, r1.y, s1\n"
+                "texld r1, r1.z, s1\n"
+                "mul r2.z, r1.z, r1.z\n"
+                "mul r2.y, r3.y, r3.y\n"
+                "rsq r0.x, r0.x\n"
+                "rcp oC0.x, r0.x\n"
+                "rsq r0.x, r0.y\n"
+                "rsq r0.y, r0.z\n"
+                "rcp oC0.z, r0.y\n"
+                "rcp oC0.y, r0.x\n";
+
+            LPD3DXBUFFER pCode;
+            LPD3DXBUFFER pErrorMsgs;
+            LPDWORD shader_data;
+            auto result = D3DXAssembleShader(shader_text, strlen(shader_text), NULL, NULL, 0, &pCode, &pErrorMsgs);
+            if (SUCCEEDED(result))
+            {
+                shader_data = (DWORD*)pCode->GetBufferPointer();
+                IDirect3DPixelShader9* shader = nullptr;
+                result = pDevice->CreatePixelShader(shader_data, &shader);
+                if (FAILED(result)) {
+                    return pShader;
+                }
+                else
+                {
+                    pShader->Release();
+                    return shader;
+                }
+            }
+        }
+
+        //else if (crc == 0xFD473559) // waiting for partner overlay
+        //    shader_FD473559 = pShader;
         //else if (crc == 0x793BE067) // injured overlay
         //    shader_793BE067 = pShader;
     }
@@ -497,20 +597,20 @@ void Init()
     injector::MakeCALL(addrTbl[0x1197937], sub_E6E800, true);
     injector::MakeCALL(addrTbl[0x123F3CF], sub_E6E800, true);
 
-    //disable shader overlays (don't scale to fullscreen)
+    // shader overlays (scale to fullscreen)
     {
-        //injector::MakeCALL(addrTbl[0x012915D1], CreateVertexShaderHook, true);
+        injector::MakeCALL(addrTbl[0x012915D1], CreateVertexShaderHook, true);
         injector::MakeCALL(addrTbl[0x01291614], CreatePixelShaderHook, true);
         
-        static bool bIsPaused = false;
-        struct GameStateHook
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                regs.eax = *(uint8_t*)(regs.ebp + 0x104A9);
-                bIsPaused = !!regs.eax;
-            }
-        }; injector::MakeInline<GameStateHook>(addrTbl[0x511DAA], addrTbl[0x511DAA] + 6);
+        //static bool bIsPaused = false;
+        //struct GameStateHook
+        //{
+        //    void operator()(injector::reg_pack& regs)
+        //    {
+        //        regs.eax = *(uint8_t*)(regs.ebp + 0x104A9);
+        //        bIsPaused = !!regs.eax;
+        //    }
+        //}; injector::MakeInline<GameStateHook>(addrTbl[0x511DAA], addrTbl[0x511DAA] + 6);
 
         //struct SetVertexShaderHook
         //{
@@ -529,22 +629,22 @@ void Init()
         //    }
         //}; injector::MakeInline<SetVertexShaderHook>(addrTbl[0xF3CA40], addrTbl[0xF3CA40] + 6);
 
-        struct SetPixelShaderHook
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                if ((IsSplitScreenActive() || GetDiff() > 1.0f) && !bIsPaused)
-                {
-                    auto pShader = (IDirect3DPixelShader9*)regs.eax;
-                    if (pShader == shader_498080AC || pShader == shader_FD473559)
-                    {
-                        regs.eax = (uint32_t)shader_dummy;
-                    }
-                }
-                *(uint32_t*)(regs.edi + 0x28) = regs.eax;
-                regs.ecx = *(uint32_t*)(regs.ebp + 0x0);
-            }
-        }; injector::MakeInline<SetPixelShaderHook>(addrTbl[0xF3CA8E], addrTbl[0xF3CA8E] + 6);
+        //struct SetPixelShaderHook
+        //{
+        //    void operator()(injector::reg_pack& regs)
+        //    {
+        //        if ((IsSplitScreenActive() || GetDiff() > 1.0f) && !bIsPaused)
+        //        {
+        //            auto pShader = (IDirect3DPixelShader9*)regs.eax;
+        //            if (pShader == shader_498080AC || pShader == shader_FD473559)
+        //            {
+        //                regs.eax = (uint32_t)shader_dummy;
+        //            }
+        //        }
+        //        *(uint32_t*)(regs.edi + 0x28) = regs.eax;
+        //        regs.ecx = *(uint32_t*)(regs.ebp + 0x0);
+        //    }
+        //}; injector::MakeInline<SetPixelShaderHook>(addrTbl[0xF3CA8E], addrTbl[0xF3CA8E] + 6);
 
         // disabling injured overlay
         if (bDisableDamageOverlay)
@@ -575,7 +675,7 @@ void Init()
         //injector::MakeCALL(0x58E178, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
         //injector::MakeCALL(0x96CB66, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80 //press ok to continue
         //injector::MakeCALL(0x96CBB4, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
-        //injector::MakeCALL(0x97A188, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80 // skills background
+        injector::MakeCALL(addrTbl[0x97A188], sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80 // skills background
         //injector::MakeCALL(0x97A1A2, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
         injector::MakeCALL(addrTbl[0x97A787], sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
         //injector::MakeCALL(0x97A7A1, sub_974C80_center, true); //0x974C80 + 0x0->call    sub_974C80
@@ -604,7 +704,7 @@ void Init()
 
         injector::MakeCALL(addrTbl[0x55DCC7], sub_55DB40, true); // 0x55DB40 + 0x0->call    sub_55DB40
         injector::MakeCALL(addrTbl[0x55DCE5], sub_55DB40_stretch, true); // 0x55DB40 + 0x0->call    sub_55DB40
-        //injector::MakeCALL(0x55DD52, sub_55DB40_center, true); // 0x55DB40 + 0x0->call    sub_55DB40
+        injector::MakeCALL(addrTbl[0x55DD52], sub_55DB40, true); // 0x55DB40 + 0x0->call    sub_55DB40 // pause background
         //injector::MakeCALL(0x55DD8F, sub_55DB40_center, true); // 0x55DB40 + 0x0->call    sub_55DB40
         injector::MakeCALL(addrTbl[0x55DE28], sub_55DB40_center, true); // 0x55DB40 + 0x0->call    sub_55DB40
         //injector::MakeCALL(0x55DE46, sub_55DB40_center, true); // 0x55DB40 + 0x0->call    sub_55DB40
@@ -700,9 +800,9 @@ void Init()
                                 }
 
                                 auto [FineRP, FineGP, FineBP] = LEDEffects::RGBtoPercent(FineR, FineG, FineB);
-                                auto [FineRPDimmed, FineGPDimmed, FineBPDimmed] = LEDEffects::RGBtoPercent(FineR, FineG, FineB, 0.25f);
+                                auto [FineRPDimmed, FineGPDimmed, FineBPDimmed] = LEDEffects::RGBtoPercent(FineR, FineG, FineB, 0.5f);
                                 auto [DangerRP, DangerGP, DangerBP] = LEDEffects::RGBtoPercent(DangerR, DangerG, DangerB);
-                                auto [DangerRPDimmed, DangerGPDimmed, DangerBPDimmed] = LEDEffects::RGBtoPercent(DangerR, DangerG, DangerB, 0.25f);
+                                auto [DangerRPDimmed, DangerGPDimmed, DangerBPDimmed] = LEDEffects::RGBtoPercent(DangerR, DangerG, DangerB, 0.5f);
 
                                 if (health1 >= 1)
                                 {
@@ -735,7 +835,7 @@ void Init()
                                 else if (health2 == 0)
                                 {
                                     LEDEffects::SetLightingRightSide(DangerRPDimmed, DangerGPDimmed, DangerBPDimmed, false, true); //red
-                                    LEDEffects::DrawCardiogram(DangerRP, DangerGP, DangerBP, 0, 0, 0, true);
+                                    LEDEffects::DrawCardiogramNumpad(DangerRP, DangerGP, DangerBP, 0, 0, 0, true);
                                 }
                                 else
                                 {
