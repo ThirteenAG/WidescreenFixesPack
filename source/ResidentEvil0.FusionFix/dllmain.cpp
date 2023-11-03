@@ -178,6 +178,20 @@ IDirect3DPixelShader9* __stdcall CreatePixelShaderHook(const DWORD** a1)
     return pShader;
 }
 
+std::vector<HWND> windows;
+BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam)
+{
+    DWORD lpdwProcessId;
+    GetWindowThreadProcessId(hwnd, &lpdwProcessId);
+    if (lpdwProcessId == lParam)
+    {
+        if (IsWindowVisible(hwnd))
+            windows.push_back(hwnd);
+        return FALSE;
+    }
+    return TRUE;
+}
+
 void Init()
 {
     CIniReader iniReader("");
@@ -202,46 +216,51 @@ void Init()
                 //}
                 //else
                 {
-                    static auto TIMERA = LEDEffects::Timer();
-                    static bool bHideCur = false;
-                    static CURSORINFO hiddenPoint = {};
-                    static POINT oldPoint = {};
-                    POINT curPoint = {};
-                    GetCursorPos(&curPoint);
-                    if ((curPoint.x != oldPoint.x || curPoint.y != oldPoint.y) && (curPoint.x != hiddenPoint.ptScreenPos.x && curPoint.y != hiddenPoint.ptScreenPos.y))
+                    if (windows.empty())
+                        EnumWindows(EnumWindowsProc, GetCurrentProcessId());
+                    else if (windows.front() == GetFocus())
                     {
-                        if (bHideCur)
-                            SetCursorPos(oldPoint.x, oldPoint.y);
-                        bHideCur = false;
-                        TIMERA.reset();
-                    }
-                    else
-                    {
-                        if (TIMERA > nHideMouseCursorAfterMs)
+                        static auto TIMERA = LEDEffects::Timer();
+                        static bool bHideCur = false;
+                        static CURSORINFO hiddenPoint = {};
+                        static POINT oldPoint = {};
+                        POINT curPoint = {};
+                        GetCursorPos(&curPoint);
+                        if ((curPoint.x != oldPoint.x || curPoint.y != oldPoint.y) && (curPoint.x != hiddenPoint.ptScreenPos.x && curPoint.y != hiddenPoint.ptScreenPos.y))
                         {
-                            bHideCur = true;
+                            if (bHideCur)
+                                SetCursorPos(oldPoint.x, oldPoint.y);
+                            bHideCur = false;
                             TIMERA.reset();
                         }
-                    }
-                    if (curPoint.x != hiddenPoint.ptScreenPos.x && curPoint.y != hiddenPoint.ptScreenPos.y)
-                        oldPoint = curPoint;
-
-                    if (bHideCur)
-                    {
-                        if (!hiddenPoint.hCursor)
+                        else
                         {
-                            SetCursorPos(99999, 99999);
-                            hiddenPoint.cbSize = sizeof(CURSORINFO);
-                            GetCursorInfo(&hiddenPoint);
-                            hiddenPoint.ptScreenPos.x -= 1;
-                            hiddenPoint.ptScreenPos.y -= 1;
-                            SetCursorPos(hiddenPoint.ptScreenPos.x, hiddenPoint.ptScreenPos.y);
+                            if (TIMERA > nHideMouseCursorAfterMs)
+                            {
+                                bHideCur = true;
+                                TIMERA.reset();
+                            }
                         }
-                        CURSORINFO Point = {};
-                        Point.cbSize = sizeof(CURSORINFO);
-                        GetCursorInfo(&Point);
-                        if (Point.ptScreenPos.x != hiddenPoint.ptScreenPos.x || Point.ptScreenPos.y != hiddenPoint.ptScreenPos.y)
-                            SetCursorPos(hiddenPoint.ptScreenPos.x, hiddenPoint.ptScreenPos.x);
+                        if (curPoint.x != hiddenPoint.ptScreenPos.x && curPoint.y != hiddenPoint.ptScreenPos.y)
+                            oldPoint = curPoint;
+
+                        if (bHideCur)
+                        {
+                            if (hiddenPoint.ptScreenPos.x == 0 || hiddenPoint.ptScreenPos.y == 0)
+                            {
+                                SetCursorPos(99999, 99999);
+                                hiddenPoint.cbSize = sizeof(CURSORINFO);
+                                GetCursorInfo(&hiddenPoint);
+                                hiddenPoint.ptScreenPos.x -= 1;
+                                hiddenPoint.ptScreenPos.y -= 1;
+                                SetCursorPos(hiddenPoint.ptScreenPos.x, hiddenPoint.ptScreenPos.y);
+                            }
+                            CURSORINFO Point = {};
+                            Point.cbSize = sizeof(CURSORINFO);
+                            GetCursorInfo(&Point);
+                            if (Point.ptScreenPos.x != hiddenPoint.ptScreenPos.x || Point.ptScreenPos.y != hiddenPoint.ptScreenPos.y)
+                                SetCursorPos(hiddenPoint.ptScreenPos.x, hiddenPoint.ptScreenPos.x);
+                        }
                     }
                 }
             }
