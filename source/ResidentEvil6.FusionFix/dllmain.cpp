@@ -66,8 +66,15 @@ void FillAddressTable()
     addrTbl[0x55DCC7] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? D9 5E 04 8B 4C 24 14");
     addrTbl[0x55DCE5] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? D9 5E 0C 8B 44 24 1C");
     addrTbl[0x55DD52] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? D9 5E 04 A1");
+    addrTbl[0x55DD8F] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? D9 5E 0C A1");
     addrTbl[0x55DE28] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? D9 5E 04 8B 4C 24 18 51 8B CF E8 ? ? ? ? D9 5E 08 8B 54 24 1C 52 8B CF E8 ? ? ? ? D9 5E 0C");
+    addrTbl[0x55DE46] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? D9 5E 0C 8B 44 24 20 50");
+    addrTbl[0x55DEDC] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? D9 5E 04 8B 54 24 18 52 8B CF E8 ? ? ? ? D9 54 24 30");
+    addrTbl[0x55DF52] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? D9 56 0C DA 4C 24 20 8B 4C 24 24");
+    addrTbl[0x55DFE8] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? D9 5E 04 8B 4C 24 18 51 8B CF E8 ? ? ? ? D9 5E 08 8B 54 24 1C 52 8B CF E8 ? ? ? ? D9 56 0C");
+    addrTbl[0x55E006] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? D9 56 0C DA 4C 24 20 8B 4C 24 28");
     addrTbl[0x55E09C] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? D9 5E 04 8B 54 24 18 52 8B CF E8 ? ? ? ? 83 EC 08");
+    addrTbl[0x55E0C8] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? D9 5E 0C 8B 44 24 20 F3 0F 10 05");
     addrTbl[0x97D139] = (uintptr_t)hook::get_pattern("75 0A F3 0F 10 05 ? ? ? ? EB 43");
     addrTbl[0x01292227] = (uintptr_t)hook::get_pattern("FF 15 ? ? ? ? 56 68");
     addrTbl[0xF35DF6] = (uintptr_t)hook::get_pattern("FF 15 ? ? ? ? 8B D8 6A 00");
@@ -416,7 +423,7 @@ IDirect3DVertexShader9* __stdcall CreateVertexShaderHook(const DWORD** a1)
                 "slt r0.z, v1.w, c6.w\n"
                 "add r0.z, -r0.z, c4.x\n"
                 "rcp r10.x, c2.x\n"
-                "mul r10.x, c2.y, r10.x\n"
+                "mul r10.x, c2.w, r10.x\n"
                 "mul r10.x, r10.x, c7.y\n"
                 "mul r0.x, r0.x, r10.x\n"
                 "mul o0.x, r0.x, c7.x\n"
@@ -424,6 +431,70 @@ IDirect3DVertexShader9* __stdcall CreateVertexShaderHook(const DWORD** a1)
                 "mov o0.w, r0.z\n"
                 "mov o1.w, v1.w\n"
                 "mov o2.zw, c4.y\n";
+
+            LPD3DXBUFFER pCode;
+            LPD3DXBUFFER pErrorMsgs;
+            LPDWORD pShaderData;
+            auto result = D3DXAssembleShader(shader_text, strlen(shader_text), NULL, NULL, 0, &pCode, &pErrorMsgs);
+            if (SUCCEEDED(result))
+            {
+                pShaderData = (DWORD*)pCode->GetBufferPointer();
+                IDirect3DVertexShader9* shader = nullptr;
+                result = pDevice->CreateVertexShader(pShaderData, &shader);
+                if (FAILED(result)) {
+                    return pShader;
+                }
+                else
+                {
+                    pShader->Release();
+                    return shader;
+                }
+            }
+        }
+        else if (crc == 0xF09EC5E9) // low health rotating blurry rectangle
+        {
+            const char* shader_text =
+                "vs_3_0\n"
+                "def c0, 32768, 1, 3.90624991e-005, 0\n"
+                "def c10, 0.000244140625, 0, 0, 0\n"
+                "def c11, 2, 0, 0, 0\n"
+                "dcl_position v0\n"
+                "dcl_normal v1\n"
+                "dcl_tangent v2\n"
+                "dcl_binormal v3\n"
+                "dcl_position o0\n"
+                "dcl_texcoord o1\n"
+                "dcl_texcoord1 o2\n"
+                "dcl_texcoord2 o3\n"
+                "mov r0.x, c1.w\n"
+                "mov r0.y, c2.w\n"
+                "mov r0.z, c3.w\n"
+                "mov r0.w, c4.w\n"
+                "mov r1.xyz, v0\n"
+                "mad r1.xyz, c7, -v3.x, r1\n"
+                "mov r1.w, c0.y\n"
+                "dp4 r0.x, r1, r0\n"
+                "rcp r0.x, r0.x\n"
+                "mul r0.yzw, c2.xxyw, v0.y\n"
+                "mad r0.yzw, v0.x, c1.xxyw, r0\n"
+                "mad r0.yzw, v0.z, c3.xxyw, r0\n"
+                "add r0.yzw, r0, c4.xxyw\n"
+                "mul r2.x, r0.w, c1.z\n"
+                "mul r2.y, r0.w, c2.z\n"
+                "mul r2.z, r0.w, c3.z\n"
+                "mul r2.w, r0.w, c4.z\n"
+                "mul r2, r0.x, r2\n"
+                "dp4 o0.z, r1, r2\n"
+                "add r0.x, c0.x, v3.y\n"
+                "mul r0.x, r0.x, c9.z\n"
+                "mul o2.w, r0.x, c0.z\n"
+                "mul r0.y, r0.y, c11.x\n"
+                "mad o0.x, c8.x, -r0.w, r0.y\n"
+                "mad o0.y, c8.y, r0.w, r0.z\n"
+                "mov o0.w, r0.w\n"
+                "mov o1, v1\n"
+                "mov o2.xyz, c0.ywww\n"
+                "mul o3, c10.xxyy, v2.xyxx\n";
 
             LPD3DXBUFFER pCode;
             LPD3DXBUFFER pErrorMsgs;
@@ -452,83 +523,83 @@ IDirect3DVertexShader9* __stdcall CreateVertexShaderHook(const DWORD** a1)
 //IDirect3DPixelShader9* shader_dummy = nullptr;
 //IDirect3DPixelShader9* shader_498080AC = nullptr;
 //IDirect3DPixelShader9* shader_FD473559 = nullptr;
-IDirect3DPixelShader9* __stdcall CreatePixelShaderHook(const DWORD** a1)
-{
-    if (!a1)
-        return nullptr;
-
-    auto pDevice = (IDirect3DDevice9*)*(uint32_t*)(*(uint32_t*)addrTbl[0x186E8BC] + 256);
-    IDirect3DPixelShader9* pShader = nullptr;
-    pDevice->CreatePixelShader(a1[2], &pShader);
-
-    if (pShader != nullptr)
-    {
-        static std::vector<uint8_t> pbFunc;
-        UINT len;
-        pShader->GetFunction(nullptr, &len);
-        if (pbFunc.size() < len)
-            pbFunc.resize(len);
-
-        pShader->GetFunction(pbFunc.data(), &len);
-
-        uint32_t crc32(uint32_t crc, const void* buf, size_t size);
-        auto crc = crc32(0, pbFunc.data(), len);
-
-        if (crc == 0x498080AC)      // low health rotating blurry rectangle
-        {
-            const char* shader_text =
-                "ps_3_0\n"
-                "dcl_texcoord v0.xy\n"
-                "dcl_2d s0\n"
-                "dcl_2d s1\n"
-                "texld r0, v0, s0\n"
-                "mul r0.xyz, r0, r0\n"
-                "mov oC0.w, r0.w\n"
-                "mul r1.xyz, r0.y, c2\n"
-                "mad r1.xyz, r0.x, c1, r1\n"
-                "mad r1.xyz, r0.z, c3, r1\n"
-                "add r1.xyz, r1, c4\n"
-                "texld r2, r1.x, s1\n"
-                "mul r2.x, r2.x, r2.x\n"
-                "texld r3, r1.y, s1\n"
-                "texld r1, r1.z, s1\n"
-                "mul r2.z, r1.z, r1.z\n"
-                "mul r2.y, r3.y, r3.y\n"
-                "rsq r0.x, r0.x\n"
-                "rcp oC0.x, r0.x\n"
-                "rsq r0.x, r0.y\n"
-                "rsq r0.y, r0.z\n"
-                "rcp oC0.z, r0.y\n"
-                "rcp oC0.y, r0.x\n";
-
-            LPD3DXBUFFER pCode;
-            LPD3DXBUFFER pErrorMsgs;
-            LPDWORD shader_data;
-            auto result = D3DXAssembleShader(shader_text, strlen(shader_text), NULL, NULL, 0, &pCode, &pErrorMsgs);
-            if (SUCCEEDED(result))
-            {
-                shader_data = (DWORD*)pCode->GetBufferPointer();
-                IDirect3DPixelShader9* shader = nullptr;
-                result = pDevice->CreatePixelShader(shader_data, &shader);
-                if (FAILED(result)) {
-                    return pShader;
-                }
-                else
-                {
-                    pShader->Release();
-                    return shader;
-                }
-            }
-        }
-
-        //else if (crc == 0xFD473559) // waiting for partner overlay
-        //    shader_FD473559 = pShader;
-        //else if (crc == 0x793BE067) // injured overlay
-        //    shader_793BE067 = pShader;
-    }
-
-    return pShader;
-}
+//IDirect3DPixelShader9* __stdcall CreatePixelShaderHook(const DWORD** a1)
+//{
+//    if (!a1)
+//        return nullptr;
+//
+//    auto pDevice = (IDirect3DDevice9*)*(uint32_t*)(*(uint32_t*)addrTbl[0x186E8BC] + 256);
+//    IDirect3DPixelShader9* pShader = nullptr;
+//    pDevice->CreatePixelShader(a1[2], &pShader);
+//
+//    if (pShader != nullptr)
+//    {
+//        static std::vector<uint8_t> pbFunc;
+//        UINT len;
+//        pShader->GetFunction(nullptr, &len);
+//        if (pbFunc.size() < len)
+//            pbFunc.resize(len);
+//
+//        pShader->GetFunction(pbFunc.data(), &len);
+//
+//        uint32_t crc32(uint32_t crc, const void* buf, size_t size);
+//        auto crc = crc32(0, pbFunc.data(), len);
+//
+//        if (crc == 0x498080AC)      // low health rotating blurry rectangle
+//        {
+//            const char* shader_text =
+//                "ps_3_0\n"
+//                "dcl_texcoord v0.xy\n"
+//                "dcl_2d s0\n"
+//                "dcl_2d s1\n"
+//                "texld r0, v0, s0\n"
+//                "mul r0.xyz, r0, r0\n"
+//                "mov oC0.w, r0.w\n"
+//                "mul r1.xyz, r0.y, c2\n"
+//                "mad r1.xyz, r0.x, c1, r1\n"
+//                "mad r1.xyz, r0.z, c3, r1\n"
+//                "add r1.xyz, r1, c4\n"
+//                "texld r2, r1.x, s1\n"
+//                "mul r2.x, r2.x, r2.x\n"
+//                "texld r3, r1.y, s1\n"
+//                "texld r1, r1.z, s1\n"
+//                "mul r2.z, r1.z, r1.z\n"
+//                "mul r2.y, r3.y, r3.y\n"
+//                "rsq r0.x, r0.x\n"
+//                "rcp oC0.x, r0.x\n"
+//                "rsq r0.x, r0.y\n"
+//                "rsq r0.y, r0.z\n"
+//                "rcp oC0.z, r0.y\n"
+//                "rcp oC0.y, r0.x\n";
+//
+//            LPD3DXBUFFER pCode;
+//            LPD3DXBUFFER pErrorMsgs;
+//            LPDWORD shader_data;
+//            auto result = D3DXAssembleShader(shader_text, strlen(shader_text), NULL, NULL, 0, &pCode, &pErrorMsgs);
+//            if (SUCCEEDED(result))
+//            {
+//                shader_data = (DWORD*)pCode->GetBufferPointer();
+//                IDirect3DPixelShader9* shader = nullptr;
+//                result = pDevice->CreatePixelShader(shader_data, &shader);
+//                if (FAILED(result)) {
+//                    return pShader;
+//                }
+//                else
+//                {
+//                    pShader->Release();
+//                    return shader;
+//                }
+//            }
+//        }
+//
+//        //else if (crc == 0xFD473559) // waiting for partner overlay
+//        //    shader_FD473559 = pShader;
+//        //else if (crc == 0x793BE067) // injured overlay
+//        //    shader_793BE067 = pShader;
+//    }
+//
+//    return pShader;
+//}
 
 void Init()
 {
@@ -600,7 +671,7 @@ void Init()
     // shader overlays (scale to fullscreen)
     {
         injector::MakeCALL(addrTbl[0x012915D1], CreateVertexShaderHook, true);
-        injector::MakeCALL(addrTbl[0x01291614], CreatePixelShaderHook, true);
+        //injector::MakeCALL(addrTbl[0x01291614], CreatePixelShaderHook, true);
         
         //static bool bIsPaused = false;
         //struct GameStateHook
@@ -705,15 +776,15 @@ void Init()
         injector::MakeCALL(addrTbl[0x55DCC7], sub_55DB40, true); // 0x55DB40 + 0x0->call    sub_55DB40
         injector::MakeCALL(addrTbl[0x55DCE5], sub_55DB40_stretch, true); // 0x55DB40 + 0x0->call    sub_55DB40
         injector::MakeCALL(addrTbl[0x55DD52], sub_55DB40, true); // 0x55DB40 + 0x0->call    sub_55DB40 // pause background
-        //injector::MakeCALL(0x55DD8F, sub_55DB40_center, true); // 0x55DB40 + 0x0->call    sub_55DB40
-        injector::MakeCALL(addrTbl[0x55DE28], sub_55DB40_center, true); // 0x55DB40 + 0x0->call    sub_55DB40
-        //injector::MakeCALL(0x55DE46, sub_55DB40_center, true); // 0x55DB40 + 0x0->call    sub_55DB40
-        //injector::MakeCALL(0x55DEDC, sub_55DB40_center, true); // 0x55DB40 + 0x0->call    sub_55DB40
-        //injector::MakeCALL(0x55DF52, sub_55DB40_center, true); // 0x55DB40 + 0x0->call    sub_55DB40
-        //injector::MakeCALL(0x55DFE8, sub_55DB40_center, true); // 0x55DB40 + 0x0->call    sub_55DB40
-        //injector::MakeCALL(0x55E006, sub_55DB40_center, true); // 0x55DB40 + 0x0->call    sub_55DB40
-        injector::MakeCALL(addrTbl[0x55E09C], sub_55DB40_center, true); // 0x55DB40 + 0x0->call    sub_55DB40
-        //injector::MakeCALL(0x55E0C8, sub_55DB40_center, true); // 0x55DB40 + 0x0->call    sub_55DB40
+        injector::MakeCALL(addrTbl[0x55DD8F], sub_55DB40_stretch, true); // 0x55DB40 + 0x0->call    sub_55DB40
+        injector::MakeCALL(addrTbl[0x55DE28], sub_55DB40, true); // 0x55DB40 + 0x0->call    sub_55DB40
+        injector::MakeCALL(addrTbl[0x55DE46], sub_55DB40_stretch, true); // 0x55DB40 + 0x0->call    sub_55DB40
+        injector::MakeCALL(addrTbl[0x55DEDC], sub_55DB40, true); // 0x55DB40 + 0x0->call    sub_55DB40
+        injector::MakeCALL(addrTbl[0x55DF52], sub_55DB40_stretch, true); // 0x55DB40 + 0x0->call    sub_55DB40
+        injector::MakeCALL(addrTbl[0x55DFE8], sub_55DB40, true); // 0x55DB40 + 0x0->call    sub_55DB40
+        injector::MakeCALL(addrTbl[0x55E006], sub_55DB40_stretch, true); // 0x55DB40 + 0x0->call    sub_55DB40
+        injector::MakeCALL(addrTbl[0x55E09C], sub_55DB40, true); // 0x55DB40 + 0x0->call    sub_55DB40
+        injector::MakeCALL(addrTbl[0x55E0C8], sub_55DB40_stretch, true); // 0x55DB40 + 0x0->call    sub_55DB40
     }
     
     //3d blips fix
