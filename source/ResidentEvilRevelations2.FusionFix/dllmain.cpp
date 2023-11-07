@@ -580,7 +580,7 @@ IDirect3DVertexShader9* __stdcall CreateVertexShaderHook(const DWORD** a1)
                 "slt r0.z, v1.w, c6.w\n"
                 "add r0.z, -r0.z, c4.x\n"
                 "rcp r10.x, c2.x\n"
-                "mul r10.x, c2.y, r10.x\n"
+                "mul r10.x, c2.w, r10.x\n"
                 "mul r10.x, r10.x, c7.y\n"
                 "mul r0.x, r0.x, r10.x\n"
                 "mul o0.x, r0.x, c7.x\n"
