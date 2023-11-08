@@ -76,6 +76,8 @@ void FillAddressTable()
     addrTbl[0x55E09C] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? D9 5E 04 8B 54 24 18 52 8B CF E8 ? ? ? ? 83 EC 08");
     addrTbl[0x55E0C8] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? D9 5E 0C 8B 44 24 20 F3 0F 10 05");
     addrTbl[0x97D139] = (uintptr_t)hook::get_pattern("75 0A F3 0F 10 05 ? ? ? ? EB 43");
+    addrTbl[0x9A0EE0] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? D9 00 0F 57 C0 D9 5E 40 D9 40 04 5F");
+    addrTbl[0x97D0F0] = (uintptr_t)hook::get_pattern("8B 44 24 0C 0F 57 C0 69 C0");
     addrTbl[0x01292227] = (uintptr_t)hook::get_pattern("FF 15 ? ? ? ? 56 68");
     addrTbl[0xF35DF6] = (uintptr_t)hook::get_pattern("FF 15 ? ? ? ? 8B D8 6A 00");
     addrTbl[0xF35EEC] = (uintptr_t)hook::get_pattern("FF 15 ? ? ? ? 89 86 ? ? ? ? EB 0A");
@@ -358,7 +360,7 @@ void __fastcall sub_E6E800(float* _this, void* edx, float a2, float a3, float a4
     return injector::fastcall<void(float*, void*, float, float, float, float)>::call(addrTbl[0xE6E800], _this, edx, a2, a3, a4, a5);
 }
 
-//IDirect3DVertexShader9* shader_4F0EE939 = nullptr;
+IDirect3DVertexShader9* shader_4F0EE939 = nullptr;
 IDirect3DVertexShader9* __stdcall CreateVertexShaderHook(const DWORD** a1)
 {
     if (!a1)
@@ -390,7 +392,6 @@ IDirect3DVertexShader9* __stdcall CreateVertexShaderHook(const DWORD** a1)
                 "def c4, 1, 0, -128, 4\n"
                 "def c5, 0.000244140654, 0.5, 6.28318548, -3.14159274\n"
                 "def c6, 2, -1, 1, 9.99999997e-007\n"
-                "def c7, 1.8, 0.28125, 0, 0\n" // 1.8 instead of 1.6 to cover the gaps in ultra wide
                 "dcl_position v0\n"
                 "dcl_normal v1\n"
                 "dcl_tangent v2\n"
@@ -417,16 +418,13 @@ IDirect3DVertexShader9* __stdcall CreateVertexShaderHook(const DWORD** a1)
                 "mul r0.yz, r1.xyxw, r0.y\n"
                 "mad r2.x, r0.x, r1.x, -r0.y\n"
                 "mad r2.y, r0.x, r1.y, r0.z\n"
-                "mov r0.xy, v0\n"
+                "add r0.xy, r2, v0\n"
                 "mul r0.xy, r0, c2\n"
                 "mad r0.xy, r0, c6.x, c6.yzzw\n"
                 "slt r0.z, v1.w, c6.w\n"
                 "add r0.z, -r0.z, c4.x\n"
-                "rcp r10.x, c2.x\n"
-                "mul r10.x, c2.w, r10.x\n"
-                "mul r10.x, r10.x, c7.y\n"
-                "mul r0.x, r0.x, r10.x\n"
-                "mul o0.x, r0.x, c7.x\n"
+                "mul r0.x, r0.x, c230.x\n"
+                "mad o0.x, c1.x, -r0.z, r0.x\n"
                 "mad o0.y, c1.y, r0.z, r0.y\n"
                 "mov o0.w, r0.z\n"
                 "mov o1.w, v1.w\n"
@@ -446,6 +444,7 @@ IDirect3DVertexShader9* __stdcall CreateVertexShaderHook(const DWORD** a1)
                 }
                 else
                 {
+                    shader_4F0EE939 = shader;
                     pShader->Release();
                     return shader;
                 }
@@ -601,6 +600,79 @@ IDirect3DVertexShader9* __stdcall CreateVertexShaderHook(const DWORD** a1)
 //    return pShader;
 //}
 
+bool bDisableObjectiveIndicator = false;
+float* __stdcall ObjectiveIndicator(float* a1, float* a2, int a3)
+{
+    if (bDisableObjectiveIndicator)
+        return a1;
+
+
+    // needs proper fix
+    auto p186E23C = *(uint32_t*)addrTbl[0x186E23C];
+
+    auto v12 = 0;
+    auto v13 = 0;
+    auto v14 = 0;
+    auto v15 = 0;
+
+    auto v3 = 1.0f;
+    auto v4 = *(int32_t*)(400 * a3 + p186E23C + 72);
+    auto v5 = *(int32_t*)(400 * a3 + p186E23C + 76);
+    auto v6 = *(int32_t*)(400 * a3 + p186E23C + 80);
+    auto v8 = *(int32_t*)(400 * a3 + p186E23C + 84);
+    auto gameMode = *(uint32_t*)(p186E23C + 3296);
+    auto v9 = 1.0f;
+
+    auto additionalScaler = 1.0f;
+    auto scrRes = GetResX() * GetResY();
+    if (scrRes > 1920 * 1080)
+        additionalScaler = ((float)scrRes / (1920.0f * 1080.0f)) / 2.0f;
+
+    if (gameMode == 2)
+    {
+        auto v10 = 2.0f / additionalScaler;
+        v12 = (int)((float)v4 * v10);
+        v13 = (int)((float)v5 * v10);
+        v14 = (int)((float)v6 * v10);
+        v15 = (int)((float)v8 * v10);
+        a1[0] = (float)(((float)(v15 - v13) * defaultAspectRatio) * a2[0]) * (v9 / GetSplitScreenDiff());
+        a1[1] = (float)((float)(v15 - v13) * a2[1]) * v3;
+        a1[2] = -2650.0;
+        a1[3] = 0.0;
+        return a1;
+    }
+    if (gameMode == 1)
+    {
+        auto v11 = (float)(v6 - v4) / (float)(v8 - v5);
+        if (v11 > defaultAspectRatio)
+            v9 = (float)(v11 - defaultAspectRatio) * 1.25f;
+        auto v10 = 3.049072f / additionalScaler;
+        v12 = (int)(float)((float)v4 * v10);
+        v13 = (int)(float)((float)v5 * v10);
+        v14 = (int)(float)((float)v6 * v10);
+        v15 = (int)(float)((float)v8 * v10);
+        a1[0] = (float)(((float)(v15 - v13) * defaultAspectRatio) * a2[0]) * (v9 / GetSplitScreenDiff());
+        a1[1] = (float)((float)(v15 - v13) * a2[1]) * v3;
+        a1[2] = -2650.0f;
+        a1[3] = 0.0f;
+        return a1;
+    }
+
+    auto v16 = (float)(v6 - v4) / (float)(v8 - v5);
+    if (v16 < defaultAspectRatio)
+        v3 = (float)((float)(defaultAspectRatio - v16) * 1.25f) + 1.0f;
+    auto v10 = 1.524536f / additionalScaler;
+    v12 = (int)(float)((float)v4 * v10);
+    v13 = (int)(float)((float)v5 * v10);
+    v14 = 1951;
+    v15 = 1097;
+    a1[0] = (float)(((float)(v15 - v13) * defaultAspectRatio) * a2[0]) * (v9 / GetSplitScreenDiff());
+    a1[1] = (float)((float)(v15 - v13) * a2[1]) * v3;
+    a1[2] = -2650.0f;
+    a1[3] = 0.0f;
+    return a1;
+}
+
 void Init()
 {
     CIniReader iniReader("");
@@ -609,6 +681,7 @@ void Init()
     bSplitScreenSwapTopBottom = iniReader.ReadInteger("MAIN", "SplitScreenSwapTopBottom", 0) != 0;
     auto bDisableDamageOverlay = iniReader.ReadInteger("MAIN", "DisableDamageOverlay", 1) != 0;
     auto bDisableDBNOEffects = iniReader.ReadInteger("MAIN", "DisableDBNOEffects", 0) != 0;
+    bDisableObjectiveIndicator = iniReader.ReadInteger("MAIN", "DisableObjectiveIndicator", 0) != 0;
 
     FillAddressTable();
     
@@ -683,22 +756,32 @@ void Init()
         //    }
         //}; injector::MakeInline<GameStateHook>(addrTbl[0x511DAA], addrTbl[0x511DAA] + 6);
 
-        //struct SetVertexShaderHook
-        //{
-        //    void operator()(injector::reg_pack& regs)
-        //    {
-        //        if ((IsSplitScreenActive() || GetDiff() > 1.0f) && !bIsPaused)
-        //        {
-        //            auto pShader = (IDirect3DVertexShader9*)regs.eax;
-        //            if (pShader == shader_4F0EE939)
-        //            {
-        //                regs.eax = 0;
-        //            }
-        //        }
-        //        *(uint32_t*)(regs.edi + 0x24) = regs.eax;
-        //        regs.ecx = *(uint32_t*)(regs.ebp + 0x0);
-        //    }
-        //}; injector::MakeInline<SetVertexShaderHook>(addrTbl[0xF3CA40], addrTbl[0xF3CA40] + 6);
+        struct SetVertexShaderHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                //if ((IsSplitScreenActive() || GetDiff() > 1.0f)/* && !bIsPaused*/)
+                {
+                    auto pShader = (IDirect3DVertexShader9*)regs.eax;
+                    //if (pShader == shader_4F0EE939)
+                    {
+                        //regs.eax = 0;
+                        IDirect3DDevice9* pDevice = nullptr;
+                        pShader->GetDevice(&pDevice);
+                        static float arr[4];
+                        arr[0] = IsSplitScreenActive() ? GetSplitScreenDiff() : GetDiff();
+                        arr[1] = 0.0f;
+                        arr[2] = 0.0f;
+                        arr[3] = 0.0f;
+                        if (arr[0] < 1.0f)
+                            arr[0] = 1.0f;
+                        pDevice->SetVertexShaderConstantF(230, &arr[0], 1);
+                    }
+                }
+                *(uint32_t*)(regs.edi + 0x24) = regs.eax;
+                regs.ecx = *(uint32_t*)(regs.ebp + 0x0);
+            }
+        }; injector::MakeInline<SetVertexShaderHook>(addrTbl[0xF3CA40], addrTbl[0xF3CA40] + 6);
 
         //struct SetPixelShaderHook
         //{
@@ -777,8 +860,10 @@ void Init()
         injector::MakeCALL(addrTbl[0x55DCE5], sub_55DB40_stretch, true); // 0x55DB40 + 0x0->call    sub_55DB40
         injector::MakeCALL(addrTbl[0x55DD52], sub_55DB40, true); // 0x55DB40 + 0x0->call    sub_55DB40 // pause background
         injector::MakeCALL(addrTbl[0x55DD8F], sub_55DB40_stretch, true); // 0x55DB40 + 0x0->call    sub_55DB40
-        injector::MakeCALL(addrTbl[0x55DE28], sub_55DB40, true); // 0x55DB40 + 0x0->call    sub_55DB40
-        injector::MakeCALL(addrTbl[0x55DE46], sub_55DB40_stretch, true); // 0x55DB40 + 0x0->call    sub_55DB40
+
+        injector::MakeCALL(addrTbl[0x55DE28], sub_55DB40_center, true); // 0x55DB40 + 0x0->call    sub_55DB40 weapon name bg
+        injector::MakeCALL(addrTbl[0x55DE46], sub_55DB40, true); // 0x55DB40 + 0x0->call    sub_55DB40
+
         injector::MakeCALL(addrTbl[0x55DEDC], sub_55DB40, true); // 0x55DB40 + 0x0->call    sub_55DB40
         injector::MakeCALL(addrTbl[0x55DF52], sub_55DB40_stretch, true); // 0x55DB40 + 0x0->call    sub_55DB40
         injector::MakeCALL(addrTbl[0x55DFE8], sub_55DB40, true); // 0x55DB40 + 0x0->call    sub_55DB40
@@ -788,7 +873,10 @@ void Init()
     }
     
     //3d blips fix
-    injector::MakeNOP(addrTbl[0x97D139], 2);
+    {
+        injector::MakeCALL(addrTbl[0x9A0EE0], ObjectiveIndicator, true);
+        //injector::MakeNOP(addrTbl[0x97D139], 2);
+    }
 
     if (bBorderlessWindowed)
     {
