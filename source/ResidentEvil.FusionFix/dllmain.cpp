@@ -140,6 +140,7 @@ int __fastcall sub_663820(uint32_t* _this, void* edx)
 
 bool bDisableNoise = false;
 bool bDisableColorCorrection = false;
+bool bDisableFog = false;
 uintptr_t pD3D9DeviceAddr;
 IDirect3DPixelShader9* __stdcall CreatePixelShaderHook(const DWORD** a1)
 {
@@ -292,6 +293,40 @@ IDirect3DPixelShader9* __stdcall CreatePixelShaderHook(const DWORD** a1)
                 }
             }
         }
+        else if (crc == 0xE8C35AD8 && bDisableFog)
+        {
+            const char* shader_text =
+                "ps_3_0\n"
+                "def c0, 0.00392156886, 0, 0, 0\n"
+                "def c2, 1, 255, 65025, 0\n"
+                "dcl_texcoord v0.zw\n"
+                "dcl_2d s0\n"
+                "mov r0, c0.w\n"
+                "mul r0.yzw, r0.x, c2.xxyz\n"
+                "mov oDepth, r0.x\n"
+                "frc r0.xyz, r0.yzww\n"
+                "mad oC0.xyz, r0.yzzw, -c0.xxyw, r0\n"
+                "mov oC0.w, c1.y\n";
+
+            LPD3DXBUFFER pCode;
+            LPD3DXBUFFER pErrorMsgs;
+            LPDWORD shader_data;
+            auto result = D3DXAssembleShader(shader_text, strlen(shader_text), NULL, NULL, 0, &pCode, &pErrorMsgs);
+            if (SUCCEEDED(result))
+            {
+                shader_data = (DWORD*)pCode->GetBufferPointer();
+                IDirect3DPixelShader9* shader = nullptr;
+                result = pDevice->CreatePixelShader(shader_data, &shader);
+                if (FAILED(result)) {
+                    return pShader;
+                }
+                else
+                {
+                    pShader->Release();
+                    return shader;
+                }
+            }
+        }
     }
 
     return pShader;
@@ -307,6 +342,7 @@ void Init()
     auto bLightSyncRGB = iniReader.ReadInteger("MAIN", "LightSyncRGB", 1) != 0;
     bDisableNoise = iniReader.ReadInteger("MAIN", "DisableNoise", 0) != 0;
     bDisableColorCorrection = iniReader.ReadInteger("MAIN", "DisableColorCorrection", 0) != 0;
+    bDisableFog = iniReader.ReadInteger("MAIN", "DisableFog", 0) != 0;
 
     if (bUnlockAllResolutions)
     {
@@ -465,7 +501,7 @@ void Init()
         );
     }
 
-    if (bDisableNoise || bDisableColorCorrection)
+    if (bDisableNoise || bDisableColorCorrection || bDisableFog)
     {
         pD3D9DeviceAddr = (uintptr_t)*hook::get_pattern<uint32_t>("A1 ? ? ? ? 56 66 0F 6E 80", 1);
         injector::MakeCALL(hook::get_pattern("E8 ? ? ? ? 89 47 08 66 8B 4C 24 ? 0F B7 C1 43 83 C5 0C 3B D8 72 C7 33 C0"), CreatePixelShaderHook, true);
