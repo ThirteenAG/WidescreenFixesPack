@@ -14,6 +14,7 @@
 #include <set>
 #include <map>
 #include <iomanip>
+#include <future>
 #include "IniReader.h"
 #include "injector\injector.hpp"
 #include "injector\calling.hpp"
@@ -1020,7 +1021,7 @@ namespace WindowedModeWrapper
     static HWND WINAPI CreateWindowExA_Hook(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam)
     {
         auto[WindowPosX, WindowPosY, newWidth, newHeight] = beforeCreateWindow(nWidth, nHeight);
-        GameHWND = CreateWindowExA(dwExStyle, lpClassName, lpWindowName, 0, WindowPosX, WindowPosY, newWidth, newHeight, hWndParent, hMenu, hInstance, lpParam);
+        GameHWND = CreateWindowExA(dwExStyle, lpClassName, lpWindowName, dwStyle, WindowPosX, WindowPosY, newWidth, newHeight, hWndParent, hMenu, hInstance, lpParam);
         afterCreateWindow();
         return GameHWND;
     }
@@ -1028,7 +1029,7 @@ namespace WindowedModeWrapper
     static HWND WINAPI CreateWindowExW_Hook(DWORD dwExStyle, LPCWSTR lpClassName, LPCWSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam)
     {
         auto [WindowPosX, WindowPosY, newWidth, newHeight] = beforeCreateWindow(nWidth, nHeight);
-        GameHWND = CreateWindowExW(dwExStyle, lpClassName, lpWindowName, 0, WindowPosX, WindowPosY, newWidth, newHeight, hWndParent, hMenu, hInstance, lpParam);
+        GameHWND = CreateWindowExW(dwExStyle, lpClassName, lpWindowName, dwStyle, WindowPosX, WindowPosY, newWidth, newHeight, hWndParent, hMenu, hInstance, lpParam);
         afterCreateWindow();
         return GameHWND;
     }
@@ -1191,4 +1192,74 @@ std::optional<T> PtrWalkthrough(auto addr, std::convertible_to<ptrdiff_t> auto&&
             return injector::ReadMemory<T>(a + last, true);
     }
     return std::nullopt;
+};
+
+class WFP
+{
+public:
+    template<typename... Args>
+    class Event : public std::function<void(Args...)>
+    {
+    public:
+        using std::function<void(Args...)>::function;
+
+    private:
+        std::vector<std::function<void(Args...)>> handlers;
+
+    public:
+        void operator+=(std::function<void(Args...)>&& handler)
+        {
+            handlers.push_back(handler);
+        }
+
+        void executeAll(Args... args) const
+        {
+            if (!handlers.empty())
+            {
+                for (auto& handler : handlers)
+                {
+                    handler(args...);
+                }
+            }
+        }
+
+        std::reference_wrapper<std::vector<std::future<void>>> executeAllAsync(Args... args) const
+        {
+            static std::vector<std::future<void>> pendingFutures;
+            if (!handlers.empty())
+            {
+                for (auto& handler : handlers)
+                {
+                    pendingFutures.push_back(std::async(std::launch::async, handler, args...));
+                }
+            }
+            return std::ref(pendingFutures);
+        }
+    };
+
+public:
+    static Event<>& onInitEvent() {
+        static Event<> InitEvent;
+        return InitEvent;
+    }
+    static Event<>& onInitEventAsync() {
+        static Event<> InitEventAsync;
+        return InitEventAsync;
+    }
+    static Event<>& onAfterUALRestoredIATEvent() {
+        static Event<> AfterUALRestoredIATEvent;
+        return AfterUALRestoredIATEvent;
+    }
+    static Event<>& onShutdownEvent() {
+        static Event<> ShutdownEvent;
+        return ShutdownEvent;
+    }
+    static Event<>& onGameInitEvent() {
+        static Event<> GameInitEvent;
+        return GameInitEvent;
+    }
+    static Event<>& onGameProcessEvent() {
+        static Event<> GameProcessEvent;
+        return GameProcessEvent;
+    }
 };
