@@ -1,8 +1,6 @@
 #include "stdafx.h"
 #include "LEDEffects.h"
 
-static bool bLogiLedInitialized = false;
-
 HMODULE hm = NULL;
 HMODULE ual = NULL;
 
@@ -54,6 +52,8 @@ void ReplaceUSER32IAT(Ts&& ... inputs)
 
 void Init()
 {
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
     static std::once_flag flag;
     std::call_once(flag, []()
     {
@@ -163,85 +163,70 @@ void Init()
 
     if (bLightSyncRGB)
     {
-        bLogiLedInitialized = LogiLedInit();
+        static auto sPlayerPtr = *hook::get_pattern<void*>("8B 0D ? ? ? ? 56 E8 ? ? ? ? A1 ? ? ? ? 8B 48 20 69 C9 ? ? ? ? 8B 94 01", 2);
 
-        if (bLogiLedInitialized)
+        LEDEffects::Inject([]()
         {
-            static auto sPlayerPtr = *hook::get_pattern<void*>("8B 0D ? ? ? ? 56 E8 ? ? ? ? A1 ? ? ? ? 8B 48 20 69 C9 ? ? ? ? 8B 94 01", 2);
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-            std::thread t([]() 
+            if (sPlayerPtr)
             {
-                while (true)
+                auto Player1Health = PtrWalkthrough<int16_t>(sPlayerPtr, 0x28, 0x2A74, 0x1364);
+                auto Player2Health = PtrWalkthrough<int16_t>(sPlayerPtr, 0x28, 0x1364);
+
+                if (Player1Health && Player2Health)
                 {
-                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-                    if (bLogiLedInitialized)
+                    auto health1 = *Player1Health;
+                    auto health2 = *Player2Health;
+                    if (health1 > 1)
                     {
-                        if (sPlayerPtr)
-                        {
-                            auto Player1Health = PtrWalkthrough<int16_t>(sPlayerPtr, 0x28, 0x2A74, 0x1364);
-                            auto Player2Health = PtrWalkthrough<int16_t>(sPlayerPtr, 0x28, 0x1364);
-
-                            if (Player1Health && Player2Health)
-                            {
-                                auto health1 = *Player1Health;
-                                auto health2 = *Player2Health;
-                                if (health1 > 1)
-                                {
-                                    if (health1 == 2) {
-                                        LEDEffects::SetLightingLeftSide(26, 4, 4, true, false); //red
-                                        LEDEffects::DrawCardiogram(100, 0, 0, 0, 0, 0); //red
-                                    }
-                                    else if (health1 <= 250) {
-                                        LEDEffects::SetLightingLeftSide(50, 30, 4, true, false); //orange
-                                        LEDEffects::DrawCardiogram(67, 0, 0, 0, 0, 0); //orange
-                                    }
-                                    else {
-                                        LEDEffects::SetLightingLeftSide(10, 30, 4, true, false);  //green
-                                        LEDEffects::DrawCardiogram(0, 100, 0, 0, 0, 0); //green
-                                    }                                   
-                                }
-                                else
-                                {
-                                    LEDEffects::SetLightingLeftSide(26, 4, 4, false, true); //red
-                                    LEDEffects::DrawCardiogram(100, 0, 0, 0, 0, 0, true);
-                                }
-
-                                if (health2 > 1)
-                                {
-                                    if (health2 == 2) {
-                                        LEDEffects::SetLightingRightSide(26, 4, 4, true, false); //red
-                                        LEDEffects::DrawCardiogramNumpad(100, 0, 0, 0, 0, 0); //red
-                                    }
-                                    else if (health2 <= 250) {
-                                        LEDEffects::SetLightingRightSide(50, 30, 4, true, false); //orange
-                                        LEDEffects::DrawCardiogramNumpad(67, 0, 0, 0, 0, 0); //orange
-                                    }
-                                    else {
-                                        LEDEffects::SetLightingRightSide(10, 30, 4, true, false);  //green
-                                        LEDEffects::DrawCardiogramNumpad(0, 100, 0, 0, 0, 0); //green
-                                    }                                    
-                                }
-                                else
-                                {
-                                    LEDEffects::SetLightingRightSide(26, 4, 4, false, true); //red
-                                    LEDEffects::DrawCardiogramNumpad(100, 0, 0, 0, 0, 0, true);
-                                }
-                            }
-                            else
-                            {
-                                LogiLedStopEffects();
-                                LEDEffects::SetLighting(98, 87, 24); //logo gold
-                            }
+                        if (health1 == 2) {
+                            LEDEffects::SetLightingLeftSide(26, 4, 4, true, false); //red
+                            LEDEffects::DrawCardiogram(100, 0, 0, 0, 0, 0); //red
                         }
+                        else if (health1 <= 250) {
+                            LEDEffects::SetLightingLeftSide(50, 30, 4, true, false); //orange
+                            LEDEffects::DrawCardiogram(67, 0, 0, 0, 0, 0); //orange
+                        }
+                        else {
+                            LEDEffects::SetLightingLeftSide(10, 30, 4, true, false);  //green
+                            LEDEffects::DrawCardiogram(0, 100, 0, 0, 0, 0); //green
+                        }                                   
                     }
                     else
-                        break;
-                }
-            });
+                    {
+                        LEDEffects::SetLightingLeftSide(26, 4, 4, false, true); //red
+                        LEDEffects::DrawCardiogram(100, 0, 0, 0, 0, 0, true);
+                    }
 
-            t.detach();
-        }
+                    if (health2 > 1)
+                    {
+                        if (health2 == 2) {
+                            LEDEffects::SetLightingRightSide(26, 4, 4, true, false); //red
+                            LEDEffects::DrawCardiogramNumpad(100, 0, 0, 0, 0, 0); //red
+                        }
+                        else if (health2 <= 250) {
+                            LEDEffects::SetLightingRightSide(50, 30, 4, true, false); //orange
+                            LEDEffects::DrawCardiogramNumpad(67, 0, 0, 0, 0, 0); //orange
+                        }
+                        else {
+                            LEDEffects::SetLightingRightSide(10, 30, 4, true, false);  //green
+                            LEDEffects::DrawCardiogramNumpad(0, 100, 0, 0, 0, 0); //green
+                        }                                    
+                    }
+                    else
+                    {
+                        LEDEffects::SetLightingRightSide(26, 4, 4, false, true); //red
+                        LEDEffects::DrawCardiogramNumpad(100, 0, 0, 0, 0, 0, true);
+                    }
+                }
+                else
+                {
+                    LogiLedStopEffects();
+                    LEDEffects::SetLighting(98, 87, 24); //logo gold
+                }
+            }
+        });
     }
 }
 
@@ -261,10 +246,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
     }
     else if (reason == DLL_PROCESS_DETACH)
     {
-        if (bLogiLedInitialized) {
-            LogiLedShutdown();
-            bLogiLedInitialized = false;
-        }
+
     }
     return TRUE;
 }

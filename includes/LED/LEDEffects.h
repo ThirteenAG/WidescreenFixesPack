@@ -8,9 +8,112 @@
 #include <chrono>
 #include <vector>
 #include <algorithm>
+#include <CommCtrl.h>
+#pragma comment(lib, "Comctl32.lib")
 
 class LEDEffects
 {
+public:
+    static inline bool bLogiLedInitialized;
+private:
+    static inline std::vector<HWND> AppWindows;
+    static inline WNDPROC DefaultWndProc = nullptr;
+    static inline std::vector<std::function<void()>> Callbacks;
+    static inline std::future<void> Future;
+
+    static void Init()
+    {
+        if (!bLogiLedInitialized)
+            bLogiLedInitialized = LogiLedInit();
+    }
+
+    static void Shutdown()
+    {
+        if (bLogiLedInitialized) {
+            LogiLedShutdown();
+            bLogiLedInitialized = false;
+            if (Future.valid())
+                Future.wait();
+        }
+    }
+
+    static BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam)
+    {
+        DWORD lpdwProcessId;
+        GetWindowThreadProcessId(hwnd, &lpdwProcessId);
+        if (lpdwProcessId == lParam)
+        {
+            if (IsWindowVisible(hwnd))
+                AppWindows.push_back(hwnd);
+            return FALSE;
+        }
+        return TRUE;
+    }
+
+    static LRESULT WINAPI WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+    {
+        switch (uMsg)
+        {
+        case WM_QUIT:
+        case WM_DESTROY:
+            Shutdown();
+            break;
+        default:
+            break;
+        }
+
+        return CallWindowProcW(DefaultWndProc, hWnd, uMsg, wParam, lParam);
+    }
+
+public:
+    static void Inject(std::function<void()> callback)
+    {
+        Init();
+
+        Callbacks.push_back(callback);
+
+        if (bLogiLedInitialized)
+        {
+            static std::once_flag flag;
+            std::call_once(flag, []()
+            {
+                Future = std::async(std::launch::async, []() 
+                {
+                    while (true)
+                    {
+                        std::this_thread::yield();
+                        if (LEDEffects::bLogiLedInitialized)
+                        {
+                            for (auto& cb : Callbacks) { cb(); }
+                        }
+                        else
+                            break;
+                    }
+                });
+
+                if (AppWindows.empty())
+                {
+                    std::thread([]()
+                    {
+                        while (AppWindows.empty())
+                        {
+                            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+                            EnumWindows(EnumWindowsProc, GetCurrentProcessId());
+                        }
+                        DefaultWndProc = (WNDPROC)SetWindowLongPtrW(AppWindows.back(), GWLP_WNDPROC, (LONG_PTR)WndProc);
+                    }).detach();
+                }
+
+                IATHook::Replace(GetModuleHandleA(NULL), "KERNEL32.DLL",
+                    std::forward_as_tuple("ExitProcess", static_cast<void(__stdcall*)(UINT)>([](UINT uExitCode) {
+                        Shutdown();
+                        ExitProcess(uExitCode);
+                    }))
+                );
+            });
+        }
+    }
+
 private:
     static inline std::vector<LogiLed::KeyName> leftSide = {
         LogiLed::KeyName::ESC,

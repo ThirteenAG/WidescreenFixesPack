@@ -6,8 +6,6 @@
 #include <d3dx9.h>
 #pragma comment(lib, "d3dx9.lib")
 
-static bool bLogiLedInitialized = false;
-
 struct StringRes
 {
     const char* entry;
@@ -509,99 +507,74 @@ void Init()
 
     if (bLightSyncRGB)
     {
-        bLogiLedInitialized = LogiLedInit();
-
-        if (bLogiLedInitialized)
+        auto pattern = hook::pattern("8B 44 24 04 8B 91 ? ? ? ? 89 81 ? ? ? ? 3B C2");
+        injector::MakeJMP(pattern.get_first(), sub_65F6A0, true);
+        pattern = hook::pattern("56 8B F1 8B 46 04 83 E8 00 74 25");
+        injector::MakeJMP(pattern.get_first(), sub_663820, true);
+        
+        static auto sub_4898C0 = (int(__fastcall*) (void* _this, int edx))hook::get_pattern("8B D1 56 8B 42 24");
+        static auto dword_D7C938 = *hook::get_pattern<void**>("8B 0D ? ? ? ? E8 ? ? ? ? 8B D0 89 54 24 18", 2);
+        LEDEffects::Inject([]()
         {
-            auto pattern = hook::pattern("8B 44 24 04 8B 91 ? ? ? ? 89 81 ? ? ? ? 3B C2");
-            injector::MakeJMP(pattern.get_first(), sub_65F6A0, true);
-            pattern = hook::pattern("56 8B F1 8B 46 04 83 E8 00 74 25");
-            injector::MakeJMP(pattern.get_first(), sub_663820, true);
-
-            static auto sub_4898C0 = (int(__fastcall*) (void* _this, int edx))hook::get_pattern("8B D1 56 8B 42 24");
-            static auto dword_D7C938 = *hook::get_pattern<void**>("8B 0D ? ? ? ? E8 ? ? ? ? 8B D0 89 54 24 18", 2);
-            std::thread t([]()
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        
+            if (*dword_D7C938)
             {
-                while (true)
+                auto sPlayerPtr = sub_4898C0(*dword_D7C938, 0);
+                if (sPlayerPtr)
                 {
-                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                    auto Player1Health = PtrWalkthrough<int32_t>(&sPlayerPtr, 0x13BC);
+                    auto Player1Poisoned = PtrWalkthrough<int32_t>(&sPlayerPtr, 0x1584);
 
-                    if (bLogiLedInitialized)
+                    if (Player1Health)
                     {
-                        if (!*dword_D7C938)
-                            continue;
-
-                        auto sPlayerPtr = sub_4898C0(*dword_D7C938, 0);
-                        if (sPlayerPtr)
+                        auto health1 = *Player1Health;
+                        auto poisoned = *Player1Poisoned;
+                        if (health1 > 1)
                         {
-                            auto Player1Health = PtrWalkthrough<int32_t>(&sPlayerPtr, 0x13BC);
-                            auto Player1Poisoned = PtrWalkthrough<int32_t>(&sPlayerPtr, 0x1584);
-
-                            if (Player1Health)
-                            {
-                                auto health1 = *Player1Health;
-                                auto poisoned = *Player1Poisoned;
-                                if (health1 > 1)
-                                {
-                                    if (health1 < 240) {
-                                        if (!poisoned)
-                                            LEDEffects::SetLighting(26, 4, 4, true, false, true); //red
-                                        else
-                                            LEDEffects::SetLighting(51, 4, 53, true, false, true); //purple
-                                        LEDEffects::DrawCardiogram(100, 0, 0, 0, 0, 0); //red
-                                    }
-                                    else if (health1 < 720) {
-                                        if (!poisoned)
-                                            LEDEffects::SetLighting(50, 30, 4, true, false, true); //orange
-                                        else
-                                            LEDEffects::SetLighting(51, 4, 53, true, false, true); //purple
-                                        LEDEffects::DrawCardiogram(67, 0, 0, 0, 0, 0); //orange
-                                    }
-                                    else {
-                                        if (!poisoned)
-                                            LEDEffects::SetLighting(10, 30, 4, true, false, true);  //green
-                                        else
-                                            LEDEffects::SetLighting(51, 4, 53, true, false, true); //purple
-                                        LEDEffects::DrawCardiogram(0, 100, 0, 0, 0, 0); //green
-                                    }
-
-                                    AmmoInClip();
-                                }
+                            if (health1 < 240) {
+                                if (!poisoned)
+                                    LEDEffects::SetLighting(26, 4, 4, true, false, true); //red
                                 else
-                                {
-                                    LEDEffects::SetLighting(26, 4, 4, false, true); //red
-                                    LEDEffects::DrawCardiogram(100, 0, 0, 0, 0, 0, true);
-                                }
+                                    LEDEffects::SetLighting(51, 4, 53, true, false, true); //purple
+                                LEDEffects::DrawCardiogram(100, 0, 0, 0, 0, 0); //red
                             }
-                            else
-                            {
-                                LogiLedStopEffects();
-                                LEDEffects::SetLighting(93, 12, 14); //umbrella red
+                            else if (health1 < 720) {
+                                if (!poisoned)
+                                    LEDEffects::SetLighting(50, 30, 4, true, false, true); //orange
+                                else
+                                    LEDEffects::SetLighting(51, 4, 53, true, false, true); //purple
+                                LEDEffects::DrawCardiogram(67, 0, 0, 0, 0, 0); //orange
                             }
+                            else {
+                                if (!poisoned)
+                                    LEDEffects::SetLighting(10, 30, 4, true, false, true);  //green
+                                else
+                                    LEDEffects::SetLighting(51, 4, 53, true, false, true); //purple
+                                LEDEffects::DrawCardiogram(0, 100, 0, 0, 0, 0); //green
+                            }
+
+                            AmmoInClip();
                         }
                         else
                         {
-                            LogiLedStopEffects();
-                            LEDEffects::SetLighting(93, 12, 14); //umbrella red
+                            LEDEffects::SetLighting(26, 4, 4, false, true); //red
+                            LEDEffects::DrawCardiogram(100, 0, 0, 0, 0, 0, true);
                         }
                     }
                     else
-                        break;
-                }
-            });
-
-            t.detach();
-
-            IATHook::Replace(GetModuleHandleA(NULL), "KERNEL32.DLL",
-                std::forward_as_tuple("ExitProcess", static_cast<void(__stdcall*)(UINT)>([](UINT uExitCode) {
-                    if (bLogiLedInitialized) {
-                        LogiLedShutdown();
-                        bLogiLedInitialized = false;
+                    {
+                        LogiLedStopEffects();
+                        LEDEffects::SetLighting(93, 12, 14); //umbrella red
                     }
-                    ExitProcess(uExitCode); 
-                }))
-            );
-        }
+                }
+                else
+                {
+                    LogiLedStopEffects();
+                    LEDEffects::SetLighting(93, 12, 14); //umbrella red
+                }
+            }
+        });
     }
 }
 
@@ -621,10 +594,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
     }
     else if (reason == DLL_PROCESS_DETACH)
     {
-        if (bLogiLedInitialized) {
-            LogiLedShutdown();
-            bLogiLedInitialized = false;
-        }
+
     }
     return TRUE;
 }

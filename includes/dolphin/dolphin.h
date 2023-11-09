@@ -65,38 +65,34 @@ public:
         }
     }
 
-    static inline void FindEmulatorMemory(std::future<void>& futureObj)
+    static inline void FindEmulatorMemory()
     {
-        while (GameMemoryStart == 0 && futureObj.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout)
+        uintptr_t curAddr = 0;
+        MEMORY_BASIC_INFORMATION MemoryInf;
+        while (VirtualQuery((LPCVOID)curAddr, &MemoryInf, sizeof(MemoryInf)))
         {
-            uintptr_t curAddr = 0;
-            do
+            if (MemoryInf.AllocationProtect == PAGE_READWRITE && MemoryInf.State == MEM_COMMIT &&
+                MemoryInf.Protect == PAGE_READWRITE && MemoryInf.Type == MEM_MAPPED && MemoryInf.RegionSize == 0x2000000)
             {
-                MEMORY_BASIC_INFORMATION MemoryInf;
-                if (VirtualQuery((LPCVOID)curAddr, &MemoryInf, sizeof(MemoryInf)) == 0) break;
-                if (MemoryInf.AllocationProtect == PAGE_READWRITE && MemoryInf.State == MEM_COMMIT &&
-                    MemoryInf.Protect == PAGE_READWRITE && MemoryInf.Type == MEM_MAPPED && MemoryInf.RegionSize == 0x2000000)
+                if (GameMemoryStart == 0)
                 {
-                    if (GameMemoryStart == 0)
-                    {
-                        GameMemoryStart = (uintptr_t)MemoryInf.BaseAddress;
-                        GameMemoryEnd = GameMemoryStart + 0x01800000;
-                        ImageBase = 0x80000000;
-                        break;
-                    }
+                    GameMemoryStart = (uintptr_t)MemoryInf.BaseAddress;
+                    GameMemoryEnd = GameMemoryStart + 0x01800000;
+                    ImageBase = 0x80000000;
+                    break;
                 }
-                curAddr += MemoryInf.RegionSize;
-            } while (futureObj.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout);
+            }
+            curAddr += MemoryInf.RegionSize;
         }
     }
 
-    static inline bool MemoryValid(std::future<void>& futureObj)
+    static inline bool MemoryValid()
     {
         static MEMORY_BASIC_INFORMATION MemoryInf;
         if (GameMemoryStart == 0 || VirtualQuery((LPCVOID)GameMemoryStart, &MemoryInf, sizeof(MemoryInf)) == 0 || MemoryInf.AllocationProtect != PAGE_READWRITE)
         {
             GameMemoryStart = 0;
-            FindEmulatorMemory(futureObj);
+            FindEmulatorMemory();
             return false;
         }
         return true;
