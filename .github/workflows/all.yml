@@ -271,6 +271,14 @@ jobs:
         tag: driv3r
         artifacts: data/Archives/Driv3r.WidescreenFix.zip
 
+    - name: The Saboteur Fusion Fix
+      uses: ./.github/workflows/release_tag
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag: thesaboteur
+        artifacts: data/Archives/TheSaboteur.FusionFix.zip
+
     - name: The Suffering Widescreen Fix
       uses: ./.github/workflows/release_tag
       with:

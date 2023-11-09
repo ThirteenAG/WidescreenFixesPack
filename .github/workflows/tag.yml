@@ -87,6 +87,7 @@ on:
         - thaw
         - thegodfather
         - thematrixpathofneo
+        - thesaboteur
         - thesuffering
         - thewarriors
         - thps2
@@ -180,6 +181,7 @@ env:
   thaw: "/t:TonyHawksAmericanWasteland_WidescreenFix"
   thegodfather: "/t:TheGodfather_WidescreenFix"
   thematrixpathofneo: "/t:TheMatrixPathOfNeo_WidescreenFix"
+  thesaboteur: "/t:TheSaboteur_FusionFix"
   thesuffering: "/t:TheSuffering_WidescreenFix"
   thewarriors: "/t:TheWarriors_PPSSPP_FusionMod"
   thps2: "/t:TonyHawksProSkater2_WidescreenFix"
