@@ -8,8 +8,6 @@
 #include <chrono>
 #include <vector>
 #include <algorithm>
-#include <CommCtrl.h>
-#pragma comment(lib, "Comctl32.lib")
 
 class LEDEffects
 {
