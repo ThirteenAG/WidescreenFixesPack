@@ -996,7 +996,7 @@ void Init()
                 else
                 {
                     LogiLedStopEffects();
-                    LogiLedSetLighting(31, 25, 70); //logo purple
+                    LEDEffects::SetLighting(31, 25, 70); //logo purple
                 }
             }
         });
