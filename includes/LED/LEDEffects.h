@@ -28,10 +28,10 @@ private:
     static void Shutdown()
     {
         if (bLogiLedInitialized) {
-            LogiLedShutdown();
             bLogiLedInitialized = false;
             if (Future.valid())
                 Future.wait();
+            LogiLedShutdown();
         }
     }
 
