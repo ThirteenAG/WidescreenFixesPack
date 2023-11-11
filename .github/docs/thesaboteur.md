@@ -7,4 +7,4 @@
     Installation:
         Download and extract the archive to the game directory, where the exe is located.
 
-[Website](https://thirteenag.github.io/wfp#thesaboteur) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/TheSaboteur.FusionFix/dllmain.cpp) | [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/TheSaboteur.FusionFix/plugins/TheSaboteur.FusionFix.ini)
+[Website](https://thirteenag.github.io/wfp#thesaboteur) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/TheSaboteur.FusionFix/dllmain.cpp) | [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix.ini)

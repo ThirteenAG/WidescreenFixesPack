@@ -24,32 +24,6 @@ void __fastcall sub_6D1650(float* _this, void* edx, float a2, float a3, float a4
     return injector::fastcall<void(float*, void*, float, float, float, float)>::call(p6D1650, _this, edx, a2, a3, a4, a5);
 }
 
-template <class... Ts>
-void ReplaceUSER32IAT(Ts&& ... inputs)
-{
-    auto start = *hook::get_pattern<uintptr_t>("FF 15 ? ? ? ? 85 C0 75 66", 2);
-    auto end = start + 0x47C;
-    for (auto i = start; i < end; i += sizeof(size_t))
-    {
-        DWORD dwProtect[2];
-        VirtualProtect((size_t*)i, sizeof(size_t), PAGE_EXECUTE_READWRITE, &dwProtect[0]);
-
-        auto ptr = *(size_t*)i;
-        if (!ptr)
-            continue;
-
-        ([&]
-        {
-            auto func_name = std::get<0>(inputs);
-            auto func_hook = std::get<1>(inputs);
-            if (func_hook && ptr == (size_t)GetProcAddress(GetModuleHandleA("USER32.DLL"), func_name))
-                *(size_t*)i = (size_t)func_hook;
-        } (), ...);
-
-        VirtualProtect((size_t*)i, sizeof(size_t), dwProtect[0], &dwProtect[1]);
-    }
-}
-
 void Init()
 {
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -141,7 +115,7 @@ void Init()
             WindowedModeWrapper::SetWindowLongA_Hook(*ptr, 0, GetWindowLong(*ptr, GWL_STYLE));
         }, ptr).detach();
 
-        ReplaceUSER32IAT(
+        IATHook::Replace(GetModuleHandleA(NULL), "USER32.DLL",
             std::forward_as_tuple("CreateWindowExA", WindowedModeWrapper::CreateWindowExA_Hook),
             std::forward_as_tuple("CreateWindowExW", WindowedModeWrapper::CreateWindowExW_Hook),
             std::forward_as_tuple("SetWindowLongA", WindowedModeWrapper::SetWindowLongA_Hook),

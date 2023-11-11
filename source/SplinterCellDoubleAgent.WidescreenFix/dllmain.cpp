@@ -2,6 +2,7 @@
 #include <d3d9.h>
 #include <D3dx9.h>
 #pragma comment(lib, "D3dx9.lib")
+#include <LEDEffects.h>
 
 namespace AffinityChanges
 {
@@ -40,64 +41,43 @@ namespace AffinityChanges
         }
         return hThread;
     }
+}
 
-    static void ReplaceFunction(void** funcPtr)
+uint32_t curAmmoInClip = 1;
+uint32_t curClipCapacity = 1;
+void AmmoInClip()
+{
+    static std::vector<LogiLed::KeyName> keys = {
+        LogiLed::KeyName::F1, LogiLed::KeyName::F2, LogiLed::KeyName::F3,
+        LogiLed::KeyName::F4, LogiLed::KeyName::F5, LogiLed::KeyName::F6,
+        LogiLed::KeyName::F7, LogiLed::KeyName::F8, LogiLed::KeyName::F9,
+        LogiLed::KeyName::F10, LogiLed::KeyName::F11, LogiLed::KeyName::F12,
+        LogiLed::KeyName::PRINT_SCREEN, LogiLed::KeyName::SCROLL_LOCK,
+        LogiLed::KeyName::PAUSE_BREAK,
+    };
+
+    static auto oldAmmoInClip = -1;
+    if (curAmmoInClip != oldAmmoInClip)
     {
-        DWORD dwProtect;
+        auto maxAmmo = curClipCapacity;
+        float ammoInClipPercent = ((float)curAmmoInClip / (float)maxAmmo) * 100.0f;
 
-        VirtualProtect(funcPtr, sizeof(*funcPtr), PAGE_READWRITE, &dwProtect);
-        *funcPtr = &CreateThread_GameThread;
-        VirtualProtect(funcPtr, sizeof(*funcPtr), dwProtect, &dwProtect);
-    }
-
-    static bool RedirectImports(HMODULE module_handle)
-    {
-        const DWORD_PTR instance = reinterpret_cast<DWORD_PTR>(module_handle);
-        const PIMAGE_NT_HEADERS ntHeader = reinterpret_cast<PIMAGE_NT_HEADERS>(instance + reinterpret_cast<PIMAGE_DOS_HEADER>(instance)->e_lfanew);
-
-        // Find IAT
-        PIMAGE_IMPORT_DESCRIPTOR pImports = reinterpret_cast<PIMAGE_IMPORT_DESCRIPTOR>(instance + ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress);
-
-        for (; pImports->Name != 0; pImports++)
+        for (size_t i = 0; i < keys.size(); i++)
         {
-            if (_stricmp(reinterpret_cast<const char*>(instance + pImports->Name), "kernel32.dll") == 0)
-            {
-                if (pImports->OriginalFirstThunk != 0)
-                {
-                    const PIMAGE_THUNK_DATA pThunk = reinterpret_cast<PIMAGE_THUNK_DATA>(instance + pImports->OriginalFirstThunk);
-
-                    for (ptrdiff_t j = 0; pThunk[j].u1.AddressOfData != 0; j++)
-                    {
-                        if (strcmp(reinterpret_cast<PIMAGE_IMPORT_BY_NAME>(instance + pThunk[j].u1.AddressOfData)->Name, "CreateThread") == 0)
-                        {
-                            void** pAddress = reinterpret_cast<void**>(instance + pImports->FirstThunk) + j;
-                            ReplaceFunction(pAddress);
-                            return true;
-                        }
-                    }
-                }
-                else
-                {
-                    void** pFunctions = reinterpret_cast<void**>(instance + pImports->FirstThunk);
-
-                    for (ptrdiff_t j = 0; pFunctions[j] != nullptr; j++)
-                    {
-                        if (pFunctions[j] == &CreateThread)
-                        {
-                            ReplaceFunction(&pFunctions[j]);
-                            return true;
-                        }
-                    }
-                }
-            }
+            auto indexInPercent = ((float)i / (float)keys.size()) * 100.0f;
+            if (ammoInClipPercent > indexInPercent)
+                LogiLedSetLightingForKeyWithKeyName(keys[i], 100, 100, 100);
+            else
+                LogiLedSetLightingForKeyWithKeyName(keys[i], 10, 10, 10);
         }
-        return false;
     }
+    oldAmmoInClip = curAmmoInClip;
 }
 
 float gVisibility = 1.0f;
 int32_t gBlacklistIndicators = 0;
 uint32_t gColor;
+uint32_t bLightSyncRGB;
 float* __cdecl FGetHSV(float* dest, uint8_t H, uint8_t S, uint8_t V)
 {
     auto bChangeColor = ((H == 0x41 && S == 0x33) || (H == 0x5B && S == 0 && V == 0xFF) || (H == 0x2B && S == 0x40 && V == 0xFF)); //goggles || green ind || yellow ind
@@ -234,6 +214,7 @@ void Init()
     Screen.szLoadscPath.replace_extension(".png");
     gBlacklistIndicators = iniReader.ReadInteger("BONUS", "BlacklistIndicators", 0);
     gColor = iniReader.ReadInteger("BONUS", "GogglesLightColor", 0);
+    bLightSyncRGB = iniReader.ReadInteger("BONUS", "LightSyncRGB", 1);
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -261,6 +242,27 @@ void Init()
         static float fFPSLimit = 1.0f / static_cast<float>(nFPSLimit);
         auto pattern = hook::pattern("A1 ? ? ? ? 8B 0D ? ? ? ? 89 45 DC 89 4D C4");
         injector::WriteMemory(pattern.get_first(1), &fFPSLimit, true);
+    }
+
+    if (bLightSyncRGB)
+    {
+        LEDEffects::Inject([]()
+        {
+            static auto fPlayerVisibility = gVisibility;
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+            if (fPlayerVisibility > gVisibility)
+                fPlayerVisibility -= 0.05f;
+            else if (fPlayerVisibility < gVisibility)
+                fPlayerVisibility += 0.05f;
+
+            fPlayerVisibility = std::clamp(fPlayerVisibility, 0.0f, 1.0f);
+
+            auto [R, G, B] = LEDEffects::RGBtoPercent(1, 255, 1, fPlayerVisibility);
+
+            LEDEffects::SetLighting(R, G, B, false, false, true);
+            AmmoInClip();
+        });
     }
 
     //for test only (steam version)
@@ -894,7 +896,9 @@ void InitEngine()
     if (bSingleCoreAffinity)
     {
         AffinityChanges::Init();
-        AffinityChanges::RedirectImports(GetModuleHandle(L"Engine"));
+        IATHook::Replace(GetModuleHandle(L"Engine"), "kernel32.dll",
+            std::forward_as_tuple("CreateThread", AffinityChanges::CreateThread_GameThread)
+        );
     }
 }
 
@@ -977,7 +981,7 @@ void InitEchelon()
     CIniReader iniReader("");
     gBlacklistIndicators = iniReader.ReadInteger("BONUS", "BlacklistIndicators", 0);
     
-    if (gBlacklistIndicators)
+    if (gBlacklistIndicators || bLightSyncRGB)
     {
         auto pattern = hook::module_pattern(GetModuleHandle(L"Echelon"), "8B 96 ? ? ? ? 8D 0C 80");
         struct BlacklistIndicatorsHook
@@ -1000,20 +1004,32 @@ void InitEchelon()
                 }
             }
         }; injector::MakeInline<BlacklistIndicatorsHook>(pattern.get_first(0), pattern.get_first(6));
+
+        
+        pattern = hook::module_pattern(GetModuleHandle(L"Echelon"), "8B 81 ? ? ? ? 8B 54 24 04 89 02 8B 81 ? ? ? ? 8B 4C 24 08 89 01");
+        struct GetPrimaryAmmoHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                curAmmoInClip = *(uint32_t*)(regs.ecx + 0x0B6C);
+                curClipCapacity = *(uint32_t*)(regs.ecx + 0x0B6C + 4);
+                regs.eax = curAmmoInClip;
+            }
+        }; injector::MakeInline<GetPrimaryAmmoHook>(pattern.get_first(0), pattern.get_first(6));
     }
 }
 
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
-        {
-            CallbackHandler::RegisterCallback(Init);
-            CallbackHandler::RegisterCallback(L"Window.dll", InitWindow);
-            CallbackHandler::RegisterCallback(L"Engine.dll", InitEngine);
-            CallbackHandler::RegisterCallback(L"D3DDrv.dll", InitD3DDrv);
-            CallbackHandler::RegisterCallback(L"EchelonMenus.dll", InitEchelonMenus);
-            CallbackHandler::RegisterCallback(L"Echelon.dll", InitEchelon);
-        });
+    {
+        CallbackHandler::RegisterCallback(Init);
+        CallbackHandler::RegisterCallback(L"Window.dll", InitWindow);
+        CallbackHandler::RegisterCallback(L"Engine.dll", InitEngine);
+        CallbackHandler::RegisterCallback(L"D3DDrv.dll", InitD3DDrv);
+        CallbackHandler::RegisterCallback(L"EchelonMenus.dll", InitEchelonMenus);
+        CallbackHandler::RegisterCallback(L"Echelon.dll", InitEchelon);
+    });
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
