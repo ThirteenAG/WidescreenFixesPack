@@ -250,10 +250,12 @@ void Init()
         {
             static auto fPlayerVisibility = gVisibility;
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            auto gVisCmp = static_cast<float>(static_cast<int>(gVisibility * 10.0f)) / 10.0f;
+            auto fPlVisCmp = static_cast<float>(static_cast<int>(fPlayerVisibility * 10.0f)) / 10.0f;
 
-            if (fPlayerVisibility > gVisibility)
+            if (fPlVisCmp > gVisCmp)
                 fPlayerVisibility -= 0.05f;
-            else if (fPlayerVisibility < gVisibility)
+            else if (fPlVisCmp < gVisCmp)
                 fPlayerVisibility += 0.05f;
 
             fPlayerVisibility = std::clamp(fPlayerVisibility, 0.0f, 1.0f);

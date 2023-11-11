@@ -354,6 +354,7 @@ public:
 
     static inline void SetLightingLeftSide(int redPercentage, int greenPercentage, int bluePercentage, bool ignoreCardiogram = false, bool ignoreCardiogramDead = false, bool ignoreFSide = false)
     {
+        LogiLedSetTargetDevice(LOGI_DEVICETYPE_PERKEY_RGB);
         for (auto key : leftSide)
         {
             if (ignoreCardiogram && std::any_of(std::begin(keysCardiogram), std::end(keysCardiogram), [key](auto i) { return i == key; }))
@@ -367,10 +368,15 @@ public:
 
             LogiLedSetLightingForKeyWithKeyName(key, redPercentage, greenPercentage, bluePercentage);
         }
+
+        LogiLedSetTargetDevice(LOGI_DEVICETYPE_RGB);
+        LogiLedSetLighting(redPercentage, greenPercentage, bluePercentage);
+        LogiLedSetTargetDevice(LOGI_DEVICETYPE_ALL);
     }
 
     static inline void SetLightingRightSide(int redPercentage, int greenPercentage, int bluePercentage, bool ignoreCardiogram = false, bool ignoreCardiogramDead = false, bool ignoreFSide = false)
     {
+        LogiLedSetTargetDevice(LOGI_DEVICETYPE_PERKEY_RGB);
         for (auto key : rightSide)
         {
             if (ignoreCardiogram && std::any_of(std::begin(keysCardiogramNumpad), std::end(keysCardiogramNumpad), [key](auto i) { return i == key; }))
@@ -384,10 +390,15 @@ public:
 
             LogiLedSetLightingForKeyWithKeyName(key, redPercentage, greenPercentage, bluePercentage);
         }
+
+        LogiLedSetTargetDevice(LOGI_DEVICETYPE_RGB);
+        LogiLedSetLighting(redPercentage, greenPercentage, bluePercentage);
+        LogiLedSetTargetDevice(LOGI_DEVICETYPE_ALL);
     }
 
     static inline void SetLighting(int redPercentage, int greenPercentage, int bluePercentage, bool ignoreCardiogram = false, bool ignoreCardiogramDead = false, bool ignoreFSide = false)
     {
+        LogiLedSetTargetDevice(LOGI_DEVICETYPE_PERKEY_RGB);
         SetLightingLeftSide(redPercentage, greenPercentage, bluePercentage, ignoreCardiogram, ignoreCardiogramDead, ignoreFSide);
         for (auto key : rightSide)
         {
@@ -396,10 +407,15 @@ public:
 
             LogiLedSetLightingForKeyWithKeyName(key, redPercentage, greenPercentage, bluePercentage);
         }
+
+        LogiLedSetTargetDevice(LOGI_DEVICETYPE_RGB);
+        LogiLedSetLighting(redPercentage, greenPercentage, bluePercentage);
+        LogiLedSetTargetDevice(LOGI_DEVICETYPE_ALL);
     }
     
     static inline void DrawCardiogram(int startRedPercentage, int startGreenPercentage, int startBluePercentage, int finishRedPercentage, int finishGreenPercentage, int finishBluePercentage, bool dead = false)
     {
+        LogiLedSetTargetDevice(LOGI_DEVICETYPE_PERKEY_RGB);
         auto& arr = dead ? keysCardiogramDead : keysCardiogram;
         static auto TIMERA = Timer();
         static auto counter = 0;
@@ -413,10 +429,12 @@ public:
             counter++;
             TIMERA.reset();
         }
+        LogiLedSetTargetDevice(LOGI_DEVICETYPE_ALL);
     }
 
     static inline void DrawCardiogramNumpad(int startRedPercentage, int startGreenPercentage, int startBluePercentage, int finishRedPercentage, int finishGreenPercentage, int finishBluePercentage, bool dead = false)
     {
+        LogiLedSetTargetDevice(LOGI_DEVICETYPE_PERKEY_RGB);
         auto& arr = dead ? keysCardiogramNumpadDead : keysCardiogramNumpad;
         static auto TIMERB = Timer();
         static auto counter = 0;
@@ -430,6 +448,7 @@ public:
             counter++;
             TIMERB.reset();
         }
+        LogiLedSetTargetDevice(LOGI_DEVICETYPE_ALL);
     }
 
     static inline void DrawPoliceSirenMouse()
@@ -461,6 +480,7 @@ public:
 
     static void DrawPoliceSirenKeyboard(bool withWhiteStrip = false, int duration = 1200, bool isInfinite = true)
     {
+        LogiLedSetTargetDevice(LOGI_DEVICETYPE_PERKEY_RGB);
         static auto TIMERD = Timer();
 
         if (TIMERD >= duration || isInfinite)
@@ -503,5 +523,6 @@ public:
             else
                 TIMERD.reset();
         }
+        LogiLedSetTargetDevice(LOGI_DEVICETYPE_ALL);
     }
 };
