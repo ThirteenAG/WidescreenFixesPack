@@ -402,6 +402,24 @@ void __fastcall sub_BA4440(void* _this, int edx, int* a2)
     return injector::fastcall<void(void*, int, int*)>::call(0xBA4440, _this, edx, a2);
 }
 
+bool bDisableCreateQuery = false;
+void __fastcall gpuCommandBufferSync(IDirect3DDevice9** m_ppD3DDevice, void* edx)
+{
+    if (bDisableCreateQuery)
+        return;
+
+    IDirect3DQuery9* pEventQuery = NULL;
+    m_ppD3DDevice[38]->CreateQuery(D3DQUERYTYPE_EVENT, &pEventQuery);
+
+    if (pEventQuery)
+    {
+        pEventQuery->Issue(D3DISSUE_END);
+        while (pEventQuery->GetData(NULL, 0, D3DGETDATA_FLUSH) == S_FALSE)
+            Sleep(0);
+        pEventQuery->Release();
+    }
+}
+
 void Init()
 {
     CIniReader iniReader("");
@@ -409,6 +427,7 @@ void Init()
     auto bDisableDamageOverlay = iniReader.ReadInteger("MAIN", "DisableDamageOverlay", 1) != 0;
     fFOVFactor= iniReader.ReadFloat("MAIN", "FOVFactor", 1.2f);
     if (fFOVFactor <= 0.0f) fFOVFactor = 1.0f;
+    bDisableCreateQuery = iniReader.ReadInteger("MAIN", "DisableCreateQuery", 0) != 0;
 
     // unrestrict resolutons
     struct ResList
@@ -512,6 +531,12 @@ void Init()
 
     {
         injector::WriteMemory(0x0107FF78, 1000, true); //max fps
+    }
+
+    if (bDisableCreateQuery)
+    {
+        auto pattern = hook::pattern("51 8B 81 ? ? ? ? 56 8B 35 ? ? ? ? 68 ? ? ? ? 8D 54 24 08");
+        injector::MakeJMP(pattern.get_first(), gpuCommandBufferSync, true);
     }
 
     {

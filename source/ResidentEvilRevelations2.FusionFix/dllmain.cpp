@@ -629,6 +629,24 @@ void __stdcall SplitScreenSetupBottom(void* a1, int32_t* a2)
     return injector::stdcall<void(void*, int32_t*)>::call(0x4AC310, a1, a2);
 }
 
+bool bDisableCreateQuery = false;
+void __fastcall gpuCommandBufferSync(IDirect3DDevice9** m_ppD3DDevice, void* edx)
+{
+    if (bDisableCreateQuery)
+        return;
+
+    IDirect3DQuery9* pEventQuery = NULL;
+    m_ppD3DDevice[38]->CreateQuery(D3DQUERYTYPE_EVENT, &pEventQuery);
+
+    if (pEventQuery)
+    {
+        pEventQuery->Issue(D3DISSUE_END);
+        while (pEventQuery->GetData(NULL, 0, D3DGETDATA_FLUSH) == S_FALSE)
+            Sleep(0);
+        pEventQuery->Release();
+    }
+}
+
 void Init()
 {
     CIniReader iniReader("");
@@ -640,6 +658,7 @@ void Init()
     auto bDisableGUICommandFar = iniReader.ReadInteger("MAIN", "DisableGUICommandFar", 0) != 0;
     fFOVFactor= iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f);
     if (fFOVFactor <= 0.0f) fFOVFactor = 1.0f;
+    bDisableCreateQuery = iniReader.ReadInteger("MAIN", "DisableCreateQuery", 0) != 0;
     
     if (bSkipIntro)
     {
@@ -789,6 +808,12 @@ void Init()
     {
         injector::WriteMemory(0xA97206 + 4, 1000, true); //max fps
         injector::WriteMemory(0xA9796C + 4, 1000, true); //max fps
+    }
+
+    if (bDisableCreateQuery)
+    {
+        auto pattern = hook::pattern("51 80 B9 ? ? ? ? ? 8B 91");
+        injector::MakeJMP(pattern.get_first(), gpuCommandBufferSync, true);
     }
 
     {
