@@ -225,6 +225,24 @@ BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam)
     return TRUE;
 }
 
+bool bDisableCreateQuery = false;
+void __fastcall gpuCommandBufferSync(IDirect3DDevice9** m_ppD3DDevice, void* edx)
+{
+    if (bDisableCreateQuery)
+        return;
+
+    IDirect3DQuery9* pEventQuery = NULL;
+    m_ppD3DDevice[38]->CreateQuery(D3DQUERYTYPE_EVENT, &pEventQuery);
+
+    if (pEventQuery)
+    {
+        pEventQuery->Issue(D3DISSUE_END);
+        while (pEventQuery->GetData(NULL, 0, D3DGETDATA_FLUSH) == S_FALSE)
+            Sleep(0);
+        pEventQuery->Release();
+    }
+}
+
 void Init()
 {
     CIniReader iniReader("");
@@ -235,6 +253,7 @@ void Init()
     bDisableNoise = iniReader.ReadInteger("MAIN", "DisableNoise", 0) != 0;
     bDisableColorCorrection = iniReader.ReadInteger("MAIN", "DisableColorCorrection", 0) != 0;
     bDisableFog = iniReader.ReadInteger("MAIN", "DisableFog", 0) != 0;
+    bDisableCreateQuery = iniReader.ReadInteger("MAIN", "DisableCreateQuery", 0) != 0;
 
     if (nHideMouseCursorAfterMs)
     {
@@ -330,6 +349,12 @@ void Init()
     {
         pD3D9DeviceAddr = (uintptr_t)*hook::get_pattern<uint32_t>("8B 0D ? ? ? ? E8 ? ? ? ? 0F B6 C0 F7 D8", 2);
         injector::MakeCALL(hook::get_pattern("E8 ? ? ? ? 89 46 08 66 8B 4C 24 ? 0F B7 C1 43 83 C5 0C 3B D8 72 C7 33 C0"), CreatePixelShaderHook, true);
+    }
+
+    if (bDisableCreateQuery)
+    {
+        auto pattern = hook::pattern("51 80 B9 ? ? ? ? ? 8B 91 ? ? ? ? 75 7B 8B 02 56");
+        injector::MakeJMP(pattern.get_first(), gpuCommandBufferSync, true);
     }
 
     if (bLightSyncRGB)
