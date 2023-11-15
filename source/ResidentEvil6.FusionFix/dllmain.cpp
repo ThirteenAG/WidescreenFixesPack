@@ -5,6 +5,7 @@
 #pragma comment(lib, "d3dx9.lib")
 #include <vector>
 #include <map>
+#include <xinput.h>
 
 constexpr auto defaultAspectRatio = 16.0f / 9.0f;
 bool bSplitScreenSwapTopBottom = false;
@@ -671,6 +672,56 @@ float* __stdcall ObjectiveIndicator(float* a1, float* a2, int a3)
     return a1;
 }
 
+bool bNeedsAutoclick = false;
+injector::hook_back<const char* (__fastcall*)(void*, void*, unsigned int)> hb_11B5A80;
+const char* __fastcall sub_11B5A80(void* _this, void* a2, unsigned int a3)
+{
+    static constexpr auto RestartStr = "Restart game from last checkpoint.";
+    static constexpr auto LoadSuccessful = "Load successful.";
+    static constexpr auto ThisGameReq = "This game includes an auto-save feature.\r\nPlease do not turn off your computer.";
+    static constexpr auto Version = "Version";
+
+    auto ret = hb_11B5A80.fun(_this, a2, a3);
+
+    if (ret)
+    {
+        auto s = std::string_view(ret);
+
+        if (s == RestartStr || s == LoadSuccessful || s == Version || s == ThisGameReq)
+        {
+            bNeedsAutoclick = true;
+        }
+    }
+
+    return ret;
+}
+
+std::future<void*> pXInputGetState;
+injector::hook_back<DWORD(WINAPI*)(DWORD, XINPUT_STATE*)> hbXInputGetStateHook;
+DWORD WINAPI XInputGetStateHook(DWORD dwUserIndex, XINPUT_STATE* pState)
+{
+    if (!hbXInputGetStateHook.fun)
+        hbXInputGetStateHook.fun = (decltype(hbXInputGetStateHook.fun))pXInputGetState.get();
+
+    auto ret = hbXInputGetStateHook.fun(dwUserIndex, pState);
+
+    if (bNeedsAutoclick)
+    {
+        pState->Gamepad.wButtons = XINPUT_GAMEPAD_A;
+
+        static auto frames = 0;
+        if (frames >= 20) {
+            pState->Gamepad.wButtons = 0x0000;
+            frames = 0;
+        }
+        frames++;
+
+        bNeedsAutoclick = false;
+    }
+
+    return ret;
+}
+
 void Init()
 {
     CIniReader iniReader("");
@@ -680,6 +731,7 @@ void Init()
     auto bDisableDamageOverlay = iniReader.ReadInteger("MAIN", "DisableDamageOverlay", 1) != 0;
     auto bDisableDBNOEffects = iniReader.ReadInteger("MAIN", "DisableDBNOEffects", 0) != 0;
     bDisableObjectiveIndicator = iniReader.ReadInteger("MAIN", "DisableObjectiveIndicator", 0) != 0;
+    auto bAutoclicker = iniReader.ReadInteger("MAIN", "Autoclicker", 0) != 0;
 
     FillAddressTable();
     
@@ -898,6 +950,16 @@ void Init()
         injector::WriteMemory(addrTbl[0x016E62D8], (int)fps, true);
     }
 
+    if (bAutoclicker)
+    {
+        pXInputGetState = std::move(IATHook::Replace(GetModuleHandleA(NULL), "XINPUT1_3.dll",
+            std::forward_as_tuple("XInputGetState@2", XInputGetStateHook)
+        )["XInputGetState@2"]);
+
+        auto pattern = hook::pattern("E8 ? ? ? ? 8D 4C 24 24 8A 11");
+        hb_11B5A80.fun = injector::MakeCALL(pattern.get_first(), sub_11B5A80, true).get();
+    }
+
     {
         static auto sPlayerPtr = *hook::get_pattern<void*>("8B 0D ? ? ? ? 85 C9 74 07 6A 01 E8 ? ? ? ? FE 86", 2);
 
@@ -909,7 +971,7 @@ void Init()
                 auto LeonHealth = PtrWalkthrough<int16_t>(sPlayerPtr, 0x24, 0xF10);
                 auto HelenaHealth = PtrWalkthrough<int16_t>(sPlayerPtr, 0x28, 0xF10);
                 auto ChrisHealth = PtrWalkthrough<int16_t>(sPlayerPtr, 0x2C, 0xF10);
-                auto PierceHealth = PtrWalkthrough<int16_t>(sPlayerPtr, 0x30, 0xF10);
+                auto PiersHealthHealth = PtrWalkthrough<int16_t>(sPlayerPtr, 0x30, 0xF10);
                 auto JakeHealth = PtrWalkthrough<int16_t>(sPlayerPtr, 0x34, 0xF10);
                 auto SherryHealth = PtrWalkthrough<int16_t>(sPlayerPtr, 0x38, 0xF10);
                 auto AdaHealth = PtrWalkthrough<int16_t>(sPlayerPtr, 0x3C, 0xF10);
@@ -918,7 +980,7 @@ void Init()
                 int FineR = 0x84, FineG = 0xDE, FineB = 0xFF;
                 int DangerR = 0x89, DangerG = 0x13, DangerB = 0x1D;
 
-                if ((LeonHealth && HelenaHealth) || (ChrisHealth && PierceHealth) || (JakeHealth && SherryHealth) || AdaHealth)
+                if ((LeonHealth && HelenaHealth) || (ChrisHealth && PiersHealthHealth) || (JakeHealth && SherryHealth) || AdaHealth)
                 {
                     int16_t health1 = 0;
                     int16_t health2 = 0;
@@ -927,9 +989,9 @@ void Init()
                         health1 = *LeonHealth;
                         health2 = *HelenaHealth;
                     }
-                    else if (ChrisHealth && PierceHealth) {
+                    else if (ChrisHealth && PiersHealthHealth) {
                         health1 = *ChrisHealth;
-                        health2 = *PierceHealth;
+                        health2 = *PiersHealthHealth;
 
                         FineR = 0xA4, FineG = 0xB8, FineB = 0x39;
                         DangerR = 0x89, DangerG = 0x13, DangerB = 0x1D;

@@ -4,6 +4,7 @@
 #include <d3dx9.h>
 #pragma comment(lib, "d3dx9.lib")
 #include <vector>
+#include <xinput.h>
 
 constexpr auto defaultAspectRatio = 16.0f / 9.0f;
 float fFOVFactor = 1.0f;
@@ -647,6 +648,57 @@ void __fastcall gpuCommandBufferSync(IDirect3DDevice9** m_ppD3DDevice, void* edx
     }
 }
 
+bool bNeedsAutoclick = false;
+injector::hook_back<const char* (__fastcall*)(void*, void*, int, int)> hb_954B40;
+const char* __fastcall sub_954B40(void* _this, void* a2, int a3, int a4)
+{
+    static constexpr auto RestartStr = "Restart game from your last checkpoint.";
+    static constexpr auto LoadSuccessful = "Load successful.";
+    static constexpr auto ThisGameReq = "This game has an autosave feature.\r\nDo not turn off the power when the above icon is displayed.";
+
+    auto ret = hb_954B40.fun(_this, a2, a3, a4);
+
+    if (ret)
+    {
+        auto s = std::string_view(ret);
+
+        if (s == RestartStr || s == LoadSuccessful || s == ThisGameReq)
+        {
+            bNeedsAutoclick = true;
+        }
+    }
+
+    return ret;
+}
+
+std::future<void*> pXInputGetState;
+injector::hook_back<DWORD(WINAPI*)(DWORD, XINPUT_STATE*)> hbXInputGetStateHook;
+DWORD WINAPI XInputGetStateHook(DWORD dwUserIndex, XINPUT_STATE* pState)
+{
+    if (!hbXInputGetStateHook.fun)
+        hbXInputGetStateHook.fun = (decltype(hbXInputGetStateHook.fun))pXInputGetState.get();
+
+    auto ret = hbXInputGetStateHook.fun(dwUserIndex, pState);
+
+    if (bNeedsAutoclick)
+    {
+        pState->Gamepad.wButtons = XINPUT_GAMEPAD_A;
+
+        static auto frames = 0;
+        if (frames % 10) {
+            pState->Gamepad.wButtons = 0x0000;
+
+            if (frames >= 2000) {
+                frames = 0;
+                bNeedsAutoclick = false;
+            }
+        }
+        frames++;
+    }
+
+    return ret;
+}
+
 void Init()
 {
     CIniReader iniReader("");
@@ -659,6 +711,7 @@ void Init()
     fFOVFactor= iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f);
     if (fFOVFactor <= 0.0f) fFOVFactor = 1.0f;
     bDisableCreateQuery = iniReader.ReadInteger("MAIN", "DisableCreateQuery", 0) != 0;
+    auto bAutoclicker = iniReader.ReadInteger("MAIN", "Autoclicker", 0) != 0;
     
     if (bSkipIntro)
     {
@@ -814,6 +867,16 @@ void Init()
     {
         auto pattern = hook::pattern("51 80 B9 ? ? ? ? ? 8B 91");
         injector::MakeJMP(pattern.get_first(), gpuCommandBufferSync, true);
+    }
+
+    if (bAutoclicker)
+    {
+        pXInputGetState = std::move(IATHook::Replace(GetModuleHandleA(NULL), "XINPUT1_3.dll",
+            std::forward_as_tuple("XInputGetState@2", XInputGetStateHook)
+        )["XInputGetState@2"]);
+        
+        auto pattern = hook::pattern("E8 ? ? ? ? 8B D0 85 D2 75 13 8B 07 8B CF FF 50 60 56 FF 15 ? ? ? ? 5E 5F C2 0C 00 8B CA 53 8D 59 01 8D A4 24");
+        hb_954B40.fun = injector::MakeCALL(pattern.get_first(), sub_954B40, true).get();
     }
 
     {

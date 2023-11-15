@@ -22,19 +22,18 @@ void CreateThreadAutoClose(LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_T dwSt
 
 bool IsModuleUAL(HMODULE mod)
 {
-    if (GetProcAddress(mod, "DirectInput8Create") != NULL && GetProcAddress(mod, "DirectSoundCreate8") != NULL && GetProcAddress(mod, "InternetOpenA") != NULL)
+    if (GetProcAddress(mod, "IsUltimateASILoader") != NULL || (GetProcAddress(mod, "DirectInput8Create") != NULL && GetProcAddress(mod, "DirectSoundCreate8") != NULL && GetProcAddress(mod, "InternetOpenA") != NULL))
         return true;
     return false;
 }
 
-bool IsUALPresent()
-{
-    ModuleList dlls;
-    dlls.Enumerate(ModuleList::SearchLocation::LocalOnly);
-    for (auto& e : dlls.m_moduleList)
-    {
-        if (IsModuleUAL(std::get<HMODULE>(e)))
-            return true;
+bool IsUALPresent() {
+    for (const auto& entry : std::stacktrace::current()) {
+        HMODULE hModule = NULL;
+        if (GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR)entry.native_handle(), &hModule)) {
+            if (IsModuleUAL(hModule))
+                return true;
+        }
     }
     return false;
 }
