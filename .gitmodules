@@ -28,3 +28,6 @@
 [submodule "external/ps2sdk"]
 	path = external/ps2sdk
 	url = https://github.com/ThirteenAG/ps2sdk
+[submodule "source/Manhunt.WidescreenFix"]
+	path = source/Manhunt.WidescreenFix
+	url = https://github.com/Fire-Head/MHWSF
