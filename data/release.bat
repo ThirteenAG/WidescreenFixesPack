@@ -58,6 +58,9 @@ if errorlevel 1 (
 )
 )
 
+rem Manhunt Widescreen Fix
+copy /b/v/y "..\source\Manhunt.WidescreenFix\bin\Manhunt.WidescreenFix.ini" "..\data\Manhunt.WidescreenFix\scripts\Manhunt.WidescreenFix.ini"
+
 rem Creating archives
 
 FOR /D /r %%G in ("*PPSSPP*") DO (

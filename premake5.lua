@@ -446,6 +446,10 @@ project "Mafia.CXBXR.WidescreenFix"
       setpaths("Z:/WFP/Games/CXBXR/", "cxbx.exe")
       files { "includes/cxbxr/cxbxr.h" }
 project "Manhunt.WidescreenFix"
+   characterset ("MBCS")
+   buildoptions { "/Zc:strictStrings-" }
+   includedirs { "source/%{prj.name}/inc" }
+   files { "source/%{prj.name}/**/*.cpp" }
    setpaths("Z:/WFP/Games/Manhunt/", "manhunt.exe")
 project "MassEffectTrilogy.FOVFix"
    setpaths("Z:/WFP/Games/Mass Effect/Mass Effect 2/Binaries/", "MassEffect2.exe", "/")
