@@ -450,6 +450,7 @@ project "Manhunt.WidescreenFix"
    buildoptions { "/Zc:strictStrings-" }
    includedirs { "source/%{prj.name}/inc" }
    files { "source/%{prj.name}/**/*.cpp" }
+   removefiles { "includes/stdafx.h", "includes/stdafx.cpp" }
    setpaths("Z:/WFP/Games/Manhunt/", "manhunt.exe")
 project "MassEffectTrilogy.FOVFix"
    setpaths("Z:/WFP/Games/Mass Effect/Mass Effect 2/Binaries/", "MassEffect2.exe", "/")
