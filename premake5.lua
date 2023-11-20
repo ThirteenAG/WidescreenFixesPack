@@ -7,6 +7,7 @@ workspace "WidescreenFixesPack"
    buildlog ("build/log/%{prj.name}.log")
    cppdialect "C++latest"
    include "makefile.lua"
+   buildoptions { "/Zc:__cplusplus" }
    
    kind "SharedLib"
    language "C++"
@@ -446,7 +447,6 @@ project "Mafia.CXBXR.WidescreenFix"
       setpaths("Z:/WFP/Games/CXBXR/", "cxbx.exe")
       files { "includes/cxbxr/cxbxr.h" }
 project "Manhunt.WidescreenFix"
-   characterset ("MBCS")
    buildoptions { "/Zc:strictStrings-" }
    includedirs { "source/%{prj.name}/inc" }
    files { "source/%{prj.name}/**/*.cpp" }
