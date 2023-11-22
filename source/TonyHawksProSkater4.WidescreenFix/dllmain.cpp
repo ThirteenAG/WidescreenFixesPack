@@ -11,6 +11,7 @@ struct Screen
     float fAspectRatio;
     float fAspectRatioDiff;
     float fFieldOfView;
+    float fFOVFactor;
     float fHUDScaleX;
     float fHudOffset;
     float fHudOffsetReal;
@@ -23,6 +24,7 @@ void Init()
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
     bool bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) != 0;
     bool bRandomSongOrderFix = iniReader.ReadInteger("MAIN", "RandomSongOrderFix", 1) != 0;
+    Screen.fFOVFactor = iniReader.ReadFloat("MAIN", "FOVFactor", 0.0f);
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -35,6 +37,8 @@ void Init()
     Screen.fHUDScaleX = 1.0f / Screen.fWidth * (Screen.fHeight / 480.0f);
     Screen.fHudOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
     Screen.fHudOffsetReal = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
+    if (Screen.fFOVFactor <= 0.0f)
+        Screen.fFOVFactor = 1.0f;
 
     //Resolution
     auto pattern = hook::pattern("8B 4C B4 20 89 15");
@@ -69,9 +73,9 @@ void Init()
     {
         void operator()(injector::reg_pack& regs)
         {
-            float fov = 0.0f;
-            _asm {fst dword ptr[fov]}
-            *(float*)(regs.esi + 0xA4) = AdjustFOV(fov, Screen.fAspectRatio);
+            float fov = *(float*)(regs.esi + 0xA4);
+            float adjustedFov = AdjustFOV(fov, Screen.fAspectRatio);
+            *(float*)(regs.esi + 0xA0) = adjustedFov * Screen.fFOVFactor;
         }
     }; injector::MakeInline<FovHook>(pattern.get_first(0), pattern.get_first(6));
 
