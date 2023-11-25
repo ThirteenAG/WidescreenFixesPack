@@ -47,9 +47,7 @@ float randf(float min, float max)
 
 float* CWeather__Foggyness;
 float* CWeather__CloudCoverage;
-void (*CSprite__FlushSpriteBuffer)();
-int (*CSprite__CalcScreenCoors)(CVector* in, CVector* out, float* outW, float* outH, uint8_t farClip);
-void (*CSprite__RenderBufferedOneXLUSprite)();
+int** gpCoronaTexture;
 void CSprite__FlushSpriteBufferHook()
 {
     CSprite__FlushSpriteBuffer();
@@ -144,6 +142,19 @@ void CSprite__FlushSpriteBufferHook()
     }
 }
 
+void CCoronas__RenderHook()
+{
+    CCoronas__Render();
+
+    RslRenderStateSet(6, 0);
+    RslRenderStateSet(10, 1);
+    RslRenderStateSet(8, 2);
+    RslRenderStateSet(9, 2);
+    RslRenderStateSet(4, 1);
+    RslRenderStateSet(1, *gpCoronaTexture[0]);
+    RenderLODLightsBuffered();
+}
+
 uintptr_t GetAbsoluteAddress(uintptr_t at, int32_t offs_hi, int32_t offs_lo)
 {
     return (uintptr_t)((uint32_t)(*(uint16_t*)(at + offs_hi)) << 16) + *(int16_t*)(at + offs_lo);
@@ -160,6 +171,15 @@ void init()
 
     int SkyGfx = inireader.ReadInteger("PROJECT2DFX", "SkyGfx", 0);
 
+    uintptr_t ptr_39FC48 = pattern.get(0, "70 00 02 3C 10 00 B0 FF", -4);
+    CSprite__CalcScreenCoors = (int(*)(CVector*, CVector*, float*, float*, uint8_t))ptr_39FC48;
+    uintptr_t ptr_39FF48 = pattern.get(0, "80 68 10 46 ? ? ? ? 40 60 0F 46 80 3F 01 3C 00 00 81 44 01 63 0F 46 20 00 A0 AF 41 6B 10 46 68 00 B5 FF", -0);
+    CSprite__RenderBufferedOneXLUSprite = (void(*)())ptr_39FF48;
+    uintptr_t ptr_18D450 = pattern.get(0, "00 00 00 00 48 00 03 3C 01 00 04 24 ? ? ? ? ? ? ? ? 00 00 45 8C", -4);
+    CSprite__FlushSpriteBuffer = (void(*)())injector.GetBranchDestination(ptr_18D450);
+    uintptr_t ptr_27C464 = pattern.get(0, "90 00 B4 E7 00 3F 01 3C", -4);
+    RslRenderStateSet = (void(*)(int, int))injector.GetBranchDestination(ptr_27C464);
+
     if (RenderLodLights)
     {
         uintptr_t ptr_27DD10 = pattern.get(0, "FF 00 4A 31 ? ? ? ? ? ? ? ? ? ? ? ? 80 50 0A 00 ? ? ? ? 21 50 42 01", 0);
@@ -174,12 +194,17 @@ void init()
         CTimer__m_snTimeInMillisecondsPauseModeOffset = GetAbsoluteAddress(ptr_1085AC, 0, 4);
         uintptr_t ptr_132678 = pattern.get(0, "02 08 00 46 82 08 02 46 42 08 03 46 00 21 00 46", 0);
         CTimer__ms_fTimeStepOffset = GetAbsoluteAddress(ptr_132678, -20, -8);
+        uintptr_t ptr_244B10 = pattern.get(0, "48 00 03 3C 01 00 04 24 ? ? ? ? ? ? ? ? 00 00 45 8C 04 00 04 24", -0);
+        gpCoronaTexture = (int**)GetAbsoluteAddress(ptr_244B10, 0, 8);
 
-        IncreaseCoronasLimit(CoronaLimit);
+        // disabled because introduces bugs with script objects
+        //IncreaseCoronasLimit(CoronaLimit);
 
         // Coronas Render
-        uintptr_t ptr_21ED38 = pattern.get(0, "00 00 00 00 48 00 02 3C 48 7A 43 8C", -4);
-        injector.MakeJAL(ptr_21ED38, (intptr_t)RegisterLODLights);
+        //uintptr_t ptr_21ED38 = pattern.get(0, "00 00 00 00 48 00 02 3C 48 7A 43 8C", -4);
+        //injector.MakeJAL(ptr_21ED38, (intptr_t)RegisterLODLights);
+        uintptr_t ptr_21F268 = pattern.get(11, "00 00 00 00 ? ? ? ? 2D 20 40 02 23 10 22 02 2B 10 02 02 ? ? ? ? 00 00 B0 DF", -4);
+        CCoronas__Render = (void(*)())injector.MakeJAL(ptr_21F268, (uintptr_t)CCoronas__RenderHook);
 
         // Heli Height Limit
         uintptr_t ptr_3EA644 = pattern.get(1, "A0 42 01 3C 00 00 81 44 00 00 00 00", 0); // count = 3
@@ -202,11 +227,6 @@ void init()
         uintptr_t ptr_408058 = pattern.get(0, "49 00 08 3C 01 00 03 3C", -0);
         base__Random = (int(*)())ptr_408058;
 
-        uintptr_t ptr_39FC48 = pattern.get(0, "70 00 02 3C 10 00 B0 FF", -4);
-        CSprite__CalcScreenCoors = (int(*)(CVector*, CVector*, float*, float*, uint8_t))ptr_39FC48;
-        uintptr_t ptr_39FF48 = pattern.get(0, "80 68 10 46 ? ? ? ? 40 60 0F 46 80 3F 01 3C 00 00 81 44 01 63 0F 46 20 00 A0 AF 41 6B 10 46 68 00 B5 FF", -0);
-        CSprite__RenderBufferedOneXLUSprite = (void(*)())ptr_39FF48;
-
         for (int side = 0; side < STAR_SKYBOX_SIDES; ++side)
         {
             for (int i = 0; i < AMOUNT_OF_STARS; ++i)
@@ -223,7 +243,6 @@ void init()
             }
         }
 
-        uintptr_t ptr_18D450 = pattern.get(0, "00 00 00 00 48 00 03 3C 01 00 04 24 ? ? ? ? ? ? ? ? 00 00 45 8C", -4);
         CSprite__FlushSpriteBuffer = (void(*)())injector.MakeJAL(ptr_18D450, (uintptr_t)CSprite__FlushSpriteBufferHook);
     }
 }
