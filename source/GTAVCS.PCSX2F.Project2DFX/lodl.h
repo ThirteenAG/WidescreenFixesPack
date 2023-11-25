@@ -55,6 +55,11 @@ extern uintptr_t CurrentTimeHoursOffset;
 extern uintptr_t CurrentTimeMinutesOffset;
 extern uintptr_t CTimer__m_snTimeInMillisecondsPauseModeOffset;
 extern uintptr_t CTimer__ms_fTimeStepOffset;
+extern void (*CSprite__FlushSpriteBuffer)();
+extern void (*CCoronas__Render)();
+extern void (*RslRenderStateSet)(int, int);
+extern int (*CSprite__CalcScreenCoors)(CVector* in, CVector* out, float* outW, float* outH, uint8_t farClip);
+extern void (*CSprite__RenderBufferedOneXLUSprite)();
 
 void IncreaseCoronasLimit(size_t CoronaLimit);
 char CurrentTimeHours();
@@ -65,4 +70,6 @@ char GetIsTimeInRange(int hourA, int hourB);
 CVector* GetCamPos();
 int IsBlinkingNeeded(int BlinkType);
 void RegisterLODLights();
+void RenderLODLightsBuffered();
+int IsSphereVisible(float radius, CVector* center);
 #endif
