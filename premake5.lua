@@ -8,6 +8,7 @@ workspace "WidescreenFixesPack"
    cppdialect "C++latest"
    include "makefile.lua"
    buildoptions { "/Zc:__cplusplus" }
+   flags { "MultiProcessorCompile" }
    
    kind "SharedLib"
    language "C++"
@@ -311,6 +312,7 @@ project "GTASADE.FusionMod"
    setpaths("Z:/WFP/Games/Grand Theft Auto The Definitive Edition/GTA San Andreas - Definitive Edition/", "Gameface/Binaries/Win64/SanAndreas.exe", "Gameface/Binaries/Win64/scripts/")
 project "GTALCS.PCSX2F.WidescreenFix"
    kind "Makefile"
+   dependson { "Burnout3.PCSX2F.WidescreenFix" }
    includedirs { "external/ps2sdk/ps2sdk/ee" }
    files { "source/%{prj.name}/*.h" }
    files { "source/%{prj.name}/*.c", "source/%{prj.name}/makefile" }
@@ -322,6 +324,7 @@ project "GTALCS.PCSX2F.WidescreenFix"
    writelinkfile_ps2("GTALCS.PCSX2F.WidescreenFix")
 project "GTAVCS.PCSX2F.WidescreenFix"
    kind "Makefile"
+   dependson { "GTALCS.PCSX2F.WidescreenFix" }
    includedirs { "external/ps2sdk/ps2sdk/ee" }
    files { "source/%{prj.name}/*.h" }
    files { "source/%{prj.name}/*.c", "source/%{prj.name}/makefile" }
@@ -343,6 +346,18 @@ project "GTAVCS.PCSX2F.Project2DFX"
    "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o","../../includes/pcsx2/inireader.o",
    "../../includes/pcsx2/mips.o")
    writelinkfile_ps2("GTAVCS.PCSX2F.Project2DFX")
+project "GTAVCS.PCSX2F.ImVehLM"
+   kind "Makefile"
+   dependson { "GTAVCS.PCSX2F.Project2DFX" }
+   includedirs { "external/ps2sdk/ps2sdk/ee" }
+   files { "source/%{prj.name}/*.h" }
+   files { "source/%{prj.name}/*.c", "source/%{prj.name}/makefile" }
+   targetextension ".elf"
+   setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin/", "pcsx2x64.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PCSX2F.ImVehLM")
+   writemakefile_ps2("GTAVCS.PCSX2F.ImVehLM", "PLUGINS/", "0x06000000", "-l:libc.a", "../../includes/pcsx2/memalloc.o",
+   "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o","../../includes/pcsx2/inireader.o",
+   "../../includes/pcsx2/mips.o")
+   writelinkfile_ps2("GTAVCS.PCSX2F.ImVehLM")
 project "GTALCS.PPSSPP.WidescreenFix"
    kind "Makefile"
    dependson { "GTALCS.PPSSPP.Project2DFX", "GTALCS.PPSSPP.ImVehLM" }
@@ -423,6 +438,7 @@ project "KnightRider.WidescreenFix"
       setpaths("Z:/WFP/Games/Knight Rider/", "Knight Rider.exe")
 project "KnightRider.PCSX2F.WidescreenFix"
    kind "Makefile"
+   dependson { "GTAVCS.PCSX2F.ImVehLM" }
    includedirs { "external/ps2sdk/ps2sdk/ee" }
    files { "source/%{prj.name}/*.h" }
    files { "source/%{prj.name}/*.c", "source/%{prj.name}/makefile" }
@@ -556,6 +572,7 @@ project "SplinterCellDoubleAgent.WidescreenFix"
    defines { "IDR_SCDAICON=200" }
 project "SplinterCellDoubleAgent.PCSX2F.WidescreenFix"
    kind "Makefile"
+   dependson { "KnightRider.PCSX2F.WidescreenFix" }
    includedirs { "external/ps2sdk/ps2sdk/ee" }
    files { "source/%{prj.name}/*.h" }
    files { "source/%{prj.name}/*.c", "source/%{prj.name}/makefile" }
