@@ -1,19 +1,23 @@
 cd textures/NFS/NFSUC
-createtpk.bat
+call createtpk.bat
 cd ../../..
 
 cd textures/NFS/NFSC
-createtpk.bat
+call createtpk.bat
 cd ../../..
 
 cd textures/NFS/NFSMW
-createtpk.bat
+call createtpk.bat
 cd ../../..
 
 cd textures/NFS/NFSU2
-createtpk.bat
+call createtpk.bat
 cd ../../..
 
 cd textures/NFS/NFSU
-createtpk.bat
+call createtpk.bat
 cd ../../..
+
+cd textures/GTAVCS
+call buildps2.bat
+cd ../..

@@ -61,7 +61,7 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
         tag: gtavcs
-        artifacts: data/Archives/GTAVCS.PCSX2F.WidescreenFix.zip, data/Archives/GTAVCS.PCSX2F.Project2DFX.zip
+        artifacts: data/Archives/GTAVCS.PCSX2F.WidescreenFix.zip, data/Archives/GTAVCS.PCSX2F.Project2DFX.zip, data/Archives/GTAVCS.PCSX2F.ImVehLM.zip
 
     - name: GTA Liberty City Stories Widescreen Fix [PPSSPP]
       uses: ./.github/workflows/release_tag

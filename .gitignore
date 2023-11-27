@@ -44,6 +44,7 @@ source/*PCSX2F.*/**/*.o
 source/*PCSX2F.*/**/*.map
 source/*PCSX2F.*/**/linkfile
 includes/pcsx2/**/*.o
+data/*PCSX2F.*/**/TEXTURES/**/*.png
 
 #Misc
 !data/Mafia.WidescreenFix/rw_data.bak

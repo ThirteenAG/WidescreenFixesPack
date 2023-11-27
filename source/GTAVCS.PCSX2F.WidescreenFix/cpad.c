@@ -120,6 +120,7 @@ int16_t CPad__ChangeStationUpJustDown(struct CPad* pad)
         return 0;
     if (pad->NewState.DPADRIGHT)
         return pad->OldState.DPADRIGHT == 0;
+    return 0;
 }
 int16_t CPad__ChangeStationDownJustDown(struct CPad* pad)
 {
@@ -127,6 +128,7 @@ int16_t CPad__ChangeStationDownJustDown(struct CPad* pad)
         return 0;
     if (pad->NewState.DPADLEFT)
         return pad->OldState.DPADLEFT == 0;
+    return 0;
 }
 int16_t CPad__CycleWeaponLeftJustDown(struct CPad* pad)
 {
