@@ -5,6 +5,12 @@
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
+#ifndef __INTELLISENSE__
+#define align16 __attribute__((aligned(16)))
+#else
+#define align16
+#endif
+
 typedef struct CVector
 {
     float x;
@@ -43,6 +49,11 @@ enum BlinkTypes
 extern float fCoronaFarClip;
 extern float fCoronaRadiusMultiplier;
 extern void(*CCoronas__RegisterCorona)(int id, char r, char g, char b, char a, void* pos, char coronaType, char flareType, float radius, float farClip, float unk3, float unk4, char reflection, char LOScheck, char drawStreak, char flag4);
+extern void (*CSprite__FlushSpriteBuffer)();
+extern int (*CSprite__CalcScreenCoors)(CVector* in, CVector* out, float* outW, float* outH, uint8_t farClip);
+extern void (*CSprite__RenderBufferedOneXLUSprite)();
+extern void (*CCoronas__Render)();
+extern void (*RslRenderStateSet)(int, int);
 extern uintptr_t TheCamera;
 extern CVector* pCamPos;
 extern uintptr_t CDraw__ms_fNearClipZOffset;
@@ -62,3 +73,4 @@ char GetIsTimeInRange(int hourA, int hourB);
 CVector* GetCamPos();
 int IsBlinkingNeeded(int BlinkType);
 void RegisterLODLights();
+void RenderLODLightsBuffered();

@@ -169,7 +169,7 @@ void init()
     fCoronaRadiusMultiplier = inireader.ReadFloat("PROJECT2DFX", "CoronaRadiusMultiplier", 1.0f);
     fCoronaFarClip = inireader.ReadFloat("PROJECT2DFX", "CoronaFarClip", 500.0f);
 
-    int SkyGfx = inireader.ReadInteger("PROJECT2DFX", "SkyGfx", 0);
+    int SkyGfx = inireader.ReadInteger("PROJECT2DFX", "SkyGfx", 1);
 
     uintptr_t ptr_39FC48 = pattern.get(0, "70 00 02 3C 10 00 B0 FF", -4);
     CSprite__CalcScreenCoors = (int(*)(CVector*, CVector*, float*, float*, uint8_t))ptr_39FC48;

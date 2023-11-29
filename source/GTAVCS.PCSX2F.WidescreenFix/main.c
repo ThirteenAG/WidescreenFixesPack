@@ -344,7 +344,7 @@ void init()
             injector.MakeInlineLUIORI(0x119034, ((5.333333f * Screen.fHudScale)));
             MakeInlineWrapper(0x119174, mtc1(at, f0), lui(at, HIWORD(Screen.fHudScale)), addiu(at, at, LOWORD(Screen.fHudScale)), mtc1(at, f31), muls(f0, f0, f31));
             injector.WriteInstr(0x21f654, (li(s1, (int16_t)round_f(210.0f * Screen.fHudScale))));
-            injector.MakeInlineLUIORI(0x2625BC, Screen.fHudScale); // game text
+            injector.MakeInlineLUIORI(0x2625BC, Screen.fHudScale / 0.75f); // game text, 0.75 is for some kind of og bug
             //injector.MakeInlineLUIORI(0x265460, Screen.fAspectRatio); //ar
             //0x2AEC9C todo menu or script
 
