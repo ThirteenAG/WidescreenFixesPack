@@ -4211,6 +4211,9 @@ void RenderLODLightsBuffered()
                     if (fRadius > 3.5f)
                         fRadius = 3.5f;
 
+                    //if (bSlightlyIncreaseRadiusWithDistance)
+                        fRadius *= MIN((0.0025f) * (1.0f / Q_rsqrt(fDistSqr)) + 0.25f, 4.0f); // http://goo.gl/3kDpnC
+
                     void* pos = &aLodLights[i];
                     unsigned char alpha = (bAlpha * (aLodLights[i].a / 255.0f));
                     float radius = (fRadius * aLodLights[i].fCustomSizeMult * fCoronaRadiusMultiplier);
