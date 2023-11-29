@@ -126,7 +126,7 @@ env:
   gtasade: "/t:GTASADE_FusionMod"
   gtavc: "/t:GTAVC_WidescreenFix"
   gtavcde: "/t:GTAVCDE_FusionMod"
-  gtavcs: "/t:GTAVCS_PCSX2F_WidescreenFix /t:GTAVCS_PCSX2F_Project2DFX"
+  gtavcs: "/t:GTAVCS_PCSX2F_WidescreenFix /t:GTAVCS_PCSX2F_Project2DFX /t:GTAVCS_PCSX2F_ImVehLM"
   gtavcspsp: "/t:GTAVCS_PPSSPP_WidescreenFix /t:GTAVCS_PPSSPP_Project2DFX /t:GTAVCS_PPSSPP_ImVehLM"
   gun: "/t:Gun_WidescreenFix"
   hd2: "/t:HiddenandDangerous2_WidescreenFix"

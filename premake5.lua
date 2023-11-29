@@ -360,7 +360,6 @@ project "GTAVCS.PCSX2F.ImVehLM"
    writelinkfile_ps2("GTAVCS.PCSX2F.ImVehLM")
 project "GTALCS.PPSSPP.WidescreenFix"
    kind "Makefile"
-   dependson { "GTALCS.PPSSPP.Project2DFX", "GTALCS.PPSSPP.ImVehLM" }
    includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
    includedirs { "external/pspsdk/usr/local/pspdev/bin" }
    includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
@@ -370,6 +369,7 @@ project "GTALCS.PPSSPP.WidescreenFix"
    writemakefile_psp("GTALCS.PPSSPP.WidescreenFix")
 project "GTALCS.PPSSPP.Project2DFX"
    kind "Makefile"
+   dependson { "GTALCS.PPSSPP.WidescreenFix" }
    includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
    includedirs { "external/pspsdk/usr/local/pspdev/bin" }
    includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
@@ -379,6 +379,7 @@ project "GTALCS.PPSSPP.Project2DFX"
    writemakefile_psp("GTALCS.PPSSPP.Project2DFX", "lodl.c")
 project "GTALCS.PPSSPP.ImVehLM"
    kind "Makefile"
+   dependson { "GTALCS.PPSSPP.Project2DFX" }
    includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
    includedirs { "external/pspsdk/usr/local/pspdev/bin" }
    includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
@@ -388,7 +389,7 @@ project "GTALCS.PPSSPP.ImVehLM"
    writemakefile_psp("GTALCS.PPSSPP.ImVehLM")
 project "GTAVCS.PPSSPP.WidescreenFix"
    kind "Makefile"
-   dependson { "GTAVCS.PPSSPP.Project2DFX", "GTAVCS.PPSSPP.ImVehLM" }
+   dependson { "GTALCS.PPSSPP.ImVehLM" }
    includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
    includedirs { "external/pspsdk/usr/local/pspdev/bin" }
    includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
@@ -398,6 +399,7 @@ project "GTAVCS.PPSSPP.WidescreenFix"
    writemakefile_psp("GTAVCS.PPSSPP.WidescreenFix")
 project "GTAVCS.PPSSPP.Project2DFX"
    kind "Makefile"
+   dependson { "GTAVCS.PPSSPP.WidescreenFix" }
    includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
    includedirs { "external/pspsdk/usr/local/pspdev/bin" }
    includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
@@ -407,6 +409,7 @@ project "GTAVCS.PPSSPP.Project2DFX"
    writemakefile_psp("GTAVCS.PPSSPP.Project2DFX", "lodl.c")
 project "GTAVCS.PPSSPP.ImVehLM"
    kind "Makefile"
+   dependson { "GTAVCS.PPSSPP.Project2DFX" }
    includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
    includedirs { "external/pspsdk/usr/local/pspdev/bin" }
    includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
@@ -416,6 +419,7 @@ project "GTAVCS.PPSSPP.ImVehLM"
    writemakefile_psp("GTAVCS.PPSSPP.ImVehLM")
 project "GTACTW.PPSSPP.FusionMod"
    kind "Makefile"
+   dependson { "GTAVCS.PPSSPP.ImVehLM" }
    includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
    includedirs { "external/pspsdk/usr/local/pspdev/bin" }
    includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
@@ -474,6 +478,7 @@ project "MaxPayne.WidescreenFix"
    setpaths("Z:/WFP/Games/Max Payne/Max Payne/", "MaxPayne.exe")
 project "MidnightClubLARemix.PPSSPP.FusionMod"
    kind "Makefile"
+   dependson { "GTACTW.PPSSPP.FusionMod" }
    includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
    includedirs { "external/pspsdk/usr/local/pspdev/bin" }
    includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
@@ -590,6 +595,7 @@ project "SplinterCellPandoraTomorrow.WidescreenFix"
    setpaths("Z:/WFP/Games/Splinter Cell/Splinter Cell Pandora Tomorrow/", "offline/system/SplinterCell2.exe", "offline/system/scripts/")
 project "SplinterCellEssentials.PPSSPP.FusionMod"
    kind "Makefile"
+   dependson { "MidnightClubLARemix.PPSSPP.FusionMod" }
    includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
    includedirs { "external/pspsdk/usr/local/pspdev/bin" }
    includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
@@ -618,6 +624,7 @@ project "TheSuffering.WidescreenFix"
    setpaths("Z:/WFP/Games/The Suffering/The Suffering/", "suffering.exe")
 project "TheWarriors.PPSSPP.FusionMod"
    kind "Makefile"
+   dependson { "SplinterCellEssentials.PPSSPP.FusionMod" }
    includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
    includedirs { "external/pspsdk/usr/local/pspdev/bin" }
    includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
