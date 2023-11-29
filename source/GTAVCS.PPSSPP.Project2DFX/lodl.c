@@ -8,9 +8,14 @@ float SolveEqSys(float a, float b, float c, float d, float value)
     return MIN((x) * value + y, d);
 }
 
-float fCoronaFarClip = 500.0f;
-float fCoronaRadiusMultiplier = 1.0f;
+float align16 fCoronaFarClip = 500.0f;
+float align16 fCoronaRadiusMultiplier = 1.0f;
 void(*CCoronas__RegisterCorona)(int id, char r, char g, char b, char a, void* pos, char coronaType, char flareType, float radius, float farClip, float unk3, float unk4, char reflection, char LOScheck, char drawStreak, char flag4);
+void (*CSprite__FlushSpriteBuffer)();
+int (*CSprite__CalcScreenCoors)(CVector* in, CVector* out, float* outW, float* outH, uint8_t farClip);
+void (*CSprite__RenderBufferedOneXLUSprite)();
+void (*CCoronas__Render)();
+void (*RslRenderStateSet)(int, int);
 uintptr_t TheCamera;
 CVector* pCamPos;
 uintptr_t CDraw__ms_fNearClipZOffset;
@@ -3786,9 +3791,9 @@ int IsSphereVisible(float radius, CVector* center)
     float* m_cameraMatrix3 = (float*)(TheCamera + 0xA20);
     float* m_cameraMatrix4 = (float*)(TheCamera + 0xA30);
 
-    float x = m_cameraMatrix1[0] * center->x + m_cameraMatrix2[0] * center->y + m_cameraMatrix3[0] * center->z + m_cameraMatrix4[0] * 1.0f;
-    float y = m_cameraMatrix1[1] * center->x + m_cameraMatrix2[1] * center->y + m_cameraMatrix3[1] * center->z + m_cameraMatrix4[1] * 1.0f;
-    float z = m_cameraMatrix1[2] * center->x + m_cameraMatrix2[2] * center->y + m_cameraMatrix3[2] * center->z + m_cameraMatrix4[2] * 1.0f;
+    float align16 x = m_cameraMatrix1[0] * center->x + m_cameraMatrix2[0] * center->y + m_cameraMatrix3[0] * center->z + m_cameraMatrix4[0] * 1.0f;
+    float align16 y = m_cameraMatrix1[1] * center->x + m_cameraMatrix2[1] * center->y + m_cameraMatrix3[1] * center->z + m_cameraMatrix4[1] * 1.0f;
+    float align16 z = m_cameraMatrix1[2] * center->x + m_cameraMatrix2[2] * center->y + m_cameraMatrix3[2] * center->z + m_cameraMatrix4[2] * 1.0f;
 
     if (y + radius < CDraw__ms_fNearClipZ()) return 0;
     if (y - radius > CDraw__ms_fFarClipZ()) return 0;
@@ -3801,8 +3806,8 @@ int IsSphereVisible(float radius, CVector* center)
 
 int IsBlinkingNeeded(int BlinkType)
 {
-    signed int nOnDuration = 0;
-    signed int nOffDuration = 0;
+    signed int align16 nOnDuration = 0;
+    signed int align16 nOffDuration = 0;
 
     switch (BlinkType)
     {
@@ -3847,10 +3852,10 @@ void RegisterLODLights()
 {
     if (GetIsTimeInRange(19, 7))
     {
-        unsigned char   bAlpha = 0;
-        float           fRadius = 0.0f;
-        unsigned int    nTime = CurrentTimeHours() * 60 + CurrentTimeMinutes();
-        unsigned int    curMin = CurrentTimeMinutes();
+        unsigned char align16 bAlpha = 0;
+        float         align16 fRadius = 0.0f;
+        unsigned int  align16 nTime = CurrentTimeHours() * 60 + CurrentTimeMinutes();
+        unsigned int  align16 curMin = CurrentTimeMinutes();
 
         if (nTime >= 19 * 60)
             bAlpha = (unsigned char)SolveEqSys((float)(19 * 60), 30.0f, (float)(24 * 60), 255.0f, (float)nTime); // {(19*60)a + y = 30,  (24*60)a + y = 255}
@@ -3864,13 +3869,13 @@ void RegisterLODLights()
             //if ((aLodLights[i].z >= -15.0f) && (aLodLights[i].z <= 1030.0f))
             {
                 CVector* pCamPos = (CVector*)GetCamPos();
-                float fDistSqr = (pCamPos->x - aLodLights[i].x) * (pCamPos->x - aLodLights[i].x) + (pCamPos->y - aLodLights[i].y) * (pCamPos->y - aLodLights[i].y) + (pCamPos->z - aLodLights[i].z) * (pCamPos->z - aLodLights[i].z);
-                float fCoronaDist = aLodLights[i].fThisCoronaFarClip / 2.0f;
+                float align16 fDistSqr = (pCamPos->x - aLodLights[i].x) * (pCamPos->x - aLodLights[i].x) + (pCamPos->y - aLodLights[i].y) * (pCamPos->y - aLodLights[i].y) + (pCamPos->z - aLodLights[i].z) * (pCamPos->z - aLodLights[i].z);
+                float align16 fCoronaDist = aLodLights[i].fThisCoronaFarClip / 2.0f;
 
                 if ((fDistSqr > fCoronaDist * fCoronaDist && fDistSqr < fCoronaFarClip * fCoronaFarClip) || aLodLights[i].nNoDistance)
                 {
-                    float fUnkDist1 = 0.125f;
-                    float fUnkDist2 = 0.125f;
+                    float align16 fUnkDist1 = 0.125f;
+                    float align16 fUnkDist2 = 0.125f;
 
                     //if (fDistSqr < 150.0f * 150.0f)
                     //{
@@ -3878,10 +3883,10 @@ void RegisterLODLights()
                     //    fUnkDist2 = 1.5f;
                     //}
 
-                    float min_radius_distance = fCoronaDist;
-                    float min_radius_value = 0.0f;
-                    float max_radius_distance = aLodLights[i].fThisCoronaFarClip;
-                    float max_radius_value = 3.5f;
+                    float align16 min_radius_distance = fCoronaDist;
+                    float align16 min_radius_value = 0.0f;
+                    float align16 max_radius_distance = aLodLights[i].fThisCoronaFarClip;
+                    float align16 max_radius_value = 3.5f;
 
                     if (aLodLights[i].nNoDistance)
                         fRadius = 3.5f;
@@ -3965,5 +3970,290 @@ void RegisterLODLights()
                 }
             }
         }
+    }
+}
+
+void RenderLODLightsBuffered()
+{
+    if (GetIsTimeInRange(19, 7))
+    {
+        unsigned char align16  bAlpha = 0;
+        float align16          fRadius = 0.0f;
+        unsigned int align16   nTime = CurrentTimeHours() * 60 + CurrentTimeMinutes();
+        unsigned int align16   curMin = CurrentTimeMinutes();
+
+        if (nTime >= 19 * 60)
+            bAlpha = (unsigned char)SolveEqSys((float)(19 * 60), 30.0f, (float)(24 * 60), 255.0f, (float)nTime); // {(19*60)a + y = 30,  (24*60)a + y = 255}
+        else if (nTime < 3 * 60)
+            bAlpha = 255;
+        else
+            bAlpha = (unsigned char)SolveEqSys((float)(7 * 60), 30.0f, (float)(3 * 60), 255.0f, (float)nTime); // {(7*60)a + y = 30,  (3*60)a + y = 255}
+       
+        for (size_t i = 0; i < sizeof(aLodLights) / sizeof(aLodLights[0]); i++)
+        {
+            //if ((aLodLights[i].z >= -15.0f) && (aLodLights[i].z <= 1030.0f))
+            {
+                CVector* pCamPos = (CVector*)GetCamPos();
+                float align16 fDistSqr = (pCamPos->x - aLodLights[i].x) * (pCamPos->x - aLodLights[i].x) + (pCamPos->y - aLodLights[i].y) * (pCamPos->y - aLodLights[i].y) + (pCamPos->z - aLodLights[i].z) * (pCamPos->z - aLodLights[i].z);
+                float align16 fCoronaDist = aLodLights[i].fThisCoronaFarClip / 2.0f;
+
+                if ((fDistSqr > fCoronaDist * fCoronaDist && fDistSqr < fCoronaFarClip * fCoronaFarClip) || aLodLights[i].nNoDistance)
+                {
+                    float align16 fUnkDist1 = 0.125f;
+                    float align16 fUnkDist2 = 0.125f;
+
+                    //if (fDistSqr < 150.0f * 150.0f)
+                    //{
+                    //    fUnkDist1 = 1.5f;
+                    //    fUnkDist2 = 1.5f;
+                    //}
+
+                    float align16 min_radius_distance = fCoronaDist;
+                    float align16 min_radius_value = 0.0f;
+                    float align16 max_radius_distance = aLodLights[i].fThisCoronaFarClip;
+                    float align16 max_radius_value = 3.5f;
+
+                    if (aLodLights[i].nNoDistance)
+                        fRadius = 3.5f;
+                    else
+                        fRadius = SolveEqSys(min_radius_distance, min_radius_value, max_radius_distance, max_radius_value, sqrt(fDistSqr));
+
+                    void* pos = &aLodLights[i];
+                    unsigned char alpha = (bAlpha * (aLodLights[i].a / 255.0f));
+                    //CVector vec = { aLodLights[i].x, aLodLights[i].y, aLodLights[i].z };
+                    //if (pCamPos->z >= 60.0f && (fDistSqr > 150.0f * 150.0f))
+                    //    vec.z += (pCamPos->z - 60.0f) / 20.0f;
+                    //CVector* pos = &vec;
+
+                    if (!IsSphereVisible(fRadius, (CVector*)pos))
+                        continue;
+
+                    if (aLodLights[i].fCustomSizeMult != 0.45f)
+                    {
+                        if (!aLodLights[i].nCoronaShowMode)
+                        {
+                            //CCoronas__RegisterCorona(&aLodLights[i], aLodLights[i].r, aLodLights[i].g, aLodLights[i].b, alpha, pos, 0, 0, (fRadius * aLodLights[i].fCustomSizeMult * fCoronaRadiusMultiplier), fCoronaFarClip, fUnkDist1, fUnkDist2, 1, 0, 0, 0);
+                            CVector align16 ScreenPos, WorldPos;
+                            static volatile float align16 SZ;
+                            static volatile float align16 SZX;
+                            static volatile float align16 SZY;
+                            WorldPos.x = aLodLights[i].x;
+                            WorldPos.y = aLodLights[i].y;
+                            WorldPos.z = aLodLights[i].z;
+                            SZ = fRadius;
+
+                            if (CSprite__CalcScreenCoors(&WorldPos, &ScreenPos, &SZX, &SZY, 1))
+                            {
+                                int align16 a0 = aLodLights[i].r;
+                                int align16 a1 = aLodLights[i].g;
+                                int align16 a2 = aLodLights[i].b;
+                                int align16 a3 = alpha;
+                                int align16 a4 = alpha;
+                                float align16 f12 = ScreenPos.x;
+                                float align16 f13 = ScreenPos.y;
+                                float align16 f14 = ScreenPos.z;
+                                float align16 f15 = SZX * SZ;
+                                float align16 f16 = SZY * SZ;
+                                float align16 f17 = 1.0f / ScreenPos.z;
+
+                                asm volatile ("lw $v0,  %[x]" ::[x] "m" (a0));
+                                asm volatile ("move $a0, $v0");
+                                asm volatile ("lw $v0,  %[x]" ::[x] "m" (a1));
+                                asm volatile ("move $a1, $v0");
+                                asm volatile ("lw $v0,  %[x]" ::[x] "m" (a2));
+                                asm volatile ("move $a2, $v0");
+                                asm volatile ("lw $v0,  %[x]" ::[x] "m" (a3));
+                                asm volatile ("move $a3, $v0");
+                                asm volatile ("lw $v0,  %[x]" ::[x] "m" (a4));
+                                asm volatile ("move $t0, $v0");
+
+                                asm volatile ("lw $v0,  %[x]" ::[x] "m" (f12));
+                                asm volatile ("mtc1 $v0, $f12");
+                                asm volatile ("lw $v0,  %[x]" ::[x] "m" (f13));
+                                asm volatile ("mtc1 $v0, $f13");
+                                asm volatile ("lw $v0,  %[x]" ::[x] "m" (f14));
+                                asm volatile ("mtc1 $v0, $f14");
+                                asm volatile ("lw $v0,  %[x]" ::[x] "m" (f15));
+                                asm volatile ("mtc1 $v0, $f15");
+                                asm volatile ("lw $v0,  %[x]" ::[x] "m" (f16));
+                                asm volatile ("mtc1 $v0, $f16");
+                                asm volatile ("lw $v0,  %[x]" ::[x] "m" (f17));
+                                asm volatile ("mtc1 $v0, $f17");
+                                asm volatile ("lw $v0,  %[x]" ::[x] "m" (CSprite__RenderBufferedOneXLUSprite));
+                                asm volatile ("jalr $v0");
+                            }
+                        }
+                        else
+                        {
+                            static float align16 blinking = 1.0f;
+                            static volatile float align16 blinking_a = 1.0f;
+                            static volatile float align16 blinking_b = 1.0f;
+                            static volatile float align16 blinking_c = 1.0f;
+                            if (IsBlinkingNeeded(aLodLights[i].nCoronaShowMode))
+                                blinking -= CTimer__ms_fTimeStep() / 1000.0f;
+                            else
+                                blinking += CTimer__ms_fTimeStep() / 1000.0f;
+                        
+                            if (blinking > 1.0f)
+                                blinking = 1.0f;
+                            else if (blinking < 0.0f)
+                                blinking = 0.0f;
+                        
+                            //CCoronas__RegisterCorona(&aLodLights[i], aLodLights[i].r, aLodLights[i].g, aLodLights[i].b, blinking * alpha, pos, 0, 0, (fRadius * aLodLights[i].fCustomSizeMult * fCoronaRadiusMultiplier), fCoronaFarClip, fUnkDist1, fUnkDist2, 1, 0, 0, 0);
+                            CVector align16 ScreenPos, WorldPos;
+                            static volatile float align16 SZ;
+                            static volatile float align16 SZX;
+                            static volatile float align16 SZY;
+                            WorldPos.x = aLodLights[i].x;
+                            WorldPos.y = aLodLights[i].y;
+                            WorldPos.z = aLodLights[i].z;
+                            SZ = fRadius;
+
+                            if (CSprite__CalcScreenCoors(&WorldPos, &ScreenPos, &SZX, &SZY, 1))
+                            {
+                                int align16 a0 = aLodLights[i].r;
+                                int align16 a1 = aLodLights[i].g;
+                                int align16 a2 = aLodLights[i].b;
+                                int align16 a3 = blinking * alpha;
+                                int align16 a4 = blinking * alpha;
+                                float align16 f12 = ScreenPos.x;
+                                float align16 f13 = ScreenPos.y;
+                                float align16 f14 = ScreenPos.z;
+                                float align16 f15 = SZX * SZ;
+                                float align16 f16 = SZY * SZ;
+                                float align16 f17 = 1.0f / ScreenPos.z;
+
+                                asm volatile ("lw $v0,  %[x]" ::[x] "m" (a0));
+                                asm volatile ("move $a0, $v0");
+                                asm volatile ("lw $v0,  %[x]" ::[x] "m" (a1));
+                                asm volatile ("move $a1, $v0");
+                                asm volatile ("lw $v0,  %[x]" ::[x] "m" (a2));
+                                asm volatile ("move $a2, $v0");
+                                asm volatile ("lw $v0,  %[x]" ::[x] "m" (a3));
+                                asm volatile ("move $a3, $v0");
+                                asm volatile ("lw $v0,  %[x]" ::[x] "m" (a4));
+                                asm volatile ("move $t0, $v0");
+
+                                asm volatile ("lw $v0,  %[x]" ::[x] "m" (f12));
+                                asm volatile ("mtc1 $v0, $f12");
+                                asm volatile ("lw $v0,  %[x]" ::[x] "m" (f13));
+                                asm volatile ("mtc1 $v0, $f13");
+                                asm volatile ("lw $v0,  %[x]" ::[x] "m" (f14));
+                                asm volatile ("mtc1 $v0, $f14");
+                                asm volatile ("lw $v0,  %[x]" ::[x] "m" (f15));
+                                asm volatile ("mtc1 $v0, $f15");
+                                asm volatile ("lw $v0,  %[x]" ::[x] "m" (f16));
+                                asm volatile ("mtc1 $v0, $f16");
+                                asm volatile ("lw $v0,  %[x]" ::[x] "m" (f17));
+                                asm volatile ("mtc1 $v0, $f17");
+                                asm volatile ("lw $v0,  %[x]" ::[x] "m" (CSprite__RenderBufferedOneXLUSprite));
+                                asm volatile ("jalr $v0");
+                            }
+                        }
+                    }
+                    else
+                    {
+                        int bNeedsToDrawCorona = 0;
+                        if ((aLodLights[i].r >= 250 && aLodLights[i].g >= 100 && aLodLights[i].b <= 100) && ((curMin == 9 || curMin == 19 || curMin == 29 || curMin == 39 || curMin == 49 || curMin == 59))) //yellow
+                        {
+                            //CCoronas__RegisterCorona(&aLodLights[i], aLodLights[i].r, aLodLights[i].g, aLodLights[i].b, alpha, pos, 0, 0, (fRadius * aLodLights[i].fCustomSizeMult * fCoronaRadiusMultiplier), fCoronaFarClip, fUnkDist1, fUnkDist2, 1, 0, 0, 0);
+                            bNeedsToDrawCorona = 1;
+                        }
+                        else
+                        {
+                            //if ((abs(aLodLights[i].fHeading) >= (3.1415f / 6.0f) && abs(aLodLights[i].fHeading) <= (5.0f * 3.1415f / 6.0f)))
+                            if (abs(aLodLights[i].fHeading) > (3.1415f / 2.0f))
+                            {
+                                if ((aLodLights[i].r >= 250 && aLodLights[i].g < 100 && aLodLights[i].b == 0) && (((curMin >= 0 && curMin < 9) || (curMin >= 20 && curMin < 29) || (curMin >= 40 && curMin < 49)))) //red
+                                {
+                                    //CCoronas__RegisterCorona(&aLodLights[i], aLodLights[i].r, aLodLights[i].g, aLodLights[i].b, alpha, pos, 0, 0, (fRadius * aLodLights[i].fCustomSizeMult * fCoronaRadiusMultiplier), fCoronaFarClip, fUnkDist1, fUnkDist2, 1, 0, 0, 0);
+                                    bNeedsToDrawCorona = 1;
+                                }
+                                else
+                                {
+                                    if ((aLodLights[i].r == 0 && aLodLights[i].g >= 250 && aLodLights[i].b == 0) && (((curMin > 9 && curMin < 19) || (curMin > 29 && curMin < 39) || (curMin > 49 && curMin < 59)))) //green
+                                    {
+                                        //CCoronas__RegisterCorona(&aLodLights[i], aLodLights[i].r, aLodLights[i].g, aLodLights[i].b, alpha, pos, 0, 0, (fRadius * aLodLights[i].fCustomSizeMult * fCoronaRadiusMultiplier), fCoronaFarClip, fUnkDist1, fUnkDist2, 1, 0, 0, 0);
+                                        bNeedsToDrawCorona = 1;
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                if ((aLodLights[i].r == 0 && aLodLights[i].g >= 250 && aLodLights[i].b == 0) && (((curMin >= 0 && curMin < 9) || (curMin >= 20 && curMin < 29) || (curMin >= 40 && curMin < 49)))) //red
+                                {
+                                    //CCoronas__RegisterCorona(&aLodLights[i], aLodLights[i].r, aLodLights[i].g, aLodLights[i].b, alpha, pos, 0, 0, (fRadius * aLodLights[i].fCustomSizeMult * fCoronaRadiusMultiplier), fCoronaFarClip, fUnkDist1, fUnkDist2, 1, 0, 0, 0);
+                                    bNeedsToDrawCorona = 1;
+                                }
+                                else
+                                {
+                                    if ((aLodLights[i].r >= 250 && aLodLights[i].g < 100 && aLodLights[i].b == 0) && (((curMin > 9 && curMin < 19) || (curMin > 29 && curMin < 39) || (curMin > 49 && curMin < 59)))) //green
+                                    {
+                                        //CCoronas__RegisterCorona(&aLodLights[i], aLodLights[i].r, aLodLights[i].g, aLodLights[i].b, alpha, pos, 0, 0, (fRadius * aLodLights[i].fCustomSizeMult * fCoronaRadiusMultiplier), fCoronaFarClip, fUnkDist1, fUnkDist2, 1, 0, 0, 0);
+                                        bNeedsToDrawCorona = 1;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (bNeedsToDrawCorona)
+                        {
+                            CVector align16 ScreenPos, WorldPos;
+                            static volatile float align16 SZ;
+                            static volatile float align16 SZX;
+                            static volatile float align16 SZY;
+                            WorldPos.x = aLodLights[i].x;
+                            WorldPos.y = aLodLights[i].y;
+                            WorldPos.z = aLodLights[i].z;
+                            SZ = fRadius;
+
+                            if (CSprite__CalcScreenCoors(&WorldPos, &ScreenPos, &SZX, &SZY, 1))
+                            {
+                                int align16 a0 = aLodLights[i].r;
+                                int align16 a1 = aLodLights[i].g;
+                                int align16 a2 = aLodLights[i].b;
+                                int align16 a3 = alpha;
+                                int align16 a4 = alpha;
+                                float align16 f12 = ScreenPos.x;
+                                float align16 f13 = ScreenPos.y;
+                                float align16 f14 = ScreenPos.z;
+                                float align16 f15 = SZX * SZ;
+                                float align16 f16 = SZY * SZ;
+                                float align16 f17 = 1.0f / ScreenPos.z;
+
+                                asm volatile ("lw $v0,  %[x]" ::[x] "m" (a0));
+                                asm volatile ("move $a0, $v0");
+                                asm volatile ("lw $v0,  %[x]" ::[x] "m" (a1));
+                                asm volatile ("move $a1, $v0");
+                                asm volatile ("lw $v0,  %[x]" ::[x] "m" (a2));
+                                asm volatile ("move $a2, $v0");
+                                asm volatile ("lw $v0,  %[x]" ::[x] "m" (a3));
+                                asm volatile ("move $a3, $v0");
+                                asm volatile ("lw $v0,  %[x]" ::[x] "m" (a4));
+                                asm volatile ("move $t0, $v0");
+
+                                asm volatile ("lw $v0,  %[x]" ::[x] "m" (f12));
+                                asm volatile ("mtc1 $v0, $f12");
+                                asm volatile ("lw $v0,  %[x]" ::[x] "m" (f13));
+                                asm volatile ("mtc1 $v0, $f13");
+                                asm volatile ("lw $v0,  %[x]" ::[x] "m" (f14));
+                                asm volatile ("mtc1 $v0, $f14");
+                                asm volatile ("lw $v0,  %[x]" ::[x] "m" (f15));
+                                asm volatile ("mtc1 $v0, $f15");
+                                asm volatile ("lw $v0,  %[x]" ::[x] "m" (f16));
+                                asm volatile ("mtc1 $v0, $f16");
+                                asm volatile ("lw $v0,  %[x]" ::[x] "m" (f17));
+                                asm volatile ("mtc1 $v0, $f17");
+                                asm volatile ("lw $v0,  %[x]" ::[x] "m" (CSprite__RenderBufferedOneXLUSprite));
+                                asm volatile ("jalr $v0");
+                            }
+                        }
+                    }
+                }
+            }
+            if (i % 96 == 0)
+                CSprite__FlushSpriteBuffer();
+        }
+        CSprite__FlushSpriteBuffer();
     }
 }
