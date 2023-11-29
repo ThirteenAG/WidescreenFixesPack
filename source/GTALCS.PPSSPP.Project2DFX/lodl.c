@@ -4771,6 +4771,9 @@ void RenderLODLightsBuffered()
                     else
                         fRadius = SolveEqSys(min_radius_distance, min_radius_value, max_radius_distance, max_radius_value, sqrt(fDistSqr));
 
+                    //if (bSlightlyIncreaseRadiusWithDistance)
+                        fRadius *= MIN((0.0025f) * sqrt(fDistSqr) + 0.25f, 4.0f); // http://goo.gl/3kDpnC
+
                     void* pos = &aLodLights[i];
                     unsigned char alpha = (bAlpha * (aLodLights[i].a / 255.0f));
                     //CVector vec = { aLodLights[i].x, aLodLights[i].y, aLodLights[i].z };
