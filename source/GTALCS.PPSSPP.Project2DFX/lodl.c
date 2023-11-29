@@ -4796,7 +4796,7 @@ void RenderLODLightsBuffered()
                             WorldPos.x = aLodLights[i].x;
                             WorldPos.y = aLodLights[i].y;
                             WorldPos.z = aLodLights[i].z;
-                            SZ = fRadius;
+                            SZ = fRadius * aLodLights[i].fCustomSizeMult * fCoronaRadiusMultiplier;
 
                             if (CSprite__CalcScreenCoors(&WorldPos, &ScreenPos, &SZX, &SZY, 1))
                             {
