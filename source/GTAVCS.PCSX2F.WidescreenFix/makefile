@@ -8,7 +8,7 @@ ASFLAGS = $(CFLAGS)
 BASE_ADDRESS = 0x02100000
 EE_LINKFILE = linkfile
 EE_LIBS += -l:libc.a
-EE_LDFLAGS = -Wl,--entry=init -Wl,-Map,../../data/GTAVCS.PCSX2F.WidescreenFix/PLUGINS/GTAVCS.PCSX2F.WidescreenFix.map -nostdlib -nodefaultlibs -Wl,'--defsym=BASE_ADDRESS=$(BASE_ADDRESS)'
+EE_LDFLAGS = -Wl,--entry=init -Wl,-Map,../../data/GTAVCS.PCSX2F.WidescreenFix/PLUGINS/GTAVCS.PCSX2F.WidescreenFix.map -Wl,-exclude-libs,ALL -Wl,'--defsym=BASE_ADDRESS=$(BASE_ADDRESS)'
 
 all: clean main-build
 

@@ -48,7 +48,7 @@ ASFLAGS = $(CFLAGS)
 BASE_ADDRESS = %s
 EE_LINKFILE = linkfile
 EE_LIBS += %s
-EE_LDFLAGS = -Wl,--entry=init -Wl,-Map,../../data/%s/%s.map -nostdlib -nodefaultlibs -Wl,'--defsym=BASE_ADDRESS=$(BASE_ADDRESS)'
+EE_LDFLAGS = -Wl,--entry=init -Wl,-Map,../../data/%s/%s.map -Wl,-exclude-libs,ALL -Wl,'--defsym=BASE_ADDRESS=$(BASE_ADDRESS)'
 
 all: clean main-build
 
