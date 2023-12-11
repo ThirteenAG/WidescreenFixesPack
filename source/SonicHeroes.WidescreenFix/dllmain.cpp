@@ -659,6 +659,15 @@ void Init()
 	if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
 		szCustomUserFilesDirectoryInGameDir.clear();
 
+	// demo/trial version detect -- the string for the user directory is different in these builds
+	static bool bDemoVersion = false;
+	uintptr_t loc_629D23 = reinterpret_cast<uintptr_t>(hook::pattern("? ? ? 6A 1A ? FF 15").get_first(0)) + 0x12;
+	char* userPath = *(char**)(loc_629D23 + 1);
+	if (strstr(userPath, "TRIAL") || strstr(userPath, "DEMO"))
+	{
+		bDemoVersion = true;
+	}
+
 	// SkipFE-like functions for Sonic Heroes
 	// credit to: https://github.com/Sewer56/Heroes.Utils.DebugBoot.ReloadedII
 	static bool bSkipFE = iniReader.ReadInteger("SkipFE", "Enabled", 0) != 0;
@@ -1424,7 +1433,8 @@ void Init()
 		injector::MakeJMP(loc_402CF5, loc_402CF5 + 0x2B);
 	}
 
-	if (bRestoreDemos)
+	// does not exist in demo!
+	if (bRestoreDemos && !bDemoVersion)
 	{
 		uintptr_t loc_456989 = reinterpret_cast<uintptr_t>(hook::pattern("C7 05 ? ? ? ? 06 00 00 00 EB 14 C7 05 ? ? ? ? 03 00 00 00 C7 05 ? ? ? ? 0A 00 00 00").get_first(0)) + 0x23;
 		DemoRestoreExit1 = loc_456989 + 7;
@@ -1447,7 +1457,8 @@ void Init()
 		}; injector::MakeInline<SysModeHook>(loc_42713E, loc_42713E + 0xB);
 	}
 
-	if (bDisableCDCheck)
+	// does not exist in demo!
+	if (bDisableCDCheck && !bDemoVersion)
 	{
 		uintptr_t loc_629B72 = reinterpret_cast<uintptr_t>(hook::pattern("55 8B EC 83 E4 F8 83 EC 50 53 55 56 57 68 00 00 40 00 6A 00 6A 00").get_first(0)) + 0x42;
 		injector::MakeJMP(loc_629B72, loc_629B72 + 0xC4, true);
