@@ -17,7 +17,7 @@ before_package:
 - cmd: >-
     before_packaging.bat
 
-    cd widescreenfixespack/data
+    cd data
 
     release.bat
 after_build:
