@@ -15,6 +15,7 @@ float fCameraWidth[2], fCameraHeight[2];
 float fDefaultWidth;
 float fDefaultCoords;
 float fFrontendDefaultWidth;
+bool bProportionalWeaponIcon = false;
 
 void ReadSettings()
 {
@@ -31,6 +32,7 @@ void ReadSettings()
     fRadarWidthScale = iniReader.ReadFloat("MAIN", "RadarWidthScale", 0.0f); fRadarWidthScale == 0.0f ? fRadarWidthScale = 1.0f : fRadarWidthScale;
     fRadarHeightScale = iniReader.ReadFloat("MAIN", "RadarHeightScale", 0.0f); fRadarHeightScale == 0.0f ? fRadarHeightScale = 1.0f : fRadarHeightScale;
     fSubtitlesScale = iniReader.ReadFloat("MAIN", "SubtitlesScale", 0.0f); fSubtitlesScale == 0.0f ? fSubtitlesScale = 1.0f : fSubtitlesScale;
+    bProportionalWeaponIcon = iniReader.ReadInteger("MAIN", "ProportionalWeaponIcon", 0) != 0;
 
     bSmartCutsceneBorders = iniReader.ReadInteger("MISC", "SmartCutsceneBorders", 1) != 0;
     bAllowAltTabbingWithoutPausing = iniReader.ReadInteger("MISC", "AllowAltTabbingWithoutPausing", 0) != 0;
@@ -521,6 +523,13 @@ void UpdateHUDFixes()
     fHUDHeight[103] = 0.002232143f * fWideScreenHeightScale * fHudHeightScale;
     fHUDHeight[104] = 0.002232143f * fWideScreenHeightScale * fHudHeightScale;
     fHUDHeight[105] = 0.002232143f * fWideScreenHeightScale * fHudHeightScale;
+
+    if (bProportionalWeaponIcon)
+    {
+        fHUDHeight[14] /= 1.125f;
+        fHUDHeight[15] /= 1.125f;
+        fHUDHeight[16] /= 1.125f;
+    }
 }
 
 void UpdateScriptFixes()
