@@ -18,14 +18,13 @@ on:
 jobs:
   build:
     runs-on: windows-latest
-    strategy:
-      matrix:
-        platform: [Win32]
-        buildtype: [Release]
 
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v4
+      with:
+        submodules: 'true'
+
     - name: Build All
       uses: ./.github/workflows/build_all
       with:
