@@ -9,14 +9,8 @@ if errorlevel 1 (
 ) else (
    SET filepath=%%F
    SET dll=!filepath:.ual=.dll!
-   ECHO !dll! 	
-   copy "..\..\Ultimate-ASI-Loader\bin\Win32\Release\dinput8.dll" !dll!
-   REM SET "mu=%%~dpF\scripts\"
-   REM SET "mu2=%%~dpF\plugins\"
-   REM SET "mu3=%%~dpF\"
-   REM SET "mu4=modupdater.asi"
-   REM ECHO !mu!
-   REM IF EXIST !mu! (copy "..\..\modupdater\bin\Release\modupdater.asi" !mu!!mu4!) ELSE IF EXIST !mu2! (copy "..\..\modupdater\bin\Release\modupdater.asi" !mu2!!mu4!) ELSE (copy "..\..\modupdater\bin\Release\modupdater.asi" !mu3!!mu4!)
+   ECHO !dll!
+   7za e -so "..\Ultimate-ASI-Loader.zip" *.dll -r > !dll!
 )
 )
 
@@ -27,13 +21,9 @@ if errorlevel 1 (
 ) else (
    SET filepath=%%F
    SET dll=!filepath:.x64ual=.dll!
-   ECHO !dll! 	
+   ECHO !dll!
    copy "..\..\Ultimate-ASI-Loader\bin\x64\Release\dinput8.dll" !dll!
-   REM SET "mu=%%~dpF\scripts\"
-   REM SET "mu2=%%~dpF\plugins\"
-   REM SET "mu3=modupdater.asi"
-   REM ECHO !mu!
-   REM IF EXIST !mu! (copy "..\..\modupdater\bin\Release\modupdater.asi" !mu!!mu3!) ELSE (copy "..\..\modupdater\bin\Release\modupdater.asi" !mu2!!mu3!)
+   7za e -so "..\Ultimate-ASI-Loader_x64.zip" *.dll -r > !dll!
 )
 )
 
@@ -47,19 +37,29 @@ if errorlevel 1 (
         ) else (
         SET filepath=%%F
         SET dll=!filepath:.wrapper=.dll!
-        ECHO !dll! 	
-        copy "..\..\d3d8-wrapper\data\d3d8.dll" !dll!
+        ECHO !dll!
+        7za e -so "..\d3d8.zip" *.dll -r > !dll!
 )
 ) else (
    SET filepath=%%F
    SET dll=!filepath:.wrapper=.dll!
-   ECHO !dll! 	
-   copy "..\..\d3d9-wrapper\data\d3d9.dll" !dll!
+   ECHO !dll!
+   7za e -so "..\d3d9.zip" *.dll -r > !dll!
 )
 )
 
 rem Manhunt Widescreen Fix
-copy /b/v/y "..\source\Manhunt.WidescreenFix\bin\Manhunt.WidescreenFix.ini" "..\data\Manhunt.WidescreenFix\scripts\Manhunt.WidescreenFix.ini"
+copy /b/v/y "..\source\Manhunt.WidescreenFix\bin\Manhunt.WidescreenFix.ini" ".\Manhunt.WidescreenFix\scripts\Manhunt.WidescreenFix.ini"
+
+rem dgVoodoo
+7za e -so "..\dgVoodoo2.zip" "MS\x86\DDraw.dll" > ".\KnightRider.WidescreenFix\DDraw.dll"
+7za e -so "..\dgVoodoo2.zip" "MS\x86\D3DImm.dll" > ".\KnightRider.WidescreenFix\D3DImm.dll"
+
+7za e -so "..\dgVoodoo2.zip" "MS\x86\DDraw.dll" > ".\KnightRider2.WidescreenFix\DDraw.dll"
+7za e -so "..\dgVoodoo2.zip" "MS\x86\D3DImm.dll" > ".\KnightRider2.WidescreenFix\D3DImm.dll"
+
+7za e -so "..\dgVoodoo2.zip" "MS\x86\D3D8.dll" > ".\SplinterCell.WidescreenFix\system\d3d8.dll"
+7za e -so "..\dgVoodoo2.zip" "MS\x86\D3D8.dll" > ".\SplinterCellPandoraTomorrow.WidescreenFix\offline\system\d3d8.dll"
 
 rem Creating archives
 
