@@ -1,20 +1,17 @@
-cd ..
+for /f "tokens=1,* delims=:" %%A in ('curl -ks https://api.github.com/repos/ThirteenAG/Ultimate-ASI-Loader/releases/latest ^| find "browser_download_url"') do (
+    curl -kOL %%B
+)
 
-git clone https://github.com/ThirteenAG/Ultimate-ASI-Loader --recursive
-cd Ultimate-ASI-Loader
-premake5.exe vs2022
-msbuild.exe build/Ultimate-ASI-Loader-Win32.sln /t:Build /p:Configuration=Release;Platform=Win32
-msbuild.exe build/Ultimate-ASI-Loader-x64.sln /t:Build /p:Configuration=Release;Platform=x64
-cd ..
+for /f "tokens=1,* delims=:" %%A in ('curl -ks https://api.github.com/repos/ThirteenAG/d3d8-wrapper/releases/latest ^| find "browser_download_url"') do (
+    curl -kOL %%B
+)
 
-git clone https://github.com/ThirteenAG/d3d8-wrapper --recursive
-cd d3d8-wrapper
-premake5.exe vs2022
-msbuild.exe build/d3d8-wrapper.sln /t:Build /p:Configuration=Release;Platform=Win32
-cd ..
+for /f "tokens=1,* delims=:" %%A in ('curl -ks https://api.github.com/repos/ThirteenAG/d3d9-wrapper/releases/latest ^| find "browser_download_url"') do (
+    curl -kOL %%B
+)
 
-git clone https://github.com/ThirteenAG/d3d9-wrapper --recursive
-cd d3d9-wrapper
-premake5.exe vs2022
-msbuild.exe build/d3d9-wrapper.sln /t:Build /p:Configuration=Release;Platform=Win32
-cd ..
+for /f "tokens=1,* delims=:" %%A in ('curl -ks https://api.github.com/repos/dege-diosg/dgVoodoo2/releases/latest ^| find "browser_download_url"') do (
+  echo.%%B | FIND /I "_dbg">Nul || ( 
+    curl -o dgVoodoo2.zip -kL %%B
+  )
+)
