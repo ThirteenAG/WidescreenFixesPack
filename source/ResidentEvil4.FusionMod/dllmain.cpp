@@ -82,10 +82,24 @@ void Init()
     });
 }
 
+// https://github.com/praydog/REFramework/blob/master/src/REFramework.cpp#L297-L309
+// https://github.com/praydog/REFramework/blob/master/LICENSE
+void IntegrityCheckBypass()
+{
+    auto pattern = hook::pattern("40 53 56 57 48 83 EC 20 48 8B 15");
+    if (!pattern.empty())
+        injector::MakeRET(pattern.get_first(0));
+
+    pattern = hook::pattern("48 8B 8D D0 03 00 00 48 29 C1 75 ?");
+    if (!pattern.empty())
+        injector::WriteMemory<uint8_t>(pattern.get_first(10), 0xEB, true);
+}
+
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
+        CallbackHandler::RegisterCallback(IntegrityCheckBypass);
         CallbackHandler::RegisterCallback(Init, hook::pattern("48 8B 05 ? ? ? ? 48 8B F2 48 8B 5A 10"));
     });
 }
