@@ -43,7 +43,6 @@ private:
         {
             if (IsWindowVisible(hwnd))
                 AppWindows.push_back(hwnd);
-            return FALSE;
         }
         return TRUE;
     }

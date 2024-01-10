@@ -15,6 +15,7 @@
 #include <map>
 #include <iomanip>
 #include <future>
+#include <shlobj.h>
 #include "IniReader.h"
 #include "injector\injector.hpp"
 #include "injector\calling.hpp"
@@ -302,6 +303,18 @@ bool fileExists(T fileName)
     std::ifstream infile(fileName);
     return infile.good();
 }
+
+inline std::filesystem::path GetKnownFolderPath(REFKNOWNFOLDERID rfid, DWORD dwFlags, HANDLE hToken)
+{
+    std::filesystem::path r;
+    WCHAR* szSystemPath = nullptr;
+    if (SUCCEEDED(SHGetKnownFolderPath(rfid, dwFlags, hToken, &szSystemPath)))
+    {
+        r = szSystemPath;
+    }
+    CoTaskMemFree(szSystemPath);
+    return r;
+};
 
 class CallbackHandler
 {
