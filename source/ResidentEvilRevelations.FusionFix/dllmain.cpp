@@ -2,6 +2,8 @@
 #include "LEDEffects.h"
 #include <d3d9.h>
 #include <vector>
+#include <psapi.h>
+#pragma comment(lib, "psapi.lib")
 
 constexpr auto defaultAspectRatio = 16.0f / 9.0f;
 float fFOVFactor = 1.0f;
@@ -95,12 +97,77 @@ enum GUI
     uGUISubtitlesFix = 0x10924B0,
 };
 
+std::map<uintptr_t, uintptr_t> addrTbl;
+
+void FillAddressTable()
+{
+    addrTbl[0x11E7B9C] = (uintptr_t)*hook::get_pattern<uintptr_t>("8B 3D ? ? ? ? 6A 08", 2);
+    addrTbl[0xE98FAF] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? 8B 7C 24 1C 8B CF");
+    addrTbl[0xD00F71] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? F3 0F 10 8C 24 ? ? ? ? F3 0F 10 94 24 ? ? ? ? F3 0F 10 A4 24 ? ? ? ? F3 0F 10 AC 24 ? ? ? ? F3 0F 10 BC 24");
+    addrTbl[0xCDC9D9] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? F3 0F 10 44 24 ? F3 0F 10 4C 24 ? F3 0F 10 7C 24 ? F3 0F 10 6C 24 ? 0F 28 D1");
+    addrTbl[0xC0346A] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? 85 DB 74 36");
+    addrTbl[0xC52BF4] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? F3 0F 10 44 24 ? F3 0F 10 4C 24 ? F3 0F 10 7C 24 ? F3 0F 10 6C 24 ? F3 0F 10 74 24 ? 0F 28 D8 F3 0F 59 5C 24 ? 0F 28 D1");
+    addrTbl[0xBCC44E] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? 8B 7D 08 38 9E");
+    addrTbl[0xBC62D4] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? 80 7D 10 00 74 23");
+    addrTbl[0xBABE12] = (uintptr_t)hook::get_pattern("8B 87 ? ? ? ? DC C9");
+    addrTbl[0xBA4440] = (uintptr_t)hook::get_pattern("55 8B EC 83 E4 F0 81 EC ? ? ? ? 53 56 8B F1 83 BE ? ? ? ? ? 57 0F 84 ? ? ? ? 8B 8E");
+    addrTbl[0xBA1050] = (uintptr_t)hook::get_pattern("83 EC 34 8B 44 24 38 53 55 56 8B 70 04");
+    addrTbl[0xB98830] = (uintptr_t)hook::get_pattern("51 56 57 8B F9 8B 77 60");
+    addrTbl[0xB83530] = (uintptr_t)hook::get_pattern("56 8B 74 24 08 57 81 C6");
+    addrTbl[0xB838F0] = (uintptr_t)hook::get_pattern("8B 81 ? ? ? ? 83 E0 F0 D9 40 4C");
+    addrTbl[0xB838E0] = (uintptr_t)hook::get_pattern("8B 81 ? ? ? ? 83 E0 F0 D9 40 5C");
+    addrTbl[0xAA52EA] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? F3 0F 10 83 ? ? ? ? F3 0F 10 94 24");
+    addrTbl[0xA1025D] = (uintptr_t)hook::get_pattern("F3 0F 59 05 ? ? ? ? F3 0F 11 44 24 ? F3 0F 10 41", 37);
+    addrTbl[0x47249D] = (uintptr_t)hook::get_pattern("F3 0F 10 40 ? F3 0F 11 04 24 E8 ? ? ? ? C2 04 00", 10);
+    addrTbl[0x4962E8] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? 5F 8B C6 5E 5B C2 04 00 8B 86 ? ? ? ? 83 3C B8 00 74 A5");
+    addrTbl[0x498AE5] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? 8B C6 5E C2 04 00 B8");
+    addrTbl[0x480F4E] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? 85 DB 74 2E 8B 56 50");
+    addrTbl[0x0107FF78] = (uintptr_t)*hook::get_pattern<uintptr_t>("DB 04 85 ? ? ? ? 5E", 3);
+    addrTbl[0x9EE595] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? 83 BE ? ? ? ? ? 8B C7");
+    addrTbl[0x8F2230] = (uintptr_t)injector::GetBranchDestination(hook::get_pattern("E8 ? ? ? ? 85 DB 74 2E 8B 56 50")).as_int();
+    addrTbl[0x8CFFF3] = (uintptr_t)hook::get_pattern("F3 0F 11 04 24 E8 ? ? ? ? 8B C6 5E 59", 5);
+    addrTbl[0x8A1406] = (uintptr_t)hook::get_pattern("C7 44 24 ? ? ? ? ? 8B FF 83 7C 24");
+    addrTbl[0x8A1346] = (uintptr_t)hook::get_pattern("C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? EB 08 8D A4 24 00 00 00 00 90 83 BE");
+    addrTbl[0x8A134E] = (uintptr_t)hook::get_pattern("C7 44 24 ? ? ? ? ? EB 08 8D A4 24 00 00 00 00 90 83 BE");
+    addrTbl[0x8A13FE] = (uintptr_t)hook::get_pattern("C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? 8B FF");
+    addrTbl[0x7BB17A] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? 8B 86 ? ? ? ? 8B 0D ? ? ? ? 83 C4 04");
+    addrTbl[0x5ED652] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? F3 0F 10 7C 24 ? F3 0F 10 44 24 ? F3 0F 10 5C 24");
+
+    auto off_1092380 = *hook::get_pattern<uintptr_t*>("68 C0 09 00 00 8B C8 FF D2 8B F0 85 F6 74 11 8B CE E8 ? ? ? ? C7 06", 24);
+    addrTbl[0x10923AC] = (uintptr_t)&off_1092380[11];
+
+    auto off_10D49D8 = *hook::get_pattern<uintptr_t*>("C7 07 ? ? ? ? E8 ? ? ? ? 80 BF ? ? ? ? ? C7 87", 2);
+    addrTbl[0x10D4A04] = (uintptr_t)&off_10D49D8[11];
+
+    auto off_10D4AE8 = *hook::get_pattern<uintptr_t*>("C7 06 ? ? ? ? 8B C6 5E C3 33 C0 5E C3 56 57", 2);
+    addrTbl[0x10D4B14] = (uintptr_t)&off_10D4AE8[11];
+
+    auto off_10D4BC8 = *hook::get_pattern<uintptr_t*>("C7 06 ? ? ? ? C6 86 ? ? ? ? ? 85 C9", 2);
+    addrTbl[0x10D4BF4] = (uintptr_t)&off_10D4BC8[11];
+
+    auto off_108DC90 = *hook::get_pattern<uintptr_t*>("C7 06 ? ? ? ? C7 86 ? ? ? ? ? ? ? ? C7 86 ? ? ? ? ? ? ? ? E8 ? ? ? ? 81 66 ? ? ? ? ? 8B C6 5E C3 33 C0", 2);
+    addrTbl[uGUI_PauseBlurHD] = (uintptr_t)&off_108DC90[22];
+
+    auto off_1084C98 = *hook::get_pattern<uintptr_t*>("68 36 01 00 00 8B CE C7 06 ? ? ? ? E8 ? ? ? ? 8B 46 0C 25 ? ? ? ? 0D 00 00 01 00", 9);
+    addrTbl[uGUI_Damage] = (uintptr_t)&off_1084C98[22];
+
+    auto off_1084DA0 = *hook::get_pattern<uintptr_t*>("68 2C 01 00 00 8B CE C7 06 ? ? ? ? E8 ? ? ? ? 8B 46 0C 25 ? ? ? ? 0D 00 00 01 00", 9);
+    addrTbl[uGUI_DamageChoke] = (uintptr_t)&off_1084DA0[22];
+
+    #if _DEBUG
+    for (auto& it : addrTbl)
+    {
+        assert(it.first == it.second);
+    }
+    #endif // _DEBUG
+}
+
 int32_t GetResX()
 {
     if (ResX)
         return ResX;
     else
-        return *(int32_t*)(*(uint32_t*)0x11E7B9C + 0xB8);
+        return *(int32_t*)(*(uint32_t*)addrTbl[0x11E7B9C] + 0xB8);
 }
 
 int32_t GetResY()
@@ -108,7 +175,7 @@ int32_t GetResY()
     if (ResY)
         return ResY;
     else
-        return *(int32_t*)(*(uint32_t*)0x11E7B9C + 0xBC);
+        return *(int32_t*)(*(uint32_t*)addrTbl[0x11E7B9C] + 0xBC);
 }
 
 int32_t GetRelativeResX()
@@ -175,10 +242,10 @@ void __fastcall sub_BA1050(int _this, int edx, int a2)
     int v29; // [esp+34h] [ebp-10h]
     int v30; // [esp+38h] [ebp-Ch]
 
-    auto sub_B83530 = (int(__fastcall*) (char*, int, int))0xB83530;
-    auto sub_B838F0 = (float(__fastcall*) (char*, int))0xB838F0;
-    auto sub_B838E0 = (float(__fastcall*) (char*, int))0xB838E0;
-    auto sub_B98830 = (void(__fastcall*) (uint32_t*, int, int))0xB98830;
+    auto sub_B83530 = (int(__fastcall*) (char*, int, int))addrTbl[0xB83530];
+    auto sub_B838F0 = (float(__fastcall*) (char*, int))addrTbl[0xB838F0];
+    auto sub_B838E0 = (float(__fastcall*) (char*, int))addrTbl[0xB838E0];
+    auto sub_B98830 = (void(__fastcall*) (uint32_t*, int, int))addrTbl[0xB98830];
 
     v2 = *(char**)(a2 + 4);
     v3 = *((uint32_t*)v2 + 49);
@@ -318,8 +385,8 @@ void __cdecl sub_79BB50(int a1)
     int v12; // [esp+Ch] [ebp-10h]
     int v13; // [esp+10h] [ebp-Ch]
     
-    auto sub_B83530 = (int(__fastcall*) (char*, int, int))0xB83530;
-    auto sub_B838E0 = (float(__fastcall*) (char*, int))0xB838E0;
+    auto sub_B83530 = (int(__fastcall*) (char*, int, int))addrTbl[0xB83530];
+    auto sub_B838E0 = (float(__fastcall*) (char*, int))addrTbl[0xB838E0];
     
     v1 = *(uint32_t**)(a1 + 4);
     v2 = v1[47];
@@ -388,18 +455,18 @@ void __fastcall sub_8F2230(void* _this, void* edx, float a2, float a3, float a4,
 {
     a4 *= fFOVFactor;
     a2 /= GetDiff();
-    return injector::fastcall<void(void*, void*, float, float, float, float)>::call(0x8F2230, _this, edx, a2, a3, a4, a5);
+    return injector::fastcall<void(void*, void*, float, float, float, float)>::call(addrTbl[0x8F2230], _this, edx, a2, a3, a4, a5);
 }
 
 void __fastcall sub_BA4440(void* _this, int edx, int* a2)
 {
-    if (*(uint32_t*)(*(uint32_t*)_this + 88) == 0xBA1050)
+    if (*(uint32_t*)(*(uint32_t*)_this + 88) == addrTbl[0xBA1050])
     {
         DWORD out;
         injector::UnprotectMemory((*(DWORD*)_this + 88), 4, out);
         *(uint32_t*)(*(DWORD*)_this + 88) = (uint32_t)&sub_BA1050_offset;
     }
-    return injector::fastcall<void(void*, int, int*)>::call(0xBA4440, _this, edx, a2);
+    return injector::fastcall<void(void*, int, int*)>::call(addrTbl[0xBA4440], _this, edx, a2);
 }
 
 bool bDisableCreateQuery = false;
@@ -420,6 +487,19 @@ void __fastcall gpuCommandBufferSync(IDirect3DDevice9** m_ppD3DDevice, void* edx
     }
 }
 
+std::vector<HWND> AppWindows;
+BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam)
+{
+    DWORD lpdwProcessId;
+    GetWindowThreadProcessId(hwnd, &lpdwProcessId);
+    if (lpdwProcessId == lParam)
+    {
+        if (IsWindowVisible(hwnd))
+            AppWindows.push_back(hwnd);
+    }
+    return TRUE;
+}
+
 void Init()
 {
     CIniReader iniReader("");
@@ -428,6 +508,8 @@ void Init()
     fFOVFactor= iniReader.ReadFloat("MAIN", "FOVFactor", 1.2f);
     if (fFOVFactor <= 0.0f) fFOVFactor = 1.0f;
     bDisableCreateQuery = iniReader.ReadInteger("MAIN", "DisableCreateQuery", 0) != 0;
+
+    FillAddressTable();
 
     // unrestrict resolutons
     struct ResList
@@ -444,10 +526,10 @@ void Init()
         if (sscanf_s(strList[i].c_str(), "%dx%d", &w, &h) == 2 && w >= 640 && h >= 480)
             resList.emplace_back((uint32_t)strList[i].data(), i);
     }
-    injector::WriteMemory(0x8A1346 + 4, resList.data(), true);
-    injector::WriteMemory(0x8A13FE + 4, resList.data(), true);
-    injector::WriteMemory(0x8A134E + 4, resList.size(), true);
-    injector::WriteMemory(0x8A1406 + 4, resList.size(), true);
+    injector::WriteMemory(addrTbl[0x8A1346] + 4, resList.data(), true);
+    injector::WriteMemory(addrTbl[0x8A13FE] + 4, resList.data(), true);
+    injector::WriteMemory(addrTbl[0x8A134E] + 4, resList.size(), true);
+    injector::WriteMemory(addrTbl[0x8A1406] + 4, resList.size(), true);
 
     // overwriting aspect ratio
     hook::pattern("0F 84 ? ? ? ? 48 ? ? 48 ? ? 89 8E").for_each_result([](hook::pattern_match match)
@@ -475,50 +557,61 @@ void Init()
         {
             regs.eax = (int32_t)((float)(*(int32_t*)(regs.edi + 0xB8)) / GetDiff());
         }
-    }; injector::MakeInline<MoviesWorkaround>(0xBABE12, 0xBABE12 + 6);
+    }; injector::MakeInline<MoviesWorkaround>(addrTbl[0xBABE12], addrTbl[0xBABE12] + 6);
 
     // GUI
-    injector::MakeJMP(0xBA1050, sub_BA1050_rescale, true);
-    injector::MakeCALL(0x7BB17A, sub_79BB50, true); // radar player blip fix
+    injector::MakeJMP(addrTbl[0xBA1050], sub_BA1050_rescale, true);
+    injector::MakeCALL(addrTbl[0x7BB17A], sub_79BB50, true); // radar player blip fix
 
-    injector::WriteMemory(0x10923AC, sub_BA4440, true);
-    //injector::WriteMemory(0x10D4A04, sub_BA4440, true); // loading tips
-    injector::WriteMemory(0x10D4B14, sub_BA4440, true); // main menu bg
-    injector::WriteMemory(0x10D4BF4, sub_BA4440, true); // probably you're dead screen
+    injector::WriteMemory(addrTbl[0x10923AC], sub_BA4440, true);
+    //injector::WriteMemory(addrTbl[0x10D4A04], sub_BA4440, true); // loading tips
+    injector::WriteMemory(addrTbl[0x10D4B14], sub_BA4440, true); // main menu bg
+    injector::WriteMemory(addrTbl[0x10D4BF4], sub_BA4440, true); // probably you're dead screen
 
-    injector::WriteMemory(uGUI_PauseBlurHD, sub_BA1050, true);
-
+    injector::WriteMemory(addrTbl[uGUI_PauseBlurHD], sub_BA1050, true);
+    
     if (bDisableDamageOverlay)
     {
-        injector::WriteMemory(uGUI_Damage, sub_BA1050_nop, true);
-        injector::WriteMemory(uGUI_DamageChoke, sub_BA1050_nop, true);
+        injector::WriteMemory(addrTbl[uGUI_Damage], sub_BA1050_nop, true);
+        injector::WriteMemory(addrTbl[uGUI_DamageChoke], sub_BA1050_nop, true);
     }
     else
     {
-        injector::WriteMemory(uGUI_Damage, sub_BA1050, true);
-        injector::WriteMemory(uGUI_DamageChoke, sub_BA1050, true);
+        injector::WriteMemory(addrTbl[uGUI_Damage], sub_BA1050, true);
+        injector::WriteMemory(addrTbl[uGUI_DamageChoke], sub_BA1050, true);
     }
 
     //Camera near clip fix
-    injector::MakeCALL(0x47249D, sub_8F2230, true);
-    injector::MakeCALL(0x480F4E, sub_8F2230, true);
-    injector::MakeCALL(0x4962E8, sub_8F2230, true);
-    injector::MakeCALL(0x498AE5, sub_8F2230, true);
-    injector::MakeCALL(0x5ED652, sub_8F2230, true);
-    injector::MakeCALL(0x8CFFF3, sub_8F2230, true);
-    injector::MakeCALL(0x9EE595, sub_8F2230, true);
-    injector::MakeCALL(0xA1025D, sub_8F2230, true);
-    injector::MakeCALL(0xAA52EA, sub_8F2230, true);
-    injector::MakeCALL(0xBC62D4, sub_8F2230, true);
-    injector::MakeCALL(0xBCC44E, sub_8F2230, true);
-    injector::MakeCALL(0xC0346A, sub_8F2230, true);
-    injector::MakeCALL(0xC52BF4, sub_8F2230, true);
-    injector::MakeCALL(0xCDC9D9, sub_8F2230, true);
-    injector::MakeCALL(0xD00F71, sub_8F2230, true);
-    injector::MakeCALL(0xE98FAF, sub_8F2230, true);
+    injector::MakeCALL(addrTbl[0x47249D], sub_8F2230, true);
+    injector::MakeCALL(addrTbl[0x480F4E], sub_8F2230, true);
+    injector::MakeCALL(addrTbl[0x4962E8], sub_8F2230, true);
+    injector::MakeCALL(addrTbl[0x498AE5], sub_8F2230, true);
+    injector::MakeCALL(addrTbl[0x5ED652], sub_8F2230, true);
+    injector::MakeCALL(addrTbl[0x8CFFF3], sub_8F2230, true);
+    injector::MakeCALL(addrTbl[0x9EE595], sub_8F2230, true);
+    injector::MakeCALL(addrTbl[0xA1025D], sub_8F2230, true);
+    injector::MakeCALL(addrTbl[0xAA52EA], sub_8F2230, true);
+    injector::MakeCALL(addrTbl[0xBC62D4], sub_8F2230, true);
+    injector::MakeCALL(addrTbl[0xBCC44E], sub_8F2230, true);
+    injector::MakeCALL(addrTbl[0xC0346A], sub_8F2230, true);
+    injector::MakeCALL(addrTbl[0xC52BF4], sub_8F2230, true);
+    injector::MakeCALL(addrTbl[0xCDC9D9], sub_8F2230, true);
+    injector::MakeCALL(addrTbl[0xD00F71], sub_8F2230, true);
+    injector::MakeCALL(addrTbl[0xE98FAF], sub_8F2230, true);
     
     if (bBorderlessWindowed)
     {
+        std::thread([]()
+        {
+            while (AppWindows.empty())
+            {
+                EnumWindows(EnumWindowsProc, GetCurrentProcessId());
+                std::this_thread::yield();
+            }
+            WindowedModeWrapper::GameHWND = AppWindows.back();
+            WindowedModeWrapper::SetWindowLongA_Hook(WindowedModeWrapper::GameHWND, 0, GetWindowLong(WindowedModeWrapper::GameHWND, GWL_STYLE));
+        }).detach();
+        
         IATHook::Replace(GetModuleHandleA(NULL), "USER32.DLL",
             std::forward_as_tuple("CreateWindowExA", WindowedModeWrapper::CreateWindowExA_Hook),
             std::forward_as_tuple("CreateWindowExW", WindowedModeWrapper::CreateWindowExW_Hook),
@@ -530,7 +623,7 @@ void Init()
     }
 
     {
-        injector::WriteMemory(0x0107FF78, 1000, true); //max fps
+        injector::WriteMemory(addrTbl[0x0107FF78], 1000, true); //max fps
     }
 
     if (bDisableCreateQuery)
@@ -632,6 +725,64 @@ CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
+        //Enigma Protector bypass
+        //std::thread([]()
+        //{
+        //    auto ntdllModule = GetModuleHandleW(L"ntdll.dll");
+        //    if (ntdllModule)
+        //    {
+        //        auto proc = (uint8_t*)GetProcAddress(ntdllModule, "NtProtectVirtualMemory");
+        //        if (proc)
+        //        {
+        //            auto since = [](auto& start) -> auto { return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start); };
+        //            auto start = std::chrono::steady_clock::now();
+        //            auto bRestoreNTDLL = true;
+        //            while (proc[0] != 0xE9)
+        //            {
+        //                std::this_thread::yield();
+        //                if (since(start).count() > 4000) {
+        //                    bRestoreNTDLL = false;
+        //                    break;
+        //                }
+        //            }
+        //
+        //            if (bRestoreNTDLL)
+        //            {
+        //                HANDLE process = GetCurrentProcess();
+        //                MODULEINFO mi = {};
+        //                GetModuleInformation(process, ntdllModule, &mi, sizeof(mi));
+        //                LPVOID ntdllBase = (LPVOID)mi.lpBaseOfDll;
+        //                auto szSystemPath = GetKnownFolderPath(FOLDERID_System, 0, nullptr) / L"ntdll.dll";
+        //                HANDLE ntdllFile = CreateFileW(szSystemPath.wstring().c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+        //                HANDLE ntdllMapping = CreateFileMappingW(ntdllFile, NULL, PAGE_READONLY | SEC_IMAGE, 0, 0, NULL);
+        //                if (ntdllMapping)
+        //                {
+        //                    LPVOID ntdllMappingAddress = MapViewOfFile(ntdllMapping, FILE_MAP_READ, 0, 0, 0);
+        //                    PIMAGE_DOS_HEADER hookedDosHeader = (PIMAGE_DOS_HEADER)ntdllBase;
+        //                    PIMAGE_NT_HEADERS hookedNtHeader = (PIMAGE_NT_HEADERS)((DWORD_PTR)ntdllBase + hookedDosHeader->e_lfanew);
+        //
+        //                    for (WORD i = 0; i < hookedNtHeader->FileHeader.NumberOfSections; i++)
+        //                    {
+        //                        PIMAGE_SECTION_HEADER hookedSectionHeader = (PIMAGE_SECTION_HEADER)((DWORD_PTR)IMAGE_FIRST_SECTION(hookedNtHeader) + ((DWORD_PTR)IMAGE_SIZEOF_SECTION_HEADER * i));
+        //
+        //                        if (!strcmp((char*)hookedSectionHeader->Name, ".text"))
+        //                        {
+        //                            DWORD oldProtection = 0;
+        //                            auto isProtected = VirtualProtect((LPVOID)((DWORD_PTR)ntdllBase + (DWORD_PTR)hookedSectionHeader->VirtualAddress), hookedSectionHeader->Misc.VirtualSize, PAGE_EXECUTE_READWRITE, &oldProtection);
+        //                            memcpy((LPVOID)((DWORD_PTR)ntdllBase + (DWORD_PTR)hookedSectionHeader->VirtualAddress), (LPVOID)((DWORD_PTR)ntdllMappingAddress + (DWORD_PTR)hookedSectionHeader->VirtualAddress), hookedSectionHeader->Misc.VirtualSize);
+        //                            isProtected = VirtualProtect((LPVOID)((DWORD_PTR)ntdllBase + (DWORD_PTR)hookedSectionHeader->VirtualAddress), hookedSectionHeader->Misc.VirtualSize, oldProtection, &oldProtection);
+        //                        }
+        //                    }
+        //
+        //                    CloseHandle(process);
+        //                    CloseHandle(ntdllFile);
+        //                    CloseHandle(ntdllMapping);
+        //                }
+        //                FreeLibrary(ntdllModule);
+        //            }
+        //        }
+        //    }
+        //}).detach();
         CallbackHandler::RegisterCallback(Init, hook::pattern("8B 4E 68 85 C9 75 47"));
     });
 }
