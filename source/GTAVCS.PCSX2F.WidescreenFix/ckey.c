@@ -334,6 +334,10 @@ void ReplacePadFuncsWithPCControls()
             move(a0, at)
             //movs(f0, f0)
         );
+
+        // Remove clamp
+        injector.MakeNOP(0x29CC10);
+        injector.MakeNOP(0x29CCC0);
     }
 
     //CPlayerPed::PlayerControlFreeAim
