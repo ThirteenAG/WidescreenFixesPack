@@ -20,9 +20,7 @@
 #include "injector\injector.hpp"
 #include "injector\calling.hpp"
 #include "injector\hooking.hpp"
-#ifdef _M_IX86
-#include "injector\assembly.hpp"
-#endif
+#include "assembly2.hpp"
 #include "injector\utility.hpp"
 #include "Hooking.Patterns.h"
 #include "log.h"

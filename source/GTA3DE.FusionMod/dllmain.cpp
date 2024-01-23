@@ -1,6 +1,6 @@
 #include "stdafx.h"
-#include <assembly64.hpp>
 #include <string_view>
+#include "raw_mem.hpp"
 
 float fHudScale = 1.0f;
 float fRadarScale = 1.0f;

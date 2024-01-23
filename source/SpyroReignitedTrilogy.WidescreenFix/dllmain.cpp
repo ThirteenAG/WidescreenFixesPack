@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include <assembly64.hpp>
 #include <thread>
 
 #pragma pack(push,1)

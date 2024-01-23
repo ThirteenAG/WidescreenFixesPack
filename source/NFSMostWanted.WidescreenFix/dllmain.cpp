@@ -692,8 +692,9 @@ void Init()
             }
         }; injector::MakeInline<HudPosXHook5>(pattern.get_first(0), pattern.get_first(11));
 
-        pattern = hook::pattern("C7 ? ? ? ? 00 00 00 00 A0 43 C7 ? ? ? ? 00 00 00 00 70 43"); // 0x0059A83E
-        injector::MakeInline<HudPosXHook5>(pattern.get_first(0), pattern.get_first(11));
+        //same pattern as above?
+        //pattern = hook::pattern("C7 ? ? ? ? 00 00 00 00 A0 43 C7 ? ? ? ? 00 00 00 00 70 43"); // 0x0059A83E
+        //injector::MakeInline<HudPosXHook5>(pattern.get_first(0), pattern.get_first(11));
 
         pattern = hook::pattern("C7 ? ? ? 00 00 A0 43 C7 ? ? ? 00 00 70 43"); // 0x005A44C8
         struct HudPosXHook6
@@ -703,7 +704,6 @@ void Init()
                 *(float*)(regs.esp + 0x64) = *(float*)(FE_Xpos_894B40);
             }
         }; injector::MakeInline<HudPosXHook6>(pattern.get_first(0), pattern.get_first(8));
-
 
         //mirror position fix
         pattern = hook::pattern("C7 44 24 70 00 00 E1 43 C7 44 24 74 00 00 98 41 C7 84 24 80 00 00 00 00 00 3E 43"); // 0x6E70C0
