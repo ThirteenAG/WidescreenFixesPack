@@ -23,12 +23,12 @@ namespace injector
         template<class W>   // where W is of type wrapper
         inline void make_reg_pack_and_call(memory_pointer_tr at)
         {
-            static std::unique_ptr<SafetyHookMid> pack;
+            static std::vector<SafetyHookMid> pack;
             auto m = safetyhook::create_mid(at.get<void>(), [](reg_pack& ctx)
             {
                 W::call(&ctx);
             });
-            pack.reset(new SafetyHookMid(std::move(m)));
+            pack.emplace_back(std::move(m));
         }
     };
 
