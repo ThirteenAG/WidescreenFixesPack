@@ -692,9 +692,8 @@ void Init()
             }
         }; injector::MakeInline<HudPosXHook5>(pattern.get_first(0), pattern.get_first(11));
 
-        //same pattern as above?
-        //pattern = hook::pattern("C7 ? ? ? ? 00 00 00 00 A0 43 C7 ? ? ? ? 00 00 00 00 70 43"); // 0x0059A83E
-        //injector::MakeInline<HudPosXHook5>(pattern.get_first(0), pattern.get_first(11));
+        pattern = hook::pattern("C7 ? ? ? ? 00 00 00 00 A0 43 C7 ? ? ? ? 00 00 00 00 70 43"); // 0x0059A83E
+        injector::MakeInline<HudPosXHook5>(pattern.get_first(0), pattern.get_first(11));
 
         pattern = hook::pattern("C7 ? ? ? 00 00 A0 43 C7 ? ? ? 00 00 70 43"); // 0x005A44C8
         struct HudPosXHook6
