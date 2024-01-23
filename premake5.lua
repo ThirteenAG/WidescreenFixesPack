@@ -29,6 +29,9 @@ workspace "WidescreenFixesPack"
    files { "Resources/*.rc" }
    files { "external/hooking/Hooking.Patterns.h", "external/hooking/Hooking.Patterns.cpp" }
    files { "includes/stdafx.h", "includes/stdafx.cpp" }
+   files { "includes/safetyhook/safetyhook.hpp", "includes/safetyhook/safetyhook.cpp" }
+   files { "includes/safetyhook/Zydis.h", "includes/safetyhook/Zydis.c" }
+   includedirs { "includes/safetyhook" }
    includedirs { "includes" }
    includedirs { "external/hooking" }
    includedirs { "external/injector/include" }
@@ -182,8 +185,8 @@ workspace "WidescreenFixesPack"
    end
    
    function add_asmjit()
-      files { "external/asmjit/src/**.cpp" }
-      includedirs { "external/asmjit/src" }
+      files { "external/asmjit/src/**.h", "external/asmjit/src/**.cpp" }
+      includedirs { "external/asmjit/src/asmjit" }
    end
    
    function writeghaction(tag, prj_name)       
@@ -545,7 +548,6 @@ project "ResidentEvilRevelations2.FusionFix"
 project "ResidentEvil4.FusionMod"
    platforms { "Win64" }
    architecture "x64"
-   add_asmjit()
    setpaths("Z:/WFP/Games/ResidentEvil4/", "re4.exe", "scripts/")
 project "ResidentEvil5.FusionFix"
    setpaths("Z:/WFP/Games/ResidentEvil5/", "re5dx9.exe", "scripts/")
@@ -606,7 +608,6 @@ project "SplinterCellEssentials.PPSSPP.FusionMod"
 project "SpyroReignitedTrilogy.WidescreenFix"
    platforms { "Win64" }
    architecture "x64"
-   add_asmjit()
    setpaths("Z:/WFP/Games/Spyro Reignited Trilogy/", "Falcon/Binaries/Win64/Spyro-Win64-Shipping.exe", "Falcon/Binaries/Win64/scripts/")
 project "StreetRacingSyndicate.WidescreenFix"
    setpaths("Z:/WFP/Games/Street Racing Syndicate/", "Bin/srs.exe", "Bin/scripts/")
