@@ -109,13 +109,44 @@ constexpr size_t length(char const (&)[N])
     return N - 1;
 }
 
-template <typename T, typename V>
-bool iequals(const T& s1, const V& s2)
+inline bool iequals(const std::string_view s1, const std::string_view s2)
 {
-    T str1(s1); T str2(s2);
+    std::string str1(s1); std::string str2(s2);
     std::transform(str1.begin(), str1.end(), str1.begin(), ::tolower);
     std::transform(str2.begin(), str2.end(), str2.begin(), ::tolower);
     return (str1 == str2);
+}
+
+inline bool iequals(const std::wstring_view s1, const std::wstring_view s2)
+{
+    std::wstring str1(s1); std::wstring str2(s2);
+    std::transform(str1.begin(), str1.end(), str1.begin(), ::towlower);
+    std::transform(str2.begin(), str2.end(), str2.begin(), ::towlower);
+    return (str1 == str2);
+}
+
+inline bool starts_with(const std::string_view str, const std::string_view prefix, bool case_sensitive)
+{
+    if (!case_sensitive)
+    {
+        std::string str1(str); std::string str2(prefix);
+        std::transform(str1.begin(), str1.end(), str1.begin(), ::tolower);
+        std::transform(str2.begin(), str2.end(), str2.begin(), ::tolower);
+        return str1.starts_with(str2);
+    }
+    return str.starts_with(prefix);
+}
+
+inline bool starts_with(const std::wstring_view str, const std::wstring_view prefix, bool case_sensitive)
+{
+    if (!case_sensitive)
+    {
+        std::wstring str1(str); std::wstring str2(prefix);
+        std::transform(str1.begin(), str1.end(), str1.begin(), ::towlower);
+        std::transform(str2.begin(), str2.end(), str2.begin(), ::towlower);
+        return str1.starts_with(str2);
+    }
+    return str.starts_with(prefix);
 }
 
 template<class T>
