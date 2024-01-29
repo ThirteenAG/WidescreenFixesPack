@@ -3,6 +3,7 @@
 #include <initializer_list>
 #include "injector/injector.hpp"
 #include "../external/asmjit/src/asmjit/x86.h"
+#include "Trampoline.h"
 using namespace asmjit;
 using namespace x86;
 typedef void (*asmjit_Func)();
@@ -71,3 +72,19 @@ namespace injector
     };
 };
 
+namespace injector
+{
+    inline bool UnprotectMemory(memory_pointer_tr addr, size_t size)
+    {
+        DWORD out_oldprotect = 0;
+        return VirtualProtect(addr.get(), size, PAGE_EXECUTE_READWRITE, &out_oldprotect) != 0;
+    }
+
+#ifdef _WIN64
+    inline injector::memory_pointer_raw MakeCALLTrampoline(injector::memory_pointer_tr at, injector::memory_pointer_raw dest, bool vp = true)
+    {
+        auto trampoline = Trampoline::MakeTrampoline((void*)at.as_int());
+        return MakeCALL(at, trampoline->Jump(dest));
+    }
+#endif
+};

@@ -1,6 +1,6 @@
 [submodule "external/injector"]
 	path = external/injector
-	url = https://github.com/thelink2012/injector
+	url = https://github.com/ThirteenAG/injector
 [submodule "external/inireader"]
 	path = external/inireader
 	url = https://github.com/ThirteenAG/IniReader
