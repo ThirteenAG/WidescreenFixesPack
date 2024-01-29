@@ -28,17 +28,17 @@ workspace "WidescreenFixesPack"
    files { "data/%{prj.name}/**" }
    files { "Resources/*.rc" }
    files { "external/hooking/Hooking.Patterns.h", "external/hooking/Hooking.Patterns.cpp" }
+   files { "external/injector/safetyhook/safetyhook.hpp", "external/injector/safetyhook/safetyhook.cpp" }
+   files { "external/injector/safetyhook/Zydis.h", "external/injector/safetyhook/Zydis.c" }
    files { "includes/stdafx.h", "includes/stdafx.cpp" }
-   files { "includes/safetyhook/safetyhook.hpp", "includes/safetyhook/safetyhook.cpp" }
-   files { "includes/safetyhook/Zydis.h", "includes/safetyhook/Zydis.c" }
-   includedirs { "includes/safetyhook" }
-   includedirs { "includes" }
+   includedirs { "external/injector/safetyhook" }
    includedirs { "external/hooking" }
    includedirs { "external/injector/include" }
    includedirs { "external/inireader" }
    includedirs { "external/spdlog/include" }
    includedirs { "external/filewatch" }
    includedirs { "external/modutils" }
+   includedirs { "includes" }
    
    includedirs { "includes/LED" }
    libdirs { "includes/LED" }
