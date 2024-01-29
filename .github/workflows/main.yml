@@ -33,6 +33,6 @@ jobs:
     - name: Update Tags
       continue-on-error: true
       if: ${{ github.event_name == 'push' && github.ref_name == 'master' }}
-      uses: ThirteenAG/update-tags@v1
+      uses: ThirteenAG/update-tags@v2
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
