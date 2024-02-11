@@ -117,7 +117,7 @@ bool bOriginalExe;
 
 float gVisibility = 1.0f;
 int32_t gBlacklistIndicators = 0;
-FLTColor gColor;
+FLTColor gColor = { 0 };
 uint32_t bLightSyncRGB;
 float* __cdecl FGetHSV(float* dest, uint8_t H, uint8_t S, uint8_t V, uint32_t unk)
 {
@@ -135,6 +135,7 @@ float* __cdecl FGetHSV(float* dest, uint8_t H, uint8_t S, uint8_t V, uint32_t un
                     dest[1] = gColor.G;
                     dest[2] = gColor.B;
                     dest[3] = 1.0f;
+                    return dest;
                 }
                 if (gBlacklistIndicators)
                 {
@@ -142,8 +143,8 @@ float* __cdecl FGetHSV(float* dest, uint8_t H, uint8_t S, uint8_t V, uint32_t un
                     dest[1] *= gVisibility;
                     dest[2] *= gVisibility;
                     dest[3] *= gVisibility;
+                    return dest;
                 }
-                return dest;
             }
         }
     }
