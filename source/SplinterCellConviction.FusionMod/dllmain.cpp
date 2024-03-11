@@ -30,12 +30,19 @@ void __fastcall sub_1002581C(void* self, int edx)
     //return hb_1002581C.fun(self, edx);
 }
 
+SafetyHookInline sub_78C666_hook{};
+int __cdecl sub_78C666(char* a1, int a2)
+{
+    return sub_78C666_hook.unsafe_ccall<int>(a1, a2);
+}
+
 void Init()
 {
     CIniReader iniReader("");
     auto bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
     auto bSkipSystemDetection = iniReader.ReadInteger("MAIN", "SkipSystemDetection", 1) != 0;
     auto bDisableBlackAndWhiteFilter = iniReader.ReadInteger("MAIN", "DisableBlackAndWhiteFilter", 0) != 0;
+    auto bDisableCharacterLighting = iniReader.ReadInteger("MAIN", "DisableCharacterLighting", 0) != 0;
 
     if (bSkipIntro)
     {
@@ -60,6 +67,24 @@ void Init()
         hb_8330DB.fun = injector::MakeCALL(pattern.get_first(), sub_8330DB, true).get();
         pattern = hook::pattern("D9 5C 24 04 D9 40 08 D9 1C 24 E8 ? ? ? ? 83 C4 0C C3");
         hb_8330DB.fun = injector::MakeCALL(pattern.get_first(10), sub_8330DB, true).get();
+    }
+
+    if (bDisableCharacterLighting)
+    {
+        auto pattern = hook::pattern("E8 ? ? ? ? 33 C9 38 48 1C");
+        static SafetyHookMid test = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& ctx)
+        {
+            sub_78C666_hook.unsafe_ccall<int>("l3d-char-lighting");
+        });
+
+        pattern = hook::pattern("E9 ? ? ? ? 8D 45 90 68 ? ? ? ? 50 E8 ? ? ? ? 85 C0 59 59 74 0B 81 C6 ? ? ? ? E9 ? ? ? ? 8D 45 88 50 68 ? ? ? ? FF 75 90 E8 ? ? ? ? 83 C4 0C 85 C0 74 12 F3 0F 10 45 ? F3 0F 11 86 ? ? ? ? E9 ? ? ? ? 8D 45 88");
+        static SafetyHookMid test2 = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& ctx)
+        {
+            *(uint8_t*)ctx.esi ^= 1;
+        });
+
+        pattern = hook::pattern("55 8D AC 24 ? ? ? ? 81 EC ? ? ? ? A1 ? ? ? ? 33 C5 89 85 ? ? ? ? 8B 85 ? ? ? ? 56 57 8B BD");
+        sub_78C666_hook = safetyhook::create_inline(pattern.get_first(0), sub_78C666);
     }
 }
 
