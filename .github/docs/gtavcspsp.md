@@ -31,12 +31,18 @@
   <img src="https://user-images.githubusercontent.com/4904157/156879759-6bd08507-f30b-4890-ae69-b0503b998aa6.png" width="652px" />
 </details>
 
-# ImVehLM (Improved Vehicle Lights Mod)
+# ImVehLM (Improved Vehicle Lights Mod) & Gamepad Icons
 
 https://user-images.githubusercontent.com/4904157/218305955-3a8a244f-aae8-456b-a7ef-dac9d5ca7118.mp4
 
 Installation:
 - Download and extract the archive to the directory, where PPSSPP's memory stick is located (File -> Open Memory Stick).
 - Inside TEXTURES folder, rename ULUS10160 to the ID, that matches your game (ULUS10160, ULES00502, ULES00503, ULJM05297, ULJM05395, ULJM05884).
+- **textures.zip** is the same between two plugins, overwrite it when installing both.
 - Enable **Game Settings -> Tools -> Developer Tools -> Replace Textures**.
 - Launch the game.
+
+**Gamepad Icons**, allows to select various controller icon styles (Xbox 360, Xbox One, PS3, PS4, PS5, Nintendo Switch, Steam Deck).
+Scroll through the configuration option in CONTROLS menu to switch between them.
+
+![](https://github.com/ThirteenAG/WidescreenFixesPack/assets/4904157/e3042763-6bf8-419c-ba3a-9bb4e2dfa419)
