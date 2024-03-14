@@ -422,6 +422,30 @@ jobs:
         tag: flatoutuc
         artifacts: data/Archives/FlatoutUltimateCarnage.WidescreenFix.zip
 
+    - name: SOCOM U.S. Navy SEALs Fireteam Bravo Fusion Mod
+      uses: ./.github/workflows/release_tag
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag: fireteambravo1
+        artifacts: data/Archives/SOCOM.FireteamBravo.PPSSPP.FusionMod.zip
+
+    - name: SOCOM U.S. Navy SEALs Fireteam Bravo 2 Fusion Mod
+      uses: ./.github/workflows/release_tag
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag: fireteambravo2
+        artifacts: data/Archives/SOCOM.FireteamBravo2.PPSSPP.FusionMod.zip
+
+    - name: SOCOM U.S. Navy SEALs Fireteam Bravo 3 Fusion Mod
+      uses: ./.github/workflows/release_tag
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag: fireteambravo3
+        artifacts: data/Archives/SOCOM.FireteamBravo3.PPSSPP.FusionMod.zip
+
     - name: Flatout 2 Widescreen Fix
       uses: ./.github/workflows/release_tag
       with:
