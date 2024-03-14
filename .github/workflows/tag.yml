@@ -21,6 +21,9 @@ on:
         - flatout
         - flatout2
         - flatoutuc
+        - fireteambravo1
+        - fireteambravo2
+        - fireteambravo3
         - gta1
         - gta2
         - gta3
@@ -115,6 +118,9 @@ env:
   flatout: "/t:Flatout_WidescreenFix"
   flatout2: "/t:Flatout2_WidescreenFix"
   flatoutuc: "/t:FlatoutUltimateCarnage_WidescreenFix"
+  fireteambravo1: "/t:SOCOM_FireteamBravo_PPSSPP_FusionMod"
+  fireteambravo2: "/t:SOCOM_FireteamBravo2_PPSSPP_FusionMod"
+  fireteambravo3: "/t:SOCOM_FireteamBravo3_PPSSPP_FusionMod"
   gta1: "/t:GTA1_WidescreenFix"
   gta2: "/t:GTA2_WidescreenFix"
   gta3: "/t:GTA3_WidescreenFix"
@@ -127,7 +133,7 @@ env:
   gtavc: "/t:GTAVC_WidescreenFix"
   gtavcde: "/t:GTAVCDE_FusionMod"
   gtavcs: "/t:GTAVCS_PCSX2F_WidescreenFix /t:GTAVCS_PCSX2F_Project2DFX /t:GTAVCS_PCSX2F_ImVehLM"
-  gtavcspsp: "/t:GTAVCS_PPSSPP_WidescreenFix /t:GTAVCS_PPSSPP_Project2DFX /t:GTAVCS_PPSSPP_ImVehLM"
+  gtavcspsp: "/t:GTAVCS_PPSSPP_WidescreenFix /t:GTAVCS_PPSSPP_Project2DFX /t:GTAVCS_PPSSPP_ImVehLM /t:GTAVCS_PPSSPP_GamepadIcons"
   gun: "/t:Gun_WidescreenFix"
   hd2: "/t:HiddenandDangerous2_WidescreenFix"
   justcause: "/t:JustCause_WidescreenFix"
