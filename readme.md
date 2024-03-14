@@ -8,7 +8,7 @@
 [![CircleCI](https://img.shields.io/circleci/build/github/ThirteenAG/WidescreenFixesPack?label=CircleCI%20Build&logo=circleci)](https://circleci.com/gh/ThirteenAG/WidescreenFixesPack/tree/master)
 
 [![GitHub license](https://img.shields.io/github/license/ThirteenAG/WidescreenFixesPack?color=blue)](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/license)
-[![GitHub stars](https://img.shields.io/github/stars/ThirteenAG/WidescreenFixesPack)](https://github.com/ThirteenAG/WidescreenFixesPack/stargazers)
+[![GitHub stars](https://img.shields.io/github/stars/ThirteenAG/WidescreenFixesPack?style=flat&color=blue)](https://github.com/ThirteenAG/WidescreenFixesPack/stargazers)
 [![Commits](https://img.shields.io/github/commit-activity/m/ThirteenAG/WidescreenFixesPack?label=commits)](https://github.com/ThirteenAG/WidescreenFixesPack/commits)
 [![GitHub last commit](https://img.shields.io/github/last-commit/ThirteenAG/WidescreenFixesPack?color=blue)](https://github.com/ThirteenAG/WidescreenFixesPack/commits)
 

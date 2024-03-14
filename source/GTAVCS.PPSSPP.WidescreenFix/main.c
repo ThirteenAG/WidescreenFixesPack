@@ -687,6 +687,44 @@ void HandlePCCheats()
         cheat_id = -1;
 }
 
+float* CRect__CRect(float* dest, float f12, float f13, float f14, float f15)
+{
+    if (f12 == 0.0f && f14 == 480.0f)
+    {
+        dest[0] = f12;
+        dest[3] = f13;
+        dest[2] = f14;
+        dest[1] = f15;
+        return dest;
+    }
+
+    float fHudOffset = (((480.0f * fARDiff) - 480.0f) / 2.0f) / fARDiff;
+    dest[0] = (f12 / fARDiff) + fHudOffset;
+    dest[3] = f13;
+    dest[2] = (f14 / fARDiff) + fHudOffset;
+    dest[1] = f15;
+    return dest;
+}
+
+float* CRect__CRect2(float* dest, float f12, float f13, float f14, float f15)
+{
+    if (f12 == 0.0f && f14 == 480.0f)
+    {
+        dest[0] = f12;
+        dest[3] = f13;
+        dest[2] = f14;
+        dest[1] = f15;
+        return dest;
+    }
+
+    float fHudOffset = ((((f14 - f12) * fARDiff) - (f14 - f12)) / 2.0f) / fARDiff;
+    dest[0] = f12;
+    dest[3] = f13;
+    dest[2] = f14 - fHudOffset;
+    dest[1] = f15;
+    return dest;
+}
+
 int OnModuleStart() {
     sceKernelDelayThread(100000);
 
@@ -1264,6 +1302,22 @@ int OnModuleStart() {
         );
         injector.WriteInstr(ptr_1B9438 + 0x10, subs(f22, f0, f30));
         injector.WriteInstr(ptr_1B9438 + 0x38, adds(f28, f12, f30));
+
+        // Controller icons in menu
+        uintptr_t ptr_89043E8 = pattern.get(0, "E0 7B 80 46 48 00 04 26", -4);
+        injector.MakeJAL(ptr_89043E8, (intptr_t)CRect__CRect2);
+        
+        //Map Legend Text
+        uintptr_t ptr_88116CC = pattern.get(0, "E0 7B 80 46 04 00 A6 27", -4);
+        injector.MakeJAL(ptr_88116CC, (intptr_t)CRect__CRect2);
+
+        //ControllerMenu
+        uintptr_t ptr_8B3FD50 = pattern.get(0, "E0 7B 80 46 25 20 A0 03 FF 00 05 34 FF 00 06 34 FF 00 07 34 ? ? ? ? FF 00 08 34 25 20 00 02 ? ? ? ? 25 28 40 00 11 01 44 92", -4);
+        injector.MakeJAL(ptr_8B3FD50, (intptr_t)CRect__CRect);
+        uintptr_t ptr_8B3FE38 = pattern.get(0, "80 63 0E 46 25 20 A0 03", -4);
+        injector.MakeJAL(ptr_8B3FE38, (intptr_t)CRect__CRect);
+        uintptr_t ptr_8B3FF0C = pattern.get(0, "E0 7B 80 46 25 20 A0 03 FF 00 05 34 FF 00 06 34 FF 00 07 34 ? ? ? ? FF 00 08 34 25 20 00 02 ? ? ? ? 25 28 40 00 08 01 44 8E", -4);
+        injector.MakeJAL(ptr_8B3FF0C, (intptr_t)CRect__CRect);
     }
 
     /* Radar */

@@ -2,18 +2,16 @@
 #include <psptypes.h>
 #include <stdlib.h>
 
-int str2int(char* s, int base);
-
-struct inireader_t {
-	const char* iniName;
-	void (*SetIniPath)(const char* szFileName);
-	int (*ReadInteger)(char* szSection, char* szKey, int iDefaultValue);
-	float (*ReadFloat)(char* szSection, char* szKey, float fltDefaultValue);
-	_Bool (*ReadBoolean)(char* szSection, char* szKey, _Bool bolDefaultValue);
-	char* (*ReadString)(char* szSection, char* szKey, char* szDefaultValue, char* Buffer, int BufferSize);
-	void (*WriteInteger)(char* szSection, char* szKey, int iValue);
-	void (*WriteFloat)(char* szSection, char* szKey, float fltValue);
-	void (*WriteBoolean)(char* szSection, char* szKey, _Bool bolValue);
-	void (*WriteString)(char* szSection, char* szKey, char* szValue);
+struct ini_t {
+	const char* _iniName;
+	void (*Set_Ini_Path)(const char* szFileName);
+	int (*Read_Integer)(char* szSection, char* szKey, int iDefaultValue);
+	float (*Read_Float)(char* szSection, char* szKey, float fltDefaultValue);
+	_Bool (*Read_Boolean)(char* szSection, char* szKey, _Bool bolDefaultValue);
+	char* (*Read_String)(char* szSection, char* szKey, char* szDefaultValue, char* Buffer, int BufferSize);
+	void (*Write_Integer)(char* szSection, char* szKey, int iValue);
+	void (*Write_Float)(char* szSection, char* szKey, float fltValue);
+	void (*Write_Boolean)(char* szSection, char* szKey, _Bool bolValue);
+	void (*Write_String)(char* szSection, char* szKey, char* szValue);
 };
-extern struct inireader_t inireader;
+extern struct ini_t ini;

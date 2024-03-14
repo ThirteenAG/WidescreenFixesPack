@@ -189,6 +189,12 @@ workspace "WidescreenFixesPack"
       includedirs { "external/asmjit/src/asmjit" }
    end
    
+   function add_pspsdk()
+      includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
+      includedirs { "external/pspsdk/usr/local/pspdev/bin" }
+      files { "source/%{prj.name}/*.c", "source/%{prj.name}/makefile", "source/%{prj.name}/*.cpp" }
+   end
+   
    function writeghaction(tag, prj_name)       
       file = io.open(".github/workflows/" .. tag .. ".yml", "w")
       if (file) then
@@ -363,70 +369,56 @@ project "GTAVCS.PCSX2F.ImVehLM"
    writelinkfile_ps2("GTAVCS.PCSX2F.ImVehLM")
 project "GTALCS.PPSSPP.WidescreenFix"
    kind "Makefile"
-   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
-   includedirs { "external/pspsdk/usr/local/pspdev/bin" }
-   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
-   files { "source/%{prj.name}/*.c", "source/%{prj.name}/makefile" }
+   add_pspsdk()
    targetextension ".prx"
    setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTALCS.PPSSPP.WidescreenFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PPSSPP.WidescreenFix")
    writemakefile_psp("GTALCS.PPSSPP.WidescreenFix")
 project "GTALCS.PPSSPP.Project2DFX"
    kind "Makefile"
    dependson { "GTALCS.PPSSPP.WidescreenFix" }
-   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
-   includedirs { "external/pspsdk/usr/local/pspdev/bin" }
-   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
-   files { "source/%{prj.name}/*.c", "source/%{prj.name}/makefile", "source/%{prj.name}/*.cpp" }
+   add_pspsdk()
    targetextension ".prx"
    setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTALCS.PPSSPP.Project2DFX/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PPSSPP.Project2DFX")
    writemakefile_psp("GTALCS.PPSSPP.Project2DFX", "lodl.c")
 project "GTALCS.PPSSPP.ImVehLM"
    kind "Makefile"
    dependson { "GTALCS.PPSSPP.Project2DFX" }
-   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
-   includedirs { "external/pspsdk/usr/local/pspdev/bin" }
-   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
-   files { "source/%{prj.name}/*.c", "source/%{prj.name}/makefile", "source/%{prj.name}/*.cpp" }
+   add_pspsdk()
    targetextension ".prx"
    setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTALCS.PPSSPP.ImVehLM/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PPSSPP.ImVehLM")
    writemakefile_psp("GTALCS.PPSSPP.ImVehLM")
 project "GTAVCS.PPSSPP.WidescreenFix"
    kind "Makefile"
    dependson { "GTALCS.PPSSPP.ImVehLM" }
-   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
-   includedirs { "external/pspsdk/usr/local/pspdev/bin" }
-   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
-   files { "source/%{prj.name}/*.c", "source/%{prj.name}/makefile" }
+   add_pspsdk()
    targetextension ".prx"
    setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.WidescreenFix")
    writemakefile_psp("GTAVCS.PPSSPP.WidescreenFix")
 project "GTAVCS.PPSSPP.Project2DFX"
    kind "Makefile"
    dependson { "GTAVCS.PPSSPP.WidescreenFix" }
-   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
-   includedirs { "external/pspsdk/usr/local/pspdev/bin" }
-   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
-   files { "source/%{prj.name}/*.c", "source/%{prj.name}/makefile", "source/%{prj.name}/*.cpp" }
+   add_pspsdk()
    targetextension ".prx"
    setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.Project2DFX/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.Project2DFX")
    writemakefile_psp("GTAVCS.PPSSPP.Project2DFX", "lodl.c")
 project "GTAVCS.PPSSPP.ImVehLM"
    kind "Makefile"
    dependson { "GTAVCS.PPSSPP.Project2DFX" }
-   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
-   includedirs { "external/pspsdk/usr/local/pspdev/bin" }
-   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
-   files { "source/%{prj.name}/*.c", "source/%{prj.name}/makefile", "source/%{prj.name}/*.cpp" }
+   add_pspsdk()
    targetextension ".prx"
    setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.ImVehLM/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.ImVehLM")
    writemakefile_psp("GTAVCS.PPSSPP.ImVehLM")
+project "GTAVCS.PPSSPP.GamepadIcons"
+   kind "Makefile"
+   dependson { "GTAVCS.PPSSPP.ImVehLM" }
+   add_pspsdk()
+   targetextension ".prx"
+   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.GamepadIcons")
+   writemakefile_psp("GTAVCS.PPSSPP.GamepadIcons")
 project "GTACTW.PPSSPP.FusionMod"
    kind "Makefile"
    dependson { "GTAVCS.PPSSPP.ImVehLM" }
-   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
-   includedirs { "external/pspsdk/usr/local/pspdev/bin" }
-   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
-   files { "source/%{prj.name}/*.c", "source/%{prj.name}/makefile" }
+   add_pspsdk()
    targetextension ".prx"
    setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionMod/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTACTW.PPSSPP.FusionMod")
    writemakefile_psp("GTACTW.PPSSPP.FusionMod")
@@ -482,19 +474,13 @@ project "MaxPayne.WidescreenFix"
 project "MidnightClubLARemix.PPSSPP.FusionMod"
    kind "Makefile"
    dependson { "GTACTW.PPSSPP.FusionMod" }
-   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
-   includedirs { "external/pspsdk/usr/local/pspdev/bin" }
-   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
-   files { "source/%{prj.name}/*.c", "source/%{prj.name}/makefile" }
+   add_pspsdk()
    targetextension ".prx"
    setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/MidnightClubLARemix.PPSSPP.FusionMod/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "MidnightClubLARemix.PPSSPP.FusionMod")
    writemakefile_psp("MidnightClubLARemix.PPSSPP.FusionMod")
 project "PPSSPP.XboxRainDroplets"
    kind "Makefile"
-   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
-   includedirs { "external/pspsdk/usr/local/pspdev/bin" }
-   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
-   files { "source/%{prj.name}/*.c", "source/%{prj.name}/makefile" }
+   add_pspsdk()
    targetextension ".prx"
    setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/PPSSPP.XboxRainDroplets/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "PPSSPP.XboxRainDroplets")
    writemakefile_psp("PPSSPP.XboxRainDroplets")
@@ -598,13 +584,31 @@ project "SplinterCellPandoraTomorrow.WidescreenFix"
 project "SplinterCellEssentials.PPSSPP.FusionMod"
    kind "Makefile"
    dependson { "MidnightClubLARemix.PPSSPP.FusionMod" }
-   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
-   includedirs { "external/pspsdk/usr/local/pspdev/bin" }
-   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
-   files { "source/%{prj.name}/*.c", "source/%{prj.name}/makefile" }
+   add_pspsdk()
    targetextension ".prx"
    setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.FusionMod/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SplinterCellEssentials.PPSSPP.FusionMod")
    writemakefile_psp("SplinterCellEssentials.PPSSPP.FusionMod")
+project "SOCOM.FireteamBravo.PPSSPP.FusionMod"
+   kind "Makefile"
+   dependson { "SplinterCellEssentials.PPSSPP.FusionMod" }
+   add_pspsdk()
+   targetextension ".prx"
+   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/SOCOM.FireteamBravo.PPSSPP.FusionMod/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SOCOM.FireteamBravo.PPSSPP.FusionMod")
+   writemakefile_psp("SOCOM.FireteamBravo.PPSSPP.FusionMod")
+project "SOCOM.FireteamBravo2.PPSSPP.FusionMod"
+   kind "Makefile"
+   dependson { "SOCOM.FireteamBravo.PPSSPP.FusionMod" }
+   add_pspsdk()
+   targetextension ".prx"
+   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/SOCOM.FireteamBravo2.PPSSPP.FusionMod/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SOCOM.FireteamBravo2.PPSSPP.FusionMod")
+   writemakefile_psp("SOCOM.FireteamBravo2.PPSSPP.FusionMod")
+project "SOCOM.FireteamBravo3.PPSSPP.FusionMod"
+   kind "Makefile"
+   dependson { "SOCOM.FireteamBravo2.PPSSPP.FusionMod" }
+   add_pspsdk()
+   targetextension ".prx"
+   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/SOCOM.FireteamBravo3.PPSSPP.FusionMod/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SOCOM.FireteamBravo3.PPSSPP.FusionMod")
+   writemakefile_psp("SOCOM.FireteamBravo3.PPSSPP.FusionMod")
 project "SpyroReignitedTrilogy.WidescreenFix"
    platforms { "Win64" }
    architecture "x64"
@@ -625,11 +629,8 @@ project "TheSuffering.WidescreenFix"
    setpaths("Z:/WFP/Games/The Suffering/The Suffering/", "suffering.exe")
 project "TheWarriors.PPSSPP.FusionMod"
    kind "Makefile"
-   dependson { "SplinterCellEssentials.PPSSPP.FusionMod" }
-   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
-   includedirs { "external/pspsdk/usr/local/pspdev/bin" }
-   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
-   files { "source/%{prj.name}/*.c", "source/%{prj.name}/makefile" }
+   dependson { "SOCOM.FireteamBravo3.PPSSPP.FusionMod" }
+   add_pspsdk()
    targetextension ".prx"
    setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/TheWarriors.PPSSPP.FusionMod/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "TheWarriors.PPSSPP.FusionMod")
    writemakefile_psp("TheWarriors.PPSSPP.FusionMod")
