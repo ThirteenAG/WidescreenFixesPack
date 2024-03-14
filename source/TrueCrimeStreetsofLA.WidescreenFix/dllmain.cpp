@@ -8,6 +8,7 @@ struct Screen
     float fHeight;
     float fFieldOfView;
     float fAspectRatio;
+    float fAspectRatioDiff;
     int Width43;
     float fWidth43;
     float fHudScale;
@@ -16,6 +17,13 @@ struct Screen
 void __declspec(naked) Ret4()
 {
     __asm ret 4
+}
+
+SafetyHookInline sub_5EE430_hook{};
+void __fastcall sub_5EE430(int _this, void* edx, float a2)
+{
+    a2 /= Screen.fAspectRatioDiff;
+    return sub_5EE430_hook.unsafe_fastcall<void>(_this, edx, a2);
 }
 
 void Init()
@@ -30,6 +38,7 @@ void Init()
     Screen.fWidth = static_cast<float>(Screen.Width);
     Screen.fHeight = static_cast<float>(Screen.Height);
     Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
+    Screen.fAspectRatioDiff = 1.0f / (((4.0f / 3.0f)) / (Screen.fAspectRatio));
     Screen.Width43 = static_cast<uint32_t>(Screen.fHeight * (4.0f / 3.0f));
     Screen.fWidth43 = static_cast<float>(Screen.Width43);
 
@@ -108,14 +117,17 @@ void Init()
         }
     }; injector::MakeInline<SetIniResHook2>(pattern.count(3).get(2).get<uint32_t>(0), pattern.count(3).get(2).get<uint32_t>(7));
     injector::WriteMemory<uint8_t>(pattern.count(3).get(2).get<uint32_t>(5), 0x53, true); //push ebx
+
+    pattern = hook::pattern("55 8B EC 83 E4 F0 83 EC 64 F3 0F 10 75");
+    sub_5EE430_hook = safetyhook::create_inline(pattern.get_first(0), sub_5EE430);
 }
 
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
-        {
-            CallbackHandler::RegisterCallback(Init, hook::pattern("BF 94 00 00 00 8B C7"));
-        });
+    {
+        CallbackHandler::RegisterCallback(Init, hook::pattern("BF 94 00 00 00 8B C7"));
+    });
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
