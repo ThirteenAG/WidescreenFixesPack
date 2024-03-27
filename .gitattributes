@@ -1,3 +1,8 @@
+includes/psp/** linguist-vendored
+includes/pcsx2/** linguist-vendored
+includes/LED/** linguist-vendored
+includes/dxsdk/** linguist-vendored
+
 # Auto detect text files and perform LF normalization
 * text=auto
 

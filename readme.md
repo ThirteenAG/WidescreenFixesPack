@@ -5,7 +5,6 @@
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/ThirteenAG/WidescreenFixesPack/main.yml?branch=master&label=GitHub%20Actions%20Build&logo=GitHub)](https://github.com/ThirteenAG/WidescreenFixesPack/actions/workflows/main.yml)
 [![AppVeyor](https://img.shields.io/appveyor/build/ThirteenAG/WidescreenFixesPack?label=AppVeyor%20Build&logo=Appveyor&logoColor=white)](https://ci.appveyor.com/project/ThirteenAG/widescreenfixespack)
 [![Azure DevOps builds](https://img.shields.io/azure-devops/build/ThirteenAG/f555b128-da05-4bad-a972-90d529123a2e/3?label=Azure%20Pipelines%20Build&logo=Azure%20Pipelines)](https://dev.azure.com/thirteenag/WidescreenFixesPack/_build/latest?definitionId=3&branchName=master)
-[![CircleCI](https://img.shields.io/circleci/build/github/ThirteenAG/WidescreenFixesPack?label=CircleCI%20Build&logo=circleci)](https://circleci.com/gh/ThirteenAG/WidescreenFixesPack/tree/master)
 
 [![GitHub license](https://img.shields.io/github/license/ThirteenAG/WidescreenFixesPack?color=blue)](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/license)
 [![GitHub stars](https://img.shields.io/github/stars/ThirteenAG/WidescreenFixesPack?style=flat&color=blue)](https://github.com/ThirteenAG/WidescreenFixesPack/stargazers)
