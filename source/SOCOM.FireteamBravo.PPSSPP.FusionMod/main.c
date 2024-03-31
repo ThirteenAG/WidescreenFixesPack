@@ -204,6 +204,8 @@ uintptr_t GetAbsoluteAddress(uintptr_t at, int32_t offs_hi, int32_t offs_lo)
 
 int OnModuleStart() 
 {
+    sceKernelDelayThread(120000);
+
     int SkipIntro = inireader.ReadInteger("MAIN", "SkipIntro", 1);
     int DualAnalogPatch = inireader.ReadInteger("MAIN", "DualAnalogPatch", 1);
     UnthrottleEmuDuringLoading = inireader.ReadInteger("MAIN", "UnthrottleEmuDuringLoading", 1);
