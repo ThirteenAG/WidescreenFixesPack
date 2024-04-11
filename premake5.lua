@@ -284,13 +284,11 @@ project "Flatout.WidescreenFix"
    setpaths("Z:/WFP/Games/Flatout/FlatOut/", "flatout.exe")
 project "Flatout2.WidescreenFix"
    setpaths("Z:/WFP/Games/Flatout/FlatOut2/", "FlatOut2.exe")
-project "FlatoutUltimateCarnage.WidescreenFix"
-   setpaths("Z:/WFP/Games/Flatout/FlatOut - Ultimate Carnage/", "Fouc.exe")
-project "GettingUp.WidescreenFix"
-   setpaths("Z:/WFP/Games/Marc Ecko's Getting Up 2/", "_Bin/GettingUp.exe", "_Bin/")
-   targetdir "data/GettingUp.WidescreenFix/_Bin/"
-   debugargs { "map=M01_HOO_Tranes_Hood_3" }
-   buildoptions { "/Zc:threadSafeInit-" }
+--project "GettingUp.WidescreenFix"
+--   setpaths("Z:/WFP/Games/Marc Ecko's Getting Up 2/", "_Bin/GettingUp.exe", "_Bin/")
+--   targetdir "data/GettingUp.WidescreenFix/_Bin/"
+--   debugargs { "map=M01_HOO_Tranes_Hood_3" }
+--   buildoptions { "/Zc:threadSafeInit-" }
 project "GTA1.WidescreenFix"
    setpaths("Z:/WFP/Games/Grand Theft Auto/Grand Theft Auto 1 London 1969 1961/", "WINO/Grand Theft Auto.exe", "WINO/scripts/")
 project "GTA2.WidescreenFix"
