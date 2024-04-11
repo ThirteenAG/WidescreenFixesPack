@@ -20,7 +20,6 @@ on:
         - farcry
         - flatout
         - flatout2
-        - flatoutuc
         - fireteambravo1
         - fireteambravo2
         - fireteambravo3
@@ -117,7 +116,6 @@ env:
   farcry: "/t:FarCry_WidescreenFix"
   flatout: "/t:Flatout_WidescreenFix"
   flatout2: "/t:Flatout2_WidescreenFix"
-  flatoutuc: "/t:FlatoutUltimateCarnage_WidescreenFix"
   fireteambravo1: "/t:SOCOM_FireteamBravo_PPSSPP_FusionMod"
   fireteambravo2: "/t:SOCOM_FireteamBravo2_PPSSPP_FusionMod"
   fireteambravo3: "/t:SOCOM_FireteamBravo3_PPSSPP_FusionMod"
