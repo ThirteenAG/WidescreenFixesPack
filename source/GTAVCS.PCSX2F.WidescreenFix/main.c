@@ -393,6 +393,9 @@ void init()
             injector.MakeInlineLUIORI(0x31f1d4, 2.0f * ARDiff); // money and time spacing, not adjusted by ws option originally
             injector.MakeInlineLUIORI(0x31f5b4, fWeaponIconPos); //weapon icon pos
             injector.MakeInlineLUIORI(0x31f648, fWeaponIconSize); // weapon icon size
+            injector.MakeInlineLUIORI(0x31FB3C, 438.0f - 4.0f); // ammo
+            injector.MakeInlineLUIORI(0x31FB5C, 444.0f - 4.0f); // ammo
+            //injector.MakeInlineLUIORI(0x31F8D8, 0.24f * ARDiff); // ammo font size
             injector.MakeInlineLUIORI(0x31ff94, 13.5f - 2.5f);
             injector.MakeInlineLUIORI(0x320b40, (405.0f + 10.0f));
             injector.MakeInlineLUIORI(0x31f2ac, (float)round_f((64.0f * Screen.fHudScale))); //radar scale
