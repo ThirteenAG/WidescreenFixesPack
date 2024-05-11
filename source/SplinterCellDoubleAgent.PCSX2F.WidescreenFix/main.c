@@ -4,12 +4,15 @@
 
 #include "../../includes/pcsx2/pcsx2f_api.h"
 #include "../../includes/pcsx2/log.h"
+#include "../../includes/pcsx2/inireader.h"
+#include "../../includes/pcsx2/patterns.h"
 #include "../../includes/pcsx2/injector.h"
 
 int CompatibleCRCList[] = { 0xC0498D24, 0xABE2FDE9 };
-int CompatibleElfCRCList[] = { 0x198F1AD, 0x6BD0E9C2 };
+int CompatibleElfCRCList[] = { 0xC0498D24, 0xABE2FDE9, 0x198F1AD, 0x6BD0E9C2 };
 int PCSX2Data[PCSX2Data_Size] = { 1 };
 char OSDText[OSDStringNum][OSDStringSize] = { {1} };
+char PluginData[MaxIniSize] = { 1 };
 
 struct ScreenX
 {
@@ -43,6 +46,28 @@ void init()
 {
     logger.SetBuffer(OSDText, sizeof(OSDText) / sizeof(OSDText[0]), sizeof(OSDText[0]));
     logger.Write("Loading SplinterCellDoubleAgent.PCSX2F.WidescreenFix...");
+
+    inireader.SetIniPath((char*)PluginData + sizeof(uint32_t), *(uint32_t*)PluginData);
+
+    int SkipIntro = inireader.ReadInteger("MAIN", "SkipIntro", 1);
+
+    if (SkipIntro)
+    {
+        char ElfPattern[] = "00 00 00 00 ? ? ? ? 00 00 00 00 ? ? ? ? 2D 28 00 00 ? ? ? ? 2D 30 00 00 2D 38 00 00";
+        uintptr_t ptr_222DB8 = pattern.get_first((const char*)&ElfPattern, -12);
+
+        if (ptr_222DB8 != 0)
+        {
+            logger.Write("Skipping intro...");
+            injector.WriteMemory16(ptr_222DB8 + 2, 0x1000); // beq -> b
+            uintptr_t ptr_223CBC = pattern.get(1, "00 00 45 8C ? ? ? ? B8 00 0B 24 ? ? ? ? 00 00 00 00", 20);
+            injector.MakeNOP(ptr_223CBC);
+            uintptr_t ptr_22312C = pattern.get(0, "00 00 00 00 02 00 02 24 ? ? ? ? 00 00 00 00 01 00 02 24 ? ? ? ? 00 00 00 00 ? ? ? ? 00 00 00 00 ? ? ? ? 00 00 00 00 00 00 00 00 ? ? ? ? 00 00 00 00", -4);
+            uintptr_t ptr_2231F8 = pattern.get(0, "03 00 02 24 00 00 00 00 ? ? ? ? 00 00 00 00", 0);
+            injector.MakeJMPwNOP(ptr_22312C, ptr_2231F8);
+            return;
+        }
+    }
 
     uint32_t DesktopSizeX = PCSX2Data[PCSX2Data_DesktopSizeX];
     uint32_t DesktopSizeY = PCSX2Data[PCSX2Data_DesktopSizeY];
