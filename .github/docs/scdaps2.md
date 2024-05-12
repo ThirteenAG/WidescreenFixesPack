@@ -13,7 +13,6 @@
 ## Useful information
 
 - Two versions of the game are compatible, **SLUS-21356** (crc: **C0498D24**) and **SLES-53827** (crc: **ABE2FDE9**).
-- Main menu and online are unaffected by main elf plugin, but there's additional SkipIntro plugin that skips menu and loads singleplayer mode automatically.
 
 ![](https://i.imgur.com/swnrFGs.jpg)
 

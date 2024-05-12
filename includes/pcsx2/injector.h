@@ -38,6 +38,7 @@ struct injector_t {
     void (*MakeRangedNOP)(uintptr_t at, uintptr_t until);
     uintptr_t(*MakeInline)(size_t instrCount, uintptr_t at, ...);
     void (*MakeInlineLUIORI)(uintptr_t at, float imm);
+    void (*MakeLUIORI)(uintptr_t at, RegisterID reg, float imm);
     void (*MakeInlineLI)(uintptr_t at, int32_t imm);
 };
 

@@ -350,7 +350,7 @@ void init()
 
             const float f1_25 = (((4.0f / 3.0f) / (16.0f / 9.0f)) * (10.0f / 6.0f));
             float ARDiff = (16.0f / 9.0f) / (Screen.fAspectRatio);
-            float bar_left_edge_offset_from_right = 11.0f * ARDiff;
+            float bar_left_edge_offset_from_right = 10.0f * ARDiff;
             const float f15 = 15.0f;
             float fWeaponIconPos = (360.0f + f15 + 64.0f + (26.0f * ARDiff)); //465.0f
             float fWeaponIconSize = 45.5f * ARDiff;
@@ -389,13 +389,11 @@ void init()
             injector.MakeInlineLUIORI(0x31ec64, (fBarsPos + bar_left_edge_offset_from_right)); //money and time pos
             injector.MakeInlineLUIORI(0x31ecbc, (fBarsPos + bar_left_edge_offset_from_right)); //money and time pos
             injector.MakeInlineLUIORI(0x31eea0, (fBarsPos + bar_left_edge_offset_from_right)); //money and time pos
-            injector.MakeInlineLUIORI(0x31efe8, 9.0f * ARDiff); //money and time scale
-            injector.MakeInlineLUIORI(0x31f1d4, 2.0f * ARDiff); // money and time spacing, not adjusted by ws option originally
             injector.MakeInlineLUIORI(0x31f5b4, fWeaponIconPos); //weapon icon pos
             injector.MakeInlineLUIORI(0x31f648, fWeaponIconSize); // weapon icon size
-            injector.MakeInlineLUIORI(0x31FB3C, 438.0f - 4.0f); // ammo
-            injector.MakeInlineLUIORI(0x31FB5C, 444.0f - 4.0f); // ammo
-            //injector.MakeInlineLUIORI(0x31F8D8, 0.24f * ARDiff); // ammo font size
+            injector.MakeInlineLUIORI(0x31FB3C, (438.0f - 2.0f)); // ammo pos 1
+            injector.MakeInlineLUIORI(0x31FB5C, (438.0f - 2.0f) + (6.0f * 0.75f)); // ammo pos 2
+            injector.MakeInlineLUIORI(0x31F8D8, 0.24f * 0.90f); // ammo font size
             injector.MakeInlineLUIORI(0x31ff94, 13.5f - 2.5f);
             injector.MakeInlineLUIORI(0x320b40, (405.0f + 10.0f));
             injector.MakeInlineLUIORI(0x31f2ac, (float)round_f((64.0f * Screen.fHudScale))); //radar scale
@@ -443,8 +441,12 @@ void init()
             injector.MakeInlineLUIORI(0x3215E8, (4.0f * Screen.fHudScale));
 
             // Clock Text Thingies
+            float timesc = 10.4375f;
+            if (Screen.fAspectRatio > (16.0f / 9.0f))
+                timesc = 10.0f;
+            injector.MakeLUIORI(0x31efe8, at, timesc * ARDiff); //money and time scale
             injector.MakeInlineLUIORI(0x31F1D4, (2.0f * ARDiff));
-            //injector.MakeInlineLUIORI(0x31F1EC, (4.0f * ARDiff));
+            injector.MakeInlineLUIORI(0x31F1EC, (4.0f * ARDiff));
             injector.MakeInlineLUIORI(0x31F10C, (3.0f * ARDiff));
         }
     }
