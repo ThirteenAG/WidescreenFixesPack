@@ -191,7 +191,8 @@ void MakeLUIORI(uintptr_t at, RegisterID reg, float imm)
     injector.WriteMemory32(functor + 0, lui(reg, HIWORD(imm)));
     injector.WriteMemory32(functor + 4, ori(reg, reg, LOWORD(imm)));
     injector.MakeJMP(functor + 8, at + 4); // should be +8 as well, but it won't work, e.g. two lui instructions in a row
-    injector.MakeNOP(functor + 12);
+    injector.WriteMemory32(functor + 12, injector.ReadMemory32(at + 4));
+    injector.MakeNOP(at + 4);
     injector.MakeJMP(at, functor);
 }
 
@@ -316,5 +317,6 @@ struct injector_t injector =
     .MakeRangedNOP = MakeRangedNOP,
     .MakeInline = MakeInline,
     .MakeInlineLUIORI = MakeInlineLUIORI,
+    .MakeLUIORI = MakeLUIORI,
     .MakeInlineLI = MakeInlineLI
 };
