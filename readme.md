@@ -51,3 +51,4 @@ The usage is as simple as inserting the files into game's root directory. Uninst
 
 - Not compatible with Windows XP (without recompiling with `_xp` toolset and `/Zc:threadSafeInit-`).
 - For using with WINE, follow [this guide](https://cookieplmonster.github.io/setup-instructions/#proton-wine).
+- No need to accept this pull request. I did my github lesson. cenan54.
