@@ -105,7 +105,7 @@ CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
-        CallbackHandler::RegisterCallback(Init, hook::pattern("56 68 ? ? ? ? 68 ? ? ? ? 8B F1 6A 19"));
+        CallbackHandler::RegisterCallback(Init, hook::pattern("D9 44 24 04 56 DC 0D ? ? ? ? 8B F1 D9 5C 24 08"));
     });
 }
 
