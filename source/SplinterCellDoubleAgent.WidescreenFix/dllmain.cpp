@@ -627,9 +627,7 @@ void InitD3DDrv()
                     *(uint32_t*)(regs.ebx + 0x3C) = regs.edi;
                 }
             }
-            static float _xmm0 = 0.0f;
-            _asm movss   dword ptr[_xmm0], xmm0
-            *(float*)(regs.esp + 0x18) = _xmm0;
+            *(float*)(regs.esp + 0x18) = regs.xmm0.f32[0];
         }
     }; injector::MakeInline<RenderFilmstrip_Hook3>(pattern.get_first(4), pattern.get_first(10));
 
@@ -783,14 +781,8 @@ void InitEngine()
     {
         void operator()(injector::reg_pack& regs)
         {
-            static const float f1_0 = 1.0f;
-            _asm
-            {
-                movss xmm0, Screen.fHudOffset
-                subss xmm3, xmm0
-                addss xmm3, xmm4
-                movss xmm0, f1_0
-            }
+            regs.xmm3.f32[0] -= Screen.fHudOffset;
+            regs.xmm3.f32[0] += regs.xmm4.f32[0];
         }
     }; injector::MakeInline<HUDPosHook>(pattern.get_first(0), pattern.get_first(8));
 
@@ -799,13 +791,7 @@ void InitEngine()
     {
         void operator()(injector::reg_pack& regs)
         {
-            auto regs_ecx = regs.ecx;
-            _asm
-            {
-                cvtsi2ss xmm2, regs_ecx
-                movss xmm2, Screen.fTextScaleX
-                divss xmm1, xmm2
-            }
+            regs.xmm1.f32[0] /= Screen.fTextScaleX;
         }
     }; injector::MakeInline<TextHook>(pattern.get_first(-4), pattern.get_first(4));
 
@@ -817,13 +803,10 @@ void InitEngine()
     {
         void operator()(injector::reg_pack& regs)
         {
-            auto f3 = 0.0f;
+            auto f3 = regs.xmm3.f32[0];
             auto f4 = *(float*)(regs.esp + 0x24);
-            auto f5 = 0.0f;
-            auto f6 = 0.0f;
-            _asm { movss dword ptr ds : f3, xmm3}
-            _asm { movss dword ptr ds : f5, xmm5}
-            _asm { movss dword ptr ds : f6, xmm6}
+            auto f5 = regs.xmm5.f32[0];
+            auto f6 = regs.xmm6.f32[0];
 
             if (!*GIsWideScreen && *GIsSameFrontBufferOnNormalTV)
             {
@@ -941,8 +924,8 @@ void InitEchelonMenus()
             //auto pattern = hook::module_pattern(GetModuleHandle(L"EchelonMenus"), "83 F8 05 0F 87");
             //injector::ReadMemoryRaw(pattern.get_first(3), asm_code, sizeof(asm_code), true);
             //injector::MakeNOP(pattern.get_first(3), 13);
-            keybd_event(VK_RETURN, 0x45, KEYEVENTF_EXTENDEDKEY | 0, 0);
-            keybd_event(VK_RETURN, 0x45, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+            //keybd_event(VK_RETURN, 0x45, KEYEVENTF_EXTENDEDKEY | 0, 0);
+            //keybd_event(VK_RETURN, 0x45, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
             //injector::WriteMemoryRaw(pattern.get_first(3), asm_code, sizeof(asm_code), true);
         }
 #endif

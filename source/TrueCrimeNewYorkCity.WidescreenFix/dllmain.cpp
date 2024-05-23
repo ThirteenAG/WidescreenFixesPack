@@ -237,7 +237,7 @@ void Init()
             void operator()(injector::reg_pack& regs)
             {
                 Screen.fFieldOfView = *(float*)(regs.ebp + 0x8) * (((4.0f / 3.0f)) / (Screen.fAspectRatio));
-                _asm movss   xmm0, dword ptr[Screen.fFieldOfView]
+                regs.xmm0.f32[0] = Screen.fFieldOfView;
             }
         }; injector::MakeInline<FOVHook>(pattern.get_first(0));
     }

@@ -743,7 +743,7 @@ void Init4()
             float esp38 = *(float*)(regs.esp + 0x38);
             *(float*)(regs.esp + 0x38) = (esp38 * fHudScale);
             esp38 = *(float*)(regs.esp + 0x38);
-            _asm movss xmm0, esp38
+            regs.xmm0.f32[0] = esp38;
         }
     }; injector::MakeInline<FOVHook>(pattern.get_first(0), pattern.get_first(6));
 

@@ -80,9 +80,9 @@ void Init()
                 || (*(uint32_t*)(0x02ADB7B8 + 0x0) == 100 && *(uint32_t*)(0x02ADB7B8 + 0x8) == 70 && (*(uint32_t*)(0x02ADB7B8 + 0x38) == 524288 || *(uint32_t*)(0x02ADB7B8 + 0x38) == 524296) && (*(uint32_t*)(0x02ADB7B8 + 0xB8) == 65536)) //cutscene fading
                 || (*(uint32_t*)(0x02ADB7B8 + 0x0) == 68 && *(uint32_t*)(0x02ADB7B8 + 0x4) == 0 && *(uint32_t*)(0x02ADB7B8 + 0x8) == 6) //player shadow
                 )
-                _asm movss   xmm5, f2
+                regs.xmm5.f32[0] = f2;
             else
-                _asm movss   xmm5, Screen.f3DHorScale
+                regs.xmm5.f32[0] = Screen.f3DHorScale;
         }
     }; injector::MakeInline<Set2DScale>(pattern.get_first(0), pattern.get_first(8));
 

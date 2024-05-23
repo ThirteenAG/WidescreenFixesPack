@@ -18,8 +18,6 @@ void InitME1()
             f *= 100.0f;
             f = AdjustFOV(f, static_cast<float>(nWidth) / static_cast<float>(nHeight));
             f /= 100.0f;
-            _asm {fld dword ptr[f]}
-            _asm {fstp dword ptr[f]}
             *(float*)(regs.esp + 0x00) = f;
         }
     }; injector::MakeInline<FOVHook>(pattern.get_first(0), pattern.get_first(7));
@@ -57,7 +55,7 @@ void InitME2()
             float f = (*(float *)(regs.ebx + 0x204) - *(float *)(regs.eax + 0x204)) + *(float *)(regs.esi + 0x18);
             if (*dword_126A26C == 0 /*|| bIsNotDialogue*/)
                 f = AdjustFOV(f, static_cast<float>(nWidth) / static_cast<float>(nHeight));
-            _asm {movss xmm0, dword ptr[f]}
+            regs.xmm0.f32[0] = f;
             //bIsNotDialogue = false;
         }
     }; injector::MakeInline<FOVHook>(pattern.get_first(0));
@@ -92,7 +90,7 @@ void InitME3()
         void operator()(injector::reg_pack& regs)
         {
             float f = *(float*)(regs.ecx + 0x70);
-            _asm {movss xmm0, dword ptr[f]}
+            regs.xmm0.f32[0] = f;
             bIsDialogue2 = (*(uint32_t*)(regs.ecx + 0x70) == 0x4039999A && bIsDialogue1); //2.900000095
         }
     }; injector::MakeInline<DialogueCheck2>(pattern.get_first(0));
