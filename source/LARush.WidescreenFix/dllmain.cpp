@@ -84,12 +84,8 @@ void Init()
         {
             void operator()(injector::reg_pack& regs)
             {
-                float _xmm1 = 0.0f, _xmm2 = 0.0f;
-                _asm {movss dword ptr ds : [_xmm1], xmm1}
-                _asm {movss dword ptr ds : [_xmm2], xmm2}
-
-                *(float*)(regs.esi + 0x0C) = _xmm2;
-                *(float*)(regs.esi + 0x10) = _xmm1;
+                *(float*)(regs.esi + 0x0C) = regs.xmm2.f32[0];
+                *(float*)(regs.esi + 0x10) = regs.xmm1.f32[0];
 
                 auto ret = *(uint32_t*)(regs.esp + 0x28);
                 if (ret == ret_551F3B)
