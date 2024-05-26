@@ -197,12 +197,6 @@ struct Screen
     std::filesystem::path szLoadscPath;
 } Screen;
 
-void InitLL()
-{
-    auto pattern = hook::pattern("74 ? 68 ? ? ? ? 53 FF D7");
-    injector::MakeNOP(pattern.get_first(), 2, true);
-}
-
 void Init()
 {
     CIniReader iniReader("");
@@ -235,7 +229,10 @@ void Init()
     iniWriter.WriteString("WinDrv.WindowsClient", "FullscreenViewportY", ResY);
 
     if (bForceLL)
-        CallbackHandler::RegisterCallback(InitLL, hook::pattern("74 ? 68 ? ? ? ? 53 FF D7").count_hint(1).empty(), 0x1100);
+    {
+        auto pattern = hook::pattern("74 ? 68 ? ? ? ? 53 FF D7");
+        injector::MakeNOP(pattern.get_first(), 2, true);
+    }
 
     if (nFPSLimit)
     {
@@ -924,8 +921,8 @@ void InitEchelonMenus()
             //auto pattern = hook::module_pattern(GetModuleHandle(L"EchelonMenus"), "83 F8 05 0F 87");
             //injector::ReadMemoryRaw(pattern.get_first(3), asm_code, sizeof(asm_code), true);
             //injector::MakeNOP(pattern.get_first(3), 13);
-            //keybd_event(VK_RETURN, 0x45, KEYEVENTF_EXTENDEDKEY | 0, 0);
-            //keybd_event(VK_RETURN, 0x45, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+            keybd_event(VK_RETURN, 0x45, KEYEVENTF_EXTENDEDKEY | 0, 0);
+            keybd_event(VK_RETURN, 0x45, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
             //injector::WriteMemoryRaw(pattern.get_first(3), asm_code, sizeof(asm_code), true);
         }
 #endif
@@ -1008,7 +1005,7 @@ CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
-        CallbackHandler::RegisterCallback(Init);
+        CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("74 ? 68 ? ? ? ? 53 FF D7"));
         CallbackHandler::RegisterCallback(L"Window.dll", InitWindow);
         CallbackHandler::RegisterCallback(L"Engine.dll", InitEngine);
         CallbackHandler::RegisterCallback(L"D3DDrv.dll", InitD3DDrv);
