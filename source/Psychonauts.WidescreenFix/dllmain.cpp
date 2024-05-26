@@ -215,9 +215,9 @@ void Init()
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
-        {
-            CallbackHandler::RegisterCallback(Init, hook::pattern("8B 82 C8 02 00 00 89 81 94 05 00 00 8B 4D F8").count_hint(1).empty(), 0x1100);
-        });
+    {
+        CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("8B 82 C8 02 00 00 89 81 94 05 00 00 8B 4D F8"));
+    });
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)

@@ -752,7 +752,7 @@ CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
         {
-            CallbackHandler::RegisterCallback(Init, hook::pattern("0F 84 ? ? ? ? E8 ? ? ? ? 8B 40 04 68").count_hint(1).empty(), 0x1100);
+            CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("0F 84 ? ? ? ? E8 ? ? ? ? 8B 40 04 68"));
             CallbackHandler::RegisterCallback(L"E2MFC.dll", InitE2MFC);
             CallbackHandler::RegisterCallback(L"X_GameObjectsMFC.dll", InitX_GameObjectsMFC);
             CallbackHandler::RegisterCallback(L"X_ModesMFC.dll", InitX_ModesMFC);

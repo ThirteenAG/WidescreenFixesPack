@@ -1,21 +1,6 @@
 #include "stdafx.h"
 #include "LEDEffects.h"
 
-HMODULE hm = NULL;
-HMODULE ual = NULL;
-
-typedef HANDLE(WINAPI* tCreateFileA)(LPCSTR lpFilename, DWORD dwAccess, DWORD dwSharing, LPSECURITY_ATTRIBUTES saAttributes, DWORD dwCreation, DWORD dwAttributes, HANDLE hTemplate);
-typedef HANDLE(WINAPI* tCreateFileW)(LPCWSTR lpFilename, DWORD dwAccess, DWORD dwSharing, LPSECURITY_ATTRIBUTES saAttributes, DWORD dwCreation, DWORD dwAttributes, HANDLE hTemplate);
-typedef DWORD(WINAPI* tGetFileAttributesA)(LPCSTR lpFileName);
-typedef DWORD(WINAPI* tGetFileAttributesW)(LPCWSTR lpFileName);
-typedef BOOL(WINAPI* tGetFileAttributesExA)(LPCSTR lpFileName, GET_FILEEX_INFO_LEVELS fInfoLevelId, LPVOID lpFileInformation);
-typedef BOOL(WINAPI* tGetFileAttributesExW)(LPCWSTR lpFileName, GET_FILEEX_INFO_LEVELS fInfoLevelId, LPVOID lpFileInformation);
-tCreateFileA ptrCreateFileA;
-tCreateFileW ptrCreateFileW;
-tGetFileAttributesA ptrGetFileAttributesA;
-tGetFileAttributesW ptrGetFileAttributesW;
-tGetFileAttributesExA ptrGetFileAttributesExA;
-tGetFileAttributesExW ptrGetFileAttributesExW;
 
 injector::memory_pointer_raw p6D1650;
 void __fastcall sub_6D1650(float* _this, void* edx, float a2, float a3, float a4, float a5)
@@ -26,8 +11,6 @@ void __fastcall sub_6D1650(float* _this, void* edx, float a2, float a3, float a4
 
 void Init()
 {
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-
     CIniReader iniReader("");
     auto bBorderlessWindowed = iniReader.ReadInteger("MAIN", "BorderlessWindowed", 1) != 0;
     auto bLightSyncRGB = iniReader.ReadInteger("MAIN", "LightSyncRGB", 1) != 0;
@@ -136,7 +119,7 @@ CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
-        CallbackHandler::RegisterCallback(Init, hook::pattern("E8 ? ? ? ? 83 BE ? ? ? ? ? 8B C7"));
+        CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("E8 ? ? ? ? 83 BE ? ? ? ? ? 8B C7"));
     });
 }
 

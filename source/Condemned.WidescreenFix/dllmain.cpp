@@ -238,7 +238,7 @@ CEXP void InitializeASI()
                 if (!IsModuleUAL(m) && m != hm)
                     HookShell32IAT(m);
             }
-            CallbackHandler::RegisterCallback(OverrideSHGetFolderPathAInDLLs);
+            CallbackHandler::RegisterAnyModuleLoadCallback(OverrideSHGetFolderPathAInDLLs);
         }
     });
 }
