@@ -22,6 +22,7 @@
 
 #ifndef __INTELLISENSE__
 PSP_MODULE_INFO(MODULE_NAME, PSP_MODULE_USER, 1, 0);
+_Static_assert(sizeof(MODULE_NAME) - 1 < 28, "MODULE_NAME can't have more than 28 characters");
 #endif
 
 enum

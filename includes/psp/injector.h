@@ -20,6 +20,7 @@ struct injector_t {
     int  (*AllocMemBlock)(int size, int* id);
     void (*FreeMemBlock)();
     void*(*GetGP)();
+    void*(*SetGP)(void* gp);
     void (*SetModuleBaseAddress)(uintptr_t addr, size_t size);
     void (*SetGameBaseAddress)(uintptr_t addr, size_t size);
     void (*WriteMemoryRaw)(uintptr_t addr, void* value, size_t size);

@@ -14,12 +14,13 @@
 #include "../../includes/psp/mips.h"
 
 #define MODULE_NAME_INTERNAL "MC3"
-#define MODULE_NAME "MidnightClubLARemix.PPSSPP.FusionMod"
+#define MODULE_NAME "MCLARemix.FusionMod"
 #define LOG_PATH "ms0:/PSP/PLUGINS/MidnightClubLARemix.PPSSPP.FusionMod/MidnightClubLARemix.PPSSPP.FusionMod.log"
 #define INI_PATH "ms0:/PSP/PLUGINS/MidnightClubLARemix.PPSSPP.FusionMod/MidnightClubLARemix.PPSSPP.FusionMod.ini"
 
 #ifndef __INTELLISENSE__
 PSP_MODULE_INFO(MODULE_NAME, PSP_MODULE_USER, 1, 0);
+_Static_assert(sizeof(MODULE_NAME) - 1 < 28, "MODULE_NAME can't have more than 28 characters");
 #endif
 
 int OnModuleStart() 

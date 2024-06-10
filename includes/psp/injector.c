@@ -27,12 +27,24 @@ void FreeMemBlock(int id)
 
 void* GetGP()
 {
-    unsigned int gp;
-    asm(
+    void* gp;
+    asm volatile (
         "move %0, $gp\n"
         : "=r"(gp)
     );
     return gp;
+}
+
+void* SetGP(void* gp)
+{
+    void* oldgp;
+    asm volatile (
+        "move %0, $gp\n"
+        "move $gp, %1\n"
+        : "=r"(oldgp)
+        : "r"(gp)
+        );
+    return oldgp;
 }
 
 void SetModuleBaseAddress(uintptr_t addr, size_t size)
@@ -335,6 +347,7 @@ struct injector_t injector =
     .AllocMemBlock = AllocMemBlock,
     .FreeMemBlock = FreeMemBlock,
     .GetGP = GetGP,
+    .SetGP = SetGP,
     .SetModuleBaseAddress = SetModuleBaseAddress,
     .SetGameBaseAddress = SetGameBaseAddress,
     .WriteMemoryRaw = WriteMemoryRaw,
