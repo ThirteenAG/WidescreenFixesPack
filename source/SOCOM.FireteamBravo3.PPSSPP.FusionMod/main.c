@@ -16,12 +16,13 @@
 
 #define MODULE_NAME_INTERNAL "FireTeamBravo3"
 #define MODULE_NAME_INTERNAL2 "SocomTacticsLoader"
-#define MODULE_NAME "SOCOM.FireteamBravo3.PPSSPP.FusionMod"
+#define MODULE_NAME "FireteamBravo3.FusionMod"
 #define LOG_PATH "ms0:/PSP/PLUGINS/SOCOM.FireteamBravo3.PPSSPP.FusionMod/SOCOM.FireteamBravo3.PPSSPP.FusionMod.log"
 #define INI_PATH "ms0:/PSP/PLUGINS/SOCOM.FireteamBravo3.PPSSPP.FusionMod/SOCOM.FireteamBravo3.PPSSPP.FusionMod.ini"
 
 #ifndef __INTELLISENSE__
 PSP_MODULE_INFO(MODULE_NAME, PSP_MODULE_USER, 1, 0);
+_Static_assert(sizeof(MODULE_NAME) - 1 < 28, "MODULE_NAME can't have more than 28 characters");
 #endif
 
 enum
@@ -359,6 +360,29 @@ int OnModuleStart()
     return 0;
 }
 
+void SetModuleGP()
+{
+    SceUID modules[10];
+    int count = 0;
+    int result = 0;
+    if (sceKernelGetModuleIdList(modules, sizeof(modules), &count) >= 0) {
+        int i;
+        SceKernelModuleInfo info;
+        for (i = 0; i < count; ++i) {
+            info.size = sizeof(SceKernelModuleInfo);
+            if (sceKernelQueryModuleInfo(modules[i], &info) < 0) {
+                continue;
+            }
+
+            if (strcmp(info.name, MODULE_NAME) == 0)
+            {
+                injector.SetGP((void*)info.text_addr);
+                injector.SetModuleBaseAddress(info.text_addr, info.text_size);
+            }
+        }
+    }
+}
+
 int sceKernelStartModuleHook(SceUID modid, SceSize argsize, void* argp, int* status, SceKernelSMOption* option)
 {
     int r = sceKernelStartModule(modid, argsize, argp, status, option);
@@ -368,6 +392,7 @@ int sceKernelStartModuleHook(SceUID modid, SceSize argsize, void* argp, int* sta
     {
         if (strcmp(info.name, MODULE_NAME_INTERNAL) == 0)
         {
+            SetModuleGP();
             injector.SetGameBaseAddress(info.text_addr, info.text_size);
             pattern.SetGameBaseAddress(info.text_addr, info.text_size);
             inireader.SetIniPath(INI_PATH);

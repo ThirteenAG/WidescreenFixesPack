@@ -21,6 +21,7 @@
 
 #ifndef __INTELLISENSE__
 PSP_MODULE_INFO(MODULE_NAME, PSP_MODULE_USER, 1, 0);
+_Static_assert(sizeof(MODULE_NAME) - 1 < 28, "MODULE_NAME can't have more than 28 characters");
 #endif
 
 static const float fPSPResW = 480.0f;
@@ -1382,6 +1383,15 @@ int OnModuleStart() {
     {
         uintptr_t ptr_2D0EF4 = pattern.get(0, "25 20 00 02 00 00 12 34 25 20 20 02", -4);
         injector.MakeNOP(ptr_2D0EF4);
+    }
+
+    // Script Commands Fixes
+    {
+        uintptr_t ptr_8AE8E30 = pattern.get(0, "28 00 25 2A ? ? ? ? 00 00 00 00", -4);
+        injector.WriteInstr(ptr_8AE8E30, 0x06200004); //blez -> bltz
+
+        uintptr_t ptr_8A12A94 = pattern.get(0, "DB 01 25 2A ? ? ? ? 00 00 00 00", -4);
+        injector.WriteInstr(ptr_8A12A94, 0x06200004); //blez -> bltz
     }
 
     if (LODDistMultiplier)

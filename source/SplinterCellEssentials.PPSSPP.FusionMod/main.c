@@ -16,12 +16,13 @@
 
 #define MODULE_NAME_INTERNAL "SplinterCellPSP"
 #define MODULE_NAME_INTERNAL2 "PSPLoader"
-#define MODULE_NAME "SplinterCellEssentials.PPSSPP.FusionMod"
+#define MODULE_NAME "SplinterCellPSP.FusionMod"
 #define LOG_PATH "ms0:/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.FusionMod/SplinterCellEssentials.PPSSPP.FusionMod.log"
 #define INI_PATH "ms0:/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.FusionMod/SplinterCellEssentials.PPSSPP.FusionMod.ini"
 
 #ifndef __INTELLISENSE__
 PSP_MODULE_INFO(MODULE_NAME, PSP_MODULE_USER, 1, 0);
+_Static_assert(sizeof(MODULE_NAME) - 1 < 28, "MODULE_NAME can't have more than 28 characters");
 #endif
 
 #define max(a,b) ((a)<(b)) ? (b) : (a)
@@ -59,8 +60,13 @@ static float getAxis(float axis, float deadzone, float speed) {
 float fStickDeadzone = 0.1f;
 void __0fGUInputKDirectAxis6JEInputKeyfTCPatched(int _this, int axis, int unk) {
     int param = *(uint32_t*)(_this) + 0x130;
+    int arg0 = *(uint32_t*)(_this + 0x12A0);
+
+    if (!arg0)
+        return;
+
     int arg1 = _this + *(uint16_t*)(param);
-    int arg2 = *(uint32_t*)(*(uint32_t*)(_this + 0x12A0) + 0x34);
+    int arg2 = *(uint32_t*)(arg0 + 0x34);
 
     float* (*__0fGUInputMFindAxisNameP6GAActorPCcK)(int arg1, int arg2, const char* name);
     __0fGUInputMFindAxisNameP6GAActorPCcK = (void*)(0x80000000 | *(uint32_t*)(param + 4));
