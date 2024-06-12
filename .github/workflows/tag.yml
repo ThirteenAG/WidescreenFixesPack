@@ -194,7 +194,7 @@ env:
   thug: "/t:TonyHawksUnderground_WidescreenFix"
   thug2: "/t:TonyHawksUnderground2_WidescreenFix"
   tod: "/t:TotalOverdose_WidescreenFix"
-  truecrimenyc: "/t:TrueCrimeNewYorkCity_WidescreenFix"
+  truecrimenyc: "/t:TrueCrimeNewYorkCity_WidescreenFix /t:TrueCrimeNewYorkCity_PCSX2F_WidescreenFix"
   truecrimesola: "/t:TrueCrimeStreetsofLA_WidescreenFix"
   xrd: "/t:PPSSPP_XboxRainDroplets /t:PCSX2F_XboxRainDroplets"
   usm: "/t:UltimateSpiderMan_WidescreenFix"

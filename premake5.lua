@@ -239,7 +239,7 @@ project "Assembly64.TestApp"
    targetextension ".exe"
    platforms { "Win64" }
    architecture "x64"
-   setpaths("./data/%{prj.name}", "%{prj.name}.exe", "")
+   setpaths("./data/%{prj.name}/", "%{prj.name}.exe", "")
 project "Assembly64.TestAsi"
    platforms { "Win64" }
    architecture "x64"
@@ -648,6 +648,18 @@ project "TotalOverdose.WidescreenFix"
    setpaths("Z:/WFP/Games/Total Overdose/", "TOD.exe")
 project "TrueCrimeNewYorkCity.WidescreenFix"
    setpaths("Z:/WFP/Games/True Crime New York City/", "True Crime New York City.exe")
+project "TrueCrimeNewYorkCity.PCSX2F.WidescreenFix"
+   kind "Makefile"
+   dependson { "SplinterCellDoubleAgent.PCSX2F.WidescreenFix" }
+   includedirs { "external/ps2sdk/ps2sdk/ee" }
+   files { "source/%{prj.name}/*.h" }
+   files { "source/%{prj.name}/*.c", "source/%{prj.name}/makefile" }
+   targetextension ".elf"
+   setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin/", "pcsx2x64.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "TrueCrimeNewYorkCity.PCSX2F.WidescreenFix")
+   writemakefile_ps2("TrueCrimeNewYorkCity.PCSX2F.WidescreenFix", "PLUGINS/", "0x02100000", "-l:libc.a -l:libm.a -l:libgcc.a", "../../includes/pcsx2/log.o",
+   "../../includes/pcsx2/memalloc.o", "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o",
+   "../../includes/pcsx2/inireader.o", "../../includes/pcsx2/mips.o")
+   writelinkfile_ps2("TrueCrimeNewYorkCity.PCSX2F.WidescreenFix")
 project "TrueCrimeStreetsofLA.WidescreenFix"
    setpaths("Z:/WFP/Games/True Crime Streets of LA/", "TrueCrimeMB.exe")
 project "UltimateSpiderMan.WidescreenFix"

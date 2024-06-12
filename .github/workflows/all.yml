@@ -636,7 +636,7 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
         tag: truecrimenyc
-        artifacts: data/Archives/TrueCrimeNewYorkCity.WidescreenFix.zip
+        artifacts: data/Archives/TrueCrimeNewYorkCity.WidescreenFix.zip, data/Archives/TrueCrimeNewYorkCity.PCSX2F.WidescreenFix.zip
 
     - name: Stubbs the Zombie Widescreen Fix
       uses: ./.github/workflows/release_tag
