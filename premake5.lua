@@ -188,7 +188,18 @@ workspace "WidescreenFixesPack"
       files { "external/asmjit/src/**.h", "external/asmjit/src/**.cpp" }
       includedirs { "external/asmjit/src/asmjit" }
    end
-   
+
+   function add_kananlib()
+      defines { "BDDISASM_HAS_MEMSET", "BDDISASM_HAS_VSNPRINTF" }
+      files { "external/injector/kananlib/include/utility/*.hpp", "external/injector/kananlib/src/*.cpp" }
+      files { "external/injector/kananlib/include/utility/thirdparty/*.hpp" }
+      files { "external/injector/kananlib/include/utility/thirdparty/bddisasm/bddisasm/*.c" }
+      files { "external/injector/kananlib/include/utility/thirdparty/bddisasm/bdshemu/*.c" }
+      includedirs { "external/injector/kananlib/include" }
+      includedirs { "external/injector/kananlib/include/utility/thirdparty/bddisasm/inc" }
+      includedirs { "external/injector/kananlib/include/utility/thirdparty/bddisasm/bddisasm/include" }
+   end
+
    function add_pspsdk()
       includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
       includedirs { "external/pspsdk/usr/local/pspdev/bin" }
@@ -522,6 +533,7 @@ project "ResidentEvil0.FusionFix"
 project "ResidentEvil.FusionFix"
    setpaths("Z:/WFP/Games/ResidentEvil/", "bhd.exe", "scripts/")
 project "ResidentEvil2.RE3.Dolphin.FusionMod"
+   add_kananlib()
    platforms { "Win64" }
    architecture "x64"
    setpaths("Z:/WFP/Games/Dolphin-x64/", "Dolphin.exe", "scripts/")

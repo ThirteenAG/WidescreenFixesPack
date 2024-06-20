@@ -287,7 +287,7 @@ CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
-        CallbackHandler::RegisterCallback(Init, Dolphin::Pattern());
+        CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init);
     });
 }
 
