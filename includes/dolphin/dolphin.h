@@ -1,6 +1,7 @@
 #pragma once
 #include <stdafx.h>
 #include "ppc.hpp"
+#include <utility/Scan.hpp>
 
 class Dolphin
 {
@@ -13,21 +14,64 @@ private:
     static inline auto _MenuBarClearCache = (void(__fastcall*)())(nullptr);
 
 public:
-    static hook::pattern Pattern()
-    {
-        return hook::pattern("0F B6 C8 E8 ? ? ? ? 33 D2");
-    }
+    //static hook::pattern Pattern()
+    //{
+    //    return hook::pattern("0F B6 C8 E8 ? ? ? ? 33 D2");
+    //}
 
     static inline void SetIsThrottlerTempDisabled(bool disable)
     {
-        if (!_SetIsThrottlerTempDisabled)
+        __try
         {
-            auto pattern = hook::pattern("0F B6 C8 E8 ? ? ? ? 33 D2");
-            if (!pattern.empty())
-                _SetIsThrottlerTempDisabled = (void(__fastcall*)(bool disable))(injector::GetBranchDestination(pattern.get_first(3)).as_int());
+            [&disable]()
+            {
+                if (!_SetIsThrottlerTempDisabled)
+                {
+                    const auto current_module = GetModuleHandleW(NULL);
+                    auto candidate_string = utility::scan_string(current_module, "Fog: {}");
+                    if (!candidate_string) candidate_string = utility::scan_string(current_module, "Copy EFB: {}");
+                    if (candidate_string)
+                    {
+                        auto candidate_stringref = utility::scan_displacement_reference(current_module, *candidate_string);
+                        if (candidate_stringref)
+                        {
+                            for (size_t i = 0; i < 4000; ++i)
+                            {
+                                const auto mov = utility::scan_mnemonic(*candidate_stringref + i, 5, "MOV");
+                                if (mov)
+                                {
+                                    if (injector::ReadMemory<uint32_t>(*mov + 1, true) == 19)
+                                    {
+                                        const auto next_fn_call1 = utility::scan_mnemonic(*mov, 100, "CALL");
+                                        if (next_fn_call1)
+                                        {
+                                            const auto next_fn_call2 = utility::scan_mnemonic(*next_fn_call1 + 5, 100, "CALL");
+                                            if (next_fn_call2)
+                                            {
+                                                const auto next_mov = utility::scan_mnemonic(*next_fn_call2, 100, "MOV");
+                                                if (next_mov)
+                                                {
+                                                    if (injector::ReadMemory<uint32_t>(*next_mov + 1, true) == 17)
+                                                    {
+                                                        _SetIsThrottlerTempDisabled = (void(__fastcall*)(bool disable))(injector::GetBranchDestination(*next_fn_call2).as_int());
+                                                        return _SetIsThrottlerTempDisabled(disable);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                else
+                    return _SetIsThrottlerTempDisabled(disable);
+            }();
         }
-        else
-            return _SetIsThrottlerTempDisabled(disable);
+        __except ((GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION) ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
+        {
+        }
     }
 
     static inline void MenuBarClearCache()
@@ -38,19 +82,21 @@ public:
             {
                 if (!_MenuBarClearCache)
                 {
-                    auto pattern = hook::pattern("45 33 C9 45 33 C0 33 D2");
-                    if (!pattern.empty())
+                    const auto current_module = GetModuleHandleW(NULL);
+                    const auto candidate_string = utility::scan_string(current_module, "Clear Cache");
+                    if (candidate_string)
                     {
-                        for (size_t i = 0; i < pattern.size(); i++)
+                        auto candidate_stringref = utility::scan_displacement_reference(current_module, *candidate_string);
+                        if (candidate_stringref)
                         {
-                            auto range_pattern = hook::pattern((uintptr_t)pattern.get(i).get<uintptr_t>(0), (uintptr_t)pattern.get(i).get<uintptr_t>(200), "45 ? ? ? 8D");
-                            if (!range_pattern.empty())
+                            *candidate_stringref -= 4;
+                            for (size_t i = 0; i < 100; ++i)
                             {
-                                auto str = injector::ReadRelativeOffset(range_pattern.get(0).get<uintptr_t>(6)).get_raw<char>();
-                                if (MemoryAddrValid(str) && std::string_view(str) == "Clear Cache")
+                                const auto disp = utility::resolve_displacement(*candidate_stringref - i);
+                                if (disp)
                                 {
-                                    _MenuBarClearCache = (void(__fastcall*)())(injector::ReadRelativeOffset(pattern.get(i).get<uintptr_t>(22)).as_int());
-                                    break;
+                                    _MenuBarClearCache = (void(__fastcall*)())*disp;
+                                    return _MenuBarClearCache();
                                 }
                             }
                         }
