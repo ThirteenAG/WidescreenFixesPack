@@ -595,6 +595,7 @@ project "KnightRider.PCSX2F.WidescreenFix"
 
 project "PCSX2F.XboxRainDroplets"
    kind "Makefile"
+   dependson { "KnightRider.PCSX2F.WidescreenFix" }
    add_ps2sdk()
    targetextension ".elf"
    setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin/", "pcsx2x64.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "PCSX2F.XboxRainDroplets")
@@ -605,7 +606,7 @@ project "PCSX2F.XboxRainDroplets"
 
 project "SplinterCellDoubleAgent.PCSX2F.WidescreenFix"
    kind "Makefile"
-   dependson { "KnightRider.PCSX2F.WidescreenFix" }
+   dependson { "PCSX2F.XboxRainDroplets" }
    add_ps2sdk()
    targetextension ".elf"
    setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin/", "pcsx2x64.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SplinterCellDoubleAgent.PCSX2F.WidescreenFix")
@@ -702,6 +703,7 @@ project "MidnightClubLARemix.PPSSPP.FusionMod"
 
 project "PPSSPP.XboxRainDroplets"
    kind "Makefile"
+   dependson { "MidnightClubLARemix.PPSSPP.FusionMod" }
    add_pspsdk()
    targetextension ".prx"
    setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/PPSSPP.XboxRainDroplets/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "PPSSPP.XboxRainDroplets")
@@ -709,7 +711,7 @@ project "PPSSPP.XboxRainDroplets"
 
 project "SplinterCellEssentials.PPSSPP.FusionMod"
    kind "Makefile"
-   dependson { "MidnightClubLARemix.PPSSPP.FusionMod" }
+   dependson { "PPSSPP.XboxRainDroplets" }
    add_pspsdk()
    targetextension ".prx"
    setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.FusionMod/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SplinterCellEssentials.PPSSPP.FusionMod")
