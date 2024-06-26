@@ -27,7 +27,7 @@ jobs:
     - name: Checkout Repo
       uses: actions/checkout@v4
       with:
-        submodules: 'true'
+        submodules: recursive
     - name: Build Solution
       uses: ./.github/workflows/build_all
     - name: Update Tags
