@@ -188,12 +188,17 @@ void Init()
     CIniReader iniReader("");
     bEnableDoorSkip = iniReader.ReadInteger("MAIN", "EnableDoorSkip", 1) != 0;
     bUnthrottleEmuDuringDoorSkip = iniReader.ReadInteger("MAIN", "UnthrottleEmuDuringDoorSkip", 1) != 0;
-    bLightSyncRGB = iniReader.ReadInteger("MAIN", "LightSyncRGB", 1) != 0;
 
-    if (!bEnableDoorSkip && !bUnthrottleEmuDuringDoorSkip && !bLightSyncRGB)
+    if (!bEnableDoorSkip && !bUnthrottleEmuDuringDoorSkip)
         return;
 
     std::thread(PluginThread, exitSignal.get_future()).detach();
+}
+
+void InitLED()
+{
+    CIniReader iniReader("");
+    bLightSyncRGB = iniReader.ReadInteger("MAIN", "LightSyncRGB", 1) != 0;
 
     if (bLightSyncRGB)
     {
@@ -287,6 +292,7 @@ CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
+        CallbackHandler::RegisterCallback(InitLED);
         CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init);
     });
 }
