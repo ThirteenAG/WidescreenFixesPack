@@ -121,6 +121,7 @@ FLTColor gColor = { 0 };
 uint32_t bLightSyncRGB;
 float* __cdecl FGetHSV(float* dest, uint8_t H, uint8_t S, uint8_t V, uint32_t unk)
 {
+    bool bChangeColor = false;
     if ((H == 0x41 && S == 0xC8) || (H == 0x2C && S == 0xCC)  || (H == 0x00 && S == 0xFF && V == 0xFF))
     {
         auto unk_ptr = unk + 20;
@@ -129,20 +130,21 @@ float* __cdecl FGetHSV(float* dest, uint8_t H, uint8_t S, uint8_t V, uint32_t un
             uint32_t unk_val = *(uint32_t*)(unk_ptr);
             if (unk_val == 862 ||unk_val == 879 || unk_val == 881 || unk_val == 875)
             {
+                bChangeColor = true;
                 if (!gColor.empty())
                 {
                     dest[0] = gColor.R;
                     dest[1] = gColor.G;
                     dest[2] = gColor.B;
                     dest[3] = 1.0f;
-                    return dest;
-                }
-                if (gBlacklistIndicators)
-                {
-                    dest[0] *= gVisibility;
-                    dest[1] *= gVisibility;
-                    dest[2] *= gVisibility;
-                    dest[3] *= gVisibility;
+
+                    if (gBlacklistIndicators)
+                    {
+                        dest[0] *= gVisibility;
+                        dest[1] *= gVisibility;
+                        dest[2] *= gVisibility;
+                        dest[3] *= gVisibility;
+                    }
                     return dest;
                 }
             }
@@ -200,6 +202,15 @@ float* __cdecl FGetHSV(float* dest, uint8_t H, uint8_t S, uint8_t V, uint32_t un
     dest[1] = g;
     dest[2] = b;
     dest[3] = a;
+
+    if (bChangeColor && gBlacklistIndicators)
+    {
+        dest[0] *= gVisibility;
+        dest[1] *= gVisibility;
+        dest[2] *= gVisibility;
+        dest[3] *= gVisibility;
+    }
+
     return dest;
 }
 

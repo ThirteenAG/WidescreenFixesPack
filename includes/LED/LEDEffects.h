@@ -417,7 +417,7 @@ public:
         LogiLedSetTargetDevice(LOGI_DEVICETYPE_PERKEY_RGB);
         auto& arr = dead ? keysCardiogramDead : keysCardiogram;
         static auto TIMERA = Timer();
-        static auto counter = 0;
+        static size_t counter = 0;
         auto interval = 5 * arr.size();
 
         if (TIMERA >= interval)
@@ -436,7 +436,7 @@ public:
         LogiLedSetTargetDevice(LOGI_DEVICETYPE_PERKEY_RGB);
         auto& arr = dead ? keysCardiogramNumpadDead : keysCardiogramNumpad;
         static auto TIMERB = Timer();
-        static auto counter = 0;
+        static size_t counter = 0;
         auto interval = 150 * arr.size();
 
         if (TIMERB >= interval)
