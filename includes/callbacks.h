@@ -320,15 +320,11 @@ private:
     static inline void WINAPI GetSystemTimeAsFileTimeHook(LPFILETIME lpSystemTimeAsFileTime)
     {
         auto& threadParams = GetCallbackParamsList();
-        auto it = std::remove_if(threadParams.begin(), threadParams.end(), [](auto& p)
-        {
-            return !p.pattern.has_value() || !p.pattern.value().clear().empty();
-        });
 
-        if (it != threadParams.end())
+        for (auto& it : threadParams)
         {
-            it->fn();
-            threadParams.erase(it, threadParams.end());
+            if (!it.pattern.has_value() || !it.pattern.value().clear().empty())
+                it.fn();
         }
 
         shGetSystemTimeAsFileTime.stdcall<ReturnType<decltype(GetSystemTimeAsFileTime)>>(lpSystemTimeAsFileTime);
