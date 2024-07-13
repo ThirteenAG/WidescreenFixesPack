@@ -70,6 +70,7 @@ on:
         - sc
         - scarface
         - scc
+        - scb
         - scct
         - scda
         - scdaps2
@@ -164,6 +165,7 @@ env:
   sc: "/t:Win32\\SplinterCell\\SplinterCell_WidescreenFix"
   scarface: "/t:Win32\\Scarface_FusionFix"
   scc: "/t:Win32\\SplinterCell\\SplinterCellConviction_FusionMod"
+  scb: "/t:Win32\\SplinterCell\\SplinterCellBlacklist_FusionMod"
   scct: "/t:Win32\\SplinterCell\\SplinterCellChaosTheory_WidescreenFix"
   scda: "/t:Win32\\SplinterCell\\SplinterCellDoubleAgent_WidescreenFix"
   scdaps2: "/t:PCSX2F\\SplinterCellDoubleAgent_PCSX2F_WidescreenFix"

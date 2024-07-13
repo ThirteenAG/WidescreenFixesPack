@@ -1,0 +1,2721 @@
+<?xml version="1.0" standalone="yes"?>
+<ExtractionWaveConfig xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ExtractionWaveConfig-schema.xsd">
+
+	<EnemyConfigs>
+
+		<!-- PISTOL -->
+		<Enemy id="Pistol-1">AI_Coop_Pistol_Makarov</Enemy>
+		<Enemy id="Pistol-2">AI_Coop_Pistol_F40</Enemy>
+		<Enemy id="Pistol-H1">AI_Coop_Helmet_Russian_Pistol_Makarov</Enemy>
+		<Enemy id="Pistol-H2">AI_Coop_Helmet_Russian_Pistol_F40</Enemy>
+
+		<!-- RIFLE -->
+		<Enemy id="Rifle-1">AI_Coop_Rifle_AK47</Enemy>
+		<Enemy id="Rifle-2">AI_Coop_Rifle_AKS74U</Enemy>
+		<Enemy id="Rifle-H1">AI_Coop_Helmet_Russian_Rifle_AK47</Enemy>
+		<Enemy id="Rifle-H2">AI_Coop_Helmet_Russian_Rifle_AKS74U</Enemy>
+
+		<!-- SHOTGUN -->
+		<Enemy id="Shotgun-1">AI_Coop_Shotgun</Enemy>
+		<Enemy id="Shotgun-H1">AI_Coop_Helmet_Russian_Shotgun</Enemy>
+
+		<!-- SMG -->
+		<Enemy id="SMG-1">AI_Coop_SMG_MAC11</Enemy>
+		<Enemy id="SMG-2">AI_Coop_SMG_PP2000</Enemy>
+		<Enemy id="SMG-3">AI_Coop_SMG_Scorpion</Enemy>
+		<Enemy id="SMG-H1">AI_Coop_Helmet_Russian_SMG_MAC11</Enemy>
+		<Enemy id="SMG-H2">AI_Coop_Helmet_Russian_SMG_PP2000</Enemy>
+		<Enemy id="SMG-H3">AI_Coop_Helmet_Russian_SMG_Scorpion</Enemy>
+
+		<!-- ELITE -->
+		<Enemy id="Elite-1">AI_Coop_Elite_MAC11</Enemy>
+		<Enemy id="Elite-2">AI_Coop_Elite_PP2000</Enemy>
+		<Enemy id="Elite-3">AI_Coop_Elite_Scorpion</Enemy>
+		<Enemy id="Elite-H1">AI_Coop_Helmet_Elite_MAC11</Enemy>
+		<Enemy id="Elite-H2">AI_Coop_Helmet_Elite_PP2000</Enemy>
+		<Enemy id="Elite-H3">AI_Coop_Helmet_Elite_Scorpion</Enemy>
+
+		<!-- SNIPER -->
+		<Enemy id="Sniper">AI_Coop_Sniper_60m</Enemy>
+
+		<!-- OTHER -->
+		<Enemy id="Dog">AI_Dog</Enemy>
+		<Enemy id="Tech">AI_Coop_Tech</Enemy>
+		<Enemy id="Heavy">AI_Coop_Heavy</Enemy>
+		<Enemy id="Shielded_Heavy">AI_Coop_ShieldedHeavy</Enemy>
+
+	</EnemyConfigs>
+
+	<ObjectiveConfigs>
+
+		<ObjectiveCategories>
+			<ObjectiveCategory id="Easy" />
+			<ObjectiveCategory id="Medium" />
+			<ObjectiveCategory id="Hard" />
+		</ObjectiveCategories>
+
+		<HVTObjectiveConfigs>
+
+			<!-- Easy HVT Objectives -->
+			<HVTObjective id="HVTObjective_Easy1" timeLimit="240" category="Easy">
+				<HVTs>
+					<Enemy idref="Pistol-1" quantity="1" spawnGroup="Street_South" />
+				</HVTs>
+			</HVTObjective>
+
+			<!-- Medium HVT Objectives -->
+			<HVTObjective id="HVTObjective_Medium1" timeLimit="180" category="Medium">
+				<HVTs>
+					<Enemy idref="Pistol-1" quantity="1" spawnGroup="Embassy_South" />
+					<Enemy idref="Pistol-1" quantity="1" spawnGroup="Street_North" />
+				</HVTs>
+			</HVTObjective>
+
+			<HVTObjective id="HVTObjective_Medium2" timeLimit="180" category="Medium">
+				<HVTs>
+					<Enemy idref="SMG-3" quantity="1" spawnGroup="Street_North" />
+					<Enemy idref="Shotgun-1" quantity="1" spawnGroup="Street_South" fTimeDelay="30" />
+				</HVTs>
+			</HVTObjective>
+
+			<!-- Hard HVT Objectives -->
+			<HVTObjective id="HVTObjective_Hard1" timeLimit="240" category="Hard">
+				<HVTs>
+					<Enemy idref="Elite-3" quantity="1" spawnGroup="Street_North" />
+					<Enemy idref="Elite-3" quantity="1" spawnGroup="Street_South" />
+					<Enemy idref="Elite-3" quantity="1" spawnGroup="Embassy_North" fTimeDelay="15" />
+					<Enemy idref="Elite-3" quantity="1" spawnGroup="Embassy_South" fTimeDelay="15" />
+					<Enemy idref="Elite-3" quantity="1" spawnGroup="Street_North" fTimeDelay="30" />
+					<Enemy idref="Elite-3" quantity="1" spawnGroup="Street_South" fTimeDelay="30" />
+				</HVTs>
+			</HVTObjective>
+
+		</HVTObjectiveConfigs>
+
+	</ObjectiveConfigs>
+
+	<WaveConfigs>
+
+		<!-- PISTOL -->
+		<Wave id="1">
+			<RandomEnemyGroupConfigs>
+				<RandomEnemyGroup id="Pistol">
+					<Enemy idref="Pistol-1" chanceEncounter="100" />
+				</RandomEnemyGroup>
+				<RandomEnemyGroup id="Dog">
+					<Enemy idref="Dog" chanceEncounter="100" />
+				</RandomEnemyGroup>
+				<RandomEnemyGroup id="All">
+					<Enemy idref="Pistol-1" chanceEncounter="50" />
+					<Enemy idref="Dog" chanceEncounter="50" />
+					<Enemy idref="Rifle-1" chanceEncounter="50" />
+					<Enemy idref="Pistol-H1" chanceEncounter="50" />
+					<Enemy idref="Rifle-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-1" chanceEncounter="50" />
+					<Enemy idref="Heavy" chanceEncounter="50" />
+					<Enemy idref="Pistol-2" chanceEncounter="50" />
+					<Enemy idref="Rifle-2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-1" chanceEncounter="50" />
+					<Enemy idref="Tech" chanceEncounter="50" />
+					<Enemy idref="Shielded_Heavy" chanceEncounter="50" />
+					<Enemy idref="Rifle-H2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-H2" chanceEncounter="50" />
+					<Enemy idref="Elite-H3" chanceEncounter="50" />
+					<Enemy idref="SMG-H3" chanceEncounter="50" />
+					<Enemy idref="Elite-3" chanceEncounter="50" />
+				</RandomEnemyGroup>
+			</RandomEnemyGroupConfigs>
+			<SubWaveConfigs>
+				<SubWave id="Wave1 Subwave 1" bAllowRandomSpawn="false">
+					<StartCondition type="Time">0</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave1 Subwave 2">
+					<StartCondition type="Time">10</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+			</SubWaveConfigs>
+		</Wave>
+
+		<!-- RIFLE -->
+		<Wave id="2">
+			<RandomEnemyGroupConfigs>
+
+				<RandomEnemyGroup id="PR">
+					<Enemy idref="Pistol-1" chanceEncounter="20" />
+					<Enemy idref="Rifle-1" chanceEncounter="80" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="All">
+					<Enemy idref="Pistol-1" chanceEncounter="50" />
+					<Enemy idref="Dog" chanceEncounter="50" />
+					<Enemy idref="Rifle-1" chanceEncounter="50" />
+					<Enemy idref="Pistol-H1" chanceEncounter="50" />
+					<Enemy idref="Rifle-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-1" chanceEncounter="50" />
+					<Enemy idref="Heavy" chanceEncounter="50" />
+					<Enemy idref="Pistol-2" chanceEncounter="50" />
+					<Enemy idref="Rifle-2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-1" chanceEncounter="50" />
+					<Enemy idref="Tech" chanceEncounter="50" />
+					<Enemy idref="Shielded_Heavy" chanceEncounter="50" />
+					<Enemy idref="Rifle-H2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-H2" chanceEncounter="50" />
+					<Enemy idref="Elite-H3" chanceEncounter="50" />
+					<Enemy idref="SMG-H3" chanceEncounter="50" />
+					<Enemy idref="Elite-3" chanceEncounter="50" />
+				</RandomEnemyGroup>
+			</RandomEnemyGroupConfigs>
+			<SubWaveConfigs>
+
+				<SubWave id="Wave2 Subwave 1" bAllowRandomSpawn="false">
+					<StartCondition type="Time">0</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave2 Subwave 2">
+					<StartCondition type="Kills">3</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+			</SubWaveConfigs>
+		</Wave>
+
+		<!-- DOG -->
+		<Wave id="3">
+			<RandomEnemyGroupConfigs>
+
+				<RandomEnemyGroup id="PR">
+					<Enemy idref="Pistol-1" chanceEncounter="75" />
+					<Enemy idref="Rifle-1" chanceEncounter="25" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Dog">
+					<Enemy idref="Dog" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="All">
+					<Enemy idref="Pistol-1" chanceEncounter="50" />
+					<Enemy idref="Dog" chanceEncounter="50" />
+					<Enemy idref="Rifle-1" chanceEncounter="50" />
+					<Enemy idref="Pistol-H1" chanceEncounter="50" />
+					<Enemy idref="Rifle-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-1" chanceEncounter="50" />
+					<Enemy idref="Heavy" chanceEncounter="50" />
+					<Enemy idref="Pistol-2" chanceEncounter="50" />
+					<Enemy idref="Rifle-2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-1" chanceEncounter="50" />
+					<Enemy idref="Tech" chanceEncounter="50" />
+					<Enemy idref="Shielded_Heavy" chanceEncounter="50" />
+					<Enemy idref="Rifle-H2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-H2" chanceEncounter="50" />
+					<Enemy idref="Elite-H3" chanceEncounter="50" />
+					<Enemy idref="SMG-H3" chanceEncounter="50" />
+					<Enemy idref="Elite-3" chanceEncounter="50" />
+				</RandomEnemyGroup>
+			</RandomEnemyGroupConfigs>
+			<SubWaveConfigs>
+
+				<SubWave id="Wave3 Subwave 1" bAllowRandomSpawn="false">
+					<StartCondition type="Time">0</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave3 Subwave 2">
+					<StartCondition type="Kills">3</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave3 Subwave 3">
+					<StartCondition type="Kills">7</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+			</SubWaveConfigs>
+		</Wave>
+
+		<!-- SHOTGUN -->
+		<Wave id="4">
+			<RandomEnemyGroupConfigs>
+
+				<RandomEnemyGroup id="PR">
+					<Enemy idref="Pistol-1" chanceEncounter="50" />
+					<Enemy idref="Rifle-1" chanceEncounter="50" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Dog">
+					<Enemy idref="Dog" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Rifle">
+					<Enemy idref="Rifle-1" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="All">
+					<Enemy idref="Pistol-1" chanceEncounter="50" />
+					<Enemy idref="Dog" chanceEncounter="50" />
+					<Enemy idref="Rifle-1" chanceEncounter="50" />
+					<Enemy idref="Pistol-H1" chanceEncounter="50" />
+					<Enemy idref="Rifle-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-1" chanceEncounter="50" />
+					<Enemy idref="Heavy" chanceEncounter="50" />
+					<Enemy idref="Pistol-2" chanceEncounter="50" />
+					<Enemy idref="Rifle-2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-1" chanceEncounter="50" />
+					<Enemy idref="Tech" chanceEncounter="50" />
+					<Enemy idref="Shielded_Heavy" chanceEncounter="50" />
+					<Enemy idref="Rifle-H2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-H2" chanceEncounter="50" />
+					<Enemy idref="Elite-H3" chanceEncounter="50" />
+					<Enemy idref="SMG-H3" chanceEncounter="50" />
+					<Enemy idref="Elite-3" chanceEncounter="50" />
+				</RandomEnemyGroup>
+			</RandomEnemyGroupConfigs>
+			<SubWaveConfigs>
+
+				<SubWave id="Wave4 Subwave 1" bAllowRandomSpawn="false">
+					<StartCondition type="Time">0</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave4 Subwave 2">
+					<StartCondition type="Kills">4</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave4 Subwave 3">
+					<StartCondition type="Kills">7</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave4 Subwave 4">
+					<StartCondition type="Kills">10</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+			</SubWaveConfigs>
+		</Wave>
+
+		<!-- HVT -->
+		<Wave id="5">
+			<HVTObjective idref="HVTObjective_Easy1" />
+			<RandomEnemyGroupConfigs>
+
+				<RandomEnemyGroup id="Easy">
+					<Enemy idref="Pistol-1" chanceEncounter="50" />
+					<Enemy idref="Rifle-1" chanceEncounter="50" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="All">
+					<Enemy idref="Pistol-1" chanceEncounter="50" />
+					<Enemy idref="Dog" chanceEncounter="50" />
+					<Enemy idref="Rifle-1" chanceEncounter="50" />
+					<Enemy idref="Pistol-H1" chanceEncounter="50" />
+					<Enemy idref="Rifle-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-1" chanceEncounter="50" />
+					<Enemy idref="Heavy" chanceEncounter="50" />
+					<Enemy idref="Pistol-2" chanceEncounter="50" />
+					<Enemy idref="Rifle-2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-1" chanceEncounter="50" />
+					<Enemy idref="Tech" chanceEncounter="50" />
+					<Enemy idref="Shielded_Heavy" chanceEncounter="50" />
+					<Enemy idref="Rifle-H2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-H2" chanceEncounter="50" />
+					<Enemy idref="Elite-H3" chanceEncounter="50" />
+					<Enemy idref="SMG-H3" chanceEncounter="50" />
+					<Enemy idref="Elite-3" chanceEncounter="50" />
+				</RandomEnemyGroup>
+			</RandomEnemyGroupConfigs>
+
+			<SubWaveConfigs>
+				<SubWave id="Wave5 Subwave 1" bAllowRandomSpawn="false" startObjective="true">
+					<StartCondition type="Time">0</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave5 Subwave 2">
+					<StartCondition type="Time">5</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave5 Subwave 3">
+					<StartCondition type="Kills">4</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave5 Subwave 4">
+					<StartCondition type="Kills">5</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave5 Subwave 5">
+					<StartCondition type="Kills">8</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+			</SubWaveConfigs>
+		</Wave>
+
+		<!-- HELMET PISTOL -->
+		<Wave id="6">
+			<RandomEnemyGroupConfigs>
+
+				<RandomEnemyGroup id="HpRD">
+					<Enemy idref="Pistol-H1" chanceEncounter="60" />
+					<Enemy idref="Rifle-1" chanceEncounter="20" />
+					<Enemy idref="Dog" chanceEncounter="20" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Helmet_Pistol">
+					<Enemy idref="Pistol-H1" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="All">
+					<Enemy idref="Pistol-1" chanceEncounter="50" />
+					<Enemy idref="Dog" chanceEncounter="50" />
+					<Enemy idref="Rifle-1" chanceEncounter="50" />
+					<Enemy idref="Pistol-H1" chanceEncounter="50" />
+					<Enemy idref="Rifle-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-1" chanceEncounter="50" />
+					<Enemy idref="Heavy" chanceEncounter="50" />
+					<Enemy idref="Pistol-2" chanceEncounter="50" />
+					<Enemy idref="Rifle-2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-1" chanceEncounter="50" />
+					<Enemy idref="Tech" chanceEncounter="50" />
+					<Enemy idref="Shielded_Heavy" chanceEncounter="50" />
+					<Enemy idref="Rifle-H2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-H2" chanceEncounter="50" />
+					<Enemy idref="Elite-H3" chanceEncounter="50" />
+					<Enemy idref="SMG-H3" chanceEncounter="50" />
+					<Enemy idref="Elite-3" chanceEncounter="50" />
+				</RandomEnemyGroup>
+			</RandomEnemyGroupConfigs>
+			<SubWaveConfigs>
+				<SubWave id="Wave6 Subwave 1" bAllowRandomSpawn="false">
+					<StartCondition type="Time">0</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave6 Subwave 2">
+					<StartCondition type="Time">10</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave6 Subwave 3">
+					<StartCondition type="Kills">6</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave6 Subwave 4">
+					<StartCondition type="Kills">13</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+			</SubWaveConfigs>
+		</Wave>
+
+		<!-- HELMET SHOTGUN -->
+		<Wave id="7">
+			<RandomEnemyGroupConfigs>
+
+				<RandomEnemyGroup id="HrPD">
+					<Enemy idref="Rifle-H1" chanceEncounter="60" />
+					<Enemy idref="Pistol-1" chanceEncounter="20" />
+					<Enemy idref="Dog" chanceEncounter="20" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="HrRD">
+					<Enemy idref="Rifle-H1" chanceEncounter="60" />
+					<Enemy idref="Rifle-1" chanceEncounter="20" />
+					<Enemy idref="Dog" chanceEncounter="20" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="PR">
+					<Enemy idref="Pistol-1" chanceEncounter="50" />
+					<Enemy idref="Rifle-1" chanceEncounter="50" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Dog">
+					<Enemy idref="Dog" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Helmet_Rifle">
+					<Enemy idref="Rifle-H1" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="All">
+					<Enemy idref="Pistol-1" chanceEncounter="50" />
+					<Enemy idref="Dog" chanceEncounter="50" />
+					<Enemy idref="Rifle-1" chanceEncounter="50" />
+					<Enemy idref="Pistol-H1" chanceEncounter="50" />
+					<Enemy idref="Rifle-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-1" chanceEncounter="50" />
+					<Enemy idref="Heavy" chanceEncounter="50" />
+					<Enemy idref="Pistol-2" chanceEncounter="50" />
+					<Enemy idref="Rifle-2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-1" chanceEncounter="50" />
+					<Enemy idref="Tech" chanceEncounter="50" />
+					<Enemy idref="Shielded_Heavy" chanceEncounter="50" />
+					<Enemy idref="Rifle-H2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-H2" chanceEncounter="50" />
+					<Enemy idref="Elite-H3" chanceEncounter="50" />
+					<Enemy idref="SMG-H3" chanceEncounter="50" />
+					<Enemy idref="Elite-3" chanceEncounter="50" />
+				</RandomEnemyGroup>
+			</RandomEnemyGroupConfigs>
+			<SubWaveConfigs>
+				<SubWave id="Wave7 Subwave 1" bAllowRandomSpawn="false">
+					<StartCondition type="Time">0</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave7 Subwave 2">
+					<StartCondition type="Kills">2</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave7 Subwave 3">
+					<StartCondition type="Kills">8</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave7 Subwave 4">
+					<StartCondition type="Kills">10</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave7 Subwave 5">
+					<StartCondition type="Kills">15</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+			</SubWaveConfigs>
+		</Wave>
+
+		<!-- HELMET RIFLE -->
+		<Wave id="8">
+			<RandomEnemyGroupConfigs>
+				<RandomEnemyGroup id="HrHpD">
+					<Enemy idref="Rifle-H1" chanceEncounter="60" />
+					<Enemy idref="Pistol-H1" chanceEncounter="20" />
+					<Enemy idref="Dog" chanceEncounter="20" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="PRD">
+					<Enemy idref="Pistol-1" chanceEncounter="60" />
+					<Enemy idref="Rifle-1" chanceEncounter="20" />
+					<Enemy idref="Dog" chanceEncounter="20" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Helmet_Rifle">
+					<Enemy idref="Rifle-H1" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="All">
+					<Enemy idref="Pistol-1" chanceEncounter="50" />
+					<Enemy idref="Dog" chanceEncounter="50" />
+					<Enemy idref="Rifle-1" chanceEncounter="50" />
+					<Enemy idref="Pistol-H1" chanceEncounter="50" />
+					<Enemy idref="Rifle-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-1" chanceEncounter="50" />
+					<Enemy idref="Heavy" chanceEncounter="50" />
+					<Enemy idref="Pistol-2" chanceEncounter="50" />
+					<Enemy idref="Rifle-2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-1" chanceEncounter="50" />
+					<Enemy idref="Tech" chanceEncounter="50" />
+					<Enemy idref="Shielded_Heavy" chanceEncounter="50" />
+					<Enemy idref="Rifle-H2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-H2" chanceEncounter="50" />
+					<Enemy idref="Elite-H3" chanceEncounter="50" />
+					<Enemy idref="SMG-H3" chanceEncounter="50" />
+					<Enemy idref="Elite-3" chanceEncounter="50" />
+				</RandomEnemyGroup>
+			</RandomEnemyGroupConfigs>
+
+			<SubWaveConfigs>
+				<SubWave id="Wave8 Subwave 1" bAllowRandomSpawn="false">
+					<StartCondition type="Time">0</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave8 Subwave 2">
+					<StartCondition type="Time">1</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave8 Subwave 3">
+					<StartCondition type="Kills">9</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave8 Subwave 4">
+					<StartCondition type="Kills">13</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave8 Subwave 5">
+					<StartCondition type="Kills">16</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave8 Subwave 6">
+					<StartCondition type="Kills">17</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+			</SubWaveConfigs>
+		</Wave>
+
+		<!-- ELITE -->
+		<Wave id="9">
+			<RandomEnemyGroupConfigs>
+				<RandomEnemyGroup id="HrHpD">
+					<Enemy idref="Rifle-H1" chanceEncounter="60" />
+					<Enemy idref="Pistol-H1" chanceEncounter="20" />
+					<Enemy idref="Dog" chanceEncounter="20" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="PRD">
+					<Enemy idref="Pistol-1" chanceEncounter="60" />
+					<Enemy idref="Rifle-1" chanceEncounter="20" />
+					<Enemy idref="Dog" chanceEncounter="20" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Elite">
+					<Enemy idref="Elite-1" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Pistol">
+					<Enemy idref="Pistol-1" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="All">
+					<Enemy idref="Pistol-1" chanceEncounter="50" />
+					<Enemy idref="Dog" chanceEncounter="50" />
+					<Enemy idref="Rifle-1" chanceEncounter="50" />
+					<Enemy idref="Pistol-H1" chanceEncounter="50" />
+					<Enemy idref="Rifle-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-1" chanceEncounter="50" />
+					<Enemy idref="Heavy" chanceEncounter="50" />
+					<Enemy idref="Pistol-2" chanceEncounter="50" />
+					<Enemy idref="Rifle-2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-1" chanceEncounter="50" />
+					<Enemy idref="Tech" chanceEncounter="50" />
+					<Enemy idref="Shielded_Heavy" chanceEncounter="50" />
+					<Enemy idref="Rifle-H2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-H2" chanceEncounter="50" />
+					<Enemy idref="Elite-H3" chanceEncounter="50" />
+					<Enemy idref="SMG-H3" chanceEncounter="50" />
+					<Enemy idref="Elite-3" chanceEncounter="50" />
+				</RandomEnemyGroup>
+			</RandomEnemyGroupConfigs>
+
+			<SubWaveConfigs>
+				<SubWave id="Wave9 Subwave 1" bAllowRandomSpawn="false">
+					<StartCondition type="Time">0</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave9 Subwave 2">
+					<StartCondition type="Time">15</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave9 Subwave 3">
+					<StartCondition type="Kills">3</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave9 Subwave 4">
+					<StartCondition type="Kills">8</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave9 Subwave 5">
+					<StartCondition type="Kills">15</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave9 Subwave 6">
+					<StartCondition type="Kills">18</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave9 Subwave 7">
+					<StartCondition type="Kills">23</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+			</SubWaveConfigs>
+		</Wave>
+
+		<!-- HVT -->
+		<Wave id="10">
+			<HVTObjective idref="HVTObjective_Medium1" />
+			<RandomEnemyGroupConfigs>
+				<RandomEnemyGroup id="Heavy">
+					<Enemy idref="Heavy" chanceEncounter="100" />
+				</RandomEnemyGroup>
+				<RandomEnemyGroup id="PR">
+					<Enemy idref="Pistol-1" chanceEncounter="25" />
+					<Enemy idref="Rifle-1" chanceEncounter="75" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="All">
+					<Enemy idref="Pistol-1" chanceEncounter="50" />
+					<Enemy idref="Dog" chanceEncounter="50" />
+					<Enemy idref="Rifle-1" chanceEncounter="50" />
+					<Enemy idref="Pistol-H1" chanceEncounter="50" />
+					<Enemy idref="Rifle-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-1" chanceEncounter="50" />
+					<Enemy idref="Heavy" chanceEncounter="50" />
+					<Enemy idref="Pistol-2" chanceEncounter="50" />
+					<Enemy idref="Rifle-2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-1" chanceEncounter="50" />
+					<Enemy idref="Tech" chanceEncounter="50" />
+					<Enemy idref="Shielded_Heavy" chanceEncounter="50" />
+					<Enemy idref="Rifle-H2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-H2" chanceEncounter="50" />
+					<Enemy idref="Elite-H3" chanceEncounter="50" />
+					<Enemy idref="SMG-H3" chanceEncounter="50" />
+					<Enemy idref="Elite-3" chanceEncounter="50" />
+				</RandomEnemyGroup>
+			</RandomEnemyGroupConfigs>
+			<SubWaveConfigs>
+				<SubWave id="Wave10 Subwave 1" bAllowRandomSpawn="false" startObjective="true">
+					<StartCondition type="Time">0</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave10 Subwave 2">
+					<StartCondition type="Time">15</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave10 Subwave 3">
+					<StartCondition type="Kills">4</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave10 Subwave 4">
+					<StartCondition type="Kills">8</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave10 Subwave 5">
+					<StartCondition type="Kills">12</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave10 Subwave 6">
+					<StartCondition type="Kills">20</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+			</SubWaveConfigs>
+		</Wave>
+
+		<!-- HEAVY -->
+		<Wave id="11">
+			<RandomEnemyGroupConfigs>
+				<RandomEnemyGroup id="PRD">
+					<Enemy idref="Pistol-2" chanceEncounter="60" />
+					<Enemy idref="Rifle-2" chanceEncounter="20" />
+					<Enemy idref="Dog" chanceEncounter="20" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="PS">
+					<Enemy idref="Pistol-2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-1" chanceEncounter="50" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Pistol">
+					<Enemy idref="Pistol-2" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Rifle">
+					<Enemy idref="Rifle-2" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Heavy">
+					<Enemy idref="Heavy" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="All">
+					<Enemy idref="Pistol-1" chanceEncounter="50" />
+					<Enemy idref="Dog" chanceEncounter="50" />
+					<Enemy idref="Rifle-1" chanceEncounter="50" />
+					<Enemy idref="Pistol-H1" chanceEncounter="50" />
+					<Enemy idref="Rifle-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-1" chanceEncounter="50" />
+					<Enemy idref="Heavy" chanceEncounter="50" />
+					<Enemy idref="Pistol-2" chanceEncounter="50" />
+					<Enemy idref="Rifle-2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-1" chanceEncounter="50" />
+					<Enemy idref="Tech" chanceEncounter="50" />
+					<Enemy idref="Shielded_Heavy" chanceEncounter="50" />
+					<Enemy idref="Rifle-H2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-H2" chanceEncounter="50" />
+					<Enemy idref="Elite-H3" chanceEncounter="50" />
+					<Enemy idref="SMG-H3" chanceEncounter="50" />
+					<Enemy idref="Elite-3" chanceEncounter="50" />
+				</RandomEnemyGroup>
+			</RandomEnemyGroupConfigs>
+			<SubWaveConfigs>
+
+				<SubWave id="Wave11 Subwave 1" bAllowRandomSpawn="false">
+					<StartCondition type="Time">0</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave11 Subwave 2">
+					<StartCondition type="Kills">2</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave11 Subwave 3">
+					<StartCondition type="Kills">6</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave11 Subwave 4">
+					<StartCondition type="Kills">7</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave11 Subwave 5">
+					<StartCondition type="Kills">8</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave11 Subwave 6">
+					<StartCondition type="Kills">11</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave11 Subwave 7">
+					<StartCondition type="Kills">15</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave11 Subwave 8">
+					<StartCondition type="Kills">24</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave11 Subwave 9">
+					<StartCondition type="Kills">26</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+			</SubWaveConfigs>
+		</Wave>
+
+		<!-- SNIPER -->
+		<Wave id="12">
+			<RandomEnemyGroupConfigs>
+				<RandomEnemyGroup id="Pistol">
+					<Enemy idref="Pistol-2" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Dog">
+					<Enemy idref="Dog" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Heavy">
+					<Enemy idref="Heavy" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Shotgun">
+					<Enemy idref="Shotgun-1" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Rifle">
+					<Enemy idref="Rifle-2" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="All">
+					<Enemy idref="Pistol-1" chanceEncounter="50" />
+					<Enemy idref="Dog" chanceEncounter="50" />
+					<Enemy idref="Rifle-1" chanceEncounter="50" />
+					<Enemy idref="Pistol-H1" chanceEncounter="50" />
+					<Enemy idref="Rifle-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-1" chanceEncounter="50" />
+					<Enemy idref="Heavy" chanceEncounter="50" />
+					<Enemy idref="Pistol-2" chanceEncounter="50" />
+					<Enemy idref="Rifle-2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-1" chanceEncounter="50" />
+					<Enemy idref="Tech" chanceEncounter="50" />
+					<Enemy idref="Shielded_Heavy" chanceEncounter="50" />
+					<Enemy idref="Rifle-H2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-H2" chanceEncounter="50" />
+					<Enemy idref="Elite-H3" chanceEncounter="50" />
+					<Enemy idref="SMG-H3" chanceEncounter="50" />
+					<Enemy idref="Elite-3" chanceEncounter="50" />
+				</RandomEnemyGroup>
+			</RandomEnemyGroupConfigs>
+
+			<SubWaveConfigs>
+				<SubWave id="Wave12 Subwave 1" bAllowRandomSpawn="false">
+					<StartCondition type="Time">0</StartCondition>
+					<Enemies>
+						<Enemy idref="Sniper" quantity="1" spawnGroup="Sniper_1" sniperAttractors="Sniper_1_A" />
+						<Enemy idref="Sniper" quantity="1" spawnGroup="Sniper_3" sniperAttractors="Sniper_3_A" />
+						<Enemy idref="Sniper" quantity="1" spawnGroup="Sniper_3" sniperAttractors="Sniper_3_C" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave12 Subwave 2">
+					<StartCondition type="Time">15</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave12 Subwave 3">
+					<StartCondition type="Kills">6</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave12 Subwave 4">
+					<StartCondition type="Kills">14</StartCondition>
+					<Enemies>
+						<Enemy idref="Sniper" quantity="1" spawnGroup="Sniper_3" sniperAttractors="Sniper_3_B" />
+						<Enemy idref="Sniper" quantity="1" spawnGroup="Sniper_3" sniperAttractors="Sniper_3_D" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave12 Subwave 5">
+					<StartCondition type="Kills">20</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave12 Subwave 6">
+					<StartCondition type="Kills">24</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave12 Subwave 7">
+					<StartCondition type="Kills">26</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave12 Subwave 8">
+					<StartCondition type="Kills">28</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+			</SubWaveConfigs>
+		</Wave>
+
+		<!-- TECH -->
+		<Wave id="13">
+			<RandomEnemyGroupConfigs>
+				<RandomEnemyGroup id="PRD">
+					<Enemy idref="Pistol-2" chanceEncounter="60" />
+					<Enemy idref="Shotgun-1" chanceEncounter="20" />
+					<Enemy idref="Dog" chanceEncounter="20" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Heavy">
+					<Enemy idref="Heavy" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Pistol">
+					<Enemy idref="Pistol-2" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Rifle">
+					<Enemy idref="Rifle-2" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Tech">
+					<Enemy idref="Tech" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Dog">
+					<Enemy idref="Dog" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Shotgun">
+					<Enemy idref="Shotgun-1" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="All">
+					<Enemy idref="Pistol-1" chanceEncounter="50" />
+					<Enemy idref="Dog" chanceEncounter="50" />
+					<Enemy idref="Rifle-1" chanceEncounter="50" />
+					<Enemy idref="Pistol-H1" chanceEncounter="50" />
+					<Enemy idref="Rifle-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-1" chanceEncounter="50" />
+					<Enemy idref="Heavy" chanceEncounter="50" />
+					<Enemy idref="Pistol-2" chanceEncounter="50" />
+					<Enemy idref="Rifle-2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-1" chanceEncounter="50" />
+					<Enemy idref="Tech" chanceEncounter="50" />
+					<Enemy idref="Shielded_Heavy" chanceEncounter="50" />
+					<Enemy idref="Rifle-H2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-H2" chanceEncounter="50" />
+					<Enemy idref="Elite-H3" chanceEncounter="50" />
+					<Enemy idref="SMG-H3" chanceEncounter="50" />
+					<Enemy idref="Elite-3" chanceEncounter="50" />
+				</RandomEnemyGroup>
+			</RandomEnemyGroupConfigs>
+
+			<SubWaveConfigs>
+				<SubWave id="Wave13 Subwave 1" bAllowRandomSpawn="false">
+					<StartCondition type="Time">0</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave13 Subwave 2">
+					<StartCondition type="Time">15</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave13 Subwave 3">
+					<StartCondition type="Kills">5</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave13 Subwave 4">
+					<StartCondition type="Kills">9</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave13 Subwave 5">
+					<StartCondition type="Kills">15</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave13 Subwave 6">
+					<StartCondition type="Kills">20</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave13 Subwave 7">
+					<StartCondition type="Kills">23</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave13 Subwave 8">
+					<StartCondition type="Kills">27</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave13 Subwave 9">
+					<StartCondition type="Kills">32</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+			</SubWaveConfigs>
+		</Wave>
+
+		<!-- HEAVY SHIELDED -->
+		<Wave id="14">
+			<RandomEnemyGroupConfigs>
+				<RandomEnemyGroup id="Pistol">
+					<Enemy idref="Pistol-2" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Dog">
+					<Enemy idref="Dog" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Heavy">
+					<Enemy idref="Heavy" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Shotgun">
+					<Enemy idref="Shotgun-1" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Rifle">
+					<Enemy idref="Rifle-2" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Elite">
+					<Enemy idref="Elite-1" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Shield">
+					<Enemy idref="Shielded_Heavy" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="All">
+					<Enemy idref="Pistol-1" chanceEncounter="50" />
+					<Enemy idref="Dog" chanceEncounter="50" />
+					<Enemy idref="Rifle-1" chanceEncounter="50" />
+					<Enemy idref="Pistol-H1" chanceEncounter="50" />
+					<Enemy idref="Rifle-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-1" chanceEncounter="50" />
+					<Enemy idref="Heavy" chanceEncounter="50" />
+					<Enemy idref="Pistol-2" chanceEncounter="50" />
+					<Enemy idref="Rifle-2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-1" chanceEncounter="50" />
+					<Enemy idref="Tech" chanceEncounter="50" />
+					<Enemy idref="Shielded_Heavy" chanceEncounter="50" />
+					<Enemy idref="Rifle-H2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-H2" chanceEncounter="50" />
+					<Enemy idref="Elite-H3" chanceEncounter="50" />
+					<Enemy idref="SMG-H3" chanceEncounter="50" />
+					<Enemy idref="Elite-3" chanceEncounter="50" />
+				</RandomEnemyGroup>
+			</RandomEnemyGroupConfigs>
+
+			<SubWaveConfigs>
+				<SubWave id="Wave14 Subwave 1" bAllowRandomSpawn="false">
+					<StartCondition type="Time">0</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave14 Subwave 2">
+					<StartCondition type="Time">30</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave14 Subwave 3">
+					<StartCondition type="Kills">5</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave14 Subwave 4">
+					<StartCondition type="Kills">12</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave14 Subwave 5">
+					<StartCondition type="Kills">17</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave14 Subwave 6">
+					<StartCondition type="Kills">24</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave14 Subwave 7">
+					<StartCondition type="Kills">29</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave14 Subwave 8">
+					<StartCondition type="Kills">34</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave14 Subwave 9">
+					<StartCondition type="Kills">40</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave14 Subwave 10">
+					<StartCondition type="Kills">45</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+			</SubWaveConfigs>
+		</Wave>
+
+		<!-- HVT -->
+		<Wave id="15">
+			<HVTObjective idref="HVTObjective_Medium2" />
+			<RandomEnemyGroupConfigs>
+				<RandomEnemyGroup id="Dog">
+					<Enemy idref="Dog" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Rifle">
+					<Enemy idref="Rifle-H2" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Shotgun">
+					<Enemy idref="Shotgun-H1" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Elite">
+					<Enemy idref="Elite-H2" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="All">
+					<Enemy idref="Pistol-1" chanceEncounter="50" />
+					<Enemy idref="Dog" chanceEncounter="50" />
+					<Enemy idref="Rifle-1" chanceEncounter="50" />
+					<Enemy idref="Pistol-H1" chanceEncounter="50" />
+					<Enemy idref="Rifle-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-1" chanceEncounter="50" />
+					<Enemy idref="Heavy" chanceEncounter="50" />
+					<Enemy idref="Pistol-2" chanceEncounter="50" />
+					<Enemy idref="Rifle-2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-1" chanceEncounter="50" />
+					<Enemy idref="Tech" chanceEncounter="50" />
+					<Enemy idref="Shielded_Heavy" chanceEncounter="50" />
+					<Enemy idref="Rifle-H2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-H2" chanceEncounter="50" />
+					<Enemy idref="Elite-H3" chanceEncounter="50" />
+					<Enemy idref="SMG-H3" chanceEncounter="50" />
+					<Enemy idref="Elite-3" chanceEncounter="50" />
+				</RandomEnemyGroup>
+			</RandomEnemyGroupConfigs>
+			<SubWaveConfigs>
+				<SubWave id="Wave15 Subwave 1" bAllowRandomSpawn="false" startObjective="true">
+					<StartCondition type="Time">0</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave15 Subwave 2">
+					<StartCondition type="Time">30</StartCondition>
+					<Enemies>
+						<Enemy idref="Sniper" quantity="1" spawnGroup="Sniper_1" sniperAttractors="Sniper_1_A" />
+						<Enemy idref="Sniper" quantity="1" spawnGroup="Sniper_3" sniperAttractors="Sniper_3_A" />
+						<Enemy idref="Sniper" quantity="1" spawnGroup="Sniper_3" sniperAttractors="Sniper_3_F" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave15 Subwave 3">
+					<StartCondition type="Kills">1</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave15 Subwave 4">
+					<StartCondition type="Kills">2</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave15 Subwave 5">
+					<StartCondition type="Kills">3</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave15 Subwave 6">
+					<StartCondition type="Kills">4</StartCondition>
+					<Enemies>
+						<Enemy idref="Sniper" quantity="1" spawnGroup="Sniper_3" sniperAttractors="Sniper_3_B" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave15 Subwave 7">
+					<StartCondition type="Kills">5</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave15 Subwave 8">
+					<StartCondition type="Kills">6</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave15 Subwave 9">
+					<StartCondition type="Kills">7</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave15 Subwave 10">
+					<StartCondition type="Kills">8</StartCondition>
+					<Enemies>
+						<Enemy idref="Sniper" quantity="1" spawnGroup="Sniper_3" sniperAttractors="Sniper_3_G" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave15 Subwave 11">
+					<StartCondition type="Kills">9</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave15 Subwave 12">
+					<StartCondition type="Kills">10</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave15 Subwave 13">
+					<StartCondition type="Kills">11</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave15 Subwave 14">
+					<StartCondition type="Kills">12</StartCondition>
+					<Enemies>
+						<Enemy idref="Sniper" quantity="1" spawnGroup="Sniper_3" sniperAttractors="Sniper_3_D" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave15 Subwave 15">
+					<StartCondition type="Kills">13</StartCondition>
+					<Enemies>
+						<Enemy idref="Sniper" quantity="1" spawnGroup="Sniper_1" sniperAttractors="Sniper_1_B" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave15 Subwave 16">
+					<StartCondition type="Kills">14</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave15 Subwave 17">
+					<StartCondition type="Kills">15</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave15 Subwave 18">
+					<StartCondition type="Kills">16</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave15 Subwave 19">
+					<StartCondition type="Kills">17</StartCondition>
+					<Enemies>
+						<Enemy idref="Sniper" quantity="1" spawnGroup="Sniper_3" sniperAttractors="Sniper_3_H" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave15 Subwave 20">
+					<StartCondition type="Kills">18</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave15 Subwave 21">
+					<StartCondition type="Kills">20</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+			</SubWaveConfigs>
+		</Wave>
+
+		<!-- HELMET ELITE -->
+		<Wave id="16">
+			<RandomEnemyGroupConfigs>
+				<RandomEnemyGroup id="Helmet_Elite">
+					<Enemy idref="Elite-H3" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="All">
+					<Enemy idref="Pistol-1" chanceEncounter="50" />
+					<Enemy idref="Dog" chanceEncounter="50" />
+					<Enemy idref="Rifle-1" chanceEncounter="50" />
+					<Enemy idref="Pistol-H1" chanceEncounter="50" />
+					<Enemy idref="Rifle-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-1" chanceEncounter="50" />
+					<Enemy idref="Heavy" chanceEncounter="50" />
+					<Enemy idref="Pistol-2" chanceEncounter="50" />
+					<Enemy idref="Rifle-2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-1" chanceEncounter="50" />
+					<Enemy idref="Tech" chanceEncounter="50" />
+					<Enemy idref="Shielded_Heavy" chanceEncounter="50" />
+					<Enemy idref="Rifle-H2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-H2" chanceEncounter="50" />
+					<Enemy idref="Elite-H3" chanceEncounter="50" />
+					<Enemy idref="SMG-H3" chanceEncounter="50" />
+					<Enemy idref="Elite-3" chanceEncounter="50" />
+				</RandomEnemyGroup>
+			</RandomEnemyGroupConfigs>
+
+			<SubWaveConfigs>
+				<SubWave id="Wave16 Subwave 1" bAllowRandomSpawn="false">
+					<StartCondition type="Time">0</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave16 Subwave 2">
+					<StartCondition type="Kills">1</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave16 Subwave 3">
+					<StartCondition type="Kills">2</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave16 Subwave 4">
+					<StartCondition type="Kills">3</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave16 Subwave 5">
+					<StartCondition type="Kills">4</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave16 Subwave 6">
+					<StartCondition type="Kills">5</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave16 Subwave 7">
+					<StartCondition type="Kills">6</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave16 Subwave 8">
+					<StartCondition type="Kills">7</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave16 Subwave 9">
+					<StartCondition type="Kills">13</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave16 Subwave 10">
+					<StartCondition type="Kills">14</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave16 Subwave 11">
+					<StartCondition type="Kills">15</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave16 Subwave 12">
+					<StartCondition type="Kills">18</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave16 Subwave 13">
+					<StartCondition type="Kills">19</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave16 Subwave 14">
+					<StartCondition type="Kills">22</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+			</SubWaveConfigs>
+		</Wave>
+
+		<Wave id="17">
+			<RandomEnemyGroupConfigs>
+				<RandomEnemyGroup id="Dog">
+					<Enemy idref="Dog" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Rifle">
+					<Enemy idref="Rifle-H2" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="SMG">
+					<Enemy idref="SMG-H3" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Shotgun">
+					<Enemy idref="Shotgun-H1" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Elite">
+					<Enemy idref="Elite-H3" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="All">
+					<Enemy idref="Pistol-1" chanceEncounter="50" />
+					<Enemy idref="Dog" chanceEncounter="50" />
+					<Enemy idref="Rifle-1" chanceEncounter="50" />
+					<Enemy idref="Pistol-H1" chanceEncounter="50" />
+					<Enemy idref="Rifle-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-1" chanceEncounter="50" />
+					<Enemy idref="Heavy" chanceEncounter="50" />
+					<Enemy idref="Pistol-2" chanceEncounter="50" />
+					<Enemy idref="Rifle-2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-1" chanceEncounter="50" />
+					<Enemy idref="Tech" chanceEncounter="50" />
+					<Enemy idref="Shielded_Heavy" chanceEncounter="50" />
+					<Enemy idref="Rifle-H2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-H2" chanceEncounter="50" />
+					<Enemy idref="Elite-H3" chanceEncounter="50" />
+					<Enemy idref="SMG-H3" chanceEncounter="50" />
+					<Enemy idref="Elite-3" chanceEncounter="50" />
+				</RandomEnemyGroup>
+			</RandomEnemyGroupConfigs>
+			<SubWaveConfigs>
+				<SubWave id="Wave17 Subwave 1" bAllowRandomSpawn="false">
+					<StartCondition type="Time">0</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave17 Subwave 2">
+					<StartCondition type="Time">30</StartCondition>
+					<Enemies>
+						<Enemy idref="Sniper" quantity="1" spawnGroup="Sniper_1" sniperAttractors="Sniper_1_A" />
+						<Enemy idref="Sniper" quantity="1" spawnGroup="Sniper_3" sniperAttractors="Sniper_3_A" />
+						<Enemy idref="Sniper" quantity="1" spawnGroup="Sniper_3" sniperAttractors="Sniper_3_F" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave17 Subwave 3">
+					<StartCondition type="Kills">1</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave17 Subwave 4">
+					<StartCondition type="Kills">2</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave17 Subwave 5">
+					<StartCondition type="Kills">3</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave17 Subwave 6">
+					<StartCondition type="Kills">4</StartCondition>
+					<Enemies>
+						<Enemy idref="Sniper" quantity="1" spawnGroup="Sniper_3" sniperAttractors="Sniper_3_B" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave17 Subwave 7">
+					<StartCondition type="Kills">5</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave17 Subwave 8">
+					<StartCondition type="Kills">6</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave17 Subwave 9">
+					<StartCondition type="Kills">7</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave17 Subwave 10">
+					<StartCondition type="Kills">8</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave17 Subwave 11">
+					<StartCondition type="Kills">9</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave17 Subwave 12">
+					<StartCondition type="Kills">10</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave17 Subwave 13">
+					<StartCondition type="Kills">11</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave17 Subwave 14">
+					<StartCondition type="Kills">12</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave17 Subwave 15">
+					<StartCondition type="Kills">13</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave17 Subwave 16">
+					<StartCondition type="Kills">14</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave17 Subwave 17">
+					<StartCondition type="Kills">15</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave17 Subwave 18">
+					<StartCondition type="Kills">16</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave17 Subwave 19">
+					<StartCondition type="Kills">17</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave17 Subwave 20">
+					<StartCondition type="Kills">18</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave17 Subwave 21">
+					<StartCondition type="Kills">20</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+				<SubWave id="Wave17 Subwave 22">
+					<StartCondition type="Kills">21</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+			</SubWaveConfigs>
+		</Wave>
+
+		<Wave id="18">
+			<RandomEnemyGroupConfigs>
+				<RandomEnemyGroup id="Pistol">
+					<Enemy idref="Pistol-2" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Dog">
+					<Enemy idref="Dog" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Heavy">
+					<Enemy idref="Heavy" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Shotgun">
+					<Enemy idref="Shotgun-1" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Rifle">
+					<Enemy idref="Rifle-2" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Helmet_Elite">
+					<Enemy idref="Elite-H3" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Shield">
+					<Enemy idref="Shielded_Heavy" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="All">
+					<Enemy idref="Pistol-1" chanceEncounter="50" />
+					<Enemy idref="Dog" chanceEncounter="50" />
+					<Enemy idref="Rifle-1" chanceEncounter="50" />
+					<Enemy idref="Pistol-H1" chanceEncounter="50" />
+					<Enemy idref="Rifle-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-1" chanceEncounter="50" />
+					<Enemy idref="Heavy" chanceEncounter="50" />
+					<Enemy idref="Pistol-2" chanceEncounter="50" />
+					<Enemy idref="Rifle-2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-1" chanceEncounter="50" />
+					<Enemy idref="Tech" chanceEncounter="50" />
+					<Enemy idref="Shielded_Heavy" chanceEncounter="50" />
+					<Enemy idref="Rifle-H2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-H2" chanceEncounter="50" />
+					<Enemy idref="Elite-H3" chanceEncounter="50" />
+					<Enemy idref="SMG-H3" chanceEncounter="50" />
+					<Enemy idref="Elite-3" chanceEncounter="50" />
+				</RandomEnemyGroup>
+			</RandomEnemyGroupConfigs>
+
+			<SubWaveConfigs>
+				<SubWave id="Wave18 Subwave 1" bAllowRandomSpawn="false">
+					<StartCondition type="Time">0</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave18 Subwave 2">
+					<StartCondition type="Kills">1</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave18 Subwave 3">
+					<StartCondition type="Kills">2</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave18 Subwave 4">
+					<StartCondition type="Kills">3</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave18 Subwave 5">
+					<StartCondition type="Kills">4</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave18 Subwave 6">
+					<StartCondition type="Kills">5</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave18 Subwave 7">
+					<StartCondition type="Kills">10</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave18 Subwave 8">
+					<StartCondition type="Kills">11</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave18 Subwave 9">
+					<StartCondition type="Kills">12</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave18 Subwave 10">
+					<StartCondition type="Kills">13</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave18 Subwave 11">
+					<StartCondition type="Kills">14</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave18 Subwave 12">
+					<StartCondition type="Kills">15</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave18 Subwave 13">
+					<StartCondition type="Kills">16</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave18 Subwave 14">
+					<StartCondition type="Kills">17</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave18 Subwave 15">
+					<StartCondition type="Kills">18</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave18 Subwave 16">
+					<StartCondition type="Kills">19</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave18 Subwave 17">
+					<StartCondition type="Kills">20</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+			</SubWaveConfigs>
+		</Wave>
+
+		<Wave id="19">
+			<RandomEnemyGroupConfigs>
+				<RandomEnemyGroup id="Dog">
+					<Enemy idref="Dog" chanceEncounter="100" />
+				</RandomEnemyGroup>
+				<RandomEnemyGroup id="Tech">
+					<Enemy idref="Tech" chanceEncounter="100" />
+				</RandomEnemyGroup>
+				<RandomEnemyGroup id="Elite">
+					<Enemy idref="Elite-3" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="All">
+					<Enemy idref="Pistol-1" chanceEncounter="50" />
+					<Enemy idref="Dog" chanceEncounter="50" />
+					<Enemy idref="Rifle-1" chanceEncounter="50" />
+					<Enemy idref="Pistol-H1" chanceEncounter="50" />
+					<Enemy idref="Rifle-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-1" chanceEncounter="50" />
+					<Enemy idref="Heavy" chanceEncounter="50" />
+					<Enemy idref="Pistol-2" chanceEncounter="50" />
+					<Enemy idref="Rifle-2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-1" chanceEncounter="50" />
+					<Enemy idref="Tech" chanceEncounter="50" />
+					<Enemy idref="Shielded_Heavy" chanceEncounter="50" />
+					<Enemy idref="Rifle-H2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-H2" chanceEncounter="50" />
+					<Enemy idref="Elite-H3" chanceEncounter="50" />
+					<Enemy idref="SMG-H3" chanceEncounter="50" />
+					<Enemy idref="Elite-3" chanceEncounter="50" />
+				</RandomEnemyGroup>
+			</RandomEnemyGroupConfigs>
+
+			<SubWaveConfigs>
+				<SubWave id="Wave19 Subwave 1" bAllowRandomSpawn="false">
+					<StartCondition type="Time">0</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave19 Subwave 2">
+					<StartCondition type="Kills">2</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave19 Subwave 3">
+					<StartCondition type="Kills">4</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave19 Subwave 4">
+					<StartCondition type="Kills">6</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave19 Subwave 5">
+					<StartCondition type="Kills">8</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave19 Subwave 6">
+					<StartCondition type="Kills">12</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave19 Subwave 7">
+					<StartCondition type="Kills">16</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave19 Subwave 8">
+					<StartCondition type="Kills">20</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave19 Subwave 9">
+					<StartCondition type="Kills">22</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+
+			</SubWaveConfigs>
+		</Wave>
+
+		<Wave id="20">
+			<HVTObjective idref="HVTObjective_Hard1" />
+			<RandomEnemyGroupConfigs>
+				<RandomEnemyGroup id="Helmet_Elite">
+					<Enemy idref="Elite-H3" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="Shield">
+					<Enemy idref="Shielded_Heavy" chanceEncounter="100" />
+				</RandomEnemyGroup>
+
+				<RandomEnemyGroup id="All">
+					<Enemy idref="Pistol-1" chanceEncounter="50" />
+					<Enemy idref="Dog" chanceEncounter="50" />
+					<Enemy idref="Rifle-1" chanceEncounter="50" />
+					<Enemy idref="Pistol-H1" chanceEncounter="50" />
+					<Enemy idref="Rifle-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-1" chanceEncounter="50" />
+					<Enemy idref="Heavy" chanceEncounter="50" />
+					<Enemy idref="Pistol-2" chanceEncounter="50" />
+					<Enemy idref="Rifle-2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-1" chanceEncounter="50" />
+					<Enemy idref="Tech" chanceEncounter="50" />
+					<Enemy idref="Shielded_Heavy" chanceEncounter="50" />
+					<Enemy idref="Rifle-H2" chanceEncounter="50" />
+					<Enemy idref="Shotgun-H1" chanceEncounter="50" />
+					<Enemy idref="Elite-H2" chanceEncounter="50" />
+					<Enemy idref="Elite-H3" chanceEncounter="50" />
+					<Enemy idref="SMG-H3" chanceEncounter="50" />
+					<Enemy idref="Elite-3" chanceEncounter="50" />
+				</RandomEnemyGroup>
+			</RandomEnemyGroupConfigs>
+
+			<SubWaveConfigs>
+				<SubWave id="Wave20 Subwave 1" bAllowRandomSpawn="false" startObjective="true">
+					<StartCondition type="Time">0</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave20 Subwave 2">
+					<StartCondition type="Kills">2</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+
+				<SubWave id="Wave20 Subwave 3">
+					<StartCondition type="Kills">4</StartCondition>
+					<Enemies>
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_South" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Embassy_North" />
+						<RandomEnemies idref="All" quantity="1" spawnGroup="Street_Center" />
+					</Enemies>
+				</SubWave>
+			</SubWaveConfigs>
+		</Wave>
+
+	</WaveConfigs>
+</ExtractionWaveConfig>

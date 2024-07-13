@@ -1,13 +1,17 @@
 #include "stdafx.h"
+#include <LEDEffects.h>
 
 float gVisibility = 1.0f;
 int32_t gBlacklistIndicators = 0;
+bool bDisableBlackAndWhiteFilter = false;
 
 injector::hook_back<void (__cdecl*)(float a1, float a2, int a3)> hb_8330DB;
 void __cdecl sub_8330DB(float a1, float a2, int a3)
 {
     gVisibility = a1;
-    //return hb_8330DB.fun(a1, a2, a3);
+
+    if (!bDisableBlackAndWhiteFilter)
+        return hb_8330DB.fun(a1, a2, a3);
 }
 
 injector::hook_back<void(__cdecl*)(void* a1, int a2, int a3)> hb_100177B7;
@@ -41,7 +45,7 @@ void Init()
     CIniReader iniReader("");
     auto bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
     auto bSkipSystemDetection = iniReader.ReadInteger("MAIN", "SkipSystemDetection", 1) != 0;
-    auto bDisableBlackAndWhiteFilter = iniReader.ReadInteger("MAIN", "DisableBlackAndWhiteFilter", 0) != 0;
+    bDisableBlackAndWhiteFilter = iniReader.ReadInteger("MAIN", "DisableBlackAndWhiteFilter", 0) != 0;
     auto bDisableCharacterLighting = iniReader.ReadInteger("MAIN", "DisableCharacterLighting", 0) != 0;
 
     if (bSkipIntro)
@@ -57,7 +61,7 @@ void Init()
         injector::MakeRET(pattern.get_first(3));
     }
 
-    if (bDisableBlackAndWhiteFilter) //light and shadow
+    //if (bDisableBlackAndWhiteFilter) //light and shadow
     {
         auto pattern = hook::pattern("E8 ? ? ? ? D9 05 ? ? ? ? 83 C4 0C 33 F6 56 51");
         hb_8330DB.fun = injector::MakeCALL(pattern.get_first(), sub_8330DB, true).get();
@@ -157,12 +161,43 @@ void InitLeadD3DRender()
     }
 }
 
+void InitLED()
+{
+    CIniReader iniReader("");
+    auto bLightSyncRGB = iniReader.ReadInteger("LOGITECH", "LightSyncRGB", 1);
+
+    if (bLightSyncRGB)
+    {
+        LEDEffects::Inject([]()
+        {
+            static auto fPlayerVisibility = gVisibility;
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            auto gVisCmp = static_cast<float>(static_cast<int>(gVisibility * 10.0f)) / 10.0f;
+            auto fPlVisCmp = static_cast<float>(static_cast<int>(fPlayerVisibility * 10.0f)) / 10.0f;
+            
+            if (fPlVisCmp > gVisCmp)
+                fPlayerVisibility -= 0.05f;
+            else if (fPlVisCmp < gVisCmp)
+                fPlayerVisibility += 0.05f;
+            
+            constexpr auto minBrightness = 0.3f;
+            constexpr auto maxBrightness = 1.0f;
+
+            fPlayerVisibility = std::clamp(fPlayerVisibility, minBrightness, maxBrightness);
+            
+            auto [R, G, B] = LEDEffects::RGBtoPercent(255, 39, 26, gBlacklistIndicators ? fPlayerVisibility : ((maxBrightness + minBrightness) - fPlayerVisibility));
+            LEDEffects::SetLighting(R, G, B, false, false, false);
+        });
+    }
+}
+
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
-        CallbackHandler::RegisterCallback(Init, hook::pattern("D9 1C 24 E8 ? ? ? ? D9 5E 0C"));
+        CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("D9 1C 24 E8 ? ? ? ? D9 5E 0C"));
         CallbackHandler::RegisterCallback(L"LeadD3DRender.dll", InitLeadD3DRender);
+        CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(InitLED, hook::pattern("D9 1C 24 E8 ? ? ? ? D9 5E 0C"));
     });
 }
 

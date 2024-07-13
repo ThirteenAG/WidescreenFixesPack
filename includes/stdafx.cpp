@@ -10,9 +10,9 @@ float GetFOV2(float f, float ar)
     return 4.0f * f * atan(ar * (3.0f / 4.0f)) / (float)M_PI;
 }
 
-float AdjustFOV(float f, float ar)
+float AdjustFOV(float f, float ar, float base_ar)
 {
-    return std::round((2.0f * atan(((ar) / (4.0f / 3.0f)) * tan(f / 2.0f * ((float)M_PI / 180.0f)))) * (180.0f / (float)M_PI) * 100.0f) / 100.0f;
+    return std::round((2.0f * atan(((ar) / base_ar) * tan(f / 2.0f * ((float)M_PI / 180.0f)))) * (180.0f / (float)M_PI) * 100.0f) / 100.0f;
 }
 
 void CreateThreadAutoClose(LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_T dwStackSize, LPTHREAD_START_ROUTINE lpStartAddress, LPVOID lpParameter, DWORD dwCreationFlags, LPDWORD lpThreadId)

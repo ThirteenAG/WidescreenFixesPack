@@ -1,0 +1,1854 @@
+<?xml version="1.0" standalone="yes"?>
+<ExtractionWaveConfig xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ExtractionWaveConfig-schema.xsd">
+
+  <!-- Enemy Configs -->
+  <EnemyConfigs>
+
+    <Enemy id="Enemy_Dog">AI_Dog</Enemy>
+    <Enemy id="Enemy_GenericPistolGrenade">AI_Coop_Pistol_Makarov</Enemy>
+    <Enemy id="Enemy_GenericRifle">AI_Coop_Rifle_AK47</Enemy>
+    <Enemy id="Enemy_Shotgun">AI_Coop_Shotgun</Enemy>
+    <Enemy id="Enemy_ShieldedHeavy">AI_ShieldedHeavy_Default</Enemy>
+    <Enemy id="Enemy_Heavy">AI_Coop_Heavy</Enemy>
+    <Enemy id="Enemy_Elite">AI_Coop_Elite</Enemy>
+    <Enemy id="Enemy_Elite_MAC11">AI_Coop_Elite_MAC11</Enemy>
+    <Enemy id="Enemy_Elite_PP2000">AI_Coop_Elite_PP2000</Enemy>
+    <Enemy id="Enemy_Elite_Scorpion">AI_Coop_Elite_Scorpion</Enemy>
+    <Enemy id="Enemy_Helmet_Elite_MAC11">AI_Coop_Helmet_Elite_MAC11</Enemy>
+    <Enemy id="Enemy_Helmet_Elite_PP2000">AI_Coop_Helmet_Elite_PP2000</Enemy>
+    <Enemy id="Enemy_Helmet_Elite_Scorpion">AI_Coop_Helmet_Elite_Scorpion</Enemy>
+    <Enemy id="Enemy_Helmet_Elite">AI_Coop_Helmet_Elite</Enemy>
+    <Enemy id="Enemy_Tech">AI_Coop_Tech</Enemy>
+    <Enemy id="Enemy_Sniper">AI_Coop_Sniper_60m</Enemy>
+    <Enemy id="Enemy_Helmet_Pistol">AI_Coop_Helmet_Russian_Pistol_F40</Enemy>
+    <Enemy id="Enemy_Helmet_Shotgun">AI_Coop_Helmet_Russian_Shotgun</Enemy>
+    <Enemy id="Enemy_Helmet_Rifle">AI_Coop_Helmet_Russian_Rifle_AK47</Enemy>
+    <Enemy id="Enemy_Pistol_F40">AI_Coop_Pistol_F40</Enemy>
+    <Enemy id="Enemy_Pistol_Makarov">AI_Coop_Pistol_Makarov</Enemy>
+    <Enemy id="Enemy_Rifle_AKS74U">AI_Coop_Rifle_AKS74U</Enemy>
+    <Enemy id="Enemy_Rifle_Goblin">AI_Coop_Rifle_Goblin</Enemy>
+    <Enemy id="Enemy_SMG_MAC11">AI_Coop_SMG_MAC11</Enemy>
+    <Enemy id="Enemy_SMG_PP2000">AI_Coop_SMG_PP2000</Enemy>
+    <Enemy id="Enemy_SMG_Scorpion">AI_Coop_SMG_Scorpion</Enemy>
+
+
+  </EnemyConfigs>
+
+  <ObjectiveConfigs>
+
+    <!-- Objective Categories -->
+    <ObjectiveCategories>
+      <ObjectiveCategory id="Easy" />
+      <ObjectiveCategory id="Medium" />
+      <ObjectiveCategory id="Hard" />
+    </ObjectiveCategories>
+
+    <!-- HVT Objectives -->
+    <HVTObjectiveConfigs>
+
+      <!-- Easy HVT Objectives -->
+      <HVTObjective id="HVTObjective_Easy1" timeLimit="180" category="Easy">
+        <HVTs>
+          <Enemy idref="Enemy_Helmet_Rifle" quantity="1" spawnGroup="FCenter" fTimeDelay="35.1" />
+          <Enemy idref="Enemy_Helmet_Rifle" quantity="1" spawnGroup="FCenter" />
+        </HVTs>
+      </HVTObjective>
+
+
+      <!-- Medium HVT Objectives -->
+
+      <HVTObjective id="HVTObjective_Medium1" timeLimit="240" category="Medium">
+        <HVTs>
+          <Enemy idref="Enemy_Helmet_Rifle" quantity="1" spawnGroup="FCenter" />
+          <Enemy idref="Enemy_Tech" quantity="1" spawnGroup="FRight" fTimeDelay="25.2" />
+          <Enemy idref="Enemy_Tech" quantity="1" spawnGroup="FMainStreet" fTimeDelay="25.3" />
+        </HVTs>
+      </HVTObjective>
+
+      <HVTObjective id="HVTObjective_Medium2" timeLimit="240" category="Medium">
+        <HVTs>
+          <Enemy idref="Enemy_Helmet_Rifle" quantity="1" spawnGroup="FCenter" />
+          <Enemy idref="Enemy_Heavy" quantity="1" spawnGroup="FMainStreet" fTimeDelay="25.4" />
+          <Enemy idref="Enemy_Elite" quantity="1" spawnGroup="Ffront" fTimeDelay="45.5" />
+        </HVTs>
+      </HVTObjective>
+
+      <!-- Hard HVT Objectives -->
+      <HVTObjective id="HVTObjective_Hard1" timeLimit="240" category="Hard">
+        <HVTs>
+          <Enemy idref="Enemy_Helmet_Rifle" quantity="1" spawnGroup="FCenter" />
+          <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperInApart" fTimeDelay="10.5" sniperAttractors="SniperInApart" />
+          <Enemy idref="Enemy_Elite_Scorpion" quantity="1" spawnGroup="FMainStreet" fTimeDelay="15.6" />
+          <Enemy idref="Enemy_Elite_Scorpion" quantity="1" spawnGroup="Ffront" fTimeDelay="25" />
+        </HVTs>
+      </HVTObjective>
+
+    </HVTObjectiveConfigs>
+
+
+  </ObjectiveConfigs>
+
+  <!-- Wave Configs -->
+  <WaveConfigs>
+
+
+    <Wave id="1">
+
+
+      <RandomEnemyGroupConfigs>
+
+        <RandomEnemyGroup id="Pistol">
+          <Enemy idref="Enemy_GenericPistolGrenade" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+      </RandomEnemyGroupConfigs>
+      <SubWaveConfigs>
+
+
+        <SubWave id="Wave1 Subwave 1" bAllowRandomSpawn="false">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Pistol" quantity="3" spawnGroup="Ffront" />
+            <RandomEnemies idref="Pistol" quantity="2" spawnGroup="FCenter" />
+          </Enemies>
+        </SubWave>
+
+
+        <SubWave id="Wave1 Subwave 2">
+          <StartCondition type="Time">20</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Pistol" quantity="2" spawnGroup="Ffront" />
+          </Enemies>
+        </SubWave>
+
+
+      </SubWaveConfigs>
+    </Wave>
+
+    <Wave id="2">
+
+      <RandomEnemyGroupConfigs>
+
+        <RandomEnemyGroup id="Pistol">
+          <Enemy idref="Enemy_GenericPistolGrenade" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Rifle">
+          <Enemy idref="Enemy_GenericRifle" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+      </RandomEnemyGroupConfigs>
+
+      <SubWaveConfigs>
+        <SubWave id="Wave2 Subwave 1" bAllowRandomSpawn="false">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Pistol" quantity="3" spawnGroup="FMainStreet" />
+            <RandomEnemies idref="Rifle" quantity="2" spawnGroup="FCenter" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave2 Subwave 2">
+          <StartCondition type="Kills">3</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle" quantity="2" spawnGroup="FCenter" />
+            <RandomEnemies idref="Rifle" quantity="3" spawnGroup="FMainStreet" />
+          </Enemies>
+        </SubWave>
+
+      </SubWaveConfigs>
+    </Wave>
+
+
+    <Wave id="3">
+
+      <RandomEnemyGroupConfigs>
+
+        <RandomEnemyGroup id="Pistol">
+          <Enemy idref="Enemy_GenericPistolGrenade" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Shotgun">
+          <Enemy idref="Enemy_Rifle_AKS74U" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Rifle">
+          <Enemy idref="Enemy_GenericRifle" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+      </RandomEnemyGroupConfigs>
+      <SubWaveConfigs>
+        <SubWave id="Wave3 Subwave 1" bAllowRandomSpawn="false">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle" quantity="2" spawnGroup="FLeft" />
+            <RandomEnemies idref="Shotgun" quantity="3" spawnGroup="FCenter" />
+          </Enemies>
+        </SubWave>
+
+
+        <SubWave id="Wave3 Subwave 2">
+          <StartCondition type="Kills">3</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Shotgun" quantity="2" spawnGroup="FLeft" />
+            <RandomEnemies idref="Shotgun" quantity="2" spawnGroup="FLeft" />
+            <RandomEnemies idref="Shotgun" quantity="1" spawnGroup="FCenter" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave3 Subwave 3">
+          <StartCondition type="Kills">7</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Pistol" quantity="2" spawnGroup="FCenter" />
+            <RandomEnemies idref="Shotgun" quantity="3" spawnGroup="FLeft" />
+          </Enemies>
+        </SubWave>
+
+      </SubWaveConfigs>
+    </Wave>
+
+    <Wave id="4">
+
+      <RandomEnemyGroupConfigs>
+
+
+        <RandomEnemyGroup id="Helmet_Pistol">
+          <Enemy idref="Enemy_Helmet_Pistol" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Shotgun">
+          <Enemy idref="Enemy_Rifle_AKS74U" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Rifle">
+          <Enemy idref="Enemy_GenericRifle" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+
+      </RandomEnemyGroupConfigs>
+      <SubWaveConfigs>
+        <SubWave id="Wave4 Subwave 1" bAllowRandomSpawn="false">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Shotgun" quantity="1" spawnGroup="FRight" />
+            <RandomEnemies idref="Shotgun" quantity="1" spawnGroup="FCenter" />
+            <RandomEnemies idref="Shotgun" quantity="1" spawnGroup="FLeft" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave4 Subwave 2">
+          <StartCondition type="Kills">1</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle" quantity="2" spawnGroup="FCenter" />
+            <RandomEnemies idref="Rifle" quantity="2" spawnGroup="FRight" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave4 Subwave 3">
+          <StartCondition type="Kills">3</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Pistol" quantity="2" spawnGroup="FRight" />
+            <RandomEnemies idref="Helmet_Pistol" quantity="1" spawnGroup="FRight" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave4 Subwave 4">
+          <StartCondition type="Kills">7</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Pistol" quantity="2" spawnGroup="FRight" />
+            <RandomEnemies idref="Helmet_Pistol" quantity="3" spawnGroup="FCenter" />
+          </Enemies>
+        </SubWave>
+
+
+      </SubWaveConfigs>
+    </Wave>
+
+
+    <Wave id="5">
+
+      <HVTObjective idref="HVTObjective_Easy1" />
+
+
+      <RandomEnemyGroupConfigs>
+
+        <RandomEnemyGroup id="Pistol">
+          <Enemy idref="Enemy_GenericPistolGrenade" chanceEncounter="50" />
+          <Enemy idref="Enemy_Helmet_Pistol" chanceEncounter="50" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Rifle">
+          <Enemy idref="Enemy_GenericRifle" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+      </RandomEnemyGroupConfigs>
+
+      <SubWaveConfigs>
+        <SubWave id="Wave5 Subwave 1" startObjective="true">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Pistol" quantity="2" spawnGroup="Ffront" />
+            <RandomEnemies idref="Pistol" quantity="2" spawnGroup="FCenter" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="Sniper1L" sniperAttractors="Sniper1L" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave5 Subwave 2">
+          <StartCondition type="Time">25</StartCondition>
+          <Enemies>
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperEmbassyR" sniperAttractors="Embassy1" />
+            <RandomEnemies idref="Pistol" quantity="1" spawnGroup="Ffront" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave5 Subwave 3">
+          <StartCondition type="Kills">5</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle" quantity="2" spawnGroup="FRight" />
+            <RandomEnemies idref="Rifle" quantity="1" spawnGroup="FRight" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="Sniper2" sniperAttractors="Sniper2" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave5 Subwave 4">
+          <StartCondition type="Kills">10</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Pistol" quantity="2" spawnGroup="FRight" />
+            <RandomEnemies idref="Pistol" quantity="1" spawnGroup="FCenter" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="Sniper3" sniperAttractors="Sniper3" />
+          </Enemies>
+        </SubWave>
+
+      </SubWaveConfigs>
+    </Wave>
+
+    <Wave id="6">
+
+      <RandomEnemyGroupConfigs>
+
+        <RandomEnemyGroup id="Pistol">
+          <Enemy idref="Enemy_GenericPistolGrenade" chanceEncounter="60" />
+          <Enemy idref="Enemy_Helmet_Pistol" chanceEncounter="40" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Shotgun">
+          <Enemy idref="Enemy_Rifle_Goblin" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Rifle">
+          <Enemy idref="Enemy_GenericRifle" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Helmet_Shotgun">
+          <Enemy idref="Enemy_Helmet_Rifle" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+      </RandomEnemyGroupConfigs>
+      <SubWaveConfigs>
+        <SubWave id="Wave6 Subwave 1" bAllowRandomSpawn="false">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Shotgun" quantity="3" spawnGroup="FLeft" />
+            <RandomEnemies idref="Helmet_Shotgun" quantity="2" spawnGroup="FCenter" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave6 Subwave 2">
+          <StartCondition type="Kills">3</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle" quantity="3" spawnGroup="FLeft" />
+            <RandomEnemies idref="Rifle" quantity="1" spawnGroup="FCenter" />
+            <RandomEnemies idref="Helmet_Shotgun" quantity="2" spawnGroup="FRight" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave6 Subwave 3">
+          <StartCondition type="Kills">8</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle" quantity="4" spawnGroup="FRight" />
+            <RandomEnemies idref="Pistol" quantity="2" spawnGroup="FLeft" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave6 Subwave 4">
+          <StartCondition type="Kills">14</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Shotgun" quantity="1" spawnGroup="FLeft" />
+            <RandomEnemies idref="Pistol" quantity="2" spawnGroup="FLeft" />
+            <RandomEnemies idref="Helmet_Shotgun" quantity="1" spawnGroup="FCenter" />
+          </Enemies>
+        </SubWave>
+
+      </SubWaveConfigs>
+    </Wave>
+
+    <Wave id="7">
+      <RandomEnemyGroupConfigs>
+
+        <RandomEnemyGroup id="Helmet_Shotgun">
+          <Enemy idref="Enemy_Helmet_Rifle" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Shotgun">
+          <Enemy idref="Enemy_SMG_PP2000" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Rifle">
+          <Enemy idref="Enemy_Rifle_AKS74U" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Pistol">
+          <Enemy idref="Enemy_Pistol_F40" chanceEncounter="60" />
+          <Enemy idref="Enemy_Helmet_Pistol" chanceEncounter="40" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Dogs">
+          <Enemy idref="Enemy_Dog" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+      </RandomEnemyGroupConfigs>
+
+      <SubWaveConfigs>
+
+        <SubWave id="Wave7 Subwave 1" bAllowRandomSpawn="false">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle" quantity="2" spawnGroup="FMainStreet" />
+            <RandomEnemies idref="Pistol" quantity="2" spawnGroup="FMainStreet" />
+            <RandomEnemies idref="Dogs" quantity="2" spawnGroup="FMainStreet" />
+          </Enemies>
+        </SubWave>
+        <SubWave id="Wave7 Subwave 2">
+          <StartCondition type="Time">20</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Dogs" quantity="2" spawnGroup="FMainStreet" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave7 Subwave 3">
+          <StartCondition type="Kills">5</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Shotgun" quantity="2" spawnGroup="FMainStreet" />
+
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave7 Subwave 4">
+          <StartCondition type="Kills">7</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle" quantity="3" spawnGroup="FLeft" />
+            <RandomEnemies idref="Dogs" quantity="2" spawnGroup="FMainStreet" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave7 Subwave 5">
+          <StartCondition type="Kills">11</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle" quantity="4" spawnGroup="FRight" />
+            <RandomEnemies idref="Dogs" quantity="2" spawnGroup="FCenter" />
+          </Enemies>
+        </SubWave>
+      </SubWaveConfigs>
+    </Wave>
+
+    <Wave id="8">
+      <RandomEnemyGroupConfigs>
+
+        <RandomEnemyGroup id="Pistol">
+          <Enemy idref="Enemy_Pistol_F40" chanceEncounter="50" />
+          <Enemy idref="Enemy_Helmet_Pistol" chanceEncounter="50" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Shotgun">
+          <Enemy idref="Enemy_SMG_Scorpion" chanceEncounter="60" />
+          <Enemy idref="Enemy_Helmet_Rifle" chanceEncounter="40" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Rifle">
+          <Enemy idref="Enemy_Rifle_AKS74U" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Dogs">
+          <Enemy idref="Enemy_Dog" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+      </RandomEnemyGroupConfigs>
+
+      <SubWaveConfigs>
+
+        <SubWave id="Wave8 Subwave 1" bAllowRandomSpawn="false">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle" quantity="2" spawnGroup="Ffront" />
+            <RandomEnemies idref="Shotgun" quantity="4" spawnGroup="Ffront" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave8 Subwave 2">
+          <StartCondition type="Time">60</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="EmbassyCenter" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="Sniper3" sniperAttractors="Sniper3" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave8 Subwave 3">
+          <StartCondition type="Kills">3</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Pistol" quantity="4" spawnGroup="FRight" />
+
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave8 Subwave 4">
+          <StartCondition type="Kills">7</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="FCenter" />
+            <RandomEnemies idref="Rifle" quantity="2" spawnGroup="Ffront" />
+            <RandomEnemies idref="Rifle" quantity="2" spawnGroup="FRight" />
+
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave8 Subwave 5">
+          <StartCondition type="Kills">14</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle" quantity="5" spawnGroup="FRight" />
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="FCenter" />
+          </Enemies>
+        </SubWave>
+      </SubWaveConfigs>
+    </Wave>
+
+    <Wave id="9">
+      <RandomEnemyGroupConfigs>
+
+        <RandomEnemyGroup id="Tech">
+          <Enemy idref="Enemy_Tech" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Shotgun">
+          <Enemy idref="Enemy_Rifle_Goblin" chanceEncounter="30" />
+          <Enemy idref="Enemy_Helmet_Rifle" chanceEncounter="70" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Rifle">
+          <Enemy idref="Enemy_GenericRifle" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Pistol">
+          <Enemy idref="Enemy_Pistol_F40" chanceEncounter="50" />
+          <Enemy idref="Enemy_Helmet_Pistol" chanceEncounter="50" />
+        </RandomEnemyGroup>
+
+      </RandomEnemyGroupConfigs>
+
+      <SubWaveConfigs>
+        <SubWave id="Wave9 Subwave 1" bAllowRandomSpawn="false">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle" quantity="2" spawnGroup="FRight" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="FRight" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="FLeft" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave9 Subwave 2">
+          <StartCondition type="Time">30</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle" quantity="4" spawnGroup="FRight" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave9 Subwave 3">
+          <StartCondition type="Kills">3</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="FMainStreet" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave9 Subwave 4">
+          <StartCondition type="Kills">8</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle" quantity="3" spawnGroup="FRight" />
+            <RandomEnemies idref="Pistol" quantity="3" spawnGroup="FLeft" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="FLeft" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave9 Subwave 5">
+          <StartCondition type="Kills">13</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Shotgun" quantity="4" spawnGroup="Ffront" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Embassy" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave9 Subwave 6">
+          <StartCondition type="Kills">17</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle" quantity="4" spawnGroup="FCenter" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="FMainStreet" />
+          </Enemies>
+        </SubWave>
+
+      </SubWaveConfigs>
+    </Wave>
+
+    <Wave id="10">
+
+
+      <HVTObjective idref="HVTObjective_Medium1" />
+
+
+      <RandomEnemyGroupConfigs>
+
+        <RandomEnemyGroup id="Rifle">
+          <Enemy idref="Enemy_Rifle_AKS74U" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Shotgun">
+          <Enemy idref="Enemy_Helmet_Shotgun" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+      </RandomEnemyGroupConfigs>
+
+      <SubWaveConfigs>
+        <SubWave id="Wave10 Subwave 1" startObjective="true">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="Sniper1R" sniperAttractors="Sniper1R" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="Sniper1L" sniperAttractors="Sniper1L" />
+            <RandomEnemies idref="Shotgun" quantity="2" spawnGroup="FRight" />
+            <RandomEnemies idref="Rifle" quantity="2" spawnGroup="FMainStreet" />
+          </Enemies>
+        </SubWave>
+
+
+        <SubWave id="Wave10 Subwave 2">
+          <StartCondition type="Kills">4</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle" quantity="3" spawnGroup="FMainStreet" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="Sniper3" sniperAttractors="Sniper3" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave10 Subwave 3">
+          <StartCondition type="Kills">8</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle" quantity="2" spawnGroup="FRight" />
+            <RandomEnemies idref="Rifle" quantity="2" spawnGroup="FMainStreet" />
+          </Enemies>
+        </SubWave>
+
+      </SubWaveConfigs>
+    </Wave>
+
+
+    <Wave id="11">
+
+      <RandomEnemyGroupConfigs>
+
+        <RandomEnemyGroup id="Pistol">
+          <Enemy idref="Enemy_Pistol_F40" chanceEncounter="50" />
+          <Enemy idref="Enemy_Helmet_Pistol" chanceEncounter="50" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Dogs">
+          <Enemy idref="Enemy_Dog" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Heavy">
+          <Enemy idref="Enemy_Heavy" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Shotgun">
+          <Enemy idref="Enemy_SMG_PP2000" chanceEncounter="60" />
+          <Enemy idref="Enemy_Helmet_Shotgun" chanceEncounter="40" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Rifle">
+          <Enemy idref="Enemy_Rifle_AKS74U" chanceEncounter="70" />
+          <Enemy idref="Enemy_Helmet_Rifle" chanceEncounter="30" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Elite">
+          <Enemy idref="Enemy_Elite_MAC11" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+      </RandomEnemyGroupConfigs>
+
+      <SubWaveConfigs>
+        <SubWave id="Wave11 Subwave 1" bAllowRandomSpawn="false">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle" quantity="4" spawnGroup="Ffront" />
+            <RandomEnemies idref="Elite" quantity="2" spawnGroup="FLeft" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave11 Subwave 2">
+          <StartCondition type="Time">45</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Elite" quantity="2" spawnGroup="FCenter" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave11 Subwave 3">
+          <StartCondition type="Kills">2</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Elite" quantity="2" spawnGroup="FMainStreet" />
+            <RandomEnemies idref="Rifle" quantity="1" spawnGroup="FMainStreet" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave11 Subwave 4">
+          <StartCondition type="Kills">8</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Shotgun" quantity="2" spawnGroup="FCenter" />
+            <RandomEnemies idref="Elite" quantity="2" spawnGroup="Ffront" />
+            <RandomEnemies idref="Rifle" quantity="1" spawnGroup="FLeft" />
+            <RandomEnemies idref="Shotgun" quantity="1" spawnGroup="FLeft" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave11 Subwave 5">
+          <StartCondition type="Kills">14</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Shotgun" quantity="2" spawnGroup="FMainStreet" />
+            <RandomEnemies idref="Pistol" quantity="2" spawnGroup="FMainStreet" />
+            <RandomEnemies idref="Elite" quantity="2" spawnGroup="FMainStreet" />
+          </Enemies>
+        </SubWave>
+
+      </SubWaveConfigs>
+    </Wave>
+
+    <Wave id="12">
+
+      <RandomEnemyGroupConfigs>
+
+        <RandomEnemyGroup id="Pistol">
+          <Enemy idref="Enemy_Pistol_F40" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Dogs">
+          <Enemy idref="Enemy_Dog" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Heavy">
+          <Enemy idref="Enemy_Heavy" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="ShotgunHelmet">
+          <Enemy idref="Enemy_Helmet_Shotgun" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Rifle">
+          <Enemy idref="Enemy_Rifle_AKS74U" chanceEncounter="60" />
+          <Enemy idref="Enemy_Helmet_Rifle" chanceEncounter="40" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Elite">
+          <Enemy idref="Enemy_Elite_MAC11" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Shield">
+          <Enemy idref="Enemy_ShieldedHeavy" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+      </RandomEnemyGroupConfigs>
+
+      <SubWaveConfigs>
+        <SubWave id="Wave12 Subwave 1" bAllowRandomSpawn="false">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="ShotgunHelmet" quantity="4" spawnGroup="FMainStreet" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperEmbassyR" sniperAttractors="Embassy1" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperEmbassyL" sniperAttractors="Embassy2" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave12 Subwave 2">
+          <StartCondition type="Time">20</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="ShotgunHelmet" quantity="1" spawnGroup="FCenter" />
+            <RandomEnemies idref="Rifle" quantity="1" spawnGroup="Embassy" />
+
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave12 Subwave 3">
+          <StartCondition type="Kills">4</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="ShotgunHelmet" quantity="3" spawnGroup="FLeft" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="Sniper1R" sniperAttractors="Sniper1R" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave12 Subwave 4">
+          <StartCondition type="Kills">8</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="ShotgunHelmet" quantity="3" spawnGroup="FLeft" />
+            <RandomEnemies idref="Rifle" quantity="2" spawnGroup="Ffront" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave12 Subwave 5">
+          <StartCondition type="Kills">14</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="ShotgunHelmet" quantity="3" spawnGroup="FMainStreet" />
+            <RandomEnemies idref="Rifle" quantity="2" spawnGroup="FLeft" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="Sniper2" sniperAttractors="Sniper2" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave12 Subwave 6">
+          <StartCondition type="Kills">19</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="ShotgunHelmet" quantity="3" spawnGroup="FMainStreet" />
+            <RandomEnemies idref="Rifle" quantity="2" spawnGroup="Ffront" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave12 Subwave 7">
+          <StartCondition type="Kills">25</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="ShotgunHelmet" quantity="2" spawnGroup="FLeft" />
+            <RandomEnemies idref="Rifle" quantity="3" spawnGroup="FCenter" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="Sniper3" sniperAttractors="Sniper3" />
+          </Enemies>
+        </SubWave>
+      </SubWaveConfigs>
+    </Wave>
+
+
+    <Wave id="13">
+
+      <RandomEnemyGroupConfigs>
+
+        <RandomEnemyGroup id="Pistol">
+          <Enemy idref="Enemy_Pistol_F40" chanceEncounter="50" />
+          <Enemy idref="Enemy_Helmet_Pistol" chanceEncounter="50" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Dogs">
+          <Enemy idref="Enemy_Dog" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Heavy">
+          <Enemy idref="Enemy_Heavy" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Shotgun">
+          <Enemy idref="Enemy_SMG_PP2000" chanceEncounter="50" />
+          <Enemy idref="Enemy_Helmet_Shotgun" chanceEncounter="50" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Rifle">
+          <Enemy idref="Enemy_Rifle_AKS74U" chanceEncounter="55" />
+          <Enemy idref="Enemy_Helmet_Rifle" chanceEncounter="45" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Elite">
+          <Enemy idref="Enemy_Elite_PP2000" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Shield">
+          <Enemy idref="Enemy_ShieldedHeavy" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+      </RandomEnemyGroupConfigs>
+
+      <SubWaveConfigs>
+        <SubWave id="Wave13 Subwave 1" bAllowRandomSpawn="false">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Pistol" quantity="2" spawnGroup="FMainStreet" />
+            <RandomEnemies idref="Heavy" quantity="1" spawnGroup="FMainStreet" />
+            <RandomEnemies idref="Pistol" quantity="2" spawnGroup="FRight" />
+            <RandomEnemies idref="Pistol" quantity="2" spawnGroup="FLeft" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave13 Subwave 2">
+          <StartCondition type="Time">60</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Heavy" quantity="1" spawnGroup="Ffront" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave13 Subwave 3">
+          <StartCondition type="Kills">5</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Pistol" quantity="6" spawnGroup="FMainStreet" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave13 Subwave 4">
+          <StartCondition type="Kills">9</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="FCenter" />
+            <RandomEnemies idref="Pistol" quantity="2" spawnGroup="FRight" />
+            <RandomEnemies idref="Pistol" quantity="1" spawnGroup="FLeft" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave13 Subwave 5">
+          <StartCondition type="Kills">17</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Heavy" quantity="1" spawnGroup="FCenter" />
+            <RandomEnemies idref="Pistol" quantity="4" spawnGroup="FMainStreet" />
+            <RandomEnemies idref="Pistol" quantity="2" spawnGroup="FRight" />
+            <RandomEnemies idref="Pistol" quantity="1" spawnGroup="FLeft" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave13 Subwave 6">
+          <StartCondition type="Kills">25</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Heavy" quantity="1" spawnGroup="FMainStreet" />
+            <RandomEnemies idref="Pistol" quantity="4" spawnGroup="FMainStreet" />
+            <RandomEnemies idref="Pistol" quantity="2" spawnGroup="FRight" />
+            <RandomEnemies idref="Pistol" quantity="1" spawnGroup="FLeft" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave13 Subwave 7">
+          <StartCondition type="Kills">29</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Dogs" quantity="2" spawnGroup="FCenter" />
+            <RandomEnemies idref="Pistol" quantity="1" spawnGroup="FMainStreet" />
+            <RandomEnemies idref="Heavy" quantity="1" spawnGroup="FMainStreet" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave13 Subwave 8">
+          <StartCondition type="Kills">30</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Pistol" quantity="1" spawnGroup="FCenter" />
+            <RandomEnemies idref="Heavy" quantity="1" spawnGroup="FCenter" />
+          </Enemies>
+        </SubWave>
+
+      </SubWaveConfigs>
+    </Wave>
+
+
+    <Wave id="14">
+
+      <RandomEnemyGroupConfigs>
+
+        <RandomEnemyGroup id="Pistol">
+          <Enemy idref="Enemy_Pistol_F40" chanceEncounter="50" />
+          <Enemy idref="Enemy_Helmet_Pistol" chanceEncounter="50" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Dogs">
+          <Enemy idref="Enemy_Dog" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Tech">
+          <Enemy idref="Enemy_Tech" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Heavy">
+          <Enemy idref="Enemy_Heavy" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Shotgun">
+          <Enemy idref="Enemy_SMG_PP2000" chanceEncounter="50" />
+          <Enemy idref="Enemy_Helmet_Shotgun" chanceEncounter="50" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Rifle">
+          <Enemy idref="Enemy_Rifle_AKS74U" chanceEncounter="50" />
+          <Enemy idref="Enemy_Helmet_Rifle" chanceEncounter="50" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="EliteHelmet">
+          <Enemy idref="Enemy_Helmet_Elite_PP2000" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Shield">
+          <Enemy idref="Enemy_ShieldedHeavy" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+      </RandomEnemyGroupConfigs>
+
+      <SubWaveConfigs>
+        <SubWave id="Wave14 Subwave 1" bAllowRandomSpawn="false">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Shotgun" quantity="6" spawnGroup="FCenter" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave14 Subwave 2">
+          <StartCondition type="Time">15</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="EliteHelmet" quantity="2" spawnGroup="FMainStreet" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave14 Subwave 3">
+          <StartCondition type="Kills">3</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="EliteHelmet" quantity="2" spawnGroup="FMainStreet" />
+            <RandomEnemies idref="Shotgun" quantity="2" spawnGroup="FMainStreet" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave14 Subwave 4">
+          <StartCondition type="Kills">11</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="FCenter" />
+            <RandomEnemies idref="Shotgun" quantity="3" spawnGroup="FLeft" />
+            <RandomEnemies idref="EliteHelmet" quantity="1" spawnGroup="Ffront" />
+            <RandomEnemies idref="Shotgun" quantity="3" spawnGroup="FLeft" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave14 Subwave 5">
+          <StartCondition type="Kills">16</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle" quantity="2" spawnGroup="FLeft" />
+            <RandomEnemies idref="Rifle" quantity="4" spawnGroup="FMainStreet" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave14 Subwave 6">
+          <StartCondition type="Kills">23</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="EliteHelmet" quantity="1" spawnGroup="FLeft" />
+            <RandomEnemies idref="EliteHelmet" quantity="1" spawnGroup="Ffront" />
+            <RandomEnemies idref="Rifle" quantity="4" spawnGroup="FMainStreet" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave14 Subwave 7">
+          <StartCondition type="Kills">27</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="EliteHelmet" quantity="2" spawnGroup="FMainStreet" />
+            <RandomEnemies idref="Rifle" quantity="2" spawnGroup="FMainStreet" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave14 Subwave 8">
+          <StartCondition type="Kills">31</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="EliteHelmet" quantity="2" spawnGroup="FCenter" />
+            <RandomEnemies idref="Shotgun" quantity="2" spawnGroup="FLeft" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave14 Subwave 9">
+          <StartCondition type="Kills">37</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="EliteHelmet" quantity="1" spawnGroup="FLeft" />
+            <RandomEnemies idref="EliteHelmet" quantity="1" spawnGroup="FMainStreet" />
+            <RandomEnemies idref="Shotgun" quantity="3" spawnGroup="FLeft" />
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="FCenter" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave14 Subwave 10">
+          <StartCondition type="Kills">41</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Shield" quantity="1" spawnGroup="Ffront" />
+            <RandomEnemies idref="Shotgun" quantity="3" spawnGroup="FMainStreet" />
+          </Enemies>
+        </SubWave>
+
+      </SubWaveConfigs>
+    </Wave>
+
+
+    <Wave id="15">
+
+      <HVTObjective idref="HVTObjective_Medium2" />
+
+
+      <RandomEnemyGroupConfigs>
+
+        <RandomEnemyGroup id="Dogs">
+          <Enemy idref="Enemy_Dog" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Rifle">
+          <Enemy idref="Enemy_Rifle_Goblin" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Tech">
+          <Enemy idref="Enemy_Tech" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="ShieldedHeavy">
+          <Enemy idref="Enemy_ShieldedHeavy" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+      </RandomEnemyGroupConfigs>
+
+      <SubWaveConfigs>
+        <SubWave id="Wave15 Subwave 1" startObjective="true">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Ffront" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="FMainStreet" />
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="FMainStreet" />
+            <RandomEnemies idref="Rifle" quantity="1" spawnGroup="FMainStreet" />
+            <RandomEnemies idref="ShieldedHeavy" quantity="1" spawnGroup="EmbassyCenter" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave15 Subwave 2">
+          <StartCondition type="Time">25</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="FMainStreet" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave15 Subwave 3">
+          <StartCondition type="Kills">4</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle" quantity="1" spawnGroup="Ffront" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="FRight" />
+            <RandomEnemies idref="Rifle" quantity="1" spawnGroup="FLeft" />
+            <RandomEnemies idref="Rifle" quantity="1" spawnGroup="FRight" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave15 Subwave 4">
+          <StartCondition type="Kills">5</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="FLeft" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave15 Subwave 5">
+          <StartCondition type="Kills">6</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Dogs" quantity="2" spawnGroup="EmbassyCenter" />
+            <RandomEnemies idref="ShieldedHeavy" quantity="1" spawnGroup="FCenter" />
+          </Enemies>
+        </SubWave>
+
+      </SubWaveConfigs>
+    </Wave>
+
+
+    <Wave id="16">
+
+      <RandomEnemyGroupConfigs>
+
+        <RandomEnemyGroup id="Tech">
+          <Enemy idref="Enemy_Tech" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Dogs">
+          <Enemy idref="Enemy_Dog" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Heavy">
+          <Enemy idref="Enemy_Heavy" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Shotgun">
+          <Enemy idref="Enemy_SMG_Scorpion" chanceEncounter="50" />
+          <Enemy idref="Enemy_Helmet_Shotgun" chanceEncounter="50" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Rifle">
+          <Enemy idref="Enemy_Rifle_Goblin" chanceEncounter="50" />
+          <Enemy idref="Enemy_Helmet_Rifle" chanceEncounter="50" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Elite">
+          <Enemy idref="Enemy_Elite_PP2000" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="H_Elite">
+          <Enemy idref="Enemy_Helmet_Elite_PP2000" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Shield">
+          <Enemy idref="Enemy_ShieldedHeavy" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+      </RandomEnemyGroupConfigs>
+
+      <SubWaveConfigs>
+        <SubWave id="Wave16 Subwave 1" bAllowRandomSpawn="false">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Heavy" quantity="1" spawnGroup="FLeft" />
+            <RandomEnemies idref="Heavy" quantity="1" spawnGroup="FRight" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave16 Subwave 2">
+          <StartCondition type="Time">25</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="EmbassyCenter" />
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="FCenter" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave16 Subwave 3">
+          <StartCondition type="Time">55</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="EmbassyCenter" />
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="FCenter" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave16 Subwave 4">
+          <StartCondition type="Time">75</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="FCenter" />
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="EmbassyCenter" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave16 Subwave 5">
+          <StartCondition type="Kills">2</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Heavy" quantity="1" spawnGroup="FCenter" />
+            <RandomEnemies idref="Heavy" quantity="1" spawnGroup="Ffront" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave16 Subwave 6">
+          <StartCondition type="Kills">4</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="FMainStreet" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Embassy" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave16 Subwave 7">
+          <StartCondition type="Kills">5</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="FLeft" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="FRight" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave16 Subwave 8">
+          <StartCondition type="Kills">8</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Elite" quantity="1" spawnGroup="FMainStreet" />
+            <RandomEnemies idref="Heavy" quantity="1" spawnGroup="FCenter" />
+            <RandomEnemies idref="Heavy" quantity="1" spawnGroup="FMainStreet" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave16 Subwave 9">
+          <StartCondition type="Kills">12</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="H_Elite" quantity="1" spawnGroup="FLeft" />
+            <RandomEnemies idref="Elite" quantity="1" spawnGroup="FRight" />
+            <RandomEnemies idref="Dogs" quantity="2" spawnGroup="FCenter" />
+          </Enemies>
+        </SubWave>
+
+
+      </SubWaveConfigs>
+    </Wave>
+
+    <Wave id="17">
+
+      <RandomEnemyGroupConfigs>
+
+        <RandomEnemyGroup id="Pistol">
+          <Enemy idref="Enemy_Pistol_Makarov" chanceEncounter="50" />
+          <Enemy idref="Enemy_Helmet_Pistol" chanceEncounter="50" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Dogs">
+          <Enemy idref="Enemy_Dog" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Sniper">
+          <Enemy idref="Enemy_Sniper" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Shotgun">
+          <Enemy idref="Enemy_SMG_Scorpion" chanceEncounter="50" />
+          <Enemy idref="Enemy_Helmet_Shotgun" chanceEncounter="50" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Rifle">
+          <Enemy idref="Enemy_Rifle_Goblin" chanceEncounter="50" />
+          <Enemy idref="Enemy_Helmet_Rifle" chanceEncounter="50" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Elite">
+          <Enemy idref="Enemy_Elite_PP2000" chanceEncounter="65" />
+          <Enemy idref="Enemy_Helmet_Elite_PP2000" chanceEncounter="45" />
+        </RandomEnemyGroup>
+
+
+      </RandomEnemyGroupConfigs>
+
+      <SubWaveConfigs>
+        <SubWave id="Wave17 Subwave 1" bAllowRandomSpawn="false">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Shotgun" quantity="4" spawnGroup="FMainStreet" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave17 Subwave 2">
+          <StartCondition type="Time">20</StartCondition>
+          <Enemies>
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="Sniper1L" sniperAttractors="Sniper1L" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave17 Subwave 3">
+          <StartCondition type="Time">45</StartCondition>
+          <Enemies>
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperEmbassyL" sniperAttractors="Embassy2" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave17 Subwave 4">
+          <StartCondition type="Time">110</StartCondition>
+          <Enemies>
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="Sniper3" sniperAttractors="Sniper3" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave17 Subwave 5">
+          <StartCondition type="Time">130</StartCondition>
+          <Enemies>
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="Sniper2" sniperAttractors="Sniper2" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave17 Subwave 6">
+          <StartCondition type="Kills">2</StartCondition>
+          <Enemies>
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperEmbassyR" sniperAttractors="Embassy1" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave17 Subwave 7">
+          <StartCondition type="Kills">3</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Shotgun" quantity="1" spawnGroup="FLeft" />
+            <RandomEnemies idref="Shotgun" quantity="1" spawnGroup="FRight" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave17 Subwave 8">
+          <StartCondition type="Kills">4</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Shotgun" quantity="1" spawnGroup="FCenter" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave17 Subwave 9">
+          <StartCondition type="Kills">12</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Shotgun" quantity="2" spawnGroup="FCenter" />
+            <RandomEnemies idref="Pistol" quantity="2" spawnGroup="FMainStreet" />
+            <RandomEnemies idref="Shotgun" quantity="1" spawnGroup="FMainStreet" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave17 Subwave 10">
+          <StartCondition type="Kills">17</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Pistol" quantity="5" spawnGroup="FCenter" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave17 Subwave 11">
+          <StartCondition type="Kills">22</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Pistol" quantity="4" spawnGroup="FLeft" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave17 Subwave 12">
+          <StartCondition type="Kills">23</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Pistol" quantity="2" spawnGroup="FRight" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="Sniper1R" sniperAttractors="Sniper1R" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave17 Subwave 13">
+          <StartCondition type="Kills">25</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Pistol" quantity="2" spawnGroup="FRight" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave17 Subwave 14">
+          <StartCondition type="Kills">29</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Pistol" quantity="2" spawnGroup="FLeft" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave17 Subwave 15">
+          <StartCondition type="Kills">31</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle" quantity="2" spawnGroup="FLeft" />
+            <RandomEnemies idref="Pistol" quantity="2" spawnGroup="FCenter" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave17 Subwave 16">
+          <StartCondition type="Kills">34</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Pistol" quantity="1" spawnGroup="FMainStreet" />
+            <RandomEnemies idref="Rifle" quantity="2" spawnGroup="Ffront" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="Sniper1L" sniperAttractors="Sniper1L" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave17 Subwave 17">
+          <StartCondition type="Kills">35</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle" quantity="2" spawnGroup="FRight" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave17 Subwave 18">
+          <StartCondition type="Kills">37</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle" quantity="2" spawnGroup="FLeft" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave17 Subwave 19">
+          <StartCondition type="Kills">40</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle" quantity="2" spawnGroup="Ffront" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperEmbassyL" sniperAttractors="Embassy2" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave17 Subwave 20">
+          <StartCondition type="Kills">42</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Pistol" quantity="1" spawnGroup="FLeft" />
+            <RandomEnemies idref="Rifle" quantity="1" spawnGroup="FLeft" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave17 Subwave 21">
+          <StartCondition type="Kills">44</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Pistol" quantity="2" spawnGroup="FCenter" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave17 Subwave 22">
+          <StartCondition type="Kills">47</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Pistol" quantity="1" spawnGroup="FMainStreet" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="Sniper3" sniperAttractors="Sniper3" />
+            <RandomEnemies idref="Pistol" quantity="1" spawnGroup="EmbassyCenter" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave17 Subwave 23">
+          <StartCondition type="Kills">49</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle" quantity="1" spawnGroup="FLeft" />
+            <RandomEnemies idref="Rifle" quantity="1" spawnGroup="FRight" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave17 Subwave 24">
+          <StartCondition type="Kills">51</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle" quantity="2" spawnGroup="Ffront" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperEmbassyR" sniperAttractors="Embassy1" />
+          </Enemies>
+        </SubWave>
+
+      </SubWaveConfigs>
+    </Wave>
+
+    <Wave id="18">
+
+      <RandomEnemyGroupConfigs>
+
+        <RandomEnemyGroup id="Pistol">
+          <Enemy idref="Enemy_Pistol_Makarov" chanceEncounter="40" />
+          <Enemy idref="Enemy_Helmet_Pistol" chanceEncounter="60" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Dogs">
+          <Enemy idref="Enemy_Dog" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Heavy">
+          <Enemy idref="Enemy_Heavy" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Shotgun">
+          <Enemy idref="Enemy_SMG_Scorpion" chanceEncounter="40" />
+          <Enemy idref="Enemy_Helmet_Shotgun" chanceEncounter="60" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Rifle">
+          <Enemy idref="Enemy_Rifle_Goblin" chanceEncounter="40" />
+          <Enemy idref="Enemy_Helmet_Rifle" chanceEncounter="60" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Tech">
+          <Enemy idref="Enemy_Tech" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Elite">
+          <Enemy idref="Enemy_Elite_Scorpion" chanceEncounter="40" />
+          <Enemy idref="Enemy_Helmet_Elite_Scorpion" chanceEncounter="60" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Shield">
+          <Enemy idref="Enemy_ShieldedHeavy" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+      </RandomEnemyGroupConfigs>
+
+      <SubWaveConfigs>
+        <SubWave id="Wave18 Subwave 1" bAllowRandomSpawn="false">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Heavy" quantity="2" spawnGroup="FCenter" />
+            <RandomEnemies idref="Heavy" quantity="1" spawnGroup="FRight" />
+            <RandomEnemies idref="Heavy" quantity="1" spawnGroup="FLeft" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave18 Subwave 2">
+          <StartCondition type="Time">15</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Shield" quantity="2" spawnGroup="FMainStreet" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave18 Subwave 3">
+          <StartCondition type="Kills">2</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Heavy" quantity="2" spawnGroup="FRight" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Embassy" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave18 Subwave 4">
+          <StartCondition type="Kills">5</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Heavy" quantity="1" spawnGroup="Ffront" />
+            <RandomEnemies idref="Heavy" quantity="1" spawnGroup="Embassy" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="FMainStreet" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave18 Subwave 5">
+          <StartCondition type="Kills">9</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Shield" quantity="1" spawnGroup="FCenter" />
+            <RandomEnemies idref="Heavy" quantity="1" spawnGroup="Ffront" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperEmbassyL" sniperAttractors="Embassy2" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperEmbassyR" sniperAttractors="Embassy1" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave18 Subwave 6">
+          <StartCondition type="Kills">13</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="FMainStreet" />
+            <RandomEnemies idref="Heavy" quantity="1" spawnGroup="Ffront" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperEmbassyL" sniperAttractors="Embassy2" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperEmbassyR" sniperAttractors="Embassy1" />
+          </Enemies>
+        </SubWave>
+
+      </SubWaveConfigs>
+    </Wave>
+
+
+    <Wave id="19">
+
+      <RandomEnemyGroupConfigs>
+
+        <RandomEnemyGroup id="Pistol">
+          <Enemy idref="Enemy_Pistol_Makarov" chanceEncounter="60" />
+          <Enemy idref="Enemy_Helmet_Pistol" chanceEncounter="40" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Dogs">
+          <Enemy idref="Enemy_Dog" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Tech">
+          <Enemy idref="Enemy_Tech" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Heavy">
+          <Enemy idref="Enemy_Heavy" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Shotgun">
+          <Enemy idref="Enemy_SMG_Scorpion" chanceEncounter="60" />
+          <Enemy idref="Enemy_Helmet_Shotgun" chanceEncounter="40" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Rifle">
+          <Enemy idref="Enemy_Rifle_Goblin" chanceEncounter="60" />
+          <Enemy idref="Enemy_Helmet_Rifle" chanceEncounter="40" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Elite">
+          <Enemy idref="Enemy_Elite_Scorpion" chanceEncounter="60" />
+          <Enemy idref="Enemy_Helmet_Elite_Scorpion" chanceEncounter="40" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Shield">
+          <Enemy idref="Enemy_ShieldedHeavy" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+      </RandomEnemyGroupConfigs>
+
+      <SubWaveConfigs>
+        <SubWave id="Wave19 Subwave 1" bAllowRandomSpawn="false">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="FRight" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="FLeft" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="FMainStreet" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Ffront" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave19 Subwave 2">
+          <StartCondition type="Time">25</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Shield" quantity="1" spawnGroup="FMainStreet" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave19 Subwave 3">
+          <StartCondition type="Kills">3</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Elite" quantity="3" spawnGroup="FLeft" />
+            <RandomEnemies idref="Elite" quantity="3" spawnGroup="FRight" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave19 Subwave 4">
+          <StartCondition type="Kills">6</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Elite" quantity="3" spawnGroup="FMainStreet" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave19 Subwave 5">
+          <StartCondition type="Kills">10</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Shield" quantity="2" spawnGroup="Ffront" />
+            <RandomEnemies idref="Elite" quantity="1" spawnGroup="Ffront" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="FMainStreet" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave19 Subwave 6">
+          <StartCondition type="Kills">14</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Shield" quantity="1" spawnGroup="FCenter" />
+            <RandomEnemies idref="Elite" quantity="2" spawnGroup="FLeft" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave19 Subwave 7">
+          <StartCondition type="Kills">18</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Elite" quantity="3" spawnGroup="FLeft" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave19 Subwave 8">
+          <StartCondition type="Kills">21</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Elite" quantity="2" spawnGroup="FRight" />
+            <RandomEnemies idref="Elite" quantity="2" spawnGroup="FMainStreet" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave19 Subwave 9">
+          <StartCondition type="Kills">23</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Elite" quantity="2" spawnGroup="FRight" />
+            <RandomEnemies idref="Elite" quantity="2" spawnGroup="FMainStreet" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave19 Subwave 10">
+          <StartCondition type="Kills">27</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Shield" quantity="1" spawnGroup="FMainStreet" />
+            <RandomEnemies idref="Elite" quantity="1" spawnGroup="Ffront" />
+            <RandomEnemies idref="Elite" quantity="1" spawnGroup="FMainStreet" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave19 Subwave 11">
+          <StartCondition type="Kills">31</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Elite" quantity="2" spawnGroup="Ffront" />
+            <RandomEnemies idref="Elite" quantity="1" spawnGroup="FMainStreet" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave19 Subwave 12">
+          <StartCondition type="Kills">37</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Elite" quantity="2" spawnGroup="FLeft" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="FRight" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="FLeft" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="FMainStreet" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Ffront" />
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="EmbassyCenter" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave19 Subwave 13">
+          <StartCondition type="Kills">41</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Shield" quantity="1" spawnGroup="FLeft" />
+            <RandomEnemies idref="Shield" quantity="1" spawnGroup="FRight" />
+            <RandomEnemies idref="Elite" quantity="2" spawnGroup="Ffront" />
+          </Enemies>
+        </SubWave>
+
+
+      </SubWaveConfigs>
+    </Wave>
+
+
+    <Wave id="20">
+
+      <HVTObjective idref="HVTObjective_Hard1" />
+
+
+      <RandomEnemyGroupConfigs>
+
+        <RandomEnemyGroup id="Shield">
+          <Enemy idref="Enemy_ShieldedHeavy" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="RifleHelmet">
+          <Enemy idref="Enemy_Helmet_Rifle" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Elite">
+          <Enemy idref="Enemy_Helmet_Elite_Scorpion" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Shotgun">
+          <Enemy idref="Enemy_Helmet_Shotgun" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Heavy">
+          <Enemy idref="Enemy_Heavy" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+      </RandomEnemyGroupConfigs>
+
+      <SubWaveConfigs>
+        <SubWave id="Wave20 Subwave 1" startObjective="true">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="Sniper1L" sniperAttractors="Sniper1L" />
+            <RandomEnemies idref="Elite" quantity="2" spawnGroup="FMainStreet" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave20 Subwave 2" bAllowRandomSpawn="false">
+          <StartCondition type="Time">15</StartCondition>
+          <Enemies>
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="Sniper4" sniperAttractors="Sniper4" />
+            <RandomEnemies idref="Shotgun" quantity="1" spawnGroup="SupportAppt" />
+            <RandomEnemies idref="Elite" quantity="1" spawnGroup="FCenter" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave20 Subwave 3">
+          <StartCondition type="Kills">4</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Shield" quantity="1" spawnGroup="FCenter" />
+            <RandomEnemies idref="Heavy" quantity="1" spawnGroup="FRight" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave20 Subwave 4">
+          <StartCondition type="Kills">5</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Heavy" quantity="1" spawnGroup="FRight" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave20 Subwave 5">
+          <StartCondition type="Kills">6</StartCondition>
+          <Enemies>
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="Sniper2" sniperAttractors="Sniper2" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave20 Subwave 6">
+          <StartCondition type="Kills">7</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="RifleHelmet" quantity="1" spawnGroup="FCenter" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave20 Subwave 7">
+          <StartCondition type="Kills">8</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="RifleHelmet" quantity="1" spawnGroup="FCenter" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave20 Subwave 8">
+          <StartCondition type="Kills">9</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Shield" quantity="1" spawnGroup="FCenter" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave20 Subwave 9">
+          <StartCondition type="Kills">11</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Shield" quantity="1" spawnGroup="Ffront" />
+            <RandomEnemies idref="Shield" quantity="1" spawnGroup="FMainStreet" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave20 Subwave 10" startObjective="true">
+          <StartCondition type="Kills">12</StartCondition>
+          <Enemies>
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="Sniper1R" sniperAttractors="Sniper1R" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave20 Subwave 11" startObjective="true">
+          <StartCondition type="Kills">13</StartCondition>
+          <Enemies>
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperEmbassyR" sniperAttractors="Embassy1" />
+          </Enemies>
+        </SubWave>
+
+      </SubWaveConfigs>
+    </Wave>
+
+  </WaveConfigs>
+
+</ExtractionWaveConfig>

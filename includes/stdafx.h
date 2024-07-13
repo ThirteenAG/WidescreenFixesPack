@@ -36,7 +36,7 @@
 
 float GetFOV(float f, float ar);
 float GetFOV2(float f, float ar);
-float AdjustFOV(float f, float ar);
+float AdjustFOV(float f, float ar, float base_ar = (4.0f / 3.0f));
 
 bool IsModuleUAL(HMODULE mod);
 bool IsUALPresent();
@@ -102,6 +102,14 @@ std::string pattern_str(T t, Rest... rest)
     return std::string((std::is_same<T, char>::value ? format("%c ", t) : format("%02X ", t)) + pattern_str(rest...));
 }
 
+template <size_t count = 1, typename... Args>
+hook::pattern find_pattern(Args... args)
+{
+    hook::pattern pattern;
+    ((pattern = hook::pattern(args), !pattern.count_hint(count).empty()) || ...);
+    return pattern;
+}
+
 template<size_t N>
 constexpr size_t length(char const (&)[N])
 {
@@ -148,7 +156,7 @@ inline bool starts_with(const std::wstring_view str, const std::wstring_view pre
     return str.starts_with(prefix);
 }
 
-template<class T>
+template<class T = std::filesystem::path>
 T GetModulePath(HMODULE hModule)
 {
     static constexpr auto INITIAL_BUFFER_SIZE = MAX_PATH;
@@ -202,7 +210,7 @@ T GetModulePath(HMODULE hModule)
     return T();
 }
 
-template<class T>
+template<class T = std::filesystem::path>
 T GetThisModulePath()
 {
     HMODULE hm = NULL;
@@ -217,7 +225,7 @@ T GetThisModulePath()
     return r;
 }
 
-template<class T>
+template<class T = std::filesystem::path>
 T GetThisModuleName()
 {
     HMODULE hm = NULL;
@@ -232,7 +240,7 @@ T GetThisModuleName()
         return moduleFileName.substr(moduleFileName.find_last_of(L"/\\") + 1);
 }
 
-template<class T>
+template<class T = std::filesystem::path>
 T GetExeModulePath()
 {
     T r = GetModulePath<T>(NULL);
@@ -246,7 +254,7 @@ T GetExeModulePath()
     return r;
 }
 
-template<class T>
+template<class T = std::filesystem::path>
 T GetExeModuleName()
 {
     const T moduleFileName = GetModulePath<T>(NULL);
@@ -258,7 +266,7 @@ T GetExeModuleName()
         return moduleFileName.substr(moduleFileName.find_last_of(L"/\\") + 1);
 }
 
-template<class T>
+template<class T = std::filesystem::path>
 T GetCurrentDirectoryW()
 {
     static constexpr auto INITIAL_BUFFER_SIZE = MAX_PATH;
