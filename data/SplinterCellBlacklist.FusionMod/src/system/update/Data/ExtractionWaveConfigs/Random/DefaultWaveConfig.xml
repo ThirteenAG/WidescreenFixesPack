@@ -1,0 +1,202 @@
+<?xml version="1.0" standalone="yes"?>
+<ExtractionWaveConfig xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ExtractionWaveConfig-schema.xsd">
+
+  <!-- Enemy Configs -->
+  <EnemyConfigs>
+
+    <Enemy id="Enemy_Dog">AI_Dog</Enemy>
+    <Enemy id="Enemy_GenericPistolGrenade">AI_Generic_Pistol_Grenade</Enemy>
+    <Enemy id="Enemy_GenericRifle">AI_Generic_Rifle_Flashbang</Enemy>
+    <Enemy id="Enemy_Heavy">AI_Heavy_Default</Enemy>
+    <Enemy id="Enemy_MachineGunner">AI_MachineGunner_Default</Enemy>
+    <Enemy id="Enemy_ShieldedHeavy">AI_ShieldedHeavy_Default</Enemy>
+    <Enemy id="Enemy_Tech">AI_Tech_Default</Enemy>
+    <Enemy id="Enemy_Sniper">AI_Sniper_Default</Enemy>
+
+  </EnemyConfigs>
+
+  <!-- Objectives -->
+  <ObjectiveConfigs>
+
+    <!-- Objective Categories -->
+    <ObjectiveCategories>
+      <ObjectiveCategory id="Easy" />
+      <ObjectiveCategory id="Medium" />
+      <ObjectiveCategory id="Hard" />
+    </ObjectiveCategories>
+
+    <!-- HVT Objectives -->
+    <HVTObjectiveConfigs>
+
+      <!-- Easy HVT Objectives -->
+      <HVTObjective id="HVTObjective_Easy1" timeLimit="60" category="Easy">
+        <HVTs>
+          <Enemy idref="Enemy_GenericRifle" quantity="1" spawnGroup="TopLeft" />
+          <Enemy idref="Enemy_GenericRifle" quantity="1" spawnGroup="TopRight" />
+        </HVTs>
+      </HVTObjective>
+
+      <HVTObjective id="HVTObjective_Easy2" timeLimit="60" category="Easy">
+        <HVTs>
+          <Enemy idref="Enemy_GenericRifle" quantity="2" spawnGroup="TopRight" />
+        </HVTs>
+      </HVTObjective>
+
+      <!-- Medium HVT Objectives -->
+      <HVTObjective id="HVTObjective_Medium1" timeLimit="120" category="Medium">
+        <HVTs>
+          <Enemy idref="Enemy_Heavy" quantity="1" />
+        </HVTs>
+      </HVTObjective>
+
+    </HVTObjectiveConfigs>
+
+  </ObjectiveConfigs>
+
+
+  <!-- Wave Configs -->
+  <WaveConfigs>
+
+    <!-- A Wave's Id must be an integer -->
+    <Wave id="1">
+
+      <!-- The random enemies to choose from for this wave -->
+      <RandomEnemyGroupConfigs>
+        <RandomEnemyGroup id="Pool1">
+          <Enemy idref="Enemy_ShieldedHeavy" chanceEncounter="50" />
+          <Enemy idref="Enemy_ShieldedHeavy" chanceEncounter="50" />
+        </RandomEnemyGroup>
+        <RandomEnemyGroup id="Pool2">
+          <Enemy idref="Enemy_GenericPistolGrenade" chanceEncounter="25" />
+          <Enemy idref="Enemy_GenericRifle" chanceEncounter="75" />
+        </RandomEnemyGroup>
+      </RandomEnemyGroupConfigs>
+
+      <!-- Sub waves. Subwave Ids are just strings.  -->
+      <SubWaveConfigs>
+        <SubWave id="SubWave 1">
+          <Enemies>
+            <Enemy idref="Enemy_Sniper" quantity="2" sniperAttractors="attractor0  attractor8" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="SubWave 2">
+          <StartCondition type="Kills">2</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Pool2" quantity="1" spawnGroup="BottomLeft" />
+          </Enemies>
+        </SubWave>
+      </SubWaveConfigs>
+    </Wave>
+
+    <!-- Wave 2 repeats Wave 1 -->
+
+    <!-- Wave 3 Objective Wave -->
+    <Wave id="3">
+
+      <HVTObjective idref="HVTObjective_Easy1" />
+
+      <RandomEnemyGroupConfigs>
+        <RandomEnemyGroup id="Pool1">
+          <!-- All these are equally likely to be spawned -->
+          <Enemy idref="Enemy_GenericPistolGrenade" />
+          <Enemy idref="Enemy_GenericRifle" />
+          <Enemy idref="Enemy_Dog" />
+        </RandomEnemyGroup>
+      </RandomEnemyGroupConfigs>
+
+      <SubWaveConfigs>
+        <SubWave id="Wave 3 Subwave Objective" startObjective="true">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Pool1" quantity="2" spawnGroup="TopRight" />
+            <Enemy idref="Enemy_Dog" quantity="2" />
+          </Enemies>
+        </SubWave>
+      </SubWaveConfigs>
+    </Wave>
+
+    <Wave id="4">
+
+      <RandomEnemyGroupConfigs>
+        <RandomEnemyGroup id="SoldiersAndDogs">
+          <Enemy idref="Enemy_GenericPistolGrenade" chanceEncounter="50" />
+          <Enemy idref="Enemy_Dog" chanceEncounter="50" />
+        </RandomEnemyGroup>
+        <RandomEnemyGroup id="Pool1">
+          <Enemy idref="Enemy_GenericRifle" chanceEncounter="50" />
+          <Enemy idref="Enemy_GenericPistolGrenade" chanceEncounter="50" />
+        </RandomEnemyGroup>
+      </RandomEnemyGroupConfigs>
+
+      <SubWaveConfigs>
+        <SubWave id="Subwave 1">
+          <StartCondition type="Time">5</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="SoldiersAndDogs" quantity="5" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Subwave 3">
+          <StartCondition type="Kills">2</StartCondition>
+          <Enemies>
+            <!-- Choose a random enemy from a random pool -->
+            <RandomEnemies quantity="5" />
+          </Enemies>
+        </SubWave>
+      </SubWaveConfigs>
+    </Wave>
+
+    <!-- Wave 5 repeats wave 4 -->
+
+    <Wave id="6">
+
+      <HVTObjective category="Medium" />
+
+      <RandomEnemyGroupConfigs>
+        <RandomEnemyGroup id="SoldiersAndDogs">
+          <Enemy idref="Enemy_GenericRifle" chanceEncounter="50" />
+          <Enemy idref="Enemy_Dog" chanceEncounter="50" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="HeaviesAndDogs">
+          <Enemy idref="Enemy_Heavy" chanceEncounter="50" />
+          <Enemy idref="Enemy_Dog" chanceEncounter="50" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Shields">
+          <Enemy idref="Enemy_ShieldedHeavy" chanceEncounter="25" />
+        </RandomEnemyGroup>
+      </RandomEnemyGroupConfigs>
+
+      <SubWaveConfigs>
+        <SubWave id="1" startObjective="true">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="SoldiersAndDogs" quantity="10" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="2">
+          <StartCondition type="Time">60</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="HeaviesAndDogs" quantity="10" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="3">
+          <StartCondition type="Time">120</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Shields" quantity="5" />
+          </Enemies>
+        </SubWave>
+      </SubWaveConfigs>
+
+    </Wave>
+
+    <!-- The last wave specified in the config will be the last wave of the map -->
+
+  </WaveConfigs>
+
+
+</ExtractionWaveConfig>

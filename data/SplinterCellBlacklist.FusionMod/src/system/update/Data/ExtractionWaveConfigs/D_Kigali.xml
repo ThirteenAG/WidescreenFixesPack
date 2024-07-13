@@ -1,0 +1,1850 @@
+<?xml version="1.0" standalone="yes"?>
+<ExtractionWaveConfig xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ExtractionWaveConfig-schema.xsd">
+
+  <!-- Enemy Configs -->
+  <EnemyConfigs>
+    <Enemy id="Enemy_Dog">AI_Dog</Enemy>
+    <Enemy id="Enemy_Pistol_A">AI_Coop_Pistol_Makarov</Enemy>
+    <Enemy id="Enemy_Pistol_B">AI_Coop_Pistol_F40</Enemy>
+
+    <Enemy id="Enemy_SMG_A">AI_Coop_SMG_MAC11</Enemy>
+    <Enemy id="Enemy_SMG_B">AI_Coop_SMG_PP2000</Enemy>
+    <Enemy id="Enemy_SMG_C">AI_Coop_SMG_Scorpion</Enemy>
+    <Enemy id="Enemy_Shotgun">AI_Coop_Shotgun</Enemy>
+
+    <Enemy id="Enemy_Rifle_A">AI_Coop_Rifle_AK47</Enemy>
+    <Enemy id="Enemy_Rifle_B">AI_Coop_Rifle_AKS74U</Enemy>
+    <Enemy id="Enemy_Rifle_C">AI_Coop_Rifle_Goblin</Enemy>
+
+    <Enemy id="Enemy_ShieldedHeavy">AI_Coop_ShieldedHeavy</Enemy>
+    <Enemy id="Enemy_Heavy">AI_Coop_Heavy_Voron</Enemy>
+    <Enemy id="Enemy_Tech">AI_Coop_Tech</Enemy>
+    <Enemy id="Enemy_Sniper">AI_Coop_Sniper_60m</Enemy>
+
+    <Enemy id="Enemy_Elite_C">AI_Coop_Elite_MAC11</Enemy>
+    <Enemy id="Enemy_Elite_B">AI_Coop_Elite_PP2000</Enemy>
+    <Enemy id="Enemy_Elite_A">AI_Coop_Elite_Scorpion</Enemy>
+
+    <Enemy id="Enemy_Helmet_Pistol_A">AI_Coop_Helmet_Russian_Pistol_F40</Enemy>
+    <Enemy id="Enemy_Helmet_Rifle_A">AI_Coop_Helmet_Russian_Rifle_Goblin</Enemy>
+    <Enemy id="Enemy_Helmet_SMG_A">AI_Coop_Helmet_Russian_SMG_PP2000</Enemy>
+
+
+    <Enemy id="Enemy_Helmet_Elite_C">AI_Coop_Helmet_Elite_MAC11</Enemy>
+    <Enemy id="Enemy_Helmet_Elite_B">AI_Coop_Helmet_Elite_PP2000</Enemy>
+    <Enemy id="Enemy_Helmet_Elite_A">AI_Coop_Helmet_Elite_Scorpion</Enemy>
+
+
+  </EnemyConfigs>
+
+  <ObjectiveConfigs>
+
+    <!-- Objective Categories -->
+    <ObjectiveCategories>
+      <ObjectiveCategory id="Easy" />
+      <ObjectiveCategory id="Medium" />
+      <ObjectiveCategory id="Hard" />
+    </ObjectiveCategories>
+
+    <!-- HVT Objectives -->
+    <HVTObjectiveConfigs>
+
+      <!-- Easy HVT Objectives -->
+      <HVTObjective id="HVTObjective_Easy1" timeLimit="180" category="Easy">
+        <HVTs>
+          <Enemy idref="Enemy_Rifle_A" quantity="1" spawnGroup="Group_Alleyway" fTimeDelay="2" />
+          <Enemy idref="Enemy_Rifle_A" quantity="1" spawnGroup="Group_Building" fTimeDelay="15" />
+        </HVTs>
+      </HVTObjective>
+
+
+      <!-- Medium HVT Objectives -->
+
+      <HVTObjective id="HVTObjective_Medium1" timeLimit="180" category="Medium">
+        <HVTs>
+          <Enemy idref="Enemy_Tech" quantity="1" spawnGroup="Group_Parking" fTimeDelay="2" />
+          <Enemy idref="Enemy_Tech" quantity="1" spawnGroup="Group_Garden" fTimeDelay="15" />
+        </HVTs>
+      </HVTObjective>
+
+      <HVTObjective id="HVTObjective_Medium2" timeLimit="180" category="Medium">
+        <HVTs>
+          <Enemy idref="Enemy_Heavy" quantity="1" spawnGroup="Group_Parking" fTimeDelay="2" />
+          <Enemy idref="Enemy_Heavy" quantity="1" spawnGroup="Group_Building" fTimeDelay="35" />
+        </HVTs>
+      </HVTObjective>
+
+      <!-- Medium HVT Objectives -->
+      <HVTObjective id="HVTObjective_Hard1" timeLimit="240" category="Hard">
+        <HVTs>
+          <Enemy idref="Enemy_Helmet_Elite_A" quantity="1" spawnGroup="Group_Building" fTimeDelay="2" />
+          <Enemy idref="Enemy_Helmet_Elite_A" quantity="1" spawnGroup="Group_Alleyway" fTimeDelay="25" />
+          <Enemy idref="Enemy_Helmet_Elite_A" quantity="1" spawnGroup="Group_Garden" fTimeDelay="55" />
+          <Enemy idref="Enemy_Helmet_Elite_A" quantity="1" spawnGroup="Group_Parking" fTimeDelay="55" />
+        </HVTs>
+      </HVTObjective>
+
+    </HVTObjectiveConfigs>
+
+
+  </ObjectiveConfigs>
+
+  <!-- Wave Configs -->
+  <WaveConfigs>
+
+
+    <Wave id="1">
+
+
+      <RandomEnemyGroupConfigs>
+
+        <RandomEnemyGroup id="Pistol_A">
+          <Enemy idref="Enemy_Pistol_A" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+
+      </RandomEnemyGroupConfigs>
+      <SubWaveConfigs>
+
+
+        <SubWave id="Wave1 Subwave 1" bAllowRandomSpawn="false">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Pistol_A" quantity="2" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave1 Subwave 2">
+          <StartCondition type="Time">10</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Pistol_A" quantity="2" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave1 Subwave 3">
+          <StartCondition type="Kills">3</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Pistol_A" quantity="2" spawnGroup="Group_Parking" />
+            <RandomEnemies idref="Pistol_A" quantity="2" spawnGroup="Group_Parking" />
+
+          </Enemies>
+        </SubWave>
+
+      </SubWaveConfigs>
+    </Wave>
+
+    <Wave id="2">
+
+      <RandomEnemyGroupConfigs>
+
+        <RandomEnemyGroup id="Pistol_A">
+          <Enemy idref="Enemy_Pistol_A" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Shotgun">
+          <Enemy idref="Enemy_Shotgun" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Rifle_A">
+          <Enemy idref="Enemy_Rifle_A" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+      </RandomEnemyGroupConfigs>
+
+      <SubWaveConfigs>
+        <SubWave id="Wave2 Subwave 1" bAllowRandomSpawn="false">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Pistol_A" quantity="2" spawnGroup="Group_Parking" />
+            <RandomEnemies idref="Rifle_A" quantity="2" spawnGroup="Group_Parking" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave2 Subwave 2">
+          <StartCondition type="Kills">2</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle_A" quantity="3" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+
+        <SubWave id="Wave2 Subwave 3">
+          <StartCondition type="Kills">4</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle_A" quantity="3" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+      </SubWaveConfigs>
+    </Wave>
+
+    <Wave id="3">
+
+      <RandomEnemyGroupConfigs>
+
+        <RandomEnemyGroup id="Pistol_A">
+          <Enemy idref="Enemy_Pistol_A" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Shotgun">
+          <Enemy idref="Enemy_Shotgun" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Rifle_A">
+          <Enemy idref="Enemy_Rifle_A" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+      </RandomEnemyGroupConfigs>
+      <SubWaveConfigs>
+        <SubWave id="Wave3 Subwave 1" bAllowRandomSpawn="false">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle_A" quantity="4" spawnGroup="Group_Garden" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave3 Subwave 2">
+          <StartCondition type="Time">10</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle_A" quantity="2" spawnGroup="Group_Garden" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave3 Subwave 3">
+          <StartCondition type="Kills">4</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Pistol_A" quantity="2" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Rifle_A" quantity="2" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave3 Subwave 4">
+          <StartCondition type="Kills">7</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle_A" quantity="2" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave3 Subwave 5">
+          <StartCondition type="Kills">9</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle_A" quantity="2" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Pistol_A" quantity="1" spawnGroup="Group_Garden" />
+          </Enemies>
+        </SubWave>
+
+
+      </SubWaveConfigs>
+    </Wave>
+
+    <Wave id="4">
+
+      <RandomEnemyGroupConfigs>
+
+
+        <RandomEnemyGroup id="Helmet_Pistol_A">
+          <Enemy idref="Enemy_Helmet_Pistol_A" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+
+      </RandomEnemyGroupConfigs>
+      <SubWaveConfigs>
+        <SubWave id="Wave4 Subwave 1" bAllowRandomSpawn="false">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Pistol_A" quantity="3" spawnGroup="Group_Parking" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave4 Subwave 2">
+          <StartCondition type="Time">15</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Pistol_A" quantity="2" spawnGroup="Group_Parking" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave4 Subwave 3">
+          <StartCondition type="Kills">2</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Pistol_A" quantity="3" spawnGroup="Group_Parking" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave4 Subwave 4">
+          <StartCondition type="Kills">5</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Pistol_A" quantity="2" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Helmet_Pistol_A" quantity="2" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave4 Subwave 5">
+          <StartCondition type="Kills">7</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Pistol_A" quantity="2" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave4 Subwave 6">
+          <StartCondition type="Kills">9</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Pistol_A" quantity="2" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+
+        <SubWave id="Wave4 Subwave 7">
+          <StartCondition type="Kills">13</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Pistol_A" quantity="2" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Helmet_Pistol_A" quantity="2" spawnGroup="Group_Garden" />
+
+          </Enemies>
+        </SubWave>
+
+      </SubWaveConfigs>
+    </Wave>
+
+    <Wave id="5">
+
+      <HVTObjective idref="HVTObjective_Easy1" />
+
+
+      <RandomEnemyGroupConfigs>
+
+        <RandomEnemyGroup id="Rifle_A">
+          <Enemy idref="Enemy_Rifle_A" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Shotgun">
+          <Enemy idref="Enemy_Shotgun" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+      </RandomEnemyGroupConfigs>
+
+      <SubWaveConfigs>
+        <SubWave id="Wave5 Subwave 1" bAllowRandomSpawn="false" startObjective="true">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle_A" quantity="2" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Rifle_A" quantity="2" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave5 Subwave 2">
+          <StartCondition type="Time">15</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle_A" quantity="1" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Rifle_A" quantity="1" spawnGroup="Group_Parking" />
+            <RandomEnemies idref="Rifle_A" quantity="1" spawnGroup="Group_Garden" />
+          </Enemies>
+        </SubWave>
+
+
+        <SubWave id="Wave5 Subwave 3">
+          <StartCondition type="Kills">4</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle_A" quantity="2" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Rifle_A" quantity="2" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave5 Subwave 4">
+          <StartCondition type="Kills">8</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle_A" quantity="3" spawnGroup="Group_Parking" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave5 Subwave 5">
+          <StartCondition type="Kills">12</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle_A" quantity="2" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Rifle_A" quantity="2" spawnGroup="Group_Parking" />
+          </Enemies>
+        </SubWave>
+
+
+      </SubWaveConfigs>
+    </Wave>
+
+    <Wave id="6">
+
+      <RandomEnemyGroupConfigs>
+
+        <RandomEnemyGroup id="Pistol_A">
+          <Enemy idref="Enemy_Pistol_A" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+
+        <RandomEnemyGroup id="Rifle_A">
+          <Enemy idref="Enemy_Rifle_A" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Tech">
+          <Enemy idref="Enemy_Tech" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+      </RandomEnemyGroupConfigs>
+      <SubWaveConfigs>
+        <SubWave id="Wave6 Subwave 1" bAllowRandomSpawn="false">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Pistol_A" quantity="3" spawnGroup="Group_Parking" />
+            <RandomEnemies idref="Pistol_A" quantity="3" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave6 Subwave 2">
+          <StartCondition type="Kills">4</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle_A" quantity="3" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Parking" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave6 Subwave 3">
+          <StartCondition type="Kills">7</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle_A" quantity="1" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Rifle_A" quantity="2" spawnGroup="Group_Garden" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave6 Subwave 4">
+          <StartCondition type="Kills">10</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Parking" />
+            <RandomEnemies idref="Rifle_A" quantity="2" spawnGroup="Group_Building" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave6 Subwave 5">
+          <StartCondition type="Kills">13</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Rifle_A" quantity="2" spawnGroup="Group_Garden" />
+          </Enemies>
+        </SubWave>
+
+      </SubWaveConfigs>
+    </Wave>
+
+    <Wave id="7">
+      <RandomEnemyGroupConfigs>
+
+        <RandomEnemyGroup id="Helmet_Rifle_A">
+          <Enemy idref="Enemy_Helmet_Rifle_A" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+      </RandomEnemyGroupConfigs>
+
+      <SubWaveConfigs>
+
+        <SubWave id="Wave7 Subwave 1" bAllowRandomSpawn="false">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Rifle_A" quantity="4" spawnGroup="Group_Garden" />
+          </Enemies>
+        </SubWave>
+        <SubWave id="Wave7 Subwave 2">
+          <StartCondition type="Time">20</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Rifle_A" quantity="2" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave7 Subwave 3">
+          <StartCondition type="Kills">4</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Rifle_A" quantity="4" spawnGroup="Group_Alleyway" />
+
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave7 Subwave 4">
+          <StartCondition type="Kills">6</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Rifle_A" quantity="4" spawnGroup="Group_Garden" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave7 Subwave 5">
+          <StartCondition type="Kills">11</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Rifle_A" quantity="2" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Helmet_Rifle_A" quantity="2" spawnGroup="Group_Parking" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave7 Subwave 6">
+          <StartCondition type="Kills">15</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Rifle_A" quantity="2" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Helmet_Rifle_A" quantity="2" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+
+      </SubWaveConfigs>
+    </Wave>
+
+    <Wave id="8">
+      <RandomEnemyGroupConfigs>
+
+
+        <RandomEnemyGroup id="Rifle_A">
+          <Enemy idref="Enemy_Rifle_A" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Pistol_A">
+          <Enemy idref="Enemy_Pistol_A" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+      </RandomEnemyGroupConfigs>
+
+      <SubWaveConfigs>
+
+        <SubWave id="Wave8 Subwave 1" bAllowRandomSpawn="false">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Pistol_A" quantity="3" spawnGroup="Group_Parking" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_1" sniperAttractors="SniperAttractor_1" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave8 Subwave 2">
+          <StartCondition type="Time">20</StartCondition>
+          <Enemies>
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_3" sniperAttractors="SniperAttractor_3" />
+            <RandomEnemies idref="Pistol_A" quantity="3" spawnGroup="Group_Garden" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave8 Subwave 3">
+          <StartCondition type="Kills">7</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Pistol_A" quantity="3" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Pistol_A" quantity="3" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave8 Subwave 4">
+          <StartCondition type="Kills">11</StartCondition>
+          <Enemies>
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_2" sniperAttractors="SniperAttractor_2" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_4" sniperAttractors="SniperAttractor_4" />
+            <RandomEnemies idref="Rifle_A" quantity="2" spawnGroup="Group_Building" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave8 Subwave 5">
+          <StartCondition type="Kills">14</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle_A" quantity="3" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave8 Subwave 6">
+          <StartCondition type="Kills">17</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Rifle_A" quantity="2" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Rifle_A" quantity="2" spawnGroup="Group_Building" />
+          </Enemies>
+        </SubWave>
+      </SubWaveConfigs>
+    </Wave>
+
+    <Wave id="9">
+
+      <RandomEnemyGroupConfigs>
+
+        <RandomEnemyGroup id="Helmet_Shotgun">
+          <Enemy idref="Enemy_Helmet_SMG_A" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Helmet_Rifle_A">
+          <Enemy idref="Enemy_Helmet_Rifle_A" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Tech">
+          <Enemy idref="Enemy_Tech" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+      </RandomEnemyGroupConfigs>
+
+      <SubWaveConfigs>
+        <SubWave id="Wave9 Subwave 1" bAllowRandomSpawn="false">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Rifle_A" quantity="3" spawnGroup="Group_Garden" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave9 Subwave 2">
+          <StartCondition type="Time">15</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Rifle_A" quantity="4" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave9 Subwave 3">
+          <StartCondition type="Kills">4</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Parking" />
+            <RandomEnemies idref="Helmet_Rifle_A" quantity="2" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Helmet_Rifle_A" quantity="2" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave9 Subwave 4">
+          <StartCondition type="Kills">10</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Helmet_Rifle_A" quantity="3" spawnGroup="Group_Alleyway" />
+
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave9 Subwave 5">
+          <StartCondition type="Kills">14</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Helmet_Rifle_A" quantity="2" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Helmet_Rifle_A" quantity="2" spawnGroup="Group_Building" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave9 Subwave 6">
+          <StartCondition type="Kills">20</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Helmet_Rifle_A" quantity="2" spawnGroup="Group_Parking" />
+            <RandomEnemies idref="Helmet_Rifle_A" quantity="2" spawnGroup="Group_Garden" />
+          </Enemies>
+        </SubWave>
+
+      </SubWaveConfigs>
+    </Wave>
+
+    <Wave id="10">
+
+
+      <HVTObjective idref="HVTObjective_Medium1" />
+
+
+      <RandomEnemyGroupConfigs>
+
+        <RandomEnemyGroup id="Heavy">
+          <Enemy idref="Enemy_Heavy" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Dogs">
+          <Enemy idref="Enemy_Dog" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Tech">
+          <Enemy idref="Enemy_Tech" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+      </RandomEnemyGroupConfigs>
+
+      <SubWaveConfigs>
+        <SubWave id="Wave10 Subwave 1" bAllowRandomSpawn="false" startObjective="true">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Dogs" quantity="2" spawnGroup="Group_Parking" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_1" sniperAttractors="SniperAttractor_1" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_3" sniperAttractors="SniperAttractor_3" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave10 Subwave 2" startObjective="true">
+          <StartCondition type="Time">15</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Dogs" quantity="2" spawnGroup="Group_Garden" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave10 Subwave 3">
+          <StartCondition type="Kills">3</StartCondition>
+          <Enemies>
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_2" sniperAttractors="SniperAttractor_2" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_4" sniperAttractors="SniperAttractor_4" />
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="Group_Building" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave10 Subwave 4">
+          <StartCondition type="Kills">6</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Dogs" quantity="2" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Parking" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave10 Subwave 5">
+          <StartCondition type="Kills">10</StartCondition>
+          <Enemies>
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_1" sniperAttractors="SniperAttractor_1 SniperAttractor_2" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_3" sniperAttractors="SniperAttractor_3 SniperAttractor_4" />
+            <RandomEnemies idref="Dogs" quantity="2" spawnGroup="Group_Building" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave10 Subwave 6">
+          <StartCondition type="Kills">14</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Dogs" quantity="2" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave10 Subwave 7">
+          <StartCondition type="Kills">18</StartCondition>
+          <Enemies>
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_2" sniperAttractors="SniperAttractor_2 SniperAttractor_1" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_4" sniperAttractors="SniperAttractor_4 SniperAttractor_3" />
+            <RandomEnemies idref="Dogs" quantity="2" spawnGroup="Group_Building" />
+          </Enemies>
+        </SubWave>
+
+      </SubWaveConfigs>
+    </Wave>
+
+    <Wave id="11">
+
+      <RandomEnemyGroupConfigs>
+
+        <RandomEnemyGroup id="Tech">
+          <Enemy idref="Enemy_Tech" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Elite_A">
+          <Enemy idref="Enemy_Elite_A" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+      </RandomEnemyGroupConfigs>
+
+      <SubWaveConfigs>
+        <SubWave id="Wave11 Subwave 1" bAllowRandomSpawn="false">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Elite_A" quantity="4" spawnGroup="Group_Parking" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave11 Subwave 2">
+          <StartCondition type="Time">15</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Elite_A" quantity="4" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave11 Subwave 3">
+          <StartCondition type="Kills">4</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Garden" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave11 Subwave 4">
+          <StartCondition type="Kills">9</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Parking" />
+            <RandomEnemies idref="Elite_A" quantity="3" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Elite_A" quantity="2" spawnGroup="Group_Building" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave11 Subwave 5">
+          <StartCondition type="Kills">14</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Elite_A" quantity="3" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Elite_A" quantity="2" spawnGroup="Group_Garden" />
+
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave11 Subwave 6">
+          <StartCondition type="Kills">20</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Elite_A" quantity="4" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave11 Subwave 7">
+          <StartCondition type="Kills">24</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Elite_A" quantity="4" spawnGroup="Group_Parking" />
+          </Enemies>
+        </SubWave>
+
+      </SubWaveConfigs>
+    </Wave>
+
+    <Wave id="12">
+      <RandomEnemyGroupConfigs>
+
+        <RandomEnemyGroup id="Helmet_Pistol_B">
+          <Enemy idref="Enemy_Helmet_Pistol_A" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Helmet_Rifle_B">
+          <Enemy idref="Enemy_Helmet_Rifle_A" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Dogs">
+          <Enemy idref="Enemy_Dog" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+      </RandomEnemyGroupConfigs>
+
+      <SubWaveConfigs>
+
+        <SubWave id="Wave12 Subwave 1" bAllowRandomSpawn="false">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Dogs" quantity="2" spawnGroup="Group_Garden" />
+          </Enemies>
+        </SubWave>
+        <SubWave id="Wave12 Subwave 2">
+          <StartCondition type="Time">20</StartCondition>
+          <Enemies>
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_2" sniperAttractors="SniperAttractor_2" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_4" sniperAttractors="SniperAttractor_4" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave12 Subwave 3">
+          <StartCondition type="Kills">2</StartCondition>
+          <Enemies>
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_1" sniperAttractors="SniperAttractor_1" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_3" sniperAttractors="SniperAttractor_3" />
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="Group_Garden" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave12 Subwave 4">
+          <StartCondition type="Kills">4</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Helmet_Pistol_B" quantity="3" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave12 Subwave 5">
+          <StartCondition type="Kills">7</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Helmet_Pistol_B" quantity="3" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave12 Subwave 6">
+          <StartCondition type="Kills">11</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Helmet_Pistol_B" quantity="3" spawnGroup="Group_Parking" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave12 Subwave 7">
+          <StartCondition type="Kills">17</StartCondition>
+          <Enemies>
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_1" sniperAttractors="SniperAttractor_1 SniperAttractor_2" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_4" sniperAttractors="SniperAttractor_4 SniperAttractor_3" />
+            <RandomEnemies idref="Dogs" quantity="2" spawnGroup="Group_Parking" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave12 Subwave 8">
+          <StartCondition type="Kills">19</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Rifle_B" quantity="3" spawnGroup="Group_Parking" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave12 Subwave 9">
+          <StartCondition type="Kills">21</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Rifle_B" quantity="2" spawnGroup="Group_Garden" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave12 Subwave 10">
+          <StartCondition type="Kills">23</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Rifle_B" quantity="2" spawnGroup="Group_Parking" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave12 Subwave 11">
+          <StartCondition type="Kills">25</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Dogs" quantity="2" spawnGroup="Group_Garden" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave12 Subwave 12">
+          <StartCondition type="Kills">27</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Helmet_Rifle_B" quantity="2" spawnGroup="Group_Garden" />
+          </Enemies>
+        </SubWave>
+
+      </SubWaveConfigs>
+    </Wave>
+
+    <Wave id="13">
+
+      <RandomEnemyGroupConfigs>
+
+        <RandomEnemyGroup id="Tech">
+          <Enemy idref="Enemy_Tech" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Heavy">
+          <Enemy idref="Enemy_Heavy" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Helmet_Shotgun">
+          <Enemy idref="Enemy_Helmet_SMG_A" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Helmet_Rifle_B">
+          <Enemy idref="Enemy_Helmet_Rifle_A" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+      </RandomEnemyGroupConfigs>
+
+      <SubWaveConfigs>
+        <SubWave id="Wave13 Subwave 1" bAllowRandomSpawn="false">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Shotgun" quantity="4" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave13 Subwave 2">
+          <StartCondition type="Time">15</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Rifle_B" quantity="4" spawnGroup="Group_Garden" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave13 Subwave 3">
+          <StartCondition type="Kills">4</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Parking" />
+            <RandomEnemies idref="Heavy" quantity="1" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave13 Subwave 4">
+          <StartCondition type="Kills">10</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Helmet_Shotgun" quantity="2" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Helmet_Rifle_B" quantity="2" spawnGroup="Group_Garden" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave13 Subwave 5">
+          <StartCondition type="Kills">15</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Parking" />
+            <RandomEnemies idref="Heavy" quantity="1" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Helmet_Rifle_B" quantity="3" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave13 Subwave 6">
+          <StartCondition type="Kills">18</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Heavy" quantity="1" spawnGroup="Group_Parking" />
+            <RandomEnemies idref="Helmet_Rifle_B" quantity="2" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave13 Subwave 7">
+          <StartCondition type="Kills">22</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Rifle_B" quantity="2" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Helmet_Shotgun" quantity="2" spawnGroup="Group_Building" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave13 Subwave 8">
+          <StartCondition type="Kills">26</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Helmet_Rifle_B" quantity="2" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Helmet_Shotgun" quantity="2" spawnGroup="Group_Garden" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave13 Subwave 9">
+          <StartCondition type="Kills">34</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Parking" />
+            <RandomEnemies idref="Helmet_Rifle_B" quantity="2" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Helmet_Shotgun" quantity="2" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Heavy" quantity="1" spawnGroup="Group_Garden" />
+          </Enemies>
+        </SubWave>
+
+      </SubWaveConfigs>
+    </Wave>
+
+    <Wave id="14">
+
+      <RandomEnemyGroupConfigs>
+
+        <RandomEnemyGroup id="Helmet_Elite_A">
+          <Enemy idref="Enemy_Helmet_Elite_A" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Dogs">
+          <Enemy idref="Enemy_Dog" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+
+        <RandomEnemyGroup id="Elite_A">
+          <Enemy idref="Enemy_Elite_A" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+
+      </RandomEnemyGroupConfigs>
+
+      <SubWaveConfigs>
+        <SubWave id="Wave14 Subwave 1" bAllowRandomSpawn="false">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Elite_A" quantity="4" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave14 Subwave 2">
+          <StartCondition type="Time">15</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Dogs" quantity="2" spawnGroup="Group_Parking" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave14 Subwave 3">
+          <StartCondition type="Kills">4</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Elite_A" quantity="3" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Helmet_Elite_A" quantity="3" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave14 Subwave 4">
+          <StartCondition type="Kills">9</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="Group_Parking" />
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Helmet_Elite_A" quantity="3" spawnGroup="Group_Building" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave14 Subwave 5">
+          <StartCondition type="Kills">14</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="Group_Parking" />
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Elite_A" quantity="2" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave14 Subwave 6">
+          <StartCondition type="Kills">19</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Dogs" quantity="2" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Elite_A" quantity="2" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Elite_A" quantity="2" spawnGroup="Group_Building" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave14 Subwave 7">
+          <StartCondition type="Kills">24</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Elite_A" quantity="3" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Elite_A" quantity="3" spawnGroup="Group_Building" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave14 Subwave 8">
+          <StartCondition type="Kills">32</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Elite_A" quantity="3" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Helmet_Elite_A" quantity="3" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave14 Subwave 9">
+          <StartCondition type="Kills">36</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Elite_A" quantity="2" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Dogs" quantity="2" spawnGroup="Group_Parking" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave14 Subwave 10">
+          <StartCondition type="Kills">39</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Elite_A" quantity="2" spawnGroup="Group_Building" />
+          </Enemies>
+        </SubWave>
+
+      </SubWaveConfigs>
+    </Wave>
+
+    <Wave id="15">
+
+      <HVTObjective idref="HVTObjective_Medium2" />
+
+
+      <RandomEnemyGroupConfigs>
+
+        <RandomEnemyGroup id="Tech">
+          <Enemy idref="Enemy_Tech" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Heavy">
+          <Enemy idref="Enemy_Heavy" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Elite_A">
+          <Enemy idref="Enemy_Elite_A" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+      </RandomEnemyGroupConfigs>
+
+      <SubWaveConfigs>
+        <SubWave id="Wave15 Subwave 1" bAllowRandomSpawn="false" startObjective="true">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Parking" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Heavy" quantity="2" spawnGroup="Group_Parking" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave15 Subwave 2" startObjective="true">
+          <StartCondition type="Time">15</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Building" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave15 Subwave 3">
+          <StartCondition type="Kills">4</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Elite_A" quantity="1" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Elite_A" quantity="1" spawnGroup="Group_Parking" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave15 Subwave 4">
+          <StartCondition type="Kills">8</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Elite_A" quantity="2" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Elite_A" quantity="2" spawnGroup="Group_Parking" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave15 Subwave 5">
+          <StartCondition type="Kills">11</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Heavy" quantity="1" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Elite_A" quantity="2" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave15 Subwave 6">
+          <StartCondition type="Kills">14</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Heavy" quantity="1" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Parking" />
+            <RandomEnemies idref="Elite_A" quantity="1" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave15 Subwave 7">
+          <StartCondition type="Kills">17</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Heavy" quantity="1" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Elite_A" quantity="1" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave15 Subwave 8">
+          <StartCondition type="Kills">22</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Elite_A" quantity="3" spawnGroup="Group_Parking" />
+            <RandomEnemies idref="Elite_A" quantity="3" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+      </SubWaveConfigs>
+    </Wave>
+    <!-- The last wave specified in the config will be the last wave of the map -->
+
+
+    <Wave id="16">
+
+      <RandomEnemyGroupConfigs>
+
+        <RandomEnemyGroup id="Helmet_Pistol_B">
+          <Enemy idref="Enemy_Helmet_Pistol_A" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Helmet_Shotgun">
+          <Enemy idref="Enemy_Helmet_SMG_A" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Helmet_Rifle_B">
+          <Enemy idref="Enemy_Helmet_Rifle_A" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Dogs">
+          <Enemy idref="Enemy_Dog" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+      </RandomEnemyGroupConfigs>
+
+      <SubWaveConfigs>
+        <SubWave id="Wave16 Subwave 1" bAllowRandomSpawn="false">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Pistol_B" quantity="3" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Helmet_Pistol_B" quantity="3" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave16 Subwave 2">
+          <StartCondition type="Time">15</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Dogs" quantity="2" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave16 Subwave 3">
+          <StartCondition type="Kills">4</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Pistol_B" quantity="2" spawnGroup="Group_Building" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave16 Subwave 4">
+          <StartCondition type="Kills">6</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Pistol_B" quantity="2" spawnGroup="Group_Building" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave16 Subwave 5">
+          <StartCondition type="Kills">8</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Pistol_B" quantity="2" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Dogs" quantity="2" spawnGroup="Group_Parking" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave16 Subwave 7">
+          <StartCondition type="Kills">10</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Shotgun" quantity="1" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Helmet_Shotgun" quantity="1" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave16 Subwave 8">
+          <StartCondition type="Kills">12</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Shotgun" quantity="1" spawnGroup="Group_Parking" />
+            <RandomEnemies idref="Helmet_Shotgun" quantity="1" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave16 Subwave 10">
+          <StartCondition type="Kills">16</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Shotgun" quantity="1" spawnGroup="Group_Parking" />
+            <RandomEnemies idref="Helmet_Shotgun" quantity="1" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Dogs" quantity="2" spawnGroup="Group_Garden" />
+
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave16 Subwave 11">
+          <StartCondition type="Kills">18</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Rifle_B" quantity="1" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Helmet_Rifle_B" quantity="1" spawnGroup="Group_Parking" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave16 Subwave 12">
+          <StartCondition type="Kills">20</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Dogs" quantity="2" spawnGroup="Group_Building" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave16 Subwave 13">
+          <StartCondition type="Kills">26</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Shotgun" quantity="2" spawnGroup="Group_Parking" />
+            <RandomEnemies idref="Helmet_Shotgun" quantity="2" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Helmet_Rifle_B" quantity="2" spawnGroup="Group_Garden" />
+          </Enemies>
+        </SubWave>
+
+
+        <SubWave id="Wave16 Subwave 15">
+          <StartCondition type="Kills">28</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Shotgun" quantity="1" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Helmet_Shotgun" quantity="1" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave16 Subwave 16">
+          <StartCondition type="Kills">32</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Rifle_B" quantity="1" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Helmet_Rifle_B" quantity="1" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="Group_Building" />
+          </Enemies>
+        </SubWave>
+
+
+        <SubWave id="Wave16 Subwave 18">
+          <StartCondition type="Kills">34</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave16 Subwave 19">
+          <StartCondition type="Kills">37</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Shotgun" quantity="1" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Helmet_Shotgun" quantity="2" spawnGroup="Group_Parking" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave16 Subwave 20">
+          <StartCondition type="Kills">41</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Rifle_B" quantity="2" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Dogs" quantity="2" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+
+      </SubWaveConfigs>
+    </Wave>
+
+    <Wave id="17">
+
+      <RandomEnemyGroupConfigs>
+
+        <RandomEnemyGroup id="Helmet_Elite_A">
+          <Enemy idref="Enemy_Helmet_Elite_A" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Elite_A">
+          <Enemy idref="Enemy_Elite_A" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Heavy">
+          <Enemy idref="Enemy_Heavy" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+      </RandomEnemyGroupConfigs>
+
+      <SubWaveConfigs>
+        <SubWave id="Wave17 Subwave 1" bAllowRandomSpawn="false">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Elite_A" quantity="2" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Helmet_Elite_A" quantity="2" spawnGroup="Group_Building" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave17 Subwave 2">
+          <StartCondition type="Time">15</StartCondition>
+          <Enemies>
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_1" sniperAttractors="SniperAttractor_1" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_3" sniperAttractors="SniperAttractor_3" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_2" sniperAttractors="SniperAttractor_2" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_4" sniperAttractors="SniperAttractor_4" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave17 Subwave 3">
+          <StartCondition type="Kills">6</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Elite_A" quantity="3" spawnGroup="Group_Parking" />
+            <RandomEnemies idref="Helmet_Elite_A" quantity="3" spawnGroup="Group_Garden" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave17 Subwave 4">
+          <StartCondition type="Kills">11</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Elite_A" quantity="2" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Helmet_Elite_A" quantity="2" spawnGroup="Group_Garden" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave17 Subwave 5">
+          <StartCondition type="Kills">16</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Heavy" quantity="3" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Helmet_Elite_A" quantity="3" spawnGroup="Group_Building" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave17 Subwave 6">
+          <StartCondition type="Kills">21</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Heavy" quantity="1" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Heavy" quantity="1" spawnGroup="Group_Garden" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_2" sniperAttractors="SniperAttractor_2" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_4" sniperAttractors="SniperAttractor_4" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave17 Subwave 7">
+          <StartCondition type="Kills">24</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Elite_A" quantity="2" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Helmet_Elite_A" quantity="2" spawnGroup="Group_Parking" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave17 Subwave 8">
+          <StartCondition type="Kills">30</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Heavy" quantity="2" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Heavy" quantity="2" spawnGroup="Group_Garden" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_1" sniperAttractors="SniperAttractor_1" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_3" sniperAttractors="SniperAttractor_3" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave17 Subwave 9">
+          <StartCondition type="Kills">35</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Elite_A" quantity="3" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Helmet_Elite_A" quantity="3" spawnGroup="Group_Garden" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave17 Subwave 10">
+          <StartCondition type="Kills">39</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Heavy" quantity="2" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Heavy" quantity="2" spawnGroup="Group_Garden" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave17 Subwave 11">
+          <StartCondition type="Kills">42</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Elite_A" quantity="2" spawnGroup="Group_Building" />
+          </Enemies>
+        </SubWave>
+
+      </SubWaveConfigs>
+    </Wave>
+
+    <Wave id="18">
+
+      <RandomEnemyGroupConfigs>
+
+        <RandomEnemyGroup id="Tech">
+          <Enemy idref="Enemy_Tech" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Dogs">
+          <Enemy idref="Enemy_Dog" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Helmet_Rifle_B">
+          <Enemy idref="Enemy_Helmet_Rifle_A" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+      </RandomEnemyGroupConfigs>
+
+      <SubWaveConfigs>
+        <SubWave id="Wave18 Subwave 1" bAllowRandomSpawn="false">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Parking" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Building" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave18 Subwave 2">
+          <StartCondition type="Time">15</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="Group_Garden" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_1" sniperAttractors="SniperAttractor_1" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_3" sniperAttractors="SniperAttractor_3" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave18 Subwave 3">
+          <StartCondition type="Kills">4</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Rifle_B" quantity="2" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Dogs" quantity="2" spawnGroup="Group_Garden" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave18 Subwave 4">
+          <StartCondition type="Kills">10</StartCondition>
+          <Enemies>
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_2" sniperAttractors="SniperAttractor_2" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_4" sniperAttractors="SniperAttractor_4" />
+            <RandomEnemies idref="Dogs" quantity="2" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Helmet_Rifle_B" quantity="2" spawnGroup="Group_Building" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave18 Subwave 5">
+          <StartCondition type="Kills">14</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Rifle_B" quantity="2" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Building" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave18 Subwave 6">
+          <StartCondition type="Kills">18</StartCondition>
+          <Enemies>
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_1" sniperAttractors="SniperAttractor_1" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_3" sniperAttractors="SniperAttractor_3" />
+            <RandomEnemies idref="Dogs" quantity="2" spawnGroup="Group_Parking" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave18 Subwave 7">
+          <StartCondition type="Kills">21</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Dogs" quantity="2" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Dogs" quantity="2" spawnGroup="Group_Garden" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave18 Subwave 8">
+          <StartCondition type="Kills">28</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Parking" />
+            <RandomEnemies idref="Helmet_Rifle_B" quantity="2" spawnGroup="Group_Parking" />
+            <RandomEnemies idref="Helmet_Rifle_B" quantity="2" spawnGroup="Group_Building" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave18 Subwave 9">
+          <StartCondition type="Kills">34</StartCondition>
+          <Enemies>
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_2" sniperAttractors="SniperAttractor_2" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_4" sniperAttractors="SniperAttractor_4" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Dogs" quantity="2" spawnGroup="Group_Parking" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave18 Subwave 10">
+          <StartCondition type="Kills">38</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="Group_Parking" />
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Helmet_Rifle_B" quantity="2" spawnGroup="Group_Garden" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave18 Subwave 11">
+          <StartCondition type="Kills">42</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Dogs" quantity="2" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Building" />
+          </Enemies>
+        </SubWave>
+
+      </SubWaveConfigs>
+    </Wave>
+
+    <Wave id="19">
+
+      <RandomEnemyGroupConfigs>
+
+        <RandomEnemyGroup id="Heavy">
+          <Enemy idref="Enemy_Heavy" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Helmet_Elite_A">
+          <Enemy idref="Enemy_Helmet_Elite_A" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Shield">
+          <Enemy idref="Enemy_ShieldedHeavy" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+      </RandomEnemyGroupConfigs>
+
+      <SubWaveConfigs>
+        <SubWave id="Wave19 Subwave 1" bAllowRandomSpawn="false">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Heavy" quantity="3" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave19 Subwave 2">
+          <StartCondition type="Time">15</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Heavy" quantity="3" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Heavy" quantity="2" spawnGroup="Group_Parking" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave19 Subwave 3" startObjective="true">
+          <StartCondition type="Kills">6</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Shield" quantity="2" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Shield" quantity="3" spawnGroup="Group_Parking" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave19 Subwave 4">
+          <StartCondition type="Kills">10</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Heavy" quantity="2" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Heavy" quantity="2" spawnGroup="Group_Garden" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave19 Subwave 5">
+          <StartCondition type="Kills">15</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Heavy" quantity="2" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Heavy" quantity="2" spawnGroup="Group_Parking" />
+            <RandomEnemies idref="Shield" quantity="1" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Shield" quantity="1" spawnGroup="Group_Garden" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave19 Subwave 6">
+          <StartCondition type="Kills">21</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Heavy" quantity="3" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Heavy" quantity="2" spawnGroup="Group_Garden" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave19 Subwave 7">
+          <StartCondition type="Kills">26</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Shield" quantity="2" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Heavy" quantity="2" spawnGroup="Group_Parking" />
+            <RandomEnemies idref="Heavy" quantity="2" spawnGroup="Group_Building" />
+
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave19 Subwave 8">
+          <StartCondition type="Kills">31</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Shield" quantity="2" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Shield" quantity="2" spawnGroup="Group_Garden" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave19 Subwave 9">
+          <StartCondition type="Kills">36</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Heavy" quantity="3" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Heavy" quantity="3" spawnGroup="Group_Parking" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave19 Subwave 10">
+          <StartCondition type="Kills">43</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Heavy" quantity="3" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Shield" quantity="3" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+      </SubWaveConfigs>
+    </Wave>
+
+    <Wave id="20">
+
+      <HVTObjective idref="HVTObjective_Hard1" />
+
+
+      <RandomEnemyGroupConfigs>
+
+        <RandomEnemyGroup id="Dogs">
+          <Enemy idref="Enemy_Dog" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Shield">
+          <Enemy idref="Enemy_ShieldedHeavy" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Helmet_Elite_A">
+          <Enemy idref="Enemy_Helmet_Elite_A" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+        <RandomEnemyGroup id="Tech">
+          <Enemy idref="Enemy_Tech" chanceEncounter="100" />
+        </RandomEnemyGroup>
+
+      </RandomEnemyGroupConfigs>
+
+      <SubWaveConfigs>
+        <SubWave id="Wave20 Subwave 1" bAllowRandomSpawn="false" startObjective="true">
+          <StartCondition type="Time">0</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="Group_Garden" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_1" sniperAttractors="SniperAttractor_1" />
+            <RandomEnemies idref="Helmet_Elite_A" quantity="2" spawnGroup="Group_Building" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave20 Subwave 2" startObjective="true">
+          <StartCondition type="Time">15</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Parking" />
+            <RandomEnemies idref="Shield" quantity="1" spawnGroup="Group_Building" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave20 Subwave 3">
+          <StartCondition type="Kills">4</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Elite_A" quantity="1" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Parking" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_3" sniperAttractors="SniperAttractor_3" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave20 Subwave 4">
+          <StartCondition type="Kills">8</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Dogs" quantity="2" spawnGroup="Group_Parking" />
+            <RandomEnemies idref="Helmet_Elite_A" quantity="2" spawnGroup="Group_Building" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave20 Subwave 5">
+          <StartCondition type="Kills">12</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Shield" quantity="2" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Parking" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave20 Subwave 6">
+          <StartCondition type="Kills">15</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="Group_Garden" />
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_2" sniperAttractors="SniperAttractor_2" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave20 Subwave 7">
+          <StartCondition type="Kills">17</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Shield" quantity="1" spawnGroup="Group_Alleyway" />
+            <RandomEnemies idref="Shield" quantity="1" spawnGroup="Group_Building" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave20 Subwave 8">
+          <StartCondition type="Kills">19</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Helmet_Elite_A" quantity="1" spawnGroup="Group_Parking" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave20 Subwave 9">
+          <StartCondition type="Kills">23</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Shield" quantity="1" spawnGroup="Group_Parking" />
+            <RandomEnemies idref="Helmet_Elite_A" quantity="3" spawnGroup="Group_Building" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave20 Subwave 10">
+          <StartCondition type="Kills">27</StartCondition>
+          <Enemies>
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_4" sniperAttractors="SniperAttractor_4" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Parking" />
+            <RandomEnemies idref="Shield" quantity="1" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave20 Subwave 11">
+          <StartCondition type="Kills">31</StartCondition>
+          <Enemies>
+            <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperSpawn_4" sniperAttractors="SniperAttractor_4" />
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Garden" />
+            <RandomEnemies idref="Helmet_Elite_A" quantity="2" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+        <SubWave id="Wave20 Subwave 12">
+          <StartCondition type="Kills">34</StartCondition>
+          <Enemies>
+            <RandomEnemies idref="Tech" quantity="1" spawnGroup="Group_Parking" />
+            <RandomEnemies idref="Dogs" quantity="1" spawnGroup="Group_Building" />
+            <RandomEnemies idref="Shield" quantity="1" spawnGroup="Group_Alleyway" />
+          </Enemies>
+        </SubWave>
+
+      </SubWaveConfigs>
+    </Wave>
+
+  </WaveConfigs>
+
+</ExtractionWaveConfig>
