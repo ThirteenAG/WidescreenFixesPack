@@ -42,19 +42,20 @@ NewConfig\
 
 ```
 [EXTRACTION]
-ExtractionWaveConfigs = NewConfig        // Default | Random
-ExtractionWaveEnemyMultiplier = 2        // Multiplies the number of enemies in each wave, with Random config, acts as a range [1;ExtractionWaveEnemyMultiplier]
+ExtractionWaveConfigs = NewConfig
 ```
 
-# Hunter Mode
+Demo: https://youtu.be/su47XbCcVyw
 
-Plugin adds an ability to modify the number of reinforcements for the Hunter game mode with `ReinforcementsEnemyMultiplier` option.
+# Hunter Mode and Coop
 
-New config for the Hunter game mode: Random, which randomizes the total number of reinforcements between minimum and maximum values defined in the INI file.
+Plugin adds an ability to modify the number of reinforcements for the Hunter game mode and coop campaign with `ReinforcementsEnemyMultiplier` option.
 
-# Ghost Mode
+New config for the Hunter game mode and coop campaign: Random, which randomizes the total number of reinforcements between minimum and maximum values defined in the INI file.
 
-Plugin adds an ability to disable mission failure on detection in Ghost mode.
+# Ghost Mode and Campaign
+
+Plugin adds an ability to disable mission failure on detection in Ghost mode and Campaign (SP and COOP).
 
 # Ultrawide Screenshot
 
