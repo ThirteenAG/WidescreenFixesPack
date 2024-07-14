@@ -56,6 +56,24 @@ static BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam)
     return TRUE;
 }
 
+enum eGameMode
+{
+    CAMPAIGN,
+    PALADIN,
+    HUNTER,
+    GHOST,
+    EXTRACTION,
+    COOP,
+};
+
+int CurrentGameMode = -1;
+SafetyHookInline shLead_SetCurrentGameMode{};
+void __cdecl Lead_SetCurrentGameMode(int gameMode, int a2)
+{
+    CurrentGameMode = gameMode;
+    return shLead_SetCurrentGameMode.ccall(gameMode, a2);
+}
+
 std::string sExtractionWaveConfigs = "Default";
 int nExtractionWaveEnemyMultiplier = 1;
 int nExtractionWaveEnemyRandomRangeMin = 0;
@@ -211,12 +229,10 @@ void Init()
     nExtractionWaveEnemyRandomRangeMin = std::clamp(iniReader.ReadInteger("EXTRACTION", "ExtractionWaveEnemyRandomRangeMin", 0), 0, 9999);
     nExtractionWaveEnemyRandomRangeMax = std::clamp(iniReader.ReadInteger("EXTRACTION", "ExtractionWaveEnemyRandomRangeMax", 4), 1, 9999);
 
-    static auto sReinforcementsNumber = iniReader.ReadString("HUNTER", "ReinforcementsNumber", "Default");
-    static auto nReinforcementsEnemyMultiplier = std::clamp(iniReader.ReadInteger("HUNTER", "ReinforcementsEnemyMultiplier", 1), 1, 9999);
-    static auto nReinforcementsEnemyRandomRangeMin = std::clamp(iniReader.ReadInteger("HUNTER", "ReinforcementsEnemyRandomRangeMin", 1), 1, 9999);
-    static auto nReinforcementsEnemyRandomRangeMax = std::clamp(iniReader.ReadInteger("HUNTER", "ReinforcementsEnemyRandomRangeMax", 1), 1, 9999);
-
-    auto bDisableMissionFailOnDetection = iniReader.ReadInteger("GHOST", "DisableMissionFailOnDetection", 1) != 0;
+    static auto sHUNTERReinforcementsNumber = iniReader.ReadString("HUNTER", "ReinforcementsNumber", "Default");
+    static auto nHUNTERReinforcementsEnemyMultiplier = std::clamp(iniReader.ReadInteger("HUNTER", "ReinforcementsEnemyMultiplier", 1), 1, 9999);
+    static auto nHUNTERReinforcementsEnemyRandomRangeMin = std::clamp(iniReader.ReadInteger("HUNTER", "ReinforcementsEnemyRandomRangeMin", 1), 1, 9999);
+    static auto nHUNTERReinforcementsEnemyRandomRangeMax = std::clamp(iniReader.ReadInteger("HUNTER", "ReinforcementsEnemyRandomRangeMax", 1), 1, 9999);
 
     auto bUnlockDLC = iniReader.ReadInteger("UNLOCKS", "UnlockDLC", 1) != 0;
     static auto bUnlockAllNonCampaignMissions = iniReader.ReadInteger("UNLOCKS", "UnlockAllNonCampaignMissions", 1) != 0;
@@ -225,6 +241,16 @@ void Init()
     auto bToggleRadarHotkey = iniReader.ReadInteger("RADAR", "ToggleRadarHotkey", 0) != 0;
 
     auto sDedicatedServerExePath = iniReader.ReadString("STARTUP", "DedicatedServerExePath", "");
+
+    static auto bGHOSTDisableMissionFailOnDetection = iniReader.ReadInteger("GHOST", "DisableMissionFailOnDetection", 1) != 0;
+
+    static auto bCOOPDisableMissionFailOnDetection = iniReader.ReadInteger("COOP", "DisableMissionFailOnDetection", 0) != 0;
+    static auto sCOOPReinforcementsNumber = iniReader.ReadString("COOP", "ReinforcementsNumber", "Default");
+    static auto nCOOPReinforcementsEnemyMultiplier = std::clamp(iniReader.ReadInteger("COOP", "ReinforcementsEnemyMultiplier", 1), 1, 9999);
+    static auto nCOOPReinforcementsEnemyRandomRangeMin = std::clamp(iniReader.ReadInteger("COOP", "ReinforcementsEnemyRandomRangeMin", 1), 1, 9999);
+    static auto nCOOPReinforcementsEnemyRandomRangeMax = std::clamp(iniReader.ReadInteger("COOP", "ReinforcementsEnemyRandomRangeMax", 1), 1, 9999);
+
+    static auto bCAMPAIGNDisableMissionFailOnDetection = iniReader.ReadInteger("CAMPAIGN", "DisableMissionFailOnDetection", 0) != 0;
 
     if (!sDedicatedServerExePath.empty())
     {
@@ -271,7 +297,7 @@ void Init()
         }
     }
 
-    // Resolution
+    //Resolution
     auto pattern = hook::pattern("A3 ? ? ? ? 8B 8E ? ? ? ? 89 0D");
     static int* pViewportResolutionWidth = *pattern.get_first<int*>(1);
     static int* pViewportResolutionHeight = *pattern.get_first<int*>(13);
@@ -279,6 +305,10 @@ void Init()
     //UnrealMain
     pattern = hook::pattern("0F 84 ? ? ? ? 56 56 56 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 83 C4 18 50 8D 8D");
     injector::WriteMemory<uint16_t>(pattern.get_first(), 0xE990, true); //jz -> jmp
+
+    //GameMode
+    pattern = hook::pattern("55 8B EC 83 3D ? ? ? ? ? 75 55");
+    shLead_SetCurrentGameMode = safetyhook::create_inline(pattern.get_first(), Lead_SetCurrentGameMode);
 
     if (bSkipIntro)
     {
@@ -309,12 +339,14 @@ void Init()
             }
         }).detach();
 
-        static auto kbd = safetyhook::create_mid(0x164A351, [](SafetyHookContext& regs)
+        pattern = hook::pattern("8B 86 ? ? ? ? 8B 8E ? ? ? ? 89 86 ? ? ? ? 89 86");
+        static auto kbd = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
             nOnce = 1;
         });
 
-        static auto kbd2 = safetyhook::create_mid(0x1648E97, [](SafetyHookContext& regs)
+        pattern = hook::pattern("89 9E ? ? ? ? C7 86 ? ? ? ? ? ? ? ? 88 9E ? ? ? ? 88 9E");
+        static auto kbd2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
             nOnce = 2;
         });
@@ -369,24 +401,53 @@ void Init()
         auto pattern = hook::pattern("85 5E 08 75 29 8B 06 8B 50 0C 6A 04 8D 8F ? ? ? ? 51 8B CE FF D2 85 5E 08 75 12 8B 06 8B 50 0C 6A 04 8D 8F ? ? ? ? 51 8B CE FF D2 F6 46 08 02");
         static auto FCheckpointPackReaderHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
-            if (iequals(sReinforcementsNumber, "Random"))
-                *(uint32_t*)(regs.edi + 0x370) = GetRandomInt(nReinforcementsEnemyRandomRangeMin, nReinforcementsEnemyRandomRangeMax);
+            if (CurrentGameMode == HUNTER)
+            {
+                if (iequals(sHUNTERReinforcementsNumber, "Random"))
+                    *(uint32_t*)(regs.edi + 0x370) = GetRandomInt(nHUNTERReinforcementsEnemyRandomRangeMin, nHUNTERReinforcementsEnemyRandomRangeMax);
+            }
+            else if (CurrentGameMode == COOP)
+            {
+                if (iequals(sHUNTERReinforcementsNumber, "Random"))
+                    *(uint32_t*)(regs.edi + 0x370) = GetRandomInt(nCOOPReinforcementsEnemyRandomRangeMin, nCOOPReinforcementsEnemyRandomRangeMax);
+            }
         });
 
         pattern = hook::pattern("8B 16 8B 82 ? ? ? ? 8B CE FF D0 8B 16 8B 82 ? ? ? ? 8B CE FF D0 C6 86");
         static auto AECoopHunterSpawnerHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
-            if (iequals(sReinforcementsNumber, "Random"))
-                *(uint32_t*)(regs.esi + 0x370) = GetRandomInt(nReinforcementsEnemyRandomRangeMin, nReinforcementsEnemyRandomRangeMax);
-            else
-                *(uint32_t*)(regs.esi + 0x370) *= nReinforcementsEnemyMultiplier;
+            if (CurrentGameMode == HUNTER)
+            {
+                if (iequals(sHUNTERReinforcementsNumber, "Random"))
+                    *(uint32_t*)(regs.esi + 0x370) = GetRandomInt(nHUNTERReinforcementsEnemyRandomRangeMin, nHUNTERReinforcementsEnemyRandomRangeMax);
+                else
+                    *(uint32_t*)(regs.esi + 0x370) *= nHUNTERReinforcementsEnemyMultiplier;
+            }
+            else if (CurrentGameMode == COOP)
+            {
+                if (iequals(sCOOPReinforcementsNumber, "Random"))
+                    *(uint32_t*)(regs.esi + 0x370) = GetRandomInt(nCOOPReinforcementsEnemyRandomRangeMin, nCOOPReinforcementsEnemyRandomRangeMax);
+                else
+                    *(uint32_t*)(regs.esi + 0x370) *= nCOOPReinforcementsEnemyMultiplier;
+            }
         });
     }
 
-    if (bDisableMissionFailOnDetection)
     {
-        auto pattern = hook::pattern("0F 86 ? ? ? ? 0F B6 8E");
-        injector::WriteMemory<uint16_t>(pattern.get_first(), 0xE990, true); // jbe -> jmp
+        pattern = hook::pattern("F6 86 ? ? ? ? ? 0F 84 ? ? ? ? 8B 96 ? ? ? ? 52");
+        static auto loc_F1D09C = (uintptr_t)pattern.get_first(0);
+
+        pattern = hook::pattern("0F 86 ? ? ? ? 0F B6 8E");
+        struct AECooperativeMatchManager__TickSpecial
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                if ((bGHOSTDisableMissionFailOnDetection && CurrentGameMode == GHOST) ||
+                (bCOOPDisableMissionFailOnDetection && CurrentGameMode == COOP) || 
+                (bCAMPAIGNDisableMissionFailOnDetection && CurrentGameMode == CAMPAIGN))
+                    *(uintptr_t*)(regs.esp - 4) = loc_F1D09C;
+            }
+        }; injector::MakeInline<AECooperativeMatchManager__TickSpecial>(pattern.get_first(0), pattern.get_first(6));
     }
 
     if (bUnlockDLC)
