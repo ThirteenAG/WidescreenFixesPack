@@ -42,19 +42,6 @@ BOOL CreateProcessInJob(
 }
 
 HWND WindowHandle;
-static BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam)
-{
-    DWORD lpdwProcessId;
-    GetWindowThreadProcessId(hwnd, &lpdwProcessId);
-    if (lpdwProcessId == GetCurrentProcessId())
-    {
-        if (IsWindowVisible(hwnd))
-        {
-            WindowHandle = hwnd;
-        }
-    }
-    return TRUE;
-}
 
 enum eGameMode
 {
@@ -251,6 +238,7 @@ void Init()
     static auto nCOOPReinforcementsEnemyRandomRangeMax = std::clamp(iniReader.ReadInteger("COOP", "ReinforcementsEnemyRandomRangeMax", 1), 1, 9999);
 
     static auto bCAMPAIGNDisableMissionFailOnDetection = iniReader.ReadInteger("CAMPAIGN", "DisableMissionFailOnDetection", 0) != 0;
+    auto bEnableRunDuringForcedWalk = iniReader.ReadInteger("CAMPAIGN", "EnableRunDuringForcedWalk", 1) != 0;
 
     if (!sDedicatedServerExePath.empty())
     {
@@ -297,8 +285,15 @@ void Init()
         }
     }
 
+    //HWND
+    auto pattern = hook::pattern("8B 8E ? ? ? ? 8B 41 04 85 C0");
+    static auto GetHWND = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        WindowHandle = (HWND)regs.eax;
+    });
+
     //Resolution
-    auto pattern = hook::pattern("A3 ? ? ? ? 8B 8E ? ? ? ? 89 0D");
+    pattern = hook::pattern("A3 ? ? ? ? 8B 8E ? ? ? ? 89 0D");
     static int* pViewportResolutionWidth = *pattern.get_first<int*>(1);
     static int* pViewportResolutionHeight = *pattern.get_first<int*>(13);
 
@@ -322,7 +317,6 @@ void Init()
             while (true)
             {
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                EnumWindows(EnumWindowsProc, NULL);
                 if (nOnce == 1)
                 {
                     if (WindowHandle == GetForegroundWindow())
@@ -762,6 +756,12 @@ void Init()
         UInputManager::hbClearKey.fun = injector::MakeCALL(pattern.get_first(0), UInputManager::ClearKey).get();
         pattern = hook::pattern("55 8B EC 83 EC 14 C6 45 FF 00");
         HudRadar::HudRadarEnabled = (char (*)())pattern.get_first();
+    }
+
+    if (bEnableRunDuringForcedWalk)
+    {
+        pattern = hook::pattern("74 18 8B 80 ? ? ? ? 85 C0 74 0E 8B 4E 3C 83 E1 01 51 8B C8 E8");
+        injector::WriteMemory<uint8_t>(pattern.get_first(), 0xEB, true); //jz -> jmp
     }
 }
 
