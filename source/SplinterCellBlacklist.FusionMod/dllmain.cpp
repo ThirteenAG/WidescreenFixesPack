@@ -166,7 +166,9 @@ namespace UInputManager
 void Init()
 {
     CIniReader iniReader("");
-    auto bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
+    static auto bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
+    static auto bSkipPressAnyKeyScreen = iniReader.ReadInteger("MAIN", "SkipPressAnyKeyScreen", 1) != 0;
+    static auto bStartupFullscreen = iniReader.ReadInteger("MAIN", "StartupFullscreen", 1) != 0;
     auto bDisableNegativeMouseAcceleration = iniReader.ReadInteger("MAIN", "DisableNegativeMouseAcceleration", 1) != 0;
     auto bUltraWideSupport = iniReader.ReadInteger("MAIN", "UltraWideSupport", 1) != 0;
     static auto fFOVFactor = std::clamp(iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f), 0.5f, 2.5f);
@@ -253,6 +255,10 @@ void Init()
         WindowHandle = (HWND)regs.eax;
     });
 
+    //WindowStyle
+    pattern = hook::pattern("83 3D ? ? ? ? ? 8D 8E");
+    static int* pWindowStyle = *pattern.get_first<int*>(2);
+
     //Resolution
     pattern = hook::pattern("A3 ? ? ? ? 8B 8E ? ? ? ? 89 0D");
     static int* pViewportResolutionWidth = *pattern.get_first<int*>(1);
@@ -266,34 +272,23 @@ void Init()
     pattern = hook::pattern("55 8B EC 83 3D ? ? ? ? ? 75 55");
     shLead_SetCurrentGameMode = safetyhook::create_inline(pattern.get_first(), Lead_SetCurrentGameMode);
 
-    if (bSkipIntro)
+    if (bSkipIntro || bStartupFullscreen || bSkipPressAnyKeyScreen)
     {
+        enum eWindowStyle
+        {
+            ExclusiveFullscreen,
+            Windowed,
+            Borderless
+        };
+
         //InitBootVideos
-        auto pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 8B E5");
-        injector::MakeNOP(pattern.get_first(5), 5, true);
+        if (bSkipIntro)
+        {
+            auto pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 8B E5");
+            injector::MakeNOP(pattern.get_first(5), 5, true);
+        }
 
         static int nOnce = 0;
-        std::thread([]()
-        {
-            while (true)
-            {
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                if (nOnce == 1)
-                {
-                    if (WindowHandle == GetForegroundWindow())
-                    {
-                        if ((GetAsyncKeyState(VK_MENU) & 0xF000) == 0)
-                        {
-                            keybd_event(VK_RETURN, 0x45, KEYEVENTF_EXTENDEDKEY | 0, 0);
-                            keybd_event(VK_RETURN, 0x45, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
-                        }
-                    }
-                }
-                else if (nOnce == 2)
-                    break;
-            }
-        }).detach();
-
         pattern = hook::pattern("8B 86 ? ? ? ? 8B 8E ? ? ? ? 89 86 ? ? ? ? 89 86");
         static auto kbd = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
@@ -305,6 +300,50 @@ void Init()
         {
             nOnce = 2;
         });
+
+        std::thread([]()
+        {
+            bool bOnce = false;
+            while (true)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                if (nOnce == 1)
+                {
+                    if (WindowHandle == GetForegroundWindow())
+                    {
+                        if (bStartupFullscreen)
+                        {
+                            if ((GetWindowLongA(WindowHandle, GWL_STYLE) & WS_BORDER) != 0 && pWindowStyle && *pWindowStyle == ExclusiveFullscreen)
+                            {
+                                keybd_event(VK_RMENU, 0x45, KEYEVENTF_EXTENDEDKEY | 0, 0);
+                                keybd_event(VK_RETURN, 0x45, KEYEVENTF_EXTENDEDKEY | 0, 0);
+                                keybd_event(VK_RETURN, 0x45, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+                                keybd_event(VK_RMENU, 0x45, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+                            }
+                        }
+
+                        if (bSkipPressAnyKeyScreen)
+                        {
+                            if ((GetAsyncKeyState(VK_MENU) & 0xF000) == 0)
+                            {
+                                keybd_event(VK_RETURN, 0x45, KEYEVENTF_EXTENDEDKEY | 0, 0);
+                                keybd_event(VK_RETURN, 0x45, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (!bOnce)
+                        {
+                            bOnce = true;
+                            SetForegroundWindow(WindowHandle);
+                        }
+                    }
+                }
+                else if (nOnce == 2)
+                    break;
+            }
+        }).detach();
     }
 
     if (bDisableNegativeMouseAcceleration)
