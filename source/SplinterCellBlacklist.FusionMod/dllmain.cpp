@@ -188,7 +188,7 @@ void Init()
     static auto bUnlockAllNonCampaignMissions = iniReader.ReadInteger("UNLOCKS", "UnlockAllNonCampaignMissions", 1) != 0;
     static auto bUnlockAllCampaignMissions = iniReader.ReadInteger("UNLOCKS", "UnlockAllCampaignMissions", 0) != 0;
 
-    auto bToggleRadarHotkey = iniReader.ReadInteger("RADAR", "ToggleRadarHotkey", 1) != 0;
+    auto bToggleRadarHotkey = iniReader.ReadInteger("RADAR", "ToggleRadarHotkey", 0) != 0;
 
     auto sDedicatedServerExePath = iniReader.ReadString("STARTUP", "DedicatedServerExePath", "");
 
@@ -734,7 +734,7 @@ void Init()
         shTriggerScreenCullBias = safetyhook::create_inline(pattern.get_first(), TriggerScreenCullBias);
     }
 
-    if (bToggleRadarHotkey)
+    if (bToggleRadarHotkey && false)
     {
         auto pattern = hook::pattern("55 8B EC 6A FF 68 ? ? ? ? 64 A1 ? ? ? ? 50 83 EC 4C 53 56 57 A1 ? ? ? ? 33 C5 50 8D 45 F4 64 A3 ? ? ? ? 8B D9 83 7D 0C 00");
         UI::ScenePause::shOnRadarChanged = safetyhook::create_inline(pattern.get_first(), UI::ScenePause::OnRadarChanged);
