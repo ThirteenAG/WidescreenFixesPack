@@ -155,51 +155,12 @@ namespace HudRadar
 
 namespace UInputManager
 {
-    injector::hook_back<void(__fastcall*)(void*, void*, int)> hbThrowAction;
-    injector::hook_back<void(__fastcall*)(void*, void*, char)> hbClearKey;
-
-    bool bIsInventoryCombo = false;
+    bool bIsCoverKeyPressed = false;
 
     enum eInputAction
     {
         eCover = 0x6,
-        eInventoryClearKB = 0x18,
-        eInventoryClearPad = 0xE,
-        eInventoryOpenKB = 0x67,
-        eInventoryHeldKB = 0x68,
-        eInventoryOpenPad = 0x3D,
-        eInventoryHeldPad = 0x3F,
     };
-
-    void __fastcall ThrowActionOnKeyPressed(void* _this, void* edx, int InputAction)
-    {
-        if (InputAction != eInventoryOpenKB && InputAction != eInventoryOpenPad)
-        {
-            if (InputAction == eCover)
-            {
-                if (bIsInventoryCombo)
-                {
-                    if (UI::ScenePause::pUI && HudRadar::HudRadarEnabled && UI::ScenePause::pUnk)
-                        UI::ScenePause::shOnRadarChanged.fastcall<uint8_t>(UI::ScenePause::pUI, (void*)UI::ScenePause::shOnRadarChanged.target(), UI::ScenePause::pUnk, !HudRadar::HudRadarEnabled());
-                }
-            }
-        }
-        return hbThrowAction.fun(_this, edx, InputAction);
-    }
-
-    void __fastcall ThrowActionOnKeyHeld(void* _this, void* edx, int eInputAction)
-    {
-        if (eInputAction == eInventoryHeldKB || eInputAction == eInventoryHeldPad)
-            bIsInventoryCombo = true;
-        return hbThrowAction.fun(_this, edx, eInputAction);
-    }
-
-    void __fastcall ClearKey(void* _this, void* edx, char eButton)
-    {
-        if (eButton == eInventoryClearKB || eButton == eInventoryClearPad)
-            bIsInventoryCombo = false;
-        return hbClearKey.fun(_this, edx, eButton);
-    }
 }
 
 void Init()
@@ -225,7 +186,7 @@ void Init()
     static auto bUnlockAllNonCampaignMissions = iniReader.ReadInteger("UNLOCKS", "UnlockAllNonCampaignMissions", 1) != 0;
     static auto bUnlockAllCampaignMissions = iniReader.ReadInteger("UNLOCKS", "UnlockAllCampaignMissions", 0) != 0;
 
-    auto bToggleRadarHotkey = iniReader.ReadInteger("RADAR", "ToggleRadarHotkey", 0) != 0;
+    auto bToggleRadarHotkey = iniReader.ReadInteger("RADAR", "ToggleRadarHotkey", 1) != 0;
 
     auto sDedicatedServerExePath = iniReader.ReadString("STARTUP", "DedicatedServerExePath", "");
 
@@ -736,24 +697,35 @@ void Init()
 
     if (bToggleRadarHotkey)
     {
-        // leads to crashing
         auto pattern = hook::pattern("55 8B EC 6A FF 68 ? ? ? ? 64 A1 ? ? ? ? 50 83 EC 4C 53 56 57 A1 ? ? ? ? 33 C5 50 8D 45 F4 64 A3 ? ? ? ? 8B D9 83 7D 0C 00");
         UI::ScenePause::shOnRadarChanged = safetyhook::create_inline(pattern.get_first(), UI::ScenePause::OnRadarChanged);
 
-        //pattern = hook::pattern("E8 ? ? ? ? 8B 8E ? ? ? ? 51 8B 8E ? ? ? ? E8 ? ? ? ? 8B 8E ? ? ? ? E8");
-        //static auto UI__ScenePause__InitSlots = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& regs)
-        //{
-        //    UI::ScenePause::pUI = (void*)regs.ecx;
-        //    UI::ScenePause::pUnk = (void*)(regs.ecx + 0x68C);
-        //});
+        pattern = hook::pattern("E8 ? ? ? ? 8B 8E ? ? ? ? 51 8B 8E ? ? ? ? E8 ? ? ? ? 8B 8E ? ? ? ? E8");
+        static auto UI__ScenePause__InitSlots = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            UI::ScenePause::pUI = (void*)regs.ecx;
+            UI::ScenePause::pUnk = (void*)(regs.ecx + 0x68C);
+        });
 
-        // this is not ideal
-        pattern = hook::pattern("E8 ? ? ? ? 8B 7F 1C 83 FF 3F");
-        UInputManager::hbThrowAction.fun = injector::MakeCALL(pattern.get_first(0), UInputManager::ThrowActionOnKeyHeld).get();
-        pattern = hook::pattern("E8 ? ? ? ? 8B 4F 1C 83 F9 3F");
-        UInputManager::hbThrowAction.fun = injector::MakeCALL(pattern.get_first(0), UInputManager::ThrowActionOnKeyPressed).get();
-        pattern = hook::pattern("E8 ? ? ? ? 8B 46 28 85 C0 74 52");
-        UInputManager::hbClearKey.fun = injector::MakeCALL(pattern.get_first(0), UInputManager::ClearKey).get();
+        pattern = hook::pattern("55 8B EC 51 89 4D FC 8B 45 FC 0F B6 88 ? ? ? ? 85 C9 75 68");
+        static auto UI__HudSelectionWheel__SceneTick = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            if (UInputManager::bIsCoverKeyPressed)
+            {
+                UInputManager::bIsCoverKeyPressed = false;
+                if (UI::ScenePause::pUI && HudRadar::HudRadarEnabled && UI::ScenePause::pUnk)
+                    UI::ScenePause::shOnRadarChanged.fastcall<uint8_t>(UI::ScenePause::pUI, (void*)UI::ScenePause::shOnRadarChanged.target(), UI::ScenePause::pUnk, !HudRadar::HudRadarEnabled());
+            }
+        });
+
+        pattern = hook::pattern("8B 47 20 85 C0 74 08 50");
+        static auto ButtonHandler__KeyEvent = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            auto key = *(uint32_t*)(regs.edi + 0x20);
+            if (key == UInputManager::eCover)
+                UInputManager::bIsCoverKeyPressed = true;
+        });
+
         pattern = hook::pattern("55 8B EC 83 EC 14 C6 45 FF 00");
         HudRadar::HudRadarEnabled = (char (*)())pattern.get_first();
     }
