@@ -234,12 +234,12 @@ jobs:
 
    vpaths {
       ["source"] = { "source/**.*" },
+      ["ini"] = { "data/**.ini" },
       ["devdata/*"] = { "data/*" },
       ["data"] = { "data/**.cfg", "data/**.dat", "data/**.png", "data/**.ual", "data/**.x64ual", "data/**.dll" },
-      ["ini"] = { "data/**.ini" },
       ["resources/*"] = { "./resources/*" },
       ["includes/*"] = { "./includes/*" },
-   	  ["external/*"] = "./external/*",
+      ["external/*"] = "./external/*",
    }
 
    filter "configurations:Debug*"
