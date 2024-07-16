@@ -168,7 +168,7 @@ void Init()
     CIniReader iniReader("");
     static auto bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
     static auto bSkipPressAnyKeyScreen = iniReader.ReadInteger("MAIN", "SkipPressAnyKeyScreen", 1) != 0;
-    static auto bStartupFullscreen = iniReader.ReadInteger("MAIN", "StartupFullscreen", 1) != 0;
+    static auto bFullscreenAtStartup = iniReader.ReadInteger("MAIN", "FullscreenAtStartup", 1) != 0;
     auto bDisableNegativeMouseAcceleration = iniReader.ReadInteger("MAIN", "DisableNegativeMouseAcceleration", 1) != 0;
     auto bUltraWideSupport = iniReader.ReadInteger("MAIN", "UltraWideSupport", 1) != 0;
     static auto fFOVFactor = std::clamp(iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f), 0.5f, 2.5f);
@@ -256,13 +256,25 @@ void Init()
     });
 
     //WindowStyle
-    pattern = hook::pattern("83 3D ? ? ? ? ? 8D 8E");
+    pattern = hook::pattern("83 3D ? ? ? ? ? 0F 85 ? ? ? ? A1 ? ? ? ? 3B 46 08");
     static int* pWindowStyle = *pattern.get_first<int*>(2);
 
     //Resolution
-    pattern = hook::pattern("A3 ? ? ? ? 8B 8E ? ? ? ? 89 0D");
-    static int* pViewportResolutionWidth = *pattern.get_first<int*>(1);
-    static int* pViewportResolutionHeight = *pattern.get_first<int*>(13);
+    static int* pViewportResolutionWidth = nullptr;
+    static int* pViewportResolutionHeight = nullptr;
+
+    pattern = hook::pattern("A3 ? ? ? ? 8B 8E ? ? ? ? 89 0D ? ? ? ? 85 DB 74 13 83 BE");
+    if (!pattern.empty())
+    {
+        pViewportResolutionWidth = *pattern.get_first<int*>(1);
+        pViewportResolutionHeight = *pattern.get_first<int*>(13);
+    }
+    else
+    {
+        pattern = hook::pattern("89 0D ? ? ? ? 8B 96 ? ? ? ? 89 15 ? ? ? ? 85 DB 74 13");
+        pViewportResolutionWidth = *pattern.get_first<int*>(2);
+        pViewportResolutionHeight = *pattern.get_first<int*>(14);
+    }
 
     //UnrealMain
     pattern = hook::pattern("0F 84 ? ? ? ? 56 56 56 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 83 C4 18 50 8D 8D");
@@ -272,7 +284,7 @@ void Init()
     pattern = hook::pattern("55 8B EC 83 3D ? ? ? ? ? 75 55");
     shLead_SetCurrentGameMode = safetyhook::create_inline(pattern.get_first(), Lead_SetCurrentGameMode);
 
-    if (bSkipIntro || bStartupFullscreen || bSkipPressAnyKeyScreen)
+    if (bSkipIntro || bFullscreenAtStartup || bSkipPressAnyKeyScreen)
     {
         enum eWindowStyle
         {
@@ -311,7 +323,7 @@ void Init()
                 {
                     if (WindowHandle == GetForegroundWindow())
                     {
-                        if (bStartupFullscreen)
+                        if (bFullscreenAtStartup)
                         {
                             if ((GetWindowLongA(WindowHandle, GWL_STYLE) & WS_BORDER) != 0 && pWindowStyle && *pWindowStyle == ExclusiveFullscreen)
                             {
