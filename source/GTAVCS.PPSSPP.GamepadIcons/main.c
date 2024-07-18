@@ -87,18 +87,18 @@ struct Tex
 };
 
 struct Tex texNames[] = {
-    "btn_down_PSP", 0,
-    "btn_up_PSP", 0,
-    "btn_cross_PSP", 0,
-    "btn_circle_PSP", 0,
-    "btn_left_PSP", 0,
-    "btn_right_PSP", 0,
-    "btn_square_PSP", 0,
-    "fe_controller_new", 0,
-    "fe_arrows_onfoot_layout1", 0,
-    "fe_arrows_layout_right", 0,
-    "fe_arrows_invehicle_layout2", 0,
-    "GameText", 0,
+    { "btn_down_PSP", 0 },
+    { "btn_up_PSP", 0 },
+    { "btn_cross_PSP", 0 },
+    { "btn_circle_PSP", 0 },
+    { "btn_left_PSP", 0 },
+    { "btn_right_PSP", 0 },
+    { "btn_square_PSP", 0 },
+    { "fe_controller_new", 0 },
+    { "fe_arrows_onfoot_layout1", 0 },
+    { "fe_arrows_layout_right", 0 },
+    { "fe_arrows_invehicle_layout2", 0 },
+    { "GameText", 0 },
 };
 
 const char* btnPrefix[] = {
@@ -208,7 +208,7 @@ int OnModuleStart() {
     uintptr_t ptr_8B3F688 = pattern.get(0, "25 20 A0 00 ? ? ? ? F4 00 02 AE", -4);
     RslTextureRead = (struct RslTexture* (*)(const char*))injector.MakeJAL(ptr_8B3F688, (uintptr_t)RslTextureReadHook);
 
-    uintptr_t ptr_898B428 = pattern.get(0, "40 29 04 00 23 20 A4 00", -0);
+    uintptr_t ptr_898B428 = pattern.get(0, "C0 20 04 00 23 10 85 00 ? ? ? ? ? ? ? ? 08 00 E0 03 21 10 44 00", -8);
     CPad__GetPad = (char*(*)(int))ptr_898B428;
 
     uintptr_t ptr_898BEC8 = pattern.get(0, "00 00 B0 AF 04 00 BF AF ? ? ? ? 25 80 80 00 ? ? ? ? 00 00 00 00 ? ? ? ? 25 20 00 02 ? ? ? ? 00 00 00 00 ? ? ? ? 01 00 02 34 25 10 00 00", -4);
