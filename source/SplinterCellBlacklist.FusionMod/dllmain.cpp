@@ -580,44 +580,68 @@ void Init()
         injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true); //jbe -> jmp
         
         //UD3DRenderDevice Letterbox
+        pattern = hook::pattern("3B 05 ? ? ? ? 74 05 BE ? ? ? ? 8B C2");
+        static auto Letterbox = *pattern.get_first<int*>(2);
+
         pattern = hook::pattern("76 10 8B 03 8B 4D 10 89 06 8B 11");
+        static auto loc_A80681 = (uintptr_t)pattern.get_first(13 + 5);
         struct UD3DRenderDevice__Letterbox
         {
             void operator()(injector::reg_pack& regs)
             {
-                regs.eax = *(uintptr_t*)regs.ebx;
-                regs.ecx = *(uintptr_t*)(regs.ebp + 0x10);
-                *(uintptr_t*)regs.esi = regs.eax; //1920
-                regs.edx = *(uintptr_t*)regs.ecx;
-                *(uintptr_t*)regs.edi = regs.edx; //823
-
-                if (float(regs.eax) / float(regs.edx) > fDefaultAspectRatio)
-                { }
+                if (float(*(uintptr_t*)regs.ebx) / float(*(uintptr_t*)(*(uintptr_t*)(regs.ebp + 0x10))) > fDefaultAspectRatio)
+                {
+                
+                }
                 else
                 {
-                    *(uintptr_t*)regs.esi = regs.eax;
-                    *(uintptr_t*)regs.edi = int((float)regs.eax / fDefaultAspectRatio);
+                    if (regs.xmm0.f32[0] > regs.xmm5.f32[0])
+                    {
+                        *(uintptr_t*)(regs.esp - 4) = loc_A80681;
+                    }
+                    else
+                    {
+                        regs.eax = *(uintptr_t*)regs.ebx;
+                        regs.ecx = *(uintptr_t*)(regs.ebp + 0x10);
+                        *(uintptr_t*)regs.esi = regs.eax; //1920
+                        regs.edx = *(uintptr_t*)regs.ecx;
+                        *(uintptr_t*)regs.edi = regs.edx; //823
+
+                        *(uintptr_t*)regs.esi = regs.eax;
+                        *(uintptr_t*)regs.edi = int((float)regs.eax / fDefaultAspectRatio);
+                    }
                 }
             }
-        }; injector::MakeInline<UD3DRenderDevice__Letterbox>(pattern.get_first(0), pattern.get_first(13));
+        }; injector::MakeInline<UD3DRenderDevice__Letterbox>(pattern.get_first(-3), pattern.get_first(13));
+
+        static auto ScaleHUD = [](auto& x, auto& y, auto& w, auto& h)
+        {
+            if (GetAspectRatio() > fDefaultAspectRatio)
+            {
+                auto width = (float)h * fDefaultAspectRatio;
+                x = (int)(((float)w - width) * 0.5f);
+                w = (int)width;
+            }
+            else
+            {
+                auto height = (float)w / fDefaultAspectRatio;
+                y = (int)(((float)h - height) * 0.5f);
+                h = (int)height;
+            }
+        };
 
         pattern = hook::pattern("F3 0F 11 04 24 50 8B 85 ? ? ? ? 51 52 50 57");
         if (!pattern.count_hint(1).empty())
         {
             static auto D3DRenderer__RenderHUD = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& regs)
             {
-                if (GetAspectRatio() > fDefaultAspectRatio)
-                {
-                    auto& a2 = regs.edi;
-                    auto& x = *(uint32_t*)(regs.ebp - 0xAC);
-                    auto& y = regs.edx;
-                    auto& w = regs.ecx;
-                    auto& h = regs.eax;
-                
-                    auto width = (float)h * fDefaultAspectRatio;
-                    x = (int)(((float)w - width) * 0.5f);
-                    w = (int)width;
-                }
+                auto& a2 = regs.edi;
+                auto& x = *(uint32_t*)(regs.ebp - 0xAC);
+                auto& y = regs.edx;
+                auto& w = regs.ecx;
+                auto& h = regs.eax;
+
+                ScaleHUD(x, y, w, h);
             });
         }
         else
@@ -633,9 +657,7 @@ void Init()
                     auto& w = regs.eax;
                     auto& h = regs.edx;
                 
-                    auto width = (float)h * fDefaultAspectRatio;
-                    x = (int)(((float)w - width) * 0.5f);
-                    w = (int)width;
+                    ScaleHUD(x, y, w, h);
                 }
             });
         }
@@ -658,23 +680,25 @@ void Init()
                 regs.xmm1.f32[0] = 1.0f;
         });
 
-        pattern = hook::pattern("F2 0F 59 05 ? ? ? ? 0F 57 C9 F3 0F 2A CF");
-        injector::MakeNOP(pattern.get_first(0), 8, true);
-        static auto UI_Alignment1 = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& regs)
+        pattern = hook::pattern("F3 0F 11 40 ? 5B 5E 8B E5 5D C3");
+        injector::MakeNOP(pattern.get_first(0), 5, true);
+        static auto UI_Alignment = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& regs)
         {
-            if (GetAspectRatio() > fDefaultAspectRatio)
-                regs.xmm0.f64[0] *= GetAspectRatio() * 720.0f;
-            else
-                regs.xmm0.f64[0] *= 1280.0f;
-        });
+            *(float*)(regs.eax + 0) = *(float*)(regs.esi + 0x3C) * 1280.0f / (float)*(int*)(regs.ebp - 8);
+            *(float*)(regs.eax + 4) = *(float*)(regs.esi + 0x40) * 720.0f / (float)*(int*)(regs.ebp - 4);
 
-        pattern = hook::pattern("F3 0F 10 46 ? 0F 5A C0 F2 0F 59 05 ? ? ? ? 0F 57 C9 F3 0F 2A CB");
-        static auto UI_Alignment2 = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& regs)
-        {
             if (GetAspectRatio() > fDefaultAspectRatio)
-                *(float*)regs.eax = (720.0f * GetAspectRatio() - 1280.0f) * -0.5f + *(float*)(regs.eax);
+            {
+                *(float*)(regs.eax + 0) = *(float*)(regs.esi + 0x3C) * (GetAspectRatio() * 720.0f) / (float)*(int*)(regs.ebp - 8);
+                *(float*)(regs.eax + 0) += ((GetAspectRatio() * 720.0f) - 1280.0f) * -0.5f;
+            }
             else
-                regs.xmm0.f32[0] = *(float*)(regs.esi + 0x40);
+            {
+                if (Letterbox && *Letterbox)
+                {
+                    *(float*)(regs.eax + 4) = *(float*)(regs.esi + 0x40) * (720.0f / (GetAspectRatio() / fDefaultAspectRatio)) / (float)*(int*)(regs.ebp - 4);
+                }
+            }
         });
 
         pattern = find_pattern("F3 0F 10 46 ? F3 0F 11 85 ? ? ? ? 8D 85", "F3 0F 10 05 ? ? ? ? F3 0F 11 44 24 ? 8D 14 24");
