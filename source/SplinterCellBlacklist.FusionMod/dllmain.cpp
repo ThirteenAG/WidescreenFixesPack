@@ -173,7 +173,7 @@ void Init()
     auto bUltraWideSupport = iniReader.ReadInteger("MAIN", "UltraWideSupport", 1) != 0;
     static auto fFOVFactor = std::clamp(iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f), 0.5f, 2.5f);
     fScreenCullBias = std::clamp(iniReader.ReadFloat("MAIN", "ScreenCullBias", 0.0f), 0.0f, 1.0f);
-    static float fShadowCullDist = std::clamp(iniReader.ReadFloat("MAIN", "ShadowCullDist", 110.0f), 90.0f, 120.0f);
+    static float fShadowCullDist = std::clamp(iniReader.ReadFloat("MAIN", "ShadowCullDist", 100.0f), 90.0f, 120.0f);
 
     sExtractionWaveConfigs = iniReader.ReadString("EXTRACTION", "ExtractionWaveConfigs", "Default");
     nExtractionWaveEnemyMultiplier = std::clamp(iniReader.ReadInteger("EXTRACTION", "ExtractionWaveEnemyMultiplier", 1), 1, 9999);
