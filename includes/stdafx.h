@@ -50,6 +50,19 @@ uint32_t crc32(uint32_t crc, const void* buf, size_t size);
 HICON CreateIconFromBMP(UCHAR* data);
 HICON CreateIconFromResourceICO(UINT nID, int32_t cx, int32_t cy);
 
+BOOL CreateProcessInJob(
+    HANDLE hJob,
+    LPCTSTR lpApplicationName,
+    LPTSTR lpCommandLine,
+    LPSECURITY_ATTRIBUTES lpProcessAttributes,
+    LPSECURITY_ATTRIBUTES lpThreadAttributes,
+    BOOL bInheritHandles,
+    DWORD dwCreationFlags,
+    LPVOID lpEnvironment,
+    LPCTSTR lpCurrentDirectory,
+    LPSTARTUPINFO lpStartupInfo,
+    LPPROCESS_INFORMATION ppi);
+
 template<typename T>
 std::array<uint8_t, sizeof(T)> to_bytes(const T& object)
 {
