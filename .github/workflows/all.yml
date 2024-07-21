@@ -438,22 +438,6 @@ jobs:
         tag: fireteambravo3
         artifacts: data/Archives/SOCOM.FireteamBravo3.PPSSPP.FusionMod.zip
 
-    - name: Flatout 2 Widescreen Fix
-      uses: ./.github/workflows/release_tag
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
-        tag: flatout2
-        artifacts: data/Archives/Flatout2.WidescreenFix.zip
-
-    - name: Flatout Widescreen Fix
-      uses: ./.github/workflows/release_tag
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
-        tag: flatout
-        artifacts: data/Archives/Flatout.WidescreenFix.zip
-
     - name: Devil May Cry 3 Widescreen Fix
       uses: ./.github/workflows/release_tag
       with:

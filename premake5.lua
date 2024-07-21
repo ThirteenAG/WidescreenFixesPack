@@ -330,12 +330,6 @@ project "EnterTheMatrix.WidescreenFix"
 project "FarCry.WidescreenFix"
    setpaths("Z:/WFP/Games/Far Cry/", "Bin32/FarCry.exe", "Bin32/")
 
-project "Flatout.WidescreenFix"
-   setpaths("Z:/WFP/Games/Flatout/FlatOut/", "flatout.exe")
-
-project "Flatout2.WidescreenFix"
-   setpaths("Z:/WFP/Games/Flatout/FlatOut2/", "FlatOut2.exe")
-
 --project "GettingUp.WidescreenFix"
 --   setpaths("Z:/WFP/Games/Marc Ecko's Getting Up 2/", "_Bin/GettingUp.exe", "_Bin/")
 --   targetdir "data/GettingUp.WidescreenFix/_Bin/"

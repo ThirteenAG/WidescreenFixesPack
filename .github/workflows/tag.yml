@@ -18,8 +18,6 @@ on:
         - driverpl
         - enterthematrix
         - farcry
-        - flatout
-        - flatout2
         - fireteambravo1
         - fireteambravo2
         - fireteambravo3
@@ -113,8 +111,6 @@ env:
   driverpl: "/t:Win32\\DriverParallelLines_WidescreenFix"
   enterthematrix: "/t:Win32\\EnterTheMatrix_WidescreenFix"
   farcry: "/t:Win32\\FarCry_WidescreenFix"
-  flatout: "/t:Win32\\Flatout_WidescreenFix"
-  flatout2: "/t:Win32\\Flatout2_WidescreenFix"
   fireteambravo1: "/t:PPSSPP\\SOCOM\\SOCOM_FireteamBravo_PPSSPP_FusionMod"
   fireteambravo2: "/t:PPSSPP\\SOCOM\\SOCOM_FireteamBravo2_PPSSPP_FusionMod"
   fireteambravo3: "/t:PPSSPP\\SOCOM\\SOCOM_FireteamBravo3_PPSSPP_FusionMod"
