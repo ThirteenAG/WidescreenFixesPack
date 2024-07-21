@@ -210,8 +210,12 @@ void Init()
         }
     }
 
+    //skip systemdetection
+    auto pattern = hook::pattern("0F 84 ? ? ? ? 68 ? ? ? ? 89 B5");
+    injector::WriteMemory<uint16_t>(pattern.get_first(), 0xE990, true); //jz -> jmp
+
     //HWND
-    auto pattern = hook::pattern("8B 8E ? ? ? ? 8B 41 04 85 C0");
+    pattern = hook::pattern("8B 8E ? ? ? ? 8B 41 04 85 C0");
     static auto GetHWND = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
         WindowHandle = (HWND)regs.eax;
