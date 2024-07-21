@@ -2,45 +2,6 @@
 #include <LEDEffects.h>
 #include <random>
 
-BOOL CreateProcessInJob(
-    HANDLE hJob,
-    LPCTSTR lpApplicationName,
-    LPTSTR lpCommandLine,
-    LPSECURITY_ATTRIBUTES lpProcessAttributes,
-    LPSECURITY_ATTRIBUTES lpThreadAttributes,
-    BOOL bInheritHandles,
-    DWORD dwCreationFlags,
-    LPVOID lpEnvironment,
-    LPCTSTR lpCurrentDirectory,
-    LPSTARTUPINFO lpStartupInfo,
-    LPPROCESS_INFORMATION ppi)
-{
-    BOOL fRc = CreateProcess(
-        lpApplicationName,
-        lpCommandLine,
-        lpProcessAttributes,
-        lpThreadAttributes,
-        bInheritHandles,
-        dwCreationFlags | CREATE_SUSPENDED,
-        lpEnvironment,
-        lpCurrentDirectory,
-        lpStartupInfo,
-        ppi);
-    if (fRc) {
-        fRc = AssignProcessToJobObject(hJob, ppi->hProcess);
-        if (fRc && !(dwCreationFlags & CREATE_SUSPENDED)) {
-            fRc = ResumeThread(ppi->hThread) != (DWORD)-1;
-        }
-        if (!fRc) {
-            TerminateProcess(ppi->hProcess, 0);
-            CloseHandle(ppi->hProcess);
-            CloseHandle(ppi->hThread);
-            ppi->hProcess = ppi->hThread = nullptr;
-        }
-    }
-    return fRc;
-}
-
 HWND WindowHandle;
 
 enum eGameMode
@@ -581,7 +542,7 @@ void Init()
         injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true); //jbe -> jmp
         
         //UD3DRenderDevice Letterbox
-        pattern = hook::pattern("3B 05 ? ? ? ? 74 05 BE ? ? ? ? 8B C2");
+        pattern = find_pattern("3B 05 ? ? ? ? 74 05 BE ? ? ? ? 8B C2", "3B 0D ? ? ? ? 74 05 BE ? ? ? ? 8B C2");
         static auto Letterbox = *pattern.get_first<int*>(2);
 
         pattern = hook::pattern("76 10 8B 03 8B 4D 10 89 06 8B 11");

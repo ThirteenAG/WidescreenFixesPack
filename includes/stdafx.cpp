@@ -229,3 +229,42 @@ std::string RegistryWrapper::section;
 CIniReader RegistryWrapper::RegistryReader;
 std::map<std::string, std::string> RegistryWrapper::DefaultStrings;
 std::set<std::string, std::less<>> RegistryWrapper::PathStrings;
+
+BOOL CreateProcessInJob(
+    HANDLE hJob,
+    LPCTSTR lpApplicationName,
+    LPTSTR lpCommandLine,
+    LPSECURITY_ATTRIBUTES lpProcessAttributes,
+    LPSECURITY_ATTRIBUTES lpThreadAttributes,
+    BOOL bInheritHandles,
+    DWORD dwCreationFlags,
+    LPVOID lpEnvironment,
+    LPCTSTR lpCurrentDirectory,
+    LPSTARTUPINFO lpStartupInfo,
+    LPPROCESS_INFORMATION ppi)
+{
+    BOOL fRc = CreateProcess(
+        lpApplicationName,
+        lpCommandLine,
+        lpProcessAttributes,
+        lpThreadAttributes,
+        bInheritHandles,
+        dwCreationFlags | CREATE_SUSPENDED,
+        lpEnvironment,
+        lpCurrentDirectory,
+        lpStartupInfo,
+        ppi);
+    if (fRc) {
+        fRc = AssignProcessToJobObject(hJob, ppi->hProcess);
+        if (fRc && !(dwCreationFlags & CREATE_SUSPENDED)) {
+            fRc = ResumeThread(ppi->hThread) != (DWORD)-1;
+        }
+        if (!fRc) {
+            TerminateProcess(ppi->hProcess, 0);
+            CloseHandle(ppi->hProcess);
+            CloseHandle(ppi->hThread);
+            ppi->hProcess = ppi->hThread = nullptr;
+        }
+    }
+    return fRc;
+}
