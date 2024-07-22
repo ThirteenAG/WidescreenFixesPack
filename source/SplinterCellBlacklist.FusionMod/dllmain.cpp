@@ -171,7 +171,7 @@ void Init()
         auto dsPath = std::filesystem::path(sDedicatedServerExePath);
         auto processPath = dsPath.is_absolute() ? dsPath : (GetExeModulePath() / dsPath);
         auto workingDir = std::filesystem::path(processPath).remove_filename();
-        if (std::filesystem::exists(dsPath, ec))
+        if (std::filesystem::exists(processPath, ec))
         {
             HANDLE hJob = CreateJobObject(nullptr, nullptr);
             JOBOBJECT_EXTENDED_LIMIT_INFORMATION info = { };
