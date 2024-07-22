@@ -28,6 +28,7 @@
 #include "ModuleList.hpp"
 #include <filesystem>
 #include <stacktrace>
+#include <shellapi.h>
 #pragma warning(pop)
 
 #ifndef CEXP
@@ -61,6 +62,14 @@ BOOL CreateProcessInJob(
     LPVOID lpEnvironment,
     LPCTSTR lpCurrentDirectory,
     LPSTARTUPINFO lpStartupInfo,
+    LPPROCESS_INFORMATION ppi);
+
+BOOL CreateProcessInJobAsAdmin(
+    HANDLE hJob,
+    LPCTSTR lpApplicationName,
+    LPTSTR lpCommandLine,
+    int nShow,
+    LPCTSTR lpCurrentDirectory,
     LPPROCESS_INFORMATION ppi);
 
 template<typename T>

@@ -268,3 +268,35 @@ BOOL CreateProcessInJob(
     }
     return fRc;
 }
+
+BOOL CreateProcessInJobAsAdmin(
+    HANDLE hJob,
+    LPCTSTR lpApplicationName,
+    LPTSTR lpCommandLine,
+    int nShow,
+    LPCTSTR lpCurrentDirectory,
+    LPPROCESS_INFORMATION ppi)
+{
+    SHELLEXECUTEINFOW sei = { sizeof(sei) };
+    sei.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_FLAG_NO_UI;
+    sei.lpVerb = L"runas";
+    sei.lpFile = lpApplicationName;
+    sei.lpParameters = lpCommandLine;
+    sei.lpDirectory = lpCurrentDirectory;
+    sei.nShow = nShow;
+
+    BOOL fRc = ShellExecuteEx(&sei);
+    if (fRc) {
+        ppi->hProcess = sei.hProcess;
+        ppi->hThread = NULL; // Thread handle is not available from ShellExecuteEx
+        ppi->dwProcessId = GetProcessId(sei.hProcess);
+        ppi->dwThreadId = 0; // Thread ID is not available
+        fRc = AssignProcessToJobObject(hJob, ppi->hProcess);
+        if (!fRc) {
+            TerminateProcess(ppi->hProcess, 0);
+            CloseHandle(ppi->hProcess);
+            ppi->hProcess = NULL;
+        }
+    }
+    return fRc;
+}
