@@ -52,6 +52,7 @@ data/*PCSX2F.*/**/TEXTURES/**/*.png
 !data/SplinterCellDoubleAgent.WidescreenFix/SCDA-Offline/System/d3d9.dll
 !data/SplinterCellDoubleAgent.PCSX2F.WidescreenFix/PLUGINS/SplinterCellDoubleAgent.PCSX2F.SkipIntro.elf
 !data/Scarface.FusionFix/dinput8.dll
+!data/SplinterCellConviction.FusionMod/src/system/dinput8.dll
 
 #Dependencies
 /*.zip
