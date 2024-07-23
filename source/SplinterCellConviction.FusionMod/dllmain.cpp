@@ -123,7 +123,7 @@ void __fastcall fnStopDetectB2W(int* out, void* edx, const char* name, int a3)
     StopDetectB2W = *out;
 }
 
-bool __fastcall sub_56C0AD(uint32_t* _this, void* edx)
+BOOL __fastcall sub_56C0AD(uint32_t* _this, void* edx)
 {
     auto aimcheck = (*(uint8_t*)((uint8_t*)_this + 0xA42));
 
@@ -137,12 +137,12 @@ bool __fastcall sub_56C0AD(uint32_t* _this, void* edx)
         *(float*)&_this[753] = 1000000.0f;
     }
     
-    if (WhichPrecisionModeNeeded == TogglePrecisionModeOn && aimcheck == 4)
+    if ((WhichPrecisionModeNeeded == TogglePrecisionModeOn) && (aimcheck == 4))
         return true;
-    if (WhichPrecisionModeNeeded == TogglePrecisionModeOff && aimcheck != 4)
+    if ((WhichPrecisionModeNeeded == TogglePrecisionModeOff) && (aimcheck != 4))
         return true;
 
-    return (_this[655] & 0x100000) != 0 || (_this[656] & 0x200000) != 0;
+    return ((_this[655] & 0x100000) != 0) || ((_this[656] & 0x200000) != 0);
 }
 
 SafetyHookInline shsub_46E388{};
