@@ -135,6 +135,7 @@ void Init()
     static auto fFOVFactor = std::clamp(iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f), 0.5f, 2.5f);
     fScreenCullBias = std::clamp(iniReader.ReadFloat("MAIN", "ScreenCullBias", 0.0f), 0.0f, 1.0f);
     static float fShadowCullDist = std::clamp(iniReader.ReadFloat("MAIN", "ShadowCullDist", 100.0f), 90.0f, 120.0f);
+    auto bDisableNightVisionFlash = iniReader.ReadInteger("MAIN", "DisableNightVisionFlash", 1) != 0;
 
     sExtractionWaveConfigs = iniReader.ReadString("EXTRACTION", "ExtractionWaveConfigs", "Default");
     nExtractionWaveEnemyMultiplier = std::clamp(iniReader.ReadInteger("EXTRACTION", "ExtractionWaveEnemyMultiplier", 1), 1, 9999);
@@ -779,6 +780,17 @@ void Init()
     {
         pattern = hook::pattern("74 18 8B 80 ? ? ? ? 85 C0 74 0E 8B 4E 3C 83 E1 01 51 8B C8 E8");
         injector::WriteMemory<uint8_t>(pattern.get_first(), 0xEB, true); //jz -> jmp
+    }
+
+    if (bDisableNightVisionFlash)
+    {
+        // FThermalSonarVisionComponent::SetActiveVisionMode
+        pattern = hook::pattern("D9 46 70 D9 9E");
+        injector::MakeNOP(pattern.get_first(), 9, true);
+        static auto SetActiveVisionModeHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            *(float*)(regs.esi + 0x8C) = -0.1f;
+        });
     }
 }
 
