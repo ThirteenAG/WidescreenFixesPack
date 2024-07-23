@@ -29,6 +29,7 @@
 #include <filesystem>
 #include <stacktrace>
 #include <shellapi.h>
+#include <ranges>
 #pragma warning(pop)
 
 #ifndef CEXP

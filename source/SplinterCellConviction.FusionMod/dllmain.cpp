@@ -5,7 +5,33 @@ float gVisibility = 1.0f;
 int32_t gBlacklistIndicators = 0;
 bool bDisableBlackAndWhiteFilter = false;
 bool bBlacklistControlScheme = true;
-std::string blacklistINI = "blacklist.ini";
+
+bool (WINAPI* GetOverloadedFilePathA)(const char* lpFilename, char* out, size_t out_size) = nullptr;
+
+void OverrideForBlacklistControls(const char* path)
+{
+    static const std::string blacklistINI = "blacklist.ini";
+    static const std::string LocalizationMenus = "Localization\\Menus";
+
+    auto path_view = std::string_view(path);
+    auto dest = const_cast<char*>(path);
+    if (path_view == "ActionScheme.ini")
+    {
+        if (GetOverloadedFilePathA(blacklistINI.c_str(), nullptr, 0))
+            strcpy_s(dest, blacklistINI.length() + 1, blacklistINI.c_str());
+    }
+    else if (path_view.contains(LocalizationMenus))
+    {
+        auto replace_view = [](std::string_view str, std::string_view pattern, std::string_view replacement) -> auto
+        {
+            return str | std::views::split(pattern) | std::views::join_with(replacement);
+        };
+
+        auto new_path = replace_view(path_view, LocalizationMenus, "Blacklist\\Menus") | std::ranges::to<std::string>();
+        if (GetOverloadedFilePathA(new_path.c_str(), nullptr, 0))
+            strcpy_s(dest, new_path.length() + 1, new_path.c_str());
+    }
+}
 
 injector::hook_back<void (__cdecl*)(float a1, float a2, int a3)> hb_8330DB;
 void __cdecl sub_8330DB(float a1, float a2, int a3)
@@ -42,14 +68,13 @@ int __cdecl sub_78C666(char* a1, int a2)
     return sub_78C666_hook.ccall<int>(a1, a2);
 }
 
-bool (WINAPI* GetOverloadedFilePathA)(const char* lpFilename, char* out, size_t out_size) = nullptr;
 namespace FFileManagerArc
 {
     SafetyHookInline shLookup{};
     void* __fastcall Lookup(void* pFFileManagerArc, void* edx, const char* path)
     {
-        if (bBlacklistControlScheme && std::string_view(path) == "ActionScheme.ini")
-            strcpy_s((char*)path, blacklistINI.length() + 1, blacklistINI.c_str());
+        if (bBlacklistControlScheme)
+            OverrideForBlacklistControls(path);
 
         if (GetOverloadedFilePathA(path, nullptr/*s.data()*/, 0/*s.size()*/))
             return nullptr;
@@ -63,8 +88,8 @@ namespace FFileManagerLinear
     SafetyHookInline shLookup{};
     void* __fastcall Lookup(void* pFFileManagerLinear, void* edx, const char* path, int a3)
     {
-        if (bBlacklistControlScheme && std::string_view(path) == "ActionScheme.ini")
-            strcpy_s((char*)path, blacklistINI.length() + 1, blacklistINI.c_str());
+        if (bBlacklistControlScheme)
+            OverrideForBlacklistControls(path);
 
         if (GetOverloadedFilePathA(path, nullptr/*s.data()*/, 0/*s.size()*/))
         {
@@ -84,8 +109,8 @@ namespace FFileManagerLinear
     {
         curdword_13A3348 = *dword_13A3348;
 
-        if (bBlacklistControlScheme && std::string_view(path) == "ActionScheme.ini")
-            strcpy_s((char*)path, blacklistINI.length() + 1, blacklistINI.c_str());
+        if (bBlacklistControlScheme)
+            OverrideForBlacklistControls(path);
 
         if (GetOverloadedFilePathA(path, nullptr/*s.data()*/, 0/*s.size()*/))
         {
@@ -137,9 +162,16 @@ BOOL __fastcall sub_56C0AD(uint32_t* _this, void* edx)
         *(float*)&_this[753] = 1000000.0f;
     }
     
-    if ((WhichPrecisionModeNeeded == TogglePrecisionModeOn) && (aimcheck == 4))
+    enum AimType
+    {
+        eNormal = 4,
+        eFromCover = 5,
+        eFirstPerson = 12,
+    };
+
+    if ((WhichPrecisionModeNeeded == TogglePrecisionModeOn) && (aimcheck == eNormal || aimcheck == eFromCover || aimcheck == eFirstPerson))
         return true;
-    if ((WhichPrecisionModeNeeded == TogglePrecisionModeOff) && (aimcheck != 4))
+    if ((WhichPrecisionModeNeeded == TogglePrecisionModeOff) && (aimcheck != eNormal && aimcheck != eFromCover && aimcheck != eFirstPerson))
         return true;
 
     return ((_this[655] & 0x100000) != 0) || ((_this[656] & 0x200000) != 0);
@@ -163,7 +195,7 @@ int __fastcall WndProc(HDC _this, void* edx, UINT Msg, int a3, unsigned int a4)
 void Init()
 {
     CIniReader iniReader("");
-    auto bWindowedMode = iniReader.ReadInteger("MAIN", "WindowedMode", 1) != 0;
+    //auto bWindowedMode = iniReader.ReadInteger("MAIN", "WindowedMode", 1) != 0;
     auto bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
     auto bSkipSystemDetection = iniReader.ReadInteger("MAIN", "SkipSystemDetection", 1) != 0;
     bDisableBlackAndWhiteFilter = iniReader.ReadInteger("MAIN", "DisableBlackAndWhiteFilter", 0) != 0;
@@ -212,23 +244,24 @@ void Init()
         }
     }
 
-    if (bWindowedMode)
-    {
-        auto pattern = hook::pattern("55 8B EC 83 EC 40 53 56 83 C8 FF");
-        shsub_46E388 = safetyhook::create_inline(pattern.get_first(), sub_46E388);
-
-        IATHook::Replace(GetModuleHandleA(NULL), "USER32.DLL",
-            std::forward_as_tuple("CreateWindowExA", WindowedModeWrapper::CreateWindowExA_Hook),
-            std::forward_as_tuple("CreateWindowExW", WindowedModeWrapper::CreateWindowExW_Hook),
-            std::forward_as_tuple("SetWindowLongA", WindowedModeWrapper::SetWindowLongA_Hook),
-            std::forward_as_tuple("SetWindowLongW", WindowedModeWrapper::SetWindowLongW_Hook),
-            std::forward_as_tuple("AdjustWindowRect", WindowedModeWrapper::AdjustWindowRect_Hook),
-            std::forward_as_tuple("SetWindowPos", WindowedModeWrapper::SetWindowPos_Hook)
-        );
-
-        pattern = hook::pattern("55 8B EC 83 E4 F0 81 EC ? ? ? ? A1 ? ? ? ? 33 C4 89 84 24 ? ? ? ? 8B 45 0C");
-        shWndProc = safetyhook::create_inline(pattern.get_first(), WndProc);
-    }
+    // causes crash on aim on coste level
+    //if (bWindowedMode)
+    //{
+    //    auto pattern = hook::pattern("55 8B EC 83 EC 40 53 56 83 C8 FF");
+    //    shsub_46E388 = safetyhook::create_inline(pattern.get_first(), sub_46E388);
+    //    
+    //    IATHook::Replace(GetModuleHandleA(NULL), "USER32.DLL",
+    //        std::forward_as_tuple("CreateWindowExA", WindowedModeWrapper::CreateWindowExA_Hook),
+    //        std::forward_as_tuple("CreateWindowExW", WindowedModeWrapper::CreateWindowExW_Hook),
+    //        std::forward_as_tuple("SetWindowLongA", WindowedModeWrapper::SetWindowLongA_Hook),
+    //        std::forward_as_tuple("SetWindowLongW", WindowedModeWrapper::SetWindowLongW_Hook),
+    //        std::forward_as_tuple("AdjustWindowRect", WindowedModeWrapper::AdjustWindowRect_Hook),
+    //        std::forward_as_tuple("SetWindowPos", WindowedModeWrapper::SetWindowPos_Hook)
+    //    );
+    //
+    //    pattern = hook::pattern("55 8B EC 83 E4 F0 81 EC ? ? ? ? A1 ? ? ? ? 33 C4 89 84 24 ? ? ? ? 8B 45 0C");
+    //    shWndProc = safetyhook::create_inline(pattern.get_first(), WndProc);
+    //}
 
     if (bSkipIntro)
     {
