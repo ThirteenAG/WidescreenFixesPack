@@ -64,6 +64,53 @@ namespace FFileManagerArc
     }
 }
 
+namespace FFileManagerLinear
+{
+    bool bLoadFromDisk = false;
+    SafetyHookInline shLookup1{};
+    void* __fastcall Lookup1(void* pFFileManagerLinear, void* edx, const char* path, int a3)
+    {
+        if (GetOverloadedFilePathA(path, nullptr/*s.data()*/, 0/*s.size()*/))
+            bLoadFromDisk = true;
+        return shLookup1.fastcall<void*>(pFFileManagerLinear, edx, path, a3);
+    }
+
+    SafetyHookInline shLookup2{};
+    void* __fastcall Lookup2(void* pFFileManagerLinear, void* edx, const char* path, int a3)
+    {
+        if (GetOverloadedFilePathA(path, nullptr/*s.data()*/, 0/*s.size()*/))
+            bLoadFromDisk = true;
+        return shLookup2.fastcall<void*>(pFFileManagerLinear, edx, path, a3);
+    }
+
+    SafetyHookInline shLookup3{};
+    void* __fastcall Lookup3(void* pFFileManagerLinear, void* edx, const char* path, int a3)
+    {
+        if (GetOverloadedFilePathA(path, nullptr/*s.data()*/, 0/*s.size()*/))
+            bLoadFromDisk = true;
+        return shLookup3.fastcall<void*>(pFFileManagerLinear, edx, path, a3);
+    }
+
+    SafetyHookInline shLookup4{};
+    void* __fastcall Lookup4(void* pFFileManagerLinear, void* edx, const char* path, int a3, int a4, int a5)
+    {
+        if (GetOverloadedFilePathA(path, nullptr/*s.data()*/, 0/*s.size()*/))
+            bLoadFromDisk = true;
+        return shLookup4.fastcall<void*>(pFFileManagerLinear, edx, path, a3, a4, a5);
+    }
+
+    SafetyHookInline shsub_4B9C80{};
+    int sub_4B9C80()
+    {
+        if (bLoadFromDisk)
+        {
+            bLoadFromDisk = false;
+            return true;
+        }
+        return shsub_4B9C80.ccall<int>();
+    }
+}
+
 namespace l3d
 {
     using LeadOptions = float*;
@@ -107,6 +154,17 @@ namespace UI
             return shOnRadarChanged.fastcall<uint8_t>(ui, edx, a2, value);
         }
     }
+
+    SafetyHookInline shGetIsDifficultyLevelPerfectionist{};
+    bool GetIsDifficultyLevelPerfectionist()
+    {
+        return shGetIsDifficultyLevelPerfectionist.ccall<bool>();
+    }
+
+    bool GetIsDifficultyLevelPerfectionistHook()
+    {
+        return false;
+    }
 }
 
 namespace HudRadar
@@ -122,6 +180,17 @@ namespace UInputManager
     {
         eCover = 0x6,
     };
+}
+
+namespace FThermalSonarVisionComponent
+{
+    SafetyHookInline shSetCurrentActiveSonarWaveRange{};
+    void __fastcall SetCurrentActiveSonarWaveRange(void* _this, void* edx, float range)
+    {
+        if (UI::GetIsDifficultyLevelPerfectionist())
+            range /= 1.5f;
+        return shSetCurrentActiveSonarWaveRange.fastcall(_this, edx, range);
+    }
 }
 
 void Init()
@@ -208,6 +277,19 @@ void Init()
         {
             auto pattern = hook::pattern("55 8B EC 6A FF 68 ? ? ? ? 64 A1 ? ? ? ? 50 83 EC 1C 53 56 57 A1 ? ? ? ? 33 C5 50 8D 45 F4 64 A3 ? ? ? ? 8B F1 8B 45 08");
             FFileManagerArc::shLookup = safetyhook::create_inline(pattern.get_first(), FFileManagerArc::Lookup);
+
+            pattern = hook::pattern("55 8B EC 6A FF 68 ? ? ? ? 64 A1 ? ? ? ? 50 83 EC 0C 56 57 A1 ? ? ? ? 33 C5 50 8D 45 F4 64 A3 ? ? ? ? 8B F1 8B 86 ? ? ? ? 83 7C 86 ? ? 8B 7D 08 0F 84 ? ? ? ? E8 ? ? ? ? 85 C0 0F 85 ? ? ? ? 8B 96 ? ? ? ? 6A 01 57 8D 4D E8 51 8B 4C 96 2C E8");
+            FFileManagerLinear::shLookup1 = safetyhook::create_inline(pattern.count(2).get(0).get<void*>(0), FFileManagerLinear::Lookup1);
+            FFileManagerLinear::shLookup2 = safetyhook::create_inline(pattern.count(2).get(1).get<void*>(0), FFileManagerLinear::Lookup2);
+
+            pattern = hook::pattern("55 8B EC 6A FF 68 ? ? ? ? 64 A1 ? ? ? ? 50 83 EC 0C 53 56 57 A1 ? ? ? ? 33 C5 50 8D 45 F4 64 A3 ? ? ? ? 8B F1 8B 86 ? ? ? ? 8B 5D 08 33 FF 39 7C 86 2C 0F 84 ? ? ? ? E8 ? ? ? ? 85 C0 0F 85 ? ? ? ? 8B 96 ? ? ? ? 6A 01 53 8D 4D E8 51 8B 4C 96 2C");
+            FFileManagerLinear::shLookup3 = safetyhook::create_inline(pattern.get_first(), FFileManagerLinear::Lookup3);
+
+            pattern = hook::pattern("55 8B EC 6A FF 68 ? ? ? ? 64 A1 ? ? ? ? 50 83 EC 20 53 56 57 A1 ? ? ? ? 33 C5 50 8D 45 F4 64 A3 ? ? ? ? 8B F1 8B 5D 08");
+            FFileManagerLinear::shLookup4 = safetyhook::create_inline(pattern.get_first(), FFileManagerLinear::Lookup4);
+
+            pattern = hook::pattern("E8 ? ? ? ? 85 C0 75 7F 53");
+            FFileManagerLinear::shsub_4B9C80 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), FFileManagerLinear::sub_4B9C80);
         }
     }
 
@@ -247,9 +329,20 @@ void Init()
     pattern = hook::pattern("0F 84 ? ? ? ? 56 56 56 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 83 C4 18 50 8D 8D");
     injector::WriteMemory<uint16_t>(pattern.get_first(), 0xE990, true); //jz -> jmp
 
+    //NetOnlineManager::NetOnlineManager
+    pattern = hook::pattern("C7 45 ? ? ? ? ? 8D 64 24 00 53");
+    injector::WriteMemory<uint32_t>(pattern.get_first(3), 4372, true);
+
     //GameMode
     pattern = hook::pattern("55 8B EC 83 3D ? ? ? ? ? 75 55");
     shLead_SetCurrentGameMode = safetyhook::create_inline(pattern.get_first(), Lead_SetCurrentGameMode);
+
+    //Disable perfectionist checks
+    pattern = hook::pattern("53 32 DB E8 ? ? ? ? 85 C0 74 29");
+    UI::shGetIsDifficultyLevelPerfectionist = safetyhook::create_inline(pattern.get_first(), UI::GetIsDifficultyLevelPerfectionistHook);
+
+    pattern = hook::pattern("E8 ? ? ? ? F3 0F 10 46 ? 51 8B CE");
+    FThermalSonarVisionComponent::shSetCurrentActiveSonarWaveRange = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), FThermalSonarVisionComponent::SetCurrentActiveSonarWaveRange);
 
     if (bSkipIntro || bFullscreenAtStartup || bSkipPressAnyKeyScreen)
     {
@@ -538,10 +631,6 @@ void Init()
                 regs.xmm1.f64[0] = 2.0;
         });
 
-        //NetOnlineManager::NetOnlineManager
-        pattern = hook::pattern("C7 45 ? ? ? ? ? 8D 64 24 00 53");
-        injector::WriteMemory<uint32_t>(pattern.get_first(3), 4372, true);
-
         //UD3DRenderDevice
         pattern = hook::pattern("76 23 8B 06");
         injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true); //jbe -> jmp
@@ -616,16 +705,13 @@ void Init()
             pattern = hook::pattern("F3 0F 11 04 24 52 8B 95");
             static auto D3DRenderer__RenderHUD = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& regs)
             {
-                if (GetAspectRatio() > fDefaultAspectRatio)
-                {
-                    auto& a2 = regs.esi;
-                    auto& x = *(uint32_t*)(regs.ebp - 0xB4);
-                    auto& y = regs.ecx;
-                    auto& w = regs.eax;
-                    auto& h = regs.edx;
+                auto& a2 = regs.esi;
+                auto& x = *(uint32_t*)(regs.ebp - 0xB4);
+                auto& y = regs.ecx;
+                auto& w = regs.eax;
+                auto& h = regs.edx;
                 
-                    ScaleHUD(x, y, w, h);
-                }
+                ScaleHUD(x, y, w, h);
             });
         }
 
