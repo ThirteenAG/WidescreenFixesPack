@@ -1,10 +1,215 @@
 #include "stdafx.h"
+#include <d3d9.h>
 #include <LEDEffects.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#pragma comment(lib, "Ws2_32.lib")
+
+std::string getLocalIPAddress()
+{
+    WSADATA wsaData;
+    int result = WSAStartup(MAKEWORD(2, 2), &wsaData);
+    if (result != 0) {
+        DBGONLY(spd::log()->error("WSAStartup failed: {0:x}", result);)
+        return "";
+    }
+
+    struct sockaddr_in destination {};
+    destination.sin_family = AF_INET;
+    destination.sin_port = htons(80);
+    inet_pton(AF_INET, "8.8.8.8", &destination.sin_addr);
+
+    SOCKET sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (sock == INVALID_SOCKET) {
+        DBGONLY(spd::log()->error("Socket creation failed.");)
+        WSACleanup();
+        return "";
+    }
+
+    result = connect(sock, reinterpret_cast<struct sockaddr*>(&destination), sizeof(destination));
+    if (result == SOCKET_ERROR) {
+        DBGONLY(spd::log()->error("Socket connection failed.");)
+        closesocket(sock);
+        WSACleanup();
+        return "";
+    }
+
+    struct sockaddr_in localAddress {};
+    int addressLength = sizeof(localAddress);
+    result = getsockname(sock, reinterpret_cast<struct sockaddr*>(&localAddress), &addressLength);
+    if (result == SOCKET_ERROR) {
+        DBGONLY(spd::log()->error("getsockname failed.");)
+        closesocket(sock);
+        WSACleanup();
+        return "";
+    }
+
+    std::string ipAddress(INET_ADDRSTRLEN, '\0');
+    inet_ntop(AF_INET, &localAddress.sin_addr, ipAddress.data(), ipAddress.size());
+
+    closesocket(sock);
+    WSACleanup();
+
+    return std::string(ipAddress.c_str());
+}
+
+void LocalServer()
+{
+    WSADATA wsaData;
+    SOCKET sockserv, sock;
+    struct sockaddr_in server, client;
+    int c = sizeof(struct sockaddr_in);
+
+    // Initialize Winsock
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+        DBGONLY(spd::log()->error("Failed. Error Code : {0:x}", WSAGetLastError());)
+        return;
+    }
+
+    // Create a socket
+    if ((sockserv = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET) {
+        DBGONLY(spd::log()->error("Could not create socket : {0:x}", WSAGetLastError());)
+        WSACleanup();
+        return;
+    }
+
+    // Prepare the sockaddr_in structure
+    server.sin_family = AF_INET;
+    server.sin_addr.s_addr = INADDR_ANY;
+    server.sin_port = htons(3074);
+
+    // Bind
+    if (bind(sockserv, (struct sockaddr*)&server, sizeof(server)) == SOCKET_ERROR) {
+        DBGONLY(spd::log()->error("Bind failed with error code : {0:x}", WSAGetLastError());)
+        closesocket(sockserv);
+        WSACleanup();
+        return;
+    }
+
+    // Listen to incoming connections
+    listen(sockserv, 10);
+
+    // Accept and incoming connection
+    DBGONLY(spd::log()->info("Waiting for incoming connections...");)
+
+    while ((sock = accept(sockserv, (struct sockaddr*)&client, &c)) != INVALID_SOCKET) {
+        DBGONLY(spd::log()->info("Connection accepted");)
+        char client_message[1024] = { 0 };
+        int recv_size;
+        if ((recv_size = recv(sock, client_message, 1024, 0)) == SOCKET_ERROR) {
+            DBGONLY(spd::log()->error("recv failed");)
+        }
+        DBGONLY(spd::log()->info("Client says: {}", client_message);)
+
+        auto h = "HTTP/1.1 200 OK\r\n"
+            "Cache-Control: priva"
+            "te\r\n"
+            "Content-Type: text/h"
+            "tml; charset=utf-8\r"
+            "\n"
+            "Server: Microsoft-II"
+            "S/10.0\r\n"
+            "X-AspNet-Version: 2."
+            "0.50727\r\n"
+            "X-Powered-By: ASP.NE"
+            "T\r\n"
+            "Date: Mon, 01 Jan 20"
+            "24 23:10:02 GMT\r\n"
+            "Content-Length: 1183"
+            "\r\n\r\n";
+
+        auto r = "<RESPONSE xmlns=\"\""
+            "><AuthenticationServ"
+            "er><VALUE>lb-agora.u"
+            "bisoft.com:3081</VAL"
+            "UE></AuthenticationS"
+            "erver><CreateAccount"
+            "><VALUE>https://secu"
+            "re.ubi.com/login/Cre"
+            "ateUser.aspx?lang=%s"
+            "</VALUE></CreateAcco"
+            "unt><LobbyServer><VA"
+            "LUE>lb-lsg-prod.ubis"
+            "oft.com:3105</VALUE>"
+            "</LobbyServer><MmpTi"
+            "tleId><VALUE>0xA004<"
+            "/VALUE></MmpTitleId>"
+            "<SandboxUrl><VALUE>p"
+            "rudp:/address=lb-rdv"
+            "-as-prod01.ubisoft.c"
+            "om;port=23931</VALUE"
+            "></SandboxUrl><Sandb"
+            "oxUrlWS><VALUE>ne1-z"
+            "3-as-rdv03.ubisoft.c"
+            "om:23930</VALUE></Sa"
+            "ndboxUrlWS><SerialNa"
+            "me><VALUE>SPLINTERCE"
+            "LL5PC</VALUE></Seria"
+            "lName><uplay_Downloa"
+            "dServiceUrl><VALUE>h"
+            "ttps://secure.ubi.co"
+            "m/UplayServices/Upla"
+            "yFacade/DownloadServ"
+            "icesRESTXML.svc/REST"
+            "/XML/?url=</VALUE></"
+            "uplay_DownloadServic"
+            "eUrl><uplay_DynConte"
+            "ntBaseUrl><VALUE>htt"
+            "p://static8.cdn.ubi."
+            "com/u/Uplay/</VALUE>"
+            "</uplay_DynContentBa"
+            "seUrl><uplay_DynCont"
+            "entSecureBaseUrl><VA"
+            "LUE>http://static8.c"
+            "dn.ubi.com/</VALUE><"
+            "/uplay_DynContentSec"
+            "ureBaseUrl><uplay_Pa"
+            "ckageBaseUrl><VALUE>"
+            "http://static8.cdn.u"
+            "bi.com/u/Uplay/Packa"
+            "ges/1.0.1/</VALUE></"
+            "uplay_PackageBaseUrl"
+            "><uplay_WebServiceBa"
+            "seUrl><VALUE>https:/"
+            "/secure.ubi.com/Upla"
+            "yServices/UplayFacad"
+            "e/ProfileServicesFac"
+            "adeRESTXML.svc/REST/"
+            "</VALUE></uplay_WebS"
+            "erviceBaseUrl></RESP"
+            "ONSE>";
+
+        std::string matchmaking_config = std::string(h) + std::string(r);
+        send(sock, matchmaking_config.c_str(), matchmaking_config.size(), 0);
+        closesocket(sock);
+    }
+
+    if (sock == INVALID_SOCKET) {
+        DBGONLY(spd::log()->error("accept failed with error code : {0:x}", WSAGetLastError());)
+    }
+
+    closesocket(sockserv);
+    WSACleanup();
+}
 
 float gVisibility = 1.0f;
 int32_t gBlacklistIndicators = 0;
 bool bDisableBlackAndWhiteFilter = false;
 bool bBlacklistControlScheme = true;
+IDirect3DDevice9* pDevice = nullptr;
+int BackBufferWidth = 0;
+int BackBufferHeight = 0;
+bool bVideoRender = false;
+bool bVideoOpened = false;
+
+static constexpr float fDefaultAspectRatio = 16.0f / 9.0f;
+
+static auto GetAspectRatio = []() -> float
+{
+    if (!BackBufferWidth || !BackBufferHeight)
+        return fDefaultAspectRatio;
+    return static_cast<float>(BackBufferWidth) / static_cast<float>(BackBufferHeight);
+};
 
 bool (WINAPI* GetOverloadedFilePathA)(const char* lpFilename, char* out, size_t out_size) = nullptr;
 
@@ -183,28 +388,177 @@ int __fastcall sub_46E388(void* a1, void* edx, void* a2, int a3, int a4, int ful
     return shsub_46E388.fastcall<int>(a1, edx, a2, a3, a4, 0, a6);
 }
 
-SafetyHookInline shWndProc{};
-int __fastcall WndProc(HDC _this, void* edx, UINT Msg, int a3, unsigned int a4)
+enum WindowVerticalPos
 {
-    auto ret = shWndProc.fastcall<int>(_this, edx, Msg, a3, a4);
-    if (Msg == WM_STYLECHANGED)
-        SetWindowPos(*(HWND*)(*((uint32_t*)_this + 253) + 4), HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+    Center,
+    Top,
+    Bottom,
+};
+
+static BOOL WINAPI CenterWindowPosition(HWND hWnd, int nWidth, int nHeight, WindowVerticalPos put = Center)
+{
+    // fix the window to open at the center of the screen...
+    HMONITOR monitor = MonitorFromWindow(GetDesktopWindow(), MONITOR_DEFAULTTONEAREST);
+    MONITORINFOEX info = { sizeof(MONITORINFOEX) };
+    GetMonitorInfo(monitor, &info);
+    DEVMODE devmode = {};
+    devmode.dmSize = sizeof(DEVMODE);
+    EnumDisplaySettings(info.szDevice, ENUM_CURRENT_SETTINGS, &devmode);
+    DWORD DesktopX = devmode.dmPelsWidth;
+    DWORD DesktopY = devmode.dmPelsHeight;
+
+    int newWidth = nWidth;
+    int newHeight = nHeight;
+
+    int WindowPosX = (int)(((float)DesktopX / 2.0f) - ((float)newWidth / 2.0f));
+    int WindowPosY = (int)(((float)DesktopY / 2.0f) - ((float)newHeight / 2.0f));
+
+    if (put == Top)
+        return SetWindowPos(hWnd, 0, WindowPosX, 0, newWidth, newHeight, SWP_NOZORDER | SWP_FRAMECHANGED);
+    else if (put == Bottom)
+        return SetWindowPos(hWnd, 0, WindowPosX, DesktopY - newHeight, newWidth, newHeight, SWP_NOZORDER | SWP_FRAMECHANGED);
+
+    return SetWindowPos(hWnd, 0, WindowPosX, WindowPosY, newWidth, newHeight, SWP_NOZORDER | SWP_FRAMECHANGED);
+}
+
+bool bFocus = false;
+SafetyHookInline shWndProc{};
+int __fastcall WndProc(HDC _this, void* edx, UINT Msg, int wparam, unsigned int lparam)
+{
+    switch (Msg)
+    {
+    //case WM_SETFOCUS:
+    //    SetWindowPos(*(HWND*)(*((uint32_t*)_this + 253) + 4), HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+    //    bFocus = true;
+    //    break;
+    //
+    //case WM_KILLFOCUS:
+    //    SetWindowPos(*(HWND*)(*((uint32_t*)_this + 253) + 4), HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+    //    bFocus = false;
+    //    break;
+
+    case WM_ACTIVATE:
+        if (LOWORD(wparam) == WA_INACTIVE)
+        {
+            SetWindowPos(*(HWND*)(*((uint32_t*)_this + 253) + 4), HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+            bFocus = false;
+        }
+        else
+        {
+            SetWindowPos(*(HWND*)(*((uint32_t*)_this + 253) + 4), HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+            bFocus = true;
+        }
+        break;
+    }
+
+    auto ret = shWndProc.fastcall<int>(_this, edx, Msg, wparam, lparam);
+    return ret;
+}
+
+namespace Os
+{
+    namespace CoreTaskGetGameConnectSettings
+    {
+        SafetyHookInline shonSendRequest{};
+        void __fastcall onSendRequest(int _this, void* edx, int a2, int a3, char* response, char* header, int a6, int a7)
+        {
+            return shonSendRequest.fastcall<void>(_this, edx, a2, a3, response, header, a6, a7);
+        }
+    }
+
+    namespace NetworkTaskHTTPSend
+    {
+        SafetyHookInline shparseHeader{};
+        uint8_t __fastcall parseHeader(void* _this, void* edx)
+        {
+            return shparseHeader.fastcall<uint8_t>(_this, edx);
+        }
+
+        SafetyHookInline shreadResponse{};
+        uint8_t __fastcall readResponse(void* _this, void* edx)
+        {
+            return shreadResponse.fastcall<uint8_t>(_this, edx);
+        }
+    }
+}
+
+int WINAPI sendhook(SOCKET s, const char* buf, int len, int flags)
+{
+    return send(s, buf, len, flags);
+}
+
+int WINAPI sendtohook(SOCKET s, const char* buf, int len, int flags, const struct sockaddr* to, int tolen)
+{
+    if (to->sa_family == AF_INET)
+    {
+        auto addr = getLocalIPAddress();
+        inet_pton(AF_INET, addr.c_str(), const_cast<char*>(buf) + 93);
+    }
+
+    return sendto(s, buf, len, flags, to, tolen);
+}
+
+int WINAPI WSASendToHook(SOCKET s, LPWSABUF lpBuffers, DWORD dwBufferCount, LPDWORD lpNumberOfBytesSent, DWORD dwFlags, const struct sockaddr* lpTo, int iTolen, LPWSAOVERLAPPED lpOverlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine)
+{
+    return WSASendTo(s, lpBuffers, dwBufferCount, lpNumberOfBytesSent, dwFlags, lpTo, iTolen, lpOverlapped, lpCompletionRoutine);
+}
+bool bEnableSplitscreen = false;
+bool bInstance1 = true;
+BOOL WINAPI SetWindowPosHook(HWND hWnd, HWND hWndInsertAfter, int X, int Y, int cx, int cy, UINT uFlags)
+{
+    SetWindowLong(hWnd, GWL_STYLE, GetWindowLong(hWnd, GWL_STYLE) & ~WS_OVERLAPPEDWINDOW);
+
+    if (bEnableSplitscreen)
+    {
+        if (bInstance1)
+            return CenterWindowPosition(hWnd, BackBufferWidth, BackBufferHeight, Top);
+        else
+            return CenterWindowPosition(hWnd, BackBufferWidth, BackBufferHeight, Bottom);
+    }
+
+    return SetWindowPos(hWnd, hWndInsertAfter, X, Y, cx, cy, uFlags);
+}
+
+SafetyHookInline shCreateSemaphoreA{};
+HANDLE WINAPI CreateSemaphoreAHook(LPSECURITY_ATTRIBUTES lpSemaphoreAttributes, LONG lInitialCount, LONG lMaximumCount, LPCSTR lpName)
+{
+    auto ret = shCreateSemaphoreA.stdcall<HANDLE>(lpSemaphoreAttributes, lInitialCount, lMaximumCount, lpName);
+
+    if (GetLastError() == ERROR_ALREADY_EXISTS)
+    {
+        bInstance1 = false;
+        return shCreateSemaphoreA.stdcall<HANDLE>(lpSemaphoreAttributes, lInitialCount, lMaximumCount, "Global\\sc5_semaphore2");
+    }
+
     return ret;
 }
 
 void Init()
 {
     CIniReader iniReader("");
-    //auto bWindowedMode = iniReader.ReadInteger("MAIN", "WindowedMode", 1) != 0;
     auto bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
+    auto bWindowedMode = iniReader.ReadInteger("MAIN", "WindowedMode", 0) != 0;
     auto bSkipSystemDetection = iniReader.ReadInteger("MAIN", "SkipSystemDetection", 1) != 0;
+    auto bPartialUltraWideSupport = iniReader.ReadInteger("MAIN", "PartialUltraWideSupport", 1) != 0;
     bDisableBlackAndWhiteFilter = iniReader.ReadInteger("MAIN", "DisableBlackAndWhiteFilter", 0) != 0;
     auto bDisableCharacterLighting = iniReader.ReadInteger("MAIN", "DisableCharacterLighting", 0) != 0;
     bBlacklistControlScheme = iniReader.ReadInteger("CONTROLS", "BlacklistControlScheme", 1) != 0;
     auto bUnlockDLC = iniReader.ReadInteger("UNLOCKS", "UnlockDLC", 1) != 0;
 
-    auto sLANHelperExePath = iniReader.ReadString("STARTUP", "LANHelperExePath", "");
-    static auto sServerAddr = iniReader.ReadString("STARTUP", "ServerAddr", "127.0.0.1");
+    auto sLANHelperExePath = iniReader.ReadString("LAN", "LANHelperExePath", "");
+    auto bFixLAN = iniReader.ReadInteger("LAN", "FixLAN", 1) != 0;
+    static auto sServerAddr = iniReader.ReadString("LAN", "ServerAddr", "127.0.0.1");
+
+    bEnableSplitscreen = iniReader.ReadInteger("2INSTANCESPLITSCREEN", "Enable", 1) != 0;
+
+    if (!bWindowedMode)
+        bEnableSplitscreen = false;
+
+    //accept any refresh rate
+    {
+        auto pattern = hook::pattern("7F 17 89 45 FC");
+        injector::MakeNOP(pattern.get_first(), 2);
+    }
 
     //allow loading unpacked files
     {
@@ -244,24 +598,27 @@ void Init()
         }
     }
 
-    // causes crash on aim on coste level
-    //if (bWindowedMode)
-    //{
-    //    auto pattern = hook::pattern("55 8B EC 83 EC 40 53 56 83 C8 FF");
-    //    shsub_46E388 = safetyhook::create_inline(pattern.get_first(), sub_46E388);
-    //    
-    //    IATHook::Replace(GetModuleHandleA(NULL), "USER32.DLL",
-    //        std::forward_as_tuple("CreateWindowExA", WindowedModeWrapper::CreateWindowExA_Hook),
-    //        std::forward_as_tuple("CreateWindowExW", WindowedModeWrapper::CreateWindowExW_Hook),
-    //        std::forward_as_tuple("SetWindowLongA", WindowedModeWrapper::SetWindowLongA_Hook),
-    //        std::forward_as_tuple("SetWindowLongW", WindowedModeWrapper::SetWindowLongW_Hook),
-    //        std::forward_as_tuple("AdjustWindowRect", WindowedModeWrapper::AdjustWindowRect_Hook),
-    //        std::forward_as_tuple("SetWindowPos", WindowedModeWrapper::SetWindowPos_Hook)
-    //    );
-    //
-    //    pattern = hook::pattern("55 8B EC 83 E4 F0 81 EC ? ? ? ? A1 ? ? ? ? 33 C4 89 84 24 ? ? ? ? 8B 45 0C");
-    //    shWndProc = safetyhook::create_inline(pattern.get_first(), WndProc);
-    //}
+    if (bWindowedMode)
+    {
+        auto pattern = hook::pattern("55 8B EC 83 EC 40 53 56 83 C8 FF");
+        shsub_46E388 = safetyhook::create_inline(pattern.get_first(), sub_46E388);
+    
+        pattern = hook::pattern("55 8B EC 83 E4 F0 81 EC ? ? ? ? A1 ? ? ? ? 33 C4 89 84 24 ? ? ? ? 8B 45 0C");
+        shWndProc = safetyhook::create_inline(pattern.get_first(), WndProc);
+
+        IATHook::Replace(GetModuleHandleA(NULL), "USER32.DLL",
+            std::forward_as_tuple("SetWindowPos", SetWindowPosHook)
+        );
+        
+        pattern = hook::pattern("A3 ? ? ? ? 83 BE");
+        static auto GetPresentationParametersHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            auto PresentationParameters = (D3DPRESENT_PARAMETERS*)regs.edi;
+
+            BackBufferWidth = PresentationParameters->BackBufferWidth;
+            BackBufferHeight = PresentationParameters->BackBufferHeight;
+        });
+    }
 
     if (bSkipIntro)
     {
@@ -471,6 +828,19 @@ void Init()
         }
     }
 
+    if (bFixLAN)
+    {
+        std::thread(LocalServer).detach();
+
+        auto pattern = hook::pattern("FF 15 ? ? ? ? 8B F8 83 FF FF 75 0D FF 15 ? ? ? ? E8 ? ? ? ? 8B D8 85 DB 8B C7 74 03 89 5E 04 5B 5F 5E C2 0C 00");
+        injector::MakeNOP(pattern.get_first(), 6, true);
+        injector::MakeCALL(pattern.get_first(), sendtohook, true);
+
+        //Os::NetworkTaskHTTPSend::shparseHeader = safetyhook::create_inline(0xC14154, Os::NetworkTaskHTTPSend::parseHeader);
+        //Os::NetworkTaskHTTPSend::shreadResponse = safetyhook::create_inline(0xC1475C, Os::NetworkTaskHTTPSend::readResponse);
+        //Os::CoreTaskGetGameConnectSettings::shonSendRequest = safetyhook::create_inline(0xC0ED58, Os::CoreTaskGetGameConnectSettings::onSendRequest);
+    }
+
     if (!sServerAddr.empty())
     {
         auto pattern = hook::pattern("68 ? ? ? ? 8D 4D E0 E8 ? ? ? ? C7 45 ? ? ? ? ? E8");
@@ -478,6 +848,121 @@ void Init()
 
         pattern = hook::pattern("68 ? ? ? ? 8B CE E8 ? ? ? ? 68 ? ? ? ? 8B CE E8 ? ? ? ? 8B C6");
         injector::WriteMemory(pattern.get_first(1), sServerAddr.data(), true);
+    }
+
+    if (bEnableSplitscreen)
+    {
+        CreateMutexA(NULL, TRUE, "XidiInstance");
+        shCreateSemaphoreA = safetyhook::create_inline(CreateSemaphoreA, CreateSemaphoreAHook);
+    }
+
+    if (bPartialUltraWideSupport)
+    {
+        // override aspect ratio
+        auto pattern = hook::pattern("74 0A F3 0F 10 05 ? ? ? ? EB 13");
+        injector::MakeNOP(pattern.get_first(), 2, true);
+
+        static int nCounter = 0;
+        static int nCounterPrev = 0;
+        static bool bNeedsFix = false;
+
+        //auto pattern = hook::pattern("F3 0F 10 0D ? ? ? ? 53 8B D9 83 4B 10 FF");
+        //injector::MakeNOP(pattern.get_first(), 8, true);
+        //static auto FCanvasUtil__SetViewport = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        //{
+        //    if (GetAspectRatio() > fDefaultAspectRatio)
+        //        regs.xmm1.f32[0] = 2.0 / (GetAspectRatio() / fDefaultAspectRatio);
+        //    else
+        //        regs.xmm1.f64[0] = 2.0;
+        //});
+
+        //scaling for menus and 3d
+        {
+            auto pattern = hook::pattern("F3 0F 10 90 ? ? ? ? 83 EC 10 8B C4 F3 0F 11 00");
+            injector::MakeNOP(pattern.get_first(0), 8, true);
+            static auto UViewportHook1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            {
+                regs.xmm2.f32[0] = 1.0f / (GetAspectRatio() / fDefaultAspectRatio);
+            });
+
+            pattern = hook::pattern("F3 0F 10 90 ? ? ? ? 83 EC 10 8B C4 F3 0F 11 10");
+            injector::MakeNOP(pattern.get_first(0), 8, true);
+            static auto UViewportHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            {
+                regs.xmm2.f32[0] = 1.0f / (GetAspectRatio() / fDefaultAspectRatio);
+            });
+
+            pattern = hook::pattern("8B 3C 88 8B CF E8 ? ? ? ? 85 C0");
+            static auto UViewportHook4 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            {
+                nCounterPrev = nCounter;
+                nCounter = regs.ecx;
+            });
+        }
+
+        //HUD (all 2D, including what's fixed above)
+        {
+            auto pattern = hook::pattern("F3 0F 59 6C 24 ? F3 0F 11 44 24");
+            static auto FlashMenuRendererHook1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            {
+                if (nCounter == 0 || nCounter == 1 || nCounter == 3 || nCounter == 4)
+                {
+                    bNeedsFix = true;
+                    if (GetAspectRatio() > fDefaultAspectRatio)
+                        regs.xmm0.f32[0] /= (GetAspectRatio() / fDefaultAspectRatio);
+                }
+            });
+
+            pattern = hook::pattern("F3 0F 11 44 24 ? 0F 57 C0 F3 0F 11 5C 24");
+            static auto FlashMenuRendererHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            {
+                if (bNeedsFix)
+                {
+                    if (GetAspectRatio() > fDefaultAspectRatio)
+                        regs.xmm3.f32[0] /= (GetAspectRatio() / fDefaultAspectRatio);
+                    bNeedsFix = false;
+                }
+            });
+        }
+
+        // blood overlay disable
+        {
+            auto pattern = hook::pattern("F3 0F 10 05 ? ? ? ? 0F 2F C1 0F 86 ? ? ? ? F3 0F 10 96");
+            injector::MakeNOP(pattern.get_first(), 8, true);
+            static auto FlashHudHealthFeedback = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            {
+                if (GetAspectRatio() > fDefaultAspectRatio)
+                    regs.xmm0.f32[0] = 0.0f;
+                else
+                    regs.xmm0.f32[0] = 1.0f;
+            });
+        }
+
+        // sticky camera overlay disable
+        {
+            pattern = hook::pattern("0F 84 ? ? ? ? F3 0F 10 0D ? ? ? ? 0F B6 C9");
+            injector::MakeNOP(pattern.get_first(), 6, true); // make pos overwrite possible
+
+            pattern = hook::pattern("F3 0F 11 96 ? ? ? ? F3 0F 2C C8");
+            injector::MakeNOP(pattern.get_first(), 8, true);
+            static auto StickyCamBorder1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            {
+                if (GetAspectRatio() > fDefaultAspectRatio)
+                    *(float*)(regs.esi + 0x4A8) = -10000.0f;
+                else
+                    *(float*)(regs.esi + 0x4A8) = regs.xmm2.f32[0];
+            });
+
+            pattern = hook::pattern("F3 0F 10 86 ? ? ? ? F3 0F 59 05 ? ? ? ? 33 C9");
+            injector::MakeNOP(pattern.get_first(), 8, true);
+            static auto StickyCamBorder2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            {
+                if (GetAspectRatio() > fDefaultAspectRatio)
+                    regs.xmm0.f32[0] = -10000.0f;
+                else
+                    regs.xmm0.f32[0] = *(float*)(regs.esi + 0x4A8);
+            });
+        }
     }
 }
 
@@ -488,6 +973,7 @@ void InitLeadD3DRender()
     auto bDisableBlackAndWhiteFilter = iniReader.ReadInteger("MAIN", "DisableBlackAndWhiteFilter", 0) != 0;
     auto bEnhancedSonarVision = iniReader.ReadInteger("MAIN", "EnhancedSonarVision", 0) != 0;
     gBlacklistIndicators = iniReader.ReadInteger("MAIN", "BlacklistIndicators", 0);
+    auto bPartialUltraWideSupport = iniReader.ReadInteger("MAIN", "PartialUltraWideSupport", 1) != 0;
 
     if (bDisableDOF)
     {
@@ -548,6 +1034,56 @@ void InitLeadD3DRender()
         pattern = hook::module_pattern(GetModuleHandle(L"LeadD3DRender"), "8B 03 80 B8");
         injector::MakeNOP(pattern.get_first(2), 7);
     }
+
+    // Viewport
+    if (bPartialUltraWideSupport)
+    {
+        auto pattern = hook::module_pattern(GetModuleHandle(L"LeadD3DRender"), "F3 0F 11 49 ? F3 0F 11 61");
+        static auto ViewportHook1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            if (bVideoOpened && bVideoRender && GetAspectRatio() > fDefaultAspectRatio)
+                regs.xmm1.f32[0] /= (GetAspectRatio() / fDefaultAspectRatio);
+        });
+        
+        pattern = hook::module_pattern(GetModuleHandle(L"LeadD3DRender"), "F3 0F 11 51 ? F3 0F 11 49 ? F3 0F 59 F5");
+        static auto ViewportHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            if (bVideoOpened && bVideoRender && GetAspectRatio() > fDefaultAspectRatio)
+                regs.xmm2.f32[0] /= (GetAspectRatio() / fDefaultAspectRatio);
+            bVideoRender = false;
+        });
+
+        pattern = hook::module_pattern(GetModuleHandle(L"LeadD3DRender"), "89 4D 28 E8 ? ? ? ? 8B 75 7C 33 FF 8B D8");
+        static auto VideoRenderHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            bVideoRender = true;
+        });
+
+        pattern = hook::module_pattern(GetModuleHandle(L"LeadD3DRender"), "8B 07 8B 08 6A 00 50 FF 91 ? ? ? ? 8B 07 8B 08 6A 00");
+        static auto d3ddevice = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            pDevice = *(IDirect3DDevice9**)(regs.edi);
+        });
+    }
+}
+
+void InitLead3DEngine()
+{
+    auto pattern = hook::module_pattern(GetModuleHandle(L"Lead3DEngine"), "FF 15 ? ? ? ? 8B CE 89 86");
+    static auto BinkOpenHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        auto s = std::string_view((const char*)(regs.esp + 0x30));
+        if (s.contains("Logo_") || s.contains("_Load") || s.contains("C00_"))
+        {
+            bVideoOpened = true;
+        }
+    });
+
+    pattern = hook::module_pattern(GetModuleHandle(L"Lead3DEngine"), "FF 15 ? ? ? ? 38 1D");
+    static auto BinkCloseHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        bVideoOpened = false;
+    });
 }
 
 void InitLED()
@@ -611,6 +1147,7 @@ CEXP void InitializeASI()
 
         CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("D9 1C 24 E8 ? ? ? ? D9 5E 0C"));
         CallbackHandler::RegisterCallback(L"LeadD3DRender.dll", InitLeadD3DRender);
+        CallbackHandler::RegisterCallback(L"Lead3DEngine.dll", InitLead3DEngine);
         CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(InitLED, hook::pattern("D9 1C 24 E8 ? ? ? ? D9 5E 0C"));
     });
 }
