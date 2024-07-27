@@ -862,6 +862,13 @@ void Init()
         auto pattern = hook::pattern("74 0A F3 0F 10 05 ? ? ? ? EB 13");
         injector::MakeNOP(pattern.get_first(), 2, true);
 
+        pattern = hook::pattern("8D 86 ? ? ? ? 8B 08 3B CD");
+        static auto IniHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            *(uint32_t*)(regs.esi + 0x104) = 0; //ForceMultiMon
+            *(float*)(regs.esi + 0x108) = 99.0f; //MinTripleDispRatio
+        });
+
         static int nCounter = 0;
         static int nCounterPrev = 0;
         static bool bNeedsFix = false;
