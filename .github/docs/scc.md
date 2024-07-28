@@ -30,6 +30,8 @@
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) FPS limit in coop is changed to 60: possible to set custom with `update/convictionsettings.ini`, `SyncMaxStepFrequency` parameter
 
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Disabled unlimited ammo for all weapons, to return original behavior, delete `update/weapontuning.ini`
+
 ![controls](https://github.com/user-attachments/assets/2498a891-2991-4604-b0dc-b5d309a0c02d)
 
 https://user-images.githubusercontent.com/4904157/192846910-6ddfb3fb-3089-4553-ba94-b8d031855fc7.mp4
