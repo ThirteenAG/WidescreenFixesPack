@@ -205,6 +205,7 @@ void Init()
     fScreenCullBias = std::clamp(iniReader.ReadFloat("MAIN", "ScreenCullBias", 0.0f), 0.0f, 1.0f);
     static float fShadowCullDist = std::clamp(iniReader.ReadFloat("MAIN", "ShadowCullDist", 100.0f), 90.0f, 120.0f);
     auto bDisableNightVisionFlash = iniReader.ReadInteger("MAIN", "DisableNightVisionFlash", 1) != 0;
+    auto bDisablePerfectionistChecks = iniReader.ReadInteger("MAIN", "DisablePerfectionistChecks", 1) != 0;
 
     sExtractionWaveConfigs = iniReader.ReadString("EXTRACTION", "ExtractionWaveConfigs", "Default");
     nExtractionWaveEnemyMultiplier = std::clamp(iniReader.ReadInteger("EXTRACTION", "ExtractionWaveEnemyMultiplier", 1), 1, 9999);
@@ -339,7 +340,7 @@ void Init()
 
     //Disable perfectionist checks
     pattern = hook::pattern("53 32 DB E8 ? ? ? ? 85 C0 74 29");
-    UI::shGetIsDifficultyLevelPerfectionist = safetyhook::create_inline(pattern.get_first(), UI::GetIsDifficultyLevelPerfectionistHook);
+    UI::shGetIsDifficultyLevelPerfectionist = safetyhook::create_inline(pattern.get_first(), bDisablePerfectionistChecks ? UI::GetIsDifficultyLevelPerfectionistHook : UI::GetIsDifficultyLevelPerfectionist);
 
     pattern = hook::pattern("E8 ? ? ? ? F3 0F 10 46 ? 51 8B CE");
     FThermalSonarVisionComponent::shSetCurrentActiveSonarWaveRange = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), FThermalSonarVisionComponent::SetCurrentActiveSonarWaveRange);
