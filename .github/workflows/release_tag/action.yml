@@ -147,6 +147,7 @@ runs:
       with:
         token: ${{ inputs.token }}
         allowUpdates: true
+        makeLatest: true
         name: ${{ steps.release_info.outputs.name }}
 #        body: ${{ steps.release_info.outputs.body }}
         bodyFile: ${{ steps.tag_requires_updating.outputs.readme_path }}
