@@ -861,15 +861,25 @@ void Init()
         static int nCounterPrev = 0;
         static bool bNeedsFix = false;
 
-        //auto pattern = hook::pattern("F3 0F 10 0D ? ? ? ? 53 8B D9 83 4B 10 FF");
-        //injector::MakeNOP(pattern.get_first(), 8, true);
-        //static auto FCanvasUtil__SetViewport = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-        //{
-        //    if (GetAspectRatio() > fDefaultAspectRatio)
-        //        regs.xmm1.f32[0] = 2.0 / (GetAspectRatio() / fDefaultAspectRatio);
-        //    else
-        //        regs.xmm1.f64[0] = 2.0;
-        //});
+        pattern = hook::pattern("F3 0F 10 0D ? ? ? ? 53 8B D9 83 4B 10 FF");
+        injector::MakeNOP(pattern.get_first(), 8, true);
+        static auto FCanvasUtil__SetViewport = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            if (GetAspectRatio() > fDefaultAspectRatio)
+                regs.xmm1.f32[0] = 2.0f / (GetAspectRatio() / fDefaultAspectRatio);
+            else
+                regs.xmm1.f64[0] = 2.0f;
+        });
+
+        pattern = hook::pattern("F3 0F 10 0D ? ? ? ? 89 4B 10");
+        injector::MakeNOP(pattern.get_first(), 8, true);
+        static auto FCanvasUtil__SetViewport2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            if (GetAspectRatio() > fDefaultAspectRatio)
+                regs.xmm1.f32[0] = 2.0f / (GetAspectRatio() / fDefaultAspectRatio);
+            else
+                regs.xmm1.f64[0] = 2.0f;
+        });
 
         //scaling for menus and 3d
         {
