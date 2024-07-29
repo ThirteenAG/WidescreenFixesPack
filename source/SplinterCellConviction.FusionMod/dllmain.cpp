@@ -532,6 +532,7 @@ void Init()
     CIniReader iniReader("");
     auto bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
     auto bWindowedMode = iniReader.ReadInteger("MAIN", "WindowedMode", 0) != 0;
+    auto bDisableNegativeMouseAcceleration = iniReader.ReadInteger("MAIN", "DisableNegativeMouseAcceleration", 1) != 0;
     auto bSkipSystemDetection = iniReader.ReadInteger("MAIN", "SkipSystemDetection", 1) != 0;
     auto bPartialUltraWideSupport = iniReader.ReadInteger("MAIN", "PartialUltraWideSupport", 1) != 0;
     bDisableBlackAndWhiteFilter = iniReader.ReadInteger("MAIN", "DisableBlackAndWhiteFilter", 0) != 0;
@@ -611,6 +612,18 @@ void Init()
             BackBufferWidth = PresentationParameters->BackBufferWidth;
             BackBufferHeight = PresentationParameters->BackBufferHeight;
         });
+    }
+
+    if (bDisableNegativeMouseAcceleration)
+    {
+        auto pattern = hook::pattern("76 05 0F 28 D9 EB 08 0F 2F DA");
+        injector::MakeNOP(pattern.get_first(0), 2, true);
+        injector::MakeNOP(pattern.get_first(5), 2, true);
+        injector::MakeNOP(pattern.get_first(10), 2, true);
+
+        pattern = hook::pattern("77 0D 0F 2F C2 76 05 0F 28 CA EB 03 0F 28 C8 0F 57 C0");
+        injector::MakeNOP(pattern.get_first(0), 2, true);
+        injector::MakeNOP(pattern.get_first(5), 2, true);
     }
 
     if (bSkipIntro)
