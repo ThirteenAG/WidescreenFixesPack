@@ -4,6 +4,7 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #pragma comment(lib, "Ws2_32.lib")
+#include <list>
 
 std::string getLocalIPAddress()
 {
@@ -200,7 +201,7 @@ IDirect3DDevice9* pDevice = nullptr;
 int BackBufferWidth = 0;
 int BackBufferHeight = 0;
 bool bVideoRender = false;
-bool bVideoOpened = false;
+std::list<int> OpenedVideosList;
 
 static constexpr float fDefaultAspectRatio = 16.0f / 9.0f;
 
@@ -321,12 +322,22 @@ namespace FFileManagerLinear
 }
 
 int WhichPrecisionModeNeeded = 0;
+int CrouchSprint = 0;
+int CrouchSprintOff = 0;
+int Sprint = 0;
+int SprintOff = 0;
+bool bSprintNeeded = false;
+bool bCrouchSprintNeeded = false;
 int TogglePrecisionMode = 0;
 int TogglePrecisionModeOn = 0;
 int TogglePrecisionModeOff = 0;
 static injector::hook_back<void(__fastcall*)(int*, void*, const char*, int)> hb458CD3;
 void __fastcall fnTogglePrecisionMode(int* out, void* edx, const char* name, int a3)
 {
+    hb458CD3.fun(&Sprint, edx, "Sprint", a3);
+    hb458CD3.fun(&SprintOff, edx, "SprintOff", a3);
+    hb458CD3.fun(&CrouchSprint, edx, "CrouchSprint", a3);
+    hb458CD3.fun(&CrouchSprintOff, edx, "CrouchSprintOff", a3);
     hb458CD3.fun(&TogglePrecisionModeOn, edx, "TogglePrecisionModeOn", a3);
     hb458CD3.fun(&TogglePrecisionModeOff, edx, "TogglePrecisionModeOff", a3);
     hb458CD3.fun(out, edx, name, a3);
@@ -554,6 +565,12 @@ void Init()
         injector::MakeNOP(pattern.get_first(), 2);
     }
 
+    //disable uplay
+    {
+        auto pattern = hook::pattern("74 28 E8 ? ? ? ? 8B 10 8B C8 FF 92 ? ? ? ? 3B C3");
+        injector::WriteMemory<uint8_t>(pattern.get_first(), 0xEB, true);
+    }
+
     //allow loading unpacked files
     {
         ModuleList dlls;
@@ -673,12 +690,32 @@ void Init()
         {
             void operator()(injector::reg_pack& regs)
             {
+                if (regs.eax == CrouchSprint)
+                    bCrouchSprintNeeded = true;
+                else if (regs.eax == CrouchSprintOff)
+                    bCrouchSprintNeeded = false;
+
+                if (regs.eax == Sprint)
+                    bSprintNeeded = true;
+                else if (regs.eax == SprintOff)
+                    bSprintNeeded = false;
+
                 if (regs.eax == TogglePrecisionMode || regs.eax == TogglePrecisionModeOn || regs.eax == TogglePrecisionModeOff)
                     WhichPrecisionModeNeeded = regs.eax;
                 else
                     *(uintptr_t*)(regs.esp - 4) = loc_56DC64;
             }
         }; injector::MakeInline<GetPrecisionMode>(pattern.get_first(0), pattern.get_first(8));
+
+        // add crouch sprint
+        pattern = hook::pattern("F3 0F 10 45 ? F3 0F 11 45 ? F3 0F 10 86");
+        static auto GetSpeedReferenceAdjustment = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            if (bCrouchSprintNeeded)
+                *(float*)(regs.ebp + 0x0C) *= 2.0f;
+            else if (bSprintNeeded)
+                *(float*)(regs.ebp + 0x0C) *= 1.5f;
+        });
 
         // cover modes
         pattern = hook::pattern("E8 ? ? ? ? F6 05 ? ? ? ? ? 75 17 83 0D ? ? ? ? ? 53 68 ? ? ? ? B9 ? ? ? ? E8 ? ? ? ? F6 05 ? ? ? ? ? 75 17 83 0D ? ? ? ? ? 53 68 ? ? ? ? B9 ? ? ? ? E8 ? ? ? ? F6 05 ? ? ? ? ? 75 17 83 0D ? ? ? ? ? 53 68 ? ? ? ? B9 ? ? ? ? E8 ? ? ? ? F6 05 ? ? ? ? ? 75 1A 81 0D ? ? ? ? ? ? ? ? 53 68 ? ? ? ? B9 ? ? ? ? E8 ? ? ? ? BF");
@@ -910,7 +947,8 @@ void Init()
             auto pattern = hook::pattern("F3 0F 59 6C 24 ? F3 0F 11 44 24");
             static auto FlashMenuRendererHook1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
-                if (nCounter == 0 || nCounter == 1 || nCounter == 3 || nCounter == 4)
+                //if (nCounter == 0 || nCounter == 1 || nCounter == 3 || nCounter == 4)
+                if (nCounter != 5 && nCounter != 6 && nCounter != 7 && nCounter != 9 && OpenedVideosList.empty()) // 5 and 6 mess up menu sometimes, 7 and 9 is in-world UI
                 {
                     bNeedsFix = true;
                     if (GetAspectRatio() > fDefaultAspectRatio)
@@ -1053,14 +1091,14 @@ void InitLeadD3DRender()
         auto pattern = hook::module_pattern(GetModuleHandle(L"LeadD3DRender"), "F3 0F 11 49 ? F3 0F 11 61");
         static auto ViewportHook1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
-            if (bVideoOpened && bVideoRender && GetAspectRatio() > fDefaultAspectRatio)
+            if (!OpenedVideosList.empty() && bVideoRender && GetAspectRatio() > fDefaultAspectRatio)
                 regs.xmm1.f32[0] /= (GetAspectRatio() / fDefaultAspectRatio);
         });
         
         pattern = hook::module_pattern(GetModuleHandle(L"LeadD3DRender"), "F3 0F 11 51 ? F3 0F 11 49 ? F3 0F 59 F5");
         static auto ViewportHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
-            if (bVideoOpened && bVideoRender && GetAspectRatio() > fDefaultAspectRatio)
+            if (!OpenedVideosList.empty() && bVideoRender && GetAspectRatio() > fDefaultAspectRatio)
                 regs.xmm2.f32[0] /= (GetAspectRatio() / fDefaultAspectRatio);
             bVideoRender = false;
         });
@@ -1079,23 +1117,33 @@ void InitLeadD3DRender()
     }
 }
 
+
+SafetyHookInline shBinkOpen{};
+int __stdcall BinkOpen(const char* path, int flags)
+{
+    auto handle = shBinkOpen.stdcall<int>(path, flags);
+
+    auto s = std::string_view(path);
+    if (s.contains("Logo_") || s.contains("_Load") || s.contains("C00_"))
+        OpenedVideosList.push_back(handle);
+
+    return handle;
+}
+
+SafetyHookInline shBinkClose{};
+int __stdcall BinkClose(int handle)
+{
+    OpenedVideosList.remove(handle);
+    return shBinkClose.stdcall<int>(handle);
+}
+
 void InitLead3DEngine()
 {
     auto pattern = hook::module_pattern(GetModuleHandle(L"Lead3DEngine"), "FF 15 ? ? ? ? 8B CE 89 86");
-    static auto BinkOpenHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-    {
-        auto s = std::string_view((const char*)(regs.esp + 0x30));
-        if (s.contains("Logo_") || s.contains("_Load") || s.contains("C00_"))
-        {
-            bVideoOpened = true;
-        }
-    });
+    shBinkOpen = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), BinkOpen);
 
     pattern = hook::module_pattern(GetModuleHandle(L"Lead3DEngine"), "FF 15 ? ? ? ? 38 1D");
-    static auto BinkCloseHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-    {
-        bVideoOpened = false;
-    });
+    shBinkClose = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), BinkClose);
 }
 
 void InitLED()
