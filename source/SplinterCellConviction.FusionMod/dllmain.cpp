@@ -969,7 +969,7 @@ void Init()
             static auto FlashMenuRendererHook1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
                 //if (nCounter == 0 || nCounter == 1 || nCounter == 3 || nCounter == 4)
-                if (nCounter != 5 && nCounter != 6 && nCounter != 7 && nCounter != 9 && OpenedVideosList.empty()) // 5 and 6 mess up menu sometimes, 7 and 9 is in-world UI
+                if (nCounter != 5 && nCounter != 6 && nCounter != 7 && nCounter != 8 && nCounter != 9 && OpenedVideosList.empty()) // 5 and 6 mess up menu sometimes, 7, 8 and 9 is in-world UI
                 {
                     bNeedsFix = true;
                     if (GetAspectRatio() > fDefaultAspectRatio)
@@ -1144,7 +1144,7 @@ int __stdcall BinkOpen(const char* path, int flags)
     auto handle = shBinkOpen.stdcall<int>(path, flags);
 
     auto s = std::string_view(path);
-    if (s.contains("Logo_") || s.contains("_Load") || s.contains("C00_"))
+    if (s.contains("Logo_") || s.contains("_Load") || s.contains("C00_") || s.contains("C05_"))
         OpenedVideosList.push_back(handle);
 
     return handle;
