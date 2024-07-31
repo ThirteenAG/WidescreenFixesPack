@@ -712,9 +712,9 @@ void Init()
         static auto GetSpeedReferenceAdjustment = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
             if (bCrouchSprintNeeded)
-                *(float*)(regs.ebp + 0x0C) *= 2.0f;
-            else if (bSprintNeeded)
                 *(float*)(regs.ebp + 0x0C) *= 1.5f;
+            else if (bSprintNeeded)
+                *(float*)(regs.ebp + 0x0C) *= 1.25f;
         });
 
         // cover modes
@@ -726,6 +726,7 @@ void Init()
         // cover
         static bool bCoverStateStarted = false;
         static auto loc_56DBB3 = (uintptr_t)hook::get_pattern("3B 05 ? ? ? ? 75 13 8B 8E ? ? ? ? 8B 01");
+        static auto lastDetectTime = std::chrono::steady_clock::now();
 
         pattern = hook::pattern("3B 05 ? ? ? ? 75 0B 09 BE");
         struct CoverHook
@@ -736,7 +737,7 @@ void Init()
                 {
                     static bool toggleState = false; // Toggle state for entering/exiting cover
                     static bool buttonWasPressed = false; // Tracks if the button was previously pressed
-                    auto bInCover = (*(uint32_t*)(regs.esi + 0xA44) & 0x100);
+                    auto bInCover = bCoverStateStarted;
 
                     // Check if the button is currently pressed
                     bool buttonIsPressed = (regs.eax == DetectB2W);
@@ -752,6 +753,7 @@ void Init()
                             // Enter cover if not already in cover
                             if (!bInCover)
                             {
+                                lastDetectTime = std::chrono::steady_clock::now();
                                 *(uint32_t*)(regs.esi + 0xA44) |= 0x100;
                             }
                         }
@@ -767,13 +769,13 @@ void Init()
                     else if (!buttonIsPressed)
                     {
                         // If the button is released, ensure the player does not get stuck in a seeking cover state
-                        if (!bCoverStateStarted)
-                            *(uint32_t*)(regs.esi + 0xA44) &= ~0x100;
+                        //if (!bCoverStateStarted)
+                        //    *(uint32_t*)(regs.esi + 0xA44) &= ~0x100;
                     }
 
                     // Update the buttonWasPressed state for the next frame
                     buttonWasPressed = buttonIsPressed;
-                    bCoverStateStarted = false;
+                    //bCoverStateStarted = false;
                 }
                 else
                     *(uintptr_t*)(regs.esp - 4) = loc_56DBB3;
@@ -784,6 +786,25 @@ void Init()
         static auto UCoverNavStartState = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
             bCoverStateStarted = true;
+        });
+
+        pattern = hook::pattern("0F 57 C0 53 55 56 57");
+        static auto UCoverNavEndState = safetyhook::create_mid(0x7410FF, [](SafetyHookContext& regs)
+        {
+            bCoverStateStarted = false;
+        });
+
+        pattern = hook::pattern("66 F7 86 ? ? ? ? ? ? 0F 84 ? ? ? ? 0F 57 C0");
+        static auto UCoverNavStartStateCheck = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - lastDetectTime).count();
+            
+            // Wait for 1 second before applying StopDetectB2W code
+            if (elapsed >= 1 && elapsed <= 2)
+            {
+                if (!bCoverStateStarted)
+                    *(uint32_t*)(regs.esi + 0xA44) &= ~0x100;
+            }
         });
     }
 
@@ -905,7 +926,7 @@ void Init()
             if (GetAspectRatio() > fDefaultAspectRatio)
                 regs.xmm1.f32[0] = 2.0f / (GetAspectRatio() / fDefaultAspectRatio);
             else
-                regs.xmm1.f64[0] = 2.0f;
+                regs.xmm1.f32[0] = 2.0f;
         });
 
         pattern = hook::pattern("F3 0F 10 0D ? ? ? ? 89 4B 10");
@@ -915,7 +936,7 @@ void Init()
             if (GetAspectRatio() > fDefaultAspectRatio)
                 regs.xmm1.f32[0] = 2.0f / (GetAspectRatio() / fDefaultAspectRatio);
             else
-                regs.xmm1.f64[0] = 2.0f;
+                regs.xmm1.f32[0] = 2.0f;
         });
 
         //scaling for menus and 3d
@@ -1116,7 +1137,6 @@ void InitLeadD3DRender()
         });
     }
 }
-
 
 SafetyHookInline shBinkOpen{};
 int __stdcall BinkOpen(const char* path, int flags)
