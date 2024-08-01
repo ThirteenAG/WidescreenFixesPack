@@ -876,9 +876,17 @@ void Init()
 
     if (bFixLAN)
     {
-        std::thread(LocalServer).detach();
+        auto pattern = hook::pattern("E8 ? ? ? ? 89 5D FC 33 FF");
+        static auto MatchMakingConfigHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            static std::once_flag flag;
+            std::call_once(flag, []()
+            {
+                std::thread(LocalServer).detach();
+            });
+        });
 
-        auto pattern = hook::pattern("FF 15 ? ? ? ? 8B F8 83 FF FF 75 0D FF 15 ? ? ? ? E8 ? ? ? ? 8B D8 85 DB 8B C7 74 03 89 5E 04 5B 5F 5E C2 0C 00");
+        pattern = hook::pattern("FF 15 ? ? ? ? 8B F8 83 FF FF 75 0D FF 15 ? ? ? ? E8 ? ? ? ? 8B D8 85 DB 8B C7 74 03 89 5E 04 5B 5F 5E C2 0C 00");
         injector::MakeNOP(pattern.get_first(), 6, true);
         injector::MakeCALL(pattern.get_first(), sendtohook, true);
 
