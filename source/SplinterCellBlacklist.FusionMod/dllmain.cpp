@@ -206,6 +206,7 @@ void Init()
     static float fShadowCullDist = std::clamp(iniReader.ReadFloat("MAIN", "ShadowCullDist", 100.0f), 90.0f, 120.0f);
     auto bDisableNightVisionFlash = iniReader.ReadInteger("MAIN", "DisableNightVisionFlash", 1) != 0;
     auto bDisablePerfectionistChecks = iniReader.ReadInteger("MAIN", "DisablePerfectionistChecks", 1) != 0;
+    auto nDefaultMissionFilter = std::clamp(iniReader.ReadInteger("MAIN", "DefaultMissionFilter", 1), 0, 3);
 
     sExtractionWaveConfigs = iniReader.ReadString("EXTRACTION", "ExtractionWaveConfigs", "Default");
     nExtractionWaveEnemyMultiplier = std::clamp(iniReader.ReadInteger("EXTRACTION", "ExtractionWaveEnemyMultiplier", 1), 1, 9999);
@@ -878,6 +879,11 @@ void Init()
         {
             *(float*)(regs.esi + 0x8C) = -0.1f;
         });
+    }
+
+    {
+        pattern = hook::pattern("B9 ? ? ? ? 89 8E ? ? ? ? F3 0F 7E 05");
+        injector::WriteMemory(pattern.get_first(1), nDefaultMissionFilter, true);
     }
 }
 
