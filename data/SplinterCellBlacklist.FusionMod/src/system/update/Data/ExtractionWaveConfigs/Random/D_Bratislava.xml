@@ -139,7 +139,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -154,7 +153,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -210,7 +208,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -224,7 +221,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -283,7 +279,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -298,7 +293,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -312,7 +306,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -371,7 +364,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -385,7 +377,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -399,7 +390,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -413,7 +403,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -474,7 +463,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
             <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="Sniper1L" sniperAttractors="Sniper1L" />
           </Enemies>
         </SubWave>
@@ -490,7 +478,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -504,7 +491,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
             <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="Sniper2" sniperAttractors="Sniper2" />
           </Enemies>
         </SubWave>
@@ -519,7 +505,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
             <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="Sniper3" sniperAttractors="Sniper3" />
           </Enemies>
         </SubWave>
@@ -583,7 +568,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -597,7 +581,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -611,7 +594,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -625,7 +607,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -693,7 +674,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
         <SubWave id="Wave7 Subwave 2">
@@ -706,7 +686,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -720,7 +699,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -734,7 +712,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -748,7 +725,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
       </SubWaveConfigs>
@@ -812,7 +788,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -826,7 +801,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
             <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="Sniper3" sniperAttractors="Sniper3" />
           </Enemies>
         </SubWave>
@@ -841,7 +815,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -855,7 +828,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -869,7 +841,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
       </SubWaveConfigs>
@@ -932,7 +903,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -946,7 +916,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -960,7 +929,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -974,7 +942,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -988,7 +955,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -1002,7 +968,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -1063,7 +1028,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -1078,7 +1042,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
             <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="Sniper3" sniperAttractors="Sniper3" />
           </Enemies>
         </SubWave>
@@ -1093,7 +1056,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -1168,7 +1130,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -1182,7 +1143,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -1196,7 +1156,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -1210,7 +1169,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -1224,7 +1182,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -1300,7 +1257,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
             <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperEmbassyR" sniperAttractors="Embassy1" />
             <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperEmbassyL" sniperAttractors="Embassy2" />
           </Enemies>
@@ -1316,7 +1272,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -1330,7 +1285,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
             <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="Sniper1R" sniperAttractors="Sniper1R" />
           </Enemies>
         </SubWave>
@@ -1345,7 +1299,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -1359,7 +1312,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
             <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="Sniper2" sniperAttractors="Sniper2" />
           </Enemies>
         </SubWave>
@@ -1374,7 +1326,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -1388,7 +1339,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
             <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="Sniper3" sniperAttractors="Sniper3" />
           </Enemies>
         </SubWave>
@@ -1467,7 +1417,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -1481,7 +1430,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -1495,7 +1443,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -1509,7 +1456,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -1523,7 +1469,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -1537,7 +1482,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -1551,7 +1495,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -1565,7 +1508,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -1648,7 +1590,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -1662,7 +1603,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -1676,7 +1616,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -1690,7 +1629,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -1704,7 +1642,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -1718,7 +1655,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -1732,7 +1668,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -1746,7 +1681,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -1760,7 +1694,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -1774,7 +1707,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -1841,7 +1773,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -1855,7 +1786,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -1869,7 +1799,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -1883,7 +1812,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -1897,7 +1825,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -1979,7 +1906,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -1993,7 +1919,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2007,7 +1932,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2021,7 +1945,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2035,7 +1958,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2049,7 +1971,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2063,7 +1984,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2077,7 +1997,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2091,7 +2010,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2167,7 +2085,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2216,7 +2133,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2230,7 +2146,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2244,7 +2159,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2258,7 +2172,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2272,7 +2185,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2286,7 +2198,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
             <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="Sniper1R" sniperAttractors="Sniper1R" />
           </Enemies>
         </SubWave>
@@ -2301,7 +2212,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2315,7 +2225,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2329,7 +2238,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2343,7 +2251,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
             <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="Sniper1L" sniperAttractors="Sniper1L" />
           </Enemies>
         </SubWave>
@@ -2358,7 +2265,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2372,7 +2278,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2386,7 +2291,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
             <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperEmbassyL" sniperAttractors="Embassy2" />
           </Enemies>
         </SubWave>
@@ -2401,7 +2305,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2415,7 +2318,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2430,7 +2332,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2444,7 +2345,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2458,7 +2358,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
             <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperEmbassyR" sniperAttractors="Embassy1" />
           </Enemies>
         </SubWave>
@@ -2542,7 +2441,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2556,7 +2454,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2570,7 +2467,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2584,7 +2480,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2598,7 +2493,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
             <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperEmbassyL" sniperAttractors="Embassy2" />
             <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperEmbassyR" sniperAttractors="Embassy1" />
           </Enemies>
@@ -2614,7 +2508,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
             <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperEmbassyL" sniperAttractors="Embassy2" />
             <Enemy idref="Enemy_Sniper" quantity="1" spawnGroup="SniperEmbassyR" sniperAttractors="Embassy1" />
           </Enemies>
@@ -2700,7 +2593,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2714,7 +2606,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2728,7 +2619,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2742,7 +2632,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2756,7 +2645,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2770,7 +2658,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2784,7 +2671,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2798,7 +2684,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2812,7 +2697,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2826,7 +2710,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2840,7 +2723,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2854,7 +2736,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2868,7 +2749,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2941,7 +2821,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2956,7 +2835,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2970,7 +2848,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -2984,7 +2861,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -3005,7 +2881,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -3019,7 +2894,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -3033,7 +2907,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 
@@ -3047,7 +2920,6 @@
             <RandomEnemies idref="All" quantity="1" spawnGroup="FLeft" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="EmbassyCenter" />
             <RandomEnemies idref="All" quantity="1" spawnGroup="Embassy" />
-            <RandomEnemies idref="All" quantity="1" spawnGroup="SupportAppt" />
           </Enemies>
         </SubWave>
 

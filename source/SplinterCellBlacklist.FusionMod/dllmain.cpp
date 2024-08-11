@@ -390,10 +390,10 @@ void Init()
                         {
                             if ((GetWindowLongA(WindowHandle, GWL_STYLE) & WS_BORDER) != 0 && pWindowStyle && *pWindowStyle == ExclusiveFullscreen)
                             {
-                                keybd_event(VK_RMENU, 0x45, KEYEVENTF_EXTENDEDKEY | 0, 0);
-                                keybd_event(VK_RETURN, 0x45, KEYEVENTF_EXTENDEDKEY | 0, 0);
-                                keybd_event(VK_RETURN, 0x45, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
-                                keybd_event(VK_RMENU, 0x45, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+                                keybd_event(VK_MENU, 0, KEYEVENTF_EXTENDEDKEY, 0);
+                                keybd_event(VK_RETURN, 0, KEYEVENTF_EXTENDEDKEY, 0);
+                                keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0);
+                                keybd_event(VK_RETURN, 0, KEYEVENTF_KEYUP, 0);
                             }
                         }
 
@@ -401,8 +401,8 @@ void Init()
                         {
                             if ((GetAsyncKeyState(VK_MENU) & 0xF000) == 0)
                             {
-                                keybd_event(VK_RETURN, 0x45, KEYEVENTF_EXTENDEDKEY | 0, 0);
-                                keybd_event(VK_RETURN, 0x45, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+                                keybd_event(VK_RETURN, 0, KEYEVENTF_EXTENDEDKEY, 0);
+                                keybd_event(VK_RETURN, 0, KEYEVENTF_KEYUP, 0);
                             }
                         }
                     }
@@ -889,8 +889,8 @@ void Init()
 
     if (bSMIMapDisableStartupAnimation)
     {
-        pattern = hook::pattern("75 25 83 BE ? ? ? ? ? 7F 0E");
-        injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true);
+        pattern = hook::pattern("0F 8E ? ? ? ? 8D 8E ? ? ? ? E8 ? ? ? ? 80 BE");
+        injector::WriteMemory<uint16_t>(pattern.count(2).get(1).get<void>(), 0xE990, true); //jle -> jmp
     }
 }
 
