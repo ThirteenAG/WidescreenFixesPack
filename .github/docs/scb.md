@@ -63,6 +63,14 @@ New config for the Hunter game mode and coop campaign: Random, which randomizes 
 
 Plugin adds an ability to disable mission failure on detection in Ghost mode and Campaign (SP and COOP).
 
+# Extra tweaks
+
+Disable Active Sprint: [NoActiveSprint.zip](https://github.com/user-attachments/files/16575499/NoActiveSprint.zip)
+
+Hold DPAD-UP to switch between vision modes: [HoldDPADUPToSwitchVisionMode.zip](https://github.com/user-attachments/files/16575500/HoldDPADUPToSwitchVisionMode.zip)
+
+Put edited ini configs in `update` folder.
+
 # Ultrawide Screenshot
 
 ![scb](https://github.com/user-attachments/assets/96d6a1e7-457e-4ae4-a2f6-88cc9a632c80)
