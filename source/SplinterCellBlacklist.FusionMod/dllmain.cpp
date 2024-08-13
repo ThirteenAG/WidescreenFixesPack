@@ -378,6 +378,17 @@ void Init()
 
         std::thread([]()
         {
+             auto forceForegroundWindow = [](HWND hwnd)
+             {
+                DWORD windowThreadProcessId = GetWindowThreadProcessId(GetForegroundWindow(), LPDWORD(0));
+                DWORD currentThreadId = GetCurrentThreadId();
+                DWORD CONST_SW_SHOW = 5;
+                AttachThreadInput(windowThreadProcessId, currentThreadId, true);
+                BringWindowToTop(hwnd);
+                ShowWindow(hwnd, CONST_SW_SHOW);
+                AttachThreadInput(windowThreadProcessId, currentThreadId, false);
+            };
+
             bool bOnce = false;
             while (true)
             {
@@ -386,23 +397,31 @@ void Init()
                 {
                     if (WindowHandle == GetForegroundWindow())
                     {
+                        bool bSkipNow = false;
                         if (bFullscreenAtStartup)
                         {
                             if ((GetWindowLongA(WindowHandle, GWL_STYLE) & WS_BORDER) != 0 && pWindowStyle && *pWindowStyle == ExclusiveFullscreen)
                             {
-                                keybd_event(VK_MENU, 0, KEYEVENTF_EXTENDEDKEY, 0);
-                                keybd_event(VK_RETURN, 0, KEYEVENTF_EXTENDEDKEY, 0);
-                                keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0);
-                                keybd_event(VK_RETURN, 0, KEYEVENTF_KEYUP, 0);
+                                keybd_event(VK_MENU, 56, KEYEVENTF_EXTENDEDKEY, 0);
+                                keybd_event(VK_RETURN, 28, KEYEVENTF_EXTENDEDKEY, 0);
+                                keybd_event(VK_MENU, 56, KEYEVENTF_KEYUP, 0);
+                                keybd_event(VK_RETURN, 28, KEYEVENTF_KEYUP, 0);
+                                bSkipNow = true;
+                            }
+                            else
+                            {
+                                keybd_event(VK_MENU, 56, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+                                keybd_event(VK_RETURN, 28, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+                                bSkipNow = false;
                             }
                         }
 
                         if (bSkipPressAnyKeyScreen)
                         {
-                            if ((GetAsyncKeyState(VK_MENU) & 0xF000) == 0)
+                            if (!bSkipNow && (GetAsyncKeyState(VK_MENU) & 0xF000) == 0)
                             {
-                                keybd_event(VK_RETURN, 0, KEYEVENTF_EXTENDEDKEY, 0);
-                                keybd_event(VK_RETURN, 0, KEYEVENTF_KEYUP, 0);
+                                keybd_event(VK_RETURN, 28, KEYEVENTF_EXTENDEDKEY | 0, 0);
+                                keybd_event(VK_RETURN, 28, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
                             }
                         }
                     }
@@ -411,7 +430,7 @@ void Init()
                         if (!bOnce)
                         {
                             bOnce = true;
-                            SetForegroundWindow(WindowHandle);
+                            forceForegroundWindow(WindowHandle);
                         }
                     }
                 }
