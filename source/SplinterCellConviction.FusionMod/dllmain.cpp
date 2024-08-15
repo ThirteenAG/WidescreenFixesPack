@@ -735,47 +735,20 @@ void Init()
             {
                 if (regs.eax == DetectB2W || regs.eax == StopDetectB2W)
                 {
-                    static bool toggleState = false; // Toggle state for entering/exiting cover
-                    static bool buttonWasPressed = false; // Tracks if the button was previously pressed
                     auto bInCover = bCoverStateStarted;
 
-                    // Check if the button is currently pressed
-                    bool buttonIsPressed = (regs.eax == DetectB2W);
-
-                    // Toggle the state only on the transition from not pressed to pressed
-                    if (buttonIsPressed && !buttonWasPressed)
+                    if (regs.eax == DetectB2W)
                     {
-                        toggleState = !toggleState;
-
-                        // Apply the toggle state to enter or exit cover
-                        if (toggleState)
+                        if (bInCover)
                         {
-                            // Enter cover if not already in cover
-                            if (!bInCover)
-                            {
-                                lastDetectTime = std::chrono::steady_clock::now();
-                                *(uint32_t*)(regs.esi + 0xA44) |= 0x100;
-                            }
+                            *(uint32_t*)(regs.esi + 0xA44) &= ~0x100;
                         }
                         else
                         {
-                            // Exit cover if currently in cover
-                            if (bInCover)
-                            {
-                                *(uint32_t*)(regs.esi + 0xA44) &= ~0x100;
-                            }
+                            lastDetectTime = std::chrono::steady_clock::now();
+                            *(uint32_t*)(regs.esi + 0xA44) |= 0x100;
                         }
                     }
-                    else if (!buttonIsPressed)
-                    {
-                        // If the button is released, ensure the player does not get stuck in a seeking cover state
-                        //if (!bCoverStateStarted)
-                        //    *(uint32_t*)(regs.esi + 0xA44) &= ~0x100;
-                    }
-
-                    // Update the buttonWasPressed state for the next frame
-                    buttonWasPressed = buttonIsPressed;
-                    //bCoverStateStarted = false;
                 }
                 else
                     *(uintptr_t*)(regs.esp - 4) = loc_56DBB3;
