@@ -725,6 +725,7 @@ void Init()
 
         // cover
         static bool bCoverStateStarted = false;
+        static bool bReleased = false;
         static auto loc_56DBB3 = (uintptr_t)hook::get_pattern("3B 05 ? ? ? ? 75 13 8B 8E ? ? ? ? 8B 01");
         static auto lastDetectTime = std::chrono::steady_clock::now();
 
@@ -735,19 +736,26 @@ void Init()
             {
                 if (regs.eax == DetectB2W || regs.eax == StopDetectB2W)
                 {
-                    auto bInCover = bCoverStateStarted;
-
                     if (regs.eax == DetectB2W)
                     {
-                        if (bInCover)
+                        if (bCoverStateStarted)
                         {
-                            *(uint32_t*)(regs.esi + 0xA44) &= ~0x100;
+                            if (bReleased)
+                                *(uint32_t*)(regs.esi + 0xA44) &= ~0x100;
                         }
                         else
                         {
-                            lastDetectTime = std::chrono::steady_clock::now();
-                            *(uint32_t*)(regs.esi + 0xA44) |= 0x100;
+                            if (bReleased)
+                            {
+                                lastDetectTime = std::chrono::steady_clock::now();
+                                *(uint32_t*)(regs.esi + 0xA44) |= 0x100;
+                            }
                         }
+                        bReleased = false;
+                    }
+                    else
+                    {
+                        bReleased = true;
                     }
                 }
                 else
