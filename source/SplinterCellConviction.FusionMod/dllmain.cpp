@@ -770,7 +770,13 @@ void Init()
         });
 
         pattern = hook::pattern("0F 57 C0 53 55 56 57");
-        static auto UCoverNavEndState = safetyhook::create_mid(0x7410FF, [](SafetyHookContext& regs)
+        static auto UCoverNavEndState = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            bCoverStateStarted = false;
+        });
+
+        pattern = hook::pattern("55 8B EC 83 EC 50 53 56 8B F1 8B 46 5C");
+        static auto UCoverNavEndState2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
             bCoverStateStarted = false;
         });
