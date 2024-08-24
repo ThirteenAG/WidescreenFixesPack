@@ -740,22 +740,13 @@ void Init()
                     {
                         if (bCoverStateStarted)
                         {
-                            if (bReleased)
-                                *(uint32_t*)(regs.esi + 0xA44) &= ~0x100;
+                            *(uint32_t*)(regs.esi + 0xA44) &= ~0x100;
                         }
                         else
                         {
-                            if (bReleased)
-                            {
-                                lastDetectTime = std::chrono::steady_clock::now();
-                                *(uint32_t*)(regs.esi + 0xA44) |= 0x100;
-                            }
+                            lastDetectTime = std::chrono::steady_clock::now();
+                            *(uint32_t*)(regs.esi + 0xA44) |= 0x100;
                         }
-                        bReleased = false;
-                    }
-                    else
-                    {
-                        bReleased = true;
                     }
                 }
                 else
@@ -771,12 +762,6 @@ void Init()
 
         pattern = hook::pattern("0F 57 C0 53 55 56 57");
         static auto UCoverNavEndState = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-        {
-            bCoverStateStarted = false;
-        });
-
-        pattern = hook::pattern("55 8B EC 83 EC 50 53 56 8B F1 8B 46 5C");
-        static auto UCoverNavEndState2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
             bCoverStateStarted = false;
         });
