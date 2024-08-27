@@ -19,6 +19,59 @@ uint32_t* window_height;
 
 #define hud_offset (screen_width - screen_height * default_aspect_ratio)
 
+typedef int Sint32;
+typedef Sint32 SCR_f;
+typedef unsigned int undefined4;
+typedef unsigned int uint;
+typedef unsigned short undefined2;
+
+struct CameraPos
+{
+    SCR_f x;
+    SCR_f y;
+    SCR_f z;
+    int zoom;
+};
+
+struct WorldRect
+{
+    SCR_f left;
+    SCR_f right;
+    SCR_f top;
+    SCR_f bottom;
+};
+
+struct CameraOrPhysics
+{
+    CameraPos cameraPosTarget2;
+    CameraPos cameraPosTarget;
+    WorldRect cameraBoundaries;
+    enum PLAYER_PHYSICS_MOVEMENT movementBitmask;
+    struct Ped* ped;
+    undefined4 field_0x38;
+    int followedPedID;
+    int targetElevation;
+    int flyTimerMaybe;
+    SCR_f altMovingPosX;
+    SCR_f altMovingPosY;
+    SCR_f altMovingStateUp;
+    SCR_f altMovingStateDown;
+    SCR_f altMovingStateLeft;
+    SCR_f altMovingStateRight;
+    uint altMovingArrowsRelated;
+    undefined2 field_0x64;
+    short altMovingLimit;
+    int screenPxWidth;
+    int screenPxHeight;
+    int screenPxCenterX;
+    int screenPxCenter;
+    WorldRect cameraBoundariesNonNegative;
+    CameraPos cameraPos2;
+    CameraPos cameraPos;
+    int uiScale;
+    CameraPos cameraVelocity;
+};
+
 int nResX;
 int nResY;
 bool bExtendHud;
@@ -247,6 +300,30 @@ void Init()
             *(int32_t*)(regs.esi + 0x8) += (uint32_t)(fZoom * one);
         }
     }; injector::MakeInline<CameraZoom>(pattern.count(2).get(1).get<void*>(0));
+
+    // Ped Shadows
+    pattern = hook::pattern("A1 ? ? ? ? 8B 48 38 81 C1 ? ? ? ? E8 ? ? ? ? 84 C0"); //0x5EB4FC
+    static auto ptrToGame = *pattern.get_first<uint32_t*>(1);
+
+    pattern = hook::pattern("81 C1 ? ? ? ? E8 ? ? ? ? 8B C8 E8 ? ? ? ? D9 05"); //0x4BE38E
+    injector::MakeNOP(pattern.get_first(0), 6, true);
+    static auto PedShadowsHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        auto ph1 = PtrWalkthrough<CameraOrPhysics>(ptrToGame, 0x38, 0x90);
+        
+        if (ph1)
+        {
+            static uint32_t shadowsDummyUIScale = 0;
+            auto playerph1 = *ph1;
+            auto cameraZPos = (float)playerph1.cameraPos.z / 16384.0f;
+            auto shadowsDistance = (1.0f / (cameraZPos + 7.0f)) * 8.0f;
+            shadowsDummyUIScale = shadowsDistance * playerph1.uiScale;
+            regs.ecx = (uintptr_t)&shadowsDummyUIScale;
+            return;
+        }
+
+        regs.ecx += 0x0A8;
+    });
 
     // Hud
     pattern = hook::pattern("E8 ? ? ? ? 2B FB");
