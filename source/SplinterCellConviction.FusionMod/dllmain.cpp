@@ -6,6 +6,23 @@
 #pragma comment(lib, "Ws2_32.lib")
 #include <list>
 
+SafetyHookInline shSetProcessAffinityMask{};
+BOOL WINAPI SetProcessAffinityMaskHook(HANDLE hProcess, DWORD_PTR dwProcessAffinityMask)
+{
+    if (hProcess == GetCurrentProcess())
+    {
+        DWORD_PTR processAffinityMask;
+        DWORD_PTR systemAffinityMask;
+
+        if (GetProcessAffinityMask(GetCurrentProcess(), &processAffinityMask, &systemAffinityMask))
+        {
+            return shSetProcessAffinityMask.stdcall<BOOL>(hProcess, systemAffinityMask);
+        }
+    }
+
+    return shSetProcessAffinityMask.stdcall<BOOL>(hProcess, dwProcessAffinityMask);
+}
+
 std::string getLocalIPAddress()
 {
     WSADATA wsaData;
@@ -545,6 +562,7 @@ void Init()
     auto bWindowedMode = iniReader.ReadInteger("MAIN", "WindowedMode", 0) != 0;
     auto bDisableNegativeMouseAcceleration = iniReader.ReadInteger("MAIN", "DisableNegativeMouseAcceleration", 1) != 0;
     auto bSkipSystemDetection = iniReader.ReadInteger("MAIN", "SkipSystemDetection", 1) != 0;
+    auto bForceCPUAffinityToAllCores = iniReader.ReadInteger("MAIN", "ForceCPUAffinityToAllCores", 1) != 0;
     auto bPartialUltraWideSupport = iniReader.ReadInteger("MAIN", "PartialUltraWideSupport", 1) != 0;
     bDisableBlackAndWhiteFilter = iniReader.ReadInteger("MAIN", "DisableBlackAndWhiteFilter", 0) != 0;
     bBlacklistControlScheme = iniReader.ReadInteger("CONTROLS", "BlacklistControlScheme", 1) != 0;
@@ -653,6 +671,11 @@ void Init()
     {
         auto pattern = hook::pattern("75 13 E8 ? ? ? ? 50 E8");
         injector::WriteMemory<uint8_t>(pattern.get_first(), 0xEB, true);
+    }
+
+    if (bForceCPUAffinityToAllCores)
+    {
+        shSetProcessAffinityMask = safetyhook::create_inline(SetProcessAffinityMask, SetProcessAffinityMaskHook);
     }
 
     //if (bDisableBlackAndWhiteFilter) //light and shadow
