@@ -41,6 +41,34 @@ void Init()
             {
                 injector::WriteMemory<float>(pattern.get(i).get<float*>(1), Screen.fAspectRatio, true); // thanks to nemesis2000
             }
+
+            // InventoryMenu - BlackBox (covers top-right line paper)
+            int codePushZeroPush = 0x68006A; // 6A00 = push 0x00; 68 = push (next value)
+            injector::WriteMemory<int>(0x422B1A, codePushZeroPush, true); // y = 0
+            injector::WriteMemory<float>(0x422B1D, 1.0f, true); // x = 1
+            injector::WriteMemory<float>(0x422B27, (4.0f / 3.0f) * Screen.fHudOffset / Screen.Width, true); // w
+            injector::WriteMemory<float>(0x422B33, 1.0f, true); // h = 1
+
+            // InventoryMenu - HeartMonitorLine (positioned on line paper)
+            // NOTE: HeartMonitorLine ends at 103% ScreenWidth (i.e. 3% off-screen)
+            float HeartMonitorLineEndX = 0.53f; // ReadMemory(0x62D630); // On-Screen Range: -0.5 to 0.5
+            float HeartMonitorLineWidth = 0.000775f; // ReadMemory(0x62D794); // ScreenWidth is 0.002
+            injector::WriteMemory<float>(0x62D630, (HeartMonitorLineEndX - 0.03f) * Screen.fHudScale, true);
+            injector::WriteMemory<float>(0x62D794, (HeartMonitorLineWidth - 0.00006f) * Screen.fHudScale, true);
+
+            // HealMenu - Fix Cursor Boxes
+            // NOTE: Cursor is off by one small square even in the OG game (fixed)
+            float HealMenuBoxWidth = 26.087f; // ReadMemory(0x62D5D4);
+            float HealMenuCursorXMin = 0.35f; // ReadMemory(0x62D5D8);
+            float HealMenuCursorXMax = 0.58f; // ReadMemory(0x62D5E4);
+            float HealMenuCursorYMax = 0.87f; // ReadMemory(0x62D5DC);
+            float HealMenuCursorYMin = 0.635f; // ReadMemory(0x62D5E0);
+            float OneSquareWidth = (HealMenuCursorXMax - HealMenuCursorXMin) / 24.0f;
+            injector::WriteMemory<float>(0x62D5D4, HealMenuBoxWidth / Screen.fHudScale, true);
+            injector::WriteMemory<float>(0x62D5D8, ((HealMenuCursorXMin + OneSquareWidth - 0.5f) * Screen.fHudScale) + 0.5f, true);
+            injector::WriteMemory<float>(0x62D5E4, ((HealMenuCursorXMax + OneSquareWidth - 0.5f) * Screen.fHudScale) + 0.5f, true);
+            injector::WriteMemory<float>(0x62D5DC, HealMenuCursorYMax - OneSquareWidth, true);
+            injector::WriteMemory<float>(0x62D5E0, HealMenuCursorYMin - OneSquareWidth, true);
         }
     }; injector::MakeInline<ResHook>(pattern.count(1).get(0).get<uintptr_t>(0), pattern.count(1).get(0).get<uintptr_t>(9));
 
@@ -73,8 +101,8 @@ void Init()
     {
         void operator()(injector::reg_pack& regs)
         {
-            *(float*)(regs.esp + 8) = (*(float*)&regs.ecx * Screen.fHudScale) + (Screen.fHudOffset / 2.0f);
-            *(float*)&regs.ecx = (*(float*)(regs.eax + 0x8) * Screen.fHudScale) + (Screen.fHudOffset / 2.0f);
+            *(float*)(regs.esp + 8) = (*(float*)&regs.ecx * Screen.fHudScale) + Screen.fHudOffset;
+            *(float*)&regs.ecx = (*(float*)(regs.eax + 0x8) * Screen.fHudScale);
         }
     }; injector::MakeInline<ClickableAreaHook>(pattern.count(1).get(0).get<uintptr_t>(0), pattern.count(1).get(0).get<uintptr_t>(7));
 
