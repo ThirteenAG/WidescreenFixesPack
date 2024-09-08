@@ -543,6 +543,14 @@ void Init()
         //NetOnlineContentRightsManager::GetUnlocksFromSaveGame
         auto pattern = find_pattern("74 04 C6 40 04 01 56");
         injector::MakeNOP(pattern.get_first(), 2, true);
+
+        //NetOnlineContentRightsManager::ResetUPlayRewardPrivs
+        pattern = find_pattern("32 DB 3B C6 74 1B");
+        injector::MakeNOP(pattern.get_first(), 2, true);
+        static auto ResetUPlayRewardPrivsHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            regs.ebx = 1;
+        });
         
         pattern = find_pattern("39 5E 38 74 2C");
         injector::MakeNOP(pattern.get_first(), 5, true);
