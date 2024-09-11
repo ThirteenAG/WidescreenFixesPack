@@ -11,6 +11,8 @@ struct Screen
     float fHudOffset;
     float fTextOffset;
     float fFMVOffset;
+    float fInvMenuHeartLineEnd; // On-Screen Range: -0.5 to 0.5
+    float fInvMenuHeartLineWidth; // Full Screen Width is 0.002
 } Screen;
 
 void Init()
@@ -41,6 +43,41 @@ void Init()
             {
                 injector::WriteMemory<float>(pattern.get(i).get<float*>(1), Screen.fAspectRatio, true); // thanks to nemesis2000
             }
+
+            // InventoryMenu - BlackBox (covers top-right line paper)
+            pattern = hook::pattern("68 D7 A3 30 3F 6A 00"); // 422B1A
+            const uint32_t codePushZeroPush = 0x68006A; // 6A 00 = push 0x00; 68 = push (next value)
+            const float blackBoxWidth = (4.0f / 3.0f) * Screen.fHudOffset / Screen.Width;
+            injector::WriteMemory(pattern.get_first(0), codePushZeroPush, true); // y = 0
+            injector::WriteMemory(pattern.get_first(3), 1.0f, true); // x = 1
+            pattern = hook::pattern("68 E1 7A 14 3F ? ? ? ? ? ? ? 68 52 B8 9E 3E"); // 422B26
+            injector::WriteMemory(pattern.get_first(1), blackBoxWidth, true); // w
+            injector::WriteMemory(pattern.get_first(13), 1.0f, true); // h = 1
+
+            // InventoryMenu - HeartMonitorLine (positioned on line paper)
+            // NOTE: HeartMonitorLine ended at 103% ScreenWidth (i.e. 3% off-screen) in OG game.
+            pattern = hook::pattern("D8 0D ? ? ? ? 85 C9 DB"); // 424FD8; [????] = 0.53
+            Screen.fInvMenuHeartLineEnd = Screen.fHudScale * 0.5f; // 50% instead of 53% so line doesn't go past screen edge
+            injector::WriteMemory(pattern.get_first(2), &Screen.fInvMenuHeartLineEnd, true);
+            pattern = hook::pattern("D8 0D ? ? ? ? 8B 44 24 ? 85 C0"); // 425DC8; [????] = 0.000775
+            Screen.fInvMenuHeartLineWidth = Screen.fHudScale * 0.000715f; // Subtracted 0.00006 (3% + 3%)
+            injector::WriteMemory(pattern.get_first(2), &Screen.fInvMenuHeartLineWidth, true);
+
+            // HealMenu - Fix Cursor Boxes
+            // NOTE: Cursor was off by one small grid square in the OG game (fixed)
+            pattern = hook::pattern("D8 0D ? ? ? ? 89 44 24 ? D9 6C 24 ? DB 5C 24 ? 8B 44 24 ? 50"); // 4247B5
+            const float* ptr = injector::ReadMemory<float*>(pattern.get_first(2));
+            const float HealMenuBoxWidth = ptr[0]; // 26.087f
+            const float HealMenuCursorXMin = ptr[1]; // 0.35f
+            const float HealMenuCursorYMax = ptr[2]; // 0.87f
+            const float HealMenuCursorYMin = ptr[3]; // 0.635f
+            const float HealMenuCursorXMax = ptr[4]; // 0.58f
+            const float TinyBoxWidth = (HealMenuCursorXMax - HealMenuCursorXMin) / 24.0f; // 24 tiny boxes wide
+            injector::WriteMemory((uint32_t)&ptr[0], HealMenuBoxWidth / Screen.fHudScale, true);
+            injector::WriteMemory((uint32_t)&ptr[1], ((HealMenuCursorXMin + TinyBoxWidth - 0.5f) * Screen.fHudScale) + 0.5f, true);
+            injector::WriteMemory((uint32_t)&ptr[2], HealMenuCursorYMax - TinyBoxWidth, true);
+            injector::WriteMemory((uint32_t)&ptr[3], HealMenuCursorYMin - TinyBoxWidth, true);
+            injector::WriteMemory((uint32_t)&ptr[4], ((HealMenuCursorXMax + TinyBoxWidth - 0.5f) * Screen.fHudScale) + 0.5f, true);
         }
     }; injector::MakeInline<ResHook>(pattern.count(1).get(0).get<uintptr_t>(0), pattern.count(1).get(0).get<uintptr_t>(9));
 
@@ -73,8 +110,8 @@ void Init()
     {
         void operator()(injector::reg_pack& regs)
         {
-            *(float*)(regs.esp + 8) = (*(float*)&regs.ecx * Screen.fHudScale) + (Screen.fHudOffset / 2.0f);
-            *(float*)&regs.ecx = (*(float*)(regs.eax + 0x8) * Screen.fHudScale) + (Screen.fHudOffset / 2.0f);
+            *(float*)(regs.esp + 8) = (*(float*)&regs.ecx * Screen.fHudScale) + Screen.fHudOffset;
+            *(float*)&regs.ecx = (*(float*)(regs.eax + 0x8) * Screen.fHudScale);
         }
     }; injector::MakeInline<ClickableAreaHook>(pattern.count(1).get(0).get<uintptr_t>(0), pattern.count(1).get(0).get<uintptr_t>(7));
 
