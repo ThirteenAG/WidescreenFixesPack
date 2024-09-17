@@ -441,12 +441,9 @@ void init()
             injector.MakeInlineLUIORI(0x3215E8, (4.0f * Screen.fHudScale));
 
             // Clock Text Thingies
-            float timesc = 10.4375f;
-            if (Screen.fAspectRatio > (16.0f / 9.0f))
-                timesc = 10.0f;
-            injector.MakeLUIORI(0x31efe8, at, timesc * ARDiff); //money and time scale
+            injector.MakeLUIORI(0x31efe8, at, 9.0f * ARDiff); //money and time scale
             injector.MakeInlineLUIORI(0x31F1D4, (2.0f * ARDiff));
-            injector.MakeInlineLUIORI(0x31F1EC, (4.0f * ARDiff));
+            injector.MakeLUIORI(0x31F1EC, at, (4.0f * ARDiff));
             injector.MakeInlineLUIORI(0x31F10C, (3.0f * ARDiff));
         }
     }
