@@ -607,34 +607,17 @@ void ApplyIniOptions()
 
     if (bIVRadarScaling)
     {
-        fCustomRadarPosXIV = 40.0f + 31.0f;
-        auto pattern = hook::pattern("D8 05 ? ? ? ? DE C1 D9 19 8B 15 ? ? ? ? 89 14 24");
-        injector::WriteMemory<float>(*pattern.count(1).get(0).get<uint32_t*>(2), fCustomRadarPosXIV, true); //0x4A5075
         fCustomRadarWidthIV = 94.0f - 5.5f;
         pattern = hook::pattern("D8 0D ? ? ? ? DD DA D9 00 D8 CA");
         injector::WriteMemory<float>(*pattern.count(1).get(0).get<uint32_t*>(2), fCustomRadarWidthIV, true); //0x4A505B
 
-        fCustomRadarPosYIV = 116.0f - 7.5f;
-        pattern = hook::pattern("D9 05 ? ? ? ? 89 14 24 D8 CB DA 2C 24 DE C1 DE E1");
-        injector::WriteMemory<float>(*pattern.count(1).get(0).get<uint32_t*>(2), fCustomRadarPosYIV, true); //0x4A50B0
         fCustomRadarHeightIV = 76.0f + 5.0f;
         pattern = hook::pattern("D9 05 ? ? ? ? D8 C9 DD DA D9 40 04 D8 CA");
         injector::WriteMemory<float>(*pattern.count(1).get(0).get<uint32_t*>(2), fCustomRadarHeightIV, true); //0x4A5093
 
-        fCustomRadarRingPosXIV = 34.0f + 31.0f;
-        fCustomRadarRingPosXIV2 = fCustomRadarRingPosXIV + 6.0f;
-        pattern = hook::pattern("FF 35 ? ? ? ? DD D8 E8 ? ? ? ? B9 ? ? ? ? 50");
-        injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &fCustomRadarRingPosXIV, true); //0x50845F
-        pattern = hook::pattern("D8 05 ? ? ? ? D8 05 ? ? ? ? D9 1C 24 D9 C0 D8 25 ? ? ? ? 50");
-        injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &fCustomRadarRingPosXIV2, true); //0x508481
-
         fCustomRadarRingWidthIV = 94.0f - 5.5f;
         pattern = hook::pattern("D8 0D ? ? ? ? D8 05 ? ? ? ? D8 05");
         injector::WriteMemory<float>(*pattern.count(1).get(0).get<uint32_t*>(2), fCustomRadarRingWidthIV, true); //0x5FDC70
-
-        fCustomRadarRingPosYIV = 116.0f - 7.5f;
-        pattern = hook::pattern("D9 05 ? ? ? ? D8 CA DA 6C 24 34 DD DA D8 C1");
-        injector::WriteMemory<float>(*pattern.count(1).get(0).get<uint32_t*>(2), fCustomRadarRingPosYIV); //0x508433
 
         fCustomRadarRingHeightIV = 76.0f + 5.0f;
         pattern = hook::pattern("D9 05 ? ? ? ? D8 C9 D9 05 ? ? ? ? D8 CA DA 6C 24 34");

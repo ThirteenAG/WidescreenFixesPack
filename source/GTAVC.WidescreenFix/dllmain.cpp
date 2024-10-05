@@ -677,42 +677,17 @@ void ApplyIniOptions()
 
     if (bIVRadarScaling)
     {
-        fCustomRadarPosXIV = 40.0f + 31.0f;
-        auto pattern = hook::pattern("D8 05 ? ? ? ? DE C1 D9 5C 24 28");
-        injector::WriteMemory<float>(*pattern.count(1).get(0).get<uint32_t*>(2), fCustomRadarPosXIV, true); //0x68FD2C
-        static float f40 = 40.0f;
-        pattern = hook::pattern("83 EC 50 DD D9 D9 05 ? ? ? ? D8 C9");
-        injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(7), &f40, true); //0x4C2996
-        injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(60), &f40, true); //0x4C29CB
-
         fCustomRadarWidthIV = 94.0f - 5.5f;
         pattern = hook::pattern("D8 0D ? ? ? ? DD D9 D9 C2 D8 C9 D8 0D");
         injector::WriteMemory<float>(*pattern.count(1).get(0).get<uint32_t*>(2), fCustomRadarWidthIV, true); //0x68FD24
 
-        fCustomRadarPosYIV = 116.0f - 7.5f;
-        pattern = hook::pattern("D9 05 ? ? ? ? D8 CB DA 2C 24 DE C1");
-        injector::WriteMemory<float>(*pattern.count(1).get(0).get<uint32_t*>(2), fCustomRadarPosYIV, true); //0x68FD34
         fCustomRadarHeightIV = 76.0f + 5.0f;
         pattern = hook::pattern("D9 05 ? ? ? ? D8 C9 DD DB D9 C1 D8 CB");
         injector::WriteMemory<float>(*pattern.count(1).get(0).get<uint32_t*>(2), fCustomRadarHeightIV, true); //0x68FD30
 
-        fCustomRadarRingPosXIV = 34.0f + 31.0f;
-        fCustomRadarRingPosXIV2 = fCustomRadarRingPosXIV + 6.0f;
-        pattern = hook::pattern("C7 84 24 80 04 00 00 00 00 08 42");
-        injector::WriteMemory<float>(pattern.count(1).get(0).get<uint32_t>(7), fCustomRadarRingPosXIV, true); //0x55A956
-        pattern = hook::pattern("C7 84 24 A0 04 00 00 00 00 08 42");
-        injector::WriteMemory<float>(pattern.count(1).get(0).get<uint32_t>(7), fCustomRadarRingPosXIV, true); //0x55AA94
-        pattern = hook::pattern("D8 05 ? ? ? ? D8 05 ? ? ? ? D9 9C 24");
-        injector::WriteMemory(pattern.count(2).get(0).get<uint32_t>(2), &fCustomRadarRingPosXIV2, true); //0x55A9AC + 0x2
-        injector::WriteMemory(pattern.count(2).get(1).get<uint32_t>(2), &fCustomRadarRingPosXIV2, true); //0x55AAE5 + 0x2
-
         fCustomRadarRingWidthIV = 94.0f - 5.5f;
         pattern = hook::pattern("D8 0D ? ? ? ? D8 05 ? ? ? ? D8 05 ? ? ? ? D9 9C 24 98 04 00 00");
         injector::WriteMemory<float>(*pattern.count(1).get(0).get<uint32_t*>(2), fCustomRadarRingWidthIV, true); //0x697C1C
-
-        fCustomRadarRingPosYIV = 116.0f - 7.5f;
-        pattern = hook::pattern("D9 05 ? ? ? ? D8 CA DA 6C 24 74 51");
-        injector::WriteMemory<float>(*pattern.count(1).get(0).get<uint32_t*>(2), fCustomRadarRingPosYIV, true); //0x697C18
 
         fCustomRadarRingHeightIV = 76.0f + 5.0f;
         pattern = hook::pattern("D9 05 ? ? ? ? D8 CA D8 C1");
