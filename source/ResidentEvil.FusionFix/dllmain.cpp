@@ -360,6 +360,7 @@ void Init()
     bDisableColorCorrection = iniReader.ReadInteger("MAIN", "DisableColorCorrection", 0) != 0;
     bDisableFog = iniReader.ReadInteger("MAIN", "DisableFog", 0) != 0;
     bDisableCreateQuery = iniReader.ReadInteger("MAIN", "DisableCreateQuery", 0) != 0;
+    auto bUnlockFPS = iniReader.ReadInteger("MAIN", "UnlockFPS", 0) != 0;
 
     if (bUnlockAllResolutions)
     {
@@ -600,6 +601,12 @@ void Init()
                 }
             }
         });
+    }
+
+    if (bUnlockFPS)
+    {
+        auto pattern = hook::pattern("00 00 F0 42 EB 39 6A 01");
+        injector::WriteMemory(pattern.get_first(), 1000.0f, true);
     }
 }
 
