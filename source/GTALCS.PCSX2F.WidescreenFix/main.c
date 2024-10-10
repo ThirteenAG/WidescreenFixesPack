@@ -84,7 +84,8 @@ uintptr_t GetAbsoluteAddress(uintptr_t at, int32_t offs_hi, int32_t offs_lo)
 
 float AdjustFOV(float f, float ar, float t)
 {
-    return ((2.0f * atanf(((ar) / (4.0f / 3.0f)) * t)) * (180.0f / (float)M_PI) * 100.0f) / 100.0f;
+    uint32_t CGame__currArea = *(uint32_t*)(0x3D8430);
+    return ((2.0f * atanf(((ar) / ((CGame__currArea == 0) ? (16.0f / 9.0f) : (4.0f / 3.0f))) * t)) * (180.0f / (float)M_PI) * 100.0f) / 100.0f;
 }
 
 const float fDefaultFOV = 70.0f;
