@@ -162,6 +162,7 @@ private:
     {
         std::function<void()> fn;
         std::optional<hook::pattern> pattern;
+        bool executed;
     };
 
     static inline auto& GetOnModuleLoadCallbackList()
@@ -321,15 +322,24 @@ private:
     {
         auto& threadParams = GetCallbackParamsList();
 
+        static std::mutex threadParamsMutex;
+        std::lock_guard<std::mutex> lock(threadParamsMutex);
+
         for (auto& it : threadParams)
         {
-            if (!it.pattern.has_value() || !it.pattern.value().clear().empty())
-                it.fn();
+            if (!it.executed)
+            {
+                if (!it.pattern.has_value() || !it.pattern.value().clear().empty())
+                {
+                    it.executed = true;
+                    it.fn();
+                }
+            }
         }
 
         shGetSystemTimeAsFileTime.stdcall<ReturnType<decltype(GetSystemTimeAsFileTime)>>(lpSystemTimeAsFileTime);
 
-        if (threadParams.empty())
+        if (std::all_of(threadParams.begin(), threadParams.end(), [](const auto& params) { return params.executed; }))
             shGetSystemTimeAsFileTime = {};
     }
 
