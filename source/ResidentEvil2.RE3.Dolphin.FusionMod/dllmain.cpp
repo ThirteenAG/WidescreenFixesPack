@@ -41,7 +41,7 @@ void PluginThread(std::future<void> futureObj)
                 if (Dolphin::MemoryValid())
                 {
                     auto gameVersion = GameVersion::UNDEFINED;
-                    if (Dolphin::GameID() == "GHAE08" || Dolphin::GameID() == "GHAP08")
+                    if (Dolphin::GameID() == "GHAE08" || Dolphin::GameID() == "GHAP08" || Dolphin::GameID() == "GHAJ08")
                         gameVersion = GameVersion::RE2;
                     else if (Dolphin::GameID() == "GLEE08" || Dolphin::GameID() == "GLEJ08" || Dolphin::GameID() == "GLEP08")
                         gameVersion = GameVersion::RE3;
