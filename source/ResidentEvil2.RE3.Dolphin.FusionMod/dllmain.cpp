@@ -56,7 +56,7 @@ void PluginThread(std::future<void> futureObj)
                         {
                             [&]()
                             {
-                                auto pattern = hook::pattern(Dolphin::GameMemoryStart, Dolphin::GameMemoryEnd, "38 a0 00 01 3c 60 ? ? 38 83 ? ? 90 a4 00 00 3c 60");
+                                auto pattern = hook::pattern(Dolphin::GameMemoryStart, Dolphin::GameMemoryEnd, "38 a0 00 01 3c 60 ? ? 38 83 ? ? 90 a4");
                                 if (gameVersion == RE3)
                                     pattern = hook::pattern(Dolphin::GameMemoryStart, Dolphin::GameMemoryEnd, "38 00 00 01 3c 60 ? ? 38 63 ? ? ? ? 00 00 3c 60");
                                 if (pattern.size() >= 1)
@@ -69,13 +69,13 @@ void PluginThread(std::future<void> futureObj)
                                     if (a != 0 && b != 0)
                                         data = (uint32_t*)((convert(a) - int16_t(0 - b) + c) - Dolphin::ImageBase + Dolphin::GameMemoryStart);
                                 }
-
+                            
                                 if (gameVersion == RECV)
                                 {
-
+                            
                                 }
                             }();
-            
+                            
                             if (bLightSyncRGB)
                             {
                                 [&]()
@@ -107,11 +107,11 @@ void PluginThread(std::future<void> futureObj)
                                     }
                                     else if (gameVersion == RECV)
                                     {
-
+                            
                                     }
                                 }();
                             }
-            
+                            
                             if (bEnableDoorSkip)
                             {
                                 [&]()
@@ -165,7 +165,7 @@ void PluginThread(std::future<void> futureObj)
                             }
                             else if (gameVersion == RECV)
                             {
-
+                    
                             }
                         }
                     }
@@ -214,7 +214,7 @@ void InitLED()
                      std::this_thread::sleep_for(std::chrono::milliseconds(100));
                      
                      auto gameVersion = GameVersion::UNDEFINED;
-                     if (Dolphin::GameID() == "GHAE08" || Dolphin::GameID() == "GHAP08")
+                     if (Dolphin::GameID() == "GHAE08" || Dolphin::GameID() == "GHAP08" || Dolphin::GameID() == "GHAJ08")
                          gameVersion = GameVersion::RE2;
                      else if (Dolphin::GameID() == "GLEE08" || Dolphin::GameID() == "GLEJ08" || Dolphin::GameID() == "GLEP08")
                          gameVersion = GameVersion::RE3;
