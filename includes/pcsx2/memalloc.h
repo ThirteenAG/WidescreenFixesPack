@@ -2,6 +2,7 @@
 #define H_MEMALLOC
 #include <stdio.h>
 #include <stddef.h>
+#include <string.h>
 
 struct mem_block {
     size_t size;

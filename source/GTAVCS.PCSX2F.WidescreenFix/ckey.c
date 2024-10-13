@@ -184,10 +184,10 @@ void ReplacePadFuncsWithPCControls()
         injector.MakeNOPWithSize(0x2955D8, 64);
         MakeInlineWrapper(0x2955D8,
             move(at, v0),
-            jal(CPad__KBLookAroundLeftRightNoTimeStamp),
+            jal((uintptr_t)CPad__KBLookAroundLeftRightNoTimeStamp),
             move(a0, at),
             movs(f20, f0),
-            jal(CPad__KBLookAroundUpDownNoTimeStamp),
+            jal((uintptr_t)CPad__KBLookAroundUpDownNoTimeStamp),
             move(a0, at),
             movs(f5, f0),
             lui(at, 0x3F80),
@@ -205,10 +205,10 @@ void ReplacePadFuncsWithPCControls()
     {
         injector.MakeNOPWithSize(0x29EC9C, 44);
         MakeInlineWrapper(0x29EC9C,
-            jal(CPad__KBLookAroundLeftRightNoTimeStamp),
+            jal((uintptr_t)CPad__KBLookAroundLeftRightNoTimeStamp),
             lw(a0, sp, 0xBC),
             movs(f20, f0),
-            jal(CPad__KBLookAroundUpDownNoTimeStamp),
+            jal((uintptr_t)CPad__KBLookAroundUpDownNoTimeStamp),
             lw(a0, sp, 0xBC),
             movs(f21, f0)
         );
@@ -241,10 +241,10 @@ void ReplacePadFuncsWithPCControls()
     {
         injector.MakeNOPWithSize(0x2A0E94, 44);
         MakeInlineWrapper(0x2A0E94,
-            jal(CPad__KBLookAroundLeftRightNoTimeStamp),
+            jal((uintptr_t)CPad__KBLookAroundLeftRightNoTimeStamp),
             lw(a0, sp, 0xCC),
             movs(f20, f0),
-            jal(CPad__KBLookAroundUpDownNoTimeStamp),
+            jal((uintptr_t)CPad__KBLookAroundUpDownNoTimeStamp),
             lw(a0, sp, 0xCC),
             movs(f21, f0)
         );
@@ -263,10 +263,10 @@ void ReplacePadFuncsWithPCControls()
         injector.MakeNOPWithSize(0x29804C, 52);
         MakeInlineWrapper(0x29804C,
             move(at, v0),
-            jal(CPad__KBLookAroundLeftRightNoTimeStamp),
+            jal((uintptr_t)CPad__KBLookAroundLeftRightNoTimeStamp),
             move(a0, at),
             movs(f21, f0),
-            jal(CPad__KBLookAroundUpDownNoTimeStamp),
+            jal((uintptr_t)CPad__KBLookAroundUpDownNoTimeStamp),
             move(a0, at),
             movs(f8, f0)
         );
@@ -327,10 +327,10 @@ void ReplacePadFuncsWithPCControls()
         injector.MakeNOPWithSize(0x29CD04, 56);
         MakeInlineWrapper(0x29CD04,
             move(at, v0),
-            jal(CPad__KBLookAroundLeftRightNoTimeStamp),
+            jal((uintptr_t)CPad__KBLookAroundLeftRightNoTimeStamp),
             move(a0, at),
             movs(f20, f0),
-            jal(CPad__KBLookAroundUpDownNoTimeStamp),
+            jal((uintptr_t)CPad__KBLookAroundUpDownNoTimeStamp),
             move(a0, at)
             //movs(f0, f0)
         );
@@ -349,10 +349,10 @@ void ReplacePadFuncsWithPCControls()
             mtc1(at, f23),
             lui(at, 0x42DC),
             mtc1(at, f24),
-            jal(CPad__KBLookAroundLeftRightNoTimeStamp),
+            jal((uintptr_t)CPad__KBLookAroundLeftRightNoTimeStamp),
             move(a0, s0),
             movs(f22, f0),
-            jal(CPad__KBLookAroundUpDownNoTimeStamp),
+            jal((uintptr_t)CPad__KBLookAroundUpDownNoTimeStamp),
             move(a0, s0),
             movs(f25, f0)
         );

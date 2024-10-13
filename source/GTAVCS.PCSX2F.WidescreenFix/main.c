@@ -261,7 +261,7 @@ void init()
         {
             //logger.Write("Fixing FOV...");
             uintptr_t ptr_44A648 = pattern.get(0, "90 FF BD 27 58 00 B5 E7 50 00 B4 E7 46 6D 00 46", 0);
-            game_atan2f = (float (*)(float))ptr_44A648;
+            game_atan2f = (float (*)(float, float))ptr_44A648;
             uintptr_t ptr_21CD68 = pattern.get(0, "03 84 10 00 03 8C 11 00 03 94 12 00 03 9C 13 00 03 A4 14 00 03 AC 15 00", 0);
             flt_487484 = (float*)GetAbsoluteAddress(ptr_21CD68, 32, 48);
             temp_t = tan(fDefaultFOV / 2.0f * ((float)M_PI / 180.0f));
@@ -480,7 +480,7 @@ void init()
         MakeInlineWrapper(0x37281C,
             lui(at, 0x40A0),
             move(a0, s0),
-            jal(isLittleWillie),
+            jal((uintptr_t)isLittleWillie),
             nop()
         );
     }

@@ -95,9 +95,9 @@ uintptr_t range_get(size_t count, uintptr_t range_start, size_t range_size, cons
     size_t len = strlen(pattern_str);
     static uint8_t buf[buf_size/*len*/];
     uint8_t size = hextobin(pattern_str, buf, len, wc);
-    uint8_t* result = bytes_find_nth(count, range_start, range_size, buf, size, wc);
+    uint8_t* result = bytes_find_nth(count, (uint8_t*)range_start, range_size, buf, size, wc);
     if (result)
-        return result + offset;
+        return (uintptr_t)(result + offset);
     else
         return 0;
 }

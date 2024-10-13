@@ -5,7 +5,7 @@
 #endif
 
 int mem_custom_initialized = 0;
-char mem_custom[MEM_CUSTOM_TOTAL_SIZE] = { 0 };
+char mem_custom[MEM_CUSTOM_TOTAL_SIZE] = { 1 };
 struct mem_block* mem_freeList = (struct mem_block*)mem_custom;
 
 void mem_initialize() {

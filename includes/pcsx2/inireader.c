@@ -2,7 +2,7 @@
 
 void SetIniPath(const char* szFileContent, size_t size)
 {
-    inireader.iniBuf = szFileContent;
+    inireader.iniBuf = (int)szFileContent;
     inireader.iniBufSize = size;
 }
 
@@ -10,7 +10,7 @@ int ReadInteger(char* szSection, char* szKey, int iDefaultValue)
 {
     // hex numbers are not supported
     int result = iDefaultValue;
-    if (rini_get_key(szSection, szKey, inireader.iniBuf, inireader.iniBufSize, &result, sizeof(result), INT_VAL))
+    if (rini_get_key(szSection, szKey, (char*)inireader.iniBuf, inireader.iniBufSize, &result, sizeof(result), INT_VAL))
     {
         return result;
     }
@@ -55,7 +55,7 @@ float ratof(char* arr)
 float ReadFloat(char* szSection, char* szKey, float fltDefaultValue)
 {
     static char Buffer[30];
-    if (rini_get_key(szSection, szKey, inireader.iniBuf, inireader.iniBufSize, &Buffer, sizeof(Buffer), STRING_VAL))
+    if (rini_get_key(szSection, szKey, (char*)inireader.iniBuf, inireader.iniBufSize, &Buffer, sizeof(Buffer), STRING_VAL))
     {
         return ratof(Buffer);
     }
@@ -68,7 +68,7 @@ float ReadFloat(char* szSection, char* szKey, float fltDefaultValue)
 bool ReadBoolean(char* szSection, char* szKey, bool bDefaultValue)
 {
     bool result = bDefaultValue;
-    if (rini_get_key(szSection, szKey, inireader.iniBuf, inireader.iniBufSize, &result, sizeof(result), BOOL_VAL))
+    if (rini_get_key(szSection, szKey, (char*)inireader.iniBuf, inireader.iniBufSize, &result, sizeof(result), BOOL_VAL))
     {
         return result;
     }
@@ -80,7 +80,7 @@ bool ReadBoolean(char* szSection, char* szKey, bool bDefaultValue)
 
 char* ReadString(char* szSection, char* szKey, char* szDefaultValue, char* Buffer, int BufferSize)
 {
-    if (rini_get_key(szSection, szKey, inireader.iniBuf, inireader.iniBufSize, Buffer, BufferSize, STRING_VAL))
+    if (rini_get_key(szSection, szKey, (char*)inireader.iniBuf, inireader.iniBufSize, Buffer, BufferSize, STRING_VAL))
     {
         while (*Buffer == ' ')
             *Buffer++;

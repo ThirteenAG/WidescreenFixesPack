@@ -9,9 +9,9 @@ uint32_t parseCommand(uint32_t command, uint32_t from, uint32_t to)
     return (command & mask) >> from;
 }
 
-void* GetGP()
+void* _GetGP()
 {
-    unsigned int gp;
+    void* gp;
     asm(
         "move %0, $gp\n"
         : "=r"(gp)
@@ -26,17 +26,17 @@ uintptr_t adjustAddress(uintptr_t addr)
 
 void WriteMemoryRaw(uintptr_t addr, void* value, size_t size)
 {
-    memcpy(adjustAddress(addr), value, size);
+    memcpy((void*)adjustAddress(addr), value, size);
 }
 
 void ReadMemoryRaw(uintptr_t addr, void* ret, size_t size)
 {
-    memcpy(ret, adjustAddress(addr), size);
+    memcpy((void*)ret, (void*)adjustAddress(addr), size);
 }
 
 void MemoryFill(uintptr_t addr, uint8_t value, size_t size)
 {
-    unsigned char* p = adjustAddress(addr);
+    unsigned char* p = (unsigned char*)adjustAddress(addr);
     while (size--)
     {
         *p++ = (unsigned char)value;
@@ -134,7 +134,7 @@ uintptr_t MakeJMPwNOP(uintptr_t at, uintptr_t dest)
 {
     uintptr_t bd = GetBranchDestination(at);
     WriteMemory32(adjustAddress(at), (0x08000000 | ((adjustAddress(dest) & 0x0FFFFFFC) >> 2)));
-    MakeNOP(adjustAddress(at + 4));
+    injector.MakeNOP(adjustAddress(at + 4));
     return bd;
 }
 
@@ -182,7 +182,7 @@ uintptr_t MakeInline(size_t instrCount, uintptr_t at, ...)
 }
 
 uintptr_t MakeCallStub(uintptr_t numInstr) {
-    return AllocMemBlock(numInstr * sizeof(uintptr_t));
+    return (uintptr_t)AllocMemBlock(numInstr * sizeof(uintptr_t));
 }
 
 void MakeLUIORI(uintptr_t at, RegisterID reg, float imm)
@@ -291,7 +291,7 @@ void MakeInlineLI(uintptr_t at, int32_t imm)
 
 struct injector_t injector =
 {
-    .GetGP = GetGP,
+    .GetGP = _GetGP,
     .WriteMemoryRaw = WriteMemoryRaw,
     .ReadMemoryRaw = ReadMemoryRaw,
     .MemoryFill = MemoryFill,
