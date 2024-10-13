@@ -538,7 +538,7 @@ struct VehicleLightsData
     uint8_t align16 rasterBuffer[NUM_LIGHTS][16384];
 };
 
-struct VehicleLightsData align16 arrayofData[NUM_VEHICLES - _6ATV] = { 0 };
+struct VehicleLightsData align16 arrayofData[NUM_VEHICLES - _6ATV] = { 1 };
 
 struct RslTexture* DuplicateCarTexture(int arrI, int lightI, struct RslTexture* src)
 {
@@ -670,19 +670,19 @@ int CEntity__Render(void* car)
 
 #ifdef DUMPER_MODE
     int (*FindPlayerVehicle)() = (void*)0x24A2D0;
-    if (FindPlayerVehicle() == (int)car)
+    if (FindPlayerVehicle() == (uintptr_t)car)
 #endif
     {
 #ifdef DUMPER_MODE
-        if (gPVeh != (int)car)
+        if (gPVeh != (uintptr_t)car)
             gCounter = 0;
 
-        gPVeh = (int)car;
+        gPVeh = (uintptr_t)car;
         counter++;
 #endif
 
         // PreRender
-        struct RslElement* m_pRwClump = *(struct RslElement**)((int)car + 0x50);
+        struct RslElement* m_pRwClump = *(struct RslElement**)((uintptr_t)car + 0x50);
         RslElementGroupForAllElements(m_pRwClump, SetElementRendererCB_ImVehLM, car);
         // Render
         res = CEntityRender(car);

@@ -79,6 +79,6 @@ extern struct injector_t injector;
          9,8,7,6,5,4,3,2,1,0
 #endif
 
-#define MakeInlineWrapper(at, ...) MakeInline(PP_NARG(__VA_ARGS__), at, __VA_ARGS__)
-#define MakeInlineWrapperWithNOP(at, ...) MakeNOP(at + 4); MakeInline(PP_NARG(__VA_ARGS__), at, __VA_ARGS__)
+#define MakeInlineWrapper(at, ...) injector.MakeInline(PP_NARG(__VA_ARGS__), at, __VA_ARGS__)
+#define MakeInlineWrapperWithNOP(at, ...) injector.MakeNOP(at + 4); injector.MakeInline(PP_NARG(__VA_ARGS__), at, __VA_ARGS__)
 #endif

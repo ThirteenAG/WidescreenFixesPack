@@ -4831,7 +4831,7 @@ void RegisterLODLights()
                     {
                         //if (!aLodLights[i].nCoronaShowMode)
                         {
-                            CCoronas__RegisterCorona(&aLodLights[i], aLodLights[i].r, aLodLights[i].g, aLodLights[i].b, alpha, pos, 0, 0, radius, fCoronaFarClip, fUnkDist1, fUnkDist2, 1, 0, 0, 0, 0);
+                            CCoronas__RegisterCorona((int)&aLodLights[i], aLodLights[i].r, aLodLights[i].g, aLodLights[i].b, alpha, pos, 0, 0, radius, fCoronaFarClip, fUnkDist1, fUnkDist2, 1, 0, 0, 0, 0);
                         }
                         //else //causes crashing for some reason
                         //{
@@ -4853,7 +4853,7 @@ void RegisterLODLights()
                     {
                         if ((aLodLights[i].r >= 250 && aLodLights[i].g >= 100 && aLodLights[i].b <= 100) && ((curMin == 9 || curMin == 19 || curMin == 29 || curMin == 39 || curMin == 49 || curMin == 59))) //yellow
                         {
-                            CCoronas__RegisterCorona(&aLodLights[i], aLodLights[i].r, aLodLights[i].g, aLodLights[i].b, alpha, pos, 0, 0, radius, fCoronaFarClip, fUnkDist1, fUnkDist2, 1, 0, 0, 0, 0);
+                            CCoronas__RegisterCorona((int)&aLodLights[i], aLodLights[i].r, aLodLights[i].g, aLodLights[i].b, alpha, pos, 0, 0, radius, fCoronaFarClip, fUnkDist1, fUnkDist2, 1, 0, 0, 0, 0);
                         }
                         else
                         {
@@ -4862,13 +4862,13 @@ void RegisterLODLights()
                             {
                                 if ((aLodLights[i].r >= 250 && aLodLights[i].g < 100 && aLodLights[i].b == 0) && (((curMin >= 0 && curMin < 9) || (curMin >= 20 && curMin < 29) || (curMin >= 40 && curMin < 49)))) //red
                                 {
-                                    CCoronas__RegisterCorona(&aLodLights[i], aLodLights[i].r, aLodLights[i].g, aLodLights[i].b, alpha, pos, 0, 0, radius, fCoronaFarClip, fUnkDist1, fUnkDist2, 1, 0, 0, 0, 0);
+                                    CCoronas__RegisterCorona((int)&aLodLights[i], aLodLights[i].r, aLodLights[i].g, aLodLights[i].b, alpha, pos, 0, 0, radius, fCoronaFarClip, fUnkDist1, fUnkDist2, 1, 0, 0, 0, 0);
                                 }
                                 else
                                 {
                                     if ((aLodLights[i].r == 0 && aLodLights[i].g >= 250 && aLodLights[i].b == 0) && (((curMin > 9 && curMin < 19) || (curMin > 29 && curMin < 39) || (curMin > 49 && curMin < 59)))) //green
                                     {
-                                        CCoronas__RegisterCorona(&aLodLights[i], aLodLights[i].r, aLodLights[i].g, aLodLights[i].b, alpha, pos, 0, 0, radius, fCoronaFarClip, fUnkDist1, fUnkDist2, 1, 0, 0, 0, 0);
+                                        CCoronas__RegisterCorona((int)&aLodLights[i], aLodLights[i].r, aLodLights[i].g, aLodLights[i].b, alpha, pos, 0, 0, radius, fCoronaFarClip, fUnkDist1, fUnkDist2, 1, 0, 0, 0, 0);
                                     }
                                 }
                             }
@@ -4876,13 +4876,13 @@ void RegisterLODLights()
                             {
                                 if ((aLodLights[i].r == 0 && aLodLights[i].g >= 250 && aLodLights[i].b == 0) && (((curMin >= 0 && curMin < 9) || (curMin >= 20 && curMin < 29) || (curMin >= 40 && curMin < 49)))) //red
                                 {
-                                    CCoronas__RegisterCorona(&aLodLights[i], aLodLights[i].r, aLodLights[i].g, aLodLights[i].b, alpha, pos, 0, 0, radius, fCoronaFarClip, fUnkDist1, fUnkDist2, 1, 0, 0, 0, 0);
+                                    CCoronas__RegisterCorona((int)&aLodLights[i], aLodLights[i].r, aLodLights[i].g, aLodLights[i].b, alpha, pos, 0, 0, radius, fCoronaFarClip, fUnkDist1, fUnkDist2, 1, 0, 0, 0, 0);
                                 }
                                 else
                                 {
                                     if ((aLodLights[i].r >= 250 && aLodLights[i].g < 100 && aLodLights[i].b == 0) && (((curMin > 9 && curMin < 19) || (curMin > 29 && curMin < 39) || (curMin > 49 && curMin < 59)))) //green
                                     {
-                                        CCoronas__RegisterCorona(&aLodLights[i], aLodLights[i].r, aLodLights[i].g, aLodLights[i].b, alpha, pos, 0, 0, radius, fCoronaFarClip, fUnkDist1, fUnkDist2, 1, 0, 0, 0, 0);
+                                        CCoronas__RegisterCorona((int)&aLodLights[i], aLodLights[i].r, aLodLights[i].g, aLodLights[i].b, alpha, pos, 0, 0, radius, fCoronaFarClip, fUnkDist1, fUnkDist2, 1, 0, 0, 0, 0);
                                     }
                                 }
                             }
