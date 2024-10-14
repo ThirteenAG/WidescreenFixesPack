@@ -35,12 +35,12 @@ public:
                         auto candidate_stringref = utility::scan_displacement_reference(current_module, *candidate_string);
                         if (candidate_stringref)
                         {
-                            for (size_t i = 0; i < 4000; ++i)
+                            for (size_t i = 0; i < 8000; ++i)
                             {
                                 const auto mov = utility::scan_mnemonic(*candidate_stringref + i, 5, "MOV");
                                 if (mov)
                                 {
-                                    if (injector::ReadMemory<uint32_t>(*mov + 1, true) == 19)
+                                    if (injector::ReadMemory<uint32_t>(*mov + 1, true) == 19 || injector::ReadMemory<uint32_t>(*mov + 1, true) == 20)
                                     {
                                         const auto next_fn_call1 = utility::scan_mnemonic(*mov, 100, "CALL");
                                         if (next_fn_call1)
@@ -51,7 +51,7 @@ public:
                                                 const auto next_mov = utility::scan_mnemonic(*next_fn_call2, 100, "MOV");
                                                 if (next_mov)
                                                 {
-                                                    if (injector::ReadMemory<uint32_t>(*next_mov + 1, true) == 17)
+                                                    if (injector::ReadMemory<uint32_t>(*next_mov + 1, true) == 17 || injector::ReadMemory<uint32_t>(*next_mov + 1, true) == 18)
                                                     {
                                                         _SetIsThrottlerTempDisabled = (void(__fastcall*)(bool disable))(injector::GetBranchDestination(*next_fn_call2).as_int());
                                                         return _SetIsThrottlerTempDisabled(disable);
