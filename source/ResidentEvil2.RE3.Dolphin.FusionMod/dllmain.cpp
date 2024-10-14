@@ -56,9 +56,9 @@ void PluginThread(std::future<void> futureObj)
                         {
                             [&]()
                             {
-                                auto pattern = hook::pattern(Dolphin::GameMemoryStart, Dolphin::GameMemoryEnd, "38 a0 00 01 3c 60 ? ? 38 83 ? ? 90 a4");
+                                auto pattern = hook::pattern(Dolphin::GameMemoryStart, Dolphin::GameMemoryEnd, "38 ? 00 01 3c 60 ? ? 38 ? ? ? 90 ? ? ? 3c ? ? ? 38 63 ? ? 80 63 00 00 88 ? 00 09 28 ? 00 0b ? ? ? ? 3c 60 ? ? 38 ? ? ? 54 ? ? ? 7c ? ? ? 7c");
                                 if (gameVersion == RE3)
-                                    pattern = hook::pattern(Dolphin::GameMemoryStart, Dolphin::GameMemoryEnd, "38 00 00 01 3c 60 ? ? 38 63 ? ? ? ? 00 00 3c 60");
+                                    pattern = hook::pattern(Dolphin::GameMemoryStart, Dolphin::GameMemoryEnd, "38 00 00 01 3c 60 ? ? 38 63 ? ? 98 03 00 00 3c 60 ? ? 38 63 ? ? 93 83 21 58 3c 60");
                                 if (pattern.size() >= 1)
                                 {
                                     memcheck = pattern.get(0).get<uint32_t>(4);
@@ -165,7 +165,7 @@ void PluginThread(std::future<void> futureObj)
                             }
                             else if (gameVersion == RECV)
                             {
-                    
+
                             }
                         }
                     }
@@ -214,7 +214,7 @@ void InitLED()
                      std::this_thread::sleep_for(std::chrono::milliseconds(100));
                      
                      auto gameVersion = GameVersion::UNDEFINED;
-                     if (Dolphin::GameID() == "GHAE08" || Dolphin::GameID() == "GHAP08" || Dolphin::GameID() == "GHAJ08")
+                     if (Dolphin::GameID() == "GHAE08" || Dolphin::GameID() == "GHAP08" /* || Dolphin::GameID() == "GHAJ08"*/)
                          gameVersion = GameVersion::RE2;
                      else if (Dolphin::GameID() == "GLEE08" || Dolphin::GameID() == "GLEJ08" || Dolphin::GameID() == "GLEP08")
                          gameVersion = GameVersion::RE3;
