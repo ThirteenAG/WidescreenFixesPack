@@ -58,11 +58,16 @@ struct OdinCamera
 
 void Init()
 {
-    WFP::onInitEventAsync() += []()
+    WFP::onInitEvent() += []()
     {
         CIniReader iniReader("");
         auto bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) != 0;
         auto bBorderlessWindowed = iniReader.ReadInteger("MAIN", "BorderlessWindowed", 1) != 0;
+        auto bUnlockFPS = iniReader.ReadInteger("MAIN", "UnlockFPS", 0) != 0;
+
+        // Unlock resolutions with any refresh rate
+        auto pattern = hook::pattern("74 ? 83 C6 01 83 C0 20");
+        injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true);
 
         if (bFixFOV)
         {
@@ -87,6 +92,13 @@ void Init()
                 std::forward_as_tuple("SetWindowPos", WindowedModeWrapper::SetWindowPos_Hook)
             );
         }
+
+        if (bUnlockFPS)
+        {
+            static float f = 1.0f / 360.0f;
+            auto pattern = hook::pattern("D9 05 ? ? ? ? A2 ? ? ? ? D9 1D ? ? ? ? E8");
+            injector::WriteMemory(pattern.get_first(2), &f, true);
+        }
     };
 
     static auto futures = WFP::onInitEventAsync().executeAllAsync();
@@ -105,7 +117,7 @@ CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
-        CallbackHandler::RegisterCallback(Init, hook::pattern("D9 44 24 04 56 DC 0D ? ? ? ? 8B F1 D9 5C 24 08"));
+        CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("D9 44 24 04 56 DC 0D ? ? ? ? 8B F1 D9 5C 24 08"));
     });
 }
 
