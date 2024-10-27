@@ -2,6 +2,23 @@
 #include <LEDEffects.h>
 #include <random>
 
+SafetyHookInline shSetProcessAffinityMask{};
+BOOL WINAPI SetProcessAffinityMaskHook(HANDLE hProcess, DWORD_PTR dwProcessAffinityMask)
+{
+    if (hProcess == GetCurrentProcess())
+    {
+        DWORD_PTR processAffinityMask;
+        DWORD_PTR systemAffinityMask;
+
+        if (GetProcessAffinityMask(GetCurrentProcess(), &processAffinityMask, &systemAffinityMask))
+        {
+            return shSetProcessAffinityMask.stdcall<BOOL>(hProcess, systemAffinityMask);
+        }
+    }
+
+    return shSetProcessAffinityMask.stdcall<BOOL>(hProcess, dwProcessAffinityMask);
+}
+
 HWND WindowHandle;
 
 enum eGameMode
@@ -208,6 +225,7 @@ void Init()
     auto bDisablePerfectionistChecks = iniReader.ReadInteger("MAIN", "DisablePerfectionistChecks", 1) != 0;
     auto nDefaultMissionFilter = std::clamp(iniReader.ReadInteger("MAIN", "DefaultMissionFilter", 1), 0, 3);
     auto bSMIMapDisableStartupAnimation = iniReader.ReadInteger("MAIN", "SMIMapDisableStartupAnimation", 1) != 0;
+    auto bForceCPUAffinityToAllCores = iniReader.ReadInteger("MAIN", "ForceCPUAffinityToAllCores", 1) != 0;
 
     sExtractionWaveConfigs = iniReader.ReadString("EXTRACTION", "ExtractionWaveConfigs", "Default");
     nExtractionWaveEnemyMultiplier = std::clamp(iniReader.ReadInteger("EXTRACTION", "ExtractionWaveEnemyMultiplier", 1), 1, 9999);
@@ -918,6 +936,11 @@ void Init()
     {
         pattern = hook::pattern("0F 8E ? ? ? ? 8D 8E ? ? ? ? E8 ? ? ? ? 80 BE");
         injector::WriteMemory<uint16_t>(pattern.count(2).get(1).get<void>(), 0xE990, true); //jle -> jmp
+    }
+
+    if (bForceCPUAffinityToAllCores)
+    {
+        shSetProcessAffinityMask = safetyhook::create_inline(SetProcessAffinityMask, SetProcessAffinityMaskHook);
     }
 }
 
