@@ -697,6 +697,21 @@ void Fix2DSprites()
     pRwRenderStateSet = (void*)injector::GetBranchDestination(pattern.get_first()).as_int(); //0x649BA0
 }
 
+CEXP void UpdateVars()
+{
+    fCrosshairPosFactor = ((0.52999997f - 0.5f) / ((*CDraw::pfScreenAspectRatio) / (16.0f / 9.0f))) + 0.5f;
+    fCrosshairHeightScaleDown = fWideScreenWidthScaleDown * *CDraw::pfScreenAspectRatio;
+
+    fWideScreenHeightScaleDown = 1.0f / 480.0f;
+    fCustomWideScreenWidthScaleDown = fWideScreenWidthScaleDown * fHudWidthScale;
+    fCustomWideScreenHeightScaleDown = fWideScreenHeightScaleDown * fHudHeightScale;
+
+    fCustomRadarWidthScale = fWideScreenWidthScaleDown * fRadarWidthScale;
+    fPlayerMarkerPos = 94.0f * fRadarWidthScale;
+    if (bIVRadarScaling)
+        fPlayerMarkerPos = (94.0f - 5.5f) * fRadarWidthScale;
+}
+
 void Init()
 {
     //Immediate changes
@@ -735,17 +750,7 @@ void Init()
                 wcscpy(ptr, L"BORDERS");
             }
 
-            fCrosshairPosFactor = ((0.52999997f - 0.5f) / ((*CDraw::pfScreenAspectRatio) / (16.0f / 9.0f))) + 0.5f;
-            fCrosshairHeightScaleDown = fWideScreenWidthScaleDown * *CDraw::pfScreenAspectRatio;
-
-            fWideScreenHeightScaleDown = 1.0f / 480.0f;
-            fCustomWideScreenWidthScaleDown = fWideScreenWidthScaleDown * fHudWidthScale;
-            fCustomWideScreenHeightScaleDown = fWideScreenHeightScaleDown * fHudHeightScale;
-
-            fCustomRadarWidthScale = fWideScreenWidthScaleDown * fRadarWidthScale;
-            fPlayerMarkerPos = 94.0f * fRadarWidthScale;
-            if (bIVRadarScaling)
-                fPlayerMarkerPos = (94.0f - 5.5f) * fRadarWidthScale;
+            UpdateVars();
 
             *dwGameLoadState = 9;
         }
