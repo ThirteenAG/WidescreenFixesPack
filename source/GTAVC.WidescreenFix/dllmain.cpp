@@ -779,6 +779,27 @@ void Fix2DSprites()
     pRwRenderStateSet = hook::get_pattern("A1 ? ? ? ? 83 EC 08 83 38 00"); //0x649BA0
 }
 
+static float* pMenuPattern6;
+CEXP void UpdateVars()
+{
+    if (pMenuPattern6)
+    {
+        *pMenuPattern6 = fWideScreenWidthScaleDown;
+
+        fCrosshairPosFactor = ((0.52999997f - 0.5f) / ((*CDraw::pfScreenAspectRatio) / (16.0f / 9.0f))) + 0.5f;
+        fCrosshairHeightScaleDown = fWideScreenWidthScaleDown * *CDraw::pfScreenAspectRatio;
+
+        fWideScreenHeightScaleDown = 1.0f / 480.0f;
+        fCustomWideScreenWidthScaleDown = fWideScreenWidthScaleDown * fHudWidthScale;
+        fCustomWideScreenHeightScaleDown = fWideScreenHeightScaleDown * fHudHeightScale;
+
+        fCustomRadarWidthScale = fWideScreenWidthScaleDown * fRadarWidthScale;
+        fPlayerMarkerPos = 94.0f * fRadarWidthScale;
+        if (bIVRadarScaling)
+            fPlayerMarkerPos = (94.0f - 5.5f) * fRadarWidthScale;
+    }
+}
+
 void Init()
 {
     //Immediate changes
@@ -802,7 +823,6 @@ void Init()
     {
         void operator()(injector::reg_pack& regs)
         {
-            static float* pMenuPattern6;
             if (*dwGameLoadState < 9)
             {
                 SilentPatchCompatibility();
@@ -829,19 +849,7 @@ void Init()
                 wcscpy(ptr, L"BORDERS");
             }
 
-            *pMenuPattern6 = fWideScreenWidthScaleDown;
-
-            fCrosshairPosFactor = ((0.52999997f - 0.5f) / ((*CDraw::pfScreenAspectRatio) / (16.0f / 9.0f))) + 0.5f;
-            fCrosshairHeightScaleDown = fWideScreenWidthScaleDown * *CDraw::pfScreenAspectRatio;
-
-            fWideScreenHeightScaleDown = 1.0f / 480.0f;
-            fCustomWideScreenWidthScaleDown = fWideScreenWidthScaleDown * fHudWidthScale;
-            fCustomWideScreenHeightScaleDown = fWideScreenHeightScaleDown * fHudHeightScale;
-
-            fCustomRadarWidthScale = fWideScreenWidthScaleDown * fRadarWidthScale;
-            fPlayerMarkerPos = 94.0f * fRadarWidthScale;
-            if (bIVRadarScaling)
-                fPlayerMarkerPos = (94.0f - 5.5f) * fRadarWidthScale;
+            UpdateVars();
 
             *dwGameLoadState = 9;
         }
