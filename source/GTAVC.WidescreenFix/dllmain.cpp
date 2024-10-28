@@ -312,11 +312,11 @@ void RsSelectDeviceHook()
 
 void FixCoronas()
 {
+    auto pattern = hook::pattern("D8 0E D9 1E D9 05 ? ? ? ? D8 35 ? ? ? ? D8 0B D9 1B"); //0x57797A
+    injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(1), 0x0B, true);
+
     if (bNoLightSquare)
     {
-        auto pattern = hook::pattern("D8 0E D9 1E D9 05 ? ? ? ? D8 35 ? ? ? ? D8 0B D9 1B"); //0x57797A
-        injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(1), 0x0B, true);
-
         auto pfCAutoPreRender = (uint32_t)hook::pattern("FF 35 ? ? ? ? 50 8D 84 24 24 05 00").count(1).get(0).get<uint32_t>(0);
         auto pfCBikePreRender = (uint32_t)hook::pattern("D9 83 FC 03 00 00 D8 1D ? ? ? ? DF E0 F6 C4 45").count(1).get(0).get<uint32_t>(0);
         auto pfCBrightLightsRegisterOne = (uint32_t)hook::pattern("D9 EE D9 EE 83 EC 20 8B 44 24").count(1).get(0).get<uint32_t>(0);
