@@ -710,6 +710,14 @@ jobs:
         tag: sonicheroes
         artifacts: data/Archives/SonicHeroes.WidescreenFix.zip
 
+    - name: Red Dead Redemption Fusion Mod
+      uses: ./.github/workflows/release_tag
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag: rdr
+        artifacts: data/Archives/RedDeadRedemption.FusionMod.zip
+
     - name: Resident Evil 0 Fusion Fix
       uses: ./.github/workflows/release_tag
       with:

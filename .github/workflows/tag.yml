@@ -57,6 +57,7 @@ on:
         - psiops
         - psychonauts
         - punisher
+        - rdr
         - re0
         - re1
         - re2re3gc
@@ -150,6 +151,7 @@ env:
   psiops: "/t:Win32\\PsiOpsTheMindgateConspiracy_WidescreenFix"
   psychonauts: "/t:Win32\\Psychonauts_WidescreenFix"
   punisher: "/t:Win32\\ThePunisher_WidescreenFix"
+  rdr: "/t:Win64\\RedDeadRedemption_FusionMod"
   re0: "/t:Win32\\ResidentEvil\\ResidentEvil0_FusionFix"
   re1: "/t:Win32\\ResidentEvil\\ResidentEvil_FusionFix"
   re2re3gc: "/t:Dolphin\\ResidentEvil2_RE3_Dolphin_FusionMod"
