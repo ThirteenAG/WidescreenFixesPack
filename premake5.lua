@@ -300,6 +300,12 @@ project "SpyroReignitedTrilogy.WidescreenFix"
    platforms { "Win64" }
    architecture "x64"
    setpaths("Z:/WFP/Games/Spyro Reignited Trilogy/", "Falcon/Binaries/Win64/Spyro-Win64-Shipping.exe", "Falcon/Binaries/Win64/scripts/")
+
+project "RedDeadRedemption.FusionMod"
+   add_kananlib()
+   platforms { "Win64" }
+   architecture "x64"
+   setpaths("Z:/WFP/Games/Red Dead Redemption/", "RDR.exe", "plugins/")
 group ""
 
 group "Win32"
