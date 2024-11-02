@@ -7,7 +7,7 @@ workspace "WidescreenFixesPack"
    buildlog ("build/log/%{prj.name}.log")
    cppdialect "C++latest"
    include "makefile.lua"
-   buildoptions { "/Zc:__cplusplus" }
+   buildoptions { "/Zc:__cplusplus /utf-8" }
    flags { "MultiProcessorCompile" }
    
    kind "SharedLib"
