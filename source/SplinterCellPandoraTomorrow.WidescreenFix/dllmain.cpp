@@ -216,6 +216,8 @@ void Init()
     iniWriter.WriteInteger("D3DDrv.D3DRenderDevice", "ForceShadowMode", iniReader.ReadInteger("MAIN", "ForceShadowBufferMode", 1));
 }
 
+std::vector<uintptr_t> v;
+
 void InitCore()
 {
     auto pattern = hook::module_pattern(GetModuleHandle(L"Core"), "C7 85 D4 F1 FF FF 00 00 00 00"); //0x1000CE5E
@@ -226,6 +228,14 @@ void InitCore()
     injector::WriteMemory(rpattern.count(2).get(1).get<uint32_t>(0), Screen.Width, true);  //pfappInit + 0x67E + 0x1
     rpattern = hook::range_pattern(pfappInit, pfappInit + 0x900, "E0 01 00 00");
     injector::WriteMemory(rpattern.count(2).get(1).get<uint32_t>(0), Screen.Height, true); //pfappInit + 0x69F + 0x1
+
+#if 0 // set player speed to max on game start
+    pattern = hook::module_pattern(GetModuleHandle(L"Core"), "8B D9 C1 E9 02 83 E3 03 F3 A5 8B CB F3 A4 5B 5F 5E 59 8B F0");
+    static auto test = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        v.push_back(regs.edi - 0x2C);
+    });
+#endif
 }
 
 void InitD3DDrv()
@@ -404,6 +414,19 @@ void InitEngine()
     }
 }
 
+void InitEchelon()
+{
+    auto pattern = hook::module_pattern(GetModuleHandle(L"Echelon"), "8B 4D ? 8B 79 ? 33 DB 47 8B C7 89 79 ? 80 38 42 89 65 ? 89 5D ? 75 ? 8B 41 ? 53 50 FF 15 ? ? ? ? D9 86");
+    static auto test = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        if (std::find(v.begin(), v.end(), regs.esi) != v.end())
+        {
+            *(uintptr_t*)(regs.esi + 0x778) = 5;
+        }
+        v.clear();
+    });
+}
+
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
@@ -412,6 +435,10 @@ CEXP void InitializeASI()
             CallbackHandler::RegisterCallback(L"Core.dll", InitCore);
             CallbackHandler::RegisterCallback(L"Engine.dll", InitEngine);
             CallbackHandler::RegisterCallback(L"D3DDrv.dll", InitD3DDrv);
+
+#if 0 // set player speed to max on game start
+            CallbackHandler::RegisterCallback(L"Echelon.dll", InitEchelon);
+#endif
         });
 }
 
