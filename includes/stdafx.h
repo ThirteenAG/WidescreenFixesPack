@@ -673,6 +673,45 @@ public:
     }
 };
 
+namespace AffinityChanges
+{
+    static inline DWORD_PTR gameThreadAffinity = 0;
+    static inline bool Init()
+    {
+        DWORD_PTR processAffinity, systemAffinity;
+        if (!GetProcessAffinityMask(GetCurrentProcess(), &processAffinity, &systemAffinity))
+        {
+            return false;
+        }
+
+        DWORD_PTR otherCoresAff = (processAffinity - 1) & processAffinity;
+        if (otherCoresAff == 0) // Only one core is available for the game
+        {
+            return false;
+        }
+        gameThreadAffinity = processAffinity & ~otherCoresAff;
+
+        SetThreadAffinityMask(GetCurrentThread(), gameThreadAffinity);
+
+        return true;
+    }
+
+    static inline HANDLE WINAPI CreateThread_GameThread(LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_T dwStackSize, LPTHREAD_START_ROUTINE lpStartAddress,
+        PVOID lpParameter, DWORD dwCreationFlags, LPDWORD lpThreadId)
+    {
+        HANDLE hThread = CreateThread(lpThreadAttributes, dwStackSize, lpStartAddress, lpParameter, dwCreationFlags | CREATE_SUSPENDED, lpThreadId);
+        if (hThread != nullptr)
+        {
+            SetThreadAffinityMask(hThread, gameThreadAffinity);
+            if ((dwCreationFlags & CREATE_SUSPENDED) == 0) // Resume only if the game didn't pass CREATE_SUSPENDED
+            {
+                ResumeThread(hThread);
+            }
+        }
+        return hThread;
+    }
+}
+
 namespace WindowedModeWrapper
 {
     static bool bBorderlessWindowed = true;

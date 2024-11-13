@@ -7,45 +7,6 @@
 #pragma comment(lib, "winmm.lib") // needed for timeBeginPeriod()/timeEndPeriod()
 #include <LEDEffects.h>
 
-namespace AffinityChanges
-{
-    DWORD_PTR gameThreadAffinity = 0;
-    static bool Init()
-    {
-        DWORD_PTR processAffinity, systemAffinity;
-        if (!GetProcessAffinityMask(GetCurrentProcess(), &processAffinity, &systemAffinity))
-        {
-            return false;
-        }
-
-        DWORD_PTR otherCoresAff = (processAffinity - 1) & processAffinity;
-        if (otherCoresAff == 0) // Only one core is available for the game
-        {
-            return false;
-        }
-        gameThreadAffinity = processAffinity & ~otherCoresAff;
-
-        SetThreadAffinityMask(GetCurrentThread(), gameThreadAffinity);
-
-        return true;
-    }
-
-    static HANDLE WINAPI CreateThread_GameThread(LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_T dwStackSize, LPTHREAD_START_ROUTINE lpStartAddress,
-        PVOID lpParameter, DWORD dwCreationFlags, LPDWORD lpThreadId)
-    {
-        HANDLE hThread = CreateThread(lpThreadAttributes, dwStackSize, lpStartAddress, lpParameter, dwCreationFlags | CREATE_SUSPENDED, lpThreadId);
-        if (hThread != nullptr)
-        {
-            SetThreadAffinityMask(hThread, gameThreadAffinity);
-            if ((dwCreationFlags & CREATE_SUSPENDED) == 0) // Resume only if the game didn't pass CREATE_SUSPENDED
-            {
-                ResumeThread(hThread);
-            }
-        }
-        return hThread;
-    }
-}
-
 uint32_t curAmmoInClip = 1;
 uint32_t curClipCapacity = 1;
 void AmmoInClip()
@@ -880,10 +841,12 @@ void InitEngine()
 
     if (bSingleCoreAffinity)
     {
-        AffinityChanges::Init();
-        IATHook::Replace(GetModuleHandle(L"Engine"), "kernel32.dll",
-            std::forward_as_tuple("CreateThread", AffinityChanges::CreateThread_GameThread)
-        );
+        if (AffinityChanges::Init())
+        {
+            IATHook::Replace(GetModuleHandle(L"Engine"), "kernel32.dll",
+                std::forward_as_tuple("CreateThread", AffinityChanges::CreateThread_GameThread)
+            );
+        }
     }
 }
 
