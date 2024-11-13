@@ -347,15 +347,43 @@ void InitWinDrv()
     }; injector::MakeInline<OpenWindowHook2>(pattern.get_first(0), pattern.get_first(9));
 }
 
+std::vector<uintptr_t> v;
+void InitCore()
+{
+    auto pattern = hook::module_pattern(GetModuleHandle(L"Core"), "8B D9 C1 E9 02 83 E3 03 F3 A5 8B CB F3 A4 5B 5F 5E 59 8B 44 24 ? 8B 4C 24 ? 3B C1");
+    static auto test = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        v.push_back(regs.ebp);
+    });
+}
+
+void InitEchelon()
+{
+    auto pattern = hook::module_pattern(GetModuleHandle(L"Echelon"), "8B 48 ? 41 89 48 ? 80 39 42 75 ? 41 6A 00 89 48 ? 8B 48 ? 50 A1 ? ? ? ? FF 90 ? ? ? ? D9 86 ? ? ? ? D9 86 ? ? ? ? D9 C0 D8 C9 D9 C2 D8 CB 83 EC 08 DE C1 DD 1C 24 DD D8 DD D8 FF 15 ? ? ? ? D8 15");
+    static auto test = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        if (std::find(v.begin(), v.end(), regs.esi) != v.end())
+        {
+            *(uintptr_t*)(regs.esi + 0x5BC) = 5;
+        }
+        v.clear();
+    });
+}
+
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
-        {
-            CallbackHandler::RegisterCallback(Init);
-            CallbackHandler::RegisterCallback(L"Engine.dll", InitEngine);
-            CallbackHandler::RegisterCallback(L"D3DDrv.dll", InitD3DDrv);
-            CallbackHandler::RegisterCallback(L"WinDrv.dll", InitWinDrv);
-        });
+    {
+        CallbackHandler::RegisterCallback(Init);
+        CallbackHandler::RegisterCallback(L"Engine.dll", InitEngine);
+        CallbackHandler::RegisterCallback(L"D3DDrv.dll", InitD3DDrv);
+        CallbackHandler::RegisterCallback(L"WinDrv.dll", InitWinDrv);
+
+#if 0 // set player speed to max on game start
+        CallbackHandler::RegisterCallback(L"Core.dll", InitCore);
+        CallbackHandler::RegisterCallback(L"Echelon.dll", InitEchelon);
+#endif
+    });
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
