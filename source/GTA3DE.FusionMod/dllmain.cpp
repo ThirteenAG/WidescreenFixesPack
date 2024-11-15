@@ -1,16 +1,94 @@
 #include "stdafx.h"
 #include <string_view>
-#include "raw_mem.hpp"
+#include "kananlib.hpp"
+#include "GTA/ue.hpp"
+
+enum eGameState
+{
+    GS_START_UP = 0,
+    GS_INIT_LOGO_MPEG,
+    GS_LOGO_MPEG,
+    GS_INIT_INTRO_MPEG,
+    GS_INTRO_MPEG,
+    GS_INIT_ONCE,
+    GS_INIT_FRONTEND,
+    GS_FRONTEND,
+    GS_INIT_PLAYING_GAME,
+    GS_PLAYING_GAME,
+};
 
 float fHudScale = 1.0f;
 float fRadarScale = 1.0f;
 
 uint32_t* OnAMissionFlag;
 uint8_t* ScriptSpace;
-uint8_t* m_WideScreenOn;
 bool IsPlayerOnAMission()
 {
     return *OnAMissionFlag && (ScriptSpace[*OnAMissionFlag] == 1);
+}
+
+namespace UUI_LegalScreen
+{
+    using UUI_LegalScreen = void;
+
+    SafetyHookInline shShouldShow{};
+    void ShouldShow(UUI_LegalScreen* LegalScreen, void* a2, int8_t* out)
+    {
+        shShouldShow.fastcall(LegalScreen, a2, out);
+        *out = 0;
+    }
+}
+
+HWND ghWnd;
+void LockCursor()
+{
+    if (ghWnd == GetFocus())
+    {
+        RECT windowRect;
+        POINT pt = { 0, 0 };
+
+        GetClientRect(ghWnd, &windowRect);
+        ClientToScreen(ghWnd, &pt);
+
+        windowRect.left += pt.x + 1;
+        windowRect.top += pt.y + 1;
+        windowRect.right += pt.x - 1;
+        windowRect.bottom += pt.y - 1;
+
+        ClipCursor(&windowRect);
+    }
+    else
+    {
+        ClipCursor(NULL);
+    }
+}
+
+SafetyHookInline shWndProc{};
+LRESULT CustomWndProc(void* _this, HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    ghWnd = hWnd;
+    auto res = shWndProc.fastcall<LRESULT>(_this, hWnd, uMsg, wParam, lParam);
+
+    switch (uMsg)
+    {
+    case WM_ACTIVATEAPP:
+    case WM_SETFOCUS:
+    {
+        LockCursor();
+        break;
+    }
+    case WM_KILLFOCUS:
+    case WM_CLOSE:
+    case WM_DESTROY:
+    {
+        ClipCursor(NULL);
+        break;
+    }
+    default:
+        break;
+    }
+
+    return res;
 }
 
 int vscanf_hook(char* Buffer, char* Format, ...)
@@ -32,7 +110,7 @@ int vscanf_hook(char* Buffer, char* Format, ...)
                 OriginY = OriginY - (ScaleY - (ScaleY * fHudScale));
                 ScaleX *= fHudScale;
                 ScaleY *= fHudScale;
-            }
+            } 
             else if (buf.contains("WIDGET_POSITION_RADAR"))
             {
                 OriginX = OriginX - (ScaleX - (ScaleX * fRadarScale));
@@ -72,116 +150,348 @@ int vscanf_hook(char* Buffer, char* Format, ...)
 void Init()
 {
     CIniReader iniReader("");
+    auto bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
+    auto bSkipMenu = iniReader.ReadInteger("MAIN", "SkipMenu", 1) != 0;
     static auto nIniSaveSlot = (int32_t)iniReader.ReadInteger("MAIN", "SaveSlot", 6) - 1;
-    fHudScale = iniReader.ReadFloat("MAIN", "HudScale", 0.88f);
-    fRadarScale = iniReader.ReadFloat("MAIN", "RadarScale", 0.78f);
-    if (fHudScale <= 0.0f)
+    fHudScale = iniReader.ReadFloat("MAIN", "HudScale", 0.8f);
+    fRadarScale = iniReader.ReadFloat("MAIN", "RadarScale", 0.75f);
+    static auto bIniDisableFirstPersonAimForRifles = iniReader.ReadInteger("MAIN", "DisableFirstPersonAimForRifles", 1) != 0;
+    static auto bImproveCameraPC = iniReader.ReadInteger("MAIN", "ImproveCameraPC", 1) != 0;
+    if (fHudScale <= 0.0f) 
         fHudScale = 1.0f;
-    if (fRadarScale <= 0.0f)
+    if (fRadarScale <= 0.0f) 
         fRadarScale = 1.0f;
     if (nIniSaveSlot < 1 || nIniSaveSlot > 8)
         nIniSaveSlot = 5;
-    static auto bIniDisableFirstPersonAimForRifles = iniReader.ReadInteger("MAIN", "DisableFirstPersonAimForRifles", 1) != 0;
 
-    auto pattern = hook::pattern("8B 05 ? ? ? ? 85 C0 74 0F 42 83 BC 20");
-    OnAMissionFlag = (uint32_t*)injector::ReadRelativeOffset(pattern.get_first(2), 4, true).as_int();
-    ScriptSpace = (uint8_t*)injector::ReadRelativeAddress(pattern.get_first(14), 4, true).as_int();
-
-    pattern = hook::pattern("0F B6 05 ? ? ? ? 88 05 ? ? ? ? E8 ? ? ? ? 48 83 C4 28");
-    m_WideScreenOn = (uint8_t*)injector::ReadRelativeOffset(pattern.get_first(3), 4, true).as_int();
-
-    pattern = hook::pattern("40 53 48 83 EC 40 33 DB 48 8D 4C 24 ? 48 89 5C 24 ? 48 89 5C 24 ? 8D 53 07");
-    static auto sub_140F07930 = (void(__fastcall*)())(pattern.get_first(0));
-    static auto gxt_offset = pattern.get_first(66);
-    static auto gxt_location = (char*)injector::ReadRelativeOffset(pattern.get_first(66), 4, true).as_int();
-    DWORD out = 0;
-    injector::UnprotectMemory(gxt_location, 7, out);
-    static std::string_view gxt(gxt_location, 7);
-    static auto FESZ_L1 = std::string("FESZ_L1");
-    static auto CHEAT3 = std::string("CHEAT3");
-    static auto gxt_ptr = const_cast<char*>(gxt.data());
-    
-    pattern = hook::pattern("0F B6 05 ? ? ? ? 48 8D ? ? ? ? ? 48 69 ? ? ? ? ? 48 8B 04 ? C7 80");
-    static auto SetHelpMessageEpilogue = injector::raw_mem(pattern.get_first(0), [](x86::Assembler& a)
+    if (bSkipIntro)
     {
-        a.add(rsp, 0x40);
-        a.pop(rbx);
-        a.ret();
-    });
-
-    pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? 8B 15 ? ? ? ? E8");
-    static auto SaveToSlot = (void(__fastcall*)(int))(injector::GetBranchDestination(pattern.get_first(0)).as_int());
-
-    pattern = hook::pattern("BA ? ? ? ? 89 1D ? ? ? ? E8 ? ? ? ? 48 8D 15 ? ? ? ? C7 05");
-    static auto Slot = pattern.get_first(1);
-
-    pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 40 38 2D ? ? ? ? 75 13 48 8D 0D ? ? ? ? C6 05");
-    static auto sub_140F01E00 = (void(__fastcall*)())(injector::GetBranchDestination(pattern.get_first(0)).as_int());
-    struct IdleHook
-    {
-        void operator()(injector::reg_pack& regs)
+        auto AcceptPrivacyPolicy = utility::scan_string(utility::get_executable(), "AcceptPrivacyPolicy", true);
+        if (AcceptPrivacyPolicy)
         {
-            sub_140F01E00();
+            auto AcceptPrivacyPolicyXrefs = utility::scan_references(utility::get_executable(), AcceptPrivacyPolicy.value());
 
-            static bool bF5LastState = false;
-            bool bF5CurState = GetKeyState(VK_F5) & 0x8000;
-
-            if (!bF5LastState && bF5CurState)
+            for (auto& it : AcceptPrivacyPolicyXrefs)
             {
-                if (!IsPlayerOnAMission() && !*m_WideScreenOn)
+                auto ref = utility::scan_reference(utility::get_executable(), it);
+                if (ref)
                 {
-                    injector::WriteMemory<uint32_t>(Slot, 5, true);
-                    SaveToSlot(nIniSaveSlot);
-                    injector::WriteMemory<uint32_t>(Slot, 8, true);
-
-                    SetHelpMessageEpilogue.Write();
-                    FESZ_L1.copy(gxt_ptr, gxt.length() + 1);
-                    sub_140F07930();
-                    CHEAT3.copy(gxt_ptr, gxt.length() + 1);
-                    SetHelpMessageEpilogue.Restore();
-                }
-            }
-
-            bF5LastState = bF5CurState;
-        }
-    }; injector::MakeInline<IdleHook>(pattern.get_first(0));
-
-    if (bIniDisableFirstPersonAimForRifles)
-    {
-        pattern = hook::pattern("48 03 F0 8D 47 FA 83 F8 02 0F 96 C0 45 33 F6 4C 39 B1");
-        struct ProcessPlayerWeaponHook
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                regs.rsi += regs.rax;
-                regs.rax = regs.rdi - 6;
-
-                if (regs.rdi)
-                {
-                    enum eWeaponType
+                    auto res = utility::resolve_displacement(ref.value() - 3);
+                    if (res)
                     {
-                        WEAPONTYPE_AK47 = 5,
-                        WEAPONTYPE_M16 = 6
-                    };
+                        struct UUI_LegalScreenRef
+                        {
+                            const char* AcceptPrivacyPolicyStr;
+                            void* AcceptPrivacyPolicy;
+                            const char* CanSkipStr;
+                            void* CanSkip;
+                            const char* HasAcceptedPrivacyPolicyStr;
+                            void* HasAcceptedPrivacyPolicy;
+                            const char* ShouldShowStr;
+                            void* ShouldShow;
+                        };
 
-                    switch (regs.rdi)
-                    {
-                    case WEAPONTYPE_AK47:
-                    case WEAPONTYPE_M16:
-                        regs.rax = INT_MAX;
-                        break;
-                    default:
-                        break;
+                        auto pLegalScreen = reinterpret_cast<UUI_LegalScreenRef*>(*res);
+
+                        if (std::string_view(pLegalScreen->ShouldShowStr) == "ShouldShow")
+                        {
+                            UUI_LegalScreen::shShouldShow = safetyhook::create_inline(pLegalScreen->ShouldShow, UUI_LegalScreen::ShouldShow);
+                            break;
+                        }
                     }
                 }
             }
-        }; injector::MakeInline<ProcessPlayerWeaponHook>(pattern.get_first(0), pattern.get_first(6));
+        }
+    }
+
+    if (bSkipMenu)
+    {
+        static uint8_t* gGameState = utility::GetSymbolFromFuncStart<decltype(gGameState)>("SaveGameForPause failed with state 3", [](INSTRUX& ix) { return ix.Instruction == ND_INS_MOV && ix.Operands[0].Type == ND_OP_MEM && ix.Operands[1].Type == ND_OP_IMM && ix.Operands[1].Info.Immediate.Imm == GS_PLAYING_GAME; });
+        static char(*USanAndreasInterfaceResumeGameFromMenu)(void*) = nullptr;
+        static void* CGenericGameStorageCheckSlotDataValid = nullptr;
+
+        auto s = utility::scan_string(utility::get_executable(), L"GTA3sf%d", true);
+        if (s)
+        {
+            auto xrefs = utility::scan_displacement_references(utility::get_executable(), s.value());
+            for (auto& it2 : xrefs)
+            {
+                INSTRUX ix{};
+                auto ip = it2 + 4;
+
+                const auto decoded_xor = utility::decode_one((uint8_t*)ip);
+                if (decoded_xor->Instruction == ND_INS_XOR)
+                {
+                    const auto decoded_cmp = utility::decode_one((uint8_t*)ip + decoded_xor->Length);
+
+                    if (decoded_cmp->Instruction == ND_INS_CMP && decoded_cmp->Operands[1].Type == ND_OP_IMM && decoded_cmp->Operands[1].Info.Immediate.Imm == 0xffffffffffffffff)
+                    {
+                        auto start = utility::find_function_start(ip);
+                        if (start)
+                        {
+                            CGenericGameStorageCheckSlotDataValid = reinterpret_cast<void*>(start.value());
+                            break;
+                        }
+                    }
+                }
+
+                if (CGenericGameStorageCheckSlotDataValid)
+                    break;
+            }
+        }
+
+        if (CGenericGameStorageCheckSlotDataValid)
+        {
+            auto xrefs = utility::scan_displacement_references(utility::get_executable(), (uintptr_t)CGenericGameStorageCheckSlotDataValid);
+            for (auto& it : xrefs)
+            {
+                auto start = utility::find_function_start(it);
+                if (start)
+                {
+                    INSTRUX ix{};
+                    auto ip = start.value();
+
+                    while (true)
+                    {
+                        const auto status = NdDecodeEx(&ix, (ND_UINT8*)ip, 1000, ND_CODE_64, ND_DATA_64);
+
+                        if (!ND_SUCCESS(status)) {
+                            break;
+                        }
+
+                        if (ix.Instruction == ND_INS_CMP && ix.Operands[0].Type == ND_OP_MEM && ix.Operands[1].Type == ND_OP_IMM && ix.Operands[1].Info.Immediate.Imm == GS_PLAYING_GAME)
+                        {
+                            if (ip < it)
+                            {
+                                auto disp = utility::resolve_displacement(ip);
+                                if (disp && disp.value() == (uintptr_t)gGameState)
+                                {
+                                    auto start = utility::find_function_start(ip);
+                                    if (start)
+                                    {
+                                        if (!utility::find_function_start_with_call(start.value()).has_value())
+                                        {
+                                            USanAndreasInterfaceResumeGameFromMenu = reinterpret_cast<decltype(USanAndreasInterfaceResumeGameFromMenu)>(start.value());
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        ip += ix.Length;
+                    }
+                }
+            }
+        }
+
+        static uint8_t* byte_144D961B4 = utility::GetSymbolFromFuncStart<decltype(gGameState)>(L"SocialClubSignIn", [](INSTRUX& ix) { return ix.Instruction == ND_INS_MOVZX && ix.Operands[0].Type == ND_OP_REG && ix.Operands[1].Type == ND_OP_MEM; });
+
+        if (gGameState && USanAndreasInterfaceResumeGameFromMenu && byte_144D961B4)
+        {
+            auto strref = utility::find_virtual_function_from_string_ref(utility::get_executable(), L"open /game/Maps/MainMenu", false);
+            if (strref)
+            {
+                static safetyhook::MidHook USanAndreasInterfaceUpdateHook = {};
+                USanAndreasInterfaceUpdateHook = safetyhook::create_mid(strref.value(), [](SafetyHookContext& regs)
+                {
+                    if (*gGameState == 7 && (*byte_144D961B4 & 2) != 0)
+                    {
+                        USanAndreasInterfaceResumeGameFromMenu((void*)regs.rcx);
+                    }
+                    else if(*gGameState > 7)
+                    {
+                        USanAndreasInterfaceUpdateHook = {};
+                    }
+                });
+            }
+        }
+    }
+
+    ScriptSpace = utility::GetSymbolFromFuncStart<decltype(ScriptSpace)>("main.scm", [](INSTRUX& ix) { return ix.Instruction == ND_INS_LEA && ix.Operands[0].Type == ND_OP_REG && ix.Operands[1].Type == ND_OP_MEM; });
+    OnAMissionFlag = utility::GetSymbolFromFuncStart<decltype(OnAMissionFlag)>("ENDSUBM", [](INSTRUX& ix) { return ix.Instruction == ND_INS_MOV && ix.Operands[0].Type == ND_OP_REG && ix.Operands[1].Type == ND_OP_MEM; });
+    static void (*CHud_SetHelpMessage)(FString* a1, char a2) = nullptr;
+    static void(*SaveToSlot)(int) = nullptr;
+    static uintptr_t Slot = 0;
+
+    auto WANT_B = utility::find_function_from_string_ref(utility::get_executable(), "WANT_B", true);
+    if (WANT_B)
+    {
+        auto SetHelpMessageStrRef = utility::find_function_start_with_call(WANT_B.value());
+        if (SetHelpMessageStrRef)
+        {
+            CHud_SetHelpMessage = reinterpret_cast<decltype(CHud_SetHelpMessage)>(SetHelpMessageStrRef.value());
+
+            auto SaveGameForPause = utility::find_function_from_string_ref(utility::get_executable(), "Done with SaveGameForPause", true);
+            if (SaveGameForPause)
+            {
+                SaveToSlot = reinterpret_cast<decltype(SaveToSlot)>(SaveGameForPause.value());
+
+                INSTRUX ix{};
+                auto ip = (uintptr_t)SaveToSlot;
+
+                while (true)
+                {
+                    const auto status = NdDecodeEx(&ix, (ND_UINT8*)ip, 1000, ND_CODE_64, ND_DATA_64);
+
+                    if (!ND_SUCCESS(status)) {
+                        break;
+                    }
+
+                    if (ix.Instruction == ND_INS_MOV && ix.Operands[0].Type == ND_OP_REG && ix.Operands[1].Type == ND_OP_IMM && ix.Operands[1].Info.Immediate.Imm == 8)
+                    {
+                        Slot = ip + ix.Imm1Offset;
+                        break;
+                    }
+
+                    ip += ix.Length;
+                }
+            }
+
+            if (Slot && SaveToSlot)
+            {
+                auto DrawMessages = utility::find_function_from_string_ref(utility::get_executable(), "::MCLOCK::%d:%02d", true);
+                if (DrawMessages)
+                {
+                    auto DrawMessagesStart = utility::find_function_start_with_call(DrawMessages.value());
+                    if (DrawMessagesStart)
+                    {
+                        static auto DrawMessagesHook = safetyhook::create_mid(DrawMessagesStart.value(), [](SafetyHookContext& regs)
+                        {
+                            static bool bF5LastState = false;
+                            bool bF5CurState = GetKeyState(VK_F5) & 0x8000;
+
+                            if (!bF5LastState && bF5CurState)
+                            {
+                                if (!IsPlayerOnAMission())
+                                {
+                                    injector::WriteMemory<uint32_t>(Slot, 5, true);
+                                    SaveToSlot(nIniSaveSlot);
+                                    injector::WriteMemory<uint32_t>(Slot, 8, true);
+
+                                    FString test;
+                                    test.Data = const_cast<wchar_t*>(L"FESZ_L1");
+                                    test.Max = *test.Data ? int(std::wcslen(test.Data)) + 1 : 0;
+                                    test.Count = test.Max;
+
+                                    CHud_SetHelpMessage(&test, 0);
+                                }
+                            }
+
+                            bF5LastState = bF5CurState;
+                        });
+                    }
+                }
+            }
+        }
     }
 
     if (fHudScale != 1.0f || fRadarScale != 1.0f)
     {
-        pattern = hook::pattern("E8 ? ? ? ? E9 ? ? ? ? 48 8D 45 90");
-        injector::MakeCALLTrampoline(pattern.get_first(0), vscanf_hook, true);
+        auto str = utility::scan_string(utility::get_executable(), "%s %f %f %f %f %s %s", true);
+        if (str)
+        {
+            auto strref = utility::scan_reference(utility::get_executable(), str.value());
+
+            INSTRUX ix{};
+            auto ip = strref.value();
+
+            while (true)
+            {
+                const auto status = NdDecodeEx(&ix, (ND_UINT8*)ip, 100, ND_CODE_64, ND_DATA_64);
+
+                if (!ND_SUCCESS(status)) {
+                    break;
+                }
+
+                if (ix.Instruction == ND_INS_CALLNR)
+                {
+                    injector::MakeCALLTrampoline(ip, vscanf_hook, true);
+                    break;
+                }
+
+                ip += ix.Length;
+            }
+        }
+    }
+
+    if (bIniDisableFirstPersonAimForRifles)
+    {
+        auto pattern = hook::pattern("48 03 E8 8D 47");
+        if (!pattern.empty())
+        {
+            struct ProcessPlayerWeaponHook
+            {
+                void operator()(injector::reg_pack& regs)
+                {
+                    regs.rbp += regs.rax;
+                    regs.rax = regs.rdi - 6;
+
+                    if (regs.rdi)
+                    {
+                        enum eWeaponType
+                        {
+                            WEAPONTYPE_AK47 = 5,
+                            WEAPONTYPE_M16 = 6
+                        };
+
+                        switch (regs.rdi)
+                        {
+                        case WEAPONTYPE_AK47:
+                        case WEAPONTYPE_M16:
+                            regs.rax = INT_MAX;
+                            break;
+                        default:
+                            break;
+                        }
+                    }
+                }
+            }; injector::MakeInline<ProcessPlayerWeaponHook>(pattern.get_first(0), pattern.get_first(6));
+        }
+    }
+
+    if (bImproveCameraPC)
+    {
+        auto pGetRawInputData = utility::scan_ptr(utility::get_executable(), (uintptr_t)GetRawInputData);
+        if (pGetRawInputData)
+        {
+            auto pGetRawInputDataRef = utility::scan_displacement_reference(utility::get_executable(), pGetRawInputData.value());
+            if (pGetRawInputDataRef)
+            {
+                auto pWndProc = utility::find_function_start_with_call(pGetRawInputDataRef.value());
+                if (pWndProc)
+                {
+                    shWndProc = safetyhook::create_inline(pWndProc.value(), CustomWndProc);
+                }
+            }
+        }
+
+        auto str = utility::scan_string(utility::get_executable(), "Unimplemented GTA3::CRenderer::RequestObjectsInFrustum", true);
+        if (str)
+        {
+            auto strref = utility::scan_reference(utility::get_executable(), str.value());
+
+            if (strref)
+            {
+                auto disasm = utility::get_disassembly_behind(strref.value());
+
+                auto it = std::find_if(disasm.rbegin(), disasm.rend(), [](auto& op) {
+                    return op.instrux.Instruction == ND_INS_CALLNR;
+                });
+
+                if (it != disasm.rend())
+                {
+                    auto res = utility::resolve_displacement(it->addr);
+                    if (res)
+                    {
+                        static auto CCameraProcessHook = safetyhook::create_mid(res.value(), [](SafetyHookContext& regs)
+                        {
+                            LockCursor();
+                        });
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -189,7 +499,7 @@ CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
-        CallbackHandler::RegisterCallback(Init, hook::pattern("E8 ? ? ? ? 0F B7 C5 41 B8"));
+        CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init);
     });
 }
 

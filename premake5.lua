@@ -275,17 +275,17 @@ group "Win64/GrandTheftAuto"
 project "GTA3DE.FusionMod"
    platforms { "Win64" }
    architecture "x64"
-   add_asmjit()
+   add_kananlib()
    setpaths("Z:/WFP/Games/Grand Theft Auto The Definitive Edition/GTA III - Definitive Edition/", "Gameface/Binaries/Win64/LibertyCity.exe", "Gameface/Binaries/Win64/scripts/")
 project "GTAVCDE.FusionMod"
    platforms { "Win64" }
    architecture "x64"
-   add_asmjit()
+   add_kananlib()
    setpaths("Z:/WFP/Games/Grand Theft Auto The Definitive Edition/GTA Vice City - Definitive Edition/", "Gameface/Binaries/Win64/ViceCity.exe", "Gameface/Binaries/Win64/scripts/")
 project "GTASADE.FusionMod"
    platforms { "Win64" }
    architecture "x64"
-   add_asmjit()
+   add_kananlib()
    setpaths("Z:/WFP/Games/Grand Theft Auto The Definitive Edition/GTA San Andreas - Definitive Edition/", "Gameface/Binaries/Win64/SanAndreas.exe", "Gameface/Binaries/Win64/scripts/")
 group "Win64"
 
