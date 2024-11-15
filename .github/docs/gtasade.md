@@ -1,7 +1,10 @@
 ![gtasade](https://thirteenag.github.io/screens/gtasade/main2.jpg)
 
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Skip Intro.
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Skip Menu.
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Adds an ability to quicksave anywhere by pressing F5.
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Adds an ability to resize HUD.
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Adds an ability to fix bugged mouse camera movement.
 
     Installation:
         Download and extract the archive to the game directory, where the exe is located.
