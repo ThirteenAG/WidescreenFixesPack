@@ -91,6 +91,14 @@ LRESULT CustomWndProc(void* _this, HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM l
     return res;
 }
 
+bool bIsDefaultWidget = false;
+SafetyHookInline shParseWidgetPositionLineFromFile{};
+void ParseWidgetPositionLineFromFile(const char* widget, char bDefault)
+{
+    bIsDefaultWidget = bDefault;
+    shParseWidgetPositionLineFromFile.fastcall(widget, bDefault);
+}
+
 int vscanf_hook(char* Buffer, char* Format, ...)
 {
     std::string temp;
@@ -99,6 +107,8 @@ int vscanf_hook(char* Buffer, char* Format, ...)
     {
         std::string PositionAndScale(255, '\0');
         float OriginX, OriginY, ScaleX, ScaleY;
+        static float rOriginX2, rOriginY2, rScaleX2, rScaleY2;
+        static float pOriginX2, pOriginY2, pScaleX2, pScaleY2;
         std::string Separator(255, '\0');
         std::string Name(255, '\0');
         auto r = sscanf(Buffer, Format, PositionAndScale.data(), &OriginX, &OriginY, &ScaleX, &ScaleY, Separator.data(), Name.data());
@@ -106,6 +116,21 @@ int vscanf_hook(char* Buffer, char* Format, ...)
         {
             if (buf.contains("WIDGET_POSITION_PLAYER_INFO"))
             {
+                if (bIsDefaultWidget)
+                {
+                    pOriginX2 = OriginX;
+                    pOriginY2 = OriginY;
+                    pScaleX2 = ScaleX;
+                    pScaleY2 = ScaleY;
+                }
+                else
+                {
+                    OriginX = pOriginX2;
+                    OriginY = pOriginY2;
+                    ScaleX = pScaleX2;
+                    ScaleY = pScaleY2;
+                }
+
                 OriginX = OriginX + (ScaleX - (ScaleX * fHudScale));
                 OriginY = OriginY - (ScaleY - (ScaleY * fHudScale));
                 ScaleX *= fHudScale;
@@ -113,6 +138,21 @@ int vscanf_hook(char* Buffer, char* Format, ...)
             } 
             else if (buf.contains("WIDGET_POSITION_RADAR"))
             {
+                if (bIsDefaultWidget)
+                {
+                    rOriginX2 = OriginX;
+                    rOriginY2 = OriginY;
+                    rScaleX2 = ScaleX;
+                    rScaleY2 = ScaleY;
+                }
+                else
+                {
+                    OriginX = rOriginX2;
+                    OriginY = rOriginY2;
+                    ScaleX = rScaleX2;
+                    ScaleY = rScaleY2;
+                }
+
                 OriginX = OriginX - (ScaleX - (ScaleX * fRadarScale));
                 OriginY = OriginY + (ScaleY - (ScaleY * fRadarScale));
                 ScaleX *= fRadarScale;
@@ -387,24 +427,33 @@ void Init()
         {
             auto strref = utility::scan_reference(utility::get_executable(), str.value());
 
-            INSTRUX ix{};
-            auto ip = strref.value();
-
-            while (true)
+            if (strref)
             {
-                const auto status = NdDecodeEx(&ix, (ND_UINT8*)ip, 100, ND_CODE_64, ND_DATA_64);
-
-                if (!ND_SUCCESS(status)) {
-                    break;
-                }
-
-                if (ix.Instruction == ND_INS_CALLNR)
+                auto start = utility::find_function_start_with_call(strref.value());
+                if (start)
                 {
-                    injector::MakeCALLTrampoline(ip, vscanf_hook, true);
-                    break;
-                }
+                    shParseWidgetPositionLineFromFile = safetyhook::create_inline(start.value(), ParseWidgetPositionLineFromFile);
 
-                ip += ix.Length;
+                    INSTRUX ix{};
+                    auto ip = strref.value();
+
+                    while (true)
+                    {
+                        const auto status = NdDecodeEx(&ix, (ND_UINT8*)ip, 100, ND_CODE_64, ND_DATA_64);
+
+                        if (!ND_SUCCESS(status)) {
+                            break;
+                        }
+
+                        if (ix.Instruction == ND_INS_CALLNR)
+                        {
+                            injector::MakeCALLTrampoline(ip, vscanf_hook, true);
+                            break;
+                        }
+
+                        ip += ix.Length;
+                    }
+                }
             }
         }
     }
