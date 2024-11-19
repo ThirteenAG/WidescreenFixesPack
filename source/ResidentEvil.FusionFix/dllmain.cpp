@@ -605,8 +605,8 @@ void Init()
 
     if (bUnlockFPS)
     {
-        auto pattern = hook::pattern("00 00 F0 42 EB 39 6A 01");
-        injector::WriteMemory(pattern.get_first(), 1000.0f, true);
+        auto pattern = hook::pattern("C7 40 ? ? ? ? ? EB ? 6A 01");
+        injector::WriteMemory(pattern.get_first(3), 1000.0f, true);
     }
 }
 
