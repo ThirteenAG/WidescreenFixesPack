@@ -188,6 +188,29 @@ int vscanf_hook(char* Buffer, char* Format, ...)
     return result;
 }
 
+bool bIsFollowPed = false;
+SafetyHookInline shProcess_AimWeapon{};
+void Process_AimWeapon(void* cam, const void* ThisCamsTarget, float TargetOrientation, float SpeedVar, float SpeedVarDesired)
+{
+    bIsFollowPed = false;
+    shProcess_AimWeapon.fastcall(cam, ThisCamsTarget, TargetOrientation, SpeedVar, SpeedVarDesired);
+}
+
+uintptr_t TheCamera;
+SafetyHookInline shProcess_FollowPed_SA{};
+void Process_FollowPed_SA(void* cam, const void* ThisCamsTarget, float TargetOrientation, float SpeedVar, float SpeedVarDesired, bool bScriptSetAngles)
+{
+    uint8_t m_bFading = 0;
+    if (TheCamera)
+        m_bFading = *(uint8_t*)(TheCamera + 0x55);
+
+    bIsFollowPed = true;
+    if (bScriptSetAngles || m_bFading)
+        return shProcess_FollowPed_SA.fastcall(cam, ThisCamsTarget, TargetOrientation, SpeedVar, SpeedVarDesired, bScriptSetAngles);
+    else
+        return shProcess_AimWeapon.fastcall(cam, ThisCamsTarget, TargetOrientation, SpeedVar, SpeedVarDesired);
+}
+
 void Init()
 {
     CIniReader iniReader("");
@@ -197,6 +220,7 @@ void Init()
     fHudScale = iniReader.ReadFloat("MAIN", "HudScale", 0.8f);
     fRadarScale = iniReader.ReadFloat("MAIN", "RadarScale", 0.75f);
     static auto bImproveCameraPC = iniReader.ReadInteger("MAIN", "ImproveCameraPC", 1) != 0;
+    static auto fCenteringDelay = iniReader.ReadFloat("MAIN", "CenteringDelay", 5.0f);
     if (fHudScale <= 0.0f) 
         fHudScale = 1.0f;
     if (fRadarScale <= 0.0f) 
@@ -357,6 +381,7 @@ void Init()
         }
     }
 
+    static float* fTimeStep = utility::GetSymbolFromFuncStart<decltype(fTimeStep)>("tank_fire", [](INSTRUX& ix) { return ix.Instruction == ND_INS_MOVSS; });
     ScriptSpace = utility::GetSymbolFromFuncStart<decltype(ScriptSpace)>("mainV1.scm", [](INSTRUX& ix) { return ix.Instruction == ND_INS_LEA && ix.Operands[0].Type == ND_OP_REG && ix.Operands[1].Type == ND_OP_MEM; });
     OnAMissionFlag = utility::GetSymbolFromFuncStart<decltype(OnAMissionFlag)>("GW_ATK", [](INSTRUX& ix) { return ix.Instruction == ND_INS_MOV && ix.Operands[0].Type == ND_OP_REG && ix.Operands[1].Type == ND_OP_MEM; });
     m_WideScreenOn = utility::GetSymbolFromFuncStart<decltype(m_WideScreenOn)>("%02d:%02d", [](INSTRUX ix) { return ix.Instruction == ND_INS_CMP && ix.Operands[0].Type == ND_OP_MEM && ix.Operands[1].Type == ND_OP_IMM; });
@@ -484,6 +509,9 @@ void Init()
 
     if (bImproveCameraPC)
     {
+        uintptr_t CCameraProcess = 0;
+        uintptr_t CCamProcess = 0;
+
         auto pGetRawInputData = utility::scan_ptr(utility::get_executable(), (uintptr_t)GetRawInputData);
         if (pGetRawInputData)
         {
@@ -530,10 +558,7 @@ void Init()
                             auto disp = utility::resolve_displacement(ip);
                             if (disp)
                             {
-                                static auto CCameraProcessHook = safetyhook::create_mid(disp.value(), [](SafetyHookContext& regs)
-                                {
-                                    LockCursor();
-                                });
+                                CCameraProcess = disp.value();
                                 break;
                             }
                         }
@@ -543,6 +568,230 @@ void Init()
 
                     ip += ix.Length;
                 }
+            }
+        }
+
+        INSTRUX ix{};
+        auto ip = CCameraProcess;
+        auto nextCall = false;
+
+        while (true)
+        {
+            const auto status = NdDecodeEx(&ix, (ND_UINT8*)ip, 1000, ND_CODE_64, ND_DATA_64);
+
+            if (!ND_SUCCESS(status)) {
+                break;
+            }
+
+            if (!nextCall)
+            {
+                if (ix.Instruction == ND_INS_LEA && ix.DispLength == 4)
+                {
+                    if (injector::ReadMemory<uint32_t>(ip + ix.DispOffset, true) == 0x188)
+                    {
+                        nextCall = true;
+                    }
+                }
+            }
+            else if (ix.Instruction == ND_INS_CALLNR)
+            {
+                auto disp = utility::resolve_displacement(ip);
+                if (disp)
+                {
+                    CCamProcess = disp.value();
+                    break;
+                }
+            }
+
+            ip += ix.Length;
+        }
+
+        static uintptr_t shProcess_FollowCar_SA = 0;
+        static auto CCameraProcessHook = safetyhook::create_mid(CCameraProcess, [](SafetyHookContext& regs)
+        {
+            TheCamera = regs.rcx;
+            LockCursor();
+        });
+
+        if (CCamProcess)
+        {
+            INSTRUX ix{};
+            auto ip = CCamProcess;
+            auto caseCount = 0;
+            auto nextCall = false;
+
+            while (true)
+            {
+                const auto status = NdDecodeEx(&ix, (ND_UINT8*)ip, 1000, ND_CODE_64, ND_DATA_64);
+            
+                if (!ND_SUCCESS(status)) {
+                    break;
+                }
+            
+                if (ix.Instruction == ND_INS_MOV && ix.Operands[0].Type == ND_OP_REG && ix.Operands[0].Info.Register.Reg == 1 && ix.Operands[1].Type == ND_OP_REG && ix.Operands[1].Info.Register.Reg == 7)
+                {
+                    caseCount++;
+                    nextCall = true;
+                }
+                else if (nextCall && ix.Instruction == ND_INS_CALLNR)
+                {
+                    if (caseCount == 1) //cases 3,18,22 CCam::Process_FollowCar_SA
+                    {
+                        auto disp = utility::resolve_displacement(ip);
+                        if (disp)
+                            shProcess_FollowCar_SA = disp.value();
+                    }
+                    else if (caseCount == 2) //case 4 CCam::Process_FollowPed_SA
+                    {
+                        auto disp = utility::resolve_displacement(ip);
+                        if (disp)
+                            shProcess_FollowPed_SA = safetyhook::create_inline(disp.value(), Process_FollowPed_SA);
+                    }
+                    else if (caseCount == 6) //cases 53,55,65 CCam::Process_AimWeapon
+                    {
+                        auto disp = utility::resolve_displacement(ip);
+                        if (disp)
+                        {
+                            shProcess_AimWeapon = safetyhook::create_inline(disp.value(), Process_AimWeapon);
+                            break;
+                        }
+                    }
+                    nextCall = false;
+                }
+            
+                ip += ix.Length;
+            }
+        }
+
+        static int* nPedZoom = utility::GetSymbolFromFuncStart<decltype(nPedZoom)>(shProcess_FollowPed_SA.target_address(), [](INSTRUX ix) { return ix.Instruction == ND_INS_CMP && ix.Operands[0].Type == ND_OP_MEM && ix.Operands[1].Type == ND_OP_IMM && ix.Operands[1].Info.Immediate.Imm == 3; });
+        if (nPedZoom)
+        {
+            INSTRUX ix{};
+            auto ip = shProcess_AimWeapon.target_address();
+            auto movssCount = 0;
+
+            while (true)
+            {
+                const auto status = NdDecodeEx(&ix, (ND_UINT8*)ip, 1000, ND_CODE_64, ND_DATA_64);
+
+                if (!ND_SUCCESS(status)) {
+                    break;
+                }
+
+                if (ix.Instruction == ND_INS_CMP && ix.HasDisp && ix.Operands[0].Type == ND_OP_MEM && ix.Operands[1].Type == ND_OP_REG && ix.Operands[1].Info.Register.Reg == 13)
+                {
+                    static auto AimCamSetFOVHook = safetyhook::create_mid(ip, [](SafetyHookContext& regs)
+                    {
+                        if (bIsFollowPed)
+                        {
+                            regs.r15 = 1;
+
+                            switch (*nPedZoom)
+                            {
+                            case 0:
+                                regs.xmm0.f32[0] = 60.0f;
+                                break;
+                            case 1:
+                                regs.xmm0.f32[0] = 70.0f;
+                                break;
+                            case 2:
+                                regs.xmm0.f32[0] = 80.0f;
+                                break;
+                            case 3:
+                                regs.xmm0.f32[0] = 90.0f;
+                                break;
+                            default:
+                                regs.xmm0.f32[0] = 70.0f;
+                                break;
+                            }
+                        }
+                    });
+                }
+                else if (ix.Instruction == ND_INS_MOVSS && ix.DispLength == 4)
+                {
+                    if (injector::ReadMemory<uint32_t>(ip + ix.DispOffset, true) == 0x788)
+                    {
+                        if (movssCount == 1)
+                        {
+                            injector::MakeNOP(ip, 8, true);
+                            static auto Heading = safetyhook::create_mid(ip, [](SafetyHookContext& regs)
+                            {
+                                if (!bIsFollowPed)
+                                    *(float*)(regs.rbx + 0x788) = regs.xmm0.f32[0];
+                            });
+                            break;
+                        }
+                        movssCount++;
+                    }
+                }
+
+                ip += ix.Length;
+            }
+        }
+
+        //Process_FollowCar_SA
+        auto pattern = hook::pattern("F3 0F 11 4E ? 44 0F 28 C1");
+        if (!pattern.empty())
+            injector::MakeNOP(pattern.get_first(), 5, true);
+
+        pattern = hook::pattern("F3 44 0F 11 46 ? EB");
+        if (!pattern.empty())
+            injector::MakeNOP(pattern.get_first(), 6, true);
+
+        pattern = hook::pattern("44 89 76 ? 45 0F 28 C5");
+        if (!pattern.empty())
+            injector::MakeNOP(pattern.get_first(), 4, true);
+
+        pattern = hook::pattern("F3 41 0F 59 BC 1F ? ? ? ? E8");
+        if (!pattern.empty())
+            injector::MakeNOP(pattern.get_first(), 10, true);
+
+        constexpr float fThreshold = 0.00f; // originally 0.01
+        static float fTimer = 0.0f;
+        static float fAimWeaponUpDown = 0.0f;
+        pattern = hook::pattern("F3 0F 59 3D ? ? ? ? 41 0F 2F FD");
+        if (!pattern.empty())
+        {
+            static auto FollowCarHook1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            {
+                fAimWeaponUpDown = regs.xmm0.f32[0];
+                constexpr float timeScale = 0.02f;
+
+                float nextTimer = fabs(fAimWeaponUpDown) > fThreshold ? fCenteringDelay : fTimer;
+
+                if (fTimer >= 0.0f)
+                {
+                    fTimer = fmaxf(nextTimer - *fTimeStep * timeScale, 0.0f);
+                }
+            });
+
+            pattern = hook::pattern("F3 0F 11 46 ? 76 ? F3 44 0F 59 05");
+            if (!pattern.empty())
+            {
+                injector::MakeNOP(pattern.get_first(), 5, true);
+                static auto FollowCarHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+                {
+                    *(float*)(regs.rsi + 0x4) = fAimWeaponUpDown * 2.0f; // idk why 2.0, whatever
+                });
+
+                // x axis delay
+                pattern = hook::pattern("44 0F 29 58 ? 45 0F 57 DB 44 0F 29 60 ? 48 89 58");
+                static auto ComputeCarBetaAngleHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+                {
+                    regs.xmm10.f32[0] = 1.0f * fCenteringDelay;
+                });
+
+                // y axis delay
+                pattern = hook::pattern("F3 0F 11 36 F3 44 0F 58 F0");
+                injector::MakeNOP(pattern.get_first(), 4, true);
+                static auto targetAlphaBlendAmount = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+                {
+                    if (fTimer <= 0.0f || fabs(fAimWeaponUpDown) > fThreshold)
+                        *(float*)regs.rsi = regs.xmm6.f32[0];
+                    else
+                        regs.xmm14.f32[0] = *(float*)regs.rsi;
+                });
+
             }
         }
     }
