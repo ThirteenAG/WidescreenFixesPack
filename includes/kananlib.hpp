@@ -60,6 +60,58 @@ namespace utility {
         return T{};
     }
 
+    template<class T, class UnaryPred>
+    static T GetSymbolFromFuncStart(uintptr_t ip, UnaryPred predicate)
+    {
+        INSTRUX ix{};
+
+        while (ip)
+        {
+            const auto status = NdDecodeEx(&ix, (ND_UINT8*)ip, 1000, ND_CODE_64, ND_DATA_64);
+
+            if (!ND_SUCCESS(status)) {
+                break;
+            }
+
+            if (predicate(ix))
+            {
+                auto disp = utility::resolve_displacement(ip);
+                if (disp)
+                {
+                    return reinterpret_cast<T>(disp.value());
+                    break;
+                }
+            }
+
+            ip += ix.Length;
+        }
+        return T{};
+    }
+
+    template<class T, class UnaryPred>
+    static T GetAddrFromFuncStart(uintptr_t ip, UnaryPred predicate)
+    {
+        INSTRUX ix{};
+
+        while (ip)
+        {
+            const auto status = NdDecodeEx(&ix, (ND_UINT8*)ip, 1000, ND_CODE_64, ND_DATA_64);
+
+            if (!ND_SUCCESS(status)) {
+                break;
+            }
+
+            if (predicate(ix))
+            {
+                return reinterpret_cast<T>(ip);
+                break;
+            }
+
+            ip += ix.Length;
+        }
+        return T{};
+    }
+
     template<class T, class S>
     static T GetFunctionCallAfterStringParam(S& str, int callnum = 0)
     {
