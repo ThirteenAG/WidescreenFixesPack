@@ -43,7 +43,7 @@ namespace UUI_LegalScreen
 HWND ghWnd;
 void LockCursor()
 {
-    if (ghWnd == GetFocus())
+    if (ghWnd == GetForegroundWindow())
     {
         RECT windowRect;
         POINT pt = { 0, 0 };
@@ -469,7 +469,7 @@ void Init()
         }
     }
 
-    if (fHudScale != 1.0f || fRadarScale != 1.0f)
+    //if (fHudScale != 1.0f || fRadarScale != 1.0f)
     {
         auto str = utility::scan_string(utility::get_executable(), "%s %f %f %f %f %s %s", true);
         if (str)
@@ -782,6 +782,20 @@ void Init()
                 });
 
                 // y axis delay
+                pattern = hook::pattern("F3 0F 10 46 ? 0F 57 C9 F3 41 0F 10 CA");
+                static auto Alpha = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+                {
+                    if (fTimer <= 0.0f || fabs(fAimWeaponUpDown) > fThreshold)
+                    {
+
+                    }
+                    else
+                    {
+                        *(float*)regs.rsi = regs.xmm1.f32[0];
+                        regs.xmm10.f32[0] = regs.xmm1.f32[0];
+                    }
+                });
+
                 pattern = hook::pattern("F3 0F 11 36 F3 44 0F 58 F0");
                 injector::MakeNOP(pattern.get_first(), 4, true);
                 static auto targetAlphaBlendAmount = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
@@ -791,7 +805,6 @@ void Init()
                     else
                         regs.xmm14.f32[0] = *(float*)regs.rsi;
                 });
-
             }
         }
     }
