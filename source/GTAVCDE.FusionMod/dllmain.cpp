@@ -42,7 +42,7 @@ namespace UUI_LegalScreen
 HWND ghWnd;
 void LockCursor()
 {
-    if (ghWnd == GetFocus())
+    if (ghWnd == GetForegroundWindow())
     {
         RECT windowRect;
         POINT pt = { 0, 0 };
@@ -420,7 +420,7 @@ void Init()
         }
     }
 
-    if (fHudScale != 1.0f || fRadarScale != 1.0f)
+    //if (fHudScale != 1.0f || fRadarScale != 1.0f)
     {
         auto str = utility::scan_string(utility::get_executable(), "%s %f %f %f %f %s %s", true);
         if (str)
