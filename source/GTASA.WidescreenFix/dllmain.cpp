@@ -16,6 +16,7 @@ float fDefaultWidth;
 float fDefaultCoords;
 float fFrontendDefaultWidth;
 bool bProportionalWeaponIcon = false;
+bool bEnableSCMDrawingFixes = true;
 
 void ReadSettings()
 {
@@ -33,6 +34,7 @@ void ReadSettings()
     fRadarHeightScale = iniReader.ReadFloat("MAIN", "RadarHeightScale", 0.0f); fRadarHeightScale == 0.0f ? fRadarHeightScale = 1.0f : fRadarHeightScale;
     fSubtitlesScale = iniReader.ReadFloat("MAIN", "SubtitlesScale", 0.0f); fSubtitlesScale == 0.0f ? fSubtitlesScale = 1.0f : fSubtitlesScale;
     bProportionalWeaponIcon = iniReader.ReadInteger("MAIN", "ProportionalWeaponIcon", 0) != 0;
+    bEnableSCMDrawingFixes = iniReader.ReadInteger("MAIN", "EnableSCMDrawingFixes", 1) != 0;
 
     bSmartCutsceneBorders = iniReader.ReadInteger("MISC", "SmartCutsceneBorders", 1) != 0;
     bAllowAltTabbingWithoutPausing = iniReader.ReadInteger("MISC", "AllowAltTabbingWithoutPausing", 0) != 0;
@@ -667,26 +669,29 @@ void __stdcall DrawWindowHook(CRect *rect, char *titleKey, char fadeState, CRGBA
 
 void InstallSCMDrawingFixes()
 {
-    hbDrawRect.fun = injector::MakeCALL(0x464A53, DrawRectHook).get();
-    injector::MakeCALL(0x464A53, DrawRectHook);
+    if (bEnableSCMDrawingFixes)
+    {
+        hbDrawRect.fun = injector::MakeCALL(0x464A53, DrawRectHook).get();
+        injector::MakeCALL(0x464A53, DrawRectHook);
 
-    hbDraw.fun = injector::MakeCALL(0x464A90, DrawSpriteHook).get();
-    injector::MakeCALL(0x464A90, DrawSpriteHook);
+        hbDraw.fun = injector::MakeCALL(0x464A90, DrawSpriteHook).get();
+        injector::MakeCALL(0x464A90, DrawSpriteHook);
 
-    hbDraw2.fun = injector::MakeCALL(0x464B7F, DrawSpriteHook2).get();
-    injector::MakeCALL(0x464B7F, DrawSpriteHook2);
+        hbDraw2.fun = injector::MakeCALL(0x464B7F, DrawSpriteHook2).get();
+        injector::MakeCALL(0x464B7F, DrawSpriteHook2);
 
-    hbPrintString.fun = injector::MakeCALL(0x58C229, PrintStringHook).get();
-    injector::MakeCALL(0x58C229, PrintStringHook);
+        hbPrintString.fun = injector::MakeCALL(0x58C229, PrintStringHook).get();
+        injector::MakeCALL(0x58C229, PrintStringHook);
 
-    hbSetScale.fun = injector::MakeCALL(0x58C0E8, SetScaleHook).get();
-    injector::MakeCALL(0x58C0E8, SetScaleHook);
+        hbSetScale.fun = injector::MakeCALL(0x58C0E8, SetScaleHook).get();
+        injector::MakeCALL(0x58C0E8, SetScaleHook);
 
-    hbSetWrapx.fun = injector::MakeCALL(0x58C137, SetWrapxHook).get();
-    injector::MakeCALL(0x58C137, SetWrapxHook);
+        hbSetWrapx.fun = injector::MakeCALL(0x58C137, SetWrapxHook).get();
+        injector::MakeCALL(0x58C137, SetWrapxHook);
 
-    hbDrawWindow.fun = injector::MakeCALL(0x464A24, DrawWindowHook).get();
-    injector::MakeCALL(0x464A24, DrawWindowHook);
+        hbDrawWindow.fun = injector::MakeCALL(0x464A24, DrawWindowHook).get();
+        injector::MakeCALL(0x464A24, DrawWindowHook);
+    }
 }
 
 void InstallAspectRatioFixes()
