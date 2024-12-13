@@ -51,7 +51,7 @@ public:
                                                 const auto next_mov = utility::scan_mnemonic(*next_fn_call2, 100, "MOV");
                                                 if (next_mov)
                                                 {
-                                                    if (injector::ReadMemory<uint32_t>(*next_mov + 1, true) == 17 || injector::ReadMemory<uint32_t>(*next_mov + 1, true) == 18)
+                                                    if (injector::ReadMemory<uint8_t>(*next_mov + 1, true) == 1 || injector::ReadMemory<uint32_t>(*next_mov + 1, true) == 17 || injector::ReadMemory<uint32_t>(*next_mov + 1, true) == 18)
                                                     {
                                                         _SetIsThrottlerTempDisabled = (void(__fastcall*)(bool disable))(injector::GetBranchDestination(*next_fn_call2).as_int());
                                                         return _SetIsThrottlerTempDisabled(disable);
@@ -86,13 +86,14 @@ public:
                     const auto candidate_string = utility::scan_string(current_module, "Clear Cache");
                     if (candidate_string)
                     {
-                        auto candidate_stringref = utility::scan_displacement_reference(current_module, *candidate_string);
-                        if (candidate_stringref)
+                        auto candidate_stringref = utility::scan_displacement_references(current_module, *candidate_string);
+                        if (!candidate_stringref.empty())
                         {
-                            *candidate_stringref -= 4;
+                            auto ref = candidate_stringref.back();
+                            ref -= 4;
                             for (size_t i = 0; i < 100; ++i)
                             {
-                                const auto disp = utility::resolve_displacement(*candidate_stringref - i);
+                                const auto disp = utility::resolve_displacement(ref - i);
                                 if (disp)
                                 {
                                     _MenuBarClearCache = (void(__fastcall*)())*disp;
