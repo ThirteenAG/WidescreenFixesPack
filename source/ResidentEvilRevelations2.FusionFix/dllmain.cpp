@@ -147,7 +147,6 @@ enum GUI
     VirtualScreen = 0x141AC10
 };
 
-static IDirect3DDevice9* g_device = nullptr;
 static IDirect3DVertexShader9* g_screenVertexShader = nullptr;
 static IDirect3DPixelShader9* g_wmvYuvDecodePixelShader = nullptr;
 static IDirect3DVertexShader9* g_myScreenVertexShader = nullptr;
@@ -519,30 +518,13 @@ void __fastcall sub_B82960(void* _this, void* edx, float a2, float a3, float a4,
     return injector::fastcall<void(void*, void*, float, float, float, float)>::call(0xB82960, _this, edx, a2, a3, a4, a5);
 }
 
-void* vtableHook( void* vtbl, void* method, uintptr_t byteoffset )
-{
-  auto entry = *( (uintptr_t*)vtbl ) + byteoffset;
-  auto original = *( (uintptr_t*)entry );
-
-  DWORD oldProtect;
-  VirtualProtect( (LPVOID)entry, sizeof( entry ), PAGE_EXECUTE_READWRITE, &oldProtect );
-
-  *( (uintptr_t*)entry ) = (uintptr_t)method;
-
-  VirtualProtect( (LPVOID)entry, sizeof( entry ), oldProtect, &oldProtect );
-
-  return (void*)original;
-}
-
-uint32_t crc32( uint32_t crc, const void* buf, size_t size );
-
 //IDirect3DVertexShader9* shader_4F0EE939 = nullptr;
 IDirect3DVertexShader9* __stdcall CreateVertexShaderHook(const DWORD** a1)
 {
     if (!a1)
         return nullptr;
 
-    auto pDevice = (IDirect3DDevice9*)*( (uint32_t*)*(uint32_t*)0x15E0388 + 0x26 );
+    auto pDevice = (IDirect3DDevice9*)*((uint32_t*)*(uint32_t*)0x15E0388 + 0x26);
 
     IDirect3DVertexShader9* pShader = nullptr;
     pDevice->CreateVertexShader(a1[2], &pShader);
@@ -618,85 +600,87 @@ IDirect3DVertexShader9* __stdcall CreateVertexShaderHook(const DWORD** a1)
             {
                 pShaderData = (DWORD*)pCode->GetBufferPointer();
                 IDirect3DVertexShader9* shader = nullptr;
-                if ( pDevice->CreateVertexShader(pShaderData, &shader) == D3D_OK )
+                if (pDevice->CreateVertexShader(pShaderData, &shader) == D3D_OK)
                 {
                     pShader->Release();
                     return shader;
                 }
             }
         }
-        else if ( crc == 0x1287841D )
+        else if (crc == 0x1287841D)
         {
-          g_screenVertexShader = pShader;
+            g_screenVertexShader = pShader;
 
-          // inject additional, alternative screenspace shader for FMV fixups
-          constexpr auto src = R"(struct VS_INPUT {
-    float4 position : POSITION;
-};
+            // inject additional, alternative screenspace shader for FMV fixups
+            constexpr auto src = R"(
+            struct VS_INPUT {
+                float4 position : POSITION;
+            };
+            
+            struct VS_OUTPUT {
+                float4 position : POSITION;
+                float4 uv : TEXCOORD;
+            };
+            
+            float2 fScreenHalfPixelOffset : register(c1);
+            float fHorizontalAspectScale : register(c20);
+            
+            VS_OUTPUT main(VS_INPUT input)
+            {
+                VS_OUTPUT output;
+            
+                output.position = float4(
+                  -fScreenHalfPixelOffset.x + input.position.x * fHorizontalAspectScale,
+                  fScreenHalfPixelOffset.y + input.position.y,
+                  0.0,
+                  1.0);
+                output.uv = float4(
+                  1.0 * input.position.z,
+                  1.0 * input.position.w,
+                  0.0, 0.0
+                );
+            
+                return output;
+            })";
 
-struct VS_OUTPUT {
-    float4 position : POSITION;
-    float4 uv : TEXCOORD;
-};
-
-float2 fScreenHalfPixelOffset : register(c1);
-float fHorizontalAspectScale : register(c20);
-
-VS_OUTPUT main(VS_INPUT input)
-{
-    VS_OUTPUT output;
-
-    output.position = float4(
-      -fScreenHalfPixelOffset.x + input.position.x * fHorizontalAspectScale,
-      fScreenHalfPixelOffset.y + input.position.y,
-      0.0,
-      1.0);
-    output.uv = float4(
-      1.0 * input.position.z,
-      1.0 * input.position.w,
-      0.0, 0.0
-    );
-
-    return output;
-})";
-          LPD3DXBUFFER code;
-          if ( SUCCEEDED( D3DXCompileShader( src, strlen( src ), nullptr, nullptr, "main", "vs_3_0", NULL, &code, nullptr, nullptr ) ) )
-          {
-            pDevice->CreateVertexShader( reinterpret_cast<const DWORD*>( code->GetBufferPointer() ), &g_myScreenVertexShader );
-          }
+            LPD3DXBUFFER code;
+            if (SUCCEEDED(D3DXCompileShader(src, strlen(src), nullptr, nullptr, "main", "vs_3_0", NULL, &code, nullptr, nullptr)))
+            {
+                pDevice->CreateVertexShader(reinterpret_cast<const DWORD*>(code->GetBufferPointer()), &g_myScreenVertexShader);
+            }
         }
     }
 
     return pShader;
 }
 
-IDirect3DPixelShader9* __stdcall CreatePixelShaderHook( const DWORD** a1 )
+IDirect3DPixelShader9* __stdcall CreatePixelShaderHook(const DWORD** a1)
 {
-  if ( !a1 )
-    return nullptr;
+    if (!a1)
+        return nullptr;
 
-  auto pDevice = (IDirect3DDevice9*)*( (uint32_t*)*(uint32_t*)0x15E0388 + 0x26 );
+    auto pDevice = (IDirect3DDevice9*)*((uint32_t*)*(uint32_t*)0x15E0388 + 0x26);
 
-  IDirect3DPixelShader9* pShader = nullptr;
-  pDevice->CreatePixelShader( a1[2], &pShader );
+    IDirect3DPixelShader9* pShader = nullptr;
+    pDevice->CreatePixelShader(a1[2], &pShader);
 
-  if ( pShader != nullptr )
-  {
-    UINT len;
-    pShader->GetFunction( nullptr, &len );
-    std::vector<uint8_t> pbFunc( len, 0 );
-
-    pShader->GetFunction( pbFunc.data(), &len );
-
-    auto crc = crc32( 0, pbFunc.data(), len );
-
-    if ( crc == 0x9D190FC7 )
+    if (pShader != nullptr)
     {
-      g_wmvYuvDecodePixelShader = pShader;
-    }
-  }
+        UINT len;
+        pShader->GetFunction(nullptr, &len);
+        std::vector<uint8_t> pbFunc(len, 0);
 
-  return pShader;
+        pShader->GetFunction(pbFunc.data(), &len);
+
+        auto crc = crc32(0, pbFunc.data(), len);
+
+        if (crc == 0x9D190FC7)
+        {
+            g_wmvYuvDecodePixelShader = pShader;
+        }
+    }
+
+    return pShader;
 }
 
 void __stdcall SplitScreenSetupTop(void* a1, int32_t* a2)
@@ -786,49 +770,6 @@ DWORD WINAPI XInputGetStateHook(DWORD dwUserIndex, XINPUT_STATE* pState)
     return ret;
 }
 
-typedef HRESULT( __stdcall* DrawPrimitive_t )( D3DPRIMITIVETYPE, UINT, UINT );
-DrawPrimitive_t orig_DrawPrimitive;
-
-__declspec( noinline ) void checkForFmvDraw()
-{
-  // switch to a x-scaling vertex shader if drawing FMVs
-
-  IDirect3DPixelShader9* frag;
-  g_device->GetPixelShader( &frag );
-  if ( frag != g_wmvYuvDecodePixelShader )
-    return;
-
-  IDirect3DVertexShader9* vert;
-  g_device->GetVertexShader( &vert );
-  if ( vert != g_screenVertexShader )
-    return;
-
-  g_device->SetVertexShader( g_myScreenVertexShader );
-  const float horzScaleFactor = ( defaultAspectRatio / GetAspectRatio() );
-  const std::array<float, 4> shaderConsts = { horzScaleFactor, 0.0f, 0.0f, 0.0f };
-  g_device->SetVertexShaderConstantF( 20, shaderConsts.data(), 1 );
-}
-
-HRESULT __stdcall hook_DrawPrimitive( D3DPRIMITIVETYPE PrimitiveType, UINT StartVertex, UINT PrimitiveCount )
-{
-  __asm pushad;
-  if ( g_device )
-    checkForFmvDraw();
-  __asm popad;
-
-  return orig_DrawPrimitive( PrimitiveType, StartVertex, PrimitiveCount );
-}
-
-__declspec( noinline ) void __stdcall afterDeviceCreateHook( HRESULT result, IDirect3DDevice9** device )
-{
-  if ( result != D3D_OK )
-    return;
-
-  g_device = *device;
-
-  orig_DrawPrimitive = (DrawPrimitive_t)vtableHook( static_cast<void*>( *device ), static_cast<void*>( hook_DrawPrimitive ), 0x144 );
-}
-
 void Init()
 {
     CIniReader iniReader("");
@@ -886,9 +827,26 @@ void Init()
 
     // movies fix for ultra wide
     {
-      constexpr std::array<uint8_t, 5> buf = { 0xFF, 0x70, 0x14, 0x90, 0x90 };
-      injector::WriteMemoryRaw( 0xC769A9, const_cast<uint8_t*>( buf.data() ), buf.size(), true );
-      injector::MakeCALL( 0xC769C6, afterDeviceCreateHook, true );
+        static auto DrawPrimitiveHook = safetyhook::create_mid(0xCC8788, [](SafetyHookContext& regs)
+        {
+            auto g_device = (IDirect3DDevice9*)regs.edi;
+
+            // switch to a x-scaling vertex shader if drawing FMVs
+            IDirect3DPixelShader9* frag;
+            g_device->GetPixelShader(&frag);
+            if (frag != g_wmvYuvDecodePixelShader)
+                return;
+
+            IDirect3DVertexShader9* vert;
+            g_device->GetVertexShader(&vert);
+            if (vert != g_screenVertexShader)
+                return;
+
+            g_device->SetVertexShader(g_myScreenVertexShader);
+            const float horzScaleFactor = (defaultAspectRatio / GetAspectRatio());
+            const std::array<float, 4> shaderConsts = { horzScaleFactor, 0.0f, 0.0f, 0.0f };
+            g_device->SetVertexShaderConstantF(20, shaderConsts.data(), 1);
+        });
     }
 
     // split screen windows dimensions
@@ -1109,7 +1067,7 @@ CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
-        CallbackHandler::RegisterCallback(Init, hook::pattern("F3 0F 5C 15 ? ? ? ? F3 0F 59 E5"));
+        CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("F3 0F 5C 15 ? ? ? ? F3 0F 59 E5"));
     });
 }
 
