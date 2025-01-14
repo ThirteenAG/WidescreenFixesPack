@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "LEDEffects.h"
 #include <d3d9.h>
+#include <d3dx9.h>
+#pragma comment(lib, "d3dx9.lib")
 #include <vector>
 #include <psapi.h>
 #pragma comment(lib, "psapi.lib")
@@ -97,6 +99,10 @@ enum GUI
     uGUISubtitlesFix = 0x10924B0,
 };
 
+static IDirect3DVertexShader9* g_screenVertexShader = nullptr;
+static IDirect3DPixelShader9* g_wmvYuvDecodePixelShader = nullptr;
+static IDirect3DVertexShader9* g_myScreenVertexShader = nullptr;
+
 std::map<uintptr_t, uintptr_t> addrTbl;
 
 void FillAddressTable()
@@ -154,6 +160,10 @@ void FillAddressTable()
     auto off_1084DA0 = *hook::get_pattern<uintptr_t*>("68 2C 01 00 00 8B CE C7 06 ? ? ? ? E8 ? ? ? ? 8B 46 0C 25 ? ? ? ? 0D 00 00 01 00", 9);
     addrTbl[uGUI_DamageChoke] = (uintptr_t)&off_1084DA0[22];
 
+    addrTbl[0xD49701] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? 89 47 ? 0F B7 44 24");
+    addrTbl[0xD49744] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? 89 47 ? 0F B7 4C 24");
+    addrTbl[0xB6BA4F] = (uintptr_t)hook::get_pattern("57 FF D2 E9 ? ? ? ? B8 AB AA AA AA");
+
     #if _DEBUG
     for (auto& it : addrTbl)
     {
@@ -209,6 +219,7 @@ enum
 {
     RESCALE = 0xAAAAEEEE,
     OFFSET = 0xAAAFFFFF,
+    SUBTITLES = 0xDDDDDDDD,
 };
 
 void __fastcall sub_BA1050(int _this, int edx, int a2)
@@ -326,11 +337,12 @@ void __fastcall sub_BA1050(int _this, int edx, int a2)
             v15[3] = (float)(v17 * v25) + 1.0;
         }
         break;
+        case SUBTITLES:
         case OFFSET:
         {
             v16 = 2.0 / (float)(v3 - v26);
             v17 = -2.0 / (float)(v28 - v27);
-            v15[0] = v16 * v7;
+            v15[0] = v16 * v7 * ((edx == SUBTITLES) ? (1.0f / GetDiff()) : 1.0f);
             v15[1] = v17 * v8;
             v15[2] = (float)(v16 * v24) - (1.0f / GetDiff());
             v15[3] = (float)(v17 * v25) + 1.0;
@@ -448,6 +460,12 @@ void __fastcall sub_BA1050_rescale(int _this, int edx, int a2)
 
 void __fastcall sub_BA1050_offset(int _this, int edx, int a2)
 {
+    auto Subtitles = (const char*)(*(uintptr_t*)_this + 0xD4);
+    auto uGUISubtitlesFix = (const char*)(*(uintptr_t*)_this + 0x224);
+
+    if ((!IsBadReadPtr(Subtitles, sizeof(char*)) && std::string_view(Subtitles) == "Subtitles") || (!IsBadReadPtr(uGUISubtitlesFix, sizeof(char*)) && std::string_view(uGUISubtitlesFix) == "uGUISubtitlesFix"))
+        return sub_BA1050(_this, SUBTITLES, a2);
+
     return sub_BA1050(_this, OFFSET, a2);
 }
 
@@ -500,6 +518,104 @@ BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam)
     return TRUE;
 }
 
+IDirect3DVertexShader9* __stdcall CreateVertexShaderHook(const DWORD** a1)
+{
+    if (!a1)
+        return nullptr;
+
+    auto pDevice = (IDirect3DDevice9*)*((uint32_t*)*(uint32_t*)addrTbl[0x11E7B9C] + 0x26);
+
+    IDirect3DVertexShader9* pShader = nullptr;
+    pDevice->CreateVertexShader(a1[2], &pShader);
+
+    if (pShader != nullptr)
+    {
+        static std::vector<uint8_t> pbFunc;
+        UINT len;
+        pShader->GetFunction(nullptr, &len);
+        if (pbFunc.size() < len)
+            pbFunc.resize(len);
+
+        pShader->GetFunction(pbFunc.data(), &len);
+
+        auto crc = crc32(0, pbFunc.data(), len);
+
+        if (crc == 0x1287841D)
+        {
+            g_screenVertexShader = pShader;
+
+            // inject additional, alternative screenspace shader for FMV fixups
+            constexpr auto src = R"(
+            struct VS_INPUT {
+                float4 position : POSITION;
+            };
+            
+            struct VS_OUTPUT {
+                float4 position : POSITION;
+                float4 uv : TEXCOORD;
+            };
+            
+            float2 fScreenHalfPixelOffset : register(c1);
+            float fHorizontalAspectScale : register(c20);
+            
+            VS_OUTPUT main(VS_INPUT input)
+            {
+                VS_OUTPUT output;
+            
+                output.position = float4(
+                  -fScreenHalfPixelOffset.x + input.position.x * fHorizontalAspectScale,
+                  fScreenHalfPixelOffset.y + input.position.y,
+                  0.0,
+                  1.0);
+                output.uv = float4(
+                  1.0 * input.position.z,
+                  1.0 * input.position.w,
+                  0.0, 0.0
+                );
+            
+                return output;
+            })";
+
+            LPD3DXBUFFER code;
+            if (SUCCEEDED(D3DXCompileShader(src, strlen(src), nullptr, nullptr, "main", "vs_3_0", NULL, &code, nullptr, nullptr)))
+            {
+                pDevice->CreateVertexShader(reinterpret_cast<const DWORD*>(code->GetBufferPointer()), &g_myScreenVertexShader);
+            }
+        }
+    }
+
+    return pShader;
+}
+
+IDirect3DPixelShader9* __stdcall CreatePixelShaderHook(const DWORD** a1)
+{
+    if (!a1)
+        return nullptr;
+
+    auto pDevice = (IDirect3DDevice9*)*((uint32_t*)*(uint32_t*)addrTbl[0x11E7B9C] + 0x26);
+
+    IDirect3DPixelShader9* pShader = nullptr;
+    pDevice->CreatePixelShader(a1[2], &pShader);
+
+    if (pShader != nullptr)
+    {
+        UINT len;
+        pShader->GetFunction(nullptr, &len);
+        std::vector<uint8_t> pbFunc(len, 0);
+
+        pShader->GetFunction(pbFunc.data(), &len);
+
+        auto crc = crc32(0, pbFunc.data(), len);
+
+        if (crc == 0x310b2709)
+        {
+            g_wmvYuvDecodePixelShader = pShader;
+        }
+    }
+
+    return pShader;
+}
+
 void Init()
 {
     CIniReader iniReader("");
@@ -550,15 +666,6 @@ void Init()
         injector::MakeInline<hook_ebp_edi>(match.get<void>(0), match.get<void>(12));
     });
 
-    // movies fix for ultra wide
-    struct MoviesWorkaround
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            regs.eax = (int32_t)((float)(*(int32_t*)(regs.edi + 0xB8)) / GetDiff());
-        }
-    }; injector::MakeInline<MoviesWorkaround>(addrTbl[0xBABE12], addrTbl[0xBABE12] + 6);
-
     // GUI
     injector::MakeJMP(addrTbl[0xBA1050], sub_BA1050_rescale, true);
     injector::MakeCALL(addrTbl[0x7BB17A], sub_79BB50, true); // radar player blip fix
@@ -598,6 +705,34 @@ void Init()
     injector::MakeCALL(addrTbl[0xCDC9D9], sub_8F2230, true);
     injector::MakeCALL(addrTbl[0xD00F71], sub_8F2230, true);
     injector::MakeCALL(addrTbl[0xE98FAF], sub_8F2230, true);
+
+    injector::MakeCALL(addrTbl[0xD49701], CreateVertexShaderHook, true);
+    injector::MakeCALL(addrTbl[0xD49744], CreatePixelShaderHook, true);
+
+    // movies fix for ultra wide
+    {
+        static auto DrawPrimitiveHook = safetyhook::create_mid(addrTbl[0xB6BA4F], [](SafetyHookContext& regs)
+        {
+            auto g_device = (IDirect3DDevice9*)regs.edi;
+
+            // switch to a x-scaling vertex shader if drawing FMVs
+            IDirect3DPixelShader9* frag;
+            g_device->GetPixelShader(&frag);
+
+            if (frag != g_wmvYuvDecodePixelShader)
+                return;
+
+            IDirect3DVertexShader9* vert;
+            g_device->GetVertexShader(&vert);
+            if (vert != g_screenVertexShader)
+                return;
+
+            g_device->SetVertexShader(g_myScreenVertexShader);
+            const float horzScaleFactor = (defaultAspectRatio / GetAspectRatio());
+            const std::array<float, 4> shaderConsts = { horzScaleFactor, 0.0f, 0.0f, 0.0f };
+            g_device->SetVertexShaderConstantF(20, shaderConsts.data(), 1);
+        });
+    }
     
     if (bBorderlessWindowed)
     {
@@ -783,7 +918,7 @@ CEXP void InitializeASI()
         //        }
         //    }
         //}).detach();
-        CallbackHandler::RegisterCallback(Init, hook::pattern("8B 4E 68 85 C9 75 47"));
+        CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("8B 4E 68 85 C9 75 47"));
     });
 }
 
