@@ -260,7 +260,8 @@ enum
 {
     RESCALE = 0xAAAAEEEE,
     STRETCH = 0xBBBBFFFF,
-    OFFSET = 0xCCCCDDDD
+    OFFSET = 0xCCCCDDDD,
+    SUBTITLES = 0xDDDDDDDD,
 };
 
 void __fastcall sub_E18040(int _this, int edx, int a2)
@@ -365,6 +366,7 @@ void __fastcall sub_E18040(int _this, int edx, int a2)
 
         switch (edx)
         {
+        case SUBTITLES:
         case RESCALE:
         {
             if (IsSplitScreenActive())
@@ -373,7 +375,7 @@ void __fastcall sub_E18040(int _this, int edx, int a2)
                 {
                     v14 = 2.0 / (float)(v28 - v19);
                     v15 = -2.0 / (float)(v21 - v29);
-                    v13[0] = v14 * v4;
+                    v13[0] = v14 * v4 * ((edx == SUBTITLES) ? (1.0f / GetDiff()) : 1.0f);
                     v13[1] = v15 * v5;
                     v13[2] = (float)(v14 * v6) - (1.0f / GetDiff());
                     v13[3] = (float)(v15 * v7) + 1.0;
@@ -382,7 +384,7 @@ void __fastcall sub_E18040(int _this, int edx, int a2)
                 {
                     v14 = 2.0 / (float)(v28 - v19);
                     v15 = -2.0 / (float)(v21 - v29);
-                    v13[0] = v14 * v4;
+                    v13[0] = v14 * v4 * ((edx == SUBTITLES) ? (1.0f / GetDiff()) : 1.0f);
                     v13[1] = v15 * v5;
                     v13[2] = (float)(v14 * v6) - (1.0f / (GetAspectRatio() / defaultAspectRatio));
                     v13[3] = (float)(v15 * v7) + 1.0;
@@ -392,7 +394,7 @@ void __fastcall sub_E18040(int _this, int edx, int a2)
             {
                 v14 = 2.0 / (float)(v28 - v19);
                 v15 = -2.0 / (float)(v21 - v29);
-                v13[0] = v14 * v4;
+                v13[0] = v14 * v4 * ((edx == SUBTITLES) ? (1.0f / GetDiff()) : 1.0f);
                 v13[1] = v15 * v5;
                 v13[2] = (float)(v14 * v6) - (1.0f / GetDiff());
                 v13[3] = (float)(v15 * v7) + 1.0;
@@ -497,6 +499,11 @@ void __fastcall sub_E18040_nop(int _this, int edx, int a2)
 
 void __fastcall sub_E18040_rescale(int _this, int edx, int a2)
 {
+    auto uBioGUISubtitles = (const char*)(*(uintptr_t*)_this + 0x1B8);
+
+    if (!IsBadReadPtr(uBioGUISubtitles, sizeof(char*)) && std::string_view(uBioGUISubtitles) == "uBioGUISubtitles")
+        return sub_E18040(_this, SUBTITLES, a2);
+
     return sub_E18040(_this, RESCALE, a2);
 }
 
@@ -897,8 +904,8 @@ void Init()
 
     //disable shader overlays (don't scale to fullscreen)
     {
-      injector::MakeCALL( 0xFFB9E2, CreateVertexShaderHook, true );
-      injector::MakeCALL( 0xFFBA31, CreatePixelShaderHook, true );
+      injector::MakeCALL(0xFFB9E2, CreateVertexShaderHook, true);
+      injector::MakeCALL(0xFFBA31, CreatePixelShaderHook, true);
 
         //struct SetVertexShaderHook
         //{
