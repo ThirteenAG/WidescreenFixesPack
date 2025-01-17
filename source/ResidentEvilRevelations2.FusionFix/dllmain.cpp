@@ -248,7 +248,7 @@ void __fastcall sub_96C410(int _this, int edx, int a2, int a3)
         v9 = v10;
 
     if (IsSplitScreenActive())
-        a2 += (int32_t)(720.0f * GetAspectRatio()) - (1280.0f / (1280.0f / GetNativeSplitScreenResX()));
+        a2 += (int32_t)((720.0f * GetAspectRatio()) - (1280.0f / (1280.0f / GetNativeSplitScreenResX())));
     else
         a2 += (int32_t)(((720.0f * GetAspectRatio()) - 1280.0f) / 2.0f);
 
@@ -356,12 +356,12 @@ void __fastcall sub_E18040(int _this, int edx, int a2)
     *((uint32_t*)v2 + 81) |= 1u;
     if (v13)
     {
-        v14 = 2.0 / (float)(v28 - v19);
-        v15 = -2.0 / (float)(v21 - v29);
+        v14 = 2.0f / (float)(v28 - v19);
+        v15 = -2.0f / (float)(v21 - v29);
         v13[0] = v14 * v4;
         v13[1] = v15 * v5;
-        v13[2] = (float)(v14 * v6) - 1.0;
-        v13[3] = (float)(v15 * v7) + 1.0;
+        v13[2] = (float)(v14 * v6) - 1.0f;
+        v13[3] = (float)(v15 * v7) + 1.0f;
         *((uint32_t*)v2 + 19) &= ~2u;
 
         switch (edx)
@@ -373,42 +373,42 @@ void __fastcall sub_E18040(int _this, int edx, int a2)
             {
                 if (v21 == GetCurrentSplitScreenResY() || v21 == (GetCurrentSplitScreenResY() + 1))
                 {
-                    v14 = 2.0 / (float)(v28 - v19);
-                    v15 = -2.0 / (float)(v21 - v29);
+                    v14 = 2.0f / (float)(v28 - v19);
+                    v15 = -2.0f / (float)(v21 - v29);
                     v13[0] = v14 * v4 * ((edx == SUBTITLES) ? (1.0f / GetDiff()) : 1.0f);
                     v13[1] = v15 * v5;
                     v13[2] = (float)(v14 * v6) - (1.0f / GetDiff());
-                    v13[3] = (float)(v15 * v7) + 1.0;
+                    v13[3] = (float)(v15 * v7) + 1.0f;
                 }
                 else if (v21 == GetResY())
                 {
-                    v14 = 2.0 / (float)(v28 - v19);
-                    v15 = -2.0 / (float)(v21 - v29);
+                    v14 = 2.0f / (float)(v28 - v19);
+                    v15 = -2.0f / (float)(v21 - v29);
                     v13[0] = v14 * v4 * ((edx == SUBTITLES) ? (1.0f / GetDiff()) : 1.0f);
                     v13[1] = v15 * v5;
                     v13[2] = (float)(v14 * v6) - (1.0f / (GetAspectRatio() / defaultAspectRatio));
-                    v13[3] = (float)(v15 * v7) + 1.0;
+                    v13[3] = (float)(v15 * v7) + 1.0f;
                 }
             }
             else
             {
-                v14 = 2.0 / (float)(v28 - v19);
-                v15 = -2.0 / (float)(v21 - v29);
+                v14 = 2.0f / (float)(v28 - v19);
+                v15 = -2.0f / (float)(v21 - v29);
                 v13[0] = v14 * v4 * ((edx == SUBTITLES) ? (1.0f / GetDiff()) : 1.0f);
                 v13[1] = v15 * v5;
                 v13[2] = (float)(v14 * v6) - (1.0f / GetDiff());
-                v13[3] = (float)(v15 * v7) + 1.0;
+                v13[3] = (float)(v15 * v7) + 1.0f;
             }
         }
         break;
         case STRETCH:
         {
-            v14 = (2.0 * GetDiff()) / (float)(v28 - v19);
-            v15 = -2.0 / (float)(v21 - v29);
+            v14 = (2.0f * GetDiff()) / (float)(v28 - v19);
+            v15 = -2.0f / (float)(v21 - v29);
             v13[0] = v14 * v4;
             v13[1] = v15 * v5;
             v13[2] = -1.0f; //(float)(v14 * v6) - fDiffInv;
-            v13[3] = (float)(v15 * v7) + 1.0;
+            v13[3] = (float)(v15 * v7) + 1.0f;
         }
         break;
         case OFFSET:
@@ -417,33 +417,33 @@ void __fastcall sub_E18040(int _this, int edx, int a2)
             {
                 if (v21 == GetCurrentSplitScreenResY() || v21 == (GetCurrentSplitScreenResY() + 1))
                 {
-                    v14 = 2.0 / (float)(v28 - v19);
-                    v15 = -2.0 / (float)(v21 - v29);
+                    v14 = 2.0f / (float)(v28 - v19);
+                    v15 = -2.0f / (float)(v21 - v29);
                     v13[0] = v14 * v4;
                     v13[1] = v15 * v5;
                     v13[2] = (float)(v14 * v6) - (1.0f / GetDiff());
-                    v13[3] = (float)(v15 * v7) + 1.0;
+                    v13[3] = (float)(v15 * v7) + 1.0f;
                 }
                 else if (v21 == GetResY())
                 {
-                    v14 = 2.0 / (float)(v28 - v19);
-                    v15 = -2.0 / (float)(v21 - v29);
+                    v14 = 2.0f / (float)(v28 - v19);
+                    v15 = -2.0f / (float)(v21 - v29);
                     v13[0] = v14 * v4;
                     v13[1] = v15 * v5;
                     v13[2] = (float)(v14 * v6) - (1.0f / (GetAspectRatio() / defaultAspectRatio));
-                    v13[3] = (float)(v15 * v7) + 1.0;
+                    v13[3] = (float)(v15 * v7) + 1.0f;
                 }
             }
             else
             {
                 if (v21 == GetResY())
                 {
-                    v14 = 2.0 / (float)(v28 - v19);
-                    v15 = -2.0 / (float)(v21 - v29);
+                    v14 = 2.0f / (float)(v28 - v19);
+                    v15 = -2.0f / (float)(v21 - v29);
                     v13[0] = v14 * v4;
                     v13[1] = v15 * v5;
                     v13[2] = (float)(v14 * v6) - (1.0f / GetDiff());
-                    v13[3] = (float)(v15 * v7) + 1.0;
+                    v13[3] = (float)(v15 * v7) + 1.0f;
                 }
             }
         }
@@ -476,7 +476,7 @@ void __fastcall sub_E18040(int _this, int edx, int a2)
     {
         goto LABEL_18;
     }
-    v18 = v20 + 0.25;
+    v18 = v20 + 0.25f;
 LABEL_19:
     v16 = a2;
 LABEL_20:
@@ -777,6 +777,12 @@ DWORD WINAPI XInputGetStateHook(DWORD dwUserIndex, XINPUT_STATE* pState)
     return ret;
 }
 
+int nForceLogo = 0;
+int sub_984240()
+{
+    return nForceLogo - 1;
+}
+
 void Init()
 {
     CIniReader iniReader("");
@@ -790,6 +796,7 @@ void Init()
     if (fFOVFactor <= 0.0f) fFOVFactor = 1.0f;
     bDisableCreateQuery = iniReader.ReadInteger("MAIN", "DisableCreateQuery", 0) != 0;
     auto bAutoclicker = iniReader.ReadInteger("MAIN", "Autoclicker", 0) != 0;
+    nForceLogo = std::clamp(iniReader.ReadInteger("MAIN", "ForceLogo", 0), 0, 4);
     
     if (bSkipIntro)
     {
@@ -977,6 +984,21 @@ void Init()
         
         auto pattern = hook::pattern("E8 ? ? ? ? 8B D0 85 D2 75 13 8B 07 8B CF FF 50 60 56 FF 15 ? ? ? ? 5E 5F C2 0C 00 8B CA 53 8D 59 01 8D A4 24");
         hb_954B40.fun = injector::MakeCALL(pattern.get_first(), sub_954B40, true).get();
+    }
+
+    if (nForceLogo)
+    {
+        auto pattern = hook::pattern("E8 ? ? ? ? 83 F8 03 77 ? FF 24 85 ? ? ? ? 6A 01 68 04 8F 39 01");
+        injector::MakeCALL(pattern.get_first(), sub_984240, true);
+
+        pattern = hook::pattern("E8 ? ? ? ? 83 F8 03 0F 87 ? ? ? ? FF 24 85 ? ? ? ? 68 E8 8E 39 01");
+        injector::MakeCALL(pattern.get_first(), sub_984240, true);
+
+        pattern = hook::pattern("E8 ? ? ? ? 83 F8 03 77 ? FF 24 85 ? ? ? ? 6A 01 68 E8 EC 3B 01");
+        injector::MakeCALL(pattern.get_first(), sub_984240, true);
+
+        pattern = hook::pattern("E8 ? ? ? ? 83 F8 03 0F 87 ? ? ? ? FF 24 85 ? ? ? ? 68 B4 EC 3B 01");
+        injector::MakeCALL(pattern.get_first(), sub_984240, true);
     }
 
     {
