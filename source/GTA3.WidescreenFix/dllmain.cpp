@@ -7,7 +7,7 @@ hook::pattern MenuPattern, MenuPattern15625, RsSelectDevicePattern, CDarkelDrawM
 hook::pattern DrawHudHorScalePattern, DrawHudVerScalePattern, CSpecialFXRender2DFXsPattern, CSceneEditDrawPattern, sub61DEB0Pattern;
 hook::pattern MenuPattern1, MenuPattern2, MenuPattern3, MenuPattern4, MenuPattern5, MenuPattern6, MenuPattern7, MenuPattern8, MenuPattern9, MenuPattern10, MenuPattern11;
 hook::pattern ResolutionPattern0, ResolutionPattern1, ResolutionPattern2, ResolutionPattern3, ResolutionPattern4, ResolutionPattern5;
-hook::pattern CRadarPattern, BordersPattern;
+hook::pattern CRadarHorScalePattern, CRadarVerScalePattern, BordersPattern;
 uint32_t* dwGameLoadState;
 float* fCRadarRadarRange;
 uint32_t funcCCameraAvoidTheGeometryJmp;
@@ -87,7 +87,10 @@ void GetPatterns()
     sub61DEB0Pattern = hook::pattern(pattern_str(0xD8, 0x0D, to_bytes(dword_temp))); //0x592969
 
     dword_temp = *hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? DD DA D9 00 D8 CA").count(1).get(0).get<uint32_t*>(2);
-    CRadarPattern = hook::pattern(pattern_str(0xD8, 0x0D, to_bytes(dword_temp))); //0x5F7148
+    CRadarHorScalePattern = hook::pattern(pattern_str(0xD8, 0x0D, to_bytes(dword_temp))); //0x5F7148
+
+    dword_temp = *hook::pattern("D8 0D ? ? ? ? DD D9 D9 05 ? ? ? ? D8 C9 DD DA D9 40 04").count(1).get(0).get<uint32_t*>(2);
+    CRadarVerScalePattern = hook::pattern(pattern_str(0xD8, 0x0D, to_bytes(dword_temp))); //0x5F7158
 }
 
 void GetMemoryAddresses()
@@ -354,6 +357,13 @@ void FixHUD()
         injector::WriteMemory(p15625, &fWideScreenWidthScaleDown, true);
     }
 
+    //this is still preferred, as original game uses PS2 virtual Y res of 448.0f, which overstretches HUD
+    for (size_t i = 0; i < DrawHudVerScalePattern.size(); i++)
+    {
+        uint32_t* p15625 = DrawHudVerScalePattern.get(i).get<uint32_t>(2);
+        injector::WriteMemory(p15625, &fWideScreenHeightScaleDown, true);
+    }
+
     pattern = hook::pattern("50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8"); // radio text
     injector::WriteMemory(pattern.count(28).get(24).get<uint32_t>(3), &fWideScreenWidthScaleDown, true);
     injector::WriteMemory(pattern.count(28).get(25).get<uint32_t>(3), &fWideScreenWidthScaleDown, true);
@@ -367,10 +377,16 @@ void FixHUD()
 
     //injector::WriteMemory(0x4F6D90 + 0x5DC + 0x2, &fWideScreenWidthScaleDown, true); //CClouds::Render ??
 
-    for (size_t i = 0; i < CRadarPattern.size(); i++)
+    for (size_t i = 0; i < CRadarHorScalePattern.size(); i++)
     {
-        uint32_t* p15625 = CRadarPattern.get(i).get<uint32_t>(2);
+        uint32_t* p15625 = CRadarHorScalePattern.get(i).get<uint32_t>(2);
         injector::WriteMemory(p15625, &fWideScreenWidthScaleDown, true);
+    }
+
+    for (size_t i = 0; i < CRadarVerScalePattern.size(); i++)
+    {
+        uint32_t* p15625 = CRadarVerScalePattern.get(i).get<uint32_t>(2);
+        injector::WriteMemory(p15625, &fWideScreenHeightScaleDown, true);
     }
 
     //static float fTBW = 350.0f;
@@ -453,7 +469,7 @@ void ApplyIniOptions()
     {
         for (size_t i = 0; i < DrawHudHorScalePattern.size(); i++)
         {
-            if (i > 2 && i != 5 && i != 6 && i != 7 && i != 8 && i != 60 && i != 65 && i != 81) //0 1 2 - crosshair /65 - subs
+            if (i > 2 && i != 5 && i != 6 && i != 7 && i != 8 && i != 60 && i != 65 && i != 81) //0 1 2 - crosshair / 5 6 7 8 - sniper scope / 60 - radar disc / 65 - subs / 81 - IntroTextLines
             {
                 uint32_t* pCustomScaleHor = DrawHudHorScalePattern.get(i).get<uint32_t>(2);
                 injector::WriteMemory(pCustomScaleHor, &fCustomWideScreenWidthScaleDown, true);
@@ -462,7 +478,7 @@ void ApplyIniOptions()
 
         for (size_t i = 0; i < DrawHudVerScalePattern.size(); i++)
         {
-            if (i > 2 && i != 5 && i != 6 && i != 7 && i != 8 && i != 57 && i != 60 && i != 73) //0 1 2 - crosshair / 60 - subs
+            if (i > 2 && i != 5 && i != 6 && i != 7 && i != 8 && i != 57 && i != 60 && i != 73) //0 1 2 - crosshair / 5 6 7 8 - sniper scope / 57 - radar disc / 60 - subs / 73 - IntroTextLines
             {
                 uint32_t* pCustomScaleVer = DrawHudVerScalePattern.get(i).get<uint32_t>(2);
                 injector::WriteMemory(pCustomScaleVer, &fCustomWideScreenHeightScaleDown, true);
@@ -493,7 +509,7 @@ void ApplyIniOptions()
 
     if (fRadarWidthScale && !bIVRadarScaling)
     {
-        uint32_t* p15625 = CRadarPattern.get(0).get<uint32_t>(2);
+        uint32_t* p15625 = CRadarHorScalePattern.get(0).get<uint32_t>(2);
         injector::WriteMemory(p15625, &fCustomRadarWidthScale, true);
 
         injector::WriteMemory(DrawHudHorScalePattern.get(60).get<uint32_t>(2), &fCustomRadarWidthScale, true);
