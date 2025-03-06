@@ -908,6 +908,14 @@ void Init()
         injector::MakeCALL(loc_566197, FEScale::eWaitUntilRenderingDoneHook);
         injector::MakeCALL(loc_5CC08D, FEScale::SetTransformHook);
 
+        auto pattern = hook::pattern("A1 ? ? ? ? 8A 48 ? 84 C9 DE F9");
+        static auto loc_5369CC = pattern.get_first(14);
+        static auto MovieStartHookCrashFix = safetyhook::create_mid(pattern.get_first(5), [](SafetyHookContext& regs)
+        {
+            if (!regs.eax)
+                *(void**)(regs.esp - 4) = loc_5369CC;
+        });
+
         FEScale::Update();
     }
 
