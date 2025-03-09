@@ -62,6 +62,13 @@ void GetRs(uintptr_t addr, char a1, char a2)
         *(uint8_t*)(addr + 0x1B) = -pad.Rsrv[1] + -1;
 }
 
+uintptr_t sub_8834070 = 0;
+int sub_8834070_hook(int a1, char a2)
+{
+    UnthrottleEmuEnable();
+    return ((int(*)(int, char))sub_8834070)(a1, a2);
+}
+
 int OnModuleStart() 
 {
     int SkipIntro = inireader.ReadInteger("MAIN", "SkipIntro", 1);
@@ -180,13 +187,9 @@ int OnModuleStart()
 
     if (UnthrottleEmuDuringLoading)
     {
-        uintptr_t ptr = pattern.get_first("01 00 05 24 08 00 B2 AF 00 00 B0 AF", 0);
-        MakeInlineWrapperWithNOP(ptr,
-            addiu(a1, zero, 1),
-            sw(s2, sp, 8),
-            jal((uintptr_t)UnthrottleEmuEnable),
-            nop()
-        );
+        uintptr_t ptr = pattern.get_first("00 00 B0 AF ? ? ? ? ? ? ? ? 20 00 25 8E", 0);
+        sub_8834070 = injector.GetBranchDestination(ptr + 4);
+        injector.MakeJAL(ptr + 4, (uintptr_t)sub_8834070_hook);
 
         ptr = pattern.get_first("08 00 BF AF 04 00 B1 AF ? ? ? ? 00 00 B0 AF 06 00 03 24", 0);
         MakeInlineWrapperWithNOP(ptr,
