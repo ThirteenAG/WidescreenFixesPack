@@ -357,17 +357,17 @@ void FixHUD()
     injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &fWideScreenWidthScaleDown, true); //sniper scope & rocketlauncher right border
 
     //loading island screen text
-    pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? 50 D9 1C 24 DB 05") //0x48DBF3, 0x48DCC5
+    pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? 50 D9 1C 24 DB 05"); //0x48DBF3, 0x48DCC5
     injector::WriteMemory(pattern.count(2).get(0).get<uint32_t>(2), &fWideScreenHeightScaleDown, true); //font height
     injector::WriteMemory(pattern.count(2).get(1).get<uint32_t>(2), &fWideScreenHeightScaleDown, true); //font height
     pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? 50 D9 1C 24 E8 ? ? ? ? 59 59"); //0x48DC09, 0x48DCDB
     injector::WriteMemory(pattern.count(2).get(0).get<uint32_t>(2), &fWideScreenWidthScaleDown, true); //font width
     injector::WriteMemory(pattern.count(2).get(1).get<uint32_t>(2), &fWideScreenWidthScaleDown, true); //font width
-    pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? DB 05 ? ? ? ? DE E1") //0x48DC36, 0x48DCFF
+    pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? DB 05 ? ? ? ? DE E1"); //0x48DC36, 0x48DCFF
     injector::WriteMemory(pattern.count(2).get(0).get<uint32_t>(2), &fWideScreenHeightScaleDown, true); //bottom screen offset
     injector::WriteMemory(pattern.count(2).get(1).get<uint32_t>(2), &fWideScreenHeightScaleDown, true); //bottom screen offset
     //right offsets would require injecting code, since they were compiled as 1 byte addition instruction
-    //pattern = hook::pattern("83 C3 EC 89 9D") //0x48DC54, 0x48DD1D
+    //pattern = hook::pattern("83 C3 EC 89 9D"); //0x48DC54, 0x48DD1D
 
     for (size_t i = 0; i < DrawHudHorScalePattern.size(); i++)
     {
