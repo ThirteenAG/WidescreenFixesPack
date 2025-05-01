@@ -343,13 +343,31 @@ void FixHUD()
         injector::WriteMemory(p15625, &fWideScreenWidthScaleDown, true);
     }
 
-    auto pattern = hook::pattern("D8 0D ? ? ? ? 89 44 24 08 50 D8 0D ? ? ? ? DA 6C 24 0C"); //0x48E363
-    injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &fWideScreenWidthScaleDown, true); //sniper scope border @Render2dStuff
+    //sniper scope and rocketlauncher borders @Render2dStuff
+    auto pattern = hook::pattern("D8 0D ? ? ? ? 89 44 24 04 50 D8 0D ? ? ? ? DA 6C 24 08"); //0x48E1E2, 0x48E29C
+    injector::WriteMemory(pattern.count(2).get(0).get<uint32_t>(2), &fWideScreenHeightScaleDown, true); //rocketlauncher top border
+    injector::WriteMemory(pattern.count(2).get(1).get<uint32_t>(2), &fWideScreenHeightScaleDown, true); //sniper scope top border
+    pattern = hook::pattern("D8 0D ? ? ? ? 89 54 24 10 D8 0D ? ? ? ? DA 44 24 10"); //0x48E256
+    injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &fWideScreenHeightScaleDown, true); //rocketlauncher bottom border
+    pattern = hook::pattern("D8 0D ? ? ? ? 89 4C 24 10 D8 0D ? ? ? ? DA 44 24 10"); //0x48E30F
+    injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &fWideScreenHeightScaleDown, true); //sniper scope bottom border
+    pattern = hook::pattern("D8 0D ? ? ? ? 89 44 24 08 50 D8 0D ? ? ? ? DA 6C 24 0C"); //0x48E363
+    injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &fWideScreenWidthScaleDown, true); //sniper scope & rocketlauncher left border
     pattern = hook::pattern("D8 0D ? ? ? ? 89 54 24 0C FF 35 ? ? ? ? D8 0D ? ? ? ? 50 DA 44 24 14"); //0x48E3CC
-    injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &fWideScreenWidthScaleDown, true);
-    pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? 50 D9 1C 24 E8 ? ? ? ? 59 59");
-    injector::WriteMemory(pattern.count(2).get(0).get<uint32_t>(2), &fWideScreenWidthScaleDown, true); //0x48DC09
-    injector::WriteMemory(pattern.count(2).get(1).get<uint32_t>(2), &fWideScreenWidthScaleDown, true); //48DCDB
+    injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &fWideScreenWidthScaleDown, true); //sniper scope & rocketlauncher right border
+
+    //loading island screen text
+    pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? 50 D9 1C 24 DB 05"); //0x48DBF3, 0x48DCC5
+    injector::WriteMemory(pattern.count(2).get(0).get<uint32_t>(2), &fWideScreenHeightScaleDown, true); //font height
+    injector::WriteMemory(pattern.count(2).get(1).get<uint32_t>(2), &fWideScreenHeightScaleDown, true); //font height
+    pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? 50 D9 1C 24 E8 ? ? ? ? 59 59"); //0x48DC09, 0x48DCDB
+    injector::WriteMemory(pattern.count(2).get(0).get<uint32_t>(2), &fWideScreenWidthScaleDown, true); //font width
+    injector::WriteMemory(pattern.count(2).get(1).get<uint32_t>(2), &fWideScreenWidthScaleDown, true); //font width
+    pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? DB 05 ? ? ? ? DE E1"); //0x48DC36, 0x48DCFF
+    injector::WriteMemory(pattern.count(2).get(0).get<uint32_t>(2), &fWideScreenHeightScaleDown, true); //bottom screen offset
+    injector::WriteMemory(pattern.count(2).get(1).get<uint32_t>(2), &fWideScreenHeightScaleDown, true); //bottom screen offset
+    //right offsets would require injecting code, since they were compiled as 1 byte addition instruction
+    //pattern = hook::pattern("83 C3 EC 89 9D"); //0x48DC54, 0x48DD1D
 
     for (size_t i = 0; i < DrawHudHorScalePattern.size(); i++)
     {
