@@ -180,9 +180,9 @@ IDirect3DPixelShader9* __stdcall CreatePixelShaderHook(const DWORD** a1)
                 "def c2, 1, 255, 65025, 0\n"
                 "dcl_texcoord v0.zw\n"
                 "dcl_2d s0\n"
-                "mov r0, c0.w\n"
-                "mul r0.yzw, r0.x, c2.xxyz\n"
+                "texld r0, v0.zwzw, s0\n"
                 "mov oDepth, r0.x\n"
+                "mov r0, c0.w\n"
                 "frc r0.xyz, r0.yzww\n"
                 "mad oC0.xyz, r0.yzzw, -c0.xxyw, r0\n"
                 "mov oC0.w, c1.y\n";
