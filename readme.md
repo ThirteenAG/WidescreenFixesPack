@@ -1,6 +1,6 @@
 <div align="center">
 
-[![wfp](https://raw.githubusercontent.com/ThirteenAG/thirteenag.github.io/master/img/logo2-bl.svg)](https://thirteenag.github.io/wfp)
+[![wfp](https://raw.githubusercontent.com/ThirteenAG/thirteenag.github.io/master/img/logo2-bl.svg)](https://fusionfix.io/wfp)
 
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/ThirteenAG/WidescreenFixesPack/main.yml?branch=master&label=GitHub%20Actions%20Build&logo=GitHub)](https://github.com/ThirteenAG/WidescreenFixesPack/actions/workflows/main.yml)
 [![AppVeyor](https://img.shields.io/appveyor/build/ThirteenAG/WidescreenFixesPack?label=AppVeyor%20Build&logo=Appveyor&logoColor=white)](https://ci.appveyor.com/project/ThirteenAG/widescreenfixespack)
@@ -20,7 +20,18 @@
 
 [![Downloads](https://img.shields.io/github/downloads/ThirteenAG/WidescreenFixesPack/total?color=red)](https://github.com/ThirteenAG/WidescreenFixesPack/releases/)
 
-https://thirteenag.github.io/wfp
+https://fusionfix.io/wfp
+
+<p align="center">
+  <a href="https://discord.gg/2ckFCS572Z" target="_blank"><img width="200" src="https://raw.githubusercontent.com/ThirteenAG/GTAIV.EFLC.FusionFix/refs/heads/master/installer/discord.svg"></a>
+  &nbsp;&nbsp;&nbsp;
+  <a href="https://t.me/fusionfix" target="_blank"><img width="200" src="https://raw.githubusercontent.com/ThirteenAG/GTAIV.EFLC.FusionFix/refs/heads/master/installer/telegram.svg"></a>
+  &nbsp;&nbsp;&nbsp;
+  <a href="https://www.youtube.com/@FusionFix10" target="_blank"><img width="200" src="https://raw.githubusercontent.com/ThirteenAG/GTAIV.EFLC.FusionFix/refs/heads/master/installer/youtube.svg"></a>
+  &nbsp;&nbsp;&nbsp;
+  <a href="https://x.com/fusionfix10" target="_blank"><img width="200" src="https://raw.githubusercontent.com/ThirteenAG/GTAIV.EFLC.FusionFix/refs/heads/master/installer/x.svg"></a>
+  &nbsp;&nbsp;&nbsp;
+</p>
 
 Plugins to make or improve widescreen resolutions support in PC games, add more features and fix bugs.
 
