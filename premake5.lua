@@ -184,11 +184,6 @@ workspace "WidescreenFixesPack"
       end
       targetdir ("data/%{prj.name}/" .. scriptspath)
    end
-   
-   function add_asmjit()
-      files { "external/asmjit/src/**.h", "external/asmjit/src/**.cpp" }
-      includedirs { "external/asmjit/src/asmjit" }
-   end
 
    function add_kananlib()
       defines { "BDDISASM_HAS_MEMSET", "BDDISASM_HAS_VSNPRINTF" }
@@ -261,7 +256,6 @@ project "Assembly64.TestApp"
 project "Assembly64.TestAsi"
    platforms { "Win64" }
    architecture "x64"
-   add_asmjit()
    setpaths("./data/Assembly64.TestApp/", "Assembly64.TestApp.exe", "")
 
 project "FarCry64.WidescreenFix"
