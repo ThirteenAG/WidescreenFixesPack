@@ -10,6 +10,7 @@ struct Screen
     float fAspectRatio;
     float fHUDScaleX;
     double dHUDScaleX;
+    double dHUDScaleXInv;
     float fHudOffset;
     float fHudOffsetRight;
     float fFMVoffsetStartX;
@@ -33,58 +34,229 @@ union FColor
     };
 } gColor;
 
+std::vector<uintptr_t> EchelonGameInfoPtrs;
 uintptr_t pDrawTile;
+
+namespace HudMatchers
+{
+    inline bool IsStealthMeterLine(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    {
+        return (offsetX2 - offsetX1 == 17.0f) &&
+            (offsetY1 == 337.0f || offsetY1 == 360.0f) &&
+            (offsetY2 == 368.0f || offsetY2 == 345.0f);
+    }
+
+    inline bool IsStealthMeter(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    {
+        return (offsetX2 - offsetX1 == 109.0f) &&
+            offsetY1 == 338.0f && offsetY2 == 368.0f &&
+            (color.RGBA == 4266682200 || color.RGBA == 4271286934 || color.RGBA == 4283459416 || color.RGBA == 4288064150);
+    }
+
+    inline bool IsWeaponIconBackground(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    {
+        return offsetX1 == 491.0f && offsetX2 == 592.0f &&
+            offsetY1 == 373.0f && offsetY2 == 441.0f &&
+            (color.RGBA == 4266682200 || color.RGBA == 4283459416);
+    }
+
+    inline bool IsWeaponIconBorder(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    {
+        return (offsetX1 == 487.0f || offsetX1 == 503.0f || offsetX1 == 580.0f) &&
+            (offsetX2 == 503.0f || offsetX2 == 580.0f || offsetX2 == 596.0f) &&
+            (offsetY1 == 369.0f || offsetY1 == 385.0f || offsetY1 == 429.0f) &&
+            color.RGBA == 2152752984;
+    }
+
+    inline bool IsAlarmCounterText(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    {
+        return offsetX1 >= 562.0f && offsetX2 <= 602.0f &&
+            (offsetY1 == 316.0f || offsetY1 == 315.0f) &&
+            offsetY2 == 330.0f &&
+            (color.RGBA == 4265759816 || color.RGBA == 4283459416 || color.RGBA == 4282537289);
+    }
+
+    inline bool IsHealthBar(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    {
+        return (offsetX1 == 570.0f || offsetX1 == 586.0f) &&
+            (offsetX2 == 586.0f || offsetX2 == 602.0f) &&
+            color.RGBA == 3360712536;
+    }
+
+    inline bool IsEnvelopeIcon(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    {
+        return offsetX1 == 492.0f && offsetX2 == 519.0f &&
+            offsetY1 == 314.0f && offsetY2 == 333.0f &&
+            (color.RGBA == 4266682200 || color.RGBA == 4283459416);
+    }
+
+    inline bool IsAlarmIcon(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    {
+        return offsetX1 == 521.0f && offsetX2 == 562.0f &&
+            offsetY1 == 306.0f && offsetY2 == 340.0f &&
+            (color.RGBA == 4266682200 || color.RGBA == 2152752984 || color.RGBA == 4283459416);
+    }
+
+    inline bool IsWeaponIcon(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    {
+        return (offsetX1 == 494.0f || offsetX1 == 515.0f) &&
+            offsetY1 == 377.0f &&
+            (color.RGBA == 4266682200 || color.RGBA == 4282537289 || color.RGBA == 4283459416);
+    }
+
+    inline bool IsWeaponNameText(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    {
+        return (offsetX1 >= 491.0f || offsetX1 >= 490.0f) &&
+            offsetY1 == 423.0f &&
+            (offsetY2 == 437.0f || offsetY2 == 438.0f);
+    }
+
+    inline bool IsAmmoText(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    {
+        return offsetX1 >= 571.0f &&
+            offsetY1 == 373.0f &&
+            (offsetY2 == 385.0f || offsetY2 == 388.0f) &&
+            (color.RGBA == 4265759816 || color.RGBA == 4282537289);
+    }
+
+    inline bool IsBulletsImage(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    {
+        return (offsetX1 == 581.0f && (offsetX2 == 588.0f || offsetX2 == 592.0f)) ||
+            (offsetX1 == 568.0f && offsetY1 == 406.0f);
+    }
+
+    inline bool IsRateOfFireImage(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    {
+        return offsetX1 >= 536.0f && offsetX2 <= 576.0f &&
+            offsetY1 == 416.0f && offsetY2 == 421.0f;
+    }
+
+    inline bool IsWeaponAddonBackground(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    {
+        return ((offsetX1 == 441.0f && offsetX2 == 481.0f && offsetY1 == 373.0f && offsetY2 == 413.0f) ||
+            (offsetX1 == 439.0f && offsetX2 == 483.0f && offsetY1 == 380.0f && offsetY2 == 412.0f)) &&
+            color.RGBA == 4266682200;
+    }
+
+    inline bool IsWeaponAddonBorder(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    {
+        return (offsetX1 == 437.0f || offsetX1 == 453.0f || offsetX1 == 469.0f) &&
+            (offsetX2 == 453.0f || offsetX2 == 469.0f || offsetX2 == 485.0f) &&
+            (offsetY1 == 369.0f || offsetY1 == 385.0f || offsetY1 == 401.0f) &&
+            color.RGBA == 2152752984;
+    }
+
+    inline bool IsWeaponAddonAmmoText(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    {
+        return (offsetX1 == 452.0f || offsetX1 == 456.0f || offsetX1 == 457.0f || offsetX1 == 460.0f) &&
+            (offsetX2 == 460.0f || offsetX2 == 465.0f || offsetX2 == 464.0f || offsetX2 == 467.0f || offsetX2 == 469.0f) &&
+            offsetY1 == 371.0f &&
+            (offsetY2 == 383.0f || offsetY2 == 386.0f) &&
+            color.RGBA == 4265759816;
+    }
+
+    inline bool IsInteractionMenuBackground(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    {
+        return ((offsetX1 == 362.0f) || (offsetX1 == 422.0f || offsetX1 == 443.0f)) &&
+            offsetX2 == 562.0f &&
+            (color.RGBA == 4266682200 || color.RGBA == 4269316740);
+    }
+
+    inline bool IsInteractionMenuBorder(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    {
+        return ((offsetX1 == 359.0f || offsetX1 == 375.0f || offsetX1 == 549.0f || offsetX1 == 554.0f ||
+            offsetX1 == 440.0f || offsetX1 == 456.0f || offsetX1 == 537.0f ||
+            offsetX1 == 419.0f || offsetX1 == 435.0f || offsetX1 == 439.0f) &&
+            (offsetX2 == 375.0f || offsetX2 == 370.0f || offsetX2 == 549.0f || offsetX2 == 565.0f ||
+            offsetX2 == 456.0f || offsetX2 == 451.0f || offsetX2 == 435.0f || offsetX2 == 430.0f) &&
+            (color.RGBA == 2152752984 || color.RGBA == 4266682200));
+    }
+
+    inline bool IsInteractionMenuText(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    {
+        return offsetX1 >= 365.0f &&
+            offsetY1 >= 42.0f && offsetY2 <= 192.0f &&
+            (color.RGBA == 4265759816 || color.RGBA == 4269316740);
+    }
+
+    inline bool IsTurretInterface(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    {
+        return (offsetX1 == 371.0f || offsetX1 == 379.0f || offsetX1 == 387.0f ||
+            offsetX1 == 558.0f || offsetX1 == 566.0f) &&
+            offsetY1 >= 39.0f && offsetY2 <= 162.0f &&
+            (color.RGBA == 4266682200 || color.RGBA == 3036610302);
+    }
+
+    inline bool IsTopDialogueMenuBackground(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    {
+        return offsetX1 == 48.0f && offsetX2 == 348.0f &&
+            offsetY1 >= 42.0f &&
+            (offsetY2 <= 87.0f || offsetY2 <= 90.0f) &&
+            color.RGBA == 4266682200;
+    }
+
+    inline bool IsTopDialogueMenuBorder(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    {
+        return (offsetX1 == 45.0f || offsetX1 == 61.0f || offsetX1 == 335.0f) &&
+            (offsetX2 == 61.0f || offsetX2 == 335.0f || offsetX2 == 351.0f) &&
+            color.RGBA == 4266682200;
+    }
+
+    inline bool IsTopDialogueMenuText(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    {
+        return offsetX1 >= 52.0f &&
+            offsetY1 >= 43.0f && offsetY2 <= 185.0f &&
+            color.RGBA == 4265759816;
+    }
+
+    inline bool ShouldOffsetRight(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    {
+        return IsStealthMeterLine(offsetX1, offsetX2, offsetY1, offsetY2, color) ||
+            IsStealthMeter(offsetX1, offsetX2, offsetY1, offsetY2, color) ||
+            IsWeaponIconBackground(offsetX1, offsetX2, offsetY1, offsetY2, color) ||
+            IsWeaponIconBorder(offsetX1, offsetX2, offsetY1, offsetY2, color) ||
+            IsAlarmCounterText(offsetX1, offsetX2, offsetY1, offsetY2, color) ||
+            IsHealthBar(offsetX1, offsetX2, offsetY1, offsetY2, color) ||
+            IsEnvelopeIcon(offsetX1, offsetX2, offsetY1, offsetY2, color) ||
+            IsAlarmIcon(offsetX1, offsetX2, offsetY1, offsetY2, color) ||
+            IsWeaponIcon(offsetX1, offsetX2, offsetY1, offsetY2, color) ||
+            IsWeaponNameText(offsetX1, offsetX2, offsetY1, offsetY2, color) ||
+            IsAmmoText(offsetX1, offsetX2, offsetY1, offsetY2, color) ||
+            IsBulletsImage(offsetX1, offsetX2, offsetY1, offsetY2, color) ||
+            IsRateOfFireImage(offsetX1, offsetX2, offsetY1, offsetY2, color) ||
+            IsWeaponAddonBackground(offsetX1, offsetX2, offsetY1, offsetY2, color) ||
+            IsWeaponAddonBorder(offsetX1, offsetX2, offsetY1, offsetY2, color) ||
+            IsWeaponAddonAmmoText(offsetX1, offsetX2, offsetY1, offsetY2, color) ||
+            IsInteractionMenuBackground(offsetX1, offsetX2, offsetY1, offsetY2, color) ||
+            IsInteractionMenuBorder(offsetX1, offsetX2, offsetY1, offsetY2, color) ||
+            IsInteractionMenuText(offsetX1, offsetX2, offsetY1, offsetY2, color) ||
+            IsTurretInterface(offsetX1, offsetX2, offsetY1, offsetY2, color);
+    }
+
+    inline bool ShouldOffsetLeft(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    {
+        return IsTopDialogueMenuBackground(offsetX1, offsetX2, offsetY1, offsetY2, color) ||
+            IsTopDialogueMenuBorder(offsetX1, offsetX2, offsetY1, offsetY2, color) ||
+            IsTopDialogueMenuText(offsetX1, offsetX2, offsetY1, offsetY2, color);
+    }
+}
+
 void WidescreenHud(float& offsetX1, float& offsetX2, float& offsetY1, float& offsetY2, FColor& Color)
 {
-    DBGONLY(KEYPRESS(VK_F1) { spd::log()->info("{0:f} {1:f} {2:f} {3:f} {4:08x}", offsetX1, offsetX2, offsetY1, offsetY2, Color.RGBA); });
+    DBGONLY(KEYPRESS(VK_F2)
+    {
+        spd::log()->info("{0:f} {1:f} {2:f} {3:f} {4:08x}", offsetX1, offsetX2, offsetY1, offsetY2, Color.RGBA);
+    });
 
-    if (
-        ((offsetX2 - offsetX1 == 17) && (offsetY1 == 337.0f || offsetY1 == 360.0f) && (offsetY2 == 368.0f || offsetY2 == 345.0f) /*&& Color.RGBA == 4266682200*/) || //stealth meter line 
-        ((offsetX2 - offsetX1 == 109) && offsetY1 == 338.0f && offsetY2 == 368.0f && (Color.RGBA == 4266682200 || Color.RGBA == 4271286934)) || //stealth meter
-        (offsetX1 == 491.0f && offsetX2 == 592.0f && offsetY1 == 373.0f && offsetY2 == 441.0f && Color.RGBA == 4266682200) || //weapon icon background
-        ((offsetX1 == 487.0f || offsetX1 == 503.0f || offsetX1 == 580.0f) && (offsetX2 == 503.0f || offsetX2 == 580.0f || offsetX2 == 596.0f) && (offsetY1 == 369.0f || offsetY1 == 385.0f || offsetY1 == 429.0f) && Color.RGBA == 2152752984) || //weapon icon background border
-        (offsetX1 >= 562.0f && offsetX2 <= 602.0f && offsetY1 == 316.0f && offsetY2 == 330.0f && Color.RGBA == 4265759816) || //alarm counter digits text
-        (offsetX1 >= 562.0f && offsetX2 <= 602.0f && offsetY1 == 315.0f && offsetY2 == 330.0f && Color.RGBA == 4265759816) || //alarm counter digits text (russian)
-        ((offsetX1 == 570.0f || offsetX1 == 586.0f) && (offsetX2 == 586.0f || offsetX2 == 602.0f) /*&& (offsetY1 == 125.0f || offsetY1 == 141.0f || offsetY1 == 269.0f)*/ /*&& (offsetY2 == 141.0f || offsetY2 == 269.0f || offsetY2 == 285.0f)*/ && Color.RGBA == 3360712536) || //health bar
-        (offsetX1 == 492.0f && offsetX2 == 519.0f && offsetY1 == 314.0f && offsetY2 == 333.0f && Color.RGBA == 4266682200) || //envelope icon
-        (offsetX1 == 521.0f && offsetX2 == 562.0f && offsetY1 == 306.0f && offsetY2 == 340.0f && (Color.RGBA == 4266682200 || Color.RGBA == 2152752984)) || //alarm icon
-        ((offsetX1 == 494.0f || offsetX1 == 515.0f) && offsetY1 == 377.0f /*&& offsetY2 == 423.0f*/ && Color.RGBA == 4266682200) || //weapon icon
-        (offsetX1 >= 491.0f && /*offsetX2 == 519.0f &&*/ offsetY1 == 423.0f && offsetY2 == 437.0f /*&& Color.RGBA == 4265759816*/) || //weapon name text
-        (offsetX1 >= 490.0f && /*offsetX2 == 519.0f &&*/ offsetY1 == 423.0f && offsetY2 == 438.0f /*&& Color.RGBA == 4265759816*/) || //weapon name text (russian)
-        (offsetX1 >= 571.0f && /*offsetX2 == 519.0f &&*/ offsetY1 == 373.0f && offsetY2 == 385.0f && Color.RGBA == 4265759816) || //ammo text
-        (offsetX1 >= 571.0f && /*offsetX2 == 519.0f &&*/ offsetY1 == 373.0f && offsetY2 == 388.0f && Color.RGBA == 4265759816) || //ammo text (russian)
-        (offsetX1 == 581.0f && (offsetX2 == 588.0f || offsetX2 == 592.0f) /*&& (Color.RGBA == 4266682200 || Color.RGBA == 4265759816)*/) ||  //bullets image
-        (offsetX1 == 568.0f /*&& (offsetX2 == 588.0f || offsetX2 == 592.0f)*/&& offsetY1 == 406.0f /*&& (Color.RGBA == 4266682200 /*|| Color.RGBA == 4265759816)*/) ||  //another bullet image
-        (offsetX1 >= 536.0f && offsetX2 <= 576.0f && offsetY1 == 416.0f && offsetY2 == 421.0f /*&& Color.RGBA == 0xFE000000*/) || //rate of fire image
-        (offsetX1 == 441.0f && offsetX2 == 481.0f && offsetY1 == 373.0f && offsetY2 == 413.0f && Color.RGBA == 4266682200) || //weapon addon icon background
-        (offsetX1 == 439.0f && offsetX2 == 483.0f && offsetY1 == 380.0f && offsetY2 == 412.0f && Color.RGBA == 4266682200) || //weapon addon icon
-        ((offsetX1 == 437.0f || offsetX1 == 453.0f || offsetX1 == 469.0f) && (offsetX2 == 453.0f || offsetX2 == 469.0f || offsetX2 == 485.0f) && (offsetY1 == 369.0f || offsetY1 == 385.0f || offsetY1 == 401.0f) && Color.RGBA == 2152752984) || //weapon addon icon background border
-        ((offsetX1 == 452.0f || offsetX1 == 456.0f || offsetX1 == 457.0f || offsetX1 == 460.0f) && (offsetX2 == 460.0f || offsetX2 == 465.0f || offsetX2 == 467.0f || offsetX2 == 469.0f) && offsetY1 == 371.0f && offsetY2 == 383.0f && Color.RGBA == 4265759816) || //weapon addon ammo text
-        ((offsetX1 == 452.0f || offsetX1 == 456.0f || offsetX1 == 457.0f || offsetX1 == 460.0f) && (offsetX2 == 460.0f || offsetX2 == 464.0f || offsetX2 == 467.0f || offsetX2 == 469.0f) && offsetY1 == 371.0f && offsetY2 == 386.0f && Color.RGBA == 4265759816) || //weapon addon ammo text (russian)
-        (offsetX1 == 362.0f && offsetX2 == 562.0f /*&& offsetY1 == 42.0f && offsetY2 == 66.0f*/ && (Color.RGBA == 4266682200 || Color.RGBA == 4269316740)) || //interaction menu background
-        ((offsetX1 == 422.0f || offsetX1 == 443.0f) && offsetX2 == 562.0f /*&& offsetY1 == 42.0f && offsetY2 == 66.0f*/ && (Color.RGBA == 4266682200 || Color.RGBA == 4269316740)) || //interaction menu background (russian)
-        ((offsetX1 == 359.0f || offsetX1 == 375.0f || offsetX1 == 549.0f || offsetX1 == 554.0f) && (offsetX2 == 375.0f || offsetX2 == 370.0f || offsetX2 == 549.0f || offsetX2 == 565.0f) && (Color.RGBA == 2152752984 || Color.RGBA == 4266682200)) || //interaction menu background border
-        ((offsetX1 == 440.0f || offsetX1 == 456.0f || offsetX1 == 537.0f || offsetX1 == 554.0f) && (offsetX2 == 456.0f || offsetX2 == 451.0f || offsetX2 == 549.0f || offsetX2 == 565.0f) && (Color.RGBA == 2152752984 || Color.RGBA == 4266682200)) || //interaction menu background border (russian)
-        ((offsetX1 == 419.0f || offsetX1 == 435.0f || offsetX1 == 439.0f || offsetX1 == 549.0f) && (offsetX2 == 435.0f || offsetX2 == 430.0f || offsetX2 == 549.0f || offsetX2 == 565.0f) && (Color.RGBA == 2152752984 || Color.RGBA == 4266682200)) || //interaction menu background border (russian2)
-        (offsetX1 >= 365.0f && offsetY1 >= 42.0f && offsetY2 <= 192.0f && (Color.RGBA == 4265759816 || Color.RGBA == 4269316740)) || //interaction menu text
-        ((offsetX1 == 371.0f || offsetX1 == 379.0f || offsetX1 == 387.0f || offsetX1 == 558.0f || offsetX1 == 566.0f) && offsetY1 >= 39.0f && offsetY2 <= 162.0f && (Color.RGBA == 4266682200 || Color.RGBA == 3036610302)) // turret interface, Color.RGBA == 4271155864 -> turret mouse area, maybe something else
-        )
+    if (HudMatchers::ShouldOffsetRight(offsetX1, offsetX2, offsetY1, offsetY2, Color))
     {
         offsetX1 += Screen.fWidescreenHudOffset;
         offsetX2 += Screen.fWidescreenHudOffset;
     }
-    else
+    else if (HudMatchers::ShouldOffsetLeft(offsetX1, offsetX2, offsetY1, offsetY2, Color))
     {
-        if (
-            (offsetX1 == 48.0f && offsetX2 == 348.0f && offsetY1 >= 42.0f && offsetY2 <= 87.0f && Color.RGBA == 4266682200) || //top dialogue menu background
-            (offsetX1 == 48.0f && offsetX2 == 348.0f && offsetY1 >= 42.0f && offsetY2 <= 90.0f && Color.RGBA == 4266682200) || //top dialogue menu background (russian)
-            ((offsetX1 == 45.0f || offsetX1 == 61.0f || offsetX1 == 335.0f) && (offsetX2 == 61.0f || offsetX2 == 335.0f || offsetX2 == 351.0f) && Color.RGBA == 4266682200) || //top dialogue menu background border
-            (offsetX1 >= 52.0f && offsetY1 >= 43.0f && offsetY2 <= 185.0f && Color.RGBA == 4265759816) //top dialogue menu text
-            )
-        {
-            offsetX1 -= Screen.fWidescreenHudOffset;
-            offsetX2 -= Screen.fWidescreenHudOffset;
-        }
+        offsetX1 -= Screen.fWidescreenHudOffset;
+        offsetX2 -= Screen.fWidescreenHudOffset;
     }
 }
 
@@ -216,11 +388,9 @@ void Init()
     iniWriter.WriteInteger("D3DDrv.D3DRenderDevice", "ForceShadowMode", iniReader.ReadInteger("MAIN", "ForceShadowBufferMode", 1));
 }
 
-std::vector<uintptr_t> v;
-
 void InitCore()
 {
-    auto pattern = hook::module_pattern(GetModuleHandle(L"Core"), "C7 85 D4 F1 FF FF 00 00 00 00"); //0x1000CE5E
+    auto pattern = find_module_pattern(GetModuleHandle(L"Core"), "C7 85 D4 F1 FF FF 00 00 00 00", "C7 85 ? ? ? ? ? ? ? ? EB ? 8B 8D ? ? ? ? 83 C1 ? 89 8D ? ? ? ? 81 BD ? ? ? ? ? ? ? ? 0F 83"); //0x1000CE5E
     uint32_t pfappInit = (uint32_t)pattern.get_first();
 
     auto rpattern = hook::range_pattern(pfappInit, pfappInit + 0x900, "80 02 00 00");
@@ -229,19 +399,27 @@ void InitCore()
     rpattern = hook::range_pattern(pfappInit, pfappInit + 0x900, "E0 01 00 00");
     injector::WriteMemory(rpattern.count(2).get(1).get<uint32_t>(0), Screen.Height, true); //pfappInit + 0x69F + 0x1
 
-#if 0 // set player speed to max on game start
+    // set player speed to max on game start
     pattern = hook::module_pattern(GetModuleHandle(L"Core"), "8B D9 C1 E9 02 83 E3 03 F3 A5 8B CB F3 A4 5B 5F 5E 59 8B F0");
-    static auto test = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    if (!pattern.empty())
     {
-        v.push_back(regs.edi - 0x2C);
-    });
-#endif
+        static auto UObjectInitPropertiesHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs) {
+            EchelonGameInfoPtrs.push_back(regs.edi - 0x2C);
+        });
+    }
+    else
+    {
+        pattern = hook::module_pattern(GetModuleHandle(L"Core"), "8D 47 ? 50 8D 42");
+        static auto UObjectInitPropertiesHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs) {
+            EchelonGameInfoPtrs.push_back(regs.esi);
+        });
+    }
 }
 
 void InitD3DDrv()
 {
-    static auto pPresentParams = *hook::module_pattern(GetModuleHandle(L"D3DDrv"), "BF ? ? ? ? 33 C0 8B D9 C1 E9 02 83 E3 03").get_first<D3DPRESENT_PARAMETERS*>(1);
-    auto pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "B8 01 00 00 00 8B 4D F4 64 89 0D 00 00 00 00 5F 5E 5B 8B E5 5D C2 10 00");
+    static auto pPresentParams = *find_module_pattern(GetModuleHandle(L"D3DDrv"), "BF ? ? ? ? 33 C0 8B D9 C1 E9 02 83 E3 03", "68 ? ? ? ? FF 15 ? ? ? ? 8B 8D").get_first<D3DPRESENT_PARAMETERS*>(1);
+    auto pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "B8 01 00 00 00 8B 4D F4 64 89 0D 00 00 00 00 5F 5E 5B 8B E5 5D C2 10 00", "B8 ? ? ? ? EB ? 33 C0 89 86");
     struct SetResHook
     {
         void operator()(injector::reg_pack& regs)
@@ -256,6 +434,7 @@ void InitD3DDrv()
             Screen.fHudOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
             Screen.fHUDScaleX = 1.0f / Screen.fWidth * (Screen.fHeight / 480.0f);
             Screen.dHUDScaleX = static_cast<double>(Screen.fHUDScaleX);
+            Screen.dHUDScaleXInv = 1.0 / Screen.dHUDScaleX;
             Screen.fFMVoffsetStartX = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
             Screen.fFMVoffsetEndX = Screen.fWidth - Screen.fFMVoffsetStartX;
             Screen.fFMVoffsetStartY = 0.0f - ((Screen.fHeight - ((Screen.fHeight / 1.5f) * ((16.0f / 9.0f) / Screen.fAspectRatio))) / 2.0f);
@@ -297,37 +476,69 @@ void InitD3DDrv()
     }; injector::MakeInline<SetResHook>(pattern.get_first(0));
 
     //FMV
-    pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "C1 E9 02 33 C0 F3 AB 8B CA 83 E1 03 F3 AA 8B 45 0C");
-    struct OpenVideo_Hook
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            regs.ecx = 0x4B000;
-            regs.ecx >>= 2;
-            regs.eax = 0;
-        }
-    }; injector::MakeInline<OpenVideo_Hook>(pattern.count(2).get(0).get<void*>(0)); //pfOpenVideo + 0x2D4
+    //pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "C1 E9 02 33 C0 F3 AB 8B CA 83 E1 03 F3 AA 8B 45 0C");
+    //if (!pattern.empty())
+    //{
+    //    struct OpenVideo_Hook
+    //    {
+    //        void operator()(injector::reg_pack& regs)
+    //        {
+    //            regs.ecx = 0x4B000;
+    //            regs.ecx >>= 2;
+    //            regs.eax = 0;
+    //        }
+    //    }; injector::MakeInline<OpenVideo_Hook>(pattern.count(2).get(0).get<void*>(0)); //pfOpenVideo + 0x2D4
+    //}
+    //else
+    //{
+    //
+    //}
 
     pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "D9 1C 24 56 56 FF 15");
-    injector::WriteMemory<uint8_t>(pattern.get_first(-4), 0x56, true); //push esi
-    struct DisplayVideo_Hook
+    if (!pattern.empty())
     {
-        void operator()(injector::reg_pack& regs)
+        injector::WriteMemory<uint8_t>(pattern.get_first(-4), 0x56, true); //push esi
+        struct DisplayVideo_Hook
         {
-            *(float*)(regs.esp + 0x04) = static_cast<float>(*(int32_t*)(regs.esp + 0x68 + 0x4));
+            void operator()(injector::reg_pack& regs)
+            {
+                *(float*)(regs.esp + 0x04) = static_cast<float>(*(int32_t*)(regs.esp + 0x68 + 0x4));
 
-            if (Screen.nFMVWidescreenMode)
-            {
-                *(float*)(regs.esp + 0x00) = Screen.fFMVoffsetStartY;
-                *(float*)(regs.esp + 0x08) = Screen.fFMVoffsetEndY;
+                if (Screen.nFMVWidescreenMode)
+                {
+                    *(float*)(regs.esp + 0x00) = Screen.fFMVoffsetStartY;
+                    *(float*)(regs.esp + 0x08) = Screen.fFMVoffsetEndY;
+                }
+                else
+                {
+                    *(float*)&regs.esi = Screen.fFMVoffsetStartX;
+                    *(float*)(regs.esp + 0x04) = Screen.fFMVoffsetEndX;
+                }
             }
-            else
+        }; injector::MakeInline<DisplayVideo_Hook>(pattern.get_first(-3), pattern.get_first(4)); //pfDisplayVideo + 0x37E
+    }
+    else
+    {
+        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "C7 04 24 ? ? ? ? FF 15 ? ? ? ? 8D 8D ? ? ? ? FF 15 ? ? ? ? 8B 8E");
+        struct DisplayVideo_Hook
+        {
+            void operator()(injector::reg_pack& regs)
             {
-                *(float*)&regs.esi = Screen.fFMVoffsetStartX;
-                *(float*)(regs.esp + 0x04) = Screen.fFMVoffsetEndX;
+                *(float*)(regs.esp + 0x00) = 0.0f;
+
+                if (Screen.nFMVWidescreenMode)
+                {
+                    *(float*)(regs.esp + 0x04) = Screen.fFMVoffsetStartY;
+                    *(float*)(regs.esp + 0x0C) = Screen.fFMVoffsetEndY;
+                }
+                else
+                {
+                    *(float*)(regs.esp + 0x00) = Screen.fFMVoffsetStartX;
+                    *(float*)(regs.esp + 0x08) = Screen.fFMVoffsetEndX;
+                }
             }
-        }
-    }; injector::MakeInline<DisplayVideo_Hook>(pattern.get_first(-3), pattern.get_first(4)); //pfDisplayVideo + 0x37E
+        }; injector::MakeInline<DisplayVideo_Hook>(pattern.get_first(0), pattern.get_first(7));
+    }
 
     if (Screen.nPostProcessFixedScale)
     {
@@ -337,12 +548,24 @@ void InitD3DDrv()
         pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "68 00 02 00 00 68 00 02 00 00");
         for (size_t i = 0; i < pattern.size(); i++)
         {
+            if (pattern.size() == 8 && i == 2)
+                continue;
+
             injector::WriteMemory(pattern.get(i).get<uint32_t>(1), Screen.nPostProcessFixedScale, true); //affects glass reflections
             injector::WriteMemory(pattern.get(i).get<uint32_t>(6), Screen.nPostProcessFixedScale, true);
         }
 
         pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "B8 00 02 00 00");
-        injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(1), Screen.nPostProcessFixedScale, true);
+        if (!pattern.empty())
+            injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(1), Screen.nPostProcessFixedScale, true);
+        else
+        {
+            pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "C7 80 ? ? ? ? ? ? ? ? 56");
+            injector::WriteMemory(pattern.get_first(6), Screen.nPostProcessFixedScale, true);
+
+            pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "C7 80 ? ? ? ? ? ? ? ? 8B 45 ? 6A");
+            injector::WriteMemory(pattern.get_first(6), Screen.nPostProcessFixedScale, true);
+        }
     }
 }
 
@@ -352,38 +575,82 @@ void InitEngine()
     pDrawTile = injector::GetBranchDestination(pattern.count(3).get(0).get<uintptr_t>(6), true).as_int();
 
     pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "DC 0D ? ? ? ? DB 43 18 DC 0D ? ? ? ? D9 5D E4 75 12 D9 45 10");
-    injector::WriteMemory(pattern.get_first(2), &Screen.dHUDScaleX, true);
+    if (!pattern.empty())
+        injector::WriteMemory(pattern.get_first(2), &Screen.dHUDScaleX, true);
+    else
+    {
+        pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "F2 0F 5E 05 ? ? ? ? 66 0F 5A D0");
+        injector::WriteMemory(pattern.get_first(4), &Screen.dHUDScaleXInv, true);
+    }
 
     pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "8B 4D F4 5F 5E 64 89 0D 00 00 00 00 5B 8B E5 5D C2 4C 00");
-    injector::MakeCALL(pattern.count(1).get(0).get<uint32_t>(-5), FCanvasUtilDrawTileHook, true); //pfFUCanvasDrawTile + 0x219
+    if (!pattern.empty())
+        injector::MakeCALL(pattern.count(1).get(0).get<uint32_t>(-5), FCanvasUtilDrawTileHook, true); //pfFUCanvasDrawTile + 0x219
+    else
+    {
+        pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "F3 0F 11 0C 24 E8 ? ? ? ? 5F 5E 5B");
+        injector::MakeCALL(pattern.get_first(5), FCanvasUtilDrawTileHook, true);
+    }
 
-    uint32_t pfsub_103762F0 = (uint32_t)hook::module_pattern(GetModuleHandle(L"Engine"), "8B 4C 24 04 8B 51 44 83").get_first(0);
-    auto rpattern = hook::range_pattern(pfsub_103762F0, pfsub_103762F0 + 0x800, "E8 ? ? ? ? 8B ?");
-    injector::MakeCALL(rpattern.get(3).get<uint32_t>(0), FCanvasUtilDrawTileHook, true); //pfsub_103762F0 + 0x36E
-    injector::MakeCALL(rpattern.get(5).get<uint32_t>(0), FCanvasUtilDrawTileHook, true); //pfsub_103762F0 + 0x43D
-    injector::MakeCALL(rpattern.get(7).get<uint32_t>(0), FCanvasUtilDrawTileHook, true); //pfsub_103762F0 + 0x4DA
-    injector::MakeCALL(rpattern.get(9).get<uint32_t>(0), FCanvasUtilDrawTileHook, true); //pfsub_103762F0 + 0x564
+    pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "8B 4C 24 04 8B 51 44 83");
+    if (!pattern.empty())
+    {
+        uint32_t pfsub_103762F0 = (uint32_t)pattern.get_first(0);
+        auto rpattern = hook::range_pattern(pfsub_103762F0, pfsub_103762F0 + 0x800, "E8 ? ? ? ? 8B ?");
+        injector::MakeCALL(rpattern.get(3).get<uint32_t>(0), FCanvasUtilDrawTileHook, true); //pfsub_103762F0 + 0x36E
+        injector::MakeCALL(rpattern.get(5).get<uint32_t>(0), FCanvasUtilDrawTileHook, true); //pfsub_103762F0 + 0x43D
+        injector::MakeCALL(rpattern.get(7).get<uint32_t>(0), FCanvasUtilDrawTileHook, true); //pfsub_103762F0 + 0x4DA
+        injector::MakeCALL(rpattern.get(9).get<uint32_t>(0), FCanvasUtilDrawTileHook, true); //pfsub_103762F0 + 0x564
+    }
+    else
+    {
+        pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "E8 ? ? ? ? 83 7D ? ? 8B 4D");
+        injector::MakeCALL(pattern.get_first(0), FCanvasUtilDrawTileHook, true);
+    }
 
     //FOV
-    uint32_t pfDraw = (uint32_t)hook::module_pattern(GetModuleHandle(L"Engine"), "81 EC 84 06 00 00 A1 ? ? ? ? 53 56 57").get_first();
-    rpattern = hook::range_pattern(pfDraw, pfDraw + 0x1036, "8B ? ? 03 00 00");
-    struct UGameEngine_Draw_Hook
+    pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "81 EC 84 06 00 00 A1 ? ? ? ? 53 56 57");
+    if (!pattern.empty())
     {
-        void operator()(injector::reg_pack& regs)
+        uint32_t pfDraw = (uint32_t)pattern.get_first();
+        auto rpattern = hook::range_pattern(pfDraw, pfDraw + 0x1036, "8B ? ? 03 00 00");
+        struct UGameEngine_Draw_Hook
         {
-            *(float*)&regs.ecx = AdjustFOV(*(float*)(regs.eax + 0x374), Screen.fAspectRatio);
-        }
-    }; injector::MakeInline<UGameEngine_Draw_Hook>(rpattern.get(0).get<uint32_t>(0), rpattern.get(0).get<uint32_t>(0 + 6));
+            void operator()(injector::reg_pack& regs)
+            {
+                *(float*)&regs.ecx = AdjustFOV(*(float*)(regs.eax + 0x374), Screen.fAspectRatio);
+            }
+        }; injector::MakeInline<UGameEngine_Draw_Hook>(rpattern.get(0).get<uint32_t>(0), rpattern.get(0).get<uint32_t>(0 + 6));
 
-    struct UGameEngine_Draw_Hook2 //1038AA8F
-    {
-        void operator()(injector::reg_pack& regs)
+        struct UGameEngine_Draw_Hook2 //1038AA8F
         {
-            *(float*)&regs.eax = AdjustFOV(*(float*)(regs.edx + 0x374), Screen.fAspectRatio);
-        }
-    };
-    injector::MakeInline<UGameEngine_Draw_Hook2>(rpattern.get(2).get<uint32_t>(0), rpattern.get(2).get<uint32_t>(0 + 6));
-    injector::MakeInline<UGameEngine_Draw_Hook2>(rpattern.get(3).get<uint32_t>(0), rpattern.get(3).get<uint32_t>(0 + 6));
+            void operator()(injector::reg_pack& regs)
+            {
+                *(float*)&regs.eax = AdjustFOV(*(float*)(regs.edx + 0x374), Screen.fAspectRatio);
+            }
+        };
+        injector::MakeInline<UGameEngine_Draw_Hook2>(rpattern.get(2).get<uint32_t>(0), rpattern.get(2).get<uint32_t>(0 + 6));
+        injector::MakeInline<UGameEngine_Draw_Hook2>(rpattern.get(3).get<uint32_t>(0), rpattern.get(3).get<uint32_t>(0 + 6));
+    }
+    else
+    {
+        struct UGameEngine_Draw_Hook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                regs.xmm0.f32[0] = AdjustFOV(*(float*)(regs.eax + 0x374), Screen.fAspectRatio);
+            }
+        };
+        
+        pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "8B 8D ? ? ? ? F3 0F 10 80");
+        injector::MakeInline<UGameEngine_Draw_Hook>(pattern.get_first(6), pattern.get_first(6 + 8));
+        
+        pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "8B 41 ? F3 0F 10 80 ? ? ? ? 8B C4");
+        injector::MakeInline<UGameEngine_Draw_Hook>(pattern.get_first(3), pattern.get_first(3 + 8));
+
+        pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "C7 86 ? ? ? ? ? ? ? ? F3 0F 10 80");
+        injector::MakeInline<UGameEngine_Draw_Hook>(pattern.get_first(10), pattern.get_first(10 + 8));
+    }
 
     if (Screen.nPostProcessFixedScale)
     {
@@ -416,30 +683,29 @@ void InitEngine()
 
 void InitEchelon()
 {
-    auto pattern = hook::module_pattern(GetModuleHandle(L"Echelon"), "8B 4D ? 8B 79 ? 33 DB 47 8B C7 89 79 ? 80 38 42 89 65 ? 89 5D ? 75 ? 8B 41 ? 53 50 FF 15 ? ? ? ? D9 86");
-    static auto test = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    // set player speed to max on game start
+    auto pattern = find_module_pattern(GetModuleHandle(L"Echelon"), "8B 4D ? 8B 79 ? 33 DB 47 8B C7 89 79 ? 80 38 42 89 65 ? 89 5D ? 75 ? 8B 41 ? 53 50 FF 15 ? ? ? ? D9 86",
+        "8B 4D ? FF 41 ? 8B 41 ? 80 38 ? 75 ? 6A ? FF 71 ? FF 15 ? ? ? ? F3 0F 10 86 ? ? ? ? 83 EC ? F3 0F 10 8E ? ? ? ? F3 0F 59 C0 F3 0F 59 C9 F3 0F 58 C1 0F 5A C0 F2 0F 11 04 24 FF 15 ? ? ? ? F3 0F 10 25");
+    static auto defautSpeedHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        if (std::find(v.begin(), v.end(), regs.esi) != v.end())
+        if (std::find(EchelonGameInfoPtrs.begin(), EchelonGameInfoPtrs.end(), regs.esi) != EchelonGameInfoPtrs.end())
         {
             *(uintptr_t*)(regs.esi + 0x778) = 5;
         }
-        v.clear();
+        EchelonGameInfoPtrs.clear();
     });
 }
 
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
-        {
-            CallbackHandler::RegisterCallback(Init);
-            CallbackHandler::RegisterCallback(L"Core.dll", InitCore);
-            CallbackHandler::RegisterCallback(L"Engine.dll", InitEngine);
-            CallbackHandler::RegisterCallback(L"D3DDrv.dll", InitD3DDrv);
-
-#if 0 // set player speed to max on game start
-            CallbackHandler::RegisterCallback(L"Echelon.dll", InitEchelon);
-#endif
-        });
+    {
+        CallbackHandler::RegisterCallback(Init);
+        CallbackHandler::RegisterCallback(L"Core.dll", InitCore);
+        CallbackHandler::RegisterCallback(L"Engine.dll", InitEngine);
+        CallbackHandler::RegisterCallback(L"D3DDrv.dll", InitD3DDrv);
+        CallbackHandler::RegisterCallback(L"Echelon.dll", InitEchelon);
+    });
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
