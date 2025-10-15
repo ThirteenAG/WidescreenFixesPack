@@ -365,27 +365,36 @@ void Init()
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
 
-    char UserIni[MAX_PATH];
-    GetModuleFileNameA(GetModuleHandle(NULL), UserIni, (sizeof(UserIni)));
-    *strrchr(UserIni, '\\') = '\0';
-    strcat(UserIni, "\\SplinterCell2User.ini");
+    auto exePath = GetExeModulePath();
 
-    CIniReader iniWriter(UserIni);
-    char szRes[50];
-    sprintf(szRes, "%dx%d", Screen.Width, Screen.Height);
-    iniWriter.WriteString("Engine.EPCGameOptions", "Resolution", szRes);
+    mINI::INIStructure ini;
+    mINI::INIFile mIni(iniReader.GetIniPath());
+    mIni.read(ini);
 
-    *strrchr(UserIni, '\\') = '\0';
-    strcat(UserIni, "\\SplinterCell2.ini");
-    iniWriter.SetIniPath(UserIni);
+    auto userIniPath = exePath / "SplinterCell2User.ini";
+
+    // Read the existing user INI file into a structure
+    mINI::INIStructure userIni;
+    mINI::INIFile userIniFile(userIniPath);
+    userIniFile.read(userIni);
+
+    if (ini.has("Engine.Input"))
+    {
+        for (auto const& kv : ini["Engine.Input"])
+        {
+            std::string key = std::get<0>(kv);
+            std::string value = std::get<1>(kv);
+            userIni["Engine.Input"].setAll(key, value);
+        }
+    }
+    userIni["Engine.EPCGameOptions"]["Resolution"] = std::to_string(Screen.Width) + "x" + std::to_string(Screen.Height);
+    userIniFile.generate(userIni);
+
+    auto gameIniPath = exePath / "SplinterCell2.ini";
+    CIniReader iniWriter(gameIniPath);
     iniWriter.WriteInteger("WinDrv.WindowsClient", "WindowedViewportX", Screen.Width);
     iniWriter.WriteInteger("WinDrv.WindowsClient", "WindowedViewportY", Screen.Height);
-    iniWriter.WriteInteger("D3DDrv.D3DRenderDevice", "ForceShadowMode", iniReader.ReadInteger("MAIN", "ForceShadowBufferMode", 1));
-
-    *strrchr(UserIni, '\\') = '\0';
-    strcat(UserIni, "\\SplinterCell.ini");
-    iniWriter.SetIniPath(UserIni);
-    iniWriter.WriteInteger("D3DDrv.D3DRenderDevice", "ForceShadowMode", iniReader.ReadInteger("MAIN", "ForceShadowBufferMode", 1));
+    iniWriter.WriteString("WinDrv.WindowsClient", "UseJoystick", "True");
 }
 
 void InitCore()

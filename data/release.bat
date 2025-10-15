@@ -59,7 +59,8 @@ rem dgVoodoo
 7za e -so "..\dgVoodoo2.zip" "MS\x86\D3DImm.dll" > ".\KnightRider2.WidescreenFix\D3DImm.dll"
 
 7za e -so "..\dgVoodoo2.zip" "MS\x86\D3D8.dll" > ".\SplinterCell.WidescreenFix\system\d3d8.dll"
-7za e -so "..\dgVoodoo2.zip" "MS\x86\D3D8.dll" > ".\SplinterCellPandoraTomorrow.WidescreenFix\offline\system\d3d8.dll"
+7za e -so "..\xidi.zip" "Xidi-*/Win32/dinput8.dll" > ".\SplinterCellPandoraTomorrow.WidescreenFix\system\dinput8.dll"
+7za e -so "..\xidi.zip" "Xidi-*/Win32/dinput8.dll" > ".\SplinterCellConviction.FusionMod\src\system\dinput8.dll"
 
 rem Creating archives
 

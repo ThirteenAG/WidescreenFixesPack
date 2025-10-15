@@ -15,3 +15,7 @@ for /f "tokens=1,* delims=:" %%A in ('curl -ks https://api.github.com/repos/dege
     curl -o dgVoodoo2.zip -kL %%B
   )
 )
+
+for /f "tokens=1,* delims=:" %%A in ('curl -ks https://api.github.com/repos/samuelgr/Xidi/releases/latest ^| find "browser_download_url"') do (
+    curl -o xidi.zip -kL %%B
+)
