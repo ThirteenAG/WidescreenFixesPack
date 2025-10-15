@@ -472,7 +472,7 @@ project "SplinterCellDoubleAgent.WidescreenFix"
    files { "textures/SCDA/icon.rc" }
    defines { "IDR_SCDAICON=200" }
 project "SplinterCellPandoraTomorrow.WidescreenFix"
-   setpaths("Z:/WFP/Games/Splinter Cell/Splinter Cell Pandora Tomorrow/", "offline/system/SplinterCell2.exe", "offline/system/scripts/")
+   setpaths("Z:/WFP/Games/Splinter Cell/Splinter Cell Pandora Tomorrow/", "system/SplinterCell2.exe", "system/scripts/")
 group "Win32"
 
 project "StreetRacingSyndicate.WidescreenFix"
