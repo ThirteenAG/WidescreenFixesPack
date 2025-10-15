@@ -134,6 +134,22 @@ hook::pattern find_pattern(Args... args)
     return pattern;
 }
 
+template <size_t count = 1, typename... Args>
+hook::pattern find_module_pattern(HMODULE hModule, Args... args)
+{
+    hook::pattern pattern;
+    ((pattern = hook::module_pattern(hModule, args), !pattern.count_hint(count).empty()) || ...);
+    return pattern;
+}
+
+template <size_t count = 1, typename... Args>
+hook::pattern find_range_pattern(uintptr_t range_start, size_t range_size, Args... args)
+{
+    hook::pattern pattern;
+    ((pattern = hook::range_pattern(range_start, range_size, args), !pattern.count_hint(count).empty()) || ...);
+    return pattern;
+}
+
 template<size_t N>
 constexpr size_t length(char const (&)[N])
 {
