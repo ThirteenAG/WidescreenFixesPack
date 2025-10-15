@@ -155,7 +155,6 @@ void Init()
     iniWriter.SetIniPath(UserIni);
     iniWriter.WriteInteger("WinDrv.WindowsClient", "WindowedViewportX", Screen.Width);
     iniWriter.WriteInteger("WinDrv.WindowsClient", "WindowedViewportY", Screen.Height);
-    iniWriter.WriteInteger("D3DDrv.D3DRenderDevice", "ForceShadowMode", iniReader.ReadInteger("MAIN", "ForceShadowBufferMode", 1));
     iniWriter.WriteString("D3DDrv.D3DRenderDevice", "FullScreenVideo", "True");
 }
 
