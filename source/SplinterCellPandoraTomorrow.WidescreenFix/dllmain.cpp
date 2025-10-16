@@ -405,6 +405,25 @@ void Init()
     iniWriter.WriteInteger("WinDrv.WindowsClient", "WindowedViewportY", Screen.Height);
     iniWriter.WriteString("WinDrv.WindowsClient", "UseJoystick", "True");
 
+    auto ESettingIniPath = exePath / "ESetting.ini";
+    mINI::INIStructure ESettingIni;
+    mINI::INIFile ESettingIniFile(ESettingIniPath);
+    ESettingIniFile.read(ESettingIni);
+
+    for (auto const& section : ESettingIni)
+    {
+        std::string sectionName = std::get<0>(section);
+        if (ESettingIni[sectionName].has("useAimTuning"))
+        {
+            ESettingIni[sectionName]["useAimTuning"] = "v=0";
+        }
+        //if (ESettingIni[sectionName].has("AimSpeedAdjust"))
+        //{
+        //    ESettingIni[sectionName]["AimSpeedAdjust"] = "v=1.0";
+        //}
+    }
+    ESettingIniFile.write(ESettingIni);
+
     std::vector<std::string> list;
     GetResolutionsList(list);
 
