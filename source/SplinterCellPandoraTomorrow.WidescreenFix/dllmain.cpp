@@ -774,6 +774,25 @@ void InitD3DDrv()
     }
 }
 
+#if _DEBUG
+SafetyHookInline shFindAxisName = {};
+float* __fastcall FindAxisName(void* UInput, void* edx, void* AActor, const wchar_t* a3)
+{
+    auto ret = shFindAxisName.unsafe_fastcall<float*>(UInput, edx, AActor, a3);
+
+    if (std::wstring_view(a3) == L"aMouseX")
+    {
+        return ret;
+    }
+    else if (std::wstring_view(a3) == L"aMouseY")
+    {
+        return ret;
+    }
+
+    return ret;
+}
+#endif
+
 void InitEngine()
 {
     auto pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "8B ? 94 00 00 00 E8");
@@ -884,6 +903,16 @@ void InitEngine()
             }
         }; injector::MakeInline<USkeletalMeshInstanceRenderHook>(pattern.get_first(0), pattern.get_first(15));
     }
+
+#if _DEBUG
+    pattern = find_module_pattern<1>(GetModuleHandle(L"Engine"), "55 8B EC 83 EC ? 53 56 57 6A ? FF 75 ? 8D 4D ? FF 15 ? ? ? ? 83 7D ? ? 0F 84 ? ? ? ? 8B 75");
+    if (!pattern.empty())
+        shFindAxisName = safetyhook::create_inline(pattern.get_first(), FindAxisName);
+#endif
+
+    // LOD
+    pattern = find_module_pattern(GetModuleHandle(L"Engine"), "0F 84 ? ? ? ? FF 15 ? ? ? ? 8B 8C 24", "0F 84 ? ? ? ? 8B 41 ? F3 0F 10 81");
+    injector::WriteMemory<uint16_t>(pattern.get_first(0), 0xE990, true); // jz -> jmp
 }
 
 void InitEchelon()
@@ -899,6 +928,16 @@ void InitEchelon()
         }
         EchelonGameInfoPtrs.clear();
     });
+
+    // Camera acceleration
+    pattern = find_module_pattern(GetModuleHandle(L"Echelon"), "0F 8A ? ? ? ? F3 0F 10 81 ? ? ? ? 0F 2E C1 9F F6 C4 ? 0F 8A ? ? ? ? F3 0F 10 89");
+    if (!pattern.empty())
+        injector::WriteMemory<uint16_t>(pattern.get_first(0), 0xE990, true); // jp -> jmp
+    else
+    {
+        pattern = find_module_pattern(GetModuleHandle(L"Echelon"), "7A ? D9 05 ? ? ? ? D9 81 ? ? ? ? DA E9 DF E0 F6 C4 ? 7A");
+        injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true); // jp -> jmp
+    }
 }
 
 CEXP void InitializeASI()
