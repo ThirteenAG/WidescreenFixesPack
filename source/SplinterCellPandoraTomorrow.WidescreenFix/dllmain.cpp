@@ -34,6 +34,15 @@ union FColor
     };
 } gColor;
 
+std::vector<std::pair<const std::wstring, std::wstring>> ResList =
+{
+    { L"640x480",   L"" },
+    { L"800x600",   L"" },
+    { L"1024x768",  L"" },
+    { L"1280x1024", L"" },
+    { L"1600x1200", L"" },
+};
+
 std::vector<uintptr_t> EchelonGameInfoPtrs;
 uintptr_t pDrawTile;
 
@@ -395,6 +404,111 @@ void Init()
     iniWriter.WriteInteger("WinDrv.WindowsClient", "WindowedViewportX", Screen.Width);
     iniWriter.WriteInteger("WinDrv.WindowsClient", "WindowedViewportY", Screen.Height);
     iniWriter.WriteString("WinDrv.WindowsClient", "UseJoystick", "True");
+
+    std::vector<std::string> list;
+    GetResolutionsList(list);
+
+    // Add current resolution to list
+    auto str = format("%dx%d", Screen.Width, Screen.Height);
+    if (std::find(list.begin(), list.end(), str) == list.end())
+    {
+        list.push_back(str);
+    }
+
+    // Sort by resolution size (descending)
+    std::sort(list.begin(), list.end(), [](const std::string& lhs, const std::string& rhs) {
+        int32_t x1, y1, x2, y2;
+        sscanf_s(lhs.c_str(), "%dx%d", &x1, &y1);
+        sscanf_s(rhs.c_str(), "%dx%d", &x2, &y2);
+        return (x1 * y1) > (x2 * y2);
+    });
+
+    std::vector<std::string> matched;
+    matched.reserve(ResList.size());
+
+    bool currentResAssigned = false;
+
+    for (auto it = ResList.rbegin(); it != ResList.rend(); ++it)
+    {
+        size_t targetLength = it->first.length();
+
+        // First try to match current resolution if it has the right length
+        if (!currentResAssigned && str.length() == targetLength)
+        {
+            matched.push_back(str);
+            currentResAssigned = true;
+            auto found = std::find(list.begin(), list.end(), str);
+            if (found != list.end())
+                list.erase(found);
+            continue;
+        }
+
+        // Otherwise find any resolution with matching length
+        auto foundIt = std::find_if(list.begin(), list.end(), [targetLength](const std::string& s) {
+            return s.length() == targetLength;
+        });
+
+        if (foundIt != list.end())
+        {
+            matched.push_back(*foundIt);
+            list.erase(foundIt);
+        }
+        else if (!list.empty())
+        {
+            matched.push_back(list.front());
+            list.erase(list.begin());
+        }
+        else
+        {
+            matched.push_back(std::string(it->first.begin(), it->first.end()));
+        }
+    }
+
+    // Sort matched resolutions by size (ascending) and assign to ResList
+    std::sort(matched.begin(), matched.end(), [](const std::string& lhs, const std::string& rhs) {
+        int32_t x1, y1, x2, y2;
+        sscanf_s(lhs.c_str(), "%dx%d", &x1, &y1);
+        sscanf_s(rhs.c_str(), "%dx%d", &x2, &y2);
+        return (x1 * y1) < (x2 * y2);
+    });
+
+    // Assign in order
+    for (size_t i = 0; i < matched.size() && i < ResList.size(); ++i)
+    {
+        ResList[i].second = std::wstring(matched[i].begin(), matched[i].end());
+    }
+}
+
+SafetyHookInline shappFromAnsi = {};
+wchar_t* __cdecl appFromAnsi(const char* a1)
+{
+    bool bReqPtr = false;
+    std::vector<int> offsets = { 0, 24, 48, 74, 101 };
+    for (size_t i = 0; i < ResList.size(); i++)
+    {
+        const auto& r = ResList[i].first;
+        std::string str(r.begin(), r.end());
+        if (std::string_view(a1 + offsets[i]) == str)
+            bReqPtr = true;
+        else
+        {
+            bReqPtr = false;
+            break;
+        }
+    }
+
+    if (bReqPtr)
+    {
+        for (size_t i = 0; i < ResList.size(); i++)
+        {
+            const auto& r = ResList[i].second;
+            std::string str(r.begin(), r.end());
+            injector::scoped_unprotect p{ const_cast<char*>(a1 + offsets[i]), str.size() + 1 };
+            strcpy_s(const_cast<char*>(a1 + offsets[i]), str.size() + 1, str.c_str());
+        }
+    }
+
+    return shappFromAnsi.unsafe_ccall<wchar_t*>(a1);
 }
 
 void InitCore()
@@ -423,66 +537,129 @@ void InitCore()
             EchelonGameInfoPtrs.push_back(regs.esi);
         });
     }
+
+    pattern = find_module_pattern(GetModuleHandle(L"Core"), "55 8B EC 6A ? 68 ? ? ? ? 64 A1 ? ? ? ? 50 64 89 25 ? ? ? ? 51 83 EC ? 53 56 57 89 65 ? C7 45 ? ? ? ? ? 83 7D ? ? 75 ? 33 C0 E9 ? ? ? ? E8 ? ? ? ? 89 45 ? 8B 45 ? 89 45 ? 33 C9 74 ? EB ? C7 45 ? ? ? ? ? EB ? 8B 55 ? 83 C2 ? 89 55 ? 81 7D ? ? ? ? ? 7D ? 8B 45 ? 03 45",
+        "55 8B EC 83 EC ? 83 7D ? ? 75 ? 33 C0 EB ? E8 ? ? ? ? 89 45 ? C7 45 ? ? ? ? ? EB ? 8B 45 ? 83 C0 ? 89 45 ? 81 7D ? ? ? ? ? 7D ? 8B 4D ? 03 4D");
+    shappFromAnsi = safetyhook::create_inline(pattern.get_first(), appFromAnsi);
+
+    pattern = hook::module_pattern(GetModuleHandle(L"Core"), "33 C0 0F B7 0B");
+    if (!pattern.empty())
+    {
+        static auto OverwriteResolutions = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            auto str = std::wstring_view((const wchar_t*)regs.ebx);
+    
+            for (const auto& it : ResList)
+            {
+                if (str == it.first)
+                {
+                    wcscpy_s((wchar_t*)regs.ebx, it.second.size() + 1, it.second.c_str());
+                    break;
+                }
+            }
+        });
+    }
+    else
+    {
+        pattern = hook::module_pattern(GetModuleHandle(L"Core"), "33 C0 66 85 C9");
+        static auto OverwriteResolutions = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            auto str = std::wstring_view((const wchar_t*)regs.esi);
+
+            for (const auto& it : ResList)
+            {
+                if (str == it.first)
+                {
+                    wcscpy_s((wchar_t*)regs.esi, it.second.size() + 1, it.second.c_str());
+                    break;
+                }
+            }
+        });
+    }
+}
+
+D3DPRESENT_PARAMETERS* pPresentParams = nullptr;
+SafetyHookInline shUD3DRenderDeviceSetRes = {};
+int __fastcall UD3DRenderDeviceSetRes(void* UD3DRenderDevice, void* edx, void* UViewport, int width, int height, int a5)
+{
+    bool bInvalidRes = true;
+    std::wstring resStr = std::to_wstring(width) + L"x" + std::to_wstring(height);
+    for (const auto& it : ResList)
+    {
+        if (resStr == it.first)
+        {
+            swscanf(it.second.c_str(), L"%dx%d", &width, &height);
+            bInvalidRes = false;
+            break;
+        }
+    }
+
+    if (bInvalidRes)
+    {
+        width = Screen.Width;
+        height = Screen.Height;
+        bInvalidRes = false;
+    }
+
+    auto ret = shUD3DRenderDeviceSetRes.unsafe_fastcall<int>(UD3DRenderDevice, edx, UViewport, width, height, a5);
+
+    Screen.Width = pPresentParams->BackBufferWidth;
+    Screen.Height = pPresentParams->BackBufferHeight;
+    Screen.fWidth = static_cast<float>(Screen.Width);
+    Screen.fHeight = static_cast<float>(Screen.Height);
+    Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
+    Screen.fHudOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
+    Screen.fHUDScaleX = 1.0f / Screen.fWidth * (Screen.fHeight / 480.0f);
+    Screen.dHUDScaleX = static_cast<double>(Screen.fHUDScaleX);
+    Screen.dHUDScaleXInv = 1.0 / Screen.dHUDScaleX;
+    Screen.fFMVoffsetStartX = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
+    Screen.fFMVoffsetEndX = Screen.fWidth - Screen.fFMVoffsetStartX;
+    Screen.fFMVoffsetStartY = 0.0f - ((Screen.fHeight - ((Screen.fHeight / 1.5f) * ((16.0f / 9.0f) / Screen.fAspectRatio))) / 2.0f);
+    Screen.fFMVoffsetEndY = Screen.fHeight - Screen.fFMVoffsetStartY;
+    Screen.fWidescreenHudOffset = Screen.fIniHudOffset;
+    if (Screen.fAspectRatio < (16.0f / 9.0f))
+        Screen.fWidescreenHudOffset = Screen.fWidescreenHudOffset / (((16.0f / 9.0f) / (Screen.fAspectRatio)) * 1.5f);
+
+    if (Screen.Width < 640 || Screen.Height < 480)
+        return ret;
+
+    CIniReader iniReader("");
+    auto [DesktopResW, DesktopResH] = GetDesktopRes();
+    if (Screen.Width != DesktopResW || Screen.Height != DesktopResH)
+    {
+        iniReader.WriteInteger("MAIN", "ResX", Screen.Width);
+        iniReader.WriteInteger("MAIN", "ResY", Screen.Height);
+    }
+    else
+    {
+        iniReader.WriteInteger("MAIN", "ResX", 0);
+        iniReader.WriteInteger("MAIN", "ResY", 0);
+    }
+
+    if (pPresentParams->Windowed)
+    {
+        tagRECT rect;
+        rect.left = (LONG)(((float)DesktopResW / 2.0f) - (Screen.fWidth / 2.0f));
+        rect.top = (LONG)(((float)DesktopResH / 2.0f) - (Screen.fHeight / 2.0f));
+        rect.right = (LONG)Screen.Width;
+        rect.bottom = (LONG)Screen.Height;
+        SetWindowLong(pPresentParams->hDeviceWindow, GWL_STYLE, GetWindowLong(pPresentParams->hDeviceWindow, GWL_STYLE) & ~WS_OVERLAPPEDWINDOW);
+        SetWindowPos(pPresentParams->hDeviceWindow, NULL, rect.left, rect.top, rect.right, rect.bottom, SWP_NOACTIVATE | SWP_NOZORDER);
+        SetWindowPos(pPresentParams->hDeviceWindow, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+        SetForegroundWindow(pPresentParams->hDeviceWindow);
+        SetCursor(NULL);
+    }
+
+    return ret;
 }
 
 void InitD3DDrv()
 {
-    static auto pPresentParams = *find_module_pattern(GetModuleHandle(L"D3DDrv"), "BF ? ? ? ? 33 C0 8B D9 C1 E9 02 83 E3 03", "68 ? ? ? ? FF 15 ? ? ? ? 8B 8D").get_first<D3DPRESENT_PARAMETERS*>(1);
+    pPresentParams = *find_module_pattern(GetModuleHandle(L"D3DDrv"), "BF ? ? ? ? 33 C0 8B D9 C1 E9 02 83 E3 03", "68 ? ? ? ? FF 15 ? ? ? ? 8B 8D").get_first<D3DPRESENT_PARAMETERS*>(1);
     auto pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "B8 01 00 00 00 8B 4D F4 64 89 0D 00 00 00 00 5F 5E 5B 8B E5 5D C2 10 00", "B8 ? ? ? ? EB ? 33 C0 89 86");
-    struct SetResHook
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            regs.eax = 1;
-
-            Screen.Width = pPresentParams->BackBufferWidth;
-            Screen.Height = pPresentParams->BackBufferHeight;
-            Screen.fWidth = static_cast<float>(Screen.Width);
-            Screen.fHeight = static_cast<float>(Screen.Height);
-            Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
-            Screen.fHudOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
-            Screen.fHUDScaleX = 1.0f / Screen.fWidth * (Screen.fHeight / 480.0f);
-            Screen.dHUDScaleX = static_cast<double>(Screen.fHUDScaleX);
-            Screen.dHUDScaleXInv = 1.0 / Screen.dHUDScaleX;
-            Screen.fFMVoffsetStartX = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
-            Screen.fFMVoffsetEndX = Screen.fWidth - Screen.fFMVoffsetStartX;
-            Screen.fFMVoffsetStartY = 0.0f - ((Screen.fHeight - ((Screen.fHeight / 1.5f) * ((16.0f / 9.0f) / Screen.fAspectRatio))) / 2.0f);
-            Screen.fFMVoffsetEndY = Screen.fHeight - Screen.fFMVoffsetStartY;
-            Screen.fWidescreenHudOffset = Screen.fIniHudOffset;
-            if (Screen.fAspectRatio < (16.0f / 9.0f))
-                Screen.fWidescreenHudOffset = Screen.fWidescreenHudOffset / (((16.0f / 9.0f) / (Screen.fAspectRatio)) * 1.5f);
-
-            if (Screen.Width < 640 || Screen.Height < 480)
-                return;
-
-            CIniReader iniReader("");
-            auto[DesktopResW, DesktopResH] = GetDesktopRes();
-            if (Screen.Width != DesktopResW || Screen.Height != DesktopResH)
-            {
-                iniReader.WriteInteger("MAIN", "ResX", Screen.Width);
-                iniReader.WriteInteger("MAIN", "ResY", Screen.Height);
-            }
-            else
-            {
-                iniReader.WriteInteger("MAIN", "ResX", 0);
-                iniReader.WriteInteger("MAIN", "ResY", 0);
-            }
-
-            if (pPresentParams->Windowed)
-            {
-                tagRECT rect;
-                rect.left = (LONG)(((float)DesktopResW / 2.0f) - (Screen.fWidth / 2.0f));
-                rect.top = (LONG)(((float)DesktopResH / 2.0f) - (Screen.fHeight / 2.0f));
-                rect.right = (LONG)Screen.Width;
-                rect.bottom = (LONG)Screen.Height;
-                SetWindowLong(pPresentParams->hDeviceWindow, GWL_STYLE, GetWindowLong(pPresentParams->hDeviceWindow, GWL_STYLE) & ~WS_OVERLAPPEDWINDOW);
-                SetWindowPos(pPresentParams->hDeviceWindow, NULL, rect.left, rect.top, rect.right, rect.bottom, SWP_NOACTIVATE | SWP_NOZORDER);
-                SetWindowPos(pPresentParams->hDeviceWindow, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-                SetForegroundWindow(pPresentParams->hDeviceWindow);
-                SetCursor(NULL);
-            }
-        }
-    }; injector::MakeInline<SetResHook>(pattern.get_first(0));
+    
+    pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "55 8B EC 6A ? 68 ? ? ? ? 64 A1 ? ? ? ? 50 64 89 25 ? ? ? ? 81 EC ? ? ? ? 53 56 57 8B 7D ? 8B F1", "55 8B EC 6A ? 68 ? ? ? ? 64 A1 ? ? ? ? 50 81 EC ? ? ? ? A1 ? ? ? ? 33 C5 89 45 ? 56 57 50 8D 45 ? 64 A3 ? ? ? ? 8B F1 89 75");
+    shUD3DRenderDeviceSetRes = safetyhook::create_inline(pattern.get_first(), UD3DRenderDeviceSetRes);
 
     //FMV
     //pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "C1 E9 02 33 C0 F3 AB 8B CA 83 E1 03 F3 AA 8B 45 0C");
