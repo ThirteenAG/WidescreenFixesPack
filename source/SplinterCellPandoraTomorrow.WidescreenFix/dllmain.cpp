@@ -125,7 +125,7 @@ namespace HudMatchers
         return offsetX1 >= 571.0f &&
             offsetY1 == 373.0f &&
             (offsetY2 == 385.0f || offsetY2 == 388.0f) &&
-            (color.RGBA == 4265759816 || color.RGBA == 4282537289);
+            (color.RGBA == 4265759816 || color.RGBA == 4283459416 || color.RGBA == 4282537289);
     }
 
     inline bool IsBulletsImage(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
@@ -144,7 +144,7 @@ namespace HudMatchers
     {
         return ((offsetX1 == 441.0f && offsetX2 == 481.0f && offsetY1 == 373.0f && offsetY2 == 413.0f) ||
             (offsetX1 == 439.0f && offsetX2 == 483.0f && offsetY1 == 380.0f && offsetY2 == 412.0f)) &&
-            color.RGBA == 4266682200;
+            (color.RGBA == 4266682200 || color.RGBA == 4282537289 || color.RGBA == 4283459416 || color.RGBA == 4286094213);
     }
 
     inline bool IsWeaponAddonBorder(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
@@ -161,14 +161,14 @@ namespace HudMatchers
             (offsetX2 == 460.0f || offsetX2 == 465.0f || offsetX2 == 464.0f || offsetX2 == 467.0f || offsetX2 == 469.0f) &&
             offsetY1 == 371.0f &&
             (offsetY2 == 383.0f || offsetY2 == 386.0f) &&
-            color.RGBA == 4265759816;
+            (color.RGBA == 4265759816 || color.RGBA == 4282537289 || color.RGBA == 4283459416 || color.RGBA == 4286094213);
     }
 
     inline bool IsInteractionMenuBackground(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
     {
         return ((offsetX1 == 362.0f) || (offsetX1 == 422.0f || offsetX1 == 443.0f)) &&
             offsetX2 == 562.0f &&
-            (color.RGBA == 4266682200 || color.RGBA == 4269316740);
+            (color.RGBA == 4266682200 || color.RGBA == 4269316740 || color.RGBA == 4283459416 || color.RGBA == 4282537289 || color.RGBA == 4286094213);
     }
 
     inline bool IsInteractionMenuBorder(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
@@ -178,14 +178,14 @@ namespace HudMatchers
             offsetX1 == 419.0f || offsetX1 == 435.0f || offsetX1 == 439.0f) &&
             (offsetX2 == 375.0f || offsetX2 == 370.0f || offsetX2 == 549.0f || offsetX2 == 565.0f ||
             offsetX2 == 456.0f || offsetX2 == 451.0f || offsetX2 == 435.0f || offsetX2 == 430.0f) &&
-            (color.RGBA == 2152752984 || color.RGBA == 4266682200));
+            (color.RGBA == 2152752984 || color.RGBA == 4266682200 || color.RGBA == 4283459416));
     }
 
     inline bool IsInteractionMenuText(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
     {
         return offsetX1 >= 365.0f &&
             offsetY1 >= 42.0f && offsetY2 <= 192.0f &&
-            (color.RGBA == 4265759816 || color.RGBA == 4269316740);
+            (color.RGBA == 4265759816 || color.RGBA == 4269316740 || color.RGBA == 4282537289 || color.RGBA == 4283459416 || color.RGBA == 4286094213);
     }
 
     inline bool IsTurretInterface(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
@@ -193,7 +193,7 @@ namespace HudMatchers
         return (offsetX1 == 371.0f || offsetX1 == 379.0f || offsetX1 == 387.0f ||
             offsetX1 == 558.0f || offsetX1 == 566.0f) &&
             offsetY1 >= 39.0f && offsetY2 <= 162.0f &&
-            (color.RGBA == 4266682200 || color.RGBA == 3036610302);
+            (color.RGBA == 4266682200 || color.RGBA == 3036610302 || color.RGBA == 4282537289 || color.RGBA == 4283459416 || color.RGBA == 4286094213);
     }
 
     inline bool IsTopDialogueMenuBackground(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
@@ -201,21 +201,21 @@ namespace HudMatchers
         return offsetX1 == 48.0f && offsetX2 == 348.0f &&
             offsetY1 >= 42.0f &&
             (offsetY2 <= 87.0f || offsetY2 <= 90.0f) &&
-            color.RGBA == 4266682200;
+            (color.RGBA == 4266682200 || color.RGBA == 3036610302 || color.RGBA == 4282537289 || color.RGBA == 4283459416 || color.RGBA == 4286094213);
     }
 
     inline bool IsTopDialogueMenuBorder(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
     {
         return (offsetX1 == 45.0f || offsetX1 == 61.0f || offsetX1 == 335.0f) &&
             (offsetX2 == 61.0f || offsetX2 == 335.0f || offsetX2 == 351.0f) &&
-            color.RGBA == 4266682200;
+            (color.RGBA == 4266682200 || color.RGBA == 3036610302 || color.RGBA == 4282537289 || color.RGBA == 4283459416 || color.RGBA == 4286094213);
     }
 
     inline bool IsTopDialogueMenuText(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
     {
         return offsetX1 >= 52.0f &&
             offsetY1 >= 43.0f && offsetY2 <= 185.0f &&
-            color.RGBA == 4265759816;
+            (color.RGBA == 4265759816 || color.RGBA == 4283459416 || color.RGBA == 4282537289);
     }
 
     inline bool ShouldOffsetRight(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
