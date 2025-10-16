@@ -45,6 +45,7 @@ std::vector<std::pair<const std::wstring, std::wstring>> ResList =
 
 std::vector<uintptr_t> EchelonGameInfoPtrs;
 uintptr_t pDrawTile;
+bool bSkipIntro = false;
 
 namespace HudMatchers
 {
@@ -370,6 +371,7 @@ void Init()
     Screen.fIniHudOffset = iniReader.ReadFloat("MAIN", "WidescreenHudOffset", 140.0f);
     Screen.nPostProcessFixedScale = iniReader.ReadInteger("MAIN", "PostProcessFixedScale", 1);
     gColor.RGBA = iniReader.ReadInteger("BONUS", "GogglesLightColor", 0);
+    bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -892,16 +894,33 @@ void InitEngine()
     if (gColor.RGBA)
     {
         pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "B0 7F 88 45 24 88 45 25 88 45 26 C6 45 27 FF 8B 45 24 50 8B CB FF 52 40"); //104070CF
-        struct USkeletalMeshInstanceRenderHook
+        if (!pattern.empty())
         {
-            void operator()(injector::reg_pack& regs)
+            struct USkeletalMeshInstanceRenderHook
             {
-                *(uint8_t*)(regs.ebp + 0x24) = gColor.B;
-                *(uint8_t*)(regs.ebp + 0x25) = gColor.G;
-                *(uint8_t*)(regs.ebp + 0x26) = gColor.R;
-                *(uint8_t*)(regs.ebp + 0x27) = 0xFF;
-            }
-        }; injector::MakeInline<USkeletalMeshInstanceRenderHook>(pattern.get_first(0), pattern.get_first(15));
+                void operator()(injector::reg_pack& regs)
+                {
+                    *(uint8_t*)(regs.ebp + 0x24) = gColor.B;
+                    *(uint8_t*)(regs.ebp + 0x25) = gColor.G;
+                    *(uint8_t*)(regs.ebp + 0x26) = gColor.R;
+                    *(uint8_t*)(regs.ebp + 0x27) = 0xFF;
+                }
+            }; injector::MakeInline<USkeletalMeshInstanceRenderHook>(pattern.get_first(0), pattern.get_first(15));
+        }
+        else
+        {
+            pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "C7 85 ? ? ? ? ? ? ? ? FF B5 ? ? ? ? FF 50");
+            struct USkeletalMeshInstanceRenderHook
+            {
+                void operator()(injector::reg_pack& regs)
+                {
+                    *(uint8_t*)(regs.ebp - 0xA8) = gColor.B;
+                    *(uint8_t*)(regs.ebp - 0xA7) = gColor.G;
+                    *(uint8_t*)(regs.ebp - 0xA6) = gColor.R;
+                    *(uint8_t*)(regs.ebp - 0xA5) = 0xFF;
+                }
+            }; injector::MakeInline<USkeletalMeshInstanceRenderHook>(pattern.get_first(0), pattern.get_first(10));
+        }
     }
 
 #if _DEBUG
@@ -913,6 +932,13 @@ void InitEngine()
     // LOD
     pattern = find_module_pattern(GetModuleHandle(L"Engine"), "0F 84 ? ? ? ? FF 15 ? ? ? ? 8B 8C 24", "0F 84 ? ? ? ? 8B 41 ? F3 0F 10 81");
     injector::WriteMemory<uint16_t>(pattern.get_first(0), 0xE990, true); // jz -> jmp
+
+    if (bSkipIntro)
+    {
+        pattern = find_module_pattern(GetModuleHandle(L"Engine"), "6A ? 6A ? 68 ? ? ? ? 53 E8 ? ? ? ? 83 C4 ? 68", "6A ? FF D6 85 C0");
+        auto dest = find_module_pattern(GetModuleHandle(L"Engine"), "8B 83 ? ? ? ? 8B 48 ? 8B 01 83 A0", "8B 87 ? ? ? ? 8D 8D ? ? ? ? 8B 40");
+        injector::MakeJMP(pattern.get_first(0), dest.get_first(0), true);
+    }
 }
 
 void InitEchelon()
