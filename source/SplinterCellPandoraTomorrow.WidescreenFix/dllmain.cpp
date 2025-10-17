@@ -644,6 +644,8 @@ int __fastcall UD3DRenderDeviceSetRes(void* UD3DRenderDevice, void* edx, void* U
     Screen.fWidescreenHudOffset = Screen.fIniHudOffset;
     if (Screen.fAspectRatio < (16.0f / 9.0f))
         Screen.fWidescreenHudOffset = Screen.fWidescreenHudOffset / (((16.0f / 9.0f) / (Screen.fAspectRatio)) * 1.5f);
+    if (Screen.fAspectRatio <= (4.0f / 3.0f))
+        Screen.fWidescreenHudOffset = 0.0f;
 
     if (Screen.Width < 640 || Screen.Height < 480)
         return ret;
