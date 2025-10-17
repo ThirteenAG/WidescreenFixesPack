@@ -321,12 +321,35 @@ void InitXidi()
     
     if (bModernControlScheme)
     {
-        auto SetScarfaceData = (void (*)(bool(*menu)(), void** player, uint32_t struct_offset))GetProcAddress(GetModuleHandleW(L"dinput8.dll"), "SetScarfaceData");
-        if (SetScarfaceData)
+        typedef bool (*RegisterProfileCallbackFunc)(const wchar_t* (*callback)());
+        auto xidiModule = GetModuleHandleW(L"Xidi.dll");
+
+        if (xidiModule)
         {
-            auto fnMenuCheck = (bool(*)())injector::GetBranchDestination(hook::get_pattern("E8 ? ? ? ? 84 C0 75 A4")).as_int();
-            auto CharacterObject = *hook::get_pattern<void**>("A1 ? ? ? ? 85 C0 74 50", 1);
-            SetScarfaceData(fnMenuCheck, CharacterObject, 0x2E8);
+            auto RegisterProfileCallback = (RegisterProfileCallbackFunc)GetProcAddress(xidiModule, "RegisterProfileCallback");
+            if (RegisterProfileCallback)
+            {
+                static auto fnMenuCheck = (bool(*)())injector::GetBranchDestination(hook::get_pattern("E8 ? ? ? ? 84 C0 75 A4")).as_int();
+                static auto CharacterObject = *hook::get_pattern<void**>("A1 ? ? ? ? 85 C0 74 50", 1);
+                static auto PilotStateOffset = 0x2E8;
+
+                RegisterProfileCallback([]() -> const wchar_t*
+                {
+                    if (fnMenuCheck && !fnMenuCheck())
+                    {
+                        auto player = *CharacterObject;
+                        if (player && *(uint32_t*)(*(uint32_t*)CharacterObject + PilotStateOffset) > 0)
+                        {
+                            return L"InCar";
+                        }
+                        else
+                        {
+                            return L"OnFoot";
+                        }
+                    }
+                    return nullptr;
+                });
+            }
         }
     }
 }

@@ -246,18 +246,6 @@ jobs:
       optimize "On"
 
 group "Win64"
-project "Assembly64.TestApp"
-   kind "ConsoleApp"
-   targetextension ".exe"
-   platforms { "Win64" }
-   architecture "x64"
-   setpaths("./data/%{prj.name}/", "%{prj.name}.exe", "")
-
-project "Assembly64.TestAsi"
-   platforms { "Win64" }
-   architecture "x64"
-   setpaths("./data/Assembly64.TestApp/", "Assembly64.TestApp.exe", "")
-
 project "FarCry64.WidescreenFix"
    platforms { "Win64" }
    architecture "x64"
