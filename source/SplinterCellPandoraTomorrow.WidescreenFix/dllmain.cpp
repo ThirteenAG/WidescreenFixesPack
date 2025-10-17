@@ -338,7 +338,7 @@ void __fastcall FCanvasUtilDrawTileHook(void* _this, uint32_t EDX, float X, floa
         }
     }
 
-    if (X == 0.0f && SizeX == 640.0f)
+    if (X == 0.0f && (SizeX == 640.0f || SizeX == Screen.fWidth))
     {
         if (Color.R == 0xFE && Color.G == 0xFE && Color.B == 0xFE) //flashbang grenade flash
         {
