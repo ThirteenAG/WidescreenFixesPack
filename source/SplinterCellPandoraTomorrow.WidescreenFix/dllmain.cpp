@@ -470,6 +470,23 @@ void Init()
         }
     }
 
+    // Ensure current resolution is in the list
+    auto strWide = std::wstring(str.begin(), str.end());
+    bool currentResInList = std::any_of(ResList.begin(), ResList.end(), [&strWide](const auto& pair) { return pair.second == strWide; });
+
+    if (!currentResInList && !ResList.empty())
+    {
+        // Find a slot with matching string length and replace it
+        for (auto& pair : ResList)
+        {
+            if (pair.second.length() == strWide.length() && pair.second != strWide)
+            {
+                pair.second = strWide;
+                break;
+            }
+        }
+    }
+
 #ifdef _DEBUG
     // Log the assignments
     for (size_t i = 0; i < ResList.size(); ++i)
