@@ -194,7 +194,8 @@ namespace HudMatchers
         return (offsetX1 == 371.0f || offsetX1 == 379.0f || offsetX1 == 387.0f ||
             offsetX1 == 558.0f || offsetX1 == 566.0f) &&
             offsetY1 >= 39.0f && offsetY2 <= 162.0f &&
-            (color.RGBA == 4266682200 || color.RGBA == 3036610302 || color.RGBA == 4282537289 || color.RGBA == 4283459416 || color.RGBA == 4286094213);
+            (color.RGBA == 4266682200 || color.RGBA == 3036610302 ||
+            color.RGBA == 4282537289 || color.RGBA == 4283459416 || color.RGBA == 4286094213 || color.RGBA == 3036676095);
     }
 
     inline bool IsTopDialogueMenuBackground(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
