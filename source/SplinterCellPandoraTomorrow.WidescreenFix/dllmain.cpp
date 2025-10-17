@@ -476,13 +476,21 @@ void Init()
 
     if (!currentResInList && !ResList.empty())
     {
-        // Find a slot with matching string length and replace it
-        for (auto& pair : ResList)
+        auto it = std::find_if(ResList.begin(), ResList.end(), [&strWide](const auto& pair) { return pair.first == strWide; });
+        if (it != ResList.end())
         {
-            if (pair.second.length() == strWide.length() && pair.second != strWide)
+            it->second = strWide;
+        }
+        else
+        {
+            // Find a slot with matching string length and replace it
+            for (auto& pair : ResList)
             {
-                pair.second = strWide;
-                break;
+                if (pair.second.length() == strWide.length() && pair.second != strWide)
+                {
+                    pair.second = strWide;
+                    break;
+                }
             }
         }
     }
