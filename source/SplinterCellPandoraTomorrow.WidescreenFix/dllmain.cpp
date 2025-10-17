@@ -46,6 +46,7 @@ std::vector<std::pair<const std::wstring, std::wstring>> ResList =
 std::vector<uintptr_t> EchelonGameInfoPtrs;
 uintptr_t pDrawTile;
 bool bSkipIntro = false;
+int EPlayerControllerState = -1;
 
 namespace HudMatchers
 {
@@ -536,6 +537,26 @@ wchar_t* __cdecl appFromAnsi(const char* a1)
     return shappFromAnsi.unsafe_ccall<wchar_t*>(a1);
 }
 
+namespace UObject
+{
+    wchar_t* (__fastcall* GetFullName)(void*, void*, wchar_t*) = nullptr;
+
+    void* pPlayerObj = nullptr;
+    SafetyHookInline shGotoState = {};
+    int __fastcall GotoState(void* uObject, void* edx, int StateID)
+    {
+        wchar_t buffer[256];
+        auto objName = std::wstring_view(GetFullName(uObject, edx, buffer));
+
+        if (objName.starts_with(L"EPlayerController"))
+        {
+            EPlayerControllerState = StateID;
+        }
+
+        return shGotoState.unsafe_fastcall<int>(uObject, edx, StateID);
+    }
+}
+
 void InitCore()
 {
     auto pattern = find_module_pattern(GetModuleHandle(L"Core"), "C7 85 D4 F1 FF FF 00 00 00 00", "C7 85 ? ? ? ? ? ? ? ? EB ? 8B 8D ? ? ? ? 83 C1 ? 89 8D ? ? ? ? 81 BD ? ? ? ? ? ? ? ? 0F 83"); //0x1000CE5E
@@ -566,6 +587,12 @@ void InitCore()
     pattern = find_module_pattern(GetModuleHandle(L"Core"), "55 8B EC 6A ? 68 ? ? ? ? 64 A1 ? ? ? ? 50 64 89 25 ? ? ? ? 51 83 EC ? 53 56 57 89 65 ? C7 45 ? ? ? ? ? 83 7D ? ? 75 ? 33 C0 E9 ? ? ? ? E8 ? ? ? ? 89 45 ? 8B 45 ? 89 45 ? 33 C9 74 ? EB ? C7 45 ? ? ? ? ? EB ? 8B 55 ? 83 C2 ? 89 55 ? 81 7D ? ? ? ? ? 7D ? 8B 45 ? 03 45",
         "55 8B EC 83 EC ? 83 7D ? ? 75 ? 33 C0 EB ? E8 ? ? ? ? 89 45 ? C7 45 ? ? ? ? ? EB ? 8B 45 ? 83 C0 ? 89 45 ? 81 7D ? ? ? ? ? 7D ? 8B 4D ? 03 4D");
     shappFromAnsi = safetyhook::create_inline(pattern.get_first(), appFromAnsi);
+
+    pattern = find_module_pattern(GetModuleHandle(L"Core"), "55 8B EC 6A ? 68 ? ? ? ? 64 A1 ? ? ? ? 50 64 89 25 ? ? ? ? 83 EC ? 53 56 8B 75 ? 85 F6 57 89 65 ? 8B F9 C7 45 ? ? ? ? ? 75 ? E8 ? ? ? ? 8B F0 85 FF", "55 8B EC 53 56 8B 75 ? 8B D9 85 F6 75");
+    UObject::GetFullName = (decltype(UObject::GetFullName))pattern.get_first();
+
+    pattern = find_module_pattern(GetModuleHandle(L"Core"), "55 8B EC 6A ? 68 ? ? ? ? 64 A1 ? ? ? ? 50 64 89 25 ? ? ? ? 83 EC ? 53 56 57 8B F1 8B 46 ? 33 FF 3B C7 89 65 ? 89 7D ? 75 ? 33 C0", "55 8B EC 83 EC ? 53 56 57 8B F9 8B 47");
+    UObject::shGotoState = safetyhook::create_inline(pattern.get_first(), UObject::GotoState);
 
     pattern = hook::module_pattern(GetModuleHandle(L"Core"), "33 C0 0F B7 0B");
     if (!pattern.empty())
@@ -976,6 +1003,39 @@ void InitEchelon()
     injector::WriteMemory<uint16_t>(pattern.get_first(0), 0xE990, true); // jz -> jmp
 }
 
+void InitXidi()
+{
+    typedef bool (*RegisterProfileCallbackFunc)(const wchar_t* (*callback)());
+    auto xidiModule = GetModuleHandleW(L"Xidi.dll");
+
+    if (xidiModule)
+    {
+        auto RegisterProfileCallback = (RegisterProfileCallbackFunc)GetProcAddress(xidiModule, "RegisterProfileCallback");
+        if (RegisterProfileCallback)
+        {
+            RegisterProfileCallback([]() -> const wchar_t*
+            {
+                constexpr auto s_KeyPadInteract = 8338;
+                constexpr auto s_Zooming = 6942;
+                constexpr auto s_ZoomingSC20K = 7059;
+
+                switch (EPlayerControllerState)
+                {
+                case s_KeyPadInteract:
+                    return L"Keypad";
+                case s_Zooming:
+                    return L"Zooming";
+                case s_ZoomingSC20K:
+                    return L"ZoomingSC20K";
+                default:
+                    return L"Main";
+                }
+                return nullptr;
+            });
+        }
+    }
+}
+
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
@@ -985,6 +1045,7 @@ CEXP void InitializeASI()
         CallbackHandler::RegisterCallback(L"Engine.dll", InitEngine);
         CallbackHandler::RegisterCallback(L"D3DDrv.dll", InitD3DDrv);
         CallbackHandler::RegisterCallback(L"Echelon.dll", InitEchelon);
+        CallbackHandler::RegisterCallback(L"Xidi.dll", InitXidi);
     });
 }
 
