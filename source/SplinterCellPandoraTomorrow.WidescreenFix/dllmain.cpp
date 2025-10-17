@@ -437,7 +437,7 @@ void Init()
         list.push_back(str);
     }
 
-    // Sort by resolution size (descending)
+    // Sort list by resolution size (descending)
     std::sort(list.begin(), list.end(), [](const std::string& lhs, const std::string& rhs) {
         int32_t x1, y1, x2, y2;
         sscanf_s(lhs.c_str(), "%dx%d", &x1, &y1);
@@ -445,60 +445,38 @@ void Init()
         return (x1 * y1) > (x2 * y2);
     });
 
-    std::vector<std::string> matched;
-    matched.reserve(ResList.size());
+    // Group resolutions by string length
+    std::map<size_t, std::vector<std::string>> lengthToRes;
+    for (const auto& res : list)
+    {
+        lengthToRes[res.length()].push_back(res);
+    }
 
-    bool currentResAssigned = false;
-
+    // Assign to ResList slots in reverse order (largest slots first)
     for (auto it = ResList.rbegin(); it != ResList.rend(); ++it)
     {
         size_t targetLength = it->first.length();
-
-        // First try to match current resolution if it has the right length
-        if (!currentResAssigned && str.length() == targetLength)
+        auto& candidates = lengthToRes[targetLength];
+        if (!candidates.empty())
         {
-            matched.push_back(str);
-            currentResAssigned = true;
-            auto found = std::find(list.begin(), list.end(), str);
-            if (found != list.end())
-                list.erase(found);
-            continue;
-        }
-
-        // Otherwise find any resolution with matching length
-        auto foundIt = std::find_if(list.begin(), list.end(), [targetLength](const std::string& s) {
-            return s.length() == targetLength;
-        });
-
-        if (foundIt != list.end())
-        {
-            matched.push_back(*foundIt);
-            list.erase(foundIt);
-        }
-        else if (!list.empty())
-        {
-            matched.push_back(list.front());
-            list.erase(list.begin());
+            // Assign the largest available resolution for this length
+            it->second = std::wstring(candidates.front().begin(), candidates.front().end());
+            candidates.erase(candidates.begin());  // Remove to prevent reuse
         }
         else
         {
-            matched.push_back(std::string(it->first.begin(), it->first.end()));
+            // No matching length available, use the template resolution
+            it->second = it->first;
         }
     }
 
-    // Sort matched resolutions by size (ascending) and assign to ResList
-    std::sort(matched.begin(), matched.end(), [](const std::string& lhs, const std::string& rhs) {
-        int32_t x1, y1, x2, y2;
-        sscanf_s(lhs.c_str(), "%dx%d", &x1, &y1);
-        sscanf_s(rhs.c_str(), "%dx%d", &x2, &y2);
-        return (x1 * y1) < (x2 * y2);
-    });
-
-    // Assign in order
-    for (size_t i = 0; i < matched.size() && i < ResList.size(); ++i)
+#ifdef _DEBUG
+    // Log the assignments
+    for (size_t i = 0; i < ResList.size(); ++i)
     {
-        ResList[i].second = std::wstring(matched[i].begin(), matched[i].end());
+        spd::log()->info("{0} : {1}", std::string(ResList[i].first.begin(), ResList[i].first.end()), std::string(ResList[i].second.begin(), ResList[i].second.end()));
     }
+#endif
 }
 
 SafetyHookInline shappFromAnsi = {};
