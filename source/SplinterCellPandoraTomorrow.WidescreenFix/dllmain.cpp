@@ -340,7 +340,7 @@ void __fastcall FCanvasUtilDrawTileHook(void* _this, uint32_t EDX, float X, floa
 
     if (X == 0.0f && (SizeX == 640.0f || SizeX == Screen.fWidth))
     {
-        if (Color.R == 0xFE && Color.G == 0xFE && Color.B == 0xFE) //flashbang grenade flash
+        if ((Color.R == 0xFE && Color.G == 0xFE && Color.B == 0xFE) || (Color.R == 0xFF && Color.G == 0xFF && Color.B == 0xFF)) //flashbang grenade flash
         {
             DrawTile(_this, EDX, X, Y, SizeX + Screen.fHudOffset + Screen.fHudOffset, SizeY, U, V, SizeU, SizeV, unk1, Texture, Color, unk3, unk4);
             return;
