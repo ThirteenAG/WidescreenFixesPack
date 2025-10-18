@@ -1017,7 +1017,8 @@ void InitXidi()
             {
                 constexpr auto s_KeyPadInteract = 8338;
                 constexpr auto s_Zooming = 6942;
-                constexpr auto s_ZoomingSC20K = 7059;
+                constexpr auto s_PlayerSniping = 7059;
+                //constexpr auto s_UsingPalm = 0000;
 
                 switch (EPlayerControllerState)
                 {
@@ -1025,7 +1026,7 @@ void InitXidi()
                     return L"Keypad";
                 case s_Zooming:
                     return L"Zooming";
-                case s_ZoomingSC20K:
+                case s_PlayerSniping:
                     return L"ZoomingSC20K";
                 default:
                     return L"Main";
