@@ -48,6 +48,7 @@ uintptr_t pDrawTile;
 bool bSkipIntro = false;
 int EPlayerControllerState = -1;
 int EchelonMainHUDState = -1;
+bool bPlayingVideo = false;
 
 namespace HudMatchers
 {
@@ -976,6 +977,18 @@ void InitEngine()
         auto dest = find_module_pattern(GetModuleHandle(L"Engine"), "8B 83 ? ? ? ? 8B 48 ? 8B 01 83 A0", "8B 87 ? ? ? ? 8D 8D ? ? ? ? 8B 40");
         injector::MakeJMP(pattern.get_first(0), dest.get_first(0), true);
     }
+
+    pattern = find_module_pattern(GetModuleHandle(L"Engine"), "E8 ? ? ? ? 83 C4 ? 85 C0 75 ? 8B 4F", "83 7B ? ? BE");
+    static auto VideoPlaybackStartHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        bPlayingVideo = true;
+    });
+
+    pattern = find_module_pattern(GetModuleHandle(L"Engine"), "8B 0D ? ? ? ? 8B 54 24 ? 89 11", "89 02 8B 13");
+    static auto VideoPlaybackEndHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        bPlayingVideo = false;
+    });
 }
 
 void InitEchelon()
@@ -1023,6 +1036,9 @@ void InitXidi()
                 constexpr auto s_Zooming = 6942;
                 constexpr auto s_PlayerSniping = 7059;
                 constexpr auto s_UsingPalm = 8274;
+
+                if (bPlayingVideo)
+                    return L"Video";
 
                 if (EchelonMainHUDState == 8707 || EchelonMainHUDState == 8708)
                 {
