@@ -47,6 +47,7 @@ std::vector<uintptr_t> EchelonGameInfoPtrs;
 uintptr_t pDrawTile;
 bool bSkipIntro = false;
 int EPlayerControllerState = -1;
+int EchelonMainHUDState = -1;
 
 namespace HudMatchers
 {
@@ -551,6 +552,9 @@ namespace UObject
         if (objName.starts_with(L"EPlayerController"))
         {
             EPlayerControllerState = StateID;
+        } else if (objName.starts_with(L"EchelonMainHUD"))
+        {
+            EchelonMainHUDState = StateID;
         }
 
         return shGotoState.unsafe_fastcall<int>(uObject, edx, StateID);
@@ -1020,18 +1024,22 @@ void InitXidi()
                 constexpr auto s_PlayerSniping = 7059;
                 constexpr auto s_UsingPalm = 8274;
 
-                switch (EPlayerControllerState)
+                if (EchelonMainHUDState == 8707 || EchelonMainHUDState == 8708)
                 {
-                case s_KeyPadInteract:
-                    return L"Keypad";
-                //case s_PlayerSniping:
-                case s_Zooming:
-                case s_UsingPalm:
-                    return L"Zooming";
-                default:
-                    return L"Main";
+                    switch (EPlayerControllerState)
+                    {
+                    case s_KeyPadInteract:
+                        return L"Keypad";
+                        //case s_PlayerSniping:
+                    case s_Zooming:
+                    case s_UsingPalm:
+                        return L"Zooming";
+                    default:
+                        return L"Main";
+                    }
                 }
-                return nullptr;
+
+                return L"Main";
             });
         }
     }
