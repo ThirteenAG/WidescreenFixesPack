@@ -49,6 +49,7 @@ bool bSkipIntro = false;
 int EPlayerControllerState = -1;
 int EchelonMainHUDState = -1;
 bool bPlayingVideo = false;
+bool bPressStartToContinue = false;
 
 namespace HudMatchers
 {
@@ -833,6 +834,18 @@ float* __fastcall FindAxisName(void* UInput, void* edx, void* AActor, const wcha
 }
 #endif
 
+namespace UGameEngine
+{
+    SafetyHookInline shPressStartToContinue = {};
+    void __fastcall PressStartToContinue(void* UGameEngine, void* edx, int a2, float a3)
+    {
+        if (a2)
+            bPressStartToContinue = true;
+        shPressStartToContinue.unsafe_fastcall(UGameEngine, edx, a2, a3);
+        bPressStartToContinue = false;
+    }
+}
+
 void InitEngine()
 {
     auto pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "8B ? 94 00 00 00 E8");
@@ -989,6 +1002,10 @@ void InitEngine()
     {
         bPlayingVideo = false;
     });
+
+    pattern = find_module_pattern(GetModuleHandle(L"Engine"), "55 8B EC 6A ? 68 ? ? ? ? 64 A1 ? ? ? ? 50 64 89 25 ? ? ? ? 83 EC ? A1 ? ? ? ? 53 56 8B F1 33 C9", "55 8B EC 83 EC ? 83 3D ? ? ? ? ? 56");
+    if (!pattern.empty())
+        UGameEngine::shPressStartToContinue = safetyhook::create_inline(pattern.get_first(), UGameEngine::PressStartToContinue);
 }
 
 void InitEchelon()
@@ -1037,7 +1054,7 @@ void InitXidi()
                 constexpr auto s_PlayerSniping = 7059;
                 constexpr auto s_UsingPalm = 8274;
 
-                if (bPlayingVideo)
+                if (bPlayingVideo || bPressStartToContinue)
                     return L"Video";
 
                 if (EchelonMainHUDState == 8707 || EchelonMainHUDState == 8708)
