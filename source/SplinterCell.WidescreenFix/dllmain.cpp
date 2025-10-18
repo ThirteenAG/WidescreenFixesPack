@@ -112,6 +112,10 @@ void __fastcall FCanvasUtilDrawTileHook(void* _this, uint32_t EDX, float X, floa
         {
             DrawTile(_this, EDX, X, Y, SizeX + Screen.fHudOffset + Screen.fHudOffset, SizeY, U, V, SizeU, SizeV, unk1, Texture, Color);
             return;
+        } else if ((Color.R == 0x00 && Color.G == 0x40 && Color.B == 0x00)) //mission passed green screen
+        {
+            DrawTile(_this, EDX, X, Y, SizeX + Screen.fHudOffset, SizeY, U, V, SizeU, SizeV, unk1, Texture, Color);
+            return;
         }
         else
         {
