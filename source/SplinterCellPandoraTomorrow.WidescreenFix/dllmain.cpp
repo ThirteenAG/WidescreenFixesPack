@@ -50,6 +50,7 @@ int EPlayerControllerState = -1;
 int EchelonMainHUDState = -1;
 bool bPlayingVideo = false;
 bool bPressStartToContinue = false;
+bool bSkipPressStartToContinue = false;
 bool bKeyPad = false;
 bool bElevatorPanel = false;
 
@@ -379,6 +380,7 @@ void Init()
     Screen.nPostProcessFixedScale = iniReader.ReadInteger("MAIN", "PostProcessFixedScale", 1);
     gColor.RGBA = iniReader.ReadInteger("BONUS", "GogglesLightColor", 0);
     bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
+    bSkipPressStartToContinue = iniReader.ReadInteger("MAIN", "SkipPressStartToContinue", 0) != 0;
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -850,8 +852,7 @@ namespace UGameEngine
     SafetyHookInline shPressStartToContinue = {};
     void __fastcall PressStartToContinue(void* UGameEngine, void* edx, int a2, float a3)
     {
-        if (a2)
-            bPressStartToContinue = true;
+        bPressStartToContinue = true;
         shPressStartToContinue.unsafe_fastcall(UGameEngine, edx, a2, a3);
         bPressStartToContinue = false;
     }
@@ -1017,6 +1018,19 @@ void InitEngine()
     pattern = find_module_pattern(GetModuleHandle(L"Engine"), "55 8B EC 6A ? 68 ? ? ? ? 64 A1 ? ? ? ? 50 64 89 25 ? ? ? ? 83 EC ? A1 ? ? ? ? 53 56 8B F1 33 C9", "55 8B EC 83 EC ? 83 3D ? ? ? ? ? 56");
     if (!pattern.empty())
         UGameEngine::shPressStartToContinue = safetyhook::create_inline(pattern.get_first(), UGameEngine::PressStartToContinue);
+
+    if (bSkipPressStartToContinue)
+    {
+        pattern = find_module_pattern(GetModuleHandle(L"Engine"), "0F 84 ? ? ? ? F3 0F 10 45 ? F3 0F 59 05");
+        if (!pattern.empty())
+            injector::WriteMemory<uint16_t>(pattern.get_first(0), 0xE990, true); // jz -> jmp
+        else
+        {
+            pattern = find_module_pattern(GetModuleHandle(L"Engine"), "74 ? D9 45 ? D8 0D ? ? ? ? E8");
+            if (!pattern.empty())
+                injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true); // jz -> jmp
+        }
+    }
 }
 
 void InitEchelon()
