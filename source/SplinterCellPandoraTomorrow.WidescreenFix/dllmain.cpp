@@ -48,6 +48,7 @@ uintptr_t pDrawTile;
 bool bSkipIntro = false;
 int EPlayerControllerState = -1;
 int EchelonMainHUDState = -1;
+int EGameInteractionState = -1;
 bool bPlayingVideo = false;
 bool bPressStartToContinue = false;
 bool bSkipPressStartToContinue = false;
@@ -562,6 +563,10 @@ namespace UObject
         {
             EchelonMainHUDState = StateID;
         }
+        else if (objName.starts_with(L"EGameInteraction "))
+        {
+            EGameInteractionState = StateID;
+        }
         else if (objName.starts_with(L"EElevatorPanel "))
         {
             bKeyPad = false;
@@ -1074,11 +1079,13 @@ void InitXidi()
         {
             RegisterProfileCallback([]() -> const wchar_t*
             {
+                constexpr auto s_Turret = 8330;
                 constexpr auto s_KeyPadInteract = 8338;
                 constexpr auto s_Zooming = 6942;
                 constexpr auto s_PlayerSniping = 7059;
                 constexpr auto s_UsingPalm = 8274;
                 constexpr auto s_LaserMicTargeting = 10015;
+                constexpr auto s_GameInteractionMenu = 8122;
 
                 if (bPlayingVideo || bPressStartToContinue)
                     return L"Video";
@@ -1099,8 +1106,14 @@ void InitXidi()
                     case s_UsingPalm:
                     case s_LaserMicTargeting:
                         return L"Zooming";
+                    case s_Turret:
+                        return L"Turret";
                     default:
+                    {
+                        if (EGameInteractionState == s_GameInteractionMenu)
+                            return L"GameInteractionMenu";
                         return L"Main";
+                    }
                     }
                 }
 
