@@ -50,6 +50,8 @@ int EPlayerControllerState = -1;
 int EchelonMainHUDState = -1;
 bool bPlayingVideo = false;
 bool bPressStartToContinue = false;
+bool bKeyPad = false;
+bool bElevatorPanel = false;
 
 namespace HudMatchers
 {
@@ -551,12 +553,21 @@ namespace UObject
         wchar_t buffer[256];
         auto objName = std::wstring_view(GetFullName(uObject, edx, buffer));
 
-        if (objName.starts_with(L"EPlayerController"))
+        if (objName.starts_with(L"EPlayerController "))
         {
             EPlayerControllerState = StateID;
-        } else if (objName.starts_with(L"EchelonMainHUD"))
+        } else if (objName.starts_with(L"EchelonMainHUD "))
         {
             EchelonMainHUDState = StateID;
+        }
+        else if (objName.starts_with(L"EElevatorPanel "))
+        {
+            bKeyPad = false;
+            bElevatorPanel = true;
+        } else if (objName.starts_with(L"EKeyPad "))
+        {
+            bKeyPad = true;
+            bElevatorPanel = false;
         }
 
         return shGotoState.unsafe_fastcall<int>(uObject, edx, StateID);
@@ -1053,6 +1064,7 @@ void InitXidi()
                 constexpr auto s_Zooming = 6942;
                 constexpr auto s_PlayerSniping = 7059;
                 constexpr auto s_UsingPalm = 8274;
+                constexpr auto s_LaserMicTargeting = 10015;
 
                 if (bPlayingVideo || bPressStartToContinue)
                     return L"Video";
@@ -1062,10 +1074,16 @@ void InitXidi()
                     switch (EPlayerControllerState)
                     {
                     case s_KeyPadInteract:
-                        return L"Keypad";
-                        //case s_PlayerSniping:
+                    {
+                        if (bElevatorPanel)
+                            return L"Elevator";
+                        else if (bKeyPad)
+                            return L"Keypad";
+                        break;
+                    }
                     case s_Zooming:
                     case s_UsingPalm:
+                    case s_LaserMicTargeting:
                         return L"Zooming";
                     default:
                         return L"Main";
