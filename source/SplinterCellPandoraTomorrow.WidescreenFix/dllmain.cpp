@@ -23,6 +23,8 @@ struct Screen
     bool bOpsatWidescreenMode;
     uint32_t nPostProcessFixedScale;
     uint32_t nFMVWidescreenMode;
+    uint32_t nShadowMapResolution;
+    uint32_t nReflectionsResolution;
 } Screen;
 
 union FColor
@@ -411,6 +413,8 @@ void Init()
     Screen.bOpsatWidescreenMode = iniReader.ReadInteger("MAIN", "OpsatWidescreenMode", 1) != 0;
     Screen.fIniHudOffset = iniReader.ReadFloat("MAIN", "WidescreenHudOffset", 140.0f);
     Screen.nPostProcessFixedScale = iniReader.ReadInteger("MAIN", "PostProcessFixedScale", 1);
+    Screen.nShadowMapResolution = iniReader.ReadInteger("MAIN", "ShadowMapResolution", 1);
+    Screen.nReflectionsResolution = iniReader.ReadInteger("MAIN", "ReflectionsResolution", 1);
     gColor.RGBA = iniReader.ReadInteger("BONUS", "GogglesLightColor", 0);
     bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
     bSkipPressStartToContinue = iniReader.ReadInteger("MAIN", "SkipPressStartToContinue", 0) != 0;
@@ -772,24 +776,6 @@ void InitD3DDrv()
     shUD3DRenderDeviceSetRes = safetyhook::create_inline(pattern.get_first(), UD3DRenderDeviceSetRes);
 
     //FMV
-    //pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "C1 E9 02 33 C0 F3 AB 8B CA 83 E1 03 F3 AA 8B 45 0C");
-    //if (!pattern.empty())
-    //{
-    //    struct OpenVideo_Hook
-    //    {
-    //        void operator()(injector::reg_pack& regs)
-    //        {
-    //            regs.ecx = 0x4B000;
-    //            regs.ecx >>= 2;
-    //            regs.eax = 0;
-    //        }
-    //    }; injector::MakeInline<OpenVideo_Hook>(pattern.count(2).get(0).get<void*>(0)); //pfOpenVideo + 0x2D4
-    //}
-    //else
-    //{
-    //
-    //}
-
     pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "D9 1C 24 56 56 FF 15");
     if (!pattern.empty())
     {
@@ -836,7 +822,7 @@ void InitD3DDrv()
         }; injector::MakeInline<DisplayVideo_Hook>(pattern.get_first(0), pattern.get_first(7));
     }
 
-    if (Screen.nPostProcessFixedScale)
+    if (Screen.nPostProcessFixedScale > 0)
     {
         if (Screen.nPostProcessFixedScale == 1)
             Screen.nPostProcessFixedScale = Screen.Width;
@@ -862,6 +848,36 @@ void InitD3DDrv()
             pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "C7 80 ? ? ? ? ? ? ? ? 8B 45 ? 6A");
             injector::WriteMemory(pattern.get_first(6), Screen.nPostProcessFixedScale, true);
         }
+    }
+
+    if (Screen.nShadowMapResolution > 0)
+    {
+        if (Screen.nShadowMapResolution == 1)
+            Screen.nShadowMapResolution = Screen.Width;
+
+        pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "83 EC ? 53 55 56 8B F1 8B 86", "55 8B EC 83 EC ? 53 56 8B F1 57");
+        auto rpattern = hook::range_pattern((uint32_t)pattern.get_first(), (uint32_t)pattern.get_first() + 0x488, "68 ? ? ? ? 68");
+        for (size_t i = 0; i < rpattern.size(); i++)
+        {
+            injector::WriteMemory(rpattern.get(i).get<uint32_t>(1), Screen.nShadowMapResolution, true);
+            injector::WriteMemory(rpattern.get(i).get<uint32_t>(6), Screen.nShadowMapResolution, true);
+        }
+    }
+
+    if (Screen.nReflectionsResolution > 0)
+    {
+        if (Screen.nReflectionsResolution == 1)
+            Screen.nReflectionsResolution = Screen.Width;
+
+        auto rpattern = hook::range_pattern(shUD3DRenderDeviceSetRes.target_address(), shUD3DRenderDeviceSetRes.target_address() + 0x1AFB, "68 ? ? ? ? 68");
+        injector::WriteMemory(rpattern.get(10).get<uint32_t>(1), 1920, true);
+        injector::WriteMemory(rpattern.get(10).get<uint32_t>(6), 1920, true);
+        injector::WriteMemory(rpattern.get(11).get<uint32_t>(1), 1920, true);
+        injector::WriteMemory(rpattern.get(11).get<uint32_t>(6), 1920, true);
+
+        pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "68 ? ? ? ? 68 ? ? ? ? 6A ? 6A ? FF 50 ? 8B 07");
+        injector::WriteMemory(pattern.get_first(1), 1920, true);
+        injector::WriteMemory(pattern.get_first(6), 1920, true);
     }
 }
 
