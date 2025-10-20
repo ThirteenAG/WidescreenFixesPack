@@ -228,6 +228,37 @@ namespace HudMatchers
             (color.RGBA == 4265759816 || color.RGBA == 4283459416 || color.RGBA == 4282537289);
     }
 
+    inline bool IsTimer(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    {
+        bool timerText = (offsetX1 >= 67.0f && offsetX2 <= 171.0f &&
+                        offsetY1 >= 385.0f && offsetY2 <= 409.0f &&
+                        (color.RGBA == 4286094213 || color.RGBA == 4282384384));
+
+        bool timerTopBorder = (offsetX1 == 64.0f && (offsetX2 == 144.0f || offsetX2 == 174.0f) &&
+                            offsetY1 == 382.0f && offsetY2 == 383.0f &&
+                            color.RGBA == 4283459416);
+
+        bool timerBottomBorder = (offsetX1 == 64.0f && (offsetX2 == 144.0f || offsetX2 == 174.0f) &&
+                                offsetY1 == 411.0f && offsetY2 == 412.0f &&
+                                color.RGBA == 4283459416);
+
+        bool timerLeftBorder = (offsetX1 == 64.0f && offsetX2 == 65.0f &&
+                            offsetY1 == 382.0f && offsetY2 == 412.0f &&
+                            color.RGBA == 4283459416);
+
+        bool timerRightBorder = ((offsetX1 == 143.0f || offsetX1 == 173.0f) && 
+                                (offsetX2 == 144.0f || offsetX2 == 174.0f) &&
+                                offsetY1 == 382.0f && offsetY2 == 412.0f &&
+                                color.RGBA == 4283459416);
+
+        bool timerBackground = (offsetX1 >= 65.0f && (offsetX2 == 143.0f || offsetX2 <= 173.0f) &&
+                            (offsetX2 - offsetX1 >= 70.0f) &&
+                            offsetY1 >= 383.0f && offsetY2 <= 411.0f &&
+                            (color.RGBA == 4266682200 || color.RGBA == 4283459416));
+
+        return timerText || timerTopBorder || timerBottomBorder || timerLeftBorder || timerRightBorder || timerBackground;
+    }
+
     inline bool ShouldOffsetRight(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
     {
         return IsStealthMeterLine(offsetX1, offsetX2, offsetY1, offsetY2, color) ||
@@ -256,7 +287,8 @@ namespace HudMatchers
     {
         return IsTopDialogueMenuBackground(offsetX1, offsetX2, offsetY1, offsetY2, color) ||
             IsTopDialogueMenuBorder(offsetX1, offsetX2, offsetY1, offsetY2, color) ||
-            IsTopDialogueMenuText(offsetX1, offsetX2, offsetY1, offsetY2, color);
+            IsTopDialogueMenuText(offsetX1, offsetX2, offsetY1, offsetY2, color) ||
+            IsTimer(offsetX1, offsetX2, offsetY1, offsetY2, color);
     }
 }
 
