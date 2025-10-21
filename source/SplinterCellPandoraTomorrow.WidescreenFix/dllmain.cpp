@@ -25,6 +25,7 @@ struct Screen
     uint32_t nFMVWidescreenMode;
     uint32_t nShadowMapResolution;
     uint32_t nReflectionsResolution;
+    uint32_t nBloomResolution;
 } Screen;
 
 union FColor
@@ -415,6 +416,7 @@ void Init()
     Screen.nPostProcessFixedScale = iniReader.ReadInteger("MAIN", "PostProcessFixedScale", 1);
     Screen.nShadowMapResolution = iniReader.ReadInteger("MAIN", "ShadowMapResolution", 1);
     Screen.nReflectionsResolution = iniReader.ReadInteger("MAIN", "ReflectionsResolution", 1);
+    Screen.nBloomResolution = iniReader.ReadInteger("MAIN", "BloomResolution", 0);
     gColor.RGBA = iniReader.ReadInteger("BONUS", "GogglesLightColor", 0);
     bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
     bSkipPressStartToContinue = iniReader.ReadInteger("MAIN", "SkipPressStartToContinue", 0) != 0;
@@ -767,6 +769,32 @@ int __fastcall UD3DRenderDeviceSetRes(void* UD3DRenderDevice, void* edx, void* U
     return ret;
 }
 
+uint32_t xRefIndex = -1;
+SafetyHookInline shsub_1009D270 = {};
+void __fastcall sub_1009D270(void* FRenderInterface, void* edx, int a2, int a3, float a4, float a5, float a6, float a7, int* a8)
+{
+    a4 *= Screen.nBloomResolution;
+    a5 *= Screen.nBloomResolution;
+    a6 *= Screen.nBloomResolution;
+    a7 *= Screen.nBloomResolution;
+
+    if (xRefIndex == 1)
+    {
+        a6 += 40.0f;
+        a7 += 40.0f;
+    }
+    else if (xRefIndex == 2)
+    {
+        // I don't know what to put here
+        a4 += 10000.0f;
+        a5 += 10000.0f;
+        a6 += 10000.0f;
+        a7 += 10000.0f;
+    }
+
+    return shsub_1009D270.unsafe_fastcall(FRenderInterface, edx, a2, a3, a4, a5, a6, a7, a8);
+}
+
 void InitD3DDrv()
 {
     pPresentParams = *find_module_pattern(GetModuleHandle(L"D3DDrv"), "BF ? ? ? ? 33 C0 8B D9 C1 E9 02 83 E3 03", "68 ? ? ? ? FF 15 ? ? ? ? 8B 8D").get_first<D3DPRESENT_PARAMETERS*>(1);
@@ -868,16 +896,92 @@ void InitD3DDrv()
     {
         if (Screen.nReflectionsResolution == 1)
             Screen.nReflectionsResolution = Screen.Width;
-
+    
         auto rpattern = hook::range_pattern(shUD3DRenderDeviceSetRes.target_address(), shUD3DRenderDeviceSetRes.target_address() + 0x1AFB, "68 ? ? ? ? 68");
-        injector::WriteMemory(rpattern.get(10).get<uint32_t>(1), 1920, true);
-        injector::WriteMemory(rpattern.get(10).get<uint32_t>(6), 1920, true);
-        injector::WriteMemory(rpattern.get(11).get<uint32_t>(1), 1920, true);
-        injector::WriteMemory(rpattern.get(11).get<uint32_t>(6), 1920, true);
-
+        injector::WriteMemory(rpattern.get(10).get<uint32_t>(1), Screen.nReflectionsResolution, true);
+        injector::WriteMemory(rpattern.get(10).get<uint32_t>(6), Screen.nReflectionsResolution, true);
+        injector::WriteMemory(rpattern.get(11).get<uint32_t>(1), Screen.nReflectionsResolution, true);
+        injector::WriteMemory(rpattern.get(11).get<uint32_t>(6), Screen.nReflectionsResolution, true);
+    
         pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "68 ? ? ? ? 68 ? ? ? ? 6A ? 6A ? FF 50 ? 8B 07");
-        injector::WriteMemory(pattern.get_first(1), 1920, true);
-        injector::WriteMemory(pattern.get_first(6), 1920, true);
+        injector::WriteMemory(pattern.get_first(1), Screen.nReflectionsResolution, true);
+        injector::WriteMemory(pattern.get_first(6), Screen.nReflectionsResolution, true);
+        
+        pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "68 ? ? ? ? 68 ? ? ? ? 6A ? 6A ? 8B CB");
+        injector::WriteMemory(pattern.get_first(1), Screen.nReflectionsResolution, true);
+        injector::WriteMemory(pattern.get_first(6), Screen.nReflectionsResolution, true);
+    }
+
+    if (Screen.nBloomResolution > 0)
+    {
+        constexpr auto defaultBloomRes = 256u;
+        static auto newBloomRes = defaultBloomRes * std::clamp(Screen.nBloomResolution, 0u, Screen.Height / defaultBloomRes);
+        auto rpattern = hook::range_pattern(shUD3DRenderDeviceSetRes.target_address(), shUD3DRenderDeviceSetRes.target_address() + 0x1AFB, "68 ? ? ? ? 68");
+        injector::WriteMemory(rpattern.get(1).get<uint32_t>(1), newBloomRes, true);
+        injector::WriteMemory(rpattern.get(1).get<uint32_t>(6), newBloomRes, true);
+        injector::WriteMemory(rpattern.get(2).get<uint32_t>(1), newBloomRes / 2, true);
+        injector::WriteMemory(rpattern.get(2).get<uint32_t>(6), newBloomRes / 2, true);
+        injector::WriteMemory(rpattern.get(3).get<uint32_t>(1), newBloomRes, true);
+        injector::WriteMemory(rpattern.get(3).get<uint32_t>(6), newBloomRes, true);
+        
+        pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "50 FF 51 ? 8B 45 ? 81 C6 ? ? ? ? 56 6A ? 6A");
+        static auto ResHook1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            *(uint32_t*)(regs.esp + 0x0) = newBloomRes / 4;
+            *(uint32_t*)(regs.esp + 0x4) = newBloomRes / 4;
+        });
+        
+        pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "50 FF 51 ? 8B 4D ? 6A");
+        static auto ResHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            *(uint32_t*)(regs.esp + 0x0) = newBloomRes / 8;
+            *(uint32_t*)(regs.esp + 0x4) = newBloomRes / 8;
+        });
+        
+        pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "C7 83 ? ? ? ? ? ? ? ? F3 A5");
+        static auto ResHook3 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            xRefIndex = 1;
+        });
+        
+        pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? C7 04 24 ? ? ? ? FF D7 8D 8D ? ? ? ? FF 15 ? ? ? ? 8B 46 ? 6A ? 8B 80");
+        static auto ResHook4 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            xRefIndex = 2;
+        });
+        
+        pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "8B CB C7 44 24");
+        static auto ResHook5 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            xRefIndex = 3;
+        });
+        
+        pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "55 8B EC 6A ? 68 ? ? ? ? 64 A1 ? ? ? ? 50 81 EC ? ? ? ? A1 ? ? ? ? 33 C5 89 45 ? 53 56 57 50 8D 45 ? 64 A3 ? ? ? ? 8B D9 89 9D ? ? ? ? F3 0F 10 45");
+        shsub_1009D270 = safetyhook::create_inline(pattern.get_first(), sub_1009D270);
+        
+        pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "68 ? ? ? ? 68 ? ? ? ? 6A ? 6A ? FF 50 ? 83 EC ? 8D 8D ? ? ? ? C7 44 24 ? ? ? ? ? C7 04 24 ? ? ? ? 53");
+        injector::WriteMemory(pattern.get_first(1), newBloomRes, true);
+        injector::WriteMemory(pattern.get_first(6), newBloomRes, true);
+        
+        pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "68 ? ? ? ? 68 ? ? ? ? 6A ? 6A ? FF 50 ? 8B 46 ? 6A ? 6A");
+        injector::WriteMemory(pattern.get_first(1), newBloomRes, true);
+        injector::WriteMemory(pattern.get_first(6), newBloomRes, true);
+        
+        pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "68 ? ? ? ? 68 ? ? ? ? 6A ? 6A ? FF 50 ? 83 EC ? 8D 8D ? ? ? ? C7 44 24 ? ? ? ? ? C7 04 24 ? ? ? ? 56");
+        injector::WriteMemory(pattern.get_first(1), newBloomRes, true);
+        injector::WriteMemory(pattern.get_first(6), newBloomRes, true);
+        
+        pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "68 ? ? ? ? 68 ? ? ? ? 6A ? 6A ? FF 50 ? 8B 46 ? 6A ? 8B 80");
+        injector::WriteMemory(pattern.get_first(1), newBloomRes, true);
+        injector::WriteMemory(pattern.get_first(6), newBloomRes, true);
+
+        pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "C7 45 ? ? ? ? ? C7 45 ? ? ? ? ? C7 45 ? ? ? ? ? C7 45 ? ? ? ? ? 8B 88 ? ? ? ? 85 C9 74 ? 83 BE");
+        injector::WriteMemory(pattern.get_first(3), newBloomRes, true);
+        injector::WriteMemory(pattern.get_first(10), newBloomRes, true);
+
+        pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "C7 45 ? ? ? ? ? C7 45 ? ? ? ? ? C7 45 ? ? ? ? ? C7 45 ? ? ? ? ? 8B 88 ? ? ? ? 85 C9 74 ? 83 BF");
+        injector::WriteMemory(pattern.get_first(3), newBloomRes, true);
+        injector::WriteMemory(pattern.get_first(10), newBloomRes, true);
     }
 }
 
