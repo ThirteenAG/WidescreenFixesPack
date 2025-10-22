@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "dxsdk\d3d8.h"
+#include "dxsdk\dx8\d3d8.h"
 #include "dxsdk\d3dvtbl.h"
 #include <shlobj.h>
 
