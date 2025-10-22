@@ -342,3 +342,6 @@ __pycache__/
 !source/*PPSSPP.*/**/*.exp
 !includes/LED/LogitechLEDLib_x64.lib
 !includes/LED/LogitechLEDLib_x86.lib
+
+#DXSDK
+!includes/dxsdk/**/*
