@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include <dxsdk/d3d8.h>
+#include <dxsdk/dx8/d3d8.h>
 
 struct Screen
 {
@@ -803,6 +803,61 @@ void InitD3DDrv()
     pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "55 8B EC 6A ? 68 ? ? ? ? 64 A1 ? ? ? ? 50 64 89 25 ? ? ? ? 81 EC ? ? ? ? 53 56 57 8B 7D ? 8B F1", "55 8B EC 6A ? 68 ? ? ? ? 64 A1 ? ? ? ? 50 81 EC ? ? ? ? A1 ? ? ? ? 33 C5 89 45 ? 56 57 50 8D 45 ? 64 A3 ? ? ? ? 8B F1 89 75");
     shUD3DRenderDeviceSetRes = safetyhook::create_inline(pattern.get_first(), UD3DRenderDeviceSetRes);
 
+    // Water Blend Fix
+    pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "FF B5 ? ? ? ? 8B 07 6A ? FF B5");
+    if (!pattern.empty())
+    {
+        static DWORD WaterBlendPS = 0;
+        static auto WaterPreDrawPrimitiveHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            IDirect3DDevice8* pDevice = (IDirect3DDevice8*)(regs.edi);
+
+            if (!WaterBlendPS)
+            {
+                HMODULE hModule;
+                GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR)&InitD3DDrv, &hModule);
+                HRSRC hResource = FindResource(hModule, MAKEINTRESOURCE(IDR_WATER_BLEND), RT_RCDATA);
+                if (hResource)
+                {
+                    HGLOBAL hLoadedResource = LoadResource(hModule, hResource);
+                    if (hLoadedResource)
+                    {
+                        LPVOID pLockedResource = LockResource(hLoadedResource);
+                        DWORD dwResourceSize = SizeofResource(hModule, hResource);
+                        if (pLockedResource && dwResourceSize > 0)
+                        {
+                            if (FAILED(pDevice->CreatePixelShader((DWORD*)pLockedResource, &WaterBlendPS)))
+                            {
+                                WaterBlendPS = 0;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (WaterBlendPS)
+                pDevice->SetPixelShader(WaterBlendPS);
+        });
+
+        pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "F3 0F 10 9D ? ? ? ? 8B 95 ? ? ? ? F3 0F 10 25");
+        static auto WaterPostDrawPrimitiveHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            IDirect3DDevice8* pDevice = (IDirect3DDevice8*)(regs.edi);
+            pDevice->SetPixelShader(0);
+        });
+
+        pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "68 ? ? ? ? 50 8B 08 FF 51 ? 8B 07");
+        static auto DeviceResetHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            IDirect3DDevice8* pDevice = *(IDirect3DDevice8**)(regs.edi);
+            if (WaterBlendPS)
+            {
+                pDevice->DeletePixelShader(WaterBlendPS);
+                WaterBlendPS = 0;
+            }
+        });
+    }
+
     //FMV
     pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "D9 1C 24 56 56 FF 15");
     if (!pattern.empty())
@@ -896,17 +951,30 @@ void InitD3DDrv()
     {
         if (Screen.nReflectionsResolution == 1)
             Screen.nReflectionsResolution = Screen.Width;
-    
-        auto rpattern = hook::range_pattern(shUD3DRenderDeviceSetRes.target_address(), shUD3DRenderDeviceSetRes.target_address() + 0x1AFB, "68 ? ? ? ? 68");
-        injector::WriteMemory(rpattern.get(10).get<uint32_t>(1), Screen.nReflectionsResolution, true);
-        injector::WriteMemory(rpattern.get(10).get<uint32_t>(6), Screen.nReflectionsResolution, true);
-        injector::WriteMemory(rpattern.get(11).get<uint32_t>(1), Screen.nReflectionsResolution, true);
-        injector::WriteMemory(rpattern.get(11).get<uint32_t>(6), Screen.nReflectionsResolution, true);
-    
-        pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "68 ? ? ? ? 68 ? ? ? ? 6A ? 6A ? FF 50 ? 8B 07");
+
+        pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "68 ? ? ? ? C7 04 81 ? ? ? ? 8B 07 8B 10 68 ? ? ? ? 50 FF 52 ? 6A ? 6A ? 8B CE FF 15 ? ? ? ? 8B 0E 68");
+        if (!pattern.empty())
+        {
+            injector::WriteMemory(pattern.get_first(1), Screen.nReflectionsResolution, true);
+            injector::WriteMemory(pattern.get_first(17), Screen.nReflectionsResolution, true);
+
+            pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "68 ? ? ? ? C7 04 81 ? ? ? ? 8B 07 8B 10 68 ? ? ? ? 50 FF 52 ? 6A ? 6A ? 8B CE FF 15 ? ? ? ? 8B 0E C7 04 81");
+            injector::WriteMemory(pattern.get_first(1), Screen.nReflectionsResolution, true);
+            injector::WriteMemory(pattern.get_first(17), Screen.nReflectionsResolution, true);
+        }
+        else
+        {
+            auto rpattern = hook::range_pattern(shUD3DRenderDeviceSetRes.target_address(), shUD3DRenderDeviceSetRes.target_address() + 0x1AFB, "68 ? ? ? ? 68");
+            injector::WriteMemory(rpattern.get(10).get<uint32_t>(1), Screen.nReflectionsResolution, true);
+            injector::WriteMemory(rpattern.get(10).get<uint32_t>(6), Screen.nReflectionsResolution, true);
+            injector::WriteMemory(rpattern.get(11).get<uint32_t>(1), Screen.nReflectionsResolution, true);
+            injector::WriteMemory(rpattern.get(11).get<uint32_t>(6), Screen.nReflectionsResolution, true);
+        }
+
+        pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "68 ? ? ? ? 68 ? ? ? ? 6A ? 6A ? 8B CF", "68 ? ? ? ? 68 ? ? ? ? 6A ? 6A ? FF 50 ? 8B 07");
         injector::WriteMemory(pattern.get_first(1), Screen.nReflectionsResolution, true);
         injector::WriteMemory(pattern.get_first(6), Screen.nReflectionsResolution, true);
-        
+
         pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "68 ? ? ? ? 68 ? ? ? ? 6A ? 6A ? 8B CB");
         injector::WriteMemory(pattern.get_first(1), Screen.nReflectionsResolution, true);
         injector::WriteMemory(pattern.get_first(6), Screen.nReflectionsResolution, true);

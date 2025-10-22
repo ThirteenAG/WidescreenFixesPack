@@ -24,7 +24,7 @@ workspace "WidescreenFixesPack"
    defines { "rsc_FileDescription=\"https://thirteenag.github.io/wfp\"" }
    defines { "rsc_UpdateUrl=\"https://github.com/ThirteenAG/WidescreenFixesPack\"" }
    
-   files { "source/%{prj.name}/*.cpp" }
+   files { "source/%{prj.name}/*.h", "source/%{prj.name}/*.cpp", "source/%{prj.name}/*.hxx", "source/%{prj.name}/*.ixx" }
    files { "data/%{prj.name}/**" }
    files { "Resources/*.rc" }
    files { "external/hooking/Hooking.Patterns.h", "external/hooking/Hooking.Patterns.cpp" }
@@ -460,6 +460,10 @@ project "SplinterCellDoubleAgent.WidescreenFix"
    files { "textures/SCDA/icon.rc" }
    defines { "IDR_SCDAICON=200" }
 project "SplinterCellPandoraTomorrow.WidescreenFix"
+   prebuildcommands { "for /R \"../source/%{prj.name}/\" %%f in (*.fx) do (\"../includes/dxsdk/lib/x86/fxc.exe\" /Tps_1_1 /LD /Ewaterblend /Fo \"../source/%{prj.name}/%%~nf.fxo\" %%f)" }
+   files { "source/%{prj.name}/*.rc" }
+   defines { "IDR_WATER_BLEND=200" }
+   debugargs { "-uplay_steam_mode" }
    setpaths("Z:/WFP/Games/Splinter Cell/Splinter Cell Pandora Tomorrow/", "system/SplinterCell2.exe", "system/scripts/")
 group "Win32"
 
