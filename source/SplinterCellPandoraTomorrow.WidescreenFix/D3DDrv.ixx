@@ -272,7 +272,7 @@ export void InitD3DDrv()
     if (Screen.nShadowMapResolution > 0)
     {
         if (Screen.nShadowMapResolution == 1)
-            Screen.nShadowMapResolution = Screen.Width;
+            Screen.nShadowMapResolution = std::clamp(Screen.Width, 0, 2048);
 
         pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "83 EC ? 53 55 56 8B F1 8B 86", "55 8B EC 83 EC ? 53 56 8B F1 57");
         auto rpattern = hook::range_pattern((uint32_t)pattern.get_first(), (uint32_t)pattern.get_first() + 0x488, "68 ? ? ? ? 68");
@@ -286,7 +286,7 @@ export void InitD3DDrv()
     if (Screen.nReflectionsResolution > 0)
     {
         if (Screen.nReflectionsResolution == 1)
-            Screen.nReflectionsResolution = Screen.Width;
+            Screen.nReflectionsResolution = std::clamp(Screen.Width, 0, 2048);
 
         pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "68 ? ? ? ? C7 04 81 ? ? ? ? 8B 07 8B 10 68 ? ? ? ? 50 FF 52 ? 6A ? 6A ? 8B CE FF 15 ? ? ? ? 8B 0E 68");
         if (!pattern.empty())
