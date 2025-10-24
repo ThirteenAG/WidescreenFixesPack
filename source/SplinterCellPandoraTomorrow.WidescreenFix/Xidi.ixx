@@ -18,17 +18,6 @@ export void InitXidi()
         {
             RegisterProfileCallback([]() -> const wchar_t*
             {
-                constexpr auto s_Turret = 8330;
-                constexpr auto s_KeyPadInteract = 8338;
-                constexpr auto s_Zooming = 6942;
-                constexpr auto s_PlayerSniping = 7059;
-                constexpr auto s_UsingPalm = 8274;
-                constexpr auto s_LaserMicTargeting = 10015;
-                constexpr auto s_GameInteractionMenu = 8122;
-                constexpr auto s_FirstPersonTargeting = 7060;
-                constexpr auto s_RappellingTargeting = 7294;
-                constexpr auto s_PlayerBTWTargeting = 7548;
-
                 if (bPlayingVideo || bPressStartToContinue)
                     return L"Video";
 

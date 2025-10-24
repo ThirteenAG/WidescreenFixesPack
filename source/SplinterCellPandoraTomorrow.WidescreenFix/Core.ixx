@@ -71,6 +71,10 @@ namespace UObject
             bKeyPad = true;
             bElevatorPanel = false;
         }
+        else if (objName.starts_with(L"EDoorMarker "))
+        {
+            EDoorMarkerState = StateID;
+        }
 
         return shGotoState.unsafe_fastcall<int>(uObject, edx, StateID);
     }

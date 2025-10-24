@@ -46,6 +46,7 @@ export bool bSkipIntro = false;
 export int EPlayerControllerState = -1;
 export int EchelonMainHUDState = -1;
 export int EGameInteractionState = -1;
+export int EDoorMarkerState = -1;
 export bool bPlayingVideo = false;
 export bool bPressStartToContinue = false;
 export bool bSkipPressStartToContinue = false;
@@ -60,3 +61,17 @@ export std::vector<std::pair<const std::wstring, std::wstring>> ResList =
     { L"1280x1024", L"" },
     { L"1600x1200", L"" },
 };
+
+export
+{
+    constexpr auto s_Turret = 8330;
+    constexpr auto s_KeyPadInteract = 8338;
+    constexpr auto s_Zooming = 6942;
+    constexpr auto s_PlayerSniping = 7059;
+    constexpr auto s_UsingPalm = 8274;
+    constexpr auto s_LaserMicTargeting = 10015;
+    constexpr auto s_GameInteractionMenu = 8122;
+    constexpr auto s_FirstPersonTargeting = 7060;
+    constexpr auto s_RappellingTargeting = 7294;
+    constexpr auto s_PlayerBTWTargeting = 7548;
+}
