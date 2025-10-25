@@ -426,15 +426,16 @@ void CParticle__AddParticleHookLCS(uint32_t type, uint32_t vecPos)
         else
             data->FillScreenMoving_isBlood = 0;
     }
-    else if (type == LCS_SPLASH || type == LCS_CAR_SPLASH || type == LCS_BOAT_SPLASH || type == LCS_PED_SPLASH)
-    {
-        data->RegisterSplash_Vec_x = point->x;
-        data->RegisterSplash_Vec_y = point->y;
-        data->RegisterSplash_Vec_z = point->z;
-        data->RegisterSplash_distance = 10.0f;
-        data->RegisterSplash_duration = 300;
-        data->RegisterSplash_removaldistance = 50.0f;
-    }
+    //https://github.com/ThirteenAG/XboxRainDroplets/issues/38
+    //else if (type == LCS_SPLASH || type == LCS_CAR_SPLASH || type == LCS_BOAT_SPLASH || type == LCS_PED_SPLASH)
+    //{
+    //    data->RegisterSplash_Vec_x = point->x;
+    //    data->RegisterSplash_Vec_y = point->y;
+    //    data->RegisterSplash_Vec_z = point->z;
+    //    data->RegisterSplash_distance = 10.0f;
+    //    data->RegisterSplash_duration = 300;
+    //    data->RegisterSplash_removaldistance = 50.0f;
+    //}
 }
 
 void GameLoopStuffLCS()
