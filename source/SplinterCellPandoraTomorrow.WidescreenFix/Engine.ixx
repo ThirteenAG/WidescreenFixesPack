@@ -149,7 +149,8 @@ namespace UEngine
         {
             if (EchelonMainHUDState == 8707 || EchelonMainHUDState == 8708)
             {
-                if (EPlayerControllerState == s_FirstPersonTargeting || EPlayerControllerState == s_RappellingTargeting || EPlayerControllerState == s_PlayerBTWTargeting || EPlayerControllerState == s_PlayerSniping)
+                if (EPlayerControllerState == s_FirstPersonTargeting || EPlayerControllerState == s_RappellingTargeting ||
+                    EPlayerControllerState == s_PlayerBTWTargeting || EPlayerControllerState == s_PlayerSniping || EPlayerControllerState == s_HOHFUTargeting)
                 {
                     if (EGameInteractionState != s_GameInteractionMenu)
                     {
