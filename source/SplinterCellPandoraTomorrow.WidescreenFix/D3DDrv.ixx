@@ -127,10 +127,9 @@ export void InitD3DDrv()
     if (!pattern.empty())
     {
         static DWORD WaterBlendPS = 0;
-        static auto WaterPreDrawPrimitiveHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-        {
-            IDirect3DDevice8* pDevice = (IDirect3DDevice8*)(regs.edi);
 
+        static auto WaterPreDraw = [](SafetyHookContext& regs, IDirect3DDevice8* pDevice)
+        {
             if (!WaterBlendPS)
             {
                 HMODULE hModule;
@@ -165,13 +164,10 @@ export void InitD3DDrv()
                 pDevice->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
                 pDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
             }
-        });
+        };
 
-        pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "F3 0F 10 9D ? ? ? ? 8B 95 ? ? ? ? F3 0F 10 25");
-        static auto WaterPostDrawPrimitiveHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        static auto WaterPostDraw = [](SafetyHookContext& regs, IDirect3DDevice8* pDevice)
         {
-            IDirect3DDevice8* pDevice = (IDirect3DDevice8*)(regs.edi);
-
             if (WaterBlendPS)
             {
                 pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, OriginalAlphaBlendEnable);
@@ -180,6 +176,33 @@ export void InitD3DDrv()
             }
 
             pDevice->SetPixelShader(0);
+        };
+
+        static auto WaterPreDrawPrimitiveHook1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            IDirect3DDevice8* pDevice = (IDirect3DDevice8*)(regs.edi);
+            WaterPreDraw(regs, pDevice);
+        });
+
+        pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "F3 0F 10 9D ? ? ? ? 8B 95 ? ? ? ? F3 0F 10 25");
+        static auto WaterPostDrawPrimitiveHook1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            IDirect3DDevice8* pDevice = (IDirect3DDevice8*)(regs.edi);
+            WaterPostDraw(regs, pDevice);
+        });
+
+        pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "FF B5 ? ? ? ? 8B 06 6A ? FF B5 ? ? ? ? 6A ? 6A ? 56 FF 90 ? ? ? ? F3 0F 10 9D");
+        static auto WaterPreDrawPrimitiveHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            IDirect3DDevice8* pDevice = (IDirect3DDevice8*)(regs.esi);
+            WaterPreDraw(regs, pDevice);
+        });
+
+        pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "F3 0F 10 9D ? ? ? ? 8B 95 ? ? ? ? 8B 8F");
+        static auto WaterPostDrawPrimitiveHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            IDirect3DDevice8* pDevice = (IDirect3DDevice8*)(regs.esi);
+            WaterPostDraw(regs, pDevice);
         });
 
         pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "68 ? ? ? ? 50 8B 08 FF 51 ? 8B 07");
@@ -272,7 +295,7 @@ export void InitD3DDrv()
     if (Screen.nShadowMapResolution > 0)
     {
         if (Screen.nShadowMapResolution == 1)
-            Screen.nShadowMapResolution = std::clamp(Screen.Width, 0, 2048);
+            Screen.nShadowMapResolution = std::clamp(Screen.Width, 0, 3072);
 
         pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "83 EC ? 53 55 56 8B F1 8B 86", "55 8B EC 83 EC ? 53 56 8B F1 57");
         auto rpattern = hook::range_pattern((uint32_t)pattern.get_first(), (uint32_t)pattern.get_first() + 0x488, "68 ? ? ? ? 68");
@@ -286,7 +309,7 @@ export void InitD3DDrv()
     if (Screen.nReflectionsResolution > 0)
     {
         if (Screen.nReflectionsResolution == 1)
-            Screen.nReflectionsResolution = std::clamp(Screen.Width, 0, 2048);
+            Screen.nReflectionsResolution = std::clamp(Screen.Width, 0, 3072);
 
         pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "68 ? ? ? ? C7 04 81 ? ? ? ? 8B 07 8B 10 68 ? ? ? ? 50 FF 52 ? 6A ? 6A ? 8B CE FF 15 ? ? ? ? 8B 0E 68");
         if (!pattern.empty())
