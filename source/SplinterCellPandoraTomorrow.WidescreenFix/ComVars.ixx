@@ -74,4 +74,5 @@ export
     constexpr auto s_FirstPersonTargeting = 7060;
     constexpr auto s_RappellingTargeting = 7294;
     constexpr auto s_PlayerBTWTargeting = 7548;
+    constexpr auto s_HOHFUTargeting = 8571;
 }
