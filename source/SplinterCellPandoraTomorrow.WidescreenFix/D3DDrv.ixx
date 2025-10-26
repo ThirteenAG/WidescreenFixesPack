@@ -118,6 +118,8 @@ export void InitD3DDrv()
     pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "55 8B EC 6A ? 68 ? ? ? ? 64 A1 ? ? ? ? 50 64 89 25 ? ? ? ? 81 EC ? ? ? ? 53 56 57 8B 7D ? 8B F1", "55 8B EC 6A ? 68 ? ? ? ? 64 A1 ? ? ? ? 50 81 EC ? ? ? ? A1 ? ? ? ? 33 C5 89 45 ? 56 57 50 8D 45 ? 64 A3 ? ? ? ? 8B F1 89 75");
     shUD3DRenderDeviceSetRes = safetyhook::create_inline(pattern.get_first(), UD3DRenderDeviceSetRes);
 
+    bool bRetailVersion = false;
+
     // Water Blend Fix
     static DWORD OriginalAlphaBlendEnable = 0;
     static DWORD OriginalSrcBlend = 0;
@@ -216,6 +218,8 @@ export void InitD3DDrv()
             }
         });
     }
+    else
+        bRetailVersion = true;
 
     //FMV
     pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "D9 1C 24 56 56 FF 15");
@@ -295,7 +299,7 @@ export void InitD3DDrv()
     if (Screen.nShadowMapResolution > 0)
     {
         if (Screen.nShadowMapResolution == 1)
-            Screen.nShadowMapResolution = std::clamp(Screen.Width, 0, 3072);
+            Screen.nShadowMapResolution = std::clamp(Screen.Width, 0, bRetailVersion ? 2048 : 3072);
 
         pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "83 EC ? 53 55 56 8B F1 8B 86", "55 8B EC 83 EC ? 53 56 8B F1 57");
         auto rpattern = hook::range_pattern((uint32_t)pattern.get_first(), (uint32_t)pattern.get_first() + 0x488, "68 ? ? ? ? 68");
@@ -309,7 +313,7 @@ export void InitD3DDrv()
     if (Screen.nReflectionsResolution > 0)
     {
         if (Screen.nReflectionsResolution == 1)
-            Screen.nReflectionsResolution = std::clamp(Screen.Width, 0, 3072);
+            Screen.nReflectionsResolution = std::clamp(Screen.Width, 0, bRetailVersion ? 2048 : 3072);
 
         pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "68 ? ? ? ? C7 04 81 ? ? ? ? 8B 07 8B 10 68 ? ? ? ? 50 FF 52 ? 6A ? 6A ? 8B CE FF 15 ? ? ? ? 8B 0E 68");
         if (!pattern.empty())
