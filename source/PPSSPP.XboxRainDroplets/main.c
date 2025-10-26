@@ -15,6 +15,7 @@
 #include "../../includes/psp/mips.h"
 
 #define MODULE_NAME_INTERNAL "GTA3"
+#define MODULE_NAME_INTERNAL2 "SplinterCellPSP"
 #define MODULE_NAME "PPSSPP.XboxRainDroplets"
 #define LOG_PATH "ms0:/PSP/PLUGINS/PPSSPP.XboxRainDroplets/PPSSPP.XboxRainDroplets.log"
 #define INI_PATH "ms0:/PSP/PLUGINS/PPSSPP.XboxRainDroplets/PPSSPP.XboxRainDroplets.ini"
@@ -30,7 +31,7 @@ _Static_assert(sizeof(MODULE_NAME) - 1 < 28, "MODULE_NAME can't have more than 2
 #define align16
 #endif
 
-char align16 XboxRainDropletsData[255] = "XBOXRAINDROPLETSDATA";
+char align16 XboxRainDropletsData[255] = "\0BOXRAINDROPLETSDATA";
 
 enum eParticleVCS
 {
@@ -233,6 +234,7 @@ typedef struct RwMatrix
 
 #pragma pack(push, 1)
 struct XRData {
+    char signature[21]; // "XBOXRAINDROPLETSDATA"
     uint32_t p_enabled;
     uint32_t ms_enabled;
 
@@ -338,7 +340,7 @@ uint32_t sub_8A1A5D4(uint32_t a1)
     return a1 + 16;
 }
 
-void CParticle__AddParticleHookVCS(uint32_t type, uint32_t vecPos)
+void CParticle__AddParticleHookVCS(uint32_t type, RwV3d* vecPos/*, int a3, float a4, int a5, int a6, int a7, int16_t a8, int a9, int a10*/)
 {
     struct XRData* data = (struct XRData*)XboxRainDropletsData;
     RwV3d* point = (RwV3d*)vecPos;
@@ -408,42 +410,39 @@ intptr_t dword_08BB194C = 0;
 intptr_t TheCamera = 0;
 void GameLoopStuffVCS()
 {
-    if (XboxRainDropletsData[0] != 'X')
+    struct XRData* data = (struct XRData*)XboxRainDropletsData;
+    uint8_t gMenuActivated = *(uint8_t*)(dword_08BC9100 + 0x20);
+    data->ms_enabled = gMenuActivated == 0;
+
+    float CWeather_Rain = *(float*)(injector.GetGP() + dword_08BB3C38);
+    uint8_t CCullZones_CamNoRain = (*(uint32_t*)(injector.GetGP() + dword_08BB456C) & 8) != 0;
+    uint8_t CCullZones_PlayerNoRain = (*(uint32_t*)(injector.GetGP() + dword_08BB4570) & 8) != 0;
+    uint8_t CCutsceneMgr__ms_running = *(uint8_t*)((*(uint32_t*)(injector.GetGP() + dword_08BB345C) + 0x13));
+    uint32_t CGame__currArea = *(uint32_t*)(injector.GetGP() + dword_08BB194C);
+
+    if (CGame__currArea != 0 || CCullZones_CamNoRain || CCullZones_PlayerNoRain || CCutsceneMgr__ms_running)
+        data->ms_rainIntensity = 0.0f;
+    else
+        data->ms_rainIntensity = CWeather_Rain;
+
+    uint32_t RslCamera = *(uint32_t*)(TheCamera + 0x7BC);
+    if (RslCamera)
     {
-        struct XRData* data = (struct XRData*)XboxRainDropletsData;
-        uint8_t gMenuActivated = *(uint8_t*)(dword_08BC9100 + 0x20);
-        data->ms_enabled = gMenuActivated == 0;
+        uint32_t Node = RslCameraGetNode(RslCamera);
+        struct RwMatrix* pCamMatrix = (struct RwMatrix*)(sub_8A1A5D4(Node));
 
-        float CWeather_Rain = *(float*)(injector.GetGP() + dword_08BB3C38);
-        uint8_t CCullZones_CamNoRain = (*(uint32_t*)(injector.GetGP() + dword_08BB456C) & 8) != 0;
-        uint8_t CCullZones_PlayerNoRain = (*(uint32_t*)(injector.GetGP() + dword_08BB4570) & 8) != 0;
-        uint8_t CCutsceneMgr__ms_running = *(uint8_t*)((*(uint32_t*)(injector.GetGP() + dword_08BB345C) + 0x13));
-        uint32_t CGame__currArea = *(uint32_t*)(injector.GetGP() + dword_08BB194C);
-
-        if (CGame__currArea != 0 || CCullZones_CamNoRain || CCullZones_PlayerNoRain || CCutsceneMgr__ms_running)
-            data->ms_rainIntensity = 0.0f;
-        else
-            data->ms_rainIntensity = CWeather_Rain;
-
-        uint32_t RslCamera = *(uint32_t*)(TheCamera + 0x7BC);
-        if (RslCamera)
-        {
-            uint32_t Node = RslCameraGetNode(RslCamera);
-            struct RwMatrix* pCamMatrix = (struct RwMatrix*)(sub_8A1A5D4(Node));
-
-            data->p_right_x = (uint32_t)&pCamMatrix->right.x;
-            data->p_right_y = (uint32_t)&pCamMatrix->right.y;
-            data->p_right_z = (uint32_t)&pCamMatrix->right.z;
-            data->p_up_x = (uint32_t)&pCamMatrix->up.x;
-            data->p_up_y = (uint32_t)&pCamMatrix->up.y;
-            data->p_up_z = (uint32_t)&pCamMatrix->up.z;
-            data->p_at_x = (uint32_t)&pCamMatrix->at.x;
-            data->p_at_y = (uint32_t)&pCamMatrix->at.y;
-            data->p_at_z = (uint32_t)&pCamMatrix->at.z;
-            data->p_pos_x = (uint32_t)&pCamMatrix->pos.x;
-            data->p_pos_y = (uint32_t)&pCamMatrix->pos.y;
-            data->p_pos_z = (uint32_t)&pCamMatrix->pos.z;
-        }
+        data->p_right_x = (uint32_t)&pCamMatrix->right.x;
+        data->p_right_y = (uint32_t)&pCamMatrix->right.y;
+        data->p_right_z = (uint32_t)&pCamMatrix->right.z;
+        data->p_up_x = (uint32_t)&pCamMatrix->up.x;
+        data->p_up_y = (uint32_t)&pCamMatrix->up.y;
+        data->p_up_z = (uint32_t)&pCamMatrix->up.z;
+        data->p_at_x = (uint32_t)&pCamMatrix->at.x;
+        data->p_at_y = (uint32_t)&pCamMatrix->at.y;
+        data->p_at_z = (uint32_t)&pCamMatrix->at.z;
+        data->p_pos_x = (uint32_t)&pCamMatrix->pos.x;
+        data->p_pos_y = (uint32_t)&pCamMatrix->pos.y;
+        data->p_pos_z = (uint32_t)&pCamMatrix->pos.z;
     }
 }
 
@@ -455,43 +454,151 @@ intptr_t dword_8B303A7 = 0;
 intptr_t dword_8B58DF0 = 0;
 void GameLoopStuffLCS()
 {
-    if (XboxRainDropletsData[0] != 'X')
+    struct XRData* data = (struct XRData*)XboxRainDropletsData;
+    uint8_t gMenuActivated = *(uint8_t*)(dword_8B8EE20 + 0x131);
+    data->ms_enabled = gMenuActivated == 0;
+
+    float CWeather_Rain = *(float*)(dword_8B5E180);
+    uint8_t CCullZones_CamNoRain = (*(uint32_t*)(dword_8B5E9D0) & 8) != 0;
+    uint8_t CCullZones_PlayerNoRain = (*(uint32_t*)(dword_8B5E9D4) & 8) != 0;
+    uint8_t CCutsceneMgr__ms_running = *(uint8_t*)(dword_8B303A7);
+    uint32_t CGame__currArea = *(uint32_t*)(dword_8B58DF0);
+
+    if (CGame__currArea != 0 || CCullZones_CamNoRain || CCullZones_PlayerNoRain || CCutsceneMgr__ms_running)
+        data->ms_rainIntensity = 0.0f;
+    else
+        data->ms_rainIntensity = CWeather_Rain;
+
+    uint32_t RslCamera = *(uint32_t*)(TheCamera + 0xAB0);
+    if (RslCamera)
     {
-        struct XRData* data = (struct XRData*)XboxRainDropletsData;
-        uint8_t gMenuActivated = *(uint8_t*)(dword_8B8EE20 + 0x131);
-        data->ms_enabled = gMenuActivated == 0;
+        uint32_t Node = RslCameraGetNode(RslCamera);
+        struct RwMatrix* pCamMatrix = (struct RwMatrix*)(sub_8A1A5D4(Node));
 
-        float CWeather_Rain = *(float*)(dword_8B5E180);
-        uint8_t CCullZones_CamNoRain = (*(uint32_t*)(dword_8B5E9D0) & 8) != 0;
-        uint8_t CCullZones_PlayerNoRain = (*(uint32_t*)(dword_8B5E9D4) & 8) != 0;
-        uint8_t CCutsceneMgr__ms_running = *(uint8_t*)(dword_8B303A7);
-        uint32_t CGame__currArea = *(uint32_t*)(dword_8B58DF0);
-
-        if (CGame__currArea != 0 || CCullZones_CamNoRain || CCullZones_PlayerNoRain || CCutsceneMgr__ms_running)
-            data->ms_rainIntensity = 0.0f;
-        else
-            data->ms_rainIntensity = CWeather_Rain;
-
-        uint32_t RslCamera = *(uint32_t*)(TheCamera + 0xAB0);
-        if (RslCamera)
-        {
-            uint32_t Node = RslCameraGetNode(RslCamera);
-            struct RwMatrix* pCamMatrix = (struct RwMatrix*)(sub_8A1A5D4(Node));
-
-            data->p_right_x = (uint32_t)&pCamMatrix->right.x;
-            data->p_right_y = (uint32_t)&pCamMatrix->right.y;
-            data->p_right_z = (uint32_t)&pCamMatrix->right.z;
-            data->p_up_x = (uint32_t)&pCamMatrix->up.x;
-            data->p_up_y = (uint32_t)&pCamMatrix->up.y;
-            data->p_up_z = (uint32_t)&pCamMatrix->up.z;
-            data->p_at_x = (uint32_t)&pCamMatrix->at.x;
-            data->p_at_y = (uint32_t)&pCamMatrix->at.y;
-            data->p_at_z = (uint32_t)&pCamMatrix->at.z;
-            data->p_pos_x = (uint32_t)&pCamMatrix->pos.x;
-            data->p_pos_y = (uint32_t)&pCamMatrix->pos.y;
-            data->p_pos_z = (uint32_t)&pCamMatrix->pos.z;
-        }
+        data->p_right_x = (uint32_t)&pCamMatrix->right.x;
+        data->p_right_y = (uint32_t)&pCamMatrix->right.y;
+        data->p_right_z = (uint32_t)&pCamMatrix->right.z;
+        data->p_up_x = (uint32_t)&pCamMatrix->up.x;
+        data->p_up_y = (uint32_t)&pCamMatrix->up.y;
+        data->p_up_z = (uint32_t)&pCamMatrix->up.z;
+        data->p_at_x = (uint32_t)&pCamMatrix->at.x;
+        data->p_at_y = (uint32_t)&pCamMatrix->at.y;
+        data->p_at_z = (uint32_t)&pCamMatrix->at.z;
+        data->p_pos_x = (uint32_t)&pCamMatrix->pos.x;
+        data->p_pos_y = (uint32_t)&pCamMatrix->pos.y;
+        data->p_pos_z = (uint32_t)&pCamMatrix->pos.z;
     }
+}
+
+struct FVector
+{
+    float X, Y, Z;
+};
+
+struct FRotator
+{
+    int Pitch, Yaw, Roll;
+};
+
+void* gCurrentPlayerController;
+void _0fRAPlayerControllerETickf6KELevelTickWrapper(void* PlayerController, int a2, float a3)
+{
+    static void* prevPlayerController = 0;
+    gCurrentPlayerController = PlayerController;
+    
+    if (PlayerController != prevPlayerController)
+    {
+        prevPlayerController = PlayerController;
+
+        struct XRData* data = (struct XRData*)XboxRainDropletsData;
+        data->ms_enabled = 0;
+    }
+}
+
+RwMatrix matrix;
+void _0FIDrawRainP6LUStaticMeshP6PFLevelSceneNodeP6QFRenderInterfaceWrapper(void* a1, int a2, int a3)
+{
+    struct XRData* data = (struct XRData*)XboxRainDropletsData;
+    if (gCurrentPlayerController)
+    {
+        struct FVector* gCamPos = (struct FVector*)((uintptr_t)gCurrentPlayerController + 0x1B0);
+        struct FRotator* gCamRot = (struct FRotator*)((uintptr_t)gCurrentPlayerController + 0x1B0 + sizeof(struct FRotator) + 4);
+
+        logger.WriteF("gCamPos at: %x", gCamPos);
+        //logger.WriteF("gCamPos at: %f %f %f, gCamRot at: %d %d %d ", gCamPos->X, gCamPos->Y, gCamPos->Z, gCamRot->Pitch, gCamRot->Yaw, gCamRot->Roll);
+
+        float UnrealToRadians = (2.0f * 3.14159265359f) / 65536.0f;
+
+        float SR = sinf(gCamRot->Roll * UnrealToRadians);
+        float CR = cosf(gCamRot->Roll * UnrealToRadians);
+        float SP = sinf(gCamRot->Pitch * UnrealToRadians);
+        float CP = cosf(gCamRot->Pitch * UnrealToRadians);
+        float SY = sinf(gCamRot->Yaw * UnrealToRadians);
+        float CY = cosf(gCamRot->Yaw * UnrealToRadians);
+
+        // Right vector (from M[1][0-2])
+        matrix.right.x = SR * SP * CY - CR * SY;
+        matrix.right.y = SR * SP * SY + CR * CY;
+        matrix.right.z = -SR * CP;
+        matrix.flags = 0;
+
+        // Up vector (from M[2][0-2])
+        matrix.up.x = -(CR * SP * CY + SR * SY);
+        matrix.up.y = CY * SR - CR * SP * SY;
+        matrix.up.z = CR * CP;
+        matrix.pad1 = 0;
+
+        // At vector (from M[0][0-2]) - Forward
+        matrix.at.x = CP * CY;
+        matrix.at.y = CP * SY;
+        matrix.at.z = SP;
+        matrix.pad2 = 0;
+
+        // Position
+        matrix.pos.x = gCamPos->X;
+        matrix.pos.y = gCamPos->Y;
+        matrix.pos.z = gCamPos->Z;
+        matrix.pad3 = 0;
+
+        // Apply to WaterDrops
+        matrix.right.x = -matrix.right.x;
+        matrix.right.y = -matrix.right.y;
+        matrix.right.z = -matrix.right.z;
+
+        const float fSpeedAdjuster = 0.05f;
+        matrix.right.x *= fSpeedAdjuster;
+        matrix.right.y *= fSpeedAdjuster;
+        matrix.right.z *= fSpeedAdjuster;
+        matrix.up.x *= fSpeedAdjuster;
+        matrix.up.y *= fSpeedAdjuster;
+        matrix.up.z *= fSpeedAdjuster;
+        matrix.at.x *= fSpeedAdjuster;
+        matrix.at.y *= fSpeedAdjuster;
+        matrix.at.z *= fSpeedAdjuster;
+
+        data->p_right_x = (uint32_t)&matrix.right.x;
+        data->p_right_y = (uint32_t)&matrix.right.y;
+        data->p_right_z = (uint32_t)&matrix.right.z;
+        data->p_up_x = (uint32_t)&matrix.up.x;
+        data->p_up_y = (uint32_t)&matrix.up.y;
+        data->p_up_z = (uint32_t)&matrix.up.z;
+        data->p_at_x = (uint32_t)&matrix.at.x;
+        data->p_at_y = (uint32_t)&matrix.at.y;
+        data->p_at_z = (uint32_t)&matrix.at.z;
+        data->p_pos_x = (uint32_t)&matrix.pos.x;
+        data->p_pos_y = (uint32_t)&matrix.pos.y;
+        data->p_pos_z = (uint32_t)&matrix.pos.z;
+
+        data->ms_enabled = 1;
+        data->ms_rainIntensity = 1.0f;
+    }
+    gCurrentPlayerController = 0;
+}
+
+void _0fIUGUIPageEDrawP6HUCanvasWrapper(void* a1, int* a2)
+{
+    struct XRData* data = (struct XRData*)XboxRainDropletsData;
+    data->ms_enabled = 0;
 }
 
 uintptr_t GetAbsoluteAddress(uintptr_t at, int32_t offs_hi, int32_t offs_lo)
@@ -501,6 +608,8 @@ uintptr_t GetAbsoluteAddress(uintptr_t at, int32_t offs_hi, int32_t offs_lo)
 
 int OnModuleStart() {
     sceKernelDelayThread(110000);
+
+    XboxRainDropletsData[0] = 'X';
 
     //vcs
     uintptr_t ptr_8937A50 = pattern.get(0, "1C 00 BF AF ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 01 00 15 34", 4);
@@ -518,18 +627,11 @@ int OnModuleStart() {
         uintptr_t ptr_1F0C = pattern.get(0, "00 00 B0 AF 04 00 B1 AF 0C 00 B3 AF 10 00 B4 AF 14 00 B5 AF 18 00 B6 AF 1C 00 BF AF", -8);
         TheCamera = GetAbsoluteAddress(ptr_1F0C, 0, 4);
 
-        uintptr_t ptr_FC4B4 = pattern.get(0, "C0 29 10 00 80 38 10 00", 0);
-        MakeInlineWrapper(ptr_FC4B4,
-            move(s7, a0),
-            move(k1, a1),
-            move(a0, s0),
-            move(a1, s1),
-            jal((intptr_t)CParticle__AddParticleHookVCS),
-            nop(),
-            move(a0, s7),
-            move(a1, k1),
-            sll(a1, s0, 7)
-        );
+        uintptr_t ptr_890043C = pattern.get(0, "D0 00 B0 AF 25 80 80 00 00 01 A4 8F", -4);
+        if (ptr_890043C)
+        {
+            injector.MakeTrampoline(ptr_890043C, (uintptr_t)CParticle__AddParticleHookVCS);
+        }
     }
 
     //lcs
@@ -552,20 +654,46 @@ int OnModuleStart() {
         dword_8B58DF0 = GetAbsoluteAddress(ptr_8AD1508, 0, 4);
         uintptr_t ptr_8819700 = pattern.get(0, "00 29 05 00 21 30 05 00 C0 28 05 00 21 30 C5 00 80 28 05 00 21 28 C5 00 21 20 A4 00 AC 01 84 84 10 00 05 34 ? ? ? ? 00 3F 04 3C", -12);
         TheCamera = GetAbsoluteAddress(ptr_8819700, 0, 4);
-        
-        uintptr_t ptr_8999980 = pattern.get(0, "00 29 10 00 21 38 05 02", 0);
-        MakeInlineWrapper(ptr_8999980,
-            move(s7, a0),
-            move(k1, a1),
-            move(a0, s0),
-            move(a1, s1),
-            jal((intptr_t)CParticle__AddParticleHookLCS),
-            nop(),
-            move(a0, s7),
-            move(a1, k1),
-            sll(a1, s0, 4)
-        );
+
+        uintptr_t ptr_89998F8 = pattern.get(0, "F4 00 B0 AF 25 80 80 00 20 01 A4 8F", -4);
+        if (ptr_89998F8)
+        {
+            injector.MakeTrampoline(ptr_89998F8, (uintptr_t)CParticle__AddParticleHookLCS);
+        }
     }
+
+    //sce
+    uintptr_t ptr_89C33BC = pattern.get(0, "F0 00 86 8C 88 00 C7 8C 00 41 07 00", -4);
+    if (ptr_89C33BC)
+    {
+        if (ptr_89C33BC)
+        {
+            injector.MakeTrampoline(ptr_89C33BC, (uintptr_t)_0fRAPlayerControllerETickf6KELevelTickWrapper);
+        }
+
+        uintptr_t ptr_89606A4 = pattern.get(0, "B8 00 B4 AF ? ? ? ? ? ? ? ? AC 00 B1 AF C4 00 B7 AF", -4);
+        if (ptr_89606A4)
+        {
+            injector.MakeTrampoline(ptr_89606A4, (uintptr_t)_0FIDrawRainP6LUStaticMeshP6PFLevelSceneNodeP6QFRenderInterfaceWrapper);
+        }
+
+        uintptr_t ptr_893968C = pattern.get(0, "C0 00 86 8C 38 00 B1 AF 25 88 80 00 08 00 C4 30 28 00 B4 E7", -4);
+        if (ptr_893968C)
+        {
+            injector.MakeTrampoline(ptr_893968C, (uintptr_t)_0fIUGUIPageEDrawP6HUCanvasWrapper);
+        }
+
+        //int(*ULevel__IsInRainVolume)(void*, struct FVector*);
+        //uintptr_t ptr_89B932C = pattern.get(0, "20 00 B4 AF 0C 3A 94 8C 1C 00 B3 AF", -4);
+        //ULevel__IsInRainVolume = (int(*)(void*, struct FVector*))ptr_89B932C;
+
+        //uintptr_t ptr_89C41E8 = pattern.get(0, "2C 00 86 8C 00 00 C6 8C A4 08 C8 8C", -4);
+        //if (ptr_89C41E8)
+        //{
+        //    injector.MakeTrampoline(ptr_89C41E8, (uintptr_t)_0fGULevelETick6KELevelTickfWrapper);
+        //}
+    }
+    
     sceKernelDcacheWritebackAll();
     sceKernelIcacheClearAll();
 
@@ -586,7 +714,7 @@ int module_start(SceSize args, void* argp) {
                     continue;
                 }
 
-                if (strcmp(info.name, MODULE_NAME_INTERNAL) == 0)
+                if (strcmp(info.name, MODULE_NAME_INTERNAL) == 0 || strcmp(info.name, MODULE_NAME_INTERNAL2) == 0)
                 {
                     injector.SetGameBaseAddress(info.text_addr, info.text_size);
                     pattern.SetGameBaseAddress(info.text_addr, info.text_size);
