@@ -18,84 +18,92 @@ namespace UGameEngine
     }
 }
 
+namespace FCanvasUtil
+{
+    void(__fastcall* DrawTile)(void* _this, uint32_t EDX, float, float, float, float, float, float, float, float, float, void*, FColor, uint32_t, uint32_t); //0x103D2DA0;
+}
+
 void __fastcall FCanvasUtilDrawTileHook(void* _this, uint32_t EDX, float X, float Y, float SizeX, float SizeY, float U, float V, float SizeU, float SizeV, float unk1, void* Texture, FColor Color, uint32_t unk3, uint32_t unk4)
 {
-    static auto DrawTile = (void(__fastcall*)(void* _this, uint32_t EDX, float, float, float, float, float, float, float, float, float, void*, FColor, uint32_t, uint32_t)) pDrawTile; //0x103D2DA0;
     FColor ColBlack; ColBlack.RGBA = 0xFF000000;
+    auto n_X = static_cast<uint32_t>(X);
+    auto n_Y = static_cast<uint32_t>(Y);
+    auto n_SizeX = static_cast<uint32_t>(SizeX);
+    auto n_SizeY = static_cast<uint32_t>(SizeY);
 
-    if (X == 0.0f && SizeX == 188.0f) //zoom scope 1
+    if (n_X == 0 && n_SizeX == 188) //zoom scope 1
     {
-        DrawTile(_this, EDX, X, Y, SizeX, SizeY, U, V, SizeU, SizeV, unk1, Texture, Color, unk3, unk4);
+        FCanvasUtil::DrawTile(_this, EDX, X, Y, SizeX, SizeY, U, V, SizeU, SizeV, unk1, Texture, Color, unk3, unk4);
         return;
     }
 
-    if (X == (640.0f - 188.0f) && SizeX == 640.0f) //zoom scope 2
+    if (n_X == (640 - 188) && n_SizeX == 640) //zoom scope 2
     {
-        DrawTile(_this, EDX, SizeX + Screen.fHudOffset + Screen.fHudOffset - 188.0f, Y, SizeX + Screen.fHudOffset + Screen.fHudOffset, SizeY, U, V, SizeU, SizeV, unk1, Texture, Color, unk3, unk4);
+        FCanvasUtil::DrawTile(_this, EDX, SizeX + Screen.fHudOffset + Screen.fHudOffset - 188.0f, Y, SizeX + Screen.fHudOffset + Screen.fHudOffset, SizeY, U, V, SizeU, SizeV, unk1, Texture, Color, unk3, unk4);
         return;
     }
 
-    if ((X == 0.0f || X == 256.0f || X == 384.0f) && Y == 448.0f && (SizeX == 256.0f || SizeX == 384.0f || SizeX == 640.0f) && SizeY == 479.0f) //hiding menu background
+    if ((n_X == 0 || n_X == 256 || n_X == 384) && n_Y == 448 && (n_SizeX == 256 || n_SizeX == 384 || n_SizeX == 640) && n_SizeY == 479) //hiding menu background
     {
-        //DrawTile(_this, EDX, 0.0f, 0.0f, 640.0f + Screen.fHudOffset + Screen.fHudOffset, Y, U, V, SizeU, SizeV, unk1, Texture, ColBlack, unk3, unk4); hides all menu overlay graphics
-        DrawTile(_this, EDX, 0.0f, 0.0f, 640.0f + Screen.fHudOffset + Screen.fHudOffset, 30.0f, U, V, SizeU, SizeV, unk1, Texture, ColBlack, unk3, unk4);
-        DrawTile(_this, EDX, 0.0f, 447.0f, 640.0f + Screen.fHudOffset + Screen.fHudOffset, 480.0f, U, V, SizeU, SizeV, unk1, Texture, ColBlack, unk3, unk4);
+        //FCanvasUtil::DrawTile(_this, EDX, 0.0f, 0.0f, 640.0f + Screen.fHudOffset + Screen.fHudOffset, Y, U, V, SizeU, SizeV, unk1, Texture, ColBlack, unk3, unk4); hides all menu overlay graphics
+        FCanvasUtil::DrawTile(_this, EDX, 0.0f, 0.0f, 640.0f + Screen.fHudOffset + Screen.fHudOffset, 30.0f, U, V, SizeU, SizeV, unk1, Texture, ColBlack, unk3, unk4);
+        FCanvasUtil::DrawTile(_this, EDX, 0.0f, 447.0f, 640.0f + Screen.fHudOffset + Screen.fHudOffset, 480.0f, U, V, SizeU, SizeV, unk1, Texture, ColBlack, unk3, unk4);
         return;
     }
 
-    if (X == 0.0f && SizeX == 64.0f) //sony ericsson overlay
+    if (n_X == 0 && n_SizeX == 64) //sony ericsson overlay
     {
         if (Screen.bOpsatWidescreenMode)
         {
-            DrawTile(_this, EDX, X, Y, SizeX, SizeY, U, V, SizeU, SizeV, unk1, Texture, Color, unk3, unk4);
+            FCanvasUtil::DrawTile(_this, EDX, X, Y, SizeX, SizeY, U, V, SizeU, SizeV, unk1, Texture, Color, unk3, unk4);
             return;
         }
         else
         {
-            DrawTile(_this, EDX, 0.0f, Y, Screen.fHudOffset + 64.0f, SizeY, U, V, SizeU, SizeV, unk1, Texture, ColBlack, unk3, unk4);
+            FCanvasUtil::DrawTile(_this, EDX, 0.0f, Y, Screen.fHudOffset + 64.0f, SizeY, U, V, SizeU, SizeV, unk1, Texture, ColBlack, unk3, unk4);
         }
     }
-    if (X == 64.0f && SizeX == 320.0f) //sony ericsson overlay
+    if (n_X == 64 && n_SizeX == 320) //sony ericsson overlay
     {
         if (Screen.bOpsatWidescreenMode)
         {
-            DrawTile(_this, EDX, X, Y, SizeX + Screen.fHudOffset, SizeY, U, V, SizeU, SizeV, unk1, Texture, Color, unk3, unk4);
+            FCanvasUtil::DrawTile(_this, EDX, X, Y, SizeX + Screen.fHudOffset, SizeY, U, V, SizeU, SizeV, unk1, Texture, Color, unk3, unk4);
             return;
         }
     }
-    if (X == 320.0f && SizeX == 576.0f) //sony ericsson overlay
+    if (n_X == 320 && n_SizeX == 576) //sony ericsson overlay
     {
         if (Screen.bOpsatWidescreenMode)
         {
-            DrawTile(_this, EDX, X + Screen.fHudOffset, Y, SizeX + Screen.fHudOffset + Screen.fHudOffset, SizeY, U, V, SizeU, SizeV, unk1, Texture, Color, unk3, unk4);
+            FCanvasUtil::DrawTile(_this, EDX, X + Screen.fHudOffset, Y, SizeX + Screen.fHudOffset + Screen.fHudOffset, SizeY, U, V, SizeU, SizeV, unk1, Texture, Color, unk3, unk4);
             return;
         }
     }
 
-    if (X == 576.0f && SizeX == 640.0f) //sony ericsson overlay
+    if (n_X == 576 && n_SizeX == 640) //sony ericsson overlay
     {
         if (Screen.bOpsatWidescreenMode)
         {
-            DrawTile(_this, EDX, X + Screen.fHudOffset + Screen.fHudOffset, Y, SizeX + Screen.fHudOffset + Screen.fHudOffset, SizeY, U, V, SizeU, SizeV, unk1, Texture, Color, unk3, unk4);
+            FCanvasUtil::DrawTile(_this, EDX, X + Screen.fHudOffset + Screen.fHudOffset, Y, SizeX + Screen.fHudOffset + Screen.fHudOffset, SizeY, U, V, SizeU, SizeV, unk1, Texture, Color, unk3, unk4);
             return;
         }
         else
         {
-            DrawTile(_this, EDX, 576.0f + Screen.fHudOffset, Y, SizeX + Screen.fHudOffset + Screen.fHudOffset, SizeY, U, V, SizeU, SizeV, unk1, Texture, ColBlack, unk3, unk4);
+            FCanvasUtil::DrawTile(_this, EDX, 576.0f + Screen.fHudOffset, Y, SizeX + Screen.fHudOffset + Screen.fHudOffset, SizeY, U, V, SizeU, SizeV, unk1, Texture, ColBlack, unk3, unk4);
         }
     }
 
-    if (X == 0.0f && (SizeX == 640.0f || SizeX == Screen.fWidth))
+    if (n_X == 0 && (n_SizeX == 640 || n_SizeX == Screen.Width))
     {
         if ((Color.R == 0xFE && Color.G == 0xFE && Color.B == 0xFE) || (Color.R == 0xFF && Color.G == 0xFF && Color.B == 0xFF)) //flashbang grenade flash
         {
-            DrawTile(_this, EDX, X, Y, SizeX + Screen.fHudOffset + Screen.fHudOffset, SizeY, U, V, SizeU, SizeV, unk1, Texture, Color, unk3, unk4);
+            FCanvasUtil::DrawTile(_this, EDX, X, Y, SizeX + Screen.fHudOffset + Screen.fHudOffset, SizeY, U, V, SizeU, SizeV, unk1, Texture, Color, unk3, unk4);
             return;
         }
         else
         {
-            DrawTile(_this, EDX, 0.0f, Y, Screen.fHudOffset, SizeY, U, V, SizeU, SizeV, unk1, Texture, ColBlack, unk3, unk4);
-            DrawTile(_this, EDX, SizeX + Screen.fHudOffset, Y, SizeX + Screen.fHudOffset + Screen.fHudOffset, SizeY, U, V, SizeU, SizeV, unk1, Texture, ColBlack, unk3, unk4);
+            FCanvasUtil::DrawTile(_this, EDX, 0.0f, Y, Screen.fHudOffset, SizeY, U, V, SizeU, SizeV, unk1, Texture, ColBlack, unk3, unk4);
+            FCanvasUtil::DrawTile(_this, EDX, SizeX + Screen.fHudOffset, Y, SizeX + Screen.fHudOffset + Screen.fHudOffset, SizeY, U, V, SizeU, SizeV, unk1, Texture, ColBlack, unk3, unk4);
         }
     }
 
@@ -105,7 +113,7 @@ void __fastcall FCanvasUtilDrawTileHook(void* _this, uint32_t EDX, float X, floa
     X += Screen.fHudOffset;
     SizeX += Screen.fHudOffset;
 
-    return DrawTile(_this, EDX, X, Y, SizeX, SizeY, U, V, SizeU, SizeV, unk1, Texture, Color, unk3, unk4);
+    return FCanvasUtil::DrawTile(_this, EDX, X, Y, SizeX, SizeY, U, V, SizeU, SizeV, unk1, Texture, Color, unk3, unk4);
 }
 
 #if _DEBUG
@@ -167,7 +175,7 @@ namespace UEngine
 export void InitEngine()
 {
     auto pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "8B ? 94 00 00 00 E8");
-    pDrawTile = injector::GetBranchDestination(pattern.count(3).get(0).get<uintptr_t>(6), true).as_int();
+    FCanvasUtil::DrawTile = (decltype(FCanvasUtil::DrawTile))injector::GetBranchDestination(pattern.count(3).get(0).get<uintptr_t>(6), true).as_int();
 
     pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "DC 0D ? ? ? ? DB 43 18 DC 0D ? ? ? ? D9 5D E4 75 12 D9 45 10");
     if (!pattern.empty())

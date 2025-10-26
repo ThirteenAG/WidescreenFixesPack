@@ -41,7 +41,6 @@ export union FColor
 } gColor;
 
 export std::vector<uintptr_t> EchelonGameInfoPtrs;
-export uintptr_t pDrawTile;
 export bool bSkipIntro = false;
 export int EPlayerControllerState = -1;
 export int EchelonMainHUDState = -1;
