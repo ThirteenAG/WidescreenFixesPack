@@ -289,6 +289,112 @@ void MakeInlineLI(uintptr_t at, int32_t imm)
     }
 }
 
+// Extract stack adjustment from addiu instruction
+// Format: addiu $sp, $sp, immediate
+// Encoding: 0x27BD + immediate (as signed 16-bit)
+int32_t ExtractStackAdjustment(uint32_t instr)
+{
+    // Extract opcode (bits 26-31)
+    uint8_t opcode = parseCommand(instr, 26, 31);
+    if (opcode != 0x09) // addiu
+    {
+        return 0;
+    }
+
+    // Extract rs (source register, bits 21-25)
+    uint8_t rs = parseCommand(instr, 21, 25);
+
+    // Extract rt (target register, bits 16-20)
+    uint8_t rt = parseCommand(instr, 16, 20);
+
+    // Check if it's addiu $sp, $sp, imm (both registers must be 29)
+    if (rt != 29 || rs != 29)
+    {
+        return 0;
+    }
+
+    // Extract immediate (bits 0-15) and sign-extend
+    int16_t imm = (int16_t)parseCommand(instr, 0, 15);
+
+    return (int32_t)imm;
+}
+
+uintptr_t MakeTrampoline(uintptr_t at, uintptr_t wrapper_func)
+{
+    // Read first instruction to get stack adjustment
+    uint32_t first_instr = ReadMemory32(at);
+
+    int32_t stack_adj = ExtractStackAdjustment(first_instr);
+
+    if (stack_adj == 0)
+    {
+        return 0;
+    }
+
+    int32_t stack_size = -stack_adj;  // Convert to positive
+
+    // Allocate code stub
+    uintptr_t stub = MakeCallStub(256);
+    uintptr_t stub_ptr = stub;
+
+    // Write stack adjustment
+    WriteInstr(stub_ptr, addiu(sp, sp, stack_adj));
+    stub_ptr += 4;
+
+    // Calculate which registers fit in the stack frame
+    // Each register = 4 bytes. We need at least: ra, v0, v1, a0, a1, a2, a3 (28 bytes minimum)
+    // But for smaller frames, we only save what's needed: ra (mandatory)
+
+    int num_registers = 0;
+    int offsets[29];  // Offsets for each register
+
+    // Define register save order (descending from top of stack)
+    RegisterID regs[] = { ra, v0, v1, a0, a1, a2, a3, t0, t1, t2, t3, t4, t5, t6, t7, t8, t9,
+                         s0, s1, s2, s3, s4, s5, s6, s7, t8, t9, gp };
+    int num_possible_regs = sizeof(regs) / sizeof(regs[0]);
+
+    // Determine how many registers we can save
+    for (int i = 0; i < num_possible_regs; i++)
+    {
+        int offset = stack_size - (i + 1) * 4;
+        if (offset < 0)
+            break;  // Not enough stack space
+
+        offsets[i] = offset;
+        num_registers++;
+    }
+
+    // Save registers
+    for (int i = 0; i < num_registers; i++)
+    {
+        WriteInstr(stub_ptr, sw(regs[i], sp, offsets[i]));
+        stub_ptr += 4;
+    }
+
+    // Call wrapper
+    WriteInstr(stub_ptr, jal(wrapper_func)); stub_ptr += 4;
+    WriteInstr(stub_ptr, nop()); stub_ptr += 4;
+
+    // Restore registers in REVERSE order
+    for (int i = num_registers - 1; i >= 0; i--)
+    {
+        WriteInstr(stub_ptr, lw(regs[i], sp, offsets[i]));
+        stub_ptr += 4;
+    }
+
+    // Write the original second instruction (at + 4)
+    WriteInstr(stub_ptr, ReadMemory32(at + 4)); stub_ptr += 4;
+
+    // Jump back to continuation (at + 8)
+    WriteInstr(stub_ptr, j(at + 8)); stub_ptr += 4;
+    WriteInstr(stub_ptr, nop()); stub_ptr += 4;
+
+    // Replace hook point with: j stub + nop
+    MakeJMPwNOP(at, stub);
+
+    return stub;
+}
+
 struct injector_t injector =
 {
     .GetGP = _GetGP,
@@ -318,5 +424,6 @@ struct injector_t injector =
     .MakeInline = MakeInline,
     .MakeInlineLUIORI = MakeInlineLUIORI,
     .MakeLUIORI = MakeLUIORI,
-    .MakeInlineLI = MakeInlineLI
+    .MakeInlineLI = MakeInlineLI,
+    .MakeTrampoline = MakeTrampoline
 };

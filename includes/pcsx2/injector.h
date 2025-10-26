@@ -40,6 +40,7 @@ struct injector_t {
     void (*MakeInlineLUIORI)(uintptr_t at, float imm);
     void (*MakeLUIORI)(uintptr_t at, RegisterID reg, float imm);
     void (*MakeInlineLI)(uintptr_t at, int32_t imm);
+    uintptr_t (*MakeTrampoline)(uintptr_t at, uintptr_t wrapper_func);
 };
 
 extern struct injector_t injector;
