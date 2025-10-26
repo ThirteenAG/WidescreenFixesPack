@@ -339,6 +339,8 @@ export void InitEngine()
     }
 
     UInput::GetKey = (decltype(UInput::GetKey))GetProcAddress(GetModuleHandle(L"Engine"), "?GetKey@UInput@@UAEEPB_WH@Z");
+    if (!UInput::GetKey)
+        UInput::GetKey = (decltype(UInput::GetKey))GetProcAddress(GetModuleHandle(L"Engine"), "?GetKey@UInput@@UAEEPBGH@Z");
     UEngine::shInputEvent = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?InputEvent@UEngine@@UAEHPAVUViewport@@W4EInputKey@@W4EInputAction@@M@Z"), UEngine::InputEvent);
     UInput::shInit = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?Init@UInput@@UAEXPAVUViewport@@@Z"), UInput::Init);
 }
