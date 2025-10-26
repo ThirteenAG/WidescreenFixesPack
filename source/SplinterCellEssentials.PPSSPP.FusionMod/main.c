@@ -133,9 +133,10 @@ float ForcePlayerSpeed()
     return max(getAxis(Lx, fStickDeadzone, 1.0f), getAxis(Ly, fStickDeadzone, 1.0f));
 }
 
+float fFOVFactor = 1.0f;
 float AdjustFOV(float f, float ar)
 {
-    return round((2.0f * atan(((ar) / (16.0f / 9.0f)) * tan(f / 2.0f * ((float)M_PI / 180.0f)))) * (180.0f / (float)M_PI) * 100.0f) / 100.0f;
+    return fFOVFactor * (round((2.0f * atan(((ar) / (4.0f / 3.0f)) * tan(f / 2.0f * ((float)M_PI / 180.0f)))) * (180.0f / (float)M_PI) * 100.0f) / 100.0f);
 }
 
 int OnModuleStart() 
@@ -151,6 +152,9 @@ int OnModuleStart()
     int SpeedStickControl = inireader.ReadInteger("MAIN", "SpeedStickControl", 1);
     int Enable60FPS = inireader.ReadInteger("MAIN", "Enable60FPS", 0);
     int UnthrottleEmuDuringLoading = inireader.ReadInteger("MAIN", "UnthrottleEmuDuringLoading", 1);
+    fFOVFactor = inireader.ReadFloat("MAIN", "FOVFactor", 1.0f);
+    if (fFOVFactor <= 0.0f)
+        fFOVFactor = 1.0f;
 
     if (DualAnalogPatch)
     {
