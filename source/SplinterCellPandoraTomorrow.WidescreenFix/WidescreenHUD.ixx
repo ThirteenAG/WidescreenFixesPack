@@ -8,209 +8,209 @@ import ComVars;
 
 namespace HudMatchers
 {
-    inline bool IsStealthMeterLine(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    inline bool IsStealthMeterLine(uint32_t offsetX1, uint32_t offsetX2, uint32_t offsetY1, uint32_t offsetY2, FColor color)
     {
-        return (offsetX2 - offsetX1 == 17.0f) &&
-            (offsetY1 == 337.0f || offsetY1 == 360.0f) &&
-            (offsetY2 == 368.0f || offsetY2 == 345.0f);
+        return (offsetX2 - offsetX1 == 17) &&
+            (offsetY1 == 337 || offsetY1 == 360) &&
+            (offsetY2 == 368 || offsetY2 == 345);
     }
 
-    inline bool IsStealthMeter(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    inline bool IsStealthMeter(uint32_t offsetX1, uint32_t offsetX2, uint32_t offsetY1, uint32_t offsetY2, FColor color)
     {
-        return (offsetX2 - offsetX1 == 109.0f) &&
-            offsetY1 == 338.0f && offsetY2 == 368.0f &&
-            (color.RGBA == 4266682200 || color.RGBA == 4271286934 || color.RGBA == 4283459416 || color.RGBA == 4288064150);
+        return (offsetX2 - offsetX1 == 109) &&
+            offsetY1 == 338 && offsetY2 == 368 &&
+            (color.RGBA == 0xFE506758 || color.RGBA == 0xFE96AA96 || color.RGBA == 0xFF506758 || color.RGBA == 0xFF96AA96);
     }
 
-    inline bool IsWeaponIconBackground(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    inline bool IsWeaponIconBackground(uint32_t offsetX1, uint32_t offsetX2, uint32_t offsetY1, uint32_t offsetY2, FColor color)
     {
-        return offsetX1 == 491.0f && offsetX2 == 592.0f &&
-            offsetY1 == 373.0f && offsetY2 == 441.0f &&
-            (color.RGBA == 4266682200 || color.RGBA == 4283459416);
+        return offsetX1 == 491 && offsetX2 == 592 &&
+            offsetY1 == 373 && offsetY2 == 441 &&
+            (color.RGBA == 0xFE506758 || color.RGBA == 0xFF506758);
     }
 
-    inline bool IsWeaponIconBorder(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    inline bool IsWeaponIconBorder(uint32_t offsetX1, uint32_t offsetX2, uint32_t offsetY1, uint32_t offsetY2, FColor color)
     {
-        return (offsetX1 == 487.0f || offsetX1 == 503.0f || offsetX1 == 580.0f) &&
-            (offsetX2 == 503.0f || offsetX2 == 580.0f || offsetX2 == 596.0f) &&
-            (offsetY1 == 369.0f || offsetY1 == 385.0f || offsetY1 == 429.0f) &&
-            color.RGBA == 2152752984;
+        return (offsetX1 == 487 || offsetX1 == 503 || offsetX1 == 580) &&
+            (offsetX2 == 503 || offsetX2 == 580 || offsetX2 == 596) &&
+            (offsetY1 == 369 || offsetY1 == 385 || offsetY1 == 429) &&
+            color.RGBA == 0x80506758;
     }
 
-    inline bool IsAlarmCounterText(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    inline bool IsAlarmCounterText(uint32_t offsetX1, uint32_t offsetX2, uint32_t offsetY1, uint32_t offsetY2, FColor color)
     {
-        return offsetX1 >= 562.0f && offsetX2 <= 602.0f &&
-            (offsetY1 == 316.0f || offsetY1 == 315.0f) &&
-            offsetY2 == 330.0f &&
-            (color.RGBA == 4265759816 || color.RGBA == 4283459416 || color.RGBA == 4282537289);
+        return offsetX1 >= 562 && offsetX2 <= 602 &&
+            (offsetY1 == 316 || offsetY1 == 315) &&
+            offsetY2 == 330 &&
+            (color.RGBA == 0xFE425448 || color.RGBA == 0xFF506758 || color.RGBA == 0xFF425549);
     }
 
-    inline bool IsHealthBar(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    inline bool IsHealthBar(uint32_t offsetX1, uint32_t offsetX2, uint32_t offsetY1, uint32_t offsetY2, FColor color)
     {
-        return (offsetX1 == 570.0f || offsetX1 == 586.0f) &&
-            (offsetX2 == 586.0f || offsetX2 == 602.0f) &&
-            color.RGBA == 3360712536;
+        return (offsetX1 == 570 || offsetX1 == 586) &&
+            (offsetX2 == 586 || offsetX2 == 602) &&
+            color.RGBA == 0xC8506758;
     }
 
-    inline bool IsEnvelopeIcon(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    inline bool IsEnvelopeIcon(uint32_t offsetX1, uint32_t offsetX2, uint32_t offsetY1, uint32_t offsetY2, FColor color)
     {
-        return offsetX1 == 492.0f && offsetX2 == 519.0f &&
-            offsetY1 == 314.0f && offsetY2 == 333.0f &&
-            (color.RGBA == 4266682200 || color.RGBA == 4283459416);
+        return offsetX1 == 492 && offsetX2 == 519 &&
+            offsetY1 == 314 && offsetY2 == 333 &&
+            (color.RGBA == 0xFE506758 || color.RGBA == 0xFF506758);
     }
 
-    inline bool IsAlarmIcon(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    inline bool IsAlarmIcon(uint32_t offsetX1, uint32_t offsetX2, uint32_t offsetY1, uint32_t offsetY2, FColor color)
     {
-        return offsetX1 == 521.0f && offsetX2 == 562.0f &&
-            offsetY1 == 306.0f && offsetY2 == 340.0f &&
-            (color.RGBA == 4266682200 || color.RGBA == 2152752984 || color.RGBA == 4283459416);
+        return offsetX1 == 521 && offsetX2 == 562 &&
+            offsetY1 == 306 && offsetY2 == 340 &&
+            (color.RGBA == 0xFE506758 || color.RGBA == 0x80506758 || color.RGBA == 0xFF506758);
     }
 
-    inline bool IsWeaponIcon(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    inline bool IsWeaponIcon(uint32_t offsetX1, uint32_t offsetX2, uint32_t offsetY1, uint32_t offsetY2, FColor color)
     {
-        return (offsetX1 == 494.0f || offsetX1 == 515.0f) &&
-            offsetY1 == 377.0f &&
-            (color.RGBA == 4266682200 || color.RGBA == 4282537289 || color.RGBA == 4283459416);
+        return (offsetX1 == 494 || offsetX1 == 515) &&
+            offsetY1 == 377 &&
+            (color.RGBA == 0xFE506758 || color.RGBA == 0xFF425549 || color.RGBA == 0xFF506758);
     }
 
-    inline bool IsWeaponNameText(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    inline bool IsWeaponNameText(uint32_t offsetX1, uint32_t offsetX2, uint32_t offsetY1, uint32_t offsetY2, FColor color)
     {
-        return (offsetX1 >= 491.0f || offsetX1 >= 490.0f) &&
-            offsetY1 == 423.0f &&
-            (offsetY2 == 437.0f || offsetY2 == 438.0f);
+        return (offsetX1 >= 491 || offsetX1 >= 490) &&
+            offsetY1 == 423 &&
+            (offsetY2 == 437 || offsetY2 == 438);
     }
 
-    inline bool IsAmmoText(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    inline bool IsAmmoText(uint32_t offsetX1, uint32_t offsetX2, uint32_t offsetY1, uint32_t offsetY2, FColor color)
     {
-        return offsetX1 >= 571.0f &&
-            offsetY1 == 373.0f &&
-            (offsetY2 == 385.0f || offsetY2 == 388.0f) &&
-            (color.RGBA == 4265759816 || color.RGBA == 4283459416 || color.RGBA == 4282537289);
+        return offsetX1 >= 571 &&
+            offsetY1 == 373 &&
+            (offsetY2 == 385 || offsetY2 == 388) &&
+            (color.RGBA == 0xFE425448 || color.RGBA == 0xFF506758 || color.RGBA == 0xFF425549);
     }
 
-    inline bool IsBulletsImage(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    inline bool IsBulletsImage(uint32_t offsetX1, uint32_t offsetX2, uint32_t offsetY1, uint32_t offsetY2, FColor color)
     {
-        return (offsetX1 == 581.0f && (offsetX2 == 588.0f || offsetX2 == 592.0f)) ||
-            (offsetX1 == 568.0f && offsetY1 == 406.0f);
+        return (offsetX1 == 581 && (offsetX2 == 588 || offsetX2 == 592)) ||
+            (offsetX1 == 568 && offsetY1 == 406);
     }
 
-    inline bool IsRateOfFireImage(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    inline bool IsRateOfFireImage(uint32_t offsetX1, uint32_t offsetX2, uint32_t offsetY1, uint32_t offsetY2, FColor color)
     {
-        return offsetX1 >= 536.0f && offsetX2 <= 576.0f &&
-            offsetY1 == 416.0f && offsetY2 == 421.0f;
+        return offsetX1 >= 536 && offsetX2 <= 576 &&
+            offsetY1 == 416 && offsetY2 == 421;
     }
 
-    inline bool IsWeaponAddonBackground(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    inline bool IsWeaponAddonBackground(uint32_t offsetX1, uint32_t offsetX2, uint32_t offsetY1, uint32_t offsetY2, FColor color)
     {
-        return ((offsetX1 == 441.0f && offsetX2 == 481.0f && offsetY1 == 373.0f && offsetY2 == 413.0f) ||
-            (offsetX1 == 439.0f && offsetX2 == 483.0f && offsetY1 == 380.0f && offsetY2 == 412.0f)) &&
-            (color.RGBA == 4266682200 || color.RGBA == 4282537289 || color.RGBA == 4283459416 || color.RGBA == 4286094213);
+        return ((offsetX1 == 441 && offsetX2 == 481 && offsetY1 == 373 && offsetY2 == 413) ||
+            (offsetX1 == 439 && offsetX2 == 483 && offsetY1 == 380 && offsetY2 == 412)) &&
+            (color.RGBA == 0xFE506758 || color.RGBA == 0xFF425549 || color.RGBA == 0xFF506758 || color.RGBA == 0xFF789B85);
     }
 
-    inline bool IsWeaponAddonBorder(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    inline bool IsWeaponAddonBorder(uint32_t offsetX1, uint32_t offsetX2, uint32_t offsetY1, uint32_t offsetY2, FColor color)
     {
-        return (offsetX1 == 437.0f || offsetX1 == 453.0f || offsetX1 == 469.0f) &&
-            (offsetX2 == 453.0f || offsetX2 == 469.0f || offsetX2 == 485.0f) &&
-            (offsetY1 == 369.0f || offsetY1 == 385.0f || offsetY1 == 401.0f) &&
-            color.RGBA == 2152752984;
+        return (offsetX1 == 437 || offsetX1 == 453 || offsetX1 == 469) &&
+            (offsetX2 == 453 || offsetX2 == 469 || offsetX2 == 485) &&
+            (offsetY1 == 369 || offsetY1 == 385 || offsetY1 == 401) &&
+            color.RGBA == 0x80506758;
     }
 
-    inline bool IsWeaponAddonAmmoText(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    inline bool IsWeaponAddonAmmoText(uint32_t offsetX1, uint32_t offsetX2, uint32_t offsetY1, uint32_t offsetY2, FColor color)
     {
-        return (offsetX1 == 452.0f || offsetX1 == 456.0f || offsetX1 == 457.0f || offsetX1 == 460.0f) &&
-            (offsetX2 == 460.0f || offsetX2 == 465.0f || offsetX2 == 464.0f || offsetX2 == 467.0f || offsetX2 == 469.0f) &&
-            offsetY1 == 371.0f &&
-            (offsetY2 == 383.0f || offsetY2 == 386.0f) &&
-            (color.RGBA == 4265759816 || color.RGBA == 4282537289 || color.RGBA == 4283459416 || color.RGBA == 4286094213);
+        return (offsetX1 == 452 || offsetX1 == 456 || offsetX1 == 457 || offsetX1 == 460) &&
+            (offsetX2 == 460 || offsetX2 == 465 || offsetX2 == 464 || offsetX2 == 467 || offsetX2 == 469) &&
+            offsetY1 == 371 &&
+            (offsetY2 == 383 || offsetY2 == 386) &&
+            (color.RGBA == 0xFE425448 || color.RGBA == 0xFF425549 || color.RGBA == 0xFF506758 || color.RGBA == 0xFF789B85);
     }
 
-    inline bool IsInteractionMenuBackground(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    inline bool IsInteractionMenuBackground(uint32_t offsetX1, uint32_t offsetX2, uint32_t offsetY1, uint32_t offsetY2, FColor color)
     {
-        return ((offsetX1 == 362.0f) || (offsetX1 == 422.0f || offsetX1 == 443.0f)) &&
-            offsetX2 == 562.0f &&
-            (color.RGBA == 4266682200 || color.RGBA == 4269316740 || color.RGBA == 4283459416 || color.RGBA == 4282537289 || color.RGBA == 4286094213);
+        return ((offsetX1 == 362) || (offsetX1 == 422 || offsetX1 == 443)) &&
+            offsetX2 == 562 &&
+            (color.RGBA == 0xFE506758 || color.RGBA == 0xFE789A84 || color.RGBA == 0xFF506758 || color.RGBA == 0xFF425549 || color.RGBA == 0xFF789B85);
     }
 
-    inline bool IsInteractionMenuBorder(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    inline bool IsInteractionMenuBorder(uint32_t offsetX1, uint32_t offsetX2, uint32_t offsetY1, uint32_t offsetY2, FColor color)
     {
-        return ((offsetX1 == 359.0f || offsetX1 == 375.0f || offsetX1 == 549.0f || offsetX1 == 554.0f ||
-            offsetX1 == 440.0f || offsetX1 == 456.0f || offsetX1 == 537.0f ||
-            offsetX1 == 419.0f || offsetX1 == 435.0f || offsetX1 == 439.0f) &&
-            (offsetX2 == 375.0f || offsetX2 == 370.0f || offsetX2 == 549.0f || offsetX2 == 565.0f ||
-            offsetX2 == 456.0f || offsetX2 == 451.0f || offsetX2 == 435.0f || offsetX2 == 430.0f) &&
-            (color.RGBA == 2152752984 || color.RGBA == 4266682200 || color.RGBA == 4283459416));
+        return ((offsetX1 == 359 || offsetX1 == 375 || offsetX1 == 549 || offsetX1 == 554 ||
+            offsetX1 == 440 || offsetX1 == 456 || offsetX1 == 537 ||
+            offsetX1 == 419 || offsetX1 == 435 || offsetX1 == 439) &&
+            (offsetX2 == 375 || offsetX2 == 370 || offsetX2 == 549 || offsetX2 == 565 ||
+            offsetX2 == 456 || offsetX2 == 451 || offsetX2 == 435 || offsetX2 == 430) &&
+            (color.RGBA == 0x80506758 || color.RGBA == 0xFE506758 || color.RGBA == 0xFF506758));
     }
 
-    inline bool IsInteractionMenuText(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    inline bool IsInteractionMenuText(uint32_t offsetX1, uint32_t offsetX2, uint32_t offsetY1, uint32_t offsetY2, FColor color)
     {
-        return offsetX1 >= 365.0f &&
-            offsetY1 >= 42.0f && offsetY2 <= 192.0f &&
-            (color.RGBA == 4265759816 || color.RGBA == 4269316740 || color.RGBA == 4282537289 || color.RGBA == 4283459416 || color.RGBA == 4286094213);
+        return offsetX1 >= 365 &&
+            offsetY1 >= 42 && offsetY2 <= 192 &&
+            (color.RGBA == 0xFE425448 || color.RGBA == 0xFE789A84 || color.RGBA == 0xFF425549 || color.RGBA == 0xFF506758 || color.RGBA == 0xFF789B85);
     }
 
-    inline bool IsTurretInterface(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    inline bool IsTurretInterface(uint32_t offsetX1, uint32_t offsetX2, uint32_t offsetY1, uint32_t offsetY2, FColor color)
     {
-        return (offsetX1 == 371.0f || offsetX1 == 379.0f || offsetX1 == 387.0f ||
-            offsetX1 == 558.0f || offsetX1 == 566.0f) &&
-            offsetY1 >= 39.0f && offsetY2 <= 162.0f &&
-            (color.RGBA == 4266682200 || color.RGBA == 3036610302 ||
-            color.RGBA == 4282537289 || color.RGBA == 4283459416 || color.RGBA == 4286094213 || color.RGBA == 3036676095);
+        return (offsetX1 == 371 || offsetX1 == 379 || offsetX1 == 387 ||
+            offsetX1 == 558 || offsetX1 == 566) &&
+            offsetY1 >= 39 && offsetY2 <= 162 &&
+            (color.RGBA == 0xFE506758 || color.RGBA == 0xB4FEFEFE ||
+            color.RGBA == 0xFF425549 || color.RGBA == 0xFF506758 || color.RGBA == 0xFF789B85 || color.RGBA == 0xB4FFFFFF);
     }
 
-    inline bool IsTopDialogueMenuBackground(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    inline bool IsTopDialogueMenuBackground(uint32_t offsetX1, uint32_t offsetX2, uint32_t offsetY1, uint32_t offsetY2, FColor color)
     {
-        return offsetX1 == 48.0f && offsetX2 == 348.0f &&
-            offsetY1 >= 42.0f &&
-            (offsetY2 <= 87.0f || offsetY2 <= 90.0f) &&
-            (color.RGBA == 4266682200 || color.RGBA == 3036610302 || color.RGBA == 4282537289 || color.RGBA == 4283459416 || color.RGBA == 4286094213);
+        return offsetX1 == 48 && offsetX2 == 348 &&
+            offsetY1 >= 42 &&
+            (offsetY2 <= 87 || offsetY2 <= 90) &&
+            (color.RGBA == 0xFE506758 || color.RGBA == 0xB4FEFEFE || color.RGBA == 0xFF425549 || color.RGBA == 0xFF506758 || color.RGBA == 0xFF789B85);
     }
 
-    inline bool IsTopDialogueMenuBorder(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    inline bool IsTopDialogueMenuBorder(uint32_t offsetX1, uint32_t offsetX2, uint32_t offsetY1, uint32_t offsetY2, FColor color)
     {
-        return (offsetX1 == 45.0f || offsetX1 == 61.0f || offsetX1 == 335.0f) &&
-            (offsetX2 == 61.0f || offsetX2 == 335.0f || offsetX2 == 351.0f) &&
-            (color.RGBA == 4266682200 || color.RGBA == 3036610302 || color.RGBA == 4282537289 || color.RGBA == 4283459416 || color.RGBA == 4286094213);
+        return (offsetX1 == 45 || offsetX1 == 61 || offsetX1 == 335) &&
+            (offsetX2 == 61 || offsetX2 == 335 || offsetX2 == 351) &&
+            (color.RGBA == 0xFE506758 || color.RGBA == 0xB4FEFEFE || color.RGBA == 0xFF425549 || color.RGBA == 0xFF506758 || color.RGBA == 0xFF789B85);
     }
 
-    inline bool IsTopDialogueMenuText(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    inline bool IsTopDialogueMenuText(uint32_t offsetX1, uint32_t offsetX2, uint32_t offsetY1, uint32_t offsetY2, FColor color)
     {
-        return offsetX1 >= 52.0f &&
-            offsetY1 >= 43.0f && offsetY2 <= 185.0f &&
-            (color.RGBA == 4265759816 || color.RGBA == 4283459416 || color.RGBA == 4282537289);
+        return offsetX1 >= 52 &&
+            offsetY1 >= 43 && offsetY2 <= 185 &&
+            (color.RGBA == 0xFE425448 || color.RGBA == 0xFF506758 || color.RGBA == 0xFF425549);
     }
 
-    inline bool IsTimer(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    inline bool IsTimer(uint32_t offsetX1, uint32_t offsetX2, uint32_t offsetY1, uint32_t offsetY2, FColor color)
     {
-        bool timerText = (offsetX1 >= 67.0f && offsetX2 <= 171.0f &&
-            offsetY1 >= 385.0f && offsetY2 <= 409.0f &&
-            (color.RGBA == 4286094213 || color.RGBA == 4282384384));
+        bool timerText = (offsetX1 >= 67 && offsetX2 <= 171 &&
+            offsetY1 >= 385 && offsetY2 <= 409 &&
+            (color.RGBA == 0xFF789B85 || color.RGBA == 0xFF400000));
 
-        bool timerTopBorder = (offsetX1 == 64.0f && (offsetX2 == 144.0f || offsetX2 == 174.0f) &&
-            offsetY1 == 382.0f && offsetY2 == 383.0f &&
-            color.RGBA == 4283459416);
+        bool timerTopBorder = (offsetX1 == 64 && (offsetX2 == 144 || offsetX2 == 174) &&
+            offsetY1 == 382 && offsetY2 == 383 &&
+            color.RGBA == 0xFF506758);
 
-        bool timerBottomBorder = (offsetX1 == 64.0f && (offsetX2 == 144.0f || offsetX2 == 174.0f) &&
-            offsetY1 == 411.0f && offsetY2 == 412.0f &&
-            color.RGBA == 4283459416);
+        bool timerBottomBorder = (offsetX1 == 64 && (offsetX2 == 144 || offsetX2 == 174) &&
+            offsetY1 == 411 && offsetY2 == 412 &&
+            color.RGBA == 0xFF506758);
 
-        bool timerLeftBorder = (offsetX1 == 64.0f && offsetX2 == 65.0f &&
-            offsetY1 == 382.0f && offsetY2 == 412.0f &&
-            color.RGBA == 4283459416);
+        bool timerLeftBorder = (offsetX1 == 64 && offsetX2 == 65 &&
+            offsetY1 == 382 && offsetY2 == 412 &&
+            color.RGBA == 0xFF506758);
 
-        bool timerRightBorder = ((offsetX1 == 143.0f || offsetX1 == 173.0f) &&
-            (offsetX2 == 144.0f || offsetX2 == 174.0f) &&
-            offsetY1 == 382.0f && offsetY2 == 412.0f &&
-            color.RGBA == 4283459416);
+        bool timerRightBorder = ((offsetX1 == 143 || offsetX1 == 173) &&
+            (offsetX2 == 144 || offsetX2 == 174) &&
+            offsetY1 == 382 && offsetY2 == 412 &&
+            color.RGBA == 0xFF506758);
 
-        bool timerBackground = (offsetX1 >= 65.0f && (offsetX2 == 143.0f || offsetX2 <= 173.0f) &&
-            (offsetX2 - offsetX1 >= 70.0f) &&
-            offsetY1 >= 383.0f && offsetY2 <= 411.0f &&
-            (color.RGBA == 4266682200 || color.RGBA == 4283459416));
+        bool timerBackground = (offsetX1 >= 65 && (offsetX2 == 143 || offsetX2 <= 173) &&
+            (offsetX2 - offsetX1 >= 70) &&
+            offsetY1 >= 383 && offsetY2 <= 411 &&
+            (color.RGBA == 0xFE506758 || color.RGBA == 0xFF506758));
 
         return timerText || timerTopBorder || timerBottomBorder || timerLeftBorder || timerRightBorder || timerBackground;
     }
 
-    inline bool ShouldOffsetRight(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    inline bool ShouldOffsetRight(uint32_t offsetX1, uint32_t offsetX2, uint32_t offsetY1, uint32_t offsetY2, FColor color)
     {
         return IsStealthMeterLine(offsetX1, offsetX2, offsetY1, offsetY2, color) ||
             IsStealthMeter(offsetX1, offsetX2, offsetY1, offsetY2, color) ||
@@ -234,7 +234,7 @@ namespace HudMatchers
             IsTurretInterface(offsetX1, offsetX2, offsetY1, offsetY2, color);
     }
 
-    inline bool ShouldOffsetLeft(float offsetX1, float offsetX2, float offsetY1, float offsetY2, FColor color)
+    inline bool ShouldOffsetLeft(uint32_t offsetX1, uint32_t offsetX2, uint32_t offsetY1, uint32_t offsetY2, FColor color)
     {
         return IsTopDialogueMenuBackground(offsetX1, offsetX2, offsetY1, offsetY2, color) ||
             IsTopDialogueMenuBorder(offsetX1, offsetX2, offsetY1, offsetY2, color) ||
@@ -250,12 +250,17 @@ export void WidescreenHud(float& offsetX1, float& offsetX2, float& offsetY1, flo
         spd::log()->info("{0:f} {1:f} {2:f} {3:f} {4:08x}", offsetX1, offsetX2, offsetY1, offsetY2, Color.RGBA);
     });
 
-    if (HudMatchers::ShouldOffsetRight(offsetX1, offsetX2, offsetY1, offsetY2, Color))
+    uint32_t n_offsetX1 = static_cast<uint32_t>(offsetX1);
+    uint32_t n_offsetX2 = static_cast<uint32_t>(offsetX2);
+    uint32_t n_offsetY1 = static_cast<uint32_t>(offsetY1);
+    uint32_t n_offsetY2 = static_cast<uint32_t>(offsetY2);
+
+    if (HudMatchers::ShouldOffsetRight(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color))
     {
         offsetX1 += Screen.fWidescreenHudOffset;
         offsetX2 += Screen.fWidescreenHudOffset;
     }
-    else if (HudMatchers::ShouldOffsetLeft(offsetX1, offsetX2, offsetY1, offsetY2, Color))
+    else if (HudMatchers::ShouldOffsetLeft(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color))
     {
         offsetX1 -= Screen.fWidescreenHudOffset;
         offsetX2 -= Screen.fWidescreenHudOffset;
