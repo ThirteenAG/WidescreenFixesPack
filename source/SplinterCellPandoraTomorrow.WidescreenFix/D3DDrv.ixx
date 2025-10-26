@@ -129,9 +129,65 @@ export void InitD3DDrv()
     if (!pattern.empty())
     {
         static DWORD WaterBlendPS = 0;
-
-        static auto WaterPreDraw = [](SafetyHookContext& regs, IDirect3DDevice8* pDevice)
+        static thread_local bool bWaterFixApplied = false;
+        auto CheckWaterBlendState = [](IDirect3DDevice8* dev) -> bool
         {
+            DWORD ttf0 = 0, ttf1 = 0, ttf2 = 0;
+            DWORD c0 = 0, ca1_0 = 0, ca2_0 = 0, a0 = 0, aa1_0 = 0, aa2_0 = 0;
+            DWORD c1 = 0, ca1_1 = 0, ca2_1 = 0, a1 = 0, aa1_1 = 0, aa2_1 = 0;
+            DWORD c2 = 0, ca1_2 = 0, ca2_2 = 0, a2 = 0, aa1_2 = 0, aa2_2 = 0;
+
+            dev->GetTextureStageState(0, D3DTSS_TEXTURETRANSFORMFLAGS, &ttf0);
+            dev->GetTextureStageState(1, D3DTSS_TEXTURETRANSFORMFLAGS, &ttf1);
+            dev->GetTextureStageState(2, D3DTSS_TEXTURETRANSFORMFLAGS, &ttf2);
+
+            dev->GetTextureStageState(0, D3DTSS_COLOROP, &c0);
+            dev->GetTextureStageState(0, D3DTSS_COLORARG1, &ca1_0);
+            dev->GetTextureStageState(0, D3DTSS_COLORARG2, &ca2_0);
+            dev->GetTextureStageState(0, D3DTSS_ALPHAOP, &a0);
+            dev->GetTextureStageState(0, D3DTSS_ALPHAARG1, &aa1_0);
+            dev->GetTextureStageState(0, D3DTSS_ALPHAARG2, &aa2_0);
+
+            dev->GetTextureStageState(1, D3DTSS_COLOROP, &c1);
+            dev->GetTextureStageState(1, D3DTSS_COLORARG1, &ca1_1);
+            dev->GetTextureStageState(1, D3DTSS_COLORARG2, &ca2_1);
+            dev->GetTextureStageState(1, D3DTSS_ALPHAOP, &a1);
+            dev->GetTextureStageState(1, D3DTSS_ALPHAARG1, &aa1_1);
+            dev->GetTextureStageState(1, D3DTSS_ALPHAARG2, &aa2_1);
+
+            dev->GetTextureStageState(2, D3DTSS_COLOROP, &c2);
+            dev->GetTextureStageState(2, D3DTSS_COLORARG1, &ca1_2);
+            dev->GetTextureStageState(2, D3DTSS_COLORARG2, &ca2_2);
+            dev->GetTextureStageState(2, D3DTSS_ALPHAOP, &a2);
+            dev->GetTextureStageState(2, D3DTSS_ALPHAARG1, &aa1_2);
+            dev->GetTextureStageState(2, D3DTSS_ALPHAARG2, &aa2_2);
+
+            const bool s0 =
+                (ttf0 == D3DTTFF_DISABLE) &&
+                (c0 == D3DTOP_SELECTARG1) && (a0 == D3DTOP_SELECTARG1) &&
+                (ca1_0 == D3DTA_TEXTURE) && (aa1_0 == D3DTA_TEXTURE);
+
+            const bool s1 =
+                (ttf1 & D3DTTFF_PROJECTED) &&
+                (c1 == D3DTOP_BLENDCURRENTALPHA) && (a1 == D3DTOP_SELECTARG1) &&
+                (ca1_1 == D3DTA_TEXTURE) && (ca2_1 == D3DTA_CURRENT) &&
+                (aa1_1 == D3DTA_CURRENT);
+
+            const bool s2 =
+                (ttf2 == D3DTTFF_DISABLE) &&
+                (c2 == D3DTOP_SELECTARG1) && (a2 == D3DTOP_SELECTARG1) &&
+                (ca1_2 == D3DTA_CURRENT) && (aa1_2 == D3DTA_TEXTURE);
+
+            if (!(s0 && s1 && s2))
+                return false;
+
+            return true;
+        };
+
+        static auto WaterPreDraw = [&](SafetyHookContext& regs, IDirect3DDevice8* pDevice)
+        {
+            bWaterFixApplied = false;
+
             if (!WaterBlendPS)
             {
                 HMODULE hModule;
@@ -147,37 +203,46 @@ export void InitD3DDrv()
                         if (pLockedResource && dwResourceSize > 0)
                         {
                             if (FAILED(pDevice->CreatePixelShader((DWORD*)pLockedResource, &WaterBlendPS)))
-                            {
                                 WaterBlendPS = 0;
-                            }
                         }
                     }
                 }
             }
 
-            if (WaterBlendPS)
-            {
-                pDevice->GetRenderState(D3DRS_ALPHABLENDENABLE, &OriginalAlphaBlendEnable);
-                pDevice->GetRenderState(D3DRS_SRCBLEND, &OriginalSrcBlend);
-                pDevice->GetRenderState(D3DRS_DESTBLEND, &OriginalDestBlend);
+            if (!WaterBlendPS)
+                return;
 
-                pDevice->SetPixelShader(WaterBlendPS);
-                pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
-                pDevice->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
-                pDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
-            }
+            // Skip if a real pixel shader is already bound
+            DWORD currentPS = 0;
+            pDevice->GetPixelShader(&currentPS);
+            if (currentPS)
+                return;
+
+            if (!CheckWaterBlendState(pDevice))
+                return;
+
+            pDevice->GetRenderState(D3DRS_ALPHABLENDENABLE, &OriginalAlphaBlendEnable);
+            pDevice->GetRenderState(D3DRS_SRCBLEND, &OriginalSrcBlend);
+            pDevice->GetRenderState(D3DRS_DESTBLEND, &OriginalDestBlend);
+
+            pDevice->SetPixelShader(WaterBlendPS);
+            pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+            pDevice->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
+            pDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+
+            bWaterFixApplied = true;
         };
 
         static auto WaterPostDraw = [](SafetyHookContext& regs, IDirect3DDevice8* pDevice)
         {
-            if (WaterBlendPS)
+            if (bWaterFixApplied)
             {
                 pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, OriginalAlphaBlendEnable);
                 pDevice->SetRenderState(D3DRS_SRCBLEND, OriginalSrcBlend);
                 pDevice->SetRenderState(D3DRS_DESTBLEND, OriginalDestBlend);
+                pDevice->SetPixelShader(0);
+                bWaterFixApplied = false;
             }
-
-            pDevice->SetPixelShader(0);
         };
 
         static auto WaterPreDrawPrimitiveHook1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
