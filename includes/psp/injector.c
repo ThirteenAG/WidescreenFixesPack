@@ -343,25 +343,27 @@ void MakeInlineLI(uintptr_t at, int32_t imm)
 // Encoding: 0x27BD + immediate (as signed 16-bit)
 int32_t ExtractStackAdjustment(uint32_t instr)
 {
-    uint8_t opcode = (instr >> 26) & 0x3F;
+    // Extract opcode (bits 26-31)
+    uint8_t opcode = parseCommand(instr, 26, 31);
     if (opcode != 0x09) // addiu
     {
         return 0;
     }
 
-    // Check if it's addiu $sp, $sp, imm
-    // rs (source register) is in bits 21-25
-    // rt (target register) is in bits 16-20
-    uint8_t rs = (instr >> 21) & 0x1F;
-    uint8_t rt = (instr >> 16) & 0x1F;
+    // Extract rs (source register, bits 21-25)
+    uint8_t rs = parseCommand(instr, 21, 25);
 
+    // Extract rt (target register, bits 16-20)
+    uint8_t rt = parseCommand(instr, 16, 20);
+
+    // Check if it's addiu $sp, $sp, imm (both registers must be 29)
     if (rt != 29 || rs != 29)
     {
         return 0;
     }
 
-    // Extract immediate (signed 16-bit) - bits 0-15
-    int16_t imm = (int16_t)(instr & 0xFFFF);
+    // Extract immediate (bits 0-15) and sign-extend
+    int16_t imm = (int16_t)parseCommand(instr, 0, 15);
 
     return (int32_t)imm;
 }

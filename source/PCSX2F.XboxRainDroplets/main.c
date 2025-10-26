@@ -426,16 +426,15 @@ void CParticle__AddParticleHookLCS(uint32_t type, uint32_t vecPos)
         else
             data->FillScreenMoving_isBlood = 0;
     }
-    //https://github.com/ThirteenAG/XboxRainDroplets/issues/38
-    //else if (type == LCS_SPLASH || type == LCS_CAR_SPLASH || type == LCS_BOAT_SPLASH || type == LCS_PED_SPLASH)
-    //{
-    //    data->RegisterSplash_Vec_x = point->x;
-    //    data->RegisterSplash_Vec_y = point->y;
-    //    data->RegisterSplash_Vec_z = point->z;
-    //    data->RegisterSplash_distance = 10.0f;
-    //    data->RegisterSplash_duration = 300;
-    //    data->RegisterSplash_removaldistance = 50.0f;
-    //}
+    else if (type == LCS_SPLASH || type == LCS_CAR_SPLASH || type == LCS_BOAT_SPLASH || type == LCS_PED_SPLASH)
+    {
+        data->RegisterSplash_Vec_x = point->x;
+        data->RegisterSplash_Vec_y = point->y;
+        data->RegisterSplash_Vec_z = point->z;
+        data->RegisterSplash_distance = 10.0f;
+        data->RegisterSplash_duration = 300;
+        data->RegisterSplash_removaldistance = 50.0f;
+    }
 }
 
 void GameLoopStuffLCS()
@@ -504,12 +503,11 @@ void init()
         uintptr_t ptr_1091D4 = pattern.get(0, "6F 00 02 3C 00 00 B0 FF 08 00 B1 FF ? ? ? ? 2D 88 80 00", -0);
         TheCamera = GetAbsoluteAddress(ptr_1091D4, 0, 12);
         
-        uintptr_t ptr_1E90C4 = pattern.get(0, "38 01 B5 E7 30 01 B4 E7 ? ? ? ? 50 01 A5 8F", -0);
-        MakeInlineWrapper(ptr_1E90C4,
-            jal((intptr_t)CParticle__AddParticleHookVCS),
-            nop(),
-            swc1(f21, sp, 0x138)
-        );
+        uintptr_t ptr_1E9078 = pattern.get(0, "D0 00 B4 7F E0 00 B5 7F 2D A0 A0 00", -8);
+        if (ptr_1E9078)
+        {
+            injector.MakeTrampoline(ptr_1E9078, (uintptr_t)CParticle__AddParticleHookVCS);
+        }
     }
 
     //lcs
@@ -521,12 +519,11 @@ void init()
         uintptr_t ptr_101E04 = pattern.get(0, "44 00 02 3C 10 00 B0 FF ? ? ? ? 18 00 B1 FF", -0);
         TheCamera = GetAbsoluteAddress(ptr_101E04, 0, 8);
     
-        uintptr_t ptr_1CD600 = pattern.get(0, "28 01 B5 E7 20 01 B4 E7 ? ? ? ? 40 01 A4 8F", -0);
-        MakeInlineWrapper(ptr_1CD600,
-            jal((intptr_t)CParticle__AddParticleHookLCS),
-            nop(),
-            swc1(f21, sp, 0x128)
-        );
+        uintptr_t ptr_1CD5B8 = pattern.get(0, "E0 00 B5 7F D0 00 B4 7F 2D A8 80 00", -12);
+        if (ptr_1CD5B8)
+        {
+            injector.MakeTrampoline(ptr_1CD5B8, (uintptr_t)CParticle__AddParticleHookLCS);
+        }
     }
 }
 
