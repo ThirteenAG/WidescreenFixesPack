@@ -82,7 +82,7 @@ void Init()
     GetResolutionsList(list);
 
     // Add current resolution to list
-    auto str = format("%dx%d", Screen.Width, Screen.Height);
+    auto str = std::format("{}x{}", Screen.Width, Screen.Height);
     if (std::find(list.begin(), list.end(), str) == list.end())
     {
         list.push_back(str);

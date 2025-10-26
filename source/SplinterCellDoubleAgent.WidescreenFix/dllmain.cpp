@@ -897,7 +897,7 @@ void InitEchelonMenus()
     static std::vector<std::string> list;
     GetResolutionsList(list);
     std::swap(list[list.size() - 5], list[list.size() - 6]);
-    list[list.size() - 5] = format("%dx%d", Screen.Width, Screen.Height);
+    list[list.size() - 5] = std::format("{}x{}", Screen.Width, Screen.Height);
 
     auto pattern = hook::module_pattern(GetModuleHandle(L"EchelonMenus"), "C6 45 FC 10 33 F6 83 FE 07");
     auto rpattern = hook::range_pattern((uintptr_t)pattern.get_first(-850), (uintptr_t)pattern.get_first(0), "C7 45 E8");
