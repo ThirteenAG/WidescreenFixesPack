@@ -49,6 +49,7 @@ struct injector_t {
     uintptr_t(*MakeInline)(size_t instrCount, uintptr_t at, ...);
     void (*MakeInlineLUIORI)(uintptr_t at, float imm);
     void (*MakeInlineLI)(uintptr_t at, int32_t imm);
+    uintptr_t (*MakeTrampoline)(uintptr_t at, uintptr_t wrapper_func);
 };
 
 extern struct injector_t injector;
