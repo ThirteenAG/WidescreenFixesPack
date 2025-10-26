@@ -31,6 +31,7 @@
 #include <stacktrace>
 #include <shellapi.h>
 #include <ranges>
+#include <format>
 #pragma warning(pop)
 
 #ifndef CEXP
@@ -47,7 +48,6 @@ void CreateThreadAutoClose(LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_T dwSt
 std::tuple<int32_t, int32_t> GetDesktopRes();
 void GetResolutionsList(std::vector<std::string>& list);
 uint32_t GetDesktopRefreshRate();
-std::string format(const char* fmt, ...);
 uint32_t crc32(uint32_t crc, const void* buf, size_t size);
 
 HICON CreateIconFromBMP(UCHAR* data);
@@ -84,6 +84,15 @@ std::array<uint8_t, sizeof(T)> to_bytes(const T& object)
     return bytes;
 }
 
+template<typename T, size_t N>
+auto to_bytes(const T(&arr)[N]) -> std::array<uint8_t, N - 1>
+{
+    std::array<uint8_t, N - 1> bytes;
+    const uint8_t* begin = reinterpret_cast<const uint8_t*>(arr);
+    std::copy(begin, begin + N - 1, std::begin(bytes));
+    return bytes;
+}
+
 template<typename T>
 T& from_bytes(const std::array<uint8_t, sizeof(T)>& bytes, T& object)
 {
@@ -107,9 +116,10 @@ template <size_t n>
 std::string pattern_str(const std::array<uint8_t, n> bytes)
 {
     std::string result;
+    result.reserve(n * 3);
     for (size_t i = 0; i < n; i++)
     {
-        result += format("%02X ", bytes[i]);
+        result += std::format("{:02X} ", bytes[i]);
     }
     return result;
 }
@@ -117,13 +127,21 @@ std::string pattern_str(const std::array<uint8_t, n> bytes)
 template <typename T>
 std::string pattern_str(T t)
 {
-    return std::string((std::is_same<T, char>::value ? format("%c ", t) : format("%02X ", t)));
+    if constexpr (std::is_same<T, char>::value)
+        return std::format("{} ", t);
+    else
+        return std::format("{:02X} ", t);
 }
 
 template <typename T, typename... Rest>
 std::string pattern_str(T t, Rest... rest)
 {
-    return std::string((std::is_same<T, char>::value ? format("%c ", t) : format("%02X ", t)) + pattern_str(rest...));
+    std::string prefix;
+    if constexpr (std::is_same<T, char>::value)
+        prefix = std::format("{} ", t);
+    else
+        prefix = std::format("{:02X} ", t);
+    return prefix + pattern_str(rest...);
 }
 
 template <size_t count = 1, typename... Args>
@@ -607,7 +625,7 @@ public:
                 std::string str;
                 for (size_t i = 0; i < cbData; i++)
                 {
-                    str += format("%02x", lpData[i]);
+                    str += std::format("{:02x}", lpData[i]);
                     if (i != cbData - 1)
                         str += ',';
                 }
