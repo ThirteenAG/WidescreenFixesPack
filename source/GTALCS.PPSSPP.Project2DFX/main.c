@@ -25,6 +25,8 @@ PSP_MODULE_INFO(MODULE_NAME, PSP_MODULE_USER, 1, 0);
 _Static_assert(sizeof(MODULE_NAME) - 1 < 28, "MODULE_NAME can't have more than 28 characters");
 #endif
 
+uint8_t aCoronas[1024 * 112] = { 0 };  // Static array for 1024 coronas (112 bytes each)
+
 // https://github.com/AndroidModLoader/GTA_StarrySkies/blob/main/main.cpp
 #define AMOUNT_OF_STARS 100
 #define STAR_SKYBOX_SIDES 5
@@ -197,9 +199,12 @@ int OnModuleStart() {
 
     if (CoronaLimit)
     {
-        SceUID block_id = 0;
-        const int corona_struct_size = 112;
-        uintptr_t aCoronas = injector.AllocMemBlock(corona_struct_size * CoronaLimit, &block_id);
+        if (CoronaLimit > 1024)
+            CoronaLimit = 1024;
+
+        //SceUID block_id = 0;
+        //const int corona_struct_size = 112;
+        //uintptr_t aCoronas = injector.AllocMemBlock(corona_struct_size * CoronaLimit, &block_id);
 
         uintptr_t ptr_1F5ED0 = pattern.get(0, "24 00 B1 AF 2C 00 B3 AF 3C 60 0D 46", -4);
         uintptr_t ptr_1F5EE4 = pattern.get(0, "3C 60 0D 46 21 28 A4 00", 8);
