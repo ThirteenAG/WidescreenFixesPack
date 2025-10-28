@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include <unordered_set>
 
 export module Core;
 
@@ -40,40 +41,33 @@ wchar_t* __cdecl appFromAnsi(const char* a1)
 
 namespace UObject
 {
-    wchar_t* (__fastcall* GetFullName)(void*, void*, wchar_t*) = nullptr;
+    std::unordered_set<std::wstring> cachedTypes = {
+        L"EPlayerController",
+        L"EchelonMainHUD",
+        L"EGameInteraction",
+        L"EDoorMarker",
+        L"EKeyPad",
+        L"EElevatorPanel",
+        L"EDoorMarker",
+    };
 
-    void* pPlayerObj = nullptr;
+    wchar_t* (__fastcall* GetFullName)(void*, void*, wchar_t*) = nullptr;
+    void* (__fastcall* FindState)(void*, void*, int) = nullptr;
+
     SafetyHookInline shGotoState = {};
     int __fastcall GotoState(void* uObject, void* edx, int StateID)
     {
         wchar_t buffer[256];
         auto objName = std::wstring_view(GetFullName(uObject, edx, buffer));
 
-        if (objName.starts_with(L"EPlayerController "))
+        size_t spacePos = objName.find(L' ');
+        std::wstring type = (spacePos != std::wstring::npos) ? std::wstring(objName.substr(0, spacePos)) : std::wstring(objName);
+        if (cachedTypes.count(type))
         {
-            EPlayerControllerState = StateID;
-        }
-        else if (objName.starts_with(L"EchelonMainHUD "))
-        {
-            EchelonMainHUDState = StateID;
-        }
-        else if (objName.starts_with(L"EGameInteraction "))
-        {
-            EGameInteractionState = StateID;
-        }
-        else if (objName.starts_with(L"EElevatorPanel "))
-        {
-            bKeyPad = false;
-            bElevatorPanel = true;
-        }
-        else if (objName.starts_with(L"EKeyPad "))
-        {
-            bKeyPad = true;
-            bElevatorPanel = false;
-        }
-        else if (objName.starts_with(L"EDoorMarker "))
-        {
-            EDoorMarkerState = StateID;
+            auto svStateName = std::wstring_view(GetFullName(FindState(uObject, edx, StateID), edx, buffer));
+            size_t lastDot = svStateName.rfind(L'.');
+            std::wstring stateName = (lastDot != std::wstring::npos) ? std::wstring(svStateName.substr(lastDot + 1)) : std::wstring(svStateName);
+            objectStates[type] = stateName;
         }
 
         return shGotoState.unsafe_fastcall<int>(uObject, edx, StateID);
@@ -109,15 +103,11 @@ export void InitCore()
         });
     }
 
-    pattern = find_module_pattern(GetModuleHandle(L"Core"), "55 8B EC 6A ? 68 ? ? ? ? 64 A1 ? ? ? ? 50 64 89 25 ? ? ? ? 51 83 EC ? 53 56 57 89 65 ? C7 45 ? ? ? ? ? 83 7D ? ? 75 ? 33 C0 E9 ? ? ? ? E8 ? ? ? ? 89 45 ? 8B 45 ? 89 45 ? 33 C9 74 ? EB ? C7 45 ? ? ? ? ? EB ? 8B 55 ? 83 C2 ? 89 55 ? 81 7D ? ? ? ? ? 7D ? 8B 45 ? 03 45",
-        "55 8B EC 83 EC ? 83 7D ? ? 75 ? 33 C0 EB ? E8 ? ? ? ? 89 45 ? C7 45 ? ? ? ? ? EB ? 8B 45 ? 83 C0 ? 89 45 ? 81 7D ? ? ? ? ? 7D ? 8B 4D ? 03 4D");
-    shappFromAnsi = safetyhook::create_inline(pattern.get_first(), appFromAnsi);
+    shappFromAnsi = safetyhook::create_inline(FindProcAddress(GetModuleHandle(L"Core"), "?appFromAnsi@@YAPBGPBD@Z", "?appFromAnsi@@YAPB_WPBD@Z"), appFromAnsi);
 
-    pattern = find_module_pattern(GetModuleHandle(L"Core"), "55 8B EC 6A ? 68 ? ? ? ? 64 A1 ? ? ? ? 50 64 89 25 ? ? ? ? 83 EC ? 53 56 8B 75 ? 85 F6 57 89 65 ? 8B F9 C7 45 ? ? ? ? ? 75 ? E8 ? ? ? ? 8B F0 85 FF", "55 8B EC 53 56 8B 75 ? 8B D9 85 F6 75");
-    UObject::GetFullName = (decltype(UObject::GetFullName))pattern.get_first();
-
-    pattern = find_module_pattern(GetModuleHandle(L"Core"), "55 8B EC 6A ? 68 ? ? ? ? 64 A1 ? ? ? ? 50 64 89 25 ? ? ? ? 83 EC ? 53 56 57 8B F1 8B 46 ? 33 FF 3B C7 89 65 ? 89 7D ? 75 ? 33 C0", "55 8B EC 83 EC ? 53 56 57 8B F9 8B 47");
-    UObject::shGotoState = safetyhook::create_inline(pattern.get_first(), UObject::GotoState);
+    UObject::GetFullName = (decltype(UObject::GetFullName))FindProcAddress(GetModuleHandle(L"Core"), "?GetFullName@UObject@@QBEPBGPAG@Z", "?GetFullName@UObject@@QBEPB_WPA_W@Z");
+    UObject::FindState = (decltype(UObject::FindState))GetProcAddress(GetModuleHandle(L"Core"), "?FindState@UObject@@QAEPAVUState@@VFName@@@Z");
+    UObject::shGotoState = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Core"), "?GotoState@UObject@@UAE?AW4EGotoState@@VFName@@@Z"), UObject::GotoState);
 
     pattern = hook::module_pattern(GetModuleHandle(L"Core"), "33 C0 0F B7 0B");
     if (!pattern.empty())

@@ -155,12 +155,15 @@ namespace UEngine
     {
         if (inputID == 202) // A on gamepad
         {
-            if (EchelonMainHUDState == 8707 || EchelonMainHUDState == 8708)
+            auto EchelonMainHUDState = UObject::GetState(L"EchelonMainHUD");
+            if (EchelonMainHUDState == L"MainHUD" || EchelonMainHUDState == L"s_Slavery")
             {
-                if (EPlayerControllerState == s_FirstPersonTargeting || EPlayerControllerState == s_RappellingTargeting ||
-                    EPlayerControllerState == s_PlayerBTWTargeting || EPlayerControllerState == s_PlayerSniping || EPlayerControllerState == s_HOHFUTargeting)
+                auto EPlayerControllerState = UObject::GetState(L"EPlayerControllerState");
+
+                if (EPlayerControllerState == L"s_FirstPersonTargeting" || EPlayerControllerState == L"s_RappellingTargeting" ||
+                    EPlayerControllerState == L"s_PlayerBTWTargeting" || EPlayerControllerState == L"s_PlayerSniping" || EPlayerControllerState == L"s_HOHFUTargeting")
                 {
-                    if (EGameInteractionState != s_GameInteractionMenu)
+                    if (UObject::GetState(L"EGameInteractionState") != L"s_GameInteractionMenu")
                     {
                         shInputEvent.unsafe_fastcall<int>(_this, edx, a2, inputID, a4, value);
                         return shInputEvent.unsafe_fastcall<int>(_this, edx, a2, UInput::GetKey(UInput::gUInput, edx, L"ReloadGun", 0), a4, value);
@@ -346,9 +349,7 @@ export void InitEngine()
         }
     }
 
-    UInput::GetKey = (decltype(UInput::GetKey))GetProcAddress(GetModuleHandle(L"Engine"), "?GetKey@UInput@@UAEEPB_WH@Z");
-    if (!UInput::GetKey)
-        UInput::GetKey = (decltype(UInput::GetKey))GetProcAddress(GetModuleHandle(L"Engine"), "?GetKey@UInput@@UAEEPBGH@Z");
+    UInput::GetKey = (decltype(UInput::GetKey))FindProcAddress(GetModuleHandle(L"Engine"), "?GetKey@UInput@@UAEEPB_WH@Z", "?GetKey@UInput@@UAEEPBGH@Z");
     UEngine::shInputEvent = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?InputEvent@UEngine@@UAEHPAVUViewport@@W4EInputKey@@W4EInputAction@@M@Z"), UEngine::InputEvent);
     UInput::shInit = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?Init@UInput@@UAEXPAVUViewport@@@Z"), UInput::Init);
 }

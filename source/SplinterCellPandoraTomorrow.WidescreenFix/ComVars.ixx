@@ -42,15 +42,9 @@ export union FColor
 
 export std::vector<uintptr_t> EchelonGameInfoPtrs;
 export bool bSkipIntro = false;
-export int EPlayerControllerState = -1;
-export int EchelonMainHUDState = -1;
-export int EGameInteractionState = -1;
-export int EDoorMarkerState = -1;
 export bool bPlayingVideo = false;
 export bool bPressStartToContinue = false;
 export bool bSkipPressStartToContinue = false;
-export bool bKeyPad = false;
-export bool bElevatorPanel = false;
 
 export std::vector<std::pair<const std::wstring, std::wstring>> ResList =
 {
@@ -61,17 +55,12 @@ export std::vector<std::pair<const std::wstring, std::wstring>> ResList =
     { L"1600x1200", L"" },
 };
 
-export
+export namespace UObject
 {
-    constexpr auto s_Turret = 8330;
-    constexpr auto s_KeyPadInteract = 8338;
-    constexpr auto s_Zooming = 6942;
-    constexpr auto s_PlayerSniping = 7059;
-    constexpr auto s_UsingPalm = 8274;
-    constexpr auto s_LaserMicTargeting = 10015;
-    constexpr auto s_GameInteractionMenu = 8122;
-    constexpr auto s_FirstPersonTargeting = 7060;
-    constexpr auto s_RappellingTargeting = 7294;
-    constexpr auto s_PlayerBTWTargeting = 7548;
-    constexpr auto s_HOHFUTargeting = 8571;
+    std::unordered_map<std::wstring, std::wstring> objectStates;
+    std::wstring_view GetState(const std::wstring& type)
+    {
+        auto it = objectStates.find(type);
+        return (it != objectStates.end()) ? std::wstring_view(it->second) : std::wstring_view(L"");
+    }
 }

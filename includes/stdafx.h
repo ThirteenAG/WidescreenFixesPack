@@ -412,6 +412,14 @@ inline std::filesystem::path GetKnownFolderPath(REFKNOWNFOLDERID rfid, DWORD dwF
     return r;
 };
 
+template<typename... Ts>
+FARPROC FindProcAddress(HMODULE hModule, Ts... procNames)
+{
+    FARPROC result = nullptr;
+    ((result = ::GetProcAddress(hModule, procNames)) || ...);
+    return result;
+}
+
 class RegistryWrapper
 {
 private:
