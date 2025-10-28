@@ -58,7 +58,7 @@ void __fastcall FCanvasUtilDrawTileHook(void* _this, uint32_t EDX, float X, floa
 
     static FColor ColBlack; ColBlack.RGBA = 0xFF000000;
 
-    if (!bIsMainMenu)
+    //if (!bIsMainMenu)
     {
         //if (Color.RGBA == 0xfe000000 && X == 0.0f && static_cast<uint32_t>(SizeX) == static_cast<uint32_t>(Screen.fWidth - Screen.fHudOffset - Screen.fHudOffset) && //cutscene borders
         //    ((Y == 0.0f && static_cast<uint32_t>(SizeY) <= static_cast<uint32_t>((Screen.fWidth * (3.0f / 4.0f)) / (480.0f / 60.0f))) ||
