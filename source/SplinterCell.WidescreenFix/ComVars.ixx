@@ -21,6 +21,7 @@ export struct Screen
     float fIniHudOffset;
     float fWidescreenHudOffset;
     bool bHudWidescreenMode;
+    uint32_t nFMVWidescreenMode;
 } Screen;
 
 export union FColor

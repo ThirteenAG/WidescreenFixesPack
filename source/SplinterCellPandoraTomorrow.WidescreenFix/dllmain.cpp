@@ -21,7 +21,7 @@ void Init()
     Screen.nReflectionsResolution = iniReader.ReadInteger("MAIN", "ReflectionsResolution", 1);
     Screen.nBloomResolution = iniReader.ReadInteger("MAIN", "BloomResolution", 0);
     gColor.RGBA = iniReader.ReadInteger("BONUS", "GogglesLightColor", 0);
-    bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
+    bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 0) != 0;
     bSkipPressStartToContinue = iniReader.ReadInteger("MAIN", "SkipPressStartToContinue", 0) != 0;
 
     if (!Screen.Width || !Screen.Height)
