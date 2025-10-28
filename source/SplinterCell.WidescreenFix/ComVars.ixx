@@ -32,6 +32,35 @@ export union FColor
     };
 };
 
+export std::vector<std::pair<const std::wstring, std::wstring>> ResList =
+{
+    { L"640x480",   L"" },
+    { L"800x600",   L"" },
+    { L"1024x768",  L"" },
+    { L"1280x1024", L"" },
+    { L"1600x1200", L"" },
+};
+
+export const wchar_t* a640x480 = nullptr;
+export const wchar_t* a800x600 = nullptr;
+export const wchar_t* a1024x768 = nullptr;
+export const wchar_t* a1280x1024 = nullptr;
+export const wchar_t* a1600x1200 = nullptr;
+
 export uint32_t nFMVWidescreenMode;
 export std::vector<uintptr_t> EchelonGameInfoPtrs;
-export bool isIngameText;
+
+export bool bSkipIntro = false;
+export bool bPlayingVideo = false;
+export bool bPressStartToContinue = false;
+export bool bSkipPressStartToContinue = false;
+
+export namespace UObject
+{
+    std::unordered_map<std::wstring, std::wstring> objectStates;
+    std::wstring_view GetState(const std::wstring& type)
+    {
+        auto it = objectStates.find(type);
+        return (it != objectStates.end()) ? std::wstring_view(it->second) : std::wstring_view(L"");
+    }
+}

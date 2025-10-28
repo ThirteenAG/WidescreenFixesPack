@@ -21,30 +21,34 @@ export void InitXidi()
                 if (bPlayingVideo || bPressStartToContinue)
                     return L"Video";
 
-                if (EchelonMainHUDState == 8707 || EchelonMainHUDState == 8708)
+                auto EchelonMainHUDState = UObject::GetState(L"EchelonMainHUD");
+                if (EchelonMainHUDState == L"MainHUD" || EchelonMainHUDState == L"s_Slavery")
                 {
-                    switch (EPlayerControllerState)
+                    auto EPlayerControllerState = UObject::GetState(L"EPlayerController");
+                    if (EPlayerControllerState == L"s_KeyPadInteract")
                     {
-                    case s_KeyPadInteract:
-                    {
-                        if (bElevatorPanel)
+                        auto EKeyPadState = UObject::GetState(L"EKeyPad");
+                        auto EElevatorPanelState = UObject::GetState(L"EElevatorPanel");
+
+                        if (EElevatorPanelState == L"s_Use")
                             return L"Elevator";
-                        else if (bKeyPad)
+                        else if (EKeyPadState == L"s_Use")
                             return L"Keypad";
-                        break;
                     }
-                    case s_Zooming:
-                    case s_UsingPalm:
-                    case s_LaserMicTargeting:
-                        return L"Zooming";
-                    case s_Turret:
-                        return L"Turret";
-                    default:
+                    else if (EPlayerControllerState == L"s_Zooming" || EPlayerControllerState == L"s_UsingPalm" || EPlayerControllerState == L"s_LaserMicTargeting")
                     {
-                        if (EGameInteractionState == s_GameInteractionMenu)
+                        return L"Zooming";
+                    }
+                    else if (EPlayerControllerState == L"s_Turret")
+                    {
+                        return L"Turret";
+                    }
+                    else
+                    {
+                        auto EGameInteractionState = UObject::GetState(L"EGameInteraction");
+                        if (EGameInteractionState == L"s_GameInteractionMenu")
                             return L"GameInteractionMenu";
                         return L"Main";
-                    }
                     }
                 }
 
