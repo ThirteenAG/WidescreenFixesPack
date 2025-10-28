@@ -25,7 +25,7 @@ PSP_MODULE_INFO(MODULE_NAME, PSP_MODULE_USER, 1, 0);
 _Static_assert(sizeof(MODULE_NAME) - 1 < 28, "MODULE_NAME can't have more than 28 characters");
 #endif
 
-uint8_t aCoronas[1024 * 112] = { 0 };  // Static array for 1024 coronas (112 bytes each)
+uint8_t align16 aCoronas[1024 * 112] = { 0 };  // Static array for 1024 coronas (112 bytes each)
 
 // https://github.com/AndroidModLoader/GTA_StarrySkies/blob/main/main.cpp
 #define AMOUNT_OF_STARS 100

@@ -524,7 +524,7 @@ void _0FIDrawRainP6LUStaticMeshP6PFLevelSceneNodeP6QFRenderInterfaceWrapper(void
         struct FVector* gCamPos = (struct FVector*)((uintptr_t)gCurrentPlayerController + 0x1B0);
         struct FRotator* gCamRot = (struct FRotator*)((uintptr_t)gCurrentPlayerController + 0x1B0 + sizeof(struct FRotator) + 4);
 
-        logger.WriteF("gCamPos at: %x", gCamPos);
+        //logger.WriteF("gCamPos at: %x", gCamPos);
         //logger.WriteF("gCamPos at: %f %f %f, gCamRot at: %d %d %d ", gCamPos->X, gCamPos->Y, gCamPos->Z, gCamRot->Pitch, gCamRot->Yaw, gCamRot->Roll);
 
         float UnrealToRadians = (2.0f * 3.14159265359f) / 65536.0f;

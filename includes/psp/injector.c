@@ -9,22 +9,6 @@ uint32_t parseCommand(uint32_t command, uint32_t from, uint32_t to)
     return (command & mask) >> from;
 }
 
-int AllocMemBlock(int size, int* id) {
-    *id = sceKernelAllocPartitionMemory(PSP_MEMORY_PARTITION_USER, "alloc", PSP_SMEM_Low, size, NULL);
-    if (*id < 0) {
-        *id = sceKernelAllocPartitionMemory(PSP_MEMORY_PARTITION_USER, "alloc", PSP_SMEM_High, size, NULL);
-    }
-    if (*id < 0) {
-        return 0;
-    }
-    return sceKernelGetBlockHeadAddr(*id);
-}
-
-void FreeMemBlock(int id)
-{
-    sceKernelFreePartitionMemory(id);
-}
-
 void* GetGP()
 {
     void* gp;
@@ -228,10 +212,9 @@ uintptr_t MakeInline(size_t instrCount, uintptr_t at, ...)
     return functor;
 }
 
-uintptr_t MakeCallStub(uintptr_t numInstr) {
-    SceUID block_id = sceKernelAllocPartitionMemory(PSP_MEMORY_PARTITION_USER, "", PSP_SMEM_High, numInstr * sizeof(uintptr_t), NULL);
-    uintptr_t stub = (uintptr_t)sceKernelGetBlockHeadAddr(block_id);
-    return stub;
+uintptr_t MakeCallStub(uintptr_t numInstr)
+{
+    return (uintptr_t)AllocMemBlock(numInstr * sizeof(uintptr_t));
 }
 
 void MakeLUIORI(uintptr_t at, RegisterID reg, float imm)
