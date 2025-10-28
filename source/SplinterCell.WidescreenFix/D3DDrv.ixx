@@ -150,6 +150,8 @@ namespace UD3DRenderDevice
                                     float u, v;
                                 };
 
+                                float targetW, targetH, targetX, targetY;
+
                                 if (Screen.nFMVWidescreenMode)
                                 {
                                     const int barPixels = 60;
@@ -157,7 +159,6 @@ namespace UD3DRenderDevice
                                     float contentAspect = (float)videoWidth / (float)innerHeight;
                                     float screenAspect = (float)Screen.Width / (float)Screen.Height;
 
-                                    float targetW, targetH, targetX, targetY;
                                     if (screenAspect > contentAspect)
                                     {
                                         // Pillarbox: fit to height
@@ -195,10 +196,10 @@ namespace UD3DRenderDevice
                                 else // Original pillarbox without cropping (includes bars)
                                 {
                                     // Pillarboxing
-                                    int targetW = Screen.Height * videoWidth / videoHeight;
-                                    int targetH = Screen.Height;
-                                    int targetX = (Screen.Width - targetW) / 2;
-                                    int targetY = 0;
+                                    targetW = (float)(Screen.Height * videoWidth / videoHeight);
+                                    targetH = (float)Screen.Height;
+                                    targetX = (float)((Screen.Width - (int)targetW) / 2);
+                                    targetY = 0.0f;
 
                                     float uLeft = (float)srcX / (float)W;
                                     float uRight = (float)(srcX + videoWidth) / (float)W;
@@ -206,15 +207,42 @@ namespace UD3DRenderDevice
                                     float vBottom = (float)(srcY + videoHeight) / (float)H;
 
                                     Vertex vertices[4] = {
-                                        { (float)targetX, (float)targetY, 0.0f, 1.0f, uLeft, vTop },
-                                        { (float)(targetX + targetW), (float)targetY, 0.0f, 1.0f, uRight, vTop },
-                                        { (float)targetX, (float)(targetY + targetH), 0.0f, 1.0f, uLeft, vBottom },
-                                        { (float)(targetX + targetW), (float)(targetY + targetH), 0.0f, 1.0f, uRight, vBottom }
+                                        { targetX, targetY, 0.0f, 1.0f, uLeft, vTop },
+                                        { targetX + targetW, targetY, 0.0f, 1.0f, uRight, vTop },
+                                        { targetX, targetY + targetH, 0.0f, 1.0f, uLeft, vBottom },
+                                        { targetX + targetW, targetY + targetH, 0.0f, 1.0f, uRight, vBottom }
                                     };
 
                                     // Draw the quad
                                     pD3DDevice->SetVertexShader(D3DFVF_XYZRHW | D3DFVF_TEX1);
                                     pD3DDevice->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 2, vertices, sizeof(Vertex));
+                                }
+
+                                if (targetX > 0.0f)
+                                {
+                                    D3DRECT leftRect = { 0, 0, (LONG)targetX, H };
+                                    pD3DDevice->Clear(1, &leftRect, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
+                                }
+
+                                // Clear right side
+                                if (targetX + targetW < (float)W)
+                                {
+                                    D3DRECT rightRect = { (LONG)(targetX + targetW), 0, W, H };
+                                    pD3DDevice->Clear(1, &rightRect, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
+                                }
+
+                                // Clear top side
+                                if (targetY > 0.0f)
+                                {
+                                    D3DRECT topRect = { 0, 0, W, (LONG)targetY };
+                                    pD3DDevice->Clear(1, &topRect, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
+                                }
+
+                                // Clear bottom side
+                                if (targetY + targetH < (float)H)
+                                {
+                                    D3DRECT bottomRect = { 0, (LONG)(targetY + targetH), W, H };
+                                    pD3DDevice->Clear(1, &bottomRect, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
                                 }
                             }
                             pTexture->Release();
@@ -289,4 +317,68 @@ export void InitD3DDrv()
     }; injector::MakeInline<BINKHook2>(pattern.get_first(0), pattern.get_first(8));
 
     UD3DRenderDevice::shDisplayVideo = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"D3DDrv"), "?DisplayVideo@UD3DRenderDevice@@UAEXPAVUCanvas@@PAX@Z"), UD3DRenderDevice::DisplayVideo);
+
+    pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "8B 10 FF 92 ? ? ? ? 8B 86 14 5D 00 00");
+    static auto EndSceneHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        if (bDisplayingSplash)
+        {
+            IDirect3DDevice8* pD3DDevice = (IDirect3DDevice8*)(regs.eax);
+
+            int W = Screen.Width;
+            int H = Screen.Height;
+
+            // Calculate pillar/letterbox dimensions based on 4:3 aspect ratio
+            float expectedWidth = (float)H * (4.0f / 3.0f);
+            float expectedHeight = (float)W * (3.0f / 4.0f);
+
+            // Determine which bars to clear
+            float targetW, targetH, targetX, targetY;
+
+            if ((float)W / (float)H > (4.0f / 3.0f))
+            {
+                // Pillarbox (wider than 4:3)
+                targetH = (float)H;
+                targetW = expectedWidth;
+                targetX = ((float)W - targetW) / 2.0f;
+                targetY = 0.0f;
+            }
+            else
+            {
+                // Letterbox (taller than 4:3)
+                targetW = (float)W;
+                targetH = expectedHeight;
+                targetX = 0.0f;
+                targetY = ((float)H - targetH) / 2.0f;
+            }
+
+            // Clear left pillar area
+            if (targetX > 0.0f)
+            {
+                D3DRECT leftRect = { 0, 0, (LONG)targetX, H };
+                pD3DDevice->Clear(1, &leftRect, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
+            }
+
+            // Clear right pillar area
+            if (targetX + targetW < (float)W)
+            {
+                D3DRECT rightRect = { (LONG)(targetX + targetW), 0, W, H };
+                pD3DDevice->Clear(1, &rightRect, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
+            }
+
+            // Clear top letterbox area
+            if (targetY > 0.0f)
+            {
+                D3DRECT topRect = { 0, 0, W, (LONG)targetY };
+                pD3DDevice->Clear(1, &topRect, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
+            }
+
+            // Clear bottom letterbox area
+            if (targetY + targetH < (float)H)
+            {
+                D3DRECT bottomRect = { 0, (LONG)(targetY + targetH), W, H };
+                pD3DDevice->Clear(1, &bottomRect, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
+            }
+        }
+    });
 }

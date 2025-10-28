@@ -53,6 +53,7 @@ export std::vector<uintptr_t> EchelonGameInfoPtrs;
 
 export bool bSkipIntro = false;
 export bool bPlayingVideo = false;
+export bool bDisplayingSplash = false;
 export bool bPressStartToContinue = false;
 export bool bSkipPressStartToContinue = false;
 

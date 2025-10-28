@@ -109,6 +109,17 @@ void __fastcall FCanvasUtilDrawTileHook(void* _this, uint32_t EDX, float X, floa
     return FCanvasUtil::DrawTile(_this, EDX, X, Y, SizeX, SizeY, U, V, SizeU, SizeV, unk1, Texture, Color);
 }
 
+namespace UGameEngine
+{
+    SafetyHookInline shDisplaySplash = {};
+    void __fastcall DisplaySplash(void* UGameEngine, void* edx, int a2)
+    {
+        bDisplayingSplash = true;
+        shDisplaySplash.unsafe_fastcall(UGameEngine, edx, a2);
+        bDisplayingSplash = false;
+    }
+}
+
 export void InitEngine()
 {
     //HUD
@@ -218,11 +229,13 @@ export void InitEngine()
 
     if (bSkipPressStartToContinue)
     {
-        pattern = find_module_pattern(GetModuleHandle(L"Engine"), "75 ? 8B 55 00 6A 01 8B CD FF 52 ? 6A 00");
+        pattern = find_module_pattern(GetModuleHandle(L"Engine"), "75 ? ? ? ? ? ? 8B CD FF 52 ? 6A 00");
         injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true); // jz -> jmp
     }
 
     UInput::GetKey = (decltype(UInput::GetKey))GetProcAddress(GetModuleHandle(L"Engine"), "?GetKey@UInput@@UAEEPBGH@Z");
     UEngine::shInputEvent = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?InputEvent@UEngine@@UAEHPAVUViewport@@W4EInputKey@@W4EInputAction@@M@Z"), UEngine::InputEvent);
     UInput::shInit = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?Init@UInput@@UAEXPAVUViewport@@@Z"), UInput::Init);
+
+    UGameEngine::shDisplaySplash = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?DisplaySplash@UGameEngine@@UAEXH@Z"), UGameEngine::DisplaySplash);
 }
