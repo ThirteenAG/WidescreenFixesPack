@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <stdarg.h>
 #include <string.h>
+#include "memalloc.h"
 #include "mips.h"
 
 #define LOWORD(l)           ((uint16_t)((*(uint32_t*)(&l)) & 0xffff))
