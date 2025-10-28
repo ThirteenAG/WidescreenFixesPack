@@ -1,5 +1,4 @@
 #include <stdafx.h>
-#include <dxsdk/dx8/d3d8.h>
 
 import ComVars;
 import Core;
