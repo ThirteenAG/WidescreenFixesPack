@@ -65,3 +65,19 @@ export namespace UObject
         return (it != objectStates.end()) ? std::wstring_view(it->second) : std::wstring_view(L"");
     }
 }
+
+// Tolerance for floating-point comparisons (±1.5 units)
+const float CANVAS_TOLERANCE = 1.5f;
+
+// Helper function for tolerance-based float comparison
+export inline bool FloatEqual(float a, float b, float tolerance = CANVAS_TOLERANCE)
+{
+    return std::abs(a - b) < tolerance;
+}
+
+// Helper function for tolerance-based range checks
+export inline bool FloatInRange(uint32_t value, uint32_t minVal, uint32_t maxVal, float tolerance = CANVAS_TOLERANCE)
+{
+    return static_cast<int32_t>(value) >= static_cast<int32_t>(minVal) - tolerance &&
+        static_cast<int32_t>(value) <= static_cast<int32_t>(maxVal) + tolerance;
+}
