@@ -153,7 +153,7 @@ CEXP void InitializeASI()
         CallbackHandler::RegisterCallback(L"WinDrv.dll", InitWinDrv);
         CallbackHandler::RegisterCallback(L"Core.dll", InitCore);
         CallbackHandler::RegisterCallback(L"Echelon.dll", InitEchelon);
-        CallbackHandler::RegisterCallback(L"Xidi.dll", InitXidi);
+        CallbackHandler::RegisterCallback(L"Xidi.32.dll", InitXidi);
     });
 }
 
