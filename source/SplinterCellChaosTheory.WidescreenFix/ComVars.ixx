@@ -81,3 +81,13 @@ export bool bEnableShadowFiltering;
 export uint32_t* dword_1120B6BC = nullptr;
 export uint32_t* dword_1120B6B0 = nullptr;
 export uint32_t* dword_11223A7C = nullptr;
+
+export namespace UObject
+{
+    std::unordered_map<std::wstring, std::wstring> objectStates;
+    std::wstring_view GetState(const std::wstring& type)
+    {
+        auto it = objectStates.find(type);
+        return (it != objectStates.end()) ? std::wstring_view(it->second) : std::wstring_view(L"");
+    }
+}

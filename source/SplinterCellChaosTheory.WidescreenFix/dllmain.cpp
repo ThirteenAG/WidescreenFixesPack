@@ -3,6 +3,7 @@
 import ComVars;
 import D3DDrv;
 import Engine;
+import Core;
 import WidescreenHUD;
 
 void Init()
@@ -51,6 +52,7 @@ void Init()
 
     InitD3DDrv();
     InitEngine();
+    InitCore();
 
     if (nFPSLimit)
     {
