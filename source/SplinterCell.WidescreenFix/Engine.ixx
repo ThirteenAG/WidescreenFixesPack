@@ -60,13 +60,13 @@ void __fastcall FCanvasUtilDrawTileHook(void* _this, uint32_t EDX, float X, floa
 
     if (!bIsMainMenu)
     {
-        const float fExpectedWidth1 = (Screen.fHeight * (4.0f / 3.0f)) / (640.0f / 188.0f); //zoom scope borders
-        const float fExpectedWidth2 = (Screen.fHeight * (4.0f / 3.0f)) / (640.0f / 43.0f);  //sticky camera
-        const float fExpectedWidth3 = (Screen.fHeight * (4.0f / 3.0f)) / (640.0f / 30.0f);  //optic cable
-        const float fExpectedWidth4 = (Screen.fHeight * (4.0f / 3.0f)) / (640.0f / 163.0f); //optic mic
+        const float fZoomScopeBorders = (Screen.fHeight * (4.0f / 3.0f)) / (640.0f / 188.0f);
+        const float fStickyCamera = (Screen.fHeight * (4.0f / 3.0f)) / (640.0f / 43.0f);
+        const float fOpticCable = (Screen.fHeight * (4.0f / 3.0f)) / (640.0f / 30.0f);
+        const float fOpticMic = (Screen.fHeight * (4.0f / 3.0f)) / (640.0f / 163.0f);
 
-        if (X == 0.0f && (FloatEqual(SizeX, fExpectedWidth1) || FloatEqual(SizeX, fExpectedWidth2) ||
-            FloatEqual(SizeX, fExpectedWidth3) || FloatEqual(SizeX, fExpectedWidth4)))
+        if (X == 0.0f && (FloatEqual(SizeX, fZoomScopeBorders) || FloatEqual(SizeX, fStickyCamera) ||
+            FloatEqual(SizeX, fOpticCable) || FloatEqual(SizeX, fOpticMic)))
         {
             FCanvasUtil::DrawTile(_this, EDX, 0.0f, Y, Screen.fHudOffset, SizeY, U, V, SizeU, SizeV, unk1, nullptr, ColBlack);
             FCanvasUtil::DrawTile(_this, EDX, Screen.fWidth - Screen.fHudOffset, Y, Screen.fWidth, SizeY, U, V, SizeU, SizeV, unk1, nullptr, ColBlack);
@@ -77,7 +77,7 @@ void __fastcall FCanvasUtilDrawTileHook(void* _this, uint32_t EDX, float X, floa
 
     if (X == 0.0f && FloatEqual(SizeX, fExpectedHeight))
     {
-        if ((Color.R == 0x40 && Color.G == 0x00 && Color.B == 0x00) || (Color.R == 0x80 && Color.G == 0x80 && Color.B == 0x80))
+        if ((Color.R == 0x40 && Color.G == 0x00 && Color.B == 0x00) || (Color.R == 0x80 && Color.G == 0x80 && Color.B == 0x80)) //mission failed red screen
         {
             if (!bIsMainMenu)
             {
@@ -85,7 +85,7 @@ void __fastcall FCanvasUtilDrawTileHook(void* _this, uint32_t EDX, float X, floa
                 return;
             }
         }
-        else if ((Color.R == 0x00 && Color.G == 0x40 && Color.B == 0x00))
+        else if ((Color.R == 0x00 && Color.G == 0x40 && Color.B == 0x00)) //mission passed green screen
         {
             if (!bIsMainMenu)
             {
