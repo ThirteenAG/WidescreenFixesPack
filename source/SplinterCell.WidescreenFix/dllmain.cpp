@@ -53,6 +53,7 @@ void Init()
     iniWriter.WriteInteger("WinDrv.WindowsClient", "WindowedViewportY", Screen.Height);
     iniWriter.WriteString("WinDrv.WindowsClient", "UseJoystick", "True");
     iniWriter.WriteString("D3DDrv.D3DRenderDevice", "FullScreenVideo", "True");
+    iniWriter.WriteString("Engine.GameInfo", "UseRumble", "True");
 
     std::vector<std::string> list;
     GetResolutionsList(list);
