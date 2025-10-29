@@ -13,7 +13,7 @@ namespace HudMatchers
         return FloatInRange(n_offsetX1, 598, 616) && FloatInRange(n_offsetX2, 598, 616) &&
             FloatInRange(n_offsetY1, 38, 233) && FloatInRange(n_offsetY2, 38, 233);
     }
-    
+
     inline bool IsHudIcons(uint32_t n_offsetX1, uint32_t n_offsetX2, uint32_t n_offsetY1, uint32_t n_offsetY2, FColor Color)
     {
         return FloatInRange(n_offsetX1, 519, 616) && FloatInRange(n_offsetX2, 519, 616) &&
@@ -93,6 +93,14 @@ namespace HudMatchers
     {
         return FloatInRange(n_offsetX1, 25, 316) && FloatInRange(n_offsetY1, 40, 270) &&
             Color.RGBA == 0xfe333333;
+    }
+
+    inline bool IsTimer(uint32_t n_offsetX1, uint32_t n_offsetX2, uint32_t n_offsetY1, uint32_t n_offsetY2, FColor Color)
+    {
+        return FloatInRange(n_offsetX1, 40, 150) && FloatInRange(n_offsetX2, 40, 150) &&
+            FloatInRange(n_offsetY1, 382, 412) && FloatInRange(n_offsetY2, 382, 412) &&
+            (Color.RGBA == 0xFE808080 || Color.RGBA == 0xFE000000 ||
+            Color.RGBA == 0xFE404040 || Color.RGBA == 0xFE400000);
     }
 
     inline bool ShouldOffsetRight(uint32_t n_offsetX1, uint32_t n_offsetX2, uint32_t n_offsetY1, uint32_t n_offsetY2, FColor Color)
