@@ -103,7 +103,7 @@ namespace HudMatchers
             Color.RGBA == 0xFE404040 || Color.RGBA == 0xFE400000);
     }
 
-    inline bool ShouldOffsetRight(uint32_t n_offsetX1, uint32_t n_offsetX2, uint32_t n_offsetY1, uint32_t n_offsetY2, FColor Color)
+    inline bool ShouldOffsetRight(uint32_t n_offsetX1, uint32_t n_offsetX2, uint32_t n_offsetY1, uint32_t n_offsetY2, FColor Color, std::wstring_view texName)
     {
         return IsHealthBar(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color) ||
             IsHudIcons(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color) ||
@@ -113,7 +113,7 @@ namespace HudMatchers
             IsCameraJammerView(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color);
     }
 
-    inline bool ShouldOffsetLeft(uint32_t n_offsetX1, uint32_t n_offsetX2, uint32_t n_offsetY1, uint32_t n_offsetY2, FColor Color)
+    inline bool ShouldOffsetLeft(uint32_t n_offsetX1, uint32_t n_offsetX2, uint32_t n_offsetY1, uint32_t n_offsetY2, FColor Color, std::wstring_view texName)
     {
         return IsTopDialogueMenuBackground(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color) ||
             IsTopDialogueMenuBorder(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color) ||
@@ -125,7 +125,7 @@ namespace HudMatchers
 
 bool isIngameText;
 
-export void WidescreenHud(float& offsetX1, float& offsetX2, float& offsetY1, float& offsetY2, FColor& Color)
+export void WidescreenHud(float& offsetX1, float& offsetX2, float& offsetY1, float& offsetY2, FColor& Color, std::wstring_view texName)
 {
     uint32_t n_offsetX1 = static_cast<uint32_t>((480.0f * (Screen.fWidth / Screen.fHeight)) / (Screen.fWidth / offsetX1));
     uint32_t n_offsetX2 = static_cast<uint32_t>((480.0f * (Screen.fWidth / Screen.fHeight)) / (Screen.fWidth / offsetX2));
@@ -134,15 +134,15 @@ export void WidescreenHud(float& offsetX1, float& offsetX2, float& offsetY1, flo
 
     DBGONLY(KEYPRESS(VK_F1)
     {
-        spd::log()->info("{0:d} {1:d} {2:d} {3:d} {4:08x}", n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color.RGBA);
+        spd::log()->info("{} {} {} {} {:08x} {}", n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color.RGBA, std::string(texName.begin(), texName.end()).c_str());
     });
 
-    if (HudMatchers::ShouldOffsetRight(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color))
+    if (HudMatchers::ShouldOffsetRight(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color, texName))
     {
         offsetX1 += Screen.fWidescreenHudOffset;
         offsetX2 += Screen.fWidescreenHudOffset;
     }
-    else if (HudMatchers::ShouldOffsetLeft(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color))
+    else if (HudMatchers::ShouldOffsetLeft(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color, texName))
     {
         offsetX1 -= Screen.fWidescreenHudOffset;
         offsetX2 -= Screen.fWidescreenHudOffset;
