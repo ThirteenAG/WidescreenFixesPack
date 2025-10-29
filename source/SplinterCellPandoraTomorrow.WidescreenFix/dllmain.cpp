@@ -58,6 +58,7 @@ void Init()
     iniWriter.WriteInteger("WinDrv.WindowsClient", "WindowedViewportX", Screen.Width);
     iniWriter.WriteInteger("WinDrv.WindowsClient", "WindowedViewportY", Screen.Height);
     iniWriter.WriteString("WinDrv.WindowsClient", "UseJoystick", "True");
+    iniWriter.WriteString("Engine.GameInfo", "UseRumble", "True");
 
     auto ESettingIniPath = exePath / "ESetting.ini";
     mINI::INIStructure ESettingIni;
