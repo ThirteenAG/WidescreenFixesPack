@@ -13,12 +13,26 @@ namespace HudMatchers
         return FloatInRange(n_offsetX1, 598, 616) && FloatInRange(n_offsetX2, 598, 616) &&
             FloatInRange(n_offsetY1, 38, 233) && FloatInRange(n_offsetY2, 38, 233);
     }
-
+    
     inline bool IsHudIcons(uint32_t n_offsetX1, uint32_t n_offsetX2, uint32_t n_offsetY1, uint32_t n_offsetY2, FColor Color)
     {
         return FloatInRange(n_offsetX1, 519, 616) && FloatInRange(n_offsetX2, 519, 616) &&
             FloatEqual(n_offsetY1, 304) && (FloatEqual(n_offsetY2, 331) || FloatEqual(n_offsetY2, 332)) &&
             Color.RGBA == 0xFE808080;
+    }
+
+    inline bool IsInteractionBox(uint32_t n_offsetX1, uint32_t n_offsetX2, uint32_t n_offsetY1, uint32_t n_offsetY2, FColor Color)
+    {
+        auto EPlayerControllerState = UObject::GetState(L"EPlayerController");
+        if (EPlayerControllerState == L"s_Turret")
+            return false;
+
+
+        return FloatInRange(n_offsetX1, 373, 599) && FloatInRange(n_offsetX2, 373, 599) &&
+            FloatInRange(n_offsetY1, 38, 138) && FloatInRange(n_offsetY2, 38, 138) &&
+            (Color.RGBA == 0xFE808080 || Color.RGBA == 0xC8000000 ||
+            Color.RGBA == 0xFE5C6D4C || Color.RGBA == 0xFE313828) &&
+            !(Color.RGBA == 0xFE808080 && FloatInRange(n_offsetY1, 130, 137) && FloatInRange(n_offsetY2, 130, 137));
     }
 
     inline bool IsStealthBarWeaponHud(uint32_t n_offsetX1, uint32_t n_offsetX2, uint32_t n_offsetY1, uint32_t n_offsetY2, FColor Color)
@@ -37,6 +51,16 @@ namespace HudMatchers
         return FloatInRange(n_offsetX1, 519, 616) && FloatInRange(n_offsetX2, 519, 616) &&
             FloatInRange(n_offsetY1, 411, 440) && FloatInRange(n_offsetY2, 411, 440) &&
             Color.RGBA != 0xFE333333;
+    }
+
+    inline bool IsCameraJammerView(uint32_t n_offsetX1, uint32_t n_offsetX2, uint32_t n_offsetY1, uint32_t n_offsetY2, FColor Color)
+    {
+        auto EPlayerControllerState = UObject::GetState(L"EPlayerController");
+        if (EPlayerControllerState == L"s_Turret")
+            return false;
+
+        return FloatInRange(n_offsetX1, 457, 599) && FloatInRange(n_offsetX2, 457, 599) &&
+            FloatInRange(n_offsetY1, 39, 114) && FloatInRange(n_offsetY2, 39, 114);
     }
 
     inline bool IsInventoryFix(uint32_t n_offsetX1, uint32_t n_offsetX2, uint32_t n_offsetY1, uint32_t n_offsetY2, FColor Color)
@@ -67,7 +91,7 @@ namespace HudMatchers
 
     inline bool IsTopDialogueMenuText(uint32_t n_offsetX1, uint32_t n_offsetX2, uint32_t n_offsetY1, uint32_t n_offsetY2, FColor Color)
     {
-        return FloatInRange(n_offsetX1, 25, 710) && FloatInRange(n_offsetY1, 40, 270) &&
+        return FloatInRange(n_offsetX1, 25, 316) && FloatInRange(n_offsetY1, 40, 270) &&
             Color.RGBA == 0xfe333333;
     }
 
@@ -75,8 +99,10 @@ namespace HudMatchers
     {
         return IsHealthBar(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color) ||
             IsHudIcons(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color) ||
+            IsInteractionBox(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color) ||
             IsStealthBarWeaponHud(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color) ||
-            IsFireModeSwitch(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color);
+            IsFireModeSwitch(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color) ||
+            IsCameraJammerView(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color);
     }
 
     inline bool ShouldOffsetLeft(uint32_t n_offsetX1, uint32_t n_offsetX2, uint32_t n_offsetY1, uint32_t n_offsetY2, FColor Color)
@@ -84,7 +110,8 @@ namespace HudMatchers
         return IsTopDialogueMenuBackground(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color) ||
             IsTopDialogueMenuBorder(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color) ||
             IsTopDialogueMenuIcon(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color) ||
-            IsTopDialogueMenuText(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color);
+            IsTopDialogueMenuText(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color) ||
+            IsTimer(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color);
     }
 }
 
