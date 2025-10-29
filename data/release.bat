@@ -60,10 +60,10 @@ rem dgVoodoo
 
 7za e -so "..\dgVoodoo2.zip" "MS\x86\D3D8.dll" > ".\SplinterCell.WidescreenFix\system\d3d8.dll"
 
-7za e "..\xidi.zip" "Xidi-*/Win32/dinput8.dll" "Xidi-*/Win32/Xidi.dll" -o".\Scarface.FusionFix\" -y
-7za e "..\xidi.zip" "Xidi-*/Win32/dinput8.dll" "Xidi-*/Win32/Xidi.dll" -o".\SplinterCell.WidescreenFix\system\" -y
-7za e "..\xidi.zip" "Xidi-*/Win32/dinput8.dll" "Xidi-*/Win32/Xidi.dll" -o".\SplinterCellPandoraTomorrow.WidescreenFix\system\" -y
-7za e "..\xidi.zip" "Xidi-*/Win32/dinput8.dll" "Xidi-*/Win32/Xidi.dll" -o".\SplinterCellConviction.FusionMod\src\system\" -y
+7za e "..\xidi.zip" "Xidi-*/Win32/dinput8.dll" "Xidi-*/Win32/Xidi.32.dll" -o".\Scarface.FusionFix\" -y
+7za e "..\xidi.zip" "Xidi-*/Win32/dinput8.dll" "Xidi-*/Win32/Xidi.32.dll" -o".\SplinterCell.WidescreenFix\system\" -y
+7za e "..\xidi.zip" "Xidi-*/Win32/dinput8.dll" "Xidi-*/Win32/Xidi.32.dll" -o".\SplinterCellPandoraTomorrow.WidescreenFix\system\" -y
+7za e "..\xidi.zip" "Xidi-*/Win32/dinput8.dll" "Xidi-*/Win32/Xidi.32.dll" -o".\SplinterCellConviction.FusionMod\src\system\" -y
 
 rem Creating archives
 

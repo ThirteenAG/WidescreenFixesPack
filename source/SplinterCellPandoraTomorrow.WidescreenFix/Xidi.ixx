@@ -9,7 +9,7 @@ import ComVars;
 export void InitXidi()
 {
     typedef bool (*RegisterProfileCallbackFunc)(const wchar_t* (*callback)());
-    auto xidiModule = GetModuleHandleW(L"Xidi.dll");
+    auto xidiModule = GetModuleHandleW(L"Xidi.32.dll");
 
     if (xidiModule)
     {
