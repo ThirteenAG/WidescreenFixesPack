@@ -175,6 +175,33 @@ namespace UEngine
     }
 }
 
+namespace UGameEngine
+{
+    SafetyHookInline shDisplaySplash = {};
+    void __fastcall DisplaySplash(void* UGameEngine, void* edx, int a2)
+    {
+        bDisplayingBackground = true;
+        shDisplaySplash.unsafe_fastcall(UGameEngine, edx, a2);
+        bDisplayingBackground = false;
+    }
+
+    SafetyHookInline shDisplayMenuSplash = {};
+    void __fastcall DisplayMenuSplash(void* UGameEngine, void* edx, int a2, int a3)
+    {
+        bDisplayingBackground = true;
+        shDisplayMenuSplash.unsafe_fastcall(UGameEngine, edx, a2, a3);
+        bDisplayingBackground = false;
+    }
+
+    SafetyHookInline shSplashFadInOut = {};
+    void __fastcall SplashFadInOut(void* UGameEngine, void* edx, int a2, int a3)
+    {
+        bDisplayingBackground = true;
+        shSplashFadInOut.unsafe_fastcall(UGameEngine, edx, a2, a3);
+        bDisplayingBackground = false;
+    }
+}
+
 export void InitEngine()
 {
     auto pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "8B ? 94 00 00 00 E8");
@@ -352,4 +379,8 @@ export void InitEngine()
     UInput::GetKey = (decltype(UInput::GetKey))FindProcAddress(GetModuleHandle(L"Engine"), "?GetKey@UInput@@UAEEPB_WH@Z", "?GetKey@UInput@@UAEEPBGH@Z");
     UEngine::shInputEvent = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?InputEvent@UEngine@@UAEHPAVUViewport@@W4EInputKey@@W4EInputAction@@M@Z"), UEngine::InputEvent);
     UInput::shInit = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?Init@UInput@@UAEXPAVUViewport@@@Z"), UInput::Init);
+
+    UGameEngine::shDisplaySplash = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?DisplaySplash@UGameEngine@@QAEXH@Z"), UGameEngine::DisplaySplash);
+    UGameEngine::shDisplayMenuSplash = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?DisplayMenuSplash@UGameEngine@@QAEXHH@Z"), UGameEngine::DisplayMenuSplash);
+    UGameEngine::shSplashFadInOut = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?SplashFadInOut@UGameEngine@@QAEXHH@Z"), UGameEngine::SplashFadInOut);
 }
