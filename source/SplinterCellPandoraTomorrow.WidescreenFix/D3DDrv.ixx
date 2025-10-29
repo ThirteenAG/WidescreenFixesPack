@@ -41,15 +41,57 @@ int __fastcall UD3DRenderDeviceSetRes(void* UD3DRenderDevice, void* edx, void* U
     Screen.fHUDScaleX = 1.0f / Screen.fWidth * (Screen.fHeight / 480.0f);
     Screen.dHUDScaleX = static_cast<double>(Screen.fHUDScaleX);
     Screen.dHUDScaleXInv = 1.0 / Screen.dHUDScaleX;
-    Screen.fFMVoffsetStartX = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
-    Screen.fFMVoffsetEndX = Screen.fWidth - Screen.fFMVoffsetStartX;
-    Screen.fFMVoffsetStartY = 0.0f - ((Screen.fHeight - ((Screen.fHeight / 1.5f) * ((16.0f / 9.0f) / Screen.fAspectRatio))) / 2.0f);
-    Screen.fFMVoffsetEndY = Screen.fHeight - Screen.fFMVoffsetStartY;
     Screen.fWidescreenHudOffset = Screen.fIniHudOffset;
     if (Screen.fAspectRatio < (16.0f / 9.0f))
         Screen.fWidescreenHudOffset = Screen.fWidescreenHudOffset / (((16.0f / 9.0f) / (Screen.fAspectRatio)) * 1.5f);
     if (Screen.fAspectRatio <= (4.0f / 3.0f))
         Screen.fWidescreenHudOffset = 0.0f;
+
+    float targetAspect = 4.0f / 3.0f;
+    if (Screen.nFMVWidescreenMode && Screen.fAspectRatio > targetAspect)
+    {
+        // Video has black bars on top and bottom, zoom in to hide them
+        float barsHeight = 96.0f + 40.0f;
+        float scale = Screen.fHeight / (Screen.fHeight - 2.0f * barsHeight);
+
+        float contentHeight = Screen.fHeight * scale;
+        float contentWidth = contentHeight * targetAspect;
+
+        // Center the scaled content
+        Screen.fFMVoffsetStartX = (Screen.fWidth - contentWidth) / 2.0f;
+        Screen.fFMVoffsetEndX = Screen.fFMVoffsetStartX + contentWidth;
+        Screen.fFMVoffsetStartY = -barsHeight * scale;
+        Screen.fFMVoffsetEndY = Screen.fFMVoffsetStartY + contentHeight;
+    }
+    else
+    {
+        if (Screen.fAspectRatio > targetAspect)
+        {
+            // Pillarbox: Fit video to screen height, center horizontally
+            float targetWidth = Screen.fHeight * targetAspect;
+            Screen.fFMVoffsetStartX = (Screen.fWidth - targetWidth) / 2.0f;
+            Screen.fFMVoffsetEndX = Screen.fFMVoffsetStartX + targetWidth;
+            Screen.fFMVoffsetStartY = 0.0f;
+            Screen.fFMVoffsetEndY = Screen.fHeight;
+        }
+        else if (Screen.fAspectRatio < targetAspect)
+        {
+            // Letterbox: Fit video to screen width, center vertically
+            float targetHeight = Screen.fWidth / targetAspect;
+            Screen.fFMVoffsetStartY = (Screen.fHeight - targetHeight) / 2.0f;
+            Screen.fFMVoffsetEndY = Screen.fFMVoffsetStartY + targetHeight;
+            Screen.fFMVoffsetStartX = 0.0f;
+            Screen.fFMVoffsetEndX = Screen.fWidth;
+        }
+        else
+        {
+            // Exact 4:3: No bars needed
+            Screen.fFMVoffsetStartX = 0.0f;
+            Screen.fFMVoffsetEndX = Screen.fWidth;
+            Screen.fFMVoffsetStartY = 0.0f;
+            Screen.fFMVoffsetEndY = Screen.fHeight;
+        }
+    }
 
     if (Screen.Width < 640 || Screen.Height < 480)
         return ret;
@@ -108,6 +150,47 @@ void __fastcall sub_1009D270(void* FRenderInterface, void* edx, int a2, int a3, 
     }
 
     return shsub_1009D270.unsafe_fastcall(FRenderInterface, edx, a2, a3, a4, a5, a6, a7, a8);
+}
+
+namespace UD3DRenderDevice
+{
+    SafetyHookInline shDisplayVideo = {};
+    void __fastcall DisplayVideo(void* UD3DRenderDevice, void* edx, void* UCanvas, void* a3)
+    {
+        shDisplayVideo.unsafe_fastcall(UD3DRenderDevice, edx, UCanvas, a3);
+
+        IDirect3DDevice8* pD3DDevice = *(IDirect3DDevice8**)((uintptr_t)UD3DRenderDevice + 0x4694);
+
+        int W = Screen.Width;
+        int H = Screen.Height;
+
+        float targetX = Screen.fFMVoffsetStartX;
+        float targetY = Screen.fFMVoffsetStartY;
+        float targetW = Screen.fFMVoffsetEndX - Screen.fFMVoffsetStartX;
+        float targetH = Screen.fFMVoffsetEndY - Screen.fFMVoffsetStartY;
+
+        // Clear pillar/letterbox areas
+        if (targetX > 0.0f)
+        {
+            D3DRECT leftRect = { 0, 0, (LONG)targetX, H };
+            pD3DDevice->Clear(1, &leftRect, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
+        }
+        if (targetX + targetW < (float)W)
+        {
+            D3DRECT rightRect = { (LONG)(targetX + targetW), 0, W, H };
+            pD3DDevice->Clear(1, &rightRect, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
+        }
+        if (targetY > 0.0f)
+        {
+            D3DRECT topRect = { 0, 0, W, (LONG)targetY };
+            pD3DDevice->Clear(1, &topRect, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
+        }
+        if (targetY + targetH < (float)H)
+        {
+            D3DRECT bottomRect = { 0, (LONG)(targetY + targetH), W, H };
+            pD3DDevice->Clear(1, &bottomRect, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
+        }
+    }
 }
 
 export void InitD3DDrv()
@@ -287,6 +370,8 @@ export void InitD3DDrv()
         bRetailVersion = true;
 
     //FMV
+    UD3DRenderDevice::shDisplayVideo = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"D3DDrv"), "?DisplayVideo@UD3DRenderDevice@@UAEXPAVUCanvas@@PAX@Z"), UD3DRenderDevice::DisplayVideo);
+
     pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "D9 1C 24 56 56 FF 15");
     if (!pattern.empty())
     {
@@ -297,16 +382,10 @@ export void InitD3DDrv()
             {
                 *(float*)(regs.esp + 0x04) = static_cast<float>(*(int32_t*)(regs.esp + 0x68 + 0x4));
 
-                if (Screen.nFMVWidescreenMode)
-                {
-                    *(float*)(regs.esp + 0x00) = Screen.fFMVoffsetStartY;
-                    *(float*)(regs.esp + 0x08) = Screen.fFMVoffsetEndY;
-                }
-                else
-                {
-                    *(float*)&regs.esi = Screen.fFMVoffsetStartX;
-                    *(float*)(regs.esp + 0x04) = Screen.fFMVoffsetEndX;
-                }
+                *(float*)&regs.esi = Screen.fFMVoffsetStartX;
+                *(float*)(regs.esp + 0x04) = Screen.fFMVoffsetEndX;
+                *(float*)(regs.esp + 0x00) = Screen.fFMVoffsetStartY;
+                *(float*)(regs.esp + 0x08) = Screen.fFMVoffsetEndY;
             }
         }; injector::MakeInline<DisplayVideo_Hook>(pattern.get_first(-3), pattern.get_first(4)); //pfDisplayVideo + 0x37E
     }
@@ -317,18 +396,10 @@ export void InitD3DDrv()
         {
             void operator()(injector::reg_pack& regs)
             {
-                *(float*)(regs.esp + 0x00) = 0.0f;
-
-                if (Screen.nFMVWidescreenMode)
-                {
-                    *(float*)(regs.esp + 0x04) = Screen.fFMVoffsetStartY;
-                    *(float*)(regs.esp + 0x0C) = Screen.fFMVoffsetEndY;
-                }
-                else
-                {
-                    *(float*)(regs.esp + 0x00) = Screen.fFMVoffsetStartX;
-                    *(float*)(regs.esp + 0x08) = Screen.fFMVoffsetEndX;
-                }
+                *(float*)(regs.esp + 0x00) = Screen.fFMVoffsetStartX;
+                *(float*)(regs.esp + 0x08) = Screen.fFMVoffsetEndX;
+                *(float*)(regs.esp + 0x04) = Screen.fFMVoffsetStartY;
+                *(float*)(regs.esp + 0x0C) = Screen.fFMVoffsetEndY;
             }
         }; injector::MakeInline<DisplayVideo_Hook>(pattern.get_first(0), pattern.get_first(7));
     }
@@ -479,4 +550,68 @@ export void InitD3DDrv()
         injector::WriteMemory(pattern.get_first(3), newBloomRes, true);
         injector::WriteMemory(pattern.get_first(10), newBloomRes, true);
     }
+
+    pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "8B 10 50 FF 92 ? ? ? ? 8B 9E 28 58 00 00", "8B 08 FF 91 ? ? ? ? FF 83 2C 58 00 00");
+    static auto EndSceneHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        if (bDisplayingBackground)
+        {
+            IDirect3DDevice8* pD3DDevice = (IDirect3DDevice8*)(regs.eax);
+
+            int W = Screen.Width;
+            int H = Screen.Height;
+
+            // Calculate pillar/letterbox dimensions based on 4:3 aspect ratio
+            float expectedWidth = (float)H * (4.0f / 3.0f);
+            float expectedHeight = (float)W * (3.0f / 4.0f);
+
+            // Determine which bars to clear
+            float targetW, targetH, targetX, targetY;
+
+            if ((float)W / (float)H > (4.0f / 3.0f))
+            {
+                // Pillarbox (wider than 4:3)
+                targetH = (float)H;
+                targetW = expectedWidth;
+                targetX = ((float)W - targetW) / 2.0f;
+                targetY = 0.0f;
+            }
+            else
+            {
+                // Letterbox (taller than 4:3)
+                targetW = (float)W;
+                targetH = expectedHeight;
+                targetX = 0.0f;
+                targetY = ((float)H - targetH) / 2.0f;
+            }
+
+            // Clear left pillar area
+            if (targetX > 0.0f)
+            {
+                D3DRECT leftRect = { 0, 0, (LONG)targetX, H };
+                pD3DDevice->Clear(1, &leftRect, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
+            }
+
+            // Clear right pillar area
+            if (targetX + targetW < (float)W)
+            {
+                D3DRECT rightRect = { (LONG)(targetX + targetW), 0, W, H };
+                pD3DDevice->Clear(1, &rightRect, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
+            }
+
+            // Clear top letterbox area
+            if (targetY > 0.0f)
+            {
+                D3DRECT topRect = { 0, 0, W, (LONG)targetY };
+                pD3DDevice->Clear(1, &topRect, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
+            }
+
+            // Clear bottom letterbox area
+            if (targetY + targetH < (float)H)
+            {
+                D3DRECT bottomRect = { 0, (LONG)(targetY + targetH), W, H };
+                pD3DDevice->Clear(1, &bottomRect, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
+            }
+        }
+    });
 }
