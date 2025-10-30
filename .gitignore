@@ -24,6 +24,8 @@ data/**/binkw32.dll
 
 #Xidi
 data/**/Xidi.dll
+data/**/Xidi.32.dll
+data/**/Xidi.64.dll
 
 #Textures
 textures/**/*.txd

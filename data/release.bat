@@ -28,25 +28,6 @@ if errorlevel 1 (
 )
 
 rem Additional files
-FOR /R ".\" %%F IN (*.wrapper) DO (
-findstr /c:"FPSLimit" "%%F" >nul 2>&1
-if errorlevel 1 (
-        findstr /c:"SetVertexShaderConstantHook" "%%F" >nul 2>&1
-        if errorlevel 1 (
-            echo String not found...
-        ) else (
-        SET filepath=%%F
-        SET dll=!filepath:.wrapper=.dll!
-        ECHO !dll!
-        7za e -so "..\d3d8.zip" *.dll -r > !dll!
-)
-) else (
-   SET filepath=%%F
-   SET dll=!filepath:.wrapper=.dll!
-   ECHO !dll!
-   7za e -so "..\d3d9.zip" *.dll -r > !dll!
-)
-)
 
 rem Manhunt Widescreen Fix
 copy /b/v/y "..\source\Manhunt.WidescreenFix\bin\Manhunt.WidescreenFix.ini" ".\Manhunt.WidescreenFix\scripts\Manhunt.WidescreenFix.ini"
@@ -60,10 +41,19 @@ rem dgVoodoo
 
 7za e -so "..\dgVoodoo2.zip" "MS\x86\D3D8.dll" > ".\SplinterCell.WidescreenFix\system\d3d8.dll"
 
+rem Xidi
 7za e "..\xidi.zip" "Xidi-*/Win32/dinput8.dll" "Xidi-*/Win32/Xidi.32.dll" -o".\Scarface.FusionFix\" -y
 7za e "..\xidi.zip" "Xidi-*/Win32/dinput8.dll" "Xidi-*/Win32/Xidi.32.dll" -o".\SplinterCell.WidescreenFix\system\" -y
 7za e "..\xidi.zip" "Xidi-*/Win32/dinput8.dll" "Xidi-*/Win32/Xidi.32.dll" -o".\SplinterCellPandoraTomorrow.WidescreenFix\system\" -y
 7za e "..\xidi.zip" "Xidi-*/Win32/dinput8.dll" "Xidi-*/Win32/Xidi.32.dll" -o".\SplinterCellConviction.FusionMod\src\system\" -y
+
+rem dxwrapper
+7za e "..\dxwrapper.zip" "dxwrapper.asi" -o".\Scarface.FusionFix\scripts\" -y
+7za e "..\dxwrapper.zip" "dxwrapper.asi" -o".\SplinterCellChaosTheory.WidescreenFix\system\scripts\" -y
+7za e "..\dxwrapper.zip" "dxwrapper.asi" -o".\TonyHawksProSkater4.WidescreenFix\Game\scripts\" -y
+7za e "..\dxwrapper.zip" "dxwrapper.asi" -o".\TheSuffering.WidescreenFix\scripts\" -y
+7za e "..\dxwrapper.zip" "dxwrapper.asi" -o".\ThePunisher.WidescreenFix\scripts\" -y
+7za e "..\dxwrapper.zip" "dxwrapper.asi" -o".\KingKong.WidescreenFix\scripts\" -y
 
 rem Creating archives
 
