@@ -177,16 +177,12 @@ void Init()
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
 
-    char UserIni[MAX_PATH];
-    GetModuleFileNameA(GetModuleHandle(NULL), UserIni, (sizeof(UserIni)));
-    *strrchr(UserIni, '\\') = '\0';
-    strcat(UserIni, "\\SplinterCell4.ini");
+    auto exePath = GetExeModulePath();
+    auto userIniPath = exePath / "SplinterCell4.ini";
 
-    CIniReader iniWriter(UserIni);
-    char ResX[20];
-    char ResY[20];
-    _snprintf(ResX, 20, "%d", Screen.Width);
-    _snprintf(ResY, 20, "%d", Screen.Height);
+    CIniReader iniWriter(userIniPath);
+    auto ResX = std::to_string(Screen.Width);
+    auto ResY = std::to_string(Screen.Height);
     iniWriter.WriteString("WinDrv.WindowsClient", "WindowedViewportX", ResX);
     iniWriter.WriteString("WinDrv.WindowsClient", "WindowedViewportY", ResY);
     iniWriter.WriteString("WinDrv.WindowsClient", "FullscreenViewportX", ResX);
@@ -612,6 +608,7 @@ void InitD3DDrv()
     }; injector::MakeInline<FlushHook>(pattern.get_first(0), pattern.get_first(36));
 
     //loadscreen
+    static LPDIRECT3DTEXTURE9 pTexLoadscreenCustom = nullptr;
     pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "89 BE ? ? ? ? E8 ? ? ? ? 8B 86 ? ? ? ? 8B 08 57 6A 00 50 FF 91 ? ? ? ? 6A 04 8B CB E8 ? ? ? ? 8B 6C 24 30 F6 45 54 01 74 48 83 BE"); //
     struct LoadscHook
     {
@@ -626,7 +623,6 @@ void InitD3DDrv()
                     pTex->GetLevelDesc(0, &pDesc);
                     if (pDesc.Width == 2048 && pDesc.Height == 1024 && pDesc.Format == D3DFMT_DXT5 && pDesc.Usage == 0)
                     {
-                        static LPDIRECT3DTEXTURE9 pTexLoadscreenCustom = nullptr;
                         if (!pTexLoadscreenCustom)
                         {
                             IDirect3DDevice9* ppDevice = nullptr;
@@ -642,6 +638,12 @@ void InitD3DDrv()
             *(uint32_t*)(regs.esi + 0x6EB0) = regs.edi;
         }
     }; injector::MakeInline<LoadscHook>(pattern.get_first(0), pattern.get_first(6));
+
+    static auto DeviceResetHook = safetyhook::create_mid(GetProcAddress(GetModuleHandle(L"D3DDrv"), "?resetDevice@UD3DRenderDevice@@QAEXAAU_D3DPRESENT_PARAMETERS_@@@Z"), [](SafetyHookContext& regs)
+    {
+        pTexLoadscreenCustom->Release();
+        pTexLoadscreenCustom = nullptr;
+    });
 
     //Enhanced night vision NaN workaround
     pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "F3 A5 8B 90 30 02 00 00");
