@@ -38,7 +38,11 @@
 >
 > ###
 >
-> **Method 1**: `WINEDLLOVERRIDES` variable lets you temporarily specify DLL overrides. It can be used from a command line as well as in the Steam launcher. In case of command line, simply prepend the usual start command with `WINEDLLOVERRIDES="dinput8,msacm32,msvfw32,Xidi.32=n,b"`. For Steam, head to game’s properties and set `LAUNCH OPTIONS` to `WINEDLLOVERRIDES="dinput8,msacm32,msvfw32,Xidi.32=n,b" %command%`.
+> **Method 1**: `WINEDLLOVERRIDES` variable lets you temporarily specify DLL overrides. It can be used from a command line as well as in the Steam launcher. In the case of the command line, simply prepend the usual start command with:
+>    ```
+>    `WINEDLLOVERRIDES="dinput8,msacm32,msvfw32,Xidi.32=n,b"`
+>    ```
+> For Steam, head to the game’s properties and set `LAUNCH OPTIONS` to `WINEDLLOVERRIDES="dinput8,msacm32,msvfw32,Xidi.32=n,b" %command%`.
 >
 >  ![steam-wine-dll-override](https://cookieplmonster.github.io/assets/img/setup/steam-wine-dll-override.png)
 >
@@ -46,7 +50,7 @@
 > ```
 > WINEPREFIX="$HOME/.steam/steam/steamapps/compatdata/3929740/pfx" winecfg
 > ```
-> Select `Libraries` tab and fill the combo box with the name of the library you wish to override and hit `Add`. You can verify that it’s been added to the list below with `(native, builtin)` suffix. Then close the window with `OK` button.
+> Select the `Libraries` tab and fill the combo box with the name of the library you wish to override and hit `Add`. You can verify that it’s been added to the list below with `(native, builtin)` suffix. Then close the window with the `OK` button.
 >
 > ![winecfg-dll-override](https://cookieplmonster.github.io/assets/img/setup/winecfg-dll-override.png)
 >
