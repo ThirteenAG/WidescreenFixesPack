@@ -260,8 +260,12 @@ export void InitEngine()
                 if (regs.edi == WM_WINDOWPOSCHANGED)
                 {
                     auto lpwp = reinterpret_cast<LPWINDOWPOS>(regs.eax);
-                    if (lpwp->x < 0 && lpwp->y < 0)
-                        ShowWindow(reinterpret_cast<HWND>(regs.edx), SW_RESTORE);
+                    auto hwnd = reinterpret_cast<HWND>(regs.edx);
+                    if (lpwp->x < 0 && lpwp->y < 0 && IsIconic(hwnd))
+                    {
+                        ShowWindow(hwnd, SW_RESTORE);
+                        SetForegroundWindow(hwnd);
+                    }
                 }
             }
         }; injector::MakeInline<WndProcHook>(pattern.get_first(0), pattern.get_first(7)); //0x10CC4EEA
