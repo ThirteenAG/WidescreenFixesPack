@@ -146,9 +146,13 @@ export void InitD3DDrv()
             //FMV
             //Screen.fFMVoffsetStartX = ((Screen.fHeight * Screen.fAspectRatio) - (Screen.fHeight * (4.0f / 3.0f))) / 2.0f;
             //injector::WriteMemory(0x10C863D6 + 0x4, Screen.fFMVoffsetStartX, true);
-            //actually it scales perfectly as is.
+            //actually it scales perfectly as is.            
         }
     }; injector::MakeInline<GetRes>(pattern.get_first(0), pattern.get_first(6)); //<0x10CC622C, 0x10CC6232>
+
+    // Menu video (all videos with 640x480 dimensions are stretched for some reason)
+    pattern = hook::pattern("7A ? C7 44 24 10 00 00 00 00 C7 44 24 1C 00 00 00 00");
+    injector::WriteMemory<uint8_t>(pattern.get_first(), 0xEB, true);
 
     if (nShadowMapResolution)
     {
