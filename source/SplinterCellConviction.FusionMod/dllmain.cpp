@@ -901,7 +901,6 @@ void Init()
 
     if (bEnableSplitscreen)
     {
-        CreateMutexA(NULL, TRUE, "XidiInstance");
         shCreateSemaphoreA = safetyhook::create_inline(CreateSemaphoreA, CreateSemaphoreAHook);
     }
 
