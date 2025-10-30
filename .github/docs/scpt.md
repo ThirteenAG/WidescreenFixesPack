@@ -10,6 +10,8 @@
 
 ![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed FMVs
 
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Force highest character LOD
+
 ![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Disabled mouse acceleration
 
 ![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Improved gamepad support (via [Xidi](https://github.com/samuelgr/Xidi))
