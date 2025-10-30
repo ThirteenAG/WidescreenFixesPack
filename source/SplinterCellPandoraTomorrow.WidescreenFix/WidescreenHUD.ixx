@@ -181,31 +181,30 @@ namespace HudMatchers
 
     inline bool IsTimer(uint32_t offsetX1, uint32_t offsetX2, uint32_t offsetY1, uint32_t offsetY2, FColor color)
     {
-        bool timerText = (offsetX1 >= 67 && offsetX2 <= 171 &&
-            offsetY1 >= 385 && offsetY2 <= 409 &&
-            (color.RGBA == 0xFF789B85 || color.RGBA == 0xFF400000));
+        bool timerText = (offsetX1 >= 73 && offsetX2 <= 165) &&
+            (offsetY1 == 388 && offsetY2 == 406) &&
+            (color.RGBA == 0xFE789A84 || color.RGBA == 0xFF789B85 || color.RGBA == 0xFE400000 || color.RGBA == 0xFF400000);
 
-        bool timerTopBorder = (offsetX1 == 64 && (offsetX2 == 144 || offsetX2 == 174) &&
+        bool timerTopBorder = offsetX1 == 64 && (offsetX2 == 144 || offsetX2 == 174) &&
             offsetY1 == 382 && offsetY2 == 383 &&
-            color.RGBA == 0xFF506758);
+            (color.RGBA == 0xFE506758 || color.RGBA == 0xFF506758);
 
-        bool timerBottomBorder = (offsetX1 == 64 && (offsetX2 == 144 || offsetX2 == 174) &&
+        bool timerBottomBorder = offsetX1 == 64 && (offsetX2 == 144 || offsetX2 == 174) &&
             offsetY1 == 411 && offsetY2 == 412 &&
-            color.RGBA == 0xFF506758);
+            (color.RGBA == 0xFE506758 || color.RGBA == 0xFF506758);
 
-        bool timerLeftBorder = (offsetX1 == 64 && offsetX2 == 65 &&
+        bool timerLeftBorder = offsetX1 == 64 && offsetX2 == 65 &&
             offsetY1 == 382 && offsetY2 == 412 &&
-            color.RGBA == 0xFF506758);
+            (color.RGBA == 0xFE506758 || color.RGBA == 0xFF506758);
 
-        bool timerRightBorder = ((offsetX1 == 143 || offsetX1 == 173) &&
+        bool timerRightBorder = (offsetX1 == 143 || offsetX1 == 173) &&
             (offsetX2 == 144 || offsetX2 == 174) &&
             offsetY1 == 382 && offsetY2 == 412 &&
-            color.RGBA == 0xFF506758);
+            (color.RGBA == 0xFE506758 || color.RGBA == 0xFF506758);
 
-        bool timerBackground = (offsetX1 >= 65 && (offsetX2 == 143 || offsetX2 <= 173) &&
-            (offsetX2 - offsetX1 >= 70) &&
-            offsetY1 >= 383 && offsetY2 <= 411 &&
-            (color.RGBA == 0xFE506758 || color.RGBA == 0xFF506758));
+        bool timerBackground = offsetX1 == 67 && (offsetX2 == 141 || offsetX2 == 171) &&
+            offsetY1 == 385 && offsetY2 == 409 &&
+            (color.RGBA == 0xFE506758 || color.RGBA == 0xFF506758);
 
         return timerText || timerTopBorder || timerBottomBorder || timerLeftBorder || timerRightBorder || timerBackground;
     }
