@@ -57,6 +57,10 @@ rem dxwrapper
 7za e "..\dxwrapper.zip" "dxwrapper.asi" -o".\ThePunisher.WidescreenFix\scripts\" -y
 7za e "..\dxwrapper.zip" "dxwrapper.asi" -o".\KingKong.WidescreenFix\scripts\" -y
 
+rem dxwrapper-scda
+7za e "..\dxwrapper-scda.zip" "dxwrapper.dll" -o".\SplinterCellDoubleAgent.WidescreenFix\SCDA-Offline\System\scripts\" -y
+ren ".\SplinterCellDoubleAgent.WidescreenFix\SCDA-Offline\System\scripts\dxwrapper.dll" "dxwrapper.asi"
+
 rem Creating archives
 
 FOR /D /r %%G in ("*PPSSPP*") DO (
