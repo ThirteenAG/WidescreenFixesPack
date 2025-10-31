@@ -55,5 +55,3 @@ export struct TextOffset
         int32_t v3v2 = 215;
     } objPopup;
 } sTextOffset;
-
-
