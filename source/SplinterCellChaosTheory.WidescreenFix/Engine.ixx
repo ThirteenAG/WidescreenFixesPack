@@ -119,7 +119,9 @@ export void InitEngine()
                         !(fLeft == 566 && fRight == 569 && fTop == 409 && fBottom == 425) && // camera screen bracket ]
                         !(fLeft == 562 && fRight == 566 && fTop == 409 && fBottom == 410) && // camera screen bracket ]
                         !(fLeft == 562 && fRight == 566 && fTop == 424 && fBottom == 425) && // camera screen bracket ]
+                        !(fLeft == 592 && fRight == 602 && fTop == 270 && fBottom == 271) && // camera screen bracket ]
                         !(fLeft == 594 && fRight == 604 && fTop == 270 && fBottom == 271) && // camera screen bracket ]
+                        !(fLeft == 602 && fRight == 607 && fBottom - fTop == 1) && // camera screen bracket ]
                         !(fLeft == 604 && fRight == 609 && fBottom - fTop == 1) && // camera screen bracket ]
                         !(fLeft == 559 && fRight == 560 && fTop == 333 && fBottom == 346) && // camera screen bracket ]
                         !(fLeft == 557 && fRight == 562 && fTop == 317 && fBottom == 318) && // camera screen bracket ]
@@ -131,10 +133,10 @@ export void InitEngine()
                         !(fLeft == 489 && fRight == 490 && fTop == 265 && fBottom == 315 && Color.R == 0xff)    // single vertical line
                         )
                     {
-                        //DBGONLY(KEYPRESS(VK_F2)
-                        //{
-                        //    spd::log()->info("{0:d} {1:d} {2:d} {3:d} {4:08x}", fLeft, fRight, fTop, fBottom, Color.RGBA);
-                        //});
+                        DBGONLY(KEYPRESS(VK_F2)
+                        {
+                            spd::log()->info("{0:d} {1:d} {2:d} {3:d} {4:08x}", fLeft, fRight, fTop, fBottom, Color.RGBA);
+                        });
                         *reinterpret_cast<int16_t*>(regs.esp + 0x40) += WidescreenHudOffset._int;
                         *reinterpret_cast<int16_t*>(regs.esp + 0x42) += WidescreenHudOffset._int;
                     }
@@ -199,7 +201,7 @@ export void InitEngine()
                 auto ico = sTextOffset.icons;
                 auto obj = sTextOffset.objPopup;
 
-                DBGONLY(KEYPRESS(VK_F2) { spd::log()->info("{:d} {:d} {:d} {:08x}", offset1, offset2, offset3, Color.RGBA); });
+                //DBGONLY(KEYPRESS(VK_F2) { spd::log()->info("{:d} {:d} {:d} {:08x}", offset1, offset2, offset3, Color.RGBA); });
 
                 if (bIsInMenu && *bIsInMenu == 0)
                 {
