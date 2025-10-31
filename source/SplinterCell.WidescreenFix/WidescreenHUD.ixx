@@ -149,8 +149,6 @@ namespace HudMatchers
     }
 }
 
-bool isIngameText;
-
 export void WidescreenHud(float& offsetX1, float& offsetX2, float& offsetY1, float& offsetY2, FColor& Color)
 {
     uint32_t n_offsetX1 = static_cast<uint32_t>((480.0f * (Screen.fWidth / Screen.fHeight)) / (Screen.fWidth / offsetX1));
