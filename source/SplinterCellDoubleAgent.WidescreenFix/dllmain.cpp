@@ -68,6 +68,30 @@ void Init()
     iniWriter.WriteString("WinDrv.WindowsClient", "FullscreenViewportX", ResX);
     iniWriter.WriteString("WinDrv.WindowsClient", "FullscreenViewportY", ResY);
 
+    auto exePath = GetExeModulePath();
+
+    mINI::INIStructure ini;
+    mINI::INIFile mIni(iniReader.GetIniPath());
+    mIni.read(ini);
+
+    auto userIniPath = exePath / "SplinterCell4User.ini";
+
+    // Read the existing user INI file into a structure
+    mINI::INIStructure userIni;
+    mINI::INIFile userIniFile(userIniPath);
+    userIniFile.read(userIni);
+
+    if (ini.has("Engine.Input"))
+    {
+        for (auto const& kv : ini["Engine.Input"])
+        {
+            std::string key = std::get<0>(kv);
+            std::string value = std::get<1>(kv);
+            userIni["Engine.Input"].setAll(key, value);
+        }
+    }
+    userIniFile.generate(userIni);
+
     if (bForceLL)
     {
         auto pattern = hook::pattern("74 ? 68 ? ? ? ? 53 FF D7");

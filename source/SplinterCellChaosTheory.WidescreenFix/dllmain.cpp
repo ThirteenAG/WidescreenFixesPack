@@ -6,6 +6,49 @@ import Engine;
 import Core;
 import WidescreenHUD;
 
+const wchar_t* aJoysticks = nullptr;
+SafetyHookInline shsub_10CC8580;
+void* __fastcall sub_10CC8580(void* _this, void* edx)
+{
+    auto ret = shsub_10CC8580.unsafe_fastcall<void*>(_this, edx);
+
+    if (aJoysticks)
+    {
+        std::filesystem::path aJoysticksDefaultPath = GetExeModulePath() / "JoysticksDefault.ini";
+        std::filesystem::path aJoysticksPath = std::wstring(aJoysticks) + L".ini";
+        for (auto it : { aJoysticksDefaultPath, aJoysticksPath })
+        {
+            CIniReader iniReader("");
+            mINI::INIStructure ini;
+            mINI::INIFile mIni(iniReader.GetIniPath());
+            mIni.read(ini);
+
+            // Read the existing user INI file into a structure
+            mINI::INIStructure joysticksIni;
+            mINI::INIFile joysticksIniFile(it);
+            joysticksIniFile.read(joysticksIni);
+
+            for (auto const& sec : ini)
+            {
+                std::string sectionName = std::get<0>(sec);
+                if (sectionName.starts_with("Joystick"))
+                {
+                    for (auto const& kv : std::get<1>(sec))
+                    {
+                        std::string key = std::get<0>(kv);
+                        std::string value = std::get<1>(kv);
+                        joysticksIni[sectionName].set(key, value);
+                    }
+                }
+            }
+
+            joysticksIniFile.generate(joysticksIni);
+        }
+    }
+
+    return ret;
+}
+
 void Init()
 {
     CIniReader iniReader("");
@@ -30,7 +73,13 @@ void Init()
     Screen.fHeight = static_cast<float>(Screen.Height);
     Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
 
-    auto pattern = hook::pattern("8D 84 24 34 04 00 00 68 ? ? ? ? 50 E8 ? ? ? ? 83 C4 14"); //0x10CD09C5
+    auto pattern = hook::pattern("68 ? ? ? ? E8 ? ? ? ? 8B 8C 24 20 02 00 00");
+    aJoysticks = *pattern.get_first<const wchar_t*>(1);
+
+    pattern = hook::pattern("55 8B EC 83 E4 F8 81 EC 08 02 00 00");
+    shsub_10CC8580 = safetyhook::create_inline(pattern.get_first(), sub_10CC8580);
+
+    pattern = hook::pattern("8D 84 24 34 04 00 00 68 ? ? ? ? 50 E8 ? ? ? ? 83 C4 14"); //0x10CD09C5
     struct SetResHook
     {
         void operator()(injector::reg_pack& regs)
