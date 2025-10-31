@@ -21,12 +21,6 @@ export void InitEngine()
         }
     }; injector::MakeInline<MenuCheckHook>(pattern.get_first(0), pattern.get_first(6)); //0x10C7FC4C
 
-    Screen.fHUDScaleXDyn = Screen.fHUDScaleX;
-    Screen.fHudOffsetDyn = Screen.fHudOffset;
-
-    pattern = hook::pattern("D8 25 ? ? ? ? D9 05 ? ? ? ? D8 88");
-    injector::WriteMemory(pattern.get_first(2), &Screen.fHudOffsetDyn, true); //0x10ADADBE + 0x2
-
     pattern = hook::pattern(pattern_str(0xD9, 0x05, to_bytes(dword_1120B6BC))); //fld
     for (size_t i = 0; i < pattern.size(); ++i)
         injector::WriteMemory(pattern.get(i).get<uint32_t>(2), &Screen.fHUDScaleXDyn, true);
@@ -34,8 +28,23 @@ export void InitEngine()
     pattern = hook::pattern(pattern_str(0xA1, to_bytes(dword_1120B6BC))); //mov eax
     injector::WriteMemory(pattern.get_first(1), &Screen.fHUDScaleXDyn, true);
 
-    pattern = hook::pattern(pattern_str(0xD8, 0x0D, to_bytes(dword_1120B6BC))); //fmul
-    injector::WriteMemory(pattern.get_first(2), &Screen.fHUDScaleXDyn, true);
+    static float fHUDScaleXDynXref = 0.0f;
+    static float fHudOffsetDynXref = 0.0f;
+    pattern = hook::pattern("D8 0D ? ? ? ? D8 25 ? ? ? ? D9 05");
+    injector::WriteMemory(pattern.get_first(2), &fHUDScaleXDynXref, true);
+    injector::WriteMemory(pattern.get_first(8), &fHudOffsetDynXref, true);
+    injector::WriteMemory(pattern.get_first(14), &fHUDScaleXDynXref, true);
+
+    static auto HudScaleRestorerHook = safetyhook::create_mid(pattern.get_first(-10), [](SafetyHookContext& regs)
+    {
+        fHUDScaleXDynXref = Screen.fHUDScaleXDyn;
+        fHudOffsetDynXref = Screen.fHudOffsetDyn;
+        if (UObject::GetState(L"EPlayerController") == L"s_KeyPadInteract" || UObject::GetState(L"EPlayerController") == L"s_InteractWithObject")
+        {
+            fHUDScaleXDynXref = Screen.fHUDScaleXOriginal;
+            fHudOffsetDynXref = Screen.fHudOffsetOriginal;
+        }
+    });
 
     pattern = hook::pattern("33 CA 89 48 68 D9 44 24 48 DA E9 DF E0");
     struct HudHook
@@ -94,6 +103,12 @@ export void InitEngine()
                 }
 
                 if (!bHudWidescreenMode)
+                    return;
+
+                if (UObject::GetState(L"EPlayerController") == L"s_KeyPadInteract")
+                    return;
+
+                if (UObject::GetState(L"EPlayerController") == L"s_InteractWithObject")
                     return;
 
                 if (
@@ -245,6 +260,8 @@ export void InitEngine()
         void operator()(injector::reg_pack& regs)
         {
             *reinterpret_cast<float*>(&regs.edx) = AdjustFOV(*reinterpret_cast<float*>(regs.ecx + 0x2BC), Screen.fAspectRatio);
+            if (UObject::GetState(L"EPlayerController") == L"s_KeyPadInteract" || UObject::GetState(L"EPlayerController") == L"s_InteractWithObject")
+                *reinterpret_cast<float*>(&regs.edx) = *reinterpret_cast<float*>(regs.ecx + 0x2BC);
         }
     }; injector::MakeInline<UGameEngine_Draw_Hook>(pattern.get_first(0), pattern.get_first(6)); //0x10A3E67F
 
