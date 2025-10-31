@@ -170,7 +170,7 @@ export void InitEngine()
     {
         void operator()(injector::reg_pack& regs)
         {
-            *(float*)&regs.edx = AdjustFOV(*(float*)(regs.ecx + 0x628), Screen.fAspectRatio);
+            *(float*)&regs.edx = AdjustFOV(*(float*)(regs.ecx + 0x628), Screen.fAspectRatio, 16.0f / 9.0f);
         }
     }; injector::MakeInline<UGameEngine_Draw_Hook>(pattern.get_first(0), pattern.get_first(6));
 
