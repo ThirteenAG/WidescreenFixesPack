@@ -439,47 +439,6 @@ export void InitD3DDrv()
         }
     }; injector::MakeInline<ScopeLensHook1>(pattern.get_first(0), pattern.get_first(6));
 
-    //crashfix
-    pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "6A 04 8B CE F3 0F 11 44 24"); //
-    struct RenderFilmstrip_Hook3
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            if (regs.edi)
-            {
-                Screen.pFilmstripTex = regs.edi;
-                auto pTex = (IDirect3DTexture9*)regs.edi;
-                auto type = pTex->GetType();
-
-                if (type == 0) // check if ptr valid so it doesn't crash
-                {
-                    regs.edi = 0;
-                    *(uint32_t*)(regs.ebx + 0x3C) = regs.edi;
-                }
-            }
-            *(float*)(regs.esp + 0x18) = regs.xmm0.f32[0];
-        }
-    }; injector::MakeInline<RenderFilmstrip_Hook3>(pattern.get_first(4), pattern.get_first(10));
-
-    pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "8B 46 2C 3B C7 74 1D 39 7E 4C 50"); //
-    static auto GMalloc = *pattern.get_first<uint32_t>(22);
-    struct FlushHook
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            regs.eax = *(uint32_t*)(regs.esi + 0x2C);
-            if (regs.eax && regs.eax != Screen.pFilmstripTex)
-            {
-                regs.eax = *(uint32_t*)(regs.esi + 0x2C);
-                if (*(uint32_t*)(regs.esi + 0x4C))
-                    (*(void(__stdcall**)(int))(*(uint32_t*)GMalloc + 8))(regs.eax);
-                else
-                    (*(void(__stdcall**)(int))(*(uint32_t*)regs.eax + 8))(regs.eax);
-                *(uint32_t*)(regs.esi + 0x2C) = 0;
-            }
-        }
-    }; injector::MakeInline<FlushHook>(pattern.get_first(0), pattern.get_first(36));
-
     //loadscreen
     static LPDIRECT3DTEXTURE9 pTexLoadscreenCustom = nullptr;
     pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "89 BE ? ? ? ? E8 ? ? ? ? 8B 86 ? ? ? ? 8B 08 57 6A 00 50 FF 91 ? ? ? ? 6A 04 8B CB E8 ? ? ? ? 8B 6C 24 30 F6 45 54 01 74 48 83 BE"); //
