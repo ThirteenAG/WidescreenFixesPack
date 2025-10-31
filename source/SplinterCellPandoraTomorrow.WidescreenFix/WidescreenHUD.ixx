@@ -246,7 +246,7 @@ export void WidescreenHud(float& offsetX1, float& offsetX2, float& offsetY1, flo
 {
     DBGONLY(KEYPRESS(VK_F2)
     {
-        spd::log()->info("{0:f} {1:f} {2:f} {3:f} {4:08x}", offsetX1, offsetX2, offsetY1, offsetY2, Color.RGBA);
+        spd::log()->info("{:f} {:f} {:f} {:f} {:08x} {}", offsetX1, offsetX2, offsetY1, offsetY2, Color.RGBA, curDrawTileManagerTextureIndex);
     });
 
     uint32_t n_offsetX1 = static_cast<uint32_t>(offsetX1);

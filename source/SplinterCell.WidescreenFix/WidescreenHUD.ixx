@@ -68,31 +68,60 @@ namespace HudMatchers
         return FloatInRange(n_offsetX1, 178, 184) && FloatInRange(n_offsetX2, 607, 612);
     }
 
-    inline bool IsTopDialogueMenuBackground(uint32_t n_offsetX1, uint32_t n_offsetX2, uint32_t n_offsetY1, uint32_t n_offsetY2, FColor Color)
+    inline bool IsTopDialogue(uint32_t n_offsetX1, uint32_t n_offsetX2, uint32_t n_offsetY1, uint32_t n_offsetY2, FColor Color)
     {
-        return FloatInRange(n_offsetX1, 25, 35) && FloatInRange(n_offsetX2, 350, 370) &&
-            FloatInRange(n_offsetY1, 35, 165) && FloatInRange(n_offsetY2, 35, 165) &&
-            (Color.RGBA == 0x4C000000 || Color.RGBA == 0xFE404040 || Color.RGBA == 0xFEFEFEFE);
-    }
+        if (FloatInRange(n_offsetX1, 0, 370) && FloatInRange(n_offsetY2, 0, 140))
+        {
+            constexpr const wchar_t* kTextures[] = { // starts_with
+                L"Texture HUD.HUD.ETGAME",
+                L"FinalBlend Transient.FinalBlend",
+            };
 
-    inline bool IsTopDialogueMenuBorder(uint32_t n_offsetX1, uint32_t n_offsetX2, uint32_t n_offsetY1, uint32_t n_offsetY2, FColor Color)
-    {
-        return ((FloatInRange(n_offsetX1, 20, 40)) || (FloatInRange(n_offsetX1, 345, 365))) &&
-            ((FloatInRange(n_offsetX2, 25, 45)) || (FloatInRange(n_offsetX2, 345, 375))) &&
-            FloatInRange(n_offsetY1, 35, 165) && FloatInRange(n_offsetY2, 35, 165);
-    }
+            constexpr int kIndices[] = { 23, 26, 27, 33, 40, 47, 62, 68, 70, 72 };
 
-    inline bool IsTopDialogueMenuIcon(uint32_t n_offsetX1, uint32_t n_offsetX2, uint32_t n_offsetY1, uint32_t n_offsetY2, FColor Color)
-    {
-        return FloatInRange(n_offsetX1, 29, 356) && FloatInRange(n_offsetX2, 29, 356) &&
-            FloatInRange(n_offsetY1, 40, 160) && FloatInRange(n_offsetY2, 40, 160) &&
-            Color.RGBA == 0xFE404040;
-    }
+            constexpr uint32_t kColors[] = {
+                0xFEFEFEFE,
+                0xFE808080,
+                0x4C000000,
+                0xFE404040,
+                0x96000000,
+                0xFE333333,
+            };
 
-    inline bool IsTopDialogueMenuText(uint32_t n_offsetX1, uint32_t n_offsetX2, uint32_t n_offsetY1, uint32_t n_offsetY2, FColor Color)
-    {
-        return FloatInRange(n_offsetX1, 25, 316) && FloatInRange(n_offsetY1, 40, 270) &&
-            Color.RGBA == 0xfe333333;
+            const bool textureMatch = std::any_of(std::begin(kTextures), std::end(kTextures), [&](const wchar_t* name)
+            {
+                return curDrawTileManagerTextureName.starts_with(name);
+            });
+
+            if (textureMatch)
+            {
+                const bool indexMatch = std::any_of(std::begin(kIndices), std::end(kIndices), [&](int idx)
+                {
+                    return curDrawTileManagerTextureIndex == idx;
+                });
+
+                const bool colorMatch = std::any_of(std::begin(kColors), std::end(kColors), [&](uint32_t c)
+                {
+                    return Color.RGBA == c;
+                });
+
+                if (indexMatch && colorMatch)
+                {
+                    if (curDrawTileManagerTextureName.starts_with(L"FinalBlend Transient.FinalBlend") &&
+                        FloatInRange(n_offsetY1, 130, 138) &&
+                        FloatInRange(n_offsetY2, 136, 138) &&
+                        FloatInRange(n_offsetX1, 280, 376) &&
+                        FloatInRange(n_offsetX2, 280, 376))
+                    {
+                        return false;
+                    }
+
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     inline bool IsTimer(uint32_t n_offsetX1, uint32_t n_offsetX2, uint32_t n_offsetY1, uint32_t n_offsetY2, FColor Color)
@@ -103,7 +132,7 @@ namespace HudMatchers
             Color.RGBA == 0xFE404040 || Color.RGBA == 0xFE400000);
     }
 
-    inline bool ShouldOffsetRight(uint32_t n_offsetX1, uint32_t n_offsetX2, uint32_t n_offsetY1, uint32_t n_offsetY2, FColor Color, std::wstring_view texName)
+    inline bool ShouldOffsetRight(uint32_t n_offsetX1, uint32_t n_offsetX2, uint32_t n_offsetY1, uint32_t n_offsetY2, FColor Color)
     {
         return IsHealthBar(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color) ||
             IsHudIcons(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color) ||
@@ -113,19 +142,16 @@ namespace HudMatchers
             IsCameraJammerView(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color);
     }
 
-    inline bool ShouldOffsetLeft(uint32_t n_offsetX1, uint32_t n_offsetX2, uint32_t n_offsetY1, uint32_t n_offsetY2, FColor Color, std::wstring_view texName)
+    inline bool ShouldOffsetLeft(uint32_t n_offsetX1, uint32_t n_offsetX2, uint32_t n_offsetY1, uint32_t n_offsetY2, FColor Color)
     {
-        return IsTopDialogueMenuBackground(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color) ||
-            IsTopDialogueMenuBorder(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color) ||
-            IsTopDialogueMenuIcon(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color) ||
-            IsTopDialogueMenuText(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color) ||
+        return IsTopDialogue(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color) ||
             IsTimer(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color);
     }
 }
 
 bool isIngameText;
 
-export void WidescreenHud(float& offsetX1, float& offsetX2, float& offsetY1, float& offsetY2, FColor& Color, std::wstring_view texName)
+export void WidescreenHud(float& offsetX1, float& offsetX2, float& offsetY1, float& offsetY2, FColor& Color)
 {
     uint32_t n_offsetX1 = static_cast<uint32_t>((480.0f * (Screen.fWidth / Screen.fHeight)) / (Screen.fWidth / offsetX1));
     uint32_t n_offsetX2 = static_cast<uint32_t>((480.0f * (Screen.fWidth / Screen.fHeight)) / (Screen.fWidth / offsetX2));
@@ -134,15 +160,15 @@ export void WidescreenHud(float& offsetX1, float& offsetX2, float& offsetY1, flo
 
     DBGONLY(KEYPRESS(VK_F1)
     {
-        spd::log()->info("{} {} {} {} {:08x} {}", n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color.RGBA, std::string(texName.begin(), texName.end()).c_str());
+        spd::log()->info("{} {} {} {} {:08x} {} {}", n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color.RGBA, curDrawTileManagerTextureIndex, std::string(curDrawTileManagerTextureName.begin(), curDrawTileManagerTextureName.end()).c_str());
     });
 
-    if (HudMatchers::ShouldOffsetRight(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color, texName))
+    if (HudMatchers::ShouldOffsetRight(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color))
     {
         offsetX1 += Screen.fWidescreenHudOffset;
         offsetX2 += Screen.fWidescreenHudOffset;
     }
-    else if (HudMatchers::ShouldOffsetLeft(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color, texName))
+    else if (HudMatchers::ShouldOffsetLeft(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color))
     {
         offsetX1 -= Screen.fWidescreenHudOffset;
         offsetX2 -= Screen.fWidescreenHudOffset;
