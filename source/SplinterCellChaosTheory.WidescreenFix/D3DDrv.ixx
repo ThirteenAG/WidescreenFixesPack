@@ -164,6 +164,24 @@ export void InitD3DDrv()
             injector::WriteMemory(pattern.get_first(6), nShadowMapResolution, true); // 0x10b60871 = push 1000h;
         }
 
+        pattern = hook::pattern("B9 00 01 00 00 89 94 24 DC 00 00 00");
+        if (!pattern.empty())
+        {
+            injector::WriteMemory(pattern.get_first(1), nShadowMapResolution, true);
+        }
+
+        pattern = hook::pattern("BB 9A 99 99 3F");
+        if (!pattern.empty())
+        {
+            injector::WriteMemory<float>(pattern.get_first(1), 0.25f, true);
+        }
+
+        pattern = hook::pattern("C7 86 C8 07 00 00 9A 99 99 BE");
+        if (!pattern.empty())
+        {
+            injector::WriteMemory<float>(pattern.get_first(6), -0.15f, true);
+        }
+
         if (!bEnableShadowFiltering)
         {
             // Disable adjusting contrast and shadow filtering according to the angle of the camera. This only works if the "Soft shadows" option is disabled.
