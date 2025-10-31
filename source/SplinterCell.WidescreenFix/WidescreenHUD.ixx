@@ -21,6 +21,20 @@ namespace HudMatchers
             Color.RGBA == 0xFE808080;
     }
 
+    inline bool IsInteractionBox(uint32_t n_offsetX1, uint32_t n_offsetX2, uint32_t n_offsetY1, uint32_t n_offsetY2, FColor Color)
+    {
+        auto EPlayerControllerState = UObject::GetState(L"EPlayerController");
+        if (EPlayerControllerState == L"s_Turret")
+            return false;
+
+
+        return FloatInRange(n_offsetX1, 373, 599) && FloatInRange(n_offsetX2, 373, 599) &&
+            FloatInRange(n_offsetY1, 38, 138) && FloatInRange(n_offsetY2, 38, 138) &&
+            (Color.RGBA == 0xFE808080 || Color.RGBA == 0xC8000000 ||
+            Color.RGBA == 0xFE5C6D4C || Color.RGBA == 0xFE313828) &&
+            !(Color.RGBA == 0xFE808080 && FloatInRange(n_offsetY1, 130, 137) && FloatInRange(n_offsetY2, 130, 137));
+    }
+
     inline bool IsStealthBarWeaponHud(uint32_t n_offsetX1, uint32_t n_offsetX2, uint32_t n_offsetY1, uint32_t n_offsetY2, FColor Color)
     {
         return FloatInRange(n_offsetX1, 493, 616) && FloatInRange(n_offsetX2, 493, 616) &&
@@ -37,6 +51,16 @@ namespace HudMatchers
         return FloatInRange(n_offsetX1, 519, 616) && FloatInRange(n_offsetX2, 519, 616) &&
             FloatInRange(n_offsetY1, 411, 440) && FloatInRange(n_offsetY2, 411, 440) &&
             Color.RGBA != 0xFE333333;
+    }
+
+    inline bool IsCameraJammerView(uint32_t n_offsetX1, uint32_t n_offsetX2, uint32_t n_offsetY1, uint32_t n_offsetY2, FColor Color)
+    {
+        auto EPlayerControllerState = UObject::GetState(L"EPlayerController");
+        if (EPlayerControllerState == L"s_Turret")
+            return false;
+
+        return FloatInRange(n_offsetX1, 457, 599) && FloatInRange(n_offsetX2, 457, 599) &&
+            FloatInRange(n_offsetY1, 39, 114) && FloatInRange(n_offsetY2, 39, 114);
     }
 
     inline bool IsInventoryFix(uint32_t n_offsetX1, uint32_t n_offsetX2, uint32_t n_offsetY1, uint32_t n_offsetY2, FColor Color)
@@ -67,30 +91,41 @@ namespace HudMatchers
 
     inline bool IsTopDialogueMenuText(uint32_t n_offsetX1, uint32_t n_offsetX2, uint32_t n_offsetY1, uint32_t n_offsetY2, FColor Color)
     {
-        return FloatInRange(n_offsetX1, 25, 710) && FloatInRange(n_offsetY1, 40, 270) &&
+        return FloatInRange(n_offsetX1, 25, 316) && FloatInRange(n_offsetY1, 40, 270) &&
             Color.RGBA == 0xfe333333;
     }
 
-    inline bool ShouldOffsetRight(uint32_t n_offsetX1, uint32_t n_offsetX2, uint32_t n_offsetY1, uint32_t n_offsetY2, FColor Color)
+    inline bool IsTimer(uint32_t n_offsetX1, uint32_t n_offsetX2, uint32_t n_offsetY1, uint32_t n_offsetY2, FColor Color)
+    {
+        return FloatInRange(n_offsetX1, 40, 150) && FloatInRange(n_offsetX2, 40, 150) &&
+            FloatInRange(n_offsetY1, 382, 412) && FloatInRange(n_offsetY2, 382, 412) &&
+            (Color.RGBA == 0xFE808080 || Color.RGBA == 0xFE000000 ||
+            Color.RGBA == 0xFE404040 || Color.RGBA == 0xFE400000);
+    }
+
+    inline bool ShouldOffsetRight(uint32_t n_offsetX1, uint32_t n_offsetX2, uint32_t n_offsetY1, uint32_t n_offsetY2, FColor Color, std::wstring_view texName)
     {
         return IsHealthBar(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color) ||
             IsHudIcons(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color) ||
+            IsInteractionBox(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color) ||
             IsStealthBarWeaponHud(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color) ||
-            IsFireModeSwitch(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color);
+            IsFireModeSwitch(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color) ||
+            IsCameraJammerView(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color);
     }
 
-    inline bool ShouldOffsetLeft(uint32_t n_offsetX1, uint32_t n_offsetX2, uint32_t n_offsetY1, uint32_t n_offsetY2, FColor Color)
+    inline bool ShouldOffsetLeft(uint32_t n_offsetX1, uint32_t n_offsetX2, uint32_t n_offsetY1, uint32_t n_offsetY2, FColor Color, std::wstring_view texName)
     {
         return IsTopDialogueMenuBackground(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color) ||
             IsTopDialogueMenuBorder(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color) ||
             IsTopDialogueMenuIcon(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color) ||
-            IsTopDialogueMenuText(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color);
+            IsTopDialogueMenuText(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color) ||
+            IsTimer(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color);
     }
 }
 
 bool isIngameText;
 
-export void WidescreenHud(float& offsetX1, float& offsetX2, float& offsetY1, float& offsetY2, FColor& Color)
+export void WidescreenHud(float& offsetX1, float& offsetX2, float& offsetY1, float& offsetY2, FColor& Color, std::wstring_view texName)
 {
     uint32_t n_offsetX1 = static_cast<uint32_t>((480.0f * (Screen.fWidth / Screen.fHeight)) / (Screen.fWidth / offsetX1));
     uint32_t n_offsetX2 = static_cast<uint32_t>((480.0f * (Screen.fWidth / Screen.fHeight)) / (Screen.fWidth / offsetX2));
@@ -99,15 +134,15 @@ export void WidescreenHud(float& offsetX1, float& offsetX2, float& offsetY1, flo
 
     DBGONLY(KEYPRESS(VK_F1)
     {
-        spd::log()->info("{0:d} {1:d} {2:d} {3:d} {4:08x}", n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color.RGBA);
+        spd::log()->info("{} {} {} {} {:08x} {}", n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color.RGBA, std::string(texName.begin(), texName.end()).c_str());
     });
 
-    if (HudMatchers::ShouldOffsetRight(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color))
+    if (HudMatchers::ShouldOffsetRight(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color, texName))
     {
         offsetX1 += Screen.fWidescreenHudOffset;
         offsetX2 += Screen.fWidescreenHudOffset;
     }
-    else if (HudMatchers::ShouldOffsetLeft(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color))
+    else if (HudMatchers::ShouldOffsetLeft(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color, texName))
     {
         offsetX1 -= Screen.fWidescreenHudOffset;
         offsetX2 -= Screen.fWidescreenHudOffset;
