@@ -77,6 +77,7 @@ export float fWidescreenHudOffset;
 export bool bDisableAltTabFix;
 export int32_t nShadowMapResolution;
 export bool bEnableShadowFiltering;
+export bool bPlayingVideo = false;
 
 export uint32_t* dword_1120B6BC = nullptr;
 export uint32_t* dword_1120B6B0 = nullptr;

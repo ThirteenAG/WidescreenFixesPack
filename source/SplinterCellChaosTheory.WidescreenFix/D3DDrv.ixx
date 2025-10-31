@@ -107,6 +107,22 @@ float* __cdecl FGetHSV(float* dest, uint8_t H, uint8_t S, uint8_t V, uint32_t un
     return dest;
 }
 
+SafetyHookInline shsub_10C86280 = {};
+int __fastcall sub_10C86280(int _this, void* edx, void* a2, int a3)
+{
+    MSG msg;
+    while (PeekMessageA(&msg, nullptr, 0, 0, PM_REMOVE))
+    {
+        TranslateMessage(&msg);
+        DispatchMessageA(&msg);
+    }
+
+    bPlayingVideo = true;
+    auto ret = shsub_10C86280.unsafe_fastcall<int>(_this, edx, a2, a3);
+    bPlayingVideo = false;
+    return ret;
+}
+
 export void InitD3DDrv()
 {
     auto pattern = hook::pattern("89 6B 58 89 7B 5C EB 0E");
@@ -153,6 +169,9 @@ export void InitD3DDrv()
     // Menu video (all videos with 640x480 dimensions are stretched for some reason)
     pattern = hook::pattern("7A ? C7 44 24 10 00 00 00 00 C7 44 24 1C 00 00 00 00");
     injector::WriteMemory<uint8_t>(pattern.get_first(), 0xEB, true);
+
+    pattern = hook::pattern("8B 44 24 04 81 EC 84 00 00 00 56");
+    shsub_10C86280 = safetyhook::create_inline(pattern.get_first(0), sub_10C86280);
 
     if (nShadowMapResolution)
     {
