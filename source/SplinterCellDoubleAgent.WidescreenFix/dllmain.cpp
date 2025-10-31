@@ -58,9 +58,8 @@ void Init()
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
 
     auto exePath = GetExeModulePath();
-    auto userIniPath = exePath / "SplinterCell4.ini";
 
-    CIniReader iniWriter(userIniPath);
+    CIniReader iniWriter(exePath / "SplinterCell4.ini");
     auto ResX = std::to_string(Screen.Width);
     auto ResY = std::to_string(Screen.Height);
     iniWriter.WriteString("WinDrv.WindowsClient", "WindowedViewportX", ResX);
@@ -68,17 +67,13 @@ void Init()
     iniWriter.WriteString("WinDrv.WindowsClient", "FullscreenViewportX", ResX);
     iniWriter.WriteString("WinDrv.WindowsClient", "FullscreenViewportY", ResY);
 
-    auto exePath = GetExeModulePath();
-
     mINI::INIStructure ini;
     mINI::INIFile mIni(iniReader.GetIniPath());
     mIni.read(ini);
 
-    auto userIniPath = exePath / "SplinterCell4User.ini";
-
     // Read the existing user INI file into a structure
     mINI::INIStructure userIni;
-    mINI::INIFile userIniFile(userIniPath);
+    mINI::INIFile userIniFile(exePath / "SplinterCell4User.ini");
     userIniFile.read(userIni);
 
     if (ini.has("Engine.Input"))
