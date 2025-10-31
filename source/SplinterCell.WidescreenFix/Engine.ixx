@@ -103,8 +103,8 @@ void __fastcall FCanvasUtilDrawTileHook(void* _this, uint32_t EDX, float X, floa
     if (!bIsMainMenu && Screen.bHudWidescreenMode)
     {
         wchar_t buffer[256];
-        auto texName = std::wstring_view(UObject::GetFullName(Texture, 0, buffer));
-        WidescreenHud(X, SizeX, Y, SizeY, Color, texName);
+        curDrawTileManagerTextureName = UObject::GetFullName(Texture, 0, buffer);
+        WidescreenHud(X, SizeX, Y, SizeY, Color);
     }
 
     X += Screen.fHudOffset;

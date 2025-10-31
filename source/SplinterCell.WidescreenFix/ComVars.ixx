@@ -84,3 +84,6 @@ export inline bool FloatInRange(uint32_t value, uint32_t minVal, uint32_t maxVal
     return static_cast<int32_t>(value) >= static_cast<int32_t>(minVal) - tolerance &&
         static_cast<int32_t>(value) <= static_cast<int32_t>(maxVal) + tolerance;
 }
+
+export int curDrawTileManagerTextureIndex = -1;
+export std::wstring curDrawTileManagerTextureName;

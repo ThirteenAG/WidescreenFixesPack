@@ -65,3 +65,5 @@ export namespace UObject
         return (it != objectStates.end()) ? std::wstring_view(it->second) : std::wstring_view(L"");
     }
 }
+
+export int curDrawTileManagerTextureIndex = -1;
