@@ -157,6 +157,13 @@ namespace UD3DRenderDevice
     SafetyHookInline shDisplayVideo = {};
     void __fastcall DisplayVideo(void* UD3DRenderDevice, void* edx, void* UCanvas, void* a3)
     {
+        MSG msg;
+        while (PeekMessageA(&msg, nullptr, 0, 0, PM_REMOVE))
+        {
+            TranslateMessage(&msg);
+            DispatchMessageA(&msg);
+        }
+
         shDisplayVideo.unsafe_fastcall(UD3DRenderDevice, edx, UCanvas, a3);
 
         IDirect3DDevice8* pD3DDevice = *(IDirect3DDevice8**)((uintptr_t)UD3DRenderDevice + 0x4694);

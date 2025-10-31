@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include <TlHelp32.h>
 
 import ComVars;
 import D3DDrv;
@@ -103,6 +104,20 @@ void Init()
     InitEngine();
     InitCore();
 
+#ifdef _DEBUG
+    pattern = hook::pattern("8B 88 80 00 00 00 6A 01");
+    static auto SkipMenuHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        static char bOnce = 0;
+        if (bOnce < 2)
+        {
+            keybd_event(VK_RETURN, 0x45, KEYEVENTF_EXTENDEDKEY | 0, 0);
+            keybd_event(VK_RETURN, 0x45, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+            bOnce++;
+        }
+    });
+#endif
+
     if (nFPSLimit)
     {
         static float fFPSLimit = 1.0f / static_cast<float>(nFPSLimit);
@@ -111,11 +126,57 @@ void Init()
     }
 }
 
+DWORD FindProcessId(const std::wstring& processName)
+{
+    PROCESSENTRY32 pe32;
+    pe32.dwSize = sizeof(PROCESSENTRY32);
+
+    HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (hSnapshot == INVALID_HANDLE_VALUE)
+    {
+        return 0;
+    }
+
+    if (Process32First(hSnapshot, &pe32))
+    {
+        do
+        {
+            if (processName == pe32.szExeFile)
+            {
+                CloseHandle(hSnapshot);
+                return pe32.th32ProcessID;
+            }
+        } while (Process32Next(hSnapshot, &pe32));
+    }
+
+    CloseHandle(hSnapshot);
+    return 0;
+}
+
+void InitGameOverlayRenderer()
+{
+    auto steamPid = FindProcessId(L"steam.exe");
+    if (steamPid)
+    {
+        auto steamPath = GetModulePath(GetModuleHandleW(L"GameOverlayRenderer.dll")).parent_path();
+        auto exePath = steamPath / L"GameOverlayUI.exe";
+        std::wstring args = L" -steampid " + std::to_wstring(steamPid) + L" -pid " + std::to_wstring(GetCurrentProcessId()) + L" -gameid " + L"13570" + L" -manuallyclearframes 0";
+
+        SHELLEXECUTEINFOW sei = { sizeof(sei) };
+        sei.lpFile = exePath.c_str();
+        sei.lpParameters = args.c_str();
+        sei.nShow = SW_HIDE;
+        sei.fMask = SEE_MASK_NOCLOSEPROCESS;
+        ShellExecuteEx(&sei);
+    }
+}
+
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
         CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("8D 84 24 34 04 00 00 68 ? ? ? ? 50 E8 ? ? ? ? 83 C4 14"));
+        CallbackHandler::RegisterCallback(L"GameOverlayRenderer.dll", InitGameOverlayRenderer);
     });
 }
 
