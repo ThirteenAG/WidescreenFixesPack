@@ -38,8 +38,9 @@ namespace UObject
             objectStates[type] = stateName;
         }
 
-        // Probably there's a better place to do this
-        bHackingGameplay = false;
+        // When the game reloads, nothing resets it, so I'll do it here
+        if (UObject::GetState(L"EPlayerController") != L"s_InteractWithObject")
+            bHackingGameplay = false;
 
         return shGotoState.unsafe_fastcall<int>(uObject, edx, StateID, a3);
     }
@@ -57,8 +58,14 @@ export void InitCore()
     UObject::shGotoState = safetyhook::create_inline(pattern.get_first(), UObject::GotoState);
 
     pattern = hook::pattern("8B 7C 24 0C 52 8D 44 24 14");
-    static auto EHackingGameplayHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    static auto EHackingGameplayStartHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
         bHackingGameplay = true;
+    });
+
+    pattern = hook::pattern("83 A6 FC 04 00 00 FE");
+    static auto EHackingGameplayEndHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        bHackingGameplay = false;
     });
 }
