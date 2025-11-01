@@ -84,6 +84,7 @@ export uint32_t* dword_1120B6BC = nullptr;
 export uint32_t* dword_1120B6B0 = nullptr;
 export uint32_t* dword_11223A7C = nullptr;
 export HWND* hGameWindow = nullptr;
+export bool bIsWindowed = false;
 
 export namespace UObject
 {

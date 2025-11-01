@@ -17,6 +17,7 @@ namespace UObject
         L"EKeyPad",
         L"EElevatorPanel",
         L"EDoorMarker",
+        L"EPlayerCam",
     };
 
     wchar_t* (__fastcall* GetFullName)(void*, void*, wchar_t*) = nullptr;

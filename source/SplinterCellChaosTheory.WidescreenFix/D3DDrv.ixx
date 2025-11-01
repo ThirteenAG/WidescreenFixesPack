@@ -112,7 +112,6 @@ SafetyHookInline shsub_10C86280 = {};
 int __fastcall sub_10C86280(int _this, void* edx, void* a2, int a3)
 {
     static bool bOnce = false;
-    static bool bIsWindowed = false;
 
     if (!bOnce)
     {
@@ -175,6 +174,12 @@ export void InitD3DDrv()
             {
                 WidescreenHudOffset._float = fWidescreenHudOffset / (((16.0f / 9.0f) / (Screen.fAspectRatio)) * 1.5f);
                 WidescreenHudOffset._int = static_cast<int32_t>(WidescreenHudOffset._float);
+
+                if (Screen.fAspectRatio <= (4.0f / 3.0f))
+                {
+                    WidescreenHudOffset._float = 0.0f;
+                    WidescreenHudOffset._int = 0.0f;
+                }
             }
             else
             {

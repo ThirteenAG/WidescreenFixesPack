@@ -46,6 +46,7 @@ export bool bPlayingVideo = false;
 export bool bDisplayingBackground = false;
 export bool bPressStartToContinue = false;
 export bool bSkipPressStartToContinue = false;
+export bool bIsWindowed = false;
 
 export std::vector<std::pair<const std::wstring, std::wstring>> ResList =
 {
