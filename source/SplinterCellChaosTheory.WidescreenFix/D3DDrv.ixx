@@ -123,6 +123,7 @@ int __fastcall sub_10C86280(int _this, void* edx, void* a2, int a3)
             if (SUCCEEDED(pSwapChain->GetPresentParameters(&pp)))
             {
                 bIsWindowed = pp.Windowed;
+                hGameWindow = pp.hDeviceWindow;
             }
             pSwapChain->Release();
         }
@@ -194,9 +195,6 @@ export void InitD3DDrv()
             //actually it scales perfectly as is.            
         }
     }; injector::MakeInline<GetRes>(pattern.get_first(0), pattern.get_first(6)); //<0x10CC622C, 0x10CC6232>
-
-    pattern = hook::pattern("A1 ? ? ? ? 50 FF 15 ? ? ? ? 8B 4D 08");
-    hGameWindow = *pattern.get_first<HWND*>(1);
 
     // Menu video (all videos with 640x480 dimensions are stretched for some reason)
     pattern = hook::pattern("7A ? C7 44 24 10 00 00 00 00 C7 44 24 1C 00 00 00 00");
