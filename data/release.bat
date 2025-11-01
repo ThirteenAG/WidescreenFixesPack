@@ -51,7 +51,6 @@ rem Xidi
 
 rem dxwrapper
 7za e "..\dxwrapper.zip" "dxwrapper.asi" -o".\Scarface.FusionFix\scripts\" -y
-7za e "..\dxwrapper.zip" "dxwrapper.asi" -o".\SplinterCellChaosTheory.WidescreenFix\system\scripts\" -y
 7za e "..\dxwrapper.zip" "dxwrapper.asi" -o".\TonyHawksProSkater4.WidescreenFix\Game\scripts\" -y
 7za e "..\dxwrapper.zip" "dxwrapper.asi" -o".\TheSuffering.WidescreenFix\scripts\" -y
 7za e "..\dxwrapper.zip" "dxwrapper.asi" -o".\ThePunisher.WidescreenFix\scripts\" -y
