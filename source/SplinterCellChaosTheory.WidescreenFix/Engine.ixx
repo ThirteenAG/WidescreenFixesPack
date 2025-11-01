@@ -108,6 +108,9 @@ export void InitEngine()
                 if (UObject::GetState(L"EPlayerController") == L"s_KeyPadInteract")
                     return;
 
+                //if (UObject::GetState(L"EPlayerCam") == L"s_Fixed") // doesn't reset on quickload, need a way to reset
+                //    return;
+
                 if (bHackingGameplay)
                     return;
 
@@ -138,6 +141,7 @@ export void InitEngine()
                         !(fLeft == 594 && fRight == 604 && fTop == 270 && fBottom == 271) && // camera screen bracket ]
                         !(fLeft == 602 && fRight == 607 && fBottom - fTop == 1) && // camera screen bracket ]
                         !(fLeft == 604 && fRight == 609 && fBottom - fTop == 1) && // camera screen bracket ]
+                        !(fLeft == 540 && fRight == 560 && fTop == 393 && fBottom == 394) && // camera screen bracket ]
                         !(fLeft == 559 && fRight == 560 && fTop == 333 && fBottom == 346) && // camera screen bracket ]
                         !(fLeft == 557 && fRight == 562 && fTop == 317 && fBottom == 318) && // camera screen bracket ]
                         !(fLeft == 555 && fRight == 556 && fTop == 342 && fBottom == 346) && // camera screen bracket ]
@@ -291,14 +295,17 @@ export void InitEngine()
             {
                 regs.eax = *reinterpret_cast<uint32_t*>(regs.esp + 0x3A8);
 
-                if (regs.edi == WM_WINDOWPOSCHANGED)
+                if (bIsWindowed)
                 {
-                    auto lpwp = reinterpret_cast<LPWINDOWPOS>(regs.eax);
-                    auto hwnd = reinterpret_cast<HWND>(regs.edx);
-                    if (lpwp->x < 0 && lpwp->y < 0 && IsIconic(hwnd))
+                    if (regs.edi == WM_WINDOWPOSCHANGED)
                     {
-                        ShowWindow(hwnd, SW_RESTORE);
-                        SetForegroundWindow(hwnd);
+                        auto lpwp = reinterpret_cast<LPWINDOWPOS>(regs.eax);
+                        auto hwnd = reinterpret_cast<HWND>(regs.edx);
+                        if (lpwp->x < 0 && lpwp->y < 0 && IsIconic(hwnd))
+                        {
+                            ShowWindow(hwnd, SW_RESTORE);
+                            SetForegroundWindow(hwnd);
+                        }
                     }
                 }
             }

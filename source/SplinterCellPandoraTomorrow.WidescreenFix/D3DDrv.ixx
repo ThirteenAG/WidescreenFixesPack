@@ -109,7 +109,9 @@ int __fastcall UD3DRenderDeviceSetRes(void* UD3DRenderDevice, void* edx, void* U
         iniReader.WriteInteger("MAIN", "ResY", 0);
     }
 
-    if (pPresentParams->Windowed)
+    bIsWindowed = pPresentParams->Windowed ? true : false;
+
+    if (bIsWindowed)
     {
         tagRECT rect;
         rect.left = (LONG)(((float)DesktopResW / 2.0f) - (Screen.fWidth / 2.0f));
@@ -157,11 +159,14 @@ namespace UD3DRenderDevice
     SafetyHookInline shDisplayVideo = {};
     void __fastcall DisplayVideo(void* UD3DRenderDevice, void* edx, void* UCanvas, void* a3)
     {
-        MSG msg;
-        while (PeekMessageA(&msg, nullptr, 0, 0, PM_REMOVE))
+        if (bIsWindowed)
         {
-            TranslateMessage(&msg);
-            DispatchMessageA(&msg);
+            MSG msg;
+            while (PeekMessageA(&msg, nullptr, 0, 0, PM_REMOVE))
+            {
+                TranslateMessage(&msg);
+                DispatchMessageA(&msg);
+            }
         }
 
         shDisplayVideo.unsafe_fastcall(UD3DRenderDevice, edx, UCanvas, a3);
