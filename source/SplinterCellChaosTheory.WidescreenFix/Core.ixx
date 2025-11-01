@@ -38,6 +38,9 @@ namespace UObject
             objectStates[type] = stateName;
         }
 
+        // Probably there's a better place to do this
+        bHackingGameplay = false;
+
         return shGotoState.unsafe_fastcall<int>(uObject, edx, StateID, a3);
     }
 }
@@ -52,4 +55,10 @@ export void InitCore()
 
     pattern = hook::pattern("83 EC 0C 55 56 8B F1 8B 46 0C");
     UObject::shGotoState = safetyhook::create_inline(pattern.get_first(), UObject::GotoState);
+
+    pattern = hook::pattern("8B 7C 24 0C 52 8D 44 24 14");
+    static auto EHackingGameplayHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        bHackingGameplay = true;
+    });
 }

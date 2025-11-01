@@ -39,7 +39,7 @@ export void InitEngine()
     {
         fHUDScaleXDynXref = Screen.fHUDScaleXDyn;
         fHudOffsetDynXref = Screen.fHudOffsetDyn;
-        if (UObject::GetState(L"EPlayerController") == L"s_KeyPadInteract" || UObject::GetState(L"EPlayerController") == L"s_InteractWithObject")
+        if (UObject::GetState(L"EPlayerController") == L"s_KeyPadInteract" || bHackingGameplay)
         {
             fHUDScaleXDynXref = Screen.fHUDScaleXOriginal;
             fHudOffsetDynXref = Screen.fHudOffsetOriginal;
@@ -108,7 +108,7 @@ export void InitEngine()
                 if (UObject::GetState(L"EPlayerController") == L"s_KeyPadInteract")
                     return;
 
-                if (UObject::GetState(L"EPlayerController") == L"s_InteractWithObject")
+                if (bHackingGameplay)
                     return;
 
                 if (
@@ -260,8 +260,6 @@ export void InitEngine()
         void operator()(injector::reg_pack& regs)
         {
             *reinterpret_cast<float*>(&regs.edx) = AdjustFOV(*reinterpret_cast<float*>(regs.ecx + 0x2BC), Screen.fAspectRatio);
-            if (UObject::GetState(L"EPlayerController") == L"s_KeyPadInteract" || UObject::GetState(L"EPlayerController") == L"s_InteractWithObject")
-                *reinterpret_cast<float*>(&regs.edx) = *reinterpret_cast<float*>(regs.ecx + 0x2BC);
         }
     }; injector::MakeInline<UGameEngine_Draw_Hook>(pattern.get_first(0), pattern.get_first(6)); //0x10A3E67F
 
@@ -273,6 +271,15 @@ export void InitEngine()
             *reinterpret_cast<float*>(&regs.ecx) = AdjustFOV(*reinterpret_cast<float*>(regs.eax + 0x2BC), Screen.fAspectRatio);
         }
     }; injector::MakeInline<UGameEngine_Draw_Hook2>(pattern.get_first(0), pattern.get_first(6)); //0x10A3E8A0
+
+    pattern = hook::pattern("8B 96 BC 02 00 00 8B 4C 24 24");
+    struct UGameEngine_Draw_Hook3
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            *reinterpret_cast<float*>(&regs.edx) = AdjustFOV(*reinterpret_cast<float*>(regs.esi + 0x2BC), Screen.fAspectRatio);
+        }
+    }; injector::MakeInline<UGameEngine_Draw_Hook3>(pattern.get_first(0), pattern.get_first(6)); //0x10A0D0C1
 
     //windowed alt-tab fix
     if (!bDisableAltTabFix)
