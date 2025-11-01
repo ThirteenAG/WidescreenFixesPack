@@ -124,6 +124,38 @@ void Init()
         auto pattern = hook::pattern("8B 15 ? ? ? ? A1 ? ? ? ? 89 54 24 10 89 44 24 18");
         injector::WriteMemory(pattern.get_first(2), &fFPSLimit, true);
     }
+
+    //Bink high res
+    pattern = hook::pattern("68 E0 01 00 00 68 80 02 00 00 50 FF 52 ? EB 18");
+    if (!pattern.empty())
+    {
+        injector::WriteMemory(pattern.get_first(1), 2160, true);
+        injector::WriteMemory(pattern.get_first(6), 3840, true);
+    }
+    
+    pattern = hook::pattern("68 E0 01 00 00 68 80 02 00 00 50 FF 51 ? EB 18 8B 10 6A 01 6A 15 6A 00 6A 01 68 E0 01 00 00 68 80 02 00 00 50 FF 52 ? 85 DB");
+    if (!pattern.empty())
+    {
+        injector::WriteMemory(pattern.get_first(1), 2160, true);
+        injector::WriteMemory(pattern.get_first(6), 3840, true);
+    }
+    
+    pattern = hook::pattern("68 E0 01 00 00 68 80 02 00 00 50 FF 51 ? EB 18 8B 10 6A 01 6A 15 6A 00 6A 01 68 E0 01 00 00 68 80 02 00 00 50 FF 52 ? 8B AC 24 88 00 00 00");
+    if (!pattern.empty())
+    {
+        injector::WriteMemory(pattern.get_first(1), 2160, true);
+        injector::WriteMemory(pattern.get_first(6), 3840, true);
+    }
+    
+    static float h = 1.0f / 2160.0f;
+    pattern = hook::pattern("D8 0D ? ? ? ? 8B 0E");
+    if (!pattern.empty())
+        injector::WriteMemory(pattern.get_first(2), &h, true);
+    
+    static float w = 1.0f / 3840.0f;
+    pattern = hook::pattern("D8 0D ? ? ? ? 8B 54 24 18 8B 44 24 24");
+    if (!pattern.empty())
+        injector::WriteMemory(pattern.get_first(2), &w, true);
 }
 
 DWORD FindProcessId(const std::wstring& processName)
