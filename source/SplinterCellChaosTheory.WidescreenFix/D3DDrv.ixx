@@ -129,15 +129,16 @@ int __fastcall sub_10C86280(int _this, void* edx, void* a2, int a3)
         bOnce = true;
     }
 
-    if (bIsWindowed)
-    {
-        MSG msg;
-        while (PeekMessageA(&msg, nullptr, 0, 0, PM_REMOVE))
-        {
-            TranslateMessage(&msg);
-            DispatchMessageA(&msg);
-        }
-    }
+    //crashes
+    //if (bIsWindowed)
+    //{
+    //    MSG msg;
+    //    while (PeekMessageA(&msg, nullptr, 0, 0, PM_REMOVE))
+    //    {
+    //        TranslateMessage(&msg);
+    //        DispatchMessageA(&msg);
+    //    }
+    //}
 
     bPlayingVideo = true;
     auto ret = shsub_10C86280.unsafe_fastcall<int>(_this, edx, a2, a3);
