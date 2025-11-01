@@ -5,6 +5,8 @@ import ComVars;
 import D3DDrv;
 import Engine;
 import Core;
+import WinDrv;
+import Xidi;
 import WidescreenHUD;
 
 const wchar_t* aJoysticks = nullptr;
@@ -103,6 +105,7 @@ void Init()
     InitD3DDrv();
     InitEngine();
     InitCore();
+    InitWinDrv();
 
 #ifdef _DEBUG
     pattern = hook::pattern("8B 88 80 00 00 00 6A 01");
@@ -208,6 +211,7 @@ CEXP void InitializeASI()
     std::call_once(CallbackHandler::flag, []()
     {
         CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("8D 84 24 34 04 00 00 68 ? ? ? ? 50 E8 ? ? ? ? 83 C4 14"));
+        CallbackHandler::RegisterCallback(L"Xidi.32.dll", InitXidi);
         CallbackHandler::RegisterCallback(L"GameOverlayRenderer.dll", InitGameOverlayRenderer);
     });
 }
