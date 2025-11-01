@@ -19,6 +19,7 @@ export struct Screen
     int32_t FilmstripOffset;
     uint32_t pFilmstripTex;
     std::filesystem::path szLoadscPath;
+    const float fDefaultARforFOV = 16.0f / 9.0f;
 } Screen;
 
 export int32_t gBlacklistIndicators = 0;

@@ -426,15 +426,15 @@ export void InitD3DDrv()
             if (Screen.fAspectRatio > (4.0f / 3.0f))
             {
                 auto pVertexStreamZeroData = regs.esp + 0x6C;
-                *(float*)(pVertexStreamZeroData + 0x00) /= (Screen.fAspectRatio / (16.0f / 9.0f)) / (((4.0f / 3.0f)) / (Screen.fAspectRatio));
-                *(float*)(pVertexStreamZeroData + 0x14) /= (Screen.fAspectRatio / (16.0f / 9.0f)) / (((4.0f / 3.0f)) / (Screen.fAspectRatio));
-                *(float*)(pVertexStreamZeroData + 0x28) /= (Screen.fAspectRatio / (16.0f / 9.0f)) / (((4.0f / 3.0f)) / (Screen.fAspectRatio));
-                *(float*)(pVertexStreamZeroData + 0x3C) /= (Screen.fAspectRatio / (16.0f / 9.0f)) / (((4.0f / 3.0f)) / (Screen.fAspectRatio));
+                *(float*)(pVertexStreamZeroData + 0x00) /= (Screen.fAspectRatio / (16.0f / 9.0f)) / ((Screen.fDefaultARforFOV) / (Screen.fAspectRatio));
+                *(float*)(pVertexStreamZeroData + 0x14) /= (Screen.fAspectRatio / (16.0f / 9.0f)) / ((Screen.fDefaultARforFOV) / (Screen.fAspectRatio));
+                *(float*)(pVertexStreamZeroData + 0x28) /= (Screen.fAspectRatio / (16.0f / 9.0f)) / ((Screen.fDefaultARforFOV) / (Screen.fAspectRatio));
+                *(float*)(pVertexStreamZeroData + 0x3C) /= (Screen.fAspectRatio / (16.0f / 9.0f)) / ((Screen.fDefaultARforFOV) / (Screen.fAspectRatio));
 
-                *(float*)(pVertexStreamZeroData + 0x04) /= (4.0f / 3.0f);
-                *(float*)(pVertexStreamZeroData + 0x18) /= (4.0f / 3.0f);
-                *(float*)(pVertexStreamZeroData + 0x2C) /= (4.0f / 3.0f);
-                *(float*)(pVertexStreamZeroData + 0x40) /= (4.0f / 3.0f);
+                //*(float*)(pVertexStreamZeroData + 0x04) /= (4.0f / 3.0f);
+                //*(float*)(pVertexStreamZeroData + 0x18) /= (4.0f / 3.0f);
+                //*(float*)(pVertexStreamZeroData + 0x2C) /= (4.0f / 3.0f);
+                //*(float*)(pVertexStreamZeroData + 0x40) /= (4.0f / 3.0f);
             }
         }
     }; injector::MakeInline<ScopeLensHook1>(pattern.get_first(0), pattern.get_first(6));
