@@ -2,6 +2,7 @@ module;
 
 #include <stdafx.h>
 #include <LEDEffects.h>
+#include <d3dx9.h>
 
 export module D3DDrv;
 
@@ -110,11 +111,33 @@ float* __cdecl FGetHSV(float* dest, uint8_t H, uint8_t S, uint8_t V, uint32_t un
 SafetyHookInline shsub_10C86280 = {};
 int __fastcall sub_10C86280(int _this, void* edx, void* a2, int a3)
 {
-    MSG msg;
-    while (PeekMessageA(&msg, nullptr, 0, 0, PM_REMOVE))
+    static bool bOnce = false;
+    static bool bIsWindowed = false;
+
+    if (!bOnce)
     {
-        TranslateMessage(&msg);
-        DispatchMessageA(&msg);
+        auto pDevice = *(IDirect3DDevice9**)(_this + 0x4D3C);
+        IDirect3DSwapChain9* pSwapChain = nullptr;
+        if (SUCCEEDED(pDevice->GetSwapChain(0, &pSwapChain)))
+        {
+            D3DPRESENT_PARAMETERS pp;
+            if (SUCCEEDED(pSwapChain->GetPresentParameters(&pp)))
+            {
+                bIsWindowed = pp.Windowed;
+            }
+            pSwapChain->Release();
+        }
+        bOnce = true;
+    }
+
+    if (bIsWindowed)
+    {
+        MSG msg;
+        while (PeekMessageA(&msg, nullptr, 0, 0, PM_REMOVE))
+        {
+            TranslateMessage(&msg);
+            DispatchMessageA(&msg);
+        }
     }
 
     bPlayingVideo = true;
@@ -165,6 +188,9 @@ export void InitD3DDrv()
             //actually it scales perfectly as is.            
         }
     }; injector::MakeInline<GetRes>(pattern.get_first(0), pattern.get_first(6)); //<0x10CC622C, 0x10CC6232>
+
+    pattern = hook::pattern("A1 ? ? ? ? 50 FF 15 ? ? ? ? 8B 4D 08");
+    hGameWindow = *pattern.get_first<HWND*>(1);
 
     // Menu video (all videos with 640x480 dimensions are stretched for some reason)
     pattern = hook::pattern("7A ? C7 44 24 10 00 00 00 00 C7 44 24 1C 00 00 00 00");
