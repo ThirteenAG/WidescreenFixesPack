@@ -10,6 +10,8 @@ import D3DDrv;
 import EchelonMenus;
 import Echelon;
 import Core;
+import WinDrv;
+import Xidi;
 import Online;
 
 void AmmoInClip()
@@ -178,6 +180,8 @@ CEXP void InitializeASI()
         CallbackHandler::RegisterCallback(L"EchelonMenus.dll", InitEchelonMenus);
         CallbackHandler::RegisterCallback(L"Echelon.dll", InitEchelon);
         CallbackHandler::RegisterCallback(L"Core.dll", InitCore);
+        CallbackHandler::RegisterCallback(L"WinDrv.dll", InitWinDrv);
+        CallbackHandler::RegisterCallback(L"Xidi.32.dll", InitXidi);
 
         CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(InitOnline, hook::pattern("8B F9 8B 47 30 85 C0 74 18"));
     });
