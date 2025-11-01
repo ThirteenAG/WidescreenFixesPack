@@ -11,22 +11,24 @@ struct INI
     bool BorderlessWindowed;
 } IniFile;
 
-HRESULT SHGetFolderPathAHook(HWND hwnd, int csidl, HANDLE hToken, DWORD dwFlags, LPSTR pszPath)
+SafetyHookInline shSHGetFolderPathA = {};
+HRESULT WINAPI SHGetFolderPathAHook(HWND hwnd, int csidl, HANDLE hToken, DWORD dwFlags, LPSTR pszPath)
 {
-    auto r = SHGetFolderPathA(hwnd, CSIDL_PERSONAL | CSIDL_FLAG_CREATE, hToken, dwFlags, pszPath);
+    auto r = shSHGetFolderPathA.unsafe_stdcall<HRESULT>(hwnd, CSIDL_PERSONAL | CSIDL_FLAG_CREATE, hToken, dwFlags, pszPath);
 
     static bool once = false;
     if (!once)
     {
+        std::error_code ec;
         auto dest = std::filesystem::path(std::string(pszPath) + "\\Monolith Productions\\Condemned\\");
-        if (!std::filesystem::exists(dest))
+        if (!std::filesystem::exists(dest, ec))
         {
             CHAR szPath[MAX_PATH];
-            if (SUCCEEDED(SHGetFolderPathA(NULL, CSIDL_COMMON_DOCUMENTS | CSIDL_FLAG_CREATE, NULL, 0, szPath)))
+            if (SUCCEEDED(shSHGetFolderPathA.unsafe_stdcall<HRESULT>(NULL, CSIDL_COMMON_DOCUMENTS | CSIDL_FLAG_CREATE, NULL, 0, szPath)))
             {
                 auto src = std::filesystem::path(std::string(szPath) + "\\Monolith Productions\\Condemned\\");
-                std::filesystem::create_directories(dest);
-                std::filesystem::copy(src, dest, std::filesystem::copy_options::recursive);
+                std::filesystem::create_directories(dest, ec);
+                std::filesystem::copy(src, dest, std::filesystem::copy_options::recursive, ec);
             }
         }
         once = true;
@@ -191,26 +193,6 @@ void InitConfig()
     }
 }
 
-void HookShell32IAT(HMODULE mod)
-{
-    IATHook::Replace(mod, "SHELL32.DLL",
-        std::forward_as_tuple("SHGetFolderPathA", SHGetFolderPathAHook)
-    );
-}
-
-HMODULE hm = NULL;
-void OverrideSHGetFolderPathAInDLLs(HMODULE mod)
-{
-    ModuleList dlls;
-    dlls.Enumerate(ModuleList::SearchLocation::LocalOnly);
-    for (auto& e : dlls.m_moduleList)
-    {
-        auto m = std::get<HMODULE>(e);
-        if (m == mod && !IsModuleUAL(m) && m != hm && m != GetModuleHandle(NULL))
-            HookShell32IAT(mod);
-    }
-}
-
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
@@ -222,23 +204,13 @@ CEXP void InitializeASI()
         IniFile.FixSavePath = iniReader.ReadInteger("MAIN", "FixSavePath", 1) != 0;
         IniFile.BorderlessWindowed = iniReader.ReadInteger("MAIN", "BorderlessWindowed", 1) != 0;
 
-        CallbackHandler::RegisterCallback(Init, hook::pattern("E8 ? ? ? ? 8B C6 5E 83 C4 10 C3"));
-        CallbackHandler::RegisterCallback(InitConfig, hook::pattern("0F 85 ? ? ? ? 83 7C 24 2C 16 0F 85 ? ? ? ? 6A 7F"));
+        CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("E8 ? ? ? ? 8B C6 5E 83 C4 10 C3"));
+        CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(InitConfig, hook::pattern("0F 85 ? ? ? ? 83 7C 24 2C 16 0F 85 ? ? ? ? 6A 7F"));
         CallbackHandler::RegisterCallback(L"GameClient.dll", InitGameClient);
 
         if (IniFile.FixSavePath)
         {
-            GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR)&OverrideSHGetFolderPathAInDLLs, &hm);
-
-            ModuleList dlls;
-            dlls.Enumerate(ModuleList::SearchLocation::LocalOnly);
-            for (auto& e : dlls.m_moduleList)
-            {
-                auto m = std::get<HMODULE>(e);
-                if (!IsModuleUAL(m) && m != hm)
-                    HookShell32IAT(m);
-            }
-            CallbackHandler::RegisterAnyModuleLoadCallback(OverrideSHGetFolderPathAInDLLs);
+            shSHGetFolderPathA = safetyhook::create_inline(SHGetFolderPathA, SHGetFolderPathAHook);
         }
     });
 }
