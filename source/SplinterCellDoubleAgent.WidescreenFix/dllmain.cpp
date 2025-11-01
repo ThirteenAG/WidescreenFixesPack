@@ -59,33 +59,62 @@ void Init()
 
     auto exePath = GetExeModulePath();
 
-    CIniReader iniWriter(exePath / "SplinterCell4.ini");
-    auto ResX = std::to_string(Screen.Width);
-    auto ResY = std::to_string(Screen.Height);
-    iniWriter.WriteString("WinDrv.WindowsClient", "WindowedViewportX", ResX);
-    iniWriter.WriteString("WinDrv.WindowsClient", "WindowedViewportY", ResY);
-    iniWriter.WriteString("WinDrv.WindowsClient", "FullscreenViewportX", ResX);
-    iniWriter.WriteString("WinDrv.WindowsClient", "FullscreenViewportY", ResY);
-
-    mINI::INIStructure ini;
-    mINI::INIFile mIni(iniReader.GetIniPath());
-    mIni.read(ini);
-
-    // Read the existing user INI file into a structure
-    mINI::INIStructure userIni;
-    mINI::INIFile userIniFile(exePath / "SplinterCell4User.ini");
-    userIniFile.read(userIni);
-
-    if (ini.has("Engine.Input"))
     {
-        for (auto const& kv : ini["Engine.Input"])
+        mINI::INIStructure ini;
+        mINI::INIFile mIni(iniReader.GetIniPath());
+        mIni.read(ini);
+
+        // Read the existing user INI file into a structure
+        mINI::INIStructure sc4Ini;
+        mINI::INIFile sc4IniFile(exePath / "SplinterCell4.ini");
+        sc4IniFile.read(sc4Ini);
+
+        for (auto const& sec : ini)
         {
-            std::string key = std::get<0>(kv);
-            std::string value = std::get<1>(kv);
-            userIni["Engine.Input"].setAll(key, value);
+            std::string sectionName = std::get<0>(sec);
+            if (sectionName == "GENERAL" || sectionName == "Graphics" || sectionName == "WinDrv.WindowsClient" || sectionName == "D3DDrv.D3DRenderDevice")
+            {
+                for (auto const& kv : std::get<1>(sec))
+                {
+                    std::string key = std::get<0>(kv);
+                    std::string value = std::get<1>(kv);
+                    sc4Ini[sectionName].set(key, value);
+                }
+            }
         }
+
+        auto ResX = std::to_string(Screen.Width);
+        auto ResY = std::to_string(Screen.Height);
+
+        sc4Ini["WinDrv.WindowsClient"].set("WindowedViewportX", ResX);
+        sc4Ini["WinDrv.WindowsClient"].set("WindowedViewportY", ResY);
+        sc4Ini["WinDrv.WindowsClient"].set("FullscreenViewportX", ResX);
+        sc4Ini["WinDrv.WindowsClient"].set("FullscreenViewportY", ResY);
+
+        sc4IniFile.generate(sc4Ini);
     }
-    userIniFile.generate(userIni);
+
+    {
+        mINI::INIStructure ini;
+        mINI::INIFile mIni(iniReader.GetIniPath());
+        mIni.read(ini);
+
+        // Read the existing user INI file into a structure
+        mINI::INIStructure userIni;
+        mINI::INIFile userIniFile(exePath / "SplinterCell4User.ini");
+        userIniFile.read(userIni);
+
+        if (ini.has("Engine.Input"))
+        {
+            for (auto const& kv : ini["Engine.Input"])
+            {
+                std::string key = std::get<0>(kv);
+                std::string value = std::get<1>(kv);
+                userIni["Engine.Input"].setAll(key, value);
+            }
+        }
+        userIniFile.generate(userIni);
+    }
 
     if (bForceLL)
     {
