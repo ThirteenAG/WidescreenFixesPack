@@ -158,7 +158,7 @@ namespace UEngine
             auto EchelonMainHUDState = UObject::GetState(L"EchelonMainHUD");
             if (EchelonMainHUDState == L"MainHUD" || EchelonMainHUDState == L"s_Slavery")
             {
-                auto EPlayerControllerState = UObject::GetState(L"EPlayerControllerState");
+                auto EPlayerControllerState = UObject::GetState(L"EPlayerController");
 
                 if (EPlayerControllerState == L"s_FirstPersonTargeting" || EPlayerControllerState == L"s_RappellingTargeting" ||
                     EPlayerControllerState == L"s_PlayerBTWTargeting" || EPlayerControllerState == L"s_PlayerSniping" || EPlayerControllerState == L"s_HOHFUTargeting")
