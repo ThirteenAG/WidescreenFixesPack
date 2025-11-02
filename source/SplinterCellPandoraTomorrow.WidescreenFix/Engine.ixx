@@ -384,4 +384,10 @@ export void InitEngine()
     UGameEngine::shDisplaySplash = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?DisplaySplash@UGameEngine@@QAEXH@Z"), UGameEngine::DisplaySplash);
     UGameEngine::shDisplayMenuSplash = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?DisplayMenuSplash@UGameEngine@@QAEXHH@Z"), UGameEngine::DisplayMenuSplash);
     UGameEngine::shSplashFadInOut = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?SplashFadInOut@UGameEngine@@QAEXHH@Z"), UGameEngine::SplashFadInOut);
+
+    pattern = find_module_pattern(GetModuleHandle(L"Engine"), "89 3D ? ? ? ? 8B 8B 64 01 00 00", "C7 05 ? ? ? ? ? ? ? ? 8B 87 64 01 00 00");
+    static auto UGameEngineLoadGameHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        UObject::objectStates.clear();
+    });
 }

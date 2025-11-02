@@ -183,4 +183,10 @@ export void InitEngine()
             );
         }
     }
+
+    pattern = find_module_pattern(GetModuleHandle(L"Engine"), "83 83 20 02 00 00 01");
+    static auto UGameEngineLoadGameHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        UObject::objectStates.clear();
+    });
 }
