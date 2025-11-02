@@ -321,19 +321,19 @@ void InitXidi()
     
     if (bModernControlScheme)
     {
-        typedef bool (*RegisterProfileCallbackFunc)(const wchar_t* (*callback)());
+        typedef bool (*XidiRegisterProfileCallbackFunc)(const wchar_t* (*callback)());
         auto xidiModule = GetModuleHandleW(L"Xidi.32.dll");
 
         if (xidiModule)
         {
-            auto RegisterProfileCallback = (RegisterProfileCallbackFunc)GetProcAddress(xidiModule, "RegisterProfileCallback");
-            if (RegisterProfileCallback)
+            auto XidiRegisterProfileCallback = (XidiRegisterProfileCallbackFunc)GetProcAddress(xidiModule, "XidiRegisterProfileCallback");
+            if (XidiRegisterProfileCallback)
             {
                 static auto fnMenuCheck = (bool(*)())injector::GetBranchDestination(hook::get_pattern("E8 ? ? ? ? 84 C0 75 A4")).as_int();
                 static auto CharacterObject = *hook::get_pattern<void**>("A1 ? ? ? ? 85 C0 74 50", 1);
                 static auto PilotStateOffset = 0x2E8;
 
-                RegisterProfileCallback([]() -> const wchar_t*
+                XidiRegisterProfileCallback([]() -> const wchar_t*
                 {
                     if (fnMenuCheck && !fnMenuCheck())
                     {

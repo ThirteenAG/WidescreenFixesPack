@@ -11,17 +11,17 @@ export XidiSendVibrationFunc XidiSendVibration = nullptr;
 
 export void InitXidi()
 {
-    typedef bool (*RegisterProfileCallbackFunc)(const wchar_t* (*callback)());
+    typedef bool (*XidiRegisterProfileCallbackFunc)(const wchar_t* (*callback)());
     auto xidiModule = GetModuleHandleW(L"Xidi.32.dll");
 
     if (xidiModule)
     {
-        //auto RegisterProfileCallback = (RegisterProfileCallbackFunc)GetProcAddress(xidiModule, "RegisterProfileCallback");
+        //auto XidiRegisterProfileCallback = (XidiRegisterProfileCallbackFunc)GetProcAddress(xidiModule, "XidiRegisterProfileCallback");
         XidiSendVibration = (XidiSendVibrationFunc)GetProcAddress(xidiModule, "XidiSendVibration");
 
-        //if (RegisterProfileCallback)
+        //if (XidiRegisterProfileCallback)
         //{
-        //    RegisterProfileCallback([]() -> const wchar_t*
+        //    XidiRegisterProfileCallback([]() -> const wchar_t*
         //    {
         //        return L"Main";
         //    });
