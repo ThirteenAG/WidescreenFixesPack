@@ -473,8 +473,16 @@ export void InitD3DDrv()
 
     static auto DeviceResetHook = safetyhook::create_mid(GetProcAddress(GetModuleHandle(L"D3DDrv"), "?resetDevice@UD3DRenderDevice@@QAEXAAU_D3DPRESENT_PARAMETERS_@@@Z"), [](SafetyHookContext& regs)
     {
-        pTexLoadscreenCustom->Release();
-        pTexLoadscreenCustom = nullptr;
+        auto SafeRelease = [](auto ppT)
+        {
+            if (*ppT)
+            {
+                (*ppT)->Release();
+                *ppT = NULL;
+            }
+        };
+
+        SafeRelease(&pTexLoadscreenCustom);
     });
 
     //Enhanced night vision NaN workaround
