@@ -7,7 +7,7 @@ export module Xidi;
 typedef bool (*XidiSendVibrationFunc)(unsigned int, unsigned short, unsigned short);
 export XidiSendVibrationFunc XidiSendVibration = nullptr;
 export bool bShowingCursor = false;
-export bool bActionKeyAssignmentInProgress = false;
+export bool bKeyAssignmentInProgress = false;
 
 export void InitXidi()
 {
@@ -25,7 +25,7 @@ export void InitXidi()
         {
             XidiRegisterProfileCallback([]() -> const wchar_t*
             {
-                if (bShowingCursor && !bActionKeyAssignmentInProgress)
+                if (bShowingCursor && !bKeyAssignmentInProgress)
                     return L"Menu";
                 return L"Main";
             });
