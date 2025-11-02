@@ -208,14 +208,13 @@ void InitGameClient()
         pattern = hook::pattern(GetModuleHandle(L"GameClient"), "57 50 E8 ? ? ? ? 8B F8 68");
         static auto KeyAssignHook1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
-            if (regs.eax == 0xA)
-                bActionKeyAssignmentInProgress = true;
+            bKeyAssignmentInProgress = true;
         });
 
         pattern = hook::pattern(GetModuleHandle(L"GameClient"), "E8 ? ? ? ? 8B 78 0C 8B AC 24 E4 0A 00 00");
         static auto KeyAssignHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
-            bActionKeyAssignmentInProgress = false;
+            bKeyAssignmentInProgress = false;
         });
     }
 }
