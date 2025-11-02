@@ -159,6 +159,45 @@ void Init()
     pattern = hook::pattern("D8 0D ? ? ? ? 8B 54 24 18 8B 44 24 24");
     if (!pattern.empty())
         injector::WriteMemory(pattern.get_first(2), &w, true);
+
+    // Button names
+    pattern = hook::pattern("56 E8 ? ? ? ? 83 C4 04 50 8D 8C 24 90 00 00 00");
+    static auto ButtonNamesHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        auto sv = std::wstring_view((const wchar_t*)regs.esi);
+        
+        static const wchar_t* labelStrs[] = {
+            L"(A)",
+            L"(B)",
+            L"(X)",
+            L"(Y)",
+            L"(LB)",
+            L"(RB)",
+            L"(LT)",
+            L"(RT)",
+            L"(Back)",
+            L"(Start)",
+            L"(LS)",
+            L"(RS)",
+            L"(D-pad Up)",
+            L"(D-pad Down)",
+            L"(D-pad Left)",
+            L"(D-pad Right)",
+            L"(Left Stick X)",
+            L"(Left Stick Y)",
+            L"(Right Stick X)",
+            L"(Right Stick Y)",
+        };
+
+        for (auto [index, label] : std::views::enumerate(labelStrs))
+        {
+            if (sv == (L"Joy ") + std::to_wstring(index + 1))
+            {
+                regs.esi = (uintptr_t)label;
+                break;
+            }
+        }
+    });
 }
 
 DWORD FindProcessId(const std::wstring& processName)
