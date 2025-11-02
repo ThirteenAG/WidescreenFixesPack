@@ -311,4 +311,11 @@ export void InitEngine()
             }
         }; injector::MakeInline<WndProcHook>(pattern.get_first(0), pattern.get_first(7)); //0x10CC4EEA
     }
+
+    pattern = hook::pattern("E8 ? ? ? ? 8B 0D ? ? ? ? 33 DB");
+    static auto UGameEngineLoadGameHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        UObject::objectStates.clear();
+        bHackingGameplay = false;
+    });
 }
