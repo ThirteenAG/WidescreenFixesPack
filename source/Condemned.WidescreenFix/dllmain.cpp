@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include <shlobj.h>
 #include <filesystem>
+#include <FunctionHookMinHook.hpp>
 
 struct INI
 {
@@ -11,27 +12,35 @@ struct INI
     bool BorderlessWindowed;
 } IniFile;
 
-SafetyHookInline shSHGetFolderPathA = {};
+std::unique_ptr<FunctionHookMinHook> mhSHGetFolderPathA = { nullptr };
 HRESULT WINAPI SHGetFolderPathAHook(HWND hwnd, int csidl, HANDLE hToken, DWORD dwFlags, LPSTR pszPath)
 {
-    auto r = shSHGetFolderPathA.unsafe_stdcall<HRESULT>(hwnd, CSIDL_PERSONAL | CSIDL_FLAG_CREATE, hToken, dwFlags, pszPath);
-
-    static bool once = false;
-    if (!once)
+    HRESULT r;
+    if ((csidl & ~CSIDL_FLAG_CREATE) == CSIDL_COMMON_DOCUMENTS)
     {
-        std::error_code ec;
-        auto dest = std::filesystem::path(std::string(pszPath) + "\\Monolith Productions\\Condemned\\");
-        if (!std::filesystem::exists(dest, ec))
+        r = mhSHGetFolderPathA->get_original<decltype(SHGetFolderPathA)>()(hwnd, CSIDL_PERSONAL | CSIDL_FLAG_CREATE, hToken, dwFlags, pszPath);
+
+        static bool once = false;
+        if (!once)
         {
-            CHAR szPath[MAX_PATH];
-            if (SUCCEEDED(shSHGetFolderPathA.unsafe_stdcall<HRESULT>(NULL, CSIDL_COMMON_DOCUMENTS | CSIDL_FLAG_CREATE, NULL, 0, szPath)))
+            std::error_code ec;
+            auto dest = std::filesystem::path(std::string(pszPath) + "\\Monolith Productions\\Condemned\\");
+            if (!std::filesystem::exists(dest, ec))
             {
-                auto src = std::filesystem::path(std::string(szPath) + "\\Monolith Productions\\Condemned\\");
-                std::filesystem::create_directories(dest, ec);
-                std::filesystem::copy(src, dest, std::filesystem::copy_options::recursive, ec);
+                CHAR szPath[MAX_PATH];
+                if (SUCCEEDED(mhSHGetFolderPathA->get_original<decltype(SHGetFolderPathA)>()(NULL, CSIDL_COMMON_DOCUMENTS | CSIDL_FLAG_CREATE, NULL, 0, szPath)))
+                {
+                    auto src = std::filesystem::path(std::string(szPath) + "\\Monolith Productions\\Condemned\\");
+                    std::filesystem::create_directories(dest, ec);
+                    std::filesystem::copy(src, dest, std::filesystem::copy_options::recursive, ec);
+                }
             }
+            once = true;
         }
-        once = true;
+    }
+    else
+    {
+        r = mhSHGetFolderPathA->get_original<decltype(SHGetFolderPathA)>()(hwnd, csidl, hToken, dwFlags, pszPath);
     }
 
     return r;
@@ -210,7 +219,8 @@ CEXP void InitializeASI()
 
         if (IniFile.FixSavePath)
         {
-            shSHGetFolderPathA = safetyhook::create_inline(SHGetFolderPathA, SHGetFolderPathAHook);
+            mhSHGetFolderPathA = std::make_unique<FunctionHookMinHook>((uintptr_t)SHGetFolderPathA, (uintptr_t)SHGetFolderPathAHook);
+            mhSHGetFolderPathA->create();
         }
     });
 }

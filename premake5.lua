@@ -301,6 +301,10 @@ project "ColdFear.WidescreenFix"
    setpaths("Z:/WFP/Games/ColdFear/", "ColdFear_retail.exe")
 
 project "Condemned.WidescreenFix"
+   includedirs { "external/injector/minhook/include" }
+   files { "external/injector/minhook/include/*.h", "external/injector/minhook/src/**.h", "external/injector/minhook/src/**.c" }
+   includedirs { "external/injector/utility" }
+   files { "external/injector/utility/FunctionHookMinHook.hpp", "external/injector/utility/FunctionHookMinHook.cpp" }
    setpaths("Z:/WFP/Games/Condemned Criminal Origins/", "Condemned.exe")
 
 project "DeerAvenger4.WidescreenFix"
