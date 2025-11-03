@@ -242,4 +242,10 @@ export void InitEngine()
     UInput::shInit = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?Init@UInput@@UAEXPAVUViewport@@@Z"), UInput::Init);
 
     UGameEngine::shDisplaySplash = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?DisplaySplash@UGameEngine@@UAEXH@Z"), UGameEngine::DisplaySplash);
+
+    pattern = find_module_pattern(GetModuleHandle(L"Engine"), "8B 85 40 01 00 00 6A 00 8B 48 18");
+    static auto UGameEngineLoadGameHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        UObject::objectStates.clear();
+    });
 }

@@ -39,10 +39,6 @@ namespace UObject
             objectStates[type] = stateName;
         }
 
-        // When the game reloads, nothing resets it, so I'll do it here
-        if (!type.contains(L"Hack") && UObject::GetState(L"EPlayerController") != L"s_InteractWithObject")
-            bHackingGameplay = false;
-
         return shGotoState.unsafe_fastcall<int>(uObject, edx, StateID, a3);
     }
 }
