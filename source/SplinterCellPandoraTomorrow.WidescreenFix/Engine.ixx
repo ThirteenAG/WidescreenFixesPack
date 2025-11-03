@@ -107,7 +107,7 @@ void __fastcall FCanvasUtilDrawTileHook(void* _this, uint32_t EDX, float X, floa
         }
     }
 
-    if (Screen.bHudWidescreenMode)
+    if (Screen.nHudWidescreenMode == 1)
         WidescreenHud(X, SizeX, Y, SizeY, Color);
 
     X += Screen.fHudOffset;

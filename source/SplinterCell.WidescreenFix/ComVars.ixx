@@ -144,6 +144,10 @@ struct UOverride
         {
             *dst = g(); return;
         }
+
+        if (Registry::ByName.empty())
+            return;
+
         wchar_t buffer[256];
         if (auto g = Registry::ResolveAndBind(prop, UObject::GetFullName(prop, edx, buffer)))
         {
@@ -159,6 +163,9 @@ struct UOverride
         auto g = Registry::ResolveFast(prop);
         if (!g)
         {
+            if (Registry::ByName.empty())
+                return;
+
             wchar_t buffer[256];
             g = Registry::ResolveAndBind(prop, UObject::GetFullName(prop, edx, buffer));
         }
