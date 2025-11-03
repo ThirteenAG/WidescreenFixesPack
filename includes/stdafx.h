@@ -1,5 +1,6 @@
 #pragma once
 #include "targetver.h"
+#define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 #define _USE_MATH_DEFINES
 #pragma warning(push)
@@ -592,7 +593,7 @@ public:
                     {
                         std::string_view str((char*)lpData, *lpcbData);
                         auto ret = RegistryReader.ReadString(section, ValueName, DefaultStrings[ValueName]);
-                        *lpcbData = min(ret.length(), str.length());
+                        *lpcbData = std::min(ret.length(), str.length());
                         ret.copy((char*)str.data(), *lpcbData, 0);
                         lpData[*lpcbData] = '\0';
                         if ((ret.empty() || DefaultStrings[ValueName] == ret) && PathStrings.find(ValueName) == PathStrings.end())
@@ -1119,7 +1120,7 @@ public:
             for (auto i = 0; i < ntHeader->FileHeader.NumberOfSections; i++)
             {
                 auto sec = getSection(ntHeader, i);
-                auto pFunctions = reinterpret_cast<void**>(instance + max(sec->PointerToRawData, sec->VirtualAddress));
+                auto pFunctions = reinterpret_cast<void**>(instance + std::max(sec->PointerToRawData, sec->VirtualAddress));
 
                 for (ptrdiff_t j = 0; j < 300; j++)
                 {
