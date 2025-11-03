@@ -20,7 +20,7 @@ export struct Screen
     float fFMVoffsetEndY;
     float fIniHudOffset;
     float fWidescreenHudOffset;
-    bool bHudWidescreenMode;
+    int nHudWidescreenMode;
     uint32_t nFMVWidescreenMode;
 } Screen;
 
@@ -49,7 +49,6 @@ export const wchar_t* a1280x1024 = nullptr;
 export const wchar_t* a1600x1200 = nullptr;
 
 export uint32_t nFMVWidescreenMode;
-export std::vector<uintptr_t> EchelonGameInfoPtrs;
 
 export bool bSkipIntro = false;
 export bool bPlayingVideo = false;
@@ -69,7 +68,7 @@ export namespace UObject
     wchar_t* (__fastcall* GetFullName)(void*, void*, wchar_t*) = nullptr;
 }
 
-// Tolerance for floating-point comparisons (±1.5 units)
+// Tolerance for floating-point comparisons
 const float CANVAS_TOLERANCE = 1.5f;
 
 // Helper function for tolerance-based float comparison
@@ -87,3 +86,113 @@ export inline bool FloatInRange(uint32_t value, uint32_t minVal, uint32_t maxVal
 
 export int curDrawTileManagerTextureIndex = -1;
 export std::wstring curDrawTileManagerTextureName;
+
+export struct FArray
+{
+    void* Array;
+    unsigned int Count;
+    unsigned int Most;
+};
+
+export struct FName
+{
+    int Index;
+};
+
+export template<typename GetterT>
+struct UOverride
+{
+    using Getter = GetterT;
+
+    static inline std::unordered_map<std::wstring, Getter> ByName;
+    static inline std::unordered_map<void*, Getter>        ByPropPtr;
+
+    static inline void Register(const std::wstring& name, Getter getter)
+    {
+        ByName[name] = getter;
+    }
+
+    static inline Getter ResolveFast(void* propPtr)
+    {
+        if (auto it = ByPropPtr.find(propPtr); it != ByPropPtr.end())
+            return it->second;
+        return nullptr;
+    }
+
+    static inline Getter ResolveAndBind(void* propPtr, std::wstring_view fullName)
+    {
+        if (auto cached = ResolveFast(propPtr))
+            return cached;
+
+        if (!fullName.empty())
+        {
+            if (auto it = ByName.find(std::wstring(fullName)); it != ByName.end())
+                return ByPropPtr.emplace(propPtr, it->second).first->second;
+        }
+        return nullptr;
+    }
+
+    static inline void ClearCache()
+    {
+        ByPropPtr.clear();
+    }
+
+    template<class Registry, class T>
+    static inline void ApplyScalarOverride(void* prop, void* edx, T* dst)
+    {
+        if (auto g = Registry::ResolveFast(prop))
+        {
+            *dst = g(); return;
+        }
+
+        if (Registry::ByName.empty())
+            return;
+
+        wchar_t buffer[256];
+        if (auto g = Registry::ResolveAndBind(prop, UObject::GetFullName(prop, edx, buffer)))
+        {
+            *dst = g();
+        }
+    }
+
+    template<class Registry>
+    static inline void ApplyArrayOverride(void* prop, void* edx, FArray* dst)
+    {
+        if (!dst || !dst->Array || !dst->Count) return;
+
+        auto g = Registry::ResolveFast(prop);
+        if (!g)
+        {
+            if (Registry::ByName.empty())
+                return;
+
+            wchar_t buffer[256];
+            g = Registry::ResolveAndBind(prop, UObject::GetFullName(prop, edx, buffer));
+        }
+        if (!g) return;
+
+        const auto src = g();
+        if (!src.Array || !src.Count) return;
+
+        // Inner element size: *(uint16_t*)(Inner + 58)
+        auto GetArrayElemSize = [](void* uArrayProperty) -> unsigned int
+        {
+            // Inner pointer is at (this + 21*sizeof(void*))
+            const auto inner = *reinterpret_cast<uintptr_t*>(reinterpret_cast<uintptr_t>(uArrayProperty) + 21u * sizeof(uintptr_t));
+            return *reinterpret_cast<const uint16_t*>(inner + 58);
+        };
+
+        const auto elemSize = GetArrayElemSize(prop);
+        const auto n = std::min(dst->Count, src.Count);
+        if (n && elemSize)
+            std::memcpy(dst->Array, src.Array, static_cast<size_t>(n) * elemSize);
+    }
+};
+
+// Type aliases for current override kinds.
+export using UIntOverrides = UOverride<int(*)()>;
+export using UFloatOverrides = UOverride<float(*)()>;
+export using UByteOverrides = UOverride<uint8_t(*)()>;
+export using UNameOverrides = UOverride<FName(*)()>;
+export using UObjectOverrides = UOverride<void* (*)()>;
+export using UArrayOverrides = UOverride<FArray(*)()>;
