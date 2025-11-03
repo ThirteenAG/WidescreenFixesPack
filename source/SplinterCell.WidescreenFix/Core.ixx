@@ -165,7 +165,7 @@ export void InitCore()
     UObject::shGotoState = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Core"), "?GotoState@UObject@@UAE?AW4EGotoState@@VFName@@@Z"), UObject::GotoState);
     
     UProperty::shCopyCompleteValue = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Core"), "?CopyCompleteValue@UProperty@@UBEXPAX0PAVUObject@@@Z"), UProperty::CopyCompleteValue);
-    UObjectProperty::shCopyCompleteValue = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Core"), "?CopyCompleteValue@UFloatProperty@@UBEXPAX0PAVUObject@@@Z"), UObjectProperty::CopyCompleteValue);
+    UObjectProperty::shCopyCompleteValue = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Core"), "?CopyCompleteValue@UObjectProperty@@UBEXPAX0PAVUObject@@@Z"), UObjectProperty::CopyCompleteValue);
     UNameProperty::shCopyCompleteValue = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Core"), "?CopyCompleteValue@UNameProperty@@UBEXPAX0PAVUObject@@@Z"), UNameProperty::CopyCompleteValue);
     UIntProperty::shCopyCompleteValue = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Core"), "?CopyCompleteValue@UIntProperty@@UBEXPAX0PAVUObject@@@Z"), UIntProperty::CopyCompleteValue);
     UFloatProperty::shCopyCompleteValue = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Core"), "?CopyCompleteValue@UFloatProperty@@UBEXPAX0PAVUObject@@@Z"), UFloatProperty::CopyCompleteValue);

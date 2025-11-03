@@ -14,7 +14,7 @@ void Init()
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
     Screen.nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
-    Screen.bHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1) != 0;
+    Screen.nHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1);
     Screen.bOpsatWidescreenMode = iniReader.ReadInteger("MAIN", "OpsatWidescreenMode", 1) != 0;
     Screen.fIniHudOffset = iniReader.ReadFloat("MAIN", "WidescreenHudOffset", 140.0f);
     Screen.nPostProcessFixedScale = iniReader.ReadInteger("MAIN", "PostProcessFixedScale", 1);
@@ -27,6 +27,14 @@ void Init()
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
+
+    if (Screen.nHudWidescreenMode > 1)
+    {
+        UIntOverrides::Register(L"IntProperty Echelon.EchelonGameInfo.HUD_OFFSET_X", +[]() -> int
+        {
+            return static_cast<int>((640.0f / 2.0f) - ((448.0f / 2.0f) * Screen.fAspectRatio));
+        });
+    }
 
     auto exePath = GetExeModulePath();
 
