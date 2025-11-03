@@ -203,6 +203,26 @@ namespace UGameEngine
     }
 }
 
+namespace UCanvas
+{
+    SafetyHookInline shSetClip = {};
+    void __fastcall SetClip(void* uCanvas, void* edx, float a2, float a3)
+    {
+        if (Screen.nHudWidescreenMode > 1)
+        {
+            uint32_t n_offsetX1 = static_cast<uint32_t>(a2);
+            uint32_t n_offsetX2 = static_cast<uint32_t>(a3);
+
+            if (n_offsetX1 == 640 && n_offsetX2 == 480)
+            {
+                a2 = (480.0f * Screen.fAspectRatio);
+            }
+        }
+
+        return shSetClip.unsafe_fastcall(uCanvas, edx, a2, a3);
+    }
+}
+
 export void InitEngine()
 {
     auto pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "8B ? 94 00 00 00 E8");
@@ -384,6 +404,8 @@ export void InitEngine()
     UGameEngine::shDisplaySplash = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?DisplaySplash@UGameEngine@@QAEXH@Z"), UGameEngine::DisplaySplash);
     UGameEngine::shDisplayMenuSplash = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?DisplayMenuSplash@UGameEngine@@QAEXHH@Z"), UGameEngine::DisplayMenuSplash);
     UGameEngine::shSplashFadInOut = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?SplashFadInOut@UGameEngine@@QAEXHH@Z"), UGameEngine::SplashFadInOut);
+
+    UCanvas::shSetClip = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?SetClip@UCanvas@@UAEXMM@Z"), UCanvas::SetClip);
 
     pattern = find_module_pattern(GetModuleHandle(L"Engine"), "89 3D ? ? ? ? 8B 8B 64 01 00 00", "C7 05 ? ? ? ? ? ? ? ? 8B 87 64 01 00 00");
     static auto UGameEngineLoadGameHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
