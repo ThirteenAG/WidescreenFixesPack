@@ -17,7 +17,7 @@ namespace HudMatchers
     inline bool IsHudIcons(uint32_t n_offsetX1, uint32_t n_offsetX2, uint32_t n_offsetY1, uint32_t n_offsetY2, FColor Color)
     {
         return FloatInRange(n_offsetX1, 519, 616) && FloatInRange(n_offsetX2, 519, 616) &&
-            FloatEqual(n_offsetY1, 304) && (FloatEqual(n_offsetY2, 331) || FloatEqual(n_offsetY2, 332)) &&
+            (n_offsetY1) == 304 && (n_offsetY2 == 331) || (n_offsetY2 == 332) &&
             Color.RGBA == 0xFE808080;
     }
 
@@ -42,8 +42,8 @@ namespace HudMatchers
             (Color.RGBA == 0xFE333333 || Color.RGBA == 0x4C808080 || Color.RGBA == 0xFE808080 ||
             Color.RGBA == 0xFE404040 || Color.RGBA == 0xC0FEFEFE || Color.RGBA == 0x4C000000 ||
             (Color.RGBA == 0x98000000 && n_offsetX1 != 573) || Color.RGBA == 0x98808080 ||
-            (Color.RGBA == 0xFEFEFEFE && (FloatEqual(n_offsetX1, 524) || FloatEqual(n_offsetX1, 525) ||
-            FloatEqual(n_offsetX1, 498) || FloatEqual(n_offsetX1, 499))));
+            (Color.RGBA == 0xFEFEFEFE && ((n_offsetX1 == 524) || (n_offsetX1 == 525) ||
+            (n_offsetX1 == 498) || (n_offsetX1 == 499))));
     }
 
     inline bool IsFireModeSwitch(uint32_t n_offsetX1, uint32_t n_offsetX2, uint32_t n_offsetY1, uint32_t n_offsetY2, FColor Color)

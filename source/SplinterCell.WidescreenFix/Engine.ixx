@@ -100,7 +100,7 @@ void __fastcall FCanvasUtilDrawTileHook(void* _this, uint32_t EDX, float X, floa
         }
     }
 
-    if (!bIsMainMenu && Screen.bHudWidescreenMode)
+    if (!bIsMainMenu && Screen.nHudWidescreenMode == 1)
     {
         wchar_t buffer[256];
         curDrawTileManagerTextureName = UObject::GetFullName(Texture, 0, buffer);
@@ -205,6 +205,9 @@ export void InitEngine()
     {
         pattern = find_module_pattern(GetModuleHandle(L"Engine"), "75 ? A1 ? ? ? ? 85 C0 75 ? 68 00 00 80 3F");
         injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true); // jz -> jmp
+
+        pattern = find_module_pattern(GetModuleHandle(L"Engine"), "75 ? 39 3D ? ? ? ? 75");
+        injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true); // jz -> jmp
     }
 
     pattern = find_module_pattern(GetModuleHandle(L"Engine"), "8B 0D ? ? ? ? 56 8B 74 24 10");
@@ -247,5 +250,11 @@ export void InitEngine()
     static auto UGameEngineLoadGameHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
         UObject::objectStates.clear();
+        UIntOverrides::ClearCache();
+        UFloatOverrides::ClearCache();
+        UByteOverrides::ClearCache();
+        UNameOverrides::ClearCache();
+        UObjectOverrides::ClearCache();
+        UArrayOverrides::ClearCache();
     });
 }
