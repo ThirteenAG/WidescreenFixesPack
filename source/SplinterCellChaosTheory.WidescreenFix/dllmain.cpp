@@ -68,6 +68,8 @@ void Init()
     gColor = iniReader.ReadInteger("BONUS", "GogglesLightColor", 0);
     gBlacklistIndicators = iniReader.ReadInteger("BONUS", "BlacklistIndicators", 0);
     bLightSyncRGB = iniReader.ReadInteger("BONUS", "LightSyncRGB", 1);
+    auto bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 0) != 0;
+    auto bSkipPressAnyKeyToContinue = iniReader.ReadInteger("MAIN", "SkipPressAnyKeyToContinue", 0) != 0;
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -198,6 +200,21 @@ void Init()
             }
         }
     });
+
+    if (bSkipIntro)
+    {
+        auto pattern = hook::pattern("75 ? 68 ? ? ? ? E8 ? ? ? ? 50 E8 ? ? ? ? 83 C4 08 85 C0 75 ? 68");
+        injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true);
+    }
+
+    if (bSkipPressAnyKeyToContinue)
+    {
+        auto pattern = hook::pattern("6A 0A FF 50 ? 8B 0D");
+        injector::WriteMemory<uint8_t>(pattern.get_first(1), 1, true);
+
+        pattern = hook::pattern("6A 08 FF 52 ? 8B 0D ? ? ? ? 3B FE");
+        injector::WriteMemory<uint8_t>(pattern.get_first(1), 1, true);
+    }
 }
 
 DWORD FindProcessId(const std::wstring& processName)
