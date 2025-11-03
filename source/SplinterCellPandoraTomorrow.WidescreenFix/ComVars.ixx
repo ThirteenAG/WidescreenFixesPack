@@ -1,6 +1,7 @@
 module;
 
 #include "stdafx.h"
+#include <unordered_set>
 
 export module ComVars;
 
@@ -90,9 +91,13 @@ struct UOverride
     static inline std::unordered_map<std::wstring, Getter> ByName;
     static inline std::unordered_map<void*, Getter>        ByPropPtr;
 
+    // Names that are registered but not yet bound to a prop pointer.
+    static inline std::unordered_set<std::wstring>         PendingNames;
+
     static inline void Register(const std::wstring& name, Getter getter)
     {
         ByName[name] = getter;
+        PendingNames.insert(name);
     }
 
     static inline Getter ResolveFast(void* propPtr)
@@ -102,15 +107,25 @@ struct UOverride
         return nullptr;
     }
 
+    static inline bool AllCached()
+    {
+        // When no registered names remain unbound, there's nothing left to resolve by name.
+        return PendingNames.empty();
+    }
+
     static inline Getter ResolveAndBind(void* propPtr, std::wstring_view fullName)
     {
         if (auto cached = ResolveFast(propPtr))
             return cached;
 
-        if (!fullName.empty())
+        // If we've already cached every registered override, skip the name work entirely.
+        if (AllCached() || fullName.empty())
+            return nullptr;
+
+        if (auto it = ByName.find(std::wstring(fullName)); it != ByName.end())
         {
-            if (auto it = ByName.find(std::wstring(fullName)); it != ByName.end())
-                return ByPropPtr.emplace(propPtr, it->second).first->second;
+            PendingNames.erase(it->first); // mark this registration as bound
+            return ByPropPtr.emplace(propPtr, it->second).first->second;
         }
         return nullptr;
     }
@@ -118,6 +133,11 @@ struct UOverride
     static inline void ClearCache()
     {
         ByPropPtr.clear();
+
+        // Rebuild pending set from all registered names since nothing is bound anymore.
+        PendingNames.clear();
+        for (const auto& kv : ByName)
+            PendingNames.insert(kv.first);
     }
 
     template<class Registry, class T>
@@ -128,7 +148,8 @@ struct UOverride
             *dst = g(); return;
         }
 
-        if (Registry::ByName.empty())
+        // If all registered overrides are already cached, skip full-name resolution.
+        if (Registry::AllCached() || Registry::ByName.empty())
             return;
 
         wchar_t buffer[256];
@@ -146,7 +167,8 @@ struct UOverride
         auto g = Registry::ResolveFast(prop);
         if (!g)
         {
-            if (Registry::ByName.empty())
+            // If all registered overrides are already cached, skip full-name resolution.
+            if (Registry::AllCached() || Registry::ByName.empty())
                 return;
 
             wchar_t buffer[256];
