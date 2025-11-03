@@ -77,7 +77,7 @@ namespace HudMatchers
                 L"FinalBlend Transient.FinalBlend",
             };
 
-            constexpr int kIndices[] = { 23, 26, 27, 33, 40, 47, 62, 68, 70, 72 };
+            constexpr int kIndices[] = { 23, 26, 27, 33, 40, 47, 62, 68, 69, 70, 72 };
 
             constexpr uint32_t kColors[] = {
                 0xFEFEFEFE,
