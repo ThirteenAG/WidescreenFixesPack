@@ -19,7 +19,7 @@ int __fastcall UD3DRenderDeviceSetRes(void* UD3DRenderDevice, void* edx, void* U
     {
         if (resStr == it.first)
         {
-            swscanf(it.second.c_str(), L"%dx%d", &width, &height);
+            swscanf_s(it.second.c_str(), L"%dx%d", &width, &height);
             bInvalidRes = false;
             break;
         }

@@ -22,14 +22,9 @@ export void InitEchelon()
     });
 
     // set player speed to max on game start
-    pattern = hook::module_pattern(GetModuleHandle(L"Echelon"), "8B 48 ? 41 89 48 ? 80 39 42 75 ? 41 6A 00 89 48 ? 8B 48 ? 50 A1 ? ? ? ? FF 90 ? ? ? ? D9 86 ? ? ? ? D9 86 ? ? ? ? D9 C0 D8 C9 D9 C2 D8 CB 83 EC 08 DE C1 DD 1C 24 DD D8 DD D8 FF 15 ? ? ? ? D8 15");
-    static auto defautSpeedHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    UIntOverrides::Register(L"IntProperty Echelon.EchelonGameInfo.m_defautSpeed", +[]() -> int
     {
-        if (std::find(EchelonGameInfoPtrs.begin(), EchelonGameInfoPtrs.end(), regs.esi) != EchelonGameInfoPtrs.end())
-        {
-            *(uintptr_t*)(regs.esi + 0x5BC) = 5;
-        }
-        EchelonGameInfoPtrs.clear();
+        return 5;
     });
 
     // Camera acceleration
