@@ -6,6 +6,7 @@ import Engine;
 import D3DDrv;
 import Echelon;
 import WinDrv;
+import GUI;
 import Xidi;
 
 void Init()
@@ -174,6 +175,7 @@ CEXP void InitializeASI()
         CallbackHandler::RegisterCallback(L"D3DDrv.dll", InitD3DDrv);
         CallbackHandler::RegisterCallback(L"Echelon.dll", InitEchelon);
         CallbackHandler::RegisterCallback(L"WinDrv.dll", InitWinDrv);
+        CallbackHandler::RegisterCallback(L"GUI.dll", InitGUI);
         CallbackHandler::RegisterCallback(L"Xidi.32.dll", InitXidi);
     });
 }
