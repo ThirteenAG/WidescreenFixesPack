@@ -76,8 +76,8 @@ void Init()
         static auto getSectionEnd = [](IMAGE_NT_HEADERS* ntHeader, size_t inst) -> auto
         {
             auto sec = getSection(ntHeader, ntHeader->FileHeader.NumberOfSections - 1);
-            auto secSize = max(sec->SizeOfRawData, sec->Misc.VirtualSize);
-            auto end = inst + max(sec->PointerToRawData, sec->VirtualAddress) + secSize;
+            auto secSize = std::max(sec->SizeOfRawData, sec->Misc.VirtualSize);
+            auto end = inst + std::max(sec->PointerToRawData, sec->VirtualAddress) + secSize;
             return end;
         };
 
@@ -156,7 +156,7 @@ void InitIJoy()
                 }
                 else
                 {
-                    auto scale = min(1.0f, (len - fLeftStickDeadzone) / (1.0f - fLeftStickDeadzone)) / len;
+                    auto scale = std::min(1.0f, (len - fLeftStickDeadzone) / (1.0f - fLeftStickDeadzone)) / len;
                     x *= scale * pad_max;
                     y *= scale * pad_max;
                 };
@@ -190,7 +190,7 @@ void InitIJoy()
                 }
                 else
                 {
-                    auto scale = min(1.0f, (len - fRightStickDeadzone) / (1.0f - fRightStickDeadzone)) / len;
+                    auto scale = std::min(1.0f, (len - fRightStickDeadzone) / (1.0f - fRightStickDeadzone)) / len;
                     x *= scale * pad_max;
                     y *= scale * pad_max;
                 };

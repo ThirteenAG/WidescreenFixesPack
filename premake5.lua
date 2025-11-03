@@ -342,8 +342,8 @@ project "GTAVC.WidescreenFix"
 project "GTASA.WidescreenFix"
    files { "includes/GTA/*.h", "includes/GTA/*.cpp" }
    setpaths("Z:/WFP/Games/Grand Theft Auto/GTA San Andreas/", "gta_sa.exe")
-project "GTASA.UWP.Test"
-   setpaths("Z:/WFP/Games/GTASAUWP/", "GTASA.exe")
+--project "GTASA.UWP.Test"
+--   setpaths("Z:/WFP/Games/GTASAUWP/", "GTASA.exe")
 group "Win32"
 
 project "Gun.WidescreenFix"

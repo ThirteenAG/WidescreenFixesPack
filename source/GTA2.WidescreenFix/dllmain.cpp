@@ -94,7 +94,7 @@ LRESULT APIENTRY WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             fZoom -= 1.0f;
         }
 
-        fZoom = max(0.0f, min(fZoom, 10.0f));
+        fZoom = std::max(0.0f, std::min(fZoom, 10.0f));
         break;
     case WM_KEYUP:
         break;
