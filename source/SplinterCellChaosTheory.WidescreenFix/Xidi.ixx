@@ -25,6 +25,7 @@ export void InitXidi()
             XidiRegisterProfileCallback([]() -> const wchar_t*
             {
                 static const KnownHashes menuHashes[] = {
+                    KnownHashes::P_Pause,
                     KnownHashes::P_MenuGameOver,
                     KnownHashes::P_MenuSaveGame,
                     KnownHashes::P_MenuLoadGame,
@@ -39,7 +40,6 @@ export void InitXidi()
                 };
             
                 static const KnownHashes opsatHashes[] = {
-                    KnownHashes::P_Pause,
                     KnownHashes::P_KeyPad,
                     KnownHashes::P_Opsat,
                     KnownHashes::P_Goals,
