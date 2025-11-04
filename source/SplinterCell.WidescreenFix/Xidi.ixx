@@ -30,6 +30,9 @@ export void InitXidi()
                 if (bPlayingVideo || bPressStartToContinue)
                     return L"Video";
 
+                if (bIsEnhanced)
+                    return L"EnhancedMain";
+
                 auto EchelonMainHUDState = UObject::GetState(L"EchelonMainHUD");
                 if (EchelonMainHUDState == L"MainHUD" || EchelonMainHUDState == L"s_Slavery")
                 {
