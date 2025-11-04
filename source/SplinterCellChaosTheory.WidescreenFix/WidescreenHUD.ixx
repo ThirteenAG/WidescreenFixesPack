@@ -193,6 +193,15 @@ export void WidescreenHudImage(int16_t& left, int16_t& right, int16_t& top, int1
     if (CMenusManager::IsMenuDisplayed(KnownHashes::P_Opsat))
         return;
 
+    if (CMenusManager::IsMenuDisplayed(KnownHashes::P_Computer))
+        return;
+
+    if (CMenusManager::IsMenuDisplayed(KnownHashes::P_opticcable))
+        return;
+
+    if (CMenusManager::IsMenuDisplayed(KnownHashes::P_KeyPad))
+        return;
+
     if (IsTopRightMenu(left, right, top, bottom, color) ||
         IsBottomRightPanel(left, right, top, bottom, color) ||
         IsObjectivePopup(left, right, top, bottom, color))
