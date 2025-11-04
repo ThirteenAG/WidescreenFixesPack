@@ -5,9 +5,31 @@ module;
 export module Engine;
 
 import ComVars;
+import GUI;
+
+#if _DEBUG
+SafetyHookInline shFindAxisName = {};
+float* __fastcall FindAxisName(void* UInput, void* edx, void* AActor, const wchar_t* a3)
+{
+    auto ret = shFindAxisName.unsafe_fastcall<float*>(UInput, edx, AActor, a3);
+
+    if (std::wstring_view(a3) == L"aMouseX")
+    {
+        return ret;
+    }
+    else if (std::wstring_view(a3) == L"aMouseY")
+    {
+        return ret;
+    }
+
+    return ret;
+}
+#endif
 
 export void InitEngine()
 {
+    InitGUI();
+
     CIniReader iniReader("");
     bool bSingleCoreAffinity = iniReader.ReadInteger("MAIN", "SingleCoreAffinity", 1);
 
@@ -189,4 +211,8 @@ export void InitEngine()
     {
         UObject::objectStates.clear();
     });
+
+#if _DEBUG
+    shFindAxisName = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?FindAxisName@UInput@@MBEPAMPAVAActor@@PBG@Z"), FindAxisName);
+#endif
 }
