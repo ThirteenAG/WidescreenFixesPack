@@ -6,6 +6,7 @@ import D3DDrv;
 import Engine;
 import Core;
 import WinDrv;
+import GUI;
 import Xidi;
 import WidescreenHUD;
 
@@ -61,7 +62,6 @@ void Init()
     nWidescreenHudOffset = iniReader.ReadInteger("MAIN", "WidescreenHudOffset", 100);
     fWidescreenHudOffset = static_cast<float>(nWidescreenHudOffset);
     bDisableAltTabFix = iniReader.ReadInteger("MAIN", "DisableAltTabFix", 1) != 0;
-    eGameLang = static_cast<GameLang>(iniReader.ReadInteger("MAIN", "GameLanguage", 0));
     nShadowMapResolution = iniReader.ReadInteger("GRAPHICS", "ShadowMapResolution", 0);
     bEnableShadowFiltering = iniReader.ReadInteger("GRAPHICS", "EnableShadowFiltering", 0) != 0;
     auto nFPSLimit = iniReader.ReadInteger("MISC", "FPSLimit", 1000);
@@ -108,6 +108,7 @@ void Init()
     InitEngine();
     InitCore();
     InitWinDrv();
+    InitGUI();
 
 #ifdef _DEBUG
     pattern = hook::pattern("8B 88 80 00 00 00 6A 01");
