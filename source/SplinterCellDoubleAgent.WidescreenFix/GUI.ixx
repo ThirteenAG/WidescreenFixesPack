@@ -244,5 +244,29 @@ export void InitGUI()
     //USCMagmaInteraction::ProcessInputPressState
     //USCMagmaInteraction::ProcessInputReleaseState
 
+    if (Screen.bRawInputMouseForCamera)
+    {
+        pattern = find_module_pattern(GetModuleHandle(L"Engine"), "F3 0F 11 03 F3 0F 10 45 E8");
+        if (!pattern.empty())
+        {
+            injector::MakeNOP(pattern.get_first(0), 4);
+            injector::MakeNOP(pattern.get_first(12), 4);
+
+            static auto APlayerControllerTickHook = safetyhook::create_mid(pattern.get_first(16), [](SafetyHookContext& regs)
+            {
+                constexpr float CameraSensitivity = 100.0f;
+
+                float scaledDeltaX = static_cast<float>(RawMouseDeltaX) / CameraSensitivity;
+                float scaledDeltaY = static_cast<float>(RawMouseDeltaY) / CameraSensitivity;
+
+                *(float*)regs.ebx = scaledDeltaX;
+                *(float*)regs.edi = scaledDeltaY;
+
+                RawMouseDeltaX = 0;
+                RawMouseDeltaY = 0;
+            });
+        }
+    }
+
     CMenusManager::shDisplayMenu = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?DisplayMenu@CMenusManager@@QAE_NPAVPage@magma@@_N1W4EMENUPRIORITY@@@Z"), CMenusManager::DisplayMenu);
 }
