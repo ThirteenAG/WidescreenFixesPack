@@ -94,4 +94,6 @@ export namespace UObject
         auto it = objectStates.find(type);
         return (it != objectStates.end()) ? std::wstring_view(it->second) : std::wstring_view(L"");
     }
+
+    wchar_t* (__fastcall* GetFullName)(void*, void*, wchar_t*) = nullptr;
 }
