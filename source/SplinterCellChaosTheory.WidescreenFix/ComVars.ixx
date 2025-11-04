@@ -59,17 +59,11 @@ export struct FLTColor
     }
 };
 
-export enum class GameLang : int
+export struct WidescreenHudOffset
 {
-    English,
-    French,
-    German,
-    Hungarian,
-    Italian,
-    Polish,
-    Russian,
-    Spanish
-} eGameLang;
+    int32_t _int;
+    float _float;
+} WidescreenHudOffset;
 
 export bool bHudWidescreenMode;
 export int32_t nWidescreenHudOffset;
@@ -97,3 +91,5 @@ export namespace UObject
 
     wchar_t* (__fastcall* GetFullName)(void*, void*, wchar_t*) = nullptr;
 }
+
+export std::unordered_map<uint32_t, bool> IsMenuDisplayedCache;
