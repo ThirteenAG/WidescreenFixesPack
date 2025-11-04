@@ -6,6 +6,7 @@ import D3DDrv;
 import Engine;
 import Core;
 import WinDrv;
+import GUI;
 import Xidi;
 import WidescreenHUD;
 
@@ -108,6 +109,7 @@ void Init()
     InitEngine();
     InitCore();
     InitWinDrv();
+    InitGUI();
 
 #ifdef _DEBUG
     pattern = hook::pattern("8B 88 80 00 00 00 6A 01");

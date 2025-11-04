@@ -62,6 +62,8 @@ export void InitEngine()
             int16_t fTop = *reinterpret_cast<int16_t*>(regs.esp + 0x44);     // 0
             int16_t fBottom = *reinterpret_cast<int16_t*>(regs.esp + 0x46);  // 480
             FColor Color{ *reinterpret_cast<uint32_t*>(regs.esp + 0x3C) };
+            wchar_t buffer[256];
+            std::wstring_view curTextureName(UObject::GetFullName(*(void**)(regs.esi + 0x14), 0, buffer));
 
             if ((fLeft == 0 && fRight == 640 /*&& fTop == 0 && fBottom == 480*/) || (fLeft == -2 && fRight == 639 && fTop == -2 && fBottom == 479)
                 || (fLeft == -1 && fRight == 640 && fTop == -2 && fBottom == 479) || (fTop == 0 && fBottom == 512)) //fullscreen images, 0 512 - camera feed overlay
@@ -105,11 +107,14 @@ export void InitEngine()
                 if (!bHudWidescreenMode)
                     return;
 
+                if (curTextureName == L"Texture system_PC.mgb.CURSOR")
+                    return;
+
                 if (UObject::GetState(L"EPlayerController") == L"s_KeyPadInteract")
                     return;
 
-                //if (UObject::GetState(L"EPlayerCam") == L"s_Fixed") // doesn't reset on quickload, need a way to reset
-                //    return;
+                if (UObject::GetState(L"EPlayerCam") == L"s_Fixed")
+                    return;
 
                 if (bHackingGameplay)
                     return;
