@@ -387,6 +387,9 @@ export void InitD3DDrv()
             Screen.FilmstripScaleX = static_cast<int32_t>(Screen.fWidth / (1280.0f / (368.0 * ((4.0 / 3.0) / (Screen.fAspectRatio)))));
             Screen.FilmstripOffset = static_cast<int32_t>((((Screen.fWidth / 2.0f) - ((Screen.fHeight * (4.0f / 3.0f)) / 2.0f)) * 2.0f) + ((float)Screen.FilmstripScaleX / 5.25f));
 
+            RawMouseCursorX = Screen.Width / 2;
+            RawMouseCursorY = Screen.Height / 2;
+
             CIniReader iniReader("");
             auto [DesktopResW, DesktopResH] = GetDesktopRes();
             if (Screen.Width != DesktopResW || Screen.Height != DesktopResH)
