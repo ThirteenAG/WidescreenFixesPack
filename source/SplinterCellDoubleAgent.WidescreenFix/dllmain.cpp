@@ -69,8 +69,12 @@ LRESULT CALLBACK RawInputWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPa
             {
                 int16_t dx = static_cast<int16_t>(raw->data.mouse.lLastX);
                 int16_t dy = static_cast<int16_t>(raw->data.mouse.lLastY);
-                RawMouseCursorX += static_cast<int16_t>(dx);
-                RawMouseCursorY += static_cast<int16_t>(dy);
+
+                RawMouseDeltaX = dx;
+                RawMouseDeltaY = dy;
+
+                RawMouseCursorX += dx;
+                RawMouseCursorY += dy;
                 RawMouseCursorX = std::max(int16_t(0), std::min(RawMouseCursorX, static_cast<int16_t>(Screen.Width - 1)));
                 RawMouseCursorY = std::max(int16_t(0), std::min(RawMouseCursorY, static_cast<int16_t>(Screen.Height - 1)));
             }
@@ -86,6 +90,7 @@ void Init()
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
     Screen.bRawInputMouseForMenu = iniReader.ReadInteger("MAIN", "RawInputMouseForMenu", 1) != 0;
+    Screen.bRawInputMouseForCamera = iniReader.ReadInteger("MAIN", "RawInputMouseForCamera", 0) != 0;
     bool bForceLL = iniReader.ReadInteger("MAIN", "ForceLL", 1) != 0;
     auto nFPSLimit = iniReader.ReadInteger("MISC", "FPSLimit", 1000);
     Screen.szLoadscPath = iniReader.GetIniPath();
@@ -161,7 +166,7 @@ void Init()
         static auto SetPropWHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
             hGameWindow = (HWND)regs.eax;
-            if (Screen.bRawInputMouseForMenu)
+            if (Screen.bRawInputMouseForMenu || Screen.bRawInputMouseForCamera)
             {
                 DefaultWndProc = (WNDPROC)SetWindowLongPtr(hGameWindow, GWL_WNDPROC, (LONG_PTR)RawInputWndProc);
                 RegisterRawInput(hGameWindow);
@@ -172,7 +177,7 @@ void Init()
         static auto SetPropAHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
             hGameWindow = (HWND)regs.eax;
-            if (Screen.bRawInputMouseForMenu)
+            if (Screen.bRawInputMouseForMenu || Screen.bRawInputMouseForCamera)
             {
                 DefaultWndProc = (WNDPROC)SetWindowLongPtr(hGameWindow, GWL_WNDPROC, (LONG_PTR)RawInputWndProc);
                 RegisterRawInput(hGameWindow);

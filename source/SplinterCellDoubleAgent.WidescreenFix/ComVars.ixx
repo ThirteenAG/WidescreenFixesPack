@@ -22,6 +22,7 @@ export struct Screen
     std::filesystem::path szLoadscPath;
     const float fDefaultARforFOV = 4.0f / 3.0f;
     bool bRawInputMouseForMenu;
+    bool bRawInputMouseForCamera;
 } Screen;
 
 export int32_t gBlacklistIndicators = 0;
@@ -33,6 +34,8 @@ export uint32_t curClipCapacity = 1;
 export HWND hGameWindow = NULL;
 export int16_t RawMouseCursorX = 0;
 export int16_t RawMouseCursorY = 0;
+export int16_t RawMouseDeltaX = 0;
+export int16_t RawMouseDeltaY = 0;
 
 export namespace UObject
 {
