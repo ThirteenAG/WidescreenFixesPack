@@ -75,8 +75,8 @@ LRESULT CALLBACK RawInputWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 
                 RawMouseCursorX += dx;
                 RawMouseCursorY += dy;
-                RawMouseCursorX = std::max(int16_t(0), std::min(RawMouseCursorX, static_cast<int16_t>(Screen.Width - 1)));
-                RawMouseCursorY = std::max(int16_t(0), std::min(RawMouseCursorY, static_cast<int16_t>(Screen.Height - 1)));
+                RawMouseCursorX = std::max(int16_t(0), std::min(RawMouseCursorX, static_cast<int16_t>(Screen.Width)));
+                RawMouseCursorY = std::max(int16_t(0), std::min(RawMouseCursorY, static_cast<int16_t>(Screen.Height)));
             }
         }
         return 0;  // Consume the message to avoid game interference.

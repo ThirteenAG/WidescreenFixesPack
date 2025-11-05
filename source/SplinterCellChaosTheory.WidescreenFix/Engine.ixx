@@ -7,6 +7,27 @@ export module Engine;
 import ComVars;
 import WidescreenHUD;
 
+#if _DEBUG
+SafetyHookInline shFindAxisName = {};
+float* __fastcall FindAxisName(void* UInput, void* edx, void* AActor, const wchar_t* a3)
+{
+    auto ret = shFindAxisName.unsafe_fastcall<float*>(UInput, edx, AActor, a3);
+
+    if (std::wstring_view(a3) == L"aMouseX")
+    {
+        aMouseXPtr = ret;
+        return ret;
+    }
+    else if (std::wstring_view(a3) == L"aMouseY")
+    {
+        aMouseYPtr = ret;
+        return ret;
+    }
+
+    return ret;
+}
+#endif
+
 export void InitEngine()
 {
     //HUD
@@ -187,4 +208,9 @@ export void InitEngine()
         bHackingGameplay = false;
         IsMenuDisplayedCache.clear();
     });
+
+#if _DEBUG
+    pattern = hook::pattern("8B 44 24 08 55 56 57 6A 00 50 8D 4C 24 1C E8 ? ? ? ? 8B 44 24 14 85 C0 74 ? 8B 6C 24 10");
+    shFindAxisName = safetyhook::create_inline(pattern.get(1).get<void*>(0), FindAxisName);
+#endif
 }
