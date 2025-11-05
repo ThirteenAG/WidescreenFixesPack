@@ -57,7 +57,7 @@ int __fastcall UD3DRenderDeviceSetRes(void* UD3DRenderDevice, void* edx, void* U
             UIntOverrides::Register(L"IntProperty Echelon.EchelonGameInfo.bWidescreenMode", +[]() -> int
             {
                 // Dynamic check if user switches resolution while game is open
-                return (Screen.fAspectRatio >= (16.0f / 9.0f)) ? 1 : 0;
+                return (Screen.fAspectRatio >= (16.0f / 10.0f)) ? 1 : 0;
             });
             bWidescreenOverrideRegistered = true;
         }
