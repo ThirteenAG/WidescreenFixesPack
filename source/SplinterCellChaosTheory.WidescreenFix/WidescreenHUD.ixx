@@ -181,7 +181,7 @@ export void WidescreenHudImage(int16_t& left, int16_t& right, int16_t& top, int1
         right += Screen.nHudOffsetReal;
     }
 
-    if (textureName == L"Texture system_PC.mgb.Cursor")
+    if (textureName == L"Texture system_PC.mgb.Cursor" || textureName == L"Texture system_PC.mgb.CURSOR")
         return;
 
     if (UObject::GetState(L"EPlayerController") == L"s_KeyPadInteract" || bHackingGameplay)

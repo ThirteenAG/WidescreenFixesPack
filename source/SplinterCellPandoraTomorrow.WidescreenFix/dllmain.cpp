@@ -6,6 +6,7 @@ import Engine;
 import D3DDrv;
 import Echelon;
 import WinDrv;
+import Window;
 import GUI;
 import Xidi;
 
@@ -14,6 +15,7 @@ void Init()
     CIniReader iniReader("");
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
+    Screen.bRawInputMouseForMenu = iniReader.ReadInteger("MAIN", "RawInputMouseForMenu", 1) != 0;
     Screen.nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
     Screen.nHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1);
     Screen.bOpsatWidescreenMode = iniReader.ReadInteger("MAIN", "OpsatWidescreenMode", 1) != 0;
@@ -176,6 +178,7 @@ CEXP void InitializeASI()
         CallbackHandler::RegisterCallback(L"Echelon.dll", InitEchelon);
         CallbackHandler::RegisterCallback(L"WinDrv.dll", InitWinDrv);
         CallbackHandler::RegisterCallback(L"GUI.dll", InitGUI);
+        CallbackHandler::RegisterCallback(L"Window.dll", InitWindow);
         CallbackHandler::RegisterCallback(L"Xidi.32.dll", InitXidi);
     });
 }

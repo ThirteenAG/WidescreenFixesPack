@@ -30,6 +30,7 @@ export struct Screen
     uint32_t nShadowMapResolution;
     uint32_t nReflectionsResolution;
     uint32_t nBloomResolution;
+    bool bRawInputMouseForMenu;
 } Screen;
 
 export union FColor
@@ -46,7 +47,12 @@ export bool bPlayingVideo = false;
 export bool bDisplayingBackground = false;
 export bool bPressStartToContinue = false;
 export bool bSkipPressStartToContinue = false;
+export HWND hGameWindow = NULL;
 export bool bIsWindowed = false;
+export int32_t RawMouseCursorX = 0;
+export int32_t RawMouseCursorY = 0;
+export int32_t RawMouseDeltaX = 0;
+export int32_t RawMouseDeltaY = 0;
 
 export std::vector<std::pair<const std::wstring, std::wstring>> ResList =
 {

@@ -22,7 +22,6 @@ namespace UObject
         //L"EGoggle",
     };
 
-    wchar_t* (__fastcall* GetFullName)(void*, void*, wchar_t*) = nullptr;
     void* (__fastcall* FindState)(void*, void*, int) = nullptr;
 
     SafetyHookInline shGotoState = {};
@@ -45,9 +44,90 @@ namespace UObject
     }
 }
 
+// Base UProperty: pass-through
+namespace UProperty
+{
+    SafetyHookInline shCopyCompleteValue = {};
+    void __fastcall CopyCompleteValue(void* uProperty, void* edx, char* dst, char* src, void* uObject)
+    {
+        shCopyCompleteValue.unsafe_fastcall(uProperty, edx, dst, src, uObject);
+    }
+}
+
+namespace UIntProperty
+{
+    SafetyHookInline shCopyCompleteValue = {};
+    void __fastcall CopyCompleteValue(void* uIntProperty, void* edx, int* dst, int* src, void* uObject)
+    {
+        shCopyCompleteValue.unsafe_fastcall(uIntProperty, edx, dst, src, uObject);
+
+        wchar_t buffer[256];
+        auto sv = std::wstring_view(UObject::GetFullName(uIntProperty, edx, buffer));
+        UIntOverrides::ApplyScalarOverride<UIntOverrides, int>(uIntProperty, edx, dst);
+    }
+}
+
+namespace UFloatProperty
+{
+    SafetyHookInline shCopyCompleteValue = {};
+    void __fastcall CopyCompleteValue(void* uFloatProperty, void* edx, float* dst, float* src, void* uObject)
+    {
+        shCopyCompleteValue.unsafe_fastcall(uFloatProperty, edx, dst, src, uObject);
+        UFloatOverrides::ApplyScalarOverride<UFloatOverrides, float>(uFloatProperty, edx, dst);
+    }
+}
+
+namespace UByteProperty
+{
+    SafetyHookInline shCopyCompleteValue = {};
+    void __fastcall CopyCompleteValue(void* uByteProperty, void* edx, uint8_t* dst, uint8_t* src, void* uObject)
+    {
+        shCopyCompleteValue.unsafe_fastcall(uByteProperty, edx, dst, src, uObject);
+        UByteOverrides::ApplyScalarOverride<UByteOverrides, uint8_t>(uByteProperty, edx, dst);
+    }
+}
+
+namespace UNameProperty
+{
+    SafetyHookInline shCopyCompleteValue = {};
+    void __fastcall CopyCompleteValue(void* uNameProperty, void* edx, FName* dst, FName* src, void* uObject)
+    {
+        shCopyCompleteValue.unsafe_fastcall(uNameProperty, edx, dst, src, uObject);
+        UNameOverrides::ApplyScalarOverride<UNameOverrides, FName>(uNameProperty, edx, dst);
+    }
+}
+
+namespace UObjectProperty
+{
+    SafetyHookInline shCopyCompleteValue = {};
+    void __fastcall CopyCompleteValue(void* uObjectProperty, void* edx, void** dst, void** src, void* uObject)
+    {
+        shCopyCompleteValue.unsafe_fastcall(uObjectProperty, edx, dst, src, uObject);
+        UObjectOverrides::ApplyScalarOverride<UObjectOverrides, void*>(uObjectProperty, edx, dst);
+    }
+}
+
+namespace UArrayProperty
+{
+    SafetyHookInline shCopyCompleteValue = {};
+    void __fastcall CopyCompleteValue(void* uArrayProperty, void* edx, void* dst, const void** src, void* uObject)
+    {
+        shCopyCompleteValue.unsafe_fastcall(uArrayProperty, edx, dst, src, uObject);
+        UArrayOverrides::ApplyArrayOverride<UArrayOverrides>(uArrayProperty, edx, reinterpret_cast<FArray*>(dst));
+    }
+}
+
 export void InitCore()
 {
     UObject::GetFullName = (decltype(UObject::GetFullName))FindProcAddress(GetModuleHandle(L"Core"), "?GetFullName@UObject@@QBEPBGPAG@Z");
     UObject::FindState = (decltype(UObject::FindState))GetProcAddress(GetModuleHandle(L"Core"), "?FindState@UObject@@QAEPAVUState@@VFName@@@Z");
     UObject::shGotoState = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Core"), "?GotoState@UObject@@UAE?AW4EGotoState@@VFName@@H@Z"), UObject::GotoState);
+
+    //UProperty::shCopyCompleteValue = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Core"), "?CopyCompleteValue@UProperty@@UBEXPAX0PAVUObject@@@Z"), UProperty::CopyCompleteValue);
+    //UObjectProperty::shCopyCompleteValue = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Core"), "?CopyCompleteValue@UObjectProperty@@UBEXPAX0PAVUObject@@@Z"), UObjectProperty::CopyCompleteValue);
+    //UNameProperty::shCopyCompleteValue = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Core"), "?CopyCompleteValue@UNameProperty@@UBEXPAX0PAVUObject@@@Z"), UNameProperty::CopyCompleteValue);
+    //UIntProperty::shCopyCompleteValue = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Core"), "?CopyCompleteValue@UIntProperty@@UBEXPAX0PAVUObject@@@Z"), UIntProperty::CopyCompleteValue);
+    //UFloatProperty::shCopyCompleteValue = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Core"), "?CopyCompleteValue@UFloatProperty@@UBEXPAX0PAVUObject@@@Z"), UFloatProperty::CopyCompleteValue);
+    //UByteProperty::shCopyCompleteValue = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Core"), "?CopyCompleteValue@UByteProperty@@UBEXPAX0PAVUObject@@@Z"), UByteProperty::CopyCompleteValue);
+    //UArrayProperty::shCopyCompleteValue = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Core"), "?CopyCompleteValue@UArrayProperty@@UBEXPAX0PAVUObject@@@Z"), UArrayProperty::CopyCompleteValue);
 }
