@@ -30,7 +30,7 @@ export struct Screen
     uint32_t nShadowMapResolution;
     uint32_t nReflectionsResolution;
     uint32_t nBloomResolution;
-    bool bRawInputMouseForMenu;
+    float fRawInputMouseForMenu;
 } Screen;
 
 export union FColor

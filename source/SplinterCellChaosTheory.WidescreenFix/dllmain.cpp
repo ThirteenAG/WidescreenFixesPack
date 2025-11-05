@@ -58,7 +58,7 @@ void Init()
     CIniReader iniReader("");
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
-    Screen.bRawInputMouseForMenu = iniReader.ReadInteger("MAIN", "RawInputMouseForMenu", 1) != 0;
+    Screen.fRawInputMouseForMenu = std::clamp(iniReader.ReadFloat("MAIN", "RawInputMouseForMenu", 1.0f), 0.0f, 5.0f);
     bHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1) != 0;
     nWidescreenHudOffset = iniReader.ReadInteger("MAIN", "WidescreenHudOffset", 100);
     fWidescreenHudOffset = static_cast<float>(nWidescreenHudOffset);
@@ -114,16 +114,16 @@ void Init()
         static auto SetPropWHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
             hGameWindow = (HWND)regs.edx;
-            if (Screen.bRawInputMouseForMenu)
-                RawInputHandler<>::RegisterRawInput(hGameWindow, Screen.Width, Screen.Height);
+            if (Screen.fRawInputMouseForMenu > 0.0f)
+                RawInputHandler<>::RegisterRawInput(hGameWindow, Screen.Width, Screen.Height, Screen.fRawInputMouseForMenu);
         });
 
         pattern = hook::pattern("FF 15 ? ? ? ? A1 ? ? ? ? 85 C0 75 ? 68 ? ? ? ? E8 ? ? ? ? 83 C4 04 A3 ? ? ? ? E8 ? ? ? ? A1");
         static auto SetPropAHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
             hGameWindow = (HWND)regs.edi;
-            if (Screen.bRawInputMouseForMenu)
-                RawInputHandler<>::RegisterRawInput(hGameWindow, Screen.Width, Screen.Height);
+            if (Screen.fRawInputMouseForMenu > 0.0f)
+                RawInputHandler<>::RegisterRawInput(hGameWindow, Screen.Width, Screen.Height, Screen.fRawInputMouseForMenu);
         });
     }
 
