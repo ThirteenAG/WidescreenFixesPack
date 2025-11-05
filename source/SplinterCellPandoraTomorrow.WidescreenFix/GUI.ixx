@@ -54,7 +54,7 @@ int32_t __cdecl ClampXAxisState(int32_t value, int32_t min, int32_t max)
     int32_t delta, vmin, vmax;
     GetXAxisBounds(delta, vmin, vmax);
 
-    if (Screen.bRawInputMouseForMenu)
+    if (Screen.fRawInputMouseForMenu > 0.0f)
     {
         float normalizedX = NormalizeRawInputX(RawInputHandler<int32_t>::RawMouseCursorX);
         int32_t menuX = NormalizedToGameX(normalizedX, vmin, vmax);
@@ -68,7 +68,7 @@ int32_t __cdecl ClampYAxisState(int32_t value, int32_t min, int32_t max)
 {
     max += 15;
 
-    if (Screen.bRawInputMouseForMenu)
+    if (Screen.fRawInputMouseForMenu > 0.0f)
     {
         float normalizedY = NormalizeRawInputY(RawInputHandler<int32_t>::RawMouseCursorY);
         int32_t menuY = NormalizedToGameY(normalizedY, min, max);

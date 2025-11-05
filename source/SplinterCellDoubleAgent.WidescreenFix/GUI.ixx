@@ -181,7 +181,7 @@ int16_t __cdecl ClampXAxisState(int16_t value, int16_t min, int16_t max)
     int16_t delta, vmin, vmax;
     CMenusManager::GetXAxisBounds(delta, vmin, vmax);
 
-    if (Screen.bRawInputMouseForMenu)
+    if (Screen.fRawInputMouseForMenu > 0.0f)
     {
         float normalizedX = CMenusManager::NormalizeRawInputX(RawInputHandler<>::RawMouseCursorX);
         int16_t menuX = CMenusManager::NormalizedToGameX(normalizedX, vmin, vmax);
@@ -195,7 +195,7 @@ int16_t __cdecl ClampYAxisState(int16_t value, int16_t min, int16_t max)
 {
     max += 15;
 
-    if (Screen.bRawInputMouseForMenu)
+    if (Screen.fRawInputMouseForMenu > 0.0f)
     {
         float normalizedY = CMenusManager::NormalizeRawInputY(RawInputHandler<>::RawMouseCursorY);
         int16_t menuY = CMenusManager::NormalizedToGameY(normalizedY, min, max);
@@ -228,7 +228,7 @@ export void InitGUI()
                 int16_t clampedGameX = std::clamp(*(int16_t*)(regs.edx + 0), int16_t(0 - delta), int16_t(800 + delta));
                 int16_t clampedGameY = std::clamp(*(int16_t*)(regs.edx + 2), int16_t(0), int16_t(585));
 
-                if (Screen.bRawInputMouseForMenu)
+                if (Screen.fRawInputMouseForMenu > 0.0f)
                 {
                     RawInputHandler<>::RawMouseCursorX = CMenusManager::GameToRawInputX(clampedGameX, vmin, vmax);
                     RawInputHandler<>::RawMouseCursorY = CMenusManager::GameToRawInputY(clampedGameY, 0, 585);

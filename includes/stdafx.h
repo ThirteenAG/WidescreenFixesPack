@@ -1277,10 +1277,11 @@ public:
     static inline T RawMouseDeltaX = 0;
     static inline T RawMouseDeltaY = 0;
 
-    static void RegisterRawInput(HWND hWnd, W& width, H& height)
+    static void RegisterRawInput(HWND hWnd, W& width, H& height, float sensitivity = 1.0f)
     {
         GameWidth = std::ref(width);
         GameHeight = std::ref(height);
+        Sensitivity = sensitivity;
 
         SystemParametersInfo(SPI_GETMOUSE, 0, MouseAcceleration, 0);
         SystemParametersInfo(SPI_GETMOUSESPEED, 0, &MouseSpeed, 0);
@@ -1317,6 +1318,7 @@ private:
     static inline int MouseSpeed = 10; // Default to 10 if query fails
     static inline std::optional<std::reference_wrapper<W>> GameWidth;
     static inline std::optional<std::reference_wrapper<H>> GameHeight;
+    static inline float Sensitivity = 1.0f;
 
     static LRESULT CALLBACK RawInputWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     {
@@ -1355,6 +1357,10 @@ private:
                     // Apply mouse speed scaling
                     dx *= (static_cast<float>(MouseSpeed) / 10.0f);
                     dy *= (static_cast<float>(MouseSpeed) / 10.0f);
+
+                    // Apply custom sensitivity factor
+                    dx *= Sensitivity;
+                    dy *= Sensitivity;
 
                     // Add subpixel carry-over, round to int for accumulation, save new fractions
                     dx += SubpixelX;

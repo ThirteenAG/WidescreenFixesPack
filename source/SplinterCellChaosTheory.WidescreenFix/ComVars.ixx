@@ -25,7 +25,7 @@ export struct Screen
     float fFMVoffsetEndX;
     float fFMVoffsetStartY;
     float fFMVoffsetEndY;
-    bool bRawInputMouseForMenu;
+    float fRawInputMouseForMenu;
 } Screen;
 
 export union FColor

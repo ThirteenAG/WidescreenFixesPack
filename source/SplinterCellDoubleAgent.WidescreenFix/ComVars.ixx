@@ -21,7 +21,7 @@ export struct Screen
     uint32_t pFilmstripTex;
     std::filesystem::path szLoadscPath;
     const float fDefaultARforFOV = 4.0f / 3.0f;
-    bool bRawInputMouseForMenu;
+    float fRawInputMouseForMenu;
     bool bRawInputMouseForCamera;
 } Screen;
 

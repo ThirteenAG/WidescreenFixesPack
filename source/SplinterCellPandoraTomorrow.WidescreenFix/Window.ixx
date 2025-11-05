@@ -12,7 +12,7 @@ export void InitWindow()
     static auto CreateWindowWHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
         hGameWindow = (HWND)regs.ecx;
-        if (Screen.bRawInputMouseForMenu)
-            RawInputHandler<int32_t>::RegisterRawInput(hGameWindow, Screen.Width, Screen.Height);
+        if (Screen.fRawInputMouseForMenu > 0.0f)
+            RawInputHandler<int32_t>::RegisterRawInput(hGameWindow, Screen.Width, Screen.Height, Screen.fRawInputMouseForMenu);
     });
 }
