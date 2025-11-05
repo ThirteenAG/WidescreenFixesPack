@@ -91,6 +91,7 @@ void Init()
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
     Screen.bRawInputMouseForMenu = iniReader.ReadInteger("MAIN", "RawInputMouseForMenu", 1) != 0;
     Screen.bRawInputMouseForCamera = iniReader.ReadInteger("MAIN", "RawInputMouseForCamera", 0) != 0;
+    bVibration = iniReader.ReadInteger("MAIN", "Vibration", 0) != 0;
     bool bForceLL = iniReader.ReadInteger("MAIN", "ForceLL", 1) != 0;
     auto nFPSLimit = iniReader.ReadInteger("MISC", "FPSLimit", 1000);
     Screen.szLoadscPath = iniReader.GetIniPath();
