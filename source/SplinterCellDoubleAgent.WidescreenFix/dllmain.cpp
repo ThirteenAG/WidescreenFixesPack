@@ -2,7 +2,6 @@
 #include <mmsystem.h>
 #pragma comment(lib, "winmm.lib") // needed for timeBeginPeriod()/timeEndPeriod()
 #include <LEDEffects.h>
-#include <hidusage.h>
 
 import ComVars;
 import Window;
@@ -42,46 +41,6 @@ void AmmoInClip()
         }
     }
     oldAmmoInClip = curAmmoInClip;
-}
-
-RAWINPUTDEVICE rid[1];
-void RegisterRawInput(HWND hwndTarget)
-{
-    rid[0].usUsagePage = HID_USAGE_PAGE_GENERIC;
-    rid[0].usUsage = HID_USAGE_GENERIC_MOUSE;
-    rid[0].dwFlags = RIDEV_INPUTSINK;
-    rid[0].hwndTarget = hwndTarget;
-    RegisterRawInputDevices(rid, 1, sizeof(RAWINPUTDEVICE));
-}
-
-WNDPROC DefaultWndProc = nullptr;
-LRESULT CALLBACK RawInputWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
-{
-    if (uMsg == WM_INPUT)
-    {
-        UINT dwSize = 0;
-        GetRawInputData((HRAWINPUT)lParam, RID_INPUT, nullptr, &dwSize, sizeof(RAWINPUTHEADER));
-        std::vector<BYTE> buffer(dwSize);
-        RAWINPUT* raw = (RAWINPUT*)buffer.data();
-        if (GetRawInputData((HRAWINPUT)lParam, RID_INPUT, raw, &dwSize, sizeof(RAWINPUTHEADER)) == dwSize)
-        {
-            if (raw->header.dwType == RIM_TYPEMOUSE)
-            {
-                int16_t dx = static_cast<int16_t>(raw->data.mouse.lLastX);
-                int16_t dy = static_cast<int16_t>(raw->data.mouse.lLastY);
-
-                RawMouseDeltaX = dx;
-                RawMouseDeltaY = dy;
-
-                RawMouseCursorX += dx;
-                RawMouseCursorY += dy;
-                RawMouseCursorX = std::max(int16_t(0), std::min(RawMouseCursorX, static_cast<int16_t>(Screen.Width)));
-                RawMouseCursorY = std::max(int16_t(0), std::min(RawMouseCursorY, static_cast<int16_t>(Screen.Height)));
-            }
-        }
-        return 0;  // Consume the message to avoid game interference.
-    }
-    return CallWindowProc(DefaultWndProc, hWnd, uMsg, wParam, lParam);
 }
 
 void Init()
@@ -166,22 +125,16 @@ void Init()
         static auto SetPropWHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
             hGameWindow = (HWND)regs.eax;
-            if (Screen.bRawInputMouseForMenu || Screen.bRawInputMouseForCamera)
-            {
-                DefaultWndProc = (WNDPROC)SetWindowLongPtr(hGameWindow, GWL_WNDPROC, (LONG_PTR)RawInputWndProc);
-                RegisterRawInput(hGameWindow);
-            }
+            if (Screen.bRawInputMouseForMenu)
+                RawInputHandler<>::RegisterRawInput(hGameWindow, Screen.Width, Screen.Height);
         });
 
         pattern = hook::pattern("50 FF 15 ? ? ? ? 66 C7 85 D8 3F 00 00 00 00");
         static auto SetPropAHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
             hGameWindow = (HWND)regs.eax;
-            if (Screen.bRawInputMouseForMenu || Screen.bRawInputMouseForCamera)
-            {
-                DefaultWndProc = (WNDPROC)SetWindowLongPtr(hGameWindow, GWL_WNDPROC, (LONG_PTR)RawInputWndProc);
-                RegisterRawInput(hGameWindow);
-            }
+            if (Screen.bRawInputMouseForMenu)
+                RawInputHandler<>::RegisterRawInput(hGameWindow, Screen.Width, Screen.Height);
         });
     }
 

@@ -4,7 +4,7 @@
 #define WIN32_LEAN_AND_MEAN
 #define _USE_MATH_DEFINES
 #pragma warning(push)
-#pragma warning(disable: 4178 4305 4309 4510 4996)
+#pragma warning(disable: 4178 4244 4305 4309 4510 4996)
 #include <windows.h>
 #include <stdint.h>
 #include <array>
@@ -33,6 +33,7 @@
 #include <shellapi.h>
 #include <ranges>
 #include <format>
+#include <hidusage.h>
 #pragma warning(pop)
 
 #ifndef CEXP
@@ -1265,4 +1266,126 @@ namespace injector
         return MakeCALL(at, trampoline->Jump(dest));
     }
 #endif
+};
+
+template<typename T = int16_t, class W = int32_t, class H = W>
+class RawInputHandler
+{
+public:
+    static inline T RawMouseCursorX = 0;
+    static inline T RawMouseCursorY = 0;
+    static inline T RawMouseDeltaX = 0;
+    static inline T RawMouseDeltaY = 0;
+
+    static void RegisterRawInput(HWND hWnd, W& width, H& height)
+    {
+        GameWidth = std::ref(width);
+        GameHeight = std::ref(height);
+
+        SystemParametersInfo(SPI_GETMOUSE, 0, MouseAcceleration, 0);
+        SystemParametersInfo(SPI_GETMOUSESPEED, 0, &MouseSpeed, 0);
+
+        DefaultWndProc = (WNDPROC)SetWindowLongPtr(hWnd, GWL_WNDPROC, (LONG_PTR)RawInputWndProc);
+
+        rid[0].usUsagePage = HID_USAGE_PAGE_GENERIC;
+        rid[0].usUsage = HID_USAGE_GENERIC_MOUSE;
+        rid[0].dwFlags = RIDEV_INPUTSINK;
+        rid[0].hwndTarget = hWnd;
+        RegisterRawInputDevices(rid, 1, sizeof(RAWINPUTDEVICE));
+    }
+
+    static void OnResChange()
+    {
+        if (GameWidth.has_value() && GameHeight.has_value())
+        {
+            RawMouseCursorX = static_cast<T>(GameWidth.value().get() / 2);
+            RawMouseCursorY = static_cast<T>(GameHeight.value().get() / 2);
+        }
+        else
+        {
+            RECT clientRect;
+            GetClientRect(rid[0].hwndTarget, &clientRect);
+            RawMouseCursorX = static_cast<T>(clientRect.right / 2);
+            RawMouseCursorY = static_cast<T>(clientRect.bottom / 2);
+        }
+    }
+
+private:
+    static inline WNDPROC DefaultWndProc;
+    static inline RAWINPUTDEVICE rid[1];
+    static inline int MouseAcceleration[3] = { 0 };  // [0]=threshold1, [1]=threshold2, [2]=level (0=off, 1 or 2=on with varying strength)
+    static inline int MouseSpeed = 10; // Default to 10 if query fails
+    static inline std::optional<std::reference_wrapper<W>> GameWidth;
+    static inline std::optional<std::reference_wrapper<H>> GameHeight;
+
+    static LRESULT CALLBACK RawInputWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+    {
+        static float SubpixelX = 0.0f;          // Carry-over fractions for X
+        static float SubpixelY = 0.0f;          // Carry-over fractions for Y
+
+        if (uMsg == WM_INPUT)
+        {
+            RECT clientRect;
+            GetClientRect(hWnd, &clientRect);
+
+            UINT dwSize = 0;
+            GetRawInputData((HRAWINPUT)lParam, RID_INPUT, nullptr, &dwSize, sizeof(RAWINPUTHEADER));
+            std::vector<BYTE> buffer(dwSize);
+            RAWINPUT* raw = (RAWINPUT*)buffer.data();
+            if (GetRawInputData((HRAWINPUT)lParam, RID_INPUT, raw, &dwSize, sizeof(RAWINPUTHEADER)) == dwSize)
+            {
+                if (raw->header.dwType == RIM_TYPEMOUSE)
+                {
+                    float dx = static_cast<float>(raw->data.mouse.lLastX);
+                    float dy = static_cast<float>(raw->data.mouse.lLastY);
+
+                    // Apply acceleration (independent for each axis, using original abs values)
+                    float abs_dx = std::fabsf(dx);
+                    if (MouseAcceleration[2] > 0 && MouseAcceleration[0] < abs_dx)
+                        dx *= 2.0f;
+                    if (MouseAcceleration[2] == 2 && MouseAcceleration[1] < abs_dx)
+                        dx *= 2.0f;
+
+                    float abs_dy = std::fabsf(dy);
+                    if (MouseAcceleration[2] > 0 && MouseAcceleration[0] < abs_dy)
+                        dy *= 2.0f;
+                    if (MouseAcceleration[2] == 2 && MouseAcceleration[1] < abs_dy)
+                        dy *= 2.0f;
+
+                    // Apply mouse speed scaling
+                    dx *= (static_cast<float>(MouseSpeed) / 10.0f);
+                    dy *= (static_cast<float>(MouseSpeed) / 10.0f);
+
+                    // Add subpixel carry-over, round to int for accumulation, save new fractions
+                    dx += SubpixelX;
+                    dy += SubpixelY;
+                    T int_dx = static_cast<T>(std::roundf(dx));
+                    T int_dy = static_cast<T>(std::roundf(dy));
+                    SubpixelX = dx - static_cast<float>(int_dx);
+                    SubpixelY = dy - static_cast<float>(int_dy);
+
+                    // Accumulate and clamp
+                    RawMouseDeltaX = int_dx;
+                    RawMouseDeltaY = int_dy;
+
+                    RawMouseCursorX += int_dx;
+                    RawMouseCursorY += int_dy;
+
+                    W maxWidth = clientRect.right;
+                    H maxHeight = clientRect.bottom;
+
+                    if (GameWidth.has_value() && GameHeight.has_value())
+                    {
+                        maxWidth = GameWidth.value().get();
+                        maxHeight = GameHeight.value().get();
+                    }
+
+                    RawMouseCursorX = std::max(T(0), std::min(RawMouseCursorX, static_cast<T>(maxWidth)));
+                    RawMouseCursorY = std::max(T(0), std::min(RawMouseCursorY, static_cast<T>(maxHeight)));
+                }
+            }
+            return 0;  // Consume the message to avoid game interference.
+        }
+        return CallWindowProc(DefaultWndProc, hWnd, uMsg, wParam, lParam);
+    }
 };

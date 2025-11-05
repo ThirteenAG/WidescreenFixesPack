@@ -172,8 +172,7 @@ export void InitD3DDrv()
             Screen.nHudOffsetReal = static_cast<int32_t>(((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f);
             Screen.nScopeScale = static_cast<int32_t>(Screen.fWidth * (Screen.fAspectRatio / (4.0f / 3.0f)));
 
-            RawMouseCursorX = Screen.Width / 2;
-            RawMouseCursorY = Screen.Height / 2;
+            RawInputHandler<>::OnResChange();
 
             if (Screen.fAspectRatio < (16.0f / 9.0f))
             {
@@ -183,7 +182,7 @@ export void InitD3DDrv()
                 if (Screen.fAspectRatio <= (4.0f / 3.0f))
                 {
                     WidescreenHudOffset._float = 0.0f;
-                    WidescreenHudOffset._int = 0.0f;
+                    WidescreenHudOffset._int = 0;
                 }
             }
             else
