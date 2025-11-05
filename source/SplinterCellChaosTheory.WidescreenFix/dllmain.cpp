@@ -112,6 +112,7 @@ void Init()
     bLightSyncRGB = iniReader.ReadInteger("BONUS", "LightSyncRGB", 1);
     auto bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 0) != 0;
     auto bSkipPressAnyKeyToContinue = iniReader.ReadInteger("MAIN", "SkipPressAnyKeyToContinue", 0) != 0;
+    bVibration = iniReader.ReadInteger("MAIN", "Vibration", 0) != 0;
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
