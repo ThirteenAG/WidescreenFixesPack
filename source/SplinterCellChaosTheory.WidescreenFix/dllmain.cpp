@@ -89,6 +89,10 @@ void Init()
     pattern = hook::pattern("E8 ? ? ? ? 68 ? ? ? ? 53 68");
     injector::MakeNOP(pattern.get_first(0), 5, true);
 
+    // Stop mouse sensititvity from affecting gamepad movement in certain states
+    pattern = hook::pattern("E8 ? ? ? ? D8 4C 24 20 83 C4 04");
+    injector::MakeCALL(pattern.get_first(0), static_cast<float(__cdecl*)(float)>([](float a1) -> float { return 1.0f; }), true);
+
     pattern = hook::pattern("8D 84 24 34 04 00 00 68 ? ? ? ? 50 E8 ? ? ? ? 83 C4 14"); //0x10CD09C5
     struct SetResHook
     {
