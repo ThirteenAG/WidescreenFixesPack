@@ -81,10 +81,6 @@ export uint32_t* dword_1120B6B0 = nullptr;
 export uint32_t* dword_11223A7C = nullptr;
 export HWND hGameWindow = NULL;
 export bool bIsWindowed = false;
-export int16_t RawMouseCursorX = 0;
-export int16_t RawMouseCursorY = 0;
-export int16_t RawMouseDeltaX = 0;
-export int16_t RawMouseDeltaY = 0;
 export float* aMouseXPtr = nullptr;
 export float* aMouseYPtr = nullptr;
 

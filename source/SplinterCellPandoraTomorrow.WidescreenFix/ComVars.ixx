@@ -49,10 +49,6 @@ export bool bPressStartToContinue = false;
 export bool bSkipPressStartToContinue = false;
 export HWND hGameWindow = NULL;
 export bool bIsWindowed = false;
-export int32_t RawMouseCursorX = 0;
-export int32_t RawMouseCursorY = 0;
-export int32_t RawMouseDeltaX = 0;
-export int32_t RawMouseDeltaY = 0;
 
 export std::vector<std::pair<const std::wstring, std::wstring>> ResList =
 {
