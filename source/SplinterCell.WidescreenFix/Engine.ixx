@@ -25,7 +25,7 @@ namespace UEngine
     SafetyHookInline shInputEvent = {};
     int __fastcall InputEvent(void* _this, void* edx, int a2, int inputID, int a4, int value)
     {
-        if (inputID == 202) // A on gamepad
+        if (inputID == 202 && !bIsEnhanced) // A on gamepad
         {
             auto EchelonMainHUDState = UObject::GetState(L"EchelonMainHUD");
             if (EchelonMainHUDState == L"MainHUD" || EchelonMainHUDState == L"s_Slavery")
@@ -218,8 +218,11 @@ export void InitEngine()
     }
 
     // LOD
-    pattern = find_module_pattern(GetModuleHandle(L"Engine"), "0F 84 ? ? ? ? 8B 47 24 8D 8C 24 90 00 00 00");
-    injector::WriteMemory<uint16_t>(pattern.get_first(0), 0xE990, true); // jz -> jmp
+    if (!bIsEnhanced)
+    {
+        pattern = find_module_pattern(GetModuleHandle(L"Engine"), "0F 84 ? ? ? ? 8B 47 24 8D 8C 24 90 00 00 00");
+        injector::WriteMemory<uint16_t>(pattern.get_first(0), 0xE990, true); // jz -> jmp
+    }
 
     if (bSkipIntro)
     {

@@ -48,6 +48,20 @@ int __fastcall UD3DRenderDeviceSetRes(void* UD3DRenderDevice, void* edx, void* U
         Screen.fWidescreenHudOffset = Screen.fWidescreenHudOffset / (((16.0f / 9.0f) / (Screen.fAspectRatio)) * 1.5f);
     if (Screen.fAspectRatio <= (4.0f / 3.0f))
         Screen.fWidescreenHudOffset = 0.0f;
+    // Enhanced widescreen setting
+    if (bIsEnhanced && Screen.nHudWidescreenMode == 2)
+    {
+        static bool bWidescreenOverrideRegistered = false;
+        if (!bWidescreenOverrideRegistered)
+        {
+            UIntOverrides::Register(L"IntProperty Echelon.EchelonGameInfo.bWidescreenMode", +[]() -> int
+            {
+                // Dynamic check if user switches resolution while game is open
+                return (Screen.fAspectRatio >= (16.0f / 9.0f)) ? 1 : 0;
+            });
+            bWidescreenOverrideRegistered = true;
+        }
+    }
     if (Screen.Width < 640 || Screen.Height < 480)
         return ret;
 
