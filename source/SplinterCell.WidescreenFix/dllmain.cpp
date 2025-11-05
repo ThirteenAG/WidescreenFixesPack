@@ -30,6 +30,11 @@ void Init()
         });
     }
 
+    if (bIsEnhanced)
+    {
+        bSkipIntro = false;
+    }
+
     auto exePath = GetExeModulePath();
 
     mINI::INIStructure ini;

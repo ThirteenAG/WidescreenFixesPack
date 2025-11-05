@@ -16,6 +16,18 @@ void __fastcall UStrPropertyCopySingleValue(void* UStrProperty, void* edx, void*
     {
         auto ptr = *(uintptr_t*)FArray2;
         auto str = std::wstring_view((const wchar_t*)ptr);
+        
+        // Check if EngineVersion is Enhanced
+        wchar_t buffer[256];
+        if (auto fullName = UObject::GetFullName(UStrProperty, edx, buffer))
+        {
+            std::wstring_view EngineVersionProperty(fullName);
+            if (EngineVersionProperty.find(L"Engine.LevelInfo.EngineVersion") != std::wstring_view::npos && str == L"Enhanced")
+            {
+                bIsEnhanced = true;
+            }
+        }
+        
         if (str == L"1024x768")
         {
             auto try_offsets = [&](const std::vector<int>& offsets) -> bool

@@ -22,10 +22,13 @@ export void InitEchelon()
     });
 
     // set player speed to max on game start
-    UIntOverrides::Register(L"IntProperty Echelon.EchelonGameInfo.m_defautSpeed", +[]() -> int
+    if (!bIsEnhanced)
     {
-        return 5;
-    });
+        UIntOverrides::Register(L"IntProperty Echelon.EchelonGameInfo.m_defautSpeed", +[]() -> int
+        {
+            return 5;
+        });
+    }
 
     // Camera acceleration
     pattern = find_module_pattern(GetModuleHandle(L"Echelon"), "7A ? D9 81 DC 03 00 00");
