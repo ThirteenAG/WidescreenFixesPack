@@ -21,7 +21,7 @@ export struct Screen
     uint32_t pFilmstripTex;
     std::filesystem::path szLoadscPath;
     const float fDefaultARforFOV = 4.0f / 3.0f;
-    bool bRawInputMouseForMenu;
+    float fRawInputMouseForMenu;
     bool bRawInputMouseForCamera;
 } Screen;
 
@@ -32,10 +32,6 @@ export uint32_t gColor = 0;
 export uint32_t curAmmoInClip = 1;
 export uint32_t curClipCapacity = 1;
 export HWND hGameWindow = NULL;
-export int16_t RawMouseCursorX = 0;
-export int16_t RawMouseCursorY = 0;
-export int16_t RawMouseDeltaX = 0;
-export int16_t RawMouseDeltaY = 0;
 
 export namespace UObject
 {

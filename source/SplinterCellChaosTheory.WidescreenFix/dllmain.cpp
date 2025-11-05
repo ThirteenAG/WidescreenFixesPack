@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include <TlHelp32.h>
-#include <hidusage.h>
 
 import ComVars;
 import D3DDrv;
@@ -10,46 +9,6 @@ import WinDrv;
 import GUI;
 import Xidi;
 import WidescreenHUD;
-
-RAWINPUTDEVICE rid[1];
-void RegisterRawInput(HWND hwndTarget)
-{
-    rid[0].usUsagePage = HID_USAGE_PAGE_GENERIC;
-    rid[0].usUsage = HID_USAGE_GENERIC_MOUSE;
-    rid[0].dwFlags = RIDEV_INPUTSINK;
-    rid[0].hwndTarget = hwndTarget;
-    RegisterRawInputDevices(rid, 1, sizeof(RAWINPUTDEVICE));
-}
-
-WNDPROC DefaultWndProc = nullptr;
-LRESULT CALLBACK RawInputWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
-{
-    if (uMsg == WM_INPUT)
-    {
-        UINT dwSize = 0;
-        GetRawInputData((HRAWINPUT)lParam, RID_INPUT, nullptr, &dwSize, sizeof(RAWINPUTHEADER));
-        std::vector<BYTE> buffer(dwSize);
-        RAWINPUT* raw = (RAWINPUT*)buffer.data();
-        if (GetRawInputData((HRAWINPUT)lParam, RID_INPUT, raw, &dwSize, sizeof(RAWINPUTHEADER)) == dwSize)
-        {
-            if (raw->header.dwType == RIM_TYPEMOUSE)
-            {
-                int16_t dx = static_cast<int16_t>(raw->data.mouse.lLastX);
-                int16_t dy = static_cast<int16_t>(raw->data.mouse.lLastY);
-
-                RawMouseDeltaX = dx;
-                RawMouseDeltaY = dy;
-
-                RawMouseCursorX += dx;
-                RawMouseCursorY += dy;
-                RawMouseCursorX = std::max(int16_t(0), std::min(RawMouseCursorX, static_cast<int16_t>(Screen.Width)));
-                RawMouseCursorY = std::max(int16_t(0), std::min(RawMouseCursorY, static_cast<int16_t>(Screen.Height)));
-            }
-        }
-        return 0;  // Consume the message to avoid game interference.
-    }
-    return CallWindowProc(DefaultWndProc, hWnd, uMsg, wParam, lParam);
-}
 
 const wchar_t* aJoysticks = nullptr;
 SafetyHookInline shsub_10CC8580;
@@ -99,7 +58,7 @@ void Init()
     CIniReader iniReader("");
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
-    Screen.bRawInputMouseForMenu = iniReader.ReadInteger("MAIN", "RawInputMouseForMenu", 1) != 0;
+    Screen.fRawInputMouseForMenu = std::clamp(iniReader.ReadFloat("MAIN", "RawInputMouseForMenu", 1.0f), 0.0f, 5.0f);
     bHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1) != 0;
     nWidescreenHudOffset = iniReader.ReadInteger("MAIN", "WidescreenHudOffset", 100);
     fWidescreenHudOffset = static_cast<float>(nWidescreenHudOffset);
@@ -126,6 +85,14 @@ void Init()
     pattern = hook::pattern("55 8B EC 83 E4 F8 81 EC 08 02 00 00");
     shsub_10CC8580 = safetyhook::create_inline(pattern.get_first(), sub_10CC8580);
 
+    // Disable safe mode
+    pattern = hook::pattern("E8 ? ? ? ? 68 ? ? ? ? 53 68");
+    injector::MakeNOP(pattern.get_first(0), 5, true);
+
+    // Stop mouse sensititvity from affecting gamepad movement in certain states
+    pattern = hook::pattern("E8 ? ? ? ? D8 4C 24 20 83 C4 04");
+    injector::MakeCALL(pattern.get_first(0), static_cast<float(__cdecl*)(float)>([](float a1) -> float { return 1.0f; }), true);
+
     pattern = hook::pattern("8D 84 24 34 04 00 00 68 ? ? ? ? 50 E8 ? ? ? ? 83 C4 14"); //0x10CD09C5
     struct SetResHook
     {
@@ -151,22 +118,16 @@ void Init()
         static auto SetPropWHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
             hGameWindow = (HWND)regs.edx;
-            if (Screen.bRawInputMouseForMenu)
-            {
-                DefaultWndProc = (WNDPROC)SetWindowLongPtr(hGameWindow, GWL_WNDPROC, (LONG_PTR)RawInputWndProc);
-                RegisterRawInput(hGameWindow);
-            }
+            if (Screen.fRawInputMouseForMenu > 0.0f)
+                RawInputHandler<>::RegisterRawInput(hGameWindow, Screen.Width, Screen.Height, Screen.fRawInputMouseForMenu);
         });
 
         pattern = hook::pattern("FF 15 ? ? ? ? A1 ? ? ? ? 85 C0 75 ? 68 ? ? ? ? E8 ? ? ? ? 83 C4 04 A3 ? ? ? ? E8 ? ? ? ? A1");
         static auto SetPropAHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
             hGameWindow = (HWND)regs.edi;
-            if (Screen.bRawInputMouseForMenu)
-            {
-                DefaultWndProc = (WNDPROC)SetWindowLongPtr(hGameWindow, GWL_WNDPROC, (LONG_PTR)RawInputWndProc);
-                RegisterRawInput(hGameWindow);
-            }
+            if (Screen.fRawInputMouseForMenu > 0.0f)
+                RawInputHandler<>::RegisterRawInput(hGameWindow, Screen.Width, Screen.Height, Screen.fRawInputMouseForMenu);
         });
     }
 
