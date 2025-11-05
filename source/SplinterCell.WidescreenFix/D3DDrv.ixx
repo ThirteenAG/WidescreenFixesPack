@@ -304,7 +304,7 @@ export void InitD3DDrv()
             //*(int32_t*)&regs.ebx = static_cast<int32_t>((Screen.fHeight - 480.0f) / 2.0f);
 
             regs.ebp = 0;
-            regs.ebx = 0;
+            regs.ebx = (480 - regs.ecx) / 2;
         }
     };
 
