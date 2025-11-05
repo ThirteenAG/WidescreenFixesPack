@@ -1286,7 +1286,7 @@ public:
         SystemParametersInfo(SPI_GETMOUSE, 0, MouseAcceleration, 0);
         SystemParametersInfo(SPI_GETMOUSESPEED, 0, &MouseSpeed, 0);
 
-        DefaultWndProc = (WNDPROC)SetWindowLongPtr(hWnd, GWL_WNDPROC, (LONG_PTR)RawInputWndProc);
+        DefaultWndProc = (WNDPROC)SetWindowLongPtr(hWnd, GWLP_WNDPROC, (LONG_PTR)RawInputWndProc);
 
         rid[0].usUsagePage = HID_USAGE_PAGE_GENERIC;
         rid[0].usUsage = HID_USAGE_GENERIC_MOUSE;
