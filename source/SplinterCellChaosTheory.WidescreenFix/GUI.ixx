@@ -458,6 +458,78 @@ namespace CMenusManager
         uint32_t hash = crc32(0, name, std::strlen(name));
         return IsMenuDisplayed(hash);
     }
+
+    // Helper to compute delta and bounds for X axis
+    inline void GetXAxisBounds(int16_t& outDelta, int16_t& outVmin, int16_t& outVmax)
+    {
+        outDelta = static_cast<int16_t>(((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f);
+        outVmin = static_cast<int16_t>(0 - outDelta);
+        outVmax = static_cast<int16_t>(640 + outDelta);
+    }
+
+    // Helper to convert raw input to normalized [0, 1] range
+    inline float NormalizeRawInputX(int16_t rawX)
+    {
+        return static_cast<float>(rawX) / static_cast<float>(Screen.Width);
+    }
+
+    inline float NormalizeRawInputY(int16_t rawY)
+    {
+        return static_cast<float>(rawY) / static_cast<float>(Screen.Height);
+    }
+
+    // Helper to convert normalized coordinates to game space
+    inline int16_t NormalizedToGameX(float normalized, int16_t minGame, int16_t maxGame)
+    {
+        return static_cast<int16_t>(normalized * (maxGame - minGame) + minGame);
+    }
+
+    inline int16_t NormalizedToGameY(float normalized, int16_t minGame, int16_t maxGame)
+    {
+        return static_cast<int16_t>(normalized * (maxGame - minGame) + minGame);
+    }
+
+    // Helper to convert game coordinates back to raw input space
+    inline int16_t GameToRawInputX(int16_t gameX, int16_t vmin, int16_t vmax)
+    {
+        float normalized = static_cast<float>(gameX - vmin) / static_cast<float>(vmax - vmin);
+        return static_cast<int16_t>(normalized * Screen.Width);
+    }
+
+    inline int16_t GameToRawInputY(int16_t gameY, int16_t minGame, int16_t maxGame)
+    {
+        float normalized = static_cast<float>(gameY) / static_cast<float>(maxGame);
+        return static_cast<int16_t>(normalized * Screen.Height);
+    }
+}
+
+int16_t __cdecl ClampXAxisState(int16_t value, int16_t min, int16_t max)
+{
+    int16_t delta, vmin, vmax;
+    CMenusManager::GetXAxisBounds(delta, vmin, vmax);
+
+    if (Screen.bRawInputMouseForMenu)
+    {
+        float normalizedX = CMenusManager::NormalizeRawInputX(RawMouseCursorX);
+        int16_t menuX = CMenusManager::NormalizedToGameX(normalizedX, vmin, vmax);
+        return std::clamp(menuX, vmin, vmax);
+    }
+    else
+        return std::clamp(value, int16_t(0 - delta), int16_t(640 + delta));
+}
+
+int16_t __cdecl ClampYAxisState(int16_t value, int16_t min, int16_t max)
+{
+    max += 15;
+
+    if (Screen.bRawInputMouseForMenu)
+    {
+        float normalizedY = CMenusManager::NormalizeRawInputY(RawMouseCursorY);
+        int16_t menuY = CMenusManager::NormalizedToGameY(normalizedY, min, max);
+        return std::clamp(menuY, min, max);
+    }
+    else
+        return std::clamp(value, min, max);
 }
 
 export void InitGUI()
@@ -465,16 +537,52 @@ export void InitGUI()
     auto pattern = hook::pattern("3B C5 89 44 24 44 7D ? 66 89 6C 24 40");
     if (!pattern.empty())
     {
-        struct UGUIControllerNativePostRenderHook
+        struct USCMagmaInteractionProcessInputAxisStateHookX
         {
             void operator()(injector::reg_pack& regs)
             {
                 *(uint32_t*)(regs.esp + 0x44) = regs.eax;
-
-                int16_t delta = int16_t(((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f);
-                *(int16_t*)(regs.esp + 0x40) = std::clamp(*(int16_t*)&regs.eax, int16_t(0 - delta), int16_t(640 + delta));
+                *(int16_t*)(regs.esp + 0x40) = ClampXAxisState(*(int16_t*)&regs.eax, int16_t(0), int16_t(640));
             }
-        }; injector::MakeInline<UGUIControllerNativePostRenderHook>(pattern.get_first(0), pattern.get_first(33));
+        }; injector::MakeInline<USCMagmaInteractionProcessInputAxisStateHookX>(pattern.get_first(0), pattern.get_first(33));
+    }
+
+    pattern = hook::pattern("3B C5 89 44 24 44 7D ? 66 89 6C 24 42");
+    if (!pattern.empty())
+    {
+        struct USCMagmaInteractionProcessInputAxisStateHookY
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                *(uint32_t*)(regs.esp + 0x44) = regs.eax;
+                *(int16_t*)(regs.esp + 0x42) = ClampYAxisState(*(int16_t*)&regs.eax, int16_t(0), int16_t(480));
+            }
+        }; injector::MakeInline<USCMagmaInteractionProcessInputAxisStateHookY>(pattern.get_first(0), pattern.get_first(33));
+    }
+
+    pattern = hook::pattern("0F BF 42 02 85 C0");
+    if (!pattern.empty())
+    {
+        struct CMenusManagerSetMousePositionHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                int16_t delta, vmin, vmax;
+                CMenusManager::GetXAxisBounds(delta, vmin, vmax);
+
+                int16_t clampedGameX = std::clamp(*(int16_t*)(regs.edx + 0), int16_t(0 - delta), int16_t(640 + delta));
+                int16_t clampedGameY = std::clamp(*(int16_t*)(regs.edx + 2), int16_t(0), int16_t(480));
+
+                if (Screen.bRawInputMouseForMenu)
+                {
+                    RawMouseCursorX = CMenusManager::GameToRawInputX(clampedGameX, vmin, vmax);
+                    RawMouseCursorY = CMenusManager::GameToRawInputY(clampedGameY, 0, 480);
+                }
+
+                *(int16_t*)&regs.eax = clampedGameX;
+                *(int16_t*)&regs.ecx = clampedGameY;
+            }
+        }; injector::MakeInline<CMenusManagerSetMousePositionHook>(pattern.get_first(0), pattern.get_first(35));
     }
 
     pattern = hook::pattern("51 53 8B 5C 24 0C 85 DB");

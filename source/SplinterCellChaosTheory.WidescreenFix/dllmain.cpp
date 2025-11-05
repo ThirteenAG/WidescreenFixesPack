@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include <TlHelp32.h>
+#include <hidusage.h>
 
 import ComVars;
 import D3DDrv;
@@ -9,6 +10,46 @@ import WinDrv;
 import GUI;
 import Xidi;
 import WidescreenHUD;
+
+RAWINPUTDEVICE rid[1];
+void RegisterRawInput(HWND hwndTarget)
+{
+    rid[0].usUsagePage = HID_USAGE_PAGE_GENERIC;
+    rid[0].usUsage = HID_USAGE_GENERIC_MOUSE;
+    rid[0].dwFlags = RIDEV_INPUTSINK;
+    rid[0].hwndTarget = hwndTarget;
+    RegisterRawInputDevices(rid, 1, sizeof(RAWINPUTDEVICE));
+}
+
+WNDPROC DefaultWndProc = nullptr;
+LRESULT CALLBACK RawInputWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    if (uMsg == WM_INPUT)
+    {
+        UINT dwSize = 0;
+        GetRawInputData((HRAWINPUT)lParam, RID_INPUT, nullptr, &dwSize, sizeof(RAWINPUTHEADER));
+        std::vector<BYTE> buffer(dwSize);
+        RAWINPUT* raw = (RAWINPUT*)buffer.data();
+        if (GetRawInputData((HRAWINPUT)lParam, RID_INPUT, raw, &dwSize, sizeof(RAWINPUTHEADER)) == dwSize)
+        {
+            if (raw->header.dwType == RIM_TYPEMOUSE)
+            {
+                int16_t dx = static_cast<int16_t>(raw->data.mouse.lLastX);
+                int16_t dy = static_cast<int16_t>(raw->data.mouse.lLastY);
+
+                RawMouseDeltaX = dx;
+                RawMouseDeltaY = dy;
+
+                RawMouseCursorX += dx;
+                RawMouseCursorY += dy;
+                RawMouseCursorX = std::max(int16_t(0), std::min(RawMouseCursorX, static_cast<int16_t>(Screen.Width)));
+                RawMouseCursorY = std::max(int16_t(0), std::min(RawMouseCursorY, static_cast<int16_t>(Screen.Height)));
+            }
+        }
+        return 0;  // Consume the message to avoid game interference.
+    }
+    return CallWindowProc(DefaultWndProc, hWnd, uMsg, wParam, lParam);
+}
 
 const wchar_t* aJoysticks = nullptr;
 SafetyHookInline shsub_10CC8580;
@@ -58,6 +99,7 @@ void Init()
     CIniReader iniReader("");
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
+    Screen.bRawInputMouseForMenu = iniReader.ReadInteger("MAIN", "RawInputMouseForMenu", 1) != 0;
     bHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1) != 0;
     nWidescreenHudOffset = iniReader.ReadInteger("MAIN", "WidescreenHudOffset", 100);
     fWidescreenHudOffset = static_cast<float>(nWidescreenHudOffset);
@@ -103,6 +145,30 @@ void Init()
             WritePrivateProfileStringW(L"WinDrv.WindowsClient", L"FullscreenViewportY", ResY.c_str(), pszPath);
         }
     }; injector::MakeInline<SetResHook>(pattern.get_first(0), pattern.get_first(7));
+
+    {
+        auto pattern = hook::pattern("FF 15 ? ? ? ? EB 60");
+        static auto SetPropWHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            hGameWindow = (HWND)regs.edx;
+            if (Screen.bRawInputMouseForMenu)
+            {
+                DefaultWndProc = (WNDPROC)SetWindowLongPtr(hGameWindow, GWL_WNDPROC, (LONG_PTR)RawInputWndProc);
+                RegisterRawInput(hGameWindow);
+            }
+        });
+
+        pattern = hook::pattern("FF 15 ? ? ? ? A1 ? ? ? ? 85 C0 75 ? 68 ? ? ? ? E8 ? ? ? ? 83 C4 04 A3 ? ? ? ? E8 ? ? ? ? A1");
+        static auto SetPropAHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            hGameWindow = (HWND)regs.edi;
+            if (Screen.bRawInputMouseForMenu)
+            {
+                DefaultWndProc = (WNDPROC)SetWindowLongPtr(hGameWindow, GWL_WNDPROC, (LONG_PTR)RawInputWndProc);
+                RegisterRawInput(hGameWindow);
+            }
+        });
+    }
 
     InitD3DDrv();
     InitEngine();
