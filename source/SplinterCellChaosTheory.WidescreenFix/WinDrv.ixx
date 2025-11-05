@@ -12,7 +12,7 @@ namespace UWindowsViewport
     SafetyHookInline shUpdateRumble = {};
     void __fastcall UpdateRumble(void* UWindowsViewport, void* edx, float vibrateStrength, float shakeStrength)
     {
-        if (!XidiSendVibration || bVibration)
+        if (!XidiSendVibration || !bVibration)
             return;
 
         constexpr float RUMBLE_MIN_STRENGTH = 0.0f;
