@@ -49,6 +49,7 @@ export bool bPressStartToContinue = false;
 export bool bSkipPressStartToContinue = false;
 export HWND hGameWindow = NULL;
 export bool bIsWindowed = false;
+export bool bVibration = false;
 export int32_t RawMouseCursorX = 0;
 export int32_t RawMouseCursorY = 0;
 export int32_t RawMouseDeltaX = 0;

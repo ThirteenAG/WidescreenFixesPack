@@ -27,6 +27,7 @@ void Init()
     gColor.RGBA = iniReader.ReadInteger("BONUS", "GogglesLightColor", 0);
     bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 0) != 0;
     bSkipPressStartToContinue = iniReader.ReadInteger("MAIN", "SkipPressStartToContinue", 0) != 0;
+    bVibration = iniReader.ReadInteger("MAIN", "Vibration", 0) != 0;
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
