@@ -89,7 +89,11 @@ void Init()
     pattern = hook::pattern("E8 ? ? ? ? 68 ? ? ? ? 53 68");
     injector::MakeNOP(pattern.get_first(0), 5, true);
 
-    // Stop mouse sensititvity from affecting gamepad movement in certain states
+    // Unlock all resolutions
+    pattern = hook::pattern("75 ? B8 ? ? ? ? 68 ? ? ? ? 50 E8 ? ? ? ? 8B 5C 24 3C");
+    injector::MakeJMP(pattern.get_first(0), hook::get_pattern("8B 5C 24 18 8B 43 78 3B C5"), true);
+
+    // Stop mouse sensitivity from affecting gamepad movement in certain states
     pattern = hook::pattern("E8 ? ? ? ? D8 4C 24 20 83 C4 04");
     injector::MakeCALL(pattern.get_first(0), static_cast<float(__cdecl*)(float)>([](float a1) -> float { return 1.0f; }), true);
 
