@@ -31,16 +31,11 @@ float* __fastcall FindAxisName(void* UInput, void* edx, void* AActor, const wcha
 export void InitEngine()
 {
     //HUD
-    static uint8_t* bIsInMenu = nullptr;
-    auto pattern = hook::pattern("88 81 39 4D 00 00 C2 08 00");
-    struct MenuCheckHook
+    auto pattern = hook::pattern("FF 91 ? ? ? ? 8A 86 39 4D 00 00");
+    static auto MenuCheckHook = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& regs)
     {
-        void operator()(injector::reg_pack& regs)
-        {
-            bIsInMenu = reinterpret_cast<uint8_t*>(regs.ecx + 0x4D39);
-            *bIsInMenu = 0;
-        }
-    }; injector::MakeInline<MenuCheckHook>(pattern.get_first(0), pattern.get_first(6)); //0x10C7FC4C
+        bIsInMenu = reinterpret_cast<uint8_t*>(regs.esi + 0x4D39);
+    });
 
     pattern = hook::pattern(pattern_str(0xD9, 0x05, to_bytes(dword_1120B6BC))); //fld
     for (size_t i = 0; i < pattern.size(); ++i)

@@ -76,6 +76,7 @@ export bool bEnableShadowFiltering;
 export bool bPlayingVideo = false;
 export bool bHackingGameplay = false;
 
+export uint8_t* bIsInMenu = nullptr;
 export uint32_t* dword_1120B6BC = nullptr;
 export uint32_t* dword_1120B6B0 = nullptr;
 export uint32_t* dword_11223A7C = nullptr;
