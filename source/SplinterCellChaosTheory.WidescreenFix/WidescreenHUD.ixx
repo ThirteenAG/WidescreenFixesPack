@@ -6,6 +6,7 @@ export module WidescreenHUD;
 
 import ComVars;
 import GUI;
+import Hashes;
 
 namespace HudImageMatchers
 {
