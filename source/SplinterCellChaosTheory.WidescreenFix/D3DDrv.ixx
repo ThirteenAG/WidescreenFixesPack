@@ -174,6 +174,19 @@ export void InitD3DDrv()
 
             RawInputHandler<>::OnResChange();
 
+            CIniReader iniReader("");
+            auto [DesktopResW, DesktopResH] = GetDesktopRes();
+            if (Screen.Width != DesktopResW || Screen.Height != DesktopResH)
+            {
+                iniReader.WriteInteger("MAIN", "ResX", Screen.Width);
+                iniReader.WriteInteger("MAIN", "ResY", Screen.Height);
+            }
+            else
+            {
+                iniReader.WriteInteger("MAIN", "ResX", 0);
+                iniReader.WriteInteger("MAIN", "ResY", 0);
+            }
+
             if (Screen.fAspectRatio < (16.0f / 9.0f))
             {
                 WidescreenHudOffset._float = fWidescreenHudOffset / (((16.0f / 9.0f) / (Screen.fAspectRatio)) * 1.5f);
