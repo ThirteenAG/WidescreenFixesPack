@@ -95,6 +95,100 @@ namespace CMenusManager
         return IsMenuDisplayed(hash);
     }
 
+    export bool IsMainMenuDisplayed()
+    {
+        static const KnownHashes menuHashes[] = {
+            //KnownHashes::P_ChatIngame,
+            //KnownHashes::P_OptionPopup,
+            //KnownHashes::P_SavingScreen,
+            //KnownHashes::P_Progress,
+            //KnownHashes::P_ContextMenu,
+            //KnownHashes::P_endmission,
+            KnownHashes::P_MenuLoadLevel,
+            KnownHashes::P_MenuLoadGame,
+            KnownHashes::P_MenuSaveGame,
+            KnownHashes::P_MenuGameOver,
+            KnownHashes::P_MenuOnline,
+            KnownHashes::P_MenuLobbyList,
+            KnownHashes::P_MenuRoomListLan,
+            KnownHashes::P_MenuRoomCreateLan,
+            KnownHashes::P_MenuCoop,
+            KnownHashes::P_MenuGameType,
+            KnownHashes::P_MenuSolo,
+            //KnownHashes::P_PauseOnline,
+            //KnownHashes::P_Pause,
+            KnownHashes::P_GameOverOnline,
+            KnownHashes::P_LoadOut,
+            KnownHashes::P_LoadOut_Selection,
+            KnownHashes::P_LoadOut_Infos,
+            //KnownHashes::P_Sound,
+            //KnownHashes::P_Image,
+            //KnownHashes::P_Email,
+            KnownHashes::P_OverallAchievement,
+            KnownHashes::P_MissionStatistics,
+            KnownHashes::P_ObjectiveReview,
+            KnownHashes::P_EnterServerPassword,
+            KnownHashes::P_CDKeyEntry,
+            KnownHashes::P_OnlineTermsOfUse,
+            KnownHashes::P_PrivateMessage,
+            KnownHashes::P_FriendsManagement,
+            KnownHashes::P_ManageAccount,
+            KnownHashes::P_RoomOnline,
+            KnownHashes::P_Login,
+            KnownHashes::P_OnlineQuickMatchFilter,
+            KnownHashes::P_CreateAccount,
+            KnownHashes::P_ManageGame,
+            KnownHashes::P_LobbyOnline,
+            KnownHashes::P_OnlineESRB,
+            KnownHashes::P_OfflineOnline,
+            KnownHashes::P_LobbyLan,
+            KnownHashes::P_OnlineCreate,
+            KnownHashes::P_Movies,
+            KnownHashes::P_MusicsList,
+            KnownHashes::P_MusicsBio,
+            KnownHashes::P_Extras,
+            //KnownHashes::P_TrainingVideo,
+            //KnownHashes::P_TrainingVideoMain,
+            KnownHashes::P_Difficulty,
+            KnownHashes::P_Controls_joystick,
+            KnownHashes::P_ShaderAdvanced,
+            KnownHashes::P_CreateProfile,
+            KnownHashes::P_SoundSettings,
+            KnownHashes::P_Profiles,
+            KnownHashes::P_DisplaySettings,
+            KnownHashes::P_DisplayAdvanced,
+            //KnownHashes::P_Controls_Popup_Selection,
+            KnownHashes::P_Controls_keyboard,
+            //KnownHashes::P_Panel,
+            //KnownHashes::P_MsgBox_Training,
+            KnownHashes::P_CamControl,
+            KnownHashes::P_Briefing,
+        };
+
+        return std::any_of(std::begin(menuHashes), std::end(menuHashes), [](KnownHashes hash)
+        {
+            return CMenusManager::IsMenuDisplayed(hash);
+        });
+    }
+
+    export bool IsOpsatDisplayed()
+    {
+        static const KnownHashes opsatHashes[] = {
+            KnownHashes::P_KeyPad,
+            KnownHashes::P_Opsat,
+            KnownHashes::P_Goals,
+            KnownHashes::P_Goals_details,
+            KnownHashes::P_Notes,
+            KnownHashes::P_Datas,
+            KnownHashes::P_Computer,
+        };
+
+        return std::any_of(std::begin(opsatHashes), std::end(opsatHashes), [](KnownHashes hash)
+        {
+            return CMenusManager::IsMenuDisplayed(hash);
+        });
+    }
+
     // Helper to compute delta and bounds for X axis
     inline void GetXAxisBounds(int16_t& outDelta, int16_t& outVmin, int16_t& outVmax)
     {
