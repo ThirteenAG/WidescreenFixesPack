@@ -149,7 +149,7 @@ namespace CMenusManager
             KnownHashes::P_Extras,
             //KnownHashes::P_TrainingVideo,
             //KnownHashes::P_TrainingVideoMain,
-            KnownHashes::P_Difficulty,
+            //KnownHashes::P_Difficulty,
             KnownHashes::P_Controls_joystick,
             KnownHashes::P_ShaderAdvanced,
             KnownHashes::P_CreateProfile,
