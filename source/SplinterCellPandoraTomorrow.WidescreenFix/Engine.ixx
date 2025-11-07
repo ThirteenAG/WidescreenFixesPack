@@ -411,5 +411,11 @@ export void InitEngine()
     static auto UGameEngineLoadGameHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
         UObject::objectStates.clear();
+        UIntOverrides::ClearCache();
+        UFloatOverrides::ClearCache();
+        UByteOverrides::ClearCache();
+        UNameOverrides::ClearCache();
+        UObjectOverrides::ClearCache();
+        UArrayOverrides::ClearCache();
     });
 }
