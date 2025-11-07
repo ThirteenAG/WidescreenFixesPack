@@ -2,6 +2,9 @@ version: '{build}'
 skip_tags: true
 image: Visual Studio 2022
 configuration: Release
+environment:
+  SCCOMPILE_PASSWORD:
+    secure: KghYaVdOq7Z+5YMT/cr3OA==
 install:
 - cmd: >-
     git submodule update --init --recursive
