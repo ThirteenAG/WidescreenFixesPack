@@ -144,6 +144,29 @@ namespace HudTextMatchers
     }
 }
 
+bool IsWidescreenHudNeeded()
+{
+    if (UObject::GetState(L"EPlayerController") == L"s_KeyPadInteract" || bHackingGameplay)
+        return false;
+
+    if (UObject::GetState(L"EPlayerCam") == L"s_Fixed")
+        return false;
+
+    if (CMenusManager::IsOpsatDisplayed())
+        return false;
+
+    if (CMenusManager::IsMainMenuDisplayed())
+        return false;
+
+    if (CMenusManager::IsMenuDisplayed(KnownHashes::P_opticcable))
+        return false;
+
+    if (CMenusManager::IsMenuDisplayed(KnownHashes::P_KeyPad))
+        return false;
+
+    return true;
+}
+
 export void WidescreenHudImage(int16_t& left, int16_t& right, int16_t& top, int16_t& bottom, FColor color, std::wstring_view textureName)
 {
     using namespace HudImageMatchers;
@@ -185,22 +208,7 @@ export void WidescreenHudImage(int16_t& left, int16_t& right, int16_t& top, int1
     if (textureName == L"Texture system_PC.mgb.Cursor" || textureName == L"Texture system_PC.mgb.CURSOR")
         return;
 
-    if (UObject::GetState(L"EPlayerController") == L"s_KeyPadInteract" || bHackingGameplay)
-        return;
-
-    if (UObject::GetState(L"EPlayerCam") == L"s_Fixed")
-        return;
-
-    if (CMenusManager::IsMenuDisplayed(KnownHashes::P_Opsat))
-        return;
-
-    if (CMenusManager::IsMenuDisplayed(KnownHashes::P_Computer))
-        return;
-
-    if (CMenusManager::IsMenuDisplayed(KnownHashes::P_opticcable))
-        return;
-
-    if (CMenusManager::IsMenuDisplayed(KnownHashes::P_KeyPad))
+    if (!IsWidescreenHudNeeded())
         return;
 
     if (IsTopRightMenu(left, right, top, bottom, color) ||
@@ -223,6 +231,9 @@ export void WidescreenHudText(float& textX, int32_t offset1, int32_t offset2, in
 {
     using namespace HudTextMatchers;
 
+    if (!IsWidescreenHudNeeded())
+        return;
+
     if (IsTopCornerText(offset1, offset2, offset3, color) ||
         IsBottomCornerText(offset1, offset2, offset3, color) ||
         IsIconsText(offset1, offset2, offset3, color) ||
@@ -232,6 +243,7 @@ export void WidescreenHudText(float& textX, int32_t offset1, int32_t offset2, in
         {
             spd::log()->info("{:d} {:d} {:d} {:08x}", offset1, offset2, offset3, color.RGBA);
         });
+
         textX += WidescreenHudOffset._float;
     }
 }
