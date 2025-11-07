@@ -4,6 +4,9 @@ inputs:
   project:
     description: "Project name"
     required: false
+  sccompile_password:
+    description: "SC Compile Password"
+    required: false
 
 runs:
   using: "composite"
@@ -18,6 +21,8 @@ runs:
     shell: cmd
     run: |
       ./before_build.bat
+    env:
+      SCCOMPILE_PASSWORD: ${{ inputs.sccompile_password }}
   - name: Build
     shell: cmd
     run: |

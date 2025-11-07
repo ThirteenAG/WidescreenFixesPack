@@ -29,6 +29,7 @@ jobs:
       uses: ./.github/workflows/build_all
       with:
         project: ${{ inputs.project }}
+        sccompile_password: ${{ secrets.SCCOMPILE_PASSWORD }}
 
     - name: GTA SA The Definitive Edition Fusion Mod
       uses: ./.github/workflows/release_tag
