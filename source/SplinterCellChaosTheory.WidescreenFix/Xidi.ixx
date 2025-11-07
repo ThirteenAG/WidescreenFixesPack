@@ -110,7 +110,7 @@ export void InitXidi()
                     return L"P_Controls_joystick";
                 else if (!CMenusManager::IsMenuDisplayed(KnownHashes::P_Map) && std::any_of(std::begin(opsatHashes), std::end(opsatHashes), [](KnownHashes hash) { return CMenusManager::IsMenuDisplayed(hash); }))
                     return L"Opsat";
-                else if (bIsInMenu && *bIsInMenu != 0 && std::any_of(std::begin(menuHashes), std::end(menuHashes), [](KnownHashes hash) { return CMenusManager::IsMenuDisplayed(hash); }))
+                else if (std::any_of(std::begin(menuHashes), std::end(menuHashes), [](KnownHashes hash) { return CMenusManager::IsMenuDisplayed(hash); }))
                     return L"Menu";
                 return L"Main";
             });
