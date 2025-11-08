@@ -113,7 +113,7 @@ namespace CMenusManager
             KnownHashes::P_MenuRoomListLan,
             KnownHashes::P_MenuRoomCreateLan,
             KnownHashes::P_MenuCoop,
-            KnownHashes::P_MenuGameType,
+            //KnownHashes::P_MenuGameType,
             KnownHashes::P_MenuSolo,
             //KnownHashes::P_PauseOnline,
             //KnownHashes::P_Pause,
