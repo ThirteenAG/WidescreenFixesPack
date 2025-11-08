@@ -146,7 +146,7 @@ namespace HudTextMatchers
 
 bool IsWidescreenHudNeeded()
 {
-    if (!bHudWidescreenMode)
+    if (nHudWidescreenMode != 1)
         return false;
 
     if (UObject::GetState(L"EPlayerController") == L"s_KeyPadInteract" || bHackingGameplay)

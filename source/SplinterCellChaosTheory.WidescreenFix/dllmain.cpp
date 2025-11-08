@@ -60,7 +60,7 @@ void Init()
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
     Screen.fRawInputMouseForMenu = std::clamp(iniReader.ReadFloat("MAIN", "RawInputMouseForMenu", 1.0f), 0.0f, 5.0f);
-    bHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1) != 0;
+    nHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 2);
     nWidescreenHudOffset = iniReader.ReadInteger("MAIN", "WidescreenHudOffset", 100);
     fWidescreenHudOffset = static_cast<float>(nWidescreenHudOffset);
     bDisableAltTabFix = iniReader.ReadInteger("MAIN", "DisableAltTabFix", 1) != 0;
