@@ -67,7 +67,7 @@ export struct WidescreenHudOffset
     float _float;
 } WidescreenHudOffset;
 
-export bool bHudWidescreenMode;
+export int nHudWidescreenMode;
 export int32_t nWidescreenHudOffset;
 export float fWidescreenHudOffset;
 export bool bDisableAltTabFix;

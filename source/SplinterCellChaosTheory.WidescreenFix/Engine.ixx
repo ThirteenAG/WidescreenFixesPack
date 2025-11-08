@@ -115,7 +115,7 @@ export void InitEngine()
     pattern = hook::pattern("D8 25 ? ? ? ? D9 44 24 24 D8 4C 24");
     injector::WriteMemory(pattern.get_first(2), &Screen.fHudOffset, true); //0x10B14BAD + 0x2
 
-    if (bHudWidescreenMode)
+    if (nHudWidescreenMode == 1)
     {
         pattern = hook::pattern("A1 ? ? ? ? 83 C4 04 85 C0 D8 3D");
         struct WSText
