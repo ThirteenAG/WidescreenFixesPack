@@ -9,6 +9,7 @@ import WinDrv;
 import GUI;
 import Xidi;
 import WidescreenHUD;
+import WidescreenHUD2;
 
 const wchar_t* aJoysticks = nullptr;
 SafetyHookInline shsub_10CC8580;
@@ -140,6 +141,7 @@ void Init()
     InitCore();
     InitWinDrv();
     InitGUI();
+    InitWidescreenHUD2();
 
 #ifdef _DEBUG
     pattern = hook::pattern("8B 88 80 00 00 00 6A 01");
