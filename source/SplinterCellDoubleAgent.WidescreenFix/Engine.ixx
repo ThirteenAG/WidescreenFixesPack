@@ -6,6 +6,7 @@ export module Engine;
 
 import ComVars;
 import GUI;
+import WidescreenHUD;
 
 #if _DEBUG
 SafetyHookInline shFindAxisName = {};
@@ -29,6 +30,7 @@ float* __fastcall FindAxisName(void* UInput, void* edx, void* AActor, const wcha
 export void InitEngine()
 {
     InitGUI();
+    InitWidescreenHUD();
 
     CIniReader iniReader("");
     bool bSingleCoreAffinity = iniReader.ReadInteger("MAIN", "SingleCoreAffinity", 1);

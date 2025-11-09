@@ -402,6 +402,23 @@ export void InitD3DDrv()
                 iniReader.WriteInteger("MAIN", "ResY", 0);
             }
 
+            if (Screen.fAspectRatio < (16.0f / 9.0f))
+            {
+                WidescreenHudOffset.AsFloat = fWidescreenHudOffset / (((16.0f / 9.0f) / (Screen.fAspectRatio)) * 1.5f);
+                WidescreenHudOffset.AsInt = static_cast<int32_t>(WidescreenHudOffset.AsFloat);
+
+                if (Screen.fAspectRatio <= (4.0f / 3.0f))
+                {
+                    WidescreenHudOffset.AsFloat = 0.0f;
+                    WidescreenHudOffset.AsInt = 0;
+                }
+            }
+            else
+            {
+                WidescreenHudOffset.AsFloat = fWidescreenHudOffset;
+                WidescreenHudOffset.AsInt = nWidescreenHudOffset;
+            }
+
             if (pPresentParams->Windowed)
             {
                 tagRECT rect;

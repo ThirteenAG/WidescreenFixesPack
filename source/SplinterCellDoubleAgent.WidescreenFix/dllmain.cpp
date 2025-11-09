@@ -48,6 +48,9 @@ void Init()
     CIniReader iniReader("");
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
+    nHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 2);
+    nWidescreenHudOffset = iniReader.ReadInteger("MAIN", "WidescreenHudOffset", 100);
+    fWidescreenHudOffset = static_cast<float>(nWidescreenHudOffset);
     Screen.fRawInputMouseForMenu = std::clamp(iniReader.ReadFloat("MAIN", "RawInputMouseForMenu", 1.0f), 0.0f, 5.0f);
     Screen.bRawInputMouseForCamera = iniReader.ReadInteger("MAIN", "RawInputMouseForCamera", 0) != 0;
     bool bForceLL = iniReader.ReadInteger("MAIN", "ForceLL", 1) != 0;
