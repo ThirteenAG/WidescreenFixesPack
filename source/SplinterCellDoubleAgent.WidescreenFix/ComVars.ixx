@@ -25,6 +25,15 @@ export struct Screen
     bool bRawInputMouseForCamera;
 } Screen;
 
+export struct WidescreenHudOffset
+{
+    int32_t AsInt;
+    float AsFloat;
+} WidescreenHudOffset;
+
+export int nHudWidescreenMode;
+export int32_t nWidescreenHudOffset;
+export float fWidescreenHudOffset;
 export int32_t gBlacklistIndicators = 0;
 export uint32_t bLightSyncRGB = false;
 export float gVisibility = 1.0f;
