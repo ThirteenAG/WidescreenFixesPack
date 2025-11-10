@@ -433,7 +433,6 @@ struct injector_t injector =
     .base_size = 0,
     .module_addr = 0,
     .module_size = 0,
-    .AllocMemBlock = AllocMemBlock,
     .FreeMemBlock = FreeMemBlock,
     .GetGP = GetGP,
     .SetGP = SetGP,
