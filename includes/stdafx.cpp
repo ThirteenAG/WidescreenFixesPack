@@ -15,6 +15,72 @@ float AdjustFOV(float f, float ar, float base_ar)
     return std::round((2.0f * atan(((ar) / base_ar) * tan(f / 2.0f * ((float)M_PI / 180.0f)))) * (180.0f / (float)M_PI) * 100.0f) / 100.0f;
 }
 
+float CalculateWidescreenOffset(float fWidth, float fHeight, float fScaleToWidth, float fScaleToHeight, float fOffset, bool bScaleToActualRes)
+{
+    float fAspectRatio = fWidth / fHeight;
+
+    if (bScaleToActualRes)
+        return ((fWidth - fHeight * (fScaleToWidth / fScaleToHeight)) / 2.0f) + (fOffset / (fWidth / fScaleToWidth));
+    else
+        return ((fScaleToWidth / 2.0f) - ((fScaleToHeight / 2.0f) * fAspectRatio)) + fOffset;
+}
+
+std::optional<float> ParseWidescreenHudOffset(std::string_view input)
+{
+    if (input.empty())
+        return std::nullopt;
+
+    std::string str(input);
+
+    // Trim whitespace
+    str.erase(0, str.find_first_not_of(" \t\r\n"));
+    str.erase(str.find_last_not_of(" \t\r\n") + 1);
+
+    if (str.empty())
+        return std::nullopt;
+
+    // Case-insensitive "Auto" check
+    std::string lower = str;
+    std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+    if (lower == "auto")
+        return std::nullopt;
+
+    // Try direct float conversion
+    {
+        char* end = nullptr;
+        float value = std::strtof(str.c_str(), &end);
+        if (end != str.c_str() && *end == '\0')
+            return value;
+    }
+
+    // Try "1280x720" format
+    {
+        int width = 0, height = 0;
+        if (sscanf_s(str.c_str(), "%dx%d", &width, &height) == 2 && width > 0)
+            return static_cast<float>(width);
+    }
+
+    // Try "16:9" format
+    {
+        float aspect1 = 0.0f, aspect2 = 0.0f;
+        if (sscanf_s(str.c_str(), "%f:%f", &aspect1, &aspect2) == 2 && aspect2 > 0.0f && aspect1 > 0.0f)
+        {
+            return aspect1 / aspect2;
+        }
+    }
+
+    // Try "21/9" format
+    {
+        float aspect1 = 0.0f, aspect2 = 0.0f;
+        if (sscanf_s(str.c_str(), "%f/%f", &aspect1, &aspect2) == 2 && aspect2 > 0.0f && aspect1 > 0.0f)
+        {
+            return aspect1 / aspect2;
+        }
+    }
+
+    return std::nullopt;
+}
+
 void CreateThreadAutoClose(LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_T dwStackSize, LPTHREAD_START_ROUTINE lpStartAddress, LPVOID lpParameter, DWORD dwCreationFlags, LPDWORD lpThreadId)
 {
     CloseHandle(CreateThread(lpThreadAttributes, dwStackSize, lpStartAddress, lpParameter, dwCreationFlags, lpThreadId));

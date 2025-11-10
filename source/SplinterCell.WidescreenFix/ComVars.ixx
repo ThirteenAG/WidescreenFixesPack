@@ -19,7 +19,7 @@ export struct Screen
     float fFMVoffsetEndX;
     float fFMVoffsetStartY;
     float fFMVoffsetEndY;
-    float fIniHudOffset;
+    std::optional<float> fHudAspectRatioConstraint;
     float fWidescreenHudOffset;
     int nHudWidescreenMode;
     uint32_t nFMVWidescreenMode;

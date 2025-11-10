@@ -43,6 +43,8 @@
 float GetFOV(float f, float ar);
 float GetFOV2(float f, float ar);
 float AdjustFOV(float f, float ar, float base_ar = (4.0f / 3.0f));
+float CalculateWidescreenOffset(float fWidth, float fHeight, float fScaleToWidth = 640.0f, float fScaleToHeight = 480.0f, float fOffset = 0.0f, bool bScaleToActualRes = false);
+std::optional<float> ParseWidescreenHudOffset(std::string_view input);
 
 bool IsModuleUAL(HMODULE mod);
 bool IsUALPresent();

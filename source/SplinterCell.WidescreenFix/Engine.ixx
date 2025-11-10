@@ -147,6 +147,8 @@ namespace UCanvas
 export void InitEngine()
 {
     //HUD
+    InitWidescreenHUD();
+
     auto flt_104E9F78 = *hook::pattern(GetModuleHandle(L"Engine"), "D8 C9 D8 0D").count(9).get(0).get<float*>(4);
     auto pattern = hook::module_pattern(GetModuleHandle(L"Engine"), pattern_str(0xD8, 0xC9, 0xD8, 0x0D, to_bytes(flt_104E9F78)));
     for (size_t i = 0; i < pattern.count_hint(4).size(); ++i)

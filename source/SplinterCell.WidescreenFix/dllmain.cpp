@@ -15,20 +15,12 @@ void Init()
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
     Screen.nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
     Screen.nHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 2);
-    Screen.fIniHudOffset = iniReader.ReadFloat("MAIN", "WidescreenHudOffset", 120.0f);
+    Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "HudAspectRatioConstraint", ""));
     bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 0) != 0;
     bSkipPressStartToContinue = iniReader.ReadInteger("MAIN", "SkipPressStartToContinue", 0) != 0;
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
-
-    if (Screen.nHudWidescreenMode > 1)
-    {
-        UIntOverrides::Register(L"IntProperty Echelon.EchelonGameInfo.HUD_OFFSET_X", +[]() -> int
-        {
-            return static_cast<int>((640.0f / 2.0f) - ((448.0f / 2.0f) * Screen.fAspectRatio));
-        });
-    }
 
     if (bIsEnhanced)
     {
@@ -66,6 +58,8 @@ void Init()
     iniWriter.WriteInteger("WinDrv.WindowsClient", "WindowedViewportY", Screen.Height);
     iniWriter.WriteString("WinDrv.WindowsClient", "UseJoystick", "True");
     iniWriter.WriteString("D3DDrv.D3DRenderDevice", "FullScreenVideo", "True");
+    iniWriter.WriteInteger("D3DDrv.D3DRenderDevice", "ForceShadowMode", 1);
+    iniWriter.WriteInteger("D3DDrv.D3DRenderDevice", "EmulateGF2Mode", 0);
     iniWriter.WriteString("Engine.GameInfo", "UseRumble", "True");
 
     std::vector<std::string> list;

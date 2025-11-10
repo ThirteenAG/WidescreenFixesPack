@@ -177,3 +177,14 @@ export void WidescreenHud(float& offsetX1, float& offsetX2, float& offsetY1, flo
         offsetX2 += Screen.fWidescreenHudOffset;
     }
 }
+
+export void InitWidescreenHUD()
+{
+    if (Screen.nHudWidescreenMode > 1)
+    {
+        UIntOverrides::Register(L"IntProperty Echelon.EchelonGameInfo.HUD_OFFSET_X", +[]() -> int
+        {
+            return static_cast<int>(Screen.fWidescreenHudOffset);
+        });
+    }
+}
