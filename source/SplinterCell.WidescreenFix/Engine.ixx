@@ -23,7 +23,7 @@ namespace UInput
 namespace UEngine
 {
     SafetyHookInline shInputEvent = {};
-    int __fastcall InputEvent(void* _this, void* edx, int a2, int inputID, int a4, int value)
+    int __fastcall InputEvent(void* _this, void* edx, int a2, int inputID, int a4, float value)
     {
         if (inputID == 202 && !bIsEnhanced) // A on gamepad
         {
@@ -41,6 +41,22 @@ namespace UEngine
                         return shInputEvent.unsafe_fastcall<int>(_this, edx, a2, UInput::GetKey(UInput::gUInput, edx, L"ReloadGun", 0), a4, value);
                     }
                 }
+            }
+        }
+        else if (inputID == 228) // Mouse X
+        {
+            if (Screen.fRawInputMouseForMenu > 0.0f)
+            {
+                value = static_cast<float>(RawInputHandler<int32_t>::RawMouseDeltaX);
+                RawInputHandler<int32_t>::RawMouseDeltaX = 0;
+            }
+        }
+        else if (inputID == 229) // Mouse Y
+        {
+            if (Screen.fRawInputMouseForMenu > 0.0f)
+            {
+                value = static_cast<float>(RawInputHandler<int32_t>::RawMouseDeltaY);
+                RawInputHandler<int32_t>::RawMouseDeltaY = 0;
             }
         }
         return shInputEvent.unsafe_fastcall<int>(_this, edx, a2, inputID, a4, value);
