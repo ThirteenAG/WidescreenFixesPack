@@ -335,6 +335,9 @@ function CreateRootWindow(Canvas Canvas)
 function RenderUWindow( canvas Canvas )
 {
 	local UWindowWindow NewFocusWindow;
+	local string CurrentRes;
+	local int i, ResX, ResY;
+	local float AspectRatio, MaxMouseX, MinMouseX;
 
 	Canvas.bNoSmooth = False;
 	Canvas.Z = 1;
@@ -383,10 +386,30 @@ function RenderUWindow( canvas Canvas )
 
 	//if(MouseX > Root.WinWidth) MouseX = Root.WinWidth;
 	//if(MouseY > Root.WinHeight) MouseY = Root.WinHeight;
-    if(MouseX > 629) MouseX   = 629; //640-11 //clauzon fix, mouse out of window
-    if(MouseY > 461) MouseY   = 461; //480-19
-	if(MouseX < 0) MouseX = 0;
-	if(MouseY < 0) MouseY = 0;
+	CurrentRes = ViewportOwner.Actor.ConsoleCommand("GETCURRENTRES");
+	i = InStr(CurrentRes, "x");
+	if(i > 0)
+	{
+		ResX = int(Left(CurrentRes, i)  );
+		ResY = int(Mid(CurrentRes, i + 1));
+		AspectRatio = float(ResX) / float(ResY);
+		
+		// 4:3: MinMouseX = 0, MaxMouseX = 629 (640 - 11)
+		// 16:9: MinMouseX = -106, MaxMouseX = 736
+		MaxMouseX = 629 + ((736 - 629) * (AspectRatio - (4.0 / 3.0)) / ((16.0 / 9.0) - (4.0 / 3.0)));
+		MinMouseX = 0 + ((-106 - 0) * (AspectRatio - (4.0 / 3.0)) / ((16.0 / 9.0) - (4.0 / 3.0)));
+	}
+	else 
+	{
+		// Couldn't parse GetCurrentRes call, using fallback values
+		MaxMouseX = 629;
+		MinMouseX = 0;
+	}
+		
+	if (MouseX > MaxMouseX) MouseX = MaxMouseX;
+	if (MouseY > 466) MouseY = 466; // Increased from 461 to be closer to screen edge
+	if (MouseX < MinMouseX) MouseX = MinMouseX;
+	if (MouseY < 0) MouseY = 0;
 
 
 	// Check for keyboard focus

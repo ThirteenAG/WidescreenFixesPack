@@ -98,9 +98,9 @@ const FBLINKINGTIME	            = 0.45f;
 const MAX_BLINK_TIME	        = 120.0f;
 
 // Fake Window
-const CAT0_X		= 385;
-const CAT1_X		= 280;
-const CAT2_X		= 175;
+const CAT0_X		= 409;
+const CAT1_X		= 304;
+const CAT2_X		= 199;
 
 const ALLCAT_Y		= 387;
 
@@ -230,11 +230,11 @@ state s_QDisplay
 		//
 		// Crappy category selection
 		//
-		if( Epc.m_FakeMouseX > CAT2_X && Epc.m_FakeMouseX < CAT2_X + ITEMBOX_WIDTH_L )
+		if (Epc.m_FakeMouseX > (CAT2_X - eGame.HUD_OFFSET_X) && Epc.m_FakeMouseX < (CAT2_X - eGame.HUD_OFFSET_X) + ITEMBOX_WIDTH_L)
 			CurrentCategory = 2;
-		else if( Epc.m_FakeMouseX > CAT1_X && Epc.m_FakeMouseX < CAT1_X + ITEMBOX_WIDTH_L )
+		else if (Epc.m_FakeMouseX > (CAT1_X - eGame.HUD_OFFSET_X) && Epc.m_FakeMouseX < (CAT1_X - eGame.HUD_OFFSET_X) + ITEMBOX_WIDTH_L)
 			CurrentCategory = 1;
-		else if( Epc.m_FakeMouseX > CAT0_X && Epc.m_FakeMouseX < CAT0_X + ITEMBOX_WIDTH_L )
+		else if (Epc.m_FakeMouseX > (CAT0_X - eGame.HUD_OFFSET_X) && Epc.m_FakeMouseX < (CAT0_X - eGame.HUD_OFFSET_X) + ITEMBOX_WIDTH_L)
 			CurrentCategory = 0;
 
 		// Make sure chosen category is available
