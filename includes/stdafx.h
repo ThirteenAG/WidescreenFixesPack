@@ -1373,11 +1373,14 @@ private:
                     SubpixelY = dy - static_cast<float>(int_dy);
 
                     // Accumulate and clamp
-                    RawMouseDeltaX = int_dx;
-                    RawMouseDeltaY = int_dy;
+                    T oldX = RawMouseCursorX;
+                    T oldY = RawMouseCursorY;
 
                     RawMouseCursorX += int_dx;
                     RawMouseCursorY += int_dy;
+
+                    RawMouseDeltaX += (RawMouseCursorX - oldX);
+                    RawMouseDeltaY += (RawMouseCursorY - oldY);
 
                     W maxWidth = clientRect.right;
                     H maxHeight = clientRect.bottom;

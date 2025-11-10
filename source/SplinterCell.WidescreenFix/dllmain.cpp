@@ -5,6 +5,7 @@ import Core;
 import Engine;
 import D3DDrv;
 import WinDrv;
+import Window;
 import Echelon;
 import Xidi;
 
@@ -13,6 +14,7 @@ void Init()
     CIniReader iniReader("");
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
+    Screen.fRawInputMouseForMenu = std::clamp(iniReader.ReadFloat("MAIN", "RawInputMouseForMenu", 1.0f), 0.0f, 5.0f);
     Screen.nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
     Screen.nHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 2);
     Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "HudAspectRatioConstraint", ""));
@@ -158,6 +160,7 @@ CEXP void InitializeASI()
         CallbackHandler::RegisterCallback(L"Engine.dll", InitEngine);
         CallbackHandler::RegisterCallback(L"D3DDrv.dll", InitD3DDrv);
         CallbackHandler::RegisterCallback(L"WinDrv.dll", InitWinDrv);
+        CallbackHandler::RegisterCallback(L"Window.dll", InitWindow);
         CallbackHandler::RegisterCallback(L"Core.dll", InitCore);
         CallbackHandler::RegisterCallback(L"Echelon.dll", InitEchelon);
         CallbackHandler::RegisterCallback(L"Xidi.32.dll", InitXidi);

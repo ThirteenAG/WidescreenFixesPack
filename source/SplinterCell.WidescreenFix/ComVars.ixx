@@ -23,6 +23,7 @@ export struct Screen
     float fWidescreenHudOffset;
     int nHudWidescreenMode;
     uint32_t nFMVWidescreenMode;
+    float fRawInputMouseForMenu;
 } Screen;
 
 export union FColor
@@ -57,6 +58,7 @@ export bool bDisplayingSplash = false;
 export bool bPressStartToContinue = false;
 export bool bSkipPressStartToContinue = false;
 export bool bIsEnhanced = false;
+export HWND hGameWindow = NULL;
 
 export namespace UObject
 {
