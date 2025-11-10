@@ -87,8 +87,13 @@ function EndEvent()
 
 function bool CoordinateWithin(EPlayerController Epc, float x, float y, int w, int h)
 {
-	return Epc.m_FakeMouseX > x && Epc.m_FakeMouseX < x + w && 
-		   Epc.m_FakeMouseY > y && Epc.m_FakeMouseY < y + h;
+	local float adjustedX, adjustedY;
+	
+	adjustedX = x + (SCREEN_END_X - eGame.HUD_OFFSET_X - LBAR_WIDTH - TURRET_WIDTH);
+	adjustedY = y + eGame.HUD_OFFSET_Y;
+	
+	return Epc.m_FakeMouseX > adjustedX && Epc.m_FakeMouseX < adjustedX + w && 
+		   Epc.m_FakeMouseY > adjustedY && Epc.m_FakeMouseY < adjustedY + h;
 }
 
 function Tick( float DeltaTime )
@@ -105,13 +110,13 @@ function Tick( float DeltaTime )
 	//
 	// Crappy button selection
 	//
-	if( CoordinateWithin(Epc, 420, 95, 130, 20) )
+	if(CoordinateWithin(Epc, 30, 55, 130, 20))
 		CursorPos = DEACTIVATE;
-	else if( CoordinateWithin(Epc, 420, 120, 130, 20) )
+	else if(CoordinateWithin(Epc, 30, 80, 130, 20))
 		CursorPos = DISABLE_IFF;
-	else if( CoordinateWithin(Epc, 420, 150, 130, 17) )
+	else if(CoordinateWithin(Epc, 30, 110, 130, 17))
 		CursorPos = EXIT;
-	else if( !CoordinateWithin(Epc, 390, 40, 208, 140) )
+	else if(!CoordinateWithin(Epc, 0, 0, TURRET_WIDTH, TURRET_HEIGHT))
 		CursorPos = OUTSIDE;
 	else
 		CursorPos = -1;
