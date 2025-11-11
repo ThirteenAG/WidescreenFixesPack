@@ -29,7 +29,15 @@ namespace UWindowsViewport
             }
 
             if (Msg == WM_MOUSEMOVE)
+            {
+                RECT rc{};
+                GetClientRect(hGameWindow, &rc);
+                POINT center{ (rc.left + rc.right) / 2, (rc.top + rc.bottom) / 2 };
+                POINT screenPt = center;
+                ClientToScreen(hGameWindow, &screenPt);
+                SetCursorPos(screenPt.x, screenPt.y);
                 return 0;
+            }
             else if (Msg == WM_RAWINPUTMOUSE)
             {
                 deferredCauseInputEventForRawInput = [UWindowsViewport](int inputID, int a3, float value)
