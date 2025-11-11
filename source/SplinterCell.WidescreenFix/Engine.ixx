@@ -1,6 +1,8 @@
 module;
 
 #include <stdafx.h>
+#include <queue>
+#include <functional>
 
 export module Engine;
 
@@ -41,22 +43,6 @@ namespace UEngine
                         return shInputEvent.unsafe_fastcall<int>(_this, edx, a2, UInput::GetKey(UInput::gUInput, edx, L"ReloadGun", 0), a4, value);
                     }
                 }
-            }
-        }
-        else if (inputID == 228) // Mouse X
-        {
-            if (Screen.fRawInputMouseForMenu > 0.0f)
-            {
-                value = static_cast<float>(RawInputHandler<int32_t>::RawMouseDeltaX);
-                RawInputHandler<int32_t>::RawMouseDeltaX = 0;
-            }
-        }
-        else if (inputID == 229) // Mouse Y
-        {
-            if (Screen.fRawInputMouseForMenu > 0.0f)
-            {
-                value = static_cast<float>(RawInputHandler<int32_t>::RawMouseDeltaY);
-                RawInputHandler<int32_t>::RawMouseDeltaY = 0;
             }
         }
         return shInputEvent.unsafe_fastcall<int>(_this, edx, a2, inputID, a4, value);
@@ -138,6 +124,30 @@ namespace UGameEngine
         shDisplaySplash.unsafe_fastcall(UGameEngine, edx, a2);
         bDisplayingSplash = false;
     }
+
+    SafetyHookInline shTick = {};
+    void __fastcall Tick(void* UGameEngine, void* edx, float deltaTime)
+    {
+        if (Screen.bDeferredInput)
+        {
+            while (!UWindowsViewport::deferredCauseInputEvent.empty())
+            {
+                UWindowsViewport::deferredCauseInputEvent.front()();
+                UWindowsViewport::deferredCauseInputEvent.pop();
+            }
+        }
+
+        if (Screen.fRawInput > 0.0f && UWindowsViewport::deferredCauseInputEventForRawInput)
+        {
+            UWindowsViewport::deferredCauseInputEventForRawInput(228, 4, static_cast<float>(RawInputHandler<int32_t>::RawMouseDeltaX));
+            UWindowsViewport::deferredCauseInputEventForRawInput(229, 4, static_cast<float>(RawInputHandler<int32_t>::RawMouseDeltaY));
+            RawInputHandler<int32_t>::RawMouseDeltaX = 0;
+            RawInputHandler<int32_t>::RawMouseDeltaY = 0;
+            UWindowsViewport::deferredCauseInputEventForRawInput = nullptr;
+        }
+
+        return shTick.unsafe_fastcall(UGameEngine, edx, deltaTime);
+    }
 }
 
 namespace UCanvas
@@ -159,6 +169,25 @@ namespace UCanvas
         return shSetClip.unsafe_fastcall(uCanvas, edx, a2, a3);
     }
 }
+
+#if _DEBUG
+SafetyHookInline shFindAxisName = {};
+float* __fastcall FindAxisName(void* UInput, void* edx, void* AActor, const wchar_t* a3)
+{
+    auto ret = shFindAxisName.unsafe_fastcall<float*>(UInput, edx, AActor, a3);
+
+    if (std::wstring_view(a3) == L"aMouseX")
+    {
+        return ret;
+    }
+    else if (std::wstring_view(a3) == L"aMouseY")
+    {
+        return ret;
+    }
+
+    return ret;
+}
+#endif
 
 export void InitEngine()
 {
@@ -286,6 +315,7 @@ export void InitEngine()
     UInput::shInit = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?Init@UInput@@UAEXPAVUViewport@@@Z"), UInput::Init);
 
     UGameEngine::shDisplaySplash = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?DisplaySplash@UGameEngine@@UAEXH@Z"), UGameEngine::DisplaySplash);
+    UGameEngine::shTick = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?Tick@UGameEngine@@UAEXM@Z"), UGameEngine::Tick);
 
     UCanvas::shSetClip = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?SetClip@UCanvas@@UAEXMM@Z"), UCanvas::SetClip);
 
@@ -300,4 +330,8 @@ export void InitEngine()
         UObjectOverrides::ClearCache();
         UArrayOverrides::ClearCache();
     });
+
+#if _DEBUG
+    shFindAxisName = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?FindAxisName@UInput@@MBEPAMPAVAActor@@PBG@Z"), FindAxisName);
+#endif
 }
