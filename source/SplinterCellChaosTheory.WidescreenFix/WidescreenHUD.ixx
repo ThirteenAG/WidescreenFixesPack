@@ -174,7 +174,7 @@ export void WidescreenHudImage(int16_t& left, int16_t& right, int16_t& top, int1
 {
     using namespace HudImageMatchers;
 
-    if (nHudWidescreenMode == 2)
+    if (Screen.nHudWidescreenMode == 2)
         return;
 
     if (IsFullScreenImage(left, right, top, bottom))
@@ -237,7 +237,7 @@ export void WidescreenHudText(float& textX, int32_t offset1, int32_t offset2, in
 {
     using namespace HudTextMatchers;
 
-    if (nHudWidescreenMode == 2)
+    if (Screen.nHudWidescreenMode == 2)
         return;
 
     if (!IsWidescreenHudNeeded())
