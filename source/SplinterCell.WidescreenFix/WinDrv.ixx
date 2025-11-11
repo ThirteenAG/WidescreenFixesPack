@@ -19,12 +19,12 @@ namespace UWindowsViewport
     {
         hGameWindow = *(HWND*)(*(uintptr_t*)((uintptr_t)UWindowsViewport + 0x180) + 4);
 
-        if (Screen.fRawInput > 0.0f)
+        if (Screen.fRawInputMouse > 0.0f)
         {
             static bool bOnce = false;
             if (!bOnce)
             {
-                RawInputHandler<int32_t>::RegisterRawInput(hGameWindow, Screen.Width, Screen.Height, Screen.fRawInput);
+                RawInputHandler<int32_t>::RegisterRawInput(hGameWindow, Screen.Width, Screen.Height, Screen.fRawInputMouse);
                 bOnce = true;
             }
 

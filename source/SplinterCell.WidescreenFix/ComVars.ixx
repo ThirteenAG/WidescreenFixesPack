@@ -25,7 +25,7 @@ export struct Screen
     float fWidescreenHudOffset;
     int nHudWidescreenMode;
     uint32_t nFMVWidescreenMode;
-    float fRawInput;
+    float fRawInputMouse;
     bool bDeferredInput;
 } Screen;
 
