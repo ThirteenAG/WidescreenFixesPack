@@ -59,7 +59,7 @@ int __fastcall UD3DRenderDeviceSetRes(void* UD3DRenderDevice, void* edx, void* U
             auto HudMaxWidth = Screen.fWidth;
             Screen.fWidescreenHudOffset = CalculateWidescreenOffset(Screen.fHeight * value, Screen.fHeight, 640.0f, 480.0f, HUD_OFFSET_X, Screen.nHudWidescreenMode == 1);
         }
-    }    
+    }
 
     // Enhanced widescreen setting
     if (bIsEnhanced && Screen.nHudWidescreenMode == 2)
