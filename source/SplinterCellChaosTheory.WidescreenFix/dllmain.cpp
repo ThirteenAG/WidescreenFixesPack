@@ -59,10 +59,10 @@ void Init()
     CIniReader iniReader("");
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
-    Screen.fRawInputMouseForMenu = std::clamp(iniReader.ReadFloat("MAIN", "RawInputMouseForMenu", 1.0f), 0.0f, 5.0f);
-    nHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 2);
-    nWidescreenHudOffset = iniReader.ReadInteger("MAIN", "WidescreenHudOffset", 100);
-    fWidescreenHudOffset = static_cast<float>(nWidescreenHudOffset);
+    Screen.bDeferredInput = iniReader.ReadInteger("MAIN", "DeferredInput", 1) != 0;
+    Screen.fRawInputMouse = std::clamp(iniReader.ReadFloat("MAIN", "RawInputMouse", 1.0f), 0.0f, 5.0f);
+    Screen.nHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 2);
+    Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "HudAspectRatioConstraint", ""));
     bDisableAltTabFix = iniReader.ReadInteger("MAIN", "DisableAltTabFix", 1) != 0;
     nShadowMapResolution = iniReader.ReadInteger("GRAPHICS", "ShadowMapResolution", 0);
     bEnableShadowFiltering = iniReader.ReadInteger("GRAPHICS", "EnableShadowFiltering", 0) != 0;
@@ -117,24 +117,6 @@ void Init()
             WritePrivateProfileStringW(L"WinDrv.WindowsClient", L"FullscreenViewportY", ResY.c_str(), pszPath);
         }
     }; injector::MakeInline<SetResHook>(pattern.get_first(0), pattern.get_first(7));
-
-    {
-        auto pattern = hook::pattern("FF 15 ? ? ? ? EB 60");
-        static auto SetPropWHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-        {
-            hGameWindow = (HWND)regs.edx;
-            if (Screen.fRawInputMouseForMenu > 0.0f)
-                RawInputHandler<>::RegisterRawInput(hGameWindow, Screen.Width, Screen.Height, Screen.fRawInputMouseForMenu);
-        });
-
-        pattern = hook::pattern("FF 15 ? ? ? ? A1 ? ? ? ? 85 C0 75 ? 68 ? ? ? ? E8 ? ? ? ? 83 C4 04 A3 ? ? ? ? E8 ? ? ? ? A1");
-        static auto SetPropAHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-        {
-            hGameWindow = (HWND)regs.edi;
-            if (Screen.fRawInputMouseForMenu > 0.0f)
-                RawInputHandler<>::RegisterRawInput(hGameWindow, Screen.Width, Screen.Height, Screen.fRawInputMouseForMenu);
-        });
-    }
 
     InitD3DDrv();
     InitEngine();

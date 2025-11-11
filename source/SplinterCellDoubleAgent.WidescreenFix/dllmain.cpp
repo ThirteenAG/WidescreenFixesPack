@@ -48,8 +48,9 @@ void Init()
     CIniReader iniReader("");
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
-    Screen.fRawInputMouseForMenu = std::clamp(iniReader.ReadFloat("MAIN", "RawInputMouseForMenu", 1.0f), 0.0f, 5.0f);
-    Screen.bRawInputMouseForCamera = iniReader.ReadInteger("MAIN", "RawInputMouseForCamera", 0) != 0;
+    Screen.fRawInputMouse = std::clamp(iniReader.ReadFloat("MAIN", "RawInputMouse", 1.0f), 0.0f, 5.0f);
+    Screen.nHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1);
+    Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "HudAspectRatioConstraint", ""));
     bool bForceLL = iniReader.ReadInteger("MAIN", "ForceLL", 1) != 0;
     auto nFPSLimit = iniReader.ReadInteger("MISC", "FPSLimit", 1000);
     Screen.szLoadscPath = iniReader.GetIniPath();
@@ -118,24 +119,6 @@ void Init()
             }
         }
         userIniFile.generate(userIni);
-    }
-
-    {
-        auto pattern = hook::pattern("50 FF 15 ? ? ? ? EB 6A");
-        static auto SetPropWHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-        {
-            hGameWindow = (HWND)regs.eax;
-            if (Screen.fRawInputMouseForMenu > 0.0f)
-                RawInputHandler<>::RegisterRawInput(hGameWindow, Screen.Width, Screen.Height, Screen.fRawInputMouseForMenu);
-        });
-
-        pattern = hook::pattern("50 FF 15 ? ? ? ? 66 C7 85 D8 3F 00 00 00 00");
-        static auto SetPropAHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-        {
-            hGameWindow = (HWND)regs.eax;
-            if (Screen.fRawInputMouseForMenu > 0.0f)
-                RawInputHandler<>::RegisterRawInput(hGameWindow, Screen.Width, Screen.Height, Screen.fRawInputMouseForMenu);
-        });
     }
 
     if (bForceLL)

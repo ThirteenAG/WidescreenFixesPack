@@ -7,6 +7,33 @@ export module Engine;
 import ComVars;
 import WidescreenHUD;
 
+namespace UGameEngine
+{
+    SafetyHookInline shTick = {};
+    void __fastcall Tick(void* UGameEngine, void* edx, float deltaTime)
+    {
+        if (Screen.bDeferredInput)
+        {
+            while (!UWindowsViewport::deferredCauseInputEvent.empty())
+            {
+                UWindowsViewport::deferredCauseInputEvent.front()();
+                UWindowsViewport::deferredCauseInputEvent.pop();
+            }
+        }
+
+        if (Screen.fRawInputMouse > 0.0f && UWindowsViewport::deferredCauseInputEventForRawInput)
+        {
+            UWindowsViewport::deferredCauseInputEventForRawInput(228, 4, static_cast<float>(RawInputHandler<>::RawMouseDeltaX));
+            UWindowsViewport::deferredCauseInputEventForRawInput(229, 4, static_cast<float>(RawInputHandler<>::RawMouseDeltaY));
+            RawInputHandler<>::RawMouseDeltaX = 0;
+            RawInputHandler<>::RawMouseDeltaY = 0;
+            UWindowsViewport::deferredCauseInputEventForRawInput = nullptr;
+        }
+
+        return shTick.unsafe_fastcall(UGameEngine, edx, deltaTime);
+    }
+}
+
 #if _DEBUG
 SafetyHookInline shFindAxisName = {};
 float* __fastcall FindAxisName(void* UInput, void* edx, void* AActor, const wchar_t* a3)
@@ -15,12 +42,10 @@ float* __fastcall FindAxisName(void* UInput, void* edx, void* AActor, const wcha
 
     if (std::wstring_view(a3) == L"aMouseX")
     {
-        aMouseXPtr = ret;
         return ret;
     }
     else if (std::wstring_view(a3) == L"aMouseY")
     {
-        aMouseYPtr = ret;
         return ret;
     }
 
@@ -115,7 +140,7 @@ export void InitEngine()
     pattern = hook::pattern("D8 25 ? ? ? ? D9 44 24 24 D8 4C 24");
     injector::WriteMemory(pattern.get_first(2), &Screen.fHudOffset, true); //0x10B14BAD + 0x2
 
-    if (nHudWidescreenMode == 1)
+    if (Screen.nHudWidescreenMode == 1)
     {
         pattern = hook::pattern("A1 ? ? ? ? 83 C4 04 85 C0 D8 3D");
         struct WSText
@@ -214,4 +239,7 @@ export void InitEngine()
     pattern = hook::pattern("8B 44 24 08 55 56 57 6A 00 50 8D 4C 24 1C E8 ? ? ? ? 8B 44 24 14 85 C0 74 ? 8B 6C 24 10");
     shFindAxisName = safetyhook::create_inline(pattern.get(1).get<void*>(0), FindAxisName);
 #endif
+
+    pattern = hook::pattern("83 EC 1C 53 55 56 8B F1 8A 86 CC 01 00 00");
+    UGameEngine::shTick = safetyhook::create_inline(pattern.get_first(), UGameEngine::Tick);
 }

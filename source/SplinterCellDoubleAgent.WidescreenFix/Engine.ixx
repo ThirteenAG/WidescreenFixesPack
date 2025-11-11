@@ -6,6 +6,34 @@ export module Engine;
 
 import ComVars;
 import GUI;
+import WidescreenHUD;
+
+namespace UGameEngine
+{
+    SafetyHookInline shTick = {};
+    void __fastcall Tick(void* UGameEngine, void* edx, float deltaTime)
+    {
+        if (Screen.bDeferredInput)
+        {
+            while (!UWindowsViewport::deferredCauseInputEvent.empty())
+            {
+                UWindowsViewport::deferredCauseInputEvent.front()();
+                UWindowsViewport::deferredCauseInputEvent.pop();
+            }
+        }
+
+        if (Screen.fRawInputMouse > 0.0f && UWindowsViewport::deferredCauseInputEventForRawInput)
+        {
+            UWindowsViewport::deferredCauseInputEventForRawInput(228, 4, static_cast<float>(RawInputHandler<>::RawMouseDeltaX));
+            UWindowsViewport::deferredCauseInputEventForRawInput(229, 4, static_cast<float>(RawInputHandler<>::RawMouseDeltaY));
+            RawInputHandler<>::RawMouseDeltaX = 0;
+            RawInputHandler<>::RawMouseDeltaY = 0;
+            UWindowsViewport::deferredCauseInputEventForRawInput = nullptr;
+        }
+
+        return shTick.unsafe_fastcall(UGameEngine, edx, deltaTime);
+    }
+}
 
 #if _DEBUG
 SafetyHookInline shFindAxisName = {};
@@ -29,6 +57,7 @@ float* __fastcall FindAxisName(void* UInput, void* edx, void* AActor, const wcha
 export void InitEngine()
 {
     InitGUI();
+    InitWidescreenHUD();
 
     CIniReader iniReader("");
     bool bSingleCoreAffinity = iniReader.ReadInteger("MAIN", "SingleCoreAffinity", 1);
@@ -221,4 +250,6 @@ export void InitEngine()
 #if _DEBUG
     shFindAxisName = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?FindAxisName@UInput@@MBEPAMPAVAActor@@PBG@Z"), FindAxisName);
 #endif
+
+    UGameEngine::shTick = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?Tick@UGameEngine@@UAEXM@Z"), UGameEngine::Tick);
 }

@@ -22,7 +22,7 @@ if errorlevel 1 (
 )
 
 :: Copy all contents from input folder to output folder (overwrite)
-xcopy /e /i /h /y "%INPUT_FOLDER%" "%OUTPUT_FOLDER%\" >nul 2>&1
+xcopy /e /i /h /y "%INPUT_FOLDER%" "%OUTPUT_FOLDER%" >nul 2>&1
 
 :: Change to output folder and compile
 cd /d "%OUTPUT_FOLDER%"

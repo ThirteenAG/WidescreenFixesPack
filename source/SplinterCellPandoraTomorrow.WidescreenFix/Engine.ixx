@@ -1,6 +1,8 @@
 module;
 
 #include <stdafx.h>
+#include <queue>
+#include <functional>
 
 export module Engine;
 
@@ -201,6 +203,30 @@ namespace UGameEngine
         shSplashFadInOut.unsafe_fastcall(UGameEngine, edx, a2, a3);
         bDisplayingBackground = false;
     }
+
+    SafetyHookInline shTick = {};
+    void __fastcall Tick(void* UGameEngine, void* edx, float deltaTime)
+    {
+        if (Screen.bDeferredInput)
+        {
+            while (!UWindowsViewport::deferredCauseInputEvent.empty())
+            {
+                UWindowsViewport::deferredCauseInputEvent.front()();
+                UWindowsViewport::deferredCauseInputEvent.pop();
+            }
+        }
+
+        if (Screen.fRawInputMouse > 0.0f && UWindowsViewport::deferredCauseInputEventForRawInput)
+        {
+            UWindowsViewport::deferredCauseInputEventForRawInput(228, 4, static_cast<float>(RawInputHandler<int32_t>::RawMouseDeltaX));
+            UWindowsViewport::deferredCauseInputEventForRawInput(229, 4, static_cast<float>(RawInputHandler<int32_t>::RawMouseDeltaY));
+            RawInputHandler<int32_t>::RawMouseDeltaX = 0;
+            RawInputHandler<int32_t>::RawMouseDeltaY = 0;
+            UWindowsViewport::deferredCauseInputEventForRawInput = nullptr;
+        }
+
+        return shTick.unsafe_fastcall(UGameEngine, edx, deltaTime);
+    }
 }
 
 namespace UCanvas
@@ -225,6 +251,8 @@ namespace UCanvas
 
 export void InitEngine()
 {
+    InitWidescreenHUD();
+
     auto pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "8B ? 94 00 00 00 E8");
     FCanvasUtil::DrawTile = (decltype(FCanvasUtil::DrawTile))injector::GetBranchDestination(pattern.count(3).get(0).get<uintptr_t>(6), true).as_int();
 
@@ -404,6 +432,7 @@ export void InitEngine()
     UGameEngine::shDisplaySplash = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?DisplaySplash@UGameEngine@@QAEXH@Z"), UGameEngine::DisplaySplash);
     UGameEngine::shDisplayMenuSplash = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?DisplayMenuSplash@UGameEngine@@QAEXHH@Z"), UGameEngine::DisplayMenuSplash);
     UGameEngine::shSplashFadInOut = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?SplashFadInOut@UGameEngine@@QAEXHH@Z"), UGameEngine::SplashFadInOut);
+    UGameEngine::shTick = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?Tick@UGameEngine@@UAEXM@Z"), UGameEngine::Tick);
 
     UCanvas::shSetClip = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?SetClip@UCanvas@@UAEXMM@Z"), UCanvas::SetClip);
 

@@ -1,6 +1,8 @@
 module;
 
 #include "stdafx.h"
+#include <queue>
+#include <functional>
 #include <unordered_set>
 
 export module ComVars;
@@ -19,10 +21,12 @@ export struct Screen
     float fFMVoffsetEndX;
     float fFMVoffsetStartY;
     float fFMVoffsetEndY;
-    float fIniHudOffset;
+    std::optional<float> fHudAspectRatioConstraint;
     float fWidescreenHudOffset;
     int nHudWidescreenMode;
     uint32_t nFMVWidescreenMode;
+    float fRawInputMouse;
+    bool bDeferredInput;
 } Screen;
 
 export union FColor
@@ -57,6 +61,13 @@ export bool bDisplayingSplash = false;
 export bool bPressStartToContinue = false;
 export bool bSkipPressStartToContinue = false;
 export bool bIsEnhanced = false;
+export HWND hGameWindow = NULL;
+
+export namespace UWindowsViewport
+{
+    std::queue<std::function<void()>> deferredCauseInputEvent;
+    std::function<void(int inputID, int a3, float value)> deferredCauseInputEventForRawInput;
+}
 
 export namespace UObject
 {

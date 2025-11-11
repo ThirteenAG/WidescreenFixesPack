@@ -43,11 +43,24 @@ int __fastcall UD3DRenderDeviceSetRes(void* UD3DRenderDevice, void* edx, void* U
     Screen.HUDScaleX = 1.0f / Screen.fWidth * (Screen.fHeight / 480.0f);
     Screen.fFMVoffsetStartX = (Screen.fWidth - 640.0f) / 2.0f;
     Screen.fFMVoffsetStartY = (Screen.fHeight - 480.0f) / 2.0f;
-    Screen.fWidescreenHudOffset = ((Screen.fHeight * (4.0f / 3.0f)) / (640.0f / Screen.fIniHudOffset));
-    if (Screen.fAspectRatio < (16.0f / 9.0f))
-        Screen.fWidescreenHudOffset = Screen.fWidescreenHudOffset / (((16.0f / 9.0f) / (Screen.fAspectRatio)) * 1.5f);
-    if (Screen.fAspectRatio <= (4.0f / 3.0f))
-        Screen.fWidescreenHudOffset = 0.0f;
+    constexpr auto HUD_OFFSET_X = 24.0f; // Default offset used in original scripts
+    Screen.fWidescreenHudOffset = CalculateWidescreenOffset(Screen.fWidth, Screen.fHeight, 640.0f, 480.0f, HUD_OFFSET_X, Screen.nHudWidescreenMode == 1);
+
+    if (Screen.fHudAspectRatioConstraint.has_value())
+    {
+        float value = Screen.fHudAspectRatioConstraint.value();
+        if (value < 0.0f || value > (32.0f / 9.0f))
+            Screen.fWidescreenHudOffset = value;
+        else
+        {
+            float minAspect = std::min(4.0f / 3.0f, Screen.fAspectRatio);
+            float maxAspect = std::max(32.0f / 9.0f, Screen.fAspectRatio);
+            value = std::clamp(value, minAspect, maxAspect);
+            auto HudMaxWidth = Screen.fWidth;
+            Screen.fWidescreenHudOffset = CalculateWidescreenOffset(Screen.fHeight * value, Screen.fHeight, 640.0f, 480.0f, HUD_OFFSET_X, Screen.nHudWidescreenMode == 1);
+        }
+    }
+
     // Enhanced widescreen setting
     if (bIsEnhanced && Screen.nHudWidescreenMode == 2)
     {

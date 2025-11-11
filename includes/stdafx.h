@@ -40,9 +40,15 @@
 #define CEXP extern "C" __declspec(dllexport)
 #endif
 
+#define force_return_address(addr) (*(uintptr_t*)(regs.esp - 4) = (addr))
+#define return_to(addr) do { force_return_address(addr); return; } while (0)
+#define WM_RAWINPUTMOUSE (WM_APP + 1000)
+
 float GetFOV(float f, float ar);
 float GetFOV2(float f, float ar);
 float AdjustFOV(float f, float ar, float base_ar = (4.0f / 3.0f));
+float CalculateWidescreenOffset(float fWidth, float fHeight, float fScaleToWidth = 640.0f, float fScaleToHeight = 480.0f, float fOffset = 0.0f, bool bScaleToActualRes = false);
+std::optional<float> ParseWidescreenHudOffset(std::string_view input);
 
 bool IsModuleUAL(HMODULE mod);
 bool IsUALPresent();
@@ -1371,11 +1377,14 @@ private:
                     SubpixelY = dy - static_cast<float>(int_dy);
 
                     // Accumulate and clamp
-                    RawMouseDeltaX = int_dx;
-                    RawMouseDeltaY = int_dy;
+                    T oldX = RawMouseCursorX;
+                    T oldY = RawMouseCursorY;
 
                     RawMouseCursorX += int_dx;
                     RawMouseCursorY += int_dy;
+
+                    RawMouseDeltaX += (RawMouseCursorX - oldX);
+                    RawMouseDeltaY += (RawMouseCursorY - oldY);
 
                     W maxWidth = clientRect.right;
                     H maxHeight = clientRect.bottom;
@@ -1390,6 +1399,7 @@ private:
                     RawMouseCursorY = std::max(T(0), std::min(RawMouseCursorY, static_cast<T>(maxHeight)));
                 }
             }
+            PostMessage(hWnd, WM_RAWINPUTMOUSE, 0, 0);
             return 0;  // Consume the message to avoid game interference.
         }
         return CallWindowProc(DefaultWndProc, hWnd, uMsg, wParam, lParam);
