@@ -1,6 +1,8 @@
 module;
 
 #include "stdafx.h"
+#include <queue>
+#include <functional>
 #include <unordered_set>
 
 export module ComVars;
@@ -21,7 +23,7 @@ export struct Screen
     float fFMVoffsetEndX;
     float fFMVoffsetStartY;
     float fFMVoffsetEndY;
-    float fIniHudOffset;
+    std::optional<float> fHudAspectRatioConstraint;
     float fWidescreenHudOffset;
     int nHudWidescreenMode;
     bool bOpsatWidescreenMode;
@@ -30,7 +32,8 @@ export struct Screen
     uint32_t nShadowMapResolution;
     uint32_t nReflectionsResolution;
     uint32_t nBloomResolution;
-    float fRawInputMouseForMenu;
+    float fRawInputMouse;
+    bool bDeferredInput;
 } Screen;
 
 export union FColor
@@ -58,6 +61,12 @@ export std::vector<std::pair<const std::wstring, std::wstring>> ResList =
     { L"1280x1024", L"" },
     { L"1600x1200", L"" },
 };
+
+export namespace UWindowsViewport
+{
+    std::queue<std::function<void()>> deferredCauseInputEvent;
+    std::function<void(int inputID, int a3, float value)> deferredCauseInputEventForRawInput;
+}
 
 export namespace UObject
 {

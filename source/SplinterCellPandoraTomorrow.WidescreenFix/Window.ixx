@@ -8,11 +8,9 @@ import ComVars;
 
 export void InitWindow()
 {
-    auto pattern = find_module_pattern(GetModuleHandle(L"Window"), "89 4D EC 83 7D EC 00 75", "89 8D C8 FB FF FF");
-    static auto CreateWindowWHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-    {
-        hGameWindow = (HWND)regs.ecx;
-        if (Screen.fRawInputMouseForMenu > 0.0f)
-            RawInputHandler<int32_t>::RegisterRawInput(hGameWindow, Screen.Width, Screen.Height, Screen.fRawInputMouseForMenu);
-    });
+    //auto pattern = find_module_pattern(GetModuleHandle(L"Window"), "89 4D EC 83 7D EC 00 75", "89 8D C8 FB FF FF");
+    //static auto CreateWindowWHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    //{
+    //
+    //});
 }
