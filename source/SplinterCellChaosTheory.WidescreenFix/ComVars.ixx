@@ -1,6 +1,8 @@
 module;
 
 #include "stdafx.h"
+#include <queue>
+#include <functional>
 #include <unordered_set>
 
 export module ComVars;
@@ -20,12 +22,16 @@ export struct Screen
     float fHudOffsetDyn;
     float fTextScaleX;
     int32_t nHudOffsetReal;
+    int nHudWidescreenMode;
+    std::optional<float> fHudAspectRatioConstraint;
+    float fWidescreenHudOffset;
     int32_t nScopeScale;
     float fFMVoffsetStartX;
     float fFMVoffsetEndX;
     float fFMVoffsetStartY;
     float fFMVoffsetEndY;
-    float fRawInputMouseForMenu;
+    float fRawInputMouse;
+    bool bDeferredInput;
 } Screen;
 
 export union FColor
@@ -61,15 +67,6 @@ export struct FLTColor
     }
 };
 
-export struct WidescreenHudOffset
-{
-    int32_t _int;
-    float _float;
-} WidescreenHudOffset;
-
-export int nHudWidescreenMode;
-export int32_t nWidescreenHudOffset;
-export float fWidescreenHudOffset;
 export bool bDisableAltTabFix;
 export int32_t nShadowMapResolution;
 export bool bEnableShadowFiltering;
@@ -82,8 +79,12 @@ export uint32_t* dword_1120B6B0 = nullptr;
 export uint32_t* dword_11223A7C = nullptr;
 export HWND hGameWindow = NULL;
 export bool bIsWindowed = false;
-export float* aMouseXPtr = nullptr;
-export float* aMouseYPtr = nullptr;
+
+export namespace UWindowsViewport
+{
+    std::queue<std::function<void()>> deferredCauseInputEvent;
+    std::function<void(int inputID, int a3, float value)> deferredCauseInputEventForRawInput;
+}
 
 export namespace UObject
 {

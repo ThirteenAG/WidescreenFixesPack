@@ -187,27 +187,21 @@ export void InitD3DDrv()
                 iniReader.WriteInteger("MAIN", "ResY", 0);
             }
 
-            if (Screen.fAspectRatio < (16.0f / 9.0f))
+            Screen.fWidescreenHudOffset = std::abs(CalculateWidescreenOffset(Screen.fWidth, Screen.fHeight, 640.0f, 480.0f));
+            if (Screen.fHudAspectRatioConstraint.has_value())
             {
-                WidescreenHudOffset._float = fWidescreenHudOffset / (((16.0f / 9.0f) / (Screen.fAspectRatio)) * 1.5f);
-                WidescreenHudOffset._int = static_cast<int32_t>(WidescreenHudOffset._float);
-
-                if (Screen.fAspectRatio <= (4.0f / 3.0f))
+                float value = Screen.fHudAspectRatioConstraint.value();
+                if (value < 0.0f || value > (32.0f / 9.0f))
+                    Screen.fWidescreenHudOffset = value;
+                else
                 {
-                    WidescreenHudOffset._float = 0.0f;
-                    WidescreenHudOffset._int = 0;
+                    float minAspect = std::min(4.0f / 3.0f, Screen.fAspectRatio);
+                    float maxAspect = std::max(32.0f / 9.0f, Screen.fAspectRatio);
+                    value = std::clamp(value, minAspect, maxAspect);
+                    auto HudMaxWidth = Screen.fWidth;
+                    Screen.fWidescreenHudOffset = std::abs(CalculateWidescreenOffset(Screen.fHeight * value, Screen.fHeight, 640.0f, 480.0f));
                 }
             }
-            else
-            {
-                WidescreenHudOffset._float = fWidescreenHudOffset;
-                WidescreenHudOffset._int = nWidescreenHudOffset;
-            }
-
-            //FMV
-            //Screen.fFMVoffsetStartX = ((Screen.fHeight * Screen.fAspectRatio) - (Screen.fHeight * (4.0f / 3.0f))) / 2.0f;
-            //injector::WriteMemory(0x10C863D6 + 0x4, Screen.fFMVoffsetStartX, true);
-            //actually it scales perfectly as is.            
         }
     }; injector::MakeInline<GetRes>(pattern.get_first(0), pattern.get_first(6)); //<0x10CC622C, 0x10CC6232>
 

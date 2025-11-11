@@ -146,7 +146,7 @@ namespace HudTextMatchers
 
 bool IsWidescreenHudNeeded()
 {
-    if (nHudWidescreenMode != 1)
+    if (Screen.nHudWidescreenMode != 1)
         return false;
 
     if (UObject::GetState(L"EPlayerController") == L"s_KeyPadInteract" || bHackingGameplay)
@@ -224,8 +224,8 @@ export void WidescreenHudImage(int16_t& left, int16_t& right, int16_t& top, int1
             {
                 spd::log()->info("{0:d} {1:d} {2:d} {3:d} {4:08x}", left, right, top, bottom, color.RGBA);
             });
-            left += WidescreenHudOffset._int;
-            right += WidescreenHudOffset._int;
+            left += static_cast<int16_t>(Screen.fWidescreenHudOffset);
+            right += static_cast<int16_t>(Screen.fWidescreenHudOffset);
         }
     }
 }
@@ -247,6 +247,6 @@ export void WidescreenHudText(float& textX, int32_t offset1, int32_t offset2, in
             spd::log()->info("{:d} {:d} {:d} {:08x}", offset1, offset2, offset3, color.RGBA);
         });
 
-        textX += WidescreenHudOffset._float;
+        textX += Screen.fWidescreenHudOffset;
     }
 }
