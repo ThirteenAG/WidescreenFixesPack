@@ -19,6 +19,13 @@ namespace UWindowsViewport
     {
         hGameWindow = *(HWND*)(*(uintptr_t*)((uintptr_t)UWindowsViewport + 0x180) + 4);
 
+        // Handle Alt+F4 to close the window
+        if (Msg == WM_SYSKEYDOWN && wParam == VK_F4)
+        {
+            PostMessage(hGameWindow, WM_CLOSE, 0, 0);
+            return 0;
+        }
+
         if (Screen.fRawInputMouse > 0.0f)
         {
             static bool bOnce = false;
