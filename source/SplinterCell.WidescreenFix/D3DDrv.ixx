@@ -53,10 +53,7 @@ int __fastcall UD3DRenderDeviceSetRes(void* UD3DRenderDevice, void* edx, void* U
             Screen.fWidescreenHudOffset = value;
         else
         {
-            float minAspect = std::min(4.0f / 3.0f, Screen.fAspectRatio);
-            float maxAspect = std::max(32.0f / 9.0f, Screen.fAspectRatio);
-            value = std::clamp(value, minAspect, maxAspect);
-            auto HudMaxWidth = Screen.fWidth;
+            value = ClampHudAspectRatio(value, Screen.fAspectRatio);
             Screen.fWidescreenHudOffset = CalculateWidescreenOffset(Screen.fHeight * value, Screen.fHeight, 640.0f, 480.0f, HUD_OFFSET_X, Screen.nHudWidescreenMode == 1);
         }
     }

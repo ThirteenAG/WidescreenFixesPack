@@ -409,14 +409,11 @@ export void InitD3DDrv()
             if (Screen.fHudAspectRatioConstraint.has_value())
             {
                 float value = Screen.fHudAspectRatioConstraint.value();
-                if (value < 0.0f || value >(32.0f / 9.0f))
+                if (value < 0.0f || value > (32.0f / 9.0f))
                     Screen.fWidescreenHudOffset = value;
                 else
                 {
-                    float minAspect = std::min(4.0f / 3.0f, Screen.fAspectRatio);
-                    float maxAspect = std::max(32.0f / 9.0f, Screen.fAspectRatio);
-                    value = std::clamp(value, minAspect, maxAspect);
-                    auto HudMaxWidth = Screen.fWidth;
+                    value = ClampHudAspectRatio(value, Screen.fAspectRatio);
                     Screen.fWidescreenHudOffset = std::abs(CalculateWidescreenOffset(Screen.fHeight * value, Screen.fHeight, 800.0f, 600.0f));
                     if (Screen.nHudWidescreenMode)
                         Screen.FilmstripOffset = static_cast<int32_t>((((Screen.fWidth / 2.0f) - ((Screen.fHeight * ((Screen.fHeight * value) / Screen.fHeight)) / 2.0f)) * 2.0f) + ((float)Screen.FilmstripScaleX / 5.25f));

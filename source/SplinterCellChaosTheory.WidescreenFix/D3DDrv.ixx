@@ -195,10 +195,7 @@ export void InitD3DDrv()
                     Screen.fWidescreenHudOffset = value;
                 else
                 {
-                    float minAspect = std::min(4.0f / 3.0f, Screen.fAspectRatio);
-                    float maxAspect = std::max(32.0f / 9.0f, Screen.fAspectRatio);
-                    value = std::clamp(value, minAspect, maxAspect);
-                    auto HudMaxWidth = Screen.fWidth;
+                    value = ClampHudAspectRatio(value, Screen.fAspectRatio);
                     Screen.fWidescreenHudOffset = std::abs(CalculateWidescreenOffset(Screen.fHeight * value, Screen.fHeight, 640.0f, 480.0f));
                 }
             }

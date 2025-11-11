@@ -56,16 +56,13 @@ int __fastcall UD3DRenderDeviceSetRes(void* UD3DRenderDevice, void* edx, void* U
     if (Screen.fHudAspectRatioConstraint.has_value())
     {
         float value = Screen.fHudAspectRatioConstraint.value();
-        if (value < 0.0f || value >(32.0f / 9.0f))
+        if (value < 0.0f || value > (32.0f / 9.0f))
         {
             Screen.fWidescreenHudOffset = value;
         }
         else
         {
-            float minAspect = std::min(4.0f / 3.0f, Screen.fAspectRatio);
-            float maxAspect = std::max(32.0f / 9.0f, Screen.fAspectRatio);
-            value = std::clamp(value, minAspect, maxAspect);
-            auto HudMaxWidth = Screen.fWidth;
+            value = ClampHudAspectRatio(value, Screen.fAspectRatio);
             Screen.fWidescreenHudOffset = computeHudOffset(Screen.fHeight * value, Screen.fHeight);
         }
     }
