@@ -9,6 +9,54 @@ import Xidi;
 
 namespace UWindowsViewport
 {
+    bool bCalledFromWndProc = false;
+
+    SafetyHookInline shCauseInputEvent = {};
+    SafetyHookInline shViewportWndProc = {};
+    int32_t __fastcall ViewportWndProc(void* UWindowsViewport, void* edx, UINT Msg, WPARAM wParam, LPARAM lParam)
+    {
+        hGameWindow = *(HWND*)(*(uintptr_t*)((uintptr_t)UWindowsViewport + 0x1F0) + 4);
+
+        if (Screen.fRawInputMouse > 0.0f)
+        {
+            static bool bOnce = false;
+            if (!bOnce)
+            {
+                RawInputHandler<>::RegisterRawInput(hGameWindow, Screen.Width, Screen.Height, Screen.fRawInputMouse);
+                bOnce = true;
+            }
+
+            if (Msg == WM_MOUSEMOVE)
+                return 0;
+            else if (Msg == WM_RAWINPUTMOUSE)
+            {
+                deferredCauseInputEventForRawInput = [UWindowsViewport](int inputID, int a3, float value)
+                {
+                    shCauseInputEvent.unsafe_fastcall(UWindowsViewport, 0, inputID, a3, value);
+                };
+            }
+        }
+
+        bCalledFromWndProc = true;
+        auto ret = shViewportWndProc.unsafe_fastcall<int32_t>(UWindowsViewport, edx, Msg, wParam, lParam);
+        bCalledFromWndProc = false;
+        return ret;
+    }
+
+    void __fastcall CauseInputEvent(void* UWindowsViewport, void* edx, int inputID, int a3, float value)
+    {
+        if (Screen.bDeferredInput && bCalledFromWndProc)
+        {
+            deferredCauseInputEvent.emplace([UWindowsViewport, edx, inputID, a3, value]()
+            {
+                shCauseInputEvent.unsafe_fastcall(UWindowsViewport, edx, inputID, a3, value);
+            });
+            return;
+        }
+
+        return shCauseInputEvent.unsafe_fastcall(UWindowsViewport, edx, inputID, a3, value);
+    }
+
     SafetyHookInline shUpdateRumble = {};
     void __fastcall UpdateRumble(void* UWindowsViewport, void* edx, float vibrateStrength, float shakeStrength)
     {
@@ -44,4 +92,10 @@ export void InitWinDrv()
     pattern = hook::pattern("C7 06 ? ? ? ? E8 ? ? ? ? 8B 86 1C 08 00 00");
     auto APlayerControllerVTable = *pattern.get_first<uint32_t*>(2);
     AEPlayerController::shbIsInRumbleMode = safetyhook::create_inline(APlayerControllerVTable[178], AEPlayerController::bIsInRumbleMode); //0x2c8
+
+    pattern = hook::pattern("56 8B F1 8B 46 18 8B 48 28 8B 81 A8 00 00 00 85 C0 74");
+    UWindowsViewport::shCauseInputEvent = safetyhook::create_inline(pattern.get_first(), UWindowsViewport::CauseInputEvent);
+    
+    pattern = hook::pattern("81 EC 8C 03 00 00");
+    UWindowsViewport::shViewportWndProc = safetyhook::create_inline(pattern.get_first(), UWindowsViewport::ViewportWndProc);
 }
