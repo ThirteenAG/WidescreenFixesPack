@@ -81,6 +81,17 @@ std::optional<float> ParseWidescreenHudOffset(std::string_view input)
     return std::nullopt;
 }
 
+float ClampHudAspectRatio(float value, float screenAspect, float minAspect, float maxAspect)
+{
+    if (value < minAspect)
+        value = minAspect;
+    else if (value > maxAspect)
+        value = maxAspect;
+    if (value > screenAspect)
+        value = screenAspect;
+    return value;
+}
+
 void CreateThreadAutoClose(LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_T dwStackSize, LPTHREAD_START_ROUTINE lpStartAddress, LPVOID lpParameter, DWORD dwCreationFlags, LPDWORD lpThreadId)
 {
     CloseHandle(CreateThread(lpThreadAttributes, dwStackSize, lpStartAddress, lpParameter, dwCreationFlags, lpThreadId));
