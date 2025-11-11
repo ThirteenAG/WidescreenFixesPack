@@ -146,51 +146,51 @@ void __fastcall sub_106EE220(uint32_t* magma, void* edx, void** a2)
     {
         if (*element.pDtor == pHudAreaWidgetDtor)
         {
-            element.AsAreaWidget.Position.X -= WidescreenHudOffset.AsInt;
+            element.AsAreaWidget.Position.X -= static_cast<int16_t>(Screen.fWidescreenHudOffset);
         }
         //else if (*element.pDtor == pHudImageRendererDtor)
         //{
-        //    element.AsImageRenderer.Bounds.Left -= WidescreenHudOffset.AsInt;
-        //    element.AsImageRenderer.Bounds.Right -= WidescreenHudOffset.AsInt;
+        //    element.AsImageRenderer.Bounds.Left -= static_cast<int16_t>(Screen.fWidescreenHudOffset);
+        //    element.AsImageRenderer.Bounds.Right -= static_cast<int16_t>(Screen.fWidescreenHudOffset);
         //}
         //else if (*element.pDtor == pHudTextLabelDtor)
         //{
-        //    element.AsTextLabel.Bounds.Left -= WidescreenHudOffset.AsInt;
-        //    element.AsTextLabel.Bounds.Right -= WidescreenHudOffset.AsInt;
+        //    element.AsTextLabel.Bounds.Left -= static_cast<int16_t>(Screen.fWidescreenHudOffset);
+        //    element.AsTextLabel.Bounds.Right -= static_cast<int16_t>(Screen.fWidescreenHudOffset);
         //}
         //else if (*element.pDtor == pHudPlaceholderViewportDtor)
         //{
-        //    element.AsPlaceholderViewport.Bounds.Left -= WidescreenHudOffset.AsInt;
-        //    element.AsPlaceholderViewport.Bounds.Right -= WidescreenHudOffset.AsInt;
+        //    element.AsPlaceholderViewport.Bounds.Left -= static_cast<int16_t>(Screen.fWidescreenHudOffset);
+        //    element.AsPlaceholderViewport.Bounds.Right -= static_cast<int16_t>(Screen.fWidescreenHudOffset);
         //}
     }
     else if (HudNeedsToMoveRight(id))
     {
         if (*element.pDtor == pHudAreaWidgetDtor)
         {
-            element.AsAreaWidget.Position.X += WidescreenHudOffset.AsInt;
+            element.AsAreaWidget.Position.X += static_cast<int16_t>(Screen.fWidescreenHudOffset);
         }
         //else if (*element.pDtor == pHudImageRendererDtor)
         //{
-        //    element.AsImageRenderer.Bounds.Left += WidescreenHudOffset.AsInt;
-        //    element.AsImageRenderer.Bounds.Right += WidescreenHudOffset.AsInt;
+        //    element.AsImageRenderer.Bounds.Left += static_cast<int16_t>(Screen.fWidescreenHudOffset);
+        //    element.AsImageRenderer.Bounds.Right += static_cast<int16_t>(Screen.fWidescreenHudOffset);
         //}
         //else if (*element.pDtor == pHudTextLabelDtor)
         //{
-        //    element.AsTextLabel.Bounds.Left += WidescreenHudOffset.AsInt;
-        //    element.AsTextLabel.Bounds.Right += WidescreenHudOffset.AsInt;
+        //    element.AsTextLabel.Bounds.Left += static_cast<int16_t>(Screen.fWidescreenHudOffset);
+        //    element.AsTextLabel.Bounds.Right += static_cast<int16_t>(Screen.fWidescreenHudOffset);
         //}
         //else if (*element.pDtor == pHudPlaceholderViewportDtor)
         //{
-        //    element.AsPlaceholderViewport.Bounds.Left += WidescreenHudOffset.AsInt;
-        //    element.AsPlaceholderViewport.Bounds.Right += WidescreenHudOffset.AsInt;
+        //    element.AsPlaceholderViewport.Bounds.Left += static_cast<int16_t>(Screen.fWidescreenHudOffset);
+        //    element.AsPlaceholderViewport.Bounds.Right += static_cast<int16_t>(Screen.fWidescreenHudOffset);
         //}
     }
 }
 
 export void InitWidescreenHUD()
 {
-    if (nHudWidescreenMode < 1)
+    if (Screen.nHudWidescreenMode < 1)
         return;
 
     auto pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "56 8B F1 E8 ? ? ? ? F6 44 24 08 01 74 ? 56 E8 ? ? ? ? 83 C4 04 8B C6 5E C2 04 00");

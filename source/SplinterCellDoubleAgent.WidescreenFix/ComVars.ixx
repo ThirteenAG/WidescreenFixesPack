@@ -1,6 +1,8 @@
 module;
 
 #include "stdafx.h"
+#include <queue>
+#include <functional>
 #include <unordered_set>
 
 export module ComVars;
@@ -16,24 +18,18 @@ export struct Screen
     float fHudScaleX;
     float fHudScaleX2;
     float fTextScaleX;
+    int nHudWidescreenMode;
+    std::optional<float> fHudAspectRatioConstraint;
+    float fWidescreenHudOffset;
     int32_t FilmstripScaleX;
     int32_t FilmstripOffset;
     uint32_t pFilmstripTex;
     std::filesystem::path szLoadscPath;
     const float fDefaultARforFOV = 4.0f / 3.0f;
-    float fRawInputMouseForMenu;
-    bool bRawInputMouseForCamera;
+    float fRawInputMouse;
+    bool bDeferredInput;
 } Screen;
 
-export struct WidescreenHudOffset
-{
-    int32_t AsInt;
-    float AsFloat;
-} WidescreenHudOffset;
-
-export int nHudWidescreenMode;
-export int32_t nWidescreenHudOffset;
-export float fWidescreenHudOffset;
 export int32_t gBlacklistIndicators = 0;
 export uint32_t bLightSyncRGB = false;
 export float gVisibility = 1.0f;
@@ -41,6 +37,12 @@ export uint32_t gColor = 0;
 export uint32_t curAmmoInClip = 1;
 export uint32_t curClipCapacity = 1;
 export HWND hGameWindow = NULL;
+
+export namespace UWindowsViewport
+{
+    std::queue<std::function<void()>> deferredCauseInputEvent;
+    std::function<void(int inputID, int a3, float value)> deferredCauseInputEventForRawInput;
+}
 
 export namespace UObject
 {
