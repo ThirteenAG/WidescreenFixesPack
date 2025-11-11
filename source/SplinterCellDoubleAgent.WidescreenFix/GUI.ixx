@@ -180,29 +180,13 @@ int16_t __cdecl ClampXAxisState(int16_t value, int16_t min, int16_t max)
 {
     int16_t delta, vmin, vmax;
     CMenusManager::GetXAxisBounds(delta, vmin, vmax);
-
-    if (Screen.fRawInputMouseForMenu > 0.0f)
-    {
-        float normalizedX = CMenusManager::NormalizeRawInputX(RawInputHandler<>::RawMouseCursorX);
-        int16_t menuX = CMenusManager::NormalizedToGameX(normalizedX, vmin, vmax);
-        return std::clamp(menuX, vmin, vmax);
-    }
-    else
-        return std::clamp(value, int16_t(0 - delta), int16_t(800 + delta));
+    return std::clamp(value, int16_t(0 - delta), int16_t(800 + delta));
 }
 
 int16_t __cdecl ClampYAxisState(int16_t value, int16_t min, int16_t max)
 {
     max += 15;
-
-    if (Screen.fRawInputMouseForMenu > 0.0f)
-    {
-        float normalizedY = CMenusManager::NormalizeRawInputY(RawInputHandler<>::RawMouseCursorY);
-        int16_t menuY = CMenusManager::NormalizedToGameY(normalizedY, min, max);
-        return std::clamp(menuY, min, max);
-    }
-    else
-        return std::clamp(value, min, max);
+    return std::clamp(value, min, max);
 }
 
 export void InitGUI()
@@ -228,7 +212,7 @@ export void InitGUI()
                 int16_t clampedGameX = std::clamp(*(int16_t*)(regs.edx + 0), int16_t(0 - delta), int16_t(800 + delta));
                 int16_t clampedGameY = std::clamp(*(int16_t*)(regs.edx + 2), int16_t(0), int16_t(585));
 
-                if (Screen.fRawInputMouseForMenu > 0.0f)
+                if (Screen.fRawInputMouse > 0.0f)
                 {
                     RawInputHandler<>::RawMouseCursorX = CMenusManager::GameToRawInputX(clampedGameX, vmin, vmax);
                     RawInputHandler<>::RawMouseCursorY = CMenusManager::GameToRawInputY(clampedGameY, 0, 585);
@@ -243,30 +227,6 @@ export void InitGUI()
     //Not hooked for raw input, probably no need:
     //USCMagmaInteraction::ProcessInputPressState
     //USCMagmaInteraction::ProcessInputReleaseState
-
-    if (Screen.bRawInputMouseForCamera)
-    {
-        pattern = find_module_pattern(GetModuleHandle(L"Engine"), "F3 0F 11 03 F3 0F 10 45 E8");
-        if (!pattern.empty())
-        {
-            injector::MakeNOP(pattern.get_first(0), 4);
-            injector::MakeNOP(pattern.get_first(12), 4);
-
-            static auto APlayerControllerTickHook = safetyhook::create_mid(pattern.get_first(16), [](SafetyHookContext& regs)
-            {
-                constexpr float CameraSensitivity = 100.0f;
-
-                float scaledDeltaX = static_cast<float>(RawInputHandler<>::RawMouseDeltaX) / CameraSensitivity;
-                float scaledDeltaY = static_cast<float>(RawInputHandler<>::RawMouseDeltaY) / CameraSensitivity;
-
-                *(float*)regs.ebx = scaledDeltaX;
-                *(float*)regs.edi = scaledDeltaY;
-
-                RawInputHandler<>::RawMouseDeltaX = 0;
-                RawInputHandler<>::RawMouseDeltaY = 0;
-            });
-        }
-    }
 
     CMenusManager::shDisplayMenu = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?DisplayMenu@CMenusManager@@QAE_NPAVPage@magma@@_N1W4EMENUPRIORITY@@@Z"), CMenusManager::DisplayMenu);
 }
