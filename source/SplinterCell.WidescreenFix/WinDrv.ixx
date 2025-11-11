@@ -1,6 +1,8 @@
 module;
 
 #include <stdafx.h>
+#include <functional>
+#include <unordered_set>
 
 export module WinDrv;
 
@@ -9,6 +11,54 @@ import Xidi;
 
 namespace UWindowsViewport
 {
+    bool bCalledFromWndProc = false;
+
+    SafetyHookInline shCauseInputEvent = {};
+    SafetyHookInline shViewportWndProc = {};
+    int32_t __fastcall ViewportWndProc(void* UWindowsViewport, void* edx, UINT Msg, WPARAM wParam, LPARAM lParam)
+    {
+        hGameWindow = *(HWND*)(*(uintptr_t*)((uintptr_t)UWindowsViewport + 0x180) + 4);
+
+        if (Screen.fRawInput > 0.0f)
+        {
+            static bool bOnce = false;
+            if (!bOnce)
+            {
+                RawInputHandler<int32_t>::RegisterRawInput(hGameWindow, Screen.Width, Screen.Height, Screen.fRawInput);
+                bOnce = true;
+            }
+
+            if (Msg == WM_MOUSEMOVE)
+                return 0;
+            else if (Msg == WM_RAWINPUTMOUSE)
+            {
+                deferredCauseInputEventForRawInput = [UWindowsViewport](int inputID, int a3, float value)
+                {
+                    shCauseInputEvent.unsafe_fastcall(UWindowsViewport, 0, inputID, a3, value);
+                };
+            }
+        }
+
+        bCalledFromWndProc = true;
+        auto ret = shViewportWndProc.unsafe_fastcall<int32_t>(UWindowsViewport, edx, Msg, wParam, lParam);
+        bCalledFromWndProc = false;
+        return ret;
+    }
+
+    void __fastcall CauseInputEvent(void* UWindowsViewport, void* edx, int inputID, int a3, float value)
+    {
+        if (Screen.bDeferredInput && bCalledFromWndProc)
+        {
+            deferredCauseInputEvent.emplace([UWindowsViewport, edx, inputID, a3, value]()
+            {
+                shCauseInputEvent.unsafe_fastcall(UWindowsViewport, edx, inputID, a3, value);
+            });
+            return;
+        }
+
+        return shCauseInputEvent.unsafe_fastcall(UWindowsViewport, edx, inputID, a3, value);
+    }
+
     SafetyHookInline shUpdateRumble = {};
     void __fastcall UpdateRumble(void* UWindowsViewport, void* edx, float vibrateStrength, float shakeStrength)
     {
@@ -84,4 +134,6 @@ export void InitWinDrv()
     }; injector::MakeInline<OpenWindowHook2>(pattern.get_first(0), pattern.get_first(9));
 
     UWindowsViewport::shUpdateRumble = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"WinDrv"), "?UpdateRumble@UWindowsViewport@@UAEXMM@Z"), UWindowsViewport::UpdateRumble);
+    UWindowsViewport::shCauseInputEvent = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"WinDrv"), "?CauseInputEvent@UWindowsViewport@@UAEHHW4EInputAction@@M@Z"), UWindowsViewport::CauseInputEvent);
+    UWindowsViewport::shViewportWndProc = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"WinDrv"), "?ViewportWndProc@UWindowsViewport@@QAEJIIJ@Z"), UWindowsViewport::ViewportWndProc);
 }
