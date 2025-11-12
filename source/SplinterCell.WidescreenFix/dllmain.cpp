@@ -16,6 +16,7 @@ void Init()
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
     Screen.bDeferredInput = iniReader.ReadInteger("MAIN", "DeferredInput", 1) != 0;
     Screen.fRawInputMouse = std::clamp(iniReader.ReadFloat("MAIN", "RawInputMouse", 1.0f), 0.0f, 5.0f);
+    Screen.bRawInputMouseRawData = iniReader.ReadInteger("MAIN", "RawInputMouseRawData", 0) != 0;
     Screen.nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
     Screen.nHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 2);
     Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "HudAspectRatioConstraint", ""));
@@ -144,13 +145,13 @@ void Init()
     ResList[0].second = L"640x480";
     ResList[1].second = L"800x600";
 
-#ifdef _DEBUG
+    #ifdef _DEBUG
     // Log the assignments
     for (size_t i = 0; i < ResList.size(); ++i)
     {
         spd::log()->info("{0} : {1}", std::string(ResList[i].first.begin(), ResList[i].first.end()), std::string(ResList[i].second.begin(), ResList[i].second.end()));
     }
-#endif
+    #endif
 }
 
 CEXP void InitializeASI()

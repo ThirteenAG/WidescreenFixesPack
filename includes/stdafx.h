@@ -1309,11 +1309,12 @@ public:
     static inline T RawMouseDeltaX = 0;
     static inline T RawMouseDeltaY = 0;
 
-    static void RegisterRawInput(HWND hWnd, W& width, H& height, float sensitivity = 1.0f)
+    static void RegisterRawInput(HWND hWnd, W& width, H& height, float sensitivity = 1.0f, bool bUseRawData = false)
     {
         GameWidth = std::ref(width);
         GameHeight = std::ref(height);
         Sensitivity = sensitivity;
+        UseRawData = bUseRawData;
 
         SystemParametersInfo(SPI_GETMOUSE, 0, MouseAcceleration, 0);
         SystemParametersInfo(SPI_GETMOUSESPEED, 0, &MouseSpeed, 0);
@@ -1351,6 +1352,7 @@ private:
     static inline std::optional<std::reference_wrapper<W>> GameWidth;
     static inline std::optional<std::reference_wrapper<H>> GameHeight;
     static inline float Sensitivity = 1.0f;
+    static inline bool UseRawData = false;
 
     static LRESULT CALLBACK RawInputWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     {
@@ -1373,26 +1375,36 @@ private:
                     float dx = static_cast<float>(raw->data.mouse.lLastX);
                     float dy = static_cast<float>(raw->data.mouse.lLastY);
 
-                    // Apply acceleration (independent for each axis, using original abs values)
-                    float abs_dx = std::fabsf(dx);
-                    if (MouseAcceleration[2] > 0 && MouseAcceleration[0] < abs_dx)
-                        dx *= 2.0f;
-                    if (MouseAcceleration[2] == 2 && MouseAcceleration[1] < abs_dx)
-                        dx *= 2.0f;
+                    if (UseRawData)
+                    {
+                        // Raw input mode: only apply sensitivity
+                        dx *= Sensitivity;
+                        dy *= Sensitivity;
+                    }
+                    else
+                    {
+                        // Standard mode: apply acceleration, speed, and sensitivity
+                        // Apply acceleration (independent for each axis, using original abs values)
+                        float abs_dx = std::fabsf(dx);
+                        if (MouseAcceleration[2] > 0 && MouseAcceleration[0] < abs_dx)
+                            dx *= 2.0f;
+                        if (MouseAcceleration[2] == 2 && MouseAcceleration[1] < abs_dx)
+                            dx *= 2.0f;
 
-                    float abs_dy = std::fabsf(dy);
-                    if (MouseAcceleration[2] > 0 && MouseAcceleration[0] < abs_dy)
-                        dy *= 2.0f;
-                    if (MouseAcceleration[2] == 2 && MouseAcceleration[1] < abs_dy)
-                        dy *= 2.0f;
+                        float abs_dy = std::fabsf(dy);
+                        if (MouseAcceleration[2] > 0 && MouseAcceleration[0] < abs_dy)
+                            dy *= 2.0f;
+                        if (MouseAcceleration[2] == 2 && MouseAcceleration[1] < abs_dy)
+                            dy *= 2.0f;
 
-                    // Apply mouse speed scaling
-                    dx *= (static_cast<float>(MouseSpeed) / 10.0f);
-                    dy *= (static_cast<float>(MouseSpeed) / 10.0f);
+                        // Apply mouse speed scaling
+                        dx *= (static_cast<float>(MouseSpeed) / 10.0f);
+                        dy *= (static_cast<float>(MouseSpeed) / 10.0f);
 
-                    // Apply custom sensitivity factor
-                    dx *= Sensitivity;
-                    dy *= Sensitivity;
+                        // Apply custom sensitivity factor
+                        dx *= Sensitivity;
+                        dy *= Sensitivity;
+                    }
 
                     // Add subpixel carry-over, round to int for accumulation, save new fractions
                     dx += SubpixelX;
@@ -1430,4 +1442,23 @@ private:
         }
         return CallWindowProc(DefaultWndProc, hWnd, uMsg, wParam, lParam);
     }
+};
+
+template<typename T>
+class GameRef
+{
+private:
+    static inline T placeholder{};
+    std::reference_wrapper<T> ref;
+
+public:
+    GameRef() : ref(std::ref(placeholder)) {}
+
+    void SetAddress(auto addr)
+    {
+        ref = std::ref(*reinterpret_cast<T*>(addr));
+    }
+
+    T& get() { return ref.get(); }
+    operator T& () { return ref.get(); }
 };

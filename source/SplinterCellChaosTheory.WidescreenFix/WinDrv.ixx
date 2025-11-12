@@ -22,7 +22,7 @@ namespace UWindowsViewport
             static bool bOnce = false;
             if (!bOnce)
             {
-                RawInputHandler<>::RegisterRawInput(hGameWindow, Screen.Width, Screen.Height, Screen.fRawInputMouse);
+                RawInputHandler<>::RegisterRawInput(hGameWindow, Screen.Width, Screen.Height, Screen.fRawInputMouse, Screen.bRawInputMouseRawData);
                 bOnce = true;
             }
 

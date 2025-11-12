@@ -61,6 +61,7 @@ void Init()
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
     Screen.bDeferredInput = iniReader.ReadInteger("MAIN", "DeferredInput", 1) != 0;
     Screen.fRawInputMouse = std::clamp(iniReader.ReadFloat("MAIN", "RawInputMouse", 1.0f), 0.0f, 5.0f);
+    Screen.bRawInputMouseRawData = iniReader.ReadInteger("MAIN", "RawInputMouseRawData", 0) != 0;
     Screen.nHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 2);
     Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "HudAspectRatioConstraint", ""));
     bDisableAltTabFix = iniReader.ReadInteger("MAIN", "DisableAltTabFix", 1) != 0;
@@ -125,7 +126,7 @@ void Init()
     InitGUI();
     InitWidescreenHUD2();
 
-#ifdef _DEBUG
+    #ifdef _DEBUG
     pattern = hook::pattern("8B 88 80 00 00 00 6A 01");
     static auto SkipMenuHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
@@ -137,7 +138,7 @@ void Init()
             bOnce++;
         }
     });
-#endif
+    #endif
 
     if (nFPSLimit)
     {
@@ -153,26 +154,26 @@ void Init()
         injector::WriteMemory(pattern.get_first(1), 2160, true);
         injector::WriteMemory(pattern.get_first(6), 3840, true);
     }
-    
+
     pattern = hook::pattern("68 E0 01 00 00 68 80 02 00 00 50 FF 51 ? EB 18 8B 10 6A 01 6A 15 6A 00 6A 01 68 E0 01 00 00 68 80 02 00 00 50 FF 52 ? 85 DB");
     if (!pattern.empty())
     {
         injector::WriteMemory(pattern.get_first(1), 2160, true);
         injector::WriteMemory(pattern.get_first(6), 3840, true);
     }
-    
+
     pattern = hook::pattern("68 E0 01 00 00 68 80 02 00 00 50 FF 51 ? EB 18 8B 10 6A 01 6A 15 6A 00 6A 01 68 E0 01 00 00 68 80 02 00 00 50 FF 52 ? 8B AC 24 88 00 00 00");
     if (!pattern.empty())
     {
         injector::WriteMemory(pattern.get_first(1), 2160, true);
         injector::WriteMemory(pattern.get_first(6), 3840, true);
     }
-    
+
     static float h = 1.0f / 2160.0f;
     pattern = hook::pattern("D8 0D ? ? ? ? 8B 0E");
     if (!pattern.empty())
         injector::WriteMemory(pattern.get_first(2), &h, true);
-    
+
     static float w = 1.0f / 3840.0f;
     pattern = hook::pattern("D8 0D ? ? ? ? 8B 54 24 18 8B 44 24 24");
     if (!pattern.empty())
@@ -183,7 +184,7 @@ void Init()
     static auto ButtonNamesHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
         auto sv = std::wstring_view((const wchar_t*)regs.esi);
-        
+
         static const wchar_t* labelStrs[] = {
             L"(A)",
             L"(B)",
