@@ -298,7 +298,7 @@ T GetThisModuleName()
     HMODULE hm = NULL;
     GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCWSTR)&GetResolutionsList, &hm);
     const T moduleFileName = GetModulePath<T>(hm);
-    
+
     if constexpr (std::is_same_v<T, std::filesystem::path>)
         return moduleFileName.filename();
     else if constexpr (std::is_same_v<T, std::string>)
@@ -522,105 +522,105 @@ public:
             {
                 switch (*lpType)
                 {
-                case REG_BINARY:
-                {
-                    std::string str = RegistryReader.ReadString(section, ValueName, DefaultStrings[ValueName]);
-                    if (!str.empty())
+                    case REG_BINARY:
                     {
-                        std::istringstream input(str);
-                        std::string number;
-                        size_t i = 0;
-                        while (std::getline(input, number, ','))
+                        std::string str = RegistryReader.ReadString(section, ValueName, DefaultStrings[ValueName]);
+                        if (!str.empty())
                         {
-                            lpData[i] = (BYTE)std::stoul(number, nullptr, 16);
-                            ++i;
+                            std::istringstream input(str);
+                            std::string number;
+                            size_t i = 0;
+                            while (std::getline(input, number, ','))
+                            {
+                                lpData[i] = (BYTE)std::stoul(number, nullptr, 16);
+                                ++i;
+                            }
+                            *lpcbData = i;
                         }
-                        *lpcbData = i;
+                        else
+                            RegistryReader.WriteString(section, ValueName, DefaultStrings[ValueName].empty() ? "" : DefaultStrings[ValueName]);
+                        break;
                     }
-                    else
-                        RegistryReader.WriteString(section, ValueName, DefaultStrings[ValueName].empty() ? "" : DefaultStrings[ValueName]);
-                    break;
-                }
-                case REG_DWORD:
-                {
-                    DWORD def = UINT_MAX;
-                    if (!DefaultStrings[ValueName].empty())
+                    case REG_DWORD:
                     {
+                        DWORD def = UINT_MAX;
+                        if (!DefaultStrings[ValueName].empty())
+                        {
+                            try
+                            {
+                                def = (DWORD)std::stoul(DefaultStrings[ValueName]);
+                            }
+                            catch (const std::invalid_argument&)
+                            {
+                                def = UINT_MAX;
+                            }
+                        }
                         try
                         {
-                            def = (DWORD)std::stoul(DefaultStrings[ValueName]);
+                            *(DWORD*)lpData = RegistryReader.ReadInteger(section, ValueName, def);
                         }
                         catch (const std::invalid_argument&)
                         {
-                            def = UINT_MAX;
+                            *(DWORD*)lpData = UINT_MAX;
                         }
-                    }
-                    try
-                    {
-                        *(DWORD*)lpData = RegistryReader.ReadInteger(section, ValueName, def);
-                    }
-                    catch (const std::invalid_argument&)
-                    {
-                        *(DWORD*)lpData = UINT_MAX;
-                    }
-                    if (*(DWORD*)lpData == UINT_MAX)
-                    {
-                        RegistryReader.WriteString(section, ValueName, DefaultStrings[ValueName].empty() ? "INSERTDWORDHERE" : DefaultStrings[ValueName]);
-                        *(DWORD*)lpData = 0;
-                    }
-                    *lpcbData = sizeof(DWORD);
-                    break;
-                }
-                case REG_MULTI_SZ: //not implemented
-                    break;
-                case REG_NONE:
-                {
-                    if (lpData != NULL)
-                    {
-                        *(bool*)lpData = RegistryReader.ReadBoolean("MAIN", ValueName, false);
-                        *lpcbData = sizeof(bool);
-                    }
-                    else
-                    {
-                        auto s = DefaultStrings.find(ValueName);
-                        if (s != DefaultStrings.end())
+                        if (*(DWORD*)lpData == UINT_MAX)
                         {
-                            *lpcbData = s->second.size();
-                            *lpType = 1;
-                            return ERROR_SUCCESS;
+                            RegistryReader.WriteString(section, ValueName, DefaultStrings[ValueName].empty() ? "INSERTDWORDHERE" : DefaultStrings[ValueName]);
+                            *(DWORD*)lpData = 0;
+                        }
+                        *lpcbData = sizeof(DWORD);
+                        break;
+                    }
+                    case REG_MULTI_SZ: //not implemented
+                    break;
+                    case REG_NONE:
+                    {
+                        if (lpData != NULL)
+                        {
+                            *(bool*)lpData = RegistryReader.ReadBoolean("MAIN", ValueName, false);
+                            *lpcbData = sizeof(bool);
                         }
                         else
-                            return ERROR_FILE_NOT_FOUND;
+                        {
+                            auto s = DefaultStrings.find(ValueName);
+                            if (s != DefaultStrings.end())
+                            {
+                                *lpcbData = s->second.size();
+                                *lpType = 1;
+                                return ERROR_SUCCESS;
+                            }
+                            else
+                                return ERROR_FILE_NOT_FOUND;
+                        }
+                        break;
                     }
-                    break;
-                }
-                case REG_SZ:
-                case REG_EXPAND_SZ:
-                {
-                    if (lpData != NULL)
+                    case REG_SZ:
+                    case REG_EXPAND_SZ:
                     {
-                        std::string_view str((char*)lpData, *lpcbData);
-                        auto ret = RegistryReader.ReadString(section, ValueName, DefaultStrings[ValueName]);
-                        *lpcbData = std::min(ret.length(), str.length());
-                        ret.copy((char*)str.data(), *lpcbData, 0);
-                        lpData[*lpcbData] = '\0';
-                        if ((ret.empty() || DefaultStrings[ValueName] == ret) && PathStrings.find(ValueName) == PathStrings.end())
-                            RegistryReader.WriteString(section, ValueName, DefaultStrings[ValueName].empty() ? "INSERTSTRINGDATAHERE" : DefaultStrings[ValueName]);
+                        if (lpData != NULL)
+                        {
+                            std::string_view str((char*)lpData, *lpcbData);
+                            auto ret = RegistryReader.ReadString(section, ValueName, DefaultStrings[ValueName]);
+                            *lpcbData = std::min(ret.length(), str.length());
+                            ret.copy((char*)str.data(), *lpcbData, 0);
+                            lpData[*lpcbData] = '\0';
+                            if ((ret.empty() || DefaultStrings[ValueName] == ret) && PathStrings.find(ValueName) == PathStrings.end())
+                                RegistryReader.WriteString(section, ValueName, DefaultStrings[ValueName].empty() ? "INSERTSTRINGDATAHERE" : DefaultStrings[ValueName]);
+                        }
+                        else
+                        {
+                            auto ret = RegistryReader.ReadString(section, ValueName, DefaultStrings[ValueName]);
+                            *lpcbData = ret.length();
+                        }
+                        break;
                     }
-                    else
+                    default:
                     {
                         auto ret = RegistryReader.ReadString(section, ValueName, DefaultStrings[ValueName]);
                         *lpcbData = ret.length();
+                        *lpType = REG_SZ;
+                        break;
                     }
-                    break;
-                }
-                default:
-                {
-                    auto ret = RegistryReader.ReadString(section, ValueName, DefaultStrings[ValueName]);
-                    *lpcbData = ret.length();
-                    *lpType = REG_SZ;
-                    break;
-                }
                 }
             }
             return ERROR_SUCCESS;
@@ -637,46 +637,46 @@ public:
 
             switch (dwType)
             {
-            case REG_BINARY:
-            {
-                std::string str;
-                for (size_t i = 0; i < cbData; i++)
+                case REG_BINARY:
                 {
-                    str += std::format("{:02x}", lpData[i]);
-                    if (i != cbData - 1)
-                        str += ',';
+                    std::string str;
+                    for (size_t i = 0; i < cbData; i++)
+                    {
+                        str += std::format("{:02x}", lpData[i]);
+                        if (i != cbData - 1)
+                            str += ',';
+                    }
+                    RegistryReader.WriteString(section, lpValueName, str);
+                    break;
                 }
-                RegistryReader.WriteString(section, lpValueName, str);
-                break;
-            }
-            case REG_DWORD:
+                case REG_DWORD:
                 RegistryReader.WriteInteger(section, lpValueName, *(DWORD*)lpData);
                 break;
-            case REG_MULTI_SZ:
-            {
-                std::string str;
-                const char* temp = (const char*)lpData;
-                size_t index = 0;
-                size_t len = strlen(&temp[0]) + 1;
-                while (len > 1)
+                case REG_MULTI_SZ:
                 {
-                    str += temp[index];
-                    str += ',';
-                    index += len + 1;
-                    len = strlen(&temp[index]) + 1;
+                    std::string str;
+                    const char* temp = (const char*)lpData;
+                    size_t index = 0;
+                    size_t len = strlen(&temp[0]) + 1;
+                    while (len > 1)
+                    {
+                        str += temp[index];
+                        str += ',';
+                        index += len + 1;
+                        len = strlen(&temp[index]) + 1;
+                    }
+                    str.resize(str.size() - 1);
+                    RegistryReader.WriteString(section, lpValueName, str);
+                    break;
                 }
-                str.resize(str.size() - 1);
-                RegistryReader.WriteString(section, lpValueName, str);
-                break;
-            }
-            case REG_NONE:
+                case REG_NONE:
                 RegistryReader.WriteBoolean("MAIN", lpValueName, true);
                 break;
-            case REG_SZ:
-            case REG_EXPAND_SZ:
+                case REG_SZ:
+                case REG_EXPAND_SZ:
                 RegistryReader.WriteString(section, lpValueName, std::string((char*)lpData, cbData));
                 break;
-            default:
+                default:
                 break;
             }
             return ERROR_SUCCESS;
@@ -840,7 +840,7 @@ namespace WindowedModeWrapper
         return AdjustWindowRect(lpRect, newStyle, bMenu);
     }
 
-    static BOOL WINAPI CenterWindowPosition(int nWidth, int nHeight) 
+    static BOOL WINAPI CenterWindowPosition(int nWidth, int nHeight)
     {
         // fix the window to open at the center of the screen...
         HMONITOR monitor = MonitorFromWindow(GetDesktopWindow(), MONITOR_DEFAULTTONEAREST);
@@ -876,7 +876,10 @@ namespace WindowedModeWrapper
 
     static HWND WINAPI CreateWindowExA_Hook(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam)
     {
-        auto[WindowPosX, WindowPosY, newWidth, newHeight] = beforeCreateWindow(nWidth, nHeight);
+        if (hWndParent)
+            return CreateWindowExA(dwExStyle, lpClassName, lpWindowName, dwStyle, X, Y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
+
+        auto [WindowPosX, WindowPosY, newWidth, newHeight] = beforeCreateWindow(nWidth, nHeight);
         GameHWND = CreateWindowExA(dwExStyle, lpClassName, lpWindowName, dwStyle, WindowPosX, WindowPosY, newWidth, newHeight, hWndParent, hMenu, hInstance, lpParam);
         afterCreateWindow();
         return GameHWND;
@@ -884,6 +887,9 @@ namespace WindowedModeWrapper
 
     static HWND WINAPI CreateWindowExW_Hook(DWORD dwExStyle, LPCWSTR lpClassName, LPCWSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam)
     {
+        if (hWndParent)
+            return CreateWindowExW(dwExStyle, lpClassName, lpWindowName, dwStyle, X, Y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
+
         auto [WindowPosX, WindowPosY, newWidth, newHeight] = beforeCreateWindow(nWidth, nHeight);
         GameHWND = CreateWindowExW(dwExStyle, lpClassName, lpWindowName, dwStyle, WindowPosX, WindowPosY, newWidth, newHeight, hWndParent, hMenu, hInstance, lpParam);
         afterCreateWindow();
@@ -975,7 +981,8 @@ public:
                         {
                             auto name = std::string_view(std::get<0>(inputs));
                             auto num = std::string("-1");
-                            if (name.contains("@")) {
+                            if (name.contains("@"))
+                            {
                                 num = name.substr(name.find_last_of("@") + 1);
                                 name = name.substr(0, name.find_last_of("@"));
                             }
@@ -1053,7 +1060,8 @@ public:
                                 {
                                     auto name = std::string_view(std::get<0>(inputs));
                                     auto num = std::string("-1");
-                                    if (name.contains("@")) {
+                                    if (name.contains("@"))
+                                    {
                                         num = name.substr(name.find_last_of("@") + 1);
                                         name = name.substr(0, name.find_last_of("@"));
                                     }
@@ -1138,7 +1146,8 @@ public:
                     {
                         auto name = std::string_view(std::get<0>(inputs));
                         auto num = std::string("-1");
-                        if (name.contains("@")) {
+                        if (name.contains("@"))
+                        {
                             num = name.substr(name.find_last_of("@") + 1);
                             name = name.substr(0, name.find_last_of("@"));
                         }
@@ -1232,27 +1241,33 @@ public:
     };
 
 public:
-    static Event<>& onInitEvent() {
+    static Event<>& onInitEvent()
+    {
         static Event<> InitEvent;
         return InitEvent;
     }
-    static Event<>& onInitEventAsync() {
+    static Event<>& onInitEventAsync()
+    {
         static Event<> InitEventAsync;
         return InitEventAsync;
     }
-    static Event<>& onAfterUALRestoredIATEvent() {
+    static Event<>& onAfterUALRestoredIATEvent()
+    {
         static Event<> AfterUALRestoredIATEvent;
         return AfterUALRestoredIATEvent;
     }
-    static Event<>& onShutdownEvent() {
+    static Event<>& onShutdownEvent()
+    {
         static Event<> ShutdownEvent;
         return ShutdownEvent;
     }
-    static Event<>& onGameInitEvent() {
+    static Event<>& onGameInitEvent()
+    {
         static Event<> GameInitEvent;
         return GameInitEvent;
     }
-    static Event<>& onGameProcessEvent() {
+    static Event<>& onGameProcessEvent()
+    {
         static Event<> GameProcessEvent;
         return GameProcessEvent;
     }
@@ -1266,13 +1281,13 @@ namespace injector
         return VirtualProtect(addr.get(), size, PAGE_EXECUTE_READWRITE, &out_oldprotect) != 0;
     }
 
-#ifdef _WIN64
+    #ifdef _WIN64
     inline injector::memory_pointer_raw MakeCALLTrampoline(injector::memory_pointer_tr at, injector::memory_pointer_raw dest, bool vp = true)
     {
         auto trampoline = Trampoline::MakeTrampoline((void*)at.as_int());
         return MakeCALL(at, trampoline->Jump(dest));
     }
-#endif
+    #endif
 };
 
 template<typename T = int16_t, class W = int32_t, class H = W>

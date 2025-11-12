@@ -28,12 +28,6 @@ namespace UWindowsViewport
 
             if (Msg == WM_MOUSEMOVE)
             {
-                RECT rc{};
-                GetClientRect(hGameWindow, &rc);
-                POINT center{ (rc.left + rc.right) / 2, (rc.top + rc.bottom) / 2 };
-                POINT screenPt = center;
-                ClientToScreen(hGameWindow, &screenPt);
-                SetCursorPos(screenPt.x, screenPt.y);
                 return 0;
             }
             else if (Msg == WM_RAWINPUTMOUSE)
@@ -42,6 +36,20 @@ namespace UWindowsViewport
                 {
                     shCauseInputEvent.unsafe_fastcall(UWindowsViewport, 0, inputID, a3, value);
                 };
+
+                auto pViewport = reinterpret_cast<uint8_t*>(UWindowsViewport);
+                bool bCheck1 = (pViewport[129] & 1) != 0;
+                bool bCheck2 = *reinterpret_cast<int*>(pViewport + 134) != -1;
+
+                if ((bCheck1 || bCheck2))
+                {
+                    RECT rc{};
+                    GetClientRect(hGameWindow, &rc);
+                    POINT center{ (rc.left + rc.right) / 2, (rc.top + rc.bottom) / 2 };
+                    POINT screenPt = center;
+                    ClientToScreen(hGameWindow, &screenPt);
+                    SetCursorPos(screenPt.x, screenPt.y);
+                }
             }
         }
 
@@ -103,7 +111,7 @@ export void InitWinDrv()
 
     pattern = hook::pattern("56 8B F1 8B 46 18 8B 48 28 8B 81 A8 00 00 00 85 C0 74");
     UWindowsViewport::shCauseInputEvent = safetyhook::create_inline(pattern.get_first(), UWindowsViewport::CauseInputEvent);
-    
+
     pattern = hook::pattern("81 EC 8C 03 00 00");
     UWindowsViewport::shViewportWndProc = safetyhook::create_inline(pattern.get_first(), UWindowsViewport::ViewportWndProc);
 }
