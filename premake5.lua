@@ -356,7 +356,7 @@ project "JustCause.WidescreenFix"
    setpaths("Z:/WFP/Games/Just Cause/", "JustCause.exe")
 
 project "KingKong.WidescreenFix"
-   setpaths("Z:/WFP/Games/King Kong/", "CheckApplication.exe")
+   setpaths("Z:/WFP/Games/King Kong Gamers Edition/", "CheckApplication.exe")
 
 project "KnightRider.WidescreenFix"
    setpaths("Z:/WFP/Games/Knight Rider/", "Knight Rider.exe")
