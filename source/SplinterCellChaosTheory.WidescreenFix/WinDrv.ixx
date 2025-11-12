@@ -32,6 +32,9 @@ namespace UWindowsViewport
             }
             else if (Msg == WM_RAWINPUTMOUSE)
             {
+                if (hGameWindow != GetForegroundWindow())
+                    return 0;
+
                 deferredCauseInputEventForRawInput = [UWindowsViewport](int inputID, int a3, float value)
                 {
                     shCauseInputEvent.unsafe_fastcall(UWindowsViewport, 0, inputID, a3, value);
@@ -61,7 +64,7 @@ namespace UWindowsViewport
 
     void __fastcall CauseInputEvent(void* UWindowsViewport, void* edx, int inputID, int a3, float value)
     {
-        if (Screen.bDeferredInput && bCalledFromWndProc)
+        if (Screen.bDeferredInput && bCalledFromWndProc && (inputID == 228 || inputID == 229))
         {
             deferredCauseInputEvent.emplace([UWindowsViewport, edx, inputID, a3, value]()
             {
