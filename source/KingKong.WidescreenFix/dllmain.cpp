@@ -207,7 +207,7 @@ void Init()
     };
 
     auto pattern = hook::pattern("89 86 BC 02 00 00 89 8E C0 02 00 00 89 96 C4 02 00 00"); //0x9F2161
-    if (!pattern.empty())
+    if (!pattern.empty()) // Gamer's Edition
     {
         struct ResHook
         {
@@ -230,7 +230,7 @@ void Init()
     else
     {
         pattern = hook::pattern("8B 46 64 8B 4E 68");
-        if (!pattern.empty())
+        if (!pattern.empty()) // 9d
         {
             struct ResHook
             {
@@ -242,11 +242,21 @@ void Init()
                     SetScreenVars(regs.eax, regs.ecx);
                 }
             }; injector::MakeInline<ResHook>(pattern.get_first(0), pattern.get_first(6));
+
+            pattern = hook::pattern("39 6E ? 75 ? 8B 4E");
+            static auto WindowedHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            {
+                if (bWindowedMode)
+                {
+                    *(uint32_t*)(regs.esi + 0x10) = 1;
+                    regs.ebp = 1;
+                }
+            });
         }
         else
         {
             pattern = hook::pattern("8B 56 68 8B 44 24 44");
-            if (!pattern.empty())
+            if (!pattern.empty()) // 9
             {
                 struct ResHook
                 {
@@ -260,11 +270,21 @@ void Init()
                         SetScreenVars(regs.ecx, regs.edx);
                     }
                 }; injector::MakeInline<ResHook>(pattern.get_first(0), pattern.get_first(10));
+
+                pattern = hook::pattern("8B 46 ? 8D 4C 24 ? 51 8B 4E");
+                static auto WindowedHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+                {
+                    if (bWindowedMode)
+                    {
+                        *(uint32_t*)(regs.esi + 0x10) = 1;
+                        regs.eax = 1;
+                    }
+                });
             }
             else
             {
                 pattern = hook::pattern("8B 4E ? 8B 56 ? 53");
-                if (!pattern.empty())
+                if (!pattern.empty()) // 8
                 {
                     struct ResHook
                     {
@@ -277,6 +297,16 @@ void Init()
                         }
                     }; injector::MakeInline<ResHook>(pattern.get_first(0), pattern.get_first(6));
                 }
+
+                pattern = hook::pattern("8B 46 ? 8D 54 24 ? 52 8B 16");
+                static auto WindowedHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+                {
+                    if (bWindowedMode)
+                    {
+                        *(uint32_t*)(regs.esi + 0x10) = 1;
+                        regs.eax = 1;
+                    }
+                });
             }
         }
     }
@@ -456,21 +486,21 @@ void Init()
         injector::MakeInline<TextHookSignatureEdition>(text_pattern.get_first(18), text_pattern.get_first(18 + 8));
     }
 
-    //if (fMouseSensitivityFactor)
-    //{
-    //	pattern = hook::pattern("D9 85 ? ? ? ? D8 1D ? ? ? ? DF E0 F6 C4 41 75 1D D9 85 4C"); //0x45F048
-    //	struct MouseSensHook
-    //	{
-    //		void operator()(injector::reg_pack& regs)
-    //		{
-    //			*(float*)(regs.ebp - 0x1B0) *= fMouseSensitivityFactor;
-    //			*(float*)(regs.ebp - 0x1B4) *= fMouseSensitivityFactor;
-    //
-    //			float temp = *(float*)(regs.ebp - 0x1B4);
-    //			_asm fld     dword ptr[temp]
-    //		}
-    //	}; injector::MakeInline<MouseSensHook>(pattern.get_first(0), pattern.get_first(6));
-    //}
+    if (fMouseSensitivityFactor)
+    {
+        pattern = hook::pattern("D9 85 ? ? ? ? D8 1D ? ? ? ? DF E0 F6 C4 41 75 1D D9 85 4C"); //0x45F048
+        struct MouseSensHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                *(float*)(regs.ebp - 0x1B0) *= fMouseSensitivityFactor;
+                *(float*)(regs.ebp - 0x1B4) *= fMouseSensitivityFactor;
+
+                float temp = *(float*)(regs.ebp - 0x1B4);
+                _asm fld     dword ptr[temp]
+            }
+        }; injector::MakeInline<MouseSensHook>(pattern.get_first(0), pattern.get_first(6));
+    }
 
     static std::string defaultCmd("/B /lang:01  /spg:50 /GDBShaders KKMaps.bf");
     if (Screen.bSignatureEdition)
