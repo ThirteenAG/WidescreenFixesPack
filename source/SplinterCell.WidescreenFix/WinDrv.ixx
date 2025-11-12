@@ -37,12 +37,6 @@ namespace UWindowsViewport
 
             if (Msg == WM_MOUSEMOVE)
             {
-                RECT rc{};
-                GetClientRect(hGameWindow, &rc);
-                POINT center{ (rc.left + rc.right) / 2, (rc.top + rc.bottom) / 2 };
-                POINT screenPt = center;
-                ClientToScreen(hGameWindow, &screenPt);
-                SetCursorPos(screenPt.x, screenPt.y);
                 return 0;
             }
             else if (Msg == WM_RAWINPUTMOUSE)
@@ -51,6 +45,20 @@ namespace UWindowsViewport
                 {
                     shCauseInputEvent.unsafe_fastcall(UWindowsViewport, 0, inputID, a3, value);
                 };
+
+                auto pViewport = reinterpret_cast<uint8_t*>(UWindowsViewport);
+                bool bCheck1 = (pViewport[404] & 1) != 0;
+                bool bCheck2 = *reinterpret_cast<int*>(pViewport + 108) != -1;
+
+                if ((bCheck1 || bCheck2))
+                {
+                    RECT rc{};
+                    GetClientRect(hGameWindow, &rc);
+                    POINT center{ (rc.left + rc.right) / 2, (rc.top + rc.bottom) / 2 };
+                    POINT screenPt = center;
+                    ClientToScreen(hGameWindow, &screenPt);
+                    SetCursorPos(screenPt.x, screenPt.y);
+                }
             }
         }
 
