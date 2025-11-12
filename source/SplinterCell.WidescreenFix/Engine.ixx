@@ -91,7 +91,7 @@ void __fastcall FCanvasUtilDrawTileHook(void* _this, uint32_t EDX, float X, floa
         {
             if (!bIsMainMenu)
             {
-                FCanvasUtil::DrawTile(_this, EDX, X, Y, SizeX + Screen.fHudOffset, SizeY, U, V, SizeU, SizeV, unk1, Texture, Color);
+                FCanvasUtil::DrawTile(_this, EDX, X, Y, SizeX + Screen.fHudOffset + Screen.fHudOffset, SizeY, U, V, SizeU, SizeV, unk1, Texture, Color);
                 return;
             }
         }
@@ -243,22 +243,22 @@ export void InitEngine()
         injector::scoped_unprotect(const_cast<wchar_t*>(a640x480), wcslen(a640x480));
         wcscpy_s(const_cast<wchar_t*>(a640x480), ResList[0].second.size() + 1, ResList[0].second.c_str());
     }
-    
+
     {
         injector::scoped_unprotect(const_cast<wchar_t*>(a800x600), wcslen(a800x600));
         wcscpy_s(const_cast<wchar_t*>(a800x600), ResList[1].second.size() + 1, ResList[1].second.c_str());
     }
-    
+
     {
         injector::scoped_unprotect(const_cast<wchar_t*>(a1024x768), wcslen(a1024x768));
         wcscpy_s(const_cast<wchar_t*>(a1024x768), ResList[2].second.size() + 1, ResList[2].second.c_str());
     }
-    
+
     {
         injector::scoped_unprotect(const_cast<wchar_t*>(a1280x1024), wcslen(a1280x1024));
         wcscpy_s(const_cast<wchar_t*>(a1280x1024), ResList[3].second.size() + 1, ResList[3].second.c_str());
     }
-    
+
     {
         injector::scoped_unprotect(const_cast<wchar_t*>(a1600x1200), wcslen(a1600x1200));
         wcscpy_s(const_cast<wchar_t*>(a1600x1200), ResList[4].second.size() + 1, ResList[4].second.c_str());
@@ -331,7 +331,7 @@ export void InitEngine()
         UArrayOverrides::ClearCache();
     });
 
-#if _DEBUG
+    #if _DEBUG
     shFindAxisName = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?FindAxisName@UInput@@MBEPAMPAVAActor@@PBG@Z"), FindAxisName);
-#endif
+    #endif
 }
