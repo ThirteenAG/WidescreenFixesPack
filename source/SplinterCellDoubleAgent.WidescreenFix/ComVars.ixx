@@ -27,6 +27,7 @@ export struct Screen
     std::filesystem::path szLoadscPath;
     const float fDefaultARforFOV = 4.0f / 3.0f;
     float fRawInputMouse;
+    bool bRawInputMouseRawData;
     bool bDeferredInput;
 } Screen;
 

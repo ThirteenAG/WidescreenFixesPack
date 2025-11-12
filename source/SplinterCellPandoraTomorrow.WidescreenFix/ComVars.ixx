@@ -33,6 +33,7 @@ export struct Screen
     uint32_t nReflectionsResolution;
     uint32_t nBloomResolution;
     float fRawInputMouse;
+    bool bRawInputMouseRawData;
     bool bDeferredInput;
 } Screen;
 

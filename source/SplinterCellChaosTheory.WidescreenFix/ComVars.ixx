@@ -31,6 +31,7 @@ export struct Screen
     float fFMVoffsetStartY;
     float fFMVoffsetEndY;
     float fRawInputMouse;
+    bool bRawInputMouseRawData;
     bool bDeferredInput;
 } Screen;
 
@@ -47,8 +48,7 @@ export struct FLTColor
 {
     float R, G, B, A = 1.0f;
     inline FLTColor()
-    {
-    }
+    {}
     inline FLTColor(uint32_t color)
     {
         R = ((color >> 16) & 0xFF) / 255.0f;

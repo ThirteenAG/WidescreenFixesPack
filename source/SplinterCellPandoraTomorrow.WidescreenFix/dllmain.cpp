@@ -17,6 +17,7 @@ void Init()
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
     Screen.bDeferredInput = iniReader.ReadInteger("MAIN", "DeferredInput", 1) != 0;
     Screen.fRawInputMouse = std::clamp(iniReader.ReadFloat("MAIN", "RawInputMouse", 1.0f), 0.0f, 5.0f);
+    Screen.bRawInputMouseRawData = iniReader.ReadInteger("MAIN", "RawInputMouseRawData", 0) != 0;
     Screen.nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
     Screen.nHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1);
     Screen.bOpsatWidescreenMode = iniReader.ReadInteger("MAIN", "OpsatWidescreenMode", 1) != 0;
@@ -94,7 +95,8 @@ void Init()
     }
 
     // Sort list by resolution size (descending)
-    std::sort(list.begin(), list.end(), [](const std::string& lhs, const std::string& rhs) {
+    std::sort(list.begin(), list.end(), [](const std::string& lhs, const std::string& rhs)
+    {
         int32_t x1, y1, x2, y2;
         sscanf_s(lhs.c_str(), "%dx%d", &x1, &y1);
         sscanf_s(rhs.c_str(), "%dx%d", &x2, &y2);
@@ -151,13 +153,13 @@ void Init()
         }
     }
 
-#ifdef _DEBUG
+    #ifdef _DEBUG
     // Log the assignments
     for (size_t i = 0; i < ResList.size(); ++i)
     {
         spd::log()->info("{0} : {1}", std::string(ResList[i].first.begin(), ResList[i].first.end()), std::string(ResList[i].second.begin(), ResList[i].second.end()));
     }
-#endif
+    #endif
 }
 
 CEXP void InitializeASI()
