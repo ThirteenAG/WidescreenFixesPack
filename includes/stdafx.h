@@ -949,6 +949,16 @@ namespace WindowedModeWrapper
         }
         return res;
     }
+
+    static BOOL WINAPI MoveWindow_Hook(HWND hWnd, int X, int Y, int nWidth, int nHeight, BOOL bRepaint)
+    {
+        BOOL res = MoveWindow(hWnd, X, Y, nWidth, nHeight, bRepaint);
+        if (bBorderlessWindowed && GameHWND == hWnd)
+        {
+            CenterWindowPosition(nWidth, nHeight);
+        }
+        return res;
+    }
 };
 
 class IATHook

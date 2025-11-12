@@ -154,12 +154,26 @@ void Init()
     static float fMouseSensitivityFactor = iniReader.ReadFloat("MAIN", "MouseSensitivityFactor", 0.0f);
     static float fFOVFactor = iniReader.ReadFloat("MAIN", "FOVFactor", 0.0f);
     static bool bHideUntexturedObjects = iniReader.ReadInteger("MISC", "HideUntexturedObjects", 0) != 0;
+    static bool bWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 1) != 0;
 
     if (strncmp(szForceAspectRatio.c_str(), "auto", 4) != 0)
     {
         Screen.fCustomAspectRatioHor = static_cast<float>(std::stoi(szForceAspectRatio.c_str()));
         Screen.fCustomAspectRatioVer = static_cast<float>(std::stoi(strchr(szForceAspectRatio.c_str(), ':') + 1));
         bCustomAR = true;
+    }
+
+    if (bWindowedMode)
+    {
+        IATHook::Replace(GetModuleHandleA(NULL), "USER32.DLL",
+            std::forward_as_tuple("CreateWindowExA", WindowedModeWrapper::CreateWindowExA_Hook),
+            std::forward_as_tuple("CreateWindowExW", WindowedModeWrapper::CreateWindowExW_Hook),
+            std::forward_as_tuple("SetWindowLongA", WindowedModeWrapper::SetWindowLongA_Hook),
+            std::forward_as_tuple("SetWindowLongW", WindowedModeWrapper::SetWindowLongW_Hook),
+            std::forward_as_tuple("AdjustWindowRect", WindowedModeWrapper::AdjustWindowRect_Hook),
+            std::forward_as_tuple("SetWindowPos", WindowedModeWrapper::SetWindowPos_Hook),
+            std::forward_as_tuple("MoveWindow", WindowedModeWrapper::MoveWindow_Hook)
+        );
     }
 
     static auto SetScreenVars = [](int width, int height)
@@ -205,6 +219,9 @@ void Init()
                 *(uint32_t*)(regs.esi + 0x2BC) = width;
                 *(uint32_t*)(regs.esi + 0x2C0) = height;
                 *(uint32_t*)(regs.esi + 0x2C4) = regs.edx;
+
+                if (bWindowedMode)
+                    *(uint32_t*)(regs.esi + 0x2C8) = 1;
 
                 SetScreenVars(width, height);
             }
