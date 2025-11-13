@@ -39,6 +39,14 @@ namespace UWindowsViewport
             {
                 return 0;
             }
+            else if (Msg == WM_SETFOCUS)
+            {
+                POINT pt;
+                GetCursorPos(&pt);
+                ScreenToClient(hGameWindow, &pt);
+                PostMessage(hGameWindow, WM_LBUTTONDOWN, MK_LBUTTON, MAKELPARAM(pt.x, pt.y));
+                PostMessage(hGameWindow, WM_LBUTTONUP, 0, MAKELPARAM(pt.x, pt.y));
+            }
             else if (Msg == WM_RAWINPUTMOUSE)
             {
                 if (hGameWindow != GetForegroundWindow())
