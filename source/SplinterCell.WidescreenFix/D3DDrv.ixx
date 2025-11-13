@@ -67,7 +67,7 @@ int __fastcall UD3DRenderDeviceSetRes(void* UD3DRenderDevice, void* edx, void* U
             UIntOverrides::Register(L"IntProperty Echelon.EchelonGameInfo.bWidescreenMode", +[]() -> int
             {
                 // Dynamic check if user switches resolution while game is open
-                return (Screen.fHudAspectRatioConstraint.has_value() ? 
+                return (Screen.fHudAspectRatioConstraint.has_value() ?
                         Screen.fHudAspectRatioConstraint.value() >= (3.0f / 2.0f) :
                         Screen.fAspectRatio >= (3.0f / 2.0f)) ? 1 : 0;
             });
@@ -293,7 +293,7 @@ export void InitD3DDrv()
     pPresentParams = *hook::module_pattern(GetModuleHandle(L"D3DDrv"), "BF ? ? ? ? 33 C0 8B D9 C1 E9 02 83 E3 03").get_first<D3DPRESENT_PARAMETERS*>(1);
 
     //FMV
-    static auto SetFMVPos = [](injector::reg_pack& regs)
+    static auto SetFMVPos = [](SafetyHookContext& regs)
     {
         MSG msg;
         while (PeekMessageA(&msg, nullptr, 0, 0, PM_REMOVE))
@@ -302,45 +302,37 @@ export void InitD3DDrv()
             DispatchMessageA(&msg);
         }
 
-        //if (Screen.Width >= 1280 && Screen.Height >= 960)
-        //{
-        //    static constexpr auto BINKCOPY2XWH = 0x40000000L; // copy the width and height zoomed by two
-        //    regs.eax |= BINKCOPY2XWH;
-        //
-        //    *(int32_t*)&regs.ebp = static_cast<int32_t>((Screen.fWidth - (640.0f * 2.0f)) / 2.0f);
-        //    *(int32_t*)&regs.ebx = static_cast<int32_t>((Screen.fHeight - (480.0f * 2.0f)) / 2.0f);
-        //}
-        //else
-        {
-            //*(int32_t*)&regs.ebp = static_cast<int32_t>((Screen.fWidth - 640.0f) / 2.0f);
-            //*(int32_t*)&regs.ebx = static_cast<int32_t>((Screen.fHeight - 480.0f) / 2.0f);
+        auto& dest_height = *(uintptr_t*)(regs.esp + 12);
+        auto& dest_x = *(uintptr_t*)(regs.esp + 16);
+        auto& dest_y = *(uintptr_t*)(regs.esp + 20);
 
-            regs.ebp = 0;
-            regs.ebx = (480 - regs.ecx) / 2;
-        }
+        dest_x = 0;
+        dest_y = (480 - dest_height) / 2;
     };
 
-    pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "8B 4C 24 3C 8B 54 24 28");
-    struct BINKHook1
+    pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "FF 15 ? ? ? ? 85 C0 74 ? 8B 86");
+    static auto BinkCopyToBufferHook1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        void operator()(injector::reg_pack& regs)
-        {
-            regs.ecx = *(uint32_t*)(regs.esp + 0x3C);
-            regs.edx = *(uint32_t*)(regs.esp + 0x28);
-            SetFMVPos(regs);
-        }
-    }; injector::MakeInline<BINKHook1>(pattern.get_first(0), pattern.get_first(8));
+        SetFMVPos(regs);
+    });
 
-    pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "8B 54 24 3C 8B 4C 24 2C");
-    struct BINKHook2
+    pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "FF 15 ? ? ? ? 85 C0 75 ? 8B 83");
+    static auto BinkCopyToBufferHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        void operator()(injector::reg_pack& regs)
-        {
-            regs.edx = *(uint32_t*)(regs.esp + 0x3C);
-            regs.ecx = *(uint32_t*)(regs.esp + 0x2C);
-            SetFMVPos(regs);
-        }
-    }; injector::MakeInline<BINKHook2>(pattern.get_first(0), pattern.get_first(8));
+        SetFMVPos(regs);
+    });
+
+    pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "FF 15 ? ? ? ? 85 C0 74 ? 8B 96");
+    static auto BinkCopyToBufferHook3 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        SetFMVPos(regs);
+    });
+
+    pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "FF 15 ? ? ? ? 85 C0 75 ? 8B 44 24 ? 50");
+    static auto BinkCopyToBufferHook4 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        SetFMVPos(regs);
+    });
 
     UD3DRenderDevice::shDisplayVideo = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"D3DDrv"), "?DisplayVideo@UD3DRenderDevice@@UAEXPAVUCanvas@@PAX@Z"), UD3DRenderDevice::DisplayVideo);
 
