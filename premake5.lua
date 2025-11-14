@@ -356,6 +356,9 @@ project "JustCause.WidescreenFix"
    setpaths("Z:/WFP/Games/Just Cause/", "JustCause.exe")
 
 project "KingKong.WidescreenFix"
+   prebuildcommands { "for /R \"../source/%{prj.name}/\" %%f in (*.fx) do (\"../includes/dxsdk/lib/x86/fxc.exe\" /Tps_3_0 /Emain /Fo \"../source/%{prj.name}/%%~nf.fxo\" %%f)" }
+   files { "source/%{prj.name}/*.fx", "source/%{prj.name}/*.rc" }
+   defines { "IDR_BLUR=200" }
    setpaths("Z:/WFP/Games/King Kong Gamers Edition/", "CheckApplication.exe")
 
 project "KnightRider.WidescreenFix"

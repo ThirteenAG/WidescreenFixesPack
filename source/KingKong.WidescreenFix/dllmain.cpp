@@ -1,4 +1,6 @@
 #include "stdafx.h"
+#include <sstream>
+#include <iomanip>
 #include <d3d9.h>
 #include <d3dx9.h>
 #include "dxsdk\d3dvtbl.h"
@@ -21,6 +23,7 @@ struct Screen
     float fFMVScale;
     bool bSignatureEdition;
     uintptr_t pBarsPtr;
+    float fRawInputMouse;
 } Screen;
 
 
@@ -37,6 +40,8 @@ typedef HRESULT(STDMETHODCALLTYPE* DrawPrimitive_t)(LPDIRECT3DDEVICE9, D3DPRIMIT
 DrawPrimitive_t RealDrawPrimitive = NULL;
 typedef HRESULT(STDMETHODCALLTYPE* SetStreamSource_t)(LPDIRECT3DDEVICE9, UINT, IDirect3DVertexBuffer9*, UINT, UINT);
 SetStreamSource_t RealSetStreamSource = NULL;
+typedef HRESULT(STDMETHODCALLTYPE* CreatePixelShader_t)(LPDIRECT3DDEVICE9, const DWORD*, IDirect3DPixelShader9**);
+CreatePixelShader_t RealCreatePixelShader = NULL;
 
 IDirect3DVertexBuffer9* g_pCurrentVB = NULL;
 UINT g_CurrentOffset = 0;
@@ -53,7 +58,7 @@ HRESULT WINAPI HookedSetStreamSource(LPDIRECT3DDEVICE9 pDevice, UINT StreamNumbe
     return RealSetStreamSource(pDevice, StreamNumber, pStreamData, OffsetInBytes, Stride);
 }
 
-float fMaxObjectLength = 50.0f;
+float fMaxObjectLength = 3005.0f;
 HRESULT WINAPI DrawPrimitive(LPDIRECT3DDEVICE9 pDevice, D3DPRIMITIVETYPE PrimitiveType, UINT StartVertex, UINT PrimitiveCount)
 {
     bool isSuspectType = (PrimitiveType == D3DPT_TRIANGLESTRIP || PrimitiveType == D3DPT_TRIANGLELIST);
@@ -65,8 +70,8 @@ HRESULT WINAPI DrawPrimitive(LPDIRECT3DDEVICE9 pDevice, D3DPRIMITIVETYPE Primiti
         {
             numVerts = PrimitiveCount + 2;
         }
-        else
-        {  // D3DPT_TRIANGLELIST
+        else // D3DPT_TRIANGLELIST
+        {
             numVerts = PrimitiveCount * 3;
         }
         UINT lockOffset = g_CurrentOffset + StartVertex * g_CurrentStride;
@@ -89,7 +94,7 @@ HRESULT WINAPI DrawPrimitive(LPDIRECT3DDEVICE9 pDevice, D3DPRIMITIVETYPE Primiti
             float length = D3DXVec3Length(&extent);
             g_pCurrentVB->Unlock();
 
-            if (length > fMaxObjectLength)
+            if (std::isinf(length) || length > fMaxObjectLength)
             {
                 return D3D_OK;
             }
@@ -97,6 +102,53 @@ HRESULT WINAPI DrawPrimitive(LPDIRECT3DDEVICE9 pDevice, D3DPRIMITIVETYPE Primiti
     }
 
     return RealDrawPrimitive(pDevice, PrimitiveType, StartVertex, PrimitiveCount);
+}
+
+HRESULT WINAPI HookedCreatePixelShader(LPDIRECT3DDEVICE9 pDevice, const DWORD* pFunction, IDirect3DPixelShader9** ppShader)
+{
+    HRESULT result = RealCreatePixelShader(pDevice, pFunction, ppShader);
+    if (FAILED(result))
+        return result;
+
+    if (*ppShader != nullptr)
+    {
+        static std::vector<uint8_t> pbFunc;
+        UINT len;
+        (*ppShader)->GetFunction(nullptr, &len);
+        if (pbFunc.size() < len)
+            pbFunc.resize(len);
+
+        (*ppShader)->GetFunction(pbFunc.data(), &len);
+
+        if (crc32(0, pbFunc.data(), len) == 0x15BF4BA3)
+        {
+            HMODULE hModule;
+            GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR)&HookedCreatePixelShader, &hModule);
+            HRSRC hResource = FindResource(hModule, MAKEINTRESOURCE(IDR_BLUR), RT_RCDATA);
+            if (hResource)
+            {
+                HGLOBAL hGlob = LoadResource(hModule, hResource);
+                if (hGlob)
+                {
+                    LPVOID pData = LockResource(hGlob);
+                    DWORD size = SizeofResource(hModule, hResource);
+                    if (pData && size > 0)
+                    {
+                        LPDWORD shader_data = (LPDWORD)pData;
+                        IDirect3DPixelShader9* newShader = nullptr;
+                        HRESULT createResult = RealCreatePixelShader(pDevice, shader_data, &newShader);
+                        if (SUCCEEDED(createResult))
+                        {
+                            (*ppShader)->Release();
+                            *ppShader = newShader;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return result;
 }
 
 HRESULT WINAPI CreateDevice(IDirect3D9* d3ddev, UINT Adapter, D3DDEVTYPE DeviceType, HWND hFocusWindow, DWORD BehaviorFlags, D3DPRESENT_PARAMETERS* pPresentationParameters, IDirect3DDevice9** ppReturnedDeviceInterface)
@@ -109,6 +161,9 @@ HRESULT WINAPI CreateDevice(IDirect3D9* d3ddev, UINT Adapter, D3DDEVTYPE DeviceT
 
     RealSetStreamSource = (SetStreamSource_t)pVTable[IDirect3DDevice9VTBL::SetStreamSource];
     injector::WriteMemory(&pVTable[IDirect3DDevice9VTBL::SetStreamSource], &HookedSetStreamSource, true);
+
+    RealCreatePixelShader = (CreatePixelShader_t)pVTable[IDirect3DDevice9VTBL::CreatePixelShader];
+    injector::WriteMemory(&pVTable[IDirect3DDevice9VTBL::CreatePixelShader], &HookedCreatePixelShader, true);
 
     return retval;
 }
@@ -145,13 +200,143 @@ void __cdecl sub_9B1C80(float* a1)
     bSkipFOVHook = false;
 }
 
+GameRef<float> aMouseX;
+GameRef<float> aMouseY;
+void* pSettings = nullptr;
+
+SafetyHookInline shCameraRotationX = {};
+void __cdecl CameraRotationX(void* a1, float a2)
+{
+    float fMouseSensitivity = 1.0f;
+    auto Settings = *(uintptr_t*)pSettings;
+    if (Settings)
+        fMouseSensitivity = *(float*)(Settings + 0x4DBC);
+    auto deltaX = -aMouseX.get() * Screen.fRawInputMouse * fMouseSensitivity;
+    return shCameraRotationX.unsafe_ccall(a1, deltaX);
+}
+
+SafetyHookInline shCameraRotationY = {};
+void __cdecl CameraRotationY(void* a1, float a2)
+{
+    int bMouseInverted = 0;
+    float fMouseSensitivity = 1.0f;
+    auto Settings = *(uintptr_t*)pSettings;
+    if (Settings)
+    {
+        bMouseInverted = *(int*)(*(uintptr_t*)pSettings + 0x4DB8);
+        fMouseSensitivity = *(float*)(*(uintptr_t*)pSettings + 0x4DBC);
+    }
+    auto deltaY = -aMouseY.get() * Screen.fRawInputMouse * (bMouseInverted ? -fMouseSensitivity : fMouseSensitivity);
+    return shCameraRotationY.unsafe_ccall(a1, deltaY);
+}
+
+SafetyHookInline shWndProc = {};
+LRESULT WINAPI WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
+{
+    if (Screen.fRawInputMouse > 0.0f)
+    {
+        static bool bOnce = false;
+        if (!bOnce)
+        {
+            if (Screen.Width)
+            {
+                RawCursorHandler<float>::Initialize(hWnd, Screen.fRawInputMouse);
+                bOnce = true;
+            }
+        }
+    }
+    return shWndProc.unsafe_stdcall<LRESULT>(hWnd, Msg, wParam, lParam);
+}
+
+namespace XeTexturePacker
+{
+    const std::string textureCacheDir = "Textures";
+
+    uint32_t currentTextureID;
+
+    std::string GetHexFilename(uint32_t texID)
+    {
+        std::stringstream ss;
+        ss << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << texID;
+        return ss.str() + ".bin";
+    }
+
+    bool GetCachedData(uint32_t texID, char* dstBuffer, size_t dataSize)
+    {
+        std::string filename = textureCacheDir + "/" + GetHexFilename(texID);
+        std::ifstream file(filename, std::ios::binary | std::ios::in);
+        if (file.is_open())
+        {
+            file.read(dstBuffer, dataSize);
+            if (static_cast<size_t>(file.gcount()) == dataSize)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    struct UncompressParams
+    {
+        uint32_t field0;
+        uint32_t field1;
+        uint32_t field2;
+        uint32_t field3;
+        uint32_t field4;
+    };
+
+    int(__cdecl** XeTexture_UncompressTexture)(void*, int, UncompressParams*) = nullptr;
+
+    SafetyHookInline shUncompressTexture = {};
+    int __cdecl UncompressTexture(void* srcBuffer, int srcSize, void* info)
+    {
+        int result = 0;
+
+        auto width = *(uint16_t*)((uintptr_t)info + 4);
+        auto height = *(uint16_t*)((uintptr_t)info + 6);
+        auto dstBuffer = *(char**)((uintptr_t)info + 44);
+        auto dataSize = 4 * width * height;
+
+        if (GetCachedData(currentTextureID, dstBuffer, dataSize))
+        {
+            return 1;
+        }
+
+        UncompressParams uncompressParams = { width, height, 0, 1, 0 };
+        if ((*XeTexture_UncompressTexture)(srcBuffer, srcSize, &uncompressParams))
+        {
+            void* srcData = *(void**)(uncompressParams.field4 + 4);
+            memcpy(dstBuffer, srcData, dataSize);
+            result = 1;
+
+            std::string dir = textureCacheDir;
+            std::filesystem::create_directories(dir);
+            std::string filename = dir + "/" + GetHexFilename(currentTextureID);
+            std::ofstream file(filename, std::ios::binary | std::ios::out);
+            if (file.is_open())
+            {
+                file.write(static_cast<const char*>(srcData), dataSize);
+            }
+        }
+        currentTextureID = uint32_t(-1);
+        return result;
+    }
+
+    SafetyHookInline shTEXhardwareload = {};
+    void __cdecl TEXhardwareload(void* a1, uint32_t* texinfo, void* metadata, int index)
+    {
+        currentTextureID = texinfo[0];
+        return shTEXhardwareload.unsafe_ccall(a1, texinfo, metadata, index);
+    }
+}
+
 void Init()
 {
     CIniReader iniReader("");
     static bool bCustomAR;
     auto szForceAspectRatio = iniReader.ReadString("MAIN", "ForceAspectRatio", "auto");
     static bool bFullscreenFMVs = iniReader.ReadInteger("MAIN", "FullscreenFMVs", 1) != 0;
-    static float fMouseSensitivityFactor = iniReader.ReadFloat("MAIN", "MouseSensitivityFactor", 0.0f);
+    Screen.fRawInputMouse = iniReader.ReadFloat("MAIN", "RawInputMouse", 1.0f);
     static float fFOVFactor = iniReader.ReadFloat("MAIN", "FOVFactor", 0.0f);
     static bool bHideUntexturedObjects = iniReader.ReadInteger("MISC", "HideUntexturedObjects", 0) != 0;
     static bool bWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 1) != 0;
@@ -174,6 +359,51 @@ void Init()
             std::forward_as_tuple("SetWindowPos", WindowedModeWrapper::SetWindowPos_Hook),
             std::forward_as_tuple("MoveWindow", WindowedModeWrapper::MoveWindow_Hook)
         );
+    }
+
+    if (Screen.fRawInputMouse > 0.0f)
+    {
+        auto pattern = hook::pattern("53 8B 5C 24 ? 55 8B 6C 24 ? 56 8B 74 24 ? 57 8B 7C 24 ? 8D 44 24 ? 50 56 57 53 55");
+        shWndProc = safetyhook::create_inline(pattern.get_first(), WndProc);
+
+        pattern = hook::pattern("C7 05 ? ? ? ? ? ? ? ? EB 21 D8 15 ? ? ? ? DF E0 F6 C4 41 75 ? DD D8");
+        aMouseX.SetAddress(*pattern.get_first<float*>(2));
+
+        pattern = hook::pattern("C7 05 ? ? ? ? ? ? ? ? C3 D8 15 ? ? ? ? DF E0 F6 C4 41 75 ? DD D8 C7 05");
+        aMouseY.SetAddress(*pattern.get_first<float*>(2));
+
+        pattern = hook::pattern("8B 0D ? ? ? ? 8B 91 ? ? ? ? 89 95 ? ? ? ? 8B 85 ? ? ? ? 83 E8 06");
+        pSettings = *pattern.get_first<void*>(2);
+
+        pattern = hook::pattern("55 8B EC 83 EC 34 D9 05 ? ? ? ? D9 45 ? DA E9 DF E0 F6 C4 44");
+        shCameraRotationY = safetyhook::create_inline(pattern.count(6).get(0).get<void*>(0), CameraRotationY);
+        shCameraRotationX = safetyhook::create_inline(pattern.count(6).get(5).get<void*>(0), CameraRotationX);
+
+        static auto SetCursor = [](float* pMouseX, float* pMouseY)
+        {
+            RECT clientRect;
+            GetClientRect(RawCursorHandler<float>::UpdateMouseInput(true), &clientRect);
+
+            // Normalize to 0.0 - 1.0 range
+            float clientWidth = static_cast<float>(clientRect.right - clientRect.left);
+            float clientHeight = static_cast<float>(clientRect.bottom - clientRect.top);
+
+            *pMouseX = RawCursorHandler<float>::MouseCursorX / clientWidth;
+            *pMouseY = RawCursorHandler<float>::MouseCursorY / clientHeight;
+        };
+
+        pattern = hook::pattern("8B 55 ? 8B 82 ? ? ? ? 89 45 ? D9 45 ? D8 1D ? ? ? ? DF E0 F6 C4 41 75 ? C7 45 ? ? ? ? ? EB 1F D9 45 ? D8 1D ? ? ? ? DF E0 F6 C4 05 7A ? C7 45 ? ? ? ? ? EB 06 8B 4D ? 89 4D ? 8B 55 ? 8B 45 ? 89 82 ? ? ? ? 8B 4D");
+        static auto MouseCursorHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            SetCursor((float*)(regs.eax + 0x1D4), (float*)(regs.eax + 0x1D8));
+        });
+
+        pattern = hook::pattern("8B 45 ? 8B 88 ? ? ? ? 89 4D ? D9 45 ? D8 1D ? ? ? ? DF E0 F6 C4 41 75 ? C7 45 ? ? ? ? ? EB 1F D9 45 ? D8 1D ? ? ? ? DF E0 F6 C4 05 7A ? C7 45 ? ? ? ? ? EB 06 8B 55 ? 89 55 ? 8B 45 ? 8B 4D ? 89 88 ? ? ? ? 8B 55");
+        static int32_t offset = *pattern.get_first<int32_t>(-4);
+        static auto MouseCursorHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            SetCursor((float*)(regs.eax + offset - 4), (float*)(regs.eax + offset));
+        });
     }
 
     static auto SetScreenVars = [](int width, int height)
@@ -387,6 +617,17 @@ void Init()
     pattern = hook::pattern("D8 0D ? ? ? ? D9 5C 24 10 8B 5C 24 10 53"); //0x98B8CF
     injector::WriteMemory(pattern.get_first(2), &Screen.fCutOffArea, true);
 
+    //grass at screen edges
+    static float f0 = 0.0f;
+    pattern = hook::pattern("D8 0D ? ? ? ? D9 C0 D9 FF D9 9C 24");
+    if (!pattern.empty())
+        injector::WriteMemory(pattern.get_first(2), &f0, true);
+    else
+    {
+        pattern = hook::pattern("D8 0D ? ? ? ? D9 9D ? ? ? ? D9 85 ? ? ? ? 83 EC 08 DD 1C 24 E8 ? ? ? ? 83 C4 08 D9 9D ? ? ? ? D9 85 ? ? ? ? D8 3D ? ? ? ? D9 9D ? ? ? ? 8B 85 ? ? ? ? D9 05 ? ? ? ? D9 80 ? ? ? ? DA E9 DF E0 F6 C4 44 7A ? 8B 8D ? ? ? ? C7 81 ? ? ? ? ? ? ? ? 8B 15 ? ? ? ? 89 95 ? ? ? ? A1 ? ? ? ? 6B C0 18");
+        injector::WriteMemory(pattern.get_first(2), &f0, true);
+    }
+
     //FMVs
     pattern = hook::pattern("89 50 18 8B 06 8B CE FF 50 14 8B 4F 08"); //0xA25984
     if (!pattern.empty())
@@ -486,22 +727,6 @@ void Init()
         injector::MakeInline<TextHookSignatureEdition>(text_pattern.get_first(18), text_pattern.get_first(18 + 8));
     }
 
-    if (fMouseSensitivityFactor)
-    {
-        pattern = hook::pattern("D9 85 ? ? ? ? D8 1D ? ? ? ? DF E0 F6 C4 41 75 1D D9 85 4C"); //0x45F048
-        struct MouseSensHook
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                *(float*)(regs.ebp - 0x1B0) *= fMouseSensitivityFactor;
-                *(float*)(regs.ebp - 0x1B4) *= fMouseSensitivityFactor;
-
-                float temp = *(float*)(regs.ebp - 0x1B4);
-                _asm fld     dword ptr[temp]
-            }
-        }; injector::MakeInline<MouseSensHook>(pattern.get_first(0), pattern.get_first(6));
-    }
-
     static std::string defaultCmd("/B /lang:01  /spg:50 /GDBShaders KKMaps.bf");
     if (Screen.bSignatureEdition)
         defaultCmd = "/B /TX /lang:01 /spg:50 KingKongTheGame.bf";
@@ -573,6 +798,25 @@ void Init()
                 }
             }; injector::MakeInline<Direct3DDeviceHook>(pattern.get_first(0), pattern.get_first(7));
         }
+    }
+
+    pattern = find_pattern("74 ? FF D0 85 C0");
+    if (!pattern.empty())
+    {
+        injector::WriteMemory<uint8_t>(pattern.get_first(), 0xEB, true);
+    }
+
+    // Texture caching for Gamer's Edition
+    pattern = hook::pattern("FF 15 ? ? ? ? 83 C4 0C 85 C0 0F 95 C0");
+    if (!pattern.empty())
+    {
+        XeTexturePacker::XeTexture_UncompressTexture = *(decltype(XeTexturePacker::XeTexture_UncompressTexture)*)pattern.get_first(2);
+
+        pattern = hook::pattern("53 55 56 6A 14");
+        XeTexturePacker::shUncompressTexture = safetyhook::create_inline(pattern.get_first(), XeTexturePacker::UncompressTexture);
+
+        pattern = hook::pattern("55 8B EC 83 E4 F8 81 EC B4 00 00 00 53");
+        XeTexturePacker::shTEXhardwareload = safetyhook::create_inline(pattern.get_first(), XeTexturePacker::TEXhardwareload);
     }
 }
 
