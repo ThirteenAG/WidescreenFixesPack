@@ -310,17 +310,17 @@ export void InitD3DDrv()
         dest_y = (480 - dest_height) / 2;
     };
 
-    pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "FF 15 ? ? ? ? 85 C0 74 ? 8B 86");
-    static auto BinkCopyToBufferHook1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-    {
-        SetFMVPos(regs);
-    });
-
-    pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "FF 15 ? ? ? ? 85 C0 75 ? 8B 83");
-    static auto BinkCopyToBufferHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-    {
-        SetFMVPos(regs);
-    });
+    //pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "FF 15 ? ? ? ? 85 C0 74 ? 8B 86");
+    //static auto BinkCopyToBufferHook1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    //{
+    //    SetFMVPos(regs);
+    //});
+    //
+    //pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "FF 15 ? ? ? ? 85 C0 75 ? 8B 83");
+    //static auto BinkCopyToBufferHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    //{
+    //    SetFMVPos(regs);
+    //});
 
     pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "FF 15 ? ? ? ? 85 C0 74 ? 8B 96");
     static auto BinkCopyToBufferHook3 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
