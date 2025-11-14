@@ -11,7 +11,7 @@ public:
     static inline int* nMouseLookSensitivity = nullptr;
     static inline bool bGamepadUsed = false;
     static inline bool (*pScarfaceHook_GetMenuActive)() = nullptr;
-    
+
     static inline bool IsInvertX()
     {
         return *bIsInvertX;
@@ -28,59 +28,51 @@ public:
     {
         if (pScarfaceHook_GetMenuActive)
             return pScarfaceHook_GetMenuActive();
-        else
-            return false;
+        return false;
     }
 };
 
-void CenterMouse()
+SafetyHookInline shWndProc = {};
+LRESULT WINAPI WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 {
-    if (OptionManager::bGamepadUsed)
-        return;
-
-    if ((*OptionManager::hWnd == GetForegroundWindow()) && !OptionManager::ScarfaceHook_GetMenuActive())
+    static bool bOnce = false;
+    if (!bOnce)
     {
-        RECT windowRect;
-        GetWindowRect(*OptionManager::hWnd, &windowRect);
-        auto CenterX = ((windowRect.right - windowRect.left) / 2) + windowRect.left;
-        auto CenterY = ((windowRect.bottom - windowRect.top) / 2) + windowRect.top;
-        SetCursorPos(CenterX, CenterY);
+        RawCursorHandler<float>::Initialize(hWnd, 1.0f);
+        bOnce = true;
     }
+
+    return shWndProc.unsafe_stdcall<LRESULT>(hWnd, Msg, wParam, lParam);
 }
 
-void SetMouseInput(float* dest_x, float* dest_y, float value_x = 0.0f, float value_y = 0.0f)
+void SetMouseInput(float* dest_x, float* dest_y, float baseline_x = 0.0f, float baseline_y = 0.0f)
 {
     if (OptionManager::bGamepadUsed)
         return;
-    
-    if ((*OptionManager::hWnd == GetForegroundWindow()) && !OptionManager::ScarfaceHook_GetMenuActive())
-    {
-        RECT windowRect;
-        POINT MousePos;
-        GetCursorPos(&MousePos);
-        GetWindowRect(*OptionManager::hWnd, &windowRect);
-        auto CenterX = ((windowRect.right - windowRect.left) / 2) + windowRect.left;
-        auto CenterY = ((windowRect.bottom - windowRect.top) / 2) + windowRect.top;
+    if ((*OptionManager::hWnd != GetForegroundWindow()) || OptionManager::ScarfaceHook_GetMenuActive())
+        return;
 
-        float sign_x = 1.0f;
-        float sign_y = 1.0f;
-        if (OptionManager::IsInvertX())
-            sign_x = -1.0f;
-        if (OptionManager::IsInvertY())
-            sign_y = -1.0f;
+    RawCursorHandler<float>::SetSensitivity(OptionManager::GetMouseLookSensitivity() / 100.0f);
+    RawCursorHandler<float>::UpdateMouseInput(false);
 
-        if (value_x)
-            *dest_x = value_x + ((float)((MousePos.x - CenterX) / 100.0f) * OptionManager::GetMouseLookSensitivity()) * sign_x;
-        else
-            *dest_x += ((float)((MousePos.x - CenterX) / 100.0f) * OptionManager::GetMouseLookSensitivity()) * sign_x;
-        
-        if (value_y)
-            *dest_y = value_y + -((float)((MousePos.y - CenterY) / 100.0f) * OptionManager::GetMouseLookSensitivity()) * sign_y;
-        else
-            *dest_y += -((float)((MousePos.y - CenterY) / 100.0f) * OptionManager::GetMouseLookSensitivity()) * sign_y;
+    float dx = RawCursorHandler<float>::MouseDeltaX;
+    float dy = RawCursorHandler<float>::MouseDeltaY;
 
-        SetCursorPos(CenterX, CenterY);
-    }
+    float sign_x = OptionManager::IsInvertX() ? -1.0f : 1.0f;
+    float sign_y = OptionManager::IsInvertY() ? -1.0f : 1.0f;
+
+    if (baseline_x != 0.0f)
+        *dest_x = baseline_x + dx * sign_x;
+    else
+        *dest_x += dx * sign_x;
+
+    if (baseline_y != 0.0f)
+        *dest_y = baseline_y + dy * sign_y;
+    else
+        *dest_y += dy * sign_y;
+
+    RawCursorHandler<float>::MouseDeltaX = 0.0f;
+    RawCursorHandler<float>::MouseDeltaY = 0.0f;
 }
 
 injector::hook_back<char(__fastcall*)(float* mInputs, void* edx, float* angleH, float* angleV, float deltaTime)> hb_GenericVehicleCamera_ApplyRightStickMotion;
@@ -88,15 +80,14 @@ char __fastcall GenericVehicleCamera_ApplyRightStickMotion(float* mInputs, void*
 {
     auto H = *angleH;
     auto V = *angleV;
-    
+
     auto ret = hb_GenericVehicleCamera_ApplyRightStickMotion.fun(mInputs, edx, angleH, angleV, deltaTime);
 
     SetMouseInput(angleH, angleV, H, V);
 
-    if ((GetAsyncKeyState(VK_RBUTTON)))
+    if (GetAsyncKeyState(VK_RBUTTON))
         return 1;
-    else
-        return ret;
+    return ret;
 }
 
 float __cdecl math__ClampX(float* value, float* min, float* max)
@@ -119,7 +110,7 @@ void Init()
     auto bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
     auto bScrollWeaponsWithMouseWheel = iniReader.ReadInteger("MAIN", "ScrollWeaponsWithMouseWheel", 1) != 0;
     static auto fForceAlphaRef = iniReader.ReadFloat("TEST", "ForceAlphaRef", 0.0f);
-    
+
     if (bSkipIntro)
     {
         auto pattern = hook::pattern("E8 ? ? ? ? 83 C4 20 5F 5E C7 45");
@@ -127,15 +118,18 @@ void Init()
         pattern = hook::pattern("75 22 E8 ? ? ? ? 8B C8");
         injector::MakeNOP(pattern.get_first(), 2); //press to start
     }
-    
+
     auto pattern = hook::pattern("A2 ? ? ? ? A2 ? ? ? ? A2 ? ? ? ? A2 ? ? ? ? A2 ? ? ? ? A2 ? ? ? ? A3");
     OptionManager::bIsInvertX = *pattern.get_first<bool*>(1);
     OptionManager::bIsInvertY = *pattern.get_first<bool*>(6);
     pattern = hook::pattern("E8 ? ? ? ? 56 68 ? ? ? ? E8 ? ? ? ? 83 C4 10");
     OptionManager::nMouseLookSensitivity = *(int**)(injector::GetBranchDestination(pattern.get_first()).as_int() + 5);
-    
+
     pattern = hook::pattern("A3 ? ? ? ? 5B 74 0F");
     OptionManager::hWnd = *pattern.get_first<HWND*>(1);
+
+    pattern = hook::pattern("8B 0D ? ? ? ? 53 8B 5C 24 ? 55");
+    shWndProc = safetyhook::create_inline(pattern.get_first(), WndProc);
 
     pattern = hook::pattern("D9 58 10 83 C4 5C C2 0C 00");
     struct SetOutput_Update_FreeLook
@@ -145,7 +139,7 @@ void Init()
             SetMouseInput((float*)(regs.eax + 0x0C), (float*)(regs.eax + 0x10));
         }
     }; injector::MakeInline<SetOutput_Update_FreeLook>(pattern.get_first(6));
-    injector::MakeRET(pattern.get_first(6+5), 0xC);
+    injector::MakeRET(pattern.get_first(6 + 5), 0xC);
 
     //camera blend disable
     pattern = hook::pattern("83 EC 10 57 8B F9 80 BF");
@@ -163,7 +157,6 @@ void Init()
         {
             *(uint8_t*)(regs.ecx + 0x19) = *(uint8_t*)&regs.eax;
             *(uint8_t*)(regs.ecx + 0x18) = 0;
-
             SetMouseInput((float*)(regs.ecx + 0x0C), (float*)(regs.ecx + 0x10));
         }
     }; injector::MakeInline<SetOutput_Update_MeleeTarget>(pattern.get_first(3), pattern.get_first(10));
@@ -194,48 +187,54 @@ void Init()
         }
     }; injector::MakeInline<GamepadCheck>(pattern.get_first(0));
 
-    pattern = hook::pattern("B8 ? ? ? ? C6 05 ? ? ? ? ? A3 ? ? ? ? A3 ? ? ? ? E8");
-    struct CursorReset1
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            regs.eax = 0x18;
-            CenterMouse();
-        }
-    }; injector::MakeInline<CursorReset1>(pattern.get_first(0));
-
-    pattern = hook::pattern("83 C4 0C 88 9E ? ? ? ? 5E 5B C2 08 00");
-    struct CursorReset2
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            *(uint8_t*)(regs.esi + 0x177) = regs.ebx & 0xFF;
-            if ((regs.ebx & 0xFF) == 0)
-                CenterMouse();
-        }
-    }; injector::MakeInline<CursorReset2>(pattern.get_first(3), pattern.get_first(9));
-    
-    pattern = hook::pattern("8B 47 0C 50 8D 4C 24 38 51 8B CE E8 ? ? ? ? 80 BE");
-    struct CursorReset3
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            regs.eax = *(uint32_t*)(regs.edi + 0xC);
-            regs.ecx = regs.esp + 0x38 - 4;
-            CenterMouse();
-        }
-    }; injector::MakeInline<CursorReset3>(pattern.get_first(0), pattern.get_first(8));
-    injector::WriteMemory<uint8_t>(pattern.get_first(5), 0x50, true);
-
-    pattern = hook::pattern("8B 97 ? ? ? ? 52 8B CE E8 ? ? ? ? 5F");
-    struct CursorReset4
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            regs.edx = *(uint32_t*)(regs.edi + 0x84);
-            CenterMouse();
-        }
-    }; injector::MakeInline<CursorReset4>(pattern.get_first(0), pattern.get_first(6));
+    //pattern = hook::pattern("B8 ? ? ? ? C6 05 ? ? ? ? ? A3 ? ? ? ? A3 ? ? ? ? E8");
+    //struct CursorReset1
+    //{
+    //    void operator()(injector::reg_pack& regs)
+    //    {
+    //        regs.eax = 0x18;
+    //        RawCursorHandler<float>::MouseDeltaX = 0.0f;
+    //        RawCursorHandler<float>::MouseDeltaY = 0.0f;
+    //    }
+    //}; injector::MakeInline<CursorReset1>(pattern.get_first(0));
+    //
+    //pattern = hook::pattern("83 C4 0C 88 9E ? ? ? ? 5E 5B C2 08 00");
+    //struct CursorReset2
+    //{
+    //    void operator()(injector::reg_pack& regs)
+    //    {
+    //        *(uint8_t*)(regs.esi + 0x177) = regs.ebx & 0xFF;
+    //        if ((regs.ebx & 0xFF) == 0)
+    //        {
+    //            RawCursorHandler<float>::MouseDeltaX = 0.0f;
+    //            RawCursorHandler<float>::MouseDeltaY = 0.0f;
+    //        }
+    //    }
+    //}; injector::MakeInline<CursorReset2>(pattern.get_first(3), pattern.get_first(9));
+    //
+    //pattern = hook::pattern("8B 47 0C 50 8D 4C 24 38 51 8B CE E8 ? ? ? ? 80 BE");
+    //struct CursorReset3
+    //{
+    //    void operator()(injector::reg_pack& regs)
+    //    {
+    //        regs.eax = *(uint32_t*)(regs.edi + 0xC);
+    //        regs.ecx = regs.esp + 0x38 - 4;
+    //        RawCursorHandler<float>::MouseDeltaX = 0.0f;
+    //        RawCursorHandler<float>::MouseDeltaY = 0.0f;
+    //    }
+    //}; injector::MakeInline<CursorReset3>(pattern.get_first(0), pattern.get_first(8));
+    //injector::WriteMemory<uint8_t>(pattern.get_first(5), 0x50, true);
+    //
+    //pattern = hook::pattern("8B 97 ? ? ? ? 52 8B CE E8 ? ? ? ? 5F");
+    //struct CursorReset4
+    //{
+    //    void operator()(injector::reg_pack& regs)
+    //    {
+    //        regs.edx = *(uint32_t*)(regs.edi + 0x84);
+    //        RawCursorHandler<float>::MouseDeltaX = 0.0f;
+    //        RawCursorHandler<float>::MouseDeltaY = 0.0f;
+    //    }
+    //}; injector::MakeInline<CursorReset4>(pattern.get_first(0), pattern.get_first(6));
 
     if (bScrollWeaponsWithMouseWheel)
     {
@@ -256,11 +255,11 @@ void Init()
                         nMouseWheelValue = 0;
                         switch (rgdod->dwOfs)
                         {
-                        case DIMOFS_Z:
-                            nMouseWheelValue = rgdod->dwData;
-                            break;
-                        default:
-                            break;
+                            case DIMOFS_Z:
+                                nMouseWheelValue = rgdod->dwData;
+                                break;
+                            default:
+                                break;
                         }
                     }
                 }
@@ -277,7 +276,7 @@ void Init()
 
                 if (OptionManager::bGamepadUsed || OptionManager::ScarfaceHook_GetMenuActive())
                     return;
-                
+
                 enum
                 {
                     weaponleft = 0x9,
@@ -318,7 +317,7 @@ void InitXidi()
 {
     CIniReader iniReader("");
     auto bModernControlScheme = iniReader.ReadInteger("MAIN", "ModernControlScheme", 1) != 0;
-    
+
     if (bModernControlScheme)
     {
         typedef bool (*XidiRegisterProfileCallbackFunc)(const wchar_t* (*callback)());
@@ -364,7 +363,7 @@ CEXP void InitializeASI()
     std::call_once(CallbackHandler::flag, []()
     {
         CallbackHandler::RegisterCallback(Init, hook::pattern("B9 ? ? ? ? E8 ? ? ? ? 5E C3"));
-        CallbackHandler::RegisterCallback(L"dinput8.dll", InitXidi);
+        CallbackHandler::RegisterCallback(L"Xidi.32.dll", InitXidi);
         CallbackHandler::RegisterCallback(L"ScarfaceHook.asi", InitScarfaceHook);
     });
 }
