@@ -7,6 +7,7 @@ import D3DDrv;
 import WinDrv;
 import Window;
 import Echelon;
+import EchelonHUD;
 import Xidi;
 
 void Init()
@@ -165,6 +166,7 @@ CEXP void InitializeASI()
         CallbackHandler::RegisterCallback(L"Window.dll", InitWindow);
         CallbackHandler::RegisterCallback(L"Core.dll", InitCore);
         CallbackHandler::RegisterCallback(L"Echelon.dll", InitEchelon);
+        CallbackHandler::RegisterCallback(L"EchelonHUD.dll", InitEchelonHUD);
         CallbackHandler::RegisterCallback(L"Xidi.32.dll", InitXidi);
     });
 }
