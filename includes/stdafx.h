@@ -549,8 +549,7 @@ public:
                             try
                             {
                                 def = (DWORD)std::stoul(DefaultStrings[ValueName]);
-                            }
-                            catch (const std::invalid_argument&)
+                            } catch (const std::invalid_argument&)
                             {
                                 def = UINT_MAX;
                             }
@@ -558,8 +557,7 @@ public:
                         try
                         {
                             *(DWORD*)lpData = RegistryReader.ReadInteger(section, ValueName, def);
-                        }
-                        catch (const std::invalid_argument&)
+                        } catch (const std::invalid_argument&)
                         {
                             *(DWORD*)lpData = UINT_MAX;
                         }
@@ -572,7 +570,7 @@ public:
                         break;
                     }
                     case REG_MULTI_SZ: //not implemented
-                    break;
+                        break;
                     case REG_NONE:
                     {
                         if (lpData != NULL)
@@ -650,8 +648,8 @@ public:
                     break;
                 }
                 case REG_DWORD:
-                RegistryReader.WriteInteger(section, lpValueName, *(DWORD*)lpData);
-                break;
+                    RegistryReader.WriteInteger(section, lpValueName, *(DWORD*)lpData);
+                    break;
                 case REG_MULTI_SZ:
                 {
                     std::string str;
@@ -670,14 +668,14 @@ public:
                     break;
                 }
                 case REG_NONE:
-                RegistryReader.WriteBoolean("MAIN", lpValueName, true);
-                break;
+                    RegistryReader.WriteBoolean("MAIN", lpValueName, true);
+                    break;
                 case REG_SZ:
                 case REG_EXPAND_SZ:
-                RegistryReader.WriteString(section, lpValueName, std::string((char*)lpData, cbData));
-                break;
+                    RegistryReader.WriteString(section, lpValueName, std::string((char*)lpData, cbData));
+                    break;
                 default:
-                break;
+                    break;
             }
             return ERROR_SUCCESS;
         }
@@ -1007,8 +1005,7 @@ public:
                                         originalPtrs[std::get<0>(inputs)].wait();
                                         *pAddress = std::get<1>(inputs);
                                     }
-                                }
-                                catch (...) {}
+                                } catch (...) {}
                             }
                             else if ((*pAddress && *pAddress == (void*)GetProcAddress(GetModuleHandleA(dll_name.data()), name.data())) ||
                             (strcmp(reinterpret_cast<PIMAGE_IMPORT_BY_NAME>(instance + pThunk[j].u1.AddressOfData)->Name, name.data()) == 0))
@@ -1100,8 +1097,7 @@ public:
                                                     return r;
                                                 }, pAddress, std::get<1>(inputs), (PVOID)instance);
                                             }
-                                        }
-                                        catch (...) {}
+                                        } catch (...) {}
                                     }
                                     else if ((*pAddress && *pAddress == (void*)GetProcAddress(GetModuleHandleA(dll_name.data()), name.data())) ||
                                     (strcmp(reinterpret_cast<PIMAGE_IMPORT_BY_NAME>(instance + pThunk[j].u1.AddressOfData)->Name, name.data()) == 0))
@@ -1300,7 +1296,7 @@ namespace injector
     #endif
 };
 
-template<typename T = int16_t, class W = int32_t, class H = W>
+template<typename T = int16_t>
 class RawInputHandler
 {
 public:
@@ -1309,18 +1305,13 @@ public:
     static inline T RawMouseDeltaX = 0;
     static inline T RawMouseDeltaY = 0;
 
-    static void RegisterRawInput(HWND hWnd, W& width, H& height, float sensitivity = 1.0f, bool bUseRawData = false)
+    static void RegisterRawInput(HWND hWnd, float sensitivity = 1.0f, bool bUseRawData = false)
     {
-        GameWidth = std::ref(width);
-        GameHeight = std::ref(height);
         Sensitivity = sensitivity;
         UseRawData = bUseRawData;
-
         SystemParametersInfo(SPI_GETMOUSE, 0, MouseAcceleration, 0);
         SystemParametersInfo(SPI_GETMOUSESPEED, 0, &MouseSpeed, 0);
-
         DefaultWndProc = (WNDPROC)SetWindowLongPtr(hWnd, GWLP_WNDPROC, (LONG_PTR)RawInputWndProc);
-
         rid[0].usUsagePage = HID_USAGE_PAGE_GENERIC;
         rid[0].usUsage = HID_USAGE_GENERIC_MOUSE;
         rid[0].dwFlags = RIDEV_INPUTSINK;
@@ -1330,18 +1321,10 @@ public:
 
     static void OnResChange()
     {
-        if (GameWidth.has_value() && GameHeight.has_value())
-        {
-            RawMouseCursorX = static_cast<T>(GameWidth.value().get() / 2);
-            RawMouseCursorY = static_cast<T>(GameHeight.value().get() / 2);
-        }
-        else
-        {
-            RECT clientRect;
-            GetClientRect(rid[0].hwndTarget, &clientRect);
-            RawMouseCursorX = static_cast<T>(clientRect.right / 2);
-            RawMouseCursorY = static_cast<T>(clientRect.bottom / 2);
-        }
+        RECT windowRect;
+        GetWindowRect(rid[0].hwndTarget, &windowRect);
+        RawMouseCursorX = static_cast<T>((windowRect.right - windowRect.left) / 2 + windowRect.left);
+        RawMouseCursorY = static_cast<T>((windowRect.bottom - windowRect.top) / 2 + windowRect.top);
     }
 
 private:
@@ -1349,8 +1332,6 @@ private:
     static inline RAWINPUTDEVICE rid[1];
     static inline int MouseAcceleration[3] = { 0 };  // [0]=threshold1, [1]=threshold2, [2]=level (0=off, 1 or 2=on with varying strength)
     static inline int MouseSpeed = 10; // Default to 10 if query fails
-    static inline std::optional<std::reference_wrapper<W>> GameWidth;
-    static inline std::optional<std::reference_wrapper<H>> GameHeight;
     static inline float Sensitivity = 1.0f;
     static inline bool UseRawData = false;
 
@@ -1424,17 +1405,8 @@ private:
                     RawMouseDeltaX += (RawMouseCursorX - oldX);
                     RawMouseDeltaY += (RawMouseCursorY - oldY);
 
-                    W maxWidth = clientRect.right;
-                    H maxHeight = clientRect.bottom;
-
-                    if (GameWidth.has_value() && GameHeight.has_value())
-                    {
-                        maxWidth = GameWidth.value().get();
-                        maxHeight = GameHeight.value().get();
-                    }
-
-                    RawMouseCursorX = std::max(T(0), std::min(RawMouseCursorX, static_cast<T>(maxWidth)));
-                    RawMouseCursorY = std::max(T(0), std::min(RawMouseCursorY, static_cast<T>(maxHeight)));
+                    RawMouseCursorX = std::max(T(0), std::min(RawMouseCursorX, static_cast<T>(clientRect.right)));
+                    RawMouseCursorY = std::max(T(0), std::min(RawMouseCursorY, static_cast<T>(clientRect.bottom)));
                 }
             }
             PostMessage(hWnd, WM_RAWINPUTMOUSE, 0, 0);
@@ -1442,6 +1414,90 @@ private:
         }
         return CallWindowProc(DefaultWndProc, hWnd, uMsg, wParam, lParam);
     }
+
+    static void SetSensitivity(float sensitivity)
+    {
+        Sensitivity = sensitivity;
+    }
+};
+
+template<typename T = int16_t>
+class RawCursorHandler
+{
+public:
+    static inline T MouseCursorX = 0;
+    static inline T MouseCursorY = 0;
+    static inline T MouseDeltaX = 0;
+    static inline T MouseDeltaY = 0;
+
+    static void Initialize(HWND hWnd, float sensitivity = 1.0f)
+    {
+        Sensitivity = sensitivity;
+        TargetWindow = hWnd;
+        OnResChange();
+    }
+
+    static void OnResChange()
+    {
+        RECT windowRect;
+        GetWindowRect(TargetWindow, &windowRect);
+        MouseCursorX = static_cast<T>((windowRect.right - windowRect.left) / 2 + windowRect.left);
+        MouseCursorY = static_cast<T>((windowRect.bottom - windowRect.top) / 2 + windowRect.top);
+        SetCursorPos(MouseCursorX, MouseCursorY);
+    }
+
+    static HWND UpdateMouseInput(bool bIsAbsoluteValue = false)
+    {
+        if (TargetWindow != GetForegroundWindow())
+        {
+            if (bIsAbsoluteValue)
+                ClipCursor(NULL);
+
+            return TargetWindow;
+        }
+
+        RECT windowRect;
+        GetWindowRect(TargetWindow, &windowRect);
+
+        if (bIsAbsoluteValue)
+        {
+            POINT cursorPos;
+            ClipCursor(&windowRect);
+            GetCursorPos(&cursorPos);
+            MouseCursorX = static_cast<T>(cursorPos.x - windowRect.left);
+            MouseCursorY = static_cast<T>(cursorPos.y - windowRect.top);
+        }
+        else
+        {
+            POINT cursorPos;
+            GetCursorPos(&cursorPos);
+
+            T centerX = static_cast<T>((windowRect.right - windowRect.left) / 2 + windowRect.left);
+            T centerY = static_cast<T>((windowRect.bottom - windowRect.top) / 2 + windowRect.top);
+
+            T deltaX = static_cast<T>(cursorPos.x - centerX);
+            T deltaY = static_cast<T>(cursorPos.y - centerY);
+
+            float scaledDeltaX = static_cast<float>(deltaX) * Sensitivity;
+            float scaledDeltaY = static_cast<float>(deltaY) * Sensitivity;
+
+            MouseDeltaX += static_cast<T>(scaledDeltaX);
+            MouseDeltaY -= static_cast<T>(scaledDeltaY);
+
+            SetCursorPos(centerX, centerY);
+        }
+
+        return TargetWindow;
+    }
+
+    static void SetSensitivity(float sensitivity)
+    {
+        Sensitivity = sensitivity;
+    }
+
+private:
+    static inline HWND TargetWindow = nullptr;
+    static inline float Sensitivity = 1.0f;
 };
 
 template<typename T>
