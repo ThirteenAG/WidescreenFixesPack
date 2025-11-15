@@ -1,6 +1,4 @@
 #include "stdafx.h"
-#include <mmsystem.h>
-#pragma comment(lib, "winmm.lib") // needed for timeBeginPeriod()/timeEndPeriod()
 #include <LEDEffects.h>
 
 import ComVars;
@@ -196,11 +194,6 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
     if (reason == DLL_PROCESS_ATTACH)
     {
         if (!IsUALPresent()) { InitializeASI(); }
-    }
-    else if (reason == DLL_PROCESS_DETACH)
-    {
-        if (nFrameLimitType == FrameLimiter::FPSLimitMode::FPS_ACCURATE)
-            timeEndPeriod(1);
     }
     return TRUE;
 }

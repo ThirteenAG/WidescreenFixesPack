@@ -18,7 +18,6 @@ bool bDoNotNotifyOnTaskSwitch;
 int nForceWindowStyle;
 
 float fFPSLimit;
-export int32_t nFrameLimitType;
 export class FrameLimiter
 {
 public:
@@ -245,8 +244,7 @@ export void InitOnline()
         FpsLimiter.Init(mode, fFPSLimit);
 
         auto pattern = hook::pattern("8B F9 8B 47 30 85 C0 74 18");
-        static auto fpslimiter = safetyhook::create_mid(pattern.get_first(),
-            [](SafetyHookContext& ctx)
+        static auto fpslimiter = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& ctx)
         {
             FpsLimiter.Sync();
         });
