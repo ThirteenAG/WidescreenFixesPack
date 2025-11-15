@@ -292,6 +292,7 @@ public:
         CIniReader iniReader("");
         bHideUntexturedObjects = iniReader.ReadInteger("MISC", "HideUntexturedObjects", 1) != 0;
         bDisableBlur = iniReader.ReadInteger("MAIN", "DisableBlur", 1) != 0;
+        bVSync = iniReader.ReadInteger("MAIN", "VSync", 1) != 0;
 
         CallbackHandler::RegisterCallback(L"d3d9.dll", []()
         {
@@ -333,6 +334,11 @@ public:
 
                     auto D3D9CreateDevice = [](LPDIRECT3D9 pDirect3D9, UINT Adapter, D3DDEVTYPE DeviceType, HWND hFocusWindow, DWORD BehaviorFlags, D3DPRESENT_PARAMETERS* pPresentationParameters, IDirect3DDevice9** ppReturnedDeviceInterface) -> HRESULT
                     {
+                        if (bVSync && pPresentationParameters)
+                        {
+                            pPresentationParameters->PresentationInterval = D3DPRESENT_INTERVAL_ONE;
+                            pPresentationParameters->FullScreen_RefreshRateInHz = D3DPRESENT_RATE_DEFAULT;
+                        }
                         auto res = CreateDeviceOriginal.unsafe_stdcall<HRESULT>(pDirect3D9, Adapter, DeviceType, hFocusWindow, BehaviorFlags, pPresentationParameters, ppReturnedDeviceInterface);
                         return res;
                     };
@@ -349,6 +355,16 @@ public:
 
                     auto D3D9Reset = [](LPDIRECT3DDEVICE9 pDevice, D3DPRESENT_PARAMETERS* pPresentationParameters) -> HRESULT
                     {
+                        // Clear vertex buffer state before reset
+                        g_pCurrentVB = NULL;
+                        g_CurrentOffset = 0;
+                        g_CurrentStride = 0;
+
+                        if (bVSync && pPresentationParameters)
+                        {
+                            pPresentationParameters->PresentationInterval = D3DPRESENT_INTERVAL_ONE;
+                            pPresentationParameters->FullScreen_RefreshRateInHz = D3DPRESENT_RATE_DEFAULT;
+                        }
                         auto res = ResetOriginal.unsafe_stdcall<HRESULT>(pDevice, pPresentationParameters);
                         return res;
                     };
@@ -394,24 +410,31 @@ public:
 
                             if (SUCCEEDED(g_pCurrentVB->Lock(lockOffset, lockSize, &pData, D3DLOCK_READONLY)))
                             {
-                                D3DXVECTOR3* verts = (D3DXVECTOR3*)((BYTE*)pData + 0);
-                                D3DXVECTOR3 minV = verts[0];
-                                D3DXVECTOR3 maxV = verts[0];
-
-                                for (UINT i = 1; i < numVerts; ++i)
+                                if (pData) // Extra safety check
                                 {
-                                    D3DXVec3Minimize(&minV, &minV, &verts[i]);
-                                    D3DXVec3Maximize(&maxV, &maxV, &verts[i]);
+                                    D3DXVECTOR3* verts = (D3DXVECTOR3*)((BYTE*)pData + 0);
+                                    D3DXVECTOR3 minV = verts[0];
+                                    D3DXVECTOR3 maxV = verts[0];
+
+                                    for (UINT i = 1; i < numVerts; ++i)
+                                    {
+                                        D3DXVec3Minimize(&minV, &minV, &verts[i]);
+                                        D3DXVec3Maximize(&maxV, &maxV, &verts[i]);
+                                    }
+
+                                    D3DXVECTOR3 extent;
+                                    D3DXVec3Subtract(&extent, &maxV, &minV);
+                                    float length = D3DXVec3Length(&extent);
+                                    g_pCurrentVB->Unlock();
+
+                                    if (std::isinf(length) || length > fMaxObjectLength)
+                                    {
+                                        return D3D_OK;
+                                    }
                                 }
-
-                                D3DXVECTOR3 extent;
-                                D3DXVec3Subtract(&extent, &maxV, &minV);
-                                float length = D3DXVec3Length(&extent);
-                                g_pCurrentVB->Unlock();
-
-                                if (std::isinf(length) || length > fMaxObjectLength)
+                                else
                                 {
-                                    return D3D_OK;
+                                    g_pCurrentVB->Unlock();
                                 }
                             }
                         }
@@ -511,10 +534,8 @@ public:
                     static HRESULT(WINAPI * CreateVertexShader)(LPDIRECT3DDEVICE9, DWORD*, IDirect3DVertexShader9**) = D3D9CreateVertexShader;
                     static HRESULT(WINAPI * SetStreamSource)(LPDIRECT3DDEVICE9, UINT, IDirect3DVertexBuffer9*, UINT, UINT) = D3D9SetStreamSource;
 
-                    //bind(hD3D9, typeid(IDirect3D9VTBL), IDirect3D9VTBL().GetIndex("CreateDevice"), CreateDevice, CreateDeviceOriginal);
                     //bind(hD3D9, typeid(IDirect3DDevice9VTBL), IDirect3DDevice9VTBL().GetIndex("BeginScene"), BeginScene, BeginSceneOriginal);
                     //bind(hD3D9, typeid(IDirect3DDevice9VTBL), IDirect3DDevice9VTBL().GetIndex("EndScene"), EndScene, EndSceneOriginal);
-                    //bind(hD3D9, typeid(IDirect3DDevice9VTBL), IDirect3DDevice9VTBL().GetIndex("Reset"), Reset, ResetOriginal);
                     //bind(hD3D9, typeid(IDirect3DDevice9VTBL), IDirect3DDevice9VTBL().GetIndex("SetVertexShaderConstantF"), SetVertexShaderConstantF, SetVertexShaderConstantFOriginal);
                     //bind(hD3D9, typeid(IDirect3DDevice9VTBL), IDirect3DDevice9VTBL().GetIndex("SetPixelShaderConstantF"), SetPixelShaderConstantF, SetPixelShaderConstantFOriginal);
                     //bind(hD3D9, typeid(IDirect3DDevice9VTBL), IDirect3DDevice9VTBL().GetIndex("CreateTexture"), CreateTexture, CreateTextureOriginal);
@@ -522,6 +543,13 @@ public:
                     //bind(hD3D9, typeid(IDirect3DDevice9VTBL), IDirect3DDevice9VTBL().GetIndex("SetPixelShader"), SetPixelShader, SetPixelShaderOriginal);
                     //bind(hD3D9, typeid(IDirect3DDevice9VTBL), IDirect3DDevice9VTBL().GetIndex("SetVertexShader"), SetVertexShader, SetVertexShaderOriginal);
                     //bind(hD3D9, typeid(IDirect3DDevice9VTBL), IDirect3DDevice9VTBL().GetIndex("CreateVertexShader"), CreateVertexShader, CreateVertexShaderOriginal);
+
+                    bind(hD3D9, typeid(IDirect3DDevice9VTBL), IDirect3DDevice9VTBL().GetIndex("Reset"), Reset, ResetOriginal);
+
+                    if (bVSync)
+                    {
+                        bind(hD3D9, typeid(IDirect3D9VTBL), IDirect3D9VTBL().GetIndex("CreateDevice"), CreateDevice, CreateDeviceOriginal);
+                    }
 
                     if (bDisableBlur)
                         bind(hD3D9, typeid(IDirect3DDevice9VTBL), IDirect3DDevice9VTBL().GetIndex("CreatePixelShader"), CreatePixelShader, CreatePixelShaderOriginal);

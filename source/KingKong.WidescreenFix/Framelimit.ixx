@@ -117,8 +117,8 @@ export void InitFramelimit()
         static FrameLimiter FpsLimiter;
         FpsLimiter.Init(mode, fFPSLimit);
 
-        auto pattern = hook::pattern("83 EC 08 56 57 8B F1");
-        static auto fpslimiter = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& ctx)
+        auto pattern = find_pattern("83 EC 08 56 57 8B F1", "89 3D ? ? ? ? F7 87");
+        static auto fpslimiter = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
             FpsLimiter.Sync();
         });
