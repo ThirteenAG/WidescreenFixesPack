@@ -27,3 +27,4 @@ export struct Screen
 
 export bool bHideUntexturedObjects = false;
 export bool bDisableBlur = true;
+export bool bVSync = true;
