@@ -1,1 +1,2 @@
-IDR_BLUR RCDATA "blur.fxo"
+IDR_BLURPS RCDATA "blur.pso"
+IDR_BLURVS RCDATA "blur.vso"

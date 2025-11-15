@@ -21,6 +21,81 @@ IDirect3DVertexBuffer9* g_pCurrentVB = NULL;
 UINT g_CurrentOffset = 0;
 UINT g_CurrentStride = 0;
 
+namespace ShaderDumper
+{
+    static constexpr const char* SHADER_DUMP_DIR = "ShaderDumps";
+
+    void EnsureDumpDirectoryExists()
+    {
+        std::filesystem::create_directories(SHADER_DUMP_DIR);
+    }
+
+    std::string GetShaderDumpPath(uint32_t crc32Value, const char* shaderType)
+    {
+        std::stringstream ss;
+        ss << SHADER_DUMP_DIR << "\\"
+            << std::hex << std::setfill('0') << std::setw(8) << std::uppercase << crc32Value
+            << "_" << shaderType << ".bin";
+        return ss.str();
+    }
+
+    void DumpVertexShader(const DWORD* pFunction)
+    {
+        if (!pFunction) return;
+
+        // Get shader size by reading DWORD count
+        UINT shaderSize = 0;
+        const DWORD* ptr = pFunction;
+        while (*ptr != 0x0000FFFF && shaderSize < 1000000) // Safety limit
+        {
+            shaderSize += 4;
+            ptr++;
+        }
+        shaderSize += 4; // Include the end marker
+
+        uint32_t crcValue = crc32(0, (uint8_t*)pFunction, shaderSize);
+        std::string dumpPath = GetShaderDumpPath(crcValue, "vs");
+
+        // Check if already dumped
+        if (std::filesystem::exists(dumpPath))
+            return;
+
+        std::ofstream file(dumpPath, std::ios::binary);
+        if (file.is_open())
+        {
+            file.write((const char*)pFunction, shaderSize);
+            file.close();
+        }
+    }
+
+    void DumpPixelShader(const DWORD* pFunction)
+    {
+        if (!pFunction) return;
+
+        UINT shaderSize = 0;
+        const DWORD* ptr = pFunction;
+        while (*ptr != 0x0000FFFF && shaderSize < 1000000)
+        {
+            shaderSize += 4;
+            ptr++;
+        }
+        shaderSize += 4;
+
+        uint32_t crcValue = crc32(0, (uint8_t*)pFunction, shaderSize);
+        std::string dumpPath = GetShaderDumpPath(crcValue, "ps");
+
+        if (std::filesystem::exists(dumpPath))
+            return;
+
+        std::ofstream file(dumpPath, std::ios::binary);
+        if (file.is_open())
+        {
+            file.write((const char*)pFunction, shaderSize);
+            file.close();
+        }
+    }
+}
+
 class VTBL
 {
 private:
@@ -392,6 +467,47 @@ public:
 
                     auto D3D9DrawPrimitive = [](LPDIRECT3DDEVICE9 pDevice, D3DPRIMITIVETYPE PrimitiveType, UINT StartVertex, UINT PrimitiveCount) -> HRESULT
                     {
+                        #if 0 //def _DEBUG
+                        static bool bShaderDumpInitialized = false;
+                        if (!bShaderDumpInitialized)
+                        {
+                            ShaderDumper::EnsureDumpDirectoryExists();
+                            bShaderDumpInitialized = true;
+                        }
+
+                        // Get and dump current vertex shader
+                        IDirect3DVertexShader9* pCurrentVS = nullptr;
+                        if (SUCCEEDED(pDevice->GetVertexShader(&pCurrentVS)) && pCurrentVS)
+                        {
+                            UINT len = 0;
+                            if (SUCCEEDED(pCurrentVS->GetFunction(nullptr, &len)) && len > 0)
+                            {
+                                std::vector<DWORD> vsData(len / 4);
+                                if (SUCCEEDED(pCurrentVS->GetFunction(vsData.data(), &len)))
+                                {
+                                    ShaderDumper::DumpVertexShader(vsData.data());
+                                }
+                            }
+                            pCurrentVS->Release();
+                        }
+
+                        // Get and dump current pixel shader
+                        IDirect3DPixelShader9* pCurrentPS = nullptr;
+                        if (SUCCEEDED(pDevice->GetPixelShader(&pCurrentPS)) && pCurrentPS)
+                        {
+                            UINT len = 0;
+                            if (SUCCEEDED(pCurrentPS->GetFunction(nullptr, &len)) && len > 0)
+                            {
+                                std::vector<DWORD> psData(len / 4);
+                                if (SUCCEEDED(pCurrentPS->GetFunction(psData.data(), &len)))
+                                {
+                                    ShaderDumper::DumpPixelShader(psData.data());
+                                }
+                            }
+                            pCurrentPS->Release();
+                        }
+                        #endif
+
                         bool isSuspectType = (PrimitiveType == D3DPT_TRIANGLESTRIP || PrimitiveType == D3DPT_TRIANGLELIST);
                         if (isSuspectType && StartVertex == 0 && PrimitiveCount > 300 && g_pCurrentVB && g_CurrentStride >= 12)
                         {
@@ -473,7 +589,7 @@ public:
                             {
                                 HMODULE hModule;
                                 GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR)&CreatePixelShaderOriginal, &hModule);
-                                HRSRC hResource = FindResource(hModule, MAKEINTRESOURCE(IDR_BLUR), RT_RCDATA);
+                                HRSRC hResource = FindResource(hModule, MAKEINTRESOURCE(IDR_BLURPS), RT_RCDATA);
                                 if (hResource)
                                 {
                                     HGLOBAL hGlob = LoadResource(hModule, hResource);
@@ -503,6 +619,46 @@ public:
                     auto D3D9CreateVertexShader = [](LPDIRECT3DDEVICE9 pDevice, DWORD* pFunction, IDirect3DVertexShader9** ppShader) -> HRESULT
                     {
                         auto hr = CreateVertexShaderOriginal.unsafe_stdcall<HRESULT>(pDevice, pFunction, ppShader);
+
+                        if (SUCCEEDED(hr) && *ppShader != nullptr)
+                        {
+                            static std::vector<uint8_t> pbFunc;
+                            UINT len;
+                            (*ppShader)->GetFunction(nullptr, &len);
+                            if (pbFunc.size() < len)
+                                pbFunc.resize(len);
+
+                            (*ppShader)->GetFunction(pbFunc.data(), &len);
+
+                            auto crc = crc32(0, pbFunc.data(), len);
+                            if (crc == 0xF5A4509D || crc == 0x16C23572)
+                            {
+                                HMODULE hModule;
+                                GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR)&CreateVertexShaderOriginal, &hModule);
+                                HRSRC hResource = FindResource(hModule, MAKEINTRESOURCE(IDR_BLURVS), RT_RCDATA);
+                                if (hResource)
+                                {
+                                    HGLOBAL hGlob = LoadResource(hModule, hResource);
+                                    if (hGlob)
+                                    {
+                                        LPVOID pData = LockResource(hGlob);
+                                        DWORD size = SizeofResource(hModule, hResource);
+                                        if (pData && size > 0)
+                                        {
+                                            LPDWORD shader_data = (LPDWORD)pData;
+                                            IDirect3DVertexShader9* newShader = nullptr;
+                                            HRESULT createResult = CreateVertexShaderOriginal.unsafe_stdcall<HRESULT>(pDevice, shader_data, &newShader);
+                                            if (SUCCEEDED(createResult))
+                                            {
+                                                (*ppShader)->Release();
+                                                *ppShader = newShader;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         return hr;
                     };
 
@@ -542,7 +698,6 @@ public:
                     //bind(hD3D9, typeid(IDirect3DDevice9VTBL), IDirect3DDevice9VTBL().GetIndex("SetTexture"), SetTexture, SetTextureOriginal);
                     //bind(hD3D9, typeid(IDirect3DDevice9VTBL), IDirect3DDevice9VTBL().GetIndex("SetPixelShader"), SetPixelShader, SetPixelShaderOriginal);
                     //bind(hD3D9, typeid(IDirect3DDevice9VTBL), IDirect3DDevice9VTBL().GetIndex("SetVertexShader"), SetVertexShader, SetVertexShaderOriginal);
-                    //bind(hD3D9, typeid(IDirect3DDevice9VTBL), IDirect3DDevice9VTBL().GetIndex("CreateVertexShader"), CreateVertexShader, CreateVertexShaderOriginal);
 
                     bind(hD3D9, typeid(IDirect3DDevice9VTBL), IDirect3DDevice9VTBL().GetIndex("Reset"), Reset, ResetOriginal);
 
@@ -552,7 +707,10 @@ public:
                     }
 
                     if (bDisableBlur)
+                    {
                         bind(hD3D9, typeid(IDirect3DDevice9VTBL), IDirect3DDevice9VTBL().GetIndex("CreatePixelShader"), CreatePixelShader, CreatePixelShaderOriginal);
+                        bind(hD3D9, typeid(IDirect3DDevice9VTBL), IDirect3DDevice9VTBL().GetIndex("CreateVertexShader"), CreateVertexShader, CreateVertexShaderOriginal);
+                    }
 
                     if (bHideUntexturedObjects)
                     {
