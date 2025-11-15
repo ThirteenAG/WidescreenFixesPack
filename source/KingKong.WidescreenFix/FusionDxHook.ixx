@@ -427,7 +427,7 @@ public:
                                     float length = D3DXVec3Length(&extent);
                                     g_pCurrentVB->Unlock();
 
-                                    if (std::isinf(length) || length > fMaxObjectLength)
+                                    if (std::isinf(length) || std::isnan(length) || length > fMaxObjectLength)
                                     {
                                         return D3D_OK;
                                     }
