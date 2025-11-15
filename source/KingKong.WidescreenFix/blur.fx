@@ -10,5 +10,18 @@ struct PS_IN
 
 float4 main(PS_IN i) : COLOR
 {
-    return tex2D(g_TextureSampler, i.texcoord);
+    float4 o;
+
+    float4 r0;
+    float4 r1;
+    r0 = tex2D(g_TextureSampler, i.texcoord1);
+    r1 = r0 * 1.0;
+    r0 = tex2D(g_TextureSampler, i.texcoord);
+    r1 = r0 * 1.0 + r1;
+    r0 = tex2D(g_TextureSampler, i.texcoord2);
+    r1 = r0 * 1.0 + r1;
+    r0 = tex2D(g_TextureSampler, i.texcoord3);
+    o = r0 * 1.0 + r1;
+
+    return o;
 }

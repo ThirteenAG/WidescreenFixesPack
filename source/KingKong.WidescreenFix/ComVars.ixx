@@ -28,3 +28,8 @@ export struct Screen
 export bool bHideUntexturedObjects = false;
 export bool bDisableBlur = true;
 export bool bVSync = true;
+export bool wasUsingLeftStick = false;
+
+export GameRef<float> aMouseX;
+export GameRef<float> aMouseY;
+export void* pSettings = nullptr;
