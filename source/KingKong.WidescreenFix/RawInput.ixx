@@ -6,34 +6,38 @@ export module RawInput;
 
 import ComVars;
 
-GameRef<float> aMouseX;
-GameRef<float> aMouseY;
-void* pSettings = nullptr;
-
 SafetyHookInline shCameraRotationX = {};
 void __cdecl CameraRotationX(void* a1, float a2)
 {
-    float fMouseSensitivity = 1.0f;
-    auto Settings = *(uintptr_t*)pSettings;
-    if (Settings)
-        fMouseSensitivity = *(float*)(Settings + 0x4DBC);
-    auto deltaX = -aMouseX.get() * Screen.fRawInputMouse * fMouseSensitivity;
-    return shCameraRotationX.unsafe_ccall(a1, deltaX);
+    if (aMouseX.get())
+    {
+        float fMouseSensitivity = 1.0f;
+        auto Settings = *(uintptr_t*)pSettings;
+        if (Settings)
+            fMouseSensitivity = *(float*)(Settings + 0x4DBC);
+        auto deltaX = -aMouseX.get() * Screen.fRawInputMouse * fMouseSensitivity;
+        return shCameraRotationX.unsafe_ccall(a1, deltaX);
+    }
+    return shCameraRotationX.unsafe_ccall(a1, a2);
 }
 
 SafetyHookInline shCameraRotationY = {};
 void __cdecl CameraRotationY(void* a1, float a2)
 {
-    int bMouseInverted = 0;
-    float fMouseSensitivity = 1.0f;
-    auto Settings = *(uintptr_t*)pSettings;
-    if (Settings)
+    if (aMouseY.get())
     {
-        bMouseInverted = *(int*)(*(uintptr_t*)pSettings + 0x4DB8);
-        fMouseSensitivity = *(float*)(*(uintptr_t*)pSettings + 0x4DBC);
+        int bMouseInverted = 0;
+        float fMouseSensitivity = 1.0f;
+        auto Settings = *(uintptr_t*)pSettings;
+        if (Settings)
+        {
+            bMouseInverted = *(int*)(*(uintptr_t*)pSettings + 0x4DB8);
+            fMouseSensitivity = *(float*)(*(uintptr_t*)pSettings + 0x4DBC);
+        }
+        auto deltaY = -aMouseY.get() * Screen.fRawInputMouse * (bMouseInverted ? -fMouseSensitivity : fMouseSensitivity);
+        return shCameraRotationY.unsafe_ccall(a1, deltaY);
     }
-    auto deltaY = -aMouseY.get() * Screen.fRawInputMouse * (bMouseInverted ? -fMouseSensitivity : fMouseSensitivity);
-    return shCameraRotationY.unsafe_ccall(a1, deltaY);
+    return shCameraRotationY.unsafe_ccall(a1, a2);
 }
 
 SafetyHookInline shWndProc = {};
@@ -76,6 +80,18 @@ export void InitRawInput()
 
         static auto SetCursor = [](float* pMouseX, float* pMouseY)
         {
+            if (!aMouseX.get() && !aMouseY.get())
+            {
+                if (wasUsingLeftStick)
+                {
+                    *pMouseX = 1.0f;
+                    *pMouseY = 0.0f;
+                    return;
+                }
+            }
+            else
+                wasUsingLeftStick = false;
+
             RECT clientRect;
             GetClientRect(RawCursorHandler<float>::UpdateMouseInput(true), &clientRect);
 
@@ -99,5 +115,22 @@ export void InitRawInput()
         {
             SetCursor((float*)(regs.eax + offset - 4), (float*)(regs.eax + offset));
         });
+
+        static float f1 = 1.0f;
+        pattern = hook::pattern("D8 1D ? ? ? ? DF E0 F6 C4 41 75 ? C7 45 ? ? ? ? ? EB 1F D9 45 ? D8 1D ? ? ? ? DF E0 F6 C4 05 7A ? C7 45 ? ? ? ? ? EB 06 8B 4D ? 89 4D ? 8B 55 ? 8B 45 ? 89 82 ? ? ? ? 8B 4D");
+        injector::WriteMemory(pattern.get_first(2), &f1, true);
+        injector::WriteMemory<float>(pattern.get_first(16), f1, true);
+
+        pattern = hook::pattern("D8 1D ? ? ? ? DF E0 F6 C4 41 75 ? C7 45 ? ? ? ? ? EB 1F D9 45 ? D8 1D ? ? ? ? DF E0 F6 C4 05 7A ? C7 45 ? ? ? ? ? EB 06 8B 45 ? 89 45 ? 8B 4D ? 8B 55 ? 89 91 ? ? ? ? 8B 45");
+        injector::WriteMemory(pattern.get_first(2), &f1, true);
+        injector::WriteMemory<float>(pattern.get_first(16), f1, true);
+
+        pattern = hook::pattern("D8 1D ? ? ? ? DF E0 F6 C4 41 75 ? C7 45 ? ? ? ? ? EB 1F D9 45 ? D8 1D ? ? ? ? DF E0 F6 C4 05 7A ? C7 45 ? ? ? ? ? EB 06 8B 55 ? 89 55 ? 8B 45 ? 8B 4D ? 89 88 ? ? ? ? 8B 55 ? 8B 82 ? ? ? ? 89 45");
+        injector::WriteMemory(pattern.get_first(2), &f1, true);
+        injector::WriteMemory<float>(pattern.get_first(16), f1, true);
+
+        pattern = hook::pattern("D8 1D ? ? ? ? DF E0 F6 C4 41 75 ? C7 45 ? ? ? ? ? EB 1F D9 45 ? D8 1D ? ? ? ? DF E0 F6 C4 05 7A ? C7 45 ? ? ? ? ? EB 06 8B 4D ? 89 4D ? 8B 55 ? 8B 45 ? 89 82 ? ? ? ? 68");
+        injector::WriteMemory(pattern.get_first(2), &f1, true);
+        injector::WriteMemory<float>(pattern.get_first(16), f1, true);
     }
 }

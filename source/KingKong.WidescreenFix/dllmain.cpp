@@ -6,6 +6,8 @@ import XeTexturePacker;
 import RawInput;
 import FusionDxHook;
 import Framelimit;
+import WinMM;
+import Xidi;
 
 SafetyHookInline shsub_A2A350 = {};
 void __fastcall sub_A2A350(void* _this, void* edx, int a2, int a3, void* a4)
@@ -459,6 +461,8 @@ CEXP void InitializeASI()
     {
         CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("33 DB 89 5D E0 53"));
         CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(InitSettings, hook::pattern("75 66 8D 4C 24 04 51"));
+        CallbackHandler::RegisterCallback(L"winmm.dll", InitWinMM);
+        CallbackHandler::RegisterCallback(L"Xidi.32.dll", InitXidi);
     });
 }
 
