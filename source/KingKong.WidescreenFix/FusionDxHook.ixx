@@ -411,7 +411,7 @@ public:
     FusionDxHook()
     {
         CIniReader iniReader("");
-        bHideUntexturedObjects = iniReader.ReadInteger("MISC", "HideUntexturedObjects", 1) != 0;
+        bHideUntexturedObjects = iniReader.ReadInteger("MISC", "HideUntexturedObjects", 2);
         bDisableBlur = iniReader.ReadInteger("MAIN", "DisableBlur", 1) != 0;
         bVSync = iniReader.ReadInteger("MAIN", "VSync", 1) != 0;
 
@@ -555,9 +555,13 @@ public:
                         #endif
 
                         bool isSuspectType = (PrimitiveType == D3DPT_TRIANGLESTRIP || PrimitiveType == D3DPT_TRIANGLELIST);
-                        // 367 - small grass
-                        // 909 - tall grass
-                        if (isSuspectType && StartVertex == 0 && PrimitiveCount > 300 && g_pCurrentVB && g_CurrentStride >= 12 && PrimitiveCount != 909 && PrimitiveCount != 367)
+                        auto smallGrassPrimitiveCount = 367;
+                        auto tallGrassPrimitiveCount = 909;
+                        if (bHideUntexturedObjects > 1)
+                            tallGrassPrimitiveCount = -1;
+                        if (bHideUntexturedObjects > 2)
+                            smallGrassPrimitiveCount = -1;
+                        if (isSuspectType && StartVertex == 0 && PrimitiveCount > 300 && g_pCurrentVB && g_CurrentStride >= 12 && PrimitiveCount != tallGrassPrimitiveCount && PrimitiveCount != smallGrassPrimitiveCount)
                         {
                             void* pData = NULL;
                             UINT numVerts;
