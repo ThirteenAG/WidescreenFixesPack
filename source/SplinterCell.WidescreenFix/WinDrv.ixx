@@ -44,8 +44,8 @@ namespace UWindowsViewport
                 POINT pt;
                 GetCursorPos(&pt);
                 ScreenToClient(hGameWindow, &pt);
-                PostMessage(hGameWindow, WM_LBUTTONDOWN, MK_LBUTTON, MAKELPARAM(pt.x, pt.y));
-                PostMessage(hGameWindow, WM_LBUTTONUP, 0, MAKELPARAM(pt.x, pt.y));
+                PostMessage(hGameWindow, WM_KEYDOWN, VK_LWIN, 0);
+                PostMessage(hGameWindow, WM_KEYUP, VK_LWIN, 0);
             }
             else if (Msg == WM_RAWINPUTMOUSE)
             {
