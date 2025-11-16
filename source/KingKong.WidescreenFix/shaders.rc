@@ -1,0 +1,3 @@
+IDR_BLURPS RCDATA "blur.pso"
+IDR_BLURVS RCDATA "blur.vso"
+IDR_REMANANCEPS RCDATA "remanance.pso"
