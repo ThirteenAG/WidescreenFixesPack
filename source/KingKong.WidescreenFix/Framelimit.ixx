@@ -110,7 +110,7 @@ export void InitFramelimit()
 
     if (fFPSLimit)
     {
-        auto mode = (iniReader.ReadInteger("FRAMELIMIT", "FPSLimitMode", 2) == 2) ? FrameLimiter::FPSLimitMode::FPS_ACCURATE : FrameLimiter::FPSLimitMode::FPS_REALTIME;
+        static auto mode = (iniReader.ReadInteger("FRAMELIMIT", "FPSLimitMode", 2) == 2) ? FrameLimiter::FPSLimitMode::FPS_ACCURATE : FrameLimiter::FPSLimitMode::FPS_REALTIME;
         if (mode == FrameLimiter::FPSLimitMode::FPS_ACCURATE)
             timeBeginPeriod(1);
 
@@ -121,6 +121,17 @@ export void InitFramelimit()
         static auto fpslimiter = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
             FpsLimiter.Sync();
+        });
+
+        pattern = find_pattern("B9 ? ? ? ? 3B 0D ? ? ? ? 1B D2 F7 DA");
+        static auto fpslimiterlevel = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            gCurrentLevel = regs.eax & 0x7FFFF;
+
+            if (gCurrentLevel == 0xF858 || gCurrentLevel == 0x0213) // Chased by V-Rex || Kong To The Rescue
+                FpsLimiter.Init(mode, 30.0f);
+            else
+                FpsLimiter.Init(mode, fFPSLimit);
         });
     }
 }
