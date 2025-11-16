@@ -460,6 +460,11 @@ public:
                             pPresentationParameters->PresentationInterval = D3DPRESENT_INTERVAL_ONE;
                             pPresentationParameters->FullScreen_RefreshRateInHz = D3DPRESENT_RATE_DEFAULT;
                         }
+                        else
+                        {
+                            pPresentationParameters->PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
+                            pPresentationParameters->FullScreen_RefreshRateInHz = 0;
+                        }
                         auto res = CreateDeviceOriginal.unsafe_stdcall<HRESULT>(pDirect3D9, Adapter, DeviceType, hFocusWindow, BehaviorFlags, pPresentationParameters, ppReturnedDeviceInterface);
                         return res;
                     };
@@ -485,6 +490,11 @@ public:
                         {
                             pPresentationParameters->PresentationInterval = D3DPRESENT_INTERVAL_ONE;
                             pPresentationParameters->FullScreen_RefreshRateInHz = D3DPRESENT_RATE_DEFAULT;
+                        }
+                        else
+                        {
+                            pPresentationParameters->PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
+                            pPresentationParameters->FullScreen_RefreshRateInHz = 0;
                         }
                         auto res = ResetOriginal.unsafe_stdcall<HRESULT>(pDevice, pPresentationParameters);
                         return res;
@@ -556,12 +566,20 @@ public:
 
                         bool isSuspectType = (PrimitiveType == D3DPT_TRIANGLESTRIP || PrimitiveType == D3DPT_TRIANGLELIST);
                         auto smallGrassPrimitiveCount = 367;
+                        auto tallGrass2PrimitiveCount = 333;
+                        auto tallGrass3PrimitiveCount = 597;
                         auto tallGrassPrimitiveCount = 909;
                         if (bHideUntexturedObjects > 1)
                             tallGrassPrimitiveCount = -1;
                         if (bHideUntexturedObjects > 2)
+                        {
                             smallGrassPrimitiveCount = -1;
-                        if (isSuspectType && StartVertex == 0 && PrimitiveCount > 300 && g_pCurrentVB && g_CurrentStride >= 12 && PrimitiveCount != tallGrassPrimitiveCount && PrimitiveCount != smallGrassPrimitiveCount)
+                            tallGrass2PrimitiveCount = -1;
+                            tallGrass3PrimitiveCount = -1;
+                        }
+                        if (isSuspectType && StartVertex == 0 && PrimitiveCount > 300 && g_pCurrentVB && g_CurrentStride >= 12
+                            && PrimitiveCount != tallGrassPrimitiveCount && PrimitiveCount != smallGrassPrimitiveCount
+                            && PrimitiveCount != tallGrass2PrimitiveCount && PrimitiveCount != tallGrass3PrimitiveCount)
                         {
                             void* pData = NULL;
                             UINT numVerts;
