@@ -135,15 +135,11 @@ void Init()
                 }
             }; injector::MakeInline<ResHook>(pattern.get_first(0), pattern.get_first(6));
 
-            pattern = hook::pattern("39 6E ? 75 ? 8B 4E");
-            static auto WindowedHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            if (bWindowedMode)
             {
-                if (bWindowedMode)
-                {
-                    *(uint32_t*)(regs.esi + 0x10) = 1;
-                    regs.ebp = 1;
-                }
-            });
+                pattern = hook::pattern("75 ? 8B 4E ? 8B 56 ? 8D 44 24");
+                injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true);
+            }
         }
         else
         {
@@ -259,12 +255,13 @@ void Init()
     else
     {
         pattern = hook::pattern("E8 ? ? ? ? D9 44 24 ? 8B ? ? ? ? ? 8A");
+        static auto offset = *pattern.get_first<int8_t>(-1);
         static auto FOVHook = safetyhook::create_mid(pattern.get_first(5), [](SafetyHookContext& regs)
         {
             if (bSkipFOVHook)
-                *(float*)(regs.esp + 0x28) = 1.0f / *(float*)(regs.esp + 0x18 + 4);
+                *(float*)(regs.esp + offset) = 1.0f / *(float*)(regs.esp + 0x18 + 4);
             else
-                *(float*)(regs.esp + 0x28) = Screen.fFieldOfView / *(float*)(regs.esp + 0x18 + 4);
+                *(float*)(regs.esp + offset) = Screen.fFieldOfView / *(float*)(regs.esp + 0x18 + 4);
         });
 
         // Some interface elements
