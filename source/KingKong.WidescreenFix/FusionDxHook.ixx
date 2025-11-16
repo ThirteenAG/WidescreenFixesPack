@@ -361,6 +361,52 @@ private:
         } (), ...);
     }
 
+    template<typename ShaderType, typename ShaderInterface>
+    static bool ReplaceShaderFromResource(LPDIRECT3DDEVICE9 pDevice, ShaderInterface** ppShader, UINT resourceId, ShaderType** ppNewShader = nullptr)
+    {
+        if (!ppShader || !*ppShader)
+            return false;
+
+        HMODULE hModule;
+        GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR)&CreatePixelShaderOriginal, &hModule);
+
+        HRSRC hResource = FindResource(hModule, MAKEINTRESOURCE(resourceId), RT_RCDATA);
+        if (!hResource)
+            return false;
+
+        HGLOBAL hGlob = LoadResource(hModule, hResource);
+        if (!hGlob)
+            return false;
+
+        LPVOID pData = LockResource(hGlob);
+        DWORD size = SizeofResource(hModule, hResource);
+        if (!pData || size == 0)
+            return false;
+
+        LPDWORD shader_data = (LPDWORD)pData;
+        ShaderType* pNewShader = nullptr;
+        ShaderType** ppResult = ppNewShader ? ppNewShader : &pNewShader;
+
+        HRESULT createResult = S_OK;
+        if constexpr (std::is_same_v<ShaderType, IDirect3DPixelShader9>)
+        {
+            createResult = CreatePixelShaderOriginal.unsafe_stdcall<HRESULT>(pDevice, shader_data, (IDirect3DPixelShader9**)ppResult);
+        }
+        else if constexpr (std::is_same_v<ShaderType, IDirect3DVertexShader9>)
+        {
+            createResult = CreateVertexShaderOriginal.unsafe_stdcall<HRESULT>(pDevice, shader_data, (IDirect3DVertexShader9**)ppResult);
+        }
+
+        if (SUCCEEDED(createResult) && *ppResult)
+        {
+            (*ppShader)->Release();
+            *ppShader = (ShaderInterface*)*ppResult;
+            return true;
+        }
+
+        return false;
+    }
+
 public:
     FusionDxHook()
     {
@@ -587,32 +633,11 @@ public:
 
                             (*ppShader)->GetFunction(pbFunc.data(), &len);
 
-                            if (crc32(0, pbFunc.data(), len) == 0x15BF4BA3)
-                            {
-                                HMODULE hModule;
-                                GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR)&CreatePixelShaderOriginal, &hModule);
-                                HRSRC hResource = FindResource(hModule, MAKEINTRESOURCE(IDR_BLURPS), RT_RCDATA);
-                                if (hResource)
-                                {
-                                    HGLOBAL hGlob = LoadResource(hModule, hResource);
-                                    if (hGlob)
-                                    {
-                                        LPVOID pData = LockResource(hGlob);
-                                        DWORD size = SizeofResource(hModule, hResource);
-                                        if (pData && size > 0)
-                                        {
-                                            LPDWORD shader_data = (LPDWORD)pData;
-                                            IDirect3DPixelShader9* newShader = nullptr;
-                                            HRESULT createResult = CreatePixelShaderOriginal.unsafe_stdcall<HRESULT>(pDevice, shader_data, &newShader);
-                                            if (SUCCEEDED(createResult))
-                                            {
-                                                (*ppShader)->Release();
-                                                *ppShader = newShader;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                            auto crc = crc32(0, pbFunc.data(), len);
+                            if (crc == 0x15BF4BA3)
+                                ReplaceShaderFromResource<IDirect3DPixelShader9, IDirect3DPixelShader9>(pDevice, ppShader, IDR_BLURPS);
+                            else if (crc == 0xCC3DCE9E)
+                                ReplaceShaderFromResource<IDirect3DPixelShader9, IDirect3DPixelShader9>(pDevice, ppShader, IDR_REMANANCEPS);
                         }
 
                         return hr;
@@ -634,31 +659,7 @@ public:
 
                             auto crc = crc32(0, pbFunc.data(), len);
                             if (crc == 0xF5A4509D || crc == 0x16C23572)
-                            {
-                                HMODULE hModule;
-                                GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR)&CreateVertexShaderOriginal, &hModule);
-                                HRSRC hResource = FindResource(hModule, MAKEINTRESOURCE(IDR_BLURVS), RT_RCDATA);
-                                if (hResource)
-                                {
-                                    HGLOBAL hGlob = LoadResource(hModule, hResource);
-                                    if (hGlob)
-                                    {
-                                        LPVOID pData = LockResource(hGlob);
-                                        DWORD size = SizeofResource(hModule, hResource);
-                                        if (pData && size > 0)
-                                        {
-                                            LPDWORD shader_data = (LPDWORD)pData;
-                                            IDirect3DVertexShader9* newShader = nullptr;
-                                            HRESULT createResult = CreateVertexShaderOriginal.unsafe_stdcall<HRESULT>(pDevice, shader_data, &newShader);
-                                            if (SUCCEEDED(createResult))
-                                            {
-                                                (*ppShader)->Release();
-                                                *ppShader = newShader;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                                ReplaceShaderFromResource<IDirect3DVertexShader9, IDirect3DVertexShader9>(pDevice, ppShader, IDR_BLURVS);
                         }
 
                         return hr;

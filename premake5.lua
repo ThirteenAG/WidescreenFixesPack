@@ -357,12 +357,13 @@ project "JustCause.WidescreenFix"
 
 project "KingKong.WidescreenFix"
    prebuildcommands {
-      "for /R \"../source/%{prj.name}/\" %%f in (*.ps) do (\"../includes/dxsdk/lib/x86/fxc.exe\" /T ps_3_0 /Od /nologo /E main /Fo \"../source/%{prj.name}/%%~nf.pso\" %%f)",
-      "for /R \"../source/%{prj.name}/\" %%f in (*.vs) do (\"../includes/dxsdk/lib/x86/fxc.exe\" /T vs_3_0 /Od /nologo /E main /Fo \"../source/%{prj.name}/%%~nf.vso\" %%f)"
+      "for /R \"../source/%{prj.name}/\" %%f in (*.ps) do (\"../includes/dxsdk/lib/x86/fxc.exe\" /T ps_3_0 /nologo /E main /Fo \"../source/%{prj.name}/%%~nf.pso\" %%f)",
+      "for /R \"../source/%{prj.name}/\" %%f in (*.vs) do (\"../includes/dxsdk/lib/x86/fxc.exe\" /T vs_3_0 /nologo /E main /Fo \"../source/%{prj.name}/%%~nf.vso\" %%f)"
    }
    files { "source/%{prj.name}/*.ps", "source/%{prj.name}/*.vs", "source/%{prj.name}/*.rc" }
    defines { "IDR_BLURPS=200" }
    defines { "IDR_BLURVS=201" }
+   defines { "IDR_REMANANCEPS=202" }
    setpaths("Z:/WFP/Games/King Kong Gamers Edition/", "KingKong8.exe")
 
 project "KnightRider.WidescreenFix"
