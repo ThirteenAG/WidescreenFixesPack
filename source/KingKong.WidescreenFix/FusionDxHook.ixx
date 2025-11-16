@@ -509,7 +509,9 @@ public:
                         #endif
 
                         bool isSuspectType = (PrimitiveType == D3DPT_TRIANGLESTRIP || PrimitiveType == D3DPT_TRIANGLELIST);
-                        if (isSuspectType && StartVertex == 0 && PrimitiveCount > 300 && g_pCurrentVB && g_CurrentStride >= 12)
+                        // 367 - small grass
+                        // 909 - tall grass
+                        if (isSuspectType && StartVertex == 0 && PrimitiveCount > 300 && g_pCurrentVB && g_CurrentStride >= 12 && PrimitiveCount != 909 && PrimitiveCount != 367)
                         {
                             void* pData = NULL;
                             UINT numVerts;
