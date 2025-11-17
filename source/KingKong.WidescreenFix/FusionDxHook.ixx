@@ -415,7 +415,7 @@ public:
         bDisableBlur = iniReader.ReadInteger("MAIN", "DisableBlur", 1) != 0;
         bVSync = iniReader.ReadInteger("MAIN", "VSync", 1) != 0;
 
-        auto pattern = hook::pattern("89 86 BC 02 00 00 89 8E C0 02 00 00 89 96 C4 02 00 00"); //0x9F2161
+        auto pattern = hook::pattern("8B 96 ? ? ? ? 6A 01 52 50");
         if (pattern.empty()) // not Gamer's Edition
             bHideUntexturedObjects = 0;
 
