@@ -1,5 +1,9 @@
 ![kingkong](https://thirteenag.github.io/screens/kingkong/main2.jpg)
 
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Compatible with Gamer's Edition and Signature Edition
+
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Unlocked all resolutions in settings application
+
 ![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Aspect Ratio
 
 ![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed HUD
@@ -8,16 +12,33 @@
 
 ![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed FMVs
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Adjustable FOV via ini
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Implemented a framerate limiter to avoid game breaking bugs (some levels are locked to 30 fps to prevent crashes)
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to increase mouse sensitivity beyond the game's limit
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed an issue when after the first encounter with King Kong and after V-Rex encounters in V-Rex and Call Kong levels the camera keeps shaking constantly at 60 fps
+
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to disable blur on Necropolis, Brontosaurus, In The Mud, and New York levels, which also fixes broken damage overlay that otherwise is impossible to see through
+
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Implemented raw mouse input, for proper mouse cursor movement and camera movement
+
+![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed gamepad support in main game and settings application
+
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Adjustable FOV via ini
 
 ![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to make FMVs fullscreen
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to hide untextured objects (**experimental, not recommended to use**)
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to hide objects with broken geometry (Gamer's Edition bug)
+
+![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to make windowed mode borderless
 
     Installation:
         Download and extract the archive to the game directory, where the exe is located.
+
+<details>
+  <summary>Xbox 360 Control Scheme</summary>
+  
+<img width="1814" height="1417" alt="Xbox360ControlScheme" src="https://github.com/user-attachments/assets/e383ace8-434b-4ac4-addb-4be06102c294" />
+  
+</details>
 
 [Website](https://thirteenag.github.io/wfp#kingkong) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/KingKong.WidescreenFix/dllmain.cpp) | [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/KingKong.WidescreenFix/scripts/KingKong.WidescreenFix.ini)
 
