@@ -415,6 +415,10 @@ public:
         bDisableBlur = iniReader.ReadInteger("MAIN", "DisableBlur", 1) != 0;
         bVSync = iniReader.ReadInteger("MAIN", "VSync", 1) != 0;
 
+        auto pattern = hook::pattern("89 86 BC 02 00 00 89 8E C0 02 00 00 89 96 C4 02 00 00"); //0x9F2161
+        if (pattern.empty()) // not Gamer's Edition
+            bHideUntexturedObjects = 0;
+
         CallbackHandler::RegisterCallback(L"d3d9.dll", []()
         {
             std::thread([]()
