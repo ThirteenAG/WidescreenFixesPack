@@ -569,7 +569,7 @@ public:
                         auto tallGrass2PrimitiveCount = -1;
                         auto tallGrass3PrimitiveCount = -1;
                         auto tallGrassPrimitiveCount = 909;
-                        if (gCurrentLevel == 0xC45A)
+                        if (gCurrentLevel == 0xC45A || gCurrentLevel == 0x60E9)
                         {
                             tallGrass2PrimitiveCount = 333;
                             tallGrass3PrimitiveCount = 597;
