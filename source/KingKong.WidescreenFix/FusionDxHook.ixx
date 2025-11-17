@@ -566,9 +566,14 @@ public:
 
                         bool isSuspectType = (PrimitiveType == D3DPT_TRIANGLESTRIP || PrimitiveType == D3DPT_TRIANGLELIST);
                         auto smallGrassPrimitiveCount = 367;
-                        auto tallGrass2PrimitiveCount = 333;
-                        auto tallGrass3PrimitiveCount = 597;
+                        auto tallGrass2PrimitiveCount = -1;
+                        auto tallGrass3PrimitiveCount = -1;
                         auto tallGrassPrimitiveCount = 909;
+                        if (gCurrentLevel == 0xC45A)
+                        {
+                            tallGrass2PrimitiveCount = 333;
+                            tallGrass3PrimitiveCount = 597;
+                        }
                         if (bHideUntexturedObjects > 1)
                             tallGrassPrimitiveCount = -1;
                         if (bHideUntexturedObjects > 2)

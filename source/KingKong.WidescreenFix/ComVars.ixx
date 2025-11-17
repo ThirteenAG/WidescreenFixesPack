@@ -34,3 +34,4 @@ export GameRef<float> aMouseX;
 export GameRef<float> aMouseY;
 export void* pSettings = nullptr;
 export uint32_t gCurrentLevel = 0;
+export float* fTimeStep = nullptr;

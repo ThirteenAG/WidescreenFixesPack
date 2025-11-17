@@ -447,6 +447,16 @@ void Init()
         injector::WriteMemory<uint8_t>(pattern.get_first(), 0xEB, true);
     }
 
+    // Camera Shake fix
+    pattern = hook::pattern("D9 05 ? ? ? ? D8 49 ? 8B 55 ? D8 6A ? 8B 45 ? D9 58 ? 8B 4D ? D9 05");
+    fTimeStep = *pattern.get_first<float*>(2);
+
+    static auto CameraShakeFix = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        float targetFPS = 1.0f / *fTimeStep;
+        *(float*)(regs.ecx + 0x2C) *= targetFPS / 30.0f;
+    });
+
     InitXeTexturePacker();
     InitRawInput();
     InitFramelimit();
