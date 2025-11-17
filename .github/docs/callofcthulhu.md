@@ -1,12 +1,12 @@
 ![callofcthulhu](https://thirteenag.github.io/screens/callofcthulhu/main2.jpg)
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Aspect Ratio
+$${\color{green}✔}$$  Fixed Aspect Ratio
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed HUD
+$${\color{green}✔}$$  Fixed HUD
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed FMVs
+$${\color{green}✔}$$  Fixed FMVs
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Issues unfixed: [#420](https://github.com/ThirteenAG/WidescreenFixesPack/issues/420)
+$${\color{blue}ⓘ}$$ Issues unfixed: [#420](https://github.com/ThirteenAG/WidescreenFixesPack/issues/420)
 
     Installation:
         Download and extract the archive to the game directory, where the exe is located.

@@ -1,6 +1,6 @@
 ![gta1](https://thirteenag.github.io/screens/gta1/main2.jpg)
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Resolution
+$${\color{green}✔}$$  Fixed Resolution
 
     Installation:
         Download and extract the archive to the game directory, where the exe is located.

@@ -1,10 +1,10 @@
 ![truecrimesola](https://thirteenag.github.io/screens/truecrimesola/main2.jpg)
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Resolution
+$${\color{green}✔}$$  Fixed Resolution
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Aspect Ratio
+$${\color{green}✔}$$  Fixed Aspect Ratio
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Field of View
+$${\color{green}✔}$$  Fixed Field of View
 
 [Website](https://thirteenag.github.io/wfp#truecrimesola) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/TrueCrimeStreetsofLA.WidescreenFix/dllmain.cpp) | [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/TrueCrimeStreetsofLA.WidescreenFix/scripts/TrueCrimeStreetsofLA.WidescreenFix.ini)
 

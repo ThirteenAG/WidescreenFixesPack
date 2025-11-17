@@ -1,10 +1,10 @@
 ![re5](https://thirteenag.github.io/screens/re5/main2.jpg)
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixes camera near clip (see through walls) issue in coop
+$${\color{green}✔}$$  Fixes camera near clip (see through walls) issue in coop
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to enable borderless windowed mode
+$${\color{green}✔}$$  Added an option to enable borderless windowed mode
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to enable [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html)
+$${\color{green}✔}$$  Added an option to enable [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html)
 
     Installation:
         Download and extract the archive to the game directory, where the exe is located.

@@ -1,16 +1,16 @@
 ![gtactwpsp](https://thirteenag.github.io/screens/gtactwpsp/main2.jpg)
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to swap R-button/Cross, L-button/Square, in vehicle, swap buttons with triggers in the emulator settings to drive with triggers.
+$${\color{blue}ⓘ}$$ Added an option to swap R-button/Cross, L-button/Square, in vehicle, swap buttons with triggers in the emulator settings to drive with triggers.
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to swap R-button/Circle, on foot.
+$${\color{blue}ⓘ}$$ Added an option to swap R-button/Circle, on foot.
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to activate 3rd person camera. Press DPAD-RIGHT to switch between cameras. Use Right Stick to adjust position and angle. Original cinematic camera will be disabled.
+$${\color{blue}ⓘ}$$ Added an option to activate 3rd person camera. Press DPAD-RIGHT to switch between cameras. Use Right Stick to adjust position and angle. Original cinematic camera will be disabled.
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to enable radio in emergency vehicles.
+$${\color{blue}ⓘ}$$ Added an option to enable radio in emergency vehicles.
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to speed up emulator during loading
+$${\color{blue}ⓘ}$$ Added an option to speed up emulator during loading
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to unlock Xin missions in replay board 
+$${\color{blue}ⓘ}$$ Added an option to unlock Xin missions in replay board 
 
     Installation:
         Download and extract the archive to the directory, where PPSSPP's memstick folder is located. 

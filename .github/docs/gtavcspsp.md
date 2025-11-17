@@ -1,22 +1,22 @@
 ![gtavcspsp](https://thirteenag.github.io/screens/gtavcspsp/main2.jpg)
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to resize HUD
+$${\color{green}✔}$$  Added an option to resize HUD
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to enable dual analog patch
+$${\color{green}✔}$$  Added an option to enable dual analog patch
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to enable modern controls
+$${\color{green}✔}$$  Added an option to enable modern controls
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to enable 60 fps (includes mission fixes)
+$${\color{green}✔}$$  Added an option to enable 60 fps (includes mission fixes)
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to speed up emulator during loading
+$${\color{green}✔}$$  Added an option to speed up emulator during loading
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed camera issue in Little Willie
+$${\color{green}✔}$$  Fixed camera issue in Little Willie
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed an issue that caused saved cars disappear from garages
+$${\color{green}✔}$$  Fixed an issue that caused saved cars disappear from garages
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Plugin automatically skips intro
+$${\color{blue}ⓘ}$$ Plugin automatically skips intro
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Ultra wide support is available
+$${\color{blue}ⓘ}$$ Ultra wide support is available
 
 [Website](https://thirteenag.github.io/wfp#gtavcspsp) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/GTAVCS.PPSSPP.WidescreenFix/main.c) | [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/GTAVCS.PPSSPP.WidescreenFix/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/GTAVCS.PPSSPP.WidescreenFix.ini)
 

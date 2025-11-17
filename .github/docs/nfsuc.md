@@ -1,38 +1,38 @@
 ![nfsuc](https://thirteenag.github.io/screens/nfsuc/main2.jpg)
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Aspect Ratio (Ultra-Wide)
+$${\color{green}✔}$$  Fixed Aspect Ratio (Ultra-Wide)
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed HUD (Ultra-Wide)
+$${\color{green}✔}$$  Fixed HUD (Ultra-Wide)
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Field of View (Ultra-Wide)
+$${\color{green}✔}$$  Fixed Field of View (Ultra-Wide)
 
-![](https://habrastorage.org/webt/31/qm/gv/31qmgv6q0kj8zie1itat5ygfsuq.png) Fixed FMVs (Ultra-Wide)
+❌ Fixed FMVs (Ultra-Wide)
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to fix resolution detection
+$${\color{blue}ⓘ}$$ Added an option to fix resolution detection
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to skip intro
+$${\color{blue}ⓘ}$$ Added an option to skip intro
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to enable windowed mode
+$${\color{blue}ⓘ}$$ Added an option to enable windowed mode
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to increase shadow resolution
+$${\color{blue}ⓘ}$$ Added an option to increase shadow resolution
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to change the scale of the shadow map
+$${\color{blue}ⓘ}$$ Added an option to change the scale of the shadow map
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to change save game directory
+$${\color{blue}ⓘ}$$ Added an option to change save game directory
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to write registry settings to a file
+$${\color{blue}ⓘ}$$ Added an option to write registry settings to a file
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to improve gamepad support (gamepad icons, fixed bindings etc)
+$${\color{blue}ⓘ}$$ Added an option to improve gamepad support (gamepad icons, fixed bindings etc)
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to increase deadzone for left stick
+$${\color{blue}ⓘ}$$ Added an option to increase deadzone for left stick
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to set bloom intensity
+$${\color{blue}ⓘ}$$ Added an option to set bloom intensity
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to disable motion blur
+$${\color{blue}ⓘ}$$ Added an option to disable motion blur
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to improve scenery LOD
+$${\color{blue}ⓘ}$$ Added an option to improve scenery LOD
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to change fps limit
+$${\color{blue}ⓘ}$$ Added an option to change fps limit
 
     Installation:
         Download and extract the archive to the game directory, where the exe is located.

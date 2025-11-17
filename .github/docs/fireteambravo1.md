@@ -1,10 +1,10 @@
 ![fireteambravo1](https://thirteenag.github.io/screens/fireteambravo1/main2.jpg)
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Skip Intro
+$${\color{blue}ⓘ}$$ Skip Intro
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Dual Analog Patch
+$${\color{blue}ⓘ}$$ Dual Analog Patch
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Adds an option to speed up emulator during loading
+$${\color{blue}ⓘ}$$ Adds an option to speed up emulator during loading
 
     Installation:
         Download and extract the archive to the directory, where PPSSPP's memstick folder is located. 

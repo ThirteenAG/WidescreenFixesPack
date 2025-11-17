@@ -1,26 +1,26 @@
 ![rerev2](https://thirteenag.github.io/screens/rerev2/main2.jpg)
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Makes local split-screen coop mode fullscreen
+$${\color{green}✔}$$  Makes local split-screen coop mode fullscreen
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Unlocks all available display resolutions
+$${\color{green}✔}$$  Unlocks all available display resolutions
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Unlocks FPS when **FRAME RATE** option is set to **VARIABLE**
+$${\color{green}✔}$$  Unlocks FPS when **FRAME RATE** option is set to **VARIABLE**
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added UltraWide support
+$${\color{green}✔}$$  Added UltraWide support
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixes a game breaking bug in episode 4, where player's controls get stuck before the final boss battle
+$${\color{green}✔}$$  Fixes a game breaking bug in episode 4, where player's controls get stuck before the final boss battle
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to skip intro
+$${\color{green}✔}$$  Added an option to skip intro
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to disable damage overlay
+$${\color{green}✔}$$  Added an option to disable damage overlay
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to disable film grain
+$${\color{green}✔}$$  Added an option to disable film grain
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to enable borderless windowed mode
+$${\color{green}✔}$$  Added an option to enable borderless windowed mode
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to increase FOV
+$${\color{green}✔}$$  Added an option to increase FOV
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to enable [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html)
+$${\color{green}✔}$$  Added an option to enable [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html)
 
     Installation:
         Download and extract the archive to the game directory, where the exe is located.

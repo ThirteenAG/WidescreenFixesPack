@@ -1,16 +1,16 @@
 ![re6](https://thirteenag.github.io/screens/re6/main2.jpg)
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Makes local split-screen coop mode fullscreen
+$${\color{green}✔}$$  Makes local split-screen coop mode fullscreen
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added UltraWide support
+$${\color{green}✔}$$  Added UltraWide support
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Unlocks FPS when **FRAME RATE** option is set to **VARIABLE**
+$${\color{green}✔}$$  Unlocks FPS when **FRAME RATE** option is set to **VARIABLE**
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to skip intro
+$${\color{green}✔}$$  Added an option to skip intro
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to enable borderless windowed mode
+$${\color{green}✔}$$  Added an option to enable borderless windowed mode
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to enable [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html)
+$${\color{green}✔}$$  Added an option to enable [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html)
 
     Installation:
         Download and extract the archive to the game directory, where the exe is located.

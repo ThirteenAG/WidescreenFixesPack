@@ -1,13 +1,13 @@
 ![spyro](https://thirteenag.github.io/screens/spyro/main2.jpg)
 
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Aspect Ratio
+$${\color{green}✔}$$  Fixed Aspect Ratio
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Removes black bars on the sides
+$${\color{green}✔}$$  Removes black bars on the sides
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Adds an ability to override FOV in the INI.
+$${\color{blue}ⓘ}$$ Adds an ability to override FOV in the INI.
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Adds an ability to control FOV scale in the INI.
+$${\color{blue}ⓘ}$$ Adds an ability to control FOV scale in the INI.
 
     Installation:
         Download and extract the archive to the game directory, where the exe is located.

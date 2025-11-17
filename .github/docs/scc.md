@@ -1,38 +1,38 @@
 ![scc](https://thirteenag.github.io/screens/scc/main2.jpg)
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to skip intro
+$${\color{blue}ⓘ}$$ Added an option to skip intro
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to enable windowed mode
+$${\color{blue}ⓘ}$$ Added an option to enable windowed mode
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to disable negative mouse acceleration
+$${\color{blue}ⓘ}$$ Added an option to disable negative mouse acceleration
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to skip system detection errors on startup
+$${\color{blue}ⓘ}$$ Added an option to skip system detection errors on startup
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to restore LAN support
+$${\color{blue}ⓘ}$$ Added an option to restore LAN support
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to enable partial ultrawide support 
+$${\color{blue}ⓘ}$$ Added an option to enable partial ultrawide support 
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to disable depth of field effect
+$${\color{blue}ⓘ}$$ Added an option to disable depth of field effect
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to disable black and white filter
+$${\color{blue}ⓘ}$$ Added an option to disable black and white filter
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to enable enhanced sonar vision
+$${\color{blue}ⓘ}$$ Added an option to enable enhanced sonar vision
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to disable character lighting 
+$${\color{blue}ⓘ}$$ Added an option to disable character lighting 
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to enable [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html)
+$${\color{blue}ⓘ}$$ Added an option to enable [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html)
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to load packed files from disk
+$${\color{blue}ⓘ}$$ Added an option to load packed files from disk
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to unlock DLC content that's unavailable after servers shut down
+$${\color{blue}ⓘ}$$ Added an option to unlock DLC content that's unavailable after servers shut down
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Fixed gamepad support (via [Xidi](https://github.com/samuelgr/Xidi))
+$${\color{blue}ⓘ}$$ Fixed gamepad support (via [Xidi](https://github.com/samuelgr/Xidi))
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added Splinter Cell Blacklist control scheme (not fully tested, report issues via github)
+$${\color{blue}ⓘ}$$ Added Splinter Cell Blacklist control scheme (not fully tested, report issues via github)
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) FPS limit in coop is changed to 60: possible to set custom with `update/convictionsettings.ini`, `SyncMaxStepFrequency` parameter
+$${\color{blue}ⓘ}$$ FPS limit in coop is changed to 60: possible to set custom with `update/convictionsettings.ini`, `SyncMaxStepFrequency` parameter
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Disabled unlimited ammo for all weapons, to return original behavior, delete `update/weapontuning.ini`
+$${\color{blue}ⓘ}$$ Disabled unlimited ammo for all weapons, to return original behavior, delete `update/weapontuning.ini`
 
 ![controls](https://github.com/user-attachments/assets/2498a891-2991-4604-b0dc-b5d309a0c02d)
 

@@ -1,8 +1,8 @@
 ![thesaboteur](https://thirteenag.github.io/screens/thesaboteur/main2.jpg)
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Field of View
+$${\color{green}✔}$$  Fixed Field of View
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to make windowed mode borderless
+$${\color{blue}ⓘ}$$ Added an option to make windowed mode borderless
 
     Installation:
         Download and extract the archive to the game directory, where the exe is located.
