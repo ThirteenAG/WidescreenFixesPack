@@ -1,24 +1,24 @@
 ![mp1](https://thirteenag.github.io/screens/mp1/main2.jpg)
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Aspect Ratio
+$${\color{green}✔}$$  Fixed Aspect Ratio
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed HUD
+$${\color{green}✔}$$  Fixed HUD
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Field of View
+$${\color{green}✔}$$  Fixed Field of View
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed FMVs
+$${\color{green}✔}$$  Fixed FMVs
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Adjustable FOV via ini
+$${\color{blue}ⓘ}$$ Adjustable FOV via ini
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to make graphic novels fullscreen
+$${\color{blue}ⓘ}$$ Added an option to make graphic novels fullscreen
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to disable cutscene borders
+$${\color{blue}ⓘ}$$ Added an option to disable cutscene borders
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to load save game automatically on startup
+$${\color{blue}ⓘ}$$ Added an option to load save game automatically on startup
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to change save game directory
+$${\color{blue}ⓘ}$$ Added an option to change save game directory
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to keep the game running on minimize
+$${\color{blue}ⓘ}$$ Added an option to keep the game running on minimize
 
     Installation:
         Download and extract the archive to the game directory, where the exe is located.

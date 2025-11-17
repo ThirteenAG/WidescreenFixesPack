@@ -1,14 +1,14 @@
 ![psiops](https://thirteenag.github.io/screens/psiops/main2.jpg)
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Resolution
+$${\color{green}✔}$$  Fixed Resolution
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Aspect Ratio
+$${\color{green}✔}$$  Fixed Aspect Ratio
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed HUD
+$${\color{green}✔}$$  Fixed HUD
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Field of View
+$${\color{green}✔}$$  Fixed Field of View
 
-![](https://habrastorage.org/webt/31/qm/gv/31qmgv6q0kj8zie1itat5ygfsuq.png) Fixed FMVs [(#272)](https://github.com/ThirteenAG/WidescreenFixesPack/issues/272)
+❌ Fixed FMVs [(#272)](https://github.com/ThirteenAG/WidescreenFixesPack/issues/272)
 
     Installation:
         Download and extract the archive to the game directory, where the exe is located.

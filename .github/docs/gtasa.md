@@ -1,12 +1,12 @@
 ![gtasa](https://thirteenag.github.io/screens/gtasa/main2.jpg)
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Aspect Ratio
+$${\color{green}✔}$$  Fixed Aspect Ratio
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed HUD
+$${\color{green}✔}$$  Fixed HUD
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Field of View
+$${\color{green}✔}$$  Fixed Field of View
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Many different options available in the ini file
+$${\color{blue}ⓘ}$$ Many different options available in the ini file
 
     Installation:
         Download and extract the archive to the game directory, where the exe is located.

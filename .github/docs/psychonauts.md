@@ -1,8 +1,8 @@
 ![psychonauts](https://thirteenag.github.io/screens/psychonauts/main2.jpg)
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed HUD
+$${\color{green}✔}$$  Fixed HUD
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed FMVs
+$${\color{green}✔}$$  Fixed FMVs
 
     Installation:
         Download and extract the archive to the game directory, where the exe is located.

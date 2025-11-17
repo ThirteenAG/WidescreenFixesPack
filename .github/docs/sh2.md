@@ -1,36 +1,36 @@
 ![sh2](https://thirteenag.github.io/screens/sh2/main2.jpg)
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Resolution
+$${\color{green}✔}$$  Fixed Resolution
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Aspect Ratio
+$${\color{green}✔}$$  Fixed Aspect Ratio
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed HUD
+$${\color{green}✔}$$  Fixed HUD
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Field of View
+$${\color{green}✔}$$  Fixed Field of View
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed FMVs
+$${\color{green}✔}$$  Fixed FMVs
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to make FMVs fullscreen
+$${\color{blue}ⓘ}$$ Added an option to make FMVs fullscreen
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to disable cutscene borders
+$${\color{blue}ⓘ}$$ Added an option to disable cutscene borders
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to set core affinity
+$${\color{blue}ⓘ}$$ Added an option to set core affinity
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to disable safe mode
+$${\color{blue}ⓘ}$$ Added an option to disable safe mode
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to make fast transitions
+$${\color{blue}ⓘ}$$ Added an option to make fast transitions
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to set fps limit
+$${\color{blue}ⓘ}$$ Added an option to set fps limit
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to change camera speed to match PS2 version
+$${\color{blue}ⓘ}$$ Added an option to change camera speed to match PS2 version
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to fix gamepad bindings
+$${\color{blue}ⓘ}$$ Added an option to fix gamepad bindings
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to fix certain lighting issues
+$${\color{blue}ⓘ}$$ Added an option to fix certain lighting issues
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to increase noise effect resolution
+$${\color{blue}ⓘ}$$ Added an option to increase noise effect resolution
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to make background images fullscreen
+$${\color{blue}ⓘ}$$ Added an option to make background images fullscreen
 
     Installation:
         Download and extract the archive to the game directory, where the exe is located.

@@ -1,14 +1,14 @@
 ![truecrimenyc](http://thirteenag.github.io/screens/truecrimenyc/main2.jpg)
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Resolution
+$${\color{green}✔}$$  Fixed Resolution
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Aspect Ratio
+$${\color{green}✔}$$  Fixed Aspect Ratio
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed HUD
+$${\color{green}✔}$$  Fixed HUD
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Field of View
+$${\color{green}✔}$$  Fixed Field of View
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed FMVs
+$${\color{green}✔}$$  Fixed FMVs
 
 ## **PCSX2F: True Crime New York City Widescreen Fix (BETA):**
 
@@ -24,11 +24,11 @@ Installation:
 
 This plugin is a backport from pc version, and it's untested.
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Aspect Ratio
+$${\color{green}✔}$$  Fixed Aspect Ratio
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed HUD
+$${\color{green}✔}$$  Fixed HUD
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Field of View
+$${\color{green}✔}$$  Fixed Field of View
 
 ![truecrimenycpcsx2f](https://github.com/ThirteenAG/WidescreenFixesPack/assets/4904157/085e488d-957e-4827-9ad4-5459861ef5db)
 ![truecrimenycpcsx2f](https://github.com/ThirteenAG/WidescreenFixesPack/assets/4904157/9d76f723-fca3-4d38-887f-5cf0d4f05045)

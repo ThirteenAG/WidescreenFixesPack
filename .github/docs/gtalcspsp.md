@@ -1,18 +1,18 @@
 ![gtalcspsp](https://thirteenag.github.io/screens/gtalcspsp/main2.jpg)
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to resize HUD
+$${\color{green}✔}$$  Added an option to resize HUD
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to enable dual analog patch
+$${\color{green}✔}$$  Added an option to enable dual analog patch
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to swap L-button and Square (in vehicle)
+$${\color{green}✔}$$  Added an option to swap L-button and Square (in vehicle)
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to swap R-button and Cross (in vehicle)
+$${\color{green}✔}$$  Added an option to swap R-button and Cross (in vehicle)
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to enable 60 fps
+$${\color{green}✔}$$  Added an option to enable 60 fps
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to speed up emulator during loading
+$${\color{green}✔}$$  Added an option to speed up emulator during loading
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Plugin automatically skips intro
+$${\color{blue}ⓘ}$$ Plugin automatically skips intro
 
 [Website](https://thirteenag.github.io/wfp#gtalcspsp) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/GTALCS.PPSSPP.WidescreenFix/main.c) | [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/GTALCS.PPSSPP.WidescreenFix/memstick/PSP/PLUGINS/GTALCS.PPSSPP.WidescreenFix/GTALCS.PPSSPP.WidescreenFix.ini)
 

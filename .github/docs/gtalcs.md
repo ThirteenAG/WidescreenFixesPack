@@ -1,14 +1,14 @@
 ![gtalcs](https://thirteenag.github.io/screens/gtalcs/main2.jpg)
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Aspect Ratio (Ultra-Wide)
+$${\color{green}✔}$$  Fixed Aspect Ratio (Ultra-Wide)
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Field of View
+$${\color{green}✔}$$  Fixed Field of View
 
-![](https://habrastorage.org/webt/31/qm/gv/31qmgv6q0kj8zie1itat5ygfsuq.png) Fixed HUD (Ultra-Wide)
+❌ Fixed HUD (Ultra-Wide)
 
-![](https://habrastorage.org/webt/31/qm/gv/31qmgv6q0kj8zie1itat5ygfsuq.png) Fixed FMVs
+❌ Fixed FMVs
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Plugin automatically skips intro
+$${\color{blue}ⓘ}$$ Plugin automatically skips intro
 
 [Website](https://thirteenag.github.io/wfp#gtalcs) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/GTALCS.PCSX2F.WidescreenFix/main.c)
 

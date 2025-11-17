@@ -1,30 +1,30 @@
 ![scpt](https://thirteenag.github.io/screens/scpt/main2.jpg)
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Resolution
+$${\color{green}✔}$$  Fixed Resolution
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Aspect Ratio
+$${\color{green}✔}$$  Fixed Aspect Ratio
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed HUD
+$${\color{green}✔}$$  Fixed HUD
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Field of View
+$${\color{green}✔}$$  Fixed Field of View
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed FMVs
+$${\color{green}✔}$$  Fixed FMVs
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Force highest character LOD
+$${\color{green}✔}$$  Force highest character LOD
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Disabled mouse acceleration
+$${\color{green}✔}$$  Disabled mouse acceleration
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Improved gamepad support (via [Xidi](https://github.com/samuelgr/Xidi))
+$${\color{green}✔}$$  Improved gamepad support (via [Xidi](https://github.com/samuelgr/Xidi))
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to skip intro
+$${\color{blue}ⓘ}$$ Added an option to skip intro
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to increase night vision resolution
+$${\color{blue}ⓘ}$$ Added an option to increase night vision resolution
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to increase shadows resolution
+$${\color{blue}ⓘ}$$ Added an option to increase shadows resolution
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to increase reflections resolution
+$${\color{blue}ⓘ}$$ Added an option to increase reflections resolution
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to change goggles' light color
+$${\color{blue}ⓘ}$$ Added an option to change goggles' light color
 
     Installation:
         Download and extract the archive to the game directory, where the exe is located.

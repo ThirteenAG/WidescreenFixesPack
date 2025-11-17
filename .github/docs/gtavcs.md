@@ -1,22 +1,22 @@
 ![gtavcs](https://thirteenag.github.io/screens/gtavcs/main2.jpg)
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Aspect Ratio (Ultra-Wide)
+$${\color{green}✔}$$  Fixed Aspect Ratio (Ultra-Wide)
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Field of View
+$${\color{green}✔}$$  Fixed Field of View
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed HUD (Ultra-Wide)
+$${\color{green}✔}$$  Fixed HUD (Ultra-Wide)
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to enable modern controls
+$${\color{green}✔}$$  Added an option to enable modern controls
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to speed up emulator during loading
+$${\color{green}✔}$$  Added an option to speed up emulator during loading
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) [Added an option to enable PC Controls (BETA, experimental)](https://youtu.be/EhDviiFHYkE)
+$${\color{green}✔}$$  [Added an option to enable PC Controls (BETA, experimental)](https://youtu.be/EhDviiFHYkE)
 
 ![](https://github.com/ThirteenAG/WidescreenFixesPack/assets/4904157/3c1d73d5-a7b0-4def-96f0-c3a439fef078)
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to use PC cheats (BETA, experimental)
+$${\color{green}✔}$$  Added an option to use PC cheats (BETA, experimental)
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Plugin automatically skips intro
+$${\color{blue}ⓘ}$$ Plugin automatically skips intro
 
 [Website](https://thirteenag.github.io/wfp#gtavcs) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/GTAVCS.PCSX2F.WidescreenFix/main.c)
 

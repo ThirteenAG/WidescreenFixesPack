@@ -1,16 +1,16 @@
 ![usm](https://thirteenag.github.io/screens/usm/main2.jpg)
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Aspect Ratio
+$${\color{green}✔}$$  Fixed Aspect Ratio
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed HUD (partially, radar map has to be removed)
+$${\color{green}✔}$$  Fixed HUD (partially, radar map has to be removed)
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed Field of View
+$${\color{green}✔}$$  Fixed Field of View
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Fixed FMVs
+$${\color{green}✔}$$  Fixed FMVs
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to change fps limit
+$${\color{blue}ⓘ}$$ Added an option to change fps limit
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Adjustable FOV via ini
+$${\color{blue}ⓘ}$$ Adjustable FOV via ini
 
     Installation:
         Download and extract the archive to the game directory, where the exe is located.

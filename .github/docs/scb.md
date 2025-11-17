@@ -1,30 +1,30 @@
 ![scb](https://thirteenag.github.io/screens/scb/main2.jpg)
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to skip intro
+$${\color{green}✔}$$  Added an option to skip intro
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to skip press any key screen
+$${\color{green}✔}$$  Added an option to skip press any key screen
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to switch the game to fullscreen mode on startup
+$${\color{green}✔}$$  Added an option to switch the game to fullscreen mode on startup
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to disable negative mouse acceleration
+$${\color{green}✔}$$  Added an option to disable negative mouse acceleration
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to enable ultrawide support
+$${\color{green}✔}$$  Added an option to enable ultrawide support
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to change FOV
+$${\color{green}✔}$$  Added an option to change FOV
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to change Screen Cull Bias, for better draw distance
+$${\color{green}✔}$$  Added an option to change Screen Cull Bias, for better draw distance
 
-![](https://habrastorage.org/webt/ow/yy/mg/owyymgpibfqzfbwyf_iqoiqrede.png) Added an option to unlock DLC content that's unavailable after servers shut down
+$${\color{green}✔}$$  Added an option to unlock DLC content that's unavailable after servers shut down
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to unlock all missions from the start
+$${\color{blue}ⓘ}$$ Added an option to unlock all missions from the start
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to load packed files from disk
+$${\color{blue}ⓘ}$$ Added an option to load packed files from disk
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to enable [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html)
+$${\color{blue}ⓘ}$$ Added an option to enable [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html)
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Difficulty tweaks: **Mark and Execute**, sonar and drop crates enabled on **Perfectionist**, unlimited ammo disabled on **Rookie**. To go back to original behavior, delete `update/difficultyconfiguration.ini` and set `DisablePerfectionistChecks` to 0.
+$${\color{blue}ⓘ}$$ Difficulty tweaks: **Mark and Execute**, sonar and drop crates enabled on **Perfectionist**, unlimited ammo disabled on **Rookie**. To go back to original behavior, delete `update/difficultyconfiguration.ini` and set `DisablePerfectionistChecks` to 0.
 
-![](https://habrastorage.org/webt/d_/eg/ym/d_egymd6w_tem2erocab-e9ikna.png) Added an option to be able to run during forced walking sections
+$${\color{blue}ⓘ}$$ Added an option to be able to run during forced walking sections
 
 # Extraction Mode
 
