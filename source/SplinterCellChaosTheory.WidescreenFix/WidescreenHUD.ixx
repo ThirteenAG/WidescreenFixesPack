@@ -138,8 +138,8 @@ namespace HudTextMatchers
     {
         bool color4 = color.R == 0xb8 && color.G == 0xf7 && color.B == 0xc8;
         return (((offset1 >= 465 && offset1 <= 615) &&
-            (offset2 >= 3 && offset2 <= 80) &&
-            (offset3 >= 128 && offset3 <= 215) && color4) ||
+                (offset2 >= 3 && offset2 <= 80) &&
+                (offset3 >= 128 && offset3 <= 215) && color4) ||
             (offset1 == 473 && color4));
     }
 }
@@ -175,7 +175,22 @@ export void WidescreenHudImage(int16_t& left, int16_t& right, int16_t& top, int1
     using namespace HudImageMatchers;
 
     if (Screen.nHudWidescreenMode == 2)
+    {
+        if (textureName == L"Texture hud_PC.mgb.GOGGLES_BORDER")
+        {
+            if (IsScopeImageLeft(left, right))
+            {
+                left -= Screen.nHudOffsetReal;
+                right -= Screen.nHudOffsetReal;
+            }
+            else if (IsScopeImageRight(left, right))
+            {
+                left += Screen.nHudOffsetReal + 1;
+                right += Screen.nHudOffsetReal + 1;
+            }
+        }
         return;
+    }
 
     if (IsFullScreenImage(left, right, top, bottom))
     {
@@ -189,8 +204,8 @@ export void WidescreenHudImage(int16_t& left, int16_t& right, int16_t& top, int1
     }
     else if (IsScopeImageRight(left, right))
     {
-        left += Screen.nHudOffsetReal;
-        right += Screen.nHudOffsetReal;
+        left += Screen.nHudOffsetReal + 1;
+        right += Screen.nHudOffsetReal + 1;
     }
 
     if (IsCameraFeedOverlayLeft(left, right, top, bottom, color))
