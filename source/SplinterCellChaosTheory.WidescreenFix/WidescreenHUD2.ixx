@@ -96,6 +96,39 @@ struct HudElement
         HudTextLabel AsTextLabel;
         HudPlaceholderViewport AsPlaceholderViewport;
     };
+
+    void Move(int16_t offset = 0)
+    {
+        if (pVTable == pHudAreaWidgetVTable)
+        {
+            AsAreaWidget.Position.X += offset;
+        }
+        else if (pVTable == pHudImageRendererVTable)
+        {
+            AsImageRenderer.Bounds.Left += offset;
+            AsImageRenderer.Bounds.Right += offset;
+        }
+        else if (pVTable == pHudTextLabelVTable)
+        {
+            AsTextLabel.Bounds.Left += offset;
+            AsTextLabel.Bounds.Right += offset;
+        }
+        else if (pVTable == pHudPlaceholderViewportVTable)
+        {
+            AsPlaceholderViewport.Bounds.Left += offset;
+            AsPlaceholderViewport.Bounds.Right += offset;
+        }
+    }
+
+    void MoveLeft(float offset)
+    {
+        Move(-static_cast<int16_t>(offset));
+    }
+
+    void MoveRight(int16_t offset)
+    {
+        Move(static_cast<int16_t>(offset));
+    }
 };
 
 export bool HudNeedsToMoveLeft(uint32_t id)
@@ -206,93 +239,21 @@ export void InitWidescreenHUD2()
 
         if (HudNeedsToMoveLeft(id))
         {
-            if (element.pVTable == pHudAreaWidgetVTable)
-            {
-                element.AsAreaWidget.Position.X -= static_cast<int16_t>(Screen.fWidescreenHudOffset);
-            }
-            else if (element.pVTable == pHudImageRendererVTable)
-            {
-                element.AsImageRenderer.Bounds.Left -= static_cast<int16_t>(Screen.fWidescreenHudOffset);
-                element.AsImageRenderer.Bounds.Right -= static_cast<int16_t>(Screen.fWidescreenHudOffset);
-            }
-            else if (element.pVTable == pHudTextLabelVTable)
-            {
-                element.AsTextLabel.Bounds.Left -= static_cast<int16_t>(Screen.fWidescreenHudOffset);
-                element.AsTextLabel.Bounds.Right -= static_cast<int16_t>(Screen.fWidescreenHudOffset);
-            }
-            else if (element.pVTable == pHudPlaceholderViewportVTable)
-            {
-                element.AsPlaceholderViewport.Bounds.Left -= static_cast<int16_t>(Screen.fWidescreenHudOffset);
-                element.AsPlaceholderViewport.Bounds.Right -= static_cast<int16_t>(Screen.fWidescreenHudOffset);
-            }
+            element.MoveLeft(Screen.fWidescreenHudOffset);
         }
         else if (HudNeedsToMoveLeftGoggles(id))
         {
             // Left goggles borders get extra 15 pixel offset
-            if (element.pVTable == pHudAreaWidgetVTable)
-            {
-                element.AsAreaWidget.Position.X -= static_cast<int16_t>(Screen.fWidescreenHudOffset) + 15;
-            }
-            else if (element.pVTable == pHudImageRendererVTable)
-            {
-                element.AsImageRenderer.Bounds.Left -= static_cast<int16_t>(Screen.fWidescreenHudOffset) + 15;
-                element.AsImageRenderer.Bounds.Right -= static_cast<int16_t>(Screen.fWidescreenHudOffset) + 15;
-            }
-            else if (element.pVTable == pHudTextLabelVTable)
-            {
-                element.AsTextLabel.Bounds.Left -= static_cast<int16_t>(Screen.fWidescreenHudOffset) + 15;
-                element.AsTextLabel.Bounds.Right -= static_cast<int16_t>(Screen.fWidescreenHudOffset) + 15;
-            }
-            else if (element.pVTable == pHudPlaceholderViewportVTable)
-            {
-                element.AsPlaceholderViewport.Bounds.Left -= static_cast<int16_t>(Screen.fWidescreenHudOffset) + 15;
-                element.AsPlaceholderViewport.Bounds.Right -= static_cast<int16_t>(Screen.fWidescreenHudOffset) + 15;
-            }
+            element.MoveLeft(Screen.fWidescreenHudOffset + 15.0f);
         }
         else if (HudNeedsToMoveRight(id))
         {
-            if (element.pVTable == pHudAreaWidgetVTable)
-            {
-                element.AsAreaWidget.Position.X += static_cast<int16_t>(Screen.fWidescreenHudOffset);
-            }
-            else if (element.pVTable == pHudImageRendererVTable)
-            {
-                element.AsImageRenderer.Bounds.Left += static_cast<int16_t>(Screen.fWidescreenHudOffset);
-                element.AsImageRenderer.Bounds.Right += static_cast<int16_t>(Screen.fWidescreenHudOffset);
-            }
-            else if (element.pVTable == pHudTextLabelVTable)
-            {
-                element.AsTextLabel.Bounds.Left += static_cast<int16_t>(Screen.fWidescreenHudOffset);
-                element.AsTextLabel.Bounds.Right += static_cast<int16_t>(Screen.fWidescreenHudOffset);
-            }
-            else if (element.pVTable == pHudPlaceholderViewportVTable)
-            {
-                element.AsPlaceholderViewport.Bounds.Left += static_cast<int16_t>(Screen.fWidescreenHudOffset);
-                element.AsPlaceholderViewport.Bounds.Right += static_cast<int16_t>(Screen.fWidescreenHudOffset);
-            }
+            element.MoveRight(Screen.fWidescreenHudOffset);
         }
         else if (HudNeedsToMoveRightGoggles(id))
         {
             // Right goggles borders get extra 20 pixel offset
-            if (element.pVTable == pHudAreaWidgetVTable)
-            {
-                element.AsAreaWidget.Position.X += static_cast<int16_t>(Screen.fWidescreenHudOffset) + 20;
-            }
-            else if (element.pVTable == pHudImageRendererVTable)
-            {
-                element.AsImageRenderer.Bounds.Left += static_cast<int16_t>(Screen.fWidescreenHudOffset) + 20;
-                element.AsImageRenderer.Bounds.Right += static_cast<int16_t>(Screen.fWidescreenHudOffset) + 20;
-            }
-            else if (element.pVTable == pHudTextLabelVTable)
-            {
-                element.AsTextLabel.Bounds.Left += static_cast<int16_t>(Screen.fWidescreenHudOffset) + 20;
-                element.AsTextLabel.Bounds.Right += static_cast<int16_t>(Screen.fWidescreenHudOffset) + 20;
-            }
-            else if (element.pVTable == pHudPlaceholderViewportVTable)
-            {
-                element.AsPlaceholderViewport.Bounds.Left += static_cast<int16_t>(Screen.fWidescreenHudOffset) + 20;
-                element.AsPlaceholderViewport.Bounds.Right += static_cast<int16_t>(Screen.fWidescreenHudOffset) + 20;
-            }
+            element.MoveRight(Screen.fWidescreenHudOffset + 20.0f);
         }
     });
 }
