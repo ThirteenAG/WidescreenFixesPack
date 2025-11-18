@@ -189,6 +189,17 @@ export void WidescreenHudImage(int16_t& left, int16_t& right, int16_t& top, int1
                 right += Screen.nHudOffsetReal + 1;
             }
         }
+        else if (textureName == L"Texture system_PC.mgb.Green")
+        {
+            if (IsWeaponScopeLeft(left, right, top, bottom, color))
+            {
+                left -= Screen.nHudOffsetReal;
+            }
+            else if (IsWeaponScopeRight(left, right, top, bottom, color))
+            {
+                right += Screen.nHudOffsetReal;
+            }
+        }
         return;
     }
 
