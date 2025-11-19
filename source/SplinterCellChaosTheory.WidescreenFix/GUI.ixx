@@ -5,7 +5,7 @@ module;
 export module GUI;
 
 import ComVars;
-import Hashes;
+import HudIDs;
 
 namespace CMenusManager
 {
@@ -81,9 +81,9 @@ namespace CMenusManager
         return (it != IsMenuDisplayedCache.end()) ? it->second : false;
     }
 
-    export bool IsMenuDisplayed(KnownHashes hash)
+    export bool IsMenuDisplayed(HudID hash)
     {
-        return IsMenuDisplayed(std::to_underlying(hash));
+        return IsMenuDisplayed(uint32_t(hash));
     }
 
     export bool IsMenuDisplayed(const char* name)
@@ -97,75 +97,75 @@ namespace CMenusManager
 
     export bool IsMainMenuDisplayed()
     {
-        static const KnownHashes menuHashes[] = {
-            //KnownHashes::P_ChatIngame,
-            //KnownHashes::P_OptionPopup,
-            //KnownHashes::P_SavingScreen,
-            //KnownHashes::P_Progress,
-            //KnownHashes::P_ContextMenu,
-            //KnownHashes::P_endmission,
-            //KnownHashes::P_MenuLoadLevel,
-            //KnownHashes::P_MenuLoadGame,
-            //KnownHashes::P_MenuSaveGame,
-            //KnownHashes::P_MenuGameOver,
-            KnownHashes::P_MenuOnline,
-            KnownHashes::P_MenuLobbyList,
-            KnownHashes::P_MenuRoomListLan,
-            KnownHashes::P_MenuRoomCreateLan,
-            KnownHashes::P_MenuCoop,
-            //KnownHashes::P_MenuGameType,
-            KnownHashes::P_MenuSolo,
-            //KnownHashes::P_PauseOnline,
-            //KnownHashes::P_Pause,
-            KnownHashes::P_GameOverOnline,
-            KnownHashes::P_LoadOut,
-            KnownHashes::P_LoadOut_Selection,
-            KnownHashes::P_LoadOut_Infos,
-            //KnownHashes::P_Sound,
-            //KnownHashes::P_Image,
-            //KnownHashes::P_Email,
-            KnownHashes::P_OverallAchievement,
-            KnownHashes::P_MissionStatistics,
-            KnownHashes::P_ObjectiveReview,
-            KnownHashes::P_EnterServerPassword,
-            KnownHashes::P_CDKeyEntry,
-            KnownHashes::P_OnlineTermsOfUse,
-            KnownHashes::P_PrivateMessage,
-            KnownHashes::P_FriendsManagement,
-            KnownHashes::P_ManageAccount,
-            KnownHashes::P_RoomOnline,
-            KnownHashes::P_Login,
-            KnownHashes::P_OnlineQuickMatchFilter,
-            KnownHashes::P_CreateAccount,
-            KnownHashes::P_ManageGame,
-            KnownHashes::P_LobbyOnline,
-            KnownHashes::P_OnlineESRB,
-            KnownHashes::P_OfflineOnline,
-            KnownHashes::P_LobbyLan,
-            KnownHashes::P_OnlineCreate,
-            KnownHashes::P_Movies,
-            KnownHashes::P_MusicsList,
-            KnownHashes::P_MusicsBio,
-            KnownHashes::P_Extras,
-            //KnownHashes::P_TrainingVideo,
-            //KnownHashes::P_TrainingVideoMain,
-            //KnownHashes::P_Difficulty,
-            KnownHashes::P_Controls_joystick,
-            KnownHashes::P_ShaderAdvanced,
-            KnownHashes::P_CreateProfile,
-            KnownHashes::P_SoundSettings,
-            KnownHashes::P_Profiles,
-            KnownHashes::P_DisplaySettings,
-            KnownHashes::P_DisplayAdvanced,
-            //KnownHashes::P_Controls_Popup_Selection,
-            KnownHashes::P_Controls_keyboard,
-            //KnownHashes::P_Panel,
-            //KnownHashes::P_MsgBox_Training,
-            KnownHashes::P_CamControl,
-            KnownHashes::P_Briefing,
+        static const HudID menuHashes[] = {
+            //Page::P_ChatIngame,
+            //Page::P_OptionPopup,
+            //Page::P_SavingScreen,
+            //Page::P_Progress,
+            //Page::P_ContextMenu,
+            //Page::P_endmission,
+            //Page::P_MenuLoadLevel,
+            //Page::P_MenuLoadGame,
+            //Page::P_MenuSaveGame,
+            //Page::P_MenuGameOver,
+            Page::P_MenuOnline,
+            Page::P_MenuLobbyList,
+            Page::P_MenuRoomListLan,
+            Page::P_MenuRoomCreateLan,
+            Page::P_MenuCoop,
+            Page::P_MenuGameType,
+            Page::P_MenuSolo,
+            Page::P_PauseOnline,
+            Page::P_Pause,
+            Page::P_GameOverOnline,
+            Page::P_LoadOut,
+            Page::P_LoadOut_Selection,
+            Page::P_LoadOut_Infos,
+            //Page::P_Sound,
+            //Page::P_Image,
+            //Page::P_Email,
+            Page::P_OverallAchievement,
+            Page::P_MissionStatistics,
+            Page::P_ObjectiveReview,
+            Page::P_EnterServerPassword,
+            Page::P_CDKeyEntry,
+            Page::P_OnlineTermsOfUse,
+            Page::P_PrivateMessage,
+            Page::P_FriendsManagement,
+            Page::P_ManageAccount,
+            Page::P_RoomOnline,
+            Page::P_Login,
+            Page::P_OnlineQuickMatchFilter,
+            Page::P_CreateAccount,
+            Page::P_ManageGame,
+            Page::P_LobbyOnline,
+            Page::P_OnlineESRB,
+            Page::P_OfflineOnline,
+            Page::P_LobbyLan,
+            Page::P_OnlineCreate,
+            Page::P_Movies,
+            Page::P_MusicsList,
+            Page::P_MusicsBio,
+            Page::P_Extras,
+            //Page::P_TrainingVideo,
+            //Page::P_TrainingVideoMain,
+            //Page::P_Difficulty,
+            Page::P_Controls_joystick,
+            Page::P_ShaderAdvanced,
+            Page::P_CreateProfile,
+            Page::P_SoundSettings,
+            Page::P_Profiles,
+            Page::P_DisplaySettings,
+            Page::P_DisplayAdvanced,
+            //Page::P_Controls_Popup_Selection,
+            Page::P_Controls_keyboard,
+            //Page::P_Panel,
+            //Page::P_MsgBox_Training,
+            Page::P_CamControl,
+            Page::P_Briefing,
         };
 
-        return std::any_of(std::begin(menuHashes), std::end(menuHashes), [](KnownHashes hash)
+        return std::any_of(std::begin(menuHashes), std::end(menuHashes), [](HudID hash)
         {
             return CMenusManager::IsMenuDisplayed(hash);
         });
@@ -173,17 +173,17 @@ namespace CMenusManager
 
     export bool IsOpsatDisplayed()
     {
-        static const KnownHashes opsatHashes[] = {
-            KnownHashes::P_KeyPad,
-            KnownHashes::P_Opsat,
-            KnownHashes::P_Goals,
-            KnownHashes::P_Goals_details,
-            KnownHashes::P_Notes,
-            KnownHashes::P_Datas,
-            KnownHashes::P_Computer,
+        static const HudID opsatHashes[] = {
+            Page::P_KeyPad,
+            Page::P_Opsat,
+            Page::P_Goals,
+            Page::P_Goals_details,
+            Page::P_Notes,
+            Page::P_Datas,
+            Page::P_Computer,
         };
 
-        return std::any_of(std::begin(opsatHashes), std::end(opsatHashes), [](KnownHashes hash)
+        return std::any_of(std::begin(opsatHashes), std::end(opsatHashes), [](HudID hash)
         {
             return CMenusManager::IsMenuDisplayed(hash);
         });
