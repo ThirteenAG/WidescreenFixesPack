@@ -13,7 +13,7 @@ namespace CMenusManager
     void __fastcall DisplayMenu(int* menusManager, void* edx, void* entry, char show, char a4, char a5)
     {
         uint32_t hash = *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(entry) + 0x14);
-        //IsMenuDisplayedCache[hash] = (show != 0);
+        IsMenuDisplayedCache[hash] = (show != 0);
         shDisplayMenu.unsafe_fastcall(menusManager, edx, entry, show, a4, a5);
     }
 
@@ -72,6 +72,11 @@ namespace CMenusManager
     SafetyHookInline shOnMenuItemDeleted = {};
     void __fastcall OnMenuItemDeleted(int* item, void* edx)
     {
+        if (item)
+        {
+            uint32_t hash = GetMenuItemHash(item);
+            IsMenuDisplayedCache[hash] = false;
+        }
         shOnMenuItemDeleted.unsafe_fastcall(item, edx);
     }
 
@@ -308,6 +313,6 @@ export void InitGUI()
     pattern = hook::pattern("83 EC 0C 53 55 56 57 8B F1 C6 44 24 13 00");
     CMenusManager::shRemoveMenuItems = safetyhook::create_inline(pattern.get_first(), CMenusManager::RemoveMenuItems);
 
-    //pattern = hook::pattern("56 57 8B F9 8B 47 28 85 C0 74");
-    //CMenusManager::shOnMenuItemDeleted = safetyhook::create_inline(pattern.get_first(), CMenusManager::OnMenuItemDeleted);
+    pattern = hook::pattern("56 57 8B F9 8B 47 28 85 C0 74");
+    CMenusManager::shOnMenuItemDeleted = safetyhook::create_inline(pattern.get_first(), CMenusManager::OnMenuItemDeleted);
 }
