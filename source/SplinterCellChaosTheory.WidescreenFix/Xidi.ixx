@@ -25,7 +25,7 @@ export void InitXidi()
         {
             XidiRegisterProfileCallback([]() -> const wchar_t*
             {
-                if (CMenusManager::IsMenuDisplayed(Page::P_Controls_joystick))
+                if (CMenusManager::IsMenuDisplayed(Page::P_Controls_joystick) && !CMenusManager::IsMenuDisplayed(Page::P_Controls_Popup_Joy_Selection))
                     return L"P_Controls_joystick";
                 else if (!CMenusManager::IsMenuDisplayed(Page::P_Map) && (CMenusManager::IsOpsatDisplayed() || CMenusManager::IsMenuDisplayed(Page::P_Controls_Popup_Joy_Selection)))
                     return L"Opsat";
