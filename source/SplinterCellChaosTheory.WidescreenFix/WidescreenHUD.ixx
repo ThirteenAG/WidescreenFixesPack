@@ -6,7 +6,7 @@ export module WidescreenHUD;
 
 import ComVars;
 import GUI;
-import Hashes;
+import HudIDs;
 
 namespace HudImageMatchers
 {
@@ -161,10 +161,10 @@ bool IsWidescreenHudNeeded()
     if (CMenusManager::IsMainMenuDisplayed())
         return false;
 
-    if (CMenusManager::IsMenuDisplayed(KnownHashes::P_opticcable))
+    if (CMenusManager::IsMenuDisplayed(Page::P_opticcable))
         return false;
 
-    if (CMenusManager::IsMenuDisplayed(KnownHashes::P_KeyPad))
+    if (CMenusManager::IsMenuDisplayed(Page::P_KeyPad))
         return false;
 
     return true;

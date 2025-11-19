@@ -133,84 +133,84 @@ struct HudElement
 
 export bool HudNeedsToMoveLeft(uint32_t id)
 {
-    static const hud_PC elements[] = {
-        hud_PC::A_Communications,
-        hud_PC::A_timer,
-        hud_PC::A_Chat, // Coop text chat
-        hud_PC::TEMP_WorkInProgress, // Debug version string
+    static const HudID elements[] = {
+        AREAINST::A_Communications,
+        AREAINST::A_timer,
+        AREAINST::A_Chat, // Coop text chat
+        TEXT::TEMP_WorkInProgress, // Debug version string
     };
 
-    return std::any_of(std::begin(elements), std::end(elements), [id](hud_PC hash)
+    return std::any_of(std::begin(elements), std::end(elements), [id](HudID hash)
     {
-        return id == std::to_underlying(hash);
+        return id == hash;
     });
 }
 
 export bool HudNeedsToMoveLeftGoggles(uint32_t id)
 {
-    static const hud_PC elements[] = {
+    static const HudID elements[] = {
         // Top left goggles borders
-        hud_PC::Goggles_border2,
-        hud_PC::Goggles_border04,
-        hud_PC::Goggles_border_white1,
+        IMAGE::Goggles_border2,
+        IMAGE::Goggles_border04,
+        IMAGE::Goggles_border_white1,
         // Bottom left goggles borders
-        hud_PC::Goggles_border3,
-        hud_PC::Goggles_border01,
-        hud_PC::Goggles_border_white2,
+        IMAGE::Goggles_border3,
+        IMAGE::Goggles_border01,
+        IMAGE::Goggles_border_white2,
         // Brackets
-        hud_PC::check_left,
+        AREAINST::check_left,
     };
 
-    return std::any_of(std::begin(elements), std::end(elements), [id](hud_PC hash)
+    return std::any_of(std::begin(elements), std::end(elements), [id](HudID hash)
     {
-        return id == std::to_underlying(hash);
+        return id == hash;
     });
 }
 
 export bool HudNeedsToMoveRight(uint32_t id)
 {
-    static const hud_PC elements[] = {
-        hud_PC::A_HUD,
-        hud_PC::A_Interact,
-        hud_PC::B_interact,
-        hud_PC::List_interaction,
-        hud_PC::Slider_soundmeter,
-        hud_PC::A_missionMessage2lines,
-        hud_PC::A_missionMessage4lines,
-        hud_PC::A_missionMessage6lines,
-        hud_PC::A_Goals,
-        hud_PC::A_Notes,
-        hud_PC::I_Alarms,
-        hud_PC::L_Alarms,
-        hud_PC::A_Info_teamate,     // Coop teammate's username and health
-        hud_PC::I_Talking,          // Coop teammate's microphone icon
-        hud_PC::A_icon_coopaction,  // Coop action icon
+    static const HudID elements[] = {
+        AREAINST::A_HUD,
+        AREAINST::A_Interact,
+        BUTTONINST::B_interact,
+        LIST::List_interaction,
+        SLIDER::Slider_soundmeter,
+        AREAINST::A_missionMessage2lines,
+        AREAINST::A_missionMessage4lines,
+        AREAINST::A_missionMessage6lines,
+        AREAINST::A_Goals,
+        AREAINST::A_Notes,
+        IMAGE::I_Alarms,
+        TEXT::L_Alarms,
+        AREAINST::A_Info_teamate,     // Coop teammate's username and health
+        IMAGE::I_Talking,             // Coop teammate's microphone icon
+        AREAINST::A_icon_coopaction,  // Coop action icon
     };
 
-    return std::any_of(std::begin(elements), std::end(elements), [id](hud_PC hash)
+    return std::any_of(std::begin(elements), std::end(elements), [id](HudID hash)
     {
-        return id == std::to_underlying(hash);
+        return id == hash;
     });
 }
 
 export bool HudNeedsToMoveRightGoggles(uint32_t id)
 {
-    static const hud_PC elements[] = {
+    static const HudID elements[] = {
         // Top right goggles borders
-        hud_PC::Goggles_border1,
-        hud_PC::Goggles_border03,
-        hud_PC::Goggles_border_white4,
+        IMAGE::Goggles_border1,
+        IMAGE::Goggles_border03,
+        IMAGE::Goggles_border_white4,
         // Bottom right goggles borders
-        hud_PC::Goggles_border4,
-        hud_PC::Goggles_border02,
-        hud_PC::Goggles_border_white3,
+        IMAGE::Goggles_border4,
+        IMAGE::Goggles_border02,
+        IMAGE::Goggles_border_white3,
         // Brackets
-        hud_PC::check_right
+        AREAINST::check_right
     };
 
-    return std::any_of(std::begin(elements), std::end(elements), [id](hud_PC hash)
+    return std::any_of(std::begin(elements), std::end(elements), [id](HudID hash)
     {
-        return id == std::to_underlying(hash);
+        return id == hash;
     });
 }
 
