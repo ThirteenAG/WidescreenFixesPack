@@ -127,17 +127,17 @@ void Init()
     InitWidescreenHUD2();
 
     #ifdef _DEBUG
-    pattern = hook::pattern("8B 88 80 00 00 00 6A 01");
-    static auto SkipMenuHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-    {
-        static char bOnce = 0;
-        if (bOnce < 2)
-        {
-            keybd_event(VK_RETURN, 0x45, KEYEVENTF_EXTENDEDKEY | 0, 0);
-            keybd_event(VK_RETURN, 0x45, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
-            bOnce++;
-        }
-    });
+    //pattern = hook::pattern("8B 88 80 00 00 00 6A 01");
+    //static auto SkipMenuHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    //{
+    //    static char bOnce = 0;
+    //    if (bOnce < 2)
+    //    {
+    //        keybd_event(VK_RETURN, 0x45, KEYEVENTF_EXTENDEDKEY | 0, 0);
+    //        keybd_event(VK_RETURN, 0x45, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+    //        bOnce++;
+    //    }
+    //});
     #endif
 
     if (nFPSLimit)

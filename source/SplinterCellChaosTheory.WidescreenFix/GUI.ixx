@@ -13,7 +13,7 @@ namespace CMenusManager
     void __fastcall DisplayMenu(int* menusManager, void* edx, void* entry, char show, char a4, char a5)
     {
         uint32_t hash = *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(entry) + 0x14);
-        IsMenuDisplayedCache[hash] = (show != 0);
+        //IsMenuDisplayedCache[hash] = (show != 0);
         shDisplayMenu.unsafe_fastcall(menusManager, edx, entry, show, a4, a5);
     }
 
@@ -29,7 +29,7 @@ namespace CMenusManager
         if (entry)
         {
             auto hash = GetMenuItemHash(entry);
-            IsMenuDisplayedCache[hash] = true;
+            //IsMenuDisplayedCache[hash] = true;
         }
         shDisplayMenuAtPos.unsafe_fastcall(menusManager, edx, entry, a3, a4);
     }
@@ -37,7 +37,7 @@ namespace CMenusManager
     SafetyHookInline shRemoveMenuItems = {};
     void __fastcall RemoveMenuItems(int* menusManager, void* edx, char a2, char a3)
     {
-        // Extract and cache items before they're removed
+        // Extract and cache items BEFORE they're removed
         int itemPtr = menusManager[1];
         if (itemPtr)
         {
@@ -60,7 +60,7 @@ namespace CMenusManager
                     if (itemToRemove)
                     {
                         uint32_t hash = GetMenuItemHash(itemToRemove);
-                        IsMenuDisplayedCache[hash] = false;
+                        //IsMenuDisplayedCache[hash] = false;
                     }
                 }
             }
@@ -72,12 +72,19 @@ namespace CMenusManager
     SafetyHookInline shOnMenuItemDeleted = {};
     void __fastcall OnMenuItemDeleted(int* item, void* edx)
     {
-        if (item)
-        {
-            uint32_t hash = GetMenuItemHash(item);
-            IsMenuDisplayedCache[hash] = false;
-        }
+        IsMenuDisplayedCache.clear();
         shOnMenuItemDeleted.unsafe_fastcall(item, edx);
+    }
+
+    SafetyHookInline shsub_10D30900 = {};
+    void __fastcall sub_10D30900(void* menuStack, void* edx, int a2)
+    {
+        if ((*(uint8_t*)((uintptr_t)menuStack + 32) & 1) != 0)
+        {
+            uint32_t hash = GetMenuItemHash(menuStack);
+            IsMenuDisplayedCache[hash] = true;
+        }
+        return shsub_10D30900.unsafe_fastcall(menuStack, edx, a2);
     }
 
     export bool IsMenuDisplayed(uint32_t hash)
@@ -103,71 +110,88 @@ namespace CMenusManager
     export bool IsMainMenuDisplayed()
     {
         static const HudID menuHashes[] = {
-            //Page::P_ChatIngame,
-            //Page::P_OptionPopup,
-            //Page::P_SavingScreen,
-            //Page::P_Progress,
-            //Page::P_ContextMenu,
-            //Page::P_endmission,
-            //Page::P_MenuLoadLevel,
-            //Page::P_MenuLoadGame,
-            //Page::P_MenuSaveGame,
-            //Page::P_MenuGameOver,
-            Page::P_MenuOnline,
-            Page::P_MenuLobbyList,
-            Page::P_MenuRoomListLan,
-            Page::P_MenuRoomCreateLan,
-            Page::P_MenuCoop,
-            Page::P_MenuGameType,
-            Page::P_MenuSolo,
-            Page::P_PauseOnline,
-            Page::P_Pause,
-            Page::P_GameOverOnline,
-            Page::P_LoadOut,
-            Page::P_LoadOut_Selection,
-            Page::P_LoadOut_Infos,
-            //Page::P_Sound,
-            //Page::P_Image,
-            //Page::P_Email,
-            Page::P_OverallAchievement,
-            Page::P_MissionStatistics,
-            Page::P_ObjectiveReview,
-            Page::P_EnterServerPassword,
-            Page::P_CDKeyEntry,
-            Page::P_OnlineTermsOfUse,
-            Page::P_PrivateMessage,
-            Page::P_FriendsManagement,
-            Page::P_ManageAccount,
-            Page::P_RoomOnline,
-            Page::P_Login,
-            Page::P_OnlineQuickMatchFilter,
-            Page::P_CreateAccount,
-            Page::P_ManageGame,
-            Page::P_LobbyOnline,
-            Page::P_OnlineESRB,
-            Page::P_OfflineOnline,
-            Page::P_LobbyLan,
-            Page::P_OnlineCreate,
-            Page::P_Movies,
-            Page::P_MusicsList,
-            Page::P_MusicsBio,
-            Page::P_Extras,
-            //Page::P_TrainingVideo,
-            //Page::P_TrainingVideoMain,
-            //Page::P_Difficulty,
-            Page::P_Controls_joystick,
-            Page::P_ShaderAdvanced,
-            Page::P_CreateProfile,
-            Page::P_SoundSettings,
-            Page::P_Profiles,
-            Page::P_DisplaySettings,
-            Page::P_DisplayAdvanced,
-            //Page::P_Controls_Popup_Selection,
-            Page::P_Controls_keyboard,
-            //Page::P_Panel,
-            //Page::P_MsgBox_Training,
-            Page::P_CamControl,
             Page::P_Briefing,
+            Page::P_CDKeyEntry,
+            Page::P_CamControl,
+            Page::P_Camera,
+            Page::P_ChatIngame,
+            Page::P_ContextMenu,
+            Page::P_Controls_Popup_Joy_Selection,
+            Page::P_Controls_Popup_Selection,
+            //Page::P_Controls_joystick,
+            Page::P_Controls_keyboard,
+            Page::P_CreateAccount,
+            Page::P_CreateProfile,
+            Page::P_Difficulty,
+            Page::P_DisplayAdvanced,
+            Page::P_DisplaySettings,
+            Page::P_EEV,
+            Page::P_Email,
+            Page::P_Empty,
+            Page::P_EnterServerPassword,
+            Page::P_Equipment,
+            Page::P_Extras,
+            Page::P_FadeBlack,
+            Page::P_Footer_training2,
+            Page::P_FriendsContext,
+            Page::P_FriendsManagement,
+            Page::P_GameOverOnline,
+            Page::P_Image,
+            Page::P_LoadOut,
+            Page::P_LoadOut2,
+            Page::P_LoadingScreen,
+            Page::P_LobbyLan,
+            Page::P_LobbyOnline,
+            Page::P_Login,
+            Page::P_ManageAccount,
+            Page::P_ManageGame,
+            //Page::P_Map,
+            Page::P_MenuCoop,
+            Page::P_MenuGameOver,
+            Page::P_MenuGameType,
+            Page::P_MenuLoadGame,
+            Page::P_MenuLoadLevel,
+            Page::P_MenuLobbyList,
+            Page::P_MenuOnline,
+            Page::P_MenuRoomCreateLan,
+            Page::P_MenuRoomListLan,
+            Page::P_MenuSaveGame,
+            Page::P_MenuSettings,
+            Page::P_MenuSolo,
+            Page::P_MissionStatistics,
+            Page::P_Movies,
+            Page::P_MsgBox,
+            Page::P_MsgBox_Training,
+            Page::P_MsgBox_Training2,
+            Page::P_MusicsBio,
+            Page::P_MusicsList,
+            Page::P_ObjectiveReview,
+            Page::P_OfflineOnline,
+            Page::P_OnlineCreate,
+            Page::P_OnlineESRB,
+            Page::P_OnlineFilter,
+            Page::P_OnlineQuickMatchFilter,
+            Page::P_OnlineTermsOfUse,
+            Page::P_OptionPopup,
+            Page::P_OverallAchievement,
+            Page::P_Pause,
+            Page::P_PauseOnline,
+            Page::P_PrivateMessage,
+            Page::P_Profiles,
+            Page::P_Progress,
+            Page::P_RoomOnline,
+            Page::P_SavingScreen,
+            Page::P_SavingScreen1,
+            Page::P_ShaderAdvanced,
+            Page::P_Sniper,
+            Page::P_Sound,
+            Page::P_SoundSettings,
+            Page::P_TrainingVideo,
+            Page::P_TrainingVideoMain,
+            Page::P_endmission,
+            Page::P_opticcable,
+            Page::P_LoadOut_Infos,
+            Page::P_LoadOut_Selection,
         };
 
         return std::any_of(std::begin(menuHashes), std::end(menuHashes), [](HudID hash)
@@ -186,6 +210,9 @@ namespace CMenusManager
             Page::P_Notes,
             Page::P_Datas,
             Page::P_Computer,
+
+            Page::P_QuickInventory_New,
+            Page::P_QuickInventory_pc,
         };
 
         return std::any_of(std::begin(opsatHashes), std::end(opsatHashes), [](HudID hash)
@@ -304,15 +331,19 @@ export void InitGUI()
         }; injector::MakeInline<CMenusManagerSetMousePositionHook>(pattern.get_first(0), pattern.get_first(35));
     }
 
-    pattern = hook::pattern("51 53 8B 5C 24 0C 85 DB");
-    CMenusManager::shDisplayMenu = safetyhook::create_inline(pattern.get_first(), CMenusManager::DisplayMenu);
-
-    pattern = hook::pattern("83 EC 08 53 56 8B F1 8B 4E 04");
-    CMenusManager::shDisplayMenuAtPos = safetyhook::create_inline(pattern.get_first(), CMenusManager::DisplayMenuAtPos);
-
-    pattern = hook::pattern("83 EC 0C 53 55 56 57 8B F1 C6 44 24 13 00");
-    CMenusManager::shRemoveMenuItems = safetyhook::create_inline(pattern.get_first(), CMenusManager::RemoveMenuItems);
+    //pattern = hook::pattern("51 53 8B 5C 24 0C 85 DB");
+    //CMenusManager::shDisplayMenu = safetyhook::create_inline(pattern.get_first(), CMenusManager::DisplayMenu);
+    //
+    //pattern = hook::pattern("83 EC 08 53 56 8B F1 8B 4E 04");
+    //CMenusManager::shDisplayMenuAtPos = safetyhook::create_inline(pattern.get_first(), CMenusManager::DisplayMenuAtPos);
+    //
+    //pattern = hook::pattern("83 EC 0C 53 55 56 57 8B F1 C6 44 24 13 00");
+    //CMenusManager::shRemoveMenuItems = safetyhook::create_inline(pattern.get_first(), CMenusManager::RemoveMenuItems);
 
     pattern = hook::pattern("56 57 8B F9 8B 47 28 85 C0 74");
     CMenusManager::shOnMenuItemDeleted = safetyhook::create_inline(pattern.get_first(), CMenusManager::OnMenuItemDeleted);
+
+    pattern = hook::pattern("53 8B 5C 24 ? 56 8B F1 F6 46");
+    CMenusManager::shsub_10D30900 = safetyhook::create_inline(pattern.get_first(), CMenusManager::sub_10D30900);
+
 }
