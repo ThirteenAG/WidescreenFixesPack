@@ -77,14 +77,14 @@ namespace CMenusManager
     }
 
     SafetyHookInline shsub_10D30900 = {};
-    void __fastcall sub_10D30900(void* menuStack, void* edx, int a2)
+    void __fastcall sub_10D30900(void* item, void* edx, int a2)
     {
-        if ((*(uint8_t*)((uintptr_t)menuStack + 32) & 1) != 0)
+        if ((*(uint8_t*)((uintptr_t)item + 32) & 1) != 0)
         {
-            uint32_t hash = GetMenuItemHash(menuStack);
+            uint32_t hash = GetMenuItemHash(item);
             IsMenuDisplayedCache[hash] = true;
         }
-        return shsub_10D30900.unsafe_fastcall(menuStack, edx, a2);
+        return shsub_10D30900.unsafe_fastcall(item, edx, a2);
     }
 
     export bool IsMenuDisplayed(uint32_t hash)
@@ -345,5 +345,4 @@ export void InitGUI()
 
     pattern = hook::pattern("53 8B 5C 24 ? 56 8B F1 F6 46");
     CMenusManager::shsub_10D30900 = safetyhook::create_inline(pattern.get_first(), CMenusManager::sub_10D30900);
-
 }
