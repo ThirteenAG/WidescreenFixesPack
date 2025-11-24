@@ -31,3 +31,9 @@ for /f "tokens=1,* delims=:" %%A in ('curl -ks https://api.github.com/repos/dege
 for /f "tokens=1,* delims=:" %%A in ('curl -ks https://api.github.com/repos/ThirteenAG/Xidi/releases/latest ^| find "browser_download_url"') do (
     curl -o xidi.zip -kL %%B
 )
+
+for /f "tokens=1,* delims=:" %%A in ('curl -ks https://api.github.com/repos/kcat/dsoal/releases/tags/latest-master ^| find "browser_download_url"') do (
+  echo.%%B | FIND /I ".zip">Nul || (
+    curl -o DSOAL.7z -kL %%B
+  )
+)
