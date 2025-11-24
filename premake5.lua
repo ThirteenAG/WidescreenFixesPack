@@ -390,7 +390,17 @@ project "Manhunt.WidescreenFix"
    setpaths("Z:/WFP/Games/Manhunt/", "manhunt.exe")
 
 group "Win32/MaxPayne"
+project "MaxPayne.MSVCP60Wrapper"
+   setpaths("Z:/WFP/Games/Max Payne/Max Payne/", "MaxPayne.exe", "")
+   targetdir "data/MaxPayne.WidescreenFix"
+   targetname "MSVCP60"
+   targetextension ".dll"
+   files { "source/%{prj.name}/*.def" }
+   files { "source/%{prj.name}/*.rc" }
+   files { "source/%{prj.name}/MemoryModule.h", "source/%{prj.name}/MemoryModule.c" }
 project "MaxPayne.WidescreenFix"
+   dependson { "MaxPayne.MSVCP60Wrapper" }
+   debugargs { " -skipstartup -window -developer -screenshot" }
    setpaths("Z:/WFP/Games/Max Payne/Max Payne/", "MaxPayne.exe")
 project "MaxPayne2.WidescreenFix"
    setpaths("Z:/WFP/Games/Max Payne/Max Payne 2 The Fall of Max Payne/", "MaxPayne2.exe")
