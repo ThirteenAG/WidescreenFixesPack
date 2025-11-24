@@ -1,7 +1,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #define IDR_MSVCP60 101
 
-#include <windows.h>
+#include <stdafx.h>
 #include <stdio.h>
 #include <string>
 #include "MemoryModule.h"
@@ -9,6 +9,13 @@
 HINSTANCE mHinstDLL;
 HMEMORYMODULE memoryHinstDLL;
 FARPROC mProcs[2104];
+
+void InitRLMFC()
+{
+    auto pattern = hook::module_pattern(GetModuleHandle(L"rlmfc"), "83 E0 ? 89 45 ? 0F 84");
+    if (!pattern.empty())
+        injector::MakeNOP(pattern.get_first(), 3);
+}
 
 LPCSTR mImportNames[] = {
     "??0?$_Complex_base@M@std@@QAE@ABM0@Z", "??0?$_Complex_base@N@std@@QAE@ABN0@Z", "??0?$_Complex_base@O@std@@QAE@ABO0@Z", "??0?$_Mpunct@D@std@@QAE@ABV_Locinfo@1@I_N@Z",
@@ -561,7 +568,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
                             for (size_t i = 0; i < std::size(mImportNames); ++i)
                                 mProcs[i] = MemoryGetProcAddress(memoryHinstDLL, mImportNames[i]);
 
-                            LoadLibraryW(L"dinput.dll");
+                            CallbackHandler::RegisterCallback(L"rlmfc.dll", InitRLMFC);
                             return TRUE;
                         }
                     }
@@ -581,7 +588,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
         for (size_t i = 0; i < std::size(mImportNames); ++i)
             mProcs[i] = GetProcAddress(mHinstDLL, mImportNames[i]);
 
-        LoadLibraryW(L"dinput.dll");
+        CallbackHandler::RegisterCallback(L"rlmfc.dll", InitRLMFC);
     }
     else if (fdwReason == DLL_PROCESS_DETACH)
     {

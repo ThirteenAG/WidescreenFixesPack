@@ -8,6 +8,7 @@ import ComVars;
 
 export void InitRLMFC()
 {
-    auto pattern = hook::module_pattern(GetModuleHandle(L"rlmfc"), "83 E0 ? 89 45 ? 0F 84");
-    injector::MakeNOP(pattern.get_first(), 3);
+    //moved to msvcp60 wrapper
+    //auto pattern = hook::module_pattern(GetModuleHandle(L"rlmfc"), "83 E0 ? 89 45 ? 0F 84");
+    //injector::MakeNOP(pattern.get_first(), 3);
 }
