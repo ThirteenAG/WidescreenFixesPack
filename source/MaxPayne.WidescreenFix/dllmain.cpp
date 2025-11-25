@@ -1,13 +1,8 @@
 #include "stdafx.h"
-#include "dxsdk\dx8\d3d8.h"
-#include "dxsdk\d3dvtbl.h"
-#include <shlobj.h>
 
 import ComVars;
 import e2mfc;
 import e2_d3d8_driver_mfc;
-import rlmfc;
-import sndmfc;
 
 void Init()
 {
@@ -267,8 +262,6 @@ CEXP void InitializeASI()
         CallbackHandler::RegisterCallback(L"E2MFC.dll", InitE2MFC);
         CallbackHandler::RegisterCallback(L"E2_D3D8_DRIVER_MFC.dll", InitE2_D3D8_DRIVER_MFC);
         CallbackHandler::RegisterModuleUnloadCallback(L"E2_D3D8_DRIVER_MFC.dll", []() { EndSceneHook.reset(); shDllMainHook.reset(); });
-        CallbackHandler::RegisterCallback(L"rlmfc.dll", InitRLMFC);
-        CallbackHandler::RegisterCallback(L"sndmfc.dll", InitSNDMFC);
     });
 }
 
