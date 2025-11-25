@@ -228,13 +228,13 @@ jobs:
    end
 
    vpaths {
-      ["source"] = { "source/**.*" },
-      ["ini"] = { "data/**.ini" },
-      ["devdata/*"] = { "data/*" },
-      ["data"] = { "data/**.cfg", "data/**.dat", "data/**.png", "data/**.ual", "data/**.x64ual", "data/**.dll" },
-      ["resources/*"] = { "./resources/*" },
-      ["includes/*"] = { "./includes/*" },
-      ["external/*"] = "./external/*",
+      ["source"]       = { "source/**.*" },
+      ["ini"]          = { "data/**.ini" },
+      ["data"]         = { "data/**.cfg", "data/**.dat", "data/**.png", "data/**.ual", "data/**.x64ual", "data/**.dll", "data/**.asi" },
+      ["resources/*"]  = { "resources/*" },
+      ["includes/*"]   = { "includes/*" },
+      ["external/*"]   = { "external/*" },
+      ["devdata/*"]    = { "data/*" },
    }
 
    filter "configurations:Debug*"

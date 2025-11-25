@@ -146,6 +146,9 @@ void Init()
     }
 
     //FOV
+    auto pattern = hook::pattern("A0 ? ? ? ? 84 C0 0F 85 ? ? ? ? 8B 86");
+    X_Crosshair::sm_bCameraPathRunning.SetAddress(*pattern.get_first<bool*>(1));
+
     static auto FOVHook = [](uintptr_t _this, uintptr_t edx) -> float
     {
         float f = AdjustFOV(*(float*)(_this + 0x58) * 57.295776f, Screen.fAspectRatio) * Screen.fFOVFactor;
@@ -153,7 +156,7 @@ void Init()
         return Screen.fFieldOfView;
     };
 
-    auto pattern = hook::pattern("E8 ? ? ? ? D8 8B 3C 12"); //0x50B9E0
+    pattern = hook::pattern("E8 ? ? ? ? D8 8B 3C 12"); //0x50B9E0
     auto sub_50B9E0 = injector::GetBranchDestination(pattern.get_first(), true);
     pattern = hook::pattern("E8 ? ? ? ?");
     for (size_t i = 0; i < pattern.size(); ++i)
