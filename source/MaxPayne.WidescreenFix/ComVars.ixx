@@ -30,7 +30,6 @@ export struct Screen
     bool bDrawBordersForCameraOverlay;
     bool bGraphicNovelMode;
     bool bIsInGraphicNovel;
-    bool* bIsInCutscene;
 } Screen;
 
 export struct TextCoords

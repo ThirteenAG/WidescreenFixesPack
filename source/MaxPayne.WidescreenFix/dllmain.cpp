@@ -181,14 +181,14 @@ void Init()
         }
     }; injector::MakeInline<FOVCheck>(pattern.get_first(0), pattern.get_first(8)); // 0x4563D4
 
-    //pattern = hook::pattern("E8 ? ? ? ? D9 5C 24 14 8B CF E8"); // 0x45650D
-    //injector::MakeCALL(pattern.get_first(0), sub_50B9E0, true); // restoring cutscene FOV
+    pattern = hook::pattern("E8 ? ? ? ? D9 5C 24 14 8B CF E8"); // 0x45650D
+    injector::MakeCALL(pattern.get_first(0), sub_50B9E0, true); // restoring cutscene FOV
 
-    //auto CutsceneFOVHook = [](uintptr_t _this, uintptr_t edx) -> float
-    //{
-    //    return *(float*)(_this + 88) + ((((Screen.fHudOffsetReal / Screen.fWidth)) / *(float*)(_this + 88)) * 2.0f);
-    //};
-    //injector::MakeCALL(pattern.get_first(0), static_cast<float(__fastcall*)(uintptr_t, uintptr_t)>(CutsceneFOVHook), true);
+    auto CutsceneFOVHook = [](uintptr_t _this, uintptr_t edx) -> float
+    {
+        return *(float*)(_this + 88) + ((((Screen.fHudOffsetReal / Screen.fWidth)) / *(float*)(_this + 88)) * 2.0f);
+    };
+    injector::MakeCALL(pattern.get_first(0), static_cast<float(__fastcall*)(uintptr_t, uintptr_t)>(CutsceneFOVHook), true);
 
     pattern = hook::pattern("C6 87 ? ? ? ? ? E8 ? ? ? ? 8B 4D F4");
     struct CameraOverlayHook

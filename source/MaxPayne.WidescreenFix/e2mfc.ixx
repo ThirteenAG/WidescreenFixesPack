@@ -266,9 +266,6 @@ void InitWF()
         }; injector::MakeInline<P_TextPosHook3>(pattern.get_first(0), pattern.get_first(6));
     }
 
-    //actually not a cutscene check, but X_Crosshair::sm_bCameraPathRunning
-    Screen.bIsInCutscene = *hook::get_pattern<bool*>("A0 ? ? ? ? 84 C0 0F 85 ? ? ? ? 8B 86 ? ? ? ? 85 C0 0F 84", 1);
-
     //Graphic Novels Handler
     static bool bPatched;
     static uint16_t oldState = 0;
@@ -296,7 +293,7 @@ void InitWF()
             regs.ecx = regs.esi;
             regs.edi = 0;
 
-            if (!*Screen.bIsInCutscene)
+            if (!X_Crosshair::sm_bCameraPathRunning)
                 Screen.bDrawBordersForCameraOverlay = false;
 
             Screen.bIsInGraphicNovel = (callAddr == sub_49B6D0);
