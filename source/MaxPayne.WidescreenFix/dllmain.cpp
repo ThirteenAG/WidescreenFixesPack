@@ -245,6 +245,12 @@ void Init()
     static auto fmt = iniReader.ReadString("MISC", "SaveStringFormat", "%a, %b %d %Y, %H:%M");
     pattern = hook::pattern("68 ? ? ? ? 8D 54 24 24 68 ? ? ? ? 52"); //411091
     injector::WriteMemory(pattern.get_first(1), fmt.data(), true);
+
+    // Workaround for safetyhook hanging
+    //IATHook::Replace(GetModuleHandleA("msvcrt.dll"), "KERNEL32.DLL", std::forward_as_tuple("ExitProcess", static_cast<void(__stdcall*)(UINT)>([](UINT uExitCode)
+    //{
+    //    TerminateProcess(GetCurrentProcess(), uExitCode);
+    //})));
 }
 
 CEXP void InitializeASI()
@@ -254,6 +260,7 @@ CEXP void InitializeASI()
         CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("0F 84 ? ? ? ? E8 ? ? ? ? 8B 48 04 68 ? ? ? ? 56 89"));
         CallbackHandler::RegisterCallback(L"E2MFC.dll", InitE2MFC);
         CallbackHandler::RegisterCallback(L"E2_D3D8_DRIVER_MFC.dll", InitE2_D3D8_DRIVER_MFC);
+        CallbackHandler::RegisterModuleUnloadCallback(L"E2_D3D8_DRIVER_MFC.dll", []() { EndSceneHook.reset(); shDllMainHook.reset(); });
         CallbackHandler::RegisterCallback(L"rlmfc.dll", InitRLMFC);
         CallbackHandler::RegisterCallback(L"sndmfc.dll", InitSNDMFC);
     });

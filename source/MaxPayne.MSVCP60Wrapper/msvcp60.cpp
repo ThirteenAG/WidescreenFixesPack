@@ -12,6 +12,7 @@ FARPROC mProcs[2104];
 
 void InitRLMFC()
 {
+    // AMD CPU JPEG errors fix (https://www.reddit.com/r/Amd/comments/dr5f0b/comment/f6q2krp/)
     auto pattern = hook::module_pattern(GetModuleHandle(L"rlmfc"), "83 E0 ? 89 45 ? 0F 84");
     if (!pattern.empty())
         injector::MakeNOP(pattern.get_first(), 3);

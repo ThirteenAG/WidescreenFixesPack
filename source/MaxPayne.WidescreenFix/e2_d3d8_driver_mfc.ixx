@@ -52,20 +52,15 @@ export void InitE2_D3D8_DRIVER_MFC()
     if (bD3DHookBorders)
     {
         auto pattern = hook::module_pattern(GetModuleHandle(L"e2_d3d8_driver_mfc"), "8B 86 ? ? ? ? 8B 08 50 FF 91");
-        struct EndSceneHook
+        EndSceneHook = safetyhook::create_mid(pattern.get_first(6), [](SafetyHookContext& regs) //0x1002856D
         {
-            void operator()(injector::reg_pack& regs)
+            if (!RealEndScene)
             {
-                regs.eax = *(uint32_t*)(regs.esi + 0xD0);
-
-                if (!RealEndScene)
-                {
-                    auto addr = *(uint32_t*)(regs.eax) + (IDirect3DDevice8VTBL::EndScene * 4);
-                    RealEndScene = *(EndScene_t*)addr;
-                    injector::WriteMemory(addr, &EndScene, true);
-                }
+                auto addr = *(uint32_t*)(regs.eax) + (IDirect3DDevice8VTBL::EndScene * 4);
+                RealEndScene = *(EndScene_t*)addr;
+                injector::WriteMemory(addr, &EndScene, true);
             }
-        }; injector::MakeInline<EndSceneHook>(pattern.get_first(0), pattern.get_first(6)); //0x1002856D 
+        });
     }
 
     auto pattern = hook::module_pattern(GetModuleHandle(L"e2_d3d8_driver_mfc"), "55 8B EC 6A FF 68 ? ? ? ? 64 A1 ? ? ? ? 50 64 89 25 ? ? ? ? 83 EC 28 8B 45 ? 53 56 33 F6");

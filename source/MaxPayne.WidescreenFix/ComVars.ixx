@@ -44,3 +44,4 @@ export struct TextCoords
 export typedef HRESULT(STDMETHODCALLTYPE* EndScene_t)(LPDIRECT3DDEVICE8);
 export EndScene_t RealEndScene = NULL;
 export SafetyHookInline shDllMainHook = {};
+export safetyhook::MidHook EndSceneHook = {};
