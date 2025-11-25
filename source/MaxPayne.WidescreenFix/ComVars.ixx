@@ -17,8 +17,8 @@ export struct Screen
     float fHudScale;
     float fHudOffset;
     float fHudOffsetReal;
-    float fHudOffsetWide;
     float fWidescreenHudOffset;
+    std::optional<float> fHudAspectRatioConstraint;
     float fBorderOffset;
     float fWidthScale;
     float fHalfWidthScale;
@@ -45,3 +45,8 @@ export typedef HRESULT(STDMETHODCALLTYPE* EndScene_t)(LPDIRECT3DDEVICE8);
 export EndScene_t RealEndScene = NULL;
 export SafetyHookInline shDllMainHook = {};
 export safetyhook::MidHook EndSceneHook = {};
+
+export namespace X_Crosshair
+{
+    GameRef<bool> sm_bCameraPathRunning;
+}

@@ -23,10 +23,9 @@ void InitWF()
 
     static CIniReader iniReader("");
     static bool bWidescreenHud = iniReader.ReadInteger("MAIN", "WidescreenHud", 1) != 0;
-    Screen.fWidescreenHudOffset = iniReader.ReadFloat("MAIN", "WidescreenHudOffset", 100.0f);
+    Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "HudAspectRatioConstraint", ""));
     Screen.bGraphicNovelMode = iniReader.ReadInteger("MAIN", "GraphicNovelMode", 1) != 0;
     static int32_t nGraphicNovelModeKey = iniReader.ReadInteger("MAIN", "GraphicNovelModeKey", VK_F2);
-    if (!Screen.fWidescreenHudOffset) { Screen.fWidescreenHudOffset = 100.0f; }
     Screen.fFOVFactor = iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f);
     if (!Screen.fFOVFactor) { Screen.fFOVFactor = 1.0f; }
 
@@ -114,32 +113,32 @@ void InitWF()
             {
                 if (ElementPosX == 7.0f) // bullet time meter
                 {
-                    ElementNewPosX1 = ElementPosX + Screen.fHudOffsetWide;
+                    ElementNewPosX1 = ElementPosX + Screen.fWidescreenHudOffset;
                 }
 
                 if (ElementPosX == 8.0f && regs.eax != 8) // bullet time overlay()
                 {
-                    ElementNewPosX1 = ElementPosX + Screen.fHudOffsetWide;
+                    ElementNewPosX1 = ElementPosX + Screen.fWidescreenHudOffset;
                 }
 
                 if (ElementPosX == 12.0f) // painkillers
                 {
-                    ElementNewPosX1 = ElementPosX + Screen.fHudOffsetWide;
+                    ElementNewPosX1 = ElementPosX + Screen.fWidescreenHudOffset;
                 }
 
                 if (ElementPosX == 22.5f) //health bar and overlay
                 {
-                    ElementNewPosX1 = ElementPosX + Screen.fHudOffsetWide;
+                    ElementNewPosX1 = ElementPosX + Screen.fWidescreenHudOffset;
                 }
 
                 if (ElementPosX == 95.0f) // other weapons name
                 {
-                    ElementNewPosX1 = ElementPosX - Screen.fHudOffsetWide;
+                    ElementNewPosX1 = ElementPosX - Screen.fWidescreenHudOffset;
                 }
 
                 if (ElementPosX == 190.0f) //molotovs/grenades name pos
                 {
-                    ElementNewPosX1 = ElementPosX - Screen.fHudOffsetWide;
+                    ElementNewPosX1 = ElementPosX - Screen.fWidescreenHudOffset;
                 }
             }
 
@@ -209,11 +208,17 @@ void InitWF()
 
     if (bWidescreenHud)
     {
-        Screen.fHudOffsetWide = Screen.fWidescreenHudOffset;
-
-        if (Screen.fAspectRatio < (16.0f / 9.0f))
+        Screen.fWidescreenHudOffset = std::abs(CalculateWidescreenOffset(Screen.fWidth, Screen.fHeight, 640.0f, 480.0f));
+        if (Screen.fHudAspectRatioConstraint.has_value())
         {
-            Screen.fHudOffsetWide = Screen.fWidescreenHudOffset / (((16.0f / 9.0f) / (Screen.fAspectRatio)) * 1.5f);
+            float value = Screen.fHudAspectRatioConstraint.value();
+            if (value < 0.0f || value > (32.0f / 9.0f))
+                Screen.fWidescreenHudOffset = value;
+            else
+            {
+                value = ClampHudAspectRatio(value, Screen.fAspectRatio);
+                Screen.fWidescreenHudOffset = std::abs(CalculateWidescreenOffset(Screen.fHeight * value, Screen.fHeight, 640.0f, 480.0f));
+            }
         }
 
         pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "D9 05 ? ? ? ? D8 8E 74 01 00 00");
@@ -226,7 +231,7 @@ void InitWF()
                 auto TextNewPosX = TextPosX;
 
                 if ((pTextElementPosX->a == 0.0f || pTextElementPosX->a == -8.0f || pTextElementPosX->a == -16.0f || pTextElementPosX->a == -24.0f || pTextElementPosX->a == -32.0f) && pTextElementPosX->b == -10.5f && (pTextElementPosX->c == 8.0f || pTextElementPosX->c == 16.0f || pTextElementPosX->c == 24.0f || pTextElementPosX->c == 32.0f) && pTextElementPosX->d == 21) //ammo numbers(position depends on digits amount)
-                    TextNewPosX = TextPosX + Screen.fHudOffsetWide;
+                    TextNewPosX = TextPosX + Screen.fWidescreenHudOffset;
 
                 _asm fld    dword ptr[TextNewPosX]
             }
@@ -251,8 +256,8 @@ void InitWF()
             {
                 TextPosX2 = *(float*)(regs.ebp - 0x1C);
 
-                if (TextPosX1 == (69.0f + Screen.fHudOffsetWide) && TextPosY1 == 457.0f) // painkillers amount number
-                    *(float*)(regs.ebp - 0x1C) += (24.0f * Screen.fHudOffsetWide);
+                if (TextPosX1 == (69.0f + Screen.fWidescreenHudOffset) && TextPosY1 == 457.0f) // painkillers amount number
+                    *(float*)(regs.ebp - 0x1C) += (24.0f * Screen.fWidescreenHudOffset);
 
                 *(uint32_t*)(regs.ecx + 8) = regs.eax;
                 auto ebp1C = *(float*)(regs.ebp - 0x1C);
