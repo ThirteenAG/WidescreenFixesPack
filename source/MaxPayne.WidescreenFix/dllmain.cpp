@@ -146,11 +146,18 @@ void Init()
     }
 
     //FOV
+    static bool bRestoreCutsceneFOV = iniReader.ReadInteger("MAIN", "RestoreCutsceneFOV", 0) != 0;
     auto pattern = hook::pattern("A0 ? ? ? ? 84 C0 0F 85 ? ? ? ? 8B 86");
     X_Crosshair::sm_bCameraPathRunning.SetAddress(*pattern.get_first<bool*>(1));
 
     static auto FOVHook = [](uintptr_t _this, uintptr_t edx) -> float
     {
+        if (bRestoreCutsceneFOV && X_Crosshair::sm_bCameraPathRunning && !Screen.bDrawBordersForCameraOverlay)
+        {
+            Screen.fFieldOfView = *(float*)(_this + 0x58);
+            return Screen.fFieldOfView;
+        }
+
         float f = AdjustFOV(*(float*)(_this + 0x58) * 57.295776f, Screen.fAspectRatio) * Screen.fFOVFactor;
         Screen.fFieldOfView = f / 57.295776f;
         return Screen.fFieldOfView;
@@ -179,43 +186,39 @@ void Init()
         }
     }; injector::MakeInline<FOVCheck>(pattern.get_first(0), pattern.get_first(8)); // 0x4563D4
 
-    pattern = hook::pattern("E8 ? ? ? ? D9 5C 24 14 8B CF E8"); // 0x45650D
-    injector::MakeCALL(pattern.get_first(0), sub_50B9E0, true); // restoring cutscene FOV
+    //pattern = hook::pattern("E8 ? ? ? ? D9 5C 24 14 8B CF E8"); // 0x45650D
+    //injector::MakeCALL(pattern.get_first(0), sub_50B9E0, true); // restoring cutscene FOV
 
-    bool bD3DHookBorders = iniReader.ReadInteger("MAIN", "D3DHookBorders", 1) != 0;
-    if (bD3DHookBorders)
+    //auto CutsceneFOVHook = [](uintptr_t _this, uintptr_t edx) -> float
+    //{
+    //    return *(float*)(_this + 88) + ((((Screen.fHudOffsetReal / Screen.fWidth)) / *(float*)(_this + 88)) * 2.0f);
+    //};
+    //injector::MakeCALL(pattern.get_first(0), static_cast<float(__fastcall*)(uintptr_t, uintptr_t)>(CutsceneFOVHook), true);
+
+    pattern = hook::pattern("C6 87 ? ? ? ? ? E8 ? ? ? ? 8B 4D F4");
+    struct CameraOverlayHook
     {
-        auto CutsceneFOVHook = [](uintptr_t _this, uintptr_t edx) -> float
+        void operator()(injector::reg_pack& regs)
         {
-            return *(float*)(_this + 88) + ((((Screen.fHudOffsetReal / Screen.fWidth)) / *(float*)(_this + 88)) * 2.0f);
-        };
-        injector::MakeCALL(pattern.get_first(0), static_cast<float(__fastcall*)(uintptr_t, uintptr_t)>(CutsceneFOVHook), true);
+            Screen.bDrawBordersForCameraOverlay = false;
+            *(uint8_t*)(regs.edi + 0x14E) = 1;
 
-        pattern = hook::pattern("C6 87 ? ? ? ? ? E8 ? ? ? ? 8B 4D F4");
-        struct CameraOverlayHook
-        {
-            void operator()(injector::reg_pack& regs)
+            auto a1 = *(uint32_t*)(regs.esp + 0x10);
+            auto a2 = *(uint32_t*)(regs.esp + 0x14);
+            auto a3 = *(uint32_t*)(regs.esp + 0x18);
+            auto a4 = *(uint32_t*)(regs.esp + 0x1C);
+
+            //what happens here is check for some camera coordinates or angles
+            if ((a1 == 0x3FE842CF && a4 == 0x3FE842CF) ||											//1.81 https://i.imgur.com/A7wRrgk.gifv
+                (a1 == 0x3FC00000 && a2 == 0x4096BEF4 && a3 == 0xC003936E && a4 == 0x3FC00000) ||   //1.5 https://i.imgur.com/ouRpysL.jpg
+                (a1 == 0xBFAAE30E && a2 == 0xBFC2B1AA && a3 == 0x3EC2E382 && a4 == 0xBFAAE30E) ||   //-1.33505 https://i.imgur.com/JGNdm6y.jpg
+                (a1 == 0x403F7470 && a2 == 0xC067ED50 && a3 == 0x40424DE0 && a4 == 0x403F7470)      // 2.99148  https://i.imgur.com/hj5FsXp.png
+                )
             {
-                Screen.bDrawBordersForCameraOverlay = false;
-                *(uint8_t*)(regs.edi + 0x14E) = 1;
-
-                auto a1 = *(uint32_t*)(regs.esp + 0x10);
-                auto a2 = *(uint32_t*)(regs.esp + 0x14);
-                auto a3 = *(uint32_t*)(regs.esp + 0x18);
-                auto a4 = *(uint32_t*)(regs.esp + 0x1C);
-
-                //what happens here is check for some camera coordinates or angles
-                if ((a1 == 0x3FE842CF && a4 == 0x3FE842CF) ||											//1.81 https://i.imgur.com/A7wRrgk.gifv
-                    (a1 == 0x3FC00000 && a2 == 0x4096BEF4 && a3 == 0xC003936E && a4 == 0x3FC00000) ||   //1.5 https://i.imgur.com/ouRpysL.jpg
-                    (a1 == 0xBFAAE30E && a2 == 0xBFC2B1AA && a3 == 0x3EC2E382 && a4 == 0xBFAAE30E) ||   //-1.33505 https://i.imgur.com/JGNdm6y.jpg
-                    (a1 == 0x403F7470 && a2 == 0xC067ED50 && a3 == 0x40424DE0 && a4 == 0x403F7470)      // 2.99148  https://i.imgur.com/hj5FsXp.png
-                    )
-                {
-                    Screen.bDrawBordersForCameraOverlay = true;
-                }
+                Screen.bDrawBordersForCameraOverlay = true;
             }
-        }; injector::MakeInline<CameraOverlayHook>(pattern.get_first(0), pattern.get_first(7)); // 0x672EB1
-    }
+        }
+    }; injector::MakeInline<CameraOverlayHook>(pattern.get_first(0), pattern.get_first(7)); // 0x672EB1
 
     pattern = hook::pattern("05 40 01 00 00 84 C9 89 50 24");
     struct X_ProgressBarUpdateProgressBarHook
