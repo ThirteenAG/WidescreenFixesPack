@@ -57,13 +57,14 @@ rem dxwrapper
 7za e "..\dxwrapper.zip" "dxwrapper.asi" -o".\TheSuffering.WidescreenFix\scripts\" -y
 7za e "..\dxwrapper.zip" "dxwrapper.asi" -o".\ThePunisher.WidescreenFix\scripts\" -y
 7za e "..\dxwrapper.zip" "dxwrapper.asi" -o".\MaxPayne.WidescreenFix\scripts\" -y
+7za e "..\dxwrapper.zip" "dxwrapper.asi" -o".\MaxPayne2.WidescreenFix\scripts\" -y
 
 rem dxwrapper-scda
 7za e "..\dxwrapper-scda.zip" "dxwrapper.dll" -o".\SplinterCellDoubleAgent.WidescreenFix\SCDA-Offline\System\scripts\" -y
-move /Y ".\SplinterCellDoubleAgent.WidescreenFix\SCDA-Offline\System\scripts\dxwrapper.dll" "dxwrapper.asi"
+move /Y ".\SplinterCellDoubleAgent.WidescreenFix\SCDA-Offline\System\scripts\dxwrapper.dll" ".\SplinterCellDoubleAgent.WidescreenFix\SCDA-Offline\System\scripts\dxwrapper.asi"
 
 7za e "..\dxwrapper-scda.zip" "dxwrapper.dll" -o".\KingKong.WidescreenFix\scripts\" -y
-move /Y ".\KingKong.WidescreenFix\scripts\dxwrapper.dll" "dxwrapper.asi"
+move /Y ".\KingKong.WidescreenFix\scripts\dxwrapper.dll" ".\KingKong.WidescreenFix\scripts\dxwrapper.asi"
 
 rem DSOAL
 7za e "..\DSOAL.7z" "DSOAL+HRTF/Win32/dsound.dll" "DSOAL+HRTF/Win32/dsoal-aldrv.dll" -o".\MaxPayne.WidescreenFix\" -y
