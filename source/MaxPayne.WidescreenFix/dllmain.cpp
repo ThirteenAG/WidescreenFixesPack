@@ -4,6 +4,14 @@ import ComVars;
 import e2mfc;
 import e2_d3d8_driver_mfc;
 
+SafetyHookInline shsub_40D040 = {};
+int __fastcall sub_40D040(int* CWnd, void* edx, char a2)
+{
+    CWnd[22] = 0;
+    CWnd[23] = 0;
+    return shsub_40D040.unsafe_fastcall<int>(CWnd, edx, a2);
+}
+
 void Init()
 {
     CIniReader iniReader("");
@@ -252,6 +260,13 @@ void Init()
     //{
     //    TerminateProcess(GetCurrentProcess(), uExitCode);
     //})));
+
+    bool BorderlessWindowedMode = iniReader.ReadInteger("MAIN", "BorderlessWindowedMode", 1) != 0;
+    if (BorderlessWindowedMode)
+    {
+        pattern = hook::pattern("83 EC 08 53 55 56 57 8B F1 E8 ? ? ? ? 8B 78");
+        shsub_40D040 = safetyhook::create_inline(pattern.get_first(), sub_40D040);
+    }
 }
 
 CEXP void InitializeASI()
@@ -261,7 +276,7 @@ CEXP void InitializeASI()
         CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("0F 84 ? ? ? ? E8 ? ? ? ? 8B 48 04 68 ? ? ? ? 56 89"));
         CallbackHandler::RegisterCallback(L"E2MFC.dll", InitE2MFC);
         CallbackHandler::RegisterCallback(L"E2_D3D8_DRIVER_MFC.dll", InitE2_D3D8_DRIVER_MFC);
-        CallbackHandler::RegisterModuleUnloadCallback(L"E2_D3D8_DRIVER_MFC.dll", []() { EndSceneHook.reset(); shDllMainHook.reset(); });
+        CallbackHandler::RegisterModuleUnloadCallback(L"E2_D3D8_DRIVER_MFC.dll", []() { EndSceneHook.reset(); BorderlessWindowedHook.reset(); shDllMainHook.reset(); });
     });
 }
 

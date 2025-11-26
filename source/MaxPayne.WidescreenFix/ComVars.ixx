@@ -44,6 +44,7 @@ export typedef HRESULT(STDMETHODCALLTYPE* EndScene_t)(LPDIRECT3DDEVICE8);
 export EndScene_t RealEndScene = NULL;
 export SafetyHookInline shDllMainHook = {};
 export safetyhook::MidHook EndSceneHook = {};
+export safetyhook::MidHook BorderlessWindowedHook = {};
 
 export namespace X_Crosshair
 {
