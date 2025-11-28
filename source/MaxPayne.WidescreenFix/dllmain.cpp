@@ -7,8 +7,23 @@ import e2_d3d8_driver_mfc;
 SafetyHookInline shsub_40D040 = {};
 int __fastcall sub_40D040(int* CWnd, void* edx, char a2)
 {
+    // border size to 0
     CWnd[22] = 0;
     CWnd[23] = 0;
+
+    HMONITOR monitor = MonitorFromWindow(GetDesktopWindow(), MONITOR_DEFAULTTONEAREST);
+    MONITORINFOEX info = { sizeof(MONITORINFOEX) };
+    GetMonitorInfo(monitor, &info);
+    DEVMODE devmode = {};
+    devmode.dmSize = sizeof(DEVMODE);
+    EnumDisplaySettings(info.szDevice, ENUM_CURRENT_SETTINGS, &devmode);
+    DWORD DesktopX = devmode.dmPelsWidth;
+    DWORD DesktopY = devmode.dmPelsHeight;
+
+    // center window position
+    CWnd[24] = (int)(((float)DesktopX / 2.0f) - ((float)CWnd[20] / 2.0f));
+    CWnd[25] = (int)(((float)DesktopY / 2.0f) - ((float)CWnd[21] / 2.0f));
+
     return shsub_40D040.unsafe_fastcall<int>(CWnd, edx, a2);
 }
 

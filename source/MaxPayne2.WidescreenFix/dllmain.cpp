@@ -11,8 +11,23 @@ import x_modesmfc;
 SafetyHookInline shsub_404B20 = {};
 int __fastcall sub_404B20(int* CWnd, void* edx, char a2)
 {
+    // border size to 0
     CWnd[27] = 0;
     CWnd[28] = 0;
+
+    HMONITOR monitor = MonitorFromWindow(GetDesktopWindow(), MONITOR_DEFAULTTONEAREST);
+    MONITORINFOEX info = { sizeof(MONITORINFOEX) };
+    GetMonitorInfo(monitor, &info);
+    DEVMODE devmode = {};
+    devmode.dmSize = sizeof(DEVMODE);
+    EnumDisplaySettings(info.szDevice, ENUM_CURRENT_SETTINGS, &devmode);
+    DWORD DesktopX = devmode.dmPelsWidth;
+    DWORD DesktopY = devmode.dmPelsHeight;
+
+    // center window position
+    CWnd[29] = (int)(((float)DesktopX / 2.0f) - ((float)CWnd[25] / 2.0f));
+    CWnd[30] = (int)(((float)DesktopY / 2.0f) - ((float)CWnd[26] / 2.0f));
+
     return shsub_404B20.unsafe_fastcall<int>(CWnd, edx, a2);
 }
 
