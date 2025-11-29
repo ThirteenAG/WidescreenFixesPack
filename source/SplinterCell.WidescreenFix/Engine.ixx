@@ -32,12 +32,13 @@ namespace UEngine
             auto EchelonMainHUDState = UObject::GetState(L"EchelonMainHUD");
             if (EchelonMainHUDState == L"MainHUD" || EchelonMainHUDState == L"s_Slavery")
             {
-                auto EPlayerControllerState = UObject::GetState(L"EPlayerControllerState");
+                auto EPlayerControllerState = UObject::GetState(L"EPlayerController");
 
                 if (EPlayerControllerState == L"s_FirstPersonTargeting" || EPlayerControllerState == L"s_RappellingTargeting" ||
                     EPlayerControllerState == L"s_PlayerBTWTargeting" || EPlayerControllerState == L"s_PlayerSniping" || EPlayerControllerState == L"s_HOHFUTargeting")
                 {
-                    if (UObject::GetState(L"EGameInteractionState") != L"s_GameInteractionMenu")
+                    auto EGameInteractionState = UObject::GetState(L"EGameInteraction");
+                    if (EGameInteractionState != L"s_GameInteractionMenu")
                     {
                         shInputEvent.unsafe_fastcall<int>(_this, edx, a2, inputID, a4, value);
                         return shInputEvent.unsafe_fastcall<int>(_this, edx, a2, UInput::GetKey(UInput::gUInput, edx, L"ReloadGun", 0), a4, value);
@@ -215,7 +216,14 @@ export void InitEngine()
     {
         void operator()(injector::reg_pack& regs)
         {
-            *(float*)&regs.ecx = AdjustFOV(*(float*)(regs.eax + 0x2B0), Screen.fAspectRatio);
+            if (bRestoreCutsceneFOV && UObject::GetState(L"EchelonMainHUD") == L"s_Cinematic")
+            {
+                *(float*)&regs.ecx = *(float*)(regs.eax + 0x2B0);
+            }
+            else
+            {
+                *(float*)&regs.ecx = AdjustFOV(*(float*)(regs.eax + 0x2B0), Screen.fAspectRatio);
+            }
         }
     }; injector::MakeInline<UGameEngine_Draw_Hook>(pattern.count(1).get(0).get<uint32_t>(3), pattern.count(1).get(0).get<uint32_t>(3 + 6)); //pfDraw + 0x104
 
