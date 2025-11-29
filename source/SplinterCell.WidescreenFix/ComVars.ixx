@@ -61,6 +61,7 @@ export bool bPlayingVideo = false;
 export bool bDisplayingSplash = false;
 export bool bPressStartToContinue = false;
 export bool bSkipPressStartToContinue = false;
+export bool bRestoreCutsceneFOV = false;
 export bool bIsEnhanced = false;
 export HWND hGameWindow = NULL;
 
