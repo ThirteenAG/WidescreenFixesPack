@@ -50,6 +50,9 @@ rem Xidi
 7za e "..\xidi.zip" "Xidi-*/Win32/dinput8.dll" "Xidi-*/Win32/Xidi.32.dll" -o".\SplinterCellDoubleAgent.WidescreenFix\SCDA-Offline\System\" -y
 7za e "..\xidi.zip" "Xidi-*/Win32/dinput8.dll" "Xidi-*/Win32/Xidi.32.dll" -o".\SplinterCellConviction.FusionMod\src\system\" -y
 7za e "..\xidi.zip" "Xidi-*/Win32/winmm.dll" "Xidi-*/Win32/Xidi.32.dll" -o".\KingKong.WidescreenFix\" -y
+7za e "..\xidi.zip" "Xidi-*/Win32/dinput.dll" "Xidi-*/Win32/Xidi.32.dll" -o".\MaxPayne.WidescreenFix\scripts\" -y
+move /Y ".\MaxPayne.WidescreenFix\scripts\dinput.dll" ".\MaxPayne.WidescreenFix\dinputHooked.dll"
+move /Y ".\MaxPayne.WidescreenFix\scripts\Xidi.32.dll" ".\MaxPayne.WidescreenFix\Xidi.32.dll"
 
 rem dxwrapper
 7za e "..\dxwrapper.zip" "dxwrapper.asi" -o".\Scarface.FusionFix\scripts\" -y
