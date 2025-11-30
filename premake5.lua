@@ -401,6 +401,7 @@ project "MaxPayne.MSVCP60Wrapper"
 project "MaxPayne.WidescreenFix"
    dependson { "MaxPayne.MSVCP60Wrapper" }
    debugargs { "-skipstartup -window -developer -screenshot" }
+   libdirs { "includes/dxsdk/dx8" }
    setpaths("Z:/WFP/Games/Max Payne/Max Payne/", "MaxPayne.exe")
 project "MaxPayne2.WidescreenFix"
    debugargs { "-developer -window" }

@@ -3,6 +3,8 @@
 import ComVars;
 import e2mfc;
 import e2_d3d8_driver_mfc;
+import input;
+import xidi;
 
 SafetyHookInline shsub_40D040 = {};
 int __fastcall sub_40D040(int* CWnd, void* edx, char a2)
@@ -282,6 +284,8 @@ void Init()
         pattern = hook::pattern("83 EC 08 53 55 56 57 8B F1 E8 ? ? ? ? 8B 78");
         shsub_40D040 = safetyhook::create_inline(pattern.get_first(), sub_40D040);
     }
+
+    InitInput();
 }
 
 CEXP void InitializeASI()
@@ -292,6 +296,7 @@ CEXP void InitializeASI()
         CallbackHandler::RegisterCallback(L"E2MFC.dll", InitE2MFC);
         CallbackHandler::RegisterCallback(L"E2_D3D8_DRIVER_MFC.dll", InitE2_D3D8_DRIVER_MFC);
         CallbackHandler::RegisterModuleUnloadCallback(L"E2_D3D8_DRIVER_MFC.dll", []() { EndSceneHook.reset(); BorderlessWindowedHook.reset(); shDllMainHook.reset(); });
+        CallbackHandler::RegisterCallback(L"Xidi.32.dll", InitXidi);
     });
 }
 

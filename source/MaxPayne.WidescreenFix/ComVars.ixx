@@ -50,3 +50,48 @@ export namespace X_Crosshair
 {
     GameRef<bool> sm_bCameraPathRunning;
 }
+
+export enum eCurrentGameMode
+{
+    GameMode,
+    MenuMode,
+    GraphicNovelMode,
+};
+
+export eCurrentGameMode CurrentGameMode = MenuMode;
+
+export namespace MaxPayne_ConfiguredInput
+{
+    void* ForwardBackward = nullptr;
+    void* LeftRight = nullptr;
+    void* Shoot = nullptr;
+    void* Reload = nullptr;
+    void* Jump = nullptr;
+    void* Crouch = nullptr;
+    void* DodgeLeft = nullptr;
+    void* DodgeRight = nullptr;
+    void* DodgeForward = nullptr;
+    void* DodgeBackward = nullptr;
+    void* DodgeModifier = nullptr;
+    void* AimUpDown = nullptr;
+    void* AimLeftRight = nullptr;
+    void* Use = nullptr;
+    void* Slot1 = nullptr;
+    void* Slot2 = nullptr;
+    void* Slot3 = nullptr;
+    void* Slot4 = nullptr;
+    void* Slot5 = nullptr;
+    void* Slot6 = nullptr;
+    void* BestWeapon = nullptr;
+    void* NextPreviousWeapon = nullptr;
+    void* Pause = nullptr;
+    void* Painkiller = nullptr;
+    void* SniperZoom = nullptr;
+    void* SlowMotion = nullptr;
+    void* BulletTime = nullptr;
+}
+
+export namespace X_Input
+{
+    void* (*getMouse)() = nullptr;
+}
