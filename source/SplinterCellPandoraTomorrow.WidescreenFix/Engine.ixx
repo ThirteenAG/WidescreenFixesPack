@@ -300,7 +300,14 @@ export void InitEngine()
         {
             void operator()(injector::reg_pack& regs)
             {
-                *(float*)&regs.ecx = AdjustFOV(*(float*)(regs.eax + 0x374), Screen.fAspectRatio);
+                if (bRestoreCutsceneFOV && UObject::GetState(L"EchelonMainHUD") == L"s_Cinematic")
+                {
+                    *(float*)&regs.ecx = *(float*)(regs.eax + 0x374);
+                }
+                else
+                {
+                    *(float*)&regs.ecx = AdjustFOV(*(float*)(regs.eax + 0x374), Screen.fAspectRatio);
+                }
             }
         }; injector::MakeInline<UGameEngine_Draw_Hook>(rpattern.get(0).get<uint32_t>(0), rpattern.get(0).get<uint32_t>(0 + 6));
 
@@ -308,7 +315,14 @@ export void InitEngine()
         {
             void operator()(injector::reg_pack& regs)
             {
-                *(float*)&regs.eax = AdjustFOV(*(float*)(regs.edx + 0x374), Screen.fAspectRatio);
+                if (bRestoreCutsceneFOV && UObject::GetState(L"EchelonMainHUD") == L"s_Cinematic")
+                {
+                    *(float*)&regs.eax = *(float*)(regs.edx + 0x374);
+                }
+                else
+                {
+                    *(float*)&regs.eax = AdjustFOV(*(float*)(regs.edx + 0x374), Screen.fAspectRatio);
+                }
             }
         };
         injector::MakeInline<UGameEngine_Draw_Hook2>(rpattern.get(2).get<uint32_t>(0), rpattern.get(2).get<uint32_t>(0 + 6));
@@ -320,7 +334,14 @@ export void InitEngine()
         {
             void operator()(injector::reg_pack& regs)
             {
-                regs.xmm0.f32[0] = AdjustFOV(*(float*)(regs.eax + 0x374), Screen.fAspectRatio);
+                if (bRestoreCutsceneFOV && UObject::GetState(L"EchelonMainHUD") == L"s_Cinematic")
+                {
+                    regs.xmm0.f32[0] = *(float*)(regs.eax + 0x374);
+                }
+                else
+                {
+                    regs.xmm0.f32[0] = AdjustFOV(*(float*)(regs.eax + 0x374), Screen.fAspectRatio);
+                }
             }
         };
 
