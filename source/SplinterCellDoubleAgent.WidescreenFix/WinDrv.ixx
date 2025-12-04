@@ -32,9 +32,6 @@ namespace UWindowsViewport
             }
             else if (Msg == WM_SETFOCUS)
             {
-                POINT pt;
-                GetCursorPos(&pt);
-                ScreenToClient(hGameWindow, &pt);
                 PostMessage(hGameWindow, WM_KEYDOWN, VK_LWIN, 0);
                 PostMessage(hGameWindow, WM_KEYUP, VK_LWIN, 0);
             }
