@@ -64,6 +64,7 @@ void Init()
         auto bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) != 0;
         auto bBorderlessWindowed = iniReader.ReadInteger("MAIN", "BorderlessWindowed", 1) != 0;
         auto bUnlockFPS = iniReader.ReadInteger("MAIN", "UnlockFPS", 0) != 0;
+        auto fUnlockMaxFPS = iniReader.ReadFloat("MAIN", "UnlockMaxFPS", 360.0);
 
         // Unlock resolutions with any refresh rate
         auto pattern = hook::pattern("74 ? 83 C6 01 83 C0 20");
@@ -95,7 +96,7 @@ void Init()
 
         if (bUnlockFPS)
         {
-            static float f = 1.0f / 360.0f;
+            static float f = 1.0f / fUnlockMaxFPS;
             auto pattern = hook::pattern("D9 05 ? ? ? ? A2 ? ? ? ? D9 1D ? ? ? ? E8");
             injector::WriteMemory(pattern.get_first(2), &f, true);
         }
