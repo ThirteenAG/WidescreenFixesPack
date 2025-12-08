@@ -692,9 +692,16 @@ void InstallSCMDrawingFixes()
 void InstallAspectRatioFixes()
 {
     // Unlock resolutions
-    injector::MakeJMP(0x745B5B, (void*)0x745BCB, true);
-    injector::WriteMemory<BYTE>(0x745BD1, 0x7D, true);
-    injector::WriteMemory<BYTE>(0x745BD9, 0x7C, true);
+    // Advanced Display Options
+    injector::MakeNOP(0x745B71, 6); // Skip width check
+    injector::MakeNOP(0x745B81, 6); // Skip height check
+    injector::WriteMemory<BYTE>(0x745B96, 0xEB, true); // Skip AR check
+    injector::MakeNOP(0x745BFC, 2); // Skip VRAM check
+
+    // Resolution selection dialog
+    injector::MakeNOP(0x74596C, 6); // Skip width check
+    injector::MakeNOP(0x74597A, 6); // Skip height check
+    injector::WriteMemory<BYTE>(0x7459D0, 0xEB, true); // Skip AR check
 
     // Proportional coronas
     injector::MakeNOP(0x6FB2C9, 4);
