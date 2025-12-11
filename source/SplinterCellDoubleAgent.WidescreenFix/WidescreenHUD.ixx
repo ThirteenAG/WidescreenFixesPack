@@ -105,7 +105,6 @@ export bool HudNeedsToMoveLeft(uint32_t id)
         /*Area:*/hud_PC::id167625891,  // 0 1
         /*Area:*/hud_PC::id1145254289, // 0 -3
         /*Area:*/hud_PC::id1388722629, // 0 57
-        /*Area:*/hud_PC::id2444952937, // 0 120
         /*Area:*/hud_PC::id2329249591, // 0 120
         /*Area:*/hud_PC::id2662917053, // 0 268
         /*Area:*/hud_PC::id1476254476, // 0 373
