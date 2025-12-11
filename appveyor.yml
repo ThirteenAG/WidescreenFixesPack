@@ -14,7 +14,6 @@ before_build:
 - cmd: before_build.bat
 build:
   project: build/WidescreenFixesPack.sln
-  parallel: true
   verbosity: minimal
 before_package:
 - cmd: >-
