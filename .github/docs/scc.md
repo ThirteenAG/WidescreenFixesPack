@@ -26,6 +26,8 @@ $${\color{blue}ⓘ}$$ Added an option to load packed files from disk
 
 $${\color{blue}ⓘ}$$ Added an option to unlock DLC content that's unavailable after servers shut down
 
+$${\color{blue}ⓘ}$$ Fixed crash in DLC levels when Xbox360 achievement conditions are met (e.g., "King of the Crypt" in New Orleans, "Watch the Soap" in Portland)
+
 $${\color{blue}ⓘ}$$ Fixed gamepad support (via [Xidi](https://github.com/samuelgr/Xidi))
 
 $${\color{blue}ⓘ}$$ Added Splinter Cell Blacklist control scheme (not fully tested, report issues via github)

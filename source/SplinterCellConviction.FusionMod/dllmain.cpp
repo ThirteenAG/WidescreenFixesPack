@@ -29,6 +29,15 @@ BOOL WINAPI SetProcessAffinityMaskHook(HANDLE hProcess, DWORD_PTR dwProcessAffin
     return shSetProcessAffinityMask.stdcall<BOOL>(hProcess, dwProcessAffinityMask);
 }
 
+namespace UESEQJobUnlockAchievement
+{
+    SafetyHookInline shsub_4D6DD5 = {};
+    int __fastcall sub_4D6DD5(void* _this, void* edx)
+    {
+        return 0;
+    }
+}
+
 void Init()
 {
     CIniReader iniReader("");
@@ -56,6 +65,12 @@ void Init()
     {
         auto pattern = hook::pattern("74 28 E8 ? ? ? ? 8B 10 8B C8 FF 92 ? ? ? ? 3B C3");
         injector::WriteMemory<uint8_t>(pattern.get_first(), 0xEB, true);
+    }
+
+    // UESEQJobUnlockAchievement crash fix
+    {
+        auto pattern = hook::pattern("56 8B F1 0F B6 46 ? 50 8B 46");
+        UESEQJobUnlockAchievement::shsub_4D6DD5 = safetyhook::create_inline(pattern.get_first(), UESEQJobUnlockAchievement::sub_4D6DD5);
     }
 
     InitFileManager();
@@ -131,11 +146,11 @@ void Init()
         pattern = hook::pattern("0F 85 ? ? ? ? 39 7D EC");
         if (!pattern.empty())
             injector::MakeNOP(pattern.get_first(), 6, true);
-        
+
         pattern = hook::pattern("0F 84 ? ? ? ? 8D 45 E8 50 8B CB");
         if (!pattern.empty())
             injector::MakeNOP(pattern.get_first(), 6, true);
-        
+
         pattern = hook::pattern("7E 50 8B 45 E8");
         if (!pattern.empty())
             injector::MakeJMP(pattern.get_first(), hook::pattern("8B 0D ? ? ? ? 8B 01 57 FF 35 ? ? ? ? 57 68 ? ? ? ? FF 50 10 8B D8").get_first(), true);
@@ -158,17 +173,17 @@ void InitLED()
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
             auto gVisCmp = static_cast<float>(static_cast<int>(gVisibility * 10.0f)) / 10.0f;
             auto fPlVisCmp = static_cast<float>(static_cast<int>(fPlayerVisibility * 10.0f)) / 10.0f;
-            
+
             if (fPlVisCmp > gVisCmp)
                 fPlayerVisibility -= 0.05f;
             else if (fPlVisCmp < gVisCmp)
                 fPlayerVisibility += 0.05f;
-            
+
             constexpr auto minBrightness = 0.3f;
             constexpr auto maxBrightness = 1.0f;
 
             fPlayerVisibility = std::clamp(fPlayerVisibility, minBrightness, maxBrightness);
-            
+
             auto [R, G, B] = LEDEffects::RGBtoPercent(255, 39, 26, gBlacklistIndicators ? fPlayerVisibility : ((maxBrightness + minBrightness) - fPlayerVisibility));
             LEDEffects::SetLighting(R, G, B, false, false, false);
         });
@@ -197,7 +212,8 @@ CEXP void InitializeASI()
                     NULL,
                     const_cast<wchar_t*>(cmd.c_str()),
                     nullptr, nullptr, FALSE, CREATE_NO_WINDOW,
-                    nullptr, workingDir.c_str(), &si, &pi)) {
+                    nullptr, workingDir.c_str(), &si, &pi))
+                {
                     CloseHandle(pi.hProcess);
                     CloseHandle(pi.hThread);
                 }
