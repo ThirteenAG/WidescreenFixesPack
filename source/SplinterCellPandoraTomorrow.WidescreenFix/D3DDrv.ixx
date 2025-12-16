@@ -229,7 +229,7 @@ export void InitD3DDrv()
 {
     auto pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "BF ? ? ? ? 33 C0 8B D9 C1 E9 02 83 E3 03", "68 ? ? ? ? FF 15 ? ? ? ? 8B 8D");
     pPresentParams = *pattern.get_first<D3DPRESENT_PARAMETERS*>(1);
-    
+
     pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "55 8B EC 6A ? 68 ? ? ? ? 64 A1 ? ? ? ? 50 64 89 25 ? ? ? ? 81 EC ? ? ? ? 53 56 57 8B 7D ? 8B F1", "55 8B EC 6A ? 68 ? ? ? ? 64 A1 ? ? ? ? 50 81 EC ? ? ? ? A1 ? ? ? ? 33 C5 89 45 ? 56 57 50 8D 45 ? 64 A3 ? ? ? ? 8B F1 89 75");
     shUD3DRenderDeviceSetRes = safetyhook::create_inline(pattern.get_first(), UD3DRenderDeviceSetRes);
 
@@ -620,28 +620,32 @@ export void InitD3DDrv()
             // Clear left pillar area
             if (targetX > 0.0f)
             {
-                D3DRECT leftRect = { 0, 0, (LONG)targetX, H };
+                D3DRECT leftRect = { 0, 0, (LONG)ceil(targetX), H };
                 pD3DDevice->Clear(1, &leftRect, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
             }
 
             // Clear right pillar area
             if (targetX + targetW < (float)W)
             {
-                D3DRECT rightRect = { (LONG)(targetX + targetW), 0, W, H };
+                D3DRECT rightRect = { (LONG)floor(targetX + targetW), 0, W, H };
                 pD3DDevice->Clear(1, &rightRect, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
+
+                // Clear additional 1px
+                D3DRECT rightEdge = { (LONG)(targetX + targetW) - 1, 0, (LONG)(targetX + targetW), H };
+                pD3DDevice->Clear(1, &rightEdge, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
             }
 
             // Clear top letterbox area
             if (targetY > 0.0f)
             {
-                D3DRECT topRect = { 0, 0, W, (LONG)targetY };
+                D3DRECT topRect = { 0, 0, W, (LONG)ceil(targetY) };
                 pD3DDevice->Clear(1, &topRect, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
             }
 
             // Clear bottom letterbox area
             if (targetY + targetH < (float)H)
             {
-                D3DRECT bottomRect = { 0, (LONG)(targetY + targetH), W, H };
+                D3DRECT bottomRect = { 0, (LONG)floor(targetY + targetH), W, H };
                 pD3DDevice->Clear(1, &bottomRect, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
             }
         }

@@ -374,28 +374,32 @@ export void InitD3DDrv()
             // Clear left pillar area
             if (targetX > 0.0f)
             {
-                D3DRECT leftRect = { 0, 0, (LONG)targetX, H };
+                D3DRECT leftRect = { 0, 0, (LONG)ceil(targetX), H };
                 pD3DDevice->Clear(1, &leftRect, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
             }
 
             // Clear right pillar area
             if (targetX + targetW < (float)W)
             {
-                D3DRECT rightRect = { (LONG)(targetX + targetW), 0, W, H };
+                D3DRECT rightRect = { (LONG)floor(targetX + targetW), 0, W, H };
                 pD3DDevice->Clear(1, &rightRect, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
+
+                // Clear additional 1px
+                D3DRECT rightEdge = { (LONG)floor(targetX + targetW) - 1, 0, (LONG)floor(targetX + targetW), H };
+                pD3DDevice->Clear(1, &rightEdge, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
             }
 
             // Clear top letterbox area
             if (targetY > 0.0f)
             {
-                D3DRECT topRect = { 0, 0, W, (LONG)targetY };
+                D3DRECT topRect = { 0, 0, W, (LONG)ceil(targetY) };
                 pD3DDevice->Clear(1, &topRect, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
             }
 
             // Clear bottom letterbox area
             if (targetY + targetH < (float)H)
             {
-                D3DRECT bottomRect = { 0, (LONG)(targetY + targetH), W, H };
+                D3DRECT bottomRect = { 0, (LONG)floor(targetY + targetH), W, H };
                 pD3DDevice->Clear(1, &bottomRect, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
             }
         }
