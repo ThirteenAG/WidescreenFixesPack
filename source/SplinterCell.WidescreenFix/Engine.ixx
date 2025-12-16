@@ -126,6 +126,14 @@ namespace UGameEngine
         bDisplayingSplash = false;
     }
 
+    SafetyHookInline shDisplaySplashProgress = {};
+    void __fastcall DisplaySplashProgress(void* UGameEngine, void* edx, float a2)
+    {
+        bDisplayingSplash = true;
+        shDisplaySplashProgress.unsafe_fastcall(UGameEngine, edx, a2);
+        bDisplayingSplash = false;
+    }
+
     SafetyHookInline shTick = {};
     void __fastcall Tick(void* UGameEngine, void* edx, float deltaTime)
     {
@@ -323,6 +331,7 @@ export void InitEngine()
     UInput::shInit = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?Init@UInput@@UAEXPAVUViewport@@@Z"), UInput::Init);
 
     UGameEngine::shDisplaySplash = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?DisplaySplash@UGameEngine@@UAEXH@Z"), UGameEngine::DisplaySplash);
+    UGameEngine::shDisplaySplashProgress = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?DisplaySplashProgress@UGameEngine@@UAEXM@Z"), UGameEngine::DisplaySplashProgress);
     UGameEngine::shTick = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?Tick@UGameEngine@@UAEXM@Z"), UGameEngine::Tick);
 
     UCanvas::shSetClip = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?SetClip@UCanvas@@UAEXMM@Z"), UCanvas::SetClip);
