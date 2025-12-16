@@ -72,7 +72,7 @@ void __fastcall FCanvasUtilDrawTileHook(void* _this, uint32_t EDX, float X, floa
             FloatEqual(SizeX, fOpticCable) || FloatEqual(SizeX, fOpticMic)))
         {
             FCanvasUtil::DrawTile(_this, EDX, 0.0f, Y, Screen.fHudOffset, SizeY, U, V, SizeU, SizeV, unk1, nullptr, ColBlack);
-            FCanvasUtil::DrawTile(_this, EDX, Screen.fWidth - Screen.fHudOffset, Y, Screen.fWidth, SizeY, U, V, SizeU, SizeV, unk1, nullptr, ColBlack);
+            FCanvasUtil::DrawTile(_this, EDX, Screen.fWidth - Screen.fHudOffset - 1.0f, Y, Screen.fWidth, SizeY, U, V, SizeU, SizeV, unk1, nullptr, ColBlack);
         }
     }
 
