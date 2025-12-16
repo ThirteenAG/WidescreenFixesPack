@@ -7,8 +7,6 @@ export module D3DDrv;
 
 import ComVars;
 
-void* FMVPtrY = nullptr;
-void* FMVPtrX = nullptr;
 D3DPRESENT_PARAMETERS* pPresentParams = nullptr;
 SafetyHookInline shUD3DRenderDeviceSetRes = {};
 int __fastcall UD3DRenderDeviceSetRes(void* UD3DRenderDevice, void* edx, void* UViewport, int width, int height, int a5)
@@ -76,9 +74,6 @@ int __fastcall UD3DRenderDeviceSetRes(void* UD3DRenderDevice, void* edx, void* U
     }
     if (Screen.Width < 640 || Screen.Height < 480)
         return ret;
-
-    injector::WriteMemory(FMVPtrY, Screen.Height, true);
-    injector::WriteMemory(FMVPtrX, Screen.Width, true);
 
     CIniReader iniReader("");
     auto [DesktopResW, DesktopResH] = GetDesktopRes();
@@ -284,15 +279,21 @@ namespace UD3DRenderDevice
 
 export void InitD3DDrv()
 {
-    auto pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "68 ? ? ? ? 68 ? ? ? ? 50 8B CF FF 55 60"); //0x1000F72E
-    FMVPtrY = pattern.get_first(1);
-    FMVPtrX = pattern.get_first(6);
-
-    pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "8B 44 24 04 81 EC 80 00 00 00");
+    auto pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "8B 44 24 04 81 EC 80 00 00 00");
     shUD3DRenderDeviceSetRes = safetyhook::create_inline(pattern.get_first(), UD3DRenderDeviceSetRes);
     pPresentParams = *hook::module_pattern(GetModuleHandle(L"D3DDrv"), "BF ? ? ? ? 33 C0 8B D9 C1 E9 02 83 E3 03").get_first<D3DPRESENT_PARAMETERS*>(1);
 
     //FMV
+    pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "50 8B CF FF 55");
+    static auto StartVideoHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        auto& width = *(uint32_t*)(regs.esp + 0);
+        auto& height = *(uint32_t*)(regs.esp + 4);
+
+        width = Screen.Width;
+        height = Screen.Height;
+    });
+
     static auto SetFMVPos = [](SafetyHookContext& regs)
     {
         MSG msg;
@@ -302,9 +303,9 @@ export void InitD3DDrv()
             DispatchMessageA(&msg);
         }
 
-        auto& dest_height = *(uintptr_t*)(regs.esp + 12);
-        auto& dest_x = *(uintptr_t*)(regs.esp + 16);
-        auto& dest_y = *(uintptr_t*)(regs.esp + 20);
+        auto& dest_height = *(uint32_t*)(regs.esp + 12);
+        auto& dest_x = *(uint32_t*)(regs.esp + 16);
+        auto& dest_y = *(uint32_t*)(regs.esp + 20);
 
         dest_x = 0;
         dest_y = (480 - dest_height) / 2;
