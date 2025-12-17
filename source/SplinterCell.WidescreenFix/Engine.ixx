@@ -99,7 +99,7 @@ void __fastcall FCanvasUtilDrawTileHook(void* _this, uint32_t EDX, float X, floa
         else
         {
             FCanvasUtil::DrawTile(_this, EDX, 0.0f, Y, Screen.fHudOffset, SizeY, U, V, SizeU, SizeV, unk1, Texture, ColBlack);
-            FCanvasUtil::DrawTile(_this, EDX, SizeX + Screen.fHudOffset, Y, SizeX + Screen.fHudOffset + Screen.fHudOffset, SizeY, U, V, SizeU, SizeV, unk1, Texture, ColBlack);
+            FCanvasUtil::DrawTile(_this, EDX, SizeX + Screen.fHudOffset, Y, SizeX + Screen.fHudOffset + Screen.fHudOffset + 1.0f, SizeY + 1.0f, U, V, SizeU, SizeV, unk1, Texture, ColBlack);
         }
     }
 
