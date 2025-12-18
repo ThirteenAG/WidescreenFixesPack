@@ -16,7 +16,7 @@ void __fastcall UStrPropertyCopySingleValue(void* UStrProperty, void* edx, void*
     {
         auto ptr = *(uintptr_t*)FArray2;
         auto str = std::wstring_view((const wchar_t*)ptr);
-        
+
         // Check if EngineVersion is Enhanced
         wchar_t buffer[256];
         if (auto fullName = UObject::GetFullName(UStrProperty, edx, buffer))
@@ -27,7 +27,7 @@ void __fastcall UStrPropertyCopySingleValue(void* UStrProperty, void* edx, void*
                 bIsEnhanced = true;
             }
         }
-        
+
         if (str == L"1024x768")
         {
             auto try_offsets = [&](const std::vector<int>& offsets) -> bool
@@ -75,8 +75,6 @@ namespace UObject
         L"EDoorMarker",
         L"EPCConsole",
     };
-
-    void* (__fastcall* FindState)(void*, void*, int) = nullptr;
 
     SafetyHookInline shGotoState = {};
     int __fastcall GotoState(void* uObject, void* edx, int StateID)
@@ -175,7 +173,7 @@ export void InitCore()
     UObject::GetFullName = (decltype(UObject::GetFullName))GetProcAddress(GetModuleHandle(L"Core"), "?GetFullName@UObject@@QBEPBGPAG@Z");
     UObject::FindState = (decltype(UObject::FindState))GetProcAddress(GetModuleHandle(L"Core"), "?FindState@UObject@@QAEPAVUState@@VFName@@@Z");
     UObject::shGotoState = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Core"), "?GotoState@UObject@@UAE?AW4EGotoState@@VFName@@@Z"), UObject::GotoState);
-    
+
     UProperty::shCopyCompleteValue = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Core"), "?CopyCompleteValue@UProperty@@UBEXPAX0PAVUObject@@@Z"), UProperty::CopyCompleteValue);
     UObjectProperty::shCopyCompleteValue = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Core"), "?CopyCompleteValue@UObjectProperty@@UBEXPAX0PAVUObject@@@Z"), UObjectProperty::CopyCompleteValue);
     UNameProperty::shCopyCompleteValue = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Core"), "?CopyCompleteValue@UNameProperty@@UBEXPAX0PAVUObject@@@Z"), UNameProperty::CopyCompleteValue);
