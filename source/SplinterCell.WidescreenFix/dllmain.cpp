@@ -64,8 +64,12 @@ void Init()
     iniWriter.WriteInteger("WinDrv.WindowsClient", "WindowedViewportY", Screen.Height);
     iniWriter.WriteString("WinDrv.WindowsClient", "UseJoystick", "True");
     iniWriter.WriteString("D3DDrv.D3DRenderDevice", "FullScreenVideo", "True");
-    iniWriter.WriteInteger("D3DDrv.D3DRenderDevice", "ForceShadowMode", 1);
-    iniWriter.WriteInteger("D3DDrv.D3DRenderDevice", "EmulateGF2Mode", 0);
+
+    auto shadowMode = iniReader.ReadInteger("MAIN", "ForceShadowBufferMode", 1);
+    iniWriter.WriteInteger("D3DDrv.D3DRenderDevice", "ForceShadowMode", shadowMode);
+    if (shadowMode == 1) // GF2 mode must be off to render shadow buffers
+        iniWriter.WriteInteger("D3DDrv.D3DRenderDevice", "EmulateGF2Mode", 0);
+
     iniWriter.WriteString("Engine.GameInfo", "UseRumble", "True");
 
     std::vector<std::string> list;
