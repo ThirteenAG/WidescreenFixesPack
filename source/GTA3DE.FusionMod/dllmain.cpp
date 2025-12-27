@@ -571,6 +571,16 @@ void Init()
         pattern = hook::pattern("C7 05 ? ? ? ? ? ? ? ? E9 ? ? ? ? 8B 15 ? ? ? ? 48 63 C2");
         if (!pattern.empty())
             injector::WriteMemory(pattern.get_first(6), fCenteringDelay, true);
+
+        // lower horizontal vehicle camera sensitivity
+        pattern = hook::pattern("F3 0F 59 F8 0F 28 C7 0F 54 05");
+        if (!pattern.empty())
+        {
+            static auto VehicleHorizSensHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            {
+                regs.xmm7.f32[0] *= 0.5f;
+            });
+        }
     }
 }
 
