@@ -1,6 +1,6 @@
 #include "stdafx.h"
-#include <mmsystem.h>
-#pragma comment(lib, "winmm.lib") // needed for timeBeginPeriod()/timeEndPeriod()
+
+import Speedhack;
 
 struct Screen
 {
@@ -22,111 +22,10 @@ int32_t __cdecl SetLanguage(LPCSTR lpValueName)
     return nLanguage;
 }
 
-int32_t nFrameLimitType;
-float fFpsLimit;
-float fGameSpeed = 1.0f;
-
-class FrameLimiter
-{
-public:
-    enum FPSLimitMode { FPS_NONE, FPS_REALTIME, FPS_ACCURATE };
-    FPSLimitMode mFPSLimitMode = FPS_NONE;
-private:
-    double TIME_Frequency = 0.0;
-    double TIME_Ticks = 0.0;
-    double TIME_Frametime = 0.0;
-    float  fFPSLimit = 0.0f;
-public:
-    void Init(FPSLimitMode mode, float fps_limit)
-    {
-        mFPSLimitMode = mode;
-        fFPSLimit = fps_limit;
-
-        LARGE_INTEGER frequency;
-        QueryPerformanceFrequency(&frequency);
-        static constexpr auto TICKS_PER_FRAME = 1;
-        auto TICKS_PER_SECOND = (TICKS_PER_FRAME * fFPSLimit);
-        if (mFPSLimitMode == FPS_ACCURATE)
-        {
-            TIME_Frametime = 1000.0 / (double)fFPSLimit;
-            TIME_Frequency = (double)frequency.QuadPart / 1000.0; // ticks are milliseconds
-        }
-        else // FPS_REALTIME
-        {
-            TIME_Frequency = (double)frequency.QuadPart / (double)TICKS_PER_SECOND; // ticks are 1/n frames (n = fFPSLimit)
-        }
-        Ticks();
-    }
-    DWORD Sync_RT()
-    {
-        DWORD lastTicks, currentTicks;
-        LARGE_INTEGER counter;
-
-        QueryPerformanceCounter(&counter);
-        lastTicks = (DWORD)TIME_Ticks;
-        TIME_Ticks = (double)counter.QuadPart / TIME_Frequency;
-        currentTicks = (DWORD)TIME_Ticks;
-
-        return (currentTicks > lastTicks) ? currentTicks - lastTicks : 0;
-    }
-    DWORD Sync_SLP()
-    {
-        LARGE_INTEGER counter;
-        QueryPerformanceCounter(&counter);
-        double millis_current = (double)counter.QuadPart / TIME_Frequency;
-        double millis_delta = millis_current - TIME_Ticks;
-        if (TIME_Frametime <= millis_delta)
-        {
-            TIME_Ticks = millis_current;
-            return 1;
-        }
-        else if (TIME_Frametime - millis_delta > 2.0) // > 2ms
-            Sleep(1); // Sleep for ~1ms
-        else
-            Sleep(0); // yield thread's time-slice (does not actually sleep)
-        
-        return 0;
-    }
-    void Sync()
-    {
-        if (mFPSLimitMode == FPS_REALTIME)
-            while (!Sync_RT());
-        else if (mFPSLimitMode == FPS_ACCURATE)
-            while (!Sync_SLP());
-    }
-private:
-    void Ticks()
-    {
-        LARGE_INTEGER counter;
-        QueryPerformanceCounter(&counter);
-        TIME_Ticks = (double)counter.QuadPart / TIME_Frequency;
-    }
-};
-
-FrameLimiter FpsLimiter;
-float fGameSpeedFactor = 1.0f;
+SafetyHookInline shsub_648AC0 = {};
 void __cdecl sub_648AC0(int a1)
 {
-    if (fFpsLimit)
-        FpsLimiter.Sync();
-
-    static std::list<int> m_times;
-    LARGE_INTEGER frequency;
-    LARGE_INTEGER time;
-    QueryPerformanceFrequency(&frequency);
-    QueryPerformanceCounter(&time);
-
-    if (m_times.size() == 50)
-        m_times.pop_front();
-    m_times.push_back(static_cast<int>(time.QuadPart));
-
-    if (m_times.size() >= 2)
-    {
-        auto fps = (0.5f + (static_cast<float>(m_times.size() - 1) * static_cast<float>(frequency.QuadPart)) / static_cast<float>(m_times.back() - m_times.front()));
-        fGameSpeed = (30.0f / fps);
-        if (fGameSpeedFactor > 0.0f)
-            fGameSpeed /= fGameSpeedFactor;
-    }
+    return shsub_648AC0.unsafe_ccall(0);
 }
 
 void Init()
@@ -139,12 +38,9 @@ void Init()
     static bool bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) != 0;
 
     static bool bFixGameSpeed = iniReader.ReadInteger("FRAMELIMIT", "FixGameSpeed", 1) != 0;
-    fGameSpeedFactor = iniReader.ReadFloat("FRAMELIMIT", "GameSpeedFactor", 0.0f);
-    nFrameLimitType = iniReader.ReadInteger("FRAMELIMIT", "FrameLimitType", 1);
-    fFpsLimit = static_cast<float>(iniReader.ReadInteger("FRAMELIMIT", "FpsLimit", 30));
-    
-    static auto fSensitivityFactor = iniReader.ReadFloat("MOUSE", "SensitivityFactor", 0.0f);
+    fGameSpeedFactor = iniReader.ReadFloat("FRAMELIMIT", "GameSpeedFactor", 0.5f);
 
+    static auto fSensitivityFactor = iniReader.ReadFloat("MOUSE", "SensitivityFactor", 0.0f);
 
     if (bSkipIntro)
     {
@@ -207,13 +103,13 @@ void Init()
                 int32_t a2 = *(int32_t*)(regs.esp + 4);
                 if (a2 == Screen.Width)
                     a2 = Screen.Width43;
-        
+
                 *(float*)(regs.ecx + 0xE0) = (float)a2 * (1.0f / 640.0f);
                 *(int32_t*)(regs.ecx + 0xD8) = a2;
                 *(float*)(regs.ecx + 0xE8) = (1.0f / (float)a2);
             }
         }; injector::MakeInline<HudScaleHook>(dword_654780, dword_654780 + 53);
-        
+
         pattern = hook::pattern("F3 0F 11 44 24 24 F3 0F 11 44 24 20 F3 0F 11"); //0x65E870
         struct HudPosHook
         {
@@ -242,28 +138,14 @@ void Init()
         }; injector::MakeInline<FOVHook>(pattern.get_first(0));
     }
 
-    if (fFpsLimit)
     {
-        auto mode = (nFrameLimitType == 2) ? FrameLimiter::FPSLimitMode::FPS_ACCURATE : FrameLimiter::FPSLimitMode::FPS_REALTIME;
-        if (mode == FrameLimiter::FPSLimitMode::FPS_ACCURATE)
-            timeBeginPeriod(1);
-
-        FpsLimiter.Init(mode, fFpsLimit);
-
         pattern = hook::pattern("A1 ? ? ? ? 83 EC 1C");
-        injector::MakeJMP(pattern.get_first(), sub_648AC0, true);
+        shsub_648AC0 = safetyhook::create_inline(pattern.get_first(0), sub_648AC0);
     }
 
     if (bFixGameSpeed)
     {
-        pattern = hook::pattern("E8 ? ? ? ? D8 4E 1C");
-        struct GameSpeedHook
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                _asm fld dword ptr[fGameSpeed]
-            }
-        }; injector::MakeInline<GameSpeedHook>(pattern.get_first(0), pattern.get_first(8));
+        InitSpeedhack();
     }
 
     if (fSensitivityFactor)
@@ -295,8 +177,6 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
     }
     if (reason == DLL_PROCESS_DETACH)
     {
-        if (nFrameLimitType == FrameLimiter::FPSLimitMode::FPS_ACCURATE)
-            timeEndPeriod(1);
     }
     return TRUE;
 }
