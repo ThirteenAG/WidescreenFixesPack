@@ -12,41 +12,23 @@ void __fastcall UStrPropertyCopySingleValue(void* UStrProperty, void* edx, void*
 {
     shUStrPropertyCopySingleValue.unsafe_fastcall(UStrProperty, edx, FArray1, FArray2, UObject);
 
-    if (*(uint32_t*)FArray2 != 0)
+    wchar_t buffer[256];
+    auto sv = std::wstring_view(UObject::GetFullName(UStrProperty, edx, buffer));
+
+    if (sv == L"StrProperty UWindow.UWindowComboListItem.value")
     {
-        auto ptr = *(uintptr_t*)FArray2;
-        auto str = std::wstring_view((const wchar_t*)ptr);
-
-        if (str == L"1024x768")
+        auto ptr = *reinterpret_cast<wchar_t**>(FArray2);
+        if (ptr)
         {
-            auto try_offsets = [&](const std::vector<int>& offsets) -> bool
+            static size_t i = 0;
+            if (std::wstring_view(ptr) == ResList[i].first)
             {
-                bool bReqPtr = true;
-                for (size_t i = 2; i < ResList.size(); ++i)
-                {
-                    if (std::wstring_view((const wchar_t*)(ptr + offsets[i])) != ResList[i].first)
-                    {
-                        bReqPtr = false;
-                        break;
-                    }
-                }
-                if (bReqPtr)
-                {
-                    for (size_t i = 2; i < ResList.size(); ++i)
-                    {
-                        auto dst = reinterpret_cast<wchar_t*>(ptr + offsets[i]);
-                        injector::scoped_unprotect p{ dst, ResList[i].second.size() + 1 };
-                        wcscpy_s(dst, ResList[i].second.size() + 1, ResList[i].second.c_str());
-                    }
-                }
-                return bReqPtr;
-            };
+                injector::scoped_unprotect p{ ptr, (ResList[i].second.size() + 1) * sizeof(wchar_t) };
+                wcscpy_s(ptr, ResList[i].first.size() + 1, ResList[i].second.c_str());
+                i++;
 
-            std::vector<int> offsets = { 0, 0, 0, -20, -40 };
-            if (!try_offsets(offsets))
-            {
-                offsets = { 0, 0, 0, 20, 40 };
-                try_offsets(offsets);
+                if (i >= ResList.size())
+                    i = 0;
             }
         }
     }
