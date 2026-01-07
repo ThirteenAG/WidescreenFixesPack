@@ -57,7 +57,7 @@ int __fastcall UD3DRenderDeviceSetRes(void* UD3DRenderDevice, void* edx, void* U
     }
 
     // Enhanced widescreen setting
-    if (bIsEnhanced && Screen.nHudWidescreenMode == 2)
+    if (IsEnhanced() && Screen.nHudWidescreenMode == 2)
     {
         static bool bWidescreenOverrideRegistered = false;
         if (!bWidescreenOverrideRegistered)

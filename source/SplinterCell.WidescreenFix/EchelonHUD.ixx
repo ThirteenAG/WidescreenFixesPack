@@ -2,8 +2,6 @@ module;
 
 #include <stdafx.h>
 
-import ComVars;
-
 export module EchelonHUD;
 
 import ComVars;
