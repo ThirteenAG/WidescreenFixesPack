@@ -543,9 +543,9 @@ void Init()
             }
         }
         // ped x axis auto center
-        auto pattern = hook::pattern("F3 0F 11 43 ? 8B 8F");
+        auto pattern = hook::pattern("F3 0F 58 C6 F3 0F 58 05");
         if (!pattern.empty())
-            injector::MakeNOP(pattern.get_first(), 5);
+            injector::MakeNOP(pattern.get_first(), 4);
 
         // ped y axis auto center 
         pattern = hook::pattern("F3 0F 11 1D ? ? ? ? F3 0F 10 0D");
