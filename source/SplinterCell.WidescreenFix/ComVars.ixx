@@ -66,12 +66,15 @@ export bool bRestoreCutsceneFOV = false;
 export HWND hGameWindow = NULL;
 
 export const wchar_t* a_sav = nullptr;
+
 export bool IsEnhanced()
 {
-    if (a_sav && std::wstring_view(a_sav) != L".sav")
-        return true;
-
-    return false;
+    static bool bIsEnhanced = []()
+    {
+        std::error_code ec;
+        return std::filesystem::exists(GetExeModulePath() / "Enhanced.u", ec);
+    }();
+    return bIsEnhanced;
 }
 
 export namespace UWindowsViewport
