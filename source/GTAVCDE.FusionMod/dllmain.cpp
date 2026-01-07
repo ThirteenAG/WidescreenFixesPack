@@ -576,6 +576,10 @@ void Init()
                 regs.xmm7.f32[0] *= 0.5f;
             });
         }
+
+        // more relaxed camera centering
+        pattern = hook::pattern("8B 83 ? ? ? ? 44 0F 28 E8");
+        injector::MakeNOP(pattern.get_first(), 6);
     }
 }
 
