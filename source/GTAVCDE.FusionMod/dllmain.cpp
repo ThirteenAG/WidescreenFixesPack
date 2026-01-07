@@ -197,6 +197,7 @@ void Init()
     fRadarScale = iniReader.ReadFloat("MAIN", "RadarScale", 0.75f);
     static auto bIniDisableFirstPersonAimForRifles = iniReader.ReadInteger("MAIN", "DisableFirstPersonAimForRifles", 1) != 0;
     static auto bImproveCameraPC = iniReader.ReadInteger("MAIN", "ImproveCameraPC", 1) != 0;
+    static auto fCenteringDelay = iniReader.ReadFloat("MAIN", "CenteringDelay", 5.0f);
     if (fHudScale <= 0.0f) 
         fHudScale = 1.0f;
     if (fRadarScale <= 0.0f) 
@@ -535,6 +536,45 @@ void Init()
                     }
                 }
             }
+        }
+        // ped x axis auto center
+        auto pattern = hook::pattern("F3 0F 58 C6 F3 0F 58 05");
+        if (!pattern.empty())
+            injector::MakeNOP(pattern.get_first(), 4);
+        
+        // ped y axis auto center 
+        pattern = hook::pattern("F3 0F 11 1D ? ? ? ? F3 0F 10 0D");
+        if (!pattern.empty())
+            injector::MakeNOP(pattern.get_first(), 8);
+        
+        // vehicle x axis auto center delay
+        pattern = hook::pattern("F3 0F 11 0D ? ? ? ? 41 0F 2F CA");
+        if (!pattern.empty())
+        {
+            static auto VehicleHorizAutoCenterHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            {
+                regs.xmm1.f32[0] = fCenteringDelay;
+            });
+        }
+
+        // vehicle y axis auto center delay (mouse)
+        pattern = hook::pattern("C7 05 ? ? ? ? ? ? ? ? E9 ? ? ? ? 48 8B 15 ? ? ? ? 48 8B 0D");
+        if (!pattern.empty())
+            injector::WriteMemory(pattern.get_first(6), fCenteringDelay, true);
+        
+        // vehicle y axis auto center delay (controller)
+        pattern = hook::pattern("C7 05 ? ? ? ? ? ? ? ? E9 ? ? ? ? 8B 15");
+        if (!pattern.empty())
+            injector::WriteMemory(pattern.get_first(6), fCenteringDelay, true);
+
+        // lower horizontal vehicle camera sensitivity
+        pattern = hook::pattern("F3 0F 59 F8 0F 28 C7 0F 54 05");
+        if (!pattern.empty())
+        {
+            static auto VehicleHorizSensHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            {
+                regs.xmm7.f32[0] *= 0.5f;
+            });
         }
     }
 }
