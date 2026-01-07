@@ -64,6 +64,7 @@ export bool bPressStartToContinue = false;
 export bool bSkipPressStartToContinue = false;
 export bool bRestoreCutsceneFOV = false;
 export HWND hGameWindow = NULL;
+export int32_t ReconType = -1;
 
 export const wchar_t* a_sav = nullptr;
 
