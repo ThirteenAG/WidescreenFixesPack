@@ -62,8 +62,16 @@ export bool bDisplayingSplash = false;
 export bool bPressStartToContinue = false;
 export bool bSkipPressStartToContinue = false;
 export bool bRestoreCutsceneFOV = false;
-export bool bIsEnhanced = false;
 export HWND hGameWindow = NULL;
+
+export const wchar_t* a_sav = nullptr;
+export bool IsEnhanced()
+{
+    if (a_sav && std::wstring_view(a_sav) != L".sav")
+        return true;
+
+    return false;
+}
 
 export namespace UWindowsViewport
 {

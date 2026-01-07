@@ -58,7 +58,7 @@ export void InitEchelon()
     });
 
     // set player speed to max on game start
-    if (!bIsEnhanced)
+    if (!IsEnhanced())
     {
         UIntOverrides::Register(L"IntProperty Echelon.EchelonGameInfo.m_defautSpeed", +[]() -> int
         {

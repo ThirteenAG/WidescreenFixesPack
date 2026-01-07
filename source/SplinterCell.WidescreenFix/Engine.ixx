@@ -27,7 +27,7 @@ namespace UEngine
     SafetyHookInline shInputEvent = {};
     int __fastcall InputEvent(void* _this, void* edx, int a2, int inputID, int a4, float value)
     {
-        if (inputID == 202 && !bIsEnhanced) // A on gamepad
+        if (inputID == 202 && !IsEnhanced()) // A on gamepad
         {
             auto EchelonMainHUDState = UObject::GetState(L"EchelonMainHUD");
             if (EchelonMainHUDState == L"MainHUD" || EchelonMainHUDState == L"s_Slavery")
@@ -200,11 +200,14 @@ float* __fastcall FindAxisName(void* UInput, void* edx, void* AActor, const wcha
 
 export void InitEngine()
 {
+    auto pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "68 ? ? ? ? 50 8D 8C 24 ? ? ? ? FF 15 ? ? ? ? 8B C8 FF 15 ? ? ? ? 50 8D 4C 24 ? FF 15 ? ? ? ? 6A 00");
+    a_sav = *pattern.get_first<const wchar_t*>(1);
+
     //HUD
     InitWidescreenHUD();
 
     auto flt_104E9F78 = *hook::pattern(GetModuleHandle(L"Engine"), "D8 C9 D8 0D").count(9).get(0).get<float*>(4);
-    auto pattern = hook::module_pattern(GetModuleHandle(L"Engine"), pattern_str(0xD8, 0xC9, 0xD8, 0x0D, to_bytes(flt_104E9F78)));
+    pattern = hook::module_pattern(GetModuleHandle(L"Engine"), pattern_str(0xD8, 0xC9, 0xD8, 0x0D, to_bytes(flt_104E9F78)));
     for (size_t i = 0; i < pattern.count_hint(4).size(); ++i)
     {
         injector::WriteMemory(pattern.get(i).get<void>(4), &Screen.HUDScaleX, true); //(DWORD)Engine + 0x1E9F78
@@ -281,7 +284,7 @@ export void InitEngine()
     }
 
     // LOD
-    if (!bIsEnhanced)
+    if (!IsEnhanced())
     {
         pattern = find_module_pattern(GetModuleHandle(L"Engine"), "0F 84 ? ? ? ? 8B 47 24 8D 8C 24 90 00 00 00");
         injector::WriteMemory<uint16_t>(pattern.get_first(0), 0xE990, true); // jz -> jmp

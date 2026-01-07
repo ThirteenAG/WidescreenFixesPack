@@ -24,7 +24,7 @@ export void InitXidi()
             XidiRegisterProfileCallback([]() -> const wchar_t*
             {
                 auto EchelonMainHUDState = UObject::GetState(L"EchelonMainHUD");
-                if (bIsEnhanced && EchelonMainHUDState == L"s_GameMenu")
+                if (IsEnhanced() && EchelonMainHUDState == L"s_GameMenu")
                     return L"EnhancedMain";
 
                 bool bIsMainMenu = UObject::GetState(L"EPCConsole") == L"UWindow";
@@ -34,7 +34,7 @@ export void InitXidi()
                 if (bPlayingVideo || bPressStartToContinue)
                     return L"Video";
 
-                if (bIsEnhanced)
+                if (IsEnhanced())
                     return L"EnhancedMain";
 
                 if (EchelonMainHUDState == L"MainHUD" || EchelonMainHUDState == L"s_Slavery")
