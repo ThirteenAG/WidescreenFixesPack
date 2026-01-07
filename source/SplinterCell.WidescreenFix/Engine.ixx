@@ -302,13 +302,17 @@ export void InitEngine()
     pattern = find_module_pattern(GetModuleHandle(L"Engine"), "8B 0D ? ? ? ? 56 8B 74 24 10");
     static auto VideoPlaybackStartHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        bPlayingVideo = true;
+        if (*(int32_t*)(regs.esp + 4) == 0 && *(int32_t*)(regs.esp + 8) == 0)
+            bPlayingVideo = true;
+        else
+            bGadgetVideoIsPlaying = true;
     });
 
     pattern = find_module_pattern(GetModuleHandle(L"Engine"), "8B C1 56 8B 74 24 0C");
     static auto VideoPlaybackEndHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
         bPlayingVideo = false;
+        bGadgetVideoIsPlaying = false;
     });
 
     pattern = find_module_pattern(GetModuleHandle(L"Engine"), "8B 55 00 6A 01 8B CD FF 52 ? 6A 00");

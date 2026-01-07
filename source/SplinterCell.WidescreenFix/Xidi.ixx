@@ -27,12 +27,12 @@ export void InitXidi()
                 if (IsEnhanced() && EchelonMainHUDState == L"s_GameMenu")
                     return L"EnhancedMain";
 
+                if (bPlayingVideo || bPressStartToContinue)
+                    return L"Video";
+
                 bool bIsMainMenu = UObject::GetState(L"EPCConsole") == L"UWindow";
                 if (bIsMainMenu)
                     return L"Menu";
-
-                if (bPlayingVideo || bPressStartToContinue)
-                    return L"Video";
 
                 if (IsEnhanced())
                     return L"EnhancedMain";
