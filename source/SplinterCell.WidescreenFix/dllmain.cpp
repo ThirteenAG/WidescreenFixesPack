@@ -8,6 +8,7 @@ import WinDrv;
 import Window;
 import Echelon;
 import EchelonHUD;
+import EchelonMenus;
 import Xidi;
 
 void Init()
@@ -168,6 +169,7 @@ CEXP void InitializeASI()
         CallbackHandler::RegisterCallback(L"Core.dll", InitCore);
         CallbackHandler::RegisterCallback(L"Echelon.dll", InitEchelon);
         CallbackHandler::RegisterCallback(L"EchelonHUD.dll", InitEchelonHUD);
+        CallbackHandler::RegisterCallback(L"EchelonMenus.dll", InitEchelonMenus);
         CallbackHandler::RegisterCallback(L"Xidi.32.dll", InitXidi);
     });
 }
