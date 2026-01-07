@@ -28,7 +28,7 @@ void Init()
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
 
-    if (bIsEnhanced)
+    if (IsEnhanced())
     {
         bSkipIntro = false;
     }
