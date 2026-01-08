@@ -7,6 +7,7 @@ import Engine;
 import Core;
 import WinDrv;
 import GUI;
+import Echelon;
 import Xidi;
 import WidescreenHUD;
 import WidescreenHUD2;
@@ -124,6 +125,7 @@ void Init()
     InitCore();
     InitWinDrv();
     InitGUI();
+    InitEchelon();
     InitWidescreenHUD2();
 
     #ifdef _DEBUG
