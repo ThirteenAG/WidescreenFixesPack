@@ -80,6 +80,7 @@ export namespace UObject
     }
 
     wchar_t* (__fastcall* GetFullName)(void*, void*, wchar_t*) = nullptr;
+    void* (__fastcall* FindState)(void*, void*, int) = nullptr;
 }
 
 export int curDrawTileManagerTextureIndex = -1;

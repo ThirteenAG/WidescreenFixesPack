@@ -71,8 +71,7 @@ int __fastcall UD3DRenderDeviceSetRes(void* UD3DRenderDevice, void* edx, void* U
     if (Screen.nFMVWidescreenMode && Screen.fAspectRatio > targetAspect)
     {
         // Video has black bars on top and bottom, zoom in to hide them
-        float barsHeight = 96.0f + 40.0f;
-        float scale = Screen.fHeight / (Screen.fHeight - 2.0f * barsHeight);
+        float scale = 480.0f / 384.0f;
 
         float contentHeight = Screen.fHeight * scale;
         float contentWidth = contentHeight * targetAspect;
@@ -80,7 +79,7 @@ int __fastcall UD3DRenderDeviceSetRes(void* UD3DRenderDevice, void* edx, void* U
         // Center the scaled content
         Screen.fFMVoffsetStartX = (Screen.fWidth - contentWidth) / 2.0f;
         Screen.fFMVoffsetEndX = Screen.fFMVoffsetStartX + contentWidth;
-        Screen.fFMVoffsetStartY = -barsHeight * scale;
+        Screen.fFMVoffsetStartY = (Screen.fHeight - contentHeight) / 2.0f;
         Screen.fFMVoffsetEndY = Screen.fFMVoffsetStartY + contentHeight;
     }
     else
@@ -200,6 +199,22 @@ namespace UD3DRenderDevice
         float targetY = Screen.fFMVoffsetStartY;
         float targetW = Screen.fFMVoffsetEndX - Screen.fFMVoffsetStartX;
         float targetH = Screen.fFMVoffsetEndY - Screen.fFMVoffsetStartY;
+
+        float targetAspect = 4.0f / 3.0f;
+        if (Screen.nFMVWidescreenMode && Screen.fAspectRatio > targetAspect)
+        {
+            // Video has black bars on top and bottom, zoom in to hide them
+            float scale = 480.0f / static_cast<int32_t*>(a3)[1];
+
+            float contentHeight = Screen.fHeight * scale;
+            float contentWidth = contentHeight * targetAspect;
+
+            // Center the scaled content
+            Screen.fFMVoffsetStartX = (Screen.fWidth - contentWidth) / 2.0f;
+            Screen.fFMVoffsetEndX = Screen.fFMVoffsetStartX + contentWidth;
+            Screen.fFMVoffsetStartY = (Screen.fHeight - contentHeight) / 2.0f;
+            Screen.fFMVoffsetEndY = Screen.fFMVoffsetStartY + contentHeight;
+        }
 
         // Clear pillar/letterbox areas
         if (targetX > 0.0f)
