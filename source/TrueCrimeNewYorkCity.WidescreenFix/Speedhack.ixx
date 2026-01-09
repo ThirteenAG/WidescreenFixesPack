@@ -23,15 +23,15 @@ static bool versionDetected = false;
 // US / RU pointers
 // =======================================================
 
-static volatile uint32_t* bUSPause = nullptr;
+//static volatile uint32_t* bUSPause = nullptr;
 static volatile uint32_t* bUSCutscene = nullptr;
 static volatile uint32_t* bUSLoading = nullptr;
 
-static volatile uint32_t* bRUPause = nullptr;
+//static volatile uint32_t* bRUPause = nullptr;
 static volatile uint32_t* bRUCutscene = nullptr;
 static volatile uint32_t* bRULoading = nullptr;
 
-static volatile uint32_t* bPauseCurrent = nullptr;
+//static volatile uint32_t* bPauseCurrent = nullptr;
 static volatile uint32_t* bCutsceneCurrent = nullptr;
 static volatile uint32_t* bLoadingCurrent = nullptr;
 
@@ -199,11 +199,11 @@ NTSTATUS NTAPI NtQueryPerformanceCounter_Hook(PLARGE_INTEGER out, PLARGE_INTEGER
 static void Watcher()
 {
     while (true) {
-        int pause = bPauseCurrent ? *bPauseCurrent : 0;
+        //int pause = bPauseCurrent ? *bPauseCurrent : 0;
         int cut = bCutsceneCurrent ? *bCutsceneCurrent : 0;
         int load = bLoadingCurrent ? *bLoadingCurrent : 0;
 
-        float wanted = (pause || cut || load) ? 1.0f : fGameSpeedFactor;
+        float wanted = (cut || load) ? 1.0f : fGameSpeedFactor;
 
         if (wanted != lastMultiplier) {
             Reanchor(wanted);
@@ -245,12 +245,12 @@ export void InitSpeedhack()
     }
 
     if (!isRU) {
-        bPauseCurrent = (uint32_t*)(base + 0x3A0F5C);
+        //bPauseCurrent = (uint32_t*)(base + 0x3A0F5C);
         bCutsceneCurrent = (uint32_t*)(base + 0x387B78);
         bLoadingCurrent = (uint32_t*)(base + 0x39339C);
     }
     else {
-        bPauseCurrent = (uint32_t*)(base + 0x3A1F1C);
+        //bPauseCurrent = (uint32_t*)(base + 0x3A1F1C);
         bCutsceneCurrent = (uint32_t*)(base + 0x388B38);
         bLoadingCurrent = (uint32_t*)(base + 0x394360);
     }
