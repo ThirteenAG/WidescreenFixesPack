@@ -1,144 +1,295 @@
 module;
 
-#include <stdafx.h>
+#include <Windows.h>
+#include <winternl.h>
+#include <atomic>
+#include <thread>
+#include "MinHook.h"
 
 export module Speedhack;
 
-export bool* bPause = nullptr;
-export bool* bCutscene = nullptr;
-export float fGameSpeedFactor = 1.0f;
+// =======================================================
+// Globals
+// =======================================================
 
-struct SimpleLock
-{
+export float fGameSpeedFactor = 0.5f;
+static std::atomic<float> speedMultiplier{ 1.0f };
+static float lastMultiplier = 1.0f;
+
+static std::atomic<bool> isRU{ false };
+static bool versionDetected = false;
+
+// =======================================================
+// US / RU pointers
+// =======================================================
+
+static volatile uint32_t* bUSPause = nullptr;
+static volatile uint32_t* bUSCutscene = nullptr;
+static volatile uint32_t* bUSLoading = nullptr;
+
+static volatile uint32_t* bRUPause = nullptr;
+static volatile uint32_t* bRUCutscene = nullptr;
+static volatile uint32_t* bRULoading = nullptr;
+
+static volatile uint32_t* bPauseCurrent = nullptr;
+static volatile uint32_t* bCutsceneCurrent = nullptr;
+static volatile uint32_t* bLoadingCurrent = nullptr;
+
+// =======================================================
+// CE-style spinlock
+// =======================================================
+
+struct SimpleLock {
     LONG count = 0;
     DWORD owner = 0;
 
-    void lock()
-    {
+    void lock() {
         DWORD tid = GetCurrentThreadId();
-        if (owner != tid)
-        {
+        if (owner != tid) {
             while (InterlockedExchange(&count, 1) != 0)
                 Sleep(0);
             owner = tid;
         }
-        else
+        else {
             InterlockedIncrement(&count);
+        }
     }
 
-    void unlock()
-    {
+    void unlock() {
         if (count == 1)
             owner = 0;
         InterlockedDecrement(&count);
     }
 };
 
-SafetyHookInline shGetTickCount = {};
-SafetyHookInline shGetTickCount64 = {};
-SafetyHookInline shQueryPerformanceCounter = {};
+static SimpleLock GTCLock;
+static SimpleLock QPCLock;
 
-// Speedhack state
-export float speedMultiplier = 1.0f;
+// =======================================================
+// Anchors
+// =======================================================
 
-export void SetSpeedhackMultiplier(float multiplier)
+static DWORD      initialOffset32 = 0;
+static DWORD      initialTime32 = 0;
+
+static ULONGLONG  initialOffset64 = 0;
+static ULONGLONG  initialTime64 = 0;
+
+static LONGLONG   initialOffsetQPC = 0;
+static LONGLONG   initialTimeQPC = 0;
+
+// =======================================================
+// Original functions
+// =======================================================
+
+using FnGetTickCount = DWORD(WINAPI*)();
+using FnGetTickCount64 = ULONGLONG(WINAPI*)();
+using FnTimeGetTime = DWORD(WINAPI*)();
+using FnQPC = BOOL(WINAPI*)(LARGE_INTEGER*);
+
+using FnNtQuerySystemTime = NTSTATUS(NTAPI*)(PLARGE_INTEGER);
+using FnNtQueryPerformanceCounter = NTSTATUS(NTAPI*)(PLARGE_INTEGER, PLARGE_INTEGER);
+
+static FnGetTickCount realGetTickCount;
+static FnGetTickCount64 realGetTickCount64;
+static FnTimeGetTime realTimeGetTime;
+static FnQPC realQPC;
+
+static FnNtQuerySystemTime realNtQuerySystemTime;
+static FnNtQueryPerformanceCounter realNtQueryPerformanceCounter;
+
+// =======================================================
+// Re-anchor (CRITICAL)
+// =======================================================
+
+static void Reanchor(float newMultiplier)
 {
-    if (multiplier > 0.0f)
-        speedMultiplier = multiplier;
+    GTCLock.lock();
+    QPCLock.lock();
+
+    float old = speedMultiplier.load();
+
+    DWORD now32 = realGetTickCount();
+    ULONGLONG now64 = realGetTickCount64();
+
+    LARGE_INTEGER qpcNow{};
+    realQPC(&qpcNow);
+
+    initialOffset32 += DWORD((now32 - initialTime32) * old);
+    initialOffset64 += ULONGLONG((now64 - initialTime64) * old);
+    initialOffsetQPC += LONGLONG((qpcNow.QuadPart - initialTimeQPC) * old);
+
+    initialTime32 = now32;
+    initialTime64 = now64;
+    initialTimeQPC = qpcNow.QuadPart;
+
+    speedMultiplier.store(newMultiplier);
+
+    QPCLock.unlock();
+    GTCLock.unlock();
 }
 
-export float GetSpeedhackMultiplier()
-{
-    if (*bPause || *bCutscene)
-        return 1.0f;
+// =======================================================
+// Hooks
+// =======================================================
 
-    return speedMultiplier;
+DWORD WINAPI GetTickCount_Hook()
+{
+    GTCLock.lock();
+    DWORD t = realGetTickCount();
+    DWORD r = initialOffset32 + DWORD((t - initialTime32) * speedMultiplier.load());
+    GTCLock.unlock();
+    return r;
 }
 
-// Synchronization
-SimpleLock gtcLock;
-export SimpleLock qpcLock;
-
-// Initial values for GetTickCount
-DWORD initialOffset = 0;
-DWORD initialTime = 0;
-
-// Initial values for GetTickCount64
-ULONGLONG initialOffset64 = 0;
-ULONGLONG initialTime64 = 0;
-
-// Initial values for QueryPerformanceCounter
-LONGLONG initialOffsetQPC = 0;
-LONGLONG initialTimeQPC = 0;
-
-// Hooked functions
-DWORD WINAPI GetTickCountHook()
+ULONGLONG WINAPI GetTickCount64_Hook()
 {
-    gtcLock.lock();
-    DWORD currentTime = shGetTickCount.unsafe_stdcall<DWORD>();
-    DWORD result = (DWORD)((currentTime - initialTime) * GetSpeedhackMultiplier()) + initialOffset;
-    gtcLock.unlock();
-    return result;
+    GTCLock.lock();
+    ULONGLONG t = realGetTickCount64();
+    ULONGLONG r = initialOffset64 + ULONGLONG((t - initialTime64) * speedMultiplier.load());
+    GTCLock.unlock();
+    return r;
 }
 
-ULONGLONG WINAPI GetTickCount64Hook()
+DWORD WINAPI timeGetTime_Hook()
 {
-    gtcLock.lock();
-    ULONGLONG currentTime = shGetTickCount64.unsafe_stdcall<ULONGLONG>();
-    ULONGLONG result = (ULONGLONG)((currentTime - initialTime64) * GetSpeedhackMultiplier()) + initialOffset64;
-    gtcLock.unlock();
-    return result;
+    return GetTickCount_Hook();
 }
 
-BOOL WINAPI QueryPerformanceCounterHook(LARGE_INTEGER* lpPerformanceCount)
+BOOL WINAPI QPC_Hook(LARGE_INTEGER* out)
 {
-    if (!lpPerformanceCount)
-        return FALSE;
+    QPCLock.lock();
+    LARGE_INTEGER t{};
+    realQPC(&t);
+    out->QuadPart = initialOffsetQPC + LONGLONG((t.QuadPart - initialTimeQPC) * speedMultiplier.load());
+    QPCLock.unlock();
+    return TRUE;
+}
 
-    qpcLock.lock();
-    LARGE_INTEGER currentTime;
-    BOOL result = shQueryPerformanceCounter.unsafe_stdcall<BOOL>(&currentTime);
+// ---------------- NT ----------------
 
-    if (result)
-    {
-        LONGLONG newValue = (LONGLONG)((currentTime.QuadPart - initialTimeQPC) * GetSpeedhackMultiplier()) + initialOffsetQPC;
-        lpPerformanceCount->QuadPart = newValue;
+NTSTATUS NTAPI NtQuerySystemTime_Hook(PLARGE_INTEGER out)
+{
+    NTSTATUS s = realNtQuerySystemTime(out);
+    if (NT_SUCCESS(s)) {
+        QPCLock.lock();
+        out->QuadPart = initialOffsetQPC +
+            LONGLONG((out->QuadPart - initialTimeQPC) * speedMultiplier.load());
+        QPCLock.unlock();
     }
-
-    qpcLock.unlock();
-    return result;
+    return s;
 }
+
+NTSTATUS NTAPI NtQueryPerformanceCounter_Hook(PLARGE_INTEGER out, PLARGE_INTEGER freq)
+{
+    NTSTATUS s = realNtQueryPerformanceCounter(out, freq);
+    if (NT_SUCCESS(s)) {
+        QPCLock.lock();
+        out->QuadPart = initialOffsetQPC +
+            LONGLONG((out->QuadPart - initialTimeQPC) * speedMultiplier.load());
+        QPCLock.unlock();
+    }
+    return s;
+}
+
+// =======================================================
+// Watcher thread
+// =======================================================
+
+static void Watcher()
+{
+    while (true) {
+        int pause = bPauseCurrent ? *bPauseCurrent : 0;
+        int cut = bCutsceneCurrent ? *bCutsceneCurrent : 0;
+        int load = bLoadingCurrent ? *bLoadingCurrent : 0;
+
+        float wanted = (pause || cut || load) ? 1.0f : fGameSpeedFactor;
+
+        if (wanted != lastMultiplier) {
+            Reanchor(wanted);
+            lastMultiplier = wanted;
+        }
+
+        Sleep(50);
+    }
+}
+
+// =======================================================
+// Init
+// =======================================================
 
 export void InitSpeedhack()
 {
-    auto pattern = hook::pattern("88 15 ? ? ? ? 8D 45");
-    bPause = *pattern.get_first<bool*>(2);
+    HMODULE hGame = GetModuleHandle(nullptr);
+    uintptr_t base = (uintptr_t)hGame;
 
-    pattern = hook::pattern("88 1D ? ? ? ? E8 ? ? ? ? 85 C0");
-    bCutscene = *pattern.get_first<bool*>(2);
+    // ---------- version detection ----------
+    if (!versionDetected) {
+        wchar_t path[MAX_PATH];
+        GetModuleFileNameW(nullptr, path, MAX_PATH);
 
-    shGetTickCount = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"kernel32"), "GetTickCount"), GetTickCountHook);
-    shGetTickCount64 = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"kernel32"), "GetTickCount64"), GetTickCount64Hook);
-    shQueryPerformanceCounter = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"kernel32"), "QueryPerformanceCounter"), QueryPerformanceCounterHook);
+        WIN32_FILE_ATTRIBUTE_DATA info{};
+        GetFileAttributesExW(path, GetFileExInfoStandard, &info);
 
-    qpcLock.lock();
-    gtcLock.lock();
+        LARGE_INTEGER sz{};
+        sz.HighPart = info.nFileSizeHigh;
+        sz.LowPart = info.nFileSizeLow;
 
-    initialOffset = GetTickCount();
-    initialTime = shGetTickCount ? shGetTickCount.unsafe_stdcall<DWORD>() : GetTickCount();
-
-    QueryPerformanceCounter((LARGE_INTEGER*)&initialOffsetQPC);
-    if (shQueryPerformanceCounter)
-        shQueryPerformanceCounter.unsafe_stdcall<BOOL>(&initialTimeQPC);
-
-    if (shGetTickCount64)
-    {
-        initialOffset64 = shGetTickCount64.unsafe_stdcall<ULONGLONG>();
-        initialTime64 = shGetTickCount64.unsafe_stdcall<ULONGLONG>();
+        if (sz.QuadPart == 20135936) {
+            isRU = false;
+        }
+        else if (sz.QuadPart == 5509120) {
+            isRU = true;
+        }
+        versionDetected = true;
     }
 
-    SetSpeedhackMultiplier(fGameSpeedFactor);
+    if (!isRU) {
+        bPauseCurrent = (uint32_t*)(base + 0x3A0F5C);
+        bCutsceneCurrent = (uint32_t*)(base + 0x387B78);
+        bLoadingCurrent = (uint32_t*)(base + 0x39339C);
+    }
+    else {
+        bPauseCurrent = (uint32_t*)(base + 0x3A1F1C);
+        bCutsceneCurrent = (uint32_t*)(base + 0x388B38);
+        bLoadingCurrent = (uint32_t*)(base + 0x394360);
+    }
 
-    gtcLock.unlock();
-    qpcLock.unlock();
+    // ---------- resolve ----------
+    realGetTickCount = GetTickCount;
+    realGetTickCount64 = GetTickCount64;
+    realTimeGetTime = (FnTimeGetTime)GetProcAddress(GetModuleHandleW(L"winmm"), "timeGetTime");
+    realQPC = QueryPerformanceCounter;
+
+    HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
+    realNtQuerySystemTime = (FnNtQuerySystemTime)GetProcAddress(ntdll, "NtQuerySystemTime");
+    realNtQueryPerformanceCounter = (FnNtQueryPerformanceCounter)GetProcAddress(ntdll, "NtQueryPerformanceCounter");
+
+    // ---------- anchors ----------
+    initialTime32 = realGetTickCount();
+    initialOffset32 = initialTime32;
+
+    initialTime64 = realGetTickCount64();
+    initialOffset64 = initialTime64;
+
+    LARGE_INTEGER q{};
+    realQPC(&q);
+    initialTimeQPC = q.QuadPart;
+    initialOffsetQPC = q.QuadPart;
+
+    // ---------- hooks ----------
+    MH_Initialize();
+
+    MH_CreateHook(realGetTickCount, GetTickCount_Hook, (void**)&realGetTickCount);
+    MH_CreateHook(realGetTickCount64, GetTickCount64_Hook, (void**)&realGetTickCount64);
+    MH_CreateHook(realTimeGetTime, timeGetTime_Hook, (void**)&realTimeGetTime);
+    MH_CreateHook(realQPC, QPC_Hook, (void**)&realQPC);
+
+    MH_CreateHook(realNtQuerySystemTime, NtQuerySystemTime_Hook, (void**)&realNtQuerySystemTime);
+    MH_CreateHook(realNtQueryPerformanceCounter, NtQueryPerformanceCounter_Hook, (void**)&realNtQueryPerformanceCounter);
+
+    MH_EnableHook(MH_ALL_HOOKS);
+
+    // ---------- watcher ----------
+    std::thread(Watcher).detach();
 }
