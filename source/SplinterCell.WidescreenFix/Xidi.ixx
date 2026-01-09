@@ -23,20 +23,17 @@ export void InitXidi()
         {
             XidiRegisterProfileCallback([]() -> const wchar_t*
             {
-                auto EchelonMainHUDState = UObject::GetState(L"EchelonMainHUD");
-                if (IsEnhanced() && EchelonMainHUDState == L"s_GameMenu")
-                    return L"EnhancedMain";
-
                 if (bPlayingVideo || bPressStartToContinue)
                     return L"Video";
+
+                if (IsEnhanced())
+                    return L"EnhancedMain";
 
                 bool bIsMainMenu = UObject::GetState(L"EPCConsole") == L"UWindow";
                 if (bIsMainMenu)
                     return L"Menu";
 
-                if (IsEnhanced())
-                    return L"EnhancedMain";
-
+                auto EchelonMainHUDState = UObject::GetState(L"EchelonMainHUD");
                 if (EchelonMainHUDState == L"MainHUD" || EchelonMainHUDState == L"s_Slavery")
                 {
                     auto EPlayerControllerState = UObject::GetState(L"EPlayerController");
