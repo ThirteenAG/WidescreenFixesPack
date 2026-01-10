@@ -37,6 +37,7 @@ struct SimpleLock
 SafetyHookInline shGetTickCount = {};
 SafetyHookInline shGetTickCount64 = {};
 SafetyHookInline shQueryPerformanceCounter = {};
+SafetyHookInline shTimeGetTime = {};
 
 // Speedhack state
 export float speedMultiplier = 1.0f;
@@ -57,6 +58,7 @@ export float GetSpeedhackMultiplier()
 
 // Synchronization
 SimpleLock gtcLock;
+SimpleLock tgtLock;
 export SimpleLock qpcLock;
 
 // Initial values for GetTickCount
@@ -70,6 +72,10 @@ ULONGLONG initialTime64 = 0;
 // Initial values for QueryPerformanceCounter
 LONGLONG initialOffsetQPC = 0;
 LONGLONG initialTimeQPC = 0;
+
+// Initial values for timeGetTime
+DWORD initialOffsetTGT = 0;
+DWORD initialTimeTGT = 0;
 
 // Hooked functions
 DWORD WINAPI GetTickCountHook()
@@ -109,6 +115,15 @@ BOOL WINAPI QueryPerformanceCounterHook(LARGE_INTEGER* lpPerformanceCount)
     return result;
 }
 
+DWORD WINAPI timeGetTimeHook()
+{
+    tgtLock.lock();
+    DWORD currentTime = shTimeGetTime.unsafe_stdcall<DWORD>();
+    DWORD result = (DWORD)((currentTime - initialTimeTGT) * GetSpeedhackMultiplier()) + initialOffsetTGT;
+    tgtLock.unlock();
+    return result;
+}
+
 export void InitSpeedhack()
 {
     auto pattern = hook::pattern("88 15 ? ? ? ? 8D 45");
@@ -123,6 +138,7 @@ export void InitSpeedhack()
 
     qpcLock.lock();
     gtcLock.lock();
+    tgtLock.lock();
 
     initialOffset = GetTickCount();
     initialTime = shGetTickCount ? shGetTickCount.unsafe_stdcall<DWORD>() : GetTickCount();
@@ -137,8 +153,20 @@ export void InitSpeedhack()
         initialTime64 = shGetTickCount64.unsafe_stdcall<ULONGLONG>();
     }
 
+    CallbackHandler::RegisterCallback(L"winmm.dll", []()
+    {
+        auto pTimeGetTime = (DWORD(WINAPI*)())GetProcAddress(GetModuleHandle(L"winmm.dll"), "timeGetTime");
+        if (pTimeGetTime)
+        {
+            shTimeGetTime = safetyhook::create_inline(pTimeGetTime, timeGetTimeHook);
+            initialOffsetTGT = pTimeGetTime();
+            initialTimeTGT = shTimeGetTime ? shTimeGetTime.unsafe_stdcall<DWORD>() : pTimeGetTime();
+        }
+    });
+
     SetSpeedhackMultiplier(fGameSpeedFactor);
 
+    tgtLock.unlock();
     gtcLock.unlock();
     qpcLock.unlock();
 }
