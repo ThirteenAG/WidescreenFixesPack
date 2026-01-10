@@ -287,8 +287,8 @@ export void InitSpeedhack()
     MH_CreateHook(realGetTickCount64, GetTickCount64_Hook, (void**)&realGetTickCount64);
     MH_CreateHook(realTimeGetTime, timeGetTime_Hook, (void**)&realTimeGetTime);
     MH_CreateHook(realQPC, QPC_Hook, (void**)&realQPC);
-    MH_CreateHook(realNtQuerySystemTime, NtQuerySystemTime_Hook, (void**)&realNtQuerySystemTime);
-    MH_CreateHook(realNtQueryPerformanceCounter, NtQueryPerformanceCounter_Hook, (void**)&realNtQueryPerformanceCounter);
+    //MH_CreateHook(realNtQuerySystemTime, NtQuerySystemTime_Hook, (void**)&realNtQuerySystemTime);
+    //MH_CreateHook(realNtQueryPerformanceCounter, NtQueryPerformanceCounter_Hook, (void**)&realNtQueryPerformanceCounter);
 
     MH_EnableHook(MH_ALL_HOOKS);
 
