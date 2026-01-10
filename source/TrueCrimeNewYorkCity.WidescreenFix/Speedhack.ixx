@@ -4,10 +4,14 @@ module;
 
 export module Speedhack;
 
-export bool* bPause = nullptr;
-export bool* bCutscene = nullptr;
 export float fGameSpeedFactor = 1.0f;
 
+static volatile uint32_t* bPause = nullptr;
+static volatile uint32_t* bCutscene = nullptr;
+static volatile uint32_t* bLoading = nullptr;
+
+static std::atomic<bool> isRU{ false };
+static bool versionDetected = false;
 struct SimpleLock
 {
     LONG count = 0;
@@ -126,11 +130,39 @@ DWORD WINAPI timeGetTimeHook()
 
 export void InitSpeedhack()
 {
-    auto pattern = hook::pattern("88 15 ? ? ? ? 8D 45");
-    bPause = *pattern.get_first<bool*>(2);
+    HMODULE hGame = GetModuleHandle(nullptr);
+    uintptr_t base = (uintptr_t)hGame;
+    // ---------- version detection ----------
+    if (!versionDetected) {
+        wchar_t path[MAX_PATH];
+        GetModuleFileNameW(nullptr, path, MAX_PATH);
 
-    pattern = hook::pattern("88 1D ? ? ? ? E8 ? ? ? ? 85 C0");
-    bCutscene = *pattern.get_first<bool*>(2);
+        WIN32_FILE_ATTRIBUTE_DATA info{};
+        GetFileAttributesExW(path, GetFileExInfoStandard, &info);
+
+        LARGE_INTEGER sz{};
+        sz.HighPart = info.nFileSizeHigh;
+        sz.LowPart = info.nFileSizeLow;
+
+        if (sz.QuadPart == 20135936) {
+            isRU = false;
+        }
+        else if (sz.QuadPart == 5509120) {
+            isRU = true;
+        }
+        versionDetected = true;
+    }
+
+    if (!isRU) {
+        bPause = (uint32_t*)(base + 0x3A0F5C);
+        bCutscene = (uint32_t*)(base + 0x387B78);
+        bLoading = (uint32_t*)(base + 0x39339C);
+    }
+    else {
+        bPause = (uint32_t*)(base + 0x3A1F1C);
+        bCutscene = (uint32_t*)(base + 0x388B38);
+        bLoading = (uint32_t*)(base + 0x394360);
+    }
 
     shGetTickCount = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"kernel32"), "GetTickCount"), GetTickCountHook);
     shGetTickCount64 = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"kernel32"), "GetTickCount64"), GetTickCount64Hook);
@@ -154,15 +186,15 @@ export void InitSpeedhack()
     }
 
     CallbackHandler::RegisterCallback(L"winmm.dll", []()
-    {
-        auto pTimeGetTime = (DWORD(WINAPI*)())GetProcAddress(GetModuleHandle(L"winmm.dll"), "timeGetTime");
-        if (pTimeGetTime)
         {
-            shTimeGetTime = safetyhook::create_inline(pTimeGetTime, timeGetTimeHook);
-            initialOffsetTGT = pTimeGetTime();
-            initialTimeTGT = shTimeGetTime ? shTimeGetTime.unsafe_stdcall<DWORD>() : pTimeGetTime();
-        }
-    });
+            auto pTimeGetTime = (DWORD(WINAPI*)())GetProcAddress(GetModuleHandle(L"winmm.dll"), "timeGetTime");
+            if (pTimeGetTime)
+            {
+                shTimeGetTime = safetyhook::create_inline(pTimeGetTime, timeGetTimeHook);
+                initialOffsetTGT = pTimeGetTime();
+                initialTimeTGT = shTimeGetTime ? shTimeGetTime.unsafe_stdcall<DWORD>() : pTimeGetTime();
+            }
+        });
 
     SetSpeedhackMultiplier(fGameSpeedFactor);
 
