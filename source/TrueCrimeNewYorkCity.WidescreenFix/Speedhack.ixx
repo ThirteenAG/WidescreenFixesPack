@@ -64,19 +64,23 @@ struct SimpleLock {
 
 static SimpleLock GTCLock;
 static SimpleLock QPCLock;
+static SimpleLock SYSLock;  // new lock for NtQuerySystemTime
 
 // =======================================================
 // Anchors
 // =======================================================
 
-static DWORD      initialOffset32 = 0;
 static DWORD      initialTime32 = 0;
+static DWORD      initialOffset32 = 0;
 
-static ULONGLONG  initialOffset64 = 0;
 static ULONGLONG  initialTime64 = 0;
+static ULONGLONG  initialOffset64 = 0;
 
-static LONGLONG   initialOffsetQPC = 0;
 static LONGLONG   initialTimeQPC = 0;
+static LONGLONG   initialOffsetQPC = 0;
+
+static LONGLONG   initialTimeSys = 0;    // new anchor for NtQuerySystemTime
+static LONGLONG   initialOffsetSys = 0;  // new offset for NtQuerySystemTime
 
 // =======================================================
 // Original functions
@@ -106,6 +110,7 @@ static void Reanchor(float newMultiplier)
 {
     GTCLock.lock();
     QPCLock.lock();
+    SYSLock.lock();
 
     float old = speedMultiplier.load();
 
@@ -115,16 +120,22 @@ static void Reanchor(float newMultiplier)
     LARGE_INTEGER qpcNow{};
     realQPC(&qpcNow);
 
+    LARGE_INTEGER sysNow{};
+    realNtQuerySystemTime(&sysNow);
+
     initialOffset32 += DWORD((now32 - initialTime32) * old);
     initialOffset64 += ULONGLONG((now64 - initialTime64) * old);
     initialOffsetQPC += LONGLONG((qpcNow.QuadPart - initialTimeQPC) * old);
+    initialOffsetSys += LONGLONG((sysNow.QuadPart - initialTimeSys) * old);
 
     initialTime32 = now32;
     initialTime64 = now64;
     initialTimeQPC = qpcNow.QuadPart;
+    initialTimeSys = sysNow.QuadPart;
 
     speedMultiplier.store(newMultiplier);
 
+    SYSLock.unlock();
     QPCLock.unlock();
     GTCLock.unlock();
 }
@@ -172,10 +183,9 @@ NTSTATUS NTAPI NtQuerySystemTime_Hook(PLARGE_INTEGER out)
 {
     NTSTATUS s = realNtQuerySystemTime(out);
     if (NT_SUCCESS(s)) {
-        QPCLock.lock();
-        out->QuadPart = initialOffsetQPC +
-            LONGLONG((out->QuadPart - initialTimeQPC) * speedMultiplier.load());
-        QPCLock.unlock();
+        SYSLock.lock();
+        out->QuadPart = initialOffsetSys + LONGLONG((out->QuadPart - initialTimeSys) * speedMultiplier.load());
+        SYSLock.unlock();
     }
     return s;
 }
@@ -185,8 +195,7 @@ NTSTATUS NTAPI NtQueryPerformanceCounter_Hook(PLARGE_INTEGER out, PLARGE_INTEGER
     NTSTATUS s = realNtQueryPerformanceCounter(out, freq);
     if (NT_SUCCESS(s)) {
         QPCLock.lock();
-        out->QuadPart = initialOffsetQPC +
-            LONGLONG((out->QuadPart - initialTimeQPC) * speedMultiplier.load());
+        out->QuadPart = initialOffsetQPC + LONGLONG((out->QuadPart - initialTimeQPC) * speedMultiplier.load());
         QPCLock.unlock();
     }
     return s;
@@ -199,7 +208,6 @@ NTSTATUS NTAPI NtQueryPerformanceCounter_Hook(PLARGE_INTEGER out, PLARGE_INTEGER
 static void Watcher()
 {
     while (true) {
-        //int pause = bPauseCurrent ? *bPauseCurrent : 0;
         int cut = bCutsceneCurrent ? *bCutsceneCurrent : 0;
         int load = bLoadingCurrent ? *bLoadingCurrent : 0;
 
@@ -235,22 +243,17 @@ export void InitSpeedhack()
         sz.HighPart = info.nFileSizeHigh;
         sz.LowPart = info.nFileSizeLow;
 
-        if (sz.QuadPart == 20135936) {
-            isRU = false;
-        }
-        else if (sz.QuadPart == 5509120) {
-            isRU = true;
-        }
+        if (sz.QuadPart == 20135936) isRU = false;
+        else if (sz.QuadPart == 5509120) isRU = true;
+
         versionDetected = true;
     }
 
     if (!isRU) {
-        //bPauseCurrent = (uint32_t*)(base + 0x3A0F5C);
         bCutsceneCurrent = (uint32_t*)(base + 0x387B78);
         bLoadingCurrent = (uint32_t*)(base + 0x39339C);
     }
     else {
-        //bPauseCurrent = (uint32_t*)(base + 0x3A1F1C);
         bCutsceneCurrent = (uint32_t*)(base + 0x388B38);
         bLoadingCurrent = (uint32_t*)(base + 0x394360);
     }
@@ -266,16 +269,16 @@ export void InitSpeedhack()
     realNtQueryPerformanceCounter = (FnNtQueryPerformanceCounter)GetProcAddress(ntdll, "NtQueryPerformanceCounter");
 
     // ---------- anchors ----------
-    initialTime32 = realGetTickCount();
-    initialOffset32 = initialTime32;
-
-    initialTime64 = realGetTickCount64();
-    initialOffset64 = initialTime64;
+    initialTime32 = initialOffset32 = realGetTickCount();
+    initialTime64 = initialOffset64 = realGetTickCount64();
 
     LARGE_INTEGER q{};
     realQPC(&q);
-    initialTimeQPC = q.QuadPart;
-    initialOffsetQPC = q.QuadPart;
+    initialTimeQPC = initialOffsetQPC = q.QuadPart;
+
+    LARGE_INTEGER s{};
+    realNtQuerySystemTime(&s);
+    initialTimeSys = initialOffsetSys = s.QuadPart;
 
     // ---------- hooks ----------
     MH_Initialize();
@@ -284,7 +287,6 @@ export void InitSpeedhack()
     MH_CreateHook(realGetTickCount64, GetTickCount64_Hook, (void**)&realGetTickCount64);
     MH_CreateHook(realTimeGetTime, timeGetTime_Hook, (void**)&realTimeGetTime);
     MH_CreateHook(realQPC, QPC_Hook, (void**)&realQPC);
-
     MH_CreateHook(realNtQuerySystemTime, NtQuerySystemTime_Hook, (void**)&realNtQuerySystemTime);
     MH_CreateHook(realNtQueryPerformanceCounter, NtQueryPerformanceCounter_Hook, (void**)&realNtQueryPerformanceCounter);
 
