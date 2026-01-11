@@ -5,6 +5,7 @@ module;
 export module Speedhack;
 
 export float fGameSpeedFactor = 1.0f;
+static float lastMultiplier = 1.0f;
 
 static volatile uint32_t* bPause = nullptr;
 static volatile uint32_t* bCutscene = nullptr;
@@ -52,12 +53,21 @@ export void SetSpeedhackMultiplier(float multiplier)
         speedMultiplier = multiplier;
 }
 
+static void Reanchor(float newMultiplier);
+
 export float GetSpeedhackMultiplier()
 {
-    if (*bPause || *bCutscene)
-        return 1.0f;
+    float wanted;
 
-    return speedMultiplier;
+    if ((bLoading && *bLoading) || (bCutscene && *bCutscene))
+        wanted = 1.0f;
+    else
+        wanted = speedMultiplier;
+
+    if (wanted != lastMultiplier)
+        Reanchor(wanted);
+
+    return wanted;
 }
 
 // Synchronization
@@ -128,6 +138,49 @@ DWORD WINAPI timeGetTimeHook()
     return result;
 }
 
+static void Reanchor(float newMultiplier)
+{
+    gtcLock.lock();
+    qpcLock.lock();
+    tgtLock.lock();
+
+    float old = lastMultiplier;
+
+    DWORD now32 = shGetTickCount
+        ? shGetTickCount.unsafe_stdcall<DWORD>()
+        : GetTickCount();
+
+    ULONGLONG now64 = shGetTickCount64
+        ? shGetTickCount64.unsafe_stdcall<ULONGLONG>()
+        : GetTickCount64();
+
+    LARGE_INTEGER qpcNow{};
+    if (shQueryPerformanceCounter)
+        shQueryPerformanceCounter.unsafe_stdcall<BOOL>(&qpcNow);
+    else
+        QueryPerformanceCounter(&qpcNow);
+
+    DWORD tgtNow = shTimeGetTime
+        ? shTimeGetTime.unsafe_stdcall<DWORD>()
+        : now32;
+
+    initialOffset += DWORD((now32 - initialTime) * old);
+    initialOffset64 += ULONGLONG((now64 - initialTime64) * old);
+    initialOffsetQPC += LONGLONG((qpcNow.QuadPart - initialTimeQPC) * old);
+    initialOffsetTGT += DWORD((tgtNow - initialTimeTGT) * old);
+
+    initialTime = now32;
+    initialTime64 = now64;
+    initialTimeQPC = qpcNow.QuadPart;
+    initialTimeTGT = tgtNow;
+
+    lastMultiplier = newMultiplier;
+
+    tgtLock.unlock();
+    qpcLock.unlock();
+    gtcLock.unlock();
+}
+
 export void InitSpeedhack()
 {
     HMODULE hGame = GetModuleHandle(nullptr);
@@ -154,12 +207,12 @@ export void InitSpeedhack()
     }
 
     if (!isRU) {
-        bPause = (uint32_t*)(base + 0x3A0F5C);
+        //bPause = (uint32_t*)(base + 0x3A0F5C);
         bCutscene = (uint32_t*)(base + 0x387B78);
         bLoading = (uint32_t*)(base + 0x39339C);
     }
     else {
-        bPause = (uint32_t*)(base + 0x3A1F1C);
+        //bPause = (uint32_t*)(base + 0x3A1F1C);
         bCutscene = (uint32_t*)(base + 0x388B38);
         bLoading = (uint32_t*)(base + 0x394360);
     }
@@ -195,8 +248,8 @@ export void InitSpeedhack()
                 initialTimeTGT = shTimeGetTime ? shTimeGetTime.unsafe_stdcall<DWORD>() : pTimeGetTime();
             }
         });
-
     SetSpeedhackMultiplier(fGameSpeedFactor);
+    lastMultiplier = speedMultiplier;
 
     tgtLock.unlock();
     gtcLock.unlock();
