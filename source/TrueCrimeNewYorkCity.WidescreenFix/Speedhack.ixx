@@ -11,7 +11,7 @@ static volatile uint32_t* bPause = nullptr;
 static volatile uint32_t* bCutscene = nullptr;
 static volatile uint32_t* bLoading = nullptr;
 
-static bool versionDetected = false;
+static bool isRU{ false };
 static bool versionDetected = false;
 struct SimpleLock
 {
