@@ -71,6 +71,14 @@ export void SetSpeedhackMultiplier(float multiplier)
         speedMultiplier = multiplier;
 }
 
+export BOOL QueryRealPerformanceCounter(LARGE_INTEGER* lpPerformanceCount)
+{
+    if (shQueryPerformanceCounter)
+        return shQueryPerformanceCounter.unsafe_stdcall<BOOL>(lpPerformanceCount);
+    
+    return QueryPerformanceCounter(lpPerformanceCount);
+}
+
 void SynchronizeTimeBase(float newMultiplier)
 {
     gtcLock.lock();
