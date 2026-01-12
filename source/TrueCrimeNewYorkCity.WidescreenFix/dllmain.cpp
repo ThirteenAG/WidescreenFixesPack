@@ -98,6 +98,7 @@ private:
 };
 
 FrameLimiter FpsLimiter;
+FrameLimiter FpsLimiterCutscenes;
 
 int32_t nLanguage;
 int32_t __cdecl SetLanguage(LPCSTR lpValueName)
@@ -240,6 +241,7 @@ void Init()
             timeBeginPeriod(1);
 
         FpsLimiter.Init(mode, fFpsLimit);
+        FpsLimiterCutscenes.Init(mode, fFpsLimit / fGameSpeedFactor);
 
         pattern = hook::pattern("A1 ? ? ? ? 83 EC 1C");
         shsub_648AC0 = safetyhook::create_inline(pattern.get_first(0), sub_648AC0);
@@ -247,8 +249,10 @@ void Init()
         pattern = hook::pattern("E8 ? ? ? ? 83 C4 04 5F 5D 53");
         static auto FPSLimiterGame = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
-            if (fFpsLimit && (nLoading && !*nLoading))
+            if (fFpsLimit && ((nLoading && !*nLoading) && (bCutscene && !*bCutscene)))
                 FpsLimiter.Sync();
+            else if (bCutscene && *bCutscene)
+                FpsLimiterCutscenes.Sync();
         });
 
         if (bFixGameSpeed)
