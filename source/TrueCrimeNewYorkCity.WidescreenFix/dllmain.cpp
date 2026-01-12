@@ -124,9 +124,9 @@ void Init()
     static bool bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) != 0;
 
     static bool bFixGameSpeed = iniReader.ReadInteger("FRAMELIMIT", "FixGameSpeed", 1) != 0;
-    fGameSpeedFactor = iniReader.ReadFloat("FRAMELIMIT", "GameSpeedFactor", 0.5f);
     nFrameLimitType = iniReader.ReadInteger("FRAMELIMIT", "FrameLimitType", 1);
-    fFpsLimit = static_cast<float>(iniReader.ReadInteger("FRAMELIMIT", "FpsLimit", 30));
+    fFpsLimit = std::clamp(static_cast<float>(iniReader.ReadInteger("FRAMELIMIT", "FpsLimit", 30)), 30.0f, FLT_MAX);
+    fGameSpeedFactor = 30.0f / fFpsLimit;
     fFpsLimit *= fGameSpeedFactor;
 
     static auto fSensitivityFactor = iniReader.ReadFloat("MOUSE", "SensitivityFactor", 0.0f);
@@ -239,11 +239,11 @@ void Init()
             timeBeginPeriod(1);
 
         FpsLimiter.Init(mode, fFpsLimit);
-    }
 
-    if (bFixGameSpeed)
-    {
-        InitSpeedhack();
+        if (bFixGameSpeed)
+        {
+            InitSpeedhack();
+        }
     }
 
     if (fSensitivityFactor)
