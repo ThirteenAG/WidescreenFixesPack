@@ -14,25 +14,31 @@ struct SimpleLock
 {
     LONG count = 0;
     DWORD owner = 0;
+    LONG recursion = 0;
 
     void lock()
     {
         DWORD tid = GetCurrentThreadId();
-        if (owner != tid)
+        if (owner == tid)
         {
-            while (InterlockedExchange(&count, 1) != 0)
-                Sleep(0);
-            owner = tid;
+            ++recursion;
+            return;
         }
-        else
-            InterlockedIncrement(&count);
+
+        while (InterlockedCompareExchange(&count, 1, 0) != 0)
+            Sleep(0);
+
+        owner = tid;
+        recursion = 1;
     }
 
     void unlock()
     {
-        if (count == 1)
+        if (--recursion == 0)
+        {
             owner = 0;
-        InterlockedDecrement(&count);
+            InterlockedExchange(&count, 0);
+        }
     }
 };
 
@@ -75,7 +81,7 @@ export BOOL QueryRealPerformanceCounter(LARGE_INTEGER* lpPerformanceCount)
 {
     if (shQueryPerformanceCounter)
         return shQueryPerformanceCounter.unsafe_stdcall<BOOL>(lpPerformanceCount);
-    
+
     return QueryPerformanceCounter(lpPerformanceCount);
 }
 

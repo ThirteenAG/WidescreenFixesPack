@@ -108,10 +108,19 @@ int32_t __cdecl SetLanguage(LPCSTR lpValueName)
 SafetyHookInline shsub_648AC0 = {};
 void __cdecl sub_648AC0(int a1)
 {
-    if (fFpsLimit)
+    if (fFpsLimit && (nLoading && !*nLoading))
         FpsLimiter.Sync();
 
     return shsub_648AC0.unsafe_ccall(0);
+}
+
+float fSensitivityFactor = 1.0f;
+float* fMouseSens = nullptr;
+SafetyHookInline shsub_652340 = {};
+void __cdecl sub_652340(char a1)
+{
+    shsub_652340.unsafe_ccall(a1);
+    *fMouseSens *= fSensitivityFactor;
 }
 
 void Init()
@@ -129,7 +138,7 @@ void Init()
     fGameSpeedFactor = 30.0f / fFpsLimit;
     fFpsLimit *= fGameSpeedFactor;
 
-    static auto fSensitivityFactor = iniReader.ReadFloat("MOUSE", "SensitivityFactor", 0.0f);
+    fSensitivityFactor = iniReader.ReadFloat("MOUSE", "SensitivityFactor", 0.0f);
 
     if (bSkipIntro)
     {
@@ -227,11 +236,6 @@ void Init()
         }; injector::MakeInline<FOVHook>(pattern.get_first(0));
     }
 
-    {
-        pattern = hook::pattern("A1 ? ? ? ? 83 EC 1C");
-        shsub_648AC0 = safetyhook::create_inline(pattern.get_first(0), sub_648AC0);
-    }
-
     if (fFpsLimit)
     {
         auto mode = (nFrameLimitType == 2) ? FrameLimiter::FPSLimitMode::FPS_ACCURATE : FrameLimiter::FPSLimitMode::FPS_REALTIME;
@@ -239,6 +243,9 @@ void Init()
             timeBeginPeriod(1);
 
         FpsLimiter.Init(mode, fFpsLimit);
+
+        pattern = hook::pattern("A1 ? ? ? ? 83 EC 1C");
+        shsub_648AC0 = safetyhook::create_inline(pattern.get_first(0), sub_648AC0);
 
         if (bFixGameSpeed)
         {
@@ -248,14 +255,11 @@ void Init()
 
     if (fSensitivityFactor)
     {
-        pattern = hook::pattern("D8 0D ? ? ? ? 6A 00 68 ? ? ? ? 8B CE D9 1D ? ? ? ? E8 ? ? ? ? D8 0D ? ? ? ? 6A 00");
-        injector::WriteMemory(pattern.get_first(2), &fSensitivityFactor, true);
-        pattern = hook::pattern("D8 0D ? ? ? ? 6A 00 68 ? ? ? ? 8B CE D9 1D ? ? ? ? E8 ? ? ? ? D9 1D ? ? ? ? 6A 00");
-        injector::WriteMemory(pattern.get_first(2), &fSensitivityFactor, true);
-        pattern = hook::pattern("D8 0D ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? D8 0D ? ? ? ? 8B CE D9 1D ? ? ? ? E8");
-        injector::WriteMemory(pattern.get_first(2), &fSensitivityFactor, true);
-        pattern = hook::pattern("D8 0D ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 8B CE D9 1D ? ? ? ? E8 ? ? ? ? 68");
-        injector::WriteMemory(pattern.get_first(2), &fSensitivityFactor, true);
+        pattern = hook::pattern("F3 0F 11 05 ? ? ? ? C7 05 ? ? ? ? ? ? ? ? 0F 84");
+        fMouseSens = *pattern.get_first<float*>(4);
+
+        pattern = hook::pattern("80 7C 24 ? ? F3 0F 10 05 ? ? ? ? 56");
+        shsub_652340 = safetyhook::create_inline(pattern.get_first(0), sub_652340);
     }
 }
 
