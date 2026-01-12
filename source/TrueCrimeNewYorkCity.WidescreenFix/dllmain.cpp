@@ -120,6 +120,15 @@ void __cdecl sub_652340(char a1)
     *fMouseSens *= fSensitivityFactor;
 }
 
+float* flt_8F602C = nullptr;
+float sub_648A70()
+{
+    if (bCutscene && *bCutscene)
+        return *flt_8F602C * 2.0f;
+
+    return *flt_8F602C;
+}
+
 void Init()
 {
     CIniReader iniReader("");
@@ -244,12 +253,16 @@ void Init()
         pattern = hook::pattern("A1 ? ? ? ? 83 EC 1C");
         shsub_648AC0 = safetyhook::create_inline(pattern.get_first(0), sub_648AC0);
 
-        pattern = hook::pattern("E8 ? ? ? ? 83 C4 04 5F 5D 53");
-        static auto FPSLimiterGame = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        pattern = hook::pattern("8B 76 ? 8B 16 53");
+        static auto FPSLimiterPresent = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
-            if (fFpsLimit && (nLoading && !*nLoading))
+            if (fFpsLimit)
                 FpsLimiter.Sync();
         });
+
+        pattern = hook::pattern("E8 ? ? ? ? D8 4E ? D9 7C 24");
+        flt_8F602C = *(float**)(injector::GetBranchDestination(pattern.get_first()).as_int() + 2);
+        injector::MakeCALL(pattern.get_first(), sub_648A70, true);
 
         if (bFixGameSpeed)
         {
