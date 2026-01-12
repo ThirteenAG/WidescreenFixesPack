@@ -138,18 +138,20 @@ export float GetSpeedhackMultiplier()
 // Hooked functions
 DWORD WINAPI GetTickCountHook()
 {
+    float multiplier = GetSpeedhackMultiplier();
     gtcLock.lock();
     DWORD currentTime = shGetTickCount.unsafe_stdcall<DWORD>();
-    DWORD result = (DWORD)((currentTime - initialTime) * GetSpeedhackMultiplier()) + initialOffset;
+    DWORD result = (DWORD)((currentTime - initialTime) * multiplier) + initialOffset;
     gtcLock.unlock();
     return result;
 }
 
 ULONGLONG WINAPI GetTickCount64Hook()
 {
+    float multiplier = GetSpeedhackMultiplier();
     gtcLock.lock();
     ULONGLONG currentTime = shGetTickCount64.unsafe_stdcall<ULONGLONG>();
-    ULONGLONG result = (ULONGLONG)((currentTime - initialTime64) * GetSpeedhackMultiplier()) + initialOffset64;
+    ULONGLONG result = (ULONGLONG)((currentTime - initialTime64) * multiplier) + initialOffset64;
     gtcLock.unlock();
     return result;
 }
@@ -159,13 +161,14 @@ BOOL WINAPI QueryPerformanceCounterHook(LARGE_INTEGER* lpPerformanceCount)
     if (!lpPerformanceCount)
         return FALSE;
 
+    float multiplier = GetSpeedhackMultiplier();
     qpcLock.lock();
     LARGE_INTEGER currentTime;
     BOOL result = shQueryPerformanceCounter.unsafe_stdcall<BOOL>(&currentTime);
 
     if (result)
     {
-        LONGLONG newValue = (LONGLONG)((currentTime.QuadPart - initialTimeQPC) * GetSpeedhackMultiplier()) + initialOffsetQPC;
+        LONGLONG newValue = (LONGLONG)((currentTime.QuadPart - initialTimeQPC) * multiplier) + initialOffsetQPC;
         lpPerformanceCount->QuadPart = newValue;
     }
 
@@ -175,9 +178,10 @@ BOOL WINAPI QueryPerformanceCounterHook(LARGE_INTEGER* lpPerformanceCount)
 
 DWORD WINAPI timeGetTimeHook()
 {
+    float multiplier = GetSpeedhackMultiplier();
     tgtLock.lock();
     DWORD currentTime = shTimeGetTime.unsafe_stdcall<DWORD>();
-    DWORD result = (DWORD)((currentTime - initialTimeTGT) * GetSpeedhackMultiplier()) + initialOffsetTGT;
+    DWORD result = (DWORD)((currentTime - initialTimeTGT) * multiplier) + initialOffsetTGT;
     tgtLock.unlock();
     return result;
 }
