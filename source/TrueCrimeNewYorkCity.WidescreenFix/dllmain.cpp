@@ -108,9 +108,6 @@ int32_t __cdecl SetLanguage(LPCSTR lpValueName)
 SafetyHookInline shsub_648AC0 = {};
 void __cdecl sub_648AC0(int a1)
 {
-    if (fFpsLimit && (nLoading && !*nLoading))
-        FpsLimiter.Sync();
-
     return shsub_648AC0.unsafe_ccall(0);
 }
 
@@ -246,6 +243,13 @@ void Init()
 
         pattern = hook::pattern("A1 ? ? ? ? 83 EC 1C");
         shsub_648AC0 = safetyhook::create_inline(pattern.get_first(0), sub_648AC0);
+
+        pattern = hook::pattern("E8 ? ? ? ? 83 C4 04 5F 5D 53");
+        static auto FPSLimiterGame = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            if (fFpsLimit && (nLoading && !*nLoading))
+                FpsLimiter.Sync();
+        });
 
         if (bFixGameSpeed)
         {
