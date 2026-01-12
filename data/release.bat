@@ -72,9 +72,6 @@ move /Y ".\KingKong.WidescreenFix\scripts\dxwrapper.dll" ".\KingKong.WidescreenF
 rem DSOAL
 7za e "..\DSOAL.7z" "DSOAL+HRTF/Win32/dsound.dll" "DSOAL+HRTF/Win32/dsoal-aldrv.dll" -o".\MaxPayne.WidescreenFix\" -y
 
-rem d3d8-wrapper
-7za e "..\d3d8.zip" "d3d8.dll" -o".\TrueCrimeNewYorkCity.WidescreenFix\" -y
-
 rem Creating archives
 
 FOR /D /r %%G in ("*PPSSPP*") DO (
