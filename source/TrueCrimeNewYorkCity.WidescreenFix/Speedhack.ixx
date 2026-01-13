@@ -8,7 +8,8 @@ export bool* bPause = nullptr;
 export bool* bCutscene = nullptr;
 export uint32_t* nLoading = nullptr;
 export float fGameSpeedFactor = 1.0f;
-static float lastMultiplier = 1.0f;
+
+DWORD(WINAPI* pTimeGetTime)() = nullptr;
 
 struct SimpleLock
 {
@@ -135,7 +136,7 @@ DWORD WINAPI timeGetTimeHook()
 {
     float multiplier = GetSpeedhackMultiplier();
     tgtLock.lock();
-    DWORD currentTime = shTimeGetTime.unsafe_stdcall<DWORD>();
+    DWORD currentTime = pTimeGetTime();
     DWORD result = (DWORD)((currentTime - initialTimeTGT) * multiplier) + initialOffsetTGT;
     tgtLock.unlock();
     return result;
@@ -175,17 +176,36 @@ export void InitSpeedhack()
 
     CallbackHandler::RegisterCallback(L"winmm.dll", []()
     {
-        auto pTimeGetTime = (DWORD(WINAPI*)())GetProcAddress(GetModuleHandle(L"winmm.dll"), "timeGetTime");
+        pTimeGetTime = (DWORD(WINAPI*)())GetProcAddress(GetModuleHandle(L"winmm.dll"), "timeGetTime");
         if (pTimeGetTime)
         {
-            shTimeGetTime = safetyhook::create_inline(pTimeGetTime, timeGetTimeHook);
+            auto pattern = hook::pattern("E8 ? ? ? ? 85 C0 89 44 24 ? DB 44 24 ? 7D ? D8 05 ? ? ? ? D8 0D");
+            injector::MakeCALL(pattern.get_first(), timeGetTimeHook, true);
+
+            pattern = hook::pattern("E8 ? ? ? ? 85 C0 89 44 24 ? DB 44 24 ? 7D ? D8 05 ? ? ? ? 80 3D");
+            injector::MakeCALL(pattern.get_first(), timeGetTimeHook, true);
+
+            pattern = hook::pattern("E8 ? ? ? ? 89 44 24 ? E8 ? ? ? ? 80 3D");
+            injector::MakeCALL(pattern.get_first(), timeGetTimeHook, true);
+
+            //pattern = hook::pattern("E8 ? ? ? ? 80 3D ? ? ? ? ? 8B F8 0F 84");
+            //injector::MakeCALL(pattern.get_first(), timeGetTimeHook, true);
+
+            pattern = hook::pattern("E8 ? ? ? ? 8D 54 24 ? 52 56 8B F8");
+            injector::MakeCALL(pattern.get_first(), timeGetTimeHook, true);
+
+            pattern = hook::pattern("E8 ? ? ? ? 2B C7");
+            injector::MakeCALL(pattern.get_first(), timeGetTimeHook, true);
+
+            pattern = hook::pattern("E8 ? ? ? ? 2B 44 24 ? 85 C0 89 44 24 ? DB 44 24 ? 7D ? D8 05 ? ? ? ? 80 3D");
+            injector::MakeCALL(pattern.get_first(), timeGetTimeHook, true);
+
             initialOffsetTGT = pTimeGetTime();
-            initialTimeTGT = shTimeGetTime ? shTimeGetTime.unsafe_stdcall<DWORD>() : pTimeGetTime();
+            initialTimeTGT = pTimeGetTime();
         }
     });
 
     SetSpeedhackMultiplier(fGameSpeedFactor);
-    lastMultiplier = speedMultiplier;
 
     tgtLock.unlock();
     gtcLock.unlock();
