@@ -1,22 +1,28 @@
 ![scpt](https://thirteenag.github.io/screens/scpt/main2.jpg)
 
-$${\color{green}✔}$$  Fixed Resolution
+$${\color{green}✔}$$ Fixed Resolution
 
-$${\color{green}✔}$$  Fixed Aspect Ratio
+$${\color{green}✔}$$ Fixed Aspect Ratio
 
-$${\color{green}✔}$$  Fixed HUD
+$${\color{green}✔}$$ Fixed HUD
 
-$${\color{green}✔}$$  Fixed Field of View
+$${\color{green}✔}$$ Fixed Field of View
 
-$${\color{green}✔}$$  Fixed FMVs
+$${\color{green}✔}$$ Fixed FMVs
 
-$${\color{green}✔}$$  Force highest character LOD
+$${\color{green}✔}$$ Force highest character LOD
 
-$${\color{green}✔}$$  Disabled mouse acceleration
+$${\color{green}✔}$$ Disabled mouse acceleration
 
-$${\color{green}✔}$$  Improved gamepad support (via [Xidi](https://github.com/samuelgr/Xidi))
+$${\color{green}✔}$$ Added raw input support for mouse
+
+$${\color{green}✔}$$ Improved gamepad support (via [Xidi](https://github.com/samuelgr/Xidi))
+
+$${\color{green}✔}$$ Added an option to enable windowed mode
 
 $${\color{blue}ⓘ}$$ Added an option to skip intro
+
+$${\color{blue}ⓘ}$$ Added an option to skip "Press Enter to Continue" prompt
 
 $${\color{blue}ⓘ}$$ Added an option to increase night vision resolution
 
@@ -24,7 +30,7 @@ $${\color{blue}ⓘ}$$ Added an option to increase shadows resolution
 
 $${\color{blue}ⓘ}$$ Added an option to increase reflections resolution
 
-$${\color{blue}ⓘ}$$ Added an option to change goggles' light color
+$${\color{blue}ⓘ}$$ Added an option to change goggles light color
 
     Installation:
         Download and extract the archive to the game directory, where the exe is located.
