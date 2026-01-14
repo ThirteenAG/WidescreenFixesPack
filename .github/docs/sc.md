@@ -22,12 +22,6 @@ $${\color{blue}ⓘ}$$ Added an option to skip intro
 
 $${\color{blue}ⓘ}$$ Added an option to skip "Press Fire to Continue" prompt
 
-$${\color{blue}ⓘ}$$ Added an option to increase night vision resolution
-
-$${\color{blue}ⓘ}$$ Added an option to increase shadows resolution
-
-$${\color{blue}ⓘ}$$ Added an option to increase reflections resolution
-
 $${\color{blue}ⓘ}$$ Added an option to change goggles light color
 
     Installation:
