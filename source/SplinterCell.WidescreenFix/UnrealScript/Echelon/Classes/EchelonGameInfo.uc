@@ -136,6 +136,8 @@ var(SurfaceNoise) SurfaceNoiseInfo NormalSurface;
 var(SurfaceNoise) SurfaceNoiseInfo LoudSurface;
 var(SurfaceNoise) SurfaceNoiseInfo VeryLoudSurface;
 
+var bool bUseController; // Joshua - Adjusts HUD, inventory, lockpicking, keypad, turrets for controller
+
 
 //=============================================================================
 
