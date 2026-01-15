@@ -111,6 +111,18 @@ void __fastcall FCanvasUtilDrawTileHook(void* _this, uint32_t EDX, float X, floa
 
     if (Screen.nHudWidescreenMode == 1)
         WidescreenHud(X, SizeX, Y, SizeY, Color);
+    else if (Screen.nHudWidescreenMode == 2)
+    {
+        if (n_X == 0 && n_Y == 0 && n_SizeY == 480 && SizeU == 256.0f)
+        {
+            wchar_t buffer[256];
+            std::wstring_view curTextureName(UObject::GetFullName(Texture, 0, buffer));
+
+            // fix flashbang drawing
+            if (curTextureName == L"FinalBlend Transient.FinalBlend6")
+                X -= Screen.fHudOffset;
+        }
+    }
 
     X += Screen.fHudOffset;
     SizeX += Screen.fHudOffset;
