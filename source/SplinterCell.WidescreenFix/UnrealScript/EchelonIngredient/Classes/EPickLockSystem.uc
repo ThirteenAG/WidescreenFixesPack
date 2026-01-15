@@ -72,20 +72,43 @@ function MoveAxis( float aUpDown, float aLeftRight )
 
 function EPickLockQuadrant FindCurrentQuadrant( float aUpDown, float aLeftRight )
 {
-	// For the PC, we want a single direction to avoid the wiggling on the keyboard.
-	// UpLeft == up, UpRigth == right, DownLeft == left, DownRight == right
-	if( aUpDown == 1 )
-		return PL_UpLeft; // up
-	else if( aLeftRight == 1 )
-		return PL_UpRight; // right
-	else if( aLeftRight == -1 )
-		return PL_DownLeft; // left
-	else if( aUpDown == -1 )
-		return PL_DownRight; // down
-	else if( abs(aUpDown) == 1 && abs(aLeftRight) == 1 )	// 2 keys are pressed, invalid selection
-		return PL_None;
-	else										// no quadrant change if border lines
-		return CurrentQuadrant;
+	// Joshua - Adding controller support for lockpicks
+	local EPlayerController EPC;
+
+	EPC = EPlayerController(PickLocker);
+
+	if (!EPC.eGame.bUseController)
+	{
+		// For the PC, we want a single direction to avoid the wiggling on the keyboard.
+		// UpLeft == up, UpRight == right, DownLeft == left, DownRight == down
+		if (aUpDown == 1)
+			return PL_UpLeft; // up
+		else if (aLeftRight == 1)
+			return PL_UpRight; // right
+		else if (aLeftRight == -1)
+			return PL_DownLeft; // left
+		else if (aUpDown == -1)
+			return PL_DownRight; // down
+		else if (abs(aUpDown) == 1 && abs(aLeftRight) == 1)	// 2 keys are pressed, invalid selection
+			return PL_None;
+		else										// no quadrant change if border lines
+			return CurrentQuadrant;
+	}
+	else
+	{
+		if (aUpDown > 0 && aLeftRight < 0)
+			return PL_UpLeft;
+		else if (aUpDown > 0 && aLeftRight > 0)
+			return PL_UpRight;
+		else if (aUpDown < 0 && aLeftRight < 0)
+			return PL_DownLeft;
+		else if (aUpDown < 0 && aLeftRight > 0)
+			return PL_DownRight;
+		else if (aUpDown == 0 && aLeftRight == 0)	// only change to None when in full center
+			return PL_None;
+		else										// no quadrant change if border lines
+			return CurrentQuadrant;
+	}
 }
 
 //------------------------------------------------------------------------
