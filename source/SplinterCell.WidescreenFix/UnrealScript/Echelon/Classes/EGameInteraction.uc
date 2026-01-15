@@ -139,7 +139,7 @@ state s_GameInteractionMenu
 		if( Action == IST_Press )
 		{
 			//clauzon 9/17/2002 replaced a switch checking the key pressed by the mapped action test.
-			if (actionName == "MoveForward" || Key == IK_MouseWheelUp || actionName == "DPadUp") // Joshua - Adding controller support for interaction box
+			if ((!Epc.eGame.bUseController && actionName == "MoveForward") || Key == IK_MouseWheelUp || actionName == "DPadUp") // Joshua - Adding controller support for interaction box
 			{
 				if( Epc.IManager.SelectNextItem() )
 				{
@@ -147,7 +147,7 @@ state s_GameInteractionMenu
 					Epc.EPawn.playsound(Sound'Interface.Play_ActionChoice', SLOT_Interface);
 				}
 			}
-			else if (actionName == "MoveBackward" || Key == IK_MouseWheelDown || actionName == "DPadDown") // Joshua - Adding controller support for interaction box
+			else if ((!Epc.eGame.bUseController && actionName == "MoveBackward") || Key == IK_MouseWheelDown || actionName == "DPadDown") // Joshua - Adding controller support for interaction box
 			{
 				if( Epc.IManager.SelectPreviousItem() )
 				{
