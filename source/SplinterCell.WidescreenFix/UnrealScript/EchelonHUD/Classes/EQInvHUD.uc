@@ -186,16 +186,42 @@ state s_QDisplay
 {
 	function BeginState()
 	{
-		bPreviousConfig = false;
-		Epc.SetPause(true);
-		Epc.FakeMouseToggle(true);
-
-		if ( !Epc.EPawn.IsPlaying(Sound'Interface.Play_OpenPackSac') )
-			Epc.EPawn.playsound(Sound'Interface.Play_OpenPackSac', SLOT_Interface);
-
 		CurrentCategory	= -1;
 		CurrentItem		= -1;
 		Gap				= 17;
+
+		// Joshua - Use timer delay before showing menu for controller
+		if( eGame.bUseController )
+		{
+			bPreviousConfig = true;
+			SetTimer(0.15f, false);
+		}
+		else
+		{
+			bPreviousConfig = false;
+			Epc.SetPause(true);
+			Epc.FakeMouseToggle(true);
+
+			if ( !Epc.EPawn.IsPlaying(Sound'Interface.Play_OpenPackSac') )
+				Epc.EPawn.playsound(Sound'Interface.Play_OpenPackSac', SLOT_Interface);
+		}
+	}
+
+	function Timer()
+	{
+		// Joshua - Use timer delay before showing menu for controller
+		if( !Epc.CanAccessQuick() || Epc.bStopInput )
+		{
+			GotoState('');
+			Owner.GotoState(EchelonMainHud(Owner).RestoreState());
+			return;
+		}
+
+		Epc.SetPause(true);
+		bPreviousConfig = false;
+
+		if ( !Epc.EPawn.IsPlaying(Sound'Interface.Play_OpenPackSac') )
+			Epc.EPawn.playsound(Sound'Interface.Play_OpenPackSac', SLOT_Interface);
 	}
 
 	function EndState()
@@ -219,6 +245,12 @@ state s_QDisplay
 	{
 		local int nbItems, HoldCategory, HoldItem;
 		local EInventoryItem	Item;
+
+		// Joshua - use KeyEvent for controller navigation, skip mouse logic
+		if( eGame.bUseController )
+		{
+			return;
+		}
 
 		HoldCategory = CurrentCategory;
 		HoldItem = CurrentItem;
@@ -292,8 +324,109 @@ state s_QDisplay
 		Epc.m_FakeMouseClicked = false;
 	}
 
-function bool KeyEvent(string Key, EInputAction Action, float Delta)
+	// Joshua - Controller D-Pad/Analog navigation
+	function bool KeyEvent(string Key, EInputAction Action, float Delta)
 	{
+		local EInventoryItem	Item;
+		local int nbItem, HoldCategory, HoldItem;
+
+		if( eGame.bUseController )
+		{
+			if( Action == IST_Press )
+			{
+				// ignore Timer, reset it now.
+				if( bPreviousConfig )
+					Timer();
+
+				HoldCategory = CurrentCategory;
+				HoldItem = CurrentItem;
+
+				switch( Key )
+				{
+				case "DPadUp" :
+				case "AnalogUp" :
+				case "MoveForward" :
+					// if over category name and not last item .. move to above item
+					if( CurrentCategory != -1 )
+						CurrentItem = Min(CurrentItem+1, PCInventory.GetNbItemInCategory(GetCategory(CurrentCategory))-1);
+					break;
+
+				case "DPadDown" :
+				case "AnalogDown" :
+				case "MoveBackward" :
+					if( CurrentCategory != -1 )
+						CurrentItem = Max(CurrentItem-1, -1);
+					break;
+
+				case "DPadRight" :
+				case "AnalogRight" :
+				case "StrafeRight" :
+					if( CurrentCategory > -1 )
+						CurrentCategory--;
+
+					while( !IsCategoryAvailable(GetCategory(CurrentCategory)) && CurrentCategory > -1 )
+						CurrentCategory--;
+
+					CurrentItem = Min(HoldItem, PCInventory.GetNbItemInCategory(GetCategory(CurrentCategory))-1);
+
+					break;
+
+				case "DPadLeft" :
+				case "AnalogLeft":
+				case "StrafeLeft" :
+					while( true )
+					{
+						CurrentCategory++;
+						if( CurrentCategory <= PCInventory.GetNumberOfCategories()-1 && IsCategoryAvailable(GetCategory(CurrentCategory)) )
+							break;
+						else if( CurrentCategory == PCInventory.GetNumberOfCategories() )
+						{
+							CurrentCategory = HoldCategory;
+							break;
+						}
+					}
+					CurrentItem = Min(HoldItem, PCInventory.GetNbItemInCategory(GetCategory(CurrentCategory))-1);
+
+					break;
+
+				case "FullInventory" :
+					// Exit when selecting Fullinventory or ghost
+					GotoState('');
+					Owner.GotoState(EchelonMainHud(Owner).RestoreState());
+
+					break;
+				}
+
+				// If selection has changed, play sound
+				if( HoldCategory != CurrentCategory || HoldItem != CurrentItem )
+					Epc.Pawn.playsound(Sound'Interface.Play_NavigatePackSac', SLOT_Interface);
+			}
+			else if( Action == IST_Release )
+			{
+				if( Key == "QuickInventory" )
+				{
+					// On valid exit, check for any selected item
+					if(CurrentCategory != -1 && CurrentItem != -1 )
+					{
+						Item = PCInventory.GetItemInCategory(GetCategory(CurrentCategory), CurrentItem + 1);
+						if( !PCInventory.IsSelected(Item) )
+							PCInventory.SetSelectedItem(Item);
+						else if( !Item.IsA('EMainGun') && !Item.IsA('EOneHandedWeapon') )
+							PCInventory.UnEquipItem(Item);
+					}
+					else if( bPreviousConfig )
+					{
+						PCInventory.SetPreviousConfig();
+					}
+
+					GotoState('');
+					Owner.GotoState(EchelonMainHud(Owner).RestoreState());
+				}
+			}
+
+			return false;
+		}
+
 		if( Action == IST_Release )
 		{
 			if( Key == "QuickInventory" )
@@ -309,12 +442,13 @@ function bool KeyEvent(string Key, EInputAction Action, float Delta)
     function PostRender(Canvas C)
 	{
         local ECanvas			Canvas;
-		// draw normal view until timer expired
-/*		if( bPreviousConfig )
+
+		// Joshua - Draw normal view until timer expired
+		if( eGame.bUseController && bPreviousConfig )
 		{
 			Global.PostRender(C);
 			return;
-		}*/
+		}
 
         Canvas = ECanvas(C);
 
@@ -752,6 +886,32 @@ function DrawHandItem(ECanvas Canvas, int yPos, bool bDisplayState)
         }
         else
             WriteText(Canvas, xPos+65, yPos+24, Item.Quantity, Canvas.TextBlack);
+    }
+
+	// Joshua - Controller selection filter
+	// NOT SELECTED FILTER //
+    if(bDisplayState && eGame.bUseController)
+    {
+        if(!(CurrentCategory == -1))
+        {
+			Canvas.Style = ERenderStyle.STY_Alpha;
+            Canvas.DrawLine(xPos + offset + 5, yPos + 6, ITEMBOX_WIDTH_L - 10, ITEMBOX_HEIGHT_B - 10, Canvas.black, INSIDE_BORDER_ALPHA, eLevel.TGAME);
+
+            if(MainGun != None && MainGun.SecondaryAmmo != None)
+                Canvas.DrawLine(xPos + 5, yPos + 6, SEC_AMMO_WIDTH - 4, ITEMBOX_HEIGHT_B - 10, Canvas.black, INSIDE_BORDER_ALPHA, eLevel.TGAME);
+			Canvas.Style = ERenderStyle.STY_Normal;
+         }
+    }
+
+    // Joshua - Highlight backpack when selected on controller
+    Canvas.DrawColor = HUDColor;
+    Canvas.DrawColor.A = 128;
+    if(bDisplayState && eGame.bUseController && CurrentCategory == -1)
+    {
+		Canvas.Style = ERenderStyle.STY_Alpha;
+        Canvas.SetPos(xPos + width - ITEMBOX_WIDTH_L + 5, yPos + 6);
+        eLevel.TGAME.DrawTileFromManager(Canvas, eLevel.TGAME.qi_light, 35, 37, 0, 2, 35, 37);
+		Canvas.Style = ERenderStyle.STY_Normal;
     }
 }
 
