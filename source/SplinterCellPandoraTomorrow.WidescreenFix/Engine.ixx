@@ -119,7 +119,7 @@ void __fastcall FCanvasUtilDrawTileHook(void* _this, uint32_t EDX, float X, floa
             std::wstring_view curTextureName(UObject::GetFullName(Texture, 0, buffer));
 
             // fix flashbang drawing
-            if (curTextureName == L"FinalBlend Transient.FinalBlend6")
+            if (curTextureName.starts_with(L"FinalBlend Transient.FinalBlend"))
                 X -= Screen.fHudOffset;
         }
     }
