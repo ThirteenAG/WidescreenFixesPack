@@ -67,6 +67,10 @@ function SetInteractLocation( Pawn InteractPawn )
 
 function KeyEvent( String Key, EInputAction Action, float Delta, optional bool bAuto )
 {
+	// Joshua - Adding controller support for elevators
+	local EPlayerController EPC;
+	EPC = EPlayerController(InteractionController);
+
 	// Process Npc interaction
 	if( bAuto )
 	{
@@ -96,7 +100,10 @@ function KeyEvent( String Key, EInputAction Action, float Delta, optional bool b
 			break;
 
 		case "Interaction" :
-			if(bAuto)
+			// Joshua - Adding controller support for elevators
+			if (EPC != None && EPC.eGame.bUseController)
+				Panel.KeyPushed();
+			else if (bAuto)
 				Panel.KeyPushed();
 			break;
 

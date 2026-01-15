@@ -26,6 +26,7 @@ var		int							SelectedButton;
 var		int							DoorEndEvents;
 var		bool						bCanPushButton;			// Can push as soon as it's released
 var		bool						bLocked;
+var		bool						bWasUsingController;	// Joshua - Track previous controller state
 
 // Numbering vars
 var		float						TimeBetweenEachFloor;
@@ -444,7 +445,10 @@ state s_Use
 		// No special display if not player
 		if( Epc != None )
 		{
-			Epc.FakeMouseToggle(true);
+			// Joshua - Adding controller support for elevators
+			bWasUsingController = Epc.eGame.bUseController;
+			if( !Epc.eGame.bUseController )
+				Epc.FakeMouseToggle(true);
 			bRenderAtEndOfFrame = true;
 			bSpecialLit = true;
 			AmbientGlow = default.AmbientGlow;
@@ -475,33 +479,60 @@ state s_Use
 		if( Epc == None )
 			return;
 
-		//
-		// Crappy button selection
-		//
-		if( CoordinateWithin(Epc, 178, 174, 55, 55) )
-			SelectedButton = 2;
-		else if( CoordinateWithin(Epc, 182, 240, 55, 55) )
-			SelectedButton = 1;
-		else if( CoordinateWithin(Epc, 188, 316, 55, 55) )
-			SelectedButton = 0;
-		else
-			SelectedButton = -1;
-
-		//
-		// Manage Mouse click
-		//
-		if( Epc.m_FakeMouseClicked )
+		// Joshua - Detect controller state changes and toggle fake mouse
+		if (Epc.eGame.bUseController != bWasUsingController)
 		{
-			if( SelectedButton != -1 )
-				KeyPushed();
-			else if( !CoordinateWithin(Epc, 110, 70, 197, 317) )
-				Interaction.PostInteract(EElevatorInteraction(Interaction).InteractionController);
-		}
-		Epc.m_FakeMouseClicked = false;
+			bWasUsingController = Epc.eGame.bUseController;
+			if (bWasUsingController)
+			{
+				// Joshua - Switched to controller
+				Epc.FakeMouseToggle(false);
 
-		// Change selection
-		if( OldSelectedButton != SelectedButton )
-			GlowSelected();
+				// Joshua - If no button selected, select Open button
+				if (SelectedButton == -1)
+				{
+					SelectedButton = 0;
+					GlowSelected();
+				}
+			}
+			else
+			{
+				// Joshua - Switched to keyboard
+				Epc.FakeMouseToggle(true);
+			}
+		}
+
+		// Joshua - Only process mouse input when not using controller
+		if (!Epc.eGame.bUseController)
+		{
+			//
+			// Crappy button selection
+			//
+			if (CoordinateWithin(Epc, 178, 174, 55, 55))
+				SelectedButton = 2;
+			else if (CoordinateWithin(Epc, 182, 240, 55, 55))
+				SelectedButton = 1;
+			else if (CoordinateWithin(Epc, 188, 316, 55, 55))
+				SelectedButton = 0;
+			else
+				SelectedButton = -1;
+
+			//
+			// Manage Mouse click
+			//
+			if (Epc.m_FakeMouseClicked)
+			{
+				if (SelectedButton != -1)
+					KeyPushed();
+				else if (!CoordinateWithin(Epc, 110, 70, 197, 317))
+					Interaction.PostInteract(EElevatorInteraction(Interaction).InteractionController);
+			}
+			Epc.m_FakeMouseClicked = false;
+
+			// Change selection
+			if (OldSelectedButton != SelectedButton)
+				GlowSelected();
+		}
 	}
 
 	function bool CoordinateWithin( EPlayerController Epc, float x, float y, int w, int h )
