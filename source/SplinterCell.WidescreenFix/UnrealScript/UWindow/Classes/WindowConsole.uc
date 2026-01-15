@@ -386,9 +386,11 @@ function RenderUWindow( canvas Canvas )
 
 	//if(MouseX > Root.WinWidth) MouseX = Root.WinWidth;
 	//if(MouseY > Root.WinHeight) MouseY = Root.WinHeight;
+
+	// Joshua - Dynamic mouse bounds based on aspect ratio
 	CurrentRes = ViewportOwner.Actor.ConsoleCommand("GETCURRENTRES");
 	i = InStr(CurrentRes, "x");
-	if(i > 0)
+	if (i > 0)
 	{
 		ResX = int(Left(CurrentRes, i)  );
 		ResY = int(Mid(CurrentRes, i + 1));
@@ -407,10 +409,9 @@ function RenderUWindow( canvas Canvas )
 	}
 
 	if (MouseX > MaxMouseX) MouseX = MaxMouseX;
-	if (MouseY > 466) MouseY = 466; // Increased from 461 to be closer to screen edge
+	if (MouseY > 466) MouseY = 466; // Joshua - Increased from 461 to be closer to screen edge
 	if (MouseX < MinMouseX) MouseX = MinMouseX;
 	if (MouseY < 0) MouseY = 0;
-
 
 	// Check for keyboard focus
 	NewFocusWindow = Root.CheckKeyFocusWindow();

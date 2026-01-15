@@ -57,6 +57,7 @@ var int					TURRET_OFFSET_X;     // Offset from right side of the screen
 var int					TURRET_OFFSET_Y;     // Offset from the top of the screen
 
 var bool				bCheckMouse;
+var bool				bWasUsingController; // Joshua - Track previous controller state
 
 function PostBeginPlay()
 {
@@ -79,6 +80,7 @@ function PostBeginPlay()
 function BeginEvent()
 {
     bCheckMouse = true;
+    bWasUsingController = eGame.bUseController; // Joshua - Track initial controller state
 }
 function EndEvent()
 {
@@ -87,6 +89,7 @@ function EndEvent()
 
 function bool CoordinateWithin(EPlayerController Epc, float x, float y, int w, int h)
 {
+	// Joshua - Adjust coordinates based on turret position offset for different aspect ratios
 	local float adjustedX, adjustedY;
 
 	adjustedX = x + (SCREEN_END_X - eGame.HUD_OFFSET_X - LBAR_WIDTH - TURRET_WIDTH);
@@ -104,62 +107,83 @@ function Tick( float DeltaTime )
 
 	OldCurPos = CursorPos;
 
-	if( Epc == None || !bCheckMouse )
+	if ( Epc == None || !bCheckMouse )
 		return;
 
-	//
-	// Crappy button selection
-	//
-	if(CoordinateWithin(Epc, 30, 55, 130, 20))
-		CursorPos = DEACTIVATE;
-	else if(CoordinateWithin(Epc, 30, 80, 130, 20))
-		CursorPos = DISABLE_IFF;
-	else if(CoordinateWithin(Epc, 30, 110, 130, 17))
-		CursorPos = EXIT;
-	else if(!CoordinateWithin(Epc, 0, 0, TURRET_WIDTH, TURRET_HEIGHT))
-		CursorPos = OUTSIDE;
-	else
-		CursorPos = -1;
-
-
-	// Change selection
-	if( OldCurPos != CursorPos )
-		PlaySound(Sound'Interface.Play_ActionChoice', SLOT_Interface);
-
-	//
-	// Manage Mouse click
-	//
-	if( Epc.m_FakeMouseClicked )
+	// Joshua - Detect controller state changes and toggle fake mouse
+	if (eGame.bUseController != bWasUsingController)
 	{
-		switch( CursorPos )
+		bWasUsingController = eGame.bUseController;
+		if (eGame.bUseController)
 		{
-			case DEACTIVATE :
-    			if( LinkedTurret.GetStateName() == 's_Deactivated' )
-				{
-					LinkedTurret.GotoState('s_Patrol');
-					LinkedTurret.PlaySound(LinkedTurret.AmbientPlaySound, SLOT_SFX);
-					LinkedTurret.bInAmbientRange = true;
-				}
-				else
-					LinkedTurret.GotoState('s_Deactivated');
-				break;
-
-			case DISABLE_IFF :
-				if( LinkedTurret.SensorDetectionType != SCAN_AllChangedActors )
-					LinkedTurret.SensorDetectionType = SCAN_AllChangedActors;
-				else
-					LinkedTurret.SensorDetectionType = SCAN_AllPawnsAndChangedActors;
-				break;
-
-			case EXIT :
-			case OUTSIDE :
-				Interaction.PostInteract(ETurretInteraction(Interaction).User);
-				break;
-			default:
-				break;
+			Epc.FakeMouseToggle(false);
+			if (CursorPos < DEACTIVATE || CursorPos > EXIT)
+				CursorPos = DEACTIVATE;
+		}
+		else
+		{
+			Epc.FakeMouseToggle(true);
 		}
 	}
-	Epc.m_FakeMouseClicked = false;
+
+	// Joshua - Only process mouse input when not using controller
+	if (!eGame.bUseController)
+	{
+		//
+		// Crappy button selection
+		//
+        // Joshua - Use relative coordinates within the turret UI instead of absolute screen coordinates
+		if (CoordinateWithin(Epc, 30, 55, 130, 20))
+			CursorPos = DEACTIVATE;
+		else if (CoordinateWithin(Epc, 30, 80, 130, 20))
+			CursorPos = DISABLE_IFF;
+		else if (CoordinateWithin(Epc, 30, 110, 130, 17))
+			CursorPos = EXIT;
+		else if (!CoordinateWithin(Epc, 0, 0, TURRET_WIDTH, TURRET_HEIGHT))
+			CursorPos = OUTSIDE;
+		else
+			CursorPos = -1;
+
+
+		// Change selection
+		if ( OldCurPos != CursorPos )
+			PlaySound(Sound'Interface.Play_ActionChoice', SLOT_Interface);
+
+		//
+		// Manage Mouse click
+		//
+		if ( Epc.m_FakeMouseClicked )
+		{
+			switch( CursorPos )
+			{
+				case DEACTIVATE :
+    				if ( LinkedTurret.GetStateName() == 's_Deactivated' )
+					{
+						LinkedTurret.GotoState('s_Patrol');
+						LinkedTurret.PlaySound(LinkedTurret.AmbientPlaySound, SLOT_SFX);
+						LinkedTurret.bInAmbientRange = true;
+					}
+					else
+						LinkedTurret.GotoState('s_Deactivated');
+					break;
+
+				case DISABLE_IFF :
+					if ( LinkedTurret.SensorDetectionType != SCAN_AllChangedActors )
+						LinkedTurret.SensorDetectionType = SCAN_AllChangedActors;
+					else
+						LinkedTurret.SensorDetectionType = SCAN_AllPawnsAndChangedActors;
+					break;
+
+				case EXIT :
+				case OUTSIDE :
+					Interaction.PostInteract(ETurretInteraction(Interaction).User);
+					break;
+				default:
+					break;
+			}
+		}
+		Epc.m_FakeMouseClicked = false;
+	}
 }
 
 /*-----------------------------------------------------------------------------

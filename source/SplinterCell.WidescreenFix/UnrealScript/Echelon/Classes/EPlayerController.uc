@@ -4884,7 +4884,8 @@ Begin:
 
 	// Pop interface
 	EMainHUD(myHud).hud_master = EGameplayObject(Interaction.Owner);
-	FakeMouseToggle(true);
+	if (!eGame.bUseController) // Joshua - Adding controller support for turrets
+		FakeMouseToggle(true);
 	EMainHUD(myHud).hud_master.BeginEvent();
 
 	ePawn.PlaySound(Sound'Electronic.Play_Sq_ComputerKeyBoard', SLOT_SFX);
