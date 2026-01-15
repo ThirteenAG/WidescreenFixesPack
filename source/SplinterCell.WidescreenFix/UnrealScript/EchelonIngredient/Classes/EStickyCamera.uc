@@ -70,6 +70,25 @@ state s_Camera
 			Epc.bDPadRight		= 0;
 		}
 
+		// Joshua - Adding controller support for Sticky Camera (zoom in)
+		if (Epc.bDPadUp != 0)
+		{
+			current_fov -= DeltaTime * ZoomSpeed;
+			if (current_fov >= MinFov)
+			{
+				zoomed = true;
+			}
+		}
+		// Joshua - Adding controller support for Sticky Camera (zoom out)
+		else if (Epc.bDPadDown != 0)
+		{
+			current_fov += DeltaTime * ZoomSpeed;
+			if (current_fov <= MaxFov)
+			{
+				zoomed = true;
+			}
+		}
+
 		// Zoom in
         if( Epc.bIncSpeedPressed == true )
 		{
