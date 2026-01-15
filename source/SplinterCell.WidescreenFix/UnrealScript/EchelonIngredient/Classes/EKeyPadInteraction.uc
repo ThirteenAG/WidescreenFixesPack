@@ -90,6 +90,9 @@ function SetInteractLocation( Pawn InteractPawn )
 
 function KeyEvent( String Key, EInputAction Action, float Delta, optional bool bAuto )
 {
+	local EPlayerController EPC; // Joshua - Adding controller support for keypads
+	EPC = EPlayerController(InteractionController);
+
 	// Process Npc interaction
 	if( bAuto )
 	{
@@ -136,7 +139,10 @@ function KeyEvent( String Key, EInputAction Action, float Delta, optional bool b
 			break;
 
 		case "Interaction" :
-			if(bAuto)
+			// Joshua - Adding controller support for keypads
+			if (EPC != None && EPC.eGame.bUseController)
+				MyKeyPad.KeyPushed();
+			else if (bAuto)
 				MyKeyPad.KeyPushed();
 			break;
 		}
