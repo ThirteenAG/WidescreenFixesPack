@@ -22,34 +22,6 @@ namespace UInput
     }
 }
 
-namespace UEngine
-{
-    SafetyHookInline shInputEvent = {};
-    int __fastcall InputEvent(void* _this, void* edx, int a2, int inputID, int a4, float value)
-    {
-        if (inputID == 202 && !IsEnhanced()) // A on gamepad
-        {
-            auto EchelonMainHUDState = UObject::GetState(L"EchelonMainHUD");
-            if (EchelonMainHUDState == L"MainHUD" || EchelonMainHUDState == L"s_Slavery")
-            {
-                auto EPlayerControllerState = UObject::GetState(L"EPlayerController");
-
-                if (EPlayerControllerState == L"s_FirstPersonTargeting" || EPlayerControllerState == L"s_RappellingTargeting" ||
-                    EPlayerControllerState == L"s_PlayerBTWTargeting" || EPlayerControllerState == L"s_PlayerSniping" || EPlayerControllerState == L"s_HOHFUTargeting")
-                {
-                    auto EGameInteractionState = UObject::GetState(L"EGameInteraction");
-                    if (EGameInteractionState != L"s_GameInteractionMenu")
-                    {
-                        shInputEvent.unsafe_fastcall<int>(_this, edx, a2, inputID, a4, value);
-                        return shInputEvent.unsafe_fastcall<int>(_this, edx, a2, UInput::GetKey(UInput::gUInput, edx, L"ReloadGun", 0), a4, value);
-                    }
-                }
-            }
-        }
-        return shInputEvent.unsafe_fastcall<int>(_this, edx, a2, inputID, a4, value);
-    }
-}
-
 namespace FCanvasUtil
 {
     void(__fastcall* DrawTile)(void* _this, uint32_t EDX, float, float, float, float, float, float, float, float, float, void*, FColor);
@@ -334,7 +306,6 @@ export void InitEngine()
     }
 
     UInput::GetKey = (decltype(UInput::GetKey))GetProcAddress(GetModuleHandle(L"Engine"), "?GetKey@UInput@@UAEEPBGH@Z");
-    UEngine::shInputEvent = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?InputEvent@UEngine@@UAEHPAVUViewport@@W4EInputKey@@W4EInputAction@@M@Z"), UEngine::InputEvent);
     UInput::shInit = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?Init@UInput@@UAEXPAVUViewport@@@Z"), UInput::Init);
 
     UGameEngine::shDisplaySplash = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?DisplaySplash@UGameEngine@@UAEXH@Z"), UGameEngine::DisplaySplash);
