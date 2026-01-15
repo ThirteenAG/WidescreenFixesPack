@@ -1129,6 +1129,39 @@ exec function DecSpeed()
 	}
 }
 
+//---------------------------------------[Joshua - 8 Apr 2025]-----
+// Description
+//		 Toggles the SC-20K's scope using a single button (Y), replicating the Xbox control scheme.
+//------------------------------------------------------------------------
+exec function ZoomToggle()
+{
+	local ESniperGun snipeGun;
+	snipeGun = ESniperGun(ePawn.HandItem);
+
+	if (snipeGun != None && snipeGun.bSniperMode && !bStopInput)
+	{
+		bMustZoomIn = false;
+		bMustZoomOut = true;
+	}
+	else
+	{
+		bMustZoomIn = true;
+		bMustZoomOut = false;
+	}
+}
+
+//---------------------------------------[Joshua - 17 Apr 2025]-----
+// Description
+//		 Reset the camera position.
+//------------------------------------------------------------------------
+exec function ResetCamera()
+{
+	if (Level.Pauser != None || bStopInput)
+		return;
+
+	bResetCamera = 1;
+}
+
 //---------------------------------------[David Kalina - 12 Mar 2001]-----
 // Description
 //      Makes noise from the player's position
