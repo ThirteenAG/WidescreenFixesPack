@@ -35,14 +35,24 @@ void __fastcall FCanvasUtilDrawTileHook(void* _this, uint32_t EDX, float X, floa
 
     if (n_X == 0 && n_SizeX == 188) //zoom scope 1
     {
-        FCanvasUtil::DrawTile(_this, EDX, X, Y, SizeX, SizeY, U, V, SizeU, SizeV, unk1, Texture, Color, unk3, unk4);
-        return;
+        if (Screen.bScopeWidescreenMode)
+            return FCanvasUtil::DrawTile(_this, EDX, X, Y, SizeX, SizeY, U, V, SizeU, SizeV, unk1, Texture, Color, unk3, unk4);
+        else
+        {
+            FCanvasUtil::DrawTile(_this, EDX, 0.0f, Y, Screen.fHudOffset, SizeY, 0.0f, 0.0f, 1.0f, 1.0f, unk1, nullptr, ColBlack, unk3, unk4);
+            FCanvasUtil::DrawTile(_this, EDX, 640.0f + Screen.fHudOffset, Y, 640.0f + Screen.fHudOffset + Screen.fHudOffset, SizeY, 0.0f, 0.0f, 1.0f, 1.0f, unk1, nullptr, ColBlack, unk3, unk4);
+        }
     }
 
     if (n_X == (640 - 188) && n_SizeX == 640) //zoom scope 2
     {
-        FCanvasUtil::DrawTile(_this, EDX, SizeX + Screen.fHudOffset + Screen.fHudOffset - 188.0f, Y, SizeX + Screen.fHudOffset + Screen.fHudOffset, SizeY, U, V, SizeU, SizeV, unk1, Texture, Color, unk3, unk4);
-        return;
+        if (Screen.bScopeWidescreenMode)
+            return FCanvasUtil::DrawTile(_this, EDX, SizeX + Screen.fHudOffset + Screen.fHudOffset - 188.0f, Y, SizeX + Screen.fHudOffset + Screen.fHudOffset, SizeY, U, V, SizeU, SizeV, unk1, Texture, Color, unk3, unk4);
+        else
+        {
+            FCanvasUtil::DrawTile(_this, EDX, 0.0f, Y, Screen.fHudOffset, SizeY, 0.0f, 0.0f, 1.0f, 1.0f, unk1, Texture, ColBlack, unk3, unk4);
+            FCanvasUtil::DrawTile(_this, EDX, 640.0f + Screen.fHudOffset, Y, 640.0f + Screen.fHudOffset + Screen.fHudOffset, SizeY, 0.0f, 0.0f, 1.0f, 1.0f, unk1, Texture, ColBlack, unk3, unk4);
+        }
     }
 
     if ((n_X == 0 || n_X == 256 || n_X == 384) && n_Y == 448 && (n_SizeX == 256 || n_SizeX == 384 || n_SizeX == 640) && n_SizeY == 479) //hiding menu background
@@ -110,16 +120,17 @@ void __fastcall FCanvasUtilDrawTileHook(void* _this, uint32_t EDX, float X, floa
     }
 
     if (Screen.nHudWidescreenMode == 1)
+    {
+        wchar_t buffer[256];
+        curDrawTileManagerTextureName = UObject::GetFullName(Texture, 0, buffer);
         WidescreenHud(X, SizeX, Y, SizeY, Color);
+    }
     else if (Screen.nHudWidescreenMode == 2)
     {
         if (n_X == 0 && n_Y == 0 && n_SizeY == 480 && SizeU == 256.0f)
         {
-            wchar_t buffer[256];
-            std::wstring_view curTextureName(UObject::GetFullName(Texture, 0, buffer));
-
             // fix flashbang drawing
-            if (curTextureName.starts_with(L"FinalBlend Transient.FinalBlend"))
+            if (curDrawTileManagerTextureIndex == 163 || curDrawTileManagerTextureIndex == 164)
                 X -= Screen.fHudOffset;
         }
     }

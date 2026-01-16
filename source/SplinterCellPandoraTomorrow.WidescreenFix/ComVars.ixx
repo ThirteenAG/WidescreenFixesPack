@@ -27,6 +27,7 @@ export struct Screen
     float fWidescreenHudOffset;
     int nHudWidescreenMode;
     bool bOpsatWidescreenMode;
+    bool bScopeWidescreenMode;
     uint32_t nPostProcessFixedScale;
     uint32_t nFMVWidescreenMode;
     uint32_t nShadowMapResolution;
@@ -84,6 +85,7 @@ export namespace UObject
 }
 
 export int curDrawTileManagerTextureIndex = -1;
+export std::wstring curDrawTileManagerTextureName;
 
 export struct FArray
 {
