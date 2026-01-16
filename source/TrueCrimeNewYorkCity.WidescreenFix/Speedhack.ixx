@@ -179,6 +179,7 @@ export void InitSpeedhack()
         pTimeGetTime = (DWORD(WINAPI*)())GetProcAddress(GetModuleHandle(L"winmm.dll"), "timeGetTime");
         if (pTimeGetTime)
         {
+            // Gameplay speed
             auto pattern = hook::pattern("E8 ? ? ? ? 85 C0 89 44 24 ? DB 44 24 ? 7D ? D8 05 ? ? ? ? D8 0D");
             injector::MakeCALL(pattern.get_first(), timeGetTimeHook, true);
 
@@ -188,8 +189,8 @@ export void InitSpeedhack()
             pattern = hook::pattern("E8 ? ? ? ? 89 44 24 ? E8 ? ? ? ? 80 3D");
             injector::MakeCALL(pattern.get_first(), timeGetTimeHook, true);
 
-            //pattern = hook::pattern("E8 ? ? ? ? 80 3D ? ? ? ? ? 8B F8 0F 84");
-            //injector::MakeCALL(pattern.get_first(), timeGetTimeHook, true);
+            pattern = hook::pattern("E8 ? ? ? ? 80 3D ? ? ? ? ? 8B F8");
+            injector::MakeCALL(pattern.get_first(), timeGetTimeHook, true);
 
             pattern = hook::pattern("E8 ? ? ? ? 8D 54 24 ? 52 56 8B F8");
             injector::MakeCALL(pattern.get_first(), timeGetTimeHook, true);
