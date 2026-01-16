@@ -134,7 +134,9 @@ void __stdcall Thread(LPVOID a1)
 {
     LARGE_INTEGER frequency, currentTime;
     double lastTime, elapsed;
-    const double targetFrameTime = ((0.5f / fGameSpeedFactor) * (1.0f / fFpsLimit)) * 1000.0; // ms
+    const double msPerFrame = 1000.0 / fFpsLimit; // ms per frame at the requested FPS
+    // account for game speed factor, then apply the 0.5 scaling
+    const double targetFrameTime = (msPerFrame / fGameSpeedFactor) * 0.5; // ms
 
     QueryPerformanceFrequency(&frequency);
     QueryRealPerformanceCounter(&currentTime);
@@ -168,7 +170,7 @@ void Init()
 
     nFrameLimitType = iniReader.ReadInteger("FRAMELIMIT", "FrameLimitType", 1);
     fFpsLimit = std::clamp(static_cast<float>(iniReader.ReadInteger("FRAMELIMIT", "FpsLimit", 30)), 30.0f, FLT_MAX);
-    fGameSpeedFactor = 30.0f / fFpsLimit;
+    fGameSpeedFactor = 60.0f / fFpsLimit;
 
     fSensitivityFactor = iniReader.ReadFloat("MOUSE", "SensitivityFactor", 0.0f);
 
@@ -296,6 +298,10 @@ void Init()
 
         pattern = hook::pattern("56 8B 35 ? ? ? ? 57 8B 3D ? ? ? ? 8B FF");
         injector::MakeJMP(pattern.get_first(), Thread, true);
+
+        pattern = hook::pattern("0F 84 ? ? ? ? 80 3D ? ? ? ? ? 75 ? 84 DB");
+        injector::MakeNOP(pattern.get_first(0), 6, true);
+        injector::MakeNOP(pattern.get_first(13), 2, true);
 
         InitSpeedhack();
     }
