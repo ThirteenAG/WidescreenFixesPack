@@ -272,6 +272,8 @@ void Init()
     {
         if (nFrameLimitType > 0)
         {
+            fFpsLimit *= fGameSpeedFactor;
+
             auto mode = (nFrameLimitType == 2) ? FrameLimiter::FPSLimitMode::FPS_ACCURATE : FrameLimiter::FPSLimitMode::FPS_REALTIME;
             if (mode == FrameLimiter::FPSLimitMode::FPS_ACCURATE)
                 timeBeginPeriod(1);
