@@ -203,11 +203,24 @@ namespace UD3DRenderDevice
         float targetAspect = 4.0f / 3.0f;
         if (Screen.nFMVWidescreenMode && Screen.fAspectRatio > targetAspect)
         {
-            // Video has black bars on top and bottom, zoom in to hide them
-            float scale = 480.0f / static_cast<int32_t*>(a3)[1];
+            int videoWidth = static_cast<int32_t*>(a3)[0];
+            int videoHeight = static_cast<int32_t*>(a3)[1];
+
+            // Calculate scale to remove black bars (fit height)
+            float scaleByHeight = 480.0f / videoHeight;
+
+            // Calculate scale to fit width
+            float scaleByWidth = Screen.fWidth / (videoWidth * (Screen.fHeight / 480.0f));
+
+            // Use the smaller scale to ensure video doesn't exceed screen bounds
+            float scale = std::min(scaleByHeight, scaleByWidth);
 
             float contentHeight = Screen.fHeight * scale;
             float contentWidth = contentHeight * targetAspect;
+
+            // Clamp contentWidth to screen width if needed
+            if (contentWidth > Screen.fWidth)
+                contentWidth = Screen.fWidth;
 
             // Center the scaled content
             Screen.fFMVoffsetStartX = (Screen.fWidth - contentWidth) / 2.0f;
