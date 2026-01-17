@@ -112,22 +112,6 @@ void __cdecl sub_648AC0(int a1)
 }
 
 float fSensitivityFactor = 1.0f;
-float* fMouseSens = nullptr;
-SafetyHookInline shsub_652340 = {};
-void __cdecl sub_652340(char a1)
-{
-    shsub_652340.unsafe_ccall(a1);
-    *fMouseSens *= fSensitivityFactor;
-}
-
-float* flt_8F602C = nullptr;
-float sub_648A70()
-{
-    if (bCutscene && *bCutscene)
-        return *flt_8F602C * 2.0f;
-
-    return *flt_8F602C;
-}
 
 void (__cdecl* sub_62B450)() = nullptr;
 void __stdcall Thread(LPVOID a1)
@@ -170,9 +154,9 @@ void Init()
 
     nFrameLimitType = iniReader.ReadInteger("FRAMELIMIT", "FrameLimitType", 1);
     fFpsLimit = std::clamp(static_cast<float>(iniReader.ReadInteger("FRAMELIMIT", "FpsLimit", 30)), 30.0f, FLT_MAX);
-    fGameSpeedFactor = 30.0f / fFpsLimit;
+    fGameSpeedFactor = std::min(1.0f, 60.0f / fFpsLimit);
 
-    fSensitivityFactor = iniReader.ReadFloat("MOUSE", "SensitivityFactor", 0.0f);
+    fSensitivityFactor = std::abs(iniReader.ReadFloat("MOUSE", "SensitivityFactor", 0.0f));
 
     if (bSkipIntro)
     {
@@ -299,20 +283,26 @@ void Init()
         pattern = hook::pattern("56 8B 35 ? ? ? ? 57 8B 3D ? ? ? ? 8B FF");
         injector::MakeJMP(pattern.get_first(), Thread, true);
 
-        pattern = hook::pattern("0F 84 ? ? ? ? 80 3D ? ? ? ? ? 75 ? 84 DB");
-        injector::WriteMemory<uint16_t>(pattern.get_first(), 0xE990, true);
+        // unify game speed and cutscene speed
+        if (fFpsLimit >= 60.0f)
+        {
+            pattern = hook::pattern("0F 84 ? ? ? ? 80 3D ? ? ? ? ? 75 ? 84 DB");
+            injector::MakeNOP(pattern.get_first(0), 6, true);
+            injector::MakeNOP(pattern.get_first(13), 2, true);
+        }
 
         InitSpeedhack();
     }
 
     if (fSensitivityFactor)
     {
-        //bugged, todo
-        //pattern = hook::pattern("F3 0F 11 05 ? ? ? ? C7 05 ? ? ? ? ? ? ? ? 0F 84");
-        //fMouseSens = *pattern.get_first<float*>(4);
-        //
-        //pattern = hook::pattern("80 7C 24 ? ? F3 0F 10 05 ? ? ? ? 56");
-        //shsub_652340 = safetyhook::create_inline(pattern.get_first(0), sub_652340);
+        fSensitivityFactor *= 0.0099999998f;
+
+        pattern = hook::pattern("D8 0D ? ? ? ? DD 1C 24");
+        injector::WriteMemory(pattern.get_first(2), &fSensitivityFactor, true);
+
+        pattern = hook::pattern("F3 0F 59 05 ? ? ? ? 83 C2 FF");
+        injector::WriteMemory(pattern.get_first(4), &fSensitivityFactor, true);
     }
 }
 
