@@ -170,7 +170,7 @@ void Init()
 
     nFrameLimitType = iniReader.ReadInteger("FRAMELIMIT", "FrameLimitType", 1);
     fFpsLimit = std::clamp(static_cast<float>(iniReader.ReadInteger("FRAMELIMIT", "FpsLimit", 30)), 30.0f, FLT_MAX);
-    fGameSpeedFactor = 60.0f / fFpsLimit;
+    fGameSpeedFactor = 30.0f / fFpsLimit;
 
     fSensitivityFactor = iniReader.ReadFloat("MOUSE", "SensitivityFactor", 0.0f);
 
@@ -300,19 +300,19 @@ void Init()
         injector::MakeJMP(pattern.get_first(), Thread, true);
 
         pattern = hook::pattern("0F 84 ? ? ? ? 80 3D ? ? ? ? ? 75 ? 84 DB");
-        injector::MakeNOP(pattern.get_first(0), 6, true);
-        injector::MakeNOP(pattern.get_first(13), 2, true);
+        injector::WriteMemory<uint16_t>(pattern.get_first(), 0xE990, true);
 
         InitSpeedhack();
     }
 
     if (fSensitivityFactor)
     {
-        pattern = hook::pattern("F3 0F 11 05 ? ? ? ? C7 05 ? ? ? ? ? ? ? ? 0F 84");
-        fMouseSens = *pattern.get_first<float*>(4);
-
-        pattern = hook::pattern("80 7C 24 ? ? F3 0F 10 05 ? ? ? ? 56");
-        shsub_652340 = safetyhook::create_inline(pattern.get_first(0), sub_652340);
+        //bugged, todo
+        //pattern = hook::pattern("F3 0F 11 05 ? ? ? ? C7 05 ? ? ? ? ? ? ? ? 0F 84");
+        //fMouseSens = *pattern.get_first<float*>(4);
+        //
+        //pattern = hook::pattern("80 7C 24 ? ? F3 0F 10 05 ? ? ? ? 56");
+        //shsub_652340 = safetyhook::create_inline(pattern.get_first(0), sub_652340);
     }
 }
 
