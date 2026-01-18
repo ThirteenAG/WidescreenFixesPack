@@ -3,6 +3,7 @@
 #pragma comment(lib, "winmm.lib")
 
 import Speedhack;
+import RawInput;
 
 struct Screen
 {
@@ -111,8 +112,6 @@ void __cdecl sub_648AC0(int a1)
     return shsub_648AC0.unsafe_ccall(nFrameLimitType ? 0 : a1);
 }
 
-float fSensitivityFactor = 1.0f;
-
 void (__cdecl* sub_62B450)() = nullptr;
 void __stdcall Thread(LPVOID a1)
 {
@@ -156,7 +155,8 @@ void Init()
     fFpsLimit = std::clamp(static_cast<float>(iniReader.ReadInteger("FRAMELIMIT", "FpsLimit", 30)), 30.0f, FLT_MAX);
     fGameSpeedFactor = std::min(1.0f, 60.0f / fFpsLimit);
 
-    fSensitivityFactor = std::abs(iniReader.ReadFloat("MOUSE", "SensitivityFactor", 0.0f));
+    static float fSensitivityFactor = std::abs(iniReader.ReadFloat("MOUSE", "SensitivityFactor", 0.0f));
+    fRawInputMouse = std::abs(iniReader.ReadFloat("MOUSE", "RawInputMouse", 1.0f));
 
     if (bSkipIntro)
     {
@@ -304,6 +304,9 @@ void Init()
         pattern = hook::pattern("F3 0F 59 05 ? ? ? ? 83 C2 FF");
         injector::WriteMemory(pattern.get_first(4), &fSensitivityFactor, true);
     }
+
+    if (fRawInputMouse)
+        InitRawInput();
 }
 
 CEXP void InitializeASI()

@@ -4,9 +4,6 @@ module;
 
 export module Speedhack;
 
-export bool* bPause = nullptr;
-export bool* bCutscene = nullptr;
-export uint32_t* nLoading = nullptr;
 export float fGameSpeedFactor = 1.0f;
 
 DWORD(WINAPI* pTimeGetTime)() = nullptr;
@@ -144,15 +141,6 @@ DWORD WINAPI timeGetTimeHook()
 
 export void InitSpeedhack()
 {
-    auto pattern = hook::pattern("88 15 ? ? ? ? 8D 45");
-    bPause = *pattern.get_first<bool*>(2);
-
-    pattern = hook::pattern("32 C0 88 81 ? ? ? ? A2 ? ? ? ? E8 ? ? ? ? 33 C0 C3");
-    bCutscene = *pattern.get_first<bool*>(9);
-
-    pattern = hook::pattern("83 3D ? ? ? ? ? 74 ? 84 DB");
-    nLoading = *pattern.get_first<uint32_t*>(2);
-
     shGetTickCount = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"kernel32"), "GetTickCount"), GetTickCountHook);
     shGetTickCount64 = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"kernel32"), "GetTickCount64"), GetTickCount64Hook);
     shQueryPerformanceCounter = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"kernel32"), "QueryPerformanceCounter"), QueryPerformanceCounterHook);
