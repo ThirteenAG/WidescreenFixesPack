@@ -15,7 +15,6 @@ struct Screen
     float fAspectRatio;
     int32_t Width43;
     float fWidth43;
-    float fHudScale;
     float fHudOffset;
 } Screen;
 
@@ -142,6 +141,55 @@ void __stdcall Thread(LPVOID a1)
     }
 }
 
+SafetyHookInline shsub_654780 = {};
+void __fastcall sub_654780(void* _this, void* edx, int a2)
+{
+    a2 = Screen.Width43;
+    shsub_654780.unsafe_fastcall(_this, edx, a2);
+}
+
+void __cdecl sub_654D60(float* input1, float* input2, int alignmentMode, float* output)
+{
+    if (!input1 || !input2 || !output) return;
+
+    // Scale factors
+    output[5] = input1[5] * input2[5];  // Width scale
+    output[6] = input1[6] * input2[6];  // Height scale
+    output[3] = input2[3] * output[5];  // Scaled width component
+    output[4] = input2[4] * output[6];  // Scaled height component
+    output[0] = input1[0] * input2[0];  // Base scale
+
+    float xPos;
+    switch (alignmentMode)
+    {
+        case 0: case 3: case 6:  // Left/top alignment
+            xPos = (input2[1] * output[5]) + input1[1];
+            break;
+        case 1: case 4: case 7:  // Center alignment
+            xPos = ((input1[3] - output[3]) * 0.5f) + (input2[1] * output[5]) + input1[1];
+            break;
+        case 2: case 5: case 8:  // Right/bottom alignment
+            xPos = (input1[3] + input1[1]) - output[3] + (input2[1] * output[5]);
+            break;
+        default:
+            return;
+    }
+    output[1] = xPos + Screen.fHudOffset;  // Apply HUD offset
+
+    switch (alignmentMode)
+    {
+        case 0: case 1: case 2:  // Top alignment
+            output[2] = (input2[2] * output[6]) + input1[2];
+            break;
+        case 3: case 4: case 5:  // Middle alignment
+            output[2] = ((input1[4] - output[4]) * 0.5f) + (input2[2] * output[6]) + input1[2];
+            break;
+        case 6: case 7: case 8:  // Bottom alignment
+            output[2] = (input1[4] + input1[2]) - output[4] + (input2[2] * output[6]);
+            break;
+    }
+}
+
 void Init()
 {
     CIniReader iniReader("");
@@ -211,34 +259,11 @@ void Init()
 
     if (bFixHUD)
     {
-        uintptr_t dword_654780 = (uintptr_t)hook::pattern("8B 44 24 04 F3 0F 2A C0 0F 28 C8").count(1).get(0).get<uintptr_t>(0);
-        struct HudScaleHook
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                int32_t a2 = *(int32_t*)(regs.esp + 4);
-                if (a2 == Screen.Width)
-                    a2 = Screen.Width43;
+        auto pattern = hook::pattern("8B 44 24 ? F3 0F 2A C0 0F 28 C8 F3 0F 59 0D ? ? ? ? F3 0F 11 89");
+        shsub_654780 = safetyhook::create_inline(pattern.get_first(), sub_654780);
 
-                *(float*)(regs.ecx + 0xE0) = (float)a2 * (1.0f / 640.0f);
-                *(int32_t*)(regs.ecx + 0xD8) = a2;
-                *(float*)(regs.ecx + 0xE8) = (1.0f / (float)a2);
-            }
-        }; injector::MakeInline<HudScaleHook>(dword_654780, dword_654780 + 53);
-
-        pattern = hook::pattern("F3 0F 11 44 24 24 F3 0F 11 44 24 20 F3 0F 11"); //0x65E870
-        struct HudPosHook
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                *(float*)(regs.esp + 0x18) = Screen.fHudOffset;
-                *(float*)(regs.esp + 0x20) = 1.0f;
-                *(float*)(regs.esp + 0x24) = 1.0f;
-                *(float*)(regs.esp + 0x28) = 1.0f;
-                *(float*)(regs.esp + 0x2C) = 1.0f;
-            }
-        }; injector::MakeInline<HudPosHook>(pattern.get_first(0), pattern.get_first(24));
-        injector::WriteMemory(pattern.get_first(24 - 4), 0x9001F883, true); //cmp     eax, 1
+        pattern = hook::pattern("8B 4C 24 ? 85 C9 56");
+        static auto shsub_654D60 = safetyhook::create_inline(pattern.get_first(), sub_654D60);
     }
 
     if (bFixFOV)
