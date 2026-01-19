@@ -2,21 +2,10 @@
 #include <mmsystem.h>
 #pragma comment(lib, "winmm.lib")
 
+import ComVars;
 import Speedhack;
 import RawInput;
-
-struct Screen
-{
-    int32_t Width;
-    int32_t Height;
-    float fWidth;
-    float fHeight;
-    float fFieldOfView;
-    float fAspectRatio;
-    int32_t Width43;
-    float fWidth43;
-    float fHudOffset;
-} Screen;
+import WidescreenHUD;
 
 float fFpsLimit;
 
@@ -174,6 +163,7 @@ void __cdecl sub_654D60(float* input1, float* input2, int alignmentMode, float* 
         default:
             return;
     }
+
     output[1] = xPos + Screen.fHudOffset;  // Apply HUD offset
 
     switch (alignmentMode)
@@ -197,6 +187,7 @@ void Init()
     bool bDoNotUseRegistryPath = iniReader.ReadInteger("MAIN", "DoNotUseRegistryPath", 1) != 0;
     nLanguage = iniReader.ReadInteger("MAIN", "Language", -1);
     static bool bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) != 0;
+    Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "HudAspectRatioConstraint", ""));
     static bool bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) != 0;
 
     nFrameLimitType = iniReader.ReadInteger("FRAMELIMIT", "FrameLimitType", 1);
@@ -224,7 +215,7 @@ void Init()
 
                 GetModuleFileNameA(NULL, (char*)regs.edi, MAX_PATH);
                 *strrchr((char*)regs.edi, '\\') = '\0';
-                strcat((char*)regs.edi, "\\data");
+                strcat_s((char*)regs.edi, MAX_PATH, "\\data");
             }
         }; injector::MakeInline<RegHook>(pattern.get_first(0), pattern.get_first(11));
         injector::MakeJMP(pattern.get_first(11), hook::pattern("8D 44 24 18 8D 50 01").count(2).get(1).get<uintptr_t>(0), true); //0x496FD8
@@ -254,6 +245,21 @@ void Init()
             Screen.Width43 = static_cast<uint32_t>(Screen.fHeight * (4.0f / 3.0f));
             Screen.fWidth43 = static_cast<float>(Screen.Width43);
             Screen.fHudOffset = (1.0f / (Screen.fHeight * (4.0f / 3.0f))) * ((Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f);
+
+            Screen.fWidescreenHudOffset = std::abs(CalculateWidescreenOffset(Screen.fWidth, Screen.fHeight, 640.0f, 480.0f, 0.0f, true));
+            Screen.fWidescreenHudOffsetPhone = Screen.fWidescreenHudOffset / (Screen.fHeight * (4.0f / 3.0f));
+            if (Screen.fHudAspectRatioConstraint.has_value())
+            {
+                float value = Screen.fHudAspectRatioConstraint.value();
+                if (value < 0.0f || value > (32.0f / 9.0f))
+                    Screen.fWidescreenHudOffset = value;
+                else
+                {
+                    value = ClampHudAspectRatio(value, Screen.fAspectRatio);
+                    Screen.fWidescreenHudOffset = std::abs(CalculateWidescreenOffset(Screen.fHeight * value, Screen.fHeight, 640.0f, 480.0f, 0.0f, true));
+                }
+            }
+            Screen.fWidescreenHudOffset = Screen.fWidescreenHudOffset / (Screen.fHeight * (4.0f / 3.0f));
         }
     }; injector::MakeInline<ResHook>(pattern.get_first(0), pattern.get_first(6));
 
@@ -263,7 +269,8 @@ void Init()
         shsub_654780 = safetyhook::create_inline(pattern.get_first(), sub_654780);
 
         pattern = hook::pattern("8B 4C 24 ? 85 C9 56");
-        static auto shsub_654D60 = safetyhook::create_inline(pattern.get_first(), sub_654D60);
+        //static auto shsub_654D60 = safetyhook::create_inline(pattern.get_first(), sub_654D60);
+        static auto shsub_654D60 = safetyhook::create_inline(pattern.get_first(), WidescreenHUD);
     }
 
     if (bFixFOV)
