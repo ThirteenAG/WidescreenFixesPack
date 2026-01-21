@@ -838,6 +838,21 @@ namespace WindowedModeWrapper
         return AdjustWindowRect(lpRect, newStyle, bMenu);
     }
 
+    static BOOL WINAPI AdjustWindowRectEx_Hook(LPRECT lpRect, DWORD dwStyle, BOOL bMenu, DWORD dwExStyle)
+    {
+        DWORD newStyle = 0;
+
+        if (!bBorderlessWindowed)
+            newStyle = WS_CAPTION;
+        else
+        {
+            afterCreateWindow();
+            return AdjustWindowRectEx(lpRect, GetWindowLong(GameHWND, GWL_STYLE), bMenu, dwExStyle);
+        }
+
+        return AdjustWindowRectEx(lpRect, newStyle, bMenu, dwExStyle);
+    }
+
     static BOOL WINAPI CenterWindowPosition(int nWidth, int nHeight)
     {
         // fix the window to open at the center of the screen...

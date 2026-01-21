@@ -1,4 +1,4 @@
-module;
+ï»¿module;
 
 #include <stdafx.h>
 #include <xmmintrin.h>
@@ -18,8 +18,8 @@ bool IsAimingModeSwitch = false;
 enum CameraMode
 {
     CameraOnFoot = 0,
-    CameraCrosshair = 6,
-    CameraPrecisionAim = 11,
+    CameraPrecisionAim = 6,
+    CameraCrosshair = 11,
     CameraInVehicle = 13,
 };
 
@@ -58,11 +58,11 @@ __m128* xmmword_778BD0 = nullptr;
 __m128* xmmword_778BA0 = nullptr;
 float* float_70F390 = nullptr;
 uint8_t** dword_79430C = nullptr;
+static float idle_timer = 0.0f;
 
 SafetyHookInline shsub_40D990 = {};
 void __stdcall sub_40D990(float a1)
 {
-    static float idle_timer = 0.0f;
     static float prev_idle_timer = 0.0f;
     static float accumulated_yaw = 0.0f;
     static float accumulated_pitch = 0.0f;
@@ -95,7 +95,7 @@ void __stdcall sub_40D990(float a1)
         prev_camera_mode_local = CurrentCameraMode;
     }
 
-    if (mouse_moved)
+    if (mouse_moved || CurrentCameraMode == CameraPrecisionAim)
     {
         idle_timer = 0.0f;
     }
@@ -125,7 +125,7 @@ void __stdcall sub_40D990(float a1)
                 float z_f = current_quat.m128_f32[2];
                 float w_f = current_quat.m128_f32[3];
 
-                // Undo the 180° roll to get original quaternion
+                // Undo the 180Â° roll to get original quaternion
                 float qx_o = z_f;
                 float qy_o = -y_f;
                 float qz_o = -x_f;
@@ -196,7 +196,7 @@ void __stdcall sub_40D990(float a1)
             __m128 inv_sqrt = _mm_set_ps1(1.0f / std::sqrt(dot.m128_f32[0]));
             quat = _mm_mul_ps(quat, inv_sqrt);
 
-            // --- APPLY 180° ROLL TO FLIP CAMERA (fix upside-down startup) ---
+            // --- APPLY 180Â° ROLL TO FLIP CAMERA (fix upside-down startup) ---
             // roll quaternion r = (0,0,1,0); multiply r * quat (scalar implementation)
             {
                 float qx_f = quat.m128_f32[0];
@@ -277,6 +277,9 @@ export void InitRawInput()
     pattern = find_pattern("81 EC 90 00 00 00 53", "83 EC 48 53 8B 5C 24");
     shsub_653250 = safetyhook::create_inline(pattern.get_first(0), sub_653250);
 
+    static float menuDeltaX = 0.0f;
+    static float menuDeltaY = 0.0f;
+
     pattern = hook::pattern("C6 44 24 ? ? E8 ? ? ? ? 8B 4C 24 ? 3B CD");
     static auto UpdateInputHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
@@ -287,8 +290,47 @@ export void InitRawInput()
 
         if (*nLoading != 0 || *bCutscene || *bPause)
         {
+            menuDeltaX = RawCursorHandler<float>::MouseDeltaX;
+            menuDeltaY = RawCursorHandler<float>::MouseDeltaY;
+            idle_timer = 10.0f;
             RawCursorHandler<float>::MouseDeltaX = 0.0f;
             RawCursorHandler<float>::MouseDeltaY = 0.0f;
         }
+    });
+
+    // menu map cursor
+    pattern = hook::pattern("76 ? F3 0F 10 05 ? ? ? ? F3 0F 10 4C 24 ? F3 0F 59 C8 F3 0F 58 4E");
+    injector::MakeNOP(pattern.get_first(), 2, true);
+
+    pattern = hook::pattern("F3 0F 11 4E ? F3 0F 10 4C 24 ? F3 0F 59 C8");
+    injector::MakeNOP(pattern.get_first(), 5, true);
+    static auto MouseX = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        bool mouse_moved = (std::fabs(menuDeltaX) > 1e-6f);
+        if (mouse_moved)
+        {
+            *(float*)(regs.esi + 0x54) += menuDeltaX * 27.5f;
+        }
+        else
+        {
+            *(float*)(regs.esi + 0x54) = regs.xmm1.f32[0];
+        }
+        menuDeltaX = 0.0f;
+    });
+
+    pattern = hook::pattern("F3 0F 11 4E ? 8B 46");
+    injector::MakeNOP(pattern.get_first(), 5, true);
+    static auto MouseY = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        bool mouse_moved = (std::fabs(menuDeltaY) > 1e-6f);
+        if (mouse_moved)
+        {
+            *(float*)(regs.esi + 0x58) += -menuDeltaY * 27.5f;
+        }
+        else
+        {
+            *(float*)(regs.esi + 0x58) = regs.xmm1.f32[0];
+        }
+        menuDeltaY = 0.0f;
     });
 }
