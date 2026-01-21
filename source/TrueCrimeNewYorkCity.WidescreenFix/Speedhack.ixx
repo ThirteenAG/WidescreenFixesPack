@@ -8,6 +8,8 @@ export bool* bPause = nullptr;
 export bool* bCutscene = nullptr;
 export uint32_t* nLoading = nullptr;
 export float fGameSpeedFactor = 1.0f;
+export bool bPauseMenuSpeedFix = 1.0f;
+float lastMultiplier = 1.0f;
 
 DWORD(WINAPI* pTimeGetTime)() = nullptr;
 
