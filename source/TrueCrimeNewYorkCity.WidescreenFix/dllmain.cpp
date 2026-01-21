@@ -155,6 +155,7 @@ void Init()
     nFrameLimitType = iniReader.ReadInteger("FRAMELIMIT", "FrameLimitType", 1);
     fFpsLimit = std::clamp(static_cast<float>(iniReader.ReadInteger("FRAMELIMIT", "FpsLimit", 30)), 30.0f, FLT_MAX);
     fGameSpeedFactor = std::min(1.0f, 60.0f / fFpsLimit);
+    bPauseMenuSpeedFix = iniReader.ReadInteger("FRAMELIMIT", "PauseMenuSpeedFix", 1) != 0;
 
     fSensitivityFactor = std::abs(iniReader.ReadFloat("MOUSE", "SensitivityFactor", 0.0f));
 
