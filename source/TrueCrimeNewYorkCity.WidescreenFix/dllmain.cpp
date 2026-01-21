@@ -202,27 +202,23 @@ void Init()
         });
 
         // Menu map
-        pattern = hook::pattern("F3 0F 59 0D ? ? ? ? F3 0F 10 05 ? ? ? ? F3 0F 58 C8");
-        injector::MakeNOP(pattern.get_first(), 8, true);
+        pattern = hook::pattern("F3 0F 58 C8 F3 0F 2C E9");
+        injector::MakeNOP(pattern.get_first(), 4, true);
         static auto MapHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
-            regs.xmm1.f32[0] *= (Screen.fWidth - (Screen.fHeight * (4.0f / 3.0f))) / 2.0f;
+            regs.xmm1.f32[0] += regs.xmm0.f32[0];
+            regs.xmm1.f32[0] += (Screen.fWidth - (Screen.fHeight * (4.0f / 3.0f))) / 2.0f;
         });
 
-        static float xx = 1.0f;
-        pattern = hook::pattern("0F B7 F6 F3 0F 2A DE");
+        // Menu blips
+        pattern = hook::pattern("F3 0F 10 0D ? ? ? ? F3 0F 11 4C 24 ? F3 0F 10 0D ? ? ? ? F3 0F 11 4C 24 ? F3 0F 10 0D ? ? ? ? F3 0F 11 4C 24 ? F3 0F 11 44 24 ? F3 0F 11 44 24");
+        injector::MakeNOP(pattern.get_first(), 8, true);
         static auto BlipsHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
-            regs.xmm2.f32[0] += (Screen.fWidth / 2.0f) - (2.0f * Screen.fHeight / 3.0f) - 64.0f;
+            regs.xmm1.f32[0] = 195.0f + ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
         });
 
-        pattern = hook::pattern("89 56 ? F3 0F 59 05");
-        static auto PlayerBlipHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-        {
-            regs.xmm0.f32[0] += (Screen.fWidth / 2.0f) - (2.0f * Screen.fHeight / 3.0f) - 64.0f;
-        });
-
-        //radar
+        // Radar
         pattern = hook::pattern("F3 0F 58 C8 66 89 44 24 ? F3 0F 2C C1 F3 0F 2A C9 F3 0F 5C C8");
         injector::MakeNOP(pattern.get_first(), 4, true);
         static auto RadarPosHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
