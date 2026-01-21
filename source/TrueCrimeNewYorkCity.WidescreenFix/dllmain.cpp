@@ -1,133 +1,15 @@
 #include "stdafx.h"
-#include <mmsystem.h>
-#pragma comment(lib, "winmm.lib")
 
 import ComVars;
 import Speedhack;
+import Framelimit;
 import RawInput;
 import WidescreenHUD;
-
-float fFpsLimit;
-
-int32_t nFrameLimitType;
-class FrameLimiter
-{
-public:
-    enum FPSLimitMode { FPS_NONE, FPS_REALTIME, FPS_ACCURATE };
-    FPSLimitMode mFPSLimitMode = FPS_NONE;
-private:
-    double TIME_Frequency = 0.0;
-    double TIME_Ticks = 0.0;
-    double TIME_Frametime = 0.0;
-    float  fFPSLimit = 0.0f;
-public:
-    void Init(FPSLimitMode mode, float fps_limit)
-    {
-        mFPSLimitMode = mode;
-        fFPSLimit = fps_limit;
-
-        LARGE_INTEGER frequency;
-        QueryPerformanceFrequency(&frequency);
-        static constexpr auto TICKS_PER_FRAME = 1;
-        auto TICKS_PER_SECOND = (TICKS_PER_FRAME * fFPSLimit);
-        if (mFPSLimitMode == FPS_ACCURATE)
-        {
-            TIME_Frametime = 1000.0 / (double)fFPSLimit;
-            TIME_Frequency = (double)frequency.QuadPart / 1000.0; // ticks are milliseconds
-        }
-        else // FPS_REALTIME
-        {
-            TIME_Frequency = (double)frequency.QuadPart / (double)TICKS_PER_SECOND; // ticks are 1/n frames (n = fFPSLimit)
-        }
-        Ticks();
-    }
-    DWORD Sync_RT()
-    {
-        DWORD lastTicks, currentTicks;
-        LARGE_INTEGER counter;
-        QueryRealPerformanceCounter(&counter);
-        lastTicks = (DWORD)TIME_Ticks;
-        TIME_Ticks = (double)counter.QuadPart / TIME_Frequency;
-        currentTicks = (DWORD)TIME_Ticks;
-
-        return (currentTicks > lastTicks) ? currentTicks - lastTicks : 0;
-    }
-    DWORD Sync_SLP()
-    {
-        LARGE_INTEGER counter;
-        QueryRealPerformanceCounter(&counter);
-        double millis_current = (double)counter.QuadPart / TIME_Frequency;
-        double millis_delta = millis_current - TIME_Ticks;
-        if (TIME_Frametime <= millis_delta)
-        {
-            TIME_Ticks = millis_current;
-            return 1;
-        }
-        else if (TIME_Frametime - millis_delta > 2.0) // > 2ms
-            Sleep(1); // Sleep for ~1ms
-        else
-            Sleep(0); // yield thread's time-slice (does not actually sleep)
-
-        return 0;
-    }
-    void Sync()
-    {
-        if (mFPSLimitMode == FPS_REALTIME)
-            while (!Sync_RT());
-        else if (mFPSLimitMode == FPS_ACCURATE)
-            while (!Sync_SLP());
-    }
-private:
-    void Ticks()
-    {
-        LARGE_INTEGER counter;
-        QueryRealPerformanceCounter(&counter);
-        TIME_Ticks = (double)counter.QuadPart / TIME_Frequency;
-    }
-};
-
-FrameLimiter FpsLimiter;
 
 int32_t nLanguage;
 int32_t __cdecl SetLanguage(LPCSTR lpValueName)
 {
     return nLanguage;
-}
-
-SafetyHookInline shsub_648AC0 = {};
-void __cdecl sub_648AC0(int a1)
-{
-    return shsub_648AC0.unsafe_ccall(nFrameLimitType ? 0 : a1);
-}
-
-void (__cdecl* sub_62B450)() = nullptr;
-void __stdcall Thread(LPVOID a1)
-{
-    LARGE_INTEGER frequency, currentTime;
-    double lastTime, elapsed;
-    const double msPerFrame = 1000.0 / fFpsLimit; // ms per frame at the requested FPS
-    // account for game speed factor, then apply the 0.5 scaling
-    const double targetFrameTime = (msPerFrame / fGameSpeedFactor) * 0.5; // ms
-
-    QueryPerformanceFrequency(&frequency);
-    QueryRealPerformanceCounter(&currentTime);
-    lastTime = (double)currentTime.QuadPart / frequency.QuadPart * 1000.0;
-
-    while (1)
-    {
-        QueryRealPerformanceCounter(&currentTime);
-        elapsed = ((double)currentTime.QuadPart / frequency.QuadPart * 1000.0) - lastTime;
-
-        if (elapsed >= targetFrameTime)
-        {
-            lastTime += targetFrameTime;
-            sub_62B450();
-        }
-        else
-        {
-            Sleep(1);
-        }
-    }
 }
 
 SafetyHookInline shsub_654780 = {};
@@ -180,11 +62,22 @@ void __cdecl sub_654D60(float* input1, float* input2, int alignmentMode, float* 
     }
 }
 
+BOOL WINAPI SetWindowPosHook(HWND hWnd, HWND hWndInsertAfter, int X, int Y, int cx, int cy, UINT uFlags)
+{
+    return TRUE;
+}
+
+BOOL WINAPI AdjustWindowRectExHook(LPRECT lpRect, DWORD dwStyle, BOOL bMenu, DWORD dwExStyle)
+{
+    return TRUE;
+}
+
 void Init()
 {
     CIniReader iniReader("");
     bool bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
     bool bDoNotUseRegistryPath = iniReader.ReadInteger("MAIN", "DoNotUseRegistryPath", 1) != 0;
+    bool bBorderlessWindowed = iniReader.ReadInteger("MAIN", "BorderlessWindowed", 1) != 0;
     nLanguage = iniReader.ReadInteger("MAIN", "Language", -1);
     static bool bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) != 0;
     Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "HudAspectRatioConstraint", ""));
@@ -219,6 +112,21 @@ void Init()
             }
         }; injector::MakeInline<RegHook>(pattern.get_first(0), pattern.get_first(11));
         injector::MakeJMP(pattern.get_first(11), hook::pattern("8D 44 24 18 8D 50 01").count(2).get(1).get<uintptr_t>(0), true); //0x496FD8
+    }
+
+    if (bBorderlessWindowed)
+    {
+        auto pattern = hook::pattern("FF 15 ? ? ? ? 85 C0 A3 ? ? ? ? 75 ? FF 15");
+        injector::MakeNOP(pattern.get_first(), 6, true);
+        injector::MakeCALL(pattern.get_first(), WindowedModeWrapper::CreateWindowExA_Hook, true);
+
+        pattern = hook::pattern("FF 15 ? ? ? ? 8B 0D ? ? ? ? 6A 05");
+        injector::MakeNOP(pattern.get_first(), 6, true);
+        injector::MakeCALL(pattern.get_first(), SetWindowPosHook, true);
+
+        pattern = hook::pattern("FF 15 ? ? ? ? A1 ? ? ? ? 8B 0D");
+        injector::MakeNOP(pattern.get_first(), 6, true);
+        injector::MakeCALL(pattern.get_first(), AdjustWindowRectExHook, true);
     }
 
     if (nLanguage >= 0)
@@ -259,6 +167,7 @@ void Init()
                     Screen.fWidescreenHudOffset = std::abs(CalculateWidescreenOffset(Screen.fHeight * value, Screen.fHeight, 640.0f, 480.0f, 0.0f, true));
                 }
             }
+            Screen.fWidescreenHudOffsetRadar = Screen.fWidescreenHudOffset;
             Screen.fWidescreenHudOffset = Screen.fWidescreenHudOffset / (Screen.fHeight * (4.0f / 3.0f));
         }
     }; injector::MakeInline<ResHook>(pattern.get_first(0), pattern.get_first(6));
@@ -271,6 +180,68 @@ void Init()
         pattern = hook::pattern("8B 4C 24 ? 85 C9 56");
         //static auto shsub_654D60 = safetyhook::create_inline(pattern.get_first(), sub_654D60);
         static auto shsub_654D60 = safetyhook::create_inline(pattern.get_first(), WidescreenHUD);
+
+        //subtitles
+        pattern = hook::pattern("F3 0F 59 05 ? ? ? ? F3 0F 11 4C 24");
+        static auto SubtitlesPosHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            regs.xmm1.f32[0] *= Screen.fAspectRatio / (4.0f / 3.0f);
+        });
+
+        // 3D models (armoury etc)
+        pattern = hook::pattern("F3 0F 10 80 ? ? ? ? 68 15 26 DB FB 8D 4C 24 ? F3 0F 11 44 24 ? E8 ? ? ? ? 8B 4E ? F3 0F 2A C0 F3 0F 59 44 24");
+        static auto Move3DPos1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            *(float*)(regs.esi + 0x54) += (Screen.fWidth - (Screen.fHeight * (4.0f / 3.0f))) / 2.0f;
+        });
+
+        pattern = hook::pattern("E8 ? ? ? ? 8B 56 ? F3 0F 2A C0 F3 0F 59 44 24 ? F3 0F 11 46 ? F3 0F 10 82 ? ? ? ? 68 0F E5 4D F5 8D 4C 24 ? F3 0F 11 44 24 ? E8 ? ? ? ? F3 0F 2A C0 F3 0F 59 44 24 ? 68 00 00 80 3F");
+        static auto Move3DPos2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            *(float*)(regs.esp + 0x5C) += (Screen.fWidth - (Screen.fHeight * (4.0f / 3.0f))) / 2.0f;
+        });
+
+        // Menu map
+        pattern = hook::pattern("F3 0F 59 0D ? ? ? ? F3 0F 10 05 ? ? ? ? F3 0F 58 C8");
+        injector::MakeNOP(pattern.get_first(), 8, true);
+        static auto MapHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            regs.xmm1.f32[0] *= (Screen.fWidth - (Screen.fHeight * (4.0f / 3.0f))) / 2.0f;
+        });
+
+        static float xx = 1.0f;
+        pattern = hook::pattern("0F B7 F6 F3 0F 2A DE");
+        static auto BlipsHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            regs.xmm2.f32[0] += (Screen.fWidth / 2.0f) - (2.0f * Screen.fHeight / 3.0f) - 64.0f;
+        });
+
+        pattern = hook::pattern("89 56 ? F3 0F 59 05");
+        static auto PlayerBlipHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            regs.xmm0.f32[0] += (Screen.fWidth / 2.0f) - (2.0f * Screen.fHeight / 3.0f) - 64.0f;
+        });
+
+        //radar
+        pattern = hook::pattern("F3 0F 58 C8 66 89 44 24 ? F3 0F 2C C1 F3 0F 2A C9 F3 0F 5C C8");
+        injector::MakeNOP(pattern.get_first(), 4, true);
+        static auto RadarPosHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            regs.xmm1.f32[0] += -15.0f + ((Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f) - Screen.fWidescreenHudOffsetRadar;
+        });
+
+        pattern = hook::pattern("F3 0F 10 0D ? ? ? ? F3 0F 2A C0 F3 0F 5E C8 F3 0F 11 4F");
+        injector::MakeNOP(pattern.get_first(), 8, true);
+        static auto RadarDiscPosHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            regs.xmm1.f32[0] = -15.0f + ((Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f) - Screen.fWidescreenHudOffsetRadar;
+        });
+
+        pattern = hook::pattern("89 64 24 ? 83 EC 08");
+        static auto RadarClipArea = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            regs.eax = Screen.Width;
+        });
     }
 
     if (bFixFOV)
@@ -288,42 +259,7 @@ void Init()
 
     if (fFpsLimit)
     {
-        if (nFrameLimitType > 0)
-        {
-            fFpsLimit *= fGameSpeedFactor;
-
-            auto mode = (nFrameLimitType == 2) ? FrameLimiter::FPSLimitMode::FPS_ACCURATE : FrameLimiter::FPSLimitMode::FPS_REALTIME;
-            if (mode == FrameLimiter::FPSLimitMode::FPS_ACCURATE)
-                timeBeginPeriod(1);
-
-            FpsLimiter.Init(mode, fFpsLimit);
-        }
-
-        pattern = hook::pattern("A1 ? ? ? ? 83 EC 1C");
-        shsub_648AC0 = safetyhook::create_inline(pattern.get_first(0), sub_648AC0);
-
-        pattern = hook::pattern("8B 76 ? 8B 16 53");
-        static auto FPSLimiterPresent = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-        {
-            if (nFrameLimitType > 0 && fFpsLimit)
-                FpsLimiter.Sync();
-        });
-
-        pattern = hook::pattern("A1 ? ? ? ? 83 C0 01 A3 ? ? ? ? A1");
-        sub_62B450 = (decltype(sub_62B450))pattern.get_first();
-
-        pattern = hook::pattern("56 8B 35 ? ? ? ? 57 8B 3D ? ? ? ? 8B FF");
-        injector::MakeJMP(pattern.get_first(), Thread, true);
-
-        // unify game speed and cutscene speed
-        if (fFpsLimit >= 60.0f)
-        {
-            pattern = hook::pattern("0F 84 ? ? ? ? 80 3D ? ? ? ? ? 75 ? 84 DB");
-            injector::MakeNOP(pattern.get_first(0), 6, true);
-            injector::MakeNOP(pattern.get_first(13), 2, true);
-        }
-
-        InitSpeedhack();
+        InitFrameLimiter();
     }
 
     if (fSensitivityFactor)

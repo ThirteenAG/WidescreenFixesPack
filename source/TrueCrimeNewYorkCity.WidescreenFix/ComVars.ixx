@@ -21,4 +21,8 @@ export struct Screen
     std::optional<float> fHudAspectRatioConstraint;
     float fWidescreenHudOffset;
     float fWidescreenHudOffsetPhone;
+    float fWidescreenHudOffsetRadar;
 } Screen;
+
+export float fFpsLimit;
+export int32_t nFrameLimitType;
