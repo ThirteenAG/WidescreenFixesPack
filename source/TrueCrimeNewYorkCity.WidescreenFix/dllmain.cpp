@@ -116,17 +116,22 @@ void Init()
 
     if (bBorderlessWindowed)
     {
-        auto pattern = hook::pattern("FF 15 ? ? ? ? 85 C0 A3 ? ? ? ? 75 ? FF 15");
-        injector::MakeNOP(pattern.get_first(), 6, true);
-        injector::MakeCALL(pattern.get_first(), WindowedModeWrapper::CreateWindowExA_Hook, true);
-
-        pattern = hook::pattern("FF 15 ? ? ? ? 8B 0D ? ? ? ? 6A 05");
+        auto pattern = hook::pattern("FF 15 ? ? ? ? 8B 0D ? ? ? ? 6A 05");
         injector::MakeNOP(pattern.get_first(), 6, true);
         injector::MakeCALL(pattern.get_first(), SetWindowPosHook, true);
 
         pattern = hook::pattern("FF 15 ? ? ? ? A1 ? ? ? ? 8B 0D");
         injector::MakeNOP(pattern.get_first(), 6, true);
         injector::MakeCALL(pattern.get_first(), AdjustWindowRectExHook, true);
+
+        IATHook::Replace(GetModuleHandleA(NULL), "USER32.DLL",
+            std::forward_as_tuple("CreateWindowExA", WindowedModeWrapper::CreateWindowExA_Hook),
+            std::forward_as_tuple("CreateWindowExW", WindowedModeWrapper::CreateWindowExW_Hook),
+            std::forward_as_tuple("SetWindowLongA", WindowedModeWrapper::SetWindowLongA_Hook),
+            std::forward_as_tuple("SetWindowLongW", WindowedModeWrapper::SetWindowLongW_Hook),
+            std::forward_as_tuple("AdjustWindowRectEx", WindowedModeWrapper::AdjustWindowRectEx_Hook),
+            std::forward_as_tuple("SetWindowPos", WindowedModeWrapper::SetWindowPos_Hook)
+        );
     }
 
     if (nLanguage >= 0)
