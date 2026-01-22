@@ -26,3 +26,13 @@ export struct Screen
 
 export float fFpsLimit;
 export int32_t nFrameLimitType;
+
+export enum CameraMode
+{
+    CameraOnFoot = 0,
+    CameraPrecisionAim = 6,
+    CameraCrosshair = 11,
+    CameraInVehicle = 13,
+};
+
+export int8_t CurrentCameraMode = -1;

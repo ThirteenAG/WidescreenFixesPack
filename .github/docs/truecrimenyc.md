@@ -1,7 +1,5 @@
 ![truecrimenyc](http://thirteenag.github.io/screens/truecrimenyc/main2.jpg)
 
-$${\color{green}✔}$$ Fixed game speed tied to framerate
-
 $${\color{green}✔}$$ Fixed Resolution
 
 $${\color{green}✔}$$ Fixed Aspect Ratio
@@ -11,6 +9,8 @@ $${\color{green}✔}$$ Fixed HUD
 $${\color{green}✔}$$ Fixed Field of View
 
 $${\color{green}✔}$$ Fixed FMVs
+
+$${\color{green}✔}$$ Fixed game speed at 60 fps
 
 $${\color{green}✔}$$ Added raw input support for mouse
 

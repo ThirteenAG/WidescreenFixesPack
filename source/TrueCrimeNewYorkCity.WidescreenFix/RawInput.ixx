@@ -6,22 +6,17 @@
 
 export module RawInput;
 
+import ComVars;
+
 export float fRawInputMouse = 0.0f;
 
 bool* bPause = nullptr;
 bool* bCutscene = nullptr;
 uint32_t* nLoading = nullptr;
 float* fMouseSens = nullptr;
-int8_t CurrentCameraMode = -1;
-bool IsAimingModeSwitch = false;
-
-enum CameraMode
-{
-    CameraOnFoot = 0,
-    CameraPrecisionAim = 6,
-    CameraCrosshair = 11,
-    CameraInVehicle = 13,
-};
+bool bIsAimingModeSwitch = false;
+bool bNonMouseCameraMovement = false;
+uint8_t* byte_850D8A = nullptr;
 
 SafetyHookInline shsub_41D3C0 = {};
 int __fastcall sub_41D3C0(int8_t* _this, void* edx, int a2, void* a3)
@@ -32,7 +27,7 @@ int __fastcall sub_41D3C0(int8_t* _this, void* edx, int a2, void* a3)
 
     if (PreviousCameraMode != CurrentCameraMode)
     {
-        IsAimingModeSwitch = ((PreviousCameraMode == CameraPrecisionAim && (CurrentCameraMode == CameraCrosshair || CurrentCameraMode == CameraOnFoot)) ||
+        bIsAimingModeSwitch = ((PreviousCameraMode == CameraPrecisionAim && (CurrentCameraMode == CameraCrosshair || CurrentCameraMode == CameraOnFoot)) ||
                                  ((PreviousCameraMode == CameraCrosshair || PreviousCameraMode == CameraOnFoot) && CurrentCameraMode == CameraPrecisionAim));
     }
 
@@ -89,7 +84,7 @@ void __stdcall sub_40D990(float a1)
         idle_timer = 10.0f;  // Set to a value >= 5.0f to force use of original code
         mouse_moved = false;
 
-        if (IsAimingModeSwitch)
+        if (bIsAimingModeSwitch)
             idle_timer = 0.0f;
 
         prev_camera_mode_local = CurrentCameraMode;
@@ -108,7 +103,7 @@ void __stdcall sub_40D990(float a1)
     bool switching_to_new = (prev_idle_timer >= 5.0f && idle_timer < 5.0f);
     prev_idle_timer = idle_timer;
 
-    if (*nLoading != 0 || *bCutscene || *bPause)
+    if (*nLoading != 0 || *bCutscene || *bPause || bNonMouseCameraMovement)
     {
         shsub_40D990.unsafe_stdcall(a1);
     }
@@ -253,6 +248,9 @@ export void InitRawInput()
     pattern = hook::pattern("D8 0D ? ? ? ? 6A 00 68 3F 8F F7 79");
     fMouseSens = *pattern.get_first<float*>(2);
 
+    pattern = hook::pattern("38 1D ? ? ? ? 0F 84 ? ? ? ? 8B 86");
+    byte_850D8A = *pattern.get_first<uint8_t*>(2);
+
     pattern = hook::pattern("0F 29 05 ? ? ? ? 0F 28 46 ? 6A 00");
     xmmword_778BF0 = *pattern.get_first<__m128*>(3);
 
@@ -288,7 +286,12 @@ export void InitRawInput()
 
         RawCursorHandler<float>::UpdateMouseInput(false);
 
-        if (*nLoading != 0 || *bCutscene || *bPause)
+        if (*byte_850D8A)
+            bNonMouseCameraMovement = true;
+        else if (std::fabs(RawCursorHandler<float>::MouseDeltaX) > 1e-6f || std::fabs(RawCursorHandler<float>::MouseDeltaY) > 1e-6f)
+            bNonMouseCameraMovement = false;
+
+        if (*nLoading != 0 || *bCutscene || *bPause || bNonMouseCameraMovement)
         {
             menuDeltaX = RawCursorHandler<float>::MouseDeltaX;
             menuDeltaY = RawCursorHandler<float>::MouseDeltaY;

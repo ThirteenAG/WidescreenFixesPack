@@ -166,7 +166,8 @@ export void InitFrameLimiter()
         pattern = hook::pattern("51 F3 0F 11 04 24 68 ? ? ? ? 8D 44 24 ? 68 ? ? ? ? 50 E8 ? ? ? ? 0F 28 08 0F 28 C1 0F 59 C1 0F 28 D0 0F C6 D0 FF 0F 28 D8 0F C6 D8 AA");
         static auto slerpHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
-            regs.xmm0.f32[0] *= 2.0f;
+            if (CurrentCameraMode == CameraOnFoot)
+                regs.xmm0.f32[0] *= 1.5f;
         });
     }
 
