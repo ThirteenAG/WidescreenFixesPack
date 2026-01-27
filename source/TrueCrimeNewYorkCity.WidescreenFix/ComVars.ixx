@@ -1,9 +1,6 @@
 module;
 
 #include "stdafx.h"
-#include <queue>
-#include <functional>
-#include <unordered_set>
 
 export module ComVars;
 
