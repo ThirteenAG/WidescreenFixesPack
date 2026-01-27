@@ -5,6 +5,8 @@ import Speedhack;
 import Framelimit;
 import RawInput;
 import WidescreenHUD;
+import DepthStencil;
+import DistantBlur;
 
 int32_t nLanguage;
 int32_t __cdecl SetLanguage(LPCSTR lpValueName)
@@ -89,6 +91,11 @@ void Init()
 
     static float fSensitivityFactor = std::abs(iniReader.ReadFloat("MOUSE", "SensitivityFactor", 0.0f));
     fRawInputMouse = std::abs(iniReader.ReadFloat("MOUSE", "RawInputMouse", 1.0f));
+
+    bool bHighResolutionShadows = iniReader.ReadInteger("MISC", "HighResolutionShadows", 1) != 0;
+    bool bHighResolutionReflections = iniReader.ReadInteger("MISC", "HighResolutionReflections", 1) != 0;
+
+    bool bDistantBlur = iniReader.ReadInteger("MISC", "DistantBlur", 1) != 0;
 
     if (bSkipIntro)
     {
@@ -200,12 +207,6 @@ void Init()
             *(float*)(regs.esi + 0x54) += (Screen.fWidth - (Screen.fHeight * (4.0f / 3.0f))) / 2.0f;
         });
 
-        pattern = hook::pattern("E8 ? ? ? ? 8B 56 ? F3 0F 2A C0 F3 0F 59 44 24 ? F3 0F 11 46 ? F3 0F 10 82 ? ? ? ? 68 0F E5 4D F5 8D 4C 24 ? F3 0F 11 44 24 ? E8 ? ? ? ? F3 0F 2A C0 F3 0F 59 44 24 ? 68 00 00 80 3F");
-        static auto Move3DPos2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-        {
-            *(float*)(regs.esp + 0x5C) += (Screen.fWidth - (Screen.fHeight * (4.0f / 3.0f))) / 2.0f;
-        });
-
         // Menu map
         pattern = hook::pattern("F3 0F 58 C8 F3 0F 2C E9");
         injector::MakeNOP(pattern.get_first(), 4, true);
@@ -276,6 +277,37 @@ void Init()
 
     if (fRawInputMouse)
         InitRawInput();
+
+    if (bHighResolutionShadows)
+    {
+        auto pattern = hook::pattern("68 00 01 00 00 68 00 01 00 00 6A 06 B9 ? ? ? ? E8 ? ? ? ? 83 3D ? ? ? ? ? 75 ? 83 3D ? ? ? ? ? 75 ? B9 ? ? ? ? E8 ? ? ? ? 6A 01");
+        injector::WriteMemory(pattern.get_first(1), 256 * 3, true);
+        injector::WriteMemory(pattern.get_first(6), 256 * 3, true);
+
+        pattern = hook::pattern("68 00 01 00 00 68 00 01 00 00 6A 06 8D 8C 24");
+        injector::WriteMemory(pattern.get_first(1), 256 * 3, true);
+        injector::WriteMemory(pattern.get_first(6), 256 * 3, true);
+
+        pattern = hook::pattern("68 00 01 00 00 68 00 01 00 00 6A 06 B9 ? ? ? ? E8 ? ? ? ? 83 3D ? ? ? ? ? 75 ? 83 3D ? ? ? ? ? 75 ? B9 ? ? ? ? E8 ? ? ? ? 51");
+        injector::WriteMemory(pattern.get_first(1), 256 * 3, true);
+        injector::WriteMemory(pattern.get_first(6), 256 * 3, true);
+    }
+
+    if (bHighResolutionReflections)
+    {
+        auto pattern = hook::pattern("68 00 01 00 00 68 00 01 00 00 6A 06 8D 4C 24 ? E8");
+        injector::WriteMemory(pattern.get_first(1), 256 * 3, true);
+        injector::WriteMemory(pattern.get_first(6), 256 * 3, true);
+
+        pattern = hook::pattern("68 00 01 00 00 68 00 01 00 00 6A 4B");
+        injector::WriteMemory(pattern.get_first(1), 256 * 3, true);
+        injector::WriteMemory(pattern.get_first(6), 256 * 3, true);
+    }
+
+    InitDepthStencil();
+
+    if (bDistantBlur)
+        InitDistantBlur();
 }
 
 CEXP void InitializeASI()
