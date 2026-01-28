@@ -304,6 +304,12 @@ void Init()
         injector::WriteMemory(pattern.get_first(6), 256 * 3, true);
     }
 
+    // Shadows distance fix
+    {
+        pattern = hook::pattern("68 ? ? ? ? 0F 59 E1");
+        injector::WriteMemory(pattern.get_first(1), 10.0f * 10.0f, true);
+    }
+
     InitDepthStencil();
 
     if (bDistantBlur)
