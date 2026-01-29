@@ -153,9 +153,8 @@ export void InitFrameLimiter()
     // unify game speed and cutscene speed
     if (fFpsLimit >= 60.0f)
     {
-        pattern = hook::pattern("0F 84 ? ? ? ? 80 3D ? ? ? ? ? 75 ? 84 DB");
-        injector::MakeNOP(pattern.get_first(0), 6, true);
-        injector::MakeNOP(pattern.get_first(13), 2, true);
+        pattern = hook::pattern("BE ? ? ? ? F3 0F 11 4C 24 ? F3 0F 11 44 24 ? 89 74 24 ? DB 44 24");
+        injector::WriteMemory(pattern.get_first(1), 1, true);
 
         // change menu map cursor sensitivity
         static const float fMenuCursorSens = 27.5f / 2.0f;

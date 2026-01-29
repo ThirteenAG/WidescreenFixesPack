@@ -61,6 +61,7 @@ export void InitDepthStencil()
             return;
         }
 
+        texture->Release();
         pD3D8->Release();
 
         return_to(loc_64079F);
