@@ -48,7 +48,10 @@ void DrawDOF(float* screenData)
     }
 
     if (!effect)
+    {
+        pD3D9Device->Release();
         return;
+    }
 
     static IDirect3DTexture9* backBufferTex = nullptr;
     static IDirect3DSurface9* backBufferCopySurf = nullptr;
@@ -125,51 +128,64 @@ void DrawDOF(float* screenData)
 
     pD3D9Device->SetDepthStencilSurface(depthSurf);
 
-    depthSurf->Release();
-    depthTex->Release();
-    pD3D9Device->Release();
-    rt0->Release();
-
     pD3D9Device->SetFVF(oldFVF);
     pD3D9Device->SetVertexDeclaration(oldDecl);
     pD3D9Device->SetStreamSource(0, oldVB, oldOffset, oldStride);
 
+    SAFE_RELEASE(depthSurf);
+    SAFE_RELEASE(depthTex);
+    SAFE_RELEASE(rt0);
     SAFE_RELEASE(oldDecl);
     SAFE_RELEASE(oldVB);
+    pD3D9Device->Release();
 }
 
-struct HandlerNode
+struct ListNode
 {
-    HandlerNode* next;
-    int          field_4;
-    int          user_context;
-    int          (__cdecl* callback)(int context, float* arg);
-    int          tag;
+    struct ListNode* next;
+    uint32_t _reserved;
+    uint32_t data;
+    int (__cdecl* cb)(uint32_t data, float* arg);
+    float value;
 };
 
-HandlerNode** g_handler_list = nullptr;
-int* g_last_tag = nullptr;
-int (__cdecl* sub_52F7D0)(int context, float* arg) = nullptr;
+ListNode** g_listHead = nullptr;
+float* g_currentVal = nullptr;
+int (__cdecl* sub_52F7D0)(uint32_t data, float* arg) = nullptr;
 
-void __cdecl sub_533AA0(float* screenData)
+void sub_533AA0(float* screenData)
 {
-    *g_last_tag = 0;
+    ListNode* node = *g_listHead;
+    ListNode* next = node ? node->next : NULL;
 
-    for (auto* node = *g_handler_list; node; node = node->next)
+    if (!next)
     {
-        *g_last_tag = node->tag;
-
-        if (node->callback)
-        {
-            auto ret = node->callback(node->user_context, screenData);
-
-            if (reinterpret_cast<uintptr_t>(node->callback) == reinterpret_cast<uintptr_t>(sub_52F7D0))
-                DrawDOF(screenData);
-
-            if (ret)
-                return;
-        }
+        *g_currentVal = 0.0f;
+        return;
     }
+
+    for (;;)
+    {
+        *g_currentVal = node->value;
+
+        if (node->cb != NULL && node->cb(node->data, screenData))
+        {
+            return;
+        }
+        else
+        {
+            if (node->cb == sub_52F7D0)
+                DrawDOF(screenData);
+        }
+
+        node = next;
+        next = node->next;
+
+        if (!next)
+            break;
+    }
+
+    *g_currentVal = 0.0f;
 }
 
 export void InitDistantBlur()
@@ -178,10 +194,10 @@ export void InitDistantBlur()
     pDevice = *pattern.get_first<IUnknown**>(1);
 
     pattern = hook::pattern("A1 ? ? ? ? 56 8B 30 85 F6 57 74 ? 8B 7C 24 ? F3 0F 10 40");
-    g_handler_list = *pattern.get_first<HandlerNode**>(1);
+    g_listHead = *pattern.get_first<ListNode**>(1);
 
     pattern = hook::pattern("0F 2F 05 ? ? ? ? 72 ? 33 C0 8B 4C 24 ? 64 89 0D ? ? ? ? 5E");
-    g_last_tag = *pattern.get_first<int*>(3);
+    g_currentVal = *pattern.get_first<float*>(3);
 
     pattern = hook::pattern("A1 ? ? ? ? 85 C0 74 ? 80 B8 ? ? ? ? ? 75 ? 56");
     sub_52F7D0 = (decltype(sub_52F7D0))pattern.get_first();

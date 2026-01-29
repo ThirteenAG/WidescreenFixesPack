@@ -189,6 +189,31 @@ export void InitSpeedhack()
             pattern = hook::pattern("E8 ? ? ? ? 2B 44 24 ? 85 C0 89 44 24 ? DB 44 24 ? 7D ? D8 05 ? ? ? ? 80 3D");
             injector::MakeCALL(pattern.get_first(), timeGetTimeHook, true);
 
+            pattern = hook::pattern("E8 ? ? ? ? DB 05 ? ? ? ? A3");
+            injector::MakeCALL(pattern.get_first(), timeGetTimeHook, true);
+
+            // Other xrefs (maybe needed, unknown)
+            //injector::MakeCALL(0x496050, timeGetTimeHook, true);
+            //injector::MakeCALL(0x4982E9, timeGetTimeHook, true);
+            //injector::MakeCALL(0x4988D6, timeGetTimeHook, true);
+            //injector::MakeCALL(0x499661, timeGetTimeHook, true);
+            //injector::MakeCALL(0x4997FF, timeGetTimeHook, true);
+            //injector::MakeCALL(0x49A06E, timeGetTimeHook, true);
+            //injector::MakeCALL(0x49A0AE, timeGetTimeHook, true);
+            //injector::MakeCALL(0x49A141, timeGetTimeHook, true);
+            //injector::MakeCALL(0x49A5D2, timeGetTimeHook, true);
+            //injector::MakeCALL(0x49B75B, timeGetTimeHook, true);
+            //
+            //injector::MakeCALL(0x4A8E66, timeGetTimeHook, true);
+            //injector::MakeCALL(0x4A8EDE, timeGetTimeHook, true);
+            //injector::MakeCALL(0x4A90ED, timeGetTimeHook, true);
+            //injector::MakeCALL(0x5C09B1, timeGetTimeHook, true);
+            //injector::MakeCALL(0x5C09FB, timeGetTimeHook, true);
+            //injector::MakeCALL(0x5D8552, timeGetTimeHook, true);
+            //injector::MakeCALL(0x5D8593, timeGetTimeHook, true);
+            //injector::MakeCALL(0x648D1D, timeGetTimeHook, true);
+            //injector::MakeCALL(0x649733, timeGetTimeHook, true);
+
             initialOffsetTGT = pTimeGetTime();
             initialTimeTGT = pTimeGetTime();
         }
