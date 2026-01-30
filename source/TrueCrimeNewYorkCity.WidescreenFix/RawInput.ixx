@@ -336,4 +336,15 @@ export void InitRawInput()
         }
         menuDeltaY = 0.0f;
     });
+
+    // Fix crazy deadzone to prevent mouse camera from locking up
+    pattern = hook::pattern("0F 87 ? ? ? ? 0F 28 44 24");
+    injector::WriteMemory<uint16_t>(pattern.get_first(), 0xE990, true);
+
+    //static float deadzone_threshold = 0.0f;
+    //pattern = hook::pattern("D9 05 ? ? ? ? D9 C9 83 C4 08 DF F1 DD D8 0F 87 ? ? ? ? 6A 20");
+    //injector::WriteMemory(pattern.get_first(2), &deadzone_threshold, true);
+    //
+    //pattern = hook::pattern("D9 05 ? ? ? ? D9 C9 83 C4 08 DF F1 DD D8 0F 87 ? ? ? ? 0F 28 44 24");
+    //injector::WriteMemory(pattern.get_first(2), &deadzone_threshold, true);
 }
