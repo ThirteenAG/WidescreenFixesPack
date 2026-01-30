@@ -10,9 +10,6 @@ import ComVars;
 
 export float fRawInputMouse = 0.0f;
 
-bool* bPause = nullptr;
-bool* bCutscene = nullptr;
-uint32_t* nLoading = nullptr;
 float* fMouseSens = nullptr;
 bool bIsAimingModeSwitch = false;
 bool bNonMouseCameraMovement = false;
@@ -236,16 +233,7 @@ void __stdcall sub_40D990(float a1)
 
 export void InitRawInput()
 {
-    auto pattern = hook::pattern("88 15 ? ? ? ? 8D 45");
-    bPause = *pattern.get_first<bool*>(2);
-
-    pattern = hook::pattern("32 C0 88 81 ? ? ? ? A2 ? ? ? ? E8 ? ? ? ? 33 C0 C3");
-    bCutscene = *pattern.get_first<bool*>(9);
-
-    pattern = hook::pattern("83 3D ? ? ? ? ? 74 ? 84 DB");
-    nLoading = *pattern.get_first<uint32_t*>(2);
-
-    pattern = hook::pattern("D8 0D ? ? ? ? 6A 00 68 3F 8F F7 79");
+    auto pattern = hook::pattern("D8 0D ? ? ? ? 6A 00 68 3F 8F F7 79");
     fMouseSens = *pattern.get_first<float*>(2);
 
     pattern = hook::pattern("38 1D ? ? ? ? 0F 84 ? ? ? ? 8B 86");
