@@ -1,7 +1,6 @@
 #include "stdafx.h"
 
 import ComVars;
-import Speedhack;
 import Framelimit;
 import RawInput;
 import WidescreenHUD;
@@ -84,10 +83,10 @@ void Init()
     static bool bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) != 0;
     Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "HudAspectRatioConstraint", ""));
     static bool bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) != 0;
-
     nFrameLimitType = iniReader.ReadInteger("FRAMELIMIT", "FrameLimitType", 1);
-    fFpsLimit = std::clamp(static_cast<float>(iniReader.ReadInteger("FRAMELIMIT", "FpsLimit", 30)), 30.0f, FLT_MAX);
-    fGameSpeedFactor = std::min(1.0f, 60.0f / fFpsLimit);
+    fFpsLimit = 30.0f;
+    if (iniReader.ReadInteger("FRAMELIMIT", "Enable60FPS", 1) != 0)
+        fFpsLimit = 60.0f;
 
     static float fSensitivityFactor = std::abs(iniReader.ReadFloat("MOUSE", "SensitivityFactor", 0.0f));
     fRawInputMouse = std::abs(iniReader.ReadFloat("MOUSE", "RawInputMouse", 1.0f));
@@ -96,6 +95,22 @@ void Init()
     bool bHighResolutionReflections = iniReader.ReadInteger("MISC", "HighResolutionReflections", 1) != 0;
 
     bool bDistantBlur = iniReader.ReadInteger("MISC", "DistantBlur", 1) != 0;
+
+    auto pattern = hook::pattern("88 15 ? ? ? ? 8D 45");
+    bPause = *pattern.get_first<bool*>(2);
+
+    pattern = hook::pattern("32 C0 88 81 ? ? ? ? A2 ? ? ? ? E8 ? ? ? ? 33 C0 C3");
+    bCutscene = *pattern.get_first<bool*>(9);
+
+    pattern = hook::pattern("83 3D ? ? ? ? ? 74 ? 84 DB");
+    nLoading = *pattern.get_first<uint32_t*>(2);
+
+    pattern = hook::pattern("89 88 ? ? ? ? 0F B6 8A ? ? ? ? 88 88 ? ? ? ? 0F B6 8A ? ? ? ? 88 88 ? ? ? ? 0F B6 8A ? ? ? ? 88 88 ? ? ? ? 0F B6 8A ? ? ? ? 88 88 ? ? ? ? 0F B6 8A");
+    static auto CacheMissionIDs = safetyhook::create_mid(pattern.get_first(6), [](SafetyHookContext& regs)
+    {
+        CurrentCaseName = *(int*)(regs.eax + 0xD9C);
+        CurrentMissionName = *(int*)(regs.eax + 0xDA0);
+    });
 
     if (bSkipIntro)
     {
@@ -149,7 +164,7 @@ void Init()
         injector::MakeCALL(pattern.count(2).get(1).get<uintptr_t>(5), SetLanguage, true);
     }
 
-    auto pattern = hook::pattern("89 55 00 89 5D 04 C7 45 08 15 00 00 00 89 7D 0C"); //0x649478
+    pattern = hook::pattern("89 55 00 89 5D 04 C7 45 08 15 00 00 00 89 7D 0C"); //0x649478
     struct ResHook
     {
         void operator()(injector::reg_pack& regs)

@@ -1454,7 +1454,7 @@ public:
         GetWindowRect(TargetWindow, &windowRect);
         MouseCursorX = static_cast<T>((windowRect.right - windowRect.left) / 2 + windowRect.left);
         MouseCursorY = static_cast<T>((windowRect.bottom - windowRect.top) / 2 + windowRect.top);
-        SetCursorPos(MouseCursorX, MouseCursorY);
+        SetCursorPos(static_cast<int>(MouseCursorX), static_cast<int>(MouseCursorY));
     }
 
     static HWND UpdateMouseInput(bool bIsAbsoluteValue = false)
@@ -1495,7 +1495,7 @@ public:
             MouseDeltaX += static_cast<T>(scaledDeltaX);
             MouseDeltaY -= static_cast<T>(scaledDeltaY);
 
-            SetCursorPos(centerX, centerY);
+            SetCursorPos(static_cast<int>(centerX), static_cast<int>(centerY));
         }
 
         return TargetWindow;

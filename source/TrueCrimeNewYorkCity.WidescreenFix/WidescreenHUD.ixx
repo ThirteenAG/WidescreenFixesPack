@@ -36,7 +36,7 @@ public:
         {
             float a = *(float*)&values[i];
             float b = *(float*)&other.values[i];
-            if (fabs(a - b) >= FLT_EPSILON)
+            if (fabs(a - b) >= 0.001f)
                 return false;
         }
         return true;
