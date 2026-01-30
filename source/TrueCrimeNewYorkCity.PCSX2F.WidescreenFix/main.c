@@ -326,7 +326,7 @@ void init()
     char buffer[100];
     char* constraintStr = inireader.ReadString("MAIN", "HudAspectRatioConstraint", "auto", buffer, sizeof(buffer));
     Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(constraintStr);
-    //int bEnable60fps = inireader.ReadInteger("MAIN", "Enable60fps", 0);
+    int bEnable60FPS = inireader.ReadInteger("MAIN", "Enable60FPS", 0);
 
     //logger.WriteF("Screen.fHudAspectRatioConstraint: %f", Screen.fHudAspectRatioConstraint);
 
@@ -341,10 +341,17 @@ void init()
         return;
     }
 
-    //if (bEnable60fps)
-    //{
-    //    injector.WriteInstr(0x4A1CC4, addiu(a0, zero, 1));
-    //}
+    if (bEnable60FPS)
+    {
+        uintptr_t ptr_4A1C3C = pattern.get(0, "70 00 B3 7F ? ? ? ? 60 00 B4 7F ? ? ? ? A0 00 B0 7F", -4);
+        injector.WriteInstr(ptr_4A1C3C, addiu(s1, zero, 2));
+
+        uintptr_t ptr_4A1C54 = pattern.get(0, "50 00 BF FF 40 00 A0 AF ? ? ? ? ? ? ? ? ? ? ? ? 00 00 00 00", -4);
+        injector.WriteInstr(ptr_4A1C54, li(s4, 1));
+
+        uintptr_t ptr_4A1CC4 = pattern.get(0, "10 00 A3 FB ? ? 12 0C 02 00 04 24", 8);
+        injector.WriteInstr(ptr_4A1CC4, addiu(a0, zero, 1));
+    }
 
     uint32_t DesktopSizeX = PCSX2Data[PCSX2Data_DesktopSizeX];
     uint32_t DesktopSizeY = PCSX2Data[PCSX2Data_DesktopSizeY];
