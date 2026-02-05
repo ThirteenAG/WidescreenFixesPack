@@ -61,6 +61,7 @@ rem dxwrapper
 7za e "..\dxwrapper.zip" "dxwrapper.asi" -o".\ThePunisher.WidescreenFix\scripts\" -y
 7za e "..\dxwrapper.zip" "dxwrapper.asi" -o".\MaxPayne.WidescreenFix\scripts\" -y
 7za e "..\dxwrapper.zip" "dxwrapper.asi" -o".\MaxPayne2.WidescreenFix\scripts\" -y
+7za e "..\dxwrapper.zip" "dxwrapper.asi" -o".\TrueCrimeNewYorkCity.WidescreenFix\scripts\" -y
 
 rem dxwrapper-scda
 7za e "..\dxwrapper-scda.zip" "dxwrapper.dll" -o".\SplinterCellDoubleAgent.WidescreenFix\SCDA-Offline\System\scripts\" -y
