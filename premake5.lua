@@ -531,8 +531,11 @@ project "TotalOverdose.WidescreenFix"
 
 project "TrueCrimeNewYorkCity.WidescreenFix"
    prebuildcommands { "for /R \"../source/%{prj.name}/\" %%f in (*.fx) do (\"../includes/dxsdk/lib/x86/fxc.exe\" /T fx_2_0 /Fo \"../source/%{prj.name}/%%~nf.fxo\" %%f)" }
+   includedirs {"Resources"}
    files { "source/%{prj.name}/*.fx", "source/%{prj.name}/*.rc" }
-   defines { "IDR_DISTANTBLUR=200" }
+   defines { "IDR_POSTFX=200" }
+   defines { "IDR_AREATEX=201" }
+   defines { "IDR_SEARCHTEX=202" }
    setpaths("Z:/WFP/Games/True Crime New York City/", "True Crime New York City.exe")
 
 project "TrueCrimeStreetsofLA.WidescreenFix"
