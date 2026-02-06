@@ -222,6 +222,8 @@ technique DistanceBlur
         AlphaBlendEnable = false;
         AlphaTestEnable = false;
         StencilEnable = false;
+        CullMode = None;
+        ScissorTestEnable = False;
     }
 }
 
@@ -236,6 +238,8 @@ technique ConsoleGamma
         AlphaBlendEnable = false;
         AlphaTestEnable = false;
         StencilEnable = false;
+        CullMode = None;
+        ScissorTestEnable = False;
     }
 }
 
@@ -251,6 +255,8 @@ technique Bloom
         AlphaTestEnable = FALSE;
         ZEnable = 0;
         ZWriteEnable = FALSE;
+        CullMode = None;
+        ScissorTestEnable = False;
     }
     pass BloomBlur
     {
@@ -262,6 +268,8 @@ technique Bloom
         AlphaTestEnable = FALSE;
         ZEnable = 0;
         ZWriteEnable = FALSE;
+        CullMode = None;
+        ScissorTestEnable = False;
     }
     pass BloomOutput
     {
@@ -273,6 +281,8 @@ technique Bloom
         AlphaTestEnable = FALSE;
         ZEnable = 0;
         ZWriteEnable = FALSE;
+        CullMode = None;
+        ScissorTestEnable = False;
     }
 }
 
