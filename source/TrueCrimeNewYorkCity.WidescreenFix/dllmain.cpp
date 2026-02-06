@@ -73,6 +73,43 @@ BOOL WINAPI AdjustWindowRectExHook(LPRECT lpRect, DWORD dwStyle, BOOL bMenu, DWO
     return TRUE;
 }
 
+void __stdcall TransformMapToScreen(__m128* a1, const __m128* a2)
+{
+    // Build matrix row 0: [0.21810906, 0, 0, 0]
+    __m128 row0 = _mm_set_ps(0.0f, 0.0f, 0.0f, 0.21810906f);
+
+    // Build matrix row 1: [0, 0, 0, 0]
+    __m128 row1 = _mm_setzero_ps();
+
+    // Build matrix row 2: [0, 0, -0.21810906, 0]
+    __m128 row2 = _mm_set_ps(0.0f, -0.21810906f, 0.0f, 0.0f);
+
+    // Build translation vector: [195.0, 0, 825.0, 0] with w = 1.0
+    __m128 translation = _mm_set_ps(0.0f, 825.0f, 0.0f, (195.0f + ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f));
+    // Shuffle to get: [1.0, 825.0, 0, 195.0] based on the assembly pattern
+    __m128 temp = _mm_set_ss(1.0f);
+    __m128 row3 = _mm_shuffle_ps(translation, _mm_shuffle_ps(temp, translation, 0xE0), 0x24);
+
+    // Load input vector
+    __m128 input = *a2;
+
+    // Extract and broadcast x, y, z components
+    __m128 xxxx = _mm_shuffle_ps(input, input, 0x00); // broadcast x
+    __m128 yyyy_temp = _mm_shuffle_ps(input, input, 0x55); // broadcast y
+    __m128 yyyy = _mm_shuffle_ps(yyyy_temp, yyyy_temp, 0x00);
+    __m128 zzzz_temp = _mm_shuffle_ps(input, input, 0xAA); // broadcast z
+    __m128 zzzz = _mm_shuffle_ps(zzzz_temp, zzzz_temp, 0x00);
+
+    // Perform matrix multiplication: result = row0*x + row1*y + row2*z + translation
+    __m128 result = _mm_mul_ps(row0, xxxx);
+    result = _mm_add_ps(result, _mm_mul_ps(row1, yyyy));
+    result = _mm_add_ps(result, _mm_mul_ps(row2, zzzz));
+    result = _mm_add_ps(result, row3);
+
+    // Store result
+    *a1 = result;
+}
+
 void Init()
 {
     CIniReader iniReader("");
@@ -232,12 +269,12 @@ void Init()
         });
 
         // Menu blips
-        pattern = hook::pattern("F3 0F 10 0D ? ? ? ? F3 0F 11 4C 24 ? F3 0F 10 0D ? ? ? ? F3 0F 11 4C 24 ? F3 0F 10 0D ? ? ? ? F3 0F 11 4C 24 ? F3 0F 11 44 24 ? F3 0F 11 44 24");
-        injector::MakeNOP(pattern.get_first(), 8, true);
-        static auto BlipsHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-        {
-            regs.xmm1.f32[0] = 195.0f + ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
-        });
+        //injector::MakeCALL(0x4AB6ED, TransformMapToScreen, true);
+        //injector::MakeCALL(0x4AB7C8, TransformMapToScreen, true);
+        pattern = hook::pattern("E8 ? ? ? ? F3 0F 10 0D ? ? ? ? F3 0F 11 4C 24 ? 8D 54 24");
+        injector::MakeCALL(pattern.get_first(), TransformMapToScreen, true);
+        pattern = hook::pattern("E8 ? ? ? ? F3 0F 10 05 ? ? ? ? F3 0F 11 44 24 ? 8D 54 24 ? F3 0F 10 02 0F 28 C8 0F 28 44 24 ? 0F 28 D0 0F C6 D0 AA F3 0F 5C D1");
+        injector::MakeCALL(pattern.get_first(), TransformMapToScreen, true);
 
         // Radar
         pattern = hook::pattern("F3 0F 58 C8 66 89 44 24 ? F3 0F 2C C1 F3 0F 2A C9 F3 0F 5C C8");

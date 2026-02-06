@@ -315,6 +315,20 @@ float ParseWidescreenHudOffset(char* input)
     return num1 / num2;
 }
 
+float BlipsOffset = 195.0f;
+void (*fnsub_268058)(void* a1, void* a2);
+void TransformMapToScreen(void* a1, void* a2)
+{
+    BlipsOffset = 195.0f + ((640.0f / ((640.0f / 480.0f) / Screen.fAspectRatio)) - 640.0f) / 2.0f;
+    fnsub_268058(a1, a2);
+}
+
+void TransformMapToScreen_original(void* a1, void* a2)
+{
+    BlipsOffset = 195.0f;
+    fnsub_268058(a1, a2);
+}
+
 void init()
 {
     //logger.SetBuffer(OSDText, sizeof(OSDText) / sizeof(OSDText[0]), sizeof(OSDText[0]));
@@ -477,12 +491,21 @@ void init()
     );
 
     // Menu blips
+    uintptr_t ptr_265224 = pattern.get(0, "00 00 81 44 00 10 A2 48 00 00 03 44 00 18 A3 48 44 10 43 4A", -12);
+    fnsub_268058 = (void(*)(void*, void*))injector.MakeJAL(ptr_265224, (uintptr_t)TransformMapToScreen);
+    uintptr_t ptr_266758 = pattern.get(0, "DA 4F 21 34 00 00 81 44 00 08 82 44 ? ? ? ? 43 16 21 34 00 20 81 44 42 08 00 46 ? ? ? ? 00 18 81 44 89 1F 02 70 00 00 83 44 ? ? ? ? 00 10 81 44 02 00 04 46 42 08 03 46 02 00 02 46 A4 08 00 46 00 10 04 44", -12);
+    fnsub_268058 = (void(*)(void*, void*))injector.MakeJAL(ptr_266758, (uintptr_t)TransformMapToScreen_original);
+    uintptr_t ptr_266844 = pattern.get(0, "DA 4F 21 34 00 00 81 44 00 08 82 44 ? ? ? ? 43 16 21 34 00 20 81 44 42 08 00 46 ? ? ? ? 00 18 81 44 89 1F 02 70 00 00 83 44 ? ? ? ? 00 10 81 44 02 00 04 46 42 08 03 46 02 00 02 46 A4 08 00 46 00 10 06 44", -12);
+    fnsub_268058 = (void(*)(void*, void*))injector.MakeJAL(ptr_266844, (uintptr_t)TransformMapToScreen_original);
+    uintptr_t ptr_267F74 = pattern.get(0, "00 08 A2 48 ? ? ? ? 00 00 81 44 00 00 00 00 00 00 02 44", -8);
+    fnsub_268058 = (void(*)(void*, void*))injector.MakeJAL(ptr_267F74, (uintptr_t)TransformMapToScreen);
+
     uintptr_t ptr_268094 = pattern.get(0, "00 08 81 44 00 10 03 44 00 10 A7 48", -4);
-    float BlipsOffset = 195.0f + ((640.0f / ((640.0f / 480.0f) / Screen.fAspectRatio)) - 640.0f) / 2.0f;
+    uintptr_t BlipsOffsetAddr = (uintptr_t)&BlipsOffset;
     MakeInlineWrapperWithNOP(ptr_268094,
-        lui(at, HIWORD(BlipsOffset)),
-        ori(at, at, LOWORD(BlipsOffset)),
-        mtc1(at, f1)
+        lui(at, HIWORD(BlipsOffsetAddr)),
+        ori(at, at, LOWORD(BlipsOffsetAddr)),
+        lwc1(f1, at, 0)
     );
 
     // Radar
