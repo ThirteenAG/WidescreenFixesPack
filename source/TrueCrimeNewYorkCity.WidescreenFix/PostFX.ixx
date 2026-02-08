@@ -127,7 +127,9 @@ public:
 
     static inline void UpdateBackBuffer(IDirect3DDevice9* device, IDirect3DSurface9* rt0)
     {
-        assert(SUCCEEDED(device->StretchRect(rt0, nullptr, pBackBufferSurf, nullptr, D3DTEXF_NONE)));
+        HRESULT hr = device->StretchRect(rt0, nullptr, pBackBufferSurf, nullptr, D3DTEXF_NONE);
+        assert(SUCCEEDED(hr));
+        (void)hr;
     }
 
     static inline void DrawScreenQuad(IDirect3DDevice9* device, UINT width, UINT height)
@@ -146,7 +148,7 @@ public:
     static inline void RenderSafe(std::function<void(IDirect3DDevice9* device, IDirect3DSurface9* rt0, IDirect3DTexture9* depthTex)> cb)
     {
         IDirect3DDevice9* d3d9device = nullptr;
-        if (FAILED((*pD3D8Device)->QueryInterface(__uuidof(IDirect3DDevice9*), (void**)&d3d9device)))
+        if (FAILED((*pD3D8Device)->QueryInterface(__uuidof(IDirect3DDevice9), (void**)&d3d9device)))
             return;
 
         IDirect3DSurface9* depthSurf = nullptr;
