@@ -53,6 +53,7 @@ float X360GammaApprox(float x)
     float D = 6.56649f;
     float E = 0.311465f;
     
+    x = max(0.0f, x);
     float f1 = A * x;
     float f2 = pow(x, B) * (1.0f - exp2(-C * x));
     float f3 = saturate(x * D + E);
