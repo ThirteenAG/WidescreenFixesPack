@@ -5,6 +5,7 @@ import Framelimit;
 import RawInput;
 import WidescreenHUD;
 import DepthStencil;
+import DInputMapper;
 import PostFX;
 
 int32_t nLanguage;
@@ -350,6 +351,7 @@ void Init()
 
     InitDepthStencil();
     InitPostFX();
+    InitDInputMapper();
 }
 
 CEXP void InitializeASI()
