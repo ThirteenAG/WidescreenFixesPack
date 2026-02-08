@@ -10,6 +10,8 @@ $${\color{green}✔}$$ Fixed Field of View
 
 $${\color{green}✔}$$ Fixed FMVs
 
+$${\color{green}✔}$$ Added an option to enable 60 fps
+
 $${\color{green}✔}$$ Fixed game speed at 60 fps
 
 $${\color{green}✔}$$ Fixed shadow rendering issues
@@ -20,9 +22,13 @@ $${\color{green}✔}$$ Added an option to enable borderless windowed mode
 
 $${\color{green}✔}$$ Added an option to increase shadow resolution
 
-$${\color{green}✔}$$ Added an option to increase reflections resolution
-
 $${\color{green}✔}$$ Added an option to enable a depth of field effect for distant objects, similar to the PS2 version
+
+$${\color{green}✔}$$ Added an option to enable a bloom post-processing effect
+
+$${\color{green}✔}$$ Added an option to enable SMAA
+
+$${\color{green}✔}$$ Added an option to enable XBOX 360 gamma
 
 ## **PCSX2F: True Crime New York City Widescreen Fix**
 
@@ -45,6 +51,12 @@ $${\color{green}✔}$$ Fixed Aspect Ratio
 $${\color{green}✔}$$ Fixed HUD
 
 $${\color{green}✔}$$ Fixed Field of View
+
+$${\color{green}✔}$$ Added an option to enable 60 fps
+
+$${\color{green}✔}$$ Fixed game speed at 60 fps
+
+$${\color{green}✔}$$ Added an option to skip intro videos
 
 ![truecrimenycpcsx2f](https://github.com/user-attachments/assets/5a34aa37-e4a4-4ceb-89c8-f3a0d49a205e)
 
