@@ -46,7 +46,7 @@ rem Xidi
 7za e "..\xidi.zip" "Xidi-*/Win32/dinput8.dll" "Xidi-*/Win32/Xidi.32.dll" -o".\Scarface.FusionFix\" -y
 7za e "..\xidi.zip" "Xidi-*/Win32/dinput8.dll" "Xidi-*/Win32/Xidi.32.dll" -o".\SplinterCell.WidescreenFix\system\" -y
 7za e "..\xidi.zip" "Xidi-*/Win32/dinput8.dll" "Xidi-*/Win32/Xidi.32.dll" -o".\SplinterCellPandoraTomorrow.WidescreenFix\system\" -y
-7za e "..\xidi.zip" "Xidi-*/Win32/dinput8.dll" "Xidi-*/Win32/Xidi.32.dll" -o".\SplinterCellChaosTheory.WidescreenFix\system\" -y
+7za e "..\xidi.zip" "Xidi-*/Win32/dinput8.dll" "Xidi-*/Win32/Xidi.32.dll" -o".\SplinterCellChaosTheory.WidescreenFix\System\" -y
 7za e "..\xidi.zip" "Xidi-*/Win32/dinput8.dll" "Xidi-*/Win32/Xidi.32.dll" -o".\SplinterCellDoubleAgent.WidescreenFix\SCDA-Offline\System\" -y
 7za e "..\xidi.zip" "Xidi-*/Win32/dinput8.dll" "Xidi-*/Win32/Xidi.32.dll" -o".\SplinterCellConviction.FusionMod\src\system\" -y
 7za e "..\xidi.zip" "Xidi-*/Win32/winmm.dll" "Xidi-*/Win32/Xidi.32.dll" -o".\KingKong.WidescreenFix\" -y
@@ -106,8 +106,8 @@ Copyright (C) 1999-2016 Igor Pavlov.
 7-Zip Extra files are under the GNU LGPL license.
 
 
-Notes: 
-  You can use 7-Zip Extra on any computer, including a computer in a commercial 
+Notes:
+  You can use 7-Zip Extra on any computer, including a computer in a commercial
   organization. You don't need to register or pay for 7-Zip.
 
 
@@ -124,6 +124,6 @@ GNU LGPL information
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
   Lesser General Public License for more details.
 
-  You can receive a copy of the GNU Lesser General Public License from 
+  You can receive a copy of the GNU Lesser General Public License from
   http://www.gnu.org/
 
