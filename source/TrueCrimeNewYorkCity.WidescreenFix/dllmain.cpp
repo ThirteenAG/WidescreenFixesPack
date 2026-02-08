@@ -5,7 +5,7 @@ import Framelimit;
 import RawInput;
 import WidescreenHUD;
 import DepthStencil;
-import DistantBlur;
+import PostFX;
 
 int32_t nLanguage;
 int32_t __cdecl SetLanguage(LPCSTR lpValueName)
@@ -129,9 +129,6 @@ void Init()
     fRawInputMouse = std::abs(iniReader.ReadFloat("MOUSE", "RawInputMouse", 1.0f));
 
     bool bHighResolutionShadows = iniReader.ReadInteger("MISC", "HighResolutionShadows", 1) != 0;
-    bool bHighResolutionReflections = iniReader.ReadInteger("MISC", "HighResolutionReflections", 1) != 0;
-
-    bool bDistantBlur = iniReader.ReadInteger("MISC", "DistantBlur", 1) != 0;
 
     auto pattern = hook::pattern("88 15 ? ? ? ? 8D 45");
     bPause = *pattern.get_first<bool*>(2);
@@ -345,17 +342,6 @@ void Init()
         injector::WriteMemory(pattern.get_first(6), 256 * 3, true);
     }
 
-    if (bHighResolutionReflections)
-    {
-        auto pattern = hook::pattern("68 00 01 00 00 68 00 01 00 00 6A 06 8D 4C 24 ? E8");
-        injector::WriteMemory(pattern.get_first(1), 256 * 3, true);
-        injector::WriteMemory(pattern.get_first(6), 256 * 3, true);
-
-        pattern = hook::pattern("68 00 01 00 00 68 00 01 00 00 6A 4B");
-        injector::WriteMemory(pattern.get_first(1), 256 * 3, true);
-        injector::WriteMemory(pattern.get_first(6), 256 * 3, true);
-    }
-
     // Shadows distance fix
     {
         pattern = hook::pattern("68 ? ? ? ? 0F 59 E1");
@@ -363,9 +349,7 @@ void Init()
     }
 
     InitDepthStencil();
-
-    if (bDistantBlur)
-        InitDistantBlur();
+    InitPostFX();
 }
 
 CEXP void InitializeASI()

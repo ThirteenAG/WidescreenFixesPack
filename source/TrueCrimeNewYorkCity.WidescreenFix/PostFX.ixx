@@ -5,7 +5,7 @@ module;
 #include <d3dx9effect.h>
 #pragma comment(lib, "D3dx9.lib")
 
-export module DistantBlur;
+export module PostFX;
 
 import ComVars;
 
@@ -568,8 +568,17 @@ void sub_533AA0(float* screenData)
     *g_currentVal = 0.0f;
 }
 
-export void InitDistantBlur()
+export void InitPostFX()
 {
+    CIniReader iniReader("");
+    CPostFX::DistanceBlur::bDOFEnabled = iniReader.ReadInteger("MISC", "DistantBlur", 1) != 0;
+    CPostFX::Bloom::bBloomEnabled = iniReader.ReadInteger("MISC", "Bloom", 1) != 0;
+    CPostFX::AntiAliasing::bAAEnabled = iniReader.ReadInteger("MISC", "AntiAliasing", 1) != 0;
+    CPostFX::ConsoleGamma::bConsoleGammaEnabled = iniReader.ReadInteger("MISC", "ConsoleGamma", 1) != 0;
+
+    if (!CPostFX::DistanceBlur::bDOFEnabled && !CPostFX::Bloom::bBloomEnabled && !CPostFX::AntiAliasing::bAAEnabled && !CPostFX::ConsoleGamma::bConsoleGammaEnabled)
+        return;
+
     auto pattern = hook::pattern("A1 ? ? ? ? 8B 10 8D 4C 24 ? 51 50");
     pD3D8Device = *pattern.get_first<IUnknown**>(1);
 
