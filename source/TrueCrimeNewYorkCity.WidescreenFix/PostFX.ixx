@@ -130,15 +130,15 @@ public:
         assert(SUCCEEDED(device->StretchRect(rt0, nullptr, pBackBufferSurf, nullptr, D3DTEXF_NONE)));
     }
 
-    static inline void DrawScreenQuad(IDirect3DDevice9* device, float width, float height)
+    static inline void DrawScreenQuad(IDirect3DDevice9* device, UINT width, UINT height)
     {
         struct ScreenVertex { float x, y, z, rhw; float u, v; };
         ScreenVertex screenVertices[4] =
         {
-            { -0.5f,         -0.5f,          0.0f, 1.0f, 0.0f, 0.0f },
-            { -0.5f,          height - 0.5f, 0.0f, 1.0f, 0.0f, 1.0f },
-            { width - 0.5f, -0.5f,          0.0f, 1.0f, 1.0f, 0.0f },
-            { width - 0.5f, height - 0.5f, 0.0f, 1.0f, 1.0f, 1.0f }
+            { -0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f },
+            { -0.5f, (float)height - 0.5f, 0.0f, 1.0f, 0.0f, 1.0f },
+            { (float)width - 0.5f, -0.5f, 0.0f, 1.0f, 1.0f, 0.0f },
+            { (float)width - 0.5f, (float)height - 0.5f, 0.0f, 1.0f, 1.0f, 1.0f }
         };
         device->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 2, screenVertices, sizeof(ScreenVertex));
     }
@@ -235,9 +235,9 @@ public:
         static inline IDirect3DSurface9* pBloomSurface = nullptr;
         static inline IDirect3DSurface9* pBloomBlurSurface = nullptr;
 
-        static inline float fBloomIntensity = 2.0;
-        static inline float fBloomThreshold = 0.8;
-        static inline float fBloomSoftThreshold = 0.75;
+        static inline float fBloomIntensity = 2.0f;
+        static inline float fBloomThreshold = 0.8f;
+        static inline float fBloomSoftThreshold = 0.75f;
 
         static void Initialize(IDirect3DDevice9* device)
         {
@@ -275,7 +275,7 @@ public:
                         {
                             device->SetRenderTarget(0, pBloomSurface);
 
-                            float ViewportSize[] = { nScreenWidth, nScreenHeight };
+                            float ViewportSize[] = { (float)nScreenWidth, (float)nScreenHeight };
 
                             pEffect->SetFloatArray(EffectHandles.vec2ViewportSize, ViewportSize, 2);
                             pEffect->SetTexture(EffectHandles.InputTex2D, pBackBufferTex);
@@ -347,7 +347,7 @@ public:
                 {
                     UpdateBackBuffer(device, rt0);
 
-                    float ViewportSize[] = { nScreenWidth, nScreenHeight };
+                    float ViewportSize[] = { (float)nScreenWidth, (float)nScreenHeight };
 
                     pEffect->SetTexture(EffectHandles.InputTex2D, pBackBufferTex);
                     pEffect->SetTexture(EffectHandles.DepthTex2D, depthTex);
@@ -448,7 +448,7 @@ public:
                     Initialize(device);
                     UpdateBackBuffer(device, rt0);
 
-                    float ViewportSize[] = { 1.0 / nScreenWidth, 1.0 / nScreenHeight, nScreenWidth, nScreenHeight };
+                    float ViewportSize[] = { 1.0f / (float)nScreenWidth, 1.0f / (float)nScreenHeight, (float)nScreenWidth, (float)nScreenHeight };
                     pEffect->SetFloatArray(EffectHandles.vec2ViewportSize, ViewportSize + 2, 2);
                     pEffect->SetFloatArray(EffectHandles.vec4SMAARTMetrics, ViewportSize, 4);
 
