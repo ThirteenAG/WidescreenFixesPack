@@ -329,6 +329,76 @@ void TransformMapToScreen_original(void* a1, void* a2)
     fnsub_268058(a1, a2);
 }
 
+int CurrentCaseName = -1;
+int CurrentMissionName = -1;
+void* (*fnsub_1FD738)(void* a1);
+void* sub_1FD738(void* a1)
+{
+    void* ret = fnsub_1FD738(a1);
+    CurrentCaseName = *(int*)((uintptr_t)a1 + 0x1078);
+    CurrentMissionName = *(int*)((uintptr_t)a1 + 0x107C);
+    return ret;
+}
+
+enum eCaseNames
+{
+    Mision0,
+    Intro,
+    BC01,
+    BC02,
+    BC03,
+    BC04,
+    EndGame,
+    CIKingMission,
+    CIMadamMission,
+    CICabbieMission,
+    FC,
+    RedmanBonus,
+    Police_Challenges,
+    StreetRacing,
+    SC03,
+};
+
+enum eMissionNames_BC03
+{
+    BC3_Prologue,
+    BC3_M0F,
+    BC3_M1,
+    BC3_M1F,
+    BC3_M2,
+    BC3_M2F,
+    BC3_M4,
+    BC3_M4F,
+    BC3_M5,
+    BC3_M5F,
+    BC3_M6,
+    BC3_M7,
+    BC3_M8,
+};
+
+typedef struct
+{
+    int caseName;
+    int missionName;
+} MissionPair;
+
+MissionPair missionList[] =
+{
+    { BC03, BC3_M6 },
+};
+
+int GameNeeds30FPS()
+{
+    for (size_t i = 0; i < sizeof(missionList) / sizeof(MissionPair); ++i)
+    {
+        if (CurrentCaseName == missionList[i].caseName && CurrentMissionName == missionList[i].missionName)
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 void init()
 {
     //logger.SetBuffer(OSDText, sizeof(OSDText) / sizeof(OSDText[0]), sizeof(OSDText[0]));
@@ -357,14 +427,48 @@ void init()
 
     if (bEnable60FPS)
     {
+        //uintptr_t ptr_4A1C3C = pattern.get(0, "70 00 B3 7F ? ? ? ? 60 00 B4 7F ? ? ? ? A0 00 B0 7F", -4);
+        //injector.WriteInstr(ptr_4A1C3C, addiu(s1, zero, 2));
+
         uintptr_t ptr_4A1C3C = pattern.get(0, "70 00 B3 7F ? ? ? ? 60 00 B4 7F ? ? ? ? A0 00 B0 7F", -4);
-        injector.WriteInstr(ptr_4A1C3C, addiu(s1, zero, 2));
+        MakeInlineWrapperWithNOP(ptr_4A1C3C,
+            jal((uintptr_t)GameNeeds30FPS),
+            nop(),
+            beq(v0, zero, 2),
+            addiu(s1, zero, 2),
+            addiu(s1, zero, 4)
+        );
+
+        //uintptr_t ptr_4A1C54 = pattern.get(0, "50 00 BF FF 40 00 A0 AF ? ? ? ? ? ? ? ? ? ? ? ? 00 00 00 00", -4);
+        //injector.WriteInstr(ptr_4A1C54, li(s4, 1));
 
         uintptr_t ptr_4A1C54 = pattern.get(0, "50 00 BF FF 40 00 A0 AF ? ? ? ? ? ? ? ? ? ? ? ? 00 00 00 00", -4);
-        injector.WriteInstr(ptr_4A1C54, li(s4, 1));
+        MakeInlineWrapperWithNOP(ptr_4A1C54,
+            jal((uintptr_t)GameNeeds30FPS),
+            nop(),
+            beq(v0, zero, 2),
+            addiu(s4, zero, 1),
+            addiu(s4, zero, 2)
+        );
 
-        uintptr_t ptr_4A1CC4 = pattern.get(0, "10 00 A3 FB ? ? 12 0C 02 00 04 24", 8);
-        injector.WriteInstr(ptr_4A1CC4, addiu(a0, zero, 1));
+        //uintptr_t ptr_4A1CC4 = pattern.get(0, "10 00 A3 FB ? ? 12 0C 02 00 04 24", 8);
+        //injector.WriteInstr(ptr_4A1CC4, addiu(a0, zero, 1));
+
+        uintptr_t ptr_4A1CC0 = pattern.get(0, "10 00 A3 FB ? ? 12 0C 02 00 04 24", 4);
+        uintptr_t sub_4AB5E8 = injector.GetBranchDestination(ptr_4A1CC0);
+        injector.MakeNOP(ptr_4A1CC0 + 4);
+        MakeInlineWrapperWithNOP(ptr_4A1CC0,
+            jal((uintptr_t)GameNeeds30FPS),
+            nop(),
+            beq(v0, zero, 2),
+            addiu(a0, zero, 1),
+            addiu(a0, zero, 2),
+            jal(sub_4AB5E8),
+            nop()
+        );
+
+        uintptr_t ptr_1FE0C4 = pattern.get(0, "C0 26 00 AE ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? C3 01 03 92 ? ? ? ? BC 00 02 8E", -20);
+        fnsub_1FD738 = (void* (*)(void*))injector.MakeJAL(ptr_1FE0C4, (uintptr_t)sub_1FD738);
     }
 
     uint32_t DesktopSizeX = PCSX2Data[PCSX2Data_DesktopSizeX];
