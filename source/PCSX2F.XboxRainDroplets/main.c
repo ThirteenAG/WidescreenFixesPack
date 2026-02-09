@@ -8,12 +8,20 @@
 #include "../../includes/pcsx2/patterns.h"
 #include "../../includes/pcsx2/mips.h"
 
-int CompatibleCRCList[] = { 
+int CompatibleCRCList[] = {
     0x4F32A11F, 0xB3AD1EA4, // vcs
     0x7EA439F5, //0xD693D4CF, // lcs
+    0x42A9C4EC, 0x7A9D67B8, 0x77B4F13C, 0xB1AC3BEB //tcnyc
+};
+
+int CompatibleElfCRCList[] = {
+    0x4F32A11F, 0xB3AD1EA4, // vcs
+    0x7EA439F5, //0xD693D4CF, // lcs
+    0x42A9C4EC, 0x1118ACD0, 0x7A9D67B8, 0xB73CDCFA, 0x77B4F13C, 0xA4334B91, 0xB1AC3BEB, 0xB2D44C6C
 };
 
 char XboxRainDropletsData[255] = "XBOXRAINDROPLETSDATA";
+//char OSDText[OSDStringNum][OSDStringSize] = { {1} };
 
 uintptr_t GetAbsoluteAddress(uintptr_t at, int32_t offs_hi, int32_t offs_lo)
 {
@@ -220,7 +228,8 @@ typedef struct RwMatrix
 } RwMatrix;
 
 #pragma pack(push, 1)
-struct XRData {
+struct XRData
+{
     uint32_t p_enabled;
     uint32_t ms_enabled;
 
@@ -268,7 +277,7 @@ struct XRData {
     float FillScreenMoving_amount;
     int32_t FillScreenMoving_isBlood;
 
-#ifdef __cplusplus
+    #ifdef __cplusplus
     bool Enabled(uint64_t ptr)
     {
         if (p_enabled)
@@ -312,7 +321,7 @@ struct XRData {
             (p_pos_y ? *(float*)(ptr + p_pos_y) : ms_pos_y),
             (p_pos_z ? *(float*)(ptr + p_pos_z) : ms_pos_z));
     }
-#endif
+    #endif
 };
 #pragma pack(pop)
 
@@ -346,20 +355,20 @@ void GameLoopStuffVCS()
         float CWeather_Rain = *(float*)(dword_4CD144);
         uint8_t CCullZones_CamNoRain = (*(uint32_t*)(dword_4CD680) & 8) != 0;
         uint8_t CCullZones_PlayerNoRain = (*(uint32_t*)(dword_4CD684) & 8) != 0;
-        uint8_t CCutsceneMgr__ms_running = *(uint8_t*)((*(uint32_t*)(dword_48F820) + 0x20));
+        uint8_t CCutsceneMgr__ms_running = *(uint8_t*)((*(uint32_t*)(dword_48F820)+0x20));
         uint32_t CGame__currArea = *(uint32_t*)(dword_489F7C);
-        
+
         if (CGame__currArea != 0 || CCullZones_CamNoRain || CCullZones_PlayerNoRain || CCutsceneMgr__ms_running)
             data->ms_rainIntensity = 0.0f;
         else
             data->ms_rainIntensity = CWeather_Rain;
-        
+
         uint32_t RslCamera = *(uint32_t*)(TheCamera + 0x7F4);
         if (RslCamera)
         {
             uint32_t Node = RslCameraGetNode(RslCamera);
             struct RwMatrix* pCamMatrix = (struct RwMatrix*)(sub_8A1A5D4(Node));
-        
+
             data->ms_right_x = pCamMatrix->right.x;
             data->ms_right_y = pCamMatrix->right.y;
             data->ms_right_z = pCamMatrix->right.z;
@@ -380,7 +389,7 @@ void CParticle__AddParticleHookVCS(uint32_t type, uint32_t vecPos)
 {
     struct XRData* data = (struct XRData*)XboxRainDropletsData;
     RwV3d* point = (RwV3d*)vecPos;
-    
+
     if (type == WATER_SPARK || type == WHEEL_WATER || type == WATER || type == WATER_HYDRANT ||
         /*type == WATERSPRAY ||*/ type == BOAT_THRUSTJET || type == WATER_CANNON ||
         type == BLOOD || type == BLOOD_SMALL || type == BLOOD_SPURT)
@@ -388,7 +397,7 @@ void CParticle__AddParticleHookVCS(uint32_t type, uint32_t vecPos)
         data->FillScreenMoving_Vec_x = point->x;
         data->FillScreenMoving_Vec_y = point->y;
         data->FillScreenMoving_Vec_z = point->z;
-    
+
         data->FillScreenMoving_amount = 1.0f;
         if (type == BLOOD || type == BLOOD_SMALL || type == BLOOD_SPURT)
             data->FillScreenMoving_isBlood = 1;
@@ -478,8 +487,149 @@ void GameLoopStuffLCS()
     }
 }
 
+// True Crime New York City
+float* CameraQuat;
+float* CameraPos;
+float* RainGrid;
+uint8_t* RainBitmap;
+float (*GetRainIntensity)();
+int* RainCheck1;
+int* RainCheck2;
+int bPause = 1;
+int bCutscene = 0;
+int* nLoading = 0;
+
+void ComputeCameraVectors(float* upX, float* upY, float* upZ,
+                          float* atX, float* atY, float* atZ,
+                          float* rightX, float* rightY, float* rightZ,
+                          float* posX, float* posY, float* posZ)
+{
+    float qx = -CameraQuat[0];
+    float qy = -CameraQuat[1];
+    float qz = -CameraQuat[2];
+    float qw = CameraQuat[3];
+    float len;
+
+    *atX = 2.0f * (qx * qz + qw * qy);
+    *atY = 2.0f * (qy * qz - qw * qx);
+    *atZ = 1.0f - 2.0f * (qx * qx + qy * qy);
+
+    *rightX = 1.0f - 2.0f * (qy * qy + qz * qz);
+    *rightY = 2.0f * (qx * qy + qw * qz);
+    *rightZ = 2.0f * (qx * qz - qw * qy);
+
+    *upX = 2.0f * (qx * qy - qw * qz);
+    *upY = 1.0f - 2.0f * (qx * qx + qz * qz);
+    *upZ = 2.0f * (qy * qz + qw * qx);
+
+    *atX = -*atX;
+    *atY = -*atY;
+    *atZ = -*atZ;
+
+    len = sqrtf(*atX * *atX + *atY * *atY + *atZ * *atZ);
+    if (len > 0.001f)
+    {
+        *atX /= len;
+        *atY /= len;
+        *atZ /= len;
+    }
+    if (*atZ < 0.1f)
+    {
+        *atZ = 0.1f;
+    }
+
+    *upX = -*upX;
+    *upY = -*upY;
+    *upZ = -*upZ;
+
+    *rightX = -*rightX;
+    *rightY = -*rightY;
+    *rightZ = -*rightZ;
+
+    *posX = CameraPos[0];
+    *posY = CameraPos[1];
+    *posZ = CameraPos[2];
+}
+
+int IsCameraInsideActiveRainVolume(float camX, float camY, float camZ)
+{
+    const float MAX_DIST_SQ = 4.0f;
+    int idx;
+
+    for (idx = 0; idx < 256; idx++)
+    {
+        int byteOffset = idx >> 3;
+        int bit = idx & 7;
+        float* center;
+        float dx, dy, dz, dist;
+
+        if ((RainBitmap[byteOffset] & (1u << bit)) == 0)
+            continue;
+
+        center = &RainGrid[idx * 4];
+
+        dx = camX - center[0];
+        dy = camY - center[1];
+        dz = camZ - center[2];
+
+        dist = dx * dx + dy * dy + dz * dz;
+        if (dist <= MAX_DIST_SQ)
+            return 1;
+    }
+
+    return 0;
+}
+
+void (*fnTCNYCDrawRain)(void*);
+void TCNYCDrawRain(void* a1)
+{
+    fnTCNYCDrawRain(a1);
+
+    if (*RainCheck1 && *RainCheck2)
+    {
+        if (XboxRainDropletsData[0] != 'X')
+        {
+            struct XRData* data = (struct XRData*)XboxRainDropletsData;
+
+            if (*nLoading != 0 || bCutscene || bPause)
+            {
+                data->ms_enabled = 0;
+                return;
+            }
+            else
+                data->ms_enabled = 1;
+
+            data->ms_rainIntensity = GetRainIntensity();
+
+            if (data->ms_rainIntensity >= 0.0133333206f && data->ms_rainIntensity < 0.279999971f)
+                data->ms_rainIntensity = 0.279999971f;
+
+            float upX, upY, upZ, atX, atY, atZ, rightX, rightY, rightZ, posX, posY, posZ;
+            ComputeCameraVectors(&upX, &upY, &upZ, &atX, &atY, &atZ, &rightX, &rightY, &rightZ, &posX, &posY, &posZ);
+
+            if (!IsCameraInsideActiveRainVolume(posX, posY, posZ))
+                data->ms_rainIntensity = 0.0f;
+
+            data->ms_up_x = upX;
+            data->ms_up_y = upY;
+            data->ms_up_z = upZ;
+            data->ms_at_x = atX;
+            data->ms_at_y = atY;
+            data->ms_at_z = atZ;
+            data->ms_right_x = rightX;
+            data->ms_right_y = rightY;
+            data->ms_right_z = rightZ;
+            data->ms_pos_x = posX;
+            data->ms_pos_y = posY;
+            data->ms_pos_z = posZ;
+        }
+    }
+}
+
 void init()
 {
+    //logger.SetBuffer(OSDText, sizeof(OSDText) / sizeof(OSDText[0]), sizeof(OSDText[0]));
+
     //vcs
     uintptr_t ptr_21E994 = pattern.get(0, "52 00 02 3C ? ? ? ? ? ? ? ? ? ? ? ? 00 00 00 00 ? ? ? ? 00 00 00 00 ? ? ? ? 48 00 10 3C", -8);
     if (ptr_21E994)
@@ -502,7 +652,7 @@ void init()
         dword_489F7C = GetAbsoluteAddress(ptr_113FB8, 0, 8);
         uintptr_t ptr_1091D4 = pattern.get(0, "6F 00 02 3C 00 00 B0 FF 08 00 B1 FF ? ? ? ? 2D 88 80 00", -0);
         TheCamera = GetAbsoluteAddress(ptr_1091D4, 0, 12);
-        
+
         uintptr_t ptr_1E9078 = pattern.get(0, "D0 00 B4 7F E0 00 B5 7F 2D A0 A0 00", -8);
         if (ptr_1E9078)
         {
@@ -518,11 +668,94 @@ void init()
 
         uintptr_t ptr_101E04 = pattern.get(0, "44 00 02 3C 10 00 B0 FF ? ? ? ? 18 00 B1 FF", -0);
         TheCamera = GetAbsoluteAddress(ptr_101E04, 0, 8);
-    
+
         uintptr_t ptr_1CD5B8 = pattern.get(0, "E0 00 B5 7F D0 00 B4 7F 2D A8 80 00", -12);
         if (ptr_1CD5B8)
         {
             injector.MakeTrampoline(ptr_1CD5B8, (uintptr_t)CParticle__AddParticleHookLCS);
+        }
+    }
+
+    //tcnyc
+    uintptr_t ptr_12A56C = pattern.get(0, "0C 00 C0 AC ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 30 00 B0 7B ? ? ? ? 20 00 B1 7B", 16);
+    if (ptr_12A56C)
+    {
+        uintptr_t ptr_16F9A4 = pattern.get(0, "24 00 26 8E 00 00 03 7A 30 00 C3 7C", -16);
+        CameraQuat = (float*)GetAbsoluteAddress(ptr_16F9A4, 0, 4);
+
+        uintptr_t ptr_16F9E0 = pattern.get(0, "8F C2 21 34 00 60 81 44 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 20 00 02 DA", -20);
+        CameraPos = (float*)GetAbsoluteAddress(ptr_16F9E0, 0, 4);
+
+        uintptr_t ptr_345940 = pattern.get(0, "A0 86 C6 34 ? ? ? ? ? ? ? ? ? ? ? ? 00 40 21 34 00 A8 81 44", -12);
+        RainGrid = (float*)GetAbsoluteAddress(ptr_345940, 0, 8);
+
+        uintptr_t ptr_345A84 = pattern.get(0, "40 20 13 00 ? ? ? ? ? ? ? ? ? ? ? ? C2 28 10 00 07 00 02 32 ? ? ? ? 04 10 43 00 00 00 A3 90 27 10 02 00 10 00 A4 AF", -4);
+        RainBitmap = (uint8_t*)GetAbsoluteAddress(ptr_345A84, 0, 8);
+
+        uintptr_t ptr_11AB2C = pattern.get(0, "86 05 00 46 ? ? ? ? 00 00 00 00 ? ? ? ? 46 06 00 46", -4);
+        GetRainIntensity = (float(*)())injector.GetBranchDestination(ptr_11AB2C);
+
+        uintptr_t ptr_101B48 = pattern.get(0, "5C 26 43 8C ? ? ? ? ? ? ? ? ? ? ? ? 00 00 00 00 ? ? ? ? 04 00 43 8C", -8);
+        RainCheck1 = (int*)GetAbsoluteAddress(ptr_101B48, 0, 4);
+
+        uintptr_t ptr_10E7D4 = pattern.get(0, "04 00 42 8E ? ? ? ? 02 15 02 00 60 00 83 8C", -4);
+        RainCheck2 = (int*)GetAbsoluteAddress(ptr_101B48, 0, 8);
+
+        fnTCNYCDrawRain = (void(*)(void*))injector.MakeJAL(ptr_12A56C, (uintptr_t)TCNYCDrawRain);
+
+        uintptr_t ptr_1FD788 = pattern.get(0, "C0 26 05 8E ? ? ? ? BC 26 02 8E 09 F8 40 00", -8);
+        nLoading = (int*)GetAbsoluteAddress(ptr_1FD788, 0, 4);
+
+        uintptr_t ptr_2692E8 = pattern.get(0, "08 00 03 8E 13 00 22 B2 0C 00 22 B6 14 00 23 AE ? ? ? ? ? ? ? ? ? ? ? ? 20 00 23 8E", 0);
+        if (ptr_2692E8)
+        {
+            uintptr_t bPauseAddr = (uintptr_t)&bPause;
+            MakeInlineWrapper(ptr_2692E8,
+                lw(v1, s0, 8),
+                lui(at, HIWORD(bPauseAddr)),
+                ori(at, at, LOWORD(bPauseAddr)),
+                li(t0, 1),
+                sw(t0, at, 0)
+            );
+        }
+
+        uintptr_t ptr_26B644 = pattern.get(0, "24 00 22 8E ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 00 60 81 44 ? ? ? ? ? ? ? ? ? ? ? ? 00 00 00 00", -16);
+        if (ptr_26B644)
+        {
+            uintptr_t bPauseAddr = (uintptr_t)&bPause;
+            MakeInlineWrapper(ptr_26B644,
+                addiu(v1, zero, 1),
+                lui(at, HIWORD(bPauseAddr)),
+                ori(at, at, LOWORD(bPauseAddr)),
+                li(t0, 0),
+                sw(t0, at, 0)
+            );
+        }
+
+        uintptr_t ptr_1F1318 = pattern.get(0, "F0 00 BF FF 5C 26 02 AE ? ? ? ? 3C 26 04 8E", -4);
+        if (ptr_1F1318)
+        {
+            uintptr_t bCutsceneAddr = (uintptr_t)&bCutscene;
+            MakeInlineWrapper(ptr_1F1318,
+                daddu(s2, a1, zero),
+                lui(at, HIWORD(bCutsceneAddr)),
+                ori(at, at, LOWORD(bCutsceneAddr)),
+                li(t0, 1),
+                sw(t0, at, 0)
+            );
+        }
+
+        uintptr_t ptr_1A2640 = pattern.get(0, "00 00 81 44 ? ? ? ? ? ? ? ? 00 08 81 44 ? ? ? ? 94 00 00 AE", -4);
+        if (ptr_1A2640)
+        {
+            uintptr_t bCutsceneAddr = (uintptr_t)&bCutscene;
+            MakeInlineWrapper(ptr_1A2640,
+                lui(at, HIWORD(bCutsceneAddr)),
+                ori(at, at, LOWORD(bCutsceneAddr)),
+                li(t0, 0),
+                sw(t0, at, 0),
+                lui(at, 0x4120)
+            );
         }
     }
 }
