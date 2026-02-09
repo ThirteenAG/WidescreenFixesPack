@@ -14,6 +14,7 @@ int CompatibleElfCRCList[] = { 0x42A9C4EC, 0x1118ACD0, 0x7A9D67B8, 0xB73CDCFA, 0
 int PCSX2Data[PCSX2Data_Size] = { 1 };
 char OSDText[OSDStringNum][OSDStringSize] = { {1} };
 char PluginData[MaxIniSize] = { 1 };
+char FrameLimitUnthrottle;
 
 struct ScreenX
 {
@@ -329,14 +330,36 @@ void TransformMapToScreen_original(void* a1, void* a2)
     fnsub_268058(a1, a2);
 }
 
+void UnthrottleEmuEnable()
+{
+    FrameLimitUnthrottle = 1;
+}
+
+void UnthrottleEmuDisable()
+{
+    FrameLimitUnthrottle = 0;
+}
+
+int* nLoading = 0;
+int UnthrottleEmuDuringLoading = 0;
 int CurrentCaseName = -1;
 int CurrentMissionName = -1;
 void* (*fnsub_1FD738)(void* a1);
 void* sub_1FD738(void* a1)
 {
     void* ret = fnsub_1FD738(a1);
+
     CurrentCaseName = *(int*)((uintptr_t)a1 + 0x1078);
     CurrentMissionName = *(int*)((uintptr_t)a1 + 0x107C);
+
+    if (UnthrottleEmuDuringLoading)
+    {
+        if (!*nLoading) // not sure why this is inverted
+            UnthrottleEmuEnable();
+        else
+            UnthrottleEmuDisable();
+    }
+
     return ret;
 }
 
@@ -399,6 +422,22 @@ int GameNeeds30FPS()
     return 0;
 }
 
+void GameLoop()
+{
+    if (UnthrottleEmuDuringLoading)
+    {
+        if (*nLoading)
+            UnthrottleEmuEnable();
+        else
+            UnthrottleEmuDisable();
+    }
+}
+
+uintptr_t GetAbsoluteAddress(uintptr_t at, int32_t offs_hi, int32_t offs_lo)
+{
+    return (uintptr_t)((uint32_t)(*(uint16_t*)(at + offs_hi)) << 16) + *(int16_t*)(at + offs_lo);
+}
+
 void init()
 {
     //logger.SetBuffer(OSDText, sizeof(OSDText) / sizeof(OSDText[0]), sizeof(OSDText[0]));
@@ -411,8 +450,21 @@ void init()
     char* constraintStr = inireader.ReadString("MAIN", "HudAspectRatioConstraint", "auto", buffer, sizeof(buffer));
     Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(constraintStr);
     int bEnable60FPS = inireader.ReadInteger("MAIN", "Enable60FPS", 0);
+    UnthrottleEmuDuringLoading = inireader.ReadInteger("MAIN", "UnthrottleEmuDuringLoading", 1);
 
-    //logger.WriteF("Screen.fHudAspectRatioConstraint: %f", Screen.fHudAspectRatioConstraint);
+    uintptr_t ptr_1FD788 = pattern.get(0, "C0 26 05 8E ? ? ? ? BC 26 02 8E 09 F8 40 00", -8);
+    nLoading = (int*)GetAbsoluteAddress(ptr_1FD788, 0, 4);
+
+    uintptr_t ptr_1FE0C4 = pattern.get(0, "C0 26 00 AE ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? C3 01 03 92 ? ? ? ? BC 00 02 8E", -20);
+    fnsub_1FD738 = (void* (*)(void*))injector.MakeJAL(ptr_1FE0C4, (uintptr_t)sub_1FD738);
+
+    if (UnthrottleEmuDuringLoading)
+    {
+        UnthrottleEmuEnable();
+
+        uintptr_t ptr_4A1C60 = pattern.get(0, "00 00 00 00 ? ? ? ? ? ? ? ? ? ? ? ? 23 10 46 00 2A 18 62 02", -12);
+        injector.MakeJAL(ptr_4A1C60, (intptr_t)GameLoop);
+    }
 
     uintptr_t ptr_100350 = pattern.get(0, "2D 20 40 02 ? ? ? ? 2D 40 20 02", -4);
     if (ptr_100350 != 0)
@@ -466,9 +518,6 @@ void init()
             jal(sub_4AB5E8),
             nop()
         );
-
-        uintptr_t ptr_1FE0C4 = pattern.get(0, "C0 26 00 AE ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? C3 01 03 92 ? ? ? ? BC 00 02 8E", -20);
-        fnsub_1FD738 = (void* (*)(void*))injector.MakeJAL(ptr_1FE0C4, (uintptr_t)sub_1FD738);
     }
 
     uint32_t DesktopSizeX = PCSX2Data[PCSX2Data_DesktopSizeX];
