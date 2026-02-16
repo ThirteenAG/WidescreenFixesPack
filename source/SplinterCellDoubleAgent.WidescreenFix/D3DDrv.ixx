@@ -18,24 +18,24 @@ float* __cdecl FGetHSV(float* dest, uint8_t H, uint8_t S, uint8_t V)
         {
             switch (gColor)
             {
-            case 2:
-                dest[0] = 1.0f;
-                dest[1] = 0.0f;
-                dest[2] = 0.0f;
-                dest[3] = 1.0f;
-                break;
-            case 3:
-                dest[0] = 1.0f;
-                dest[1] = 0.5f;
-                dest[2] = 0.0f;
-                dest[3] = 1.0f;
-                break;
-            default:
-                dest[0] = 0.0f;
-                dest[1] = 1.0f;
-                dest[2] = 0.0f;
-                dest[3] = 1.0f;
-                break;
+                case 2:
+                    dest[0] = 1.0f;
+                    dest[1] = 0.0f;
+                    dest[2] = 0.0f;
+                    dest[3] = 1.0f;
+                    break;
+                case 3:
+                    dest[0] = 1.0f;
+                    dest[1] = 0.5f;
+                    dest[2] = 0.0f;
+                    dest[3] = 1.0f;
+                    break;
+                default:
+                    dest[0] = 0.0f;
+                    dest[1] = 1.0f;
+                    dest[2] = 0.0f;
+                    dest[3] = 1.0f;
+                    break;
             }
             if (gBlacklistIndicators)
             {
@@ -61,38 +61,38 @@ float* __cdecl FGetHSV(float* dest, uint8_t H, uint8_t S, uint8_t V)
 
     switch ((uint32_t)v4)
     {
-    case 0:
-        r = v15;
-        g = v17;
-        b = v16;
-        break;
-    case 1:
-        r = v10;
-        g = v15;
-        b = v16;
-        break;
-    case 2:
-        r = v16;
-        g = v15;
-        b = v17;
-        break;
-    case 3:
-        r = v16;
-        g = v10;
-        b = v15;
-        break;
-    case 4:
-        r = v17;
-        g = v16;
-        b = v15;
-        break;
-    case 5:
-        r = v15;
-        g = v16;
-        b = v10;
-        break;
-    default:
-        break;
+        case 0:
+            r = v15;
+            g = v17;
+            b = v16;
+            break;
+        case 1:
+            r = v10;
+            g = v15;
+            b = v16;
+            break;
+        case 2:
+            r = v16;
+            g = v15;
+            b = v17;
+            break;
+        case 3:
+            r = v16;
+            g = v10;
+            b = v15;
+            break;
+        case 4:
+            r = v17;
+            g = v16;
+            b = v15;
+            break;
+        case 5:
+            r = v15;
+            g = v16;
+            b = v10;
+            break;
+        default:
+            break;
     }
 
     dest[0] = r;
@@ -111,238 +111,124 @@ float* __cdecl FGetHSV(float* dest, uint8_t H, uint8_t S, uint8_t V)
     return dest;
 }
 
+int nGlowResolutionMultiplier = 0;
+SafetyHookInline shsub_100B9860 = {};
+void* __fastcall sub_100B9860(void* _this, void* edx, int a2, int a3, int a4, int a5, int a6)
+{
+    if (edx != (void*)0xC0DE)
+    {
+        a3 *= nGlowResolutionMultiplier;
+        a4 *= nGlowResolutionMultiplier;
+    }
+    return shsub_100B9860.unsafe_fastcall<void*>(_this, edx, a2, a3, a4, a5, a6);
+}
+
 export void InitD3DDrv()
 {
     CIniReader iniReader("");
-    static auto nShadowMapResolution = iniReader.ReadInteger("GRAPHICS", "ShadowMapResolution", 0);
-    static auto nGlowResolution = iniReader.ReadInteger("GRAPHICS", "GlowResolution", 0);
+    static auto nShadowMapResolutionMultiplier = std::clamp(iniReader.ReadInteger("GRAPHICS", "ShadowMapResolutionMultiplier", 0), 0, 16);
+    nGlowResolutionMultiplier = std::clamp(iniReader.ReadInteger("GRAPHICS", "GlowResolutionMultiplier", 0), 0, 16);
 
-    //https://github.com/ThirteenAG/WidescreenFixesPack/issues/725#issuecomment-612613927
-    if (nShadowMapResolution)
+    if (nShadowMapResolutionMultiplier)
     {
-        //causes bugs #1251
+        const char* GShadowResolutionDegreeXrefs[] = {
+            "B8 00 04 00 00 D3 F8 80 BE",
+            "B8 00 04 00 00 D3 F8 8B 8E ? ? ? ? 8B 11 8D 8E",
+            "B8 00 02 00 00 D3 F8 8B 8E ? ? ? ? 8B 09 6A 01",
+            "B8 00 02 00 00 D3 F8 8D 8E ? ? ? ? 51 8B 8E",
+            "B8 00 04 00 00 D3 F8 8B 8E ? ? ? ? 8B 11 6A 01",
+            "B8 00 02 00 00 D3 F8 8B 8E ? ? ? ? 8B 09 6A 50",
+            "B8 00 02 00 00 D3 F8 8D 8E ? ? ? ? 51 6A 00",
+            "B8 00 02 00 00 D3 F8 8B 8E ? ? ? ? 8B 11 6A 01 50 50 51 FF 52 ? 8B 03",
+            "B8 00 02 00 00 D3 F8 8B 8E ? ? ? ? 8B 11 6A 01 50 50 51 FF 52 ? 8B 1B",
+            "B8 00 02 00 00 EB 11",
+            "B8 00 04 00 00 D3 F8 C7 44 24",
+        };
 
-        if (nShadowMapResolution > 8192)
-            nShadowMapResolution = 8192;
-
-        auto pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "B8 00 04 00 00 C3 ? ? ? ? ? ? ? ? ? ? B8 00 04 00 00 C3 ? ? ? ? ? ? ? ? ? ? B8 00 02 00 00 C3 ? ? ? ? ? ? ? ? ? ? B8 00 02 00 00 C3");
-        if (!pattern.empty())
+        for (auto& xref : GShadowResolutionDegreeXrefs)
         {
-            auto range = hook::range_pattern((uintptr_t)pattern.get_first(0), (uintptr_t)pattern.get_first(54), "B8 ? ? ? ? C3");
-            range.for_each_result([&](hook::pattern_match match)
-            {
-                injector::WriteMemory(match.get<void>(1), nShadowMapResolution, true);
-            });
+            auto pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), xref);
+            auto v = injector::ReadMemory<uint32_t>(pattern.get_first(1), true);
+            injector::WriteMemory(pattern.get_first(1), v * nShadowMapResolutionMultiplier, true);
         }
-
-        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "0F B6 8E ? ? ? ? B8");
-        if (!pattern.empty())
-            injector::WriteMemory(pattern.get_first(3), nShadowMapResolution, true);
-
-        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "6A 00 B8 ? ? ? ? D3 F8 8B 8E ? ? ? ? 8B 11");
-        if (!pattern.empty())
-            injector::WriteMemory(pattern.get_first(3), nShadowMapResolution, true);
-
-        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "6A 02 B8");
-        if (!pattern.empty())
-            injector::WriteMemory(pattern.get_first(3), nShadowMapResolution, true);
-
-        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "B8 ? ? ? ? D3 F8 8D 8E ? ? ? ? 51 8B 8E");
-        if (!pattern.empty())
-            injector::WriteMemory(pattern.get_first(1), nShadowMapResolution, true);
-
-        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "B8 ? ? ? ? D3 F8 8B 8E ? ? ? ? 8B 11 6A 01 50 50 51 FF 52 5C 0F B6 8E");
-        if (!pattern.empty())
-            injector::WriteMemory(pattern.get_first(1), nShadowMapResolution, true);
-
-        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "B8 ? ? ? ? D3 F8 8B 8E ? ? ? ? 8B 09 6A 50");
-        if (!pattern.empty())
-            injector::WriteMemory(pattern.get_first(1), nShadowMapResolution, true);
-
-        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "B8 ? ? ? ? D3 F8 8D 8E ? ? ? ? 51 6A 00");
-        if (!pattern.empty())
-            injector::WriteMemory(pattern.get_first(1), nShadowMapResolution, true);
-
-        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "B8 ? ? ? ? EB 11");
-        if (!pattern.empty())
-            injector::WriteMemory(pattern.get_first(1), nShadowMapResolution, true);
     }
 
-    if (nGlowResolution)
+    if (nGlowResolutionMultiplier)
     {
-        if (nGlowResolution > 2048)
-            nGlowResolution = 2048;
+        auto pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "6A FF 68 ? ? ? ? 64 A1 ? ? ? ? 50 64 89 25 ? ? ? ? 51 56 8B F1 33 C0");
+        shsub_100B9860 = safetyhook::create_inline(pattern.get_first(), sub_100B9860);
 
-        static injector::hook_back<void(__fastcall*)(void* _this, int edx, int a2, int a3, int a4, int a5, int a6)> sub_100B9D10;
-        auto sub_100B9D10_hook = [](void* _this, int edx, int a2, int a3, int a4, int a5, int a6)
+        static injector::hook_back<void(__fastcall*)(void* _this, void* edx, int a2, int a3, int a4, int a5, int a6)> shsub_100B9860;
+        auto sub_100B9860_hook = [](void* _this, void* edx, int a2, int a3, int a4, int a5, int a6)
         {
-            a3 = nGlowResolution;
-            a4 = nGlowResolution;
-            return sub_100B9D10.fun(_this, edx, a2, a3, a4, a5, a6);
+            return shsub_100B9860.fun(_this, (void*)0xC0DE, a2, a3, a4, a5, a6);
         };
 
         const char* xrefs_arr[] = {
-            "E8 ? ? ? ? EB 02 33 C0 89 86 ? ? ? ? 8B 0D",
-            "E8 ? ? ? ? EB 02 33 C0 89 86 ? ? ? ? A1 ? ? ? ? 8B 08 8B 11 68 ? ? ? ? 6A 10 89 5C 24 3C FF 12 89 44 24 40 85 C0 C7 44 24 ? ? ? ? ? 74 12 6A 00 6A 15 6A 40",
-            "E8 ? ? ? ? EB 02 33 C0 89 86 ? ? ? ? A1 ? ? ? ? 8B 08 8B 11 68 ? ? ? ? 6A 10 89 5C 24 3C FF 12 89 44 24 40 85 C0 C7 44 24 ? ? ? ? ? 74 12 6A 00 6A 15 6A 20",
-            "E8 ? ? ? ? EB 02 33 C0 89 86 ? ? ? ? A1 ? ? ? ? 8B 08 8B 11 68 ? ? ? ? 6A 10 89 5C 24 3C FF 12 89 44 24 40 85 C0 C7 44 24 ? ? ? ? ? 74 12 6A 00 6A 15 6A 10",
-            "E8 ? ? ? ? EB 02 33 C0 89 86 ? ? ? ? A1 ? ? ? ? 8B 08 8B 11 68 ? ? ? ? 6A 10 89 5C 24 3C FF 12 89 44 24 40 85 C0 C7 44 24 ? ? ? ? ? 74 12 6A 00 6A 15 6A 08",
+            "E8 ? ? ? ? EB 02 33 C0 89 86 ? ? ? ? A1 ? ? ? ? 8B 08 8B 11 68 ? ? ? ? 83 CB FF",
+            "E8 ? ? ? ? EB 02 33 C0 6A 00 89 5C 24 ? 8D 9E ? ? ? ? 53 6A 00 6A 71",
         };
 
         for (auto& xref : xrefs_arr)
         {
             auto pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), xref);
-            if (!pattern.empty())
-                sub_100B9D10.fun = injector::MakeCALL(pattern.get_first(), static_cast<void(__fastcall*)(void* _this, int edx, int a2, int a3, int a4, int a5, int a6)>(sub_100B9D10_hook), true).get();
+            shsub_100B9860.fun = injector::MakeCALL(pattern.get_first(), static_cast<void(__fastcall*)(void* _this, void* edx, int a2, int a3, int a4, int a5, int a6)>(sub_100B9860_hook), true).get();
         }
 
-        auto pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 8B 08");
-        if (!pattern.empty())
+        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "8D 4C 24 ? FF 15 ? ? ? ? 8B 54 24");
+        static auto GlowResolutionHook0 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
-            injector::WriteMemory<float>(pattern.get_first(1), 1.003910000f, true);
-            injector::WriteMemory<float>(pattern.get_first(6), 0.003906250f, true);
-            injector::WriteMemory<float>(pattern.get_first(23), 1.001950000f, true);
-            injector::WriteMemory<float>(pattern.get_first(28), 0.001953120f, true);
-            injector::WriteMemory<float>(pattern.get_first(43), 1.000980000f, true);
-            injector::WriteMemory<float>(pattern.get_first(48), 0.000976562f, true);
-            injector::WriteMemory<float>(pattern.get_first(63), 1.000490000f, true);
-            injector::WriteMemory<float>(pattern.get_first(68), 0.000488281f, true);
-        }
+            float* ptr = reinterpret_cast<float*>(regs.eax);
+            *(float*)(regs.esp + 0x3C) = 1.0f + (1.0f / (32.0f * (float)nGlowResolutionMultiplier));
+            *(float*)(regs.esp + 0x38) = 1.0f / (32.0f * (float)nGlowResolutionMultiplier);
+            *(float*)(regs.esp + 0x2C) = 1.0f + (1.0f / (64.0f * (float)nGlowResolutionMultiplier));
+            *(float*)(regs.esp + 0x28) = 1.0f / (64.0f * (float)nGlowResolutionMultiplier);
+            *(float*)(regs.esp + 0x1C) = 1.0f + (1.0f / (128.0f * (float)nGlowResolutionMultiplier));
+            *(float*)(regs.esp + 0x18) = 1.0f / (128.0f * (float)nGlowResolutionMultiplier);
+            *(float*)(regs.esp + 0x0C) = 1.0f + (1.0f / (256.0f * (float)nGlowResolutionMultiplier));
+            *(float*)(regs.esp + 0x08) = 1.0f / (256.0f * (float)nGlowResolutionMultiplier);
+        });
 
-        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "68 ? ? ? ? 68 ? ? ? ? 50 55");
-        if (!pattern.empty())
+        static auto increaseGlowRes = [](float* ptr)
         {
-            injector::WriteMemory(pattern.get_first(1), nGlowResolution, true);
-            injector::WriteMemory(pattern.get_first(6), nGlowResolution, true);
-        }
+            *(int*)&ptr[1] *= nGlowResolutionMultiplier;
+            //ptr[3]; // res x
+            //ptr[4]; // res y
 
-        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "68 ? ? ? ? 68 ? ? ? ? 51 50");
-        if (!pattern.empty())
-        {
-            injector::WriteMemory(pattern.get_first(1), nGlowResolution, true);
-            injector::WriteMemory(pattern.get_first(6), nGlowResolution, true);
-        }
+            *(int*)&ptr[10] *= nGlowResolutionMultiplier;
+            ptr[12] *= (float)nGlowResolutionMultiplier;
+            ptr[13] *= (float)nGlowResolutionMultiplier;
 
-        uint8_t asm_code[] = {
-            0x68, 0xCC, 0xCC, 0xCC, 0xCC,                             //push    40h
-            0x68, 0xCC, 0xCC, 0xCC, 0xCC,                             //push    40h
-            0x51,                                                     //push    ecx
-            0x50,                                                     //push    eax
-            0x8B, 0xCE,                                               //mov     ecx, esi
-            0xFF, 0x92, 0xD0, 0x04, 0x00, 0x00,                       //call    dword ptr[edx + 4D0h]
+            *(int*)&ptr[19] *= nGlowResolutionMultiplier;
+            ptr[21] *= (float)nGlowResolutionMultiplier;
+            ptr[22] *= (float)nGlowResolutionMultiplier;
+
+            *(int*)&ptr[28] *= nGlowResolutionMultiplier;
+            ptr[30] *= (float)nGlowResolutionMultiplier;
+            ptr[31] *= (float)nGlowResolutionMultiplier;
+
+            *(int*)&ptr[37] *= nGlowResolutionMultiplier;
+            ptr[39] *= (float)nGlowResolutionMultiplier;
+            ptr[40] *= (float)nGlowResolutionMultiplier;
         };
 
-        const char* xrefs_arr2[] = {
-            "6A 40 6A 40 51 50 8B CE FF 92",
-            "6A 20 6A 20 51 50 8B CE FF 92",
-            "6A 10 6A 10 51 50 8B CE FF 92",
-        };
-
-        for (auto& xref : xrefs_arr2)
+        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "50 53 57 8B CE");
+        static auto GlowResolutionHook1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
-            auto pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), xref);
-            if (!pattern.empty())
-            {
-                injector::MakeNOP(pattern.get_first(), 31);
-                injector::WriteMemoryRaw(pattern.get_first(), asm_code, sizeof(asm_code), true);
-                injector::WriteMemory(pattern.get_first(1), nGlowResolution, true);
-                injector::WriteMemory(pattern.get_first(6), nGlowResolution, true);
-            }
-        }
+            increaseGlowRes(reinterpret_cast<float*>(regs.eax));
+        });
 
-        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "C7 44 24 ? ? ? ? ? D9 5C 24 0C");
-        if (!pattern.empty())
-            injector::WriteMemory(pattern.get_first(4), nGlowResolution, true);
-
-        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "89 54 24 3C C7 44 24");
-        if (!pattern.empty())
-            injector::WriteMemory(pattern.get_first(8), nGlowResolution, true);
-
-        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "C7 44 24 ? ? ? ? ? E8 ? ? ? ? 8B 10 F3 0F 10 05 ? ? ? ? 8B 86 ? ? ? ? 8B 88");
-        if (!pattern.empty())
+        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "52 53 57 8B CE");
+        static auto GlowResolutionHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
-            injector::WriteMemory(pattern.get(0).get<void>(4), nGlowResolution, true);
-            injector::WriteMemory(pattern.get(2).get<void>(4), nGlowResolution, true);
-        }
+            increaseGlowRes(reinterpret_cast<float*>(regs.edx));
+        });
 
-        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "C7 84 24 ? ? ? ? ? ? ? ? E8 ? ? ? ? 8B 10 F3 0F 10 05 ? ? ? ? 8B 86 ? ? ? ? 8B 88");
-        if (!pattern.empty())
-            injector::WriteMemory(pattern.get(0).get<void>(7), nGlowResolution, true);
-
-        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "C7 84 24 ? ? ? ? ? ? ? ? E8 ? ? ? ? F3 0F 10 05 ? ? ? ? 8B 10 6A 01");
-        if (!pattern.empty())
-            injector::WriteMemory(pattern.get_first(7), nGlowResolution, true);
-
-        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "8B 88 ? ? ? ? C7 44 24 ? ? ? ? ? E8");
-        if (!pattern.empty())
-            injector::WriteMemory(pattern.get_first(10), nGlowResolution, true);
-
-        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "89 54 24 40 C7 44 24");
-        if (!pattern.empty())
-            injector::WriteMemory(pattern.get_first(8), nGlowResolution, true);
-
-        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "C7 84 24 ? ? ? ? ? ? ? ? E8 ? ? ? ? F3 0F 10 05 ? ? ? ? 8B 10 F3 0F 11 84 24");
-        if (!pattern.empty())
-            injector::WriteMemory(pattern.get_first(7), nGlowResolution, true);
-
-        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "C7 84 24 ? ? ? ? ? ? ? ? E8 ? ? ? ? 8B 10 8B 84 24 ? ? ? ? 8B 8C 24");
-        if (!pattern.empty())
-            injector::WriteMemory(pattern.get_first(7), nGlowResolution, true);
-
-        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "B9 ? ? ? ? FF 25");
-        if (!pattern.empty())
+        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "52 F3 0F 11 84 24 ? ? ? ? F3 0F 11 84 24");
+        static auto GlowResolutionHook3 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
-            uint8_t asm_code[] = {
-                0x6A, 0x15, 0x68, 0x00, 0x02, 0x00, 0x00, 0x68, 0x00, 0x02, 0x00, 0x00,
-                0xE9, 0xD4, 0xC6, 0xF6, 0xFF, 0x6A, 0x15, 0x68, 0x00, 0x01, 0x00, 0x00,
-                0x68, 0x00, 0x01, 0x00, 0x00, 0xE9, 0x03, 0xC7, 0xF6, 0xFF, 0x6A, 0x15,
-                0x68, 0x80, 0x00, 0x00, 0x00, 0x68, 0x80, 0x00, 0x00, 0x00, 0xE9, 0x32,
-                0xC7, 0xF6, 0xFF, 0xC7, 0x44, 0xE4, 0x6C, 0x00, 0x00, 0x00, 0x45, 0xC7,
-                0x44, 0xE4, 0x70, 0x00, 0x00, 0x00, 0x45, 0xC7, 0x84, 0xE4, 0x90, 0x00,
-                0x00, 0x00, 0x00, 0x00, 0x80, 0x44, 0xC7, 0x84, 0xE4, 0x94, 0x00, 0x00,
-                0x00, 0x00, 0x00, 0x80, 0x44, 0xC7, 0x84, 0xE4, 0xB4, 0x00, 0x00, 0x00,
-                0x00, 0x00, 0x00, 0x44, 0xC7, 0x84, 0xE4, 0xB8, 0x00, 0x00, 0x00, 0x00,
-                0x00, 0x00, 0x44, 0xC7, 0x84, 0xE4, 0xD8, 0x00, 0x00, 0x00, 0x00, 0x00,
-                0x80, 0x43, 0xC7, 0x84, 0xE4, 0xDC, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80,
-                0x43, 0xE8, 0x3B, 0xB6, 0xF8, 0xFF, 0xE9, 0x85, 0xE0, 0xF8, 0xFF, 0xC7,
-                0x44, 0xE4, 0x70, 0x00, 0x00, 0x00, 0x45, 0xC7, 0x44, 0xE4, 0x74, 0x00,
-                0x00, 0x00, 0x45, 0xC7, 0x84, 0xE4, 0x94, 0x00, 0x00, 0x00, 0x00, 0x00,
-                0x80, 0x44, 0xC7, 0x84, 0xE4, 0x98, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80,
-                0x44, 0xC7, 0x84, 0xE4, 0xB8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x44,
-                0xC7, 0x84, 0xE4, 0xBC, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x44, 0xC7,
-                0x84, 0xE4, 0xDC, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x43, 0xC7, 0x84,
-                0xE4, 0xE0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x43, 0xE8, 0xDF, 0xB5,
-                0xF8, 0xFF, 0xE9, 0x57, 0xE2, 0xF9, 0xFF, 0x68, 0x00, 0x02, 0x00, 0x00,
-                0x68, 0x00, 0x02, 0x00, 0x00, 0x51, 0xE9, 0xF9, 0xCE, 0xF8, 0xFF, 0x68,
-                0x00, 0x01, 0x00, 0x00, 0x68, 0x00, 0x01, 0x00, 0x00, 0x51, 0xE9, 0x9F,
-                0xCF, 0xF8, 0xFF, 0x68, 0x80, 0x00, 0x00, 0x00, 0x68, 0x80, 0x00, 0x00,
-                0x00, 0x51, 0xE9, 0x3A, 0xD0, 0xF8, 0xFF
-            };
-
-            uint8_t asm_jmp[] = {
-                0xE9, 0x1F, 0x1F, 0x07, 0x00
-            };
-
-            uint8_t asm_jmp2[] = {
-                0xE9, 0x4D, 0x1D, 0x06, 0x00
-            };
-            injector::WriteMemoryRaw(pattern.get_first(11), asm_code, sizeof(asm_code), true);
-
-            pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "E8 ? ? ? ? E8 ? ? ? ? 8B 16");
-            injector::WriteMemoryRaw(pattern.get_first(0), asm_jmp, sizeof(asm_jmp), true);
-
-            pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "F3 0F 11 84 24 ? ? ? ? E8 ? ? ? ? 5F");
-            injector::WriteMemoryRaw(pattern.get_first(9), asm_jmp2, sizeof(asm_jmp2), true);
-
-            uint8_t flts[] = {
-                0x51, 0x68, 0x00, 0x40, 0x80, 0x3F, 0x68, 0x00, 0x00, 0x00, 0x3B, 0x68, 0x00, 0x00, 0x80, 0xBF, 0x68, 0x00, 0x00, 0x80,
-                0x3F, 0x68, 0x00, 0x20, 0x80, 0x3F, 0x68, 0x00, 0x00, 0x80, 0x3A, 0x68, 0x00, 0x00, 0x80, 0xBF, 0x68, 0x00, 0x00, 0x80,
-                0x3F, 0x68, 0x00, 0x10, 0x80, 0x3F, 0x68, 0x00, 0x00, 0x00, 0x3A
-            };
-
-            pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "51 68 00 00 82 3F 68 00 00 80 3C 68 00 00 80 BF 68 00 00 80 3F 68 00 00 81 3F 68 00 00 00 3C 68 00 00 80 BF 68 00 00 80 3F 68 00 80 80 3F 68 00 00 80 3B");
-            injector::WriteMemoryRaw(pattern.get_first(0), flts, sizeof(flts), true);
-        }
+            increaseGlowRes(reinterpret_cast<float*>(regs.edx));
+        });
     }
 
     //Minimap aka FilmStrip
@@ -405,7 +291,7 @@ export void InitD3DDrv()
             Screen.fWidescreenHudOffset = std::abs(CalculateWidescreenOffset(Screen.fWidth, Screen.fHeight, 800.0f, 600.0f));
             if (Screen.nHudWidescreenMode)
                 Screen.FilmstripOffset = static_cast<int32_t>((((Screen.fWidth / 2.0f) - ((Screen.fHeight * (Screen.fAspectRatio)) / 2.0f)) * 2.0f) + ((float)Screen.FilmstripScaleX / 5.25f));
-            
+
             if (Screen.fHudAspectRatioConstraint.has_value())
             {
                 float value = Screen.fHudAspectRatioConstraint.value();
@@ -442,7 +328,7 @@ export void InitD3DDrv()
         void operator()(injector::reg_pack& regs)
         {
             regs.eax = *(uint32_t*)(regs.eax + 0x5F30);
-    
+
             if (Screen.fAspectRatio > (4.0f / 3.0f))
             {
                 auto pVertexStreamZeroData = regs.esp + 0x6C;
@@ -450,7 +336,7 @@ export void InitD3DDrv()
                 *(float*)(pVertexStreamZeroData + 0x14) /= (Screen.fAspectRatio / (16.0f / 9.0f)) / ((Screen.fDefaultARforFOV) / (Screen.fAspectRatio));
                 *(float*)(pVertexStreamZeroData + 0x28) /= (Screen.fAspectRatio / (16.0f / 9.0f)) / ((Screen.fDefaultARforFOV) / (Screen.fAspectRatio));
                 *(float*)(pVertexStreamZeroData + 0x3C) /= (Screen.fAspectRatio / (16.0f / 9.0f)) / ((Screen.fDefaultARforFOV) / (Screen.fAspectRatio));
-    
+
                 *(float*)(pVertexStreamZeroData + 0x04) /= (16.0f / 9.0f) / (Screen.fDefaultARforFOV);
                 *(float*)(pVertexStreamZeroData + 0x18) /= (16.0f / 9.0f) / (Screen.fDefaultARforFOV);
                 *(float*)(pVertexStreamZeroData + 0x2C) /= (16.0f / 9.0f) / (Screen.fDefaultARforFOV);
@@ -530,5 +416,23 @@ export void InitD3DDrv()
                 regs.edx = regs.ecx != 0 ? 1000 : 0;
             }
         }; injector::MakeInline<FullScreen_RefreshRateInHzHook>(pattern.get_first(0), pattern.get_first(9));
+    }
+
+    {
+        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "8B 4F ? 3B C1");
+        static auto VideoSkipHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            if (bVideoStartedFromLoadMap)
+            {
+                #ifndef _DEBUG
+                if (GetAsyncKeyState(VK_ESCAPE) & 0x8000 || GetAsyncKeyState(VK_RETURN) & 0x8000)
+                    #endif
+                {
+                    auto& bink_Frames = *(uint32_t*)(regs.edi + 0x8);
+                    auto& bink_FrameNum = *(uint32_t*)(regs.edi + 0xC);
+                    bink_FrameNum = bink_Frames;
+                }
+            }
+        });
     }
 }

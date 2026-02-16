@@ -54,6 +54,24 @@ float* __fastcall FindAxisName(void* UInput, void* edx, void* AActor, const wcha
 }
 #endif
 
+namespace ALight
+{
+    SafetyHookInline shGetShadowTurnOffRatio = {};
+    float __fastcall GetShadowTurnOffRatio(void* aLight, void* edx)
+    {
+        return 4.0f;
+    }
+}
+
+namespace AActor
+{
+    SafetyHookInline shGetShadowTurnOffRatio = {};
+    float __fastcall GetShadowTurnOffRatio(void* aActor, void* edx)
+    {
+        return 4.0f;
+    }
+}
+
 export void InitEngine()
 {
     InitGUI();
@@ -247,9 +265,27 @@ export void InitEngine()
         UArrayOverrides::ClearCache();
     });
 
-#if _DEBUG
+    #if _DEBUG
     shFindAxisName = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?FindAxisName@UInput@@MBEPAMPAVAActor@@PBG@Z"), FindAxisName);
-#endif
+    #endif
 
+    // Tick hook for deferred input and raw input helper
     UGameEngine::shTick = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?Tick@UGameEngine@@UAEXM@Z"), UGameEngine::Tick);
+
+    // Shadows and lights draw distance
+    ALight::shGetShadowTurnOffRatio = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?GetShadowTurnOffRatio@ALight@@UAEMXZ"), ALight::GetShadowTurnOffRatio);
+    AActor::shGetShadowTurnOffRatio = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?GetShadowTurnOffRatio@AActor@@UAEMXZ"), AActor::GetShadowTurnOffRatio);
+
+    // Helper for video skipping
+    pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "FF D7 83 C4 08 68 ? ? ? ? 68 ? ? ? ? FF D7 83 C4 08");
+    static auto UGameEngineLoadMapHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        bVideoStartedFromLoadMap = true;
+    });
+
+    pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "FF 90 ? ? ? ? B0 01 5E");
+    static auto UGameEnginePostLoadMapHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        bVideoStartedFromLoadMap = false;
+    });
 }

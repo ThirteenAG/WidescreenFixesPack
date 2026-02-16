@@ -38,6 +38,7 @@ export uint32_t gColor = 0;
 export uint32_t curAmmoInClip = 1;
 export uint32_t curClipCapacity = 1;
 export HWND hGameWindow = NULL;
+export bool bVideoStartedFromLoadMap = false;
 
 export namespace UWindowsViewport
 {
