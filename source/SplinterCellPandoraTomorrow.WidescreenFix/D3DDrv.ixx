@@ -6,6 +6,7 @@ module;
 export module D3DDrv;
 
 import ComVars;
+import Shaders;
 
 D3DPRESENT_PARAMETERS* pPresentParams = nullptr;
 SafetyHookInline shUD3DRenderDeviceSetRes = {};
@@ -678,4 +679,6 @@ export void InitD3DDrv()
             }
         }
     });
+
+    InitShaders();
 }
