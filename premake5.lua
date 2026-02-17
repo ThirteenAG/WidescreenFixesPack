@@ -486,7 +486,11 @@ project "SplinterCellDoubleAgent.WidescreenFix"
    files { "textures/SCDA/icon.rc" }
    defines { "IDR_SCDAICON=200" }
 project "SplinterCellPandoraTomorrow.WidescreenFix"
-   prebuildcommands { "for /R \"../source/%{prj.name}/\" %%f in (*.fx) do (\"../includes/dxsdk/lib/x86/fxc.exe\" /Tps_1_1 /LD /Ewaterblend /Fo \"../source/%{prj.name}/%%~nf.fxo\" %%f)" }
+   prebuildcommands {
+   "for /R \"../source/%{prj.name}/\" %%f in (*.fx) do (\"../includes/dxsdk/lib/x86/fxc.exe\" /Tps_1_1 /LD /Ewaterblend /Fo \"../source/%{prj.name}/%%~nf.fxo\" %%f)",
+   "for /R \"../source/%{prj.name}/\" %%f in (*.ps) do (\"../includes/dxsdk/lib/x86/asm_shader.exe\" %%f \"../source/%{prj.name}/%%~nf.pso\")",
+   "for /R \"../source/%{prj.name}/\" %%f in (*.vs) do (\"../includes/dxsdk/lib/x86/asm_shader.exe\" %%f \"../source/%{prj.name}/%%~nf.vso\")",
+   }
    files { "source/%{prj.name}/*.fx", "source/%{prj.name}/*.rc" }
    defines { "IDR_WATER_BLEND=200" }
    debugargs { "-uplay_steam_mode" }
