@@ -323,27 +323,22 @@ export void InitD3DDrv()
 
     //ScopeLens
     pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "8B 80 ? ? ? ? 8B 08 6A 14 8D 54 24 70 52 6A 02 6A 05");
-    struct ScopeLensHook1
+    static auto ScopeLensHook = safetyhook::create_mid(GetProcAddress(GetModuleHandle(L"D3DDrv"), "?resetDevice@UD3DRenderDevice@@QAEXAAU_D3DPRESENT_PARAMETERS_@@@Z"), [](SafetyHookContext& regs)
     {
-        void operator()(injector::reg_pack& regs)
+        if (Screen.fAspectRatio > (4.0f / 3.0f))
         {
-            regs.eax = *(uint32_t*)(regs.eax + 0x5F30);
+            auto pVertexStreamZeroData = regs.esp + 0x6C;
+            *(float*)(pVertexStreamZeroData + 0x00) /= (Screen.fAspectRatio / (16.0f / 9.0f)) / ((Screen.fDefaultARforFOV) / (Screen.fAspectRatio));
+            *(float*)(pVertexStreamZeroData + 0x14) /= (Screen.fAspectRatio / (16.0f / 9.0f)) / ((Screen.fDefaultARforFOV) / (Screen.fAspectRatio));
+            *(float*)(pVertexStreamZeroData + 0x28) /= (Screen.fAspectRatio / (16.0f / 9.0f)) / ((Screen.fDefaultARforFOV) / (Screen.fAspectRatio));
+            *(float*)(pVertexStreamZeroData + 0x3C) /= (Screen.fAspectRatio / (16.0f / 9.0f)) / ((Screen.fDefaultARforFOV) / (Screen.fAspectRatio));
 
-            if (Screen.fAspectRatio > (4.0f / 3.0f))
-            {
-                auto pVertexStreamZeroData = regs.esp + 0x6C;
-                *(float*)(pVertexStreamZeroData + 0x00) /= (Screen.fAspectRatio / (16.0f / 9.0f)) / ((Screen.fDefaultARforFOV) / (Screen.fAspectRatio));
-                *(float*)(pVertexStreamZeroData + 0x14) /= (Screen.fAspectRatio / (16.0f / 9.0f)) / ((Screen.fDefaultARforFOV) / (Screen.fAspectRatio));
-                *(float*)(pVertexStreamZeroData + 0x28) /= (Screen.fAspectRatio / (16.0f / 9.0f)) / ((Screen.fDefaultARforFOV) / (Screen.fAspectRatio));
-                *(float*)(pVertexStreamZeroData + 0x3C) /= (Screen.fAspectRatio / (16.0f / 9.0f)) / ((Screen.fDefaultARforFOV) / (Screen.fAspectRatio));
-
-                *(float*)(pVertexStreamZeroData + 0x04) /= (16.0f / 9.0f) / (Screen.fDefaultARforFOV);
-                *(float*)(pVertexStreamZeroData + 0x18) /= (16.0f / 9.0f) / (Screen.fDefaultARforFOV);
-                *(float*)(pVertexStreamZeroData + 0x2C) /= (16.0f / 9.0f) / (Screen.fDefaultARforFOV);
-                *(float*)(pVertexStreamZeroData + 0x40) /= (16.0f / 9.0f) / (Screen.fDefaultARforFOV);
-            }
+            *(float*)(pVertexStreamZeroData + 0x04) /= (16.0f / 9.0f) / (Screen.fDefaultARforFOV);
+            *(float*)(pVertexStreamZeroData + 0x18) /= (16.0f / 9.0f) / (Screen.fDefaultARforFOV);
+            *(float*)(pVertexStreamZeroData + 0x2C) /= (16.0f / 9.0f) / (Screen.fDefaultARforFOV);
+            *(float*)(pVertexStreamZeroData + 0x40) /= (16.0f / 9.0f) / (Screen.fDefaultARforFOV);
         }
-    }; injector::MakeInline<ScopeLensHook1>(pattern.get_first(0), pattern.get_first(6));
+    });
 
     //loadscreen
     static LPDIRECT3DTEXTURE9 pTexLoadscreenCustom = nullptr;
