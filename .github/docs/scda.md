@@ -14,6 +14,10 @@ $${\color{green}✔}$$ Added raw input support for mouse
 
 $${\color{green}✔}$$ Improved gamepad support (via [Xidi](https://github.com/samuelgr/Xidi))
 
+$${\color{blue}ⓘ}$$ Added an option to increase shadows resolution
+
+$${\color{blue}ⓘ}$$ Added an option to increase glow/bloom resolution
+
 $${\color{blue}ⓘ}$$ Added an option to limit fps to avoid game breaking bugs
 
 $${\color{blue}ⓘ}$$ Added an option to skip intro
@@ -22,7 +26,7 @@ $${\color{blue}ⓘ}$$ Added an option to change goggles light color
 
 $${\color{blue}ⓘ}$$ Added an option to enable [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html)
 
-$${\color{blue}ⓘ}$$ Added an option to enable suit indicators behave like in Blacklist
+$${\color{blue}ⓘ}$$ Added an option to enable suit indicators to behave like in Blacklist
 
     Installation:
         Download and extract the archive to the game directory, where the exe is located.
