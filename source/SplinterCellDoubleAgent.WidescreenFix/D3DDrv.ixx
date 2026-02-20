@@ -178,9 +178,8 @@ export void InitD3DDrv()
         pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "8D 4C 24 ? FF 15 ? ? ? ? 8B 54 24");
         static auto GlowResolutionHook0 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
-            float* ptr = reinterpret_cast<float*>(regs.eax);
-            *(float*)(regs.esp + 0x3C) = 1.0f + (1.0f / (32.0f * (float)nGlowResolutionMultiplier));
-            *(float*)(regs.esp + 0x38) = 1.0f / (32.0f * (float)nGlowResolutionMultiplier);
+            *(float*)(regs.esp + 0x3C) = 1.0f + (1.0f / Screen.fWidth);
+            *(float*)(regs.esp + 0x38) = 1.0f / Screen.fWidth;
             *(float*)(regs.esp + 0x2C) = 1.0f + (1.0f / (64.0f * (float)nGlowResolutionMultiplier));
             *(float*)(regs.esp + 0x28) = 1.0f / (64.0f * (float)nGlowResolutionMultiplier);
             *(float*)(regs.esp + 0x1C) = 1.0f + (1.0f / (128.0f * (float)nGlowResolutionMultiplier));
@@ -228,6 +227,54 @@ export void InitD3DDrv()
         static auto GlowResolutionHook3 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
             increaseGlowRes(reinterpret_cast<float*>(regs.edx));
+        });
+
+        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "8D 8C 24 ? ? ? ? 89 BC 24 ? ? ? ? FF 15 ? ? ? ? 8B 54 24");
+        static auto VisionResolutionHook0 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            *(float*)(regs.esp + 0x3C) = 1.0f + (1.0f / Screen.fWidth);
+            *(float*)(regs.esp + 0x38) = 1.0f / Screen.fWidth;
+            *(float*)(regs.esp + 0x2C) = 1.0f + (1.0f / (64.0f * (float)nGlowResolutionMultiplier));
+            *(float*)(regs.esp + 0x28) = 1.0f / (64.0f * (float)nGlowResolutionMultiplier);
+            *(float*)(regs.esp + 0x1C) = 1.0f + (1.0f / (128.0f * (float)nGlowResolutionMultiplier));
+            *(float*)(regs.esp + 0x18) = 1.0f / (128.0f * (float)nGlowResolutionMultiplier);
+            *(float*)(regs.esp + 0x0C) = 1.0f + (1.0f / (256.0f * (float)nGlowResolutionMultiplier));
+            *(float*)(regs.esp + 0x08) = 1.0f / (256.0f * (float)nGlowResolutionMultiplier);
+        });
+
+        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "8B CE FF 92 ? ? ? ? 8B 8E ? ? ? ? 8B 89 ? ? ? ? E8 ? ? ? ? 8B 96");
+        static auto VisionResolutionHook1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            *(int*)(regs.esp + 0x0C) *= nGlowResolutionMultiplier;
+            *(int*)(regs.esp + 0x08) *= nGlowResolutionMultiplier;
+        });
+
+        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "8B CE FF 92 ? ? ? ? 8B 8E ? ? ? ? 8B 89 ? ? ? ? E8 ? ? ? ? 83 7D ? ? 0F 84 ? ? ? ? 8B BE ? ? ? ? F3 0F 10 05");
+        static auto VisionResolutionHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            *(int*)(regs.esp + 0x0C) *= nGlowResolutionMultiplier;
+            *(int*)(regs.esp + 0x08) *= nGlowResolutionMultiplier;
+        });
+
+        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "8B CE FF 92 ? ? ? ? 8B 8E ? ? ? ? 8B 89 ? ? ? ? E8 ? ? ? ? 83 7D ? ? 75");
+        static auto VisionResolutionHook3 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            *(int*)(regs.esp + 0x0C) *= nGlowResolutionMultiplier;
+            *(int*)(regs.esp + 0x08) *= nGlowResolutionMultiplier;
+        });
+
+        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "8B CE FF 92 ? ? ? ? 8B 8E ? ? ? ? 8B 89 ? ? ? ? E8 ? ? ? ? 83 7D ? ? 0F 84 ? ? ? ? 8B BE ? ? ? ? 0F 57 C0");
+        static auto VisionResolutionHook4 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            *(int*)(regs.esp + 0x0C) *= nGlowResolutionMultiplier;
+            *(int*)(regs.esp + 0x08) *= nGlowResolutionMultiplier;
+        });
+
+        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "8B CE FF 92 ? ? ? ? 8B 8E ? ? ? ? 8B 89 ? ? ? ? E8 ? ? ? ? 80 7C 24");
+        static auto VisionResolutionHook5 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            *(int*)(regs.esp + 0x0C) *= nGlowResolutionMultiplier;
+            *(int*)(regs.esp + 0x08) *= nGlowResolutionMultiplier;
         });
     }
 
