@@ -14,6 +14,8 @@ $${\color{green}✔}$$ Added raw input support for mouse
 
 $${\color{green}✔}$$ Improved gamepad support (via [Xidi](https://github.com/samuelgr/Xidi))
 
+$${\color{green}✔}$$ Fixed [AI hearing issue](https://www.youtube.com/watch?v=uX_FcPvM64c)
+
 $${\color{blue}ⓘ}$$ Added an option to increase shadows resolution
 
 $${\color{blue}ⓘ}$$ Added an option to increase glow/bloom resolution
