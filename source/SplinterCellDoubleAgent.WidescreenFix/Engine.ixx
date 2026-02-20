@@ -288,4 +288,8 @@ export void InitEngine()
     {
         bVideoStartedFromLoadMap = false;
     });
+
+    // AActor::MakeNoise patch - fixes AI hearing issue, should be safe as the xbox 360 code doesn't have that check
+    pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "0F 87 ? ? ? ? E8");
+    injector::MakeNOP(pattern.get_first(0), 6, true);
 }
