@@ -482,9 +482,13 @@ project "SplinterCellConviction.FusionMod"
 project "SplinterCellBlacklist.FusionMod"
    setpaths("Z:/WFP/Games/Splinter Cell/Splinter Cell Blacklist/", "src/SYSTEM/Blacklist_DX11_game.exe", "src/system/scripts/")
 project "SplinterCellDoubleAgent.WidescreenFix"
-   setpaths("Z:/WFP/Games/Splinter Cell/Splinter Cell - Double Agent/", "SCDA-Offline/System/SplinterCell4.exe", "SCDA-Offline/System/scripts/")
+   prebuildcommands { "for /R \"../source/%{prj.name}/\" %%f in (*.fx) do (\"../includes/dxsdk/lib/x86/fxc.exe\" /T fx_2_0 /Fo \"../source/%{prj.name}/%%~nf.fxo\" %%f)" }
+   includedirs {"Resources"}
+   files { "source/%{prj.name}/*.fx", "source/%{prj.name}/*.rc" }
    files { "textures/SCDA/icon.rc" }
    defines { "IDR_SCDAICON=200" }
+   defines { "IDR_POSTFX=201" }
+   setpaths("Z:/WFP/Games/Splinter Cell/Splinter Cell - Double Agent/", "SCDA-Offline/System/SplinterCell4.exe", "SCDA-Offline/System/scripts/")
 project "SplinterCellPandoraTomorrow.WidescreenFix"
    prebuildcommands {
    "for /R \"../source/%{prj.name}/\" %%f in (*.fx) do (\"../includes/dxsdk/lib/x86/fxc.exe\" /Tps_1_1 /LD /Ewaterblend /Fo \"../source/%{prj.name}/%%~nf.fxo\" %%f)",

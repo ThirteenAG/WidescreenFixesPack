@@ -8,6 +8,7 @@ module;
 export module D3DDrv;
 
 import ComVars;
+import PostFX;
 
 float* __cdecl FGetHSV(float* dest, uint8_t H, uint8_t S, uint8_t V)
 {
@@ -477,4 +478,6 @@ export void InitD3DDrv()
             }
         });
     }
+
+    InitPostFX();
 }
