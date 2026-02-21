@@ -183,6 +183,7 @@ public:
         SAFE_RELEASE(pEffect);
         SAFE_RELEASE(pBackBufferTex);
         SAFE_RELEASE(pBackBufferSurf);
+        bInitialized = false;
     }
 };
 
@@ -206,5 +207,10 @@ export void InitPostFX()
     {
         auto device = (IDirect3DDevice9*)regs.eax;
         CPostFX::ConsoleGamma::Render(device);
+    });
+
+    static auto DeviceResetHook = safetyhook::create_mid(GetProcAddress(GetModuleHandle(L"D3DDrv"), "?resetDevice@UD3DRenderDevice@@QAEXAAU_D3DPRESENT_PARAMETERS_@@@Z"), [](SafetyHookContext& regs)
+    {
+        CPostFX::Shutdown();
     });
 }
