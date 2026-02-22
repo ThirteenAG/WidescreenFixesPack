@@ -315,4 +315,14 @@ export void InitEngine()
             *(double*)(regs.esp + 0x38) = 0.0f;
         }
     });
+
+    //Remove precache for faster loading
+    #ifdef _DEBUG
+    pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "C6 05 ? ? ? ? ? C6 05 ? ? ? ? ? C6 05 ? ? ? ? ? C6 05 ? ? ? ? ? C6 05");
+    injector::WriteMemory<uint8_t>(pattern.get_first(6), 1, true);
+    injector::WriteMemory<uint8_t>(pattern.get_first(13), 0, true);
+    injector::WriteMemory<uint8_t>(pattern.get_first(20), 0, true);
+    injector::WriteMemory<uint8_t>(pattern.get_first(27), 1, true);
+    injector::WriteMemory<uint8_t>(pattern.get_first(34), 1, true);
+    #endif
 }
