@@ -25,7 +25,7 @@ export struct Screen
     int32_t FilmstripOffset;
     uint32_t pFilmstripTex;
     std::filesystem::path szLoadscPath;
-    const float fDefaultARforFOV = 4.0f / 3.0f;
+    const float fDefaultARforFOV = 16.0f / 9.0f;
     float fRawInputMouse;
     bool bRawInputMouseRawData;
     bool bDeferredInput;
@@ -39,6 +39,7 @@ export uint32_t curAmmoInClip = 1;
 export uint32_t curClipCapacity = 1;
 export HWND hGameWindow = NULL;
 export bool bVideoStartedFromLoadMap = false;
+export std::wstring gCurrentCameraShotName;
 
 export uint8_t* bLoadingScreenActive = nullptr;
 
@@ -193,3 +194,5 @@ export using UByteOverrides = UOverride<uint8_t(*)()>;
 export using UNameOverrides = UOverride<FName(*)()>;
 export using UObjectOverrides = UOverride<void* (*)()>;
 export using UArrayOverrides = UOverride<FArray(*)()>;
+
+export const wchar_t* (__fastcall* GetFName)(void* FNameInstance, void* edx) = nullptr;

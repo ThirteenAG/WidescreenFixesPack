@@ -234,14 +234,17 @@ export void InitEngine()
     }; injector::MakeInline<UCanvasCloseVideoHook>(pattern.get_first(0), pattern.get_first(6));
 
     //FOV
-    pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "8B 91 28 06 00 00 52 8B"); //?Draw@UGameEngine@@UAEXPAVUViewport@@HPAEPAH@Z  10530BD7
-    struct UGameEngine_Draw_Hook
+    pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "F3 0F 10 05 ? ? ? ? F3 0F 11 83 ? ? ? ? E8");
+    static auto FCameraSceneNodeCtorHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        void operator()(injector::reg_pack& regs)
+        if (gCurrentCameraShotName == L"Take_01_EnterSWAT")
         {
-            *(float*)&regs.edx = AdjustFOV(*(float*)(regs.ecx + 0x628), Screen.fAspectRatio, Screen.fDefaultARforFOV);
+            *(float*)(regs.ebx + 0x268) = AdjustFOV(*(float*)(regs.ebx + 0x268), Screen.fAspectRatio, 4.0f / 3.0f);
+            return;
         }
-    }; injector::MakeInline<UGameEngine_Draw_Hook>(pattern.get_first(0), pattern.get_first(6));
+
+        *(float*)(regs.ebx + 0x268) = AdjustFOV(*(float*)(regs.ebx + 0x268), Screen.fAspectRatio, Screen.fDefaultARforFOV);
+    });
 
     if (bSingleCoreAffinity)
     {

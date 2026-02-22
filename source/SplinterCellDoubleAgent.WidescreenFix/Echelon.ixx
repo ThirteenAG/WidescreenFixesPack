@@ -9,7 +9,7 @@ import ComVars;
 namespace AEPlayerController
 {
     SafetyHookInline shTick = {};
-    void __fastcall Tick(void* playerController, void* edx, int a2, int a3)
+    void __fastcall Tick(void* playerController, void* edx, float a2, int a3)
     {
         if (playerController)
         {
@@ -36,6 +36,32 @@ namespace AEPlayerController
         }
 
         return shTick.unsafe_fastcall(playerController, edx, a2, a3);
+    }
+}
+
+namespace AEPattern
+{
+    SafetyHookInline shTick = {};
+    void __fastcall Tick(void* AEPattern, void* edx, float a2, int a3)
+    {
+        std::wstring CameraShot = L"";
+
+        if (AEPattern)
+        {
+            auto AEchelonLevelInfo = *((uintptr_t*)AEPattern + 0x81);
+            if (AEchelonLevelInfo)
+            {
+                auto ptr = *((uintptr_t*)AEchelonLevelInfo + 0x4F9);
+                if (ptr)
+                {
+                    CameraShot = GetFName((void*)(ptr + 0x38), 0);
+                }
+            }
+        }
+
+        gCurrentCameraShotName = CameraShot;
+
+        return shTick.unsafe_fastcall(AEPattern, edx, a2, a3);
     }
 }
 
@@ -68,7 +94,6 @@ export void InitEchelon()
             }
         }; injector::MakeInline<BlacklistIndicatorsHook>(pattern.get_first(0), pattern.get_first(6));
 
-
         pattern = hook::module_pattern(GetModuleHandle(L"Echelon"), "8B 81 ? ? ? ? 8B 54 24 04 89 02 8B 81 ? ? ? ? 8B 4C 24 08 89 01");
         struct GetPrimaryAmmoHook
         {
@@ -83,5 +108,5 @@ export void InitEchelon()
 
     //EPlayerController additional state cache
     AEPlayerController::shTick = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Echelon"), "?Tick@AEPlayerController@@UAEHMW4ELevelTick@@@Z"), AEPlayerController::Tick);
-
+    AEPattern::shTick = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Echelon"), "?Tick@AEPattern@@UAEHMW4ELevelTick@@@Z"), AEPattern::Tick);
 }
