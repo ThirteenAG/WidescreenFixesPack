@@ -295,4 +295,13 @@ export void InitEngine()
 
     pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "C6 05 ? ? ? ? ? 8B 0D ? ? ? ? ? ? 33 F6");
     bLoadingScreenActive = *pattern.get_first<uint8_t*>(2);
+
+    pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "F3 0F 59 85 ? ? ? ? F3 0F 11 85 ? ? ? ? 85 DB");
+    static auto UInputExecMouseWheelScrollHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        auto ECoopPlayerControllerState = UObject::GetState(L"ECoopPlayerController");
+
+        if (ECoopPlayerControllerState == L"s_CrackSafe" || ECoopPlayerControllerState == L"s_Ledge")
+            regs.xmm0.f32[0] = 1.0f;
+    });
 }
