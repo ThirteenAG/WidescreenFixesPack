@@ -129,8 +129,18 @@ void Init()
     if (nFPSLimit)
     {
         static float fFPSLimit = 1.0f / static_cast<float>(nFPSLimit);
-        auto pattern = hook::pattern("A1 ? ? ? ? 8B 0D ? ? ? ? 89 45 DC 89 4D C4");
-        injector::WriteMemory(pattern.get_first(1), &fFPSLimit, true);
+        auto pattern = hook::pattern("A1 ? ? ? ? 8B 0D ? ? ? ? 89 45");
+        injector::MakeNOP(pattern.get_first(), 5, true);
+        static auto DeltaTimeHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            if (bLoadingScreenActive && *bLoadingScreenActive)
+            {
+                *(float*)&regs.eax = 1.0f / 9999.0f;
+                return;
+            }
+
+            *(float*)&regs.eax = fFPSLimit;
+        });
     }
 
     if (bLightSyncRGB)

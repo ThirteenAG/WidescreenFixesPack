@@ -292,4 +292,7 @@ export void InitEngine()
     // AActor::MakeNoise patch - fixes AI hearing issue, should be safe as the xbox 360 code doesn't have that check
     pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "0F 87 ? ? ? ? E8");
     injector::MakeNOP(pattern.get_first(0), 6, true);
+
+    pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "C6 05 ? ? ? ? ? 8B 0D ? ? ? ? ? ? 33 F6");
+    bLoadingScreenActive = *pattern.get_first<uint8_t*>(2);
 }

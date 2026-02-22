@@ -40,6 +40,8 @@ export uint32_t curClipCapacity = 1;
 export HWND hGameWindow = NULL;
 export bool bVideoStartedFromLoadMap = false;
 
+export uint8_t* bLoadingScreenActive = nullptr;
+
 export namespace UWindowsViewport
 {
     std::queue<std::function<void()>> deferredCauseInputEvent;
