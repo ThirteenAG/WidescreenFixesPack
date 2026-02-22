@@ -78,7 +78,8 @@ IDirect3DPixelShader9* __stdcall CreatePixelShaderHook(const DWORD** a1)
                 shader_data = (DWORD*)pCode->GetBufferPointer();
                 IDirect3DPixelShader9* shader = nullptr;
                 result = pDevice->CreatePixelShader(shader_data, &shader);
-                if (FAILED(result)) {
+                if (FAILED(result))
+                {
                     return pShader;
                 }
                 else
@@ -162,7 +163,8 @@ IDirect3DPixelShader9* __stdcall CreatePixelShaderHook(const DWORD** a1)
                 shader_data = (DWORD*)pCode->GetBufferPointer();
                 IDirect3DPixelShader9* shader = nullptr;
                 result = pDevice->CreatePixelShader(shader_data, &shader);
-                if (FAILED(result)) {
+                if (FAILED(result))
+                {
                     return pShader;
                 }
                 else
@@ -196,7 +198,8 @@ IDirect3DPixelShader9* __stdcall CreatePixelShaderHook(const DWORD** a1)
                 shader_data = (DWORD*)pCode->GetBufferPointer();
                 IDirect3DPixelShader9* shader = nullptr;
                 result = pDevice->CreatePixelShader(shader_data, &shader);
-                if (FAILED(result)) {
+                if (FAILED(result))
+                {
                     return pShader;
                 }
                 else
@@ -275,14 +278,24 @@ void Init()
                     {
                         static auto TIMERA = LEDEffects::Timer();
                         static bool bHideCur = false;
-                        static CURSORINFO hiddenPoint = {};
-                        static POINT oldPoint = {};
-                        POINT curPoint = {};
-                        GetCursorPos(&curPoint);
-                        if ((curPoint.x != oldPoint.x || curPoint.y != oldPoint.y) && (curPoint.x != hiddenPoint.ptScreenPos.x && curPoint.y != hiddenPoint.ptScreenPos.y))
+                        static CURSORINFO hiddenInfo = {};
+                        static POINT lastVisiblePos = {};
+                        static HCURSOR hLastHiddenCursor = NULL;
+
+                        POINT currentPos{};
+                        GetCursorPos(&currentPos);
+
+                        bool hasMoved = (currentPos.x != lastVisiblePos.x || currentPos.y != lastVisiblePos.y);
+                        bool movedAwayFromHidden = (currentPos.x != hiddenInfo.ptScreenPos.x ||
+                                                     currentPos.y != hiddenInfo.ptScreenPos.y);
+
+                        if (hasMoved && movedAwayFromHidden)
                         {
                             if (bHideCur)
-                                SetCursorPos(oldPoint.x, oldPoint.y);
+                            {
+                                SetCursorPos(lastVisiblePos.x, lastVisiblePos.y);
+                            }
+
                             bHideCur = false;
                             TIMERA.reset();
                         }
@@ -294,30 +307,67 @@ void Init()
                                 TIMERA.reset();
                             }
                         }
-                        if (curPoint.x != hiddenPoint.ptScreenPos.x && curPoint.y != hiddenPoint.ptScreenPos.y)
-                            oldPoint = curPoint;
+
+                        if (movedAwayFromHidden)
+                            lastVisiblePos = currentPos;
 
                         if (bHideCur)
                         {
-                            if (hiddenPoint.ptScreenPos.x == 0 || hiddenPoint.ptScreenPos.y == 0)
+                            // Initialize hidden position + cursor only once
+                            if (hiddenInfo.ptScreenPos.x == 0 && hiddenInfo.ptScreenPos.y == 0)
                             {
-                                SetCursorPos(99999, 99999);
-                                hiddenPoint.cbSize = sizeof(CURSORINFO);
-                                GetCursorInfo(&hiddenPoint);
-                                hiddenPoint.ptScreenPos.x -= 1;
-                                hiddenPoint.ptScreenPos.y -= 1;
-                                SetCursorPos(hiddenPoint.ptScreenPos.x, hiddenPoint.ptScreenPos.y);
+                                // Move far away once to sample real hidden position
+                                SetCursorPos(32000, 32000);
+
+                                hiddenInfo.cbSize = sizeof(CURSORINFO);
+                                if (GetCursorInfo(&hiddenInfo))
+                                {
+                                    // Slightly adjust so we can detect when we're back at it
+                                    hiddenInfo.ptScreenPos.x -= 1;
+                                    hiddenInfo.ptScreenPos.y -= 1;
+
+                                    SetCursorPos(hiddenInfo.ptScreenPos.x, hiddenInfo.ptScreenPos.y);
+
+                                    hLastHiddenCursor = hiddenInfo.hCursor;
+                                }
+                                else
+                                {
+                                    // Fallback – just stay off-screen
+                                    hiddenInfo.ptScreenPos.x = 32000;
+                                    hiddenInfo.ptScreenPos.y = 32000;
+                                }
                             }
-                            CURSORINFO Point = {};
-                            Point.cbSize = sizeof(CURSORINFO);
-                            GetCursorInfo(&Point);
-                            if (Point.ptScreenPos.x != hiddenPoint.ptScreenPos.x || Point.ptScreenPos.y != hiddenPoint.ptScreenPos.y)
-                                SetCursorPos(hiddenPoint.ptScreenPos.x, hiddenPoint.ptScreenPos.x);
+
+                            // Keep forcing position every frame while hidden
+                            CURSORINFO now{};
+                            now.cbSize = sizeof(CURSORINFO);
+                            if (GetCursorInfo(&now))
+                            {
+                                if (now.ptScreenPos.x != hiddenInfo.ptScreenPos.x || now.ptScreenPos.y != hiddenInfo.ptScreenPos.y)
+                                {
+                                    SetCursorPos(hiddenInfo.ptScreenPos.x, hiddenInfo.ptScreenPos.y);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // Destroy previously captured hidden cursor
+                            if (hLastHiddenCursor)
+                            {
+                                DestroyCursor(hLastHiddenCursor);
+                                hLastHiddenCursor = NULL;
+                            }
+
+                            hiddenInfo.ptScreenPos.x = 0;
+                            hiddenInfo.ptScreenPos.y = 0;
+                            hiddenInfo.hCursor = NULL;
                         }
                     }
                 }
             }
-        }; injector::MakeInline<MouseCursorHook>(pattern.get_first(0), pattern.get_first(28));
+        };
+
+        injector::MakeInline<MouseCursorHook>(pattern.get_first(0), pattern.get_first(28));
     }
 
     if (bDoorSkip)
@@ -361,39 +411,42 @@ void Init()
     {
         auto pattern = hook::pattern("E8 ? ? ? ? 8B CE E8 ? ? ? ? 85 C0 75 09");
         injector::MakeJMP(injector::GetBranchDestination(pattern.get_first()), sub_529250, true);
-        
+
         LEDEffects::Inject([]()
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            
+
             auto Player1ID = PtrWalkthrough<int32_t>(&sPlayer1Ptr, 0x100);
             auto Player2ID = PtrWalkthrough<int32_t>(&sPlayer2Ptr, 0x100);
             auto Player1Health = PtrWalkthrough<int32_t>(&sPlayer1Ptr, 0x1030);
             auto Player2Health = PtrWalkthrough<int32_t>(&sPlayer2Ptr, 0x1030);
             auto Player1Poisoned = PtrWalkthrough<int32_t>(&sPlayer1Ptr, 0x68C4);
             auto Player2Poisoned = PtrWalkthrough<int32_t>(&sPlayer2Ptr, 0x68C4);
-            
+
             if (Player1ID && *Player1ID == 3 && Player1Health)
             {
                 auto health1 = *Player1Health;
                 auto poisoned1 = *Player1Poisoned == 1;
                 if (health1 > 1)
                 {
-                    if (health1 < 40) {
+                    if (health1 < 40)
+                    {
                         if (!poisoned1)
                             LEDEffects::SetLightingLeftSide(26, 4, 4, true, false); //red
                         else
                             LEDEffects::SetLightingLeftSide(51, 4, 53, true, false); //purple
                         LEDEffects::DrawCardiogram(100, 0, 0, 0, 0, 0); //red
                     }
-                    else if (health1 < 130) {
+                    else if (health1 < 130)
+                    {
                         if (!poisoned1)
                             LEDEffects::SetLightingLeftSide(50, 30, 4, true, false); //orange
                         else
                             LEDEffects::SetLightingLeftSide(51, 4, 53, true, false); //purple
                         LEDEffects::DrawCardiogram(67, 0, 0, 0, 0, 0); //orange
                     }
-                    else {
+                    else
+                    {
                         if (!poisoned1)
                             LEDEffects::SetLightingLeftSide(10, 30, 4, true, false);  //green
                         else
@@ -406,28 +459,31 @@ void Init()
                     LEDEffects::SetLightingLeftSide(26, 4, 4, false, true); //red
                     LEDEffects::DrawCardiogram(100, 0, 0, 0, 0, 0, true);
                 }
-            
+
                 if (Player2ID && *Player2ID == 5 && Player2Health)
                 {
                     auto health2 = *Player2Health;
                     auto poisoned2 = *Player2Poisoned == 1;
                     if (health2 > 1)
                     {
-                        if (health2 < 40) {
+                        if (health2 < 40)
+                        {
                             if (!poisoned2)
                                 LEDEffects::SetLightingRightSide(26, 4, 4, true, false); //red
                             else
                                 LEDEffects::SetLightingRightSide(51, 4, 53, true, false); //purple
                             LEDEffects::DrawCardiogramNumpad(100, 0, 0, 0, 0, 0); //red
                         }
-                        else if (health2 < 130) {
+                        else if (health2 < 130)
+                        {
                             if (!poisoned2)
                                 LEDEffects::SetLightingRightSide(50, 30, 4, true, false); //orange
                             else
                                 LEDEffects::SetLightingRightSide(51, 4, 53, true, false); //purple
                             LEDEffects::DrawCardiogramNumpad(67, 0, 0, 0, 0, 0); //orange
                         }
-                        else {
+                        else
+                        {
                             if (!poisoned2)
                                 LEDEffects::SetLightingRightSide(10, 30, 4, true, false);  //green
                             else
