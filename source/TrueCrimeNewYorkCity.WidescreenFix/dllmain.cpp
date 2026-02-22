@@ -64,9 +64,12 @@ void __cdecl sub_654D60(float* input1, float* input2, int alignmentMode, float* 
     }
 }
 
+uint32_t* dword_92BACC = nullptr;
 BOOL WINAPI SetWindowPosHook(HWND hWnd, HWND hWndInsertAfter, int X, int Y, int cx, int cy, UINT uFlags)
 {
-    return TRUE;
+    if (*dword_92BACC)
+        return SetWindowPos(hWnd, hWndInsertAfter, X, Y, cx - 1, cy - 1, uFlags);
+    return SetWindowPos(hWnd, hWndInsertAfter, X, Y, cx, cy, uFlags);
 }
 
 BOOL WINAPI AdjustWindowRectExHook(LPRECT lpRect, DWORD dwStyle, BOOL bMenu, DWORD dwExStyle)
@@ -173,13 +176,12 @@ void Init()
 
     if (bBorderlessWindowed)
     {
-        auto pattern = hook::pattern("FF 15 ? ? ? ? 8B 0D ? ? ? ? 6A 05");
+        auto pattern = hook::pattern("39 35 ? ? ? ? 74 ? 6A");
+        dword_92BACC = *pattern.get_first<uint32_t*>(2);
+
+        pattern = hook::pattern("FF 15 ? ? ? ? 8B 0D ? ? ? ? 6A 05");
         injector::MakeNOP(pattern.get_first(), 6, true);
         injector::MakeCALL(pattern.get_first(), SetWindowPosHook, true);
-
-        pattern = hook::pattern("FF 15 ? ? ? ? A1 ? ? ? ? 8B 0D");
-        injector::MakeNOP(pattern.get_first(), 6, true);
-        injector::MakeCALL(pattern.get_first(), AdjustWindowRectExHook, true);
 
         IATHook::Replace(GetModuleHandleA(NULL), "USER32.DLL",
             std::forward_as_tuple("CreateWindowExA", WindowedModeWrapper::CreateWindowExA_Hook),
