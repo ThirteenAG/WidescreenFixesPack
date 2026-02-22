@@ -304,4 +304,15 @@ export void InitEngine()
         if (ECoopPlayerControllerState == L"s_CrackSafe" || ECoopPlayerControllerState == L"s_Ledge")
             regs.xmm0.f32[0] = 1.0f;
     });
+
+    pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "DC 0A DC 64 24");
+    static auto LoadscreenAudioThreadHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        #ifndef _DEBUG
+        if (GetAsyncKeyState(VK_ESCAPE) & 0x8000 || GetAsyncKeyState(VK_RETURN) & 0x8000)
+            #endif
+        {
+            *(double*)(regs.esp + 0x38) = 0.0f;
+        }
+    });
 }
