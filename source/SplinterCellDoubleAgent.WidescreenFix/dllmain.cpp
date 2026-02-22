@@ -133,6 +133,14 @@ void Init()
         injector::MakeNOP(pattern.get_first(), 5, true);
         static auto DeltaTimeHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
+            auto ECoopPlayerControllerState = UObject::GetState(L"ECoopPlayerController");
+
+            if (ECoopPlayerControllerState == L"s_CrackSafe")
+            {
+                *(float*)&regs.eax = 1.0f / 30.0f;
+                return;
+            }
+
             if (bLoadingScreenActive && *bLoadingScreenActive)
             {
                 *(float*)&regs.eax = 1.0f / 9999.0f;

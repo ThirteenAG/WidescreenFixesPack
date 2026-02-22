@@ -22,8 +22,6 @@ namespace UObject
         //L"EGoggle",
     };
 
-    void* (__fastcall* FindState)(void*, void*, int) = nullptr;
-
     SafetyHookInline shGotoState = {};
     int __fastcall GotoState(void* uObject, void* edx, int StateID, int a3)
     {
