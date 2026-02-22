@@ -18,15 +18,15 @@ class CPostFX
 {
 public:
     static inline bool bInitialized = false;
-
-    static inline IDirect3DTexture9* pBackBufferTex = nullptr;
-    static inline IDirect3DSurface9* pBackBufferSurf = nullptr;
+    static inline bool bConsoleGammaEnabled = true;
 
     static inline UINT nScreenWidth = 0;
     static inline UINT nScreenHeight = 0;
 
-    static inline ID3DXEffect* pEffect = nullptr;
+    static inline IDirect3DTexture9* pSceneTex = nullptr;
+    static inline IDirect3DSurface9* pSceneSurf = nullptr;
 
+    static inline ID3DXEffect* pEffect = nullptr;
     static inline IDirect3DVertexDeclaration9* pQuadVertexDecl = nullptr;
 
     struct
@@ -39,177 +39,200 @@ public:
             InputTex2D = effect->GetParameterByName(nullptr, "InputTex2D");
             ConsoleGammaTechnique = effect->GetTechniqueByName("ConsoleGamma");
         }
-
     } static inline EffectHandles = {};
 
-    static HRESULT CreateQuadVertexDeclaration(IDirect3DDevice9* device)
+    static void Render(IDirect3DDevice9* device)
     {
-        if (pQuadVertexDecl) return S_OK;
-
-        D3DVERTEXELEMENT9 decl[] =
+        if (bConsoleGammaEnabled)
         {
-            { 0,  0, D3DDECLTYPE_FLOAT4, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITIONT, 0 },  // x,y,z,rhw
-            { 0, 16, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD,  0 },  // u,v
-            D3DDECL_END()
-        };
+            if (!bInitialized)
+                Initialize(device);
 
-        return device->CreateVertexDeclaration(decl, &pQuadVertexDecl);
+            if (pEffect && pSceneTex && pSceneSurf && pQuadVertexDecl)
+            {
+                IDirect3DSurface9* pRealBB = GetRealBackBuffer(device);
+                if (pRealBB)
+                {
+                    // Copy current frame (whatever is currently rendering) to our texture
+                    IDirect3DSurface9* pCurrentRT = nullptr;
+                    device->GetRenderTarget(0, &pCurrentRT);
+                    if (pCurrentRT)
+                    {
+                        device->StretchRect(pCurrentRT, nullptr, pSceneSurf, nullptr, D3DTEXF_POINT);
+                        SAFE_RELEASE(pCurrentRT);
+                    }
+
+                    IDirect3DStateBlock9* pState = nullptr;
+                    device->CreateStateBlock(D3DSBT_ALL, &pState);
+                    if (pState) pState->Capture();
+
+                    device->SetRenderState(D3DRS_ZENABLE, D3DZB_FALSE);
+                    device->SetRenderState(D3DRS_ZWRITEENABLE, FALSE);
+                    device->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
+                    device->SetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
+                    device->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
+                    device->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
+                    device->SetRenderState(D3DRS_LIGHTING, FALSE);
+                    device->SetRenderState(D3DRS_FOGENABLE, FALSE);
+                    device->SetRenderState(D3DRS_COLORWRITEENABLE, 0x0000000F);
+
+                    for (int i = 0; i < 8; ++i)
+                        device->SetTexture(i, nullptr);
+
+                    device->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+                    device->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+                    device->SetSamplerState(0, D3DSAMP_MIPFILTER, D3DTEXF_NONE);
+                    device->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+                    device->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+
+                    device->SetVertexDeclaration(pQuadVertexDecl);
+                    device->SetRenderTarget(0, pRealBB);
+
+                    pEffect->SetTexture(EffectHandles.InputTex2D, pSceneTex);
+                    pEffect->SetTechnique(EffectHandles.ConsoleGammaTechnique);
+                    pEffect->CommitChanges();
+
+                    UINT passes = 0;
+                    pEffect->Begin(&passes, 0);
+                    pEffect->BeginPass(0);
+                    DrawScreenQuad(device, nScreenWidth, nScreenHeight);
+                    pEffect->EndPass();
+                    pEffect->End();
+
+                    if (pState)
+                    {
+                        pState->Apply();
+                        pState->Release();
+                    }
+
+                    SAFE_RELEASE(pRealBB);
+                }
+            }
+        }
     }
 
-    static inline void Initialize(IDirect3DDevice9* device, IDirect3DSurface9* backBuffer)
+    static void Initialize(IDirect3DDevice9* device)
     {
         if (bInitialized) return;
         bInitialized = true;
 
-        D3DSURFACE_DESC desc;
-        backBuffer->GetDesc(&desc);
+        IDirect3DSurface9* pBB = GetRealBackBuffer(device);
+        if (!pBB)
+        {
+            OutputDebugStringA("PostFX: Failed to get real backbuffer\n");
+            bInitialized = false;
+            return;
+        }
+
+        D3DSURFACE_DESC desc{};
+        pBB->GetDesc(&desc);
         nScreenWidth = desc.Width;
         nScreenHeight = desc.Height;
+        SAFE_RELEASE(pBB);
 
-        HRESULT hr = device->CreateTexture(desc.Width, desc.Height, 1,
-                                           desc.Usage, desc.Format, desc.Pool,
-                                           &pBackBufferTex, nullptr);
-        if (SUCCEEDED(hr))
-            pBackBufferTex->GetSurfaceLevel(0, &pBackBufferSurf);
+        if (FAILED(device->CreateTexture(nScreenWidth, nScreenHeight, 1,
+            D3DUSAGE_RENDERTARGET, desc.Format,
+            D3DPOOL_DEFAULT, &pSceneTex, nullptr)))
+        {
+            OutputDebugStringA("PostFX: Failed to create scene texture\n");
+            bInitialized = false;
+            return;
+        }
+
+        pSceneTex->GetSurfaceLevel(0, &pSceneSurf);
 
         CreateQuadVertexDeclaration(device);
 
-        HMODULE hModule = nullptr;
+        HMODULE hMod = nullptr;
         GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                           (LPCSTR)&Initialize, &hModule);
+                           (LPCSTR)&Initialize, &hMod);
 
-        ID3DXBuffer* error = nullptr;
-        hr = D3DXCreateEffectFromResource(device, hModule, MAKEINTRESOURCE(IDR_POSTFX),
-                                          nullptr, nullptr, 0, nullptr, &pEffect, &error);
+        ID3DXBuffer* err = nullptr;
+        HRESULT hr = D3DXCreateEffectFromResource(device, hMod, MAKEINTRESOURCE(IDR_POSTFX),
+                                                  nullptr, nullptr, 0, nullptr, &pEffect, &err);
 
         if (FAILED(hr))
         {
-            if (error)
-            {
-                OutputDebugStringA((LPCSTR)error->GetBufferPointer());
-                error->Release();
-            }
+            if (err) { OutputDebugStringA((LPCSTR)err->GetBufferPointer()); err->Release(); }
             pEffect = nullptr;
+            bInitialized = false;
             return;
         }
 
         EffectHandles.GetHandles(pEffect);
     }
 
-    static inline void UpdateBackBuffer(IDirect3DDevice9* device, IDirect3DSurface9* rt0)
+    static IDirect3DSurface9* GetRealBackBuffer(IDirect3DDevice9* device)
     {
-        device->StretchRect(rt0, nullptr, pBackBufferSurf, nullptr, D3DTEXF_NONE);
-    }
-
-    static inline void DrawScreenQuad(IDirect3DDevice9* device, UINT width, UINT height)
-    {
-        struct ScreenVertex
+        IDirect3DSwapChain9* pSwap = nullptr;
+        IDirect3DSurface9* pBB = nullptr;
+        if (SUCCEEDED(device->GetSwapChain(0, &pSwap)) && pSwap)
         {
-            float x, y, z, rhw;
-            float u, v;
-        };
-
-        ScreenVertex verts[4] =
-        {
-            { -0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f },
-            { -0.5f, (float)height - 0.5f, 0.0f, 1.0f, 0.0f, 1.0f },
-            { (float)width - 0.5f, -0.5f, 0.0f, 1.0f, 1.0f, 0.0f },
-            { (float)width - 0.5f, (float)height - 0.5f, 0.0f, 1.0f, 1.0f, 1.0f }
-        };
-
-        device->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 2, verts, sizeof(ScreenVertex));
-    }
-
-    static inline void RenderSafe(IDirect3DDevice9* d3d9device, std::function<void(IDirect3DDevice9*, IDirect3DSurface9*)> cb)
-    {
-        IDirect3DSurface9* rt0 = nullptr;
-        IDirect3DVertexDeclaration9* oldDecl = nullptr;
-        IDirect3DVertexBuffer9* oldVB = nullptr;
-        UINT oldOffset = 0, oldStride = 0;
-
-        d3d9device->GetRenderTarget(0, &rt0);
-        d3d9device->GetVertexDeclaration(&oldDecl);
-        d3d9device->GetStreamSource(0, &oldVB, &oldOffset, &oldStride);
-
-        Initialize(d3d9device, rt0);
-
-        if (pQuadVertexDecl)
-            d3d9device->SetVertexDeclaration(pQuadVertexDecl);
-
-        d3d9device->SetStreamSource(0, nullptr, 0, 0);
-
-        cb(d3d9device, rt0);
-
-        d3d9device->SetRenderTarget(0, rt0);
-        d3d9device->SetVertexDeclaration(oldDecl);
-        d3d9device->SetStreamSource(0, oldVB, oldOffset, oldStride);
-
-        SAFE_RELEASE(rt0);
-        SAFE_RELEASE(oldDecl);
-        SAFE_RELEASE(oldVB);
-    }
-
-    class ConsoleGamma
-    {
-    public:
-        static inline bool bConsoleGammaEnabled = true;
-
-        static inline void Render(IDirect3DDevice9* device)
-        {
-            if (!bConsoleGammaEnabled) return;
-
-            RenderSafe(device, [](IDirect3DDevice9* device, IDirect3DSurface9* rt0)
-            {
-                UpdateBackBuffer(device, rt0);
-                device->SetRenderTarget(0, rt0);
-
-                pEffect->SetTexture(EffectHandles.InputTex2D, pBackBufferTex);
-                pEffect->SetTechnique(EffectHandles.ConsoleGammaTechnique);
-                pEffect->CommitChanges();
-
-                UINT passes = 0;
-                pEffect->Begin(&passes, 0);
-                pEffect->BeginPass(0);
-                DrawScreenQuad(device, nScreenWidth, nScreenHeight);
-                pEffect->EndPass();
-                pEffect->End();
-            });
+            pSwap->GetBackBuffer(0, D3DBACKBUFFER_TYPE_MONO, &pBB);
+            pSwap->Release();
         }
-    };
+        return pBB;
+    }
+
+    static void DrawScreenQuad(IDirect3DDevice9* device, UINT w, UINT h)
+    {
+        struct { float x, y, z, rhw, u, v; } verts[4] = {
+            {-0.5f, -0.5f, 0,1, 0,0},
+            {-0.5f, (float)h - 0.5f, 0,1, 0,1},
+            {(float)w - 0.5f, -0.5f, 0,1, 1,0},
+            {(float)w - 0.5f, (float)h - 0.5f, 0,1, 1,1}
+        };
+        device->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 2, verts, sizeof(verts[0]));
+    }
+
+    static HRESULT CreateQuadVertexDeclaration(IDirect3DDevice9* device)
+    {
+        if (pQuadVertexDecl) return S_OK;
+        D3DVERTEXELEMENT9 decl[] =
+        {
+            { 0, 0, D3DDECLTYPE_FLOAT4, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITIONT, 0 },
+            { 0, 16, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 0 },
+            D3DDECL_END()
+        };
+        return device->CreateVertexDeclaration(decl, &pQuadVertexDecl);
+    }
 
     static void Shutdown()
     {
         SAFE_RELEASE(pQuadVertexDecl);
         SAFE_RELEASE(pEffect);
-        SAFE_RELEASE(pBackBufferTex);
-        SAFE_RELEASE(pBackBufferSurf);
+        SAFE_RELEASE(pSceneTex);
+        SAFE_RELEASE(pSceneSurf);
         bInitialized = false;
     }
 };
 
+namespace UD3DRenderDevice
+{
+    ptrdiff_t pDeviceOffset = 0;
+    SafetyHookInline shPresent = {};
+    void __fastcall Present(void* UD3DRenderDevice, void* edx, void* UViewport, int a3)
+    {
+        auto device = *(IDirect3DDevice9**)((uintptr_t)UD3DRenderDevice + pDeviceOffset);
+        CPostFX::Render(device);
+        return shPresent.unsafe_fastcall(UD3DRenderDevice, edx, UViewport, a3);
+    }
+}
+
 export void InitPostFX()
 {
     CIniReader iniReader("");
-    CPostFX::ConsoleGamma::bConsoleGammaEnabled = iniReader.ReadInteger("GRAPHICS", "ConsoleGamma", 1) != 0;
+    CPostFX::bConsoleGammaEnabled = iniReader.ReadInteger("GRAPHICS", "ConsoleGamma", 1) != 0;
 
-    if (!CPostFX::ConsoleGamma::bConsoleGammaEnabled)
+    if (!CPostFX::bConsoleGammaEnabled)
         return;
 
-    auto pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "8B 11 53 50 8D 45");
-    static auto UD3DRenderDevicePresentHook1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-    {
-        auto device = (IDirect3DDevice9*)regs.ecx;
-        CPostFX::ConsoleGamma::Render(device);
-    });
+    auto pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "8B 8F ? ? ? ? ? ? 53");
+    UD3DRenderDevice::pDeviceOffset = *pattern.get_first<int32_t>(2);
 
-    pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "8B 10 56 53 50");
-    static auto UD3DRenderDevicePresentHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-    {
-        auto device = (IDirect3DDevice9*)regs.eax;
-        CPostFX::ConsoleGamma::Render(device);
-    });
+    UD3DRenderDevice::shPresent = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"D3DDrv"), "?Present@UD3DRenderDevice@@UAEXPAVUViewport@@H@Z"), UD3DRenderDevice::Present);
 
-    static auto DeviceResetHook = safetyhook::create_mid(GetProcAddress(GetModuleHandle(L"D3DDrv"), "?resetDevice@UD3DRenderDevice@@QAEXAAU_D3DPRESENT_PARAMETERS_@@@Z"), [](SafetyHookContext& regs)
+    static auto resetDeviceHook = safetyhook::create_mid(GetProcAddress(GetModuleHandle(L"D3DDrv"), "?resetDevice@UD3DRenderDevice@@QAEXAAU_D3DPRESENT_PARAMETERS_@@@Z"), [](SafetyHookContext& regs)
     {
         CPostFX::Shutdown();
     });
