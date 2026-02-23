@@ -328,4 +328,22 @@ export void InitEngine()
     injector::WriteMemory<uint8_t>(pattern.get_first(27), 1, true);
     injector::WriteMemory<uint8_t>(pattern.get_first(34), 1, true);
     #endif
+
+    //ScopeLens
+    pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "76 ? 8B 48 ? 8B 81");
+    injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true);
+
+    pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "F3 0F 5E D0 F3 0F 59 E0");
+    injector::MakeNOP(pattern.get_first(0), 8, true);
+    static auto FCameraSceneNodeRenderHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        float old_v28 = regs.xmm1.f32[0];
+        float old_v29 = regs.xmm3.f32[0];
+
+        float new_v29 = old_v29 / regs.xmm0.f32[0];
+        float new_v28 = old_v28 + (old_v29 - new_v29) * 0.5f;
+
+        regs.xmm1.f32[0] = new_v28;
+        regs.xmm3.f32[0] = new_v29;
+    });
 }
