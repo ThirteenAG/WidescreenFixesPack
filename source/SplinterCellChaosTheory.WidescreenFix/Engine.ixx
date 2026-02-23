@@ -167,32 +167,11 @@ export void InitEngine()
     }
 
     //FOV
-    pattern = hook::pattern("8B 91 BC 02 00 00 52 8B 54 24 24");
-    struct UGameEngine_Draw_Hook
+    pattern = hook::pattern("E8 ? ? ? ? 5F 5E 5D 8B C3 5B 83 C4 6C");
+    static auto FCameraSceneNodeCtorHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        void operator()(injector::reg_pack& regs)
-        {
-            *reinterpret_cast<float*>(&regs.edx) = AdjustFOV(*reinterpret_cast<float*>(regs.ecx + 0x2BC), Screen.fAspectRatio);
-        }
-    }; injector::MakeInline<UGameEngine_Draw_Hook>(pattern.get_first(0), pattern.get_first(6)); //0x10A3E67F
-
-    pattern = hook::pattern("8B 88 BC 02 00 00 8B 44 24 20 51");
-    struct UGameEngine_Draw_Hook2
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            *reinterpret_cast<float*>(&regs.ecx) = AdjustFOV(*reinterpret_cast<float*>(regs.eax + 0x2BC), Screen.fAspectRatio);
-        }
-    }; injector::MakeInline<UGameEngine_Draw_Hook2>(pattern.get_first(0), pattern.get_first(6)); //0x10A3E8A0
-
-    pattern = hook::pattern("8B 96 BC 02 00 00 8B 4C 24 24");
-    struct UGameEngine_Draw_Hook3
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            *reinterpret_cast<float*>(&regs.edx) = AdjustFOV(*reinterpret_cast<float*>(regs.esi + 0x2BC), Screen.fAspectRatio);
-        }
-    }; injector::MakeInline<UGameEngine_Draw_Hook3>(pattern.get_first(0), pattern.get_first(6)); //0x10A0D0C1
+        *(float*)(regs.ebx + 0x248) = AdjustFOV(*(float*)(regs.ebx + 0x248), Screen.fAspectRatio);
+    });
 
     //windowed alt-tab fix
     if (!bDisableAltTabFix)
@@ -235,10 +214,10 @@ export void InitEngine()
         IsMenuDisplayedCache.clear();
     });
 
-#if _DEBUG
+    #if _DEBUG
     pattern = hook::pattern("8B 44 24 08 55 56 57 6A 00 50 8D 4C 24 1C E8 ? ? ? ? 8B 44 24 14 85 C0 74 ? 8B 6C 24 10");
     shFindAxisName = safetyhook::create_inline(pattern.get(1).get<void*>(0), FindAxisName);
-#endif
+    #endif
 
     pattern = hook::pattern("83 EC 1C 53 55 56 8B F1 8A 86 CC 01 00 00");
     UGameEngine::shTick = safetyhook::create_inline(pattern.get_first(), UGameEngine::Tick);

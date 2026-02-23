@@ -314,68 +314,31 @@ export void InitEngine()
     }
 
     //FOV
-    pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "81 EC 84 06 00 00 A1 ? ? ? ? 53 56 57");
+    pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "E8 ? ? ? ? 8B 4D ? 5F 8B C6 5E 64 89 0D ? ? ? ? 5B 8B E5 5D C2 24 00");
     if (!pattern.empty())
     {
-        uint32_t pfDraw = (uint32_t)pattern.get_first();
-        auto rpattern = hook::range_pattern(pfDraw, pfDraw + 0x1036, "8B ? ? 03 00 00");
-        struct UGameEngine_Draw_Hook
+        static auto FCameraSceneNodeCtorHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
-            void operator()(injector::reg_pack& regs)
+            if (bRestoreCutsceneFOV && UObject::GetState(L"EchelonMainHUD") == L"s_Cinematic")
             {
-                if (bRestoreCutsceneFOV && UObject::GetState(L"EchelonMainHUD") == L"s_Cinematic")
-                {
-                    *(float*)&regs.ecx = *(float*)(regs.eax + 0x374);
-                }
-                else
-                {
-                    *(float*)&regs.ecx = AdjustFOV(*(float*)(regs.eax + 0x374), Screen.fAspectRatio);
-                }
+                return;
             }
-        }; injector::MakeInline<UGameEngine_Draw_Hook>(rpattern.get(0).get<uint32_t>(0), rpattern.get(0).get<uint32_t>(0 + 6));
 
-        struct UGameEngine_Draw_Hook2 //1038AA8F
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                if (bRestoreCutsceneFOV && UObject::GetState(L"EchelonMainHUD") == L"s_Cinematic")
-                {
-                    *(float*)&regs.eax = *(float*)(regs.edx + 0x374);
-                }
-                else
-                {
-                    *(float*)&regs.eax = AdjustFOV(*(float*)(regs.edx + 0x374), Screen.fAspectRatio);
-                }
-            }
-        };
-        injector::MakeInline<UGameEngine_Draw_Hook2>(rpattern.get(2).get<uint32_t>(0), rpattern.get(2).get<uint32_t>(0 + 6));
-        injector::MakeInline<UGameEngine_Draw_Hook2>(rpattern.get(3).get<uint32_t>(0), rpattern.get(3).get<uint32_t>(0 + 6));
+            *(float*)(regs.esi + 0x214) = AdjustFOV(*(float*)(regs.esi + 0x214), Screen.fAspectRatio);
+        });
     }
     else
     {
-        struct UGameEngine_Draw_Hook
+        pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "E8 ? ? ? ? 8B C7 8B 4D ? 64 89 0D ? ? ? ? 59 5F 5E 8B E5 5D C2 24 00");
+        static auto FCameraSceneNodeCtorHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
-            void operator()(injector::reg_pack& regs)
+            if (bRestoreCutsceneFOV && UObject::GetState(L"EchelonMainHUD") == L"s_Cinematic")
             {
-                if (bRestoreCutsceneFOV && UObject::GetState(L"EchelonMainHUD") == L"s_Cinematic")
-                {
-                    regs.xmm0.f32[0] = *(float*)(regs.eax + 0x374);
-                }
-                else
-                {
-                    regs.xmm0.f32[0] = AdjustFOV(*(float*)(regs.eax + 0x374), Screen.fAspectRatio);
-                }
+                return;
             }
-        };
 
-        pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "8B 8D ? ? ? ? F3 0F 10 80");
-        injector::MakeInline<UGameEngine_Draw_Hook>(pattern.get_first(6), pattern.get_first(6 + 8));
-
-        pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "8B 41 ? F3 0F 10 80 ? ? ? ? 8B C4");
-        injector::MakeInline<UGameEngine_Draw_Hook>(pattern.get_first(3), pattern.get_first(3 + 8));
-
-        pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "C7 86 ? ? ? ? ? ? ? ? F3 0F 10 80");
-        injector::MakeInline<UGameEngine_Draw_Hook>(pattern.get_first(10), pattern.get_first(10 + 8));
+            *(float*)(regs.edi + 0x214) = AdjustFOV(*(float*)(regs.edi + 0x214), Screen.fAspectRatio);
+        });
     }
 
     if (Screen.nPostProcessFixedScale)
