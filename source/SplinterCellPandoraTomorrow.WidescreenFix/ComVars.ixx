@@ -32,7 +32,7 @@ export struct Screen
     uint32_t nFMVWidescreenMode;
     uint32_t nShadowMapResolution;
     uint32_t nReflectionsResolution;
-    uint32_t nBloomResolution;
+    uint32_t nBloomResolutionMultiplier;
     float fRawInputMouse;
     bool bRawInputMouseRawData;
     bool bDeferredInput;

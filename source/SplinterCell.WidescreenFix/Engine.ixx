@@ -194,21 +194,17 @@ export void InitEngine()
     injector::MakeCALL(pattern.count(2).get(0).get<uint32_t>(7), FCanvasUtilDrawTileHook, true); //(uint32_t)Engine + 0xC9B7C
     injector::MakeCALL(pattern.count(2).get(1).get<uint32_t>(7), FCanvasUtilDrawTileHook, true); //(uint32_t)Engine + 0xC9DE1
 
-    pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "8B 46 34 8B 88 B0 02 00 00");
-    struct UGameEngine_Draw_Hook
+    //FOV
+    pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "8B CB 89 42 ? 89 72");
+    static auto FCameraSceneNodeCtorHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        void operator()(injector::reg_pack& regs)
+        if (bRestoreCutsceneFOV && UObject::GetState(L"EchelonMainHUD") == L"s_Cinematic")
         {
-            if (bRestoreCutsceneFOV && UObject::GetState(L"EchelonMainHUD") == L"s_Cinematic")
-            {
-                *(float*)&regs.ecx = *(float*)(regs.eax + 0x2B0);
-            }
-            else
-            {
-                *(float*)&regs.ecx = AdjustFOV(*(float*)(regs.eax + 0x2B0), Screen.fAspectRatio);
-            }
+            return;
         }
-    }; injector::MakeInline<UGameEngine_Draw_Hook>(pattern.count(1).get(0).get<uint32_t>(3), pattern.count(1).get(0).get<uint32_t>(3 + 6)); //pfDraw + 0x104
+
+        *(float*)(regs.ebx + 0x200) = AdjustFOV(*(float*)(regs.ebx + 0x200), Screen.fAspectRatio);
+    });
 
     // Resolution overrides
     static auto newSETRES = L"SETRES 000x000"; // Final video resolution switch to 640x480, also crashes with dgvoodoo on some resolutions
