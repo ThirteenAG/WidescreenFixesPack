@@ -129,6 +129,7 @@ export void InitD3DDrv()
     CIniReader iniReader("");
     static auto nShadowMapResolutionMultiplier = std::clamp(iniReader.ReadInteger("GRAPHICS", "ShadowMapResolutionMultiplier", 0), 0, 16);
     nGlowResolutionMultiplier = std::clamp(iniReader.ReadInteger("GRAPHICS", "GlowResolutionMultiplier", 0), 0, 16);
+    static auto nMirrorResolutionMultiplier = std::clamp(iniReader.ReadInteger("GRAPHICS", "MirrorResolutionMultiplier", 0), 0, 16);
 
     if (nShadowMapResolutionMultiplier)
     {
@@ -365,6 +366,14 @@ export void InitD3DDrv()
                 SetWindowPos(pPresentParams->hDeviceWindow, NULL, rect.left, rect.top, rect.right, rect.bottom, SWP_NOACTIVATE | SWP_NOZORDER);
                 SetForegroundWindow(pPresentParams->hDeviceWindow);
                 SetCursor(NULL);
+            }
+
+            //Mirrors
+            auto hEngine = GetModuleHandle(L"Engine");
+            if (hEngine)
+            {
+                injector::WriteMemory(GetProcAddress(hEngine, "?MIRROR_WIDTH@@3IA"), std::clamp(640 * nMirrorResolutionMultiplier, 640, (int)Screen.Width), true);
+                injector::WriteMemory(GetProcAddress(hEngine, "?MIRROR_HEIGHT@@3IA"), std::clamp(360 * nMirrorResolutionMultiplier, 360, (int)Screen.Height), true);
             }
         }
     }; injector::MakeInline<SetResHook>(pattern.get_first(0));
