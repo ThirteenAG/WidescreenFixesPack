@@ -45,12 +45,16 @@ void UnthrottleEmuDisable()
     sceIoDevctl("kemulator:", EMULATOR_DEVCTL__TOGGLE_FASTFORWARD, (void*)0, 0, NULL, 0);
 }
 
-static float getAxis(float axis, float deadzone, float speed) {
-    if (fabsf(axis) >= deadzone) {
-        if (axis < 0.0f) {
+static float getAxis(float axis, float deadzone, float speed)
+{
+    if (fabsf(axis) >= deadzone)
+    {
+        if (axis < 0.0f)
+        {
             return speed * ((axis + deadzone) / (1.0f - deadzone));
         }
-        else {
+        else
+        {
             return speed * ((axis - deadzone) / (1.0f - deadzone));
         }
     }
@@ -58,8 +62,9 @@ static float getAxis(float axis, float deadzone, float speed) {
     return 0.0f;
 }
 float fStickDeadzone = 0.1f;
-void __0fGUInputKDirectAxis6JEInputKeyfTCPatched(int _this, int axis, int unk) {
-    int param = *(uint32_t*)(_this) + 0x130;
+void __0fGUInputKDirectAxis6JEInputKeyfTCPatched(int _this, int axis, int unk)
+{
+    int param = *(uint32_t*)(_this)+0x130;
     int arg0 = *(uint32_t*)(_this + 0x12A0);
 
     if (!arg0)
@@ -70,11 +75,13 @@ void __0fGUInputKDirectAxis6JEInputKeyfTCPatched(int _this, int axis, int unk) {
 
     float* (*__0fGUInputMFindAxisNameP6GAActorPCcK)(int arg1, int arg2, const char* name);
     __0fGUInputMFindAxisNameP6GAActorPCcK = (void*)(0x80000000 | *(uint32_t*)(param + 4));
-    if (__0fGUInputMFindAxisNameP6GAActorPCcK) {
+    if (__0fGUInputMFindAxisNameP6GAActorPCcK)
+    {
         SceCtrlData pad;
         sceCtrlPeekBufferPositive(&pad, 1);
 
-        if (axis == 0xE0) {
+        if (axis == 0xE0)
+        {
             float Lx = ((float)pad.Lx - 128.0f) / 128.0f;
             float Rx = ((float)pad.Rsrv[0] - 128.0f) / 128.0f;
 
@@ -86,7 +93,8 @@ void __0fGUInputKDirectAxis6JEInputKeyfTCPatched(int _this, int axis, int unk) {
             if (aTurn)
                 *aTurn = getAxis(Rx, fStickDeadzone, 1.0f);
         }
-        else if (axis == 0xE1) {
+        else if (axis == 0xE1)
+        {
             float Ly = -(((float)pad.Ly - 128.0f) / 128.0f);
             float Ry = -(((float)pad.Rsrv[1] - 128.0f) / 128.0f);
 
@@ -118,7 +126,7 @@ int PSPLoaderHandler()
 
 int CheckFloatParams(float X, float Y, float SizeX, float SizeY)
 {
-    if (/*X <= 0.0f && Y <= 0.0f && */ SizeX == 481.0f && (SizeY == 271.0f || SizeY == 51.0f))
+    if (/*X <= 0.0f && Y <= 0.0f && */ SizeX == 481.0f && ((SizeY == 271.0f || SizeY == 51.0f) || SizeY == 273.0f || SizeY == 34.0f))
         return 1;
     else
         return 0;
@@ -139,7 +147,16 @@ float AdjustFOV(float f, float ar)
     return fFOVFactor * (round((2.0f * atan(((ar) / (4.0f / 3.0f)) * tan(f / 2.0f * ((float)M_PI / 180.0f)))) * (180.0f / (float)M_PI) * 100.0f) / 100.0f);
 }
 
-int OnModuleStart() 
+float ar = 0.0f;
+void (*pfFCameraSceneNodeUpdateMatrices)(float*, int, float, float, float);
+void FCameraSceneNodeUpdateMatrices(float* a1, int a2, float a3, float a4, float a5)
+{
+    a1[144] = AdjustFOV(a1[144], ar);
+
+    return pfFCameraSceneNodeUpdateMatrices(a1, a2, a3, a4, a5);
+}
+
+int OnModuleStart()
 {
     uintptr_t ptr = pattern.get_first("B0 FF BD 27 B0 03 8C C4", 0);
 
@@ -227,7 +244,6 @@ int OnModuleStart()
     }
 
     {
-        float ar = 0.0f;
         sceIoDevctl("kemulator:", EMULATOR_DEVCTL__GET_ASPECT_RATIO, NULL, 0, &ar, sizeof(ar));
         if (ar)
         {
@@ -289,18 +305,10 @@ int OnModuleStart()
             }
 
             // FOV
-            ptr = pattern.get(0, "78 03 8C C4 25 20 C0 03 25 28 20 02", 0);
-            if (ptr)
+            uintptr_t ptr_89F41C8 = pattern.get(0, "DC 01 0C E6 25 10 00 02 40 01 B4 C7", -4);
+            if (ptr_89F41C8)
             {
-                MakeInlineWrapper(ptr,
-                    lwc1(f12, a0, 0x378),
-                    lui(a0, HIWORD(ar)),
-                    ori(a0, a0, LOWORD(ar)),
-                    mtc1(a0, f13),
-                    jal((intptr_t)AdjustFOV),
-                    nop(),
-                    movs(f12, f0)
-                );
+                pfFCameraSceneNodeUpdateMatrices = (void (*)(float*, int, float, float, float))injector.MakeJAL(ptr_89F41C8, (uintptr_t)FCameraSceneNodeUpdateMatrices);
             }
         }
     }
@@ -325,18 +333,22 @@ int OnModuleStart()
     return 0;
 }
 
-int module_start(SceSize args, void* argp) 
+int module_start(SceSize args, void* argp)
 {
-    if (sceIoDevctl("kemulator:", 0x00000003, NULL, 0, NULL, 0) == 0) {
+    if (sceIoDevctl("kemulator:", 0x00000003, NULL, 0, NULL, 0) == 0)
+    {
         SceUID modules[10];
         int count = 0;
         int result = 0;
-        if (sceKernelGetModuleIdList(modules, sizeof(modules), &count) >= 0) {
+        if (sceKernelGetModuleIdList(modules, sizeof(modules), &count) >= 0)
+        {
             int i;
             SceKernelModuleInfo info;
-            for (i = 0; i < count; ++i) {
+            for (i = 0; i < count; ++i)
+            {
                 info.size = sizeof(SceKernelModuleInfo);
-                if (sceKernelQueryModuleInfo(modules[i], &info) < 0) {
+                if (sceKernelQueryModuleInfo(modules[i], &info) < 0)
+                {
                     continue;
                 }
 
