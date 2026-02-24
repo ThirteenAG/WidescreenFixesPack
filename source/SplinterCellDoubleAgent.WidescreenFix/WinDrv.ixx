@@ -23,6 +23,11 @@ namespace UWindowsViewport
             PostMessage(hGameWindow, WM_CLOSE, 0, 0);
             return 0;
         }
+        else if (Msg == WM_SETFOCUS)
+        {
+            PostMessage(hGameWindow, WM_KEYDOWN, VK_LWIN, 0);
+            PostMessage(hGameWindow, WM_KEYUP, VK_LWIN, 0);
+        }
 
         if (Screen.fRawInputMouse > 0.0f)
         {
@@ -32,15 +37,9 @@ namespace UWindowsViewport
                 RawInputHandler<>::RegisterRawInput(hGameWindow, Screen.fRawInputMouse, Screen.bRawInputMouseRawData);
                 bOnce = true;
             }
-
             if (Msg == WM_MOUSEMOVE)
             {
                 return 0;
-            }
-            else if (Msg == WM_SETFOCUS)
-            {
-                PostMessage(hGameWindow, WM_KEYDOWN, VK_LWIN, 0);
-                PostMessage(hGameWindow, WM_KEYUP, VK_LWIN, 0);
             }
             else if (Msg == WM_RAWINPUTMOUSE)
             {
