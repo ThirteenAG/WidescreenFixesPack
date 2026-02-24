@@ -228,14 +228,31 @@ jobs:
    end
 
    vpaths {
-      ["source"]       = { "source/**.*" },
-      ["shaders"]      = { "source/**.fx" },
-      ["ini"]          = { "data/**.ini" },
-      ["data"]         = { "data/**.cfg", "data/**.dat", "data/**.png", "data/**.ual", "data/**.x64ual", "data/**.dll", "data/**.asi" },
-      ["resources/*"]  = { "resources/*", "source/**/*.rc" },
-      ["includes/*"]   = { "includes/*" },
-      ["external/*"]   = { "external/*" },
-      ["devdata/*"]    = { "data/*" },
+      ["source"] = {
+         "source/**.*",
+      },
+      ["shaders"] = {
+         "source/**.fx",
+         "source/**.vs",
+         "source/**.ps",
+         "source/**.hlsl",
+      },
+      ["ini"] = {
+         "data/**.ini",
+      },
+      ["data"] = {
+         "data/**.cfg",
+         "data/**.dat",
+      },
+      ["resources/*"] = {
+         "resources/*",
+      },
+      ["includes/*"] = {
+         "includes/**",
+      },
+      ["external/*"] = {
+         "external/**",
+      },
    }
 
    filter "configurations:Debug*"
@@ -482,12 +499,18 @@ project "SplinterCellConviction.FusionMod"
 project "SplinterCellBlacklist.FusionMod"
    setpaths("Z:/WFP/Games/Splinter Cell/Splinter Cell Blacklist/", "src/SYSTEM/Blacklist_DX11_game.exe", "src/system/scripts/")
 project "SplinterCellDoubleAgent.WidescreenFix"
-   prebuildcommands { "for /R \"../source/%{prj.name}/\" %%f in (*.fx) do (\"../includes/dxsdk/lib/x86/fxc.exe\" /T fx_2_0 /Fo \"../source/%{prj.name}/%%~nf.fxo\" %%f)" }
+   prebuildcommands {
+   "for /R \"../source/%{prj.name}/\" %%f in (*.fx) do (\"../includes/dxsdk/lib/x86/fxc.exe\" /T fx_2_0 /Fo \"../source/%{prj.name}/%%~nf.fxo\" %%f)",
+   "for /R \"../source/%{prj.name}/\" %%f in (*.ps) do (\"../includes/dxsdk/lib/x86/asm_shader.exe\" %%f \"../source/%{prj.name}/%%~nf.pso\")",
+   "for /R \"../source/%{prj.name}/\" %%f in (*.vs) do (\"../includes/dxsdk/lib/x86/asm_shader.exe\" %%f \"../source/%{prj.name}/%%~nf.vso\")",
+   }
    includedirs {"Resources"}
-   files { "source/%{prj.name}/*.fx", "source/%{prj.name}/*.rc" }
+   files { "source/%{prj.name}/*.fx", "source/%{prj.name}/*.ps", "source/%{prj.name}/*.rc" }
    files { "textures/SCDA/icon.rc" }
    defines { "IDR_SCDAICON=200" }
    defines { "IDR_POSTFX=201" }
+   defines { "IDR_SHADER_BB6378E1=202" }
+   defines { "IDR_SHADER_C081893C=203" }
    setpaths("Z:/WFP/Games/Splinter Cell/Splinter Cell - Double Agent/", "SCDA-Offline/System/SplinterCell4.exe", "SCDA-Offline/System/scripts/")
 project "SplinterCellPandoraTomorrow.WidescreenFix"
    prebuildcommands {
