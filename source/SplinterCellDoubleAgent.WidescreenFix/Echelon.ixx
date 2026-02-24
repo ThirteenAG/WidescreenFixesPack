@@ -69,6 +69,7 @@ export void InitEchelon()
 {
     CIniReader iniReader("");
     gBlacklistIndicators = iniReader.ReadInteger("BONUS", "BlacklistIndicators", 0);
+    auto bEnableRunDuringForcedWalk = iniReader.ReadInteger("MISC", "EnableRunDuringForcedWalk", 1) != 0;
 
     if (gBlacklistIndicators || bLightSyncRGB)
     {
@@ -109,4 +110,10 @@ export void InitEchelon()
     //EPlayerController additional state cache
     AEPlayerController::shTick = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Echelon"), "?Tick@AEPlayerController@@UAEHMW4ELevelTick@@@Z"), AEPlayerController::Tick);
     AEPattern::shTick = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Echelon"), "?Tick@AEPattern@@UAEHMW4ELevelTick@@@Z"), AEPattern::Tick);
+
+    if (bEnableRunDuringForcedWalk)
+    {
+        auto pattern = hook::module_pattern(GetModuleHandle(L"Echelon"), "75 ? ? ? ? ? ? ? ? ? ? DF E0 F6 C4 ? 7A ? C7 45 ? ? ? ? ? EB");
+        injector::WriteMemory<uint8_t>(pattern.get_first(), 0xEB, true); //jz -> jmp
+    }
 }
