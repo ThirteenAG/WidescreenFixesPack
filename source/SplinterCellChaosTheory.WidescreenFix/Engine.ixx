@@ -53,6 +53,22 @@ float* __fastcall FindAxisName(void* UInput, void* edx, void* AActor, const wcha
 }
 #endif
 
+namespace ALight
+{
+    float __fastcall GetShadowTurnOffRatio()
+    {
+        return 4.0f;
+    }
+}
+
+namespace AActor
+{
+    float __fastcall GetShadowTurnOffRatio()
+    {
+        return 4.0f;
+    }
+}
+
 export void InitEngine()
 {
     //HUD
@@ -221,4 +237,19 @@ export void InitEngine()
 
     pattern = hook::pattern("83 EC 1C 53 55 56 8B F1 8A 86 CC 01 00 00");
     UGameEngine::shTick = safetyhook::create_inline(pattern.get_first(), UGameEngine::Tick);
+
+    // Shadows and lights draw distance
+    static float ebx2C0 = 0.0f;
+    pattern = hook::pattern("D9 05 ? ? ? ? D9 83 ? ? ? ? DA E9 DF E0 F6 C4 44 7B ? D8 9B");
+    injector::WriteMemory<uint16_t>(pattern.get_first(6), 0x05D9, true); //fld
+    injector::WriteMemory(pattern.get_first(6 + 2), &ebx2C0, true); // ebx2C0
+
+    static auto FDynamicLightHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        ebx2C0 = *(float*)(regs.ebx + 0x2C0) * ALight::GetShadowTurnOffRatio();
+    });
+
+    pattern = hook::pattern("D8 9B ? ? ? ? DF E0 F6 C4 41 75 ? 8B 81");
+    injector::WriteMemory<uint16_t>(pattern.get_first(0), 0x1DD8, true); //fcomp
+    injector::WriteMemory(pattern.get_first(2), &ebx2C0, true); // ebx2C0
 }
