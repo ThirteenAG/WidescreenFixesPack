@@ -154,11 +154,17 @@ HRESULT WINAPI Hook_CreateDevice(IDirect3D8* d3ddev, UINT Adapter, D3DDEVTYPE De
 
     UINT_PTR* pVTable = *((UINT_PTR**)*ppReturnedDeviceInterface);
 
-    RealCreatePixelShader = (CreatePixelShader_t)pVTable[IDirect3DDevice8VTBL::CreatePixelShader];
-    RealCreateVertexShader = (CreateVertexShader_t)pVTable[IDirect3DDevice8VTBL::CreateVertexShader];
+    if (pVTable[IDirect3DDevice9VTBL::CreatePixelShader] != (UINT_PTR)Hook_CreatePixelShader)
+    {
+        RealCreatePixelShader = (CreatePixelShader_t)pVTable[IDirect3DDevice9VTBL::CreatePixelShader];
+        injector::WriteMemory(&pVTable[IDirect3DDevice9VTBL::CreatePixelShader], &Hook_CreatePixelShader, true);
+    }
 
-    injector::WriteMemory(&pVTable[IDirect3DDevice8VTBL::CreatePixelShader], &Hook_CreatePixelShader, true);
-    injector::WriteMemory(&pVTable[IDirect3DDevice8VTBL::CreateVertexShader], &Hook_CreateVertexShader, true);
+    if (pVTable[IDirect3DDevice9VTBL::CreateVertexShader] != (UINT_PTR)Hook_CreateVertexShader)
+    {
+        RealCreateVertexShader = (CreateVertexShader_t)pVTable[IDirect3DDevice9VTBL::CreateVertexShader];
+        injector::WriteMemory(&pVTable[IDirect3DDevice9VTBL::CreateVertexShader], &Hook_CreateVertexShader, true);
+    }
 
     return hr;
 }
