@@ -123,7 +123,7 @@ export void InitEngine()
             wchar_t buffer[256];
             std::wstring_view curTextureName(UObject::GetFullName(*(void**)(regs.esi + 0x14), 0, buffer));
 
-            if (!CMenusManager::IsMainMenuDisplayed() && (bIsInMenu && *bIsInMenu == 0))
+            if (!CMenusManager::IsMainMenuDisplayed() && (bIsInMenu && *bIsInMenu == 0) && !curTextureName.contains(L"LOADING_"))
             {
                 // Fullscreen images, including camera feed overlay at 0 512
                 if ((fLeft == 0 && fRight == 640) ||
