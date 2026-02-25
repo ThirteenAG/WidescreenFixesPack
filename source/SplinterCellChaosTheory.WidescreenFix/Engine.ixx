@@ -175,7 +175,7 @@ export void InitEngine()
 
                 //DBGONLY(KEYPRESS(VK_F2) { spd::log()->info("{:d} {:d} {:d} {:08x}", offset1, offset2, offset3, Color.RGBA); });
 
-                if (bIsInMenu && *bIsInMenu == 0)
+                if (!CMenusManager::IsMainMenuDisplayed() && (bIsInMenu && *bIsInMenu == 0))
                 {
                     WidescreenHudText(textX, offset1, offset2, offset3, Color);
                 }
