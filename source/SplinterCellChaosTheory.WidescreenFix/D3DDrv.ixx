@@ -7,6 +7,7 @@ module;
 export module D3DDrv;
 
 import ComVars;
+import GUI;
 import WidescreenHUD;
 
 float gVisibility = 1.0f;
@@ -58,38 +59,38 @@ float* __cdecl FGetHSV(float* dest, uint8_t H, uint8_t S, uint8_t V, uint32_t un
 
     switch (static_cast<uint32_t>(v4))
     {
-    case 0:
-        r = v15;
-        g = v17;
-        b = v16;
-        break;
-    case 1:
-        r = v10;
-        g = v15;
-        b = v16;
-        break;
-    case 2:
-        r = v16;
-        g = v15;
-        b = v17;
-        break;
-    case 3:
-        r = v16;
-        g = v10;
-        b = v15;
-        break;
-    case 4:
-        r = v17;
-        g = v16;
-        b = v15;
-        break;
-    case 5:
-        r = v15;
-        g = v16;
-        b = v10;
-        break;
-    default:
-        break;
+        case 0:
+            r = v15;
+            g = v17;
+            b = v16;
+            break;
+        case 1:
+            r = v10;
+            g = v15;
+            b = v16;
+            break;
+        case 2:
+            r = v16;
+            g = v15;
+            b = v17;
+            break;
+        case 3:
+            r = v16;
+            g = v10;
+            b = v15;
+            break;
+        case 4:
+            r = v17;
+            g = v16;
+            b = v15;
+            break;
+        case 5:
+            r = v15;
+            g = v16;
+            b = v10;
+            break;
+        default:
+            break;
     }
 
     dest[0] = r;
@@ -301,4 +302,84 @@ export void InitD3DDrv()
             });
         }
     }
+
+    pattern = hook::pattern("8B 10 55 55 55 55");
+    static auto PresentHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        if (CMenusManager::IsMainMenuDisplayed() && (bIsInMenu && *bIsInMenu == 0))
+        {
+            IDirect3DDevice9* pD3DDevice = (IDirect3DDevice9*)(regs.eax);
+
+            const int W = Screen.Width;
+            const int H = Screen.Height;
+
+            constexpr float TARGET_ASPECT = 4.0f / 3.0f;
+
+            float render_w = (float)W;
+            float render_h = (float)H;
+
+            // Fit 4:3 inside current resolution (letterbox or pillarbox)
+            if ((float)W / (float)H > TARGET_ASPECT)
+            {
+                // Current screen is wider, pillarboxes on sides
+                render_w = (float)H * TARGET_ASPECT;
+            }
+            else
+            {
+                // Current screen is taller or same, letterboxes top/bottom
+                render_h = (float)W / TARGET_ASPECT;
+            }
+
+            // Center the render area
+            const float x = ((float)W - render_w) * 0.5f;
+            const float y = ((float)H - render_h) * 0.5f;
+
+            const LONG left = (LONG)floor(x);
+            const LONG right = (LONG)ceil(x + render_w);
+            const LONG top = (LONG)floor(y);
+            const LONG bottom = (LONG)ceil(y + render_h);
+
+            const D3DCOLOR BLACK = D3DCOLOR_XRGB(0, 0, 0);
+
+            // Left pillar
+            if (left > 0)
+            {
+                D3DRECT r{ 0, 0, left, H };
+                pD3DDevice->Clear(1, &r, D3DCLEAR_TARGET, BLACK, 1.0f, 0);
+            }
+
+            // Right pillar
+            if (right < W)
+            {
+                D3DRECT r{ right, 0, W, H };
+                pD3DDevice->Clear(1, &r, D3DCLEAR_TARGET, BLACK, 1.0f, 0);
+            }
+
+            // Top letterbox
+            if (top > 0)
+            {
+                D3DRECT r{ 0, 0, W, top };
+                pD3DDevice->Clear(1, &r, D3DCLEAR_TARGET, BLACK, 1.0f, 0);
+            }
+
+            // Bottom letterbox
+            if (bottom < H)
+            {
+                D3DRECT r{ 0, bottom, W, H };
+                pD3DDevice->Clear(1, &r, D3DCLEAR_TARGET, BLACK, 1.0f, 0);
+            }
+
+            // One-pixel safety overlap on right/bottom edges
+            if (right < W)
+            {
+                D3DRECT r{ right - 1, 0, right, H };
+                pD3DDevice->Clear(1, &r, D3DCLEAR_TARGET, BLACK, 1.0f, 0);
+            }
+            if (bottom < H)
+            {
+                D3DRECT r{ 0, bottom - 1, W, bottom };
+                pD3DDevice->Clear(1, &r, D3DCLEAR_TARGET, BLACK, 1.0f, 0);
+            }
+        }
+    });
 }
