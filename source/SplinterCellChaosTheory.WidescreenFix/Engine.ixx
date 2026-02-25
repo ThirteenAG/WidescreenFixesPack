@@ -6,6 +6,7 @@ export module Engine;
 
 import ComVars;
 import WidescreenHUD;
+import GUI;
 
 namespace UGameEngine
 {
@@ -122,19 +123,19 @@ export void InitEngine()
             wchar_t buffer[256];
             std::wstring_view curTextureName(UObject::GetFullName(*(void**)(regs.esi + 0x14), 0, buffer));
 
-            // Fullscreen images, including camera feed overlay at 0 512
-            if ((fLeft == 0 && fRight == 640) ||
-                (fLeft == -2 && fRight == 639 && fTop == -2 && fBottom == 479) ||
-                (fLeft == -1 && fRight == 640 && fTop == -2 && fBottom == 479) ||
-                (fTop == 0 && fBottom == 512))
+            if (!CMenusManager::IsMainMenuDisplayed() && (bIsInMenu && *bIsInMenu == 0))
             {
-                Screen.fHUDScaleXDyn = Screen.fHUDScaleXOriginal;
-                Screen.fHudOffsetDyn = Screen.fHudOffsetOriginal;
-                return;
-            }
+                // Fullscreen images, including camera feed overlay at 0 512
+                if ((fLeft == 0 && fRight == 640) ||
+                    (fLeft == -2 && fRight == 639 && fTop == -2 && fBottom == 479) ||
+                    (fLeft == -1 && fRight == 640 && fTop == -2 && fBottom == 479) ||
+                    (fTop == 0 && fBottom == 512))
+                {
+                    Screen.fHUDScaleXDyn = Screen.fHUDScaleXOriginal;
+                    Screen.fHudOffsetDyn = Screen.fHudOffsetOriginal;
+                    return;
+                }
 
-            if (bIsInMenu && *bIsInMenu == 0)
-            {
                 WidescreenHudImage(fLeft, fRight, fTop, fBottom, Color, curTextureName);
             }
         }
