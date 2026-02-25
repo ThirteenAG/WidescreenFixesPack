@@ -157,6 +157,20 @@ export void InitEngine()
     pattern = hook::pattern("D8 25 ? ? ? ? D9 44 24 24 D8 4C 24");
     injector::WriteMemory(pattern.get_first(2), &Screen.fHudOffset, true); //0x10B14BAD + 0x2
 
+    // Loading Bar
+    static float fLoadingBarScaleX = 0.0f;
+    static float fLoadingBarPosX = 0.0f;
+    pattern = hook::pattern("DB 86 ? ? ? ? 8B 4F");
+    static auto test = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        fLoadingBarScaleX = 1.0f / (480.0f * Screen.fAspectRatio);
+        fLoadingBarPosX = 56.0f + Screen.nHudOffsetReal;
+    });
+    pattern = hook::pattern("D8 0D ? ? ? ? 6A 00 DB 86");
+    injector::WriteMemory(pattern.get_first(2), &fLoadingBarScaleX, true);
+    pattern = hook::pattern("D8 0D ? ? ? ? D9 5C 24 ? D9 C9 D8 0D ? ? ? ? D9 5C 24 ? D9 05 ? ? ? ? D8 C9 D9 5C 24 ? D8 0D ? ? ? ? D9 5C 24 ? FF 92 ? ? ? ? 8B D8");
+    injector::WriteMemory(pattern.get_first(2), &fLoadingBarPosX, true);
+
     if (Screen.nHudWidescreenMode == 1)
     {
         pattern = hook::pattern("A1 ? ? ? ? 83 C4 04 85 C0 D8 3D");
