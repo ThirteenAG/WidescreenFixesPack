@@ -72,6 +72,7 @@ move /Y ".\KingKong.WidescreenFix\scripts\dxwrapper.dll" ".\KingKong.WidescreenF
 
 rem DSOAL
 7za e "..\DSOAL.7z" "DSOAL+HRTF/Win32/dsound.dll" "DSOAL+HRTF/Win32/dsoal-aldrv.dll" -o".\MaxPayne.WidescreenFix\" -y
+7za e "..\DSOAL.7z" "DSOAL+HRTF/Win32/dsound.dll" "DSOAL+HRTF/Win32/dsoal-aldrv.dll" -o".\SplinterCellChaosTheory.WidescreenFix\System\" -y
 
 rem Creating archives
 
