@@ -9,6 +9,7 @@ import WinDrv;
 import Window;
 import GUI;
 import Xidi;
+import Eax;
 
 void Init()
 {
@@ -177,6 +178,7 @@ CEXP void InitializeASI()
         CallbackHandler::RegisterCallback(L"GUI.dll", InitGUI);
         CallbackHandler::RegisterCallback(L"Window.dll", InitWindow);
         CallbackHandler::RegisterCallback(L"Xidi.32.dll", InitXidi);
+        CallbackHandler::RegisterCallback(L"eax.dll", InitEAX);
     });
 }
 

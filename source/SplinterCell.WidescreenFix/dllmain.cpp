@@ -10,6 +10,7 @@ import Echelon;
 import EchelonHUD;
 import EchelonMenus;
 import Xidi;
+import Eax;
 
 void Init()
 {
@@ -175,6 +176,7 @@ CEXP void InitializeASI()
         CallbackHandler::RegisterCallback(L"EchelonHUD.dll", InitEchelonHUD);
         CallbackHandler::RegisterCallback(L"EchelonMenus.dll", InitEchelonMenus);
         CallbackHandler::RegisterCallback(L"Xidi.32.dll", InitXidi);
+        CallbackHandler::RegisterCallback(L"eax.dll", InitEAX);
     });
 }
 

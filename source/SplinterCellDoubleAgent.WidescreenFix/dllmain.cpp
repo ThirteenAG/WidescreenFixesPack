@@ -11,6 +11,7 @@ import Core;
 import WinDrv;
 import Xidi;
 import Online;
+import Eax;
 
 void AmmoInClip()
 {
@@ -202,6 +203,7 @@ CEXP void InitializeASI()
         CallbackHandler::RegisterCallback(L"Core.dll", InitCore);
         CallbackHandler::RegisterCallback(L"WinDrv.dll", InitWinDrv);
         CallbackHandler::RegisterCallback(L"Xidi.32.dll", InitXidi);
+        CallbackHandler::RegisterCallback(L"eax.dll", InitEAX);
 
         CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(InitOnline, hook::pattern("8B F9 8B 47 30 85 C0 74 18"));
     });
