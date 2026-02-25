@@ -125,7 +125,7 @@ struct HudElement
         Move(-static_cast<int16_t>(offset));
     }
 
-    void MoveRight(int16_t offset)
+    void MoveRight(float offset)
     {
         Move(static_cast<int16_t>(offset));
     }
