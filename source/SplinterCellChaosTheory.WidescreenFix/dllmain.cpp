@@ -11,6 +11,7 @@ import Echelon;
 import Xidi;
 import WidescreenHUD;
 import WidescreenHUD2;
+import Eax;
 
 const wchar_t* aJoysticks = nullptr;
 SafetyHookInline shsub_10CC8580;
@@ -288,6 +289,7 @@ CEXP void InitializeASI()
         CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("8D 84 24 34 04 00 00 68 ? ? ? ? 50 E8 ? ? ? ? 83 C4 14"));
         CallbackHandler::RegisterCallback(L"Xidi.32.dll", InitXidi);
         CallbackHandler::RegisterCallback(L"GameOverlayRenderer.dll", InitGameOverlayRenderer);
+        CallbackHandler::RegisterCallback(L"eax.dll", InitEAX);
     });
 }
 
