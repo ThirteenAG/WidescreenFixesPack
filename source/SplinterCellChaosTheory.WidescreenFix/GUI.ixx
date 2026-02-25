@@ -188,7 +188,7 @@ namespace CMenusManager
             Page::P_SoundSettings,
             Page::P_TrainingVideo,
             Page::P_TrainingVideoMain,
-            Page::P_endmission,
+            //Page::P_endmission,
             Page::P_opticcable,
             Page::P_LoadOut_Infos,
             Page::P_LoadOut_Selection,
