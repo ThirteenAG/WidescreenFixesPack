@@ -288,4 +288,14 @@ export void InitEngine()
     pattern = hook::pattern("D9 81 ? ? ? ? 8D 4C 24 ? D8 E2");
     injector::WriteMemory<uint16_t>(pattern.get_first(0), 0x05D9, true); //fld
     injector::WriteMemory(pattern.get_first(2), &ecx2C0, true); // ecx2C0
+
+    pattern = hook::pattern("D9 81 ? ? ? ? DA E9 DF E0 F6 C4 44 7B ? D9 44 24 ? D8 99 ? ? ? ? DF E0 F6 C4 41 0F 84");
+    static auto FDynamicLightHook4 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        ecx2C0 = *(float*)(regs.ecx + 0x2C0) * ALight::GetShadowTurnOffRatio();
+    });
+
+    pattern = hook::pattern("D8 99 ? ? ? ? DF E0 F6 C4 41 0F 84 ? ? ? ? 8A 86");
+    injector::WriteMemory<uint16_t>(pattern.get_first(0), 0x1DD8, true); //fcomp
+    injector::WriteMemory(pattern.get_first(2), &ecx2C0, true); // ecx2C0
 }
