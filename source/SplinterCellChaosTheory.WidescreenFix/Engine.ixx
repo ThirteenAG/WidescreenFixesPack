@@ -70,6 +70,16 @@ namespace AActor
     }
 }
 
+float fLoadingBarScaleX = 1.0f / 640.0f;
+float fLoadingBarPosX = 56.0f;
+SafetyHookInline shDrawLoadingBar = {};
+void __fastcall DrawLoadingBar(void* _this, void* edx, float a2, char a3)
+{
+    fLoadingBarScaleX = 1.0f / (480.0f * Screen.fAspectRatio);
+    fLoadingBarPosX = 56.0f + Screen.nHudOffsetReal;
+    return shDrawLoadingBar.unsafe_fastcall(_this, edx, a2, a3);
+}
+
 export void InitEngine()
 {
     //HUD
@@ -77,6 +87,30 @@ export void InitEngine()
     static auto MenuCheckHook = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& regs)
     {
         bIsInMenu = reinterpret_cast<uint8_t*>(regs.esi + 0x4D39);
+    });
+
+    pattern = hook::pattern("E8 ? ? ? ? 8D 4C 24 ? E8 ? ? ? ? 5F B0 ? 5E 83 C4 ? C2 ? ? 68");
+    static auto CMenusManagerDisplayLoadGameScreenHook1 = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& regs)
+    {
+        bQuickLoadingShown = true;
+    });
+
+    pattern = hook::pattern("6A 02 6A 00 6A 00 50 8B CE E8 ? ? ? ? 5F B0 01 5E 83 C4 18 C2 08 00");
+    static auto CMenusManagerDisplayLoadGameScreenHook2 = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& regs)
+    {
+        bQuickLoadingShown = false;
+    });
+
+    pattern = hook::pattern("E8 ? ? ? ? 8B 0D ? ? ? ? ? ? 56 FF 50 ? 8B 8B");
+    static auto UGameEngineDisplayProgressScreenXrefHook1 = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& regs)
+    {
+        bLoadingBarShown = true;
+    });
+
+    pattern = hook::pattern("8B 8C 24 ? ? ? ? 8B C3 E8");
+    static auto UGameEngineDisplayProgressScreenXrefHook2 = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& regs)
+    {
+        bLoadingBarShown = false;
     });
 
     pattern = hook::pattern(pattern_str(0xD9, 0x05, to_bytes(dword_1120B6BC))); //fld
@@ -129,7 +163,7 @@ export void InitEngine()
                 if ((fLeft == 0 && fRight == 640) ||
                     (fLeft == -2 && fRight == 639 && fTop == -2 && fBottom == 479) ||
                     (fLeft == -1 && fRight == 640 && fTop == -2 && fBottom == 479) ||
-                    (fTop == 0 && fBottom == 512))
+                    (CMenusManager::IsMenuDisplayed(Page::P_CamControl)))
                 {
                     Screen.fHUDScaleXDyn = Screen.fHUDScaleXOriginal;
                     Screen.fHudOffsetDyn = Screen.fHudOffsetOriginal;
@@ -158,14 +192,8 @@ export void InitEngine()
     injector::WriteMemory(pattern.get_first(2), &Screen.fHudOffset, true); //0x10B14BAD + 0x2
 
     // Loading Bar
-    static float fLoadingBarScaleX = 0.0f;
-    static float fLoadingBarPosX = 0.0f;
-    pattern = hook::pattern("DB 86 ? ? ? ? 8B 4F");
-    static auto test = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-    {
-        fLoadingBarScaleX = 1.0f / (480.0f * Screen.fAspectRatio);
-        fLoadingBarPosX = 56.0f + Screen.nHudOffsetReal;
-    });
+    pattern = hook::pattern("83 EC ? 53 56 57 8B F9 8B 47 ? 85 C0 0F 84 ? ? ? ? 8B 48");
+    shDrawLoadingBar = safetyhook::create_inline(pattern.get_first(0), DrawLoadingBar);
     pattern = hook::pattern("D8 0D ? ? ? ? 6A 00 DB 86");
     injector::WriteMemory(pattern.get_first(2), &fLoadingBarScaleX, true);
     pattern = hook::pattern("D8 0D ? ? ? ? D9 5C 24 ? D9 C9 D8 0D ? ? ? ? D9 5C 24 ? D9 05 ? ? ? ? D8 C9 D9 5C 24 ? D8 0D ? ? ? ? D9 5C 24 ? FF 92 ? ? ? ? 8B D8");
