@@ -282,48 +282,58 @@ export void InitEngine()
     UGameEngine::shTick = safetyhook::create_inline(pattern.get_first(), UGameEngine::Tick);
 
     // Shadows and lights draw distance
-    static float ebx2C0 = 0.0f;
+    static float TurnOffDistance = 0.0f;
     pattern = hook::pattern("D9 05 ? ? ? ? D9 83 ? ? ? ? DA E9 DF E0 F6 C4 44 7B ? D8 9B");
     static auto FDynamicLightHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        ebx2C0 = *(float*)(regs.ebx + 0x2C0) * ALight::GetShadowTurnOffRatio();
+        TurnOffDistance = *(float*)(regs.ebx + 0x2C0) * ALight::GetShadowTurnOffRatio();
     });
 
     pattern = hook::pattern("D8 9B ? ? ? ? DF E0 F6 C4 41 75 ? 8B 81");
-    injector::WriteMemory<uint16_t>(pattern.get_first(0), 0x1DD8, true); //fcomp
-    injector::WriteMemory(pattern.get_first(2), &ebx2C0, true); // ebx2C0
+    ReplaceFpuMemOperand(pattern, OPCODE_FCOMP, &TurnOffDistance);
 
-    static float ecx2C0 = 0.0f;
     pattern = hook::pattern("D9 44 24 ? D8 99 ? ? ? ? DF E0 F6 C4 41 75 ? 8B 86");
-    injector::WriteMemory<uint16_t>(pattern.get_first(4), 0x1DD8, true); //fcomp
-    injector::WriteMemory(pattern.get_first(4 + 2), &ecx2C0, true); // ecx2C0
+    ReplaceFpuMemOperand(pattern, OPCODE_FCOMP, &TurnOffDistance, 4);
 
     static auto FDynamicLightHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        ecx2C0 = *(float*)(regs.ecx + 0x2C0) * ALight::GetShadowTurnOffRatio();
+        TurnOffDistance = *(float*)(regs.ecx + 0x2C0) * ALight::GetShadowTurnOffRatio();
     });
 
     pattern = hook::pattern("D9 81 ? ? ? ? D8 89 ? ? ? ? D9 44 24");
     static auto FDynamicLightHook3 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        ecx2C0 = *(float*)(regs.ecx + 0x2C0) * ALight::GetShadowTurnOffRatio();
+        TurnOffDistance = *(float*)(regs.ecx + 0x2C0) * ALight::GetShadowTurnOffRatio();
     });
 
     pattern = hook::pattern("D8 89 ? ? ? ? D9 44 24 ? D8 D9");
-    injector::WriteMemory<uint16_t>(pattern.get_first(0), 0x0DD8, true); //fmul
-    injector::WriteMemory(pattern.get_first(2), &ecx2C0, true); // ecx2C0
+    ReplaceFpuMemOperand(pattern, OPCODE_FMUL, &TurnOffDistance);
 
     pattern = hook::pattern("D9 81 ? ? ? ? 8D 4C 24 ? D8 E2");
-    injector::WriteMemory<uint16_t>(pattern.get_first(0), 0x05D9, true); //fld
-    injector::WriteMemory(pattern.get_first(2), &ecx2C0, true); // ecx2C0
+    ReplaceFpuMemOperand(pattern, OPCODE_FLD, &TurnOffDistance);
 
     pattern = hook::pattern("D9 81 ? ? ? ? DA E9 DF E0 F6 C4 44 7B ? D9 44 24 ? D8 99 ? ? ? ? DF E0 F6 C4 41 0F 84");
     static auto FDynamicLightHook4 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        ecx2C0 = *(float*)(regs.ecx + 0x2C0) * ALight::GetShadowTurnOffRatio();
+        TurnOffDistance = *(float*)(regs.ecx + 0x2C0) * ALight::GetShadowTurnOffRatio();
     });
 
     pattern = hook::pattern("D8 99 ? ? ? ? DF E0 F6 C4 41 0F 84 ? ? ? ? 8A 86");
-    injector::WriteMemory<uint16_t>(pattern.get_first(0), 0x1DD8, true); //fcomp
-    injector::WriteMemory(pattern.get_first(2), &ecx2C0, true); // ecx2C0
+    ReplaceFpuMemOperand(pattern, OPCODE_FCOMP, &TurnOffDistance);
+
+    static float ShadowsTurnOffDistance = 0.0f;
+    pattern = hook::pattern("D9 81 ? ? ? ? D8 1D ? ? ? ? DF E0 F6 C4 41 75 ? 57");
+    ReplaceFpuMemOperand(pattern, OPCODE_FLD, &ShadowsTurnOffDistance);
+
+    pattern = hook::pattern("D9 81 ? ? ? ? D8 A1 ? ? ? ? D8 15");
+    ReplaceFpuMemOperand(pattern, OPCODE_FLD, &ShadowsTurnOffDistance);
+
+    pattern = hook::pattern("D9 81 ? ? ? ? DA E9 DF E0 F6 C4 44 7B ? D9 86");
+    ReplaceFpuMemOperand(pattern, OPCODE_FLD, &ShadowsTurnOffDistance);
+
+    pattern = hook::pattern("D9 80 ? ? ? ? DA E9 DF E0 F6 C4 44 7B ? D9 81 ? ? ? ? D8 1D ? ? ? ? DF E0 F6 C4 05 7A ? 8B 94 24");
+    ReplaceFpuMemOperand(pattern, OPCODE_FLD, &ShadowsTurnOffDistance);
+
+    pattern = hook::pattern("D9 80 ? ? ? ? 89 44 24 ? DA E9 DF E0 F6 C4 44 7B ? D9 85");
+    ReplaceFpuMemOperand(pattern, OPCODE_FLD, &ShadowsTurnOffDistance);
 }
