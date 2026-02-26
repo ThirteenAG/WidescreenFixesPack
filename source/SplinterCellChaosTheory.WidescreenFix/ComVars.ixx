@@ -233,3 +233,14 @@ export using UByteOverrides = UOverride<uint8_t(*)()>;
 export using UNameOverrides = UOverride<FName(*)()>;
 export using UObjectOverrides = UOverride<void* (*)()>;
 export using UArrayOverrides = UOverride<FArray(*)()>;
+
+export constexpr uint16_t OPCODE_FLD = 0x05D9;    // D9 05    fld dword ptr [...]
+export constexpr uint16_t OPCODE_FCOMP = 0x1DD8;  // D8 1D    fcomp dword ptr [...]
+export constexpr uint16_t OPCODE_FMUL = 0x0DD8;   // D8 0D    fmul dword ptr [...]
+
+export void ReplaceFpuMemOperand(hook::pattern& pattern, uint16_t opcode, float* new_ptr, size_t opcode_offset = 0)
+{
+    auto addr = (uintptr_t)pattern.get_first(opcode_offset);
+    injector::WriteMemory<uint16_t>(addr, opcode, true);
+    injector::WriteMemory(addr + sizeof(opcode), new_ptr, true);
+}
