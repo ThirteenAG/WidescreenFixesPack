@@ -75,6 +75,7 @@ rem DSOAL
 7za e "..\DSOAL.7z" "DSOAL+HRTF/Win32/dsound.dll" "DSOAL+HRTF/Win32/dsoal-aldrv.dll" -o".\SplinterCell.WidescreenFix\system\" -y
 7za e "..\DSOAL.7z" "DSOAL+HRTF/Win32/dsound.dll" "DSOAL+HRTF/Win32/dsoal-aldrv.dll" -o".\SplinterCellPandoraTomorrow.WidescreenFix\system\" -y
 7za e "..\DSOAL.7z" "DSOAL+HRTF/Win32/dsound.dll" "DSOAL+HRTF/Win32/dsoal-aldrv.dll" -o".\SplinterCellChaosTheory.WidescreenFix\System\" -y
+7za e "..\DSOAL.7z" "DSOAL+HRTF/Win32/dsound.dll" "DSOAL+HRTF/Win32/dsoal-aldrv.dll" -o".\SplinterCellDoubleAgent.WidescreenFix\SCDA-Offline\System\" -y
 
 rem Creating archives
 

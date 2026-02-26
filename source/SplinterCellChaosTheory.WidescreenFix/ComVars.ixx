@@ -72,6 +72,8 @@ export int32_t nShadowMapResolution;
 export bool bEnableShadowFiltering;
 export bool bPlayingVideo = false;
 export bool bHackingGameplay = false;
+export bool bQuickLoadingShown = false;
+export bool bLoadingBarShown = false;
 
 export uint8_t* bIsInMenu = nullptr;
 export uint32_t* dword_1120B6BC = nullptr;
