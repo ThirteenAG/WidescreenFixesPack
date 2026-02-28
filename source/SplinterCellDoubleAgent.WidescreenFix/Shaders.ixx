@@ -19,7 +19,6 @@ struct ShaderResource
 
 static ShaderResource g_shaderResources[] = {
     { 0xBB6378E1, IDR_SHADER_BB6378E1 }, // blur in cutscenes
-    { 0xC081893C, IDR_SHADER_C081893C }, // Omni light type 1 brightness
 };
 
 std::filesystem::path GetShadersPath()

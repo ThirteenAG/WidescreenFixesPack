@@ -470,6 +470,15 @@ export void InitD3DDrv()
         });
     }
 
+    // Brighter lights
+    static float f4 = 4.0f * 2.5f;
+    pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "F3 0F 10 1D ? ? ? ? F3 0F 10 66 ? F3 0F 59 64 24 ? 8B 8C 24");
+    injector::WriteMemory(pattern.get_first(4), &f4, true);
+
+    static float f8 = 8.0f * 2.5f;
+    pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "F3 0F 10 25 ? ? ? ? 0F 28 C8 F3 0F 59 0D ? ? ? ? F3 0F 58 0D ? ? ? ? F3 0F 59 C8 F3 0F 10 47");
+    injector::WriteMemory(pattern.get_first(4), &f8, true);
+
     InitPostFX();
     InitShaders();
 }
