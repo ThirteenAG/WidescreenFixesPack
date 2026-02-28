@@ -134,9 +134,11 @@ void Init()
         injector::MakeNOP(pattern.get_first(), 5, true);
         static auto DeltaTimeHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
-            auto ECoopPlayerControllerState = UObject::GetState(L"ECoopPlayerController");
+            auto ECoopPlayerControllerWithLabel = UObject::GetState(L"ECoopPlayerControllerWithLabel");
+            constexpr auto s_CrackSafeTurnLeft = L"s_CrackSafe224";
+            constexpr auto s_CrackSafeTurnRight = L"s_CrackSafe248";
 
-            if (ECoopPlayerControllerState == L"s_CrackSafe")
+            if (ECoopPlayerControllerWithLabel == s_CrackSafeTurnLeft || ECoopPlayerControllerWithLabel == s_CrackSafeTurnRight)
             {
                 *(float*)&regs.eax = 1.0f / 30.0f;
                 return;
