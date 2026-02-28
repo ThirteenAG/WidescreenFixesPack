@@ -20,6 +20,7 @@ namespace AEPlayerController
                 if (ptr2)
                 {
                     auto StateID = *(int*)(ptr2 + 0x20);
+                    auto Label = *(uint8_t*)(ptr + 0xC);
 
                     wchar_t buffer[256];
                     auto objName = std::wstring_view(UObject::GetFullName(playerController, edx, buffer));
@@ -31,6 +32,7 @@ namespace AEPlayerController
                     size_t lastDot = svStateName.rfind(L'.');
                     std::wstring stateName = (lastDot != std::wstring::npos) ? std::wstring(svStateName.substr(lastDot + 1)) : std::wstring(svStateName);
                     UObject::objectStates[type] = stateName;
+                    UObject::objectStates[type + L"WithLabel"] = stateName + std::to_wstring(Label);
                 }
             }
         }
