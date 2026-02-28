@@ -79,7 +79,7 @@ export void InitEngine()
 
     CIniReader iniReader("");
     bool bSingleCoreAffinity = iniReader.ReadInteger("MAIN", "SingleCoreAffinity", 1);
-    bool bDisablePreCache = iniReader.ReadInteger("MAIN", "DisablePreCache", 0);
+    bDisablePreCache = iniReader.ReadInteger("MAIN", "DisablePreCache", 0);
 
     static bool bIsOPSAT = false;
     static bool bIsVideoPlaying = false;
@@ -260,6 +260,7 @@ export void InitEngine()
     pattern = find_module_pattern(GetModuleHandle(L"Engine"), "83 83 20 02 00 00 01");
     static auto UGameEngineLoadGameHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
+        bLoadGameWasCalled = true;
         UObject::objectStates.clear();
         UIntOverrides::ClearCache();
         UFloatOverrides::ClearCache();

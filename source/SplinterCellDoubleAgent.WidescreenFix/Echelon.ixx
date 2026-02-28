@@ -70,6 +70,7 @@ export void InitEchelon()
     CIniReader iniReader("");
     gBlacklistIndicators = iniReader.ReadInteger("BONUS", "BlacklistIndicators", 0);
     auto bEnableRunDuringForcedWalk = iniReader.ReadInteger("MISC", "EnableRunDuringForcedWalk", 1) != 0;
+    bDisablePreCache = iniReader.ReadInteger("MAIN", "DisablePreCache", 0);
 
     if (gBlacklistIndicators || bLightSyncRGB)
     {
@@ -115,5 +116,19 @@ export void InitEchelon()
     {
         auto pattern = hook::module_pattern(GetModuleHandle(L"Echelon"), "75 ? ? ? ? ? ? ? ? ? ? DF E0 F6 C4 ? 7A ? C7 45 ? ? ? ? ? EB");
         injector::WriteMemory<uint8_t>(pattern.get_first(), 0xEB, true); //jz -> jmp
+    }
+
+    if (bDisablePreCache)
+    {
+        auto pattern = hook::module_pattern(GetModuleHandle(L"Echelon"), "F7 80 ? ? ? ? ? ? ? ? 74 ? 6A ? E9");
+        static auto loc_10156B76 = (uintptr_t)pattern.get_first(12);
+        static auto AEAIManagerUpdateMusicHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            if (bLoadGameWasCalled)
+            {
+                bLoadGameWasCalled = false;
+                return_to(loc_10156B76);
+            }
+        });
     }
 }
