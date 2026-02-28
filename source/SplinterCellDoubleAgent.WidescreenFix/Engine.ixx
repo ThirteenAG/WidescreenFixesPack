@@ -78,8 +78,12 @@ export void InitEngine()
     InitWidescreenHUD();
 
     CIniReader iniReader("");
-    bool bSingleCoreAffinity = iniReader.ReadInteger("MAIN", "SingleCoreAffinity", 1);
-    bDisablePreCache = iniReader.ReadInteger("MAIN", "DisablePreCache", 0);
+    bool bSingleCoreAffinity = iniReader.ReadInteger("MAIN", "SingleCoreAffinity", 1) != 0;
+    bDisablePreCache = iniReader.ReadInteger("MAIN", "DisablePreCache", 0) != 0;
+
+    #if _DEBUG
+    bDisablePreCache = true;
+    #endif
 
     static bool bIsOPSAT = false;
     static bool bIsVideoPlaying = false;
@@ -260,7 +264,6 @@ export void InitEngine()
     pattern = find_module_pattern(GetModuleHandle(L"Engine"), "83 83 20 02 00 00 01");
     static auto UGameEngineLoadGameHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        bLoadGameWasCalled = true;
         UObject::objectStates.clear();
         UIntOverrides::ClearCache();
         UFloatOverrides::ClearCache();
@@ -322,9 +325,7 @@ export void InitEngine()
     });
 
     //Remove precache for faster loading
-    #ifndef _DEBUG
     if (bDisablePreCache)
-    #endif
     {
         pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "C6 05 ? ? ? ? ? C6 05 ? ? ? ? ? C6 05 ? ? ? ? ? C6 05 ? ? ? ? ? C6 05");
         injector::WriteMemory<uint8_t>(pattern.get_first(6), 1, true);
@@ -332,6 +333,11 @@ export void InitEngine()
         injector::WriteMemory<uint8_t>(pattern.get_first(20), 0, true);
         injector::WriteMemory<uint8_t>(pattern.get_first(27), 1, true);
         injector::WriteMemory<uint8_t>(pattern.get_first(34), 1, true);
+
+        static auto UGameEngineLoadMapHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            bLoadMapWasCalled = true;
+        });
     }
 
     //ScopeLens
