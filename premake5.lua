@@ -510,7 +510,6 @@ project "SplinterCellDoubleAgent.WidescreenFix"
    defines { "IDR_SCDAICON=200" }
    defines { "IDR_POSTFX=201" }
    defines { "IDR_SHADER_BB6378E1=202" }
-   defines { "IDR_SHADER_C081893C=203" }
    setpaths("Z:/WFP/Games/Splinter Cell/Splinter Cell - Double Agent/", "SCDA-Offline/System/SplinterCell4.exe", "SCDA-Offline/System/scripts/")
 project "SplinterCellPandoraTomorrow.WidescreenFix"
    prebuildcommands {
