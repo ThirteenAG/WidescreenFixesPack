@@ -41,7 +41,7 @@ export HWND hGameWindow = NULL;
 export bool bVideoStartedFromLoadMap = false;
 export std::wstring gCurrentCameraShotName;
 export bool bDisablePreCache = false;
-export bool bLoadGameWasCalled = false;
+export bool bLoadMapWasCalled = false;
 
 export uint8_t* bLoadingScreenActive = nullptr;
 

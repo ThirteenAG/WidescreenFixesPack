@@ -72,7 +72,11 @@ export void InitEchelon()
     CIniReader iniReader("");
     gBlacklistIndicators = iniReader.ReadInteger("BONUS", "BlacklistIndicators", 0);
     auto bEnableRunDuringForcedWalk = iniReader.ReadInteger("MISC", "EnableRunDuringForcedWalk", 1) != 0;
-    bDisablePreCache = iniReader.ReadInteger("MAIN", "DisablePreCache", 0);
+    bDisablePreCache = iniReader.ReadInteger("MAIN", "DisablePreCache", 0) != 0;
+
+    #if _DEBUG
+    bDisablePreCache = true;
+    #endif
 
     if (gBlacklistIndicators || bLightSyncRGB)
     {
@@ -126,9 +130,9 @@ export void InitEchelon()
         static auto loc_10156B76 = (uintptr_t)pattern.get_first(12);
         static auto AEAIManagerUpdateMusicHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
-            if (bLoadGameWasCalled)
+            if (bLoadMapWasCalled)
             {
-                bLoadGameWasCalled = false;
+                bLoadMapWasCalled = false;
                 return_to(loc_10156B76);
             }
         });
