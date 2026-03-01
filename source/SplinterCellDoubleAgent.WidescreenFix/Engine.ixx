@@ -357,4 +357,9 @@ export void InitEngine()
         regs.xmm1.f32[0] = new_v28;
         regs.xmm3.f32[0] = new_v29;
     });
+
+    //SpeedInc
+    static float f020 = 0.20f;
+    pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "F3 0F 10 0D ? ? ? ? 83 C4 ? 0F 2F C8 F3 0F 11 86");
+    injector::WriteMemory(pattern.get_first(4), &f020, true);
 }
