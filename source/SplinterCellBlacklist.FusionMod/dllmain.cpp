@@ -410,7 +410,6 @@ void Init()
             };
 
             bool bOnce = false;
-            bool bFullscreenDone = false;
             while (true)
             {
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -419,7 +418,7 @@ void Init()
                     if (WindowHandle == GetForegroundWindow())
                     {
                         bool bSkipNow = false;
-                        if (bFullscreenAtStartup && !bFullscreenDone)
+                        if (bFullscreenAtStartup)
                         {
                             if ((GetWindowLongA(WindowHandle, GWL_STYLE) & WS_BORDER) != 0 && pWindowStyle && *pWindowStyle == ExclusiveFullscreen)
                             {
@@ -428,7 +427,6 @@ void Init()
                                 keybd_event(VK_MENU, 56, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
                                 keybd_event(VK_RETURN, 28, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
                                 bSkipNow = true;
-                                bFullscreenDone = true;
                             }
                             else
                             {
