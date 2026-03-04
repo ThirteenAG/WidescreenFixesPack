@@ -220,7 +220,6 @@ void Init()
     auto bUltraWideSupport = iniReader.ReadInteger("MAIN", "UltraWideSupport", 1) != 0;
     static auto fFOVFactor = std::clamp(iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f), 0.5f, 2.5f);
     fScreenCullBias = std::clamp(iniReader.ReadFloat("MAIN", "ScreenCullBias", 0.0f), 0.0f, 1.0f);
-    static float fShadowCullDist = std::clamp(iniReader.ReadFloat("MAIN", "ShadowCullDist", 100.0f), 90.0f, 120.0f);
     auto bDisableNightVisionFlash = iniReader.ReadInteger("MAIN", "DisableNightVisionFlash", 1) != 0;
     auto bDisablePerfectionistChecks = iniReader.ReadInteger("MAIN", "DisablePerfectionistChecks", 1) != 0;
     auto nDefaultMissionFilter = std::clamp(iniReader.ReadInteger("MAIN", "DefaultMissionFilter", 1), 0, 3);
@@ -871,10 +870,6 @@ void Init()
         pattern = hook::pattern("55 8B EC E8 ? ? ? ? 8B C8 E8 ? ? ? ? 80 7D 08 00");
         l3d::GetResource = (l3d::LeadOptions * (*)())injector::GetBranchDestination(pattern.get_first(3), true).as_int();
         shTriggerScreenCullBias = safetyhook::create_inline(pattern.get_first(), TriggerScreenCullBias);
-
-        // Shadow Cull
-        pattern = hook::pattern("F3 0F 10 0D ? ? ? ? F3 0F 11 85 ? ? ? ? 66 0F 6E 81");
-        injector::WriteMemory(pattern.get_first(4), &fShadowCullDist, true);
     }
 
     if (bToggleRadarHotkey && false)
