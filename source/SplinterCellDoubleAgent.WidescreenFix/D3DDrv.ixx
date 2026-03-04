@@ -11,6 +11,39 @@ import ComVars;
 import PostFX;
 import Shaders;
 
+injector::hook_back<void* (__fastcall*)(float*, void*, uintptr_t, float, float, float, float, float, float, float, float)> hbsub_10077470;
+void* __fastcall VideoTopOverlay(float* _this, void* edx, uintptr_t ctx, float x, float y, float w, float h, float u1, float v1, float u2, float v2)
+{
+    auto width = static_cast<float>(*(int*)(ctx + 0x5A08));
+    auto height = static_cast<float>(*(int*)(ctx + 0x5A0C));
+
+    auto verticalOffset = ((height * ((width / height) / (4.0f / 3.0f))) - height) / 2.0f;
+    y -= verticalOffset;
+
+    return hbsub_10077470.fun(_this, edx, ctx, x, y, w, h, u1, v1, u2, v2);
+}
+
+void* __fastcall VideoBottomOverlay(float* _this, void* edx, uintptr_t ctx, float x, float y, float w, float h, float u1, float v1, float u2, float v2)
+{
+    auto width = static_cast<float>(*(int*)(ctx + 0x5A08));
+    auto height = static_cast<float>(*(int*)(ctx + 0x5A0C));
+
+    auto verticalOffset = ((height * ((width / height) / (4.0f / 3.0f))) - height) / 2.0f;
+    h += verticalOffset;
+
+    return hbsub_10077470.fun(_this, edx, ctx, x, y, w, h, u1, v1, u2, v2);
+}
+
+void* __fastcall VideoBackground(float* _this, void* edx, uintptr_t ctx, float x, float y, float w, float h, float u1, float v1, float u2, float v2)
+{
+    return hbsub_10077470.fun(_this, edx, ctx, x, y, w, h, u1, v1, u2, v2);
+}
+
+void* __fastcall VideoContent(float* _this, void* edx, uintptr_t ctx, float x, float y, float w, float h, float u1, float v1, float u2, float v2)
+{
+    return hbsub_10077470.fun(_this, edx, ctx, x, y, w, h, u1, v1, u2, v2);
+}
+
 float* __cdecl FGetHSV(float* dest, uint8_t H, uint8_t S, uint8_t V)
 {
     auto bChangeColor = ((H == 0x41 && S == 0x33) || (H == 0x5B && S == 0 && V == 0xFF) || (H == 0x2B && S == 0x40 && V == 0xFF)); //goggles || green ind || yellow ind
@@ -480,6 +513,19 @@ export void InitD3DDrv()
     static float f8 = 8.0f * fLightsMultiplier;
     pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "F3 0F 10 25 ? ? ? ? 0F 28 C8 F3 0F 59 0D ? ? ? ? F3 0F 58 0D ? ? ? ? F3 0F 59 C8 F3 0F 10 47");
     injector::WriteMemory(pattern.get_first(4), &f8, true);
+
+    // Video Loadscreens scaling
+    pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "E8 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 6A ? 8B C8 E8 ? ? ? ? 8B 9E");
+    hbsub_10077470.fun = injector::MakeCALL(pattern.get_first(0), VideoTopOverlay, true).get();
+
+    pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "E8 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 6A ? 8B C8 E8 ? ? ? ? 80 3D");
+    hbsub_10077470.fun = injector::MakeCALL(pattern.get_first(0), VideoBottomOverlay, true).get();
+
+    //pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "E8 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 6A ? 8B C8 E8 ? ? ? ? 8B 4C 24");
+    //hbsub_10077470.fun = injector::MakeCALL(pattern.get_first(0), VideoBackground, true).get();
+    //
+    //pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "E8 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 6A ? 8B C8 E8 ? ? ? ? 8B 47");
+    //hbsub_10077470.fun = injector::MakeCALL(pattern.get_first(0), VideoContent, true).get();
 
     InitPostFX();
     InitShaders();
