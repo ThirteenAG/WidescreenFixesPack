@@ -472,9 +472,6 @@ export void InitD3DDrv()
 
     // Brighter lights
     constexpr float fLightsMultiplier = 2.0f;
-    static float f2 = 2.0f * fLightsMultiplier;
-    pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "F3 0F 10 05 ? ? ? ? F3 0F 10 4C 24 ? 33 C0");
-    injector::WriteMemory(pattern.get_first(4), &f2, true);
 
     static float f4 = 4.0f * fLightsMultiplier;
     pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "F3 0F 10 1D ? ? ? ? F3 0F 10 66 ? F3 0F 59 64 24 ? 8B 8C 24");
