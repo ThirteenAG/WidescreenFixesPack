@@ -306,7 +306,9 @@ export void InitD3DDrv()
     pattern = hook::pattern("8B 10 55 55 55 55");
     static auto PresentHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        if ((CMenusManager::IsMainMenuDisplayed() && !CMenusManager::IsMenuDisplayed(Page::P_Briefing) && !CMenusManager::IsMenuDisplayed(Page::P_LoadOut) && !CMenusManager::IsMenuDisplayed(Page::P_LoadOut2) &&
+        if ((CMenusManager::IsMainMenuDisplayed() && !CMenusManager::IsMenuDisplayed(Page::P_Briefing) &&
+            !CMenusManager::IsMenuDisplayed(Page::P_LoadOut) && !CMenusManager::IsMenuDisplayed(Page::P_LoadOut2) &&
+            !CMenusManager::IsMenuDisplayed(Page::P_CamControl) && !CMenusManager::IsMenuDisplayed(Page::P_Camera) &&
             (bIsInMenu && *bIsInMenu == 0)) || bQuickLoadingShown || bLoadingBarShown)
         {
             IDirect3DDevice9* pD3DDevice = (IDirect3DDevice9*)(regs.eax);
