@@ -274,7 +274,8 @@ void Init()
                 processPath.c_str(),
                 NULL,
                 nullptr, nullptr, FALSE, CREATE_NO_WINDOW,
-                nullptr, workingDir.c_str(), &si, &pi)) {
+                nullptr, workingDir.c_str(), &si, &pi))
+            {
                 CloseHandle(pi.hProcess);
                 CloseHandle(pi.hThread);
             }
@@ -288,7 +289,8 @@ void Init()
         for (auto& e : dlls.m_moduleList)
         {
             auto m = std::get<HMODULE>(e);
-            if (IsModuleUAL(m)) {
+            if (IsModuleUAL(m))
+            {
                 GetOverloadedFilePathA = (decltype(GetOverloadedFilePathA))GetProcAddress(m, "GetOverloadedFilePathA");
                 break;
             }
@@ -396,8 +398,8 @@ void Init()
 
         std::thread([]()
         {
-             auto forceForegroundWindow = [](HWND hwnd)
-             {
+            auto forceForegroundWindow = [](HWND hwnd)
+            {
                 DWORD windowThreadProcessId = GetWindowThreadProcessId(GetForegroundWindow(), LPDWORD(0));
                 DWORD currentThreadId = GetCurrentThreadId();
                 DWORD CONST_SW_SHOW = 5;
@@ -408,6 +410,7 @@ void Init()
             };
 
             bool bOnce = false;
+            bool bFullscreenDone = false;
             while (true)
             {
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -416,15 +419,16 @@ void Init()
                     if (WindowHandle == GetForegroundWindow())
                     {
                         bool bSkipNow = false;
-                        if (bFullscreenAtStartup)
+                        if (bFullscreenAtStartup && !bFullscreenDone)
                         {
                             if ((GetWindowLongA(WindowHandle, GWL_STYLE) & WS_BORDER) != 0 && pWindowStyle && *pWindowStyle == ExclusiveFullscreen)
                             {
                                 keybd_event(VK_MENU, 56, KEYEVENTF_EXTENDEDKEY, 0);
                                 keybd_event(VK_RETURN, 28, KEYEVENTF_EXTENDEDKEY, 0);
-                                keybd_event(VK_MENU, 56, KEYEVENTF_KEYUP, 0);
-                                keybd_event(VK_RETURN, 28, KEYEVENTF_KEYUP, 0);
+                                keybd_event(VK_MENU, 56, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+                                keybd_event(VK_RETURN, 28, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
                                 bSkipNow = true;
+                                bFullscreenDone = true;
                             }
                             else
                             {
@@ -549,7 +553,7 @@ void Init()
             void operator()(injector::reg_pack& regs)
             {
                 if ((bGHOSTDisableMissionFailOnDetection && CurrentGameMode == GHOST) ||
-                (bCOOPDisableMissionFailOnDetection && CurrentGameMode == COOP) || 
+                (bCOOPDisableMissionFailOnDetection && CurrentGameMode == COOP) ||
                 (bCAMPAIGNDisableMissionFailOnDetection && CurrentGameMode == CAMPAIGN))
                     *(uintptr_t*)(regs.esp - 4) = loc_F1D09C;
             }
@@ -569,21 +573,21 @@ void Init()
         {
             regs.ebx = 1;
         });
-        
+
         pattern = find_pattern("39 5E 38 74 2C");
         injector::MakeNOP(pattern.get_first(), 5, true);
         static auto SPHelmetSuitC = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
             *(uint32_t*)(regs.esi + 0x38) = regs.ebx;
         });
-        
+
         pattern = find_pattern("39 5E 3C 74 27");
         injector::MakeNOP(pattern.get_first(), 5, true);
         static auto SPBootsSuitL = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
             *(uint32_t*)(regs.esi + 0x3C) = regs.ebx;
         });
-        
+
         pattern = find_pattern("39 5E 40 74 27");
         injector::MakeNOP(pattern.get_first(), 5, true);
         static auto SPGlovesSuitL = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
@@ -601,7 +605,7 @@ void Init()
             auto& MissionEnum = *(uint8_t*)(regs.esi + 0xA4);
             auto& MissionStatusEnum = *(uint32_t*)(regs.esi + 0xB4);
             MissionStatusEnum = regs.eax;
-            
+
             if (!MissionStatusEnum)
             {
                 if (bUnlockAllNonCampaignMissions && MissionEnum >= 13 && MissionEnum <= 16) // briggs
@@ -682,7 +686,7 @@ void Init()
         //UD3DRenderDevice
         pattern = hook::pattern("76 23 8B 06");
         injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true); //jbe -> jmp
-        
+
         //UD3DRenderDevice Letterbox
         pattern = find_pattern("3B 05 ? ? ? ? 74 05 BE ? ? ? ? 8B C2", "3B 0D ? ? ? ? 74 05 BE ? ? ? ? 8B C2");
         static auto Letterbox = *pattern.get_first<int*>(2);
@@ -695,7 +699,7 @@ void Init()
             {
                 if (float(*(uintptr_t*)regs.ebx) / float(*(uintptr_t*)(*(uintptr_t*)(regs.ebp + 0x10))) > fDefaultAspectRatio)
                 {
-                
+
                 }
                 else
                 {
@@ -758,7 +762,7 @@ void Init()
                 auto& y = regs.ecx;
                 auto& w = regs.eax;
                 auto& h = regs.edx;
-                
+
                 ScaleHUD(x, y, w, h);
             });
         }
@@ -867,7 +871,7 @@ void Init()
 
         // Cull
         pattern = hook::pattern("55 8B EC E8 ? ? ? ? 8B C8 E8 ? ? ? ? 80 7D 08 00");
-        l3d::GetResource = (l3d::LeadOptions*(*)())injector::GetBranchDestination(pattern.get_first(3), true).as_int();
+        l3d::GetResource = (l3d::LeadOptions * (*)())injector::GetBranchDestination(pattern.get_first(3), true).as_int();
         shTriggerScreenCullBias = safetyhook::create_inline(pattern.get_first(), TriggerScreenCullBias);
 
         // Shadow Cull
