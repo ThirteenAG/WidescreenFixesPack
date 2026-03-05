@@ -1,5 +1,7 @@
 ![sh2](https://thirteenag.github.io/screens/sh2/main2.jpg)
 
+## This project is a part of [Silent Hill 2: Enhanced Edition](https://enhanced.townofsilenthill.com/SH2/). It is recommended to use it instead.
+
 $${\color{green}✔}$$  Fixed Resolution
 
 $${\color{green}✔}$$  Fixed Aspect Ratio

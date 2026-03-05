@@ -5,4 +5,4 @@ $${\color{green}✔}$$  Added an option to skip intro and legal screens
     Installation:
         Download and extract the archive to the game directory, where the exe is located.
 
-[Website](https://thirteenag.github.io/wfp#rdr) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/RedDeadRedemption.FusionMod/dllmain.cpp)
+[Website](https://thirteenag.github.io/wfp#rdr) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/RedDeadRedemption.FusionFix/dllmain.cpp)

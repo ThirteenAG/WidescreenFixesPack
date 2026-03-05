@@ -31,29 +31,29 @@ jobs:
         project: ${{ inputs.project }}
         sccompile_password: ${{ secrets.SCCOMPILE_PASSWORD }}
 
-    - name: GTA SA The Definitive Edition Fusion Mod
+    - name: GTA SA The Definitive Edition Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
         tag: gtasade
-        artifacts: data/Archives/GTASADE.FusionMod.zip
+        artifacts: data/Archives/GTASADE.FusionFix.zip
 
-    - name: GTA III The Definitive Edition Fusion Mod
+    - name: GTA III The Definitive Edition Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
         tag: gta3de
-        artifacts: data/Archives/GTA3DE.FusionMod.zip
+        artifacts: data/Archives/GTA3DE.FusionFix.zip
 
-    - name: GTA VC The Definitive Edition Fusion Mod
+    - name: GTA VC The Definitive Edition Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
         tag: gtavcde
-        artifacts: data/Archives/GTAVCDE.FusionMod.zip
+        artifacts: data/Archives/GTAVCDE.FusionFix.zip
 
     - name: Grand Theft Auto Vice City Stories Widescreen Fix [PCSX2F]
       uses: ./.github/workflows/release_tag
@@ -71,13 +71,13 @@ jobs:
         tag: gtalcspsp
         artifacts: data/Archives/GTALCS.PPSSPP.WidescreenFix.zip, data/Archives/GTALCS.PPSSPP.Project2DFX.zip, data/Archives/GTALCS.PPSSPP.ImVehLM.zip
 
-    - name: GTA Chinatown Wars Fusion Mod [PPSSPP]
+    - name: GTA Chinatown Wars Fusion Fix [PPSSPP]
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
         tag: gtactwpsp
-        artifacts: data/Archives/GTACTW.PPSSPP.FusionMod.zip
+        artifacts: data/Archives/GTACTW.PPSSPP.FusionFix.zip
 
     - name: GTA Vice City Stories Widescreen Fix [PPSSPP]
       uses: ./.github/workflows/release_tag
@@ -119,13 +119,13 @@ jobs:
         tag: scdaxbox
         artifacts: data/Archives/SplinterCellDoubleAgent.CXBXR.WidescreenFix.zip
 
-    - name: Splinter Cell Essentials Fusion Mod [PPSSPP]
+    - name: Splinter Cell Essentials Fusion Fix [PPSSPP]
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
         tag: sce
-        artifacts: data/Archives/SplinterCellEssentials.PPSSPP.FusionMod.zip
+        artifacts: data/Archives/SplinterCellEssentials.PPSSPP.FusionFix.zip
 
     - name: Burnout 3 Takedown Widescreen Fix [PCSX2F]
       uses: ./.github/workflows/release_tag
@@ -167,21 +167,21 @@ jobs:
         tag: farcry
         artifacts: data/Archives/FarCry.WidescreenFix.zip
 
-    - name: Need for Speed Undercover Generic Fix
+    - name: Need for Speed Undercover Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
         tag: nfsuc
-        artifacts: data/Archives/NFSUndercover.GenericFix.zip
+        artifacts: data/Archives/NFSUndercover.FusionFix.zip
 
-    - name: Need for Speed ProStreet Generic Fix
+    - name: Need for Speed ProStreet Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
         tag: nfsps
-        artifacts: data/Archives/NFSProStreet.GenericFix.zip
+        artifacts: data/Archives/NFSProStreet.FusionFix.zip
 
     - name: Mass Effect Trilogy FOV Fix
       uses: ./.github/workflows/release_tag
@@ -287,13 +287,13 @@ jobs:
         tag: thesuffering
         artifacts: data/Archives/TheSuffering.WidescreenFix.zip
 
-    - name: The Warriors Fusion Mod [PPSSPP]
+    - name: The Warriors Fusion Fix [PPSSPP]
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
         tag: thewarriors
-        artifacts: data/Archives/TheWarriors.PPSSPP.FusionMod.zip
+        artifacts: data/Archives/TheWarriors.PPSSPP.FusionFix.zip
 
     - name: Silent Hill 4 Widescreen Fix
       uses: ./.github/workflows/release_tag
@@ -415,29 +415,29 @@ jobs:
         tag: gun
         artifacts: data/Archives/Gun.WidescreenFix.zip
 
-    - name: SOCOM U.S. Navy SEALs Fireteam Bravo Fusion Mod
+    - name: SOCOM U.S. Navy SEALs Fireteam Bravo Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
         tag: fireteambravo1
-        artifacts: data/Archives/SOCOM.FireteamBravo.PPSSPP.FusionMod.zip
+        artifacts: data/Archives/SOCOM.FireteamBravo.PPSSPP.FusionFix.zip
 
-    - name: SOCOM U.S. Navy SEALs Fireteam Bravo 2 Fusion Mod
+    - name: SOCOM U.S. Navy SEALs Fireteam Bravo 2 Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
         tag: fireteambravo2
-        artifacts: data/Archives/SOCOM.FireteamBravo2.PPSSPP.FusionMod.zip
+        artifacts: data/Archives/SOCOM.FireteamBravo2.PPSSPP.FusionFix.zip
 
-    - name: SOCOM U.S. Navy SEALs Fireteam Bravo 3 Fusion Mod
+    - name: SOCOM U.S. Navy SEALs Fireteam Bravo 3 Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
         tag: fireteambravo3
-        artifacts: data/Archives/SOCOM.FireteamBravo3.PPSSPP.FusionMod.zip
+        artifacts: data/Archives/SOCOM.FireteamBravo3.PPSSPP.FusionFix.zip
 
     - name: Devil May Cry 3 Widescreen Fix
       uses: ./.github/workflows/release_tag
@@ -655,21 +655,21 @@ jobs:
         tag: scct
         artifacts: data/Archives/SplinterCellChaosTheory.WidescreenFix.zip
 
-    - name: Splinter Cell Conviction Fusion Mod
+    - name: Splinter Cell Conviction Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
         tag: scc
-        artifacts: data/Archives/SplinterCellConviction.FusionMod.zip
+        artifacts: data/Archives/SplinterCellConviction.FusionFix.zip
 
-    - name: Splinter Cell Blacklist Fusion Mod
+    - name: Splinter Cell Blacklist Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
         tag: scb
-        artifacts: data/Archives/SplinterCellBlacklist.FusionMod.zip
+        artifacts: data/Archives/SplinterCellBlacklist.FusionFix.zip
 
     - name: Splinter Cell Pandora Tomorrow Widescreen Fix
       uses: ./.github/workflows/release_tag
@@ -711,13 +711,13 @@ jobs:
         tag: sonicheroes
         artifacts: data/Archives/SonicHeroes.WidescreenFix.zip
 
-    - name: Red Dead Redemption Fusion Mod
+    - name: Red Dead Redemption Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
         tag: rdr
-        artifacts: data/Archives/RedDeadRedemption.FusionMod.zip
+        artifacts: data/Archives/RedDeadRedemption.FusionFix.zip
 
     - name: Resident Evil 0 Fusion Fix
       uses: ./.github/workflows/release_tag
@@ -735,21 +735,21 @@ jobs:
         tag: re1
         artifacts: data/Archives/ResidentEvil.FusionFix.zip
 
-    - name: Resident Evil 2 and RE3 Nemesis Fusion Mod [Dolphin]
+    - name: Resident Evil 2 and RE3 Nemesis Fusion Fix [Dolphin]
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
         tag: re2re3gc
-        artifacts: data/Archives/ResidentEvil2.RE3.Dolphin.FusionMod.zip
+        artifacts: data/Archives/ResidentEvil2.RE3.Dolphin.FusionFix.zip
 
-    - name: Resident Evil 4 Fusion Mod
+    - name: Resident Evil 4 Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
         tag: re4
-        artifacts: data/Archives/ResidentEvil4.FusionMod.zip
+        artifacts: data/Archives/ResidentEvil4.FusionFix.zip
 
     - name: Resident Evil 5 Fusion Fix
       uses: ./.github/workflows/release_tag
