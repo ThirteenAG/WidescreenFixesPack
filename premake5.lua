@@ -272,17 +272,17 @@ project "FarCry64.WidescreenFix"
    targetdir "data/FarCry.WidescreenFix/Bin64/"
 
 group "Win64/GrandTheftAuto"
-project "GTA3DE.FusionMod"
+project "GTA3DE.FusionFix"
    platforms { "Win64" }
    architecture "x64"
    add_kananlib()
    setpaths("Z:/WFP/Games/Grand Theft Auto The Definitive Edition/GTA III - Definitive Edition/", "Gameface/Binaries/Win64/LibertyCity.exe", "Gameface/Binaries/Win64/scripts/")
-project "GTAVCDE.FusionMod"
+project "GTAVCDE.FusionFix"
    platforms { "Win64" }
    architecture "x64"
    add_kananlib()
    setpaths("Z:/WFP/Games/Grand Theft Auto The Definitive Edition/GTA Vice City - Definitive Edition/", "Gameface/Binaries/Win64/ViceCity.exe", "Gameface/Binaries/Win64/scripts/")
-project "GTASADE.FusionMod"
+project "GTASADE.FusionFix"
    platforms { "Win64" }
    architecture "x64"
    add_kananlib()
@@ -290,7 +290,7 @@ project "GTASADE.FusionMod"
 group "Win64"
 
 group "Win64/ResidentEvil"
-project "ResidentEvil4.FusionMod"
+project "ResidentEvil4.FusionFix"
    platforms { "Win64" }
    architecture "x64"
    setpaths("Z:/WFP/Games/ResidentEvil4/", "re4.exe", "scripts/")
@@ -301,7 +301,7 @@ project "SpyroReignitedTrilogy.WidescreenFix"
    architecture "x64"
    setpaths("Z:/WFP/Games/Spyro Reignited Trilogy/", "Falcon/Binaries/Win64/Spyro-Win64-Shipping.exe", "Falcon/Binaries/Win64/scripts/")
 
-project "RedDeadRedemption.FusionMod"
+project "RedDeadRedemption.FusionFix"
    add_kananlib()
    platforms { "Win64" }
    architecture "x64"
@@ -393,7 +393,7 @@ project "KnightRider2.WidescreenFix"
 project "LARush.WidescreenFix"
    setpaths("Z:/WFP/Games/LA Rush/", "LARush.exe", "plugins/")
 
-project "Mafia.GenericFix"
+project "Mafia.FusionFix"
    setpaths("Z:/WFP/Games/Mafia/", "Setup.exe")
    targetdir "data/Mafia.WidescreenFix/scripts"
 
@@ -432,9 +432,9 @@ project "NFSCarbon.WidescreenFix"
    setpaths("Z:/WFP/Games/Need For Speed/Need for Speed Carbon/", "NFSC.exe")
 project "NFSMostWanted.WidescreenFix"
    setpaths("Z:/WFP/Games/Need For Speed/Need for Speed Most Wanted/", "speed.exe")
-project "NFSProStreet.GenericFix"
+project "NFSProStreet.FusionFix"
    setpaths("Z:/WFP/Games/Need For Speed/Need for Speed ProStreet/", "nfsps.exe")
-project "NFSUndercover.GenericFix"
+project "NFSUndercover.FusionFix"
    setpaths("Z:/WFP/Games/Need For Speed/Need for Speed Undercover/", "nfs.exe")
 project "NFSUnderground.WidescreenFix"
    setpaths("Z:/WFP/Games/Need For Speed/Need For Speed Underground/", "speed.exe")
@@ -494,9 +494,9 @@ project "SplinterCell.WidescreenFix"
    setpaths("Z:/WFP/Games/Splinter Cell/Splinter Cell/", "system/SplinterCell.exe", "system/scripts/")
 project "SplinterCellChaosTheory.WidescreenFix"
    setpaths("Z:/WFP/Games/Splinter Cell/Splintercell Chaos Theory/", "system/splintercell3.exe", "system/scripts/")
-project "SplinterCellConviction.FusionMod"
+project "SplinterCellConviction.FusionFix"
    setpaths("Z:/WFP/Games/Splinter Cell/Tom Clancy's Splinter Cell Conviction/", "src/system/conviction_game.exe", "src/system/scripts/")
-project "SplinterCellBlacklist.FusionMod"
+project "SplinterCellBlacklist.FusionFix"
    setpaths("Z:/WFP/Games/Splinter Cell/Splinter Cell Blacklist/", "src/SYSTEM/Blacklist_DX11_game.exe", "src/system/scripts/")
 project "SplinterCellDoubleAgent.WidescreenFix"
    prebuildcommands {
@@ -734,74 +734,74 @@ project "GTAVCS.PPSSPP.GamepadIcons"
    setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.GamepadIcons")
    writemakefile_psp("GTAVCS.PPSSPP.GamepadIcons")
 
-project "GTACTW.PPSSPP.FusionMod"
+project "GTACTW.PPSSPP.FusionFix"
    kind "Makefile"
    dependson { "GTAVCS.PPSSPP.ImVehLM" }
    add_pspsdk()
    targetextension ".prx"
-   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionMod/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTACTW.PPSSPP.FusionMod")
-   writemakefile_psp("GTACTW.PPSSPP.FusionMod")
+   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTACTW.PPSSPP.FusionFix")
+   writemakefile_psp("GTACTW.PPSSPP.FusionFix")
 group "PPSSPP"
 
-project "MidnightClubLARemix.PPSSPP.FusionMod"
+project "MidnightClubLARemix.PPSSPP.FusionFix"
    kind "Makefile"
-   dependson { "GTACTW.PPSSPP.FusionMod" }
+   dependson { "GTACTW.PPSSPP.FusionFix" }
    add_pspsdk()
    targetextension ".prx"
-   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/MidnightClubLARemix.PPSSPP.FusionMod/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "MidnightClubLARemix.PPSSPP.FusionMod")
-   writemakefile_psp("MidnightClubLARemix.PPSSPP.FusionMod")
+   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/MidnightClubLARemix.PPSSPP.FusionFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "MidnightClubLARemix.PPSSPP.FusionFix")
+   writemakefile_psp("MidnightClubLARemix.PPSSPP.FusionFix")
 
 project "PPSSPP.XboxRainDroplets"
    kind "Makefile"
-   dependson { "MidnightClubLARemix.PPSSPP.FusionMod" }
+   dependson { "MidnightClubLARemix.PPSSPP.FusionFix" }
    add_pspsdk()
    targetextension ".prx"
    setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/PPSSPP.XboxRainDroplets/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "PPSSPP.XboxRainDroplets")
    writemakefile_psp("PPSSPP.XboxRainDroplets")
 
-project "SplinterCellEssentials.PPSSPP.FusionMod"
+project "SplinterCellEssentials.PPSSPP.FusionFix"
    kind "Makefile"
    dependson { "PPSSPP.XboxRainDroplets" }
    add_pspsdk()
    targetextension ".prx"
-   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.FusionMod/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SplinterCellEssentials.PPSSPP.FusionMod")
-   writemakefile_psp("SplinterCellEssentials.PPSSPP.FusionMod")
+   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.FusionFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SplinterCellEssentials.PPSSPP.FusionFix")
+   writemakefile_psp("SplinterCellEssentials.PPSSPP.FusionFix")
 
 group "PPSSPP/SOCOM"
-project "SOCOM.FireteamBravo.PPSSPP.FusionMod"
+project "SOCOM.FireteamBravo.PPSSPP.FusionFix"
    kind "Makefile"
-   dependson { "SplinterCellEssentials.PPSSPP.FusionMod" }
+   dependson { "SplinterCellEssentials.PPSSPP.FusionFix" }
    add_pspsdk()
    targetextension ".prx"
-   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/SOCOM.FireteamBravo.PPSSPP.FusionMod/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SOCOM.FireteamBravo.PPSSPP.FusionMod")
-   writemakefile_psp("SOCOM.FireteamBravo.PPSSPP.FusionMod")
-project "SOCOM.FireteamBravo2.PPSSPP.FusionMod"
+   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/SOCOM.FireteamBravo.PPSSPP.FusionFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SOCOM.FireteamBravo.PPSSPP.FusionFix")
+   writemakefile_psp("SOCOM.FireteamBravo.PPSSPP.FusionFix")
+project "SOCOM.FireteamBravo2.PPSSPP.FusionFix"
    kind "Makefile"
-   dependson { "SOCOM.FireteamBravo.PPSSPP.FusionMod" }
+   dependson { "SOCOM.FireteamBravo.PPSSPP.FusionFix" }
    add_pspsdk()
    targetextension ".prx"
-   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/SOCOM.FireteamBravo2.PPSSPP.FusionMod/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SOCOM.FireteamBravo2.PPSSPP.FusionMod")
-   writemakefile_psp("SOCOM.FireteamBravo2.PPSSPP.FusionMod")
-project "SOCOM.FireteamBravo3.PPSSPP.FusionMod"
+   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/SOCOM.FireteamBravo2.PPSSPP.FusionFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SOCOM.FireteamBravo2.PPSSPP.FusionFix")
+   writemakefile_psp("SOCOM.FireteamBravo2.PPSSPP.FusionFix")
+project "SOCOM.FireteamBravo3.PPSSPP.FusionFix"
    kind "Makefile"
-   dependson { "SOCOM.FireteamBravo2.PPSSPP.FusionMod" }
+   dependson { "SOCOM.FireteamBravo2.PPSSPP.FusionFix" }
    add_pspsdk()
    targetextension ".prx"
-   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/SOCOM.FireteamBravo3.PPSSPP.FusionMod/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SOCOM.FireteamBravo3.PPSSPP.FusionMod")
-   writemakefile_psp("SOCOM.FireteamBravo3.PPSSPP.FusionMod")
+   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/SOCOM.FireteamBravo3.PPSSPP.FusionFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SOCOM.FireteamBravo3.PPSSPP.FusionFix")
+   writemakefile_psp("SOCOM.FireteamBravo3.PPSSPP.FusionFix")
 group "PPSSPP"
 
-project "TheWarriors.PPSSPP.FusionMod"
+project "TheWarriors.PPSSPP.FusionFix"
    kind "Makefile"
-   dependson { "SOCOM.FireteamBravo3.PPSSPP.FusionMod" }
+   dependson { "SOCOM.FireteamBravo3.PPSSPP.FusionFix" }
    add_pspsdk()
    targetextension ".prx"
-   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/TheWarriors.PPSSPP.FusionMod/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "TheWarriors.PPSSPP.FusionMod")
-   writemakefile_psp("TheWarriors.PPSSPP.FusionMod")
+   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/TheWarriors.PPSSPP.FusionFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "TheWarriors.PPSSPP.FusionFix")
+   writemakefile_psp("TheWarriors.PPSSPP.FusionFix")
 group ""
 
 group "Dolphin"
-project "ResidentEvil2.RE3.Dolphin.FusionMod"
+project "ResidentEvil2.RE3.Dolphin.FusionFix"
    add_kananlib()
    platforms { "Win64" }
    architecture "x64"

@@ -37,7 +37,7 @@ $${\color{blue}ⓘ}$$ Added an option to change fps limit
     Installation:
         Download and extract the archive to the game directory, where the exe is located.
 
-[Website](https://thirteenag.github.io/wfp#nfsuc) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/NFSUndercover.GenericFix/dllmain.cpp) | [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/NFSUndercover.GenericFix/scripts/NFSUndercover.GenericFix.ini)
+[Website](https://thirteenag.github.io/wfp#nfsuc) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/NFSUndercover.FusionFix/dllmain.cpp) | [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/NFSUndercover.FusionFix/scripts/NFSUndercover.FusionFix.ini)
 
 <a href="https://github.com/sponsors/xan1242"><img src="https://img.shields.io/badge/Sponsor_xan1242_on_GitHub-5c5c5c?style=for-the-badge&logo=github&logoColor=white" width="250"></a><br>
 
