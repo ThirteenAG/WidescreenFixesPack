@@ -131,7 +131,7 @@ export void InitEngine()
     {
         fHUDScaleXDynXref = Screen.fHUDScaleXDyn;
         fHudOffsetDynXref = Screen.fHudOffsetDyn;
-        if (UObject::GetState(L"EPlayerController") == L"s_KeyPadInteract" || bHackingGameplay)
+        if ((UObject::GetState(L"EPlayerController") == L"s_KeyPadInteract" && UObject::GetState(L"EKeyPad") == L"s_Use") || bHackingGameplay)
         {
             fHUDScaleXDynXref = Screen.fHUDScaleXOriginal;
             fHudOffsetDynXref = Screen.fHudOffsetOriginal;
