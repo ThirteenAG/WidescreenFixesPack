@@ -126,7 +126,7 @@ namespace CMenusManager
             Page::P_DisplayAdvanced,
             Page::P_DisplaySettings,
             //Page::P_EEV,
-            Page::P_Email,
+            //Page::P_Email,
             Page::P_Empty,
             Page::P_EnterServerPassword,
             Page::P_Equipment,
