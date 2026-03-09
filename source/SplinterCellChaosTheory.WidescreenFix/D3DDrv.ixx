@@ -309,7 +309,7 @@ export void InitD3DDrv()
         if ((CMenusManager::IsMainMenuDisplayed() && !CMenusManager::IsMenuDisplayed(Page::P_Briefing) &&
             !CMenusManager::IsMenuDisplayed(Page::P_LoadOut) && !CMenusManager::IsMenuDisplayed(Page::P_LoadOut2) &&
             !CMenusManager::IsMenuDisplayed(Page::P_CamControl) && !CMenusManager::IsMenuDisplayed(Page::P_Camera) &&
-            !CMenusManager::IsMenuDisplayed(Page::P_opticcable) &&
+            !CMenusManager::IsMenuDisplayed(Page::P_opticcable) && !CMenusManager::IsMenuDisplayed(Page::P_MenuGameOver) &&
             (bIsInMenu && *bIsInMenu == 0)) || bQuickLoadingShown || bLoadingBarShown)
         {
             IDirect3DDevice9* pD3DDevice = (IDirect3DDevice9*)(regs.eax);
