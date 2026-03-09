@@ -41,7 +41,11 @@ namespace AEPlayerController
 
 export void InitEchelon()
 {
-    //EPlayerController additional state cache
+    // EPlayerController additional state cache
     auto pattern = hook::pattern("8B 88 ? ? ? ? 8B 6E");
     AEPlayerController::shTick = safetyhook::create_inline(pattern.get_first(-10), AEPlayerController::Tick);
+
+    // Aiming camera smoothing
+    pattern = hook::pattern("6B D2 ? 8B 8C 32");
+    injector::WriteMemory<uint8_t>(pattern.get_first(2), 0, true);
 }
