@@ -25,6 +25,8 @@ export void InitXidi()
             {
                 if (CurrentGameMode != eCurrentGameMode::GameMode)
                     return L"Menu";
+                else if (CurrentGameMode == eCurrentGameMode::GameMode && bIsPaused)
+                    return L"Pause";
                 return L"Main";
             });
         }

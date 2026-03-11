@@ -195,19 +195,38 @@ namespace MaxPayne_InputControl
         DpadDown = 13,
         DpadLeft = 14,
         DpadRight = 15,
+
+        Undefined = -1,
     };
 
     // Control scheme mapping
     struct ControlScheme
     {
-        JoystickButton shoot = TriggerRT;
-        JoystickButton reload = ButtonX;
-        JoystickButton jump = ButtonY;
-        JoystickButton crouch = ButtonLS;
-        JoystickButton use = ButtonA;
-        JoystickButton painkiller = ButtonB;
-        JoystickButton sniperZoom = ButtonRS;
-        JoystickButton bulletTime = TriggerLT;
+        JoystickButton Shoot = TriggerRT;
+        JoystickButton Reload = ButtonX;
+        JoystickButton Jump = ButtonY;
+        JoystickButton Crouch = ButtonLS;
+        JoystickButton DodgeLeft = Undefined;
+        JoystickButton DodgeRight = Undefined;
+        JoystickButton DodgeForward = Undefined;
+        JoystickButton DodgeBackward = Undefined;
+        JoystickButton DodgeModifier = Undefined;
+        JoystickButton Use = ButtonA;
+        JoystickButton Slot1 = Undefined;
+        JoystickButton Slot2 = Undefined;
+        JoystickButton Slot3 = Undefined;
+        JoystickButton Slot4 = Undefined;
+        JoystickButton Slot5 = Undefined;
+        JoystickButton Slot6 = Undefined;
+        JoystickButton BestWeapon = Undefined;
+        JoystickButton NextPreviousWeapon = Undefined;
+        JoystickButton NextWeapon = DpadRight;
+        JoystickButton PreviousWeapon = DpadLeft;
+        JoystickButton Pause = ButtonBack;
+        JoystickButton Painkiller = ButtonB;
+        JoystickButton SniperZoom = ButtonRS;
+        JoystickButton SlowMotion = ButtonLB;
+        JoystickButton BulletTime = TriggerLT;
     };
 
     static ControlScheme g_ControlScheme;
@@ -216,23 +235,53 @@ namespace MaxPayne_InputControl
     inline JoystickButton GetButtonForInput(void* inputControl)
     {
         if (inputControl == MaxPayne_ConfiguredInput::Shoot)
-            return g_ControlScheme.shoot;
+            return g_ControlScheme.Shoot;
         else if (inputControl == MaxPayne_ConfiguredInput::Reload)
-            return g_ControlScheme.reload;
+            return g_ControlScheme.Reload;
         else if (inputControl == MaxPayne_ConfiguredInput::Jump)
-            return g_ControlScheme.jump;
+            return g_ControlScheme.Jump;
         else if (inputControl == MaxPayne_ConfiguredInput::Crouch)
-            return g_ControlScheme.crouch;
+            return g_ControlScheme.Crouch;
+        else if (inputControl == MaxPayne_ConfiguredInput::DodgeLeft)
+            return g_ControlScheme.DodgeLeft;
+        else if (inputControl == MaxPayne_ConfiguredInput::DodgeRight)
+            return g_ControlScheme.DodgeRight;
+        else if (inputControl == MaxPayne_ConfiguredInput::DodgeForward)
+            return g_ControlScheme.DodgeForward;
+        else if (inputControl == MaxPayne_ConfiguredInput::DodgeBackward)
+            return g_ControlScheme.DodgeBackward;
+        else if (inputControl == MaxPayne_ConfiguredInput::DodgeModifier)
+            return g_ControlScheme.DodgeModifier;
         else if (inputControl == MaxPayne_ConfiguredInput::Use)
-            return g_ControlScheme.use;
+            return g_ControlScheme.Use;
+        else if (inputControl == MaxPayne_ConfiguredInput::Slot1)
+            return g_ControlScheme.Slot1;
+        else if (inputControl == MaxPayne_ConfiguredInput::Slot2)
+            return g_ControlScheme.Slot2;
+        else if (inputControl == MaxPayne_ConfiguredInput::Slot3)
+            return g_ControlScheme.Slot3;
+        else if (inputControl == MaxPayne_ConfiguredInput::Slot4)
+            return g_ControlScheme.Slot4;
+        else if (inputControl == MaxPayne_ConfiguredInput::Slot5)
+            return g_ControlScheme.Slot5;
+        else if (inputControl == MaxPayne_ConfiguredInput::Slot6)
+            return g_ControlScheme.Slot6;
+        else if (inputControl == MaxPayne_ConfiguredInput::BestWeapon)
+            return g_ControlScheme.BestWeapon;
+        else if (inputControl == MaxPayne_ConfiguredInput::NextPreviousWeapon)
+            return g_ControlScheme.NextPreviousWeapon;
+        else if (inputControl == MaxPayne_ConfiguredInput::Pause)
+            return g_ControlScheme.Pause;
         else if (inputControl == MaxPayne_ConfiguredInput::Painkiller)
-            return g_ControlScheme.painkiller;
+            return g_ControlScheme.Painkiller;
         else if (inputControl == MaxPayne_ConfiguredInput::SniperZoom)
-            return g_ControlScheme.sniperZoom;
+            return g_ControlScheme.SniperZoom;
+        else if (inputControl == MaxPayne_ConfiguredInput::SlowMotion)
+            return g_ControlScheme.SlowMotion;
         else if (inputControl == MaxPayne_ConfiguredInput::BulletTime)
-            return g_ControlScheme.bulletTime;
+            return g_ControlScheme.BulletTime;
 
-        return static_cast<JoystickButton>(-1);
+        return JoystickButton::Undefined;
     }
 
     SafetyHookInline shgetFloat = {};
@@ -287,16 +336,16 @@ namespace MaxPayne_InputControl
                     }
                     case 3: // D-pad weapon scrolling
                     {
-                        bool bDpadLeftPressed = IsButtonPressed(joyState->rgbButtons[DpadLeft]) &&
-                            !IsButtonPressed(GetPrevJoyState()->rgbButtons[DpadLeft]);
-                        bool bDpadRightPressed = IsButtonPressed(joyState->rgbButtons[DpadRight]) &&
-                            !IsButtonPressed(GetPrevJoyState()->rgbButtons[DpadRight]);
+                        bool bLeftPressed = IsButtonPressed(joyState->rgbButtons[g_ControlScheme.PreviousWeapon]) &&
+                            !IsButtonPressed(GetPrevJoyState()->rgbButtons[g_ControlScheme.PreviousWeapon]);
+                        bool bRightPressed = IsButtonPressed(joyState->rgbButtons[g_ControlScheme.NextWeapon]) &&
+                            !IsButtonPressed(GetPrevJoyState()->rgbButtons[g_ControlScheme.NextWeapon]);
 
-                        if (bDpadLeftPressed)
+                        if (bLeftPressed)
                         {
                             ret = 1.0f;  // Previous weapon
                         }
-                        else if (bDpadRightPressed)
+                        else if (bRightPressed)
                         {
                             ret = -1.0f;  // Next weapon
                         }
@@ -331,16 +380,16 @@ namespace MaxPayne_InputControl
                 {
                     case 3: // D-pad weapon scrolling with single-click
                     {
-                        bool bDpadLeftPressed = IsButtonJustPressed(joyState->rgbButtons[DpadLeft],
-                                                                     prevJoyState->rgbButtons[DpadLeft]);
-                        bool bDpadRightPressed = IsButtonJustPressed(joyState->rgbButtons[DpadRight],
-                                                                      prevJoyState->rgbButtons[DpadRight]);
+                        bool bLeftPressed = IsButtonJustPressed(joyState->rgbButtons[g_ControlScheme.PreviousWeapon],
+                                                                     prevJoyState->rgbButtons[g_ControlScheme.PreviousWeapon]);
+                        bool bRightPressed = IsButtonJustPressed(joyState->rgbButtons[g_ControlScheme.NextWeapon],
+                                                                      prevJoyState->rgbButtons[g_ControlScheme.NextWeapon]);
 
-                        if (bDpadLeftPressed)
+                        if (bLeftPressed)
                         {
                             ret = 1.0f;  // Previous weapon
                         }
-                        else if (bDpadRightPressed)
+                        else if (bRightPressed)
                         {
                             ret = -1.0f;  // Next weapon
                         }
@@ -486,6 +535,7 @@ export void InitInput()
     static auto MaxPayne_GameModeupdateHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
         CurrentGameMode = eCurrentGameMode::GameMode;
+        bIsPaused = *(uint8_t*)(regs.ecx + 0x12CE) != 0;
     });
 
     pattern = hook::pattern("E8 ? ? ? ? 8B CF E8 ? ? ? ? 8B C8 E8 ? ? ? ? 84 C0 75");

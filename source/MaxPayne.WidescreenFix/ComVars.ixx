@@ -59,6 +59,7 @@ export enum eCurrentGameMode
 };
 
 export eCurrentGameMode CurrentGameMode = MenuMode;
+export bool bIsPaused = false;
 
 export namespace MaxPayne_ConfiguredInput
 {
