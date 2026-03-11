@@ -29,7 +29,6 @@ export struct Screen
     bool bDrawBordersToFillGap;
     bool bDrawBordersForCameraOverlay;
     bool bGraphicNovelMode;
-    bool bIsInGraphicNovel;
 } Screen;
 
 export struct TextCoords

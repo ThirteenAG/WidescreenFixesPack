@@ -165,9 +165,28 @@ void Init()
         }
     }
 
+    auto pattern = hook::pattern("E8 ? ? ? ? 8B CB E8 ? ? ? ? 8B C8 E8 ? ? ? ? 8B CB");
+    static auto MaxPayne_GameModeupdateHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        CurrentGameMode = eCurrentGameMode::GameMode;
+        bIsPaused = *(uint8_t*)(regs.ecx + 0x12CE) != 0;
+    });
+
+    pattern = hook::pattern("E8 ? ? ? ? 8B CF E8 ? ? ? ? 8B C8 E8 ? ? ? ? 84 C0 75");
+    static auto X_MenuModeBaseupdateHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        CurrentGameMode = eCurrentGameMode::MenuMode;
+    });
+
+    pattern = hook::pattern("E8 ? ? ? ? 8A 86 ? ? ? ? 84 C0 74 ? 8B CE");
+    static auto MaxPayne_GraphicNovelModeupdate = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        CurrentGameMode = eCurrentGameMode::GraphicNovelMode;
+    });
+
     //FOV
     static bool bRestoreCutsceneFOV = iniReader.ReadInteger("MAIN", "RestoreCutsceneFOV", 0) != 0;
-    auto pattern = hook::pattern("A0 ? ? ? ? 84 C0 0F 85 ? ? ? ? 8B 86");
+    pattern = hook::pattern("A0 ? ? ? ? 84 C0 0F 85 ? ? ? ? 8B 86");
     X_Crosshair::sm_bCameraPathRunning.SetAddress(*pattern.get_first<bool*>(1));
 
     static auto FOVHook = [](uintptr_t _this, uintptr_t edx) -> float
@@ -214,6 +233,13 @@ void Init()
         return *(float*)(_this + 88) + ((((Screen.fHudOffsetReal / Screen.fWidth)) / *(float*)(_this + 88)) * 2.0f);
     };
     injector::MakeCALL(pattern.get_first(0), static_cast<float(__fastcall*)(uintptr_t, uintptr_t)>(CutsceneFOVHook), true);
+
+    pattern = hook::pattern("8B 46 ? 50 8B CF FF 15");
+    injector::MakeNOP(pattern.get_first(), 3, true);
+    static auto MaxPayne_GraphicNovelPageshowHook = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& regs)
+    {
+        *(float*)&regs.eax = *(float*)(regs.esi + 0x6B) * (Screen.fAspectRatio / (4.0f / 3.0f));
+    });
 
     pattern = hook::pattern("C6 87 ? ? ? ? ? E8 ? ? ? ? 8B 4D F4");
     struct CameraOverlayHook

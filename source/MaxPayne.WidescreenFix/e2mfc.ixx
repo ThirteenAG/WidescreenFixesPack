@@ -33,8 +33,8 @@ void InitWF()
     //injector::WriteMemory((DWORD)e2mfc + 0x148ED + 0x2, &f1_480, true); //doors fix ???
     //CPatch::SetFloat((DWORD)h_e2mfc_dll + 0x49DE4, height_multipl); //D3DERR_INVALIDCALL
     static uintptr_t e2mfc_14775, e2mfc_1566C, e2mfc_146FA;
-    static uintptr_t e2mfc_49DEC, e2mfc_49DFC;
-    static uintptr_t e2mfc_1565E, e2mfc_49E00;
+    static uintptr_t e2mfc_49DEC;
+    static bool bDelayedHookDone = false;
 
     uintptr_t dword_40B3B2 = (uintptr_t)hook::get_pattern("C7 86 F5 00 00 00 00 00 00 00 5E");
     struct DelayedHook
@@ -48,7 +48,7 @@ void InitWF()
             injector::WriteMemory(e2mfc_1566C, &Screen.f1_fWidthScale, true); // D3DERR_INVALIDCALL 9
 
             injector::WriteMemory<float>(e2mfc_49DEC, Screen.fDouble1_fWidthScale, true);
-            injector::WriteMemory<float>(e2mfc_49DFC, Screen.fHalf1_fWidthScale, true);
+            bDelayedHookDone = true;
         }
     }; injector::MakeInline<DelayedHook>(dword_40B3B2, dword_40B3B2 + 10);
 
@@ -67,12 +67,51 @@ void InitWF()
 
     pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "D8 0D ? ? ? ? D9 1D ? ? ? ? 8A 86 E0");
     e2mfc_49DEC = *pattern.get_first<uintptr_t>(2);
+
+    static float flt_10049DFC = (1.0f / 480.0f) / 2.0f;
     pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "D8 0D ? ? ? ? D9 5D E0 E8");
-    e2mfc_49DFC = *pattern.get_first<uintptr_t>(2);
+    injector::WriteMemory(pattern.get_first(2), &flt_10049DFC, true);
+    static auto GraphicNovelsOverride1 = safetyhook::create_mid(pattern.get_first(-3), [](SafetyHookContext& regs)
+    {
+        if (bDelayedHookDone)
+        {
+            flt_10049DFC = Screen.fHalf1_fWidthScale;
+
+            if (CurrentGameMode == eCurrentGameMode::GraphicNovelMode)
+            {
+                if (!Screen.bGraphicNovelMode)
+                    flt_10049DFC *= 1.27f;
+            }
+        }
+    });
+
+    static float flt_10049E00 = (1.0f / 640.0f) / 2.0f;
     pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "D8 0D ? ? ? ? D9 5D E4 D9 45 EC");
-    e2mfc_49E00 = *pattern.get_first<uintptr_t>(2);
+    injector::WriteMemory(pattern.get_first(2), &flt_10049E00, true);
+    static auto GraphicNovelsOverride2 = safetyhook::create_mid(pattern.get_first(-3), [](SafetyHookContext& regs)
+    {
+        flt_10049E00 = ((1.0f / 640.0f) / 2.0f);
+
+        if (CurrentGameMode == eCurrentGameMode::GraphicNovelMode)
+        {
+            if (!Screen.bGraphicNovelMode)
+                flt_10049E00 *= 1.27f;
+        }
+    });
+
     pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "C7 05 ? ? ? ? ? ? ? ? C7 05 ? ? ? ? ? ? ? ? D8 0D");
-    e2mfc_1565E = (uintptr_t)pattern.get_first(6);
+    static float* flt_1006555C = *(float**)pattern.get_first(2);
+    injector::MakeNOP(pattern.get_first(), 10, true);
+    static auto GraphicNovelsOverride3 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        *flt_1006555C = 0.0f;
+
+        if (CurrentGameMode == eCurrentGameMode::GraphicNovelMode)
+        {
+            if (!Screen.bGraphicNovelMode)
+                *flt_1006555C = -0.39f;
+        }
+    });
 
     pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), pattern_str(to_bytes(480.0f))); //0x5ECD00
     while (pattern.clear(GetModuleHandle(L"e2mfc")).count_hint(6).empty()) { Sleep(0); };
@@ -151,16 +190,11 @@ void InitWF()
                 //ElementNewPosY1 = ElementPosY + 48.0f;
                 //ElementNewPosY2 = ElementPosY - 48.0f;
             }
-            else if (Screen.bIsInGraphicNovel)
+            else if (CurrentGameMode == eCurrentGameMode::GraphicNovelMode)
             {
                 if (ElementPosX == 0.0f && ElementPosY == 100.0f /*&& regs.eax == 2*/ /*&& *(float*)&regs.edx == 80.0f*/) // graphic novels controls and background
                 {
-                    if (Screen.bGraphicNovelMode)
-                    {
-                        ElementNewPosY1 = ElementPosY - 90.0f;
-                        ElementNewPosY2 = ElementPosY - 90.0f;
-                    }
-                    else
+                    if (!Screen.bGraphicNovelMode)
                     {
                         ElementNewPosY1 = ElementPosY - 160.0f;
                         ElementNewPosY2 = ElementPosY - 160.0f;
@@ -169,12 +203,7 @@ void InitWF()
 
                 if (ElementPosX == 0.0f && ElementPosY == 0.0f && regs.eax == 2 && (*(float*)&regs.edx == 80.0f || *(float*)&regs.edx == 60.0f)) // graphic novels controls and background
                 {
-                    if (Screen.bGraphicNovelMode)
-                    {
-                        ElementNewPosY1 = ElementPosY - 60.0f;
-                        ElementNewPosY2 = ElementPosY - 60.0f;
-                    }
-                    else
+                    if (!Screen.bGraphicNovelMode)
                     {
                         ElementNewPosY1 = ElementPosY - 160.0f;
                         ElementNewPosY2 = ElementPosY - 160.0f;
@@ -267,21 +296,8 @@ void InitWF()
     }
 
     //Graphic Novels Handler
-    static bool bPatched;
     static uint16_t oldState = 0;
     static uint16_t curState = 0;
-    static uint32_t callAddr;
-
-    auto p = hook::pattern("8B 5C 24 3C 8B 10 53 8B C8"); //60145C
-    struct GraphicNovelXRefHook
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            regs.ebx = *(uint32_t*)(regs.esp + 0x3C);
-            regs.edx = *(uint32_t*)(regs.eax);
-            callAddr = *(uint32_t*)(regs.edx + 0x38);
-        }
-    }; injector::MakeInline<GraphicNovelXRefHook>(p.get_first(0), p.get_first(6));
 
     static auto sub_49B6D0 = (uint32_t)hook::get_pattern("55 8B EC 83 EC 48 8B 45 08 53 56 57 8B F1 50"); //MaxPayne_GraphicNovelMode::update
     auto GraphicNovelPageUpdate = hook::pattern("8B 06 8B CE 33 FF FF 50 10"); //60146E
@@ -296,52 +312,17 @@ void InitWF()
             if (!X_Crosshair::sm_bCameraPathRunning)
                 Screen.bDrawBordersForCameraOverlay = false;
 
-            Screen.bIsInGraphicNovel = (callAddr == sub_49B6D0);
-            callAddr = 0;
-
-            if (Screen.bIsInGraphicNovel)
+            if (CurrentGameMode == eCurrentGameMode::GraphicNovelMode)
             {
                 curState = GetAsyncKeyState(nGraphicNovelModeKey);
 
                 if (!curState && oldState)
                 {
                     Screen.bGraphicNovelMode = !Screen.bGraphicNovelMode;
-                    bPatched = !bPatched;
                     iniReader.WriteInteger("MAIN", "GraphicNovelMode", Screen.bGraphicNovelMode);
                 }
 
                 oldState = curState;
-
-                if (Screen.bGraphicNovelMode)
-                {
-                    if (!bPatched)
-                    {
-                        injector::WriteMemory<float>(e2mfc_49E00, ((1.0f / (480.0f * Screen.fAspectRatio)) / 2.0f), true);
-                        injector::WriteMemory<float>(e2mfc_49DFC, (1.0f / (640.0f / (4.0f / 3.0f)) / 2.0f), true);
-                        injector::WriteMemory<float>(e2mfc_1565E, 0.0f, true);
-                        bPatched = true;
-                    }
-                }
-                else
-                {
-                    if (!bPatched)
-                    {
-                        injector::WriteMemory<float>(e2mfc_49E00, ((1.0f / (480.0f * Screen.fAspectRatio)) / 2.0f) * 1.27f, true);
-                        injector::WriteMemory<float>(e2mfc_49DFC, (1.0f / (640.0f / (4.0f / 3.0f)) / 2.0f) * 1.27f, true);
-                        injector::WriteMemory<float>(e2mfc_1565E, -0.39f, true);
-                        bPatched = true;
-                    }
-                }
-            }
-            else
-            {
-                if (bPatched)
-                {
-                    injector::WriteMemory<float>(e2mfc_49E00, ((1.0f / 640.0f) / 2.0f), true);
-                    injector::WriteMemory<float>(e2mfc_49DFC, Screen.fHalf1_fWidthScale, true);
-                    injector::WriteMemory<float>(e2mfc_1565E, 0.0f, true);
-                    bPatched = false;
-                }
             }
         }
     }; injector::MakeInline<GraphicNovelPageUpdateHook>(GraphicNovelPageUpdate.get_first(0), GraphicNovelPageUpdate.get_first(6));
@@ -367,10 +348,6 @@ export void InitE2MFC()
         else
             Screen.nHeight = *(int32_t*)(P_Driver__m_initializedDriver + 8);
 
-        if (Screen.nWidth && Screen.nHeight)
-        {
-            std::call_once(wf, []() { InitWF(); });
-        }
         return Screen.nHeight;
     };
 
@@ -378,7 +355,15 @@ export void InitE2MFC()
     auto pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "E8 ? ? ? ? 8B 0D ? ? ? ? 89 45 DC 89 5D E0");
     injector::MakeCALL(pattern.count_hint(2).get(0).get<uintptr_t>(0), static_cast<int32_t(__fastcall*)(uintptr_t, uintptr_t)>(PDriverGetWidth), true);   //e2mfc + 0x15582
     injector::MakeCALL(pattern.count_hint(2).get(0).get<uintptr_t>(41), static_cast<int32_t(__fastcall*)(uintptr_t, uintptr_t)>(PDriverGetHeight), true); //e2mfc + 0x155AB
-    //CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&InitWF, NULL, 0, NULL);
+
+    pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "? ? ? ? ? ? C7 05 ? ? ? ? ? ? ? ? ? ? ? ? ? ? C7 05 ? ? ? ? ? ? ? ? C7 05 ? ? ? ? ? ? ? ? C7 05 ? ? ? ? ? ? ? ? ? ? ? C7 05");
+    static auto P_CameraprepareHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        if (Screen.nWidth && Screen.nHeight)
+        {
+            std::call_once(wf, []() { InitWF(); });
+        }
+    });
 
     //relocate dllmain code of e2_d3d8_driver_mfc
     pattern = hook::module_pattern(GetModuleHandle(L"e2mfc"), "C7 46 ? ? ? ? ? 8B 75 ? 89 07 EB 15 FF 15 ? ? ? ? 50 68 ? ? ? ? 53 E8 ? ? ? ? 83 C4 0C 8D 8D ? ? ? ? 51 56 FF 15 ? ? ? ? 85 C0 75 ? 56 FF 15 ? ? ? ? 8D 95");

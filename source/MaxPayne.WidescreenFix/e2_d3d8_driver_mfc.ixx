@@ -32,7 +32,7 @@ HRESULT WINAPI EndScene(LPDIRECT3DDEVICE8 pDevice)
         Screen.bDrawBordersToFillGap = false;
     }
 
-    if ((Screen.bDrawBorders || Screen.bDrawBordersForCameraOverlay) && !Screen.bIsInGraphicNovel)
+    if ((Screen.bDrawBorders || Screen.bDrawBordersForCameraOverlay) && CurrentGameMode != eCurrentGameMode::GraphicNovelMode)
     {
         float fBadCamPosOffset = Screen.bDrawBordersForCameraOverlay ? 10.0f : 0.0f; // for motel camera gap https://i.imgur.com/JGNdm6y.jpg
 
