@@ -531,25 +531,6 @@ export void InitInput()
         UpdateInput();
     });
 
-    pattern = hook::pattern("E8 ? ? ? ? 8B CB E8 ? ? ? ? 8B C8 E8 ? ? ? ? 8B CB");
-    static auto MaxPayne_GameModeupdateHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-    {
-        CurrentGameMode = eCurrentGameMode::GameMode;
-        bIsPaused = *(uint8_t*)(regs.ecx + 0x12CE) != 0;
-    });
-
-    pattern = hook::pattern("E8 ? ? ? ? 8B CF E8 ? ? ? ? 8B C8 E8 ? ? ? ? 84 C0 75");
-    static auto X_MenuModeBaseupdateHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-    {
-        CurrentGameMode = eCurrentGameMode::MenuMode;
-    });
-
-    pattern = hook::pattern("E8 ? ? ? ? 8A 86 ? ? ? ? 84 C0 74 ? 8B CE");
-    static auto MaxPayne_GraphicNovelModeupdate = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-    {
-        CurrentGameMode = eCurrentGameMode::GraphicNovelMode;
-    });
-
     pattern = hook::pattern("56 8B F1 6A 00 E8 ? ? ? ? 84 C0 74 ? D9 05 ? ? ? ? 5E C3");
     MaxPayne_InputControl::shgetFloat = safetyhook::create_inline(pattern.count(2).get(0).get<void*>(0), MaxPayne_InputControl::getFloat);
     MaxPayne_InputControl::shgetFloatWithSingleClicks = safetyhook::create_inline(pattern.count(2).get(1).get<void*>(0), MaxPayne_InputControl::getFloatWithSingleClicks);
