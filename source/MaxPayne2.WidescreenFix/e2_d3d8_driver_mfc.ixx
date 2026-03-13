@@ -24,7 +24,7 @@ void DrawRect(LPDIRECT3DDEVICE8 pDevice, int32_t x, int32_t y, int32_t w, int32_
 
 HRESULT WINAPI EndScene(LPDIRECT3DDEVICE8 pDevice)
 {
-    if ((Screen.bDrawBorders || Screen.bDrawBordersForCameraOverlay) && !Screen.bIsInGraphicNovel)
+    if ((Screen.bDrawBorders || Screen.bDrawBordersForCameraOverlay) && CurrentGameMode != "graphicnovel")
     {
         DrawRect(pDevice, 0, 0, static_cast<int32_t>(Screen.fHudOffsetReal), Screen.nHeight);
         DrawRect(pDevice, static_cast<int32_t>(Screen.fWidth - Screen.fHudOffsetReal), 0, static_cast<int32_t>(Screen.fHudOffsetReal + Screen.fHudOffsetReal), Screen.nHeight);

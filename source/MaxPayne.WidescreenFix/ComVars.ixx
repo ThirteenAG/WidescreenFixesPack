@@ -50,14 +50,7 @@ export namespace X_Crosshair
     GameRef<bool> sm_bCameraPathRunning;
 }
 
-export enum eCurrentGameMode
-{
-    GameMode,
-    MenuMode,
-    GraphicNovelMode,
-};
-
-export eCurrentGameMode CurrentGameMode = MenuMode;
+export std::string CurrentGameMode;
 export bool bIsPaused = false;
 
 export namespace MaxPayne_ConfiguredInput

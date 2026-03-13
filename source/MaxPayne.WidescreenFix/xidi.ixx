@@ -23,9 +23,9 @@ export void InitXidi()
         {
             XidiRegisterProfileCallback([]() -> const wchar_t*
             {
-                if (CurrentGameMode != eCurrentGameMode::GameMode)
+                if (CurrentGameMode != "game")
                     return L"Menu";
-                else if (CurrentGameMode == eCurrentGameMode::GameMode && bIsPaused)
+                else if (CurrentGameMode == "game" && bIsPaused)
                     return L"Pause";
                 return L"Main";
             });
