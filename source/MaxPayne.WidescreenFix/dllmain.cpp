@@ -29,6 +29,16 @@ int __fastcall sub_40D040(int* CWnd, void* edx, char a2)
     return shsub_40D040.unsafe_fastcall<int>(CWnd, edx, a2);
 }
 
+namespace X_ModeSwitch
+{
+    SafetyHookInline shSetModeSwitch = {};
+    void __fastcall setModeSwitch(void* X_ModeSwitch, void* edx, void* a2)
+    {
+        CurrentGameMode = std::string_view(*((char**)a2 + 1));
+        return shSetModeSwitch.unsafe_fastcall(X_ModeSwitch, edx, a2);
+    }
+}
+
 void Init()
 {
     CIniReader iniReader("");
@@ -165,23 +175,13 @@ void Init()
         }
     }
 
-    auto pattern = hook::pattern("E8 ? ? ? ? 8B CB E8 ? ? ? ? 8B C8 E8 ? ? ? ? 8B CB");
+    auto pattern = hook::pattern("51 55 8B E9 8B 45");
+    X_ModeSwitch::shSetModeSwitch = safetyhook::create_inline(pattern.get_first(0), X_ModeSwitch::setModeSwitch);
+
+    pattern = hook::pattern("E8 ? ? ? ? 8B CB E8 ? ? ? ? 8B C8 E8 ? ? ? ? 8B CB");
     static auto MaxPayne_GameModeupdateHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        CurrentGameMode = eCurrentGameMode::GameMode;
         bIsPaused = *(uint8_t*)(regs.ecx + 0x12CE) != 0;
-    });
-
-    pattern = hook::pattern("E8 ? ? ? ? 8B CF E8 ? ? ? ? 8B C8 E8 ? ? ? ? 84 C0 75");
-    static auto X_MenuModeBaseupdateHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-    {
-        CurrentGameMode = eCurrentGameMode::MenuMode;
-    });
-
-    pattern = hook::pattern("E8 ? ? ? ? 8A 86 ? ? ? ? 84 C0 74 ? 8B CE");
-    static auto MaxPayne_GraphicNovelModeupdate = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-    {
-        CurrentGameMode = eCurrentGameMode::GraphicNovelMode;
     });
 
     //FOV

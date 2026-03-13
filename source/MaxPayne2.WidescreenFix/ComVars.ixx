@@ -38,8 +38,10 @@ export struct Screen
     bool bIs2D;
     bool bIsSkybox;
     bool bGraphicNovelMode;
-    bool bIsInGraphicNovel;
 } Screen;
+
+export std::string CurrentGameMode;
+export bool bIsPaused = false;
 
 export struct TextCoords
 {

@@ -51,7 +51,7 @@ void InitWF()
             float v2 = (float)tan(fParam0 / 2.0);
             *(float*)(PCamera + 0x20C) = v2;
 
-            if (!Screen.bIs2D && !Screen.bIsInGraphicNovel)
+            if (!Screen.bIs2D && CurrentGameMode != "graphicnovel")
             {
                 if (fParam5 == 0.05f || Screen.bIsSkybox) /*|| stack[3] == (void*)0x004122bf*/
                     *(float*)(PCamera + 0x20C) = v2 * Screen.fDiffFactor;

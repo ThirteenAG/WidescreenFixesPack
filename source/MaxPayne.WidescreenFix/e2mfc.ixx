@@ -77,7 +77,7 @@ void InitWF()
         {
             flt_10049DFC = Screen.fHalf1_fWidthScale;
 
-            if (CurrentGameMode == eCurrentGameMode::GraphicNovelMode)
+            if (CurrentGameMode == "graphicnovel")
             {
                 if (!Screen.bGraphicNovelMode)
                     flt_10049DFC *= 1.27f;
@@ -92,7 +92,7 @@ void InitWF()
     {
         flt_10049E00 = ((1.0f / 640.0f) / 2.0f);
 
-        if (CurrentGameMode == eCurrentGameMode::GraphicNovelMode)
+        if (CurrentGameMode == "graphicnovel")
         {
             if (!Screen.bGraphicNovelMode)
                 flt_10049E00 *= 1.27f;
@@ -106,7 +106,7 @@ void InitWF()
     {
         *flt_1006555C = 0.0f;
 
-        if (CurrentGameMode == eCurrentGameMode::GraphicNovelMode)
+        if (CurrentGameMode == "graphicnovel")
         {
             if (!Screen.bGraphicNovelMode)
                 *flt_1006555C = -0.39f;
@@ -190,7 +190,7 @@ void InitWF()
                 //ElementNewPosY1 = ElementPosY + 48.0f;
                 //ElementNewPosY2 = ElementPosY - 48.0f;
             }
-            else if (CurrentGameMode == eCurrentGameMode::GraphicNovelMode)
+            else if (CurrentGameMode == "graphicnovel")
             {
                 if (ElementPosX == 0.0f && ElementPosY == 100.0f /*&& regs.eax == 2*/ /*&& *(float*)&regs.edx == 80.0f*/) // graphic novels controls and background
                 {
@@ -312,7 +312,7 @@ void InitWF()
             if (!X_Crosshair::sm_bCameraPathRunning)
                 Screen.bDrawBordersForCameraOverlay = false;
 
-            if (CurrentGameMode == eCurrentGameMode::GraphicNovelMode)
+            if (CurrentGameMode == "graphicnovel")
             {
                 curState = GetAsyncKeyState(nGraphicNovelModeKey);
 

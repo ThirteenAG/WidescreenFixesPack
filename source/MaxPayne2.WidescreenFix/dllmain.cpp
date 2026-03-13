@@ -167,7 +167,13 @@ void Init()
         }
     }
 
-    auto pattern = hook::pattern("8B 4C 24 18 51 8B 4F 04 FF 15");
+    auto pattern = hook::pattern("FF 15 ? ? ? ? 8D 8E ? ? ? ? 8B F8");
+    static auto MaxPayne_GameModeupdateHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        bIsPaused = *(uint8_t*)(regs.ecx + 0x12CE) != 0;
+    });
+
+    pattern = hook::pattern("8B 4C 24 18 51 8B 4F 04 FF 15");
     struct X_CharacterSetSniperZoomOnHook
     {
         void operator()(injector::reg_pack& regs)

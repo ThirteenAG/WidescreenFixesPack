@@ -6,29 +6,29 @@ export module x_modesmfc;
 
 import ComVars;
 
+namespace X_ModeSwitch
+{
+    SafetyHookInline shSetModeSwitch = {};
+    void __fastcall setModeSwitch(void* X_ModeSwitch, void* edx, void* a2)
+    {
+        CurrentGameMode = std::string_view((char*)a2 + 4);
+        return shSetModeSwitch.unsafe_fastcall(X_ModeSwitch, edx, a2);
+    }
+}
+
 export void InitX_ModesMFC()
 {
     static CIniReader iniReader("");
     static int32_t nGraphicNovelModeKey = iniReader.ReadInteger("MAIN", "GraphicNovelModeKey", VK_F2);
 
+    auto pattern = hook::module_pattern(GetModuleHandle(L"X_ModesMFC"), "56 8B F1 8B 46 ? 85 C0 0F 85");
+    X_ModeSwitch::shSetModeSwitch = safetyhook::create_inline(pattern.get_first(0), X_ModeSwitch::setModeSwitch);
+
     //Graphic Novels Handler
     static bool bPatched;
     static uint16_t oldState = 0;
     static uint16_t curState = 0;
-    static uint32_t callAddr;
 
-    auto pattern = hook::module_pattern(GetModuleHandle(L"X_ModesMFC"), "8B 5C 24 18 8B 01 53 FF 50 38");
-    struct GraphicNovelXRefHook
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            regs.ebx = *(uint32_t*)(regs.esp + 0x18);
-            regs.eax = *(uint32_t*)(regs.ecx);
-            callAddr = *(uint32_t*)(regs.eax + 0x38);
-        }
-    }; injector::MakeInline<GraphicNovelXRefHook>(pattern.get_first(0), pattern.get_first(6)); //10001A6A
-
-    static auto sub_484AE0 = (uint32_t)hook::get_pattern("8B 44 24 04 83 EC 34 53 55 56 57 50 8B F1"); //MaxPayne_GraphicNovelMode::update
     auto GraphicNovelPageUpdate = hook::module_pattern(GetModuleHandle(L"X_ModesMFC"), "8B 16 8B CE 33 FF FF 52 10"); //10001A7A 
     struct GraphicNovelPageUpdateHook
     {
@@ -41,10 +41,7 @@ export void InitX_ModesMFC()
             if (!X_Crosshair::sm_bCameraPathRunning)
                 Screen.bDrawBordersForCameraOverlay = false;
 
-            Screen.bIsInGraphicNovel = (callAddr == sub_484AE0);
-            callAddr = 0;
-
-            if (Screen.bIsInGraphicNovel)
+            if (CurrentGameMode == "graphicnovel")
             {
                 curState = GetAsyncKeyState(nGraphicNovelModeKey);
 
