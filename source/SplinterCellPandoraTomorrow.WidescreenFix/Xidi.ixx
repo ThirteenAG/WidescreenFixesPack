@@ -27,7 +27,11 @@ export void InitXidi()
                     return L"Video";
 
                 auto EchelonMainHUDState = UObject::GetState(L"EchelonMainHUD");
-                if (EchelonMainHUDState == L"MainHUD" || EchelonMainHUDState == L"s_Slavery")
+                if (EchelonMainHUDState == L"s_MainMenu" || EchelonMainHUDState == L"s_GameMenu")
+                {
+                    return L"Menu";
+                }
+                else if (EchelonMainHUDState == L"MainHUD" || EchelonMainHUDState == L"s_Slavery")
                 {
                     auto EPlayerControllerState = UObject::GetState(L"EPlayerController");
                     if (EPlayerControllerState == L"s_KeyPadInteract")
