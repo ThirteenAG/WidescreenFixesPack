@@ -107,31 +107,26 @@ void InitWF()
                 {
                     ElementNewPosX1 = ElementPosX + Screen.fWidescreenHudOffset;
                 }
-                else
-                    if (ElementPosX == 8.0f && ElementPosY != 8.0f) // bullet time overlay()
-                    {
-                        ElementNewPosX1 = ElementPosX + Screen.fWidescreenHudOffset;
-                    }
-                    else
-                        if (ElementPosX == 12.0f) // painkillers
-                        {
-                            ElementNewPosX1 = ElementPosX + Screen.fWidescreenHudOffset;
-                        }
-                        else
-                            if (ElementPosX == 22.5f) //health bar and overlay
-                            {
-                                ElementNewPosX1 = ElementPosX + Screen.fWidescreenHudOffset;
-                            }
-                            else
-                                if (ElementPosX == 96.0f) // other weapons name
-                                {
-                                    ElementNewPosX1 = ElementPosX - Screen.fWidescreenHudOffset;
-                                }
-                                else
-                                    if (ElementPosX == 192.0f) //molotovs/grenades name pos
-                                    {
-                                        ElementNewPosX1 = ElementPosX - Screen.fWidescreenHudOffset;
-                                    }
+                else if (ElementPosX == 8.0f && ElementPosY != 8.0f) // bullet time overlay()
+                {
+                    ElementNewPosX1 = ElementPosX + Screen.fWidescreenHudOffset;
+                }
+                else if (ElementPosX == 12.0f) // painkillers
+                {
+                    ElementNewPosX1 = ElementPosX + Screen.fWidescreenHudOffset;
+                }
+                else if (ElementPosX == 22.5f) //health bar and overlay
+                {
+                    ElementNewPosX1 = ElementPosX + Screen.fWidescreenHudOffset;
+                }
+                else if (ElementPosX == 96.0f) // other weapons name
+                {
+                    ElementNewPosX1 = ElementPosX - Screen.fWidescreenHudOffset;
+                }
+                else if (ElementPosX == 192.0f) //molotovs/grenades name pos
+                {
+                    ElementNewPosX1 = ElementPosX - Screen.fWidescreenHudOffset;
+                }
             }
 
             ElementNewPosX2 = ElementNewPosX1;

@@ -61,3 +61,51 @@ export namespace X_Crosshair
 {
     GameRef<bool> sm_bCameraPathRunning;
 }
+
+export namespace MaxPayne_ConfiguredInput
+{
+    uintptr_t* sm_control;
+
+    enum eControls
+    {
+        RUN,
+        WALKBACK,
+        STRAFELEFT,
+        STRAFERIGHT,
+        SHOOT,
+        ATTACK,
+        RELOAD,
+        JUMP,
+        CROUCH,
+        DODGELEFT,
+        DODGERIGHT,
+        DODGEFORWARD,
+        DODGEBACKWARD,
+        DODGEMODIFIER,
+        USE,
+        SLOT0,
+        SLOT1,
+        SLOT2,
+        SLOT3,
+        SLOT4,
+        SLOT5,
+        SLOT6,
+        SLOT7,
+        SLOT8,
+        SLOT9,
+        SLOT10,
+        BESTWEAPON,
+        NEXTWEAPON,
+        PREVIOUSWEAPON,
+        PAUSE,
+        PAINKILLER,
+        SNIPERZOOM,
+        SLOWMOTION,
+        BULLETTIME,
+    };
+}
+
+export namespace X_Input
+{
+    void* (*getMouse)() = nullptr;
+}

@@ -418,12 +418,14 @@ project "MaxPayne.MSVCP60Wrapper"
    files { "source/%{prj.name}/MemoryModule.h", "source/%{prj.name}/MemoryModule.c" }
 project "MaxPayne.WidescreenFix"
    dependson { "MaxPayne.MSVCP60Wrapper" }
-   debugargs { "-skipstartup -window -developer -screenshot" }
+   debugargs { "-skipstartup -window -developer -screenshot -nodialog" }
    linkoptions { "/SAFESEH:NO" }
    libdirs { "includes/dxsdk/dx8" }
    setpaths("Z:/WFP/Games/Max Payne/Max Payne/", "MaxPayne.exe")
 project "MaxPayne2.WidescreenFix"
-   debugargs { "-developer -window" }
+   debugargs { "-skipstartup -developer -window -nodialog" }
+   linkoptions { "/SAFESEH:NO" }
+   libdirs { "includes/dxsdk/dx8" }
    setpaths("Z:/WFP/Games/Max Payne/Max Payne 2 The Fall of Max Payne/", "MaxPayne2.exe")
 group "Win32"
 
