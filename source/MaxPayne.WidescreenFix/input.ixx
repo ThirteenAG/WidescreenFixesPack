@@ -204,14 +204,14 @@ namespace MaxPayne_InputControl
     {
         JoystickButton Shoot = TriggerRT;
         JoystickButton Reload = ButtonX;
-        JoystickButton Jump = ButtonY;
+        JoystickButton Jump = ButtonA;
         JoystickButton Crouch = ButtonLS;
         JoystickButton DodgeLeft = Undefined;
         JoystickButton DodgeRight = Undefined;
         JoystickButton DodgeForward = Undefined;
         JoystickButton DodgeBackward = Undefined;
         JoystickButton DodgeModifier = Undefined;
-        JoystickButton Use = ButtonA;
+        JoystickButton Use = ButtonY;
         JoystickButton Slot1 = Undefined;
         JoystickButton Slot2 = Undefined;
         JoystickButton Slot3 = Undefined;

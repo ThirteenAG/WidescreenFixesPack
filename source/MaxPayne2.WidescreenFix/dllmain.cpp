@@ -7,6 +7,9 @@ import x_basicmodesmfc;
 import x_gameobjectsmfc;
 import x_helpersmfc;
 import x_modesmfc;
+import sndmfc;
+import x_inputmfc;
+import xidi;
 
 SafetyHookInline shsub_404B20 = {};
 int __fastcall sub_404B20(int* CWnd, void* edx, char a2)
@@ -246,6 +249,9 @@ CEXP void InitializeASI()
         CallbackHandler::RegisterCallback(L"E2_D3D8_DRIVER_MFC.dll", InitE2_D3D8_DRIVER_MFC);
         CallbackHandler::RegisterModuleUnloadCallback(L"E2_D3D8_DRIVER_MFC.dll", []() { EndSceneHook.reset(); BorderlessWindowedHook.reset(); shDllMainHook.reset(); });
         CallbackHandler::RegisterCallback(L"X_BasicModesMFC.dll", InitX_BasicModesMFC);
+        CallbackHandler::RegisterCallback(L"sndmfc.dll", InitSNDMFC);
+        CallbackHandler::RegisterCallback(L"X_Inputmfc.dll", InitInput);
+        CallbackHandler::RegisterCallback(L"Xidi.32.dll", InitXidi);
     });
 }
 
