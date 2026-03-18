@@ -218,3 +218,132 @@ export using UByteOverrides = UOverride<uint8_t(*)()>;
 export using UNameOverrides = UOverride<FName(*)()>;
 export using UObjectOverrides = UOverride<void* (*)()>;
 export using UArrayOverrides = UOverride<FArray(*)()>;
+
+export class ScriptConstants
+{
+public:
+    union OverrideValue
+    {
+        int32_t asInt;
+        float   asFloat;
+        uint32_t raw;
+    };
+
+    using OverrideFunc = float(__cdecl*)();
+
+    static constexpr int MAX_OVERRIDES = 64;
+    static constexpr uint32_t MAGIC = 0x7FC20000u;
+
+    static inline OverrideValue StaticOverrides[MAX_OVERRIDES] = {};
+    static inline OverrideFunc  DynamicOverrides[MAX_OVERRIDES] = {};
+
+    static inline bool IsOverrideTag(uint32_t bits)
+    {
+        return (bits & 0xFFFF0000u) == MAGIC;
+    }
+
+    static inline uint32_t DecodeOverrideID(uint32_t bits)
+    {
+        return bits & 0x0000FFFFu;
+    }
+
+    static inline uint32_t EncodeOverrideID(uint32_t id)
+    {
+        return MAGIC | (id & 0x0000FFFFu);
+    }
+
+    static void SetStaticFloat(uint32_t id, float value)
+    {
+        if (id < MAX_OVERRIDES)
+        {
+            StaticOverrides[id].asFloat = value;
+            DynamicOverrides[id] = nullptr;
+        }
+    }
+
+    static void SetStaticInt(uint32_t id, int32_t value)
+    {
+        if (id < MAX_OVERRIDES)
+        {
+            StaticOverrides[id].asInt = value;
+            DynamicOverrides[id] = nullptr;
+        }
+    }
+
+    static void SetDynamicFloat(uint32_t id, OverrideFunc func)
+    {
+        if (id < MAX_OVERRIDES)
+            DynamicOverrides[id] = func;
+    }
+
+    static void SetDynamicInt(uint32_t id, int32_t(__cdecl* func)())
+    {
+        if (id < MAX_OVERRIDES)
+            DynamicOverrides[id] = reinterpret_cast<OverrideFunc>(func);
+    }
+
+    //ID  0: 00 00 C2 7F
+    //ID  1: 01 00 C2 7F
+    //ID  2: 02 00 C2 7F
+    //ID  3: 03 00 C2 7F
+    //ID  4: 04 00 C2 7F
+    //ID  5: 05 00 C2 7F
+    //ID  6: 06 00 C2 7F
+    //ID  7: 07 00 C2 7F
+    //ID  8: 08 00 C2 7F
+    //ID  9: 09 00 C2 7F
+    //ID 10: 0A 00 C2 7F
+    //ID 11: 0B 00 C2 7F
+    //ID 12: 0C 00 C2 7F
+    //ID 13: 0D 00 C2 7F
+    //ID 14: 0E 00 C2 7F
+    //ID 15: 0F 00 C2 7F
+    //ID 16: 10 00 C2 7F
+    //ID 17: 11 00 C2 7F
+    //ID 18: 12 00 C2 7F
+    //ID 19: 13 00 C2 7F
+    //ID 20: 14 00 C2 7F
+    //ID 21: 15 00 C2 7F
+    //ID 22: 16 00 C2 7F
+    //ID 23: 17 00 C2 7F
+    //ID 24: 18 00 C2 7F
+    //ID 25: 19 00 C2 7F
+    //ID 26: 1A 00 C2 7F
+    //ID 27: 1B 00 C2 7F
+    //ID 28: 1C 00 C2 7F
+    //ID 29: 1D 00 C2 7F
+    //ID 30: 1E 00 C2 7F
+    //ID 31: 1F 00 C2 7F
+    //ID 32: 20 00 C2 7F
+    //ID 33: 21 00 C2 7F
+    //ID 34: 22 00 C2 7F
+    //ID 35: 23 00 C2 7F
+    //ID 36: 24 00 C2 7F
+    //ID 37: 25 00 C2 7F
+    //ID 38: 26 00 C2 7F
+    //ID 39: 27 00 C2 7F
+    //ID 40: 28 00 C2 7F
+    //ID 41: 29 00 C2 7F
+    //ID 42: 2A 00 C2 7F
+    //ID 43: 2B 00 C2 7F
+    //ID 44: 2C 00 C2 7F
+    //ID 45: 2D 00 C2 7F
+    //ID 46: 2E 00 C2 7F
+    //ID 47: 2F 00 C2 7F
+    //ID 48: 30 00 C2 7F
+    //ID 49: 31 00 C2 7F
+    //ID 50: 32 00 C2 7F
+    //ID 51: 33 00 C2 7F
+    //ID 52: 34 00 C2 7F
+    //ID 53: 35 00 C2 7F
+    //ID 54: 36 00 C2 7F
+    //ID 55: 37 00 C2 7F
+    //ID 56: 38 00 C2 7F
+    //ID 57: 39 00 C2 7F
+    //ID 58: 3A 00 C2 7F
+    //ID 59: 3B 00 C2 7F
+    //ID 60: 3C 00 C2 7F
+    //ID 61: 3D 00 C2 7F
+    //ID 62: 3E 00 C2 7F
+    //ID 63: 3F 00 C2 7F
+};
