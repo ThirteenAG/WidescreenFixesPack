@@ -46,7 +46,7 @@ void Init()
     bDisableNegativeMouseAcceleration = iniReader.ReadInteger("MAIN", "DisableNegativeMouseAcceleration", 1) != 0;
     bSkipSystemDetection = iniReader.ReadInteger("MAIN", "SkipSystemDetection", 1) != 0;
     bForceCPUAffinityToAllCores = iniReader.ReadInteger("MAIN", "ForceCPUAffinityToAllCores", 1) != 0;
-    bPartialUltraWideSupport = iniReader.ReadInteger("MAIN", "PartialUltraWideSupport", 1) != 0;
+    bUltraWideSupport = iniReader.ReadInteger("MAIN", "UltraWideSupport", 1) != 0;
     bDisableBlackAndWhiteFilter = iniReader.ReadInteger("MAIN", "DisableBlackAndWhiteFilter", 0) != 0;
     bBlacklistControlScheme = iniReader.ReadInteger("CONTROLS", "BlacklistControlScheme", 1) != 0;
     auto bUnlockDLC = iniReader.ReadInteger("UNLOCKS", "UnlockDLC", 1) != 0;

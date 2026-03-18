@@ -244,10 +244,59 @@ int WINAPI sendhook(SOCKET s, const char* buf, int len, int flags)
 
 int WINAPI sendtohook(SOCKET s, const char* buf, int len, int flags, const struct sockaddr* to, int tolen)
 {
-    if (to->sa_family == AF_INET)
+    // Only modify host info packets (len > 500)
+    // Search packets (len == 54) and other traffic are passed through unchanged.
+    if (to->sa_family == AF_INET && len > 500)
     {
-        auto addr = getLocalIPAddress();
-        inet_pton(AF_INET, addr.c_str(), const_cast<char*>(buf) + 93);
+        static std::string localAddr = getLocalIPAddress();
+
+        if (!localAddr.empty())
+        {
+            struct in_addr ipAddr;
+            if (inet_pton(AF_INET, localAddr.c_str(), &ipAddr) == 1)
+            {
+                // Build the 8-byte IP field: 07 <4-byte IP> 05 23 8F
+                constexpr size_t IP_FIELD_SIZE = 8;
+                uint8_t ipField[IP_FIELD_SIZE] = { 0x07, 0, 0, 0, 0, 0x05, 0x23, 0x8F };
+                memcpy(ipField + 1, &ipAddr, 4);
+
+                // Read the IP count at offset 0x5B (value = actual count + 1)
+                int numIPs = static_cast<int>(static_cast<uint8_t>(buf[0x5B])) - 1;
+
+                // Work on a mutable copy since we may need to change the buffer size
+                std::vector<char> newBuf;
+
+                if (numIPs <= 0)
+                {
+                    // No IP fields present (or unexpected value) - insert one
+                    newBuf.assign(buf, buf + 0x5C);
+                    newBuf.insert(newBuf.end(), reinterpret_cast<char*>(ipField), reinterpret_cast<char*>(ipField) + IP_FIELD_SIZE);
+                    newBuf.insert(newBuf.end(), buf + 0x5C, buf + len);
+                }
+                else if (numIPs >= 2)
+                {
+                    // Multiple IP fields - remove extras, keep one correct field
+                    newBuf.assign(buf, buf + 0x5C);
+                    newBuf.insert(newBuf.end(), reinterpret_cast<char*>(ipField), reinterpret_cast<char*>(ipField) + IP_FIELD_SIZE);
+                    size_t oldFieldsEnd = 0x5C + static_cast<size_t>(IP_FIELD_SIZE) * numIPs;
+                    if (oldFieldsEnd < static_cast<size_t>(len))
+                        newBuf.insert(newBuf.end(), buf + oldFieldsEnd, buf + len);
+                }
+                else
+                {
+                    // Exactly 1 IP field - update it in place
+                    newBuf.assign(buf, buf + len);
+                    memcpy(newBuf.data() + 0x5C, ipField, IP_FIELD_SIZE);
+                }
+
+                // Set count to 1 IP + 1 = 2
+                newBuf[0x5B] = static_cast<char>(2);
+
+                DBGONLY(spd::log()->info("Fixed host info packet IP to: {}", localAddr););
+
+                return sendto(s, newBuf.data(), static_cast<int>(newBuf.size()), flags, to, tolen);
+            }
+        }
     }
 
     return sendto(s, buf, len, flags, to, tolen);

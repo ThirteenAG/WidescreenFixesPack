@@ -13,7 +13,7 @@ export bool bWindowedMode;
 export bool bDisableNegativeMouseAcceleration;
 export bool bSkipSystemDetection;
 export bool bForceCPUAffinityToAllCores;
-export bool bPartialUltraWideSupport;
+export bool bUltraWideSupport;
 
 export float gVisibility = 1.0f;
 export int32_t gBlacklistIndicators = 0;
