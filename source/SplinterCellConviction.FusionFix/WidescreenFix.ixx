@@ -8,7 +8,7 @@ import ComVars;
 
 export void InitWidescreenFix()
 {
-    if (bPartialUltraWideSupport)
+    if (bUltraWideSupport)
     {
         // override aspect ratio
         auto pattern = hook::pattern("74 0A F3 0F 10 05 ? ? ? ? EB 13");

@@ -31,11 +31,30 @@ int __fastcall sub_40D040(int* CWnd, void* edx, char a2)
 
 namespace X_ModeSwitch
 {
+    std::string PendingGameMode;
+
     SafetyHookInline shSetModeSwitch = {};
     void __fastcall setModeSwitch(void* X_ModeSwitch, void* edx, void* a2)
     {
-        CurrentGameMode = std::string_view(*((char**)a2 + 1));
+        PendingGameMode = std::string_view(*((char**)a2 + 1));
         return shSetModeSwitch.unsafe_fastcall(X_ModeSwitch, edx, a2);
+    }
+}
+
+namespace MaxPayne_HUDFadeUpdate
+{
+    SafetyHookInline shupdate = {};
+    void __fastcall update(float* MaxPayne_HUDFadeUpdate, void* edx, const void* X_TimeUpdate)
+    {
+        Screen.bIsFading = true;
+        return shupdate.unsafe_fastcall(MaxPayne_HUDFadeUpdate, edx, X_TimeUpdate);
+    }
+
+    SafetyHookInline shdestruct = {};
+    void __fastcall destruct(float* MaxPayne_HUDFadeUpdate, void* edx)
+    {
+        Screen.bIsFading = false;
+        return shdestruct.unsafe_fastcall(MaxPayne_HUDFadeUpdate, edx);
     }
 }
 
@@ -178,11 +197,32 @@ void Init()
     auto pattern = hook::pattern("51 55 8B E9 8B 45");
     X_ModeSwitch::shSetModeSwitch = safetyhook::create_inline(pattern.get_first(0), X_ModeSwitch::setModeSwitch);
 
+    pattern = hook::pattern("83 F8 ? C7 44 24");
+    static auto X_ModeSwitchupdateHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        static void* prevMode = nullptr;
+        auto mode = *(void**)(regs.esi + 0x19);
+
+        if (mode != prevMode)
+        {
+            prevMode = mode;
+            CurrentGameMode = X_ModeSwitch::PendingGameMode;
+        }
+
+        Screen.bIsFading = regs.eax == 2 || regs.eax == 3;
+    });
+
     pattern = hook::pattern("E8 ? ? ? ? 8B CB E8 ? ? ? ? 8B C8 E8 ? ? ? ? 8B CB");
     static auto MaxPayne_GameModeupdateHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
         bIsPaused = *(uint8_t*)(regs.ecx + 0x12CE) != 0;
     });
+
+    pattern = hook::pattern("55 8B EC 83 EC ? 56 57 8B 7D ? 8B F1 8B CF E8 ? ? ? ? 39 46");
+    MaxPayne_HUDFadeUpdate::shupdate = safetyhook::create_inline(pattern.get_first(0), MaxPayne_HUDFadeUpdate::update);
+
+    pattern = hook::pattern("E8 ? ? ? ? 8B 46 ? 8B 48 ? 85 C9 0F 84");
+    MaxPayne_HUDFadeUpdate::shdestruct = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first(0)).as_int(), MaxPayne_HUDFadeUpdate::destruct);
 
     //FOV
     static bool bRestoreCutsceneFOV = iniReader.ReadInteger("MAIN", "RestoreCutsceneFOV", 0) != 0;

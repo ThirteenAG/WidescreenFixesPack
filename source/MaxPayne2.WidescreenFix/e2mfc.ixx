@@ -143,11 +143,10 @@ void InitWF()
                 Screen.bIsX_QuadRenderer = false;
             }
 
-            if (Screen.bIsFading && !Screen.bIsSniperZoomOn && ElementPosX == 0.0f && ElementPosY == 0.0f)
+            if (CurrentGameMode == "game" && Screen.bIsFading && !Screen.bDrawBorders && ElementPosX == 0.0f && ElementPosY == 0.0f)
             {
                 ElementNewPosX1 = ElementPosX + Screen.fHudOffset2;
                 ElementNewPosX2 = ElementPosX - Screen.fHudOffset2;
-                Screen.bIsFading = false;
             }
 
             regs.eax = *(uint32_t*)(regs.esi + 0x164);

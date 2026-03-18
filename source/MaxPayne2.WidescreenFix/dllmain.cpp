@@ -191,19 +191,6 @@ void Init()
     }; injector::MakeInline<X_CharacterSetSniperZoomOnHook>(pattern.get_first(0), pattern.get_first(8)); //428FB2
     injector::WriteMemory<uint8_t>(pattern.get_first(6), 0x52i8, true); //push edx
 
-    pattern = hook::pattern("8B 8B AD 00 00 00 DF E0 F6 C4 41");
-    struct FadingHook
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            regs.ecx = *(uint32_t*)(regs.ebx + 0xAD);
-            if (*(float*)(regs.esp + 0x34) == 0.0f)
-                Screen.bIsFading = false;
-            else
-                Screen.bIsFading = true;
-        }
-    }; injector::MakeInline<FadingHook>(pattern.get_first(0), pattern.get_first(6)); //4872C1 
-
     pattern = hook::pattern("C7 44 24 ? ? ? ? ? 75 07 8A 46 41 84 C0");
     struct SkyboxHook1
     {
