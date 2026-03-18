@@ -371,7 +371,7 @@ export void InitD3DDrv()
                 iniReader.WriteInteger("MAIN", "ResY", 0);
             }
 
-            Screen.fWidescreenHudOffset = std::abs(CalculateWidescreenOffset(Screen.fWidth, Screen.fHeight, 800.0f, 600.0f));
+            Screen.fWidescreenHudOffset = -CalculateWidescreenOffset(Screen.fWidth, Screen.fHeight, 800.0f, 600.0f);
             if (Screen.nHudWidescreenMode)
                 Screen.FilmstripOffset = static_cast<int32_t>((((Screen.fWidth / 2.0f) - ((Screen.fHeight * (Screen.fAspectRatio)) / 2.0f)) * 2.0f) + ((float)Screen.FilmstripScaleX / 5.25f));
 
@@ -383,7 +383,7 @@ export void InitD3DDrv()
                 else
                 {
                     value = ClampHudAspectRatio(value, Screen.fAspectRatio);
-                    Screen.fWidescreenHudOffset = std::abs(CalculateWidescreenOffset(Screen.fHeight * value, Screen.fHeight, 800.0f, 600.0f));
+                    Screen.fWidescreenHudOffset = -CalculateWidescreenOffset(Screen.fHeight * value, Screen.fHeight, 800.0f, 600.0f);
                     if (Screen.nHudWidescreenMode)
                         Screen.FilmstripOffset = static_cast<int32_t>((((Screen.fWidth / 2.0f) - ((Screen.fHeight * ((Screen.fHeight * value) / Screen.fHeight)) / 2.0f)) * 2.0f) + ((float)Screen.FilmstripScaleX / 5.25f));
                 }

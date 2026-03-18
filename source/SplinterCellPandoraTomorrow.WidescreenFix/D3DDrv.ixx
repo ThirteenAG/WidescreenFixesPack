@@ -49,7 +49,7 @@ int __fastcall UD3DRenderDeviceSetRes(void* UD3DRenderDevice, void* edx, void* U
         if (Screen.nHudWidescreenMode > 1)
             return CalculateWidescreenOffset(width, height, 640.0f, 480.0f, HUD_OFFSET_X);
         else
-            return std::abs(CalculateWidescreenOffset(width, height, 640.0f, 480.0f, 0.0f)) + HUD_OFFSET_X;
+            return HUD_OFFSET_X - CalculateWidescreenOffset(width, height, 640.0f, 480.0f, 0.0f);
     };
 
     Screen.fWidescreenHudOffset = computeHudOffset(Screen.fWidth, Screen.fHeight);
