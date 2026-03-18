@@ -7,6 +7,7 @@ module;
 export module input;
 
 import ComVars;
+import xidi;
 
 #pragma comment(lib, "dinput.lib")
 #pragma comment(lib, "dxguid.lib")
@@ -476,6 +477,55 @@ namespace MaxPayne_InputControl
     }
 }
 
+bool g_VibrationThisFrame = false;
+bool g_VibrationActive = false;
+std::chrono::steady_clock::time_point g_VibrationStart = {};
+constexpr std::chrono::milliseconds VIBRATION_DURATION{ 300 };
+
+void Vibrate(int strength)
+{
+    if (!XidiSendVibration)
+        return;
+
+    if (g_VibrationThisFrame)
+        return;
+
+    if (g_VibrationActive)
+        return;
+
+    if (strength < 0)
+        return;
+
+    g_VibrationThisFrame = true;
+    g_VibrationActive = true;
+    g_VibrationStart = std::chrono::steady_clock::now();
+
+    constexpr int RUMBLE_MAX_STRENGTH = 100;
+    constexpr WORD RUMBLE_MAX_VALUE = 0xFFFF;
+
+    const WORD motor = static_cast<WORD>(
+        static_cast<float>(std::clamp(strength, 0, RUMBLE_MAX_STRENGTH))
+        / RUMBLE_MAX_STRENGTH * RUMBLE_MAX_VALUE);
+
+    XidiSendVibration(-1, motor, motor);
+}
+
+void UpdateVibration()
+{
+    g_VibrationThisFrame = false;
+
+    if (g_VibrationActive)
+    {
+        auto elapsed = std::chrono::steady_clock::now() - g_VibrationStart;
+        if (elapsed >= VIBRATION_DURATION)
+        {
+            g_VibrationActive = false;
+            if (XidiSendVibration)
+                XidiSendVibration(-1, 0, 0);
+        }
+    }
+}
+
 export void InitInput()
 {
     auto pattern = hook::pattern("E8 ? ? ? ? 8B C8 E8 ? ? ? ? D9 83");
@@ -539,4 +589,63 @@ export void InitInput()
     MaxPayne_InputControl::shgetButton = safetyhook::create_inline(pattern.count(3).get(0).get<void*>(0), MaxPayne_InputControl::getButton);
     MaxPayne_InputControl::shgetButtonSingleClicked = safetyhook::create_inline(pattern.count(3).get(1).get<void*>(0), MaxPayne_InputControl::getButtonSingleClicked);
     MaxPayne_InputControl::shgetButtonReleased = safetyhook::create_inline(pattern.count(3).get(2).get<void*>(0), MaxPayne_InputControl::getButtonReleased);
+
+    pattern = hook::pattern("FF 15 ? ? ? ? 33 DB 8D 4C 24");
+    static auto ApplicationTickHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        UpdateVibration();
+    });
+
+    // Sniper scope enter
+    pattern = hook::pattern("C7 83 ? ? ? ? ? ? ? ? E9 ? ? ? ? 84 C0");
+    static auto MaxPayne_GameModeupdateHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        Vibrate(14);
+    });
+
+    pattern = hook::pattern("E8 ? ? ? ? 8B CB E8 ? ? ? ? ? ? 8B C8 FF 52");
+    static auto X_GlobalPainkillerSettingssendMessagesHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        Vibrate(23);
+    });
+
+    pattern = hook::pattern("84 C0 0F 84 ? ? ? ? 6A ? 8B CE E8 ? ? ? ? 8B C8 E8 ? ? ? ? E9");
+    static auto X_CharactersetHealthHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        if (!*(uint8_t*)&regs.eax)
+            Vibrate(46);
+    });
+
+    pattern = hook::pattern("E8 ? ? ? ? 8B 44 24 ? 50 8B CE E8 ? ? ? ? 5E");
+    static auto X_CharacterPropertiessetIsShooting1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        Vibrate(50);
+    });
+
+    pattern = hook::pattern("6A ? 8B CE E8 ? ? ? ? 8B C8 E8 ? ? ? ? 5E 5B C2");
+    static auto X_CharacterPropertiessetIsShooting2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        Vibrate(50);
+    });
+
+    pattern = hook::pattern("E8 ? ? ? ? 53 8B CE E8 ? ? ? ? 5E");
+    static auto X_CharacterPropertiessetIsShooting3 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        Vibrate(50);
+    });
+
+    static std::string CameraPathName;
+    pattern = hook::pattern("E8 ? ? ? ? 8D 7B ? 68 ? ? ? ? 8B CF E8 ? ? ? ? 3B 47 ? 89 44 24 ? 74 ? 8D 50 ? B9 ? ? ? ? E8 ? ? ? ? 84 C0 75 ? 8D 44 24 ? EB ? 8D 44 24");
+    static auto X_CameraImplementationreceiveAnimateInPlaceHook1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        CameraPathName = std::string_view(*(char**)(regs.eax + 4));
+    });
+
+    pattern = hook::pattern("89 8E ? ? ? ? E8 ? ? ? ? C6 86");
+    static auto X_CameraImplementationreceiveAnimateInPlaceHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        if (CameraPathName == "explosion")
+            Vibrate(100);
+        CameraPathName.clear();
+    });
 }

@@ -8,11 +8,30 @@ import ComVars;
 
 namespace X_ModeSwitch
 {
+    std::string PendingGameMode;
+
     SafetyHookInline shSetModeSwitch = {};
     void __fastcall setModeSwitch(void* X_ModeSwitch, void* edx, void* a2)
     {
-        CurrentGameMode = std::string_view((char*)a2 + 4);
+        PendingGameMode = std::string_view((char*)a2 + 4);
         return shSetModeSwitch.unsafe_fastcall(X_ModeSwitch, edx, a2);
+    }
+}
+
+namespace MaxPayne_HUDFadeUpdate
+{
+    SafetyHookInline shupdate = {};
+    void __fastcall update(float* MaxPayne_HUDFadeUpdate, void* edx, const void* X_TimeUpdate)
+    {
+        Screen.bIsFading = true;
+        return shupdate.unsafe_fastcall(MaxPayne_HUDFadeUpdate, edx, X_TimeUpdate);
+    }
+
+    SafetyHookInline shdestruct = {};
+    void __fastcall destruct(float* MaxPayne_HUDFadeUpdate, void* edx)
+    {
+        Screen.bIsFading = false;
+        return shdestruct.unsafe_fastcall(MaxPayne_HUDFadeUpdate, edx);
     }
 }
 
@@ -25,7 +44,6 @@ export void InitX_ModesMFC()
     X_ModeSwitch::shSetModeSwitch = safetyhook::create_inline(pattern.get_first(0), X_ModeSwitch::setModeSwitch);
 
     //Graphic Novels Handler
-    static bool bPatched;
     static uint16_t oldState = 0;
     static uint16_t curState = 0;
 
@@ -48,7 +66,6 @@ export void InitX_ModesMFC()
                 if (!curState && oldState)
                 {
                     Screen.bGraphicNovelMode = !Screen.bGraphicNovelMode;
-                    bPatched = !bPatched;
                     iniReader.WriteInteger("MAIN", "GraphicNovelMode", Screen.bGraphicNovelMode);
                 }
 
@@ -56,38 +73,48 @@ export void InitX_ModesMFC()
 
                 if (Screen.bGraphicNovelMode)
                 {
-                    if (!bPatched)
-                    {
-                        Screen.fNovelsScale = 0.003125f;
-                        Screen.fNovelsOffset = -1.0f;
-                        Screen.fViewPortSizeX = 480.0f * Screen.fAspectRatio;
-                        Screen.fViewPortSizeY = 480.0f;
-                        bPatched = true;
-                    }
+                    Screen.fNovelsScale = 0.003125f;
+                    Screen.fNovelsOffset = -1.0f;
+                    Screen.fViewPortSizeX = 480.0f * Screen.fAspectRatio;
+                    Screen.fViewPortSizeY = 480.0f;
                 }
                 else
                 {
-                    if (!bPatched)
-                    {
-                        Screen.fNovelsScale = 0.003125f;
-                        Screen.fNovelsOffset = -1.0f;
-                        Screen.fViewPortSizeX = (480.0f * Screen.fAspectRatio) / 1.17936117936f;
-                        Screen.fViewPortSizeY = 480.0f / 1.17936117936f;
-                        bPatched = true;
-                    }
+                    Screen.fNovelsScale = 0.003125f;
+                    Screen.fNovelsOffset = -1.0f;
+                    Screen.fViewPortSizeX = (480.0f * Screen.fAspectRatio) / 1.17936117936f;
+                    Screen.fViewPortSizeY = 480.0f / 1.17936117936f;
                 }
             }
             else
             {
-                if (bPatched)
-                {
-                    Screen.fViewPortSizeX = 640.0f;
-                    Screen.fViewPortSizeY = 480.0f;
-                    Screen.fNovelsScale = Screen.fHudScale;
-                    Screen.fNovelsOffset = Screen.fHudOffset;
-                    bPatched = false;
-                }
+                Screen.fViewPortSizeX = 640.0f;
+                Screen.fViewPortSizeY = 480.0f;
+                Screen.fNovelsScale = Screen.fHudScale;
+                Screen.fNovelsOffset = Screen.fHudOffset;
             }
         }
     }; injector::MakeInline<GraphicNovelPageUpdateHook>(GraphicNovelPageUpdate.get_first(0), GraphicNovelPageUpdate.get_first(6));
+
+    pattern = hook::module_pattern(GetModuleHandle(L"X_ModesMFC"), "83 F8 ? 75 ? ? ? ? BF ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? DF E0 F6 C4 ? 74 ? 8B 7C 24 ? 8B 4E ? ? ? 57 FF 52 ? 8B 4E");
+    static auto X_ModeSwitchupdateHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        static void* prevMode = nullptr;
+        auto mode = *(void**)(regs.esi + 0x19);
+
+        if (mode != prevMode)
+        {
+            prevMode = mode;
+            CurrentGameMode = X_ModeSwitch::PendingGameMode;
+        }
+
+        Screen.bIsFading = regs.eax == 2 || regs.eax == 3;
+    });
+
+    pattern = hook::pattern("83 EC ? 53 8B 1D");
+    MaxPayne_HUDFadeUpdate::shupdate = safetyhook::create_inline(pattern.get_first(0), MaxPayne_HUDFadeUpdate::update);
+
+    pattern = hook::pattern("E8 ? ? ? ? 8B 46 ? 8B 48");
+    MaxPayne_HUDFadeUpdate::shdestruct = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first(0)).as_int(), MaxPayne_HUDFadeUpdate::destruct);
+
 }
