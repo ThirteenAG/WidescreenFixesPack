@@ -141,6 +141,59 @@ namespace UArrayProperty
     }
 }
 
+namespace UObject
+{
+    SafetyHookInline shexecFloatConst = {};
+    void __fastcall execFloatConst(void* uObject, void* edx, void* FFrame, float* dst)
+    {
+        shexecFloatConst.unsafe_fastcall(uObject, edx, FFrame, dst);
+
+        uint32_t bits = *reinterpret_cast<uint32_t*>(dst);
+
+        if (ScriptConstants::IsOverrideTag(bits))
+        {
+            uint32_t id = ScriptConstants::DecodeOverrideID(bits);
+            if (id < ScriptConstants::MAX_OVERRIDES)
+            {
+                auto func = ScriptConstants::DynamicOverrides[id];
+                if (func)
+                {
+                    *dst = func();
+                }
+                else
+                {
+                    *dst = ScriptConstants::StaticOverrides[id].asFloat;
+                }
+            }
+        }
+    }
+
+    SafetyHookInline shexecIntConst = {};
+    void __fastcall execIntConst(void* uObject, void* edx, void* FFrame, int* dst)
+    {
+        shexecIntConst.unsafe_fastcall(uObject, edx, FFrame, dst);
+
+        uint32_t bits = *reinterpret_cast<uint32_t*>(dst);
+
+        if (ScriptConstants::IsOverrideTag(bits))
+        {
+            uint32_t id = ScriptConstants::DecodeOverrideID(bits);
+            if (id < ScriptConstants::MAX_OVERRIDES)
+            {
+                auto func = ScriptConstants::DynamicOverrides[id];
+                if (func)
+                {
+                    *dst = reinterpret_cast<int32_t(__cdecl*)()>(func)();
+                }
+                else
+                {
+                    *dst = ScriptConstants::StaticOverrides[id].asInt;
+                }
+            }
+        }
+    }
+}
+
 export void InitCore()
 {
     auto pattern = find_module_pattern(GetModuleHandle(L"Core"), "C7 85 D4 F1 FF FF 00 00 00 00", "C7 85 ? ? ? ? ? ? ? ? EB ? 8B 8D ? ? ? ? 83 C1 ? 89 8D ? ? ? ? 81 BD ? ? ? ? ? ? ? ? 0F 83"); //0x1000CE5E
@@ -200,4 +253,12 @@ export void InitCore()
     UFloatProperty::shCopyCompleteValue = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Core"), "?CopyCompleteValue@UFloatProperty@@UBEXPAX0PAVUObject@@@Z"), UFloatProperty::CopyCompleteValue);
     UByteProperty::shCopyCompleteValue = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Core"), "?CopyCompleteValue@UByteProperty@@UBEXPAX0PAVUObject@@@Z"), UByteProperty::CopyCompleteValue);
     UArrayProperty::shCopyCompleteValue = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Core"), "?CopyCompleteValue@UArrayProperty@@UBEXPAX0PAVUObject@@@Z"), UArrayProperty::CopyCompleteValue);
+
+    UObject::shexecIntConst = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Core"), "?execIntConst@UObject@@QAEXAAUFFrame@@QAX@Z"), UObject::execIntConst);
+    UObject::shexecFloatConst = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Core"), "?execFloatConst@UObject@@QAEXAAUFFrame@@QAX@Z"), UObject::execFloatConst);
+
+    ScriptConstants::SetDynamicFloat(1, []() -> float
+    {
+        return 380.0f + Screen.fWidescreenHudOffset;
+    });
 }
