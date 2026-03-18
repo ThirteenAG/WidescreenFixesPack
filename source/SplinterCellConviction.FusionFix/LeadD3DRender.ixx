@@ -15,7 +15,7 @@ export void InitLeadD3DRender()
     auto bDisableCharacterLighting = iniReader.ReadInteger("MAIN", "DisableCharacterLighting", 0) != 0;
     auto bEnhancedSonarVision = iniReader.ReadInteger("MAIN", "EnhancedSonarVision", 0) != 0;
     gBlacklistIndicators = iniReader.ReadInteger("MAIN", "BlacklistIndicators", 0);
-    auto bPartialUltraWideSupport = iniReader.ReadInteger("MAIN", "PartialUltraWideSupport", 1) != 0;
+    auto bUltraWideSupport = iniReader.ReadInteger("MAIN", "UltraWideSupport", 1) != 0;
 
     if (bDisableDOF)
     {
@@ -84,7 +84,7 @@ export void InitLeadD3DRender()
     }
 
     // Viewport
-    if (bPartialUltraWideSupport)
+    if (bUltraWideSupport)
     {
         auto pattern = hook::module_pattern(GetModuleHandle(L"LeadD3DRender"), "F3 0F 11 49 ? F3 0F 11 61");
         static auto ViewportHook1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
