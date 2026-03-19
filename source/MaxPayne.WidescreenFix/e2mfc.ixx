@@ -237,7 +237,7 @@ void InitWF()
 
     if (bWidescreenHud)
     {
-        Screen.fWidescreenHudOffset = std::abs(CalculateWidescreenOffset(Screen.fWidth, Screen.fHeight, 640.0f, 480.0f));
+        Screen.fWidescreenHudOffset = -CalculateWidescreenOffset(Screen.fWidth, Screen.fHeight, 640.0f, 480.0f);
         if (Screen.fHudAspectRatioConstraint.has_value())
         {
             float value = Screen.fHudAspectRatioConstraint.value();
@@ -246,7 +246,7 @@ void InitWF()
             else
             {
                 value = ClampHudAspectRatio(value, Screen.fAspectRatio);
-                Screen.fWidescreenHudOffset = std::abs(CalculateWidescreenOffset(Screen.fHeight * value, Screen.fHeight, 640.0f, 480.0f));
+                Screen.fWidescreenHudOffset = -CalculateWidescreenOffset(Screen.fHeight * value, Screen.fHeight, 640.0f, 480.0f);
             }
         }
 

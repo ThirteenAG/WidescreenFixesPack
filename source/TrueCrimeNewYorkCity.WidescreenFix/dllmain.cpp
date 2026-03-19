@@ -68,13 +68,15 @@ uint32_t* dword_92BACC = nullptr;
 BOOL WINAPI SetWindowPosHook(HWND hWnd, HWND hWndInsertAfter, int X, int Y, int cx, int cy, UINT uFlags)
 {
     if (*dword_92BACC)
-        return SetWindowPos(hWnd, hWndInsertAfter, X, Y, cx - 1, cy - 1, uFlags);
+        return TRUE;
     return SetWindowPos(hWnd, hWndInsertAfter, X, Y, cx, cy, uFlags);
 }
 
 BOOL WINAPI AdjustWindowRectExHook(LPRECT lpRect, DWORD dwStyle, BOOL bMenu, DWORD dwExStyle)
 {
-    return TRUE;
+    if (*dword_92BACC)
+        return TRUE;
+    return AdjustWindowRectEx(lpRect, dwStyle, bMenu, dwExStyle);
 }
 
 void __stdcall TransformMapToScreen(__m128* a1, const __m128* a2)
@@ -183,6 +185,10 @@ void Init()
         injector::MakeNOP(pattern.get_first(), 6, true);
         injector::MakeCALL(pattern.get_first(), SetWindowPosHook, true);
 
+        pattern = hook::pattern("FF 15 ? ? ? ? A1 ? ? ? ? 8B 0D");
+        injector::MakeNOP(pattern.get_first(), 6, true);
+        injector::MakeCALL(pattern.get_first(), AdjustWindowRectExHook, true);
+
         IATHook::Replace(GetModuleHandleA(NULL), "USER32.DLL",
             std::forward_as_tuple("CreateWindowExA", WindowedModeWrapper::CreateWindowExA_Hook),
             std::forward_as_tuple("CreateWindowExW", WindowedModeWrapper::CreateWindowExW_Hook),
@@ -218,7 +224,7 @@ void Init()
             Screen.fWidth43 = static_cast<float>(Screen.Width43);
             Screen.fHudOffset = (1.0f / (Screen.fHeight * (4.0f / 3.0f))) * ((Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f);
 
-            Screen.fWidescreenHudOffset = std::abs(CalculateWidescreenOffset(Screen.fWidth, Screen.fHeight, 640.0f, 480.0f, 0.0f, true));
+            Screen.fWidescreenHudOffset = CalculateWidescreenOffset(Screen.fWidth, Screen.fHeight, 640.0f, 480.0f, 0.0f, true);
             Screen.fWidescreenHudOffsetPhone = Screen.fWidescreenHudOffset / (Screen.fHeight * (4.0f / 3.0f));
             if (Screen.fHudAspectRatioConstraint.has_value())
             {
@@ -228,7 +234,7 @@ void Init()
                 else
                 {
                     value = ClampHudAspectRatio(value, Screen.fAspectRatio);
-                    Screen.fWidescreenHudOffset = std::abs(CalculateWidescreenOffset(Screen.fHeight * value, Screen.fHeight, 640.0f, 480.0f, 0.0f, true));
+                    Screen.fWidescreenHudOffset = CalculateWidescreenOffset(Screen.fHeight * value, Screen.fHeight, 640.0f, 480.0f, 0.0f, true);
                 }
             }
             Screen.fWidescreenHudOffsetRadar = Screen.fWidescreenHudOffset;
