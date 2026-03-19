@@ -603,19 +603,21 @@ export void InitInput()
         Vibrate(14);
     });
 
+    // Painkiller use
     pattern = hook::pattern("E8 ? ? ? ? 8B CB E8 ? ? ? ? ? ? 8B C8 FF 52");
     static auto X_GlobalPainkillerSettingssendMessagesHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
         Vibrate(23);
     });
 
-    pattern = hook::pattern("84 C0 0F 84 ? ? ? ? 6A ? 8B CE E8 ? ? ? ? 8B C8 E8 ? ? ? ? E9");
+    // Damage taken
+    pattern = hook::pattern("E8 ? ? ? ? E9 ? ? ? ? ? ? ? ? ? ? ? ? ? ? DF E0");
     static auto X_CharactersetHealthHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        if (!*(uint8_t*)&regs.eax)
-            Vibrate(46);
+        Vibrate(46);
     });
 
+    // Shooting
     pattern = hook::pattern("E8 ? ? ? ? 8B 44 24 ? 50 8B CE E8 ? ? ? ? 5E");
     static auto X_CharacterPropertiessetIsShooting1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
@@ -634,6 +636,7 @@ export void InitInput()
         Vibrate(50);
     });
 
+    // Explosion
     static std::string CameraPathName;
     pattern = hook::pattern("E8 ? ? ? ? 8D 7B ? 68 ? ? ? ? 8B CF E8 ? ? ? ? 3B 47 ? 89 44 24 ? 74 ? 8D 50 ? B9 ? ? ? ? E8 ? ? ? ? 84 C0 75 ? 8D 44 24 ? EB ? 8D 44 24");
     static auto X_CameraImplementationreceiveAnimateInPlaceHook1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)

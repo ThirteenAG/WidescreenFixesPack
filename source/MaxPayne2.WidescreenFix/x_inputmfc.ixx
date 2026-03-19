@@ -7,6 +7,7 @@ module;
 export module x_inputmfc;
 
 import ComVars;
+import xidi;
 
 #pragma comment(lib, "dinput.lib")
 #pragma comment(lib, "dxguid.lib")
@@ -424,6 +425,11 @@ namespace X_InputControlButton
         return ret;
     }
 
+    static constexpr float gameHorizontalMultiplier = 1.4f;
+    static constexpr float gameHorizontalBias = 0.1f;
+    static constexpr float gameVerticalMultiplier = gameHorizontalMultiplier;
+    static constexpr float gameVerticalBias = gameHorizontalBias;
+
     SafetyHookInline shreadAimUpDown = {};
     float __fastcall readAimUpDown(void* _this, void* edx)
     {
@@ -434,12 +440,13 @@ namespace X_InputControlButton
             DIJOYSTATE* joyState = GetJoyState();
             if (joyState)
             {
-                const float stickSensitivity = 1.0f;
+                auto Mouse = (uintptr_t)X_Input::getMouse();
+                bool bInvertY = (*(uint8_t*)(Mouse + 81)) != 0;
+                auto fVerSens = *(float*)(Mouse + 87);
+                const float stickSensitivity = gameVerticalMultiplier * fVerSens + gameVerticalBias;
 
                 float stickY = ConvertJoystickToMouseDelta(joyState->lRy, stickSensitivity);
 
-                auto Mouse = (uintptr_t)X_Input::getMouse();
-                bool bInvertY = (*(uint8_t*)(Mouse + 81)) != 0;
                 if (bInvertY)
                     stickY = -stickY;
 
@@ -460,7 +467,9 @@ namespace X_InputControlButton
             DIJOYSTATE* joyState = GetJoyState();
             if (joyState)
             {
-                const float stickSensitivity = 1.0f;
+                auto Mouse = (uintptr_t)X_Input::getMouse();
+                auto fHorSens = *(float*)(Mouse + 83);
+                const float stickSensitivity = gameHorizontalMultiplier * fHorSens + gameHorizontalBias;
 
                 float stickX = ConvertJoystickToMouseDelta(joyState->lRx, stickSensitivity);
                 ret = stickX;
@@ -468,6 +477,55 @@ namespace X_InputControlButton
         }
 
         return ret;
+    }
+}
+
+bool g_VibrationThisFrame = false;
+bool g_VibrationActive = false;
+std::chrono::steady_clock::time_point g_VibrationStart = {};
+constexpr std::chrono::milliseconds VIBRATION_DURATION{ 300 };
+
+void Vibrate(int strength)
+{
+    if (!XidiSendVibration)
+        return;
+
+    if (g_VibrationThisFrame)
+        return;
+
+    if (g_VibrationActive)
+        return;
+
+    if (strength < 0)
+        return;
+
+    g_VibrationThisFrame = true;
+    g_VibrationActive = true;
+    g_VibrationStart = std::chrono::steady_clock::now();
+
+    constexpr int RUMBLE_MAX_STRENGTH = 100;
+    constexpr WORD RUMBLE_MAX_VALUE = 0xFFFF;
+
+    const WORD motor = static_cast<WORD>(
+        static_cast<float>(std::clamp(strength, 0, RUMBLE_MAX_STRENGTH))
+        / RUMBLE_MAX_STRENGTH * RUMBLE_MAX_VALUE);
+
+    XidiSendVibration(-1, motor, motor);
+}
+
+void UpdateVibration()
+{
+    g_VibrationThisFrame = false;
+
+    if (g_VibrationActive)
+    {
+        auto elapsed = std::chrono::steady_clock::now() - g_VibrationStart;
+        if (elapsed >= VIBRATION_DURATION)
+        {
+            g_VibrationActive = false;
+            if (XidiSendVibration)
+                XidiSendVibration(-1, 0, 0);
+        }
     }
 }
 
@@ -505,4 +563,66 @@ export void InitInput()
 
     pattern = hook::pattern("83 EC ? 56 8B F1 FF 15 ? ? ? ? 84 C0 74 ? ? ? FF 15 ? ? ? ? 84 C0 74 ? 8D 44 24 ? 50 FF 15 ? ? ? ? 8B C8 FF 15 ? ? ? ? ? ? 5E");
     X_InputControlButton::shreadAimLeftRight = safetyhook::create_inline(pattern.get_first(), X_InputControlButton::readAimLeftRight);
+
+    pattern = hook::pattern("8A 86 ? ? ? ? 84 C0 57 74 ? 8D 8E");
+    static auto ApplicationTickHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        UpdateVibration();
+    });
+
+    // Sniper scope enter
+    pattern = hook::pattern("C7 86 ? ? ? ? ? ? ? ? E9 ? ? ? ? 84 C0");
+    static auto MaxPayne_GameModeupdateHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        Vibrate(14);
+    });
+
+    // Painkiller use
+    pattern = hook::pattern("FF 25 ? ? ? ? 5E");
+    static auto X_GlobalPainkillerSettingssendMessagesHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        Vibrate(23);
+    });
+
+    // Damage taken
+    pattern = hook::module_pattern(GetModuleHandle(L"X_GameObjectsMFC"), "E8 ? ? ? ? 8B CF E8 ? ? ? ? 48");
+    static auto X_CharactersetHealthHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        Vibrate(46);
+    });
+
+    // Shooting
+    pattern = hook::module_pattern(GetModuleHandle(L"X_GameObjectsMFC"), "E8 ? ? ? ? 8B 44 24 ? 50 8B CE E8 ? ? ? ? 5E");
+    static auto X_CharacterPropertiessetIsShooting1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        Vibrate(50);
+    });
+
+    pattern = hook::module_pattern(GetModuleHandle(L"X_GameObjectsMFC"), "E8 ? ? ? ? 8B C8 E8 ? ? ? ? 5E 5B");
+    static auto X_CharacterPropertiessetIsShooting2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        Vibrate(50);
+    });
+
+    pattern = hook::module_pattern(GetModuleHandle(L"X_GameObjectsMFC"), "E8 ? ? ? ? 8B C8 E8 ? ? ? ? 53 8B CE E8 ? ? ? ? 5E");
+    static auto X_CharacterPropertiessetIsShooting3 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        Vibrate(50);
+    });
+
+    // Explosion
+    static std::string CameraPathName;
+    pattern = hook::module_pattern(GetModuleHandle(L"X_GameObjectsMFC"), "FF 15 ? ? ? ? 68 ? ? ? ? 8D 44 24 ? 50 8D 4F ? E8 ? ? ? ? ? ? 3B 47 ? 74 ? 8B 40 ? EB ? 8B 44 24 ? 8B 4E ? 69 C0 ? ? ? ? 03 C8 89 4E ? E8 ? ? ? ? 8B 44 24");
+    static auto X_CameraImplementationreceiveAnimateInPlaceHook1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        CameraPathName = std::string_view((char*)(regs.eax + 4));
+    });
+
+    pattern = hook::module_pattern(GetModuleHandle(L"X_GameObjectsMFC"), "89 4E ? E8 ? ? ? ? 8B 44 24");
+    static auto X_CameraImplementationreceiveAnimateInPlaceHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        if (CameraPathName == "explosion")
+            Vibrate(100);
+        CameraPathName.clear();
+    });
 }
