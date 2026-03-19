@@ -88,6 +88,7 @@ void FillAddressTable()
     addrTbl[0xEE17C5] = (uintptr_t)hook::get_pattern("D9 05 ? ? ? ? 5F 5E C2 0C 00");
     addrTbl[0x9DBE9D] = (uintptr_t)hook::get_pattern("F3 0F 10 05 ? ? ? ? F3 0F 11 40 ? EB 28");
     addrTbl[0x9DB8E8] = (uintptr_t)hook::get_pattern("F3 0F 5C 05 ? ? ? ? F3 0F 10 0D ? ? ? ? 0F 54 C1");
+    addrTbl[0x500640] = (uintptr_t)hook::get_pattern("C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? E8 ? ? ? ? 8B 8E ? ? ? ? 89 6C 24");
 
     hook::pattern("6A 03 53 53 68").for_each_result([](hook::pattern_match match)
     {
@@ -98,7 +99,7 @@ void FillAddressTable()
         }
     });
 
-#if _DEBUG
+    #if _DEBUG
     if (std::string_view((const char*)0x016E1608, 9) == "VARIABLE")
     {
         for (auto& it : addrTbl)
@@ -106,7 +107,7 @@ void FillAddressTable()
             assert(it.first == it.second);
         }
     }
-#endif // _DEBUG
+    #endif // _DEBUG
 }
 
 bool IsSplitScreenActive()
@@ -255,10 +256,10 @@ float __cdecl sub_974CD0(int a1)
 {
     if (IsSplitScreenActive())
         return (float)(*(uint32_t*)(*(uint32_t*)addrTbl[0x186E23C] + 80) - *(uint32_t*)(*(uint32_t*)addrTbl[0x186E23C] + 72))
-            * GetRelativeSplitScreenResY()
-            * (1.0f / (GetRelativeSplitScreenResX() * GetDiff()))
-            * (float)a1
-            * (1.0f / GetRelativeSplitScreenResY());
+        * GetRelativeSplitScreenResY()
+        * (1.0f / (GetRelativeSplitScreenResX() * GetDiff()))
+        * (float)a1
+        * (1.0f / GetRelativeSplitScreenResY());
     else
         return (float)(a1 * *(uint32_t*)(*(uint32_t*)addrTbl[0x186E8BC] + 292)) * (1.0f / GetRelativeResY());
 }
@@ -289,7 +290,7 @@ float __stdcall sub_55DB40_stretch(int a1)
 }
 
 float fAspectRatioInv = (1.0f / (16.0f / 9.0f));
-void __stdcall sub_58DDF0(uint32_t * a1, int* a2, int a3, uint16_t a4)
+void __stdcall sub_58DDF0(uint32_t* a1, int* a2, int a3, uint16_t a4)
 {
     int v4; // eax
     float v5; // st7
@@ -438,7 +439,8 @@ IDirect3DVertexShader9* __stdcall CreateVertexShaderHook(const DWORD** a1)
                 pShaderData = (DWORD*)pCode->GetBufferPointer();
                 IDirect3DVertexShader9* shader = nullptr;
                 result = pDevice->CreateVertexShader(pShaderData, &shader);
-                if (FAILED(result)) {
+                if (FAILED(result))
+                {
                     return pShader;
                 }
                 else
@@ -503,7 +505,8 @@ IDirect3DVertexShader9* __stdcall CreateVertexShaderHook(const DWORD** a1)
                 pShaderData = (DWORD*)pCode->GetBufferPointer();
                 IDirect3DVertexShader9* shader = nullptr;
                 result = pDevice->CreateVertexShader(pShaderData, &shader);
-                if (FAILED(result)) {
+                if (FAILED(result))
+                {
                     return pShader;
                 }
                 else
@@ -710,7 +713,8 @@ DWORD WINAPI XInputGetStateHook(DWORD dwUserIndex, XINPUT_STATE* pState)
         pState->Gamepad.wButtons = XINPUT_GAMEPAD_A;
 
         static auto frames = 0;
-        if (frames >= 20) {
+        if (frames >= 20)
+        {
             pState->Gamepad.wButtons = 0x0000;
             frames = 0;
         }
@@ -734,7 +738,7 @@ void Init()
     auto bAutoclicker = iniReader.ReadInteger("MAIN", "Autoclicker", 0) != 0;
 
     FillAddressTable();
-    
+
     if (bSkipIntro)
     {
         injector::MakeNOP(addrTbl[0x97BE91], 6);
@@ -759,11 +763,11 @@ void Init()
     // interface scaling
     injector::MakeCALL(addrTbl[0x58ED00], sub_58DDF0, true);
     injector::MakeCALL(addrTbl[0x58EDC3], sub_58DDF0, true);
-    injector::WriteMemory(addrTbl[0x5103E5],  &fAspectRatioInv, true);  // fmul    ds : dword_151B5D8
-    injector::WriteMemory(addrTbl[0x55DF21],  &fAspectRatioInv, true);  // movss   xmm2, ds : dword_151B5D8
-    injector::WriteMemory(addrTbl[0x58DF02],  &fAspectRatioInv, true);  // movss   xmm0, ds : dword_151B5D8
-    injector::WriteMemory(addrTbl[0x58E118],  &fAspectRatioInv, true);  // movss   xmm0, ds : dword_151B5D8
-    injector::WriteMemory(addrTbl[0x9FC4F3],  &fAspectRatioInv, true);  // mulss   xmm0, ds : dword_151B5D8
+    injector::WriteMemory(addrTbl[0x5103E5], &fAspectRatioInv, true);  // fmul    ds : dword_151B5D8
+    injector::WriteMemory(addrTbl[0x55DF21], &fAspectRatioInv, true);  // movss   xmm2, ds : dword_151B5D8
+    injector::WriteMemory(addrTbl[0x58DF02], &fAspectRatioInv, true);  // movss   xmm0, ds : dword_151B5D8
+    injector::WriteMemory(addrTbl[0x58E118], &fAspectRatioInv, true);  // movss   xmm0, ds : dword_151B5D8
+    injector::WriteMemory(addrTbl[0x9FC4F3], &fAspectRatioInv, true);  // mulss   xmm0, ds : dword_151B5D8
     injector::WriteMemory(addrTbl[0x116A33B], &fAspectRatioInv, true);  // movss   xmm1, ds : dword_151B5D8
     injector::WriteMemory(addrTbl[0x116A378], &fAspectRatioInv, true);  // movss   xmm0, ds : dword_151B5D8
 
@@ -778,9 +782,16 @@ void Init()
     injector::MakeJMP(addrTbl[0x55DB40], sub_55DB40, true);
     injector::MakeJMP(addrTbl[0x55DBA0], sub_55DBA0, true);
 
+    // Fullscreen cutscenes
+    injector::MakeNOP(addrTbl[0x500640], 8, true);
+    static auto CutsceneDimensionsHook = safetyhook::create_mid(addrTbl[0x500640], [](SafetyHookContext& regs)
+    {
+        *(int32_t*)(regs.esp + 0x24) = static_cast<int32_t>(720.0f * GetAspectRatio());
+    });
+
     // Camera near clip fix
-    injector::MakeCALL(addrTbl[0x5F816C],  sub_E6E800, true);
-    injector::MakeCALL(addrTbl[0x96B347],  sub_E6E800, true);
+    injector::MakeCALL(addrTbl[0x5F816C], sub_E6E800, true);
+    injector::MakeCALL(addrTbl[0x96B347], sub_E6E800, true);
     injector::MakeCALL(addrTbl[0x104357D], sub_E6E800, true);
     injector::MakeCALL(addrTbl[0x104866C], sub_E6E800, true);
     injector::MakeCALL(addrTbl[0x104F1F7], sub_E6E800, true);
@@ -795,7 +806,7 @@ void Init()
     {
         injector::MakeCALL(addrTbl[0x012915D1], CreateVertexShaderHook, true);
         //injector::MakeCALL(addrTbl[0x01291614], CreatePixelShaderHook, true);
-        
+
         //static bool bIsPaused = false;
         //struct GameStateHook
         //{
@@ -921,7 +932,7 @@ void Init()
         injector::MakeCALL(addrTbl[0x55E09C], sub_55DB40, true); // 0x55DB40 + 0x0->call    sub_55DB40
         injector::MakeCALL(addrTbl[0x55E0C8], sub_55DB40_stretch, true); // 0x55DB40 + 0x0->call    sub_55DB40
     }
-    
+
     //3d blips fix
     {
         injector::MakeCALL(addrTbl[0x9A0EE0], ObjectiveIndicator, true);
@@ -953,7 +964,7 @@ void Init()
     if (bAutoclicker)
     {
         pXInputGetState = std::move(IATHook::Replace(GetModuleHandleA(NULL), "XINPUT1_3.dll",
-            std::forward_as_tuple("XInputGetState@2", XInputGetStateHook)
+                                    std::forward_as_tuple("XInputGetState@2", XInputGetStateHook)
         )["XInputGetState@2"]);
 
         auto pattern = hook::pattern("E8 ? ? ? ? 8D 4C 24 24 8A 11");
@@ -985,18 +996,21 @@ void Init()
                     int16_t health1 = 0;
                     int16_t health2 = 0;
 
-                    if (LeonHealth && HelenaHealth) {
+                    if (LeonHealth && HelenaHealth)
+                    {
                         health1 = *LeonHealth;
                         health2 = *HelenaHealth;
                     }
-                    else if (ChrisHealth && PiersHealthHealth) {
+                    else if (ChrisHealth && PiersHealthHealth)
+                    {
                         health1 = *ChrisHealth;
                         health2 = *PiersHealthHealth;
 
                         FineR = 0xA4, FineG = 0xB8, FineB = 0x39;
                         DangerR = 0x89, DangerG = 0x13, DangerB = 0x1D;
                     }
-                    else if (JakeHealth && SherryHealth) {
+                    else if (JakeHealth && SherryHealth)
+                    {
                         health1 = *JakeHealth;
                         health2 = *SherryHealth;
 
@@ -1016,11 +1030,13 @@ void Init()
 
                     if (health1 >= 1)
                     {
-                        if (health1 <= 150) {
+                        if (health1 <= 150)
+                        {
                             LEDEffects::SetLightingLeftSide(DangerRPDimmed, DangerGPDimmed, DangerBPDimmed, true, false); //red
                             LEDEffects::DrawCardiogram(DangerRP, DangerGP, DangerBP, 0, 0, 0); //red
                         }
-                        else {
+                        else
+                        {
                             LEDEffects::SetLightingLeftSide(FineRPDimmed, FineGPDimmed, FineBPDimmed, true, false);  //green
                             LEDEffects::DrawCardiogram(FineRP, FineGP, FineBP, 0, 0, 0); //green
                         }
@@ -1033,11 +1049,13 @@ void Init()
 
                     if (health2 >= 1)
                     {
-                        if (health2 <= 150) {
+                        if (health2 <= 150)
+                        {
                             LEDEffects::SetLightingRightSide(DangerRPDimmed, DangerGPDimmed, DangerBPDimmed, true, false); //red
                             LEDEffects::DrawCardiogramNumpad(DangerRP, DangerGP, DangerBP, 0, 0, 0); //red
                         }
-                        else {
+                        else
+                        {
                             LEDEffects::SetLightingRightSide(FineRPDimmed, FineGPDimmed, FineBPDimmed, true, false);  //green
                             LEDEffects::DrawCardiogramNumpad(FineRP, FineGP, FineBP, 0, 0, 0); //green
                         }
