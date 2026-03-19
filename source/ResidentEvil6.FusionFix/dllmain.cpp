@@ -89,6 +89,10 @@ void FillAddressTable()
     addrTbl[0x9DBE9D] = (uintptr_t)hook::get_pattern("F3 0F 10 05 ? ? ? ? F3 0F 11 40 ? EB 28");
     addrTbl[0x9DB8E8] = (uintptr_t)hook::get_pattern("F3 0F 5C 05 ? ? ? ? F3 0F 10 0D ? ? ? ? 0F 54 C1");
     addrTbl[0x500640] = (uintptr_t)hook::get_pattern("C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? E8 ? ? ? ? 8B 8E ? ? ? ? 89 6C 24");
+    addrTbl[0x50098E] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? 8B 8E ? ? ? ? C7 86 ? ? ? ? ? ? ? ? C7 86");
+    addrTbl[0x544227] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? 85 C0 75 ? 0F 57 C0 A1");
+    addrTbl[0x544432] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? 85 C0 75 ? 83 C7 ? 8B 86");
+    addrTbl[0x975DF0] = (uintptr_t)hook::get_pattern("8B 44 24 ? 8B 54 24 ? 50 8B 44 24 ? 6A 00 52 8B 54 24 ? 50 8B 44 24 ? 52 8B 54 24 ? 50 8B 44 24 ? 6A 00");
 
     hook::pattern("6A 03 53 53 68").for_each_result([](hook::pattern_match match)
     {
@@ -289,6 +293,7 @@ float __stdcall sub_55DB40_stretch(int a1)
     return sub_974C80(a1) + (GetHudOffset() * 2.0f);
 }
 
+bool bDrawingSubtitlesNow = false;
 float fAspectRatioInv = (1.0f / (16.0f / 9.0f));
 void __stdcall sub_58DDF0(uint32_t* a1, int* a2, int a3, uint16_t a4)
 {
@@ -310,9 +315,17 @@ void __stdcall sub_58DDF0(uint32_t* a1, int* a2, int a3, uint16_t a4)
 
     fAspectRatioInv = 1.0f / GetAspectRatio();
 
+    int32_t nHudOffset = GetHudOffset();
+
+    if (bDrawingSubtitlesNow)
+    {
+        nHudOffset = 0;
+        bDrawingSubtitlesNow = false;
+    }
+
     if (IsSplitScreenActive())
     {
-        *a1 = (int)sub_974C80(*a1) + GetHudOffset();
+        *a1 = (int)sub_974C80(*a1) + nHudOffset;
         *a2 = (int)sub_974CD0(*a2);
         *(float*)(a3 + 16) = sub_974C80((int)*(float*)(a3 + 16));
         *(float*)(a3 + 20) = sub_974CD0((int)*(float*)(a3 + 20));
@@ -329,7 +342,7 @@ void __stdcall sub_58DDF0(uint32_t* a1, int* a2, int a3, uint16_t a4)
     {
         v6 = *(uint32_t*)(*(uint32_t*)addrTbl[0x186E8BC] + 292);
         v18 = fAspectRatioInv / (float)((float)v6 / (float)*(int*)(*(uint32_t*)addrTbl[0x186E8BC] + 288));
-        *a1 = (int)sub_974C80(*a1) + GetHudOffset();
+        *a1 = (int)sub_974C80(*a1) + nHudOffset;
         v7 = (int)sub_974CD0(*a2);
         *a2 = v7;
         if (a4)
@@ -736,6 +749,8 @@ void Init()
     auto bDisableDBNOEffects = iniReader.ReadInteger("MAIN", "DisableDBNOEffects", 0) != 0;
     bDisableObjectiveIndicator = iniReader.ReadInteger("MAIN", "DisableObjectiveIndicator", 0) != 0;
     auto bAutoclicker = iniReader.ReadInteger("MAIN", "Autoclicker", 0) != 0;
+    static auto bCutsceneLetterbox = iniReader.ReadInteger("MAIN", "CutsceneLetterbox", 1) != 0;
+    static auto bCutscenePillarbox = iniReader.ReadInteger("MAIN", "CutscenePillarbox", 1) != 0;
 
     FillAddressTable();
 
@@ -787,6 +802,60 @@ void Init()
     static auto CutsceneDimensionsHook = safetyhook::create_mid(addrTbl[0x500640], [](SafetyHookContext& regs)
     {
         *(int32_t*)(regs.esp + 0x24) = static_cast<int32_t>(720.0f * GetAspectRatio());
+    });
+
+    static int32_t nBorderSize = 0;
+    static auto CutsceneLetterboxingHook = safetyhook::create_mid(addrTbl[0x50098E], [](SafetyHookContext& regs)
+    {
+        const int32_t ResX = *(int32_t*)(regs.esp + 0x34);
+        const int32_t ResY = *(int32_t*)(regs.esp + 0x38);
+
+        int32_t& x = *(int32_t*)(regs.esp + 0x3C);
+        int32_t& y = *(int32_t*)(regs.esp + 0x40);
+        int32_t& w = *(int32_t*)(regs.esp + 0x44);
+        int32_t& h = *(int32_t*)(regs.esp + 0x48);
+
+        if (bCutscenePillarbox)
+        {
+            const int32_t targetWidth = (ResY * 16) / 9;
+            const int32_t border = (ResX - targetWidth) / 2;
+
+            x += border;
+            w -= border;
+        }
+
+        if (!bCutsceneLetterbox)
+        {
+            const int32_t topBorder = y;
+            nBorderSize = topBorder;
+
+            h += topBorder;
+            y = 0;
+        }
+    });
+
+    // Subtitles
+    injector::MakeNOP(addrTbl[0x544227], 5, true);
+    static auto ForceSubtitlesStyle = safetyhook::create_mid(addrTbl[0x544227], [](SafetyHookContext& regs)
+    {
+        if (bCutscenePillarbox)
+            bDrawingSubtitlesNow = true;
+        regs.eax = *(uint32_t*)(regs.ecx + 0x20);
+        if (regs.eax == 1)
+            regs.eax = 0;
+    });
+
+    injector::MakeNOP(addrTbl[0x544432], 5, true);
+    static auto SubtitlesVerticalPos = safetyhook::create_mid(addrTbl[0x544432], [](SafetyHookContext& regs)
+    {
+        regs.eax = *(uint32_t*)(regs.ecx + 0x20);
+        if (regs.eax == 1)
+            regs.edi += nBorderSize;
+    });
+
+    static auto LocationPopupText = safetyhook::create_mid(addrTbl[0x975DF0], [](SafetyHookContext& regs)
+    {
+        bDrawingSubtitlesNow = true;
     });
 
     // Camera near clip fix
@@ -1087,7 +1156,7 @@ CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
-        CallbackHandler::RegisterCallback(Init, hook::pattern("85 C0 74 CB 8B 0D"));
+        CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("85 C0 74 CB 8B 0D"));
     });
 }
 
