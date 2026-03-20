@@ -254,11 +254,12 @@ export void InitCore()
     UByteProperty::shCopyCompleteValue = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Core"), "?CopyCompleteValue@UByteProperty@@UBEXPAX0PAVUObject@@@Z"), UByteProperty::CopyCompleteValue);
     UArrayProperty::shCopyCompleteValue = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Core"), "?CopyCompleteValue@UArrayProperty@@UBEXPAX0PAVUObject@@@Z"), UArrayProperty::CopyCompleteValue);
 
-    UObject::shexecIntConst = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Core"), "?execIntConst@UObject@@QAEXAAUFFrame@@QAX@Z"), UObject::execIntConst);
-    UObject::shexecFloatConst = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Core"), "?execFloatConst@UObject@@QAEXAAUFFrame@@QAX@Z"), UObject::execFloatConst);
-
-    ScriptConstants::SetDynamicFloat(1, []() -> float
-    {
-        return 380.0f + Screen.fWidescreenHudOffset;
-    });
+    //not needed atm
+    //UObject::shexecIntConst = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Core"), "?execIntConst@UObject@@QAEXAAUFFrame@@QAX@Z"), UObject::execIntConst);
+    //UObject::shexecFloatConst = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Core"), "?execFloatConst@UObject@@QAEXAAUFFrame@@QAX@Z"), UObject::execFloatConst);
+    //
+    //ScriptConstants::SetDynamicFloat(1, []() -> float
+    //{
+    //    return 380.0f + Screen.fWidescreenHudOffset;
+    //});
 }
