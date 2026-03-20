@@ -482,10 +482,11 @@ namespace X_InputControlButton
 
 bool g_VibrationThisFrame = false;
 bool g_VibrationActive = false;
+int g_VibrationCurrentStrength = 0;
 std::chrono::steady_clock::time_point g_VibrationStart = {};
-constexpr std::chrono::milliseconds VIBRATION_DURATION{ 300 };
+std::chrono::milliseconds g_VibrationDuration{ 150 };
 
-void Vibrate(int strength)
+void Vibrate(int strength, std::chrono::milliseconds duration = std::chrono::milliseconds{ 150 })
 {
     if (!XidiSendVibration)
         return;
@@ -493,15 +494,17 @@ void Vibrate(int strength)
     if (g_VibrationThisFrame)
         return;
 
-    if (g_VibrationActive)
+    if (strength < 0)
         return;
 
-    if (strength < 0)
+    if (g_VibrationActive && strength < g_VibrationCurrentStrength)
         return;
 
     g_VibrationThisFrame = true;
     g_VibrationActive = true;
+    g_VibrationCurrentStrength = strength;
     g_VibrationStart = std::chrono::steady_clock::now();
+    g_VibrationDuration = duration;
 
     constexpr int RUMBLE_MAX_STRENGTH = 100;
     constexpr WORD RUMBLE_MAX_VALUE = 0xFFFF;
@@ -520,9 +523,10 @@ void UpdateVibration()
     if (g_VibrationActive)
     {
         auto elapsed = std::chrono::steady_clock::now() - g_VibrationStart;
-        if (elapsed >= VIBRATION_DURATION)
+        if (elapsed >= g_VibrationDuration)
         {
             g_VibrationActive = false;
+            g_VibrationCurrentStrength = 0;
             if (XidiSendVibration)
                 XidiSendVibration(-1, 0, 0);
         }
@@ -574,40 +578,40 @@ export void InitInput()
     pattern = hook::pattern("C7 86 ? ? ? ? ? ? ? ? E9 ? ? ? ? 84 C0");
     static auto MaxPayne_GameModeupdateHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        Vibrate(14);
+        Vibrate(14, std::chrono::milliseconds{ 100 });
     });
 
     // Painkiller use
     pattern = hook::pattern("FF 25 ? ? ? ? 5E");
     static auto X_GlobalPainkillerSettingssendMessagesHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        Vibrate(23);
+        Vibrate(23, std::chrono::milliseconds{ 200 });
     });
 
     // Damage taken
     pattern = hook::module_pattern(GetModuleHandle(L"X_GameObjectsMFC"), "E8 ? ? ? ? 8B CF E8 ? ? ? ? 48");
     static auto X_CharactersetHealthHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        Vibrate(46);
+        Vibrate(46, std::chrono::milliseconds{ 180 });
     });
 
     // Shooting
     pattern = hook::module_pattern(GetModuleHandle(L"X_GameObjectsMFC"), "E8 ? ? ? ? 8B 44 24 ? 50 8B CE E8 ? ? ? ? 5E");
     static auto X_CharacterPropertiessetIsShooting1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        Vibrate(50);
+        Vibrate(80, std::chrono::milliseconds{ 80 });
     });
 
     pattern = hook::module_pattern(GetModuleHandle(L"X_GameObjectsMFC"), "E8 ? ? ? ? 8B C8 E8 ? ? ? ? 5E 5B");
     static auto X_CharacterPropertiessetIsShooting2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        Vibrate(50);
+        Vibrate(80, std::chrono::milliseconds{ 80 });
     });
 
     pattern = hook::module_pattern(GetModuleHandle(L"X_GameObjectsMFC"), "E8 ? ? ? ? 8B C8 E8 ? ? ? ? 53 8B CE E8 ? ? ? ? 5E");
     static auto X_CharacterPropertiessetIsShooting3 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        Vibrate(50);
+        Vibrate(80, std::chrono::milliseconds{ 80 });
     });
 
     // Explosion
@@ -622,7 +626,7 @@ export void InitInput()
     static auto X_CameraImplementationreceiveAnimateInPlaceHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
         if (CameraPathName == "explosion")
-            Vibrate(100);
+            Vibrate(100, std::chrono::milliseconds{ 500 });
         CameraPathName.clear();
     });
 }
