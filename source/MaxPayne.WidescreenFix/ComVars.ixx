@@ -53,6 +53,7 @@ export namespace X_Crosshair
 
 export std::string CurrentGameMode;
 export bool bIsPaused = false;
+export bool bCutsceneBordersRendered = false;
 
 export namespace MaxPayne_ConfiguredInput
 {
