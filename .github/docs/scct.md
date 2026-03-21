@@ -1,36 +1,36 @@
 ![scct](https://thirteenag.github.io/screens/scct/main2.jpg)
 
-$${\color{green}✔}$$ Fixed Resolution
+$${\color{green}✔}$$  Fixed Resolution
 
-$${\color{green}✔}$$ Fixed Aspect Ratio
+$${\color{green}✔}$$  Fixed Aspect Ratio
 
-$${\color{green}✔}$$ Fixed HUD
+$${\color{green}✔}$$  Fixed HUD
 
-$${\color{green}✔}$$ Fixed Field of View
+$${\color{green}✔}$$  Fixed Field of View
 
-$${\color{green}✔}$$ Fixed FMVs
+$${\color{green}✔}$$  Fixed FMVs
 
-$${\color{green}✔}$$ Added raw input support for mouse
+$${\color{green}✔}$$  Added raw input support for mouse
 
-$${\color{green}✔}$$ Improved gamepad support (via [Xidi](https://github.com/samuelgr/Xidi))
+$${\color{green}✔}$$  Improved gamepad support (via [Xidi](https://github.com/samuelgr/Xidi))
 
-$${\color{blue}ⓘ}$$ Added an option to limit fps to avoid game breaking bugs
+$${\color{blue}ⓘ}$$  Added an option to limit FPS to avoid game breaking bugs
 
-$${\color{blue}ⓘ}$$ Added an option to skip intro
+$${\color{blue}ⓘ}$$  Added an option to skip intro
 
-$${\color{blue}ⓘ}$$ Added an option to skip "Press Any Key To Continue" prompt
+$${\color{blue}ⓘ}$$  Added an option to skip "Press Any Key To Continue" prompt
 
-$${\color{blue}ⓘ}$$ Added an option to increase shadows resolution
+$${\color{blue}ⓘ}$$  Added an option to increase shadows resolution
 
-$${\color{blue}ⓘ}$$ Added an option to change goggles light color
+$${\color{blue}ⓘ}$$  Added an option to change goggles light color
 
-$${\color{blue}ⓘ}$$ Added an option to enable [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html)
+$${\color{blue}ⓘ}$$  Added an option to enable [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html)
 
-$${\color{blue}ⓘ}$$ Added an option to enable suit indicators to behave like in Blacklist
+$${\color{blue}ⓘ}$$  Added an option to enable suit indicators to behave like in Blacklist
 
-$${\color{blue}ⓘ}$$ Fixed an issue that caused settings to be reset on every game launch
+$${\color{blue}ⓘ}$$  Fixed an issue that caused settings to be reset on every game launch
 
-$${\color{blue}ⓘ}$$ Restored steam overlay functionality if it's available
+$${\color{blue}ⓘ}$$  Restored steam overlay functionality if it's available
 
     Installation:
         Download and extract the archive to the game directory, where the exe is located.

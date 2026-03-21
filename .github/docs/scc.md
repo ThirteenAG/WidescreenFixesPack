@@ -1,40 +1,40 @@
 ![scc](https://thirteenag.github.io/screens/scc/main2.jpg)
 
-$${\color{blue}ⓘ}$$ Added an option to skip intro
+$${\color{blue}ⓘ}$$  Added an option to skip intro
 
-$${\color{blue}ⓘ}$$ Added an option to enable windowed mode
+$${\color{blue}ⓘ}$$  Added an option to enable windowed mode
 
-$${\color{blue}ⓘ}$$ Added an option to disable negative mouse acceleration
+$${\color{blue}ⓘ}$$  Added an option to disable negative mouse acceleration
 
-$${\color{blue}ⓘ}$$ Added an option to skip system detection errors on startup
+$${\color{blue}ⓘ}$$  Added an option to skip system detection errors on startup
 
-$${\color{blue}ⓘ}$$ Added an option to restore LAN support
+$${\color{blue}ⓘ}$$  Added an option to restore LAN support
 
-$${\color{blue}ⓘ}$$ Added an option to enable partial ultrawide support 
+$${\color{blue}ⓘ}$$  Added an option to enable partial ultrawide support 
 
-$${\color{blue}ⓘ}$$ Added an option to disable depth of field effect
+$${\color{blue}ⓘ}$$  Added an option to disable depth of field effect
 
-$${\color{blue}ⓘ}$$ Added an option to disable black and white filter
+$${\color{blue}ⓘ}$$  Added an option to disable black and white filter
 
-$${\color{blue}ⓘ}$$ Added an option to enable enhanced sonar vision
+$${\color{blue}ⓘ}$$  Added an option to enable enhanced sonar vision
 
-$${\color{blue}ⓘ}$$ Added an option to disable character lighting 
+$${\color{blue}ⓘ}$$  Added an option to disable character lighting 
 
-$${\color{blue}ⓘ}$$ Added an option to enable [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html)
+$${\color{blue}ⓘ}$$  Added an option to enable [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html)
 
-$${\color{blue}ⓘ}$$ Added an option to load packed files from disk
+$${\color{blue}ⓘ}$$  Added an option to load packed files from disk
 
-$${\color{blue}ⓘ}$$ Added an option to unlock DLC content that's unavailable after servers shut down
+$${\color{blue}ⓘ}$$  Added an option to unlock DLC content that's unavailable after servers shut down
 
-$${\color{blue}ⓘ}$$ Fixed crash in DLC levels when Xbox360 achievement conditions are met (e.g., "King of the Crypt" in New Orleans, "Watch the Soap" in Portland)
+$${\color{blue}ⓘ}$$  Fixed crash in DLC levels when Xbox360 achievement conditions are met (e.g., "King of the Crypt" in New Orleans, "Watch the Soap" in Portland)
 
-$${\color{blue}ⓘ}$$ Fixed gamepad support (via [Xidi](https://github.com/samuelgr/Xidi))
+$${\color{blue}ⓘ}$$  Fixed gamepad support (via [Xidi](https://github.com/samuelgr/Xidi))
 
-$${\color{blue}ⓘ}$$ Added Splinter Cell Blacklist control scheme (not fully tested, report issues via github)
+$${\color{blue}ⓘ}$$  Added Splinter Cell Blacklist control scheme (not fully tested, report issues via github)
 
-$${\color{blue}ⓘ}$$ FPS limit in coop is changed to 60: possible to set custom with `update/convictionsettings.ini`, `SyncMaxStepFrequency` parameter
+$${\color{blue}ⓘ}$$  FPS limit in coop is changed to 60: possible to set custom with `update/convictionsettings.ini`, `SyncMaxStepFrequency` parameter
 
-$${\color{blue}ⓘ}$$ Disabled unlimited ammo for all weapons, to return original behavior, delete `update/weapontuning.ini`
+$${\color{blue}ⓘ}$$  Disabled unlimited ammo for all weapons, to return original behavior, delete `update/weapontuning.ini`
 
 ![controls](https://github.com/user-attachments/assets/2498a891-2991-4604-b0dc-b5d309a0c02d)
 

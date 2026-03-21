@@ -1,10 +1,10 @@
 ![scdaps2](https://thirteenag.github.io/screens/scdaps2/main2.jpg)
 
-$${\color{green}✔}$$  Fixed Aspect Ratio
+$${\color{green}✔}$$ Fixed Aspect Ratio
 
-$${\color{green}✔}$$  Fixed HUD
+$${\color{green}✔}$$ Fixed HUD
 
-$${\color{green}✔}$$  Fixed Field of View
+$${\color{green}✔}$$ Fixed Field of View
 
 ❌ Fixed FMVs
 
@@ -18,6 +18,6 @@ $${\color{green}✔}$$  Fixed Field of View
 
 ## Known Issues
 
-- Hud in coop mode is partially broken
+- HUD in Coop mode is partially broken
 - FMVs are stretched, I couldn't find a way to fix them
-- Loadscreens are stretched. Same as above
+- Loadscreens are stretched (same as above)
