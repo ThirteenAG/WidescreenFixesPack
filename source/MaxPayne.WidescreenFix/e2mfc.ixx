@@ -150,38 +150,34 @@ void InitWF()
 
             if (bWidescreenHud)
             {
-                float fWidescreenHudOffset = Screen.fWidescreenHudOffset;
-                if (bCutsceneBordersRendered)
-                    fWidescreenHudOffset -= 9999.0f;
-
                 if (ElementPosX == 7.0f) // bullet time meter
                 {
-                    ElementNewPosX1 = ElementPosX + fWidescreenHudOffset;
+                    ElementNewPosX1 = ElementPosX + Screen.fWidescreenHudOffset;
                 }
 
                 if (ElementPosX == 8.0f && regs.eax != 8) // bullet time overlay()
                 {
-                    ElementNewPosX1 = ElementPosX + fWidescreenHudOffset;
+                    ElementNewPosX1 = ElementPosX + Screen.fWidescreenHudOffset;
                 }
 
                 if (ElementPosX == 12.0f) // painkillers
                 {
-                    ElementNewPosX1 = ElementPosX + fWidescreenHudOffset;
+                    ElementNewPosX1 = ElementPosX + Screen.fWidescreenHudOffset;
                 }
 
                 if (ElementPosX == 22.5f) //health bar and overlay
                 {
-                    ElementNewPosX1 = ElementPosX + fWidescreenHudOffset;
+                    ElementNewPosX1 = ElementPosX + Screen.fWidescreenHudOffset;
                 }
 
                 if (ElementPosX == 95.0f) // other weapons name
                 {
-                    ElementNewPosX1 = ElementPosX - fWidescreenHudOffset;
+                    ElementNewPosX1 = ElementPosX - Screen.fWidescreenHudOffset;
                 }
 
                 if (ElementPosX == 190.0f) //molotovs/grenades name pos
                 {
-                    ElementNewPosX1 = ElementPosX - fWidescreenHudOffset;
+                    ElementNewPosX1 = ElementPosX - Screen.fWidescreenHudOffset;
                 }
             }
 
@@ -264,12 +260,7 @@ void InitWF()
                 auto TextNewPosX = TextPosX;
 
                 if ((pTextElementPosX->a == 0.0f || pTextElementPosX->a == -8.0f || pTextElementPosX->a == -16.0f || pTextElementPosX->a == -24.0f || pTextElementPosX->a == -32.0f) && pTextElementPosX->b == -10.5f && (pTextElementPosX->c == 8.0f || pTextElementPosX->c == 16.0f || pTextElementPosX->c == 24.0f || pTextElementPosX->c == 32.0f) && pTextElementPosX->d == 21) //ammo numbers(position depends on digits amount)
-                {
                     TextNewPosX = TextPosX + Screen.fWidescreenHudOffset;
-
-                    if (bCutsceneBordersRendered)
-                        TextNewPosX += 9999.0f;
-                }
 
                 _asm fld    dword ptr[TextNewPosX]
             }
@@ -295,12 +286,7 @@ void InitWF()
                 TextPosX2 = *(float*)(regs.ebp - 0x1C);
 
                 if (TextPosX1 == (69.0f + Screen.fWidescreenHudOffset) && TextPosY1 == 457.0f) // painkillers amount number
-                {
                     *(float*)(regs.ebp - 0x1C) += (24.0f * Screen.fWidescreenHudOffset);
-
-                    if (bCutsceneBordersRendered)
-                        *(float*)(regs.ebp - 0x1C) += 9999.0f;
-                }
 
                 *(uint32_t*)(regs.ecx + 8) = regs.eax;
                 auto ebp1C = *(float*)(regs.ebp - 0x1C);
