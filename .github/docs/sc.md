@@ -12,6 +12,8 @@ $${\color{green}✔}$$ Fixed FMVs
 
 $${\color{green}✔}$$ Forces highest character LOD
 
+$${\color{green}✔}$$ Restores Xbox shadows and water shader
+
 $${\color{green}✔}$$ Disabled mouse acceleration
 
 $${\color{green}✔}$$ Added raw input support for mouse
@@ -21,8 +23,6 @@ $${\color{green}✔}$$ Improved gamepad support (via [Xidi](https://github.com/s
 $${\color{blue}ⓘ}$$ Added an option to skip intro
 
 $${\color{blue}ⓘ}$$ Added an option to skip "Press Fire to Continue" prompt
-
-$${\color{blue}ⓘ}$$ Added an option to change goggles light color
 
     Installation:
         Download and extract the archive to the game directory, where the exe is located.
