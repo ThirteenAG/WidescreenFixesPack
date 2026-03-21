@@ -2,7 +2,7 @@
 
 $${\color{green}✔}$$  Added an option to enable dual analog patch
 
-$${\color{green}✔}$$  Added an option to improve movement controls, allowing the left analog stick to fully control the player’s movement speed
+$${\color{green}✔}$$  Added an option to improve movement controls, allowing the left analog stick to fully control the player's movement speed
 
 $${\color{green}✔}$$  Added an option to enable 60 FPS
 
