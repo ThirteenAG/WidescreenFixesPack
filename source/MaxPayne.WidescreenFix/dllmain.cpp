@@ -58,12 +58,13 @@ namespace MaxPayne_HUDFadeUpdate
     }
 }
 
+float CutsceneBordersScale = 1.0f;
 injector::hook_back<float(__fastcall*)(void*, void*)> hb_421AC0;
 float __fastcall sub_421AC0(void* _this, void* edx)
 {
     auto ret = hb_421AC0.fun(_this, edx);
-    bCutsceneBordersRendered = ret == 2.0f;
-    return ret;
+    bCutsceneBordersRendered = ret < 1.0f;
+    return CutsceneBordersScale;
 }
 
 void Init()
@@ -88,19 +89,15 @@ void Init()
     {
         auto f = [](uintptr_t _this, uintptr_t edx) -> float
         {
-            auto targetScale = 1.0f;
             if (nCutsceneBorders > 1)
-                targetScale = *(float*)(_this + 12) * (1.0f / ((4.0f / 3.0f) / Screen.fAspectRatio));
+                CutsceneBordersScale = *(float*)(_this + 12) * (1.0f / ((4.0f / 3.0f) / Screen.fAspectRatio));
 
-            if (targetScale >= 1.0f)
-                targetScale = 2.0f;
-
-            return targetScale;
+            return *(float*)(_this + 12);
         };
         auto pattern = hook::pattern("E8 ? ? ? ? EB ? D9 05 ? ? ? ? 8B CF");
         injector::MakeCALL(pattern.get_first(), static_cast<float(__fastcall*)(uintptr_t, uintptr_t)>(f), true); //0x4565B8
 
-        pattern = hook::pattern("E8 ? ? ? ? ? ? ? ? ? ? 5F DF E0 F6 C4 ? 0F 84");
+        pattern = hook::pattern("E8 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? E8 ? ? ? ? ? ? ? ? 8B F0 89 5C 24");
         hb_421AC0.fun = injector::MakeCALL(pattern.get_first(), sub_421AC0, true).get();
     }
 
