@@ -1,34 +1,36 @@
 ![scda](https://thirteenag.github.io/screens/scda/main2.jpg)
 
-$${\color{green}✔}$$ Fixed Resolution
+$${\color{green}✔}$$  Fixed Resolution
 
-$${\color{green}✔}$$ Fixed Aspect Ratio
+$${\color{green}✔}$$  Fixed Aspect Ratio
 
-$${\color{green}✔}$$ Fixed HUD
+$${\color{green}✔}$$  Fixed HUD
 
-$${\color{green}✔}$$ Fixed Field of View
+$${\color{green}✔}$$  Fixed Field of View
 
-$${\color{green}✔}$$ Fixed FMVs
+$${\color{green}✔}$$  Fixed FMVs
 
-$${\color{green}✔}$$ Added raw input support for mouse
+$${\color{green}✔}$$  Added raw input support for mouse
 
-$${\color{green}✔}$$ Improved gamepad support (via [Xidi](https://github.com/samuelgr/Xidi))
+$${\color{green}✔}$$  Improved gamepad support (via [Xidi](https://github.com/samuelgr/Xidi))
 
-$${\color{green}✔}$$ Fixed [AI hearing issue](https://www.youtube.com/watch?v=uX_FcPvM64c)
+$${\color{green}✔}$$  Fixed [AI hearing issue](https://www.youtube.com/watch?v=uX_FcPvM64c)
 
-$${\color{blue}ⓘ}$$ Added an option to increase shadows resolution
+$${\color{blue}ⓘ}$$  Added an option to increase shadows resolution
 
-$${\color{blue}ⓘ}$$ Added an option to increase glow/bloom resolution
+$${\color{blue}ⓘ}$$  Added an option to increase glow/bloom resolution
 
-$${\color{blue}ⓘ}$$ Added an option to limit fps to avoid game breaking bugs
+$${\color{blue}ⓘ}$$  Added an option to approximately restore Xbox 360's gamma
 
-$${\color{blue}ⓘ}$$ Added an option to skip intro
+$${\color{blue}ⓘ}$$  Added an option to limit FPS to avoid game breaking bugs
 
-$${\color{blue}ⓘ}$$ Added an option to change goggles light color
+$${\color{blue}ⓘ}$$  Added an option to skip intro
 
-$${\color{blue}ⓘ}$$ Added an option to enable [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html)
+$${\color{blue}ⓘ}$$  Added an option to change goggles light color
 
-$${\color{blue}ⓘ}$$ Added an option to enable suit indicators to behave like in Blacklist
+$${\color{blue}ⓘ}$$  Added an option to enable [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html)
+
+$${\color{blue}ⓘ}$$  Added an option to enable suit indicators to behave like in Blacklist
 
     Installation:
         Download and extract the archive to the game directory, where the exe is located.

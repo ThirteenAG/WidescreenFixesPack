@@ -2,13 +2,13 @@
 
 $${\color{green}✔}$$  Added an option to enable dual analog patch
 
-$${\color{green}✔}$$  Added an option to improve movement controls, like in other Splinter Cell games, left stick fully controls player's speed
+$${\color{green}✔}$$  Added an option to improve movement controls, allowing the left analog stick to fully control the player’s movement speed
 
-$${\color{green}✔}$$  Added an option to enable 60 fps
+$${\color{green}✔}$$  Added an option to enable 60 FPS
 
 $${\color{green}✔}$$  Added an option to speed up emulator during loading
 
-$${\color{blue}ⓘ}$$ Added an option to skip intro
+$${\color{blue}ⓘ}$$  Added an option to skip intro
 
 $${\color{blue}ⓘ}$$ Ultra-wide support is available (for PPSSPP v1.14 and above)
 

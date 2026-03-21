@@ -1,28 +1,30 @@
 ![sc](https://thirteenag.github.io/screens/sc/main2.jpg)
 
-$${\color{green}✔}$$ Fixed Resolution
+$${\color{green}✔}$$  Fixed Resolution
 
-$${\color{green}✔}$$ Fixed Aspect Ratio
+$${\color{green}✔}$$  Fixed Aspect Ratio
 
-$${\color{green}✔}$$ Fixed HUD
+$${\color{green}✔}$$  Fixed HUD
 
-$${\color{green}✔}$$ Fixed Field of View
+$${\color{green}✔}$$  Fixed Field of View
 
-$${\color{green}✔}$$ Fixed FMVs
+$${\color{green}✔}$$  Fixed FMVs
 
-$${\color{green}✔}$$ Forces highest character LOD
+$${\color{green}✔}$$  Forces highest character LOD
 
-$${\color{green}✔}$$ Restores Xbox shadows and water shader
+$${\color{green}✔}$$  Restores Xbox shadows and water shader
 
-$${\color{green}✔}$$ Disabled mouse acceleration
+$${\color{green}✔}$$  Disabled mouse acceleration
 
-$${\color{green}✔}$$ Added raw input support for mouse
+$${\color{green}✔}$$  Added raw input support for mouse
 
-$${\color{green}✔}$$ Improved gamepad support (via [Xidi](https://github.com/samuelgr/Xidi))
+$${\color{green}✔}$$  Improved gamepad support (via [Xidi](https://github.com/samuelgr/Xidi))
 
-$${\color{blue}ⓘ}$$ Added an option to skip intro
+$${\color{blue}ⓘ}$$  Added an option to skip intro
 
-$${\color{blue}ⓘ}$$ Added an option to skip "Press Fire to Continue" prompt
+$${\color{blue}ⓘ}$$  Added an option to skip "Press Fire to Continue" prompt
+
+$${\color{blue}ⓘ}$$  Added an option to disable cutscene borders
 
     Installation:
         Download and extract the archive to the game directory, where the exe is located.
