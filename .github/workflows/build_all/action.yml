@@ -12,7 +12,7 @@ runs:
   using: "composite"
   steps:
   - name: Add msbuild to PATH
-    uses: microsoft/setup-msbuild@v1.3.2
+    uses: microsoft/setup-msbuild@v3
   - name: Configure build
     shell: cmd
     run: |
