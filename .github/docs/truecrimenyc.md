@@ -30,6 +30,13 @@ $${\color{green}✔}$$ Added an option to enable SMAA
 
 $${\color{green}✔}$$ Added an option to enable XBOX 360 gamma
 
+
+Credits:
+
+- [@Parallellines0451](https://github.com/Parallellines0451) (for XBOX 360 gamma)
+- [@Tervel1337](https://github.com/Tervel1337) (for bloom and depth of field)
+- [@ICantReadYourMind](https://github.com/ICantReadYourMind) (for PostFX module)
+
 ## **PCSX2F: True Crime New York City Widescreen Fix**
 
 Compatible versions:
