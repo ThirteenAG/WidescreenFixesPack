@@ -1,7 +1,7 @@
 TARGET = ../../data/TheWarriors.PPSSPP.FusionFix/memstick/PSP/PLUGINS/TheWarriors.PPSSPP.FusionFix/TheWarriors.PPSSPP.FusionFix
 OBJS = main.o exports.o ../../includes/psp/injector.o ../../includes/psp/log.o ../../includes/psp/patterns.o ../../includes/psp/rini.o ../../includes/psp/inireader.o ../../includes/psp/gvm.o ../../includes/psp/mips.o ../../includes/psp/memalloc.o
 
-CFLAGS = -O2 -Os -G0 -Wall -fshort-wchar -fno-pic -mno-check-zero-division -fpack-struct=16
+CFLAGS = -O2 -Os -G0 -Wall -fshort-wchar -fno-pic -mno-check-zero-division -mpreferred-stack-boundary=4 -fpack-struct=16
 CXXFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti
 ASFLAGS = $(CFLAGS)
 
