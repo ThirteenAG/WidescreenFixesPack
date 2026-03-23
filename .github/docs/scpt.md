@@ -18,6 +18,8 @@ $${\color{green}✔}$$ Added raw input support for mouse
 
 $${\color{green}✔}$$ Improved gamepad support (via [Xidi](https://github.com/samuelgr/Xidi))
 
+$${\color{green}✔}$$ Restored EAX support (via [DSOAL](https://github.com/kcat/dsoal))
+
 $${\color{green}✔}$$ Added an option to enable windowed mode
 
 $${\color{blue}ⓘ}$$ Added an option to skip intro
