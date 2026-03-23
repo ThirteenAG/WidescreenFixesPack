@@ -12,13 +12,15 @@ $${\color{green}✔}$$  Fixed FMVs
 
 $${\color{green}✔}$$  Forces highest character LOD
 
-$${\color{green}✔}$$  Restores Xbox shadows and water shader
+$${\color{green}✔}$$  Restored Xbox shadows and water shader
 
 $${\color{green}✔}$$  Disabled mouse acceleration
 
 $${\color{green}✔}$$  Added raw input support for mouse
 
 $${\color{green}✔}$$  Improved gamepad support (via [Xidi](https://github.com/samuelgr/Xidi))
+
+$${\color{green}✔}$$  Restored EAX support (via [DSOAL](https://github.com/kcat/dsoal))
 
 $${\color{blue}ⓘ}$$  Added an option to skip intro
 
