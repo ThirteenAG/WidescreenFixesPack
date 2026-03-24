@@ -31,8 +31,10 @@ void CDraw::SetFOV(float fFactor)
 {
     fEmergencyVehiclesFix = 70.0f / fFactor;
 
-    if ((*bIsInCutscene == true && bRestoreCutsceneFOV) || bDontTouchFOV)
+    if (bDontTouchFOV)
         *pfScreenFieldOfView = fFactor;
+    else if (*bIsInCutscene == true && bRestoreCutsceneFOV)
+        *pfScreenFieldOfView = AdjustFOV(fFactor, *pfScreenAspectRatio, std::min(*pfScreenAspectRatio, 16.0f / 9.0f));
     else
         *pfScreenFieldOfView = AdjustFOV(fFactor, *pfScreenAspectRatio);
 
