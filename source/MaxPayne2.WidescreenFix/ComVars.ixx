@@ -42,6 +42,7 @@ export struct Screen
 
 export std::string CurrentGameMode;
 export bool bIsPaused = false;
+export bool bCutsceneBordersRendered = false;
 
 export struct TextCoords
 {
