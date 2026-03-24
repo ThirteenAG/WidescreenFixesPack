@@ -34,6 +34,15 @@ int __fastcall sub_404B20(int* CWnd, void* edx, char a2)
     return shsub_404B20.unsafe_fastcall<int>(CWnd, edx, a2);
 }
 
+float CutsceneBordersScale = 1.0f;
+injector::hook_back<float(__fastcall*)(void*, void*)> hb_41EF70;
+float __fastcall sub_41EF70(void* _this, void* edx)
+{
+    auto ret = hb_41EF70.fun(_this, edx);
+    bCutsceneBordersRendered = ret < 1.0f;
+    return CutsceneBordersScale;
+}
+
 void Init()
 {
     CIniReader iniReader("");
@@ -57,12 +66,15 @@ void Init()
         auto f = [](uintptr_t _this, uintptr_t edx) -> float
         {
             if (nCutsceneBorders > 1)
-                return *(float*)(*(uintptr_t*)_this + 4692) * (1.0f / ((4.0f / 3.0f) / Screen.fAspectRatio));
-            else
-                return 1.0f;
+                CutsceneBordersScale = *(float*)(*(uintptr_t*)_this + 4692) * (1.0f / ((4.0f / 3.0f) / Screen.fAspectRatio));
+
+            return *(float*)(*(uintptr_t*)_this + 4692);
         };
         auto pattern = hook::pattern("E8 ? ? ? ? D8 2D ? ? ? ? D8");
         injector::MakeCALL(pattern.get_first(), static_cast<float(__fastcall*)(uintptr_t, uintptr_t)>(f), true); //0x488C68
+
+        pattern = hook::pattern("E8 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? E8 ? ? ? ? ? ? ? ? 8B F0");
+        hb_41EF70.fun = injector::MakeCALL(pattern.get_first(), sub_41EF70, true).get();
     }
 
     static int32_t nLoadSaveSlot = iniReader.ReadInteger("MISC", "LoadSaveSlot", -1);
