@@ -12,7 +12,7 @@ runs:
   using: "composite"
   steps:
   - name: Add msbuild to PATH
-    uses: microsoft/setup-msbuild@v1.3.2
+    uses: microsoft/setup-msbuild@v3
   - name: Configure build
     shell: cmd
     run: |
@@ -37,7 +37,7 @@ runs:
       cd ./data
       release.bat
   - name: Upload artifacts to actions
-    uses: actions/upload-artifact@v4
+    uses: actions/upload-artifact@v7
     with:
       name: WidescreenFixesPack
       path: ./data/Archives/*.zip
