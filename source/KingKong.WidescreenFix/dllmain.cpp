@@ -6,6 +6,7 @@ import XeTexturePacker;
 import RawInput;
 import FusionDxHook;
 import Framelimit;
+import GameSpeedFix;
 import WinMM;
 import Xidi;
 
@@ -37,7 +38,7 @@ void Init()
     static bool bFullscreenFMVs = iniReader.ReadInteger("MAIN", "FullscreenFMVs", 1) != 0;
     Screen.fRawInputMouse = iniReader.ReadFloat("MAIN", "RawInputMouse", 1.0f);
     static float fFOVFactor = iniReader.ReadFloat("MAIN", "FOVFactor", 0.0f);
-    static bool bWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 1) != 0;
+    static bool bWindowedMode = iniReader.ReadInteger("MAIN", "WindowedMode", 1) != 0;
 
     if (strncmp(szForceAspectRatio.c_str(), "auto", 4) != 0)
     {
@@ -457,20 +458,7 @@ void Init()
         *(float*)(regs.ecx + 0x2C) *= targetFPS / 30.0f;
     });
 
-    // Game speed fix
-    pattern = hook::pattern("D8 0D ? ? ? ? DC 05 ? ? ? ? DD 1C 24 8B 04 24 DD D8");
-    injector::MakeNOP(pattern.get_first(15), 3, true);
-    static auto TIM_ul_PreciseGetTicksPerSecondHook = safetyhook::create_mid(pattern.get_first(15), [](SafetyHookContext& regs)
-    {
-        double TicksPerSecond = *(double*)(regs.esp);
-
-        // Cap to prevent 32-bit overflow (4.294 GHz)
-        if (TicksPerSecond > 4294000000.0)
-            TicksPerSecond = 4294000000.0;
-
-        regs.eax = static_cast<uint32_t>(TicksPerSecond);
-    });
-
+    InitGameSpeedFix();
     InitXeTexturePacker();
     InitRawInput();
     InitFramelimit();
