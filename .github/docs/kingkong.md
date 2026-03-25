@@ -1,26 +1,28 @@
 ![kingkong](https://thirteenag.github.io/screens/kingkong/main2.jpg)
 
-$${\color{green}✔}$$  Compatible with Gamer's Edition and Signature Edition
+$${\color{green}✔}$$ Compatible with Gamer's Edition and Signature Edition
 
-$${\color{green}✔}$$  Unlocked all resolutions in settings application
+$${\color{green}✔}$$ Unlocked all resolutions in settings application
 
-$${\color{green}✔}$$  Fixed Aspect Ratio
+$${\color{green}✔}$$ Fixed Aspect Ratio
 
-$${\color{green}✔}$$  Fixed HUD
+$${\color{green}✔}$$ Fixed HUD
 
-$${\color{green}✔}$$  Fixed Field of View
+$${\color{green}✔}$$ Fixed Field of View
 
-$${\color{green}✔}$$  Fixed FMVs
+$${\color{green}✔}$$ Fixed FMVs
 
-$${\color{green}✔}$$  Implemented a framerate limiter to avoid game breaking bugs (some levels are locked to 30 fps to prevent crashes)
+$${\color{green}✔}$$ Fixed an issue that could made the game run too fast when the CPU frequency is above 4.294 GHz
 
-$${\color{green}✔}$$  Fixed an issue when after the first encounter with King Kong and after V-Rex encounters in V-Rex and Call Kong levels the camera keeps shaking constantly at 60 fps
+$${\color{green}✔}$$ Implemented a framerate limiter to avoid game breaking bugs (some levels are locked to 30 fps to prevent crashes)
 
-$${\color{green}✔}$$  Added an option to disable blur on Necropolis, Brontosaurus, In The Mud, and New York levels, which also fixes broken damage overlay that otherwise is impossible to see through
+$${\color{green}✔}$$ Fixed an issue when after the first encounter with King Kong and after V-Rex encounters in V-Rex and Call Kong levels the camera keeps shaking constantly at 60 fps
 
-$${\color{green}✔}$$  Implemented raw mouse input, for proper mouse cursor movement and camera movement
+$${\color{green}✔}$$ Added an option to disable blur on Necropolis, Brontosaurus, In The Mud, and New York levels, which also fixes broken damage overlay that otherwise is impossible to see through
 
-$${\color{green}✔}$$  Fixed gamepad support in main game and settings application, including vibration
+$${\color{green}✔}$$ Implemented raw mouse input, for proper mouse cursor movement and camera movement
+
+$${\color{green}✔}$$ Fixed gamepad support in main game and settings application, including vibration
 
 $${\color{blue}ⓘ}$$ Adjustable FOV via ini
 
