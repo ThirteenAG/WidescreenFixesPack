@@ -19,10 +19,31 @@ workspace "WidescreenFixesPack"
    
    defines { "rsc_CompanyName=\"ThirteenAG\"" }
    defines { "rsc_LegalCopyright=\"MIT License\""} 
-   defines { "rsc_FileVersion=\"1.0.0.0\"", "rsc_ProductVersion=\"1.0.0.0\"" }
-   defines { "rsc_InternalName=\"%{prj.name}\"", "rsc_ProductName=\"%{prj.name}\"", "rsc_OriginalFilename=\"%{prj.name}.asi\"" }
+   defines { "rsc_InternalName=\"%{prj.name}\"", "rsc_ProductName=\"%{prj.name}\"", "rsc_OriginalFilename=\"%{cfg.buildtarget.name}\"" }
    defines { "rsc_FileDescription=\"https://thirteenag.github.io/wfp\"" }
    defines { "rsc_UpdateUrl=\"https://github.com/ThirteenAG/WidescreenFixesPack\"" }
+
+   local day = os.date("%d")
+   local month = os.date("%m")
+   local year = os.date("%Y")
+   local revision = os.date("%H") .. os.date("%M")
+
+   defines { "rsc_FileVersion_MAJOR=" .. day }
+   defines { "rsc_FileVersion_MINOR=" .. month }
+   defines { "rsc_FileVersion_BUILD=" .. year }
+   defines { "rsc_FileVersion_REVISION=" .. revision }
+   defines { "rsc_FileVersion=\"" .. day .. "." .. month .. "." .. year .. "\"" }
+
+   local githash = ""
+   local f = io.popen("git rev-parse --short HEAD")
+   if f then
+      githash = f:read("*a"):gsub("%s+", "")
+      f:close()
+   end
+
+   defines { "rsc_GitSHA1=\"" .. githash .. "\"" }
+   defines { "rsc_GitSHA1W=L\"" .. githash .. "\"" }
+   defines { "rsc_ProductVersion=\"" .. day .. "." .. month .. "." .. year .. "." .. revision .. "-" .. githash .. "\"" }
    
    files { "source/%{prj.name}/*.h", "source/%{prj.name}/*.cpp", "source/%{prj.name}/*.hxx", "source/%{prj.name}/*.ixx" }
    files { "data/%{prj.name}/**" }
