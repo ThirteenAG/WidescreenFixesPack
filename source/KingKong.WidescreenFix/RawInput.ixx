@@ -6,10 +6,20 @@ export module RawInput;
 
 import ComVars;
 
+bool bNeedsRawInput = false;
+SafetyHookInline shsub_45B1B0 = {};
+int sub_45B1B0()
+{
+    bNeedsRawInput = true;
+    auto ret = shsub_45B1B0.unsafe_call<int>();
+    bNeedsRawInput = false;
+    return ret;
+}
+
 SafetyHookInline shCameraRotationX = {};
 void __cdecl CameraRotationX(void* a1, float a2)
 {
-    if (aMouseX.get())
+    if (bNeedsRawInput && aMouseX.get())
     {
         float fMouseSensitivity = 1.0f;
         auto Settings = *(uintptr_t*)pSettings;
@@ -24,7 +34,7 @@ void __cdecl CameraRotationX(void* a1, float a2)
 SafetyHookInline shCameraRotationY = {};
 void __cdecl CameraRotationY(void* a1, float a2)
 {
-    if (aMouseY.get())
+    if (bNeedsRawInput && aMouseY.get())
     {
         int bMouseInverted = 0;
         float fMouseSensitivity = 1.0f;
@@ -73,6 +83,9 @@ export void InitRawInput()
 
         pattern = hook::pattern("8B 0D ? ? ? ? 8B 91 ? ? ? ? 89 95 ? ? ? ? 8B 85 ? ? ? ? 83 E8 06");
         pSettings = *pattern.get_first<void*>(2);
+
+        pattern = hook::pattern("55 8B EC B8 ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 8B 48 ? 89 8D ? ? ? ? 8B 15 ? ? ? ? 89 95 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? DF E0");
+        shsub_45B1B0 = safetyhook::create_inline(pattern.get_first(), sub_45B1B0);
 
         pattern = hook::pattern("55 8B EC 83 EC 34 D9 05 ? ? ? ? D9 45 ? DA E9 DF E0 F6 C4 44");
         shCameraRotationY = safetyhook::create_inline(pattern.count(6).get(0).get<void*>(0), CameraRotationY);
