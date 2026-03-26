@@ -53,4 +53,7 @@ export void InitGameSpeedFix()
 
     pattern = hook::pattern("A0 ? ? ? ? 84 C0 74 ? E8");
     shTIM_UpdateCPUClockFrequency = safetyhook::create_inline(pattern.get_first(), TIM_UpdateCPUClockFrequency);
+
+    pattern = hook::pattern("7A ? ? ? ? ? ? ? ? ? EB ? ? ? ? ? ? ? DF E0 F6 C4 ? 75 ? ? ? ? ? ? ? ? ? A1");
+    injector::WriteMemory<uint8_t>(pattern.get_first(), 0xEB, true);
 }
