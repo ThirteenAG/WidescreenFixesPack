@@ -1,0 +1,1228 @@
+[HUD]
+CTRLSecFire=SEKUNDÄR-\nWAFFE
+CTRLPrimFire=FEUER
+CTRLMove=BEWEGEN
+CTRLInventoryShortCut=INVENTAR\nTASTATURKÜRZEL
+CTRLQInv=SCHNELL-\nINVENTAR
+CTRLWeapon=WAFFE
+CTRLOpsat=OPSAT
+CTRLPauseMenu=PAUSE-\nMENÜ
+CTRLNightVision=NACHT-\nSICHT
+CTRLThermalVision=WÄRME-\nBILD
+CTRLCam=KAMERA
+CTRLAim=ZIELEN
+CTRLJump=SPRINGEN
+CTRLCrouch=DUCKEN
+CTRLInteract=AKTION
+CTRLBackWall=RÜCKEN AN\nDIE WAND
+CTRLBinocular=SICHTGERÄT\n/SCHARFSCH.
+CTRLWhistle=PFEIFEN
+
+CTRLSplitJump=SPAGATSPG\n(2x ant.)
+CTRLView=CONTROLLER\nANZEIGEN
+CTRLInventory=INVENTAR
+CTRLResetCam=KAMERA-\nRESET\n(DRÜCKEN)
+
+MAPKEYTITLE=TASTATURBELEGUNG ÄNDERN
+MAPKEYMESSAGE=Drücken Sie eine Taste, um die aktuelle Belegung zu ändern oder klicken Sie auf 'Abbruch', um den Vorgang abzubrechen.
+RESETTODEFAULT=Standard
+SETTINGSCHANGEMESSAGE=Sie haben eine oder mehrere Einstellungen geändert. Klicken Sie auf 'Ja', um die Änderungen zu übernehmen oder auf 'Nein', um die Änderungen zu verwerfen.
+
+DeleteSave=Sind Sie sicher, dass Sie das gespeicherte Spiel löschen möchten?
+CD_WARNING=Bitte legen Sie die CD 3 in das Laufwerk.
+EXITMESSAGE=Möchten Sie Splinter Cell wirklich verlassen?
+
+IDENTITY=(IDENTITÄT
+ACCESS_DENIED=KEIN ZUGRIFF
+KNOWN=BEKANNT
+UNKNOWN=UNBEKANNT)
+GRANT_ACCESS=ZUGRIFF GEW.
+COLONEL=GENERAL
+DECODING=-DECODIEREN-
+SEARCHING=-SUCHE-
+ZOOM_4X=ZOOM 4X
+
+Move=Bewegen
+Unequip=Nicht verwenden
+Equip=Verwenden
+Drop=Ablegen
+BACKPACK=RUCKSACK 
+FN2000=SC-20K
+GADGETS=AUSRÜSTUNG
+ITEMS=GEGENST
+JANUARY=JANUAR
+FEBRUARY=FEBRUAR 
+MARCH=MÄRZ
+APRIL=APRIL
+MAY=MAI
+JUNE=JUNI
+JULY=JULI
+AUGUST=AUGUST 
+SEPTEMBER=SEPTEMBER
+OCTOBER=OKTOBER
+NOVEMBER=NOVEMBER 
+DECEMBER=DEZEMBER 
+DEACTIVATE=ABSCHALTEN
+DISABLEIFF=IFF AUS
+EXIT=ENDE
+EXIT_CAMERA=ENDE [Feuer]
+Exit_Menu=Verlassen
+HackingTurret=- HACKE KANONEN-SOFTWARE - HACKE KANONEN-SOFTWARE 
+NOISE=PFEIFEN
+GAS=GAS [Sekundärfeuer]
+THERMAL=THERMAL
+NIGHT=NACHT
+ZOOMPLUS=ZOOM +
+ZOOMMINUS=ZOOM -
+UPDIRECTIONALBUTTON=Mausrad hoch
+DOWNDIRECTIONALBUTTON=Mausrad runter
+MAINMENU=MENÜ
+PALMTITLE=ECHELON 3.0
+START=SPIEL STARTEN
+TRAINING=TRAINING
+DEMOX=DEMO
+SETTINGS=EINSTELLUNGEN
+DVDFEATURE=BONUSMATERIAL
+VIDEOTRAILER=TRAILER
+DOWNLOADONLINE=LEVEL HERUNTERLADEN
+CREDIT=CREDITS
+VIDEOWALKTHROUGH=WALKTHROUGH
+PLAYERNAME=SPIELERNAME
+ENTER=OK
+Select=Wählen
+Back=Zurück
+Create=Erstellen
+Delete=Löschen
+LEVELS_TITLE=Level laden
+SAVES_TITLE=Spiel laden
+LEVELS=LEVEL
+SAVES=GESPEICHERTE SPIELSTÄNDE
+LOADING=LADE...
+SAVING=SPEICHERN...
+QUICKLOADING=Schnell-Laden...
+QUICKSAVING=Schnellspeichern...
+AUTOLOADING=Automatisches Laden...
+AUTOSAVING=Automatische Speicherung...
+QUICKSAVENAME=Schnellspeichern
+AUTOSAVENAME=Automatisches Speichern
+SAVEFAILED=Speichern des Spielstands gescheitert
+LOADFAILED=Laden des Spielstands gescheitert
+MEMORYCARD=MEMORY CARD
+PLAYERS=PROFILE
+QUICK_LOAD=Schnell-Laden
+BACKTOMAINMENU=SPIEL BEENDEN
+BACKTOSINGLEPLAYERMENU=ZURÜCK ZUM HAUPTMENÜ
+PRESSTOCONTINUE=Zum Fortsetzen (Eingabetaste) drücken
+SINGLEPLAYERMENU=PANDORA TOMORROW
+INTRO=INTRO
+PLAYINTRO=VORSPANN
+CONTROLS=STEUERUNG
+GRAPHICS=GRAFIK
+SOUNDS=SOUND
+WEBSITE=SPLINTER CELL WEBSITE
+LOAD=Laden
+NAME=NAME 
+DATE=DATUM
+TIME=ZEIT
+
+SAVEGAMEEXISTSMESSAGE=Ein Spielstand mit diesem Namen existiert bereits. Möchten Sie ihn überschreiben?
+INVALIDFILENAME=Ungültiger Dateiname.
+
+YES=JA
+NO=NEIN
+OK=OK 
+NAME=NAME 
+CONTROLLER=CONTROLLER 
+
+CtlYNormal=Normale
+CtlYInvert=Umkehren
+CtlVibrateOn=Vibration
+CtlVibrateOff=keine Vibration
+
+NormalVibrate=Normale Vibration
+NormalNoVibrate=Normal keine Vibration
+InvertVibrate=Vibration umkehren
+InvertNoVibrate=Keine Vibration umkehren
+InvertYAxis=Y-ACHSE UMKEHREN
+ControllerVibration=CONTROLLER VIBRATION
+OPTIONS=OPTIONEN
+DIFFICULTY=SCHWIERIGKEIT
+PLAYERSETTINGS=PROFILEINSTELLUNGEN
+SAVE=Speichern
+InvalidName=Dieser Profilname wird BEREITS VERWENDET oder ist UNGÜLTIG. Wählen Sie einen anderen Namen.
+PROFILE_INVALID_NAME=Dieser Profilname wird BEREITS VERWENDET oder ist UNGÜLTIG. Wählen Sie einen anderen Namen.
+PROFILE_ALREADY_EXIST=Dieser Profilname wird BEREITS VERWENDET oder ist UNGÜLTIG. Wählen Sie einen anderen Namen.
+Interact=Aktion
+Jump=Springen
+Duck=Ducken
+Target=Ziel
+QuickInventory=Schnell-Inventar
+Fire=Feuer
+Default=Stand.
+Look=Umsehen
+LOADGAME=SPIEL LADEN
+SAVEGAME=SPIEL SPEICHERN
+MU_TITLE=WO WOLLEN SIE SPEICHERN
+ConfirmLoadGame=Spiel wirklich laden?
+ConfirmBackToMainMenu=Wollen sie wirklich zum Hauptmenü zurückkehren?
+DEMO_NORMAL=Normal (Tipps ein)
+DEMO_HARD=Schwer (Tipps aus)
+Easy=Leicht
+Normal=Normal
+Hard=Schwer
+VIDEO=GRAFIK
+SOUND=SOUND
+SetPosition=Benutzen Sie die Pfeiltasten, um die Position der Bildschirmelemente einzustellen.
+BRIGHTNESS=Helligkeit
+CONTRAST=Kontrast
+POSITION=Position
+MUSICVOLUME=Musik
+VOICEVOLUME=Sprache
+SFXVOLUME=SFX
+AMBIENTVOLUME=Hintergrund
+GAMMA=Gamma
+AUDIOVIRT=Audio-Virtualisierung
+EAX=EAX
+AUDIO3D=3D Audio
+SAVELOAD=SPEICHERN UND LADEN
+TRAININGFOWARD=Weiter mit Leertaste
+JAMMING=STÖRSENDER AKTIV
+RECHARGING=WIRD AUFGELADEN
+ExitGame=Aktuelles Spiel wirklich abbrechen?
+RECONS=DATEN
+PROFILE=PROFIL
+STATS=STATISTIK
+INVENTORY=INVENTAR
+MISSIONINFORMATION=MISSIONSDATEN
+AGENTINFORMATION=AGENTENDATEN
+AMMO=Munition
+CLIPS=Magazine
+QUANTITY=Menge
+UploadData=Datentransfer
+COPYING=KOPIERE... 
+FILE=DATEI:
+MEMORYSTICKDEST=VON Speicher-Stick AN Aufklärung
+From=Von: 
+To=An: 
+Sent=Gesendet: 
+Subject=Betreff: 
+Added=aus Speicher-Stick kopiert. 
+Goal=Ziel
+Goals=ZIELE
+Note=Notiz
+Notes=NOTIZEN
+Foward=Weiter
+HOW_TO_USE_ME=ANWENDUNG
+ITEM_INFO=INFO
+EMPTY=<LEER>
+KEYPAD_GOAL=Der Code für diese Tür lautet: 
+LOW=NIEDRIG
+MEDIUM=MITTEL
+HIGH=HOCH
+VERYHIGH=SEHR HOCH
+GEOMETRY=Animierte Geometrie
+SHADOWS=Schattendetails
+LIGHTMAPS=Lichtdetails
+SHADOWRES=Schattenauflösung
+RESOLUTION=Auflösung
+GRAPHICSQUALITY=Grafik-Qualität
+LOADPROFILE=PROFIL LADEN
+CREATEPROFILE=NEUES PROFIL
+CLEARALL=ZURÜCKSETZEN
+DELETEPROFILE=Profil löschen
+EFFECTSQUALITY=Effekt-Qualität
+
+MissionFailed=MISSION GESCHEITERT
+MissionFailedNormal=LEBENSENERGIE AUF NULL
+MissionFailedAlarm=SIE HABEN ZU VIELE ALARME AUSGELÖST!
+MissionFailedCivilian=SIE HABEN ZU VIELE ZIVILISTEN GETÖTET!
+MissionFailedTimer=ZEIT ABGELAUFEN
+MissionFailedEscaped=SIE HABEN IHR ZIEL NICHT ERREICHT!
+MissionFailedDetected=SIE WURDEN ENTDECKT!
+MissionFailedMissed=MISSIONSZIEL VERPASST
+MissionFailedLethalForce=SIE HABEN GETÖTET!
+MissionFailedBodyFound=EINE LEICHE WURDE GEFUNDEN, ALARMSTUFE 3!
+MissionFailedBodyFound1=EINE LEICHE WURDE GEFUNDEN, ALARMSTUFE 1!
+MissionFailedSothKnows=SOTH WUSSTE, DASS SIE DA SIND!
+MissionFailedOutOfMind=SIE SIND NICHT MEHR ZURECHNUNGSFÄHIG!
+MissionFailedSadono=SADONO WUSSTE, DASS SIE DA SIND!
+MissionFailedHostageKilled=DIE GEISELN WURDEN GETÖTET!
+MissionFailedBombExploded=DIE BOMBE IST EXPLODIERT!
+
+
+MissionComplete=MISSION ERFÜLLT
+Press=DRÜCKEN SIE
+WALKTHROUGH=Walkthrough
+CONTINUE=Weiter
+E3WALKTHROUGHDIALOGTITLE=Wählen Sie eine Option
+CONTINUE_TO_LOAD=WEITER
+RETRY=WIEDERHOLEN
+START_TO_GAME=Drücken Sie (Eingabetaste), um zum Spiel zurückzukehren.
+BACK_TO_GAME=Drücken Sie (ESC), um zum Spiel zurückzukehren.
+CANCEL=ABBRECHEN
+LOAD_WARNING=Aktuelles Spiel geht dabei verloren. Wählen Sie WEITER, um den Vorgang fortzusetzen oder ABBRECHEN, um den Vorgang abzubrechen.
+SAVE_WARNING=Ein Spielstand mit diesem Namen existiert bereits. Möchten Sie ihn überschreiben?
+SAVE_POPUP=Spiel Speichern?
+
+ETHERNET_OFF=Ethernet-Verbindung unterbrochen.
+ETHERNET_ON=Ethernet-Verbindung gefunden.
+VERIFYING=Übertragenes Archiv wird geprüft
+
+NOT_ENOUGH_MEM_01=Ihr PC verfügt nicht über ausreichend freien Speicher, um ein Profil zu speichern. Sie müssen ein Profil speichern, um fortzufahren.
+NOT_ENOUGH_MEM_02= Blöcke freizumachen oder Abbrechen.
+
+NOT_ENOUGH_MEM_1=Ihr PC verfügt nicht über ausreichend freien Speicher, um ein Profil zu speichern. Sie müssen ein Profil speichern, um fortzufahren.
+NOT_ENOUGH_MEM_2= Blöcke freizumachen oder Abbrechen, um ein anderes Profil zu wählen.
+
+SAVING_GAME=Speicherpunkt wird in Spielprofil gespeichert.
+SAVING_PROFILE=Profile werden gespeichert.
+SAVING_GAME_BAD=Speichern des Spiels gescheitert.
+BAD_PROFILE_CREATION=Profilerstellung fehlgeschlagen.
+QUIT_GAME=Spiel beenden\n Sie benötigen mindestens
+QUIT_GAME_END=weitere freie Blöcke. Wählen Sie WEITER, um das Spiel zu verlassen oder ABBRECHEN, um den Vorgang abzubrechen.
+LOADING_GAME=Lade...
+LOADING_GAME_BAD=Die Splinter Cell Spieldaten können nicht geladen werden.
+LOADING_LEVEL_BAD=Der Splinter Cell-Level konnte nicht geladen werden.
+LOADING_PREF_BAD=Laden der Splinter Cell-Einstellungen gescheitert.\nStandardeinstellungen werden verwendet.
+DeletePlayer=Profil wird gelöscht!\n Wählen Sie WEITER, um den Vorgang fortzusetzen oder ABBRECHEN, um den Vorgang abzubrechen.
+DELETING_GAME=Löschvorgang...
+DELETING_GAME_BAD=Löschen gescheitert.
+MAX_SAVEGAME_REACH=Sie haben die maximale Anzahl an Profilen erreicht.
+CONTINUE_WITHOUT_SAVING_CONFIRM=Sind Sie sicher?
+LOADING_PROFILE_BAD=Die Splinter Cell Spieldaten können nicht geladen werden.
+SELECTED_BAD_PROFILE=Das Profil konnte nicht geladen werden.
+DISK_FULL_FREE_FILE=Spiel beenden.\n Wählen Sie Fortsetzen zum Beenden oder Abbrechen, um zum Spiel zurückzukehren.
+DISK_FULL=Ihr PC verfügt nicht über ausreichend freien Speicher, um ein neues Profil zu erstellen. Wählen Sie Fortsetzen, um weiteren Speicherplatz freizugeben oder Abbruch zum Zurückkehren.
+
+SELECTED_BAD_PROFILE_RECOVER=Profil kann nicht geladen werden. Das Profil wurde beschädigt.\nWählen Sie Abbrechen, um ein anderes Profil zu wählen oder Fortsetzen, um es wieder herzustellen. Einige Daten können verloren gehen.
+BAD_PROFILE_RECOVERING=Versuche das Profil wiederherzustellen.
+BAD_PROFILE_RECOVERED=Das Profil wurde wiederhergestellt.
+
+
+ERROR_CONTROLLER=Bitte schließen Sie den Controller wieder an und drücken Sie eine Taste zum Fortsetzen.
+ERROR_NOT_ENOUGH_MEM=Ihr PC verfügt nicht über ausreichend freien Speicher, um Spielstände zu speichern.
+ERROR_NO_DISK=Legen Sie die Spiel-CD ein.
+ERROR_BAD_DISK=Bei der benutzten CD ist ein Problem aufgetreten. Möglicherweise ist sie verschmutzt oder beschädigt.
+ERROR_UNSUPPORTED_CTRL=Nicht unterstützter Controller.
+
+HELP_TITLE=PROFIL ERSTELLEN
+HELP_CREATE_PROFILE=1- Profilnamen wählen\n\n2- Controller-Modus wählen\n\n3- Schwierigkeitsgrad wählen\n\n4- Profil speichern
+HELP_BUTTON=Wählen Sie aus der Liste
+
+AVAILABLE=Verfügbar: 
+NEEDED=Benötigt:
+BLOCK=Blöcke
+
+EXTRA_FEATURE=BONUSMATERIAL
+BEHIND_THE_SCENE=HINTER DEN KULISSEN
+UBI_MONTREAL=UBI SOFT MONTREAL
+RANDOM_FACT=INTERESSANTE FAKTEN
+UBI_XBOX_GAME=SPIELE VON UBI SOFT
+CRYSTAL_METHOD=CRYSTAL METHOD
+SAM_FISHER=SAM FISHER
+
+
+BEHIND_THE_SCENE_1=DIE PRODUKTION
+BEHIND_THE_SCENE_2=SAM FISHER
+BEHIND_THE_SCENE_3=CHARAKTER-ANIMATION
+BEHIND_THE_SCENE_4=HIGHTECH-AUSRÜSTUNG
+BEHIND_THE_SCENE_5=SPIEL-DESIGN
+BEHIND_THE_SCENE_6=LEVEL-DESIGN
+BEHIND_THE_SCENE_7=LICHT UND SCHATTEN
+BEHIND_THE_SCENE_8=DER ENGLISCHE SAM
+BEHIND_THE_SCENE_9=KOMPOSITION DER MUSIK
+BEHIND_THE_SCENE_10=INTEGRATION DER MUSIK
+BEHIND_THE_SCENE_11=SAM FISHER PRIVAT
+
+
+UBI_GAME_1=ROCKY
+UBI_GAME_2=XIII
+
+SAM_FISHER_1=Character
+SAM_FISHER_2=Equipement
+ 
+OBJECTIVE=MISSIONSZIEL
+MEM_UNIT=SPEICHER-EINHEIT
+
+0_0_0_menu=0_0_0_menu
+1_1_1_EMBASSY=Dili, Ottimor
+1_1_2_EMBASSY=Dili, Ottimor
+2_1_1_LAB=Paris, Frankreich
+2_1_2_LAB=Paris, Frankreich
+2_2_1_Train=Paris-Nizza, Frankreich
+3_1_1_MARKET=Jerusalem, Israel
+3_1_2_MARKET=Jerusalem, Israel
+3_1_3_MARKET=Jerusalem, Israel
+4_1_1_village=Kundang Camp, Indonesien
+4_1_2_village=Kundang Camp, Indonesien
+4_1_3_village=Kundang Camp, Indonesien
+4_2_1_Dock=Komodo, Indonesien
+4_2_2_Dock=Komodo, Indonesien
+4_3_1_TV=Djakarta, Indonesien
+4_3_2_TV=Djakarta, Indonesien
+5_1_1_LAX=Los Angeles, USA
+5_1_2_LAX=Los Angeles, USA
+
+
+1_1_1_EMBASSY_CHEAT=Dili, Ottimor 1
+1_1_2_EMBASSY_CHEAT=Dili, Ottimor 2
+2_1_1_LAB_CHEAT=Paris, Frankreich 1
+2_1_2_LAB_CHEAT=Paris, Frankreich 2
+2_2_1_Train_CHEAT=Paris-Nizza, Frankreich 1
+3_1_1_MARKET_CHEAT=Jerusalem, Israel 1
+3_1_2_MARKET_CHEAT=Jerusalem, Israel 2
+3_1_3_MARKET_CHEAT=Jerusalem, Israel 3
+4_1_1_village_CHEAT=Kundang Camp, Indonesien 1
+4_1_2_village_CHEAT=Kundang Camp, Indonesien 2
+4_1_3_village_CHEAT=Kundang Camp, Indonesien 3
+4_2_1_Dock_CHEAT=Komodo, Indonesien 1
+4_2_2_Dock_CHEAT=Komodo, Indonesien 2
+4_3_1_TV_CHEAT=Djakarta, Indonesien 1
+4_3_2_TV_CHEAT=Djakarta, Indonesien 2
+5_1_1_LAX_CHEAT=Los Angeles, USA 1
+5_1_2_LAX_CHEAT=Los Angeles, USA 2
+
+
+[Transmission]
+PickUp= genommen
+NoPickUp=Sie haben zu viele 
+SatchelFind= aus Tasche genommen
+BodyFound=Körper wurde gefunden... Alarmstufe erhöht
+ComputerPickUp=Speicher-Stick aus Computer genommen
+DoorLock=Tür abgeschlossen
+DoorJam=Schloss klemmt
+DoorPick=Schloss geknackt
+ElevatorPower=Aufzug hat keinen Strom
+MedKitNotUsed=Sie benötigen keine Erste Hilfe.
+MedKitUsed=Medi-Kit benutzt. Gesundheit wiederhergestellt.
+Alarm0To1Grindottir=GRIMSDOTTIR - Alarmstufe 1, Sam, du darfst nicht entdeckt werden.
+Alarm0To1Lambert0=LAMBERT - Fisher, du sollst ein Geist sein. Du bringst die Mission in Gefahr.
+Alarm0To1Lambert1=LAMBERT - Fisher, du wirst dafür bezahlt, unsichtbar zu sein.
+Alarm0To1Lambert2=LAMBERT - Sei vorsichtig Fisher, Tarnung ist das A und O bei dieser Mission.
+Alarm0To1BodyFoundLambert=LAMBERT - Fisher, du riskierst viel, wenn du die Körper nicht versteckst.
+Alarm1To2Grindottir=GRIMSDOTTIR - Alarmtufe 2, Fisher, wenn du unsichtbar bleibst, wird die Alarmbereitschaft vermindert.
+Alarm1To2Lambert0=LAMBERT - Fisher, die Situation ist kurz davor, außer Kontrolle zu geraten.
+Alarm1To2Lambert1=LAMBERT - Fisher, wir können uns keine weiteren Opfer leisten. Beim nächsten Alarm ist die Mission gelaufen.
+Alarm2To3Lambert0=LAMBERT - Verflucht Fisher, die Mission ist vorbei.
+Alarm2To3Lambert1=LAMBERT - Was machst du Fischer, die Mission ist gelaufen.
+Alarm1To2BodyFoundLambert=LAMBERT - Fisher, du riskierst viel, wenn du die Körper nicht versteckst.
+Alarm2To3BodyFoundLambert=LAMBERT - Fisher, du musst die Körper an dunklen Orten verstecken. Die Mission ist beendet.
+Alarm2To3BodyFoundNote=Körper wurde gefunden... Alarmstufe erhöht.
+AlarmStageBeforeDecrease=LAMBERT - Fisher, wenn du nicht mehr entdeckt wirst, normalisiert sich die Lage wieder. 
+AlarmStageAfterDecrease=GRIMSDOTTIR - Okay, es scheint, als seien sie wieder zur Normalität übergegangen.  
+Alarm0To1Enemy=Sicherheitsstufe erhöht, Stufe 1. Schusssichere Weste anlegen.
+Alarm1To2Enemy=Sicherheitsstufe erhöht, Stufe 2. Kopfschutz anlegen.
+AlarmDecreaseEnemy=Sicherheitsstufe gesenkt.
+AlarmBackToNormalEnemy=Sicherheitsstufe zurück auf normal.
+
+[Interaction]
+Exit=Zurück zum Spiel
+NpcZone0=Greifen
+NpcZone1=Person greifen
+NpcZone2=Verhören
+NpcZone3=Reden
+NpcZone4=...
+NpcZone5=Weiter
+NpcZone6=Körper
+Alarm=Alarm benutzen
+Bomb=Bombe entschärfen
+Computer=Computer benutzen
+Door0=Tür öffnen
+Door1=Tür leise öffnen
+Elevator=Aufzug benutzen
+KeyPad=Codeblock benutzen
+Rappel=An Wand abseilen
+RetSafe=Retina-Safe
+RetScan=Retina-Scanner
+Trap=Öffnen
+Switch=Schalter benutzen
+Turret=An Kanone arbeiten
+WallMine=Haftmine
+Window=Aufschieben
+ClimbUp=Nach oben klettern
+ClimbDown=Nach unten klettern
+JumpDown=Nach unten springen
+ClimbOut=Herausklettern
+ClimbIn=Hereinklettern
+Disable=Deaktivieren
+JumpRope=An Seil springen
+MedCenter=Teilweise heilen
+MedCenterFull=Vollständig heilen
+PutWallMine=Sprengsatz legen
+UnlockSideDoor=SEITENTÜREN ÖFFNEN
+UseHint=Tipp benutzen
+NextHint=Nächster Tipp
+		
+[GameplayObject]
+DefaultObject=Objekt
+Briefcase=Aktenkoffer
+DataStick=Datastick
+Satchel=Tasche
+
+[InventoryItem]
+AK47=AK 47
+AK47Desc=Das AK 47 verschießt Munition vom Kaliber 7.62x39 und besitzt einen Schaft aus Hartholz.
+
+AmmoF2000=5.56mm-Munition
+AmmoFn7=5.72mm-Munition
+
+Beretta=Beretta 92FS
+BerettaDesc=Pistole.
+
+CameraJammer=Kamera-Störsystem
+CameraJammerDesc=Ein Mikrowellen-Sender, der Kameraübertragungen stört.
+CameraJammerHowToUseMe=(SCHWARZE TASTE) Schnell-Inventar\n\n(Steuerkreuz) Kamerastörsystem wählen\n\n(SCHALTER RECHTS) Schalter festhalten, um Kamera zu stören
+CameraJammerAbbrName=K.-Stör.
+
+
+ChemFlare=Knicklicht
+ChemFlareDesc=Eine chemische Fackel zur Beleuchtung dunkler Räume.
+ChemFlareHowToUseMe=(SCHWARZE TASTE) Schnell-Inventar\n\n(Steuerkreuz) Knicklicht wählen\n\n(X) Knicklicht zünden / Wurf abbrechen\n\n(SCHALTER LINKS) Flugbahn ändern\n\n(SCHALTER RECHTS) Knicklicht werfen
+
+ChaffGrenade=EMP-Granate
+ChaffGrenadeDesc=Eine Granate, die eine Wolke magnetischer Partikel erzeugt und dadurch elektrische Geräte zerstört.
+ChaffGrenadeAbbrName=EMP-Gr
+
+ConcussionGrenade=Betäubungsgranate
+ConcussionGrenadeDesc=Eine Betäubungsgranate.
+ConcussionGrenadeHowToUseMe=ConcussionGrenadeHowToUseMe
+
+DisposablePick=Einweg-Dietrich
+DisposablePickDesc=Ein Gerät zur schnellen Entfernung des Schließzylinders einer Tür.
+DisposablePickHowToUseMe=(SCHWARZE TASTE) Schnell-Inventar\n\n(Steuerkreuz) Einwegdietrich wählen\n\n(SCHALTER RECHTS) Tür öffnen
+DisposablePickAbbrName=Dietrich
+
+
+DiversionCamera=Ablenkungssystem
+DiversionCameraDesc=Eine selbsthaftende Kamera mit CO2-Tank, der zur Ablenkung und Betäubung dient.
+DiversionCameraHowToUseMe=(SCHWARZE TASTE) Schnell-Inventar\n\n(Steuerkreuz) Ablenkungssystem wählen\n\n(X) SC-20K ziehen/wegstecken\n\n(SCHALTER LINKS) Ablenkungssystem abfeuern\n\n(MINISTICK RECHTS) Kamera drehen\n\n(B) Lärm\n\n(Y) Gas\n\n(SCHALTER RECHTS) Kamerasicht verlassen
+DiversionCameraAbbrName=Abl.Sys.
+
+Dragunov=Dragunov SVD
+DragunovDesc=Scharfschützengewehr
+EA91=EA91
+EA91Desc=Das A-91 ist ein Sturmgewehr, dass auch für Gegner mit kugelsicheren Westen eine Gefahr darstellt. Es kann einzelne Schüsse und kurze Feuerstöße abgeben.
+
+Flare=Fackel
+FlareDesc=Eine Magnesiumfackel, die Hitze und Licht abgibt.
+FlareHowToUseMe=(SCHWARZE TASTE) Schnell-Inventar\n\n(Steuerkreuz) Fackel wählen\n\n(X) Fackel zünden / Wurf abbrechen\n\n(SCHALTER LINKS) Flugbahn ändern\n\n(SCHALTER RECHTS) Fackel werfen
+FlareAbbrName=Fackel
+
+FlashBang=Blendgranate
+FlashBangDesc=Eine Granate mit einem heftigen Lichtblitz, der Sie auf mittlere Entfernung erblinden lässt.
+FlashBangAbbrName=Blendgr.
+
+Flashlight=Taschenlampe
+FlashlightDesc=Polizei-Taschenlampe.
+FlashlightHowToUseMe=FlashlightHowToUseMe
+
+FN2000=5.56mm SC-20K AR
+FN2000Desc=SCs 5.56x45mm Sturmgewehr mit Zielfernrohr, Schalldämpfer und 40mm-Granatwerfer.
+FN2000HowToUseMe=(SCHWARZE TASTE) Schnell-Inventar\n\n(Steuerkreuz) SC-20K wählen\n\n(X) SC-20K ziehen/wegstecken\n\n(SCHALTER RECHTS) Feuer\n\n(SCHALTER LINKS) Sekundäre Waffenfunktion / Atem anhalten im Scharfschützenmodus\n\n(MINISTICK LINKS drücken) Feuermodus wechseln\n\n(WEISSE TASTE) Nachladen (bei gezogener Waffe)\n\n(Y) Scharfschützen- Modus
+FN2000AbbrName=SC-20K
+
+
+FN7=5.72mm SC Pistole
+FN7Desc=SCs halbautomatische 5.72mm-Pistole mit 20-Schuss-Magazin und Schalldämpfer.
+FN7HowToUseMe=(SCHWARZE TASTE) Schnellinventar öffnen\n\n(Steuerkreuz) Ziehen / Wegstecken der Five7\n\n(SCHALTER RECHTS) Schießen\n\n(WEISSE TASTE) Nachladen bei gezogener Waffe
+FN7AbbrName=Pistole
+
+
+FragGrenade=Splittergranate
+FragGrenadeDesc=Eine gewöhnliche Splittergranate.
+FragGrenadeHowToUseMe=(SCHWARZE TASTE) Schnell-Inventar\n\n(Steuerkreuz) Splittergranate wählen\n\n(X) Granate entsichern / Wurf abbrechen\n\n(SCHALTER LINKS) Flugbahn ändern\n\n(SCHALTER RECHTS) Granate werfen
+FragGrenadeAbbrName=Granate
+
+
+Franchi=Franchi SPAS-12
+FranchiDesc=Schrotgewehr für Militäreinsätze
+Groza=Groza
+GrozaDesc=Mehrzweck-Sturmgewehr
+
+GpsSound=GPS
+GpsSoundDesc=Global Positioning System. Dieses Gerät zeigt besondere Orte an.
+GpsSoundAbbrName=GPS
+
+
+LaserMic=Laser-Mikro
+LaserMicDesc=Ein Gerät zur Messung von Oberflächenschwingungen und deren Umwandlung in Sprache.
+LaserMicHowToUseMe=(SCHWARZE TASTE) Schnellinventar öffnen\n\n(Steuerkreuz) Lasermikro auswählen\n\n(SCHALTER RECHTS) Schalter gedrückt halten, um das anvisierte Ziel abzuhören
+LaserMicAbbrName=L.Mikro
+
+
+LockPick=Dietrich
+LockPickDesc=Ein Dietrich-Satz zum unbemerkten Öffnen von Türen.
+LockPickHowToUseMe=(SCHWARZE TASTE) Schnell-Inventar\n\n(Steuerkreuz) Dietriche wählen\n\n(SCHALTER RECHTS) Schloss knacken anfangen/abbrechen\n\n(MINISTICK LINKS) In richtigem Sektor hin- und herbewegen, um Stifte zu lösen
+
+
+M16A2=M16A2
+M16A2Desc=Sturmgewehr
+Makarov=9mm Makarov PMM
+MakarovDesc=Pistole
+
+MedKit=Medi-Kit
+MedKitDesc=Eine Standard-Erste-Hilfe- Ausrüstung zur Auffrischung der Lebensenergie.
+MedKitHowToUseMe=(SCHWARZE TASTE) Schnell-Inventar\n\n(Steuerkreuz) Medi-Pack wählen
+
+
+NightGoggle=Nachtsichtgerät
+NightGoggleDesc=Sichtsystem zur Verstärkung vorhandener schwacher Lichtquellen.
+NightGoggleHowToUseMe=(Steuerkreuz) (rechts) Nachtsicht ein-/ausschalten
+
+
+
+OpticCable=Flexible Optik
+OpticCableDesc=Ein einfacher\nLichtleiter, der unter Türen durchgeschoben werden kann.
+OpticCableHowToUseMe=(SCHWARZE TASTE) Schnell-Inventar\n\n(Steuerkreuz) Flexible Optik auswählen\n\n(SCHALTER RECHTS) Kabel durchschieben/zurückziehen\n\n(MINISTICK RECHTS) Optik bewegen
+
+QBZType95=QBZ Typ 95
+QBZType95Desc=Sturmgewehr
+
+RingAirfoilRound=Ringgeschoss
+RingAirfoilRoundDesc=Ein ungefährliches Geschoss mit dem Gegner kampfunfähig gemacht werden können.
+RingAirfoilRoundHowToUseMe=(SCHWARZE TASTE) Schnell-Inventar\n\n(Steuerkreuz) Ringflächenprojektil wählen\n\n(X) SC-20K ziehen/wegstecken\n\n(SCHALTER LINKS) Ringflächenprojektil abfeuern
+RingAirfoilRoundAbbrName=Ringg.
+
+RecordCamera=Aufnahmekamera
+RecordCameraDesc=Eine wiederverwendbare Haftkamera zur Überwachung von Geräuschen in ihrer Reichweite.
+RecordCameraHowToUseMe=(SCHWARZE TASTE) Schnellinventar öffnen\n\n(Steuerkreuz) Aufnahmekamera auswählen\n\n(X) Ziehen / Halftern des SC-20K\n\n(SCHALTER LINKS) Aufnahme starten starten\n(Rechter Ministick) Kamera schwenken\n\n(Steuerkreuz) Heran-/Wegzoomen\n\n(SCHALTER RECHTS) Kamerasicht verlassen
+RecordCameraAbbrName=Aufn.-K.
+
+
+Silencer=Schalldämpfer
+SilencerDesc=Der Schalldämpfer reduziert die Geräuschentwicklung einer Waffe, reduziert aber auch ihre effektive Reichweite
+Skorpion=VZ-61 Skorpion
+SkorpionDesc=Die vz.61 Skorpion (vz. steht für "vzor", also "Modell" auf Tschechisch) wurde als vielseitige Maschinenpistole entworfen
+
+SmokeGrenade=Rauchgranate
+SmokeGrenadeDesc=Eine CS-Gas-Granate, mit der mehrere Gegner gleichzeitig kampfunfähig gemacht werden können.
+SmokeGrenadeHowToUseMe=(SCHWARZE TASTE) Schnell-Inventar\n\n(Steuerkreuz) Gasgranate wählen\n\n(X) SC-20K ziehen/wegstecken\n\n(SCHALTER LINKS) Gasgranate werfen
+SmokeGrenadeAbbrName=Rauchgr.
+
+
+StickyCamera=Haftkamera m.Mikro
+StickyCameraDesc=Eine wiederverwendbare selbsthaftende Kamera für Aufklärungs- und Aufzeichnungszwecke.
+StickyCameraHowToUseMe=(SCHWARZE TASTE) Schnell-Inventar\n\n(Steuerkreuz) Haftkamera wählen\n\n(X) SC-20K ziehen/wegstecken\n\n(SCHALTER LINKS) Haftkamera abfeuern\n\n(MINISTICK RECHTS) Kamera schwenken\n\n(Steuerkreuz)\nZoom +/-\n\n(Steuerkreuz) links/rechts Nacht/Wärme aktivieren\n\n(SCHALTER RECHTS) Kamerasicht verlassen
+StickyCameraAbbrName=Haftkam.
+
+StickyShocker=Taser
+StickyShockerDesc=Eine ungefährliche Elektroschock-Waffe, mit der Gegner kampfunfähig gemacht werden können.
+StickyShockerHowToUseMe=(SCHWARZE TASTE) Schnell-Inventar\n\n(Steuerkreuz) Taser auswählen\n\n(X) SC-20K ziehen/wegstecken\n\n(SCHALTER LINKS) Taser abfeuern
+StickyShockerAbbrName=Taser
+
+
+ThermalGoggle=Wärmebildgerät
+ThermalGoggleDesc=Sichtsystem, mit dem der Träger Hitzequellen sehen kann.
+ThermalGoggleHowToUseMe=(Steuerkreuz) (Links) Wärmebild ein-/ausschalten
+
+UMP=UMP 
+UMPDesc=Eine kompakte Maschinenpistole
+Uzi=IMI Uzi 
+UziDesc=Maschinenpistole
+
+WallMine=Haftmine
+WallMineDesc=Eine Haftmine mit Bewegungszünder.
+WallMineHowToUseMe=(SCHWARZE TASTE) Schnell-Inventar\n\n(Steuerkreuz) Haftmine wählen\n\n(SCHALTER RECHTS) Mine setzen\n\n(A) Mine entschärfen und nehmen (wenn LED aus)
+WallMineAbbrName=Mine
+
+
+[Recon]
+DataStick=Datastick
+
+ReconMapTsiRoom1=Startpunkt
+ReconMapTsiRoom2=Hotel Begurebi
+ReconMapTsiRoom3=Puschkin-Straße
+ReconMapTsiRoom4=Ak Tendeba Inc.
+ReconMapTsiRoom5=Shroshi-Straße
+ReconMapTsiRoom6=Blausteins Apartment
+ReconMapTsiRoom7=Morevi-Platz
+ReconMapTsiRoom8=Musikladen Gamis Svelka
+ReconMapTsiRoom9=Bazaleti-Straße
+ReconMapTsiRoom10=Kutateladze-Straße
+ReconMapTsiRoom11=Kobuleti-Straße
+ReconMapTsiRoom12=Shatberashvili-Straße
+ReconMapTsiRoom13=Shatberashvili-Gasse
+ReconMapTsiRoom14=Chavchavadze-Straße
+ReconMapTsiRoom15=Polizeirevier 4. Bezirk, Tiflis
+
+ReconMapMinRoom1=Aufzug
+ReconMapMinRoom2=Abholpunkt
+
+ReconMapKaliRoom1=Parkplatz
+ReconMapKaliRoom2=Brücke
+ReconMapKaliRoom3=Kalinatek-Gebäude
+ReconMapKaliRoom4=Kran
+ReconMapKaliRoom5=Ash Tree Lane 
+ReconMapKaliRoom6=Chain Bridge Road
+
+ReconMapCIA1Room1=CIA-Haupttor
+ReconMapCIA1Room2=Wartungsbereich
+ReconMapCIA1Room3=Haupthalle
+ReconMapCIA1Room4=Aufzugzugang
+ReconMapCIA1Room5=Aufzug
+ReconMapCIA1Room6=Sicherheitsposten
+ReconMapCIA1Room7=Reservegenerator
+ReconMapCIA1Room8=CIA-Zentralserver
+ReconMapCIA1Room9=Lageraum
+ReconMapCIA1Room10=Flur
+ReconMapCIA1Room11=Abteilung für Waffentests
+
+ReconMapCIA2Room1=Dach
+ReconMapCIA2Room2=Raucherbreich
+ReconMapCIA2Room3=Abteilung für Informationsbeschaffung
+ReconMapCIA2Room4=Abholpunkt
+
+ReconMap3_2CoolingRoom1=Geschützte Kamera
+ReconMap3_2CoolingRoom2=Auf Zielbereich beschränkt
+
+ReconMapChineRoom1=Signal-Pagoda-Straße
+ReconMapChineRoom2=Seitenstraße
+ReconMapChineRoom3=Lager
+ReconMapChineRoom4=Hinteres Tor
+ReconMapChineRoom5=Pyidaungsu-Yeiktha-Straße
+ReconMapChineRoom6=Botschaft
+ReconMapChineRoom7=Abholpunkt
+
+ReconNameMapTsi=110_01/04
+ReconPTMapTsi=Karte von Tiflis
+
+ReconNameMapMin=121_01/05
+ReconPTMapMin=Karte vom Ministerium
+
+ReconNameMapKali=221_02/02
+ReconPTMapKali=Karte von Kalinatek 
+
+ReconNameMapCIA1=210_01/01
+ReconPTMapCIA1=CIA 1
+
+ReconNameMapCIA2=211_01/01
+ReconPTMapCIA2=CIA 2
+
+ReconNameMap3_2Cooling=321_02/02 
+ReconPTMap3_2Cooling=Sicherheitsysteme: Nadezdha-Kühlraum
+
+ReconNameMapChine=411_01/01
+ReconPTMapChine=Karte vom Chinesische Botschaft
+
+ReconNamePicGrinko=121_03/05
+ReconPTPicGrinko=Bild von Grinko
+
+ReconNamePicMasse=121_05/05 
+ReconPTPicMasse=Bild von Masse 
+
+ReconNamePicAlek=342_05/06
+ReconPTPicAlek=Bild von Alek
+
+ReconNamePicIvan=Ivan 1
+ReconPTPicIvan=Bild von Ivan
+
+ReconNamePicCritavi=511_02/03
+ReconPTPicCritavi=Bild von Cristavi 
+
+ReconNamePicBaxter=212_04/04
+ReconPTPicBaxter=Bild von Baxter
+
+ReconNamePicDoug=212_02/04
+ReconPTPicDoug=Bild von Dougherty 
+
+ReconNameMasseToTitko=MasseTitko
+ReconPTMailFromMasseToTitko=E-MAIL\nVon: Philip Masse\nAn: Titko de Boer
+ReconFTMailFromMasseToTitko=Von: Philip Masse An: Titko de Boer\nCc:\nBetreff:\nWichtigkeit: Hoch Gesendet: 11.08.04 22:19\nAlte Bauern-Titte,\nPass auf: Neuer Tastaturcode für die Türen im zweiten Stock, die von der Kaserne in die "Zerkleinerer-Räume" führen: 53779.\nKannst du dir das merken, Titte?
+
+ReconNameKuoToSom=KuoToSom
+ReconPTMailFromKuoToSom=E-MAIL\nVon: Kuo Sang Chen\nAn: Som-Ok Vongsamang
+ReconFTMailFromKuoToSom=Von: Kuo Sang Chen An: Som-Ok Vongsamang\nCc:\nBetreff: Fahrt durch Laos\nWichtigkeit: Normal Gesendet: 11.12.04 00:47\nVongsamang,\nNikoladse hat uns fallen gelassen, wir ziehen uns früher zurück, als ich dachte.\nWir müssen uns auf den Weg machen, bevor wir dazu bereit sind, aber wenigstens gehen wir zum Angriff über, statt Babysitter für diese kuhäugigen Kartoffelsäcke zu spielen.\nWir verfügen über genügend Kontakte, um relativ unbeschadet durch Thailand zu kommen, aber Laos ist eine ganz andere Geschichte.\nOberst To-Hoi koordiniert die Grenzübertrittspunkte und benötigt bestechliche Kontake in der laotischen Armee.\nIch dachte mir, Sie wären der richtige Mann dafür. Geld ist kein Problem, die Zeit allerdings äußerst knapp.\nIch habe ein Satellitentelefon. Sie kennen die Nummer.\nChen
+
+ReconName5_1AF_A=511_01/03
+ReconPT5_1AF_A=BETREFF: Personenakte\nUPLOAD: 11.11.04\nQUELLE: Grimsdottir\n\nNAME: Warlam\nWissarionowitsch Cristavi\nALIAS: -
+ReconFT5_1AF_A=BETREFF: Personenakte\nUPLOAD: 11.11.04\nQUELLE: Grimsdottir\n\nNAME: Warlam Wissarionowitsch Cristavi\nALIAS: -\nGEB: 11.05.48\nGRÖSSE: 1,70m\nGEWICHT: 104kg\nNATIONALITÄT: Georgier\nOPERATIONSGEBIET: Tiflis, Georgien\nVERBINDUNGEN: Exekutive der georgischen Regierung\nBERUF: Staatsoberhaupt/Regierungschef\n\nRELEVANTE VERGANGENHEIT:\n\n03.01.01- Cristavi wird als Minister in das Kabinett von Nikoladse berufen.\n09.12.01 - HEUTE- C. verkauft Informationen über die Ölpolitik von Nikoladse an die CIA. Die Lieferungen finden unregelmäßig in Zeiträumen zwischen 2 und 10 Wochen statt.\n20.10.04- Nach 2 Tagen, in denen die georgische Regierung am Rande der Anarchie stand, übernimmt C. die Macht.
+ReconFT5_1AF_A1=29.10.04- 7 Ex-Minister Nikoladses, die sich gegen C. stellen, verschwinden spurlos.\n\nANM.: "Spitzel" klingt vielleicht herablassend. Wir nennen ihn lieber eine "Marionette". Man nimmt an, dass die CIA eine Rolle beim Verschwinden der 7 Minister am 29. 10. gespielt hat.
+
+ReconNameAlek=342_04/06
+ReconPTAlek=BETREFF: Personenakte\n\nUPLOAD: 11.09.04\nQUELLE: Grimsdottir\n\nNAME: Andreij Ville Alekseijwitsch\nALIAS: "Bugor", "Greschnik", "Wladislaw Efros"
+ReconFTAlek=BETREFF: Personenakte\nUPLOAD: 11.09.04\nQUELLE: Grimsdottir\n\nNAME: Andreij Ville Alekseijwitsch\nALIAS: "Bugor", "Greschnik", "Wladislaw Efros"\nGEB: 06.07.53\nNATIONALITÄT: Russe\nOPERATIONSGEBIET: Halbinsel Kola / Mobil\nVERBINDUNGEN: Kombaijn Nikoladse\nBERUF: Söldner\n\nRELEVANTE VERGANGENHEIT:\n\nAb 02.09.04 wöchentliche Einzahlungen unbekannter Höhe auf das schwedische Bankkonto von Wladislaw Efros (einer der Decknamen von A.), die aus einem der Unternehmen von Nikoladse stammen.\n10.10.04- Beweise tauchen auf, dass A. an der Planung und Durchführung der Überfälle auf Gyumri, Armenien und umliegende Dörfer beteiligt war.\n07.11.04- Wird auf der Schiffswerft Oktijabr gesehen.\n\nANM.: Tut mir Leid, dass wir Ihnen nur so wenige Informationen geben können, für den Großteil haben Sie nicht die erforderliche Sicherheitsstufe. Er ist so was wie der sowjetische Darth Vader, und ich weiß nicht, ob es schon jemand gewagt hat, ihm vom Zusammenbruch der UdSSR zu berichten.
+
+ReconNameBlaustAF=110_03/04
+ReconPTBlaustAF=BETREFF: Personenakte\nUPLOAD: 16.10.04\nQUELLE: Grimsdottir\n\nNAME: William Robert Blaustein\nALIAS: Keins
+ReconFTBlaustAF=BETREFF: Personenakte\nUPLOAD: 16.10.04\nQUELLE: Grimsdottir\n\nNAME: William Robert Blaustein\nALIAS: Keins\nGEB: 08.04.62\nNATIONALITÄT: US-Bürger.\nOPERATIONSGEBIET: Langley, Virginia / Tiflis, Georgien\nVERBINDUNGEN: CIA\n\nRELEVANTE VERGANGENHEIT:\n\n07.10.04- Ankunft in Tiflis, um das Verschwinden von Agent Madison zu untersuchen.\n08.10.04- Erster Kontakt mit Thomas Gurgenidze.\n10.10.04- Meldet Schikane durch örtliche Polizei und wird fast verhaftet.(Bez.: Sgt. Lortkipanidse)\n10.10.04- Meldung über mögliche Sicherheitslücke in der Operationsbasis von Blaustein.\n11.10.04- Täglicher Bericht an Langley wurde nicht abgesetzt.\n11.10.04- Der von der CIA unter der Haut implantierte Bewegungsmelder gibt weniger als 10 Meter pro Tag an.\n12.10.04- Täglicher Bericht an Langley wurde nicht abgesetzt.
+ReconFTBlaustAF1=13.10.04- Täglicher Bericht an Langley wurde nicht abgesetzt.\n\nBEMERKUNGEN-\nEin echter Cowboy und Vertreter der alten Garde in Langley. (Autor: Grimsdottir)
+
+ReconNameDougAF=212_01/04
+ReconPTDougAF=BETREFF: Personenakte\nUPLOAD: 31.10.04\nQUELLE: Grimsdottir\n\nNAME: Mitchell Donald Dougherty\nALIAS: -
+ReconFTDougAF=BETREFF: Personenakte\nUPLOAD: 31.10.04\nQUELLE: Grimsdottir\n\nNAME: Mitchell Donald Dougherty\nALIAS: -\nGEB: 05.12.59\nNATIONALITÄT: US-Bürger\nOPERATIONSGEBIET: Langley, Virginia\nVERBINDUNGEN: CIA\nBERUF: Techniker für Informationsbeschaffung\n\nRELEVANTE VERGANGENHEIT:\n\n06.04.97- Tritt Stelle bei der CIA an.\n05.05.01- HEUTE- Teilnahme am 12-Schritte-Programm "Unwichtiges loslassen können" beim CVJM.\n10.02.02- Bußgeld wegen "rücksichtslosem Langsamfahrens" in Cheverly, Maryland.\n31.10.04- Verratsverdacht in Bezug auf die georgische Informationskrise.\n31.10.04- ECHELON-Suche eingeleitet, Ergebnisse stehen aus.\n\nBEMERKUNGEN:\nSchrecklicher Mundgeruch. Man sollte besser nicht mit ihm in einem Aufzug stecken bleiben. (Autor: Grimsdottir)
+
+ReconNameGrinkoAF=121_02/05
+ReconPTGrinkoAF=BETREFF: Personenakte\nUPLOAD: 16.10.04\nQUELLE: Grimsdottir\n\nNAME: Wijacheslaw Grinko\nALIAS: Koschcheij, Albert Wentworth, Tsmeij Gorinitsch, Paul Gaylord
+ReconFTGrinkoAF=BETREFF: Personenakte\nUPLOAD: 16.10.04\nQUELLE: Grimsdottir\n\nNAME: Wijacheslaw Grinko\nALIAS: Koschcheij, Albert Wentworth, Tsmeij Gorinitsch, Paul Gaylord\nGEB: 30.10.59\nNATIONALITÄT: Russe\nOPERATIONSGEBIET: Georgien / Russland / Osteuropa\nVERBINDUNGEN: Ex-Spetsnaz\nBERUF: Söldner\n\nRELEVANTE DATEN:\n\n27.09.87- Ermordung von Bktiyer Farukh in Towraghondi, Afghanistan.\n19.01.90- Scharfschütze bei Operation UDAR, Baku, Aserbeidschan.\n16.12.91- Vermögen liquidiert und in USD getauscht.\n01.02.00- 1. Zahlung von Nikoladse auf das Konto von Albert Wentworth alias G. Zahlungen laufen bis zum 11.01.01, dann nimmt G. neuen Decknamen an.\n10.09.00- Denis Galtsew alias G. erhält von Nikoladse 200 Anteile an der GFO Inc.\n30.04.04- Armen Trofimow alias G. zahlt 150.000 USD auf ein Schweizer Konto ein.
+ReconFTGrinkoAF1=ANM.: G. ist ein ziemlich windiger Typ. Es ist schwierig, ihm Verbindungen nachzuweisen, aber wir sind sicher, dass er seit mind. 4 Jahren für Nikoladse arbeitet.
+
+ReconNameGugenAF=110_02/04
+ReconPTGugenAF=BETREFF: Personalakte\nUPLOAD: 16.10.04\nQUELLE: Grimsdottir\n\nNAME- Thomas Goldoni Gurgenidze
+ReconFTGugenAF=BETREFF: Personalakte\nUPLOAD: 16.10.04\nQUELLE: Grimsdottir\n\nNAME- Thomas Goldoni Gurgenidze\nGEB- 08.04.62\nNATIONALITÄT- Georgier\nOPERATIONSGEBIET- Tiflis, Georgien\nVERBINDUNGEN-\nBERUF- Buchhalter für das 4. Polizeirevier in Tiflis; bezahlter CIA-Informant.\n\n5.12.96- Angeworben durch Special Agent Tanahill\n23.02.97- Sichert sich eine Stelle im Innendienst der Tifliser Polizei.\n14.03.97- Erster Kontakt mit Sergeant Lortkipanidse.\n02.11.97- Beförderung.\n23.04.98- Beförderung, erhält Server-Zugriff auf den PC von Lortkipanidse.\n24.04.98- Antrag von Agent Tanahill GENEHMIGT: Weitere finanzielle Mittel für die Bezahlung von Gurgenidze.\n25.04.98 bis heute- Wöchentliche Übertragung der Dateien von Sgt. Lortkipanidse.\n08.10.04- Negativbericht über CIA-Agent Alice Madison.\n\nANM: Keine
+
+ReconNameJackAF=212_03/04
+ReconPTJackAF=BETREFF: Personenakte\nUPLOAD: 31.10.04\nQUELLE: Grimsdottir\n\nNAME: Dr. John Edward Baxter\nALIAS: Jack Baxter
+ReconFTJackAF=BETREFF: Personenakte\nUPLOAD: 31.10.04\nQUELLE: Grimsdottir\n\nNAME: Dr. John Edward Baxter\nALIAS: Jack Baxter\nGEB: 13.02.67\nNATIONALITÄT: US-Bürger\nOPERATIONSGEBIET: Langley, Virginia\nVERBINDUNGEN: National Security Agency (NSA)\n\nRELEVANTE GESCHICHTE:\n\nkeine\n\nANM.: Über den Typen brauchen Sie nicht allzu viel zu wissen. Ziemlich schräger Typ, setzt hauptsächlich Medikamente ein, um renitente Subjekte zum Reden zu bringen. Letztes Jahr habe ich ihn auf einer Weihnachtsfeier in Fort Meade getroffen, und er wollte mir ein Glas Punsch holen. Die Sache war mir nicht geheuer, deswegen habe ich das Zeug an Wilkes weitergegeben.
+
+ReconNameMadAF=110_04/04
+ReconPTMadAF=BETREFF: Personenakte\nUPLOAD: 16/10/04\nQUELLE: Grimsdottir\n\nNAME- Alice McCarthy Madison
+ReconFTMadAF=BETREFF: Personenakte\nUPLOAD: 16/10/04\nQUELLE: Grimsdottir\n\nNAME- Alice McCarthy Madison\nGEB- 29.08.68\nNATIONALITÄT: US-Bürger\nOPERATIONSGEBIET: Tiflis\nVERBINDUNGEN: CIA\nBERUF: Special Agent\n\nRELEVANTE DATEN:\n\n24.05.02- Transfer von Illinois nach Georgien.\n07.07.02- Tritt eine Position im Büro des georg. Ministers Tschokheli an.\n05.03.04- Beträchtliche "Wahlkampfspende" für Nikoladse sorgt dafür, dass Madison weiter in der Regierungsverwaltung arbeiten darf.\n28.09.04- Bericht über "verdächtigen Datenverkehr" zwischen Stellvertretern Nikoladses. Code nicht zu knacken.\n03.10.04- Täglicher Bericht an Langley nicht abgesetzt.\n04.10.04- Der implantierte Bewegungsmelder gibt weniger als 20m/Tag an.
+ReconFTMadAF1=06.10.04- Bewegungsmelder-Chip offline.\n07.10.04- Statusanfrage unter Verwendung der Tifliser Polizeiakten\n08.10.04- Negativmeldung von Gurgenidze\n\nANM.: Sie hat sich so schnell in der Regierung von Nikoladse hochgearbeitet, dass Fragen zu ihren Methoden aufkommen.
+
+ReconNameMasseAF=121_04/05
+ReconPTMasseAF=BETREFF: Personenakte\nUPLOAD: 16.10.04\nQUELLE: Grimsdottir\n\nNAME: Philip Frankel Masse\nALIAS: crYSTaL*NinJA, Cerbere, Marvin Kurzweil
+ReconFTMasseAF=BETREFF: Personenakte\nUPLOAD: 16.10.04\nQUELLE: Grimsdottir\n\nNAME: Philip Frankel Masse\nALIAS: crYSTaL*NinJA, Cerbere, Marvin Kurzweil\nGEB: 21.08.72\nNATIONALITÄT: Kanadier\nOPERATIONSGEBIET: Georgien\nVERBINDUNGEN: GFO Inc. (Eigentümer: Nikoladse)\nBERUF: Chefprogrammierer\n\nRELEVANTE DATEN:\n\n27.05.94- Flieht aus Kanada, als seine Betrügereien auffliegen.\n31.12.97- Bricht für 114 Sekunden in das CIA-Netzwerk ein.\n06.02.99- Wird von Saudi Arabien für Industriespionage angeheuert.\n14.11.99- Flieht in kan. Botschaft in Saudi Arabien, um Haftbefehl zu entgehen.\n21.09.01- 2. Einbruchsversuch in das CIA-Netzwerk.\n12.09.02- 1. Gehaltsscheck von Nikoladses GFO Inc.\n28.03.03- Setzt PC-Virus "U.S.gAy" frei.
+ReconFTMasseAF1=30.04.04- M. Kurzweil zahlt 80.000 USD auf ein Konto auf den Kayman-Inseln ein.\n\nANM.: Ich habe 98 von ihm gehört, kurz nachdem er die CIA zum 1. Mal gehackt hatte. War eine Weile legendär. Sein Psychoprofil: unsicher, unreif, unmoralisch und ein genialer Streber.
+
+ReconNameInfCrudeOilCircuit=133_01/04
+ReconPTInfCrudeOilCircuit=Sekundäre Rohöl-Kreislaufpumpe
+ReconFTInfCrudeOilCircuit=Sekundäre Rohöl-Kreislaufpumpe\nHersteller: InessA Eng.\nWegpunkt-Pumpe für Ölfilterung.\n\nACHTUNG:\nDas Öl in den roten Leitungen steht unter Hochdruck und kann bei Leckschlagung in Brand geraten.
+
+ReconNameInfCrudeOilRegulator=133_02/04
+ReconPTInfCrudeOilRegulator=Rohöl-Flussregler
+ReconFTInfCrudeOilRegulator=Rohöl-Flussregler\nHersteller: InessA Eng.\nRegelt den Ölflussdruck.\n\nACHTUNG:\nDas Öl in den roten Leitungen steht unter Hochdruck und kann bei Leckschlagung in Brand geraten.
+
+ReconNameInfWaterValve=133_05/05
+ReconPTInfWaterValve=Industrie-Wasserpumpe
+ReconFTInfWaterValve=Wasserpumpe\nHersteller: Yutani Systems, Inc.\n\nACHTUNG:\nEine Beschädigung der Außenhaut des Zylinders kann massives Auslaufen herbeiführen.
+
+ReconNameInfPetrolRes=133_03/04
+ReconPTInfPetrolRes=Reservetank
+ReconFTInfPetrolRes=Reservetank\nHersteller: Weylanda\nWird als Überlaufbecken für Hochsee-Bohrinseln verwendet.
+
+ReconNameMissileDesc=342_06/06
+ReconPTMissileDesc=Boden-Luft-Rakete 57E7-Y
+ReconFTMissileDesc=BESCHREIBUNG:\nBoden-Luft-Rakete mit einem 14 kg schweren stangenförmigen Splitter-Gefechtskopf.\nDie Rakete ist tandemartig aus zwei Teilen aufgebaut: abtrennbarer Antrieb und Stützkörper. Gefechtskopf, Kontakt- und Annäherungszünder befinden sich im Stützkörper. Beim Start wiegt die Rakete 55 kg. Bei einer Reichweite von 1 bis 16 km beträgt die Maximalgeschwindigkeit 1.200 Meter pro Sekunde. Die 57E7-Y liegt offiziell nur als Prototyp vor.
+
+ReconName3_2AF_A=322_01/01
+ReconPT3_2AF_A=BETREFF: Americium 239\nUPLOAD: 6.11.04\nQUELLE: Grimsdottir\n\nOrdnungszahl- 95\nAtomgewicht- u 243\nSchmelzpunkt- K 1268\nSiedepunkt- K 2880\nFusionswärme- kJ/mol 14.4
+ReconFT3_2AF_A=Waffenfähigkeit von Americium 239\n\nAmericium wird in minimalen Mengen in Brandmeldern verwendet. Es ist ein künstliches Element, das zum Bau von Nuklearwaffen geeignet ist. Das Grundisotop ist Americium 241. Es entsteht beim Zerfall von Plutonium 241. Americium 239 ist von wesentlich geringerer Reinheit, aber immer noch waffenfähig. Americium 239 neigt hochgradig zur Selbstspaltung, d. h. es gibt kontinuierlich überschüssige Neutronen ab. Eine A-Bombe wird normalerweise durch einen Neutronenimpuls gezündet.\nEine primitive Waffe aus Americium birgt die Gefahr, dass sie durch die Hintergrund-Neutronen einige Millisekunden zu früh explodiert. Dadurch kann die Detonationswirkung drastisch verringert werden. Ein 1kt-Sprengsatz würde trotzdem eine Fläche vernichten, die halb so groß wäre wie bei dem Abwurf der Bombe von Hiroshima.
+
+ReconName3_2AF_B=321_01/02
+ReconPT3_2AF_B=BETREFF:Nadezhda\nUPLOAD: -\nQUELLE: Grimsdottir
+ReconFT3_2AF_B=BESCHREIBUNG:\n\nBrief der Leitung von Nadezhda, aus dem hervorgeht, dass sich das russische Militär auf dem Firmengelände aufhalten wird.\n\nTEXT:\n\nNadezhda Nuclear Power Co.\n\nAn alle Mitarbeiter der Nadesda Nuclear Power Co.\n\nWir möchten uns für die Unannehmlichkeiten entschuldigen, die aus dem Aufenthalt der russischen Armee in unserem Unternehmen in der nächsten Zeit entstehen werden.\nDie Werksleitung hat eine Meldung aus Moskau erhalten, in der um unsere Zusammenarbeit gebeten wird. Wir wollen dieser Bitte nachkommen.\nObwohl der Aufenthalt der Soldaten in unserem Betrieb nicht als "Geheim" eingestuft wurde, hat man uns instruiert, nur darüber zu sprechen, wenn es absolut notwendig erscheinen sollte. Wir bitten Sie, mit niemandem über diese militärischen Aktivitäten zu reden.\nAlle Mitarbeiter sind angewiesen, den Befehlen des Militärpersonals Folge zu leisten und nur auf Anfrage mit den Soldaten zu kommunizieren.\nDanke für Ihr Verständnis.\n\nDie Werksleitung
+
+ReconName5_1AF_B=511_03/03
+ReconPT5_1AF_B=BETREFF: Die "Arche-Verhöre"\nUPLOAD: 11.11.04\nQUELLE: Grimsdottir
+ReconFT5_1AF_B=KOMMENTAR:\n\nDie Männer von Cristavi bekamen einen Oberst von Nikoladse in die Hände und wollten Informationen über die Arche. Die Folter dauerte 8 Stunden.\n\nTEXT:\n\n5. Stunde\nVERNEHMER 1- Wir hören auf, wenn Sie reden.\nVERHÖRTE PERSON- (...) ...blind.\nVERNEHMER 2- Sagen Sie uns, was es ist. Was ist die Arche?\nPERS- Oh Gott!\nVERN2- Hören Sie, wir wollen nur...\nPERS- Es ist SADM.\nVERN2- Ein Saddam?\nPERS- Special Atomic Demolitions Munitions, ein nuklearer Spezialsprengstoff.\nVERN2- Gut, das ist sehr gut.
+ReconFT5_1AF_B1=7. Stunde\n\nVERN1- Wo?\nPERS- Im... (...) Tresorraum der Bibliothek.\n\n8. Stunde\n\nPERS- Nein! Ich schwöre!\nVERN2- Überzeugen Sie uns.\nPERS- Was soll ich tun? (...)\nVERN1- Sicherheitsvorrichtungen sind doch normal.\nPERS- Er ist verschlossen! Retina-Scanner! Ich kann nicht... Verschlossen, aber keine Sprengfallen. Ich sehe meinen... Gott...\nVERN2- Ich glaube, wir haben ihn verloren.\n\nENDE
+
+ReconNameCall911AF=221_01/02
+ReconPTCall911AF=BETREFF: Mitschrift\nUPLOAD: 1.11.04\nQUELLE: Grimsdottir
+ReconFTCall911AF=BESCHREIBUNG:\n\nMitschrift eines Telefonats zwischen Anna Grimsdottir und einem namens Iwan.\n\nTEXT:\n\nANNA GRIMSDOTTIR- 911 Notruf.\nIWAN- Es handelt sich um einen Notfall!\nAG- Ich werde Ihnen helfen. Sind Sie in Gefahr?\nI.- Ja, verdammt! Die wollen mich umlegen! Die-\nAG- Sind Sie noch dran?\nI.- Ja! Sie müssen mir helfen! Ich habe Informationen für Ihre Regierung.\nAG- Wo befinden Sie sich?\nI.- Bei Kalinatek, Chain Bridge Road. Schnell!\nAG- Wie ist Ihr Na-\nI.- Ich habe den Feueralarm ausgelöst. Die haben die Telefonleitungen gekappt, aber das Gebäudesystem funktioniert noch.\nAG- Wie bitte?
+ReconFTCall911AF1=I.- Ich meine, dass ich im Moment sicher bin. Aber wenn die durch die Brandtüren kommen, bin ich geliefert.\nAG- Wie bitte?\nI.- Ich arbeite für Kombaijn Nikoladse. Ich habe Informationen.\nAG- Vielleicht verraten Sie mir...\nI.- Ha! Holen Sie mich hier lebend raus, und ich rede. Ich kenne Namen, Protokolle-\n\nENDE
+
+ReconNameProgDesc=342_03/06
+ReconPTProgDesc=BETREFF: Pickett Gap\nUPLOAD: 9.11.2004\nQUELLE: Grimsdottir
+ReconFTProgDesc=TEXT:\nDas Programm soll die Wasseraufbereitung sabotieren, an die die Bewohner von Pickett Gap angeschlossen sind. Das Werk hat mehrere Leitungen gesperrt und ein UV-Desinfektionssystem installiert, nachdem der Verdacht entstanden war, die Leitungen seien mit Bakterien verseucht. Laut Daten aus Simargl verfügt Masse über eine logische Bombe, die dieses UV-System lahm legen und das Wasser wieder durch die verseuchten Rohre leiten kann. Dadurch könnten Hunderte von Menschen in einer Woche sterben.\nIn diesem Fall könnten wir zur rechten Zeit eingreifen. Alle Programme von Masse verwenden einige Kernroutinen, die sich bei ihrer Ausführung selbst vernichten. Wenn ich eines der Programme beobachten kann, wäre es möglich, es rechtzeitig zu analysieren. Wenn wir eins geknackt haben, knacken wir alle. Wir setzen hier zwar Leben aufs Spiel, könnten aber die Informationskrise beenden.
+
+ReconNameUSAF=133_04/04
+ReconPTUSAF=BETREFF: Bericht einer SR-71 der USAF\nUPLOAD: 27/10/04\nQUELLE: Grimsdottir
+ReconFTUSAF=BESCHREIBUNG:\n\nDas Folgende ist eine Mitschrift abgefangener Fragmente des Funkverkehrs zwischen einer SR-71 und einer AWACS über dem Kaspischen Meer.\n\nAWACS: (Statik) irgendein Zugang zum Knoten?\nSR-71: (Statik) irgendwelche automatischen Feuertüren (Statik)\nAWACS: (Statik) Datenknoten (Statik)\nSR-71: (Statik) scheint ein Fenster in das Gebäude zu geben (Statik)\n\nENDE
+ReconTip=Bewegen Sie die Maus über die Karte, um sich Beschreibungen der Punkte anzeigen zu lassen.
+
+
+ReconNamePicAsruldef=41_0C
+ReconPTPicAsruldef=Azrul Idriss Arifin
+
+ReconNamePicDahlia=31_0F
+ReconPTPicDahlia=Dahlia Suleiman Tal
+
+ReconNamePicDouglas=11_0F
+ReconPTPicDouglas=Douglas Wayne Shetland
+
+ReconNamePicFrancois=21_0F
+ReconPTPicFrancois=Francois Coulon Coldeboeuf
+
+ReconNamePicIngrid=11_0K
+ReconPTPicIngrid=Ingrid Ruth Karlthson
+
+ReconNamePicSadano=11_0L
+ReconPTPicSadano=Suhadi Sadono
+
+ReconNamePicSoth=51_0B
+ReconPTPicSoth=Norman Washington Soth
+
+ReconNamePicJerusalem=31_0E
+ReconPTPicJerusalem=Karte von Jerusalem
+
+ReconNamePicIndonesia=11_0G
+ReconPTPicIndonesia=Karte von Indonesien
+
+ReconNamePicParis=21_0E
+ReconPTPicParis=Karte von Paris
+
+ReconName11_0AAF=11_0A
+ReconPT11_0AAF=BETREFF - Akte über Suhadi Sadono\nUPLOAD - 28/03/06; 02:03:12\nQUELLE - Grimsdottir\nVOLLSTÄNDIGER NAME - Suhadi Sadono\n
+ReconFT11_0AAF=BETREFF - Akte über Suhadi Sadono\nUPLOAD - 28/03/06; 02:03:12\nQUELLE - Grimsdottir\nVOLLSTÄNDIGER NAME - Suhadi Sadono\nALIAS - Dur Sad\nGEB. - 23/12/72\nGRÖSSE - 1,76 m\nGEWICHT - 77 kg\nHAAR - Schwarz\nAUGEN - Braun\nNATIONALITÄT - Indonesisch\nOPERATIONSGEBIET - Indonesien, Osttimor\nVERBINDUNGEN - Kopf der Darah Dan Doa, (Übers. "Blut und Gebet"), einer nationalistischen indonesische Guerillabewegung\n\n\nRELEVANTE DATEN -\n\n27/12/86-\nErste bekannte terroristische Aktivitäten: Sadono wird mit einem von der CIA finanzierten Bombenattentat auf timoresische Dissidenten in Verbindung gebracht.\n\n05/04/91-\nWird Mitglied einer Straßenbande mit Namen Cireban, vermutliche Keimzelle der Darah Dan Doa.\n\n21/09/93-\nOffizielle Gründung der Darah Dan Doa, Verbindungen zu CIA-Finanzquellen werden vermutet.\n\n24/12/93-\nÜbernimmt die Führung der DDD.\n\n12/08/95 - 25/10/99-\nKontakte zu mutmaßlichem CIA-Agenten, Richard Arbor.\n\n
+ReconFT11_0AAF1=06/01/96 - 15/01/96-\nDDD "Woche der Abrechnung" in Dili: einundzwanzig zivile Opfer.\n\n25/10/99-\nRichard Arbor verschwindet aus den Akten.\n\n27/10/99-\nMisslungener Mordanschlag auf Sadono durch CIA.\n\n07/11/01-\nZweiter misslungener Attentatsversuch der CIA auf Sadono.\n\n03/03/06-\nElektronisch abgefangene Nachrichten an Sadono sprechen von "weltweiter Abrechnung".\n\nANMERKUNGEN -\nSadonos Wahnvorstellung von einem asiatischen Che Guevara würden uns nicht weiter beunruhigen, wenn nicht so viele radikalisierte indonesische Jugendliche mit ihm sympathisieren würden. Eine gefährliche Mischung aus Idealist und Sozialrevolutionär.\n\n(Autor: Grimsdottir) 
+
+ReconName11_0BAF=11_0B
+ReconPT11_0BAF=BETREFF - Akte über Douglas Shetland\nUPLOAD - 28/03/06; 02:03:12\nQUELLE - Grimsdottir\nVOLLSTÄNDIGER NAME- Douglas Wayne Shetland\n
+ReconFT11_0BAF=BETREFF - Akte über Douglas Shetland\nUPLOAD - 28/03/06; 02:03:12\nQUELLE - Grimsdottir\nVOLLSTÄNDIGER NAME- Douglas Wayne Shetland\nALIAS - Keine\nGEB. - 18/04/59\nGRÖSSE - 1,82 m\nGEWICHT - 91 kg\nHAAR- Braun / licht\nAUGEN- Braun\nNATIONALITÄT- US-amerikanisch.\nOPERATIONSGEBIET- Virginia, USA / äußerst beweglich\nVERBINDUNGEN- Geschäftsführer von Displace, International\n\n\nRELEVANTE DATEN-\n\n03/09/77 - 24/05/81-\nGrundstudium im Fach Elektrotechnik an der Alabama State University\n\n28/08/81 - 01/06/82-\nWestpoint.\n\n21/06/82 - 16/10/01\n- US-Marine, erlangt den Rang eines Majors.\n\n16/01/91 - 26/02/91-\nLeiter einer Einheit zur Zielerfassung lasergesteuerter Waffen im Zuge der Operation Desert Storm.\n\n04/03/91-\nUmm Qasr, erster Kontakt zu Sam Fisher, wird Navy SEAL\n\n12/03/91-\nKuwait, Operation SCARAB TOOTH, zweites Zusammentreffen mit Sam Fisher.\n\n05/05/94-\nAutor des Aufsatzes "Die Welt von Troja", in der Monatszeitschrift American Republic.\n\n
+ReconFT11_0BAF1=12/09/98-\nAutor des Aufsatzes, "Ein besserer Kampf" in American Republic.\n\n11/10/01-\nGhazni, Afghanistan, Operation SAND GLASS.\n\n16/10/01-\nBagram, Afghanistan.  Ein Soldat aus Shetlands Einheit erschoss versehentlich den US-Soldaten Kelly Lewis. Durch eine Welle öffentlicher Empörung, in den Medien als der "Bagram-Zwischenfall" behandelt, musste Shetland aus dem Operationsgebiet abberufen werden.\n\n03/02/02 - 15/04/02-\nIn der Verhandlung zum "Bagram-Zwischenfall" wurde Shetland freigesprochen und anschließend auf einen Fünfsterne-Büroposten abgeschoben.\n\n03/07/02-\nShetland verlässt das Marine Corps.\n\n17/11/02-\nShetland werden bei einer Gegenklage zum "Bagram-Zwischenfall" über $700.000 Entschädigung zugesprochen.\n\n03/01/03-\nEr gründet DISPLACE, INTERNATIONAL, ein privates Militärunternehmen.\n\n
+ReconFT11_0BAF2=25/10/04-\nAchalciche, Georgien: Displace International ist die Speerspitze der Operation RIVER DOG.  Keine amerikanischen Verluste. Sechs getötete Georgier. Georgischer Flugplatz und elf Flugzeug erobert.\n\nANMERKUNGEN -\nDu kennst Doug sicherlich besser als wir. Man könnte meinen, ihr beiden veranstaltet einen Wettlauf um die weltweit schmutzigsten Einsätze.\n(Autor: Grimsdottir)
+
+ReconName11_0CAF=11_0C
+ReconPT11_0CAF=BETREFF- Agency-Datei über Osttimor/Indonesien\nUPLOAD - 28/03/06; 02:03:12\nQUELLE - Grimsdottir\n
+ReconFT11_0CAF=BETREFF- Agency-Datei über Osttimor/Indonesien\nUPLOAD - 28/03/06; 02:03:12\nQUELLE - Grimsdottir\n\n\nANMERKUNGEN -\nAm 28 November 1975 erklärte Osttimor seine Unabhängigkeit von Portugal. Indonsische Streitkräfte überschritten 9 Tage später die Grenzen zu Osttimor und erklärten das Gebiet zur indonesischen Provinz Timor Timur. Die Berichte sind lückenhaft, aber es wird vermutet, dass der folgenden "Befriedungskampagne" eine Viertelmillion timoresische Zivilisten zum Opfer fielen, häufig mit verdeckter Unterstützung durch die CIA. In den späten 90ern stellte der US-Nachrichtendienst seine Unterstützung für das indonesische Militär bei seinem Vorgehen gegen die timoresische Bevölkerung ein und im August 1999 entschieden sich die Timoresen in einem von der UNO überwachten Referendum für die Unabhängigkeit von Indonesien. Im Mai 2002 erhielt Osttimor eine demokratische Verfassung.\n(Autor: Grimsdottir)
+
+ReconName11_0DAF=11_0D
+ReconPT11_0DAF=BETREFF- Agency-Datei über DARAH DAN DOA\nUPLOAD - 28/03/06; 02:03:12\nQUELLE - Grimsdottir\n
+ReconFT11_0DAF=BETREFF- Agency-Datei über DARAH DAN DOA\nUPLOAD - 28/03/06; 02:03:12\nQUELLE - Grimsdottir\n\n\nANMERKUNGEN -\nDer Darah Dan Doa hat seinen Namen von den Farben der indonesischen Nationalflagge, Rot und Weiß, abgeleitet. Frei übersetzt lautet er "Blut und Gebet". Diese Gruppierung wird vom islamischen Fundamentalismus beeinflusst, aber ihre stärksten Wurzeln hat sie im indonesischen Nationalismus, der jeglichen westlichen Einfluss in Südostasien ablehnt. In den Neunzigern machte der DDD hauptsächlich durch Autobomben und Guerilla-Angriffe unter der Führung des jungen, charismatischen Suhadi Sadono von sich reden. Durch Sadonos Kontakte zu Richard Arbor (einem mutmaßlichen CIA-Agenten), entwickelte sich der DDD zu einer hochentwickelten Terrororganisation. Durch die Drogengelder aus Sadonos Verbindung zum Goldenen Dreieck, konnte der DDD seine technische Ausrüstung und seine Kommunikation in letzter Zeit wesentlich verbessern. 
+ReconFT11_0DAF1= Der DDD war in den Transport von Nikoladzes radioaktiven Materialien von China nach Burma verwickelt.\n(Autor: Grimsdottir)
+
+ReconName11_0EAF=11_0E
+ReconPT11_0EAF=BETREFF - Akte über D.P. Brunton\nUPLOAD - 28/03/06; 02:09:11\nQUELLE - Grimsdottir\nVOLLSTÄNDIGER NAME - Durmot Paul Brunton\n
+ReconFT11_0EAF=BETREFF - Akte über D.P. Brunton\nUPLOAD - 28/03/06; 02:09:11\nQUELLE - Grimsdottir\nVOLLSTÄNDIGER NAME - Durmot Paul Brunton\nALIAS - gargoyle\nGEB.- 21/10/63\nGRÖSSE - 1,67 m\nGEWICHT - 62 kg\nHAAR - Schwarz\nAUGEN - Braun\nNATIONALITÄT - US-amerikanisch\nOPERATIONSGEBIET - Washington, D.C.\nVERBINDUNGEN - NSA, Third Echelon\n\n\nRELEVANTE DATEN -\n\n03/06/85-\nMagister in Computerlinguistik an der Universität von Harvard.\n\n22/08/88-\nVeröffentlichte Magisterarbeit, "Angewandte Kryptographie und die Zukunft des Datenschutzes" in der Vierteljahresschrift American Mathematician.\n\n12/02/90-\nErhielt ein Bell-Jones-Stipendium für die Entwicklung einer Gruppenstrategischen Positionierungssoftware.\n\n24/08/91-\nUS-Army kauft GSPS-Software.\n\n01/09/91-\nGründete die Firma Three Clicks Software Development.\n\n
+ReconFT11_0EAF1=20/12/91-\nWurde von der US-Army für die vorgeschlagene Zusammenarbeit mit der CIA als Geheimnisträger der Stufe 4 eingestuft.\n\n04/02/92-\nVon der CIA für die Entwicklung eines asymetrischen Verschlüsselungssystems zur internen Kommunikation angeworben.\n\n18/06/95-\nEntwickelte das ROOT HOG-System für die CIA.\n\n05/05/98-\nErhielt eine höhere Sicherheitsstufe auf Lebenszeit für seine technisch-strategische Unterstützung der FBI-Operation EARLY WIND.\n\n01/04/01-\nTrat dem "Civilian Boot Camp"-Programm beim MCRD Paris Island, South Carolina bei.\n\n
+ReconFT11_0EAF2=03/02/01 - 07/09/01-\nKonsultierte die NSA bezüglich der Netzwerkrestrukturierung im Zuge des Crashs vom 22. Januar.\n\n08/09/01-\nWurde Vollzeitangestellter der NSA, Technischer Berater für Agency-übergreifende Verbindungen.\n\n01/11/05-\nErreicht höchste Einstufung als Geheimnisträger.\n\n02/11/05-\nBefördert zum Agency internen Verbindungsmann für Third Echelon.\n\nANMERKUNGEN-\nIch mag Dermot, aber ich glaube, Lambert würde ihm manchmal gerne eine runterhauen. Er ist ein bisschen zu motiviert und ich fürchte, er macht sich zum Narren, bei dem Versuch als Superprofi durchzugehen. Ein bisschen zu smart, finde ich.\n(Autor: Grimsdottir)
+
+ReconName11_0HAF=11_0H
+ReconPT11_0HAF=BETREFF- Akte über Ingrid Karlthson\nUPLOAD - 28/03/06; 02:12:29\nQUELLE - Grimsdottir\nVOLLSTÄNDIGER NAME - Ingrid Ruth Karlthson\n
+ReconFT11_0HAF=BETREFF- Akte über Ingrid Karlthson\nUPLOAD - 28/03/06; 02:12:29\nQUELLE - Grimsdottir\nVOLLSTÄNDIGER NAME - Ingrid Ruth Karlthson\nALIAS - Keine\nGEB.- 14/02/52\nGRÖSSE - 1,67 m\nGEWICHT - 71 kg\nHAAR- Dunkelbraun\nAUGEN - Braun\nNATIONALITÄT - US-amerikanisch\nOPERATIONSGEBIET- Virginia / Osttimor / Hohe Mobilität\nVERBINDUNGEN - CIA-Verwaltung\n\n\nRELEVANTE DATEN -\n\n02/05/02 -\nDer US-Botschaft in Dili, Osttimor, zugewiesen.\n\nANMERKUNGEN -\nScheint eine dieser CIA-Büronymphen zu sein, allerdings mit einer unglaublichen Begabung für Sprachen. Aufnahmen der Überwachungskameras zeigen, wie erstaunlich kaltblütig sie sich im Ernstfall verhält. Es scheint als habe Sadono sie von den anderen Geiseln getrennt.\n(Autor: Grimsdottir)
+
+ReconName11_0IAF=11_0I
+ReconPT11_0IAF=BETREFF - Agency-Datei zu Mortified Penguin\nUPLOAD - 28/03/06; 02:27:52\nQUELLE- Grimsdottir\n
+ReconFT11_0IAF=BETREFF - Agency-Datei zu Mortified Penguin\nUPLOAD - 28/03/06; 02:27:52\nQUELLE- Grimsdottir\n\n\nANMERKUNGEN -\nM.P. ist eine bekannte Zeichentrickfigur aus den späten 80er Jahren. Du kennst ihn sicherlich von den Portemonnees und Haarspangen japanischer Schulmädchen. Es handelt sich um einen Vogel mit passiv-agressiven Zügen. In den meisten Folgen der Serie wird er erbarmungslos runtergemacht und lässt seine Wut anschließend an toten Gegenständen ab. Ist lustiger, als es sich anhört.  (Bildanhang)\n(Autor: Grimsdottir)
+
+ReconName11_0JAF=11_0J
+ReconPT11_0JAF=BETREFF - Agency-Datei zur Operation RED BEARD\nUPLOAD - 28/03/06; 02:27:52\nQUELLE- Grimsdottir\n
+ReconFT11_0JAF=BETREFF - Agency-Datei zur Operation RED BEARD\nUPLOAD - 28/03/06; 02:27:52\nQUELLE- Grimsdottir\n\n\nANMERKUNGEN -\nBrunton hat darüber alles hervorgekramt, was er finden konnte, aber die Informationslage ist sehr dürftig. Die Aufzeichnungen der CIA werden noch mindestens 2 Jahrzehnte unter Verschluss bleiben. Sie wollen verhindern, dass irgendetwas über ihre Aktivitäten in Indonesien ans Licht kommt und erreichen, dass ihre Leute, die noch vor Ort sind, vorher in den gesicherten Ruhestand wechseln. Es scheint, als sei die Operation Red Beard von 1986 bis 1998 gelaufen und habe den blutigen Teil der indonesischen "Befriedungskampagne" gegen Timor Timur vorangetrieben. Richard Arbor (wahrscheinlich ein Deckname) war zweifelsfrei in die Aktivitäten verwickelt.\n(Autor: Grimsdottir)
+
+ReconName21_0AAF=21_0A
+ReconPT21_0AAF=BETREFF - Agency-Datei über Saulnier Cryogenics\nUPLOAD - 30/03/06; 04:15:12\nQUELLE - Grimsdottir\n
+ReconFT21_0AAF=BETREFF - Agency-Datei über Saulnier Cryogenics\nUPLOAD - 30/03/06; 04:15:12\nQUELLE - Grimsdottir\n\n\nANMERKUNGEN -\nErleichterung für die Todesangst reicher Europäer. Saulnier ist eines der ältesten und "renommiertesten" Laboratorien für Tieftemperaturtechnik in Europa. Die Anfänge der Tieftemperaturtechnik reichen in die Mitte der 70er Jahre zurück, als diese Technik noch wenig Vertrauen einflößte. Saulnier jedoch hat massiv in Forschung und Entwicklung investiert und alles Mögliche getan, um auf der Höhe der Entwicklung zu bleiben. Das sichtbarste Resultat dieser Bemühungen war der Schritt in Richtung eines vakuumbasierten Temperaturmanagements, welches keine konstante Energiequelle benötigt, um die für Tieftemperaturtechnik erforderlichen -140 Grad Celsius zu halten. Noch eine beiläufige Bemerkung: Guy Saulnier, der das Laboratorium gründete, dachte, Tieftemperaturtechnik sei eine Gabe Gottes, eine Art Vorbereitung für das Jüngste Gericht. Stell es dir vor.\n(Autor: Grimsdottir) 
+
+ReconName21_0BAF=21_0B
+ReconPT21_0BAF=BETREFF - Angaben zu Kamera-Störsender\nUPLOAD - 30/03/06; 04:14:07\nQUELLE - Grimsdottir\n
+ReconFT21_0BAF=BETREFF - Angaben zu Kamera-Störsender\nUPLOAD - 30/03/06; 04:14:07\nQUELLE - Grimsdottir\n\n\nZusammenfassung (und Bilder?) von Game Design / Grafik-Abteilung\n(Autor: Grimsdottir) 
+
+ReconName21_0CAF=21_0C
+ReconPT21_0CAF=BETREFF- Agency-Datei über ND133\nUPLOAD - 30/03/06; 04:23:45\nQUELLE- Grimsdottir\n
+ReconFT21_0CAF=BETREFF- Agency-Datei über ND133\nUPLOAD - 30/03/06; 04:23:45\nQUELLE- Grimsdottir\n\n\nANMERKUNGEN -\nIch habe das mithilfe meines Schulfranzösischs auf die Schnelle von der Saulnier-Webseite zusammengekratzt, also verzeih, wenn mir eine ihrer pseudochristlichen Verirrungen durch die Lappen gegangen sein sollte. Der ND133 scheint das Einsteigermodell zu sein. Besser betuchte Kunden können auch ihren gesamten Körper einfrieren lassen. Wenn die Mittel jedoch begrenzt sind (um die 15.000 $), kann man sein Hirn aus dem Schädel entfernen und in einem ND 133 (Navire D'Esprit / -140 Grad Celsius) von der Größe eines Brotkastens vakuumverpackt einfrieren lassen.  Selbst bei längeren Stromausfällen (an dieser Stelle bringen Sie die Apokalypse ins Spiel) bleibt das Vakuumsiegel des ND 133 erhalten und der "Passagier" kann in gefrorenem Zustand einige hundert Jahre überdauern. Sie nennen das ein "Einzelabteil für die Seele".\n(Autor: Grimsdottir) 
+
+ReconName21_0DAF=21_0D
+ReconPT21_0DAF=BETREFF - Agency-Datei über Francis Coldeboeuf \nUPLOAD - 30/03/06; 04:29:03\nQUELLE - Grimsdottir\nVOLLSTÄNDIGER NAME - Francis Coulon Coldeboeuf\n
+ReconFT21_0DAF=BETREFF - Agency-Datei über Francis Coldeboeuf \nUPLOAD - 30/03/06; 04:29:03\nQUELLE - Grimsdottir\nVOLLSTÄNDIGER NAME - Francis Coulon Coldeboeuf\nALIAS - Keine\nGEB. - 18/02/80\nGRÖSSE - 1,89 m\nGEWICHT - 78 kg\nHAAR - Schwarz\nAUGEN - Braun\nNATIONALITÄT - Französisch\nOPERATIONSGEBIET- Paris\nVERBINDUNGEN - Wachmann, Saulnier Cryogenics Laboratorium\n\n\nRELEVANTE DATEN -\n\n29/02/03 -\nVerhaftung aufgrund von Missachtung der Persönlichkeitsrechte anderer, Verfahren eingestellt.\n09/01/05 -\n\nDERZEITIGE TÄTIGKEIT - Angestellter bei Saulnier Cryogenics.\n\nANMERKUNGEN -\nEs scheint, als sei M. Coldeboeuf nichts als ein glückloser Außenseiter. 2003 wurde er wegen Voyeurismus verhaftet. Francis hatte ein Foto geschossen, als er eigentlich seinen Blick beschämt hätte abwenden sollen. Er hat kein Feingefühl und ist immer zur falschen Zeit am falschen Ort. Ansonsten scheint er in Ordnung zu sein.\n(Autor: Grimsdottir) 
+
+ReconName22_0AAF=22_0A
+ReconPT22_0AAF=BETREFF - Agency-Datei über Norman Soth\nUPLOAD - 02/04/06; 21:54:18\nQUELLE - Grimsdottir\nVOLLSTÄNDIGER NAME - Norman Washington Soth\n
+ReconFT22_0AAF=BETREFF - Agency-Datei über Norman Soth\nUPLOAD - 02/04/06; 21:54:18\nQUELLE - Grimsdottir\nVOLLSTÄNDIGER NAME - Norman Washington Soth\nALIAS - mortified_penguin, Jonathan Poindexter, Richard Arbor, Rizal Ariyanto\nGEB. - 07/08/61\nGRÖSSE - 1,82 m\nGEWICHT- 83 kg\nHAAR- Braun / licht\nAUGEN - Braun\nNATIONALITÄT- Unbekannt (zahlreiche falsche Papiere)\nOPERATIONSGEBIET - Indonesien / Osttimor / Hochgradig mobil\nVERBINDUNGEN- Darah Dan Doa; möglicherweise CIA; möglicherweise Kopassus (Indonesische Spezialeinheit)\n\n\nRELEVANTE DATEN -\n\n07/08/61 - 19/03/72 -\nBürger der Vereinigten Staaten.\n\n1972 - 1981-\nAufenthalte in Kambodscha, Birma, Hong Kong, schließlich Indonesien (Militärfamilie)\n\n18/02/82-\nErster CIA-Kontakt. Angeworben von Agent Knisely als möglicher Aktivposten für Operation RED BEARD.\n\n06/06/83-\nBeantragt die indonesische Staatsbürgerschaft.\n\n05/07/83-\nWird in die CIA-Lohnliste aufgenommen.\n\n
+ReconFT22_0AAF1=24/07/83-\nBeginnt mit dem Kopassus-Ausbildungsprogramm (ungenaue Informationen über seine Kopassus-Zeit). Es ist unbekannt, ob er das Programm beendet oder vorzeitig abgebrochen hat.\n\n18/12/84-\nNorman Soths Eltern sterben bei einem Hotelbrand in Djakarta.\n\n1985 - 1992-\nRückkehr in die Vereinigten Staaten, wohnhaft in Virginia, Kalifornien und Arizona. (Noch in Diensten der CIA)\n\n10/10/93-\nRückkehr nach Indonesien.\n\n25/12/94-\nEinlieferung ins Krankenhaus von Djakarta "mit starken Verletzungen des rechten Beins und des Gesichts."  Soth verliert seine Ohrläppchen und drei Finger. Hat seinen Vorgesetzten niemals die Verantwortlichen offenbart.\n\n02/03/95-\nErster Kontakt mit Darah Dan Doa.\n\n12/08/95-\nErster Kontakt mit Suhadi Sadono, (als Richard Arbor.)\n\n04/05/98-\nSoth verliert finanzielle Unterstützung durch die CIA (Abgefangene Gespräche legen eine Verwicklung in Sadonos Drogengeschäfte nahe).\n\n04/09/00 - 19/09/00-\nReise nach Paris, Grund unbekannt.\n\n
+ReconFT22_0AAF2=07/01/02 - 12/02/02-\nReise nach Deutschland und in die Türkei.\n\n12/05/05 - 25/05/05-\nReise nach Virginia, USA.  Gelder auf Konten umgeleitet, die mit 'Armed Guardians Services', einem privaten Militärunternehmen in Verbindung stehen.\n\nANMERKUNGEN -\nIch wünschte, wir wüssten mehr über die CIA-Operation Red Beard, das würde Soths Werdegang sicherlich verständlicher machen. Nach dem jetzigen Stand können wir nicht sagen, ob er zu den Guten gehört oder nicht. Ich habe jedoch den Eindruck, dass aus diesem einstigen "Freiheitskämpfer" nach der 180 Grad Wende der USA im Indonesien/Osttimor-Konflikt ein "Terrorist" geworden ist.\n(Autor: Grimsdottir) 
+
+ReconName31_0AAF=31_0A
+ReconPT31_0AAF=BETREFF - Agency-Datei über Dahlia Tal\nUPLOAD - 05/04/06; 01:02:13\nQUELLE - Grimsdottir\nVOLLSTÄNDIGER NAME - Dahlia Suleiman Tal\n
+ReconFT31_0AAF=BETREFF - Agency-Datei über Dahlia Tal\nUPLOAD - 05/04/06; 01:02:13\nQUELLE - Grimsdottir\nVOLLSTÄNDIGER NAME - Dahlia Suleiman Tal\nALIAS - Manal Daher\nGEB. - 11/08/68\nGRÖSSE - 1,75 m\nGEWICHT - 63 kg\nHAAR - Schwarz\nAUGEN- Braun\nNATIONALITÄT- Israelisch\nOPERATIONSGEBIET - Israel/ West Bank/ Libanon/ hochgradig mobil\nVERBINDUNGEN - Shin Bet (Israelische Geheimpolizei) "Sehnsucht nach dem Tod" (Syrische Terror-Zelle)\n\n\nRELEVANTE DATEN -\n\n11/08/84 - 10/08/86-\nNahal (Kämpfende Jugendpioniereinheit)\n\n11/08/86 - 08/03/96-\nIsraelische Verteidigungskräfte.\n\n09/03/96-\nDurchläuft ein Mossad-Ausbildungsprogramm.\n\n04/11/97-\nAnwerbung durch den Shin Bet.\n\n28/02/98 - 12/04/00 -\nAgentenaustauschprogramm mit dem britischen Geheimdienst.\n\n14/04/00 - AKTUELL -\nZu starke Shin Bet-Einbindung für verlässliche Informationen.\n\n
+ReconFT31_0AAF1=ANMERKUNGEN -\n"Sehnsucht nach dem Tod" klingt im Arabischen heroischer, so sagte man mir zumindest. Wenn wir einen Kampf zwischen Dahlia und einem Rottweiler arrangieren würden, dann würde ich mein gesamtes Geld auf Dahlia setzen und dem Hund nicht mal einen Namen geben.\n(Autor: Grimsdottir) 
+
+ReconName31_0BAF=31_0B
+ReconPT31_0BAF=BETREFF - Agency-Datei über Shin Bet / Mossad\nUPLOAD - 05/04/06; 01:02:13\nQUELLE - Grimsdottir\n
+ReconFT31_0BAF=BETREFF - Agency-Datei über Shin Bet / Mossad\nUPLOAD - 05/04/06; 01:02:13\nQUELLE - Grimsdottir\n\n\nANMERKUNGEN -\nIch bin mir sicher, dass Sie mit Shin Bet und Mossad bereits bestens bekannt sind. Der Mossad ist Israels berühmt-berüchtigter Nachrichtendienst. Der Shin Bet hingegen ist mehr nach Art einer Geheimpolizei organisiert, die sich um die unappetitlichen Dinge kümmert, wie Verhöre (Folter), Psycho-Einsätze (Folter) und Öffentlichkeitsarbeit (Folter). Das aktuelle politische Klima und die Herangehensweise der USA in internationalen Fragen hat den Shin Bet in seinem Handeln nur noch bestärkt.\n(Autor: Grimsdottir) 
+
+ReconName31_0CAF=31_0C
+ReconPT31_0CAF=BETREFF - Plan von Geula\nUPLOAD - 05/04/06; 01:02:13\nQUELLE - Grimsdottir\n
+ReconFT31_0CAF=BETREFF - Plan von Geula\nUPLOAD - 05/04/06; 01:02:13\nQUELLE - Grimsdottir\n\n\n
+
+ReconName31_0DAF=31_0D
+ReconPT31_0DAF=BETREFF - Agency-Datei über Bellagio Sampler\nUPLOAD - 05/04/06; 01:21:54\nQUELLE - Grimsdottir\nVOLLSTÄNDIGER NAME- Unbekannt\n
+ReconFT31_0DAF=BETREFF - Agency-Datei über Bellagio Sampler\nUPLOAD - 05/04/06; 01:21:54\nQUELLE - Grimsdottir\nVOLLSTÄNDIGER NAME- Unbekannt\nALIAS -\nGEB. - 1971\nGRÖSSE - 1,76 m\nGEWICHT - 80 kg\nHAAR - Braun / licht\nAUGEN - Braun\nNATIONALITÄT - US-amerikanisch\nOPERATIONSGEBIET - Jerusalem\nVERBINDUNGEN - CIA, Mossad\n\n\nRELEVANTE DATEN -\n\n- Nichts, Sorry.\n\nANMERKUNGEN -\nIch habe fast nichts über diesen Typen. Der CIA wirkt ziemlich nervös und ist unkommunikativ was diesen Mann angeht, fast wie in den späten Neunzigern. Vielleicht aus Angst wegen der Mossad-Verbindungen und der gesamten Dahlia Tal-Situation. Dem Typen einen so bescheuerten  Decknamen wie "Bellagio Sampler" zu geben, war nicht notwendig.  Aber er ist offensichtlich ein guter Analytiker und jemand, der innerhalb von 5 Minuten verfügbar ist.\n(Autor: Grimsdottir) 
+
+ReconName41_0AAF=41_0A
+ReconPT41_0AAF=BETREFF - Agency-Datei über das Kundang-Lager / Goldenes Dreieck\nUPLOAD - 12/04/06; 15:15:48\nQUELLE - Grimsdottir\n
+ReconFT41_0AAF=BETREFF - Agency-Datei über das Kundang-Lager / Goldenes Dreieck\nUPLOAD - 12/04/06; 15:15:48\nQUELLE - Grimsdottir\n\n\nANMERKUNGEN -\nSadono hat bereits in den frühen Neunzigern Verbindungen zum Drogenhandel im Goldenen Dreieck geknüpft, als er noch ein kleiner Ganove in den Straßen von Ciraban war. 1996 kam es zu ersten Kooperationen, als der DDD seine Dienste zur Absicherung der Schmuggeloperationen in den Bergregionen anbot. Als die CIA der DDD 98/99 den Geldhahn zudrehte, verdoppelte Sadono seinen Einsatz im Heroingeschäft und verzehnfachte seinen Gewinn. Ein schönes Beispiel für Sadonos finanziellen Idealismus. Das Lager von Kundang ist eine erschreckend ergiebige Milchkuh, vollgestopft mit Waffen und wildentschlossenen Kämpfern.\n(Autor: Grimsdottir) 
+
+ReconName41_0BAF=41_0B
+ReconPT41_0BAF=BETREFF- Akte über Azrul Arifin\nUPLOAD - 12/04/06; 15:28:02\nQUELLE - Grimsdottir\nVOLLSTÄNDIGER NAME - Azrul Idriss Arifin\n
+ReconFT41_0BAF=BETREFF- Akte über Azrul Arifin\nUPLOAD - 12/04/06; 15:28:02\nQUELLE - Grimsdottir\nVOLLSTÄNDIGER NAME - Azrul Idriss Arifin\nALIAS - George Marshall; Henning Fischerauer\nGEB. - 16/09/72\nGRÖSSE - 1,55 m\nGEWICHT - 67 kg\nHAAR - Schwarz\nAUGEN - Braun\nNATIONALITÄT - Indonesisch\nOPERATIONSGEBIET - Kundang, Indonesien\nVERBINDUNGEN - Das "Goldene Dreieck"\n\n\nRELEVANTE DATEN -\n\nLieß sich einen singapurischen Pass auf den Namen George Marshall ausstellen.\n\n02/02/03-\nErster Kontakt mit CIA-Agent Sarah Glass.\n\n28/04/03-\nKommt auf die CIA-Lohnliste als Informant für Sarah Glass.\nAbsolviert Pilotentraining in München, als Henning Fleischerauer, Deutscher in der 2. Generation.\n\n26/10/05-\nVon Sarah Glass Informantenliste gestrichen, wegen "unpassenden Verhaltens".  CIA-Agent Robert Khchefati übernimmt ihn.\n\n02/04/06-\nErbittet Streichung aus der CIA Informantenliste.  Antrag abgelehnt.\n\n
+ReconFT41_0BAF1=ANMERKUNGEN -\n\nSarah Glass Akteneinträge zu diesem Typen sind sehr erheiternd. Du solltest sie dir anschauen, wenn du zurück in den Staaten bist. Hört sich echt schräg an, aber er ist clever, umsichtig und leicht einzuschüchtern, kurz eine ideale Insider-Quelle für unsere Freunde aus Langley.\n(Autor: Grimsdottir) 
+
+ReconName42_0AAF=42_0A
+ReconPT42_0AAF=BETREFF- Agency-Datei über Baldanders Corporate Digital Security\nUPLOAD - 18/04/06; 05:24:01\nQUELLE - Grimsdottir\n
+ReconFT42_0AAF=BETREFF- Agency-Datei über Baldanders Corporate Digital Security\nUPLOAD - 18/04/06; 05:24:01\nQUELLE - Grimsdottir\n\n\nANMERKUNGEN -\nBaldanders ist ein indisches Unternehmen mit Sitz in Kolkata ("Kalkutta" für Touristen). Sie haben sich einen guten Ruf erworben, als Sie einen Patch entwickelten mit dem der "Reverse Onion" Masse-Algorithmus ausgemerzt werden konnte, der nach den unschönen Ereignissen in Georgien überall herumschwirrte. Trotz der Schwierigkeiten, in denen das Technologie-Gewerbe derzeit steckt, konnten sie von dem enormen Boom in China profitieren. Sie haben ein stationäres Digitales Sicherheitspaket perfektioniert und reisen mit Teams von 6 bis 50 Mitgliedern mit allem nötigen Equipment und Programmierwissen überallhin, wo sie ihr Auftraggeber haben möchte.\n(Autor: Grimsdottir) 
+
+ReconName42_0BAF=42_0B
+ReconPT42_0BAF=BETREFF - Akte über Peter Singh\nUPLOAD - 18/04/06; 05:44:57\nQUELLE - Grimsdottir\nVOLLSTÄNDIGER NAME - Peter Roa Chandrakumar Singh\n
+ReconFT42_0BAF=BETREFF - Akte über Peter Singh\nUPLOAD - 18/04/06; 05:44:57\nQUELLE - Grimsdottir\nVOLLSTÄNDIGER NAME - Peter Roa Chandrakumar Singh\nALIAS - Keine\nGEB. - 28/2/77\nGRÖSSE - 1,79 m\nGEWICHT - 72 kg\nHAAR - Schwarz\nAUGEN - Braun\nNATIONALITÄT- Indisch\nOPERATIONSGEBIET - Hochgradig mobil, Sitz in Kalkutta\nVERBINDUNGEN - Baldanders Digital Security\n\n\nRELEVANTE DATEN -\n\n08/09/00-\nTritt in den Dienst von Baldanders Digital Security.\n\n27/06/02-\nErhält ein Diplom in Militärrelevanter Analyse von Elektronischen Systeme von der Akhtar C.S.U. in Neu Delhi.\n\nANMERKUNG -\nNachdem er die Hälfte seines Lebens als glückloser Zuschauer verbracht hat, sieht es so aus, als habe Komodo Mr. Sing die Möglichkeit gegeben, ein vollwertiges Opfer zu werden. Wir können davon ausgehen, dass der DDD den armen Kerl aufgrund seiner technischen Kenntnisse für seine Zwecke einsetzt. So wie es aussieht, ist Peter ziemlich fähig in seinem Fach.\n(Autor: Grimsdottir) 
+
+ReconName42_0CAF=42_0C
+ReconPT42_0CAF=BETREFF- Agency-Datei über das SISSIXS\nUPLOAD - 18/04/06; 05:49:10\nQUELLE - Grimsdottir\n
+ReconFT42_0CAF=BETREFF- Agency-Datei über das SISSIXS\nUPLOAD - 18/04/06; 05:49:10\nQUELLE - Grimsdottir\n\n\nANMERKUNGEN -\nDas Special Intelligence Satellite Submarine Information Exchange System (SISSIXS) ist ein sogenanntes Over-the-Horizon Targeting (OTH-T)-Kommunikationssystem, entwickelt, um Niedrigfrequenzverbindungen zu vervollständigen. Im Gegensatz zum herkömmlichen SSIXS, ermöglicht dieses System einer beliebigen Anzahl von Nutzern zusätzlichen Datenschutz, indem es einmalige ID-Nummer vergibt. Die gesamte Kommunikation wird per Squirt-Übertragung übermittelt, wodurch die Anwender Satellitenressourcen gleichzeitig nutzen können. Ein SISSIXS-Netzwerk kann sich über eine beliebige Anzahl von Satelliten erstrecken.\nZitiert aus dem Handbuch.  "Squirt-Übertragung".\n(Autor: Grimsdottir) 
+
+ReconName43_0AAF=43_0A
+ReconPT43_0AAF=BETREFF- Aktualisierte Agency-Datei über Ingrid Karlthson\nUPLOAD - 02/04/06; 21:54:18\nQUELLE - Grimsdottir\nVOLLSTÄNDIGER NAME - Ingrid Ruth Karlthson\n
+ReconFT43_0AAF=BETREFF- Aktualisierte Agency-Datei über Ingrid Karlthson\nUPLOAD - 02/04/06; 21:54:18\nQUELLE - Grimsdottir\nVOLLSTÄNDIGER NAME - Ingrid Ruth Karlthson\nALIAS - Sarah Glass\nGEB. - 14/02/52\nGRÖSSE - 1,67 m\nGEWICHT - 70 kg\nHAAR - Dunkelbraun\nAUGEN - Braun\nNATIONALITÄT - US-amerikanisch\nOPERATIONSGEBIET - Virginia / Osttimor / Indonesien / Hochgradig mobil\nVERBINDUNGEN - CIA / Verbindungen zu Kopassus als Sarah Glass\n\n\nRELEVANTE DATEN -\n\n01/06/01-\nLeitet Operation Red Grass in Quezon, Philippinen\n\n02/05/02-\nUS-Botschaft in Dili, Osttimor, zugeteilt\n\n13/11/02-\nRekrutiert Citra Nugroho als CIA-Informant\n\n28/04/03-\nRekrutiert Azrul Arifin als CIA-Informant\n\n26/10/05-\nGibt Arifin auf, unterhält weiterhin Nugroho\n\n28/03/06-\nWird von Suhadi Sadono in der US-Botschaft von Dili als Geisel genommen.\n\nANMERKUNGEN -\nIch wusste, dass es einen Grund gibt, warum ich sie mag. Ihre Sprachkenntnisse sind nützlich, aber besonders in der Rekrutierung von V-Leuten und der Durchführung von Operationen hat sie Talent bewiesen. Agentin vom alten Schlag, mit Ingrid Karlthson ist nicht zu spaßen.\n(Autor: Grimsdottir) 
+
+ReconName51_0AAF=51_0A
+ReconPT51_0AAF=BETREFF- Agency-Datei über Norman Soth\nUPLOAD - 23/04/06; 12:48:01\nQUELLE - Grimsdottir\nVOLLSTÄNDIGER NAME- Norman Washington Soth\n
+ReconFT51_0AAF=BETREFF- Agency-Datei über Norman Soth\nUPLOAD - 23/04/06; 12:48:01\nQUELLE - Grimsdottir\nVOLLSTÄNDIGER NAME- Norman Washington Soth\nALIAS - mortified_penguin, Jonathan Poindexter, Richard Arbor, Rizal Ariyanto, goodbye_cat, Robbert Redding\nGEB. - 07/08/61\nGRÖSSE - 1,82 m\nGEWICHT - 83 kg\nHAAR- Braun / licht\nAUGEN - Braun\nNATIONALITÄT - Unbekannt (zahlreiche gefälschte Dokumente)\nOPERATIONSGEBIET - Indonesien / Osttimor / Los Angeles / Hochgradig mobil\nVERBINDUNGEN - Darah Dan Doa; ehemaliger CIA-Agent\n\n\nRELEVANTE DATEN -\n\n07/08/61 - 19/03/72 -\nBürger der Vereinigten Staaten.\n\n1972 - 1981-\nAufenhalte in Kambodscha, Birma, Hong Kong, schließlich Indonesien (Militärfamilie)\n\n18/02/82-\nErster CIA-Kontakt. Angeworben von Agent Knisely als möglicher Aktivposten für Operation RED BEARD.\n\n06/06/83-\nBeantragt die indonesische Staatsbürgerschaft.\n\n05/07/83-\nWird in die CIA-Lohnliste aufgenommen.\n\n
+ReconFT51_0AAF1=24/07/83-\nBeginnt mit dem Kopassus-Ausbildungsprogramm (ungenaue Informationen über seine Kopassus-Zeit). Es ist unbekannt, ob er das Programm beendet oder vorzeitig abgebrochen hat.\n\n18/12/84-\nNorman Soths Eltern sterben bei einem Hotelbrand in Djakarta.\n\n1985 - 1992-\nRückkehr in die Vereinigten Staaten, wohnhaft in Virginia, Kalifornien und Arizona. (Noch in Diensten der CIA)\n\n10/10/93-\nRückkehr nach Indonesien.\n\n25/12/94-\nEinlieferung ins Krankenhaus von Djakarta "mit starken Verletzungen des rechten Beins und des Gesichts."  Soth verliert seine Ohrläppchen und drei Finger. Hat seinen Vorgesetzten niemals die Verantwortlichen genannt.\n\n02/03/95-\nErster Kontakt mit Darah Dan Doa.\n\n30/05/95-\nErste nachweisbare Beteiligung bei Operation Red Beard.\n\n12/08/95-\nErster Kontakt zu Suhadi Sadono, (als Richard Arbor.)\n\n04/05/98-\nSoth verliert finanzielle Unterstützung durch die CIA (Abgefangene Gespräche legen eine Verwicklung in Sadonos Drogengeschäfte nahe).\n\n
+ReconFT51_0AAF2=10/10/99-\nCIA löst jede Verbindung zu Operation Red Beard.\n\n22/03/01-\nGescheiterter Anschlag auf Soth.\n\n04/09/00 - 19/09/00-\nReise nach Paris. Betreibt Nachforschungen über Saulnier Cryogenics unter dem Decknamen Robert Redding.\n\n07/01/02 - 12/02/02-\nReise nach Deutschland und in die Türkei.\n\n12/05/05 - 25/05/05-\nReise nach Virginia, USA.  Gelder auf Konten umgeleitet, die mit 'Armed Guardians Services', einem privaten Militärunternehmen in Verbindung stehen.\n\nANMERKUNGEN -\nBrunton ist es gelungen, von der CIA ein bisschen mehr über Red Beard herauszuquetschen, bevor Lambert ihn zum Putzdienst eingeteilt hat. Es ist nicht viel, aber soviel wir herausfinden konnten, war Red Beard ein auf Drogengelder gestütztes Unternehmen zur Unterdrückung der timoresischen Unabhängigkeitsbewegung. Die CIA hat die indonesischen Guerilleros dabei mit Waffen ausgestattet. 
+ReconFT51_0AAF3=Soth begann als Verbindungsmann bei der Operation und hat sie innerhalb von wenigen Jahren auf die Beine gestellt. Als die CIA sich 99 aus der Operation verabschiedete, wandelte sich Soth zu einer nahezu autonomen Terrorzelle. Er war eigenständig genug, um die Operationen fortzuführen, nachdem die CIA ihre Ressourcen aus Indonesien abgezogen hatte und die USA offiziell Osttimor unterstützte. Der amerikanische Nachrichtendienst hat mehrere Versuche unternommen, alle Kontakte zu Red Beard zu eliminieren, mindestens einer dieser Tötungsversuche war auf Soth gerichtet. Ich denke, es ist nicht übertrieben anzunehmen, dass Soth einen gewissen Groll hegt.\n(Autor: Grimsdottir) 
+
+
+[OPTIONS]
+QUITCURRENTGAME=AKTUELLES SPIEL BEENDEN
+QUITCURRENTGAMEMESSAGE=Sind Sie sicher, dass Sie zum Hauptmenü zurückkehren und das aktuelle Spiel abbrechen möchten?
+DELETEPROFILE=Ein Profil löschen
+DELETEPROFILEMESSAGE=Sind Sie sicher, dass Sie dieses Profil löschen möchten?
+QUITSPLINTER=SPLINTER CELL VERLASSEN
+QUITSPLINTERMESSAGE=Möchten Sie Splinter Cell wirklich verlassen?
+SETTINGSCHANGE=EINSTELLUNGEN ÄNDERN
+PROFILEEXISTS=Fehler beim Erstellen des neuen Profils
+PROFILEEXISTSMESSAGE=Es ist ein Fehler beim Erstellen des Profls aufgetreten. Dieser Profilname existiert bereits.
+SAVEGAMEEXISTS=Dieser Spielstand existiert bereits
+SAVEGAMEEXISTSMESSAGE=Ein Spielstand mit diesem Namen existiert bereits. Möchten Sie ihn überschreiben?
+INVALIDFILENAME=Ungültiger Dateiname.
+
+[MESSAGEBOX]
+YES=JA
+NO=NEIN
+OK=OK 
+CANCEL=ABBRECHEN
+DesktopColorDepthErrorTitle=Fehler bei der Desktop-Farbtiefe
+DesktopColorDepthError=Stellen Sie die Farbtiefe des Desktops auf 32 Bit.
+
+[Keys]
+Title_Move=BEWEGUNG
+K_MoveForward=Vorwärts
+K_MoveBackward=Rückwärts
+K_StrafeLeft=Schritt links
+K_StrafeRight=Schritt rechts
+K_Duck=Ducken/Aufrichten
+K_Accel=Zoom +/Schneller
+K_Decell=Zoom -/Langsamer
+k_BackToWall=Rücken an die Wand
+
+Title_Actions=AKTION
+K_Fire=Feuer
+K_AltFire=Sekundärfeuer
+K_Scope=Benutzen/Ausrüsten
+K_Jump=Spring./Spagatspg.
+K_Interaction=Interaktion
+K_Reload=Nachladen
+K_SwitchROF=Feuerrate
+K_Whistle=Pfeifen
+K_ResetCamera=Kamera-Reset
+K_QuickSave=Schnellspeichern
+K_QuickLoad=Schnell-Laden
+K_NightVision=Nachtsichtgerät
+K_HeatVision=Wärmebildgerät
+K_Pause=Pause
+K_Zoom=Zoom
+K_BlackSnipe=Sichtg./Scharfsch.
+
+
+Title_Inventory=INVENTAR
+K_QuickInventory=Schnell-Inventar
+K_FullInventory=Komplettinventar
+K_NextGadget=Nächste Waffe
+K_PrevGadget=Vorherige Waffe
+
+MENU=MENÜ
+CTRLOpsat=OPSAT
+CTRLPauseMenu=Pause-Menü
+
+MOUSE=MAUS
+INVERTMOUSE=Maus umkehren
+FIRETODRAWGUN=Mit Feuertaste Waffe ziehen aktivieren
+MOUSESENSITIVITY=Mausempfindlichkeit
+
+[Interactions]
+IK_None=NO LOCALIZATION
+IK_LeftMouse=L. Maustaste
+IK_RightMouse=R. Maustaste
+IK_Cancel=Cancel
+IK_MiddleMouse=M. Maustaste
+IK_Unknown05=Unknown05
+IK_Unknown06=Unknown06
+IK_Unknown07=Unknown07
+IK_Backspace=Backspace
+IK_Tab=Tab
+IK_Unknown0A=Unknown0A
+IK_Unknown0B=Unknown0B
+IK_Unknown0C=Unknown0C
+IK_Enter=Eingabe
+IK_Unknown0E=Unknown0E
+IK_Unknown0F=Unknown0F
+IK_Shift=Umsch.
+IK_Ctrl=Strg
+IK_Alt=Alt
+IK_Pause=Pause
+IK_CapsLock=Feststelltaste
+IK_Unknown15=Unknown15
+IK_Unknown16=Unknown16
+IK_Unknown17=Unknown17
+IK_Unknown18=Unknown18
+IK_Unknown19=Unknown19
+IK_Unknown1A=Unknown1A
+IK_Escape=Escape
+IK_Unknown1C=Unknown1C
+IK_Unknown1D=Unknown1D
+IK_Unknown1E=Unknown1E
+IK_Unknown1F=Unknown1F
+IK_Space=Leertaste
+IK_PageUp=Bild auf
+IK_PageDown=Bild ab
+IK_End=Ende
+IK_Home=Pos1
+IK_Left=Links
+IK_Up=Hoch
+IK_Right=Rechts
+IK_Down=Runter
+IK_Select=Select
+IK_Print=Print
+IK_Execute=Execute
+IK_PrintScrn=Drucken
+IK_Insert=Einf
+IK_Delete=Entf
+IK_Help=Help
+IK_Unknown3A=Unknown3A
+IK_Unknown3B=Unknown3B
+IK_Unknown3C=Unknown3C
+IK_Unknown3D=Unknown3D
+IK_Unknown3E=Unknown3E
+IK_Unknown3F=Unknown3F
+IK_Unknown40=Unknown40
+IK_Unknown5B=Unknown5B
+IK_Unknown5C=Unknown5C
+IK_Unknown5D=Unknown5D
+IK_Unknown5E=Unknown5E
+IK_Unknown5F=Unknown5F
+IK_NumPad0=Num 0
+IK_NumPad1=Num 1
+IK_NumPad2=Num 2
+IK_NumPad3=Num 3
+IK_NumPad4=Num 4
+IK_NumPad5=Num 5
+IK_NumPad6=Num 6
+IK_NumPad7=Num 7
+IK_NumPad8=Num 8
+IK_NumPad9=Num 9
+IK_GreyStar=Num *
+IK_GreyPlus=Num +
+IK_Separator=Separator
+IK_GreyMinus=Num -
+IK_NumPadPeriod=Num .
+IK_GreySlash=Num /
+IK_Unknown88=Unknown88
+IK_Unknown89=Unknown89
+IK_Unknown8A=Unknown8A
+IK_Unknown8B=Unknown8B
+IK_Unknown8C=Unknown8C
+IK_Unknown8D=Unknown8D
+IK_Unknown8E=Unknown8E
+IK_Unknown8F=Unknown8F
+IK_NumLock=Numlock
+IK_ScrollLock=Rollen
+IK_Unknown92=Unknown92
+IK_Unknown93=Unknown93
+IK_Unknown94=Unknown94
+IK_Unknown95=Unknown95
+IK_Unknown96=Unknown96
+IK_Unknown97=Unknown97
+IK_Unknown98=Unknown98
+IK_Unknown99=Unknown99
+IK_Unknown9A=Unknown9A
+IK_Unknown9B=Unknown9B
+IK_Unknown9C=Unknown9C
+IK_Unknown9D=Unknown9D
+IK_Unknown9E=Unknown9E
+IK_Unknown9F=Unknown9F
+IK_LShift=Left Shift
+IK_RShift=Right Shift
+IK_LControl=Left Control
+IK_RControl=Right Control
+IK_UnknownA4=UnknownA4
+IK_UnknownA5=UnknownA5
+IK_UnknownA6=UnknownA6
+IK_UnknownA7=UnknownA7
+IK_UnknownA8=UnknownA8
+IK_UnknownA9=UnknownA9
+IK_UnknownAA=UnknownAA
+IK_UnknownAB=UnknownAB
+IK_UnknownAC=UnknownAC
+IK_UnknownAD=UnknownAD
+IK_UnknownAE=UnknownAE
+IK_UnknownAF=UnknownAF
+IK_UnknownB0=UnknownB0
+IK_UnknownB1=UnknownB1
+IK_UnknownB2=UnknownB2
+IK_UnknownB3=UnknownB3
+IK_UnknownB4=UnknownB4
+IK_UnknownB5=UnknownB5
+IK_UnknownB6=UnknownB6
+IK_UnknownB7=UnknownB7
+IK_UnknownB8=UnknownB8
+IK_UnknownB9=UnknownB9
+IK_Semicolon=;
+IK_Equals==
+IK_Comma=,
+IK_Minus=-
+IK_Period=.
+IK_Slash=/
+IK_Tilde=~
+IK_UnknownC1=4. Maustaste
+IK_UnknownC2=5. Maustaste
+IK_UnknownC3=UnknownC3
+IK_UnknownC4=UnknownC4
+IK_UnknownC5=UnknownC5
+IK_UnknownC6=UnknownC6
+IK_UnknownC7=UnknownC7
+IK_Joy1=Joy 1
+IK_Joy2=Joy 2
+IK_Joy3=Joy 3
+IK_Joy4=Joy 4
+IK_Joy5=Joy 5
+IK_Joy6=Joy 6
+IK_Joy7=Joy 7
+IK_Joy8=Joy 8
+IK_Joy9=Joy 9
+IK_Joy10=Joy 10
+IK_Joy11=Joy 11
+IK_Joy12=Joy 12
+IK_Joy13=Joy 13
+IK_Joy14=Joy 14
+IK_Joy15=Joy 15
+IK_Joy16=Joy 16
+IK_UnknownD8=UnknownD8
+IK_UnknownD9=UnknownD9
+IK_UnknownDA=UnknownDA
+IK_LeftBracket={
+IK_Backslash=\
+IK_RightBracket=}
+IK_SingleQuote= ' 
+IK_UnknownDF=UnknownDF
+IK_JoyX=Joy X Axis
+IK_JoyY=Joy Y Axis
+IK_JoyZ=Joy Z Axis
+IK_JoyR=Joy R
+IK_MouseX=Mouse X Axis
+IK_MouseY=Mouse Y Axis
+IK_MouseZ=Mouse Z Axis
+IK_MouseW=Mouse W
+IK_JoyU=Joy U
+IK_JoyV=Joy V
+IK_UnknownEA=UnknownEA
+IK_UnknownEB=UnknownEB
+IK_MouseWheelUp=Mausrad hoch
+IK_MouseWheelDown=Mausrad runter
+IK_Unknown10E=Unknown10E
+IK_Unknown10F=Unknown10F
+IK_UnknownF0=UnknownF0
+IK_UnknownF1=UnknownF1
+IK_UnknownF2=UnknownF2
+IK_UnknownF3=UnknownF3
+IK_UnknownF4=UnknownF4
+IK_UnknownF5=UnknownF5
+IK_Attn=Attn
+IK_CrSel=CrSel
+IK_ExSel=ExSel
+IK_ErEof=ErEof
+IK_Play=Play
+IK_Zoom=Zoom
+IK_NoName=NoName
+IK_PA1=PA1
+IK_OEMClear=OEMClear
+
