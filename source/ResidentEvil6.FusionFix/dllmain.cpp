@@ -90,7 +90,7 @@ void FillAddressTable()
     addrTbl[0x9DB8E8] = (uintptr_t)hook::get_pattern("F3 0F 5C 05 ? ? ? ? F3 0F 10 0D ? ? ? ? 0F 54 C1");
     addrTbl[0x500640] = (uintptr_t)hook::get_pattern("C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? E8 ? ? ? ? 8B 8E ? ? ? ? 89 6C 24");
     addrTbl[0x50098E] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? 8B 8E ? ? ? ? C7 86 ? ? ? ? ? ? ? ? C7 86");
-    addrTbl[0x544227] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? 85 C0 75 ? 0F 57 C0 A1");
+    addrTbl[0x544227] = (uintptr_t)find_pattern("E8 ? ? ? ? 85 C0 75 ? 0F 57 C0 A1", "E8 ? ? ? ? F3 0F 10 05 ? ? ? ? F3 0F 11 44 24 ? F3 0F 10 05 ? ? ? ? 89 7C 24").get_first();
     addrTbl[0x544432] = (uintptr_t)hook::get_pattern("E8 ? ? ? ? 85 C0 75 ? 83 C7 ? 8B 86");
     addrTbl[0x975DF0] = (uintptr_t)hook::get_pattern("8B 44 24 ? 8B 54 24 ? 50 8B 44 24 ? 6A 00 52 8B 54 24 ? 50 8B 44 24 ? 52 8B 54 24 ? 50 8B 44 24 ? 6A 00");
 
