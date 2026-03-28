@@ -49,6 +49,55 @@ Run the following command in the root of this directory to generate the project 
 
 The usage is as simple as inserting the files into game's root directory. Uninstalling is as easy as that too, delete the files and you are done.
 
+# How to Report Crashes
+
+If the game crashes while using the fixes, please send the **crash dump** (.dmp file).
+
+#### ⚙️ Easiest way (Recommended)
+
+Plugins usually come with an [Ultimate ASI Loader](https://github.com/ThirteenAG/Ultimate-ASI-Loader) that is capable of generating crash dumps and crash logs.
+
+1. Go to your game's main folder (where the game's `.exe` file is located).
+2. In the same folder, create a new folder and name it exactly:
+   **`CrashDumps`**
+
+**After the game crashes:**
+- Open the **CrashDumps** folder you created.
+- Look for the newest file with the `.dmp` extension (this is the most important file).
+- You may also include the `.log` file if it exists, but the **.dmp file is required**.
+
+Please send the `.dmp` file when reporting the crash.
+
+You can report it here:
+- [GitHub Issues](https://github.com/ThirteenAG/WidescreenFixesPack/issues)
+
+#### ⚙️ Alternative way (Windows built-in crash dumps)
+
+Use this method only if the previous method doesn't create a dump.
+
+1. Press **Windows key + R**, type `regedit`, and press Enter.
+2. Navigate to this path:  
+   `HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting`
+3. Right-click inside the **Windows Error Reporting** folder → **New** → **Key**, and name it exactly: **`LocalDumps`**
+4. Close Registry Editor.
+
+After a crash, the dump file will be saved here:  
+`C:\Users\YOURUSERNAME\AppData\Local\CrashDumps`
+
+Find the newest `.dmp` file related to your game and send it in [GitHub Issues](https://github.com/ThirteenAG/WidescreenFixesPack/issues).
+
+**Warning:** This method requires administrator rights and enables crash dumps for all programs on your computer.
+
+#### ⚙️ If the game **hangs or freezes** (instead of crashing)
+
+1. Press **Ctrl + Shift + Esc** to open Task Manager.
+2. Find the game process in the list (usually the name of the game's `.exe`).
+3. Right-click on it and select **Create memory dump file**.
+
+**Warning:** This file will be quite large (hundreds of MB or more).
+
+Upload the `.dmp` file to Google Drive, OneDrive, Dropbox, or any similar service **and make sure the link is set to public access**. Then share the link when reporting in [GitHub Issues](https://github.com/ThirteenAG/WidescreenFixesPack/issues).
+
 # Important notes
 
 - Not compatible with Windows XP (without recompiling with `_xp` toolset and `/Zc:threadSafeInit-`).
