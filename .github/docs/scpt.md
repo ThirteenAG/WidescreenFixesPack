@@ -16,6 +16,8 @@ $${\color{green}✔}$$ Disabled mouse acceleration
 
 $${\color{green}✔}$$ Added raw input support for mouse
 
+$${\color{green}✔}$$ Added Mouse 4 / Mouse 5 support
+
 $${\color{green}✔}$$ Improved gamepad support (via [Xidi](https://github.com/samuelgr/Xidi))
 
 $${\color{green}✔}$$ Restored EAX support (via [DSOAL](https://github.com/kcat/dsoal))

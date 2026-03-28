@@ -13,11 +13,34 @@ namespace UWindowsViewport
 {
     bool bCalledFromWndProc = false;
 
+    constexpr UINT IST_Press = 1;
+    constexpr UINT IST_Release = 3;
+    constexpr UINT IK_MOUSE4 = 193; // IK_UnknownC0
+    constexpr UINT IK_MOUSE5 = 194; // IK_UnknownC1
+
     SafetyHookInline shCauseInputEvent = {};
     SafetyHookInline shViewportWndProc = {};
     int32_t __fastcall ViewportWndProc(void* UWindowsViewport, void* edx, UINT Msg, WPARAM wParam, LPARAM lParam)
     {
         hGameWindow = *(HWND*)(*(uintptr_t*)((uintptr_t)UWindowsViewport + 0x18C) + 4);
+
+        // Handle Mouse 4 / Mouse 5 (XButtons)
+        if (Msg == WM_XBUTTONDOWN || Msg == WM_XBUTTONUP)
+        {
+            const UINT button = GET_XBUTTON_WPARAM(wParam);
+            UINT iKey = 0;
+            if (button == XBUTTON1)
+                iKey = IK_MOUSE4;
+            else if (button == XBUTTON2)
+                iKey = IK_MOUSE5;
+
+            if (iKey != 0)
+            {
+                const UINT inputState = (Msg == WM_XBUTTONDOWN) ? IST_Press : IST_Release;
+                shCauseInputEvent.unsafe_fastcall(UWindowsViewport, 0, (int)iKey, (int)inputState, 1.0f);
+                return 0;
+            }
+        }
 
         if (Screen.fRawInputMouse > 0.0f)
         {
@@ -66,6 +89,10 @@ namespace UWindowsViewport
 
     void __fastcall CauseInputEvent(void* UWindowsViewport, void* edx, int inputID, int a3, float value)
     {
+        // Ignore release events the game triggers automatically, GetKeyState doesn't work for XButtons
+        if (inputID == IK_MOUSE4 || inputID == IK_MOUSE5)
+            return;
+
         if (Screen.bDeferredInput && bCalledFromWndProc && (inputID == 228 || inputID == 229))
         {
             deferredCauseInputEvent.emplace([UWindowsViewport, edx, inputID, a3, value]()
