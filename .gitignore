@@ -1,6 +1,7 @@
 ## Releases data
 data/Archives
 data/**/*.asi
+data/EmbedPDB/EmbedPDB.exe
 
 #ASI Loader
 data/**/d3d8.dll

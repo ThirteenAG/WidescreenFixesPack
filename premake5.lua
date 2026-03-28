@@ -285,6 +285,13 @@ jobs:
       optimize "On"
 
 group "Win64"
+--project "EmbedPDB"
+--   kind "ConsoleApp"
+--   targetextension ".exe"
+--   platforms { "Win64" }
+--   architecture "x64"
+--   files { "./source/%{prj.name}/*.h", "./source/%{prj.name}/*.c" }
+--   setpaths("./data/%{prj.name}/", "%{prj.name}.exe", "")
 project "FarCry64.WidescreenFix"
    platforms { "Win64" }
    architecture "x64"
