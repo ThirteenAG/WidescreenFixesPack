@@ -38,3 +38,70 @@ jobs:
       uses: ThirteenAG/update-tags@v3
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  prepare-artifacts:
+    needs: build
+    runs-on: windows-latest
+    if: ${{ needs.build.result == 'success' }}
+    outputs:
+      matrix: ${{ steps.gen-matrix.outputs.matrix }}
+
+    steps:
+      - name: Download the bundle
+        uses: actions/download-artifact@v8
+        with:
+          name: WidescreenFixesPack
+          path: downloaded-zips
+
+      - name: Generate matrix
+        id: gen-matrix
+        shell: pwsh
+        run: |
+          $dir = "downloaded-zips"
+          $zips = @(Get-ChildItem "$dir\*.zip" -File -ErrorAction SilentlyContinue)
+
+          if ($zips.Count -eq 0) {
+            Write-Host "No .zip files found in the bundle."
+            echo "matrix={}" >> $env:GITHUB_OUTPUT
+            exit 0
+          }
+
+          $include = @()
+          foreach ($zip in $zips) {
+            $include += @{
+              name = $zip.BaseName
+              path = "downloaded-zips/$($zip.Name)"
+            }
+          }
+
+          $matrixJson = @{ include = $include } | ConvertTo-Json -Compress -Depth 10
+
+          if ($zips.Count -eq 1) {
+            $matrixJson = '{"include":[' + ($include[0] | ConvertTo-Json -Compress -Depth 10) + ']}'
+          }
+
+          echo "matrix=$matrixJson" >> $env:GITHUB_OUTPUT
+          Write-Host "Generated matrix with $($zips.Count) artifacts"
+
+  upload-artifact:
+    needs: prepare-artifacts
+    runs-on: windows-latest
+    if: ${{ needs.prepare-artifacts.outputs.matrix != '' && needs.prepare-artifacts.outputs.matrix != '{}' }}
+    strategy:
+      matrix: ${{ fromJson(needs.prepare-artifacts.outputs.matrix) }}
+
+    steps:
+      - name: Download the bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: WidescreenFixesPack
+          path: downloaded-zips
+
+      - name: Upload individual artifact ${{ matrix.name }}
+        uses: actions/upload-artifact@v7
+        with:
+          archive: false
+          name: ${{ matrix.name }}
+          path: ${{ matrix.path }}
+          retention-days: 90
+          if-no-files-found: error

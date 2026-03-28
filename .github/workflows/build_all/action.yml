@@ -38,17 +38,7 @@ runs:
       release.bat
   - name: Upload artifacts to actions
     if: ${{ inputs.project == '' }}
-    uses: actions/github-script@v7
+    uses: actions/upload-artifact@v7
     with:
-      script: |
-        const { DefaultArtifactClient } = require('@actions/artifact')
-        const client = new DefaultArtifactClient()
-        const fs = require('fs')
-        const path = require('path')
-        const dir = 'data/Archives'
-        for (const file of fs.readdirSync(dir).filter(f => f.endsWith('.zip'))) {
-          const filePath = path.join(dir, file)
-          const name = path.basename(file, '.zip')
-          console.log(`Uploading artifact: ${name}`)
-          await client.uploadArtifact(name, [filePath], dir)
-        }
+      name: WidescreenFixesPack
+      path: ./data/Archives/*.zip
