@@ -1,7 +1,8 @@
 echo off
-RD /S /Q ".\Archives"
-rem Copying asi loader
 setlocal enabledelayedexpansion
+RD /S /Q ".\Archives"
+
+rem Copying asi loader
 FOR /R ".\" %%F IN (*.ual) DO (
 findstr /c:"loadfromscriptsonly" "%%F" >nul 2>&1
 if errorlevel 1 (
