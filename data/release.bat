@@ -2,6 +2,9 @@ echo off
 setlocal enabledelayedexpansion
 RD /S /Q ".\Archives"
 
+rem Embedding PDBs
+call EmbedPDB.bat
+
 rem Copying asi loader
 FOR /R ".\" %%F IN (*.ual) DO (
 findstr /c:"loadfromscriptsonly" "%%F" >nul 2>&1
