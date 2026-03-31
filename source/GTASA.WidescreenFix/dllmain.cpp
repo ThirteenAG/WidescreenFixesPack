@@ -1533,22 +1533,25 @@ void Install2dSpriteFixes()
     injector::MakeCALL(0x590480, DrawLoadingBarHook);
 
     // Make rocket launcher and hydra lockons circular rather than an ellipse (clippy95)
-    uintptr_t m_dwLockOnWidth[] = { 0x742E52,
-                         0x742E63,
-                         0x742EE0,
-                         0x742EF1,
-                         0x742FFF,
-                         0x743010,
-                         0x7430A4,
-                         0x7430B5,
+    uintptr_t m_dwLockOnWidth[] = { 0x742E50,
+                         0x742E61,
+                         0x742EDE,
+                         0x742EEF,
+                         0x742FFD,
+                         0x74300E,
+                         0x7430A2,
+                         0x7430B3,
     };
 
     for (int i = 0; i < sizeof(m_dwLockOnWidth) / sizeof(const void*); i++)
     {
         if (m_dwLockOnWidth[i] != NULL)
             // 0x858BA4 points to 20.f
-            injector::WriteMemory<uintptr_t>(m_dwLockOnWidth[i], 0x858BA4, true);
+            injector::WriteMemory<uintptr_t>(m_dwLockOnWidth[i] + 2, 0x858BA4, true);
     }
+
+    // Make co-op in-car crosshair circular rather than an ellipse (clippy95)
+    injector::WriteMemory<uint8_t>(0x00743BCD, 0x34, true); // multiply by a4 rather than a3
 
 }
 
