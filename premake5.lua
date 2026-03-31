@@ -1,14 +1,14 @@
 workspace "WidescreenFixesPack"
    configurations { "Release", "Debug" }
    platforms { "Windows" }
-   architecture "x32"
+   architecture "x86"
    location "build"
    objdir ("build/obj")
    buildlog ("build/log/%{prj.name}.log")
    cppdialect "C++latest"
    include "makefile.lua"
    buildoptions { "/Zc:__cplusplus /utf-8" }
-   flags { "MultiProcessorCompile" }
+   multiprocessorcompile ("On")
    
    kind "SharedLib"
    language "C++"
@@ -23,16 +23,10 @@ workspace "WidescreenFixesPack"
    defines { "rsc_FileDescription=\"https://thirteenag.github.io/wfp\"" }
    defines { "rsc_UpdateUrl=\"https://github.com/ThirteenAG/WidescreenFixesPack\"" }
 
-   local day = os.date("%d")
-   local month = os.date("%m")
-   local year = os.date("%Y")
+   local major = os.date("%d")
+   local minor = os.date("%m")
+   local build = os.date("%Y")
    local revision = os.date("%H") .. os.date("%M")
-
-   defines { "rsc_FileVersion_MAJOR=" .. day }
-   defines { "rsc_FileVersion_MINOR=" .. month }
-   defines { "rsc_FileVersion_BUILD=" .. year }
-   defines { "rsc_FileVersion_REVISION=" .. revision }
-   defines { "rsc_FileVersion=\"" .. day .. "." .. month .. "." .. year .. "\"" }
 
    local githash = ""
    local f = io.popen("git rev-parse --short HEAD")
@@ -41,9 +35,19 @@ workspace "WidescreenFixesPack"
       f:close()
    end
 
+   local productVersion = major .. "." .. minor .. "." .. build .. "." .. revision
+   if githash ~= "" then
+      productVersion = productVersion .. "-" .. githash
+   end
+
+   defines { "rsc_FileVersion_MAJOR=" .. major }
+   defines { "rsc_FileVersion_MINOR=" .. minor }
+   defines { "rsc_FileVersion_BUILD=" .. build }
+   defines { "rsc_FileVersion_REVISION=" .. revision }
+   defines { "rsc_FileVersion=\"" .. major .. "." .. minor .. "." .. build .. "\"" }
+   defines { "rsc_ProductVersion=\"" .. productVersion .. "\"" }
    defines { "rsc_GitSHA1=\"" .. githash .. "\"" }
    defines { "rsc_GitSHA1W=L\"" .. githash .. "\"" }
-   defines { "rsc_ProductVersion=\"" .. day .. "." .. month .. "." .. year .. "." .. revision .. "-" .. githash .. "\"" }
    
    files { "source/%{prj.name}/*.h", "source/%{prj.name}/*.cpp", "source/%{prj.name}/*.hxx", "source/%{prj.name}/*.ixx" }
    files { "data/%{prj.name}/**" }
