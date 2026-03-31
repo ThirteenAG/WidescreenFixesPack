@@ -26,7 +26,7 @@ runs:
   - name: Build
     shell: cmd
     run: |
-      msbuild -m build/WidescreenFixesPack.sln ${{inputs.project}} /property:Configuration=Release
+      msbuild -m build/WidescreenFixesPack.slnx ${{inputs.project}} /property:Configuration=Release
   - name: Before Package
     shell: cmd
     run: |

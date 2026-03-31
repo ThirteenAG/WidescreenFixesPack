@@ -21,7 +21,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
 
     steps:
     - name: Checkout Repo
@@ -41,7 +41,7 @@ jobs:
 
   prepare-artifacts:
     needs: build
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
     if: ${{ needs.build.result == 'success' }}
     outputs:
       matrix: ${{ steps.gen-matrix.outputs.matrix }}
@@ -85,7 +85,7 @@ jobs:
 
   upload-artifact:
     needs: prepare-artifacts
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
     if: ${{ needs.prepare-artifacts.outputs.matrix != '' && needs.prepare-artifacts.outputs.matrix != '{}' }}
     strategy:
       matrix: ${{ fromJson(needs.prepare-artifacts.outputs.matrix) }}
