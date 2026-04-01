@@ -33,7 +33,7 @@ xcopy /S /Q /Y /F "../TEXTURES/lt.dds" "unpacked/1B4F984/L1.dds"
 xcopy /S /Q /Y /F "../TEXTURES/rt.dds" "unpacked/1B4F984/R1.dds"
 xcopy /S /Q /Y /F "../TEXTURES/lb.dds" "unpacked/1B4F984/L2.dds"
 xcopy /S /Q /Y /F "../TEXTURES/rb.dds" "unpacked/1B4F984/R2.dds"
-%XNFSTPKTool% -w unpacked/1B4F984.ini ../../../data/NFSProStreet.GenericFix/scripts/buttons-xbox.tpk
+%XNFSTPKTool% -w unpacked/1B4F984.ini ../../../data/NFSProStreet.FusionFix/scripts/buttons-xbox.tpk
 rmdir /Q /S unpacked
 
 
@@ -70,5 +70,5 @@ xcopy /S /Q /Y /F "../TEXTURES/l2.dds" "unpacked/1B4F984/L1.dds"
 xcopy /S /Q /Y /F "../TEXTURES/r2.dds" "unpacked/1B4F984/R1.dds"
 xcopy /S /Q /Y /F "../TEXTURES/l1.dds" "unpacked/1B4F984/L2.dds"
 xcopy /S /Q /Y /F "../TEXTURES/r1.dds" "unpacked/1B4F984/R2.dds"
-%XNFSTPKTool% -w unpacked/1B4F984.ini ../../../data/NFSProStreet.GenericFix/scripts/buttons-playstation.tpk
+%XNFSTPKTool% -w unpacked/1B4F984.ini ../../../data/NFSProStreet.FusionFix/scripts/buttons-playstation.tpk
 rmdir /Q /S unpacked

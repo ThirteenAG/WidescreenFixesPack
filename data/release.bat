@@ -5,6 +5,15 @@ RD /S /Q ".\Archives"
 rem Embedding PDBs
 call EmbedPDB.bat
 
+powershell -NoProfile -ExecutionPolicy Bypass -File "Sign.ps1" ^
+    -SearchPaths ".\*.asi .\MaxPayne.WidescreenFix\MSVCP60.dll" ^
+    -MaxParallel 8
+
+if %errorlevel% neq 0 (
+    echo ERROR: Signing failed!
+    exit /b 1
+)
+
 rem Copying asi loader
 FOR /R ".\" %%F IN (*.ual) DO (
 findstr /c:"loadfromscriptsonly" "%%F" >nul 2>&1
@@ -26,7 +35,6 @@ if errorlevel 1 (
    SET filepath=%%F
    SET dll=!filepath:.x64ual=.dll!
    ECHO !dll!
-   copy "..\..\Ultimate-ASI-Loader\bin\x64\Release\dinput8.dll" !dll!
    7za e -so "..\Ultimate-ASI-Loader_x64.zip" *.dll -r > !dll!
 )
 )

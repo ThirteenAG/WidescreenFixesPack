@@ -1,239 +1,136 @@
-workspace "WidescreenFixesPack"
-   configurations { "Release", "Debug" }
-   platforms { "Windows" }
-   architecture "x86"
-   location "build"
-   objdir ("build/obj")
-   buildlog ("build/log/%{prj.name}.log")
-   cppdialect "C++latest"
-   include "makefile.lua"
-   buildoptions { "/Zc:__cplusplus /utf-8" }
-   multiprocessorcompile ("On")
-   
-   kind "SharedLib"
-   language "C++"
-   targetdir "data/%{prj.name}/scripts"
-   targetextension ".asi"
-   characterset ("UNICODE")
-   staticruntime "On"
-   
-   defines { "rsc_CompanyName=\"ThirteenAG\"" }
-   defines { "rsc_LegalCopyright=\"MIT License\""} 
-   defines { "rsc_InternalName=\"%{prj.name}\"", "rsc_ProductName=\"%{prj.name}\"", "rsc_OriginalFilename=\"%{cfg.buildtarget.name}\"" }
-   defines { "rsc_FileDescription=\"https://thirteenag.github.io/wfp\"" }
-   defines { "rsc_UpdateUrl=\"https://github.com/ThirteenAG/WidescreenFixesPack\"" }
-
-   local major = os.date("%d")
-   local minor = os.date("%m")
-   local build = os.date("%Y")
-   local revision = os.date("%H") .. os.date("%M")
-
-   local githash = ""
-   local f = io.popen("git rev-parse --short HEAD")
-   if f then
-      githash = f:read("*a"):gsub("%s+", "")
-      f:close()
-   end
-
-   local productVersion = major .. "." .. minor .. "." .. build .. "." .. revision
-   if githash ~= "" then
-      productVersion = productVersion .. "-" .. githash
-   end
-
-   defines { "rsc_FileVersion_MAJOR=" .. major }
-   defines { "rsc_FileVersion_MINOR=" .. minor }
-   defines { "rsc_FileVersion_BUILD=" .. build }
-   defines { "rsc_FileVersion_REVISION=" .. revision }
-   defines { "rsc_FileVersion=\"" .. major .. "." .. minor .. "." .. build .. "\"" }
-   defines { "rsc_ProductVersion=\"" .. productVersion .. "\"" }
-   defines { "rsc_GitSHA1=\"" .. githash .. "\"" }
-   defines { "rsc_GitSHA1W=L\"" .. githash .. "\"" }
-   
-   files { "source/%{prj.name}/*.h", "source/%{prj.name}/*.cpp", "source/%{prj.name}/*.hxx", "source/%{prj.name}/*.ixx" }
-   files { "data/%{prj.name}/**" }
-   files { "Resources/*.rc" }
-   files { "external/hooking/Hooking.Patterns.h", "external/hooking/Hooking.Patterns.cpp" }
-   files { "external/injector/safetyhook/include/**.hpp", "external/injector/safetyhook/src/**.cpp" }
-   files { "external/injector/zydis/**.h", "external/injector/zydis/**.c" }
-   files { "includes/stdafx.h", "includes/stdafx.cpp" }
-   includedirs { "external/injector/safetyhook/include" }
-   includedirs { "external/injector/zydis" }
-   includedirs { "external/hooking" }
-   includedirs { "external/injector/include" }
-   includedirs { "external/inireader" }
-   includedirs { "external/spdlog/include" }
-   includedirs { "external/filewatch" }
-   includedirs { "external/modutils" }
-   includedirs { "includes" }
-   
-   includedirs { "includes/LED" }
-   libdirs { "includes/LED" }
-   
-   local dxsdk = os.getenv "DXSDK_DIR"
-   if dxsdk then
-      includedirs { dxsdk .. "/include" }
-      libdirs { dxsdk .. "/lib/x86" }
-   elseif os.isdir("external/minidx9") then
-      includedirs { "external/minidx9/Include" }
-      libdirs { "external/minidx9/Lib/x86" }
-   else
-      includedirs { "C:/Program Files (x86)/Microsoft DirectX SDK (June 2010)/include" }
-      libdirs { "C:/Program Files (x86)/Microsoft DirectX SDK (June 2010)/lib/x86" }
-   end
-   
-   pbcommands = {
-      "setlocal EnableDelayedExpansion",
-      --"set \"path=" .. (gamepath) .. "\"",
-      "set file=$(TargetPath)",
-      "FOR %%i IN (\"%file%\") DO (",
-      "set filename=%%~ni",
-      "set fileextension=%%~xi",
-      "set target=!path!!filename!!fileextension!",
-      "if exist \"!target!\" copy /y \"%%~fi\" \"!target!\"",
-      ")" 
-      }
-
-   function setpaths(gamepath, exepath, scriptspath)
-      scriptspath = scriptspath or "scripts/"
-      if (gamepath) then
-         cmdcopy = { "set \"path=" .. gamepath .. scriptspath .. "\"" }
-         table.insert(cmdcopy, pbcommands)
-         postbuildcommands (cmdcopy)
-         debugdir (gamepath)
-         if (exepath) then
-            debugcommand (gamepath .. exepath)
-            dir, file = exepath:match'(.*/)(.*)'
-            debugdir (gamepath .. (dir or ""))
-         end
+function setpaths(gamepath, exepath, scriptspath)
+   scriptspath = scriptspath or "scripts/"
+   if (gamepath) then
+      cmdcopy = { "set \"path=" .. gamepath .. scriptspath .. "\"" }
+      table.insert(cmdcopy, pbcommands)
+      postbuildcommands (cmdcopy)
+      debugdir (gamepath)
+      if (exepath) then
+         debugcommand (gamepath .. exepath)
+         dir, file = exepath:match'(.*/)(.*)'
+         debugdir (gamepath .. (dir or ""))
       end
-      targetdir ("data/%{prj.name}/" .. scriptspath)
    end
-   
-   function setbuildpaths_psp(gamepath, exepath, scriptspath, pspsdkpath, sourcepath, prj_name)
-      -- local pbcmd = {}
-      -- for k,v in pairs(pbcommands) do
-      --   pbcmd[k] = v
-      -- end
-      if (gamepath) then
-        buildcommands {"setlocal EnableDelayedExpansion"}
-        rebuildcommands {"setlocal EnableDelayedExpansion"}
-        local ppsspppath = os.getenv "PPSSPPMemstick"
-        if (ppsspppath == nil) then
-            buildcommands {"set _PPSSPPMemstick=" .. gamepath .. "memstick/PSP"}
-            rebuildcommands {"set _PPSSPPMemstick=" .. gamepath .. "memstick/PSP"}
-        else
-            buildcommands {"set _PPSSPPMemstick=!PPSSPPMemstick!"}
-            rebuildcommands {"set _PPSSPPMemstick=!PPSSPPMemstick!"}
-        end
-         
-        buildcommands {
-        "powershell -ExecutionPolicy Bypass -File \"" .. pspsdkpath .. "\" -C \"" .. sourcepath .. "\"\r\n" ..
-        "if !errorlevel! neq 0 exit /b !errorlevel!\r\n" ..
-        "if not defined _PPSSPPMemstick goto :eof\r\n" ..
-        "if not exist !_PPSSPPMemstick! goto :eof\r\n" ..
-        "if not exist !_PPSSPPMemstick!/PLUGINS/ mkdir !_PPSSPPMemstick!/PLUGINS/\r\n" ..
-        "set target=!_PPSSPPMemstick!/PLUGINS/$(ProjectName)\r\n" ..
-        "copy /y $(NMakeOutput) \"!target!\"\r\n"
-        }
-        rebuildcommands {
-        "powershell -ExecutionPolicy Bypass -File \"" .. pspsdkpath .. "\" -C \"" .. sourcepath .. "\" clean\r\n" ..
-        "powershell -ExecutionPolicy Bypass -File \"" .. pspsdkpath .. "\" -C \"" .. sourcepath .. "\"\r\n" ..
-        "if !errorlevel! neq 0 exit /b !errorlevel!\r\n" ..
-        "if not defined _PPSSPPMemstick goto :eof\r\n" ..
-        "if not exist !_PPSSPPMemstick! goto :eof\r\n" ..
-        "set target=!_PPSSPPMemstick!/PLUGINS/$(ProjectName)\r\n" ..
-        "copy /y $(NMakeOutput) \"!target!\"\r\n"
-        }
-        cleancommands {
-        "setlocal EnableDelayedExpansion\r\n" ..
-        "powershell -ExecutionPolicy Bypass -File \"" .. pspsdkpath .. "\" -C \"" .. sourcepath .. "\" clean\r\n" ..
-        "if !errorlevel! neq 0 exit /b !errorlevel!\r\n"
-        }
-        debugdir (gamepath)
-        if (exepath) then
-           debugcommand (gamepath .. exepath)
-           dir, file = exepath:match'(.*/)(.*)'
-           debugdir (gamepath .. (dir or ""))
-        end
+   targetdir ("data/%{prj.name}/" .. scriptspath)
+end
+
+function setbuildpaths_psp(gamepath, exepath, scriptspath, pspsdkpath, sourcepath, prj_name)
+   if (gamepath) then
+     buildcommands {"setlocal EnableDelayedExpansion"}
+     rebuildcommands {"setlocal EnableDelayedExpansion"}
+     local ppsspppath = os.getenv "PPSSPPMemstick"
+     if (ppsspppath == nil) then
+         buildcommands {"set _PPSSPPMemstick=" .. gamepath .. "memstick/PSP"}
+         rebuildcommands {"set _PPSSPPMemstick=" .. gamepath .. "memstick/PSP"}
+     else
+         buildcommands {"set _PPSSPPMemstick=!PPSSPPMemstick!"}
+         rebuildcommands {"set _PPSSPPMemstick=!PPSSPPMemstick!"}
+     end
+      
+     buildcommands {
+     "powershell -ExecutionPolicy Bypass -File \"" .. pspsdkpath .. "\" -C \"" .. sourcepath .. "\"\r\n" ..
+     "if !errorlevel! neq 0 exit /b !errorlevel!\r\n" ..
+     "if not defined _PPSSPPMemstick goto :eof\r\n" ..
+     "if not exist !_PPSSPPMemstick! goto :eof\r\n" ..
+     "if not exist !_PPSSPPMemstick!/PLUGINS/ mkdir !_PPSSPPMemstick!/PLUGINS/\r\n" ..
+     "set target=!_PPSSPPMemstick!/PLUGINS/$(ProjectName)\r\n" ..
+     "copy /y $(NMakeOutput) \"!target!\"\r\n"
+     }
+     rebuildcommands {
+     "powershell -ExecutionPolicy Bypass -File \"" .. pspsdkpath .. "\" -C \"" .. sourcepath .. "\" clean\r\n" ..
+     "powershell -ExecutionPolicy Bypass -File \"" .. pspsdkpath .. "\" -C \"" .. sourcepath .. "\"\r\n" ..
+     "if !errorlevel! neq 0 exit /b !errorlevel!\r\n" ..
+     "if not defined _PPSSPPMemstick goto :eof\r\n" ..
+     "if not exist !_PPSSPPMemstick! goto :eof\r\n" ..
+     "set target=!_PPSSPPMemstick!/PLUGINS/$(ProjectName)\r\n" ..
+     "copy /y $(NMakeOutput) \"!target!\"\r\n"
+     }
+     cleancommands {
+     "setlocal EnableDelayedExpansion\r\n" ..
+     "powershell -ExecutionPolicy Bypass -File \"" .. pspsdkpath .. "\" -C \"" .. sourcepath .. "\" clean\r\n" ..
+     "if !errorlevel! neq 0 exit /b !errorlevel!\r\n"
+     }
+     debugdir (gamepath)
+     if (exepath) then
+        debugcommand (gamepath .. exepath)
+        dir, file = exepath:match'(.*/)(.*)'
+        debugdir (gamepath .. (dir or ""))
+     end
+   end
+   targetdir ("data/%{prj.name}/" .. scriptspath)
+end
+
+function setbuildpaths_ps2(gamepath, exepath, scriptspath, ps2sdkpath, sourcepath, prj_name)
+   if (gamepath) then
+     buildcommands {"setlocal EnableDelayedExpansion"}
+     rebuildcommands {"setlocal EnableDelayedExpansion"}
+     local pcsx2fpath = os.getenv "PCSX2FDir"
+     if (pcsx2fpath == nil) then
+         buildcommands {"set _PCSX2FDir=" .. gamepath}
+         rebuildcommands {"set _PCSX2FDir=" .. gamepath}
+     else
+         buildcommands {"set _PCSX2FDir=!PCSX2FDir!"}
+         rebuildcommands {"set _PCSX2FDir=!PCSX2FDir!"}
+     end
+     buildcommands {
+     "powershell -ExecutionPolicy Bypass -File \"" .. ps2sdkpath .. "\" -C \"" .. sourcepath .. "\"\r\n" ..
+     "if !errorlevel! neq 0 exit /b !errorlevel!\r\n" ..
+     "if not defined _PCSX2FDir goto :eof\r\n" ..
+     "if not exist !_PCSX2FDir! goto :eof\r\n" ..
+     "if not exist !_PCSX2FDir!/PLUGINS mkdir !_PCSX2FDir!/PLUGINS\r\n" ..
+     "set target=!_PCSX2FDir!/PLUGINS/\r\n" ..
+     "copy /y $(NMakeOutput) \"!target!\"\r\n"
+     }
+     rebuildcommands {
+     "powershell -ExecutionPolicy Bypass -File \"" .. ps2sdkpath .. "\" -C \"" .. sourcepath .. "\" clean\r\n" ..
+     "powershell -ExecutionPolicy Bypass -File \"" .. ps2sdkpath .. "\" -C \"" .. sourcepath .. "\"\r\n" ..
+     "if !errorlevel! neq 0 exit /b !errorlevel!\r\n" ..
+     "if not defined _PCSX2FDir goto :eof\r\n" ..
+     "if not exist !_PCSX2FDir! goto :eof\r\n" ..
+     "if not exist !_PCSX2FDir!/PLUGINS mkdir !_PCSX2FDir!/PLUGINS\r\n" ..
+     "set target=!_PCSX2FDir!/PLUGINS/\r\n" ..
+     "copy /y $(NMakeOutput) \"!target!\"\r\n"
+     }
+     cleancommands {
+     "setlocal EnableDelayedExpansion\r\n" ..
+     "powershell -ExecutionPolicy Bypass -File \"" .. ps2sdkpath .. "\" -C \"" .. sourcepath .. "\" clean\r\n" ..
+     "if !errorlevel! neq 0 exit /b !errorlevel!"
+     }
+      
+      debugdir (gamepath)
+      if (exepath) then
+         debugcommand (gamepath .. exepath)
+         dir, file = exepath:match'(.*/)(.*)'
+         debugdir (gamepath .. (dir or ""))
       end
-      targetdir ("data/%{prj.name}/" .. scriptspath)
    end
-   
-   function setbuildpaths_ps2(gamepath, exepath, scriptspath, ps2sdkpath, sourcepath, prj_name)
-      -- local pbcmd = {}
-      -- for k,v in pairs(pbcommands) do
-      --   pbcmd[k] = v
-      -- end
-      if (gamepath) then
-        buildcommands {"setlocal EnableDelayedExpansion"}
-        rebuildcommands {"setlocal EnableDelayedExpansion"}
-        local pcsx2fpath = os.getenv "PCSX2FDir"
-        if (pcsx2fpath == nil) then
-            buildcommands {"set _PCSX2FDir=" .. gamepath}
-            rebuildcommands {"set _PCSX2FDir=" .. gamepath}
-        else
-            buildcommands {"set _PCSX2FDir=!PCSX2FDir!"}
-            rebuildcommands {"set _PCSX2FDir=!PCSX2FDir!"}
-        end
-        buildcommands {
-        "powershell -ExecutionPolicy Bypass -File \"" .. ps2sdkpath .. "\" -C \"" .. sourcepath .. "\"\r\n" ..
-        "if !errorlevel! neq 0 exit /b !errorlevel!\r\n" ..
-        "if not defined _PCSX2FDir goto :eof\r\n" ..
-        "if not exist !_PCSX2FDir! goto :eof\r\n" ..
-        "if not exist !_PCSX2FDir!/PLUGINS mkdir !_PCSX2FDir!/PLUGINS\r\n" ..
-        "set target=!_PCSX2FDir!/PLUGINS/\r\n" ..
-        "copy /y $(NMakeOutput) \"!target!\"\r\n"
-        }
-        rebuildcommands {
-        "powershell -ExecutionPolicy Bypass -File \"" .. ps2sdkpath .. "\" -C \"" .. sourcepath .. "\" clean\r\n" ..
-        "powershell -ExecutionPolicy Bypass -File \"" .. ps2sdkpath .. "\" -C \"" .. sourcepath .. "\"\r\n" ..
-        "if !errorlevel! neq 0 exit /b !errorlevel!\r\n" ..
-        "if not defined _PCSX2FDir goto :eof\r\n" ..
-        "if not exist !_PCSX2FDir! goto :eof\r\n" ..
-        "if not exist !_PCSX2FDir!/PLUGINS mkdir !_PCSX2FDir!/PLUGINS\r\n" ..
-        "set target=!_PCSX2FDir!/PLUGINS/\r\n" ..
-        "copy /y $(NMakeOutput) \"!target!\"\r\n"
-        }
-        cleancommands {
-        "setlocal EnableDelayedExpansion\r\n" ..
-        "powershell -ExecutionPolicy Bypass -File \"" .. ps2sdkpath .. "\" -C \"" .. sourcepath .. "\" clean\r\n" ..
-        "if !errorlevel! neq 0 exit /b !errorlevel!"
-        }
-         
-         debugdir (gamepath)
-         if (exepath) then
-            debugcommand (gamepath .. exepath)
-            dir, file = exepath:match'(.*/)(.*)'
-            debugdir (gamepath .. (dir or ""))
-         end
-      end
-      targetdir ("data/%{prj.name}/" .. scriptspath)
-   end
+   targetdir ("data/%{prj.name}/" .. scriptspath)
+end
 
-   function add_kananlib()
-      defines { "BDDISASM_HAS_MEMSET", "BDDISASM_HAS_VSNPRINTF" }
-      files { "external/injector/kananlib/include/utility/**.hpp", "external/injector/kananlib/src/**.cpp" }
-      files { "external/injector/bddisasm/bddisasm/*.c" }
-      files { "external/injector/bddisasm/bdshemu/*.c" }
-      includedirs { "external/injector/kananlib/include" }
-      includedirs { "external/injector/bddisasm/inc" }
-      includedirs { "external/injector/bddisasm/bddisasm/include" }
-   end
+function add_kananlib()
+   defines { "BDDISASM_HAS_MEMSET", "BDDISASM_HAS_VSNPRINTF" }
+   files { "external/injector/kananlib/include/utility/**.hpp", "external/injector/kananlib/src/**.cpp" }
+   files { "external/injector/bddisasm/bddisasm/*.c" }
+   files { "external/injector/bddisasm/bdshemu/*.c" }
+   includedirs { "external/injector/kananlib/include" }
+   includedirs { "external/injector/bddisasm/inc" }
+   includedirs { "external/injector/bddisasm/bddisasm/include" }
+end
 
-   function add_pspsdk()
-      includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
-      includedirs { "external/pspsdk/usr/local/pspdev/bin" }
-      files { "source/%{prj.name}/*.h", "source/%{prj.name}/*.c", "source/%{prj.name}/*.cpp", "source/%{prj.name}/makefile" }
-   end
+function add_pspsdk()
+   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
+   includedirs { "external/pspsdk/usr/local/pspdev/bin" }
+   files { "source/%{prj.name}/*.h", "source/%{prj.name}/*.c", "source/%{prj.name}/*.cpp", "source/%{prj.name}/makefile" }
+end
 
-   function add_ps2sdk()
-      includedirs { "external/ps2sdk/ps2sdk/ee" }
-      files { "source/%{prj.name}/*.h", "source/%{prj.name}/*.c", "source/%{prj.name}/*.cpp", "source/%{prj.name}/makefile" }
-   end
+function add_ps2sdk()
+   includedirs { "external/ps2sdk/ps2sdk/ee" }
+   files { "source/%{prj.name}/*.h", "source/%{prj.name}/*.c", "source/%{prj.name}/*.cpp", "source/%{prj.name}/makefile" }
+end
 
-   function writeghaction(tag, prj_name)       
-      file = io.open(".github/workflows/" .. tag .. ".yml", "w")
-      if (file) then
+function writeghaction(tag, prj_name)       
+   file = io.open(".github/workflows/" .. tag .. ".yml", "w")
+   if (file) then
 str = [[
 name: %s
 
@@ -247,100 +144,134 @@ jobs:
       tag_list: %s
       project: /t:%s
 ]]
-         file:write(string.format(str, tag, tag, prj_name:gsub("%.", "_")))
-         file:close()
-      end
+      file:write(string.format(str, tag, tag, prj_name:gsub("%.", "_")))
+      file:close()
    end
+end
 
-   vpaths {
-      ["source"] = {
-         "source/**.*",
-      },
-      ["shaders"] = {
-         "source/**.fx",
-         "source/**.vs",
-         "source/**.ps",
-         "source/**.hlsl",
-      },
-      ["ini"] = {
-         "data/**.ini",
-      },
-      ["data"] = {
-         "data/**.cfg",
-         "data/**.dat",
-      },
-      ["resources/*"] = {
-         "resources/*",
-      },
-      ["includes/*"] = {
-         "includes/**",
-      },
-      ["external/*"] = {
-         "external/**",
-      },
-   }
+function CommonWorkspaceSetup(platform, prefix)
+   workspace (prefix .. ".WidescreenFixesPack")
+      configurations { "Release", "Debug" }
+      platforms { platform }
+      location "build"
+      objdir ("build/obj")
+      buildlog ("build/log/%{prj.name}.log")
+      cppdialect "C++latest"
+      include "makefile.lua"
+      buildoptions { "/Zc:__cplusplus /utf-8" }
+      multiprocessorcompile ("On")
+      
+      kind "SharedLib"
+      language "C++"
+      targetdir "data/%{prj.name}/scripts"
+      targetextension ".asi"
+      characterset ("UNICODE")
+      staticruntime "On"
+      
+      defines { "rsc_CompanyName=\"ThirteenAG\"" }
+      defines { "rsc_LegalCopyright=\"MIT License\""} 
+      defines { "rsc_InternalName=\"%{prj.name}\"", "rsc_ProductName=\"%{prj.name}\"", "rsc_OriginalFilename=\"%{cfg.buildtarget.name}\"" }
+      defines { "rsc_FileDescription=\"https://thirteenag.github.io/wfp\"" }
+      defines { "rsc_UpdateUrl=\"https://github.com/ThirteenAG/WidescreenFixesPack\"" }
 
-   filter "configurations:Debug*"
-      defines "DEBUG"
-      symbols "On"
+      local major = os.date("%d")
+      local minor = os.date("%m")
+      local build = os.date("%Y")
+      local revision = os.date("%H") .. os.date("%M")
 
-   filter "configurations:Release*"
-      defines "NDEBUG"
-      optimize "On"
+      local githash = ""
+      local f = io.popen("git rev-parse --short HEAD")
+      if f then
+         githash = f:read("*a"):gsub("%s+", "")
+         f:close()
+      end
 
-group "Win64"
---project "EmbedPDB"
---   kind "ConsoleApp"
---   targetextension ".exe"
---   platforms { "Win64" }
---   architecture "x64"
---   files { "./source/%{prj.name}/*.h", "./source/%{prj.name}/*.c" }
---   setpaths("./data/%{prj.name}/", "%{prj.name}.exe", "")
-project "FarCry64.WidescreenFix"
-   platforms { "Win64" }
-   architecture "x64"
-   files { "source/FarCry.WidescreenFix/*.cpp" }
-   setpaths("Z:/WFP/Games/Far Cry/", "Bin64/FarCry.exe", "Bin64/")
-   targetdir "data/FarCry.WidescreenFix/Bin64/"
+      local productVersion = major .. "." .. minor .. "." .. build .. "." .. revision
+      if githash ~= "" then
+         productVersion = productVersion .. "-" .. githash
+      end
 
-group "Win64/GrandTheftAuto"
-project "GTA3DE.FusionFix"
-   platforms { "Win64" }
-   architecture "x64"
-   add_kananlib()
-   setpaths("Z:/WFP/Games/Grand Theft Auto The Definitive Edition/GTA III - Definitive Edition/", "Gameface/Binaries/Win64/LibertyCity.exe", "Gameface/Binaries/Win64/scripts/")
-project "GTAVCDE.FusionFix"
-   platforms { "Win64" }
-   architecture "x64"
-   add_kananlib()
-   setpaths("Z:/WFP/Games/Grand Theft Auto The Definitive Edition/GTA Vice City - Definitive Edition/", "Gameface/Binaries/Win64/ViceCity.exe", "Gameface/Binaries/Win64/scripts/")
-project "GTASADE.FusionFix"
-   platforms { "Win64" }
-   architecture "x64"
-   add_kananlib()
-   setpaths("Z:/WFP/Games/Grand Theft Auto The Definitive Edition/GTA San Andreas - Definitive Edition/", "Gameface/Binaries/Win64/SanAndreas.exe", "Gameface/Binaries/Win64/scripts/")
-group "Win64"
+      defines { "rsc_FileVersion_MAJOR=" .. major }
+      defines { "rsc_FileVersion_MINOR=" .. minor }
+      defines { "rsc_FileVersion_BUILD=" .. build }
+      defines { "rsc_FileVersion_REVISION=" .. revision }
+      defines { "rsc_FileVersion=\"" .. major .. "." .. minor .. "." .. build .. "\"" }
+      defines { "rsc_ProductVersion=\"" .. productVersion .. "\"" }
+      defines { "rsc_GitSHA1=\"" .. githash .. "\"" }
+      defines { "rsc_GitSHA1W=L\"" .. githash .. "\"" }
+      
+      files { "source/%{prj.name}/*.h", "source/%{prj.name}/*.cpp", "source/%{prj.name}/*.hxx", "source/%{prj.name}/*.ixx" }
+      files { "data/%{prj.name}/**" }
+      files { "Resources/*.rc" }
+      files { "external/hooking/Hooking.Patterns.h", "external/hooking/Hooking.Patterns.cpp" }
+      files { "external/injector/safetyhook/include/**.hpp", "external/injector/safetyhook/src/**.cpp" }
+      files { "external/injector/zydis/**.h", "external/injector/zydis/**.c" }
+      files { "includes/stdafx.h", "includes/stdafx.cpp" }
+      includedirs { "external/injector/safetyhook/include" }
+      includedirs { "external/injector/zydis" }
+      includedirs { "external/hooking" }
+      includedirs { "external/injector/include" }
+      includedirs { "external/inireader" }
+      includedirs { "external/spdlog/include" }
+      includedirs { "external/filewatch" }
+      includedirs { "external/modutils" }
+      includedirs { "includes" }
+      
+      includedirs { "includes/LED" }
+      libdirs { "includes/LED" }
+      
+      local dxsdk = os.getenv "DXSDK_DIR"
+      if dxsdk then
+         includedirs { dxsdk .. "/include" }
+         libdirs { dxsdk .. "/lib/x86" }
+      elseif os.isdir("external/minidx9") then
+         includedirs { "external/minidx9/Include" }
+         libdirs { "external/minidx9/Lib/x86" }
+      else
+         includedirs { "C:/Program Files (x86)/Microsoft DirectX SDK (June 2010)/include" }
+         libdirs { "C:/Program Files (x86)/Microsoft DirectX SDK (June 2010)/lib/x86" }
+      end
+      
+      pbcommands = {
+         "setlocal EnableDelayedExpansion",
+         "set file=$(TargetPath)",
+         "FOR %%i IN (\"%file%\") DO (",
+         "set filename=%%~ni",
+         "set fileextension=%%~xi",
+         "set target=!path!!filename!!fileextension!",
+         "if exist \"!target!\" copy /y \"%%~fi\" \"!target!\"",
+         ")" 
+      }
 
-group "Win64/ResidentEvil"
-project "ResidentEvil4.FusionFix"
-   platforms { "Win64" }
-   architecture "x64"
-   setpaths("Z:/WFP/Games/ResidentEvil4/", "re4.exe", "scripts/")
-group "Win64"
+      vpaths {
+         ["source"] = { "source/**.*" },
+         ["shaders"] = { "source/**.fx", "source/**.vs", "source/**.ps", "source/**.hlsl" },
+         ["ini"] = { "data/**.ini" },
+         ["data"] = { "data/**.cfg", "data/**.dat" },
+         ["resources/*"] = { "resources/*" },
+         ["includes/*"] = { "includes/**" },
+         ["external/*"] = { "external/**" },
+      }
 
-project "SpyroReignitedTrilogy.WidescreenFix"
-   platforms { "Win64" }
-   architecture "x64"
-   setpaths("Z:/WFP/Games/Spyro Reignited Trilogy/", "Falcon/Binaries/Win64/Spyro-Win64-Shipping.exe", "Falcon/Binaries/Win64/scripts/")
+      filter { "platforms:Win32" }
+         architecture "x86"
+      filter { "platforms:x64" }
+         architecture "x64"
+      filter {}
 
-project "RedDeadRedemption.FusionFix"
-   add_kananlib()
-   platforms { "Win64" }
-   architecture "x64"
-   setpaths("Z:/WFP/Games/Red Dead Redemption/", "RDR.exe", "plugins/")
+      filter "configurations:Debug*"
+         defines "DEBUG"
+         symbols "On"
+
+      filter "configurations:Release*"
+         defines "NDEBUG"
+         optimize "On"
+end
+
+-- ====================== WIN32 SOLUTION ======================
+CommonWorkspaceSetup("Win32", "Win32")
+
 group ""
-
-group "Win32"
 project "Bully.WidescreenFix"
    setpaths("Z:/WFP/Games/Bully Scholarship Edition/", "Bully.exe", "plugins/")
 
@@ -372,13 +303,7 @@ project "EnterTheMatrix.WidescreenFix"
 project "FarCry.WidescreenFix"
    setpaths("Z:/WFP/Games/Far Cry/", "Bin32/FarCry.exe", "Bin32/")
 
---project "GettingUp.WidescreenFix"
---   setpaths("Z:/WFP/Games/Marc Ecko's Getting Up 2/", "_Bin/GettingUp.exe", "_Bin/")
---   targetdir "data/GettingUp.WidescreenFix/_Bin/"
---   debugargs { "map=M01_HOO_Tranes_Hood_3" }
---   buildoptions { "/Zc:threadSafeInit-" }
-
-group "Win32/GrandTheftAuto"
+group "GrandTheftAuto"
 project "GTA1.WidescreenFix"
    setpaths("Z:/WFP/Games/Grand Theft Auto/Grand Theft Auto 1 London 1969 1961/", "WINO/Grand Theft Auto.exe", "WINO/scripts/")
 project "GTA2.WidescreenFix"
@@ -392,9 +317,7 @@ project "GTAVC.WidescreenFix"
 project "GTASA.WidescreenFix"
    files { "includes/GTA/*.h", "includes/GTA/*.cpp" }
    setpaths("Z:/WFP/Games/Grand Theft Auto/GTA San Andreas/", "gta_sa.exe")
---project "GTASA.UWP.Test"
---   setpaths("Z:/WFP/Games/GTASAUWP/", "GTASA.exe")
-group "Win32"
+group ""
 
 project "Gun.WidescreenFix"
    setpaths("Z:/WFP/Games/GUN/", "Gun.exe")
@@ -439,7 +362,7 @@ project "Manhunt.WidescreenFix"
    removefiles { "includes/stdafx.h", "includes/stdafx.cpp" }
    setpaths("Z:/WFP/Games/Manhunt/", "manhunt.exe")
 
-group "Win32/MaxPayne"
+group "MaxPayne"
 project "MaxPayne.MSVCP60Wrapper"
    setpaths("Z:/WFP/Games/Max Payne/Max Payne/", "MaxPayne.exe", "")
    targetdir "data/MaxPayne.WidescreenFix"
@@ -459,9 +382,9 @@ project "MaxPayne2.WidescreenFix"
    linkoptions { "/SAFESEH:NO" }
    libdirs { "includes/dxsdk/dx8" }
    setpaths("Z:/WFP/Games/Max Payne/Max Payne 2 The Fall of Max Payne/", "MaxPayne2.exe")
-group "Win32"
+group ""
 
-group "Win32/NeedForSpeed"
+group "NeedForSpeed"
 project "NFSCarbon.WidescreenFix"
    setpaths("Z:/WFP/Games/Need For Speed/Need for Speed Carbon/", "NFSC.exe")
 project "NFSMostWanted.WidescreenFix"
@@ -476,7 +399,7 @@ project "NFSUnderground.WidescreenFix"
    defines { "IDR_NFSUICON=200" }
 project "NFSUnderground2.WidescreenFix"
    setpaths("Z:/WFP/Games/Need For Speed/Need For Speed Underground 2/", "speed2.exe")
-group "Win32"
+group ""
 
 project "Onimusha3.WidescreenFix"
    setpaths("Z:/WFP/Games/Onimusha 3/", "ONI3.exe")
@@ -487,7 +410,7 @@ project "PsiOpsTheMindgateConspiracy.WidescreenFix"
 project "Psychonauts.WidescreenFix"
    setpaths("Z:/WFP/Games/Psychonauts/", "Psychonauts.exe")
 
-group "Win32/ResidentEvil"
+group "ResidentEvil"
 project "ResidentEvil0.FusionFix"
    setpaths("Z:/WFP/Games/ResidentEvil0/", "re0hd.exe", "scripts/")
 project "ResidentEvil.FusionFix"
@@ -500,7 +423,7 @@ project "ResidentEvil5.FusionFix"
    setpaths("Z:/WFP/Games/ResidentEvil5/", "re5dx9.exe", "scripts/")
 project "ResidentEvil6.FusionFix"
    setpaths("Z:/WFP/Games/ResidentEvil6/", "BH6.exe", "scripts/")
-group "Win32"
+group ""
 
 project "Scarface.FusionFix"
    setpaths("Z:/WFP/Games/Scarface/", "scarface.exe", "scripts/")
@@ -508,14 +431,14 @@ project "Scarface.FusionFix"
 project "SecondSight.WidescreenFix"
    setpaths("Z:/WFP/Games/Second Sight/", "secondsight.exe")
 
-group "Win32/SilentHill"
+group "SilentHill"
 project "SilentHill2.WidescreenFix"
    setpaths("Z:/WFP/Games/Silent Hill/Silent Hill 2/", "sh2pc.exe")
 project "SilentHill3.WidescreenFix"
    setpaths("Z:/WFP/Games/Silent Hill/Silent Hill 3/", "sh3.exe")
 project "SilentHill4.WidescreenFix"
    setpaths("Z:/WFP/Games/Silent Hill/Silent Hill 4 The Room/", "Silent Hill 4.exe")
-group "Win32"
+group ""
 
 project "SniperElite.WidescreenFix"
    setpaths("Z:/WFP/Games/Sniper Elite/", "SniperElite.exe")
@@ -523,7 +446,7 @@ project "SniperElite.WidescreenFix"
 project "SonicHeroes.WidescreenFix"
    setpaths("Z:/WFP/Games/SONICHEROES/", "Tsonic_win.exe")
 
-group "Win32/SplinterCell"
+group "SplinterCell"
 project "SplinterCell.WidescreenFix"
    setpaths("Z:/WFP/Games/Splinter Cell/Splinter Cell/", "system/SplinterCell.exe", "system/scripts/")
 project "SplinterCellChaosTheory.WidescreenFix"
@@ -555,7 +478,7 @@ project "SplinterCellPandoraTomorrow.WidescreenFix"
    defines { "IDR_WATER_BLEND=200" }
    debugargs { "-uplay_steam_mode" }
    setpaths("Z:/WFP/Games/Splinter Cell/Splinter Cell Pandora Tomorrow/", "system/SplinterCell2.exe", "system/scripts/")
-group "Win32"
+group ""
 
 project "StreetRacingSyndicate.WidescreenFix"
    setpaths("Z:/WFP/Games/Street Racing Syndicate/", "Bin/srs.exe", "Bin/scripts/")
@@ -575,7 +498,7 @@ project "TheSaboteur.FusionFix"
 project "TheSuffering.WidescreenFix"
    setpaths("Z:/WFP/Games/The Suffering/The Suffering/", "suffering.exe")
 
-group "Win32/TonyHawks"
+group "TonyHawks"
 project "TonyHawksAmericanWasteland.WidescreenFix"
    setpaths("Z:/WFP/Games/Tony Hawks/Tony Hawk's American Wasteland/", "Game/THAW.exe", "Game/scripts/")
 project "TonyHawksProSkater2.WidescreenFix"
@@ -588,7 +511,7 @@ project "TonyHawksUnderground.WidescreenFix"
    setpaths("Z:/WFP/Games/Tony Hawks/Tony Hawk's Underground/", "Game/THUG.exe", "Game/scripts/")
 project "TonyHawksUnderground2.WidescreenFix"
    setpaths("Z:/WFP/Games/Tony Hawks/Tony Hawk's Underground 2/", "Game/THUG2.exe", "Game/scripts/")
-group "Win32"
+group ""
 
 project "TotalOverdose.WidescreenFix"
    setpaths("Z:/WFP/Games/Total Overdose/", "TOD.exe")
@@ -609,7 +532,49 @@ project "UltimateSpiderMan.WidescreenFix"
    setpaths("Z:/WFP/Games/Ultimate Spider-Man/", "USM.exe")
 group ""
 
-group "PCSX2F"
+-- ====================== WIN64 SOLUTION ======================
+CommonWorkspaceSetup("x64", "Win64")
+
+group ""
+--project "EmbedPDB"
+--   kind "ConsoleApp"
+--   targetextension ".exe"
+--   files { "./source/%{prj.name}/*.h", "./source/%{prj.name}/*.c" }
+--   setpaths("./data/%{prj.name}/", "%{prj.name}.exe", "")
+project "FarCry64.WidescreenFix"
+   files { "source/FarCry.WidescreenFix/*.cpp" }
+   setpaths("Z:/WFP/Games/Far Cry/", "Bin64/FarCry.exe", "Bin64/")
+   targetdir "data/FarCry.WidescreenFix/Bin64/"
+
+group "GrandTheftAuto"
+project "GTA3DE.FusionFix"
+   add_kananlib()
+   setpaths("Z:/WFP/Games/Grand Theft Auto The Definitive Edition/GTA III - Definitive Edition/", "Gameface/Binaries/Win64/LibertyCity.exe", "Gameface/Binaries/Win64/scripts/")
+project "GTAVCDE.FusionFix"
+   add_kananlib()
+   setpaths("Z:/WFP/Games/Grand Theft Auto The Definitive Edition/GTA Vice City - Definitive Edition/", "Gameface/Binaries/Win64/ViceCity.exe", "Gameface/Binaries/Win64/scripts/")
+project "GTASADE.FusionFix"
+   add_kananlib()
+   setpaths("Z:/WFP/Games/Grand Theft Auto The Definitive Edition/GTA San Andreas - Definitive Edition/", "Gameface/Binaries/Win64/SanAndreas.exe", "Gameface/Binaries/Win64/scripts/")
+group ""
+
+group "ResidentEvil"
+project "ResidentEvil4.FusionFix"
+   setpaths("Z:/WFP/Games/ResidentEvil4/", "re4.exe", "scripts/")
+group ""
+
+project "SpyroReignitedTrilogy.WidescreenFix"
+   setpaths("Z:/WFP/Games/Spyro Reignited Trilogy/", "Falcon/Binaries/Win64/Spyro-Win64-Shipping.exe", "Falcon/Binaries/Win64/scripts/")
+
+project "RedDeadRedemption.FusionFix"
+   add_kananlib()
+   setpaths("Z:/WFP/Games/Red Dead Redemption/", "RDR.exe", "plugins/")
+group ""
+
+-- ====================== PCSX2F SOLUTION ======================
+CommonWorkspaceSetup("Win32", "PCSX2F")
+
+group ""
 project "Burnout3.PCSX2F.WidescreenFix"
    kind "Makefile"
    add_ps2sdk()
@@ -620,7 +585,7 @@ project "Burnout3.PCSX2F.WidescreenFix"
    "../../includes/pcsx2/inireader.o", "../../includes/pcsx2/mips.o")
    writelinkfile_ps2("Burnout3.PCSX2F.WidescreenFix")
 
-group "PCSX2F/GrandTheftAuto"
+group "GrandTheftAuto"
 project "GTALCS.PCSX2F.WidescreenFix"
    kind "Makefile"
    dependson { "Burnout3.PCSX2F.WidescreenFix" }
@@ -664,7 +629,7 @@ project "GTAVCS.PCSX2F.ImVehLM"
    "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o","../../includes/pcsx2/inireader.o",
    "../../includes/pcsx2/mips.o")
    writelinkfile_ps2("GTAVCS.PCSX2F.ImVehLM")
-group "PCSX2F"
+group ""
 
 project "KnightRider.PCSX2F.WidescreenFix"
    kind "Makefile"
@@ -711,8 +676,11 @@ project "TrueCrimeNewYorkCity.PCSX2F.WidescreenFix"
    writelinkfile_ps2("TrueCrimeNewYorkCity.PCSX2F.WidescreenFix")
 group ""
 
-group "PPSSPP"
-group "PPSSPP/GrandTheftAuto"
+-- ====================== PPSSPP SOLUTION ======================
+CommonWorkspaceSetup("Win32", "PPSSPP")
+
+group ""
+group "GrandTheftAuto"
 project "GTALCS.PPSSPP.WidescreenFix"
    kind "Makefile"
    add_pspsdk()
@@ -775,7 +743,7 @@ project "GTACTW.PPSSPP.FusionFix"
    targetextension ".prx"
    setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTACTW.PPSSPP.FusionFix")
    writemakefile_psp("GTACTW.PPSSPP.FusionFix")
-group "PPSSPP"
+group ""
 
 project "MidnightClubLARemix.PPSSPP.FusionFix"
    kind "Makefile"
@@ -801,7 +769,7 @@ project "SplinterCellEssentials.PPSSPP.FusionFix"
    setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.FusionFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SplinterCellEssentials.PPSSPP.FusionFix")
    writemakefile_psp("SplinterCellEssentials.PPSSPP.FusionFix")
 
-group "PPSSPP/SOCOM"
+group "SOCOM"
 project "SOCOM.FireteamBravo.PPSSPP.FusionFix"
    kind "Makefile"
    dependson { "SplinterCellEssentials.PPSSPP.FusionFix" }
@@ -823,7 +791,7 @@ project "SOCOM.FireteamBravo3.PPSSPP.FusionFix"
    targetextension ".prx"
    setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/SOCOM.FireteamBravo3.PPSSPP.FusionFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SOCOM.FireteamBravo3.PPSSPP.FusionFix")
    writemakefile_psp("SOCOM.FireteamBravo3.PPSSPP.FusionFix")
-group "PPSSPP"
+group ""
 
 project "TheWarriors.PPSSPP.FusionFix"
    kind "Makefile"
@@ -834,23 +802,24 @@ project "TheWarriors.PPSSPP.FusionFix"
    writemakefile_psp("TheWarriors.PPSSPP.FusionFix")
 group ""
 
-group "Dolphin"
+-- ====================== DOLPHIN SOLUTION ======================
+CommonWorkspaceSetup("x64", "Dolphin")
+
+group ""
 project "ResidentEvil2.RE3.Dolphin.FusionFix"
    add_kananlib()
-   platforms { "Win64" }
-   architecture "x64"
    setpaths("Z:/WFP/Games/Dolphin-x64/", "Dolphin.exe", "scripts/")
 group ""
 
-group "CXBXR"
+-- ====================== CXBXR SOLUTION ======================
+CommonWorkspaceSetup("Win32", "CXBXR")
+
+group ""
 project "Mafia.CXBXR.WidescreenFix"
-   configurations { "ReleaseCXBXR", "DebugCXBXR" }
-      setpaths("Z:/WFP/Games/CXBXR/", "cxbx.exe")
-      files { "includes/cxbxr/cxbxr.h" }
+   setpaths("Z:/WFP/Games/CXBXR/", "cxbx.exe")
+   files { "includes/cxbxr/cxbxr.h" }
 
 project "SplinterCellDoubleAgent.CXBXR.WidescreenFix"
-   configurations { "ReleaseCXBXR", "DebugCXBXR" }
-      setpaths("Z:/WFP/Games/CXBXR/", "cxbx.exe")
-      files { "includes/cxbxr/cxbxr.h" }
+   setpaths("Z:/WFP/Games/CXBXR/", "cxbx.exe")
+   files { "includes/cxbxr/cxbxr.h" }
 group ""
-

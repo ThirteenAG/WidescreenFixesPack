@@ -29,7 +29,10 @@ jobs:
       uses: ./.github/workflows/build_all
       with:
         project: ${{ inputs.project }}
-        sccompile_password: ${{ secrets.SCCOMPILE_PASSWORD }}
+      env:
+        SCCOMPILE_PASSWORD: ${{ secrets.SCCOMPILE_PASSWORD }}
+        CODE_SIGNING_PFX: ${{ secrets.CODE_SIGNING_PFX }}
+        CODE_SIGNING_PASSWORD: ${{ secrets.CODE_SIGNING_PASSWORD }}
 
     - name: GTA SA The Definitive Edition Fusion Fix
       uses: ./.github/workflows/release_tag
