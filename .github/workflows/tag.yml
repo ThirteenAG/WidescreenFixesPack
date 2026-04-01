@@ -102,98 +102,98 @@ on:
         - usm
 
 env:
-  bully: "/t:Win32\\Bully_WidescreenFix"
-  burnout3: "/t:PCSX2F\\Burnout3_PCSX2F_WidescreenFix"
-  callofcthulhu: "/t:Win32\\CallOfCthulhu_WidescreenFix"
-  coldfear: "/t:Win32\\ColdFear_WidescreenFix"
-  condemned: "/t:Win32\\Condemned_WidescreenFix"
-  da4: "/t:Win32\\DeerAvenger4_WidescreenFix"
-  driv3r: "/t:Win32\\Driv3r_WidescreenFix"
-  driverpl: "/t:Win32\\DriverParallelLines_WidescreenFix"
-  enterthematrix: "/t:Win32\\EnterTheMatrix_WidescreenFix"
-  farcry: "/t:Win32\\FarCry_WidescreenFix"
-  fireteambravo1: "/t:PPSSPP\\SOCOM\\SOCOM_FireteamBravo_PPSSPP_FusionFix"
-  fireteambravo2: "/t:PPSSPP\\SOCOM\\SOCOM_FireteamBravo2_PPSSPP_FusionFix"
-  fireteambravo3: "/t:PPSSPP\\SOCOM\\SOCOM_FireteamBravo3_PPSSPP_FusionFix"
-  gta1: "/t:Win32\\GrandTheftAuto\\GTA1_WidescreenFix"
-  gta2: "/t:Win32\\GrandTheftAuto\\GTA2_WidescreenFix"
-  gta3: "/t:Win32\\GrandTheftAuto\\GTA3_WidescreenFix"
-  gta3de: "/t:Win64\\GrandTheftAuto\\GTA3DE_FusionFix"
-  gtactwpsp: "/t:PPSSPP\\GrandTheftAuto\\GTACTW_PPSSPP_FusionFix"
-  gtalcs: "/t:PCSX2F\\GrandTheftAuto\\GTALCS_PCSX2F_WidescreenFix"
-  gtalcspsp: "/t:PPSSPP\\GrandTheftAuto\\GTALCS_PPSSPP_WidescreenFix /t:PPSSPP\\GrandTheftAuto\\GTALCS_PPSSPP_Project2DFX /t:PPSSPP\\GrandTheftAuto\\GTALCS_PPSSPP_ImVehLM"
-  gtasa: "/t:Win32\\GrandTheftAuto\\GTASA_WidescreenFix"
-  gtasade: "/t:Win64\\GrandTheftAuto\\GTASADE_FusionFix"
-  gtavc: "/t:Win32\\GrandTheftAuto\\GTAVC_WidescreenFix"
-  gtavcde: "/t:Win64\\GrandTheftAuto\\GTAVCDE_FusionFix"
-  gtavcs: "/t:PCSX2F\\GrandTheftAuto\\GTAVCS_PCSX2F_WidescreenFix /t:PCSX2F\\GrandTheftAuto\\GTAVCS_PCSX2F_Project2DFX /t:PCSX2F\\GrandTheftAuto\\GTAVCS_PCSX2F_ImVehLM"
-  gtavcspsp: "/t:PPSSPP\\GrandTheftAuto\\GTAVCS_PPSSPP_WidescreenFix /t:PPSSPP\\GrandTheftAuto\\GTAVCS_PPSSPP_Project2DFX /t:PPSSPP\\GrandTheftAuto\\GTAVCS_PPSSPP_ImVehLM /t:PPSSPP\\GrandTheftAuto\\GTAVCS_PPSSPP_GamepadIcons"
-  gun: "/t:Win32\\Gun_WidescreenFix"
-  hd2: "/t:Win32\\HiddenandDangerous2_WidescreenFix"
-  justcause: "/t:Win32\\JustCause_WidescreenFix"
-  kingkong: "/t:Win32\\KingKong_WidescreenFix"
-  kr: "/t:Win32\\KnightRider_WidescreenFix /t:PCSX2F\\KnightRider_PCSX2F_WidescreenFix"
-  kr2: "/t:Win32\\KnightRider2_WidescreenFix"
-  larush: "/t:Win32\\LARush_WidescreenFix"
-  mafia: "/t:Win32\\Mafia_WidescreenFix"
-  mafiaxbox: "/t:CXBXR\\Mafia_CXBXR_WidescreenFix"
-  manhunt: "/t:Win32\\Manhunt_WidescreenFix"
-  mp1: "/t:Win32\\MaxPayne\\MaxPayne_WidescreenFix"
-  mp2: "/t:Win32\\MaxPayne\\MaxPayne2_WidescreenFix"
-  nfsc: "/t:Win32\\NeedForSpeed\\NFSCarbon_WidescreenFix"
-  nfsmw: "/t:Win32\\NeedForSpeed\\NFSMostWanted_WidescreenFix"
-  nfsps: "/t:Win32\\NeedForSpeed\\NFSProStreet_FusionFix"
-  nfsu: "/t:Win32\\NeedForSpeed\\NFSUnderground_WidescreenFix"
-  nfsu2: "/t:Win32\\NeedForSpeed\\NFSUnderground2_WidescreenFix"
-  nfsuc: "/t:Win32\\NeedForSpeed\\NFSUndercover_FusionFix"
-  onimusha3: "/t:Win32\\Onimusha3_WidescreenFix"
-  paradisecracked: "/t:Win32\\ParadiseCracked_WidescreenFix"
-  psiops: "/t:Win32\\PsiOpsTheMindgateConspiracy_WidescreenFix"
-  psychonauts: "/t:Win32\\Psychonauts_WidescreenFix"
-  punisher: "/t:Win32\\ThePunisher_WidescreenFix"
-  rdr: "/t:Win64\\RedDeadRedemption_FusionFix"
-  re0: "/t:Win32\\ResidentEvil\\ResidentEvil0_FusionFix"
-  re1: "/t:Win32\\ResidentEvil\\ResidentEvil_FusionFix"
-  re2re3gc: "/t:Dolphin\\ResidentEvil2_RE3_Dolphin_FusionFix"
-  re4: "/t:Win32\\ResidentEvil\\ResidentEvil4_FusionFix"
-  re5: "/t:Win32\\ResidentEvil\\ResidentEvil5_FusionFix"
-  re6: "/t:Win32\\ResidentEvil\\ResidentEvil6_FusionFix"
-  rerev: "/t:Win32\\ResidentEvil\\ResidentEvilRevelations_FusionFix"
-  rerev2: "/t:Win32\\ResidentEvil\\ResidentEvilRevelations2_FusionFix"
-  sc: "/t:Win32\\SplinterCell\\SplinterCell_WidescreenFix"
-  scarface: "/t:Win32\\Scarface_FusionFix"
-  scc: "/t:Win32\\SplinterCell\\SplinterCellConviction_FusionFix"
-  scb: "/t:Win32\\SplinterCell\\SplinterCellBlacklist_FusionFix"
-  scct: "/t:Win32\\SplinterCell\\SplinterCellChaosTheory_WidescreenFix"
-  scda: "/t:Win32\\SplinterCell\\SplinterCellDoubleAgent_WidescreenFix"
-  scdaps2: "/t:PCSX2F\\SplinterCellDoubleAgent_PCSX2F_WidescreenFix"
-  scdaxbox: "/t:CXBXR\\SplinterCellDoubleAgent_CXBXR_WidescreenFix"
-  sce: "/t:PPSSPP\\SplinterCellEssentials_PPSSPP_FusionFix"
-  scpt: "/t:Win32\\SplinterCell\\SplinterCellPandoraTomorrow_WidescreenFix"
-  secondsight: "/t:Win32\\SecondSight_WidescreenFix"
-  sh2: "/t:Win32\\SilentHill\\SilentHill2_WidescreenFix"
-  sh3: "/t:Win32\\SilentHill\\SilentHill3_WidescreenFix"
-  sh4: "/t:Win32\\SilentHill\\SilentHill4_WidescreenFix"
-  sniperelite: "/t:Win32\\SniperElite_WidescreenFix"
-  sonicheroes: "/t:Win32\\SonicHeroes_WidescreenFix"
-  spyro: "/t:Win64\\SpyroReignitedTrilogy_WidescreenFix"
-  srs: "/t:Win32\\StreetRacingSyndicate_WidescreenFix"
-  thaw: "/t:Win32\\TonyHawks\\TonyHawksAmericanWasteland_WidescreenFix"
-  thegodfather: "/t:Win32\\TheGodfather_WidescreenFix"
-  thematrixpathofneo: "/t:Win32\\TheMatrixPathOfNeo_WidescreenFix"
-  thesaboteur: "/t:Win32\\TheSaboteur_FusionFix"
-  thesuffering: "/t:Win32\\TheSuffering_WidescreenFix"
-  thewarriors: "/t:PPSSPP\\TheWarriors_PPSSPP_FusionFix"
-  thps2: "/t:Win32\\TonyHawks\\TonyHawksProSkater2_WidescreenFix"
-  thps3: "/t:Win32\\TonyHawks\\TonyHawksProSkater3_WidescreenFix"
-  thps4: "/t:Win32\\TonyHawks\\TonyHawksProSkater4_WidescreenFix"
-  thug: "/t:Win32\\TonyHawks\\TonyHawksUnderground_WidescreenFix"
-  thug2: "/t:Win32\\TonyHawks\\TonyHawksUnderground2_WidescreenFix"
-  tod: "/t:Win32\\TotalOverdose_WidescreenFix"
-  truecrimenyc: "/t:Win32\\TrueCrimeNewYorkCity_WidescreenFix /t:PCSX2F\\TrueCrimeNewYorkCity_PCSX2F_WidescreenFix"
-  truecrimesola: "/t:Win32\\TrueCrimeStreetsofLA_WidescreenFix"
-  xrd: "/t:PPSSPP\\PPSSPP_XboxRainDroplets /t:PCSX2F\\PCSX2F_XboxRainDroplets"
-  usm: "/t:Win32\\UltimateSpiderMan_WidescreenFix"
+  bully: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:Bully_WidescreenFix /p:Configuration=Release
+  burnout3: msbuild -m build/PCSX2F.WidescreenFixesPack.slnx /t:Burnout3_PCSX2F_WidescreenFix /p:Configuration=Release
+  callofcthulhu: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:CallOfCthulhu_WidescreenFix /p:Configuration=Release
+  coldfear: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:ColdFear_WidescreenFix /p:Configuration=Release
+  condemned: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:Condemned_WidescreenFix /p:Configuration=Release
+  da4: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:DeerAvenger4_WidescreenFix /p:Configuration=Release
+  driv3r: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:Driv3r_WidescreenFix /p:Configuration=Release
+  driverpl: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:DriverParallelLines_WidescreenFix /p:Configuration=Release
+  enterthematrix: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:EnterTheMatrix_WidescreenFix /p:Configuration=Release
+  farcry: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:FarCry_WidescreenFix /p:Configuration=Release
+  fireteambravo1: msbuild -m build/PPSSPP.WidescreenFixesPack.slnx /t:SOCOM\\SOCOM_FireteamBravo_PPSSPP_FusionFix /p:Configuration=Release
+  fireteambravo2: msbuild -m build/PPSSPP.WidescreenFixesPack.slnx /t:SOCOM\\SOCOM_FireteamBravo2_PPSSPP_FusionFix /p:Configuration=Release
+  fireteambravo3: msbuild -m build/PPSSPP.WidescreenFixesPack.slnx /t:SOCOM\\SOCOM_FireteamBravo3_PPSSPP_FusionFix /p:Configuration=Release
+  gta1: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:GrandTheftAuto\\GTA1_WidescreenFix /p:Configuration=Release
+  gta2: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:GrandTheftAuto\\GTA2_WidescreenFix /p:Configuration=Release
+  gta3: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:GrandTheftAuto\\GTA3_WidescreenFix /p:Configuration=Release
+  gta3de: msbuild -m build/Win64.WidescreenFixesPack.slnx /t:GrandTheftAuto\\GTA3DE_FusionFix /p:Configuration=Release
+  gtactwpsp: msbuild -m build/PPSSPP.WidescreenFixesPack.slnx /t:GrandTheftAuto\\GTACTW_PPSSPP_FusionFix /p:Configuration=Release
+  gtalcs: msbuild -m build/PCSX2F.WidescreenFixesPack.slnx /t:GrandTheftAuto\\GTALCS_PCSX2F_WidescreenFix /p:Configuration=Release
+  gtalcspsp: msbuild -m build/PPSSPP.WidescreenFixesPack.slnx /t:GrandTheftAuto\\GTALCS_PPSSPP_WidescreenFix /t:GrandTheftAuto\\GTALCS_PPSSPP_Project2DFX /t:GrandTheftAuto\\GTALCS_PPSSPP_ImVehLM /p:Configuration=Release
+  gtasa: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:GrandTheftAuto\\GTASA_WidescreenFix /p:Configuration=Release
+  gtasade: msbuild -m build/Win64.WidescreenFixesPack.slnx /t:GrandTheftAuto\\GTASADE_FusionFix /p:Configuration=Release
+  gtavc: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:GrandTheftAuto\\GTAVC_WidescreenFix /p:Configuration=Release
+  gtavcde: msbuild -m build/Win64.WidescreenFixesPack.slnx /t:GrandTheftAuto\\GTAVCDE_FusionFix /p:Configuration=Release
+  gtavcs: msbuild -m build/PCSX2F.WidescreenFixesPack.slnx /t:GrandTheftAuto\\GTAVCS_PCSX2F_WidescreenFix /t:GrandTheftAuto\\GTAVCS_PCSX2F_Project2DFX /t:GrandTheftAuto\\GTAVCS_PCSX2F_ImVehLM /p:Configuration=Release
+  gtavcspsp: msbuild -m build/PPSSPP.WidescreenFixesPack.slnx /t:GrandTheftAuto\\GTAVCS_PPSSPP_WidescreenFix /t:GrandTheftAuto\\GTAVCS_PPSSPP_Project2DFX /t:GrandTheftAuto\\GTAVCS_PPSSPP_ImVehLM /t:GrandTheftAuto\\GTAVCS_PPSSPP_GamepadIcons /p:Configuration=Release
+  gun: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:Gun_WidescreenFix /p:Configuration=Release
+  hd2: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:HiddenandDangerous2_WidescreenFix /p:Configuration=Release
+  justcause: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:JustCause_WidescreenFix /p:Configuration=Release
+  kingkong: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:KingKong_WidescreenFix /p:Configuration=Release
+  kr: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:KnightRider_WidescreenFix /p:Configuration=Release && msbuild -m build/PCSX2F.WidescreenFixesPack.slnx /t:KnightRider_PCSX2F_WidescreenFix /p:Configuration=Release
+  kr2: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:KnightRider2_WidescreenFix /p:Configuration=Release
+  larush: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:LARush_WidescreenFix /p:Configuration=Release
+  mafia: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:Mafia_WidescreenFix /p:Configuration=Release
+  mafiaxbox: msbuild -m build/CXBXR.WidescreenFixesPack.slnx /t:Mafia_CXBXR_WidescreenFix /p:Configuration=Release
+  manhunt: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:Manhunt_WidescreenFix /p:Configuration=Release
+  mp1: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:MaxPayne\\MaxPayne_WidescreenFix /p:Configuration=Release
+  mp2: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:MaxPayne\\MaxPayne2_WidescreenFix /p:Configuration=Release
+  nfsc: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:NeedForSpeed\\NFSCarbon_WidescreenFix /p:Configuration=Release
+  nfsmw: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:NeedForSpeed\\NFSMostWanted_WidescreenFix /p:Configuration=Release
+  nfsps: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:NeedForSpeed\\NFSProStreet_FusionFix /p:Configuration=Release
+  nfsu: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:NeedForSpeed\\NFSUnderground_WidescreenFix /p:Configuration=Release
+  nfsu2: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:NeedForSpeed\\NFSUnderground2_WidescreenFix /p:Configuration=Release
+  nfsuc: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:NeedForSpeed\\NFSUndercover_FusionFix /p:Configuration=Release
+  onimusha3: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:Onimusha3_WidescreenFix /p:Configuration=Release
+  paradisecracked: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:ParadiseCracked_WidescreenFix /p:Configuration=Release
+  psiops: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:PsiOpsTheMindgateConspiracy_WidescreenFix /p:Configuration=Release
+  psychonauts: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:Psychonauts_WidescreenFix /p:Configuration=Release
+  punisher: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:ThePunisher_WidescreenFix /p:Configuration=Release
+  rdr: msbuild -m build/Win64.WidescreenFixesPack.slnx /t:RedDeadRedemption_FusionFix /p:Configuration=Release
+  re0: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:ResidentEvil\\ResidentEvil0_FusionFix /p:Configuration=Release
+  re1: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:ResidentEvil\\ResidentEvil_FusionFix /p:Configuration=Release
+  re2re3gc: msbuild -m build/Dolphin.WidescreenFixesPack.slnx /t:ResidentEvil2_RE3_Dolphin_FusionFix /p:Configuration=Release
+  re4: msbuild -m build/Win64.WidescreenFixesPack.slnx /t:ResidentEvil\\ResidentEvil4_FusionFix /p:Configuration=Release
+  re5: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:ResidentEvil\\ResidentEvil5_FusionFix /p:Configuration=Release
+  re6: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:ResidentEvil\\ResidentEvil6_FusionFix /p:Configuration=Release
+  rerev: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:ResidentEvil\\ResidentEvilRevelations_FusionFix /p:Configuration=Release
+  rerev2: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:ResidentEvil\\ResidentEvilRevelations2_FusionFix /p:Configuration=Release
+  sc: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:SplinterCell\\SplinterCell_WidescreenFix /p:Configuration=Release
+  scarface: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:Scarface_FusionFix /p:Configuration=Release
+  scc: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:SplinterCell\\SplinterCellConviction_FusionFix /p:Configuration=Release
+  scb: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:SplinterCell\\SplinterCellBlacklist_FusionFix /p:Configuration=Release
+  scct: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:SplinterCell\\SplinterCellChaosTheory_WidescreenFix /p:Configuration=Release
+  scda: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:SplinterCell\\SplinterCellDoubleAgent_WidescreenFix /p:Configuration=Release
+  scdaps2: msbuild -m build/PCSX2F.WidescreenFixesPack.slnx /t:SplinterCellDoubleAgent_PCSX2F_WidescreenFix /p:Configuration=Release
+  scdaxbox: msbuild -m build/CXBXR.WidescreenFixesPack.slnx /t:SplinterCellDoubleAgent_CXBXR_WidescreenFix /p:Configuration=Release
+  sce: msbuild -m build/PPSSPP.WidescreenFixesPack.slnx /t:SplinterCellEssentials_PPSSPP_FusionFix /p:Configuration=Release
+  scpt: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:SplinterCell\\SplinterCellPandoraTomorrow_WidescreenFix /p:Configuration=Release
+  secondsight: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:SecondSight_WidescreenFix /p:Configuration=Release
+  sh2: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:SilentHill\\SilentHill2_WidescreenFix /p:Configuration=Release
+  sh3: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:SilentHill\\SilentHill3_WidescreenFix /p:Configuration=Release
+  sh4: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:SilentHill\\SilentHill4_WidescreenFix /p:Configuration=Release
+  sniperelite: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:SniperElite_WidescreenFix /p:Configuration=Release
+  sonicheroes: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:SonicHeroes_WidescreenFix /p:Configuration=Release
+  spyro: msbuild -m build/Win64.WidescreenFixesPack.slnx /t:SpyroReignitedTrilogy_WidescreenFix /p:Configuration=Release
+  srs: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:StreetRacingSyndicate_WidescreenFix /p:Configuration=Release
+  thegodfather: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:TheGodfather_WidescreenFix /p:Configuration=Release
+  thematrixpathofneo: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:TheMatrixPathOfNeo_WidescreenFix /p:Configuration=Release
+  thesaboteur: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:TheSaboteur_FusionFix /p:Configuration=Release
+  thesuffering: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:TheSuffering_WidescreenFix /p:Configuration=Release
+  thewarriors: msbuild -m build/PPSSPP.WidescreenFixesPack.slnx /t:TheWarriors_PPSSPP_FusionFix /p:Configuration=Release
+  thps2: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:TonyHawks\\TonyHawksProSkater2_WidescreenFix /p:Configuration=Release
+  thps3: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:TonyHawks\\TonyHawksProSkater3_WidescreenFix /p:Configuration=Release
+  thps4: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:TonyHawks\\TonyHawksProSkater4_WidescreenFix /p:Configuration=Release
+  thug: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:TonyHawks\\TonyHawksUnderground_WidescreenFix /p:Configuration=Release
+  thug2: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:TonyHawks\\TonyHawksUnderground2_WidescreenFix /p:Configuration=Release
+  thaw: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:TonyHawks\\TonyHawksAmericanWasteland_WidescreenFix /p:Configuration=Release
+  tod: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:TotalOverdose_WidescreenFix /p:Configuration=Release
+  truecrimenyc: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:TrueCrimeNewYorkCity_WidescreenFix /p:Configuration=Release && msbuild -m build/PCSX2F.WidescreenFixesPack.slnx /t:TrueCrimeNewYorkCity_PCSX2F_WidescreenFix /p:Configuration=Release
+  truecrimesola: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:TrueCrimeStreetsofLA_WidescreenFix /p:Configuration=Release
+  xrd: msbuild -m build/PPSSPP.WidescreenFixesPack.slnx /t:PPSSPP_XboxRainDroplets /p:Configuration=Release && msbuild -m build/PCSX2F.WidescreenFixesPack.slnx /t:PCSX2F_XboxRainDroplets /p:Configuration=Release
+  usm: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:UltimateSpiderMan_WidescreenFix /p:Configuration=Release
 
 jobs:
   setup_project_name:
@@ -211,3 +211,4 @@ jobs:
     with:
       tag_list: ${{ inputs.tag_name }}
       project: ${{ needs.setup_project_name.outputs.project_name }}
+    secrets: inherit

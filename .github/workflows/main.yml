@@ -30,8 +30,10 @@ jobs:
         submodules: recursive
     - name: Build Solution
       uses: ./.github/workflows/build_all
-      with:
-        sccompile_password: ${{ secrets.SCCOMPILE_PASSWORD }}
+      env:
+        SCCOMPILE_PASSWORD: ${{ github.event_name == 'push' && github.ref_name == 'master' && secrets.SCCOMPILE_PASSWORD || '' }}
+        CODE_SIGNING_PFX: ${{ github.event_name == 'push' && github.ref_name == 'master' && secrets.CODE_SIGNING_PFX || '' }}
+        CODE_SIGNING_PASSWORD: ${{ github.event_name == 'push' && github.ref_name == 'master' && secrets.CODE_SIGNING_PASSWORD || '' }}
     - name: Update Tags
       continue-on-error: true
       if: ${{ github.event_name == 'push' && github.ref_name == 'master' }}

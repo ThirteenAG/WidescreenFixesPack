@@ -2,9 +2,6 @@ version: '{build}'
 skip_tags: true
 image: Visual Studio 2022
 configuration: Release
-environment:
-  SCCOMPILE_PASSWORD:
-    secure: KghYaVdOq7Z+5YMT/cr3OA==
 install:
 - cmd: >-
     git submodule update --init --recursive
@@ -13,10 +10,21 @@ install:
 before_build:
 - cmd: before_build.bat
 build:
-  project: build/WidescreenFixesPack.sln
+  project: build/Win32.WidescreenFixesPack.sln
   verbosity: minimal
 before_package:
 - cmd: >-
+    msbuild -m build/Win64.WidescreenFixesPack.sln /p:Configuration=Release
+
+    msbuild -m build/PCSX2F.WidescreenFixesPack.sln /p:Configuration=Release
+
+    msbuild -m build/PPSSPP.WidescreenFixesPack.sln /p:Configuration=Release
+
+    msbuild -m build/Dolphin.WidescreenFixesPack.sln /p:Configuration=Release
+
+    msbuild -m build/CXBXR.WidescreenFixesPack.sln /p:Configuration=Release
+
+
     before_packaging.bat
 
     cd data

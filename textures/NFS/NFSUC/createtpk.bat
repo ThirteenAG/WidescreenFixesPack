@@ -34,7 +34,7 @@ xcopy /S /Q /Y /F "./unpacked/textures/xdpaddown.dds" "unpacked/2F0D85E/HUD_RACE
 cd unpacked
 copy /b temp1.tpk+temp2.tpk buttons-xbox.tpk
 cd ..
-xcopy /S /Q /Y /F "unpacked/buttons-xbox.tpk" "../../../data/NFSUndercover.GenericFix/scripts/buttons-xbox.tpk"
+xcopy /S /Q /Y /F "unpacked/buttons-xbox.tpk" "../../../data/NFSUndercover.FusionFix/scripts/buttons-xbox.tpk"
 rmdir /Q /S unpacked
 
 
@@ -70,5 +70,5 @@ xcopy /S /Q /Y /F "./unpacked/textures/pdpaddown.dds" "unpacked/2F0D85E/HUD_RACE
 cd unpacked
 copy /b temp1.tpk+temp2.tpk buttons-playstation.tpk
 cd ..
-xcopy /S /Q /Y /F "unpacked/buttons-playstation.tpk" "../../../data/NFSUndercover.GenericFix/scripts/buttons-playstation.tpk"
+xcopy /S /Q /Y /F "unpacked/buttons-playstation.tpk" "../../../data/NFSUndercover.FusionFix/scripts/buttons-playstation.tpk"
 rmdir /Q /S unpacked
