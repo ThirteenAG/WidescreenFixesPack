@@ -10,13 +10,11 @@ for /f "tokens=1,* delims=:" %%A in ('curl -ks https://api.github.com/repos/Thir
     curl -kOL %%B
 )
 
-rem download latest CI artifact of dxwrapper for now
-curl -kL -o dxwrapper.zip "https://nightly.link/elishacloud/dxwrapper/workflows/ci/master/Release%%20binaries.zip"
-rem for /f "tokens=1,* delims=:" %%A in ('curl -ks https://api.github.com/repos/elishacloud/dxwrapper/releases/latest ^| find "browser_download_url"') do (
-rem   echo.%%B | FIND /I "dxwrapper">Nul && echo.%%B | FIND /I "debug">Nul || (
-rem     curl -o dxwrapper.zip -kL %%B
-rem   )
-rem )
+for /f "tokens=1,* delims=:" %%A in ('curl -ks https://api.github.com/repos/elishacloud/dxwrapper/releases/latest ^| find "browser_download_url"') do (
+  echo.%%B | FIND /I "dxwrapper">Nul && echo.%%B | FIND /I "debug">Nul || (
+    curl -o dxwrapper.zip -kL %%B
+  )
+)
 
 for /f "tokens=1,* delims=:" %%A in ('curl -ks https://api.github.com/repos/ThirteenAG/dxwrapper/releases/latest ^| find "browser_download_url"') do (
   echo.%%B | FIND /I "dxwrapper">Nul && echo.%%B | FIND /I "debug">Nul || (
