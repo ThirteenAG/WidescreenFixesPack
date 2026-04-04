@@ -43,7 +43,8 @@ HRESULT WINAPI CustomCoCreateInstance(REFCLSID rclsid, LPUNKNOWN pUnkOuter, DWOR
 export void InitEAX()
 {
     auto pattern = hook::pattern("24 ? 0B C2 8B 0D ? ? ? ? ? ? 89 42");
-    injector::WriteMemory<uint8_t>(pattern.get_first(1), 0xFF, true);
+    if (!pattern.empty())
+        injector::WriteMemory<uint8_t>(pattern.get_first(1), 0xFF, true);
 
     IATHook::Replace(GetModuleHandle(L"eax"), "OLE32.DLL",
         std::forward_as_tuple("CoCreateInstance", CustomCoCreateInstance)
