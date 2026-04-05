@@ -1,374 +1,20 @@
 #include "stdafx.h"
 #include <d3d9.h>
 
-struct Screen
-{
-    int32_t Width;
-    int32_t Height;
-    int32_t Width43;
-    float fWidth;
-    float fHeight;
-    float fAspectRatio;
-    float fHudScaleX;
-    float fHudPosX;
-} Screen;
-
-bool bHUDWidescreenMode = true;
-
-struct bVector4
-{
-    float x;
-    float y;
-    float z;
-    float w;
-};
-
-struct bMatrix4
-{
-    bVector4 v0;
-    bVector4 v1;
-    bVector4 v2;
-    bVector4 v3;
-};
-
-namespace NOSTrailFix
-{
-    struct bVector3
-    {
-        float x;
-        float y;
-        float z;
-        float pad;
-    };
-
-#pragma runtime_checks( "", off )
-    float NOSTrailScalar = 2.0f;
-    float NOSTrailPositionScalar = 0.3f;
-    bMatrix4 carbody_nos;
-
-    uintptr_t CarRenderInfo_RenderFlaresOnCar_Addr = 0x007CBC40;
-
-    void __stdcall CarRenderInfo_RenderFlaresOnCar_Hook(void* eView, bVector3* position, bMatrix4* body_matrix, int force_light_state, int reflexion, int renderFlareFlags, int nonplayercar)
-    {
-        void* thethis = 0;
-        _asm mov thethis, ecx
-        memcpy(&carbody_nos, body_matrix, sizeof(bMatrix4));
-
-        float pos_scale = (NOSTrailScalar * NOSTrailPositionScalar);
-        if (pos_scale < 1.0f)
-            pos_scale = 1.0f;
-
-        carbody_nos.v0.x *= pos_scale;
-        carbody_nos.v0.y *= pos_scale;
-        carbody_nos.v0.z *= pos_scale;
-
-        carbody_nos.v2.x *= pos_scale;
-        carbody_nos.v2.y *= pos_scale;
-
-
-        return reinterpret_cast<void(__thiscall*)(void*, void*, bVector3*, bMatrix4*, int, int, int, int)>(CarRenderInfo_RenderFlaresOnCar_Addr)(thethis, eView, position, &carbody_nos, force_light_state, reflexion, renderFlareFlags, nonplayercar);
-    }
-
-    bVector3* WorldPos1;
-    bVector3* WorldPos2;
-    bVector3* NOSFlarePos;
-
-    uintptr_t NOSTrailCave2Exit = 0x007CCD30;
-    void __declspec(naked) NOSTrailCave2()
-    {
-        _asm
-        {
-            mov WorldPos1, edx
-            mov WorldPos2, esi
-            lea edx, [esp + 0x40]
-            mov NOSFlarePos, edx
-        }
-
-        (*NOSFlarePos).x = ((*WorldPos1).x - (*WorldPos2).x) * NOSTrailScalar;
-        (*NOSFlarePos).y = ((*WorldPos1).y - (*WorldPos2).y) * NOSTrailScalar;
-        (*NOSFlarePos).z = ((*WorldPos1).z - (*WorldPos2).z) * NOSTrailScalar;
-
-        _asm
-        {
-            xor eax, eax
-            jmp NOSTrailCave2Exit
-        }
-    }
-}
-
-namespace XenonEffectFix
-{
-    uint32_t* dword_AB0ABC = (uint32_t*)0x00AB0ABC;
-    void(__thiscall* sub_723380)(void* that, void* texture) = (void(__thiscall*)(void*, void*))0x723380;
-#pragma runtime_checks( "", off )
-    void __stdcall sub_723380_hook(void* texture)
-    {
-        void* that;
-        _asm mov that, ecx
-
-        sub_723380(that, texture);
-        LPDIRECT3DDEVICE9 gDevice = *(LPDIRECT3DDEVICE9*)dword_AB0ABC;
-        gDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
-    }
-
-#pragma runtime_checks( "", restore )
-}
-
-namespace LightingFixMirror
-{
-    uint32_t* LightingFixUpdateMirrorCave_Exit = (uint32_t*)0x00748C5D;
-    uint32_t* sub_713AA0 = (uint32_t*)0x713AA0;
-    uint32_t* sub_713A30 = (uint32_t*)0x713A30;
-    uint32_t* ptr_dword_AB095C = (uint32_t*)0x00AB095C;
-    uint32_t* ptr_dword_AB0914 = (uint32_t*)0x00AB0914;
-    void __declspec(naked) LightingFixUpdateMirrorCave()
-    {
-        _asm
-        {
-            cmp dword ptr[edi + 8], 01
-            mov ecx, esi
-            jne IsMirror
-            mov eax, ds:ptr_dword_AB095C
-            mov eax, [eax]
-            push eax
-            push 0x59
-            call sub_713AA0
-            jmp ExitCode
-
-            IsMirror :
-            mov eax, ds : ptr_dword_AB0914
-                mov eax, [eax]
-                push eax
-                push 0x59
-                call sub_713AA0
-                mov eax, [esi + 0x1330]
-                test eax, eax
-                je ExitCode
-                push 0
-                push 0x80
-                mov ecx, esi
-                call sub_713A30
-
-                ExitCode :
-            jmp LightingFixUpdateMirrorCave_Exit
-        }
-    }
-}
-
-namespace ContrailHook
-{
-    float *fContrailSpeed;
-    bool bLimitContrailRate;
-    float fContrailTargetFPS;
-    float fContrailMinIntensity;
-    float fContrailMaxIntensity;
-
-    uintptr_t AddXenonEffect = 0x00754CD0;
-
-    uint32_t ContrailFrameDelay = 1;
-
-    uint32_t ContrailFC = 0;
-    uint32_t RenderConnFC = 0;
-    void AddXenonEffect_Contrail_Hook(void* piggyback_fx, void* spec, bMatrix4* mat, bVector4* vel, float intensity)
-    {
-        float newintensity = fContrailMaxIntensity;
-
-        double carspeed = ((sqrt((*vel).x * (*vel).x + (*vel).y * (*vel).y + (*vel).z * (*vel).z) - *fContrailSpeed)) / *fContrailSpeed;
-        newintensity = std::lerp(fContrailMinIntensity, fContrailMaxIntensity, carspeed);
-        if (newintensity > fContrailMaxIntensity)
-            newintensity = fContrailMaxIntensity;
-
-
-        if (!bLimitContrailRate)
-            return reinterpret_cast<void(*)(void*, void*, bMatrix4*, bVector4*, float)>(AddXenonEffect)(piggyback_fx, spec, mat, vel, newintensity);
-
-        // TODO: this could use actual timers instead of a simple framecounter to make it better, but it is good enough for this purpose
-        if ((ContrailFC + ContrailFrameDelay) <= RenderConnFC)
-        {
-            if (ContrailFC != RenderConnFC)
-            {
-                ContrailFC = RenderConnFC;
-                reinterpret_cast<void(*)(void*, void*, bMatrix4*, bVector4*, float)>(AddXenonEffect)(piggyback_fx, spec, mat, vel, newintensity);
-            }
-        }
-        RenderConnFC++;
-    }
-}
-
-namespace SparkHook
-{
-    bool bLimitSparkRate = false;
-    float fSparkTargetFPS = 60.0f;
-    float fSparkIntensity = 1.0f;
-
-    uintptr_t AddXenonEffect = 0x00754CD0;
-
-    uint32_t SparkFrameDelay = 1;
-
-    uint32_t SparkFC = 0;
-    uint32_t RenderConnFC = 0;
-    void AddXenonEffect_Spark_Hook(void* piggyback_fx, void* spec, bMatrix4* mat, bVector4* vel, float intensity)
-    {
-        if (!bLimitSparkRate)
-            return reinterpret_cast<void(*)(void*, void*, bMatrix4*, bVector4*, float)>(AddXenonEffect)(piggyback_fx, spec, mat, vel, fSparkIntensity);
-
-        // TODO: this could use actual timers instead of a simple framecounter to make it better, but it is good enough for this purpose
-        if ((SparkFC + SparkFrameDelay) <= RenderConnFC)
-        {
-            if (SparkFC != RenderConnFC)
-            {
-                SparkFC = RenderConnFC;
-                reinterpret_cast<void(*)(void*, void*, bMatrix4*, bVector4*, float)>(AddXenonEffect)(piggyback_fx, spec, mat, vel, fSparkIntensity);
-            }
-        }
-        RenderConnFC++;
-    }
-}
-
-namespace XtendedInput
-{
-    HMODULE mhXtendedInput;
-    float(__cdecl* SetFEScale)(float val);
-    bool(__cdecl* GetUseWin32Cursor)();
-    bool bLookedForXInput = false;
-    bool bFoundXInput = false;
-
-    void LookForXtendedInput()
-    {
-        if (!mhXtendedInput)
-        {
-            mhXtendedInput = GetModuleHandleA("NFS_XtendedInput.asi");
-            if (mhXtendedInput)
-            {
-                SetFEScale = reinterpret_cast<float(__cdecl*)(float)>(GetProcAddress(mhXtendedInput, "SetFEScale"));
-                GetUseWin32Cursor = reinterpret_cast<bool(__cdecl*)()>(GetProcAddress(mhXtendedInput, "GetUseWin32Cursor"));
-                bFoundXInput = (SetFEScale != nullptr) && (GetUseWin32Cursor != nullptr);
-            }
-        }
-    }
-}
-
-namespace FEScale
-{
-    float fFEScale = 1.0f;
-    float fCalcFEScale = 1.0f;
-    float fFMVScale = 1.0f;
-    float fCalcFMVScale = 1.0f;
-    bool bEnabled = false;
-    bool bAutoFitFE = true;
-    bool bAutoFitFMV = true;
-
-    uintptr_t gMoviePlayerAddr = 0x00A97BB4;
-
-    void ScaleMat(D3DMATRIX* cMat)
-    {
-        if (*(uintptr_t*)gMoviePlayerAddr)
-        {
-            cMat->_11 *= fCalcFMVScale;
-            cMat->_22 *= fCalcFMVScale;
-        }
-        else
-        {
-            cMat->_11 *= fCalcFEScale;
-            cMat->_22 *= fCalcFEScale;
-        }
-    }
-
-    struct FEScaleHook1
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            uintptr_t vTable = *reinterpret_cast<uintptr_t*>(regs.ecx);
-            uintptr_t SetTransformAddr = *reinterpret_cast<uintptr_t*>(vTable + 8);
-
-            D3DMATRIX* mat = reinterpret_cast<D3DMATRIX*>(regs.esp + 0x30);
-            D3DMATRIX cMat;
-            memcpy(&cMat, mat, sizeof(D3DMATRIX));
-
-            ScaleMat(&cMat);
-
-            reinterpret_cast<void(__thiscall*)(uintptr_t, D3DMATRIX*, uintptr_t, uint32_t)>(SetTransformAddr)(regs.ecx, &cMat, regs.ebx, 0);
-        }
-    };
-
-    struct FEScaleHook2
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            uintptr_t vTable = *reinterpret_cast<uintptr_t*>(regs.esi);
-            uintptr_t SetTransformAddr = *reinterpret_cast<uintptr_t*>(vTable + 8);
-
-            D3DMATRIX* mat = reinterpret_cast<D3DMATRIX*>(regs.esp + 0x30);
-            D3DMATRIX cMat;
-            memcpy(&cMat, mat, sizeof(D3DMATRIX));
-
-            ScaleMat(&cMat);
-
-            reinterpret_cast<void(__thiscall*)(uintptr_t, D3DMATRIX*, uintptr_t, uint32_t)>(SetTransformAddr)(regs.esi, &cMat, regs.ebx, 0);
-        }
-    };
-
-    void Update()
-    {
-        fCalcFEScale = fFEScale;
-        fCalcFMVScale = fFMVScale;
-
-        if (bHUDWidescreenMode)
-        {
-            if (bAutoFitFE)
-                fCalcFEScale *= Screen.fAspectRatio / (16.0f / 9.0f);
-            if (bAutoFitFMV)
-                fCalcFMVScale *= Screen.fAspectRatio / (16.0f / 9.0f);
-        }
-        else
-        {
-            if (bAutoFitFE)
-                fCalcFEScale *= Screen.fAspectRatio / (4.0f / 3.0f);
-            if (bAutoFitFMV)
-                fCalcFMVScale *= Screen.fAspectRatio / (4.0f / 3.0f);
-        }
-
-        if (fCalcFEScale > fFEScale)
-            fCalcFEScale = fFEScale;
-
-        if (fCalcFMVScale > fFMVScale)
-            fCalcFMVScale = fFMVScale;
-
-        if (!XtendedInput::bLookedForXInput)
-            XtendedInput::LookForXtendedInput();
-        if (!XtendedInput::bFoundXInput) return;
-        if (!XtendedInput::GetUseWin32Cursor()) return;
-
-        XtendedInput::SetFEScale(fCalcFEScale);
-    }
-}
-
-#pragma runtime_checks( "", restore )
-
-uintptr_t PostStartFunc = 0x7AFEF0;
-void InitPostStart()
-{
-    if (FEScale::bEnabled)
-        FEScale::Update();
-    return reinterpret_cast<void(*)()>(PostStartFunc)();
-}
+import ComVars;
+import Frontend;
+import Rendering;
+import NOSTrailFix;
+import XenonEffectFix;
+import LightingFixMirror;
+import ContrailHook;
+import SparkHook;
 
 void Init()
 {
     CIniReader iniReader("");
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
-    bool bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) != 0;
-    bool bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) != 0;
-    int32_t nScaling = iniReader.ReadInteger("MAIN", "Scaling", 1);
-    bHUDWidescreenMode = iniReader.ReadInteger("MAIN", "HUDWidescreenMode", 1) != 0;
-    int nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
-    FEScale::fFEScale = iniReader.ReadFloat("MAIN", "FEScale", 1.0f);
-    FEScale::fCalcFEScale = FEScale::fFEScale;
-    FEScale::fFMVScale = iniReader.ReadFloat("MAIN", "FMVScale", 1.0f);
-    FEScale::fCalcFMVScale = FEScale::fFMVScale;
-    FEScale::bAutoFitFE = iniReader.ReadInteger("MAIN", "AutoFitFE", 1) != 0;
-    FEScale::bAutoFitFMV = iniReader.ReadInteger("MAIN", "AutoFitFMV", 1) != 0;
     int32_t nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
     bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 0) != 0;
 
@@ -382,30 +28,9 @@ void Init()
     static int32_t nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
     bool bExpandControllerOptions = iniReader.ReadInteger("MISC", "ExpandControllerOptions", 0) != 0;
     static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
-    static int SimRate = iniReader.ReadInteger("MISC", "SimRate", -1);
+    SimRate = iniReader.ReadInteger("MISC", "SimRate", -1);
 
-
-    bool bLightingFix = iniReader.ReadInteger("GRAPHICS", "LightingFix", 1) != 0;
     bool bCarShadowFix = iniReader.ReadInteger("GRAPHICS", "CarShadowFix", 1) != 0;
-    static float fRainDropletsScale = iniReader.ReadFloat("GRAPHICS", "RainDropletsScale", 0.5f);
-    bool bDisableMotionBlur = iniReader.ReadInteger("GRAPHICS", "DisableMotionBlur", 0) != 0;
-    bool bDisableContrails = iniReader.ReadInteger("GRAPHICS", "DisableContrails", 0) != 0;
-    bool bFixXenonEffects = iniReader.ReadInteger("GRAPHICS", "FixXenonEffects", 1) != 0;
-
-    float cfgContrailSpeed = iniReader.ReadFloat("Contrails", "ContrailSpeed", 35.0f);
-    ContrailHook::bLimitContrailRate = iniReader.ReadInteger("Contrails", "LimitContrailRate", 1) != 0;
-    ContrailHook::fContrailTargetFPS = iniReader.ReadFloat("Contrails", "ContrailTargetFPS", 30.0f);
-    ContrailHook::fContrailMinIntensity = iniReader.ReadFloat("Contrails", "ContrailMinIntensity", 0.1f);
-    ContrailHook::fContrailMaxIntensity = iniReader.ReadFloat("Contrails", "ContrailMaxIntensity", 0.75f);
-
-    SparkHook::bLimitSparkRate = iniReader.ReadInteger("Sparks", "LimitSparkRate", 0) != 0;
-    SparkHook::fSparkTargetFPS = iniReader.ReadFloat("Sparks", "SparkTargetFPS", 60.0f);
-    SparkHook::fSparkIntensity = iniReader.ReadFloat("Sparks", "SparkIntensity", 1.0f);
-
-    bool bFixNOSTrailLength = iniReader.ReadInteger("NOSTrail", "FixNOSTrailLength", 1) == 1;
-    bool bFixNOSTrailPosition = iniReader.ReadInteger("NOSTrail", "FixNOSTrailPosition", 0) != 0;
-    static float fCustomNOSTrailLength = iniReader.ReadFloat("NOSTrail", "CustomNOSTrailLength", 1.0f);
-    NOSTrailFix::NOSTrailPositionScalar = iniReader.ReadFloat("NOSTrail", "NOSTrailPositionScalar", 0.3f);
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -420,11 +45,6 @@ void Init()
     Screen.fWidth = static_cast<float>(Screen.Width);
     Screen.fHeight = static_cast<float>(Screen.Height);
     Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
-
-    // Post-start init function hook
-    uintptr_t loc_6B783F = reinterpret_cast<uintptr_t>(hook::pattern("6A 01 C7 44 24 14 FF FF FF FF A3").get_first(0)) + 0x9D;
-    PostStartFunc = static_cast<uintptr_t>(injector::GetBranchDestination(loc_6B783F));
-    injector::MakeCALL(loc_6B783F, InitPostStart);
 
     //Resolution
     for (size_t i = 0; i < 2; i++)
@@ -455,6 +75,14 @@ void Init()
         uint32_t dword_6C2866 = (uint32_t)dword_6C2860 + 6;
         injector::WriteMemory(dword_6C2866, Screen.Height, true);
     }
+
+    InitFrontend();
+    InitRendering();
+    InitNOSTrailFix();
+    InitXenonEffectFix();
+    InitLightingFixMirror();
+    InitContrailHook();
+    InitSparkHook();
 
     //Autosculpt scaling
     uint32_t* dword_9E9B68 = *hook::pattern("D8 0D ? ? ? ? DA 74 24 18 E8 ? ? ? ? 89 46 04 EB 03").count(1).get(0).get<uint32_t*>(2);
@@ -506,213 +134,8 @@ void Init()
     uint32_t* dword_570DDC = hook::pattern("7A 24 D9 44 24 18 D8 5C 24 04 DF E0").count(1).get(0).get<uint32_t>(0);
     injector::MakeNOP(dword_570DDC, 2, true);
 
-    //Rain droplets
-    static float fRainScaleX = ((0.75f / Screen.fAspectRatio) * (4.0f / 3.0f));
-    pattern = hook::pattern("D9 44 24 08 D8 44 24 10 8B 4C 24 0C 8B 44 24 10 8B D1");
-    struct RainDropletsHook
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            float esp08 = *(float*)(regs.esp + 0x08);
-            float esp10 = *(float*)(regs.esp + 0x10);
-            _asm {fld  dword ptr[esp08]}
-            _asm {fmul dword ptr[fRainScaleX]}
-            _asm {fmul dword ptr[fRainDropletsScale]}
-            _asm {fadd dword ptr[esp10]}
-        }
-    }; injector::MakeInline<RainDropletsHook>(pattern.get_first(0), pattern.get_first(8)); //0x722E78
-
-    struct RainDropletsYScaleHook
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            float esp0C = *(float*)(regs.esp + 0x0C);
-            _asm {fmul dword ptr[fRainDropletsScale]}
-            _asm {fadd dword ptr[esp0C]}
-            *(uintptr_t*)(regs.esp + 0x34) = regs.eax;
-        }
-    }; injector::MakeInline<RainDropletsYScaleHook>(pattern.get_first(36), pattern.get_first(36 + 8)); //0x722E9C
-
     //For ini options
     auto GetFolderPathpattern = hook::pattern("50 6A 00 6A 00 68 ? 80 00 00 6A 00");
-
-    //HUD
-    if (bFixHUD)
-    {
-        Screen.fHudScaleX = (1.0f / Screen.Width * (Screen.Height / 480.0f)) * 2.0f;
-        Screen.fHudPosX = 640.0f / (640.0f * Screen.fHudScaleX);
-
-        uint32_t* dword_9E8F8C = *hook::pattern("D8 0D ? ? ? ? D8 25 ? ? ? ? D9 5C 24 20 D9 46 04 D8 0D ? ? ? ? D8 25 ? ? ? ? D9 E0").count(1).get(0).get<uint32_t*>(2);
-        injector::WriteMemory<float>(dword_9E8F8C, Screen.fHudScaleX, true);
-
-        //fHudScaleY = *(float*)0x9E8F88;
-        //injector::WriteMemory<float>(0x9E8F88, fHudScaleY);
-
-        for (size_t i = 0; i < 4; i++)
-        {
-            uint32_t* dword_598DC0 = hook::pattern("C7 ? ? ? ? 00 00 00 00 A0 43 C7 ? ? ? ? 00 00 00 00 70 43").count(1).get(0).get<uint32_t>(7);
-            injector::WriteMemory<float>(dword_598DC0, Screen.fHudPosX, true);
-        }
-
-        for (size_t i = 0; i < 2; i++)
-        {
-            uint32_t* dword_5A18BA = hook::pattern("C7 ? ? ? 00 00 A0 43 C7 ? ? ? 00 00 70 43").count(1).get(0).get<uint32_t>(4);
-            injector::WriteMemory<float>(dword_5A18BA, Screen.fHudPosX, true);
-        }
-
-        uint32_t* dword_A604AC = *hook::pattern("D8 05 ? ? ? ? 89 44 24 18 D9 44 24 18").count(1).get(0).get<uint32_t*>(2);
-        injector::WriteMemory<float>(dword_A604AC, Screen.fHudPosX, true);
-
-        uint32_t* dword_9C778C = *hook::pattern("D8 25 ? ? ? ? 8D 46 34 50 D9 5C 24 20").count(1).get(0).get<uint32_t*>(2);
-        injector::WriteMemory<float>(dword_9C778C, Screen.fHudPosX, true);
-
-        //mini_map_route fix
-        uint32_t* dword_9D5F3C = *hook::pattern("D8 05 ? ? ? ? D9 5C 24 7C D9 86 B8 00 00 00 D8 05 ? ? ? ? D9 9C 24 80 00 00 00").count(1).get(0).get<uint32_t*>(2);
-        injector::WriteMemory<float>(dword_9D5F3C, (Screen.fHudPosX - 320.0f) + 384.0f, true);
-    }
-
-    if (bFixFOV)
-    {
-        static float hor3DScale = 1.0f / (Screen.fAspectRatio / (4.0f / 3.0f));
-        static float ver3DScale = 1.0f; // don't touch this
-        static float mirrorScale = 0.925f;
-        static float f1205 = 1.205f;
-        static float f0434665 = 0.434665f;
-        static float flt1 = 0.0f;
-        static float flt2 = 0.0f;
-        static float flt3 = 0.0f;
-
-        if (nScaling)
-        {
-            hor3DScale /= 1.034482718f;
-            f1205 = 1.225f;
-
-            if (nScaling == 2)
-            {
-                f1205 = 1.28f;
-            }
-        }
-
-        uint32_t* dword_71B858 = hook::pattern("DB 05 ? ? ? ? 8B 45 08 83 F8 01 DA 35 ? ? ? ? D9 5C 24 24").count(1).get(0).get<uint32_t>(0);
-        struct FOVHook
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                regs.eax = *(uint32_t*)(regs.ebp + 8);
-
-                if (regs.eax == 1 || regs.eax == 4) //Headlights stretching, reflections etc 
-                {
-                    flt1 = hor3DScale;
-                    flt2 = f0434665;
-                    flt3 = f1205;
-                }
-                else
-                {
-                    flt1 = 1.0f;
-                    flt2 = 0.375f;
-                    flt3 = 1.0f;
-                }
-
-                if (regs.eax == 3) //if rearview mirror
-                    _asm fld ds : mirrorScale
-                else
-                    _asm fld ds : ver3DScale
-            }
-        }; injector::MakeInline<FOVHook>((uint32_t)dword_71B858, (uint32_t)dword_71B858 + 18);
-        injector::WriteMemory((uint32_t)dword_71B858 + 5, 0x9001F883, true); //cmp     eax, 1
-
-        uint32_t* dword_71B8DA = hook::pattern("D8 3D ? ? ? ? D9 5C 24 30 DB 44 24 20 D8 4C 24 2C").count(1).get(0).get<uint32_t>(2);
-        injector::WriteMemory(dword_71B8DA, &flt1, true);
-
-        // FOV being different in menus and in-game fix
-        uint32_t* dword_71B8EC = hook::pattern("D8 0D ? ? ? ? E8 ? ? ? ? 8B E8 55 E8").count(2).get(1).get<uint32_t>(2);
-        injector::WriteMemory(dword_71B8EC, &flt2, true);
-
-        uint32_t* dword_71B923 = hook::pattern("D8 3D ? ? ? ? D9 5C 24 2C 8B 54 24 2C 52 50 55").count(1).get(0).get<uint32_t>(2);
-        injector::WriteMemory(dword_71B923, &flt3, true);
-    }
-
-    if (bHUDWidescreenMode)
-    {
-        uint32_t* dword_5DC508 = hook::pattern("0F 95 C1 3A C1 75 2B 8B 0D ? ? ? ? 3B CE").count(1).get(0).get<uint32_t>(1);
-        injector::WriteMemory<uint8_t>(dword_5DC508, 0x94, true);
-        uint32_t* dword_5D52B3 = hook::pattern("0F 95 C0 3A C8 0F 84 C7 00 00 00 84 C0 88 86 41 03 00 00").count(1).get(0).get<uint32_t>(1);
-        injector::WriteMemory<uint8_t>(dword_5D52B3, 0x94, true);
-        uint32_t* dword_5B6BAE = hook::pattern("74 07 68 ? ? ? ? EB 05 68 ? ? ? ? E8 ? ? ? ? 8B ? ? ? ? ? 8B E8 8B 03 83 C4 04").count(1).get(0).get<uint32_t>(0);
-        injector::WriteMemory<uint8_t>(dword_5B6BAE, 0x75, true);
-        uint32_t* dword_5B6B5B = hook::pattern("74 07 68 ? ? ? ? EB 05 68 ? ? ? ? E8 ? ? ? ? 8B ? ? ? ? ? 89 44 24 14 8B 03 83 C4 04").count(1).get(0).get<uint32_t>(0);
-        injector::WriteMemory<uint8_t>(dword_5B6B5B, 0x75, true);
-
-        //PiP/rearview mirror
-        uint32_t* dword_750DE7 = hook::pattern("68 CD CC 8C 3E 68 33 33 33 3F 8D 54 24 10 68 F4 FD D4 3C 52").count(1).get(0).get<uint32_t>(1);
-        injector::WriteMemory<float>(dword_750DE7, 0.2799999714f, true);
-        uint32_t dword_750DF5 = (uint32_t)dword_750DE7 + 14;
-        injector::WriteMemory<float>(dword_750DF5, -0.1649999917f, true);
-
-        static float fMirrorScaling = 1.0f * ((4.0f / 3.0f) / ((float)Screen.Width / (float)Screen.Height));
-        pattern = hook::pattern("D9 5E 4C 89 46 5C 5E 5B C3");
-        struct MirrorFix
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                *(float *)(regs.esi + 0x00) = *(float *)(regs.esi + 0x00) * fMirrorScaling;
-                *(float *)(regs.esi + 0x18) = *(float *)(regs.esi + 0x18) * fMirrorScaling;
-                *(float *)(regs.esi + 0x30) = *(float *)(regs.esi + 0x30) * fMirrorScaling;
-                *(float *)(regs.esi + 0x48) = *(float *)(regs.esi + 0x48) * fMirrorScaling;
-            }
-        }; injector::MakeInline<MirrorFix>(pattern.get_first(6)); //750C23
-        injector::WriteMemory(pattern.get_first(6 + 5), 0x90C35B5E, true); //pop esi pop ebx ret
-    }
-
-    if (nFMVWidescreenMode)
-    {
-        // Widescreen FMV Text Placement
-        uint32_t* dword_5AB6D7 = hook::pattern("74 3C ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 68 D1 BC D5 FF").count(1).get(0).get<uint32_t>(0);
-        injector::WriteMemory<uint8_t>(dword_5AB6D7, 0xEB, true);
-
-        if (nFMVWidescreenMode > 1)
-        {
-            // HD FMV Support
-            uint32_t* dword_598EB9 = hook::pattern("68 00 00 80 3F 68 00 00 00 3F 68 00 00 00 3F 68 00 00 00 BF 68 00 00 00 BF 8B CB E8 ? ? ? ? 8B CB C7").count(1).get(0).get<uint32_t>(6);
-            injector::WriteMemory<float>((uint32_t)dword_598EB9 + 0, (0.5f / ((4.0f / 3.0f) / (4.0f / 3.0f))), true); // Height (Bottom)
-            injector::WriteMemory<float>((uint32_t)dword_598EB9 + 5, (0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true); // Width (Right)
-            injector::WriteMemory<float>((uint32_t)dword_598EB9 + 10, -(0.5f / ((4.0f / 3.0f) / (4.0f / 3.0f))), true); // Height (Top)
-            injector::WriteMemory<float>((uint32_t)dword_598EB9 + 15, -(0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true); // Width (Left)
-        }
-        else
-        {
-            // Native Widescreen FMV Support
-            uint32_t* dword_5BB818 = hook::pattern("74 6A 8B CE E8 ? ? ? ? 84 C0 75 5F 68 ? ? ? ? 68").count(1).get(0).get<uint32_t>(0);
-            injector::MakeNOP(dword_5BB818, 2, true);
-            uint32_t* dword_5BD4A1 = hook::pattern("74 0D 68 ? ? ? ? E8 ? ? ? ? 5E 59 C3").count(1).get(0).get<uint32_t>(0);
-            injector::MakeNOP(dword_5BD4A1, 2, true);
-        }
-    }
-
-    if (bLightingFix)
-    {
-        uint32_t* dword_7497B9 = hook::pattern("8B 0D ? ? ? ? 83 F8 06 89 0D ? ? ? ? C7 05 ? ? ? ? CD CC CC 3E").count(2).get(1).get<uint32_t>(2);
-        static float f20 = 2.0f;
-        injector::WriteMemory((uint32_t)dword_7497B9, &f20, true);
-        static float f19 = 1.9f;
-        uint32_t* dword_748A70 = hook::pattern("A1 ? ? ? ? A3 ? ? ? ? 83 3D ? ? ? ? 06 C7 05 ? ? ? ? CD CC CC 3E").count(2).get(1).get<uint32_t>(1);
-        injector::WriteMemory(dword_748A70, &f19, true);
-        uint32_t* dword_73E7CB = *hook::pattern("C7 05 ? ? ? ? CD CC CC 3E B8 ? ? ? ? 74 05 B8 ? ? ? ? C3").count(1).get(0).get<uint32_t*>(11);
-        injector::WriteMemory<float>(dword_73E7CB, 1.35f, true);
-
-        //Lighting Fix Update (mirror)
-        pattern = hook::pattern("8B 4F 6C 8B 91 8C 02 00 00 52 6A 6C 8B CE"); //0x00748C17
-        uint32_t* dword_748C2A = pattern.count(1).get(0).get<uint32_t>(0x13);
-        LightingFixMirror::ptr_dword_AB095C = *pattern.count(1).get(0).get<uint32_t*>(0x1C);
-        LightingFixMirror::ptr_dword_AB0914 = *hook::pattern("52 50 FF 51 5C A1 ? ? ? ? 8B 08").count(1).get(0).get<uint32_t*>(6);
-        LightingFixMirror::sub_713AA0 = hook::pattern("C2 08 00 CC 8B 54 24 08 8B 41 44 56").count(1).get(0).get<uint32_t>(4);
-        LightingFixMirror::sub_713A30 = hook::pattern("89 81 84 17 00 00 C3 CC CC").count(1).get(0).get<uint32_t>(9);
-        LightingFixMirror::LightingFixUpdateMirrorCave_Exit = hook::pattern("A1 ? ? ? ? 8B 15 ? ? ? ? 83 F8 06 89 15 ? ? ? ? C7 05 ? ? ? ? CD CC CC 3E").count(1).get(0).get<uint32_t>(0); //0x00748C5D
-        injector::MakeJMP(dword_748C2A, LightingFixMirror::LightingFixUpdateMirrorCave, true);
-
-        uint32_t* dword_72E382 = hook::pattern("C7 05 ? ? ? ? 01 00 00 00 C7 05 ? ? ? ? 00 00 80").count(1).get(0).get<uint32_t>(6);
-        injector::WriteMemory(dword_72E382, 0, true);
-    }
 
     if (bCarShadowFix)
     {
@@ -745,22 +168,6 @@ void Init()
         }
     }
 
-    if (bDisableMotionBlur)
-    {
-        uint32_t* dword_71356B = hook::pattern("D9 87 B4 00 00 00 D8 1D ? ? ? ? DF E0 F6 C4 41 75 76").count(1).get(0).get<uint32_t>(17); //0x0071355A
-        injector::WriteMemory<uint8_t>(dword_71356B, 0xEB, true);
-    }
-
-    if (bFixXenonEffects)
-    {
-        uint32_t* dword_749BC5 = hook::pattern("FF 91 90 01 00 00 8B 4B 04 8B 07 51 57 FF 90 A0 01 00 00").count(1).get(0).get<uint32_t>(0x1D); //0x00749BA8
-        pattern = hook::pattern("A1 ? ? ? ? 8B 08 6A 01 6A 16 50 FF 91 E4 00 00 00 5F 5E C2 04 00"); //0x007233A1
-        XenonEffectFix::dword_AB0ABC = *pattern.count(1).get(0).get<uint32_t*>(1);
-        XenonEffectFix::sub_723380 = (void(__thiscall*)(void*, void*))pattern.count(1).get(0).get<uint32_t>(-0x21);
-
-        injector::MakeCALL(dword_749BC5, XenonEffectFix::sub_723380_hook, true);
-    }
-
     if (nWindowedMode)
     {
         pattern = hook::pattern("68 06 2D 05 54 68 06 2D 05 54 E8 ? ? ? ? 83 C4 08 50"); //0x730A07 anchor
@@ -783,19 +190,19 @@ void Init()
 
         switch (nWindowedMode)
         {
-        case 5:
-            WindowedModeWrapper::bStretchWindow = true;
-            break;
-        case 4:
-            WindowedModeWrapper::bScaleWindow = true;
-            break;
-        case 3:  // TODO: implement dynamic resizing (like in MW)
-            WindowedModeWrapper::bEnableWindowResize = true;
-        case 2:
-            WindowedModeWrapper::bBorderlessWindowed = false;
-            break;
-        default:
-            break;
+            case 5:
+                WindowedModeWrapper::bStretchWindow = true;
+                break;
+            case 4:
+                WindowedModeWrapper::bScaleWindow = true;
+                break;
+            case 3:  // TODO: implement dynamic resizing (like in MW)
+                WindowedModeWrapper::bEnableWindowResize = true;
+            case 2:
+                WindowedModeWrapper::bBorderlessWindowed = false;
+                break;
+            default:
+                break;
         }
     }
 
@@ -837,9 +244,9 @@ void Init()
     if (nImproveGamepadSupport)
     {
         pattern = hook::pattern("6A FF 68 ? ? ? ? 64 A1 ? ? ? ? 50 64 89 25 ? ? ? ? 51 A1 ? ? ? ? 50 E8 ? ? ? ? 83 C4 04 89 04 24 85 C0 C7 44 24 ? ? ? ? ? 74 22 8B 4C 24 24 8B 54 24 20 51");
-        static auto CreateResourceFile = (void*(*)(const char* ResourceFileName, int32_t ResourceFileType, int, int, int)) pattern.get_first(0); //0x006B32C0
+        static auto CreateResourceFile = (void* (*)(const char* ResourceFileName, int32_t ResourceFileType, int, int, int)) pattern.get_first(0); //0x006B32C0
         pattern = hook::pattern("8B 44 24 04 56 8B F1 8B 4C 24 0C 89 46 34 89 4E 38 FF 05 ? ? ? ? 8B 46 3C 85 C0 75 14 8B 56 10 C1 EA 03 81 E2 ? ? ? ? 52 8B CE");
-        static auto ResourceFileBeginLoading = (void(__thiscall *)(void* rsc, int a1, int a2)) pattern.get_first(0); //0x006B5910;
+        static auto ResourceFileBeginLoading = (void(__thiscall*)(void* rsc, int a1, int a2)) pattern.get_first(0); //0x006B5910;
         static auto LoadResourceFile = [](const char* ResourceFileName, int32_t ResourceFileType, int32_t nUnk1 = 0, int32_t nUnk2 = 0, int32_t nUnk3 = 0, int32_t nUnk4 = 0, int32_t nUnk5 = 0)
         {
             auto r = CreateResourceFile(ResourceFileName, ResourceFileType, nUnk1, nUnk2, nUnk3);
@@ -967,10 +374,8 @@ void Init()
 
                 if (it != Texts.end())
                 {
-                    if (nImproveGamepadSupport != 2)
-                        strcpy(pszStr, TextsXBOX[i].c_str());
-                    else
-                        strcpy(pszStr, TextsPS[i].c_str());
+                    const std::string& text = (nImproveGamepadSupport != 2) ? TextsXBOX[i] : TextsPS[i];
+                    strcpy_s(pszStr, text.length() + 1, text.c_str());
                 }
             }
         }; injector::MakeInline<Buttons>(pattern.get_first(16));
@@ -1138,104 +543,6 @@ void Init()
         injector::WriteMemory(dword_58F7B5, &WorldMapConst4, true);
     }
 
-
-    if (bDisableContrails)
-    {
-        uintptr_t loc_7E1351 = reinterpret_cast<uintptr_t>(hook::pattern("8A 87 9C 01 00 00 84 C0").get_first(0)) + 0xD0;
-        uintptr_t loc_7E13A9 = loc_7E1351 + 0x58;
-
-        injector::MakeJMP(loc_7E1351, loc_7E13A9, true);
-    }
-    else if (ContrailHook::bLimitContrailRate && (ContrailHook::fContrailTargetFPS > 0.0f))
-    {
-        uintptr_t loc_6B4D30 = reinterpret_cast<uintptr_t>(hook::pattern("D9 05 ? ? ? ? B9 ? ? ? ? D8 44 24 14 D9 5C 24 14").get_first(0)) + 0x35;
-        static float fGameTargetFPS = 1.0f / **reinterpret_cast<float**>(loc_6B4D30);
-
-        if (fGameTargetFPS != ContrailHook::fContrailTargetFPS)
-        {
-            // TODO: use a timer instead of this because of rounding errors!
-            float fContrailFrameDelay = (fGameTargetFPS / ContrailHook::fContrailTargetFPS);
-            ContrailHook::ContrailFrameDelay = static_cast<uint32_t>(round(fContrailFrameDelay));
-
-            uintptr_t loc_7E139A = reinterpret_cast<uintptr_t>(hook::pattern("8A 87 9C 01 00 00 84 C0").get_first(0)) + 0x119;
-            ContrailHook::AddXenonEffect = static_cast<uintptr_t>(injector::GetBranchDestination(loc_7E139A));
-            injector::MakeCALL(loc_7E139A, ContrailHook::AddXenonEffect_Contrail_Hook, true);
-        }
-    }
-    else
-    {
-        uintptr_t loc_7E136D = reinterpret_cast<uintptr_t>(hook::pattern("8A 87 9C 01 00 00 84 C0").get_first(0)) + 0xEC;
-        uintptr_t loc_7E1372 = loc_7E136D + 5;
-
-        injector::WriteMemory<float>(loc_7E136D + 1, ContrailHook::fContrailMaxIntensity, true);
-        injector::WriteMemory<float>(loc_7E1372 + 1, ContrailHook::fContrailMinIntensity, true);
-    }
-
-    uintptr_t loc_7E1364 = reinterpret_cast<uintptr_t>(hook::pattern("8A 87 9C 01 00 00 84 C0").get_first(0)) + 0xE3;
-    ContrailHook::fContrailSpeed = *reinterpret_cast<float**>(loc_7E1364 + 2);
-    DWORD oldprotect;
-    injector::UnprotectMemory(ContrailHook::fContrailSpeed, sizeof(float), oldprotect);
-    *ContrailHook::fContrailSpeed = cfgContrailSpeed;
-
-    if (SparkHook::bLimitSparkRate)
-    {
-        uintptr_t loc_6B4D30 = reinterpret_cast<uintptr_t>(hook::pattern("D9 05 ? ? ? ? B9 ? ? ? ? D8 44 24 14 D9 5C 24 14").get_first(0)) + 0x35;
-        static float fGameTargetFPS = 1.0f / **reinterpret_cast<float**>(loc_6B4D30);
-        
-        if (fGameTargetFPS != SparkHook::fSparkTargetFPS)
-        {
-            // TODO: use a timer instead of this because of rounding errors!
-            float fSparkFrameDelay = (fGameTargetFPS / SparkHook::fSparkTargetFPS);
-            SparkHook::SparkFrameDelay = static_cast<uint32_t>(round(fSparkFrameDelay));
-
-            uintptr_t loc_755C99 = reinterpret_cast<uintptr_t>(hook::pattern("8B 4E 3C 57 68 37 E6 40 FE E8").get_first(0)) + 0x39;
-            SparkHook::AddXenonEffect = static_cast<uintptr_t>(injector::GetBranchDestination(loc_755C99));
-            injector::MakeCALL(loc_755C99, SparkHook::AddXenonEffect_Spark_Hook, true);
-        }
-    }
-    else
-    {
-        uintptr_t loc_755C8A = reinterpret_cast<uintptr_t>(hook::pattern("8B 4E 3C 57 68 37 E6 40 FE E8").get_first(0)) + 0x2A;
-        injector::WriteMemory<float>(loc_755C8A + 1, SparkHook::fSparkIntensity, true);
-    }
-
-
-    if (bFixNOSTrailLength)
-    {
-        static int TargetRate = 60;
-
-        if (SimRate)
-            TargetRate = SimRate;
-
-        constexpr float NOSTargetFPS = 60.0f; // original FPS we're targeting from. Consoles target 60 but run at 30, hence have longer trails than PC. Targeting 60 is smarter due to less issues with shorter trails. Use SimRate -2 to get the same effect as console versions.
-        NOSTrailFix::NOSTrailScalar = (TargetRate / NOSTargetFPS) * fCustomNOSTrailLength;
-
-        uintptr_t loc_7CCD28 = reinterpret_cast<uintptr_t>(hook::pattern("EB 06 8D 9B 00 00 00 00 40 89 44 24 24").get_first(0));
-        injector::MakeJMP(loc_7CCD28, NOSTrailFix::NOSTrailCave2, true);
-        NOSTrailFix::NOSTrailCave2Exit = loc_7CCD28 + 8;
-
-        if (bFixNOSTrailPosition)
-        {
-            uintptr_t loc_7CCDD6 = reinterpret_cast<uintptr_t>(hook::pattern("D9 44 24 40 6A 01 D8 4C 24 1C").get_first(0)) + 0x5E;
-            NOSTrailFix::CarRenderInfo_RenderFlaresOnCar_Addr = static_cast<uintptr_t>(injector::GetBranchDestination(loc_7CCDD6));
-            injector::MakeCALL(loc_7CCDD6, NOSTrailFix::CarRenderInfo_RenderFlaresOnCar_Hook, true);
-        }
-    }
-
-    if ((FEScale::fFEScale != 1.0f) || (FEScale::fFMVScale != 1.0f) || (FEScale::bAutoFitFE) || (FEScale::bAutoFitFMV))
-    {
-        FEScale::bEnabled = true;
-
-        uintptr_t loc_730E4D = reinterpret_cast<uintptr_t>(hook::pattern("C7 44 24 60 00 00 80 3F C7 44 24 74 00 00 80 3F B9 10 00 00 00").get_first(0)) + 0x57;
-        uintptr_t loc_730ECE = loc_730E4D + 0x81;
-        uintptr_t loc_54B895 = reinterpret_cast<uintptr_t>(hook::pattern("3D 91 FA C3 01 74 ? 8B 0D").get_first(0)) + 7;
-
-        FEScale::gMoviePlayerAddr = *reinterpret_cast<uintptr_t*>(loc_54B895 + 2);
-
-        injector::MakeInline<FEScale::FEScaleHook1>(loc_730E4D, loc_730E4D + 0xB);
-        injector::MakeInline<FEScale::FEScaleHook2>(loc_730ECE, loc_730ECE + 0xC);
-    }
-
     if (bWriteSettingsToFile)
     {
         pattern = hook::pattern("C7 05 ? ? ? ? 00 00 00 00 8B 44 24 04 50 E8"); //0x71D117 
@@ -1299,9 +606,9 @@ void Init()
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
-        {
-            CallbackHandler::RegisterCallback(Init, hook::pattern("C7 00 80 02 00 00 C7 01 E0 01 00 00 C2 08 00"));
-        });
+    {
+        CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("C7 00 80 02 00 00 C7 01 E0 01 00 00 C2 08 00"));
+    });
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
