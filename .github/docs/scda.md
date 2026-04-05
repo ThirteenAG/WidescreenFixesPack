@@ -18,6 +18,8 @@ $${\color{green}✔}$$  Restored EAX support (via [DSOAL](https://github.com/kca
 
 $${\color{green}✔}$$  Fixed [AI hearing issue](https://www.youtube.com/watch?v=uX_FcPvM64c)
 
+$${\color{green}✔}$$  Loading screens with a video playing are skippable by pressing the Enter key
+
 $${\color{blue}ⓘ}$$  Added an option to increase shadows resolution
 
 $${\color{blue}ⓘ}$$  Added an option to increase glow/bloom resolution

@@ -8,7 +8,7 @@ $${\color{green}✔}$$  Fixed Field of View
 
 $${\color{green}✔}$$  Fixed FMVs
 
-$${\color{blue}ⓘ}$$ Adjustable FOV via ini
+$${\color{blue}ⓘ}$$ Added an option to adjust FOV via ini
 
 $${\color{blue}ⓘ}$$ Added an option to make graphic novels fullscreen
 

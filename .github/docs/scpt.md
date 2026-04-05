@@ -10,7 +10,7 @@ $${\color{green}✔}$$ Fixed Field of View
 
 $${\color{green}✔}$$ Fixed FMVs
 
-$${\color{green}✔}$$ Force highest character LOD
+$${\color{green}✔}$$ Forced highest character LOD
 
 $${\color{green}✔}$$ Disabled mouse acceleration
 
@@ -21,8 +21,6 @@ $${\color{green}✔}$$ Added Mouse 4 / Mouse 5 support
 $${\color{green}✔}$$ Improved gamepad support (via [Xidi](https://github.com/samuelgr/Xidi))
 
 $${\color{green}✔}$$ Restored EAX support (via [DSOAL](https://github.com/kcat/dsoal))
-
-$${\color{green}✔}$$ Added an option to enable windowed mode
 
 $${\color{blue}ⓘ}$$ Added an option to skip intro
 

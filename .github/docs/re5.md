@@ -2,9 +2,9 @@
 
 $${\color{green}✔}$$  Fixes camera near clip (see through walls) issue in coop
 
-$${\color{green}✔}$$  Added an option to enable borderless windowed mode
+$${\color{blue}ⓘ}$$  Added an option to enable borderless windowed mode
 
-$${\color{green}✔}$$  Added an option to enable [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html)
+$${\color{blue}ⓘ}$$  Added an option to enable [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html)
 
     Installation:
         Download and extract the archive to the game directory, where the exe is located.

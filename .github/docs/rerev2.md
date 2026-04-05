@@ -6,21 +6,21 @@ $${\color{green}✔}$$  Unlocks all available display resolutions
 
 $${\color{green}✔}$$  Unlocks FPS when **FRAME RATE** option is set to **VARIABLE**
 
-$${\color{green}✔}$$  Added UltraWide support
+$${\color{green}✔}$$  Added ultrawide support
 
 $${\color{green}✔}$$  Fixes a game breaking bug in episode 4, where player's controls get stuck before the final boss battle
 
-$${\color{green}✔}$$  Added an option to skip intro
+$${\color{blue}ⓘ}$$  Added an option to skip intro
 
-$${\color{green}✔}$$  Added an option to disable damage overlay
+$${\color{blue}ⓘ}$$  Added an option to disable damage overlay
 
-$${\color{green}✔}$$  Added an option to disable film grain
+$${\color{blue}ⓘ}$$  Added an option to disable film grain
 
-$${\color{green}✔}$$  Added an option to enable borderless windowed mode
+$${\color{blue}ⓘ}$$  Added an option to enable borderless windowed mode
 
-$${\color{green}✔}$$  Added an option to increase FOV
+$${\color{blue}ⓘ}$$  Added an option to increase FOV
 
-$${\color{green}✔}$$  Added an option to enable [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html)
+$${\color{blue}ⓘ}$$  Added an option to enable [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html)
 
     Installation:
         Download and extract the archive to the game directory, where the exe is located.

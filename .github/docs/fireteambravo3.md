@@ -1,10 +1,10 @@
 ![fireteambravo3](https://thirteenag.github.io/screens/fireteambravo3/main2.jpg)
 
-$${\color{blue}ⓘ}$$ Skip Intro
+$${\color{blue}ⓘ}$$ Added an option to skip intro
 
-$${\color{blue}ⓘ}$$ Dual Analog Patch
+$${\color{blue}ⓘ}$$ Added an option to enable dual analog patch
 
-$${\color{blue}ⓘ}$$ Adds an option to speed up emulator during loading
+$${\color{blue}ⓘ}$$ Added an option to speed up the emulator during loading screens
 
     Installation:
         Download and extract the archive to the directory, where PPSSPP's memstick folder is located. 

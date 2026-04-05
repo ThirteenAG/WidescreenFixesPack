@@ -16,15 +16,15 @@ $${\color{green}✔}$$ Fixed an issue that could made the game run too fast when
 
 $${\color{green}✔}$$ Implemented a framerate limiter to avoid game breaking bugs (some levels are locked to 30 fps to prevent crashes)
 
-$${\color{green}✔}$$ Fixed an issue when after the first encounter with King Kong and after V-Rex encounters in V-Rex and Call Kong levels the camera keeps shaking constantly at 60 fps
+$${\color{green}✔}$$ Fixed an issue where, after the first encounter with King Kong and after V-Rex encounters in the V-Rex and Call Kong levels, the camera keeps shaking constantly at 60 fps
 
-$${\color{green}✔}$$ Added an option to disable blur on Necropolis, Brontosaurus, In The Mud, and New York levels, which also fixes broken damage overlay that otherwise is impossible to see through
+$${\color{green}✔}$$ Implemented raw mouse input for proper cursor and camera movement
 
-$${\color{green}✔}$$ Implemented raw mouse input, for proper mouse cursor movement and camera movement
+$${\color{green}✔}$$ Fixed gamepad support in the main game and settings application, including vibration
 
-$${\color{green}✔}$$ Fixed gamepad support in main game and settings application, including vibration
+$${\color{blue}ⓘ}$$ Added an option to disable blur on Necropolis, Brontosaurus, In The Mud, and New York levels, which also fixes broken damage overlay that otherwise is impossible to see through
 
-$${\color{blue}ⓘ}$$ Adjustable FOV via ini
+$${\color{blue}ⓘ}$$ Added an option to adjust FOV via ini
 
 $${\color{blue}ⓘ}$$ Added an option to make FMVs fullscreen
 

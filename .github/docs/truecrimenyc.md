@@ -10,30 +10,28 @@ $${\color{green}✔}$$ Fixed Field of View
 
 $${\color{green}✔}$$ Fixed FMVs
 
-$${\color{green}✔}$$ Added an option to enable 60 fps
-
-$${\color{green}✔}$$ Fixed game speed at 60 fps
-
 $${\color{green}✔}$$ Fixed shadow rendering issues
 
 $${\color{green}✔}$$ Added raw input support for mouse
 
-$${\color{green}✔}$$ Added an option to enable borderless windowed mode
+$${\color{blue}ⓘ}$$ Added an option to enable 60 fps with fixed game speed
 
-$${\color{green}✔}$$ Added an option to increase shadow resolution
+$${\color{blue}ⓘ}$$ Added an option to enable borderless windowed mode
 
-$${\color{green}✔}$$ Added an option to enable a depth of field effect for distant objects, similar to the PS2 version
+$${\color{blue}ⓘ}$$ Added an option to increase shadow resolution
 
-$${\color{green}✔}$$ Added an option to enable a bloom post-processing effect
+$${\color{blue}ⓘ}$$ Added an option to enable a depth of field effect for distant objects, similar to the PS2 version
 
-$${\color{green}✔}$$ Added an option to enable SMAA
+$${\color{blue}ⓘ}$$ Added an option to enable a bloom post-processing effect
 
-$${\color{green}✔}$$ Added an option to enable XBOX 360 gamma
+$${\color{blue}ⓘ}$$ Added an option to enable SMAA
+
+$${\color{blue}ⓘ}$$ Added an option to enable Xbox 360 gamma
 
 
 Credits:
 
-- [@Parallellines0451](https://github.com/Parallellines0451) (for XBOX 360 gamma)
+- [@Parallellines0451](https://github.com/Parallellines0451) (for Xbox 360 gamma)
 - [@Tervel1337](https://github.com/Tervel1337) (for bloom and depth of field)
 - [@ICantReadYourMind](https://github.com/ICantReadYourMind) (for PostFX module)
 
@@ -59,11 +57,9 @@ $${\color{green}✔}$$ Fixed HUD
 
 $${\color{green}✔}$$ Fixed Field of View
 
-$${\color{green}✔}$$ Added an option to enable 60 fps
+$${\color{blue}ⓘ}$$ Added an option to enable 60 fps with fixed game speed
 
-$${\color{green}✔}$$ Fixed game speed at 60 fps
-
-$${\color{green}✔}$$ Added an option to skip intro videos
+$${\color{blue}ⓘ}$$ Added an option to skip intro videos
 
 ![truecrimenycpcsx2f](https://github.com/user-attachments/assets/5a34aa37-e4a4-4ceb-89c8-f3a0d49a205e)
 

@@ -1,20 +1,20 @@
 ![gtavcs](https://thirteenag.github.io/screens/gtavcs/main2.jpg)
 
-$${\color{green}✔}$$  Fixed Aspect Ratio (Ultra-Wide)
+$${\color{green}✔}$$  Fixed Aspect Ratio (Ultrawide)
 
 $${\color{green}✔}$$  Fixed Field of View
 
-$${\color{green}✔}$$  Fixed HUD (Ultra-Wide)
+$${\color{green}✔}$$  Fixed HUD (Ultrawide)
 
-$${\color{green}✔}$$  Added an option to enable modern controls
+$${\color{blue}ⓘ}$$  Added an option to enable modern controls
 
-$${\color{green}✔}$$  Added an option to speed up emulator during loading
+$${\color{blue}ⓘ}$$  Added an option to speed up the emulator during loading screens
 
-$${\color{green}✔}$$  [Added an option to enable PC Controls (BETA, experimental)](https://youtu.be/EhDviiFHYkE)
+$${\color{blue}ⓘ}$$  [Added an option to enable PC controls (Beta, experimental)](https://youtu.be/EhDviiFHYkE)
 
 ![](https://github.com/ThirteenAG/WidescreenFixesPack/assets/4904157/3c1d73d5-a7b0-4def-96f0-c3a439fef078)
 
-$${\color{green}✔}$$  Added an option to use PC cheats (BETA, experimental)
+$${\color{blue}ⓘ}$$  Added an option to use PC cheats (Beta, experimental)
 
 $${\color{blue}ⓘ}$$ Plugin automatically skips intro
 

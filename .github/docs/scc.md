@@ -1,5 +1,9 @@
 ![scc](https://thirteenag.github.io/screens/scc/main2.jpg)
 
+$${\color{green}✔}$$  Fixed gamepad support (via [Xidi](https://github.com/samuelgr/Xidi))
+
+$${\color{green}✔}$$  Fixed crash in DLC levels when Xbox 360 achievement conditions are met (e.g., "King of the Crypt" in New Orleans, "Watch the Soap" in Portland)
+
 $${\color{blue}ⓘ}$$  Added an option to skip intro
 
 $${\color{blue}ⓘ}$$  Added an option to enable windowed mode
@@ -26,15 +30,11 @@ $${\color{blue}ⓘ}$$  Added an option to load packed files from disk
 
 $${\color{blue}ⓘ}$$  Added an option to unlock DLC content that's unavailable after servers shut down
 
-$${\color{blue}ⓘ}$$  Fixed crash in DLC levels when Xbox360 achievement conditions are met (e.g., "King of the Crypt" in New Orleans, "Watch the Soap" in Portland)
+$${\color{blue}ⓘ}$$  Added an option to use Splinter Cell Blacklist control scheme (not fully tested, report issues via GitHub)
 
-$${\color{blue}ⓘ}$$  Fixed gamepad support (via [Xidi](https://github.com/samuelgr/Xidi))
+$${\color{blue}ⓘ}$$  Changed coop FPS limit to 60 (custom values can be set via `update/convictionsettings.ini`, `SyncMaxStepFrequency` parameter)
 
-$${\color{blue}ⓘ}$$  Added Splinter Cell Blacklist control scheme (not fully tested, report issues via github)
-
-$${\color{blue}ⓘ}$$  FPS limit in coop is changed to 60: possible to set custom with `update/convictionsettings.ini`, `SyncMaxStepFrequency` parameter
-
-$${\color{blue}ⓘ}$$  Disabled unlimited ammo for all weapons, to return original behavior, delete `update/weapontuning.ini`
+$${\color{blue}ⓘ}$$  Disabled unlimited ammo for all weapons (restore original behavior by deleting `update/weapontuning.ini`)
 
 ![controls](https://github.com/user-attachments/assets/2498a891-2991-4604-b0dc-b5d309a0c02d)
 

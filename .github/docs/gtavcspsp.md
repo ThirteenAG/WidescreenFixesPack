@@ -1,14 +1,14 @@
 ![gtavcspsp](https://thirteenag.github.io/screens/gtavcspsp/main2.jpg)
 
-$${\color{green}✔}$$  Added an option to resize HUD
+$${\color{blue}ⓘ}$$  Added an option to resize HUD
 
-$${\color{green}✔}$$  Added an option to enable dual analog patch
+$${\color{blue}ⓘ}$$  Added an option to enable dual analog patch
 
-$${\color{green}✔}$$  Added an option to enable modern controls
+$${\color{blue}ⓘ}$$  Added an option to enable modern controls
 
-$${\color{green}✔}$$  Added an option to enable 60 fps (includes mission fixes)
+$${\color{blue}ⓘ}$$  Added an option to enable 60 fps (includes mission fixes)
 
-$${\color{green}✔}$$  Added an option to speed up emulator during loading
+$${\color{blue}ⓘ}$$  Added an option to speed up emulator during loading
 
 $${\color{green}✔}$$  Fixed camera issue in Little Willie
 
@@ -16,7 +16,7 @@ $${\color{green}✔}$$  Fixed an issue that caused saved cars disappear from gar
 
 $${\color{blue}ⓘ}$$ Plugin automatically skips intro
 
-$${\color{blue}ⓘ}$$ Ultra wide support is available
+$${\color{blue}ⓘ}$$ Ultrawide support is available
 
 [Website](https://thirteenag.github.io/wfp#gtavcspsp) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/GTAVCS.PPSSPP.WidescreenFix/main.c) | [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/GTAVCS.PPSSPP.WidescreenFix/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/GTAVCS.PPSSPP.WidescreenFix.ini)
 

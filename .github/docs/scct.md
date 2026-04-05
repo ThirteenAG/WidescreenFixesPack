@@ -16,6 +16,10 @@ $${\color{green}✔}$$  Improved gamepad support (via [Xidi](https://github.com/
 
 $${\color{green}✔}$$  Restored EAX support (via [DSOAL](https://github.com/kcat/dsoal))
 
+$${\color{green}✔}$$  Fixed an issue that caused settings to be reset on every game launch
+
+$${\color{green}✔}$$  Restored Steam overlay functionality if it's available
+
 $${\color{blue}ⓘ}$$  Added an option to limit FPS to avoid game breaking bugs
 
 $${\color{blue}ⓘ}$$  Added an option to skip intro
@@ -29,10 +33,6 @@ $${\color{blue}ⓘ}$$  Added an option to change goggles light color
 $${\color{blue}ⓘ}$$  Added an option to enable [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html)
 
 $${\color{blue}ⓘ}$$  Added an option to enable suit indicators to behave like in Blacklist
-
-$${\color{blue}ⓘ}$$  Fixed an issue that caused settings to be reset on every game launch
-
-$${\color{blue}ⓘ}$$  Restored steam overlay functionality if it's available
 
     Installation:
         Download and extract the archive to the game directory, where the exe is located.
