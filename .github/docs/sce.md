@@ -1,16 +1,16 @@
 ![sce](https://thirteenag.github.io/screens/sce/main2.jpg)
 
-$${\color{green}✔}$$  Added an option to enable dual analog patch
+$${\color{blue}ⓘ}$$  Added an option to enable dual analog patch
 
-$${\color{green}✔}$$  Added an option to improve movement controls, allowing the left analog stick to fully control the player's movement speed
+$${\color{blue}ⓘ}$$  Added an option to improve movement controls, allowing the left analog stick to fully control the player's movement speed
 
-$${\color{green}✔}$$  Added an option to enable 60 FPS
+$${\color{blue}ⓘ}$$  Added an option to enable 60 FPS
 
-$${\color{green}✔}$$  Added an option to speed up emulator during loading
+$${\color{blue}ⓘ}$$  Added an option to speed up the emulator during loading screens
 
-$${\color{blue}ⓘ}$$  Added an option to skip intro
+$${\color{blue}ⓘ}$$  Plugin automatically skips intro
 
-$${\color{blue}ⓘ}$$ Ultra-wide support is available (for PPSSPP v1.14 and above)
+$${\color{blue}ⓘ}$$  Ultrawide support is available (for PPSSPP v1.14 and above)
 
 ![PPSSPPWindows64_2022_12_22_21_55_46](https://user-images.githubusercontent.com/4904157/209209073-9fd0d3f6-70a9-4991-83ae-390ceb696960.png)
 

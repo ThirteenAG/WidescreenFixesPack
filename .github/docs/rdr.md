@@ -1,6 +1,6 @@
 ![rdr](https://thirteenag.github.io/screens/rdr/main2.jpg)
 
-$${\color{green}✔}$$  Added an option to skip intro and legal screens
+$${\color{blue}ⓘ}$$  Added an option to skip intro and legal screens
 
     Installation:
         Download and extract the archive to the game directory, where the exe is located.

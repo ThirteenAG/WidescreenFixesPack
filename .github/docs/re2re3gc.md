@@ -1,10 +1,10 @@
 ![re2re3gc](https://thirteenag.github.io/screens/re2re3gc/main2.jpg)
 
-$${\color{green}✔}$$  Added an option to skip doors animation
+$${\color{blue}ⓘ}$$  Added an option to skip doors animation
 
-$${\color{green}✔}$$  Added an option to unthrottle emulator during door skip (speeds up loading)
+$${\color{blue}ⓘ}$$  Added an option to unthrottle emulator during door skip (speeds up loading)
 
-$${\color{green}✔}$$  Added an option to enable [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html)
+$${\color{blue}ⓘ}$$  Added an option to enable [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html)
 
 Plugin should be compatible with any recent version of the emulator, but if not, open an issue.
 

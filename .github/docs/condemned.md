@@ -2,9 +2,9 @@
 
 $${\color{green}✔}$$  Fixed Resolution (Config.exe)
 
-$${\color{green}✔}$$  Fixed Aspect Ratio (Ultra-Wide)
+$${\color{green}✔}$$  Fixed Aspect Ratio (Ultrawide)
 
-$${\color{green}✔}$$  Fixed HUD (Ultra-Wide)
+$${\color{green}✔}$$  Fixed HUD (Ultrawide)
 
 $${\color{green}✔}$$  Added gamepad support (via [Xidi](https://github.com/samuelgr/Xidi))
 
