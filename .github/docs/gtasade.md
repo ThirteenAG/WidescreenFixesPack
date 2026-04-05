@@ -6,7 +6,7 @@ $${\color{blue}ⓘ}$$ Added an option to skip menu
 
 $${\color{blue}ⓘ}$$ Added an option to quicksave anywhere by pressing F5
 
-$${\color{blue}ⓘ}$$ Addsed an option to resize HUD
+$${\color{blue}ⓘ}$$ Added an option to resize HUD
 
 $${\color{blue}ⓘ}$$ Added an option to fix bugged mouse camera movement
 
