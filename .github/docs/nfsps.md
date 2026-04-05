@@ -1,12 +1,12 @@
 ![nfsps](https://thirteenag.github.io/screens/nfsps/main2.jpg)
 
-$${\color{green}✔}$$  Fixed Aspect Ratio (Ultra-Wide)
+$${\color{green}✔}$$  Fixed Aspect Ratio (Ultrawide)
 
-$${\color{green}✔}$$  Fixed HUD (Ultra-Wide)
+$${\color{green}✔}$$  Fixed HUD (Ultrawide)
 
-$${\color{green}✔}$$  Fixed Field of View (Ultra-Wide)
+$${\color{green}✔}$$  Fixed Field of View (Ultrawide)
 
-$${\color{green}✔}$$  Fixed FMVs (Ultra-Wide)
+$${\color{green}✔}$$  Fixed FMVs (Ultrawide)
 
 $${\color{blue}ⓘ}$$ Added an option to fix resolution detection
 
@@ -26,7 +26,7 @@ $${\color{blue}ⓘ}$$ Added an option to change save game directory
 
 $${\color{blue}ⓘ}$$ Added an option to write registry settings to a file
 
-$${\color{blue}ⓘ}$$ Added an option to improve gamepad support (gamepad icons, fixed bindings etc)
+$${\color{blue}ⓘ}$$ Added an option to improve gamepad support (gamepad icons, fixed bindings, etc.)
 
 $${\color{blue}ⓘ}$$ Added an option to increase deadzone for left stick
 

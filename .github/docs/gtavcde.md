@@ -1,11 +1,16 @@
 ![gtavcde](https://thirteenag.github.io/screens/gtavcde/main2.jpg)
 
-$${\color{blue}ⓘ}$$ Skip Intro.
-$${\color{blue}ⓘ}$$ Skip Menu.
-$${\color{blue}ⓘ}$$ Adds an ability to quicksave anywhere by pressing F5.
-$${\color{blue}ⓘ}$$ Adds an ability to disable first person aim mode for rifles.
-$${\color{blue}ⓘ}$$ Adds an ability to resize HUD.
-$${\color{blue}ⓘ}$$ Adds an ability to fix bugged mouse camera movement.
+$${\color{blue}ⓘ}$$ Added an option to skip intro
+
+$${\color{blue}ⓘ}$$ Added an option to skip menu
+
+$${\color{blue}ⓘ}$$ Added an option to quicksave anywhere by pressing F5
+
+$${\color{blue}ⓘ}$$ Addsed an option to resize HUD
+
+$${\color{blue}ⓘ}$$ Added an option to fix bugged mouse camera movement
+
+$${\color{blue}ⓘ}$$ Added an option to disable first person aim mode for rifles
 
     Installation:
         Download and extract the archive to the game directory, where the exe is located.

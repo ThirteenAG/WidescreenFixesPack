@@ -1,18 +1,18 @@
 ![gtalcspsp](https://thirteenag.github.io/screens/gtalcspsp/main2.jpg)
 
-$${\color{green}✔}$$  Added an option to resize HUD
+$${\color{blue}ⓘ}$$  Added an option to resize HUD
 
-$${\color{green}✔}$$  Added an option to enable dual analog patch
+$${\color{blue}ⓘ}$$  Added an option to enable dual analog patch
 
-$${\color{green}✔}$$  Added an option to swap L-button and Square (in vehicle)
+$${\color{blue}ⓘ}$$  Added an option to swap L-button and Square (in vehicle)
 
-$${\color{green}✔}$$  Added an option to swap R-button and Cross (in vehicle)
+$${\color{blue}ⓘ}$$  Added an option to swap R-button and Cross (in vehicle)
 
-$${\color{green}✔}$$  Added an option to enable 60 fps
+$${\color{blue}ⓘ}$$  Added an option to enable 60 fps
 
-$${\color{green}✔}$$  Added an option to speed up emulator during loading
+$${\color{blue}ⓘ}$$  Added an option to speed up the emulator during loading screens
 
-$${\color{blue}ⓘ}$$ Plugin automatically skips intro
+$${\color{blue}ⓘ}$$  Plugin automatically skips intro
 
 [Website](https://thirteenag.github.io/wfp#gtalcspsp) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/GTALCS.PPSSPP.WidescreenFix/main.c) | [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/GTALCS.PPSSPP.WidescreenFix/memstick/PSP/PLUGINS/GTALCS.PPSSPP.WidescreenFix/GTALCS.PPSSPP.WidescreenFix.ini)
 

@@ -24,7 +24,7 @@ $${\color{blue}ⓘ}$$ Added an option to change save game directory
 
 $${\color{blue}ⓘ}$$ Added an option to write registry settings to a file
 
-$${\color{blue}ⓘ}$$ Added an option to improve gamepad support (gamepad icons, fixed bindings etc)
+$${\color{blue}ⓘ}$$ Added an option to improve gamepad support (gamepad icons, fixed bindings, etc.)
 
 $${\color{blue}ⓘ}$$ Added an option to increase deadzone for left stick
 

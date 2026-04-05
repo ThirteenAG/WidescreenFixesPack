@@ -1,11 +1,16 @@
 ![gta3de](https://thirteenag.github.io/screens/gta3de/main2.jpg)
 
-$${\color{blue}ⓘ}$$ Skip Intro.
-$${\color{blue}ⓘ}$$ Skip Menu.
-$${\color{blue}ⓘ}$$ Adds an ability to quicksave anywhere by pressing F5.
-$${\color{blue}ⓘ}$$ Adds an ability to disable first person aim mode for rifles.
-$${\color{blue}ⓘ}$$ Adds an ability to resize HUD.
-$${\color{blue}ⓘ}$$ Adds an ability to fix bugged mouse camera movement.
+$${\color{blue}ⓘ}$$ Added an option to skip intro
+
+$${\color{blue}ⓘ}$$ Added an option to skip menu
+
+$${\color{blue}ⓘ}$$ Added an option to quicksave anywhere by pressing F5
+
+$${\color{blue}ⓘ}$$ Addsed an option to resize HUD
+
+$${\color{blue}ⓘ}$$ Added an option to fix bugged mouse camera movement
+
+$${\color{blue}ⓘ}$$ Added an option to disable first person aim mode for rifles
 
 [Website](https://thirteenag.github.io/wfp#gta3de) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/GTA3DE.FusionFix/dllmain.cpp) | [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/GTA3DE.FusionFix/Gameface/Binaries/Win64/scripts/GTA3DE.FusionFix.ini)
 

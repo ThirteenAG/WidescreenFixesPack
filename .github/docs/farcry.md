@@ -8,9 +8,9 @@ $${\color{green}✔}$$  Fixed Field of View
 
 $${\color{green}✔}$$  Fixed FMVs
 
-$${\color{blue}ⓘ}$$ Enemy markers currently offset due to FOV fix
+$${\color{blue}ⓘ}$$  Enemy markers currently offset due to FOV fix
 
-$${\color{blue}ⓘ}$$ Adjustable FOV via ini
+$${\color{blue}ⓘ}$$  Added an option to adjust FOV via ini
 
     Installation:
         Download and extract the archive to the game directory, where the exe is located.

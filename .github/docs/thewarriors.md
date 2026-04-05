@@ -1,14 +1,16 @@
 ![thewarriors](https://thirteenag.github.io/screens/thewarriors/main2.jpg)
 
-$${\color{blue}ⓘ}$$ Skip Intro.
+$${\color{blue}ⓘ}$$ Added an option to skip intro
 
-$${\color{blue}ⓘ}$$ Dual Analog Patch, 60 fps.
+$${\color{blue}ⓘ}$$ Added an option to enable dual analog patch
 
-$${\color{blue}ⓘ}$$ Adds an option to fix incorrect aspect ratio.
+$${\color{blue}ⓘ}$$  Added an option to enable 60 FPS
 
-$${\color{blue}ⓘ}$$ Adds an option to speed up emulator during loading
+$${\color{blue}ⓘ}$$ Adds an option to fix incorrect aspect ratio
 
-$${\color{blue}ⓘ}$$ Ultra-wide support is available (for PPSSPP v1.14 and above)
+$${\color{blue}ⓘ}$$ Added an option to speed up the emulator during loading screens
+
+$${\color{blue}ⓘ}$$ Ultrawide support is available (for PPSSPP v1.14 and above)
 
 ![PPSSPPWindows64_2022_12_23_16_04_26](https://user-images.githubusercontent.com/4904157/209387701-75952568-fcdf-4a3c-876d-46c8cb38d645.png)
 

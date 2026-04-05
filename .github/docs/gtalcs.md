@@ -1,10 +1,10 @@
 ![gtalcs](https://thirteenag.github.io/screens/gtalcs/main2.jpg)
 
-$${\color{green}✔}$$  Fixed Aspect Ratio (Ultra-Wide)
+$${\color{green}✔}$$  Fixed Aspect Ratio (Ultrawide)
 
 $${\color{green}✔}$$  Fixed Field of View
 
-❌ Fixed HUD (Ultra-Wide)
+❌ Fixed HUD (Ultrawide)
 
 ❌ Fixed FMVs
 

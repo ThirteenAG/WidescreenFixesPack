@@ -10,7 +10,7 @@ $${\color{green}✔}$$  Fixed Field of View
 
 $${\color{green}✔}$$  Fixed FMVs
 
-$${\color{green}✔}$$  Forces highest character LOD
+$${\color{green}✔}$$  Forced highest character LOD
 
 $${\color{green}✔}$$  Restored Xbox shadows and water shader
 

@@ -10,7 +10,7 @@ $${\color{green}✔}$$  Fixed FMVs
 
 $${\color{blue}ⓘ}$$ Added an option to change fps limit
 
-$${\color{blue}ⓘ}$$ Adjustable FOV via ini
+$${\color{blue}ⓘ}$$ Added an option to adjust FOV via ini
 
     Installation:
         Download and extract the archive to the game directory, where the exe is located.
