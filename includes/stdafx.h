@@ -1515,17 +1515,102 @@ template<typename T>
 class GameRef
 {
 private:
-    static inline T placeholder{};
-    std::reference_wrapper<T> ref;
+    std::optional<T*> ptr{ std::nullopt };
 
 public:
-    GameRef() : ref(std::ref(placeholder)) {}
+    GameRef() = default;
 
-    void SetAddress(auto addr)
+    void SetAddress(T* address)
     {
-        ref = std::ref(*reinterpret_cast<T*>(addr));
+        if (address == nullptr)
+            throw std::invalid_argument("GameRef::SetAddress called with null pointer");
+
+        ptr = address;
     }
 
-    T& get() { return ref.get(); }
-    operator T& () { return ref.get(); }
+    T& get()
+    {
+        if (!ptr.has_value())
+        {
+            assert(false && "GameRef accessed before SetAddress()!");
+            throw std::runtime_error("GameRef accessed before SetAddress() was called");
+        }
+        return **ptr;
+    }
+
+    const T& get() const
+    {
+        if (!ptr.has_value())
+        {
+            assert(false && "GameRef accessed before SetAddress()!");
+            throw std::runtime_error("GameRef accessed before SetAddress() was called");
+        }
+        return **ptr;
+    }
+
+    bool is_initialized() const noexcept { return ptr.has_value(); }
+    T* get_ptr() noexcept { return ptr.value_or(nullptr); }
+    const T* get_ptr() const noexcept { return ptr.value_or(nullptr); }
+
+    operator T& () { return get(); }
+    operator const T& () const { return get(); }
+
+    T& operator=(const T& value) { return get() = value; }
+    T& operator=(T&& value) { return get() = std::move(value); }
+
+    template<typename U> T& operator+=(const U& v) { return get() += v; }
+    template<typename U> T& operator-=(const U& v) { return get() -= v; }
+    template<typename U> T& operator*=(const U& v) { return get() *= v; }
+    template<typename U> T& operator/=(const U& v) { return get() /= v; }
+    template<typename U> T& operator%=(const U& v) { return get() %= v; }
+
+    template<typename U> T& operator&=(const U& v) { return get() &= v; }
+    template<typename U> T& operator|=(const U& v) { return get() |= v; }
+    template<typename U> T& operator^=(const U& v) { return get() ^= v; }
+    template<typename U> T& operator<<=(const U& v) { return get() <<= v; }
+    template<typename U> T& operator>>=(const U& v) { return get() >>= v; }
+
+    T& operator++() { return ++get(); }
+    T  operator++(int) { return get()++; }
+
+    T& operator--() { return --get(); }
+    T  operator--(int) { return get()--; }
+
+    T operator+() const { return +get(); }
+    T operator-() const { return -get(); }
+    bool operator!() const { return !get(); }
+    T operator~() const { return ~get(); }
+
+    template<typename U> auto operator+(const U& v) const { return get() + v; }
+    template<typename U> auto operator-(const U& v) const { return get() - v; }
+    template<typename U> auto operator*(const U& v) const { return get() * v; }
+    template<typename U> auto operator/(const U& v) const { return get() / v; }
+    template<typename U> auto operator%(const U& v) const { return get() % v; }
+
+    template<typename U> auto operator&(const U& v) const { return get() & v; }
+    template<typename U> auto operator|(const U& v) const { return get() | v; }
+    template<typename U> auto operator^(const U& v) const { return get() ^ v; }
+    template<typename U> auto operator<<(const U& v) const { return get() << v; }
+    template<typename U> auto operator>>(const U& v) const { return get() >> v; }
+
+    template<typename U> bool operator==(const U& v) const { return get() == v; }
+    template<typename U> bool operator!=(const U& v) const { return get() != v; }
+    template<typename U> bool operator<(const U& v)  const { return get() < v; }
+    template<typename U> bool operator>(const U& v)  const { return get() > v; }
+    template<typename U> bool operator<=(const U& v) const { return get() <= v; }
+    template<typename U> bool operator>=(const U& v) const { return get() >= v; }
+
+    T& operator*() { return get(); }
+    const T& operator*() const { return get(); }
+
+    T* operator->() { return &get(); }
+    const T* operator->() const { return &get(); }
+
+    template<typename U>
+    auto operator[](const U& index) { return get()[index]; }
+
+    template<typename U>
+    auto operator[](const U& index) const { return get()[index]; }
+
+    explicit operator bool() const { return static_cast<bool>(get()); }
 };
