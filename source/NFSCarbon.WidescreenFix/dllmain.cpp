@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include <d3d9.h>
 
 import ComVars;
 import Frontend;
