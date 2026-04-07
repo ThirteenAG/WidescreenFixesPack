@@ -1,14 +1,16 @@
 ![nfsc](https://thirteenag.github.io/screens/nfsc/main2.jpg)
 
-$${\color{green}✔}$$  Fixed Resolution
+$${\color{green}✔}$$ Fixed Resolution
 
-$${\color{green}✔}$$  Fixed Aspect Ratio
+$${\color{green}✔}$$ Fixed Aspect Ratio
 
-$${\color{green}✔}$$  Fixed HUD
+$${\color{green}✔}$$ Fixed HUD
 
-$${\color{green}✔}$$  Fixed Field of View
+$${\color{green}✔}$$ Fixed Field of View
 
-$${\color{green}✔}$$  Fixed FMVs
+$${\color{green}✔}$$ Fixed FMVs
+
+$${\color{blue}ⓘ}$$ Implemented a feature to control the camera with the right analog stick or mouse during gameplay
 
 $${\color{blue}ⓘ}$$ Added an option to switch between different 3D scaling
 
@@ -24,7 +26,7 @@ $${\color{blue}ⓘ}$$ Added an option to write registry settings to a file
 
 $${\color{blue}ⓘ}$$ Added an option to improve gamepad support (gamepad icons, fixed bindings, etc.)
 
-$${\color{blue}ⓘ}$$ Added an option to increase deadzone for left stick
+$${\color{blue}ⓘ}$$ Added an option to increase deadzone for left stick and right stick
 
     Installation:
         Download and extract the archive to the game directory, where the exe is located.

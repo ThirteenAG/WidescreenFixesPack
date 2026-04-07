@@ -104,10 +104,13 @@ bool IsModuleUAL(HMODULE mod)
     return false;
 }
 
-bool IsUALPresent() {
-    for (const auto& entry : std::stacktrace::current()) {
+bool IsUALPresent()
+{
+    for (const auto& entry : std::stacktrace::current())
+    {
         HMODULE hModule = NULL;
-        if (GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR)entry.native_handle(), &hModule)) {
+        if (GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR)entry.native_handle(), &hModule))
+        {
             if (IsModuleUAL(hModule))
                 return true;
         }
@@ -126,8 +129,9 @@ std::tuple<int32_t, int32_t> GetDesktopRes()
     return std::make_tuple(DesktopResW, DesktopResH);
 }
 
-void GetResolutionsList(std::vector<std::string>& list)
+std::vector<std::tuple<int, int, int>> GetResolutionsList(bool uniqueByRefresh)
 {
+    std::vector<std::tuple<int, int, int>> list;
     DISPLAY_DEVICE dd;
     dd.cb = sizeof(DISPLAY_DEVICE);
     DWORD deviceNum = 0;
@@ -141,8 +145,7 @@ void GetResolutionsList(std::vector<std::string>& list)
         {
             for (auto iModeNum = 0; EnumDisplaySettings(NULL, iModeNum, &dm) != 0; iModeNum++)
             {
-                auto str = std::format("{}x{}", dm.dmPelsWidth, dm.dmPelsHeight);
-                list.emplace_back(str);
+                list.emplace_back(dm.dmPelsWidth, dm.dmPelsHeight, dm.dmDisplayFrequency);
             }
             monitorNum++;
         }
@@ -151,25 +154,67 @@ void GetResolutionsList(std::vector<std::string>& list)
 
     if (list.empty())
     {
-        list = { "160x120", "240x160", "320x240", "400x240", "480x320", "640x360", "640x480",
-                 "768x480", "800x600", "854x480", "960x540", "960x640", "1024x576", "1024x768",
-                 "1152x864", "1280x720", "1280x800", "1280x1024", "1280x1080", "1360x768", "1366x768",
-                 "1400x1050", "1440x900", "1600x900", "1600x1200", "1680x1050", "1920x1080", "1920x1200",
-                 "2048x1080", "2048x1152", "2048x1536", "2560x1080", "2560x1440", "2560x1600", "2560x2048",
-                 "3200x1800", "3200x2048", "3200x2400", "3440x1440", "3840x1080", "3840x1600", "3840x2160",
-                 "3840x2400", "4096x2160", "4096x3072", "5120x2160", "5120x2880", "5120x3200", "5120x4096",
-                 "6400x4096", "6400x4800", "7680x4320", "7680x4800"
-               };
+        // Default resolutions with 60Hz refresh rate
+        std::vector<std::pair<int, int>> defaultRes = {
+            {160,120}, {240,160}, {320,240}, {400,240}, {480,320}, {640,360}, {640,480},
+            {768,480}, {800,600}, {854,480}, {960,540}, {960,640}, {1024,576}, {1024,768},
+            {1152,864}, {1280,720}, {1280,800}, {1280,1024}, {1280,1080}, {1360,768}, {1366,768},
+            {1400,1050}, {1440,900}, {1600,900}, {1600,1200}, {1680,1050}, {1920,1080}, {1920,1200},
+            {2048,1080}, {2048,1152}, {2048,1536}, {2560,1080}, {2560,1440}, {2560,1600}, {2560,2048},
+            {3200,1800}, {3200,2048}, {3200,2400}, {3440,1440}, {3840,1080}, {3840,1600}, {3840,2160},
+            {3840,2400}, {4096,2160}, {4096,3072}, {5120,2160}, {5120,2880}, {5120,3200}, {5120,4096},
+            {6400,4096}, {6400,4800}, {7680,4320}, {7680,4800}
+        };
+        for (const auto& res : defaultRes)
+        {
+            list.emplace_back(res.first, res.second, 60);
+        }
     }
 
-    std::sort(list.begin(), list.end(), [](const std::string& lhs, const std::string& rhs)
+    std::sort(list.begin(), list.end(), [](const std::tuple<int, int, int>& lhs, const std::tuple<int, int, int>& rhs)
     {
-        int32_t x1, y1, x2, y2;
-        sscanf_s(lhs.c_str(), "%dx%d", &x1, &y1);
-        sscanf_s(rhs.c_str(), "%dx%d", &x2, &y2);
-        return (x1 != x2) ? (x1 < x2) : (x1 * y1 < x2 * y2);
+        auto [w1, h1, r1] = lhs;
+        auto [w2, h2, r2] = rhs;
+        if (w1 != w2) return w1 < w2;
+        if (h1 != h2) return h1 < h2;
+        return r1 > r2;
     });
-    list.erase(std::unique(std::begin(list), std::end(list)), list.end());
+    if (uniqueByRefresh)
+    {
+        list.erase(std::unique(list.begin(), list.end(), [](const std::tuple<int, int, int>& lhs, const std::tuple<int, int, int>& rhs)
+        {
+            auto [w1, h1, r1] = lhs;
+            auto [w2, h2, r2] = rhs;
+            return w1 == w2 && h1 == h2 && r1 == r2;
+        }), list.end());
+    }
+    else
+    {
+        list.erase(std::unique(list.begin(), list.end(), [](const std::tuple<int, int, int>& lhs, const std::tuple<int, int, int>& rhs)
+        {
+            auto [w1, h1, r1] = lhs;
+            auto [w2, h2, r2] = rhs;
+            return w1 == w2 && h1 == h2;
+        }), list.end());
+    }
+    return list;
+}
+
+void GetResolutionsList(std::vector<std::string>& list, bool includeRefreshRate)
+{
+    auto resolutions = GetResolutionsList(!includeRefreshRate);
+    for (const auto& res : resolutions)
+    {
+        auto [width, height, refresh] = res;
+        if (includeRefreshRate)
+        {
+            list.emplace_back(std::format("{}x{}@{}", width, height, refresh));
+        }
+        else
+        {
+            list.emplace_back(std::format("{}x{}", width, height));
+        }
+    }
 }
 
 // gets primary monitor's current refresh rate
@@ -275,10 +320,15 @@ HICON CreateIconFromResourceICO(UINT nID, int32_t cx, int32_t cy)
 }
 
 std::string RegistryWrapper::filter;
-std::string RegistryWrapper::section;
 CIniReader RegistryWrapper::RegistryReader;
 std::map<std::string, std::string> RegistryWrapper::DefaultStrings;
-std::set<std::string, std::less<>> RegistryWrapper::PathStrings;
+std::set<std::string> RegistryWrapper::PathStrings;
+thread_local std::string RegistryWrapper::section;
+
+std::string RegistryFallback::s_MainPath;
+std::string RegistryFallback::s_FallbackPath;
+std::map<std::string, std::string> RegistryFallback::s_Defaults;
+bool RegistryFallback::s_UseHKCUFallback = false;
 
 BOOL CreateProcessInJob(
     HANDLE hJob,
@@ -304,12 +354,15 @@ BOOL CreateProcessInJob(
         lpCurrentDirectory,
         lpStartupInfo,
         ppi);
-    if (fRc) {
+    if (fRc)
+    {
         fRc = AssignProcessToJobObject(hJob, ppi->hProcess);
-        if (fRc && !(dwCreationFlags & CREATE_SUSPENDED)) {
+        if (fRc && !(dwCreationFlags & CREATE_SUSPENDED))
+        {
             fRc = ResumeThread(ppi->hThread) != (DWORD)-1;
         }
-        if (!fRc) {
+        if (!fRc)
+        {
             TerminateProcess(ppi->hProcess, 0);
             CloseHandle(ppi->hProcess);
             CloseHandle(ppi->hThread);
@@ -336,13 +389,15 @@ BOOL CreateProcessInJobAsAdmin(
     sei.nShow = nShow;
 
     BOOL fRc = ShellExecuteEx(&sei);
-    if (fRc) {
+    if (fRc)
+    {
         ppi->hProcess = sei.hProcess;
         ppi->hThread = NULL; // Thread handle is not available from ShellExecuteEx
         ppi->dwProcessId = GetProcessId(sei.hProcess);
         ppi->dwThreadId = 0; // Thread ID is not available
         fRc = AssignProcessToJobObject(hJob, ppi->hProcess);
-        if (!fRc) {
+        if (!fRc)
+        {
             TerminateProcess(ppi->hProcess, 0);
             CloseHandle(ppi->hProcess);
             ppi->hProcess = NULL;
