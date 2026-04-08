@@ -132,23 +132,140 @@ namespace cFEng
     std::optional<float> fHudAspectRatioConstraint;
     float fWidescreenHudOffset = 120.0f;
 
-    int __stdcall QueuePackageMessage(int MessageHash, char const* packageName, void* FEObject)
+    std::unordered_map<void*, std::pair<float, float>> originalCenterCache;
+
+    void** mInstance = nullptr;
+
+    static void* s_currentLeftGroup = nullptr;
+    static void* s_currentRightGroup = nullptr;
+
+    injector::hook_back<void(__fastcall*)(void*, void*, int, char const*, int)> hbQueuePackageMessage;
+    void __fastcall QueuePackageMessage(void* instance, void* edx, int MessageHash, char const* packageName, int a4)
     {
-        if (void* leftGroup = FE::Object::FindObject(packageName, 0x1603009E))
+        hbQueuePackageMessage.fun(instance, edx, MessageHash, packageName, a4);
+
+        void* leftGroup = FE::Object::FindObject(packageName, 0x1603009E);
+        void* rightGroup = FE::Object::FindObject(packageName, 0x5D0101F1);
+
+        if (leftGroup && leftGroup != s_currentLeftGroup)
         {
-            float x = 0.0f, y = 0.0f;
-            FE::Object::GetCenter(leftGroup, &x, &y);
-            FE::Object::SetCenter(leftGroup, x - fWidescreenHudOffset, y);
+            originalCenterCache.erase(s_currentLeftGroup);
+            s_currentLeftGroup = leftGroup;
         }
 
-        if (void* rightGroup = FE::Object::FindObject(packageName, 0x5D0101F1))
+        if (rightGroup && rightGroup != s_currentRightGroup)
         {
-            float x = 0.0f, y = 0.0f;
-            FE::Object::GetCenter(rightGroup, &x, &y);
-            FE::Object::SetCenter(rightGroup, x + fWidescreenHudOffset, y);
+            originalCenterCache.erase(s_currentRightGroup);
+            s_currentRightGroup = rightGroup;
         }
 
-        return 1;
+        if (leftGroup)
+        {
+            auto it = originalCenterCache.find(leftGroup);
+            if (it == originalCenterCache.end())
+            {
+                float x = 0.0f, y = 0.0f;
+                FE::Object::GetCenter(leftGroup, &x, &y);
+                originalCenterCache[leftGroup] = { x, y };
+                it = originalCenterCache.find(leftGroup);
+            }
+
+            const auto& [origX, origY] = it->second;
+            FE::Object::SetCenter(leftGroup, origX - fWidescreenHudOffset, origY);
+        }
+
+        if (rightGroup)
+        {
+            auto it = originalCenterCache.find(rightGroup);
+            if (it == originalCenterCache.end())
+            {
+                float x = 0.0f, y = 0.0f;
+                FE::Object::GetCenter(rightGroup, &x, &y);
+                originalCenterCache[rightGroup] = { x, y };
+                it = originalCenterCache.find(rightGroup);
+            }
+
+            const auto& [origX, origY] = it->second;
+            FE::Object::SetCenter(rightGroup, origX + fWidescreenHudOffset, origY);
+        }
+    }
+}
+
+namespace FEngHud
+{
+    bool bUpdateFEngHud = false;
+
+    struct MinimapOriginal
+    {
+        float originalX;
+    };
+
+    static std::unordered_map<void*, MinimapOriginal> originalMinimapCache;
+    static void* s_lastMinimapPtr = nullptr;
+
+    SafetyHookInline shSetWideScreenMode = {};
+    void __fastcall SetWideScreenMode(void* _this, void* edx)
+    {
+        if (bUpdateFEngHud)
+        {
+            uint8_t* pThis = reinterpret_cast<uint8_t*>(_this);
+
+            uint8_t* pCachedState = pThis + 833;
+
+            bool isWidescreen = *pCachedState;
+
+            constexpr int kEnableHash = 0x62ED04EC;
+            constexpr int kDisableHash = 0x53EC068C;
+
+            int messageHash = isWidescreen ? kEnableHash : kDisableHash;
+            cFEng::QueuePackageMessage(*cFEng::mInstance, 0, messageHash, *reinterpret_cast<char**>(pThis + 44), 0);
+
+            void* minimap = reinterpret_cast<void*>(*reinterpret_cast<uint32_t*>(pThis + 820));
+            if (!minimap)
+                return;
+
+            if (minimap != s_lastMinimapPtr)
+            {
+                originalMinimapCache.clear();
+                s_lastMinimapPtr = minimap;
+            }
+
+            auto it = originalMinimapCache.find(minimap);
+            if (it == originalMinimapCache.end())
+            {
+                MinimapOriginal orig;
+                orig.originalX = *reinterpret_cast<float*>(reinterpret_cast<uint8_t*>(minimap) + 180);
+                originalMinimapCache.emplace(minimap, orig);
+                it = originalMinimapCache.find(minimap);
+            }
+
+            const float origX = it->second.originalX;
+            const float offset = isWidescreen ? -cFEng::fWidescreenHudOffset : 0.0f;
+            const float newX = origX + offset;
+
+            *reinterpret_cast<float*>(reinterpret_cast<uint8_t*>(minimap) + 180) = newX;
+
+            {
+                uint32_t child144 = *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(minimap) + 144);
+                if (child144)
+                {
+                    uintptr_t dataPtr = *reinterpret_cast<uintptr_t*>(child144 + 44);
+                    *reinterpret_cast<float*>(dataPtr + 28) = newX;
+                }
+            }
+
+            {
+                uint32_t child140 = *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(minimap) + 140);
+                if (child140)
+                {
+                    uintptr_t dataPtr = *reinterpret_cast<uintptr_t*>(child140 + 44);
+                    *reinterpret_cast<uint32_t*>(dataPtr + 28) = *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(minimap) + 180);
+                }
+            }
+            bUpdateFEngHud = false;
+        }
+
+        return shSetWideScreenMode.unsafe_fastcall(_this, edx);
     }
 }
 
@@ -247,6 +364,8 @@ public:
                     }
 
                     fPiPUCAPPosition = ((((320.0f + cFEng::fWidescreenHudOffset) / 320.0f) - 1.042f) / -2.0f);
+
+                    FEngHud::bUpdateFEngHud = true;
                 };
 
                 // Widescreen HUD
@@ -289,10 +408,14 @@ public:
                 FE::Object::FindObject = (decltype(FE::Object::FindObject))injector::GetBranchDestination(pattern.get_first()).as_int();
 
                 pattern = hook::pattern("E8 ? ? ? ? 8B B6 ? ? ? ? 85 F6 0F 84 ? ? ? ? ? ? ? ? ? ? 8B 86");
-                injector::MakeCALL(pattern.get_first(), cFEng::QueuePackageMessage, true);
+                cFEng::mInstance = *pattern.get_first<void**>(-9);
+                cFEng::hbQueuePackageMessage.fun = injector::MakeCALL(pattern.get_first(), cFEng::QueuePackageMessage, true).get();
 
                 pattern = hook::pattern("E8 ? ? ? ? 8B B6 ? ? ? ? 85 F6 74 ? ? ? ? ? ? ? 8B 86");
-                injector::MakeCALL(pattern.get_first(), cFEng::QueuePackageMessage, true);
+                cFEng::hbQueuePackageMessage.fun = injector::MakeCALL(pattern.get_first(), cFEng::QueuePackageMessage, true).get();
+
+                pattern = hook::pattern("E8 ? ? ? ? 8B 8E ? ? ? ? 41 0B FB");
+                FEngHud::shSetWideScreenMode = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), FEngHud::SetWideScreenMode);
 
                 pattern = hook::pattern("D8 25 ? ? ? ? D9 96 ? ? ? ? 74");
                 injector::WriteMemory(pattern.get_first(2), &cFEng::fWidescreenHudOffset, true);
