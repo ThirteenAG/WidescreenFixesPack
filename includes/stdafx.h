@@ -1118,6 +1118,9 @@ namespace WindowedModeWrapper
     static bool bScaleWindow = false;
     static bool bStretchWindow = false;
     static HWND GameHWND = NULL;
+    static int desiredClientWidth = 0;
+    static int desiredClientHeight = 0;
+    static bool s_cursorOnNcArea = false;
 
     static std::tuple<int, int, int, int> beforeCreateWindow(int nWidth, int nHeight)
     {
@@ -1147,6 +1150,10 @@ namespace WindowedModeWrapper
             newWidth = DesktopX;
         }
 
+        // Save the final desired client dimensions
+        desiredClientWidth = newWidth;
+        desiredClientHeight = newHeight;
+
         int WindowPosX = (int)(((float)DesktopX / 2.0f) - ((float)newWidth / 2.0f));
         int WindowPosY = (int)(((float)DesktopY / 2.0f) - ((float)newHeight / 2.0f));
 
@@ -1169,7 +1176,33 @@ namespace WindowedModeWrapper
         }
 
         SetWindowLong(GameHWND, GWL_STYLE, lStyle);
-        SetWindowPos(GameHWND, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
+
+        if (!bBorderlessWindowed && desiredClientWidth > 0 && desiredClientHeight > 0)
+        {
+            // Compute outer window size so client rect = desired dimensions
+            RECT rect = { 0, 0, desiredClientWidth, desiredClientHeight };
+            LONG exStyle = GetWindowLong(GameHWND, GWL_EXSTYLE);
+            AdjustWindowRectEx(&rect, lStyle, FALSE, exStyle);
+            int outerW = rect.right - rect.left;
+            int outerH = rect.bottom - rect.top;
+
+            // Center by client area, not outer window
+            HMONITOR monitor = MonitorFromWindow(GetDesktopWindow(), MONITOR_DEFAULTTONEAREST);
+            MONITORINFOEX info = { sizeof(MONITORINFOEX) };
+            GetMonitorInfo(monitor, &info);
+            DEVMODE devmode = {};
+            devmode.dmSize = sizeof(DEVMODE);
+            EnumDisplaySettings(info.szDevice, ENUM_CURRENT_SETTINGS, &devmode);
+
+            int posX = ((int)devmode.dmPelsWidth - desiredClientWidth) / 2 + rect.left;
+            int posY = ((int)devmode.dmPelsHeight - desiredClientHeight) / 2 + rect.top;
+
+            SetWindowPos(GameHWND, 0, posX, posY, outerW, outerH, SWP_NOZORDER | SWP_FRAMECHANGED);
+        }
+        else
+        {
+            SetWindowPos(GameHWND, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
+        }
     }
 
     static BOOL WINAPI AdjustWindowRect_Hook(LPRECT lpRect, DWORD dwStyle, BOOL bMenu)
@@ -1320,6 +1353,37 @@ namespace WindowedModeWrapper
             CenterWindowPosition(nWidth, nHeight);
         }
         return res;
+    }
+
+    static int WINAPI ShowCursor_Hook(BOOL bShow)
+    {
+        if (!bBorderlessWindowed && GameHWND && !bShow)
+        {
+            POINT pt;
+            GetCursorPos(&pt);
+            RECT clientRect;
+            GetClientRect(GameHWND, &clientRect);
+            MapWindowPoints(GameHWND, NULL, (LPPOINT)&clientRect, 2);
+
+            if (!PtInRect(&clientRect, pt))
+            {
+                if (!s_cursorOnNcArea)
+                {
+                    // Entering NC area — force counter to 0 (visible)
+                    s_cursorOnNcArea = true;
+                    int count;
+                    do { count = ShowCursor(TRUE); } while (count < 0);
+                }
+                return 0; // Suppress the hide
+            }
+            else if (s_cursorOnNcArea)
+            {
+                // Back on client area — let game hide normally
+                s_cursorOnNcArea = false;
+            }
+        }
+
+        return ShowCursor(bShow);
     }
 };
 

@@ -26,7 +26,7 @@ public:
                     case 4:
                         WindowedModeWrapper::bScaleWindow = true;
                         break;
-                    case 3:  // TODO: implement dynamic resizing (like in MW)
+                    case 3:
                         WindowedModeWrapper::bEnableWindowResize = true;
                     case 2:
                         WindowedModeWrapper::bBorderlessWindowed = false;
@@ -43,7 +43,8 @@ public:
                     std::forward_as_tuple("SetWindowLongA", WindowedModeWrapper::SetWindowLongA_Hook),
                     std::forward_as_tuple("SetWindowLongW", WindowedModeWrapper::SetWindowLongW_Hook),
                     std::forward_as_tuple("AdjustWindowRectEx", WindowedModeWrapper::AdjustWindowRectEx_Hook),
-                    std::forward_as_tuple("SetWindowPos", WindowedModeWrapper::SetWindowPos_Hook)
+                    std::forward_as_tuple("SetWindowPos", WindowedModeWrapper::SetWindowPos_Hook),
+                    std::forward_as_tuple("ShowCursor", WindowedModeWrapper::ShowCursor_Hook)
                 );
             }
         };

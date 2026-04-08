@@ -138,8 +138,28 @@ void __cdecl sub_72B370()
         auto [deskW, deskH] = GetDesktopRes();
         int windowW = Width;
         int windowH = Height;
-        int left = (deskW - windowW) / 2;
-        int top = (deskH - windowH) / 2;
+        int left, top;
+
+        LONG style = GetWindowLong(hWnd, GWL_STYLE);
+        LONG exStyle = GetWindowLong(hWnd, GWL_EXSTYLE);
+
+        if (style & WS_CAPTION)
+        {
+            // Expand outer size so client rect = Width x Height
+            RECT rect = { 0, 0, Width, Height };
+            AdjustWindowRectEx(&rect, style, FALSE, exStyle);
+            windowW = rect.right - rect.left;
+            windowH = rect.bottom - rect.top;
+
+            // Center by client area
+            left = (deskW - Width) / 2 + rect.left;
+            top = (deskH - Height) / 2 + rect.top;
+        }
+        else
+        {
+            left = (deskW - windowW) / 2;
+            top = (deskH - windowH) / 2;
+        }
 
         WindowRect->left = left;
         WindowRect->top = top;
@@ -148,6 +168,29 @@ void __cdecl sub_72B370()
 
         SetWindowPos(hWnd, HWND_NOTOPMOST, WindowRect->left, WindowRect->top, WindowRect->right - WindowRect->left, WindowRect->bottom - WindowRect->top, SWP_SHOWWINDOW);
     }
+}
+
+SafetyHookInline shWndProc = {};
+LRESULT __stdcall WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (Msg)
+    {
+        case WM_SETCURSOR:
+        {
+            if (dwWindowedMode && LOWORD(lParam) != HTCLIENT)
+                return DefWindowProc(hWnd, Msg, wParam, lParam);
+        }
+        break;
+        case WM_SIZE:
+        {
+            cachedWidth = LOWORD(lParam);
+            cachedHeight = HIWORD(lParam);
+            onResChange().executeAll(cachedWidth, cachedHeight);
+        }
+        break;
+    }
+
+    return shWndProc.unsafe_stdcall<LRESULT>(hWnd, Msg, wParam, lParam);
 }
 
 export std::pair<int, int> GetRes()
@@ -298,6 +341,9 @@ public:
 
             pattern = hook::pattern("E8 ? ? ? ? 88 1D ? ? ? ? 55");
             shsub_72B370 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), sub_72B370);
+
+            pattern = hook::pattern("C7 44 24 ? ? ? ? ? 89 74 24 ? 89 74 24 ? FF D7 68");
+            shWndProc = safetyhook::create_inline(*pattern.get_first<void*>(4), WndProc);
         };
     }
 } Resolution;
