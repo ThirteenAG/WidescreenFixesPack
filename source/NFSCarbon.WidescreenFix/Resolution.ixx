@@ -175,6 +175,12 @@ LRESULT __stdcall WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 {
     switch (Msg)
     {
+        case WM_SYSKEYDOWN:
+        {
+            if (dwWindowedMode && wParam == VK_MENU)
+                return 0;
+        }
+        break;
         case WM_SETCURSOR:
         {
             if (dwWindowedMode && LOWORD(lParam) != HTCLIENT)
@@ -252,13 +258,7 @@ public:
             pattern = hook::pattern("8B 14 8D ? ? ? ? 8B 0D");
             injector::AdjustPointer(pattern.get_first(), dwSupportedRefreshRateArray.data(), pSupportedRefreshRateArray, pSupportedRefreshRateArray);
 
-            pattern = hook::pattern("3B B3 ? ? ? ? C7 83");
-            injector::AdjustPointer(pattern.get_first(), dwSupportedRefreshRateArray.data(), pSupportedRefreshRateArray, pSupportedRefreshRateArray);
-
-            pattern = hook::pattern("89 B3 ? ? ? ? 3B 3D");
-            injector::AdjustPointer(pattern.get_first(), dwSupportedRefreshRateArray.data(), pSupportedRefreshRateArray, pSupportedRefreshRateArray);
-
-            pattern = hook::pattern("8B 2C 95 ? ? ? ? E8 ? ? ? ? 8B 7C 24 ? 8B 5C 24 ? B8");
+            pattern = hook::pattern("8B 2C 95 ? ? ? ? E8 ? ? ? ? 8B 7C 24 ? 8B 5C 24 ? B8 ? ? ? ? 89 44 24 ? 89 44 24");
             injector::AdjustPointer(pattern.get_first(), dwSupportedRefreshRateArray.data(), pSupportedRefreshRateArray, pSupportedRefreshRateArray);
 
             pattern = hook::pattern("8B 04 95 ? ? ? ? 8B 4C 24");
