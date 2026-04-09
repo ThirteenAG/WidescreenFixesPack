@@ -12,7 +12,7 @@ import ComVars;
 SafetyHookInline shsub_56FDB0 = {};
 void __cdecl sub_56FDB0(int a1, int a2)
 {
-    if (!bHideCursorForMouseLook || GameFlowManager::IsPaused())
+    if (!bHideCursorForMouseLook)
         return shsub_56FDB0.unsafe_ccall(a1, a2);
 }
 

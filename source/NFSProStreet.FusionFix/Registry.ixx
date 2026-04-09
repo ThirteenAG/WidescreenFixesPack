@@ -67,37 +67,38 @@ public:
                     SettingsSavePath = szSettingsSavePath;
                 }
 
-                SettingsSavePath.append("NFS Most Wanted");
+                SettingsSavePath.append("NFS ProStreet");
                 SettingsSavePath.append("Settings.ini");
 
-                RegistryFallback::UseHKCUFallback(true);
                 RegistryWrapper("Need for Speed", SettingsSavePath);
                 RegistryWrapper::AddPathWriter("Install Dir", "InstallDir", "Path");
                 RegistryWrapper::AddDefault("@", "INSERTYOURCDKEYHERE");
                 RegistryWrapper::AddDefault("CD Drive", "D:\\");
-                RegistryWrapper::AddDefault("CacheSize", "2936691712");
+                RegistryWrapper::AddDefault("CacheSize", "5697825792");
                 RegistryWrapper::AddDefault("SwapSize", "73400320");
-                RegistryWrapper::AddDefault("Language", "English");
+                RegistryWrapper::AddDefault("Language", "Engish (US)");
                 RegistryWrapper::AddDefault("StreamingInstall", "0");
-                RegistryWrapper::AddDefault("VTMode", "0");
-                RegistryWrapper::AddDefault("VERSION", "0");
-                RegistryWrapper::AddDefault("SIZE", "0");
-                RegistryWrapper::AddDefault("g_CarEnvironmentMapEnable", "3");
-                RegistryWrapper::AddDefault("g_CarEnvironmentMapUpdateData", "1");
-                RegistryWrapper::AddDefault("g_RoadReflectionEnable", "3");
-                RegistryWrapper::AddDefault("g_MotionBlurEnable", "1");
-                RegistryWrapper::AddDefault("g_ParticleSystemEnable", "1");
-                RegistryWrapper::AddDefault("g_WorldLodLevel", "3");
-                RegistryWrapper::AddDefault("g_CarLodLevel", "1");
-                RegistryWrapper::AddDefault("g_OverBrightEnable", "1");
-                RegistryWrapper::AddDefault("g_FSAALevel", "7");
+                RegistryWrapper::AddDefault("FirstTime", "0");
+                RegistryWrapper::AddDefault("g_CarEffects", "2");
+                RegistryWrapper::AddDefault("g_WorldFXLevel", "3");
+                RegistryWrapper::AddDefault("g_RoadReflectionEnable", "1");
+                RegistryWrapper::AddDefault("g_WorldLodLevel", "2");
+                RegistryWrapper::AddDefault("g_CarLodLevel", "0");
+                RegistryWrapper::AddDefault("g_FSAALevel", "3");
                 RegistryWrapper::AddDefault("g_RainEnable", "1");
                 RegistryWrapper::AddDefault("g_TextureFiltering", "2");
-                RegistryWrapper::AddDefault("g_RacingResolution", "1");
-                RegistryWrapper::AddDefault("g_PerformanceLevel", "5");
+                RegistryWrapper::AddDefault("g_SmokeEnable", "1");
+                RegistryWrapper::AddDefault("g_CarDamageDetail", "2");
+                RegistryWrapper::AddDefault("g_PerformanceLevel", "0");
                 RegistryWrapper::AddDefault("g_VSyncOn", "0");
-                RegistryWrapper::AddDefault("g_ShadowDetail", "2");
-                RegistryWrapper::AddDefault("g_VisualTreatment", "1");
+                RegistryWrapper::AddDefault("g_ShadowEnable", "3");
+                RegistryWrapper::AddDefault("g_ShaderDetailLevel", "1");
+                RegistryWrapper::AddDefault("g_AudioDetail", "1");
+                RegistryWrapper::AddDefault("g_Brightness", "50");
+                RegistryWrapper::AddDefault("g_AudioMode", "1");
+                RegistryWrapper::AddDefault("g_Width", std::to_string(DesktopResW));
+                RegistryWrapper::AddDefault("g_Height", std::to_string(DesktopResH));
+                RegistryWrapper::AddDefault("g_Refresh", "60");
 
                 IATHook::Replace(GetModuleHandleA(NULL), "ADVAPI32.DLL",
                     std::forward_as_tuple("RegCloseKey", RegistryWrapper::RegCloseKey),
@@ -114,35 +115,41 @@ public:
             }
             else
             {
+                auto [DesktopResW, DesktopResH] = GetDesktopRes();
+
                 RegistryFallback::Init(
-                    "Software\\EA Games\\Need for Speed Most Wanted"
+                    "Software\\Electronic Arts\\Need for Speed ProStreet",
+                    "Software\\Electronic Arts\\Electronic Arts\\Need for Speed ProStreet"
                 );
 
+                RegistryFallback::UseHKCUFallback(true);
                 RegistryFallback::AddDefault("@", "INSERTYOURCDKEYHERE");
                 RegistryFallback::AddDefault("CD Drive", "D:\\");
-                RegistryFallback::AddDefault("CacheSize", "2936691712");
+                RegistryFallback::AddDefault("CacheSize", "5697825792");
                 RegistryFallback::AddDefault("SwapSize", "73400320");
-                RegistryFallback::AddDefault("Language", "English");
+                RegistryFallback::AddDefault("Language", "Engish (US)");
                 RegistryFallback::AddDefault("StreamingInstall", "0");
-                RegistryFallback::AddDefault("VTMode", "0");
-                RegistryFallback::AddDefault("VERSION", "0");
-                RegistryFallback::AddDefault("SIZE", "0");
-                RegistryFallback::AddDefault("g_CarEnvironmentMapEnable", "3");
-                RegistryFallback::AddDefault("g_CarEnvironmentMapUpdateData", "1");
-                RegistryFallback::AddDefault("g_RoadReflectionEnable", "3");
-                RegistryFallback::AddDefault("g_MotionBlurEnable", "1");
-                RegistryFallback::AddDefault("g_ParticleSystemEnable", "1");
-                RegistryFallback::AddDefault("g_WorldLodLevel", "3");
-                RegistryFallback::AddDefault("g_CarLodLevel", "1");
-                RegistryFallback::AddDefault("g_OverBrightEnable", "1");
-                RegistryFallback::AddDefault("g_FSAALevel", "7");
+                RegistryFallback::AddDefault("FirstTime", "0");
+                RegistryFallback::AddDefault("g_CarEffects", "2");
+                RegistryFallback::AddDefault("g_WorldFXLevel", "3");
+                RegistryFallback::AddDefault("g_RoadReflectionEnable", "1");
+                RegistryFallback::AddDefault("g_WorldLodLevel", "2");
+                RegistryFallback::AddDefault("g_CarLodLevel", "0");
+                RegistryFallback::AddDefault("g_FSAALevel", "3");
                 RegistryFallback::AddDefault("g_RainEnable", "1");
                 RegistryFallback::AddDefault("g_TextureFiltering", "2");
-                RegistryFallback::AddDefault("g_RacingResolution", "1");
-                RegistryFallback::AddDefault("g_PerformanceLevel", "5");
+                RegistryFallback::AddDefault("g_SmokeEnable", "1");
+                RegistryFallback::AddDefault("g_CarDamageDetail", "2");
+                RegistryFallback::AddDefault("g_PerformanceLevel", "0");
                 RegistryFallback::AddDefault("g_VSyncOn", "0");
-                RegistryFallback::AddDefault("g_ShadowDetail", "2");
-                RegistryFallback::AddDefault("g_VisualTreatment", "1");
+                RegistryFallback::AddDefault("g_ShadowEnable", "3");
+                RegistryFallback::AddDefault("g_ShaderDetailLevel", "1");
+                RegistryFallback::AddDefault("g_AudioDetail", "1");
+                RegistryFallback::AddDefault("g_Brightness", "50");
+                RegistryFallback::AddDefault("g_AudioMode", "1");
+                RegistryFallback::AddDefault("g_Width", std::to_string(DesktopResW));
+                RegistryFallback::AddDefault("g_Height", std::to_string(DesktopResH));
+                RegistryFallback::AddDefault("g_Refresh", "60");
 
                 std::string exePath = GetExeModulePath<std::string>();
                 RegistryFallback::AddDefault("Install Dir", exePath);

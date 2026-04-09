@@ -46,12 +46,6 @@ void __cdecl MiniMainLoop()
 
 void Init()
 {
-    auto hExecutableInstance = (size_t)GetModuleHandle(NULL);
-    IMAGE_NT_HEADERS* ntHeader = (IMAGE_NT_HEADERS*)(hExecutableInstance + ((IMAGE_DOS_HEADER*)hExecutableInstance)->e_lfanew);
-    SIZE_T size = ntHeader->OptionalHeader.SizeOfImage;
-    DWORD oldProtect;
-    VirtualProtect((VOID*)hExecutableInstance, size, PAGE_EXECUTE_READWRITE, &oldProtect);
-
     auto pattern = hook::pattern("A1 ? ? ? ? 68 ? ? ? ? 50 FF 15");
     hWnd.SetAddress(*pattern.get_first<HWND*>(1));
     WindowRect.SetAddress(*pattern.get_first<tagRECT*>(6));

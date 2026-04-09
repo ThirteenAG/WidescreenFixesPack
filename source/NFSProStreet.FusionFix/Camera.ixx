@@ -160,15 +160,15 @@ public:
             MouseLookSensitivity = iniReader.ReadFloat("CAMERA", "MouseLookSensitivity", 1.0f) * 0.15f;
             InvertLook = iniReader.ReadInteger("CAMERA", "InvertLook", 0) != 0;
 
-            //CubicCameraMover::Update
-            auto pattern = hook::pattern("E8 ? ? ? ? 8B 4E ? 8D 84 24 ? ? ? ? 50 51 E8");
+            //DrivingCameraMover::Update
+            auto pattern = hook::pattern("E8 ? ? ? ? 0F 57 C0 83 C4 ? 0F 2F 86 ? ? ? ? 0F 82");
             hb_eCreateLookAtMatrix.fun = injector::MakeCALL(pattern.get_first(), eCreateLookAtMatrix, true).get();
 
-            pattern = hook::pattern("C6 86 ? ? ? ? ? ? ? ? ? ? ? DF E0");
+            pattern = hook::pattern("8B 56 ? F3 0F 10 05 ? ? ? ? 88 44 24");
             static auto GetCameraData = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
-                bLookBehind = *(uint8_t*)(regs.esi + 0xB1);
-                nCameraMode = *(uint32_t*)(regs.esi + 0xAC);
+                bLookBehind = *(uint8_t*)(regs.esi + 0xBD);
+                nCameraMode = *(uint32_t*)(regs.esi + 0xC8);
             });
 
             WFP::onGameProcessEvent() += []()

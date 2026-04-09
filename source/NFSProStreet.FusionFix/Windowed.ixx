@@ -5,7 +5,6 @@ module;
 export module Windowed;
 
 import ComVars;
-import Compat;
 
 class Windowed
 {
@@ -44,15 +43,34 @@ public:
                     std::forward_as_tuple("SetWindowLongA", WindowedModeWrapper::SetWindowLongA_Hook),
                     std::forward_as_tuple("SetWindowLongW", WindowedModeWrapper::SetWindowLongW_Hook),
                     std::forward_as_tuple("AdjustWindowRectEx", WindowedModeWrapper::AdjustWindowRectEx_Hook),
-                    std::forward_as_tuple("SetWindowPos", WindowedModeWrapper::SetWindowPos_Hook)//,
-                    //std::forward_as_tuple("ShowCursor", WindowedModeWrapper::ShowCursor_Hook)
+                    std::forward_as_tuple("SetWindowPos", WindowedModeWrapper::SetWindowPos_Hook),
+                    std::forward_as_tuple("ShowCursor", WindowedModeWrapper::ShowCursor_Hook)
                 );
 
-                auto pattern = hook::pattern("8B 15 ? ? ? ? 8B 82 ? ? ? ? 8B C8 C1 E9 ? F6 C1 ? 75 ? C1 E8 ? A8 ? 75 ? 39 1D");
-                static auto ShowCursorHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+                // actually what enforces the windowed mode
+                auto pattern = hook::pattern("89 5D 3C 89 5D 18 89 5D 44"); //0x708379
+                struct WindowedMode
                 {
-                    WindowedModeWrapper::ShowCursor_Hook(FALSE);
-                });
+                    void operator()(injector::reg_pack& regs)
+                    {
+                        *(uint32_t*)(regs.ebp + 0x3C) = dwWindowedMode;
+                        *(uint32_t*)(regs.ebp + 0x18) = regs.ebx;
+                    }
+                }; injector::MakeInline<WindowedMode>(pattern.get_first(0), pattern.get_first(6));
+
+                pattern = hook::pattern("A3 ? ? ? ? 89 35 ? ? ? ? 88 1D ? ? ? ? B9 ? ? ? ? 74 0B 6A 15");
+                static auto Width = *pattern.get_first<int32_t*>(1);
+                static auto Height = *pattern.get_first<int32_t*>(7);
+                struct ResHook
+                {
+                    void operator()(injector::reg_pack& regs)
+                    {
+                        *Width = regs.eax;
+                        *Height = regs.esi;
+
+                        WindowedModeWrapper::CenterWindowPosition(*Width, *Height);
+                    }
+                }; injector::MakeInline<ResHook>(pattern.get_first(0), pattern.get_first(11));
             }
         };
     }

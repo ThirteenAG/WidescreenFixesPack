@@ -1,10 +1,31 @@
 module;
 
 #include <stdafx.h>
+#include <FunctionHookMinHook.hpp>
 
 export module Registry;
 
 import ComVars;
+
+static std::filesystem::path CustomUserDir;
+static bool bUseCustomUserDir = false;
+
+static std::unique_ptr<FunctionHookMinHook> mhSHGetFolderPathA;
+static HRESULT WINAPI SHGetFolderPathAHook(HWND hwnd, int csidl, HANDLE hToken, DWORD dwFlags, LPSTR pszPath)
+{
+    if (bUseCustomUserDir)
+    {
+        int folder = csidl & ~CSIDL_FLAG_CREATE;
+        if (folder == CSIDL_COMMON_DOCUMENTS)
+        {
+            CreateDirectoryW(CustomUserDir.c_str(), NULL);
+            memcpy(pszPath, CustomUserDir.u8string().data(), CustomUserDir.u8string().size() + 1);
+            return S_OK;
+        }
+    }
+
+    return mhSHGetFolderPathA->get_original<decltype(SHGetFolderPathA)>()(hwnd, csidl, hToken, dwFlags, pszPath);
+}
 
 class Registry
 {
@@ -15,101 +36,82 @@ public:
         {
             CIniReader iniReader("");
             bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 0) != 0;
-            static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
-            static std::filesystem::path CustomUserDir;
+            auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
+
             if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
                 szCustomUserFilesDirectoryInGameDir.clear();
-
-            auto GetFolderPathpattern = hook::pattern("50 6A 00 6A 00 68 ? 80 00 00 6A 00");
 
             if (!szCustomUserFilesDirectoryInGameDir.empty())
             {
                 CustomUserDir = GetExeModulePath<std::filesystem::path>();
                 CustomUserDir.append(szCustomUserFilesDirectoryInGameDir);
-
-                auto SHGetFolderPathAHook = [](HWND /*hwnd*/, int /*csidl*/, HANDLE /*hToken*/, DWORD /*dwFlags*/, LPSTR pszPath) -> HRESULT
-                {
-                    CreateDirectoryW((LPCWSTR)(CustomUserDir.u16string().c_str()), NULL);
-                    memcpy(pszPath, CustomUserDir.u8string().data(), CustomUserDir.u8string().size() + 1);
-
-                    return S_OK;
-                };
-
-                for (size_t i = 0; i < GetFolderPathpattern.size(); i++)
-                {
-                    uint32_t* dword_6CBF17 = GetFolderPathpattern.get(i).get<uint32_t>(12);
-                    if (*(BYTE*)dword_6CBF17 != 0xFF)
-                        dword_6CBF17 = GetFolderPathpattern.get(i).get<uint32_t>(14);
-
-                    injector::MakeCALL((uint32_t)dword_6CBF17, static_cast<HRESULT(WINAPI*)(HWND, int, HANDLE, DWORD, LPSTR)>(SHGetFolderPathAHook), true);
-                    injector::MakeNOP((uint32_t)dword_6CBF17 + 5, 1, true);
-                }
+                bUseCustomUserDir = true;
             }
+
+            mhSHGetFolderPathA = std::make_unique<FunctionHookMinHook>((uintptr_t)SHGetFolderPathA, (uintptr_t)SHGetFolderPathAHook);
+            mhSHGetFolderPathA->create();
 
             if (bWriteSettingsToFile)
             {
-                auto pattern = hook::pattern("C7 05 ? ? ? ? 00 00 00 00 8B 44 24 04 50 E8"); //0x71D117 
-                injector::MakeNOP(pattern.get(0).get<uintptr_t>(0), 10, true); //stops settings reset at startup
+                auto [DesktopResW, DesktopResH] = GetDesktopRes();
 
                 std::filesystem::path SettingsSavePath;
-                if (!szCustomUserFilesDirectoryInGameDir.empty())
+                if (bUseCustomUserDir)
+                {
                     SettingsSavePath = CustomUserDir;
-
-                uintptr_t GetFolderPathCallDest = injector::GetBranchDestination(GetFolderPathpattern.get(0).get<uintptr_t>(14), true).as_int();
-                if (GetFolderPathCallDest && szCustomUserFilesDirectoryInGameDir.empty())
+                }
+                else
                 {
                     char szSettingsSavePath[MAX_PATH];
-                    injector::stdcall<HRESULT(HWND, int, HANDLE, DWORD, LPSTR)>::call(GetFolderPathCallDest, NULL, 0x8005, NULL, NULL, szSettingsSavePath);
+                    SHGetFolderPathA(NULL, CSIDL_PERSONAL | CSIDL_FLAG_CREATE, NULL, 0, szSettingsSavePath);
                     SettingsSavePath = szSettingsSavePath;
                 }
 
                 SettingsSavePath.append("NFS Carbon");
                 SettingsSavePath.append("Settings.ini");
 
-                if (GetFolderPathCallDest || !szCustomUserFilesDirectoryInGameDir.empty())
-                {
-                    RegistryWrapper("Need for Speed", SettingsSavePath);
-                    RegistryWrapper::AddPathWriter("Install Dir", "InstallDir", "Path");
-                    RegistryWrapper::AddDefault("@", "INSERTYOURCDKEYHERE");
-                    RegistryWrapper::AddDefault("CD Drive", "D:\\");
-                    RegistryWrapper::AddDefault("CacheSize", "5697825792");
-                    RegistryWrapper::AddDefault("SwapSize", "73400320");
-                    RegistryWrapper::AddDefault("Language", "English US");
-                    RegistryWrapper::AddDefault("StreamingInstall", "0");
-                    RegistryWrapper::AddDefault("VERSION", "1");
-                    RegistryWrapper::AddDefault("SIZE", "100");
-                    RegistryWrapper::AddDefault("FirstTime", "0");
-                    RegistryWrapper::AddDefault("g_CarEnvironmentMapEnable", "3");
-                    RegistryWrapper::AddDefault("g_RoadReflectionEnable", "2");
-                    RegistryWrapper::AddDefault("g_MotionBlurEnable", "1");
-                    RegistryWrapper::AddDefault("g_ParticleSystemEnable", "1");
-                    RegistryWrapper::AddDefault("g_WorldLodLevel", "3");
-                    RegistryWrapper::AddDefault("g_CarLodLevel", "1");
-                    RegistryWrapper::AddDefault("g_FSAALevel", "2");
-                    RegistryWrapper::AddDefault("g_RainEnable", "1");
-                    RegistryWrapper::AddDefault("g_TextureFiltering", "2");
-                    RegistryWrapper::AddDefault("g_RacingResolution", "1");
-                    RegistryWrapper::AddDefault("g_PerformanceLevel", "5");
-                    RegistryWrapper::AddDefault("g_VSyncOn", "0");
-                    RegistryWrapper::AddDefault("g_ShadowDetail", "0");
-                    RegistryWrapper::AddDefault("g_VisualTreatment", "1");
-                    RegistryWrapper::AddDefault("g_ShaderDetailLevel", "3");
-                    RegistryWrapper::AddDefault("g_Brightness", "0");
-                    RegistryWrapper::AddDefault("g_AudioMode", "0");
+                RegistryFallback::UseHKCUFallback(true);
+                RegistryWrapper("Need for Speed", SettingsSavePath);
+                RegistryWrapper::AddPathWriter("Install Dir", "InstallDir", "Path");
+                RegistryWrapper::AddDefault("@", "INSERTYOURCDKEYHERE");
+                RegistryWrapper::AddDefault("CD Drive", "D:\\");
+                RegistryWrapper::AddDefault("CacheSize", "5697825792");
+                RegistryWrapper::AddDefault("SwapSize", "73400320");
+                RegistryWrapper::AddDefault("Language", "English US");
+                RegistryWrapper::AddDefault("StreamingInstall", "0");
+                RegistryWrapper::AddDefault("VERSION", "1");
+                RegistryWrapper::AddDefault("SIZE", "100");
+                RegistryWrapper::AddDefault("FirstTime", "0");
+                RegistryWrapper::AddDefault("g_CarEnvironmentMapEnable", "3");
+                RegistryWrapper::AddDefault("g_RoadReflectionEnable", "2");
+                RegistryWrapper::AddDefault("g_MotionBlurEnable", "1");
+                RegistryWrapper::AddDefault("g_ParticleSystemEnable", "1");
+                RegistryWrapper::AddDefault("g_WorldLodLevel", "3");
+                RegistryWrapper::AddDefault("g_CarLodLevel", "1");
+                RegistryWrapper::AddDefault("g_FSAALevel", "2");
+                RegistryWrapper::AddDefault("g_RainEnable", "1");
+                RegistryWrapper::AddDefault("g_TextureFiltering", "2");
+                RegistryWrapper::AddDefault("g_RacingResolution", "1");
+                RegistryWrapper::AddDefault("g_PerformanceLevel", "5");
+                RegistryWrapper::AddDefault("g_VSyncOn", "0");
+                RegistryWrapper::AddDefault("g_ShadowDetail", "0");
+                RegistryWrapper::AddDefault("g_VisualTreatment", "1");
+                RegistryWrapper::AddDefault("g_ShaderDetailLevel", "3");
+                RegistryWrapper::AddDefault("g_Brightness", "0");
+                RegistryWrapper::AddDefault("g_AudioMode", "0");
 
-                    IATHook::Replace(GetModuleHandleA(NULL), "ADVAPI32.DLL",
-                        std::forward_as_tuple("RegCloseKey", RegistryWrapper::RegCloseKey),
-                        std::forward_as_tuple("RegCreateKeyA", RegistryWrapper::RegCreateKeyA),
-                        std::forward_as_tuple("RegOpenKeyA", RegistryWrapper::RegOpenKeyA),
-                        std::forward_as_tuple("RegOpenKeyExA", RegistryWrapper::RegOpenKeyExA),
-                        std::forward_as_tuple("RegCreateKeyExA", RegistryWrapper::RegCreateKeyExA),
-                        std::forward_as_tuple("RegQueryValueExA", RegistryWrapper::RegQueryValueExA),
-                        std::forward_as_tuple("RegSetValueExA", RegistryWrapper::RegSetValueExA),
-                        std::forward_as_tuple("RegQueryValueA", RegistryWrapper::RegQueryValueA),
-                        std::forward_as_tuple("RegDeleteKeyA", RegistryWrapper::RegDeleteKeyA),
-                        std::forward_as_tuple("RegEnumKeyA", RegistryWrapper::RegEnumKeyA)
-                    );
-                }
+                IATHook::Replace(GetModuleHandleA(NULL), "ADVAPI32.DLL",
+                    std::forward_as_tuple("RegCloseKey", RegistryWrapper::RegCloseKey),
+                    std::forward_as_tuple("RegCreateKeyA", RegistryWrapper::RegCreateKeyA),
+                    std::forward_as_tuple("RegOpenKeyA", RegistryWrapper::RegOpenKeyA),
+                    std::forward_as_tuple("RegOpenKeyExA", RegistryWrapper::RegOpenKeyExA),
+                    std::forward_as_tuple("RegCreateKeyExA", RegistryWrapper::RegCreateKeyExA),
+                    std::forward_as_tuple("RegQueryValueExA", RegistryWrapper::RegQueryValueExA),
+                    std::forward_as_tuple("RegSetValueExA", RegistryWrapper::RegSetValueExA),
+                    std::forward_as_tuple("RegQueryValueA", RegistryWrapper::RegQueryValueA),
+                    std::forward_as_tuple("RegDeleteKeyA", RegistryWrapper::RegDeleteKeyA),
+                    std::forward_as_tuple("RegEnumKeyA", RegistryWrapper::RegEnumKeyA)
+                );
             }
             else
             {
