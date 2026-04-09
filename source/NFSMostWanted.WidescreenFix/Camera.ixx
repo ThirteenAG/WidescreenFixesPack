@@ -11,6 +11,7 @@ import ComVars;
 static float YawOffset = 0.0f;
 static float PitchOffset = 0.0f;
 
+bool InvertLook = false;
 float StickLookSensitivity = 1.0f;
 float MouseLookSensitivity = 1.0f;
 
@@ -36,12 +37,17 @@ float LerpAngleDeg(float from, float to, float t)
     return from + diff * t;
 }
 
+using SteadyClock = std::chrono::steady_clock;
+using TimePoint = SteadyClock::time_point;
+static constexpr auto HideCursorDuration = std::chrono::milliseconds(100);
+TimePoint LastCameraInputTime = {};
 uint8_t bLookBehind = 0;
 uint32_t nCameraMode = 0;
 injector::hook_back<void(__cdecl*)(bMatrix4*, bVector3*, bVector3*, bVector3*)> hb_eCreateLookAtMatrix;
 void __cdecl eCreateLookAtMatrix(bMatrix4* out, bVector3* from, bVector3* to, bVector3* up)
 {
     bHideCursorForMouseLook = true;
+    LastCameraInputTime = SteadyClock::now();
 
     if (bLookBehind || (nCameraMode != 2 && nCameraMode != 3))
     {
@@ -81,7 +87,7 @@ void __cdecl eCreateLookAtMatrix(bMatrix4* out, bVector3* from, bVector3* to, bV
     if (hasInput)
     {
         YawOffset += deltaX * StickLookSensitivity;
-        PitchOffset += deltaY * StickLookSensitivity;
+        PitchOffset += deltaY * StickLookSensitivity * (InvertLook ? -1.0f : 1.0f);
         IdleTimer = 0.0f;
     }
     else
@@ -152,6 +158,7 @@ public:
             ReturnSpeed = iniReader.ReadFloat("CAMERA", "CameraReturnSpeed", 2.0f);
             StickLookSensitivity = iniReader.ReadFloat("CAMERA", "StickLookSensitivity", 1.0f);
             MouseLookSensitivity = iniReader.ReadFloat("CAMERA", "MouseLookSensitivity", 1.0f) * 0.15f;
+            InvertLook = iniReader.ReadInteger("CAMERA", "InvertLook", 0) != 0;
 
             //CubicCameraMover::Update
             auto pattern = hook::pattern("E8 ? ? ? ? 8B 4E ? 8D 84 24");
@@ -166,7 +173,7 @@ public:
 
             WFP::onGameProcessEvent() += []()
             {
-                bHideCursorForMouseLook = false;
+                bHideCursorForMouseLook = (SteadyClock::now() - LastCameraInputTime) < HideCursorDuration;
             };
         };
     }

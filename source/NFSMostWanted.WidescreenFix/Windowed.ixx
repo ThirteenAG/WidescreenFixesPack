@@ -5,6 +5,7 @@ module;
 export module Windowed;
 
 import ComVars;
+import Compat;
 
 class Windowed
 {

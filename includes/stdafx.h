@@ -911,29 +911,11 @@ public:
         s_FallbackPath = fallbackPath;
         s_Defaults.clear();
         s_UseHKCUFallback = false;
+    }
 
-        // Test if we can write to HKLM
-        HKEY hTest = nullptr;
-        LSTATUS status = ::RegCreateKeyExA(
-            HKEY_LOCAL_MACHINE,
-            s_MainPath.c_str(),
-            0,
-            nullptr,
-            REG_OPTION_NON_VOLATILE,
-            KEY_WRITE,
-            nullptr,
-            &hTest,
-            nullptr);
-
-        if (status == ERROR_ACCESS_DENIED || status == ERROR_PRIVILEGE_NOT_HELD)
-        {
-            s_UseHKCUFallback = true;
-            OutputDebugStringA("RegistryFallback: HKLM not writable, using HKEY_CURRENT_USER fallback\n");
-        }
-        else if (hTest)
-        {
-            ::RegCloseKey(hTest);
-        }
+    static void UseHKCUFallback(bool useFallback)
+    {
+        s_UseHKCUFallback = useFallback;
     }
 
     static void AddDefault(std::string_view key, std::string_view value)
@@ -1165,6 +1147,8 @@ namespace WindowedModeWrapper
     static void afterCreateWindow()
     {
         LONG lStyle = GetWindowLong(GameHWND, GWL_STYLE);
+
+        lStyle &= ~(WS_HSCROLL | WS_VSCROLL);
 
         if (bBorderlessWindowed)
             lStyle &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU);

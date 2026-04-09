@@ -205,8 +205,12 @@ function CommonWorkspaceSetup(platform, prefix)
       files { "Resources/*.rc" }
       files { "external/hooking/Hooking.Patterns.h", "external/hooking/Hooking.Patterns.cpp" }
       files { "external/injector/safetyhook/include/**.hpp", "external/injector/safetyhook/src/**.cpp" }
+	  files { "external/injector/minhook/include/*.h", "external/injector/minhook/src/**.h", "external/injector/minhook/src/**.c" }
+	  files { "external/injector/utility/FunctionHookMinHook.hpp", "external/injector/utility/FunctionHookMinHook.cpp" }
       files { "external/injector/zydis/**.h", "external/injector/zydis/**.c" }
       files { "includes/stdafx.h", "includes/stdafx.cpp" }
+	  includedirs { "external/injector/minhook/include" }
+	  includedirs { "external/injector/utility" }
       includedirs { "external/injector/safetyhook/include" }
       includedirs { "external/injector/zydis" }
       includedirs { "external/hooking" }
@@ -216,7 +220,7 @@ function CommonWorkspaceSetup(platform, prefix)
       includedirs { "external/filewatch" }
       includedirs { "external/modutils" }
       includedirs { "includes" }
-      
+
       includedirs { "includes/LED" }
       libdirs { "includes/LED" }
       
@@ -282,10 +286,6 @@ project "ColdFear.WidescreenFix"
    setpaths("Z:/WFP/Games/ColdFear/", "ColdFear_retail.exe")
 
 project "Condemned.WidescreenFix"
-   includedirs { "external/injector/minhook/include" }
-   files { "external/injector/minhook/include/*.h", "external/injector/minhook/src/**.h", "external/injector/minhook/src/**.c" }
-   includedirs { "external/injector/utility" }
-   files { "external/injector/utility/FunctionHookMinHook.hpp", "external/injector/utility/FunctionHookMinHook.cpp" }
    setpaths("Z:/WFP/Games/Condemned Criminal Origins/", "Condemned.exe")
 
 project "DeerAvenger4.WidescreenFix"
@@ -402,6 +402,12 @@ project "NFSMostWanted.WidescreenFix"
    defines { "IDR_POSTFX=201" }
    setpaths("Z:/WFP/Games/Need For Speed/Need for Speed Most Wanted/", "speed.exe")
 project "NFSProStreet.FusionFix"
+   prebuildcommands {
+   "for /R \"../source/%{prj.name}/\" %%f in (*.fx) do (\"../includes/dxsdk/lib/x86/fxc.exe\" /T fx_2_0 /Fo \"../source/%{prj.name}/%%~nf.fxo\" %%f)"
+   }
+   includedirs {"Resources"}
+   files { "source/%{prj.name}/*.fx", "source/%{prj.name}/*.ps", "source/%{prj.name}/*.rc" }
+   defines { "IDR_POSTFX=201" }
    setpaths("Z:/WFP/Games/Need For Speed/Need for Speed ProStreet/", "nfsps.exe")
 project "NFSUndercover.FusionFix"
    setpaths("Z:/WFP/Games/Need For Speed/Need for Speed Undercover/", "nfs.exe")

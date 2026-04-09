@@ -7,15 +7,7 @@ export module Frontend;
 
 import ComVars;
 import Resolution;
-
-namespace XtendedInput
-{
-    HMODULE mhXtendedInput = NULL;
-    float(__cdecl* SetFEScale)(float val) = nullptr;
-    bool(__cdecl* GetUseWin32Cursor)() = nullptr;
-    bool bLookedForXInput = false;
-    bool bFoundXInput = false;
-}
+import Compat;
 
 export namespace FEScale
 {
@@ -268,17 +260,6 @@ public:
                 if (FEScale::bEnabled)
                     FEScale::Update();
             };
-
-            CallbackHandler::RegisterCallback(L"NFS_XtendedInput.asi", []()
-            {
-                XtendedInput::mhXtendedInput = GetModuleHandleA("NFS_XtendedInput.asi");
-                if (XtendedInput::mhXtendedInput)
-                {
-                    XtendedInput::SetFEScale = reinterpret_cast<decltype(XtendedInput::SetFEScale)>(GetProcAddress(XtendedInput::mhXtendedInput, "SetFEScale"));
-                    XtendedInput::GetUseWin32Cursor = reinterpret_cast<decltype(XtendedInput::GetUseWin32Cursor)>(GetProcAddress(XtendedInput::mhXtendedInput, "GetUseWin32Cursor"));
-                    XtendedInput::bFoundXInput = (XtendedInput::SetFEScale != nullptr) && (XtendedInput::GetUseWin32Cursor != nullptr);
-                }
-            });
 
             //HUD
             if (bFixHUD)
