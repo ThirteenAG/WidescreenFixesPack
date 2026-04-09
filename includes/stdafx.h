@@ -2046,8 +2046,21 @@ public:
     T& operator*() { return get(); }
     const T& operator*() const { return get(); }
 
-    T* operator->() { return &get(); }
-    const T* operator->() const { return &get(); }
+    auto operator->()
+    {
+        if constexpr (std::is_pointer_v<T>)
+            return get();
+        else
+            return &get();
+    }
+
+    auto operator->() const
+    {
+        if constexpr (std::is_pointer_v<T>)
+            return get();
+        else
+            return &get();
+    }
 
     template<typename U>
     auto operator[](const U& index) { return get()[index]; }
