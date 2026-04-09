@@ -12,7 +12,7 @@ static float YawOffset = 0.0f;
 static float PitchOffset = 0.0f;
 
 float StickLookSensitivity = 1.0f;
-float MouseLookSensitivity = 0.15f;
+float MouseLookSensitivity = 1.0f;
 
 // Auto-return state
 float IdleTimer = 0.0f;
@@ -36,10 +36,21 @@ float LerpAngleDeg(float from, float to, float t)
     return from + diff * t;
 }
 
+uint8_t bLookBehind = 0;
+uint32_t nCameraMode = 0;
 injector::hook_back<void(__cdecl*)(bMatrix4*, bVector3*, bVector3*, bVector3*)> hb_eCreateLookAtMatrix;
 void __cdecl eCreateLookAtMatrix(bMatrix4* out, bVector3* from, bVector3* to, bVector3* up)
 {
     bHideCursorForMouseLook = true;
+
+    if (bLookBehind || (nCameraMode != 2 && nCameraMode != 3))
+    {
+        YawOffset = 0.0f;
+        PitchOffset = 0.0f;
+        IdleTimer = 0.0f;
+        PrevCarPosValid = false;
+        return hb_eCreateLookAtMatrix.fun(out, from, to, up);
+    }
 
     float dt = Sim::Internal::mLastFrameTime;
 
@@ -140,11 +151,18 @@ public:
             IdleTimeoutSeconds = iniReader.ReadFloat("CAMERA", "CameraReturnTimeout", 3.0f);
             ReturnSpeed = iniReader.ReadFloat("CAMERA", "CameraReturnSpeed", 2.0f);
             StickLookSensitivity = iniReader.ReadFloat("CAMERA", "StickLookSensitivity", 1.0f);
-            MouseLookSensitivity = iniReader.ReadFloat("CAMERA", "MouseLookSensitivity", 0.15f);
+            MouseLookSensitivity = iniReader.ReadFloat("CAMERA", "MouseLookSensitivity", 1.0f) * 0.15f;
 
             //CubicCameraMover::Update
             auto pattern = hook::pattern("E8 ? ? ? ? 8B 4E ? 8D 84 24");
             hb_eCreateLookAtMatrix.fun = injector::MakeCALL(pattern.get_first(), eCreateLookAtMatrix, true).get();
+
+            pattern = hook::pattern("8B 86 ? ? ? ? 8B 8E ? ? ? ? 50 89 86");
+            static auto GetCameraData = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            {
+                bLookBehind = *(uint8_t*)(regs.esi + 0xA1);
+                nCameraMode = *(uint32_t*)(regs.esi + 0x9C);
+            });
 
             WFP::onGameProcessEvent() += []()
             {

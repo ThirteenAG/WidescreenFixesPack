@@ -88,6 +88,9 @@ void Init()
     pattern = hook::pattern("DB 05 ? ? ? ? 56 D8 25");
     cFEngGameInterface::GetMouseInfo = decltype(cFEngGameInterface::GetMouseInfo)(pattern.get_first());
 
+    pattern = hook::pattern("8B 0D ? ? ? ? 83 C4 ? 8D 54 24 ? 52 C6 44 24");
+    MoviePlayerInstance.SetAddress(*pattern.get_first<void**>(2));
+
     pattern = hook::pattern("A1 ? ? ? ? ? ? 68 ? ? ? ? 50 FF 51 ? A1");
     Direct3DDevice.SetAddress(*pattern.get_first<IDirect3DDevice9**>(1));
     static auto BeforeResetHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)

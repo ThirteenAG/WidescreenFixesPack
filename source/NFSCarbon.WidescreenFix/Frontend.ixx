@@ -10,25 +10,11 @@ import Resolution;
 
 namespace XtendedInput
 {
-    HMODULE mhXtendedInput;
-    float(__cdecl* SetFEScale)(float val);
-    bool(__cdecl* GetUseWin32Cursor)();
+    HMODULE mhXtendedInput = NULL;
+    float(__cdecl* SetFEScale)(float val) = nullptr;
+    bool(__cdecl* GetUseWin32Cursor)() = nullptr;
     bool bLookedForXInput = false;
     bool bFoundXInput = false;
-
-    void LookForXtendedInput()
-    {
-        if (!mhXtendedInput)
-        {
-            mhXtendedInput = GetModuleHandleA("NFS_XtendedInput.asi");
-            if (mhXtendedInput)
-            {
-                SetFEScale = reinterpret_cast<float(__cdecl*)(float)>(GetProcAddress(mhXtendedInput, "SetFEScale"));
-                GetUseWin32Cursor = reinterpret_cast<bool(__cdecl*)()>(GetProcAddress(mhXtendedInput, "GetUseWin32Cursor"));
-                bFoundXInput = (SetFEScale != nullptr) && (GetUseWin32Cursor != nullptr);
-            }
-        }
-    }
 }
 
 namespace FEScale
@@ -41,11 +27,9 @@ namespace FEScale
     bool bAutoFitFE = true;
     bool bAutoFitFMV = true;
 
-    uintptr_t gMoviePlayerAddr = 0x00A97BB4;
-
     void ScaleMat(D3DMATRIX* cMat)
     {
-        if (*(uintptr_t*)gMoviePlayerAddr)
+        if (MoviePlayerInstance)
         {
             cMat->_11 *= fCalcFMVScale;
             cMat->_22 *= fCalcFMVScale;
@@ -108,12 +92,12 @@ namespace FEScale
         if (fCalcFMVScale > fFMVScale)
             fCalcFMVScale = fFMVScale;
 
-        if (!XtendedInput::bLookedForXInput)
-            XtendedInput::LookForXtendedInput();
-        if (!XtendedInput::bFoundXInput) return;
-        if (!XtendedInput::GetUseWin32Cursor()) return;
-
-        XtendedInput::SetFEScale(fCalcFEScale);
+        if (!XtendedInput::bFoundXInput)
+            return;
+        if (!XtendedInput::GetUseWin32Cursor())
+            return;
+        if (XtendedInput::SetFEScale)
+            XtendedInput::SetFEScale(fCalcFEScale);
     }
 }
 
@@ -293,6 +277,17 @@ public:
                     FEScale::Update();
             };
 
+            CallbackHandler::RegisterCallback(L"NFS_XtendedInput.asi", []()
+            {
+                XtendedInput::mhXtendedInput = GetModuleHandleA("NFS_XtendedInput.asi");
+                if (XtendedInput::mhXtendedInput)
+                {
+                    XtendedInput::SetFEScale = reinterpret_cast<decltype(XtendedInput::SetFEScale)>(GetProcAddress(XtendedInput::mhXtendedInput, "SetFEScale"));
+                    XtendedInput::GetUseWin32Cursor = reinterpret_cast<decltype(XtendedInput::GetUseWin32Cursor)>(GetProcAddress(XtendedInput::mhXtendedInput, "GetUseWin32Cursor"));
+                    XtendedInput::bFoundXInput = (XtendedInput::SetFEScale != nullptr) && (XtendedInput::GetUseWin32Cursor != nullptr);
+                }
+            });
+
             //HUD
             if (bFixHUD)
             {
@@ -422,6 +417,60 @@ public:
 
                 pattern = hook::pattern("D8 05 ? ? ? ? D9 96 ? ? ? ? 74");
                 injector::WriteMemory(pattern.get_first(2), &cFEng::fWidescreenHudOffset, true);
+
+                static auto DrawPillarboxes = []()
+                {
+                    auto [Width, Height] = GetRes();
+                    float target_aspect = 16.0f / 9.0f;
+                    float video_width = static_cast<float>(Height) * target_aspect;
+                    float pillar = (static_cast<float>(Width) - video_width) / 2.0f;
+                    if (pillar > 0.0f)
+                    {
+                        D3DRECT rects[2];
+                        rects[0].x1 = 0;
+                        rects[0].y1 = 0;
+                        rects[0].x2 = static_cast<LONG>(pillar);
+                        rects[0].y2 = Height;
+                        rects[1].x1 = Width - static_cast<LONG>(pillar);
+                        rects[1].y1 = 0;
+                        rects[1].x2 = Width;
+                        rects[1].y2 = Height;
+                        Direct3DDevice->Clear(2, rects, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
+                    }
+                };
+
+                static bool bInLoadingScreen = false;
+                pattern = hook::pattern("89 46 ? 89 4E ? 8B 0D ? ? ? ? 50");
+                static auto ELoadingScreenOn = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+                {
+                    bInLoadingScreen = true;
+                });
+
+                pattern = hook::pattern("89 46 ? 8B 0D ? ? ? ? 50");
+                static auto ELoadingScreenOff = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+                {
+                    bInLoadingScreen = false;
+                });
+
+                pattern = hook::pattern("88 5E ? 89 5E ? E8 ? ? ? ? 83 C4 ? E8");
+                static auto SplashScreenCtor = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+                {
+                    bInLoadingScreen = true;
+                });
+
+                pattern = hook::pattern("8B 46 ? 85 C0 C7 44 24 ? ? ? ? ? 74 ? 89 44 24");
+                static auto SplashScreenDtor = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+                {
+                    bInLoadingScreen = false;
+                });
+
+                WFP::onEndScene() += []()
+                {
+                    if (MoviePlayerInstance || bInLoadingScreen)
+                    {
+                        DrawPillarboxes();
+                    }
+                };
             }
 
             if (nFMVWidescreenMode)
@@ -453,14 +502,11 @@ public:
             {
                 FEScale::bEnabled = true;
 
-                uintptr_t loc_730E4D = reinterpret_cast<uintptr_t>(hook::pattern("C7 44 24 60 00 00 80 3F C7 44 24 74 00 00 80 3F B9 10 00 00 00").get_first(0)) + 0x57;
-                uintptr_t loc_730ECE = loc_730E4D + 0x81;
-                uintptr_t loc_54B895 = reinterpret_cast<uintptr_t>(hook::pattern("3D 91 FA C3 01 74 ? 8B 0D").get_first(0)) + 7;
+                auto loc_730E4D = hook::pattern("6A ? 53 8D 54 24 ? 52 FF 50");
+                injector::MakeInline<FEScale::FEScaleHook1>(loc_730E4D.get_first(), loc_730E4D.get_first(0xB));
 
-                FEScale::gMoviePlayerAddr = *reinterpret_cast<uintptr_t*>(loc_54B895 + 2);
-
-                injector::MakeInline<FEScale::FEScaleHook1>(loc_730E4D, loc_730E4D + 0xB);
-                injector::MakeInline<FEScale::FEScaleHook2>(loc_730ECE, loc_730ECE + 0xC);
+                auto loc_730ECE = hook::pattern("57 53 8D 44 24 ? 50 8B CE FF 52");
+                injector::MakeInline<FEScale::FEScaleHook2>(loc_730ECE.get_first(), loc_730ECE.get_first(0xC));
             }
 
             //Mouse cursor

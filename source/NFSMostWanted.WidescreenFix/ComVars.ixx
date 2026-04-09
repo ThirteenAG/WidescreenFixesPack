@@ -65,6 +65,7 @@ export GameRef<uint32_t> dwWindowedMode;
 export GameRef<tagRECT> WindowRect;
 export GameRef<int> g_RacingResolution;
 export GameRef<IDirect3DDevice9*> Direct3DDevice;
+export GameRef<void*> MoviePlayerInstance;
 
 export void** pOptions = nullptr;
 

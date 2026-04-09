@@ -12,7 +12,7 @@ import ComVars;
 SafetyHookInline shsub_56FDB0 = {};
 void __cdecl sub_56FDB0(int a1, int a2)
 {
-    if (!bHideCursorForMouseLook)
+    if (!bHideCursorForMouseLook || GameFlowManager::IsPaused())
         return shsub_56FDB0.unsafe_ccall(a1, a2);
 }
 
@@ -270,6 +270,9 @@ public:
                 auto pattern = hook::pattern("8B 85 ? ? ? ? 3B 86");
                 static auto JoyStateHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
                 {
+                    if (hWnd != GetForegroundWindow())
+                        return;
+
                     DIJOYSTATE* state = (DIJOYSTATE*)(regs.ebp - 0x13C);
 
                     g_RightStick.RawX = state->lRx;
@@ -289,6 +292,9 @@ public:
                 pattern = hook::pattern("8B 45 ? 3B C7 75 ? 3B D7");
                 static auto MouseStateHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
                 {
+                    if (hWnd != GetForegroundWindow())
+                        return;
+
                     MouseData* state = (MouseData*)(regs.ebp - 0x14);
                     g_Mouse.DeltaX = state->DeltaX;
                     g_Mouse.DeltaY = state->DeltaY;

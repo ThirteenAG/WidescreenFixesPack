@@ -10,25 +10,11 @@ import Resolution;
 
 namespace XtendedInput
 {
-    HMODULE mhXtendedInput;
-    float(__cdecl* SetFEScale)(float val);
-    bool(__cdecl* GetUseWin32Cursor)();
+    HMODULE mhXtendedInput = NULL;
+    float(__cdecl* SetFEScale)(float val) = nullptr;
+    bool(__cdecl* GetUseWin32Cursor)() = nullptr;
     bool bLookedForXInput = false;
     bool bFoundXInput = false;
-
-    void LookForXtendedInput()
-    {
-        if (!mhXtendedInput)
-        {
-            mhXtendedInput = GetModuleHandleA("NFS_XtendedInput.asi");
-            if (mhXtendedInput)
-            {
-                SetFEScale = reinterpret_cast<float(__cdecl*)(float)>(GetProcAddress(mhXtendedInput, "SetFEScale"));
-                GetUseWin32Cursor = reinterpret_cast<bool(__cdecl*)()>(GetProcAddress(mhXtendedInput, "GetUseWin32Cursor"));
-                bFoundXInput = (SetFEScale != nullptr) && (GetUseWin32Cursor != nullptr);
-            }
-        }
-    }
 }
 
 export namespace FEScale
@@ -41,15 +27,13 @@ export namespace FEScale
     bool bAutoFitFE = true;
     bool bAutoFitFMV = true;
 
-    uintptr_t SetTransformAddr = 0x6C8000;
-    uintptr_t gMoviePlayerAddr = 0x91CB10;
-
+    injector::hook_back<void(__cdecl*)(D3DMATRIX*, uint32_t)> hbSetTransformHook;
     void __cdecl SetTransformHook(D3DMATRIX* mat, uint32_t EVIEW_ID)
     {
         D3DMATRIX cMat;
         memcpy(&cMat, mat, sizeof(D3DMATRIX));
 
-        if (*(uintptr_t*)gMoviePlayerAddr)
+        if (MoviePlayerInstance)
         {
             cMat._11 *= fCalcFMVScale;
             cMat._22 *= fCalcFMVScale;
@@ -60,7 +44,7 @@ export namespace FEScale
             cMat._22 *= fCalcFEScale;
         }
 
-        return reinterpret_cast<void(__cdecl*)(D3DMATRIX*, uint32_t)>(SetTransformAddr)(&cMat, EVIEW_ID);
+        return hbSetTransformHook.fun(&cMat, EVIEW_ID);
     }
 
     void Update()
@@ -80,12 +64,12 @@ export namespace FEScale
         if (fCalcFMVScale > fFMVScale)
             fCalcFMVScale = fFMVScale;
 
-        if (!XtendedInput::bLookedForXInput)
-            XtendedInput::LookForXtendedInput();
-        if (!XtendedInput::bFoundXInput) return;
-        if (!XtendedInput::GetUseWin32Cursor()) return;
-
-        XtendedInput::SetFEScale(fCalcFEScale);
+        if (!XtendedInput::bFoundXInput)
+            return;
+        if (!XtendedInput::GetUseWin32Cursor())
+            return;
+        if (XtendedInput::SetFEScale)
+            XtendedInput::SetFEScale(fCalcFEScale);
     }
 }
 
@@ -285,6 +269,17 @@ public:
                     FEScale::Update();
             };
 
+            CallbackHandler::RegisterCallback(L"NFS_XtendedInput.asi", []()
+            {
+                XtendedInput::mhXtendedInput = GetModuleHandleA("NFS_XtendedInput.asi");
+                if (XtendedInput::mhXtendedInput)
+                {
+                    XtendedInput::SetFEScale = reinterpret_cast<decltype(XtendedInput::SetFEScale)>(GetProcAddress(XtendedInput::mhXtendedInput, "SetFEScale"));
+                    XtendedInput::GetUseWin32Cursor = reinterpret_cast<decltype(XtendedInput::GetUseWin32Cursor)>(GetProcAddress(XtendedInput::mhXtendedInput, "GetUseWin32Cursor"));
+                    XtendedInput::bFoundXInput = (XtendedInput::SetFEScale != nullptr) && (XtendedInput::GetUseWin32Cursor != nullptr);
+                }
+            });
+
             //HUD
             if (bFixHUD)
             {
@@ -442,6 +437,60 @@ public:
                 pattern = hook::pattern("E8 ? ? ? ? 8B 8E ? ? ? ? 85 C9 74 ? 6A ? E8 ? ? ? ? 5E C3");
                 cFEng::hbQueuePackageMessage.fun = injector::MakeCALL(pattern.count(2).get(0).get<void*>(0), cFEng::QueuePackageMessage, true).get();
                 cFEng::hbQueuePackageMessage.fun = injector::MakeCALL(pattern.count(2).get(1).get<void*>(0), cFEng::QueuePackageMessage, true).get();
+
+                static auto DrawPillarboxes = []()
+                {
+                    auto [Width, Height] = GetRes();
+                    float target_aspect = 16.0f / 9.0f;
+                    float video_width = static_cast<float>(Height) * target_aspect;
+                    float pillar = (static_cast<float>(Width) - video_width) / 2.0f;
+                    if (pillar > 0.0f)
+                    {
+                        D3DRECT rects[2];
+                        rects[0].x1 = 0;
+                        rects[0].y1 = 0;
+                        rects[0].x2 = static_cast<LONG>(pillar);
+                        rects[0].y2 = Height;
+                        rects[1].x1 = Width - static_cast<LONG>(pillar);
+                        rects[1].y1 = 0;
+                        rects[1].x2 = Width;
+                        rects[1].y2 = Height;
+                        Direct3DDevice->Clear(2, rects, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
+                    }
+                };
+
+                static bool bInLoadingScreen = false;
+                pattern = hook::pattern("89 47 ? 89 44 24");
+                static auto ELoadingScreenOn = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+                {
+                    bInLoadingScreen = true;
+                });
+
+                pattern = hook::pattern("C7 46 ? ? ? ? ? ? ? ? ? ? ? 8B 3D");
+                static auto ELoadingScreenOff = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+                {
+                    bInLoadingScreen = false;
+                });
+
+                pattern = hook::pattern("88 5E ? 89 5E ? 89 9C 24");
+                static auto SplashScreenCtor = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+                {
+                    bInLoadingScreen = true;
+                });
+
+                pattern = hook::pattern("8B F8 8D 44 24 ? 50 E8 ? ? ? ? 8B 4C 24 ? 89 4C 24 ? 83 C4 ? 8D 4C 24 ? C7 44 24 ? ? ? ? ? 89 5C 24");
+                static auto SplashScreenDtor = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+                {
+                    bInLoadingScreen = false;
+                });
+
+                WFP::onEndScene() += []()
+                {
+                    if (MoviePlayerInstance || bInLoadingScreen)
+                    {
+                        DrawPillarboxes();
+                    }
+                };
             }
 
             if (nFMVWidescreenMode)
@@ -465,15 +514,11 @@ public:
             {
                 FEScale::bEnabled = true;
 
-                uintptr_t loc_6E6FB7 = reinterpret_cast<uintptr_t>(hook::pattern("C7 44 24 10 00 00 80 3F C7 44 24 24 00 00 80 3F").get_first(0)) + 0x66;
-                uintptr_t loc_6E7011 = loc_6E6FB7 + 0x5A;
-                uintptr_t loc_559789 = reinterpret_cast<uintptr_t>(hook::pattern("C7 44 24 60 00 00 0A 00 88 5C 24 70").get_first(0)) + 0x2D;
+                auto loc_6E6FB7 = hook::pattern("E8 ? ? ? ? ? ? 83 C4 ? 8B CB FF 50 ? 8B 43");
+                FEScale::hbSetTransformHook.fun = injector::MakeCALL(loc_6E6FB7.get_first(), FEScale::SetTransformHook).get();
 
-                FEScale::SetTransformAddr = static_cast<uintptr_t>(injector::GetBranchDestination(loc_6E6FB7));
-                FEScale::gMoviePlayerAddr = *reinterpret_cast<uintptr_t*>(loc_559789 + 2);
-
-                injector::MakeCALL(loc_6E6FB7, FEScale::SetTransformHook);
-                injector::MakeCALL(loc_6E7011, FEScale::SetTransformHook);
+                auto loc_6E7011 = hook::pattern("E8 ? ? ? ? ? ? 83 C4 ? 8B CE FF 52 ? 8B 76");
+                FEScale::hbSetTransformHook.fun = injector::MakeCALL(loc_6E7011.get_first(), FEScale::SetTransformHook).get();
             }
         };
     }
