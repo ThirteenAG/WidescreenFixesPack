@@ -177,7 +177,7 @@ std::vector<std::tuple<int, int, int>> GetResolutionsList(bool uniqueByRefresh)
         auto [w2, h2, r2] = rhs;
         if (w1 != w2) return w1 < w2;
         if (h1 != h2) return h1 < h2;
-        return r1 > r2;
+        return r1 < r2;
     });
     if (uniqueByRefresh)
     {
@@ -202,7 +202,7 @@ std::vector<std::tuple<int, int, int>> GetResolutionsList(bool uniqueByRefresh)
 
 void GetResolutionsList(std::vector<std::string>& list, bool includeRefreshRate)
 {
-    auto resolutions = GetResolutionsList(!includeRefreshRate);
+    auto resolutions = GetResolutionsList(includeRefreshRate);
     for (const auto& res : resolutions)
     {
         auto [width, height, refresh] = res;
