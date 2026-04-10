@@ -50,7 +50,6 @@ void Init()
     hWnd.SetAddress(*pattern.get_first<HWND*>(2));
 
     pattern = hook::pattern("A3 ? ? ? ? 89 35 ? ? ? ? C6 05");
-
     ResX.SetAddress(*pattern.get_first<int*>(1));
     ResY.SetAddress(*pattern.get_first<int*>(7));
 
