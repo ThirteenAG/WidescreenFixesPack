@@ -22,12 +22,10 @@ for /f "tokens=1,* delims=:" %%A in ('curl -ks https://api.github.com/repos/Thir
   )
 )
 
-for /f "tokens=1,* delims=:" %%A in ('curl -ks https://api.github.com/repos/dege-diosg/dgVoodoo2/releases/latest ^| find "browser_download_url"') do (
-  echo.%%B | find /i "dgVoodoo2_" >nul && (
-    echo.%%B | find /i "_dbg" >nul || echo.%%B | find /i "_dev64" >nul || echo.%%B | find /i "API" >nul || (
-      curl -o dgVoodoo2.zip -kL %%B
-    )
-  )
+for /f "tokens=1,* delims=:" %%A in (
+  'curl -ks https://api.github.com/repos/dege-diosg/dgVoodoo2/releases/latest ^| find "browser_download_url" ^| find /i "dgVoodoo2_" ^| find /i /v "_dbg" ^| find /i /v "_dev64" ^| find /i /v "API"'
+) do (
+  curl -o dgVoodoo2.zip -kL %%B
 )
 
 for /f "tokens=1,* delims=:" %%A in ('curl -ks https://api.github.com/repos/ThirteenAG/Xidi/releases/latest ^| find "browser_download_url"') do (
