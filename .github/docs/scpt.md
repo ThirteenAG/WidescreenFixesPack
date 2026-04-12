@@ -46,7 +46,7 @@ $${\color{blue}ⓘ}$$ Added an option to change goggles light color
 > <summary>Click here for details</summary>
 > <br>
 >
-> You need to tell Wine explicitly to use the correct DLL overrides, which include `dinput8.dll`, `msacm32.dll`, `msvfw32.dll`, and `Xidi.32.dll`. There's more than one way to achieve it.
+> You need to tell Wine explicitly to use the correct DLL overrides required for this plugin. There's more than one way to achieve it.
 >
 > ###
 >
@@ -54,7 +54,7 @@ $${\color{blue}ⓘ}$$ Added an option to change goggles light color
 >    ```
 >    `WINEDLLOVERRIDES="dinput8,msacm32,msvfw32,Xidi.32=n,b"`
 >    ```
-> For Steam, head to the game’s properties and set `LAUNCH OPTIONS` to `WINEDLLOVERRIDES="dinput8,msacm32,msvfw32,Xidi.32=n,b" %command%`.
+> For Steam, head to the game's properties and set `LAUNCH OPTIONS` to `WINEDLLOVERRIDES="dinput8,msacm32,msvfw32,Xidi.32=n,b" %command%`.
 >
 >  ![steam-wine-dll-override](https://cookieplmonster.github.io/assets/img/setup/steam-wine-dll-override.png)
 >
@@ -62,7 +62,7 @@ $${\color{blue}ⓘ}$$ Added an option to change goggles light color
 > ```
 > WINEPREFIX="$HOME/.steam/steam/steamapps/compatdata/3929740/pfx" winecfg
 > ```
-> Select the `Libraries` tab and fill the combo box with the name of the library you wish to override and hit `Add`. You can verify that it’s been added to the list below with `(native, builtin)` suffix. Then close the window with the `OK` button.
+> Select the `Libraries` tab and fill the combo box with the name of the library you wish to override and hit `Add`. You can verify that it's been added to the list below with `(native, builtin)` suffix. Then close the window with the `OK` button.
 >
 > ![winecfg-dll-override](https://cookieplmonster.github.io/assets/img/setup/winecfg-dll-override.png)
 >
