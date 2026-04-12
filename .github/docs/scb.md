@@ -91,7 +91,7 @@ Put edited ini configs in `update` folder.
 >
 > **Method 1**: `WINEDLLOVERRIDES` variable lets you temporarily specify DLL overrides. It can be used from a command line as well as in the Steam launcher. In the case of the command line, simply prepend the usual start command with:
 >    ```
->    `WINEDLLOVERRIDES="version=n,b"`
+>    WINEDLLOVERRIDES="version=n,b"
 >    ```
 > For Steam, head to the game's properties and set `LAUNCH OPTIONS` to `WINEDLLOVERRIDES="version=n,b" %command%`.
 >

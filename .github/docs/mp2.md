@@ -36,7 +36,7 @@ $${\color{blue}ⓘ}$$ Added an option to keep the game running on minimize
 >
 > **Method 1**: `WINEDLLOVERRIDES` variable lets you temporarily specify DLL overrides. It can be used from a command line as well as in the Steam launcher. In the case of the command line, simply prepend the usual start command with:
 >    ```
->    `WINEDLLOVERRIDES="dinput,winmm,dsound,dsoal-aldrv,Xidi.32=n,b"`
+>    WINEDLLOVERRIDES="dinput,winmm,dsound,dsoal-aldrv,Xidi.32=n,b"
 >    ```
 > For Steam, head to the game's properties and set `LAUNCH OPTIONS` to `WINEDLLOVERRIDES="dinput,winmm,dsound,dsoal-aldrv,Xidi.32=n,b" %command%`.
 >

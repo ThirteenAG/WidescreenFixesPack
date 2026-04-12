@@ -56,7 +56,7 @@ https://user-images.githubusercontent.com/4904157/192846910-6ddfb3fb-3089-4553-b
 >
 > **Method 1**: `WINEDLLOVERRIDES` variable lets you temporarily specify DLL overrides. It can be used from a command line as well as in the Steam launcher. In the case of the command line, simply prepend the usual start command with:
 >    ```
->    `WINEDLLOVERRIDES="dinput8,version,Xidi.32=n,b"`
+>    WINEDLLOVERRIDES="dinput8,version,Xidi.32=n,b"
 >    ```
 > For Steam, head to the game's properties and set `LAUNCH OPTIONS` to `WINEDLLOVERRIDES="dinput8,version,Xidi.32=n,b" %command%`.
 >
