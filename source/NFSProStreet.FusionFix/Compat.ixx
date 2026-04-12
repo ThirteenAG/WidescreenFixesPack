@@ -59,11 +59,13 @@ namespace XtendedInputCompat
                 GetProcAddress(hXInputLib, "XInputGetState"));
 
         bActive = (pfnXInputGetState != nullptr);
-        return bActive;
     }
 
     void Update()
     {
+        if (hWnd != GetForegroundWindow())
+            return;
+
         // --- Right stick via XInput (port 0) ---
         XI_STATE state = {};
         if (bActive && pfnXInputGetState(0, &state) == 0 /*ERROR_SUCCESS*/)
@@ -136,17 +138,17 @@ void Init()
     XtendedInput::bFoundXInput = (XtendedInput::SetFEScale != nullptr) && (XtendedInput::GetUseWin32Cursor != nullptr) && (XtendedInput::SetPollingState != nullptr);
 
     XtendedInputCompat::fDeadzone = (fRightStickDeadzone > 0.0f) ? fRightStickDeadzone / 200.0f : 0.0f;
-    if (XtendedInputCompat::Init())
-    {
-        WFP::onGameProcessEvent() += []()
-        {
-            XtendedInputCompat::Update();
-        };
 
-        IATHook::Replace(XtendedInput::mhXtendedInput, "USER32.DLL",
-            std::forward_as_tuple("SetCursor", XtendedInputCompat::SetCursor_Hook)
-        );
-    }
+    XtendedInputCompat::Init();
+
+    WFP::onGameProcessEvent() += []()
+    {
+        XtendedInputCompat::Update();
+    };
+
+    IATHook::Replace(XtendedInput::mhXtendedInput, "USER32.DLL",
+        std::forward_as_tuple("SetCursor", XtendedInputCompat::SetCursor_Hook)
+    );
 }
 
 class Compat

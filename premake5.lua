@@ -385,6 +385,8 @@ project "MaxPayne2.WidescreenFix"
 group ""
 
 group "NeedForSpeed"
+project "NFSTheRun.FusionFix"
+   setpaths("Z:/WFP/Games/Need For Speed/Need for Speed The Run/", "Need For Speed The Run.exe", "plugins/")
 project "NFSCarbon.WidescreenFix"
    prebuildcommands {
    "for /R \"../source/%{prj.name}/\" %%f in (*.fx) do (\"../includes/dxsdk/lib/x86/fxc.exe\" /T fx_2_0 /Fo \"../source/%{prj.name}/%%~nf.fxo\" %%f)"
