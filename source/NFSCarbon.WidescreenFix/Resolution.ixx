@@ -344,6 +344,12 @@ public:
 
             pattern = hook::pattern("C7 44 24 ? ? ? ? ? 89 74 24 ? 89 74 24 ? FF D7 68");
             shWndProc = safetyhook::create_inline(*pattern.get_first<void*>(4), WndProc);
+
+            onResChange() += [](int Width, int Height)
+            {
+                if (cFEng::pInstance && *cFEng::pInstance)
+                    cFEng::MakeLoadedPackagesDirty(*cFEng::pInstance, 0);
+            };
         };
     }
 } Resolution;

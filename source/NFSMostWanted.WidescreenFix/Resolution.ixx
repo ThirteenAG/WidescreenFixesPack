@@ -64,14 +64,14 @@ namespace DALOptions
             *pCurrentIndex = currentIndex;
         }
 
-        reinterpret_cast<BYTE*>(_this)[42] = 1;
-        DWORD* vtable = *reinterpret_cast<DWORD**>(_this);
+        reinterpret_cast<uint8_t*>(_this)[42] = 1;
+        uintptr_t* vtable = *reinterpret_cast<uintptr_t**>(_this);
 
         using NotifyFn = void (__thiscall*)(void* _this, int actionId);
         NotifyFn notifyChanged = reinterpret_cast<NotifyFn>(vtable[14]);
         notifyChanged(_this, actionId);
 
-        using UpdateFn = int (__thiscall*)(void* _this);
+        using UpdateFn = void(__thiscall*)(void* _this);
         UpdateFn update = reinterpret_cast<UpdateFn>(vtable[3]);
         update(_this);
     }
@@ -282,11 +282,9 @@ public:
             pattern = hook::pattern("89 35 ? ? ? ? 89 35 ? ? ? ? 89 35 ? ? ? ? 89 35 ? ? ? ? 89 35 ? ? ? ? 89 35 ? ? ? ? 89 35");
             injector::MakeNOP(pattern.get_first(), 6, true);
 
-
             pattern = hook::pattern("A1 ? ? ? ? 83 F8 ? 0F 87 ? ? ? ? FF 24 85 ? ? ? ? 8B 44 24 ? 8B 4C 24 ? ? ? ? ? ? ? ? ? ? ? ? ? C2");
             shsub_6C27D0 = safetyhook::create_inline(pattern.count_hint(2).get(0).get<void*>(), GetRacingResolution);
             shsub_6C28B0 = safetyhook::create_inline(pattern.count_hint(2).get(1).get<void*>(), sub_6C28B0);
-
 
             pattern = hook::pattern("E8 ? ? ? ? 50 6A ? 6A ? 68 ? ? ? ? 6A ? 68 ? ? ? ? 56 E8 ? ? ? ? 83 C4 ? 32 C0 5E C3");
             shGetLocalizedString = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), GetLocalizedString);
@@ -361,6 +359,12 @@ public:
 
             pattern = hook::pattern("C7 44 24 ? ? ? ? ? 89 5C 24 ? 89 5C 24 ? FF D6 68");
             shWndProc = safetyhook::create_inline(*pattern.get_first<void*>(4), WndProc);
+
+            onResChange() += [](int Width, int Height)
+            {
+                if (cFEng::pInstance && *cFEng::pInstance)
+                    cFEng::MakeLoadedPackagesDirty(*cFEng::pInstance, 0);
+            };
         };
     }
 } Resolution;

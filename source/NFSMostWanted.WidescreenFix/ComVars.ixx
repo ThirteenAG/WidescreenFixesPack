@@ -77,6 +77,12 @@ export namespace Sim
     }
 }
 
+export namespace cFEng
+{
+    void** pInstance = nullptr;
+    void (__fastcall* MakeLoadedPackagesDirty)(void*, void*) = nullptr;
+}
+
 export int bStringHash(const char* str)
 {
     if (!str)

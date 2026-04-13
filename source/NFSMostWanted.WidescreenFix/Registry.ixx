@@ -70,7 +70,6 @@ public:
                 SettingsSavePath.append("NFS Most Wanted");
                 SettingsSavePath.append("Settings.ini");
 
-                RegistryFallback::UseHKCUFallback(true);
                 RegistryWrapper("Need for Speed", SettingsSavePath);
                 RegistryWrapper::AddPathWriter("Install Dir", "InstallDir", "Path");
                 RegistryWrapper::AddDefault("@", "INSERTYOURCDKEYHERE");
@@ -118,6 +117,7 @@ public:
                     "Software\\EA Games\\Need for Speed Most Wanted"
                 );
 
+                RegistryFallback::UseHKCUFallback(true);
                 RegistryFallback::AddDefault("@", "INSERTYOURCDKEYHERE");
                 RegistryFallback::AddDefault("CD Drive", "D:\\");
                 RegistryFallback::AddDefault("CacheSize", "2936691712");
