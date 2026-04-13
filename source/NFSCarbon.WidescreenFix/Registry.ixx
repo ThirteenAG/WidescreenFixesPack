@@ -70,7 +70,6 @@ public:
                 SettingsSavePath.append("NFS Carbon");
                 SettingsSavePath.append("Settings.ini");
 
-                RegistryFallback::UseHKCUFallback(true);
                 RegistryWrapper("Need for Speed", SettingsSavePath);
                 RegistryWrapper::AddPathWriter("Install Dir", "InstallDir", "Path");
                 RegistryWrapper::AddDefault("@", "INSERTYOURCDKEYHERE");
@@ -120,6 +119,7 @@ public:
                     "Software\\Electronic Arts\\Need for Speed Carbono"
                 );
 
+                RegistryFallback::UseHKCUFallback(true);
                 RegistryFallback::AddDefault("@", "INSERTYOURCDKEYHERE");
                 RegistryFallback::AddDefault("CD Drive", "D:\\");
                 RegistryFallback::AddDefault("CacheSize", "5697825792");

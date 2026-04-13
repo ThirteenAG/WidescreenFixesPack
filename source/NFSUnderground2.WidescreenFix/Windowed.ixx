@@ -47,7 +47,7 @@ public:
                     //std::forward_as_tuple("ShowCursor", WindowedModeWrapper::ShowCursor_Hook)
                 );
 
-                auto pattern = hook::pattern("8B 15 ? ? ? ? 8B 82 ? ? ? ? 8B C8 C1 E9 ? F6 C1 ? 75 ? C1 E8 ? A8 ? 75 ? 39 1D");
+                auto pattern = hook::pattern("B9 ? ? ? ? E8 ? ? ? ? 84 C0 75 ? A1 ? ? ? ? 85 C0 74 ? 6A");
                 static auto ShowCursorHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
                 {
                     WindowedModeWrapper::ShowCursor_Hook(FALSE);
