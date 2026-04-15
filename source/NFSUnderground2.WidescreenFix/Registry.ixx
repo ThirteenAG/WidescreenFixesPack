@@ -16,7 +16,7 @@ static HRESULT WINAPI SHGetFolderPathAHook(HWND hwnd, int csidl, HANDLE hToken, 
     if (bUseCustomUserDir)
     {
         int folder = csidl & ~CSIDL_FLAG_CREATE;
-        if (folder == CSIDL_PERSONAL)
+        if (folder == CSIDL_LOCAL_APPDATA)
         {
             CreateDirectoryW(CustomUserDir.c_str(), NULL);
             memcpy(pszPath, CustomUserDir.u8string().data(), CustomUserDir.u8string().size() + 1);

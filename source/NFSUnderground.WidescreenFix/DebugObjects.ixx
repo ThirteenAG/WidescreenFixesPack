@@ -6,6 +6,7 @@ module;
 export module DebugObjects;
 
 import ComVars;
+import Resolution;
 
 namespace DebugTags
 {
@@ -167,45 +168,58 @@ void DrawRect(LPDIRECT3DDEVICE9 pDevice, int32_t x, int32_t y, int32_t w, int32_
     pDevice->Clear(1, &BarRect, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, color, 0, 0);
 }
 
-export void InitDebugObjects()
+class DebugObjects
 {
-    CIniReader iniReader("");
-    int nHideDebugObjects = iniReader.ReadInteger("MISC", "HideDebugObjects", 0);
-
-    if (nHideDebugObjects)
+public:
+    DebugObjects()
     {
-        if (nHideDebugObjects == 2)
+        WFP::onInitEventAsync() += []()
         {
-            //D3D9 EndScene Hook
-            auto pattern = hook::pattern("A1 ? ? ? ? 8B 08 83 C4 04 50");
-            static LPDIRECT3DDEVICE9* pDevice = *pattern.get_first<LPDIRECT3DDEVICE9*>(1);
-            struct EndSceneHook
+            CIniReader iniReader("");
+            int nHideDebugObjects = iniReader.ReadInteger("MISC", "HideDebugObjects", 0);
+
+            if (nHideDebugObjects)
             {
-                void operator()(injector::reg_pack& regs)
+                if (nHideDebugObjects == 2)
                 {
-                    regs.eax = *(uint32_t*)pDevice;
-                    regs.ecx = *(uint32_t*)(regs.eax);
-
-                    if (nGameState == 3)
+                    //D3D9 EndScene Hook
+                    auto pattern = hook::pattern("A1 ? ? ? ? 8B 08 83 C4 04 50");
+                    static LPDIRECT3DDEVICE9* pDevice = *pattern.get_first<LPDIRECT3DDEVICE9*>(1);
+                    struct EndSceneHook
                     {
-                        DrawRect(*pDevice, 0, 0, static_cast<int32_t>(Screen.fHudOffsetReal), Screen.nHeight);
-                        DrawRect(*pDevice, static_cast<int32_t>(Screen.fWidth43 + Screen.fHudOffsetReal), 0, static_cast<int32_t>(Screen.fWidth43 + Screen.fHudOffsetReal + Screen.fHudOffsetReal), Screen.nHeight);
-                    }
+                        void operator()(injector::reg_pack& regs)
+                        {
+                            regs.eax = *(uint32_t*)pDevice;
+                            regs.ecx = *(uint32_t*)(regs.eax);
+
+                            if (nGameState == 3)
+                            {
+                                auto [Width, Height] = GetRes();
+
+                                float nWidth43 = static_cast<uint32_t>(static_cast<float>(Height) * (4.0f / 3.0f));
+                                float fWidth43 = static_cast<float>(nWidth43);
+                                float fHudOffsetReal = (static_cast<float>(Width) - static_cast<float>(Height) * (4.0f / 3.0f)) / 2.0f;
+
+                                DrawRect(*pDevice, 0, 0, static_cast<int32_t>(fHudOffsetReal), Height);
+                                DrawRect(*pDevice, static_cast<int32_t>(fWidth43 + fHudOffsetReal), 0, static_cast<int32_t>(fWidth43 + fHudOffsetReal + fHudOffsetReal), Height);
+                            }
+                        }
+                    }; injector::MakeInline<EndSceneHook>(pattern.get_first(0), pattern.get_first(7));
                 }
-            }; injector::MakeInline<EndSceneHook>(pattern.get_first(0), pattern.get_first(7));
-        }
-        else
-        {
-            using namespace DebugTags;
+                else
+                {
+                    using namespace DebugTags;
 
-            FEngSetInvisible_Addr = static_cast<decltype(FEngSetInvisible_Addr)>(injector::GetBranchDestination(hook::get_pattern("E8 ? ? ? ? 8A 43 61"))); //0x000495F70;
-            FEHashUpper_Addr = static_cast<decltype(FEHashUpper_Addr)>(injector::GetBranchDestination(hook::get_pattern("E8 ? ? ? ? 8B 75 6C"))); //0x004FD230;
-            FEngFindObject_Addr = static_cast<decltype(FEngFindObject_Addr)>(injector::GetBranchDestination(hook::get_pattern("E8 ? ? ? ? 3B C6 75 16"))); //0x004FFB70;
-            FEPkgMgr_FindPackage_Addr = static_cast<decltype(FEPkgMgr_FindPackage_Addr)>(injector::GetBranchDestination(hook::get_pattern("E8 ? ? ? ? 8B 50 1C"))); //0x004F65D0;
+                    FEngSetInvisible_Addr = static_cast<decltype(FEngSetInvisible_Addr)>(injector::GetBranchDestination(hook::get_pattern("E8 ? ? ? ? 8A 43 61"))); //0x000495F70;
+                    FEHashUpper_Addr = static_cast<decltype(FEHashUpper_Addr)>(injector::GetBranchDestination(hook::get_pattern("E8 ? ? ? ? 8B 75 6C"))); //0x004FD230;
+                    FEngFindObject_Addr = static_cast<decltype(FEngFindObject_Addr)>(injector::GetBranchDestination(hook::get_pattern("E8 ? ? ? ? 3B C6 75 16"))); //0x004FFB70;
+                    FEPkgMgr_FindPackage_Addr = static_cast<decltype(FEPkgMgr_FindPackage_Addr)>(injector::GetBranchDestination(hook::get_pattern("E8 ? ? ? ? 8B 50 1C"))); //0x004F65D0;
 
-            auto pattern = hook::pattern("8B 4C 24 4C 8B 16");
-            FEPkgMgr_SendMessageToPackage_Cave_Exit = reinterpret_cast<decltype(FEPkgMgr_SendMessageToPackage_Cave_Exit)>(pattern.get_first(4)); //0x004F7D18;
-            injector::MakeJMP(pattern.get_first(-4), FEPkgMgr_SendMessageToPackage_Cave, true);
-        }
+                    auto pattern = hook::pattern("8B 4C 24 4C 8B 16");
+                    FEPkgMgr_SendMessageToPackage_Cave_Exit = reinterpret_cast<decltype(FEPkgMgr_SendMessageToPackage_Cave_Exit)>(pattern.get_first(4)); //0x004F7D18;
+                    injector::MakeJMP(pattern.get_first(-4), FEPkgMgr_SendMessageToPackage_Cave, true);
+                }
+            }
+        };
     }
-}
+} DebugObjects;

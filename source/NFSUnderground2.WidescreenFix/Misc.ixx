@@ -252,7 +252,6 @@ public:
             }; injector::MakeInline<Buttons>(pattern.get_first(1), pattern.get_first(9));
 
             {
-
                 static auto dword_86FFC0 = *hook::get_pattern<int32_t*>("8D 95 ? ? ? ? 8D 3C 28 8B", 2);
 
                 auto pattern = hook::pattern("8B F0 85 F6 7D ? 53 68 ? ? ? ? E8 ? ? ? ? 83 C4 ? 81 FE");
