@@ -7,7 +7,6 @@ export module Frontend;
 
 import ComVars;
 import Resolution;
-import Compat;
 
 std::optional<float> fHudAspectRatioConstraint;
 float fWidescreenHudOffset = 120.0f;

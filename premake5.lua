@@ -420,9 +420,15 @@ project "NFSUndercover.FusionFix"
    defines { "IDR_POSTFX=201" }
    setpaths("Z:/WFP/Games/Need For Speed/Need for Speed Undercover/", "nfs.exe")
 project "NFSUnderground.WidescreenFix"
-   setpaths("Z:/WFP/Games/Need For Speed/Need For Speed Underground/", "speed.exe")
-   files { "textures/NFS/NFSU/icon.rc" }
+   prebuildcommands {
+   "for /R \"../source/%{prj.name}/\" %%f in (*.fx) do (\"../includes/dxsdk/lib/x86/fxc.exe\" /T fx_2_0 /Fo \"../source/%{prj.name}/%%~nf.fxo\" %%f)"
+   }
+   includedirs {"Resources"}
+   files { "source/%{prj.name}/*.fx", "source/%{prj.name}/*.ps", "source/%{prj.name}/*.rc" }
    defines { "IDR_NFSUICON=200" }
+   defines { "IDR_POSTFX=201" }
+   files { "textures/NFS/NFSU/icon.rc" }
+   setpaths("Z:/WFP/Games/Need For Speed/Need For Speed Underground/", "speed.exe")
 project "NFSUnderground2.WidescreenFix"
    prebuildcommands {
    "for /R \"../source/%{prj.name}/\" %%f in (*.fx) do (\"../includes/dxsdk/lib/x86/fxc.exe\" /T fx_2_0 /Fo \"../source/%{prj.name}/%%~nf.fxo\" %%f)"
