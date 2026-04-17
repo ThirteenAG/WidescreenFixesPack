@@ -60,9 +60,11 @@ namespace usercall
     {
         __asm
         {
-            mov esi, [esp + 8]
-            mov eax, [esp + 4]
+            push esi
+            mov esi, [esp + 12]
+            mov eax, [esp + 8]
             call eax
+            pop esi
             ret
         }
     }
@@ -71,9 +73,11 @@ namespace usercall
     {
         __asm
         {
-            mov edi, [esp + 8]
-            mov eax, [esp + 4]
+            push edi
+            mov edi, [esp + 12]
+            mov eax, [esp + 8]
             call eax
+            pop edi
             ret
         }
     }
@@ -82,9 +86,11 @@ namespace usercall
     {
         __asm
         {
-            mov ebx, [esp + 8]
-            mov eax, [esp + 4]
+            push ebx
+            mov ebx, [esp + 12]
+            mov eax, [esp + 8]
             call eax
+            pop ebx
             ret
         }
     }
@@ -118,10 +124,12 @@ namespace usercall
     {
         __asm
         {
-            mov esi, [esp + 12]
-            mov eax, [esp + 8]
-            mov ecx, [esp + 4]
+            push esi
+            mov esi, [esp + 16]
+            mov eax, [esp + 12]
+            mov ecx, [esp + 8]
             call ecx
+            pop esi
             ret
         }
     }
@@ -130,10 +138,12 @@ namespace usercall
     {
         __asm
         {
-            mov edi, [esp + 12]
-            mov eax, [esp + 8]
-            mov ecx, [esp + 4]
+            push edi
+            mov edi, [esp + 16]
+            mov eax, [esp + 12]
+            mov ecx, [esp + 8]
             call ecx
+            pop edi
             ret
         }
     }
@@ -154,10 +164,12 @@ namespace usercall
     {
         __asm
         {
-            mov esi, [esp + 12]
-            mov ecx, [esp + 8]
-            mov eax, [esp + 4]
+            push esi
+            mov esi, [esp + 16]
+            mov ecx, [esp + 12]
+            mov eax, [esp + 8]
             call eax
+            pop esi
             ret
         }
     }
@@ -166,10 +178,12 @@ namespace usercall
     {
         __asm
         {
-            mov edi, [esp + 12]
-            mov ecx, [esp + 8]
-            mov eax, [esp + 4]
+            push edi
+            mov edi, [esp + 16]
+            mov ecx, [esp + 12]
+            mov eax, [esp + 8]
             call eax
+            pop edi
             ret
         }
     }
@@ -178,10 +192,12 @@ namespace usercall
     {
         __asm
         {
-            mov esi, [esp + 12]
-            mov edx, [esp + 8]
-            mov eax, [esp + 4]
+            push esi
+            mov esi, [esp + 16]
+            mov edx, [esp + 12]
+            mov eax, [esp + 8]
             call eax
+            pop esi
             ret
         }
     }
@@ -190,10 +206,12 @@ namespace usercall
     {
         __asm
         {
-            mov edi, [esp + 12]
-            mov edx, [esp + 8]
-            mov eax, [esp + 4]
+            push edi
+            mov edi, [esp + 16]
+            mov edx, [esp + 12]
+            mov eax, [esp + 8]
             call eax
+            pop edi
             ret
         }
     }
@@ -202,10 +220,14 @@ namespace usercall
     {
         __asm
         {
-            mov esi, [esp + 12]
-            mov edi, [esp + 8]
-            mov eax, [esp + 4]
+            push edi
+            push esi
+            mov esi, [esp + 20]
+            mov edi, [esp + 16]
+            mov eax, [esp + 12]
             call eax
+            pop esi
+            pop edi
             ret
         }
     }
@@ -214,10 +236,14 @@ namespace usercall
     {
         __asm
         {
-            mov edi, [esp + 12]
-            mov esi, [esp + 8]
-            mov eax, [esp + 4]
+            push edi
+            push esi
+            mov edi, [esp + 20]
+            mov esi, [esp + 16]
+            mov eax, [esp + 12]
             call eax
+            pop esi
+            pop edi
             ret
         }
     }
@@ -239,11 +265,13 @@ namespace usercall
     {
         __asm
         {
-            mov edx, [esp + 16]
-            mov ecx, [esp + 12]
-            mov eax, [esp + 8]
-            mov ebx, [esp + 4]
+            push ebx
+            mov edx, [esp + 20]
+            mov ecx, [esp + 16]
+            mov eax, [esp + 12]
+            mov ebx, [esp + 8]
             call ebx
+            pop ebx
             ret
         }
     }
@@ -252,11 +280,13 @@ namespace usercall
     {
         __asm
         {
-            mov esi, [esp + 16]
-            mov ecx, [esp + 12]
-            mov eax, [esp + 8]
-            mov edx, [esp + 4]
+            push esi
+            mov esi, [esp + 20]
+            mov ecx, [esp + 16]
+            mov eax, [esp + 12]
+            mov edx, [esp + 8]
             call edx
+            pop esi
             ret
         }
     }
@@ -265,11 +295,13 @@ namespace usercall
     {
         __asm
         {
-            mov esi, [esp + 16]
-            mov edx, [esp + 12]
-            mov eax, [esp + 8]
-            mov ecx, [esp + 4]
+            push esi
+            mov esi, [esp + 20]
+            mov edx, [esp + 16]
+            mov eax, [esp + 12]
+            mov ecx, [esp + 8]
             call ecx
+            pop esi
             ret
         }
     }
@@ -278,11 +310,13 @@ namespace usercall
     {
         __asm
         {
-            mov esi, [esp + 16]
-            mov edx, [esp + 12]
-            mov ecx, [esp + 8]
-            mov eax, [esp + 4]
+            push esi
+            mov esi, [esp + 20]
+            mov edx, [esp + 16]
+            mov ecx, [esp + 12]
+            mov eax, [esp + 8]
             call eax
+            pop esi
             ret
         }
     }
@@ -291,11 +325,15 @@ namespace usercall
     {
         __asm
         {
-            mov esi, [esp + 16]
-            mov edi, [esp + 12]
-            mov edx, [esp + 8]
-            mov eax, [esp + 4]
+            push edi
+            push esi
+            mov esi, [esp + 24]
+            mov edi, [esp + 20]
+            mov edx, [esp + 16]
+            mov eax, [esp + 12]
             call eax
+            pop esi
+            pop edi
             ret
         }
     }
@@ -344,11 +382,13 @@ namespace usercall
     {
         __asm
         {
-            mov esi, [esp + 8]
-            push dword ptr[esp + 12]
-            mov eax, [esp + 8]
+            push esi
+            mov esi, [esp + 12]
+            push dword ptr[esp + 16]
+            mov eax, [esp + 12]
             call eax
             add esp, 4
+            pop esi
             ret
         }
     }
@@ -357,11 +397,13 @@ namespace usercall
     {
         __asm
         {
-            mov edi, [esp + 8]
-            push dword ptr[esp + 12]
-            mov eax, [esp + 8]
+            push edi
+            mov edi, [esp + 12]
+            push dword ptr[esp + 16]
+            mov eax, [esp + 12]
             call eax
             add esp, 4
+            pop edi
             ret
         }
     }
@@ -413,12 +455,14 @@ namespace usercall
     {
         __asm
         {
-            mov edi, [esp + 12]
-            mov edx, [esp + 8]
-            push dword ptr[esp + 16]
-            mov eax, [esp + 8]
+            push edi
+            mov edi, [esp + 16]
+            mov edx, [esp + 12]
+            push dword ptr[esp + 20]
+            mov eax, [esp + 12]
             call eax
             add esp, 4
+            pop edi
             ret
         }
     }
@@ -427,12 +471,16 @@ namespace usercall
     {
         __asm
         {
-            mov esi, [esp + 12]
-            mov edi, [esp + 8]
-            push dword ptr[esp + 16]
-            mov eax, [esp + 8]
+            push edi
+            push esi
+            mov esi, [esp + 20]
+            mov edi, [esp + 16]
+            push dword ptr[esp + 24]
+            mov eax, [esp + 16]
             call eax
             add esp, 4
+            pop esi
+            pop edi
             ret
         }
     }
@@ -442,13 +490,15 @@ namespace usercall
     {
         __asm
         {
-            mov esi, [esp + 16]
-            mov edx, [esp + 12]
-            mov eax, [esp + 8]
-            push dword ptr[esp + 20]
-            mov ecx, [esp + 8]
+            push esi
+            mov esi, [esp + 20]
+            mov edx, [esp + 16]
+            mov eax, [esp + 12]
+            push dword ptr[esp + 24]
+            mov ecx, [esp + 12]
             call ecx
             add esp, 4
+            pop esi
             ret
         }
     }
@@ -457,13 +507,17 @@ namespace usercall
     {
         __asm
         {
-            mov esi, [esp + 16]
-            mov edi, [esp + 12]
-            mov eax, [esp + 8]
-            push dword ptr[esp + 20]
-            mov ecx, [esp + 8]
+            push edi
+            push esi
+            mov esi, [esp + 24]
+            mov edi, [esp + 20]
+            mov eax, [esp + 16]
+            push dword ptr[esp + 28]
+            mov ecx, [esp + 16]
             call ecx
             add esp, 4
+            pop esi
+            pop edi
             ret
         }
     }
@@ -506,9 +560,11 @@ namespace usercall
     {
         __asm
         {
-            mov esi, [esp + 8]
-            mov eax, [esp + 4]
+            push esi
+            mov esi, [esp + 12]
+            mov eax, [esp + 8]
             call eax
+            pop esi
             ret
         }
     }
@@ -517,9 +573,11 @@ namespace usercall
     {
         __asm
         {
-            mov edi, [esp + 8]
-            mov eax, [esp + 4]
+            push edi
+            mov edi, [esp + 12]
+            mov eax, [esp + 8]
             call eax
+            pop edi
             ret
         }
     }
@@ -528,9 +586,11 @@ namespace usercall
     {
         __asm
         {
-            mov ebx, [esp + 8]
-            mov eax, [esp + 4]
+            push ebx
+            mov ebx, [esp + 12]
+            mov eax, [esp + 8]
             call eax
+            pop ebx
             ret
         }
     }
@@ -564,10 +624,12 @@ namespace usercall
     {
         __asm
         {
-            mov esi, [esp + 12]
-            mov eax, [esp + 8]
-            mov ecx, [esp + 4]
+            push esi
+            mov esi, [esp + 16]
+            mov eax, [esp + 12]
+            mov ecx, [esp + 8]
             call ecx
+            pop esi
             ret
         }
     }
@@ -576,10 +638,12 @@ namespace usercall
     {
         __asm
         {
-            mov edi, [esp + 12]
-            mov eax, [esp + 8]
-            mov ecx, [esp + 4]
+            push edi
+            mov edi, [esp + 16]
+            mov eax, [esp + 12]
+            mov ecx, [esp + 8]
             call ecx
+            pop edi
             ret
         }
     }
@@ -600,10 +664,12 @@ namespace usercall
     {
         __asm
         {
-            mov esi, [esp + 12]
-            mov ecx, [esp + 8]
-            mov eax, [esp + 4]
+            push esi
+            mov esi, [esp + 16]
+            mov ecx, [esp + 12]
+            mov eax, [esp + 8]
             call eax
+            pop esi
             ret
         }
     }
@@ -612,10 +678,12 @@ namespace usercall
     {
         __asm
         {
-            mov edi, [esp + 12]
-            mov ecx, [esp + 8]
-            mov eax, [esp + 4]
+            push edi
+            mov edi, [esp + 16]
+            mov ecx, [esp + 12]
+            mov eax, [esp + 8]
             call eax
+            pop edi
             ret
         }
     }
@@ -624,10 +692,12 @@ namespace usercall
     {
         __asm
         {
-            mov esi, [esp + 12]
-            mov edx, [esp + 8]
-            mov eax, [esp + 4]
+            push esi
+            mov esi, [esp + 16]
+            mov edx, [esp + 12]
+            mov eax, [esp + 8]
             call eax
+            pop esi
             ret
         }
     }
@@ -636,10 +706,12 @@ namespace usercall
     {
         __asm
         {
-            mov edi, [esp + 12]
-            mov edx, [esp + 8]
-            mov eax, [esp + 4]
+            push edi
+            mov edi, [esp + 16]
+            mov edx, [esp + 12]
+            mov eax, [esp + 8]
             call eax
+            pop edi
             ret
         }
     }
@@ -648,10 +720,14 @@ namespace usercall
     {
         __asm
         {
-            mov esi, [esp + 12]
-            mov edi, [esp + 8]
-            mov eax, [esp + 4]
+            push edi
+            push esi
+            mov esi, [esp + 20]
+            mov edi, [esp + 16]
+            mov eax, [esp + 12]
             call eax
+            pop esi
+            pop edi
             ret
         }
     }
@@ -660,10 +736,14 @@ namespace usercall
     {
         __asm
         {
-            mov edi, [esp + 12]
-            mov esi, [esp + 8]
-            mov eax, [esp + 4]
+            push edi
+            push esi
+            mov edi, [esp + 20]
+            mov esi, [esp + 16]
+            mov eax, [esp + 12]
             call eax
+            pop esi
+            pop edi
             ret
         }
     }
@@ -685,11 +765,13 @@ namespace usercall
     {
         __asm
         {
-            mov edx, [esp + 16]
-            mov ecx, [esp + 12]
-            mov eax, [esp + 8]
-            mov ebx, [esp + 4]
+            push ebx
+            mov edx, [esp + 20]
+            mov ecx, [esp + 16]
+            mov eax, [esp + 12]
+            mov ebx, [esp + 8]
             call ebx
+            pop ebx
             ret
         }
     }
@@ -698,11 +780,13 @@ namespace usercall
     {
         __asm
         {
-            mov esi, [esp + 16]
-            mov ecx, [esp + 12]
-            mov eax, [esp + 8]
-            mov edx, [esp + 4]
+            push esi
+            mov esi, [esp + 20]
+            mov ecx, [esp + 16]
+            mov eax, [esp + 12]
+            mov edx, [esp + 8]
             call edx
+            pop esi
             ret
         }
     }
@@ -711,11 +795,13 @@ namespace usercall
     {
         __asm
         {
-            mov esi, [esp + 16]
-            mov edx, [esp + 12]
-            mov eax, [esp + 8]
-            mov ecx, [esp + 4]
+            push esi
+            mov esi, [esp + 20]
+            mov edx, [esp + 16]
+            mov eax, [esp + 12]
+            mov ecx, [esp + 8]
             call ecx
+            pop esi
             ret
         }
     }
@@ -724,11 +810,13 @@ namespace usercall
     {
         __asm
         {
-            mov esi, [esp + 16]
-            mov edx, [esp + 12]
-            mov ecx, [esp + 8]
-            mov eax, [esp + 4]
+            push esi
+            mov esi, [esp + 20]
+            mov edx, [esp + 16]
+            mov ecx, [esp + 12]
+            mov eax, [esp + 8]
             call eax
+            pop esi
             ret
         }
     }
@@ -737,11 +825,15 @@ namespace usercall
     {
         __asm
         {
-            mov esi, [esp + 16]
-            mov edi, [esp + 12]
-            mov edx, [esp + 8]
-            mov eax, [esp + 4]
+            push edi
+            push esi
+            mov esi, [esp + 24]
+            mov edi, [esp + 20]
+            mov edx, [esp + 16]
+            mov eax, [esp + 12]
             call eax
+            pop esi
+            pop edi
             ret
         }
     }
@@ -790,11 +882,13 @@ namespace usercall
     {
         __asm
         {
-            mov esi, [esp + 8]
-            push dword ptr[esp + 12]
-            mov eax, [esp + 8]
+            push esi
+            mov esi, [esp + 12]
+            push dword ptr[esp + 16]
+            mov eax, [esp + 12]
             call eax
             add esp, 4
+            pop esi
             ret
         }
     }
@@ -803,11 +897,13 @@ namespace usercall
     {
         __asm
         {
-            mov edi, [esp + 8]
-            push dword ptr[esp + 12]
-            mov eax, [esp + 8]
+            push edi
+            mov edi, [esp + 12]
+            push dword ptr[esp + 16]
+            mov eax, [esp + 12]
             call eax
             add esp, 4
+            pop edi
             ret
         }
     }
@@ -859,12 +955,14 @@ namespace usercall
     {
         __asm
         {
-            mov edi, [esp + 12]
-            mov edx, [esp + 8]
-            push dword ptr[esp + 16]
-            mov eax, [esp + 8]
+            push edi
+            mov edi, [esp + 16]
+            mov edx, [esp + 12]
+            push dword ptr[esp + 20]
+            mov eax, [esp + 12]
             call eax
             add esp, 4
+            pop edi
             ret
         }
     }
@@ -873,12 +971,16 @@ namespace usercall
     {
         __asm
         {
-            mov esi, [esp + 12]
-            mov edi, [esp + 8]
-            push dword ptr[esp + 16]
-            mov eax, [esp + 8]
+            push edi
+            push esi
+            mov esi, [esp + 20]
+            mov edi, [esp + 16]
+            push dword ptr[esp + 24]
+            mov eax, [esp + 16]
             call eax
             add esp, 4
+            pop esi
+            pop edi
             ret
         }
     }
@@ -888,13 +990,15 @@ namespace usercall
     {
         __asm
         {
-            mov esi, [esp + 16]
-            mov edx, [esp + 12]
-            mov eax, [esp + 8]
-            push dword ptr[esp + 20]
-            mov ecx, [esp + 8]
+            push esi
+            mov esi, [esp + 20]
+            mov edx, [esp + 16]
+            mov eax, [esp + 12]
+            push dword ptr[esp + 24]
+            mov ecx, [esp + 12]
             call ecx
             add esp, 4
+            pop esi
             ret
         }
     }
@@ -903,13 +1007,17 @@ namespace usercall
     {
         __asm
         {
-            mov esi, [esp + 16]
-            mov edi, [esp + 12]
-            mov eax, [esp + 8]
-            push dword ptr[esp + 20]
-            mov ecx, [esp + 8]
+            push edi
+            push esi
+            mov esi, [esp + 24]
+            mov edi, [esp + 20]
+            mov eax, [esp + 16]
+            push dword ptr[esp + 28]
+            mov ecx, [esp + 16]
             call ecx
             add esp, 4
+            pop esi
+            pop edi
             ret
         }
     }

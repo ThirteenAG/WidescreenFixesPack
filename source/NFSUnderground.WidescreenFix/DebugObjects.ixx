@@ -80,16 +80,15 @@ namespace DebugTags
         if (usercall::CallAndRet<unsigned int, reg::edx>(FEHashUpper, pkgname) == 0x630135FF) // MU_QuickRaceOptions_PC.fng -- removes some buttons
             return;
 
+        unsigned int obj = 0;
+        unsigned int targetHash = usercall::CallAndRet<unsigned int, reg::edx>(FEHashUpper, "ConduitMdITC_TT21i");
+        char* pkg = (char*)usercall::CallAndRet<unsigned int, reg::eax>(FEPkgMgr_FindPackage, pkgname);
+
         // we search for every single test object until it's done (FEngFindObject returns 0 if it can't find any)
-        while (usercall::CallAndRet<unsigned int, reg::edx, reg::ecx>(FEngFindObject, (char*)usercall::CallAndRet<unsigned int, reg::eax>(FEPkgMgr_FindPackage, pkgname), usercall::CallAndRet<unsigned int, reg::edx>(FEHashUpper, "ConduitMdITC_TT21i")))
+        while ((obj = usercall::CallAndRet<unsigned int, reg::edx, reg::ecx>(FEngFindObject, pkg, targetHash)) != 0)
         {
-            // once found, catch it in a variable
-            TestObj = usercall::CallAndRet<unsigned int, reg::edx, reg::ecx>(FEngFindObject, (char*)usercall::CallAndRet<unsigned int, reg::eax>(FEPkgMgr_FindPackage, pkgname), usercall::CallAndRet<unsigned int, reg::edx>(FEHashUpper, "ConduitMdITC_TT21i"));
-            // before corrupting, hide it
-            usercall::Call<reg::esi, reg::edi>(FEngSetInvisible, pkgname, usercall::CallAndRet<unsigned int, reg::edx>(FEHashUpper, "ConduitMdITC_TT21i"));
-            // after hiding, we can corrupt the hash, this is simply done by changing the NameHash at 0x10 of the FEObject (as per its class)
-            *(int*)(TestObj + 0x10) = 0xDEADBEEF;
-            // rip and tear... until it's done
+            usercall::Call<reg::esi, reg::edi>(FEngSetInvisible, pkgname, targetHash);
+            *(int*)(obj + 0x10) = 0xDEADBEEF;
         }
     }
 }

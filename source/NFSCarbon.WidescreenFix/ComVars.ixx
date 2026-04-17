@@ -110,7 +110,7 @@ public:
     using WFP::Event<Args...>::Event;
 };
 
-export inline ResChange<int, int>& onResChange()
+export ResChange<int, int>& onResChange()
 {
     static ResChange<int, int> ResChangeEvent;
     return ResChangeEvent;

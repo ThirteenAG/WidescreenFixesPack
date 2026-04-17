@@ -246,6 +246,12 @@ public:
             pattern = hook::pattern("89 35 ? ? ? ? A1 ? ? ? ? 89 35");
             injector::MakeNOP(pattern.get_first(), 6, true);
 
+            pattern = hook::pattern("89 35 ? ? ? ? E8 ? ? ? ? 83 C4 ? E8 ? ? ? ? A1");
+            injector::MakeNOP(pattern.get_first(), 6, true);
+
+            pattern = hook::pattern("89 35 ? ? ? ? E8 ? ? ? ? 81 3D");
+            injector::MakeNOP(pattern.get_first(), 6, true);
+
             pattern = hook::pattern("A1 ? ? ? ? 83 F8 ? 0F 87 ? ? ? ? FF 24 85 ? ? ? ? 8B 44 24");
             shsub_5BF610 = safetyhook::create_inline(pattern.get_first(), GetRacingResolution);
 

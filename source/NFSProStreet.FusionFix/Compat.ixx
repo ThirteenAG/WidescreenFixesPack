@@ -45,7 +45,7 @@ namespace XtendedInputCompat
     int   nWheelAccum = 0;
     float fDeadzone = 0.0f;
 
-    bool Init()
+    void Init()
     {
         const char* xinputDlls[] = { "xinput1_4.dll", "xinput1_3.dll", "xinput9_1_0.dll" };
         for (auto dll : xinputDlls)
