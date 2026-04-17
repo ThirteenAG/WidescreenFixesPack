@@ -61,6 +61,9 @@ void Init()
     pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? C2 ? ? ? ? C2");
     cFEng::PopPackage = (decltype(cFEng::PopPackage))injector::GetBranchDestination(pattern.get_first(0)).as_int();
 
+    pattern = hook::pattern("A1 ? ? ? ? 85 C0 74 ? BB");
+    pCurrentMoviePlayer.SetAddress(*pattern.get_first<void**>(1));
+
     pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 8D 44 24 ? 50 FF D7");
     static auto GetActualDeltaTime = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
