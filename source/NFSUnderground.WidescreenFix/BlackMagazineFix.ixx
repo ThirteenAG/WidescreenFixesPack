@@ -55,7 +55,11 @@ public:
 
             if (bBlackMagazineFix)
             {
-                auto pattern = hook::pattern("8B F8 A0 ? ? ? ? 84 C0 0F 85");
+                auto pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? E8 ? ? ? ? A1 ? ? ? ? 33 F6");
+                if (pattern.empty())
+                    return;
+
+                pattern = hook::pattern("8B F8 A0 ? ? ? ? 84 C0 0F 85");
                 pIsMagazineMode = *pattern.get_first<uint8_t*>(3);
 
                 pattern = hook::pattern("83 3D ? ? ? ? 01 8B 77 58");
@@ -63,9 +67,9 @@ public:
                 injector::MakeRangedNOP(pattern.get_first(0), pattern.get_first(7));
                 injector::MakeCALL(pattern.get_first(0), CmpShouldClearSurfaceDuring3DRender); // 4098A2
 
-                pattern = hook::pattern("6A 00 BE ? ? ? ? 74 ? BE");
-                off_71AA4C = *pattern.get_first<void*>(10);
-                injector::MakeCALL(pattern.get_first(9), MaybeClearSurfaceDuringBackgroundRender); // 409CF2
+                pattern = hook::pattern("BE ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 83 C4 ? 85 C0");
+                off_71AA4C = *pattern.get_first<void*>(1);
+                injector::MakeCALL(pattern.get_first(0), MaybeClearSurfaceDuringBackgroundRender); // 409CF2
             }
         };
     }

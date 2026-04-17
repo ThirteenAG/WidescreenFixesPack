@@ -134,7 +134,13 @@ public:
             FEScale::bAutoFitFMV = iniReader.ReadInteger("MAIN", "AutoFitFMV", 1) != 0;
 
             auto pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? E8 ? ? ? ? A1 ? ? ? ? 33 F6");
-            eSetCurrentRenderTarget = (decltype(eSetCurrentRenderTarget))injector::GetBranchDestination(pattern.get_first()).as_int();
+            if (!pattern.empty())
+                eSetCurrentRenderTarget = (decltype(eSetCurrentRenderTarget))injector::GetBranchDestination(pattern.get_first()).as_int();
+            else
+            {
+                pattern = hook::pattern("55 8B EC 83 E4 ? 81 EC ? ? ? ? 56 57 E8");
+                eSetCurrentRenderTarget = (decltype(eSetCurrentRenderTarget))pattern.get_first();
+            }
 
             //HUD
             if (bFixHUD)
@@ -146,29 +152,24 @@ public:
                 static std::vector<GameRef<float>> fHudPosXArray;
 
                 auto pattern = hook::pattern("C7 ? ? ? ? 00 00 00 00 A0 43 C7 ? ? ? ? 00 00 00 00 70 43");
+                pattern.for_each_result([](auto match)
+                {
+                    GameRef<float> ref;
+                    ref.SetAddress(match.get<float>(7));
+                    injector::UnprotectMemory(ref.get_ptr(), sizeof(float));
+                    fHudPosXArray.push_back(std::move(ref));
+                });
+
+                pattern = hook::pattern("C7 ? ? ? 00 00 A0 43 C7 ? ? ? ? 00 00 00 00 70 43");
                 if (!pattern.empty())
                 {
                     pattern.for_each_result([](auto match)
                     {
                         GameRef<float> ref;
-                        ref.SetAddress(match.get<float>(7));
+                        ref.SetAddress(match.get<float>(4));
                         injector::UnprotectMemory(ref.get_ptr(), sizeof(float));
                         fHudPosXArray.push_back(std::move(ref));
                     });
-                }
-                else
-                {
-                    pattern = hook::pattern("C7 ? ? ? 00 00 A0 43 C7 ? ? ? ? 00 00 00 00 70 43");
-                    if (!pattern.empty())
-                    {
-                        pattern.for_each_result([](auto match)
-                        {
-                            GameRef<float> ref;
-                            ref.SetAddress(match.get<float>(4));
-                            injector::UnprotectMemory(ref.get_ptr(), sizeof(float));
-                            fHudPosXArray.push_back(std::move(ref));
-                        });
-                    }
                 }
 
                 pattern = hook::pattern("C7 ? ? ? 00 00 A0 43 C7 ? ? ? 00 00 70 43");
@@ -188,23 +189,42 @@ public:
                 injector::UnprotectMemory(temp_ref.get_ptr(), sizeof(float));
                 fHudPosXArray.push_back(std::move(temp_ref));
 
+                static GameRef<float> fRearviewMirrorLeftX1;
+                static GameRef<float> fRearviewMirrorLeftX2;
+                static GameRef<float> fRearviewMirrorRightX1;
+                static GameRef<float> fRearviewMirrorRightX2;
+
                 pattern = hook::pattern("C7 44 24 ? 00 00 DC 43 C7 44 24 ? 00 00 70 41");
 
-                static GameRef<float> fRearviewMirrorLeftX1;
-                fRearviewMirrorLeftX1.SetAddress(pattern.get_first<float>(20));
-                injector::UnprotectMemory(fRearviewMirrorLeftX1.get_ptr(), sizeof(float));
+                if (!pattern.empty())
+                {
+                    fRearviewMirrorLeftX1.SetAddress(pattern.get_first<float>(20));
+                    injector::UnprotectMemory(fRearviewMirrorLeftX1.get_ptr(), sizeof(float));
 
-                static GameRef<float> fRearviewMirrorLeftX2;
-                fRearviewMirrorLeftX2.SetAddress(pattern.get_first<float>(42));
-                injector::UnprotectMemory(fRearviewMirrorLeftX2.get_ptr(), sizeof(float));
+                    fRearviewMirrorLeftX2.SetAddress(pattern.get_first<float>(42));
+                    injector::UnprotectMemory(fRearviewMirrorLeftX2.get_ptr(), sizeof(float));
 
-                static GameRef<float> fRearviewMirrorRightX1;
-                fRearviewMirrorRightX1.SetAddress(pattern.get_first<float>(4));
-                injector::UnprotectMemory(fRearviewMirrorRightX1.get_ptr(), sizeof(float));
+                    fRearviewMirrorRightX1.SetAddress(pattern.get_first<float>(4));
+                    injector::UnprotectMemory(fRearviewMirrorRightX1.get_ptr(), sizeof(float));
 
-                static GameRef<float> fRearviewMirrorRightX2;
-                fRearviewMirrorRightX2.SetAddress(pattern.get_first<float>(64));
-                injector::UnprotectMemory(fRearviewMirrorRightX2.get_ptr(), sizeof(float));
+                    fRearviewMirrorRightX2.SetAddress(pattern.get_first<float>(64));
+                    injector::UnprotectMemory(fRearviewMirrorRightX2.get_ptr(), sizeof(float));
+                }
+                else
+                {
+                    pattern = hook::pattern("C7 44 24 ? ? ? ? ? C7 84 24 ? ? ? ? ? ? ? ? C7 84 24 ? ? ? ? ? ? ? ? C7 84 24 ? ? ? ? ? ? ? ? C7 84 24 ? ? ? ? ? ? ? ? C7 84 24 ? ? ? ? ? ? ? ? C7 84 24 ? ? ? ? ? ? ? ? C7 84 24 ? ? ? ? ? ? ? ? FF 91");
+                    fRearviewMirrorLeftX1.SetAddress(pattern.get_first<float>(26));
+                    injector::UnprotectMemory(fRearviewMirrorLeftX1.get_ptr(), sizeof(float));
+
+                    fRearviewMirrorLeftX2.SetAddress(pattern.get_first<float>(48));
+                    injector::UnprotectMemory(fRearviewMirrorLeftX2.get_ptr(), sizeof(float));
+
+                    fRearviewMirrorRightX1.SetAddress(pattern.get_first<float>(4));
+                    injector::UnprotectMemory(fRearviewMirrorRightX1.get_ptr(), sizeof(float));
+
+                    fRearviewMirrorRightX2.SetAddress(pattern.get_first<float>(70));
+                    injector::UnprotectMemory(fRearviewMirrorRightX2.get_ptr(), sizeof(float));
+                }
 
                 //mouse cursor fix
                 static std::vector<GameRef<int32_t>> fNegativeHudPosXArray;
@@ -464,7 +484,7 @@ public:
                     FEScale::UnsetMovieFlag();
                 });
 
-                pattern = hook::pattern("E8 ? ? ? ? A1 ? ? ? ? ? ? 83 C4 ? 57 6A ? 50 FF 91 ? ? ? ? A1 ? ? ? ? ? ? 57 6A ? 50 FF 92 ? ? ? ? 85 DB");
+                pattern = find_pattern("E8 ? ? ? ? A1 ? ? ? ? ? ? 83 C4 ? 57 6A ? 50 FF 91 ? ? ? ? A1 ? ? ? ? ? ? 57 6A ? 50 FF 92 ? ? ? ? 85 DB", "E8 ? ? ? ? A1 ? ? ? ? ? ? 83 C4 ? 57 6A ? 50 FF 91 ? ? ? ? A1 ? ? ? ? ? ? 57 6A ? 50 FF 92 ? ? ? ? 8B 45");
                 FEScale::hbSetTransformHook.fun = usercall::MakeUsercall(pattern.get_first(), [](SafetyHookContext& regs)
                 {
                     auto arg1 = (uint32_t)regs.edi;
