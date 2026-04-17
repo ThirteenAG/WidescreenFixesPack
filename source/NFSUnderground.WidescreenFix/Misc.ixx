@@ -84,9 +84,9 @@ public:
                     outLastScreen = &BootFlowScreensLangSelect[_countof(BootFlowScreensLangSelect) - 1];
                 }
 
-                uintptr_t loc_4DE21A = reinterpret_cast<uintptr_t>(hook::pattern("89 36 89 76 04 A1 ? ? ? ? 83 F8 05").get_first(0)) + 0x15;
-                uintptr_t loc_4DE273 = loc_4DE21A + 0x59;
-                uintptr_t loc_4DE2A0 = reinterpret_cast<uintptr_t>(hook::pattern("8B 4E 04 89 01 83 C7 04 81 FF ? ? ? ? 89 46 04 89 48 04 89 30 7C C8 8B 36").get_first(0)) + 8;
+                uintptr_t loc_4DE21A = reinterpret_cast<uintptr_t>(hook::pattern("74 ? 85 C0 0F 95 C1").get_first(0));
+                uintptr_t loc_4DE273 = reinterpret_cast<uintptr_t>(hook::pattern("BF ? ? ? ? 6A ? E8").get_first(0));
+                uintptr_t loc_4DE2A0 = reinterpret_cast<uintptr_t>(hook::pattern("81 FF ? ? ? ? 89 46 ? 89 48 ? ? ? 7C ? ? ? 85 F6").get_first(0));
 
                 // force US Retail bootflow
                 injector::MakeJMP(loc_4DE21A, loc_4DE273);

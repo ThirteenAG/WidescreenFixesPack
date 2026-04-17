@@ -99,7 +99,7 @@ public:
                     EndHUDScissorTest(Direct3DDevice);
             });
 
-            pattern = hook::pattern("A1 ? ? ? ? 33 F6 85 C0 7E ? 8D 49");
+            pattern = find_pattern("A1 ? ? ? ? 33 F6 85 C0 7E ? 8D 49", "A1 ? ? ? ? 33 F6 85 C0 7E ? EB ? 8D A4 24 ? ? ? ? 90 8B 04 B5 ? ? ? ? 8B 80");
             static auto ScissorTestRestore2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
                 if (nGameState == 3)

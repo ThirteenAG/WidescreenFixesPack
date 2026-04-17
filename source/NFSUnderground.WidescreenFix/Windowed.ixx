@@ -52,6 +52,13 @@ public:
                 {
                     WindowedModeWrapper::ShowCursor_Hook(FALSE);
                 });
+
+                pattern = hook::pattern("8B 0D ? ? ? ? 68 ? ? ? ? 6A ? 51 FF 15");
+                if (!pattern.empty())
+                {
+                    if (*pattern.get_first<HWND*>(2) != hWnd.get_ptr())
+                        injector::WriteMemory(pattern.get_first(2), hWnd.get_ptr(), true);
+                }
             }
         };
     }
