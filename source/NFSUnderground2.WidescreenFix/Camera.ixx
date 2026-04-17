@@ -52,7 +52,7 @@ void __cdecl eCreateLookAtMatrix(bMatrix4* out, bVector3* from, bVector3* to, bV
         LastCameraInputTime = SteadyClock::now();
     }
 
-    if (bLookBehind || (nCameraMode != 0 && nCameraMode != 1))
+    if (bLookBehind || (nCameraMode != 0 && nCameraMode != 1 && nCameraMode != 5))
     {
         YawOffset = 0.0f;
         PitchOffset = 0.0f;

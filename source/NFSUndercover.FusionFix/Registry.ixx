@@ -131,7 +131,6 @@ public:
                         "Software\\Electronic Arts\\EA Games\\Need for Speed Undercover"
                     );
 
-                    RegistryFallback::UseHKCUFallback(true);
                     RegistryFallback::AddDefault("@", "INSERTYOURCDKEYHERE");
                     RegistryFallback::AddDefault("CD Drive", "D:\\");
                     RegistryFallback::AddDefault("FirstTime", "0");
@@ -169,11 +168,24 @@ public:
 
                     RegistryFallback::EnsureDefaults();
 
+                    IATHook::Replace(GetModuleHandleA(NULL), "ADVAPI32.DLL",
+                        std::forward_as_tuple("RegCloseKey", RegistryFallback::RegCloseKey),
+                        std::forward_as_tuple("RegCreateKeyA", RegistryFallback::RegCreateKeyA),
+                        std::forward_as_tuple("RegOpenKeyA", RegistryFallback::RegOpenKeyA),
+                        std::forward_as_tuple("RegOpenKeyExA", RegistryFallback::RegOpenKeyExA),
+                        std::forward_as_tuple("RegCreateKeyExA", RegistryFallback::RegCreateKeyExA),
+                        std::forward_as_tuple("RegQueryValueExA", RegistryFallback::RegQueryValueExA),
+                        std::forward_as_tuple("RegSetValueExA", RegistryFallback::RegSetValueExA),
+                        std::forward_as_tuple("RegQueryValueA", RegistryFallback::RegQueryValueA),
+                        std::forward_as_tuple("RegDeleteKeyA", RegistryFallback::RegDeleteKeyA),
+                        std::forward_as_tuple("RegEnumKeyA", RegistryFallback::RegEnumKeyA)
+                    );
+
                     // get the ShadowLevel setting from the registry -- it's important to get this before the game uses it
                     HKEY hUCKey = 0;
                     DWORD type = REG_DWORD;
                     DWORD cbtype = REG_DWORD;
-                    LSTATUS status = RegOpenKeyA(HKEY_LOCAL_MACHINE, "Software\\EA Games\\Need for Speed Undercover", &hUCKey);
+                    LSTATUS status = RegOpenKeyA(HKEY_CURRENT_USER, "Software\\EA Games\\Need for Speed Undercover", &hUCKey);
                     if (status == ERROR_SUCCESS)
                     {
                         RegQueryValueExA(hUCKey, "g_ShadowEnable", NULL, &type, (LPBYTE)&ShadowLevel, &cbtype);

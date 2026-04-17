@@ -119,7 +119,6 @@ public:
                     "Software\\Electronic Arts\\Need for Speed Carbono"
                 );
 
-                RegistryFallback::UseHKCUFallback(true);
                 RegistryFallback::AddDefault("@", "INSERTYOURCDKEYHERE");
                 RegistryFallback::AddDefault("CD Drive", "D:\\");
                 RegistryFallback::AddDefault("CacheSize", "5697825792");
@@ -153,6 +152,19 @@ public:
                 RegistryFallback::AddDefault("Path", exePath);
 
                 RegistryFallback::EnsureDefaults();
+
+                IATHook::Replace(GetModuleHandleA(NULL), "ADVAPI32.DLL",
+                    std::forward_as_tuple("RegCloseKey", RegistryFallback::RegCloseKey),
+                    std::forward_as_tuple("RegCreateKeyA", RegistryFallback::RegCreateKeyA),
+                    std::forward_as_tuple("RegOpenKeyA", RegistryFallback::RegOpenKeyA),
+                    std::forward_as_tuple("RegOpenKeyExA", RegistryFallback::RegOpenKeyExA),
+                    std::forward_as_tuple("RegCreateKeyExA", RegistryFallback::RegCreateKeyExA),
+                    std::forward_as_tuple("RegQueryValueExA", RegistryFallback::RegQueryValueExA),
+                    std::forward_as_tuple("RegSetValueExA", RegistryFallback::RegSetValueExA),
+                    std::forward_as_tuple("RegQueryValueA", RegistryFallback::RegQueryValueA),
+                    std::forward_as_tuple("RegDeleteKeyA", RegistryFallback::RegDeleteKeyA),
+                    std::forward_as_tuple("RegEnumKeyA", RegistryFallback::RegEnumKeyA)
+                );
             }
         };
     }

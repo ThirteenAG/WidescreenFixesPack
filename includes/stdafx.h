@@ -902,7 +902,6 @@ private:
     static std::string s_MainPath;
     static std::string s_FallbackPath;
     static std::map<std::string, std::string> s_Defaults;
-    static bool s_UseHKCUFallback;
 
 public:
     static void Init(std::string_view mainPath, std::string_view fallbackPath = {})
@@ -910,12 +909,6 @@ public:
         s_MainPath = mainPath;
         s_FallbackPath = fallbackPath;
         s_Defaults.clear();
-        s_UseHKCUFallback = false;
-    }
-
-    static void UseHKCUFallback(bool useFallback)
-    {
-        s_UseHKCUFallback = useFallback;
     }
 
     static void AddDefault(std::string_view key, std::string_view value)
@@ -938,11 +931,10 @@ public:
             HKEY hKey = nullptr;
             DWORD dwDisposition = 0;
 
-            LSTATUS status = SmartRegCreateKeyExA(
-                HKEY_LOCAL_MACHINE,
+            LSTATUS status = ::RegCreateKeyExA(
+                HKEY_CURRENT_USER,
                 path.c_str(),
-                0,
-                nullptr,
+                0, nullptr,
                 REG_OPTION_NON_VOLATILE,
                 KEY_READ | KEY_WRITE,
                 nullptr,
@@ -950,74 +942,96 @@ public:
                 &dwDisposition);
 
             if (status != ERROR_SUCCESS)
-            {
-                char buf[256];
-                std::snprintf(buf, sizeof(buf), "RegistryFallback: Failed to open/create %s (error %lu)\n", path.c_str(), status);
-                OutputDebugStringA(buf);
                 continue;
-            }
 
             for (const auto& [key, valueStr] : s_Defaults)
             {
-                // Try as DWORD first
                 char* end = nullptr;
                 DWORD dwordVal = strtoul(valueStr.c_str(), &end, 10);
-                if (end && *end == '\0') // pure number
-                {
+                if (end && *end == '\0')
                     SetDwordIfMissing(hKey, key.c_str(), dwordVal);
-                }
                 else
-                {
                     SetStringIfMissing(hKey, key.c_str(), valueStr);
-                }
             }
 
-            SmartRegCloseKey(hKey);
+            ::RegCloseKey(hKey);
         }
     }
 
-    static LSTATUS WINAPI SmartRegCreateKeyExA(HKEY hKey, LPCSTR lpSubKey, DWORD Reserved,
+    static LSTATUS WINAPI RegCreateKeyA(HKEY hKey, LPCSTR lpSubKey, PHKEY phkResult)
+    {
+        if (hKey == HKEY_LOCAL_MACHINE)
+            hKey = HKEY_CURRENT_USER;
+
+        return ::RegCreateKeyA(hKey, lpSubKey, phkResult);
+    }
+
+    static LSTATUS WINAPI RegQueryValueA(HKEY hKey, LPCSTR lpSubKey, LPSTR lpData, PLONG lpcbData)
+    {
+        if (hKey == HKEY_LOCAL_MACHINE)
+            hKey = HKEY_CURRENT_USER;
+
+        return ::RegQueryValueA(hKey, lpSubKey, lpData, lpcbData);
+    }
+
+    static LSTATUS WINAPI RegDeleteKeyA(HKEY hKey, LPCSTR lpSubKey)
+    {
+        if (hKey == HKEY_LOCAL_MACHINE)
+            hKey = HKEY_CURRENT_USER;
+
+        return ::RegDeleteKeyA(hKey, lpSubKey);
+    }
+
+    static LSTATUS WINAPI RegEnumKeyA(HKEY hKey, DWORD dwIndex, LPSTR lpName, DWORD cchName)
+    {
+        if (hKey == HKEY_LOCAL_MACHINE)
+            hKey = HKEY_CURRENT_USER;
+
+        return ::RegEnumKeyA(hKey, dwIndex, lpName, cchName);
+    }
+
+    static LSTATUS WINAPI RegCreateKeyExA(HKEY hKey, LPCSTR lpSubKey, DWORD Reserved,
                                                LPSTR lpClass, DWORD dwOptions, REGSAM samDesired,
                                                CONST LPSECURITY_ATTRIBUTES lpSecurityAttributes,
                                                PHKEY phkResult, LPDWORD lpdwDisposition)
     {
-        if (hKey == HKEY_LOCAL_MACHINE && s_UseHKCUFallback)
+        if (hKey == HKEY_LOCAL_MACHINE)
             hKey = HKEY_CURRENT_USER;
 
         return ::RegCreateKeyExA(hKey, lpSubKey, Reserved, lpClass, dwOptions, samDesired,
                                  lpSecurityAttributes, phkResult, lpdwDisposition);
     }
 
-    static LSTATUS WINAPI SmartRegOpenKeyExA(HKEY hKey, LPCSTR lpSubKey, DWORD ulOptions,
+    static LSTATUS WINAPI RegOpenKeyExA(HKEY hKey, LPCSTR lpSubKey, DWORD ulOptions,
                                              REGSAM samDesired, PHKEY phkResult)
     {
-        if (hKey == HKEY_LOCAL_MACHINE && s_UseHKCUFallback)
+        if (hKey == HKEY_LOCAL_MACHINE)
             hKey = HKEY_CURRENT_USER;
 
         return ::RegOpenKeyExA(hKey, lpSubKey, ulOptions, samDesired, phkResult);
     }
 
-    static LSTATUS WINAPI SmartRegOpenKeyA(HKEY hKey, LPCSTR lpSubKey, PHKEY phkResult)
+    static LSTATUS WINAPI RegOpenKeyA(HKEY hKey, LPCSTR lpSubKey, PHKEY phkResult)
     {
-        if (hKey == HKEY_LOCAL_MACHINE && s_UseHKCUFallback)
+        if (hKey == HKEY_LOCAL_MACHINE)
             hKey = HKEY_CURRENT_USER;
 
         return ::RegOpenKeyA(hKey, lpSubKey, phkResult);
     }
 
-    static LSTATUS WINAPI SmartRegSetValueExA(HKEY hKey, LPCSTR lpValueName, DWORD Reserved,
+    static LSTATUS WINAPI RegSetValueExA(HKEY hKey, LPCSTR lpValueName, DWORD Reserved,
                                               DWORD dwType, const BYTE* lpData, DWORD cbData)
     {
         return ::RegSetValueExA(hKey, lpValueName, Reserved, dwType, lpData, cbData);
     }
 
-    static LSTATUS WINAPI SmartRegQueryValueExA(HKEY hKey, LPCSTR lpValueName, LPDWORD lpReserved,
+    static LSTATUS WINAPI RegQueryValueExA(HKEY hKey, LPCSTR lpValueName, LPDWORD lpReserved,
                                                 LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData)
     {
         return ::RegQueryValueExA(hKey, lpValueName, lpReserved, lpType, lpData, lpcbData);
     }
 
-    static LSTATUS WINAPI SmartRegCloseKey(HKEY hKey)
+    static LSTATUS WINAPI RegCloseKey(HKEY hKey)
     {
         return ::RegCloseKey(hKey);
     }
@@ -1026,11 +1040,11 @@ private:
     static void SetDwordIfMissing(HKEY hKey, const char* valueName, DWORD defaultValue)
     {
         DWORD type = 0, data = 0, cb = sizeof(DWORD);
-        LSTATUS query = SmartRegQueryValueExA(hKey, valueName, nullptr, &type, (LPBYTE)&data, &cb);
+        LSTATUS query = RegQueryValueExA(hKey, valueName, nullptr, &type, (LPBYTE)&data, &cb);
 
         if (query != ERROR_SUCCESS || type != REG_DWORD || cb != sizeof(DWORD))
         {
-            LSTATUS set = SmartRegSetValueExA(hKey, valueName, 0, REG_DWORD,
+            LSTATUS set = RegSetValueExA(hKey, valueName, 0, REG_DWORD,
                                               reinterpret_cast<const BYTE*>(&defaultValue), sizeof(DWORD));
         }
     }
@@ -1040,14 +1054,14 @@ private:
         const char* lpValue = (valueName && strcmp(valueName, "@") == 0) ? nullptr : valueName;
 
         DWORD type = 0, cb = 0;
-        LSTATUS query = SmartRegQueryValueExA(hKey, lpValue, nullptr, &type, nullptr, &cb);
+        LSTATUS query = RegQueryValueExA(hKey, lpValue, nullptr, &type, nullptr, &cb);
 
         if (query != ERROR_SUCCESS || type != REG_SZ)
         {
             std::string val(defaultValue);
             if (val.empty()) val = " ";
 
-            LSTATUS set = SmartRegSetValueExA(hKey, lpValue, 0, REG_SZ,
+            LSTATUS set = RegSetValueExA(hKey, lpValue, 0, REG_SZ,
                                               reinterpret_cast<const BYTE*>(val.c_str()),
                                               static_cast<DWORD>(val.length() + 1));
         }
@@ -1982,7 +1996,11 @@ public:
     operator T& () { return get(); }
     operator const T& () const { return get(); }
 
-    T& operator=(const T& value) { return get() = value; }
+    T& operator=(const T& value)
+    {
+        *reinterpret_cast<volatile T*>(*ptr) = value;
+        return **ptr;
+    }
     T& operator=(T&& value) { return get() = std::move(value); }
 
     template<typename U> T& operator+=(const U& v) { return get() += v; }

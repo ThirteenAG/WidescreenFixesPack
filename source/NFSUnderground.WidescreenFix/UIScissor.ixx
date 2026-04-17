@@ -82,29 +82,35 @@ public:
     {
         WFP::onInitEventAsync() += []()
         {
-            auto pattern = hook::pattern("A1 ? ? ? ? 74 ? 85 C0");
-            static auto ScissorTest1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            CIniReader iniReader("");
+            bool bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) != 0;
+
+            if (bFixHUD)
             {
-                if (nGameState == 3 && !MovieIsPlaying())
+                auto pattern = hook::pattern("A1 ? ? ? ? 74 ? 85 C0");
+                static auto ScissorTest1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
                 {
-                    auto [Width, Height] = GetRes();
-                    StartHUDScissorTest(Direct3DDevice, 4.0f / 3.0f, Width, Height);
-                }
-            });
+                    if (nGameState == 3 && !MovieIsPlaying())
+                    {
+                        auto [Width, Height] = GetRes();
+                        StartHUDScissorTest(Direct3DDevice, 4.0f / 3.0f, Width, Height);
+                    }
+                });
 
-            pattern = hook::pattern("E9 ? ? ? ? 85 C0 74 ? A1");
-            static auto ScissorTestRestore1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-            {
-                if (nGameState == 3 && !MovieIsPlaying())
-                    EndHUDScissorTest(Direct3DDevice);
-            });
+                pattern = hook::pattern("E9 ? ? ? ? 85 C0 74 ? A1");
+                static auto ScissorTestRestore1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+                {
+                    if (nGameState == 3 && !MovieIsPlaying())
+                        EndHUDScissorTest(Direct3DDevice);
+                });
 
-            pattern = find_pattern("A1 ? ? ? ? 33 F6 85 C0 7E ? 8D 49", "A1 ? ? ? ? 33 F6 85 C0 7E ? EB ? 8D A4 24 ? ? ? ? 90 8B 04 B5 ? ? ? ? 8B 80");
-            static auto ScissorTestRestore2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-            {
-                if (nGameState == 3 && !MovieIsPlaying())
-                    EndHUDScissorTest(Direct3DDevice);
-            });
+                pattern = find_pattern("A1 ? ? ? ? 33 F6 85 C0 7E ? 8D 49", "A1 ? ? ? ? 33 F6 85 C0 7E ? EB ? 8D A4 24 ? ? ? ? 90 8B 04 B5 ? ? ? ? 8B 80");
+                static auto ScissorTestRestore2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+                {
+                    if (nGameState == 3 && !MovieIsPlaying())
+                        EndHUDScissorTest(Direct3DDevice);
+                });
+            }
         };
     }
 } UIScissor;

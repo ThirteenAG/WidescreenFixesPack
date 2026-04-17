@@ -328,7 +328,6 @@ thread_local std::string RegistryWrapper::section;
 std::string RegistryFallback::s_MainPath;
 std::string RegistryFallback::s_FallbackPath;
 std::map<std::string, std::string> RegistryFallback::s_Defaults;
-bool RegistryFallback::s_UseHKCUFallback = false;
 
 BOOL CreateProcessInJob(
     HANDLE hJob,

@@ -161,28 +161,22 @@ public:
                 });
 
                 pattern = hook::pattern("C7 ? ? ? 00 00 A0 43 C7 ? ? ? ? 00 00 00 00 70 43");
-                if (!pattern.empty())
+                pattern.for_each_result([](auto match)
                 {
-                    pattern.for_each_result([](auto match)
-                    {
-                        GameRef<float> ref;
-                        ref.SetAddress(match.get<float>(4));
-                        injector::UnprotectMemory(ref.get_ptr(), sizeof(float));
-                        fHudPosXArray.push_back(std::move(ref));
-                    });
-                }
+                    GameRef<float> ref;
+                    ref.SetAddress(match.get<float>(4));
+                    injector::UnprotectMemory(ref.get_ptr(), sizeof(float));
+                    fHudPosXArray.push_back(std::move(ref));
+                });
 
                 pattern = hook::pattern("C7 ? ? ? 00 00 A0 43 C7 ? ? ? 00 00 70 43");
-                if (!pattern.empty())
+                pattern.for_each_result([](auto match)
                 {
-                    pattern.for_each_result([](auto match)
-                    {
-                        GameRef<float> ref;
-                        ref.SetAddress(match.get<float>(4));
-                        injector::UnprotectMemory(ref.get_ptr(), sizeof(float));
-                        fHudPosXArray.push_back(std::move(ref));
-                    });
-                }
+                    GameRef<float> ref;
+                    ref.SetAddress(match.get<float>(4));
+                    injector::UnprotectMemory(ref.get_ptr(), sizeof(float));
+                    fHudPosXArray.push_back(std::move(ref));
+                });
 
                 GameRef<float> temp_ref;
                 temp_ref.SetAddress(*hook::pattern("D8 1D ? ? ? ? DF E0 F6 C4 41 75 0F D9 45 FC").count(1).get(0).get<float*>(2));
@@ -195,7 +189,6 @@ public:
                 static GameRef<float> fRearviewMirrorRightX2;
 
                 pattern = hook::pattern("C7 44 24 ? 00 00 DC 43 C7 44 24 ? 00 00 70 41");
-
                 if (!pattern.empty())
                 {
                     fRearviewMirrorLeftX1.SetAddress(pattern.get_first<float>(20));
