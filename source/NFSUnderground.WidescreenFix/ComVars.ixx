@@ -53,6 +53,7 @@ export GameRef<tagRECT> WindowRect;
 export GameRef<int> g_RacingResolution;
 export GameRef<IDirect3DDevice9*> Direct3DDevice;
 export GameRef<int32_t> nGameState;
+export GameRef<void*> pCurrentMoviePlayer;
 
 export float actualDeltaTime = 0.0f;
 
@@ -61,6 +62,11 @@ export namespace cFEng
     void** pInstance = nullptr;
     void (__stdcall* MakeLoadedPackagesDirty)(void*) = nullptr;
     void (__cdecl* PopPackage)(char* a1) = nullptr;
+}
+
+export bool MovieIsPlaying()
+{
+    return pCurrentMoviePlayer != nullptr;
 }
 
 export int bStringHash(const char* str)

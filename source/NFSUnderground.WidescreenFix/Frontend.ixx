@@ -497,6 +497,12 @@ public:
                     if (FEScale::bEnabled)
                         FEScale::Update();
                 };
+
+                pattern = hook::pattern("8B 45 ? 8B 78 ? 8B 55");
+                static auto RenderMovieHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+                {
+                    Direct3DDevice->Clear(0, NULL, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
+                });
             }
         };
     };
