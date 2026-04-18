@@ -75,7 +75,7 @@ namespace fb
 
     namespace CinebotCamera
     {
-        injector::hook_back<void(__fastcall*)(float*, void*, void*)> hbCommitShot;
+        SafetyHookInline shCommitShot = {};
         void __fastcall commitShot(float* CinebotCamera, void* edx, void* CinebotCameraShot)
         {
             bHideCursorForMouseLook = true;
@@ -96,7 +96,7 @@ namespace fb
                 YawOffset = 0.0f;
                 PitchOffset = 0.0f;
                 IdleTimer = 0.0f;
-                return hbCommitShot.fun(CinebotCamera, edx, CinebotCameraShot);
+                return shCommitShot.unsafe_fastcall(CinebotCamera, edx, CinebotCameraShot);
             }
 
             float dt = fb::GameTimer::actualDeltaTime;
@@ -137,7 +137,7 @@ namespace fb
             if (PitchOffset < -30.0f) PitchOffset = -30.0f;
 
             if (YawOffset == 0.0f && PitchOffset == 0.0f)
-                return hbCommitShot.fun(CinebotCamera, edx, CinebotCameraShot);
+                return shCommitShot.unsafe_fastcall(CinebotCamera, edx, CinebotCameraShot);
 
             float* shotEye = (float*)((uintptr_t)CinebotCameraShot);
             float* shotTgt = (float*)((uintptr_t)CinebotCameraShot + 16);
@@ -198,7 +198,7 @@ namespace fb
                 }
             }
 
-            hbCommitShot.fun(CinebotCamera, edx, CinebotCameraShot);
+            shCommitShot.unsafe_fastcall(CinebotCamera, edx, CinebotCameraShot);
 
             shotEye[0] = origEyeX;
             shotEye[1] = origEyeY;
@@ -253,14 +253,14 @@ public:
             CIniReader iniReader("");
             IdleTimeoutSeconds = iniReader.ReadFloat("CAMERA", "CameraReturnTimeout", 3.0f);
             ReturnSpeed = iniReader.ReadFloat("CAMERA", "CameraReturnSpeed", 2.0f);
-            StickLookSensitivity = iniReader.ReadFloat("CAMERA", "StickLookSensitivity", 1.0f) * 5.0f;
+            StickLookSensitivity = iniReader.ReadFloat("CAMERA", "StickLookSensitivity", 1.0f);
             MouseLookSensitivity = iniReader.ReadFloat("CAMERA", "MouseLookSensitivity", 1.0f) * 0.15f;
             InvertLook = iniReader.ReadInteger("CAMERA", "InvertLook", 0) != 0;
             CollisionOffset = iniReader.ReadFloat("CAMERA", "CollisionOffset", 0.3f);
             MinCamDistance = iniReader.ReadFloat("CAMERA", "MinCamDistance", 1.5f);
 
             auto pattern = find_pattern("E8 ? ? ? ? 8B 44 24 ? 0F 57 D2", "E8 ? ? ? ? 0F 57 D2 F3 0F 11 93");
-            fb::CinebotCamera::hbCommitShot.fun = injector::MakeCALL(pattern.get_first(), fb::CinebotCamera::commitShot, true).get();
+            fb::CinebotCamera::shCommitShot = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), fb::CinebotCamera::commitShot);
 
             pattern = hook::pattern("83 EC ? 8D 44 24 ? 8B C8");
             fb::CinebotRay::test = (decltype(fb::CinebotRay::test))pattern.get_first();
