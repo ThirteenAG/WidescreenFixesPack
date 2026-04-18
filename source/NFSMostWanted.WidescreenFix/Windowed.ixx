@@ -42,6 +42,7 @@ public:
                     std::forward_as_tuple("CreateWindowExW", WindowedModeWrapper::CreateWindowExW_Hook),
                     std::forward_as_tuple("SetWindowLongA", WindowedModeWrapper::SetWindowLongA_Hook),
                     std::forward_as_tuple("SetWindowLongW", WindowedModeWrapper::SetWindowLongW_Hook),
+                    std::forward_as_tuple("AdjustWindowRect", WindowedModeWrapper::AdjustWindowRect_Hook),
                     std::forward_as_tuple("AdjustWindowRectEx", WindowedModeWrapper::AdjustWindowRectEx_Hook),
                     std::forward_as_tuple("SetWindowPos", WindowedModeWrapper::SetWindowPos_Hook)//,
                     //std::forward_as_tuple("ShowCursor", WindowedModeWrapper::ShowCursor_Hook)

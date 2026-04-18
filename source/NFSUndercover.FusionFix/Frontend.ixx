@@ -41,18 +41,7 @@ namespace cFEng
 
     void updateRadarOffset()
     {
-        cFEng::fRadarOffset = CalculateWidescreenOffset(static_cast<float>(*Width), static_cast<float>(*Height), 640.0f, 480.0f, 0.0f, true);
-        if (cFEng::fHudAspectRatioConstraint.has_value())
-        {
-            float value = cFEng::fHudAspectRatioConstraint.value();
-            if (value < 0.0f || value > (32.0f / 9.0f))
-                cFEng::fRadarOffset = value;
-            else
-            {
-                value = ClampHudAspectRatio(value, static_cast<float>(*Width) / static_cast<float>(*Height));
-                cFEng::fRadarOffset = CalculateWidescreenOffset(static_cast<float>(*Height) * value, static_cast<float>(*Height), 640.0f, 480.0f, 0.0f, true);
-            }
-        }
+        fRadarOffset = fWidescreenHudOffset - 20.0f;
     };
 
     std::unordered_map<void*, std::pair<float, float>> originalCenterCache;
@@ -164,6 +153,12 @@ public:
             //pattern = hook::pattern("E8 ? ? ? ? 83 86 ? ? ? ? ? 0B FB");
             //FEngHud::shSetWideScreenMode = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), FEngHud::SetWideScreenMode);
 
+            pattern = find_pattern("74 ? 68 ? ? ? ? E8 ? ? ? ? 85 F6");
+            if (!pattern.empty())
+            {
+                injector::MakeNOP(pattern.get_first(), 2, true);
+            }
+
             pattern = find_pattern("F2 0F 5C 05 ? ? ? ? EB ? 68");
             if (!pattern.empty())
             {
@@ -185,26 +180,26 @@ public:
                 });
             }
 
-            pattern = find_pattern("F2 0F 58 05 ? ? ? ? 8B 86");
-            if (!pattern.empty())
-            {
-                injector::MakeNOP(pattern.get_first(0), 8);
-                static auto SetWideScreenModeHook1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-                {
-                    cFEng::updateRadarOffset();
-                    regs.xmm0.f64[0] += cFEng::fRadarOffset;
-                });
-            }
-            else
-            {
-                pattern = find_pattern("F3 0F 58 05 ? ? ? ? 8B 86");
-                injector::MakeNOP(pattern.get_first(0), 8);
-                static auto SetWideScreenModeHook1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-                {
-                    cFEng::updateRadarOffset();
-                    regs.xmm0.f32[0] += cFEng::fRadarOffset;
-                });
-            }
+            //pattern = find_pattern("F2 0F 58 05 ? ? ? ? 8B 86");
+            //if (!pattern.empty())
+            //{
+            //    injector::MakeNOP(pattern.get_first(0), 8);
+            //    static auto SetWideScreenModeHook1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            //    {
+            //        cFEng::updateRadarOffset();
+            //        regs.xmm0.f64[0] += cFEng::fRadarOffset;
+            //    });
+            //}
+            //else
+            //{
+            //    pattern = find_pattern("F3 0F 58 05 ? ? ? ? 8B 86");
+            //    injector::MakeNOP(pattern.get_first(0), 8);
+            //    static auto SetWideScreenModeHook1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            //    {
+            //        cFEng::updateRadarOffset();
+            //        regs.xmm0.f32[0] += cFEng::fRadarOffset;
+            //    });
+            //}
 
             //static auto DrawPillarboxes = []()
             //{
