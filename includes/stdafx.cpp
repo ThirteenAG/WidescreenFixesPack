@@ -1,5 +1,66 @@
 #include "stdafx.h"
 
+__declspec(noinline) WFP::Event<>& WFP::onInitEvent()
+{
+    static Event<> InitEvent;
+    return InitEvent;
+}
+__declspec(noinline) WFP::Event<>& WFP::onInitEventAsync()
+{
+    static Event<> InitEventAsync;
+    return InitEventAsync;
+}
+__declspec(noinline) WFP::Event<>& WFP::onShutdownEvent()
+{
+    static Event<> ShutdownEvent;
+    return ShutdownEvent;
+}
+__declspec(noinline) WFP::Event<>& WFP::onGameInitEvent()
+{
+    static Event<> GameInitEvent;
+    return GameInitEvent;
+}
+__declspec(noinline) WFP::Event<>& WFP::onGameProcessEvent()
+{
+    static Event<> GameProcessEvent;
+    return GameProcessEvent;
+}
+__declspec(noinline) WFP::Event<>& WFP::onMenuDrawingEvent()
+{
+    static Event<> MenuDrawingEvent;
+    return MenuDrawingEvent;
+}
+__declspec(noinline) WFP::Event<>& WFP::onMenuEnterEvent()
+{
+    static Event<> MenuEnterEvent;
+    return MenuEnterEvent;
+}
+__declspec(noinline) WFP::Event<>& WFP::onMenuExitEvent()
+{
+    static Event<> MenuExitEvent;
+    return MenuExitEvent;
+}
+__declspec(noinline) WFP::Event<bool>& WFP::onActivateApp()
+{
+    static Event<bool> ActivateApp;
+    return ActivateApp;
+}
+__declspec(noinline) WFP::Event<>& WFP::onBeforeReset()
+{
+    static Event<> BeforeReset;
+    return BeforeReset;
+}
+__declspec(noinline) WFP::Event<>& WFP::onEndScene()
+{
+    static Event<> EndScene;
+    return EndScene;
+}
+__declspec(noinline) WFP::Event<>& WFP::onReadGameConfig()
+{
+    static Event<> ReadGameConfig;
+    return ReadGameConfig;
+}
+
 float GetFOV(float f, float ar)
 {
     return atan(3.0f / 4.0f * ar * tan(f * 0.5f));
