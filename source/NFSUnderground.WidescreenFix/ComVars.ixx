@@ -105,7 +105,7 @@ public:
     using WFP::Event<Args...>::Event;
 };
 
-export ResChange<int, int>& onResChange()
+export __declspec(noinline) ResChange<int, int>& onResChange()
 {
     static ResChange<int, int> ResChangeEvent;
     return ResChangeEvent;

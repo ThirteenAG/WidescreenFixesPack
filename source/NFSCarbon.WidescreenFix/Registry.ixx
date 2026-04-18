@@ -34,6 +34,12 @@ public:
     {
         WFP::onInitEvent() += []()
         {
+            // FirstTime might cause settings reset on each startup here
+            static auto stub = "_FirstTime";
+            auto pattern = hook::pattern("68 ? ? ? ? F7 D8 52");
+            if (!pattern.empty())
+                injector::WriteMemory(pattern.get_first(1), stub, true);
+
             CIniReader iniReader("");
             bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 0) != 0;
             auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
