@@ -89,6 +89,15 @@ void Init()
     cFEng::pInstance = *pattern.get_first<void**>(2);
     cFEng::MakeLoadedPackagesDirty = (decltype(cFEng::MakeLoadedPackagesDirty))injector::GetBranchDestination(pattern.get_first(6)).as_int();
 
+    pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 8B F0 A1 ? ? ? ? 57");
+    CreateResourceFile = (decltype(CreateResourceFile))injector::GetBranchDestination(pattern.get_first(0)).as_int();
+
+    pattern = hook::pattern("E8 ? ? ? ? 6A ? E8 ? ? ? ? 83 C4 ? 85 C0 74 ? 8B 0D");
+    ResourceFileBeginLoading = (decltype(ResourceFileBeginLoading))injector::GetBranchDestination(pattern.get_first(0)).as_int();
+
+    pattern = hook::pattern("E8 ? ? ? ? A1 ? ? ? ? 85 C0 75 ? A1 ? ? ? ? 85 C0 8B D0");
+    ServiceResourceLoading = (decltype(ServiceResourceLoading))injector::GetBranchDestination(pattern.get_first(0)).as_int();
+
     pattern = hook::pattern("A1 ? ? ? ? ? ? 68 ? ? ? ? 50 FF 51 ? A1");
     Direct3DDevice.SetAddress(*pattern.get_first<IDirect3DDevice9**>(1));
     static auto BeforeResetHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
