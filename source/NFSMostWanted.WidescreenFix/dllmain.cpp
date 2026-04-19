@@ -98,6 +98,9 @@ void Init()
     pattern = hook::pattern("E8 ? ? ? ? A1 ? ? ? ? 85 C0 75 ? A1 ? ? ? ? 85 C0 8B D0");
     ServiceResourceLoading = (decltype(ServiceResourceLoading))injector::GetBranchDestination(pattern.get_first(0)).as_int();
 
+    pattern = hook::pattern("E8 ? ? ? ? C7 44 24 ? ? ? ? ? 8D 44 24");
+    FEPackage::ForAllObjects = (decltype(FEPackage::ForAllObjects))injector::GetBranchDestination(pattern.get_first(0)).as_int();
+
     pattern = hook::pattern("A1 ? ? ? ? ? ? 68 ? ? ? ? 50 FF 51 ? A1");
     Direct3DDevice.SetAddress(*pattern.get_first<IDirect3DDevice9**>(1));
     static auto BeforeResetHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)

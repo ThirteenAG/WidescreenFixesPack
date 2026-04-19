@@ -168,3 +168,8 @@ export struct FEImage : FEObject
 export void* (*CreateResourceFile)(const char* filename, int32_t type, int flags, int file_offset, int file_size) = nullptr;
 export void(__fastcall* ResourceFileBeginLoading)(void* ResourceFile, void* edx, void* callback, void* callback_param) = nullptr;
 export void (__cdecl* ServiceResourceLoading)() = nullptr;
+
+export namespace FEPackage
+{
+    char (__fastcall* ForAllObjects)(void* pPackage, void* edx, void* pCB) = nullptr;
+}

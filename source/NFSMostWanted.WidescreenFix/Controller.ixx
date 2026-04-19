@@ -66,47 +66,72 @@ void SetTextureHash(FEImage* image, unsigned int texture_hash)
 }
 
 int nImproveGamepadSupport = 0;
-namespace MouseStateArrayBuilder
+char __stdcall cb(FEObject* pObj)
 {
-    SafetyHookInline shCallback = {};
-    int __fastcall Callback(void* MouseStateArrayBuilder, void* edx, FEObject* pObj)
+    static bool bOnce = false;
+    if (!bOnce)
     {
-        static bool bOnce = false;
-        if (!bOnce)
-        {
-            auto TPKPath = GetThisModulePath<std::string>().substr(GetExeModulePath<std::string>().length()) + GetThisModuleName().replace_extension("tpk").string().c_str();
-            auto r = CreateResourceFile(TPKPath.c_str(), 0, 0, 0, 0);
-            ResourceFileBeginLoading(r, 0, nullptr, nullptr);
-            ServiceResourceLoading();
-            bOnce = true;
-        }
+        auto TPKPath = GetThisModulePath<std::string>().substr(GetExeModulePath<std::string>().length()) + GetThisModuleName().replace_extension("tpk").string().c_str();
+        auto r = CreateResourceFile(TPKPath.c_str(), 0, 0, 0, 0);
+        ResourceFileBeginLoading(r, 0, nullptr, nullptr);
+        ServiceResourceLoading();
+        bOnce = true;
+    }
 
-        if (pObj->Type == FE_Image)
+    if (pObj->Type == FE_Image)
+    {
+        for (const auto& mapping : AllButtonHashes)
         {
-            for (const auto& mapping : AllButtonHashes)
+            if (pObj->Handle == mapping.pcTexture || pObj->Handle == mapping.xboxTexture || pObj->Handle == mapping.psTexture)
             {
-                if (pObj->Handle == mapping.pcTexture || pObj->Handle == mapping.xboxTexture || pObj->Handle == mapping.psTexture)
+                auto mode = 0;
+                if (bLastInputWasPad)
+                    mode = nImproveGamepadSupport;
+
+                unsigned int textureHash = 0;
+                switch (mode)
                 {
-                    auto mode = 0;
-                    if (bLastInputWasPad)
-                        mode = nImproveGamepadSupport;
-
-                    unsigned int textureHash = 0;
-                    switch (mode)
-                    {
-                        case 0:  textureHash = mapping.pcTexture;   break;
-                        case 1:  textureHash = mapping.xboxTexture; break;
-                        case 2:  textureHash = mapping.psTexture;   break;
-                        default: textureHash = mapping.pcTexture;   break;
-                    }
-
-                    if (textureHash)
-                        SetTextureHash((FEImage*)pObj, textureHash);
+                    case 0:  textureHash = mapping.pcTexture;   break;
+                    case 1:  textureHash = mapping.xboxTexture; break;
+                    case 2:  textureHash = mapping.psTexture;   break;
+                    default: textureHash = mapping.pcTexture;   break;
                 }
+
+                if (textureHash)
+                    SetTextureHash((FEImage*)pObj, textureHash);
             }
         }
+    }
 
-        return shCallback.unsafe_fastcall<int>(MouseStateArrayBuilder, edx, pObj);
+    return 1;
+}
+
+namespace cFEng
+{
+    SafetyHookInline shService = {};
+    void __fastcall Service(void* cFEng, void* edx, unsigned int tDeltaTicks, unsigned int lock)
+    {
+        struct FEObjectCallbackStruct
+        {
+            void* Destructor = nullptr;
+            void* Function = nullptr;
+        };
+
+        FEObjectCallbackStruct callback = { nullptr, &cb };
+        void* cbpointer = &callback;
+
+        uintptr_t current = *reinterpret_cast<uintptr_t*>(reinterpret_cast<uintptr_t>(cFEng) + 0xE0);
+
+        while (current)
+        {
+            FEPackage::ForAllObjects(reinterpret_cast<void*>(current), 0, &cbpointer);
+            uintptr_t next = *reinterpret_cast<uintptr_t*>(current + 4);
+            if (next == current)
+                break;
+            current = next;
+        }
+
+        return shService.unsafe_fastcall(cFEng, edx, tDeltaTicks, lock);
     }
 }
 
@@ -134,8 +159,8 @@ public:
                     });
                 }
 
-                auto pattern = hook::pattern("8B 44 24 ? F7 40 ? ? ? ? ? 74 ? 8B 49 ? 50 E8");
-                MouseStateArrayBuilder::shCallback = safetyhook::create_inline(pattern.get_first(0), MouseStateArrayBuilder::Callback);
+                auto pattern = hook::pattern("E8 ? ? ? ? A1 ? ? ? ? ? ? 85 C0 74");
+                cFEng::shService = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first(0)).as_int(), cFEng::Service);
 
                 struct PadState
                 {
