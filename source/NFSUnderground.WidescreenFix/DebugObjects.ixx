@@ -15,12 +15,7 @@ namespace DebugTags
 {
     //by xan1242
     //https://github.com/ThirteenAG/WidescreenFixesPack/issues/643#issuecomment-1083564196
-    void (__cdecl* FEngSetInvisible)(const char* pkgname, unsigned int hash) = nullptr;
-    unsigned int (__cdecl* FEHashUpper)(const char* instr) = nullptr;
-    unsigned int (__cdecl* FEngFindObject)(const char* pkg, int hash) = nullptr;
-    unsigned int (__cdecl* FEPkgMgr_FindPackage)(const char* pkgname) = nullptr;
-
-    void __stdcall CorruptAllFEDevObjects(char* pkgname)
+    void __stdcall CorruptAllFEDevObjects(const char* pkgname)
     {
         // so in order to hide the silly little side-tags used during FEng development, an attack at its FEObjects is necessary
         // all of them, and I mean each and every one of the tags' text object hashes and name is "ConduitMdITC_TT21i"
@@ -141,17 +136,11 @@ public:
                 {
                     using namespace DebugTags;
 
-                    FEngSetInvisible = reinterpret_cast<decltype(FEngSetInvisible)>(injector::GetBranchDestination(hook::get_pattern("E8 ? ? ? ? 8A 43 61")).as_int()); //0x000495F70;
-                    FEHashUpper = reinterpret_cast<decltype(FEHashUpper)>(injector::GetBranchDestination(hook::get_pattern("E8 ? ? ? ? 8B 75 6C")).as_int()); //0x004FD230;
-                    FEngFindObject = reinterpret_cast<decltype(FEngFindObject)>(injector::GetBranchDestination(hook::get_pattern("E8 ? ? ? ? 3B C6 75 16")).as_int()); //0x004FFB70;
-                    FEPkgMgr_FindPackage = reinterpret_cast<decltype(FEPkgMgr_FindPackage)>(injector::GetBranchDestination(hook::get_pattern("E8 ? ? ? ? 8B 50 1C")).as_int()); //0x004F65D0;
-
                     // FEPkgMgr_SendMessageToPackage talks to ALL of FrontEnd, so it's an ideal place to globally affect it
-                    auto pattern = hook::pattern("8B 4C 24 4C 8B 16");
-                    static auto FEPkgMgr_SendMessageToPackageHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+                    onMenuScreenBaseNotify() += [](MenuScreen* menu)
                     {
-                        CorruptAllFEDevObjects(*(char**)(regs.esi + 0xC));
-                    });
+                        CorruptAllFEDevObjects(menu->PackageFilename);
+                    };
                 }
             }
         };
