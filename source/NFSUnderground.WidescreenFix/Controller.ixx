@@ -359,10 +359,8 @@ public:
                 pattern = hook::pattern("85 C0 7D ? 3D ? ? ? ? 74 ? 3D ? ? ? ? 0F 85 ? ? ? ? A1 ? ? ? ? ? ? 50 FF 52 ? 5F 5B");
                 static auto KeyboardStateHook = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& regs)
                 {
-                    int a1 = regs.esi;
-
-                    int keyMaskLow = *(int*)(a1 + 8);
-                    int keyMaskHigh = *(int*)(a1 + 12);
+                    int keyMaskLow = *(int*)(regs.esi + 8);
+                    int keyMaskHigh = *(int*)(regs.esi + 12);
 
                     if (keyMaskLow != -1 || keyMaskHigh != -1)
                     {

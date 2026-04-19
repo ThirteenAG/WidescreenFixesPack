@@ -83,7 +83,7 @@ export namespace cFEng
     void (__fastcall* MakeLoadedPackagesDirty)(void*, void*) = nullptr;
 }
 
-export int bStringHash(const char* str)
+export unsigned int bStringHash(const char* str)
 {
     if (!str)
         return -1;
@@ -117,3 +117,54 @@ export __declspec(noinline) ResChange<int, int>& onResChange()
     static ResChange<int, int> ResChangeEvent;
     return ResChangeEvent;
 }
+
+struct FEMinNode
+{
+    void* __vftable;
+    FEMinNode* next;
+    FEMinNode* prev;
+};
+
+export enum FEObjType : int32_t
+{
+    FE_None = 0x0,
+    FE_Image = 0x1,
+    FE_String = 0x2,
+    FE_Model = 0x3,
+    FE_List = 0x4,
+    FE_Group = 0x5,
+    FE_CodeList = 0x6,
+    FE_Movie = 0x7,
+    FE_Effect = 0x8,
+    FE_ColoredImage = 0x9,
+    FE_AnimImage = 0xA,
+    FE_SimpleImage = 0xB,
+    FE_MultiImage = 0xC,
+    FE_UserMin = 0x100,
+};
+
+
+export struct FEObject : FEMinNode
+{
+    uint32_t GUID;
+    uint32_t NameHash;
+    char* pName;
+    FEObjType Type;
+    uint32_t Flags;
+    uint16_t RenderContext;
+    uint16_t ResourceIndex;
+    uint32_t Handle;
+    uint32_t UserParam;
+    uint8_t* pData;
+    uint32_t DataSize;
+    //...
+};
+
+export struct FEImage : FEObject
+{
+    unsigned int ImageFlags;
+};
+
+export void* (*CreateResourceFile)(const char* filename, int32_t type, int flags, int file_offset, int file_size) = nullptr;
+export void(__fastcall* ResourceFileBeginLoading)(void* ResourceFile, void* edx, void* callback, void* callback_param) = nullptr;
+export void (__cdecl* ServiceResourceLoading)() = nullptr;
