@@ -2,7 +2,7 @@ module;
 
 #include <stdafx.h>
 
-export module Compat;
+export module Input;
 
 import ComVars;
 
@@ -112,10 +112,10 @@ void Update()
     nWheelAccum = 0;
 }
 
-class Compat
+class Input
 {
 public:
-    Compat()
+    Input()
     {
         WFP::onInitEvent() += []()
         {
@@ -131,4 +131,4 @@ public:
             };
         };
     }
-} Compat;
+} Input;
