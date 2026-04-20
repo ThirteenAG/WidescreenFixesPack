@@ -377,8 +377,12 @@ public:
 
                 onResChange() += [](int Width, int Height)
                 {
+                    injector::UnprotectMemory(fHudScaleX.get_ptr(), sizeof(float));
                     fHudScaleX = (1.0f / static_cast<float>(Width) * (static_cast<float>(Height) / 480.0f)) * 2.0f;
+
                     float fHudPosX = 640.0f / (640.0f * fHudScaleX);
+
+                    injector::UnprotectMemory(fFEHudPosX.get_ptr(), sizeof(float));
                     fFEHudPosX = fHudPosX;
 
                     cFEng::fWidescreenHudOffset = -CalculateWidescreenOffset(static_cast<float>(Width), static_cast<float>(Height), 640.0f, 480.0f);
