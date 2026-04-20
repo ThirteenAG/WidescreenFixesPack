@@ -149,7 +149,11 @@ public:
             onResChange() += [](int Width, int Height)
             {
                 float fAspectRatio = static_cast<float>(Width) / static_cast<float>(Height);
+
+                injector::UnprotectMemory(fAutosculptScaling.get_ptr(), sizeof(float));
                 fAutosculptScaling = 480.0f * fAspectRatio;
+
+                injector::UnprotectMemory(fArrestBlur.get_ptr(), sizeof(float));
                 fArrestBlur = (1.0f / 640.0f) * ((4.0f / 3.0f) / fAspectRatio);
             };
 
@@ -199,38 +203,52 @@ public:
 
             if (bLightStreaksEnable)
             {
-                uintptr_t loc_6C1841 = reinterpret_cast<uintptr_t>(hook::pattern("A1 ? ? ? ? 8B 0C 85 ? ? ? ? 85 C9 75 20 85 C0").get_first(0)) - 0x113;
-                uintptr_t loc_6C19EC = reinterpret_cast<uintptr_t>(hook::pattern("C7 44 24 10 40 00 00 00 FF 15 ? ? ? ? 39 7C 24 18").get_first(0)) - 0x134;
-                uintptr_t loc_6C1AD8 = loc_6C19EC + 0xEC;
-                uintptr_t loc_6C310B = reinterpret_cast<uintptr_t>(hook::pattern("99 83 E2 03 03 C2 8B C8 8B C7 99 83 E2 03 03 C2 C1 F8 ? A3").get_first(0)) - 0x20;
-
-                uintptr_t g_LightStreaksEnable = *reinterpret_cast<uintptr_t*>(loc_6C1841 + 1);
-
                 // disable control of the variable
-                injector::MakeNOP(loc_6C1841, 5);
-                injector::MakeNOP(loc_6C19EC, 6);
-                injector::MakeNOP(loc_6C1AD8, 6);
-                injector::MakeNOP(loc_6C310B, 6);
+                pattern = hook::pattern("A3 ? ? ? ? A1 ? ? ? ? 3B 05 ? ? ? ? 7D ? A3 ? ? ? ? A1 ? ? ? ? 3B 05 ? ? ? ? 7D ? A3 ? ? ? ? A1 ? ? ? ? 3B 05 ? ? ? ? 7D ? A3 ? ? ? ? A1 ? ? ? ? 3B 05 ? ? ? ? 7D ? A3 ? ? ? ? A1 ? ? ? ? 3B 05 ? ? ? ? 7D ? A3 ? ? ? ? A1 ? ? ? ? 3B 05 ? ? ? ? 7D ? A3 ? ? ? ? A1 ? ? ? ? 3B 05 ? ? ? ? 7D ? A3 ? ? ? ? A1 ? ? ? ? 3B 05 ? ? ? ? 7D ? A3 ? ? ? ? A1 ? ? ? ? 3B 05 ? ? ? ? 7D ? A3 ? ? ? ? A1 ? ? ? ? 3B 05 ? ? ? ? 7D ? A3 ? ? ? ? A1 ? ? ? ? 3B 05 ? ? ? ? 7D ? A3 ? ? ? ? A1 ? ? ? ? 3B 05 ? ? ? ? 7D ? A3 ? ? ? ? A1 ? ? ? ? 3B 05 ? ? ? ? 7D ? A3 ? ? ? ? A1 ? ? ? ? 3B 05 ? ? ? ? 7D ? A3 ? ? ? ? A1 ? ? ? ? 3B 05 ? ? ? ? 7D ? A3 ? ? ? ? A1 ? ? ? ? 8B 0C 85");
+                if (!pattern.empty())
+                {
+                    uintptr_t g_LightStreaksEnable = *reinterpret_cast<uintptr_t*>(pattern.get_first(1));
+                    injector::MakeNOP(pattern.get_first(0), 5);
 
-                *(uint32_t*)g_LightStreaksEnable = 1;
+                    pattern = hook::pattern("89 35 ? ? ? ? 89 35 ? ? ? ? 89 3D");
+                    if (!pattern.empty())
+                        injector::MakeNOP(pattern.get_first(0), 6);
+
+                    pattern = hook::pattern("89 35 ? ? ? ? 89 35 ? ? ? ? 83 F8 ? 7C");
+                    if (!pattern.empty())
+                        injector::MakeNOP(pattern.get_first(0), 6);
+
+                    pattern = hook::pattern("89 1D ? ? ? ? 89 1D ? ? ? ? 89 1D ? ? ? ? 8B 35");
+                    if (!pattern.empty())
+                        injector::MakeNOP(pattern.get_first(0), 6);
+
+                    *(uint32_t*)g_LightStreaksEnable = 1;
+                }
             }
 
             if (bBleachByPassEnable)
             {
-                uintptr_t loc_6C18D1 = reinterpret_cast<uintptr_t>(hook::pattern("A1 ? ? ? ? 8B 0C 85 ? ? ? ? 85 C9 75 20 85 C0").get_first(0)) - 0x83;
-                uintptr_t loc_6C1A9F = reinterpret_cast<uintptr_t>(hook::pattern("C7 44 24 10 40 00 00 00 FF 15 ? ? ? ? 39 7C 24 18").get_first(0)) - 0x81;
-                uintptr_t loc_6C1B0E = loc_6C1A9F + 0x6F;
-                uintptr_t loc_6C2FC0 = reinterpret_cast<uintptr_t>(hook::pattern("99 83 E2 03 03 C2 8B C8 8B C7 99 83 E2 03 03 C2 C1 F8 ? A3").get_first(0)) - 0x16B;
-
-                uintptr_t g_BleachByPassEnable = *reinterpret_cast<uintptr_t*>(loc_6C18D1 + 1);
-
                 // disable control of the variable
-                injector::MakeNOP(loc_6C18D1, 5);
-                injector::MakeNOP(loc_6C1A9F, 6);
-                injector::MakeNOP(loc_6C1B0E, 6);
-                injector::MakeNOP(loc_6C2FC0, 6);
+                pattern = hook::pattern("A3 ? ? ? ? A1 ? ? ? ? 3B 05 ? ? ? ? 7D ? A3 ? ? ? ? A1 ? ? ? ? 3B 05 ? ? ? ? 7D ? A3 ? ? ? ? A1 ? ? ? ? 3B 05 ? ? ? ? 7D ? A3 ? ? ? ? A1 ? ? ? ? 3B 05 ? ? ? ? 7D ? A3 ? ? ? ? A1 ? ? ? ? 3B 05 ? ? ? ? 7D ? A3 ? ? ? ? A1 ? ? ? ? 3B 05 ? ? ? ? 7D ? A3 ? ? ? ? A1 ? ? ? ? 3B 05 ? ? ? ? 7D ? A3 ? ? ? ? A1 ? ? ? ? 8B 0C 85");
+                if (!pattern.empty())
+                {
+                    uintptr_t g_BleachByPassEnable = *reinterpret_cast<uintptr_t*>(pattern.get_first(1));
+                    injector::MakeNOP(pattern.get_first(), 5);
 
-                *(uint32_t*)g_BleachByPassEnable = 1;
+                    pattern = hook::pattern("89 35 ? ? ? ? 89 35 ? ? ? ? E8 ? ? ? ? ? ? A1");
+                    if (!pattern.empty())
+                        injector::MakeNOP(pattern.get_first(), 6);
+
+                    pattern = hook::pattern("89 3D ? ? ? ? 89 3D ? ? ? ? 89 3D ? ? ? ? C7 44 24");
+                    if (!pattern.empty())
+                        injector::MakeNOP(pattern.get_first(), 6);
+
+                    pattern = hook::pattern("89 1D ? ? ? ? 89 1D ? ? ? ? 89 1D ? ? ? ? 89 1D ? ? ? ? 89 1D ? ? ? ? 89 1D ? ? ? ? 38 5C 24");
+                    if (!pattern.empty())
+                        injector::MakeNOP(pattern.get_first(), 6);
+
+                    *(uint32_t*)g_BleachByPassEnable = 1;
+                }
             }
         };
     }
