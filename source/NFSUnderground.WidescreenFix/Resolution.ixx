@@ -348,7 +348,7 @@ public:
                 nCurrentMenuResolutionSelectorIndex = *(int32_t*)(regs.ebx + 0x7C);
             });
 
-            pattern = hook::pattern("8D 4C 24 ? E8 ? ? ? ? 5F 5E 8B E5");
+            pattern = hook::pattern("8B C3 8D 4C 24 ? ? ? ? ? ? 5F 5E");
             static auto FEngFontRenderStringHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
                 auto str = std::wstring_view(*(wchar_t**)(regs.esp + 0x4));
