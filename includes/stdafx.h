@@ -430,20 +430,6 @@ FARPROC FindProcAddress(HMODULE hModule, Ts... procNames)
     return result;
 }
 
-#pragma once
-
-#include <string>
-#include <map>
-#include <set>
-#include <vector>
-#include <string_view>
-#include <filesystem>
-#include <format>
-#include <sstream>
-#include <iterator>
-#include <cstring>  // for std::memcpy, std::strlen
-#include <cstdint>  // for BYTE, DWORD etc. (already in windows.h usually)
-
 class RegistryWrapper
 {
 private:
@@ -456,6 +442,8 @@ private:
     static thread_local std::string section;
 
 public:
+    static inline DWORD OverrideTypeREG_NONE = REG_NONE;
+
     RegistryWrapper(std::string_view searchString, std::filesystem::path iniPath)
     {
         filter = searchString;
@@ -493,6 +481,11 @@ public:
 
     static LSTATUS WINAPI RegCreateKeyA(HKEY hKey, LPCSTR lpSubKey, PHKEY phkResult)
     {
+        if (hKey == NULL)
+        {
+            *phkResult = NULL;
+            return ERROR_SUCCESS;
+        }
         if (strstr(lpSubKey, filter.c_str()) != NULL)
         {
             *phkResult = NULL;
@@ -561,6 +554,9 @@ public:
         DWORD regType = REG_SZ;
         if (lpType != nullptr)
             regType = *lpType;
+
+        if (OverrideTypeREG_NONE)
+            regType = OverrideTypeREG_NONE;
 
         // Fetch value from INI (uses DefaultStrings if key not present)
         auto it = DefaultStrings.find(ValueName);
@@ -783,6 +779,9 @@ public:
             return ERROR_INVALID_PARAMETER;
 
         std::string ValueName = lpValueName;
+
+        if (OverrideTypeREG_NONE)
+            dwType = OverrideTypeREG_NONE;
 
         switch (dwType)
         {
