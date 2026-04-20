@@ -402,6 +402,14 @@ jobs:
         tag: nfsc
         artifacts: data/Archives/NFSCarbon.WidescreenFix.zip
 
+    - name: Need For Speed The Run Fusion Fix
+      uses: ./.github/workflows/release_tag
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag: nfstherun
+        artifacts: data/Archives/NFSTheRun.FusionFix.zip
+
     - name: Manhunt Widescreen Fix
       uses: ./.github/workflows/release_tag
       with:

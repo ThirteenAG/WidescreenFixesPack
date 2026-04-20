@@ -52,6 +52,7 @@ on:
         - nfsu
         - nfsu2
         - nfsuc
+        - nfstherun
         - onimusha3
         - paradisecracked
         - psiops
@@ -146,6 +147,7 @@ env:
   nfsu: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:NeedForSpeed\\NFSUnderground_WidescreenFix /p:Configuration=Release
   nfsu2: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:NeedForSpeed\\NFSUnderground2_WidescreenFix /p:Configuration=Release
   nfsuc: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:NeedForSpeed\\NFSUndercover_FusionFix /p:Configuration=Release
+  nfstherun: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:NeedForSpeed\\NFSTheRun_FusionFix /p:Configuration=Release
   onimusha3: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:Onimusha3_WidescreenFix /p:Configuration=Release
   paradisecracked: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:ParadiseCracked_WidescreenFix /p:Configuration=Release
   psiops: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:PsiOpsTheMindgateConspiracy_WidescreenFix /p:Configuration=Release
