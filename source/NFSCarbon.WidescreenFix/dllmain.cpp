@@ -90,6 +90,12 @@ void Init()
     pattern = hook::pattern("E8 ? ? ? ? C7 44 24 ? ? ? ? ? 8D 44 24");
     FEPackage::ForAllObjects = (decltype(FEPackage::ForAllObjects))injector::GetBranchDestination(pattern.get_first(0)).as_int();
 
+    pattern = hook::pattern("8B 14 CD ? ? ? ? ? ? ? ? ? ? 85 C9");
+    gActionBindings = *pattern.get_first<ActionBindingData*>(3);
+
+    pattern = hook::pattern("8B 0D ? ? ? ? 46 8D 54 09 ? 83 C7");
+    gNumControllers.SetAddress(*pattern.get_first<int*>(2));
+
     pattern = hook::pattern("A1 ? ? ? ? ? ? 68 ? ? ? ? 50 FF 52 ? A1");
     Direct3DDevice.SetAddress(*pattern.get_first<IDirect3DDevice9**>(1));
     static auto BeforeResetHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
