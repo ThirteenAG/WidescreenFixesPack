@@ -28,6 +28,7 @@ jobs:
   steps:
   - task: CmdLine@2
     displayName: Before build
+    timeoutInMinutes: 0
     inputs:
       script: |
         git submodule update --init --recursive
@@ -35,6 +36,8 @@ jobs:
         ./before_build.bat
 
   - task: MSBuild@1
+    displayName: Build
+    timeoutInMinutes: 0
     inputs:
       solution: 'build/*.slnx'
       maximumCpuCount: true
