@@ -12,6 +12,7 @@ float YawOffset = 0.0f;
 float PitchOffset = 0.0f;
 
 bool InvertLook = false;
+bool OnlyAllowHorizontalStickMovement = false;
 float StickLookSensitivity = 1.0f;
 float MouseLookSensitivity = 1.0f;
 
@@ -107,7 +108,7 @@ namespace fb
             g_Mouse.DeltaY = 0;
 
             float deltaX = -g_RightStick.X + (-mouseDeltaX * MouseLookSensitivity);
-            float deltaY = g_RightStick.Y + (mouseDeltaY * MouseLookSensitivity);
+            float deltaY = (OnlyAllowHorizontalStickMovement ? 0.0f : g_RightStick.Y) + (mouseDeltaY * MouseLookSensitivity);
 
             bool hasInput = (fabsf(deltaX) > 0.01f || fabsf(deltaY) > 0.01f);
 
@@ -251,6 +252,9 @@ public:
         WFP::onInitEventAsync() += []()
         {
             CIniReader iniReader("");
+            if (!iniReader.ReadInteger("CAMERA", "Enable", 1))
+                return;
+
             IdleTimeoutSeconds = iniReader.ReadFloat("CAMERA", "CameraReturnTimeout", 3.0f);
             ReturnSpeed = iniReader.ReadFloat("CAMERA", "CameraReturnSpeed", 2.0f);
             StickLookSensitivity = iniReader.ReadFloat("CAMERA", "StickLookSensitivity", 1.0f);
@@ -258,6 +262,7 @@ public:
             InvertLook = iniReader.ReadInteger("CAMERA", "InvertLook", 0) != 0;
             CollisionOffset = iniReader.ReadFloat("CAMERA", "CollisionOffset", 0.3f);
             MinCamDistance = iniReader.ReadFloat("CAMERA", "MinCamDistance", 1.5f);
+            OnlyAllowHorizontalStickMovement = iniReader.ReadInteger("CAMERA", "OnlyAllowHorizontalStickMovement", 0) != 0;
 
             auto pattern = find_pattern("E8 ? ? ? ? 8B 44 24 ? 0F 57 D2", "E8 ? ? ? ? 0F 57 D2 F3 0F 11 93");
             fb::CinebotCamera::shCommitShot = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), fb::CinebotCamera::commitShot);
