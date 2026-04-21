@@ -51,6 +51,123 @@ public:
             mhSHGetFolderPathA = std::make_unique<FunctionHookMinHook>((uintptr_t)SHGetFolderPathA, (uintptr_t)SHGetFolderPathAHook);
             mhSHGetFolderPathA->create();
 
+            auto InstallRegistryInlineHooks = [](
+                decltype(&RegCloseKey)      fRegCloseKey,
+                decltype(&RegCreateKeyA)    fRegCreateKeyA,
+                decltype(&RegOpenKeyA)      fRegOpenKeyA,
+                decltype(&RegOpenKeyExA)    fRegOpenKeyExA,
+                decltype(&RegCreateKeyExA)  fRegCreateKeyExA,
+                decltype(&RegQueryValueExA) fRegQueryValueExA,
+                decltype(&RegSetValueExA)   fRegSetValueExA,
+                decltype(&RegQueryValueA)   fRegQueryValueA,
+                decltype(&RegDeleteKeyA)    fRegDeleteKeyA,
+                decltype(&RegEnumKeyA)      fRegEnumKeyA)
+            {
+                static auto IsCallerFromExe = [](HMODULE hModule) -> bool
+                {
+                    for (const auto& entry : std::stacktrace::current(1, 4))
+                    {
+                        HMODULE hCaller = NULL;
+                        if (GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                            (LPCSTR)entry.native_handle(), &hCaller) && hCaller == hModule)
+                            return true;
+                    }
+                    return false;
+                };
+
+                static decltype(&RegCloseKey)      sRegCloseKey;
+                static decltype(&RegCreateKeyA)    sRegCreateKeyA;
+                static decltype(&RegOpenKeyA)      sRegOpenKeyA;
+                static decltype(&RegOpenKeyExA)    sRegOpenKeyExA;
+                static decltype(&RegCreateKeyExA)  sRegCreateKeyExA;
+                static decltype(&RegQueryValueExA) sRegQueryValueExA;
+                static decltype(&RegSetValueExA)   sRegSetValueExA;
+                static decltype(&RegQueryValueA)   sRegQueryValueA;
+                static decltype(&RegDeleteKeyA)    sRegDeleteKeyA;
+                static decltype(&RegEnumKeyA)      sRegEnumKeyA;
+
+                sRegCloseKey = fRegCloseKey;
+                sRegCreateKeyA = fRegCreateKeyA;
+                sRegOpenKeyA = fRegOpenKeyA;
+                sRegOpenKeyExA = fRegOpenKeyExA;
+                sRegCreateKeyExA = fRegCreateKeyExA;
+                sRegQueryValueExA = fRegQueryValueExA;
+                sRegSetValueExA = fRegSetValueExA;
+                sRegQueryValueA = fRegQueryValueA;
+                sRegDeleteKeyA = fRegDeleteKeyA;
+                sRegEnumKeyA = fRegEnumKeyA;
+
+                static SafetyHookInline shRegCloseKey = {};
+                shRegCloseKey = safetyhook::create_inline(RegCloseKey, static_cast<decltype(&RegCloseKey)>([](HKEY hKey) -> LSTATUS
+                {
+                    if (IsCallerFromExe(GetModuleHandleA(NULL))) return sRegCloseKey(hKey);
+                    return shRegCloseKey.stdcall<LSTATUS>(hKey);
+                }));
+
+                static SafetyHookInline shRegCreateKeyA = {};
+                shRegCreateKeyA = safetyhook::create_inline(RegCreateKeyA, static_cast<decltype(&RegCreateKeyA)>([](HKEY hKey, LPCSTR lpSubKey, PHKEY phkResult) -> LSTATUS
+                {
+                    if (IsCallerFromExe(GetModuleHandleA(NULL))) return sRegCreateKeyA(hKey, lpSubKey, phkResult);
+                    return shRegCreateKeyA.stdcall<LSTATUS>(hKey, lpSubKey, phkResult);
+                }));
+
+                static SafetyHookInline shRegOpenKeyA = {};
+                shRegOpenKeyA = safetyhook::create_inline(RegOpenKeyA, static_cast<decltype(&RegOpenKeyA)>([](HKEY hKey, LPCSTR lpSubKey, PHKEY phkResult) -> LSTATUS
+                {
+                    if (IsCallerFromExe(GetModuleHandleA(NULL))) return sRegOpenKeyA(hKey, lpSubKey, phkResult);
+                    return shRegOpenKeyA.stdcall<LSTATUS>(hKey, lpSubKey, phkResult);
+                }));
+
+                static SafetyHookInline shRegOpenKeyExA = {};
+                shRegOpenKeyExA = safetyhook::create_inline(RegOpenKeyExA, static_cast<decltype(&RegOpenKeyExA)>([](HKEY hKey, LPCSTR lpSubKey, DWORD ulOptions, REGSAM samDesired, PHKEY phkResult) -> LSTATUS
+                {
+                    if (IsCallerFromExe(GetModuleHandleA(NULL))) return sRegOpenKeyExA(hKey, lpSubKey, ulOptions, samDesired, phkResult);
+                    return shRegOpenKeyExA.stdcall<LSTATUS>(hKey, lpSubKey, ulOptions, samDesired, phkResult);
+                }));
+
+                static SafetyHookInline shRegCreateKeyExA = {};
+                shRegCreateKeyExA = safetyhook::create_inline(RegCreateKeyExA, static_cast<decltype(&RegCreateKeyExA)>([](HKEY hKey, LPCSTR lpSubKey, DWORD Reserved, LPSTR lpClass, DWORD dwOptions, REGSAM samDesired, CONST LPSECURITY_ATTRIBUTES lpSA, PHKEY phkResult, LPDWORD lpdwDisp) -> LSTATUS
+                {
+                    if (IsCallerFromExe(GetModuleHandleA(NULL))) return sRegCreateKeyExA(hKey, lpSubKey, Reserved, lpClass, dwOptions, samDesired, lpSA, phkResult, lpdwDisp);
+                    return shRegCreateKeyExA.stdcall<LSTATUS>(hKey, lpSubKey, Reserved, lpClass, dwOptions, samDesired, lpSA, phkResult, lpdwDisp);
+                }));
+
+                static SafetyHookInline shRegQueryValueExA = {};
+                shRegQueryValueExA = safetyhook::create_inline(RegQueryValueExA, static_cast<decltype(&RegQueryValueExA)>([](HKEY hKey, LPCSTR lpValueName, LPDWORD lpReserved, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData) -> LSTATUS
+                {
+                    if (IsCallerFromExe(GetModuleHandleA(NULL))) return sRegQueryValueExA(hKey, lpValueName, lpReserved, lpType, lpData, lpcbData);
+                    return shRegQueryValueExA.stdcall<LSTATUS>(hKey, lpValueName, lpReserved, lpType, lpData, lpcbData);
+                }));
+
+                static SafetyHookInline shRegSetValueExA = {};
+                shRegSetValueExA = safetyhook::create_inline(RegSetValueExA, static_cast<decltype(&RegSetValueExA)>([](HKEY hKey, LPCSTR lpValueName, DWORD Reserved, DWORD dwType, const BYTE* lpData, DWORD cbData) -> LSTATUS
+                {
+                    if (IsCallerFromExe(GetModuleHandleA(NULL))) return sRegSetValueExA(hKey, lpValueName, Reserved, dwType, lpData, cbData);
+                    return shRegSetValueExA.stdcall<LSTATUS>(hKey, lpValueName, Reserved, dwType, lpData, cbData);
+                }));
+
+                static SafetyHookInline shRegQueryValueA = {};
+                shRegQueryValueA = safetyhook::create_inline(RegQueryValueA, static_cast<decltype(&RegQueryValueA)>([](HKEY hKey, LPCSTR lpSubKey, LPSTR lpData, PLONG lpcbData) -> LSTATUS
+                {
+                    if (IsCallerFromExe(GetModuleHandleA(NULL))) return sRegQueryValueA(hKey, lpSubKey, lpData, lpcbData);
+                    return shRegQueryValueA.stdcall<LSTATUS>(hKey, lpSubKey, lpData, lpcbData);
+                }));
+
+                static SafetyHookInline shRegDeleteKeyA = {};
+                shRegDeleteKeyA = safetyhook::create_inline(RegDeleteKeyA, static_cast<decltype(&RegDeleteKeyA)>([](HKEY hKey, LPCSTR lpSubKey)->LSTATUS
+                {
+                    if (IsCallerFromExe(GetModuleHandleA(NULL))) return sRegDeleteKeyA(hKey, lpSubKey);
+                    return shRegDeleteKeyA.stdcall<LSTATUS>(hKey, lpSubKey);
+                }));
+
+                static SafetyHookInline shRegEnumKeyA = {};
+                shRegEnumKeyA = safetyhook::create_inline(RegEnumKeyA, static_cast<decltype(&RegEnumKeyA)>([](HKEY hKey, DWORD dwIndex, LPSTR lpName, DWORD cchName) -> LSTATUS
+                {
+                    if (IsCallerFromExe(GetModuleHandleA(NULL))) return sRegEnumKeyA(hKey, dwIndex, lpName, cchName);
+                    return shRegEnumKeyA.stdcall<LSTATUS>(hKey, dwIndex, lpName, cchName);
+                }));
+            };
+
             if (bWriteSettingsToFile)
             {
                 auto [DesktopResW, DesktopResH] = GetDesktopRes();
@@ -106,7 +223,7 @@ public:
                 RegistryWrapper::AddDefault("g_PerformanceLevel", "5");
                 RegistryWrapper::AddDefault("g_VSyncOn", "0");
 
-                IATHook::Replace(GetModuleHandleA(NULL), "ADVAPI32.DLL",
+                auto hooks = IATHook::Replace(GetModuleHandleA(NULL), "ADVAPI32.DLL",
                     std::forward_as_tuple("RegCloseKey", RegistryWrapper::RegCloseKey),
                     std::forward_as_tuple("RegCreateKeyA", RegistryWrapper::RegCreateKeyA),
                     std::forward_as_tuple("RegOpenKeyA", RegistryWrapper::RegOpenKeyA),
@@ -118,6 +235,22 @@ public:
                     std::forward_as_tuple("RegDeleteKeyA", RegistryWrapper::RegDeleteKeyA),
                     std::forward_as_tuple("RegEnumKeyA", RegistryWrapper::RegEnumKeyA)
                 );
+
+                if (hooks.empty())
+                {
+                    InstallRegistryInlineHooks(
+                        RegistryWrapper::RegCloseKey,
+                        RegistryWrapper::RegCreateKeyA,
+                        RegistryWrapper::RegOpenKeyA,
+                        RegistryWrapper::RegOpenKeyExA,
+                        RegistryWrapper::RegCreateKeyExA,
+                        RegistryWrapper::RegQueryValueExA,
+                        RegistryWrapper::RegSetValueExA,
+                        RegistryWrapper::RegQueryValueA,
+                        RegistryWrapper::RegDeleteKeyA,
+                        RegistryWrapper::RegEnumKeyA
+                    );
+                }
             }
             else
             {
@@ -167,7 +300,7 @@ public:
 
                 RegistryFallback::EnsureDefaults();
 
-                IATHook::Replace(GetModuleHandleA(NULL), "ADVAPI32.DLL",
+                auto hooks = IATHook::Replace(GetModuleHandleA(NULL), "ADVAPI32.DLL",
                     std::forward_as_tuple("RegCloseKey", RegistryFallback::RegCloseKey),
                     std::forward_as_tuple("RegCreateKeyA", RegistryFallback::RegCreateKeyA),
                     std::forward_as_tuple("RegOpenKeyA", RegistryFallback::RegOpenKeyA),
@@ -179,6 +312,22 @@ public:
                     std::forward_as_tuple("RegDeleteKeyA", RegistryFallback::RegDeleteKeyA),
                     std::forward_as_tuple("RegEnumKeyA", RegistryFallback::RegEnumKeyA)
                 );
+
+                if (hooks.empty())
+                {
+                    InstallRegistryInlineHooks(
+                        RegistryFallback::RegCloseKey,
+                        RegistryFallback::RegCreateKeyA,
+                        RegistryFallback::RegOpenKeyA,
+                        RegistryFallback::RegOpenKeyExA,
+                        RegistryFallback::RegCreateKeyExA,
+                        RegistryFallback::RegQueryValueExA,
+                        RegistryFallback::RegSetValueExA,
+                        RegistryFallback::RegQueryValueA,
+                        RegistryFallback::RegDeleteKeyA,
+                        RegistryFallback::RegEnumKeyA
+                    );
+                }
             }
 
             auto szLanguage = iniReader.ReadString("LANGUAGE", "Language", "");
