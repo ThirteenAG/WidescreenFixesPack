@@ -173,3 +173,32 @@ export namespace FEPackage
 {
     char (__fastcall* ForAllObjects)(void* pPackage, void* edx, void* pCB) = nullptr;
 }
+
+struct BindingSlot
+{
+    int assignmentId;
+    int unk_04;
+    int unk_08;
+};
+
+export struct ActionBindingData
+{
+    BindingSlot slots[4];
+    int unk_30;
+};
+
+export ActionBindingData* gActionBindings;
+
+export bool IsRightStickAssignedToAnyAction()
+{
+    constexpr int ACTION_MIN = 0;
+    constexpr int ACTION_MAX = 18;
+    constexpr int NUM_SLOTS = 4;
+
+    for (int action = ACTION_MIN; action <= ACTION_MAX; ++action)
+        for (int slot = 0; slot < NUM_SLOTS; ++slot)
+            if (gActionBindings[action].slots[slot].assignmentId == 6)
+                return true;
+
+    return false;
+}

@@ -170,6 +170,35 @@ public:
                     std::forward_as_tuple("RegEnumKeyA", RegistryFallback::RegEnumKeyA)
                 );
             }
+
+
+            auto szLanguage = iniReader.ReadString("LANGUAGE", "Language", "");
+            if (!szLanguage.empty())
+            {
+                HKEY hKey = nullptr;
+                if (bWriteSettingsToFile)
+                {
+                    if (RegistryWrapper::RegOpenKeyA(HKEY_LOCAL_MACHINE, "Software\\Electronic Arts\\Need for Speed ProStreet", &hKey) == ERROR_SUCCESS)
+                    {
+                        RegistryWrapper::RegSetValueExA(hKey, "Language", 0, REG_SZ, (const BYTE*)szLanguage.c_str(), (DWORD)szLanguage.size() + 1);
+                        RegistryWrapper::RegCloseKey(hKey);
+                    }
+                }
+                else
+                {
+                    if (RegistryFallback::RegOpenKeyA(HKEY_LOCAL_MACHINE, "Software\\Electronic Arts\\Need for Speed ProStreet", &hKey) == ERROR_SUCCESS)
+                    {
+                        RegistryFallback::RegSetValueExA(hKey, "Language", 0, REG_SZ, (const BYTE*)szLanguage.c_str(), (DWORD)szLanguage.size() + 1);
+                        RegistryFallback::RegCloseKey(hKey);
+                    }
+
+                    if (RegistryFallback::RegOpenKeyA(HKEY_LOCAL_MACHINE, "Software\\Electronic Arts\\Electronic Arts\\Need for Speed ProStreet", &hKey) == ERROR_SUCCESS)
+                    {
+                        RegistryFallback::RegSetValueExA(hKey, "Language", 0, REG_SZ, (const BYTE*)szLanguage.c_str(), (DWORD)szLanguage.size() + 1);
+                        RegistryFallback::RegCloseKey(hKey);
+                    }
+                }
+            }
         };
     }
 } Registry;

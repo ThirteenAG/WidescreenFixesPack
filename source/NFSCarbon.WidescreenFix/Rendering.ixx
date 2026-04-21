@@ -115,13 +115,11 @@ public:
                 injector::WriteMemory<uint8_t>(dword_71356B, 0xEB, true);
             }
 
-            static GameRef<float> fAutosculptScaling;
+            static ProtectedGameRef<float> fAutosculptScaling;
             fAutosculptScaling.SetAddress(*hook::pattern("D8 0D ? ? ? ? DA 74 24 18 E8 ? ? ? ? 89 46 04 EB 03").count(1).get(0).get<float*>(2));
-            injector::UnprotectMemory(fAutosculptScaling.get_ptr(), sizeof(float));
 
-            static GameRef<float> fArrestBlur;
+            static ProtectedGameRef<float> fArrestBlur;
             fArrestBlur.SetAddress(*hook::pattern("D8 0D ? ? ? ? 8B 4C 24 14 8B 54").count(1).get(0).get<float*>(2));
-            injector::UnprotectMemory(fArrestBlur.get_ptr(), sizeof(float));
 
             onResChange() += [](int Width, int Height)
             {
