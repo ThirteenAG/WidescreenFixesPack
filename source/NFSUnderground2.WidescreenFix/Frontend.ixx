@@ -148,17 +148,15 @@ public:
             //HUD
             if (bFixHUD)
             {
-                static GameRef<float> fHudScaleX;
+                static ProtectedGameRef<float> fHudScaleX;
                 fHudScaleX.SetAddress(*hook::pattern("D9 05 ? ? ? ? 89 7C 24 28 C7 44 24 2C 00 00 00 3F D8 C9 C7 44 24 30 00 00 00 3F").count(1).get(0).get<float*>(2));
-                injector::UnprotectMemory(fHudScaleX.get_ptr(), sizeof(float));
 
-                static std::vector<GameRef<float>> fHudPosXArray;
+                static std::vector<ProtectedGameRef<float>> fHudPosXArray;
 
                 auto setHudPosRef = [&](hook::pattern pat, int offset)
                 {
-                    GameRef<float> ref;
+                    ProtectedGameRef<float> ref;
                     ref.SetAddress(pat.count(1).get(0).get<float>(offset));
-                    injector::UnprotectMemory(ref.get_ptr(), sizeof(float));
                     fHudPosXArray.push_back(std::move(ref));
                 };
 
@@ -170,77 +168,62 @@ public:
                 setHudPosRef(hook::pattern("C7 05 ? ? ? ? 00 00 A0 43 C7 05 ? ? ? ? 00 00 00 00 C7 05 ? ? ? ? 00 00 00 00 C6 05 ? ? ? ? 82"), 6);
                 setHudPosRef(hook::pattern("C7 84 24 A0 01 00 00 00 00 A0 43 C7 84 24 A4 01 00 00 00 00 70 43 C7 84 24 A8 01 00 00 00 00 00 00 E8 ? ? ? ? 8D 8C 24 30 01 00 00 51 8B F0"), 7);
 
-                GameRef<float> temp_ref;
+                ProtectedGameRef<float> temp_ref;
                 temp_ref.SetAddress(*hook::pattern("D8 25 ? ? ? ? 8B 4C 24 28 6A 00 8D 54 24 48 D9 5C 24 48 89 4C 24 50 D9 44 24 28 8B 0B").count(1).get(0).get<float*>(2));
-                injector::UnprotectMemory(temp_ref.get_ptr(), sizeof(float));
                 fHudPosXArray.push_back(std::move(temp_ref));
 
-                static GameRef<float> fHudPosX_x2;
+                static ProtectedGameRef<float> fHudPosX_x2;
                 fHudPosX_x2.SetAddress(*hook::pattern("D8 0D ? ? ? ? D9 5C 24 ? D9 44 24 ? D8 74 24").count(1).get(0).get<float*>(2));
-                injector::UnprotectMemory(fHudPosX_x2.get_ptr(), sizeof(float));
 
                 auto pattern = hook::pattern("C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? 33 D2");
 
-                static GameRef<float> fRearviewMirrorLeftX1;
+                static ProtectedGameRef<float> fRearviewMirrorLeftX1;
                 fRearviewMirrorLeftX1.SetAddress(pattern.get_first<float>(4));
-                injector::UnprotectMemory(fRearviewMirrorLeftX1.get_ptr(), sizeof(float));
 
-                static GameRef<float> fRearviewMirrorLeftX2;
+                static ProtectedGameRef<float> fRearviewMirrorLeftX2;
                 fRearviewMirrorLeftX2.SetAddress(pattern.get_first<float>(4 + 16));
-                injector::UnprotectMemory(fRearviewMirrorLeftX2.get_ptr(), sizeof(float));
 
-                static GameRef<float> fRearviewMirrorRightX1;
+                static ProtectedGameRef<float> fRearviewMirrorRightX1;
                 fRearviewMirrorRightX1.SetAddress(pattern.get_first<float>(4 - 16));
-                injector::UnprotectMemory(fRearviewMirrorRightX1.get_ptr(), sizeof(float));
 
-                static GameRef<float> fRearviewMirrorRightX2;
+                static ProtectedGameRef<float> fRearviewMirrorRightX2;
                 fRearviewMirrorRightX2.SetAddress(pattern.get_first<float>(4 + 32));
-                injector::UnprotectMemory(fRearviewMirrorRightX2.get_ptr(), sizeof(float));
 
                 pattern = hook::pattern("C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? E8 ? ? ? ? 83 C4 ? 5F");
 
-                static GameRef<float> fCutsceneBordersWidth1;
+                static ProtectedGameRef<float> fCutsceneBordersWidth1;
                 fCutsceneBordersWidth1.SetAddress(pattern.get_first<float>(4));
-                injector::UnprotectMemory(fCutsceneBordersWidth1.get_ptr(), sizeof(float));
 
-                static GameRef<float> fCutsceneBordersWidth2;
+                static ProtectedGameRef<float> fCutsceneBordersWidth2;
                 fCutsceneBordersWidth2.SetAddress(pattern.get_first<float>(4 + 16));
-                injector::UnprotectMemory(fCutsceneBordersWidth2.get_ptr(), sizeof(float));
 
                 pattern = hook::pattern("C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? E8 ? ? ? ? BA");
 
-                static GameRef<float> fCutsceneBordersWidth3;
+                static ProtectedGameRef<float> fCutsceneBordersWidth3;
                 fCutsceneBordersWidth3.SetAddress(pattern.get_first<float>(4));
-                injector::UnprotectMemory(fCutsceneBordersWidth3.get_ptr(), sizeof(float));
 
-                static GameRef<float> fCutsceneBordersWidth4;
+                static ProtectedGameRef<float> fCutsceneBordersWidth4;
                 fCutsceneBordersWidth4.SetAddress(pattern.get_first<float>(4 + 24));
-                injector::UnprotectMemory(fCutsceneBordersWidth4.get_ptr(), sizeof(float));
 
                 pattern = hook::pattern("C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? 7D");
 
-                static GameRef<float> fRadarMaskWidth1;
+                static ProtectedGameRef<float> fRadarMaskWidth1;
                 fRadarMaskWidth1.SetAddress(pattern.get_first<float>(4));
-                injector::UnprotectMemory(fRadarMaskWidth1.get_ptr(), sizeof(float));
 
-                static GameRef<float> fRadarMaskWidth2;
+                static ProtectedGameRef<float> fRadarMaskWidth2;
                 fRadarMaskWidth2.SetAddress(pattern.get_first<float>(4 + 16));
-                injector::UnprotectMemory(fRadarMaskWidth2.get_ptr(), sizeof(float));
 
-                static GameRef<float> fRadarMaskHeight1;
+                static ProtectedGameRef<float> fRadarMaskHeight1;
                 fRadarMaskHeight1.SetAddress(pattern.get_first<float>(4 + 24));
-                injector::UnprotectMemory(fRadarMaskHeight1.get_ptr(), sizeof(float));
 
-                static GameRef<float> fRadarMaskHeight2;
+                static ProtectedGameRef<float> fRadarMaskHeight2;
                 fRadarMaskHeight2.SetAddress(pattern.get_first<float>(4 + 40));
-                injector::UnprotectMemory(fRadarMaskHeight2.get_ptr(), sizeof(float));
 
                 //graph of the dyno result issue #366 / #462
                 pattern = hook::pattern("6A ? 68 ? ? ? ? 68 ? ? ? ? 8B C8 E8 ? ? ? ? EB ? 33 C0 8B CF");
 
-                static GameRef<std::array<float, 2>> fDynoResultOffset;
-                fDynoResultOffset.SetAddress(pattern.get_first<std::array<float, 2>>(8));
-                injector::UnprotectMemory(fDynoResultOffset.get_ptr(), sizeof(std::array<float, 2>));
+                static ProtectedGameRef<std::array<float, 2>> fDynoResultOffset;
+                fDynoResultOffset.SetAddress(*pattern.get_first<std::array<float, 2>*>(8));
 
                 //controls screenshot aspect ratio issue #462
                 static auto Width43 = 0;

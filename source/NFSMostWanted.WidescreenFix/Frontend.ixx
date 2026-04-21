@@ -142,8 +142,8 @@ namespace cFEng
 
 namespace Minimap
 {
-    GameRef<float> MinimapPivotX;
-    GameRef<float> MinimapDispX;
+    ProtectedGameRef<float> MinimapPivotX;
+    ProtectedGameRef<float> MinimapDispX;
 
     struct OriginalPositions
     {
@@ -264,13 +264,11 @@ public:
             //HUD
             if (bFixHUD)
             {
-                static GameRef<float> fHudScaleX;
+                static ProtectedGameRef<float> fHudScaleX;
                 fHudScaleX.SetAddress(*hook::pattern("D8 0D ? ? ? ? D8 25 ? ? ? ? D9 5C 24 20 D9 46 04").count(1).get(0).get<float*>(2));
-                injector::UnprotectMemory(fHudScaleX.get_ptr(), sizeof(float));
 
-                static GameRef<float> fFEHudPosX;
+                static ProtectedGameRef<float> fFEHudPosX;
                 fFEHudPosX.SetAddress(*hook::pattern("D8 25 ? ? ? ? D9 5C 24 14 DB 05 ? ? ? ? D8 25 ? ? ? ? D9 5C 24 1C 74 20").count(1).get(0).get<float*>(2));
-                injector::UnprotectMemory(fFEHudPosX.get_ptr(), sizeof(float));
 
                 auto pattern = hook::pattern("C7 ? ? ? ? 00 00 00 00 A0 43 C7 ? ? ? ? 00 00 00 00 70 43"); // 0x56FED4
                 struct HudPosXHook1
@@ -377,12 +375,8 @@ public:
 
                 onResChange() += [](int Width, int Height)
                 {
-                    injector::UnprotectMemory(fHudScaleX.get_ptr(), sizeof(float));
                     fHudScaleX = (1.0f / static_cast<float>(Width) * (static_cast<float>(Height) / 480.0f)) * 2.0f;
-
                     float fHudPosX = 640.0f / (640.0f * fHudScaleX);
-
-                    injector::UnprotectMemory(fFEHudPosX.get_ptr(), sizeof(float));
                     fFEHudPosX = fHudPosX;
 
                     cFEng::fWidescreenHudOffset = -CalculateWidescreenOffset(static_cast<float>(Width), static_cast<float>(Height), 640.0f, 480.0f);

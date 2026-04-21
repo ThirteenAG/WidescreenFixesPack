@@ -145,104 +145,82 @@ public:
             //HUD
             if (bFixHUD)
             {
-                static GameRef<float> fHudScaleX;
+                static ProtectedGameRef<float> fHudScaleX;
                 fHudScaleX.SetAddress(*hook::pattern("D8 0D ? ? ? ? 57 0F B6 B8").count(1).get(0).get<float*>(2));
-                injector::UnprotectMemory(fHudScaleX.get_ptr(), sizeof(float));
 
-                static std::vector<GameRef<float>> fHudPosXArray;
+                static std::vector<ProtectedGameRef<float>> fHudPosXArray;
 
                 auto pattern = hook::pattern("C7 ? ? ? ? 00 00 00 00 A0 43 C7 ? ? ? ? 00 00 00 00 70 43");
                 pattern.for_each_result([](auto match)
                 {
-                    GameRef<float> ref;
+                    ProtectedGameRef<float> ref;
                     ref.SetAddress(match.get<float>(7));
-                    injector::UnprotectMemory(ref.get_ptr(), sizeof(float));
                     fHudPosXArray.push_back(std::move(ref));
                 });
 
                 pattern = hook::pattern("C7 ? ? ? 00 00 A0 43 C7 ? ? ? ? 00 00 00 00 70 43");
                 pattern.for_each_result([](auto match)
                 {
-                    GameRef<float> ref;
+                    ProtectedGameRef<float> ref;
                     ref.SetAddress(match.get<float>(4));
-                    injector::UnprotectMemory(ref.get_ptr(), sizeof(float));
                     fHudPosXArray.push_back(std::move(ref));
                 });
 
                 pattern = hook::pattern("C7 ? ? ? 00 00 A0 43 C7 ? ? ? 00 00 70 43");
                 pattern.for_each_result([](auto match)
                 {
-                    GameRef<float> ref;
+                    ProtectedGameRef<float> ref;
                     ref.SetAddress(match.get<float>(4));
-                    injector::UnprotectMemory(ref.get_ptr(), sizeof(float));
                     fHudPosXArray.push_back(std::move(ref));
                 });
 
-                GameRef<float> temp_ref;
+                ProtectedGameRef<float> temp_ref;
                 temp_ref.SetAddress(*hook::pattern("D8 1D ? ? ? ? DF E0 F6 C4 41 75 0F D9 45 FC").count(1).get(0).get<float*>(2));
-                injector::UnprotectMemory(temp_ref.get_ptr(), sizeof(float));
                 fHudPosXArray.push_back(std::move(temp_ref));
 
-                static GameRef<float> fRearviewMirrorLeftX1;
-                static GameRef<float> fRearviewMirrorLeftX2;
-                static GameRef<float> fRearviewMirrorRightX1;
-                static GameRef<float> fRearviewMirrorRightX2;
+                static ProtectedGameRef<float> fRearviewMirrorLeftX1;
+                static ProtectedGameRef<float> fRearviewMirrorLeftX2;
+                static ProtectedGameRef<float> fRearviewMirrorRightX1;
+                static ProtectedGameRef<float> fRearviewMirrorRightX2;
 
                 pattern = hook::pattern("C7 44 24 ? 00 00 DC 43 C7 44 24 ? 00 00 70 41");
                 if (!pattern.empty())
                 {
                     fRearviewMirrorLeftX1.SetAddress(pattern.get_first<float>(20));
-                    injector::UnprotectMemory(fRearviewMirrorLeftX1.get_ptr(), sizeof(float));
-
                     fRearviewMirrorLeftX2.SetAddress(pattern.get_first<float>(42));
-                    injector::UnprotectMemory(fRearviewMirrorLeftX2.get_ptr(), sizeof(float));
-
                     fRearviewMirrorRightX1.SetAddress(pattern.get_first<float>(4));
-                    injector::UnprotectMemory(fRearviewMirrorRightX1.get_ptr(), sizeof(float));
-
                     fRearviewMirrorRightX2.SetAddress(pattern.get_first<float>(64));
-                    injector::UnprotectMemory(fRearviewMirrorRightX2.get_ptr(), sizeof(float));
                 }
                 else
                 {
                     pattern = hook::pattern("C7 44 24 ? ? ? ? ? C7 84 24 ? ? ? ? ? ? ? ? C7 84 24 ? ? ? ? ? ? ? ? C7 84 24 ? ? ? ? ? ? ? ? C7 84 24 ? ? ? ? ? ? ? ? C7 84 24 ? ? ? ? ? ? ? ? C7 84 24 ? ? ? ? ? ? ? ? C7 84 24 ? ? ? ? ? ? ? ? FF 91");
                     fRearviewMirrorLeftX1.SetAddress(pattern.get_first<float>(26));
-                    injector::UnprotectMemory(fRearviewMirrorLeftX1.get_ptr(), sizeof(float));
-
                     fRearviewMirrorLeftX2.SetAddress(pattern.get_first<float>(48));
-                    injector::UnprotectMemory(fRearviewMirrorLeftX2.get_ptr(), sizeof(float));
-
                     fRearviewMirrorRightX1.SetAddress(pattern.get_first<float>(4));
-                    injector::UnprotectMemory(fRearviewMirrorRightX1.get_ptr(), sizeof(float));
-
                     fRearviewMirrorRightX2.SetAddress(pattern.get_first<float>(70));
-                    injector::UnprotectMemory(fRearviewMirrorRightX2.get_ptr(), sizeof(float));
                 }
 
                 //mouse cursor fix
-                static std::vector<GameRef<int32_t>> fNegativeHudPosXArray;
+                static std::vector<ProtectedGameRef<int32_t>> fNegativeHudPosXArray;
 
                 pattern = hook::pattern("81 C2 C0 FE FF FF");
                 pattern.for_each_result([](auto match)
                 {
-                    GameRef<int32_t> ref;
+                    ProtectedGameRef<int32_t> ref;
                     ref.SetAddress(match.get<int32_t>(2));
-                    injector::UnprotectMemory(ref.get_ptr(), sizeof(int32_t));
                     fNegativeHudPosXArray.push_back(std::move(ref));
                 });
 
                 pattern = hook::pattern("05 C0 FE FF FF");
                 pattern.for_each_result([](auto match)
                 {
-                    GameRef<int32_t> ref;
+                    ProtectedGameRef<int32_t> ref;
                     ref.SetAddress(match.get<int32_t>(1));
-                    injector::UnprotectMemory(ref.get_ptr(), sizeof(int32_t));
                     fNegativeHudPosXArray.push_back(std::move(ref));
                 });
 
-                GameRef<int32_t> temp_ref2;
+                ProtectedGameRef<int32_t> temp_ref2;
                 temp_ref2.SetAddress(hook::pattern("8D 88 C0 FE FF FF").get_first<int32_t>(2));
-                injector::UnprotectMemory(temp_ref2.get_ptr(), sizeof(int32_t));
                 fNegativeHudPosXArray.push_back(std::move(temp_ref2));
 
                 pattern = hook::pattern("8B 06 8B 4C 24 08");
