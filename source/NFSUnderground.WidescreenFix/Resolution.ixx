@@ -73,8 +73,8 @@ LRESULT __stdcall WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
     return shWndProc.unsafe_stdcall<LRESULT>(hWnd, Msg, wParam, lParam);
 }
 
-std::vector<GameRef<int32_t>> ResXRefs;
-std::vector<GameRef<int32_t>> ResYRefs;
+std::vector<ProtectedGameRef<int32_t>> ResXRefs;
+std::vector<ProtectedGameRef<int32_t>> ResYRefs;
 export void SetRes(int width, int height)
 {
     for (auto& ref : ResXRefs)
@@ -242,13 +242,12 @@ public:
             injector::WriteMemory<uint8_t>(pattern.get_first(2), (uint8_t)ResList.size() - 1, true);
 
             {
-                auto setResRef = [&](hook::pattern pat, int offset, std::vector<GameRef<int32_t>>& targetVector)
+                auto setResRef = [&](hook::pattern pat, int offset, std::vector<ProtectedGameRef<int32_t>>& targetVector)
                 {
                     pattern.for_each_result([&](const hook::pattern_match& match)
                     {
-                        GameRef<int32_t> ref;
+                        ProtectedGameRef<int32_t> ref;
                         ref.SetAddress(match.get<int32_t>(offset));
-                        injector::UnprotectMemory(ref.get_ptr(), sizeof(int32_t));
                         targetVector.push_back(std::move(ref));
                     });
                 };
@@ -284,25 +283,21 @@ public:
                 setResRef(pattern, 6, ResYRefs);
 
                 pattern = hook::pattern("8B 0D ? ? ? ? 8B 15 ? ? ? ? B8");
-                static GameRef<int32_t> ScreenWidth;
+                static ProtectedGameRef<int32_t> ScreenWidth;
                 ScreenWidth.SetAddress(*pattern.get_first<int32_t*>(2));
-                injector::UnprotectMemory(ScreenWidth.get_ptr(), sizeof(int32_t));
                 ResXRefs.push_back(ScreenWidth);
 
-                static GameRef<int32_t> ScreenHeight;
+                static ProtectedGameRef<int32_t> ScreenHeight;
                 ScreenHeight.SetAddress(*pattern.get_first<int32_t*>(8));
-                injector::UnprotectMemory(ScreenHeight.get_ptr(), sizeof(int32_t));
                 ResYRefs.push_back(ScreenHeight);
 
                 pattern = hook::pattern("89 1D ? ? ? ? 89 1D ? ? ? ? 89 35");
-                static GameRef<int32_t> ScreenWidth2;
+                static ProtectedGameRef<int32_t> ScreenWidth2;
                 ScreenWidth2.SetAddress(*pattern.get_first<int32_t*>(2));
-                injector::UnprotectMemory(ScreenWidth2.get_ptr(), sizeof(int32_t));
                 ResXRefs.push_back(ScreenWidth2);
 
-                static GameRef<int32_t> ScreenHeight2;
+                static ProtectedGameRef<int32_t> ScreenHeight2;
                 ScreenHeight2.SetAddress(*pattern.get_first<int32_t*>(14));
-                injector::UnprotectMemory(ScreenHeight2.get_ptr(), sizeof(int32_t));
                 ResYRefs.push_back(ScreenHeight2);
             }
 

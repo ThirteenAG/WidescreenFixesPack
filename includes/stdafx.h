@@ -1903,11 +1903,19 @@ private:
     static inline float Sensitivity = 1.0f;
 };
 
-template<typename T>
+template<typename T, bool AutoUnprotect = false>
 class GameRef
 {
 private:
     std::optional<T*> ptr{ std::nullopt };
+
+    T& assign(const T& value)
+    {
+        if constexpr (AutoUnprotect)
+            injector::UnprotectMemory(*ptr, sizeof(T));
+        **ptr = value;
+        return **ptr;
+    }
 
 public:
     GameRef() = default;
@@ -1949,15 +1957,18 @@ public:
 
     T& operator=(const T& value)
     {
-        *reinterpret_cast<volatile T*>(*ptr) = value;
-        return **ptr;
+        return assign(value);
     }
-    T& operator=(T&& value) { return get() = std::move(value); }
 
-    template<typename U> T& operator+=(const U& v) { return get() += v; }
-    template<typename U> T& operator-=(const U& v) { return get() -= v; }
-    template<typename U> T& operator*=(const U& v) { return get() *= v; }
-    template<typename U> T& operator/=(const U& v) { return get() /= v; }
+    T& operator=(T&& value)
+    {
+        return assign(value);
+    }
+
+    template<typename U> T& operator+=(const U& v) { T val = get() + v; return assign(val); }
+    template<typename U> T& operator-=(const U& v) { T val = get() - v; return assign(val); }
+    template<typename U> T& operator*=(const U& v) { T val = get() * v; return assign(val); }
+    template<typename U> T& operator/=(const U& v) { T val = get() / v; return assign(val); }
     template<typename U> T& operator%=(const U& v) { return get() %= v; }
 
     template<typename U> T& operator&=(const U& v) { return get() &= v; }
@@ -2024,3 +2035,5 @@ public:
     explicit operator bool() const { return static_cast<bool>(get()); }
 };
 
+template<typename T>
+using ProtectedGameRef = GameRef<T, true>;

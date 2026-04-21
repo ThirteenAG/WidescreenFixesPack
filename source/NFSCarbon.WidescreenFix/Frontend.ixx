@@ -291,34 +291,28 @@ public:
             //HUD
             if (bFixHUD)
             {
-                static GameRef<float> fHudScaleX;
+                static ProtectedGameRef<float> fHudScaleX;
                 fHudScaleX.SetAddress(*hook::pattern("D8 0D ? ? ? ? D8 25 ? ? ? ? D9 5C 24 20 D9 46 04 D8 0D ? ? ? ? D8 25 ? ? ? ? D9 E0").count(1).get(0).get<float*>(2));
-                injector::UnprotectMemory(fHudScaleX.get_ptr(), sizeof(float));
 
-                static GameRef<float> fWorldMapHudPosX;
+                static ProtectedGameRef<float> fWorldMapHudPosX;
                 fWorldMapHudPosX.SetAddress(*hook::pattern("D8 05 ? ? ? ? 89 44 24 18 D9 44 24 18").count(1).get(0).get<float*>(2));
-                injector::UnprotectMemory(fWorldMapHudPosX.get_ptr(), sizeof(float));
 
-                static GameRef<float> fFEHudPosX;
+                static ProtectedGameRef<float> fFEHudPosX;
                 fFEHudPosX.SetAddress(*hook::pattern("D8 25 ? ? ? ? 8D 46 34 50 D9 5C 24 20").count(1).get(0).get<float*>(2));
-                injector::UnprotectMemory(fFEHudPosX.get_ptr(), sizeof(float));
 
-                static GameRef<float> fRenderRaceRouteHudPosX;
+                static ProtectedGameRef<float> fRenderRaceRouteHudPosX;
                 fRenderRaceRouteHudPosX.SetAddress(*hook::pattern("D8 05 ? ? ? ? D9 5C 24 7C D9 86 B8 00 00 00 D8 05 ? ? ? ? D9 9C 24 80 00 00 00").count(1).get(0).get<float*>(2));
-                injector::UnprotectMemory(fRenderRaceRouteHudPosX.get_ptr(), sizeof(float));
 
-                static GameRef<float> fPiPUCAPPosition;
+                static ProtectedGameRef<float> fPiPUCAPPosition;
                 fPiPUCAPPosition.SetAddress(hook::pattern("68 ? ? ? ? 52 E8 ? ? ? ? A1 ? ? ? ? ? ? 83 C4").count(1).get(0).get<float>(1));
-                injector::UnprotectMemory(fPiPUCAPPosition.get_ptr(), sizeof(float));
 
-                static std::vector<GameRef<float>> hudPosXRefs;
+                static std::vector<ProtectedGameRef<float>> hudPosXRefs;
 
                 for (size_t i = 0; i < 4; i++)
                 {
                     float* ptr = hook::pattern("C7 ? ? ? ? 00 00 00 00 A0 43 C7 ? ? ? ? 00 00 00 00 70 43").count(4).get(i).get<float>(7);
-                    injector::UnprotectMemory(ptr, sizeof(float));
 
-                    GameRef<float> fTemp;
+                    ProtectedGameRef<float> fTemp;
                     fTemp.SetAddress(ptr);
                     hudPosXRefs.push_back(std::move(fTemp));
                 }
@@ -326,9 +320,7 @@ public:
                 for (size_t i = 0; i < 2; i++)
                 {
                     float* ptr = hook::pattern("C7 ? ? ? 00 00 A0 43 C7 ? ? ? 00 00 70 43").count(2).get(i).get<float>(4);
-                    injector::UnprotectMemory(ptr, sizeof(float));
-
-                    GameRef<float> fTemp;
+                    ProtectedGameRef<float> fTemp;
                     fTemp.SetAddress(ptr);
                     hudPosXRefs.push_back(std::move(fTemp));
                 }
