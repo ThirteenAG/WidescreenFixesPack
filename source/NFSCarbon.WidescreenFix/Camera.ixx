@@ -12,6 +12,7 @@ static float YawOffset = 0.0f;
 static float PitchOffset = 0.0f;
 
 bool InvertLook = false;
+bool OnlyAllowHorizontalStickMovement = false;
 float StickLookSensitivity = 1.0f;
 float MouseLookSensitivity = 1.0f;
 
@@ -77,8 +78,16 @@ void __cdecl eCreateLookAtMatrix(bMatrix4* out, bVector3* from, bVector3* to, bV
     g_Mouse.DeltaY = 0;
 
     // Combine stick + mouse input
-    float deltaX = -g_RightStick.X + (-mouseDeltaX * MouseLookSensitivity);
-    float deltaY = g_RightStick.Y + (mouseDeltaY * MouseLookSensitivity);
+    float StickX = -g_RightStick.X;
+    float StickY = (OnlyAllowHorizontalStickMovement ? 0.0f : g_RightStick.Y);
+    if (!OnlyAllowHorizontalStickMovement && IsRightStickAssignedToAnyAction())
+    {
+        StickX = 0.0f;
+        StickY = 0.0f;
+    }
+
+    float deltaX = StickX + (-mouseDeltaX * MouseLookSensitivity);
+    float deltaY = StickY + (mouseDeltaY * MouseLookSensitivity);
 
     bool hasInput = (fabsf(deltaX) > 0.01f || fabsf(deltaY) > 0.01f);
     bool carIsMoving = (CarSpeed2D > CarMoveThreshold);
@@ -154,11 +163,15 @@ public:
         WFP::onInitEventAsync() += []()
         {
             CIniReader iniReader("");
+            if (!iniReader.ReadInteger("CAMERA", "Enable", 1))
+                return;
+
             IdleTimeoutSeconds = iniReader.ReadFloat("CAMERA", "CameraReturnTimeout", 3.0f);
             ReturnSpeed = iniReader.ReadFloat("CAMERA", "CameraReturnSpeed", 2.0f);
             StickLookSensitivity = iniReader.ReadFloat("CAMERA", "StickLookSensitivity", 1.0f);
             MouseLookSensitivity = iniReader.ReadFloat("CAMERA", "MouseLookSensitivity", 1.0f) * 0.15f;
             InvertLook = iniReader.ReadInteger("CAMERA", "InvertLook", 0) != 0;
+            OnlyAllowHorizontalStickMovement = iniReader.ReadInteger("CAMERA", "OnlyAllowHorizontalStickMovement", 0) != 0;
 
             //CubicCameraMover::Update
             auto pattern = hook::pattern("E8 ? ? ? ? 8B 4E ? 8D 84 24 ? ? ? ? 50 51 E8");
