@@ -57,9 +57,12 @@ public:
             if (bExperimentalCrashFix)
             {
                 auto pattern = hook::pattern("75 0B 8B 06 8B CE FF 50 14 3B D8"); //0x59606D
-                injector::MakeNOP(pattern.get_first(0), 2, true);
+                if (!pattern.empty())
+                    injector::MakeNOP(pattern.get_first(0), 2, true);
+
                 pattern = hook::pattern("74 20 8B 44 24 20 8B 55 00 6A 00 50 6A 00"); //0x5960A9
-                injector::MakeNOP(pattern.get_first(0), 2, true);
+                if (!pattern.empty())
+                    injector::MakeNOP(pattern.get_first(0), 2, true);
             }
 
             if (SimRate)
