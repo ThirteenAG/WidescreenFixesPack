@@ -2,28 +2,31 @@ version: '{build}'
 skip_tags: true
 image: Visual Studio 2022
 configuration: Release
+environment:
+  APPVEYOR_SAVE_CACHE_ON_ERROR: true
 install:
 - cmd: >-
     git submodule update --init --recursive
 
     premake5 vs2022
+cache: build
 before_build:
-- cmd: REM before_build.bat
+- cmd: before_build.bat
 build:
   project: build/Win32.WidescreenFixesPack.sln
   parallel: true
   verbosity: minimal
 before_package:
 - cmd: >-
-    REM msbuild -m build/Win64.WidescreenFixesPack.sln /p:Configuration=Release
+    msbuild -m build/Win64.WidescreenFixesPack.sln /p:Configuration=Release
 
-    REM msbuild -m build/PCSX2F.WidescreenFixesPack.sln /p:Configuration=Release
+    msbuild -m build/PCSX2F.WidescreenFixesPack.sln /p:Configuration=Release
 
-    REM msbuild -m build/PPSSPP.WidescreenFixesPack.sln /p:Configuration=Release
+    msbuild -m build/PPSSPP.WidescreenFixesPack.sln /p:Configuration=Release
 
-    REM msbuild -m build/Dolphin.WidescreenFixesPack.sln /p:Configuration=Release
+    msbuild -m build/Dolphin.WidescreenFixesPack.sln /p:Configuration=Release
 
-    REM msbuild -m build/CXBXR.WidescreenFixesPack.sln /p:Configuration=Release
+    msbuild -m build/CXBXR.WidescreenFixesPack.sln /p:Configuration=Release
 
 
     before_packaging.bat
