@@ -15,9 +15,13 @@ pr:
     - .appveyor.yml
 
 jobs:
-- job:
+- job: Build
+  timeoutInMinutes: 0
+  cancelTimeoutInMinutes: 5
+
   pool:
     vmImage: windows-2025-vs2026
+
   strategy:
     matrix:
       Release:
@@ -35,6 +39,7 @@ jobs:
         ./before_build.bat
 
   - task: MSBuild@1
+    displayName: Build
     inputs:
       solution: 'build/*.slnx'
       maximumCpuCount: true
