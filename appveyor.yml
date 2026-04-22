@@ -15,18 +15,18 @@ build:
   verbosity: minimal
 before_package:
 - cmd: >-
-    msbuild -m build/Win64.WidescreenFixesPack.sln /p:Configuration=Release
+    REM msbuild -m build/Win64.WidescreenFixesPack.sln /p:Configuration=Release
 
-    msbuild -m build/PCSX2F.WidescreenFixesPack.sln /p:Configuration=Release
+    REM msbuild -m build/PCSX2F.WidescreenFixesPack.sln /p:Configuration=Release
 
-    msbuild -m build/PPSSPP.WidescreenFixesPack.sln /p:Configuration=Release
+    REM msbuild -m build/PPSSPP.WidescreenFixesPack.sln /p:Configuration=Release
 
-    msbuild -m build/Dolphin.WidescreenFixesPack.sln /p:Configuration=Release
+    REM msbuild -m build/Dolphin.WidescreenFixesPack.sln /p:Configuration=Release
 
-    msbuild -m build/CXBXR.WidescreenFixesPack.sln /p:Configuration=Release
+    REM msbuild -m build/CXBXR.WidescreenFixesPack.sln /p:Configuration=Release
 
 
-    REM before_packaging.bat
+    before_packaging.bat
 
     cd data
 
