@@ -1,562 +1,128 @@
 #include "stdafx.h"
+#include "d3d9.h"
 
 import ComVars;
-import Frontend;
-import Rendering;
-import DebugObjects;
 
-void* (*CreateResourceFile)(const char* ResourceFileName, int32_t ResourceFileType, int, int, int);
-void(__fastcall* ResourceFileBeginLoading)(int a1, void* rsc, int a2);
-void LoadResourceFile(const char* ResourceFileName, int32_t ResourceFileType, int32_t nUnk1 = 0, int32_t nUnk2 = 0, int32_t nUnk3 = 0, int32_t nUnk4 = 0, int32_t nUnk5 = 0)
+std::once_flag of;
+
+void MainLoop()
 {
-    auto r = CreateResourceFile(ResourceFileName, ResourceFileType, nUnk1, nUnk2, nUnk3);
-    _asm
+    std::call_once(of, []()
     {
-        mov     edx, r
-        mov     ecx, nUnk5
-        mov     eax, nUnk4
-        call    ResourceFileBeginLoading
-    }
-};
+        WFP::onGameInitEvent().executeAll();
+    });
 
-namespace IntroFMVScreen
-{
-    #pragma runtime_checks( "", off )
-    bool bOnceFlag = false;
-    uintptr_t NotificationMessageFuncAddr = 0x004DE9F0;
-    uintptr_t FEngPopPackageAddr = 0x004DE4A0;
+    WFP::onGameProcessEvent().executeAll();
 
-    void __stdcall hkNotificationMessage(uint32_t msg, void* FEObject, uint32_t unk1, uint32_t unk2)
+    static bool oldMenuState = GameFlowManager::IsPaused();
+    bool curMenuState = GameFlowManager::IsPaused();
+    if (curMenuState != oldMenuState)
     {
-        uintptr_t that;
-        _asm mov that, ecx
-
-        // pop the package once for the intro skip
-        if (!bOnceFlag)
-        {
-            bOnceFlag = true;
-            reinterpret_cast<void(__cdecl*)(char* pkgname)>(FEngPopPackageAddr)(*(char**)(that + 0xC));
-            return;
-        }
-
-        return reinterpret_cast<void(__thiscall*)(uintptr_t, uint32_t, void*, uint32_t, uint32_t)>(NotificationMessageFuncAddr)(that, msg, FEObject, unk1, unk2);
+        if (curMenuState)
+            WFP::onMenuEnterEvent().executeAll();
+        else
+            WFP::onMenuExitEvent().executeAll();
     }
-    #pragma runtime_checks( "", restore )
-}
-HWND WINAPI CreateWindowExA_Hook_NFSU(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam)
-{
-    HWND retval = WindowedModeWrapper::CreateWindowExA_Hook(dwExStyle, lpClassName, lpWindowName, 0, X, Y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
-
-    // icon fix
-    SendMessage(retval, WM_SETICON, ICON_BIG, (LPARAM)CreateIconFromResourceICO(IDR_NFSUICON, ::GetSystemMetrics(SM_CXICON), ::GetSystemMetrics(SM_CYICON)));
-    SendMessage(retval, WM_SETICON, ICON_SMALL, (LPARAM)CreateIconFromResourceICO(IDR_NFSUICON, ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON)));
-
-    return retval;
+    oldMenuState = curMenuState;
+    if (curMenuState)
+        WFP::onMenuDrawingEvent().executeAll();
 }
 
 void Init()
 {
-    CIniReader iniReader("");
-    Screen.nWidth = iniReader.ReadInteger("MAIN", "ResX", 0);
-    Screen.nHeight = iniReader.ReadInteger("MAIN", "ResY", 0);
+    auto pattern = hook::pattern("A1 ? ? ? ? 68 ? ? ? ? 50 FF 15");
+    hWnd.SetAddress(*pattern.get_first<HWND*>(1));
+    WindowRect.SetAddress(*pattern.get_first<tagRECT*>(6));
 
-    bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 0) != 0;
-    bool bShowLangSelect = iniReader.ReadInteger("MISC", "ShowLangSelect", 0) != 0;
-    static std::filesystem::path CustomUserDir;
-    static auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
+    pattern = hook::pattern("A1 ? ? ? ? 85 C0 74 ? A1 ? ? ? ? 68");
+    dwWindowedMode.SetAddress(*pattern.get_first<uint32_t*>(1));
 
-    if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
-        szCustomUserFilesDirectoryInGameDir.clear();
+    pattern = hook::pattern("A1 ? ? ? ? 8B 0C 85 ? ? ? ? 85 C9");
+    g_RacingResolution.SetAddress(*pattern.get_first<int*>(1));
 
-    static int nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
-    static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
-    uint32_t nForcedAudioSampleRate = iniReader.ReadInteger("MISC", "ForcedAudioSampleRate", 44100);
-    static int nFPSLimit = iniReader.ReadInteger("MISC", "FPSLimit", -1);
-    int nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
-
-    if (!Screen.nWidth || !Screen.nHeight)
-        std::tie(Screen.nWidth, Screen.nHeight) = GetDesktopRes();
-
-    // clamp the size because below 32x32 the game crashes!
-    if (Screen.nWidth < 32)
-        Screen.nWidth = 32;
-
-    if (Screen.nHeight < 32)
-        Screen.nHeight = 32;
-
-    Screen.fWidth = static_cast<float>(Screen.nWidth);
-    Screen.fHeight = static_cast<float>(Screen.nHeight);
-    Screen.nWidth43 = static_cast<uint32_t>(Screen.fHeight * (4.0f / 3.0f));
-    Screen.fWidth43 = static_cast<float>(Screen.nWidth43);
-    Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
-    Screen.fHudScaleX = (1.0f / Screen.fWidth * (Screen.fHeight / 480.0f)) * 2.0f;
-    Screen.fHudPosX = 640.0f / (640.0f * Screen.fHudScaleX);
-    Screen.fHudOffsetReal = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
-
-    //Game state
-    nGameState.SetAddress(*hook::get_pattern<int32_t*>("83 3D ? ? ? ? 06 ? ? A1", 2)); //0x77A920
-
-    //Resolution
-    //menu
-    auto pattern = hook::pattern("68 20 03 00 00 BE 58 02 00 00");
-    injector::WriteMemory(pattern.get_first(1), Screen.nWidth, true);
-    injector::WriteMemory(pattern.get_first(6), Screen.nHeight, true);
-
-    pattern = hook::pattern("68 20 03 00 00 BE 58 02 00 00");
-    injector::WriteMemory(pattern.get_first(1), Screen.nWidth, true);
-    injector::WriteMemory(pattern.get_first(6), Screen.nHeight, true);
-
-    //game
-    pattern = hook::pattern("B8 20 03 00 00 BE 58 02 00 00 77 75");
-    injector::WriteMemory(pattern.get_first(1), Screen.nWidth, true);
-    injector::WriteMemory(pattern.get_first(6), Screen.nHeight, true);
-    injector::MakeNOP(pattern.get_first(10), 9, true);
-    pattern = hook::pattern("B8 80 02 00 00 BE E0 01 00 00 50");
-    injector::WriteMemory(pattern.get_first(1), Screen.nWidth, true);
-    injector::WriteMemory(pattern.get_first(6), Screen.nHeight, true);
-    pattern = hook::pattern("B8 20 03 00 00 BE 58 02 00 00 50");
-    injector::WriteMemory(pattern.get_first(1), Screen.nWidth, true);
-    injector::WriteMemory(pattern.get_first(6), Screen.nHeight, true);
-    pattern = hook::pattern("B8 00 04 00 00 BE 00 03 00 00 50");
-    injector::WriteMemory(pattern.get_first(1), Screen.nWidth, true);
-    injector::WriteMemory(pattern.get_first(6), Screen.nHeight, true);
-    pattern = hook::pattern("B8 00 05 00 00 BE C0 03 00 00 50");
-    injector::WriteMemory(pattern.get_first(1), Screen.nWidth, true);
-    injector::WriteMemory(pattern.get_first(6), Screen.nHeight, true);
-    // initial ResX and ResY
-    uint32_t* dword_701034 = *hook::pattern("83 EB 00 56 8B 35 ? ? ? ? 57 8B 3D ? ? ? ?").count(1).get(0).get<uint32_t*>(6); // ResX
-    uint32_t* dword_701038 = *hook::pattern("83 EB 00 56 8B 35 ? ? ? ? 57 8B 3D ? ? ? ?").count(1).get(0).get<uint32_t*>(13); // ResY
-    *dword_701034 = Screen.nWidth;
-    *dword_701038 = Screen.nHeight;
-
-    InitFrontend();
-    InitRendering();
-    InitDebugObjects();
-
-    if (bSkipIntro)
+    pattern = hook::pattern("A3 ? ? ? ? 39 1D ? ? ? ? 89 15");
+    static auto MainLoopHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        // patch bootflow
+        MainLoop();
+    });
 
-        // LS_IntroFMV.fng NEEDS to be there in order to hear the splash screen music!
-        // This means that the intro video technically still plays, which means e3_title.mad still needs to be in the movies folder
-        static const char* BootFlowScreens[] = { "LS_IntroFMV.fng", "LS_Splash_PC.fng", "MU_UG_NEwOrLoad_PC2.fng" , "BootFlowEnd" };
-        static const char* BootFlowScreensLangSelect[] = { "LS_LangSelect.fng", "LS_IntroFMV.fng", "LS_Splash_PC.fng", "MU_UG_NEwOrLoad_PC2.fng" , "BootFlowEnd" };
+    pattern = hook::pattern("A1 ? ? ? ? 85 C0 74 ? ? ? 83 F8 ? 74 ? 83 F8 ? 75 ? 8A 43");
+    GameFlowManager::pRaceCoordinator = *pattern.get_first<int**>(1);
 
-        const char** outScreens = BootFlowScreens;
-        const char** outLastScreen = &BootFlowScreens[_countof(BootFlowScreens) - 1];
-        if (bShowLangSelect)
-        {
-            outScreens = BootFlowScreensLangSelect;
-            outLastScreen = &BootFlowScreensLangSelect[_countof(BootFlowScreensLangSelect) - 1];
-        }
+    pattern = hook::pattern("83 3D ? ? ? ? 06 ? ? A1");
+    nGameState.SetAddress(*pattern.get_first<int32_t*>(2));
 
-        uintptr_t loc_4DE21A = reinterpret_cast<uintptr_t>(hook::pattern("89 36 89 76 04 A1 ? ? ? ? 83 F8 05").get_first(0)) + 0x15;
-        uintptr_t loc_4DE273 = loc_4DE21A + 0x59;
-        uintptr_t loc_4DE2A0 = reinterpret_cast<uintptr_t>(hook::pattern("8B 4E 04 89 01 83 C7 04 81 FF ? ? ? ? 89 46 04 89 48 04 89 30 7C C8 8B 36").get_first(0)) + 8;
+    pattern = hook::pattern("A1 ? ? ? ? 33 C9 3B D3");
+    cFEng::pInstance = *pattern.get_first<void**>(1);
 
-        // force US Retail bootflow
-        injector::MakeJMP(loc_4DE21A, loc_4DE273);
+    pattern = hook::pattern("E8 ? ? ? ? 5B 5F C3 C1 E6");
+    cFEng::MakeLoadedPackagesDirty = (decltype(cFEng::MakeLoadedPackagesDirty))injector::GetBranchDestination(pattern.get_first(0)).as_int();
 
-        // list start
-        injector::WriteMemory<const char**>(loc_4DE273 + 1, outScreens, true);
+    pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? C2 ? ? ? ? C2");
+    cFEng::PopPackage = (decltype(cFEng::PopPackage))injector::GetBranchDestination(pattern.get_first(0)).as_int();
 
-        // list end
-        injector::WriteMemory<const char**>(loc_4DE2A0 + 2, outLastScreen, true);
+    pattern = hook::pattern("A1 ? ? ? ? 85 C0 74 ? BB");
+    pCurrentMoviePlayer.SetAddress(*pattern.get_first<void**>(1));
 
-        // IntroFMV NotificationMessage Hook -- for skipping the video for the first time it plays
-        // dereference instruction at 0x004DE985 (IntroFMVScreen constructor) for the vtable
-        uintptr_t loc_4DE985 = reinterpret_cast<uintptr_t>(hook::pattern("A1 ? ? ? ? 85 C0 C7 44 24 10 00 00 00 00 C7 07 ? ? ? ? 74 49 68 ? ? ? ? B8").get_first(0)) + 0xF;
-        uintptr_t IntroFMVScreenVTable = *reinterpret_cast<uintptr_t*>(loc_4DE985 + 2);
-        IntroFMVScreen::NotificationMessageFuncAddr = *reinterpret_cast<uintptr_t*>(IntroFMVScreenVTable + 8);
-        // dereference instruction at 0x004DEA5A
-        uintptr_t loc_4DEA5A = reinterpret_cast<uintptr_t>(hook::pattern("5F 5E C2 10 00 8B 49 0C 51 E8 ? ? ? ? 83 C4 04 5E C2 10 00").get_first(0)) + 9;
-        IntroFMVScreen::FEngPopPackageAddr = static_cast<uintptr_t>(injector::GetBranchDestination(loc_4DEA5A));
+    pattern = hook::pattern("E8 ? ? ? ? 8B 4E ? 8B 15 ? ? ? ? 83 C4");
+    CreateResourceFile = (decltype(CreateResourceFile))injector::GetBranchDestination(pattern.get_first(0)).as_int();
 
-        injector::WriteMemory<uintptr_t>(IntroFMVScreenVTable + 8, (uintptr_t)&IntroFMVScreen::hkNotificationMessage, true);
-    }
-    else if (bShowLangSelect)
+    pattern = hook::pattern("E8 ? ? ? ? 8D 46 ? BE ? ? ? ? BA ? ? ? ? 2B F0 ? ? ? 4A 84 C9 ? ? 74 ? 40 85 D2 75 ? A1");
+    ResourceFileBeginLoading = (decltype(ResourceFileBeginLoading))injector::GetBranchDestination(pattern.get_first(0)).as_int();
+
+    pattern = hook::pattern("E8 ? ? ? ? 8B 86 ? ? ? ? 85 C0 74 ? ? ? 8B 4E ? ? ? 89 48 ? E8 ? ? ? ? A1 ? ? ? ? 8B 48 ? 8B 50 ? ? ? 89 70");
+    ServiceResourceLoading = (decltype(ServiceResourceLoading))injector::GetBranchDestination(pattern.get_first(0)).as_int();
+
+    pattern = hook::pattern("E8 ? ? ? ? 3B C6 74 ? C7 40");
+    FEPkgMgr_FindPackage = (decltype(FEPkgMgr_FindPackage))injector::GetBranchDestination(pattern.get_first(0)).as_int();
+
+    pattern = hook::pattern("E8 ? ? ? ? 85 C0 75 ? A1 ? ? ? ? 85 C0 74 ? 8B 40 ? 56 8B CF E8 ? ? ? ? 5E");
+    FEngFindObject = (decltype(FEngFindObject))injector::GetBranchDestination(pattern.get_first(0)).as_int();
+
+    pattern = hook::pattern("E8 ? ? ? ? 8A 43 ? 84 C0 74 ? E8");
+    FEngSetInvisible = (decltype(FEngSetInvisible))injector::GetBranchDestination(pattern.get_first(0)).as_int();
+
+    pattern = hook::pattern("E8 ? ? ? ? 8B 75 ? 3B F3 74 ? 81 4E");
+    FEHashUpper = (decltype(FEHashUpper))injector::GetBranchDestination(pattern.get_first(0)).as_int();
+
+    pattern = hook::pattern("E8 ? ? ? ? 8B 50 ? ? ? 89 96");
+    FEPkgMgr_FindPackage = (decltype(FEPkgMgr_FindPackage))injector::GetBranchDestination(pattern.get_first(0)).as_int();
+
+    pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 8D 44 24 ? 50 FF D7");
+    static auto GetActualDeltaTime = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        static const char* BootFlowScreensLangSelect[] = { "LS_LangSelect.fng", "LS_EAlogo.fng", "LS_PSAMovie.fng", "LS_IntroFMV.fng", "LS_Splash_PC.fng", "MU_UG_NEwOrLoad_PC2.fng" , "BootFlowEnd" };
+        actualDeltaTime = *(float*)(regs.esp);
+    });
 
-        uintptr_t loc_4DE21A = reinterpret_cast<uintptr_t>(hook::pattern("89 36 89 76 04 A1 ? ? ? ? 83 F8 05").get_first(0)) + 0x15;
-        uintptr_t loc_4DE273 = loc_4DE21A + 0x59;
-        uintptr_t loc_4DE2A0 = reinterpret_cast<uintptr_t>(hook::pattern("8B 4E 04 89 01 83 C7 04 81 FF ? ? ? ? 89 46 04 89 48 04 89 30 7C C8 8B 36").get_first(0)) + 8;
-
-        // force US Retail bootflow
-        injector::MakeJMP(loc_4DE21A, loc_4DE273);
-
-        // list start
-        injector::WriteMemory<const char**>(loc_4DE273 + 1, BootFlowScreensLangSelect, true);
-
-        // list end
-        injector::WriteMemory<const char**>(loc_4DE2A0 + 2, &BootFlowScreensLangSelect[_countof(BootFlowScreensLangSelect) - 1], true);
-    }
-
-    if (!szCustomUserFilesDirectoryInGameDir.empty())
+    pattern = hook::pattern("8B 44 24 ? 8B 4C 24 ? ? ? 50 8B 44 24 ? 51 50");
+    static auto FEPkgMgr_SendMessageToPackageHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        CustomUserDir = GetExeModulePath<std::filesystem::path>();
-        CustomUserDir.append(szCustomUserFilesDirectoryInGameDir);
+        onMenuScreenBaseNotify().executeAll((MenuScreen*)regs.esi);
+    });
 
-        auto SHGetFolderPathAHook = [](HWND /*hwnd*/, int /*csidl*/, HANDLE /*hToken*/, DWORD /*dwFlags*/, LPSTR pszPath) -> HRESULT
-        {
-            CreateDirectoryW((LPCWSTR)(CustomUserDir.u16string().c_str()), NULL);
-            memcpy(pszPath, CustomUserDir.u8string().data(), CustomUserDir.u8string().size() + 1);
-
-            return S_OK;
-        };
-
-        auto dword_41C481 = *hook::pattern("68 ? ? ? ? 6A 00 6A 00 68 23 80 00 00 6A 00 FF 15").count(1).get(0).get<uint32_t*>(16 + 2);
-        auto pattern = hook::pattern(pattern_str(0xFF, 0x15, to_bytes(dword_41C481)));
-        for (size_t i = 0; i < pattern.size(); i++)
-        {
-            injector::MakeCALL(pattern.get(i).get<void*>(0), static_cast<HRESULT(WINAPI*)(HWND, int, HANDLE, DWORD, LPSTR)>(SHGetFolderPathAHook), true);
-            injector::MakeNOP(pattern.get(i).get<void*>(5), 1, true);
-        }
-    }
-
-    if (nImproveGamepadSupport)
+    pattern = hook::pattern("A1 ? ? ? ? ? ? 68 ? ? ? ? 50 FF 51 ? 85 C0 75 ? E8");
+    static auto BeforeResetHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        pattern = hook::pattern("6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 51 A1 ? ? ? ? 57");
-        CreateResourceFile = (void* (*)(const char* ResourceFileName, int32_t ResourceFileType, int, int, int)) pattern.get_first(0); //0x004482F0
-        pattern = hook::pattern("56 8B F2 89 8E 98 00 00 00 8B 0D ? ? ? ? 89 86 94 00 00 00 8B 86 9C 00 00 00");
-        ResourceFileBeginLoading = (void(__fastcall*)(int a1, void* rsc, int a2)) pattern.get_first(0); //0x00448110;
+        WFP::onBeforeReset().executeAll();
+    });
 
-        if (nImproveGamepadSupport < 3)
-        {
-            static auto TPKPath = GetThisModulePath<std::string>().substr(GetExeModulePath<std::string>().length());
-
-            if (nImproveGamepadSupport == 1)
-                TPKPath += "buttons-xbox.tpk";
-            else if (nImproveGamepadSupport == 2)
-                TPKPath += "buttons-playstation.tpk";
-
-            static injector::hook_back<void(__cdecl*)()> hb_448600;
-            auto LoadTPK = []()
-            {
-                if (std::filesystem::exists(TPKPath))
-                {
-                    LoadResourceFile(TPKPath.c_str(), 1);
-                }
-                return hb_448600.fun();
-            };
-
-            pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 6A 00 6A 00 6A 00 68 F0 59 00 00"); //0x447280
-            hb_448600.fun = injector::MakeCALL(pattern.get_first(0), static_cast<void(__cdecl*)()>(LoadTPK), true).get();
-        }
-
-        struct PadState
-        {
-            int32_t LSAxis1;
-            int32_t LSAxis2;
-            int32_t LTRT;
-            int32_t RSAxis1;
-            int32_t RSAxis2;
-            uint8_t unk[28];
-            int8_t A;
-            int8_t B;
-            int8_t X;
-            int8_t Y;
-            int8_t LB;
-            int8_t RB;
-            int8_t Select;
-            int8_t Start;
-            int8_t LSClick;
-            int8_t RSClick;
-        };
-
-        static bool Zstate, Pstate, Tstate, Dstate, Qstate, Cstate;
-        pattern = hook::pattern("7C ? 5F 5D 5E 33 C0 5B C2 08 00"); //0x41989E
-        injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(8 + 5), 0x900008C2, true);
-        //static uintptr_t ButtonsState = (uintptr_t)*hook::pattern("").count(1).get(0).get<uint32_t*>(8); //0x
-        struct CatchPad
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                PadState* PadKeyPresses = *(PadState**)(regs.esp + 0x4);
-                //Keyboard
-                //006F9358 backspace
-                //006F931C enter
-                if (PadKeyPresses != nullptr && PadKeyPresses != (PadState*)0x1 && nGameState == 3)
-                {
-                    if (PadKeyPresses->LSClick && PadKeyPresses->RSClick)
-                    {
-                        if (!Qstate)
-                        {
-                            keybd_event(BYTE(VkKeyScan('Q')), 0, KEYEVENTF_EXTENDEDKEY, 0);
-                            keybd_event(BYTE(VkKeyScan('Q')), 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
-                        }
-                        Qstate = true;
-                    }
-                    else
-                        Qstate = false;
-
-                    if (PadKeyPresses->Y)
-                    {
-                        if (!Zstate)
-                        {
-                            keybd_event(BYTE(VkKeyScan('Z')), 0, KEYEVENTF_EXTENDEDKEY, 0);
-                            keybd_event(BYTE(VkKeyScan('Z')), 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
-                        }
-                        Zstate = true;
-                    }
-                    else
-                        Zstate = false;
-
-                    if (PadKeyPresses->X)
-                    {
-                        if (!Pstate)
-                        {
-                            keybd_event(BYTE(VkKeyScan('P')), 0, KEYEVENTF_EXTENDEDKEY, 0);
-                            keybd_event(BYTE(VkKeyScan('P')), 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
-                        }
-                        Pstate = true;
-                    }
-                    else
-                        Pstate = false;
-
-                    if (PadKeyPresses->LSClick && !PadKeyPresses->RSClick)
-                    {
-                        if (!Tstate)
-                        {
-                            keybd_event(BYTE(VkKeyScan('T')), 0, KEYEVENTF_EXTENDEDKEY, 0);
-                            keybd_event(BYTE(VkKeyScan('T')), 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
-                        }
-                        Tstate = true;
-                    }
-                    else
-                        Tstate = false;
-
-                    if (PadKeyPresses->RSClick && !PadKeyPresses->LSClick)
-                    {
-                        if (!Dstate)
-                        {
-                            keybd_event(BYTE(VkKeyScan('D')), 0, KEYEVENTF_EXTENDEDKEY, 0);
-                            keybd_event(BYTE(VkKeyScan('D')), 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
-                        }
-                        Dstate = true;
-                    }
-                    else
-                        Dstate = false;
-
-                    if (PadKeyPresses->Select)
-                    {
-                        if (!Cstate)
-                        {
-                            keybd_event(BYTE(VkKeyScan('C')), 0, KEYEVENTF_EXTENDEDKEY, 0);
-                            keybd_event(BYTE(VkKeyScan('C')), 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
-                        }
-                        Cstate = true;
-                    }
-                    else
-                        Cstate = false;
-                }
-            }
-        }; injector::MakeInline<CatchPad>(pattern.get_first(8));
-
-        const wchar_t* ControlsTexts[] = { L" 0", L" 1", L" 2", L" 3", L" 4", L" 5", L" 6", L" 7", L" 8", L" 9", L" Up", L" Down", L" Left", L" Right", L"X Rotation", L"Y Rotation", L"X Axis", L"Y Axis", L"Z Axis", L"Hat Switch" };
-        const wchar_t* ControlsTextsXBOX[] = { L"A", L"B", L"X", L"Y", L"LB", L"RB", L"View (Select)", L"Menu (Start)", L"Left stick", L"Right stick", L"D-pad Up", L"D-pad Down", L"D-pad Left", L"D-pad Right", L"Right stick Left/Right", L"Right stick Up/Down", L"Left stick Left/Right", L"Left stick Up/Down", L"LT / RT", L"D-pad" };
-        const wchar_t* ControlsTextsPS[] = { L"Cross", L"Circle", L"Square", L"Triangle", L"L1", L"R1", L"Select", L"Start", L"L3", L"R3", L"D-pad Up", L"D-pad Down", L"D-pad Left", L"D-pad Right", L"Right stick Left/Right", L"Right stick Up/Down", L"Left stick Left/Right", L"Left stick Up/Down", L"L2 / R2", L"D-pad" };
-
-        static std::vector<std::wstring> Texts(ControlsTexts, std::end(ControlsTexts));
-        static std::vector<std::wstring> TextsXBOX(ControlsTextsXBOX, std::end(ControlsTextsXBOX));
-        static std::vector<std::wstring> TextsPS(ControlsTextsPS, std::end(ControlsTextsPS));
-
-        pattern = hook::pattern("8D 43 60 8D 74 24 10 E8 ? ? ? ? 8B"); //0x4148F6
-        struct Buttons
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                regs.eax = regs.ebx + 0x60;
-                regs.esi = regs.esp + 0x10;
-
-                auto pszStr = (wchar_t*)(regs.esp + 0x10);
-                auto it = std::find_if(Texts.begin(), Texts.end(), [&](const std::wstring& str) { std::wstring s(pszStr); return s.find(str) != std::wstring::npos; });
-                auto i = std::distance(Texts.begin(), it);
-
-                if (it != Texts.end())
-                {
-                    const std::wstring& text = (nImproveGamepadSupport != 2) ? TextsXBOX[i] : TextsPS[i];
-                    wcscpy_s(pszStr, text.length() + 1, text.c_str());
-                }
-            }
-        }; if (pattern.size() > 0) { injector::MakeInline<Buttons>(pattern.get_first(0), pattern.get_first(7)); }
-
-        // FrontEnd button remap (through game code, not key emulation)
-        auto pattern = hook::pattern("8B 86 ? ? ? ? 8B 0C ? ? ? ? ? 85 C9 0F"); // 004071C5
-        struct FrontEndRemap
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                regs.eax = *(uintptr_t*)(regs.esi + 0x0130);
-
-                int LB = (regs.esi + 0x0130) - (0x88);
-                *(uintptr_t*)LB = 0x1A; // FE Action "Comma"
-                int RB = (regs.esi + 0x0130) - (0x84);
-                *(uintptr_t*)RB = 0x19; // FE Action "Period"
-            }
-        };
-        injector::MakeInline<FrontEndRemap>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
-    }
-
-    if (fLeftStickDeadzone)
+    pattern = hook::pattern("A1 ? ? ? ? ? ? 83 C4 ? 50");
+    Direct3DDevice.SetAddress(*pattern.get_first<IDirect3DDevice9**>(1));
+    static auto BeforeEndSceneHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        // [ -10000 | 10000 ]
-        static int32_t nLeftStickDeadzone = static_cast<int32_t>(fLeftStickDeadzone * 100.0f);
-        pattern = hook::pattern("85 F6 7D 3D 8B 7C 24 18 57"); //0x4193B6
-        static auto loc_4193F7 = (uint32_t)hook::get_pattern("83 7C 24 18 01 75 ? B9 04 00 00 00");
-        static auto dword_71D8A8 = *hook::get_pattern<int32_t*>("8D 95 ? ? ? ? 8B F2 52 B9", 2);
-        struct DeadzoneHook
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                regs.esi = regs.eax;
-                if (*(int32_t*)&regs.esi >= 0)
-                {
-                    int32_t dStickStateX = *(int32_t*)(dword_71D8A8 + 0);
-                    int32_t dStickStateY = *(int32_t*)(dword_71D8A8 + 1);
+        WFP::onEndScene().executeAll();
+    });
 
-                    *(int32_t*)(dword_71D8A8 + 0) = (std::abs(dStickStateX) <= nLeftStickDeadzone) ? 0 : dStickStateX;
-                    *(int32_t*)(dword_71D8A8 + 1) = (std::abs(dStickStateY) <= nLeftStickDeadzone) ? 0 : dStickStateY;
+    WFP::onInitEvent().executeAll();
 
-                    *(uint32_t*)(regs.esp - 4) = loc_4193F7;
-                }
-            }
-        }; injector::MakeInline<DeadzoneHook>(pattern.get_first(-2), pattern.get_first(4));
-    }
+    static auto futures = WFP::onInitEventAsync().executeAllAsync();
 
-    if (nForcedAudioSampleRate)
+    WFP::onGameInitEvent() += []()
     {
-        uintptr_t loc_532B15 = reinterpret_cast<uintptr_t>(hook::pattern("C7 05 ? ? ? ? 22 56 00 00 A1 ? ? ? ? 85 C0").get_first(0)) + 0xA;
-        uintptr_t dword_735610 = *(uintptr_t*)(loc_532B15 + 1);
-        *(uint32_t*)dword_735610 = nForcedAudioSampleRate;
-    }
-
-    //__mbclen to strlen, "---" bug fix
-    pattern = hook::pattern("E8 ? ? ? ? 83 C4 04 85 C0 76 21 8D 43 60");
-    if (!pattern.empty())
-    {
-        injector::MakeCALL(pattern.get_first(0), strlen, true);
-    }
-
-    if (nFPSLimit)
-    {
-        if (nFPSLimit < 0)
-        {
-            if (nFPSLimit == -1)
-                nFPSLimit = GetDesktopRefreshRate();
-            else if (nFPSLimit == -2)
-                nFPSLimit = GetDesktopRefreshRate() * 2;
-            else
-                nFPSLimit = 60;
-        }
-
-        // the game limits FPS 2x over the frametime (or just reports it that way to D3D) -- this is the real game framerate here!
-        static float FrameTime = 1.0f / nFPSLimit;
-        // Video mode frametime
-        uint32_t* dword_6CC7B0 = *hook::pattern("83 EC 10 A1 ? ? ? ? 89 44 24 04").count(1).get(0).get<uint32_t*>(31);
-        injector::WriteMemory(dword_6CC7B0, FrameTime, true);
-        // RealTimestep frametime
-        uint32_t* dword_6F0890 = *hook::pattern("99 D9 05 ? ? ? ? B9 64 00 00 00").count(1).get(0).get<uint32_t*>(3);
-        injector::WriteMemory(dword_6F0890, FrameTime, true);
-        uint32_t* dword_6CCDEC = *hook::pattern("99 D9 05 ? ? ? ? B9 64 00 00 00").count(1).get(0).get<uint32_t*>(63);
-        injector::WriteMemory(dword_6CCDEC, FrameTime * 2.0f, true);
-        // a function in eDisplayFrame (particle effects?) frametime
-        uint32_t* dword_40A744 = hook::pattern("68 89 88 88 3C").count(1).get(0).get<uint32_t>(1);
-        injector::WriteMemory(dword_40A744, FrameTime, true);
-        // something related to framerate and/or seconds. This value has to be an integer multiple of 60, otherwise the game can freeze. This affects some gameplay features such as NOS and menus.
-        uint32_t* dword_6CC8B0 = *hook::pattern("83 E1 01 0B F9 D9 44 24 28 D8 1D ? ? ? ?").count(1).get(0).get<uint32_t*>(11);
-        static float FrameSeconds = static_cast<float>(nFPSLimit);
-
-        if (nFPSLimit % 60)
-            FrameSeconds = static_cast<float>(nFPSLimit - (nFPSLimit % 60));
-
-        // needed to avoid crashes, anything above 120 seems to be problematic at the moment...
-        if (FrameSeconds > 120.0f)
-            FrameSeconds = 120.0f;
-
-        if (FrameSeconds < 60.0)
-            FrameSeconds = 60.0;
-        injector::WriteMemory(dword_6CC8B0, FrameSeconds, true);
-        // another frametime -- seems to affect some gameplay elements...
-        uint32_t* dword_6B5C08 = *hook::pattern("DF E0 F6 C4 41 7A ? 8A 44 24 12 D9 05 ? ? ? ?").count(1).get(0).get<uint32_t*>(13);
-        injector::WriteMemory(dword_6B5C08, FrameTime, true);
-
-        // GAME BUGFIX: fix sticky steering (especially on high FPS)
-        // kill the autocentering!
-        uint32_t* dword_460A3D = hook::pattern("D9 54 24 14 D9 E1 D8 1D ? ? ? ? DF E0 F6 C4 05 7A 08").count(1).get(0).get<uint32_t>(0x11); //0x460A2C anchor
-        injector::WriteMemory<uint8_t>(dword_460A3D, 0xEB, true);
-
-        // explanation:
-        // this is a native game bug which can sadly happen on a bone-stock game, it's just been exaggerated by the higher FPS and faster input
-        // what happens is this: if the steering curve isn't finished with the steering (if the wheels aren't centered), it will outright ignore the other direction you're pressing
-        // to exaggerate the issue even further: nop out the instruction at 00460DFA which will make the steering extremely slow, then try steering all the way to the left, then quickly go and hold right. Notice how it *won't* continue to go right.
-        // so to summarize in a chain of events:
-        // 1. game controller sets steering value (-1.0 to 1.0)
-        // 2. World::DoTimestep updates the player info and somewhere
-        // 3. Somewhere in that chain it calls PlayerSteering::DoUndergroundSteering with the steering value as argument
-        // 4. Steering curves get processed at PlayerSteering::CalculateSteeringSpeed                                          <-- THIS IS WHERE THE BUG HAPPENS (or shortly thereafter)
-        // 5. Steering value gets passed to the car
-        // Skipping 4. is possible by enabling the bool at 00736514, but that is intended exclusively for wheel input and not gamepad/keyboard input.
-    }
-
-    // windowed mode
-    if (nWindowedMode)
-    {
-        uint32_t* dword_408AA1 = hook::pattern("8B 0D ? ? ? ? 68 00 00 C0 10").count(1).get(0).get<uint32_t>(0);
-        uint32_t* dword_408AB5 = (uint32_t*)((uint32_t)dword_408AA1 + 0x14);
-
-        uint32_t* dword_4089B1 = hook::pattern("68 00 00 08 90 68 ? ? ? ? 68 ? ? ? ? 53 FF 15").count(1).get(0).get<uint32_t>(16);
-        uint32_t* dword_408975 = hook::pattern("68 00 00 08 90 8D 44 24 14 50 89 4C 24 20 89 54 24 24 FF 15").count(1).get(0).get<uint32_t>(18);
-        uint32_t* WindowedMode_73637C = *hook::pattern("B9 0E 00 00 00 BF ? ? ? ? F3 AB A1 ? ? ? ?").count(1).get(0).get<uint32_t*>(13);
-
-        // skip SetWindowLong because it messes things up
-        injector::MakeJMP(dword_408AA1, dword_408AB5, true);
-        // hook the offending functions
-        injector::MakeNOP(dword_4089B1, 6, true);
-        injector::MakeCALL(dword_4089B1, CreateWindowExA_Hook_NFSU, true);
-        injector::MakeNOP(dword_408975, 6, true);
-        injector::MakeCALL(dword_408975, WindowedModeWrapper::AdjustWindowRect_Hook, true);
-        // enable windowed mode variable
-        *WindowedMode_73637C = 1;
-
-        switch (nWindowedMode)
-        {
-            case 5:
-                WindowedModeWrapper::bStretchWindow = true;
-                break;
-            case 4:
-                WindowedModeWrapper::bScaleWindow = true;
-                break;
-            case 3:  // TODO: implement dynamic resizing (like in MW)
-                WindowedModeWrapper::bEnableWindowResize = true;
-            case 2:
-                WindowedModeWrapper::bBorderlessWindowed = false;
-                break;
-            default:
-                break;
-        }
-    }
-    else
-    {
-        //icon fix
-        auto SetWindowLongHook = [](HWND hWndl, int nIndex, LONG dwNewLong)
-        {
-            SetWindowLongA(hWndl, nIndex, dwNewLong);
-            SendMessage(hWndl, WM_SETICON, ICON_BIG, (LPARAM)CreateIconFromResourceICO(IDR_NFSUICON, ::GetSystemMetrics(SM_CXICON), ::GetSystemMetrics(SM_CYICON)));
-            SendMessage(hWndl, WM_SETICON, ICON_SMALL, (LPARAM)CreateIconFromResourceICO(IDR_NFSUICON, ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON)));
-        };
-
-        pattern = hook::pattern("FF 15 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 8B 0D ? ? ? ? 33 D2 3B CB 0F 95 C2");
-        injector::MakeNOP(pattern.get_first(0), 6, true);
-        injector::MakeCALL(pattern.get_first(0), static_cast<void(WINAPI*)(HWND, int, LONG)>(SetWindowLongHook), true);
-    }
-
-    // Disable the best lap time counter at the end of the race for better ultrawide support
-    // (this element is not visible during 16:9 play)
-    auto loc_49A222 = hook::pattern("8A 44 24 24 8B 6C 24 68 8B 7D 0C 83 CE FF 84 C0 8D 4C 24 24 74 ? 6B F6 21");
-    pattern = hook::pattern("0F 84 B8 00 00 00 8D 4C 24 44");
-    injector::MakeNOP(pattern.get_first(0), 6, true);
-    injector::MakeJMP(pattern.get_first(0), loc_49A222.get_first(0), true);
+        for (auto& f : futures.get())
+            f.wait();
+        futures.get().clear();
+    };
 }
 
 CEXP void InitializeASI()
@@ -567,11 +133,11 @@ CEXP void InitializeASI()
     });
 }
 
-BOOL APIENTRY DllMain(HMODULE hModule, uint32_t reason, LPVOID lpReserved)
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
     {
-
+        if (!IsUALPresent()) { InitializeASI(); }
     }
     return TRUE;
 }

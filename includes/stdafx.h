@@ -55,7 +55,8 @@ bool IsModuleUAL(HMODULE mod);
 bool IsUALPresent();
 void CreateThreadAutoClose(LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_T dwStackSize, LPTHREAD_START_ROUTINE lpStartAddress, LPVOID lpParameter, DWORD dwCreationFlags, LPDWORD lpThreadId);
 std::tuple<int32_t, int32_t> GetDesktopRes();
-void GetResolutionsList(std::vector<std::string>& list);
+std::vector<std::tuple<int, int, int>> GetResolutionsList(bool uniqueByRefresh = true);
+void GetResolutionsList(std::vector<std::string>& list, bool includeRefreshRate = false);
 uint32_t GetDesktopRefreshRate();
 uint32_t crc32(uint32_t crc, const void* buf, size_t size);
 
@@ -281,7 +282,7 @@ template<class T = std::filesystem::path>
 T GetThisModulePath()
 {
     HMODULE hm = NULL;
-    GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCWSTR)&GetResolutionsList, &hm);
+    GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCWSTR)&GetDesktopRefreshRate, &hm);
     T r = GetModulePath<T>(hm);
     if constexpr (std::is_same_v<T, std::filesystem::path>)
         return r.parent_path();
@@ -296,7 +297,7 @@ template<class T = std::filesystem::path>
 T GetThisModuleName()
 {
     HMODULE hm = NULL;
-    GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCWSTR)&GetResolutionsList, &hm);
+    GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCWSTR)&GetDesktopRefreshRate, &hm);
     const T moduleFileName = GetModulePath<T>(hm);
 
     if constexpr (std::is_same_v<T, std::filesystem::path>)
@@ -432,11 +433,14 @@ FARPROC FindProcAddress(HMODULE hModule, Ts... procNames)
 class RegistryWrapper
 {
 private:
-    static /*inline c a e*/ std::string filter;
-    static /*inline r t x*/ std::string section;
-    static /*inline a   i*/ CIniReader RegistryReader;
-    static /*inline s   t*/ std::map<std::string, std::string> DefaultStrings;
-    static /*inline h    */ std::set<std::string, std::less<>> PathStrings;
+    static std::string filter;
+    static CIniReader RegistryReader;
+    static std::map<std::string, std::string> DefaultStrings;
+    static std::set<std::string> PathStrings;
+
+    // Thread-local state so concurrent registry calls on different threads don't corrupt each other
+    static thread_local std::string section;
+
 public:
     static inline DWORD OverrideTypeREG_NONE = REG_NONE;
 
@@ -446,280 +450,620 @@ public:
         RegistryReader.SetIniPath(iniPath);
         std::filesystem::create_directories(std::filesystem::path(iniPath).parent_path());
     }
+
     static void AddDefault(std::string_view key, std::string_view value)
     {
         DefaultStrings.emplace(key, value);
     }
+
     template<typename... Args>
     static void AddPathWriter(Args... args)
     {
-        PathStrings = { args... };
-        for (size_t i = 0; i < PathStrings.size(); i++)
+        PathStrings = { std::string(args)... };  // explicit std::string for safety with string_view
+        for (const auto& key : PathStrings)
         {
-            AddDefault(*std::next(PathStrings.begin(), i), GetExeModulePath<std::string>());
+            AddDefault(key, GetExeModulePath<std::string>());
         }
     }
+
     static void AddPathWriterWithPath(std::string_view key, std::string_view merge)
     {
         PathStrings.emplace(key);
         AddDefault(key, GetExeModulePath<std::string>() + std::string(merge) + "\\");
     }
+
     static LSTATUS WINAPI RegCloseKey(HKEY hKey)
     {
         if (hKey == NULL)
-        {
             return ERROR_SUCCESS;
-        }
-        else
-            return ::RegCloseKey(hKey);
+        return ::RegCloseKey(hKey);
     }
+
     static LSTATUS WINAPI RegCreateKeyA(HKEY hKey, LPCSTR lpSubKey, PHKEY phkResult)
     {
         if (hKey == NULL)
         {
+            *phkResult = NULL;
             return ERROR_SUCCESS;
         }
-        else
-            return ::RegCreateKeyA(hKey, lpSubKey, phkResult);
+        if (strstr(lpSubKey, filter.c_str()) != NULL)
+        {
+            *phkResult = NULL;
+            section = lpSubKey;
+            auto pos = section.find_last_of('\\');
+            section = (pos == std::string::npos) ? section : section.substr(pos + 1);
+            return ERROR_SUCCESS;
+        }
+        return ::RegCreateKeyA(hKey, lpSubKey, phkResult);
     }
+
     static LSTATUS WINAPI RegOpenKeyA(HKEY hKey, LPCSTR lpSubKey, PHKEY phkResult)
     {
         if (strstr(lpSubKey, filter.c_str()) != NULL)
         {
             *phkResult = NULL;
             section = lpSubKey;
-            section = section.substr(section.find_last_of('\\') + 1);
+            auto pos = section.find_last_of('\\');
+            section = (pos == std::string::npos) ? section : section.substr(pos + 1);
             return ERROR_SUCCESS;
         }
-        else
-            return ::RegOpenKeyA(hKey, lpSubKey, phkResult);
+        return ::RegOpenKeyA(hKey, lpSubKey, phkResult);
     }
+
     static LSTATUS WINAPI RegOpenKeyExA(HKEY hKey, LPCSTR lpSubKey, DWORD ulOptions, REGSAM samDesired, PHKEY phkResult)
     {
         if (strstr(lpSubKey, filter.c_str()) != NULL)
         {
             *phkResult = NULL;
             section = lpSubKey;
-            section = section.substr(section.find_last_of('\\') + 1);
+            auto pos = section.find_last_of('\\');
+            section = (pos == std::string::npos) ? section : section.substr(pos + 1);
             return ERROR_SUCCESS;
         }
-        else
-            return ::RegOpenKeyExA(hKey, lpSubKey, ulOptions, samDesired, phkResult);
+        return ::RegOpenKeyExA(hKey, lpSubKey, ulOptions, samDesired, phkResult);
     }
 
-    static LSTATUS WINAPI RegQueryValueExA(HKEY hKey, LPCSTR lpValueName, LPDWORD lpReserved, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData)
-    {
-        std::string ValueName = "@";
-        if (lpValueName)
-            ValueName = lpValueName;
-
-        if (hKey == NULL)
-        {
-            if (OverrideTypeREG_NONE)
-                lpType = &OverrideTypeREG_NONE;
-
-            if (lpType)
-            {
-                switch (*lpType)
-                {
-                    case REG_BINARY:
-                    {
-                        std::string str = RegistryReader.ReadString(section, ValueName, DefaultStrings[ValueName]);
-                        if (!str.empty())
-                        {
-                            std::istringstream input(str);
-                            std::string number;
-                            size_t i = 0;
-                            while (std::getline(input, number, ','))
-                            {
-                                lpData[i] = (BYTE)std::stoul(number, nullptr, 16);
-                                ++i;
-                            }
-                            *lpcbData = i;
-                        }
-                        else
-                            RegistryReader.WriteString(section, ValueName, DefaultStrings[ValueName].empty() ? "" : DefaultStrings[ValueName]);
-                        break;
-                    }
-                    case REG_DWORD:
-                    {
-                        DWORD def = UINT_MAX;
-                        if (!DefaultStrings[ValueName].empty())
-                        {
-                            try
-                            {
-                                def = (DWORD)std::stoul(DefaultStrings[ValueName]);
-                            } catch (const std::invalid_argument&)
-                            {
-                                def = UINT_MAX;
-                            }
-                        }
-                        try
-                        {
-                            *(DWORD*)lpData = RegistryReader.ReadInteger(section, ValueName, def);
-                        } catch (const std::invalid_argument&)
-                        {
-                            *(DWORD*)lpData = UINT_MAX;
-                        }
-                        if (*(DWORD*)lpData == UINT_MAX)
-                        {
-                            RegistryReader.WriteString(section, ValueName, DefaultStrings[ValueName].empty() ? "INSERTDWORDHERE" : DefaultStrings[ValueName]);
-                            *(DWORD*)lpData = 0;
-                        }
-                        *lpcbData = sizeof(DWORD);
-                        break;
-                    }
-                    case REG_MULTI_SZ: //not implemented
-                        break;
-                    case REG_NONE:
-                    {
-                        if (lpData != NULL)
-                        {
-                            *(bool*)lpData = RegistryReader.ReadBoolean("MAIN", ValueName, false);
-                            *lpcbData = sizeof(bool);
-                        }
-                        else
-                        {
-                            auto s = DefaultStrings.find(ValueName);
-                            if (s != DefaultStrings.end())
-                            {
-                                *lpcbData = s->second.size();
-                                *lpType = 1;
-                                return ERROR_SUCCESS;
-                            }
-                            else
-                                return ERROR_FILE_NOT_FOUND;
-                        }
-                        break;
-                    }
-                    case REG_SZ:
-                    case REG_EXPAND_SZ:
-                    {
-                        if (lpData != NULL)
-                        {
-                            std::string_view str((char*)lpData, *lpcbData);
-                            auto ret = RegistryReader.ReadString(section, ValueName, DefaultStrings[ValueName]);
-                            *lpcbData = std::min(ret.length(), str.length());
-                            ret.copy((char*)str.data(), *lpcbData, 0);
-                            lpData[*lpcbData] = '\0';
-                            if ((ret.empty() || DefaultStrings[ValueName] == ret) && PathStrings.find(ValueName) == PathStrings.end())
-                                RegistryReader.WriteString(section, ValueName, DefaultStrings[ValueName].empty() ? "INSERTSTRINGDATAHERE" : DefaultStrings[ValueName]);
-                        }
-                        else
-                        {
-                            auto ret = RegistryReader.ReadString(section, ValueName, DefaultStrings[ValueName]);
-                            *lpcbData = ret.length();
-                        }
-                        break;
-                    }
-                    default:
-                    {
-                        auto ret = RegistryReader.ReadString(section, ValueName, DefaultStrings[ValueName]);
-                        *lpcbData = ret.length();
-                        *lpType = REG_SZ;
-                        break;
-                    }
-                }
-            }
-            return ERROR_SUCCESS;
-        }
-        else
-            return ::RegQueryValueExA(hKey, lpValueName, lpReserved, lpType, lpData, lpcbData);
-    }
-    static LSTATUS WINAPI RegSetValueExA(HKEY hKey, LPCSTR lpValueName, DWORD Reserved, DWORD dwType, const BYTE* lpData, DWORD cbData)
-    {
-        if (hKey == NULL)
-        {
-            if (OverrideTypeREG_NONE)
-                dwType = OverrideTypeREG_NONE;
-
-            switch (dwType)
-            {
-                case REG_BINARY:
-                {
-                    std::string str;
-                    for (size_t i = 0; i < cbData; i++)
-                    {
-                        str += std::format("{:02x}", lpData[i]);
-                        if (i != cbData - 1)
-                            str += ',';
-                    }
-                    RegistryReader.WriteString(section, lpValueName, str);
-                    break;
-                }
-                case REG_DWORD:
-                    RegistryReader.WriteInteger(section, lpValueName, *(DWORD*)lpData);
-                    break;
-                case REG_MULTI_SZ:
-                {
-                    std::string str;
-                    const char* temp = (const char*)lpData;
-                    size_t index = 0;
-                    size_t len = strlen(&temp[0]) + 1;
-                    while (len > 1)
-                    {
-                        str += temp[index];
-                        str += ',';
-                        index += len + 1;
-                        len = strlen(&temp[index]) + 1;
-                    }
-                    str.resize(str.size() - 1);
-                    RegistryReader.WriteString(section, lpValueName, str);
-                    break;
-                }
-                case REG_NONE:
-                    RegistryReader.WriteBoolean("MAIN", lpValueName, true);
-                    break;
-                case REG_SZ:
-                case REG_EXPAND_SZ:
-                    RegistryReader.WriteString(section, lpValueName, std::string((char*)lpData, cbData));
-                    break;
-                default:
-                    break;
-            }
-            return ERROR_SUCCESS;
-        }
-        else
-            return ::RegSetValueExA(hKey, lpValueName, Reserved, dwType, lpData, cbData);
-    }
-    static LSTATUS WINAPI RegDeleteKeyA(HKEY hKey, LPCSTR lpSubKey)
-    {
-        if (hKey == NULL)
-        {
-            return ERROR_SUCCESS; //not implemented
-        }
-        else
-            return ::RegDeleteKeyA(hKey, lpSubKey);
-    }
-    static LSTATUS WINAPI RegEnumKeyA(HKEY hKey, DWORD dwIndex, LPSTR lpName, DWORD cchName)
-    {
-        if (hKey == NULL)
-        {
-            return ERROR_SUCCESS; //not implemented
-        }
-        else
-            return ::RegEnumKeyA(hKey, dwIndex, lpName, cchName);
-    }
-    static LSTATUS WINAPI RegQueryValueA(HKEY hKey, LPCSTR lpSubKey, LPSTR lpData, PLONG lpcbData)
-    {
-        if (hKey == NULL)
-        {
-            return ERROR_SUCCESS; //not implemented
-        }
-        else
-            return ::RegQueryValueA(hKey, lpSubKey, lpData, lpcbData);
-    }
-    static LSTATUS WINAPI RegCreateKeyExA(HKEY hKey, LPCSTR lpSubKey, DWORD Reserved, LPSTR lpClass, DWORD dwOptions, REGSAM samDesired, CONST LPSECURITY_ATTRIBUTES lpSecurityAttributes, PHKEY phkResult, LPDWORD lpdwDisposition)
+    static LSTATUS WINAPI RegCreateKeyExA(HKEY hKey, LPCSTR lpSubKey, DWORD Reserved, LPSTR lpClass,
+                                          DWORD dwOptions, REGSAM samDesired,
+                                          CONST LPSECURITY_ATTRIBUTES lpSecurityAttributes,
+                                          PHKEY phkResult, LPDWORD lpdwDisposition)
     {
         if (strstr(lpSubKey, filter.c_str()) != NULL)
         {
             *phkResult = NULL;
             section = lpSubKey;
-            section = section.substr(section.find_last_of('\\') + 1);
+            auto pos = section.find_last_of('\\');
+            section = (pos == std::string::npos) ? section : section.substr(pos + 1);
+            if (lpdwDisposition) *lpdwDisposition = REG_OPENED_EXISTING_KEY;  // reasonable default
             return ERROR_SUCCESS;
         }
-        else
-            return ::RegCreateKeyExA(hKey, lpSubKey, Reserved, lpClass, dwOptions, samDesired, lpSecurityAttributes, phkResult, lpdwDisposition);
+        return ::RegCreateKeyExA(hKey, lpSubKey, Reserved, lpClass, dwOptions, samDesired,
+                                 lpSecurityAttributes, phkResult, lpdwDisposition);
+    }
+
+    static LSTATUS WINAPI RegQueryValueExA(HKEY hKey, LPCSTR lpValueName, LPDWORD lpReserved,
+                                           LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData)
+    {
+        if (hKey != NULL)
+            return ::RegQueryValueExA(hKey, lpValueName, lpReserved, lpType, lpData, lpcbData);
+
+        // === INTERCEPTED KEY ===
+        std::string ValueName = lpValueName ? lpValueName : "@";
+
+        // Determine type hint (what the caller expects)
+        DWORD regType = REG_SZ;
+        if (lpType != nullptr)
+            regType = *lpType;
+
+        if (OverrideTypeREG_NONE)
+            regType = OverrideTypeREG_NONE;
+
+        // Fetch value from INI (uses DefaultStrings if key not present)
+        auto it = DefaultStrings.find(ValueName);
+        std::string defaultValue = (it != DefaultStrings.end()) ? it->second : std::string{};
+        std::string readValue = RegistryReader.ReadString(section, ValueName, defaultValue);
+
+        // Placeholder logic (original behavior): if value is still at default, write a marker
+        // (skipped for PathStrings keys)
+        bool isDefaultOrEmpty = readValue.empty() || readValue == defaultValue;
+        bool shouldWritePlaceholder = isDefaultOrEmpty && (PathStrings.find(ValueName) == PathStrings.end());
+
+        switch (regType)
+        {
+            case REG_BINARY:
+            {
+                std::vector<BYTE> bytes;
+                if (!readValue.empty())
+                {
+                    std::istringstream input(readValue);
+                    std::string token;
+                    while (std::getline(input, token, ','))
+                    {
+                        if (!token.empty())
+                        {
+                            try
+                            {
+                                auto val = std::stoul(token, nullptr, 16);
+                                bytes.push_back(static_cast<BYTE>(val & 0xFF));
+                            } catch (...) {}
+                        }
+                    }
+                }
+
+                DWORD required = static_cast<DWORD>(bytes.size());
+                if (lpType) *lpType = REG_BINARY;
+
+                if (lpData == nullptr)
+                {
+                    if (lpcbData) *lpcbData = required;
+                    return ERROR_SUCCESS;
+                }
+
+                if (*lpcbData < required)
+                {
+                    *lpcbData = required;
+                    return ERROR_MORE_DATA;
+                }
+
+                if (required > 0)
+                    std::memcpy(lpData, bytes.data(), required);
+
+                *lpcbData = required;
+
+                if (shouldWritePlaceholder && !defaultValue.empty())
+                    RegistryReader.WriteString(section, ValueName, defaultValue);
+
+                return ERROR_SUCCESS;
+            }
+
+            case REG_DWORD:
+            {
+                DWORD value = 0;
+                if (!readValue.empty())
+                {
+                    try { value = static_cast<DWORD>(std::stoul(readValue)); } catch (...) { value = 0; }
+                }
+                else if (!defaultValue.empty())
+                {
+                    try { value = static_cast<DWORD>(std::stoul(defaultValue)); } catch (...) { value = 0; }
+                }
+
+                // Original special case for UINT_MAX
+                if (value == UINT_MAX)
+                {
+                    value = 0;
+                    RegistryReader.WriteString(section, ValueName,
+                        defaultValue.empty() ? "INSERTDWORDHERE" : defaultValue);
+                }
+
+                if (lpType) *lpType = REG_DWORD;
+
+                constexpr DWORD required = sizeof(DWORD);
+
+                if (lpData == nullptr)
+                {
+                    if (lpcbData) *lpcbData = required;
+                    return ERROR_SUCCESS;
+                }
+
+                if (*lpcbData < required)
+                {
+                    *lpcbData = required;
+                    return ERROR_MORE_DATA;
+                }
+
+                *reinterpret_cast<DWORD*>(lpData) = value;
+                *lpcbData = required;
+
+                if (shouldWritePlaceholder)
+                    RegistryReader.WriteString(section, ValueName,
+                        defaultValue.empty() ? "INSERTDWORDHERE" : defaultValue);
+
+                return ERROR_SUCCESS;
+            }
+
+            case REG_MULTI_SZ:
+            {
+                // Convert comma-separated INI value back to proper double-null-terminated multi-sz
+                std::vector<std::string> parts;
+                if (!readValue.empty())
+                {
+                    std::istringstream iss(readValue);
+                    std::string part;
+                    while (std::getline(iss, part, ','))
+                        parts.push_back(std::move(part));
+                }
+
+                DWORD required = 0;
+                for (const auto& p : parts)
+                    required += static_cast<DWORD>(p.length() + 1);
+                required += 1; // final null terminator
+
+                if (lpType) *lpType = REG_MULTI_SZ;
+
+                if (lpData == nullptr)
+                {
+                    if (lpcbData) *lpcbData = required;
+                    return ERROR_SUCCESS;
+                }
+
+                if (*lpcbData < required)
+                {
+                    *lpcbData = required;
+                    return ERROR_MORE_DATA;
+                }
+
+                BYTE* dst = lpData;
+                for (const auto& p : parts)
+                {
+                    if (!p.empty())
+                        std::memcpy(dst, p.data(), p.length());
+                    dst += p.length();
+                    *dst++ = '\0';
+                }
+                *dst = '\0'; // final terminator
+
+                *lpcbData = required;
+
+                if (shouldWritePlaceholder && !defaultValue.empty())
+                    RegistryReader.WriteString(section, ValueName, defaultValue);
+
+                return ERROR_SUCCESS;
+            }
+
+            case REG_NONE:
+            {
+                if (lpData != nullptr)
+                {
+                    // Special original behavior: read boolean from "MAIN" section
+                    bool val = RegistryReader.ReadBoolean("MAIN", ValueName, false);
+                    *reinterpret_cast<bool*>(lpData) = val;
+                    if (lpcbData) *lpcbData = sizeof(bool);
+                    if (lpType) *lpType = REG_NONE;
+                    return ERROR_SUCCESS;
+                }
+
+                // Size-only query (original behavior)
+                auto s = DefaultStrings.find(ValueName);
+                if (s != DefaultStrings.end())
+                {
+                    if (lpcbData) *lpcbData = static_cast<DWORD>(s->second.size()); // original did NOT add +1
+                    if (lpType) *lpType = 1; // REG_SZ
+                    return ERROR_SUCCESS;
+                }
+                return ERROR_FILE_NOT_FOUND;
+            }
+
+            case REG_SZ:
+            case REG_EXPAND_SZ:
+            default:  // treat unknown types as REG_SZ (safest)
+            {
+                if (lpType) *lpType = (regType == REG_EXPAND_SZ) ? REG_EXPAND_SZ : REG_SZ;
+
+                DWORD required = static_cast<DWORD>(readValue.length() + 1); // + null terminator
+
+                if (lpData == nullptr)
+                {
+                    if (lpcbData) *lpcbData = required;
+                    return ERROR_SUCCESS;
+                }
+
+                if (*lpcbData < required)
+                {
+                    *lpcbData = required;
+                    return ERROR_MORE_DATA;
+                }
+
+                if (!readValue.empty())
+                    std::memcpy(lpData, readValue.data(), readValue.length());
+                lpData[readValue.length()] = '\0';
+
+                *lpcbData = required;
+
+                if (shouldWritePlaceholder)
+                    RegistryReader.WriteString(section, ValueName,
+                        defaultValue.empty() ? "INSERTSTRINGDATAHERE" : defaultValue);
+
+                return ERROR_SUCCESS;
+            }
+        }
+    }
+
+    static LSTATUS WINAPI RegSetValueExA(HKEY hKey, LPCSTR lpValueName, DWORD Reserved,
+                                         DWORD dwType, const BYTE* lpData, DWORD cbData)
+    {
+        if (hKey != NULL)
+            return ::RegSetValueExA(hKey, lpValueName, Reserved, dwType, lpData, cbData);
+
+        if (lpValueName == nullptr)
+            return ERROR_INVALID_PARAMETER;
+
+        std::string ValueName = lpValueName;
+
+        if (OverrideTypeREG_NONE)
+            dwType = OverrideTypeREG_NONE;
+
+        switch (dwType)
+        {
+            case REG_BINARY:
+            {
+                std::string str;
+                if (cbData > 0 && lpData != nullptr)
+                {
+                    for (DWORD i = 0; i < cbData; ++i)
+                    {
+                        str += std::format("{:02x}", lpData[i]);
+                        if (i != cbData - 1)
+                            str += ',';
+                    }
+                }
+                RegistryReader.WriteString(section, ValueName, str);
+                break;
+            }
+
+            case REG_DWORD:
+            {
+                DWORD val = (cbData >= sizeof(DWORD) && lpData != nullptr)
+                    ? *reinterpret_cast<const DWORD*>(lpData)
+                    : 0;
+                RegistryReader.WriteInteger(section, ValueName, val);
+                break;
+            }
+
+            case REG_MULTI_SZ:
+            {
+                std::string str;
+                if (lpData != nullptr && cbData > 2)  // at least one empty string + double null
+                {
+                    const char* p = reinterpret_cast<const char*>(lpData);
+                    const char* end = p + cbData;
+                    while (p < end && *p != '\0')
+                    {
+                        if (!str.empty())
+                            str += ',';
+                        str.append(p);
+                        p += std::strlen(p) + 1;
+                    }
+                }
+                RegistryReader.WriteString(section, ValueName, str);
+                break;
+            }
+
+            case REG_NONE:
+            {
+                // Original special behavior
+                RegistryReader.WriteBoolean("MAIN", ValueName, true);
+                break;
+            }
+
+            case REG_SZ:
+            case REG_EXPAND_SZ:
+            default:
+            {
+                std::string val;
+                if (lpData != nullptr && cbData > 0)
+                {
+                    val.assign(reinterpret_cast<const char*>(lpData), cbData);
+                    // Remove trailing null if present (registry usually includes it)
+                    if (!val.empty() && val.back() == '\0')
+                        val.pop_back();
+                }
+                RegistryReader.WriteString(section, ValueName, val);
+                break;
+            }
+        }
+        return ERROR_SUCCESS;
+    }
+
+    static LSTATUS WINAPI RegQueryValueA(HKEY hKey, LPCSTR lpSubKey, LPSTR lpData, PLONG lpcbData)
+    {
+        if (hKey != NULL)
+        {
+            return ::RegQueryValueA(hKey, lpSubKey, lpData, lpcbData);
+        }
+
+        DWORD dwType = REG_SZ;
+        DWORD cbData = (lpcbData != nullptr) ? static_cast<DWORD>(*lpcbData) : 0;
+
+        LSTATUS status = RegQueryValueExA(
+            NULL,           // our magic intercepted key
+            NULL,           // lpValueName = NULL becomes "@" inside RegQueryValueExA
+            nullptr,        // lpReserved
+            &dwType,        // we force REG_SZ (what RegQueryValueA expects)
+            reinterpret_cast<LPBYTE>(lpData),
+            &cbData
+        );
+
+        // Convert back to the PLONG size that the caller expects
+        if (lpcbData != nullptr)
+            *lpcbData = static_cast<LONG>(cbData);
+
+        return status;
+    }
+
+    // Unimplemented stubs
+    static LSTATUS WINAPI RegDeleteKeyA(HKEY hKey, LPCSTR lpSubKey)
+    {
+        if (hKey == NULL) return ERROR_SUCCESS;
+        return ::RegDeleteKeyA(hKey, lpSubKey);
+    }
+
+    static LSTATUS WINAPI RegEnumKeyA(HKEY hKey, DWORD dwIndex, LPSTR lpName, DWORD cchName)
+    {
+        if (hKey == NULL) return ERROR_SUCCESS;
+        return ::RegEnumKeyA(hKey, dwIndex, lpName, cchName);
+    }
+};
+
+class RegistryFallback
+{
+private:
+    static std::string s_MainPath;
+    static std::string s_FallbackPath;
+    static std::map<std::string, std::string> s_Defaults;
+
+public:
+    static void Init(std::string_view mainPath, std::string_view fallbackPath = {})
+    {
+        s_MainPath = mainPath;
+        s_FallbackPath = fallbackPath;
+        s_Defaults.clear();
+    }
+
+    static void AddDefault(std::string_view key, std::string_view value)
+    {
+        if (!key.empty())
+            s_Defaults.emplace(key, value);
+    }
+
+    static void EnsureDefaults()
+    {
+        if (s_MainPath.empty())
+            return;
+
+        std::vector<std::string> paths = { s_MainPath };
+        if (!s_FallbackPath.empty())
+            paths.push_back(s_FallbackPath);
+
+        for (const auto& path : paths)
+        {
+            HKEY hKey = nullptr;
+            DWORD dwDisposition = 0;
+
+            LSTATUS status = ::RegCreateKeyExA(
+                HKEY_CURRENT_USER,
+                path.c_str(),
+                0, nullptr,
+                REG_OPTION_NON_VOLATILE,
+                KEY_READ | KEY_WRITE,
+                nullptr,
+                &hKey,
+                &dwDisposition);
+
+            if (status != ERROR_SUCCESS)
+                continue;
+
+            for (const auto& [key, valueStr] : s_Defaults)
+            {
+                char* end = nullptr;
+                DWORD dwordVal = strtoul(valueStr.c_str(), &end, 10);
+                if (end && *end == '\0')
+                    SetDwordIfMissing(hKey, key.c_str(), dwordVal);
+                else
+                    SetStringIfMissing(hKey, key.c_str(), valueStr);
+            }
+
+            ::RegCloseKey(hKey);
+        }
+    }
+
+    static LSTATUS WINAPI RegCreateKeyA(HKEY hKey, LPCSTR lpSubKey, PHKEY phkResult)
+    {
+        if (hKey == HKEY_LOCAL_MACHINE)
+            hKey = HKEY_CURRENT_USER;
+
+        return ::RegCreateKeyA(hKey, lpSubKey, phkResult);
+    }
+
+    static LSTATUS WINAPI RegQueryValueA(HKEY hKey, LPCSTR lpSubKey, LPSTR lpData, PLONG lpcbData)
+    {
+        if (hKey == HKEY_LOCAL_MACHINE)
+            hKey = HKEY_CURRENT_USER;
+
+        return ::RegQueryValueA(hKey, lpSubKey, lpData, lpcbData);
+    }
+
+    static LSTATUS WINAPI RegDeleteKeyA(HKEY hKey, LPCSTR lpSubKey)
+    {
+        if (hKey == HKEY_LOCAL_MACHINE)
+            hKey = HKEY_CURRENT_USER;
+
+        return ::RegDeleteKeyA(hKey, lpSubKey);
+    }
+
+    static LSTATUS WINAPI RegEnumKeyA(HKEY hKey, DWORD dwIndex, LPSTR lpName, DWORD cchName)
+    {
+        if (hKey == HKEY_LOCAL_MACHINE)
+            hKey = HKEY_CURRENT_USER;
+
+        return ::RegEnumKeyA(hKey, dwIndex, lpName, cchName);
+    }
+
+    static LSTATUS WINAPI RegCreateKeyExA(HKEY hKey, LPCSTR lpSubKey, DWORD Reserved,
+                                               LPSTR lpClass, DWORD dwOptions, REGSAM samDesired,
+                                               CONST LPSECURITY_ATTRIBUTES lpSecurityAttributes,
+                                               PHKEY phkResult, LPDWORD lpdwDisposition)
+    {
+        if (hKey == HKEY_LOCAL_MACHINE)
+            hKey = HKEY_CURRENT_USER;
+
+        return ::RegCreateKeyExA(hKey, lpSubKey, Reserved, lpClass, dwOptions, samDesired,
+                                 lpSecurityAttributes, phkResult, lpdwDisposition);
+    }
+
+    static LSTATUS WINAPI RegOpenKeyExA(HKEY hKey, LPCSTR lpSubKey, DWORD ulOptions,
+                                             REGSAM samDesired, PHKEY phkResult)
+    {
+        if (hKey == HKEY_LOCAL_MACHINE)
+            hKey = HKEY_CURRENT_USER;
+
+        return ::RegOpenKeyExA(hKey, lpSubKey, ulOptions, samDesired, phkResult);
+    }
+
+    static LSTATUS WINAPI RegOpenKeyA(HKEY hKey, LPCSTR lpSubKey, PHKEY phkResult)
+    {
+        if (hKey == HKEY_LOCAL_MACHINE)
+            hKey = HKEY_CURRENT_USER;
+
+        return ::RegOpenKeyA(hKey, lpSubKey, phkResult);
+    }
+
+    static LSTATUS WINAPI RegSetValueExA(HKEY hKey, LPCSTR lpValueName, DWORD Reserved,
+                                              DWORD dwType, const BYTE* lpData, DWORD cbData)
+    {
+        return ::RegSetValueExA(hKey, lpValueName, Reserved, dwType, lpData, cbData);
+    }
+
+    static LSTATUS WINAPI RegQueryValueExA(HKEY hKey, LPCSTR lpValueName, LPDWORD lpReserved,
+                                                LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData)
+    {
+        return ::RegQueryValueExA(hKey, lpValueName, lpReserved, lpType, lpData, lpcbData);
+    }
+
+    static LSTATUS WINAPI RegCloseKey(HKEY hKey)
+    {
+        return ::RegCloseKey(hKey);
+    }
+
+private:
+    static void SetDwordIfMissing(HKEY hKey, const char* valueName, DWORD defaultValue)
+    {
+        DWORD type = 0, data = 0, cb = sizeof(DWORD);
+        LSTATUS query = RegQueryValueExA(hKey, valueName, nullptr, &type, (LPBYTE)&data, &cb);
+
+        if (query != ERROR_SUCCESS || type != REG_DWORD || cb != sizeof(DWORD))
+        {
+            LSTATUS set = RegSetValueExA(hKey, valueName, 0, REG_DWORD,
+                                              reinterpret_cast<const BYTE*>(&defaultValue), sizeof(DWORD));
+        }
+    }
+
+    static void SetStringIfMissing(HKEY hKey, const char* valueName, std::string_view defaultValue)
+    {
+        const char* lpValue = (valueName && strcmp(valueName, "@") == 0) ? nullptr : valueName;
+
+        DWORD type = 0, cb = 0;
+        LSTATUS query = RegQueryValueExA(hKey, lpValue, nullptr, &type, nullptr, &cb);
+
+        if (query != ERROR_SUCCESS || type != REG_SZ)
+        {
+            std::string val(defaultValue);
+            if (val.empty()) val = " ";
+
+            LSTATUS set = RegSetValueExA(hKey, lpValue, 0, REG_SZ,
+                                              reinterpret_cast<const BYTE*>(val.c_str()),
+                                              static_cast<DWORD>(val.length() + 1));
+        }
     }
 };
 
@@ -769,6 +1113,9 @@ namespace WindowedModeWrapper
     static bool bScaleWindow = false;
     static bool bStretchWindow = false;
     static HWND GameHWND = NULL;
+    static int desiredClientWidth = 0;
+    static int desiredClientHeight = 0;
+    static bool s_cursorOnNcArea = false;
 
     static std::tuple<int, int, int, int> beforeCreateWindow(int nWidth, int nHeight)
     {
@@ -798,6 +1145,10 @@ namespace WindowedModeWrapper
             newWidth = DesktopX;
         }
 
+        // Save the final desired client dimensions
+        desiredClientWidth = newWidth;
+        desiredClientHeight = newHeight;
+
         int WindowPosX = (int)(((float)DesktopX / 2.0f) - ((float)newWidth / 2.0f));
         int WindowPosY = (int)(((float)DesktopY / 2.0f) - ((float)newHeight / 2.0f));
 
@@ -810,17 +1161,45 @@ namespace WindowedModeWrapper
     {
         LONG lStyle = GetWindowLong(GameHWND, GWL_STYLE);
 
+        lStyle &= ~(WS_HSCROLL | WS_VSCROLL);
+
         if (bBorderlessWindowed)
             lStyle &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU);
         else
         {
-            lStyle |= (WS_MINIMIZEBOX | WS_SYSMENU);
+            lStyle |= (WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU);
             if (bEnableWindowResize)
                 lStyle |= (WS_MAXIMIZEBOX | WS_THICKFRAME);
         }
 
         SetWindowLong(GameHWND, GWL_STYLE, lStyle);
-        SetWindowPos(GameHWND, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
+
+        if (!bBorderlessWindowed && desiredClientWidth > 0 && desiredClientHeight > 0)
+        {
+            // Compute outer window size so client rect = desired dimensions
+            RECT rect = { 0, 0, desiredClientWidth, desiredClientHeight };
+            LONG exStyle = GetWindowLong(GameHWND, GWL_EXSTYLE);
+            AdjustWindowRectEx(&rect, lStyle, FALSE, exStyle);
+            int outerW = rect.right - rect.left;
+            int outerH = rect.bottom - rect.top;
+
+            // Center by client area, not outer window
+            HMONITOR monitor = MonitorFromWindow(GetDesktopWindow(), MONITOR_DEFAULTTONEAREST);
+            MONITORINFOEX info = { sizeof(MONITORINFOEX) };
+            GetMonitorInfo(monitor, &info);
+            DEVMODE devmode = {};
+            devmode.dmSize = sizeof(DEVMODE);
+            EnumDisplaySettings(info.szDevice, ENUM_CURRENT_SETTINGS, &devmode);
+
+            int posX = ((int)devmode.dmPelsWidth - desiredClientWidth) / 2 + rect.left;
+            int posY = ((int)devmode.dmPelsHeight - desiredClientHeight) / 2 + rect.top;
+
+            SetWindowPos(GameHWND, 0, posX, posY, outerW, outerH, SWP_NOZORDER | SWP_FRAMECHANGED);
+        }
+        else
+        {
+            SetWindowPos(GameHWND, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
+        }
     }
 
     static BOOL WINAPI AdjustWindowRect_Hook(LPRECT lpRect, DWORD dwStyle, BOOL bMenu)
@@ -921,7 +1300,7 @@ namespace WindowedModeWrapper
         }
         else
         {
-            dwNewLong |= (WS_MINIMIZEBOX | WS_SYSMENU);
+            dwNewLong |= (WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU);
             if (bEnableWindowResize)
                 dwNewLong |= (WS_MAXIMIZEBOX | WS_THICKFRAME);
         }
@@ -941,7 +1320,7 @@ namespace WindowedModeWrapper
         }
         else
         {
-            dwNewLong |= (WS_MINIMIZEBOX | WS_SYSMENU);
+            dwNewLong |= (WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU);
             if (bEnableWindowResize)
                 dwNewLong |= (WS_MAXIMIZEBOX | WS_THICKFRAME);
         }
@@ -971,6 +1350,37 @@ namespace WindowedModeWrapper
             CenterWindowPosition(nWidth, nHeight);
         }
         return res;
+    }
+
+    static int WINAPI ShowCursor_Hook(BOOL bShow)
+    {
+        if (!bBorderlessWindowed && GameHWND && !bShow)
+        {
+            POINT pt;
+            GetCursorPos(&pt);
+            RECT clientRect;
+            GetClientRect(GameHWND, &clientRect);
+            MapWindowPoints(GameHWND, NULL, (LPPOINT)&clientRect, 2);
+
+            if (!PtInRect(&clientRect, pt))
+            {
+                if (!s_cursorOnNcArea)
+                {
+                    // Entering NC area — force counter to 0 (visible)
+                    s_cursorOnNcArea = true;
+                    int count;
+                    do { count = ShowCursor(TRUE); } while (count < 0);
+                }
+                return 0; // Suppress the hide
+            }
+            else if (s_cursorOnNcArea)
+            {
+                // Back on client area — let game hide normally
+                s_cursorOnNcArea = false;
+            }
+        }
+
+        return ShowCursor(bShow);
     }
 };
 
@@ -1258,36 +1668,18 @@ public:
     };
 
 public:
-    static Event<>& onInitEvent()
-    {
-        static Event<> InitEvent;
-        return InitEvent;
-    }
-    static Event<>& onInitEventAsync()
-    {
-        static Event<> InitEventAsync;
-        return InitEventAsync;
-    }
-    static Event<>& onAfterUALRestoredIATEvent()
-    {
-        static Event<> AfterUALRestoredIATEvent;
-        return AfterUALRestoredIATEvent;
-    }
-    static Event<>& onShutdownEvent()
-    {
-        static Event<> ShutdownEvent;
-        return ShutdownEvent;
-    }
-    static Event<>& onGameInitEvent()
-    {
-        static Event<> GameInitEvent;
-        return GameInitEvent;
-    }
-    static Event<>& onGameProcessEvent()
-    {
-        static Event<> GameProcessEvent;
-        return GameProcessEvent;
-    }
+    __declspec(noinline) static Event<>& onInitEvent();
+    __declspec(noinline) static Event<>& onInitEventAsync();
+    __declspec(noinline) static Event<>& onShutdownEvent();
+    __declspec(noinline) static Event<>& onGameInitEvent();
+    __declspec(noinline) static Event<>& onGameProcessEvent();
+    __declspec(noinline) static Event<>& onMenuDrawingEvent();
+    __declspec(noinline) static Event<>& onMenuEnterEvent();
+    __declspec(noinline) static Event<>& onMenuExitEvent();
+    __declspec(noinline) static Event<bool>& onActivateApp();
+    __declspec(noinline) static Event<>& onBeforeReset();
+    __declspec(noinline) static Event<>& onEndScene();
+    __declspec(noinline) static Event<>& onReadGameConfig();
 };
 
 namespace injector
@@ -1511,11 +1903,19 @@ private:
     static inline float Sensitivity = 1.0f;
 };
 
-template<typename T>
+template<typename T, bool AutoUnprotect = false>
 class GameRef
 {
 private:
     std::optional<T*> ptr{ std::nullopt };
+
+    T& assign(const T& value)
+    {
+        if constexpr (AutoUnprotect)
+            injector::UnprotectMemory(*ptr, sizeof(T));
+        **ptr = value;
+        return **ptr;
+    }
 
 public:
     GameRef() = default;
@@ -1555,13 +1955,20 @@ public:
     operator T& () { return get(); }
     operator const T& () const { return get(); }
 
-    T& operator=(const T& value) { return get() = value; }
-    T& operator=(T&& value) { return get() = std::move(value); }
+    T& operator=(const T& value)
+    {
+        return assign(value);
+    }
 
-    template<typename U> T& operator+=(const U& v) { return get() += v; }
-    template<typename U> T& operator-=(const U& v) { return get() -= v; }
-    template<typename U> T& operator*=(const U& v) { return get() *= v; }
-    template<typename U> T& operator/=(const U& v) { return get() /= v; }
+    T& operator=(T&& value)
+    {
+        return assign(value);
+    }
+
+    template<typename U> T& operator+=(const U& v) { T val = get() + v; return assign(val); }
+    template<typename U> T& operator-=(const U& v) { T val = get() - v; return assign(val); }
+    template<typename U> T& operator*=(const U& v) { T val = get() * v; return assign(val); }
+    template<typename U> T& operator/=(const U& v) { T val = get() / v; return assign(val); }
     template<typename U> T& operator%=(const U& v) { return get() %= v; }
 
     template<typename U> T& operator&=(const U& v) { return get() &= v; }
@@ -1603,8 +2010,21 @@ public:
     T& operator*() { return get(); }
     const T& operator*() const { return get(); }
 
-    T* operator->() { return &get(); }
-    const T* operator->() const { return &get(); }
+    auto operator->()
+    {
+        if constexpr (std::is_pointer_v<T>)
+            return get();
+        else
+            return &get();
+    }
+
+    auto operator->() const
+    {
+        if constexpr (std::is_pointer_v<T>)
+            return get();
+        else
+            return &get();
+    }
 
     template<typename U>
     auto operator[](const U& index) { return get()[index]; }
@@ -1614,3 +2034,6 @@ public:
 
     explicit operator bool() const { return static_cast<bool>(get()); }
 };
+
+template<typename T>
+using ProtectedGameRef = GameRef<T, true>;

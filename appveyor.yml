@@ -8,9 +8,10 @@ install:
 
     premake5 vs2022
 before_build:
-- cmd: before_build.bat
+- cmd: REM before_build.bat
 build:
   project: build/Win32.WidescreenFixesPack.sln
+  parallel: true
   verbosity: minimal
 before_package:
 - cmd: >-
@@ -25,7 +26,7 @@ before_package:
     msbuild -m build/CXBXR.WidescreenFixesPack.sln /p:Configuration=Release
 
 
-    before_packaging.bat
+    REM before_packaging.bat
 
     cd data
 
