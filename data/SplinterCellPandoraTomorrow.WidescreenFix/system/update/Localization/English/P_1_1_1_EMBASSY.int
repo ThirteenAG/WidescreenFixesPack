@@ -1,0 +1,162 @@
+[P1_1_1_Bodycheck]
+Speech_0001L=Valim , are you there. Do you have some light? Valim, do you hear me?
+Speech_0002L=(null)
+
+[P1_1_1_DeathTick]
+
+[P1_1_1_Gunfire]
+
+[P1_1_1_Hidebody]
+
+[P1_1_1_InterrogateDialog]
+Speech_0001L=FISHER - I need information. 
+Speech_0002L=MILITIAN - I... I don't speak English.
+Speech_0003L=FISHER - I'd be willing to bet your neck that you do.
+Speech_0004L=MILITIAN - I know a little English.
+Speech_0005L=FISHER - Good to hear.  I'm going inside to meet your friends.  Anything I need to worry about?
+Speech_0006L=MILITIAN - They have guns.
+Speech_0007L=FISHER - I'm shocked and amazed.  What else?
+Speech_0032L=MILITIAN - My men planted the mines on our way out.  We had to escort... to defend the village.
+Speech_0012L=FISHER - Escort who?
+Speech_0013L=MILITIAN - Nothing.
+Speech_0014L=FISHER - Escort who?
+Speech_0015L=MILITIAN - Nobody.  I made a mistake.
+Speech_0016L=FISHER - Escort who?
+Speech_0017L=MILITIAN - I don't know his name.  Somebody important to Sadono.  He's got an American accent and one of his leg is fake.  A bald man with dead eyes.
+Speech_0018L=FISHER - A fake leg?
+Speech_0019L=MILITIAN - Yes.
+Speech_0020L=MILITIAN - Go ahead and kill me, that's all I know.
+Speech_0021L=MILITIAN - Go ahead and kill me, that's all I know.
+Speech_0022L=MILITIAN - I swear, I don't know who he is.
+
+[P1_1_1_Interrogatetraining]
+Training_0001L=(null)
+
+[P1_1_1_LambertComms]
+Speech_0063L=LAMBERT - Before you infiltrate the embassy,  let me reintroduce D.P. Brunton, our inter-agency consultant.  He's got an update for the mission.
+Speech_0064L=BRUNTON - I'll keep it brief, I'm sure you know,  I'm excited to be part of the team.  The Joint Chiefs want this mission kept non-lethal, and alarms at flat zero.  We can't endanger the hostages.
+Speech_0065L=FISHER - Understood.  And with some due respect, leave anything Lambert can say to Lambert.  I don't want the voices in my head to become a crowd.
+Speech_0009L=LAMBERT - Get inside  the embassy.  This situation is delicate and largely unknown, so walk softly.
+Training_0071L=Use the Movement keys (W/S/A/D) / (Controller: LS) to move. Use Accelerate key (mouse wheel up)  and Decelerate key (mouse wheel down) to adjust your speed.
+Speech_0001L=LAMBERT - Fisher.  Welcome back to the front.
+Goal_0023L=Infiltrate the embassy.
+Goal_0024L=Infiltrate the embassy.
+Note_0068L=Hand-to-hand and drop attacks are considered non-lethal.
+Speech_0043L=LAMBERT - What are you doing, Fisher?
+Speech_0044L=FISHER - Heading out to sea.
+Speech_0045L=LAMBERT - What the hell are you doing? 
+Speech_0046L=FISHER - Trying to convince you it's time to let me retire. 
+Speech_0047L=LAMBERT - That's not funny.
+Speech_0048L=LAMBERT - This is not amusing, you're carelessly putting lives at risk.
+Speech_0049L=LAMBERT - Get back to shore, Fisher, you've got a mission.
+Speech_0050L=LAMBERT - Let's work on stealth. Your gun should always be your last resort. Invisibility is your best weapon. We've got a network of photocells on your suit connected to a visibility meter on your OPSAT. If the meter's at 3, you're lit up like Time Square.
+Speech_0013L=FISHER - I've got a man in my way, Lambert.  How flexible is my zero fatality mandate? 
+Speech_0014L=LAMBERT - As a rock.  In fact, we want you to make a new friend.  From your on-boards that man looks like one of Sadono's lieutenants.  Interrogate him. Find out what he knows about Sadono's defense parameters.  The chatter we're sifting sounds bad but lacks specifics.  Details on your OPSAT.
+Speech_0052L=FISHER - Landmines might spoil my pleasant disposition. 
+Speech_0053L=GRIMSDOTTIR - Heaven forbid.
+Speech_0015L=GRIMSDOTTIR - Fisher , Activate  your thermal to spot the mines.
+Speech_0054L=LAMBERT - Grim's found you a back door.
+Speech_0016L=GRIMSDOTTIR - Avoid the main gate at all cost. Blueprints show an ornamental stream running beneath the entrance, looks like a viable way in.
+Speech_0017L=LAMBERT - A little wet's better than a little dead.  That stream's your way in, even if it means moving slowly to minimize your noise level.
+Speech_0018L=LAMBERT - Fisher,  be careful,  this village is a walk in the park compared to what needs to be done inside the embassy.
+Speech_0019L=LAMBERT - Be careful Fisher, your use of stealth is crucial for this operation.
+Speech_0056L=GRIMSDOTTIR - The situation is getting worst in the embassy , they seem to kill hostages now.
+Speech_0020L=GRIMSDOTTIR - You have no choice that knocking this guard , don't forget to hide his body to avoid a full alert.
+Speech_0055L=LAMBERT - Fisher, you are making yourself too visible , watch out.
+Speech_0022L=LAMBERT - Damnit, Fisher, We weren't supposed to have any casualties, the mission's over.
+Speech_0038L=LAMBERT - Fisher ,  the situation will become almost impossible to control , this operation is based on stealth !
+Speech_0051L=LAMBERT - Fisher, you need to hide all bodies in the shadows. The mission is over.
+Speech_0039L=LAMBERT - Fisher, we needed to get all the info this guy had. The mission is over. 
+Training_0070L=(null)
+
+[P1_1_1_MineReinforcement]
+
+[P1_1_1_RiverGuard]
+
+[P1_1_1_RiverListener]
+
+[P1_1_1_RiverListener2]
+
+[P1_1_1_SaveLoad]
+Training_0001L=(null)
+
+[P1_1_1_TrainingText]
+Training_0053L=The Stealth Meter in the bottom right hand corner indicates how well you are lit.
+Training_0090L=When the tab is at the right side of the meter, you are well lit. When the tab is at the left side of the meter, you are practically invisible.
+Training_0091L=The Stealth Meter in the bottom right hand corner indicates how well you are lit.
+Training_0108L=(null)
+Training_0055L=The Objective Bar at the bottom of your HUD keeps you informed of your current Objectives.
+Training_0108L=(null)
+Training_0051L=When a small flashing envelope appears above your OPSAT, a new goal or a new note is available. Press the OPSAT key (F1) / (Controller: Back) to open it and read the note.
+Goal_0023L=Infiltrate the embassy.
+Goal_0024L=Infiltrate the embassy.
+Training_0004L=Press the Jump key (Shift) / (Controller: Y) at the base of a ledge to grab onto it.
+Training_0005L=Move the mouse / (Controller: RS) to look around.
+Training_0006L=To climb a ladder, simply move or jump towards it.
+Training_0007L=To use a zip line, stand under it and press the Jump key (Shift) / (Controller: Y) to jump and grab it.
+Training_0008L=To grab a beam or a horizontal pipe, stand under it and press the Jump key (Shift) / (Controller: Y). You can move hand-over-hand along it.
+Training_0009L=While hanging on a pipe, press the Jump key (Shift) / (Controller: Y) to bring your legs up. This will decrease your visibility and enable you to pass over obstacles.
+Training_0111L=(null)
+Training_0085L=While you are holding a horizontal pipe with your legs up, press Equip key (E) / (Controller: X) to hang by your legs and draw your weapon.
+Training_0112L=(null)
+Training_0100L=While hanging from a pipe, beam, or ledge, press the Crouch key (C) / (Controller: B) to drop down.
+Training_0113L=(null)
+Training_0010L=To open a door, press the Interaction key (Space) / (Controller: A) when the interaction window appears.
+Note_0057L=To avoid being surprised, use the optic cable to check a room before entering it.
+Training_0087L=You can pick a lock using a lock pick. In front of the door press the Interaction key (Space) / (Controller: A) and select lock pick in the interaction window to begin picking the lock.
+Training_0125L=To release a pin, you must press the correct movement key (W or S or A or D by default) / (Controller: LS).Once you hear and see the pin begin to move, press the same key repeatedly until it is released. Repeat until all pins are released.
+Training_0011L=You can pick a lock using a lock pick. In front of the door press the Interaction key (Space) / (Controller: A) and select lock pick in the interaction window to begin picking the lock.
+Training_0012L=To release a pin, you must press the correct movement key (W or S or A or D by default) / (Controller: LS).Once you hear and see the pin begin to move, press the same key repeatedly until it is released. Repeat until all pins are released.
+Training_0014L=To climb a pipe or a beam, simply move or jump towards it.
+Training_0016L=To crouch, press the Crouch key (C) / (Controller: B). You will make much less noise while crouched and moving slowly.
+Note_0105L=You will also perform a Quiet Landing if you drop from a height while crouched.
+Training_0088L=To crouch, press the Crouch key (C) / (Controller: B). You will make much less noise while crouched and moving slowly.
+Training_0089L=You will also perform a Quiet Landing if you drop from a height while crouched.
+Training_0114L=(null)
+Training_0017L=To put your back to a wall, face the wall and press (Q) / (Controller: LS Press). You will peek when you reach a corner.
+Note_0106L=The SWAT Turn is a highly trained Special Forces movement that makes you almost invisible.
+Training_0018L=While you are peeking at an open door or a small corridor, press the Action key (Space) / (Controller: A) to perform a SWAT turn.
+Training_0086L=While you are peeking at an open door or a small corridor, press the Action key (Space) / (Controller: A) to perform a SWAT turn.
+Training_0098L=The SWAT Turn is a highly trained Special Forces movement that makes you almost invisible.
+Training_0124L=(null)
+Note_0061L=When equipped with the pistol, press the Alternate Fire key (right mouse button) / (Controller: LT) to activate the laser targeting. When the laser targeting is activated, your aiming is more precise, but the red dot can be seen by the enemies.
+Note_0063L=Press (Tab) / (Controller: D-pad Down) to select an object you can throw. While peeking, press the Equip key (E) / (Controller: X) to equip the object and press the Fire key (left mouse button) / (Controller: RT) to throw it. While the object is equipped, you can adjust throwing length by pressing the Alternate Fire key (right mouse button) / (Controller: LT).
+Training_0019L=You will need to shoot the light out to pass unnoticed. From back to wall, go to the peeking position by moving towards the edge of the wall.
+Training_0118L=Press the Equip key (E) / (Controller: X) to draw the pistol. When equipped with a weapon, press the Fire key (left mouse button) / (Controller: RT) to shoot.
+Training_0121L=Press the Equip key (E) / (Controller: X) to draw the pistol. When equipped with a weapon, press the Fire key (left mouse button) / (Controller: RT) to shoot.
+Training_0123L=(null)
+Training_0022L=To equip your Night Vision Goggles, simply press (2) / (Controller: D-pad Left). To return to normal vision, press (2) / (Controller: D-pad Left) again.
+Training_0075L=You will need to shoot the light to pass unnoticed. From back to wall, go to the peeking position and press the Equip key (E) / (Controller: B) to draw the pistol. When equipped with a weapon, press the Fire key (left mouse button) / (Controller: RT) to shoot.
+Training_0076L=During the game, press the Inventory key (Ctrl) / (Controller: RB) to access the quick inventory.
+Note_0103L=Use the mouse or arrows to select an item. To use the item, press the Fire key (left mouse button) / (Controller: RT).
+Training_0104L=During the game, press the Inventory key (Ctrl) / (Controller: RB) to access the quick inventory.
+Training_0107L=Use the mouse or arrows to select an item. To use the item, press the Fire key (left mouse button) / (Controller: RT).
+Training_0102L=To access the binoculars, press the Zoom key (middle mouse button) / (Controller: RS Press).
+Training_0023L=Approach your opponent quietly from behind and press the Interaction key (Space) / (Controller: A) to grab him.
+Training_0067L=(null)
+Training_0024L=If the character has any useful information, the Interrogate interaction will appear. Select this interaction to force the character to talk.
+Training_0068L=(null)
+Training_0025L=After you get the information you need, press the Fire key (left mouse button) / (Controller: RT) to knock out and release your opponent.
+Training_0078L=Approach your opponent quietly from behind and press the Interaction key (Space) / (Controller: A) to grab him.
+Training_0079L=If the character has any useful information, the Interrogate interaction will appear. Select this interaction to force the character to talk.
+Training_0080L=After you get the information you need, press the Fire key (left mouse button) / (Controller: RT) to knock out and release your opponent.
+Training_0026L=Land mines can only be detected in thermal vision.
+Training_0092L=To equip your thermal Vision Goggles, simply press (3) / (Controller: D-pad Right).
+Training_0093L=To return to normal vision, press (3) / (Controller: D-pad Right) again.
+Training_0094L=To equip your thermal Vision Goggles, simply press (3) / (Controller: D-pad Right).
+Training_0066L=(null)
+Training_0027L=When in a narrow passage, you can perform a split jump by standing next to a wall and pressing the Jump key (Shift) / (Controller: Y). At the top of the jump, press the Jump key (Shift) / (Controller: Y) again to complete the maneuver.
+Training_0038L=(null)
+Training_0028L=From a half split jump, you can reach a position above yourself. Face the higher position by moving left or right, then press the Jump key (Shift) / (Controller: Y) to reach it.
+Training_0072L=When in a narrow passage, you can perform a split jump by standing next to a wall and pressing the Jump key (Shift). At the top of the jump, press the Jump key (Shift) / (Controller: Y) again to complete the maneuver.
+Training_0099L=From a half split jump, you can reach a position above yourself. Face the higher position by moving left or right, then press the Jump key (Shift) / (Controller: Y) to reach it.
+Training_0116L=(null)
+Training_0101L=You can whistle using the Whistle key (V) / (Controller: LB). If a guard hears this, he will investigate the sound.
+Training_0029L=You will be much quieter while crouched and moving slowly. You will also perform a Quiet Landing if you drop from a height while crouched.
+Training_0030L=Approach your opponent quietly from behind and press the Interaction key (Space) / (Controller: A) to grab him.
+Training_0040L=(null)
+Training_0031L=Stand over the fallen enemy, press the Interaction key (Space) / (Controller: A) and select the Body interaction. Carry the body to somewhere dark and out of the way, then press the Interaction key (Space) / (Controller: A) to drop him. 
+Note_0084L=When you drop a body your stealth meter will flash twice indicating that the body is well hidden in the dark at the time you drop it.
+Training_0074L=Stand over the fallen enemy, press the Interaction key (Space) / (Controller: A) and select the Body interaction. Carry the body to somewhere dark and out of the way, then press the Interaction key (Space) / (Controller: A) to drop him. 
+Training_0035L=(null)
+

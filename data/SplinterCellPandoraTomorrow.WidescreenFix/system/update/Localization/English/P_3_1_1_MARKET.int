@@ -1,0 +1,156 @@
+[P311_BalconCivil]
+
+[P311_Begining]
+
+[P311_CiviliansA]
+
+[P311_CiviliansB]
+Speech_0001L=Hebrew Civil 1 - Les accords ne seront jamais tenus, ils controlent tellement peu la situation.
+Speech_0002L=Hebrew Civil 2 - on se sait jamais , en tout cas ce couvre feu est mal suivi et controle.
+Speech_0003L=Hebrew Civil 1 - D'un autre cote la police semble sur les dents.
+Speech_0004L=Hebrew Civil 2 - Justement ils ne controlent rien.
+Speech_0005L=Hebrew Civil 1 - Tu croies qu;il ya aura une autre attaque ce soir?
+Speech_0006L=Hebrew Civil 2 - Je n'en sait rien mas il ne faut pas trainer dans la vieille ville. 
+Speech_0007L=Hebrew Civil 1 - Oui je sais on va peut etre rentre sur Tel Aviv avec ma femme, la situation a l;air moins dangereuse la bas.
+Speech_0008L=Hebrew Civil 2 - Ah bon tu crois?
+Speech_0009L=Hebrew Civil 1 - Rien n'est plus dangereux que Jerusalem.
+
+[P311_CivilInfrontTV]
+
+[P311_CoenManager]
+Speech_0001L=COEN - Here's a cultural opportunity for you.  The birthplace of Judaism, Christianity, and Islam.  
+Speech_0002L=FISHER - So this is where all that peace and love came from. 
+Speech_0003L=COEN - Exactly. Recent attacks have led authorities to put a curfew in place, which is what account for tonight's peace. In other words, you should have basically empty streets.
+Speech_0004L=FISHER - Great.  The fewer civilians, the easier my job gets.
+Speech_0005L=FISHER - I couldn't tell from the flash notes whether we're dealing with Shin Bet or Mosad here.
+Speech_0006L=COEN - Let's hope for your sake it's Mosad.  Between the lines back at Fort Meade reads like our side's having trouble getting straight answers from Israeli intelligence.
+Speech_0007L=FISHER - Why are you smiling?
+Speech_0008L=COEN - Thinking about my mom.
+Speech_0009L=FISHER - That's sweet.
+Speech_0010L=COEN - She always wanted me to make the pilgrimage to Israel.
+Speech_0011L=FISHER - If I see any postcards I'll pick one up for you.
+Speech_0012L=COEN - Super.
+Speech_0013L=COEN - I'll see you once you're finished.
+Speech_0014L=COEN - Good luck.
+Speech_0015L=BRUNTON - We have no choice we need to have them dead.
+Note_0016L=Use of lethal force is permitted.
+
+[P311_Conv2Street]
+Speech_0001L=Conv2StreetCivil - Hey , please , can you tell me when the curfew ends?
+Speech_0002L=Conv2StreetPoliceM - No idea , but we had an incident in the Christian area this morning
+Speech_0003L=Conv2StreetCivil - Was it serious?
+Speech_0004L=Conv2StreetPoliceM - Pretty serious but less than the one last week.
+Speech_0005L=Conv2StreetPoliceM - Now be quiet !
+Speech_0006L=Conv2StreetCivil - God this city is becoming more and more dangerous.
+
+[P311_ConvTerrasse]
+Speech_0001L=ConvTerrassePoliceM - You can not stay here, you have to go home.
+Speech_0002L=ConvTerrasseCivil - Let me just finish my orange juice.
+Speech_0003L=ConvTerrassePoliceM - You can finish it in prison if you want.
+Speech_0004L=ConvTerrasseCivil - Okay , I am going , fine.
+Speech_0005L=ConvTerrassePoliceM - I said now.
+
+[P311_Dahlia]
+
+[P311_LambertComms]
+Note_0035L=Use of lethal force is not allowed.
+Speech_0001L=LAMBERT - This looks like a touchy mission, Brunton is coordinating with local intelligence.
+Speech_0006L=FISHER - Mosad?
+Speech_0007L=LAMBERT - Even better, Shin Bet.
+Speech_0008L=FISHER - Spooky.  Who are we torturing?
+Speech_0009L=LAMBERT - Just you.  First thing, you're going to need to retrieve your SC-20K. 
+Speech_0023L=FISHER - Wouldn't it make sense just to give it to me? 
+Speech_0011L=LAMBERT - We had the barrel altered to reduce sonic placement.  Only one man with those skills in the area, an old arms dealer-slash-CIA plant working out of the back of a small shop. He'll be waiting for you, details on your OPSAT.
+Goal_0020L=Retrieve your SC-20K in the grocery shop of Saul. Saul is your CIA contact in Jerusalem.
+Goal_0021L=Retreive your SC-20K
+Note_0039L=Use of lethal force is not allowed.
+Speech_0024L=LAMBERT - Good.  Feeling better with a warm gun in your hand?
+Speech_0025L=FISHER - Much, thanks.
+Speech_0026L=LAMBERT - Your next objective is named Dahlia Tal.  Brunton?
+Speech_0027L=BRUNTON - Ms. Dahlia Tal, she's a Shin Bet agent in deep cover with local terrorist cells.
+Speech_0028L=LAMBERT - She's our link to Norman Soth's terrorist connections.
+Speech_0030L=LAMBERT -  One of the choice nuggets of intel we pulled off Soth's laptop.  Find Dahlia, she'll lead you to the mercenaries.
+Note_0043L=When you're equipped with the SC-20K rifle, press the Sniper key (middle mouse button) to snipe.
+Note_0044L=While in snipe mode, you can zoom in or zoom out (mouse wheel).
+Note_0045L=If you want to steady your aim for a short amount of time, press the Alternate Fire key (right mouse button) to hold your breath.
+Note_0046L=When you're equipped with the SC-20K rifle, press the Next Weapon key (Tab) to choose your weapon.
+Note_0047L=When you're equipped with a weapon, Press the Alternate Fire key (right mouse button) to shoot secondary weapons.
+Goal_0002L=Locate Dahlia Tal near the Armenian Church.
+Goal_0003L=Locate and question Dahlia Tal.
+Speech_0012L=LAMBERT - For Christ sake Fisher , the mission is over.
+Speech_0015L=LAMBERT - What are you doing , the mission is over.
+Speech_0022L=LAMBERT - Good God, Fisher, what the hell are you doing?  The mission's over.  I'm not even sure we can bring you back to the states.
+Speech_0041L=LAMBERT - Good God, Fisher, what the hell are you doing?  The mission's over.  I'm not even sure we can bring you back to the states.
+Speech_0019L=LAMBERT - Fisher, you are paid to be invisible.
+Speech_0042L=LAMBERT - Fisher, you need to hide all bodies in the shadows. The mission is over.
+Speech_0029L=GRIMSDOTTIR - I have a clearer identification of Dahlia, she is waiting for you near the church, she is wearing a traditional white outfit. The code is 'is there a special hour for the mass?' answer : only in the morning.
+
+[P311_MouloudComms]
+Speech_0001L=FISHER - You're Saul Berkovitz.
+Speech_0002L=SAUL - Thank God you showed up when you did.  You are Mr. Brunton's man, no?
+Speech_0003L=FISHER - Who were they?
+Speech_0004L=SAUL - Thieves. They shouldn't have been able to get this close to me. There must be something wrong with my security arrangements...
+Speech_0005L=FISHER - You've got something for me.
+Speech_0006L=SAUL - Yes.  Only a small thanks compared to what I owe you.
+Speech_0008L=FISHER - You made some modifications.
+Speech_0011L=SAUL - If you'd like to give it a try, I know a discreet place nearby.
+Speech_0012L= FISHER - I wouldn't mind.
+Speech_0013L=SAUL - Excellent. Just this way, follow me if you want. Nothing compulsory.
+Speech_0014L=FISHER - What about our friends?
+Speech_0015L=SAUL - Our friends?
+Speech_0007L=FISHER - The dead ones.
+Speech_0016L=SAUL - Ah!  Corpses are a small bother, I'll take care of them later. 
+Speech_0017L=SAUL - Here we are.  Feel free to play, but don't fire any bullets; I couldn't make it any quieter without sacrificing accuracy and range.
+Speech_0019L=SAUL - Good night, and good luck.
+Speech_0020L=SAUL - I thank you again for saving my life, I hope the SC-20K will do the same for you.
+Speech_0018L=SAUL - If I were you, I'd keep that gun holstered.  Violence in this town tends to echo.
+
+[P311_MouloudManager]
+Speech_0010L=SAUL - I calibrated the optics on your scope, I think you'll like the effect.  Of course it's still sensitive as a butterfly's wing, you'll probably have to hold your breath to get a steady shot. 
+Speech_0011L=SAUL - I... oh, crap, get down.  Somebody's coming.
+Speech_0012L=SAUL - Why don't you do both of us a favor and drop this guy.  A Ring Airfoil Grenade should be quiet enough, and it'll certainly do the trick.
+Speech_0027L=FISHER - He's standing in a puddle.
+Speech_0028L=SAUL - Oh, that idiot.  I like the way you think.  Sticky shock him. 
+Speech_0017L=SAUL - Good, good.  Perhaps you could take care of that body, I already have our two earlier guests to attend to.
+Speech_0018L=FISHER - Sure.  Thanks for the work, the gun looks good.
+Speech_0029L=SAUL - My pleasure.  Just don't do anything with it I'll regret contributing to.
+
+[P311_PoliceConv]
+Speech_0001L=(null)
+Speech_0002L=(null)
+Speech_0003L=(null)
+Speech_0004L=(null)
+Speech_0005L=(null)
+Speech_0006L=(null)
+Speech_0007L=(null)
+Speech_0008L=(null)
+Speech_0009L=(null)
+Speech_0010L=(null)
+Speech_0011L=(null)
+Speech_0012L=(null)
+Speech_0013L=(null)
+Speech_0014L=(null)
+Speech_0015L=(null)
+Speech_0016L=(null)
+Speech_0017L=(null)
+Speech_0018L=(null)
+
+[P311_PoliceMMid]
+
+[P311_ShowHideBackG]
+
+[P311_StillersManager]
+Speech_0001L=We just want the guns and the money, Saul! 
+Speech_0002L=We'll take your life too, if we have to, but we don't want it.
+Speech_0003L=Lay down your gun and walk out, we'll let you go.
+Speech_0004L=A- Ah!  God damnit.  Alright, Saul, alright.
+
+[P311_TrainingManager]
+Training_0002L=(null)
+Training_0001L=When you're equipped with the SC-20K rifle, press the Sniper key (middle mouse button) / (Controller: RS Press) to snipe.
+Training_0003L=If you want to steady your aim for a short amount of time, press the Alternate Fire key (right mouse button) / (Controller: LT) to hold your breath.
+Training_0004L=(null)
+Training_0006L=(null)
+Training_0005L=When you're equipped with the SC-20K rifle, press the Next Weapon key (Tab) / (Controller: D-pad Down) to choose your weapon.
+Training_0007L=(null)
+
