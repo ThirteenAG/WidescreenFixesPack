@@ -45,15 +45,15 @@ before_package:
 
     REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:FarCry_WidescreenFix /p:Configuration=Release
 
-    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:GrandTheftAuto\\GTA1_WidescreenFix /p:Configuration=Release
+    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:GrandTheftAuto\GTA1_WidescreenFix /p:Configuration=Release
 
-    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:GrandTheftAuto\\GTA2_WidescreenFix /p:Configuration=Release
+    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:GrandTheftAuto\GTA2_WidescreenFix /p:Configuration=Release
 
-    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:GrandTheftAuto\\GTA3_WidescreenFix /p:Configuration=Release
+    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:GrandTheftAuto\GTA3_WidescreenFix /p:Configuration=Release
 
-    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:GrandTheftAuto\\GTASA_WidescreenFix /p:Configuration=Release
+    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:GrandTheftAuto\GTASA_WidescreenFix /p:Configuration=Release
 
-    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:GrandTheftAuto\\GTAVC_WidescreenFix /p:Configuration=Release
+    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:GrandTheftAuto\GTAVC_WidescreenFix /p:Configuration=Release
 
     REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:Gun_WidescreenFix /p:Configuration=Release
 
@@ -73,23 +73,23 @@ before_package:
 
     REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:Manhunt_WidescreenFix /p:Configuration=Release
 
-    msbuild -m build/Win32.WidescreenFixesPack.sln /t:MaxPayne\\MaxPayne_WidescreenFix /p:Configuration=Release
+    msbuild -m build/Win32.WidescreenFixesPack.sln /t:MaxPayne\MaxPayne_WidescreenFix /p:Configuration=Release
 
-    msbuild -m build/Win32.WidescreenFixesPack.sln /t:MaxPayne\\MaxPayne2_WidescreenFix /p:Configuration=Release
+    msbuild -m build/Win32.WidescreenFixesPack.sln /t:MaxPayne\MaxPayne2_WidescreenFix /p:Configuration=Release
 
-    msbuild -m build/Win32.WidescreenFixesPack.sln /t:NeedForSpeed\\NFSCarbon_WidescreenFix /p:Configuration=Release
+    msbuild -m build/Win32.WidescreenFixesPack.sln /t:NeedForSpeed\NFSCarbon_WidescreenFix /p:Configuration=Release
 
-    msbuild -m build/Win32.WidescreenFixesPack.sln /t:NeedForSpeed\\NFSMostWanted_WidescreenFix /p:Configuration=Release
+    msbuild -m build/Win32.WidescreenFixesPack.sln /t:NeedForSpeed\NFSMostWanted_WidescreenFix /p:Configuration=Release
 
-    msbuild -m build/Win32.WidescreenFixesPack.sln /t:NeedForSpeed\\NFSProStreet_FusionFix /p:Configuration=Release
+    msbuild -m build/Win32.WidescreenFixesPack.sln /t:NeedForSpeed\NFSProStreet_FusionFix /p:Configuration=Release
 
-    msbuild -m build/Win32.WidescreenFixesPack.sln /t:NeedForSpeed\\NFSUnderground_WidescreenFix /p:Configuration=Release
+    msbuild -m build/Win32.WidescreenFixesPack.sln /t:NeedForSpeed\NFSUnderground_WidescreenFix /p:Configuration=Release
 
-    msbuild -m build/Win32.WidescreenFixesPack.sln /t:NeedForSpeed\\NFSUnderground2_WidescreenFix /p:Configuration=Release
+    msbuild -m build/Win32.WidescreenFixesPack.sln /t:NeedForSpeed\NFSUnderground2_WidescreenFix /p:Configuration=Release
 
-    msbuild -m build/Win32.WidescreenFixesPack.sln /t:NeedForSpeed\\NFSUndercover_FusionFix /p:Configuration=Release
+    msbuild -m build/Win32.WidescreenFixesPack.sln /t:NeedForSpeed\NFSUndercover_FusionFix /p:Configuration=Release
 
-    msbuild -m build/Win32.WidescreenFixesPack.sln /t:NeedForSpeed\\NFSTheRun_FusionFix /p:Configuration=Release
+    msbuild -m build/Win32.WidescreenFixesPack.sln /t:NeedForSpeed\NFSTheRun_FusionFix /p:Configuration=Release
 
     msbuild -m build/Win32.WidescreenFixesPack.sln /t:Onimusha3_WidescreenFix /p:Configuration=Release
 
@@ -101,39 +101,39 @@ before_package:
 
     msbuild -m build/Win32.WidescreenFixesPack.sln /t:ThePunisher_WidescreenFix /p:Configuration=Release
 
-    msbuild -m build/Win32.WidescreenFixesPack.sln /t:ResidentEvil\\ResidentEvil0_FusionFix /p:Configuration=Release
+    msbuild -m build/Win32.WidescreenFixesPack.sln /t:ResidentEvil\ResidentEvil0_FusionFix /p:Configuration=Release
 
-    msbuild -m build/Win32.WidescreenFixesPack.sln /t:ResidentEvil\\ResidentEvil_FusionFix /p:Configuration=Release
+    msbuild -m build/Win32.WidescreenFixesPack.sln /t:ResidentEvil\ResidentEvil_FusionFix /p:Configuration=Release
 
-    msbuild -m build/Win32.WidescreenFixesPack.sln /t:ResidentEvil\\ResidentEvil5_FusionFix /p:Configuration=Release
+    msbuild -m build/Win32.WidescreenFixesPack.sln /t:ResidentEvil\ResidentEvil5_FusionFix /p:Configuration=Release
 
-    msbuild -m build/Win32.WidescreenFixesPack.sln /t:ResidentEvil\\ResidentEvil6_FusionFix /p:Configuration=Release
+    msbuild -m build/Win32.WidescreenFixesPack.sln /t:ResidentEvil\ResidentEvil6_FusionFix /p:Configuration=Release
 
-    msbuild -m build/Win32.WidescreenFixesPack.sln /t:ResidentEvil\\ResidentEvilRevelations_FusionFix /p:Configuration=Release
+    msbuild -m build/Win32.WidescreenFixesPack.sln /t:ResidentEvil\ResidentEvilRevelations_FusionFix /p:Configuration=Release
 
-    msbuild -m build/Win32.WidescreenFixesPack.sln /t:ResidentEvil\\ResidentEvilRevelations2_FusionFix /p:Configuration=Release
+    msbuild -m build/Win32.WidescreenFixesPack.sln /t:ResidentEvil\ResidentEvilRevelations2_FusionFix /p:Configuration=Release
 
-    msbuild -m build/Win32.WidescreenFixesPack.sln /t:SplinterCell\\SplinterCell_WidescreenFix /p:Configuration=Release
+    msbuild -m build/Win32.WidescreenFixesPack.sln /t:SplinterCell\SplinterCell_WidescreenFix /p:Configuration=Release
 
     msbuild -m build/Win32.WidescreenFixesPack.sln /t:Scarface_FusionFix /p:Configuration=Release
 
-    msbuild -m build/Win32.WidescreenFixesPack.sln /t:SplinterCell\\SplinterCellConviction_FusionFix /p:Configuration=Release
+    msbuild -m build/Win32.WidescreenFixesPack.sln /t:SplinterCell\SplinterCellConviction_FusionFix /p:Configuration=Release
 
-    msbuild -m build/Win32.WidescreenFixesPack.sln /t:SplinterCell\\SplinterCellBlacklist_FusionFix /p:Configuration=Release
+    msbuild -m build/Win32.WidescreenFixesPack.sln /t:SplinterCell\SplinterCellBlacklist_FusionFix /p:Configuration=Release
 
-    msbuild -m build/Win32.WidescreenFixesPack.sln /t:SplinterCell\\SplinterCellChaosTheory_WidescreenFix /p:Configuration=Release
+    msbuild -m build/Win32.WidescreenFixesPack.sln /t:SplinterCell\SplinterCellChaosTheory_WidescreenFix /p:Configuration=Release
 
-    msbuild -m build/Win32.WidescreenFixesPack.sln /t:SplinterCell\\SplinterCellDoubleAgent_WidescreenFix /p:Configuration=Release
+    msbuild -m build/Win32.WidescreenFixesPack.sln /t:SplinterCell\SplinterCellDoubleAgent_WidescreenFix /p:Configuration=Release
 
-    msbuild -m build/Win32.WidescreenFixesPack.sln /t:SplinterCell\\SplinterCellPandoraTomorrow_WidescreenFix /p:Configuration=Release
+    msbuild -m build/Win32.WidescreenFixesPack.sln /t:SplinterCell\SplinterCellPandoraTomorrow_WidescreenFix /p:Configuration=Release
 
     REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:SecondSight_WidescreenFix /p:Configuration=Release
 
-    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:SilentHill\\SilentHill2_WidescreenFix /p:Configuration=Release
+    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:SilentHill\SilentHill2_WidescreenFix /p:Configuration=Release
 
-    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:SilentHill\\SilentHill3_WidescreenFix /p:Configuration=Release
+    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:SilentHill\SilentHill3_WidescreenFix /p:Configuration=Release
 
-    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:SilentHill\\SilentHill4_WidescreenFix /p:Configuration=Release
+    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:SilentHill\SilentHill4_WidescreenFix /p:Configuration=Release
 
     REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:SniperElite_WidescreenFix /p:Configuration=Release
 
@@ -149,17 +149,17 @@ before_package:
 
     REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:TheSuffering_WidescreenFix /p:Configuration=Release
 
-    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:TonyHawks\\TonyHawksProSkater2_WidescreenFix /p:Configuration=Release
+    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:TonyHawks\TonyHawksProSkater2_WidescreenFix /p:Configuration=Release
 
-    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:TonyHawks\\TonyHawksProSkater3_WidescreenFix /p:Configuration=Release
+    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:TonyHawks\TonyHawksProSkater3_WidescreenFix /p:Configuration=Release
 
-    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:TonyHawks\\TonyHawksProSkater4_WidescreenFix /p:Configuration=Release
+    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:TonyHawks\TonyHawksProSkater4_WidescreenFix /p:Configuration=Release
 
-    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:TonyHawks\\TonyHawksUnderground_WidescreenFix /p:Configuration=Release
+    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:TonyHawks\TonyHawksUnderground_WidescreenFix /p:Configuration=Release
 
-    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:TonyHawks\\TonyHawksUnderground2_WidescreenFix /p:Configuration=Release
+    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:TonyHawks\TonyHawksUnderground2_WidescreenFix /p:Configuration=Release
 
-    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:TonyHawks\\TonyHawksAmericanWasteland_WidescreenFix /p:Configuration=Release
+    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:TonyHawks\TonyHawksAmericanWasteland_WidescreenFix /p:Configuration=Release
 
     REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:TotalOverdose_WidescreenFix /p:Configuration=Release
 
