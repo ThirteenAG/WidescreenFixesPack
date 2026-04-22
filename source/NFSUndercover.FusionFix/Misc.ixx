@@ -727,7 +727,7 @@ void Init4()
     if (bImproveSceneryLOD)
     {
         // there is 1 more step left after 0xE, with this it should actually show all scenery
-        // the top nibble doesn't affect anything, only the bottom, so 0x10 will cause everything to dissapear, while 0x1F will have the same effect as below
+        // the top nibble doesn't affect anything, only the bottom, so 0x10 will cause everything to disappear, while 0x1F will have the same effect as below
         pattern = hook::pattern("83 F8 01 C6 44 24 0F 0E");
         if (!pattern.empty())
         {
