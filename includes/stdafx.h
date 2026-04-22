@@ -1145,9 +1145,11 @@ namespace WindowedModeWrapper
             newWidth = DesktopX;
         }
 
-        // Save the final desired client dimensions
-        desiredClientWidth = newWidth;
-        desiredClientHeight = newHeight;
+        if (bBorderlessWindowed || desiredClientWidth <= 0 || desiredClientHeight <= 0)
+        {
+            desiredClientWidth = newWidth;
+            desiredClientHeight = newHeight;
+        }
 
         int WindowPosX = (int)(((float)DesktopX / 2.0f) - ((float)newWidth / 2.0f));
         int WindowPosY = (int)(((float)DesktopY / 2.0f) - ((float)newHeight / 2.0f));
@@ -1204,32 +1206,32 @@ namespace WindowedModeWrapper
 
     static BOOL WINAPI AdjustWindowRect_Hook(LPRECT lpRect, DWORD dwStyle, BOOL bMenu)
     {
-        DWORD newStyle = 0;
-
         if (!bBorderlessWindowed)
-            newStyle = WS_CAPTION;
+        {
+            desiredClientWidth = lpRect->right - lpRect->left;
+            desiredClientHeight = lpRect->bottom - lpRect->top;
+            return AdjustWindowRect(lpRect, WS_CAPTION, bMenu);
+        }
         else
         {
             afterCreateWindow();
             return AdjustWindowRect(lpRect, GetWindowLong(GameHWND, GWL_STYLE), bMenu);
         }
-
-        return AdjustWindowRect(lpRect, newStyle, bMenu);
     }
 
     static BOOL WINAPI AdjustWindowRectEx_Hook(LPRECT lpRect, DWORD dwStyle, BOOL bMenu, DWORD dwExStyle)
     {
-        DWORD newStyle = 0;
-
         if (!bBorderlessWindowed)
-            newStyle = WS_CAPTION;
+        {
+            desiredClientWidth = lpRect->right - lpRect->left;
+            desiredClientHeight = lpRect->bottom - lpRect->top;
+            return AdjustWindowRectEx(lpRect, WS_CAPTION, bMenu, dwExStyle);
+        }
         else
         {
             afterCreateWindow();
             return AdjustWindowRectEx(lpRect, GetWindowLong(GameHWND, GWL_STYLE), bMenu, dwExStyle);
         }
-
-        return AdjustWindowRectEx(lpRect, newStyle, bMenu, dwExStyle);
     }
 
     static BOOL WINAPI CenterWindowPosition(int nWidth, int nHeight)
