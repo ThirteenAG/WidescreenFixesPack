@@ -15,9 +15,13 @@ pr:
     - .appveyor.yml
 
 jobs:
-- job:
+- job: Build
+  timeoutInMinutes: 0
+  cancelTimeoutInMinutes: 5
+
   pool:
     vmImage: windows-2025-vs2026
+
   strategy:
     matrix:
       Release:
@@ -28,7 +32,6 @@ jobs:
   steps:
   - task: CmdLine@2
     displayName: Before build
-    timeoutInMinutes: 0
     inputs:
       script: |
         git submodule update --init --recursive
@@ -37,7 +40,6 @@ jobs:
 
   - task: MSBuild@1
     displayName: Build
-    timeoutInMinutes: 0
     inputs:
       solution: 'build/*.slnx'
       maximumCpuCount: true
