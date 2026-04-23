@@ -91,31 +91,31 @@ before_package:
 
     msbuild -m build/Win32.WidescreenFixesPack.sln /t:NeedForSpeed\NFSTheRun_FusionFix /p:Configuration=Release
 
-    msbuild -m build/Win32.WidescreenFixesPack.sln /t:Onimusha3_WidescreenFix /p:Configuration=Release
+    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:Onimusha3_WidescreenFix /p:Configuration=Release
 
-    msbuild -m build/Win32.WidescreenFixesPack.sln /t:ParadiseCracked_WidescreenFix /p:Configuration=Release
+    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:ParadiseCracked_WidescreenFix /p:Configuration=Release
 
-    msbuild -m build/Win32.WidescreenFixesPack.sln /t:PsiOpsTheMindgateConspiracy_WidescreenFix /p:Configuration=Release
+    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:PsiOpsTheMindgateConspiracy_WidescreenFix /p:Configuration=Release
 
-    msbuild -m build/Win32.WidescreenFixesPack.sln /t:Psychonauts_WidescreenFix /p:Configuration=Release
+    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:Psychonauts_WidescreenFix /p:Configuration=Release
 
-    msbuild -m build/Win32.WidescreenFixesPack.sln /t:ThePunisher_WidescreenFix /p:Configuration=Release
+    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:ThePunisher_WidescreenFix /p:Configuration=Release
 
-    msbuild -m build/Win32.WidescreenFixesPack.sln /t:ResidentEvil\ResidentEvil0_FusionFix /p:Configuration=Release
+    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:ResidentEvil\ResidentEvil0_FusionFix /p:Configuration=Release
 
-    msbuild -m build/Win32.WidescreenFixesPack.sln /t:ResidentEvil\ResidentEvil_FusionFix /p:Configuration=Release
+    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:ResidentEvil\ResidentEvil_FusionFix /p:Configuration=Release
 
-    msbuild -m build/Win32.WidescreenFixesPack.sln /t:ResidentEvil\ResidentEvil5_FusionFix /p:Configuration=Release
+    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:ResidentEvil\ResidentEvil5_FusionFix /p:Configuration=Release
 
-    msbuild -m build/Win32.WidescreenFixesPack.sln /t:ResidentEvil\ResidentEvil6_FusionFix /p:Configuration=Release
+    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:ResidentEvil\ResidentEvil6_FusionFix /p:Configuration=Release
 
-    msbuild -m build/Win32.WidescreenFixesPack.sln /t:ResidentEvil\ResidentEvilRevelations_FusionFix /p:Configuration=Release
+    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:ResidentEvil\ResidentEvilRevelations_FusionFix /p:Configuration=Release
 
-    msbuild -m build/Win32.WidescreenFixesPack.sln /t:ResidentEvil\ResidentEvilRevelations2_FusionFix /p:Configuration=Release
+    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:ResidentEvil\ResidentEvilRevelations2_FusionFix /p:Configuration=Release
 
-    msbuild -m build/Win32.WidescreenFixesPack.sln /t:SplinterCell\SplinterCell_WidescreenFix /p:Configuration=Release
+    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:SplinterCell\SplinterCell_WidescreenFix /p:Configuration=Release
 
-    msbuild -m build/Win32.WidescreenFixesPack.sln /t:Scarface_FusionFix /p:Configuration=Release
+    REM msbuild -m build/Win32.WidescreenFixesPack.sln /t:Scarface_FusionFix /p:Configuration=Release
 
     msbuild -m build/Win32.WidescreenFixesPack.sln /t:SplinterCell\SplinterCellConviction_FusionFix /p:Configuration=Release
 
