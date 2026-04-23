@@ -2,12 +2,19 @@
 #include "d3d9.h"
 
 import ComVars;
+#ifdef _DEBUG
+import Speedhack;
+#endif
 
 std::once_flag of;
 
 SafetyHookInline shMainLoop = {};
 void __cdecl MainLoop(float TickerDifference)
 {
+    #ifdef _DEBUG
+    SetSpeed(1.0f);
+    #endif
+
     std::call_once(of, []()
     {
         WFP::onGameInitEvent().executeAll();
@@ -34,6 +41,10 @@ void __cdecl MainLoop(float TickerDifference)
 SafetyHookInline shMiniMainLoop = {};
 void __cdecl MiniMainLoop()
 {
+    #ifdef _DEBUG
+    SetSpeed(500.0f);
+    #endif
+
     std::call_once(of, []()
     {
         WFP::onGameInitEvent().executeAll();
@@ -46,6 +57,10 @@ void __cdecl MiniMainLoop()
 
 void Init()
 {
+    #ifdef _DEBUG
+    InitSpeedhack();
+    #endif
+
     auto pattern = hook::pattern("A1 ? ? ? ? 52 33 FF");
     if (!pattern.empty())
         hWnd.SetAddress(*pattern.get_first<HWND*>(1));

@@ -9,6 +9,16 @@ export module Misc;
 
 import ComVars;
 
+bool sub_61A5E0()
+{
+    return false;
+}
+
+char __fastcall sub_6B2A90(void* _this, void* edx)
+{
+    return 0;
+}
+
 static uint32_t ShadowsRes = 1024;
 static uint32_t ShadowsResX = 3072;
 static float fShadowsRes = 1024.0;
@@ -472,7 +482,6 @@ void Init4()
 
     bool bScaling = iniReader.ReadInteger("MAIN", "Scaling", 0) != 0;
 
-
     // HUD Refresh
     auto pattern = GetPattern("38 86 E3 00 00 00 5F");
     injector::MakeNOP(pattern.get_first(7), 2, true);
@@ -613,9 +622,18 @@ void Init4()
     // FOV Scaling
     if (bScaling)
     {
-        static constexpr double Corrected_Hor = 1.3f;
-        uint32_t* dword_76B7FF = hook::pattern("F2 0F 10 0D ? ? ? ? 0F B7 C5 F2 0F 2A").count(1).get(0).get<uint32_t>(55);
-        injector::WriteMemory(dword_76B7FF, &Corrected_Hor, true);
+        auto pattern = hook::pattern("F2 0F 59 0D ? ? ? ? 66 0F 5A C1 F3 0F 11 44 24");
+        if (!pattern.empty())
+        {
+            static const double Corrected_Hor = 1.3;
+            injector::WriteMemory(pattern.get_first(4), &Corrected_Hor, true);
+        }
+        else
+        {
+            static const float Corrected_Hor = 1.3f;
+            pattern = hook::pattern("F3 0F 59 0D ? ? ? ? F3 0F 59 05 ? ? ? ? F3 0F 11 4C 24");
+            injector::WriteMemory(pattern.get_first(4), &Corrected_Hor, true);
+        }
     }
 
     // FOV
@@ -814,14 +832,13 @@ void Init4()
         }
 
         // MainLoop float frametime (FPS lock) .rdata
-        float* flt_C05E7C = *pattern.count(1).get(0).get<float*>(0x5E);
         pattern = find_pattern("D9 05 ? ? ? ? D9 44 24 ? DF F1 DD D8 76 ? F3 0F 10 44 24 ? EB 08 F3 0F 10 05 ? ? ? ? F3 0F 11 44 24", "D9 05 ? ? ? ? D9 C9 DF F1 DD D8 76 ? F3 0F 10 44 24 ? EB 08"); //0x67962E location dereference
         injector::WriteMemory<float>(*pattern.get_first<float*>(2), FrameTime, true);
 
-
         // FullSpeedMode frametime (10x speed) .rdata
-        pattern = find_pattern("F3 0F 10 05 ? ? ? ? F3 0F 11 44 24 ? 6A ? 6A ? E8"); //0x679786 location dereference
-        injector::WriteMemory<float>(*pattern.get_first<float*>(4), FrameTime * 10.0f, true);
+        static float fFrameTime10x = FrameTime * 10.0f;
+        pattern = find_pattern("F3 0F 10 05 ? ? ? ? F3 0F 11 44 24 ? 6A 02"); //0x679786 location dereference
+        injector::WriteMemory(pattern.get_first(4), &fFrameTime10x, true);
 
         // Unknown frametime 1 .rdata
         pattern = find_pattern("D9 05 ? ? ? ? 8B 81 ? ? ? ? 83 EC 08");  //0x50FE5A anchor, 0x50FE68 location dereference
@@ -853,9 +870,17 @@ void Init4()
     bool bDisableMotionBlur = iniReader.ReadInteger("GRAPHICS", "DisableMotionBlur", 0) != 0;
     if (bDisableMotionBlur)
     {
-        uint32_t* dword_7B2972 = hook::pattern("F3 0F 7E 84 24 44 01 00 00 6A 0C 68 ? ? ? ? 8D 84 24 40 01 00 00 50").count(1).get(0).get<uint32_t>(0x35); //0x7B293D anchor, 0x7B2972 pointer write
-        uint32_t* dword_7B2AAC = hook::pattern("F3 0F 7E 84 24 44 01 00 00 6A 0C 68 ? ? ? ? 8D 84 24 40 01 00 00 50").count(1).get(0).get<uint32_t>(0x16F);
-        injector::MakeJMP(dword_7B2972, dword_7B2AAC, true);
+        auto pattern = hook::pattern("0F 85 ? ? ? ? 6A ? B9 ? ? ? ? E8 ? ? ? ? 85 C0");
+        injector::WriteMemory<uint16_t>(pattern.get_first(0), 0xE990, true); // jnz -> jmp
+    }
+
+    // Disable online login attempts
+    {
+        auto pattern = hook::pattern("E8 ? ? ? ? 84 C0 74 ? 39 5C 24 ? 75 ? 8B 0D");
+        static auto shsub_61A5E0 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), sub_61A5E0);
+
+        //pattern = hook::pattern("E8 ? ? ? ? 84 C0 75 ? E8 ? ? ? ? 84 C0 74");
+        //static auto shsub_6B2A90 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), sub_6B2A90);
     }
 }
 
