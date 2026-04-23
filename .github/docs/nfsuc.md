@@ -50,7 +50,7 @@
 - **Improve Scenery LOD** - increases visible scenery in the closest map section
 - **Disable Preculler** - disables precalculated culling
 - **Bruteforce Culling** - forces bruteforced culling type to reduce culled scenery
-- **Xbox 360 Gamma** - optional console gamma curve
+- **Console Gamma** - a custom gamma curve that creates a more contrasted image with deeper colors, similar to how some games looked on the Xbox 360
 <br clear="both">
 
 ---

@@ -40,7 +40,7 @@
 - **Custom Save Directory** - redirect user files to any subfolder in game directory
 - **Hide Debug Objects** - removes debug UI that is only visible in widescreen
 - **Audio Sample Rate** - override the game's default 44100 Hz if needed
-- **Xbox 360 Gamma** - optional console gamma curve
+- **Console Gamma** - a custom gamma curve that creates a more contrasted image with deeper colors, similar to how some games looked on the Xbox 360
 <br clear="both">
 
 ---

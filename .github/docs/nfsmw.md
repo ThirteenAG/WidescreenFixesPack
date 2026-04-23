@@ -52,7 +52,7 @@
 - **No Optical Drive** - allows the game to run without a disc present *(carried over from old fix)*
 - **High Spec Audio** - forces 44100 Hz sample rate regardless of registry settings
 - **Rain Droplet Scale** - adjusts the size of on-screen rain droplets
-- **Xbox 360 Gamma** - optional console gamma curve
+- **Console Gamma** – a custom gamma curve that produces a higher-contrast image with deeper colors (similar to the Xbox 360 versions of some games) and lets you select a matching gamma preset from the Xbox 360 version of NFS MW
 <br clear="both">
 
 <img src="https://thirteenag.github.io/screens/nfsmw/race5.jpg" width="360" align="left" style="margin: 0 24px 0px 0;" alt="Racing">

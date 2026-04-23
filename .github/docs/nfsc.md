@@ -50,7 +50,7 @@
 - **Rain Droplet Scale** - adjusts the size of on-screen rain droplets
 - **Motion Blur Toggle** - disable motion blur without losing other effects such as screen flashes or light trails
 - **Disable Contrails** - disables the wind effect behind the car
-- **Xbox 360 Gamma** - optional console gamma curve
+- **Console Gamma** - a custom gamma curve that creates a more contrasted image with deeper colors, similar to how some games looked on the Xbox 360
 <br clear="both">
 
 ---
