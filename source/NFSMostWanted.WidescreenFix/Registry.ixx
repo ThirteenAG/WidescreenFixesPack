@@ -51,6 +51,20 @@ public:
             mhSHGetFolderPathA = std::make_unique<FunctionHookMinHook>((uintptr_t)SHGetFolderPathA, (uintptr_t)SHGetFolderPathAHook);
             mhSHGetFolderPathA->create();
 
+            static std::string defaultLanguage = "English US";
+
+            HKEY hKeyOrig = nullptr;
+            if (RegOpenKeyA(HKEY_LOCAL_MACHINE, "Software\\EA Games\\Need for Speed Most Wanted", &hKeyOrig) == ERROR_SUCCESS)
+            {
+                char szLang[256] = {};
+                DWORD cbData = sizeof(szLang);
+                if (RegQueryValueExA(hKeyOrig, "Language", nullptr, nullptr, (LPBYTE)szLang, &cbData) == ERROR_SUCCESS && cbData > 1)
+                {
+                    defaultLanguage = szLang;
+                }
+                RegCloseKey(hKeyOrig);
+            }
+
             auto InstallRegistryInlineHooks = [](
                 decltype(&RegCloseKey)      fRegCloseKey,
                 decltype(&RegCreateKeyA)    fRegCreateKeyA,
@@ -193,7 +207,7 @@ public:
                 RegistryWrapper::AddDefault("CD Drive", "D:\\");
                 RegistryWrapper::AddDefault("CacheSize", "2936691712");
                 RegistryWrapper::AddDefault("SwapSize", "73400320");
-                RegistryWrapper::AddDefault("Language", "English");
+                RegistryWrapper::AddDefault("Language", defaultLanguage.c_str());
                 RegistryWrapper::AddDefault("StreamingInstall", "0");
                 RegistryWrapper::AddDefault("VTMode", "0");
                 RegistryWrapper::AddDefault("VERSION", "0");
@@ -254,7 +268,7 @@ public:
                 RegistryFallback::AddDefault("CD Drive", "D:\\");
                 RegistryFallback::AddDefault("CacheSize", "2936691712");
                 RegistryFallback::AddDefault("SwapSize", "73400320");
-                RegistryFallback::AddDefault("Language", "English");
+                RegistryFallback::AddDefault("Language", defaultLanguage.c_str());
                 RegistryFallback::AddDefault("StreamingInstall", "0");
                 RegistryFallback::AddDefault("VTMode", "0");
                 RegistryFallback::AddDefault("VERSION", "0");
