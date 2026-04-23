@@ -16,6 +16,7 @@
 
 - **Skip Intro** - enables faster loading by bypassing startup FMVs and login prompts
 - **Improved Windowed Mode** - makes windowed mode borderless and resizes the window to match the selected resolution
+- **Console Gamma** - a custom gamma curve that creates a more contrasted image with deeper colors, similar to how some games looked on the Xbox 360
 <br clear="both">
 
 ---
