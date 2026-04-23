@@ -18,7 +18,7 @@ class CPostFX
 {
 public:
     static inline bool bInitialized = false;
-    static inline bool bConsoleGammaEnabled = true;
+    static inline int nConsoleGammaEnabled = 1;
 
     static inline UINT nScreenWidth = 0;
     static inline UINT nScreenHeight = 0;
@@ -37,13 +37,17 @@ public:
         inline void GetHandles(ID3DXEffect* effect)
         {
             InputTex2D = effect->GetParameterByName(nullptr, "InputTex2D");
-            ConsoleGammaTechnique = effect->GetTechniqueByName("ConsoleGamma");
+
+            if (nConsoleGammaEnabled == 2)
+                ConsoleGammaTechnique = effect->GetTechniqueByName("MWGamma");
+            else
+                ConsoleGammaTechnique = effect->GetTechniqueByName("ConsoleGamma");
         }
     } static inline EffectHandles = {};
 
     static void RenderGamma(IDirect3DDevice9* device)
     {
-        if (!bConsoleGammaEnabled)
+        if (!nConsoleGammaEnabled)
             return;
 
         if (!bInitialized)
@@ -215,9 +219,9 @@ public:
         WFP::onInitEventAsync() += []()
         {
             CIniReader iniReader("");
-            CPostFX::bConsoleGammaEnabled = iniReader.ReadInteger("GRAPHICS", "ConsoleGamma", 1) != 0;
+            CPostFX::nConsoleGammaEnabled = std::clamp(iniReader.ReadInteger("GRAPHICS", "ConsoleGamma", 1), 0, 2);
 
-            if (!CPostFX::bConsoleGammaEnabled)
+            if (!CPostFX::nConsoleGammaEnabled)
                 return;
 
             WFP::onEndScene() += []()
