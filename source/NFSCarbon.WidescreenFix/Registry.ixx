@@ -57,6 +57,20 @@ public:
             mhSHGetFolderPathA = std::make_unique<FunctionHookMinHook>((uintptr_t)SHGetFolderPathA, (uintptr_t)SHGetFolderPathAHook);
             mhSHGetFolderPathA->create();
 
+            static std::string defaultLanguage = "English US";
+
+            HKEY hKeyOrig = nullptr;
+            if (RegOpenKeyA(HKEY_LOCAL_MACHINE, "Software\\Electronic Arts\\Need for Speed Carbon", &hKeyOrig) == ERROR_SUCCESS)
+            {
+                char szLang[256] = {};
+                DWORD cbData = sizeof(szLang);
+                if (RegQueryValueExA(hKeyOrig, "Language", nullptr, nullptr, (LPBYTE)szLang, &cbData) == ERROR_SUCCESS && cbData > 1)
+                {
+                    defaultLanguage = szLang;
+                }
+                RegCloseKey(hKeyOrig);
+            }
+
             auto InstallRegistryInlineHooks = [](
                 decltype(&RegCloseKey)      fRegCloseKey,
                 decltype(&RegCreateKeyA)    fRegCreateKeyA,
@@ -199,7 +213,7 @@ public:
                 RegistryWrapper::AddDefault("CD Drive", "D:\\");
                 RegistryWrapper::AddDefault("CacheSize", "5697825792");
                 RegistryWrapper::AddDefault("SwapSize", "73400320");
-                RegistryWrapper::AddDefault("Language", "English US");
+                RegistryWrapper::AddDefault("Language", defaultLanguage.c_str());
                 RegistryWrapper::AddDefault("StreamingInstall", "0");
                 RegistryWrapper::AddDefault("VERSION", "1");
                 RegistryWrapper::AddDefault("SIZE", "100");
@@ -262,7 +276,7 @@ public:
                 RegistryFallback::AddDefault("CD Drive", "D:\\");
                 RegistryFallback::AddDefault("CacheSize", "5697825792");
                 RegistryFallback::AddDefault("SwapSize", "73400320");
-                RegistryFallback::AddDefault("Language", "English US");
+                RegistryFallback::AddDefault("Language", defaultLanguage.c_str());
                 RegistryFallback::AddDefault("StreamingInstall", "0");
                 RegistryFallback::AddDefault("VERSION", "1");
                 RegistryFallback::AddDefault("SIZE", "100");
@@ -319,6 +333,28 @@ public:
                         RegistryFallback::RegDeleteKeyA,
                         RegistryFallback::RegEnumKeyA
                     );
+                }
+            }
+
+            auto szLanguage = iniReader.ReadString("LANGUAGE", "Language", "");
+            if (!szLanguage.empty())
+            {
+                HKEY hKey = nullptr;
+                if (bWriteSettingsToFile)
+                {
+                    if (RegistryWrapper::RegOpenKeyA(HKEY_LOCAL_MACHINE, "Software\\Electronic Arts\\Need for Speed Carbon", &hKey) == ERROR_SUCCESS)
+                    {
+                        RegistryWrapper::RegSetValueExA(hKey, "Language", 0, REG_SZ, (const BYTE*)szLanguage.c_str(), (DWORD)szLanguage.size() + 1);
+                        RegistryWrapper::RegCloseKey(hKey);
+                    }
+                }
+                else
+                {
+                    if (RegistryFallback::RegOpenKeyA(HKEY_LOCAL_MACHINE, "Software\\Electronic Arts\\Need for Speed Carbon", &hKey) == ERROR_SUCCESS)
+                    {
+                        RegistryFallback::RegSetValueExA(hKey, "Language", 0, REG_SZ, (const BYTE*)szLanguage.c_str(), (DWORD)szLanguage.size() + 1);
+                        RegistryFallback::RegCloseKey(hKey);
+                    }
                 }
             }
         };

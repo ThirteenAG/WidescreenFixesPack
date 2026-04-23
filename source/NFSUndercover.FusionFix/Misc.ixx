@@ -77,8 +77,8 @@ void InitRes()
     injector::MakeNOP(pattern.get_first(0), 5, true);
     injector::WriteMemory(*pattern.get_first<void*>(9), list3.size() - 1, true);//0x12AA194
 
-    pattern = GetPattern("68 D7 13 00 00");
-    injector::WriteMemory(pattern.get_first(24), &list3[0], true); //0x57A5B5
+    pattern = GetPattern("8B 14 8D ? ? ? ? ? ? 50");
+    injector::WriteMemory(pattern.get_first(3), &list3[0], true); //0x57A5B5
     pattern = GetPattern("8B 14 8D ? ? ? ? 8B 42 04 50");
     injector::WriteMemory(pattern.get_first(3), &list3[0], true); //0x57A5D1
     pattern = GetPattern("8B 04 8D ? ? ? ? 8B 50");

@@ -47,7 +47,13 @@ void __cdecl MiniMainLoop()
 void Init()
 {
     auto pattern = hook::pattern("A1 ? ? ? ? 52 33 FF");
-    hWnd.SetAddress(*pattern.get_first<HWND*>(1));
+    if (!pattern.empty())
+        hWnd.SetAddress(*pattern.get_first<HWND*>(1));
+    else
+    {
+        pattern = hook::pattern("B9 ? ? ? ? A3 ? ? ? ? E8 ? ? ? ? 8B 15");
+        hWnd.SetAddress((HWND*)(*pattern.get_first<uintptr_t>(1) + 0x18));
+    }
 
     pattern = hook::pattern("A1 ? ? ? ? F7 D8 1B C0 83 E0");
     dwWindowedMode.SetAddress(*pattern.get_first<uint32_t*>(1));
@@ -55,7 +61,7 @@ void Init()
     pattern = find_pattern("F3 0F 2A 44 24 ? 56", "F3 0F 2A 44 24 ? F3 0F 59 05 ? ? ? ? F3 0F 59 05 ? ? ? ? 56");
     shMainLoop = safetyhook::create_inline(pattern.get_first(), MainLoop);
 
-    pattern = find_pattern("51 A1 ? ? ? ? 50 E8 ? ? ? ? ? ? ? ? ? ? ? ? 83 C4 ? ? ? ? ? ? ? ? ? ? ? 76", "51 A1 ? ? ? ? 50 E8 ? ? ? ? ? ? ? ? ? ? ? ? ? ? 83 C4");
+    pattern = find_pattern("51 A1 ? ? ? ? 50 E8 ? ? ? ? ? ? ? ? ? ? ? ? 83 C4 ? ? ? ? ? ? ? ? ? ? ? 76", "51 A1 ? ? ? ? 50 E8 ? ? ? ? ? ? ? ? ? ? ? ? ? ? 83 C4", "51 E9 ? ? ? ? 50 E8");
     shMiniMainLoop = safetyhook::create_inline(pattern.get_first(), MiniMainLoop);
 
     pattern = hook::pattern("E8 ? ? ? ? 84 C0 F3 0F 10 54 24");

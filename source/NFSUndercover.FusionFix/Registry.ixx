@@ -54,6 +54,20 @@ public:
                 mhSHGetFolderPathA = std::make_unique<FunctionHookMinHook>((uintptr_t)SHGetFolderPathA, (uintptr_t)SHGetFolderPathAHook);
                 mhSHGetFolderPathA->create();
 
+                static std::string defaultLanguage = "Engish (US)";
+
+                HKEY hKeyOrig = nullptr;
+                if (RegOpenKeyA(HKEY_LOCAL_MACHINE, "Software\\EA Games\\Need for Speed Undercover", &hKeyOrig) == ERROR_SUCCESS)
+                {
+                    char szLang[256] = {};
+                    DWORD cbData = sizeof(szLang);
+                    if (RegQueryValueExA(hKeyOrig, "Language", nullptr, nullptr, (LPBYTE)szLang, &cbData) == ERROR_SUCCESS && cbData > 1)
+                    {
+                        defaultLanguage = szLang;
+                    }
+                    RegCloseKey(hKeyOrig);
+                }
+
                 auto InstallRegistryInlineHooks = [](
                     decltype(&RegCloseKey)      fRegCloseKey,
                     decltype(&RegCreateKeyA)    fRegCreateKeyA,
@@ -197,7 +211,7 @@ public:
                     RegistryWrapper::AddDefault("FirstTime", "0");
                     RegistryWrapper::AddDefault("CacheSize", "5697825792");
                     RegistryWrapper::AddDefault("SwapSize", "73400320");
-                    RegistryWrapper::AddDefault("Language", "Engish (US)");
+                    RegistryWrapper::AddDefault("Language", defaultLanguage.c_str());
                     RegistryWrapper::AddDefault("StreamingInstall", "0");
                     RegistryWrapper::AddDefault("g_CarEffects", "3");
                     RegistryWrapper::AddDefault("g_WorldFXLevel", "3");
@@ -269,7 +283,7 @@ public:
                     RegistryFallback::AddDefault("FirstTime", "0");
                     RegistryFallback::AddDefault("CacheSize", "5697825792");
                     RegistryFallback::AddDefault("SwapSize", "73400320");
-                    RegistryFallback::AddDefault("Language", "Engish (US)");
+                    RegistryFallback::AddDefault("Language", defaultLanguage.c_str());
                     RegistryFallback::AddDefault("StreamingInstall", "0");
                     RegistryFallback::AddDefault("g_CarEffects", "3");
                     RegistryFallback::AddDefault("g_WorldFXLevel", "3");

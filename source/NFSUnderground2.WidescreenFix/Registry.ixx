@@ -51,6 +51,20 @@ public:
             mhSHGetFolderPathA = std::make_unique<FunctionHookMinHook>((uintptr_t)SHGetFolderPathA, (uintptr_t)SHGetFolderPathAHook);
             mhSHGetFolderPathA->create();
 
+            static std::string defaultLanguage = "English US";
+
+            HKEY hKeyOrig = nullptr;
+            if (RegOpenKeyA(HKEY_LOCAL_MACHINE, "Software\\EA Games\\Need for Speed Underground 2", &hKeyOrig) == ERROR_SUCCESS)
+            {
+                char szLang[256] = {};
+                DWORD cbData = sizeof(szLang);
+                if (RegQueryValueExA(hKeyOrig, "Language", nullptr, nullptr, (LPBYTE)szLang, &cbData) == ERROR_SUCCESS && cbData > 1)
+                {
+                    defaultLanguage = szLang;
+                }
+                RegCloseKey(hKeyOrig);
+            }
+
             auto InstallRegistryInlineHooks = [](
                 decltype(&RegCloseKey)      fRegCloseKey,
                 decltype(&RegCreateKeyA)    fRegCreateKeyA,
@@ -193,7 +207,7 @@ public:
                 RegistryWrapper::AddDefault("CD Drive", "D:\\");
                 RegistryWrapper::AddDefault("CacheSize", "1879040000");
                 RegistryWrapper::AddDefault("SwapSize", "0");
-                RegistryWrapper::AddDefault("Language", "English US");
+                RegistryWrapper::AddDefault("Language", defaultLanguage.c_str());
                 RegistryWrapper::AddDefault("StreamingInstall", "0");
                 RegistryWrapper::AddDefault("g_CarEnvironmentMapEnable", "3");
                 RegistryWrapper::AddDefault("g_CarEnvironmentMapUpdateData", "1");
@@ -263,7 +277,7 @@ public:
                 RegistryFallback::AddDefault("CD Drive", "D:\\");
                 RegistryFallback::AddDefault("CacheSize", "1879040000");
                 RegistryFallback::AddDefault("SwapSize", "0");
-                RegistryFallback::AddDefault("Language", "English US");
+                RegistryFallback::AddDefault("Language", defaultLanguage.c_str());
                 RegistryFallback::AddDefault("StreamingInstall", "0");
                 RegistryFallback::AddDefault("g_CarEnvironmentMapEnable", "3");
                 RegistryFallback::AddDefault("g_CarEnvironmentMapUpdateData", "1");
