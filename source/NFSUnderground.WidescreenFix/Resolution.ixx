@@ -242,7 +242,7 @@ public:
             injector::WriteMemory<uint8_t>(pattern.get_first(2), (uint8_t)ResList.size() - 1, true);
 
             {
-                auto setResRef = [&](hook::pattern pat, int offset, std::vector<ProtectedGameRef<int32_t>>& targetVector)
+                auto setResRef = [](hook::pattern pattern, int offset, std::vector<ProtectedGameRef<int32_t>>& targetVector)
                 {
                     pattern.for_each_result([&](const hook::pattern_match& match)
                     {
