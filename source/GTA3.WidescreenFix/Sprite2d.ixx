@@ -103,8 +103,7 @@ static CRect ComputeContentRect(CSprite2d* sprite2d, const CRect* rect)
     return CRect(centerX - halfW, rect->bottom, centerX + halfW, rect->top);
 }
 
-SafetyHookInline shDrawRect1 = {};
-
+export SafetyHookInline shDrawRect1 = {};
 static void DrawPillarBars(const CRect& content, float top, float bottom)
 {
     g_drawingBars = true;
