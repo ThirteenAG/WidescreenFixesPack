@@ -9,6 +9,36 @@ export module Hud;
 import Skeleton;
 import Draw;
 import Sprite2d;
+import Camera;
+
+export namespace CHud
+{
+    GameRef<uint8_t> m_Wants_To_Draw_Hud([]() -> uint8_t*
+    {
+        auto pattern = find_pattern("80 3D ? ? ? ? ? 0F 84 ? ? ? ? 50 50 D9 83");
+        if (!pattern.empty())
+            return *pattern.get_first<uint8_t*>(2);
+        return nullptr;
+    });
+}
+
+namespace CRadar
+{
+    SafetyHookInline shShowRadarTrace = {};
+    void ShowRadarTrace(float x, float y, uint32_t size, uint8_t red, uint8_t green, uint8_t blue, uint8_t alpha)
+    {
+        if ((TheCamera->m_WideScreenOn || !CHud::m_Wants_To_Draw_Hud))
+            return;
+
+        auto col = CRGBA(red, green, blue, alpha);
+        auto black = CRGBA(0, 0, 0, alpha);
+        auto rect1 = CRect(x - SCREEN_SCALE_X(size + 1.0f), y - SCREEN_SCALE_Y(size + 1.0f), SCREEN_SCALE_X(size + 1.0f) + x, SCREEN_SCALE_Y(size + 1.0f) + y);
+        auto rect2 = CRect(x - SCREEN_SCALE_X(size), y - SCREEN_SCALE_Y(size), SCREEN_SCALE_X(size) + x, SCREEN_SCALE_Y(size) + y);
+
+        shDrawRect1.unsafe_ccall(&rect1, &black);
+        shDrawRect1.unsafe_ccall(&rect2, &col);
+    }
+}
 
 class Hud
 {
@@ -64,6 +94,9 @@ public:
                 g_wantsToMoveHudRight = false;
                 g_wantsToMoveHudLeft = false;
             });
+
+            pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? E9 ? ? ? ? 8D 84 20 ? ? ? ? FF 74 24");
+            CRadar::shShowRadarTrace = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), CRadar::ShowRadarTrace);
         };
     }
 } Hud;
