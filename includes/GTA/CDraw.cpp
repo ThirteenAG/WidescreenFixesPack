@@ -2,8 +2,8 @@
 #include "CDraw.h"
 
 extern RsGlobalType* RsGlobal;
-float*  CDraw::pfScreenAspectRatio;
-float*  CDraw::pfScreenFieldOfView;
+float* CDraw::pfScreenAspectRatio;
+float* CDraw::pfScreenFieldOfView;
 
 extern float fWideScreenWidthScaleDown;
 extern float fCustomAspectRatioHor, fCustomAspectRatioVer;
@@ -44,12 +44,12 @@ void CDraw::SetFOV(float fFactor)
     }
 }
 
-CEXP void __cdecl GetCurrentFOV(float* out)
+void __cdecl LegacyGetCurrentFOV(float* out)
 {
     *out = *CDraw::pfScreenFieldOfView;
 }
 
-CEXP void __cdecl SetFOVMultiplier(void* hash, float value)
+void __cdecl LegacySetFOVMultiplier(void* hash, float value)
 {
     if (value <= 0.0f)
         value = 1.0f;
@@ -60,7 +60,7 @@ CEXP void __cdecl SetFOVMultiplier(void* hash, float value)
     }
 }
 
-CEXP void __cdecl RemoveFOVMultiplier(void* hash)
+void __cdecl LegacyRemoveFOVMultiplier(void* hash)
 {
     FOVMods.erase(hash);
 }
