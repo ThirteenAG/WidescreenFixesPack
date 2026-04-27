@@ -6,6 +6,7 @@ module;
 export module CarCtrl;
 
 import Skeleton;
+import Camera;
 
 class CarCtrl
 {
