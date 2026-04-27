@@ -315,7 +315,6 @@ void __cdecl ShowRadarTrace(float x, float y, unsigned int size, uint8_t red, ui
 }
 
 SafetyHookInline shDrawBordersForWideScreen{};
-
 void __fastcall DrawBordersForWideScreen(CCamera* camera, void* edx)
 {
     g_skipXCorrection = true;
