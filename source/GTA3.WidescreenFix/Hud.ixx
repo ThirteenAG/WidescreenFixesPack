@@ -95,8 +95,31 @@ public:
                 g_wantsToMoveHudLeft = false;
             });
 
+            pattern = hook::pattern("E8 ? ? ? ? 59 E8 ? ? ? ? 6A ? E8 ? ? ? ? A1");
+            static auto HudDrawAfterFade3 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            {
+                g_wantsToMoveHudRight = true;
+                g_wantsToMoveHudLeft = false;
+            });
+
+            pattern = hook::pattern("83 C4 ? EB ? C7 05 ? ? ? ? ? ? ? ? 83 C4");
+            static auto HudDrawAfterFade4 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            {
+                g_wantsToMoveHudRight = false;
+                g_wantsToMoveHudLeft = false;
+            });
+
             pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? E9 ? ? ? ? 8D 84 20 ? ? ? ? FF 74 24");
             CRadar::shShowRadarTrace = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), CRadar::ShowRadarTrace);
+
+            //static int SubtitleConstraint = 640;
+            //pattern = hook::pattern("8B 0D ? ? ? ? 89 4C 24 ? 50");
+            //injector::WriteMemory(pattern.get_first(2), &SubtitleConstraint, true);
+            //
+            //onResChange() += [](int Width, int Height)
+            //{
+            //    SubtitleConstraint = Width - (-fWidescreenHudOffset * 2.0f);
+            //};
         };
     }
 } Hud;
