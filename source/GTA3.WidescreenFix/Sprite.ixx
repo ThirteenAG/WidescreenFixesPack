@@ -10,9 +10,9 @@ import Camera;
 import Skeleton;
 
 SafetyHookInline shCalcScreenCoors = {};
-bool CalcScreenCoors(const RwV3d& in, RwV3d* out, float* outw, float* outh, bool farclip)
+bool __cdecl CalcScreenCoors(const RwV3d* in, RwV3d* out, float* outw, float* outh, bool farclip)
 {
-    CVector viewvec = TheCamera->m_viewMatrix * in;
+    CVector viewvec = TheCamera->m_viewMatrix * *in;
     *out = viewvec;
     if (out->z <= CDraw::GetNearClipZ() + 1.0f)
         return false;

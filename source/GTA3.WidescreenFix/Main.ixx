@@ -10,7 +10,6 @@ import Draw;
 import Skeleton;
 import Camera;
 
-using RwCamera = void;
 using tCameraSize = void(__cdecl*)(RwCamera*, RwRect*, float, float);
 
 class Main

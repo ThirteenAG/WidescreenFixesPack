@@ -286,6 +286,12 @@ public:
                 injector::WriteMemory<uint8_t>(pattern.get_first(3), 0x01, true);
                 injector::WriteMemory<uint8_t>(pattern.get_first(5), 0x01, true);
 
+                //mission failed text shadow color
+                pattern = hook::pattern("6A ? 6A ? 6A ? ? ? E8 ? ? ? ? 8D 84 24 ? ? ? ? 50");//508BFA
+                injector::WriteMemory<uint8_t>(pattern.get_first(1), 0x01, true);
+                injector::WriteMemory<uint8_t>(pattern.get_first(3), 0x01, true);
+                injector::WriteMemory<uint8_t>(pattern.get_first(5), 0x01, true);
+
                 //pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? D9 05 ? ? ? ? D8 4C 24 04 D9 3C 24");
                 //injector::WriteMemory(pattern.get(0).get<uint32_t>(1), 0xFFFF885F, true); //0x50948D text box background disable
                 //
