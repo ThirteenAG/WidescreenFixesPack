@@ -45,7 +45,13 @@ struct RwV2d
     float Normalise()
     {
         float l = Length();
-        if (l > 0.f) { x /= l; y /= l; }
+        if (l > 0.f)
+        {
+            x /= l;
+            y /= l;
+        }
+        else
+            x = 1.0f;
         return l;
     }
 
@@ -95,6 +101,7 @@ struct RwV3d
     {
         float l = Length();
         if (l > 0.f) { x /= l; y /= l; z /= l; }
+        else x = 1.0f;
         return l;
     }
 
@@ -365,249 +372,535 @@ public:
     union
     {
         float f[4][4];
-        struct { float rx, ry, rz, rw, fx, fy, fz, fw, ux, uy, uz, uw, px, py, pz, pw; };
+        struct
+        {
+            float rx, ry, rz, rw;
+            float fx, fy, fz, fw;
+            float ux, uy, uz, uw;
+            float px, py, pz, pw;
+        };
     };
 
     RwMatrix* m_attachment;
-    bool      m_hasRwMatrix;
+    bool m_hasRwMatrix; // are we the owner?
 
-    CMatrix() : m_attachment(nil), m_hasRwMatrix(false) {}
-
-    CMatrix(CMatrix const& m) : m_attachment(nil), m_hasRwMatrix(false) { *this = m; }
-
-    CMatrix(RwMatrix* matrix, bool owner = false) : m_attachment(nil), m_hasRwMatrix(false)
+    CMatrix(void);
+    CMatrix(CMatrix const& m);
+    CMatrix(RwMatrix* matrix, bool owner = false);
+    CMatrix(float scale)
     {
-        Attach(matrix, owner);
-    }
-
-    CMatrix(float scale) : m_attachment(nil), m_hasRwMatrix(false) { SetScale(scale); }
-
-    ~CMatrix()
-    {
-        if (m_hasRwMatrix && m_attachment)
-            RwMatrixDestroy(m_attachment);
-    }
-
-    void Attach(RwMatrix* matrix, bool owner = false)
-    {
-        if (m_attachment && m_hasRwMatrix)
-            RwMatrixDestroy(m_attachment);
-        m_attachment = matrix;
-        m_hasRwMatrix = owner;
-        Update();
-    }
-
-    void AttachRW(RwMatrix* matrix, bool owner = false)
-    {
-        if (m_hasRwMatrix && m_attachment)
-            RwMatrixDestroy(m_attachment);
-        m_attachment = matrix;
-        m_hasRwMatrix = owner;
-        UpdateRW();
-    }
-
-    void Detach()
-    {
-        if (m_hasRwMatrix && m_attachment)
-            RwMatrixDestroy(m_attachment);
         m_attachment = nil;
+        m_hasRwMatrix = false;
+        SetScale(scale);
     }
-
-    void Update()
-    {
-        GetRight() = m_attachment->right;
-        GetForward() = m_attachment->up;
-        GetUp() = m_attachment->at;
-        GetPosition() = m_attachment->pos;
-    }
-
-    void UpdateRW()
-    {
-        if (m_attachment)
-        {
-            m_attachment->right = GetRight();
-            m_attachment->up = GetForward();
-            m_attachment->at = GetUp();
-            m_attachment->pos = GetPosition();
-            RwMatrixUpdate(m_attachment);
-        }
-    }
-
-    void operator=(CMatrix const& rhs)
-    {
-        memcpy(this, &rhs, sizeof(f));
-        if (m_attachment) UpdateRW();
-    }
-
-    void CopyOnlyMatrix(const CMatrix& other) { memcpy(this, &other, sizeof(f)); }
-
-    CMatrix& operator+=(CMatrix const& rhs)
-    {
-        GetRight() += rhs.GetRight();
-        GetForward() += rhs.GetForward();
-        GetUp() += rhs.GetUp();
-        GetPosition() += rhs.GetPosition();
-        return *this;
-    }
-
+    ~CMatrix(void);
+    void Attach(RwMatrix* matrix, bool owner = false);
+    void AttachRW(RwMatrix* matrix, bool owner = false);
+    void Detach(void);
+    void Update(void);
+    void UpdateRW(void);
+    void operator=(CMatrix const& rhs);
+    CMatrix& operator+=(CMatrix const& rhs);
     CMatrix& operator*=(CMatrix const& rhs);
 
-    CVector& GetPosition() { return *(CVector*)&px; }
-    CVector& GetRight() { return *(CVector*)&rx; }
-    CVector& GetForward() { return *(CVector*)&fx; }
-    CVector& GetUp() { return *(CVector*)&ux; }
-    const CVector& GetPosition() const { return *(CVector*)&px; }
-    const CVector& GetRight()    const { return *(CVector*)&rx; }
-    const CVector& GetForward()  const { return *(CVector*)&fx; }
-    const CVector& GetUp()       const { return *(CVector*)&ux; }
+    CVector& GetPosition(void) { return *(CVector*)&px; }
+    CVector& GetRight(void) { return *(CVector*)&rx; }
+    CVector& GetForward(void) { return *(CVector*)&fx; }
+    CVector& GetUp(void) { return *(CVector*)&ux; }
 
-    void SetUnity()
+    const CVector& GetPosition(void) const { return *(CVector*)&px; }
+    const CVector& GetRight(void) const { return *(CVector*)&rx; }
+    const CVector& GetForward(void) const { return *(CVector*)&fx; }
+    const CVector& GetUp(void) const { return *(CVector*)&ux; }
+
+
+    void SetTranslate(float x, float y, float z);
+    void SetTranslate(const CVector& trans) { SetTranslate(trans.x, trans.y, trans.z); }
+    void Translate(float x, float y, float z)
     {
-        rx = 1.f; ry = 0.f; rz = 0.f;
-        fx = 0.f; fy = 1.f; fz = 0.f;
-        ux = 0.f; uy = 0.f; uz = 1.f;
-        px = 0.f; py = 0.f; pz = 0.f;
+        px += x;
+        py += y;
+        pz += z;
     }
+    void Translate(const CVector& trans) { Translate(trans.x, trans.y, trans.z); }
 
-    void ResetOrientation()
-    {
-        rx = 1.f; ry = 0.f; rz = 0.f;
-        fx = 0.f; fy = 1.f; fz = 0.f;
-        ux = 0.f; uy = 0.f; uz = 1.f;
-    }
-
-    void SetScale(float s)
-    {
-        rx = s;   ry = 0.f; rz = 0.f;
-        fx = 0.f; fy = s;   fz = 0.f;
-        ux = 0.f; uy = 0.f; uz = s;
-        px = 0.f; py = 0.f; pz = 0.f;
-    }
-
-    void Scale(float s)
+    void SetScale(float s);
+    void Scale(float scale)
     {
         for (int i = 0; i < 3; i++)
+            #ifdef FIX_BUGS // BUGFIX from VC
             for (int j = 0; j < 3; j++)
-                f[i][j] *= s;
+                #else
+            for (int j = 0; j < 4; j++)
+                #endif
+                f[i][j] *= scale;
     }
 
-    void SetTranslate(float x, float y, float z)
-    {
-        rx = 1.f; ry = 0.f; rz = 0.f;
-        fx = 0.f; fy = 1.f; fz = 0.f;
-        ux = 0.f; uy = 0.f; uz = 1.f;
-        px = x;   py = y;   pz = z;
-    }
-    void SetTranslate(const CVector& t) { SetTranslate(t.x, t.y, t.z); }
-    void Translate(float x, float y, float z) { px += x; py += y; pz += z; }
-    void Translate(const CVector& t) { Translate(t.x, t.y, t.z); }
 
-    void SetTranslateOnly(float x, float y, float z) { px = x; py = y; pz = z; }
-    void SetTranslateOnly(const CVector& p) { SetTranslateOnly(p.x, p.y, p.z); }
+    void SetRotateXOnly(float angle);
+    void SetRotateYOnly(float angle);
+    void SetRotateZOnly(float angle);
+    void SetRotateX(float angle);
+    void SetRotateY(float angle);
+    void SetRotateZ(float angle);
+    void SetRotate(float xAngle, float yAngle, float zAngle);
+    void Rotate(float x, float y, float z);
+    void RotateX(float x);
+    void RotateY(float y);
+    void RotateZ(float z);
 
-    void SetRotateXOnly(float angle)
+    void Reorthogonalise(void);
+    void CopyOnlyMatrix(const CMatrix& other);
+    void SetUnity(void);
+    void ResetOrientation(void);
+    void SetTranslateOnly(float x, float y, float z)
     {
-        float c = Cos(angle), s = Sin(angle);
-        rx = 1.f; ry = 0.f; rz = 0.f;
-        fx = 0.f; fy = c;   fz = s;
-        ux = 0.f; uy = -s;  uz = c;
+        px = x;
+        py = y;
+        pz = z;
     }
-    void SetRotateYOnly(float angle)
+    void SetTranslateOnly(const CVector& pos)
     {
-        float c = Cos(angle), s = Sin(angle);
-        rx = c;   ry = 0.f; rz = -s;
-        fx = 0.f; fy = 1.f; fz = 0.f;
-        ux = s;   uy = 0.f; uz = c;
+        SetTranslateOnly(pos.x, pos.y, pos.z);
     }
-    void SetRotateZOnly(float angle)
-    {
-        float c = Cos(angle), s = Sin(angle);
-        rx = c;   ry = s;   rz = 0.f;
-        fx = -s;  fy = c;   fz = 0.f;
-        ux = 0.f; uy = 0.f; uz = 1.f;
-    }
-    void SetRotateX(float a) { SetRotateXOnly(a); px = 0.f; py = 0.f; pz = 0.f; }
-    void SetRotateY(float a) { SetRotateYOnly(a); px = 0.f; py = 0.f; pz = 0.f; }
-    void SetRotateZ(float a) { SetRotateZOnly(a); px = 0.f; py = 0.f; pz = 0.f; }
-
-    void SetRotate(float xAngle, float yAngle, float zAngle)
-    {
-        float cX = Cos(xAngle), sX = Sin(xAngle);
-        float cY = Cos(yAngle), sY = Sin(yAngle);
-        float cZ = Cos(zAngle), sZ = Sin(zAngle);
-        rx = cZ * cY - (sZ * sX) * sY;
-        ry = (cZ * sX) * sY + sZ * cY;
-        rz = -cX * sY;
-        fx = -sZ * cX;
-        fy = cZ * cX;
-        fz = sX;
-        ux = (sZ * sX) * cY + cZ * sY;
-        uy = sZ * sY - (cZ * sX) * cY;
-        uz = cX * cY;
-        px = 0.f; py = 0.f; pz = 0.f;
-    }
-
-    void RotateX(float x)
-    {
-        float c = Cos(x), s = Sin(x);
-        float _ry = ry, _rz = rz, _fy = fy, _fz = fz, _uy = uy, _uz = uz, _py = py, _pz = pz;
-        ry = c * _ry - s * _rz; rz = c * _rz + s * _ry;
-        fy = c * _fy - s * _fz; fz = c * _fz + s * _fy;
-        uy = c * _uy - s * _uz; uz = c * _uz + s * _uy;
-        py = c * _py - s * _pz; pz = c * _pz + s * _py;
-    }
-
-    void RotateY(float y)
-    {
-        float c = Cos(y), s = Sin(y);
-        float _rx = rx, _rz = rz, _fx = fx, _fz = fz, _ux = ux, _uz = uz, _px = px, _pz = pz;
-        rx = c * _rx + s * _rz; rz = c * _rz - s * _rx;
-        fx = c * _fx + s * _fz; fz = c * _fz - s * _fx;
-        ux = c * _ux + s * _uz; uz = c * _uz - s * _ux;
-        px = c * _px + s * _pz; pz = c * _pz - s * _px;
-    }
-
-    void RotateZ(float z)
-    {
-        float c = Cos(z), s = Sin(z);
-        float _rx = rx, _ry = ry, _fx = fx, _fy = fy, _ux = ux, _uy = uy, _px = px, _py = py;
-        rx = c * _rx - s * _ry; ry = c * _ry + s * _rx;
-        fx = c * _fx - s * _fy; fy = c * _fy + s * _fx;
-        ux = c * _ux - s * _uy; uy = c * _uy + s * _ux;
-        px = c * _px - s * _py; py = c * _py + s * _px;
-    }
-
-    void Rotate(float x, float y, float z)
-    {
-        float cX = Cos(x), sX = Sin(x), cY = Cos(y), sY = Sin(y), cZ = Cos(z), sZ = Sin(z);
-        float _rx = rx, _ry = ry, _rz = rz, _fx = fx, _fy = fy, _fz = fz;
-        float _ux = ux, _uy = uy, _uz = uz, _px = px, _py = py, _pz = pz;
-        float x1 = cZ * cY - (sZ * sX) * sY, x2 = (cZ * sX) * sY + sZ * cY, x3 = -cX * sY;
-        float y1 = -sZ * cX, y2 = cZ * cX, y3 = sX;
-        float z1 = (sZ * sX) * cY + cZ * sY, z2 = sZ * sY - (cZ * sX) * cY, z3 = cX * cY;
-        rx = x1 * _rx + y1 * _ry + z1 * _rz; ry = x2 * _rx + y2 * _ry + z2 * _rz; rz = x3 * _rx + y3 * _ry + z3 * _rz;
-        fx = x1 * _fx + y1 * _fy + z1 * _fz; fy = x2 * _fx + y2 * _fy + z2 * _fz; fz = x3 * _fx + y3 * _fy + z3 * _fz;
-        ux = x1 * _ux + y1 * _uy + z1 * _uz; uy = x2 * _ux + y2 * _uy + z2 * _uz; uz = x3 * _ux + y3 * _uy + z3 * _uz;
-        px = x1 * _px + y1 * _py + z1 * _pz; py = x2 * _px + y2 * _py + z2 * _pz; pz = x3 * _px + y3 * _py + z3 * _pz;
-    }
-
-    void Reorthogonalise()
-    {
-        CVector& r = GetRight();
-        CVector& fw = GetForward();
-        CVector& u = GetUp();
-        u = CrossProduct(r, fw); u.Normalise();
-        r = CrossProduct(fw, u); r.Normalise();
-        fw = CrossProduct(u, r);
-    }
-
     void CheckIntegrity() {}
 };
 
-inline CMatrix& CMatrix::operator*=(CMatrix const& rhs) { *this = *this * rhs; return *this; }
+inline CVector MultiplyInverse(const CMatrix& mat, const CVector& vec)
+{
+    CVector v(vec.x - mat.px, vec.y - mat.py, vec.z - mat.pz);
+    return CVector(
+        mat.rx * v.x + mat.ry * v.y + mat.rz * v.z,
+        mat.fx * v.x + mat.fy * v.y + mat.fz * v.z,
+        mat.ux * v.x + mat.uy * v.y + mat.uz * v.z);
+}
+
+inline CVector Multiply3x3(const CMatrix& mat, const CVector& vec)
+{
+    // TODO: VU0 code
+    return CVector(mat.rx * vec.x + mat.fx * vec.y + mat.ux * vec.z,
+        mat.ry * vec.x + mat.fy * vec.y + mat.uy * vec.z,
+        mat.rz * vec.x + mat.fz * vec.y + mat.uz * vec.z);
+}
+
+inline CVector Multiply3x3(const CVector& vec, const CMatrix& mat)
+{
+    return CVector(mat.rx * vec.x + mat.ry * vec.y + mat.rz * vec.z,
+        mat.fx * vec.x + mat.fy * vec.y + mat.fz * vec.z,
+        mat.ux * vec.x + mat.uy * vec.y + mat.uz * vec.z);
+}
+
+inline CVector operator*(const CMatrix& mat, const CVector& vec)
+{
+    // TODO: VU0 code
+    return CVector(mat.rx * vec.x + mat.fx * vec.y + mat.ux * vec.z + mat.px,
+        mat.ry * vec.x + mat.fy * vec.y + mat.uy * vec.z + mat.py,
+        mat.rz * vec.x + mat.fz * vec.y + mat.uz * vec.z + mat.pz);
+}
+
+inline CMatrix::CMatrix(void)
+{
+    m_attachment = nil;
+    m_hasRwMatrix = false;
+}
+
+inline CMatrix::CMatrix(CMatrix const& m)
+{
+    m_attachment = nil;
+    m_hasRwMatrix = false;
+    *this = m;
+}
+
+inline CMatrix::CMatrix(RwMatrix* matrix, bool owner)
+{
+    m_attachment = nil;
+    Attach(matrix, owner);
+}
+
+inline CMatrix::~CMatrix(void)
+{
+    if (m_hasRwMatrix && m_attachment)
+        RwMatrixDestroy(m_attachment);
+}
+
+inline void CMatrix::Attach(RwMatrix* matrix, bool owner)
+{
+    if (m_attachment && m_hasRwMatrix)
+        RwMatrixDestroy(m_attachment);
+    m_attachment = matrix;
+    m_hasRwMatrix = owner;
+    Update();
+}
+
+inline void CMatrix::AttachRW(RwMatrix* matrix, bool owner)
+{
+    if (m_hasRwMatrix && m_attachment)
+        RwMatrixDestroy(m_attachment);
+    m_attachment = matrix;
+    m_hasRwMatrix = owner;
+    UpdateRW();
+}
+
+inline void CMatrix::Detach(void)
+{
+    if (m_hasRwMatrix && m_attachment)
+        RwMatrixDestroy(m_attachment);
+    m_attachment = nil;
+}
+
+inline void CMatrix::Update(void)
+{
+    GetRight() = m_attachment->right;
+    GetForward() = m_attachment->up;
+    GetUp() = m_attachment->at;
+    GetPosition() = m_attachment->pos;
+}
+
+inline void CMatrix::UpdateRW(void)
+{
+    if (m_attachment)
+    {
+        m_attachment->right = GetRight();
+        m_attachment->up = GetForward();
+        m_attachment->at = GetUp();
+        m_attachment->pos = GetPosition();
+        RwMatrixUpdate(m_attachment);
+    }
+}
+
+inline void CMatrix::operator=(CMatrix const& rhs)
+{
+    memcpy(this, &rhs, sizeof(f));
+    if (m_attachment)
+        UpdateRW();
+}
+
+inline void CMatrix::CopyOnlyMatrix(const CMatrix& other)
+{
+    memcpy(this, &other, sizeof(f));
+}
+
+inline CMatrix& CMatrix::operator+=(CMatrix const& rhs)
+{
+    GetRight() += rhs.GetRight();
+    GetForward() += rhs.GetForward();
+    GetUp() += rhs.GetUp();
+    GetPosition() += rhs.GetPosition();
+    return *this;
+}
+
+inline void CMatrix::SetUnity(void)
+{
+    rx = 1.0f;
+    ry = 0.0f;
+    rz = 0.0f;
+    fx = 0.0f;
+    fy = 1.0f;
+    fz = 0.0f;
+    ux = 0.0f;
+    uy = 0.0f;
+    uz = 1.0f;
+    px = 0.0f;
+    py = 0.0f;
+    pz = 0.0f;
+}
+
+inline void CMatrix::ResetOrientation(void)
+{
+    rx = 1.0f;
+    ry = 0.0f;
+    rz = 0.0f;
+    fx = 0.0f;
+    fy = 1.0f;
+    fz = 0.0f;
+    ux = 0.0f;
+    uy = 0.0f;
+    uz = 1.0f;
+}
+
+inline void CMatrix::SetScale(float s)
+{
+    rx = s;
+    ry = 0.0f;
+    rz = 0.0f;
+
+    fx = 0.0f;
+    fy = s;
+    fz = 0.0f;
+
+    ux = 0.0f;
+    uy = 0.0f;
+    uz = s;
+
+    px = 0.0f;
+    py = 0.0f;
+    pz = 0.0f;
+}
+
+inline void CMatrix::SetTranslate(float x, float y, float z)
+{
+    rx = 1.0f;
+    ry = 0.0f;
+    rz = 0.0f;
+
+    fx = 0.0f;
+    fy = 1.0f;
+    fz = 0.0f;
+
+    ux = 0.0f;
+    uy = 0.0f;
+    uz = 1.0f;
+
+    px = x;
+    py = y;
+    pz = z;
+}
+
+inline void CMatrix::SetRotateXOnly(float angle)
+{
+    float c = Cos(angle);
+    float s = Sin(angle);
+
+    rx = 1.0f;
+    ry = 0.0f;
+    rz = 0.0f;
+
+    fx = 0.0f;
+    fy = c;
+    fz = s;
+
+    ux = 0.0f;
+    uy = -s;
+    uz = c;
+}
+
+inline void CMatrix::SetRotateYOnly(float angle)
+{
+    float c = Cos(angle);
+    float s = Sin(angle);
+
+    rx = c;
+    ry = 0.0f;
+    rz = -s;
+
+    fx = 0.0f;
+    fy = 1.0f;
+    fz = 0.0f;
+
+    ux = s;
+    uy = 0.0f;
+    uz = c;
+}
+
+inline void CMatrix::SetRotateZOnly(float angle)
+{
+    float c = Cos(angle);
+    float s = Sin(angle);
+
+    rx = c;
+    ry = s;
+    rz = 0.0f;
+
+    fx = -s;
+    fy = c;
+    fz = 0.0f;
+
+    ux = 0.0f;
+    uy = 0.0f;
+    uz = 1.0f;
+}
+
+inline void CMatrix::SetRotateX(float angle)
+{
+    SetRotateXOnly(angle);
+    px = 0.0f;
+    py = 0.0f;
+    pz = 0.0f;
+}
+
+
+inline void CMatrix::SetRotateY(float angle)
+{
+    SetRotateYOnly(angle);
+    px = 0.0f;
+    py = 0.0f;
+    pz = 0.0f;
+}
+
+inline void CMatrix::SetRotateZ(float angle)
+{
+    SetRotateZOnly(angle);
+    px = 0.0f;
+    py = 0.0f;
+    pz = 0.0f;
+}
+
+inline void CMatrix::SetRotate(float xAngle, float yAngle, float zAngle)
+{
+    float cX = Cos(xAngle);
+    float sX = Sin(xAngle);
+    float cY = Cos(yAngle);
+    float sY = Sin(yAngle);
+    float cZ = Cos(zAngle);
+    float sZ = Sin(zAngle);
+
+    rx = cZ * cY - (sZ * sX) * sY;
+    ry = (cZ * sX) * sY + sZ * cY;
+    rz = -cX * sY;
+
+    fx = -sZ * cX;
+    fy = cZ * cX;
+    fz = sX;
+
+    ux = (sZ * sX) * cY + cZ * sY;
+    uy = sZ * sY - (cZ * sX) * cY;
+    uz = cX * cY;
+
+    px = 0.0f;
+    py = 0.0f;
+    pz = 0.0f;
+}
+
+inline void CMatrix::RotateX(float x)
+{
+    float c = Cos(x);
+    float s = Sin(x);
+
+    float ry = this->ry;
+    float rz = this->rz;
+    float uy = this->fy;
+    float uz = this->fz;
+    float ay = this->uy;
+    float az = this->uz;
+    float py = this->py;
+    float pz = this->pz;
+
+    this->ry = c * ry - s * rz;
+    this->rz = c * rz + s * ry;
+    this->fy = c * uy - s * uz;
+    this->fz = c * uz + s * uy;
+    this->uy = c * ay - s * az;
+    this->uz = c * az + s * ay;
+    this->py = c * py - s * pz;
+    this->pz = c * pz + s * py;
+}
+
+inline void CMatrix::RotateY(float y)
+{
+    float c = Cos(y);
+    float s = Sin(y);
+
+    float rx = this->rx;
+    float rz = this->rz;
+    float ux = this->fx;
+    float uz = this->fz;
+    float ax = this->ux;
+    float az = this->uz;
+    float px = this->px;
+    float pz = this->pz;
+
+    this->rx = c * rx + s * rz;
+    this->rz = c * rz - s * rx;
+    this->fx = c * ux + s * uz;
+    this->fz = c * uz - s * ux;
+    this->ux = c * ax + s * az;
+    this->uz = c * az - s * ax;
+    this->px = c * px + s * pz;
+    this->pz = c * pz - s * px;
+}
+
+inline void CMatrix::RotateZ(float z)
+{
+    float c = Cos(z);
+    float s = Sin(z);
+
+    float ry = this->ry;
+    float rx = this->rx;
+    float uy = this->fy;
+    float ux = this->fx;
+    float ay = this->uy;
+    float ax = this->ux;
+    float py = this->py;
+    float px = this->px;
+
+    this->rx = c * rx - s * ry;
+    this->ry = c * ry + s * rx;
+    this->fx = c * ux - s * uy;
+    this->fy = c * uy + s * ux;
+    this->ux = c * ax - s * ay;
+    this->uy = c * ay + s * ax;
+    this->px = c * px - s * py;
+    this->py = c * py + s * px;
+}
+
+inline void CMatrix::Rotate(float x, float y, float z)
+{
+    float cX = Cos(x);
+    float sX = Sin(x);
+    float cY = Cos(y);
+    float sY = Sin(y);
+    float cZ = Cos(z);
+    float sZ = Sin(z);
+
+    float rx = this->rx;
+    float ry = this->ry;
+    float rz = this->rz;
+    float ux = this->fx;
+    float uy = this->fy;
+    float uz = this->fz;
+    float ax = this->ux;
+    float ay = this->uy;
+    float az = this->uz;
+    float px = this->px;
+    float py = this->py;
+    float pz = this->pz;
+
+    float x1 = cZ * cY - (sZ * sX) * sY;
+    float x2 = (cZ * sX) * sY + sZ * cY;
+    float x3 = -cX * sY;
+    float y1 = -sZ * cX;
+    float y2 = cZ * cX;
+    float y3 = sX;
+    float z1 = (sZ * sX) * cY + cZ * sY;
+    float z2 = sZ * sY - (cZ * sX) * cY;
+    float z3 = cX * cY;
+
+    this->rx = x1 * rx + y1 * ry + z1 * rz;
+    this->ry = x2 * rx + y2 * ry + z2 * rz;
+    this->rz = x3 * rx + y3 * ry + z3 * rz;
+    this->fx = x1 * ux + y1 * uy + z1 * uz;
+    this->fy = x2 * ux + y2 * uy + z2 * uz;
+    this->fz = x3 * ux + y3 * uy + z3 * uz;
+    this->ux = x1 * ax + y1 * ay + z1 * az;
+    this->uy = x2 * ax + y2 * ay + z2 * az;
+    this->uz = x3 * ax + y3 * ay + z3 * az;
+    this->px = x1 * px + y1 * py + z1 * pz;
+    this->py = x2 * px + y2 * py + z2 * pz;
+    this->pz = x3 * px + y3 * py + z3 * pz;
+}
+
+inline CMatrix& CMatrix::operator*=(CMatrix const& rhs)
+{
+    // TODO: VU0 code
+    *this = *this * rhs;
+    return *this;
+}
+
+inline void CMatrix::Reorthogonalise(void)
+{
+    CVector& r = GetRight();
+    CVector& f = GetForward();
+    CVector& u = GetUp();
+    u = CrossProduct(r, f);
+    u.Normalise();
+    r = CrossProduct(f, u);
+    r.Normalise();
+    f = CrossProduct(u, r);
+}
 
 inline CMatrix operator*(const CMatrix& m1, const CMatrix& m2)
 {
+    // TODO: VU0 code
     CMatrix out;
     out.rx = m1.rx * m2.rx + m1.fx * m2.ry + m1.ux * m2.rz;
     out.ry = m1.ry * m2.rx + m1.fy * m2.ry + m1.uy * m2.rz;
@@ -626,16 +919,34 @@ inline CMatrix operator*(const CMatrix& m1, const CMatrix& m2)
 
 inline CMatrix& Invert(const CMatrix& src, CMatrix& dst)
 {
-    dst.f[3][0] = dst.f[3][1] = dst.f[3][2] = 0.f;
-    dst.f[0][0] = src.f[0][0]; dst.f[0][1] = src.f[1][0]; dst.f[0][2] = src.f[2][0];
-    dst.f[1][0] = src.f[0][1]; dst.f[1][1] = src.f[1][1]; dst.f[1][2] = src.f[2][1];
-    dst.f[2][0] = src.f[0][2]; dst.f[2][1] = src.f[1][2]; dst.f[2][2] = src.f[2][2];
-    dst.f[3][0] += dst.f[0][0] * src.f[3][0] + dst.f[1][0] * src.f[3][1] + dst.f[2][0] * src.f[3][2];
-    dst.f[3][1] += dst.f[0][1] * src.f[3][0] + dst.f[1][1] * src.f[3][1] + dst.f[2][1] * src.f[3][2];
-    dst.f[3][2] += dst.f[0][2] * src.f[3][0] + dst.f[1][2] * src.f[3][1] + dst.f[2][2] * src.f[3][2];
+    dst.f[3][0] = dst.f[3][1] = dst.f[3][2] = 0.0f;
+
+    dst.f[0][0] = src.f[0][0];
+    dst.f[0][1] = src.f[1][0];
+    dst.f[0][2] = src.f[2][0];
+    dst.f[1][0] = src.f[0][1];
+    dst.f[1][1] = src.f[1][1];
+    dst.f[1][2] = src.f[2][1];
+    dst.f[2][0] = src.f[0][2];
+    dst.f[2][1] = src.f[1][2];
+    dst.f[2][2] = src.f[2][2];
+
+    dst.f[3][0] += dst.f[0][0] * src.f[3][0];
+    dst.f[3][1] += dst.f[0][1] * src.f[3][0];
+    dst.f[3][2] += dst.f[0][2] * src.f[3][0];
+
+    dst.f[3][0] += dst.f[1][0] * src.f[3][1];
+    dst.f[3][1] += dst.f[1][1] * src.f[3][1];
+    dst.f[3][2] += dst.f[1][2] * src.f[3][1];
+
+    dst.f[3][0] += dst.f[2][0] * src.f[3][2];
+    dst.f[3][1] += dst.f[2][1] * src.f[3][2];
+    dst.f[3][2] += dst.f[2][2] * src.f[3][2];
+
     dst.f[3][0] = -dst.f[3][0];
     dst.f[3][1] = -dst.f[3][1];
     dst.f[3][2] = -dst.f[3][2];
+
     return dst;
 }
 
@@ -643,35 +954,6 @@ inline CMatrix Invert(const CMatrix& matrix)
 {
     CMatrix inv;
     return Invert(matrix, inv);
-}
-
-inline CVector Multiply3x3(const CMatrix& mat, const CVector& vec)
-{
-    return CVector(mat.rx * vec.x + mat.fx * vec.y + mat.ux * vec.z,
-                   mat.ry * vec.x + mat.fy * vec.y + mat.uy * vec.z,
-                   mat.rz * vec.x + mat.fz * vec.y + mat.uz * vec.z);
-}
-
-inline CVector Multiply3x3(const CVector& vec, const CMatrix& mat)
-{
-    return CVector(mat.rx * vec.x + mat.ry * vec.y + mat.rz * vec.z,
-                   mat.fx * vec.x + mat.fy * vec.y + mat.fz * vec.z,
-                   mat.ux * vec.x + mat.uy * vec.y + mat.uz * vec.z);
-}
-
-inline CVector operator*(const CMatrix& mat, const CVector& vec)
-{
-    return CVector(mat.rx * vec.x + mat.fx * vec.y + mat.ux * vec.z + mat.px,
-                   mat.ry * vec.x + mat.fy * vec.y + mat.uy * vec.z + mat.py,
-                   mat.rz * vec.x + mat.fz * vec.y + mat.uz * vec.z + mat.pz);
-}
-
-inline CVector MultiplyInverse(const CMatrix& mat, const CVector& vec)
-{
-    CVector v(vec.x - mat.px, vec.y - mat.py, vec.z - mat.pz);
-    return CVector(mat.rx * v.x + mat.ry * v.y + mat.rz * v.z,
-                   mat.fx * v.x + mat.fy * v.y + mat.fz * v.z,
-                   mat.ux * v.x + mat.uy * v.y + mat.uz * v.z);
 }
 
 // ---------------------------------------------------------------------------
@@ -829,4 +1111,285 @@ public:
         this->a = right.a;
         return *this;
     }
+};
+
+struct RwImage
+{
+    int32_t flags;
+    int32_t width;
+    int32_t height;
+    int32_t depth;
+    int32_t stride;
+    uint8_t* pixels;
+    uint8_t* palette;
+};
+
+struct RwRGBA
+{
+    uint8_t red;
+    uint8_t green;
+    uint8_t blue;
+    uint8_t alpha;
+};
+
+enum RwObjectType
+{
+    rwNAOBJECT = 0,
+    rwCAMERA = 1,
+    rwLIGHT = 2,
+    rwATOMIC = 3,
+    rwCLUMP = 4
+};
+
+struct RwObject
+{
+    uint8_t type;
+    uint8_t subType;
+    uint8_t flags;
+    uint8_t privateFlags;
+    void* parent;  // pointer to RwFrame
+};
+
+enum RwRenderState
+{
+    rwRENDERSTATENARENDERSTATE = 0,
+    rwRENDERSTATETEXTURERASTER,
+    rwRENDERSTATETEXTUREADDRESS,
+    rwRENDERSTATETEXTUREADDRESSU,
+    rwRENDERSTATETEXTUREADDRESSV,
+    rwRENDERSTATETEXTUREPERSPECTIVE,
+    rwRENDERSTATEZTESTENABLE,
+    rwRENDERSTATESHADEMODE,
+    rwRENDERSTATEZWRITEENABLE,
+    rwRENDERSTATETEXTUREFILTER,
+    rwRENDERSTATESRCBLEND,
+    rwRENDERSTATEDESTBLEND,
+    rwRENDERSTATEVERTEXALPHAENABLE,
+    rwRENDERSTATEBORDERCOLOR,
+    rwRENDERSTATEFOGENABLE,
+    rwRENDERSTATEFOGCOLOR,
+    rwRENDERSTATEFOGTYPE,
+    rwRENDERSTATEFOGDENSITY,
+    rwRENDERSTATECULLMODE = 20,
+    rwRENDERSTATESTENCILENABLE,
+    rwRENDERSTATESTENCILFAIL,
+    rwRENDERSTATESTENCILZFAIL,
+    rwRENDERSTATESTENCILPASS,
+    rwRENDERSTATESTENCILFUNCTION,
+    rwRENDERSTATESTENCILFUNCTIONREF,
+    rwRENDERSTATESTENCILFUNCTIONMASK,
+    rwRENDERSTATESTENCILFUNCTIONWRITEMASK,
+    rwRENDERSTATEALPHATESTFUNCTION,
+    rwRENDERSTATEALPHATESTFUNCTIONREF,
+    rwRENDERSTATEFORCEENUMSIZEINT = ((int32_t)((~((uint32_t)0)) >> 1))
+};
+
+enum RwBlendFunction
+{
+    rwBLENDNABLEND = 0,
+    rwBLENDZERO,
+    rwBLENDONE,
+    rwBLENDSRCCOLOR,
+    rwBLENDINVSRCCOLOR,
+    rwBLENDSRCALPHA,
+    rwBLENDINVSRCALPHA,
+    rwBLENDDESTALPHA,
+    rwBLENDINVDESTALPHA,
+    rwBLENDDESTCOLOR,
+    rwBLENDINVDESTCOLOR,
+    rwBLENDSRCALPHASAT,
+    rwBLENDFUNCTIONFORCEENUMSIZEINT = ((int32_t)((~((uint32_t)0)) >> 1))
+};
+
+struct RwLinkList { void* link_next; void* link_prev; };
+
+typedef int32_t (__cdecl* RwDebugHandler)(const char* message);
+typedef void* (__cdecl* RwMemoryAllocFn)(void* memoryManager, uint32_t size, uint32_t hint);
+typedef void (__cdecl* RwMemoryFreeFn)(void* memoryManager, void* mem);
+typedef void* (__cdecl* RwMallocFn)(size_t size, uint32_t hint);
+typedef void (__cdecl* RwFreeFn)(void* mem);
+typedef void* (__cdecl* RwReallocFn)(void* mem, size_t newSize, uint32_t hint);
+typedef void* (__cdecl* RwCallocFn)(size_t numObj, size_t sizeObj, uint32_t hint);
+
+typedef int32_t (__cdecl* RwSystemFunc)(int32_t nOption, void* pOut, void* pInOut, int32_t nIn);
+typedef int32_t (__cdecl* RwRenderStateSetFunction)(int32_t state, void* value);
+typedef int32_t (__cdecl* RwRenderStateGetFunction)(int32_t state, void* value);
+typedef int32_t (__cdecl* RwIm2DRenderLineFunction)(void* vertices, int32_t numVertices, int32_t vert1, int32_t vert2);
+typedef int32_t (__cdecl* RwIm2DRenderTriangleFunction)(void* vertices, int32_t numVertices, int32_t vert1, int32_t vert2, int32_t vert3);
+typedef int32_t (__cdecl* RwIm2DRenderPrimitiveFunction)(int32_t primType, void* vertices, int32_t numVertices);
+typedef int32_t (__cdecl* RwIm2DRenderIndexedPrimitiveFunction)(int32_t primType, void* vertices, int32_t numVertices, void* indices, int32_t numIndices);
+typedef int32_t (__cdecl* RwIm3DRenderLineFunction)(int32_t vert1, int32_t vert2);
+typedef int32_t (__cdecl* RwIm3DRenderTriangleFunction)(int32_t vert1, int32_t vert2, int32_t vert3);
+typedef int32_t (__cdecl* RwIm3DRenderPrimitiveFunction)(int32_t primType);
+typedef int32_t (__cdecl* RwIm3DRenderIndexedPrimitiveFunction)(int32_t primType, void* indices, int32_t numIndices);
+
+struct RwDevice
+{
+    float gammaCorrection;
+    RwSystemFunc fpSystem;
+    float zBufferNear;
+    float zBufferFar;
+
+    RwRenderStateSetFunction fpRenderStateSet;
+    RwRenderStateGetFunction fpRenderStateGet;
+
+    RwIm2DRenderLineFunction fpIm2DRenderLine;
+    RwIm2DRenderTriangleFunction fpIm2DRenderTriangle;
+    RwIm2DRenderPrimitiveFunction fpIm2DRenderPrimitive;
+    RwIm2DRenderIndexedPrimitiveFunction fpIm2DRenderIndexedPrimitive;
+
+    RwIm3DRenderLineFunction fpIm3DRenderLine;
+    RwIm3DRenderTriangleFunction fpIm3DRenderTriangle;
+    RwIm3DRenderPrimitiveFunction fpIm3DRenderPrimitive;
+    RwIm3DRenderIndexedPrimitiveFunction fpIm3DRenderIndexedPrimitive;
+};
+
+struct RwStringFunctions
+{
+    void* vecSprintf;
+    void* vecVsprintf;
+    void* vecStrcpy;
+    void* vecStrncpy;
+    void* vecStrcat;
+    void* vecStrncat;
+    void* vecStrrchr;
+    void* vecStrchr;
+    void* vecStrstr;
+    void* vecStrcmp;
+    void* vecStrncmp;
+    void* vecStricmp;
+    void* vecStrlen;
+    void* vecStrupr;
+    void* vecStrlwr;
+    void* vecStrtok;
+    void* vecSscanf;
+};
+
+struct RwMemoryFunctions
+{
+    RwMallocFn rwmalloc;
+    RwFreeFn rwfree;
+    RwReallocFn rwrealloc;
+    RwCallocFn rwcalloc;
+};
+
+struct RwStandardFunc
+{
+    void* func;
+};
+
+struct RwMetrics
+{
+    void* data;
+};
+
+enum RwEngineStatus
+{
+    rwENGINESTATUSIDLE = 0,
+    rwENGINESTATUSINITED = 1,
+    rwENGINESTATUSOPENED = 2,
+    rwENGINESTATUSSTARTED = 3
+};
+
+struct RwGlobals
+{
+    void* curCamera;
+    void* curWorld;
+    uint16_t renderFrame;
+    uint16_t lightFrame;
+    uint16_t pad[2];
+    RwDevice dOpenDevice;
+    RwStandardFunc stdFunc[29];
+    RwLinkList dirtyFrameList;
+    RwStringFunctions stringFuncs;
+    RwMemoryFunctions memoryFuncs;
+    RwMemoryAllocFn memoryAlloc;
+    RwMemoryFreeFn memoryFree;
+    RwMetrics* metrics;
+    RwEngineStatus engineStatus;
+    uint32_t resArenaInitSize;
+};
+
+struct RwBBox { RwV3d sup, inf; };
+
+struct RwFrustumPlane
+{
+    float a, b, c, d;
+    uint8_t closestX;
+    uint8_t closestY;
+    uint8_t closestZ;
+    uint8_t pad;
+};
+
+enum RwCameraProjection
+{
+    rwNACAMERAPROJECTION = 0,
+    rwPERSPECTIVE = 1,
+    rwPARALLEL = 2,
+    rwCAMERAPROJECTIONFORCEENUMSIZEINT = ((int32_t)((~((uint32_t)0)) >> 1))
+};
+
+struct RwLLLink
+{
+    RwLLLink* next;
+    RwLLLink* prev;
+};
+
+struct RwObjectHasFrame
+{
+    RwObject object;
+    RwLLLink lFrame;
+    RwObjectHasFrame* (*sync)(RwObjectHasFrame* object);
+};
+
+struct RwCamera
+{
+    RwObjectHasFrame    object;
+    RwCameraProjection  projectionType;
+    void (*beginUpdate)(RwCamera*);
+    void (*endUpdate)(RwCamera*);
+    RwMatrix viewMatrix;
+    RwRaster* frameBuffer;
+    RwRaster* zBuffer;
+    RwV2d viewWindow;
+    RwV2d recipViewWindow;
+    RwV2d viewOffset;
+    float nearPlane;
+    float farPlane;
+    float fogPlane;
+    float zScale, zShift;
+    RwFrustumPlane frustumPlanes[6];
+    RwBBox frustumBoundBox;
+    RwV3d frustumCorners[8];
+};
+
+struct RpWorld
+{
+    RwObject object;
+    uint32_t flags;
+    //...
+};
+
+struct CScene
+{
+    RpWorld* m_pRwWorld;
+    RwCamera* m_pRwCamera;
+};
+
+struct RwRGBAReal
+{
+    float red;
+    float green;
+    float blue;
+    float alpha;
+};
+
+struct RpClump
+{
+    RwObject object;
+    RwLinkList atomicList;
+    RwLinkList lightList;
+    RwLinkList cameraList;
+    RwLLLink inWorldLink;
+    void* callback;
 };
