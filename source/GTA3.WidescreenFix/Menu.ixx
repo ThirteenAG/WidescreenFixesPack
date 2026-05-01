@@ -190,7 +190,7 @@ public:
             });
 
             pattern = hook::pattern("DB 05 ? ? ? ? D8 3D ? ? ? ? D8 D9 DF E0 80 E4 05 80 FC 01 0F 85");
-            struct GenerationDistMultiplierFMUL
+            struct FrameLimiter
             {
                 void operator()(injector::reg_pack& regs)
                 {
@@ -216,7 +216,7 @@ public:
                     _asm {fld dword ptr[maxFPS]}
 
                 }
-            }; injector::MakeInline<GenerationDistMultiplierFMUL>(pattern.get_first(0), pattern.get_first(6));
+            }; injector::MakeInline<FrameLimiter>(pattern.get_first(0), pattern.get_first(6));
         };
     }
 } Menu;
