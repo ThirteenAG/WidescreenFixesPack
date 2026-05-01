@@ -2,7 +2,6 @@ module;
 
 #include <stdafx.h>
 #include "common.h"
-#include "callargs.h"
 
 export module Main;
 
@@ -10,7 +9,11 @@ import Draw;
 import Skeleton;
 import Camera;
 
-using tCameraSize = void(__cdecl*)(RwCamera*, RwRect*, float, float);
+SafetyHookInline shCameraSize = {};
+void __cdecl CameraSize(RwCamera* camera, RwRect* rect, float viewWindow, float aspectRatio)
+{
+    return shCameraSize.unsafe_ccall(camera, rect, SCREEN_VIEWWINDOW, SCREEN_ASPECT_RATIO);
+}
 
 class Main
 {
@@ -29,21 +32,8 @@ public:
 
         WFP::onGameInitEvent() += []()
         {
-            auto pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? A1 ? ? ? ? 50 E8 ? ? ? ? A1 ? ? ? ? 8D 54 24");
-            static auto DoRWStuffStartOfFrame = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-            {
-                auto [camera, rect, viewWindow, aspectRatio] = deduce_args<tCameraSize>(regs);
-                viewWindow = SCREEN_VIEWWINDOW;
-                aspectRatio = SCREEN_ASPECT_RATIO;
-            });
-
-            pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? A1 ? ? ? ? 50 E8 ? ? ? ? A1 ? ? ? ? 59");
-            static auto DoRWStuffStartOfFrame_Horizon = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-            {
-                auto [camera, rect, viewWindow, aspectRatio] = deduce_args<tCameraSize>(regs);
-                viewWindow = SCREEN_VIEWWINDOW;
-                aspectRatio = SCREEN_ASPECT_RATIO;
-            });
+            auto pattern = hook::pattern("E8 ? ? ? ? C7 44 24 ? ? ? ? ? 8B 54 24");
+            shCameraSize = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), CameraSize);
 
             pattern = hook::pattern("E8 ? ? ? ? 80 3D ? ? ? ? ? 74 ? 81 3D");
             static auto Idle1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
@@ -51,37 +41,10 @@ public:
                 CDraw::SetAspectRatio(CDraw::FindAspectRatio());
             });
 
-            pattern = hook::pattern("E8 ? ? ? ? A1 ? ? ? ? 83 C4 ? 50 E8 ? ? ? ? A1 ? ? ? ? 59 6A ? 68 ? ? ? ? 50 E8 ? ? ? ? A1 ? ? ? ? 83 C4 ? 50 E8 ? ? ? ? 85 C0 59 75 ? 83 C4 ? C3 89 C0");
-            static auto Idle2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-            {
-                auto [camera, rect, viewWindow, aspectRatio] = deduce_args<tCameraSize>(regs);
-
-                viewWindow = SCREEN_VIEWWINDOW;
-                aspectRatio = SCREEN_ASPECT_RATIO;
-            });
-
             pattern = hook::pattern("83 3D ? ? ? ? ? ? ? 74 ? 83 C4");
             static auto FrontendIdle1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
                 CDraw::SetAspectRatio(CDraw::FindAspectRatio());
-            });
-
-            pattern = hook::pattern("E8 ? ? ? ? A1 ? ? ? ? 83 C4 ? 50 E8 ? ? ? ? A1 ? ? ? ? 59 6A ? 68 ? ? ? ? 50 E8 ? ? ? ? A1 ? ? ? ? 83 C4 ? 50 E8 ? ? ? ? 85 C0 59 75 ? 83 C4 ? C3 E8");
-            static auto FrontendIdle2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-            {
-                auto [camera, rect, viewWindow, aspectRatio] = deduce_args<tCameraSize>(regs);
-
-                viewWindow = SCREEN_VIEWWINDOW;
-                aspectRatio = SCREEN_ASPECT_RATIO;
-            });
-
-            pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? B8 ? ? ? ? 83 C4 ? 5B");
-            static auto AppEventHandler = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-            {
-                auto [camera, rect, viewWindow, aspectRatio] = deduce_args<tCameraSize>(regs);
-
-                viewWindow = SCREEN_VIEWWINDOW;
-                aspectRatio = SCREEN_ASPECT_RATIO;
             });
 
             //DoFade
