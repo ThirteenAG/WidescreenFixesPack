@@ -101,4 +101,4 @@ Upload the `.dmp` file to Google Drive, OneDrive, Dropbox, or any similar servic
 # Important notes
 
 - Not compatible with Windows XP (without recompiling with `_xp` toolset and `/Zc:threadSafeInit-`).
-- For using with WINE, follow [this guide](https://cookieplmonster.github.io/setup-instructions/#proton-wine).
+- For using with WINE, follow [this guide](https://silentsblog.com/setup-instructions/#proton-wine).

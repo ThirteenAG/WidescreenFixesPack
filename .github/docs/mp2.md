@@ -40,7 +40,7 @@ $${\color{blue}ⓘ}$$ Added an option to keep the game running on minimize
 >    ```
 > For Steam, head to the game's properties and set `LAUNCH OPTIONS` to `WINEDLLOVERRIDES="dinput,winmm,dsound,dsoal-aldrv,Xidi.32=n,b" %command%`.
 >
->  ![steam-wine-dll-override](https://cookieplmonster.github.io/assets/img/setup/steam-wine-dll-override.png)
+>  ![steam-wine-dll-override](https://silentsblog.com/assets/img/setup/steam-wine-dll-override.png)
 >
 > **Method 2**: Use `winecfg` tool to make a permanent override for a specific Wine prefix. In case of Proton, Steam creates the Wine prefix for Max Payne 2: The Fall of Max Payne in `$HOME/.steam/steam/steamapps/compatdata/12150/pfx`. Then you need to run `winecfg` with that path:
 > ```
@@ -48,7 +48,7 @@ $${\color{blue}ⓘ}$$ Added an option to keep the game running on minimize
 > ```
 > Select the `Libraries` tab and fill the combo box with the name of the library you wish to override and hit `Add`. You can verify that it's been added to the list below with `(native, builtin)` suffix. Then close the window with the `OK` button.
 >
-> ![winecfg-dll-override](https://cookieplmonster.github.io/assets/img/setup/winecfg-dll-override.png)
+> ![winecfg-dll-override](https://silentsblog.com/assets/img/setup/winecfg-dll-override.png)
 >
 > Related Wine documentation:
 > * [More on DLL overrides](https://wiki.winehq.org/Wine_User's_Guide#DLL_Overrides)
