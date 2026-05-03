@@ -56,7 +56,7 @@ $${\color{blue}ⓘ}$$  Added an option to enable suit indicators to behave like 
 >    ```
 > For Steam, head to the game's properties and set `LAUNCH OPTIONS` to `WINEDLLOVERRIDES="msacm32,msvfw32,dinput8,dsound,dsoal-aldrv,Xidi.32=n,b" %command%`.
 >
->  ![steam-wine-dll-override](https://cookieplmonster.github.io/assets/img/setup/steam-wine-dll-override.png)
+>  ![steam-wine-dll-override](https://silentsblog.com/assets/img/setup/steam-wine-dll-override.png)
 >
 > **Method 2**: Use `winecfg` tool to make a permanent override for a specific Wine prefix. In case of Proton, Steam creates the Wine prefix for Splinter Cell: Double Agent in `$HOME/.steam/steam/steamapps/compatdata/13580/pfx`. Then you need to run `winecfg` with that path:
 > ```
@@ -64,7 +64,7 @@ $${\color{blue}ⓘ}$$  Added an option to enable suit indicators to behave like 
 > ```
 > Select the `Libraries` tab and fill the combo box with the name of the library you wish to override and hit `Add`. You can verify that it's been added to the list below with `(native, builtin)` suffix. Then close the window with the `OK` button.
 >
-> ![winecfg-dll-override](https://cookieplmonster.github.io/assets/img/setup/winecfg-dll-override.png)
+> ![winecfg-dll-override](https://silentsblog.com/assets/img/setup/winecfg-dll-override.png)
 >
 > Related Wine documentation:
 > * [More on DLL overrides](https://wiki.winehq.org/Wine_User's_Guide#DLL_Overrides)
