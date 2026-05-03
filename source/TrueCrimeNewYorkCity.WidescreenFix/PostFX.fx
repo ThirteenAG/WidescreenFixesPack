@@ -29,7 +29,7 @@ sampler2D DepthTex
 
 float2 vec2ViewportSize;
 
-// dist blir
+// dist blur
 float fNearPlane;
 float fFarPlane;
 float fDistBlurStrength;
