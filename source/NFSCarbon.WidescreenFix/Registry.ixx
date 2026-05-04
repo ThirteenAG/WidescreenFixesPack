@@ -40,6 +40,11 @@ public:
             if (!pattern.empty())
                 injector::WriteMemory(pattern.get_first(1), stub, true);
 
+            // Allow loading any profiles
+            pattern = hook::pattern("74 ? 5F B8 ? ? ? ? 5E 83 C4 ? C2");
+            if (!pattern.empty())
+                injector::WriteMemory<uint8_t>(pattern.get_first(), 0xEB, true);
+
             CIniReader iniReader("");
             bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 0) != 0;
             auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
