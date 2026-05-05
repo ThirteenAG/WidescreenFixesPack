@@ -25,6 +25,45 @@ export enum FrontendClass
     FrontendClassCount
 };
 
+export struct __declspec(align(4)) CFontDetails
+{
+    CRGBA m_Color;
+    CVector2D m_vecScale;
+    float m_fSlant;
+    CVector2D m_vecSlantRefPoint;
+    bool m_bJustify;
+    bool m_bCentre;
+    bool m_bRightJustify;
+    bool m_bBackground;
+    bool m_bBackGroundOnlyText;
+    bool m_bProp;
+    char _pad1E[2];
+    float m_fAlphaFade;
+    CRGBA m_BackgroundColor;
+    float m_fWrapX;
+    float m_fCentreSize;
+    float m_fRightJustifyWrap;
+    int16_t m_nStyle;
+    char _pad36[2];
+    int m_nBank;
+    int16_t m_nDropShadowPosition;
+    CRGBA m_DropColor;
+    char _pad42[2];
+};
+
+export namespace CFont
+{
+    void (__cdecl* SetColor)(CRGBA* color) = nullptr;
+
+    export GameRef<CFontDetails> Details([]() -> CFontDetails*
+    {
+        auto pattern = hook::pattern("68 ? ? ? ? 52 0F BF 05");
+        if (!pattern.empty())
+            return *pattern.get_first<CFontDetails*>(1);
+        return nullptr;
+    });
+}
+
 export std::array<ProtectedGameRef<float>, FrontendClassCount> ResXInvRefs;
 export std::array<ProtectedGameRef<float>, FrontendClassCount> ResYInvRefs;
 
@@ -53,12 +92,14 @@ public:
         WFP::onGameInitEvent() += []()
         {
             CIniReader iniReader("");
-            static float fHudWidthScale = iniReader.ReadFloat("MAIN", "HudWidthScale", 0.0f); fHudWidthScale == 0.0f ? fHudWidthScale = 1.0f : fHudWidthScale;
-            static float fHudHeightScale = iniReader.ReadFloat("MAIN", "HudHeightScale", 0.0f); fHudHeightScale == 0.0f ? fHudHeightScale = 1.0714285f : fHudHeightScale;
-            static float fRadarWidthScale = iniReader.ReadFloat("MAIN", "RadarWidthScale", 0.0f); fRadarWidthScale == 0.0f ? fRadarWidthScale = 1.0f : fRadarWidthScale;
-            static float fRadarHeightScale = iniReader.ReadFloat("MAIN", "RadarHeightScale", 0.0f); fRadarHeightScale == 0.0f ? fRadarHeightScale = 1.0f : fRadarHeightScale;
-            static float fSubtitlesScale = iniReader.ReadFloat("MAIN", "SubtitlesScale", 0.0f); fSubtitlesScale == 0.0f ? fSubtitlesScale = 1.0f : fSubtitlesScale;
-            auto bIVRadarScaling = iniReader.ReadInteger("MISC", "IVRadarScaling", 0) != 0;
+            static float fHudWidthScale = iniReader.ReadFloat("MAIN", "HudWidthScale", 0.0f);
+            static float fHudHeightScale = iniReader.ReadFloat("MAIN", "HudHeightScale", 0.0f);
+            static float fRadarWidth = iniReader.ReadFloat("MAIN", "RadarWidth", 94.0f);
+            static float fRadarHeight = iniReader.ReadFloat("MAIN", "RadarHeight", 76.0f);
+            static float fSubtitlesScale = iniReader.ReadFloat("MAIN", "SubtitlesScale", 0.0f);
+
+            auto pattern = hook::pattern("E8 ? ? ? ? 59 6A ? E8 ? ? ? ? 83 3D ? ? ? ? ? 59 0F 84");
+            CFont::SetColor = (decltype(CFont::SetColor))injector::GetBranchDestination(pattern.get_first(0)).as_int();
 
             constexpr auto INV_DEFAULT_SCREEN_HEIGHT = 1.0f / (float)DEFAULT_SCREEN_HEIGHT;
             constexpr auto INV_DEFAULT_SCREEN_HEIGHT_MENU = 1.0f / 448.0f;
@@ -75,7 +116,7 @@ public:
                 ResYInvRefs[id].SetAddress(*pattern.get_first<float*>(2));
             };
 
-            auto pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? DA 6C 24 ? D9 1C 24 E8 ? ? ? ? 83 C4 0C 8D 4C 24 ? 68 FF 00 00 00 68 FF 00 00 00");
+            pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? DA 6C 24 ? D9 1C 24 E8 ? ? ? ? 83 C4 0C 8D 4C 24 ? 68 FF 00 00 00 68 FF 00 00 00");
             SetResX(pattern, FrontendClass::eCDarkel);
             pattern = hook::pattern("D8 0D ? ? ? ? 50 D8 0D ? ? ? ? D9 1C 24 A1 ? ? ? ? 89 44 24 ? DB 44 24");
             SetResY(pattern, FrontendClass::eCDarkel);
@@ -181,6 +222,9 @@ public:
 
             if (fHudWidthScale || fHudHeightScale)
             {
+                fHudWidthScale = std::clamp(fHudWidthScale, 0.25f, 4.0f);
+                fHudHeightScale = std::clamp(fHudHeightScale, 0.25f, 4.0f);
+
                 static float fCustomWideScreenWidthScaleDown = 1.0f / 640.0f;
                 static float fCustomWideScreenHeightScaleDown = 1.0f / 480.0f;
 
@@ -274,52 +318,33 @@ public:
                 }
             }
 
-            if (!bIVRadarScaling)
+            for (auto& radarWidthRef : RadarWidthRefs)
             {
-                for (auto& radarWidth : RadarWidthRefs)
-                {
-                    radarWidth = 86.0f;
-                }
-
-                for (auto& radarHeight : RadarHeightRefs)
-                {
-                    radarHeight = 86.0f;
-                }
+                radarWidthRef = fRadarWidth * (((float)DEFAULT_SCREEN_WIDTH / (float)DEFAULT_SCREEN_HEIGHT) / (640.0f / 448.0f));
             }
 
-            if (fRadarWidthScale && !bIVRadarScaling)
+            for (auto& radarHeightRef : RadarHeightRefs)
             {
-                for (auto& radarWidth : RadarWidthRefs)
-                {
-                    radarWidth *= fRadarWidthScale;
-                }
-            }
-
-            if (fRadarHeightScale && !bIVRadarScaling)
-            {
-                for (auto& radarHeight : RadarHeightRefs)
-                {
-                    radarHeight *= fRadarHeightScale;
-                }
-            }
-
-            if (bIVRadarScaling)
-            {
-                float fCustomRadarWidthIV = 92.0f;
-                float fCustomRadarHeightIV = 92.0f;
-
-                for (auto& radarWidth : RadarWidthRefs)
-                {
-                    radarWidth = fCustomRadarWidthIV;
-                }
-
-                for (auto& radarHeight : RadarHeightRefs)
-                {
-                    radarHeight = fCustomRadarHeightIV;
-                }
+                radarHeightRef = fRadarHeight;
             }
 
             RadarWidthRefs.back() += 1.5f; // expand radardisc a bit
+
+            if (fSubtitlesScale)
+            {
+                fSubtitlesScale = std::clamp(fSubtitlesScale, 0.25f, 4.0f);
+
+                ProtectedGameRef<float> SubtitlesWidth;
+                pattern = hook::pattern("D8 0D ? ? ? ? D9 1C 24 DB 05 ? ? ? ? 50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59 E8 ? ? ? ? E8 ? ? ? ? 6A 00");
+                SubtitlesWidth.SetAddress(*pattern.get_first<float*>(2));
+
+                ProtectedGameRef<float> SubtitlesHeight;
+                pattern = hook::pattern("D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59 E8 ? ? ? ? E8 ? ? ? ? 6A 00");
+                SubtitlesHeight.SetAddress(*pattern.get_first<float*>(2));
+
+                SubtitlesWidth *= fSubtitlesScale;
+                SubtitlesHeight *= fSubtitlesScale;
+            }
         };
     }
 } Frontend;

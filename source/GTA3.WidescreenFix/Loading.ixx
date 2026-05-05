@@ -222,7 +222,7 @@ void __cdecl CFileLoader__LoadCollisionFromDatFileStub(unsigned int)
 
 }
 
-const char* __cdecl GetLevelSplashScreenStubStub(eLevelName)
+const char* __cdecl GetLevelSplashScreenStub(eLevelName)
 {
     return "";
 }
@@ -324,7 +324,7 @@ public:
                 injector::MakeCALL(pattern.get_first(0), CFileLoader__LoadCollisionFromDatFileStub);
 
                 pattern = hook::pattern("E8 ? ? ? ? 59 50 E8 ? ? ? ? 59 A1 ? ? ? ? 50");
-                injector::MakeCALL(pattern.get_first(0), GetLevelSplashScreenStubStub);
+                injector::MakeCALL(pattern.get_first(0), GetLevelSplashScreenStub);
                 injector::MakeCALL(pattern.get_first(7), LoadSplashStub);
 
                 pattern = hook::pattern("E8 ? ? ? ? A1 ? ? ? ? 59 50 E8 ? ? ? ? A1 ? ? ? ? 59 50 E8 ? ? ? ? 59 6A");

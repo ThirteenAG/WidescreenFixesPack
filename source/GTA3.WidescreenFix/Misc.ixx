@@ -6,6 +6,7 @@ module;
 export module Misc;
 
 import Skeleton;
+import Frontend;
 import Camera;
 import Entity;
 import Vehicle;
@@ -84,44 +85,8 @@ enum BlackCRGBA
     rxD3D8SubmitNode_65,
 };
 
-struct __declspec(align(4)) CFontDetails
-{
-    CRGBA m_Color;
-    CVector2D m_vecScale;
-    float m_fSlant;
-    CVector2D m_vecSlantRefPoint;
-    bool m_bJustify;
-    bool m_bCentre;
-    bool m_bRightJustify;
-    bool m_bBackground;
-    bool m_bBackGroundOnlyText;
-    bool m_bProp;
-    char _pad1E[2];
-    float m_fAlphaFade;
-    CRGBA m_BackgroundColor;
-    float m_fWrapX;
-    float m_fCentreSize;
-    float m_fRightJustifyWrap;
-    int16_t m_nStyle;
-    char _pad36[2];
-    int m_nBank;
-    int16_t m_nDropShadowPosition;
-    CRGBA m_DropColor;
-    char _pad42[2];
-};
-
 namespace CFont
 {
-    void (__cdecl* SetColor)(CRGBA* color) = nullptr;
-
-    export GameRef<CFontDetails> Details([]() -> CFontDetails*
-    {
-        auto pattern = hook::pattern("68 ? ? ? ? 52 0F BF 05");
-        if (!pattern.empty())
-            return *pattern.get_first<CFontDetails*>(1);
-        return nullptr;
-    });
-
     SafetyHookInline shPrintString = {};
     void __cdecl PrintString(float x, float y, wchar_t* str)
     {
@@ -197,10 +162,7 @@ public:
 
             if (ReplaceTextShadowWithOutline)
             {
-                auto pattern = hook::pattern("E8 ? ? ? ? 59 6A ? E8 ? ? ? ? 83 3D ? ? ? ? ? 59 0F 84");
-                CFont::SetColor = (decltype(CFont::SetColor))injector::GetBranchDestination(pattern.get_first(0)).as_int();
-
-                pattern = hook::pattern("E8 ? ? ? ? 8D 44 24 ? 50 E8 ? ? ? ? 59 6A ? E8 ? ? ? ? 83 3D ? ? ? ? ? 59 0F 84");
+                auto pattern = hook::pattern("E8 ? ? ? ? 8D 44 24 ? 50 E8 ? ? ? ? 59 6A ? E8 ? ? ? ? 83 3D ? ? ? ? ? 59 0F 84");
                 auto CRGBACtor = injector::GetBranchDestination(pattern.get_first()).as_int();
 
                 //Hiding text shadow
