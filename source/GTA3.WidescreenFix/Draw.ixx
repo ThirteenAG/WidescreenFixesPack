@@ -46,6 +46,7 @@ public:
     static float FindAspectRatio();
     static float ConvertFOV(float fov);
     static float ConvertFOVforCutscene(float fov);
+    static float ConvertFOVInverse(float fov);
     static float GetAspectRatio() { return ms_fAspectRatio; }
     static void SetAspectRatio(float ratio)
     {
@@ -125,6 +126,16 @@ float CDraw::ConvertFOVforCutscene(float fov)
     {
         return fov;
     }
+}
+
+float CDraw::ConvertFOVInverse(float fov)
+{
+    const float arFrom = DEFAULT_ASPECT_RATIO;
+    const float arTo = GetAspectRatio();
+
+    const float rad = DEGTORAD(fov);
+    const float out = 2.0f * Atan(tan(rad * 0.5f) * (arFrom / arTo));
+    return RADTODEG(out);
 }
 
 export namespace FOVManager
