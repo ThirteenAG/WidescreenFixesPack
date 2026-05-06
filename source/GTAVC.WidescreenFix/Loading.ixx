@@ -15,6 +15,8 @@ export bool gbNoInteriorLoading = false;
 export bool bSkipNextPlayerCoords = false;
 export bool bSkipNextPlayerHeading = false;
 export bool bSkipNextFade = false;
+export bool bSkipNextClearArea = false;
+export bool bSkipNextSetAreaVisible = false;
 export bool bSkipNextLoadScene = false;
 
 class CPtrNode
