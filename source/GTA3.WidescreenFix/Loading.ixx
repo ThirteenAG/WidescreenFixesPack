@@ -285,7 +285,7 @@ public:
                 pattern = hook::pattern("E8 ? ? ? ? 0F B6 1D ? ? ? ? 59 8D 4C 24");
                 LoadSplash = (decltype(LoadSplash))injector::GetBranchDestination(pattern.get_first()).as_int();
 
-                pattern = hook::pattern("E8 ? ? ? ? A1 ? ? ? ? 59 A3 ? ? ? ? E8");
+                pattern = hook::pattern("E8 ? ? ? ? 80 3D ? ? ? ? ? 59 75 ? A1");
                 CFileLoader::LoadCollisionFromDatFile = (decltype(CFileLoader::LoadCollisionFromDatFile))injector::GetBranchDestination(pattern.get_first()).as_int();
 
                 pattern = hook::pattern("E8 ? ? ? ? A1 ? ? ? ? 59 50 E8 ? ? ? ? A1 ? ? ? ? 59 EB ? 83 F8");
@@ -304,43 +304,59 @@ public:
 
                 //CCollision::LoadCollisionWhenINeedIt
                 pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 50 E8 ? ? ? ? 59 B9 ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 8B 15");
-                injector::MakeCALL(pattern.get_first(0), cDMAudio__SetEffectsFadeVolStub);
-                injector::MakeCALL(pattern.get_first(5), CPad__StopPadsShakingStub);
-                injector::MakeCALL(pattern.get_first(16), CCollision__LoadCollisionScreenStub);
-                injector::MakeCALL(pattern.get_first(27), cDMAudio__ServiceStub);
+                if (!pattern.empty())
+                {
+                    injector::MakeCALL(pattern.get_first(0), cDMAudio__SetEffectsFadeVolStub);
+                    injector::MakeCALL(pattern.get_first(5), CPad__StopPadsShakingStub);
+                    injector::MakeCALL(pattern.get_first(16), CCollision__LoadCollisionScreenStub);
+                    injector::MakeCALL(pattern.get_first(27), cDMAudio__ServiceStub);
+                }
 
                 pattern = hook::pattern("E8 ? ? ? ? 59 6A ? E8 ? ? ? ? 59 6A ? E8 ? ? ? ? 59 6A ? E8 ? ? ? ? 59 6A ? E8 ? ? ? ? 59");
-                injector::MakeCALL(pattern.get_first(0), CStreaming__RemoveIslandsNotUsedStub);
-                injector::MakeCALL(pattern.get_first(8), CStreaming__RemoveIslandsNotUsedStub);
-                injector::MakeCALL(pattern.get_first(16), CStreaming__RemoveIslandsNotUsedStub);
-                injector::MakeCALL(pattern.get_first(24), CStreaming__RemoveBigBuildingsStub);
-                injector::MakeCALL(pattern.get_first(32), CStreaming__RemoveBigBuildingsStub);
-                injector::MakeCALL(pattern.get_first(40), CStreaming__RemoveBigBuildingsStub);
+                if (!pattern.empty())
+                {
+                    injector::MakeCALL(pattern.get_first(0), CStreaming__RemoveIslandsNotUsedStub);
+                    injector::MakeCALL(pattern.get_first(8), CStreaming__RemoveIslandsNotUsedStub);
+                    injector::MakeCALL(pattern.get_first(16), CStreaming__RemoveIslandsNotUsedStub);
+                    injector::MakeCALL(pattern.get_first(24), CStreaming__RemoveBigBuildingsStub);
+                    injector::MakeCALL(pattern.get_first(32), CStreaming__RemoveBigBuildingsStub);
+                    injector::MakeCALL(pattern.get_first(40), CStreaming__RemoveBigBuildingsStub);
+                }
 
                 pattern = hook::pattern("E8 ? ? ? ? 59 E8 ? ? ? ? 6A ? 6A ? E8 ? ? ? ? A1");
-                injector::MakeCALL(pattern.get_first(0), CModelInfo__RemoveColModelsFromOtherLevelsStub);
+                if (!pattern.empty())
+                    injector::MakeCALL(pattern.get_first(0), CModelInfo__RemoveColModelsFromOtherLevelsStub);
 
                 pattern = hook::pattern("E8 ? ? ? ? A1 ? ? ? ? 59 A3 ? ? ? ? E8");
-                injector::MakeCALL(pattern.get_first(0), CFileLoader__LoadCollisionFromDatFileStub);
+                if (!pattern.empty())
+                    injector::MakeCALL(pattern.get_first(0), CFileLoader__LoadCollisionFromDatFileStub);
 
                 pattern = hook::pattern("E8 ? ? ? ? 59 50 E8 ? ? ? ? 59 A1 ? ? ? ? 50");
-                injector::MakeCALL(pattern.get_first(0), GetLevelSplashScreenStub);
-                injector::MakeCALL(pattern.get_first(7), LoadSplashStub);
+                if (!pattern.empty())
+                {
+                    injector::MakeCALL(pattern.get_first(0), GetLevelSplashScreenStub);
+                    injector::MakeCALL(pattern.get_first(7), LoadSplashStub);
+                }
 
                 pattern = hook::pattern("E8 ? ? ? ? A1 ? ? ? ? 59 50 E8 ? ? ? ? A1 ? ? ? ? 59 50 E8 ? ? ? ? 59 6A");
-                injector::MakeCALL(pattern.get_first(), CStreaming__RemoveUnusedBigBuildingsStub);
+                if (!pattern.empty())
+                    injector::MakeCALL(pattern.get_first(), CStreaming__RemoveUnusedBigBuildingsStub);
 
                 pattern = hook::pattern("E8 ? ? ? ? A1 ? ? ? ? 59 50 E8 ? ? ? ? 59 6A ? E8 ? ? ? ? A1");
-                injector::MakeCALL(pattern.get_first(), CStreaming__RemoveUnusedBuildingsStub);
+                if (!pattern.empty())
+                    injector::MakeCALL(pattern.get_first(), CStreaming__RemoveUnusedBuildingsStub);
 
                 pattern = hook::pattern("E8 ? ? ? ? 59 6A ? E8 ? ? ? ? A1 ? ? ? ? 59 50 E8 ? ? ? ? 59 6A ? 6A ? E8 ? ? ? ? 59 59 E8");
-                injector::MakeCALL(pattern.get_first(), CStreaming__RequestBigBuildingsStub);
+                if (!pattern.empty())
+                    injector::MakeCALL(pattern.get_first(), CStreaming__RequestBigBuildingsStub);
 
                 pattern = hook::pattern("E8 ? ? ? ? 59 6A ? 6A ? E8 ? ? ? ? 59 59 E8 ? ? ? ? B9");
-                injector::MakeCALL(pattern.get_first(), CStreaming__HaveAllBigBuildingsLoadedStub);
+                if (!pattern.empty())
+                    injector::MakeCALL(pattern.get_first(), CStreaming__HaveAllBigBuildingsLoadedStub);
 
                 pattern = hook::pattern("B9 ? ? ? ? 6A ? E8 ? ? ? ? 83 C4 ? 5D 5F");
-                injector::MakeCALL(pattern.get_first(7), cDMAudio__SetEffectsFadeVolStub);
+                if (!pattern.empty())
+                    injector::MakeCALL(pattern.get_first(7), cDMAudio__SetEffectsFadeVolStub);
 
                 //CCollision::SortOutCollisionAfterLoad
                 pattern = hook::pattern("E8 ? ? ? ? 8D 04 24 50 E8 ? ? ? ? 59 80 3D");
@@ -445,7 +461,7 @@ public:
                 auto pattern = hook::pattern("E8 ? ? ? ? 84 C0 59 74 ? 8A 83");
                 CRenderer::shIsEntityCullZoneVisible = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), CRenderer::IsEntityCullZoneVisible);
 
-                pattern = hook::pattern("75 ? 55 E8 ? ? ? ? 83 F8 ? 59 75 ? A1");
+                pattern = hook::pattern("75 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 8B 5B ? 85 DB 75 ? 5D 5B C3");
                 injector::MakeNOP(pattern.get_first(), 2);
             }
         };
