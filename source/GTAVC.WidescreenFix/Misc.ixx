@@ -46,6 +46,15 @@ public:
                 {
                     CFont::Details->dropShadowPosition = 2;
                 });
+
+                // radio shadow 0x5FA1A5
+                pattern = hook::pattern("68 ? ? ? ? 6A ? 6A ? 6A ? E8 ? ? ? ? 8D 44 24 ? 50 E8 ? ? ? ? ? ? ? ? ? ? 59 53");
+                injector::WriteMemory(pattern.get_first(1), 0x00000000, true);
+                static auto RadioHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+                {
+                    CFont::Details->dropColor = { 0, 0, 0, 0xFF };
+                    CFont::Details->dropShadowPosition = 2;
+                });
             }
 
             if (bCarSpeedDependantFOV)

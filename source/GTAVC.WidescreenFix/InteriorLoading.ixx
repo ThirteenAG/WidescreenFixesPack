@@ -6,6 +6,7 @@ module;
 export module InteriorLoading;
 
 import Skeleton;
+import Main;
 import Entity;
 import Loading;
 import ModelInfo;
@@ -46,8 +47,6 @@ constexpr auto man_hall_ref = 2469;
 constexpr auto bnk_main_rework = 4549;
 constexpr auto pw_printworks = 1484;
 constexpr auto hvoodext = 1718;
-
-CEntity* (__cdecl* FindPlayerPed)() = nullptr;
 
 CVector GetPositionToTrack()
 {
@@ -421,10 +420,20 @@ void ProcessInteriorSwitching()
         CStreaming::RemoveBuildingsNotInArea(CGame::currArea);
         CStreaming::LoadScene(&pos);
     }
+
+    static eAreaName oldArea = CGame::currArea;
+    if (oldArea != CGame::currArea)
+    {
+        ProcessMultiInteriorEntities();
+        CStreaming::RemoveBuildingsNotInArea(CGame::currArea);
+        CStreaming::LoadScene(&pos);
+        oldArea = CGame::currArea;
+    }
 }
 
 class CRunningScript
 {
+public:
     enum
     {
         MAX_STACK_DEPTH = 6,
@@ -473,6 +482,40 @@ public:
     bool m_bMissionFlag;
 };
 
+void UpdateCompareFlag(CRunningScript* script, bool flag)
+{
+    if (script->m_bNotFlag)
+        flag = !flag;
+    if (script->m_nAndOrState == CRunningScript::ANDOR_NONE)
+    {
+        script->m_bCondResult = flag;
+        return;
+    }
+    if (script->m_nAndOrState >= CRunningScript::ANDS_1 && script->m_nAndOrState <= CRunningScript::ANDS_8)
+    {
+        script->m_bCondResult &= flag;
+        if (script->m_nAndOrState == CRunningScript::ANDS_1)
+        {
+            script->m_nAndOrState = CRunningScript::ANDOR_NONE;
+            return;
+        }
+    }
+    else if (script->m_nAndOrState >= CRunningScript::ORS_1 && script->m_nAndOrState <= CRunningScript::ORS_8)
+    {
+        script->m_bCondResult |= flag;
+        if (script->m_nAndOrState == CRunningScript::ORS_1)
+        {
+            script->m_nAndOrState = CRunningScript::ANDOR_NONE;
+            return;
+        }
+    }
+    else
+    {
+        return;
+    }
+    script->m_nAndOrState--;
+}
+
 class InteriorLoading
 {
 public:
@@ -505,9 +548,6 @@ public:
 
                 pattern = find_pattern("B8 ? ? ? ? BF ? ? ? ? 01 E8");
                 ppScriptSpace = pattern.get_first<uint8_t*>(1);
-
-                pattern = find_pattern("E8 ? ? ? ? 0F B6 0D ? ? ? ? 8A 58");
-                FindPlayerPed = (decltype(FindPlayerPed))injector::GetBranchDestination(pattern.get_first()).as_int();
 
                 pattern = find_pattern("88 46 ? 8A 47");
                 injector::MakeNOP(pattern.get_first(), 3, true);
@@ -563,7 +603,6 @@ public:
                 static auto COMMAND_SET_PLAYER_CONTROL = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
                 {
                     CRunningScript* script = (CRunningScript*)regs.ebp;
-
                     if (iequals(script->m_abScriptName, "shit"))
                     {
                         auto ScriptParams = *ppScriptParams;
@@ -572,61 +611,141 @@ public:
 
                         if (!control)
                         {
-                            bSkipNextPlayerCoords = true;
-                            bSkipNextPlayerHeading = true;
+                            //bSkipNextPlayerCoords = true;
+                            //bSkipNextPlayerHeading = true;
                             bSkipNextFade = true;
-                            bSkipNextLoadScene = true;
+                            //bSkipNextClearArea = true;
+                            //bSkipNextSetAreaVisible = true;
+                            //bSkipNextLoadScene = true;
                             return_to(loc_452309);
                         }
                         else
                         {
-                            bSkipNextPlayerCoords = false;
-                            bSkipNextPlayerHeading = false;
+                            //bSkipNextPlayerCoords = false;
+                            //bSkipNextPlayerHeading = false;
                             bSkipNextFade = false;
-                            bSkipNextLoadScene = false;
+                            //bSkipNextClearArea = false;
+                            //bSkipNextSetAreaVisible = false;
+                            //bSkipNextLoadScene = false;
                         }
                     }
                 });
 
-                static auto loc_44EDC4 = (uintptr_t)hook::pattern("30 C0 81 C4 ? ? ? ? 5D 5F 5E 5B C2 ? ? 8D 46 ? 89 F1 6A ? 50 E8 ? ? ? ? A1 ? ? ? ? 6B C0 ? 8B 04 C5 ? ? ? ? 80 B8 ? ? ? ? ? 74 ? 8B 88 ? ? ? ? 85 C9 74 ? 83 C1 ? FF 35 ? ? ? ? FF 35 ? ? ? ? FF 35 ? ? ? ? FF 35 ? ? ? ? E8").get_first();
-                pattern = find_pattern("D9 05 ? ? ? ? D9 5C 24 ? D9 05 ? ? ? ? D9 5C 24 ? D9 05 ? ? ? ? D9 5C 24 ? D9 44 24 ? D8 1D ? ? ? ? DF E0 8B 1D");
-                static auto COMMAND_SET_PLAYER_COORDINATES = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-                {
-                    if (bSkipNextPlayerCoords)
-                    {
-                        return_to(loc_44EDC4);
-                    }
-                });
+                //static auto loc_44EDC4 = (uintptr_t)hook::pattern("30 C0 81 C4 ? ? ? ? 5D 5F 5E 5B C2 ? ? 8D 46 ? 89 F1 6A ? 50 E8 ? ? ? ? A1 ? ? ? ? 6B C0 ? 8B 04 C5 ? ? ? ? 80 B8 ? ? ? ? ? 74 ? 8B 88 ? ? ? ? 85 C9 74 ? 83 C1 ? FF 35 ? ? ? ? FF 35 ? ? ? ? FF 35 ? ? ? ? FF 35 ? ? ? ? E8").get_first();
+                //pattern = find_pattern("D9 05 ? ? ? ? D9 5C 24 ? D9 05 ? ? ? ? D9 5C 24 ? D9 05 ? ? ? ? D9 5C 24 ? D9 44 24 ? D8 1D ? ? ? ? DF E0 8B 1D");
+                //static auto COMMAND_SET_PLAYER_COORDINATES = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+                //{
+                //    CRunningScript* script = (CRunningScript*)regs.esi;
+                //    if (iequals(script->m_abScriptName, "shit"))
+                //    {
+                //        if (bSkipNextPlayerCoords)
+                //        {
+                //            return_to(loc_44EDC4);
+                //        }
+                //    }
+                //});
 
-                static auto loc_4544B7 = (uintptr_t)hook::pattern("30 C0 81 C4 68 01 00 00 5F 5E 5B C2 04 00 8D 46 ? 89 F1 6A 01 50 E8 ? ? ? ? A1 ? ? ? ? 8B 0D ? ? ? ? 50 E8 ? ? ? ? 80 B8").get_first();
-                pattern = find_pattern("8B 35 ? ? ? ? 69 F6 70 01 00 00 81 C6 ? ? ? ? 8B 06");
-                static auto COMMAND_SET_PLAYER_HEADING = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-                {
-                    if (bSkipNextPlayerHeading)
-                    {
-                        return_to(loc_4544B7);
-                    }
-                });
+                //static auto loc_4544B7 = (uintptr_t)hook::pattern("30 C0 81 C4 68 01 00 00 5F 5E 5B C2 04 00 8D 46 ? 89 F1 6A 01 50 E8 ? ? ? ? A1 ? ? ? ? 8B 0D ? ? ? ? 50 E8 ? ? ? ? 80 B8").get_first();
+                //pattern = find_pattern("8B 35 ? ? ? ? 69 F6 70 01 00 00 81 C6 ? ? ? ? 8B 06");
+                //static auto COMMAND_SET_PLAYER_HEADING = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+                //{
+                //    CRunningScript* script = (CRunningScript*)regs.esi;
+                //    if (iequals(script->m_abScriptName, "shit"))
+                //    {
+                //        if (bSkipNextPlayerHeading)
+                //        {
+                //            return_to(loc_4544B7);
+                //        }
+                //    }
+                //});
 
                 static auto loc_454135 = (uintptr_t)hook::pattern("30 C0 81 C4 68 01 00 00 5F 5E 5B C2 04 00 B9 ? ? ? ? E8 ? ? ? ? 84 C0").get_first();
                 pattern = find_pattern("DB 05 ? ? ? ? 66 A1 ? ? ? ? B9 ? ? ? ? 50 50");
                 static auto COMMAND_DO_FADE = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
                 {
-                    if (bSkipNextFade)
+                    CRunningScript* script = (CRunningScript*)regs.esi;
+                    if (iequals(script->m_abScriptName, "shit"))
                     {
-                        return_to(loc_454135);
+                        if (bSkipNextFade)
+                        {
+                            auto ScriptParams = *ppScriptParams;
+                            ScriptParams[0] = 0;
+                            ScriptParams[1] = 1;
+                            //return_to(loc_454135);
+                        }
                     }
                 });
 
-                static auto loc_45AA37 = (uintptr_t)hook::pattern("30 C0 81 C4 08 02 00 00 5D 5F 5E 5B C2 04 00 8D 45 ? 89 E9 6A 03 50 E8 ? ? ? ? A1 ? ? ? ? 8B 0D ? ? ? ? 50 E8 ? ? ? ? A1").get_first();
-                pattern = find_pattern("D9 05 ? ? ? ? D9 5C 24 ? D9 05 ? ? ? ? D9 9C 24 ? ? ? ? D9 05 ? ? ? ? D9 9C 24 ? ? ? ? E8");
-                static auto COMMAND_LOAD_SCENE = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-                {
-                    if (bSkipNextLoadScene)
-                    {
-                        return_to(loc_45AA37);
-                    }
-                });
+                //static auto loc_4595C1 = (uintptr_t)hook::pattern("30 C0 81 C4 ? ? ? ? 5D 5F 5E 5B C2 ? ? 8D 45 ? 89 E9 6A ? 50 E8 ? ? ? ? 83 3D ? ? ? ? ? 74 ? C6 05 ? ? ? ? ? EB ? 90").get_first();
+                //pattern = find_pattern("D9 05 ? ? ? ? D9 5C 24 ? D9 05 ? ? ? ? D9 5C 24 ? D9 05 ? ? ? ? D9 5C 24 ? D9 44 24 ? D8 1D ? ? ? ? DF E0 F6 C4 04 75 ? 80 E4 45 F6 C4 41 74 ? FF 74 24 ? FF 74 24 ? E8 ? ? ? ? D9 5C 24 ? 59 59 8B 44 24 ? 8A 1D ? ? ? ? 89 84 24 ? ? ? ? 8B 44 24 ? 89 84 24 ? ? ? ? 8D 84 24");
+                //static auto COMMAND_CLEAR_AREA = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+                //{
+                //    CRunningScript* script = (CRunningScript*)regs.ebp;
+                //    if (iequals(script->m_abScriptName, "shit"))
+                //    {
+                //        if (bSkipNextClearArea)
+                //        {
+                //            return_to(loc_4595C1);
+                //        }
+                //    }
+                //});
+
+                //static auto loc_630B59 = (uintptr_t)hook::pattern("30 C0 81 C4 ? ? ? ? 5D 5F 5E 5B C2 ? ? BA ? ? ? ? 8D 44 24 ? 03 55 ? 6A ? 52 50 E8 ? ? ? ? 83 45 ? ? 83 C4 ? 8D 44 24").get_first();
+                //pattern = find_pattern("A1 ? ? ? ? 50 A3 ? ? ? ? E8 ? ? ? ? 59");
+                //static auto COMMAND_SET_AREA_VISIBLE = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+                //{
+                //    CRunningScript* script = (CRunningScript*)regs.ebp;
+                //    if (iequals(script->m_abScriptName, "shit"))
+                //    {
+                //        if (bSkipNextSetAreaVisible)
+                //        {
+                //            return_to(loc_630B59);
+                //        }
+                //    }
+                //});
+
+                //pattern = find_pattern("81 C4 ? ? ? ? 5D 5F 5E 5B C2 ? ? 8D 73 ? 89 D9 56 50 E8 ? ? ? ? 30 C0 81 C4 ? ? ? ? 5D 5F 5E 5B C2 ? ? 8D 4B ? 51 50 89 D9 E8 ? ? ? ? 30 C0 81 C4 ? ? ? ? 5D 5F 5E 5B C2 ? ? 8D 53 ? 89 D9 52 50 E8 ? ? ? ? 30 C0 81 C4 ? ? ? ? 5D 5F 5E 5B C2 ? ? 8D 43");
+                //static auto COMMAND_LOCATE_PLAYER_ANY_MEANS_3D = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+                //{
+                //    CRunningScript* script = (CRunningScript*)regs.ebx;
+                //
+                //    if (!iequals(script->m_abScriptName, "shit"))
+                //        return;
+                //
+                //    auto ScriptParams = *ppScriptParams;
+                //    float x = *(float*)&ScriptParams[1];
+                //    float y = *(float*)&ScriptParams[2];
+                //
+                //    bool isInsideMalibu = (CGame::currArea == AREA_MALIBU_CLUB);
+                //
+                //    // EXIT sphere (488.6, -75.4)
+                //    if (fabsf(x - 488.6f) < 1.5f && fabsf(y + 75.4f) < 1.5f)
+                //    {
+                //        if (isInsideMalibu)
+                //        {
+                //            UpdateCompareFlag(script, false);   // Inside + Exit sphere = treat as ENTER
+                //        }
+                //        else
+                //        {
+                //            UpdateCompareFlag(script, true);
+                //        }
+                //        return;
+                //    }
+                //});
+
+                //static auto loc_45AA37 = (uintptr_t)hook::pattern("30 C0 81 C4 08 02 00 00 5D 5F 5E 5B C2 04 00 8D 45 ? 89 E9 6A 03 50 E8 ? ? ? ? A1 ? ? ? ? 8B 0D ? ? ? ? 50 E8 ? ? ? ? A1").get_first();
+                //pattern = find_pattern("D9 05 ? ? ? ? D9 5C 24 ? D9 05 ? ? ? ? D9 9C 24 ? ? ? ? D9 05 ? ? ? ? D9 9C 24 ? ? ? ? E8");
+                //static auto COMMAND_LOAD_SCENE = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+                //{
+                //    CRunningScript* script = (CRunningScript*)regs.ebp;
+                //    if (iequals(script->m_abScriptName, "shit"))
+                //    {
+                //        if (bSkipNextLoadScene)
+                //        {
+                //            return_to(loc_45AA37);
+                //        }
+                //    }
+                //});
             }
         };
     }
