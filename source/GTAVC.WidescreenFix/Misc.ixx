@@ -33,6 +33,13 @@ public:
             auto bCarSpeedDependantFOV = iniReader.ReadInteger("MISC", "CarSpeedDependantFOV", 1) != 0;
             auto bVCSCamShake = iniReader.ReadInteger("MISC", "VCSCamShake", 0) != 0;
 
+            auto pattern = hook::pattern("83 D8 ? ? ? 89 44 24 ? 50 ? ? ? ? ? ? ? E9");
+            static auto SubtitlesHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            {
+                CFont::Details->dropColor = { 0, 0, 0, 0xFF };
+                CFont::Details->dropShadowPosition = 2;
+            });
+
             if (ReplaceTextShadowWithOutline)
             {
                 auto pattern = hook::pattern("6A 32 6A 64 6A 64 6A 64 E8");
@@ -40,12 +47,6 @@ public:
 
                 pattern = hook::pattern("E8 ? ? ? ? 8B 85 08 01 00 00 83 C4 0C 3D FF 00 00 00");
                 injector::MakeNOP(pattern.count(1).get(0).get<uint32_t>(0), 5, true); //menu title shadows 0x49E30E
-
-                pattern = hook::pattern("83 D8 ? ? ? 89 44 24 ? 50 ? ? ? ? ? ? ? E9");
-                static auto SubtitlesHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-                {
-                    CFont::Details->dropShadowPosition = 2;
-                });
 
                 // radio shadow 0x5FA1A5
                 pattern = hook::pattern("68 ? ? ? ? 6A ? 6A ? 6A ? E8 ? ? ? ? 8D 44 24 ? 50 E8 ? ? ? ? ? ? ? ? ? ? 59 53");

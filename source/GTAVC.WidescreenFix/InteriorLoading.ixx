@@ -524,7 +524,7 @@ public:
         WFP::onGameInitEvent() += []()
         {
             CIniReader iniReader("");
-            gbNoInteriorLoading = iniReader.ReadInteger("MAIN", "NoInteriorLoading", 1) != 0;
+            gbNoInteriorLoading = iniReader.ReadInteger("MISC", "NoInteriorLoading", 0) != 0;
 
             if (gbNoInteriorLoading)
             {
