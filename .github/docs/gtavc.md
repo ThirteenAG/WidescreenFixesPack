@@ -1,15 +1,60 @@
 ![gtavc](https://thirteenag.github.io/screens/gtavc/main2.jpg)
 
-$${\color{green}✔}$$  Fixed Aspect Ratio
+$${\color{green}✔}$$ Fixed Aspect Ratio
 
-$${\color{green}✔}$$  Fixed HUD
+$${\color{green}✔}$$ Fixed HUD
 
-$${\color{green}✔}$$  Fixed Field of View
+$${\color{green}✔}$$ Fixed Field of View
 
-$${\color{blue}ⓘ}$$ Many different options available in the ini file
+$${\color{green}✔}$$ Cutscene FOV and letterboxing adjusts properly with aspect ratio
+
+$${\color{blue}ⓘ}$$ Added an option to disable loading between islands
+
+$${\color{blue}ⓘ}$$ Added options to scale the size of HUD elements
+
+$${\color{blue}ⓘ}$$ Added an option to force MSAA
+
+$${\color{blue}ⓘ}$$ Added an option to replace the text shadows with an outline
+
+$${\color{blue}ⓘ}$$ Added an option to increase FOV with car speed
+
+$${\color{blue}ⓘ}$$ Added an option to enable GTA: Vice City Stories camera shake in vehicles at high speed
 
     Installation:
         Download and extract the archive to the game directory, where the exe is located.
+
+> [!WARNING]
+> Non-Windows users (Proton/Wine) need to perform a **DLL override**.
+>
+> <details>
+> <summary>Click here for details</summary>
+> <br>
+>
+> You need to tell Wine explicitly to use the correct DLL overrides required for this plugin. There's more than one way to achieve it.
+>
+> ###
+>
+> **Method 1**: `WINEDLLOVERRIDES` variable lets you temporarily specify DLL overrides. It can be used from a command line as well as in the Steam launcher. In the case of the command line, simply prepend the usual start command with:
+>    ```
+>    WINEDLLOVERRIDES="d3d8=n,b"
+>    ```
+> For Steam, head to the game's properties and set `LAUNCH OPTIONS` to `WINEDLLOVERRIDES="d3d8=n,b" %command%`.
+>
+>  ![steam-wine-dll-override](https://silentsblog.com/assets/img/setup/steam-wine-dll-override.png)
+>
+> **Method 2**: Use `winecfg` tool to make a permanent override for a specific Wine prefix. In case of Proton, Steam creates the Wine prefix for Grand Theft Auto: Vice City in `$HOME/.steam/steam/steamapps/compatdata/12240/pfx`. Then you need to run `winecfg` with that path:
+> ```
+> WINEPREFIX="$HOME/.steam/steam/steamapps/compatdata/12240/pfx" winecfg
+> ```
+> Select the `Libraries` tab and fill the combo box with the name of the library you wish to override and hit `Add`. You can verify that it's been added to the list below with `(native, builtin)` suffix. Then close the window with the `OK` button.
+>
+> ![winecfg-dll-override](https://silentsblog.com/assets/img/setup/winecfg-dll-override.png)
+>
+> Related Wine documentation:
+> * [More on DLL overrides](https://wiki.winehq.org/Wine_User's_Guide#DLL_Overrides)
+> * [More on WINEDLLOVERRIDES method](https://wiki.winehq.org/Wine_User's_Guide#WINEDLLOVERRIDES.3DDLL_Overrides)
+> </details>
+        
 
 [Website](https://thirteenag.github.io/wfp#gtavc) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/GTAVC.WidescreenFix/dllmain.cpp) | [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/GTAVC.WidescreenFix/scripts/GTAVC.WidescreenFix.ini)
 
