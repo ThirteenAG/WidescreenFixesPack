@@ -274,8 +274,8 @@ public:
         WFP::onGameInitEvent() += []()
         {
             CIniReader iniReader("");
-            static bool gbNoIslandLoading = iniReader.ReadInteger("MAIN", "NoIslandLoading", 1) != 0;
-            static bool gbDisableZoneCull = iniReader.ReadInteger("MAIN", "DisableZoneCull", 1) != 0;
+            static bool gbNoIslandLoading = iniReader.ReadInteger("MISC", "NoIslandLoading", 1) != 0;
+            static bool gbDisableZoneCull = iniReader.ReadInteger("MISC", "DisableZoneCull", 1) != 0;
 
             if (gbNoIslandLoading)
             {

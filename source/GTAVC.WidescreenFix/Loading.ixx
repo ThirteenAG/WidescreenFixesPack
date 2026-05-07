@@ -288,7 +288,7 @@ public:
         WFP::onGameInitEvent() += []()
         {
             CIniReader iniReader("");
-            gbNoIslandLoading = iniReader.ReadInteger("MAIN", "NoIslandLoading", 1) != 0;
+            gbNoIslandLoading = iniReader.ReadInteger("MISC", "NoIslandLoading", 1) != 0;
 
             if (gbNoIslandLoading)
             {
