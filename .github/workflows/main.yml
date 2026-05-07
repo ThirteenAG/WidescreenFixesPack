@@ -41,12 +41,10 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  prepare-artifacts:
+  upload-artifacts:
     needs: build
     runs-on: windows-2025-vs2026
     if: ${{ needs.build.result == 'success' }}
-    outputs:
-      matrix: ${{ steps.gen-matrix.outputs.matrix }}
 
     steps:
       - name: Download the bundle
@@ -55,55 +53,24 @@ jobs:
           name: WidescreenFixesPack
           path: downloaded-zips
 
-      - name: Generate matrix
-        id: gen-matrix
-        shell: pwsh
-        run: |
-          $dir = "downloaded-zips"
-          $zips = @(Get-ChildItem "$dir\*.zip" -File -ErrorAction SilentlyContinue)
+      - name: Install artifact client
+        run: npm install @actions/artifact
 
-          if ($zips.Count -eq 0) {
-            Write-Host "No .zip files found in the bundle."
-            echo "matrix={}" >> $env:GITHUB_OUTPUT
-            exit 0
-          }
-
-          $include = @()
-          foreach ($zip in $zips) {
-            $include += @{
-              name = $zip.BaseName
-              path = "downloaded-zips/$($zip.Name)"
+      - name: Upload individual artifacts
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {DefaultArtifactClient} = require('./node_modules/@actions/artifact')
+            const client = new DefaultArtifactClient()
+            const path = require('path')
+            const globber = await glob.create('downloaded-zips/*.zip')
+            const files = await globber.glob()
+            if (files.length === 0) {
+              core.warning('No .zip files found in the bundle.')
+              return
             }
-          }
-
-          $matrixJson = @{ include = $include } | ConvertTo-Json -Compress -Depth 10
-
-          if ($zips.Count -eq 1) {
-            $matrixJson = '{"include":[' + ($include[0] | ConvertTo-Json -Compress -Depth 10) + ']}'
-          }
-
-          echo "matrix=$matrixJson" >> $env:GITHUB_OUTPUT
-          Write-Host "Generated matrix with $($zips.Count) artifacts"
-
-  upload-artifact:
-    needs: prepare-artifacts
-    runs-on: windows-2025-vs2026
-    if: ${{ needs.prepare-artifacts.outputs.matrix != '' && needs.prepare-artifacts.outputs.matrix != '{}' }}
-    strategy:
-      matrix: ${{ fromJson(needs.prepare-artifacts.outputs.matrix) }}
-
-    steps:
-      - name: Download the bundle
-        uses: actions/download-artifact@v8
-        with:
-          name: WidescreenFixesPack
-          path: downloaded-zips
-
-      - name: Upload individual artifact ${{ matrix.name }}
-        uses: actions/upload-artifact@v7
-        with:
-          archive: false
-          name: ${{ matrix.name }}
-          path: ${{ matrix.path }}
-          retention-days: 90
-          if-no-files-found: error
+            for (const file of files) {
+              const name = path.basename(file)
+              core.info(`Uploading ${name}...`)
+              await client.uploadArtifact(name, [file], 'downloaded-zips', { retentionDays: 90, skipArchive: true })
+            }
