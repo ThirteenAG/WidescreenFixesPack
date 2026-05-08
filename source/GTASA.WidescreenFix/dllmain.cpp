@@ -1449,47 +1449,51 @@ void __cdecl SetVerticesHook(CRect& a1, CRGBA const& a2, CRGBA const& a3, CRGBA 
 
     if (static_cast<int>(a1.m_fLeft) <= 0 && static_cast<int>(a1.m_fTop) <= 0 && static_cast<int>(a1.m_fRight) >= RsGlobal->MaximumWidth && static_cast<int>(a1.m_fBottom) >= RsGlobal->MaximumHeight)
     {
-        if (pTexture && std::find(std::begin(main_scm_tex), std::end(main_scm_tex), std::string_view((const char*)(*(uintptr_t*)pTexture + 0x10))) != std::end(main_scm_tex))
+        if (pTexture)
         {
-            float fMiddleScrCoord = (float)RsGlobal->MaximumWidth / 2.0f;
-
-            float w = 16.0f;
-            float h = 9.0f;
-
-            if (FrontendAspectRatioWidth && FrontendAspectRatioHeight)
+            const uintptr_t pRwTexture = *(uintptr_t*)pTexture;
+            if (pRwTexture && std::find(std::begin(main_scm_tex), std::end(main_scm_tex), std::string_view((const char*)(pRwTexture + 0x10))) != std::end(main_scm_tex))
             {
-                w = (float)FrontendAspectRatioWidth;
-                h = (float)FrontendAspectRatioHeight;
-            }
-            else
-            {
-                if (pTexture)
+                float fMiddleScrCoord = (float)RsGlobal->MaximumWidth / 2.0f;
+
+                float w = 16.0f;
+                float h = 9.0f;
+
+                if (FrontendAspectRatioWidth && FrontendAspectRatioHeight)
                 {
-                    if (*(uint32_t*)pTexture)
+                    w = (float)FrontendAspectRatioWidth;
+                    h = (float)FrontendAspectRatioHeight;
+                }
+                else
+                {
+                    if (pTexture)
                     {
-                        pTexture = **(uint32_t**)pTexture;
-                        w = (float)(*(uint32_t*)(pTexture + 0x28));
-                        h = (float)(*(uint32_t*)(pTexture + 0x2C));
-                        if (w == h && w > 0 && h > 0)
+                        if (*(uint32_t*)pTexture)
                         {
-                            w = 4.0f;
-                            h = 3.0f;
+                            pTexture = **(uint32_t**)pTexture;
+                            w = (float)(*(uint32_t*)(pTexture + 0x28));
+                            h = (float)(*(uint32_t*)(pTexture + 0x2C));
+                            if (w == h && w > 0 && h > 0)
+                            {
+                                w = 4.0f;
+                                h = 3.0f;
+                            }
                         }
                     }
                 }
+
+                fFrontendDefaultWidth = ((((float)RsGlobal->MaximumHeight * (w / h))));
+
+                a1.m_fTop = 0.0f;
+                a1.m_fLeft = fMiddleScrCoord - ((((float)RsGlobal->MaximumHeight * (w / h))) / 2.0f);
+                a1.m_fBottom = (float)RsGlobal->MaximumHeight;
+                a1.m_fRight = fMiddleScrCoord + ((((float)RsGlobal->MaximumHeight * (w / h))) / 2.0f);
+
+                CRGBA RectColor = { 0, 0, 0, a2.alpha };
+                CSprite2dDrawRect2(CRect(-5.0f, a1.m_fBottom, a1.m_fLeft, -5.0f), RectColor, RectColor, RectColor, RectColor);
+                CSprite2dDrawRect2(CRect((float)RsGlobal->MaximumWidth, a1.m_fBottom, a1.m_fRight, -5.0f), RectColor, RectColor, RectColor, RectColor);
+                CSprite2dDrawRect2(CRect(-5.0f, (float)RsGlobal->MaximumHeight + 5.0f, (float)RsGlobal->MaximumWidth + 5.0f, -5.0f), RectColor, RectColor, RectColor, RectColor);
             }
-
-            fFrontendDefaultWidth = ((((float)RsGlobal->MaximumHeight * (w / h))));
-
-            a1.m_fTop = 0.0f;
-            a1.m_fLeft = fMiddleScrCoord - ((((float)RsGlobal->MaximumHeight * (w / h))) / 2.0f);
-            a1.m_fBottom = (float)RsGlobal->MaximumHeight;
-            a1.m_fRight = fMiddleScrCoord + ((((float)RsGlobal->MaximumHeight * (w / h))) / 2.0f);
-
-            CRGBA RectColor = { 0, 0, 0, a2.alpha };
-            CSprite2dDrawRect2(CRect(-5.0f, a1.m_fBottom, a1.m_fLeft, -5.0f), RectColor, RectColor, RectColor, RectColor);
-            CSprite2dDrawRect2(CRect((float)RsGlobal->MaximumWidth, a1.m_fBottom, a1.m_fRight, -5.0f), RectColor, RectColor, RectColor, RectColor);
-            CSprite2dDrawRect2(CRect(-5.0f, (float)RsGlobal->MaximumHeight + 5.0f, (float)RsGlobal->MaximumWidth + 5.0f, -5.0f), RectColor, RectColor, RectColor, RectColor);
         }
     }
     return hbSetVertices.fun(a1, a2, a3, a4, a5);
