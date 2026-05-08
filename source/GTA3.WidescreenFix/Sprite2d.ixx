@@ -19,6 +19,7 @@ public:
     RwTexture* m_pTexture;
 };
 
+export bool g_noBorderAnim = false;
 float s_bordersMult = 0.0f;
 float s_barHeight = 0.0f;
 float s_pillarWidth = 0.0f;
@@ -100,6 +101,30 @@ static CRect ComputeContentRect(CSprite2d* sprite2d, const CRect* rect)
     float halfW = (SCREEN_HEIGHT * aspect) / 2.0f;
 
     return CRect(centerX - halfW, rect->bottom, centerX + halfW, rect->top);
+}
+
+static CRect ComputeCoverRect(CSprite2d* sprite2d, const CRect* rect)
+{
+    float w = DEFAULT_ASPECT_RATIO, h = 1.0f;
+
+    RwRaster* pRaster = RwTextureGetRaster(sprite2d->m_pTexture);
+    if (pRaster)
+    {
+        int32_t texW = RwRasterGetWidth(pRaster);
+        int32_t texH = RwRasterGetHeight(pRaster);
+        if (texW > 0 && texH > 0)
+        {
+            w = (float)texW;
+            h = (float)texH;
+        }
+    }
+
+    float aspect = w / h;
+    float scaledH = SCREEN_WIDTH / aspect;
+    float centerY = SCREEN_HEIGHT / 2.0f;
+    float halfH = scaledH / 2.0f;
+
+    return CRect(0.0f, centerY + halfH, SCREEN_WIDTH, centerY - halfH);
 }
 
 export SafetyHookInline shDrawRect1 = {};
@@ -356,9 +381,13 @@ void __fastcall DrawBordersForWideScreen(CCamera* camera, void* edx)
         shouldBeActive = false;
     }
 
-    TickBorderAnim(now, shouldBeActive);
+    if (g_noBorderAnim)
+        s_bordersMult = widescreenOn ? 1.0f : 0.0f;
+    else
+        TickBorderAnim(now, shouldBeActive);
 
-    if (shouldBeActive)
+    bool shouldComputeGeometry = shouldBeActive || (g_noBorderAnim && widescreenOn);
+    if (shouldComputeGeometry)
     {
         float reductionPercent = camera->m_ScreenReductionPercentage;
 
@@ -396,7 +425,8 @@ void __fastcall DrawBordersForWideScreen(CCamera* camera, void* edx)
 
     // Render whenever the animation multiplier is still visible
     auto pref = CMenuManager::m_PrefsUseWideScreen.get();
-    if (pref && s_bordersMult > 0.01f)
+    bool canRender = s_bordersMult > 0.01f && (shouldComputeGeometry || !g_noBorderAnim);
+    if (pref && canRender)
     {
         bool renderBorders = false;
         if (pref == CutsceneBordersMode::Letterbox && s_hasLetterbox)
