@@ -304,6 +304,7 @@ public:
             static float fRadarWidth = iniReader.ReadFloat("MAIN", "RadarWidth", 94.0f);
             static float fRadarHeight = iniReader.ReadFloat("MAIN", "RadarHeight", 76.0f);
             static float fSubtitlesScale = iniReader.ReadFloat("MAIN", "SubtitlesScale", 0.0f);
+            g_noBorderAnim = iniReader.ReadInteger("MAIN", "NoCutsceneBorderAnimation", 0) != 0;
 
             auto pattern = hook::pattern("E8 ? ? ? ? 6A ? E8 ? ? ? ? 59 8D 8C 24 ? ? ? ? 68 ? ? ? ? 6A ? 6A ? 6A ? E8 ? ? ? ? 8D 84 24 ? ? ? ? 50 E8 ? ? ? ? ? ? ? ? ? ? 59 50 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 50 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? E8 ? ? ? ? 8B 3D");
             CFont::DrawFonts = (decltype(CFont::DrawFonts))injector::GetBranchDestination(pattern.get_first(0)).as_int();

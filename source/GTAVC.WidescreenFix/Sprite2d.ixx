@@ -20,6 +20,7 @@ public:
     RwTexture* m_pTexture;
 };
 
+export bool g_noBorderAnim = false;
 float s_bordersMult = 0.0f;
 float s_barHeight = 0.0f;
 float s_pillarWidth = 0.0f;
@@ -103,6 +104,30 @@ static CRect ComputeContentRect(CSprite2d* sprite2d, const CRect* rect)
     return CRect(centerX - halfW, rect->bottom, centerX + halfW, rect->top);
 }
 
+static CRect ComputeCoverRect(CSprite2d* sprite2d, const CRect* rect)
+{
+    float w = DEFAULT_ASPECT_RATIO, h = 1.0f;
+
+    RwRaster* pRaster = RwTextureGetRaster(sprite2d->m_pTexture);
+    if (pRaster)
+    {
+        int32_t texW = RwRasterGetWidth(pRaster);
+        int32_t texH = RwRasterGetHeight(pRaster);
+        if (texW > 0 && texH > 0)
+        {
+            w = (float)texW;
+            h = (float)texH;
+        }
+    }
+
+    float aspect = w / h;
+    float scaledH = SCREEN_WIDTH / aspect;
+    float centerY = SCREEN_HEIGHT / 2.0f;
+    float halfH = scaledH / 2.0f;
+
+    return CRect(0.0f, centerY + halfH, SCREEN_WIDTH, centerY - halfH);
+}
+
 export SafetyHookInline shDrawRect1 = {};
 static void DrawPillarBars(const CRect& content, float top, float bottom)
 {
@@ -163,9 +188,24 @@ void __fastcall Draw1(CSprite2d* sprite2d, void* edx, CRect* rect, CRGBA* col)
     g_isFullscreen = IsFullscreen(rect);
     g_hasTexture = sprite2d->m_pTexture != nullptr;
     g_alpha = reinterpret_cast<uint8_t*>(col)[3];
-    if (g_isFullscreen && g_hasTexture) g_contentRect = ComputeContentRect(sprite2d, rect);
-    shDraw1.unsafe_fastcall(sprite2d, edx, rect, col);
-    if (g_isFullscreen && g_hasTexture) DrawPillarBars(g_contentRect, rect->top, rect->bottom);
+
+    bool isCover = g_isFullscreen && g_hasTexture
+        && sprite2d->m_pTexture->name
+        && std::string_view(sprite2d->m_pTexture->name) == "background";
+
+    if (isCover)
+    {
+        // Stretch to cover: zoom in, no pillar bars needed
+        g_contentRect = ComputeCoverRect(sprite2d, rect);
+        shDraw1.unsafe_fastcall(sprite2d, edx, rect, col);
+    }
+    else
+    {
+        if (g_isFullscreen && g_hasTexture) g_contentRect = ComputeContentRect(sprite2d, rect);
+        shDraw1.unsafe_fastcall(sprite2d, edx, rect, col);
+        if (g_isFullscreen && g_hasTexture) DrawPillarBars(g_contentRect, rect->top, rect->bottom);
+    }
+
     g_isFullscreen = false; g_hasTexture = false;
 }
 
@@ -365,9 +405,13 @@ void __fastcall DrawBordersForWideScreen(CCamera* camera, void* edx)
         shouldBeActive = false;
     }
 
-    TickBorderAnim(now, shouldBeActive);
+    if (g_noBorderAnim)
+        s_bordersMult = widescreenOn ? 1.0f : 0.0f;
+    else
+        TickBorderAnim(now, shouldBeActive);
 
-    if (shouldBeActive)
+    bool shouldComputeGeometry = shouldBeActive || (g_noBorderAnim && widescreenOn);
+    if (shouldComputeGeometry)
     {
         float reductionPercent = camera->m_ScreenReductionPercentage;
 
@@ -405,7 +449,8 @@ void __fastcall DrawBordersForWideScreen(CCamera* camera, void* edx)
 
     // Render whenever the animation multiplier is still visible
     auto pref = FrontendMenuManager->m_PrefsUseWideScreen;
-    if (pref && s_bordersMult > 0.01f)
+    bool canRender = s_bordersMult > 0.01f && (shouldComputeGeometry || !g_noBorderAnim);
+    if (pref && canRender)
     {
         bool renderBorders = false;
         if (pref == CutsceneBordersMode::Letterbox && s_hasLetterbox)
