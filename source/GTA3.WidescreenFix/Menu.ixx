@@ -40,6 +40,14 @@ export namespace CMenuManager
             return *pattern.get_first<int8_t*>(2);
         return nullptr;
     });
+
+    GameRef<int8_t> m_bIsActive([]() -> int8_t*
+    {
+        auto pattern = hook::pattern("80 3D ? ? ? ? ? 74 ? 80 3D ? ? ? ? ? 0F 85 ? ? ? ? B9");
+        if (!pattern.empty())
+            return *pattern.get_first<int8_t*>(2);
+        return nullptr;
+    });
 }
 
 namespace CText
