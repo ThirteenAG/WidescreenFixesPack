@@ -11,6 +11,7 @@ import Camera;
 import Draw;
 import Timer;
 import Menu;
+import TransparentMenu;
 
 using RwIm2DVertex = void;
 
@@ -192,6 +193,16 @@ void __fastcall Draw1(CSprite2d* sprite2d, void* edx, CRect* rect, CRGBA* col)
     bool isCover = g_isFullscreen && g_hasTexture
         && sprite2d->m_pTexture->name
         && std::string_view(sprite2d->m_pTexture->name) == "background";
+
+    if (gTransparentMenuCanRender)
+    {
+        bool isMenuBackground = g_isFullscreen && g_hasTexture
+            && sprite2d->m_pTexture->name
+            && (std::string_view(sprite2d->m_pTexture->name) == "background");
+
+        if (isMenuBackground)
+            return;
+    }
 
     if (isCover)
     {
