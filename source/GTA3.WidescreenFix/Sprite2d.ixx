@@ -10,6 +10,7 @@ import Camera;
 import Draw;
 import Timer;
 import Menu;
+import TransparentMenu;
 
 using RwIm2DVertex = void;
 
@@ -186,6 +187,25 @@ void __fastcall Draw1(CSprite2d* sprite2d, void* edx, CRect* rect, CRGBA* col)
 {
     g_isFullscreen = IsFullscreen(rect);
     g_hasTexture = sprite2d->m_pTexture != nullptr;
+
+    if (gTransparentMenuCanRender)
+    {
+        bool isMenuBackground = g_isFullscreen && g_hasTexture
+            && sprite2d->m_pTexture->name
+            && (
+                std::string_view(sprite2d->m_pTexture->name) == "mainmenu24" ||
+                std::string_view(sprite2d->m_pTexture->name) == "singleplayer24" ||
+                std::string_view(sprite2d->m_pTexture->name) == "multiplayer24" ||
+                std::string_view(sprite2d->m_pTexture->name) == "hostgame24" ||
+                std::string_view(sprite2d->m_pTexture->name) == "findgame24" ||
+                std::string_view(sprite2d->m_pTexture->name) == "connection24" ||
+                std::string_view(sprite2d->m_pTexture->name) == "Playersetup24"
+            );
+
+        if (isMenuBackground)
+            return;
+    }
+
     g_alpha = reinterpret_cast<uint8_t*>(col)[3];
     if (g_isFullscreen && g_hasTexture) g_contentRect = ComputeContentRect(sprite2d, rect);
     shDraw1.unsafe_fastcall(sprite2d, edx, rect, col);
