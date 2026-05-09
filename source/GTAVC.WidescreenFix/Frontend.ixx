@@ -291,6 +291,34 @@ void StretchX(SafetyHookContext& ctx)
     _asm {fdiv dword ptr[f]}
 }
 
+enum
+{
+    SCRIPT_TEXT_MAX_LENGTH = 100
+};
+
+struct intro_text_line
+{
+    float m_fScaleX;
+    float m_fScaleY;
+    CRGBA m_sColor;
+    bool m_bJustify;
+    bool m_bCentered;
+    bool m_bBackground;
+    bool m_bBackgroundOnly;
+    float m_fWrapX;
+    float m_fCenterSize;
+    CRGBA m_sBackgroundColor;
+    bool m_bTextProportional;
+    bool m_bTextBeforeFade;
+    bool m_bRightJustify;
+    int32_t m_nFont;
+    float m_fAtX;
+    float m_fAtY;
+    wchar_t m_Text[SCRIPT_TEXT_MAX_LENGTH];
+};
+
+intro_text_line** ppIntroTextLines = nullptr;
+
 class Frontend
 {
 public:
@@ -784,6 +812,47 @@ public:
                 SubtitlesWidth2 *= fSubtitlesScale;
                 SubtitlesHeight *= fSubtitlesScale;
             }
+
+            //IntroTextLines
+            pattern = hook::pattern("BE ? ? ? ? 66 83 BD");
+            ppIntroTextLines = pattern.get_first<intro_text_line*>(1);
+
+            pattern = hook::pattern("E8 ? ? ? ? ? ? ? ? ? ? 59 50 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? E8 ? ? ? ? 80 BD");
+            static auto IntroTextLinesSetWrapX = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            {
+                using tSetWrapx = void(__cdecl*)(float x);
+                auto [x] = deduce_args<tSetWrapx>(regs);
+
+                auto pIntroTextLines = *ppIntroTextLines;
+                auto line = &pIntroTextLines[regs.ebx];
+
+                x = SCALE_AND_CENTER_X(line->m_fWrapX);
+            });
+
+            pattern = hook::pattern("E8 ? ? ? ? 80 BD ? ? ? ? ? 59 74 ? E8 ? ? ? ? EB ? 8D 40");
+            static auto IntroTextLinesSetCentreSize = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            {
+                using tSetCentreSize = void(__cdecl*)(float s);
+                auto [s] = deduce_args<tSetCentreSize>(regs);
+
+                auto pIntroTextLines = *ppIntroTextLines;
+                auto line = &pIntroTextLines[regs.ebx];
+
+                s = SCREEN_SCALE_X(line->m_fCenterSize);
+            });
+
+            pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 43 81 C5");
+            static auto IntroTextLinesPrintString = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            {
+                using tPrintString = void(__cdecl*)(float, float, wchar_t*);
+                auto [xstart, ystart, s] = deduce_args<tPrintString>(regs);
+
+                auto pIntroTextLines = *ppIntroTextLines;
+                auto line = &pIntroTextLines[regs.ebx];
+
+                xstart = SCREEN_WIDTH - SCALE_AND_CENTER_X(DEFAULT_SCREEN_WIDTH - line->m_fAtX);
+                ystart = SCREEN_HEIGHT - SCREEN_SCALE_Y(DEFAULT_SCREEN_HEIGHT - line->m_fAtY);
+            });
         };
     }
 } Frontend;
