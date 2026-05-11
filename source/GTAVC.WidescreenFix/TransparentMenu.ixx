@@ -31,7 +31,8 @@ void __cdecl CSprite2d__DrawRect2(CRect* a1, uint8_t* a2)
 injector::hook_back<void(__cdecl*)(float, float, float, float, float, float, float, float, uint8_t*)> hbDraw2DPolygon;
 void __cdecl CSprite2d__Draw2DPolygon(float a1, float a2, float a3, float a4, float a5, float a6, float a7, float a8, uint8_t* a9)
 {
-    //return hbDraw2DPolygon.fun(a1, a2, a3, a4, a5, a6, a7, a8, a9);
+    if (FrontendMenuManager->m_bGameNotLoaded)
+        return hbDraw2DPolygon.fun(a1, a2, a3, a4, a5, a6, a7, a8, a9);
 }
 
 class TransparentMenu

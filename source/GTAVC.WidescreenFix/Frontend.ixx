@@ -287,7 +287,7 @@ export std::array<ProtectedGameRef<float>, FrontendClassCount> ResYInvRefs;
 
 void StretchX(SafetyHookContext& ctx)
 {
-    float f = f = (CDraw::GetAspectRatio() / (4.0f / 3.0f));
+    float f = (CDraw::GetAspectRatio() / (4.0f / 3.0f));
     _asm {fdiv dword ptr[f]}
 }
 

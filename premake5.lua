@@ -325,6 +325,11 @@ project "GTAVC.WidescreenFix"
    files { "includes/GTA/*.h", "includes/GTA/*.cpp" }
    setpaths("Z:/WFP/Games/Grand Theft Auto/Grand Theft Auto Vice City/", "gta-vc.exe")
 project "GTASA.WidescreenFix"
+   prebuildcommands {
+   "for /R \"../source/%{prj.name}/\" %%f in (*.fx) do (\"../includes/dxsdk/lib/x86/fxc.exe\" /T fx_2_0 /Fo \"../source/%{prj.name}/%%~nf.fxo\" %%f)"
+   }
+   files { "source/%{prj.name}/*.fx", "source/%{prj.name}/*.rc" }
+   defines { "IDR_POSTFX=201" }
    files { "includes/GTA/*.h", "includes/GTA/*.cpp" }
    setpaths("Z:/WFP/Games/Grand Theft Auto/GTA San Andreas/", "gta_sa.exe")
 group ""
