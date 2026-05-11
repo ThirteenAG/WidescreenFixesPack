@@ -13,7 +13,6 @@ import Vehicle;
 import Timer;
 import Draw;
 
-
 injector::hook_back<void(__fastcall*)(CCamera*, void*)> hbCalculateDerivedValues;
 void __fastcall CalculateDerivedValues(CCamera* camera, void* edx)
 {
