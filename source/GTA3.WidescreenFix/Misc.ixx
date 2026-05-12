@@ -104,15 +104,44 @@ namespace CFont
         if (originalColor.red == 0x20 && originalColor.green == 0xA2 && originalColor.blue == 0x42) //pager
             return shPrintString.unsafe_ccall(x, y, str);
 
-        float outlineStrength = 0.5f;
         CRGBA outlineColor;
         bool isVeryDark = (originalColor.red <= 0x14 && originalColor.green <= 0x14 && originalColor.blue <= 0x14);
 
         if (isVeryDark)
-            outlineColor = CRGBA(255, 255, 255, originalColor.alpha / 10);
+            outlineColor = CRGBA(255, 255, 255, originalColor.alpha / 2);
         else
             outlineColor = CRGBA(0, 0, 0, originalColor.alpha);
 
+        const int sampleCount = 16;
+
+        // 16-direction ring (smoother edge)
+        static constexpr float dirs16[][2] = {
+            { 1.0000f,  0.0000f}, { 0.9239f,  0.3827f}, { 0.7071f,  0.7071f}, { 0.3827f,  0.9239f},
+            { 0.0000f,  1.0000f}, {-0.3827f,  0.9239f}, {-0.7071f,  0.7071f}, {-0.9239f,  0.3827f},
+            {-1.0000f,  0.0000f}, {-0.9239f, -0.3827f}, {-0.7071f, -0.7071f}, {-0.3827f, -0.9239f},
+            { 0.0000f, -1.0000f}, { 0.3827f, -0.9239f}, { 0.7071f, -0.7071f}, { 0.9239f, -0.3827f}
+        };
+
+        const float targetAlpha = (float)outlineColor.a / 255.0f;
+        const float perPassAlphaF = 1.0f - std::pow(1.0f - targetAlpha, 1.0f / (float)sampleCount);
+
+        constexpr float kOutlineAlphaBoost = 1.0f;
+        const uint8_t perPassAlpha = (uint8_t)std::clamp(perPassAlphaF * 255.0f * kOutlineAlphaBoost, (float)std::min<uint8_t>(0, outlineColor.a), (float)outlineColor.a);
+
+        float outlineStrength = (ReplaceTextShadowWithOutline > 1) ? 1.0f : 0.5f;
+
+        for (int i = 0; i < sampleCount; ++i)
+        {
+            outlineColor.a = perPassAlpha;
+            Details->m_Color = outlineColor;
+
+            const float ox = SCREEN_SCALE_X(dirs16[i][0] * outlineStrength);
+            const float oy = SCREEN_SCALE_Y(dirs16[i][1] * outlineStrength);
+
+            shPrintString.unsafe_ccall(x + ox, y + oy, str);
+        }
+
+        #if 0
         static CVector2D offsets[] = {
             { 1.f,  1.f}, { 1.f, -1.f},
             {-1.f,  1.f}, {-1.f, -1.f},
@@ -129,6 +158,7 @@ namespace CFont
             CVector2D& offset = offsets[i];
             shPrintString.unsafe_ccall(x + SCREEN_SCALE_X(offset.x * outlineStrength), y + SCREEN_SCALE_Y(offset.y * outlineStrength), str);
         }
+        #endif
 
         SetColor(&originalColor);
         shPrintString.unsafe_ccall(x, y, str);
