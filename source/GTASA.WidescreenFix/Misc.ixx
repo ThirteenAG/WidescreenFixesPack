@@ -143,6 +143,102 @@ public:
             auto bCarSpeedDependantFOV = iniReader.ReadInteger("MISC", "CarSpeedDependantFOV", 1) != 0;
             auto bVCSCamShake = iniReader.ReadInteger("MISC", "VCSCamShake", 0) != 0;
 
+            auto pattern = hook::pattern("E8 ? ? ? ? 8A 0D ? ? ? ? 83 C4 14");
+            CFont::PrintString = (decltype(CFont::PrintString))injector::GetBranchDestination(pattern.get_first()).as_int();
+
+            static auto loc_719F30 = (uintptr_t)hook::pattern("8B 0D ? ? ? ? BA ? ? ? ? 2B D5").get_first();
+            pattern = hook::pattern("D9 05 ? ? ? ? A0 ? ? ? ? D8 1D ? ? ? ? 66 0F BE D9 8A 0D ? ? ? ? A2 ? ? ? ? 89 54 24 ? 8A 15 ? ? ? ? DF E0 F6 C4 44 88 0D ? ? ? ? 8A 0D ? ? ? ? C6 05 ? ? ? ? ? 88 15 ? ? ? ? 88 0D ? ? ? ? C6 05 ? ? ? ? ? 7B ? 0F BF D3 89 54 24 ? DB 44 24 ? DB 05 ? ? ? ? D8 0D ? ? ? ? D8 C9 D8 05 ? ? ? ? D9 1D ? ? ? ? DB 05 ? ? ? ? D8 0D ? ? ? ? D8 C9 D8 05 ? ? ? ? D9 1D ? ? ? ? DD D8 8B 7C 24");
+            static auto PrintStringHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            {
+                static thread_local bool inOutlinePass = false;
+
+                if (inOutlinePass)
+                {
+                    return_to(loc_719F30);
+                }
+
+                const float x = *(float*)(regs.esp + 0x1C);
+                const float y = *(float*)(regs.esp + 0x20);
+                auto _start = (char*)regs.esi;
+                auto _end = (char*)regs.ebp;
+                const float wrap = *(float*)(regs.esp + 0x2C);
+
+                const CRGBA savedColor = CFont::Color;
+                const uint8_t savedIsBlip = CFont::m_FontIsBlip;
+                const uint8_t savedOutlineSize = CFont::m_FontOutlineSize;
+                const uint8_t savedShadow = CFont::m_FontShadow;
+                const CVector2D savedSlantRef = CFont::SlantRefPoint;
+
+                const float dropShadowPosition = (float)CFont::m_FontOutlineSize;
+                const int sampleCount = 16;
+
+                // 16-direction ring (smoother edge)
+                static constexpr float dirs16[][2] = {
+                    { 1.0000f,  0.0000f}, { 0.9239f,  0.3827f}, { 0.7071f,  0.7071f}, { 0.3827f,  0.9239f},
+                    { 0.0000f,  1.0000f}, {-0.3827f,  0.9239f}, {-0.7071f,  0.7071f}, {-0.9239f,  0.3827f},
+                    {-1.0000f,  0.0000f}, {-0.9239f, -0.3827f}, {-0.7071f, -0.7071f}, {-0.3827f, -0.9239f},
+                    { 0.0000f, -1.0000f}, { 0.3827f, -0.9239f}, { 0.7071f, -0.7071f}, { 0.9239f, -0.3827f}
+                };
+
+                const float targetAlpha = (float)savedColor.a / 255.0f;
+                const float perPassAlphaF = 1.0f - std::pow(1.0f - targetAlpha, 1.0f / (float)sampleCount);
+
+                constexpr float kOutlineAlphaBoost = 2.0f;
+                const uint8_t perPassAlpha = (uint8_t)std::clamp(perPassAlphaF * 255.0f * kOutlineAlphaBoost, (float)std::min<uint8_t>(0, savedColor.a), (float)savedColor.a);
+
+                float outlineStrength = 1.0f;
+                switch (ReplaceTextShadowWithOutline)
+                {
+                    case 0:
+                        outlineStrength = 0.75f;
+                        break;
+                    case 1:
+                        outlineStrength = 0.5f;
+                        break;
+                    case 2:
+                        outlineStrength = 1.0f;
+                        break;
+                    default:
+                        break;
+                }
+
+                CFont::m_FontIsBlip = 1;
+                inOutlinePass = true;
+
+                for (int i = 0; i < sampleCount; ++i)
+                {
+                    CRGBA outlineColor = CFont::m_FontDropColor;
+                    outlineColor.a = perPassAlpha;
+                    CFont::Color = outlineColor;
+
+                    const float ox = SCREEN_SCALE_X(dropShadowPosition * dirs16[i][0] * outlineStrength);
+                    const float oy = SCREEN_SCALE_Y(dropShadowPosition * dirs16[i][1] * outlineStrength);
+
+                    if (CFont::Slant != 0.0f)
+                    {
+                        CFont::SlantRefPoint->x += ox;
+                        CFont::SlantRefPoint->y += oy;
+                        CFont::PrintString(x + ox, y + oy, _start, _end, wrap);
+                        CFont::SlantRefPoint->x -= ox;
+                        CFont::SlantRefPoint->y -= oy;
+                    }
+                    else
+                    {
+                        CFont::PrintString(x + ox, y + oy, _start, _end, wrap);
+                    }
+                }
+
+                inOutlinePass = false;
+
+                CFont::Color = savedColor;
+                CFont::m_FontIsBlip = savedIsBlip;
+                CFont::m_FontOutlineSize = savedOutlineSize;
+                CFont::m_FontShadow = savedShadow;
+                CFont::SlantRefPoint = savedSlantRef;
+
+                return_to(loc_719F30);
+            });
+
             if (bAllowAltTabbingWithoutPausing)
             {
                 //Windowed mode fix (from MTA sources)
@@ -205,88 +301,6 @@ public:
             {
                 auto pattern = hook::pattern("E8 ? ? ? ? 6A ? E8 ? ? ? ? 0F B6 7B");
                 static auto SetDropShadowPosition = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), CFont::SetOutlinePosition);
-
-                pattern = hook::pattern("E8 ? ? ? ? 8A 0D ? ? ? ? 83 C4 14");
-                CFont::PrintString = (decltype(CFont::PrintString))injector::GetBranchDestination(pattern.get_first()).as_int();
-
-                static auto loc_719F30 = (uintptr_t)hook::pattern("8B 0D ? ? ? ? BA ? ? ? ? 2B D5").get_first();
-                pattern = hook::pattern("D9 05 ? ? ? ? A0 ? ? ? ? D8 1D ? ? ? ? 66 0F BE D9 8A 0D ? ? ? ? A2 ? ? ? ? 89 54 24 ? 8A 15 ? ? ? ? DF E0 F6 C4 44 88 0D ? ? ? ? 8A 0D ? ? ? ? C6 05 ? ? ? ? ? 88 15 ? ? ? ? 88 0D ? ? ? ? C6 05 ? ? ? ? ? 7B ? 0F BF D3 89 54 24 ? DB 44 24 ? DB 05 ? ? ? ? D8 0D ? ? ? ? D8 C9 D8 05 ? ? ? ? D9 1D ? ? ? ? DB 05 ? ? ? ? D8 0D ? ? ? ? D8 C9 D8 05 ? ? ? ? D9 1D ? ? ? ? DD D8 8B 7C 24");
-                static auto PrintStringHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-                {
-                    static thread_local bool inOutlinePass = false;
-
-                    if (inOutlinePass)
-                    {
-                        return_to(loc_719F30);
-                    }
-
-                    const float x = *(float*)(regs.esp + 0x1C);
-                    const float y = *(float*)(regs.esp + 0x20);
-                    auto _start = (char*)regs.esi;
-                    auto _end = (char*)regs.ebp;
-                    const float wrap = *(float*)(regs.esp + 0x2C);
-
-                    const CRGBA savedColor = CFont::Color;
-                    const uint8_t savedIsBlip = CFont::m_FontIsBlip;
-                    const uint8_t savedOutlineSize = CFont::m_FontOutlineSize;
-                    const uint8_t savedShadow = CFont::m_FontShadow;
-                    const CVector2D savedSlantRef = CFont::SlantRefPoint;
-
-                    const float dropShadowPosition = (float)CFont::m_FontOutlineSize;
-                    const int sampleCount = 16;
-
-                    // 16-direction ring (smoother edge)
-                    static constexpr float dirs16[][2] = {
-                        { 1.0000f,  0.0000f}, { 0.9239f,  0.3827f}, { 0.7071f,  0.7071f}, { 0.3827f,  0.9239f},
-                        { 0.0000f,  1.0000f}, {-0.3827f,  0.9239f}, {-0.7071f,  0.7071f}, {-0.9239f,  0.3827f},
-                        {-1.0000f,  0.0000f}, {-0.9239f, -0.3827f}, {-0.7071f, -0.7071f}, {-0.3827f, -0.9239f},
-                        { 0.0000f, -1.0000f}, { 0.3827f, -0.9239f}, { 0.7071f, -0.7071f}, { 0.9239f, -0.3827f}
-                    };
-
-                    const float targetAlpha = (float)savedColor.a / 255.0f;
-                    const float perPassAlphaF = 1.0f - std::pow(1.0f - targetAlpha, 1.0f / (float)sampleCount);
-
-                    constexpr float kOutlineAlphaBoost = 2.0f;
-                    const uint8_t perPassAlpha = (uint8_t)std::clamp(perPassAlphaF * 255.0f * kOutlineAlphaBoost, (float)std::min<uint8_t>(0, savedColor.a), (float)savedColor.a);
-
-                    float outlineStrength = (ReplaceTextShadowWithOutline > 1) ? 1.0f : 0.5f;
-
-                    CFont::m_FontIsBlip = 1;
-                    inOutlinePass = true;
-
-                    for (int i = 0; i < sampleCount; ++i)
-                    {
-                        CRGBA outlineColor = CFont::m_FontDropColor;
-                        outlineColor.a = perPassAlpha;
-                        CFont::Color = outlineColor;
-
-                        const float ox = SCREEN_SCALE_X(dropShadowPosition * dirs16[i][0] * outlineStrength);
-                        const float oy = SCREEN_SCALE_Y(dropShadowPosition * dirs16[i][1] * outlineStrength);
-
-                        if (CFont::Slant != 0.0f)
-                        {
-                            CFont::SlantRefPoint->x += ox;
-                            CFont::SlantRefPoint->y += oy;
-                            CFont::PrintString(x + ox, y + oy, _start, _end, wrap);
-                            CFont::SlantRefPoint->x -= ox;
-                            CFont::SlantRefPoint->y -= oy;
-                        }
-                        else
-                        {
-                            CFont::PrintString(x + ox, y + oy, _start, _end, wrap);
-                        }
-                    }
-
-                    inOutlinePass = false;
-
-                    CFont::Color = savedColor;
-                    CFont::m_FontIsBlip = savedIsBlip;
-                    CFont::m_FontOutlineSize = savedOutlineSize;
-                    CFont::m_FontShadow = savedShadow;
-                    CFont::SlantRefPoint = savedSlantRef;
-
-                    return_to(loc_719F30);
-                });
             }
 
             if (bVCSCamShake)
