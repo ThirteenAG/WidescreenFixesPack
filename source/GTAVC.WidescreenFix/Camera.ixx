@@ -615,7 +615,7 @@ void CCamera::UpdatePlayerVehicleSpeedBlur(CCamera* camera)
     if (camera->pTargetEntity->GetType() == ENTITY_TYPE_PED)
         return;
 
-    if (camera->Cams[camera->ActiveCam].Mode == CCam::MODE_1STPERSON)
+    if (camera->Cams[camera->ActiveCam].Mode != CCam::MODE_CAM_ON_A_STRING)
         return;
 
     if (!FindPlayerVehicle())
