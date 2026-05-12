@@ -24,6 +24,7 @@ export __declspec(noinline) ResChange<int, int>& onResChange()
 
 std::optional<float> fHudAspectRatioConstraint;
 export float fWidescreenHudOffset = 0.0f;
+export float fWidescreenHudOffset43 = 0.0f;
 
 export class CDraw
 {
@@ -55,6 +56,8 @@ public:
             return;
 
         ms_fAspectRatio = ratio;
+
+        fWidescreenHudOffset43 = CalculateWidescreenOffset(SCREEN_HEIGHT * (4.0f / 3.0f), SCREEN_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT, 0.0, true);
 
         fWidescreenHudOffset = CalculateWidescreenOffset(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT, 0.0, true);
         if (fHudAspectRatioConstraint.has_value())

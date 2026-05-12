@@ -61,11 +61,15 @@ static inline bool IsFullscreen(const CRect* r)
 
 export bool g_wantsToMoveHudLeft = false;
 export bool g_wantsToMoveHudRight = false;
+export bool g_needsToMoveHudLeft = false;
+export bool g_needsToMoveHudRight = false;
 
 static inline float GetHudOffset()
 {
     if (g_wantsToMoveHudLeft)  return -fWidescreenHudOffset;
     if (g_wantsToMoveHudRight) return  fWidescreenHudOffset;
+    if (g_needsToMoveHudLeft)  return -fWidescreenHudOffset43;
+    if (g_needsToMoveHudRight) return  fWidescreenHudOffset43;
     return 0.0f;
 }
 
@@ -144,6 +148,20 @@ static void DrawPillarBars(const CRect& content, float top, float bottom)
     g_drawingBars = false;
 }
 
+export void DrawPillarBars43()
+{
+    if (std::abs(fWidescreenHudOffset43) > 0.0f)
+    {
+        g_drawingBars = true;
+        CRGBA black(0, 0, 0, 255);
+        CRect left(0.0f, 0.0f, -fWidescreenHudOffset43, SCREEN_HEIGHT);
+        CRect right(SCREEN_WIDTH + fWidescreenHudOffset43, 0.0f, SCREEN_WIDTH, SCREEN_HEIGHT);
+        shDrawRect1.unsafe_ccall(&left, &black);
+        shDrawRect1.unsafe_ccall(&right, &black);
+        g_drawingBars = false;
+    }
+}
+
 void TickBorderAnim(uint32_t now, bool active)
 {
     if (!s_lastTickMs) { s_lastTickMs = now; return; }
@@ -190,19 +208,15 @@ void __fastcall Draw1(CSprite2d* sprite2d, void* edx, CRect* rect, CRGBA* col)
     g_hasTexture = sprite2d->m_pTexture != nullptr;
     g_alpha = reinterpret_cast<uint8_t*>(col)[3];
 
+    bool needsPillarbox43 = g_hasTexture && sprite2d->m_pTexture->name
+        && std::string_view(sprite2d->m_pTexture->name) == "tvcorn";
+
+    if (needsPillarbox43)
+        DrawPillarBars43();
+
     //bool isCover = g_isFullscreen && g_hasTexture
     //    && sprite2d->m_pTexture->name
     //    && std::string_view(sprite2d->m_pTexture->name) == "background";
-
-    //if (gTransparentMenuCanRender)
-    //{
-    //    bool isMenuBackground = g_isFullscreen && g_hasTexture
-    //        && sprite2d->m_pTexture->name
-    //        && (std::string_view(sprite2d->m_pTexture->name) == "background");
-    //
-    //    if (isMenuBackground)
-    //        return;
-    //}
 
     //if (isCover)
     //{
