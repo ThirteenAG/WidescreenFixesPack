@@ -57,7 +57,7 @@ jobs:
         run: npm install @actions/artifact
 
       - name: Upload individual artifacts
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const {DefaultArtifactClient} = require('./node_modules/@actions/artifact')
