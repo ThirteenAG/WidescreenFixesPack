@@ -171,7 +171,7 @@ export namespace CFont
                 for (int i = 0; i < offsetCount; ++i)
                 {
                     CRGBA outlineColor = Details->dropColor;
-                    outlineColor.a = perPassAlpha; // key fix
+                    outlineColor.a = perPassAlpha;
                     Details->color = outlineColor;
 
                     const float outlineStrength = 0.25f;
