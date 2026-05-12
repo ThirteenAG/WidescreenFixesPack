@@ -435,6 +435,25 @@ public:
                     injector::WriteMemory<const void*>(m_dwHUDHeight[16] + 0x2, &fWeaponIconScaleY, true);
                 }
 
+                int m_dwCrosshairHeight[] = { 0x58E7E4,
+                              0x58E80E,
+                              0x58E319,
+                              0x58E527,
+                              0x58E2C8,
+                              0x53E3E7,
+                              0x53E409,
+                              NULL,
+                              NULL,
+                              NULL,
+                };
+
+                static float fCrosshairsHeight = 1.0f / 480.0f;
+                for (int i = 0; i < sizeof(m_dwCrosshairHeight) / sizeof(const void*); i++)
+                {
+                    if (m_dwCrosshairHeight[i] != NULL)
+                        injector::WriteMemory<const void*>(m_dwCrosshairHeight[i] + 0x2, &fCrosshairsHeight, true);
+                }
+
                 onResChange() += [](int Width, int Height)
                 {
                     float fAspectRatio = static_cast<float>(Width) / static_cast<float>(Height);

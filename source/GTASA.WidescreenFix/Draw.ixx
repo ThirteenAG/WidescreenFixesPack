@@ -83,7 +83,7 @@ public:
 
     CDraw()
     {
-        WFP::onGameInitEvent() += []()
+        WFP::onInitEvent() += []()
         {
             auto pattern = hook::pattern("D9 05 ? ? ? ? 8B 15 ? ? ? ? D8 0D ? ? ? ? 68 AB AA AA 3F");
             ms_fFOV.SetAddress(*pattern.get_first<float*>(2));
