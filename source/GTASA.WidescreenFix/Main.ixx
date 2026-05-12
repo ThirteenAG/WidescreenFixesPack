@@ -64,6 +64,22 @@ public:
 
             pattern = hook::pattern("D8 0D ? ? ? ? D9 C0 D9 44 24 ? D8 44 24");
             injector::WriteMemory<const void*>(pattern.get_first(2), &horizSpread, true);
+
+            //CCam::Process_WheelCam
+            pattern = hook::pattern("C7 86 ? ? ? ? ? ? ? ? 8A 47 ? 24 07");
+            injector::MakeNOP(pattern.get_first(), 10, true);
+            static auto Process_WheelCamFOV = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            {
+                *(float*)(regs.esi + 0xB4) = CDraw::ConvertFOVInverse(70.0f);
+            });
+
+            //CCam::Process_Fixed
+            pattern = hook::pattern("C7 87 ? ? ? ? ? ? ? ? 80 3D");
+            injector::MakeNOP(pattern.get_first(), 10, true);
+            static auto Process_FixedFOV = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            {
+                *(float*)(regs.edi + 0xB4) = CDraw::ConvertFOVInverse(70.0f);
+            });
         };
     }
 } Main;

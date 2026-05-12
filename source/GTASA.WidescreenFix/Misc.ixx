@@ -72,8 +72,8 @@ namespace CFont
 
     void __cdecl SetOutlinePosition(char value)
     {
-        if (ReplaceTextShadowWithOutline > 1)
-            value += 1;
+        if (ReplaceTextShadowWithOutline <= 1 && value > 1)
+            value -= 1;
 
         m_FontShadow = 0;
         m_FontOutlineSize = value;
