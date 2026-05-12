@@ -113,9 +113,6 @@ namespace CFont
 
     void __cdecl SetOutlinePosition(char value)
     {
-        if (ReplaceTextShadowWithOutline <= 1 && value > 1)
-            value -= 1;
-
         m_FontShadow = 0;
         m_FontOutlineSize = value;
         m_FontOutlineOrShadow = value;
@@ -235,7 +232,7 @@ public:
                     const uint8_t savedShadow = CFont::m_FontShadow;
                     const CVector2D savedSlantRef = CFont::SlantRefPoint;
 
-                    const float dropShadowPosition = (float)(CFont::m_FontOutlineOrShadow ? CFont::m_FontOutlineOrShadow : CFont::m_FontOutlineSize);
+                    const float dropShadowPosition = (float)CFont::m_FontOutlineSize;
                     const int sampleCount = 16;
 
                     // 16-direction ring (smoother edge)
@@ -248,7 +245,9 @@ public:
 
                     const float targetAlpha = (float)savedColor.a / 255.0f;
                     const float perPassAlphaF = 1.0f - std::pow(1.0f - targetAlpha, 1.0f / (float)sampleCount);
-                    const uint8_t perPassAlpha = (uint8_t)std::clamp(perPassAlphaF * 255.0f, 0.0f, 255.0f);
+
+                    constexpr float kOutlineAlphaBoost = 2.0f;
+                    const uint8_t perPassAlpha = (uint8_t)std::clamp(perPassAlphaF * 255.0f * kOutlineAlphaBoost, (float)std::min<uint8_t>(0, savedColor.a), (float)savedColor.a);
 
                     float outlineStrength = (ReplaceTextShadowWithOutline > 1) ? 1.0f : 0.5f;
 

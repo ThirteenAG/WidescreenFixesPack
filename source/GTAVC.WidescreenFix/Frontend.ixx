@@ -150,6 +150,50 @@ export namespace CFont
 
             if (ReplaceTextShadowWithOutline)
             {
+                const int sampleCount = 16;
+
+                // 16-direction ring (smoother edge)
+                static constexpr float dirs16[][2] = {
+                    { 1.0000f,  0.0000f}, { 0.9239f,  0.3827f}, { 0.7071f,  0.7071f}, { 0.3827f,  0.9239f},
+                    { 0.0000f,  1.0000f}, {-0.3827f,  0.9239f}, {-0.7071f,  0.7071f}, {-0.9239f,  0.3827f},
+                    {-1.0000f,  0.0000f}, {-0.9239f, -0.3827f}, {-0.7071f, -0.7071f}, {-0.3827f, -0.9239f},
+                    { 0.0000f, -1.0000f}, { 0.3827f, -0.9239f}, { 0.7071f, -0.7071f}, { 0.9239f, -0.3827f}
+                };
+
+                const float targetAlpha = (float)color.a / 255.0f;
+                const float perPassAlphaF = 1.0f - std::pow(1.0f - targetAlpha, 1.0f / (float)sampleCount);
+
+                constexpr float kOutlineAlphaBoost = 2.0f;
+                const uint8_t perPassAlpha = (uint8_t)std::clamp(perPassAlphaF * 255.0f * kOutlineAlphaBoost, (float)std::min<uint8_t>(0, color.a), (float)color.a);
+
+                float outlineStrength = (ReplaceTextShadowWithOutline > 1) ? 0.5f : 0.25f;
+
+                Details->bIsShadow = true;
+
+                for (int i = 0; i < sampleCount; ++i)
+                {
+                    CRGBA outlineColor = Details->dropColor;
+                    outlineColor.a = perPassAlpha;
+                    Details->color = outlineColor;
+
+                    const float ox = SCREEN_SCALE_X(dropShadowPosition * dirs16[i][0] * outlineStrength);
+                    const float oy = SCREEN_SCALE_Y(dropShadowPosition * dirs16[i][1] * outlineStrength);
+
+                    if (Details->slant != 0.0f)
+                    {
+                        Details->slantRefX += ox;
+                        Details->slantRefY += oy;
+                        PrintOutlinedString(x + ox, y + oy, Details->anonymous_25, start, end, spwidth);
+                        Details->slantRefX -= ox;
+                        Details->slantRefY -= oy;
+                    }
+                    else
+                    {
+                        PrintOutlinedString(x + ox, y + oy, Details->anonymous_25, start, end, spwidth);
+                    }
+                }
+
+                #if 0
                 Details->color = Details->dropColor;
                 Details->bIsShadow = true;
 
@@ -191,6 +235,7 @@ export namespace CFont
                         PrintOutlinedString(x + ox, y + oy, Details->anonymous_25, start, end, spwidth);
                     }
                 }
+                #endif
             }
             else
             {
