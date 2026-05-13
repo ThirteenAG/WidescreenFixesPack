@@ -9,6 +9,7 @@ export module Frontend;
 import Skeleton;
 import Sprite2d;
 import Draw;
+import Menu;
 
 auto INV_SCREEN_WIDTH = [](float fAspectRatio) { return (1.0f / 640.0f) / (fAspectRatio / (4.0f / 3.0f)); };
 
@@ -17,6 +18,42 @@ export ProtectedGameRef<float> ResXInvRef;
 export ProtectedGameRef<float> ResYInvRef;
 
 std::array<std::pair<float, float>, 400> vHudScalePtrs;
+
+injector::hook_back<float(__stdcall*)(float)> hbStretchX;
+float __stdcall StretchX(float a1)
+{
+    if (RsGlobal->maximumWidth == 640)
+        return a1;
+
+    auto m_nCurrentMenuPage = *(int8_t*)((uintptr_t)FrontendMenuManager.get_ptr() + 0x15D);
+
+    if (m_nCurrentMenuPage == SCREEN_MAP)
+        return hbStretchX.fun(a1);
+
+    const float distFromRight = 640.0f - a1;
+    const float scaledDist = RsGlobal->maximumWidth * distFromRight * INV_SCREEN_WIDTH(CDraw::GetAspectRatio());
+    return RsGlobal->maximumWidth - scaledDist;
+}
+
+SafetyHookInline shDisplaySlider = {};
+int __stdcall DisplaySlider(float x, float y, float unk0, float unk1, float width, float progress, signed int unk)
+{
+    if (RsGlobal->maximumWidth != 640)
+    {
+        const float scaleCurrent = (float)RsGlobal->maximumWidth / 640.0f;
+        const float scale43 = (float)RsGlobal->maximumHeight / 480.0f;
+        const float x640 = x / scaleCurrent;
+        const float width640 = width / scaleCurrent;
+        const float unk640 = (float)unk / scaleCurrent; // slider bar thickness-ish
+        const float distFromRight640 = 640.0f - (x640 + width640);
+
+        x = (float)RsGlobal->maximumWidth - (distFromRight640 * scale43) - (width640 * scale43);
+        width = width640 * scale43;
+        unk = (signed int)std::lround(unk640 * scale43);
+    }
+
+    return shDisplaySlider.unsafe_stdcall<int>(x, y, unk0, unk1, width, progress, unk);
+}
 
 class Frontend
 {
@@ -65,6 +102,7 @@ public:
             // excludes for ResXInvRef
             excludeResXInvAddrs.push_back(0x57A1E3 + 2); // Main menu
             excludeResXInvAddrs.push_back(0x57A47D + 2); // Main menu entry sprite
+            excludeResXInvAddrs.push_back(0x576398 + 2); // Briefs text scale
 
             auto isExcluded = [&](uintptr_t a) -> bool
             {
@@ -84,6 +122,13 @@ public:
             pattern.for_each_result([&](hook::pattern_match match)
             {
                 float* addr = match.get<float>(10);
+                allHudScaleAddrs.push_back(reinterpret_cast<uintptr_t>(addr));
+            });
+
+            pattern = hook::pattern(pattern_str(0xDB, 0x05, to_bytes(ptr)) + "? ? ? ? ? ? ? ? D8 0D"); // fild + push + push + fmul
+            pattern.for_each_result([&](hook::pattern_match match)
+            {
+                float* addr = match.get<float>(16);
                 allHudScaleAddrs.push_back(reinterpret_cast<uintptr_t>(addr));
             });
 
@@ -115,6 +160,13 @@ public:
             {
                 injector::WriteMemory(addr, &DefaultResXInv, true);
             }
+
+            //Menu helper text
+            pattern = hook::pattern("E8 ? ? ? ? 51 ? ? ? E8 ? ? ? ? 83 C4 ? 5F");
+            hbStretchX.fun = injector::MakeCALL(pattern.get_first(), StretchX, true).get();
+
+            pattern = hook::pattern("E8 ? ? ? ? 8B 4D ? 89 44 24 ? 8B 44 24");
+            shDisplaySlider = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), DisplaySlider);
 
             onResChange() += [](int Width, int Height)
             {

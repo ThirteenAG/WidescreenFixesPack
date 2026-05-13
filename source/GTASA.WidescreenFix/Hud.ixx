@@ -154,6 +154,55 @@ void __cdecl DrawRect(CRect* rect, uint8_t* rgbaColor)
     hbDrawRect.fun(&copy, rgbaColor);
 }
 
+SafetyHookInline shPrintMap = {};
+void __fastcall PrintMap(CMenuManager* menu, void* edx)
+{
+    CFont::DrawFonts();
+    g_needsToMoveHudLeft = true;
+    g_needsToMoveHudRight = false;
+    shPrintMap.unsafe_fastcall(menu, edx);
+    DrawPillarBars43();
+    CFont::DrawFonts();
+    g_needsToMoveHudRight = false;
+    g_needsToMoveHudLeft = false;
+}
+
+SafetyHookInline shAdditionalOptionInput = {};
+void __fastcall AdditionalOptionInput(CMenuManager* menu, void* edx, uint8_t* a2, uint8_t* a3)
+{
+    auto m_nCurrentMenuPage = *(int8_t*)((uintptr_t)menu + 0x15D);
+
+    if (m_nCurrentMenuPage == SCREEN_MAP)
+        menu->m_nMousePosX -= static_cast<int32_t>(std::abs(fWidescreenHudOffset43));
+    shAdditionalOptionInput.unsafe_fastcall(menu, edx, a2, a3);
+    if (m_nCurrentMenuPage == SCREEN_MAP)
+        menu->m_nMousePosX += static_cast<int32_t>(std::abs(fWidescreenHudOffset43));
+}
+
+SafetyHookInline shPrintStats = {};
+void __fastcall PrintStats(CMenuManager* menu, void* edx)
+{
+    CFont::DrawFonts();
+    g_needsToMoveHudLeft = true;
+    g_needsToMoveHudRight = false;
+    shPrintStats.unsafe_fastcall(menu, edx);
+    CFont::DrawFonts();
+    g_needsToMoveHudRight = false;
+    g_needsToMoveHudLeft = false;
+}
+
+SafetyHookInline shPrintBriefs = {};
+void __fastcall PrintBriefs(CMenuManager* menu, void* edx)
+{
+    CFont::DrawFonts();
+    g_needsToMoveHudLeft = true;
+    g_needsToMoveHudRight = false;
+    shPrintBriefs.unsafe_fastcall(menu, edx);
+    CFont::DrawFonts();
+    g_needsToMoveHudRight = false;
+    g_needsToMoveHudLeft = false;
+}
+
 class Hud
 {
 public:
@@ -178,6 +227,18 @@ public:
 
             pattern = hook::pattern("E8 ? ? ? ? EB ? 8B CD E8 ? ? ? ? EB");
             shPrintRadioStationList = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), PrintRadioStationList);
+
+            pattern = hook::pattern("E8 ? ? ? ? 8B 44 24 ? 8B 4C 24 ? 8B 54 24 ? 89 46 ? 89 4E ? 89 56");
+            shPrintMap = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), PrintMap);
+
+            pattern = hook::pattern("E8 ? ? ? ? 84 DB 0F 84 ? ? ? ? 8A 85");
+            shPrintStats = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), PrintStats);
+
+            pattern = hook::pattern("E8 ? ? ? ? EB ? 8B CD E8 ? ? ? ? 84 DB");
+            shPrintBriefs = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), PrintBriefs);
+
+            pattern = hook::pattern("E8 ? ? ? ? 8B CE E8 ? ? ? ? 84 C0 74 ? C6 44 24");
+            shAdditionalOptionInput = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), AdditionalOptionInput);
 
             pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 6A ? E8 ? ? ? ? 83 C4 ? A0");
             hbCMenuSystem__Process.fun = injector::MakeCALL(pattern.get_first(), CMenuSystem__Process, true).get();
