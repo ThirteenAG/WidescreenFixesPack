@@ -7,6 +7,59 @@ export module Menu;
 
 import Skeleton;
 
+export enum eMenuScreen : int8_t
+{
+    SCREEN_GO_BACK = -2,
+    SCREEN_NONE = -1,
+    SCREEN_STATS = 0,
+    SCREEN_NOP = 0,
+    SCREEN_START_GAME,                     //  1  New Game, Load Game, Delete Game
+    SCREEN_BRIEF,                          //  2
+    SCREEN_AUDIO_SETTINGS,                 //  3
+    SCREEN_DISPLAY_SETTINGS,               //  4
+    SCREEN_MAP,                            //  5
+    SCREEN_NEW_GAME_ASK,                   //  6  Are you sure you want to start a new game? All current game progress will be lost. Proceed?
+    SCREEN_SELECT_GAME,                    //  7  Please select which new game you wish to start:
+    SCREEN_MISSION_PACK_LOADING_ASK,       //  8  Are you sure you want to load a San Andreas Mission Pack? All current game progress will be lost. Proceed?
+    SCREEN_LOAD_GAME,                      //  9  Select save file to load:
+    SCREEN_DELETE_GAME,                    // 10  Select save file to delete:
+    SCREEN_LOAD_GAME_ASK,                  // 11  All unsaved progress in your current game will be lost. Proceed with loading?
+    SCREEN_DELETE_GAME_ASK,                // 12  Are you sure you wish to delete this save file?
+    SCREEN_LOAD_FIRST_SAVE,                // 13
+    SCREEN_DELETE_FINISHED,                // 14
+    SCREEN_DELETE_SUCCESSFUL,              // 15  Delete Successful. Select OK to continue.
+    SCREEN_GAME_SAVE,                      // 16  Select file you wish to save to:
+    SCREEN_SAVE_WRITE_ASK,                 // 17  Are you sure you wish to save?
+    SCREEN_SAVE_DONE_1,                    // 18
+    SCREEN_SAVE_DONE_2,                    // 19  Save Successful. Select OK to continue.
+    SCREEN_GAME_SAVED,                     // 20  OK
+    SCREEN_GAME_LOADED,                    // 21  OK
+    SCREEN_GAME_WARNING_DONT_SAVE,         // 22  Warning! One or more cheats have been activated. This may affect your save game. It is recommended that you do not save this game.
+    SCREEN_ASK_DISPLAY_DEFAULT_SETS,       // 23  Are you sure you want to reset your current settings to default?
+    SCREEN_ASK_AUDIO_DEFAULT_SETS,         // 24  Are you sure you want to reset your current settings to default?
+    SCREEN_CONTROLS_RESET,                 // 25  Are you sure you want to reset your current settings to default?
+    SCREEN_USER_TRACKS_OPTIONS,            // 26
+    SCREEN_DISPLAY_ADVANCED,               // 27  DRAW DISTANCE, ...
+    SCREEN_LANGUAGE,                       // 28  English, ...
+    SCREEN_SAVE_GAME_DONE,                 // 29  O.K
+    SCREEN_SAVE_GAME_FAILED,               // 30  Save Unsuccessful., O.K.
+    SCREEN_SAVE_WRITE_FAILED,              // 31  Save Unsuccessful.
+    SCREEN_SAVE_FAILED_FILE_ERROR,         // 32  Load Unsuccessful. File Corrupted, Please delete.
+    SCREEN_OPTIONS,                        // 33  Controller Setup, Audio Setup ...
+    SCREEN_MAIN_MENU,                      // 34  Start Game, Options, Quit Game
+    SCREEN_QUIT_GAME_ASK,                  // 35  Are you sure you want to quit? All progress since the last save game will be lost. Proceed?
+    SCREEN_CONTROLLER_SETUP,               // 36  CONFIGURATION, Redefine Controls ...
+    SCREEN_REDEFINE_CONTROLS,              // 37  Foot Controls, Vehicle Controls
+    SCREEN_CONTROLS_DEFINITION,            // 38  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    SCREEN_MOUSE_SETTINGS,                 // 39
+    SCREEN_JOYPAD_SETTINGS,                // 40
+    SCREEN_PAUSE_MENU,                     // 41  Resume, START NEW GAME ...
+    SCREEN_INITIAL,                        // 42  SCREEN_QUIT_GAME_2
+    SCREEN_EMPTY,                          // 43
+
+    SCREEN_COUNT,                          // Screen count
+};
+
 export enum CutsceneBordersMode : int8_t
 {
     Off = 0,
