@@ -161,7 +161,7 @@ void __fastcall PrintMap(CMenuManager* menu, void* edx)
     g_needsToMoveHudLeft = true;
     g_needsToMoveHudRight = false;
     shPrintMap.unsafe_fastcall(menu, edx);
-    DrawPillarBars43();
+    //DrawPillarBars43(); //MenuMap.ixx
     CFont::DrawFonts();
     g_needsToMoveHudRight = false;
     g_needsToMoveHudLeft = false;
