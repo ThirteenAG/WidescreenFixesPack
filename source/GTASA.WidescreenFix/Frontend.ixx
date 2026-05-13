@@ -28,7 +28,7 @@ float __stdcall StretchX(float a1)
     auto m_nCurrentMenuPage = *(int8_t*)((uintptr_t)FrontendMenuManager.get_ptr() + 0x15D);
 
     if (m_nCurrentMenuPage == SCREEN_MAP)
-        return hbStretchX.fun(a1);
+        return hbStretchX.fun(a1 + std::abs(fWidescreenHudOffset43) * (640.0f / (float)RsGlobal->maximumWidth));
 
     const float distFromRight = 640.0f - a1;
     const float scaledDist = RsGlobal->maximumWidth * distFromRight * INV_SCREEN_WIDTH(CDraw::GetAspectRatio());
@@ -101,6 +101,8 @@ public:
 
             // excludes for ResXInvRef
             excludeResXInvAddrs.push_back(0x57A1E3 + 2); // Main menu
+            excludeResXInvAddrs.push_back(0x57A4EE + 2); // Main menu entry sprite
+            excludeResXInvAddrs.push_back(0x57A4CB + 2); // Main menu entry sprite
             excludeResXInvAddrs.push_back(0x57A47D + 2); // Main menu entry sprite
             excludeResXInvAddrs.push_back(0x576398 + 2); // Briefs text scale
 
@@ -162,7 +164,7 @@ public:
             }
 
             //Menu helper text
-            pattern = hook::pattern("E8 ? ? ? ? 51 ? ? ? E8 ? ? ? ? 83 C4 ? 5F");
+            pattern = hook::pattern("E8 ? ? ? ? 51 ? ? ? ? ? ? ? ? 83 C4 ? 5F");
             hbStretchX.fun = injector::MakeCALL(pattern.get_first(), StretchX, true).get();
 
             pattern = hook::pattern("E8 ? ? ? ? 8B 4D ? 89 44 24 ? 8B 44 24");
