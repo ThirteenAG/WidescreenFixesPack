@@ -10,6 +10,8 @@ $${\color{green}✔}$$ Fixed radar blip scaling at higher resolutions
 
 $${\color{green}✔}$$ Cutscene FOV and letterboxing adjusts properly with aspect ratio
 
+$${\color{blue}ⓘ}$$ Added an option to disable loading between islands
+
 $${\color{blue}ⓘ}$$ Added options to scale the size of HUD elements
 
 $${\color{blue}ⓘ}$$ Added an option to force MSAA
@@ -19,6 +21,10 @@ $${\color{blue}ⓘ}$$ Added an option to replace the text shadows with an outlin
 $${\color{blue}ⓘ}$$ Added an option to increase FOV with car speed
 
 $${\color{blue}ⓘ}$$ Added an option to enable GTA: Vice City Stories camera shake in vehicles at high speed
+
+$${\color{blue}ⓘ}$$ Added an option to make the menu background transparent with a blur 
+
+$${\color{blue}ⓘ}$$ Added an option to enable Xbox 360 gamma
 
 
     Installation:
@@ -43,9 +49,9 @@ $${\color{blue}ⓘ}$$ Added an option to enable GTA: Vice City Stories camera sh
 >
 >  ![steam-wine-dll-override](https://silentsblog.com/assets/img/setup/steam-wine-dll-override.png)
 >
-> **Method 2**: Use `winecfg` tool to make a permanent override for a specific Wine prefix. In case of Proton, Steam creates the Wine prefix for Grand Theft Auto III in `$HOME/.steam/steam/steamapps/compatdata/12230/pfx`. Then you need to run `winecfg` with that path:
+> **Method 2**: Use `winecfg` tool to make a permanent override for a specific Wine prefix. In case of Proton, Steam creates the Wine prefix for Grand Theft Auto III in `$HOME/.steam/steam/steamapps/compatdata/12100/pfx`. Then you need to run `winecfg` with that path:
 > ```
-> WINEPREFIX="$HOME/.steam/steam/steamapps/compatdata/12230/pfx" winecfg
+> WINEPREFIX="$HOME/.steam/steam/steamapps/compatdata/12100/pfx" winecfg
 > ```
 > Select the `Libraries` tab and fill the combo box with the name of the library you wish to override and hit `Add`. You can verify that it's been added to the list below with `(native, builtin)` suffix. Then close the window with the `OK` button.
 >
