@@ -12,6 +12,8 @@ $${\color{green}✔}$$ Fixed FMVs
 
 $${\color{green}✔}$$ Forced highest character LOD
 
+$${\color{green}✔}$$ Increased foliage draw distance
+
 $${\color{green}✔}$$ Disabled mouse acceleration
 
 $${\color{green}✔}$$ Added raw input support for mouse

@@ -272,6 +272,20 @@ namespace UCanvas
     }
 }
 
+namespace AEGrassActor
+{
+    SafetyHookInline shPostLoad = {};
+    void __fastcall PostLoad(void* actor, void* edx)
+    {
+        shPostLoad.unsafe_fastcall(actor, edx);
+
+        constexpr float kGrassFarDistance = 100000.0f;
+        *(float*)((char*)actor + 0x3F8) = kGrassFarDistance; // InvisibleDistance
+        *(float*)((char*)actor + 0x3FC) = kGrassFarDistance; // LODDistance
+        *(float*)((char*)actor + 0x400) = kGrassFarDistance; // LODNear
+    }
+}
+
 export void InitEngine()
 {
     InitWidescreenHUD();
@@ -454,4 +468,8 @@ export void InitEngine()
         UObjectOverrides::ClearCache();
         UArrayOverrides::ClearCache();
     });
+
+    AEGrassActor::shPostLoad = safetyhook::create_inline(
+        GetProcAddress(GetModuleHandle(L"Engine"), "?PostLoad@AEGrassActor@@UAEXXZ"),
+        AEGrassActor::PostLoad);
 }
