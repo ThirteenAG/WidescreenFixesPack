@@ -197,6 +197,20 @@ public:
             radarWidthRef = fRadarWidth;// *(((float)DEFAULT_SCREEN_WIDTH / (float)DEFAULT_SCREEN_HEIGHT) / (640.0f / 448.0f));
             radarHeightRef = fRadarHeight;
 
+            // DrawPlayerInfo reuses the radar variable, need to restore it
+            static auto fPlayerInfoBarsPosX = 94.0f;
+            pattern = hook::pattern("D8 0D ? ? ? ? D8 6C 24 ? E8 ? ? ? ? 50 0F B6 C3");
+            injector::WriteMemory(pattern.get_first(2), &fPlayerInfoBarsPosX, true);
+
+            pattern = hook::pattern("D8 0D ? ? ? ? D8 6C 24 ? E8 ? ? ? ? 50 6A 01 E8 ? ? ? ? 83 C4 18 8B 74 24");
+            injector::WriteMemory(pattern.get_first(2), &fPlayerInfoBarsPosX, true);
+
+            pattern = hook::pattern("D8 0D ? ? ? ? D8 6C 24 ? E8 ? ? ? ? 0F B6 CB");
+            injector::WriteMemory(pattern.get_first(2), &fPlayerInfoBarsPosX, true);
+
+            pattern = hook::pattern("D8 0D ? ? ? ? D8 6C 24 ? E8 ? ? ? ? 50 6A 01 E8 ? ? ? ? 83 C4 18 0F B6 05");
+            injector::WriteMemory(pattern.get_first(2), &fPlayerInfoBarsPosX, true);
+
             if (fSubtitlesScale)
             {
                 fSubtitlesScale = std::clamp(fSubtitlesScale, 0.25f, 4.0f);
@@ -483,10 +497,8 @@ public:
 
                 if (bProportionalWeaponIcon)
                 {
-                    static float fWeaponIconScaleY = 1.0f / 640.0f;
-                    injector::WriteMemory<const void*>(m_dwHUDHeight[14] + 0x2, &fWeaponIconScaleY, true);
-                    injector::WriteMemory<const void*>(m_dwHUDHeight[15] + 0x2, &fWeaponIconScaleY, true);
-                    injector::WriteMemory<const void*>(m_dwHUDHeight[16] + 0x2, &fWeaponIconScaleY, true);
+                    injector::WriteMemory(0x58D94B + 2, 0x866C4C, true);
+                    injector::WriteMemory(0x58D894 + 2, 0x866C4C, true);
                 }
 
                 int m_dwCrosshairHeight[] = { 0x58E7E4,

@@ -128,6 +128,24 @@ namespace CFont
     void (__cdecl* PrintString)(float x, float y, char* start, char* end, float wrap) = nullptr;
 }
 
+injector::hook_back<void(__cdecl*)(float, float, char*)> hbPrintStringFromBottom;
+void __cdecl PrintStringFromBottom(float x, float y, char* text)
+{
+    CFont::SetDropShadowPosition(1);
+    CFont::m_FontDropColor = { 0, 0, 0, 0xFF };
+    hbPrintStringFromBottom.fun(x, y, text);
+    CFont::SetDropShadowPosition(0);
+}
+
+injector::hook_back<void(__cdecl*)(float, float, char*)> hbPrintString;
+void __cdecl PrintString(float x, float y, char* text)
+{
+    CFont::SetOutlinePosition(1);
+    CFont::m_FontDropColor = { 0, 0, 0, 0xFF };
+    hbPrintString.fun(x, y, text);
+    CFont::SetOutlinePosition(0);
+}
+
 class Misc
 {
 public:
@@ -145,6 +163,20 @@ public:
 
             auto pattern = hook::pattern("E8 ? ? ? ? 8A 0D ? ? ? ? 83 C4 14");
             CFont::PrintString = (decltype(CFont::PrintString))injector::GetBranchDestination(pattern.get_first()).as_int();
+
+            pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 5F 5E C2 ? ? 68");
+            hbPrintStringFromBottom.fun = injector::MakeCALL(pattern.get_first(), PrintStringFromBottom, true).get();
+
+            pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 68 ? ? ? ? 8B CF E8 ? ? ? ? ? ? ? ? E8 ? ? ? ? 89 44 24 ? 43");
+            hbPrintString.fun = injector::MakeCALL(pattern.get_first(), PrintString, true).get();
+
+            pattern = hook::pattern("6A ? E8 ? ? ? ? 83 C4 ? 6A ? 8D 44 24 ? 50 B9 ? ? ? ? E8 ? ? ? ? ? ? 51 E8 ? ? ? ? 6A ? E8 ? ? ? ? ? ? ? ? ? ? 8A 86");
+            if (!pattern.empty())
+                injector::WriteMemory<uint8_t>(pattern.get_first(1), 1, true);
+
+            pattern = hook::pattern("6A ? E8 ? ? ? ? 83 C4 ? 68 ? ? ? ? 6A ? 6A ? 6A ? 8D 4C 24 ? E8 ? ? ? ? ? ? 51 E8 ? ? ? ? ? ? ? ? ? ? 83 C4");
+            if (!pattern.empty())
+                injector::WriteMemory<uint8_t>(pattern.get_first(1), 1, true);
 
             static auto loc_719F30 = (uintptr_t)hook::pattern("8B 0D ? ? ? ? BA ? ? ? ? 2B D5").get_first();
             pattern = hook::pattern("D9 05 ? ? ? ? A0 ? ? ? ? D8 1D ? ? ? ? 66 0F BE D9 8A 0D ? ? ? ? A2 ? ? ? ? 89 54 24 ? 8A 15 ? ? ? ? DF E0 F6 C4 44 88 0D ? ? ? ? 8A 0D ? ? ? ? C6 05 ? ? ? ? ? 88 15 ? ? ? ? 88 0D ? ? ? ? C6 05 ? ? ? ? ? 7B ? 0F BF D3 89 54 24 ? DB 44 24 ? DB 05 ? ? ? ? D8 0D ? ? ? ? D8 C9 D8 05 ? ? ? ? D9 1D ? ? ? ? DB 05 ? ? ? ? D8 0D ? ? ? ? D8 C9 D8 05 ? ? ? ? D9 1D ? ? ? ? DD D8 8B 7C 24");

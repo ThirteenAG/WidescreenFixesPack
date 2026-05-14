@@ -110,10 +110,6 @@ public:
             if (!pattern.empty())
                 injector::WriteMemory<float>(pattern.get_first(1), 9999.0f, true);
 
-            pattern = hook::pattern("6A ? E8 ? ? ? ? 8B 44 24 ? 83 C4 ? 85 C0 74 ? 50 B9");
-            if (!pattern.empty())
-                injector::WriteMemory<uint8_t>(pattern.get_first(1), 1, true);
-
             // Zoom speed
             static float speed = 7.0f * 2.0f;
 
