@@ -16,7 +16,8 @@ struct Screen
     float fGameAspectRatio;
     float fCenterPos;
     int32_t* FMVStatus;
-    bool bFixFMVs;
+    int bFixFMVs;
+    double dFMVAspectRatio;
 } Screen;
 
 enum ScreenModes
@@ -82,8 +83,17 @@ void __fastcall sub_5F3627(uintptr_t _this, uint32_t edx, uintptr_t a2, uintptr_
                 if ((floats[0].f1 == 0.0f && floats[0].f2 == 1.0f) && (floats[1].f1 == 0.0f && floats[1].f2 == 0.0f) &&
                     (floats[2].f1 == 1.0f && floats[2].f2 == 1.0f) && (floats[3].f1 == 1.0f && floats[3].f2 == 0.0f))
                 {
-                    if (Screen.bFixFMVs && *Screen.FMVStatus == 1)
-                        *(float *)(v8a - 4) /= (Screen.fAspectRatio / Screen.fGameAspectRatio);
+                    if (*Screen.FMVStatus == 1)
+                    {
+                        if (Screen.bFixFMVs == 1)
+                        {
+                            *(float *)(v8a - 4) /= (Screen.fAspectRatio / Screen.fGameAspectRatio);
+                        }
+                        else if (Screen.bFixFMVs == 2)
+                        {
+                            *(float *)(v8a - 4) /= (Screen.fAspectRatio / Screen.dFMVAspectRatio);
+                        }
+                    }
                 }
                 else
                 {
@@ -140,7 +150,8 @@ void Init()
     CIniReader iniReader("");
     auto bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
     Screen.fCustomFieldOfView = iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f);
-    Screen.bFixFMVs = iniReader.ReadInteger("MAIN", "FixFMVs", 1) != 0;
+    Screen.bFixFMVs = iniReader.ReadInteger("MAIN", "FixFMVs", 2);
+    Screen.dFMVAspectRatio = iniReader.ReadDouble("MAIN", "FMV_AspectRatio", 16.0/9.0);
     int32_t nMinResX = iniReader.ReadInteger("MAIN", "MinResX", 0);
     int32_t nMinResY = iniReader.ReadInteger("MAIN", "MinResY", 0);
 
@@ -364,7 +375,7 @@ CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
         {
-            CallbackHandler::RegisterCallback(Init, hook::pattern("55 8B EC 83 EC 60 53 56 57"));
+            CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("55 8B EC 83 EC 60 53 56 57"));
         });
 }
 
