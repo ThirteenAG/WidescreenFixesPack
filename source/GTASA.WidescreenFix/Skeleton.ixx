@@ -118,6 +118,13 @@ export void (__cdecl* RwCameraSetNearClipPlane)(RwCamera* camera, float nearClip
 
 export IDirect3DDevice9** pD3D9Device = nullptr;
 
+export GameRef<RwGlobals*> RwEngineInstance;
+
+export void RwRenderStateSet(RwRenderState nState, void* pParam)
+{
+    RwEngineInstance->dOpenDevice.fpRenderStateSet(nState, pParam);
+}
+
 class Skeleton
 {
 public:
@@ -133,6 +140,9 @@ public:
 
             pattern = find_pattern("E8 ? ? ? ? 83 C4 ? 85 C0 74 ? 83 C0 ? ? ? 8B 50 ? 8B 40 ? 89 4C 24 ? ? ? ? ? ? ? ? ? ? ? 89 54 24");
             FindPlayerVehicle = (decltype(FindPlayerVehicle))injector::GetBranchDestination(pattern.get_first()).as_int();
+
+            pattern = find_pattern("8B 0D ? ? ? ? 56 6A ? FF 51 ? 83 C4");
+            RwEngineInstance.SetAddress(*pattern.get_first<RwGlobals**>(2));
         };
     }
 } Skeleton;

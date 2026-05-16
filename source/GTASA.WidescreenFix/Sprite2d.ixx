@@ -209,7 +209,8 @@ void __fastcall Draw1(CSprite2d* sprite2d, void* edx, CRect* rect, CRGBA* col)
     g_alpha = reinterpret_cast<uint8_t*>(col)[3];
 
     bool needsPillarbox43 = g_hasTexture && sprite2d->m_pTexture->name
-        && std::string_view(sprite2d->m_pTexture->name) == "tvcorn";
+        && (std::string_view(sprite2d->m_pTexture->name) == "tvcorn" ||
+            std::string_view(sprite2d->m_pTexture->name) == "backbet");
 
     if (needsPillarbox43)
         DrawPillarBars43();
