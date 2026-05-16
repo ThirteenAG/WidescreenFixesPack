@@ -20,6 +20,10 @@ $${\color{blue}ⓘ}$$ Added an option to increase FOV with car speed
 
 $${\color{blue}ⓘ}$$ Added an option to enable GTA: Vice City Stories camera shake in vehicles at high speed
 
+$${\color{blue}ⓘ}$$ Added an option to make the menu background transparent with a blur 
+
+$${\color{blue}ⓘ}$$ Added an option to enable Xbox 360 gamma
+
     Installation:
         Download and extract the archive to the game directory, where the exe is located.
 
@@ -42,9 +46,9 @@ $${\color{blue}ⓘ}$$ Added an option to enable GTA: Vice City Stories camera sh
 >
 >  ![steam-wine-dll-override](https://silentsblog.com/assets/img/setup/steam-wine-dll-override.png)
 >
-> **Method 2**: Use `winecfg` tool to make a permanent override for a specific Wine prefix. In case of Proton, Steam creates the Wine prefix for Grand Theft Auto: Vice City in `$HOME/.steam/steam/steamapps/compatdata/12240/pfx`. Then you need to run `winecfg` with that path:
+> **Method 2**: Use `winecfg` tool to make a permanent override for a specific Wine prefix. In case of Proton, Steam creates the Wine prefix for Grand Theft Auto: Vice City in `$HOME/.steam/steam/steamapps/compatdata/12110/pfx`. Then you need to run `winecfg` with that path:
 > ```
-> WINEPREFIX="$HOME/.steam/steam/steamapps/compatdata/12240/pfx" winecfg
+> WINEPREFIX="$HOME/.steam/steam/steamapps/compatdata/12110/pfx" winecfg
 > ```
 > Select the `Libraries` tab and fill the combo box with the name of the library you wish to override and hit `Add`. You can verify that it's been added to the list below with `(native, builtin)` suffix. Then close the window with the `OK` button.
 >
