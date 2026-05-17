@@ -240,6 +240,7 @@ std::vector<std::tuple<int, int, int>> GetResolutionsList(bool uniqueByRefresh)
         if (h1 != h2) return h1 < h2;
         return r1 < r2;
     });
+
     if (uniqueByRefresh)
     {
         list.erase(std::unique(list.begin(), list.end(), [](const std::tuple<int, int, int>& lhs, const std::tuple<int, int, int>& rhs)
@@ -251,12 +252,29 @@ std::vector<std::tuple<int, int, int>> GetResolutionsList(bool uniqueByRefresh)
     }
     else
     {
+        std::sort(list.begin(), list.end(), [](const std::tuple<int, int, int>& lhs, const std::tuple<int, int, int>& rhs)
+        {
+            auto [w1, h1, r1] = lhs;
+            auto [w2, h2, r2] = rhs;
+            if (w1 != w2) return w1 < w2;
+            if (h1 != h2) return h1 < h2;
+            return r1 > r2;
+        });
+
         list.erase(std::unique(list.begin(), list.end(), [](const std::tuple<int, int, int>& lhs, const std::tuple<int, int, int>& rhs)
         {
             auto [w1, h1, r1] = lhs;
             auto [w2, h2, r2] = rhs;
             return w1 == w2 && h1 == h2;
         }), list.end());
+
+        std::sort(list.begin(), list.end(), [](const std::tuple<int, int, int>& lhs, const std::tuple<int, int, int>& rhs)
+        {
+            auto [w1, h1, r1] = lhs;
+            auto [w2, h2, r2] = rhs;
+            if (w1 != w2) return w1 < w2;
+            return h1 < h2;
+        });
     }
     return list;
 }
