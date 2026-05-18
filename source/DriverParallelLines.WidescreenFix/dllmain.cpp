@@ -3,31 +3,6 @@
 
 import ComVars;
 
-std::once_flag of;
-
-void MainLoop()
-{
-    std::call_once(of, []()
-    {
-        WFP::onGameInitEvent().executeAll();
-    });
-
-    WFP::onGameProcessEvent().executeAll();
-
-    //static bool oldMenuState = GameFlowManager::IsPaused();
-    //bool curMenuState = GameFlowManager::IsPaused();
-    //if (curMenuState != oldMenuState)
-    //{
-    //    if (curMenuState)
-    //        WFP::onMenuEnterEvent().executeAll();
-    //    else
-    //        WFP::onMenuExitEvent().executeAll();
-    //}
-    //oldMenuState = curMenuState;
-    //if (curMenuState)
-    //    WFP::onMenuDrawingEvent().executeAll();
-}
-
 void Init()
 {
     auto pattern = hook::pattern("A1 ? ? ? ? 85 C0 8D 7E");
@@ -39,7 +14,29 @@ void Init()
     pattern = hook::pattern("8B 45 ? 8B 48 ? 57");
     static auto MainLoopHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        MainLoop();
+        static uint32_t fps = 0;
+        static std::list<int> m_times;
+        LARGE_INTEGER frequency;
+        LARGE_INTEGER time;
+        QueryPerformanceFrequency(&frequency);
+        QueryPerformanceCounter(&time);
+
+        if (m_times.size() == 50)
+            m_times.pop_front();
+        m_times.push_back(static_cast<int>(time.QuadPart));
+
+        if (m_times.size() >= 2)
+            fps = static_cast<uint32_t>(0.5f + (static_cast<float>(m_times.size() - 1) *
+                                        static_cast<float>(frequency.QuadPart)) / static_cast<float>(m_times.back() - m_times.front()));
+        fTimeStep = 1.0f / fps;
+
+        static std::once_flag of;
+        std::call_once(of, []()
+        {
+            WFP::onGameInitEvent().executeAll();
+        });
+
+        WFP::onGameProcessEvent().executeAll();
     });
 
     pCurrentMovieStatus.SetAddress(*hook::get_pattern<int32_t*>("BE ? ? ? ? 33 C0 B9 20 01 00 00 8B FE F3 AB", 1) + 0x1D);
