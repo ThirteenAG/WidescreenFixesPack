@@ -4,7 +4,7 @@
 
 **Driver: Parallel Lines Widescreen Fix** improves ultrawide support, corrects aspect ratio, HUD, FOV, and radar scaling, and includes quality-of-life improvements such as free-look camera and functional turn indicators.
 
-[Website](https://fusionfix.io/wfp#dpl) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/DriverParallelLines.WidescreenFix/dllmain.cpp) · [Default INI](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/DriverParallelLines.WidescreenFix/scripts/DriverParallelLines.WidescreenFix.ini)
+[Website](https://fusionfix.io/wfp#driverpl) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/DriverParallelLines.WidescreenFix/dllmain.cpp) · [Default INI](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/DriverParallelLines.WidescreenFix/scripts/DriverParallelLines.WidescreenFix.ini)
 
 </div>
 
