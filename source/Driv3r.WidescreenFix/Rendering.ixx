@@ -153,10 +153,12 @@ public:
                         const float currentAspect = fAspectRatio;
                         const float constrainedAspect = std::clamp(currentAspect, baseAspect, targetHudAspect);
 
-                        const float scaleH = (float)BackbufferHeight / 480.0f;
-                        const float radarW_px = 152.0f * scaleH;
-                        const float marginR_px = 24.0f * scaleH;
-                        const float w = radarW_px / (float)BackbufferWidth;
+                        const float h = *(float*)(regs.esi + 0x18);
+                        const float radarH_px = h * (float)BackbufferHeight;
+                        const float marginR_px = 24.0f * ((float)BackbufferHeight / 480.0f);
+
+                        // Make width equal to height in pixels
+                        const float w = radarH_px / (float)BackbufferWidth;
                         const float marginR = marginR_px / (float)BackbufferWidth;
 
                         // Right edge of target area (16:9 max), clamped so narrow AR uses full screen
