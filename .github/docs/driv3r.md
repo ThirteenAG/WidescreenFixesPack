@@ -50,7 +50,7 @@
 | Before | After |
 |:---:|:---:|
 | <img src="https://thirteenag.github.io/screens/driv3r/main1.jpg" alt="Before 16:9"> | <img src="https://thirteenag.github.io/screens/driv3r/main2.jpg" alt="After 16:9"> |
-| Original 16:9 output | Correct 16:9 aspect ratio with proper HUD and FOV |
+| Original 16:9 output | Correct 16:9 aspect ratio with proper HUD scaling |
 
 </div>
 
