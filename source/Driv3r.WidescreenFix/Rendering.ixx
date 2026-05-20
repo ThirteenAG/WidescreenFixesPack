@@ -8,6 +8,7 @@ import ComVars;
 import Resolution;
 
 constexpr float baseAspect = 4.0f / 3.0f;
+constexpr float targetHudAspect = 16.0f / 9.0f;
 
 ProtectedGameRef<float> fAspectRatio([]() -> float*
 {
@@ -64,6 +65,7 @@ public:
             static auto dword_53F06F = (uint32_t)hook::get_pattern("80 BE 40 02 00 00 00", 0);
             static auto dword_53F08A = (uint32_t)hook::get_pattern("8D 46 3C 53 E8 ? ? ? ? 5F", 9);
             static auto dword_540F2E = (uint32_t)hook::get_pattern("8D 86 9C 01 00 00 51 E8 ? ? ? ? C2", 12);
+            static auto dword_53FD96 = (uint32_t)hook::get_pattern("83 C6 ? 83 ED ? 0F 85 ? ? ? ? 53", 0);
             struct HudHook
             {
                 void operator()(injector::reg_pack& regs)
@@ -81,13 +83,45 @@ public:
                     if (retAddr == dword_53F06F || retAddr == dword_53F08A)
                         return;
 
+                    if (retAddr == dword_53FD96)
+                    {
+                        const float currentAspect = fAspectRatio;
+                        const float constrainedAspect = std::clamp(currentAspect, baseAspect, targetHudAspect);
+                        // Don't expand coordinates for sub-4:3 (stretchScale < 1 would push HUD out of bounds)
+                        const float stretchScale = std::max(1.0f, currentAspect / baseAspect);
+
+                        // sideOffset scaled for post-/stretchScale coordinate space
+                        const float sideOffset = (1.0f - (baseAspect / constrainedAspect)) * targetHudAspect / currentAspect;
+
+                        float* x0 = (float*)((regs.esi - 0x90) - 0x14);
+                        float* x1v = (float*)((regs.esi - 0x90) + 0x04);
+                        float* x2v = (float*)((regs.esi - 0x90) + 0x1C);
+                        float* x3v = (float*)((regs.esi - 0x90) + 0x34);
+                        float* x4 = (float*)((regs.esi - 0x44) + 0x00);
+                        float* x5 = (float*)((regs.esi - 0x2C) + 0x00);
+
+                        *x0 /= stretchScale; *x1v /= stretchScale; *x2v /= stretchScale;
+                        *x3v /= stretchScale; *x4 /= stretchScale; *x5 /= stretchScale;
+
+                        float minX = *x0, maxX = *x0;
+                        auto acc = [&](float v) { if (v < minX) minX = v; if (v > maxX) maxX = v; };
+                        acc(*x1v); acc(*x2v); acc(*x3v); acc(*x4); acc(*x5);
+
+                        const float center = (minX + maxX) * 0.5f;
+                        const float bias = (center < 0.0f) ? -sideOffset : sideOffset;
+
+                        *x0 += bias; *x1v += bias; *x2v += bias;
+                        *x3v += bias; *x4 += bias; *x5 += bias;
+                        return;
+                    }
+
                     auto x1 = *(float*)(*(DWORD*)(regs.edi + 8) + (regs.ebp - 0x30) + 0x10);
                     auto x2 = *(float*)(*(DWORD*)(regs.edi + 8) + (regs.ebp - 0x30) + 24)
                         + *(float*)((regs.ebp - 0x30) + *(DWORD*)(regs.edi + 8) + 16);
                     if (x1 == 0.0f && x2 == 1.0f && retAddr == dword_540F2E)
                         return;
 
-                    const float scale = fAspectRatio / baseAspect;
+                    const float scale = std::max(1.0f, fAspectRatio / baseAspect);
                     *(float*)((regs.esi - 0x90) - 0x14) /= scale; // vertex 0 X
                     *(float*)((regs.esi - 0x90) + 0x04) /= scale; // vertex 1 X
                     *(float*)((regs.esi - 0x90) + 0x1C) /= scale; // vertex 2 X
@@ -116,32 +150,24 @@ public:
                     }
                     else
                     {
-                        // Radar widget: maintain 4:3 physical size, anchored bottom-right
-                        //const float scaleH = (float)BackbufferHeight / 480.0f;
-                        //const float radarW_px = 152.0f * scaleH;
-                        //const float marginR_px = 24.0f * scaleH;
-                        //const float w = radarW_px / (float)BackbufferWidth;
-                        //const float x = 1.0f - w - marginR_px / (float)BackbufferWidth;
-                        //*(float*)(regs.esi + 0x14) = w;
-                        //*(float*)(regs.esi + 0x0C) = x;
+                        const float currentAspect = fAspectRatio;
+                        const float constrainedAspect = std::clamp(currentAspect, baseAspect, targetHudAspect);
 
-                        // Radar widget: maintain 4:3 physical size, anchored to bottom-right of 4:3 safe area
                         const float scaleH = (float)BackbufferHeight / 480.0f;
                         const float radarW_px = 152.0f * scaleH;
                         const float marginR_px = 24.0f * scaleH;
                         const float w = radarW_px / (float)BackbufferWidth;
                         const float marginR = marginR_px / (float)BackbufferWidth;
-                        const float safeRight = 0.5f + 0.5f * (baseAspect / fAspectRatio);
+
+                        // Right edge of target area (16:9 max), clamped so narrow AR uses full screen
+                        const float safeRight = 0.5f + 0.5f * std::min(1.0f, constrainedAspect / currentAspect);
                         const float x = safeRight - w - marginR;
+
                         *(float*)(regs.esi + 0x14) = w;
                         *(float*)(regs.esi + 0x0C) = x;
                     }
                 }
             }; injector::MakeInline<RadarHook>(pattern.get_first(0), pattern.get_first(12));
-
-            // Map game widget (disable)
-            //pattern = hook::pattern("83 EC ? 53 8B 5C 24 ? 57 8B F9");
-            //injector::MakeRET(pattern.get_first(), 4, true);
 
             // Object disappearance fix
             pattern = hook::pattern("D9 83 80 01 00 00 ? ? ? 01 00 00");

@@ -20,15 +20,6 @@ static void (__fastcall* ActivateLamp)(CVehicle* veh, void* edx, Lights a3, char
 
 using Vehicle = CVehicle*;
 
-export GameRef<void*> dword_8AC3F0([]() -> void**
-{
-    //auto pattern = hook::pattern("8B 0D ? ? ? ? 8B 41 ? 56 83 C1 ? 6A ? FF 50 ? ? ? 8B C8 FF 52 ? 8B 70");
-    auto pattern = hook::pattern("8B 0D ? ? ? ? 8B 81 ? ? ? ? 8D 91 ? ? ? ? 3B C2 89 4C 24");
-    if (!pattern.empty())
-        return *pattern.get_first<void**>(2);
-    return nullptr;
-});
-
 // Configuration
 constexpr float STEER_THRESHOLD = 0.50f;    // Minimum steering to trigger blinkers
 constexpr float ACTIVATION_DELAY = 400.0f;  // ms delay before activation
@@ -176,12 +167,36 @@ public:
             auto pattern = hook::pattern("51 56 8B B1 ? ? ? ? ? ? 83 F8 ? 57 8B B9");
             ActivateLamp = (decltype(ActivateLamp))pattern.get_first();
 
+            static CVehicle* pPlayerCar = 0;
+            pattern = hook::pattern("56 8B 70 ? 8D 48");
+            static auto FetchPlayerCarPtr = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            {
+                pPlayerCar = (CVehicle*)(regs.edx);
+            });
+
+            pattern = hook::pattern("8D 77 ? C7 44 24 ? ? ? ? ? 80 7E");
+            static auto CVehicleDtorHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            {
+                CVehicle* veh = *(CVehicle**)(regs.edi + 0x18);
+
+                if (veh == pPlayerCar)
+                    pPlayerCar = nullptr;
+
+                auto it = std::remove_if(recent_vehicles.begin(), recent_vehicles.end(),
+                    [veh](const std::pair<Vehicle, VehicleState>& p) { return p.first == veh; });
+                recent_vehicles.erase(it, recent_vehicles.end());
+            });
+
             pattern = hook::pattern("C7 45 ? ? ? ? ? C7 45 ? ? ? ? ? C7 45 ? ? ? ? ? C7 45 ? ? ? ? ? C7 45 ? ? ? ? ? C7 45 ? ? ? ? ? C7 45 ? ? ? ? ? 8D B5");
             if (!pattern.empty())
             {
                 static auto CVehicleDtorHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
                 {
                     CVehicle* veh = (CVehicle*)regs.ebp;
+
+                    if (veh == pPlayerCar)
+                        pPlayerCar = nullptr;
+
                     auto it = std::remove_if(recent_vehicles.begin(), recent_vehicles.end(),
                         [veh](const std::pair<Vehicle, VehicleState>& p) { return p.first == veh; });
                     recent_vehicles.erase(it, recent_vehicles.end());
@@ -193,17 +208,15 @@ public:
                 static auto CVehicleDtorHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
                 {
                     CVehicle* veh = (CVehicle*)regs.esi;
+
+                    if (veh == pPlayerCar)
+                        pPlayerCar = nullptr;
+
                     auto it = std::remove_if(recent_vehicles.begin(), recent_vehicles.end(),
                         [veh](const std::pair<Vehicle, VehicleState>& p) { return p.first == veh; });
                     recent_vehicles.erase(it, recent_vehicles.end());
                 });
             }
-
-            pattern = hook::pattern("89 7D ? 89 7D ? 89 7D ? 89 7D ? 8B 75");
-            static auto dword_8AC3F0Dtor = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-            {
-                dword_8AC3F0 = nullptr;
-            });
 
             static uintptr_t prev_player_car = 0;
 
@@ -216,19 +229,7 @@ public:
                 static float rb_press_time = 0.0f;
 
                 // Get current player vehicle
-                Vehicle PlayerCar = nullptr;
-
-                auto ls = *dword_8AC3F0;
-                if (ls)
-                {
-                    auto p1 = *reinterpret_cast<void**>(reinterpret_cast<uintptr_t>(ls) + 0x08);
-                    if (p1)
-                    {
-                        auto p2 = *reinterpret_cast<void**>(reinterpret_cast<uintptr_t>(p1) + 0x0C);
-                        if (p2)
-                            PlayerCar = (CVehicle*)(reinterpret_cast<uintptr_t>(p2) - 4);
-                    }
-                }
+                Vehicle PlayerCar = pPlayerCar;
 
                 // Check if player has fully entered the vehicle (can actually drive)
                 auto pVehicleStruct = PlayerCar;
@@ -238,6 +239,7 @@ public:
                 if (PlayerCar != nullptr)
                 {
                     addOrUpdateVehicle(PlayerCar);
+                    pPlayerCar = nullptr;
                 }
 
                 // Process all vehicles in our queue

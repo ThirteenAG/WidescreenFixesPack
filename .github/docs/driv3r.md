@@ -26,6 +26,7 @@
 ## New Options
 
 - **Skip Intro** - bypass startup intro movies
+- **Draw Distance** - added an option to increase draw distance
 - **Windowed Mode** - borderless windowed mode via [dxwrapper](https://github.com/elishacloud/dxwrapper)
 
 ---
