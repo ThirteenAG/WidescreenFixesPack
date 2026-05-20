@@ -46,7 +46,7 @@ public:
             onResChange() += [](int Width, int Height)
             {
                 fAspectRatio = static_cast<float>(Width) / static_cast<float>(Height);
-                fFieldOfView = 2.0f * std::atan(std::tan(1.308f * 0.5f) * (fAspectRatio / baseAspect));
+                fFieldOfView = 2.0f * std::atan(std::tan(1.04f * 0.5f) * (fAspectRatio / baseAspect));
                 if (fCustomFieldOfView)
                     fFieldOfView *= fCustomFieldOfView;
             };
