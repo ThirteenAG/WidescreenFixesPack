@@ -28,6 +28,7 @@ void Init()
     Screen.nShadowMapResolution = iniReader.ReadInteger("MAIN", "ShadowMapResolution", 1);
     Screen.nReflectionsResolution = iniReader.ReadInteger("MAIN", "ReflectionsResolution", 1);
     Screen.nBloomResolutionMultiplier = std::clamp(iniReader.ReadInteger("MAIN", "BloomResolutionMultiplier", 0), 0, 4);
+    fLightDistanceMultiplier = std::clamp(iniReader.ReadFloat("MAIN", "LightDistanceMultiplier", 8.0f), 1.0f, 8.0f);
     gColor.RGBA = iniReader.ReadInteger("BONUS", "GogglesLightColor", 0);
     bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 0) != 0;
     bSkipPressStartToContinue = iniReader.ReadInteger("MAIN", "SkipPressStartToContinue", 0) != 0;
