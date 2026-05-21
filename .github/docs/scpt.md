@@ -34,6 +34,8 @@ $${\color{blue}ⓘ}$$ Added an option to increase shadows resolution
 
 $${\color{blue}ⓘ}$$ Added an option to increase reflections resolution
 
+$${\color{blue}ⓘ}$$ Added an option to increase light draw distance
+
 $${\color{blue}ⓘ}$$ Added an option to disable cutscene borders
 
 $${\color{blue}ⓘ}$$ Added an option to change goggles light color
