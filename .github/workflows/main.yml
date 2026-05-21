@@ -37,40 +37,35 @@ jobs:
     - name: Update Tags
       continue-on-error: true
       if: ${{ github.event_name == 'push' && github.ref_name == 'master' }}
-      uses: ThirteenAG/update-tags@v3
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: actions/github-script@v9
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const sha = process.env.GITHUB_SHA
+          if (!sha) {
+            core.setFailed('Missing GITHUB_SHA')
+            return
+          }
 
-  upload-artifacts:
-    needs: build
-    runs-on: windows-2025-vs2026
-    if: ${{ needs.build.result == 'success' }}
+          const tags = await github.paginate(github.rest.repos.listTags, {
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            per_page: 100
+          })
 
-    steps:
-      - name: Download the bundle
-        uses: actions/download-artifact@v8
-        with:
-          name: WidescreenFixesPack
-          path: downloaded-zips
+          if (!tags.length) {
+            core.info('No tags found to update.')
+            return
+          }
 
-      - name: Install artifact client
-        run: npm install @actions/artifact
-
-      - name: Upload individual artifacts
-        uses: actions/github-script@v9
-        with:
-          script: |
-            const {DefaultArtifactClient} = require('./node_modules/@actions/artifact')
-            const client = new DefaultArtifactClient()
-            const path = require('path')
-            const globber = await glob.create('downloaded-zips/*.zip')
-            const files = await globber.glob()
-            if (files.length === 0) {
-              core.warning('No .zip files found in the bundle.')
-              return
-            }
-            for (const file of files) {
-              const name = path.basename(file)
-              core.info(`Uploading ${name}...`)
-              await client.uploadArtifact(name, [file], 'downloaded-zips', { retentionDays: 90, skipArchive: true })
-            }
+          for (const tag of tags) {
+            const tagName = tag.name
+            core.info(`Updating ${tagName} -> ${sha}`)
+            await github.rest.git.updateRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: `tags/${tagName}`,
+              sha,
+              force: true
+            })
+          }
