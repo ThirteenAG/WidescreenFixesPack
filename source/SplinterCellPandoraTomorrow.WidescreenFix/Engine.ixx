@@ -286,6 +286,22 @@ namespace AEGrassActor
     }
 }
 
+namespace AActor
+{
+    SafetyHookInline shPostLoad = {};
+    void __fastcall PostLoad(void* actor, void* edx)
+    {
+        shPostLoad.unsafe_fastcall(actor, edx);
+
+        if (fLightDistanceMultiplier != 1.0f)
+        {
+            float* pTurnOffDistance = (float*)((char*)actor + 0x294); // AActor::TurnOffDistance
+            if (*pTurnOffDistance > 0.0f)
+                *pTurnOffDistance *= fLightDistanceMultiplier;
+        }
+    }
+}
+
 export void InitEngine()
 {
     InitWidescreenHUD();
@@ -472,4 +488,8 @@ export void InitEngine()
     AEGrassActor::shPostLoad = safetyhook::create_inline(
         GetProcAddress(GetModuleHandle(L"Engine"), "?PostLoad@AEGrassActor@@UAEXXZ"),
         AEGrassActor::PostLoad);
+
+    AActor::shPostLoad = safetyhook::create_inline(
+        GetProcAddress(GetModuleHandle(L"Engine"), "?PostLoad@AActor@@UAEXXZ"),
+        AActor::PostLoad);
 }
