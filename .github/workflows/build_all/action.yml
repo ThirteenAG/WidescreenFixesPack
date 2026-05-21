@@ -48,9 +48,28 @@ runs:
         cd ./data
         release.bat
 
-    - name: Upload artifacts to actions
+    - name: Install artifact client
       if: ${{ inputs.project == '' }}
-      uses: actions/upload-artifact@v7
+      shell: cmd
+      run: |
+        npm install @actions/artifact
+
+    - name: Upload individual zip artifacts
+      if: ${{ inputs.project == '' }}
+      uses: actions/github-script@v9
       with:
-        name: WidescreenFixesPack
-        path: ./data/Archives/*.zip
+        script: |
+          const {DefaultArtifactClient} = require('./node_modules/@actions/artifact')
+          const client = new DefaultArtifactClient()
+          const path = require('path')
+          const globber = await glob.create('data/Archives/*.zip')
+          const files = await globber.glob()
+          if (files.length === 0) {
+            core.warning('No .zip files found in data/Archives.')
+            return
+          }
+          for (const file of files) {
+            const name = path.basename(file)
+            core.info(`Uploading ${name}...`)
+            await client.uploadArtifact(name, [file], 'data/Archives', { retentionDays: 90, skipArchive: true })
+          }
