@@ -8,7 +8,8 @@ import ComVars;
 import Resolution;
 
 constexpr float baseAspect = 4.0f / 3.0f;
-constexpr float targetHudAspect = 16.0f / 9.0f;
+std::optional<float> fHudAspectRatioConstraint;
+float targetHudAspect = 16.0f / 9.0f;
 
 ProtectedGameRef<float> fAspectRatio([]() -> float*
 {
@@ -33,6 +34,15 @@ enum ScreenModes
     WIDE16BY9 = 2
 };
 
+bool bHUD = false;
+SafetyHookInline shsub_53BC50 = {};
+void __fastcall sub_53BC50(void* _this, void* edx, int a2)
+{
+    bHUD = true;
+    shsub_53BC50.unsafe_fastcall(_this, edx, a2);
+    bHUD = false;
+}
+
 class Rendering
 {
 public:
@@ -42,6 +52,7 @@ public:
         {
             CIniReader iniReader("");
             static float fCustomFieldOfView = iniReader.ReadFloat("MAIN", "FOVFactor", 0.0f);
+            fHudAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "HudAspectRatioConstraint", ""));
 
             onResChange() += [](int Width, int Height)
             {
@@ -49,6 +60,14 @@ public:
                 fFieldOfView = 2.0f * std::atan(std::tan(1.04f * 0.5f) * (fAspectRatio / baseAspect));
                 if (fCustomFieldOfView)
                     fFieldOfView *= fCustomFieldOfView;
+
+                targetHudAspect = fAspectRatio;
+                if (fHudAspectRatioConstraint.has_value())
+                {
+                    const float value = fHudAspectRatioConstraint.value();
+                    if (value >= 0.0f && value <= fAspectRatio)
+                        targetHudAspect = ClampHudAspectRatio(value, fAspectRatio);
+                }
             };
 
             auto pattern = hook::pattern("8B 44 24 04 89 41 ? B0 01 C2 04 00"); //0x580C00
@@ -83,15 +102,26 @@ public:
                     if (retAddr == dword_53F06F || retAddr == dword_53F08A)
                         return;
 
-                    if (retAddr == dword_53FD96)
+                    if (bHUD)
                     {
                         const float currentAspect = fAspectRatio;
                         const float constrainedAspect = std::clamp(currentAspect, baseAspect, targetHudAspect);
-                        // Don't expand coordinates for sub-4:3 (stretchScale < 1 would push HUD out of bounds)
                         const float stretchScale = std::max(1.0f, currentAspect / baseAspect);
-
-                        // sideOffset scaled for post-/stretchScale coordinate space
                         const float sideOffset = (1.0f - (baseAspect / constrainedAspect)) * targetHudAspect / currentAspect;
+
+                        const uintptr_t src = *(uintptr_t*)(regs.edi + 8) + (regs.ebp - 0x30);
+                        const float srcX1 = *(float*)(src + 0x10);
+                        const float srcY1 = *(float*)(src + 0x14);
+                        const float srcX2 = *(float*)(src + 0x18) + srcX1; // x + w
+                        const float srcY2 = *(float*)(src + 0x1C) + srcY1; // y + h
+                        const float srcW = srcX2 - srcX1;
+                        const float srcH = srcY2 - srcY1;
+
+                        // Bottom-right small HUD element exclusion in normalized [0..1] space
+                        const bool isBottomRight = (srcX2 > 0.5f) && (srcY2 > 0.5f);
+
+                        if (isBottomRight)
+                            return;
 
                         float* x0 = (float*)((regs.esi - 0x90) - 0x14);
                         float* x1v = (float*)((regs.esi - 0x90) + 0x04);
@@ -115,9 +145,10 @@ public:
                         return;
                     }
 
-                    auto x1 = *(float*)(*(DWORD*)(regs.edi + 8) + (regs.ebp - 0x30) + 0x10);
-                    auto x2 = *(float*)(*(DWORD*)(regs.edi + 8) + (regs.ebp - 0x30) + 24)
-                        + *(float*)((regs.ebp - 0x30) + *(DWORD*)(regs.edi + 8) + 16);
+                    auto x1 = *(float*)(*(uintptr_t*)(regs.edi + 8) + (regs.ebp - 0x30) + 0x10);
+                    auto x2 = *(float*)(*(uintptr_t*)(regs.edi + 8) + (regs.ebp - 0x30) + 24)
+                        + *(float*)((regs.ebp - 0x30) + *(uintptr_t*)(regs.edi + 8) + 16);
+
                     if (x1 == 0.0f && x2 == 1.0f && retAddr == dword_540F2E)
                         return;
 
@@ -175,6 +206,9 @@ public:
             pattern = hook::pattern("D9 83 80 01 00 00 ? ? ? 01 00 00");
             injector::WriteMemory<uint8_t>(pattern.count(2).get(0).get<void*>(2), 0x84i8, true); //0x57D4C2
             injector::WriteMemory<uint8_t>(pattern.count(2).get(1).get<void*>(2), 0x84i8, true); //0x57D505
+
+            pattern = hook::pattern("83 EC ? 53 8B 5C 24 ? 57 8B F9");
+            shsub_53BC50 = safetyhook::create_inline(pattern.get_first(), sub_53BC50);
         };
     }
 } Rendering;
