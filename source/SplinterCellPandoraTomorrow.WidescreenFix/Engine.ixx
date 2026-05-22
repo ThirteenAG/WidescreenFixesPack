@@ -302,6 +302,35 @@ namespace AActor
     }
 }
 
+// Animated texture fix
+namespace UTexture
+{
+    constexpr uintptr_t kMaxFrameRateOff = 0xA8;
+    constexpr uintptr_t kAccumulatorOff  = 0xAC;
+
+    constexpr float kStep = 1.0f / 30.0f;
+
+    SafetyHookInline shTick = {};
+    void __fastcall Tick(void* self, void* edx, float deltaSeconds)
+    {
+        const float maxFrameRate = *reinterpret_cast<float*>(reinterpret_cast<uintptr_t>(self) + kMaxFrameRateOff);
+
+        if (maxFrameRate != 0.0f || !(deltaSeconds > 0.0f))
+            return shTick.unsafe_fastcall(self, edx, deltaSeconds);
+
+        float& accumulator = *reinterpret_cast<float*>(reinterpret_cast<uintptr_t>(self) + kAccumulatorOff);
+        accumulator += deltaSeconds;
+
+        if (accumulator >= kStep)
+        {
+            accumulator -= kStep;
+            if (accumulator > kStep)
+                accumulator = kStep;
+            shTick.unsafe_fastcall(self, edx, deltaSeconds);
+        }
+    }
+}
+
 export void InitEngine()
 {
     InitWidescreenHUD();
@@ -472,6 +501,8 @@ export void InitEngine()
     UGameEngine::shTick = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?Tick@UGameEngine@@UAEXM@Z"), UGameEngine::Tick);
 
     UCanvas::shSetClip = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?SetClip@UCanvas@@UAEXMM@Z"), UCanvas::SetClip);
+
+    UTexture::shTick = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?Tick@UTexture@@UAEXM@Z"), UTexture::Tick);
 
     pattern = find_module_pattern(GetModuleHandle(L"Engine"), "89 3D ? ? ? ? 8B 8B 64 01 00 00", "C7 05 ? ? ? ? ? ? ? ? 8B 87 64 01 00 00");
     static auto UGameEngineLoadGameHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
