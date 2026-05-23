@@ -54,15 +54,21 @@ void __fastcall FCanvasUtilDrawTileHook(void* _this, uint32_t EDX, float X, floa
             FCanvasUtil::DrawTile(_this, EDX, 640.0f + Screen.fHudOffset, Y, 640.0f + Screen.fHudOffset + Screen.fHudOffset, SizeY, 0.0f, 0.0f, 1.0f, 1.0f, unk1, Texture, ColBlack, unk3, unk4);
         }
     }
-
     if ((n_X == 0 || n_X == 256 || n_X == 384) && n_Y == 448 && (n_SizeX == 256 || n_SizeX == 384 || n_SizeX == 640) && n_SizeY == 479) //hiding menu background
     {
-        //FCanvasUtil::DrawTile(_this, EDX, 0.0f, 0.0f, 640.0f + Screen.fHudOffset + Screen.fHudOffset, Y, U, V, SizeU, SizeV, unk1, Texture, ColBlack, unk3, unk4); hides all menu overlay graphics
-        FCanvasUtil::DrawTile(_this, EDX, 0.0f, 0.0f, 640.0f + Screen.fHudOffset + Screen.fHudOffset, 30.0f, U, V, SizeU, SizeV, unk1, Texture, ColBlack, unk3, unk4);
-        FCanvasUtil::DrawTile(_this, EDX, 0.0f, 447.0f, 640.0f + Screen.fHudOffset + Screen.fHudOffset, 480.0f, U, V, SizeU, SizeV, unk1, Texture, ColBlack, unk3, unk4);
+        // 4:3 menus on widescreen leave stale pixels visible, so fill side areas and the 1px bottom gap with black
+        if (!Screen.bOpsatWidescreenMode && Screen.fHudOffset > 0.0f)
+        {
+            FCanvasUtil::DrawTile(_this, EDX, 0.0f, 0.0f, Screen.fHudOffset, 480.0f, 0.0f, 0.0f, 1.0f, 1.0f, unk1, nullptr, ColBlack, unk3, unk4); //left side bar
+            FCanvasUtil::DrawTile(_this, EDX, 640.0f + Screen.fHudOffset, 0.0f, 640.0f + Screen.fHudOffset + Screen.fHudOffset, 480.0f, 0.0f, 0.0f, 1.0f, 1.0f, unk1, nullptr, ColBlack, unk3, unk4); //right side bar
+        }
+        // The menu texture stops at Y=479, leaving a 1px gap at the very bottom of the 4:3 area
+        FCanvasUtil::DrawTile(_this, EDX, 0.0f, 479.0f, 640.0f + Screen.fHudOffset + Screen.fHudOffset, 480.0f, 0.0f, 0.0f, 1.0f, 1.0f, unk1, nullptr, ColBlack, unk3, unk4); //bottom 1px gap
+
+         // Draw menu bottom strip normally
+        FCanvasUtil::DrawTile(_this, EDX, X + Screen.fHudOffset, Y, SizeX + Screen.fHudOffset, SizeY, U, V, SizeU, SizeV, unk1, Texture, Color, unk3, unk4);
         return;
     }
-
     if (n_X == 0 && n_SizeX == 64) //sony ericsson overlay
     {
         if (Screen.bOpsatWidescreenMode)
