@@ -104,6 +104,10 @@ public:
 
                     if (bHUD)
                     {
+                        const float hudTopThreshold = 0.35f;    // [0..1], only elements above this Y are eligible
+                        const float hudLeftThreshold = 0.22f;   // [0..1], left-corner band width
+                        const float hudRightThreshold = 0.22f;  // [0..1], right-corner band width
+
                         const float currentAspect = fAspectRatio;
                         const float constrainedAspect = std::clamp(currentAspect, baseAspect, targetHudAspect);
                         const float stretchScale = std::max(1.0f, currentAspect / baseAspect);
@@ -114,13 +118,18 @@ public:
                         const float srcY1 = *(float*)(src + 0x14);
                         const float srcX2 = *(float*)(src + 0x18) + srcX1; // x + w
                         const float srcY2 = *(float*)(src + 0x1C) + srcY1; // y + h
-                        const float srcW = srcX2 - srcX1;
-                        const float srcH = srcY2 - srcY1;
 
-                        // Bottom-right small HUD element exclusion in normalized [0..1] space
-                        const bool isBottomRight = (srcX2 > 0.5f) && (srcY2 > 0.5f);
+                        // Only top row items can be moved.
+                        const bool isTop = (srcY1 <= hudTopThreshold);
+                        if (!isTop)
+                            return;
 
-                        if (isBottomRight)
+                        // Only true corners can be moved.
+                        const bool isLeftCorner = (srcX1 <= hudLeftThreshold);
+                        const bool isRightCorner = (srcX2 >= (1.0f - hudRightThreshold));
+
+                        // Skip center/edge-crossing items (neither or both).
+                        if (isLeftCorner == isRightCorner)
                             return;
 
                         float* x0 = (float*)((regs.esi - 0x90) - 0x14);
@@ -133,13 +142,7 @@ public:
                         *x0 /= stretchScale; *x1v /= stretchScale; *x2v /= stretchScale;
                         *x3v /= stretchScale; *x4 /= stretchScale; *x5 /= stretchScale;
 
-                        float minX = *x0, maxX = *x0;
-                        auto acc = [&](float v) { if (v < minX) minX = v; if (v > maxX) maxX = v; };
-                        acc(*x1v); acc(*x2v); acc(*x3v); acc(*x4); acc(*x5);
-
-                        const float center = (minX + maxX) * 0.5f;
-                        const float bias = (center < 0.0f) ? -sideOffset : sideOffset;
-
+                        const float bias = isLeftCorner ? -sideOffset : sideOffset;
                         *x0 += bias; *x1v += bias; *x2v += bias;
                         *x3v += bias; *x4 += bias; *x5 += bias;
                         return;
