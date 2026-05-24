@@ -106,6 +106,52 @@ int __fastcall UD3DRenderDeviceSetRes(void* UD3DRenderDevice, void* edx, void* U
 
 namespace UD3DRenderDevice
 {
+    SafetyHookInline shGetShadowBufferResolutionWidth = {};
+    int __fastcall GetShadowBufferResolutionWidth(void* self, void* edx)
+    {
+        int stock = shGetShadowBufferResolutionWidth.unsafe_fastcall<int>(self, edx);
+
+        if (Screen.nShadowBufferResolution <= 0 || stock <= 0)
+            return stock;
+
+        int raw;
+
+        if (Screen.nShadowBufferResolution == 1)
+            raw = Screen.Width;
+        else
+            raw = static_cast<int>(Screen.nShadowBufferResolution);
+
+        if (raw < stock)
+            raw = stock;
+
+        // Clamping to 4096x4096 for dgVoodoo 2 compatability for now
+        //return raw > 16384 ? 16384 : raw;
+        return raw > 4096 ? 4096 : raw;
+    }
+
+    SafetyHookInline shGetShadowBufferResolutionHeight = {};
+    int __fastcall GetShadowBufferResolutionHeight(void* self, void* edx)
+    {
+        int stock = shGetShadowBufferResolutionHeight.unsafe_fastcall<int>(self, edx);
+
+        if (Screen.nShadowBufferResolution <= 0 || stock <= 0)
+            return stock;
+
+        int raw;
+
+        if (Screen.nShadowBufferResolution == 1)
+            raw = Screen.Width;
+        else
+            raw = static_cast<int>(Screen.nShadowBufferResolution); // Default game used nShadowBufferResolution / 2 for height
+        
+        if (raw < stock)
+            raw = stock;
+
+        // Clamping to 4096x4096 for dgVoodoo 2 compatability for now
+        //return raw > 16384 ? 16384 : raw;
+        return raw > 4096 ? 4096 : raw;
+    }
+
     SafetyHookInline shDisplayVideo = {};
     void __fastcall DisplayVideo(void* UD3DRenderDevice, void* edx, void* UCanvas, void* a3)
     {
@@ -340,6 +386,9 @@ export void InitD3DDrv()
     });
 
     UD3DRenderDevice::shDisplayVideo = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"D3DDrv"), "?DisplayVideo@UD3DRenderDevice@@UAEXPAVUCanvas@@PAX@Z"), UD3DRenderDevice::DisplayVideo);
+
+    UD3DRenderDevice::shGetShadowBufferResolutionWidth = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"D3DDrv"), "?GetShadowBufferResolutionWidth@UD3DRenderDevice@@UAEHXZ"), UD3DRenderDevice::GetShadowBufferResolutionWidth);
+    UD3DRenderDevice::shGetShadowBufferResolutionHeight = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"D3DDrv"), "?GetShadowBufferResolutionHeight@UD3DRenderDevice@@UAEHXZ"), UD3DRenderDevice::GetShadowBufferResolutionHeight);
 
     pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "8B 10 FF 92 ? ? ? ? 8B 86 14 5D 00 00");
     static auto EndSceneHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
