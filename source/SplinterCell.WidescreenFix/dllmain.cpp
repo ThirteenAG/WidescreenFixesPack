@@ -23,6 +23,7 @@ void Init()
     Screen.nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
     Screen.nHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 2);
     Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "HudAspectRatioConstraint", ""));
+    auto nFPSLimit = iniReader.ReadInteger("MISC", "FPSLimit", 1000);
     bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 0) != 0;
     bSkipPressStartToContinue = iniReader.ReadInteger("MAIN", "SkipPressStartToContinue", 0) != 0;
     bRestoreCutsceneFOV = iniReader.ReadInteger("MAIN", "RestoreCutsceneFOV", 0) != 0;
@@ -161,6 +162,14 @@ void Init()
         spd::log()->info("{0} : {1}", std::string(ResList[i].first.begin(), ResList[i].first.end()), std::string(ResList[i].second.begin(), ResList[i].second.end()));
     }
     #endif
+
+    if (nFPSLimit)
+    {
+        static float fFPSLimit = 1.0f / static_cast<float>(nFPSLimit);
+        auto pattern = hook::pattern("8B 15 ? ? ? ? 89 55 D4 A1 ? ? ? ? 89 45 F8");
+        if (!pattern.empty())
+            injector::WriteMemory(pattern.get_first(2), &fFPSLimit, true);
+    }
 }
 
 CEXP void InitializeASI()
