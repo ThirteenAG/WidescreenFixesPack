@@ -305,6 +305,7 @@ namespace UD3DRenderDevice
     SafetyHookInline shDisplayVideo = {};
     SafetyHookInline shStartVideo = {};
     SafetyHookInline shStopVideo = {};
+    SafetyHookInline shUnlock = {};
 
     void __fastcall StartVideo(void* renderDevice, void* edx, void* UCanvas, int posX, int posY, int centered)
     {
@@ -346,6 +347,15 @@ namespace UD3DRenderDevice
         shStopVideo.unsafe_fastcall(renderDevice, edx, UCanvas, a3, a4);
     }
 
+    void __fastcall Unlock(void* renderDevice, void* edx, void* renderInterface)
+    {
+        // Lock() can fail during device loss, skip Unlock() if nothing was locked
+        if (!renderInterface)
+            return;
+
+        shUnlock.unsafe_fastcall(renderDevice, edx, renderInterface);
+    }
+
     void __fastcall DisplayVideo(void* UD3DRenderDevice, void* edx, void* UCanvas, void* a3)
     {
         // Exit cutscene loop cleanly during shutdown so the game can process WM_CLOSE
@@ -353,6 +363,24 @@ namespace UD3DRenderDevice
         {
             *(uint32_t*)((uintptr_t)UCanvas + kCanvas_IsPlaying) = 0;
             return;
+        }
+
+        // Exclusive fullscreen alt+tab can lose the D3D device
+        // Skip cutscene rendering until the engine restores it
+        if (!bGadgetVideoIsPlaying)
+        {
+            IDirect3DDevice8* pDevice = *(IDirect3DDevice8**)((uintptr_t)UD3DRenderDevice + 0x4684);
+            if (!pDevice || pDevice->TestCooperativeLevel() != D3D_OK)
+            {
+                if (pHiResVideoTexture)
+                {
+                    pHiResVideoTexture->Release();
+                    pHiResVideoTexture = nullptr;
+                    nHiResVideoTexW = 0;
+                    nHiResVideoTexH = 0;
+                }
+                return;
+            }
         }
 
         // Skip if Bink handle is invalid
@@ -610,6 +638,7 @@ export void InitD3DDrv()
     }
     UD3DRenderDevice::shStartVideo = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"D3DDrv"), "?StartVideo@UD3DRenderDevice@@UAEXPAVUCanvas@@HHH@Z"), UD3DRenderDevice::StartVideo);
     UD3DRenderDevice::shStopVideo = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"D3DDrv"), "?StopVideo@UD3DRenderDevice@@UAEXPAVUCanvas@@HH@Z"), UD3DRenderDevice::StopVideo);
+    UD3DRenderDevice::shUnlock = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"D3DDrv"), "?Unlock@UD3DRenderDevice@@UAEXPAVFRenderInterface@@@Z"), UD3DRenderDevice::Unlock);
 
     pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "8B 10 FF 92 ? ? ? ? 8B 86 14 5D 00 00");
     static auto EndSceneHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
