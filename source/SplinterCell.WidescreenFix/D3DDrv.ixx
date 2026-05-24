@@ -30,6 +30,15 @@ int __fastcall UD3DRenderDeviceSetRes(void* UD3DRenderDevice, void* edx, void* U
         bInvalidRes = false;
     }
 
+    // Skip redundant SetRes calls to avoid unnecessary device resets and screen flicker
+    // Lost devices still fall through so D3D can recover
+    IDirect3DDevice8* pExistingDevice = *(IDirect3DDevice8**)((uintptr_t)UD3DRenderDevice + 0x4684);
+    if (pExistingDevice && width == Screen.Width && height == Screen.Height &&
+        pExistingDevice->TestCooperativeLevel() == D3D_OK)
+    {
+        return 1;
+    }
+
     auto ret = shUD3DRenderDeviceSetRes.unsafe_fastcall<int>(UD3DRenderDevice, edx, UViewport, width, height, a5);
 
     Screen.Width = width;
@@ -104,16 +113,265 @@ int __fastcall UD3DRenderDeviceSetRes(void* UD3DRenderDevice, void* edx, void* U
     return ret;
 }
 
+// High resolution Bink cutscene fix
+typedef int      (__stdcall* BinkCopyToBuffer_t)(void* bink, void* dest, int destpitch, unsigned destheight, unsigned destx, unsigned desty, unsigned flags);
+typedef void*    (__fastcall* PrepareTexture_t)(void* renderDevice, void* edx, int width, int height);
+
+BinkCopyToBuffer_t   pBinkCopyToBuffer   = nullptr;
+PrepareTexture_t     pPrepareTexture     = nullptr;
+
+// Prevent crashes if BinkCopyToBufferRect runs after the Bink handle is freed.
+SafetyHookInline shBinkCopyToBufferRect = {};
+
+int __stdcall BinkCopyToBufferRectGuard(void* bink, void* dest, int destpitch, unsigned destheight,
+                                        unsigned destx, unsigned desty, unsigned srcx, unsigned srcy,
+                                        unsigned srcw, unsigned srch, unsigned flags)
+{
+    if (!bink || *(int*)bink <= 0 || *(int*)((uintptr_t)bink + 4) <= 0)
+        return 0;
+
+    return shBinkCopyToBufferRect.unsafe_stdcall<int>(bink, dest, destpitch, destheight, destx, desty,
+                                                      srcx, srcy, srcw, srch, flags);
+}
+
+constexpr uintptr_t kCanvas_hBink             = 0x98;
+constexpr uintptr_t kCanvas_IsPlaying         = 0x9C;
+constexpr uintptr_t kCanvas_PlaybackTexture   = 0xB0;
+constexpr uintptr_t kCanvas_VideoOnBackBuffer = 0xC8;
+constexpr uintptr_t kCanvas_Viewport          = 0x90;
+constexpr uintptr_t kViewport_Width           = 0x7C;
+constexpr uintptr_t kViewport_Height          = 0x80;
+constexpr uintptr_t kRenderDevice_VideoMode   = 0x5D58; // 0 = texture playback
+constexpr uintptr_t kRenderDevice_VideoFrame  = 0x5D54;
+
+IDirect3DTexture8* pHiResVideoTexture = nullptr;
+int                nHiResVideoTexW    = 0;
+int                nHiResVideoTexH    = 0;
+
+int NextPow2(int v)
+{
+    int r = 1;
+    while (r < v)
+        r <<= 1;
+    return r;
+}
+
+// Don't handle close/quit during a cutscene frame.
+// Shutdown would free Bink mid-frame, so delay it until the cutscene ends.
+void PumpMessagesDeferringClose()
+{
+    MSG msg;
+    while (PeekMessageA(&msg, nullptr, 0, 0, PM_REMOVE))
+    {
+        if (msg.message == WM_CLOSE)
+        {
+            bShuttingDown = true;
+            PostMessageA(msg.hwnd ? msg.hwnd : hGameWindow, WM_CLOSE, 0, 0);
+            break;
+        }
+        if (msg.message == WM_QUIT)
+        {
+            bShuttingDown = true;
+            PostQuitMessage(static_cast<int>(msg.wParam));
+            break;
+        }
+        TranslateMessage(&msg);
+        DispatchMessageA(&msg);
+    }
+}
+
+// Draw Bink frame using a custom texture with correct aspect ratio scaling
+void DrawHiResCutsceneFrame(IDirect3DDevice8* pD3DDevice, void* UCanvas)
+{
+    // This keeps the window responsive and lets Alt+F4 take effect immediately instead of waiting for the video
+    PumpMessagesDeferringClose();
+
+    if (!pBinkCopyToBuffer)
+        return;
+
+    void* hBink = *(void**)((uintptr_t)UCanvas + kCanvas_hBink);
+    if (!hBink)
+        return;
+
+    int videoWidth  = *(int*)hBink;
+    int videoHeight = *(int*)((uintptr_t)hBink + 4);
+    if (videoWidth <= 0 || videoHeight <= 0)
+        return;
+
+    // Recreate texture when video resolution changes
+    if (!pHiResVideoTexture || nHiResVideoTexW != videoWidth || nHiResVideoTexH != videoHeight)
+    {
+        if (pHiResVideoTexture)
+        {
+            pHiResVideoTexture->Release();
+            pHiResVideoTexture = nullptr;
+        }
+        if (FAILED(pD3DDevice->CreateTexture(videoWidth, videoHeight, 1, 0, D3DFMT_X8R8G8B8, D3DPOOL_MANAGED, &pHiResVideoTexture)))
+        {
+            pHiResVideoTexture = nullptr;
+            return;
+        }
+        nHiResVideoTexW = videoWidth;
+        nHiResVideoTexH = videoHeight;
+    }
+
+    // Copy decoded Bink frame into texture
+    D3DLOCKED_RECT lockedRect;
+    if (SUCCEEDED(pHiResVideoTexture->LockRect(0, &lockedRect, nullptr, 0)))
+    {
+        pBinkCopyToBuffer(hBink, lockedRect.pBits, lockedRect.Pitch, (unsigned)videoHeight, 0, 0, 0x80000005u);
+        pHiResVideoTexture->UnlockRect(0);
+    }
+
+    // Use viewport size (not back buffer) to handle windowed/borderless scaling
+    int screenW = Screen.Width;
+    int screenH = Screen.Height;
+    void* pViewport = *(void**)((uintptr_t)UCanvas + kCanvas_Viewport);
+    if (pViewport)
+    {
+        int viewportW = *(int*)((uintptr_t)pViewport + kViewport_Width);
+        int viewportH = *(int*)((uintptr_t)pViewport + kViewport_Height);
+        if (viewportW > 0 && viewportH > 0)
+        {
+            screenW = viewportW;
+            screenH = viewportH;
+        }
+    }
+    if (screenW <= 0 || screenH <= 0)
+        return;
+
+    float fScreenW = (float)screenW;
+    float fScreenH = (float)screenH;
+
+    float vTop = 0.0f;
+    float vBottom = 1.0f;
+    float contentHeight = (float)videoHeight;
+    if (Screen.nFMVWidescreenMode)
+    {
+        int barPixels = (videoHeight - (videoWidth * 9) / 16) / 2;
+        if (barPixels > 0)
+        {
+            contentHeight = (float)(videoHeight - 2 * barPixels);
+            vTop = (float)barPixels / (float)videoHeight;
+            vBottom = 1.0f - vTop;
+        }
+    }
+
+    float videoAspect  = (float)videoWidth / contentHeight;
+    float screenAspect = fScreenW / fScreenH;
+
+    float targetW, targetH, targetX, targetY;
+    if (screenAspect > videoAspect)
+    {
+        // Pillarbox
+        targetH = fScreenH;
+        targetW = targetH * videoAspect;
+        targetX = (fScreenW - targetW) / 2.0f;
+        targetY = 0.0f;
+    }
+    else
+    {
+        // Letterbox
+        targetW = fScreenW;
+        targetH = targetW / videoAspect;
+        targetX = 0.0f;
+        targetY = (fScreenH - targetH) / 2.0f;
+    }
+
+    pD3DDevice->Clear(0, nullptr, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
+
+    pD3DDevice->SetRenderState(D3DRS_LIGHTING, FALSE);
+    pD3DDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
+    pD3DDevice->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_SELECTARG1);
+    pD3DDevice->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
+    pD3DDevice->SetTextureStageState(0, D3DTSS_MINFILTER, D3DTEXF_LINEAR);
+    pD3DDevice->SetTextureStageState(0, D3DTSS_MAGFILTER, D3DTEXF_LINEAR);
+    pD3DDevice->SetTexture(0, pHiResVideoTexture);
+
+    struct Vertex { float x, y, z, rhw, u, v; };
+    Vertex vertices[4] =
+    {
+        { targetX,           targetY,           0.0f, 1.0f, 0.0f, vTop    },
+        { targetX + targetW, targetY,           0.0f, 1.0f, 1.0f, vTop    },
+        { targetX,           targetY + targetH, 0.0f, 1.0f, 0.0f, vBottom },
+        { targetX + targetW, targetY + targetH, 0.0f, 1.0f, 1.0f, vBottom },
+    };
+    pD3DDevice->SetVertexShader(D3DFVF_XYZRHW | D3DFVF_TEX1);
+    pD3DDevice->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 2, vertices, sizeof(Vertex));
+}
+
 namespace UD3DRenderDevice
 {
     SafetyHookInline shDisplayVideo = {};
+    SafetyHookInline shStartVideo = {};
+    SafetyHookInline shStopVideo = {};
+
+    void __fastcall StartVideo(void* renderDevice, void* edx, void* UCanvas, int posX, int posY, int centered)
+    {
+        if (pPrepareTexture && bPlayingVideo && !bGadgetVideoIsPlaying &&
+            *(uint32_t*)((uintptr_t)renderDevice + kRenderDevice_VideoMode) == 0)
+        {
+            void* hBink = *(void**)((uintptr_t)UCanvas + kCanvas_hBink);
+            if (hBink)
+            {
+                int videoWidth  = *(int*)hBink;
+                int videoHeight = *(int*)((uintptr_t)hBink + 4);
+
+                // Non 640 videos use a small playback texture resize to prevent overflow
+                if (videoWidth > 0 && videoHeight > 0 && videoWidth != 640)
+                {
+                    void* bigTexture = pPrepareTexture(renderDevice, nullptr,
+                                                       NextPow2(videoWidth), NextPow2(videoHeight));
+                    if (bigTexture)
+                    {
+                        *(void**)((uintptr_t)UCanvas + kCanvas_PlaybackTexture) = bigTexture;
+                        *(uint32_t*)((uintptr_t)renderDevice + kRenderDevice_VideoFrame) = 0;
+                    }
+                }
+            }
+        }
+
+        shStartVideo.unsafe_fastcall(renderDevice, edx, UCanvas, posX, posY, centered);
+    }
+
+    void __fastcall StopVideo(void* renderDevice, void* edx, void* UCanvas, int a3, int a4)
+    {
+        if (pHiResVideoTexture)
+        {
+            pHiResVideoTexture->Release();
+            pHiResVideoTexture = nullptr;
+            nHiResVideoTexW = 0;
+            nHiResVideoTexH = 0;
+        }
+        shStopVideo.unsafe_fastcall(renderDevice, edx, UCanvas, a3, a4);
+    }
+
     void __fastcall DisplayVideo(void* UD3DRenderDevice, void* edx, void* UCanvas, void* a3)
     {
+        // Exit cutscene loop cleanly during shutdown so the game can process WM_CLOSE
+        if (bShuttingDown)
+        {
+            *(uint32_t*)((uintptr_t)UCanvas + kCanvas_IsPlaying) = 0;
+            return;
+        }
+
+        // Skip if Bink handle is invalid
+        void* hBink = *(void**)((uintptr_t)UCanvas + kCanvas_hBink);
+        if (!hBink || *(int*)hBink <= 0 || *(int*)((uintptr_t)hBink + 4) <= 0)
+            return;
+
         shDisplayVideo.unsafe_fastcall(UD3DRenderDevice, edx, UCanvas, a3);
 
-        IDirect3DDevice8* pD3DDevice = *(IDirect3DDevice8**)((uintptr_t)UD3DRenderDevice + 0x4684);
+        // Do not apply to gadget videos
+        if (bGadgetVideoIsPlaying)
+            return;
 
-        if (pD3DDevice)
+        IDirect3DDevice8* pD3DDevice = *(IDirect3DDevice8**)((uintptr_t)UD3DRenderDevice + 0x4684);
+        if (!pD3DDevice)
+            return;
+
+        // Back-buffer path for standard 640x480 cutscenes
+        if (*(uint32_t*)((uintptr_t)UCanvas + kCanvas_VideoOnBackBuffer) != 0)
         {
             IDirect3DSurface8* pBackBuffer = nullptr;
 
@@ -278,6 +536,10 @@ namespace UD3DRenderDevice
                 pBackBuffer->Release();
             }
         }
+        else if (bPlayingVideo)
+        {
+            DrawHiResCutsceneFrame(pD3DDevice, UCanvas);
+        }
     }
 }
 
@@ -300,12 +562,7 @@ export void InitD3DDrv()
 
     static auto SetFMVPos = [](SafetyHookContext& regs)
     {
-        MSG msg;
-        while (PeekMessageA(&msg, nullptr, 0, 0, PM_REMOVE))
-        {
-            TranslateMessage(&msg);
-            DispatchMessageA(&msg);
-        }
+        PumpMessagesDeferringClose();
 
         auto& dest_height = *(uint32_t*)(regs.esp + 12);
         auto& dest_x = *(uint32_t*)(regs.esp + 16);
@@ -340,6 +597,19 @@ export void InitD3DDrv()
     });
 
     UD3DRenderDevice::shDisplayVideo = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"D3DDrv"), "?DisplayVideo@UD3DRenderDevice@@UAEXPAVUCanvas@@PAX@Z"), UD3DRenderDevice::DisplayVideo);
+
+    // High resolution Bink cutscene fix
+    pPrepareTexture = (PrepareTexture_t)GetProcAddress(GetModuleHandle(L"D3DDrv"), "?PrepareTexture@UD3DRenderDevice@@QAEPAVUTexture@@HH@Z");
+    if (HMODULE hBinkModule = GetModuleHandle(L"binkw32"))
+    {
+        pBinkCopyToBuffer = (BinkCopyToBuffer_t)GetProcAddress(hBinkModule, "_BinkCopyToBuffer@28");
+
+        // Prevent crash during shutdown while a video is still playing
+        if (auto pBinkRect = GetProcAddress(hBinkModule, "_BinkCopyToBufferRect@44"))
+            shBinkCopyToBufferRect = safetyhook::create_inline(pBinkRect, BinkCopyToBufferRectGuard);
+    }
+    UD3DRenderDevice::shStartVideo = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"D3DDrv"), "?StartVideo@UD3DRenderDevice@@UAEXPAVUCanvas@@HHH@Z"), UD3DRenderDevice::StartVideo);
+    UD3DRenderDevice::shStopVideo = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"D3DDrv"), "?StopVideo@UD3DRenderDevice@@UAEXPAVUCanvas@@HH@Z"), UD3DRenderDevice::StopVideo);
 
     pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "8B 10 FF 92 ? ? ? ? 8B 86 14 5D 00 00");
     static auto EndSceneHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)

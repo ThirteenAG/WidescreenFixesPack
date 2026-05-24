@@ -22,8 +22,14 @@ namespace UWindowsViewport
         // Handle Alt+F4 to close the window
         if (Msg == WM_SYSKEYDOWN && wParam == VK_F4)
         {
+            // Stop Bink rendering during shutdown to avoid a crash
+            bShuttingDown = true;
             PostMessage(hGameWindow, WM_CLOSE, 0, 0);
             return 0;
+        }
+        else if (Msg == WM_CLOSE)
+        {
+            bShuttingDown = true;
         }
         else if (Msg == WM_SETFOCUS)
         {
