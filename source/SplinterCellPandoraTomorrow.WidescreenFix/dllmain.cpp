@@ -159,6 +159,10 @@ void Init()
         }
     }
 
+    // Keep 640x480 and 800x600
+    ResList[0].second = L"640x480";
+    ResList[1].second = L"800x600";
+
     #ifdef _DEBUG
     // Log the assignments
     for (size_t i = 0; i < ResList.size(); ++i)
