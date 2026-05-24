@@ -287,6 +287,33 @@ export void InitEngine()
         injector::WriteMemory<uint16_t>(pattern.get_first(0), 0xE990, true); // jz -> jmp
     }
 
+    // Prevent fake backdrops from rendering in thermal vision
+    pattern = find_module_pattern(GetModuleHandle(L"Engine"), "8B 44 24 2C 85 C0 0F 8E ? ? ? ? 8B 43 04 8B 48 34 8B 81 04 04 00 00 83 F8 05");
+    static auto ThermalFakeBackdropHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        constexpr int32_t  REN_ThermalVision = 10;
+        constexpr uint32_t PF_FakeBackdrop   = 0x00000080; // EPolyFlags::PF_FakeBackdrop
+
+        uintptr_t sceneNode = regs.ebx; // FSceneNode*
+        uintptr_t surf      = regs.edi; // FBspSurf*
+        if (!sceneNode || !surf)
+            return;
+
+        uintptr_t viewport = *(uintptr_t*)(sceneNode + 0x04);
+        if (!viewport)
+            return;
+
+        uintptr_t actor = *(uintptr_t*)(viewport + 0x34);
+        if (!actor)
+            return;
+
+        int32_t  rendMap   = *(int32_t*)(actor + 0x404); // AActor::RendMap
+        uint32_t polyFlags = *(uint32_t*)(surf + 0x04);  // FBspSurf::PolyFlags
+
+        if (rendMap == REN_ThermalVision && (polyFlags & PF_FakeBackdrop))
+            *(uint32_t*)(regs.esp + 0x2C) = 0;
+    });
+
     if (bSkipIntro)
     {
         pattern = find_module_pattern(GetModuleHandle(L"Engine"), "75 ? A1 ? ? ? ? 85 C0 75 ? 68 00 00 80 3F");
