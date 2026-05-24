@@ -468,6 +468,11 @@ export void InitEngine()
         injector::MakeJMP(pattern.get_first(0), dest.get_first(0), true);
     }
 
+    // Always skip the HealthWarning_<lang>.bik startup video added in the digital release
+    pattern = find_module_pattern(GetModuleHandle(L"Engine"), "6A 0A 6A 00 6A 01 8D 85 ? ? ? ? 50 57 E8 ? ? ? ? 8B 35 ? ? ? ? 83 C4 20");
+    if (!pattern.empty())
+        injector::MakeNOP(pattern.get_first(14), 5, true); // skip PlayMovie("HealthWarning_%s.bik")
+
     pattern = find_module_pattern(GetModuleHandle(L"Engine"), "E8 ? ? ? ? 83 C4 ? 85 C0 75 ? 8B 4F", "83 7B ? ? BE");
     static auto VideoPlaybackStartHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {

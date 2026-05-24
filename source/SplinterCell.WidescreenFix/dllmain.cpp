@@ -151,7 +151,7 @@ void Init()
         }
     }
 
-    // For SC1, keep 640x480 and 800x600
+    // Keep 640x480 and 800x600
     ResList[0].second = L"640x480";
     ResList[1].second = L"800x600";
 
