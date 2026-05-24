@@ -125,20 +125,30 @@ namespace UD3DRenderDevice
                     int W = desc.Width;
                     int H = desc.Height;
 
-                    // Create a temporary surface to copy the back buffer
+                    const int videoWidth  = 640;
+                    const int videoHeight = 480;
+                    const int srcX = 0;
+                    const int srcY = 0;
+
+                    // Clamp in case of an unusually small back buffer
+                    const int captureW = (W < videoWidth)  ? W : videoWidth;
+                    const int captureH = (H < videoHeight) ? H : videoHeight;
+
+                    // Create a 640x480 temporary surface for the FMV region
                     IDirect3DSurface8* pTemp = nullptr;
-                    if (SUCCEEDED(pD3DDevice->CreateImageSurface(W, H, desc.Format, &pTemp)))
+                    if (SUCCEEDED(pD3DDevice->CreateImageSurface(videoWidth, videoHeight, desc.Format, &pTemp)))
                     {
-                        // Copy the entire back buffer to temp using CopyRects
+                        // Copy only the 640x480 FMV region of the back buffer to temp
+                        RECT srcRect = { 0, 0, captureW, captureH };
                         POINT pt = { 0, 0 };
-                        pD3DDevice->CopyRects(pBackBuffer, nullptr, 0, pTemp, &pt);
+                        pD3DDevice->CopyRects(pBackBuffer, &srcRect, 1, pTemp, &pt);
 
                         // Clear the back buffer to black
                         pD3DDevice->Clear(0, nullptr, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
 
-                        // Create a texture from the temp surface
+                        // Create a 640x480 texture from the temp surface
                         IDirect3DTexture8* pTexture = nullptr;
-                        if (SUCCEEDED(pD3DDevice->CreateTexture(W, H, 1, 0, desc.Format, D3DPOOL_MANAGED, &pTexture)))
+                        if (SUCCEEDED(pD3DDevice->CreateTexture(videoWidth, videoHeight, 1, 0, desc.Format, D3DPOOL_MANAGED, &pTexture)))
                         {
                             IDirect3DSurface8* pTexSurf = nullptr;
                             if (SUCCEEDED(pTexture->GetSurfaceLevel(0, &pTexSurf)))
@@ -157,12 +167,6 @@ namespace UD3DRenderDevice
                                 // Add for smoother stretching
                                 pD3DDevice->SetTextureStageState(0, D3DTSS_MINFILTER, D3DTEXF_LINEAR);
                                 pD3DDevice->SetTextureStageState(0, D3DTSS_MAGFILTER, D3DTEXF_LINEAR);
-
-                                // 640x480 content is at 0,0
-                                int srcX = 0;
-                                int srcY = 0;
-                                int videoWidth = 640;
-                                int videoHeight = 480;
 
                                 // Define vertices for a quad (TL, TR, BL, BR)
                                 struct Vertex
@@ -197,11 +201,11 @@ namespace UD3DRenderDevice
                                         targetY = ((float)Screen.Height - targetH) / 2.0f;
                                     }
 
-                                    // UVs for cropped inner content
-                                    float uLeft = (float)srcX / (float)W;
-                                    float uRight = (float)(srcX + videoWidth) / (float)W;
-                                    float vTop = (float)(srcY + barPixels) / (float)H;
-                                    float vBottom = (float)(srcY + barPixels + innerHeight) / (float)H;
+                                    // UVs for cropped inner content (texture is exactly 640x480)
+                                    float uLeft = (float)srcX / (float)videoWidth;
+                                    float uRight = (float)(srcX + videoWidth) / (float)videoWidth;
+                                    float vTop = (float)(srcY + barPixels) / (float)videoHeight;
+                                    float vBottom = (float)(srcY + barPixels + innerHeight) / (float)videoHeight;
 
                                     Vertex vertices[4] = {
                                         { targetX, targetY, 0.0f, 1.0f, uLeft, vTop },
@@ -222,10 +226,10 @@ namespace UD3DRenderDevice
                                     targetX = (float)((Screen.Width - (int)targetW) / 2);
                                     targetY = 0.0f;
 
-                                    float uLeft = (float)srcX / (float)W;
-                                    float uRight = (float)(srcX + videoWidth) / (float)W;
-                                    float vTop = (float)srcY / (float)H;
-                                    float vBottom = (float)(srcY + videoHeight) / (float)H;
+                                    float uLeft = (float)srcX / (float)videoWidth;
+                                    float uRight = (float)(srcX + videoWidth) / (float)videoWidth;
+                                    float vTop = (float)srcY / (float)videoHeight;
+                                    float vBottom = (float)(srcY + videoHeight) / (float)videoHeight;
 
                                     Vertex vertices[4] = {
                                         { targetX, targetY, 0.0f, 1.0f, uLeft, vTop },
