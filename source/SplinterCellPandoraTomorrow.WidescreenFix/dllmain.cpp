@@ -29,6 +29,7 @@ void Init()
     Screen.nReflectionsResolution = iniReader.ReadInteger("MAIN", "ReflectionsResolution", 1);
     Screen.nBloomResolutionMultiplier = std::clamp(iniReader.ReadInteger("MAIN", "BloomResolutionMultiplier", 0), 0, 4);
     fLightDistanceMultiplier = std::clamp(iniReader.ReadFloat("MAIN", "LightDistanceMultiplier", 8.0f), 1.0f, 8.0f);
+    auto nFPSLimit = iniReader.ReadInteger("MISC", "FPSLimit", 1000);
     gColor.RGBA = iniReader.ReadInteger("BONUS", "GogglesLightColor", 0);
     bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 0) != 0;
     bSkipPressStartToContinue = iniReader.ReadInteger("MAIN", "SkipPressStartToContinue", 0) != 0;
@@ -165,6 +166,19 @@ void Init()
         spd::log()->info("{0} : {1}", std::string(ResList[i].first.begin(), ResList[i].first.end()), std::string(ResList[i].second.begin(), ResList[i].second.end()));
     }
     #endif
+
+    if (nFPSLimit)
+    {
+        static float fFPSLimit = 1.0f / static_cast<float>(nFPSLimit);
+        auto pattern = hook::pattern("F3 0F 10 05 ? ? ? ? F3 0F 11 45 F0 F3 0F 10 05 ? ? ? ? F3 0F 11 45 EC"); // Digital version
+        if (!pattern.empty())
+            injector::WriteMemory(pattern.get_first(4), &fFPSLimit, true);
+        else
+        {
+            pattern = hook::pattern("8B 0D ? ? ? ? 89 4D C8 8B 15 ? ? ? ? 89 55 E0"); // Retail version
+            injector::WriteMemory(pattern.get_first(2), &fFPSLimit, true);
+        }
+    }
 }
 
 CEXP void InitializeASI()
