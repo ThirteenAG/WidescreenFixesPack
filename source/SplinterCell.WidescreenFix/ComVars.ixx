@@ -25,10 +25,12 @@ export struct Screen
     float fWidescreenHudOffset;
     int nHudWidescreenMode;
     uint32_t nFMVWidescreenMode;
+    uint32_t nShadowBufferResolution;
     float fRawInputMouse;
     bool bRawInputMouseRawData;
     bool bDeferredInput;
     int nCutsceneBorders;
+    float fGrainScale;
 } Screen;
 
 export union FColor
