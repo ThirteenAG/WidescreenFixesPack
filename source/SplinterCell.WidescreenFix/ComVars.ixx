@@ -61,6 +61,7 @@ export uint32_t nFMVWidescreenMode;
 export bool bSkipIntro = false;
 export bool bPlayingVideo = false;
 export bool bGadgetVideoIsPlaying = false;
+export bool bShuttingDown = false;
 export bool bDisplayingSplash = false;
 export bool bPressStartToContinue = false;
 export bool bSkipPressStartToContinue = false;
