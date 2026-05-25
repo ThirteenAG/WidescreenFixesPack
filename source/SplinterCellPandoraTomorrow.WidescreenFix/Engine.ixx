@@ -421,7 +421,19 @@ export void InitEngine()
         // Thermal vision uses a separate render target size so it bypasses the main fix, apply PostProcessFixedScale here as well
         auto thermalRT = find_module_pattern(GetModuleHandle(L"Engine"), "8B 0C 85 ? ? ? ? 8B 75 10");
         if (!thermalRT.empty())
-            injector::WriteMemory<uint32_t>(*thermalRT.get_first<uintptr_t>(3), Screen.nPostProcessFixedScale, true);
+        {
+            // Override all thermal RT presets
+            uintptr_t thermalSceneSizes = *thermalRT.get_first<uintptr_t>(3);
+            for (int i = 0; i < 3; i++)
+                injector::WriteMemory<uint32_t>(thermalSceneSizes + i * 4, Screen.nPostProcessFixedScale, true);
+        }
+    }
+
+    // Force thermal vision to use quality preset 2 (1024px pyramid)
+    {
+        auto thermalDispatch = find_module_pattern(GetModuleHandle(L"Engine"), "FF B5 FC FB FF FF 56 53 6A 00 E8");
+        if (!thermalDispatch.empty())
+            injector::WriteMemory<uint8_t>(thermalDispatch.get_first(9), 2, true);
     }
 
     if (gColor.RGBA)
