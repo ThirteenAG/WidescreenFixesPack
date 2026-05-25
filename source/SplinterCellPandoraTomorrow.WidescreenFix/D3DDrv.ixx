@@ -8,6 +8,72 @@ export module D3DDrv;
 import ComVars;
 import Shaders;
 
+// Rain splash point sprites use pixel-sized D3D8 constants scaled for 640x480, causing them to shrink at higher resolutions
+namespace RainSplashFix
+{
+    bool   bInitialized   = false;
+    float* pSizeScaleC73z = nullptr;
+    float* pSizeScaleC75y = nullptr;
+    float* pMaxSizeC75z   = nullptr;
+    float* pMaxSizeC75w   = nullptr;
+    float  fOrigC73z = 0.0f, fOrigC75y = 0.0f, fOrigC75z = 0.0f, fOrigC75w = 0.0f;
+
+    void Init()
+    {
+        // Rain splash constant block (c73–c75)
+        auto pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "6A 01 68 ? ? ? ? 6A 4B 8B 80 94 46 00 00");
+        if (pattern.empty())
+            return;
+
+        float* c75 = *pattern.get_first<float*>(3);
+        if (!c75)
+            return;
+
+        float* c73 = c75 - 8; // contiguous float4 block
+
+        // Verify expected c73–c75 constant block for this build
+        static const uint32_t kExpected[12] =
+        {
+            0x40C00000u, 0x40A00000u, 0x46EA6000u, 0x3F000000u,
+            0x41A00000u, 0x41A00000u, 0x40C00000u, 0x3E4CCCCDu,
+            0x41000000u, 0x459C4000u, 0x41C00000u, 0x41F00000u,
+        };
+        for (int i = 0; i < 12; i++)
+        {
+            if (*reinterpret_cast<uint32_t*>(&c73[i]) != kExpected[i])
+                return;
+        }
+
+        pSizeScaleC73z = &c73[2];
+        pSizeScaleC75y = &c75[1];
+        pMaxSizeC75z   = &c75[2];
+        pMaxSizeC75w   = &c75[3];
+
+        fOrigC73z = *pSizeScaleC73z;
+        fOrigC75y = *pSizeScaleC75y;
+        fOrigC75z = *pMaxSizeC75z;
+        fOrigC75w = *pMaxSizeC75w;
+
+        bInitialized = true;
+    }
+
+    void Apply()
+    {
+        if (!bInitialized)
+            return;
+
+        // Maintain original 480p vertical scale
+        float scale = static_cast<float>(Screen.Height) / 480.0f;
+        if (!(scale > 0.0f))
+            scale = 1.0f;
+
+        injector::WriteMemory<float>(pSizeScaleC73z, fOrigC73z * scale, true);
+        injector::WriteMemory<float>(pSizeScaleC75y, fOrigC75y * scale, true);
+        injector::WriteMemory<float>(pMaxSizeC75z,   fOrigC75z * scale, true);
+        injector::WriteMemory<float>(pMaxSizeC75w,   fOrigC75w * scale, true);
+    }
+}
+
 D3DPRESENT_PARAMETERS* pPresentParams = nullptr;
 SafetyHookInline shUD3DRenderDeviceSetRes = {};
 int __fastcall UD3DRenderDeviceSetRes(void* UD3DRenderDevice, void* edx, void* UViewport, int width, int height, int a5)
@@ -38,6 +104,10 @@ int __fastcall UD3DRenderDeviceSetRes(void* UD3DRenderDevice, void* edx, void* U
     Screen.fWidth = static_cast<float>(Screen.Width);
     Screen.fHeight = static_cast<float>(Screen.Height);
     Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
+
+    // Rescale the rain splash point sprites for the new resolution
+    RainSplashFix::Apply();
+
     Screen.fHudOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
     Screen.fHUDScaleX = 1.0f / Screen.fWidth * (Screen.fHeight / 480.0f);
     Screen.dHUDScaleX = static_cast<double>(Screen.fHUDScaleX);
@@ -632,6 +702,9 @@ export void InitD3DDrv()
             }
         }
     });
+
+    RainSplashFix::Init();
+    RainSplashFix::Apply();
 
     InitShaders();
 }
