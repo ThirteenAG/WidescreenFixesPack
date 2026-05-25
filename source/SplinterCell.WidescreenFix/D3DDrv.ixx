@@ -714,13 +714,17 @@ export void InitD3DDrv()
     {
         static auto NightVisionGrainHook = safetyhook::create_mid(pattern.get_first(4), [](SafetyHookContext& regs)
         {
+            if (Screen.fGrainScale == 0.0f)
+                return;
+
             uint32_t height = *(uint32_t*)(regs.esp + 0xCD0);
             if (height == 0)
                 return;
 
-            float scale = 480.0f / static_cast<float>(height);
-            *(float*)(regs.esp + 0x14) *= scale;
-            *(float*)(regs.esp + 0x28) *= scale;
+            float fullScale = 480.0f / static_cast<float>(height);
+            float blendedScale = 1.0f + (fullScale - 1.0f) * Screen.fGrainScale;
+            *(float*)(regs.esp + 0x14) *= blendedScale;
+            *(float*)(regs.esp + 0x28) *= blendedScale;
         });
     }
 }
