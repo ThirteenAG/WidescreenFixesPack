@@ -302,6 +302,52 @@ void DrawHiResCutsceneFrame(IDirect3DDevice8* pD3DDevice, void* UCanvas)
 
 namespace UD3DRenderDevice
 {
+    SafetyHookInline shGetShadowBufferResolutionWidth = {};
+    int __fastcall GetShadowBufferResolutionWidth(void* self, void* edx)
+    {
+        int stock = shGetShadowBufferResolutionWidth.unsafe_fastcall<int>(self, edx);
+
+        if (Screen.nShadowBufferResolution <= 0 || stock <= 0)
+            return stock;
+
+        int raw;
+
+        if (Screen.nShadowBufferResolution == 1)
+            raw = Screen.Width;
+        else
+            raw = static_cast<int>(Screen.nShadowBufferResolution);
+
+        if (raw < stock)
+            raw = stock;
+
+        // Clamping to 4096x4096 for dgVoodoo 2 compatability for now
+        //return raw > 16384 ? 16384 : raw;
+        return raw > 4096 ? 4096 : raw;
+    }
+
+    SafetyHookInline shGetShadowBufferResolutionHeight = {};
+    int __fastcall GetShadowBufferResolutionHeight(void* self, void* edx)
+    {
+        int stock = shGetShadowBufferResolutionHeight.unsafe_fastcall<int>(self, edx);
+
+        if (Screen.nShadowBufferResolution <= 0 || stock <= 0)
+            return stock;
+
+        int raw;
+
+        if (Screen.nShadowBufferResolution == 1)
+            raw = Screen.Width;
+        else
+            raw = static_cast<int>(Screen.nShadowBufferResolution); // Default game used nShadowBufferResolution / 2 for height
+        
+        if (raw < stock)
+            raw = stock;
+
+        // Clamping to 4096x4096 for dgVoodoo 2 compatability for now
+        //return raw > 16384 ? 16384 : raw;
+        return raw > 4096 ? 4096 : raw;
+    }
+
     SafetyHookInline shDisplayVideo = {};
     SafetyHookInline shStartVideo = {};
     SafetyHookInline shStopVideo = {};
@@ -626,6 +672,9 @@ export void InitD3DDrv()
 
     UD3DRenderDevice::shDisplayVideo = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"D3DDrv"), "?DisplayVideo@UD3DRenderDevice@@UAEXPAVUCanvas@@PAX@Z"), UD3DRenderDevice::DisplayVideo);
 
+    UD3DRenderDevice::shGetShadowBufferResolutionWidth = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"D3DDrv"), "?GetShadowBufferResolutionWidth@UD3DRenderDevice@@UAEHXZ"), UD3DRenderDevice::GetShadowBufferResolutionWidth);
+    UD3DRenderDevice::shGetShadowBufferResolutionHeight = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"D3DDrv"), "?GetShadowBufferResolutionHeight@UD3DRenderDevice@@UAEHXZ"), UD3DRenderDevice::GetShadowBufferResolutionHeight);
+    
     // High resolution Bink cutscene fix
     pPrepareTexture = (PrepareTexture_t)GetProcAddress(GetModuleHandle(L"D3DDrv"), "?PrepareTexture@UD3DRenderDevice@@QAEPAVUTexture@@HH@Z");
     if (HMODULE hBinkModule = GetModuleHandle(L"binkw32"))
