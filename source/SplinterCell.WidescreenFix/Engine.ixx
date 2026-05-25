@@ -317,14 +317,24 @@ export void InitEngine()
     // Fix thermal vision grain scaling at high resolutions
     static auto ThermalGrainScaleHeight = [](SafetyHookContext& regs)
     {
-        regs.eax = 480; // V tile count becomes 480 / noiseTexHeight
+        float blended = (float)regs.eax + (480.0f - (float)regs.eax) * Screen.fGrainScale;
+        regs.eax = (uint32_t)blended;
     };
+
     static auto ThermalGrainScaleWidth = [](SafetyHookContext& regs)
     {
         uint32_t height = *(uint32_t*)(regs.edx + 0x80); // UViewport screen height
         if (height == 0)
             return;
-        uint32_t eff = (uint32_t)((uint64_t)regs.eax * 480ull / height); // width * 480 / height
+
+        uint32_t origWidth = regs.eax;
+        uint32_t scaledWidth = (uint32_t)((uint64_t)origWidth * 480ull / height); // width * 480 / height
+        if (scaledWidth < 1u)
+            scaledWidth = 1u;
+
+        float blended = (float)origWidth + ((float)scaledWidth - (float)origWidth) * Screen.fGrainScale;
+
+        uint32_t eff = (uint32_t)blended;
         regs.eax = eff < 1u ? 1u : eff;
     };
 
