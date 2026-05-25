@@ -9,6 +9,11 @@ export module WinDrv;
 import ComVars;
 import Xidi;
 
+// Engine clean shutdown request (Core.dll): posts WM_QUIT and sets
+// GIsRequestingExit so the main loop exits cleanly after the current frame
+typedef void(__cdecl* appRequestExit_t)(int force);
+appRequestExit_t appRequestExit = nullptr;
+
 namespace UWindowsViewport
 {
     bool bCalledFromWndProc = false;
@@ -19,10 +24,13 @@ namespace UWindowsViewport
     {
         hGameWindow = *(HWND*)(*(uintptr_t*)((uintptr_t)UWindowsViewport + 0x180) + 4);
 
-        // Handle Alt+F4 to close the window
-        if (Msg == WM_SYSKEYDOWN && wParam == VK_F4)
+        // Use the engine's shutdown path instead of letting DefWindowProc destroy
+        // the window/device mid-frame, which can cause rendering on a dead device
+        if ((Msg == WM_SYSKEYDOWN && wParam == VK_F4) || Msg == WM_CLOSE)
         {
-            PostMessage(hGameWindow, WM_CLOSE, 0, 0);
+            bShuttingDown = true; // also stops Bink rendering during shutdown
+            if (appRequestExit)
+                appRequestExit(0);
             return 0;
         }
         else if (Msg == WM_SETFOCUS)
@@ -162,6 +170,8 @@ export void InitWinDrv()
             SetCursor(NULL);
         }
     }; injector::MakeInline<OpenWindowHook2>(pattern.get_first(0), pattern.get_first(9));
+
+    appRequestExit = (appRequestExit_t)GetProcAddress(GetModuleHandle(L"Core"), "?appRequestExit@@YAXH@Z");
 
     UWindowsViewport::shUpdateRumble = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"WinDrv"), "?UpdateRumble@UWindowsViewport@@UAEXMM@Z"), UWindowsViewport::UpdateRumble);
     UWindowsViewport::shCauseInputEvent = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"WinDrv"), "?CauseInputEvent@UWindowsViewport@@UAEHHW4EInputAction@@M@Z"), UWindowsViewport::CauseInputEvent);
