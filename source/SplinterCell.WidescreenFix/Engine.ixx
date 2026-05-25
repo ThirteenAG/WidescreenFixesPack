@@ -314,6 +314,33 @@ export void InitEngine()
             *(uint32_t*)(regs.esp + 0x2C) = 0;
     });
 
+    // Fix thermal vision grain scaling at high resolutions
+    static auto ThermalGrainScaleHeight = [](SafetyHookContext& regs)
+    {
+        regs.eax = 480; // V tile count becomes 480 / noiseTexHeight
+    };
+    static auto ThermalGrainScaleWidth = [](SafetyHookContext& regs)
+    {
+        uint32_t height = *(uint32_t*)(regs.edx + 0x80); // UViewport screen height
+        if (height == 0)
+            return;
+        uint32_t eff = (uint32_t)((uint64_t)regs.eax * 480ull / height); // width * 480 / height
+        regs.eax = eff < 1u ? 1u : eff;
+    };
+
+    pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "8B 82 80 00 00 00 99 F7 F9 8D 4C 24 30");
+    size_t nThermalGrain = pattern.count_hint(2).size();
+    if (nThermalGrain >= 1)
+    {
+        static auto ThermalGrainHeightHook0 = safetyhook::create_mid(pattern.get(0).get<void>(0x06), ThermalGrainScaleHeight);
+        static auto ThermalGrainWidthHook0  = safetyhook::create_mid(pattern.get(0).get<void>(0x3C), ThermalGrainScaleWidth);
+    }
+    if (nThermalGrain >= 2)
+    {
+        static auto ThermalGrainHeightHook1 = safetyhook::create_mid(pattern.get(1).get<void>(0x06), ThermalGrainScaleHeight);
+        static auto ThermalGrainWidthHook1  = safetyhook::create_mid(pattern.get(1).get<void>(0x3C), ThermalGrainScaleWidth);
+    }
+
     if (bSkipIntro)
     {
         pattern = find_module_pattern(GetModuleHandle(L"Engine"), "75 ? A1 ? ? ? ? 85 C0 75 ? 68 00 00 80 3F");

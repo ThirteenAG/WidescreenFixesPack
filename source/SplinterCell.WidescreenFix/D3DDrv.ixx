@@ -707,4 +707,20 @@ export void InitD3DDrv()
             }
         }
     });
+
+    // Fix night vision grain scaling at high resolutions
+    pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "D9 5C 24 14 FF 15 ? ? ? ? D9 5C 24 10");
+    if (!pattern.empty())
+    {
+        static auto NightVisionGrainHook = safetyhook::create_mid(pattern.get_first(4), [](SafetyHookContext& regs)
+        {
+            uint32_t height = *(uint32_t*)(regs.esp + 0xCD0);
+            if (height == 0)
+                return;
+
+            float scale = 480.0f / static_cast<float>(height);
+            *(float*)(regs.esp + 0x14) *= scale;
+            *(float*)(regs.esp + 0x28) *= scale;
+        });
+    }
 }
