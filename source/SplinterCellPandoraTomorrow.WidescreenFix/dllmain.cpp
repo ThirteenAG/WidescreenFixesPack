@@ -25,6 +25,7 @@ void Init()
     Screen.bScopeWidescreenMode = iniReader.ReadInteger("MAIN", "ScopeWidescreenMode", 0) != 0;
     Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "HudAspectRatioConstraint", ""));
     Screen.nPostProcessFixedScale = iniReader.ReadInteger("MAIN", "PostProcessFixedScale", 1);
+    Screen.fGrainScale = std::clamp(iniReader.ReadFloat("MAIN", "GrainScale", 1.0f), 0.0f, 1.0f);
     Screen.nShadowMapResolution = iniReader.ReadInteger("MAIN", "ShadowMapResolution", 1);
     Screen.nReflectionsResolution = iniReader.ReadInteger("MAIN", "ReflectionsResolution", 1);
     Screen.nBloomResolutionMultiplier = std::clamp(iniReader.ReadInteger("MAIN", "BloomResolutionMultiplier", 0), 0, 4);
