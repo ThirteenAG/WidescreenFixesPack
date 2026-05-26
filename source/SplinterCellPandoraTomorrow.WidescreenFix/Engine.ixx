@@ -471,6 +471,23 @@ export void InitEngine()
             injector::WriteMemory(pattern2.get(i).get<uint32_t>(1), Screen.nPostProcessFixedScale, true);
             injector::WriteMemory(pattern2.get(i).get<uint32_t>(6), Screen.nPostProcessFixedScale, true);
         }
+
+        // Thermal vision uses a separate render target size so it bypasses the main fix, apply PostProcessFixedScale here as well
+        auto thermalRT = find_module_pattern(GetModuleHandle(L"Engine"), "8B 0C 85 ? ? ? ? 8B 75 10");
+        if (!thermalRT.empty())
+        {
+            // Override all thermal RT presets
+            uintptr_t thermalSceneSizes = *thermalRT.get_first<uintptr_t>(3);
+            for (int i = 0; i < 3; i++)
+                injector::WriteMemory<uint32_t>(thermalSceneSizes + i * 4, Screen.nPostProcessFixedScale, true);
+        }
+    }
+
+    // Force thermal vision to use quality preset 2 (1024px pyramid)
+    {
+        auto thermalDispatch = find_module_pattern(GetModuleHandle(L"Engine"), "FF B5 FC FB FF FF 56 53 6A 00 E8");
+        if (!thermalDispatch.empty())
+            injector::WriteMemory<uint8_t>(thermalDispatch.get_first(9), 2, true);
     }
 
     if (gColor.RGBA)
@@ -599,4 +616,23 @@ export void InitEngine()
     AActor::shPostLoad = safetyhook::create_inline(
         GetProcAddress(GetModuleHandle(L"Engine"), "?PostLoad@AActor@@UAEXXZ"),
         AActor::PostLoad);
+
+    // Fix thermal vision grain scaling at high resolutions
+    pattern = find_module_pattern(GetModuleHandle(L"Engine"), "8B 46 04 8B 80 84 00 00 00 99 F7 F9 66 0F 6E C0");
+    if (!pattern.empty())
+    {
+        static auto ThermalGrainHeightHook = safetyhook::create_mid(pattern.get_first(9), [](SafetyHookContext& regs)
+        {
+            regs.eax = static_cast<uint32_t>((float)regs.eax + (480.0f - (float)regs.eax) * Screen.fGrainScale);
+        });
+    }
+
+    pattern = find_module_pattern(GetModuleHandle(L"Engine"), "8B 46 04 8B 80 80 00 00 00 99 F7 F9 8D 8D 74 FE FF FF");
+    if (!pattern.empty())
+    {
+        static auto ThermalGrainWidthHook = safetyhook::create_mid(pattern.get_first(9), [](SafetyHookContext& regs)
+        {
+            regs.eax = static_cast<uint32_t>((float)regs.eax + (640.0f - (float)regs.eax) * Screen.fGrainScale);
+        });
+    }
 }
