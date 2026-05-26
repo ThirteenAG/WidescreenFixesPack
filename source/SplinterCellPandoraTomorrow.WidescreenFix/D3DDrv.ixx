@@ -706,5 +706,26 @@ export void InitD3DDrv()
     RainSplashFix::Init();
     RainSplashFix::Apply();
 
+    // Fix night vision grain scaling at high resolutions
+    pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "F3 0F 5E C8 F3 0F 11 8D 18 FA FF FF FF D0 66 0F 6E 8D 14 FA FF FF 0F 5B C9 66 0F 6E C0 0F 5B C0 F3 0F 5E C8 F3 0F 11 8D 04 FA FF FF");
+    if (!pattern.empty())
+    {
+        static auto NightVisionGrainHook = safetyhook::create_mid(pattern.get_first(0x2C), [](SafetyHookContext& regs)
+            {
+                if (Screen.fGrainScale == 0.0f)
+                    return;
+
+                float* pGrainScaleU = reinterpret_cast<float*>(regs.ebp - 0x5E8);
+                float* pGrainScaleV = reinterpret_cast<float*>(regs.ebp - 0x5FC);
+                float  renderWidth = static_cast<float>(*reinterpret_cast<int32_t*>(regs.ebp - 0x5F0));
+                float  renderHeight = static_cast<float>(*reinterpret_cast<int32_t*>(regs.ebp - 0x5EC));
+                if (renderWidth > 0.0f && renderHeight > 0.0f)
+                {
+                    *pGrainScaleU *= 1.0f + (640.0f / renderWidth  - 1.0f) * Screen.fGrainScale;
+                    *pGrainScaleV *= 1.0f + (480.0f / renderHeight - 1.0f) * Screen.fGrainScale;
+                }
+            });
+    }
+
     InitShaders();
 }

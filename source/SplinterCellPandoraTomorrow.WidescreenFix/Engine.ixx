@@ -207,6 +207,60 @@ namespace UEngine
     }
 }
 
+// Restore the in-game console
+namespace UInteractionMaster
+{
+    void(__fastcall* FName_ctor)(int* /*FName out*/, void* /*edx*/, const wchar_t* Name, int FindType) = nullptr;
+    void* (__fastcall* FindFunction)(void* /*UObject*/, void* /*edx*/, int /*FName*/, int) = nullptr;
+    void(__fastcall* ProcessEvent)(void* /*UObject*/, void* /*edx*/, void* /*UFunction*/, void* /*Parms*/, void* /*Result*/) = nullptr;
+    void(__fastcall* SetClip)(void* /*UCanvas*/, void* /*edx*/, float X, float Y) = nullptr;
+
+    constexpr int IK_Tilde = 0xC0; // Tilde key to open console
+    constexpr int IST_Press = 1;
+
+    SafetyHookInline shMasterProcessKeyEvent = {};
+    int __fastcall MasterProcessKeyEvent(void* self, void* edx, int key, int action, float delta)
+    {
+        // Input enums are byte-sized
+        if ((key & 0xFF) == IK_Tilde && (action & 0xFF) == IST_Press)
+        {
+            // UInteractionMaster Console is at +0x34
+            void* console = *(void**)((char*)self + 0x34);
+
+            if (console && FName_ctor && FindFunction && ProcessEvent)
+            {
+                static int typeName = 0;
+                static void* typeFn = nullptr;
+
+                // Cache FName/UFunction on first use
+                if (!typeFn)
+                {
+                    if (typeName == 0)
+                        FName_ctor(&typeName, nullptr, L"Type", 1 /* FNAME_Add */);
+                    if (typeName != 0)
+                        typeFn = FindFunction(console, nullptr, typeName, 0);
+                }
+
+                if (typeFn)
+                {
+                    ProcessEvent(console, nullptr, typeFn, nullptr, nullptr);
+                    return 1;
+                }
+            }
+        }
+        return shMasterProcessKeyEvent.unsafe_fastcall<int>(self, edx, key, action, delta);
+    }
+
+    SafetyHookInline shMasterProcessPostRender = {};
+    void __fastcall MasterProcessPostRender(void* self, void* edx, void* canvas)
+    {
+        if (canvas && SetClip)
+            SetClip(canvas, nullptr, 640.0f, 480.0f);
+
+        shMasterProcessPostRender.unsafe_fastcall(self, edx, canvas);
+    }
+}
+
 namespace UGameEngine
 {
     SafetyHookInline shDisplaySplash = {};
@@ -417,6 +471,23 @@ export void InitEngine()
             injector::WriteMemory(pattern2.get(i).get<uint32_t>(1), Screen.nPostProcessFixedScale, true);
             injector::WriteMemory(pattern2.get(i).get<uint32_t>(6), Screen.nPostProcessFixedScale, true);
         }
+
+        // Thermal vision uses a separate render target size so it bypasses the main fix, apply PostProcessFixedScale here as well
+        auto thermalRT = find_module_pattern(GetModuleHandle(L"Engine"), "8B 0C 85 ? ? ? ? 8B 75 10");
+        if (!thermalRT.empty())
+        {
+            // Override all thermal RT presets
+            uintptr_t thermalSceneSizes = *thermalRT.get_first<uintptr_t>(3);
+            for (int i = 0; i < 3; i++)
+                injector::WriteMemory<uint32_t>(thermalSceneSizes + i * 4, Screen.nPostProcessFixedScale, true);
+        }
+    }
+
+    // Force thermal vision to use quality preset 2 (1024px pyramid)
+    {
+        auto thermalDispatch = find_module_pattern(GetModuleHandle(L"Engine"), "FF B5 FC FB FF FF 56 53 6A 00 E8");
+        if (!thermalDispatch.empty())
+            injector::WriteMemory<uint8_t>(thermalDispatch.get_first(9), 2, true);
     }
 
     if (gColor.RGBA)
@@ -506,6 +577,17 @@ export void InitEngine()
     UEngine::shInputEvent = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?InputEvent@UEngine@@UAEHPAVUViewport@@W4EInputKey@@W4EInputAction@@M@Z"), UEngine::InputEvent);
     UInput::shInit = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?Init@UInput@@UAEXPAVUViewport@@@Z"), UInput::Init);
 
+    // Restore the in-game console
+    if (bEnableConsole)
+    {
+        UInteractionMaster::FName_ctor = (decltype(UInteractionMaster::FName_ctor))GetProcAddress(GetModuleHandle(L"Core"), "??0FName@@QAE@PB_WW4EFindName@@@Z");
+        UInteractionMaster::FindFunction = (decltype(UInteractionMaster::FindFunction))GetProcAddress(GetModuleHandle(L"Core"), "?FindFunction@UObject@@QAEPAVUFunction@@VFName@@H@Z");
+        UInteractionMaster::ProcessEvent = (decltype(UInteractionMaster::ProcessEvent))GetProcAddress(GetModuleHandle(L"Core"), "?ProcessEvent@UObject@@UAEXPAVUFunction@@PAX1@Z");
+        UInteractionMaster::SetClip = (decltype(UInteractionMaster::SetClip))GetProcAddress(GetModuleHandle(L"Engine"), "?SetClip@UCanvas@@UAEXMM@Z");
+        UInteractionMaster::shMasterProcessKeyEvent = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?MasterProcessKeyEvent@UInteractionMaster@@QAEHW4EInputKey@@W4EInputAction@@M@Z"), UInteractionMaster::MasterProcessKeyEvent);
+        UInteractionMaster::shMasterProcessPostRender = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?MasterProcessPostRender@UInteractionMaster@@QAEXPAVUCanvas@@@Z"), UInteractionMaster::MasterProcessPostRender);
+    }
+
     UGameEngine::shDisplaySplash = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?DisplaySplash@UGameEngine@@QAEXH@Z"), UGameEngine::DisplaySplash);
     UGameEngine::shDisplayMenuSplash = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?DisplayMenuSplash@UGameEngine@@QAEXHH@Z"), UGameEngine::DisplayMenuSplash);
     UGameEngine::shSplashFadInOut = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?SplashFadInOut@UGameEngine@@QAEXHH@Z"), UGameEngine::SplashFadInOut);
@@ -534,4 +616,23 @@ export void InitEngine()
     AActor::shPostLoad = safetyhook::create_inline(
         GetProcAddress(GetModuleHandle(L"Engine"), "?PostLoad@AActor@@UAEXXZ"),
         AActor::PostLoad);
+
+    // Fix thermal vision grain scaling at high resolutions
+    pattern = find_module_pattern(GetModuleHandle(L"Engine"), "8B 46 04 8B 80 84 00 00 00 99 F7 F9 66 0F 6E C0");
+    if (!pattern.empty())
+    {
+        static auto ThermalGrainHeightHook = safetyhook::create_mid(pattern.get_first(9), [](SafetyHookContext& regs)
+        {
+            regs.eax = static_cast<uint32_t>((float)regs.eax + (480.0f - (float)regs.eax) * Screen.fGrainScale);
+        });
+    }
+
+    pattern = find_module_pattern(GetModuleHandle(L"Engine"), "8B 46 04 8B 80 80 00 00 00 99 F7 F9 8D 8D 74 FE FF FF");
+    if (!pattern.empty())
+    {
+        static auto ThermalGrainWidthHook = safetyhook::create_mid(pattern.get_first(9), [](SafetyHookContext& regs)
+        {
+            regs.eax = static_cast<uint32_t>((float)regs.eax + (640.0f - (float)regs.eax) * Screen.fGrainScale);
+        });
+    }
 }

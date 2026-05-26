@@ -1,6 +1,7 @@
 #include <stdafx.h>
 
 import ComVars;
+import CrashHandler;
 import Core;
 import Engine;
 import D3DDrv;
@@ -13,6 +14,8 @@ import Eax;
 
 void Init()
 {
+    InitCrashHandler();
+
     CIniReader iniReader("");
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
@@ -25,6 +28,7 @@ void Init()
     Screen.bScopeWidescreenMode = iniReader.ReadInteger("MAIN", "ScopeWidescreenMode", 0) != 0;
     Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "HudAspectRatioConstraint", ""));
     Screen.nPostProcessFixedScale = iniReader.ReadInteger("MAIN", "PostProcessFixedScale", 1);
+    Screen.fGrainScale = std::clamp(iniReader.ReadFloat("MAIN", "GrainScale", 1.0f), 0.0f, 1.0f);
     Screen.nShadowMapResolution = iniReader.ReadInteger("MAIN", "ShadowMapResolution", 1);
     Screen.nReflectionsResolution = iniReader.ReadInteger("MAIN", "ReflectionsResolution", 1);
     Screen.nBloomResolutionMultiplier = std::clamp(iniReader.ReadInteger("MAIN", "BloomResolutionMultiplier", 0), 0, 4);
@@ -35,6 +39,7 @@ void Init()
     bSkipPressStartToContinue = iniReader.ReadInteger("MAIN", "SkipPressStartToContinue", 0) != 0;
     bRestoreCutsceneFOV = iniReader.ReadInteger("MAIN", "RestoreCutsceneFOV", 0) != 0;
     Screen.nCutsceneBorders = iniReader.ReadInteger("MAIN", "CutsceneBorders", 0);
+    bEnableConsole = iniReader.ReadInteger("MAIN", "EnableConsole", 0) != 0;
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
