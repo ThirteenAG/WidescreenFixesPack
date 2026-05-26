@@ -54,6 +54,7 @@ export bool bDisplayingBackground = false;
 export bool bPressStartToContinue = false;
 export bool bSkipPressStartToContinue = false;
 export bool bRestoreCutsceneFOV = false;
+export bool bEnableConsole = false;
 export float fLightDistanceMultiplier = 8.0f;
 export HWND hGameWindow = NULL;
 export bool bIsWindowed = false;

@@ -207,6 +207,60 @@ namespace UEngine
     }
 }
 
+// Restore the in-game console
+namespace UInteractionMaster
+{
+    void(__fastcall* FName_ctor)(int* /*FName out*/, void* /*edx*/, const wchar_t* Name, int FindType) = nullptr;
+    void* (__fastcall* FindFunction)(void* /*UObject*/, void* /*edx*/, int /*FName*/, int) = nullptr;
+    void(__fastcall* ProcessEvent)(void* /*UObject*/, void* /*edx*/, void* /*UFunction*/, void* /*Parms*/, void* /*Result*/) = nullptr;
+    void(__fastcall* SetClip)(void* /*UCanvas*/, void* /*edx*/, float X, float Y) = nullptr;
+
+    constexpr int IK_Tilde = 0xC0; // Tilde key to open console
+    constexpr int IST_Press = 1;
+
+    SafetyHookInline shMasterProcessKeyEvent = {};
+    int __fastcall MasterProcessKeyEvent(void* self, void* edx, int key, int action, float delta)
+    {
+        // Input enums are byte-sized
+        if ((key & 0xFF) == IK_Tilde && (action & 0xFF) == IST_Press)
+        {
+            // UInteractionMaster Console is at +0x34
+            void* console = *(void**)((char*)self + 0x34);
+
+            if (console && FName_ctor && FindFunction && ProcessEvent)
+            {
+                static int typeName = 0;
+                static void* typeFn = nullptr;
+
+                // Cache FName/UFunction on first use
+                if (!typeFn)
+                {
+                    if (typeName == 0)
+                        FName_ctor(&typeName, nullptr, L"Type", 1 /* FNAME_Add */);
+                    if (typeName != 0)
+                        typeFn = FindFunction(console, nullptr, typeName, 0);
+                }
+
+                if (typeFn)
+                {
+                    ProcessEvent(console, nullptr, typeFn, nullptr, nullptr);
+                    return 1;
+                }
+            }
+        }
+        return shMasterProcessKeyEvent.unsafe_fastcall<int>(self, edx, key, action, delta);
+    }
+
+    SafetyHookInline shMasterProcessPostRender = {};
+    void __fastcall MasterProcessPostRender(void* self, void* edx, void* canvas)
+    {
+        if (canvas && SetClip)
+            SetClip(canvas, nullptr, 640.0f, 480.0f);
+
+        shMasterProcessPostRender.unsafe_fastcall(self, edx, canvas);
+    }
+}
+
 namespace UGameEngine
 {
     SafetyHookInline shDisplaySplash = {};
@@ -505,6 +559,17 @@ export void InitEngine()
     UInput::GetKey = (decltype(UInput::GetKey))FindProcAddress(GetModuleHandle(L"Engine"), "?GetKey@UInput@@UAEEPB_WH@Z", "?GetKey@UInput@@UAEEPBGH@Z");
     UEngine::shInputEvent = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?InputEvent@UEngine@@UAEHPAVUViewport@@W4EInputKey@@W4EInputAction@@M@Z"), UEngine::InputEvent);
     UInput::shInit = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?Init@UInput@@UAEXPAVUViewport@@@Z"), UInput::Init);
+
+    // Restore the in-game console
+    if (bEnableConsole)
+    {
+        UInteractionMaster::FName_ctor = (decltype(UInteractionMaster::FName_ctor))GetProcAddress(GetModuleHandle(L"Core"), "??0FName@@QAE@PB_WW4EFindName@@@Z");
+        UInteractionMaster::FindFunction = (decltype(UInteractionMaster::FindFunction))GetProcAddress(GetModuleHandle(L"Core"), "?FindFunction@UObject@@QAEPAVUFunction@@VFName@@H@Z");
+        UInteractionMaster::ProcessEvent = (decltype(UInteractionMaster::ProcessEvent))GetProcAddress(GetModuleHandle(L"Core"), "?ProcessEvent@UObject@@UAEXPAVUFunction@@PAX1@Z");
+        UInteractionMaster::SetClip = (decltype(UInteractionMaster::SetClip))GetProcAddress(GetModuleHandle(L"Engine"), "?SetClip@UCanvas@@UAEXMM@Z");
+        UInteractionMaster::shMasterProcessKeyEvent = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?MasterProcessKeyEvent@UInteractionMaster@@QAEHW4EInputKey@@W4EInputAction@@M@Z"), UInteractionMaster::MasterProcessKeyEvent);
+        UInteractionMaster::shMasterProcessPostRender = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?MasterProcessPostRender@UInteractionMaster@@QAEXPAVUCanvas@@@Z"), UInteractionMaster::MasterProcessPostRender);
+    }
 
     UGameEngine::shDisplaySplash = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?DisplaySplash@UGameEngine@@QAEXH@Z"), UGameEngine::DisplaySplash);
     UGameEngine::shDisplayMenuSplash = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?DisplayMenuSplash@UGameEngine@@QAEXHH@Z"), UGameEngine::DisplayMenuSplash);

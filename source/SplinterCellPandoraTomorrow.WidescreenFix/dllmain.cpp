@@ -35,6 +35,7 @@ void Init()
     bSkipPressStartToContinue = iniReader.ReadInteger("MAIN", "SkipPressStartToContinue", 0) != 0;
     bRestoreCutsceneFOV = iniReader.ReadInteger("MAIN", "RestoreCutsceneFOV", 0) != 0;
     Screen.nCutsceneBorders = iniReader.ReadInteger("MAIN", "CutsceneBorders", 0);
+    bEnableConsole = iniReader.ReadInteger("MAIN", "EnableConsole", 0) != 0;
 
     if (!Screen.Width || !Screen.Height)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
