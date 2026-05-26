@@ -37,6 +37,7 @@ export struct Screen
     bool bRawInputMouseRawData;
     bool bDeferredInput;
     int nCutsceneBorders;
+    float fGrainScale;
 } Screen;
 
 export union FColor
