@@ -1,6 +1,7 @@
 #include <stdafx.h>
 
 import ComVars;
+import CrashHandler;
 import Core;
 import Engine;
 import D3DDrv;
@@ -13,6 +14,8 @@ import Eax;
 
 void Init()
 {
+    InitCrashHandler();
+
     CIniReader iniReader("");
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
