@@ -216,13 +216,15 @@ namespace UInteractionMaster
     void(__fastcall* SetClip)(void* /*UCanvas*/, void* /*edx*/, float X, float Y) = nullptr;
 
     constexpr int IK_Tilde = 0xC0; // Tilde key to open console
+    constexpr int IK_F2 = 0x71; // F2 key to open console
     constexpr int IST_Press = 1;
 
     SafetyHookInline shMasterProcessKeyEvent = {};
     int __fastcall MasterProcessKeyEvent(void* self, void* edx, int key, int action, float delta)
     {
         // Input enums are byte-sized
-        if ((key & 0xFF) == IK_Tilde && (action & 0xFF) == IST_Press)
+        if (((key & 0xFF) == IK_Tilde || (key & 0xFF) == IK_F2) &&
+            (action & 0xFF) == IST_Press)
         {
             // UInteractionMaster Console is at +0x34
             void* console = *(void**)((char*)self + 0x34);
