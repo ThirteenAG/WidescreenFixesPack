@@ -42,6 +42,10 @@ public:
             auto pattern = hook::pattern("BD ? ? ? ? BB ? ? ? ? BE");
             injector::WriteMemory<int32_t>(pattern.get_first(1), x, true);
             injector::WriteMemory<int32_t>(pattern.get_first(6), y, true);
+
+            //CHud::DrawHelpText (help text is lower with widescreen borders, not needed)
+            pattern = hook::pattern("74 ? 8A 0D ? ? ? ? 84 C9 75 ? B0");
+            injector::WriteMemory<uint8_t>(pattern.get_first(), 0xEB, true);
         };
 
         WFP::onGameInitEvent() += []()
