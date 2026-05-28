@@ -18,6 +18,17 @@ void __cdecl CameraSize(RwCamera* camera, RwRect* rect, float viewWindow, float 
     return shCameraSize.unsafe_ccall(camera, rect, SCREEN_VIEWWINDOW, SCREEN_ASPECT_RATIO);
 }
 
+namespace CEntryExitManager
+{
+    GameRef<int> ms_exitEnterState([]() -> int*
+    {
+        auto pattern = find_pattern("A1 ? ? ? ? 85 C0 75 ? 33 C0 8A 46");
+        if (!pattern.empty())
+            return *pattern.get_first<int*>(1);
+        return nullptr;
+    });
+}
+
 class Main
 {
 public:
@@ -82,7 +93,8 @@ public:
             injector::MakeNOP(pattern.get_first(), 10, true);
             static auto Process_FixedFOV = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
-                *(float*)(regs.edi + 0xB4) = CDraw::ConvertFOVInverse(70.0f);
+                if (CEntryExitManager::ms_exitEnterState == 1 || CEntryExitManager::ms_exitEnterState == 2)
+                    *(float*)(regs.edi + 0xB4) = CDraw::ConvertFOVInverse(70.0f);
             });
         };
     }
