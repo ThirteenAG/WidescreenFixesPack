@@ -96,6 +96,15 @@ public:
             if (!pattern.empty())
                 injector::WriteMemory<uint8_t>(pattern.get_first(), 0x55, true); //push ebp
 
+            //FireInstantHit doesn't set the target coords
+            pattern = hook::pattern("C6 05 ? ? ? ? ? ? ? 8D B4 24");
+            static auto FireInstantHitBugfix = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            {
+                auto& target = *(CVector*)(regs.esp + 0x84);
+                auto& pPoint = *(CVector*)(regs.esp + 0xF4);
+                target = pPoint;
+            });
+
             //CCamera::IsSphereVisible
             pattern = hook::pattern("E8 ? ? ? ? ? ? ? ? ? ? ? ? ? ? 83 C4 ? ? ? ? ? ? ? ? ? ? ? ? ? DF E0 80 E4 ? 80 FC ? 75 ? 30 DB");
             injector::MakeCALL(pattern.get_first(), RwV3dTransformPointsHook, true);
