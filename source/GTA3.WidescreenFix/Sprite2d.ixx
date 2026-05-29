@@ -256,6 +256,7 @@ void __fastcall Draw5(CSprite2d* sprite2d, void* edx, float x1, float y1, float 
 
 void __cdecl DrawRect1(CRect* r, CRGBA* col)
 {
+    g_hasTexture = false;
     g_isFullscreen = IsFullscreen(r);
     shDrawRect1.unsafe_ccall(r, col);
     g_isFullscreen = false;
@@ -264,6 +265,7 @@ void __cdecl DrawRect1(CRect* r, CRGBA* col)
 SafetyHookInline shDrawRect2 = {};
 void __cdecl DrawRect2(CRect* r, CRGBA* colorLeft, CRGBA* colorTop, CRGBA* colorRight, CRGBA* colorBottom)
 {
+    g_hasTexture = false;
     g_skipXCorrection = true;
     shDrawRect2.unsafe_ccall(r, colorLeft, colorTop, colorRight, colorBottom);
     g_skipXCorrection = false;
@@ -272,6 +274,7 @@ void __cdecl DrawRect2(CRect* r, CRGBA* colorLeft, CRGBA* colorTop, CRGBA* color
 SafetyHookInline shDrawRectXLU = {};
 void __cdecl DrawRectXLU(CRect* r, CRGBA* colorLeft, CRGBA* colorTop, CRGBA* colorRight, CRGBA* colorBottom)
 {
+    g_hasTexture = false;
     g_skipXCorrection = true;
     shDrawRectXLU.unsafe_ccall(r, colorLeft, colorTop, colorRight, colorBottom);
     g_skipXCorrection = false;
