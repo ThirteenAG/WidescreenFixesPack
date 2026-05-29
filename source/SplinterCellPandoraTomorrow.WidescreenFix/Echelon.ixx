@@ -567,6 +567,101 @@ namespace AETextureManager
     }
 }
 
+// EPlayerCam FPS fixes
+namespace AEPlayerCam
+{
+    constexpr float kStep     = 1.0f / 30.0f;
+    constexpr int   kMaxSteps = 8;
+
+    constexpr uintptr_t kHitRoll      = 0x2500;
+    constexpr uintptr_t kHitFadeOut   = 0x2504;
+    constexpr uintptr_t kShakeRoll    = 0x2518;
+    constexpr uintptr_t kShakeTarget  = 0x251c;
+    constexpr uintptr_t kShakeSpeed   = 0x2520;
+    constexpr uintptr_t kShakeFadeOut = 0x2524;
+    constexpr uintptr_t kTiltPitch    = 0x2508;
+    constexpr uintptr_t kTiltTarget   = 0x250c;
+    constexpr uintptr_t kTiltSpeed    = 0x2510;
+    constexpr uintptr_t kTiltFadeOut  = 0x2514;
+
+    constexpr uintptr_t kLevelOff     = 0xb8;
+    constexpr uintptr_t kDeltaTimeOff = 0x764;
+
+    float accumulator = 0.0f;
+
+    SafetyHookInline shUpdateView = {};
+    void __fastcall UpdateView(void* cam, void* edx, int p1, int p2, int p3, int p4)
+    {
+        if (!cam)
+            return shUpdateView.unsafe_fastcall(cam, edx, p1, p2, p3, p4);
+
+        const auto base  = reinterpret_cast<uintptr_t>(cam);
+        const auto level = *reinterpret_cast<uintptr_t*>(base + kLevelOff);
+        if (!level)
+            return shUpdateView.unsafe_fastcall(cam, edx, p1, p2, p3, p4);
+
+        float& levelDt = *reinterpret_cast<float*>(level + kDeltaTimeOff);
+        const float realDt = levelDt;
+        if (!(realDt > 0.0f))
+            return shUpdateView.unsafe_fastcall(cam, edx, p1, p2, p3, p4);
+
+        accumulator += realDt;
+
+        if (accumulator < kStep)
+        {
+            // Stop speed updates but allow camera rotation
+            const int saved[10] = {
+                *reinterpret_cast<int*>(base + kHitRoll),
+                *reinterpret_cast<int*>(base + kHitFadeOut),
+                *reinterpret_cast<int*>(base + kShakeRoll),
+                *reinterpret_cast<int*>(base + kShakeTarget),
+                *reinterpret_cast<int*>(base + kShakeSpeed),
+                *reinterpret_cast<int*>(base + kShakeFadeOut),
+                *reinterpret_cast<int*>(base + kTiltPitch),
+                *reinterpret_cast<int*>(base + kTiltTarget),
+                *reinterpret_cast<int*>(base + kTiltSpeed),
+                *reinterpret_cast<int*>(base + kTiltFadeOut),
+            };
+
+            *reinterpret_cast<int*>(base + kHitFadeOut)   = 0;
+            *reinterpret_cast<int*>(base + kShakeSpeed)   = 0;
+            *reinterpret_cast<int*>(base + kShakeFadeOut) = 0;
+            *reinterpret_cast<int*>(base + kTiltSpeed)    = 0;
+            *reinterpret_cast<int*>(base + kTiltFadeOut)  = 0;
+
+            shUpdateView.unsafe_fastcall(cam, edx, p1, p2, p3, p4);
+
+            *reinterpret_cast<int*>(base + kHitRoll)      = saved[0];
+            *reinterpret_cast<int*>(base + kHitFadeOut)   = saved[1];
+            *reinterpret_cast<int*>(base + kShakeRoll)    = saved[2];
+            *reinterpret_cast<int*>(base + kShakeTarget)  = saved[3];
+            *reinterpret_cast<int*>(base + kShakeSpeed)   = saved[4];
+            *reinterpret_cast<int*>(base + kShakeFadeOut) = saved[5];
+            *reinterpret_cast<int*>(base + kTiltPitch)    = saved[6];
+            *reinterpret_cast<int*>(base + kTiltTarget)   = saved[7];
+            *reinterpret_cast<int*>(base + kTiltSpeed)    = saved[8];
+            *reinterpret_cast<int*>(base + kTiltFadeOut)  = saved[9];
+            return;
+        }
+
+        int steps = 0;
+        while (accumulator >= kStep)
+        {
+            accumulator -= kStep;
+            if (++steps >= kMaxSteps)
+            {
+                accumulator = 0.0f; // discard excess accumulated time to avoid stalls
+                break;
+            }
+        }
+
+        levelDt = kStep;
+        for (int i = 0; i < steps; ++i)
+            shUpdateView.unsafe_fastcall(cam, edx, p1, p2, p3, p4);
+        levelDt = realDt;
+    }
+}
+
 export void InitEchelon()
 {
     // EPlayerController additional state cache
@@ -578,6 +673,9 @@ export void InitEchelon()
     // Restores the checkpoints from the Xbox version of the game
     if (bEnableCheckpoints)
         AEPlayerControllerCheckpoint::Init();
+
+    // EPlayerCam FPS fixes
+    AEPlayerCam::shUpdateView = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Echelon"), "?UpdateView@AEPlayerCam@@QAEXVFRotator@@H@Z"), AEPlayerCam::UpdateView);
 
     // Letterboxing
     auto pattern = find_module_pattern(GetModuleHandle(L"Echelon"), "D9 1C 24 51 50 8B CE E8 ? ? ? ? 5E", "FF B6 ? ? ? ? 57 E8 ? ? ? ? 5F");
@@ -596,7 +694,7 @@ export void InitEchelon()
         curDrawTileManagerTextureIndex = regs.eax;
     });
 
-    // set player speed to max on game start
+    // Set player speed to max on game start
     UIntOverrides::Register(L"IntProperty Echelon.EchelonGameInfo.m_defautSpeed", +[]() -> int
     {
         return 5;
