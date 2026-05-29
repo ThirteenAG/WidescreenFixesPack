@@ -3,11 +3,17 @@ module;
 #include <stdafx.h>
 #include <queue>
 #include <functional>
+#include <unordered_map>
+#include <vector>
 
 export module Engine;
 
 import ComVars;
 import WidescreenHUD;
+
+// Forward declaration for the softbody fixed timestep update
+// Implemented later in the AESoftBodyActor namespace
+namespace AESoftBodyActor { void AdvanceFixedTimestep(float deltaTime); }
 
 namespace UInput
 {
@@ -109,6 +115,10 @@ namespace UGameEngine
     SafetyHookInline shTick = {};
     void __fastcall Tick(void* UGameEngine, void* edx, float deltaTime)
     {
+        // Update the shared softbody fixed timestep once per frame
+        // All cloth actors use the same substep count and interpolation alpha
+        AESoftBodyActor::AdvanceFixedTimestep(deltaTime);
+
         if (Screen.bDeferredInput)
         {
             while (!UWindowsViewport::deferredCauseInputEvent.empty())
@@ -151,7 +161,176 @@ namespace UCanvas
     }
 }
 
-// Animated texture fix
+// Softbody FPS fixes
+namespace AESoftBodyActor
+{
+    constexpr uintptr_t kSoftBodyMember      = 0x2A8;
+    constexpr uintptr_t kVertCountOff        = 0x98;
+    constexpr uintptr_t kVertArrayOff        = 0x94;
+    constexpr uintptr_t kVertStride          = 0x48;
+    constexpr uintptr_t kVertPosOff          = 0x04;
+    constexpr uintptr_t kSmoothStateOff      = 0x158;
+    constexpr uintptr_t kSoftBodyTickVtblOff          = 0x84;
+    constexpr uintptr_t kSoftBodyUpdateBuffersOff     = 0x74;
+    constexpr uintptr_t kSoftBodyUpdateAttachmentsOff = 0xB8;
+    constexpr uintptr_t kSoftBodyUpdateBoundsOff      = 0xBC;
+
+    constexpr float kFixedDt = 1.0f / 30.0f;
+    constexpr float kMinDt = 1.0f / 1000.0f; // Engine originally clamped dt at 1/200s, widened to 1/1000s
+
+    // Address patched in UESoftBody::Update to force fixed timestep
+    float fFrameDelta = kFixedDt;
+
+    using AActorTickFn = int(__fastcall*)(void* self, void* edx, float dt, int tickType);
+    AActorTickFn AActorTick = nullptr;
+
+    // Global accumulator (advanced once per engine tick)
+    // All cloth actors in a frame share the same substep count and interpolation alpha
+    float gAccumulator       = 0.0f;
+    int   gSubstepsThisFrame = 0;
+    float gAlpha             = 0.0f;
+
+    void AdvanceFixedTimestep(float deltaTime)
+    {
+        float dt = deltaTime;
+        if (!(dt > 0.0f) || dt < kMinDt) dt = kMinDt;
+
+        gAccumulator += dt;
+        gSubstepsThisFrame = 0;
+        while (gAccumulator >= kFixedDt)
+        {
+            gAccumulator -= kFixedDt;
+            ++gSubstepsThisFrame;
+        }
+        gAlpha = gAccumulator / kFixedDt;
+    }
+
+    struct SbState
+    {
+        std::vector<float> back;    // t - 1/30
+        std::vector<float> front;   // t
+        int   nVerts      = 0;
+        bool  initialized = false;
+    };
+
+    // Cleared between levels by UGameEngineLoadGameHook
+    std::unordered_map<void*, SbState> states;
+
+    static inline void CaptureAll(void* vBase, int n, std::vector<float>& dst)
+    {
+        if (static_cast<int>(dst.size()) < n * 3) dst.assign(n * 3, 0.0f);
+        const uintptr_t base = reinterpret_cast<uintptr_t>(vBase);
+        for (int i = 0; i < n; ++i)
+        {
+            const float* p = reinterpret_cast<const float*>(base + static_cast<size_t>(i) * kVertStride + kVertPosOff);
+            dst[i * 3 + 0] = p[0];
+            dst[i * 3 + 1] = p[1];
+            dst[i * 3 + 2] = p[2];
+        }
+    }
+
+    static inline void RestoreAll(void* vBase, int n, const std::vector<float>& src)
+    {
+        const uintptr_t base = reinterpret_cast<uintptr_t>(vBase);
+        for (int i = 0; i < n; ++i)
+        {
+            float* p = reinterpret_cast<float*>(base + static_cast<size_t>(i) * kVertStride + kVertPosOff);
+            p[0] = src[i * 3 + 0];
+            p[1] = src[i * 3 + 1];
+            p[2] = src[i * 3 + 2];
+        }
+    }
+
+    static inline void LerpAll(void* vBase, int n,
+                               const std::vector<float>& a,
+                               const std::vector<float>& b,
+                               float t)
+    {
+        const uintptr_t base = reinterpret_cast<uintptr_t>(vBase);
+        for (int i = 0; i < n; ++i)
+        {
+            float* p = reinterpret_cast<float*>(base + static_cast<size_t>(i) * kVertStride + kVertPosOff);
+            p[0] = a[i * 3 + 0] + t * (b[i * 3 + 0] - a[i * 3 + 0]);
+            p[1] = a[i * 3 + 1] + t * (b[i * 3 + 1] - a[i * 3 + 1]);
+            p[2] = a[i * 3 + 2] + t * (b[i * 3 + 2] - a[i * 3 + 2]);
+        }
+    }
+
+    static inline void RunOneSubstep(void* softBody)
+    {
+        *reinterpret_cast<float*>(reinterpret_cast<uintptr_t>(softBody) + kSmoothStateOff) = kFixedDt;
+
+        auto vtbl = *reinterpret_cast<uintptr_t**>(softBody);
+        using TickFn = void(__fastcall*)(void*);
+        TickFn fn = reinterpret_cast<TickFn>(vtbl[kSoftBodyTickVtblOff / sizeof(uintptr_t)]);
+        fn(softBody);
+    }
+
+    // Run UpdateBuffers after interpolation so the rendered cloth uses interpolated positions
+    // UpdateAttachments and UpdateBounds keep attachments and culling bounds in sync
+    static inline void SyncRenderToCurrentPositions(void* softBody)
+    {
+        auto vtbl = *reinterpret_cast<uintptr_t**>(softBody);
+        using VoidFn = void(__fastcall*)(void*);
+        VoidFn buffers = reinterpret_cast<VoidFn>(vtbl[kSoftBodyUpdateBuffersOff     / sizeof(uintptr_t)]);
+        VoidFn attach  = reinterpret_cast<VoidFn>(vtbl[kSoftBodyUpdateAttachmentsOff / sizeof(uintptr_t)]);
+        VoidFn bounds  = reinterpret_cast<VoidFn>(vtbl[kSoftBodyUpdateBoundsOff      / sizeof(uintptr_t)]);
+        attach (softBody);
+        bounds (softBody);
+        buffers(softBody);
+    }
+
+    SafetyHookInline shTick = {};
+    int __fastcall Tick(void* self, void* edx, float deltaTime, int tickType)
+    {
+        void* softBody = *reinterpret_cast<void**>(reinterpret_cast<uintptr_t>(self) + kSoftBodyMember);
+        if (!softBody)
+            return shTick.unsafe_fastcall<int>(self, edx, deltaTime, tickType);
+
+        const int   n     = *reinterpret_cast<int*>(reinterpret_cast<uintptr_t>(softBody) + kVertCountOff);
+        void* const vBase = *reinterpret_cast<void**>(reinterpret_cast<uintptr_t>(softBody) + kVertArrayOff);
+
+        if (!vBase || n <= 0)
+            return shTick.unsafe_fastcall<int>(self, edx, deltaTime, tickType);
+
+        SbState& st = states[softBody];
+
+        if (!st.initialized || st.nVerts != n)
+        {
+            st.nVerts = n;
+            st.back.assign(n * 3, 0.0f);
+            st.front.assign(n * 3, 0.0f);
+            CaptureAll(vBase, n, st.back);
+            RunOneSubstep(softBody);
+            CaptureAll(vBase, n, st.front);
+            st.initialized = true;
+        }
+
+        RestoreAll(vBase, n, st.front);
+
+        for (int i = 0; i < gSubstepsThisFrame; ++i)
+        {
+            st.back = st.front;
+            RunOneSubstep(softBody);
+            CaptureAll(vBase, n, st.front);
+        }
+
+        LerpAll(vBase, n, st.back, st.front, gAlpha);
+
+        SyncRenderToCurrentPositions(softBody);
+
+        if (AActorTick)
+            return AActorTick(self, edx, deltaTime, tickType);
+
+        // Temporarily use a null SoftBody so AActor::Tick skips SoftBody updates
+        *reinterpret_cast<void**>(reinterpret_cast<uintptr_t>(self) + kSoftBodyMember) = nullptr;
+        int ret = shTick.unsafe_fastcall<int>(self, edx, deltaTime, tickType);
+        *reinterpret_cast<void**>(reinterpret_cast<uintptr_t>(self) + kSoftBodyMember) = softBody;
+        return ret;
+    }
+}
+
+// Animated texture FPS fixes
 namespace UTexture
 {
     constexpr uintptr_t kMaxFrameRateOff = 0xA8;
@@ -415,7 +594,32 @@ export void InitEngine()
         UNameOverrides::ClearCache();
         UObjectOverrides::ClearCache();
         UArrayOverrides::ClearCache();
+        AESoftBodyActor::states.clear();
     });
+
+    // Softbody FPS fixes
+    {
+        auto sbActorTick = find_module_pattern(GetModuleHandle(L"Engine"),
+            "56 8B F1 8B 8E A8 02 00 00 85 C9 74 08 8B 01 FF 90 84 00 00 00");
+
+        auto sbUpdate = find_module_pattern(GetModuleHandle(L"Engine"),
+            "56 8B F1 57 8B 46 5C 8B 48 6C D9 81 5C 05 00 00 D8 15");
+
+        if (sbActorTick.size() && sbUpdate.size())
+        {
+            AESoftBodyActor::AActorTick = reinterpret_cast<AESoftBodyActor::AActorTickFn>(
+                GetProcAddress(GetModuleHandle(L"Engine"), "?Tick@AActor@@UAEHMW4ELevelTick@@@Z"));
+
+            AESoftBodyActor::shTick = safetyhook::create_inline(sbActorTick.get_first(), AESoftBodyActor::Tick);
+
+            uintptr_t fld = reinterpret_cast<uintptr_t>(sbUpdate.get_first(10));
+            injector::WriteMemory<uint8_t>(fld + 1, 0x05, true);
+            injector::WriteMemory<uintptr_t>(fld + 2, reinterpret_cast<uintptr_t>(&AESoftBodyActor::fFrameDelta), true);
+
+            uintptr_t clampLow = *sbUpdate.get_first<uintptr_t>(18);
+            injector::WriteMemory<float>(clampLow, AESoftBodyActor::kMinDt, true);
+        }
+    }
 
     #if _DEBUG
     shFindAxisName = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?FindAxisName@UInput@@MBEPAMPAVAActor@@PBG@Z"), FindAxisName);
