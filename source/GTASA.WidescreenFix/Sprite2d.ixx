@@ -286,6 +286,7 @@ void __fastcall Draw6(CSprite2d* sprite2d, void* edx, float xb, float yb, float 
 
 void __cdecl DrawRect1(CRect* r, CRGBA* col)
 {
+    g_hasTexture = false;
     g_isFullscreen = IsFullscreen(r);
     shDrawRect1.unsafe_ccall(r, col);
     g_isFullscreen = false;
@@ -294,6 +295,7 @@ void __cdecl DrawRect1(CRect* r, CRGBA* col)
 SafetyHookInline shDrawRect2 = {};
 void __cdecl DrawRect2(CRect* r, CRGBA* colorLeft, CRGBA* colorTop, CRGBA* colorRight, CRGBA* colorBottom)
 {
+    g_hasTexture = false;
     g_skipXCorrection = true;
     shDrawRect2.unsafe_ccall(r, colorLeft, colorTop, colorRight, colorBottom);
     g_skipXCorrection = false;
@@ -302,6 +304,7 @@ void __cdecl DrawRect2(CRect* r, CRGBA* colorLeft, CRGBA* colorTop, CRGBA* color
 SafetyHookInline shDrawRectXLU = {};
 void __fastcall DrawRectXLU(CRect* r, void* edx, float a2, float a3, float a4, float a5, CRGBA* color)
 {
+    g_hasTexture = false;
     g_skipXCorrection = true;
     shDrawRectXLU.unsafe_fastcall(r, edx, a2, a3, a4, a5, color);
     g_skipXCorrection = false;
@@ -316,6 +319,7 @@ void __cdecl AddToBuffer(const CRect* r, const CRGBA* c, float u0, float v0, flo
 SafetyHookInline shRenderOneXLUSprite_Rotate_Aspect{};
 void __cdecl RenderOneXLUSprite_Rotate_Aspect(float x, float y, float z, float w, float h, uint8_t r, uint8_t g, uint8_t b, int16_t intensity, float rz, float rotation, uint8_t alpha)
 {
+    g_hasTexture = false;
     float off = GetHudOffset();
     x = g_skipXCorrection ? (x + off) : (CorrectX(x) + off);
     shRenderOneXLUSprite_Rotate_Aspect.unsafe_ccall(x, y, z, w, h, r, g, b, intensity, rz, rotation, alpha);
