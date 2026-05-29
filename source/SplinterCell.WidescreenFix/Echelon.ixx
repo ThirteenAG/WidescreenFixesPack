@@ -37,6 +37,33 @@ namespace AEPlayerController
 
         return shTick.unsafe_fastcall(playerController, edx, a2, a3);
     }
+
+    // LedgeGrab FPS fix - player would sometimes fail to grab a ledge while falling at high fps
+    constexpr float kLedgeStep = 1.0f / 30.0f;
+    constexpr uintptr_t kLevelOff = 0x6c;
+    constexpr uintptr_t kDeltaTimeOff = 0x55c;
+
+    SafetyHookInline shCheckLedgeGrabArms = {};
+    int __fastcall CheckLedgeGrabArms(void* pc, void* edx, void* p1, void* p2, void* p3, void* p4, float p5)
+    {
+        if (pc)
+        {
+            const auto level = *reinterpret_cast<uintptr_t*>(reinterpret_cast<uintptr_t>(pc) + kLevelOff);
+            if (level)
+            {
+                float& levelDt = *reinterpret_cast<float*>(level + kDeltaTimeOff);
+                const float realDt = levelDt;
+                if (realDt > 0.0f && realDt < kLedgeStep)
+                {
+                    levelDt = kLedgeStep;
+                    const int r = shCheckLedgeGrabArms.unsafe_fastcall<int>(pc, edx, p1, p2, p3, p4, p5);
+                    levelDt = realDt;
+                    return r;
+                }
+            }
+        }
+        return shCheckLedgeGrabArms.unsafe_fastcall<int>(pc, edx, p1, p2, p3, p4, p5);
+    }
 }
 
 namespace AETextureManager
@@ -83,6 +110,9 @@ export void InitEchelon()
 {
     //EPlayerController additional state cache
     AEPlayerController::shTick = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Echelon"), "?Tick@AEPlayerController@@UAEHMW4ELevelTick@@@Z"), AEPlayerController::Tick);
+
+    // LedgeGrab FPS fix
+    AEPlayerController::shCheckLedgeGrabArms = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Echelon"), "?CheckLedgeGrabArms@AEPlayerController@@QAEHPBVGEObject@@0AAVFVector@@1M@Z"), AEPlayerController::CheckLedgeGrabArms);
 
     // Letterboxing
     auto pattern = find_module_pattern(GetModuleHandle(L"Echelon"), "D9 1C 24 50 53 E8 ? ? ? ? 5F");
