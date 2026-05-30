@@ -146,7 +146,7 @@ export void InitFrameLimiter()
     pattern = hook::pattern("56 8B 35 ? ? ? ? 57 8B 3D ? ? ? ? 8B FF");
     injector::MakeJMP(pattern.get_first(), Thread, true);
 
-    if (fFpsLimit >= 60.0f)
+    if (fFpsLimit >= 0.0f)
     {
         if (nFrameLimitType > 0)
         {
