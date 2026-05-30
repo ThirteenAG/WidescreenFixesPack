@@ -117,7 +117,7 @@ public:
             injector::MakeCALL(pattern.get_first(), RwV3dTransformPointsHook, true);
 
             //CCamera::Process
-            pattern = hook::pattern("D9 83 ? ? ? ? D9 9B ? ? ? ? D9 83 ? ? ? ? D8 0D");
+            pattern = hook::pattern("D9 83 ? ? ? ? D9 9B ? ? ? ? D9 83 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 80 7B ? ? 74 ? 80 7B ? ? 75");
             static auto LODDistFix = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
                 auto& LODDistMultiplier = *(float*)(regs.ebx + 0xEC);
