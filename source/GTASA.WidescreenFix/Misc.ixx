@@ -167,9 +167,6 @@ public:
             pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 5F 5E C2 ? ? 68");
             hbPrintStringFromBottom.fun = injector::MakeCALL(pattern.get_first(), PrintStringFromBottom, true).get();
 
-            pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 68 ? ? ? ? 8B CF E8 ? ? ? ? ? ? ? ? E8 ? ? ? ? 89 44 24 ? 43");
-            hbPrintString.fun = injector::MakeCALL(pattern.get_first(), PrintString, true).get();
-
             pattern = hook::pattern("6A ? E8 ? ? ? ? 83 C4 ? 6A ? 8D 44 24 ? 50 B9 ? ? ? ? E8 ? ? ? ? ? ? 51 E8 ? ? ? ? 6A ? E8 ? ? ? ? ? ? ? ? ? ? 8A 86");
             if (!pattern.empty())
                 injector::WriteMemory<uint8_t>(pattern.get_first(1), 1, true);
@@ -222,7 +219,7 @@ public:
                 switch (ReplaceTextShadowWithOutline)
                 {
                     case 0:
-                        outlineStrength = 0.75f;
+                        outlineStrength = 1.0f;
                         break;
                     case 1:
                         outlineStrength = 0.5f;
@@ -333,6 +330,9 @@ public:
             {
                 auto pattern = hook::pattern("E8 ? ? ? ? 6A ? E8 ? ? ? ? 0F B6 7B");
                 static auto SetDropShadowPosition = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), CFont::SetOutlinePosition);
+
+                pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 68 ? ? ? ? 8B CF E8 ? ? ? ? ? ? ? ? E8 ? ? ? ? 89 44 24 ? 43");
+                hbPrintString.fun = injector::MakeCALL(pattern.get_first(), PrintString, true).get();
             }
 
             if (bVCSCamShake)

@@ -126,14 +126,14 @@ public:
                 {
                     LODDistMultiplier = (70.0f * CDraw::GetAspectRatio() / (4.0f / 3.0f)) / CDraw::GetFOV();
 
-                    if ((TheCamera->GetPosition().z > 55.0f && FindPlayerVehicle()))
-                    {
-                        constexpr float DEFAULT_NEAR = 0.9f;
-                        LODDistMultiplier *= 1.0f + std::max((TheCamera->GetPosition().z - 55.0f) / 60.0f, 0.0f);
-                        float NewNear = DEFAULT_NEAR * (1.0f + std::max((TheCamera->GetPosition().z - 55.0f) / 60.0f, 0.0f));
-                        if (Scene->m_pRwCamera->nearPlane >= DEFAULT_NEAR)
-                            RwCameraSetNearClipPlane(Scene->m_pRwCamera, NewNear);
-                    }
+                    //if ((TheCamera->GetPosition().z > 55.0f && FindPlayerVehicle()))
+                    //{
+                    //    constexpr float DEFAULT_NEAR = 0.9f;
+                    //    LODDistMultiplier *= 1.0f + std::max((TheCamera->GetPosition().z - 55.0f) / 60.0f, 0.0f);
+                    //    float NewNear = DEFAULT_NEAR * (1.0f + std::max((TheCamera->GetPosition().z - 55.0f) / 60.0f, 0.0f));
+                    //    if (Scene->m_pRwCamera->nearPlane >= DEFAULT_NEAR)
+                    //        RwCameraSetNearClipPlane(Scene->m_pRwCamera, NewNear);
+                    //}
                     if (LODDistMultiplier > 2.2f)
                         LODDistMultiplier = 2.2f;
                 }
