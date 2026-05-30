@@ -30,9 +30,9 @@
 
 ## Installation
 
-1. Download `SplinterCell.WidescreenFix.zip` from this release.
-2. Extract the contents directly into the game folder - the same folder as `nfsc.exe`.
-3. Optionally edit `SplinterCell.WidescreenFix.ini` to configure the available options.
+1. Download `SplinterCellPandoraTomorrow.WidescreenFix.zip` from this release.
+2. Extract the contents directly into the game folder.
+3. Optionally edit `SplinterCellPandoraTomorrow.WidescreenFix.ini` to configure the available options.
 4. Launch the game.
 
 <details>
