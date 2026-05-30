@@ -93,8 +93,21 @@ public:
             injector::MakeNOP(pattern.get_first(), 10, true);
             static auto Process_FixedFOV = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
-                if (CEntryExitManager::ms_exitEnterState == 1 || CEntryExitManager::ms_exitEnterState == 2)
+                static bool allowLeadingZero = true; // one-shot 0 before 1/2
+
+                const int state = CEntryExitManager::ms_exitEnterState;
+                const bool inTransition = (state == 1 || state == 2);
+                const bool leadingZero = (state == 0 && allowLeadingZero);
+
+                if (inTransition || leadingZero)
+                {
                     *(float*)(regs.edi + 0xB4) = CDraw::ConvertFOVInverse(70.0f);
+                }
+
+                if (inTransition)
+                    allowLeadingZero = true;   // next transition can again have a leading 0
+                else if (leadingZero)
+                    allowLeadingZero = false;  // only one 0 call allowed before 1/2
             });
         };
     }
