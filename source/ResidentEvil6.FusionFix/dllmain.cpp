@@ -14,6 +14,231 @@ int32_t ResY = 0;
 
 std::map<uintptr_t, uintptr_t> addrTbl;
 
+namespace DisplayModeFix { 
+    typedef IDirect3D9* (WINAPI* PFN_Direct3DCreate9)(
+        UINT SDKVersion
+    );
+
+    typedef UINT(STDMETHODCALLTYPE* PFN_GetAdapterModeCount)(
+        IDirect3D9* This,
+        UINT Adapter,
+        D3DFORMAT Format
+    );
+
+    typedef HRESULT(STDMETHODCALLTYPE* PFN_EnumAdapterModes)(
+        IDirect3D9* This,
+        UINT Adapter,
+        D3DFORMAT Format,
+        UINT Mode,
+        D3DDISPLAYMODE* pMode
+    );
+
+    struct Config
+    {
+        uint32_t width;
+        uint32_t height;
+        bool enabled;
+    } resConfig;
+
+    static PFN_GetAdapterModeCount g_RealGetAdapterModeCount = nullptr;
+    static PFN_EnumAdapterModes g_RealEnumAdapterModes = nullptr;
+
+    constexpr DWORD IDX_GetAdapterModeCount = 6;
+    constexpr DWORD IDX_EnumAdapterModes = 7;
+    
+    IDirect3D9 *g_pDirect3D9Instance = nullptr;
+    SafetyHookInline g_inlineSafetyHook{};
+
+    std::vector<D3DDISPLAYMODE> g_vDisplayModes{};   // Filtered display modes
+
+    UINT STDMETHODCALLTYPE Hook_GetAdapterModeCount(
+        IDirect3D9* This,
+        UINT Adapter,
+        D3DFORMAT Format
+    ) {
+        if (nullptr == g_RealGetAdapterModeCount) {
+            return 0;
+        }
+
+        UINT uModeCount = g_RealGetAdapterModeCount(This, Adapter, Format);
+
+        // game only queries for D3DFMT_X8R8G8B8 modes, see disasm below
+        if (D3DFMT_X8R8G8B8 != Format) {
+            MessageBoxA(
+                nullptr,
+                "Unexpected format passed to GetAdapterModeCount hook. Expected D3DFMT_X8R8G8B8.",
+                "RE6 Crash Fix",
+                MB_ICONERROR
+            );
+            ExitProcess(EXIT_FAILURE);
+        }
+
+        g_vDisplayModes.clear();
+        for (UINT i = 0; i < uModeCount; i++) {
+            if (g_vDisplayModes.size() >= 256) {
+                break;
+            }
+
+            D3DDISPLAYMODE displayMode{};
+            HRESULT hr = g_RealEnumAdapterModes(
+                This,
+                Adapter,
+                Format,
+                i,
+                &displayMode
+            );
+            if (FAILED(hr)) {
+                continue;
+            }
+
+            if (
+                displayMode.Width != resConfig.width
+                ||
+                displayMode.Height != resConfig.height
+            ) {
+                continue;
+            }
+
+            g_vDisplayModes.push_back(displayMode);
+        }
+
+        uModeCount = static_cast<UINT>(g_vDisplayModes.size());
+
+        return uModeCount;
+    }
+
+    HRESULT STDMETHODCALLTYPE Hook_EnumAdapterModes(
+        IDirect3D9* This,
+        UINT Adapter,
+        D3DFORMAT Format,
+        UINT Mode,
+        D3DDISPLAYMODE* pMode
+    ) {
+        if (nullptr == g_RealEnumAdapterModes) {
+            return E_FAIL;
+        }
+
+        if (nullptr == pMode) {
+            return D3DERR_INVALIDCALL;
+        }
+
+        if (0 == g_vDisplayModes.size()) {
+            return D3DERR_INVALIDCALL;
+        }
+
+        if (Mode >= g_vDisplayModes.size()) {
+            return D3DERR_INVALIDCALL;
+        }
+
+        *pMode = g_vDisplayModes[Mode];
+        return D3D_OK;
+    }
+
+    bool HookD3D9Object(
+    _In_ IDirect3D9* pD3D9
+    ) {
+        if (nullptr == pD3D9) {
+            return false;
+        }
+
+        void*** pppVtable = reinterpret_cast<void***>(pD3D9);
+        if (nullptr == pppVtable || nullptr == *pppVtable) {
+            return false;
+        }
+
+        void** ppVtable = *pppVtable;
+
+        DWORD dwOldProtect = 0;
+        if (!VirtualProtect(
+            &ppVtable[IDX_GetAdapterModeCount],
+            (sizeof(void*) * 2),
+            PAGE_EXECUTE_READWRITE,
+            &dwOldProtect
+        )) {
+            return false;
+        }
+
+        if (
+            ppVtable[IDX_GetAdapterModeCount] == reinterpret_cast<void*>(&Hook_GetAdapterModeCount)
+            ||
+            ppVtable[IDX_EnumAdapterModes] == reinterpret_cast<void*>(&Hook_EnumAdapterModes)
+        ) {
+            // already hooked, bozo
+            return true;
+        }
+
+        g_RealGetAdapterModeCount = reinterpret_cast<PFN_GetAdapterModeCount>(
+            ppVtable[IDX_GetAdapterModeCount]
+        );
+
+        g_RealEnumAdapterModes = reinterpret_cast<PFN_EnumAdapterModes>(
+            ppVtable[IDX_EnumAdapterModes]
+        );
+
+        ppVtable[IDX_GetAdapterModeCount] =
+            reinterpret_cast<void*>(&Hook_GetAdapterModeCount);
+
+        ppVtable[IDX_EnumAdapterModes] =
+            reinterpret_cast<void*>(&Hook_EnumAdapterModes);
+
+        DWORD dwDummy = 0;
+        VirtualProtect(
+            &ppVtable[IDX_GetAdapterModeCount],
+            (sizeof(void*) * 2),
+            dwOldProtect,
+            &dwDummy
+        );
+
+        return true;
+    }
+
+    IDirect3D9* WINAPI Hooked_Direct3DCreate9(
+        UINT SDKVersion
+    ) {
+        g_pDirect3D9Instance = g_inlineSafetyHook.stdcall<IDirect3D9*>(SDKVersion);
+        
+        if (!HookD3D9Object(g_pDirect3D9Instance)) {
+            MessageBoxA(
+                nullptr,
+                "Failed to hook IDirect3D9 object.",
+                "RE6 Crash Fix",
+                MB_ICONERROR
+            );
+        }
+
+        return g_pDirect3D9Instance;
+    }
+
+    bool AutoInitConfig(void) {
+        DEVMODEA devMode;
+        devMode.dmSize = sizeof(DEVMODEA);
+
+        if (!EnumDisplaySettingsA(
+            nullptr,
+            ENUM_CURRENT_SETTINGS,
+            &devMode
+        )) {
+            // fallback to 1080p
+            resConfig.width = 1920;
+            resConfig.height = 1080;
+        }
+
+        resConfig.width = devMode.dmPelsWidth;
+        resConfig.height = devMode.dmPelsHeight;
+
+        return true;
+    }
+    bool Install(void) {
+        // 67E14B20 = Direct3DCreate9
+        g_inlineSafetyHook = safetyhook::create_inline(
+            reinterpret_cast<void*>(0x67E14B20),
+            reinterpret_cast<void*>(&Hooked_Direct3DCreate9)
+        );
+
+        return g_inlineSafetyHook.enabled();
+    }
+}
+
 void FillAddressTable()
 {
     addrTbl[0x17CF454] = (uintptr_t)*hook::get_pattern<uint32_t>("8B 0D ? ? ? ? E8 ? ? ? ? 84 C0 75 0E", 2);
@@ -751,6 +976,22 @@ void Init()
     auto bAutoclicker = iniReader.ReadInteger("MAIN", "Autoclicker", 0) != 0;
     static auto bCutsceneLetterbox = iniReader.ReadInteger("MAIN", "CutsceneLetterbox", 1) != 0;
     static auto bCutscenePillarbox = iniReader.ReadInteger("MAIN", "CutscenePillarbox", 1) != 0;
+    DisplayModeFix::resConfig.enabled = iniReader.ReadInteger("MAIN", "DisplayModeFix", 1) != 0;
+
+    if (DisplayModeFix::resConfig.enabled)
+    {
+        DisplayModeFix::resConfig.width = iniReader.ReadInteger("MAIN", "DisplayModeFixResX", 0);
+        DisplayModeFix::resConfig.height = iniReader.ReadInteger("MAIN", "DisplayModeFixResY", 0);
+
+        if (0 == DisplayModeFix::resConfig.width || 0 == DisplayModeFix::resConfig.height)
+        {
+            DisplayModeFix::AutoInitConfig();
+        }
+        
+        if (!DisplayModeFix::Install()) {
+            MessageBoxA(nullptr, "Failed to install display mode fix!", "Error", MB_ICONERROR);
+        }
+    }
 
     FillAddressTable();
 
