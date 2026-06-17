@@ -50,12 +50,12 @@ void Init()
         WFP::onBeforeReset().executeAll();
     });
 
-    pattern = hook::pattern("B8 ? ? ? ? 89 9F");
-    Direct3DDevice.SetAddress(*pattern.get_first<IDirect3DDevice9**>(1));
-
     auto dword_8D7DF0 = *hook::get_pattern<int*>("8B 0D ? ? ? ? 8B 44 24 14 8D 54 24 2C", 2);
     BackbufferWidth.SetAddress(dword_8D7DF0 + 2);
     BackbufferHeight.SetAddress(dword_8D7DF0 + 3);
+
+    pattern = hook::pattern("A1 ? ? ? ? ? ? 8D 7B ? 57 6A ? 6A");
+    Direct3DDevice.SetAddress(*pattern.get_first<IDirect3DDevice9**>(1));
 
     pattern = hook::pattern("E8 ? ? ? ? ? ? ? ? ? ? ? 50 FF 92 ? ? ? ? B8 ? ? ? ? E8 ? ? ? ? 8B C5 8D 6F ? BB");
     static auto BeforeEndSceneHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
