@@ -98,56 +98,54 @@ IDirect3D9* CreateD3D9()
     return nullptr;
 }
 
-D3DFORMAT GetBestFormat()
+D3DFORMAT GetBestFormat(uint32_t width, uint32_t height)
 {
-    static D3DFORMAT cachedFormat = D3DFMT_UNKNOWN;
+    static std::map<std::pair<uint32_t, uint32_t>, D3DFORMAT> formatCache;
     static bool initialized = false;
 
-    if (initialized)
-        return cachedFormat;
-
-    initialized = true;
-
-    IDirect3D9* pD3D = CreateD3D9();
-    if (!pD3D)
+    if (!initialized)
     {
-        cachedFormat = D3DFMT_X8R8G8B8;
-        return cachedFormat;
-    }
+        initialized = true;
 
-    auto [DesktopW, DesktopH] = GetDesktopRes();
-
-    // Priority order (best -> worst)
-    const D3DFORMAT candidates[] = {
-        D3DFMT_A2R10G10B10,   // 35 - Best quality (10-bit)
-        D3DFMT_X8R8G8B8,      // 22
-        D3DFMT_A8R8G8B8,      // 21
-        D3DFMT_R5G6B5,        // 23
-        D3DFMT_X1R5G5B5,      // 24
-    };
-
-    for (D3DFORMAT fmt : candidates)
-    {
-        UINT modeCount = pD3D->GetAdapterModeCount(D3DADAPTER_DEFAULT, fmt);
-        for (UINT i = 0; i < modeCount; ++i)
+        IDirect3D9* pD3D = CreateD3D9();
+        if (pD3D)
         {
-            D3DDISPLAYMODE mode{};
-            if (SUCCEEDED(pD3D->EnumAdapterModes(D3DADAPTER_DEFAULT, fmt, i, &mode)))
+            const D3DFORMAT candidates[] = {
+                D3DFMT_A2R10G10B10,
+                D3DFMT_X8R8G8B8,
+                D3DFMT_A8R8G8B8,
+                D3DFMT_R5G6B5,
+                D3DFMT_X1R5G5B5,
+            };
+
+            for (D3DFORMAT fmt : candidates)
             {
-                if (mode.Width == DesktopW && mode.Height == DesktopH)
+                UINT modeCount = pD3D->GetAdapterModeCount(D3DADAPTER_DEFAULT, fmt);
+                for (UINT i = 0; i < modeCount; ++i)
                 {
-                    cachedFormat = fmt;
-                    pD3D->Release();
-                    return cachedFormat;
+                    D3DDISPLAYMODE mode{};
+                    if (SUCCEEDED(pD3D->EnumAdapterModes(D3DADAPTER_DEFAULT, fmt, i, &mode)))
+                    {
+                        auto key = std::make_pair(mode.Width, mode.Height);
+                        if (formatCache.find(key) == formatCache.end())
+                        {
+                            formatCache[key] = fmt;
+                        }
+                    }
                 }
             }
+
+            pD3D->Release();
         }
     }
 
-    // Final fallback
-    cachedFormat = D3DFMT_X8R8G8B8;
-    pD3D->Release();
-    return cachedFormat;
+    auto key = std::make_pair(width, height);
+    auto it = formatCache.find(key);
+
+    if (it != formatCache.end())
+        return it->second;
+
+    return D3DFMT_X8R8G8B8;
 }
 
 class Resolution
@@ -232,7 +230,7 @@ public:
                 if (it != MaxRefreshRateMap.end() && refreshrate != it->second)
                     regs.eax = 0;
 
-                if (format != GetBestFormat())
+                if (format != GetBestFormat(w, h))
                     regs.eax = 0;
             });
 
@@ -247,7 +245,7 @@ public:
                     auto w = config.width ? config.width : DesktopResW;
                     auto h = config.height ? config.height : DesktopResH;
                     auto refreshrate = config.refreshrate ? config.refreshrate : MaxRefreshRateMap[std::make_pair(DesktopResW, DesktopResH)];
-                    auto format = config.format != D3DFMT_UNKNOWN ? config.format : GetBestFormat();
+                    auto format = config.format != D3DFMT_UNKNOWN ? config.format : GetBestFormat(w, h);
 
                     *(uint32_t*)(regs.esp + 0x28) = w;
                     *(uint32_t*)(regs.esp + 0x2C) = h;
@@ -292,7 +290,7 @@ public:
                     auto [DesktopResW, DesktopResH] = GetDesktopRes();
                     auto config = GetSavedResolution();
                     auto refreshrate = config.refreshrate ? config.refreshrate : MaxRefreshRateMap[std::make_pair(DesktopResW, DesktopResH)];
-                    auto format = config.format != D3DFMT_UNKNOWN ? config.format : GetBestFormat();
+                    auto format = config.format != D3DFMT_UNKNOWN ? config.format : GetBestFormat(DesktopResW, DesktopResH);
 
                     *(uint32_t*)(regs.esp + 0x0C) = refreshrate;
                     *(D3DFORMAT*)(regs.esp + 0x10) = format;
@@ -337,7 +335,7 @@ public:
                         w = config.width ? config.width : DesktopResW;
                         h = config.height ? config.height : DesktopResH;
                         refreshrate = config.refreshrate ? config.refreshrate : MaxRefreshRateMap[std::make_pair(DesktopResW, DesktopResH)];
-                        format = config.format != D3DFMT_UNKNOWN ? config.format : GetBestFormat();
+                        format = config.format != D3DFMT_UNKNOWN ? config.format : GetBestFormat(w, h);
                     }
                     else
                         SaveResolution(w, h, refreshrate, format);

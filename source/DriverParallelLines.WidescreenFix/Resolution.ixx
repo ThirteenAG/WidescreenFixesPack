@@ -26,56 +26,54 @@ IDirect3D9* CreateD3D9()
     return nullptr;
 }
 
-D3DFORMAT GetBestFormat()
+D3DFORMAT GetBestFormat(uint32_t width, uint32_t height)
 {
-    static D3DFORMAT cachedFormat = D3DFMT_UNKNOWN;
+    static std::map<std::pair<uint32_t, uint32_t>, D3DFORMAT> formatCache;
     static bool initialized = false;
 
-    if (initialized)
-        return cachedFormat;
-
-    initialized = true;
-
-    IDirect3D9* pD3D = CreateD3D9();
-    if (!pD3D)
+    if (!initialized)
     {
-        cachedFormat = D3DFMT_X8R8G8B8;
-        return cachedFormat;
-    }
+        initialized = true;
 
-    auto [DesktopW, DesktopH] = GetDesktopRes();
-
-    // Priority order (best -> worst)
-    const D3DFORMAT candidates[] = {
-        D3DFMT_A2R10G10B10,   // 35 - Best quality (10-bit)
-        D3DFMT_X8R8G8B8,      // 22
-        D3DFMT_A8R8G8B8,      // 21
-        D3DFMT_R5G6B5,        // 23
-        D3DFMT_X1R5G5B5,      // 24
-    };
-
-    for (D3DFORMAT fmt : candidates)
-    {
-        UINT modeCount = pD3D->GetAdapterModeCount(D3DADAPTER_DEFAULT, fmt);
-        for (UINT i = 0; i < modeCount; ++i)
+        IDirect3D9* pD3D = CreateD3D9();
+        if (pD3D)
         {
-            D3DDISPLAYMODE mode{};
-            if (SUCCEEDED(pD3D->EnumAdapterModes(D3DADAPTER_DEFAULT, fmt, i, &mode)))
+            const D3DFORMAT candidates[] = {
+                D3DFMT_A2R10G10B10,
+                D3DFMT_X8R8G8B8,
+                D3DFMT_A8R8G8B8,
+                D3DFMT_R5G6B5,
+                D3DFMT_X1R5G5B5,
+            };
+
+            for (D3DFORMAT fmt : candidates)
             {
-                if (mode.Width == DesktopW && mode.Height == DesktopH)
+                UINT modeCount = pD3D->GetAdapterModeCount(D3DADAPTER_DEFAULT, fmt);
+                for (UINT i = 0; i < modeCount; ++i)
                 {
-                    cachedFormat = fmt;
-                    pD3D->Release();
-                    return cachedFormat;
+                    D3DDISPLAYMODE mode{};
+                    if (SUCCEEDED(pD3D->EnumAdapterModes(D3DADAPTER_DEFAULT, fmt, i, &mode)))
+                    {
+                        auto key = std::make_pair(mode.Width, mode.Height);
+                        if (formatCache.find(key) == formatCache.end())
+                        {
+                            formatCache[key] = fmt;
+                        }
+                    }
                 }
             }
+
+            pD3D->Release();
         }
     }
 
-    // Final fallback
-    cachedFormat = D3DFMT_X8R8G8B8;
-    pD3D->Release();
-    return cachedFormat;
+    auto key = std::make_pair(width, height);
+    auto it = formatCache.find(key);
+
+    if (it != formatCache.end())
+        return it->second;
+
+    return D3DFMT_X8R8G8B8;
 }
 
 int32_t nMinResX = 0;
@@ -100,7 +98,7 @@ char __fastcall sub_5E3C9D(D3DFORMAT fmt, void*)
     if (it != MaxRefreshRateMap.end() && nCurrentRefresh != it->second)
         return 0;
 
-    if (fmt == GetBestFormat())
+    if (fmt == GetBestFormat(nCurrentResX, nCurrentResY))
         return 1;
 
     return 0;
