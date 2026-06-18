@@ -121,31 +121,29 @@ public:
 
                         // Only top row items can be moved.
                         const bool isTop = (srcY1 <= hudTopThreshold);
-                        if (!isTop)
-                            return;
 
                         // Only true corners can be moved.
                         const bool isLeftCorner = (srcX1 <= hudLeftThreshold);
                         const bool isRightCorner = (srcX2 >= (1.0f - hudRightThreshold));
 
                         // Skip center/edge-crossing items (neither or both).
-                        if (isLeftCorner == isRightCorner)
+                        if (isTop && isLeftCorner != isRightCorner)
+                        {
+                            float* x0 = (float*)((regs.esi - 0x90) - 0x14);
+                            float* x1v = (float*)((regs.esi - 0x90) + 0x04);
+                            float* x2v = (float*)((regs.esi - 0x90) + 0x1C);
+                            float* x3v = (float*)((regs.esi - 0x90) + 0x34);
+                            float* x4 = (float*)((regs.esi - 0x44) + 0x00);
+                            float* x5 = (float*)((regs.esi - 0x2C) + 0x00);
+
+                            *x0 /= stretchScale; *x1v /= stretchScale; *x2v /= stretchScale;
+                            *x3v /= stretchScale; *x4 /= stretchScale; *x5 /= stretchScale;
+
+                            const float bias = isLeftCorner ? -sideOffset : sideOffset;
+                            *x0 += bias; *x1v += bias; *x2v += bias;
+                            *x3v += bias; *x4 += bias; *x5 += bias;
                             return;
-
-                        float* x0 = (float*)((regs.esi - 0x90) - 0x14);
-                        float* x1v = (float*)((regs.esi - 0x90) + 0x04);
-                        float* x2v = (float*)((regs.esi - 0x90) + 0x1C);
-                        float* x3v = (float*)((regs.esi - 0x90) + 0x34);
-                        float* x4 = (float*)((regs.esi - 0x44) + 0x00);
-                        float* x5 = (float*)((regs.esi - 0x2C) + 0x00);
-
-                        *x0 /= stretchScale; *x1v /= stretchScale; *x2v /= stretchScale;
-                        *x3v /= stretchScale; *x4 /= stretchScale; *x5 /= stretchScale;
-
-                        const float bias = isLeftCorner ? -sideOffset : sideOffset;
-                        *x0 += bias; *x1v += bias; *x2v += bias;
-                        *x3v += bias; *x4 += bias; *x5 += bias;
-                        return;
+                        }
                     }
 
                     auto x1 = *(float*)(*(uintptr_t*)(regs.edi + 8) + (regs.ebp - 0x30) + 0x10);
