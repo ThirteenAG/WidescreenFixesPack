@@ -32,6 +32,11 @@ private:
 
     T& assign(const T& value)
     {
+        return assign(T(value));
+    }
+
+    T& assign(T&& value)
+    {
         EnsureResolved();
         if (*ptr == nullptr)
             throw std::runtime_error("GameRef: Address resolution failed (pattern returned nullptr)");
@@ -42,7 +47,7 @@ private:
             injector::UnprotectMemory(*ptr, sizeof(T), oldProtect);
         }
 
-        **ptr = value;
+        **ptr = std::move(value);
         return **ptr;
     }
 
@@ -60,7 +65,7 @@ public:
         requires std::invocable<Fn>&& std::convertible_to<std::invoke_result_t<Fn>, T*>
     explicit GameRef(Fn&& fn)
     {
-        T* result = std::invoke(std::forward<Fn>(fn));
+        T* result = std::invoke(fn);
 
         if (result != nullptr)
         {
@@ -104,7 +109,7 @@ public:
 
     bool is_initialized() const noexcept
     {
-        return ptr.has_value();
+        return ptr.has_value() || deferredResolver.has_value();
     }
 
     T* get_ptr()
@@ -122,23 +127,22 @@ public:
     operator T& () { return get(); }
     operator const T& () const { return get(); }
 
-    explicit operator bool() const { return static_cast<bool>(get()); }
+    explicit operator bool() const requires std::convertible_to<T, bool> { return static_cast<bool>(get()); }
 
-    T& operator=(const T& value) { return assign(value); }
+    T& operator=(const T& value) { return assign(T(value)); }
     T& operator=(T&& value) { return assign(std::move(value)); }
 
-    // ====================== OPERATORS (exact match to your old working version) ======================
-    template<typename U> T& operator+=(const U& v) { T val = get() + v; return assign(val); }
-    template<typename U> T& operator-=(const U& v) { T val = get() - v; return assign(val); }
-    template<typename U> T& operator*=(const U& v) { T val = get() * v; return assign(val); }
-    template<typename U> T& operator/=(const U& v) { T val = get() / v; return assign(val); }
-    template<typename U> T& operator%=(const U& v) { return get() %= v; }
+    template<typename U> T& operator+=(const U& v) { T val = get() + v; return assign(std::move(val)); }
+    template<typename U> T& operator-=(const U& v) { T val = get() - v; return assign(std::move(val)); }
+    template<typename U> T& operator*=(const U& v) { T val = get() * v; return assign(std::move(val)); }
+    template<typename U> T& operator/=(const U& v) { T val = get() / v; return assign(std::move(val)); }
+    template<typename U> T& operator%=(const U& v) { T val = get() % v; return assign(std::move(val)); }
 
-    template<typename U> T& operator&=(const U& v) { return get() &= v; }
-    template<typename U> T& operator|=(const U& v) { return get() |= v; }
-    template<typename U> T& operator^=(const U& v) { return get() ^= v; }
-    template<typename U> T& operator<<=(const U& v) { return get() <<= v; }
-    template<typename U> T& operator>>=(const U& v) { return get() >>= v; }
+    template<typename U> T& operator&=(const U& v) { T val = get() & v; return assign(std::move(val)); }
+    template<typename U> T& operator|=(const U& v) { T val = get() | v; return assign(std::move(val)); }
+    template<typename U> T& operator^=(const U& v) { T val = get() ^ v; return assign(std::move(val)); }
+    template<typename U> T& operator<<=(const U& v) { T val = get() << v; return assign(std::move(val)); }
+    template<typename U> T& operator>>=(const U& v) { T val = get() >> v; return assign(std::move(val)); }
 
     T& operator++() { return ++get(); }
     T  operator++(int) { return get()++; }
