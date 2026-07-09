@@ -674,7 +674,7 @@ export void InitD3DDrv()
 
     UD3DRenderDevice::shGetShadowBufferResolutionWidth = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"D3DDrv"), "?GetShadowBufferResolutionWidth@UD3DRenderDevice@@UAEHXZ"), UD3DRenderDevice::GetShadowBufferResolutionWidth);
     UD3DRenderDevice::shGetShadowBufferResolutionHeight = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"D3DDrv"), "?GetShadowBufferResolutionHeight@UD3DRenderDevice@@UAEHXZ"), UD3DRenderDevice::GetShadowBufferResolutionHeight);
-    
+
     // High resolution Bink cutscene fix
     pPrepareTexture = (PrepareTexture_t)GetProcAddress(GetModuleHandle(L"D3DDrv"), "?PrepareTexture@UD3DRenderDevice@@QAEPAVUTexture@@HH@Z");
     if (HMODULE hBinkModule = GetModuleHandle(L"binkw32"))
@@ -757,11 +757,21 @@ export void InitD3DDrv()
         }
     });
 
-    // Fix night vision grain scaling at high resolutions
-    pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "D9 5C 24 14 FF 15 ? ? ? ? D9 5C 24 10");
+    // Fix night vision grain scaling and FPS-dependent noise animation
+    pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "D9 5C 24 14 FF 15 ? ? ? ? D9 5C 24 10 FF 15 ? ? ? ? D8 4C 24 14 D9 5C 24 24 FF 15 ? ? ? ? D8 4C 24 28");
     if (!pattern.empty())
     {
-        static auto NightVisionGrainHook = safetyhook::create_mid(pattern.get_first(4), [](SafetyHookContext& regs)
+        auto base = reinterpret_cast<uintptr_t>(pattern.get_first(0));
+
+        // Redirect call sites before creating the mid hook on the first call site
+        if (VisionNoiseGrain::Init())
+        {
+            VisionNoiseGrain::RedirectCallSite(base + 0x04, VisionNoiseGrain::HeldFrand<0, 0>); // rotation angle
+            VisionNoiseGrain::RedirectCallSite(base + 0x0E, VisionNoiseGrain::HeldFrand<0, 1>); // V offset
+            VisionNoiseGrain::RedirectCallSite(base + 0x1C, VisionNoiseGrain::HeldFrand<0, 2>); // U offset
+        }
+
+        static auto NightVisionGrainHook = safetyhook::create_mid(reinterpret_cast<void*>(base + 0x04), [](SafetyHookContext& regs)
         {
             if (Screen.fGrainScale == 0.0f)
                 return;
@@ -775,5 +785,15 @@ export void InitD3DDrv()
             *(float*)(regs.esp + 0x14) *= blendedScale;
             *(float*)(regs.esp + 0x28) *= blendedScale;
         });
+    }
+
+    // Fixed-function vision path for legacy GPUs like GeForce 2 (or EmulateGF2Mode=1 in SplinterCell.ini)
+    pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "D9 5C 24 28 FF 15 ? ? ? ? D9 5C 24 1C FF 15 ? ? ? ? D8 4C 24 28 D9 5C 24 7C FF 15 ? ? ? ? D8 4C 24 14");
+    if (!pattern.empty() && VisionNoiseGrain::Init())
+    {
+        auto base = reinterpret_cast<uintptr_t>(pattern.get_first(0));
+        VisionNoiseGrain::RedirectCallSite(base + 0x04, VisionNoiseGrain::HeldFrand<1, 0>); // rotation angle
+        VisionNoiseGrain::RedirectCallSite(base + 0x0E, VisionNoiseGrain::HeldFrand<1, 1>); // V offset
+        VisionNoiseGrain::RedirectCallSite(base + 0x1C, VisionNoiseGrain::HeldFrand<1, 2>); // U offset
     }
 }

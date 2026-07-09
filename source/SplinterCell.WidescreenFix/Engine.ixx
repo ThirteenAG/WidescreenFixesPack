@@ -530,6 +530,29 @@ export void InitEngine()
         static auto ThermalGrainWidthHook1  = safetyhook::create_mid(pattern.get(1).get<void>(0x3C), ThermalGrainScaleWidth);
     }
 
+    // Thermal vision noise grain FPS fix
+    if (VisionNoiseGrain::Init())
+    {
+        // Noise grain TexMatrix random rotation (appFrand angle)
+        auto patternAngle = hook::module_pattern(GetModuleHandle(L"Engine"), "89 4A 4C FF 15 ? ? ? ? A1");
+        // Noise grain TexMatrix random UV offset (appFrand V/U)
+        auto patternUV = hook::module_pattern(GetModuleHandle(L"Engine"), "D9 5C 24 28 FF 15 ? ? ? ? D8 4C 24 28 51 D9 1C 24 FF 15 ? ? ? ?");
+
+        static constexpr float(__cdecl* kAngleFns[2])() = { VisionNoiseGrain::HeldFrand<2, 0>, VisionNoiseGrain::HeldFrand<3, 0> };
+        static constexpr float(__cdecl* kVFns[2])()     = { VisionNoiseGrain::HeldFrand<2, 1>, VisionNoiseGrain::HeldFrand<3, 1> };
+        static constexpr float(__cdecl* kUFns[2])()     = { VisionNoiseGrain::HeldFrand<2, 2>, VisionNoiseGrain::HeldFrand<3, 2> };
+
+        size_t nAngle = patternAngle.count_hint(2).size();
+        size_t nUV = patternUV.count_hint(2).size();
+        size_t nClusters = nAngle < nUV ? nAngle : nUV;
+        for (size_t i = 0; i < nClusters && i < 2; ++i)
+        {
+            VisionNoiseGrain::RedirectCallSite(reinterpret_cast<uintptr_t>(patternAngle.get(i).get<void>(0x03)), kAngleFns[i]); // rotation angle
+            VisionNoiseGrain::RedirectCallSite(reinterpret_cast<uintptr_t>(patternUV.get(i).get<void>(0x04)), kVFns[i]);        // V offset
+            VisionNoiseGrain::RedirectCallSite(reinterpret_cast<uintptr_t>(patternUV.get(i).get<void>(0x12)), kUFns[i]);        // U offset
+        }
+    }
+
     if (bSkipIntro)
     {
         pattern = find_module_pattern(GetModuleHandle(L"Engine"), "75 ? A1 ? ? ? ? 85 C0 75 ? 68 00 00 80 3F");

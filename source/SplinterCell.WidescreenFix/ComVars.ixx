@@ -243,6 +243,81 @@ struct UOverride
     }
 };
 
+// Night vision and thermal vision FPS fix. D3DDrv and Engine normally rebuild
+// the noise grain's random angle/UV transform every rendered frame, making the
+// grain animate faster at high FPS. Hold the random values at 30 Hz instead.
+export namespace VisionNoiseGrain
+{
+    constexpr double fStep = 1.0 / 30.0;
+
+    float(__cdecl* pAppFrand)() = nullptr;
+
+    // Resolve Core.dll's appFrand once, the fix is skipped when unavailable
+    bool Init()
+    {
+        if (!pAppFrand)
+            pAppFrand = (decltype(pAppFrand))GetProcAddress(GetModuleHandle(L"Core"), "?appFrand@@YAMXZ");
+        return pAppFrand != nullptr;
+    }
+
+    double NowSeconds()
+    {
+        static const double fFreq = []
+        {
+            LARGE_INTEGER liFreq;
+            QueryPerformanceFrequency(&liFreq);
+            return static_cast<double>(liFreq.QuadPart);
+        }();
+        LARGE_INTEGER liNow;
+        QueryPerformanceCounter(&liNow);
+        return static_cast<double>(liNow.QuadPart) / fFreq;
+    }
+
+    struct HeldCluster
+    {
+        float v[3] = {};
+        double fLast = -1.0;
+
+        void Refresh()
+        {
+            const double fNow = NowSeconds();
+            if (fLast >= 0.0)
+            {
+                const double fElapsed = fNow - fLast;
+                if (fElapsed < fStep)
+                    return;
+                // Advance in whole 30 Hz steps to keep the update rate exact
+                fLast += static_cast<double>(static_cast<int64_t>(fElapsed / fStep)) * fStep;
+            }
+            else
+                fLast = fNow;
+
+            v[0] = pAppFrand();
+            v[1] = pAppFrand();
+            v[2] = pAppFrand();
+        }
+    };
+
+    // 0/1 = night vision (pixel shader / fixed function path)
+    // 2/3 = thermal vision (pixel shader / low-end fallback path)
+    HeldCluster Clusters[4] = {};
+
+    // Refresh once per cluster, Index 0 is always the first appFrand() call
+    template <int Cluster, int Index>
+    float __cdecl HeldFrand()
+    {
+        if constexpr (Index == 0)
+            Clusters[Cluster].Refresh();
+        return Clusters[Cluster].v[Index];
+    }
+
+    void RedirectCallSite(uintptr_t addr, float(__cdecl* fn)())
+    {
+        injector::MakeCALL(addr, fn, true);
+        injector::MakeNOP(addr + 5, 1, true);
+    }
+}
+
 // Type aliases for current override kinds.
 export using UIntOverrides = UOverride<int(*)()>;
 export using UFloatOverrides = UOverride<float(*)()>;
