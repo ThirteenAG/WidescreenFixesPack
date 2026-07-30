@@ -443,9 +443,9 @@ public:
             pattern = hook::pattern("D8 0D ? ? ? ? D9 05 ? ? ? ? D8 A5 ? ? ? ? DE C9 DA 6C 24 ? D9 1C 24 A1");
             SetResY(pattern, FrontendClass::eCHud);
 
-            pattern = hook::pattern("D8 0D ? ? ? ? DD DA D9 43 ? D8 8D ? ? ? ? D8 CA D8 03");
+            pattern = hook::pattern("D8 0D ? ? ? ? DD DA D9 43 ? D8 4C 24 ? D8 CA D8 2B D9 7C 24 ? 8B 44 24 ? 80 4C 24 ? ? D9 6C 24 ? 89 44 24 ? DB 5C 24 ? D9 6C 24 ? DB 05 ? ? ? ? 8B 44 24 ? 89 44 24 ? 8D 7C 24");
             SetResX(pattern, FrontendClass::eCParticle);
-            pattern = hook::pattern("D8 0D ? ? ? ? DD D9 D9 43 ? D8 8D ? ? ? ? D8 C9 D8 6B ? D9 7C 24 ? 8B 44 24 ? 80 4C 24 ? ? D9 6C 24 ? 89 44 24 ? DB 5C 24 ? 8B 44 24 ? D9 6C 24 ? 89 44 24 ? D9 43 ? D8 8D ? ? ? ? D8 CA D8 03");
+            pattern = hook::pattern("D8 0D ? ? ? ? 57 DD D9");
             SetResY(pattern, FrontendClass::eCParticle);
 
             pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59 E8 ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 83 C0 EC 89 44 24 ? 50 DB 44 24 ? D9 1C 24 E8 ? ? ? ? 59 E8 ? ? ? ? E8 ? ? ? ? 8D 4C 24 ? 68 C8 00 00 00 6A 00");
