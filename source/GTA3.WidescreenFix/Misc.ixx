@@ -96,7 +96,8 @@ namespace CFont
         if (Details->m_bBackground)
             return shPrintString.unsafe_ccall(x, y, str);
 
-        CRGBA originalColor = Details->m_Color;
+        const CFontDetails originalDetails = *Details;
+        const CRGBA originalColor = originalDetails.m_Color;
 
         if (originalColor.red == 1 && originalColor.green == 1 && originalColor.blue == 1)
             return;
@@ -112,8 +113,6 @@ namespace CFont
         else
             outlineColor = CRGBA(0, 0, 0, originalColor.alpha);
 
-        const int sampleCount = 16;
-
         // 16-direction ring (smoother edge)
         static constexpr float dirs16[][2] = {
             { 1.0000f,  0.0000f}, { 0.9239f,  0.3827f}, { 0.7071f,  0.7071f}, { 0.3827f,  0.9239f},
@@ -122,45 +121,34 @@ namespace CFont
             { 0.0000f, -1.0000f}, { 0.3827f, -0.9239f}, { 0.7071f, -0.7071f}, { 0.9239f, -0.3827f}
         };
 
-        const float targetAlpha = (float)outlineColor.a / 255.0f;
-        const float perPassAlphaF = 1.0f - std::pow(1.0f - targetAlpha, 1.0f / (float)sampleCount);
-
-        constexpr float kOutlineAlphaBoost = 1.0f;
-        const uint8_t perPassAlpha = (uint8_t)std::clamp(perPassAlphaF * 255.0f * kOutlineAlphaBoost, (float)std::min<uint8_t>(0, outlineColor.a), (float)outlineColor.a);
+        // White outlines overlap visibly on dark glyphs such as wanted stars.
+        if (isVeryDark)
+        {
+            const float targetAlpha = static_cast<float>(outlineColor.a) / 255.0f;
+            const float perPassAlpha = (1.0f - std::pow(1.0f - targetAlpha, 1.0f / 16.0f)) * 255.0f;
+            outlineColor.a = static_cast<uint8_t>(std::clamp(perPassAlpha, 0.0f, static_cast<float>(outlineColor.a)));
+        }
 
         float outlineStrength = (ReplaceTextShadowWithOutline > 1) ? 1.0f : 0.5f;
 
-        for (int i = 0; i < sampleCount; ++i)
+        for (const auto& dir : dirs16)
         {
-            outlineColor.a = perPassAlpha;
+            *Details = originalDetails;
             Details->m_Color = outlineColor;
 
-            const float ox = SCREEN_SCALE_X(dirs16[i][0] * outlineStrength);
-            const float oy = SCREEN_SCALE_Y(dirs16[i][1] * outlineStrength);
+            const float ox = SCREEN_SCALE_X(dir[0] * outlineStrength);
+            const float oy = SCREEN_SCALE_Y(dir[1] * outlineStrength);
+
+            // Translate the entire layout so every outline pass wraps and slants identically.
+            Details->m_vecSlantRefPoint.x += ox;
+            Details->m_vecSlantRefPoint.y += oy;
+            Details->m_fWrapX += ox;
+            Details->m_fRightJustifyWrap += ox;
 
             shPrintString.unsafe_ccall(x + ox, y + oy, str);
         }
 
-        #if 0
-        static CVector2D offsets[] = {
-            { 1.f,  1.f}, { 1.f, -1.f},
-            {-1.f,  1.f}, {-1.f, -1.f},
-            { 2.f,  0.f}, {-2.f,  0.f},
-            { 0.f,  2.f}, { 0.f, -2.f}
-        };
-
-        int offsetCount = (ReplaceTextShadowWithOutline > 1) ? 8 : 4;
-
-        SetColor(&outlineColor);
-
-        for (int i = 0; i < offsetCount; ++i)
-        {
-            CVector2D& offset = offsets[i];
-            shPrintString.unsafe_ccall(x + SCREEN_SCALE_X(offset.x * outlineStrength), y + SCREEN_SCALE_Y(offset.y * outlineStrength), str);
-        }
-        #endif
-
-        SetColor(&originalColor);
+        *Details = originalDetails;
         shPrintString.unsafe_ccall(x, y, str);
     }
 
