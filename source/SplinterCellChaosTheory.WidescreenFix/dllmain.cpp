@@ -270,7 +270,7 @@ void InitGameOverlayRenderer()
     if (steamPid)
     {
         auto steamPath = GetModulePath(GetModuleHandleW(L"GameOverlayRenderer.dll")).parent_path();
-        auto exePath = steamPath / L"GameOverlayUI.exe";
+        auto exePath = steamPath / L"gameoverlayui64.exe";
         std::wstring args = L" -steampid " + std::to_wstring(steamPid) + L" -pid " + std::to_wstring(GetCurrentProcessId()) + L" -gameid " + L"13570" + L" -manuallyclearframes 0";
 
         SHELLEXECUTEINFOW sei = { sizeof(sei) };
