@@ -47,6 +47,8 @@ private:
     static inline UINT nScreenWidth = 0;
     static inline UINT nScreenHeight = 0;
     static inline bool bInitialized = false;
+    static inline bool bIsWindowed = false;
+    static inline bool bWindowedCached = false;
 
     static inline D3DXHANDLE hInputTex2D = nullptr;
     static inline D3DXHANDLE hGammaTechnique = nullptr;
@@ -61,6 +63,25 @@ private:
 
         dev9->Release();
         return dev9;
+    }
+
+    static bool IsWindowed(IDirect3DDevice9* dev)
+    {
+        if (bWindowedCached)
+            return bIsWindowed;
+
+        bIsWindowed = false;
+        IDirect3DSwapChain9* pSwap = nullptr;
+        if (SUCCEEDED(dev->GetSwapChain(0, &pSwap)) && pSwap)
+        {
+            D3DPRESENT_PARAMETERS pp{};
+            if (SUCCEEDED(pSwap->GetPresentParameters(&pp)))
+                bIsWindowed = pp.Windowed != FALSE;
+            pSwap->Release();
+        }
+
+        bWindowedCached = true;
+        return bIsWindowed;
     }
 
     static bool Initialize(IDirect3DDevice9* dev)
@@ -156,6 +177,8 @@ public:
         IDirect3DDevice9* dev = GetDevice9();
         if (!dev) return;
 
+        if (!IsWindowed(dev)) return;
+
         if (!Initialize(dev)) return;
 
         IDirect3DSurface9* currentRT = nullptr;
@@ -190,6 +213,7 @@ public:
 
     static void OnDeviceReset()
     {
+        bWindowedCached = false;
         ReleaseResources();
     }
 } ConsoleGamma;
