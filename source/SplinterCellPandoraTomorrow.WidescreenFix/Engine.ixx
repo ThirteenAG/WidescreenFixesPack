@@ -358,6 +358,11 @@ namespace AEGrassActor
     }
 }
 
+namespace FLevelSceneNode
+{
+    float fPlantFarDistance = 100000.0f;
+}
+
 namespace AActor
 {
     SafetyHookInline shPostLoad = {};
@@ -822,6 +827,12 @@ export void InitEngine()
     AActor::shPostLoad = safetyhook::create_inline(
         GetProcAddress(GetModuleHandle(L"Engine"), "?PostLoad@AActor@@UAEXXZ"),
         AActor::PostLoad);
+
+    pattern = find_module_pattern(GetModuleHandle(L"Engine"), "FF 15 ? ? ? ? D9 5D 08 F3 0F 10 45 08 0F 2F 05 ? ? ? ? 0F 86");
+    if (!pattern.empty())
+    {
+        injector::WriteMemory<uintptr_t>(pattern.get_first(17), reinterpret_cast<uintptr_t>(&FLevelSceneNode::fPlantFarDistance), true);
+    }
 
     // Fix thermal vision grain scaling at high resolutions
     pattern = find_module_pattern(GetModuleHandle(L"Engine"), "8B 46 04 8B 80 84 00 00 00 99 F7 F9 66 0F 6E C0");
