@@ -229,9 +229,18 @@ namespace DisplayModeFix {
         return true;
     }
     bool Install(void) {
-        // 67E14B20 = Direct3DCreate9
+        HMODULE hD3D9 = GetModuleHandleA("d3d9.dll");
+        if (nullptr == hD3D9) {
+            return false;
+        }
+
+        FARPROC pfnDirect3DCreate9 = GetProcAddress(hD3D9, "Direct3DCreate9");
+        if (nullptr == pfnDirect3DCreate9) {
+            return false;
+        }
+        
         g_inlineSafetyHook = safetyhook::create_inline(
-            reinterpret_cast<void*>(0x67E14B20),
+            reinterpret_cast<void*>(pfnDirect3DCreate9),
             reinterpret_cast<void*>(&Hooked_Direct3DCreate9)
         );
 
