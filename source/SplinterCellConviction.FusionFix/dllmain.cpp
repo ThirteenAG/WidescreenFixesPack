@@ -41,14 +41,14 @@ namespace UESEQJobUnlockAchievement
 void Init()
 {
     CIniReader iniReader("");
-    bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
-    bWindowedMode = iniReader.ReadInteger("MAIN", "WindowedMode", 0) != 0;
-    bDisableNegativeMouseAcceleration = iniReader.ReadInteger("MAIN", "DisableNegativeMouseAcceleration", 1) != 0;
-    bSkipSystemDetection = iniReader.ReadInteger("MAIN", "SkipSystemDetection", 1) != 0;
-    bForceCPUAffinityToAllCores = iniReader.ReadInteger("MAIN", "ForceCPUAffinityToAllCores", 1) != 0;
-    bUltraWideSupport = iniReader.ReadInteger("MAIN", "UltraWideSupport", 1) != 0;
-    bDisableBlackAndWhiteFilter = iniReader.ReadInteger("MAIN", "DisableBlackAndWhiteFilter", 0) != 0;
-    bBlacklistControlScheme = iniReader.ReadInteger("CONTROLS", "BlacklistControlScheme", 1) != 0;
+    bSkipIntro = iniReader.ReadInteger("GENERAL", "SkipIntro", 1) != 0;
+    bWindowedMode = iniReader.ReadInteger("DISPLAY", "WindowedMode", 0) != 0;
+    bDisableNegativeMouseAcceleration = iniReader.ReadInteger("GAMEPLAY", "DisableNegativeMouseAcceleration", 1) != 0;
+    bSkipSystemDetection = iniReader.ReadInteger("GENERAL", "SkipSystemDetection", 1) != 0;
+    bForceCPUAffinityToAllCores = iniReader.ReadInteger("GENERAL", "ForceCPUAffinityToAllCores", 1) != 0;
+    bUltraWideSupport = iniReader.ReadInteger("DISPLAY", "UltraWideSupport", 1) != 0;
+    bDisableBlackAndWhiteFilter = iniReader.ReadInteger("GRAPHICS", "DisableBlackAndWhiteFilter", 0) != 0;
+    bBlacklistControlScheme = iniReader.ReadInteger("GAMEPLAY", "BlacklistControlScheme", 1) != 0;
     auto bUnlockDLC = iniReader.ReadInteger("UNLOCKS", "UnlockDLC", 1) != 0;
     bEnableSplitscreen = iniReader.ReadInteger("2INSTANCESPLITSCREEN", "Enable", 1) != 0;
 
