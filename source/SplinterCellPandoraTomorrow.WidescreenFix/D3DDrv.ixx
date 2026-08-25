@@ -703,6 +703,11 @@ export void InitD3DDrv()
         }
     });
 
+    // EOceanInfo "Ocean2" culling fix
+    pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "3D 2C 01 00 00 77 43 85 C0 0F 84 ? ? ? ? 6A 08 6A 01");
+    if (!pattern.empty())
+        injector::WriteMemory<uint8_t>(pattern.get_first(5), 0xEB, true); // ja -> jmp
+
     RainSplashFix::Init();
     RainSplashFix::Apply();
 

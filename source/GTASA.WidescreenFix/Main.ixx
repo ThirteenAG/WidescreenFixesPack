@@ -40,13 +40,19 @@ public:
             // Advanced Display Options
             injector::MakeNOP(0x745B71, 6); // Skip width check
             injector::MakeNOP(0x745B81, 6); // Skip height check
-            injector::WriteMemory<BYTE>(0x745B96, 0xEB, true); // Skip AR check
+            if (injector::ReadMemory<BYTE>(0x745B96) == 0x7Bu) // SA-MP stomps over this entire block of code
+            {
+                injector::WriteMemory<BYTE>(0x745B96, 0xEB, true); // Skip AR check
+            }
             injector::MakeNOP(0x745BFC, 2); // Skip VRAM check
 
             // Resolution selection dialog
             injector::MakeNOP(0x74596C, 6); // Skip width check
             injector::MakeNOP(0x74597A, 6); // Skip height check
-            injector::WriteMemory<BYTE>(0x7459D0, 0xEB, true); // Skip AR check
+            if (injector::ReadMemory<BYTE>(0x7459D0) == 0x7Bu) // SA-MP stomps over this entire block of code
+            {
+                injector::WriteMemory<BYTE>(0x7459D0, 0xEB, true); // Skip AR check
+            }
 
             // default res
             auto [x, y] = GetDesktopRes();
@@ -89,26 +95,27 @@ public:
             });
 
             //CCam::Process_Fixed
-            pattern = hook::pattern("C7 87 ? ? ? ? ? ? ? ? 80 3D");
-            injector::MakeNOP(pattern.get_first(), 10, true);
-            static auto Process_FixedFOV = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-            {
-                static bool allowLeadingZero = true; // one-shot 0 before 1/2
-
-                const int state = CEntryExitManager::ms_exitEnterState;
-                const bool inTransition = (state == 1 || state == 2);
-                const bool leadingZero = (state == 0 && allowLeadingZero);
-
-                if (inTransition || leadingZero)
-                {
-                    *(float*)(regs.edi + 0xB4) = CDraw::ConvertFOVInverse(70.0f);
-                }
-
-                if (inTransition)
-                    allowLeadingZero = true;   // next transition can again have a leading 0
-                else if (leadingZero)
-                    allowLeadingZero = false;  // only one 0 call allowed before 1/2
-            });
+            //Bugged atm
+            //pattern = hook::pattern("C7 87 ? ? ? ? ? ? ? ? 80 3D");
+            //injector::MakeNOP(pattern.get_first(), 10, true);
+            //static auto Process_FixedFOV = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            //{
+            //    static bool allowLeadingZero = true; // one-shot 0 before 1/2
+            //
+            //    const int state = CEntryExitManager::ms_exitEnterState;
+            //    const bool inTransition = (state == 1 || state == 2);
+            //    const bool leadingZero = (state == 0 && allowLeadingZero);
+            //
+            //    if (inTransition || leadingZero)
+            //    {
+            //        *(float*)(regs.edi + 0xB4) = CDraw::ConvertFOVInverse(70.0f);
+            //    }
+            //
+            //    if (inTransition)
+            //        allowLeadingZero = true;   // next transition can again have a leading 0
+            //    else if (leadingZero)
+            //        allowLeadingZero = false;  // only one 0 call allowed before 1/2
+            //});
         };
     }
 } Main;

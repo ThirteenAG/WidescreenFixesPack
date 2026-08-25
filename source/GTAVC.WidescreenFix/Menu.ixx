@@ -2,6 +2,8 @@ module;
 
 #include <stdafx.h>
 #include "common.h"
+#include <mmsystem.h>
+#pragma comment(lib, "winmm.lib") // needed for timeBeginPeriod()/timeEndPeriod()
 
 export module Menu;
 
@@ -328,6 +330,209 @@ namespace CText
     }
 }
 
+enum RsEvent
+{
+    rsCAMERASIZE,
+    rsCOMMANDLINE,
+    rsFILELOAD,
+    rsINITDEBUG,
+    rsINPUTDEVICEATTACH,
+    rsLEFTBUTTONDOWN,
+    rsLEFTBUTTONUP,
+    rsMOUSEMOVE,
+    rsMOUSEWHEELMOVE,
+    rsPLUGINATTACH,
+    rsREGISTERIMAGELOADER,
+    rsRIGHTBUTTONDOWN,
+    rsRIGHTBUTTONUP,
+    _rs_13,
+    _rs_14,
+    _rs_15,
+    _rs_16,
+    _rs_17,
+    _rs_18,
+    _rs_19,
+    _rs_20,
+    rsRWINITIALIZE,
+    rsRWTERMINATE,
+    rsSELECTDEVICE,
+    rsINITIALIZE,
+    rsTERMINATE,
+    rsIDLE,
+    rsFRONTENDIDLE,
+    rsKEYDOWN,
+    rsKEYUP,
+    rsQUITAPP,
+    rsPADBUTTONDOWN,
+    rsPADBUTTONUP,
+    rsPADANALOGUELEFT,
+    rsPADANALOGUELEFTRESET,
+    rsPADANALOGUERIGHT,
+    rsPADANALOGUERIGHTRESET,
+    rsPREINITCOMMANDLINE,
+    rsACTIVATE,
+};
+
+class FrameLimiter
+{
+public:
+    enum FPSLimitMode
+    {
+        FPS_NONE,
+        FPS_REALTIME,
+        FPS_ACCURATE
+    };
+
+    FPSLimitMode mFPSLimitMode = FPS_NONE;
+
+private:
+    double TIME_Frequency = 0.0;
+    double TIME_Ticks = 0.0;
+    double TIME_Frametime = 0.0;
+    float fFPSLimit = 0.0f;
+    bool bFpsLimitWasUpdated = false;
+
+public:
+    void Init(FPSLimitMode mode, float fps_limit)
+    {
+        bFpsLimitWasUpdated = true;
+        mFPSLimitMode = mode;
+        fFPSLimit = fps_limit;
+
+        LARGE_INTEGER frequency;
+        QueryPerformanceFrequency(&frequency);
+
+        static constexpr auto TICKS_PER_FRAME = 1;
+        auto TICKS_PER_SECOND = (TICKS_PER_FRAME * fFPSLimit);
+
+        if (mFPSLimitMode == FPS_ACCURATE)
+        {
+            TIME_Frametime = 1000.0 / (double)fFPSLimit;
+            TIME_Frequency = (double)frequency.QuadPart / 1000.0;
+        }
+        else
+        {
+            TIME_Frequency = (double)frequency.QuadPart / (double)TICKS_PER_SECOND;
+        }
+
+        Ticks();
+    }
+
+    DWORD Sync_RT()
+    {
+        if (bFpsLimitWasUpdated)
+        {
+            bFpsLimitWasUpdated = false;
+            return 1;
+        }
+
+        DWORD lastTicks, currentTicks;
+        LARGE_INTEGER counter;
+
+        QueryPerformanceCounter(&counter);
+        lastTicks = (DWORD)TIME_Ticks;
+        TIME_Ticks = (double)counter.QuadPart / TIME_Frequency;
+        currentTicks = (DWORD)TIME_Ticks;
+
+        return (currentTicks > lastTicks) ? currentTicks - lastTicks : 0;
+    }
+
+    DWORD Sync_SLP()
+    {
+        if (bFpsLimitWasUpdated)
+        {
+            bFpsLimitWasUpdated = false;
+            return 1;
+        }
+
+        LARGE_INTEGER counter;
+        QueryPerformanceCounter(&counter);
+        double millis_current = (double)counter.QuadPart / TIME_Frequency;
+        double millis_delta = millis_current - TIME_Ticks;
+
+        if (TIME_Frametime <= millis_delta)
+        {
+            TIME_Ticks = millis_current;
+            return 1;
+        }
+        else if (TIME_Frametime - millis_delta > 2.0)
+            Sleep(1);
+        else
+            Sleep(0);
+
+        return 0;
+    }
+
+    void Sync()
+    {
+        if (fFPSLimit <= 0.0f)
+            return;
+
+        if (mFPSLimitMode == FPS_REALTIME)
+            while (!Sync_RT());
+        else if (mFPSLimitMode == FPS_ACCURATE)
+            while (!Sync_SLP());
+    }
+
+private:
+    void Ticks()
+    {
+        LARGE_INTEGER counter;
+        QueryPerformanceCounter(&counter);
+        TIME_Ticks = (double)counter.QuadPart / TIME_Frequency;
+    }
+};
+
+static float GetFrameLimiterValue()
+{
+    switch (FrontendMenuManager->m_PrefsFrameLimiter)
+    {
+        case FrameLimiterMode::e30:  return 30.0f;
+        case FrameLimiterMode::e40:  return 40.0f;
+        case FrameLimiterMode::e50:  return 50.0f;
+        case FrameLimiterMode::e60:  return 60.0f;
+        case FrameLimiterMode::e75:  return 75.0f;
+        case FrameLimiterMode::e100: return 100.0f;
+        case FrameLimiterMode::e120: return 120.0f;
+        case FrameLimiterMode::e144: return 144.0f;
+        case FrameLimiterMode::e165: return 165.0f;
+        case FrameLimiterMode::e200: return 200.0f;
+        case FrameLimiterMode::e240: return 240.0f;
+        case FrameLimiterMode::eOff:
+        default:
+            return 0.0f;
+    }
+}
+
+injector::hook_back<bool(__cdecl*)(RsEvent event, void* data)> hbRsEventHandler;
+bool __cdecl RsEventHandler(RsEvent event, void* data)
+{
+    static FrameLimiter fpsLimiter;
+    static constexpr auto mode = FrameLimiter::FPS_ACCURATE;
+    static bool bTimerResolutionSet = false;
+    static float fLastFpsLimit = -1.0f;
+
+    float fFpsLimit = GetFrameLimiterValue();
+
+    if (fFpsLimit != fLastFpsLimit)
+    {
+        fLastFpsLimit = fFpsLimit;
+
+        if (!bTimerResolutionSet)
+        {
+            timeBeginPeriod(1);
+            bTimerResolutionSet = true;
+        }
+
+        RsGlobal->maxFPS = static_cast<int32_t>(fFpsLimit);
+        fpsLimiter.Init(mode, fFpsLimit);
+    }
+
+    fpsLimiter.Sync();
+
+    return hbRsEventHandler.fun(event, data);
+}
+
 class Menu
 {
 public:
@@ -413,34 +618,11 @@ public:
                     pref = FrameLimiterMode::e240;
             });
 
-            pattern = hook::pattern("DB 05 ? ? ? ? D8 3D ? ? ? ? D8 D9 DF E0 80 E4 05 80 FC 01 0F 85");
-            struct FrameLimiter
-            {
-                void operator()(injector::reg_pack& regs)
-                {
-                    float maxFPS = 30.0f;
-                    auto pref = FrontendMenuManager->m_PrefsFrameLimiter;
-                    switch (pref)
-                    {
-                        case FrameLimiterMode::e30: maxFPS = 30.0f; break;
-                        case FrameLimiterMode::e40: maxFPS = 40.0f; break;
-                        case FrameLimiterMode::e50: maxFPS = 50.0f; break;
-                        case FrameLimiterMode::e60: maxFPS = 60.0f; break;
-                        case FrameLimiterMode::e75: maxFPS = 75.0f; break;
-                        case FrameLimiterMode::e100: maxFPS = 100.0f; break;
-                        case FrameLimiterMode::e120: maxFPS = 120.0f; break;
-                        case FrameLimiterMode::e144: maxFPS = 144.0f; break;
-                        case FrameLimiterMode::e165: maxFPS = 165.0f; break;
-                        case FrameLimiterMode::e200: maxFPS = 200.0f; break;
-                        case FrameLimiterMode::e240: maxFPS = 240.0f; break;
-                        default:
-                            break;
-                    }
+            pattern = hook::pattern("74 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? DF E0 80 E4 ? 80 FC ? 0F 85 ? ? ? ? 6A");
+            injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true);
 
-                    _asm {fld dword ptr[maxFPS]}
-
-                }
-            }; injector::MakeInline<FrameLimiter>(pattern.get_first(0), pattern.get_first(6));
+            pattern = hook::pattern("E8 ? ? ? ? 59 59 EB ? 89 C0 8D 40 ? A1 ? ? ? ? 50");
+            hbRsEventHandler.fun = injector::MakeCALL(pattern.get_first(0), RsEventHandler).get();
         };
     }
 } Menu;
