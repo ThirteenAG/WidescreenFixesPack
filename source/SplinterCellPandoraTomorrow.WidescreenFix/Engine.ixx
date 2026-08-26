@@ -607,10 +607,13 @@ export void InitEngine()
     {
         uint32_t pfsub_103762F0 = (uint32_t)pattern.get_first(0);
         auto rpattern = hook::range_pattern(pfsub_103762F0, pfsub_103762F0 + 0x800, "E8 ? ? ? ? 8B ?");
-        injector::MakeCALL(rpattern.get(3).get<uint32_t>(0), FCanvasUtilDrawTileHook, true); //pfsub_103762F0 + 0x36E
-        injector::MakeCALL(rpattern.get(5).get<uint32_t>(0), FCanvasUtilDrawTileHook, true); //pfsub_103762F0 + 0x43D
-        injector::MakeCALL(rpattern.get(7).get<uint32_t>(0), FCanvasUtilDrawTileHook, true); //pfsub_103762F0 + 0x4DA
-        injector::MakeCALL(rpattern.get(9).get<uint32_t>(0), FCanvasUtilDrawTileHook, true); //pfsub_103762F0 + 0x564
+        if (rpattern.size() >= 10)
+        {
+            injector::MakeCALL(rpattern.get(3).get<uint32_t>(0), FCanvasUtilDrawTileHook, true); //pfsub_103762F0 + 0x36E
+            injector::MakeCALL(rpattern.get(5).get<uint32_t>(0), FCanvasUtilDrawTileHook, true); //pfsub_103762F0 + 0x43D
+            injector::MakeCALL(rpattern.get(7).get<uint32_t>(0), FCanvasUtilDrawTileHook, true); //pfsub_103762F0 + 0x4DA
+            injector::MakeCALL(rpattern.get(9).get<uint32_t>(0), FCanvasUtilDrawTileHook, true); //pfsub_103762F0 + 0x564
+        }
     }
     else
     {
@@ -659,7 +662,7 @@ export void InitEngine()
         }
 
         // Thermal vision uses a separate render target size so it bypasses the main fix, apply PostProcessFixedScale here as well
-        auto thermalRT = find_module_pattern(GetModuleHandle(L"Engine"), "8B 0C 85 ? ? ? ? 8B 75 10");
+        auto thermalRT = find_module_pattern(GetModuleHandle(L"Engine"), "8B 0C 85 ? ? ? ? 8B 75 10", "8B 34 9D ? ? ? ? 57 75");
         if (!thermalRT.empty())
         {
             // Override all thermal RT presets
@@ -671,7 +674,7 @@ export void InitEngine()
 
     // Force thermal vision to use quality preset 2 (1024px pyramid)
     {
-        auto thermalDispatch = find_module_pattern(GetModuleHandle(L"Engine"), "FF B5 FC FB FF FF 56 53 6A 00 E8");
+        auto thermalDispatch = find_module_pattern(GetModuleHandle(L"Engine"), "FF B5 FC FB FF FF 56 53 6A 00 E8", "0C 8B 55 08 50 51 52 56 6A 00 E8");
         if (!thermalDispatch.empty())
             injector::WriteMemory<uint8_t>(thermalDispatch.get_first(9), 2, true);
     }
@@ -704,14 +707,14 @@ export void InitEngine()
                     *(uint8_t*)(regs.ebp - 0xA6) = gColor.R;
                     *(uint8_t*)(regs.ebp - 0xA5) = 0xFF;
                 }
-            }; injector::MakeInline<USkeletalMeshInstanceRenderHook>(pattern.get_first(0), pattern.get_first(10));
+            }; if (!pattern.empty()) injector::MakeInline<USkeletalMeshInstanceRenderHook>(pattern.get_first(0), pattern.get_first(10));
         }
     }
 
     #if _DEBUG
-    pattern = find_module_pattern<1>(GetModuleHandle(L"Engine"), "55 8B EC 83 EC ? 53 56 57 6A ? FF 75 ? 8D 4D ? FF 15 ? ? ? ? 83 7D ? ? 0F 84 ? ? ? ? 8B 75");
-    if (!pattern.empty())
-        shFindAxisName = safetyhook::create_inline(pattern.get_first(), FindAxisName);
+    auto pFindAxisName = FindProcAddress(GetModuleHandle(L"Engine"), "?FindAxisName@UInput@@MBEPAMPAVAActor@@PB_W@Z", "?FindAxisName@UInput@@MBEPAMPAVAActor@@PBG@Z");
+    if (pFindAxisName)
+        shFindAxisName = safetyhook::create_inline(pFindAxisName, FindAxisName);
     #endif
 
     // LOD
@@ -766,7 +769,7 @@ export void InitEngine()
     // Restore the in-game console
     if (bEnableConsole)
     {
-        UInteractionMaster::FName_ctor = (decltype(UInteractionMaster::FName_ctor))GetProcAddress(GetModuleHandle(L"Core"), "??0FName@@QAE@PB_WW4EFindName@@@Z");
+        UInteractionMaster::FName_ctor = (decltype(UInteractionMaster::FName_ctor))FindProcAddress(GetModuleHandle(L"Core"), "??0FName@@QAE@PB_WW4EFindName@@@Z", "??0FName@@QAE@PBGW4EFindName@@@Z");
         UInteractionMaster::FindFunction = (decltype(UInteractionMaster::FindFunction))GetProcAddress(GetModuleHandle(L"Core"), "?FindFunction@UObject@@QAEPAVUFunction@@VFName@@H@Z");
         UInteractionMaster::ProcessEvent = (decltype(UInteractionMaster::ProcessEvent))GetProcAddress(GetModuleHandle(L"Core"), "?ProcessEvent@UObject@@UAEXPAVUFunction@@PAX1@Z");
         UInteractionMaster::SetClip = (decltype(UInteractionMaster::SetClip))GetProcAddress(GetModuleHandle(L"Engine"), "?SetClip@UCanvas@@UAEXMM@Z");
@@ -799,24 +802,40 @@ export void InitEngine()
     // Softbody FPS fixes
     {
         auto sbActorTick = find_module_pattern(GetModuleHandle(L"Engine"),
-            "55 8B EC 56 8B F1 8B 8E 6C 03 00 00 85 C9 74 08 8B 01 FF 90 98 00 00 00");
+            "55 8B EC 56 8B F1 8B 8E 6C 03 00 00 85 C9 74 08 8B 01 FF 90 98 00 00 00",
+            "56 8B F1 8B 86 6C 03 00 00 85 C0 74 0A 8B C8 8B 01 FF 90 98 00 00 00");
 
         auto sbUpdate = find_module_pattern(GetModuleHandle(L"Engine"),
             "8B 43 60 8B 80 B8 00 00 00 F3 0F 10 15 ? ? ? ? 5E F3 0F 10 80 64 07 00 00 0F 2F D0 77 0B F3 0F 5D 05");
 
-        if (sbActorTick.size() && sbUpdate.size())
+        auto sbUpdateRetail = find_module_pattern(GetModuleHandle(L"Engine"),
+            "8B 57 60 8B 82 B8 00 00 00 D9 80 64 07 00 00 D8 15 ? ? ? ? DF E0 F6 C4 05 7A 0A DD D8 D9 05");
+
+        if (sbActorTick.size() && (sbUpdate.size() || sbUpdateRetail.size()))
         {
             AESoftBodyActor::AActorTick = reinterpret_cast<AESoftBodyActor::AActorTickFn>(
                 GetProcAddress(GetModuleHandle(L"Engine"), "?Tick@AActor@@UAEHMW4ELevelTick@@@Z"));
 
             AESoftBodyActor::shTick = safetyhook::create_inline(sbActorTick.get_first(), AESoftBodyActor::Tick);
 
-            uintptr_t movss = reinterpret_cast<uintptr_t>(sbUpdate.get_first(18));
-            injector::WriteMemory<uint8_t>(movss + 3, 0x05, true);
-            injector::WriteMemory<uintptr_t>(movss + 4, reinterpret_cast<uintptr_t>(&AESoftBodyActor::fFrameDelta), true);
+            if (sbUpdate.size())
+            {
+                uintptr_t movss = reinterpret_cast<uintptr_t>(sbUpdate.get_first(18));
+                injector::WriteMemory<uint8_t>(movss + 3, 0x05, true);
+                injector::WriteMemory<uintptr_t>(movss + 4, reinterpret_cast<uintptr_t>(&AESoftBodyActor::fFrameDelta), true);
 
-            uintptr_t clampLow = *sbUpdate.get_first<uintptr_t>(13);
-            injector::WriteMemory<float>(clampLow, AESoftBodyActor::kMinDt, true);
+                uintptr_t clampLow = *sbUpdate.get_first<uintptr_t>(13);
+                injector::WriteMemory<float>(clampLow, AESoftBodyActor::kMinDt, true);
+            }
+            else // retail: x87 fld m32
+            {
+                uintptr_t fld = reinterpret_cast<uintptr_t>(sbUpdateRetail.get_first(9));
+                injector::WriteMemory<uint8_t>(fld + 1, 0x05, true);
+                injector::WriteMemory<uintptr_t>(fld + 2, reinterpret_cast<uintptr_t>(&AESoftBodyActor::fFrameDelta), true);
+
+                uintptr_t clampLow = *sbUpdateRetail.get_first<uintptr_t>(17);
+                injector::WriteMemory<float>(clampLow, AESoftBodyActor::kMinDt, true);
+            }
         }
     }
 
@@ -828,14 +847,14 @@ export void InitEngine()
         GetProcAddress(GetModuleHandle(L"Engine"), "?PostLoad@AActor@@UAEXXZ"),
         AActor::PostLoad);
 
-    pattern = find_module_pattern(GetModuleHandle(L"Engine"), "FF 15 ? ? ? ? D9 5D 08 F3 0F 10 45 08 0F 2F 05 ? ? ? ? 0F 86");
+    pattern = find_module_pattern(GetModuleHandle(L"Engine"), "FF 15 ? ? ? ? D9 5D 08 F3 0F 10 45 08 0F 2F 05 ? ? ? ? 0F 86", "A7 94 01 00 00 D9 5C 24 1C FF 15 ? ? ? ? D8 1D ? ? ? ? DF E0");
     if (!pattern.empty())
     {
         injector::WriteMemory<uintptr_t>(pattern.get_first(17), reinterpret_cast<uintptr_t>(&FLevelSceneNode::fPlantFarDistance), true);
     }
 
     // Fix thermal vision grain scaling at high resolutions
-    pattern = find_module_pattern(GetModuleHandle(L"Engine"), "8B 46 04 8B 80 84 00 00 00 99 F7 F9 66 0F 6E C0");
+    pattern = find_module_pattern(GetModuleHandle(L"Engine"), "8B 46 04 8B 80 84 00 00 00 99 F7 F9 66 0F 6E C0", "04 8B C8 8B 82 84 00 00 00 99 F7 F9");
     if (!pattern.empty())
     {
         static auto ThermalGrainHeightHook = safetyhook::create_mid(pattern.get_first(9), [](SafetyHookContext& regs)
@@ -844,7 +863,7 @@ export void InitEngine()
         });
     }
 
-    pattern = find_module_pattern(GetModuleHandle(L"Engine"), "8B 46 04 8B 80 80 00 00 00 99 F7 F9 8D 8D 74 FE FF FF");
+    pattern = find_module_pattern(GetModuleHandle(L"Engine"), "8B 46 04 8B 80 80 00 00 00 99 F7 F9 8D 8D 74 FE FF FF", "04 8B C8 8B 82 80 00 00 00 99 F7 F9");
     if (!pattern.empty())
     {
         static auto ThermalGrainWidthHook = safetyhook::create_mid(pattern.get_first(9), [](SafetyHookContext& regs)

@@ -174,7 +174,7 @@ export void InitShaders()
     if (std::filesystem::exists(GetShadersPath()))
     {
         // Hook D3D8 creation
-        auto pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "89 83 ? ? ? ? 50");
+        auto pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "89 83 ? ? ? ? 50", "89 83 ? ? ? ? 8B 08 89 7D ? 50");
         static auto Direct3DCreate8Hook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
             auto pID3D8 = (IDirect3D8*)regs.eax;
