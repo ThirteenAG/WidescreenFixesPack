@@ -505,7 +505,7 @@ namespace AEPlayerControllerCheckpoint
 
     void Init()
     {
-        FName_ctor    = decltype(FName_ctor)(GetProcAddress(GetModuleHandle(L"Core"), "??0FName@@QAE@PB_WW4EFindName@@@Z"));
+        FName_ctor    = decltype(FName_ctor)(FindProcAddress(GetModuleHandle(L"Core"), "??0FName@@QAE@PB_WW4EFindName@@@Z", "??0FName@@QAE@PBGW4EFindName@@@Z"));
         FindFunction  = decltype(FindFunction)(GetProcAddress(GetModuleHandle(L"Core"), "?FindFunction@UObject@@QAEPAVUFunction@@VFName@@H@Z"));
         ProcessEvent  = decltype(ProcessEvent)(GetProcAddress(GetModuleHandle(L"Core"), "?ProcessEvent@UObject@@UAEXPAVUFunction@@PAX1@Z"));
         gNullSlot     = (void**)GetProcAddress(GetModuleHandle(L"Core"), "?GNull@@3PAVFOutputDevice@@A");
@@ -519,10 +519,10 @@ namespace AEPlayerControllerCheckpoint
         if (auto pProcessInternal = GetProcAddress(GetModuleHandle(L"Core"), "?ProcessInternal@UObject@@QAEXAAUFFrame@@QAX@Z"))
             shProcessInternal = safetyhook::create_inline(pProcessInternal, ProcessInternalHook);
 
-        if (auto pLocalize = GetProcAddress(GetModuleHandle(L"Core"), "?Localize@@YAPB_WPB_W000H@Z"))
+        if (auto pLocalize = FindProcAddress(GetModuleHandle(L"Core"), "?Localize@@YAPB_WPB_W000H@Z", "?Localize@@YAPBGPBG000H@Z"))
             shLocalize = safetyhook::create_inline(pLocalize, LocalizeHook);
 
-        if (auto pExec = GetProcAddress(GetModuleHandle(L"Engine"), "?Exec@UGameEngine@@UAEHPB_WAAVFOutputDevice@@@Z"))
+        if (auto pExec = FindProcAddress(GetModuleHandle(L"Engine"), "?Exec@UGameEngine@@UAEHPB_WAAVFOutputDevice@@@Z", "?Exec@UGameEngine@@UAEHPBGAAVFOutputDevice@@@Z"))
             shUGameEngineExec = safetyhook::create_inline(pExec, UGameEngineExecHook);
     }
 }
