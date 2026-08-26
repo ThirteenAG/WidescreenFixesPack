@@ -186,7 +186,8 @@ void Init()
         else
         {
             pattern = hook::pattern("8B 0D ? ? ? ? 89 4D C8 8B 15 ? ? ? ? 89 55 E0"); // Retail version
-            injector::WriteMemory(pattern.get_first(2), &fFPSLimit, true);
+            if (!pattern.empty())
+                injector::WriteMemory(pattern.get_first(2), &fFPSLimit, true);
         }
     }
 }
