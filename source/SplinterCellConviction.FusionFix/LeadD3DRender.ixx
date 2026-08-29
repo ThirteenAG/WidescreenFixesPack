@@ -10,12 +10,12 @@ import Graphics;
 export void InitLeadD3DRender()
 {
     CIniReader iniReader("");
-    auto bDisableDOF = iniReader.ReadInteger("MAIN", "DisableDOF", 1) != 0;
-    auto bDisableBlackAndWhiteFilter = iniReader.ReadInteger("MAIN", "DisableBlackAndWhiteFilter", 0) != 0;
-    auto bDisableCharacterLighting = iniReader.ReadInteger("MAIN", "DisableCharacterLighting", 0) != 0;
-    auto bEnhancedSonarVision = iniReader.ReadInteger("MAIN", "EnhancedSonarVision", 0) != 0;
-    gBlacklistIndicators = iniReader.ReadInteger("MAIN", "BlacklistIndicators", 0);
-    auto bUltraWideSupport = iniReader.ReadInteger("MAIN", "UltraWideSupport", 1) != 0;
+    auto bDisableDOF = iniReader.ReadInteger("GRAPHICS", "DisableDOF", 1) != 0;
+    auto bDisableBlackAndWhiteFilter = iniReader.ReadInteger("GRAPHICS", "DisableBlackAndWhiteFilter", 0) != 0;
+    auto bDisableCharacterLighting = iniReader.ReadInteger("GRAPHICS", "DisableCharacterLighting", 0) != 0;
+    auto bEnhancedSonarVision = iniReader.ReadInteger("GRAPHICS", "EnhancedSonarVision", 0) != 0;
+    gBlacklistIndicators = iniReader.ReadInteger("GRAPHICS", "BlacklistIndicators", 0);
+    auto bUltraWideSupport = iniReader.ReadInteger("DISPLAY", "UltraWideSupport", 1) != 0;
 
     if (bDisableDOF)
     {
