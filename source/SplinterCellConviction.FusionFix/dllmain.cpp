@@ -11,7 +11,6 @@ import Graphics;
 import FileManager;
 import BlacklistControls;
 import LAN;
-import CpuOptimizations;
 
 SafetyHookInline shSetProcessAffinityMask{};
 BOOL WINAPI SetProcessAffinityMaskHook(HANDLE hProcess, DWORD_PTR dwProcessAffinityMask)
@@ -158,7 +157,6 @@ void Init()
     }
 
     InitLAN();
-    InitCpuOptimizations();
     InitWidescreenFix();
 }
 
