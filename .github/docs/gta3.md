@@ -29,7 +29,7 @@
 - **In-Game Options** - a Cutscene Borders mode (off, letterbox, pillarbox, or both) and a Frame Limiter selector (off, 30 up to 240 FPS) are available right in the Display menu (Warning: Widescreen Fix does not fix any high fps related issues)
 <br clear="both">
 
-<img src="https://thirteenag.github.io/screens/gta3/island.webp" width="300" align="right" style="margin: 0 0 0 24px;" alt="Seamless world">
+<img src="https://github.com/user-attachments/assets/b92987de-9b82-4c25-ae9e-1f879154910b" data-src="https://thirteenag.github.io/screens/gta3/island.webp" width="300" align="right" style="margin: 0 0 0 24px;" alt="Seamless world">
 
 - **No Island Loading** - loads all island data at once, removing the loading screen between islands
 - **Zone Cull Fix** - disables zone culling so objects stop disappearing
@@ -47,7 +47,7 @@
 - **Transparent Menu** - makes the menu background transparent with a blur
 <br clear="both">
 
-<img src="https://fusionfix.io/screens/gta3/speed.webp" width="360" align="left" style="margin: 0 24px 0px 0;" alt="Gameplay options">
+<img src="https://github.com/user-attachments/assets/1f62e1bc-a508-49a3-a7cb-77a5d9b3e1c5" data-src="https://fusionfix.io/screens/gta3/speed.webp" width="360" align="left" style="margin: 0 24px 0px 0;" alt="Gameplay options">
 
 - **Speed Sensitive FOV** - FOV increases with car speed
 - **VCS Camera Shake** - enables GTA: Vice City Stories style camera shake in vehicles at high speed
@@ -68,6 +68,9 @@
 | The game would also be stretched in ultrawide | Widescreen fix makes it work with any aspect ratio |
 
 | <img src="https://thirteenag.github.io/screens/gta3/vanilla_fixed_ultra169.jpg" alt="Hud constraint"><br>An option to constrain the HUD is also available |
+|:---:|
+
+| <img src="https://github.com/user-attachments/assets/305b8d1f-97cb-4f93-92f2-75fa1a9b0b85" alt="Hud constraint"><br>Animated cutscene borders |
 |:---:|
 
 </div>
