@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://thirteenag.github.io/screens/gta3/main2.jpg" width="760" alt="Grand Theft Auto III - Widescreen Fix">
+<img src="https://thirteenag.github.io/screens/gta3/main2.jpg" width="760" alt="Grand Theft Auto III Widescreen Fix">
 
 **Grand Theft Auto III Widescreen Fix** adds proper widescreen support, corrects HUD, FOV and cutscene letterboxing, and includes a range of quality-of-life improvements.
 
@@ -12,47 +12,95 @@
 
 ## Fixes
 
-<img src="https://thirteenag.github.io/screens/gta3/hud.jpg" width="300" align="right" style="margin: 0 0 16px 24px;" alt="Widescreen HUD">
+<table>
+<tr>
+<td width="58%" valign="middle">
 
 - **Aspect Ratio** - corrected for all rendered elements
 - **HUD** - repositioned and scaled to match the active aspect ratio; optional constraint (16:9, 21:9, or custom); configurable scale for HUD, radar and subtitles
 - **Field of View** - corrected for widescreen
 - **Cutscenes** - FOV and letterboxing adjust properly with the aspect ratio
-<br clear="both">
+
+</td>
+<td width="42%" valign="middle" align="center">
+
+<img src="https://thirteenag.github.io/screens/gta3/hud.jpg" width="360" alt="Widescreen HUD">
+
+</td>
+</tr>
+</table>
 
 ---
 
 ## New Options
 
-<img src="https://thirteenag.github.io/screens/gta3/menu.jpg" width="360" align="left" style="margin: 0 24px 0px 0;" alt="In-game options">
+<table>
+<tr>
+<td width="58%" valign="middle">
 
 - **In-Game Options** - a Cutscene Borders mode (off, letterbox, pillarbox, or both) and a Frame Limiter selector (off, 30 up to 240 FPS) are available right in the Display menu (Warning: Widescreen Fix does not fix any high fps related issues)
-<br clear="both">
 
-<img src="https://github.com/user-attachments/assets/b92987de-9b82-4c25-ae9e-1f879154910b" data-src="https://thirteenag.github.io/screens/gta3/island.webp" width="300" align="right" style="margin: 0 0 0 24px;" alt="Seamless world">
+</td>
+<td width="42%" valign="middle" align="center">
+
+<img src="https://thirteenag.github.io/screens/gta3/menu.jpg" width="360" alt="In-game options">
+
+</td>
+</tr>
+<tr>
+<td width="58%" valign="middle">
 
 - **No Island Loading** - loads all island data at once, removing the loading screen between islands
 - **Zone Cull Fix** - disables zone culling so objects stop disappearing
-<br clear="both">
 
-<img src="https://thirteenag.github.io/screens/gta3/msaa.jpg" width="360" align="left" style="margin: 0 24px 0px 0;" alt="Antialiasing">
+</td>
+<td width="42%" valign="middle" align="center">
+
+<img src="https://github.com/user-attachments/assets/b92987de-9b82-4c25-ae9e-1f879154910b" width="360" alt="Seamless world">
+
+</td>
+</tr>
+<tr>
+<td width="58%" valign="middle">
 
 - **Forced MSAA** - enables antialiasing at any supported level
 - **AA Artifact Fix** - hides the 1px lines at the top and left of the screen caused by antialiasing
-<br clear="both">
 
-<img src="https://thirteenag.github.io/screens/gta3/gamma.jpg" width="360" align="right" style="margin: 0 0 0 24px;" alt="Xbox 360 gamma">
+</td>
+<td width="42%" valign="middle" align="center">
+
+<img src="https://thirteenag.github.io/screens/gta3/msaa.jpg" width="360" alt="Antialiasing">
+
+</td>
+</tr>
+<tr>
+<td width="58%" valign="middle">
 
 - **Xbox 360 Gamma** - a custom gamma curve that produces a higher-contrast image with deeper colors, similar to GTA IV on the Xbox 360
 - **Transparent Menu** - makes the menu background transparent with a blur
-<br clear="both">
 
-<img src="https://github.com/user-attachments/assets/1f62e1bc-a508-49a3-a7cb-77a5d9b3e1c5" data-src="https://fusionfix.io/screens/gta3/speed.webp" width="360" align="left" style="margin: 0 24px 0px 0;" alt="Gameplay options">
+</td>
+<td width="42%" valign="middle" align="center">
+
+<img src="https://thirteenag.github.io/screens/gta3/gamma.jpg" width="360" alt="Xbox 360 gamma">
+
+</td>
+</tr>
+<tr>
+<td width="58%" valign="middle">
 
 - **Speed Sensitive FOV** - FOV increases with car speed
 - **VCS Camera Shake** - enables GTA: Vice City Stories style camera shake in vehicles at high speed
 - **Text Outline** - replaces text shadows with an outline
-<br clear="both">
+
+</td>
+<td width="42%" valign="middle" align="center">
+
+<img src="https://github.com/user-attachments/assets/1f62e1bc-a508-49a3-a7cb-77a5d9b3e1c5" width="360" alt="Gameplay options">
+
+</td>
+</tr>
+</table>
 
 ---
 
