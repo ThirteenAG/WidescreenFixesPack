@@ -119,7 +119,7 @@
 | <img src="https://thirteenag.github.io/screens/gtavc/vanilla_fixed_ultra169.jpg" alt="Hud constraint"><br>An option to constrain the HUD is also available |
 |:---:|
 
-| <img src="https://github.com/user-attachments/assets/7fbdd49d-a3e0-410e-924d-229601c28a6a" alt="Hud constraint"><br>Animated cutscene borders |
+| <img src="https://github.com/user-attachments/assets/7fbdd49d-a3e0-410e-924d-229601c28a6a" alt="Animated cutscene borders"><br>Animated cutscene borders |
 |:---:|
 
 </div>
