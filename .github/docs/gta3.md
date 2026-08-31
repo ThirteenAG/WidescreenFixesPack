@@ -118,7 +118,7 @@
 | <img src="https://thirteenag.github.io/screens/gta3/vanilla_fixed_ultra169.jpg" alt="Hud constraint"><br>An option to constrain the HUD is also available |
 |:---:|
 
-| <img src="https://github.com/user-attachments/assets/305b8d1f-97cb-4f93-92f2-75fa1a9b0b85" alt="Hud constraint"><br>Animated cutscene borders |
+| <img src="https://github.com/user-attachments/assets/305b8d1f-97cb-4f93-92f2-75fa1a9b0b85" alt="Animated cutscene borders"><br>Animated cutscene borders |
 |:---:|
 
 </div>
