@@ -62,5 +62,5 @@ before_package:
     cd data
 
     release.bat
-artifacts:
-- path: 'data\Archives\*.zip'
+after_build:
+- ps: Get-ChildItem .\Archives\*.zip  | % { Push-AppveyorArtifact $_.FullName -FileName $_.Name }
