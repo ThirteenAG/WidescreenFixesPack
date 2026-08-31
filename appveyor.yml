@@ -63,4 +63,4 @@ before_package:
 
     release.bat
 after_build:
-- ps: Get-ChildItem .\Archives\*.zip  | % { Push-AppveyorArtifact $_.FullName -FileName $_.Name }
+- ps: Get-ChildItem .\data\Archives\*.zip  | % { Push-AppveyorArtifact $_.FullName -FileName $_.Name }
