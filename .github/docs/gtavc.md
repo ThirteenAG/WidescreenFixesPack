@@ -137,7 +137,7 @@
   <summary> Legacy mode - click to expand </summary>
 <br>
 
-To use the previous version of the fix, place `GTA3.WidescreenFixLegacy.ini` next to the `.asi` file with the following content:
+To use the previous version of the fix, place `GTAVC.WidescreenFixLegacy.ini` next to the `.asi` file with the following content:
 
 ```
 [MAIN]
