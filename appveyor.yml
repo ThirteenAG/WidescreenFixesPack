@@ -1,6 +1,6 @@
 version: '{build}'
 skip_tags: true
-image: Visual Studio 2022
+image: Visual Studio 2026
 configuration: Release
 environment:
   APPVEYOR_SAVE_CACHE_ON_ERROR: true
@@ -8,7 +8,7 @@ install:
 - cmd: >-
     git submodule update --init --recursive
 
-    premake5 vs2022
+    premake5 vs2026
 cache: build
 before_build:
 - cmd: before_build.bat
