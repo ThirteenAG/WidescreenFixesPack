@@ -42,16 +42,47 @@ jobs:
       script: |
         before_build.bat
 
-  - task: CmdLine@2
-    displayName: Build
+  - task: MSBuild@1
+    displayName: Build Win32
     inputs:
-      script: |
-        msbuild -m build/Win32.WidescreenFixesPack.slnx /p:Configuration=Release
-        msbuild -m build/Win64.WidescreenFixesPack.slnx /p:Configuration=Release
-        msbuild -m build/PCSX2F.WidescreenFixesPack.slnx /p:Configuration=Release
-        msbuild -m build/PPSSPP.WidescreenFixesPack.slnx /p:Configuration=Release
-        msbuild -m build/Dolphin.WidescreenFixesPack.slnx /p:Configuration=Release
-        msbuild -m build/CXBXR.WidescreenFixesPack.slnx /p:Configuration=Release
+      solution: 'build/Win32.WidescreenFixesPack.slnx'
+      configuration: Release
+      maximumCpuCount: true
+
+  - task: MSBuild@1
+    displayName: Build Win64
+    inputs:
+      solution: 'build/Win64.WidescreenFixesPack.slnx'
+      configuration: Release
+      maximumCpuCount: true
+
+  - task: MSBuild@1
+    displayName: Build PCSX2F
+    inputs:
+      solution: 'build/PCSX2F.WidescreenFixesPack.slnx'
+      configuration: Release
+      maximumCpuCount: true
+
+  - task: MSBuild@1
+    displayName: Build PPSSPP
+    inputs:
+      solution: 'build/PPSSPP.WidescreenFixesPack.slnx'
+      configuration: Release
+      maximumCpuCount: true
+
+  - task: MSBuild@1
+    displayName: Build Dolphin
+    inputs:
+      solution: 'build/Dolphin.WidescreenFixesPack.slnx'
+      configuration: Release
+      maximumCpuCount: true
+
+  - task: MSBuild@1
+    displayName: Build CXBXR
+    inputs:
+      solution: 'build/CXBXR.WidescreenFixesPack.slnx'
+      configuration: Release
+      maximumCpuCount: true
 
   - task: CmdLine@2
     displayName: Before package
