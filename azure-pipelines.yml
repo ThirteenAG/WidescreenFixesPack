@@ -9,7 +9,7 @@ trigger:
     - '**/*.txt'
 
 pr:
-  batch: true
+  autoCancel: true
   branches:
     include:
     - '*'
