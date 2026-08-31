@@ -1,18 +1,22 @@
 trigger:
+  batch: true
   branches:
     include:
     - '*'
   paths:
     exclude:
-    - .appveyor.yml
+    - '**/*.md'
+    - '**/*.txt'
 
 pr:
+  batch: true
   branches:
     include:
     - '*'
   paths:
     exclude:
-    - .appveyor.yml
+    - '**/*.md'
+    - '**/*.txt'
 
 jobs:
 - job: Build
@@ -22,24 +26,48 @@ jobs:
   pool:
     vmImage: windows-2025-vs2026
 
-  strategy:
-    matrix:
-      Release:
-        configuration: Release
-      Debug:
-        configuration: Debug
-
   steps:
+  - checkout: self
+    submodules: recursive
+
+  - task: CmdLine@2
+    displayName: Configure build
+    inputs:
+      script: |
+        premake5.bat
+
   - task: CmdLine@2
     displayName: Before build
     inputs:
       script: |
-        git submodule update --init --recursive
-        premake5.exe vs2026
-        ./before_build.bat
+        before_build.bat
 
-  - task: MSBuild@1
+  - task: CmdLine@2
     displayName: Build
     inputs:
-      solution: 'build/*.slnx'
-      maximumCpuCount: true
+      script: |
+        msbuild -m build/Win32.WidescreenFixesPack.slnx /p:Configuration=Release
+        msbuild -m build/Win64.WidescreenFixesPack.slnx /p:Configuration=Release
+        msbuild -m build/PCSX2F.WidescreenFixesPack.slnx /p:Configuration=Release
+        msbuild -m build/PPSSPP.WidescreenFixesPack.slnx /p:Configuration=Release
+        msbuild -m build/Dolphin.WidescreenFixesPack.slnx /p:Configuration=Release
+        msbuild -m build/CXBXR.WidescreenFixesPack.slnx /p:Configuration=Release
+
+  - task: CmdLine@2
+    displayName: Before package
+    inputs:
+      script: |
+        before_packaging.bat
+
+  - task: CmdLine@2
+    displayName: Pack binaries
+    inputs:
+      script: |
+        cd data
+        release.bat
+
+  - task: PublishPipelineArtifact@1
+    displayName: Publish archives
+    inputs:
+      targetPath: 'data/Archives'
+      artifact: 'Archives'
