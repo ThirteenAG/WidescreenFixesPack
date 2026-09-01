@@ -86,7 +86,7 @@ namespace CCollision
 
     bool bAlreadyLoaded = false;
     SafetyHookInline shSortOutCollisionAfterLoad = {};
-    void SortOutCollisionAfterLoad(void)
+    void __cdecl SortOutCollisionAfterLoad()
     {
         if (ms_collisionInMemory == CGame::currLevel)
             return;
@@ -122,7 +122,7 @@ namespace CStreaming
     void (__cdecl* RequestModel)(int modelId, int flags) = nullptr;
 
     SafetyHookInline shRemoveIslandsNotUsed = {};
-    void RemoveIslandsNotUsed(eLevelName level)
+    void __cdecl RemoveIslandsNotUsed(eLevelName level)
     {
         DeleteIsland(*pIslandLODindustEntity);
         DeleteIsland(*pIslandLODcomIndEntity);
