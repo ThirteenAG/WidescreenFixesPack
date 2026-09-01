@@ -10,6 +10,7 @@ import Skeleton;
 import Camera;
 import Entity;
 import CutsceneMgr;
+import Sprite2d;
 
 export GameRef<CScene> Scene;
 
@@ -37,6 +38,20 @@ RwV3d* RwV3dTransformPointsHook(RwV3d* pointsOut, const RwV3d* pointsIn, int32_t
     }
 
     return pointsOut;
+}
+
+injector::hook_back<void(__cdecl*)(const CRect*, const CRGBA*)> hbDoFadeDrawRect;
+void __cdecl DoFadeDrawRect(const CRect* r, const CRGBA* col)
+{
+    CRect rect = CRect(0.0f, SCREEN_HEIGHT, SCREEN_WIDTH, 0.0f);
+
+    if (TheCamera->m_WideScreenOn)
+    {
+        if (g_noBorderAnim)
+            rect = GetCurrentCutsceneContentRect();
+    }
+
+    return hbDoFadeDrawRect.fun(&rect, col);
 }
 
 class Main
@@ -84,8 +99,8 @@ public:
             });
 
             //DoFade
-            pattern = hook::pattern("0F 84 ? ? ? ? 8B 35 ? ? ? ? 89 F0 3D");
-            injector::WriteMemory<uint16_t>(pattern.get_first(), 0xE990, true);
+            pattern = hook::pattern("E8 ? ? ? ? 80 3D ? ? ? ? ? 59 59 74 ? 80 3D");
+            hbDoFadeDrawRect.fun = injector::MakeCALL(pattern.get_first(), DoFadeDrawRect, true).get();
 
             //CWeapon::DoBulletImpact (smoke misplacement)
             pattern = hook::pattern("50 ? ? ? ? ? ? ? 6A ? C7 84 24 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? E8 ? ? ? ? 83 C4");
