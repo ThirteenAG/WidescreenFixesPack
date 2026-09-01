@@ -10,6 +10,7 @@ import Skeleton;
 import Camera;
 import Entity;
 import CutsceneMgr;
+import Sprite2d;
 
 export GameRef<CScene> Scene;
 
@@ -27,6 +28,18 @@ SafetyHookInline shAvoidTheGeometry = {};
 void __fastcall AvoidTheGeometry(CCamera* camera, void* edx, const CVector* Source, const CVector* TargetPos, CVector* NewSource, float FOV)
 {
     return shAvoidTheGeometry.unsafe_fastcall(camera, edx, Source, TargetPos, NewSource, CDraw::ConvertFOVInverse(FOV));
+}
+
+injector::hook_back<void(__fastcall*)(CCamera*, void*, CRect*)> hbGetScreenRect;
+void __fastcall GetScreenRect(CCamera* camera, void*, CRect* rect)
+{
+    *rect = CRect(0.0f, SCREEN_HEIGHT, SCREEN_WIDTH, 0.0f);
+
+    if (TheCamera->m_WideScreenOn)
+    {
+        if (g_noBorderAnim)
+            *rect = GetCurrentCutsceneContentRect();
+    }
 }
 
 class Main
@@ -68,8 +81,8 @@ public:
                 injector::WriteMemory<uint8_t>(pattern.get_first(), 0x55, true); //push ebp
 
             //DoFade
-            pattern = hook::pattern("74 ? 8B 1D ? ? ? ? 89 D8");
-            injector::WriteMemory<uint8_t>(pattern.get_first(), 0xEB, true);
+            pattern = hook::pattern("E8 ? ? ? ? 8D 44 24 ? 8D 54 24 ? 52");
+            hbGetScreenRect.fun = injector::MakeCALL(pattern.get_first(), GetScreenRect, true).get();
 
             //CCam::Process_WheelCam
             pattern = hook::pattern("C7 85 ? ? ? ? ? ? ? ? 8B 95 ? ? ? ? 8A 42");

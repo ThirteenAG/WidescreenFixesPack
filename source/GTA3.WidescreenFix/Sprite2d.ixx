@@ -182,6 +182,25 @@ void RenderBorderBars()
     g_drawingBars = false;
 }
 
+export CRect GetCurrentCutsceneContentRect()
+{
+    float m = s_bordersMult;
+    float left = s_hasPillar ? s_pillarWidth * m : 0.0f;
+    float right = s_hasPillar ? SCREEN_WIDTH - left : SCREEN_WIDTH;
+
+    float y1 = 0.0f;
+    float y2 = SCREEN_HEIGHT;
+    if (s_hasLetterbox)
+    {
+        float h = s_barHeight * m;
+        float inset = std::max(h - SCREEN_SCALE_Y(8.0f), 0.0f);
+        y1 = inset;
+        y2 = std::max(SCREEN_HEIGHT - h - SCREEN_SCALE_Y(8.0f), y1);
+    }
+
+    return CRect(left, y1, right, y2);
+}
+
 SafetyHookInline shDraw1 = {};
 void __fastcall Draw1(CSprite2d* sprite2d, void* edx, CRect* rect, CRGBA* col)
 {
