@@ -719,6 +719,16 @@ export void InitD3DDrv()
         shsub_100A7850 = safetyhook::create_inline(pattern.get_first(), sub_100A7850);
     }
 
+    // Flash afterimage is captured into a hardcoded 256x256 buffer and stretched over the screen. It shares the main
+    // depth stencil, so it has to match the backbuffer exactly or SetRenderTarget fails and the effect never draws.
+    pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "6A 17 8B 00 6A 01 6A 01 68 00 01 00 00 8B 08 68 00 01 00 00", "6A 17 6A 01 6A 01 68 00 01 00 00 68 00 01 00 00");
+    if (!pattern.empty())
+    {
+        bool bDigitalLayout = *pattern.get_first<uint8_t>(2) == 0x8B;
+        injector::WriteMemory(pattern.get_first(bDigitalLayout ? 9 : 7), Screen.Height, true);
+        injector::WriteMemory(pattern.get_first(bDigitalLayout ? 16 : 12), Screen.Width, true);
+    }
+
     pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "8B 10 50 FF 92 ? ? ? ? 8B 9E 28 58 00 00", "8B 08 FF 91 ? ? ? ? FF 83 2C 58 00 00");
     static auto EndSceneHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {

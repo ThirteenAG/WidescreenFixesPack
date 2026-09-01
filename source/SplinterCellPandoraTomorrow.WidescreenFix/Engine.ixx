@@ -131,6 +131,11 @@ void __fastcall FCanvasUtilDrawTileHook(void* _this, uint32_t EDX, float X, floa
         }
     }
 
+    // Flash afterimage arrives already widened to the full canvas, offsetting it again leaves a bar on the left
+    if (n_X == 0 && n_Y == 0 && n_SizeY == 480 && n_SizeX == static_cast<uint32_t>(640.0f + Screen.fHudOffset + Screen.fHudOffset) &&
+        ((Color.R == 0xFE && Color.G == 0xFE && Color.B == 0xFE) || (Color.R == 0xFF && Color.G == 0xFF && Color.B == 0xFF)))
+        return FCanvasUtil::DrawTile(_this, EDX, X, Y, SizeX, SizeY, U, V, SizeU, SizeV, unk1, Texture, Color, unk3, unk4);
+
     if (Screen.nHudWidescreenMode == 1)
     {
         wchar_t buffer[256];
