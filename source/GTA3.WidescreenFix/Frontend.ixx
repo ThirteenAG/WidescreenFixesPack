@@ -358,8 +358,6 @@ public:
                 radarHeightRef = fRadarHeight;
             }
 
-            RadarWidthRefs.back() += 1.5f; // expand radardisc a bit
-
             if (fSubtitlesScale)
             {
                 fSubtitlesScale = std::clamp(fSubtitlesScale, 0.25f, 4.0f);
