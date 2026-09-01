@@ -88,7 +88,7 @@ public:
                 g_wantsToMoveHudLeft = true;
             });
 
-            pattern = hook::pattern("31 DB 31 ED BE ? ? ? ? 66 83 BD");
+            pattern = hook::pattern("0F 84 ? ? ? ? 80 BD ? ? ? ? ? 0F 85 ? ? ? ? ? ? ? ? ? ? 50");
             static auto HudDrawAfterFade2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
                 g_wantsToMoveHudRight = false;
