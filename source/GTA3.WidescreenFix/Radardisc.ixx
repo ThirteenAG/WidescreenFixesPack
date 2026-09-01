@@ -70,6 +70,12 @@ public:
     {
         WFP::onInitEvent() += []()
         {
+            CIniReader iniReader("");
+            auto bHQRadar = iniReader.ReadInteger("MISC", "HQRadar", 1) != 0;
+
+            if (!bHQRadar)
+                return;
+
             // If radardisc loaded from TXD is the original low-quality 64x64 texture,
             // replace its raster with a programmatically drawn high-quality ring.
             auto pattern = hook::pattern("BD ? ? ? ? C6 05 ? ? ? ? ? C6 05 ? ? ? ? ? 8B 04 DD");
