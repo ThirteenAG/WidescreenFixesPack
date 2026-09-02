@@ -55,6 +55,19 @@ int __stdcall DisplaySlider(float x, float y, float unk0, float unk1, float widt
     return shDisplaySlider.unsafe_stdcall<int>(x, y, unk0, unk1, width, progress, unk);
 }
 
+void InitCleoFix()
+{
+    auto pattern = hook::module_pattern(GetModuleHandle(L"CLEO+.cleo"), "F3 0F 59 05 ? ? ? ? F3 0F 59 C1 F3 0F 11 44 24");
+    if (!pattern.empty())
+    {
+        injector::MakeNOP(pattern.get_first(), 8, true);
+        static auto CleoFixHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            regs.xmm0.f32[0] *= ResXInvRef;
+        });
+    }
+}
+
 class Frontend
 {
 public:
@@ -554,6 +567,8 @@ public:
                     fWeaponIconScaleX = 0.17343046f / (CDraw::GetAspectRatio() / (4.0f / 3.0f));
                     fWeaponIconScaleX *= fHudWidthScale;
                 };
+
+                CallbackHandler::RegisterCallback(L"CLEO+.cleo", InitCleoFix);
             }
         };
     }
