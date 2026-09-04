@@ -21,7 +21,7 @@ void Init()
         WFP::onInitEvent().executeAll();
     });
 
-    pattern = hook::pattern("6A ? 53 53 53 8D 4C 24");
+    pattern = hook::pattern("8D 4C 24 ? 51 FF 15 ? ? ? ? 85 C0");
     static auto MainLoopHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
         static std::once_flag of;
