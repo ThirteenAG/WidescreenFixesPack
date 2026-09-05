@@ -120,6 +120,9 @@
 3. Optionally edit `GTASA.WidescreenFix.ini` to configure the available options.
 4. Launch the game.
 
+> [!NOTE]
+> Installing [SilentPatch](https://silentsblog.com/mods/gta-sa/) is strongly recommended - it's the perfect companion to this fix and essentially required, fixing numerous bugs, crashes and progression issues.
+
 > [!WARNING]
 > Some mods may not be compatible with this new release. If you run into compatibility issues, enable **Legacy mode** below and keep using that until the authors of those mods update their projects.
 
@@ -208,7 +211,7 @@ This project is only possible because of Fusion Fix sponsors. If you would like 
 
 <div align="center">
 
-**[SA.Project2DFX](https://github.com/ThirteenAG/III.VC.SA.IV.Project2DFX/releases/tag/gtasa)** - the perfect companion to this Widescreen Fix. It adds the Project2DFX LOD corona effect to Grand Theft Auto: San Andreas, lighting up the entire state with thousands of distant lamppost and streetlight glows and greatly extending the draw distance.
+**[SA.Project2DFX](https://github.com/ThirteenAG/III.VC.SA.IV.Project2DFX/releases/tag/gtasa)** - a visual upgrade that pairs perfectly with this Widescreen Fix. It adds the Project2DFX LOD corona effect to Grand Theft Auto: San Andreas, lighting up the entire state with thousands of distant lamppost and streetlight glows and greatly extending the draw distance.
 
 [Download](https://github.com/ThirteenAG/III.VC.SA.IV.Project2DFX/releases/tag/gtasa) · [Website](https://fusionfix.io/p2dfx)
 
