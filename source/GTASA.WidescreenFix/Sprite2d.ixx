@@ -201,6 +201,29 @@ void RenderBorderBars()
     g_drawingBars = false;
 }
 
+static inline int8_t GetTopCutsceneBorderHeightForHelpText()
+{
+    auto pref = FrontendMenuManager->m_bWidescreenOn;
+    if (!pref)
+        return 0;
+
+    if (pref == CutsceneBordersMode::Pillarbox)
+        return 0;
+
+    if (!s_hasLetterbox || s_bordersMult <= 0.01f)
+        return 0;
+
+    float topBorder = s_barHeight * s_bordersMult - SCREEN_SCALE_Y(8.0f);
+    if (topBorder <= 0.0f)
+        return 0;
+
+    int offset = (int)(topBorder + 0.5f);
+    if (offset > 127)
+        offset = 127;
+
+    return (int8_t)offset;
+}
+
 SafetyHookInline shDraw1 = {};
 void __fastcall Draw1(CSprite2d* sprite2d, void* edx, CRect* rect, CRGBA* col)
 {
@@ -598,6 +621,14 @@ public:
 
                 pattern = hook::pattern("E8 ? ? ? ? 56 6A ? E8 ? ? ? ? 83 C4 ? 85 C0");
                 shDrawBordersForWideScreen = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), DrawBordersForWideScreen);
+
+                //CHud::DrawHelpText (help text is lower with widescreen borders, not needed)
+                pattern = hook::pattern("8A 0D ? ? ? ? 84 C9 75 ? B0");
+                injector::MakeNOP(pattern.get_first(), 12, true);
+                static auto DrawHelpTextHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+                {
+                    *(int8_t*)&regs.eax = GetTopCutsceneBorderHeightForHelpText();
+                });
             }
         };
     }
