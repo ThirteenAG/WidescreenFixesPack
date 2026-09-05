@@ -850,7 +850,7 @@ export void InitLegacy()
                 auto pfGetText = (wchar_t* (__thiscall*)(int, const char*))GetText;
                 auto TheText = *pattern.count(1).get(0).get<uint32_t*>(-9);
                 wchar_t* ptr = pfGetText((int)TheText, "FED_WIS");
-                wcscpy(ptr, L"BORDERS");
+                wcscpy_s(ptr, 8, L"BORDERS");
             }
 
             LegacyUpdateVars();
