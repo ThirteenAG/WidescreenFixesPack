@@ -514,14 +514,15 @@ public:
                     injector::WriteMemory(0x58D894 + 2, 0x866C4C, true);
                 }
 
-                int m_dwCrosshairHeight[] = { 0x58E7E4,
+                int m_dwCrosshairHeight[] = { 
+                              0x58E7E4,
                               0x58E80E,
                               0x58E319,
                               0x58E527,
                               0x58E2C8,
                               0x53E3E7,
                               0x53E409,
-                              NULL,
+                              0x58E773,
                               NULL,
                               NULL,
                 };
