@@ -67,7 +67,8 @@
 
 - **Transparent Menu** - makes the menu background transparent with a blur
 - **Xbox 360 Gamma** - a custom gamma curve that produces a higher-contrast image with deeper colors, similar to GTA IV on the Xbox 360
-- **AA Artifact Fix** - hides the 1px lines at the top and left of the screen caused by antialiasing
+- **AA Artifact Fix** - hides the 1px lines at the top and left of the screen caused by MSAA
+- **SMAA** - enhanced subpixel morphological antialiasing as a post-processing effect
 
 </td>
 <td width="42%" valign="middle" align="center">

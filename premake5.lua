@@ -313,7 +313,10 @@ project "GTA3.WidescreenFix"
    "for /R \"../source/%{prj.name}/\" %%f in (*.fx) do (\"../includes/dxsdk/lib/x86/fxc.exe\" /T fx_2_0 /Fo \"../source/%{prj.name}/%%~nf.fxo\" \"%%f\")"
    }
    files { "source/%{prj.name}/*.fx", "source/%{prj.name}/*.rc" }
+   includedirs { "Resources" }
    defines { "IDR_POSTFX=201" }
+   defines { "IDR_AREATEX=202" }
+   defines { "IDR_SEARCHTEX=203" }
    files { "includes/GTA/*.h", "includes/GTA/*.cpp" }
    setpaths("Z:/WFP/Games/Grand Theft Auto/GTAIII/", "gta3.exe")
 project "GTAVC.WidescreenFix"
@@ -321,7 +324,10 @@ project "GTAVC.WidescreenFix"
    "for /R \"../source/%{prj.name}/\" %%f in (*.fx) do (\"../includes/dxsdk/lib/x86/fxc.exe\" /T fx_2_0 /Fo \"../source/%{prj.name}/%%~nf.fxo\" \"%%f\")"
    }
    files { "source/%{prj.name}/*.fx", "source/%{prj.name}/*.rc" }
+   includedirs { "Resources" }
    defines { "IDR_POSTFX=201" }
+   defines { "IDR_AREATEX=202" }
+   defines { "IDR_SEARCHTEX=203" }
    files { "includes/GTA/*.h", "includes/GTA/*.cpp" }
    setpaths("Z:/WFP/Games/Grand Theft Auto/Grand Theft Auto Vice City/", "gta-vc.exe")
 project "GTASA.WidescreenFix"
@@ -329,7 +335,10 @@ project "GTASA.WidescreenFix"
    "for /R \"../source/%{prj.name}/\" %%f in (*.fx) do (\"../includes/dxsdk/lib/x86/fxc.exe\" /T fx_2_0 /Fo \"../source/%{prj.name}/%%~nf.fxo\" \"%%f\")"
    }
    files { "source/%{prj.name}/*.fx", "source/%{prj.name}/*.rc" }
+   includedirs { "Resources" }
    defines { "IDR_POSTFX=201" }
+   defines { "IDR_AREATEX=202" }
+   defines { "IDR_SEARCHTEX=203" }
    files { "includes/GTA/*.h", "includes/GTA/*.cpp" }
    setpaths("Z:/WFP/Games/Grand Theft Auto/GTA San Andreas/", "gta_sa.exe")
 group ""

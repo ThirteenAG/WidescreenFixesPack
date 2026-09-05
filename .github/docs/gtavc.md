@@ -65,7 +65,8 @@
 <td width="58%" valign="middle">
 
 - **Forced MSAA** - enables antialiasing at any supported level
-- **AA Artifact Fix** - hides the 1px lines at the top and left of the screen caused by antialiasing
+- **AA Artifact Fix** - hides the 1px lines at the top and left of the screen caused by MSAA
+- **SMAA** - enhanced subpixel morphological antialiasing as a post-processing effect
 
 </td>
 <td width="42%" valign="middle" align="center">
