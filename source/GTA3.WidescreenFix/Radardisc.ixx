@@ -84,10 +84,10 @@ public:
             pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 85 C0 A3 ? ? ? ? 75 ? 68");
             RwRasterCreate = (decltype(RwRasterCreate))injector::GetBranchDestination(pattern.get_first()).as_int();
 
-            pattern = hook::pattern("E8 ? ? ? ? 8B 46 ? 56");
+            pattern = find_pattern("E8 ? ? ? ? 8B 46 ? 56", "E8 ? ? ? ? 85 C0 74 ? 8B 84 24 ? ? ? ? ? ? ? 8B 84 84");
             RwRasterLock = (decltype(RwRasterLock))injector::GetBranchDestination(pattern.get_first()).as_int();
 
-            pattern = hook::pattern("E8 ? ? ? ? 8D 4C 24 ? 8D 54 24 ? 51 8D 44 24");
+            pattern = find_pattern("E8 ? ? ? ? 8D 4C 24 ? 8D 54 24 ? 51 8D 44 24", "E8 ? ? ? ? 8B 84 24 ? ? ? ? 8B 84 84");
             RwRasterUnlock = (decltype(RwRasterUnlock))injector::GetBranchDestination(pattern.get_first()).as_int();
 
             pattern = hook::pattern("E8 ? ? ? ? 89 C3 59 55");
@@ -141,7 +141,7 @@ public:
                         }
 
                         // Swap in the new raster, destroying the old low-res one
-                        
+
                         if (pDiscTex)
                         {
                             RwTextureDestroy(pDiscTex);
