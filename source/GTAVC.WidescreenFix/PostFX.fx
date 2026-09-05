@@ -184,3 +184,210 @@ technique BlurVerticalDarken
         COMMON_PASS_STATE
     }
 }
+
+// -------------------------------------------------------------
+// SMAA
+// Enhanced Subpixel Morphological Antialiasing, by iryoku:
+// https://github.com/iryoku/smaa
+
+/**
+ * Copyright (C) 2013 Jorge Jimenez (jorge@iryoku.com)
+ * Copyright (C) 2013 Jose I. Echevarria (joseignacioechevarria@gmail.com)
+ * Copyright (C) 2013 Belen Masia (bmasia@unizar.es)
+ * Copyright (C) 2013 Fernando Navarro (fernandn@microsoft.com)
+ * Copyright (C) 2013 Diego Gutierrez (diegog@unizar.es)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is furnished to
+ * do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software. As clarification, there
+ * is no requirement that the copyright notice and permission be included in
+ * binary distributions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+texture2D colorTex2D;
+texture2D edgesTex2D;
+texture2D blendTex2D;
+texture2D areaTex2D;
+texture2D searchTex2D;
+
+sampler2D colorTex
+{
+    Texture = <colorTex2D>;
+    AddressU = Clamp;
+    AddressV = Clamp;
+    MipFilter = Point;
+    MinFilter = Linear;
+    MagFilter = Linear;
+    SRGBTexture = true;
+};
+
+sampler2D colorGammaTex
+{
+    Texture = <colorTex2D>;
+    AddressU = Clamp;
+    AddressV = Clamp;
+    MipFilter = Linear;
+    MinFilter = Linear;
+    MagFilter = Linear;
+    SRGBTexture = false;
+};
+
+sampler2D edgesTex
+{
+    Texture = <edgesTex2D>;
+    AddressU = Clamp;
+    AddressV = Clamp;
+    MipFilter = Linear;
+    MinFilter = Linear;
+    MagFilter = Linear;
+    SRGBTexture = false;
+};
+
+sampler2D blendTex
+{
+    Texture = <blendTex2D>;
+    AddressU = Clamp;
+    AddressV = Clamp;
+    MipFilter = Linear;
+    MinFilter = Linear;
+    MagFilter = Linear;
+    SRGBTexture = false;
+};
+
+sampler2D areaTex
+{
+    Texture = <areaTex2D>;
+    AddressU = Clamp;
+    AddressV = Clamp;
+    AddressW = Clamp;
+    MipFilter = Linear;
+    MinFilter = Linear;
+    MagFilter = Linear;
+    SRGBTexture = false;
+};
+
+sampler2D searchTex
+{
+    Texture = <searchTex2D>;
+    AddressU = Clamp;
+    AddressV = Clamp;
+    AddressW = Clamp;
+    MipFilter = Point;
+    MinFilter = Point;
+    MagFilter = Point;
+    SRGBTexture = false;
+};
+
+float4 vec4SMAARTMetrics;
+#define SMAA_RT_METRICS vec4SMAARTMetrics
+
+#define SMAA_HLSL_3
+#define SMAA_THRESHOLD 0.05
+#define SMAA_MAX_SEARCH_STEPS 16
+#define SMAA_MAX_SEARCH_STEPS_DIAG 8
+#define SMAA_CORNER_ROUNDING 25
+
+#include "SMAA.hlsl"
+
+void SMAA_EdgeDetectionVS(inout float4 position : POSITION,
+                         inout float2 texcoord : TEXCOORD0,
+                         out float4 offset[3] : TEXCOORD1)
+{
+    SMAAEdgeDetectionVS(texcoord, offset);
+}
+
+void SMAA_BlendingWeightCalculationVS(inout float4 position : POSITION,
+                                     inout float2 texcoord : TEXCOORD0,
+                                     out float2 pixcoord : TEXCOORD1,
+                                     out float4 offset[3] : TEXCOORD2)
+{
+    SMAABlendingWeightCalculationVS(texcoord, pixcoord, offset);
+}
+
+void SMAA_NeighborhoodBlendingVS(inout float4 position : POSITION,
+                                inout float2 texcoord : TEXCOORD0,
+                                out float4 offset : TEXCOORD1)
+{
+    SMAANeighborhoodBlendingVS(texcoord, offset);
+}
+
+float4 SMAA_EdgeDetectionPS(float4 position : SV_POSITION,
+                               float2 texcoord : TEXCOORD0,
+                               float4 offset[3] : TEXCOORD1) : COLOR
+{
+    return float4(SMAALumaEdgeDetectionPS(texcoord, offset, colorGammaTex), 0.0, 0.0);
+}
+
+float4 SMAA_BlendingWeightCalculationPS(float4 position : SV_POSITION,
+                                       float2 texcoord : TEXCOORD0,
+                                       float2 pixcoord : TEXCOORD1,
+                                       float4 offset[3] : TEXCOORD2) : COLOR
+{
+    return SMAABlendingWeightCalculationPS(texcoord, pixcoord, offset, edgesTex, areaTex, searchTex, 0.0);
+}
+
+float4 SMAA_NeighborhoodBlendingPS(float4 position : SV_POSITION,
+                                  float2 texcoord : TEXCOORD0,
+                                  float4 offset : TEXCOORD1) : COLOR
+{
+    return SMAANeighborhoodBlendingPS(texcoord, offset, colorTex, blendTex);
+}
+
+technique SMAAEdgeDetection
+{
+    pass SMAAEdgeDetection
+    {
+        VertexShader = compile vs_3_0 SMAA_EdgeDetectionVS();
+        PixelShader = compile ps_3_0 SMAA_EdgeDetectionPS();
+        ZEnable = false;
+        SRGBWriteEnable = false;
+        AlphaBlendEnable = false;
+        AlphaTestEnable = false;
+        StencilEnable = false;
+        CullMode = None;
+    }
+}
+
+technique SMAABlendWeightCalculation
+{
+    pass SMAABlendWeightCalculation
+    {
+        VertexShader = compile vs_3_0 SMAA_BlendingWeightCalculationVS();
+        PixelShader = compile ps_3_0 SMAA_BlendingWeightCalculationPS();
+        ZEnable = false;
+        SRGBWriteEnable = false;
+        AlphaBlendEnable = false;
+        AlphaTestEnable = false;
+        StencilEnable = false;
+        CullMode = None;
+    }
+}
+
+technique SMAAOutputPass
+{
+    pass SMAAOutputPass
+    {
+        VertexShader = compile vs_3_0 SMAA_NeighborhoodBlendingVS();
+        PixelShader = compile ps_3_0 SMAA_NeighborhoodBlendingPS();
+        ZEnable = false;
+        SRGBWriteEnable = true;
+        AlphaBlendEnable = false;
+        AlphaTestEnable = false;
+        StencilEnable = false;
+        CullMode = None;
+    }
+}
