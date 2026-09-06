@@ -37,7 +37,7 @@ void Init()
     pattern = hook::pattern("A1 ? ? ? ? 33 FF 3B C7 74 ? A1");
     dwWindowedMode.SetAddress(*pattern.get_first<uint32_t*>(1));
 
-    pattern = hook::pattern("A1 ? ? ? ? 56 8B F0 75");
+    pattern = find_pattern("A1 ? ? ? ? 56 8B F0 75", "A1 ? ? ? ? 83 F8 ? 74 ? 40");
     g_RacingResolution.SetAddress(*pattern.get_first<int*>(1));
 
     pattern = hook::pattern("E8 ? ? ? ? A1 ? ? ? ? A3 ? ? ? ? E8");

@@ -237,10 +237,10 @@ public:
             pattern = hook::pattern("8B 0C 85 ? ? ? ? 85 C9 75 ? 48");
             injector::AdjustPointer(pattern.get_first(), dwSupportedResolutionsArray.data(), pSupportedResolutionsArray, pSupportedResolutionsArray);
 
-            pattern = hook::pattern("C6 05 ? ? ? ? ? ? ? FF 50");
+            pattern = find_pattern("C6 05 ? ? ? ? ? ? ? FF 50", "C6 05 ? ? ? ? ? 8B 14 85");
             DALOptions::byte_8709D1 = *pattern.get_first<uint8_t*>(2);
 
-            pattern = hook::pattern("8B 54 24 ? 81 FA ? ? ? ? A1 ? ? ? ? 56");
+            pattern = find_pattern("8B 54 24 ? 81 FA ? ? ? ? A1 ? ? ? ? 56", "8B 44 24 ? 3D ? ? ? ? 75 ? A1");
             DALOptions::shIncScreenRes = safetyhook::create_inline(pattern.get_first(), DALOptions::IncScreenRes);
 
             pattern = hook::pattern("89 35 ? ? ? ? A1 ? ? ? ? 89 35");
