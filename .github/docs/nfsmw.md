@@ -60,6 +60,7 @@
 - **Force GPU Vendor** - override the detected GPU vendor ID to affect renderer and video options behavior
 - **Light Streaks** - re-enables the leftover light trail effect from Underground 2
 - **Bleach Bypass** - re-enables the leftover enhanced contrast effect from Underground 2 *(experimental)*
+- **AA Artifact Fix** - hides the 1px lines at the top and left of the screen caused by MSAA
 <br clear="both">
 
 ---

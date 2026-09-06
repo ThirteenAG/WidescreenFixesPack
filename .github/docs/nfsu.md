@@ -41,6 +41,7 @@
 - **Hide Debug Objects** - removes debug UI that is only visible in widescreen
 - **Audio Sample Rate** - override the game's default 44100 Hz if needed
 - **Console Gamma** - a custom gamma curve that creates a more contrasted image with deeper colors, similar to how some games looked on the Xbox 360
+- **AA Artifact Fix** - hides the 1px lines at the top and left of the screen caused by MSAA
 <br clear="both">
 
 ---

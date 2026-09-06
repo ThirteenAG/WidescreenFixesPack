@@ -55,6 +55,7 @@
 - **Shadow Resolution** - configurable dynamic shadow resolution
 - **Motion Blur Toggle** - disable motion blur without affecting the World FX setting
 - **Console Gamma** - a custom gamma curve that creates a more contrasted image with deeper colors, similar to how some games looked on the Xbox 360
+- **AA Artifact Fix** - hides the 1px lines at the top and left of the screen caused by MSAA
 - **Force FE Mode** - override the UI aspect ratio mode between widescreen and non-widescreen
 <br clear="both">
 
