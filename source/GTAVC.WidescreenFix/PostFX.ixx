@@ -44,7 +44,7 @@ public:
             if (CPostFX::bConsoleGammaEnabled)
             {
                 auto pattern = hook::pattern("83 C4 ? E8 ? ? ? ? E8 ? ? ? ? 83 C4");
-                static auto ConsoleGammaHook = safetyhook::create_mid(pattern.get_first(13), +[](SafetyHookContext& regs)
+                static auto ConsoleGammaHook = safetyhook::create_mid(pattern.get_first(3), +[](SafetyHookContext& regs)
                 {
                     CPostFX::RenderGamma(GetDevice9());
                 });

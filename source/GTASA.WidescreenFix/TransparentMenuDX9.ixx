@@ -204,7 +204,7 @@ void TransparentMenuDX9::RenderBlur()
     if (!nScreenWidth || !nScreenHeight)
         return;
 
-    constexpr float darkness = 0.0f;
+    constexpr float darkness = 0.5f;
     constexpr float blurStrength = 5.0f;
 
     IDirect3DStateBlock9* state = nullptr;
