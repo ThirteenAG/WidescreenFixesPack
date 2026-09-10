@@ -37,10 +37,11 @@ public:
 
             if (CPostFX::bConsoleGammaEnabled)
             {
-                WFP::onEndScene() += []()
+                auto pattern = hook::pattern("E8 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 8B 0D ? ? ? ? 51 E8 ? ? ? ? 83 C4 ? C3");
+                static auto ConsoleGammaHook = safetyhook::create_mid(pattern.get_first(), +[](SafetyHookContext& regs)
                 {
                     CPostFX::RenderGamma(GetDevice9());
-                };
+                });
             }
 
             if (CPostFX::bConsoleGammaEnabled || CPostFX::bSmaaEnabled)
