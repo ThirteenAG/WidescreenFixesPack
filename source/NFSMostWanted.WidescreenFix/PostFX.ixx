@@ -25,9 +25,14 @@ public:
             if (!CPostFX::bConsoleGammaEnabled && !CPostFX::bSmaaEnabled)
                 return;
 
-            WFP::onEndScene() += []()
+            auto pattern = hook::pattern("A1 ? ? ? ? 50 50");
+            static auto SMAAHook = safetyhook::create_mid(pattern.get_first(), +[](SafetyHookContext& regs)
             {
                 CPostFX::RenderSMAA(Direct3DDevice);
+            });
+
+            WFP::onEndScene() += []()
+            {
                 CPostFX::RenderGamma(Direct3DDevice);
             };
 
