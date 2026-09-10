@@ -3,12 +3,9 @@ module;
 #include <stdafx.h>
 #include <d3d9.h>
 #include <d3dx9.h>
-#include <wrl/client.h>
 #pragma comment(lib, "d3dx9.lib")
 
 export module PostFXCore;
-
-using Microsoft::WRL::ComPtr;
 
 export class CPostFX
 {
@@ -19,9 +16,18 @@ public:
     static inline float fBlurStrength = 5.0f;
     static inline bool bDisableSMAAWhenMSAA = true;
     static inline bool bRenderToBackBuffer = false;
-    static inline bool bUseMWGammaTechnique = false;
 
 private:
+    template <typename T>
+    static void SafeRelease(T*& p)
+    {
+        if (p)
+        {
+            p->Release();
+            p = nullptr;
+        }
+    }
+
     struct BackBufferInfo
     {
         D3DFORMAT format = D3DFMT_UNKNOWN;
@@ -34,29 +40,28 @@ private:
     static inline BackBufferInfo backBufferInfo{};
     static inline bool bBackBufferInfoDirty = true;
 
-    static inline ComPtr<IDirect3DTexture9> pSceneTex;
-    static inline ComPtr<IDirect3DSurface9> pSceneSurf;
-    static inline ComPtr<IDirect3DSurface9> pResolveSurf;
-    static inline ComPtr<ID3DXEffect> pEffect;
+    static inline IDirect3DTexture9* pSceneTex = nullptr;
+    static inline IDirect3DSurface9* pSceneSurf = nullptr;
+    static inline IDirect3DSurface9* pResolveSurf = nullptr;
+    static inline ID3DXEffect* pEffect = nullptr;
 
     // SMAA
-    static inline ComPtr<IDirect3DTexture9> pEdgeTex;
-    static inline ComPtr<IDirect3DTexture9> pBlendTex;
-    static inline ComPtr<IDirect3DSurface9> pEdgeSurf;
-    static inline ComPtr<IDirect3DSurface9> pBlendSurf;
-    static inline ComPtr<IDirect3DTexture9> pAreaTex;
-    static inline ComPtr<IDirect3DTexture9> pSearchTex;
+    static inline IDirect3DTexture9* pEdgeTex = nullptr;
+    static inline IDirect3DTexture9* pBlendTex = nullptr;
+    static inline IDirect3DSurface9* pEdgeSurf = nullptr;
+    static inline IDirect3DSurface9* pBlendSurf = nullptr;
+    static inline IDirect3DTexture9* pAreaTex = nullptr;
+    static inline IDirect3DTexture9* pSearchTex = nullptr;
 
     // Blur
-    static inline ComPtr<IDirect3DTexture9> pBlurIntermediateTex;
-    static inline ComPtr<IDirect3DSurface9> pBlurIntermediateSurf;
+    static inline IDirect3DTexture9* pBlurIntermediateTex = nullptr;
+    static inline IDirect3DSurface9* pBlurIntermediateSurf = nullptr;
 
     static inline bool bCreatedTextures = false;
 
     // ConsoleGamma
     static inline D3DXHANDLE hInputTex2D = nullptr;
     static inline D3DXHANDLE hGammaTechnique = nullptr;
-    static inline D3DXHANDLE hMWGammaTechnique = nullptr;
 
     // Blur
     static inline D3DXHANDLE hBlurHorizontalTechnique = nullptr;
@@ -84,7 +89,7 @@ private:
         if (bRenderToBackBuffer)
         {
             // NFS/SCDA: base format and size on the swapchain backbuffer
-            ComPtr<IDirect3DSurface9> bb = GetBackBuffer(dev);
+            IDirect3DSurface9* bb = GetBackBuffer(dev);
             if (bb)
             {
                 D3DSURFACE_DESC desc{};
@@ -95,12 +100,14 @@ private:
                     info.multiSampleQuality = desc.MultiSampleQuality;
                     info.width = desc.Width;
                     info.height = desc.Height;
+                    bb->Release();
                     return info;
                 }
+                bb->Release();
             }
         }
 
-        ComPtr<IDirect3DSurface9> rt0;
+        IDirect3DSurface9* rt0 = nullptr;
         if (SUCCEEDED(dev->GetRenderTarget(0, &rt0)) && rt0)
         {
             D3DSURFACE_DESC desc{};
@@ -111,11 +118,13 @@ private:
                 info.multiSampleQuality = desc.MultiSampleQuality;
                 info.width = desc.Width;
                 info.height = desc.Height;
+                rt0->Release();
                 return info;
             }
+            rt0->Release();
         }
 
-        ComPtr<IDirect3DSwapChain9> swap;
+        IDirect3DSwapChain9* swap = nullptr;
         if (SUCCEEDED(dev->GetSwapChain(0, &swap)) && swap)
         {
             D3DPRESENT_PARAMETERS pp{};
@@ -127,14 +136,15 @@ private:
                 info.width = pp.BackBufferWidth;
                 info.height = pp.BackBufferHeight;
             }
+            swap->Release();
         }
 
         return info;
     }
 
-    static ComPtr<IDirect3DSurface9> GetBackBuffer(IDirect3DDevice9* dev)
+    static IDirect3DSurface9* GetBackBuffer(IDirect3DDevice9* dev)
     {
-        ComPtr<IDirect3DSurface9> bb;
+        IDirect3DSurface9* bb = nullptr;
         if (dev)
             dev->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &bb);
         return bb;
@@ -150,20 +160,23 @@ private:
             GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
             (LPCSTR)&CreateTextures, &hModule);
 
-        ComPtr<ID3DXBuffer> errors;
+        ID3DXBuffer* errors = nullptr;
         HRESULT hr = D3DXCreateEffectFromResource(dev, hModule, MAKEINTRESOURCE(IDR_POSTFX),
             nullptr, nullptr, 0, nullptr, &pEffect, &errors);
 
         if (FAILED(hr) || !pEffect)
         {
-            if (errors) OutputDebugStringA((const char*)errors->GetBufferPointer());
+            if (errors)
+            {
+                OutputDebugStringA((const char*)errors->GetBufferPointer());
+                errors->Release();
+            }
             OutputDebugStringA("PostFX: Failed to load shader\n");
             return false;
         }
 
         hInputTex2D = pEffect->GetParameterByName(nullptr, "InputTex2D");
         hGammaTechnique = pEffect->GetTechniqueByName("ConsoleGamma");
-        hMWGammaTechnique = pEffect->GetTechniqueByName("MWGamma");
 
         hBlurHorizontalTechnique = pEffect->GetTechniqueByName("BlurHorizontal");
         hBlurVerticalTechnique = pEffect->GetTechniqueByName("BlurVertical");
@@ -183,28 +196,34 @@ private:
 
         D3DXIMAGE_INFO info{};
 
-        HRESULT hrArea = D3DXGetImageInfoFromResource(hModule, MAKEINTRESOURCE(IDR_AREATEX), &info);
-        if (SUCCEEDED(hrArea))
+        if (!pAreaTex)
         {
-            hrArea = D3DXCreateTextureFromResourceEx(dev, hModule, MAKEINTRESOURCE(IDR_AREATEX),
-                info.Width, info.Height, 1, 0, D3DFMT_A8L8, D3DPOOL_MANAGED,
-                D3DX_FILTER_NONE, D3DX_FILTER_NONE, 0, &info, nullptr, &pAreaTex);
-        }
-        if (FAILED(hrArea))
-        {
-            OutputDebugStringA("PostFX: Failed to load area texture from resource.\n");
+            HRESULT hrArea = D3DXGetImageInfoFromResource(hModule, MAKEINTRESOURCE(IDR_AREATEX), &info);
+            if (SUCCEEDED(hrArea))
+            {
+                hrArea = D3DXCreateTextureFromResourceEx(dev, hModule, MAKEINTRESOURCE(IDR_AREATEX),
+                    info.Width, info.Height, 1, 0, D3DFMT_A8L8, D3DPOOL_MANAGED,
+                    D3DX_FILTER_NONE, D3DX_FILTER_NONE, 0, &info, nullptr, &pAreaTex);
+            }
+            if (FAILED(hrArea))
+            {
+                OutputDebugStringA("PostFX: Failed to load area texture from resource.\n");
+            }
         }
 
-        HRESULT hrSearch = D3DXGetImageInfoFromResource(hModule, MAKEINTRESOURCE(IDR_SEARCHTEX), &info);
-        if (SUCCEEDED(hrSearch))
+        if (!pSearchTex)
         {
-            hrSearch = D3DXCreateTextureFromResourceEx(dev, hModule, MAKEINTRESOURCE(IDR_SEARCHTEX),
-                info.Width, info.Height, 1, 0, D3DFMT_L8, D3DPOOL_MANAGED,
-                D3DX_FILTER_NONE, D3DX_FILTER_NONE, 0, &info, nullptr, &pSearchTex);
-        }
-        if (FAILED(hrSearch))
-        {
-            OutputDebugStringA("PostFX: Failed to load search texture from resource.\n");
+            HRESULT hrSearch = D3DXGetImageInfoFromResource(hModule, MAKEINTRESOURCE(IDR_SEARCHTEX), &info);
+            if (SUCCEEDED(hrSearch))
+            {
+                hrSearch = D3DXCreateTextureFromResourceEx(dev, hModule, MAKEINTRESOURCE(IDR_SEARCHTEX),
+                    info.Width, info.Height, 1, 0, D3DFMT_L8, D3DPOOL_MANAGED,
+                    D3DX_FILTER_NONE, D3DX_FILTER_NONE, 0, &info, nullptr, &pSearchTex);
+            }
+            if (FAILED(hrSearch))
+            {
+                OutputDebugStringA("PostFX: Failed to load search texture from resource.\n");
+            }
         }
 
         return true;
@@ -271,15 +290,15 @@ private:
 
     static void ReleaseTextures()
     {
-        pSceneSurf.Reset();
-        pSceneTex.Reset();
-        pResolveSurf.Reset();
-        pEdgeSurf.Reset();
-        pEdgeTex.Reset();
-        pBlendSurf.Reset();
-        pBlendTex.Reset();
-        pBlurIntermediateSurf.Reset();
-        pBlurIntermediateTex.Reset();
+        SafeRelease(pSceneSurf);
+        SafeRelease(pSceneTex);
+        SafeRelease(pResolveSurf);
+        SafeRelease(pEdgeSurf);
+        SafeRelease(pEdgeTex);
+        SafeRelease(pBlendSurf);
+        SafeRelease(pBlendTex);
+        SafeRelease(pBlurIntermediateSurf);
+        SafeRelease(pBlurIntermediateTex);
         bCreatedTextures = false;
     }
 
@@ -289,14 +308,14 @@ private:
 
         if (backBufferInfo.multiSampleType != D3DMULTISAMPLE_NONE)
         {
-            if (FAILED(dev->StretchRect(currentRT, nullptr, pResolveSurf.Get(), nullptr, D3DTEXF_LINEAR)))
+            if (FAILED(dev->StretchRect(currentRT, nullptr, pResolveSurf, nullptr, D3DTEXF_LINEAR)))
             {
                 return false;
             }
-            pSrcSurf = pResolveSurf.Get();
+            pSrcSurf = pResolveSurf;
         }
 
-        if (FAILED(dev->StretchRect(pSrcSurf, nullptr, pSceneSurf.Get(), nullptr, D3DTEXF_POINT)))
+        if (FAILED(dev->StretchRect(pSrcSurf, nullptr, pSceneSurf, nullptr, D3DTEXF_POINT)))
         {
             return false;
         }
@@ -349,10 +368,12 @@ private:
     }
 
     static void SaveVertexState(IDirect3DDevice9* dev,
-                                ComPtr<IDirect3DVertexBuffer9>& oldVB,
-                                ComPtr<IDirect3DVertexDeclaration9>& oldDecl,
+                                IDirect3DVertexBuffer9*& oldVB,
+                                IDirect3DVertexDeclaration9*& oldDecl,
                                 UINT& oldOffset, UINT& oldStride, DWORD& oldFVF)
     {
+        oldVB = nullptr;
+        oldDecl = nullptr;
         dev->GetStreamSource(0, &oldVB, &oldOffset, &oldStride);
         dev->GetVertexDeclaration(&oldDecl);
         dev->GetFVF(&oldFVF);
@@ -373,16 +394,13 @@ private:
 
     static IDirect3DSurface9* GetOutputSurface(IDirect3DDevice9* dev,
                                                IDirect3DSurface9* currentRT,
-                                               ComPtr<IDirect3DSurface9>& bb)
+                                               IDirect3DSurface9** ppBB)
     {
         if (!bRenderToBackBuffer)
             return currentRT;
 
-        bb = GetBackBuffer(dev);
-        if (!bb)
-            return nullptr;
-
-        return bb.Get();
+        *ppBB = GetBackBuffer(dev);
+        return *ppBB;
     }
 
 public:
@@ -390,21 +408,29 @@ public:
     {
         if (!bSmaaEnabled || !dev) return;
         if (!InitShaderAndStaticResources(dev)) return;
-
-        ComPtr<IDirect3DSurface9> currentRT;
-        if (FAILED(dev->GetRenderTarget(0, &currentRT)) || !currentRT) return;
-
         if (!CreateTextures(dev)) return;
         if (bDisableSMAAWhenMSAA && backBufferInfo.multiSampleType != D3DMULTISAMPLE_NONE) return;
-        if (!UpdateSceneTex(dev, currentRT.Get())) return;
 
-        ComPtr<IDirect3DSurface9> bb;
-        IDirect3DSurface9* pOutput = GetOutputSurface(dev, currentRT.Get(), bb);
-        if (!pOutput) return;
+        IDirect3DSurface9* currentRT = nullptr;
+        if (FAILED(dev->GetRenderTarget(0, &currentRT)) || !currentRT) return;
 
-        ComPtr<IDirect3DVertexBuffer9> oldVB;
-        ComPtr<IDirect3DVertexDeclaration9> oldDecl;
+        if (!UpdateSceneTex(dev, currentRT))
+        {
+            currentRT->Release();
+            return;
+        }
 
+        IDirect3DSurface9* pBB = nullptr;
+        IDirect3DSurface9* pOutput = GetOutputSurface(dev, currentRT, &pBB);
+        if (!pOutput)
+        {
+            SafeRelease(pBB);
+            currentRT->Release();
+            return;
+        }
+
+        IDirect3DVertexBuffer9* oldVB = nullptr;
+        IDirect3DVertexDeclaration9* oldDecl = nullptr;
         UINT oldOffset = 0, oldStride = 0;
         DWORD oldFVF = 0;
 
@@ -414,58 +440,80 @@ public:
         float metrics[] = { 1.0f / (float)backBufferInfo.width, 1.0f / (float)backBufferInfo.height, (float)backBufferInfo.width, (float)backBufferInfo.height };
         pEffect->SetFloatArray(hSMAARTMetrics, metrics, 4);
 
-        dev->SetRenderTarget(0, pEdgeSurf.Get());
+        dev->SetRenderTarget(0, pEdgeSurf);
         dev->Clear(0, nullptr, D3DCLEAR_TARGET, D3DCOLOR_ARGB(0, 0, 0, 0), 1.0f, 0);
-        pEffect->SetTexture(hColorTex2D, pSceneTex.Get());
+        pEffect->SetTexture(hColorTex2D, pSceneTex);
         DrawAAPass(dev, hEdgeDetectionTechnique);
 
-        dev->SetRenderTarget(0, pBlendSurf.Get());
+        dev->SetRenderTarget(0, pBlendSurf);
         dev->Clear(0, nullptr, D3DCLEAR_TARGET, D3DCOLOR_ARGB(0, 0, 0, 0), 1.0f, 0);
-        pEffect->SetTexture(hEdgesTex2D, pEdgeTex.Get());
-        pEffect->SetTexture(hAreaTex2D, pAreaTex.Get());
-        pEffect->SetTexture(hSearchTex2D, pSearchTex.Get());
+        pEffect->SetTexture(hEdgesTex2D, pEdgeTex);
+        pEffect->SetTexture(hAreaTex2D, pAreaTex);
+        pEffect->SetTexture(hSearchTex2D, pSearchTex);
         DrawAAPass(dev, hBlendWeightTechnique);
 
         dev->SetRenderTarget(0, pOutput);
-        pEffect->SetTexture(hColorTex2D, pSceneTex.Get());
-        pEffect->SetTexture(hBlendTex2D, pBlendTex.Get());
+        pEffect->SetTexture(hColorTex2D, pSceneTex);
+        pEffect->SetTexture(hBlendTex2D, pBlendTex);
         DrawAAPass(dev, hOutputTechnique);
 
-        if (pOutput != currentRT.Get())
-            dev->SetRenderTarget(0, currentRT.Get());
+        if (pOutput != currentRT)
+            dev->SetRenderTarget(0, currentRT);
 
-        RestoreVertexState(dev, oldVB.Get(), oldDecl.Get(), oldOffset, oldStride, oldFVF);
+        RestoreVertexState(dev, oldVB, oldDecl, oldOffset, oldStride, oldFVF);
+
+        SafeRelease(oldVB);
+        SafeRelease(oldDecl);
+        SafeRelease(pBB);
+        currentRT->Release();
     }
 
-    static void RenderGamma(IDirect3DDevice9* dev)
+    // szTechniqueOverride: optional alternative gamma technique name, resolved
+    // against the loaded effect (used by NFS Most Wanted for its own X360 preset).
+    static void RenderGamma(IDirect3DDevice9* dev, const char* szTechniqueOverride = nullptr)
     {
         if (!bConsoleGammaEnabled || !dev) return;
         if (!InitShaderAndStaticResources(dev)) return;
+        if (!CreateTextures(dev)) return;
 
-        ComPtr<IDirect3DSurface9> currentRT;
+        IDirect3DSurface9* currentRT = nullptr;
         if (FAILED(dev->GetRenderTarget(0, &currentRT)) || !currentRT) return;
 
-        if (!CreateTextures(dev)) return;
-        if (!UpdateSceneTex(dev, currentRT.Get())) return;
+        if (!UpdateSceneTex(dev, currentRT))
+        {
+            currentRT->Release();
+            return;
+        }
 
-        ComPtr<IDirect3DSurface9> bb;
-        IDirect3DSurface9* pOutput = GetOutputSurface(dev, currentRT.Get(), bb);
-        if (!pOutput) return;
+        IDirect3DSurface9* pBB = nullptr;
+        IDirect3DSurface9* pOutput = GetOutputSurface(dev, currentRT, &pBB);
+        if (!pOutput)
+        {
+            SafeRelease(pBB);
+            currentRT->Release();
+            return;
+        }
 
-        ComPtr<IDirect3DVertexBuffer9> oldVB;
-        ComPtr<IDirect3DVertexDeclaration9> oldDecl;
-
+        IDirect3DVertexBuffer9* oldVB = nullptr;
+        IDirect3DVertexDeclaration9* oldDecl = nullptr;
         UINT oldOffset = 0, oldStride = 0;
         DWORD oldFVF = 0;
 
         SaveVertexState(dev, oldVB, oldDecl, oldOffset, oldStride, oldFVF);
         dev->SetFVF(D3DFVF_XYZRHW | D3DFVF_TEX1);
 
-        if (pOutput != currentRT.Get())
+        if (pOutput != currentRT)
             dev->SetRenderTarget(0, pOutput);
 
-        pEffect->SetTexture(hInputTex2D, pSceneTex.Get());
-        pEffect->SetTechnique(bUseMWGammaTechnique && hMWGammaTechnique ? hMWGammaTechnique : hGammaTechnique);
+        pEffect->SetTexture(hInputTex2D, pSceneTex);
+        D3DXHANDLE hTech = hGammaTechnique;
+        if (szTechniqueOverride)
+        {
+            D3DXHANDLE hCustom = pEffect->GetTechniqueByName(szTechniqueOverride);
+            if (hCustom)
+                hTech = hCustom;
+        }
+        pEffect->SetTechnique(hTech);
         pEffect->CommitChanges();
 
         UINT passes = 0;
@@ -479,30 +527,43 @@ public:
             pEffect->End();
         }
 
-        if (pOutput != currentRT.Get())
-            dev->SetRenderTarget(0, currentRT.Get());
+        if (pOutput != currentRT)
+            dev->SetRenderTarget(0, currentRT);
 
-        RestoreVertexState(dev, oldVB.Get(), oldDecl.Get(), oldOffset, oldStride, oldFVF);
+        RestoreVertexState(dev, oldVB, oldDecl, oldOffset, oldStride, oldFVF);
+
+        SafeRelease(oldVB);
+        SafeRelease(oldDecl);
+        SafeRelease(pBB);
+        currentRT->Release();
     }
 
     static void RenderBlur(IDirect3DDevice9* dev)
     {
         if (!bBlurEnabled || fBlurStrength <= 0.001f || !dev) return;
         if (!InitShaderAndStaticResources(dev)) return;
+        if (!CreateTextures(dev)) return;
 
-        ComPtr<IDirect3DSurface9> currentRT;
+        IDirect3DSurface9* currentRT = nullptr;
         if (FAILED(dev->GetRenderTarget(0, &currentRT)) || !currentRT) return;
 
-        if (!CreateTextures(dev)) return;
-        if (!UpdateSceneTex(dev, currentRT.Get())) return;
+        if (!UpdateSceneTex(dev, currentRT))
+        {
+            currentRT->Release();
+            return;
+        }
 
-        ComPtr<IDirect3DSurface9> bb;
-        IDirect3DSurface9* pOutput = GetOutputSurface(dev, currentRT.Get(), bb);
-        if (!pOutput) return;
+        IDirect3DSurface9* pBB = nullptr;
+        IDirect3DSurface9* pOutput = GetOutputSurface(dev, currentRT, &pBB);
+        if (!pOutput)
+        {
+            SafeRelease(pBB);
+            currentRT->Release();
+            return;
+        }
 
-        ComPtr<IDirect3DVertexBuffer9> oldVB;
-        ComPtr<IDirect3DVertexDeclaration9> oldDecl;
-
+        IDirect3DVertexBuffer9* oldVB = nullptr;
+        IDirect3DVertexDeclaration9* oldDecl = nullptr;
         UINT oldOffset = 0, oldStride = 0;
         DWORD oldFVF = 0;
 
@@ -513,9 +574,9 @@ public:
 
         UINT passes = 0;
 
-        dev->SetRenderTarget(0, pBlurIntermediateSurf.Get());
+        dev->SetRenderTarget(0, pBlurIntermediateSurf);
 
-        pEffect->SetTexture(hInputTex2D, pSceneTex.Get());
+        pEffect->SetTexture(hInputTex2D, pSceneTex);
         pEffect->SetFloatArray(hTexelSize, texelSize, 2);
         pEffect->SetFloat(hBlurStrengthParam, fBlurStrength);
         pEffect->SetTechnique(hBlurHorizontalTechnique);
@@ -529,7 +590,7 @@ public:
 
         dev->SetRenderTarget(0, pOutput);
 
-        pEffect->SetTexture(hInputTex2D, pBlurIntermediateTex.Get());
+        pEffect->SetTexture(hInputTex2D, pBlurIntermediateTex);
         pEffect->SetTechnique(hBlurVerticalTechnique);
         pEffect->CommitChanges();
 
@@ -539,35 +600,29 @@ public:
         pEffect->EndPass();
         pEffect->End();
 
-        if (pOutput != currentRT.Get())
-            dev->SetRenderTarget(0, currentRT.Get());
+        if (pOutput != currentRT)
+            dev->SetRenderTarget(0, currentRT);
 
-        RestoreVertexState(dev, oldVB.Get(), oldDecl.Get(), oldOffset, oldStride, oldFVF);
+        RestoreVertexState(dev, oldVB, oldDecl, oldOffset, oldStride, oldFVF);
+
+        SafeRelease(oldVB);
+        SafeRelease(oldDecl);
+        SafeRelease(pBB);
+        currentRT->Release();
     }
 
     static void Shutdown()
     {
-        pEffect.Reset();
+        // Release the effect completely instead of just calling OnLostDevice.
+        // A live ID3DXEffect keeps device objects alive (its internal state
+        // manager state block, shaders), which makes the game's
+        // IDirect3DDevice9::Reset fail with D3DERR_INVALIDCALL and retry
+        // forever (NFS: infinite reset loop inside d3d9.dll). The effect is
+        // recreated lazily on the first render after the reset in
+        // InitShaderAndStaticResources, like the original per-game modules did.
+        SafeRelease(pEffect);
         ReleaseTextures();
         bBackBufferInfoDirty = true;
-    }
-
-    static void ShutdownProcess()
-    {
-        if (pEffect)
-            pEffect.Detach();
-        pSceneSurf.Detach();
-        pSceneTex.Detach();
-        pResolveSurf.Detach();
-        pEdgeSurf.Detach();
-        pEdgeTex.Detach();
-        pBlendSurf.Detach();
-        pBlendTex.Detach();
-        pBlurIntermediateSurf.Detach();
-        pBlurIntermediateTex.Detach();
-        pAreaTex.Detach();
-        pSearchTex.Detach();
-        bCreatedTextures = false;
     }
 
     static void OnDeviceReset()
