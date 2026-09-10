@@ -23,6 +23,12 @@ public:
             if (!CPostFX::bConsoleGammaEnabled && !CPostFX::bSmaaEnabled)
                 return;
 
+            auto pattern = hook::pattern("E8 ? ? ? ? 8B 0D ? ? ? ? A1 ? ? ? ? ? ? 51 6A");
+            static auto SMAAHook = safetyhook::create_mid(pattern.get_first(), +[](SafetyHookContext& regs)
+            {
+                CPostFX::RenderSMAA(Direct3DDevice);
+            });
+
             WFP::onEndScene() += []()
             {
                 CPostFX::RenderSMAA(Direct3DDevice);
