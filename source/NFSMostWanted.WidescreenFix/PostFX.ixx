@@ -36,6 +36,11 @@ public:
                 CPostFX::Shutdown();
                 CPostFX::OnDeviceReset();
             };
+
+            WFP::onShutdownEvent() += []()
+            {
+                CPostFX::ShutdownProcess();
+            };
         };
     }
 } PostFX;

@@ -552,6 +552,24 @@ public:
         ReleaseTextures();
     }
 
+    static void ShutdownProcess()
+    {
+        if (pEffect)
+            pEffect.Detach();
+        pSceneSurf.Detach();
+        pSceneTex.Detach();
+        pResolveSurf.Detach();
+        pEdgeSurf.Detach();
+        pEdgeTex.Detach();
+        pBlendSurf.Detach();
+        pBlendTex.Detach();
+        pBlurIntermediateSurf.Detach();
+        pBlurIntermediateTex.Detach();
+        pAreaTex.Detach();
+        pSearchTex.Detach();
+        bCreatedTextures = false;
+    }
+
     static void OnDeviceReset()
     {
         bBackBufferInfoDirty = true;

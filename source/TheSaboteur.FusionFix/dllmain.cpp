@@ -39,7 +39,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
     }
     else if (reason == DLL_PROCESS_DETACH)
     {
-
+        WFP::onShutdownEvent().executeAll();
     }
     return TRUE;
 }

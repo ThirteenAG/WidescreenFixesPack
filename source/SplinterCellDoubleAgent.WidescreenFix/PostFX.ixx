@@ -33,6 +33,11 @@ export void InitPostFX()
     if (!CPostFX::bConsoleGammaEnabled && !CPostFX::bBlurEnabled && !CPostFX::bSmaaEnabled)
         return;
 
+    WFP::onShutdownEvent() += []()
+    {
+        CPostFX::ShutdownProcess();
+    };
+
     auto pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "8B 8F ? ? ? ? ? ? 53");
     UD3DRenderDevice::pDeviceOffset = *pattern.get_first<int32_t>(2);
 

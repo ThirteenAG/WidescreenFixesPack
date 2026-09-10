@@ -135,5 +135,9 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
     {
         if (!IsUALPresent()) { InitializeASI(); }
     }
+    else if (reason == DLL_PROCESS_DETACH)
+    {
+        WFP::onShutdownEvent().executeAll();
+    }
     return TRUE;
 }
