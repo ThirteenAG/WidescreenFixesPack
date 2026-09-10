@@ -53,6 +53,7 @@
 - **High Spec Audio** - forces 44100 Hz sample rate regardless of registry settings
 - **Rain Droplet Scale** - adjusts the size of on-screen rain droplets
 - **Console Gamma** – a custom gamma curve that produces a higher-contrast image with deeper colors (similar to the Xbox 360 versions of some games) and lets you select a matching gamma preset from the Xbox 360 version of NFS MW
+- **SMAA** - enhanced subpixel morphological antialiasing as a post-processing effect
 <br clear="both">
 
 <img src="https://thirteenag.github.io/screens/nfsmw/race5.jpg" width="360" align="left" style="margin: 0 24px 0px 0;" alt="Racing">

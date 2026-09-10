@@ -168,7 +168,7 @@ SubtitlesScale = 0.0    ; Original value is 1.0.
 [MISC]
 ; Same as in VCS PCE, cutscene border size will be adjusted to fit your resolution. On resolutions bigger than 16:9 vertical borders will be used. Note that you can enable or disable cutscene borders via 'WIDESCREEN'/'BORDERS' option in game menu (0|1).
 SmartCutsceneBorders = 1 
-; Drawing 1px line at top and left sides of the screen to hide antialiasing bug(0|1|2). (2) creates 4 lines to make picture symmetrical.
+; Drawing 1px line at top and left sides of the screen to hide antialiasing bug caused by MSAA(0|1|2). (2) creates 4 lines to make picture symmetrical.
 HideAABug = 1
 ; Fixes vehicle lights coronas size. (0|1).
 SmallerVehicleCorona = 0

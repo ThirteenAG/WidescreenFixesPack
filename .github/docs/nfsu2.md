@@ -52,7 +52,8 @@
 - **No Optical Drive** - allows the game to run without a disc present
 - **Audio Sample Rate** - override the game's default 44100 Hz if needed
 - **Rain Droplet Scale** - adjusts the size of on-screen rain droplets
-- **Console Gamma** - a custom gamma curve that creates a more contrasted image with deeper colors, similar to how some games looked on the Xbox 360
+- **Console Gamma** - a custom gamma curve that creates a more contrasted image with deeper colors, similar to how GTA IV looked on the Xbox 360
+- **SMAA** - enhanced subpixel morphological antialiasing as a post-processing effect
 - **AA Artifact Fix** - hides the 1px lines at the top and left of the screen caused by MSAA
 <br clear="both">
 

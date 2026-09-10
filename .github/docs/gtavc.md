@@ -171,7 +171,7 @@ SubtitlesScale = 0.0    ; Original value is 1.0.
 SmartCutsceneBorders = 1 
 ; Game will not freeze when focus is lost (only in windowed mode).
 AllowAltTabbingWithoutPausing = 0 
-; Drawing 1px line at top and left sides of the screen to hide antialiasing bug(0|1|2). (2) creates 4 lines to make picture symmetrical.
+; Drawing 1px line at top and left sides of the screen to hide antialiasing bug caused by MSAA(0|1|2). (2) creates 4 lines to make picture symmetrical.
 HideAABug = 1
 ; Fixes vehicle lights coronas size. (0|1).
 SmallerVehicleCorona = 0

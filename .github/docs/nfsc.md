@@ -50,7 +50,8 @@
 - **Rain Droplet Scale** - adjusts the size of on-screen rain droplets
 - **Motion Blur Toggle** - disable motion blur without losing other effects such as screen flashes or light trails
 - **Disable Contrails** - disables the wind effect behind the car
-- **Console Gamma** - a custom gamma curve that creates a more contrasted image with deeper colors, similar to how some games looked on the Xbox 360
+- **Console Gamma** - a custom gamma curve that creates a more contrasted image with deeper colors, similar to how GTA IV looked on the Xbox 360
+- **SMAA** - enhanced subpixel morphological antialiasing as a post-processing effect
 - **AA Artifact Fix** - hides the 1px lines at the top and left of the screen caused by MSAA
 <br clear="both">
 

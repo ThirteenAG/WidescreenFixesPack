@@ -50,7 +50,7 @@
 - **Improve Scenery LOD** - increases visible scenery in the closest map section
 - **Disable Preculler** - disables precalculated culling
 - **Bruteforce Culling** - forces bruteforced culling type to reduce culled scenery
-- **Console Gamma** - a custom gamma curve that creates a more contrasted image with deeper colors, similar to how some games looked on the Xbox 360
+- **Console Gamma** - a custom gamma curve that creates a more contrasted image with deeper colors, similar to how GTA IV looked on the Xbox 360
 - **AA Artifact Fix** - hides the 1px lines at the top and left of the screen caused by MSAA
 <br clear="both">
 
