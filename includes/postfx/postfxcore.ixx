@@ -547,9 +547,9 @@ public:
 
     static void Shutdown()
     {
-        if (pEffect)
-            pEffect->OnLostDevice();
+        pEffect.Reset();
         ReleaseTextures();
+        bBackBufferInfoDirty = true;
     }
 
     static void ShutdownProcess()
@@ -572,10 +572,8 @@ public:
 
     static void OnDeviceReset()
     {
+        // The effect was released in Shutdown() and is recreated lazily after
+        // the reset, so there is nothing to reset here.
         bBackBufferInfoDirty = true;
-
-        if (!pEffect)
-            return;
-        pEffect->OnResetDevice();
     }
 };
