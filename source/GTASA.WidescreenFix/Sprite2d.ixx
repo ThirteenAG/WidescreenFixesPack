@@ -464,7 +464,9 @@ void __fastcall DrawBordersForWideScreen(CCamera* camera, void* edx)
     else
         TickBorderAnim(now, shouldBeActive);
 
-    bool shouldComputeGeometry = shouldBeActive || (g_noBorderAnim && widescreenOn);
+    // compute geometry whenever the cutscene is active, even during fades, so
+    // the cutscene zoom is correct from the first frame (no FOV jump later)
+    bool shouldComputeGeometry = widescreenOn;
     if (shouldComputeGeometry)
     {
         const float screenAspect = (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT;
@@ -524,7 +526,8 @@ void __fastcall DrawBordersForWideScreen(CCamera* camera, void* edx)
 
     s_prevIsFading = isFading;
 
-    g_cutsceneCameraZoom = 1.0f + (s_cameraZoom - 1.0f) * s_bordersMult;
+    // apply the cutscene FOV instantly, no animation
+    g_cutsceneCameraZoom = s_cameraZoom;
 
     g_skipXCorrection = false;
 }
