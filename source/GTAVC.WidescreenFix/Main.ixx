@@ -35,11 +35,8 @@ void __fastcall GetScreenRect(CCamera* camera, void*, CRect* rect)
 {
     *rect = CRect(0.0f, SCREEN_HEIGHT, SCREEN_WIDTH, 0.0f);
 
-    if (TheCamera->m_WideScreenOn)
-    {
-        if (g_noBorderAnim)
-            *rect = GetCurrentCutsceneContentRect();
-    }
+    if (TheCamera->m_WideScreenOn && AreCutsceneBordersVisible())
+        *rect = GetCurrentCutsceneContentRect();
 }
 
 class Main
