@@ -98,6 +98,25 @@ export uint8_t* FontRenderStateBuf = nullptr;
 
 export int ReplaceTextShadowWithOutline = 0;
 
+injector::hook_back<void(__cdecl*)(float, float, unsigned short*)> hbPrintStringSubtitles;
+void __cdecl PrintStringSubtitles(float PosX, float PosY, unsigned short* c)
+{
+    // Vanilla 4:3 places subtitles inside the bottom bar (H - SCALE_Y(80)), and
+    // the vanilla bar is 0.15H + SCALE_Y(14) tall. At wider aspects the bar
+    // shrinks and that position no longer fits, so move subtitles up by exactly
+    // how much smaller the current bar is than the vanilla 4:3 one. At 4:3 the
+    // mod bar equals the vanilla bar, so nothing moves.
+    float bottomBorder = GetCurrentBottomBorderSize();
+    if (bottomBorder > 0.0f)
+    {
+        float vanillaBar = SCREEN_HEIGHT * 0.15f + SCREEN_SCALE_Y(14.0f);
+        if (bottomBorder < vanillaBar)
+            PosY -= vanillaBar - bottomBorder;
+    }
+
+    return hbPrintStringSubtitles.fun(PosX, PosY, c);
+}
+
 export namespace CFont
 {
     void (__cdecl* DrawFonts)() = nullptr;
@@ -898,6 +917,10 @@ public:
                 xstart = SCREEN_WIDTH - SCALE_AND_CENTER_X(DEFAULT_SCREEN_WIDTH - line->m_fAtX);
                 ystart = SCREEN_HEIGHT - SCREEN_SCALE_Y(DEFAULT_SCREEN_HEIGHT - line->m_fAtY);
             });
+
+            // Subtitles position
+            pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 6A ? E8 ? ? ? ? ? ? ? ? ? ? ? ? ? 0F 84 ? ? ? ? 68 ? ? ? ? 68 ");
+            hbPrintStringSubtitles.fun = injector::MakeCALL(pattern.get_first(), PrintStringSubtitles).get();
         };
     }
 } Frontend;

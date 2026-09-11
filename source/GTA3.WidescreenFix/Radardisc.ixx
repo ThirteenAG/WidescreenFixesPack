@@ -71,7 +71,7 @@ public:
         WFP::onInitEvent() += []()
         {
             CIniReader iniReader("");
-            auto bHQRadardisc = iniReader.ReadInteger("MISC", "HQRadardisc", 1) != 0;
+            auto bHQRadardisc = iniReader.ReadInteger("MISC", "HQRadarDisc", 1) != 0;
 
             if (!bHQRadardisc)
                 return;
