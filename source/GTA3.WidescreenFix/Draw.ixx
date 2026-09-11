@@ -25,6 +25,10 @@ export __declspec(noinline) ResChange<int, int>& onResChange()
 std::optional<float> fHudAspectRatioConstraint;
 export float fWidescreenHudOffset = 0.0f;
 
+// current cutscene camera zoom (tan-space), maintained by the border system
+// (Sprite2d writes it each frame so the FOV conversion can follow the border animation)
+export float g_cutsceneCameraZoom = 1.0f;
+
 export class CDraw
 {
 private:
@@ -113,19 +117,12 @@ float CDraw::ConvertFOV(float hfov)
 
 float CDraw::ConvertFOVforCutscene(float fov)
 {
-    float reduction = TheCamera->m_ScreenReductionPercentage;
-    float contentAspect = (4.0f / 3.0f) / std::max(1.0f - reduction / 100.0f, 0.01f);
-    float screenAspect = FindAspectRatio();
-
-    if (screenAspect > contentAspect)
+    if (g_cutsceneCameraZoom != 1.0f)
     {
         float hfov = DEGTORAD(fov);
-        return RADTODEG(2.0f * Atan(tan(hfov / 2.0f) * screenAspect / contentAspect));
+        return RADTODEG(2.0f * Atan(tan(hfov / 2.0f) * g_cutsceneCameraZoom));
     }
-    else
-    {
-        return fov;
-    }
+    return fov;
 }
 
 float CDraw::ConvertFOVInverse(float fov)
@@ -179,6 +176,7 @@ void CDraw::SetFOV(float fov)
 {
     if (!CCutsceneMgr::IsRunning() && !TheCamera->m_WideScreenOn)
     {
+        g_cutsceneCameraZoom = 1.0f;
         ms_fScaledFOV = ConvertFOV(fov) * FOVManager::GetCurrentMultiplier();
     }
     else

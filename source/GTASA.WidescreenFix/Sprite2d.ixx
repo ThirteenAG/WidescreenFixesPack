@@ -23,14 +23,21 @@ public:
 
 export bool g_noBorderAnim = false;
 float s_bordersMult = 0.0f;
-float s_barHeight = 0.0f;
+float s_topBar = 0.0f;
+float s_bottomBar = 0.0f;
 float s_pillarWidth = 0.0f;
+float s_cameraZoom = 1.0f;
 bool s_hasPillar = false;
 bool s_hasLetterbox = false;
 uint32_t s_lastActiveMs = 0;
 uint32_t s_lastTickMs = 0;
 uint32_t s_lastExitDrawMs = 0;
 constexpr float BORDER_ANIM_SECS = 0.35f;
+
+// vanilla 4:3 cutscene window geometry (22px top / 14px bottom border insets)
+constexpr float VANILLA_WINDOW_FRACTION = 0.7f + 8.0f / 480.0f;
+// vanilla content window sits this many px above the screen center at 4:3
+constexpr float VANILLA_CENTER_FUDGE_Y = 18.0f;
 
 export bool g_isMouseCursor = false;
 bool g_skipXCorrection = false;
@@ -180,9 +187,8 @@ void RenderBorderBars()
 
     if (s_hasLetterbox)
     {
-        float h = s_barHeight * m;
-        CRect top(0.0f, h - SCREEN_SCALE_Y(8.0f), SCREEN_WIDTH, 0.0f);
-        CRect bottom(0.0f, SCREEN_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT - h - SCREEN_SCALE_Y(8.0f));
+        CRect top(0.0f, s_topBar * m, SCREEN_WIDTH, 0.0f);
+        CRect bottom(0.0f, SCREEN_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT - s_bottomBar * m);
         CRGBA black(0, 0, 0, 255);
         shDrawRect1.unsafe_ccall(&top, &black);
         shDrawRect1.unsafe_ccall(&bottom, &black);
@@ -213,7 +219,7 @@ static inline int8_t GetTopCutsceneBorderHeightForHelpText()
     if (!s_hasLetterbox || s_bordersMult <= 0.01f)
         return 0;
 
-    float topBorder = s_barHeight * s_bordersMult - SCREEN_SCALE_Y(8.0f);
+    float topBorder = s_topBar * s_bordersMult;
     if (topBorder <= 0.0f)
         return 0;
 
@@ -474,18 +480,15 @@ void __fastcall DrawBordersForWideScreen(CCamera* camera, void* edx)
     bool shouldComputeGeometry = shouldBeActive || (g_noBorderAnim && widescreenOn);
     if (shouldComputeGeometry)
     {
-        float reductionPercent = camera->m_fScreenReductionPercentage;
-
-        const float targetAspect = DEFAULT_ASPECT_RATIO;
         const float screenAspect = (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT;
-
-        float visibleFraction = std::max(1.0f - reductionPercent / 100.0f, 0.01f);
-        float contentAspect = targetAspect / visibleFraction;
+        const float contentAspect = DEFAULT_ASPECT_RATIO / VANILLA_WINDOW_FRACTION;
 
         s_hasLetterbox = false;
         s_hasPillar = false;
-        s_barHeight = 0.0f;
+        s_topBar = 0.0f;
+        s_bottomBar = 0.0f;
         s_pillarWidth = 0.0f;
+        s_cameraZoom = 1.0f;
 
         if (screenAspect > contentAspect)
         {
@@ -493,13 +496,18 @@ void __fastcall DrawBordersForWideScreen(CCamera* camera, void* edx)
             s_hasPillar = true;
             float contentWidth = SCREEN_HEIGHT * contentAspect;
             s_pillarWidth = (SCREEN_WIDTH - contentWidth) * 0.5f;
+            s_cameraZoom = VANILLA_WINDOW_FRACTION * screenAspect / DEFAULT_ASPECT_RATIO;
         }
         else
         {
             // Letterbox
             s_hasLetterbox = true;
-            float contentHeight = SCREEN_WIDTH / contentAspect;
-            s_barHeight = (SCREEN_HEIGHT - contentHeight) * 0.5f;
+            float contentFractionTarget = screenAspect / contentAspect;
+            s_cameraZoom = std::max(1.0f, contentFractionTarget + 1.5f * VANILLA_CENTER_FUDGE_Y * screenAspect / 480.0f);
+            float contentFraction = contentFractionTarget / s_cameraZoom;
+            float windowCenter = 0.5f - 0.75f * VANILLA_CENTER_FUDGE_Y * screenAspect / (480.0f * s_cameraZoom);
+            s_topBar = std::max(windowCenter - contentFraction * 0.5f, 0.0f) * SCREEN_HEIGHT;
+            s_bottomBar = std::max(1.0f - windowCenter - contentFraction * 0.5f, 0.0f) * SCREEN_HEIGHT;
         }
 
         if (camera->m_nBlurType == eMotionBlurType::NONE || camera->m_nBlurType == eMotionBlurType::LIGHT_SCENE)
@@ -526,6 +534,8 @@ void __fastcall DrawBordersForWideScreen(CCamera* camera, void* edx)
     }
 
     s_prevIsFading = isFading;
+
+    g_cutsceneCameraZoom = 1.0f + (s_cameraZoom - 1.0f) * s_bordersMult;
 
     g_skipXCorrection = false;
 }
