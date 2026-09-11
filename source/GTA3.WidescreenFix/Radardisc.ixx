@@ -71,9 +71,9 @@ public:
         WFP::onInitEvent() += []()
         {
             CIniReader iniReader("");
-            auto bHQRadar = iniReader.ReadInteger("MISC", "HQRadar", 1) != 0;
+            auto bHQRadardisc = iniReader.ReadInteger("MISC", "HQRadardisc", 1) != 0;
 
-            if (!bHQRadar)
+            if (!bHQRadardisc)
                 return;
 
             // If radardisc loaded from TXD is the original low-quality 64x64 texture,
