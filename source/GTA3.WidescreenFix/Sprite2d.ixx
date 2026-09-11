@@ -201,6 +201,21 @@ export CRect GetCurrentCutsceneContentRect()
     return CRect(left, y1, right, y2);
 }
 
+export bool AreCutsceneBordersVisible()
+{
+    if (s_bordersMult <= 0.01f)
+        return false;
+
+    auto pref = CMenuManager::m_PrefsUseWideScreen.get();
+    if (pref == CutsceneBordersMode::Letterbox)
+        return s_hasLetterbox;
+    if (pref == CutsceneBordersMode::Pillarbox)
+        return s_hasPillar;
+    if (pref == CutsceneBordersMode::Both)
+        return s_hasLetterbox || s_hasPillar;
+    return false;
+}
+
 SafetyHookInline shDraw1 = {};
 void __fastcall Draw1(CSprite2d* sprite2d, void* edx, CRect* rect, CRGBA* col)
 {

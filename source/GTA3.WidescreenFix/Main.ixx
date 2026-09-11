@@ -45,11 +45,8 @@ void __cdecl DoFadeDrawRect(const CRect* r, const CRGBA* col)
 {
     CRect rect = CRect(0.0f, SCREEN_HEIGHT, SCREEN_WIDTH, 0.0f);
 
-    if (TheCamera->m_WideScreenOn)
-    {
-        if (g_noBorderAnim)
-            rect = GetCurrentCutsceneContentRect();
-    }
+    if (TheCamera->m_WideScreenOn && AreCutsceneBordersVisible())
+        rect = GetCurrentCutsceneContentRect();
 
     return hbDoFadeDrawRect.fun(&rect, col);
 }
