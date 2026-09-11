@@ -599,7 +599,7 @@ public:
                 pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 5B 83 C4 ? C3 ? ? ? ? ? ? 8A 44 24");
                 shAddToBuffer = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), AddToBuffer);
 
-                pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 8A 47 ? 3A C3");
+                pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 46 83 FE ? 89 74 24 ? 0F 8C ? ? ? ? 8B 44 24");
                 shRenderOneXLUSprite_Rotate_Aspect = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), RenderOneXLUSprite_Rotate_Aspect);
 
             }
