@@ -38,6 +38,8 @@ constexpr float BORDER_ANIM_SECS = 0.35f;
 constexpr float VANILLA_WINDOW_FRACTION = 0.7f + 8.0f / 480.0f;
 // vanilla content window sits this many px above the screen center at 4:3
 constexpr float VANILLA_CENTER_FUDGE_Y = 18.0f;
+// minimum visible top border (fraction of the bottom border height) in letterbox mode
+constexpr float MIN_TOP_BAR_BOTTOM_RATIO = 0.2f;
 
 export bool g_isMouseCursor = false;
 bool g_skipXCorrection = false;
@@ -503,7 +505,9 @@ void __fastcall DrawBordersForWideScreen(CCamera* camera, void* edx)
             // Letterbox
             s_hasLetterbox = true;
             float contentFractionTarget = screenAspect / contentAspect;
-            s_cameraZoom = std::max(1.0f, contentFractionTarget + 1.5f * VANILLA_CENTER_FUDGE_Y * screenAspect / 480.0f);
+            s_cameraZoom = std::max(1.0f,
+                contentFractionTarget + 1.5f * VANILLA_CENTER_FUDGE_Y * screenAspect / 480.0f
+                    * (1.0f + MIN_TOP_BAR_BOTTOM_RATIO) / (1.0f - MIN_TOP_BAR_BOTTOM_RATIO));
             float contentFraction = contentFractionTarget / s_cameraZoom;
             float windowCenter = 0.5f - 0.75f * VANILLA_CENTER_FUDGE_Y * screenAspect / (480.0f * s_cameraZoom);
             s_topBar = std::max(windowCenter - contentFraction * 0.5f, 0.0f) * SCREEN_HEIGHT;
