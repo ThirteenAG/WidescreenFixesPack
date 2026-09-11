@@ -413,36 +413,26 @@ void __fastcall DrawBordersForWideScreen(CCamera* camera, void* edx)
     float fadeAlpha = camera->m_fFLOATingFade;
 
     static bool  s_prevIsFading = false;
-    static bool  s_wasGradualFade = false;
 
     bool fadeJustStarted = !s_prevIsFading && isFading;
-    bool fadeJustEnded = s_prevIsFading && !isFading;
 
-    bool isInstantPop = false;
+    // screen faded but m_bFading already cleared (zero-timeout fades get processed
+    // by ProcessFade before rendering, so their fade start edge is never seen here)
+    bool isFadedScreen = !isFading && fadeAlpha > 50.0f;
 
-    if (fadeJustStarted)
-    {
-        if (fadeAlpha > 50.0f)
-        {
-            isInstantPop = true;
-            s_wasGradualFade = false;
-        }
-        else
-        {
-            s_wasGradualFade = true;
-        }
-    }
+    // sudden fades remove the borders immediately; gradual black fades animate
+    // them out via TickBorderAnim below. m_FadeTargetIsSplashScreen is set by
+    // SetFadeColour only for black (0,0,0) fades, so any non-black fade (white
+    // flash etc.) counts as sudden even with a non-zero duration
+    bool isFlashFade = fadeAlpha > 50.0f || camera->m_fTimeToFadeOut == 0.0f
+        || !camera->m_FadeTargetIsSplashScreen;
 
-    bool shouldBeActive = widescreenOn && !isFading;
-
-    if (isInstantPop)
+    if ((fadeJustStarted && isFlashFade) || isFadedScreen)
     {
         s_bordersMult = 0.0f;
     }
-    else if (fadeJustEnded && s_wasGradualFade)
-    {
-        shouldBeActive = false;
-    }
+
+    bool shouldBeActive = widescreenOn && !isFading && !isFadedScreen;
 
     if (g_noBorderAnim)
         s_bordersMult = widescreenOn ? 1.0f : 0.0f;
