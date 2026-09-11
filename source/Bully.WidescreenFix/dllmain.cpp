@@ -15,6 +15,7 @@ struct Screen
     float fHudOffsetReal;
     float fHudFullWidth;
     float fHudVerticalOffset;
+    float fHudVerticalOffsetWide;
 } Screen;
 
 void Init()
@@ -52,6 +53,7 @@ void Init()
         Screen.fHudScale = (4.0f / 3.0f) / Screen.fAspectRatio;
         Screen.fHudFullWidth = 640.0f * (Screen.fAspectRatio / (4.0f / 3.0f));
         Screen.fHudVerticalOffset = ((480.0f * (Screen.fAspectRatio / (4.0f / 3.0f))) - 480.0f) / 2.0f;
+        Screen.fHudVerticalOffsetWide = ((480.0f * (Screen.fAspectRatio / (16.0f / 9.0f))) - 480.0f) / 2.0f;
     };
 
     pattern = hook::pattern("C6 44 24 18 00 8B 4C 24 18 52");
@@ -118,6 +120,10 @@ void Init()
         }
     }; injector::MakeInline<BackgroundsHook>(pattern.get_first(0), pattern.get_first(6)); //0x73984B
 
+    //In widescreen mode the game loads 16:9 loadscreens from TXD\lsw instead of 4:3 ones from TXD\ls
+    pattern = hook::pattern("80 3D ? ? ? ? 00 57 75 0C 68");
+    static auto bWidescreen = *pattern.get_first<bool*>(2); //0x43BFBC
+
     pattern = hook::pattern("8B 3D ? ? ? ? D9 5C 24 08 85 FF D9 05 ? ? ? ? D9 5C 24 04 D9");
     static auto dword_20DCCC8 = *pattern.get_first<uint32_t*>(2);
     struct LoadscreensHook
@@ -130,11 +136,12 @@ void Init()
             auto y = *(float*)(regs.esp + 0x20);
             auto w = *(float*)(regs.esp + 0x50);
             auto h = *(float*)(regs.esp + 0x4C);
+            auto fVerticalOffset = *bWidescreen ? Screen.fHudVerticalOffsetWide : Screen.fHudVerticalOffset;
 
             if (x == 0.0f && (static_cast<int>(w) == 639 || static_cast<int>(w) == 640) && y == 0.0f && static_cast<int>(h) == 480)
             {
-                *(float*)(regs.esp + 0x20) -= Screen.fHudVerticalOffset;
-                *(float*)(regs.esp + 0x4C) += Screen.fHudVerticalOffset;
+                *(float*)(regs.esp + 0x20) -= fVerticalOffset;
+                *(float*)(regs.esp + 0x4C) += fVerticalOffset;
             }
             else
             {
@@ -145,8 +152,8 @@ void Init()
 
                 if (x == 0.0f && (static_cast<int>(w) == 639 || static_cast<int>(w) == 640) && y == 0.0f && static_cast<int>(h) == 480)
                 {
-                    *(float*)(regs.esp + 0x2C) -= Screen.fHudVerticalOffset;
-                    *(float*)(regs.esp + 0x20) += Screen.fHudVerticalOffset;
+                    *(float*)(regs.esp + 0x2C) -= fVerticalOffset;
+                    *(float*)(regs.esp + 0x20) += fVerticalOffset;
                 }
             }
         }
