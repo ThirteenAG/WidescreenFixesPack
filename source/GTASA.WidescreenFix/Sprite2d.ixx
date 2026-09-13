@@ -575,10 +575,10 @@ public:
                 //shDraw4 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), Draw4);
 
                 pattern = hook::pattern("E8 ? ? ? ? 6A 00 6A FF E8 ? ? ? ? 83 C4 08 85 C0 74 ? 6A 00 6A FF E8 ? ? ? ? 8B 88");
-                shDraw5 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first(4)).as_int(), Draw5);
+                shDraw5 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), Draw5);
 
                 pattern = hook::pattern("E8 ? ? ? ? 8B 4C 24 ? 83 C1 2F");
-                shDraw6 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first(4)).as_int(), Draw6);
+                shDraw6 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), Draw6);
 
                 pattern = hook::pattern("9C A1 ? ? ? ? 51 8B 0D ? ? ? ? D3 C0 59 8B 00 9D E9 16 E4 31 00");
                 if (!pattern.empty())
