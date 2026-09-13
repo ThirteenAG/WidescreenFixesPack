@@ -71,13 +71,13 @@ public:
 
             // Fix sky multitude
             static float horizSpread = 10.0f;
-            pattern = hook::pattern("D8 0D ? ? ? ? 83 C4 40");
-            injector::WriteMemory<const void*>(pattern.get_first(2), &horizSpread, true);
-
-            static auto SkyRenderingFix = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            onResChange() += [](int Width, int Height)
             {
                 horizSpread = 1.4f * (CDraw::GetAspectRatio() / (4.0f / 3.0f));
-            });
+            };
+
+            pattern = hook::pattern("D8 0D ? ? ? ? 83 C4 40");
+            injector::WriteMemory<const void*>(pattern.get_first(2), &horizSpread, true);
 
             pattern = hook::pattern("D8 0D ? ? ? ? D9 C0 D9 44 24 ? D8 44 24");
             injector::WriteMemory<const void*>(pattern.get_first(2), &horizSpread, true);
@@ -89,29 +89,6 @@ public:
             {
                 *(float*)(regs.esi + 0xB4) = CDraw::ConvertFOVInverse(70.0f);
             });
-
-            //CCam::Process_Fixed
-            //Bugged atm
-            //pattern = hook::pattern("C7 87 ? ? ? ? ? ? ? ? 80 3D");
-            //injector::MakeNOP(pattern.get_first(), 10, true);
-            //static auto Process_FixedFOV = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-            //{
-            //    static bool allowLeadingZero = true; // one-shot 0 before 1/2
-            //
-            //    const int state = CEntryExitManager::ms_exitEnterState;
-            //    const bool inTransition = (state == 1 || state == 2);
-            //    const bool leadingZero = (state == 0 && allowLeadingZero);
-            //
-            //    if (inTransition || leadingZero)
-            //    {
-            //        *(float*)(regs.edi + 0xB4) = CDraw::ConvertFOVInverse(70.0f);
-            //    }
-            //
-            //    if (inTransition)
-            //        allowLeadingZero = true;   // next transition can again have a leading 0
-            //    else if (leadingZero)
-            //        allowLeadingZero = false;  // only one 0 call allowed before 1/2
-            //});
         };
     }
 } Main;
