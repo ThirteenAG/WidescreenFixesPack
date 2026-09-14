@@ -80,7 +80,7 @@ public:
             }
 
             if (ResList.size() > 100)
-                ResList.erase(ResList.begin(), ResList.begin() + (ResList.size() - 100));
+                ResList.erase(ResList.begin(), ResList.begin() + 100);
 
             //force 32 bit HD and max refresh rate
             if (ForceMaxRefreshRate)
