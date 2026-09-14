@@ -123,7 +123,7 @@ public:
             }
 
             if (ResList.size() > 100)
-                ResList.erase(ResList.begin(), ResList.begin() + (ResList.size() - 100));
+                ResList.erase(ResList.begin(), ResList.begin() + 100);
 
             //force 32 bit HD and max refresh rate
             auto pattern = hook::pattern("8B 02 3B 44 24 ? 8B 4A ? 8B 72 ? 8B 52 ? 89 74 24");
