@@ -73,8 +73,11 @@ bool IsScriptActiveByName(const char* scriptName)
         const size_t len = std::find(s->m_szName, s->m_szName + sizeof(s->m_szName), '\0') - s->m_szName;
         const std::string_view name(s->m_szName, len);
 
-        if (name == scriptName)
-            return true;
+        if (s->m_bIsActive)
+        {
+            if (name == scriptName)
+                return true;
+        }
     }
 
     return false;

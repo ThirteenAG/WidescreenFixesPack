@@ -633,6 +633,18 @@ public:
                     *(int8_t*)&regs.eax = GetTopCutsceneBorderHeightForHelpText();
                 });
             }
+
+            {
+                //CFont::PrintChar (when g_needsToMoveHudLeft is active, prevent text from disappearing)
+                static auto fZero = 0.0f;
+                auto pattern = hook::pattern("D8 1D ? ? ? ? DF E0 F6 C4 05 0F 8B ? ? ? ? DB 05 ? ? ? ? D8 5C 24 ? DF E0 F6 C4 05 0F 8B ? ? ? ? A0");
+                injector::WriteMemory(pattern.get_first(2), &fZero, true);
+
+                onResChange() += [](int Width, int Height)
+                {
+                    fZero = fWidescreenHudOffset43;
+                };
+            }
         };
     }
 } Sprite2d;
