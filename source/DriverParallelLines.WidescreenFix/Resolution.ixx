@@ -67,7 +67,7 @@ public:
         WFP::onInitEvent() += []()
         {
             CIniReader iniReader("");
-            auto ForceMaxRefreshRate = iniReader.ReadInteger("MAIN", "ForceMaxRefreshRate", 1);
+            auto ForceMaxRefreshRate = iniReader.ReadInteger("MAIN", "ForceMaxRefreshRate", 0);
 
             auto ResList = GetResolutionsList(true);
             for (const auto& entry : ResList)
