@@ -7,83 +7,10 @@ export module Resolution;
 
 import ComVars;
 
-IDirect3D9* CreateD3D9()
-{
-    static IDirect3D9* (WINAPI * pDirect3DCreate9)(UINT) = nullptr;
-
-    if (!pDirect3DCreate9)
-    {
-        HMODULE hD3D9 = LoadLibraryA("d3d9.dll");
-        if (hD3D9)
-        {
-            pDirect3DCreate9 = reinterpret_cast<decltype(pDirect3DCreate9)>(GetProcAddress(hD3D9, "Direct3DCreate9"));
-        }
-    }
-
-    if (pDirect3DCreate9)
-        return pDirect3DCreate9(D3D_SDK_VERSION);
-
-    return nullptr;
-}
-
-D3DFORMAT GetBestFormat(uint32_t width, uint32_t height)
-{
-    static std::map<std::pair<uint32_t, uint32_t>, D3DFORMAT> formatCache;
-    static bool initialized = false;
-
-    if (!initialized)
-    {
-        initialized = true;
-
-        IDirect3D9* pD3D = CreateD3D9();
-        if (pD3D)
-        {
-            const D3DFORMAT candidates[] = {
-                D3DFMT_A2R10G10B10,
-                D3DFMT_X8R8G8B8,
-                D3DFMT_A8R8G8B8,
-                D3DFMT_R5G6B5,
-                D3DFMT_X1R5G5B5,
-            };
-
-            for (D3DFORMAT fmt : candidates)
-            {
-                UINT modeCount = pD3D->GetAdapterModeCount(D3DADAPTER_DEFAULT, fmt);
-                for (UINT i = 0; i < modeCount; ++i)
-                {
-                    D3DDISPLAYMODE mode{};
-                    if (SUCCEEDED(pD3D->EnumAdapterModes(D3DADAPTER_DEFAULT, fmt, i, &mode)))
-                    {
-                        auto key = std::make_pair(mode.Width, mode.Height);
-                        if (formatCache.find(key) == formatCache.end())
-                        {
-                            formatCache[key] = fmt;
-                        }
-                    }
-                }
-            }
-
-            pD3D->Release();
-        }
-    }
-
-    auto key = std::make_pair(width, height);
-    auto it = formatCache.find(key);
-
-    if (it != formatCache.end())
-        return it->second;
-
-    return D3DFMT_X8R8G8B8;
-}
+bool* bIsWindowed = nullptr;
 
 int32_t nMinResX = 0;
 int32_t nMinResY = 0;
-
-std::map<std::pair<int, int>, int> MaxRefreshRateMap;
-
-int nCurrentResX = 0;
-int nCurrentResY = 0;
-int nCurrentRefresh = 0;
 
 SafetyHookInline shsub_5E3DDC = {};
 int __fastcall sub_5E3DDC(void* _this, void* edx, UINT Adapter, unsigned int a3, unsigned int a4, unsigned int a5, unsigned int a6)
@@ -91,29 +18,45 @@ int __fastcall sub_5E3DDC(void* _this, void* edx, UINT Adapter, unsigned int a3,
     return shsub_5E3DDC.unsafe_fastcall<int>(_this, edx, Adapter, nMinResX, nMinResY, INT_MAX, INT_MAX);
 }
 
-char __fastcall sub_5E3C9D(D3DFORMAT fmt, void*)
+std::map<std::pair<int, int>, int> MaxRefreshRateMap;
+
+int nCurrentResX = 0;
+int nCurrentResY = 0;
+int nCurrentRefresh = 0;
+int nCurrentFormat = 0;
+
+injector::hook_back<void(__fastcall*)(void*, void*, int*)> hbsub_5E76A9;
+void __fastcall sub_5E76A9(void* _this, void* edx, int* a2)
 {
+    nCurrentResX = a2[0];      // width
+    nCurrentResY = a2[1];      // height
+    nCurrentRefresh = a2[2];   // refresh rate
+    nCurrentFormat = a2[3];    // D3DFORMAT (21=A8R8G8B8, 22=X8R8G8B8, 35=A2R10G10B10)
+
+    auto is32bit = [](D3DFORMAT f)
+    {
+        return f == D3DFMT_A8R8G8B8 || f == D3DFMT_X8R8G8B8 || f == D3DFMT_A2R10G10B10;
+    };
+
     auto key = std::make_pair(nCurrentResX, nCurrentResY);
     auto it = MaxRefreshRateMap.find(key);
-    if (it != MaxRefreshRateMap.end() && nCurrentRefresh != it->second)
-        return 0;
+    if (it != MaxRefreshRateMap.end() && nCurrentRefresh > it->second)
+        it->second = nCurrentRefresh;
 
-    if (fmt == GetBestFormat(nCurrentResX, nCurrentResY))
-        return 1;
+    static std::map<std::pair<int, int>, D3DFORMAT> appended;
 
-    return 0;
-}
+    auto prev = appended.find(key);
+    if (prev != appended.end())
+    {
+        bool prev32 = is32bit(prev->second);
+        bool cur32 = is32bit((D3DFORMAT)nCurrentFormat);
 
-injector::hook_back<int(__fastcall*)(void*, void*, int*, int*, int*)> hbsub_5E3A10;
-int __fastcall sub_5E3A10(void* _this, void* edx, int* a2, int* a3, int* a4)
-{
-    auto ret = hbsub_5E3A10.fun(_this, edx, a2, a3, a4);
+        if (prev32 && !cur32) return;
+        if (prev32 && cur32)  return;
+    }
 
-    nCurrentResX = a4[0];
-    nCurrentResY = a4[1];
-    nCurrentRefresh = a4[2];
-
-    return ret;
+    appended[key] = (D3DFORMAT)nCurrentFormat;
+    hbsub_5E76A9.fun(_this, edx, a2);
 }
 
 class Resolution
@@ -124,8 +67,7 @@ public:
         WFP::onInitEvent() += []()
         {
             CIniReader iniReader("");
-            nMinResX = iniReader.ReadInteger("MAIN", "MinResX", 0);
-            nMinResY = iniReader.ReadInteger("MAIN", "MinResY", 0);
+            auto ForceMaxRefreshRate = iniReader.ReadInteger("MAIN", "ForceMaxRefreshRate", 1);
 
             auto ResList = GetResolutionsList(true);
             for (const auto& entry : ResList)
@@ -137,12 +79,20 @@ public:
                     MaxRefreshRateMap[key] = refresh;
             }
 
-            if (!nMinResX || !nMinResY)
-            {
-                auto ResList = GetResolutionsList(false);
-                if (ResList.size() > 100)
-                    ResList.erase(ResList.begin(), ResList.begin() + (ResList.size() - 100));
+            if (ResList.size() > 100)
+                ResList.erase(ResList.begin(), ResList.begin() + (ResList.size() - 100));
 
+            //force 32 bit HD and max refresh rate
+            if (ForceMaxRefreshRate)
+            {
+                auto pattern = hook::pattern("E8 ? ? ? ? 43 3B 5D ? 72 ? 47");
+                hbsub_5E76A9.fun = injector::MakeCALL(pattern.get_first(), sub_5E76A9, true).get();
+
+                nMinResX = 0;
+                nMinResY = 0;
+            }
+            else
+            {
                 nMinResX = std::get<0>(ResList.front());
                 nMinResY = std::get<1>(ResList.front());
             }
@@ -162,13 +112,8 @@ public:
             injector::WriteMemory(pattern.get_first<int32_t*>(3 + 0), DesktopResW, true);
             injector::WriteMemory(pattern.get_first<int32_t*>(3 + 7), DesktopResH, true);
 
-            //cache processed resolutions
-            pattern = hook::pattern("E8 ? ? ? ? 3B C3 0F 8C ? ? ? ? 8B 4D");
-            hbsub_5E3A10.fun = injector::MakeCALL(pattern.get_first(), sub_5E3A10, true).get();
-
-            //force 32 bit HD and max refresh rate
-            pattern = hook::pattern("E8 ? ? ? ? 84 C0 74 ? 8B 45 ? 3B 45");
-            injector::MakeCALL(pattern.get_first(), sub_5E3C9D, true);
+            pattern = hook::pattern("80 3D ? ? ? ? ? 75 ? ? ? 8B 0D");
+            bIsWindowed = *pattern.get_first<decltype(bIsWindowed)>(2);
 
             //resolution switch
             pattern = hook::pattern("C6 01 01 33 C0 C2 0C 00"); //0x5E4A6A

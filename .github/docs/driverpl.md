@@ -27,7 +27,8 @@
 
 - **Skip Intro** - bypass startup intro movies
 - **Windowed Mode** - borderless windowed mode via [dxwrapper](https://github.com/elishacloud/dxwrapper)
-
+- **SMAA** - enhanced subpixel morphological antialiasing as a post-processing effect
+- **Xbox 360 Gamma** - a custom gamma curve that produces a higher-contrast image with deeper colors, similar to GTA IV on the Xbox 360
 ---
 
 ## Camera

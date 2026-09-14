@@ -11,6 +11,7 @@ int32_t nMinResX = 0;
 int32_t nMinResY = 0;
 
 std::map<std::pair<int, int>, int> MaxRefreshRateMap;
+std::map<std::pair<int, int>, D3DFORMAT> BestFormatMap;
 
 std::filesystem::path GetResolutionConfigPath()
 {
@@ -79,70 +80,23 @@ void SaveResolution(uint32_t width, uint32_t height, uint32_t refreshrate, D3DFO
         << "format = " << static_cast<uint32_t>(format) << '\n';
 }
 
-IDirect3D9* CreateD3D9()
+static int FormatRank(D3DFORMAT fmt)
 {
-    static IDirect3D9* (WINAPI * pDirect3DCreate9)(UINT) = nullptr;
-
-    if (!pDirect3DCreate9)
+    switch (fmt)
     {
-        HMODULE hD3D9 = LoadLibraryA("d3d9.dll");
-        if (hD3D9)
-        {
-            pDirect3DCreate9 = reinterpret_cast<decltype(pDirect3DCreate9)>(GetProcAddress(hD3D9, "Direct3DCreate9"));
-        }
+        case D3DFMT_A2R10G10B10: return 5;
+        case D3DFMT_X8R8G8B8:    return 4;
+        case D3DFMT_A8R8G8B8:    return 3;
+        case D3DFMT_R5G6B5:      return 2;
+        case D3DFMT_X1R5G5B5:    return 1;
+        default:                 return 0;
     }
-
-    if (pDirect3DCreate9)
-        return pDirect3DCreate9(D3D_SDK_VERSION);
-
-    return nullptr;
 }
 
 D3DFORMAT GetBestFormat(uint32_t width, uint32_t height)
 {
-    static std::map<std::pair<uint32_t, uint32_t>, D3DFORMAT> formatCache;
-    static bool initialized = false;
-
-    if (!initialized)
-    {
-        initialized = true;
-
-        IDirect3D9* pD3D = CreateD3D9();
-        if (pD3D)
-        {
-            const D3DFORMAT candidates[] = {
-                D3DFMT_A2R10G10B10,
-                D3DFMT_X8R8G8B8,
-                D3DFMT_A8R8G8B8,
-                D3DFMT_R5G6B5,
-                D3DFMT_X1R5G5B5,
-            };
-
-            for (D3DFORMAT fmt : candidates)
-            {
-                UINT modeCount = pD3D->GetAdapterModeCount(D3DADAPTER_DEFAULT, fmt);
-                for (UINT i = 0; i < modeCount; ++i)
-                {
-                    D3DDISPLAYMODE mode{};
-                    if (SUCCEEDED(pD3D->EnumAdapterModes(D3DADAPTER_DEFAULT, fmt, i, &mode)))
-                    {
-                        auto key = std::make_pair(mode.Width, mode.Height);
-                        if (formatCache.find(key) == formatCache.end())
-                        {
-                            formatCache[key] = fmt;
-                        }
-                    }
-                }
-            }
-
-            pD3D->Release();
-        }
-    }
-
-    auto key = std::make_pair(width, height);
-    auto it = formatCache.find(key);
-
-    if (it != formatCache.end())
+    auto it = BestFormatMap.find(std::make_pair(static_cast<int>(width), static_cast<int>(height)));
+    if (it != BestFormatMap.end())
         return it->second;
 
     return D3DFMT_X8R8G8B8;
@@ -156,8 +110,7 @@ public:
         WFP::onInitEvent() += []()
         {
             CIniReader iniReader("");
-            nMinResX = iniReader.ReadInteger("MAIN", "MinResX", 0);
-            nMinResY = iniReader.ReadInteger("MAIN", "MinResY", 0);
+            auto ForceMaxRefreshRate = iniReader.ReadInteger("MAIN", "ForceMaxRefreshRate", 1);
 
             auto ResList = GetResolutionsList(true);
             for (const auto& entry : ResList)
@@ -169,18 +122,47 @@ public:
                     MaxRefreshRateMap[key] = refresh;
             }
 
-            if (!nMinResX || !nMinResY)
-            {
-                auto ResList = GetResolutionsList(false);
-                if (ResList.size() > 100)
-                    ResList.erase(ResList.begin(), ResList.begin() + (ResList.size() - 100));
+            if (ResList.size() > 100)
+                ResList.erase(ResList.begin(), ResList.begin() + (ResList.size() - 100));
 
+            //force 32 bit HD and max refresh rate
+            auto pattern = hook::pattern("8B 02 3B 44 24 ? 8B 4A ? 8B 72 ? 8B 52 ? 89 74 24");
+            injector::MakeNOP(pattern.get_first(0), 2, true);
+            static auto ResHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            {
+                auto w = *(uint32_t*)(regs.edx + 0x0);
+                auto h = *(uint32_t*)(regs.edx + 0x4);
+                auto refreshrate = *(uint32_t*)(regs.edx + 0x8);
+                auto format = *(D3DFORMAT*)(regs.edx + 0xC);
+
+                regs.eax = w;
+
+                auto key = std::make_pair(static_cast<int>(w), static_cast<int>(h));
+                auto it = BestFormatMap.find(key);
+                if (it == BestFormatMap.end() || FormatRank(format) > FormatRank(it->second))
+                    BestFormatMap[key] = format;
+
+                auto refreshIt = MaxRefreshRateMap.find(key);
+                if (refreshIt != MaxRefreshRateMap.end() && refreshrate != refreshIt->second)
+                    regs.eax = -1;
+
+                if (format != GetBestFormat(w, h))
+                    regs.eax = -1;
+            });
+
+            if (ForceMaxRefreshRate)
+            {
+                nMinResX = 0;
+                nMinResY = 0;
+            }
+            else
+            {
                 nMinResX = std::get<0>(ResList.front());
                 nMinResY = std::get<1>(ResList.front());
             }
 
             //uncap resolutions
-            auto pattern = hook::pattern("68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 57 8B DE E8 ? ? ? ? 85 C0"); //54A5A0
+            pattern = hook::pattern("68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 57 8B DE E8 ? ? ? ? 85 C0"); //54A5A0
             injector::WriteMemory(pattern.get_first<int32_t*>(1 + 0), INT_MAX, true);
             injector::WriteMemory(pattern.get_first<int32_t*>(1 + 5), INT_MAX, true);
             injector::WriteMemory(pattern.get_first<int32_t*>(1 + 10), nMinResY, true);
@@ -212,27 +194,6 @@ public:
             pattern = hook::pattern("C7 44 24 28 ? ? ? ? C7 44 24 2C ? ? ? ? C7 44 24 30 ? ? ? ? C7 44 24 34 ? ? ? ? 89 16 E8"); //0x57F6DF
             injector::WriteMemory(pattern.get_first<int32_t*>(4 + 0), DesktopResW, true);
             injector::WriteMemory(pattern.get_first<int32_t*>(4 + 8), DesktopResH, true);
-
-            //force 32 bit HD and max refresh rate
-            pattern = hook::pattern("8B 02 3B 44 24 ? 8B 4A ? 8B 72 ? 8B 52 ? 89 74 24");
-            injector::MakeNOP(pattern.get_first(0), 2, true);
-            static auto ResHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-            {
-                auto w = *(uint32_t*)(regs.edx + 0x0);
-                auto h = *(uint32_t*)(regs.edx + 0x4);
-                auto refreshrate = *(uint32_t*)(regs.edx + 0x8);
-                auto format = *(D3DFORMAT*)(regs.edx + 0xC);
-
-                regs.eax = w;
-
-                auto key = std::make_pair(w, h);
-                auto it = MaxRefreshRateMap.find(key);
-                if (it != MaxRefreshRateMap.end() && refreshrate != it->second)
-                    regs.eax = 0;
-
-                if (format != GetBestFormat(w, h))
-                    regs.eax = 0;
-            });
 
             //main menu resolution (before profile loading)
             pattern = hook::pattern("C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? ? ? E8");
