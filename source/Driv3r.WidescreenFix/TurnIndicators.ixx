@@ -57,6 +57,10 @@ namespace Natives
     void SetVehIndicatorlights(Vehicle veh, bool on)
     {
         if (!veh) return;
+        auto ptrCheck = *(uintptr_t*)((uintptr_t)veh + 0x474);
+        if (ptrCheck == 0 || ptrCheck == 0xCCCCCCCC)
+            return;
+
         if (!on)
         {
             ActivateLamp(veh, nullptr, LIGHT_FRONT_LEFT, false, false);
