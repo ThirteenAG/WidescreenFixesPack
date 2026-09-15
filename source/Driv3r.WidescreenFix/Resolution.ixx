@@ -111,6 +111,8 @@ public:
         {
             CIniReader iniReader("");
             auto ForceMaxRefreshRate = iniReader.ReadInteger("MAIN", "ForceMaxRefreshRate", 0);
+            nMinResX = iniReader.ReadInteger("MAIN", "MinResX", 0);
+            nMinResY = iniReader.ReadInteger("MAIN", "MinResY", 0);
 
             auto ResList = GetResolutionsList(true);
             for (const auto& entry : ResList)
@@ -124,6 +126,12 @@ public:
 
             if (ResList.size() > 100)
                 ResList.erase(ResList.begin(), ResList.begin() + 100);
+
+            if (!nMinResX || !nMinResY)
+            {
+                nMinResX = std::get<0>(ResList.front());
+                nMinResY = std::get<1>(ResList.front());
+            }
 
             //force 32 bit HD and max refresh rate
             auto pattern = hook::pattern("8B 02 3B 44 24 ? 8B 4A ? 8B 72 ? 8B 52 ? 89 74 24");
@@ -149,17 +157,6 @@ public:
                 if (format != GetBestFormat(w, h))
                     regs.eax = -1;
             });
-
-            if (ForceMaxRefreshRate)
-            {
-                nMinResX = 0;
-                nMinResY = 0;
-            }
-            else
-            {
-                nMinResX = std::get<0>(ResList.front());
-                nMinResY = std::get<1>(ResList.front());
-            }
 
             //uncap resolutions
             pattern = hook::pattern("68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 57 8B DE E8 ? ? ? ? 85 C0"); //54A5A0
