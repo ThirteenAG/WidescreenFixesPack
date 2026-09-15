@@ -100,7 +100,7 @@ void Init()
         onMenuScreenBaseNotify().executeAll((MenuScreen*)regs.esi);
     });
 
-    pattern = hook::pattern("A1 ? ? ? ? ? ? 68 ? ? ? ? 50 FF 51 ? 85 C0 75 ? E8");
+    pattern = hook::pattern("BE ? ? ? ? ? ? ? ? 50 FF 91");
     static auto BeforeResetHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
         WFP::onBeforeReset().executeAll();

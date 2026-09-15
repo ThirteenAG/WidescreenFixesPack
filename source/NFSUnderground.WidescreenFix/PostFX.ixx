@@ -23,11 +23,11 @@ public:
             if (!CPostFX::bConsoleGammaEnabled && !CPostFX::bSmaaEnabled)
                 return;
 
-            //auto pattern = hook::pattern("85 C0 74 ? 8D 70 ? 8B 40");
-            //static auto SMAAHook = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& regs)
-            //{
-            //    CPostFX::RenderSMAA(Direct3DDevice);
-            //});
+            auto pattern = hook::pattern("E8 ? ? ? ? ? ? ? ? ? ? ? 83 C4 ? 50 FF 91 ? ? ? ? EB ? 33 F6");
+            static auto SMAAHook = safetyhook::create_mid(pattern.get_first(-1), [](SafetyHookContext& regs)
+            {
+                CPostFX::RenderSMAA(Direct3DDevice);
+            });
 
             WFP::onEndScene() += []()
             {
