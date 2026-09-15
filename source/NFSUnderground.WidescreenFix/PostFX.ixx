@@ -13,7 +13,7 @@ class PostFX
 public:
     PostFX()
     {
-        WFP::onInitEventAsync() += []()
+        WFP::onInitEvent() += []()
         {
             CIniReader iniReader("");
             CPostFX::bConsoleGammaEnabled = iniReader.ReadInteger("GRAPHICS", "ConsoleGamma", 1) != 0;
@@ -23,15 +23,14 @@ public:
             if (!CPostFX::bConsoleGammaEnabled && !CPostFX::bSmaaEnabled)
                 return;
 
-            auto pattern = hook::pattern("E8 ? ? ? ? 8B 0D ? ? ? ? A1 ? ? ? ? ? ? 51 6A");
-            static auto SMAAHook = safetyhook::create_mid(pattern.get_first(), +[](SafetyHookContext& regs)
-            {
-                CPostFX::RenderSMAA(Direct3DDevice);
-            });
+            //auto pattern = hook::pattern("85 C0 74 ? 8D 70 ? 8B 40");
+            //static auto SMAAHook = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& regs)
+            //{
+            //    CPostFX::RenderSMAA(Direct3DDevice);
+            //});
 
             WFP::onEndScene() += []()
             {
-                CPostFX::RenderSMAA(Direct3DDevice);
                 CPostFX::RenderGamma(Direct3DDevice);
             };
 
