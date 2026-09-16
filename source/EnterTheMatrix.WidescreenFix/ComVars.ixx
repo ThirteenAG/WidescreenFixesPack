@@ -22,6 +22,7 @@ export struct Screen
     float fCutOffArea;
     float fFMVScale;
     float fFMVOffset;
+    std::optional<float> fHudAspectRatioConstraint;
     float fWidescreenHudOffset;
     int32_t nWidescreenHudOffset;
 } Screen;
