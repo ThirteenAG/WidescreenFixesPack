@@ -38,6 +38,10 @@
 
 </div>
 
+# Ultrawide Screenshot
+
+![scb](https://thirteenag.github.io/screens/farcry/ultrawide.jpg)
+
 ---
 
 ## Installation
