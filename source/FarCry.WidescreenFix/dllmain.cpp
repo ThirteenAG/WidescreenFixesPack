@@ -23,6 +23,7 @@ struct Screen
     float fIniFOV;
     float fFOVFactor;
     bool bUnstretchedText = true;
+    bool bBinocularsActive = false;     // set by the binoculars HUD draw, consumed by SetCamera
 
     void AdjustToRes(uint32_t x, uint32_t y)
     {
@@ -320,6 +321,10 @@ void InitXRenderD3D9()
             auto x2 = *(float*)(regs.esp + 0x38);
             auto y2 = *(float*)(regs.esp + 0x3C);
 
+            // binoculars HUD compass strip (Binoculars.lua), drawn every frame while the binoculars are up
+            if (x1 == 401.0f && y1 == 185.0f && x2 == 60.0f && y2 == 16.0f)
+                Screen.bBinocularsActive = true;
+
             void* ret = *(void**)(regs.esp + 0x2C);
             void* ret2 = nullptr;
             void* ret3 = nullptr;
@@ -380,10 +385,14 @@ void InitXRenderD3D9()
             {
                 if (ret == dword_365526AD) // Objectives window on Tab
                 {
-                    if (x2 == 50.0f && y2 == 25.0f) // enemy markers (binoculars)
+                    if (y2 > 0.0f && x2 >= 50.0f && x2 <= 850.0f && x2 == y2 * 2.0f) // enemy markers (binoculars)
                     {
-                        *(float*)(regs.esp + 0x38) /= Screen.fHudScale;
-                        *(float*)(regs.esp + 0x30) += (50.0f - *(float*)(regs.esp + 0x38)) / 2.0f;
+                        // MoTrackLayer.lua draws the motion-tracker ring 2:1 (50x25 when fully tracked, up to
+                        // 850x425 while it fades in), centred on Game:GetEntitiesScreenSpace, which is a raw
+                        // screen position -> draw it with the raw mapping, keeping the ring centred.
+                        const float fW = x2 / Screen.fHudScale;
+                        *(float*)(regs.esp + 0x30) = x1 + (x2 - fW) * 0.5f;
+                        *(float*)(regs.esp + 0x38) = fW;
                         Screen.bStretch = false;
                     }
                     else
@@ -408,6 +417,10 @@ void InitXRenderD3D9()
         static void* stack[6];
         CaptureStackBackTrace(0, 6, stack, NULL);
         Screen.bStretch = false;
+
+        // binoculars HUD compass strip (Binoculars.lua), drawn every frame while the binoculars are up
+        if (x1 == 401.0f && y1 == 185.0f && x2 == 60.0f && y2 == 16.0f)
+            Screen.bBinocularsActive = true;
 
         void* ret = stack[2];
         void* ret2 = stack[3];
@@ -457,10 +470,14 @@ void InitXRenderD3D9()
         {
             if (ret == dword_100B0A58) // Objectives window on Tab
             {
-                if (x2 == 50.0f && y2 == 25.0f) // enemy markers (binoculars)
+                if (y2 > 0.0f && x2 >= 50.0f && x2 <= 850.0f && x2 == y2 * 2.0f) // enemy markers (binoculars)
                 {
-                    x2 /= Screen.fHudScale;
-                    x1 += (50.0f - x2) / 2.0f;
+                    // MoTrackLayer.lua draws the motion-tracker ring 2:1 (50x25 when fully tracked, up to
+                    // 850x425 while it fades in), centred on Game:GetEntitiesScreenSpace, which is a raw
+                    // screen position -> draw it with the raw mapping, keeping the ring centred.
+                    const float fW = x2 / Screen.fHudScale;
+                    x1 += (x2 - fW) * 0.5f;
+                    x2 = fW;
                     Screen.bStretch = false;
                 }
                 else
@@ -716,8 +733,18 @@ void InitCryGame()
 SafetyHookInline shSetCamera = {};
 void __fastcall SetCamera(void* engine, void* edx, float* cam, char bToTheScreen)
 {
-    if (bToTheScreen && Screen.fFOVFactor > 0.0f)
-        cam[12] *= Screen.fFOVFactor;      // fHudScale * fIniFOV = aspect/(4/3) * fIniFOV
+    if (bToTheScreen)
+    {
+        // bBinocularsActive is armed by the binoculars HUD drawing its compass strip (Binoculars.lua,
+        // nothing else draws a 60x16 quad at 401,185, and it draws it every frame while up). While
+        // armed the game keeps its own fov - no Hor+ factor - so the rendered view and the scripts'
+        // ProjectToScreen agree and the motion-tracker markers line up. It is disarmed here and only
+        // re-armed by the next HUD draw.
+        if (Screen.bBinocularsActive)
+            Screen.bBinocularsActive = false;
+        else if (Screen.fFOVFactor > 0.0f)
+            cam[12] *= Screen.fFOVFactor;      // fHudScale * fIniFOV = aspect/(4/3) * fIniFOV
+    }
 
     shSetCamera.unsafe_fastcall(engine, edx, cam, bToTheScreen);
 }
@@ -725,8 +752,18 @@ void __fastcall SetCamera(void* engine, void* edx, float* cam, char bToTheScreen
 SafetyHookInline shSetCamera = {};
 void __fastcall SetCamera(void* engine, float* cam, char bToTheScreen)
 {
-    if (bToTheScreen && Screen.fFOVFactor > 0.0f)
-        cam[12] *= Screen.fFOVFactor;      // fHudScale * fIniFOV = aspect/(4/3) * fIniFOV
+    if (bToTheScreen)
+    {
+        // bBinocularsActive is armed by the binoculars HUD drawing its compass strip (Binoculars.lua,
+        // nothing else draws a 60x16 quad at 401,185, and it draws it every frame while up). While
+        // armed the game keeps its own fov - no Hor+ factor - so the rendered view and the scripts'
+        // ProjectToScreen agree and the motion-tracker markers line up. It is disarmed here and only
+        // re-armed by the next HUD draw.
+        if (Screen.bBinocularsActive)
+            Screen.bBinocularsActive = false;
+        else if (Screen.fFOVFactor > 0.0f)
+            cam[12] *= Screen.fFOVFactor;      // fHudScale * fIniFOV = aspect/(4/3) * fIniFOV
+    }
 
     shSetCamera.unsafe_fastcall(engine, cam, bToTheScreen);
 }
