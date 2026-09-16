@@ -28,7 +28,6 @@ void InitWF()
     Screen.fNovelsOffset = Screen.fHudOffset;
 
     CIniReader iniReader("");
-    static bool bWidescreenHud = iniReader.ReadInteger("MAIN", "WidescreenHud", 1) != 0;
     Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "HudAspectRatioConstraint", ""));
     Screen.bGraphicNovelMode = iniReader.ReadInteger("MAIN", "GraphicNovelMode", 1) != 0;
 
@@ -101,7 +100,7 @@ void InitWF()
             auto ElementNewPosX2 = ElementPosX;
             auto ElementNewPosY2 = ElementPosY;
 
-            if (bWidescreenHud && !Screen.bIsSniperZoomOn)
+            if (!Screen.bIsSniperZoomOn)
             {
                 if (ElementPosX == 7.0f) // bullet time meter
                 {
@@ -162,7 +161,6 @@ void InitWF()
     }; injector::MakeInline<P_HudPosHook>(pattern.get_first(0), pattern.get_first(73)); //0x1000F2B3
     injector::WriteMemory(pattern.get_first(10), 0x9008EC83, true); //sub     esp, 8
 
-    if (bWidescreenHud)
     {
         Screen.fWidescreenHudOffset = -CalculateWidescreenOffset(Screen.fWidth, Screen.fHeight, 640.0f, 480.0f);
         if (Screen.fHudAspectRatioConstraint.has_value())

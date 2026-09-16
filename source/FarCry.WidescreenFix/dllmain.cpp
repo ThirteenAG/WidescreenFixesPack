@@ -20,7 +20,6 @@ struct Screen
     float fFMVOffsetV;
     float fRadarVerticalOffset;
     bool bStretch;
-    bool bWidescreenHud;
     std::optional<float> fHudAspectRatioConstraint;
     float fWidescreenHudOffset;
     float fFOV;
@@ -261,7 +260,6 @@ sub_380E58B5(float* a1, float a2, float a3, float a4, float a5, float a6, float 
 void Init()
 {
     CIniReader iniReader("");
-    Screen.bWidescreenHud = iniReader.ReadInteger("MAIN", "WidescreenHud", 1) != 0;
     Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "HudAspectRatioConstraint", ""));
     Screen.fIniFOV = iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f);
     if (!Screen.fIniFOV) { Screen.fIniFOV = 1.0f; }
@@ -577,7 +575,6 @@ void InitXRenderD3D9()
                 *(float*)(regs.esp + 0x34) += Screen.fRadarVerticalOffset;
                 Screen.bStretch = false;
 
-                if (Screen.bWidescreenHud)
                 {
                     *(float*)(regs.esp + 0x30) -= Screen.fWidescreenHudOffset;
                 }
@@ -592,7 +589,6 @@ void InitXRenderD3D9()
                 *(float*)(regs.esp + 0x34) += Screen.fRadarVerticalOffset;
                 Screen.bStretch = false;
 
-                if (Screen.bWidescreenHud)
                 {
                     *(float*)(regs.esp + 0x30) -= Screen.fWidescreenHudOffset;
                 }
@@ -692,7 +688,6 @@ void InitXRenderD3D9()
                     y1 += Screen.fRadarVerticalOffset;
                     Screen.bStretch = false;
 
-                    if (Screen.bWidescreenHud)
                     {
                         x1 -= Screen.fWidescreenHudOffset;
                     }
@@ -707,7 +702,6 @@ void InitXRenderD3D9()
                     y1 += Screen.fRadarVerticalOffset;
                     Screen.bStretch = false;
 
-                    if (Screen.bWidescreenHud)
                     {
                         x1 -= Screen.fWidescreenHudOffset;
                     }
@@ -1007,7 +1001,6 @@ void InitCryGame()
             *(float*)(regs.ebp - 0x78) += Screen.fHudOffset;
             *(float*)(regs.ebp - 0x60) += Screen.fHudOffset;
 
-            if (Screen.bWidescreenHud)
             {
                 DBGONLY(KEYPRESS(VK_F1) { spd::log()->info("{}, {}, {}, {}, {}, {}, {}, {}", q.ix1, q.iy1, q.ix2, q.iy2, q.ix3, q.iy3, q.ix4, q.iy4); });
 
@@ -1060,7 +1053,6 @@ void InitCryGame()
                 *(float*)(ptr + 0xC8) += Screen.fHudOffset;
                 *(float*)(ptr + 0xE0) += Screen.fHudOffset;
 
-                if (Screen.bWidescreenHud)
                 {
                     if (q.ix1 >= 551)
                     {
