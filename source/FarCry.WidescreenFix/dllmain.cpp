@@ -1,7 +1,4 @@
 #include "stdafx.h"
-#ifdef _WIN64
-#include "asm-x64/asm-x64.h"
-#endif
 
 struct Screen
 {
@@ -25,6 +22,7 @@ struct Screen
     float fFOV;
     float fIniFOV;
     float fFOVFactor;
+    bool bUnstretchedText = true;
 
     void AdjustToRes(uint32_t x, uint32_t y)
     {
@@ -110,76 +108,6 @@ public:
 
     inline QUAD() {}
 };
-
-#ifdef _WIN64
-#define JMPSIZE 14
-#define CALLSIZE 16
-
-#define pushad() \
-{ \
-    a.pushq(reg::rcx); \
-    a.pushq(reg::rdx); \
-    a.pushq(reg::r8);  \
-    a.pushq(reg::r9);  \
-    a.pushq(reg::rbx); \
-    a.pushq(reg::rbp); \
-    a.pushq(reg::rdi); \
-    a.pushq(reg::rsi); \
-    a.pushq(reg::rsp); \
-    a.pushq(reg::r12); \
-    a.pushq(reg::r13); \
-    a.pushq(reg::r14); \
-    a.pushq(reg::r15); \
-    a.subq(0x28, reg::rsp); \
-}
-
-#define popad() \
-{ \
-    a.addq(0x28, reg::rsp); \
-    a.popq(reg::r15); \
-    a.popq(reg::r14); \
-    a.popq(reg::r13); \
-    a.popq(reg::r12); \
-    a.popq(reg::rsp); \
-    a.popq(reg::rsi); \
-    a.popq(reg::rdi); \
-    a.popq(reg::rbp); \
-    a.popq(reg::rbx); \
-    a.popq(reg::r9);  \
-    a.popq(reg::r8);  \
-    a.popq(reg::rdx); \
-    a.popq(reg::rcx); \
-}
-
-inline injector::memory_pointer_raw MakeAbsCALL(injector::memory_pointer_tr at, injector::memory_pointer_raw dest, bool vp = true)
-{
-    injector::WriteMemory<uint16_t>(at, 0x15FF, vp);
-    injector::WriteMemory<uint32_t>(at + sizeof(uint16_t), 2, vp);
-    injector::WriteMemory<uint16_t>(at + sizeof(uint16_t) + sizeof(uint32_t), 0x08EB, vp);
-    injector::WriteMemory<uint64_t>(at + sizeof(uint16_t) + sizeof(uint32_t) + sizeof(uint16_t), dest.as_int(), vp);
-    return at.as_int() + CALLSIZE;
-}
-
-inline injector::memory_pointer_raw MakeAbsJMP(injector::memory_pointer_tr at, injector::memory_pointer_raw dest, bool vp = true)
-{
-    injector::WriteMemory<uint16_t>(at, 0x25FF, vp);
-    injector::WriteMemory<uint32_t>(at + sizeof(uint16_t), 0, vp);
-    injector::WriteMemory<uint64_t>(at + sizeof(uint16_t) + sizeof(uint32_t), dest.as_int(), vp);
-    return at.as_int() + JMPSIZE;
-}
-
-template<class FuncT>
-inline void MakeInlineJMP(injector::memory_pointer_tr at, injector::memory_pointer_raw dest, bool vp = true, bool areanop = true)
-{
-    assert((dest.as_int() - at.as_int()) >= JMPSIZE);
-    if (areanop)
-        injector::MakeRangedNOP(at, dest, vp);
-    FuncT fun;
-    auto [frontier, to] = fun();
-    MakeAbsJMP(at, to, vp);
-    MakeAbsJMP(frontier, dest, vp);
-}
-#endif
 
 int WINAPI GetSystemMetricsHook(int nIndex)
 {
@@ -275,68 +203,13 @@ void InitXRenderD3D9()
     //injector::MakeCALL(0x3806726B, sub_380E58B5, true); //3d? and crosshair (2d lines)
     #else
     auto pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "E8 ? ? ? ? 48 8B 8F ? ? ? ? 4C 8B C3 48 8B 01 BA ? ? ? ? FF 90 ? ? ? ? 48 8B 8F");
-    struct TextHook
-    {
-        std::tuple<Address, void*> operator()()
-        {
-            static uint8_t buffer[100];
-            injector::ProtectMemory(buffer, sizeof(buffer), PAGE_EXECUTE_READWRITE);
-            CodeBlock cb; cb.init((Address)buffer, sizeof(buffer));
-            X64Assembler a(cb);
-
-            cb.setFrontier(Address(MakeAbsCALL(cb.frontier(), sub_380E58B5, true).as_int())); //_asm call sub_1008AED0
-            a.movq(reg::rdi[0x20E58], reg::rcx); // _asm mov     rcx, [rdi + 20E58h]
-            a.movq(reg::rbx, reg::r8);           // _asm mov     r8, rbx
-            a.movq(reg::rcx[0], reg::rax);       // _asm mov     rax, [rcx]
-            a.movl(3, reg::edx);                 // _asm mov     edx, 3
-
-            assert(sizeof(buffer) > ((cb.frontier() + JMPSIZE) - cb.base()));
-            return std::make_tuple(cb.frontier(), &buffer);
-        }
-    }; MakeInlineJMP<TextHook>(pattern.get_first(0), pattern.get_first(23)); //0x10027B06, 0x10027B1D
+    injector::MakeCALLTrampoline(pattern.get_first(), sub_380E58B5, true);
 
     pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "E8 ? ? ? ? 48 8B 8D ? ? ? ? 48 8B 01 4C 8B C3 BA ? ? ? ? FF 90 ? ? ? ? 48 8B 8D");
-    struct Hook2D
-    {
-        std::tuple<Address, void*> operator()()
-        {
-            static uint8_t buffer[100];
-            injector::ProtectMemory(buffer, sizeof(buffer), PAGE_EXECUTE_READWRITE);
-            CodeBlock cb; cb.init((Address)buffer, sizeof(buffer));
-            X64Assembler a(cb);
-
-            cb.setFrontier(Address(MakeAbsCALL(cb.frontier(), sub_380E58B5, true).as_int())); //_asm call sub_1008AED0
-            a.movq(reg::rbp[0x20E58], reg::rcx); // _asm mov     rcx, [rbp+20E58h]
-            a.movq(reg::rbx, reg::r8);           // _asm mov     r8, rbx
-            a.movq(reg::rcx[0], reg::rax);       // _asm mov     rax, [rcx]
-            a.movl(3, reg::edx);                 // _asm mov     edx, 3
-
-            assert(sizeof(buffer) > ((cb.frontier() + JMPSIZE) - cb.base()));
-            return std::make_tuple(cb.frontier(), &buffer);
-        }
-    }; MakeInlineJMP<Hook2D>(pattern.get_first(0), pattern.get_first(23)); //0x1002199B, 0x100219B2
+    injector::MakeCALLTrampoline(pattern.get_first(), sub_380E58B5, true);
 
     /*
     pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "E8 ? ? ? ? 48 8B 8E ? ? ? ? 4C 8B C3 48 8B 01 BA ? ? ? ? FF 90 ? ? ? ? 48 8B 8E");
-    struct Hook3D
-    {
-        std::tuple<Address, void*> operator()()
-        {
-            static uint8_t buffer[100];
-            injector::ProtectMemory(buffer, sizeof(buffer), PAGE_EXECUTE_READWRITE);
-            CodeBlock cb; cb.init((Address)buffer, sizeof(buffer));
-            X64Assembler a(cb);
-
-            cb.setFrontier(Address(MakeAbsCALL(cb.frontier(), sub_1008AED0, true).as_int())); //_asm call sub_1008AED0
-            a.movq(reg::rsi[0x20E58], reg::rcx); // _asm mov     rcx, [rsi + 20E58h]
-            a.movq(reg::rbx, reg::r8);           // _asm mov     r8, rbx
-            a.movq(reg::rcx[0], reg::rax);       // _asm mov     rax, [rcx]
-            a.movl(3, reg::edx);                 // _asm mov     edx, 3
-
-            assert(sizeof(buffer) > ((cb.frontier() + JMPSIZE) - cb.base()));
-            return std::make_tuple(cb.frontier(), &buffer);
-        }
-    }; MakeInlineJMP<Hook3D>(pattern.get_first(0), pattern.get_first(23)); //0x1003FBFB, 0x1003FC12
     */
     #endif
 
@@ -355,49 +228,22 @@ void InitXRenderD3D9()
         }
     };
     #else
-    static uint64_t _rcx;
-
-    pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "48 8B C4 48 81 EC 38 01 00 00 48 C7 44 24 58 FE FF FF FF 48");
-    //static auto DrawImage = (void(__fastcall*)(void* _this, float x, float y, float w, float h, int tex, float a6, float a7, float a8, float a9, float a10, float r, float g, float b, float alpha, float a15)) pattern.get_first(0);
-
-    static uint8_t DrawImageOriginal[100];
+    static SafetyHookInline Draw_2DImageHook{};
+    static auto DrawImage = [](void* _this, float x, float y, float w, float h, int tex, float a6, float a7, float a8, float a9, float a10, float r, float g, float b, float alpha, float a15)
     {
-        injector::ProtectMemory(DrawImageOriginal, sizeof(DrawImageOriginal), PAGE_EXECUTE_READWRITE);
-        CodeBlock cb; cb.init((Address)DrawImageOriginal, sizeof(DrawImageOriginal));
-        X64Assembler a(cb);
+        return Draw_2DImageHook.unsafe_fastcall(_this, x, y, w, h, tex, a6, a7, a8, a9, a10, r, g, b, alpha, a15);
+    };
 
-        a.movq(reg::rsp, reg::rax); // _asm mov rax, rsp
-        a.subq(0x138, reg::rsp);    // _asm sub rsp, 138h
-        a.movq(-2, reg::rsp[0x58]); // _asm mov qword ptr [rsp+58h], -2
-        a.setFrontier((Address)MakeAbsJMP(a.frontier(), pattern.get_first(19), true).as_int());
-        assert(sizeof(DrawImageOriginal) > ((cb.frontier() + JMPSIZE) - cb.base()));
-    }
-    static auto DrawImage = (void(__fastcall*)(void* _this, float x, float y, float w, float h, int tex, float a6, float a7, float a8, float a9, float a10, float r, float g, float b, float alpha, float a15)) & DrawImageOriginal;
-
-    static uint8_t DrawBordersBuffer[100];
+    static auto DrawBorders = [](void* _this)
     {
-        injector::ProtectMemory(DrawBordersBuffer, sizeof(DrawBordersBuffer), PAGE_EXECUTE_READWRITE);
-        CodeBlock cb; cb.init((Address)DrawBordersBuffer, sizeof(DrawBordersBuffer));
-        X64Assembler a(cb);
-
-        pushad();
-        a.movq((int64_t)static_cast<void(*)()>([]()
+        if (Screen.bStretch)
         {
-            if (Screen.bStretch)
-            {
-                Screen.bStretch = false;
-                DrawImage((void*)_rcx, 0.0f, 0.0f, Screen.fHudOffset + 1.0f, 600.0f, 0, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.5f);
-                DrawImage((void*)_rcx, 800.0f - Screen.fHudOffset - 1.0f, 0.0f, Screen.fHudOffset + 1.0f, 600.0f, 0, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.5f);
-                Screen.bStretch = true;
-            }
+            Screen.bStretch = false;
+            DrawImage(_this, 0.0f, 0.0f, Screen.fHudOffset + 1.0f, 600.0f, 0, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.5f);
+            DrawImage(_this, 800.0f - Screen.fHudOffset - 1.0f, 0.0f, Screen.fHudOffset + 1.0f, 600.0f, 0, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.5f);
+            Screen.bStretch = true;
         }
-        ), reg::rax);
-        a.callq(reg::rax);
-        popad();
-        a.ret();
-        assert(sizeof(DrawBordersBuffer) > ((cb.frontier() + JMPSIZE) - cb.base()));
-    }
-    static auto DrawBorders = (void(*)()) & DrawBordersBuffer;
+    };
     #endif
 
     #ifndef _WIN64
@@ -422,81 +268,18 @@ void InitXRenderD3D9()
     }; injector::MakeInline<SetResHook2>(pattern.get_first(0), pattern.get_first(6));
     #else
     pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "44 89 89 ? ? ? ? 44 89 81 ? ? ? ? 89 91 ? ? ? ? 44 89 91");
-    struct SetResHook
+    static auto SetResHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        std::tuple<Address, void*> operator()()
-        {
-            static uint8_t buffer[200];
-            injector::ProtectMemory(buffer, sizeof(buffer), PAGE_EXECUTE_READWRITE);
-            CodeBlock cb; cb.init((Address)buffer, sizeof(buffer));
-            X64Assembler a(cb);
-
-            a.movl(reg::r9d, reg::rcx[0x17BF0]); //_asm mov[rcx + 17BF0h], r9d
-            a.movl(reg::r8d, reg::rcx[0x17BF4]); //_asm mov[rcx + 17BF4h], r8d
-            a.movl(reg::edx, reg::rcx[0x17BE8]); //_asm mov[rcx + 17BE8h], edx
-
-            pushad();
-
-            a.movl(reg::r9d, reg::ecx);
-            a.movl(reg::r8d, reg::edx);
-            a.movq((int64_t)static_cast<void(*)(uint32_t, uint32_t)>([](uint32_t w, uint32_t h)
-            {
-                Screen.AdjustToRes(w, h);
-            }
-            ), reg::rax);
-            a.callq(reg::rax);
-
-            popad();
-
-            a.testq(reg::rbx, reg::rbx); // _asm test    rbx, rbx
-
-            assert(sizeof(buffer) > ((cb.frontier() + JMPSIZE) - cb.base()));
-            return std::make_tuple(cb.frontier(), &buffer);
-        }
-    }; MakeInlineJMP<SetResHook>(pattern.get_first(0), pattern.get_first(20)); //0x1012B5A1, 0x1012B5B5
+        Screen.AdjustToRes(static_cast<uint32_t>(regs.r9), static_cast<uint32_t>(regs.r8));
+    });
 
     pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "8B 8B ? ? ? ? 89 48 10 8B 8B ? ? ? ? 89 48 14");
-    struct SetResHook2
+    static auto SetResHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        std::tuple<Address, void*> operator()()
-        {
-            static uint8_t buffer[100];
-            injector::ProtectMemory(buffer, sizeof(buffer), PAGE_EXECUTE_READWRITE);
-            CodeBlock cb; cb.init((Address)buffer, sizeof(buffer));
-            X64Assembler a(cb);
-
-            a.movl(reg::rbx[0x17BC8], reg::ecx); //_asm mov ecx, [rbx + 17BC8h]
-            a.movl(reg::ecx, reg::rax[0x10]);    //_asm mov[rax + 10h], ecx
-            a.movl(reg::rbx[0x17BCC], reg::ecx); //_asm mov ecx, [rbx + 17BCCh]
-            a.movl(reg::ecx, reg::rax[0x14]);    //_asm mov[rax + 14h], ecx
-
-            a.pushq(reg::rax);
-            a.pushq(reg::rbx);
-            a.pushq(reg::rdx);
-            a.pushq(reg::rcx);
-            a.pushq(reg::r8);
-            a.pushq(reg::r9);
-
-            a.movl(reg::rax[0x10], reg::ecx);
-            a.movl(reg::rax[0x14], reg::edx);
-            a.movq((int64_t)static_cast<void(*)(uint32_t, uint32_t)>([](uint32_t w, uint32_t h)
-            {
-                Screen.AdjustToRes(w, h);
-            }
-            ), reg::rbx);
-            a.callq(reg::rbx);
-
-            a.popq(reg::r9);
-            a.popq(reg::r8);
-            a.popq(reg::rcx);
-            a.popq(reg::rdx);
-            a.popq(reg::rbx);
-            a.popq(reg::rax);
-
-            assert(sizeof(buffer) > ((cb.frontier() + JMPSIZE) - cb.base()));
-            return std::make_tuple(cb.frontier(), &buffer);
-        }
-    }; MakeInlineJMP<SetResHook2>(pattern.get_first(0), pattern.get_first(18)); //0x100852B9, 0x100852CB
+        auto w = *(uint32_t*)(regs.rbx + 0x17BC8);
+        auto h = *(uint32_t*)(regs.rbx + 0x17BCC);
+        Screen.AdjustToRes(w, h);
+    });
     #endif
 
     #ifndef _WIN64
@@ -620,146 +403,89 @@ void InitXRenderD3D9()
     }; injector::MakeInline<Draw_2DImageHook>(pattern.get_first(0), pattern.get_first(6));
     #else
     pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "48 8B C4 48 81 EC ? ? ? ? 48 C7 44 24 ? ? ? ? ? 48 89 58 F8 48 89 68 F0 48 89 70 E8 48 89 78 E0 4C 89 60 D8 66 0F 7F 70");
-    struct Draw_2DImageHook
+    Draw_2DImageHook = safetyhook::create_inline(pattern.get_first(), +[](void* _this, float x1, float y1, float x2, float y2, int tex, float a6, float a7, float a8, float a9, float a10, float r, float g, float b, float alpha, float a15) -> int64_t
     {
-        std::tuple<Address, void*> operator()()
+        static void* stack[6];
+        CaptureStackBackTrace(0, 6, stack, NULL);
+        Screen.bStretch = false;
+
+        void* ret = stack[2];
+        void* ret2 = stack[3];
+
+        if (ret == dword_1005DA88 && ret2 == dword_10068D88) //fmv
         {
-            static volatile float x1, y1, x2, y2;
+            Screen.bStretch = false;
+            x1 /= Screen.fHudScale;
+            x2 /= Screen.fHudScale;
+            x1 += Screen.fHudOffset;
 
-            static uint8_t buffer[300];
-            injector::ProtectMemory(buffer, sizeof(buffer), PAGE_EXECUTE_READWRITE);
-            CodeBlock cb; cb.init((Address)buffer, sizeof(buffer));
-            X64Assembler a(cb);
+            x1 -= Screen.fFMVOffsetH;
+            y1 -= Screen.fFMVOffsetV;
+            x2 += Screen.fFMVOffsetH + Screen.fFMVOffsetH;
+            y2 += Screen.fFMVOffsetV + Screen.fFMVOffsetV;
+        }
+        else if (ret == dword_1018DCD8 || ret == dword_1018DD8F || ret == dword_1018DEA3 || ret == dword_1018DF57)
+        {
+            x1 /= Screen.fHudScale;
+            y1 /= Screen.fHudScale;
+            x2 /= Screen.fHudScale;
+            y2 /= Screen.fHudScale;
 
-            pushad();
+            x1 += Screen.fHudOffset;
+            y1 += Screen.fRadarVerticalOffset;
+            Screen.bStretch = false;
 
-            a.movq((int64_t)&_rcx, reg::rax);
-            a.movq(reg::rcx, reg::rax[0]);
-            a.movq((int64_t)&x1, reg::rax);
-            a.movss(reg::xmm1, reg::rax[0]);
-            a.movq((int64_t)&y1, reg::rax);
-            a.movss(reg::xmm2, reg::rax[0]);
-            a.movq((int64_t)&x2, reg::rax);
-            a.movss(reg::xmm3, reg::rax[0]);
-            a.movq((int64_t)&y2, reg::rax);
-            a.movss(reg::rsp[0x28 + 0x90], reg::xmm1);
-            a.movss(reg::xmm1, reg::rax[0]);
-
-            a.movq(reg::rsp, reg::rcx);
-            a.movq((int64_t)static_cast<void(*)(int64_t)>([](int64_t ptr)
             {
-                Screen.bStretch = false;
+                x1 -= Screen.fWidescreenHudOffset;
+            }
+        }
+        else if (ret == dword_1018F2CE || ret == dword_1018E00E || ret == dword_1018ECE0 || ret == dword_1018EB80 || ret == dword_1018E5B4 || ret == dword_1018F11C || ret == dword_1018E4C6)
+        {
+            x1 /= Screen.fHudScale;
+            y1 /= Screen.fHudScale;
+            x2 /= Screen.fHudScale;
 
-                void* ret = *(void**)(ptr + 0x90);
-                void* ret2 = nullptr;
-                void* ret3 = nullptr;
-                if (ret == dword_100B1018)
-                {
-                    ret2 = *(void**)(ptr + 0x160);
-                    ret3 = *(void**)(ptr + 0x160 + 0x30);
-                }
-                else if (ret == dword_1005DA88)
-                {
-                    ret2 = *(void**)(ptr + 0x1F0);
-                }
+            x1 += Screen.fHudOffset;
+            y1 += Screen.fRadarVerticalOffset;
+            Screen.bStretch = false;
 
-                if (ret == dword_1005DA88 && ret2 == dword_10068D88) //fmv
+            {
+                x1 -= Screen.fWidescreenHudOffset;
+            }
+        }
+        else
+        {
+            if (ret == dword_100B0A58) // Objectives window on Tab
+            {
+                if (x2 == 50.0f && y2 == 25.0f) // enemy markers (binoculars)
                 {
-                    Screen.bStretch = false;
-                    x1 /= Screen.fHudScale;
                     x2 /= Screen.fHudScale;
-                    x1 += Screen.fHudOffset;
-
-                    x1 -= Screen.fFMVOffsetH;
-                    y1 -= Screen.fFMVOffsetV;
-                    x2 += Screen.fFMVOffsetH + Screen.fFMVOffsetH;
-                    y2 += Screen.fFMVOffsetV + Screen.fFMVOffsetV;
-                    return;
-                }
-
-                if (ret == dword_1018DCD8 || ret == dword_1018DD8F || ret == dword_1018DEA3 || ret == dword_1018DF57)
-                {
-                    x1 /= Screen.fHudScale;
-                    y1 /= Screen.fHudScale;
-                    x2 /= Screen.fHudScale;
-                    y2 /= Screen.fHudScale;
-
-                    x1 += Screen.fHudOffset;
-                    y1 += Screen.fRadarVerticalOffset;
+                    x1 += (50.0f - x2) / 2.0f;
                     Screen.bStretch = false;
-
-                    {
-                        x1 -= Screen.fWidescreenHudOffset;
-                    }
-                }
-                else if (ret == dword_1018F2CE || ret == dword_1018E00E || ret == dword_1018ECE0 || ret == dword_1018EB80 || ret == dword_1018E5B4 || ret == dword_1018F11C || ret == dword_1018E4C6)
-                {
-                    x1 /= Screen.fHudScale;
-                    y1 /= Screen.fHudScale;
-                    x2 /= Screen.fHudScale;
-
-                    x1 += Screen.fHudOffset;
-                    y1 += Screen.fRadarVerticalOffset;
-                    Screen.bStretch = false;
-
-                    {
-                        x1 -= Screen.fWidescreenHudOffset;
-                    }
                 }
                 else
+                    Screen.bStretch = true;
+            }
+            else if (ret2 == dword_100B72BB) // Damage overlay (and scopes in x64 version)
+            {
+                if ((x1 == 0.0f && x2 == 800.0f && y1 == 0.0f && y2 == 90.0f) || (x1 == 0.0f && x2 == 800.0f && y1 == 510.0f && y2 == 90.0f) ||
+                    (x1 == 0.0f && x2 == 90.0f && y1 == 0.0f && y2 == 600.0f) || (x1 == 710.0f && x2 == 90.0f && y1 == 0.0f && y2 == 600.0f))
+                    Screen.bStretch = false;
+                else
                 {
-                    if (ret == dword_100B0A58) // Objectives window on Tab
-                    {
-                        if (x2 == 50.0f && y2 == 25.0f) // enemy markers (binoculars)
-                        {
-                            x2 /= Screen.fHudScale;
-                            x1 += (50.0f - x2) / 2.0f;
-                            Screen.bStretch = false;
-                        }
-                        else
-                            Screen.bStretch = true;
-                    }
-                    else if (ret2 == dword_100B72BB) // Damage overlay (and scopes in x64 version)
-                    {
-                        if ((x1 == 0.0f && x2 == 800.0f && y1 == 0.0f && y2 == 90.0f) || (x1 == 0.0f && x2 == 800.0f && y1 == 510.0f && y2 == 90.0f) ||
-                            (x1 == 0.0f && x2 == 90.0f && y1 == 0.0f && y2 == 600.0f) || (x1 == 710.0f && x2 == 90.0f && y1 == 0.0f && y2 == 600.0f))
-                            Screen.bStretch = false;
-                        else
-                        {
-                            Screen.bStretch = true;
-                            DrawBorders();
-                        }
-                    }
-                    else
-                    {
-                        Screen.bStretch = true;
-                        DrawBorders();
-                    }
+                    Screen.bStretch = true;
+                    DrawBorders(_this);
                 }
             }
-            ), reg::rax);
-            a.callq(reg::rax);
-
-            a.movq((int64_t)&x1, reg::rax);
-            a.movss(reg::rax[0], reg::xmm1);
-            a.movq((int64_t)&y1, reg::rax);
-            a.movss(reg::rax[0], reg::xmm2);
-            a.movq((int64_t)&x2, reg::rax);
-            a.movss(reg::rax[0], reg::xmm3);
-            a.movq((int64_t)&y2, reg::rax);
-            a.movq(reg::rax[0], reg::rax);
-            a.movq(reg::rax, reg::rsp[0x28 + 0x90]);
-
-            popad();
-
-            a.movq(reg::rsp, reg::rax); // _asm mov rax, rsp
-            a.subq(0x138, reg::rsp);    // _asm sub rsp, 138h
-            a.movq(-2, reg::rsp[0x58]); // _asm mov qword ptr [rsp+58h], -2
-
-            assert(sizeof(buffer) > ((cb.frontier() + JMPSIZE) - cb.base()));
-            return std::make_tuple(cb.frontier(), &buffer);
+            else
+            {
+                Screen.bStretch = true;
+                DrawBorders(_this);
+            }
         }
-    }; MakeInlineJMP<Draw_2DImageHook>(pattern.get_first(0), pattern.get_first(19)); //0x10021730, 0x10021743
+
+        return Draw_2DImageHook.unsafe_fastcall<int64_t>(_this, x1, y1, x2, y2, tex, a6, a7, a8, a9, a10, r, g, b, alpha, a15);
+    });
     #endif
 
     //Crosshair
@@ -780,39 +506,13 @@ void InitXRenderD3D9()
     }; injector::MakeInline<DrawLineHook>(pattern.get_first(0), pattern.get_first(6));
     #else
     pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "41 89 43 18 8B 47 04 41 89 43 1C 8B 47 08 41 89 6B 24 41 89 43 20");
-    struct DrawLineHook
+    static auto DrawLineHook = safetyhook::create_mid(pattern.get_first(22), [](SafetyHookContext& regs)
     {
-        std::tuple<Address, void*> operator()()
-        {
-            static uint8_t buffer[100];
-            injector::ProtectMemory(buffer, sizeof(buffer), PAGE_EXECUTE_READWRITE);
-            CodeBlock cb; cb.init((Address)buffer, sizeof(buffer));
-            X64Assembler a(cb);
-
-            a.movl(reg::eax, reg::r11[0x18]); //_asm mov [r11+18h], eax
-            a.movl(reg::rdi[0x4], reg::eax);  //_asm mov eax, [rdi+4]
-            a.movl(reg::eax, reg::r11[0x1C]); //_asm mov [r11+1Ch], eax
-            a.movl(reg::rdi[0x8], reg::eax);  //_asm mov eax, [rdi+8]
-            a.movl(reg::ebp, reg::r11[0x24]); //_asm mov [r11+24h], ebp
-            a.movl(reg::eax, reg::r11[0x20]); //_asm mov [r11+20h], eax
-
-            a.pushq(reg::rcx);
-            a.movq(reg::r11, reg::rcx);
-            a.movq((int64_t)static_cast<void(*)(uintptr_t)>([](uintptr_t ptr)
-            {
-                *(float*)(ptr + 0x00) /= Screen.fHudScale;
-                *(float*)(ptr + 0x00) += Screen.fHudOffset;
-                *(float*)(ptr + 0x18) /= Screen.fHudScale;
-                *(float*)(ptr + 0x18) += Screen.fHudOffset;
-            }
-            ), reg::rax);
-            a.callq(reg::rax);
-            a.popq(reg::rcx);
-
-            assert(sizeof(buffer) > ((cb.frontier() + JMPSIZE) - cb.base()));
-            return std::make_tuple(cb.frontier(), &buffer);
-        }
-    }; MakeInlineJMP<DrawLineHook>(pattern.get_first(0), pattern.get_first(22)); //0x10020E6B, 0x10020E81
+        *(float*)(regs.r11 + 0x00) /= Screen.fHudScale;
+        *(float*)(regs.r11 + 0x00) += Screen.fHudOffset;
+        *(float*)(regs.r11 + 0x18) /= Screen.fHudScale;
+        *(float*)(regs.r11 + 0x18) += Screen.fHudOffset;
+    });
     #endif
 
     //FullscreenFMV
@@ -833,36 +533,12 @@ void InitXRenderD3D9()
     }; injector::MakeInline<FMVHook>(pattern.get_first(0), pattern.get_first(6));
     #else
     pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "48 8B C4 48 81 EC ? ? ? ? 80 B9 ? ? ? ? ? 0F 85 ? ? ? ? 48 89 58 F8");
-    struct FMVHook
+    static auto FMVHook = safetyhook::create_mid(pattern.get_first(3), [](SafetyHookContext& regs)
     {
-        std::tuple<Address, void*> operator()()
-        {
-            static uint8_t buffer[200];
-            injector::ProtectMemory(buffer, sizeof(buffer), PAGE_EXECUTE_READWRITE);
-            CodeBlock cb; cb.init((Address)buffer, sizeof(buffer));
-            X64Assembler a(cb);
-
-            pushad();
-
-            a.movq(reg::rsp[0xC0], reg::rcx);
-            a.movq(reg::rsp[0xC8], reg::rdx);
-            a.movq((int64_t)static_cast<void(*)(int64_t, int64_t)>([](int64_t w, int64_t h)
-            {
-                Screen.AdjustFMVRes(w, h);
-            }
-            ), reg::rax);
-            a.callq(reg::rax);
-
-            popad();
-
-            a.movq(reg::rsp, reg::rax); // _asm mov rax, rsp
-            a.subq(0x0D8, reg::rsp);    // _asm sub rsp, 0D8h
-            a.cmpb(0, reg::rcx[0x150]); // _asm cmp byte ptr [rcx+150h], 0
-
-            assert(sizeof(buffer) > ((cb.frontier() + JMPSIZE) - cb.base()));
-            return std::make_tuple(cb.frontier(), &buffer);
-        }
-    }; MakeInlineJMP<FMVHook>(pattern.get_first(0), pattern.get_first(17)); //0x1006A920, 0x1006A931
+        auto w = *(int32_t*)(regs.rsp + 0x30);
+        auto h = *(int32_t*)(regs.rsp + 0x38);
+        Screen.AdjustFMVRes(w, h);
+    });
     #endif
 
     //Language Switch (for controls)
@@ -898,54 +574,33 @@ void InitXRenderD3D9()
     }; injector::MakeInline<LayoutSwitch>(pattern.get_first(0), pattern.get_first(6));
     #else
     pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "48 83 BF ? ? ? ? ? 4C 8B 7C 24");
-    struct LayoutSwitch
+    static auto LayoutSwitch = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        std::tuple<Address, void*> operator()()
+        auto hWnd = *(HWND*)(regs.rdi + 0x1FD18);
+        if (!hWnd)
+            return;
+
+        HKL* lpList = NULL;
+        wchar_t szBuf[512];
+
+        UINT uLayouts = GetKeyboardLayoutList(0, NULL);
+        lpList = (HKL*)LocalAlloc(LPTR, (uLayouts * sizeof(HKL)));
+        uLayouts = GetKeyboardLayoutList(uLayouts, lpList);
+
+        for (int i = 0; i < uLayouts; ++i)
         {
-            static uint8_t buffer[200];
-            injector::ProtectMemory(buffer, sizeof(buffer), PAGE_EXECUTE_READWRITE);
-            CodeBlock cb; cb.init((Address)buffer, sizeof(buffer));
-            X64Assembler a(cb);
-
-            pushad();
-
-            a.movq(reg::rcx[0x1FD18], reg::rcx);
-            a.movq((int64_t)static_cast<void(*)(HWND)>([](HWND hWnd)
+            GetLocaleInfo(MAKELCID(((UINT)lpList[i] & 0xffffffff), SORT_DEFAULT), LOCALE_SLANGUAGE, szBuf, 512);
+            if (wcsstr(szBuf, L"English") != NULL)
             {
-                HKL* lpList = NULL;
-                wchar_t szBuf[512];
-
-                UINT uLayouts = GetKeyboardLayoutList(0, NULL);
-                lpList = (HKL*)LocalAlloc(LPTR, (uLayouts * sizeof(HKL)));
-                uLayouts = GetKeyboardLayoutList(uLayouts, lpList);
-
-                for (int i = 0; i < uLayouts; ++i)
-                {
-                    GetLocaleInfo(MAKELCID(((UINT)lpList[i] & 0xffffffff), SORT_DEFAULT), LOCALE_SLANGUAGE, szBuf, 512);
-                    if (wcsstr(szBuf, L"English") != NULL)
-                    {
-                        PostMessage(hWnd, WM_INPUTLANGCHANGEREQUEST, 0, (LPARAM)LoadKeyboardLayout(std::to_wstring((UINT)lpList[i]).c_str(), KLF_ACTIVATE));
-                        break;
-                    }
-                    memset(szBuf, 0, 512);
-                }
-
-                if (lpList)
-                    LocalFree(lpList);
+                PostMessage(hWnd, WM_INPUTLANGCHANGEREQUEST, 0, (LPARAM)LoadKeyboardLayout(std::to_wstring((UINT)lpList[i]).c_str(), KLF_ACTIVATE));
+                break;
             }
-            ), reg::rax);
-            a.callq(reg::rax);
-
-            popad();
-
-            a.cmpq(0, reg::rdi[0x1FD18]);     // _asm cmp qword ptr [rdi+1FD18h], 0
-            a.movq(reg::rsp[0x78], reg::r15); // _asm mov r15, [rsp+78h]
-            a.movq(reg::rsp[0x80], reg::r14); // _asm mov r14, [rsp+80h]
-
-            assert(sizeof(buffer) > ((cb.frontier() + JMPSIZE) - cb.base()));
-            return std::make_tuple(cb.frontier(), &buffer);
+            memset(szBuf, 0, 512);
         }
-    }; MakeInlineJMP<LayoutSwitch>(pattern.get_first(0), pattern.get_first(21));
+
+        if (lpList)
+            LocalFree(lpList);
+    });
     #endif
 }
 
@@ -1023,112 +678,74 @@ void InitCryGame()
     }; injector::MakeInline<HUDHook>(pattern.get_first(0), pattern.get_first(6));
     #else
     auto pattern = hook::module_pattern(GetModuleHandle(L"CryGame"), "4C 8D A4 24 ? ? ? ? 4C 8D B4 24 ? ? ? ? 45 33 FF");
-    struct HUDHook
+    static auto HUDHook = safetyhook::create_mid(pattern.get_first(19), [](SafetyHookContext& regs)
     {
-        std::tuple<Address, void*> operator()()
+        auto q = QUAD(*(float*)(regs.rsp + 0x80), *(float*)(regs.rsp + 0x7C), *(float*)(regs.rsp + 0x98), *(float*)(regs.rsp + 0x94),
+            *(float*)(regs.rsp + 0xB0), *(float*)(regs.rsp + 0xAC), *(float*)(regs.rsp + 0xC8), *(float*)(regs.rsp + 0xC4));
+
+        Screen.bStretch = false;
+        *(float*)(regs.rsp + 0x80) /= Screen.fHudScale;
+        *(float*)(regs.rsp + 0x98) /= Screen.fHudScale;
+        *(float*)(regs.rsp + 0xB0) /= Screen.fHudScale;
+        *(float*)(regs.rsp + 0xC8) /= Screen.fHudScale;
+
+        *(float*)(regs.rsp + 0x80) += Screen.fHudOffset;
+        *(float*)(regs.rsp + 0x98) += Screen.fHudOffset;
+        *(float*)(regs.rsp + 0xB0) += Screen.fHudOffset;
+        *(float*)(regs.rsp + 0xC8) += Screen.fHudOffset;
+
+        if (q.ix1 >= 551)
         {
-            static uint8_t buffer[100];
-            injector::ProtectMemory(buffer, sizeof(buffer), PAGE_EXECUTE_READWRITE);
-            CodeBlock cb; cb.init((Address)buffer, sizeof(buffer));
-            X64Assembler a(cb);
-
-            a.pushq(reg::rax);
-            a.pushq(reg::rbx);
-            a.pushq(reg::rcx);
-
-            a.movq(reg::rsp, reg::rcx);
-            a.movq((int64_t)static_cast<void(*)(uintptr_t)>([](uintptr_t ptr)
-            {
-                auto q = QUAD(*(float*)(ptr + 0x98), *(float*)(ptr + 0x94), *(float*)(ptr + 0xB0), *(float*)(ptr + 0xAC),
-                    *(float*)(ptr + 0xC8), *(float*)(ptr + 0xC4), *(float*)(ptr + 0xE0), *(float*)(ptr + 0xDC));
-
-                Screen.bStretch = false;
-                *(float*)(ptr + 0x98) /= Screen.fHudScale;
-                *(float*)(ptr + 0xB0) /= Screen.fHudScale;
-                *(float*)(ptr + 0xC8) /= Screen.fHudScale;
-                *(float*)(ptr + 0xE0) /= Screen.fHudScale;
-
-                *(float*)(ptr + 0x98) += Screen.fHudOffset;
-                *(float*)(ptr + 0xB0) += Screen.fHudOffset;
-                *(float*)(ptr + 0xC8) += Screen.fHudOffset;
-                *(float*)(ptr + 0xE0) += Screen.fHudOffset;
-
-                {
-                    if (q.ix1 >= 551)
-                    {
-                        *(float*)(ptr + 0x98) += Screen.fWidescreenHudOffset;
-                        *(float*)(ptr + 0xB0) += Screen.fWidescreenHudOffset;
-                        *(float*)(ptr + 0xC8) += Screen.fWidescreenHudOffset;
-                        *(float*)(ptr + 0xE0) += Screen.fWidescreenHudOffset;
-                    }
-                    else if (q.ix1 <= 99)
-                    {
-                        *(float*)(ptr + 0x98) -= Screen.fWidescreenHudOffset;
-                        *(float*)(ptr + 0xB0) -= Screen.fWidescreenHudOffset;
-                        *(float*)(ptr + 0xC8) -= Screen.fWidescreenHudOffset;
-                        *(float*)(ptr + 0xE0) -= Screen.fWidescreenHudOffset;
-                    }
-                }
-            }
-            ), reg::rax);
-            a.callq(reg::rax);
-
-            a.popq(reg::rcx);
-            a.popq(reg::rbx);
-            a.popq(reg::rax);
-
-            a.leaq(reg::rsp[0x8D], reg::r12);   //_asm lea     r12, [rsp + 8Dh]
-            a.leaq(reg::rsp[0x80], reg::r14);   //_asm lea     r14, [rsp + 80h]
-            a.xorl(reg::r15d, reg::r15d);       //_asm xor     r15d, r15d
-
-            assert(sizeof(buffer) > ((cb.frontier() + JMPSIZE) - cb.base()));
-            return std::make_tuple(cb.frontier(), &buffer);
+            *(float*)(regs.rsp + 0x80) += Screen.fWidescreenHudOffset;
+            *(float*)(regs.rsp + 0x98) += Screen.fWidescreenHudOffset;
+            *(float*)(regs.rsp + 0xB0) += Screen.fWidescreenHudOffset;
+            *(float*)(regs.rsp + 0xC8) += Screen.fWidescreenHudOffset;
         }
-    }; MakeInlineJMP<HUDHook>(pattern.get_first(0), pattern.get_first(19)); //0x100AF490, 0x100AF4A3
+        else if (q.ix1 <= 99)
+        {
+            *(float*)(regs.rsp + 0x80) -= Screen.fWidescreenHudOffset;
+            *(float*)(regs.rsp + 0x98) -= Screen.fWidescreenHudOffset;
+            *(float*)(regs.rsp + 0xB0) -= Screen.fWidescreenHudOffset;
+            *(float*)(regs.rsp + 0xC8) -= Screen.fWidescreenHudOffset;
+        }
+    });
     #endif
 }
+
+#ifndef _WIN64
+SafetyHookInline shSetCamera = {};
+void __fastcall SetCamera(void* engine, void* edx, float* cam, char bToTheScreen)
+{
+    if (bToTheScreen && Screen.fFOVFactor > 0.0f)
+        cam[12] *= Screen.fFOVFactor;      // fHudScale * fIniFOV = aspect/(4/3) * fIniFOV
+
+    shSetCamera.unsafe_fastcall(engine, edx, cam, bToTheScreen);
+}
+#else
+SafetyHookInline shSetCamera = {};
+void __fastcall SetCamera(void* engine, float* cam, char bToTheScreen)
+{
+    if (bToTheScreen && Screen.fFOVFactor > 0.0f)
+        cam[12] *= Screen.fFOVFactor;      // fHudScale * fIniFOV = aspect/(4/3) * fIniFOV
+
+    shSetCamera.unsafe_fastcall(engine, cam, bToTheScreen);
+}
+#endif
 
 void InitCry3DEngine()
 {
     #ifndef _WIN64
-    auto pattern = hook::module_pattern(GetModuleHandle(L"Cry3DEngine"), "8B 4A 30 89 48 30 8D 4A 34 8B 39");
-    struct FOVHook
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            *(float*)(regs.eax + 0x30) = Screen.fFOV;
-        }
-    }; injector::MakeInline<FOVHook>(pattern.get_first(0), pattern.get_first(6));
+    auto pattern = hook::module_pattern(GetModuleHandle(L"Cry3DEngine"), "74 ? 32 C0 5F 8B E5 5D C2");
+    injector::MakeNOP(pattern.get_first(), 2, true);
+
+    pattern = hook::module_pattern(GetModuleHandle(L"Cry3DEngine"), "83 EC ? 53 55 56 57 8B 7C 24");
+    shSetCamera = safetyhook::create_inline(pattern.get_first(), SetCamera);
     #else
-    auto pattern = hook::module_pattern(GetModuleHandle(L"Cry3DEngine"), "8B 42 30 89 41 30 8B 42 34 89 41 34 8B 42 38");
-    struct FOVHook
-    {
-        std::tuple<Address, void*> operator()()
-        {
-            static uint8_t buffer[200];
-            injector::ProtectMemory(buffer, sizeof(buffer), PAGE_EXECUTE_READWRITE);
-            CodeBlock cb; cb.init((Address)buffer, sizeof(buffer));
-            X64Assembler a(cb);
+    auto pattern = hook::module_pattern(GetModuleHandle(L"Cry3DEngine"), "0F 87 ? ? ? ? 32 C0 66 44 0F 6F 84 24");
+    injector::MakeNOP(pattern.get_first(), 6, true);
 
-            a.movl(reg::rdx[0x30], reg::eax); // _asm mov eax, [rdx+30h]
-            {
-                a.pushq(reg::rcx);
-                a.movq((int64_t)&Screen.fFOV, reg::rcx); //regs.eax = Screen.fFOV
-                a.movl(reg::rcx[0], reg::eax);
-                a.popq(reg::rcx);
-            }
-            a.movl(reg::eax, reg::rcx[0x30]); // _asm mov [rcx+30h], eax
-
-            a.movl(reg::rdx[0x34], reg::eax); // _asm mov eax, [rdx+34h]
-            a.movl(reg::eax, reg::rcx[0x34]); // _asm mov [rcx+34h], eax
-            a.movl(reg::rdx[0x38], reg::eax); // _asm mov eax, [rdx+38h]
-            a.movl(reg::eax, reg::rcx[0x38]); // _asm mov [rcx+38h], eax
-            a.movl(reg::rdx[0x3C], reg::eax); // _asm mov eax, [rdx+3Ch]
-
-            assert(sizeof(buffer) > ((cb.frontier() + JMPSIZE) - cb.base()));
-            return std::make_tuple(cb.frontier(), &buffer);
-        }
-    }; MakeInlineJMP<FOVHook>(pattern.get_first(0), pattern.get_first(21));
+    pattern = hook::module_pattern(GetModuleHandle(L"Cry3DEngine"), "48 8B C4 48 81 EC ? ? ? ? 48 89 58 ? 48 89 68 ? 48 8B E9");
+    shSetCamera = safetyhook::create_inline(pattern.get_first(), SetCamera);
     #endif
 }
 
@@ -1137,55 +754,57 @@ void InitCrySystem()
     #ifndef _WIN64
     dword_36552A15 = hook::make_module_pattern(GetModuleHandle(L"CrySystem"), "83 7D F8 00 74 10 8B 4F 1C 8B 01 68 00 01 00 00 FF 90 38 02 00 00 8B 06 8B CE FF 50 40 5F 5E 5B C9 C2 04 00 55 8B EC 83 EC 30").get_first(0);
     dword_365526AD = hook::make_module_pattern(GetModuleHandle(L"CrySystem"), "83 7D F8 00 74 10 8B 4F 1C 8B 01 68 00 01 00 00 FF 90 38 02 00 00").get(1).get<void>(0);
-
-    auto pattern = hook::module_pattern(GetModuleHandle(L"CrySystem"), "89 50 30 8D 71 34 8D 78 34 A5 A5 A5");
-    struct FOVHook
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            Screen.fFOV = *(float*)&regs.edx;
-            *(float*)(regs.eax + 0x30) = Screen.fFOV * Screen.fFOVFactor;
-            regs.esi = regs.ecx + 0x34;
-        }
-    }; injector::MakeInline<FOVHook>(pattern.get_first(0), pattern.get_first(6));
     #else
     dword_100B0A58 = hook::make_module_pattern(GetModuleHandle(L"CrySystem"), "83 BC 24 ? ? ? ? ? 74 12 48 8B 4E 38 BA ? ? ? ? 48 8B 01").count(4).get(1).get<void*>(0);
     dword_100B1018 = hook::make_module_pattern(GetModuleHandle(L"CrySystem"), "83 BC 24 ? ? ? ? ? 74 12 48 8B 4E 38 BA ? ? ? ? 48 8B 01").count(4).get(3).get<void*>(0);
     dword_100B72BB = hook::make_module_pattern(GetModuleHandle(L"CrySystem"), "48 8B CB 4C 63 C0 48 8B 05 ? ? ? ? 42 FF 14 C0 48 83 C4 20 5B C3").count(7).get(5).get<void*>(17);
+    #endif
+}
 
-    auto pattern = hook::module_pattern(GetModuleHandle(L"CrySystem"), "8B 42 30 89 41 30");
-    struct FOVHook
+#ifndef _WIN64
+SafetyHookInline shDrawStringW = {};
+void __fastcall DrawStringW(void* a1, void* edx, float fBaseX, float fBaseY, const wchar_t* szMsg, const bool bASCIIMultiLine)
+{
+    if (!Screen.bUnstretchedText)
     {
-        std::tuple<Address, void*> operator()()
-        {
-            static uint8_t buffer[200];
-            injector::ProtectMemory(buffer, sizeof(buffer), PAGE_EXECUTE_READWRITE);
-            CodeBlock cb; cb.init((Address)buffer, sizeof(buffer));
-            X64Assembler a(cb);
+        shDrawStringW.unsafe_fastcall(a1, edx, fBaseX, fBaseY, szMsg, bASCIIMultiLine);
+        return;
+    }
 
-            a.movl(reg::rdx[0x30], reg::eax); // _asm mov eax, [rdx+30h]
-            {
-                a.pushq(reg::rcx);
-                a.movq((int64_t)&Screen.fFOV, reg::rcx); //Screen.fFOV = regs.eax
-                a.movl(reg::eax, reg::rcx[0]);
-                a.movl(reg::eax, reg::xmm10);
-                a.movq((int64_t)&Screen.fFOVFactor, reg::rcx);
-                a.mulss(reg::rcx[0], reg::xmm10);
-                a.movl(reg::xmm10, reg::eax);
-                a.popq(reg::rcx);
-            }
-            a.movl(reg::eax, reg::rcx[0x30]); // _asm mov [rcx+30h], eax
+    const bool bOldStretch = Screen.bStretch;
+    Screen.bStretch = true;
 
-            a.movl(reg::rdx[0x34], reg::eax); // _asm mov eax, [rdx+34h]
-            a.movl(reg::eax, reg::rcx[0x34]); // _asm mov [rcx+34h], eax
-            a.movl(reg::rdx[0x38], reg::eax); // _asm mov eax, [rdx+38h]
-            a.movl(reg::eax, reg::rcx[0x38]); // _asm mov [rcx+38h], eax
-            a.movl(reg::rdx[0x3C], reg::eax); // _asm mov eax, [rdx+3Ch]
+    shDrawStringW.unsafe_fastcall(a1, edx, fBaseX, fBaseY, szMsg, bASCIIMultiLine);
 
-            assert(sizeof(buffer) > ((cb.frontier() + JMPSIZE) - cb.base()));
-            return std::make_tuple(cb.frontier(), &buffer);
-        }
-    }; MakeInlineJMP<FOVHook>(pattern.get_first(0), pattern.get_first(21));
+    Screen.bStretch = bOldStretch;
+}
+#else
+SafetyHookInline shDrawStringW = {};
+void __fastcall DrawStringW(void* a1, float fBaseX, float fBaseY, const wchar_t* szMsg, const bool bASCIIMultiLine)
+{
+    if (!Screen.bUnstretchedText)
+    {
+        shDrawStringW.unsafe_fastcall(a1, fBaseX, fBaseY, szMsg, bASCIIMultiLine);
+        return;
+    }
+
+    const bool bOldStretch = Screen.bStretch;
+    Screen.bStretch = true;
+
+    shDrawStringW.unsafe_fastcall(a1, fBaseX, fBaseY, szMsg, bASCIIMultiLine);
+
+    Screen.bStretch = bOldStretch;
+}
+#endif
+
+void InitCryFont()
+{
+    #ifndef _WIN64
+    auto pattern = hook::module_pattern(GetModuleHandle(L"CryFont"), "55 8D 6C 24 ? 81 EC ? ? ? ? 53 56");
+    shDrawStringW = safetyhook::create_inline(pattern.get_first(), DrawStringW);
+    #else
+    auto pattern = hook::module_pattern(GetModuleHandle(L"CryFont"), "4C 89 4C 24 ? F3 0F 11 54 24");
+    shDrawStringW = safetyhook::create_inline(pattern.get_first(), DrawStringW);
     #endif
 }
 
@@ -1198,6 +817,7 @@ CEXP void InitializeASI()
         CallbackHandler::RegisterCallback(L"CryGame.dll", InitCryGame);
         CallbackHandler::RegisterCallback(L"Cry3DEngine.dll", InitCry3DEngine);
         CallbackHandler::RegisterCallback(L"CrySystem.dll", InitCrySystem);
+        CallbackHandler::RegisterCallback(L"CryFont.dll", InitCryFont);
     });
 }
 
