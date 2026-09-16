@@ -53,7 +53,7 @@ export void InitMatrix()
 {
     CIniReader iniReader("");
     bool bFixHud = iniReader.ReadInteger("MAIN", "FixHud", 1) != 0;
-    Screen.fWidescreenHudOffset = iniReader.ReadFloat("MAIN", "WidescreenHudOffset", 100.0f);
+    Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "HudAspectRatioConstraint", ""));
 
     static int32_t* dwordResX = nullptr;
     static int32_t* dwordResY = nullptr;
@@ -108,12 +108,19 @@ export void InitMatrix()
             Screen.fFMVScale = 1.0f / (((4.0f / 3.0f)) / (Screen.fAspectRatio));
             Screen.fFMVOffset = ((Screen.fWidth - Screen.fWidth43) / 2.0f) / (Screen.fWidth / 640.0f);
 
-            if (Screen.fWidescreenHudOffset)
+            Screen.fWidescreenHudOffset = -CalculateWidescreenOffset(Screen.fWidth, Screen.fHeight, 640.0f, 480.0f);
+            if (Screen.fHudAspectRatioConstraint.has_value())
             {
-                if (Screen.fAspectRatio < (16.0f / 9.0f))
-                    Screen.fWidescreenHudOffset = Screen.fWidescreenHudOffset / (((16.0f / 9.0f) / (Screen.fAspectRatio)) * 1.5f);
-                Screen.nWidescreenHudOffset = static_cast<int32_t>(Screen.fWidescreenHudOffset);
+                float value = Screen.fHudAspectRatioConstraint.value();
+                if (value < 0.0f || value > (32.0f / 9.0f))
+                    Screen.fWidescreenHudOffset = value;
+                else
+                {
+                    value = ClampHudAspectRatio(value, Screen.fAspectRatio);
+                    Screen.fWidescreenHudOffset = -CalculateWidescreenOffset(Screen.fHeight * value, Screen.fHeight, 640.0f, 480.0f);
+                }
             }
+            Screen.nWidescreenHudOffset = static_cast<int32_t>(Screen.fWidescreenHudOffset);
         }
     }; injector::MakeInline<ResHook>(pattern.get_first(0), pattern.get_first(resHookEnd)); //0x7AD916
 

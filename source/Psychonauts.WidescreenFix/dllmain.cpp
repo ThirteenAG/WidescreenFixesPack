@@ -25,7 +25,8 @@ public:
     float m_fRight;
     float m_fTop;
 
-    bool operator==(const CRect& rect) {
+    bool operator==(const CRect& rect)
+    {
         return ((*(uint32_t*)&this->m_fLeft == *(uint32_t*)&rect.m_fLeft) && (*(uint32_t*)&this->m_fBottom == *(uint32_t*)&rect.m_fBottom) &&
             (*(uint32_t*)&this->m_fRight == *(uint32_t*)&rect.m_fRight) && (*(uint32_t*)&this->m_fTop == *(uint32_t*)&rect.m_fTop));
     }
@@ -33,10 +34,12 @@ public:
     inline CRect() {}
     inline CRect(float a, float b, float c, float d)
         : m_fLeft(a), m_fBottom(b), m_fRight(c), m_fTop(d)
-    {}
+    {
+    }
     inline CRect(uint32_t a, uint32_t b, uint32_t c, uint32_t d)
         : m_fLeft(*(float*)&a), m_fBottom(*(float*)&b), m_fRight(*(float*)&c), m_fTop(*(float*)&d)
-    {}
+    {
+    }
 };
 
 struct MemFloat
@@ -59,11 +62,36 @@ struct MemFloat
     float a16 = 1.0f;
 } flt_7933E0;
 
+static auto idx = 0; // seems like 4 in debug build and 3 in release
+static void* stack[6];
+SafetyHookInline shsub_47C7C0 = {};
+void __fastcall sub_47C7C0(
+        void* _this,
+        void* edx,
+        int a2,
+        float a3,
+        float a4,
+        int a5,
+        void* a6,
+        int a7,
+        float* a8,
+        float* a9,
+        float a10,
+        float* a11,
+        int a12,
+        int a13,
+        float* a14)
+{
+    CaptureStackBackTrace(0, 6, stack, NULL);
+
+    return shsub_47C7C0.unsafe_fastcall(_this, edx, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14);
+}
+
 void Init()
 {
     CIniReader iniReader("");
-    static bool bWidescreenHud = iniReader.ReadInteger("MAIN", "WidescreenHud", 1) != 0;
-    static float fWidescreenHudOffset = iniReader.ReadFloat("MAIN", "WidescreenHudOffset", 100.0f);
+    static bool bWidescreenHud = true;
+    static std::optional<float> fHudAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "HudAspectRatioConstraint", ""));
     bool bAltTab = iniReader.ReadInteger("MAIN", "AllowAltTabbingWithoutPausing", 0) != 0;
 
     auto pattern = hook::pattern("8B 82 C8 02 00 00 89 81 94 05 00 00 8B 4D F8");
@@ -84,9 +112,18 @@ void Init()
             Screen.fHudOffsetReal = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
             Screen.fHudScale = 1.0f / (((4.0f / 3.0f)) / (Screen.fAspectRatio));
             Screen.fHudScale2 = 640.0f / (((4.0f / 3.0f)) / (Screen.fAspectRatio));
-            Screen.fHudOffsetWide = fWidescreenHudOffset;
-            if (Screen.fAspectRatio < (16.0f / 9.0f))
-                Screen.fHudOffsetWide = fWidescreenHudOffset / (((16.0f / 9.0f) / (Screen.fAspectRatio)) * 1.5f);
+            Screen.fHudOffsetWide = -CalculateWidescreenOffset(Screen.fWidth, Screen.fHeight, 640.0f, 480.0f);
+            if (fHudAspectRatioConstraint.has_value())
+            {
+                float value = fHudAspectRatioConstraint.value();
+                if (value < 0.0f || value > (32.0f / 9.0f))
+                    Screen.fHudOffsetWide = value;
+                else
+                {
+                    value = ClampHudAspectRatio(value, Screen.fAspectRatio);
+                    Screen.fHudOffsetWide = -CalculateWidescreenOffset(Screen.fHeight * value, Screen.fHeight, 640.0f, 480.0f);
+                }
+            }
         }
     }; injector::MakeInline<ResHook>(pattern.get_first(0), pattern.get_first(12)); //0x67F958
 
@@ -125,12 +162,15 @@ void Init()
     pattern = hook::pattern("BE ? ? ? ? 8D BC 24 00 01 00 00 F3 A5 83 7D 20 00");
     injector::WriteMemory(pattern.get_first(1), &flt_7933E0, true); //0x47CC71 + 1
 
+    pattern = hook::pattern("E8 ? ? ? ? 8B 85 ? ? ? ? 83 C0 ? EB");
+    shsub_47C7C0 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first(0)).as_int(), sub_47C7C0);
+
     pattern = hook::pattern("89 8C 24 AC 01 00 00 83 7D 08 00");
     struct HudHook2
     {
         const CRect fs = CRect(0.0f, 0.0f, 640.0f, 480.0f); // fullscreen images
         const CRect fl = CRect(0.0f, 0.0f, 20.0f, 15.0f);   // strike flash
-        const CRect flbv = CRect( 0.0f, 0.0f, 2.5f, 1.875f );   // strike flash (black velvetopia variant)
+        const CRect flbv = CRect(0.0f, 0.0f, 2.5f, 1.875f);   // strike flash (black velvetopia variant)
 
         void operator()(injector::reg_pack& regs)
         {
@@ -146,7 +186,7 @@ void Init()
 
                 DBGONLY(KEYPRESS(VK_F1) { spd::log()->info("{0:f} {1:f} {2:f} {3:f} {4:08x} {5:08x} {6:08x} {7:08x}", r->m_fLeft, r->m_fBottom, r->m_fRight, r->m_fTop, *(uint32_t*)&r->m_fLeft, *(uint32_t*)&r->m_fBottom, *(uint32_t*)&r->m_fRight, *(uint32_t*)&r->m_fTop); });
 
-                if (*r == fs || *r == fl || *r == flbv )
+                if (*r == fs || *r == fl || *r == flbv)
                 {
                     flt_7933E0.a01 = Screen.fHudScale;
                     flt_7933E0.a13 = -Screen.fHudOffset;
@@ -155,10 +195,6 @@ void Init()
                 {
                     if (bWidescreenHud)
                     {
-                        static auto idx = 0; // seems like 4 in debug build and 3 in release
-                        static void* stack[6];
-                        CaptureStackBackTrace(0, 6, stack, NULL);
-
                         auto it = std::find_if(std::begin(stack), std::end(stack), [](void* n) { return n == dw_61F2EF || n == dw_61F2FE; });
                         if (!idx && it != std::end(stack))
                             idx = std::distance(std::begin(stack), it);
