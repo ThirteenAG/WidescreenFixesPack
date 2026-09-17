@@ -1,4 +1,8 @@
 #include "stdafx.h"
+#include "callargs.h"
+#include <d3d9.h>
+
+import PostFX;
 
 void Init()
 {
@@ -59,6 +63,53 @@ void InitLS3DF()
         injector::WriteMemory(*pattern.get_first<uint32_t*>(2), GetSystemMetricsHook, true);
         pattern = hook::module_pattern(GetModuleHandle(L"LS3DF"), "FF 15 ? ? ? ? 3B C5 A3 ? ? ? ? 0F 84 ? ? ? ? 50");
         injector::WriteMemory(*pattern.get_first<uint32_t*>(2), CreateWindowExAHook, true);
+    }
+
+    // Shadows Z-Fighting
+    {
+        static std::vector<SafetyHookMid> zbiasHooks;
+
+        std::vector<std::pair<std::string, int>> patterns = {
+            { "FF 92 ? ? ? ? A1 ? ? ? ? ? ? 6A ? 6A ? 50 FF 91 ? ? ? ? F6 86", 0 },
+            { "FF 92 ? ? ? ? A1 ? ? ? ? ? ? 6A ? 6A ? 50 FF 91 ? ? ? ? 8B 96", 0 },
+            { "FF 92 ? ? ? ? ? ? ? ? 56", 0 },
+            { "51 6A ? 89 0D ? ? ? ? ? ? 50 FF 92 ? ? ? ? C3", 12 },
+            { "FF A2 ? ? ? ? 8B 44 24 ? 39 05 ? ? ? ? 0F 84 ? ? ? ? 8B 0D ? ? ? ? 50 6A ? 6A ? A3 ? ? ? ? ? ? 51 FF 92 ? ? ? ? 5B C2 ? ? 8B 44 24 ? 39 05 ? ? ? ? 0F 84 ? ? ? ? 8B 0D ? ? ? ? 50 6A ? 6A ? A3 ? ? ? ? ? ? 51 FF 92 ? ? ? ? 5B C2 ? ? 8B 44 24 ? 8B 0D", 0 },
+        };
+
+        for (const auto& p : patterns)
+        {
+            auto pattern = hook::module_pattern(GetModuleHandle(L"LS3DF"), p.first);
+            zbiasHooks.emplace_back(safetyhook::create_mid(pattern.get_first(p.second), [](SafetyHookContext& regs)
+            {
+                constexpr auto D3DRS_ZBIAS = 47;
+                constexpr auto D3DRS_ZVISIBLE = 30;
+                using SetRenderState = HRESULT(__stdcall*)(void* pDevice, DWORD State, DWORD Value);
+                auto [pDevice, State, Value] = deduce_args<SetRenderState>(regs);
+
+                if (State != D3DRS_ZBIAS)
+                    return;
+
+                if (Value)
+                    Value = 16;
+
+                // On real D3D8 the driver biases slope dependently, so ZBIAS alone fixes the flickering.
+                // d3d8to9 only turns it into a constant D3DRS_DEPTHBIAS, so set the bias on the D3D9 device
+                // ourselves and hand d3d8to9 a state it ignores (ZVISIBLE returns D3D_OK at once), otherwise
+                // its own conversion would overwrite the values set here.
+                auto pDevice9 = GetDevice9();
+                if (!pDevice9)
+                    return;
+
+                constexpr float fDepthBiasUnit = -1.0f / ((1 << 20) - 1); // 24-bit depth, same as CalcDepthBias
+                const float fDepthBias = Value * fDepthBiasUnit;
+                const float fSlopeDepthBias = -0.125f * static_cast<float>(Value); // per ZBIAS unit, -2.0 at 16
+                pDevice9->SetRenderState(D3DRS_DEPTHBIAS, *reinterpret_cast<const DWORD*>(&fDepthBias));
+                pDevice9->SetRenderState(D3DRS_SLOPESCALEDEPTHBIAS, *reinterpret_cast<const DWORD*>(&fSlopeDepthBias));
+
+                State = D3DRS_ZVISIBLE;
+            }));
+        }
     }
 }
 
@@ -144,6 +195,7 @@ CEXP void InitializeASI()
     {
         CallbackHandler::RegisterCallback(Init);
         CallbackHandler::RegisterCallback(L"LS3DF.dll", InitLS3DF);
+        CallbackHandler::RegisterCallback(L"LS3DF.dll", InitPostFX);
         CallbackHandler::RegisterCallback(L"IJoy.dll", InitIJoy);
     });
 }

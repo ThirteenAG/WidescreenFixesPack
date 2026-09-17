@@ -368,6 +368,7 @@ project "LARush.WidescreenFix"
    setpaths("Z:/WFP/Games/LA Rush/", "LARush.exe", "plugins/")
 
 project "Mafia.FusionFix"
+   add_postfx()
    setpaths("Z:/WFP/Games/Mafia/", "Setup.exe")
    targetdir "data/Mafia.WidescreenFix/scripts"
 
