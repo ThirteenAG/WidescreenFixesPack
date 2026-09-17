@@ -7,10 +7,6 @@ export module PostFX;
 
 import PostFXCore;
 
-// LS3DF.dll is the D3D8 renderer of the game. The first operand of the pattern
-// below is the global that holds the IDirect3DDevice8 pointer, it is only set
-// once the device was created (i.e. after this code), hence the dereference in
-// GetDevice9 instead of here.
 static IUnknown** pD3D8Device = nullptr;
 
 static void InitDevicePointer()
@@ -25,10 +21,6 @@ static void InitDevicePointer()
         pD3D8Device = *pattern.get_first<IUnknown**>(1);
 }
 
-// Returns the D3D9 device when the game renders through a D3D8 to D3D9 wrapper
-// (thirteenag's d3d8.dll with UseD3D8to9=1), which forwards the query to the real
-// D3D9 device. A native D3D8 device does not answer this query, so a null return
-// means the game runs on real D3D8 (which needs no translation at all).
 export IDirect3DDevice9* GetDevice9()
 {
     InitDevicePointer();
@@ -49,7 +41,6 @@ export void InitPostFX()
     CPostFX::bConsoleGammaEnabled = iniReader.ReadInteger("GRAPHICS", "ConsoleGamma", 0) != 0;
     CPostFX::bSmaaEnabled = iniReader.ReadInteger("GRAPHICS", "SMAA", 0) != 0;
 
-    // resolved unconditionally, other modules (the Z-bias fix in dllmain.cpp) need it too
     InitDevicePointer();
 
     if (!CPostFX::bConsoleGammaEnabled && !CPostFX::bSmaaEnabled)
@@ -59,11 +50,6 @@ export void InitPostFX()
     if (!hLS3DF || !pD3D8Device)
         return;
 
-    // All rendering happens in I3D_driver::Render() (BeginScene ... EndScene).
-    // This call is the last one before IDirect3DDevice8::EndScene, the 3D scene
-    // is fully rendered into the render target at this point. The call itself
-    // renders the remaining 2D pass (HUD/menus), which is intentionally left
-    // untouched by the post processing. rendering.
     auto pattern = hook::module_pattern(hLS3DF, "E8 ? ? ? ? 33 C9 ? ? ? ? ? ? ? E8 ? ? ? ? 6A ? 6A ? 6A ? FF 96 ? ? ? ? C6 05");
     if (!pattern.empty())
     {
