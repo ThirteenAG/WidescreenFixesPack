@@ -6,9 +6,11 @@
 #include <vector>
 #include <map>
 #include <xinput.h>
+#include <algorithm>
 
 constexpr auto defaultAspectRatio = 16.0f / 9.0f;
 bool bSplitScreenSwapTopBottom = false;
+bool bSplitScreenSideBySide = false;
 int32_t ResX = 0;
 int32_t ResY = 0;
 
@@ -197,12 +199,34 @@ int32_t GetRelativeSplitScreenResY()
     return int32_t((float)GetRelativeResY() / 2.0f); //360
 }
 
+// The game lays out the split-screen HUD in an 800x360 box (the 20:9 shape of its own
+// split viewports). Side by side, each viewport is 16:9, so fit that box to the viewport
+// and center it.
+constexpr float fSplitHudWidth = 800.0f;
+constexpr float fSplitHudHeight = 360.0f;
+
+float GetSideBySideHudScale()
+{
+    return (std::min)((float)GetCurrentSplitScreenResX() / fSplitHudWidth, (float)GetCurrentSplitScreenResY() / fSplitHudHeight);
+}
+
 int32_t GetHudOffset()
 {
     if (IsSplitScreenActive())
+    {
+        if (bSplitScreenSideBySide)
+            return (int32_t)(((float)GetCurrentSplitScreenResX() - fSplitHudWidth * GetSideBySideHudScale()) / 2.0f);
         return (int32_t)((((float)GetCurrentSplitScreenResX() - ((float)GetNativeSplitScreenResY() * ((float)GetNativeSplitScreenResX() / (float)GetNativeSplitScreenResY())))) / 2.0f);
+    }
     else
         return (int32_t)((GetResX() - (GetResY() * defaultAspectRatio)) / 2.0f);
+}
+
+int32_t GetHudOffsetY()
+{
+    if (!IsSplitScreenActive() || !bSplitScreenSideBySide)
+        return 0;
+    return (int32_t)(((float)GetCurrentSplitScreenResY() - fSplitHudHeight * GetSideBySideHudScale()) / 2.0f);
 }
 
 void __fastcall sub_4F8C60(int _this, int edx, int a2, int32_t* a3)
@@ -224,7 +248,25 @@ void __fastcall sub_4F8C60(int _this, int edx, int a2, int32_t* a3)
             a2 = 0;
     }
 
-    if (a2 == 0)
+    if (bSplitScreenSideBySide)
+    {
+        // player 1 on the left half, player 2 on the right half, both full height
+        if (a2 == 0)
+        {
+            v4[18] = 0;
+            v4[19] = 0;
+            v4[20] = GetResX() / 2;
+            v4[21] = GetResY();
+        }
+        else if (a2 == 1)
+        {
+            v4[18] = GetResX() / 2;
+            v4[19] = 0;
+            v4[20] = GetResX();
+            v4[21] = GetResY();
+        }
+    }
+    else if (a2 == 0)
     {
         v4[18] = 0;
         v4[19] = 0;
@@ -250,6 +292,8 @@ void __fastcall sub_4F8C60(int _this, int edx, int a2, int32_t* a3)
 
 float __cdecl sub_974C80(int a1)
 {
+    if (IsSplitScreenActive() && bSplitScreenSideBySide)
+        return (float)a1 * GetSideBySideHudScale();
     if (IsSplitScreenActive())
         return (float)(*(uint32_t*)(*(uint32_t*)addrTbl[0x186E23C] + 80) - *(uint32_t*)(*(uint32_t*)addrTbl[0x186E23C] + 72)) * (float)a1 * (1.0f / (GetRelativeSplitScreenResX() * GetDiff()));
     else
@@ -258,6 +302,8 @@ float __cdecl sub_974C80(int a1)
 
 float __cdecl sub_974CD0(int a1)
 {
+    if (IsSplitScreenActive() && bSplitScreenSideBySide)
+        return (float)a1 * GetSideBySideHudScale();
     if (IsSplitScreenActive())
         return (float)(*(uint32_t*)(*(uint32_t*)addrTbl[0x186E23C] + 80) - *(uint32_t*)(*(uint32_t*)addrTbl[0x186E23C] + 72))
         * GetRelativeSplitScreenResY()
@@ -326,7 +372,7 @@ void __stdcall sub_58DDF0(uint32_t* a1, int* a2, int a3, uint16_t a4)
     if (IsSplitScreenActive())
     {
         *a1 = (int)sub_974C80(*a1) + nHudOffset;
-        *a2 = (int)sub_974CD0(*a2);
+        *a2 = (int)sub_974CD0(*a2) + GetHudOffsetY();
         *(float*)(a3 + 16) = sub_974C80((int)*(float*)(a3 + 16));
         *(float*)(a3 + 20) = sub_974CD0((int)*(float*)(a3 + 20));
         v4 = (int)sub_974C80(*(uint32_t*)(a3 + 8));
@@ -745,6 +791,7 @@ void Init()
     auto bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
     auto bBorderlessWindowed = iniReader.ReadInteger("MAIN", "BorderlessWindowed", 1) != 0;
     bSplitScreenSwapTopBottom = iniReader.ReadInteger("MAIN", "SplitScreenSwapTopBottom", 0) != 0;
+    bSplitScreenSideBySide = iniReader.ReadInteger("MAIN", "SplitScreenSideBySide", 0) != 0;
     auto bDisableDamageOverlay = iniReader.ReadInteger("MAIN", "DisableDamageOverlay", 1) != 0;
     auto bDisableDBNOEffects = iniReader.ReadInteger("MAIN", "DisableDBNOEffects", 0) != 0;
     bDisableObjectiveIndicator = iniReader.ReadInteger("MAIN", "DisableObjectiveIndicator", 0) != 0;
