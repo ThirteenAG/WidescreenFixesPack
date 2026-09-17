@@ -61,8 +61,6 @@ export void InitPostFX()
         });
     }
 
-    // This function calls IDirect3DDevice8::Reset, so all default pool resources
-    // must be released before it runs.
     pattern = hook::module_pattern(hLS3DF, "56 8A D9 74 ? 8B 0D");
     if (!pattern.empty())
     {
