@@ -317,6 +317,7 @@ project "EnterTheMatrix.WidescreenFix"
    setpaths("Z:/WFP/Games/Enter the Matrix/", "Matrix.exe")
 
 project "FarCry.WidescreenFix"
+   add_postfx()
    setpaths("Z:/WFP/Games/Far Cry/", "Bin32/FarCry.exe", "Bin32/")
 
 group "GrandTheftAuto"
@@ -581,7 +582,12 @@ group ""
 --   files { "./source/%{prj.name}/*.h", "./source/%{prj.name}/*.c" }
 --   setpaths("./data/%{prj.name}/", "%{prj.name}.exe", "")
 project "FarCry64.WidescreenFix"
-   files { "source/FarCry.WidescreenFix/*.cpp" }
+   add_postfx()
+   files { "source/FarCry.WidescreenFix/*.cpp", "source/FarCry.WidescreenFix/*.ixx" }
+   filter { "platforms:x64" }
+      -- postfxcore.ixx uses D3DX; the shared setup only adds the x86 DXSDK lib dir, so link the x64 one explicitly
+      links { "$(DXSDK_DIR)/Lib/x64/d3dx9.lib" }
+   filter {}
    setpaths("Z:/WFP/Games/Far Cry/", "Bin64/FarCry.exe", "Bin64/")
    targetdir "data/FarCry.WidescreenFix/Bin64/"
 

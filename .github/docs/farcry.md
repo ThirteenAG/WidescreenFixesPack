@@ -2,7 +2,7 @@
 
 <img src="https://thirteenag.github.io/screens/farcry/main2.jpg" width="760" alt="Far Cry Widescreen Fix">
 
-**Far Cry Widescreen Fix** adds proper widescreen support, corrects aspect ratio, HUD, field of view and FMV playback.
+**Far Cry Widescreen Fix** adds proper widescreen support, corrects aspect ratio, HUD, field of view and FMV playback, and adds optional post-processing effects.
 
 [Website](https://thirteenag.github.io/wfp#farcry) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/FarCry.WidescreenFix/dllmain.cpp) · [Default INI](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/FarCry.WidescreenFix/Bin32/FarCry.WidescreenFix.ini)
 
@@ -24,6 +24,8 @@
 
 - **HUD Aspect Ratio Constraint** - constrains the HUD to an aspect ratio via the `HudAspectRatioConstraint` option (Auto, 16:9, 21:9, or a custom ratio)
 - **FOV Factor** - makes the FOV higher or lower via the `FOVFactor` option, `1.0` by default
+- **SMAA** - enhanced subpixel morphological antialiasing as a post-processing effect
+- **Xbox 360 Gamma** - a custom gamma curve that produces a higher-contrast image with deeper colors, similar to GTA IV on the Xbox 360
 
 ---
 

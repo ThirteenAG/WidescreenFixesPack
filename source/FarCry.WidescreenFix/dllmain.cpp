@@ -1,5 +1,7 @@
 #include "stdafx.h"
 
+import PostFX;
+
 struct Screen
 {
     int32_t nWidth;
@@ -192,6 +194,8 @@ void Init()
     Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "HudAspectRatioConstraint", ""));
     Screen.fIniFOV = iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f);
     if (!Screen.fIniFOV) { Screen.fIniFOV = 1.0f; }
+
+    WFP::onInitEvent().executeAll();
 }
 
 void InitXRenderD3D9()
@@ -619,6 +623,8 @@ void InitXRenderD3D9()
             LocalFree(lpList);
     });
     #endif
+
+    InitDeviceHook();
 }
 
 void InitCryGame()
@@ -784,6 +790,8 @@ void InitCry3DEngine()
     pattern = hook::module_pattern(GetModuleHandle(L"Cry3DEngine"), "48 8B C4 48 81 EC ? ? ? ? 48 89 58 ? 48 89 68 ? 48 8B E9");
     shSetCamera = safetyhook::create_inline(pattern.get_first(), SetCamera);
     #endif
+
+    InitDrawHook();
 }
 
 void InitCrySystem()
@@ -863,6 +871,10 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
     if (reason == DLL_PROCESS_ATTACH)
     {
         if (!IsUALPresent()) { InitializeASI(); }
+    }
+    else if (reason == DLL_PROCESS_DETACH)
+    {
+        WFP::onShutdownEvent().executeAll();
     }
     return TRUE;
 }
