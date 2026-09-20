@@ -23,6 +23,8 @@ int CompatibleElfCRCList[] = {
 char XboxRainDropletsData[255] = "XBOXRAINDROPLETSDATA";
 //char OSDText[OSDStringNum][OSDStringSize] = { {1} };
 
+int PCSX2Data[PCSX2Data_Size] = { 1 };
+
 uintptr_t GetAbsoluteAddress(uintptr_t at, int32_t offs_hi, int32_t offs_lo)
 {
     return (uintptr_t)((uint32_t)(*(uint16_t*)(at + offs_hi)) << 16) + *(int16_t*)(at + offs_lo);
@@ -416,6 +418,13 @@ void CParticle__AddParticleHookVCS(uint32_t type, uint32_t vecPos)
     }
 }
 
+// The point of the frame of the game where its world is done and its UI is not drawn yet,
+// which the plugin reports so that the emulator can draw the drops there
+void Render2DStuff()
+{
+    PCSX2F_GuestBeforeUIDraw();
+}
+
 void CParticle__AddParticleHookLCS(uint32_t type, uint32_t vecPos)
 {
     struct XRData* data = (struct XRData*)XboxRainDropletsData;
@@ -658,6 +667,12 @@ void init()
         {
             injector.MakeTrampoline(ptr_1E9078, (uintptr_t)CParticle__AddParticleHookVCS);
         }
+
+        uintptr_t ptr_21F348 = pattern.get(0, "04 00 04 24 48 00 B5 FF 2D 28 00 00", -4);
+        if (ptr_21F348)
+        {
+            injector.MakeTrampoline(ptr_21F348, (uintptr_t)Render2DStuff);
+        }
     }
 
     //lcs
@@ -673,6 +688,12 @@ void init()
         if (ptr_1CD5B8)
         {
             injector.MakeTrampoline(ptr_1CD5B8, (uintptr_t)CParticle__AddParticleHookLCS);
+        }
+
+        uintptr_t ptr_1F6338 = pattern.get(0, "04 00 04 24 20 00 B0 FF 2D 28 00 00", -4);
+        if (ptr_1F6338)
+        {
+            injector.MakeTrampoline(ptr_1F6338, (uintptr_t)Render2DStuff);
         }
     }
 
