@@ -78,13 +78,68 @@ struct PPSSPPBeforeUIData ppssppBeforeUIData = { "PPSSPPBEFOREUIDATA" };
 // be handed over here for the emulator to be able to run exactly the world of the frame.
 static uint32_t p_displayListPosition = 0;
 
+// -----------------------------------------------------------------------
+// Where the frame of Splinter Cell is in the list of libgu
+//
+// That game keeps no display list of its own: it draws through libgu (PSPGU), which is linked
+// into it, so the frame it builds is the list libgu is filling, and the pointer it writes its
+// commands with is in the context of libgu, see sceGuStart of the game:
+//
+//     g_Libgu.pPacket = &g_Libgu.listctx[list_mode].packet;
+//     pPacket->list.current = ...;   // advanced by every command written
+//
+// That pointer is the position a report needs: at the moment the UI of the frame begins to be
+// drawn it is where the world of the frame ends.
+// -----------------------------------------------------------------------
+struct SceGupList
+{
+    uint32_t size;
+    uint32_t current; // the pointer the commands are written with, advanced by every one of them
+    uint32_t start;
+};
+
+struct SceGupPacket
+{
+    uint32_t reserved; // one word in front of the list of it
+    struct SceGupList list;
+};
+
+// g_Libgu.pPacket, the packet of the list libgu is filling, or 0 while it is not known
+static uint32_t p_gLibguPacket = 0;
+
+static uint32_t GetDisplayListPosition()
+{
+    const struct SceGupPacket* pPacket = 0;
+
+    if (!p_gLibguPacket)
+        return 0;
+
+    pPacket = *(volatile struct SceGupPacket**)p_gLibguPacket;
+
+    if (!pPacket)
+        return 0;
+
+    return pPacket->list.current;
+}
+
+// An emulator that has the frame point takes this and counts it in tick; one that has none
+// leaves it alone and answers with an error, see the block above.
+static void ReportBeforeUIDraw(uint32_t listPos)
+{
+    sceIoDevctl(PPSSPP_EMULATOR_DEVICE, PPSSPP_DEVCTL__BEFORE_UI_DRAW, (void*)&ppssppBeforeUIData.tick, sizeof(ppssppBeforeUIData.tick), (void*)listPos, 0);
+}
+
+// The point of the frame of a GTA game: it builds the list itself and keeps the position of its
+// commands in a variable of its own, see OnModuleStart.
 void Render2DStuff()
 {
-    const uint32_t listPos = p_displayListPosition ? *(volatile uint32_t*)p_displayListPosition : 0;
+    ReportBeforeUIDraw(p_displayListPosition ? *(volatile uint32_t*)p_displayListPosition : 0);
+}
 
-    // An emulator that has the frame point takes this and counts it in tick; one that has none
-    // leaves it alone and answers with an error, see the block above.
-    sceIoDevctl(PPSSPP_EMULATOR_DEVICE, PPSSPP_DEVCTL__BEFORE_UI_DRAW, (void*)&ppssppBeforeUIData.tick, sizeof(ppssppBeforeUIData.tick), (void*)listPos, 0);
+// The point of the frame of Splinter Cell, see GetDisplayListPosition.
+void Render2DStuffSC()
+{
+    ReportBeforeUIDraw(GetDisplayListPosition());
 }
 
 enum eParticleVCS
@@ -741,6 +796,16 @@ int OnModuleStart()
     uintptr_t ptr_89C33BC = pattern.get(0, "F0 00 86 8C 88 00 C7 8C 00 41 07 00", -4);
     if (ptr_89C33BC)
     {
+        // where libgu keeps the packet of the list it is filling, see GetDisplayListPosition: the
+        // lui/addiu pair of sceGuInit that builds the address of g_Libgu, whose pPacket is 0x48
+        // behind it
+        uintptr_t ptr_88404D0 = pattern.get(0, "1C 00 B3 AF 20 00 43 34 ? ? ? ? 20 00 BF AF", -12);
+        if (ptr_88404D0)
+        {
+            uintptr_t g_Libgu = GetAbsoluteAddress(ptr_88404D0, 0, 0x14);
+            p_gLibguPacket = (uint32_t)(g_Libgu + 0x48);
+        }
+
         if (ptr_89C33BC)
         {
             injector.MakeTrampoline(ptr_89C33BC, (uintptr_t)_0fRAPlayerControllerETickf6KELevelTickWrapper);
@@ -756,6 +821,12 @@ int OnModuleStart()
         if (ptr_893968C)
         {
             injector.MakeTrampoline(ptr_893968C, (uintptr_t)_0fIUGUIPageEDrawP6HUCanvasWrapper);
+        }
+
+        uintptr_t ptr_888EFF4 = pattern.get(0, "5C 00 B2 AF 25 90 A0 00 18 00 A0 AF", -4);
+        if (ptr_888EFF4)
+        {
+            injector.MakeTrampoline(ptr_888EFF4, (uintptr_t)Render2DStuffSC);
         }
 
         //int(*ULevel__IsInRainVolume)(void*, struct FVector*);
