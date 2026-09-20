@@ -33,6 +33,60 @@ _Static_assert(sizeof(MODULE_NAME) - 1 < 28, "MODULE_NAME can't have more than 2
 
 char align16 XboxRainDropletsData[255] = "\0BOXRAINDROPLETSDATA";
 
+// -----------------------------------------------------------------------
+// The point of the frame of a game between its world and its UI
+//
+// The frame of a game is its world and its UI drawn into the same buffer, so everything
+// drawn after it (which is what a plugin of the host drawing at the present call does) ends
+// up on top of the UI. The game itself knows that point and reports it here from its own
+// code, once per frame, with the call below.
+//
+// An emulator that has the frame point of a frame makes everything drawn so far real and asks
+// the plugin of the application to draw at this point, so the drops land under the UI of the
+// game, see PPSSPP_DEVCTL__BEFORE_UI_DRAW and PPSSPPBeforeUIDrawTarget of the emulator. The
+// counter it counts for that is tick, which is handed to the call below and which that
+// emulator counts; one that has no such point leaves it alone and answers the call with an
+// error, which is nothing to mind: the drops are then drawn over the frame by the plugin of
+// the application, which draws them at the present call of the backend.
+//
+// The marker is what that plugin finds the block by (it reads the memory of this module), so
+// the two have to stay where they are. The data of the drops is published right behind the
+// counter as its own address, so nothing has to be searched for and nothing has to be alive
+// for it to be found.
+// -----------------------------------------------------------------------
+struct PPSSPPBeforeUIData
+{
+    char signature[20]; // "PPSSPPBEFOREUIDATA", zero padded
+    volatile uint32_t tick; // how often the point was reported, counted by the emulator
+    uint32_t p_dropsData; // the address of the data of the drops, in the memory of this plugin
+};
+
+struct PPSSPPBeforeUIData ppssppBeforeUIData = { "PPSSPPBEFOREUIDATA" };
+
+#define PPSSPP_EMULATOR_DEVICE "emulator:"
+#define PPSSPP_DEVCTL__BEFORE_UI_DRAW 0x35
+
+// Where the game keeps the position of the commands of the frame it is building in its display
+// list, or 0 for a game this is not known for. At the moment of the report everything up to
+// that position is the world of the frame, and everything the game writes behind it is the UI
+// of it, so the emulator is told to stop the list there: it draws the world of the frame, and
+// the plugin of the host, which draws at the counter the emulator counts once it has, comes out
+// under the UI that the game writes behind that point.
+//
+// The game hands the commands of a whole frame to the GE in one go, at its next vblank, so at
+// the report the world is written down but not handed over yet; that is why the position has to
+// be handed over here for the emulator to be able to run exactly the world of the frame.
+static uint32_t p_displayListPosition = 0;
+
+void Render2DStuff()
+{
+    const uint32_t listPos = p_displayListPosition ? *(volatile uint32_t*)p_displayListPosition : 0;
+
+    // An emulator that has the frame point takes this and counts it in tick; one that has none
+    // leaves it alone and answers with an error, see the block above.
+    sceIoDevctl(PPSSPP_EMULATOR_DEVICE, PPSSPP_DEVCTL__BEFORE_UI_DRAW, (void*)&ppssppBeforeUIData.tick, sizeof(ppssppBeforeUIData.tick), (void*)listPos, 0);
+}
+
 enum eParticleVCS
 {
     SPARK,
@@ -233,7 +287,8 @@ typedef struct RwMatrix
 } RwMatrix;
 
 #pragma pack(push, 1)
-struct XRData {
+struct XRData
+{
     char signature[21]; // "XBOXRAINDROPLETSDATA"
     uint32_t p_enabled;
     uint32_t ms_enabled;
@@ -282,7 +337,7 @@ struct XRData {
     float FillScreenMoving_amount;
     int32_t FillScreenMoving_isBlood;
 
-#ifdef __cplusplus
+    #ifdef __cplusplus
     bool Enabled(uint64_t ptr)
     {
         if (p_enabled)
@@ -326,7 +381,7 @@ struct XRData {
             (p_pos_y ? *(float*)(ptr + p_pos_y) : ms_pos_y),
             (p_pos_z ? *(float*)(ptr + p_pos_z) : ms_pos_z));
     }
-#endif
+    #endif
 };
 #pragma pack(pop)
 
@@ -359,7 +414,7 @@ void CParticle__AddParticleHookVCS(uint32_t type, RwV3d* vecPos/*, int a3, float
         else
             data->FillScreenMoving_isBlood = 0;
     }
-    else if ( type == SPLASH || type == CAR_SPLASH || type == BOAT_SPLASH ||
+    else if (type == SPLASH || type == CAR_SPLASH || type == BOAT_SPLASH ||
               type == PED_SPLASH || type == SWIM_SPLASH || type == HELI_WATER_DROP)
     {
         data->RegisterSplash_Vec_x = point->x;
@@ -505,7 +560,7 @@ void _0fRAPlayerControllerETickf6KELevelTickWrapper(void* PlayerController, int 
 {
     static void* prevPlayerController = 0;
     gCurrentPlayerController = PlayerController;
-    
+
     if (PlayerController != prevPlayerController)
     {
         prevPlayerController = PlayerController;
@@ -523,9 +578,6 @@ void _0FIDrawRainP6LUStaticMeshP6PFLevelSceneNodeP6QFRenderInterfaceWrapper(void
     {
         struct FVector* gCamPos = (struct FVector*)((uintptr_t)gCurrentPlayerController + 0x1B0);
         struct FRotator* gCamRot = (struct FRotator*)((uintptr_t)gCurrentPlayerController + 0x1B0 + sizeof(struct FRotator) + 4);
-
-        //logger.WriteF("gCamPos at: %x", gCamPos);
-        //logger.WriteF("gCamPos at: %f %f %f, gCamRot at: %d %d %d ", gCamPos->X, gCamPos->Y, gCamPos->Z, gCamRot->Pitch, gCamRot->Yaw, gCamRot->Roll);
 
         float UnrealToRadians = (2.0f * 3.14159265359f) / 65536.0f;
 
@@ -606,10 +658,9 @@ uintptr_t GetAbsoluteAddress(uintptr_t at, int32_t offs_hi, int32_t offs_lo)
     return (uintptr_t)((uint32_t)(*(uint16_t*)(at + offs_hi)) << 16) + *(int16_t*)(at + offs_lo);
 }
 
-int OnModuleStart() {
+int OnModuleStart()
+{
     sceKernelDelayThread(110000);
-
-    XboxRainDropletsData[0] = 'X';
 
     //vcs
     uintptr_t ptr_8937A50 = pattern.get(0, "1C 00 BF AF ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 01 00 15 34", 4);
@@ -631,6 +682,18 @@ int OnModuleStart() {
         if (ptr_890043C)
         {
             injector.MakeTrampoline(ptr_890043C, (uintptr_t)CParticle__AddParticleHookVCS);
+        }
+
+        uintptr_t ptr_8936250 = pattern.get(0, "04 00 04 34 34 00 B4 E7 38 00 B6 E7", -4);
+        if (ptr_8936250)
+        {
+            // where the game keeps the position of the commands of the frame it is building, see
+            // Render2DStuff: the frame function reads that variable as the pointer it writes its
+            // commands with
+            uintptr_t ptr_895A7B8 = pattern.get(0, "30 00 A7 A3 ? ? ? ? ? ? ? ? 00 B0 80 44 00 00 A5 8C", -4);
+            p_displayListPosition = GetAbsoluteAddress(ptr_895A7B8, 0, 8);
+
+            injector.MakeTrampoline(ptr_8936250, (uintptr_t)Render2DStuff);
         }
     }
 
@@ -659,6 +722,18 @@ int OnModuleStart() {
         if (ptr_89998F8)
         {
             injector.MakeTrampoline(ptr_89998F8, (uintptr_t)CParticle__AddParticleHookLCS);
+        }
+
+        uintptr_t ptr_89C2B60 = pattern.get(0, "06 00 04 34 54 00 B4 E7 58 00 B6 E7", -4);
+        if (ptr_89C2B60)
+        {
+            // where the game keeps the position of the commands of the frame it is building, see
+            // Render2DStuff: the frame function reads that variable as the pointer it writes its
+            // commands with
+            uintptr_t ptr_8867F54 = pattern.get(0, "F0 FF 12 24 ? ? ? ? 24 90 92 00 20 00 06 34", -12);
+            p_displayListPosition = GetAbsoluteAddress(ptr_8867F54, 0, 4);
+
+            injector.MakeTrampoline(ptr_89C2B60, (uintptr_t)Render2DStuff);
         }
     }
 
@@ -693,24 +768,37 @@ int OnModuleStart() {
         //    injector.MakeTrampoline(ptr_89C41E8, (uintptr_t)_0fGULevelETick6KELevelTickfWrapper);
         //}
     }
-    
+
     sceKernelDcacheWritebackAll();
     sceKernelIcacheClearAll();
 
     return 0;
 }
 
-int module_start(SceSize args, void* argp) {
-    if (sceIoDevctl("kemulator:", 0x00000003, NULL, 0, NULL, 0) == 0) {
+int module_start(SceSize args, void* argp)
+{
+    // What an application that reads this module needs is published before anything below can
+    // go wrong: where the data of the drops is, and that this plugin in its memory is alive
+    // (the marker of the data is only whole once its first letter is written). The data only
+    // tells the application to draw anything once the game below is recognised, so publishing
+    // it here costs nothing and takes the guesswork out of finding the block.
+    ppssppBeforeUIData.p_dropsData = (uint32_t)(uintptr_t)XboxRainDropletsData;
+    XboxRainDropletsData[0] = 'X';
+
+    if (sceIoDevctl("kemulator:", 0x00000003, NULL, 0, NULL, 0) == 0)
+    {
         SceUID modules[10];
         int count = 0;
         int result = 0;
-        if (sceKernelGetModuleIdList(modules, sizeof(modules), &count) >= 0) {
+        if (sceKernelGetModuleIdList(modules, sizeof(modules), &count) >= 0)
+        {
             int i;
             SceKernelModuleInfo info;
-            for (i = 0; i < count; ++i) {
+            for (i = 0; i < count; ++i)
+            {
                 info.size = sizeof(SceKernelModuleInfo);
-                if (sceKernelQueryModuleInfo(modules[i], &info) < 0) {
+                if (sceKernelQueryModuleInfo(modules[i], &info) < 0)
+                {
                     continue;
                 }
 
