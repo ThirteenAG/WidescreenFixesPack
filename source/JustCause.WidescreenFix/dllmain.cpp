@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include <d3d9.h>
-#include "dxsdk\d3dvtbl.h"
+#include "d3dvtbl.h"
 
 struct Screen
 {

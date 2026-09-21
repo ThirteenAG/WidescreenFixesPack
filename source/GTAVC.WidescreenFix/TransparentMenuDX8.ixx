@@ -2,7 +2,7 @@ module;
 
 #include <stdafx.h>
 #include "common.h"
-#include <dxsdk/dx8/d3d8.h>
+#include <minidx8/d3d8.h>
 
 export module TransparentMenuDX8;
 

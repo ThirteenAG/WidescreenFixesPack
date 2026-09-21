@@ -354,4 +354,10 @@ __pycache__/
 !includes/LED/LogitechLEDLib_x86.lib
 
 #DXSDK
-!includes/dxsdk/**/*
+!includes/minidx8/**/*
+
+# Shader tools (fxc.exe, asm_shader.exe and their runtime DLLs)
+!tools/x86/
+!tools/x86/*
+!tools/x64/
+!tools/x64/*

@@ -1,8 +1,8 @@
 module;
 
 #include <stdafx.h>
-#include "dxsdk\dx8\d3d8.h"
-#include "dxsdk\d3dvtbl.h"
+#include "minidx8/d3d8.h"
+#include "d3dvtbl.h"
 
 export module e2_d3d8_driver_mfc;
 

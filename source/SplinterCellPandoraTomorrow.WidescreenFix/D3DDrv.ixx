@@ -1,7 +1,7 @@
 module;
 
 #include <stdafx.h>
-#include <dxsdk/dx8/d3d8.h>
+#include <minidx8/d3d8.h>
 
 export module D3DDrv;
 
