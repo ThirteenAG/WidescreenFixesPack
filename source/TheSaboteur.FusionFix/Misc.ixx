@@ -142,17 +142,45 @@ public:
             injector::MakeCALL(pattern.get_first(4), static_cast<int(__cdecl*)(void*, float, float, float, int)>(DrawMapCircleHook), true);
 
             // This section fixes the audio stuttering that happens sometimes when you close the game
-            pattern = hook::pattern("A1 ? ? ? ? 50 FF 15 ? ? ? ? 8B 35 ? ? ? ? 6A 00 68 ? ? ? ? 6A 08 6A 3B");
-            static auto pGameWindow = *pattern.get_first<HWND*>(1);
-            auto pRestoreAccessibility = pattern.get_first(12);
-            pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 8B 0D ? ? ? ? 85 C9 74 12 8B 01 8B 10 6A 01 FF D2");
-            injector::MakeJMP(pattern.get_first(0), pRestoreAccessibility, true);
+            pattern = hook::pattern("83 EC 2C 8B 0D ? ? ? ? 56 8B 74 24 34 6A 08 8D 44 24 08 50 66 C7 44 24 0E 19 00");
+            static auto StopAllSounds = (void(__cdecl*)(uint32_t))pattern.get_first(0);
 
-            pattern = hook::pattern("8B 0D ? ? ? ? 8B 11 8B 02 5E FF E0");
-            static auto ExitHook = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& regs)
+            pattern = hook::pattern("83 EC 28 80 7C 24 2C 00 56 8B 35 ? ? ? ? 74 2C 6A 00 68");
+            static auto EnableAccessibilityShortcuts = (int(__cdecl*)(char))pattern.get_first(0);
+
+            pattern = hook::pattern("8B 0D ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 50 FF 15 ? ? ? ? 8B 35");
+            static auto pJobSystem = *pattern.get_first<uintptr_t*>(2);
+            static auto pGameWindow = *pattern.get_first<HWND*>(17);
+
+            pattern = hook::pattern("8B C6 5E 88 1D ? ? ? ? C6 05 ? ? ? ? 01 5B");
+            static auto pGameIsRunning = *pattern.get_first<uint8_t*>(5);
+            static auto CloseWindowHook = safetyhook::create_mid(pattern.get_first(3), [](SafetyHookContext& regs)
             {
+                *pGameIsRunning = 0;
+
+                StopAllSounds(0xFFFFFFFF);
                 ShowWindow(*pGameWindow, SW_HIDE);
-                ExitProcess(0);
+                EnableAccessibilityShortcuts(1);
+
+                if (*pJobSystem)
+                {
+                    static constexpr auto nWorkerThreads = 7;
+                    static constexpr auto nFirstThreadHandleOffset = 0x44;
+                    static constexpr auto nWorkerSize = 0x18;
+                    HANDLE hThreads[nWorkerThreads];
+                    DWORD nCount = 0;
+                    for (auto i = 0; i < nWorkerThreads; i++)
+                    {
+                        auto hThread = *(HANDLE*)(*pJobSystem + nFirstThreadHandleOffset + i * nWorkerSize);
+                        if (hThread && GetThreadId(hThread) != GetCurrentThreadId())
+                            hThreads[nCount++] = hThread;
+                    }
+                    if (nCount)
+                        WaitForMultipleObjects(nCount, hThreads, TRUE, 1000);
+                }
+
+                WFP::onShutdownEvent().executeAll();
+                TerminateProcess(GetCurrentProcess(), 0);
             });
 
             pattern = hook::pattern("83 EC 44 55 56 8B E9 8B 85 04 02 00 00 57 33 F6 83 CF FF");
