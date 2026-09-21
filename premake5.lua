@@ -219,12 +219,12 @@ function CommonWorkspaceSetup(platform, prefix)
       files { "Resources/*.rc" }
       files { "external/hooking/Hooking.Patterns.h", "external/hooking/Hooking.Patterns.cpp" }
       files { "external/injector/safetyhook/include/**.hpp", "external/injector/safetyhook/src/**.cpp" }
-	  files { "external/injector/minhook/include/*.h", "external/injector/minhook/src/**.h", "external/injector/minhook/src/**.c" }
-	  files { "external/injector/utility/FunctionHookMinHook.hpp", "external/injector/utility/FunctionHookMinHook.cpp" }
+      files { "external/injector/minhook/include/*.h", "external/injector/minhook/src/**.h", "external/injector/minhook/src/**.c" }
+      files { "external/injector/utility/FunctionHookMinHook.hpp", "external/injector/utility/FunctionHookMinHook.cpp" }
       files { "external/injector/zydis/**.h", "external/injector/zydis/**.c" }
       files { "includes/stdafx.h", "includes/stdafx.cpp" }
-	  includedirs { "external/injector/minhook/include" }
-	  includedirs { "external/injector/utility" }
+      includedirs { "external/injector/minhook/include" }
+      includedirs { "external/injector/utility" }
       includedirs { "external/injector/safetyhook/include" }
       includedirs { "external/injector/zydis" }
       includedirs { "external/hooking" }
@@ -239,16 +239,17 @@ function CommonWorkspaceSetup(platform, prefix)
       libdirs { "includes/LED" }
 
       local dxsdk = os.getenv "DXSDK_DIR"
-      if dxsdk then
-         includedirs { dxsdk .. "/include" }
-         libdirs { dxsdk .. "/lib/x86" }
+      local dxsdkinc
+      if dxsdk and os.isdir(dxsdk) then
+         dxsdkinc = dxsdk .. "/include"
       elseif os.isdir("external/minidx9") then
-         includedirs { "external/minidx9/Include" }
-         libdirs { "external/minidx9/Lib/x86" }
+         dxsdk = "external/minidx9"
+         dxsdkinc = "external/minidx9/Include"
       else
-         includedirs { "C:/Program Files (x86)/Microsoft DirectX SDK (June 2010)/include" }
-         libdirs { "C:/Program Files (x86)/Microsoft DirectX SDK (June 2010)/lib/x86" }
+         dxsdk = "C:/Program Files (x86)/Microsoft DirectX SDK (June 2010)"
+         dxsdkinc = dxsdk .. "/include"
       end
+      includedirs { dxsdkinc }
 
       pbcommands = {
          "setlocal EnableDelayedExpansion",
@@ -273,8 +274,10 @@ function CommonWorkspaceSetup(platform, prefix)
 
       filter { "platforms:Win32" }
          architecture "x86"
+         libdirs { dxsdk .. "/lib/x86" }
       filter { "platforms:x64" }
          architecture "x64"
+         libdirs { dxsdk .. "/lib/x64" }
       filter {}
 
       filter "configurations:Debug*"
@@ -584,10 +587,6 @@ group ""
 project "FarCry64.WidescreenFix"
    add_postfx()
    files { "source/FarCry.WidescreenFix/*.cpp", "source/FarCry.WidescreenFix/*.ixx" }
-   filter { "platforms:x64" }
-      -- postfxcore.ixx uses D3DX; the shared setup only adds the x86 DXSDK lib dir, so link the x64 one explicitly
-      links { "$(DXSDK_DIR)/Lib/x64/d3dx9.lib" }
-   filter {}
    setpaths("Z:/WFP/Games/Far Cry/", "Bin64/FarCry.exe", "Bin64/")
    targetdir "data/FarCry.WidescreenFix/Bin64/"
 
