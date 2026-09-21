@@ -209,9 +209,14 @@ public:
                 Update(TimerHUD, *(uint8_t*)(regs.ecx + 64) != 0);
             });
 
-            pattern = hook::pattern("8B 44 24 18 8B 52 3C 68 ? ? ? ? 50 FF D2 8B 0D");
-            static const char* szPlaceholderTexture = "blank.dds";
-            injector::WriteMemory(pattern.get_first(8), szPlaceholderTexture, true);
+            pattern = hook::pattern("8B 55 1C 8D 7E 1C 50 8B CE 89 17 E8");
+            static auto CivilianPropMaskHook = safetyhook::create_mid(pattern.get_first(11), [](SafetyHookContext& regs)
+            {
+                static constexpr uint32_t nHumanDistanceBits = 0x80 | 0x100 | 0x200;
+                auto& nMask = *(uint32_t*)(regs.esi + 0x1C);
+                if (nMask & nHumanDistanceBits)
+                    nMask = (nMask & ~nHumanDistanceBits) | 0x01;
+            });
 
             if (bBorderlessWindowed)
             {
