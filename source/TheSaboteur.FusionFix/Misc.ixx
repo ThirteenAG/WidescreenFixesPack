@@ -6,22 +6,20 @@ export module Misc;
 
 import ComVars;
 
-struct SabWindowedModeWrapper
+static int WINAPI GetSystemMetrics_Hook(int nIndex)
 {
-    static int WINAPI GetSystemMetrics_Hook(int nIndex)
-    {
-        if (nIndex == SM_CYCAPTION || nIndex == SM_CYSIZEFRAME)
-            return 0;
-        return GetSystemMetrics(nIndex);
-    }
-    static HWND WINAPI CreateWindowExA_Hook(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam)
-    {
-        auto hWnd = WindowedModeWrapper::CreateWindowExA_Hook(dwExStyle, lpClassName, lpWindowName, dwStyle, X, Y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
-        if (hWnd && hWnd == WindowedModeWrapper::GameHWND)
-            WindowedModeWrapper::SetWindowLongA_Hook(hWnd, GWL_STYLE, GetWindowLong(hWnd, GWL_STYLE));
-        return hWnd;
-    }
-};
+    if (nIndex == SM_CYCAPTION || nIndex == SM_CYSIZEFRAME)
+        return 0;
+    return GetSystemMetrics(nIndex);
+}
+
+static HWND WINAPI CreateWindowExA_Hook(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam)
+{
+    auto hWnd = WindowedModeWrapper::CreateWindowExA_Hook(dwExStyle, lpClassName, lpWindowName, dwStyle, X, Y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
+    if (hWnd && hWnd == WindowedModeWrapper::GameHWND)
+        WindowedModeWrapper::SetWindowLongA_Hook(hWnd, GWL_STYLE, GetWindowLong(hWnd, GWL_STYLE));
+    return hWnd;
+}
 
 class Misc
 {
@@ -116,8 +114,8 @@ public:
             if (bBorderlessWindowed)
             {
                 IATHook::Replace(GetModuleHandleA(NULL), "USER32.DLL",
-				    std::forward_as_tuple("GetSystemMetrics", SabWindowedModeWrapper::GetSystemMetrics_Hook),
-                    std::forward_as_tuple("CreateWindowExA", SabWindowedModeWrapper::CreateWindowExA_Hook),
+				    std::forward_as_tuple("GetSystemMetrics", GetSystemMetrics_Hook),
+                    std::forward_as_tuple("CreateWindowExA", CreateWindowExA_Hook),
                     std::forward_as_tuple("CreateWindowExW", WindowedModeWrapper::CreateWindowExW_Hook),
                     std::forward_as_tuple("SetWindowLongA", WindowedModeWrapper::SetWindowLongA_Hook),
                     std::forward_as_tuple("SetWindowLongW", WindowedModeWrapper::SetWindowLongW_Hook),
