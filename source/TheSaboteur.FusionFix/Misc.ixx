@@ -142,15 +142,11 @@ public:
             injector::MakeCALL(pattern.get_first(4), static_cast<int(__cdecl*)(void*, float, float, float, int)>(DrawMapCircleHook), true);
 
             // This section fixes the audio stuttering that happens sometimes when you close the game
-            pattern = hook::pattern("83 EC 2C 8B 0D ? ? ? ? 56 8B 74 24 34 6A 08 8D 44 24 08 50 66 C7 44 24 0E 19 00");
-            static auto StopAllSounds = (void(__cdecl*)(uint32_t))pattern.get_first(0);
-
             pattern = hook::pattern("83 EC 28 80 7C 24 2C 00 56 8B 35 ? ? ? ? 74 2C 6A 00 68");
             static auto EnableAccessibilityShortcuts = (int(__cdecl*)(char))pattern.get_first(0);
 
             pattern = hook::pattern("8B 0D ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 50 FF 15 ? ? ? ? 8B 35");
             static auto pJobSystem = *pattern.get_first<uintptr_t*>(2);
-            static auto pGameWindow = *pattern.get_first<HWND*>(17);
 
             pattern = hook::pattern("8B C6 5E 88 1D ? ? ? ? C6 05 ? ? ? ? 01 5B");
             static auto pGameIsRunning = *pattern.get_first<uint8_t*>(5);
@@ -158,8 +154,6 @@ public:
             {
                 *pGameIsRunning = 0;
 
-                StopAllSounds(0xFFFFFFFF);
-                ShowWindow(*pGameWindow, SW_HIDE);
                 EnableAccessibilityShortcuts(1);
 
                 if (*pJobSystem)
