@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "dxsdk\d3d8.h"
+#include "minidx8/d3d8.h"
 
 struct Screen
 {

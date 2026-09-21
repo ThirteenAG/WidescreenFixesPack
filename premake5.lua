@@ -122,7 +122,7 @@ function add_postfx(id_postfx, id_areatex, id_searchtex)
    id_areatex = id_areatex or id_postfx + 1
    id_searchtex = id_searchtex or id_postfx + 2
    prebuildcommands {
-      "\"../includes/dxsdk/lib/x86/fxc.exe\" /T fx_2_0 /Fo \"../includes/postfx/postfx.fxo\" \"../includes/postfx/postfx.fx\""
+      "\"../tools/x86/fxc.exe\" /T fx_2_0 /Fo \"../includes/postfx/postfx.fxo\" \"../includes/postfx/postfx.fx\""
    }
    includedirs { "Resources", "includes/postfx" }
    files { "includes/postfx/postfxcore.ixx", "includes/postfx/postfx.fx", "includes/postfx/postfx.fxo", "includes/postfx/postfx.rc" }
@@ -238,18 +238,7 @@ function CommonWorkspaceSetup(platform, prefix)
       includedirs { "includes/LED" }
       libdirs { "includes/LED" }
 
-      local dxsdk = os.getenv "DXSDK_DIR"
-      local dxsdkinc
-      if dxsdk and os.isdir(dxsdk) then
-         dxsdkinc = dxsdk .. "/include"
-      elseif os.isdir("external/minidx9") then
-         dxsdk = "external/minidx9"
-         dxsdkinc = "external/minidx9/Include"
-      else
-         dxsdk = "C:/Program Files (x86)/Microsoft DirectX SDK (June 2010)"
-         dxsdkinc = dxsdk .. "/include"
-      end
-      includedirs { dxsdkinc }
+      includedirs { "external/minidx9/Include" }
 
       pbcommands = {
          "setlocal EnableDelayedExpansion",
@@ -274,10 +263,10 @@ function CommonWorkspaceSetup(platform, prefix)
 
       filter { "platforms:Win32" }
          architecture "x86"
-         libdirs { dxsdk .. "/lib/x86" }
+         libdirs { "external/minidx9/Lib/x86" }
       filter { "platforms:x64" }
          architecture "x64"
-         libdirs { dxsdk .. "/lib/x64" }
+         libdirs { "external/minidx9/Lib/x64" }
       filter {}
 
       filter "configurations:Debug*"
@@ -353,8 +342,8 @@ project "JustCause.WidescreenFix"
 
 project "KingKong.WidescreenFix"
    prebuildcommands {
-      "for /R \"../source/%{prj.name}/\" %%f in (*.ps) do (\"../includes/dxsdk/lib/x86/fxc.exe\" /T ps_3_0 /nologo /E main /Fo \"../source/%{prj.name}/%%~nf.pso\" \"%%f\")",
-      "for /R \"../source/%{prj.name}/\" %%f in (*.vs) do (\"../includes/dxsdk/lib/x86/fxc.exe\" /T vs_3_0 /nologo /E main /Fo \"../source/%{prj.name}/%%~nf.vso\" \"%%f\")"
+      "for /R \"../source/%{prj.name}/\" %%f in (*.ps) do (\"../tools/x86/fxc.exe\" /T ps_3_0 /nologo /E main /Fo \"../source/%{prj.name}/%%~nf.pso\" \"%%f\")",
+      "for /R \"../source/%{prj.name}/\" %%f in (*.vs) do (\"../tools/x86/fxc.exe\" /T vs_3_0 /nologo /E main /Fo \"../source/%{prj.name}/%%~nf.vso\" \"%%f\")"
    }
    files { "source/%{prj.name}/*.ps", "source/%{prj.name}/*.vs", "source/%{prj.name}/*.rc" }
    defines { "IDR_BLURPS=200" }
@@ -399,12 +388,12 @@ project "MaxPayne.WidescreenFix"
    dependson { "MaxPayne.MSVCP60Wrapper" }
    debugargs { "-skipstartup -window -developer -screenshot -nodialog" }
    linkoptions { "/SAFESEH:NO" }
-   libdirs { "includes/dxsdk/dx8" }
+   libdirs { "includes/minidx8" }
    setpaths("Z:/WFP/Games/Max Payne/Max Payne/", "MaxPayne.exe")
 project "MaxPayne2.WidescreenFix"
    debugargs { "-skipstartup -developer -window -nodialog" }
    linkoptions { "/SAFESEH:NO" }
-   libdirs { "includes/dxsdk/dx8" }
+   libdirs { "includes/minidx8" }
    setpaths("Z:/WFP/Games/Max Payne/Max Payne 2 The Fall of Max Payne/", "MaxPayne2.exe")
 group ""
 
@@ -416,7 +405,7 @@ project "NFSCarbon.WidescreenFix"
    setpaths("Z:/WFP/Games/Need For Speed/Need for Speed Carbon/", "NFSC.exe")
 project "NFSMostWanted.WidescreenFix"
    prebuildcommands {
-   "for /R \"../source/%{prj.name}/\" %%f in (*.fx) do (\"../includes/dxsdk/lib/x86/fxc.exe\" /T fx_2_0 /Fo \"../source/%{prj.name}/%%~nf.fxo\" \"%%f\")"
+   "for /R \"../source/%{prj.name}/\" %%f in (*.fx) do (\"../tools/x86/fxc.exe\" /T fx_2_0 /Fo \"../source/%{prj.name}/%%~nf.fxo\" \"%%f\")"
    }
    includedirs { "Resources", "includes/postfx" }
    files { "includes/postfx/postfxcore.ixx", "source/%{prj.name}/*.fx", "source/%{prj.name}/*.rc" }
@@ -496,9 +485,9 @@ project "SplinterCellBlacklist.FusionFix"
    setpaths("Z:/WFP/Games/Splinter Cell/Splinter Cell Blacklist/", "src/SYSTEM/Blacklist_DX11_game.exe", "src/system/scripts/")
 project "SplinterCellDoubleAgent.WidescreenFix"
    prebuildcommands {
-   "\"../includes/dxsdk/lib/x86/fxc.exe\" /T fx_2_0 /Fo \"../includes/postfx/postfx.fxo\" \"../includes/postfx/postfx.fx\"",
-   "for /R \"../source/%{prj.name}/\" %%f in (*.ps) do (\"../includes/dxsdk/lib/x86/asm_shader.exe\" \"%%f\" \"../source/%{prj.name}/%%~nf.pso\")",
-   "for /R \"../source/%{prj.name}/\" %%f in (*.vs) do (\"../includes/dxsdk/lib/x86/asm_shader.exe\" \"%%f\" \"../source/%{prj.name}/%%~nf.vso\")",
+   "\"../tools/x86/fxc.exe\" /T fx_2_0 /Fo \"../includes/postfx/postfx.fxo\" \"../includes/postfx/postfx.fx\"",
+   "for /R \"../source/%{prj.name}/\" %%f in (*.ps) do (\"../tools/x86/asm_shader.exe\" \"%%f\" \"../source/%{prj.name}/%%~nf.pso\")",
+   "for /R \"../source/%{prj.name}/\" %%f in (*.vs) do (\"../tools/x86/asm_shader.exe\" \"%%f\" \"../source/%{prj.name}/%%~nf.vso\")",
    }
    includedirs { "Resources", "includes/postfx" }
    files { "includes/postfx/postfxcore.ixx", "includes/postfx/postfx.fx", "includes/postfx/postfx.fxo", "includes/postfx/postfx.rc" }
@@ -512,9 +501,9 @@ project "SplinterCellDoubleAgent.WidescreenFix"
    setpaths("Z:/WFP/Games/Splinter Cell/Splinter Cell - Double Agent/", "SCDA-Offline/System/SplinterCell4.exe", "SCDA-Offline/System/scripts/")
 project "SplinterCellPandoraTomorrow.WidescreenFix"
    prebuildcommands {
-   "for /R \"../source/%{prj.name}/\" %%f in (*.fx) do (\"../includes/dxsdk/lib/x86/fxc.exe\" /Tps_1_1 /LD /Ewaterblend /Fo \"../source/%{prj.name}/%%~nf.fxo\" \"%%f\")",
-   "for /R \"../source/%{prj.name}/\" %%f in (*.ps) do (\"../includes/dxsdk/lib/x86/asm_shader.exe\" \"%%f\" \"../source/%{prj.name}/%%~nf.pso\")",
-   "for /R \"../source/%{prj.name}/\" %%f in (*.vs) do (\"../includes/dxsdk/lib/x86/asm_shader.exe\" \"%%f\" \"../source/%{prj.name}/%%~nf.vso\")",
+   "for /R \"../source/%{prj.name}/\" %%f in (*.fx) do (\"../tools/x86/fxc.exe\" /Tps_1_1 /LD /Ewaterblend /Fo \"../source/%{prj.name}/%%~nf.fxo\" \"%%f\")",
+   "for /R \"../source/%{prj.name}/\" %%f in (*.ps) do (\"../tools/x86/asm_shader.exe\" \"%%f\" \"../source/%{prj.name}/%%~nf.pso\")",
+   "for /R \"../source/%{prj.name}/\" %%f in (*.vs) do (\"../tools/x86/asm_shader.exe\" \"%%f\" \"../source/%{prj.name}/%%~nf.vso\")",
    }
    files { "source/%{prj.name}/*.fx", "source/%{prj.name}/*.rc" }
    defines { "IDR_WATER_BLEND=200" }
@@ -560,7 +549,7 @@ project "TotalOverdose.WidescreenFix"
    setpaths("Z:/WFP/Games/Total Overdose/", "TOD.exe")
 
 project "TrueCrimeNewYorkCity.WidescreenFix"
-   prebuildcommands { "for /R \"../source/%{prj.name}/\" %%f in (*.fx) do (\"../includes/dxsdk/lib/x86/fxc.exe\" /T fx_2_0 /Fo \"../source/%{prj.name}/%%~nf.fxo\" \"%%f\")" }
+   prebuildcommands { "for /R \"../source/%{prj.name}/\" %%f in (*.fx) do (\"../tools/x86/fxc.exe\" /T fx_2_0 /Fo \"../source/%{prj.name}/%%~nf.fxo\" \"%%f\")" }
    includedirs {"Resources"}
    files { "source/%{prj.name}/*.fx", "source/%{prj.name}/*.rc" }
    defines { "IDR_POSTFX=200" }
