@@ -1,6 +1,10 @@
 module;
 
 #include <stdafx.h>
+#include <algorithm>
+#include <cmath>
+#include <unordered_map>
+#include <vector>
 
 export module Misc;
 
