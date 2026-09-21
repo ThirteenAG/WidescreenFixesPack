@@ -116,10 +116,47 @@ public:
                 *(float*)(regs.esi + 0x228) += static_cast<float>(*(int32_t*)(regs.esi + 0x104)) * GetCursorSpeedBoost();
             });
 
+            pattern = hook::pattern("D9 05 ? ? ? ? DE D9 DF E0 F6 C4 41 75 49 8B 0D");
+            static auto pMapCanvasHeight = *pattern.get_first<float*>(2);
+            static auto pMapCanvasWidth = pMapCanvasHeight - 1;
+
+            pattern = hook::pattern("56 D9 58 04 E8 ? ? ? ? 83 C4 14 EB 14");
+            static auto DrawMapCircle = (int(__cdecl*)(void*, float, float, float, int))injector::GetBranchDestination(pattern.get_first(4), true).as_int();
+            static auto DrawMapCircleHook = [](void* pDrawContext, float fPosX, float fPosY, float fRadius, int nColor) -> int
+            {
+                auto fWidth = *pMapCanvasWidth;
+                auto fHeight = *pMapCanvasHeight;
+                if (fWidth > 0.0f && fHeight > 0.0f)
+                {
+                    float mat0[4] = { 2.0f / fWidth, 0.0f, 0.0f, -1.0f };
+                    float mat1[4] = { 0.0f, -2.0f / fHeight, 0.0f, 1.0f };
+                    auto vtbl = *(void***)pDrawContext;
+                    auto SetViewport = (void(__thiscall*)(void*, float, float, float, float, float, float))vtbl[148 / 4];
+                    auto SetShaderConstant = (void(__thiscall*)(void*, int, float*))vtbl[188 / 4];
+                    SetViewport(pDrawContext, 0.0f, 0.0f, fWidth, fHeight, 0.0f, 1.0f);
+                    SetShaderConstant(pDrawContext, 0, mat0);
+                    SetShaderConstant(pDrawContext, 1, mat1);
+                }
+                return DrawMapCircle(pDrawContext, fPosX, fPosY, fRadius, nColor);
+            };
+            injector::MakeCALL(pattern.get_first(4), static_cast<int(__cdecl*)(void*, float, float, float, int)>(DrawMapCircleHook), true);
+
+            // This section fixes the audio stuttering that happens sometimes when you close the game
+            pattern = hook::pattern("A1 ? ? ? ? 50 FF 15 ? ? ? ? 8B 35 ? ? ? ? 6A 00 68 ? ? ? ? 6A 08 6A 3B");
+            auto pDestroyWindow = pattern.get_first(0);
+            pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 8B 0D ? ? ? ? 85 C9 74 12 8B 01 8B 10 6A 01 FF D2");
+            injector::MakeJMP(pattern.get_first(0), pDestroyWindow, true);
+
+            pattern = hook::pattern("8B 0D ? ? ? ? 8B 11 8B 02 5E FF E0");
+            static auto ExitHook = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& regs)
+            {
+                ExitProcess(0);
+            });
+
             if (bBorderlessWindowed)
             {
                 IATHook::Replace(GetModuleHandleA(NULL), "USER32.DLL",
-				    std::forward_as_tuple("GetSystemMetrics", GetSystemMetrics_Hook),
+                    std::forward_as_tuple("GetSystemMetrics", GetSystemMetrics_Hook),
                     std::forward_as_tuple("CreateWindowExA", CreateWindowExA_Hook),
                     std::forward_as_tuple("CreateWindowExW", WindowedModeWrapper::CreateWindowExW_Hook),
                     std::forward_as_tuple("SetWindowLongA", WindowedModeWrapper::SetWindowLongA_Hook),
