@@ -153,6 +153,60 @@ public:
                 ExitProcess(0);
             });
 
+            pattern = hook::pattern("83 EC 44 55 56 8B E9 8B 85 04 02 00 00 57 33 F6 83 CF FF");
+            static auto RaceHUDHook = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& regs)
+            {
+                struct Element
+                {
+                    const char* szVisible;
+                    bool bVisible = true;
+                    float fHideTimer = 0.0f;
+                };
+                static Element RaceHUD = { "_root.RaceHUD._visible" };
+                static Element TimerHUD = { "_root.TimerHUD._visible" };
+                static void* pLastMovie = nullptr;
+                static constexpr auto fHideDelay = 1.0f;
+
+                auto pMovie = *(void**)(regs.ecx + 0x10);
+                if (!pMovie)
+                    return;
+
+                if (pMovie != pLastMovie)
+                {
+                    pLastMovie = pMovie;
+                    RaceHUD.bVisible = TimerHUD.bVisible = true;
+                    RaceHUD.fHideTimer = TimerHUD.fHideTimer = fHideDelay;
+                }
+
+                auto fFrameTime = *(float*)(regs.esp + 0x04);
+                auto Update = [&](Element& element, bool bShown)
+                {
+                    if (bShown)
+                        element.fHideTimer = 0.0f;
+                    else if (element.bVisible)
+                        element.fHideTimer += fFrameTime;
+
+                    auto bVisible = bShown || (element.bVisible && element.fHideTimer < fHideDelay);
+                    if (bVisible == element.bVisible)
+                        return;
+
+                    struct GFxValue
+                    {
+                        uint32_t Type = 2;
+                        uint32_t Pad = 0;
+                        union { double Number; bool Bool; } Value = {};
+                    } value;
+                    value.Value.Bool = bVisible;
+
+                    auto SetVariable = (bool(__thiscall*)(void*, const char*, GFxValue*, int))(*(void***)pMovie)[44 / 4];
+                    SetVariable(pMovie, element.szVisible, &value, 1);
+                    element.bVisible = bVisible;
+                };
+
+                Update(RaceHUD, *(int32_t*)(regs.ecx + 60) != 0);
+                Update(TimerHUD, *(uint8_t*)(regs.ecx + 64) != 0);
+            });
+
             if (bBorderlessWindowed)
             {
                 IATHook::Replace(GetModuleHandleA(NULL), "USER32.DLL",
