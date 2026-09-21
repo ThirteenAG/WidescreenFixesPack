@@ -121,6 +121,10 @@ end
 -- as Visual Studio's FxCompile build action, but with the June 2010 compiler, which is the one that still
 -- handles the D3D9 era profiles (fx_2_0, ps_1_1 with /LD, ...). Unlike a prebuild command this only runs when
 -- a shader actually changed, and the output is tracked by MSBuild.
+-- Both the input and the output are passed as paths relative to the project file, as written in the project
+-- and with the output next to the shader, where the .rc files expect it. Do not use %(FullPath)/%(Directory)
+-- here: they expand to a drive-stripped absolute path, which makes the June 2010 compiler write the output to
+-- a bogus "build/<source tree>" mirror and fails there on some machines (AppVeyor) instead of compiling.
 -- Rules: { files = <file pattern>, ext = <output extension>, tool = "fxc" (default) | "asm_shader",
 --          args = <tool arguments>, out = <optional output path, defaults to a sibling of the source> }
 -- `args` and `out` may use the input file's metadata, written with a single % (e.g. %(Filename)).
@@ -128,12 +132,13 @@ function buildshaders(rules)
    for _, rule in ipairs(rules) do
       local tool = rule.tool or "fxc"
       local exe = "../tools/x86/" .. tool .. ".exe"
-      local out = rule.out or ("%(Directory)%(Filename)" .. (rule.ext or ".fxo"))
+      local input = "%(RelativeDir)%(Filename)%(Extension)"
+      local out = rule.out or ("%(RelativeDir)%(Filename)" .. (rule.ext or ".fxo"))
       local command
       if tool == "asm_shader" then
-         command = string.format('"%s" "%s" "%s"', exe, "%(FullPath)", out)
+         command = string.format('"%s" "%s" "%s"', exe, input, out)
       else
-         command = string.format('"%s" %s /Fo "%s" "%s"', exe, rule.args or "", out, "%(FullPath)")
+         command = string.format('"%s" %s /Fo "%s" "%s"', exe, rule.args or "", out, input)
       end
       filter { "files:" .. rule.files }
          buildaction "CustomBuild"
