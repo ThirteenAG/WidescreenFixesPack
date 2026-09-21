@@ -610,22 +610,133 @@ struct FRotator
     int Pitch, Yaw, Roll;
 };
 
+// -----------------------------------------------------------------------
+// Whether the roof over the camera is what keeps the rain out
+//
+// Nothing in the game says which part of a level is roofed: what hides the rain in the game is
+// the roof drawn over it, and the mesh of the rain is drawn over the whole level either way, its
+// streaks being too coarse to say anything about the camera (a few dozen over a level). The
+// collision of the game does know, though, and it is the same collision the game walks against,
+// so the roof over the camera is looked for by tracing straight up from it with the trace of the
+// game itself, AActor::FastTrace, which answers whether the way is clear. A roof is a way that is
+// not clear.
+//
+// That trace is a call into a function of the game, made from the tick of the player controller,
+// which runs with the registers of the game.
+// -----------------------------------------------------------------------
+#define RAIN_TRACE_UP 600.0f // how far over the camera a roof is looked for, about six metres
+#define RAIN_STALE_TICKS 30 // ticks the rain of the game is remembered after it was drawn
+#define RAIN_TRACE_EVERY 10 // ticks between two traces, the roof over the camera does not hurry
+
+typedef int (*FastTrace_t)(void* pActor, const struct FVector* pEnd, const struct FVector* pStart, const struct FVector* pExtent, double unknown);
+
+uintptr_t p_FastTrace = 0; // AActor::FastTrace
+
+static float gRainStrength = 1.0f; // how much rain is over the camera, handed to the effect as is
+
+// -----------------------------------------------------------------------
+// Whether a place of the memory of the game can be read at all
+//
+// The level of an actor and its table of functions are read out of the actor, and a place that is
+// not there is not worth reading: a read outside the memory of the game is an exception on this
+// machine, not a wrong number.
+// -----------------------------------------------------------------------
+#define RAIN_MEMORY_LOW 0x08800000u
+#define RAIN_MEMORY_HIGH 0x0A000000u
+
+static int IsGameMemory(uint32_t address, uint32_t size)
+{
+    return address >= RAIN_MEMORY_LOW && address <= RAIN_MEMORY_HIGH - size;
+}
+
+// -----------------------------------------------------------------------
+// Whether the trace of the game finds a roof over the camera
+//
+// The place of the camera and the same place a little over it are handed over, with no size, so
+// only what is really over the camera stops the way. That little is what makes a roof a roof:
+// the levels of the game are boxes, and what one of them holds over the whole of it, over the
+// open places as much as over the roofs of a house, answers for a roof of either, so only a cover
+// near over the camera is taken for one, see RAIN_TRACE_UP.
+//
+// A trace of the game needs the actor it is run for, which is the one of the camera, and the
+// level of that actor is looked at first, together with the place the level keeps the primitives
+// of its collision by, which the trace of the game reads without looking first: a level between
+// two parts of a load has nothing there to read, and the trace is left alone instead.
+//
+// The size a trace is given is four floats and not three, see the trace of the game.
+// -----------------------------------------------------------------------
+static int IsCameraUnderRoof(void* pActor, const struct FVector* pCamPos)
+{
+    struct FVector above;
+    float extent[4];
+    const uint32_t level = *(const uint32_t*)((const uint8_t*)pActor + 240);
+
+    if (!p_FastTrace)
+        return -1;
+
+    if (!IsGameMemory(level, 64) || !IsGameMemory(*(const uint32_t*)level, 4))
+        return -1;
+
+    if (!IsGameMemory(*(const uint32_t*)(level + 44), 4))
+        return -1;
+
+    above.X = pCamPos->X;
+    above.Y = pCamPos->Y;
+    above.Z = pCamPos->Z + RAIN_TRACE_UP;
+    extent[0] = 0.0f;
+    extent[1] = 0.0f;
+    extent[2] = 0.0f;
+    extent[3] = 0.0f;
+
+    // A trace of the game answers whether the way is clear, so a roof is one that is not
+    return ((FastTrace_t)p_FastTrace)(pActor, &above, pCamPos, extent, 0.0) == 0;
+}
+
 void* gCurrentPlayerController;
+int gFramesWithoutRain; // how long the rain of the game has not been drawn for
+
 void _0fRAPlayerControllerETickf6KELevelTickWrapper(void* PlayerController, int a2, float a3)
 {
     static void* prevPlayerController = 0;
+    static uint32_t traceTick = 0;
+    const struct FVector* pCamPos = (const struct FVector*)((uintptr_t)PlayerController + 0x1B0);
+    struct XRData* data = (struct XRData*)XboxRainDropletsData;
     gCurrentPlayerController = PlayerController;
 
     if (PlayerController != prevPlayerController)
     {
         prevPlayerController = PlayerController;
 
-        struct XRData* data = (struct XRData*)XboxRainDropletsData;
-        data->ms_enabled = 0;
+        // Another level is another rain
+        gFramesWithoutRain = 1000;
     }
+
+    if (gFramesWithoutRain < 1000)
+        ++gFramesWithoutRain;
+
+    // The rain over the camera is the rain of the frame, taken away by the roof over the camera:
+    // the roof is looked for with the trace of the game, and the drops of a lens dry out on their
+    // own once no new rain is put on it, so what is handed over is the strength of the rain and
+    // never a switch of the effect. See the rain of SprayDrops and its ForceRain.
+    if (gFramesWithoutRain > RAIN_STALE_TICKS)
+    {
+        gRainStrength = 0.0f;
+    }
+    else if ((traceTick++ % RAIN_TRACE_EVERY) == 0 && PlayerController && IsGameMemory((uint32_t)(uintptr_t)PlayerController, 0x1B0 + 12))
+    {
+        const int underRoof = IsCameraUnderRoof(PlayerController, pCamPos);
+
+        if (underRoof >= 0)
+            gRainStrength = underRoof ? 0.0f : 1.0f;
+    }
+
+    data->ms_enabled = 1;
+    data->ms_rainIntensity = gRainStrength;
+    data->p_rainIntensity = (uint32_t)(uintptr_t)&gRainStrength;
 }
 
 RwMatrix matrix;
+
 void _0FIDrawRainP6LUStaticMeshP6PFLevelSceneNodeP6QFRenderInterfaceWrapper(void* a1, int a2, int a3)
 {
     struct XRData* data = (struct XRData*)XboxRainDropletsData;
@@ -696,8 +807,9 @@ void _0FIDrawRainP6LUStaticMeshP6PFLevelSceneNodeP6QFRenderInterfaceWrapper(void
         data->p_pos_y = (uint32_t)&matrix.pos.y;
         data->p_pos_z = (uint32_t)&matrix.pos.z;
 
-        data->ms_enabled = 1;
-        data->ms_rainIntensity = 1.0f;
+        // The rain of the game is drawn in this frame. Whether it comes down over the camera is
+        // worked out in the tick of the player controller, see IsCameraUnderRoof.
+        gFramesWithoutRain = 0;
     }
     gCurrentPlayerController = 0;
 }
@@ -815,6 +927,12 @@ int OnModuleStart()
         if (ptr_89606A4)
         {
             injector.MakeTrampoline(ptr_89606A4, (uintptr_t)_0FIDrawRainP6LUStaticMeshP6PFLevelSceneNodeP6QFRenderInterfaceWrapper);
+        }
+
+        uintptr_t ptr_8A11B50 = pattern.get(0, "30 00 A0 AF 00 60 80 44 34 00 A0 AF 40 00 AC E7 44 00 AC E7 48 00 AC E7 25 40 C0 00", -4);
+        if (ptr_8A11B50)
+        {
+            p_FastTrace = ptr_8A11B50;
         }
 
         uintptr_t ptr_893968C = pattern.get(0, "C0 00 86 8C 38 00 B1 AF 25 88 80 00 08 00 C4 30 28 00 B4 E7", -4);
