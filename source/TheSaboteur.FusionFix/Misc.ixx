@@ -218,6 +218,9 @@ public:
                     nMask = (nMask & ~nHumanDistanceBits) | 0x01;
             });
 
+            pattern = hook::pattern("56 50 51 53 8B CF E8 ? ? ? ? 84 C0 0F 85");
+            injector::WriteMemoryRaw(pattern.get_first(6), (void*)"\x83\xC4\x10\x32\xC0", 5, true);
+
             if (bBorderlessWindowed)
             {
                 IATHook::Replace(GetModuleHandleA(NULL), "USER32.DLL",
