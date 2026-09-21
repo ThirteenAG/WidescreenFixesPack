@@ -143,13 +143,15 @@ public:
 
             // This section fixes the audio stuttering that happens sometimes when you close the game
             pattern = hook::pattern("A1 ? ? ? ? 50 FF 15 ? ? ? ? 8B 35 ? ? ? ? 6A 00 68 ? ? ? ? 6A 08 6A 3B");
-            auto pDestroyWindow = pattern.get_first(0);
+            static auto pGameWindow = *pattern.get_first<HWND*>(1);
+            auto pRestoreAccessibility = pattern.get_first(12);
             pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 8B 0D ? ? ? ? 85 C9 74 12 8B 01 8B 10 6A 01 FF D2");
-            injector::MakeJMP(pattern.get_first(0), pDestroyWindow, true);
+            injector::MakeJMP(pattern.get_first(0), pRestoreAccessibility, true);
 
             pattern = hook::pattern("8B 0D ? ? ? ? 8B 11 8B 02 5E FF E0");
             static auto ExitHook = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& regs)
             {
+                ShowWindow(*pGameWindow, SW_HIDE);
                 ExitProcess(0);
             });
 
@@ -206,6 +208,10 @@ public:
                 Update(RaceHUD, *(int32_t*)(regs.ecx + 60) != 0);
                 Update(TimerHUD, *(uint8_t*)(regs.ecx + 64) != 0);
             });
+
+            pattern = hook::pattern("8B 44 24 18 8B 52 3C 68 ? ? ? ? 50 FF D2 8B 0D");
+            static const char* szPlaceholderTexture = "blank.dds";
+            injector::WriteMemory(pattern.get_first(8), szPlaceholderTexture, true);
 
             if (bBorderlessWindowed)
             {
