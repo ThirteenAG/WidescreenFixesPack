@@ -71,6 +71,7 @@ public:
                         break;
                 }
             }
+
             pattern = hook::pattern("C7 44 24 1C 30 00 00 00 89 54 24 20 C7 44 24 24 00 01 00 00 E8");
             static auto FontCacheConfigHook = safetyhook::create_mid(pattern.get_first(20), [](SafetyHookContext& regs)
             {
@@ -90,8 +91,10 @@ public:
                 pConfig->TextureHeight = 2048;
                 pConfig->MaxSlotHeight = 96;
             });
+
             pattern = hook::pattern("A1 ? ? ? ? 8B 88 74 06 00 00 DB 80 74 06 00 00");
             static auto ppRenderer = *pattern.get_first<uintptr_t*>(1);
+
             static auto GetCursorSpeedBoost = []() -> float
             {
                 auto pRenderer = *ppRenderer;
@@ -100,11 +103,13 @@ public:
                 auto fHeight = static_cast<float>(*(uint32_t*)(pRenderer + 0x678));
                 return std::max(fHeight / 1080.0f, 1.0f) - 1.0f;
             };
+
             pattern = hook::pattern("D9 9E 24 02 00 00 D9 EE D8 96 24 02 00 00");
             static auto CursorXHook = safetyhook::create_mid(pattern.get_first(6), [](SafetyHookContext& regs)
             {
                 *(float*)(regs.esi + 0x224) += static_cast<float>(*(int32_t*)(regs.esi + 0x100)) * GetCursorSpeedBoost();
             });
+
             pattern = hook::pattern("D9 9E 28 02 00 00 D8 96 28 02 00 00");
             static auto CursorYHook = safetyhook::create_mid(pattern.get_first(6), [](SafetyHookContext& regs)
             {
@@ -129,6 +134,7 @@ public:
                 static float f = 1.0f / static_cast<float>(nFPSLimit);
                 auto pattern = hook::pattern("D9 05 ? ? ? ? A2 ? ? ? ? D9 1D ? ? ? ? E8");
                 injector::WriteMemory(pattern.get_first(2), &f, true);
+
                 pattern = hook::pattern("8B 54 24 0C 01 56 40 D9 6C 24 04");
                 static auto GameClockHook = safetyhook::create_mid(pattern.get_first(4), [](SafetyHookContext& regs)
                 {
@@ -139,11 +145,13 @@ public:
                     fRemainder = fMilliseconds - static_cast<double>(nMilliseconds);
                     regs.edx = nMilliseconds;
                 });
+
                 static double fDriveSpeedDamping = 0.9990000128746033;
                 static double fDriveSpeedDampingSlow = 0.9900000095367432;
                 pattern = hook::pattern("D9 C9 DC 0D ? ? ? ? EB 0A DD D9 D9 07 DC 0D ? ? ? ? D9 1F");
                 injector::WriteMemory(pattern.get_first(4), &fDriveSpeedDamping, true);
                 injector::WriteMemory(pattern.get_first(16), &fDriveSpeedDampingSlow, true);
+
                 pattern = hook::pattern("83 EC 1C D9 EE 56 8B F1 D9 54 24 04 80 BE B8 09 00 00 00");
                 static auto BrakeForceHook = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& regs)
                 {
@@ -151,6 +159,7 @@ public:
                     fDriveSpeedDamping = std::pow(0.9990000128746033, fFrames);
                     fDriveSpeedDampingSlow = std::pow(0.9900000095367432, fFrames);
                 });
+
                 static double fMouseAxisScale = 0.04;
                 pattern = hook::pattern("D9 86 2C 02 00 00 DD 05 ? ? ? ? DC C9");
                 injector::WriteMemory(pattern.get_first(8), &fMouseAxisScale, true);
