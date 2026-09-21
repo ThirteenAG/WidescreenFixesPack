@@ -1,13 +1,13 @@
 # tools
 
-Standalone Windows binaries used by the build scripts (see `prebuildcommands` in `premake5.lua`).
-They are kept here, outside of the include/library folders, so that both the 32-bit and 64-bit
-copies can coexist next to their own runtime dependencies.
+Standalone Windows binaries used by the build (`buildshaders()` in `premake5.lua` adds them as per-file
+custom build steps). They are kept here, outside of the include/library folders, so that both the 32-bit
+and 64-bit copies can coexist next to their own runtime dependencies.
 
 ## x86
 
-Used by every project that compiles shaders at build time (`add_postfx()` and the per-project
-`prebuildcommands` loops).
+Used by every project that compiles shaders at build time (`add_postfx()` and the projects that call
+`buildshaders()` directly).
 
 | File | Purpose | Depends on |
 | --- | --- | --- |

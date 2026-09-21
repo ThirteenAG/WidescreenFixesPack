@@ -117,12 +117,39 @@ function add_kananlib()
    includedirs { "external/injector/bddisasm/bddisasm/include" }
 end
 
+-- Compiles shaders with the DirectX SDK tools shipped in tools/x86, one custom build step per file. Same idea
+-- as Visual Studio's FxCompile build action, but with the June 2010 compiler, which is the one that still
+-- handles the D3D9 era profiles (fx_2_0, ps_1_1 with /LD, ...). Unlike a prebuild command this only runs when
+-- a shader actually changed, and the output is tracked by MSBuild.
+-- Rules: { files = <file pattern>, ext = <output extension>, tool = "fxc" (default) | "asm_shader",
+--          args = <tool arguments>, out = <optional output path, defaults to a sibling of the source> }
+-- `args` and `out` may use the input file's metadata, written with a single % (e.g. %(Filename)).
+function buildshaders(rules)
+   for _, rule in ipairs(rules) do
+      local tool = rule.tool or "fxc"
+      local exe = "../tools/x86/" .. tool .. ".exe"
+      local out = rule.out or ("%(Directory)%(Filename)" .. (rule.ext or ".fxo"))
+      local command
+      if tool == "asm_shader" then
+         command = string.format('"%s" "%s" "%s"', exe, "%(FullPath)", out)
+      else
+         command = string.format('"%s" %s /Fo "%s" "%s"', exe, rule.args or "", out, "%(FullPath)")
+      end
+      filter { "files:" .. rule.files }
+         buildaction "CustomBuild"
+         buildmessage("Compiling %(Filename)%(Extension) with " .. tool)
+         buildcommands { command }
+         buildoutputs { out }
+      filter {}
+   end
+end
+
 function add_postfx(id_postfx, id_areatex, id_searchtex)
    id_postfx = id_postfx or 201
    id_areatex = id_areatex or id_postfx + 1
    id_searchtex = id_searchtex or id_postfx + 2
-   prebuildcommands {
-      "\"../tools/x86/fxc.exe\" /T fx_2_0 /Fo \"../includes/postfx/postfx.fxo\" \"../includes/postfx/postfx.fx\""
+   buildshaders {
+      { files = "includes/postfx/*.fx", args = "/T fx_2_0", ext = ".fxo" }
    }
    includedirs { "Resources", "includes/postfx" }
    files { "includes/postfx/postfxcore.ixx", "includes/postfx/postfx.fx", "includes/postfx/postfx.fxo", "includes/postfx/postfx.rc" }
@@ -341,9 +368,9 @@ project "JustCause.WidescreenFix"
    setpaths("Z:/WFP/Games/Just Cause/", "JustCause.exe")
 
 project "KingKong.WidescreenFix"
-   prebuildcommands {
-      "for /R \"../source/%{prj.name}/\" %%f in (*.ps) do (\"../tools/x86/fxc.exe\" /T ps_3_0 /nologo /E main /Fo \"../source/%{prj.name}/%%~nf.pso\" \"%%f\")",
-      "for /R \"../source/%{prj.name}/\" %%f in (*.vs) do (\"../tools/x86/fxc.exe\" /T vs_3_0 /nologo /E main /Fo \"../source/%{prj.name}/%%~nf.vso\" \"%%f\")"
+   buildshaders {
+      { files = "source/*/*.ps", args = "/T ps_3_0 /nologo /E main", ext = ".pso" },
+      { files = "source/*/*.vs", args = "/T vs_3_0 /nologo /E main", ext = ".vso" }
    }
    files { "source/%{prj.name}/*.ps", "source/%{prj.name}/*.vs", "source/%{prj.name}/*.rc" }
    defines { "IDR_BLURPS=200" }
@@ -404,8 +431,8 @@ project "NFSCarbon.WidescreenFix"
    add_postfx()
    setpaths("Z:/WFP/Games/Need For Speed/Need for Speed Carbon/", "NFSC.exe")
 project "NFSMostWanted.WidescreenFix"
-   prebuildcommands {
-   "for /R \"../source/%{prj.name}/\" %%f in (*.fx) do (\"../tools/x86/fxc.exe\" /T fx_2_0 /Fo \"../source/%{prj.name}/%%~nf.fxo\" \"%%f\")"
+   buildshaders {
+      { files = "source/*/*.fx", args = "/T fx_2_0", ext = ".fxo" }
    }
    includedirs { "Resources", "includes/postfx" }
    files { "includes/postfx/postfxcore.ixx", "source/%{prj.name}/*.fx", "source/%{prj.name}/*.rc" }
@@ -484,10 +511,10 @@ project "SplinterCellConviction.FusionFix"
 project "SplinterCellBlacklist.FusionFix"
    setpaths("Z:/WFP/Games/Splinter Cell/Splinter Cell Blacklist/", "src/SYSTEM/Blacklist_DX11_game.exe", "src/system/scripts/")
 project "SplinterCellDoubleAgent.WidescreenFix"
-   prebuildcommands {
-   "\"../tools/x86/fxc.exe\" /T fx_2_0 /Fo \"../includes/postfx/postfx.fxo\" \"../includes/postfx/postfx.fx\"",
-   "for /R \"../source/%{prj.name}/\" %%f in (*.ps) do (\"../tools/x86/asm_shader.exe\" \"%%f\" \"../source/%{prj.name}/%%~nf.pso\")",
-   "for /R \"../source/%{prj.name}/\" %%f in (*.vs) do (\"../tools/x86/asm_shader.exe\" \"%%f\" \"../source/%{prj.name}/%%~nf.vso\")",
+   buildshaders {
+      { files = "includes/postfx/*.fx", args = "/T fx_2_0", ext = ".fxo" },
+      { files = "source/*/*.ps", tool = "asm_shader", ext = ".pso" },
+      { files = "source/*/*.vs", tool = "asm_shader", ext = ".vso" }
    }
    includedirs { "Resources", "includes/postfx" }
    files { "includes/postfx/postfxcore.ixx", "includes/postfx/postfx.fx", "includes/postfx/postfx.fxo", "includes/postfx/postfx.rc" }
@@ -500,10 +527,10 @@ project "SplinterCellDoubleAgent.WidescreenFix"
    defines { "IDR_SEARCHTEX=204" }
    setpaths("Z:/WFP/Games/Splinter Cell/Splinter Cell - Double Agent/", "SCDA-Offline/System/SplinterCell4.exe", "SCDA-Offline/System/scripts/")
 project "SplinterCellPandoraTomorrow.WidescreenFix"
-   prebuildcommands {
-   "for /R \"../source/%{prj.name}/\" %%f in (*.fx) do (\"../tools/x86/fxc.exe\" /Tps_1_1 /LD /Ewaterblend /Fo \"../source/%{prj.name}/%%~nf.fxo\" \"%%f\")",
-   "for /R \"../source/%{prj.name}/\" %%f in (*.ps) do (\"../tools/x86/asm_shader.exe\" \"%%f\" \"../source/%{prj.name}/%%~nf.pso\")",
-   "for /R \"../source/%{prj.name}/\" %%f in (*.vs) do (\"../tools/x86/asm_shader.exe\" \"%%f\" \"../source/%{prj.name}/%%~nf.vso\")",
+   buildshaders {
+      { files = "source/*/*.fx", args = "/Tps_1_1 /LD /Ewaterblend", ext = ".fxo" },
+      { files = "source/*/*.ps", tool = "asm_shader", ext = ".pso" },
+      { files = "source/*/*.vs", tool = "asm_shader", ext = ".vso" }
    }
    files { "source/%{prj.name}/*.fx", "source/%{prj.name}/*.rc" }
    defines { "IDR_WATER_BLEND=200" }
@@ -549,7 +576,9 @@ project "TotalOverdose.WidescreenFix"
    setpaths("Z:/WFP/Games/Total Overdose/", "TOD.exe")
 
 project "TrueCrimeNewYorkCity.WidescreenFix"
-   prebuildcommands { "for /R \"../source/%{prj.name}/\" %%f in (*.fx) do (\"../tools/x86/fxc.exe\" /T fx_2_0 /Fo \"../source/%{prj.name}/%%~nf.fxo\" \"%%f\")" }
+   buildshaders {
+      { files = "source/*/*.fx", args = "/T fx_2_0", ext = ".fxo" }
+   }
    includedirs {"Resources"}
    files { "source/%{prj.name}/*.fx", "source/%{prj.name}/*.rc" }
    defines { "IDR_POSTFX=200" }
