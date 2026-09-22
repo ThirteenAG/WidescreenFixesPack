@@ -262,7 +262,6 @@ public:
                 auto pattern = hook::pattern("D9 05 ? ? ? ? A2 ? ? ? ? D9 1D ? ? ? ? E8");
                 injector::WriteMemory(pattern.get_first(2), &f, true);
 
-                static float fGameFrameTime = 1.0f / 60.0f;
                 pattern = hook::pattern("8B 54 24 0C 01 56 40 D9 6C 24 04");
                 static auto GameClockHook = safetyhook::create_mid(pattern.get_first(4), [](SafetyHookContext& regs)
                 {
@@ -272,19 +271,10 @@ public:
                     auto nMilliseconds = static_cast<uint32_t>(fMilliseconds);
                     fRemainder = fMilliseconds - static_cast<double>(nMilliseconds);
                     regs.edx = nMilliseconds;
-                    fGameFrameTime = *(float*)(regs.esi + 0x18);
                 });
 
-                pattern = hook::pattern("83 86 ? ? 00 00 01 8B 86 ? ? 00 00 83 F8 03 0F 8C");
-                static auto TurretAttachDelayHook = safetyhook::create_mid(pattern.get_first(13), [](SafetyHookContext& regs)
-                {
-                    static constexpr auto nFramesToWait = 3;
-                    static constexpr auto fTimeToWait = nFramesToWait / 60.0f;
-                    auto nFrames = nFramesToWait;
-                    if (fGameFrameTime > 0.0f)
-                        nFrames = std::clamp(static_cast<int>(std::ceil(fTimeToWait / fGameFrameTime)), nFramesToWait, 60);
-                    regs.eax = (static_cast<int>(regs.eax) >= nFrames) ? nFramesToWait : 0;
-                });
+                pattern = hook::pattern("DB 86 BC 08 00 00 D9 05 ? ? ? ? D9 C0 DE CA D9 46 0C");
+                injector::WriteMemoryRaw(pattern.get_first(0), (void*)"\x5E\xC2\x14\x00\x90\x90", 6, true);
 
                 static double fDriveSpeedDamping = 0.9990000128746033;
                 static double fDriveSpeedDampingSlow = 0.9900000095367432;
