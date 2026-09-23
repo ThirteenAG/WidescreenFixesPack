@@ -1,31 +1,59 @@
-function setpaths(gamepath, exepath, scriptspath)
+-- The folder a project is deployed to, and the game it is started from when debugging,
+-- is the path of one machine and does not belong in the repository. It is read from a
+-- `.env` file next to this script, which is not tracked by git and holds one
+-- `<KEY>=<folder>` line per game (quotes and a trailing slash are optional). A project
+-- whose key is missing is not deployed at all.
+local envkeys = nil
+function envdir(key)
+   if not envkeys then
+      envkeys = {}
+      local text = io.readfile(path.join(_SCRIPT_DIR, ".env")) or ""
+      for line in text:gmatch("[^\r\n]+") do
+         local k, v = line:match("^%s*([%w_]+)%s*=%s*(.-)%s*$")
+         if k and v ~= "" then
+            v = v:gsub('^"', ""):gsub('"$', ""):gsub("^'", ""):gsub("'$", "")
+            envkeys[k] = v
+         end
+      end
+   end
+
+   local value = envkeys[key]
+   if not value then return nil end
+
+   value = value:gsub("[%s\\/]+$", "")
+   if value == "" then return nil end
+
+   return path.translate(value)
+end
+
+-- Deploys the built .asi into the script folder of the game that `key` names in the .env
+-- file, and starts the game from there when debugging. Only a plugin that is already
+-- installed in the game folder is replaced, a folder without one is left alone.
+function setpaths(key, exepath, scriptspath)
    scriptspath = scriptspath or "scripts/"
-   if (gamepath) then
-      cmdcopy = { "set \"path=" .. gamepath .. scriptspath .. "\"" }
-      table.insert(cmdcopy, pbcommands)
-      postbuildcommands (cmdcopy)
+   local gamepath = envdir(key)
+   if gamepath then
+      local target = gamepath .. "\\" .. path.translate(scriptspath)
+      postbuildcommands {
+         "if exist \"" .. target .. "$(TargetFileName)\" copy /y \"$(TargetPath)\" \"" .. target .. "\"",
+      }
       debugdir (gamepath)
       if (exepath) then
-         debugcommand (gamepath .. exepath)
-         dir, file = exepath:match'(.*/)(.*)'
-         debugdir (gamepath .. (dir or ""))
+         debugcommand (gamepath .. "\\" .. path.translate(exepath))
+         local dir = exepath:match'(.*/)(.*)'
+         debugdir (gamepath .. "\\" .. path.translate(dir or ""))
       end
    end
    targetdir ("data/%{prj.name}/" .. scriptspath)
 end
 
-function setbuildpaths_psp(gamepath, exepath, scriptspath, pspsdkpath, sourcepath, prj_name)
+function setbuildpaths_psp(key, exepath, scriptspath, pspsdkpath, sourcepath, prj_name)
+   local gamepath = envdir(key)
    if (gamepath) then
      buildcommands {"setlocal EnableDelayedExpansion"}
      rebuildcommands {"setlocal EnableDelayedExpansion"}
-     local ppsspppath = os.getenv "PPSSPPMemstick"
-     if (ppsspppath == nil) then
-         buildcommands {"set _PPSSPPMemstick=" .. gamepath .. "memstick/PSP"}
-         rebuildcommands {"set _PPSSPPMemstick=" .. gamepath .. "memstick/PSP"}
-     else
-         buildcommands {"set _PPSSPPMemstick=!PPSSPPMemstick!"}
-         rebuildcommands {"set _PPSSPPMemstick=!PPSSPPMemstick!"}
-     end
+     buildcommands {"set _PPSSPPMemstick=" .. gamepath .. "\\memstick\\PSP"}
+     rebuildcommands {"set _PPSSPPMemstick=" .. gamepath .. "\\memstick\\PSP"}
 
      buildcommands {
      "powershell -ExecutionPolicy Bypass -File \"" .. pspsdkpath .. "\" -C \"" .. sourcepath .. "\"\r\n" ..
@@ -50,28 +78,23 @@ function setbuildpaths_psp(gamepath, exepath, scriptspath, pspsdkpath, sourcepat
      "powershell -ExecutionPolicy Bypass -File \"" .. pspsdkpath .. "\" -C \"" .. sourcepath .. "\" clean\r\n" ..
      "if !errorlevel! neq 0 exit /b !errorlevel!\r\n"
      }
-     debugdir (gamepath)
-     if (exepath) then
-        debugcommand (gamepath .. exepath)
-        dir, file = exepath:match'(.*/)(.*)'
-        debugdir (gamepath .. (dir or ""))
-     end
+      debugdir (gamepath)
+      if (exepath) then
+         debugcommand (gamepath .. "\\" .. path.translate(exepath))
+         local dir = exepath:match'(.*/)(.*)'
+         debugdir (gamepath .. "\\" .. path.translate(dir or ""))
+      end
    end
    targetdir ("data/%{prj.name}/" .. scriptspath)
 end
 
-function setbuildpaths_ps2(gamepath, exepath, scriptspath, ps2sdkpath, sourcepath, prj_name)
+function setbuildpaths_ps2(key, exepath, scriptspath, ps2sdkpath, sourcepath, prj_name)
+   local gamepath = envdir(key)
    if (gamepath) then
      buildcommands {"setlocal EnableDelayedExpansion"}
      rebuildcommands {"setlocal EnableDelayedExpansion"}
-     local pcsx2fpath = os.getenv "PCSX2FDir"
-     if (pcsx2fpath == nil) then
-         buildcommands {"set _PCSX2FDir=" .. gamepath}
-         rebuildcommands {"set _PCSX2FDir=" .. gamepath}
-     else
-         buildcommands {"set _PCSX2FDir=!PCSX2FDir!"}
-         rebuildcommands {"set _PCSX2FDir=!PCSX2FDir!"}
-     end
+     buildcommands {"set _PCSX2FDir=" .. gamepath}
+     rebuildcommands {"set _PCSX2FDir=" .. gamepath}
      buildcommands {
      "powershell -ExecutionPolicy Bypass -File \"" .. ps2sdkpath .. "\" -C \"" .. sourcepath .. "\"\r\n" ..
      "if !errorlevel! neq 0 exit /b !errorlevel!\r\n" ..
@@ -99,9 +122,9 @@ function setbuildpaths_ps2(gamepath, exepath, scriptspath, ps2sdkpath, sourcepat
 
       debugdir (gamepath)
       if (exepath) then
-         debugcommand (gamepath .. exepath)
-         dir, file = exepath:match'(.*/)(.*)'
-         debugdir (gamepath .. (dir or ""))
+         debugcommand (gamepath .. "\\" .. path.translate(exepath))
+         local dir = exepath:match'(.*/)(.*)'
+         debugdir (gamepath .. "\\" .. path.translate(dir or ""))
       end
    end
    targetdir ("data/%{prj.name}/" .. scriptspath)
@@ -272,17 +295,6 @@ function CommonWorkspaceSetup(platform, prefix)
 
       includedirs { "external/minidx9/Include" }
 
-      pbcommands = {
-         "setlocal EnableDelayedExpansion",
-         "set file=$(TargetPath)",
-         "FOR %%i IN (\"%file%\") DO (",
-         "set filename=%%~ni",
-         "set fileextension=%%~xi",
-         "set target=!path!!filename!!fileextension!",
-         "if exist \"!target!\" copy /y \"%%~fi\" \"!target!\"",
-         ")"
-      }
-
       vpaths {
          ["source"] = { "source/**.*" },
          ["shaders"] = { "source/**.fx", "source/**.vs", "source/**.ps", "source/**.hlsl" },
@@ -315,62 +327,62 @@ CommonWorkspaceSetup("Win32", "Win32")
 
 group ""
 project "Bully.WidescreenFix"
-   setpaths("Z:/WFP/Games/Bully Scholarship Edition/", "Bully.exe", "plugins/")
+   setpaths("BULLY_SCHOLARSHIP_EDITION_DIR", "Bully.exe", "plugins/")
 
 project "CallOfCthulhu.WidescreenFix"
-   setpaths("Z:/WFP/Games/Call of Cthulhu/", "Engine/CoCMainWin32.exe", "Engine/scripts/")
+   setpaths("CALL_OF_CTHULHU_DIR", "Engine/CoCMainWin32.exe", "Engine/scripts/")
 
 project "ColdFear.WidescreenFix"
-   setpaths("Z:/WFP/Games/ColdFear/", "ColdFear_retail.exe")
+   setpaths("COLDFEAR_DIR", "ColdFear_retail.exe")
 
 project "Condemned.WidescreenFix"
-   setpaths("Z:/WFP/Games/Condemned Criminal Origins/", "Condemned.exe")
+   setpaths("CONDEMNED_CRIMINAL_ORIGINS_DIR", "Condemned.exe")
 
 project "DeerAvenger4.WidescreenFix"
-   setpaths("Z:/WFP/Games/Deer Avenger 4/", "DA4.exe")
+   setpaths("DEER_AVENGER_4_DIR", "DA4.exe")
 
 project "Driv3r.WidescreenFix"
    add_postfx()
-   setpaths("Z:/WFP/Games/DRIV3R/", "driv3r.exe")
+   setpaths("DRIV3R_DIR", "driv3r.exe")
 
 project "DriverParallelLines.WidescreenFix"
    add_postfx()
-   setpaths("Z:/WFP/Games/Driver Parallel Lines/", "DriverParallelLines.exe")
+   setpaths("DRIVER_PARALLEL_LINES_DIR", "DriverParallelLines.exe")
 
 project "EnterTheMatrix.WidescreenFix"
-   setpaths("Z:/WFP/Games/Enter the Matrix/", "Matrix.exe")
+   setpaths("ENTER_THE_MATRIX_DIR", "Matrix.exe")
 
 project "FarCry.WidescreenFix"
    add_postfx()
-   setpaths("Z:/WFP/Games/Far Cry/", "Bin32/FarCry.exe", "Bin32/")
+   setpaths("FAR_CRY_DIR", "Bin32/FarCry.exe", "Bin32/")
 
 group "GrandTheftAuto"
 project "GTA1.WidescreenFix"
-   setpaths("Z:/WFP/Games/Grand Theft Auto/Grand Theft Auto 1 London 1969 1961/", "WINO/Grand Theft Auto.exe", "WINO/scripts/")
+   setpaths("GRAND_THEFT_AUTO_1_LONDON_1969_1961_DIR", "WINO/Grand Theft Auto.exe", "WINO/scripts/")
 project "GTA2.WidescreenFix"
-   setpaths("Z:/WFP/Games/Grand Theft Auto/Grand Theft Auto 2/", "gta2.exe")
+   setpaths("GRAND_THEFT_AUTO_2_DIR", "gta2.exe")
 project "GTA3.WidescreenFix"
    add_postfx()
    files { "includes/GTA/*.h", "includes/GTA/*.cpp" }
-   setpaths("Z:/WFP/Games/Grand Theft Auto/GTAIII/", "gta3.exe")
+   setpaths("GTAIII_DIR", "gta3.exe")
 project "GTAVC.WidescreenFix"
    add_postfx()
    files { "includes/GTA/*.h", "includes/GTA/*.cpp" }
-   setpaths("Z:/WFP/Games/Grand Theft Auto/Grand Theft Auto Vice City/", "gta-vc.exe")
+   setpaths("GRAND_THEFT_AUTO_VICE_CITY_DIR", "gta-vc.exe")
 project "GTASA.WidescreenFix"
    add_postfx()
    files { "includes/GTA/*.h", "includes/GTA/*.cpp" }
-   setpaths("Z:/WFP/Games/Grand Theft Auto/GTA San Andreas/", "gta_sa.exe")
+   setpaths("GTA_SAN_ANDREAS_DIR", "gta_sa.exe")
 group ""
 
 project "Gun.WidescreenFix"
-   setpaths("Z:/WFP/Games/GUN/", "Gun.exe")
+   setpaths("GUN_DIR", "Gun.exe")
 
 project "HiddenandDangerous2.WidescreenFix"
-   setpaths("Z:/WFP/Games/Hidden and Dangerous 2/", "hd2.exe")
+   setpaths("HIDDEN_AND_DANGEROUS_2_DIR", "hd2.exe")
 
 project "JustCause.WidescreenFix"
-   setpaths("Z:/WFP/Games/Just Cause/", "JustCause.exe")
+   setpaths("JUST_CAUSE_DIR", "JustCause.exe")
 
 project "KingKong.WidescreenFix"
    buildshaders {
@@ -381,35 +393,35 @@ project "KingKong.WidescreenFix"
    defines { "IDR_BLURPS=200" }
    defines { "IDR_BLURVS=201" }
    defines { "IDR_REMANANCEPS=202" }
-   setpaths("Z:/WFP/Games/King Kong Gamers Edition/", "KingKong8.exe")
+   setpaths("KING_KONG_GAMERS_EDITION_DIR", "KingKong8.exe")
 
 project "KnightRider.WidescreenFix"
-   setpaths("Z:/WFP/Games/Knight Rider/", "Knight Rider.exe")
+   setpaths("KNIGHT_RIDER_DIR", "Knight Rider.exe")
 
 project "KnightRider2.WidescreenFix"
-   setpaths("Z:/WFP/Games/Knight Rider 2/", "KR2.exe")
+   setpaths("KNIGHT_RIDER_2_DIR", "KR2.exe")
 
 project "LARush.WidescreenFix"
-   setpaths("Z:/WFP/Games/LA Rush/", "LARush.exe", "plugins/")
+   setpaths("LA_RUSH_DIR", "LARush.exe", "plugins/")
 
 project "Mafia.FusionFix"
    add_postfx()
-   setpaths("Z:/WFP/Games/Mafia/", "Setup.exe")
+   setpaths("MAFIA_DIR", "Setup.exe")
    targetdir "data/Mafia.WidescreenFix/scripts"
 
 project "Mafia.WidescreenFix"
-   setpaths("Z:/WFP/Games/Mafia/", "GameV12.exe")
+   setpaths("MAFIA_DIR", "GameV12.exe")
 
 project "Manhunt.WidescreenFix"
    buildoptions { "/Zc:strictStrings-" }
    includedirs { "source/%{prj.name}/inc" }
    files { "source/%{prj.name}/**/*.cpp" }
    removefiles { "includes/stdafx.h", "includes/stdafx.cpp" }
-   setpaths("Z:/WFP/Games/Manhunt/", "manhunt.exe")
+   setpaths("MANHUNT_DIR", "manhunt.exe")
 
 group "MaxPayne"
 project "MaxPayne.MSVCP60Wrapper"
-   setpaths("Z:/WFP/Games/Max Payne/Max Payne/", "MaxPayne.exe", "")
+   setpaths("MAX_PAYNE_DIR", "MaxPayne.exe", "")
    targetdir "data/MaxPayne.WidescreenFix"
    targetname "MSVCP60"
    targetextension ".dll"
@@ -421,20 +433,20 @@ project "MaxPayne.WidescreenFix"
    debugargs { "-skipstartup -window -developer -screenshot -nodialog" }
    linkoptions { "/SAFESEH:NO" }
    libdirs { "includes/minidx8" }
-   setpaths("Z:/WFP/Games/Max Payne/Max Payne/", "MaxPayne.exe")
+   setpaths("MAX_PAYNE_DIR", "MaxPayne.exe")
 project "MaxPayne2.WidescreenFix"
    debugargs { "-skipstartup -developer -window -nodialog" }
    linkoptions { "/SAFESEH:NO" }
    libdirs { "includes/minidx8" }
-   setpaths("Z:/WFP/Games/Max Payne/Max Payne 2 The Fall of Max Payne/", "MaxPayne2.exe")
+   setpaths("MAX_PAYNE_2_THE_FALL_OF_MAX_PAYNE_DIR", "MaxPayne2.exe")
 group ""
 
 group "NeedForSpeed"
 project "NFSTheRun.FusionFix"
-   setpaths("Z:/WFP/Games/Need For Speed/Need for Speed The Run/", "Need For Speed The Run.exe", "plugins/")
+   setpaths("NEED_FOR_SPEED_THE_RUN_DIR", "Need For Speed The Run.exe", "plugins/")
 project "NFSCarbon.WidescreenFix"
    add_postfx()
-   setpaths("Z:/WFP/Games/Need For Speed/Need for Speed Carbon/", "NFSC.exe")
+   setpaths("NEED_FOR_SPEED_CARBON_DIR", "NFSC.exe")
 project "NFSMostWanted.WidescreenFix"
    buildshaders {
       { files = "source/*/*.fx", args = "/T fx_2_0", ext = ".fxo" }
@@ -444,77 +456,77 @@ project "NFSMostWanted.WidescreenFix"
    defines { "IDR_POSTFX=201" }
    defines { "IDR_AREATEX=202" }
    defines { "IDR_SEARCHTEX=203" }
-   setpaths("Z:/WFP/Games/Need For Speed/Need for Speed Most Wanted/", "speed.exe")
+   setpaths("NEED_FOR_SPEED_MOST_WANTED_DIR", "speed.exe")
 project "NFSProStreet.FusionFix"
    add_postfx()
-   setpaths("Z:/WFP/Games/Need For Speed/Need for Speed ProStreet/", "nfsps.exe")
+   setpaths("NEED_FOR_SPEED_PROSTREET_DIR", "nfsps.exe")
 project "NFSUndercover.FusionFix"
    add_postfx()
-   setpaths("Z:/WFP/Games/Need For Speed/Need for Speed Undercover/", "nfs.exe")
+   setpaths("NEED_FOR_SPEED_UNDERCOVER_DIR", "nfs.exe")
 project "NFSUnderground.WidescreenFix"
    add_postfx()
    defines { "IDR_NFSUICON=200" }
    files { "textures/NFS/NFSU/icon.rc" }
-   setpaths("Z:/WFP/Games/Need For Speed/Need For Speed Underground/", "speed.exe")
+   setpaths("NEED_FOR_SPEED_UNDERGROUND_DIR", "speed.exe")
 project "NFSUnderground2.WidescreenFix"
    add_postfx()
-   setpaths("Z:/WFP/Games/Need For Speed/Need For Speed Underground 2/", "speed2.exe")
+   setpaths("NEED_FOR_SPEED_UNDERGROUND_2_DIR", "speed2.exe")
 group ""
 
 project "Onimusha3.WidescreenFix"
-   setpaths("Z:/WFP/Games/Onimusha 3/", "ONI3.exe")
+   setpaths("ONIMUSHA_3_DIR", "ONI3.exe")
 project "ParadiseCracked.WidescreenFix"
-   setpaths("Z:/WFP/Games/Paradise Cracked/", "game.exe")
+   setpaths("PARADISE_CRACKED_DIR", "game.exe")
 project "PsiOpsTheMindgateConspiracy.WidescreenFix"
-   setpaths("Z:/WFP/Games/PSI-OPS/", "PsiOps.exe")
+   setpaths("PSI_OPS_DIR", "PsiOps.exe")
 project "Psychonauts.WidescreenFix"
-   setpaths("Z:/WFP/Games/Psychonauts/", "Psychonauts.exe")
+   setpaths("PSYCHONAUTS_DIR", "Psychonauts.exe")
 
 group "ResidentEvil"
 project "ResidentEvil0.FusionFix"
-   setpaths("Z:/WFP/Games/ResidentEvil0/", "re0hd.exe", "scripts/")
+   setpaths("RESIDENTEVIL0_DIR", "re0hd.exe", "scripts/")
 project "ResidentEvil.FusionFix"
-   setpaths("Z:/WFP/Games/ResidentEvil/", "bhd.exe", "scripts/")
+   setpaths("RESIDENTEVIL_DIR", "bhd.exe", "scripts/")
 project "ResidentEvilRevelations.FusionFix"
-   setpaths("Z:/WFP/Games/ResidentEvilRevelations/", "rerev.exe", "scripts/")
+   setpaths("RESIDENTEVILREVELATIONS_DIR", "rerev.exe", "scripts/")
 project "ResidentEvilRevelations2.FusionFix"
-   setpaths("Z:/WFP/Games/ResidentEvilRevelations2/", "rerev2.exe", "scripts/")
+   setpaths("RESIDENTEVILREVELATIONS2_DIR", "rerev2.exe", "scripts/")
 project "ResidentEvil5.FusionFix"
-   setpaths("Z:/WFP/Games/ResidentEvil5/", "re5dx9.exe", "scripts/")
+   setpaths("RESIDENTEVIL5_DIR", "re5dx9.exe", "scripts/")
 project "ResidentEvil6.FusionFix"
-   setpaths("Z:/WFP/Games/ResidentEvil6/", "BH6.exe", "scripts/")
+   setpaths("RESIDENTEVIL6_DIR", "BH6.exe", "scripts/")
 group ""
 
 project "Scarface.FusionFix"
-   setpaths("Z:/WFP/Games/Scarface/", "scarface.exe", "scripts/")
+   setpaths("SCARFACE_DIR", "scarface.exe", "scripts/")
 
 project "SecondSight.WidescreenFix"
-   setpaths("Z:/WFP/Games/Second Sight/", "secondsight.exe")
+   setpaths("SECOND_SIGHT_DIR", "secondsight.exe")
 
 group "SilentHill"
 project "SilentHill2.WidescreenFix"
-   setpaths("Z:/WFP/Games/Silent Hill/Silent Hill 2/", "sh2pc.exe")
+   setpaths("SILENT_HILL_2_DIR", "sh2pc.exe")
 project "SilentHill3.WidescreenFix"
-   setpaths("Z:/WFP/Games/Silent Hill/Silent Hill 3/", "sh3.exe")
+   setpaths("SILENT_HILL_3_DIR", "sh3.exe")
 project "SilentHill4.WidescreenFix"
-   setpaths("Z:/WFP/Games/Silent Hill/Silent Hill 4 The Room/", "Silent Hill 4.exe")
+   setpaths("SILENT_HILL_4_THE_ROOM_DIR", "Silent Hill 4.exe")
 group ""
 
 project "SniperElite.WidescreenFix"
-   setpaths("Z:/WFP/Games/Sniper Elite/", "SniperElite.exe")
+   setpaths("SNIPER_ELITE_DIR", "SniperElite.exe")
 
 project "SonicHeroes.WidescreenFix"
-   setpaths("Z:/WFP/Games/SONICHEROES/", "Tsonic_win.exe")
+   setpaths("SONICHEROES_DIR", "Tsonic_win.exe")
 
 group "SplinterCell"
 project "SplinterCell.WidescreenFix"
-   setpaths("Z:/WFP/Games/Splinter Cell/Splinter Cell/", "system/SplinterCell.exe", "system/scripts/")
+   setpaths("SPLINTER_CELL_DIR", "system/SplinterCell.exe", "system/scripts/")
 project "SplinterCellChaosTheory.WidescreenFix"
-   setpaths("Z:/WFP/Games/Splinter Cell/Splintercell Chaos Theory/", "system/splintercell3.exe", "system/scripts/")
+   setpaths("SPLINTERCELL_CHAOS_THEORY_DIR", "system/splintercell3.exe", "system/scripts/")
 project "SplinterCellConviction.FusionFix"
-   setpaths("Z:/WFP/Games/Splinter Cell/Tom Clancy's Splinter Cell Conviction/", "src/system/conviction_game.exe", "src/system/scripts/")
+   setpaths("TOM_CLANCYS_SPLINTER_CELL_CONVICTION_DIR", "src/system/conviction_game.exe", "src/system/scripts/")
 project "SplinterCellBlacklist.FusionFix"
-   setpaths("Z:/WFP/Games/Splinter Cell/Splinter Cell Blacklist/", "src/SYSTEM/Blacklist_DX11_game.exe", "src/system/scripts/")
+   setpaths("SPLINTER_CELL_BLACKLIST_DIR", "src/SYSTEM/Blacklist_DX11_game.exe", "src/system/scripts/")
 project "SplinterCellDoubleAgent.WidescreenFix"
    buildshaders {
       { files = "includes/postfx/*.fx", args = "/T fx_2_0", ext = ".fxo" },
@@ -530,7 +542,7 @@ project "SplinterCellDoubleAgent.WidescreenFix"
    defines { "IDR_SHADER_BB6378E1=202" }
    defines { "IDR_AREATEX=203" }
    defines { "IDR_SEARCHTEX=204" }
-   setpaths("Z:/WFP/Games/Splinter Cell/Splinter Cell - Double Agent/", "SCDA-Offline/System/SplinterCell4.exe", "SCDA-Offline/System/scripts/")
+   setpaths("SPLINTER_CELL_DOUBLE_AGENT_DIR", "SCDA-Offline/System/SplinterCell4.exe", "SCDA-Offline/System/scripts/")
 project "SplinterCellPandoraTomorrow.WidescreenFix"
    buildshaders {
       { files = "source/*/*.fx", args = "/Tps_1_1 /LD /Ewaterblend", ext = ".fxo" },
@@ -540,45 +552,45 @@ project "SplinterCellPandoraTomorrow.WidescreenFix"
    files { "source/%{prj.name}/*.fx", "source/%{prj.name}/*.rc" }
    defines { "IDR_WATER_BLEND=200" }
    debugargs { "-uplay_steam_mode" }
-   setpaths("Z:/WFP/Games/Splinter Cell/Splinter Cell Pandora Tomorrow/", "system/SplinterCell2.exe", "system/scripts/")
+   setpaths("SPLINTER_CELL_PANDORA_TOMORROW_DIR", "system/SplinterCell2.exe", "system/scripts/")
 group ""
 
 project "StreetRacingSyndicate.WidescreenFix"
-   setpaths("Z:/WFP/Games/Street Racing Syndicate/", "Bin/srs.exe", "Bin/scripts/")
+   setpaths("STREET_RACING_SYNDICATE_DIR", "Bin/srs.exe", "Bin/scripts/")
 
 project "TheGodfather.WidescreenFix"
-   setpaths("Z:/WFP/Games/The Godfather/", "godfather.exe")
+   setpaths("THE_GODFATHER_DIR", "godfather.exe")
 
 project "TheMatrixPathOfNeo.WidescreenFix"
-   setpaths("Z:/WFP/Games/The Matrix - Path Of Neo/", "Matrix3.exe")
+   setpaths("THE_MATRIX_PATH_OF_NEO_DIR", "Matrix3.exe")
 
 project "ThePunisher.WidescreenFix"
-   setpaths("Z:/WFP/Games/The Punisher/", "pun.exe")
+   setpaths("THE_PUNISHER_DIR", "pun.exe")
 
 project "TheSaboteur.FusionFix"
    add_postfx()
-   setpaths("Z:/WFP/Games/The Saboteur/", "Saboteur.exe")
+   setpaths("THE_SABOTEUR_DIR", "Saboteur.exe")
 
 project "TheSuffering.WidescreenFix"
-   setpaths("Z:/WFP/Games/The Suffering/The Suffering/", "suffering.exe")
+   setpaths("THE_SUFFERING_DIR", "suffering.exe")
 
 group "TonyHawks"
 project "TonyHawksAmericanWasteland.WidescreenFix"
-   setpaths("Z:/WFP/Games/Tony Hawks/Tony Hawk's American Wasteland/", "Game/THAW.exe", "Game/scripts/")
+   setpaths("TONY_HAWKS_AMERICAN_WASTELAND_DIR", "Game/THAW.exe", "Game/scripts/")
 project "TonyHawksProSkater2.WidescreenFix"
-   setpaths("Z:/WFP/Games/Tony Hawks/THPS2/", "THawk2.exe")
+   setpaths("THPS2_DIR", "THawk2.exe")
 project "TonyHawksProSkater3.WidescreenFix"
-   setpaths("Z:/WFP/Games/Tony Hawks/Pro Skater 3/", "Skate3.exe")
+   setpaths("PRO_SKATER_3_DIR", "Skate3.exe")
 project "TonyHawksProSkater4.WidescreenFix"
-   setpaths("Z:/WFP/Games/Tony Hawks/Tony Hawks Pro Skater 4/", "Game/Skate4.exe", "Game/scripts/")
+   setpaths("TONY_HAWKS_PRO_SKATER_4_DIR", "Game/Skate4.exe", "Game/scripts/")
 project "TonyHawksUnderground.WidescreenFix"
-   setpaths("Z:/WFP/Games/Tony Hawks/Tony Hawk's Underground/", "Game/THUG.exe", "Game/scripts/")
+   setpaths("TONY_HAWKS_UNDERGROUND_DIR", "Game/THUG.exe", "Game/scripts/")
 project "TonyHawksUnderground2.WidescreenFix"
-   setpaths("Z:/WFP/Games/Tony Hawks/Tony Hawk's Underground 2/", "Game/THUG2.exe", "Game/scripts/")
+   setpaths("TONY_HAWKS_UNDERGROUND_2_DIR", "Game/THUG2.exe", "Game/scripts/")
 group ""
 
 project "TotalOverdose.WidescreenFix"
-   setpaths("Z:/WFP/Games/Total Overdose/", "TOD.exe")
+   setpaths("TOTAL_OVERDOSE_DIR", "TOD.exe")
 
 project "TrueCrimeNewYorkCity.WidescreenFix"
    buildshaders {
@@ -589,13 +601,13 @@ project "TrueCrimeNewYorkCity.WidescreenFix"
    defines { "IDR_POSTFX=200" }
    defines { "IDR_AREATEX=201" }
    defines { "IDR_SEARCHTEX=202" }
-   setpaths("Z:/WFP/Games/True Crime New York City/", "True Crime New York City.exe")
+   setpaths("TRUE_CRIME_NEW_YORK_CITY_DIR", "True Crime New York City.exe")
 
 project "TrueCrimeStreetsofLA.WidescreenFix"
-   setpaths("Z:/WFP/Games/True Crime Streets of LA/", "TrueCrimeMB.exe")
+   setpaths("TRUE_CRIME_STREETS_OF_LA_DIR", "TrueCrimeMB.exe")
 
 project "UltimateSpiderMan.WidescreenFix"
-   setpaths("Z:/WFP/Games/Ultimate Spider-Man/", "USM.exe")
+   setpaths("ULTIMATE_SPIDER_MAN_DIR", "USM.exe")
 group ""
 
 -- ====================== WIN64 SOLUTION ======================
@@ -610,32 +622,32 @@ group ""
 project "FarCry64.WidescreenFix"
    add_postfx()
    files { "source/FarCry.WidescreenFix/*.cpp", "source/FarCry.WidescreenFix/*.ixx" }
-   setpaths("Z:/WFP/Games/Far Cry/", "Bin64/FarCry.exe", "Bin64/")
+   setpaths("FAR_CRY_DIR", "Bin64/FarCry.exe", "Bin64/")
    targetdir "data/FarCry.WidescreenFix/Bin64/"
 
 group "GrandTheftAuto"
 project "GTA3DE.FusionFix"
    add_kananlib()
-   setpaths("Z:/WFP/Games/Grand Theft Auto The Definitive Edition/GTA III - Definitive Edition/", "Gameface/Binaries/Win64/LibertyCity.exe", "Gameface/Binaries/Win64/scripts/")
+   setpaths("GTA_III_DEFINITIVE_EDITION_DIR", "Gameface/Binaries/Win64/LibertyCity.exe", "Gameface/Binaries/Win64/scripts/")
 project "GTAVCDE.FusionFix"
    add_kananlib()
-   setpaths("Z:/WFP/Games/Grand Theft Auto The Definitive Edition/GTA Vice City - Definitive Edition/", "Gameface/Binaries/Win64/ViceCity.exe", "Gameface/Binaries/Win64/scripts/")
+   setpaths("GTA_VICE_CITY_DEFINITIVE_EDITION_DIR", "Gameface/Binaries/Win64/ViceCity.exe", "Gameface/Binaries/Win64/scripts/")
 project "GTASADE.FusionFix"
    add_kananlib()
-   setpaths("Z:/WFP/Games/Grand Theft Auto The Definitive Edition/GTA San Andreas - Definitive Edition/", "Gameface/Binaries/Win64/SanAndreas.exe", "Gameface/Binaries/Win64/scripts/")
+   setpaths("GTA_SAN_ANDREAS_DEFINITIVE_EDITION_DIR", "Gameface/Binaries/Win64/SanAndreas.exe", "Gameface/Binaries/Win64/scripts/")
 group ""
 
 group "ResidentEvil"
 project "ResidentEvil4.FusionFix"
-   setpaths("Z:/WFP/Games/ResidentEvil4/", "re4.exe", "scripts/")
+   setpaths("RESIDENTEVIL4_DIR", "re4.exe", "scripts/")
 group ""
 
 project "SpyroReignitedTrilogy.WidescreenFix"
-   setpaths("Z:/WFP/Games/Spyro Reignited Trilogy/", "Falcon/Binaries/Win64/Spyro-Win64-Shipping.exe", "Falcon/Binaries/Win64/scripts/")
+   setpaths("SPYRO_REIGNITED_TRILOGY_DIR", "Falcon/Binaries/Win64/Spyro-Win64-Shipping.exe", "Falcon/Binaries/Win64/scripts/")
 
 project "RedDeadRedemption.FusionFix"
    add_kananlib()
-   setpaths("Z:/WFP/Games/Red Dead Redemption/", "RDR.exe", "plugins/")
+   setpaths("RED_DEAD_REDEMPTION_DIR", "RDR.exe", "plugins/")
 group ""
 
 -- ====================== PCSX2F SOLUTION ======================
@@ -646,7 +658,7 @@ project "Burnout3.PCSX2F.WidescreenFix"
    kind "Makefile"
    add_ps2sdk()
    targetextension ".elf"
-   setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin/", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "Burnout3.PCSX2F.WidescreenFix")
+   setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "Burnout3.PCSX2F.WidescreenFix")
    writemakefile_ps2("Burnout3.PCSX2F.WidescreenFix", "PLUGINS/", "0x02100000", "-l:libc.a -l:libm.a -l:libgcc.a", "../../includes/pcsx2/log.o",
    "../../includes/pcsx2/memalloc.o", "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o",
    "../../includes/pcsx2/inireader.o", "../../includes/pcsx2/mips.o")
@@ -658,7 +670,7 @@ project "GTALCS.PCSX2F.WidescreenFix"
    dependson { "Burnout3.PCSX2F.WidescreenFix" }
    add_ps2sdk()
    targetextension ".elf"
-   setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin/", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PCSX2F.WidescreenFix")
+   setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PCSX2F.WidescreenFix")
    writemakefile_ps2("GTALCS.PCSX2F.WidescreenFix", "PLUGINS/", "0x02100000", "-l:libc.a -l:libm.a -l:libgcc.a", "lodl.o", "cpad.o", "../../includes/pcsx2/log.o",
    "../../includes/pcsx2/memalloc.o", "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o",
    "../../includes/pcsx2/inireader.o", "../../includes/pcsx2/mips.o")
@@ -669,7 +681,7 @@ project "GTAVCS.PCSX2F.WidescreenFix"
    dependson { "GTALCS.PCSX2F.WidescreenFix" }
    add_ps2sdk()
    targetextension ".elf"
-   setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin/", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PCSX2F.WidescreenFix")
+   setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PCSX2F.WidescreenFix")
    writemakefile_ps2("GTAVCS.PCSX2F.WidescreenFix", "PLUGINS/", "0x02100000", "-l:libc.a", "cpad.o", "ckey.o", "../../includes/pcsx2/memalloc.o",
    "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o","../../includes/pcsx2/inireader.o",
    "../../includes/pcsx2/mips.o")
@@ -680,7 +692,7 @@ project "GTAVCS.PCSX2F.Project2DFX"
    dependson { "GTAVCS.PCSX2F.WidescreenFix" }
    add_ps2sdk()
    targetextension ".elf"
-   setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin/", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PCSX2F.Project2DFX")
+   setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PCSX2F.Project2DFX")
    writemakefile_ps2("GTAVCS.PCSX2F.Project2DFX", "PLUGINS/", "0x03100000", "-l:libc.a", "lodl.o", "../../includes/pcsx2/memalloc.o",
    "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o","../../includes/pcsx2/inireader.o",
    "../../includes/pcsx2/mips.o")
@@ -691,7 +703,7 @@ project "GTAVCS.PCSX2F.ImVehLM"
    dependson { "GTAVCS.PCSX2F.Project2DFX" }
    add_ps2sdk()
    targetextension ".elf"
-   setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin/", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PCSX2F.ImVehLM")
+   setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PCSX2F.ImVehLM")
    writemakefile_ps2("GTAVCS.PCSX2F.ImVehLM", "PLUGINS/", "0x06000000", "-l:libc.a", "../../includes/pcsx2/memalloc.o",
    "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o","../../includes/pcsx2/inireader.o",
    "../../includes/pcsx2/mips.o")
@@ -703,7 +715,7 @@ project "KnightRider.PCSX2F.WidescreenFix"
    dependson { "GTAVCS.PCSX2F.ImVehLM" }
    add_ps2sdk()
    targetextension ".elf"
-   setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin/", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "KnightRider.PCSX2F.WidescreenFix")
+   setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "KnightRider.PCSX2F.WidescreenFix")
    writemakefile_ps2("KnightRider.PCSX2F.WidescreenFix", "PLUGINS/", "0x02100000", "-l:libc.a -l:libm.a -l:libgcc.a", "../../includes/pcsx2/log.o",
    "../../includes/pcsx2/memalloc.o", "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o",
    "../../includes/pcsx2/inireader.o", "../../includes/pcsx2/mips.o")
@@ -714,7 +726,7 @@ project "PCSX2F.XboxRainDroplets"
    dependson { "KnightRider.PCSX2F.WidescreenFix" }
    add_ps2sdk()
    targetextension ".elf"
-   setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin/", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "PCSX2F.XboxRainDroplets")
+   setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "PCSX2F.XboxRainDroplets")
    writemakefile_ps2("PCSX2F.XboxRainDroplets", "PLUGINS/", "0x03F00000", "-l:libc.a", "../../includes/pcsx2/memalloc.o",
    "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o","../../includes/pcsx2/inireader.o",
    "../../includes/pcsx2/mips.o")
@@ -725,7 +737,7 @@ project "SplinterCellDoubleAgent.PCSX2F.WidescreenFix"
    dependson { "PCSX2F.XboxRainDroplets" }
    add_ps2sdk()
    targetextension ".elf"
-   setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin/", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SplinterCellDoubleAgent.PCSX2F.WidescreenFix")
+   setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SplinterCellDoubleAgent.PCSX2F.WidescreenFix")
    writemakefile_ps2("SplinterCellDoubleAgent.PCSX2F.WidescreenFix", "PLUGINS/", "0x02100000", "-l:libc.a -l:libm.a -l:libgcc.a", "../../includes/pcsx2/log.o",
    "../../includes/pcsx2/memalloc.o", "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o",
    "../../includes/pcsx2/inireader.o", "../../includes/pcsx2/mips.o")
@@ -736,7 +748,7 @@ project "TrueCrimeNewYorkCity.PCSX2F.WidescreenFix"
    dependson { "SplinterCellDoubleAgent.PCSX2F.WidescreenFix" }
    add_ps2sdk()
    targetextension ".elf"
-   setbuildpaths_ps2("Z:/GitHub/PCSX2-Fork-With-Plugins/bin/", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "TrueCrimeNewYorkCity.PCSX2F.WidescreenFix")
+   setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "TrueCrimeNewYorkCity.PCSX2F.WidescreenFix")
    writemakefile_ps2("TrueCrimeNewYorkCity.PCSX2F.WidescreenFix", "PLUGINS/", "0x02100000", "-l:libc.a -l:libm.a -l:libgcc.a", "../../includes/pcsx2/log.o",
    "../../includes/pcsx2/memalloc.o", "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o",
    "../../includes/pcsx2/inireader.o", "../../includes/pcsx2/mips.o")
@@ -752,7 +764,7 @@ project "GTALCS.PPSSPP.WidescreenFix"
    kind "Makefile"
    add_pspsdk()
    targetextension ".prx"
-   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTALCS.PPSSPP.WidescreenFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PPSSPP.WidescreenFix")
+   setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTALCS.PPSSPP.WidescreenFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PPSSPP.WidescreenFix")
    writemakefile_psp("GTALCS.PPSSPP.WidescreenFix")
 
 project "GTALCS.PPSSPP.Project2DFX"
@@ -760,7 +772,7 @@ project "GTALCS.PPSSPP.Project2DFX"
    dependson { "GTALCS.PPSSPP.WidescreenFix" }
    add_pspsdk()
    targetextension ".prx"
-   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTALCS.PPSSPP.Project2DFX/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PPSSPP.Project2DFX")
+   setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTALCS.PPSSPP.Project2DFX/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PPSSPP.Project2DFX")
    writemakefile_psp("GTALCS.PPSSPP.Project2DFX", "lodl.c")
 
 project "GTALCS.PPSSPP.ImVehLM"
@@ -768,7 +780,7 @@ project "GTALCS.PPSSPP.ImVehLM"
    dependson { "GTALCS.PPSSPP.Project2DFX" }
    add_pspsdk()
    targetextension ".prx"
-   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTALCS.PPSSPP.ImVehLM/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PPSSPP.ImVehLM")
+   setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTALCS.PPSSPP.ImVehLM/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PPSSPP.ImVehLM")
    writemakefile_psp("GTALCS.PPSSPP.ImVehLM")
 
 project "GTAVCS.PPSSPP.WidescreenFix"
@@ -776,7 +788,7 @@ project "GTAVCS.PPSSPP.WidescreenFix"
    dependson { "GTALCS.PPSSPP.ImVehLM" }
    add_pspsdk()
    targetextension ".prx"
-   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.WidescreenFix")
+   setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.WidescreenFix")
    writemakefile_psp("GTAVCS.PPSSPP.WidescreenFix")
 
 project "GTAVCS.PPSSPP.Project2DFX"
@@ -784,7 +796,7 @@ project "GTAVCS.PPSSPP.Project2DFX"
    dependson { "GTAVCS.PPSSPP.WidescreenFix" }
    add_pspsdk()
    targetextension ".prx"
-   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.Project2DFX/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.Project2DFX")
+   setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.Project2DFX/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.Project2DFX")
    writemakefile_psp("GTAVCS.PPSSPP.Project2DFX", "lodl.c")
 
 project "GTAVCS.PPSSPP.ImVehLM"
@@ -792,7 +804,7 @@ project "GTAVCS.PPSSPP.ImVehLM"
    dependson { "GTAVCS.PPSSPP.Project2DFX" }
    add_pspsdk()
    targetextension ".prx"
-   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.ImVehLM/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.ImVehLM")
+   setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.ImVehLM/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.ImVehLM")
    writemakefile_psp("GTAVCS.PPSSPP.ImVehLM")
 
 project "GTAVCS.PPSSPP.GamepadIcons"
@@ -800,7 +812,7 @@ project "GTAVCS.PPSSPP.GamepadIcons"
    dependson { "GTAVCS.PPSSPP.ImVehLM" }
    add_pspsdk()
    targetextension ".prx"
-   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.GamepadIcons")
+   setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.GamepadIcons")
    writemakefile_psp("GTAVCS.PPSSPP.GamepadIcons")
 
 project "GTACTW.PPSSPP.FusionFix"
@@ -808,7 +820,7 @@ project "GTACTW.PPSSPP.FusionFix"
    dependson { "GTAVCS.PPSSPP.ImVehLM" }
    add_pspsdk()
    targetextension ".prx"
-   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTACTW.PPSSPP.FusionFix")
+   setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTACTW.PPSSPP.FusionFix")
    writemakefile_psp("GTACTW.PPSSPP.FusionFix")
 group ""
 
@@ -817,7 +829,7 @@ project "MidnightClubLARemix.PPSSPP.FusionFix"
    dependson { "GTACTW.PPSSPP.FusionFix" }
    add_pspsdk()
    targetextension ".prx"
-   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/MidnightClubLARemix.PPSSPP.FusionFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "MidnightClubLARemix.PPSSPP.FusionFix")
+   setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/MidnightClubLARemix.PPSSPP.FusionFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "MidnightClubLARemix.PPSSPP.FusionFix")
    writemakefile_psp("MidnightClubLARemix.PPSSPP.FusionFix")
 
 project "PPSSPP.XboxRainDroplets"
@@ -825,7 +837,7 @@ project "PPSSPP.XboxRainDroplets"
    dependson { "MidnightClubLARemix.PPSSPP.FusionFix" }
    add_pspsdk()
    targetextension ".prx"
-   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/PPSSPP.XboxRainDroplets/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "PPSSPP.XboxRainDroplets")
+   setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/PPSSPP.XboxRainDroplets/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "PPSSPP.XboxRainDroplets")
    writemakefile_psp("PPSSPP.XboxRainDroplets")
 
 project "SplinterCellEssentials.PPSSPP.FusionFix"
@@ -833,7 +845,7 @@ project "SplinterCellEssentials.PPSSPP.FusionFix"
    dependson { "PPSSPP.XboxRainDroplets" }
    add_pspsdk()
    targetextension ".prx"
-   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.FusionFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SplinterCellEssentials.PPSSPP.FusionFix")
+   setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.FusionFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SplinterCellEssentials.PPSSPP.FusionFix")
    writemakefile_psp("SplinterCellEssentials.PPSSPP.FusionFix")
 
 group "SOCOM"
@@ -842,21 +854,21 @@ project "SOCOM.FireteamBravo.PPSSPP.FusionFix"
    dependson { "SplinterCellEssentials.PPSSPP.FusionFix" }
    add_pspsdk()
    targetextension ".prx"
-   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/SOCOM.FireteamBravo.PPSSPP.FusionFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SOCOM.FireteamBravo.PPSSPP.FusionFix")
+   setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/SOCOM.FireteamBravo.PPSSPP.FusionFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SOCOM.FireteamBravo.PPSSPP.FusionFix")
    writemakefile_psp("SOCOM.FireteamBravo.PPSSPP.FusionFix")
 project "SOCOM.FireteamBravo2.PPSSPP.FusionFix"
    kind "Makefile"
    dependson { "SOCOM.FireteamBravo.PPSSPP.FusionFix" }
    add_pspsdk()
    targetextension ".prx"
-   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/SOCOM.FireteamBravo2.PPSSPP.FusionFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SOCOM.FireteamBravo2.PPSSPP.FusionFix")
+   setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/SOCOM.FireteamBravo2.PPSSPP.FusionFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SOCOM.FireteamBravo2.PPSSPP.FusionFix")
    writemakefile_psp("SOCOM.FireteamBravo2.PPSSPP.FusionFix")
 project "SOCOM.FireteamBravo3.PPSSPP.FusionFix"
    kind "Makefile"
    dependson { "SOCOM.FireteamBravo2.PPSSPP.FusionFix" }
    add_pspsdk()
    targetextension ".prx"
-   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/SOCOM.FireteamBravo3.PPSSPP.FusionFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SOCOM.FireteamBravo3.PPSSPP.FusionFix")
+   setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/SOCOM.FireteamBravo3.PPSSPP.FusionFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SOCOM.FireteamBravo3.PPSSPP.FusionFix")
    writemakefile_psp("SOCOM.FireteamBravo3.PPSSPP.FusionFix")
 group ""
 
@@ -865,7 +877,7 @@ project "TheWarriors.PPSSPP.FusionFix"
    dependson { "SOCOM.FireteamBravo3.PPSSPP.FusionFix" }
    add_pspsdk()
    targetextension ".prx"
-   setbuildpaths_psp("Z:/WFP/Games/PPSSPP/", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/TheWarriors.PPSSPP.FusionFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "TheWarriors.PPSSPP.FusionFix")
+   setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/TheWarriors.PPSSPP.FusionFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "TheWarriors.PPSSPP.FusionFix")
    writemakefile_psp("TheWarriors.PPSSPP.FusionFix")
 group ""
 
@@ -875,7 +887,7 @@ CommonWorkspaceSetup("x64", "Dolphin")
 group ""
 project "ResidentEvil2.RE3.Dolphin.FusionFix"
    add_kananlib()
-   setpaths("Z:/WFP/Games/Dolphin-x64/", "Dolphin.exe", "scripts/")
+   setpaths("DOLPHIN_DIR", "Dolphin.exe", "scripts/")
 group ""
 
 -- ====================== CXBXR SOLUTION ======================
@@ -883,10 +895,10 @@ CommonWorkspaceSetup("Win32", "CXBXR")
 
 group ""
 project "Mafia.CXBXR.WidescreenFix"
-   setpaths("Z:/WFP/Games/CXBXR/", "cxbx.exe")
+   setpaths("CXBXR_DIR", "cxbx.exe")
    files { "includes/cxbxr/cxbxr.h" }
 
 project "SplinterCellDoubleAgent.CXBXR.WidescreenFix"
-   setpaths("Z:/WFP/Games/CXBXR/", "cxbx.exe")
+   setpaths("CXBXR_DIR", "cxbx.exe")
    files { "includes/cxbxr/cxbxr.h" }
 group ""
