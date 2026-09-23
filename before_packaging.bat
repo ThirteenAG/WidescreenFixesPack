@@ -50,7 +50,7 @@ if not exist DSOAL-outer.zip (
 )
 
 rmdir /s /q "DSOAL-tmp" 2>nul
-7za x DSOAL-outer.zip -y -o"DSOAL-tmp" >nul
+data\7za.exe x DSOAL-outer.zip -y -o"DSOAL-tmp" >nul
 for %%F in ("DSOAL-tmp\*.zip") do move /y "%%~F" "DSOAL.zip" >nul
 del DSOAL-outer.zip
 rmdir /s /q "DSOAL-tmp"
