@@ -86,12 +86,12 @@ move /Y ".\SplinterCellDoubleAgent.WidescreenFix\SCDA-Offline\System\scripts\dxw
 move /Y ".\KingKong.WidescreenFix\scripts\dxwrapper.dll" ".\KingKong.WidescreenFix\scripts\dxwrapper.asi"
 
 rem DSOAL
-7za e "..\DSOAL.7z" "DSOAL+HRTF/Win32/dsound.dll" "DSOAL+HRTF/Win32/dsoal-aldrv.dll" -o".\MaxPayne.WidescreenFix\" -y
-7za e "..\DSOAL.7z" "DSOAL+HRTF/Win32/dsound.dll" "DSOAL+HRTF/Win32/dsoal-aldrv.dll" -o".\MaxPayne2.WidescreenFix\" -y
-7za e "..\DSOAL.7z" "DSOAL+HRTF/Win32/dsound.dll" "DSOAL+HRTF/Win32/dsoal-aldrv.dll" -o".\SplinterCell.WidescreenFix\system\" -y
-7za e "..\DSOAL.7z" "DSOAL+HRTF/Win32/dsound.dll" "DSOAL+HRTF/Win32/dsoal-aldrv.dll" -o".\SplinterCellPandoraTomorrow.WidescreenFix\system\" -y
-7za e "..\DSOAL.7z" "DSOAL+HRTF/Win32/dsound.dll" "DSOAL+HRTF/Win32/dsoal-aldrv.dll" -o".\SplinterCellChaosTheory.WidescreenFix\System\" -y
-7za e "..\DSOAL.7z" "DSOAL+HRTF/Win32/dsound.dll" "DSOAL+HRTF/Win32/dsoal-aldrv.dll" -o".\SplinterCellDoubleAgent.WidescreenFix\SCDA-Offline\System\" -y
+7za e "..\DSOAL.zip" "DSOAL+HRTF/Win32/dsound.dll" "DSOAL+HRTF/Win32/dsoal-aldrv.dll" -o".\MaxPayne.WidescreenFix\" -y
+7za e "..\DSOAL.zip" "DSOAL+HRTF/Win32/dsound.dll" "DSOAL+HRTF/Win32/dsoal-aldrv.dll" -o".\MaxPayne2.WidescreenFix\" -y
+7za e "..\DSOAL.zip" "DSOAL+HRTF/Win32/dsound.dll" "DSOAL+HRTF/Win32/dsoal-aldrv.dll" -o".\SplinterCell.WidescreenFix\system\" -y
+7za e "..\DSOAL.zip" "DSOAL+HRTF/Win32/dsound.dll" "DSOAL+HRTF/Win32/dsoal-aldrv.dll" -o".\SplinterCellPandoraTomorrow.WidescreenFix\system\" -y
+7za e "..\DSOAL.zip" "DSOAL+HRTF/Win32/dsound.dll" "DSOAL+HRTF/Win32/dsoal-aldrv.dll" -o".\SplinterCellChaosTheory.WidescreenFix\System\" -y
+7za e "..\DSOAL.zip" "DSOAL+HRTF/Win32/dsound.dll" "DSOAL+HRTF/Win32/dsoal-aldrv.dll" -o".\SplinterCellDoubleAgent.WidescreenFix\SCDA-Offline\System\" -y
 
 rem Creating archives
 
