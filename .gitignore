@@ -361,3 +361,6 @@ __pycache__/
 !tools/x86/*
 !tools/x64/
 !tools/x64/*
+
+# the paths of this machine, read by premake5.lua, see the readme
+.env
