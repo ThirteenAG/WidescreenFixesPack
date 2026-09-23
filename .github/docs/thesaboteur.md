@@ -2,6 +2,10 @@
 
 $${\color{green}✔}$$  Fixed Field of View
 
+$${\color{green}✔}$$  Added an option to go above 60 FPS
+
+$${\color{green}✔}$$  Multiple bug fixes
+
 $${\color{blue}ⓘ}$$ Added an option to make windowed mode borderless
 
     Installation:
