@@ -57,6 +57,9 @@ void FillAddressTable()
     addrTbl[0x511DAA] = (uintptr_t)hook::get_pattern("8A 85 ? ? ? ? 33 DB");
     addrTbl[0xF3CA40] = (uintptr_t)hook::get_pattern("89 47 24 8B 4D 00");
     addrTbl[0xF3CA8E] = (uintptr_t)hook::get_pattern("89 47 28 8B 4D 00");
+
+    // start of the display mode enumeration loop, see the comment in Init()
+    addrTbl[0xF427E0] = (uintptr_t)hook::get_pattern("89 6D 04 89 44 24 20 3B F0 0F 86", 3);
     addrTbl[0x98410A] = (uintptr_t)hook::get_pattern("C6 46 38 14 E9 ? ? ? ? F3 0F 10 05");
     addrTbl[0x9842C3] = (uintptr_t)hook::get_pattern("C6 46 38 14 8B 4E 40");
     addrTbl[0x9840F5] = (uintptr_t)hook::get_pattern("C6 46 38 0A 8B 4E 40");
@@ -800,6 +803,27 @@ void Init()
     static auto bCutscenePillarbox = iniReader.ReadInteger("MAIN", "CutscenePillarbox", 1) != 0;
 
     FillAddressTable();
+
+    // Display mode list overflow (crash on monitors with 256 or more display modes)
+    //
+    // mpCore stores the display modes it enumerates in a fixed array of 256 entries
+    // (0x4540E4, 92 bytes each), with the mode count right behind it (0x459CE4).
+    // sub_F42770 fills that array from a linked list without ever checking the bound,
+    // and it counts every accepted mode, so on a machine where more than 256 modes
+    // pass the filter below (%8 width, >= 640x480) entry 257 overwrites the count,
+    // the string tables behind it get corrupted by the rest and the code after the
+    // copy walks them with a garbage count - the reported startup crash (AV reading
+    // a bogus pointer in the strcmp of the unique resolution table, BH6.exe+0xB42A79).
+    //
+    // D3D returns the modes in ascending order, so starting the loop at (count - 256)
+    // instead of 0 keeps the 256 largest ones and can never store more than the array
+    // holds. With 256 modes or less nothing changes at all; above that only the
+    // smallest modes are no longer listed, every mode from the 256th largest up keeps
+    // all of its refresh rates.
+    static auto DisplayModeListStartHook = safetyhook::create_mid(addrTbl[0xF427E0], [](SafetyHookContext& regs)
+    {
+        regs.eax = regs.esi > 256 ? regs.esi - 256 : 0;
+    });
 
     if (bSkipIntro)
     {
