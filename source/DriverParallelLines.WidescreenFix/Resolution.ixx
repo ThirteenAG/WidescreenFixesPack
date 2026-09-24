@@ -98,7 +98,7 @@ public:
             }
 
             //uncap resolutions
-            auto pattern = hook::pattern("E8 ? ? ? ? 85 C0 0F 8C ? ? ? ? 8D 45");
+            auto pattern = find_pattern("E8 ? ? ? ? 85 C0 0F 8C ? ? ? ? 8D 45", "E8 ? ? ? ? 85 C0 7C ? 33 C0 5D");
             shsub_5E3DDC = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first(0)).as_int(), sub_5E3DDC);
 
             //default to desktop res
