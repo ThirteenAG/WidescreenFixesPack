@@ -3,6 +3,8 @@ module;
 #include <stdafx.h>
 #include "common.h"
 #include <control.h>
+#include <commctrl.h>
+#pragma comment(lib, "comctl32.lib")
 
 export module Frontend2;
 
@@ -613,38 +615,120 @@ void __cdecl SetCentreSizeHook(float a1)
         hbSetCentreSize.fun(a1);
 }
 
+namespace VideoPlayer
+{
+    constexpr UINT_PTR SubclassId = 0x57465056;
+    static HWND owner = nullptr;
+    static IVideoWindow* currentVideo = nullptr; // Borrowed; checked against the game's pointer.
+    static long sourceWidth = 4, sourceHeight = 3;
+    static RECT videoRect{};
+    static bool positioning = false;
+
+    static bool IsPlaying()
+    {
+        return currentVideo && currentVideo == *reinterpret_cast<IVideoWindow**>(0xC920E0);
+    }
+
+    static void PaintMargins(HWND window, HDC dc)
+    {
+        RECT client{};
+        if (!GetClientRect(window, &client)) return;
+        const RECT margins[] = {
+            { 0, 0, client.right, videoRect.top },
+            { 0, videoRect.bottom, client.right, client.bottom },
+            { 0, videoRect.top, videoRect.left, videoRect.bottom },
+            { videoRect.right, videoRect.top, client.right, videoRect.bottom }
+        };
+        for (const auto& margin : margins)
+            FillRect(dc, &margin, static_cast<HBRUSH>(GetStockObject(BLACK_BRUSH)));
+    }
+
+    static void Position(HWND window)
+    {
+        if (positioning || !IsPlaying()) return;
+        RECT client{};
+        if (!GetClientRect(window, &client) || client.right <= 0 || client.bottom <= 0) return;
+        const double scale = std::min(static_cast<double>(client.right) / sourceWidth,
+            static_cast<double>(client.bottom) / sourceHeight);
+        const long width = std::max(1L, static_cast<long>(sourceWidth * scale));
+        const long height = std::max(1L, static_cast<long>(sourceHeight * scale));
+        const long left = (client.right - width) / 2;
+        const long top = (client.bottom - height) / 2;
+        positioning = true;
+        if (SUCCEEDED(currentVideo->SetWindowPosition(left, top, width, height)))
+            videoRect = { left, top, left + width, top + height };
+        positioning = false;
+        InvalidateRect(window, nullptr, FALSE);
+    }
+
+    static LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam,
+        LPARAM lParam, UINT_PTR id, DWORD_PTR)
+    {
+        if (message == WM_NCDESTROY || !IsPlaying())
+        {
+            RemoveWindowSubclass(window, WindowProc, id);
+            owner = nullptr;
+            currentVideo = nullptr;
+            return DefSubclassProc(window, message, wParam, lParam);
+        }
+        if (message == WM_SIZE)
+        {
+            const auto result = DefSubclassProc(window, message, wParam, lParam);
+            if (wParam != SIZE_MINIMIZED) Position(window);
+            return result;
+        }
+        if (message == WM_ERASEBKGND)
+        {
+            PaintMargins(window, reinterpret_cast<HDC>(wParam));
+            return 1;
+        }
+        if (message == WM_PAINT)
+        {
+            PAINTSTRUCT paint{};
+            const HDC dc = BeginPaint(window, &paint);
+            PaintMargins(window, dc);
+            EndPaint(window, &paint);
+            return 0;
+        }
+        return DefSubclassProc(window, message, wParam, lParam);
+    }
+}
+
 void VideoPlayerShowHook()
 {
-    IVideoWindow*& pvVideoWindow = *(IVideoWindow**)0xC920E0;
+    using namespace VideoPlayer;
+    auto* videoWindow = *reinterpret_cast<IVideoWindow**>(0xC920E0);
+    if (!videoWindow) return;
 
-    CDraw::CalculateAspectRatio();
+    OAHWND videoOwner = 0;
+    if (FAILED(videoWindow->get_Owner(&videoOwner))) return;
+    const HWND window = reinterpret_cast<HWND>(videoOwner);
+    if (!IsWindow(window)) return;
 
-    long r, b;
-    pvVideoWindow->get_Width(&r);
-    pvVideoWindow->get_Height(&b);
-
-    float fMiddleScrCoord = (float)RsGlobal->maximumWidth / 2.0f;
-
-    float w = static_cast<float>(r);
-    float h = static_cast<float>(b);
-
-    if (w == h && w > 0 && h > 0)
+    // Cache the source ratio before SetWindowPosition changes the video window.
+    if (currentVideo != videoWindow || owner != window)
     {
-        w = 4.0f;
-        h = 3.0f;
+        long width = 0, height = 0;
+        const HRESULT widthResult = videoWindow->get_Width(&width);
+        const HRESULT heightResult = videoWindow->get_Height(&height);
+        if (FAILED(widthResult) || FAILED(heightResult) || width <= 0 || height <= 0 || width == height)
+        {
+            width = 4;
+            height = 3;
+        }
+        if (owner) RemoveWindowSubclass(owner, WindowProc, SubclassId);
+        sourceWidth = width;
+        sourceHeight = height;
+        owner = window;
+        currentVideo = videoWindow;
+        videoRect = {};
     }
-
-    long Top = static_cast<long>(0.0f);
-    long Left = static_cast<long>(fMiddleScrCoord - ((((float)RsGlobal->maximumHeight * (w / h))) / 2.0f));
-    long Bottom = static_cast<long>((float)RsGlobal->maximumHeight);
-    long Right = static_cast<long>(fMiddleScrCoord + ((((float)RsGlobal->maximumHeight * (w / h))) / 2.0f));
-
-    HRESULT wPos = pvVideoWindow->SetWindowPosition(Left, Top, Right - Left, Bottom);
-    if (wPos >= 0)
-    {
-        pvVideoWindow->put_MessageDrain((OAHWND)RsGlobal->ps);
-        SetFocus((HWND)RsGlobal->ps);
-    }
+    SetWindowSubclass(window, WindowProc, SubclassId, 0);
+    Position(window);
+    // Paint immediately as well as on subsequent expose/resize messages.
+    UpdateWindow(window);
+    videoWindow->put_MessageDrain(videoOwner);
+    SetFocus(window);
 }
 
 void InstallFrontendFixes()
@@ -803,8 +887,7 @@ void InstallFrontendFixes()
     hbDrawBarChart.fun = injector::MakeCALL(0x574F54, DrawBarChartHook).get();
     injector::MakeCALL(0x574F54, DrawBarChartHook);
 
-    // Fix video player.
-    injector::MakeJMP(0x7466D0, VideoPlayerShowHook);
+
 }
 
 void InstallMiscFixes()
@@ -1257,6 +1340,19 @@ class Frontend2
 public:
     Frontend2()
     {
+        WFP::onInitEvent() += []()
+        {
+            // Intro videos play before game initialization, in either scaling mode.
+            injector::MakeJMP(0x7466D0, VideoPlayerShowHook);
+            static auto releaseVideoHook = safetyhook::create_mid(0x746740, [](SafetyHookContext&)
+            {
+                if (VideoPlayer::owner)
+                    RemoveWindowSubclass(VideoPlayer::owner, VideoPlayer::WindowProc, VideoPlayer::SubclassId);
+                VideoPlayer::owner = nullptr;
+                VideoPlayer::currentVideo = nullptr;
+            });
+        };
+
         WFP::onGameInitEvent() += []()
         {
             CIniReader iniReader("");
