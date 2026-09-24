@@ -33,11 +33,19 @@ void Init()
         WFP::onGameProcessEvent().executeAll();
     });
 
-    pattern = find_pattern("E8 ? ? ? ? A1 ? ? ? ? 68 ? ? ? ? 50 ? ? FF 51 ? 3D");
-    static auto BeforeResetHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-    {
-        WFP::onBeforeReset().executeAll();
-    });
+    pattern = find_pattern<3>("68 ? ? ? ? 50 ? ? FF 52", "68 ? ? ? ? 50 ? ? FF 52");
+    static auto _rwD3D8CameraClearBeforeResetHook = safetyhook::create_mid(pattern.get(0).get<void*>(), [](SafetyHookContext& regs) { WFP::onBeforeReset().executeAll(); });
+    //static auto _rwD3D8BeginSceneBeforeResetHook = safetyhook::create_mid(pattern.get(1).get<void*>(), [](SafetyHookContext& regs) { WFP::onBeforeReset().executeAll(); });
+    static auto _rwD3D8CameraBeginUpdateBeforeResetHook = safetyhook::create_mid(pattern.get(2).get<void*>(), [](SafetyHookContext& regs) { WFP::onBeforeReset().executeAll(); });
+
+    pattern = find_pattern("68 ? ? ? ? 50 ? ? FF 51 ? 3D");
+    static auto _rwD3D8BeginSceneBeforeResetHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs) { WFP::onBeforeReset().executeAll(); });
+
+    pattern = find_pattern("68 ? ? ? ? 50 ? ? FF 51 ? A1 ? ? ? ? 68 ? ? ? ? 50 ? ? FF 92 ? ? ? ? A1 ? ? ? ? 50 ? ? FF 51 ? A1 ? ? ? ? 68 ? ? ? ? 50 ? ? FF 92 ? ? ? ? A1 ? ? ? ? 50 ? ? FF 51 ? E8 ? ? ? ? 85 C0 0F 84");
+    static auto _rwD3D8RasterShowRasterBeforeResetHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs) { WFP::onBeforeReset().executeAll(); });
+
+    pattern = find_pattern("68 ? ? ? ? 50 ? ? FF 51 ? A1 ? ? ? ? 68 ? ? ? ? 50 ? ? FF 92 ? ? ? ? A1 ? ? ? ? 50 ? ? FF 51 ? A1 ? ? ? ? 68 ? ? ? ? 50 ? ? FF 92 ? ? ? ? A1 ? ? ? ? 50 ? ? FF 51 ? E8 ? ? ? ? 85 C0 74");
+    static auto _rwD3D8RasterShowRasterBeforeResetHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs) { WFP::onBeforeReset().executeAll(); });
 
     pattern = find_pattern("A1 ? ? ? ? 50 ? ? FF 91 ? ? ? ? 89 2D");
     static auto BeforeEndSceneHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)

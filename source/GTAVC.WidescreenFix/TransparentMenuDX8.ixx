@@ -27,6 +27,7 @@ private:
         IDirect3DTexture8* renderTex = nullptr; // D3DPOOL_MANAGED   — safe for SetTexture, no RT state side-effects
         int fbWidth = 0;
         int fbHeight = 0;
+        size_t rowBytes = 0;
 
         bool initialised = false;
         bool captureReady = false;
@@ -62,8 +63,31 @@ void TransparentMenuDX8::InitResources(IDirect3DDevice8* dev)
     if (FAILED(dev->GetBackBuffer(0, D3DBACKBUFFER_TYPE_MONO, &backBuffer))) return;
 
     D3DSURFACE_DESC desc{};
-    backBuffer->GetDesc(&desc);
+    const HRESULT descResult = backBuffer->GetDesc(&desc);
     backBuffer->Release();
+    if (FAILED(descResult) || !desc.Width || !desc.Height) return;
+
+    size_t bytesPerPixel = 0;
+    switch (desc.Format)
+    {
+    case D3DFMT_R5G6B5:
+    case D3DFMT_X1R5G5B5:
+    case D3DFMT_A1R5G5B5:
+    case D3DFMT_A4R4G4B4:
+    case D3DFMT_X4R4G4B4:
+        bytesPerPixel = 2;
+        break;
+    case D3DFMT_R8G8B8:
+        bytesPerPixel = 3;
+        break;
+    case D3DFMT_X8R8G8B8:
+    case D3DFMT_A8R8G8B8:
+        bytesPerPixel = 4;
+        break;
+    default:
+        return; // Unsupported capture format; do not guess its layout.
+    }
+    if (desc.Width > SIZE_MAX / bytesPerPixel) return;
 
     // System-memory surface — CopyRects from back buffer is valid here,
     // and does NOT touch any render-target or transform internal state.
@@ -80,6 +104,7 @@ void TransparentMenuDX8::InitResources(IDirect3DDevice8* dev)
         return;
     }
 
+    s_res.rowBytes = static_cast<size_t>(desc.Width) * bytesPerPixel;
     s_res.fbWidth = desc.Width;
     s_res.fbHeight = desc.Height;
     s_res.initialised = true;
@@ -87,6 +112,7 @@ void TransparentMenuDX8::InitResources(IDirect3DDevice8* dev)
 
 bool TransparentMenuDX8::CaptureFrame()
 {
+    s_res.captureReady = false;
     if (!IsDeviceReady()) return false;
     auto* dev = GetDevice8();
     if (!dev) return false;
@@ -111,19 +137,24 @@ bool TransparentMenuDX8::CaptureFrame()
     {
         if (SUCCEEDED(texSurf->LockRect(&dstLock, nullptr, 0)))
         {
-            const int rowBytes = s_res.fbWidth * 4; // assumes 32-bit format
-            const auto* src = static_cast<const uint8_t*>(srcLock.pBits);
-            auto* dst = static_cast<uint8_t*>(dstLock.pBits);
-            for (int y = 0; y < s_res.fbHeight; ++y)
-                memcpy(dst + y * dstLock.Pitch, src + y * srcLock.Pitch, rowBytes);
+            if (srcLock.pBits && dstLock.pBits && srcLock.Pitch > 0 && dstLock.Pitch > 0 &&
+                s_res.rowBytes <= static_cast<size_t>(srcLock.Pitch) &&
+                s_res.rowBytes <= static_cast<size_t>(dstLock.Pitch))
+            {
+                const auto* src = static_cast<const uint8_t*>(srcLock.pBits);
+                auto* dst = static_cast<uint8_t*>(dstLock.pBits);
+                for (int y = 0; y < s_res.fbHeight; ++y)
+                    memcpy(dst + static_cast<size_t>(y) * dstLock.Pitch,
+                        src + static_cast<size_t>(y) * srcLock.Pitch, s_res.rowBytes);
+                s_res.captureReady = true;
+            }
             texSurf->UnlockRect();
         }
         s_res.captureSurf->UnlockRect();
     }
     texSurf->Release();
 
-    s_res.captureReady = true;
-    return true;
+    return s_res.captureReady;
 }
 
 void TransparentMenuDX8::RenderBlur()
@@ -227,4 +258,5 @@ void TransparentMenuDX8::OnDeviceReset()
 
     s_res.fbWidth = 0;
     s_res.fbHeight = 0;
+    s_res.rowBytes = 0;
 }
