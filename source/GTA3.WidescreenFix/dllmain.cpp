@@ -33,20 +33,26 @@ void Init()
         WFP::onGameProcessEvent().executeAll();
     });
 
-    pattern = find_pattern("E8 ? ? ? ? A1 ? ? ? ? 68 ? ? ? ? 50 ? ? FF 51 ? 8B F0", "E8 ? ? ? ? 83 C4 ? A1 ? ? ? ? C7 44 24 ? ? ? ? ? ? ? ? ? ? FF 52 ? E8 ? ? ? ? A1");
-    static auto BeforeResetHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-    {
-        WFP::onBeforeReset().executeAll();
-    });
+    pattern = find_pattern("68 ? ? ? ? 50 ? ? FF 52 ? 3B C3", "C7 44 24 ? ? ? ? ? 8B 10 89 04 24 FF 52 ? 85 C0 7C ? E8 ? ? ? ? 85 C0 74 ? 8B 85 ? ? ? ? 8B 95 ? ? ? ? A3 ? ? ? ? 89 15 ? ? ? ? E9 A4 01 00 00");
+    static auto _rwD3D8CameraClearBeforeResetHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs) { WFP::onBeforeReset().executeAll(); });
 
-    pattern = find_pattern("A1 ? ? ? ? 68 ? ? ? ? 50 ? ? FF 52 ? A1");
+    pattern = find_pattern("68 ? ? ? ? 50 ? ? FF 51 ? 3D", "C7 44 24 ? ? ? ? ? ? ? ? ? ? FF 52 ? 8B D8 81 FB");
+    static auto _rwD3D8BeginSceneBeforeResetHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs) { WFP::onBeforeReset().executeAll(); });
+
+    pattern = find_pattern("68 ? ? ? ? 50 ? ? FF 51 ? 3B C3", "C7 44 24 ? ? ? ? ? 8B 10 89 04 24 FF 52 ? 85 C0 7C ? E8 ? ? ? ? 85 C0 74 ? 8B 85 ? ? ? ? 8B 95 ? ? ? ? A3 ? ? ? ? 89 15 ? ? ? ? E9 A7 01 00 00");
+    static auto _rwD3D8CameraBeginUpdateBeforeResetHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs) { WFP::onBeforeReset().executeAll(); });
+
+    pattern = find_pattern("68 ? ? ? ? 50 ? ? FF 51 ? 8B F0");
     if (!pattern.empty())
     {
-        static auto BeforeResetHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-        {
-            WFP::onBeforeReset().executeAll();
-        });
+        static auto _rwD3D8CameraBeginUpdateBeforeResetHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs) { WFP::onBeforeReset().executeAll(); });
     }
+
+    pattern = find_pattern("68 ? ? ? ? 50 ? ? FF 52 ? A1", "C7 44 24 ? ? ? ? ? ? ? ? ? ? FF 52 ? E8 ? ? ? ? A1");
+    static auto _rwD3D8RasterShowRasterBeforeResetHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs) { WFP::onBeforeReset().executeAll(); });
+
+    pattern = find_pattern("68 ? ? ? ? 50 ? ? FF 51 ? A1", "C7 44 24 ? ? ? ? ? ? ? ? ? ? FF 52 ? E8 ? ? ? ? 33 C0");
+    static auto _rwD3D8RasterShowRasterBeforeResetHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs) { WFP::onBeforeReset().executeAll(); });
 
     pattern = find_pattern("8B 08 53 56 57 50 FF 91", "A1 ? ? ? ? ? ? 50 FF 92 ? ? ? ? A1");
     static auto BeforeEndSceneHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
