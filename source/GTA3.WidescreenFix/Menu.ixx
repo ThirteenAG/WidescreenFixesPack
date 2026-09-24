@@ -311,9 +311,31 @@ static float GetFrameLimiterValue()
     }
 }
 
+// Keep menu pacing independent of the gameplay limiter's timestamps and setting.
+static FrameLimiter menuFpsLimiter;
+static float menuFrameLimit = 60.0f;
+
+static void LimitMenuFrame()
+{
+    if (menuFrameLimit <= 0.0f)
+        return;
+
+    static bool initialized = false;
+    if (!initialized)
+    {
+        timeBeginPeriod(1);
+        menuFpsLimiter.Init(FrameLimiter::FPS_ACCURATE, menuFrameLimit);
+        initialized = true;
+    }
+    menuFpsLimiter.Sync();
+}
+
 injector::hook_back<bool(__cdecl*)(RsEvent event, void* data)> hbRsEventHandler;
 bool __cdecl RsEventHandler(RsEvent event, void* data)
 {
+    if (CMenuManager::m_bIsActive)
+        return hbRsEventHandler.fun(event, data);
+
     static FrameLimiter fpsLimiter;
     static constexpr auto mode = FrameLimiter::FPS_ACCURATE;
     static bool bTimerResolutionSet = false;
@@ -347,6 +369,10 @@ public:
     {
         WFP::onGameInitEvent() += []()
         {
+            CIniReader iniReader("");
+            menuFrameLimit = static_cast<float>(std::max(0,
+                iniReader.ReadInteger("MAIN", "MenuFrameLimit", 60)));
+
             auto pattern = hook::pattern("E8 ? ? ? ? 89 44 24 ? 8B B5");
             CText::hbGet.fun = injector::MakeCALL(pattern.get_first(0), CText::GetMenuOptionText).get();
 
@@ -407,6 +433,12 @@ public:
 
             pattern = hook::pattern("E8 ? ? ? ? 59 59 EB ? A1 ? ? ? ? 50");
             hbRsEventHandler.fun = injector::MakeCALL(pattern.get_first(0), RsEventHandler).get();
+
+            pattern = hook::pattern("E8 ? ? ? ? 83 BB ? ? ? ? ? 59 75 ? 80 BB");
+            static auto DrawFrontEndHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext&)
+            {
+                LimitMenuFrame();
+            });
         };
     }
 } Menu;
