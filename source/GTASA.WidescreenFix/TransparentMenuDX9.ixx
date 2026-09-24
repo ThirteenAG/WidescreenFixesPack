@@ -256,6 +256,9 @@ void TransparentMenuDX9::RenderBlur()
         pBlurEffect->End();
     }
 
+    // Render targets are not part of a state block. Restore even when an
+    // effect operation failed, before Apply restores the saved viewport.
+    (*pD3D9Device)->SetRenderTarget(0, originalRT);
     state->Apply();
     state->Release();
     originalRT->Release();

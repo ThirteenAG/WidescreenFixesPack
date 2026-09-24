@@ -249,19 +249,35 @@ public:
                 SubtitlesHeight *= fSubtitlesScale;
             }
 
-            // Disable subtitle shift
+            // Center gameplay subtitles, but reserve the radar's space on BOTH sides.
+            // The original width is W - (20 + 8 + leftReserve + 8) * scale.
+            // For symmetric margins of (radarReserve + 8), leftReserve must be
+            // 2 * radarReserve - 20 (260 at the default radar size).
             static float SubtitlesShift = 20.0f;
+            static float SubtitlesWrapReserve = 2.0f * std::max(140.0f, 40.0f + fRadarWidth + 6.0f) - 20.0f;
             pattern = hook::pattern("D8 0D ? ? ? ? D8 C1 DE EA D9 C9 D8 0D");
-            injector::WriteMemory(pattern.get_first(2), &SubtitlesShift, true);
+            injector::WriteMemory(pattern.get_first(2), &SubtitlesWrapReserve, true);
 
             pattern = hook::pattern("D8 0D ? ? ? ? D8 44 24 ? D9 5C 24 ? D9 05 ? ? ? ? D8 C9 D8 EA D9 C9 DC C0 DE E9 D9 5C 24 ? DD D8 D9 44 24 ? D8 0D ? ? ? ? D8 6C 24 ? D8 64 24 ? D8 64 24 ? D8 0D ? ? ? ? D8 44 24 ? D9 44 24");
             injector::WriteMemory(pattern.get_first(2), &SubtitlesShift, true);
 
             pattern = hook::pattern("D8 0D ? ? ? ? D8 C1 DE EA D9 C9 D9 1C 24");
-            injector::WriteMemory(pattern.get_first(2), &SubtitlesShift, true);
+            injector::WriteMemory(pattern.get_first(2), &SubtitlesWrapReserve, true);
 
             pattern = hook::pattern("D8 0D ? ? ? ? D8 44 24 ? D9 5C 24 ? D9 05 ? ? ? ? D8 C9 D8 EA D9 C9 DC C0 DE E9 D9 5C 24 ? DD D8 D9 44 24 ? D8 0D ? ? ? ? D8 6C 24 ? D8 64 24 ? D8 64 24 ? D8 0D ? ? ? ? D8 44 24 ? D9 1C 24");
             injector::WriteMemory(pattern.get_first(2), &SubtitlesShift, true);
+
+            // The vital-stats branch adds another 40 scaled pixels after centering.
+            // Remove only that extra offset; retain its smaller font/wrapping width.
+            static float SubtitlesStatsShift = 0.0f;
+            pattern = hook::pattern("D9 44 24 ? D8 0D ? ? ? ? DE C1 E9 ? ? ? ? DB 05");
+            injector::WriteMemory(pattern.get_first(6), &SubtitlesStatsShift, true);
+
+            //CFont::SetScaleForCurrentlanguage
+            static float fNonEnglishScale = 1.0f;
+            pattern = hook::pattern("D8 0D ? ? ? ? A3 ? ? ? ? D9 1D ? ? ? ? C3");
+            if (!pattern.empty())
+                injector::WriteMemory(pattern.get_first(2), &fNonEnglishScale, true);
 
             if (fHudWidthScale || fHudHeightScale)
             {
@@ -514,7 +530,7 @@ public:
                     injector::WriteMemory(0x58D894 + 2, 0x866C4C, true);
                 }
 
-                int m_dwCrosshairHeight[] = { 
+                int m_dwCrosshairHeight[] = {
                               0x58E7E4,
                               0x58E80E,
                               0x58E319,
