@@ -24,9 +24,9 @@ export GameRef<bool> isTurret([]() -> bool*
 
 export GameRef<uintptr_t> dword_70C59C([]() -> uintptr_t*
 {
-    auto pattern = hook::pattern("A3 ? ? ? ? E8 ? ? ? ? 6A ? 59 E8 ? ? ? ? A3 ? ? ? ? ? ? 6A");
+    auto pattern = hook::pattern("8B 0D ? ? ? ? E8 ? ? ? ? 8B 0D ? ? ? ? E8 ? ? ? ? 8B 0D ? ? ? ? E8 ? ? ? ? 8B 0D ? ? ? ? 83 C1");
     if (!pattern.empty())
-        return *pattern.get_first<uintptr_t*>(1);
+        return *pattern.get_first<uintptr_t*>(2);
     return nullptr;
 });
 
