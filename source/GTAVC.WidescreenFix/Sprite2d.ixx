@@ -100,7 +100,7 @@ static CRect ComputeContentRect(CSprite2d* sprite2d, const CRect* rect)
     {
         int32_t texW = RwRasterGetWidth(pRaster);
         int32_t texH = RwRasterGetHeight(pRaster);
-        if (texW > 0 && texH > 0 && texW != texH && texW / texH != 2)
+        if (texW > 0 && texH > 0 && texW != texH && static_cast<int64_t>(texW) != 2LL * texH)
         {
             w = (float)texW;
             h = (float)texH;
