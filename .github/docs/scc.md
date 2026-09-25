@@ -1,47 +1,55 @@
-![scc](https://thirteenag.github.io/screens/scc/main2.jpg)
+<div align="center">
 
-$${\color{green}✔}$$  Fixed gamepad support (via [Xidi](https://github.com/samuelgr/Xidi))
+<img src="https://thirteenag.github.io/screens/scc/main2.jpg" width="760" alt="Splinter Cell: Conviction Fusion Fix">
 
-$${\color{green}✔}$$  Fixed crash in DLC levels when Xbox 360 achievement conditions are met (e.g., "King of the Crypt" in New Orleans, "Watch the Soap" in Portland)
+**Splinter Cell: Conviction Fusion Fix** fixes DLC achievement crashes and adds controller support, startup skips, partial ultrawide support, and configurable visual and gameplay options.
 
-$${\color{blue}ⓘ}$$  Added an option to skip intro
+[Website](https://thirteenag.github.io/wfp#scc) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/SplinterCellConviction.FusionFix/dllmain.cpp) · [Default INI](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/SplinterCellConviction.FusionFix/src/system/scripts/SplinterCellConviction.FusionFix.ini)
 
-$${\color{blue}ⓘ}$$  Added an option to enable windowed mode
+</div>
 
-$${\color{blue}ⓘ}$$  Added an option to disable negative mouse acceleration
+---
 
-$${\color{blue}ⓘ}$$  Added an option to skip system detection errors on startup
+## Fixes
 
-$${\color{blue}ⓘ}$$  Added an option to restore LAN support
+- **Gamepad** — Support controllers through [Xidi](https://github.com/samuelgr/Xidi).
+- **DLC crash** — Prevent crashes when Xbox 360 achievement conditions are met in DLC levels, including “King of the Crypt” in New Orleans and “Watch the Soap” in Portland.
+- **Co-op frame rate** — Changed coop FPS limit to 60 (custom values can be set via `update/convictionsettings.ini`, `SyncMaxStepFrequency` parameter)
+- **Ammunition** — Disabled unlimited ammo for all weapons (restore original behavior by deleting `update/weapontuning.ini`)
 
-$${\color{blue}ⓘ}$$  Added an option to enable partial ultrawide support 
+## Options
 
-$${\color{blue}ⓘ}$$  Added an option to disable depth of field effect
+- **Skip intro** — Skip startup intros.
+- **Windowed mode** — Run the game in a window.
+- **Mouse input** — Optionally disable negative mouse acceleration.
+- **Hardware detection** — Skip hardware detection messages on startup.
+- **LAN** — Restore LAN support.
 
-$${\color{blue}ⓘ}$$  Added an option to disable black and white filter
+### Display and effects
 
-$${\color{blue}ⓘ}$$  Added an option to enable enhanced sonar vision
+- **Ultrawide** — Enable partial ultrawide support.
+- **Depth of field** — Optionally disable the depth of field effect.
+- **Black and white filter** — Optionally disable the desaturation effect.
+- **Sonar vision** — Enable the enhanced sonar vision option.
+- **Character lighting** — Optionally disable the additional character lighting, including in cutscenes.
+- **RGB lighting** — Support [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html).
 
-$${\color{blue}ⓘ}$$  Added an option to disable character lighting 
+### Content and controls
 
-$${\color{blue}ⓘ}$$  Added an option to enable [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html)
-
-$${\color{blue}ⓘ}$$  Added an option to load packed files from disk
-
-$${\color{blue}ⓘ}$$  Added an option to unlock DLC content that's unavailable after servers shut down
-
-$${\color{blue}ⓘ}$$  Added an option to use Splinter Cell Blacklist control scheme (not fully tested, report issues via GitHub)
-
-$${\color{blue}ⓘ}$$  Changed coop FPS limit to 60 (custom values can be set via `update/convictionsettings.ini`, `SyncMaxStepFrequency` parameter)
-
-$${\color{blue}ⓘ}$$  Disabled unlimited ammo for all weapons (restore original behavior by deleting `update/weapontuning.ini`)
+- **Loose files** — Load unpacked files from disk.
+- **DLC** — Unlock DLC content made unavailable by the server shutdown.
+- **Controls** — Enable the Blacklist control scheme. Not fully tested; report issues via GitHub.
 
 ![controls](https://github.com/user-attachments/assets/2498a891-2991-4604-b0dc-b5d309a0c02d)
 
 https://user-images.githubusercontent.com/4904157/192846910-6ddfb3fb-3089-4553-ba94-b8d031855fc7.mp4
 
-    Installation:
-        Download and extract the archive to the game directory, where the exe is located.
+## Installation
+
+1. Download the fix archive from this release.
+2. Extract the archive into the game’s installation folder, preserving its directory structure. The included files belong under `src/system`.
+3. Optionally edit `src/system/scripts/SplinterCellConviction.FusionFix.ini` to configure the fix.
+4. Launch the game.
 
 > [!WARNING]
 > Non-Windows users (Proton/Wine) need to perform a **DLL override**.
@@ -75,6 +83,6 @@ https://user-images.githubusercontent.com/4904157/192846910-6ddfb3fb-3089-4553-b
 > * [More on WINEDLLOVERRIDES method](https://wiki.winehq.org/Wine_User's_Guide#WINEDLLOVERRIDES.3DDLL_Overrides)
 > </details>
 
-[Website](https://thirteenag.github.io/wfp#scc) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/SplinterCellConviction.FusionFix/dllmain.cpp) | [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/SplinterCellConviction.FusionFix/src/system/scripts/SplinterCellConviction.FusionFix.ini)
+
 
 <p align="center"> <a href="https://patreon.fusionfix.io/" target="_blank"><picture><source media="(max-width: 768px) and (prefers-color-scheme: dark)" srcset="https://fusionlegacyinitiative.com/sponsors-progress/sponsors-progress-wfp-mobile-dark.svg"><source media="(max-width: 768px)" srcset="https://fusionlegacyinitiative.com/sponsors-progress/sponsors-progress-wfp-mobile.svg"><source media="(prefers-color-scheme: dark)" srcset="https://fusionlegacyinitiative.com/sponsors-progress/sponsors-progress-wfp-dark.svg"><img width="100%" src="https://fusionlegacyinitiative.com/sponsors-progress/sponsors-progress-wfp.svg"></picture></a> <br /> <a href="https://github.com/sponsors/ThirteenAG"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/github-dark.svg"><img src="https://thirteenag.github.io/img/buttons/github.svg" width="250"></picture></a> <a href="https://ko-fi.com/thirteenag"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/kofi-dark.svg"><img src="https://thirteenag.github.io/img/buttons/kofi.svg" width="250"></picture></a> <a href="https://paypal.me/SergeyP13"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/paypal-dark.svg"><img src="https://thirteenag.github.io/img/buttons/paypal.svg" width="250"></picture></a> <a href="https://www.patreon.com/ThirteenAG"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/patreon-dark.svg"><img src="https://thirteenag.github.io/img/buttons/patreon.svg" width="250"></picture></a> <a href="https://boosty.to/thirteenag"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/boosty-dark.svg"><img src="https://thirteenag.github.io/img/buttons/boosty.svg" width="250"></picture></a><br><br> </p>

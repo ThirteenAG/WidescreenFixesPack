@@ -1,14 +1,30 @@
-![thesaboteur](https://thirteenag.github.io/screens/thesaboteur/main2.jpg)
+<div align="center">
 
-$${\color{green}✔}$$  Fixed Field of View
+<img src="https://thirteenag.github.io/screens/thesaboteur/main2.jpg" width="760" alt="The Saboteur Fusion Fix">
 
-$${\color{green}✔}$$  Added an option to go above 60 FPS
+**The Saboteur Fusion Fix** adjusts widescreen FOV, adds a configurable frame rate limit and borderless windowed mode, and fixes interface and shutdown issues.
 
-$${\color{green}✔}$$  Multiple bug fixes
+[Website](https://thirteenag.github.io/wfp#thesaboteur) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/TheSaboteur.FusionFix/dllmain.cpp) · [Default INI](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix.ini)
 
-$${\color{blue}ⓘ}$$ Added an option to make windowed mode borderless
+</div>
 
-    Installation:
-        Download and extract the archive to the game directory, where the exe is located.
+---
 
-[Website](https://thirteenag.github.io/wfp#thesaboteur) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/TheSaboteur.FusionFix/dllmain.cpp) | [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix.ini)
+## Fixes
+
+- **Field of view** — Adjust widescreen FOV, with scaling capped to avoid rendering problems at very wide ratios.
+- **Interface and shutdown** — Correct map marker rendering and high-resolution cursor movement, and fix audio stuttering when closing the game.
+
+## Options
+
+- **Frame rate** — Configure `FPSLimit`, including values above 60 FPS.
+- **Windowed mode** — Make windowed mode borderless.
+
+---
+
+## Installation
+
+1. Download the fix archive from this release.
+2. Extract the archive into the game folder, beside the game executable, preserving the folders in the archive.
+3. Optionally edit `scripts/TheSaboteur.FusionFix.ini` to configure the fix.
+4. Launch the game.

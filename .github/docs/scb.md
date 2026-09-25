@@ -1,30 +1,39 @@
-![scb](https://thirteenag.github.io/screens/scb/main2.jpg)
+<div align="center">
 
-$${\color{blue}ⓘ}$$  Added an option to skip intro
+<img src="https://thirteenag.github.io/screens/scb/main2.jpg" width="760" alt="Splinter Cell: Blacklist Fusion Fix">
 
-$${\color{blue}ⓘ}$$  Added an option to skip press any key screen
+**Splinter Cell: Blacklist Fusion Fix** adds ultrawide and FOV options, startup skips, input adjustments, and configurable mission and game-mode changes.
 
-$${\color{blue}ⓘ}$$  Added an option to switch the game to fullscreen mode on startup
+[Website](https://thirteenag.github.io/wfp#scb) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/SplinterCellBlacklist.FusionFix/dllmain.cpp) · [Default INI](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/SplinterCellBlacklist.FusionFix/src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix.ini)
 
-$${\color{blue}ⓘ}$$  Added an option to disable negative mouse acceleration
+</div>
 
-$${\color{blue}ⓘ}$$  Added an option to enable ultrawide support
+---
 
-$${\color{blue}ⓘ}$$  Added an option to change FOV
+## Options
 
-$${\color{blue}ⓘ}$$  Added an option to change Screen Cull Bias, for better draw distance
+### Startup and input
 
-$${\color{blue}ⓘ}$$  Added an option to unlock DLC content that's unavailable after servers shut down
+- **Skip intro** — Skip startup intros.
+- **Startup prompt** — Skip the “Press Any Key” screen and checkpoint selection.
+- **Startup display** — Switch to fullscreen if the game starts in a window.
+- **Mouse input** — Optionally disable negative mouse acceleration.
 
-$${\color{blue}ⓘ}$$  Added an option to unlock all missions from the start
+### Display and camera
 
-$${\color{blue}ⓘ}$$  Added an option to load packed files from disk
+- **Ultrawide** — Enable ultrawide support; this also disables the damage overlay and fading in ultrawide.
+- **Field of view** — Adjust `FOVFactor` from 0.5 to 2.5.
+- **Draw distance** — Adjust `ScreenCullBias`; lower values keep distant objects visible for longer.
 
-$${\color{blue}ⓘ}$$  Added an option to enable [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html)
+### Gameplay and files
 
-$${\color{blue}ⓘ}$$ Added an option to be able to run during forced walking sections
+- **DLC** — Unlock DLC content made unavailable by the server shutdown.
+- **Mission unlocks** — Separate options unlock campaign and 4th Echelon missions from the start.
+- **Loose files** — Load unpacked files from disk.
+- **RGB lighting** — Support [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html).
+- **Forced walking** — Allow running during forced walking sections.
 
-$${\color{blue}ⓘ}$$  Difficulty tweaks: **Mark and Execute**, sonar and drop crates enabled on **Perfectionist**, unlimited ammo disabled on **Rookie**. To go back to original behavior, delete `update/difficultyconfiguration.ini` and set `DisablePerfectionistChecks` to 0.
+Difficulty tweaks: **Mark and Execute**, sonar and drop crates enabled on **Perfectionist**, unlimited ammo disabled on **Rookie**. To go back to original behavior, delete `update/difficultyconfiguration.ini` and set `DisablePerfectionistChecks` to 0.
 
 # Extraction Mode
 
@@ -75,8 +84,12 @@ Put edited ini configs in `update` folder.
 
 ![scb](https://github.com/user-attachments/assets/96d6a1e7-457e-4ae4-a2f6-88cc9a632c80)
 
-    Installation:
-        Download and extract the archive to the game directory, where the exe is located.
+## Installation
+
+1. Download the fix archive from this release.
+2. Extract the archive into the game’s installation folder, preserving its directory structure. The included files belong under `src/SYSTEM`.
+3. Optionally edit `src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix.ini` to configure the fix.
+4. Launch the game.
 
 > [!WARNING]
 > Non-Windows users (Proton/Wine) need to perform a **DLL override**.
@@ -110,6 +123,6 @@ Put edited ini configs in `update` folder.
 > * [More on WINEDLLOVERRIDES method](https://wiki.winehq.org/Wine_User's_Guide#WINEDLLOVERRIDES.3DDLL_Overrides)
 > </details>
 
-[Website](https://thirteenag.github.io/wfp#scb) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/SplinterCellBlacklist.FusionFix/dllmain.cpp) | [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/SplinterCellBlacklist.FusionFix/src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix.ini)
+
 
 <p align="center"> <a href="https://patreon.fusionfix.io/" target="_blank"><picture><source media="(max-width: 768px) and (prefers-color-scheme: dark)" srcset="https://fusionlegacyinitiative.com/sponsors-progress/sponsors-progress-wfp-mobile-dark.svg"><source media="(max-width: 768px)" srcset="https://fusionlegacyinitiative.com/sponsors-progress/sponsors-progress-wfp-mobile.svg"><source media="(prefers-color-scheme: dark)" srcset="https://fusionlegacyinitiative.com/sponsors-progress/sponsors-progress-wfp-dark.svg"><img width="100%" src="https://fusionlegacyinitiative.com/sponsors-progress/sponsors-progress-wfp.svg"></picture></a> <br /> <a href="https://github.com/sponsors/ThirteenAG"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/github-dark.svg"><img src="https://thirteenag.github.io/img/buttons/github.svg" width="250"></picture></a> <a href="https://ko-fi.com/thirteenag"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/kofi-dark.svg"><img src="https://thirteenag.github.io/img/buttons/kofi.svg" width="250"></picture></a> <a href="https://paypal.me/SergeyP13"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/paypal-dark.svg"><img src="https://thirteenag.github.io/img/buttons/paypal.svg" width="250"></picture></a> <a href="https://www.patreon.com/ThirteenAG"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/patreon-dark.svg"><img src="https://thirteenag.github.io/img/buttons/patreon.svg" width="250"></picture></a> <a href="https://boosty.to/thirteenag"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/boosty-dark.svg"><img src="https://thirteenag.github.io/img/buttons/boosty.svg" width="250"></picture></a><br><br> </p>
