@@ -47,6 +47,8 @@ bool g_hasTexture = false;
 uint8_t g_alpha = 255;
 CRect g_contentRect = {};
 bool g_drawingBars = false;
+bool bFullscreenMenuBackground = true;
+bool g_drawingMenuBackground = false;
 
 static inline float CorrectX(float x)
 {
@@ -79,6 +81,9 @@ static inline float GetHudOffset()
 
 static inline CRect* ScaleRect(CRect* r)
 {
+    if (g_drawingMenuBackground)
+        return r;
+
     float offset = GetHudOffset();
     if (g_skipXCorrection)
     {
@@ -222,28 +227,100 @@ export bool AreCutsceneBordersVisible()
     return false;
 }
 
+struct MenuBackgroundSplit
+{
+    std::string_view name;
+    int originalColumn;
+    int widescreenColumn;
+};
+
+// Columns inside artwork-free vertical strips in the original 512x512 textures
+// (authored for 4:3) and textures/GTA3/models/menu's 1920x1080 replacements.
+constexpr MenuBackgroundSplit menuBackgroundSplits[] = {
+    { "mainmenu24",      197,  794 },
+    { "singleplayer24",  112,  446 },
+    { "multiplayer24",   357, 1136 },
+    { "hostgame24",      149,  552 },
+    { "findgame24",       86,  378 },
+    { "connection24",    381, 1430 },
+    { "Playersetup24",    96,  400 },
+};
+
+static const MenuBackgroundSplit* FindMenuBackground(CSprite2d* sprite)
+{
+    if (sprite->m_pTexture)
+        for (const auto& split : menuBackgroundSplits)
+            if (std::string_view(sprite->m_pTexture->name) == split.name)
+                return &split;
+    return nullptr;
+}
+
+SafetyHookInline shDraw3 = {};
+static bool DrawMenuBackground(CSprite2d* sprite, void* edx, const CRect* rect, CRGBA* color, const MenuBackgroundSplit& split)
+{
+    auto raster = RwTextureGetRaster(sprite->m_pTexture);
+    if (!raster || !shDraw3)
+        return false;
+
+    const auto width = RwRasterGetWidth(raster);
+    const auto height = RwRasterGetHeight(raster);
+    float aspect, u;
+    if (width == 512 && height == 512)
+    {
+        aspect = DEFAULT_ASPECT_RATIO;
+        u = (split.originalColumn + 0.5f) / width;
+    }
+    else if (width == 1920 && height == 1080)
+    {
+        aspect = 1920.0f / 1080.0f;
+        u = (split.widescreenColumn + 0.5f) / width;
+    }
+    else
+        return false;
+
+    // Preserve both edges at the authored aspect when expanding. On narrower
+    // screens fit the complete image instead of overlapping or cropping artwork.
+    const float contentWidth = std::min(SCREEN_WIDTH, (rect->bottom - rect->top) * aspect);
+    const float leftEnd = contentWidth * u;
+    const float gap = SCREEN_WIDTH - contentWidth;
+    const float rightStart = leftEnd + gap;
+    g_isFullscreen = false;
+    g_drawingMenuBackground = true;
+    auto drawSlice = [&](float left, float right, float uLeft, float uRight)
+    {
+        CRect slice(left, rect->bottom, right, rect->top);
+        shDraw3.unsafe_fastcall(sprite, edx, &slice, color,
+            uLeft, 0.0f, uRight, 0.0f, uLeft, 1.0f, uRight, 1.0f);
+    };
+    // Constant U repeats the same texel column across the entire gap, including
+    // its yellow stripe and frame, with no per-pixel draw calls or alpha overlap.
+    if (gap > 0.0f)
+    {
+        drawSlice(0.0f, leftEnd, 0.0f, u);
+        drawSlice(leftEnd, rightStart, u, u);
+        drawSlice(rightStart, SCREEN_WIDTH, u, 1.0f);
+    }
+    else
+        drawSlice(0.0f, SCREEN_WIDTH, 0.0f, 1.0f);
+    g_drawingMenuBackground = false;
+    return true;
+}
+
 SafetyHookInline shDraw1 = {};
 void __fastcall Draw1(CSprite2d* sprite2d, void* edx, CRect* rect, CRGBA* col)
 {
     g_isFullscreen = IsFullscreen(rect);
     g_hasTexture = sprite2d->m_pTexture != nullptr;
 
-    if (gTransparentMenuCanRender)
+    if (const auto background = g_isFullscreen ? FindMenuBackground(sprite2d) : nullptr)
     {
-        bool isMenuBackground = g_isFullscreen && g_hasTexture
-            && sprite2d->m_pTexture->name
-            && (
-                std::string_view(sprite2d->m_pTexture->name) == "mainmenu24" ||
-                std::string_view(sprite2d->m_pTexture->name) == "singleplayer24" ||
-                std::string_view(sprite2d->m_pTexture->name) == "multiplayer24" ||
-                std::string_view(sprite2d->m_pTexture->name) == "hostgame24" ||
-                std::string_view(sprite2d->m_pTexture->name) == "findgame24" ||
-                std::string_view(sprite2d->m_pTexture->name) == "connection24" ||
-                std::string_view(sprite2d->m_pTexture->name) == "Playersetup24"
-            );
-
-        if (isMenuBackground)
+        if (gTransparentMenuCanRender ||
+            (bFullscreenMenuBackground && DrawMenuBackground(sprite2d, edx, rect, col, *background)))
+        {
+            g_isFullscreen = false;
+            g_hasTexture = false;
             return;
+        }
     }
 
     g_alpha = reinterpret_cast<uint8_t*>(col)[3];
@@ -265,7 +342,6 @@ void __fastcall Draw2(CSprite2d* sprite2d, void* edx, CRect* rect, CRGBA* colorL
     g_isFullscreen = false; g_hasTexture = false;
 }
 
-SafetyHookInline shDraw3 = {};
 void __fastcall Draw3(CSprite2d* sprite2d, void* edx, CRect* rect, CRGBA* col,
     float u0, float v0, float u1, float v1, float u3, float v3, float u2, float v2)
 {
@@ -514,6 +590,9 @@ public:
     {
         WFP::onGameInitEvent() += []()
         {
+            CIniReader iniReader("");
+            bFullscreenMenuBackground = iniReader.ReadInteger("GRAPHICS", "FullscreenMenuBackground", 1) != 0;
+
             {
                 auto pattern = hook::pattern("E8 ? ? ? ? 89 D9 83 C4 34");
                 shSetVertices1 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), SetVertices1);
