@@ -498,6 +498,7 @@ project "ResidentEvil6.FusionFix"
 group ""
 
 project "Scarface.FusionFix"
+   add_postfx()
    setpaths("SCARFACE_DIR", "scarface.exe", "scripts/")
 
 project "SecondSight.WidescreenFix"

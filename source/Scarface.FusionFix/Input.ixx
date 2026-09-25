@@ -1,0 +1,310 @@
+module;
+
+#include "stdafx.h"
+#define DIRECTINPUT_VERSION 0x0800
+#include <dinput.h>
+
+export module Input;
+
+void InitXidi();
+void InitScarfaceHook();
+
+class OptionManager
+{
+public:
+    static inline HWND* hWnd = nullptr;
+    static inline bool* bIsInvertX = nullptr;
+    static inline bool* bIsInvertY = nullptr;
+    static inline int* nMouseLookSensitivity = nullptr;
+    static inline bool bGamepadUsed = false;
+    static inline bool (*pScarfaceHook_GetMenuActive)() = nullptr;
+
+    static inline bool IsInvertX()
+    {
+        return *bIsInvertX;
+    }
+    static inline bool IsInvertY()
+    {
+        return *bIsInvertY;
+    }
+    static inline float GetMouseLookSensitivity()
+    {
+        return *nMouseLookSensitivity / 10.0f;
+    }
+    static inline bool ScarfaceHook_GetMenuActive()
+    {
+        if (pScarfaceHook_GetMenuActive)
+            return pScarfaceHook_GetMenuActive();
+        return false;
+    }
+};
+
+SafetyHookInline shWndProc = {};
+LRESULT WINAPI WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
+{
+    static bool bOnce = false;
+    if (!bOnce)
+    {
+        RawCursorHandler<float>::Initialize(hWnd, 1.0f);
+        bOnce = true;
+    }
+
+    return shWndProc.unsafe_stdcall<LRESULT>(hWnd, Msg, wParam, lParam);
+}
+
+void SetMouseInput(float* dest_x, float* dest_y, float baseline_x = 0.0f, float baseline_y = 0.0f)
+{
+    if (OptionManager::bGamepadUsed)
+        return;
+    if ((*OptionManager::hWnd != GetForegroundWindow()) || OptionManager::ScarfaceHook_GetMenuActive())
+        return;
+
+    RawCursorHandler<float>::SetSensitivity(OptionManager::GetMouseLookSensitivity() / 100.0f);
+    RawCursorHandler<float>::UpdateMouseInput(false);
+
+    float dx = RawCursorHandler<float>::MouseDeltaX;
+    float dy = RawCursorHandler<float>::MouseDeltaY;
+
+    float sign_x = OptionManager::IsInvertX() ? -1.0f : 1.0f;
+    float sign_y = OptionManager::IsInvertY() ? -1.0f : 1.0f;
+
+    if (baseline_x != 0.0f)
+        *dest_x = baseline_x + dx * sign_x;
+    else
+        *dest_x += dx * sign_x;
+
+    if (baseline_y != 0.0f)
+        *dest_y = baseline_y + dy * sign_y;
+    else
+        *dest_y += dy * sign_y;
+
+    RawCursorHandler<float>::MouseDeltaX = 0.0f;
+    RawCursorHandler<float>::MouseDeltaY = 0.0f;
+}
+
+injector::hook_back<char(__fastcall*)(float* mInputs, void* edx, float* angleH, float* angleV, float deltaTime)> hb_GenericVehicleCamera_ApplyRightStickMotion;
+char __fastcall GenericVehicleCamera_ApplyRightStickMotion(float* mInputs, void* edx, float* angleH, float* angleV, float deltaTime)
+{
+    auto H = *angleH;
+    auto V = *angleV;
+
+    auto ret = hb_GenericVehicleCamera_ApplyRightStickMotion.fun(mInputs, edx, angleH, angleV, deltaTime);
+
+    SetMouseInput(angleH, angleV, H, V);
+
+    if (GetAsyncKeyState(VK_RBUTTON))
+        return 1;
+    return ret;
+}
+
+float __cdecl math__ClampX(float* value, float* min, float* max)
+{
+    float dummyY = 0.0f;
+    SetMouseInput(value, &dummyY, 0.0f, 0.0f);
+    return *value;
+}
+
+float __cdecl math__ClampY(float* value, float* min, float* max)
+{
+    float dummyX = 0.0f;
+    SetMouseInput(&dummyX, value, 0.0f, 0.0f);
+    return *value;
+}
+
+void Init()
+{
+    CIniReader iniReader("");
+    auto bScrollWeaponsWithMouseWheel = iniReader.ReadInteger("MAIN", "ScrollWeaponsWithMouseWheel", 1) != 0;
+
+    auto pattern = hook::pattern("A2 ? ? ? ? A2 ? ? ? ? A2 ? ? ? ? A2 ? ? ? ? A2 ? ? ? ? A2 ? ? ? ? A3");
+    OptionManager::bIsInvertX = *pattern.get_first<bool*>(1);
+    OptionManager::bIsInvertY = *pattern.get_first<bool*>(6);
+    pattern = hook::pattern("E8 ? ? ? ? 56 68 ? ? ? ? E8 ? ? ? ? 83 C4 10");
+    OptionManager::nMouseLookSensitivity = *(int**)(injector::GetBranchDestination(pattern.get_first()).as_int() + 5);
+
+    pattern = hook::pattern("A3 ? ? ? ? 5B 74 0F");
+    OptionManager::hWnd = *pattern.get_first<HWND*>(1);
+
+    pattern = hook::pattern("8B 0D ? ? ? ? 53 8B 5C 24 ? 55");
+    shWndProc = safetyhook::create_inline(pattern.get_first(), WndProc);
+
+    pattern = hook::pattern("D9 58 10 83 C4 5C C2 0C 00");
+    struct SetOutput_Update_FreeLook
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            SetMouseInput((float*)(regs.eax + 0x0C), (float*)(regs.eax + 0x10));
+        }
+    }; injector::MakeInline<SetOutput_Update_FreeLook>(pattern.get_first(6));
+    injector::MakeRET(pattern.get_first(6 + 5), 0xC);
+
+    //camera blend disable
+    pattern = hook::pattern("83 EC 10 57 8B F9 80 BF");
+    injector::MakeRET(pattern.get_first(0), 8);
+
+    //vehicle camera
+    pattern = hook::pattern("E8 ? ? ? ? 84 C0 74 0C C6 85");
+    hb_GenericVehicleCamera_ApplyRightStickMotion.fun = injector::MakeCALL(pattern.get_first(0), GenericVehicleCamera_ApplyRightStickMotion, true).get();
+
+    //melee camera
+    pattern = hook::pattern("D9 59 10 88 41 19");
+    struct SetOutput_Update_MeleeTarget
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            *(uint8_t*)(regs.ecx + 0x19) = *(uint8_t*)&regs.eax;
+            *(uint8_t*)(regs.ecx + 0x18) = 0;
+            SetMouseInput((float*)(regs.ecx + 0x0C), (float*)(regs.ecx + 0x10));
+        }
+    }; injector::MakeInline<SetOutput_Update_MeleeTarget>(pattern.get_first(3), pattern.get_first(10));
+
+    //map camera
+    pattern = hook::pattern("E8 ? ? ? ? D9 5C 24 2C 83 C4 0C D9 05");
+    injector::MakeCALL(pattern.get_first(0), math__ClampX, true); //mousePanXID
+    pattern = hook::pattern("E8 ? ? ? ? D9 5C 24 24 D9 05 ? ? ? ? 83");
+    injector::MakeCALL(pattern.get_first(0), math__ClampY, true); //mousePanYID
+    pattern = hook::pattern("7A 0E D9 44 24 1C B1 01");
+    injector::MakeNOP(pattern.get_first(0), 2);
+    pattern = hook::pattern("75 2B 8B 44 24 20 89 44 24 10");
+    injector::MakeNOP(pattern.get_first(0), 2);
+    pattern = hook::pattern("75 2B 8B 44 24 18 89 44 24 10 21 54 24 10");
+    injector::MakeNOP(pattern.get_first(0), 2);
+    pattern = hook::pattern("7A 0E D9 44 24 1C D8 4C 24 18");
+    injector::MakeNOP(pattern.get_first(0), 2);
+    pattern = hook::pattern("7A 08 DD D8 D9 05 ? ? ? ? D9 44 24 20 8D BE ? ? ? ? D8 C9");
+    injector::MakeNOP(pattern.get_first(0), 2);
+
+    pattern = hook::pattern("B9 ? ? ? ? 21 4C 24 10 D9 44 24 10 89 54 24 14");
+    struct GamepadCheck
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            regs.ecx = 0x7FFFFFFF;
+            OptionManager::bGamepadUsed = (*(float*)(regs.esp + 0x1C) + *(float*)(regs.esp + 0x18)) != 0.0f;
+        }
+    }; injector::MakeInline<GamepadCheck>(pattern.get_first(0));
+
+    if (bScrollWeaponsWithMouseWheel)
+    {
+        static int nMouseWheelValue = 0;
+        pattern = hook::pattern("8B B7 ? ? ? ? 85 F6 74 21 90");
+        struct GetDeviceDataHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                regs.esi = *(uint32_t*)(regs.edi + 0x264);
+                auto controller = std::string_view((char*)regs.edi + 0x40);
+
+                if (controller.starts_with("Mouse"))
+                {
+                    auto rgdod = (LPDIDEVICEOBJECTDATA)(regs.esp + 0x10);
+                    if (rgdod)
+                    {
+                        nMouseWheelValue = 0;
+                        switch (rgdod->dwOfs)
+                        {
+                            case DIMOFS_Z:
+                                nMouseWheelValue = rgdod->dwData;
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                }
+            }
+        }; injector::MakeInline<GetDeviceDataHook>(pattern.get_first(0), pattern.get_first(6));
+
+        pattern = hook::pattern("0F BF 54 24 08 ? ? ? ? 03");
+        if (pattern.empty()) pattern = hook::pattern("0F BF 54 24 ? E9");
+        struct MouseScroll
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                *(int32_t*)&regs.edx = *(int16_t*)(regs.esp + 0x8);
+
+                if (OptionManager::bGamepadUsed || OptionManager::ScarfaceHook_GetMenuActive())
+                    return;
+
+                enum
+                {
+                    weaponleft = 0x9,
+                    weaponright = 0xA
+                };
+
+                static auto counter = 0;
+                if (nMouseWheelValue >= WHEEL_DELTA)
+                    counter++;
+                else if (nMouseWheelValue <= -WHEEL_DELTA)
+                    counter--;
+                else
+                    counter = 0;
+
+                static constexpr auto duration = 30;
+                if (counter > 0 && counter < duration)
+                    *(int16_t*)(regs.ecx + weaponleft * 2) = 1; // 1
+                else if (counter < 0 && counter > -duration)
+                    *(int16_t*)(regs.ecx + weaponright * 2) = 1; // 2
+
+                if (counter < -duration || counter > duration)
+                {
+                    counter = 0;
+                    nMouseWheelValue = 0;
+                }
+            }
+        }; injector::MakeInline<MouseScroll>(pattern.get_first(0));
+    }
+
+    CallbackHandler::RegisterCallback(L"Xidi.32.dll", InitXidi);
+    CallbackHandler::RegisterCallback(L"ScarfaceHook.asi", InitScarfaceHook);
+}
+
+void InitXidi()
+{
+    CIniReader iniReader("");
+    auto bModernControlScheme = iniReader.ReadInteger("MAIN", "ModernControlScheme", 1) != 0;
+
+    if (bModernControlScheme)
+    {
+        typedef bool (*XidiRegisterProfileCallbackFunc)(const wchar_t* (*callback)());
+        auto xidiModule = GetModuleHandleW(L"Xidi.32.dll");
+
+        if (xidiModule)
+        {
+            auto XidiRegisterProfileCallback = (XidiRegisterProfileCallbackFunc)GetProcAddress(xidiModule, "XidiRegisterProfileCallback");
+            if (XidiRegisterProfileCallback)
+            {
+                static auto fnMenuCheck = (bool(*)())injector::GetBranchDestination(hook::get_pattern("E8 ? ? ? ? 84 C0 75 A4")).as_int();
+                static auto CharacterObject = *hook::get_pattern<void**>("A1 ? ? ? ? 85 C0 74 50", 1);
+                static auto PilotStateOffset = 0x2E8;
+
+                XidiRegisterProfileCallback([]() -> const wchar_t*
+                {
+                    if (fnMenuCheck && !fnMenuCheck())
+                    {
+                        auto player = *CharacterObject;
+                        if (player && *(uint32_t*)(*(uint32_t*)CharacterObject + PilotStateOffset) > 0)
+                        {
+                            return L"InCar";
+                        }
+                        else
+                        {
+                            return L"OnFoot";
+                        }
+                    }
+                    return nullptr;
+                });
+            }
+        }
+    }
+}
+
+void InitScarfaceHook()
+{
+    OptionManager::pScarfaceHook_GetMenuActive = (bool (*)())GetProcAddress(GetModuleHandleW(L"ScarfaceHook.asi"), "ScarfaceHook_GetMenuActive");
+}
+
+class Input
+{
+public:
+    Input() { WFP::onInitEvent() += Init; }
+} Input;
