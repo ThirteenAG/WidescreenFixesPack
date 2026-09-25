@@ -68,7 +68,6 @@ move /Y ".\MaxPayne.WidescreenFix\scripts\Xidi.32.dll" ".\MaxPayne.WidescreenFix
 7za e "..\xidi.zip" "Xidi-*/Win32/dinput.dll" "Xidi-*/Win32/Xidi.32.dll" -o".\MaxPayne2.WidescreenFix\" -y
 
 rem dxwrapper
-7za e "..\dxwrapper.zip" "dxwrapper.asi" -o".\Scarface.FusionFix\scripts\" -y
 7za e "..\dxwrapper.zip" "dxwrapper.asi" -o".\TonyHawksProSkater4.WidescreenFix\Game\scripts\" -y
 7za e "..\dxwrapper.zip" "dxwrapper.asi" -o".\TheSuffering.WidescreenFix\scripts\" -y
 7za e "..\dxwrapper.zip" "dxwrapper.asi" -o".\ThePunisher.WidescreenFix\scripts\" -y

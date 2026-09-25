@@ -8,9 +8,13 @@ $${\color{green}✔}$$  Modern gamepad controls (Brake/Accelerate and Aim/Shoot 
 
 $${\color{green}✔}$$  An ability to scroll between weapons with mouse wheel
 
-$${\color{green}✔}$$  Includes d3d9 wrapper with an ability to activate windowed mode and set fps limit
+$${\color{green}✔}$$  Windowed Mode - borderless, bordered or borderless fullscreen
 
 $${\color{green}✔}$$  Automatically skips intro
+
+$${\color{blue}ⓘ}$$  Console Gamma: a custom gamma curve that creates a more contrasted image with deeper colors, similar to how GTA IV looked on the Xbox 360
+
+$${\color{blue}ⓘ}$$  SMAA: enhanced subpixel morphological antialiasing as a post-processing effect (does not work with MSAA)
 
 Installation:
 
