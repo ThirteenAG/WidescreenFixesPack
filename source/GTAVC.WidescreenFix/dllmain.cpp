@@ -86,6 +86,25 @@ CEXP void __cdecl RemoveFOVMultiplier(void* hash)
         FOVManager::RemoveFOVMultiplier(hash);
 }
 
+CEXP BOOL __cdecl RegisterBeforeResetCallback(void (__cdecl* callback)())
+{
+    if (!callback || bUsingLegacy)
+        return FALSE;
+
+    static std::vector<void (__cdecl*)()> callbacks;
+    if (std::find(callbacks.begin(), callbacks.end(), callback) != callbacks.end())
+        return TRUE;
+
+    // The event retains the function pointer for the lifetime of the game.
+    HMODULE callbackModule = nullptr;
+    if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN, reinterpret_cast<LPCWSTR>(callback), &callbackModule))
+        return FALSE;
+
+    callbacks.push_back(callback);
+    WFP::onBeforeReset() += [callback]() { callback(); };
+    return TRUE;
+}
+
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
