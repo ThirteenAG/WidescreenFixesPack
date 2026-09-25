@@ -1,4 +1,14 @@
-![manhunt](https://thirteenag.github.io/screens/manhunt/main2.jpg)
+<div align="center">
+
+<img src="https://thirteenag.github.io/screens/manhunt/main2.jpg" width="760" alt="Manhunt Widescreen Fix">
+
+**Manhunt Widescreen Fix** corrects widescreen HUD, menu, camera, video, and screen-effect scaling, with Xbox-style HUD and PS2-style subtitle options.
+
+[Website](https://github.com/Fire-Head/MHWSF) · [Source Code](https://github.com/Fire-Head/MHWSF/blob/main/src/dllmain.cpp) · [Default INI](https://github.com/Fire-Head/MHWSF/blob/main/bin/Manhunt.WidescreenFix.ini)
+
+</div>
+
+---
 
 <div align="center">
 
@@ -6,23 +16,25 @@
 
 </div>
 
-$${\color{green}✔}$$  Fixed Aspect Ratio
+## Fixes
 
-$${\color{green}✔}$$  Fixed HUD
+- **Aspect ratio** — Correct widescreen aspect ratio scaling.
+- **HUD** — Correct HUD scaling for widescreen.
+- **Field of view** — Adjust the field of view for widescreen.
+- **Videos** — Correct FMV scaling for widescreen.
+- **Menus** — Correct widescreen menu scaling.
+- **Video effects** — Correct scanlines and TV noise for widescreen.
+- **Screen effects** — Correct screen effects, blood drops, and lights for widescreen.
 
-$${\color{green}✔}$$  Fixed Field of View
+## Options
 
-$${\color{green}✔}$$  Fixed FMVs
+- **Interface style** — Choose Xbox-style HUD and PS2-style subtitles.
 
-$${\color{green}✔}$$  Fixed Menus
+---
 
-$${\color{green}✔}$$  Fixed Scanlines, TV noise
+## Installation
 
-$${\color{green}✔}$$  Fixed ScreenFx, BloodDrops and Lights
-
-$${\color{blue}ⓘ}$$ Adds Xbox Hud and PS2 Subtitles style options
-
-    Installation:
-        Download and extract the archive to the game directory, where the exe is located.
-
-[Website](https://github.com/Fire-Head/MHWSF) | [Source](https://github.com/Fire-Head/MHWSF/blob/main/src/dllmain.cpp) | [Default INI File](https://github.com/Fire-Head/MHWSF/blob/main/bin/Manhunt.WidescreenFix.ini)
+1. Download the fix archive from this release.
+2. Extract the archive into the game folder, beside the game executable, preserving the folders in the archive.
+3. Optionally edit `scripts/Manhunt.WidescreenFix.ini` to configure the fix.
+4. Launch the game.

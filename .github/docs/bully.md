@@ -1,22 +1,37 @@
-![bully](https://thirteenag.github.io/screens/bully/main2.jpg)
+<div align="center">
 
-$${\color{green}✔}$$  Fixed Resolution (Ultrawide)
+<img src="https://thirteenag.github.io/screens/bully/main2.jpg" width="760" alt="Bully: Scholarship Edition Widescreen Fix">
 
-$${\color{green}✔}$$  Fixed Aspect Ratio (Ultrawide)
+**Bully: Scholarship Edition Widescreen Fix** corrects ultrawide HUD scaling and field of view, unlocks display resolutions, and preserves the selected resolution on startup. FMVs remain uncorrected.
 
-$${\color{green}✔}$$  Fixed HUD (Ultrawide)
+[Website](https://thirteenag.github.io/wfp#bully) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/Bully.WidescreenFix/dllmain.cpp) · [Default INI](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/Bully.WidescreenFix/plugins/Bully.WidescreenFix.ini)
 
-$${\color{green}✔}$$  Fixed Field of View (Ultrawide)
+</div>
 
-❌ Fixed FMVs
+---
 
-$${\color{blue}ⓘ}$$ Unlocked all resolutions supported by the OS
+## Fixes
 
-$${\color{blue}ⓘ}$$ Fixed an issue when last selected resolution is reset upon startup
+- **Resolution** — Support ultrawide resolutions.
+- **Aspect ratio** — Correct scaling on ultrawide displays.
+- **HUD** — Correct HUD scaling on ultrawide displays.
+- **Field of view** — Adjust the field of view for ultrawide displays.
+- **Resolution list** — Make display resolutions reported by the OS available.
+- **Saved resolution** — Keep the last selected resolution on startup.
 
-$${\color{blue}ⓘ}$$ Added an option to adjust FOV via ini
+## Options
 
-    Installation:
-        Download and extract the archive to the game directory, where the exe is located.
+- **Field of view** — Adjust the FOV multiplier in the INI file.
 
-[Website](https://thirteenag.github.io/wfp#bully) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/Bully.WidescreenFix/dllmain.cpp) | [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/Bully.WidescreenFix/plugins/Bully.WidescreenFix.ini)
+## Limitations
+
+- **Videos** — Not corrected by this fix.
+
+---
+
+## Installation
+
+1. Download the fix archive from this release.
+2. Extract the archive into the game folder, beside the game executable, preserving the folders in the archive.
+3. Optionally edit `plugins/Bully.WidescreenFix.ini` to configure the fix.
+4. Launch the game.

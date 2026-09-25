@@ -1,8 +1,23 @@
-![rdr](https://thirteenag.github.io/screens/rdr/main2.jpg)
+<div align="center">
 
-$${\color{blue}ⓘ}$$  Added an option to skip intro and legal screens
+<img src="https://thirteenag.github.io/screens/rdr/main2.jpg" width="760" alt="Red Dead Redemption Fusion Fix">
 
-    Installation:
-        Download and extract the archive to the game directory, where the exe is located.
+**Red Dead Redemption Fusion Fix** skips startup intros and legal screens.
 
-[Website](https://thirteenag.github.io/wfp#rdr) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/RedDeadRedemption.FusionFix/dllmain.cpp)
+[Website](https://thirteenag.github.io/wfp#rdr) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/RedDeadRedemption.FusionFix/dllmain.cpp)
+
+</div>
+
+---
+
+## Options
+
+- **Skip intro** — Skip startup intros and legal screens.
+
+---
+
+## Installation
+
+1. Download the fix archive from this release.
+2. Extract the archive into the game folder, beside the game executable, preserving the folders in the archive.
+3. Launch the game.

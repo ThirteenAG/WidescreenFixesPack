@@ -1,17 +1,32 @@
-![sonicheroes](https://thirteenag.github.io/screens/sonicheroes/main2.jpg)
+<div align="center">
 
-$${\color{green}✔}$$  Fixed Resolution
+<img src="https://thirteenag.github.io/screens/sonicheroes/main2.jpg" width="760" alt="Sonic Heroes Widescreen Fix">
 
-$${\color{green}✔}$$  Fixed Aspect Ratio
+**Sonic Heroes Widescreen Fix** corrects resolution handling, aspect ratio, HUD scaling and field of view for widescreen displays.
 
-$${\color{green}✔}$$  Fixed HUD
+[Website](https://thirteenag.github.io/wfp#sonicheroes) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/SonicHeroes.WidescreenFix/dllmain.cpp) · [Default INI](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/SonicHeroes.WidescreenFix/scripts/SonicHeroes.WidescreenFix.ini)
 
-$${\color{green}✔}$$  Fixed Field of View
+</div>
 
-    Installation:
-        Download and extract the archive to the game directory, where the exe is located.
+---
 
-[Website](https://thirteenag.github.io/wfp#sonicheroes) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/SonicHeroes.WidescreenFix/dllmain.cpp) | [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/SonicHeroes.WidescreenFix/scripts/SonicHeroes.WidescreenFix.ini)
+## Fixes
+
+- **Resolution** — Set the output resolution with `ResX` and `ResY` in the INI file.
+- **Aspect ratio** — Correct widescreen aspect ratio scaling.
+- **HUD** — Correct HUD scaling for widescreen.
+- **Field of view** — Adjust the field of view for widescreen.
+
+---
+
+## Installation
+
+1. Download the fix archive from this release.
+2. Extract the archive into the game folder, beside the game executable, preserving the folders in the archive.
+3. Optionally edit `scripts/SonicHeroes.WidescreenFix.ini` to configure the fix.
+4. Launch the game.
+
+
 
 <a href="https://github.com/sponsors/xan1242"><img src="https://img.shields.io/badge/Sponsor_xan1242_on_GitHub-5c5c5c?style=for-the-badge&logo=github&logoColor=white" width="250"></a><br>
 

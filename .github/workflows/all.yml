@@ -186,14 +186,6 @@ jobs:
         tag: nfsps
         artifacts: data/Archives/NFSProStreet.FusionFix.zip
 
-    - name: Mass Effect Trilogy FOV Fix
-      uses: ./.github/workflows/release_tag
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
-        tag: masseffect
-        artifacts: data/Archives/MassEffectTrilogy.FOVFix.zip
-
     - name: Bully Scholarship Edition Widescreen Fix
       uses: ./.github/workflows/release_tag
       with:
@@ -578,14 +570,6 @@ jobs:
         tag: mp1
         artifacts: data/Archives/MaxPayne.WidescreenFix.zip
 
-    - name: Grand Theft Auto San Andreas Widescreen Fix
-      uses: ./.github/workflows/release_tag
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
-        tag: gtasa-wshps
-        artifacts: data/Archives/GTASA.WidescreenFix.Archived.zip, data/Archives/wshps.asi
-
     - name: Grand Theft Auto Vice City Widescreen Fix
       uses: ./.github/workflows/release_tag
       with:
@@ -633,14 +617,6 @@ jobs:
         tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
         tag: truecrimenyc
         artifacts: data/Archives/TrueCrimeNewYorkCity.WidescreenFix.zip, data/Archives/TrueCrimeNewYorkCity.PCSX2F.WidescreenFix.zip
-
-    - name: Stubbs the Zombie Widescreen Fix
-      uses: ./.github/workflows/release_tag
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
-        tag: stubbsthezombie
-        artifacts: data/Archives/StubbstheZombie.WidescreenFix.zip
 
     - name: Street Racing Syndicate Widescreen Fix
       uses: ./.github/workflows/release_tag

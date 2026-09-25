@@ -1,10 +1,25 @@
-![paradisecracked](https://thirteenag.github.io/screens/paradisecracked/main2.jpg)
+<div align="center">
 
-$${\color{green}✔}$$  Fixed Resolution
+<img src="https://thirteenag.github.io/screens/paradisecracked/main2.jpg" width="760" alt="Paradise Cracked Widescreen Fix">
 
-$${\color{green}✔}$$  Fixed Aspect Ratio
+**Paradise Cracked Widescreen Fix** corrects resolution handling and aspect ratio for widescreen displays.
 
-    Installation:
-        Download and extract the archive to the game directory, where the exe is located.
+[Website](https://thirteenag.github.io/wfp#paradisecracked) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/ParadiseCracked.WidescreenFix/dllmain.cpp) · [Default INI](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/ParadiseCracked.WidescreenFix/scripts/ParadiseCracked.WidescreenFix.ini)
 
-[Website](https://thirteenag.github.io/wfp#paradisecracked) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/ParadiseCracked.WidescreenFix/dllmain.cpp) | [Default INI File](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/ParadiseCracked.WidescreenFix/scripts/ParadiseCracked.WidescreenFix.ini)
+</div>
+
+---
+
+## Fixes
+
+- **Resolution** — Set the output resolution with `ResX` and `ResY` in the INI file.
+- **Aspect ratio** — Correct widescreen aspect ratio scaling.
+
+---
+
+## Installation
+
+1. Download the fix archive from this release.
+2. Extract the archive into the game folder, beside the game executable, preserving the folders in the archive.
+3. Optionally edit `scripts/ParadiseCracked.WidescreenFix.ini` to configure the fix.
+4. Launch the game.

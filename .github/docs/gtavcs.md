@@ -1,26 +1,42 @@
-![gtavcs](https://thirteenag.github.io/screens/gtavcs/main2.jpg)
+<div align="center">
 
-$${\color{green}✔}$$  Fixed Aspect Ratio (Ultrawide)
+<img src="https://thirteenag.github.io/screens/gtavcs/main2.jpg" width="760" alt="Grand Theft Auto: Vice City Stories Widescreen Fix (PCSX2F)">
 
-$${\color{green}✔}$$  Fixed Field of View
+**Grand Theft Auto: Vice City Stories Widescreen Fix (PCSX2F)** corrects widescreen aspect ratio, HUD scaling, and field of view, with modern controls and experimental PC controls and cheats.
 
-$${\color{green}✔}$$  Fixed HUD (Ultrawide)
+[Website](https://thirteenag.github.io/wfp#gtavcs) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/GTAVCS.PCSX2F.WidescreenFix/main.c)
 
-$${\color{blue}ⓘ}$$  Added an option to enable modern controls
+</div>
 
-$${\color{blue}ⓘ}$$  Added an option to speed up the emulator during loading screens
+---
 
-$${\color{blue}ⓘ}$$  [Added an option to enable PC controls (Beta, experimental)](https://youtu.be/EhDviiFHYkE)
+## Fixes
+
+- **Aspect ratio** — Correct scaling on ultrawide displays.
+- **Field of view** — Adjust the field of view for widescreen.
+- **HUD** — Correct HUD scaling on ultrawide displays.
+- **PC controls** — Enable [PC controls (beta, experimental)](https://youtu.be/EhDviiFHYkE).
+
+## Options
+
+- **Controls** — Enable the modern control scheme.
+- **Loading** — Temporarily unthrottle the emulator during loading screens.
 
 ![](https://github.com/ThirteenAG/WidescreenFixesPack/assets/4904157/3c1d73d5-a7b0-4def-96f0-c3a439fef078)
 
-$${\color{blue}ⓘ}$$  Added an option to use PC cheats (Beta, experimental)
+### Keyboard cheats and startup
 
-$${\color{blue}ⓘ}$$ Plugin automatically skips intro
+- **PC cheats** — Enable keyboard cheats. Beta, experimental.
+- **Skip intro** — Skip startup intros with `SkipIntro`.
 
-[Website](https://thirteenag.github.io/wfp#gtavcs) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/GTAVCS.PCSX2F.WidescreenFix/main.c)
+---
 
-<p align="center"> <a href="https://patreon.fusionfix.io/" target="_blank"><picture><source media="(max-width: 768px) and (prefers-color-scheme: dark)" srcset="https://fusionlegacyinitiative.com/sponsors-progress/sponsors-progress-wfp-mobile-dark.svg"><source media="(max-width: 768px)" srcset="https://fusionlegacyinitiative.com/sponsors-progress/sponsors-progress-wfp-mobile.svg"><source media="(prefers-color-scheme: dark)" srcset="https://fusionlegacyinitiative.com/sponsors-progress/sponsors-progress-wfp-dark.svg"><img width="100%" src="https://fusionlegacyinitiative.com/sponsors-progress/sponsors-progress-wfp.svg"></picture></a> <br /> <a href="https://github.com/sponsors/ThirteenAG"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/github-dark.svg"><img src="https://thirteenag.github.io/img/buttons/github.svg" width="250"></picture></a> <a href="https://ko-fi.com/thirteenag"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/kofi-dark.svg"><img src="https://thirteenag.github.io/img/buttons/kofi.svg" width="250"></picture></a> <a href="https://paypal.me/SergeyP13"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/paypal-dark.svg"><img src="https://thirteenag.github.io/img/buttons/paypal.svg" width="250"></picture></a> <a href="https://www.patreon.com/ThirteenAG"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/patreon-dark.svg"><img src="https://thirteenag.github.io/img/buttons/patreon.svg" width="250"></picture></a> <a href="https://boosty.to/thirteenag"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/boosty-dark.svg"><img src="https://thirteenag.github.io/img/buttons/boosty.svg" width="250"></picture></a><br><br> </p>
+## Installation
+
+1. Download the fix archive from this release.
+2. Use [PCSX2 Fork With Plugins](https://github.com/ASI-Factory/PCSX2-Fork-With-Plugins/releases/tag/latest).
+3. Extract the plugin archive into the emulator folder, preserving its `PLUGINS` directory.
+4. Set the emulator’s aspect ratio or window size, then launch a supported version of the game.
 
 ## Useful information
 
@@ -51,3 +67,5 @@ Installation:
 - Download and extract archive to the root directory, where exe is located (PLUGINS and TEXTURES folders).
 - Enable **Game Settings -> Graphics -> Texture Replacement -> Load Textures**.
 - Launch the game.
+
+<p align="center"> <a href="https://patreon.fusionfix.io/" target="_blank"><picture><source media="(max-width: 768px) and (prefers-color-scheme: dark)" srcset="https://fusionlegacyinitiative.com/sponsors-progress/sponsors-progress-wfp-mobile-dark.svg"><source media="(max-width: 768px)" srcset="https://fusionlegacyinitiative.com/sponsors-progress/sponsors-progress-wfp-mobile.svg"><source media="(prefers-color-scheme: dark)" srcset="https://fusionlegacyinitiative.com/sponsors-progress/sponsors-progress-wfp-dark.svg"><img width="100%" src="https://fusionlegacyinitiative.com/sponsors-progress/sponsors-progress-wfp.svg"></picture></a> <br /> <a href="https://github.com/sponsors/ThirteenAG"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/github-dark.svg"><img src="https://thirteenag.github.io/img/buttons/github.svg" width="250"></picture></a> <a href="https://ko-fi.com/thirteenag"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/kofi-dark.svg"><img src="https://thirteenag.github.io/img/buttons/kofi.svg" width="250"></picture></a> <a href="https://paypal.me/SergeyP13"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/paypal-dark.svg"><img src="https://thirteenag.github.io/img/buttons/paypal.svg" width="250"></picture></a> <a href="https://www.patreon.com/ThirteenAG"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/patreon-dark.svg"><img src="https://thirteenag.github.io/img/buttons/patreon.svg" width="250"></picture></a> <a href="https://boosty.to/thirteenag"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/boosty-dark.svg"><img src="https://thirteenag.github.io/img/buttons/boosty.svg" width="250"></picture></a><br><br> </p>
