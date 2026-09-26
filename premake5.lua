@@ -608,6 +608,7 @@ project "TrueCrimeStreetsofLA.WidescreenFix"
    setpaths("TRUE_CRIME_STREETS_OF_LA_DIR", "TrueCrimeMB.exe")
 
 project "UltimateSpiderMan.WidescreenFix"
+   add_postfx()
    setpaths("ULTIMATE_SPIDER_MAN_DIR", "USM.exe")
 group ""
 
