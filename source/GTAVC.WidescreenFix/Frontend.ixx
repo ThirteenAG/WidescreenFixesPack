@@ -280,7 +280,9 @@ export namespace CFont
             Details->bIsShadow = originalIsShadow;
         }
 
-        if (FontRenderStatePointer->pStr >= (wchar_t*)(FontRenderStateBuf + FontRenderStateBufSize) - (end - start + 26))
+        // Reserve 27 wchars: 24 for the block header, 1 for the trailing space below, 1 for the
+        // terminator and 1 for Align().
+        if (FontRenderStatePointer->pStr >= (wchar_t*)(FontRenderStateBuf + FontRenderStateBufSize) - (end - start + 27))
             CFont::DrawFonts();
 
         CFontRenderState* pRenderState = FontRenderStatePointer->pRenderState;
@@ -322,6 +324,19 @@ export namespace CFont
                 *(FontRenderStatePointer->pStr++) = *(s++);
             }
         }
+
+        // A block's string must never end on a '~'. RenderFontBuffer()'s block walker treats the
+        // character following a token as a printable one, so for a string that ends with a token it
+        // consumes the block's terminating NUL as that character and then tests the word 2 bytes
+        // past it for the end of the block. Those 2 bytes are Align() padding (only skipped, never
+        // written) or the next block's first field (never written either), so if they are non-zero
+        // the walker does not see the block end, keeps printing the next block's header as text and
+        // resynchronises at a wrong offset - every following block is then misread and
+        // RenderState.style ends up holding a text character ('~'), which makes
+        // Sprite[RenderState.style] read out of bounds in the next RenderFontBuffer() call.
+        // The walk and the write agree again if the token is followed by a real character.
+        if (end > start && FontRenderStatePointer->pStr[-1] == '~')
+            *(FontRenderStatePointer->pStr++) = ' ';
 
         *(FontRenderStatePointer->pStr++) = '\0';
         FontRenderStatePointer->Align();
