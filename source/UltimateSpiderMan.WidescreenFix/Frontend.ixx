@@ -98,23 +98,29 @@ void ScaleUIMatrix(float* matrix)
 
 void** pWhiteTexture = nullptr;
 uintptr_t pComicTextureVtable = 0;
+uintptr_t pRenderComicCamera = 0;
 SafetyHookInline shDrawComicPanel;
 
 bool HasComicArtwork(uintptr_t panel)
 {
-    // A panel's linked components share one transform: fit the artwork, border
-    // and clipping together. Camera panels and solid-color overlays keep theirs.
+    // Mixed panels use a separate viewport for their live 3D camera. Adjusting
+    // only the artwork matrix detaches the background/border from the character.
+    // Keep their native composition; fit only panels containing static artwork.
+    bool hasArtwork = false;
     for (auto component = *reinterpret_cast<uintptr_t*>(panel + 0x60); component;
         component = *reinterpret_cast<uintptr_t*>(component + 4))
     {
-        if (*reinterpret_cast<uintptr_t*>(component) == pComicTextureVtable)
+        auto vtable = *reinterpret_cast<uintptr_t**>(component);
+        if (vtable[5] == pRenderComicCamera)
+            return false;
+        if (reinterpret_cast<uintptr_t>(vtable) == pComicTextureVtable)
         {
             auto texture = *reinterpret_cast<void**>(component + 0x28);
             if (texture && texture != *pWhiteTexture)
-                return true;
+                hasArtwork = true;
         }
     }
-    return false;
+    return hasArtwork;
 }
 
 void __fastcall DrawComicPanel(uintptr_t panel, void*, float** renderInfo)
@@ -768,6 +774,9 @@ public:
 
             pattern = hook::pattern("C7 07 ? ? ? ? C7 44 24 18 00 00 00 00 8D 77 18"); //0x73166F + 2
             pComicTextureVtable = *pattern.get_first<uintptr_t>(2);
+
+            pattern = hook::pattern("C7 06 ? ? ? ? 8B 46 44 85 C0 C7 44 24 10 00 00 00 00 74 28"); //0x73339D + 2
+            pRenderComicCamera = (*pattern.get_first<uintptr_t*>(2))[5];
 
             pattern = hook::pattern("56 8B 71 60 85 F6 74 18 57 8B 7C 24 0C 8D 49 00"); //0x743440
             shDrawComicPanel = safetyhook::create_inline(pattern.get_first(), DrawComicPanel);
