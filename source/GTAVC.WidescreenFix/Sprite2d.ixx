@@ -131,11 +131,13 @@ static CRect ComputeCoverRect(CSprite2d* sprite2d, const CRect* rect)
     }
 
     float aspect = w / h;
-    float scaledH = SCREEN_WIDTH / aspect;
+    float scaledH = std::max((float)SCREEN_HEIGHT, SCREEN_WIDTH / aspect);
+    float halfW = scaledH * aspect / 2.0f;
+    float centerX = SCREEN_WIDTH / 2.0f;
     float centerY = SCREEN_HEIGHT / 2.0f;
     float halfH = scaledH / 2.0f;
 
-    return CRect(0.0f, centerY + halfH, SCREEN_WIDTH, centerY - halfH);
+    return CRect(centerX - halfW, centerY + halfH, centerX + halfW, centerY - halfH);
 }
 
 export SafetyHookInline shDrawRect1 = {};
@@ -243,21 +245,18 @@ void __fastcall Draw1(CSprite2d* sprite2d, void* edx, CRect* rect, CRGBA* col)
     g_hasTexture = sprite2d->m_pTexture != nullptr;
     g_alpha = reinterpret_cast<uint8_t*>(col)[3];
 
-    bool isCover = g_isFullscreen && g_hasTexture
+    bool isMenuBackground = g_isFullscreen && g_hasTexture
         && sprite2d->m_pTexture->name
         && std::string_view(sprite2d->m_pTexture->name) == "background";
 
-    if (gTransparentMenuCanRender)
+    if (gTransparentMenuCanRender && isMenuBackground)
     {
-        bool isMenuBackground = g_isFullscreen && g_hasTexture
-            && sprite2d->m_pTexture->name
-            && (std::string_view(sprite2d->m_pTexture->name) == "background");
-
-        if (isMenuBackground)
-            return;
+        g_isFullscreen = false;
+        g_hasTexture = false;
+        return;
     }
 
-    if (isCover)
+    if (isMenuBackground)
     {
         // Stretch to cover: zoom in, no pillar bars needed
         g_contentRect = ComputeCoverRect(sprite2d, rect);
