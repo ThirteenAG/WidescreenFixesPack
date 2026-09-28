@@ -36,6 +36,25 @@ float __fastcall sub_4140E0Hook(int _this, float a2, float a3, float a4, float a
     return a3;
 }
 
+SafetyHookMid ReticleHorizontal[3], ReticleVertical[3];
+
+inline float ReticleX(float x)
+{
+    return 0.5f + (x - 0.5f) * (Screen.fWidth - 2.0f * Screen.fHudOffset) / Screen.fWidth;
+}
+
+void AdjustReticleHorizontal(injector::reg_pack& regs)
+{
+    auto* args = reinterpret_cast<float*>(regs.esp);
+    args[0] = ReticleX(args[0]);
+    args[1] = ReticleX(args[1]);
+}
+void AdjustReticleVertical(injector::reg_pack& regs)
+{
+    auto& x = *reinterpret_cast<float*>(regs.esp);
+    x = ReticleX(x);
+}
+
 void Init()
 {
     CIniReader iniReader("");
@@ -92,6 +111,15 @@ void Init()
     injector::WriteMemory(*pattern.count(1).get(0).get<uint32_t*>(2), AdjustFOV(FOV, Screen.fAspectRatio), true);
 
     Screen.fHudOffset = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
+
+    pattern = hook::pattern("83 ? ? 56 8B ? 8B ? ? 85 ? 57 74 ? 8B ? 85"); //507C40
+    uint8_t* drawScopeReticle = pattern.count(1).get(0).get<uint8_t>(0);
+    static constexpr int32_t horizontalCalls[] = { 0x31F, 0x3BC, 0x3E9 };
+    static constexpr int32_t verticalCalls[] = { 0x33C, 0x401, 0x416 };
+    for (size_t i = 0; i < _countof(ReticleHorizontal); ++i)
+        ReticleHorizontal[i] = safetyhook::create_mid(drawScopeReticle + horizontalCalls[i], AdjustReticleHorizontal);
+    for (size_t i = 0; i < _countof(ReticleVertical); ++i)
+        ReticleVertical[i] = safetyhook::create_mid(drawScopeReticle + verticalCalls[i], AdjustReticleVertical);
 
     pattern = hook::pattern("E8 ? ? ? ? 6A 01 B9 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 8A"); //4D5839
     injector::MakeCALL(pattern.count(1).get(0).get<uint32_t>(0), sub_4140E0Hook, true); //intro screen
