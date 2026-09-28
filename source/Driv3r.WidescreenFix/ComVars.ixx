@@ -41,6 +41,13 @@ export GameRef<uintptr_t> InputManager([]() -> uintptr_t*
     return nullptr;
 });
 
+// Mouse movement of the latest input update (once per frame), in mouse counts (see Mouse.ixx)
+export namespace MouseRead
+{
+    int32_t X = 0;
+    int32_t Y = 0;
+}
+
 // "Joy But N" in the controls menu
 export bool IsJoyButtonPressed(uint32_t number)
 {
