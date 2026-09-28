@@ -348,6 +348,7 @@ void __fastcall gpuCommandBufferSync(IDirect3DDevice9** m_ppD3DDevice, void* edx
     }
 }
 
+bool bUpdatedRelease = false; // 2026 update, rebuilt with a newer compiler
 void Init()
 {
     CIniReader iniReader("");
@@ -369,14 +370,23 @@ void Init()
         injector::MakeCALL(pattern.get_first(), sprintfHook, true);
 
         // Hook right after sprintf loop
-        pattern = hook::pattern("33 DB 33 ED 89 5C 24 58");
+        pattern = find_pattern("33 DB 33 ED 89 5C 24 58", "33 C0 33 FF 89 44 24 2C");
         struct ResHook
         {
             void operator()(injector::reg_pack& regs)
             {
-                regs.ebx = 0;
-                regs.ebp = 0;
-                *(uint32_t*)(regs.esp + 0x58) = regs.ebx;
+                if (!bUpdatedRelease)
+                {
+                    regs.ebx = 0;
+                    regs.ebp = 0;
+                    *(uint32_t*)(regs.esp + 0x58) = regs.ebx;
+                }
+                else
+                {
+                    regs.eax = 0;
+                    regs.edi = 0;
+                    *(uint32_t*)(regs.esp + 0x2C) = regs.eax;
+                }
 
                 std::sort(resList.begin(), resList.end(), [](const std::string& lhs, const std::string& rhs)
                 {
@@ -396,62 +406,113 @@ void Init()
                     resListNum.emplace_back(x, y, idx);
                 }
 
-                auto pattern = hook::pattern("B9 ? ? ? ? 89 44 24 0C 89 74 24 28");
-                injector::WriteMemory(pattern.get_first(1), resList.size(), true);
-                pattern = hook::pattern("BA ? ? ? ? 89 44 24 0C 89 4C 24 14");
-                injector::WriteMemory(pattern.get_first(1), resList.size(), true);
-                pattern = hook::pattern("83 FE 0C 72 C2");
-                injector::WriteMemory<uint8_t>(pattern.get_first(2), resList.size(), true);
-                pattern = hook::pattern("83 F8 0B 77 65 53");
-                injector::WriteMemory<uint8_t>(pattern.get_first(2), resList.size() - 1, true);
-                pattern = hook::pattern("83 C6 08 83 FE 60");
-                static auto loc_47D471 = hook::get_pattern("8B 8E ? ? ? ? 8B C7 8D A4 24");
-                struct LoopBreakHook
+                if (!bUpdatedRelease)
                 {
-                    void operator()(injector::reg_pack& regs)
+                    auto pattern = hook::pattern("B9 ? ? ? ? 89 44 24 0C 89 74 24 28");
+                    injector::WriteMemory(pattern.get_first(1), resList.size(), true);
+                    pattern = hook::pattern("BA ? ? ? ? 89 44 24 0C 89 4C 24 14");
+                    injector::WriteMemory(pattern.get_first(1), resList.size(), true);
+                    pattern = hook::pattern("83 FE 0C 72 C2");
+                    injector::WriteMemory<uint8_t>(pattern.get_first(2), resList.size(), true);
+                    pattern = hook::pattern("83 F8 0B 77 65 53");
+                    injector::WriteMemory<uint8_t>(pattern.get_first(2), resList.size() - 1, true);
+                    pattern = hook::pattern("83 C6 08 83 FE 60");
+                    static auto loc_47D471 = hook::get_pattern("8B 8E ? ? ? ? 8B C7 8D A4 24");
+                    struct LoopBreakHook
                     {
-                        regs.esi += 8;
-                        if (regs.esi >= resList.size() * 8)
-                            *(void**)(regs.esp - 4) = loc_47D471;
-                    }
-                }; injector::MakeInline<LoopBreakHook>(pattern.get_first(0), pattern.get_first(8));
+                        void operator()(injector::reg_pack& regs)
+                        {
+                            regs.esi += 8;
+                            if (regs.esi >= resList.size() * 8)
+                                *(void**)(regs.esp - 4) = loc_47D471;
+                        }
+                    }; injector::MakeInline<LoopBreakHook>(pattern.get_first(0), pattern.get_first(8));
 
-                pattern = hook::pattern("BE ? ? ? ? B9 ? ? ? ? 89 44 24 0C");
-                injector::WriteMemory(pattern.get_first(1), resListString.data(), true);
-                pattern = hook::pattern("B9 ? ? ? ? BA ? ? ? ? 89 44 24 0C");
-                injector::WriteMemory(pattern.get_first(1), resListString.data(), true);
-                pattern = hook::pattern("8B 04 F5 ? ? ? ? 8B CF 8D A4 24 ? ? ? ? 8A 11 3A 10 75 19");
-                injector::WriteMemory(pattern.get_first(3), resListString.data(), true);
-                pattern = hook::pattern("8B 04 C5 ? ? ? ? 57");
-                injector::WriteMemory(pattern.get_first(3), resListString.data(), true);
-                pattern = hook::pattern("8B 8E ? ? ? ? 8B C7 8D A4 24");
-                injector::WriteMemory(pattern.get_first(2), resListString.data(), true);
-                pattern = hook::pattern("8B 0D ? ? ? ? 8B 07");
-                injector::WriteMemory(pattern.get_first(2), resListString.data(), true);
+                    pattern = hook::pattern("BE ? ? ? ? B9 ? ? ? ? 89 44 24 0C");
+                    injector::WriteMemory(pattern.get_first(1), resListString.data(), true);
+                    pattern = hook::pattern("B9 ? ? ? ? BA ? ? ? ? 89 44 24 0C");
+                    injector::WriteMemory(pattern.get_first(1), resListString.data(), true);
+                    pattern = hook::pattern("8B 04 F5 ? ? ? ? 8B CF 8D A4 24 ? ? ? ? 8A 11 3A 10 75 19");
+                    injector::WriteMemory(pattern.get_first(3), resListString.data(), true);
+                    pattern = hook::pattern("8B 04 C5 ? ? ? ? 57");
+                    injector::WriteMemory(pattern.get_first(3), resListString.data(), true);
+                    pattern = hook::pattern("8B 8E ? ? ? ? 8B C7 8D A4 24");
+                    injector::WriteMemory(pattern.get_first(2), resListString.data(), true);
+                    pattern = hook::pattern("8B 0D ? ? ? ? 8B 07");
+                    injector::WriteMemory(pattern.get_first(2), resListString.data(), true);
+                }
+                else
+                {
+                    // The table is indexed directly and the loop counters are 8-bit compares
+                    auto pattern = hook::pattern("8B 0C D5 ? ? ? ? 8B C6 8A 10");
+                    injector::WriteMemory(pattern.get_first(3), resListString.data(), true);
+                    pattern = hook::pattern("83 FA 0C 72 82");
+                    injector::WriteMemory<uint8_t>(pattern.get_first(2), resList.size(), true);
+                    pattern = hook::pattern("8B 0C DD ? ? ? ? 8B 84 F2");
+                    injector::WriteMemory(pattern.get_first(3), resListString.data(), true);
+                    pattern = hook::pattern("83 FB 0C 72 87");
+                    injector::WriteMemory<uint8_t>(pattern.get_first(2), resList.size(), true);
+                    pattern = hook::pattern("8B 04 F5 ? ? ? ? 8B CF 0F 1F 00 8A 11 3A 10 75 19");
+                    injector::WriteMemory(pattern.get_first(3), resListString.data(), true);
+                    pattern = hook::pattern("83 FE 0C 72 C6");
+                    injector::WriteMemory<uint8_t>(pattern.get_first(2), resList.size(), true);
+                    pattern = hook::pattern("83 F8 0B 77 63 56");
+                    injector::WriteMemory<uint8_t>(pattern.get_first(2), resList.size() - 1, true);
+                    pattern = hook::pattern("8B 04 C5 ? ? ? ? 89 44 24 14");
+                    injector::WriteMemory(pattern.get_first(3), resListString.data(), true);
+                    pattern = hook::pattern("8B 0C F5 ? ? ? ? 8B C3 0F 1F 80");
+                    injector::WriteMemory(pattern.get_first(3), resListString.data(), true);
+                    pattern = hook::pattern("83 FE 0C 72 C1");
+                    injector::WriteMemory<uint8_t>(pattern.get_first(2), resList.size(), true);
 
-                pattern = hook::pattern("FF 34 85 ? ? ? ? E8 ? ? ? ? 6A 01 6A 20");
+                    // "1280x720" is an immediate here instead of a table read, use the same entry as the original release
+                    pattern = hook::pattern("8B 84 F2 ? ? ? ? B9 ? ? ? ? 0F 1F 40 00");
+                    injector::WriteMemory(pattern.get_first(8), resListString[0].entry, true);
+                }
+
+                auto pattern = hook::pattern("FF 34 85 ? ? ? ? E8 ? ? ? ? 6A 01 6A 20");
                 injector::WriteMemory(pattern.get_first(3), &resListNum[0].id, true);
 
                 pattern = hook::pattern("E8 ? ? ? ? 6A 01 6A 20");
                 injector::MakeCALL(pattern.get_first(), GetResString, true);
-                pattern = hook::pattern("E8 ? ? ? ? 6A 08 89 83");
-                injector::MakeCALL(pattern.get_first(), GetResID, true);
-                pattern = hook::pattern("0F 87 ? ? ? ? FF 24 85 ? ? ? ? C7 04 24");
+
+                if (!bUpdatedRelease)
+                {
+                    pattern = hook::pattern("E8 ? ? ? ? 6A 08 89 83");
+                    injector::MakeCALL(pattern.get_first(), GetResID, true);
+                }
+                else
+                {
+                    // GetResID is inlined, width is in ecx and height is in eax
+                    pattern = hook::pattern("81 F9 00 04 00 00 75 0B 3D 00 03 00 00 0F 84");
+                    static auto loc_5284C4 = hook::get_pattern("6A 08 89 83 ? ? ? ? 8B 0D ? ? ? ? 68");
+                    struct GetResIDHook
+                    {
+                        void operator()(injector::reg_pack& regs)
+                        {
+                            regs.eax = GetResID(regs.ecx, regs.eax);
+                            *(void**)(regs.esp - 4) = loc_5284C4;
+                        }
+                    }; injector::MakeInline<GetResIDHook>(pattern.get_first(0), pattern.get_first(6));
+                }
+
+                pattern = find_pattern("0F 87 ? ? ? ? FF 24 85 ? ? ? ? C7 04 24", "0F 87 ? ? ? ? FF 24 85 ? ? ? ? C7 44 24 04");
                 struct GetResValueHook
                 {
                     void operator()(injector::reg_pack& regs)
                     {
-                        *(uint32_t*)(regs.esp + 0x00) = 1024;
-                        *(uint32_t*)(regs.esp + 0x04) = 768;
+                        auto nStackOffset = bUpdatedRelease ? 0x04 : 0x00;
+                        *(uint32_t*)(regs.esp + nStackOffset + 0x00) = 1024;
+                        *(uint32_t*)(regs.esp + nStackOffset + 0x04) = 768;
 
                         auto it = std::find_if(resListNum.begin(), resListNum.end(), [&](auto& m) -> bool { return m.id == regs.eax; });
                         if (it != resListNum.end())
                         {
-                            *(uint32_t*)(regs.esp + 0x00) = it->x;
-                            *(uint32_t*)(regs.esp + 0x04) = it->y;
+                            *(uint32_t*)(regs.esp + nStackOffset + 0x00) = it->x;
+                            *(uint32_t*)(regs.esp + nStackOffset + 0x04) = it->y;
                         }
                     }
-                }; injector::MakeInline<GetResValueHook>(pattern.get_first(0), pattern.get_first(28));
+                }; injector::MakeInline<GetResValueHook>(pattern.get_first(0), pattern.get_first(bUpdatedRelease ? 29 : 28));
             }
         }; injector::MakeInline<ResHook>(pattern.get_first(0), pattern.get_first(8));
     }
@@ -501,7 +562,7 @@ void Init()
     {
         auto pattern = hook::pattern("E8 ? ? ? ? 84 C0 0F 85 ? ? ? ? 6A 00 51 8B 0D");
         injector::MakeCALL(pattern.get_first(), sub_41CD80, true);
-        injector::MakeJMP(hook::get_pattern("C7 46 ? ? ? ? ? C7 86 ? ? ? ? ? ? ? ? C7 86 ? ? ? ? ? ? ? ? 3B DA"), hook::get_pattern("8B 46 04 57 33 FF"));
+        injector::MakeJMP(hook::get_pattern("C7 46 ? ? ? ? ? C7 86 ? ? ? ? ? ? ? ? C7 86 ? ? ? ? ? ? ? ? 3B"), hook::get_pattern("8B 46 04 57 33 FF"));
         std::vector<uint8_t> DoorEventReturn = { 0x5F, 0xC7, 0x86, 0x84, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x5E, 0x5D, 0x5B, 0xC2, 0x10, 0x00 };
         injector::WriteMemoryRaw(hook::get_pattern("81 7E ? ? ? ? ? 75 07"), DoorEventReturn.data(), DoorEventReturn.size(), true);
         injector::WriteMemory<uint8_t>(hook::get_pattern("68 FB 00 00 00 EB 1D", 1), 0xFA, true); // Lift Fix
@@ -521,13 +582,14 @@ void Init()
 
     if (bDisableNoise || bDisableColorCorrection || bDisableFog)
     {
-        pD3D9DeviceAddr = (uintptr_t)*hook::get_pattern<uint32_t>("A1 ? ? ? ? 56 66 0F 6E 80", 1);
-        injector::MakeCALL(hook::get_pattern("E8 ? ? ? ? 89 47 08 66 8B 4C 24 ? 0F B7 C1 43 83 C5 0C 3B D8 72 C7 33 C0"), CreatePixelShaderHook, true);
+        pD3D9DeviceAddr = (uintptr_t)*find_pattern("A1 ? ? ? ? 56 66 0F 6E 80", "A1 ? ? ? ? 56 57 FF 71 04 66 0F 6E 88").get_first<uint32_t>(1);
+        auto pattern = find_pattern("E8 ? ? ? ? 89 47 08 66 8B 4C 24 ? 0F B7 C1 43 83 C5 0C 3B D8 72 C7 33 C0", "E8 ? ? ? ? 89 47 08 66 8B 54 24 ? 43 0F B7 C2 3B D8 72 C2 33 C0");
+        injector::MakeCALL(pattern.get_first(), CreatePixelShaderHook, true);
     }
 
     if (bDisableCreateQuery)
     {
-        auto pattern = hook::pattern("51 8B 91 ? ? ? ? 56 8B 35");
+        auto pattern = find_pattern("51 8B 91 ? ? ? ? 56 8B 35", "51 8B 91 ? ? ? ? 8D 0C 24 56 8B 35");
         injector::MakeJMP(pattern.get_first(), gpuCommandBufferSync, true);
     }
 
@@ -535,10 +597,10 @@ void Init()
     {
         auto pattern = hook::pattern("8B 44 24 04 8B 91 ? ? ? ? 89 81 ? ? ? ? 3B C2");
         injector::MakeJMP(pattern.get_first(), sub_65F6A0, true);
-        pattern = hook::pattern("56 8B F1 8B 46 04 83 E8 00 74 25");
+        pattern = find_pattern("56 8B F1 8B 46 04 83 E8 00 74 25", "56 8B F1 8B 46 04 83 E8 00 74 29");
         injector::MakeJMP(pattern.get_first(), sub_663820, true);
         
-        static auto sub_4898C0 = (int(__fastcall*) (void* _this, int edx))hook::get_pattern("8B D1 56 8B 42 24");
+        static auto sub_4898C0 = (int(__fastcall*) (void* _this, int edx))find_pattern("8B D1 56 8B 42 24", "FF 71 24 FF 71 20 E8 ? ? ? ? C3").get_first();
         static auto dword_D7C938 = *hook::get_pattern<void**>("8B 0D ? ? ? ? E8 ? ? ? ? 8B D0 89 54 24 18", 2);
         LEDEffects::Inject([]()
         {
@@ -615,6 +677,7 @@ CEXP void InitializeASI()
     std::call_once(CallbackHandler::flag, []()
     {
         CallbackHandler::RegisterCallback(Init, hook::pattern("8B 04 C5 ? ? ? ? 57"));
+        CallbackHandler::RegisterCallback([]() { bUpdatedRelease = true; Init(); }, hook::pattern("8B 04 C5 ? ? ? ? 89 44 24 14"));
     });
 }
 
