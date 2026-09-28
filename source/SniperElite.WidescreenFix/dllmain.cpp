@@ -90,7 +90,7 @@ namespace Textures
 
 namespace UI
 {
-    enum DrawMode { Game, Menu };
+    enum DrawMode { Game, Menu, Info };
     DrawMode Mode = Game;
     bool CenteredText = false;
     int32_t FontWidth;
@@ -101,13 +101,14 @@ namespace UI
     template <DrawMode drawMode, SafetyHookInline& hook, typename Result = int32_t, typename... Args>
     Result __cdecl Draw(Args... args)
     {
-        auto mode = std::exchange(Mode, drawMode);
+        auto mode = std::exchange(Mode, Mode == Info ? Info : drawMode); //preserve info context in nested menus
         auto result = hook.template unsafe_ccall<Result>(args...);
         Mode = mode;
         return result;
     }
 
     SafetyHookInline LoadingFrame, LoadingText, LoadingProgress, LoadingPercent;
+    SafetyHookInline InfoScreen;
     int32_t* LoadingTexture = nullptr;
     void(__cdecl* FlushQuads)();
 
@@ -205,6 +206,19 @@ int32_t __cdecl sub_48B140Hook(HudQuad* quad)
         memcpy(&centered, quad, 0x5A);
         for (float& x : centered.x)
             x = Screen.fHudOffset + x * scale;
+
+        if (UI::Mode == UI::Info &&
+            Near(quad->x[0], 0.0f) && Near(quad->x[1], Screen.fWidth43) &&
+            Near(quad->y[0], 0.0f) && Near(quad->y[2], Screen.fHeight))
+        {
+            if (quad->texture == -1)
+            {
+                centered.x[0] = centered.x[3] = 0.0f;
+                centered.x[1] = centered.x[2] = Screen.fWidth; //fullscreen coverage
+            }
+            else if (Screen.fHudOffset > 0.0f)
+                UI::DrawBackdrop(quad->color[0], true);
+        }
         return QueueHudQuad(&centered);
     }
 
@@ -403,6 +417,24 @@ void Init()
     UI::LoadingText = safetyhook::create_inline(loadingText, UI::Draw<UI::Menu, UI::LoadingText, int32_t, int32_t>);
     UI::LoadingProgress = safetyhook::create_inline(loadingProgress, UI::Draw<UI::Menu, UI::LoadingProgress, int32_t, float>);
     UI::LoadingPercent = safetyhook::create_inline(loadingPercent, UI::Draw<UI::Menu, UI::LoadingPercent, int32_t, float>);
+
+    const auto infoDraw = hook::get_pattern<uint8_t>("A0 ? ? ? ? 83 ? ? 84 ? 53 55 56 57 0F"); //4ADBA0
+    uint8_t* infoItems = nullptr;
+    auto infoItemsSIG = hook::pattern("A0 ? ? ? ? 83 ? ? 84 ? 75 ? A1 ? ? ? ? 85 ? 75 ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 83 ? ? 84 ? 74 ? ? A1 ? ? ? ? 85"); //4AC2B0
+    if (!infoItemsSIG.empty())
+        infoItems = infoItemsSIG.get_first<uint8_t>();
+    else
+        infoItems = hook::get_pattern<uint8_t>("A1 ? ? ? ? 83 EC ? 85 C0 0F 84 ? ? ? ? ? ? ? ? C1 E0");
+
+    uint8_t* infoEnd = nullptr;
+    auto infoEndSIG = hook::pattern("A0 ? ? ? ? 83 ? ? 84 ? 0F ? ? ? ? ? A0 ? ? ? ? 84 ? 75"); //4AE290
+    if (!infoEndSIG.empty())
+        infoEnd = infoEndSIG.get_first<uint8_t>();
+    else
+        infoEnd = hook::get_pattern<uint8_t>("A0 ? ? ? ? 83 ? ? 84 ? 0F ? ? ? ? ? 53 8A");
+
+    UI::RedirectWidth(infoItems, infoEnd, nativeWidth, &Screen.Width43); //map, markers and frame; end after info draw
+    UI::InfoScreen = safetyhook::create_inline(infoDraw, UI::Draw<UI::Info, UI::InfoScreen, char>);
 
     pattern = hook::pattern("A0 ? ? ? ? 83 ? ? 84 ? 0F ? ? ? ? ? DB"); //481B50
     UI::MouseUpdate = safetyhook::create_mid(pattern.get_first(), UI::UpdateMouse);
