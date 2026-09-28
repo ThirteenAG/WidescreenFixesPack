@@ -51,6 +51,7 @@ void Init()
     });
 
     auto dword_8D7DF0 = *hook::get_pattern<int*>("8B 0D ? ? ? ? 8B 44 24 14 8D 54 24 2C", 2);
+    RendererModeIndex.SetAddress(dword_8D7DF0 - 2);
     BackbufferWidth.SetAddress(dword_8D7DF0 + 2);
     BackbufferHeight.SetAddress(dword_8D7DF0 + 3);
 

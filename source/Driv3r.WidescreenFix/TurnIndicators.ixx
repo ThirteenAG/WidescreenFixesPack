@@ -167,6 +167,8 @@ public:
             static bool bManualTurnIndicators = iniReader.ReadInteger("TURNINDICATORS", "ManualTurnIndicators", 0);
             static uint32_t nLeftIndicatorKey = iniReader.ReadInteger("TURNINDICATORS", "LeftIndicatorKey", VK_OEM_4);
             static uint32_t nRightIndicatorKey = iniReader.ReadInteger("TURNINDICATORS", "RightIndicatorKey", VK_OEM_6);
+            static uint32_t nLeftIndicatorButton = iniReader.ReadInteger("TURNINDICATORS", "LeftIndicatorButton", 5);
+            static uint32_t nRightIndicatorButton = iniReader.ReadInteger("TURNINDICATORS", "RightIndicatorButton", 6);
 
             auto pattern = hook::pattern("51 56 8B B1 ? ? ? ? ? ? 83 F8 ? 57 8B B9");
             ActivateLamp = (decltype(ActivateLamp))pattern.get_first();
@@ -270,8 +272,8 @@ public:
                         {
                             float dt_ms = 1000.0f * Natives::Timestep();
 
-                            float cur_lb = 0.0f;
-                            float cur_rb = 0.0f;
+                            float cur_lb = IsJoyButtonPressed(nLeftIndicatorButton);
+                            float cur_rb = IsJoyButtonPressed(nRightIndicatorButton);
 
                             bool cur_left = IsKeyboardKeyPressed(nLeftIndicatorKey);
                             bool cur_right = IsKeyboardKeyPressed(nRightIndicatorKey);
