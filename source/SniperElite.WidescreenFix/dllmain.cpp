@@ -12,30 +12,6 @@ struct Screen
     float fHudOffset;
 } Screen;
 
-float __fastcall sub_4140E0Hook(int _this, float a2, float a3, float a4, float a5)
-{
-    if (a2 == 0.0f && a4 == Screen.fWidth)
-    {
-        a2 += Screen.fHudOffset;
-        a4 -= Screen.fHudOffset * 2.0f;
-    }
-
-    float v5 = a2 + a4;
-    float v7 = a3 + a5;
-
-    *(float *)(_this + 0x00) = a2;
-    *(float *)(_this + 0x04) = v5;
-    *(float *)(_this + 0x08) = v5;
-    *(float *)(_this + 0x0C) = a2;
-    *(float *)(_this + 0x10) = a3;
-    *(float *)(_this + 0x14) = a3;
-    *(float *)(_this + 0x18) = v7;
-    *(float *)(_this + 0x1C) = v7;
-
-    *(uint8_t*)(_this + 0x59) = 1;
-    return a3;
-}
-
 struct HudQuad
 {
     float x[4];
@@ -64,6 +40,54 @@ struct HudVertexHook
 
 int32_t(__cdecl* QueueHudQuad)(HudQuad*);
 
+namespace Textures
+{
+    enum Type : uint8_t { Other, Menu, Backdrop, Scope, Binoculars };
+    Type Types[250]{}; //texture manager capacity
+    SafetyHookInline RegisterTexture;
+
+    int32_t __cdecl Register(const char* name, int32_t group, bool* created)
+    {
+        bool added = false;
+        int32_t id = RegisterTexture.unsafe_ccall<int32_t>(name, group, &added);
+        if (id == -1)
+            return id;
+
+        if (created)
+            *created = added;
+
+        if (added)
+        {
+            static constexpr struct { const char* name; Type type; } textures[] = {
+                { "\\Splash\\legal.dds", Backdrop },
+                { "\\Splash\\mc2logo.dds", Backdrop },
+                { "\\Splash\\namcolog.dds", Backdrop },
+                { "\\Splash\\frontscr.dds", Menu },
+                { "\\Splash\\backscr.dds", Backdrop },
+                { "\\Splash\\oldmenu1.dds", Backdrop },
+                { "\\Splash\\profskin.dds", Menu },
+                { "\\Splash\\profedit.dds", Menu },
+                { "\\Splash\\profsel.dds", Menu },
+                { "\\Splash\\Menu25.dds", Menu },
+                { "\\HUD\\mauserpc.tga", Scope },
+                { "\\HUD\\naganpc.tga", Scope },
+                { "\\HUD\\springpc.tga", Scope },
+                { "\\HUD\\Binos.tga", Binoculars }
+            };
+            Types[id] = Other; //handles can get reused after unloading
+            for (const auto& texture : textures)
+            {
+                if (_stricmp(name, texture.name) == 0)
+                {
+                    Types[id] = texture.type;
+                    break;
+                }
+            }
+        }
+        return id;
+    }
+}
+
 namespace UI
 {
     enum DrawMode { Game, Menu };
@@ -81,6 +105,28 @@ namespace UI
         auto result = hook.template unsafe_ccall<Result>(args...);
         Mode = mode;
         return result;
+    }
+
+    SafetyHookInline LoadingFrame, LoadingText, LoadingProgress, LoadingPercent;
+    int32_t* LoadingTexture = nullptr;
+    void(__cdecl* FlushQuads)();
+
+    void DrawBackdrop(uint32_t color, bool bordersOnly = false)
+    {
+        const float width = bordersOnly ? Screen.fHudOffset : Screen.fWidth;
+        HudQuad background = { { 0.0f, width, width, 0.0f }, { 0.0f, 0.0f, Screen.fHeight, Screen.fHeight } };
+        std::fill(std::begin(background.color), std::end(background.color), color & 0xFF000000);
+        background.texture = -1;
+        background.blend = 1;
+        background.state[0] = background.state[1] = 1;
+        QueueHudQuad(&background);
+        if (bordersOnly) //cover map icons outside the frame
+        {
+            background.x[0] = background.x[3] = Screen.fWidth - width;
+            background.x[1] = background.x[2] = Screen.fWidth;
+            QueueHudQuad(&background);
+        }
+        FlushQuads(); //backdrop before foreground so the level map can be visible
     }
 
     void UpdateMouse(injector::reg_pack& regs)
@@ -131,9 +177,28 @@ namespace UI
     }
 }
 
+inline bool Near(float a, float b)
+{
+    return fabsf(a - b) < 2.0f;
+}
+
 int32_t __cdecl sub_48B140Hook(HudQuad* quad)
 {
+    const auto type = (uint32_t)quad->texture < _countof(Textures::Types) ? Textures::Types[quad->texture] : Textures::Other;
     float scale = (UI::Mode != UI::Game || UI::CenteredText) ? 1.0f : 0.0f;
+    if (!scale && UI::LoadingTexture && quad->texture != -1 && Screen.fHudOffset > 0.0f &&
+        Near(quad->x[0], 0.0f) && Near(quad->x[1], Screen.fWidth))
+    {
+        bool loading = quad->texture == *UI::LoadingTexture;
+        if (loading || type == Textures::Menu || type == Textures::Backdrop)
+        {
+            if (loading || type == Textures::Backdrop)
+                UI::DrawBackdrop(quad->color[0]);
+
+            scale = Screen.fWidth43 / Screen.fWidth;
+        }
+    }
+
     if (scale)
     {
         HudQuad centered{};
@@ -141,6 +206,49 @@ int32_t __cdecl sub_48B140Hook(HudQuad* quad)
         for (float& x : centered.x)
             x = Screen.fHudOffset + x * scale;
         return QueueHudQuad(&centered);
+    }
+
+    const float right = Screen.fWidth - Screen.fHudOffset;
+
+    if (Screen.fHudOffset > 0.0f && Near(quad->x[0], Screen.fHudOffset) &&
+        (type == Textures::Scope || type == Textures::Binoculars))
+    {
+        HudQuad Strip{};
+        memcpy(&Strip, quad, 0x5A);
+
+        const bool binoculars = type == Textures::Binoculars;
+        const float uWidth = quad->u[1] - quad->u[0];
+        const float scopeBorder = 32.5f / 1024.0f;
+        const float scopeInset = uWidth * scopeBorder;
+
+        const float leftU = binoculars ? 0.5f / 512.0f : quad->u[0] + scopeInset;
+        const float rightU = binoculars ? 0.5f / 512.0f : quad->u[1] - scopeInset;
+
+        const float borderWidth = binoculars ? 0.0f : (right - Screen.fHudOffset) * scopeBorder;
+        const float centerLeft = Screen.fHudOffset + borderWidth;
+        const float centerRight = right - borderWidth;
+
+        Strip.x[0] = Strip.x[3] = 0.0f;
+        Strip.x[1] = Strip.x[2] = centerLeft;
+        Strip.u[0] = Strip.u[1] = Strip.u[2] = Strip.u[3] = leftU;
+        QueueHudQuad(&Strip);
+
+        Strip.x[0] = Strip.x[3] = centerRight;
+        Strip.x[1] = Strip.x[2] = Screen.fWidth;
+        Strip.u[0] = Strip.u[1] = Strip.u[2] = Strip.u[3] = rightU;
+        QueueHudQuad(&Strip);
+
+        HudQuad Center{};
+        memcpy(&Center, quad, 0x5A);
+
+        Center.x[0] = Center.x[3] = centerLeft;
+        Center.x[1] = Center.x[2] = centerRight;
+        if (!binoculars)
+        {
+            Center.u[0] = Center.u[3] = leftU;
+            Center.u[1] = Center.u[2] = rightU;
+        }
+        return QueueHudQuad(&Center);
     }
     return QueueHudQuad(quad);
 }
@@ -221,6 +329,9 @@ void Init()
 
     Screen.fHudOffset = (Screen.fWidth - Screen.Width43) / 2.0f;
 
+    pattern = hook::pattern("51 56 8B ? ? ? 85 ? 0F ? ? ? ? ? 80"); //408EE0
+    Textures::RegisterTexture = safetyhook::create_inline(pattern.get_first(), Textures::Register);
+
     pattern = hook::pattern("56 8B ? 56 E8 ? ? ? ? 8A"); //48B140
     uint8_t* drawHudQuad = pattern.count(1).get(0).get<uint8_t>(0);
     QueueHudQuad = reinterpret_cast<decltype(QueueHudQuad)>(injector::GetBranchDestination(drawHudQuad + 4, true).as_int());
@@ -240,9 +351,6 @@ void Init()
         ReticleHorizontal[i] = safetyhook::create_mid(drawScopeReticle + horizontalCalls[i], AdjustReticleHorizontal);
     for (size_t i = 0; i < _countof(ReticleVertical); ++i)
         ReticleVertical[i] = safetyhook::create_mid(drawScopeReticle + verticalCalls[i], AdjustReticleVertical);
-
-    pattern = hook::pattern("E8 ? ? ? ? 6A 01 B9 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 8A"); //4D5839
-    injector::MakeCALL(pattern.count(1).get(0).get<uint32_t>(0), sub_4140E0Hook, true); //intro screen
 
     static float fHudScale2 = (0.0009765625f / Screen.fAspectRatio) * (4.0f / 3.0f);
     pattern = hook::pattern("D8 ? ? ? ? ? D9 ? ? D9 ? ? ? D8 ? ? ? ? ? D9 ? ? ? ? ? D9 ? ? ? D8"); //502232
@@ -280,6 +388,21 @@ void Init()
     UI::RedirectWidth(frontendLayout, frontendEnd, nativeWidth, &Screen.Width43); //frontend layout through menu text sizing
     UI::MenuDraw = safetyhook::create_inline(menuDraw, UI::Draw<UI::Menu, UI::MenuDraw>);
     UI::MenuDrawOverlay = safetyhook::create_inline(menuDraw + 0x10, UI::Draw<UI::Menu, UI::MenuDrawOverlay, char>);
+
+    const auto loadingImage = hook::get_pattern<uint8_t>("A1 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 6A ? 6A"); //4D49E0
+    UI::LoadingTexture = *reinterpret_cast<int32_t**>(loadingImage + 1);
+    UI::FlushQuads = reinterpret_cast<decltype(UI::FlushQuads)>(injector::GetBranchDestination(loadingImage + 0x66, true).as_int());
+
+    const auto loadingFrame = hook::get_pattern<uint8_t>("83 ? ? DB ? ? ? ? ? 56 8B ? ? ? 83"); //4D4770
+    const auto loadingText = hook::get_pattern<uint8_t>("83 ? ? DB ? ? ? ? ? A1 ? ? ? ? 56"); //4D4840
+    const auto loadingProgress = hook::get_pattern<uint8_t>("83 ? ? DB ? ? ? ? ? 83 ? ? DB ? ? ? ? ? 8D"); //4D4930
+    const auto loadingPercent = hook::get_pattern<uint8_t>("83 ? ? DB ? ? ? ? ? 56 83"); //4D4CF0
+    UI::RedirectWidth(loadingFrame, loadingImage, nativeWidth, &Screen.Width43); //frame, text and progress; exclude background image
+    UI::RedirectWidth(loadingPercent, loadingPercent + 0x160, nativeWidth, &Screen.Width43); //percentage overlay; end before loading setup
+    UI::LoadingFrame = safetyhook::create_inline(loadingFrame, UI::Draw<UI::Menu, UI::LoadingFrame, char, int32_t>);
+    UI::LoadingText = safetyhook::create_inline(loadingText, UI::Draw<UI::Menu, UI::LoadingText, int32_t, int32_t>);
+    UI::LoadingProgress = safetyhook::create_inline(loadingProgress, UI::Draw<UI::Menu, UI::LoadingProgress, int32_t, float>);
+    UI::LoadingPercent = safetyhook::create_inline(loadingPercent, UI::Draw<UI::Menu, UI::LoadingPercent, int32_t, float>);
 
     pattern = hook::pattern("A0 ? ? ? ? 83 ? ? 84 ? 0F ? ? ? ? ? DB"); //481B50
     UI::MouseUpdate = safetyhook::create_mid(pattern.get_first(), UI::UpdateMouse);
