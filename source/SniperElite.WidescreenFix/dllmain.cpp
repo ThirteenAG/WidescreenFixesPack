@@ -150,10 +150,6 @@ void Init()
             *(float*)regs.edi += Screen.fHudOffset;
         }
     }; injector::MakeInline<TextHook>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(10));
-
-    static int n0 = 0;
-    pattern = hook::pattern("DB 05 ? ? ? ? 53 55 57 D9 5C 24 14"); //4D2166
-    injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &n0, true);
 }
 
 CEXP void InitializeASI()
