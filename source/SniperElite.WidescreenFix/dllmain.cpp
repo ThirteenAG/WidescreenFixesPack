@@ -52,11 +52,11 @@ void Init()
     Screen.Width43 = static_cast<uint32_t>(Screen.fHeight * (4.0f / 3.0f));
     Screen.fWidth43 = static_cast<float>(Screen.Width43);
 
-    auto pattern = hook::pattern("C7 05 ? ? ? ? 00 03 00 00 C7 05 ? ? ? ? 00 04 00 00"); //622B17
+    auto pattern = hook::pattern("C7 ? ? ? ? ? ? ? ? ? C7 ? ? ? ? ? ? ? ? ? C7 ? ? ? ? ? ? ? ? ? C7 ? ? ? ? ? ? ? ? ? 50 A1"); //622B17
     injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(6), Screen.Height, true);
     injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(16), Screen.Width, true);
 
-    pattern = hook::pattern("8B 0D ? ? ? ? 8B 35 ? ? ? ? 8B C1 99"); //48B0D6
+    pattern = hook::pattern("8B ? ? ? ? ? 8B ? ? ? ? ? 8B ? 99 2B ? D1 ? 89"); //48B0D6
     struct SetResHook
     {
         void operator()(injector::reg_pack& regs)
@@ -66,7 +66,7 @@ void Init()
         }
     }; injector::MakeInline<SetResHook>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(12));
 
-    pattern = hook::pattern("8B 74 24 10 57 8B 7C 24 10 50 6A 00"); //48B076
+    pattern = hook::pattern("8B ? ? ? 57 8B ? ? ? 50 6A"); //48B076
     struct SetResHook2
     {
         void operator()(injector::reg_pack& regs)
@@ -77,7 +77,7 @@ void Init()
     }; injector::MakeInline<SetResHook2>(pattern.count(1).get(0).get<uint32_t>(1), pattern.count(1).get(0).get<uint32_t>(9));
     injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(0), 0x57, true); //push edi
 
-    pattern = hook::pattern("D9 44 24 04 8B 44 24 04 D9 05"); //4152C0
+    pattern = hook::pattern("D9 ? ? ? 8B ? ? ? D9 ? ? ? ? ? A3 ? ? ? ? DA"); //4152C0
     struct SetScalingHook
     {
         void operator()(injector::reg_pack& regs)
@@ -88,7 +88,7 @@ void Init()
     injector::WriteMemory(*pattern.count(1).get(0).get<uint32_t*>(10), Screen.fAspectRatio, true);
     injector::WriteMemory(*pattern.count(1).get(0).get<uint32_t*>(15), Screen.fAspectRatio, true);
 
-    pattern = hook::pattern("D8 0D ? ? ? ? 83 C4 04 6A 00 68 00 00 80 3F"); //4A15F6
+    pattern = hook::pattern("D8 ? ? ? ? ? 83 ? ? 6A ? 68 ? ? ? ? 51 D9 ? ? E8 ? ? ? ? 83 ? ? 83"); //4A15F6
     injector::WriteMemory(*pattern.count(1).get(0).get<uint32_t*>(2), AdjustFOV(FOV, Screen.fAspectRatio), true);
 
     Screen.fHudOffset = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
@@ -97,10 +97,10 @@ void Init()
     injector::MakeCALL(pattern.count(1).get(0).get<uint32_t>(0), sub_4140E0Hook, true); //intro screen
 
     static float fHudScale2 = (0.0009765625f / Screen.fAspectRatio) * (4.0f / 3.0f);
-    pattern = hook::pattern("D8 0D ? ? ? ? D9 5E 7C D9 44 24 0C"); //502232
+    pattern = hook::pattern("D8 ? ? ? ? ? D9 ? ? D9 ? ? ? D8 ? ? ? ? ? D9 ? ? ? ? ? D9 ? ? ? D8"); //502232
     injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &fHudScale2, true); //text size and radar arrows
 
-    pattern = hook::pattern("8B 47 04 89 46 44 83 3D ? ? ? ? 01"); //5021C2
+    pattern = hook::pattern("8B ? ? 89 ? ? 83 ? ? ? ? ? ? 75 ? A1"); //5021C2
     struct HudHook2
     {
         void operator()(injector::reg_pack& regs)
@@ -113,7 +113,7 @@ void Init()
         }
     }; injector::MakeInline<HudHook2>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
 
-    pattern = hook::pattern("DB 05 ? ? ? ? D8 0F D9 1F"); //40E4FD
+    pattern = hook::pattern("DB ? ? ? ? ? D8 ? D9 ? DB ? ? ? ? ? D8 ? D9"); //40E4FD
     struct TextHook
     {
         void operator()(injector::reg_pack& regs)
@@ -132,7 +132,7 @@ CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
         {
-            CallbackHandler::RegisterCallback(Init, hook::pattern("BF 94 00 00 00 8B C7"));
+            CallbackHandler::RegisterCallback(Init, hook::pattern("BF ? ? ? ? 8B ? E8 ? ? ? ? 89 ? ? 8B"));
         });
 }
 
