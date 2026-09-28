@@ -2,7 +2,7 @@
 
 <img src="https://thirteenag.github.io/screens/driv3r/attract.png" width="760" alt="DRIV3R - Widescreen Fix">
 
-**DRIV3R Widescreen Fix** improves widescreen support, corrects aspect ratio, HUD, FOV, and radar scaling, and includes quality-of-life improvements such increased draw distance and functional turn indicators.
+**DRIV3R Widescreen Fix** improves widescreen support, corrects aspect ratio, HUD, FOV, and radar scaling, and includes quality-of-life improvements such as a free-look camera, modern controls, increased draw distance and functional turn indicators.
 
 [Website](https://fusionfix.io/wfp#driv3r) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/Driv3r.WidescreenFix/dllmain.cpp) · [Default INI](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/Driv3r.WidescreenFix/scripts/Driv3r.WidescreenFix.ini)
 
@@ -14,7 +14,7 @@
 
 <img src="https://thirteenag.github.io/screens/driv3r/gameplay.jpg" width="460" align="right" style="margin: 0 0 16px 24px;" alt="Widescreen gameplay">
 
-- **Resolution** - improved the display of available resolutions in the main menu
+- **Resolution** - the resolution list always includes the highest resolutions at their highest refresh rate, and switching resolution no longer shows the game at the wrong size
 - **Aspect Ratio** - corrected for ultrawide
 - **Field of View** - corrected for widescreen using hor+ scaling
 - **HUD / 2D Elements** - all 2D quads scaled and repositioned to match the active aspect ratio
@@ -31,6 +31,17 @@
 - **SMAA** - enhanced subpixel morphological antialiasing as a post-processing effect
 - **Xbox 360 Gamma** - a custom gamma curve that produces a higher-contrast image with deeper colors, similar to GTA IV on the Xbox 360
 - **Clip Cursor** - Locks the mouse cursor to the game window
+- **Modern Controls** - keyboard, mouse and Xbox controller bindings laid out like in modern games, used by new profiles and by Reset in the controls menu; the controller can also pause the game with Start
+---
+
+## Camera
+
+<div align="center">
+
+**Mouse/Stick Look** - orbit the camera around the vehicle with the mouse or the right stick, look back still works. Reset timeout, return speed, sensitivity, and vertical axis inversion are configurable in the ini file.
+
+</div>
+
 ---
 
 ## Turn Indicators
