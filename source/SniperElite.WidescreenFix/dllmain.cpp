@@ -36,6 +36,101 @@ float __fastcall sub_4140E0Hook(int _this, float a2, float a3, float a4, float a
     return a3;
 }
 
+struct HudQuad
+{
+    float x[4];
+    float y[4];
+    float u[4];
+    float v[4];
+    uint32_t color[4];
+    int32_t texture;
+    uint32_t blend;
+    uint8_t state[2];
+};
+
+int32_t(__cdecl* QueueHudQuad)(HudQuad*);
+
+namespace UI
+{
+    enum DrawMode { Game, Menu };
+    DrawMode Mode = Game;
+    bool CenteredText = false;
+    int32_t FontWidth;
+    SafetyHookInline MenuDraw, MenuDrawOverlay, PrintText, PixelClip, DrawLine;
+    SafetyHookMid MouseUpdate;
+    void(__cdecl* SetViewingArea)(const float*);
+
+    template <DrawMode drawMode, SafetyHookInline& hook, typename Result = int32_t, typename... Args>
+    Result __cdecl Draw(Args... args)
+    {
+        auto mode = std::exchange(Mode, drawMode);
+        auto result = hook.template unsafe_ccall<Result>(args...);
+        Mode = mode;
+        return result;
+    }
+
+    void UpdateMouse(injector::reg_pack& regs)
+    {
+        auto& x = *reinterpret_cast<float*>(regs.esp + sizeof(uintptr_t));
+        x -= Screen.fHudOffset;
+    }
+
+    char __cdecl Print(const wchar_t* text, const float* clip, float x, float y,
+        float spacing, float scale, uint32_t color, uint32_t format)
+    {
+        auto centered = std::exchange(CenteredText, Mode != Game || (format & 1));
+        auto width = std::exchange(FontWidth, CenteredText ? Screen.Width43 : Screen.Width);
+        auto result = PrintText.unsafe_ccall<char>(text, clip, x, y, spacing, scale, color, format);
+        FontWidth = width;
+        CenteredText = centered;
+        return result;
+    }
+
+    float* __cdecl GetPixelClip(float* rect, float* x, float* y, const float* clip, uint32_t format)
+    {
+        auto width = std::exchange(FontWidth, (Mode != Game || (format & 1)) ? Screen.Width43 : Screen.Width);
+        auto result = PixelClip.unsafe_ccall<float*>(rect, x, y, clip, format);
+        FontWidth = width;
+        return result;
+    }
+
+    void __cdecl Line(const float* from, const float* to, uint32_t color)
+    {
+        const float offset = Mode != Game ? Screen.fHudOffset : 0.0f;
+        const float a[] = { from[0] + offset, from[1] };
+        const float b[] = { to[0] + offset, to[1] };
+        DrawLine.unsafe_ccall(a, b, color);
+    }
+
+    void __cdecl ProfileViewingArea(const float* area)
+    {
+        const float ratio = Screen.fWidth43 / Screen.fWidth;
+        const float viewport[] = { area[0] * ratio, area[1],
+            area[2] * ratio + Screen.fHudOffset / Screen.fWidth, area[3] };
+        SetViewingArea(viewport);
+    }
+
+    void RedirectWidth(const uint8_t* begin, const uint8_t* end, uintptr_t nativeWidth, const int32_t* width)
+    {
+        hook::range_pattern((uintptr_t)begin, (uintptr_t)end, pattern_str(to_bytes(nativeWidth))).for_each_result(
+            [=](hook::pattern_match match) { injector::WriteMemory(match.get<uint32_t>(), width, true); });
+    }
+}
+
+int32_t __cdecl sub_48B140Hook(HudQuad* quad)
+{
+    float scale = (UI::Mode != UI::Game || UI::CenteredText) ? 1.0f : 0.0f;
+    if (scale)
+    {
+        HudQuad centered{};
+        memcpy(&centered, quad, 0x5A);
+        for (float& x : centered.x)
+            x = Screen.fHudOffset + x * scale;
+        return QueueHudQuad(&centered);
+    }
+    return QueueHudQuad(quad);
+}
+
 SafetyHookMid ReticleHorizontal[3], ReticleVertical[3];
 
 inline float ReticleX(float x)
@@ -110,7 +205,12 @@ void Init()
     pattern = hook::pattern("D8 ? ? ? ? ? 83 ? ? 6A ? 68 ? ? ? ? 51 D9 ? ? E8 ? ? ? ? 83 ? ? 83"); //4A15F6
     injector::WriteMemory(*pattern.count(1).get(0).get<uint32_t*>(2), AdjustFOV(FOV, Screen.fAspectRatio), true);
 
-    Screen.fHudOffset = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
+    Screen.fHudOffset = (Screen.fWidth - Screen.Width43) / 2.0f;
+
+    pattern = hook::pattern("56 8B ? 56 E8 ? ? ? ? 8A"); //48B140
+    uint8_t* drawHudQuad = pattern.count(1).get(0).get<uint8_t>(0);
+    QueueHudQuad = reinterpret_cast<decltype(QueueHudQuad)>(injector::GetBranchDestination(drawHudQuad + 4, true).as_int());
+    injector::MakeCALL(drawHudQuad + 4, sub_48B140Hook, true);
 
     pattern = hook::pattern("83 ? ? 56 8B ? 8B ? ? 85 ? 57 74 ? 8B ? 85"); //507C40
     uint8_t* drawScopeReticle = pattern.count(1).get(0).get<uint8_t>(0);
@@ -141,15 +241,35 @@ void Init()
         }
     }; injector::MakeInline<HudHook2>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
 
-    pattern = hook::pattern("DB ? ? ? ? ? D8 ? D9 ? DB ? ? ? ? ? D8 ? D9"); //40E4FD
-    struct TextHook
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            *(float*)regs.edi *= Screen.fWidth43;
-            *(float*)regs.edi += Screen.fHudOffset;
-        }
-    }; injector::MakeInline<TextHook>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(10));
+    const auto fontClip = hook::get_pattern<uint8_t>("8B ? ? ? 83 ? ? 53 8B ? ? ? 85 ? 56"); //40E450
+    const auto printText = hook::get_pattern<uint8_t>("83 ? ? A0 ? ? ? ? 84 ? 55 57"); //40F570
+    const auto nativeWidth = *hook::get_pattern<uintptr_t>("DB ? ? ? ? ? D8 ? D9 ? DB ? ? ? ? ? D8 ? D9", 2); //40E4FD
+    UI::RedirectWidth(fontClip, printText + 0x650, nativeWidth, &UI::FontWidth); //clip, glyphs and text output; end before text height
+    UI::PixelClip = safetyhook::create_inline(fontClip, UI::GetPixelClip);
+    UI::PrintText = safetyhook::create_inline(printText, UI::Print);
+
+    const auto menuDraw = hook::get_pattern<uint8_t>("8B 0D ? ? ? ? E9 ? ? ? ? ? ? ? ? ? 8B 0D"); //4819F0
+    const auto menuItems = hook::get_pattern<uint8_t>("51 56 8B ? 8B ? ? 50 E8 ? ? ? ? 0F ? ? ? 8B"); //47DFC0
+    const auto frontendItems = hook::get_pattern<uint8_t>("56 57 8B ? 8B ? FF ? ? 8B ? ? 8B ? 3B"); //4AF0A0
+    const auto frontendLayout = hook::get_pattern<uint8_t>("A1 ? ? ? ? 56 8B ? ? ? 50 8B"); //4D5DF0
+    const auto frontendEnd = hook::get_pattern<uint8_t>("83 ? ? A1 ? ? ? ? 89 ? ? ? A0 ? ? ? ? 84 ? 0F ? ? ? ? ? A1 ? ? ? ? 84"); //4FE850
+
+    const auto menuFontScale = hook::get_pattern<uint8_t>("DB ? ? ? ? ? D8 ? ? ? ? ? DB ? ? ? ? ? D8 ? ? ? ? ? D9"); //4D4340
+    UI::RedirectWidth(menuItems, menuDraw, nativeWidth, &Screen.Width43); //controls and hitboxes; end before menu dispatch
+    UI::RedirectWidth(frontendItems, menuFontScale + 0x30, nativeWidth, &Screen.Width43); //frontend controls through font scale
+    UI::RedirectWidth(frontendLayout, frontendEnd, nativeWidth, &Screen.Width43); //frontend layout through menu text sizing
+    UI::MenuDraw = safetyhook::create_inline(menuDraw, UI::Draw<UI::Menu, UI::MenuDraw>);
+    UI::MenuDrawOverlay = safetyhook::create_inline(menuDraw + 0x10, UI::Draw<UI::Menu, UI::MenuDrawOverlay, char>);
+
+    pattern = hook::pattern("A0 ? ? ? ? 83 ? ? 84 ? 0F ? ? ? ? ? DB"); //481B50
+    UI::MouseUpdate = safetyhook::create_mid(pattern.get_first(), UI::UpdateMouse);
+    pattern = hook::pattern("8B ? ? ? 50 8B ? ? ? 8B ? ? 8B ? 8B ? ? ? 51"); //486BB0
+    UI::DrawLine = safetyhook::create_inline(pattern.get_first(), UI::Line);
+
+    pattern = hook::pattern("8D ? ? ? 52 E8 ? ? ? ? 83 ? ? 8B ? E8"); //4C7F24
+    auto profileViewportCall = pattern.get_first<uint8_t>(5);
+    UI::SetViewingArea = reinterpret_cast<decltype(UI::SetViewingArea)>(injector::GetBranchDestination(profileViewportCall, true).as_int());
+    injector::MakeCALL(profileViewportCall, UI::ProfileViewingArea, true); //profile viewport
 }
 
 CEXP void InitializeASI()
