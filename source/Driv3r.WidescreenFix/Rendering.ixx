@@ -27,12 +27,38 @@ ProtectedGameRef<float> fFieldOfView([]() -> float*
     return nullptr;
 });
 
+// 16:9 mode hardcodes the aspect ratio of the HUD viewport and of the pause map once it fills the screen
+ProtectedGameRef<float> fHudViewportAspectRatio([]() -> float*
+{
+    auto pattern = find_pattern("C7 85 20 1A 00 00 39 8E E3 3F"); //0x53B26E
+    if (!pattern.empty())
+        return pattern.get_first<float>(6);
+    return nullptr;
+});
+
+ProtectedGameRef<float> fPauseMapAspectRatio([]() -> float*
+{
+    auto pattern = find_pattern("C7 86 E0 1A 00 00 39 8E E3 3F"); //0x53C121
+    if (!pattern.empty())
+        return pattern.get_first<float>(6);
+    return nullptr;
+});
+
 enum ScreenModes
 {
     LETTERBOX = 0,
     UNKNOWN = 1,
     WIDE16BY9 = 2
 };
+
+// 2D vertex as sub_57E2B0 writes them, 6 per quad
+struct QuadVertex
+{
+    float x, y, z; // clip space
+    uint32_t color;
+    float u, v;
+};
+static_assert(sizeof(QuadVertex) == 24);
 
 bool bHUD = false;
 SafetyHookInline shsub_53BC50 = {};
@@ -68,7 +94,11 @@ public:
                     if (value >= 0.0f && value <= fAspectRatio)
                         targetHudAspect = ClampHudAspectRatio(value, fAspectRatio);
                 }
+
+                fHudViewportAspectRatio = fAspectRatio;
+                fPauseMapAspectRatio = fAspectRatio;
             };
+
 
             auto pattern = hook::pattern("8B 44 24 04 89 41 ? B0 01 C2 04 00"); //0x580C00
             struct MenuAspectRatioSwitchHook
@@ -79,17 +109,21 @@ public:
                 }
             }; injector::MakeInline<MenuAspectRatioSwitchHook>(pattern.get_first(0), pattern.get_first(7));
 
-            // 2D — uniform hor+ correction; skip fullscreen fades and radar border/overlay
+            // 2D — uniform hor+ correction; skip fullscreen fades, radar border/overlay and the pause map game view
             pattern = hook::pattern("89 56 DC 83 C0 01 D9 5E D4 89 44 24 10"); //0x57E5BD
             static auto dword_53F06F = (uint32_t)hook::get_pattern("80 BE 40 02 00 00 00", 0);
             static auto dword_53F08A = (uint32_t)hook::get_pattern("8D 46 3C 53 E8 ? ? ? ? 5F", 9);
             static auto dword_540F2E = (uint32_t)hook::get_pattern("8D 86 9C 01 00 00 51 E8 ? ? ? ? C2", 12);
             static auto dword_53FD96 = (uint32_t)hook::get_pattern("83 C6 ? 83 ED ? 0F 85 ? ? ? ? 53", 0);
+            static auto dword_53BDAD = (uint32_t)hook::get_pattern("E8 ? ? ? ? 8B 87 48 1A 00 00 8B 8F 10 1B 00 00", 5);
+            static auto dword_53BE23 = (uint32_t)hook::get_pattern("E8 ? ? ? ? 80 BF 58 1A 00 00 00 75 ? 80 BF 59 1A 00 00 00", 5);
+            static auto dword_53BE3E = (uint32_t)hook::get_pattern("8D 47 34 53 E8 ? ? ? ? 5F 5B 83 C4 64 C2 04 00", 9);
             struct HudHook
             {
                 void operator()(injector::reg_pack& regs)
                 {
                     auto retAddr = *(uint32_t*)(regs.esp + 0x4C);
+                    auto viewport = *(uintptr_t*)(regs.esp + 0x50);
 
                     *(uint32_t*)(regs.esi - 0x24) = regs.edx;
                     regs.eax += 1;
@@ -101,6 +135,26 @@ public:
                     // Skip fullscreen fades — they cover the full widescreen viewport intentionally
                     if (retAddr == dword_53F06F || retAddr == dword_53F08A)
                         return;
+
+                    // Pause map: the HUD viewport shrinks from full screen into the radar's place (and back), showing a capture of the game view.
+                    // The capture is drawn over the whole viewport, and the frame around it is already laid out in pixels.
+                    if (retAddr == dword_53BE3E)
+                        return;
+
+                    if (retAddr == dword_53BDAD || retAddr == dword_53BE23)
+                    {
+                        // The capture has the screen's aspect ratio, crop its sides to the viewport instead of squishing it
+                        const int32_t viewportWidth = *(int32_t*)(viewport + 0x1E8);
+                        const int32_t viewportHeight = *(int32_t*)(viewport + 0x1EC);
+                        if (viewportWidth <= 0 || viewportHeight <= 0)
+                            return;
+
+                        const float crop = std::min(1.0f, (static_cast<float>(viewportWidth) / static_cast<float>(viewportHeight)) / fAspectRatio);
+                        auto vertices = reinterpret_cast<QuadVertex*>(regs.esi - 0xA4);
+                        for (int i = 0; i < 6; ++i)
+                            vertices[i].u = 0.5f + (vertices[i].u - 0.5f) * crop;
+                        return;
+                    }
 
                     if (bHUD)
                     {
@@ -165,6 +219,7 @@ public:
 
             // Radar
             pattern = hook::pattern("89 9E EC 01 00 00 89 9E F0 01 00 00"); //0x53DE73
+            static auto dword_8AC4C8 = *hook::get_pattern<uintptr_t*>("8B 0D ? ? ? ? 50 51 E8 ? ? ? ? 84 C0 75 ? 8B 16", 2); // HUD
             struct RadarHook
             {
                 void operator()(injector::reg_pack& regs)
@@ -172,34 +227,29 @@ public:
                     *(uint32_t*)(regs.esi + 0x1EC) = regs.ebx;
                     *(uint32_t*)(regs.esi + 0x1F0) = regs.ebx;
 
-                    if (*(float*)(regs.esi + 0x0C) == 0.0f && *(float*)(regs.esi + 0x14) == 1.0f)
-                    {
-                        // Full-screen map view: shrink to 4:3 safe area
-                        float fHudOffsetReal = ((float)BackbufferWidth - (float)BackbufferHeight * baseAspect) / 2.0f;
-                        float offset = fHudOffsetReal / (float)BackbufferWidth;
-                        *(float*)(regs.esi + 0x0C) = offset;
-                        *(float*)(regs.esi + 0x14) = 1.0f - 2.0f * offset;
-                    }
-                    else
-                    {
-                        const float currentAspect = fAspectRatio;
-                        const float constrainedAspect = std::clamp(currentAspect, baseAspect, targetHudAspect);
+                    // The pause map animates the radar to full screen and back, from the rectangle it had when the game was paused,
+                    // and the game view takes that rectangle meanwhile
+                    const uintptr_t hud = *dword_8AC4C8;
+                    if (hud && *(bool*)(hud + 0x1A58))
+                        return;
 
-                        const float h = *(float*)(regs.esi + 0x18);
-                        const float radarH_px = h * (float)BackbufferHeight;
-                        const float marginR_px = 24.0f * ((float)BackbufferHeight / 480.0f);
+                    const float currentAspect = fAspectRatio;
+                    const float constrainedAspect = std::clamp(currentAspect, baseAspect, targetHudAspect);
 
-                        // Make width equal to height in pixels
-                        const float w = radarH_px / (float)BackbufferWidth;
-                        const float marginR = marginR_px / (float)BackbufferWidth;
+                    const float h = *(float*)(regs.esi + 0x18);
+                    const float radarH_px = h * (float)BackbufferHeight;
+                    const float marginR_px = 24.0f * ((float)BackbufferHeight / 480.0f);
 
-                        // Right edge of target area (16:9 max), clamped so narrow AR uses full screen
-                        const float safeRight = 0.5f + 0.5f * std::min(1.0f, constrainedAspect / currentAspect);
-                        const float x = safeRight - w - marginR;
+                    // Make width equal to height in pixels
+                    const float w = radarH_px / (float)BackbufferWidth;
+                    const float marginR = marginR_px / (float)BackbufferWidth;
 
-                        *(float*)(regs.esi + 0x14) = w;
-                        *(float*)(regs.esi + 0x0C) = x;
-                    }
+                    // Right edge of target area (16:9 max), clamped so narrow AR uses full screen
+                    const float safeRight = 0.5f + 0.5f * std::min(1.0f, constrainedAspect / currentAspect);
+                    const float x = safeRight - w - marginR;
+
+                    *(float*)(regs.esi + 0x14) = w;
+                    *(float*)(regs.esi + 0x0C) = x;
                 }
             }; injector::MakeInline<RadarHook>(pattern.get_first(0), pattern.get_first(12));
 
