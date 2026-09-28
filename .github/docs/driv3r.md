@@ -19,6 +19,7 @@
 - **Field of View** - corrected for widescreen using hor+ scaling
 - **HUD / 2D Elements** - all 2D quads scaled and repositioned to match the active aspect ratio
 - **Radar** - position and scale corrected for any aspect ratio, including ultrawide
+- **Mouse** - read every frame, without the original delay and dropped movement, so the menu cursor and mouse look respond like raw input
 <br clear="both">
 
 ---
@@ -39,6 +40,8 @@
 <div align="center">
 
 **Mouse/Stick Look** - orbit the camera around the vehicle with the mouse or the right stick, look back still works. Reset timeout, return speed, sensitivity, and vertical axis inversion are configurable in the ini file.
+
+<img src="https://thirteenag.github.io/screens/driv3r/demo.webp" alt="Demo">
 
 </div>
 

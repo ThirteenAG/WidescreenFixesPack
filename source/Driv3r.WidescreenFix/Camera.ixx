@@ -4,8 +4,6 @@ module;
 #include <cmath>
 #include <chrono>
 #include <numbers>
-#define DIRECTINPUT_VERSION 0x0800
-#include <dinput.h>
 
 export module Camera;
 
@@ -35,8 +33,18 @@ float MouseLookSensitivity = 1.0f;
 float StickLookSensitivity = 1.0f;
 bool InvertLook = false;
 
+namespace OnFoot
+{
+    int32_t PendingMouseX = 0; // since the player controller last turned the player
+    int32_t PendingMouseY = 0;
+    int32_t MouseY = 0; // for its aim, after its turn
+    std::chrono::steady_clock::time_point LastUpdate = {};
+}
+
 namespace Orbit
 {
+    bool Enabled = false;
+
     float Yaw = 0.0f;   // replaces the look around yaw, 0 = behind the vehicle
     float Pitch = 0.0f; // added to the chase camera elevation
 
@@ -224,33 +232,58 @@ public:
         WFP::onInitEventAsync() += []()
         {
             CIniReader iniReader("");
-            if (iniReader.ReadInteger("CAMERA", "Enable", 1) == 0)
+            Orbit::Enabled = iniReader.ReadInteger("CAMERA", "Enable", 1) != 0;
+            MouseLookSensitivity = iniReader.ReadFloat("CAMERA", "MouseLookSensitivity", 1.0f);
+
+            //mouse movement, right after the input devices are read (see Mouse.ixx)
+            auto pattern = hook::pattern("E8 ? ? ? ? 57 8D 46 14 E8");
+            static auto MousePollHook = safetyhook::create_mid(pattern.get_first(5), [](SafetyHookContext& regs)
+            {
+                OnFoot::PendingMouseX += MouseRead::X;
+                OnFoot::PendingMouseY += MouseRead::Y;
+
+                if (Orbit::Enabled)
+                {
+                    Orbit::PendingMouseX += MouseRead::X;
+                    Orbit::PendingMouseY += MouseRead::Y;
+                }
+            });
+
+            //on foot, the player controller turns the player by look * -0.0025 rad and aims by look * 0.8 * 0.001953125 rad on every world update,
+            //but the mouse look is read for it only every 33-50 ms, so the same movement turned the player several times;
+            //give it the movement since its previous update instead, turning as far per mouse count as the car camera
+            pattern = hook::pattern("8B 4E 14 DD D8 D9 46 2C 8B 11 D8 0D ? ? ? ? 51 D9 1C 24 FF 92 60 01 00 00");
+            static const float TurnPerLook = std::abs(**pattern.get_first<float*>(12));
+            static auto OnFootTurnHook = safetyhook::create_mid(pattern.get_first(5), [](SafetyHookContext& regs)
+            {
+                // movement from before the player was on foot belongs to something else
+                const auto now = std::chrono::steady_clock::now();
+                const bool stale = now - OnFoot::LastUpdate > std::chrono::milliseconds(250);
+                OnFoot::LastUpdate = now;
+
+                const int32_t mouseX = std::exchange(OnFoot::PendingMouseX, 0);
+                const int32_t mouseY = std::exchange(OnFoot::PendingMouseY, 0);
+                OnFoot::MouseY = stale ? 0 : mouseY;
+
+                *reinterpret_cast<float*>(regs.esi + 0x2C) = stale ? 0.0f : mouseX * MouseLookSensitivity * MouseRadiansPerCount / TurnPerLook;
+            });
+
+            pattern = hook::pattern("8B 4E 14 DD D8 D9 46 30 8B 11 D8 0D ? ? ? ? 51 D9 1C 24 FF 92 64 01 00 00");
+            static const float AimPerLook = std::abs(**pattern.get_first<float*>(12)) * 0.001953125f; // the player adds its aim input * 0.001953125
+            static auto OnFootAimHook = safetyhook::create_mid(pattern.get_first(5), [](SafetyHookContext& regs)
+            {
+                *reinterpret_cast<float*>(regs.esi + 0x30) = OnFoot::MouseY * MouseLookSensitivity * MouseRadiansPerCount / AimPerLook;
+            });
+
+            if (!Orbit::Enabled)
                 return;
 
             IdleTimeoutSeconds = iniReader.ReadFloat("CAMERA", "CameraReturnTimeout", 3.0f);
             ReturnSpeed = iniReader.ReadFloat("CAMERA", "CameraReturnSpeed", 2.0f);
-            MouseLookSensitivity = iniReader.ReadFloat("CAMERA", "MouseLookSensitivity", 1.0f);
             StickLookSensitivity = iniReader.ReadFloat("CAMERA", "StickLookSensitivity", 1.0f);
             InvertLook = iniReader.ReadInteger("CAMERA", "InvertLook", 0) != 0;
 
             Keymap::Live();
-
-            //mouse deltas, right after the input devices are read; the game reads buffered data, at most 32 events every 8 ms or more,
-            //which drops and delays fast movement, the immediate state has every count since the last read
-            auto pattern = hook::pattern("E8 ? ? ? ? 57 8D 46 14 E8");
-            static auto MousePollHook = safetyhook::create_mid(pattern.get_first(5), [](SafetyHookContext& regs)
-            {
-                auto mouse = *reinterpret_cast<IDirectInputDevice8A**>(regs.esi + 0x220);
-                if (!mouse || !*reinterpret_cast<bool*>(regs.esi + 0x21C))
-                    return;
-
-                DIMOUSESTATE2 state = {};
-                if (SUCCEEDED(mouse->GetDeviceState(sizeof(state), &state)))
-                {
-                    Orbit::PendingMouseX += state.lX;
-                    Orbit::PendingMouseY += state.lY;
-                }
-            });
 
             //yaw, for every camera that looks around: chase, in-car and crane
             pattern = hook::pattern("83 EC 10 53 56 8B D9 8B 03 57 8B 7C 24 20");
