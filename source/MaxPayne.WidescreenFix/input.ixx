@@ -176,6 +176,12 @@ float ConvertJoystickToMouseDelta(LONG joystickValue, float sensitivity)
     return normalized * sensitivity;
 }
 
+// The game slows the mouse down by the sniper zoom factor while zooming, the right stick needs the same
+float GetAimZoomSensitivity()
+{
+    return MaxPayne_GameMode::IsSniperZooming() ? X_InputDeviceMouse::GetZoomSensitivity() : 1.0f;
+}
+
 namespace MaxPayne_InputControl
 {
     enum JoystickButton
@@ -316,13 +322,13 @@ namespace MaxPayne_InputControl
                     }
                     case 1: // Right stick X
                     {
-                        float stickX = ConvertJoystickToMouseDelta(joyState->lRx, stickSensitivity);
+                        float stickX = ConvertJoystickToMouseDelta(joyState->lRx, stickSensitivity * GetAimZoomSensitivity());
                         ret = stickX;
                         break;
                     }
                     case 2: // Right stick Y
                     {
-                        float stickY = ConvertJoystickToMouseDelta(joyState->lRy, stickSensitivity);
+                        float stickY = ConvertJoystickToMouseDelta(joyState->lRy, stickSensitivity * GetAimZoomSensitivity());
 
                         if (_this == MaxPayne_ConfiguredInput::AimUpDown)
                         {
@@ -513,7 +519,8 @@ void Vibrate(int strength, std::chrono::milliseconds duration = std::chrono::mil
     XidiSendVibration(-1, motor, motor);
 }
 
-void UpdateVibration()
+// Stops a vibration once its time is up. Called every tick and from loading screens, which block the game loop.
+export void UpdateVibration()
 {
     g_VibrationThisFrame = false;
 
@@ -614,30 +621,35 @@ export void InitInput()
         Vibrate(23, std::chrono::milliseconds{ 200 });
     });
 
-    // Damage taken
+    // Damage taken, X_Character::setHealth runs for every character: esi is the character
     pattern = hook::pattern("E8 ? ? ? ? E9 ? ? ? ? ? ? ? ? ? ? ? ? ? ? DF E0");
     static auto X_CharactersetHealthHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        Vibrate(46, std::chrono::milliseconds{ 180 });
+        if ((uint8_t*)regs.esi == MaxPayne_GameMode::GetPlayerCharacter())
+            Vibrate(46, std::chrono::milliseconds{ 180 });
     });
 
-    // Shooting
+    // Shooting, the X_PlayerInputEvaluator states also drive the enemies (MaxPayne_ArtificialPlayerInput):
+    // esi is the state, its X_CharacterProperties are at +0x10
     pattern = hook::pattern("E8 ? ? ? ? 8B 44 24 ? 50 8B CE E8 ? ? ? ? 5E");
     static auto X_CharacterPropertiessetIsShooting1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        Vibrate(80, std::chrono::milliseconds{ 80 });
+        if (X_Character::IsPlayerCharacterProperties(*(uint8_t**)(regs.esi + 0x10)))
+            Vibrate(80, std::chrono::milliseconds{ 80 });
     });
 
     pattern = hook::pattern("6A ? 8B CE E8 ? ? ? ? 8B C8 E8 ? ? ? ? 5E 5B C2");
     static auto X_CharacterPropertiessetIsShooting2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        Vibrate(80, std::chrono::milliseconds{ 180 });
+        if (X_Character::IsPlayerCharacterProperties(*(uint8_t**)(regs.esi + 0x10)))
+            Vibrate(80, std::chrono::milliseconds{ 180 });
     });
 
     pattern = hook::pattern("E8 ? ? ? ? 53 8B CE E8 ? ? ? ? 5E");
     static auto X_CharacterPropertiessetIsShooting3 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        Vibrate(80, std::chrono::milliseconds{ 80 });
+        if (X_Character::IsPlayerCharacterProperties(*(uint8_t**)(regs.esi + 0x10)))
+            Vibrate(80, std::chrono::milliseconds{ 80 });
     });
 
     // Explosion

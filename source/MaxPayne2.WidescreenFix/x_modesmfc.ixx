@@ -5,116 +5,126 @@ module;
 export module x_modesmfc;
 
 import ComVars;
+import e2mfc;
 
 namespace X_ModeSwitch
 {
-    std::string PendingGameMode;
-
-    SafetyHookInline shSetModeSwitch = {};
-    void __fastcall setModeSwitch(void* X_ModeSwitch, void* edx, void* a2)
+    enum
     {
-        PendingGameMode = std::string_view((char*)a2 + 4);
-        return shSetModeSwitch.unsafe_fastcall(X_ModeSwitch, edx, a2);
+        ACTIVE_BASIC_MODE = 0x19,
+    };
+
+    // Name the mode by its class. The requested name can't be used: setModeSwitch ignores requests
+    // while fading out, and a new request can already be accepted in the frame the switch completes.
+    std::string_view GetModeName(uint8_t* pMode)
+    {
+        if (!pMode)
+            return {};
+
+        auto pVTable = *(uintptr_t**)pMode;
+        auto pCompleteObjectLocator = (uint8_t*)pVTable[-1];
+        auto pTypeDescriptor = *(uint8_t**)(pCompleteObjectLocator + 12);
+        std::string_view szClassName = (const char*)(pTypeDescriptor + 8);
+
+        if (szClassName == ".?AVMP_GameMode@@")
+            return "game";
+        if (szClassName == ".?AVMP_MenuMode@@")
+            return "menu";
+        if (szClassName == ".?AVMP_GraphicNovelMode@@")
+            return "graphicnovel";
+        if (szClassName == ".?AVMP_StatisticsMode@@")
+            return "statistics";
+        return szClassName;
     }
-}
 
-namespace MaxPayne_HUDFadeUpdate
-{
-    SafetyHookInline shupdate = {};
-    void __fastcall update(float* MaxPayne_HUDFadeUpdate, void* edx, const void* X_TimeUpdate)
+    int32_t nGraphicNovelModeKey = VK_F2;
+
+    void update(SafetyHookContext& regs)
     {
-        Screen.bIsFading = true;
-        return shupdate.unsafe_fastcall(MaxPayne_HUDFadeUpdate, edx, X_TimeUpdate);
+        auto pModeSwitch = (uint8_t*)regs.esi;
+        auto pActiveMode = *(uint8_t**)(pModeSwitch + ACTIVE_BASIC_MODE);
+
+        static uint8_t* pPrevActiveMode = nullptr;
+        if (pActiveMode != pPrevActiveMode)
+        {
+            pPrevActiveMode = pActiveMode;
+            CurrentGameMode = GetModeName(pActiveMode);
+            if (CurrentGameMode != "graphicnovel")
+                MaxPayne_GraphicNovelPage::pCamera = nullptr;
+        }
+
+        auto profile = eGamepadProfile::Menu;
+        if (pActiveMode && CurrentGameMode == "game")
+            profile = *(pActiveMode + MP_GameMode::PAUSED) ? eGamepadProfile::Pause : eGamepadProfile::Main;
+        GamepadProfile.store(profile, std::memory_order_relaxed);
+
+        if (X_Crosshair::sm_bCameraPathRunning.is_initialized() && !X_Crosshair::sm_bCameraPathRunning)
+            Screen.bDrawBordersForCameraOverlay = false;
+
+        // graphic novels in their original framing have borders around the 4:3 page
+        UpdateCursorBounds(CurrentGameMode != "graphicnovel" || !Screen.bGraphicNovelMode);
+
+        // Graphic novels: key toggles between the original framing and a page that fills the screen width
+        static bool bWasPressed = false;
+        if (CurrentGameMode != "graphicnovel")
+        {
+            bWasPressed = false;
+            MP_GraphicNovelMode::Update(nullptr);
+            return;
+        }
+
+        bool bPressed = (GetAsyncKeyState(nGraphicNovelModeKey) & 0x8000) != 0;
+        if (!bPressed && bWasPressed)
+        {
+            Screen.bGraphicNovelMode = !Screen.bGraphicNovelMode;
+            CIniReader iniReader("");
+            iniReader.WriteInteger("MAIN", "GraphicNovelMode", Screen.bGraphicNovelMode);
+            MaxPayne_GraphicNovelPage::Refresh();
+        }
+        bWasPressed = bPressed;
+
+        MP_GraphicNovelMode::Update(pActiveMode);
     }
 
-    SafetyHookInline shdestruct = {};
-    void __fastcall destruct(float* MaxPayne_HUDFadeUpdate, void* edx)
+    // Before the last X_VideoInterface::endScene of the frame, after the overlaid modes (HUD) are
+    // drawn. The bars the widescreen fix adds are drawn here with P_Driver::clearScreen, the same
+    // way the game draws its letterbox bars.
+    void render(SafetyHookContext& regs)
     {
-        Screen.bIsFading = false;
-        return shdestruct.unsafe_fastcall(MaxPayne_HUDFadeUpdate, edx);
+        if (bGameViewRendered)
+        {
+            auto nWidth = static_cast<int32_t>(std::lround(Screen.fWidth * Cinematic::CurrentBorders.fPillarbox * 0.5f));
+            if (nWidth > 0)
+                DrawPillarboxBars(nWidth, nWidth);
+
+            // the scope overlay covers the 4:3 area
+            if (MP_GameMode::IsSniperScopeOn())
+                Draw4by3Borders(1);
+        }
+
+        if (CurrentGameMode == "graphicnovel")
+        {
+            // pages are 3D scenes, the widened view shows more than the original 4:3 frame
+            if (Screen.bGraphicNovelMode)
+                Draw4by3Borders();
+        }
+        else if (Screen.bDrawBordersForCameraOverlay)
+        {
+            Draw4by3Borders(1);
+        }
+
+        bGameViewRendered = false;
     }
 }
 
 export void InitX_ModesMFC()
 {
-    static CIniReader iniReader("");
-    static int32_t nGraphicNovelModeKey = iniReader.ReadInteger("MAIN", "GraphicNovelModeKey", VK_F2);
+    CIniReader iniReader("");
+    X_ModeSwitch::nGraphicNovelModeKey = iniReader.ReadInteger("MAIN", "GraphicNovelModeKey", VK_F2);
 
-    auto pattern = hook::module_pattern(GetModuleHandle(L"X_ModesMFC"), "56 8B F1 8B 46 ? 85 C0 0F 85");
-    X_ModeSwitch::shSetModeSwitch = safetyhook::create_inline(pattern.get_first(0), X_ModeSwitch::setModeSwitch);
+    auto pattern = hook::module_pattern(GetModuleHandle(L"X_ModesMFC"), "8B 46 0D 83 F8 03 75 ? D9 46 11");
+    static auto X_ModeSwitchUpdateHook = safetyhook::create_mid(pattern.get_first(), X_ModeSwitch::update); //0x10001914
 
-    //Graphic Novels Handler
-    static uint16_t oldState = 0;
-    static uint16_t curState = 0;
-
-    auto GraphicNovelPageUpdate = hook::module_pattern(GetModuleHandle(L"X_ModesMFC"), "8B 16 8B CE 33 FF FF 52 10"); //10001A7A 
-    struct GraphicNovelPageUpdateHook
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            regs.edx = *(uint32_t*)(regs.esi);
-            regs.ecx = regs.esi;
-            regs.edi = 0;
-
-            if (!X_Crosshair::sm_bCameraPathRunning)
-                Screen.bDrawBordersForCameraOverlay = false;
-
-            if (CurrentGameMode == "graphicnovel")
-            {
-                curState = GetAsyncKeyState(nGraphicNovelModeKey);
-
-                if (!curState && oldState)
-                {
-                    Screen.bGraphicNovelMode = !Screen.bGraphicNovelMode;
-                    iniReader.WriteInteger("MAIN", "GraphicNovelMode", Screen.bGraphicNovelMode);
-                }
-
-                oldState = curState;
-
-                if (Screen.bGraphicNovelMode)
-                {
-                    Screen.fNovelsScale = 0.003125f;
-                    Screen.fNovelsOffset = -1.0f;
-                    Screen.fViewPortSizeX = 480.0f * Screen.fAspectRatio;
-                    Screen.fViewPortSizeY = 480.0f;
-                }
-                else
-                {
-                    Screen.fNovelsScale = 0.003125f;
-                    Screen.fNovelsOffset = -1.0f;
-                    Screen.fViewPortSizeX = (480.0f * Screen.fAspectRatio) / 1.17936117936f;
-                    Screen.fViewPortSizeY = 480.0f / 1.17936117936f;
-                }
-            }
-            else
-            {
-                Screen.fViewPortSizeX = 640.0f;
-                Screen.fViewPortSizeY = 480.0f;
-                Screen.fNovelsScale = Screen.fHudScale;
-                Screen.fNovelsOffset = Screen.fHudOffset;
-            }
-        }
-    }; injector::MakeInline<GraphicNovelPageUpdateHook>(GraphicNovelPageUpdate.get_first(0), GraphicNovelPageUpdate.get_first(6));
-
-    pattern = hook::module_pattern(GetModuleHandle(L"X_ModesMFC"), "83 F8 ? 75 ? ? ? ? BF ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? DF E0 F6 C4 ? 74 ? 8B 7C 24 ? 8B 4E ? ? ? 57 FF 52 ? 8B 4E");
-    static auto X_ModeSwitchupdateHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-    {
-        static void* prevMode = nullptr;
-        auto mode = *(void**)(regs.esi + 0x19);
-
-        if (mode != prevMode)
-        {
-            prevMode = mode;
-            CurrentGameMode = X_ModeSwitch::PendingGameMode;
-        }
-
-        Screen.bIsFading = regs.eax == 2 || regs.eax == 3;
-    });
-
-    pattern = hook::pattern("83 EC ? 53 8B 1D");
-    MaxPayne_HUDFadeUpdate::shupdate = safetyhook::create_inline(pattern.get_first(0), MaxPayne_HUDFadeUpdate::update);
-
-    pattern = hook::pattern("E8 ? ? ? ? 8B 46 ? 8B 48");
-    MaxPayne_HUDFadeUpdate::shdestruct = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first(0)).as_int(), MaxPayne_HUDFadeUpdate::destruct);
-
+    pattern = hook::module_pattern(GetModuleHandle(L"X_ModesMFC"), "8B 4E 09 8B 11 FF 52 10 8B 4E 09 8B 01 FF 50 14");
+    static auto X_ModeSwitchRenderHook = safetyhook::create_mid(pattern.get_first(), X_ModeSwitch::render); //0x10008A7E
 }

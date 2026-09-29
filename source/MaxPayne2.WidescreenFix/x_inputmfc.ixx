@@ -176,6 +176,12 @@ float ConvertJoystickToMouseDelta(LONG joystickValue, float sensitivity)
     return normalized * sensitivity;
 }
 
+// The game slows the mouse down by the sniper zoom factor while zooming, the right stick needs the same
+float GetAimZoomSensitivity()
+{
+    return MP_GameMode::IsSniperZooming() ? X_InputDeviceMouse::GetZoomSensitivity() : 1.0f;
+}
+
 namespace X_InputControlButton
 {
     enum JoystickButton
@@ -443,7 +449,7 @@ namespace X_InputControlButton
                 auto Mouse = (uintptr_t)X_Input::getMouse();
                 bool bInvertY = (*(uint8_t*)(Mouse + 81)) != 0;
                 auto fVerSens = *(float*)(Mouse + 87);
-                const float stickSensitivity = gameVerticalMultiplier * fVerSens + gameVerticalBias;
+                const float stickSensitivity = (gameVerticalMultiplier * fVerSens + gameVerticalBias) * GetAimZoomSensitivity();
 
                 float stickY = ConvertJoystickToMouseDelta(joyState->lRy, stickSensitivity);
 
@@ -469,7 +475,7 @@ namespace X_InputControlButton
             {
                 auto Mouse = (uintptr_t)X_Input::getMouse();
                 auto fHorSens = *(float*)(Mouse + 83);
-                const float stickSensitivity = gameHorizontalMultiplier * fHorSens + gameHorizontalBias;
+                const float stickSensitivity = (gameHorizontalMultiplier * fHorSens + gameHorizontalBias) * GetAimZoomSensitivity();
 
                 float stickX = ConvertJoystickToMouseDelta(joyState->lRx, stickSensitivity);
                 ret = stickX;
@@ -516,7 +522,8 @@ void Vibrate(int strength, std::chrono::milliseconds duration = std::chrono::mil
     XidiSendVibration(-1, motor, motor);
 }
 
-void UpdateVibration()
+// Stops a vibration once its time is up. Called every tick and from loading screens, which block the game loop.
+export void UpdateVibration()
 {
     g_VibrationThisFrame = false;
 
@@ -588,30 +595,35 @@ export void InitInput()
         Vibrate(23, std::chrono::milliseconds{ 200 });
     });
 
-    // Damage taken
+    // Damage taken, X_Character::setHealth runs for every character: esi is the character
     pattern = hook::module_pattern(GetModuleHandle(L"X_GameObjectsMFC"), "E8 ? ? ? ? 8B CF E8 ? ? ? ? 48");
     static auto X_CharactersetHealthHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        Vibrate(46, std::chrono::milliseconds{ 180 });
+        if ((uint8_t*)regs.esi == MP_GameMode::GetPlayerCharacter())
+            Vibrate(46, std::chrono::milliseconds{ 180 });
     });
 
-    // Shooting
+    // Shooting, the input evaluator states also drive the enemies: esi is the state, its
+    // X_CharacterProperties are at +0xF
     pattern = hook::module_pattern(GetModuleHandle(L"X_GameObjectsMFC"), "E8 ? ? ? ? 8B 44 24 ? 50 8B CE E8 ? ? ? ? 5E");
     static auto X_CharacterPropertiessetIsShooting1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        Vibrate(80, std::chrono::milliseconds{ 80 });
+        if (X_Character::IsPlayerCharacterProperties(*(uint8_t**)(regs.esi + 0xF)))
+            Vibrate(80, std::chrono::milliseconds{ 80 });
     });
 
     pattern = hook::module_pattern(GetModuleHandle(L"X_GameObjectsMFC"), "E8 ? ? ? ? 8B C8 E8 ? ? ? ? 5E 5B");
     static auto X_CharacterPropertiessetIsShooting2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        Vibrate(80, std::chrono::milliseconds{ 80 });
+        if (X_Character::IsPlayerCharacterProperties(*(uint8_t**)(regs.esi + 0xF)))
+            Vibrate(80, std::chrono::milliseconds{ 80 });
     });
 
     pattern = hook::module_pattern(GetModuleHandle(L"X_GameObjectsMFC"), "E8 ? ? ? ? 8B C8 E8 ? ? ? ? 53 8B CE E8 ? ? ? ? 5E");
     static auto X_CharacterPropertiessetIsShooting3 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        Vibrate(80, std::chrono::milliseconds{ 80 });
+        if (X_Character::IsPlayerCharacterProperties(*(uint8_t**)(regs.esi + 0xF)))
+            Vibrate(80, std::chrono::milliseconds{ 80 });
     });
 
     // Explosion

@@ -6,7 +6,7 @@ export module xidi;
 
 import ComVars;
 
-typedef bool (*XidiSendVibrationFunc)(unsigned int, unsigned short, unsigned short);
+typedef bool (*XidiSendVibrationFunc)(short, unsigned short, unsigned short);
 export XidiSendVibrationFunc XidiSendVibration = nullptr;
 
 export void InitXidi()
@@ -23,11 +23,15 @@ export void InitXidi()
         {
             XidiRegisterProfileCallback([]() -> const wchar_t*
             {
-                if (CurrentGameMode != "game")
-                    return L"Menu";
-                else if (CurrentGameMode == "game" && bIsPaused)
+                switch (GamepadProfile.load(std::memory_order_relaxed))
+                {
+                case eGamepadProfile::Main:
+                    return L"Main";
+                case eGamepadProfile::Pause:
                     return L"Pause";
-                return L"Main";
+                default:
+                    return L"Menu";
+                }
             });
         }
     }
