@@ -34,13 +34,15 @@ int __fastcall sub_404B20(int* CWnd, void* edx, char a2)
     return shsub_404B20.unsafe_fastcall<int>(CWnd, edx, a2);
 }
 
-float CutsceneBordersScale = 1.0f;
-injector::hook_back<float(__fastcall*)(void*, void*)> hb_41EF70;
-float __fastcall sub_41EF70(void* _this, void* edx)
+void ReadSettings()
 {
-    auto ret = hb_41EF70.fun(_this, edx);
-    bCutsceneBordersRendered = ret < 1.0f;
-    return CutsceneBordersScale;
+    CIniReader iniReader("");
+    Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "HudAspectRatioConstraint", ""));
+    Screen.fFOVFactor = iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f);
+    if (Screen.fFOVFactor <= 0.0f) { Screen.fFOVFactor = 1.0f; }
+    Screen.bGraphicNovelMode = iniReader.ReadInteger("MAIN", "GraphicNovelMode", 1) != 0;
+    Cinematic::nCutsceneBorders = std::clamp(iniReader.ReadInteger("MAIN", "CutsceneBorders", Cinematic::Both), (int32_t)Cinematic::Off, (int32_t)Cinematic::Both);
+    Cinematic::bNoBorderAnimation = iniReader.ReadInteger("MAIN", "NoCutsceneBorderAnimation", 0) != 0;
 }
 
 void Init()
@@ -58,23 +60,6 @@ void Init()
     {
         auto pattern = hook::pattern("E8 ? ? ? ? 8B CF C6 87 82 00 00 00 00");
         injector::MakeNOP(pattern.get_first(0), 5, true); //0x404935
-    }
-
-    static int32_t nCutsceneBorders = iniReader.ReadInteger("MAIN", "CutsceneBorders", 1);
-    if (nCutsceneBorders)
-    {
-        auto f = [](uintptr_t _this, uintptr_t edx) -> float
-        {
-            if (nCutsceneBorders > 1)
-                CutsceneBordersScale = *(float*)(*(uintptr_t*)_this + 4692) * (1.0f / ((4.0f / 3.0f) / Screen.fAspectRatio));
-
-            return *(float*)(*(uintptr_t*)_this + 4692);
-        };
-        auto pattern = hook::pattern("E8 ? ? ? ? D8 2D ? ? ? ? D8");
-        injector::MakeCALL(pattern.get_first(), static_cast<float(__fastcall*)(uintptr_t, uintptr_t)>(f), true); //0x488C68
-
-        pattern = hook::pattern("E8 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? E8 ? ? ? ? ? ? ? ? 8B F0");
-        hb_41EF70.fun = injector::MakeCALL(pattern.get_first(), sub_41EF70, true).get();
     }
 
     static int32_t nLoadSaveSlot = iniReader.ReadInteger("MISC", "LoadSaveSlot", -1);
@@ -182,46 +167,63 @@ void Init()
         }
     }
 
-    auto pattern = hook::pattern("FF 15 ? ? ? ? 8D 8E ? ? ? ? 8B F8");
-    static auto MaxPayne_GameModeupdateHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    // MP_GameMode render function, where the game view gets rendered
+    auto pattern = hook::pattern("C6 86 48 01 00 00 01 FF 15 ? ? ? ? 8B 8E A0 10 00 00 FF 15");
+    static auto MP_GameModeRenderHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs) //0x451B93
     {
-        bIsPaused = *(uint8_t*)(regs.ecx + 0x12CE) != 0;
+        MP_GameMode::pInstance = (uint8_t*)regs.esi;
+        bGameViewRendered = true;
+        Cinematic::UpdateBorders(MP_GameMode::pInstance);
     });
 
-    pattern = hook::pattern("8B 4C 24 18 51 8B 4F 04 FF 15");
-    struct X_CharacterSetSniperZoomOnHook
+    // MP_GameMode destructor. The game mode is deleted on quit, while the progress bar still draws.
+    pattern = hook::pattern("C7 06 ? ? ? ? C7 46 19 ? ? ? ? C7 86 BE 00 00 00 ? ? ? ? C7 44 24 24 19 00 00 00");
+    static auto MP_GameModeDestructorHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs) //0x46A412
     {
-        void operator()(injector::reg_pack& regs)
-        {
-            regs.edx = *(uint32_t*)(regs.esp + 0x18);
-            regs.ecx = *(uint32_t*)(regs.edi + 0x04);
-            if (regs.edx == 1)
-                Screen.bIsSniperZoomOn = true;
-            else
-                Screen.bIsSniperZoomOn = false;
-        }
-    }; injector::MakeInline<X_CharacterSetSniperZoomOnHook>(pattern.get_first(0), pattern.get_first(8)); //428FB2
-    injector::WriteMemory<uint8_t>(pattern.get_first(6), 0x52i8, true); //push edx
+        if ((uint8_t*)regs.esi == MP_GameMode::pInstance)
+            MP_GameMode::pInstance = nullptr;
+    });
 
-    pattern = hook::pattern("C7 44 24 ? ? ? ? ? 75 07 8A 46 41 84 C0");
-    struct SkyboxHook1
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            *(uint32_t*)(regs.esp + 0x18) = 0;
-            Screen.bIsSkybox = true;
-        }
-    }; injector::MakeInline<SkyboxHook1>(pattern.get_first(0), pattern.get_first(8));
+    // Cutscene borders: every height multiplier read in MP_HUDMode's render function, which moves
+    // subtitles clear of the letterbox bars and then draws them
+    pattern = hook::pattern("8B 8E AE 00 00 00 33 DB 89 5C 24 ? E8"); // subtitle offset check
+    injector::MakeCALL(pattern.get_first(12), Cinematic::GetBordersHeightMultiplier, true); //0x488A01
+    pattern = hook::pattern("8B 8E AE 00 00 00 E8 ? ? ? ? D8 2D ? ? ? ? 8B 8E 07 02 00 00"); // subtitle offset
+    injector::MakeCALL(pattern.get_first(6), Cinematic::GetBordersHeightMultiplier, true); //0x488A1D
+    pattern = hook::pattern("FF 52 0C 8B 8E AE 00 00 00 E8"); // subtitle offset restore check
+    injector::MakeCALL(pattern.get_first(9), Cinematic::GetBordersHeightMultiplier, true); //0x488B23
+    pattern = hook::pattern("8B 8E AE 00 00 00 E8 ? ? ? ? D8 1D ? ? ? ? DF E0 F6 C4 05 0F 8A ? ? ? ? 8B 15"); // bars check
+    injector::MakeCALL(pattern.get_first(6), Cinematic::GetBordersHeightMultiplier, true); //0x488C05
+    pattern = hook::pattern("8B 8E AE 00 00 00 D9 5C 24 10 E8"); // bar height
+    injector::MakeCALL(pattern.get_first(10), Cinematic::GetBordersHeightMultiplier, true); //0x488C68
 
-    pattern = hook::pattern("C7 44 24 ? ? ? ? ? FF 15 ? ? ? ? 8B 4C 24 10 5E 64 89 0D ? ? ? ? 83 C4 18 C2 08 00");
-    struct SkyboxHook2
+    // MP_HUDMode's render function updates the fade layer right before drawing it
+    pattern = hook::pattern("8B 8E F0 02 00 00 D9 1C 24 E8");
+    static auto MaxPayne_HUDFadeLayerHook = safetyhook::create_mid(pattern.get_first(9), [](SafetyHookContext& regs) //0x4889F0
     {
-        void operator()(injector::reg_pack& regs)
-        {
-            *(int32_t*)(regs.esp + 0x18) = -1;
-            Screen.bIsSkybox = false;
-        }
-    }; injector::MakeInline<SkyboxHook2>(pattern.get_first(0), pattern.get_first(8));
+        if (regs.ecx)
+            MaxPayne_HUDFadeLayer::pSprite = *(uint8_t**)(regs.ecx + 0xAD);
+    });
+
+    // Graphic novels: key toggles between the original framing and a page that fills the screen width
+    pattern = hook::pattern("8B 46 6F 50 8B CF FF 15"); // camera setup when the page changes
+    P_Camera::setFOV = **pattern.get_first<decltype(P_Camera::setFOV)*>(8);
+    injector::MakeCALL(pattern.get_first(6), MaxPayne_GraphicNovelPage::setFOV, true); //0x48630F
+    injector::MakeNOP(pattern.get_first(11), 1, true);
+
+    // Graphic novel cursor bounds, see UpdateCursorBounds
+    pattern = hook::pattern("52 68 00 00 20 44 E8 ? ? ? ? 51 D9 1C 24 6A 00 E8 ? ? ? ? D9 5C 24 ? 8B 44 24 ? 50 68 00 00 F0 43 E8 ? ? ? ? 51 D9 1C 24 6A 00 E8"); // MP_GraphicNovelMode::update
+    injector::MakeCALL(pattern.get_first(6), ClampCursorRight, true); //0x484FB5
+    injector::MakeCALL(pattern.get_first(17), ClampCursorLeft, true);
+    injector::MakeCALL(pattern.get_first(36), ClampCursorBottom, true);
+    injector::MakeCALL(pattern.get_first(47), ClampCursorTop, true);
+
+    // Post-processing (pain and bullet time): the scene is warped with a grid covering the render target
+    pattern = hook::pattern("8B 8E 9C 00 00 00 52 68 ? ? ? ? E8");
+    static auto PostProcessWarpHook = safetyhook::create_mid(pattern.get_first(12), [](SafetyHookContext& regs) //0x47AB87
+    {
+        KeepOriginalProjection(*(void**)(regs.ecx + 0x10));
+    });
 
     //savegame date format
     static auto fmt = iniReader.ReadString("MISC", "SaveStringFormat", "%a, %b %d %Y, %H:%M");
@@ -240,13 +242,14 @@ CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
+        ReadSettings();
         CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("0F 84 ? ? ? ? E8 ? ? ? ? 8B 40 04 68"));
         CallbackHandler::RegisterCallback(L"E2MFC.dll", InitE2MFC);
         CallbackHandler::RegisterCallback(L"X_GameObjectsMFC.dll", InitX_GameObjectsMFC);
         CallbackHandler::RegisterCallback(L"X_ModesMFC.dll", InitX_ModesMFC);
         CallbackHandler::RegisterCallback(L"X_HelpersMFC.dll", InitX_HelpersMFC);
         CallbackHandler::RegisterCallback(L"E2_D3D8_DRIVER_MFC.dll", InitE2_D3D8_DRIVER_MFC);
-        CallbackHandler::RegisterModuleUnloadCallback(L"E2_D3D8_DRIVER_MFC.dll", []() { EndSceneHook.reset(); BorderlessWindowedHook.reset(); shDllMainHook.reset(); });
+        CallbackHandler::RegisterModuleUnloadCallback(L"E2_D3D8_DRIVER_MFC.dll", []() { BorderlessWindowedHook.reset(); shDllMainHook.reset(); });
         CallbackHandler::RegisterCallback(L"X_BasicModesMFC.dll", InitX_BasicModesMFC);
         CallbackHandler::RegisterCallback(L"sndmfc.dll", InitSNDMFC);
         CallbackHandler::RegisterCallback(L"X_Inputmfc.dll", InitInput);

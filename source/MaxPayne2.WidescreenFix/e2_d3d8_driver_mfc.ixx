@@ -1,8 +1,6 @@
 module;
 
 #include <stdafx.h>
-#include "minidx8/d3d8.h"
-#include "d3dvtbl.h"
 
 export module e2_d3d8_driver_mfc;
 
@@ -16,43 +14,9 @@ BOOL WINAPI DllMainHook(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
     return shDllMainHook.unsafe_stdcall<BOOL>(hinstDLL, fdwReason, lpvReserved);
 }
 
-void DrawRect(LPDIRECT3DDEVICE8 pDevice, int32_t x, int32_t y, int32_t w, int32_t h, D3DCOLOR color = D3DCOLOR_XRGB(0, 0, 0))
-{
-    D3DRECT BarRect = { x, y, x + w, y + h };
-    pDevice->Clear(1, &BarRect, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, color, 0, 0);
-}
-
-HRESULT WINAPI EndScene(LPDIRECT3DDEVICE8 pDevice)
-{
-    if ((Screen.bDrawBorders || Screen.bDrawBordersForCameraOverlay) && CurrentGameMode != "graphicnovel")
-    {
-        DrawRect(pDevice, 0, 0, static_cast<int32_t>(Screen.fHudOffsetReal) + 1, Screen.nHeight);
-        DrawRect(pDevice, static_cast<int32_t>(Screen.fWidth - Screen.fHudOffsetReal) - 1, 0, static_cast<int32_t>(Screen.fHudOffsetReal + Screen.fHudOffsetReal) + 1, Screen.nHeight);
-        Screen.bDrawBorders = false;
-    }
-
-    return RealEndScene(pDevice);
-}
-
 export void InitE2_D3D8_DRIVER_MFC()
 {
-    //D3D Hook for borders
     CIniReader iniReader("");
-    bool bD3DHookBorders = iniReader.ReadInteger("MAIN", "D3DHookBorders", 1) != 0;
-    if (bD3DHookBorders)
-    {
-        auto pattern = hook::module_pattern(GetModuleHandle(L"e2_d3d8_driver_mfc"), "8B 86 ? ? ? ? 8B 08 50 FF 91");
-        EndSceneHook = safetyhook::create_mid(pattern.get_first(6), [](SafetyHookContext& regs) //0x1002856D
-        {
-            if (!RealEndScene)
-            {
-                auto addr = *(uint32_t*)(regs.eax) + (IDirect3DDevice8VTBL::EndScene * 4);
-                RealEndScene = *(EndScene_t*)addr;
-                injector::WriteMemory(addr, &EndScene, true);
-            }
-        });
-    }
-
     bool BorderlessWindowedMode = iniReader.ReadInteger("MAIN", "BorderlessWindowedMode", 1) != 0;
     if (BorderlessWindowedMode)
     {

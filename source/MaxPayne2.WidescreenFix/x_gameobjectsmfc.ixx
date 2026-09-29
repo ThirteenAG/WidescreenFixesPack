@@ -5,49 +5,112 @@ module;
 export module x_gameobjectsmfc;
 
 import ComVars;
+import e2mfc;
+
+namespace X_LevelRuntimeCamera
+{
+    void(__fastcall* setFOVOriginal)(void* _this, void* edx, float fFOV) = nullptr;
+
+    // The FOV set on the level camera is the 4:3 one, P_Camera::validate widens it for the screen.
+    // FOVFactor and the cutscene framing are applied here, so the skybox camera, mirrors and the
+    // portal code, which all read this camera's FOV, stay in sync.
+    float CalculateFOV(float fFOV)
+    {
+        float fTan = tanf(fFOV * 0.5f);
+        if (fTan <= 0.0f)
+            return fFOV;
+
+        float fZoom = Screen.fAspectScaleX;
+        if (Screen.fFOVFactor != 1.0f)
+        {
+            float fWideFOV = std::clamp(2.0f * atanf(fTan * Screen.fAspectScaleX) * Screen.fFOVFactor, 0.01f, 3.1f);
+            fZoom = tanf(fWideFOV * 0.5f) / fTan;
+        }
+
+        // Cutscenes move to the vanilla framing along with the game's widescreen transition. Camera
+        // overlays are 4:3 images with the gameplay view behind them.
+        if (!Screen.bDrawBordersForCameraOverlay)
+        {
+            auto state = Cinematic::GetState(MP_GameMode::pInstance);
+            if (state.fProgress > 0.0f)
+                fZoom += (Cinematic::GetCutsceneZoom(state.fWideScreenMultiplier) - fZoom) * state.fProgress;
+        }
+
+        return 2.0f * atanf(fTan * fZoom / Screen.fAspectScaleX);
+    }
+
+    void __fastcall setFOV(void* pCamera, void* edx, float fFOV)
+    {
+        setFOVOriginal(pCamera, edx, CalculateFOV(fFOV));
+    }
+
+    // Portal culling in updateVisibility and the room sub-viewports derive the frustum from the
+    // camera FOV, so they need the same scaling as P_Camera::validate. Without it rooms seen through
+    // portals get clipped to the 4:3 part of the screen.
+    void updateVisibilityHook(SafetyHookContext& regs)
+    {
+        *(float*)(regs.esp + 0x14) *= Screen.fAspectScaleX; // tan(fov / 2)
+        *(float*)(regs.esp + 0x1C) *= Screen.fAspectScaleY; // the same for the viewport height
+    }
+
+    void setSubViewportHook(SafetyHookContext& regs)
+    {
+        *(float*)(regs.esp + 0x08) *= Screen.fAspectScaleX;
+        *(float*)(regs.esp + 0x0C) *= Screen.fAspectScaleY;
+    }
+}
+
+namespace X_Mirror
+{
+    // Mirrors build projection matrices of their own from the level camera's FOV and the 4:3 viewport
+    // ratio, for the screen area the mirror covers and for projecting the mirror image onto it. Both
+    // have to match the widened projection the scene and the mirror image are rendered with.
+    // The FOV and the viewport ratio are the first two arguments pushed at this point.
+    void WidenProjection(SafetyHookContext& regs)
+    {
+        auto& fFOV = *(float*)(regs.esp + 0x00);
+        auto& fViewportRatio = *(float*)(regs.esp + 0x04);
+        fFOV = 2.0f * atanf(tanf(fFOV * 0.5f) * Screen.fAspectScaleX);
+        fViewportRatio *= Screen.fAspectScaleY / Screen.fAspectScaleX;
+    }
+}
 
 export void InitX_GameObjectsMFC()
 {
-    //mirrors fix
-    auto pattern = hook::module_pattern(GetModuleHandle(L"X_GameObjectsMFC"), "D8 3D ? ? ? ? D9 5C 24 0C D9");
-    injector::WriteMemory(pattern.get_first(2), &Screen.fMirrorFactor, true); //0x10101F39
+    auto X_GameObjectsMFC = GetModuleHandle(L"X_GameObjectsMFC");
 
-    //doors graphics fix
-    static float fVisibilityFactor1 = 0.5f;
-    static float fVisibilityFactor2 = 1.5f;
-    pattern = hook::module_pattern(GetModuleHandle(L"X_GameObjectsMFC"), "D9 05 ? ? ? ? 89 44 24 1C"); //1000AD9E
-    injector::WriteMemory(pattern.get_first(2), &fVisibilityFactor1, true);
-    pattern = hook::module_pattern(GetModuleHandle(L"X_GameObjectsMFC"), "D9 05 ? ? ? ? 89 4C 24 18"); //1000AD55
-    injector::WriteMemory(pattern.get_first(2), &fVisibilityFactor2, true);
+    // FOV
+    auto pattern = hook::module_pattern(X_GameObjectsMFC, "8B 97 38 05 00 00 52 8B CE FF 15"); // X_LevelRuntimeCamera::getCamera
+    X_LevelRuntimeCamera::setFOVOriginal = **pattern.get_first<decltype(X_LevelRuntimeCamera::setFOVOriginal)*>(11);
+    injector::MakeCALL(pattern.get_first(9), X_LevelRuntimeCamera::setFOV, true); //0x10004292
+    injector::MakeNOP(pattern.get_first(14), 1, true);
 
-    //FOV
-    CIniReader iniReader("");
-    static bool bRestoreCutsceneFOV = iniReader.ReadInteger("MAIN", "RestoreCutsceneFOV", 0) != 0;
-    static float fFOVFactor = iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f);
-    if (!fFOVFactor) { fFOVFactor = 1.0f; }
+    pattern = hook::module_pattern(X_GameObjectsMFC, "8B 8D 28 05 00 00 D9 05 ? ? ? ? 89 4C 24 18"); // X_LevelRuntimeCamera::updateVisibility
+    static auto updateVisibilityHook = safetyhook::create_mid(pattern.get_first(), X_LevelRuntimeCamera::updateVisibilityHook); //0x1000AD4F
 
-    pattern = hook::module_pattern(GetModuleHandle(L"X_GameObjectsMFC"), "A0 ? ? ? ? 84 C0 0F 85"); //byte_101A7AA0
+    pattern = hook::module_pattern(X_GameObjectsMFC, "8B 87 9C 05 00 00 8B 4C 24 14 8B 49 5C"); // sub-viewport of a room seen through a portal
+    static auto setSubViewportHook = safetyhook::create_mid(pattern.get_first(), X_LevelRuntimeCamera::setSubViewportHook); //0x10005FE0
+
+    // Mirrors
+    pattern = hook::module_pattern(X_GameObjectsMFC, "68 00 00 40 3F 56 8D 44 24 ? 50 8B CF E8"); // screen area of the mirror
+    static auto X_MirrorScreenAreaHook = safetyhook::create_mid(pattern.get_first(6), X_Mirror::WidenProjection); //0x101020BE
+    pattern = hook::module_pattern(X_GameObjectsMFC, "68 00 00 40 3F 50 8D 4C 24 ? 51 8B CB E8"); // texture matrix, X_Mirror::update
+    static auto X_MirrorTextureMatrixHook = safetyhook::create_mid(pattern.get_first(6), X_Mirror::WidenProjection); //0x10104DBB
+
+    // Dynamic character shadows render into square textures with their own cameras
+    pattern = hook::module_pattern(X_GameObjectsMFC, "8B 15 ? ? ? ? 8B 0D ? ? ? ? 52 FF 15 ? ? ? ? 32 C9 FF D7 8B 0D ? ? ? ? E8");
+    static auto ppShadowEdgeFader = *pattern.get_first<uint8_t**>(25);
+    static auto X_DynamicCharacterShadowRenderHook = safetyhook::create_mid(pattern.get_first(12), [](SafetyHookContext& regs) //0x10073D30
+    {
+        KeepOriginalProjection((void*)regs.edx);
+        if (*ppShadowEdgeFader)
+            KeepOriginalProjection(*(void**)(*ppShadowEdgeFader + 0x10));
+    });
+
+    pattern = hook::module_pattern(X_GameObjectsMFC, "A0 ? ? ? ? 84 C0 0F 85"); //byte_101A7AA0
     X_Crosshair::sm_bCameraPathRunning.SetAddress(*pattern.get_first<bool*>(1));
 
-    pattern = hook::module_pattern(GetModuleHandle(L"X_GameObjectsMFC"), "8B 44 24 04 89 81 38 05 00 00"); //void __thiscall X_LevelRuntimeCamera::setFOV(X_LevelRuntimeCamera *this, float)
-    struct X_LevelRuntimeCamerasetFOVHook
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            *(float*)&regs.eax = *(float*)(regs.esp + 4);
-            *(float*)(regs.ecx + 0x538) = *(float*)&regs.eax;
-
-            if (bRestoreCutsceneFOV && X_Crosshair::sm_bCameraPathRunning && !Screen.bDrawBordersForCameraOverlay)
-            {
-                *(float*)(regs.ecx + 0x538) *= (4.0f / 3.0f) / Screen.fAspectRatio;
-                return;
-            }
-
-            *(float*)(regs.ecx + 0x538) *= fFOVFactor;
-        }
-    }; injector::MakeInline<X_LevelRuntimeCamerasetFOVHook>(pattern.get_first(0), pattern.get_first(10));
-
-    pattern = hook::module_pattern(GetModuleHandle(L"X_GameObjectsMFC"), "B1 01 88 46 65 E8 ? ? ? ? 5E C2 08 00");
+    pattern = hook::module_pattern(X_GameObjectsMFC, "B1 01 88 46 65 E8 ? ? ? ? 5E C2 08 00");
     struct CameraOverlayHook
     {
         void operator()(injector::reg_pack& regs)

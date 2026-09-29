@@ -29,42 +29,290 @@ int __fastcall sub_40D040(int* CWnd, void* edx, char a2)
     return shsub_40D040.unsafe_fastcall<int>(CWnd, edx, a2);
 }
 
+namespace P_Camera
+{
+    void(__fastcall* setFOV)(void* _this, void* edx, float fFOV) = nullptr;
+}
+
+// Set when MaxPayne_GameMode renders the game view, cleared at the end of each frame
+bool bGameViewRendered = false;
+
+namespace Cinematic
+{
+    enum eCutsceneBorders
+    {
+        Off,
+        Letterbox,
+        Pillarbox,
+        Both,
+    };
+
+    int32_t nCutsceneBorders = Both;
+    bool bNoBorderAnimation = false;
+    constexpr float fBorderAnimationTime = 0.35f;
+
+    struct State
+    {
+        float fProgress = 0.0f;            // how far the game's own widescreen transition is, 0 = off, 1 = on
+        float fWideScreenMultiplier = 1.0f; // X_GlobalCinematicSettings::WideScreenMultiplier, share of the 4:3 height left by the bars
+    };
+
+    State GetState(uint8_t* pGameMode)
+    {
+        State state;
+        if (!pGameMode)
+            return state;
+
+        auto pSettings = *(uint8_t**)(pGameMode + MaxPayne_GameMode::GLOBAL_CINEMATIC_SETTINGS);
+        if (pSettings)
+            state.fWideScreenMultiplier = *(float*)(pSettings + 0x0C);
+
+        if (state.fWideScreenMultiplier > 0.0f && state.fWideScreenMultiplier < 1.0f)
+        {
+            float fCurrent = *(float*)(pGameMode + MaxPayne_GameMode::CURRENT_HEIGHT_MULTIPLIER);
+            state.fProgress = std::clamp((1.0f - fCurrent) / (1.0f - state.fWideScreenMultiplier), 0.0f, 1.0f);
+        }
+        return state;
+    }
+
+    // The vanilla cutscene frame is the 4:3 view cut down to WideScreenMultiplier of its height, 16:9
+    // for the default 0.75. Cutscenes always show exactly that frame, like in the GTA III widescreen
+    // fix: across the full width on screens narrower than it (letterbox), across the full height on
+    // wider ones (pillarbox). nCutsceneBorders only decides which of the bars around it get drawn.
+    float GetFrameAspectRatio(float fWideScreenMultiplier)
+    {
+        return (4.0f / 3.0f) / fWideScreenMultiplier;
+    }
+
+    // Horizontal tangent multiplier, relative to the 4:3 FOV, that shows exactly the vanilla frame
+    float GetCutsceneZoom(float fWideScreenMultiplier)
+    {
+        return std::max(1.0f, Screen.fAspectRatio / GetFrameAspectRatio(fWideScreenMultiplier));
+    }
+
+    struct Borders
+    {
+        float fLetterbox = 0.0f; // share of the screen height covered by the top and bottom bars
+        float fPillarbox = 0.0f; // share of the screen width covered by the left and right bars
+    };
+
+    Borders GetBorders(float fWideScreenMultiplier)
+    {
+        Borders borders;
+        float fScreenToFrame = Screen.fAspectRatio / GetFrameAspectRatio(fWideScreenMultiplier);
+        if (fScreenToFrame < 1.0f)
+        {
+            if (nCutsceneBorders == Letterbox || nCutsceneBorders == Both)
+                borders.fLetterbox = 1.0f - fScreenToFrame;
+        }
+        else if (nCutsceneBorders == Pillarbox || nCutsceneBorders == Both)
+        {
+            borders.fPillarbox = 1.0f - 1.0f / fScreenToFrame;
+        }
+        return borders;
+    }
+
+    // Borders slide in and out like in the GTA III widescreen fix, following the game's own
+    // transition when a script gives it a fade time.
+    float fBordersShown = 0.0f;
+    float fBordersWideScreenMultiplier = 0.75f; // of the last cutscene, kept while its borders slide out
+    Borders CurrentBorders;
+
+    // Called every frame the game view renders, before MaxPayne_HUDMode draws the letterbox bars
+    void UpdateBorders(uint8_t* pGameMode)
+    {
+        auto state = GetState(pGameMode);
+        if (state.fProgress > 0.0f)
+            fBordersWideScreenMultiplier = state.fWideScreenMultiplier;
+
+        using clock = std::chrono::steady_clock;
+        static clock::time_point lastUpdate = clock::now();
+        auto now = clock::now();
+        float dt = std::min(std::chrono::duration<float>(now - lastUpdate).count(), 0.1f);
+        lastUpdate = now;
+
+        if (bNoBorderAnimation)
+            fBordersShown = state.fProgress;
+        else
+        {
+            float fStep = dt / fBorderAnimationTime;
+            fBordersShown += std::clamp(state.fProgress - fBordersShown, -fStep, fStep);
+        }
+
+        auto borders = GetBorders(fBordersWideScreenMultiplier);
+        CurrentBorders.fLetterbox = borders.fLetterbox * fBordersShown;
+        CurrentBorders.fPillarbox = borders.fPillarbox * fBordersShown;
+    }
+
+    // Replaces MaxPayne_GameInformation::getCurrentHeightMultiplier in MaxPayne_HUDMode's render
+    // function, which draws the letterbox bars and moves subtitles clear of them
+    float __fastcall GetBordersHeightMultiplier(void* pGameInformation, void* edx)
+    {
+        return 1.0f - CurrentBorders.fLetterbox;
+    }
+
+    // At the end of the frame, like the bars the game draws, so they cover everything but the frame
+    void DrawPillarboxBorders()
+    {
+        auto nWidth = static_cast<int32_t>(std::lround(Screen.fWidth * CurrentBorders.fPillarbox * 0.5f));
+        if (nWidth > 0)
+            DrawPillarboxBars(nWidth, nWidth);
+    }
+}
+
+namespace X_LevelRuntimeCamera
+{
+    // The FOV set on the level camera is the 4:3 one, P_Camera::validate widens it for the screen.
+    // FOVFactor and the cutscene framing are applied here, so the skybox camera and the portal code,
+    // which both read this camera's FOV, stay in sync.
+    float CalculateFOV(float fFOV)
+    {
+        float fTan = tanf(fFOV * 0.5f);
+        if (fTan <= 0.0f)
+            return fFOV;
+
+        float fZoom = Screen.fAspectScaleX;
+        if (Screen.fFOVFactor != 1.0f)
+        {
+            float fWideFOV = std::clamp(2.0f * atanf(fTan * Screen.fAspectScaleX) * Screen.fFOVFactor, 0.01f, 3.1f);
+            fZoom = tanf(fWideFOV * 0.5f) / fTan;
+        }
+
+        // Cutscenes move to the vanilla framing along with the game's widescreen transition. Camera
+        // overlays are 4:3 images with the gameplay view behind them.
+        if (!Screen.bDrawBordersForCameraOverlay)
+        {
+            auto state = Cinematic::GetState(MaxPayne_GameMode::pInstance);
+            if (state.fProgress > 0.0f)
+                fZoom += (Cinematic::GetCutsceneZoom(state.fWideScreenMultiplier) - fZoom) * state.fProgress;
+        }
+
+        return 2.0f * atanf(fTan * fZoom / Screen.fAspectScaleX);
+    }
+
+    void __fastcall setFOV(void* pCamera, void* edx, float fFOV)
+    {
+        P_Camera::setFOV(pCamera, edx, CalculateFOV(fFOV));
+    }
+
+    // Portal culling in getFirstSceneToRender and getSceneToRender derives the frustum from the
+    // camera FOV, so it needs the same scaling as P_Camera::validate (the mobile release does this
+    // too). Without it rooms seen through portals get clipped to the 4:3 part of the screen.
+    void getFirstSceneToRenderHook(SafetyHookContext& regs)
+    {
+        // [ebp-10h] is tan(fov / 2), st(0) is it multiplied by the viewport height
+        *(float*)(regs.ebp - 0x10) *= Screen.fAspectScaleX;
+        float fScaleY = Screen.fAspectScaleY;
+        _asm fmul dword ptr[fScaleY]
+    }
+
+    void getSceneToRenderHook(SafetyHookContext& regs)
+    {
+        // st(1) is tan(fov / 2), st(0) is it multiplied by the viewport height
+        float fScaleX = Screen.fAspectScaleX;
+        float fScaleY = Screen.fAspectScaleY;
+        _asm
+        {
+            fmul    dword ptr[fScaleY]
+            fxch    st(1)
+            fmul    dword ptr[fScaleX]
+            fxch    st(1)
+        }
+    }
+}
+
+namespace MaxPayne_GraphicNovelPage
+{
+    void* pCamera = nullptr;
+    float fPageFOV = 0.0f;
+
+    float CalculateFOV(float fFOV)
+    {
+        if (Screen.bGraphicNovelMode)
+            return fFOV; // original framing, the screen shows the whole page
+
+        // the page fills the screen width, like in the mobile release
+        return 2.0f * atanf(tanf(fFOV * 0.5f) / Screen.fAspectScaleX);
+    }
+
+    void __fastcall setFOV(void* camera, void* edx, float fFOV)
+    {
+        pCamera = camera;
+        fPageFOV = fFOV;
+        P_Camera::setFOV(camera, edx, CalculateFOV(fFOV));
+    }
+
+    void Refresh()
+    {
+        if (pCamera)
+            P_Camera::setFOV(pCamera, nullptr, CalculateFOV(fPageFOV));
+    }
+}
+
 namespace X_ModeSwitch
 {
-    std::string PendingGameMode;
-
-    SafetyHookInline shSetModeSwitch = {};
-    void __fastcall setModeSwitch(void* X_ModeSwitch, void* edx, void* a2)
+    enum
     {
-        PendingGameMode = std::string_view(*((char**)a2 + 1));
-        return shSetModeSwitch.unsafe_fastcall(X_ModeSwitch, edx, a2);
+        ACTIVE_BASIC_MODE = 0x19,
+    };
+
+    // Name the mode by its class. The requested name can't be used: setModeSwitch ignores requests
+    // while fading out, and a new request can already be accepted in the frame the switch completes.
+    std::string_view GetModeName(uint8_t* pMode)
+    {
+        if (!pMode)
+            return {};
+
+        auto pVTable = *(uintptr_t**)pMode;
+        auto pCompleteObjectLocator = (uint8_t*)pVTable[-1];
+        auto pTypeDescriptor = *(uint8_t**)(pCompleteObjectLocator + 12);
+        std::string_view szClassName = (const char*)(pTypeDescriptor + 8);
+
+        if (szClassName == ".?AVMaxPayne_GameMode@@")
+            return "game";
+        if (szClassName == ".?AVMaxPayne_MenuMode@@")
+            return "menu";
+        if (szClassName == ".?AVMaxPayne_GraphicNovelMode@@")
+            return "graphicnovel";
+        if (szClassName == ".?AVMaxPayne_StatisticsMode@@")
+            return "statistics";
+        return szClassName;
+    }
+
+    void update(SafetyHookContext& regs)
+    {
+        auto pModeSwitch = (uint8_t*)regs.esi;
+        auto pActiveMode = *(uint8_t**)(pModeSwitch + ACTIVE_BASIC_MODE);
+
+        static uint8_t* pPrevActiveMode = nullptr;
+        if (pActiveMode != pPrevActiveMode)
+        {
+            pPrevActiveMode = pActiveMode;
+            CurrentGameMode = GetModeName(pActiveMode);
+            if (CurrentGameMode != "graphicnovel")
+                MaxPayne_GraphicNovelPage::pCamera = nullptr;
+        }
+
+        auto profile = eGamepadProfile::Menu;
+        if (pActiveMode && CurrentGameMode == "game")
+            profile = *(pActiveMode + MaxPayne_GameMode::PAUSED) ? eGamepadProfile::Pause : eGamepadProfile::Main;
+        GamepadProfile.store(profile, std::memory_order_relaxed);
+
+        // graphic novels in their original framing keep the cursor on the 4:3 page
+        UpdateCursorBounds(CurrentGameMode != "graphicnovel" || !Screen.bGraphicNovelMode);
+        MaxPayne_GraphicNovelMode::Update(CurrentGameMode == "graphicnovel" ? pActiveMode : nullptr);
     }
 }
 
-namespace MaxPayne_HUDFadeUpdate
+void ReadSettings()
 {
-    SafetyHookInline shupdate = {};
-    void __fastcall update(float* MaxPayne_HUDFadeUpdate, void* edx, const void* X_TimeUpdate)
-    {
-        Screen.bIsFading = true;
-        return shupdate.unsafe_fastcall(MaxPayne_HUDFadeUpdate, edx, X_TimeUpdate);
-    }
-
-    SafetyHookInline shdestruct = {};
-    void __fastcall destruct(float* MaxPayne_HUDFadeUpdate, void* edx)
-    {
-        Screen.bIsFading = false;
-        return shdestruct.unsafe_fastcall(MaxPayne_HUDFadeUpdate, edx);
-    }
-}
-
-float CutsceneBordersScale = 1.0f;
-injector::hook_back<float(__fastcall*)(void*, void*)> hb_421AC0;
-float __fastcall sub_421AC0(void* _this, void* edx)
-{
-    auto ret = hb_421AC0.fun(_this, edx);
-    bCutsceneBordersRendered = ret < 1.0f;
-    return CutsceneBordersScale;
+    CIniReader iniReader("");
+    Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "HudAspectRatioConstraint", ""));
+    Screen.fFOVFactor = iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f);
+    if (Screen.fFOVFactor <= 0.0f) { Screen.fFOVFactor = 1.0f; }
+    Screen.bGraphicNovelMode = iniReader.ReadInteger("MAIN", "GraphicNovelMode", 1) != 0;
+    Cinematic::nCutsceneBorders = std::clamp(iniReader.ReadInteger("MAIN", "CutsceneBorders", Cinematic::Both), (int32_t)Cinematic::Off, (int32_t)Cinematic::Both);
+    Cinematic::bNoBorderAnimation = iniReader.ReadInteger("MAIN", "NoCutsceneBorderAnimation", 0) != 0;
 }
 
 void Init()
@@ -82,23 +330,6 @@ void Init()
     {
         auto pattern = hook::pattern("E8 ? ? ? ? 8B CE E8 ? ? ? ? 5E C2 08 00");
         injector::MakeNOP(pattern.count(2).get(1).get<uintptr_t>(0), 5, true); //0x40D29B
-    }
-
-    static int32_t nCutsceneBorders = iniReader.ReadInteger("MAIN", "CutsceneBorders", 1);
-    if (nCutsceneBorders)
-    {
-        auto f = [](uintptr_t _this, uintptr_t edx) -> float
-        {
-            if (nCutsceneBorders > 1)
-                CutsceneBordersScale = *(float*)(_this + 12) * (1.0f / ((4.0f / 3.0f) / Screen.fAspectRatio));
-
-            return *(float*)(_this + 12);
-        };
-        auto pattern = hook::pattern("E8 ? ? ? ? EB ? D9 05 ? ? ? ? 8B CF");
-        injector::MakeCALL(pattern.get_first(), static_cast<float(__fastcall*)(uintptr_t, uintptr_t)>(f), true); //0x4565B8
-
-        pattern = hook::pattern("E8 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? E8 ? ? ? ? ? ? ? ? 8B F0 89 5C 24");
-        hb_421AC0.fun = injector::MakeCALL(pattern.get_first(), sub_421AC0, true).get();
     }
 
     static int32_t nLoadSaveSlot = iniReader.ReadInteger("MISC", "LoadSaveSlot", -1);
@@ -206,91 +437,122 @@ void Init()
         }
     }
 
-    auto pattern = hook::pattern("51 55 8B E9 8B 45");
-    X_ModeSwitch::shSetModeSwitch = safetyhook::create_inline(pattern.get_first(0), X_ModeSwitch::setModeSwitch);
+    auto pattern = hook::pattern("83 F8 ? C7 44 24");
+    static auto X_ModeSwitchupdateHook = safetyhook::create_mid(pattern.get_first(), X_ModeSwitch::update);
 
-    pattern = hook::pattern("83 F8 ? C7 44 24");
-    static auto X_ModeSwitchupdateHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-    {
-        static void* prevMode = nullptr;
-        auto mode = *(void**)(regs.esi + 0x19);
-
-        if (mode != prevMode)
-        {
-            prevMode = mode;
-            CurrentGameMode = X_ModeSwitch::PendingGameMode;
-        }
-
-        Screen.bIsFading = regs.eax == 2 || regs.eax == 3;
-    });
-
-    pattern = hook::pattern("E8 ? ? ? ? 8B CB E8 ? ? ? ? 8B C8 E8 ? ? ? ? 8B CB");
-    static auto MaxPayne_GameModeupdateHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-    {
-        bIsPaused = *(uint8_t*)(regs.ecx + 0x12CE) != 0;
-    });
-
-    pattern = hook::pattern("55 8B EC 83 EC ? 56 57 8B 7D ? 8B F1 8B CF E8 ? ? ? ? 39 46");
-    MaxPayne_HUDFadeUpdate::shupdate = safetyhook::create_inline(pattern.get_first(0), MaxPayne_HUDFadeUpdate::update);
-
-    pattern = hook::pattern("E8 ? ? ? ? 8B 46 ? 8B 48 ? 85 C9 0F 84");
-    MaxPayne_HUDFadeUpdate::shdestruct = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first(0)).as_int(), MaxPayne_HUDFadeUpdate::destruct);
-
-    //FOV
-    static bool bRestoreCutsceneFOV = iniReader.ReadInteger("MAIN", "RestoreCutsceneFOV", 0) != 0;
     pattern = hook::pattern("A0 ? ? ? ? 84 C0 0F 85 ? ? ? ? 8B 86");
     X_Crosshair::sm_bCameraPathRunning.SetAddress(*pattern.get_first<bool*>(1));
 
-    static auto FOVHook = [](uintptr_t _this, uintptr_t edx) -> float
-    {
-        if (bRestoreCutsceneFOV && X_Crosshair::sm_bCameraPathRunning && !Screen.bDrawBordersForCameraOverlay)
-        {
-            Screen.fFieldOfView = *(float*)(_this + 0x58);
-            return Screen.fFieldOfView;
-        }
-
-        float f = AdjustFOV(*(float*)(_this + 0x58) * 57.295776f, Screen.fAspectRatio) * Screen.fFOVFactor;
-        Screen.fFieldOfView = f / 57.295776f;
-        return Screen.fFieldOfView;
-    };
-
-    pattern = hook::pattern("E8 ? ? ? ? D8 8B 3C 12"); //0x50B9E0
-    auto sub_50B9E0 = injector::GetBranchDestination(pattern.get_first(), true);
-    pattern = hook::pattern("E8 ? ? ? ?");
-    for (size_t i = 0; i < pattern.size(); ++i)
-    {
-        auto addr = pattern.get(i).get<uint32_t>(0);
-        auto dest = injector::GetBranchDestination(addr, true);
-        if (dest == sub_50B9E0)
-            injector::MakeCALL(addr, static_cast<float(__fastcall*)(uintptr_t, uintptr_t)>(FOVHook), true);
-    }
-
-    pattern = hook::pattern("D8 4C 24 38 D9 54 24 38 D8 1D");
-    struct FOVCheck
+    // Graphic novels: key toggles between the original framing and a page that fills the screen width
+    static int32_t nGraphicNovelModeKey = iniReader.ReadInteger("MAIN", "GraphicNovelModeKey", VK_F2);
+    pattern = hook::pattern("8B 06 8B CE 33 FF FF 50 10"); //60146E
+    struct GraphicNovelPageUpdateHook
     {
         void operator()(injector::reg_pack& regs)
         {
-            float f = *(float*)(regs.esp + 0x38);
-            _asm {fmul dword ptr[f]}
-            _asm {fst dword ptr[f]}
-            *(float*)(regs.esp + 0x38) = (f > 3.14f) ? 3.14f : f;
+            regs.eax = *(uint32_t*)(regs.esi);
+            regs.ecx = regs.esi;
+            regs.edi = 0;
+
+            if (!X_Crosshair::sm_bCameraPathRunning)
+                Screen.bDrawBordersForCameraOverlay = false;
+
+            static bool bWasPressed = false;
+            if (CurrentGameMode != "graphicnovel")
+            {
+                bWasPressed = false;
+                return;
+            }
+
+            bool bPressed = (GetAsyncKeyState(nGraphicNovelModeKey) & 0x8000) != 0;
+            if (!bPressed && bWasPressed)
+            {
+                Screen.bGraphicNovelMode = !Screen.bGraphicNovelMode;
+                CIniReader iniReader("");
+                iniReader.WriteInteger("MAIN", "GraphicNovelMode", Screen.bGraphicNovelMode);
+                MaxPayne_GraphicNovelPage::Refresh();
+            }
+            bWasPressed = bPressed;
         }
-    }; injector::MakeInline<FOVCheck>(pattern.get_first(0), pattern.get_first(8)); // 0x4563D4
+    }; injector::MakeInline<GraphicNovelPageUpdateHook>(pattern.get_first(0), pattern.get_first(6));
 
-    pattern = hook::pattern("E8 ? ? ? ? D9 5C 24 14 8B CF E8"); // 0x45650D
-    injector::MakeCALL(pattern.get_first(0), sub_50B9E0, true); // restoring cutscene FOV
+    // FOV
+    pattern = hook::pattern("8B 97 D0 05 00 00 52 8B CE FF 15"); // X_LevelRuntimeCamera camera setup
+    P_Camera::setFOV = **pattern.get_first<decltype(P_Camera::setFOV)*>(11);
+    injector::MakeCALL(pattern.get_first(9), X_LevelRuntimeCamera::setFOV, true);
+    injector::MakeNOP(pattern.get_first(14), 1, true);
 
-    auto CutsceneFOVHook = [](uintptr_t _this, uintptr_t edx) -> float
+    pattern = hook::pattern("8B 8E 74 10 00 00 33 ED 89 6C 24"); // MaxPayne_GameMode::renderMode
+    static auto MaxPayne_GameModerenderModeHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        return *(float*)(_this + 88) + ((((Screen.fHudOffsetReal / Screen.fWidth)) / *(float*)(_this + 88)) * 2.0f);
-    };
-    injector::MakeCALL(pattern.get_first(0), static_cast<float(__fastcall*)(uintptr_t, uintptr_t)>(CutsceneFOVHook), true);
+        MaxPayne_GameMode::pInstance = (uint8_t*)regs.esi;
+        bGameViewRendered = true;
+        Cinematic::UpdateBorders(MaxPayne_GameMode::pInstance);
+    });
 
-    pattern = hook::pattern("8B 46 ? 50 8B CF FF 15");
-    injector::MakeNOP(pattern.get_first(), 3, true);
-    static auto MaxPayne_GraphicNovelPageshowHook = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& regs)
+    pattern = hook::pattern("8B 46 6B 50 8B CF FF 15"); // MaxPayne_GraphicNovelPage::show
+    injector::MakeCALL(pattern.get_first(6), MaxPayne_GraphicNovelPage::setFOV, true);
+    injector::MakeNOP(pattern.get_first(11), 1, true);
+
+    // Menu and graphic novel cursor bounds, see UpdateCursorBounds. X_MenuModeBase::update and
+    // MaxPayne_GraphicNovelMode::update clamp the cursor with the same inlined code, which loads the
+    // bounds from constants shared with other code, so its loads are pointed at the fix's own.
+    pattern = hook::pattern("D9 05 ? ? ? ? D8 5D C4 DF E0 F6 C4 01 74 08 D9 05 ? ? ? ? EB 1B D9 45 C4 D9 05 ? ? ? ? D8 5D C4 DF E0 F6 C4 41 75 08 DD D8 D9 05 ? ? ? ? D9 55 C4 D9 05 ? ? ? ? D8 5D C8 DF E0 F6 C4 01 74 08 D9 05 ? ? ? ? EB 1B D9 45 C8 D9 05 ? ? ? ? D8 5D C8 DF E0 F6 C4 41 75 08 DD D8 D9 05");
+    pattern.count(2).for_each_result([](hook::pattern_match match) //0x631681, 0x49BBA2
     {
-        *(float*)&regs.eax = *(float*)(regs.esi + 0x6B) * (Screen.fAspectRatio / (4.0f / 3.0f));
+        injector::WriteMemory(match.get<void>(2), &CursorBounds.fRight, true);
+        injector::WriteMemory(match.get<void>(18), &CursorBounds.fRight, true);
+        injector::WriteMemory(match.get<void>(29), &CursorBounds.fLeft, true);
+        injector::WriteMemory(match.get<void>(47), &CursorBounds.fLeft, true);
+        injector::WriteMemory(match.get<void>(56), &CursorBounds.fBottom, true);
+        injector::WriteMemory(match.get<void>(72), &CursorBounds.fBottom, true);
+        injector::WriteMemory(match.get<void>(83), &CursorBounds.fTop, true);
+        injector::WriteMemory(match.get<void>(101), &CursorBounds.fTop, true);
+    });
+
+    pattern = hook::pattern("D9 87 FA 02 00 00 D8 A7 F6 02 00 00 C7 05");
+    static auto getFirstSceneToRenderHook = safetyhook::create_mid(pattern.get_first(), X_LevelRuntimeCamera::getFirstSceneToRenderHook);
+
+    pattern = hook::pattern("D9 86 FA 02 00 00 D8 A6 F6 02 00 00 DE F9 74");
+    static auto getSceneToRenderHook = safetyhook::create_mid(pattern.get_first(), X_LevelRuntimeCamera::getSceneToRenderHook);
+
+    // Cutscene borders: every height multiplier read in MaxPayne_HUDMode's render function, which moves
+    // subtitles clear of the letterbox bars and then draws them
+    pattern = hook::pattern("8B 8E 97 00 00 00 C7 44 24 ? 00 00 00 00 E8"); // subtitle offset check
+    injector::MakeCALL(pattern.get_first(14), Cinematic::GetBordersHeightMultiplier, true); //0x4AF943
+    pattern = hook::pattern("8B 8E 97 00 00 00 E8 ? ? ? ? D8 2D ? ? ? ? 8B 8E 94 01 00 00"); // subtitle offset
+    injector::MakeCALL(pattern.get_first(6), Cinematic::GetBordersHeightMultiplier, true); //0x4AF95B
+    pattern = hook::pattern("8B 8E 97 00 00 00 E8 ? ? ? ? D8 1D ? ? ? ? DF E0 F6 C4 01 74"); // subtitle offset restore check
+    injector::MakeCALL(pattern.get_first(6), Cinematic::GetBordersHeightMultiplier, true); //0x4AF9F0
+    pattern = hook::pattern("8B 8E 97 00 00 00 E8 ? ? ? ? D8 1D ? ? ? ? 5F DF E0"); // bars check
+    injector::MakeCALL(pattern.get_first(6), Cinematic::GetBordersHeightMultiplier, true); //0x4AFA4A
+    pattern = hook::pattern("E8 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? E8 ? ? ? ? ? ? ? ? 8B F0 89 5C 24"); // bar height
+    injector::MakeCALL(pattern.get_first(), Cinematic::GetBordersHeightMultiplier, true); //0x4AFAA2
+
+    // End of the frame, before P_Driver::endScene: the bars the widescreen fix adds are drawn here with
+    // P_Driver::clearScreen, the same way the game draws its letterbox bars
+    pattern = hook::pattern("56 8B F1 8B 4E 0C FF 15 ? ? ? ? 8A 46 28 84 C0 C6 46 37 00");
+    static auto FrameEndHook = safetyhook::create_mid(pattern.get_first(3), [](SafetyHookContext& regs)
+    {
+        if (bGameViewRendered)
+            Cinematic::DrawPillarboxBorders();
+
+        if (Screen.bDrawBordersForCameraOverlay && CurrentGameMode != "graphicnovel")
+        {
+            auto nWidth = static_cast<int32_t>(Screen.fHudOffsetReal);
+            constexpr int32_t nBadCamPosOffset = 10; // for motel camera gap https://i.imgur.com/JGNdm6y.jpg
+            DrawPillarboxBars(nWidth, nWidth + nBadCamPosOffset);
+        }
+
+        if (Screen.bDrawBordersToFillGap)
+        {
+            // hiding top/left 1px gap
+            ClearScreenRect(0, 0, Screen.nWidth, 1);
+            ClearScreenRect(0, 0, 1, Screen.nHeight);
+            Screen.bDrawBordersToFillGap = false;
+        }
+
+        bGameViewRendered = false;
     });
 
     pattern = hook::pattern("C6 87 ? ? ? ? ? E8 ? ? ? ? 8B 4D F4");
@@ -307,7 +569,7 @@ void Init()
             auto a4 = *(uint32_t*)(regs.esp + 0x1C);
 
             //what happens here is check for some camera coordinates or angles
-            if ((a1 == 0x3FE842CF && a4 == 0x3FE842CF) ||											//1.81 https://i.imgur.com/A7wRrgk.gifv
+            if ((a1 == 0x3FE842CF && a4 == 0x3FE842CF) ||                                           //1.81 https://i.imgur.com/A7wRrgk.gifv
                 (a1 == 0x3FC00000 && a2 == 0x4096BEF4 && a3 == 0xC003936E && a4 == 0x3FC00000) ||   //1.5 https://i.imgur.com/ouRpysL.jpg
                 (a1 == 0xBFAAE30E && a2 == 0xBFC2B1AA && a3 == 0x3EC2E382 && a4 == 0xBFAAE30E) ||   //-1.33505 https://i.imgur.com/JGNdm6y.jpg
                 (a1 == 0x403F7470 && a2 == 0xC067ED50 && a3 == 0x40424DE0 && a4 == 0x403F7470)      // 2.99148  https://i.imgur.com/hj5FsXp.png
@@ -318,15 +580,15 @@ void Init()
         }
     }; injector::MakeInline<CameraOverlayHook>(pattern.get_first(0), pattern.get_first(7)); // 0x672EB1
 
-    pattern = hook::pattern("05 40 01 00 00 84 C9 89 50 24");
-    struct X_ProgressBarUpdateProgressBarHook
+    // Loading screens cover the 4:3 area and leave the previous frame on the sides
+    pattern = hook::pattern("E8 ? ? ? ? 8B 0D ? ? ? ? 8B 09 FF 15 ? ? ? ? 8B 15 ? ? ? ? 8B 0A FF 15"); // X_ProgressBar::updateProgressBar, before P_Driver::endScene
+    static auto X_ProgressBarupdateProgressBarHook = safetyhook::create_mid(pattern.get_first(5), [](SafetyHookContext& regs)
     {
-        void operator()(injector::reg_pack& regs)
-        {
-            regs.eax += 0x140;
-            Screen.bDrawBorders = true;
-        }
-    }; injector::MakeInline<X_ProgressBarUpdateProgressBarHook>(pattern.get_first(0)); //5829D1
+        RefreshScreenResolution();
+        auto nWidth = static_cast<int32_t>(Screen.fHudOffsetReal);
+        DrawPillarboxBars(nWidth, nWidth);
+        UpdateVibration();
+    }); //582A18
 
     //screenshots aspect ratio
     static float fScreenShotHeight = 0.0f;
@@ -337,7 +599,7 @@ void Init()
         void operator()(injector::reg_pack& regs)
         {
             *(uint32_t*)(regs.ebx + 0x10E) = regs.edx;
-            if (!fScreenShotHeight)
+            if (!fScreenShotHeight && Screen.fAspectRatio)
             {
                 fScreenShotHeight = **(float**)off_6301B6 * ((4.0f / 3.0f) / Screen.fAspectRatio);
                 injector::WriteMemory(off_6301B6, &fScreenShotHeight, true);
@@ -349,12 +611,6 @@ void Init()
     static auto fmt = iniReader.ReadString("MISC", "SaveStringFormat", "%a, %b %d %Y, %H:%M");
     pattern = hook::pattern("68 ? ? ? ? 8D 54 24 24 68 ? ? ? ? 52"); //411091
     injector::WriteMemory(pattern.get_first(1), fmt.data(), true);
-
-    // Workaround for safetyhook hanging
-    //IATHook::Replace(GetModuleHandleA("msvcrt.dll"), "KERNEL32.DLL", std::forward_as_tuple("ExitProcess", static_cast<void(__stdcall*)(UINT)>([](UINT uExitCode)
-    //{
-    //    TerminateProcess(GetCurrentProcess(), uExitCode);
-    //})));
 
     bool BorderlessWindowedMode = iniReader.ReadInteger("MAIN", "BorderlessWindowedMode", 1) != 0;
     if (BorderlessWindowedMode)
@@ -370,10 +626,11 @@ CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
+        ReadSettings();
         CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("0F 84 ? ? ? ? E8 ? ? ? ? 8B 48 04 68 ? ? ? ? 56 89"));
         CallbackHandler::RegisterCallback(L"E2MFC.dll", InitE2MFC);
         CallbackHandler::RegisterCallback(L"E2_D3D8_DRIVER_MFC.dll", InitE2_D3D8_DRIVER_MFC);
-        CallbackHandler::RegisterModuleUnloadCallback(L"E2_D3D8_DRIVER_MFC.dll", []() { EndSceneHook.reset(); BorderlessWindowedHook.reset(); shDllMainHook.reset(); });
+        CallbackHandler::RegisterModuleUnloadCallback(L"E2_D3D8_DRIVER_MFC.dll", []() { BorderlessWindowedHook.reset(); shDllMainHook.reset(); });
         CallbackHandler::RegisterCallback(L"Xidi.32.dll", InitXidi);
     });
 }

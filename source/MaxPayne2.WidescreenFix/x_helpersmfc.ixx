@@ -5,27 +5,26 @@ module;
 export module x_helpersmfc;
 
 import ComVars;
+import e2mfc;
+import x_inputmfc;
 
 export void InitX_HelpersMFC()
 {
-    auto pattern = hook::module_pattern(GetModuleHandle(L"X_HelpersMFC"), "8B 41 08 8B 49 0C 50");
-    struct X_QuadRendererRenderHook
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            regs.eax = *(uint32_t*)(regs.ecx + 0x08);
-            regs.ecx = *(uint32_t*)(regs.ecx + 0x0C);
-            Screen.bIsX_QuadRenderer = true;
-        }
-    }; injector::MakeInline<X_QuadRendererRenderHook>(pattern.get_first(0), pattern.get_first(6)); //10004820
+    auto X_HelpersMFC = GetModuleHandle(L"X_HelpersMFC");
 
-    pattern = hook::module_pattern(GetModuleHandle(L"X_HelpersMFC"), "05 58 01 00 00 33 D2");
-    struct X_ProgressBarUpdateProgressBarHook
+    // X_QuadRenderer draws a sprite covering the whole screen or render target (post-processing,
+    // shadow blur) with a camera of its own
+    static auto X_QuadRendererRenderHook = safetyhook::create_mid(GetProcAddress(X_HelpersMFC, "?render@X_QuadRenderer@@QAEXXZ"), [](SafetyHookContext& regs)
     {
-        void operator()(injector::reg_pack& regs)
-        {
-            regs.eax += 0x158;
-            Screen.bDrawBorders = true;
-        }
-    }; injector::MakeInline<X_ProgressBarUpdateProgressBarHook>(pattern.get_first(0)); //10002FF0
+        KeepOriginalProjection(*(void**)(regs.ecx + 0x08));
+    });
+
+    // Loading screens cover the 4:3 area and leave the previous frame on the sides
+    auto pattern = hook::module_pattern(X_HelpersMFC, "E8 ? ? ? ? A1 ? ? ? ? 8B 08 FF 15 ? ? ? ? 8B 0D"); // X_ProgressBar::updateProgressBar, before P_Driver::endScene
+    static auto X_ProgressBarUpdateProgressBarHook = safetyhook::create_mid(pattern.get_first(5), [](SafetyHookContext& regs) //0x10003051
+    {
+        RefreshScreenResolution();
+        Draw4by3Borders(1);
+        UpdateVibration();
+    });
 }
