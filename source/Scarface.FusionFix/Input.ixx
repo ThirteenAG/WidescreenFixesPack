@@ -274,15 +274,26 @@ void InitXidi()
             if (XidiRegisterProfileCallback)
             {
                 static auto fnMenuCheck = (bool(*)())injector::GetBranchDestination(hook::get_pattern("E8 ? ? ? ? 84 C0 75 A4")).as_int();
+                // fnMenuCheck (HUDManager2::IsGamePaused) starts with mov eax, ds:FlowManager
+                static auto ppFlowManager = (*(uint8_t*)fnMenuCheck == 0xA1) ? *(uintptr_t**)((uintptr_t)fnMenuCheck + 1) : nullptr;
                 static auto CharacterObject = *hook::get_pattern<void**>("A1 ? ? ? ? 85 C0 74 50", 1);
                 static auto PilotStateOffset = 0x2E8;
 
                 XidiRegisterProfileCallback([]() -> const wchar_t*
                 {
+                    // Xidi calls this from its polling thread, which keeps running while the game exits,
+                    // and an atexit handler sets the FlowManager pointer that fnMenuCheck reads to 0xDDDDDDDD
+                    if (ppFlowManager)
+                    {
+                        auto pFlowManager = *ppFlowManager;
+                        if (pFlowManager == 0 || pFlowManager == 0xDDDDDDDD)
+                            return nullptr;
+                    }
+
                     if (fnMenuCheck && !fnMenuCheck())
                     {
-                        auto player = *CharacterObject;
-                        if (player && *(uint32_t*)(*(uint32_t*)CharacterObject + PilotStateOffset) > 0)
+                        auto player = (uintptr_t)*CharacterObject;
+                        if (player && *(uint32_t*)(player + PilotStateOffset) > 0)
                         {
                             return L"InCar";
                         }

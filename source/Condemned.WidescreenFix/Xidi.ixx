@@ -4,10 +4,11 @@ module;
 
 export module Xidi;
 
-typedef bool (*XidiSendVibrationFunc)(unsigned int, unsigned short, unsigned short);
+typedef bool (*XidiSendVibrationFunc)(short, unsigned short, unsigned short);
 export XidiSendVibrationFunc XidiSendVibration = nullptr;
-export bool bShowingCursor = false;
-export bool bKeyAssignmentInProgress = false;
+// Set by the game thread, read by Xidi's polling thread
+export std::atomic<bool> bShowingCursor = false;
+export std::atomic<bool> bKeyAssignmentInProgress = false;
 
 export void InitXidi()
 {

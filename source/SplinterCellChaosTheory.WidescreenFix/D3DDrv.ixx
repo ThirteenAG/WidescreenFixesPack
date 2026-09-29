@@ -9,6 +9,7 @@ export module D3DDrv;
 import ComVars;
 import GUI;
 import WidescreenHUD;
+import Xidi;
 
 float gVisibility = 1.0f;
 export int32_t gBlacklistIndicators = 0;
@@ -306,6 +307,8 @@ export void InitD3DDrv()
     pattern = hook::pattern("8B 10 55 55 55 55");
     static auto PresentHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
+        UpdateXidiProfile();
+
         if ((CMenusManager::IsMainMenuDisplayed() && !CMenusManager::IsMenuDisplayed(Page::P_Briefing) &&
             !CMenusManager::IsMenuDisplayed(Page::P_LoadOut) && !CMenusManager::IsMenuDisplayed(Page::P_LoadOut2) &&
             !CMenusManager::IsMenuDisplayed(Page::P_CamControl) && !CMenusManager::IsMenuDisplayed(Page::P_Camera) &&
