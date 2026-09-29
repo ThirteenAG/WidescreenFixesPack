@@ -147,13 +147,13 @@ void Init()
     auto pattern = hook::pattern("83 E8 00 56 74 ? 48 75 ? 8B 35 ? ? ? ? 6A 01 FF D6 85 C0 7C ? 33 C0 5E C3");
     static auto CursorHook1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        bShowingCursor = regs.eax;
+        bShowingCursor = regs.eax != 0;
     });
 
     pattern = hook::pattern("E8 ? ? ? ? 89 7E 04 5F 33 C0");
     static auto CursorHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        bShowingCursor = regs.edi;
+        bShowingCursor = regs.edi != 0;
     });
 }
 

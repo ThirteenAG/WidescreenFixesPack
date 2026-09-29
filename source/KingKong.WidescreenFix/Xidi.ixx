@@ -6,7 +6,7 @@ export module Xidi;
 
 import ComVars;
 
-typedef bool (*XidiSendVibrationFunc)(unsigned int, unsigned short, unsigned short);
+typedef bool (*XidiSendVibrationFunc)(short, unsigned short, unsigned short);
 export XidiSendVibrationFunc XidiSendVibration = nullptr;
 
 SafetyHookInline shUpdateRumble = {};
@@ -51,7 +51,8 @@ export void InitXidi()
 
         if (XidiRegisterProfileCallback)
         {
-            static bool bPlayingVideo = false;
+            // Set by the game thread, read by Xidi's polling thread
+            static std::atomic<bool> bPlayingVideo = false;
             auto pattern = hook::pattern("FF 15 ? ? ? ? 39 1D");
             if (!pattern.empty())
             {

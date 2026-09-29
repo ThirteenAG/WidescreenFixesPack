@@ -7,6 +7,7 @@ export module D3DDrv;
 
 import ComVars;
 import Shaders;
+import Xidi;
 
 // Rain splash point sprites use pixel-sized D3D8 constants scaled for 640x480, causing them to shrink at higher resolutions
 namespace RainSplashFix
@@ -732,6 +733,8 @@ export void InitD3DDrv()
     pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "8B 10 50 FF 92 ? ? ? ? 8B 9E 28 58 00 00", "8B 08 FF 91 ? ? ? ? FF 83 2C 58 00 00");
     static auto EndSceneHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
+        UpdateXidiProfile();
+
         if (bDisplayingBackground)
         {
             IDirect3DDevice8* pD3DDevice = (IDirect3DDevice8*)(regs.eax);

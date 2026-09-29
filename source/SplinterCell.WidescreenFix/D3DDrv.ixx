@@ -6,6 +6,7 @@ module;
 export module D3DDrv;
 
 import ComVars;
+import Xidi;
 
 D3DPRESENT_PARAMETERS* pPresentParams = nullptr;
 SafetyHookInline shUD3DRenderDeviceSetRes = {};
@@ -692,6 +693,8 @@ export void InitD3DDrv()
     pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "8B 10 FF 92 ? ? ? ? 8B 86 14 5D 00 00");
     static auto EndSceneHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
+        UpdateXidiProfile();
+
         if (bDisplayingSplash)
         {
             IDirect3DDevice8* pD3DDevice = (IDirect3DDevice8*)(regs.eax);

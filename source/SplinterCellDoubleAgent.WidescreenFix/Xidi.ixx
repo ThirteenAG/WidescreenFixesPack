@@ -6,7 +6,7 @@ export module Xidi;
 
 import ComVars;
 
-typedef bool (*XidiSendVibrationFunc)(unsigned int, unsigned short, unsigned short);
+typedef bool (*XidiSendVibrationFunc)(short, unsigned short, unsigned short);
 export XidiSendVibrationFunc XidiSendVibration = nullptr;
 
 export void InitXidi()
