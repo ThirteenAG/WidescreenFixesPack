@@ -12,6 +12,27 @@ struct Screen
     float fHudOffset;
 } Screen;
 
+namespace Camera
+{
+    constexpr float AspectRatio43 = 4.0f / 3.0f;
+    constexpr float RadiansPerDegree = static_cast<float>(M_PI / 180.0);
+    SafetyHookMid CutsceneFOV, CutsceneFOVEvent, CutsceneFOVCapture;
+
+    void AdjustCutsceneFOV(injector::reg_pack& regs)
+    {
+        auto& fov = *reinterpret_cast<float*>(regs.esp);
+        fov = AdjustFOV(fov / RadiansPerDegree, Screen.fAspectRatio) * RadiansPerDegree;
+    }
+
+    void CaptureCutsceneFOV(injector::reg_pack& regs)
+    {
+        const auto halfAngle = *reinterpret_cast<float*>(regs.eax + 0x4C);
+        static float halfAngle43;
+        halfAngle43 = atan(tan(halfAngle) * (AspectRatio43 / Screen.fAspectRatio));
+        regs.eax = reinterpret_cast<uintptr_t>(&halfAngle43) - 0x4C;
+    }
+}
+
 struct HudQuad
 {
     float x[4];
@@ -341,6 +362,20 @@ void Init()
     pattern = hook::pattern("D8 ? ? ? ? ? 83 ? ? 6A ? 68 ? ? ? ? 51 D9 ? ? E8 ? ? ? ? 83 ? ? 83"); //4A15F6
     injector::WriteMemory(*pattern.count(1).get(0).get<uint32_t*>(2), AdjustFOV(FOV, Screen.fAspectRatio), true);
 
+    const auto cutsceneFOV = hook::get_pattern<uint8_t>("E8 ? ? ? ? 83 ? ? C6 ? ? ? ? ? ? F6 ? ? ? 74"); //4749FE
+    const auto cutsceneFOVEvent = hook::get_pattern<uint8_t>("51 51 D9 ? ? E8 ? ? ? ? 83 ? ?", 5); //478A7A
+    const auto cutsceneFOVCapture = hook::get_pattern<uint8_t>("D8 ? ? C6 ? ? ? DC ? D9"); //4789A1
+    Camera::CutsceneFOV = safetyhook::create_mid(cutsceneFOV, Camera::AdjustCutsceneFOV);
+    Camera::CutsceneFOVEvent = safetyhook::create_mid(cutsceneFOVEvent, Camera::AdjustCutsceneFOV);
+    Camera::CutsceneFOVCapture = safetyhook::create_mid(cutsceneFOVCapture, Camera::CaptureCutsceneFOV);
+
+    const auto cinematicFraming = hook::get_pattern<uint8_t>("D9 ? ? ? ? ? D8 ? ? ? ? ? D8 ? ? ? ? ? D8 ? ? ? ? ? D8 ? ? ? ? ? D9 ? D8 ? D8 ? ? ? ? ? DE ? C3"); //4797B0
+    for (size_t offset : { 0x8, 0x38, 0xCA }) //bar height, letterboxed FOV scale and fallback bars
+        injector::WriteMemory(cinematicFraming + offset, &Camera::AspectRatio43, true);
+
+    const auto cameraEffects = hook::get_pattern<uint8_t>("83 ? ? DB ? ? ? ? ? A1 ? ? ? ? 83 ? ? D9"); //600570
+    injector::WriteMemory(cameraEffects + 0x51, &Camera::AspectRatio43, true); //preserve the original bar heights
+
     Screen.fHudOffset = (Screen.fWidth - Screen.Width43) / 2.0f;
 
     pattern = hook::pattern("51 56 8B ? ? ? 85 ? 0F ? ? ? ? ? 80"); //408EE0
@@ -389,6 +424,9 @@ void Init()
     UI::RedirectWidth(fontClip, printText + 0x650, nativeWidth, &UI::FontWidth); //clip, glyphs and text output; end before text height
     UI::PixelClip = safetyhook::create_inline(fontClip, UI::GetPixelClip);
     UI::PrintText = safetyhook::create_inline(printText, UI::Print);
+
+    const auto cutsceneSubtitles = hook::get_pattern<uint8_t>("A1 ? ? ? ? 83 ? ? 85 ? 74 ? 8A"); //5DB9C0
+    UI::RedirectWidth(cutsceneSubtitles, cutsceneSubtitles + 0xC4, nativeWidth, &Screen.Width43); //cutscenes font scale follows height
 
     const auto menuDraw = hook::get_pattern<uint8_t>("8B 0D ? ? ? ? E9 ? ? ? ? ? ? ? ? ? 8B 0D"); //4819F0
     const auto menuItems = hook::get_pattern<uint8_t>("51 56 8B ? 8B ? ? 50 E8 ? ? ? ? 0F ? ? ? 8B"); //47DFC0
