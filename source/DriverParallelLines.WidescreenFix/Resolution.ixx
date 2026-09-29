@@ -282,6 +282,12 @@ public:
                     onResChange().executeAll(*BackbufferWidth, *BackbufferHeight);
                 }
             }; injector::MakeInline<GetResHook2>(pattern.get_first(0), pattern.get_first(6));
+
+            onResChange() += [](int Width, int Height)
+            {
+                auto [DesktopResW, DesktopResH] = GetDesktopRes();
+                SetWindowPos(hWnd, NULL, (DesktopResW - Width) / 2, (DesktopResH - Height) / 2, Width, Height, SWP_NOACTIVATE | SWP_NOZORDER);
+            };
         };
     }
 } Resolution;

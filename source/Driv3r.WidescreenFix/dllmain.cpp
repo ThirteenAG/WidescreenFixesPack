@@ -5,6 +5,10 @@ import ComVars;
 
 void Init()
 {
+    // Otherwise with display scaling Windows gives the game a scaled down desktop and stretches its window,
+    // so every resolution fills the screen, and the window does not match the display modes of the resolution list
+    SetProcessDPIAware();
+
     auto pattern = hook::pattern("A1 ? ? ? ? 85 C0 55");
     hWnd.SetAddress(*pattern.get_first<HWND*>(1));
 
@@ -46,6 +50,18 @@ void Init()
 
     pattern = hook::pattern("B9 ? ? ? ? 8D 7C 24 ? 52");
     static auto BeforeResetHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        WFP::onBeforeReset().executeAll();
+    });
+
+    // Switching resolution and resizing the back buffer reset the device too, the reset above only runs when those fail
+    pattern = hook::pattern("B9 0E 00 00 00 8B F5 8D 7C 24 ? 52 F3 A5");
+    static auto BeforeModeResetHook = safetyhook::create_mid(pattern.count(2).get(0).get<void>(0), [](SafetyHookContext& regs)
+    {
+        WFP::onBeforeReset().executeAll();
+    });
+
+    static auto BeforeResizeResetHook = safetyhook::create_mid(pattern.count(2).get(1).get<void>(0), [](SafetyHookContext& regs)
     {
         WFP::onBeforeReset().executeAll();
     });
