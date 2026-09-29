@@ -48,6 +48,20 @@ struct HudQuad
     uint8_t state[2];
 };
 
+template<size_t index>
+struct HudVertexHook
+{
+    void operator()(injector::reg_pack& regs)
+    {
+        const auto* quad = reinterpret_cast<const HudQuad*>(regs.eax);
+        const auto buffer = *reinterpret_cast<uintptr_t*>(regs.esi + 0x14);
+        const auto count = *reinterpret_cast<uint32_t*>(regs.esi);
+        auto* vertex = reinterpret_cast<float*>(buffer + count * 0x1C);
+        vertex[0] = quad->x[index] - 0.5f;
+        vertex[1] = quad->y[index] - 0.5f;
+    }
+};
+
 int32_t(__cdecl* QueueHudQuad)(HudQuad*);
 
 namespace UI
@@ -211,6 +225,12 @@ void Init()
     uint8_t* drawHudQuad = pattern.count(1).get(0).get<uint8_t>(0);
     QueueHudQuad = reinterpret_cast<decltype(QueueHudQuad)>(injector::GetBranchDestination(drawHudQuad + 4, true).as_int());
     injector::MakeCALL(drawHudQuad + 4, sub_48B140Hook, true);
+
+    const auto quadVertices = hook::get_pattern<uint8_t>("8B ? 89 ? ? 8B ? 8B ? ? 6B ? ? 8B"); //487E97
+    injector::MakeInline<HudVertexHook<0>>(quadVertices, quadVertices + 0x14);
+    injector::MakeInline<HudVertexHook<1>>(quadVertices + 0x69, quadVertices + 0x7E);
+    injector::MakeInline<HudVertexHook<2>>(quadVertices + 0xD0, quadVertices + 0xE5);
+    injector::MakeInline<HudVertexHook<3>>(quadVertices + 0x12F, quadVertices + 0x14C); //Replace the native XYZRHW coordinate writes with half-pixel alignment.
 
     pattern = hook::pattern("83 ? ? 56 8B ? 8B ? ? 85 ? 57 74 ? 8B ? 85"); //507C40
     uint8_t* drawScopeReticle = pattern.count(1).get(0).get<uint8_t>(0);
