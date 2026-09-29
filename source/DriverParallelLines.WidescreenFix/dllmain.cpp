@@ -5,6 +5,10 @@ import ComVars;
 
 void Init()
 {
+    // Otherwise with display scaling Windows gives the game a scaled down desktop and stretches its window,
+    // and the window does not match the display modes of the resolution list
+    SetProcessDPIAware();
+
     auto pattern = hook::pattern("A1 ? ? ? ? 85 C0 8D 7E");
     hWnd.SetAddress(*pattern.get_first<HWND*>(1));
 
