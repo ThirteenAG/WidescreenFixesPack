@@ -1,0 +1,825 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Sequence name="se160_Tuto_ShootThug">
+  <Task name="Give Controls Back" first="1" x="28.000000" y="14.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_2" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerUnPossess">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableAllButtons">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisableTick">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_54" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerDisableRun">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="DisableRun">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_5" entity="Repository::o_Camera">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="ForceFightMusic">
+            <ParameterInstance name="Object" data="Repository::o_Camera"/>
+            <ParameterInstance name="value">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_55" entity="EAreaProperty_5" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetUnidirectionalAreaLink">
+            <ParameterInstance name="SourceArea" data="EAreaProperty_5" InUnrealActors="1"/>
+            <ParameterInstance name="DestinationArea" data="EAreaProperty_0" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="End Task SE160 TXT OFF" x="1239.000000" y="363.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_5" entity="Repository::o_Camera">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="ForceFightMusic">
+            <ParameterInstance name="Object" data="Repository::o_Camera"/>
+            <ParameterInstance name="value">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_8" entity="Repository::o_ObjectiveManager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="ObjectiveComplete">
+            <ParameterInstance name="ObjectiveManager" data="Repository::o_ObjectiveManager"/>
+            <ParameterInstance name="sObjective" data="Repository::Obj_Main_09_ShootThugs"/>
+            <ParameterInstance name="ShowMessage">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="ShowTutoral">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_6" entity="StaticMeshActor_149" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="StaticMeshActor_149" InUnrealActors="1"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="PhysType"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_9" entity="Repository::o_Camera">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="InstantPlaySound">
+            <ParameterInstance name="Actor" data="Repository::o_Camera"/>
+            <ParameterInstance name="Sound" data="Play_SFX_Market_GlassBreakingNPC" InUnrealSounds="1"/>
+            <ParameterInstance name="Flag" data="Repository::Unreal::enums::ESoundSlot::SLOT_SFX"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="GI_NonInteractiveDynActor_499" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetDamageState">
+            <ParameterInstance name="Object" data="GI_NonInteractiveDynActor_499" InUnrealActors="1"/>
+            <ParameterInstance name="DamageState" data="Repository::Unreal::enums::eGIStateID::eGIStateID_Destroyed"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_10" entity="FlashTextureInfo_6" InUnrealDynTexFlash="1">
+        <Event name="NewEvent_0" end="-1.000000">
+          <CommandInstance name="Fla_ChangeState">
+            <ParameterInstance name="FlashTexture" data="FlashTextureInfo_6" InUnrealDynTexFlash="1"/>
+            <ParameterInstance name="StateName">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="Fadeout"/>
+            </ParameterInstance>
+            <ParameterInstance name="Path">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value=""/>
+            </ParameterInstance>
+            <ParameterInstance name="UseSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="EProjectedTextLight_8" InUnrealActors="1">
+        <Event name="NewEvent_0" end="-1.000000">
+          <CommandInstance name="SetLightOn">
+            <ParameterInstance name="Light" data="EProjectedTextLight_8" InUnrealActors="1"/>
+            <ParameterInstance name="On">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Flicker">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_11" entity="EZoneInfo_12" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetBounds">
+            <ParameterInstance name="Zone" data="EZoneInfo_12" InUnrealActors="1"/>
+            <ParameterInstance name="OutOfBound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceWhenPlayerAlreadyInZone">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_12" entity="StaticMeshActor_149" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="StaticMeshActor_149" InUnrealActors="1"/>
+            <ParameterInstance name="PhysType"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_13" entity="StaticMeshActor_299" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="StaticMeshActor_299" InUnrealActors="1"/>
+            <ParameterInstance name="PhysType"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Enable Last NPC" x="634.000000" y="364.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="EAIGramkosThug_11" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="EnableNPC">
+            <ParameterInstance name="AI" data="EAIGramkosThug_11" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="EAIGramkosThug_11" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="DisableNPCBark">
+            <ParameterInstance name="AI" data="EAIGramkosThug_11" InUnrealActors="1"/>
+            <ParameterInstance name="ForPreCombatSearch">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_1" entity="EAIGramkosThug_11" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StartCombat">
+            <ParameterInstance name="AI" data="EAIGramkosThug_11" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_3" entity="EAIGramkosThug_11" InUnrealActors="1">
+        <Event name="NewEvent" start="0.100000" end="-1.000000">
+          <CommandInstance name="SetRealLKP">
+            <ParameterInstance name="AIPawn" data="EAIGramkosThug_11" InUnrealActors="1"/>
+            <ParameterInstance name="OptionalPlayer"/>
+            <ParameterInstance name="ForceDetection">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="NoDisplay">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_10" start="Wait for Pawn Dead" true="Kill NPC" data="EAIGramkosThug_11" InUnrealActors="1">
+    <ExternalEventInstance name="PAWN_DEAD" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Instigator" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="826.000000" y="389.000000"/>
+      <vertex x="1083.000000" y="388.000000"/>
+      <vertex x="1059.000000" y="459.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="2"/>
+      <segment type="0" vertex1="2" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Nice &amp; Dark MSG" first="1" x="30.000000" y="134.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::o_Pawn_Sam">
+        <Event name="NewEvent" end="2.722917">
+          <CommandInstance name="SetDialog" duration="2.722917">
+            <ParameterInstance name="CharacterOasis" data="Repository::o_Pawn_Sam"/>
+            <ParameterInstance name="DialogOasis" data="Repository::Unreal::Oasis::Map01 MARKET::SE160_RCOM::29078::80126"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="FadeOutTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayIncomingSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="HideSubtitle">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayOnlyOnLocalPlayer">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Start Search" x="205.000000" y="15.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_6" entity="EAIGramkosThug_3" InUnrealActors="1">
+        <Event name="NewEvent" start="1.000000" end="-1.000000">
+          <CommandInstance name="StartSearch">
+            <ParameterInstance name="AI" data="EAIGramkosThug_3" InUnrealActors="1"/>
+            <ParameterInstance name="PostCombat">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_9" start="Give Controls Back" true="Start Search" sequence="se160_Tuto_ShootThug">
+    <vertices>
+      <vertex x="78.000000" y="39.000000"/>
+      <vertex x="205.000000" y="40.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Shoot Tuto A" first="1" x="30.000000" y="287.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <Task name="Shoot Tuto B" first="1" x="31.000000" y="347.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <Task name="Shoot Tuto B Dead" x="279.000000" y="347.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent" start="Shoot Tuto A" true="Shoot Tuto A Dead" data="EAIGramkosThug_1" InUnrealActors="1">
+    <ExternalEventInstance name="PAWN_DEAD" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Instigator" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="80.000000" y="312.000000"/>
+      <vertex x="279.000000" y="314.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <DependencyEvent name="NewDependencyEvent_11" start="Shoot Tuto B" true="Shoot Tuto B Dead" data="EAIGramkosThug_3" InUnrealActors="1">
+    <ExternalEventInstance name="PAWN_DEAD" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Instigator" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="81.000000" y="372.000000"/>
+      <vertex x="279.000000" y="372.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="NewTask" logicand="1" x="434.000000" y="325.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_16" start="Shoot Tuto B Dead" true="NewTask" sequence="se160_Tuto_ShootThug">
+    <vertices>
+      <vertex x="329.000000" y="372.000000"/>
+      <vertex x="434.000000" y="350.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Start SE160 ProjTxt" first="1" x="29.000000" y="73.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_3" entity="Repository::Sequences::SE160_Text_ShootThug">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StartSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::SE160_Text_ShootThug"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_6" entity="Repository::List_NPC_ShootTuto_A_Initial">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="NpcSetResponsive">
+            <ParameterInstance name="AI" data="Repository::List_NPC_ShootTuto_A_Initial"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_51" entity="ESaveTriggerVolume_4" InUnrealActors="1">
+        <Event name="NewEvent" start="0.200000" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="ESaveTriggerVolume_4" InUnrealActors="1"/>
+            <ParameterInstance name="PhysType"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::o_ObjectiveManager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="ObjectiveAddPrimary">
+            <ParameterInstance name="ObjectiveManager" data="Repository::o_ObjectiveManager"/>
+            <ParameterInstance name="Light" data="EProjectedTextLight_8" InUnrealActors="1"/>
+            <ParameterInstance name="Light2"/>
+            <ParameterInstance name="Light3"/>
+            <ParameterInstance name="sObjective" data="Repository::Obj_Main_09_ShootThugs"/>
+            <ParameterInstance name="ShowMessage">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="ShowTutoralMessage">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Light4"/>
+            <ParameterInstance name="Light5"/>
+            <ParameterInstance name="Light6"/>
+            <ParameterInstance name="Light7"/>
+            <ParameterInstance name="AlwaysShowLocators">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Display Instruc." x="206.000000" y="72.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="DisplayTutorial">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Key" data="m01_id_tuto_15" InUnrealTutorialKeys="1"/>
+            <ParameterInstance name="Show">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Centered">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceVisible">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_20" start="Start SE160 ProjTxt" true="Display Instruc." sequence="se160_Tuto_ShootThug">
+    <vertices>
+      <vertex x="79.000000" y="98.000000"/>
+      <vertex x="206.000000" y="97.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Stop 160 Tuto" x="1393.000000" y="363.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_0" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent_0" end="-1.000000">
+          <CommandInstance name="DisplayTutorial">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Key" data="m01_id_tuto_37" InUnrealTutorialKeys="1"/>
+            <ParameterInstance name="Show">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Centered">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceVisible">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_54" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerDisableRun">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="DisableRun">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::Sequences::se160_Tuto_ShootThug">
+        <Event name="NewEvent" start="0.100000" end="-1.000000">
+          <CommandInstance name="StopSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::se160_Tuto_ShootThug"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete" start="End Task SE160 TXT OFF" true="Stop 160 Tuto" sequence="se160_Tuto_ShootThug">
+    <vertices>
+      <vertex x="1289.000000" y="388.000000"/>
+      <vertex x="1393.000000" y="388.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Zoom Tuto MSG" x="633.000000" y="276.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="DisplayTutorial">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Key" data="m01_id_tuto_37" InUnrealTutorialKeys="1"/>
+            <ParameterInstance name="Show">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Centered">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceVisible">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_29" start="NewTask" true="Zoom Tuto MSG" sequence="se160_Tuto_ShootThug">
+    <vertices>
+      <vertex x="484.000000" y="350.000000"/>
+      <vertex x="633.000000" y="301.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Enable OOB Volume Post-FB1" first="1" x="30.000000" y="210.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_1" entity="StaticMeshActor_422" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="StaticMeshActor_422" InUnrealActors="1"/>
+            <ParameterInstance name="PhysType"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="EZoneInfo_30" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetBounds">
+            <ParameterInstance name="Zone" data="EZoneInfo_30" InUnrealActors="1"/>
+            <ParameterInstance name="OutOfBound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceWhenPlayerAlreadyInZone">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_2" entity="StaticMeshActor_149" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="StaticMeshActor_149" InUnrealActors="1"/>
+            <ParameterInstance name="PhysType"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_4" entity="StaticMeshActor_299" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="StaticMeshActor_299" InUnrealActors="1"/>
+            <ParameterInstance name="PhysType"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_3" entity="EZoneInfo_12" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetBounds">
+            <ParameterInstance name="Zone" data="EZoneInfo_12" InUnrealActors="1"/>
+            <ParameterInstance name="OutOfBound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceWhenPlayerAlreadyInZone">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_37" start="NewTask" true="Enable Last NPC" sequence="se160_Tuto_ShootThug">
+    <vertices>
+      <vertex x="484.000000" y="350.000000"/>
+      <vertex x="634.000000" y="389.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Kill NPC" x="1083.000000" y="363.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="EAIGramkosThug_11" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Kill">
+            <ParameterInstance name="Pawn" data="EAIGramkosThug_11" InUnrealActors="1"/>
+            <ParameterInstance name="SkipReaction">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="Repository::Sequences::se160_Tuto_ShootThug_NPCVoice">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StopSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::se160_Tuto_ShootThug_NPCVoice"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_38" start="Kill NPC" true="End Task SE160 TXT OFF" sequence="se160_Tuto_ShootThug">
+    <vertices>
+      <vertex x="1133.000000" y="388.000000"/>
+      <vertex x="1239.000000" y="388.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="If any Dead" first="1" x="31.000000" y="424.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <Task name="Shoot Tuto TXT OFF" x="279.000000" y="425.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_7" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="DisplayTutorial">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Key" data="m01_id_tuto_15" InUnrealTutorialKeys="1"/>
+            <ParameterInstance name="Show">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Centered">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceVisible">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_14" start="If any Dead" true="Shoot Tuto TXT OFF" data="Repository::List_NPC_ShootTuto">
+    <ExternalEventInstance name="PAWN_DEAD" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Instigator" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="81.000000" y="449.000000"/>
+      <vertex x="279.000000" y="450.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Disable Zoom Tuto MSG" x="1297.000000" y="279.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_0" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent_0" end="-1.000000">
+          <CommandInstance name="DisplayTutorial">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Key" data="m01_id_tuto_37" InUnrealTutorialKeys="1"/>
+            <ParameterInstance name="Show">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Centered">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceVisible">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyCommand name="NewDependencyCommand_0" start="Is Button PRESS RIGHT ANALOG" true="Disable Zoom Tuto MSG" false="Wait for ZOOM Button Input">
+    <CommandInstance name="Equal">
+      <ParameterInstance name="Left" data="Repository::Ref_Zoom_Button"/>
+      <ParameterInstance name="Right" data="Repository::Unreal::enums::eActionType::eActionType_PressLeftTrigger"/>
+    </CommandInstance>
+    <vertices>
+      <vertex x="1115.000000" y="302.000000"/>
+      <vertex x="1297.000000" y="304.000000"/>
+      <vertex x="800.000000" y="302.000000"/>
+      <vertex x="1264.500000" y="304.375000"/>
+      <vertex x="1264.000000" y="258.000000"/>
+      <vertex x="780.000000" y="258.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="3" vertex2="1"/>
+      <segment type="1" vertex1="3" vertex2="4"/>
+      <segment type="1" vertex1="4" vertex2="5"/>
+      <segment type="1" vertex1="5" vertex2="2"/>
+      <segment type="2" vertex1="0" vertex2="3"/>
+    </segments>
+  </DependencyCommand>
+  <Task name="Wait for ZOOM Button Input" x="800.000000" y="277.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <Task name="Is Button PRESS RIGHT ANALOG" x="1065.000000" y="277.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_15" start="Wait for ZOOM Button Input" true="Is Button PRESS RIGHT ANALOG" data="Repository::ref_Character_Sam">
+    <ExternalEventInstance name="RAW_BUTTON_INPUT" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="ActionButton" data="Repository::Ref_Zoom_Button"/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="850.000000" y="302.000000"/>
+      <vertex x="1065.000000" y="302.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <DependencyComplete name="NewDependencyComplete_41" start="Zoom Tuto MSG" true="Wait for ZOOM Button Input" sequence="se160_Tuto_ShootThug">
+    <vertices>
+      <vertex x="683.000000" y="301.000000"/>
+      <vertex x="800.000000" y="302.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Wait for Pawn Dead" x="776.000000" y="364.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_42" start="Enable Last NPC" true="Wait for Pawn Dead" sequence="se160_Tuto_ShootThug">
+    <vertices>
+      <vertex x="684.000000" y="389.000000"/>
+      <vertex x="776.000000" y="389.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Set Real LKP" x="1015.000000" y="531.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_3" entity="EAIGramkosThug_11" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetRealLKP">
+            <ParameterInstance name="AIPawn" data="EAIGramkosThug_11" InUnrealActors="1"/>
+            <ParameterInstance name="OptionalPlayer"/>
+            <ParameterInstance name="ForceDetection">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="NoDisplay">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Shoot Tuto A Dead" x="279.000000" y="289.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_46" start="Shoot Tuto A Dead" true="NewTask" sequence="se160_Tuto_ShootThug">
+    <vertices>
+      <vertex x="329.000000" y="314.000000"/>
+      <vertex x="434.000000" y="350.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyEvent name="NewDependencyEvent_17" start="Wait for Pawn Dead" true="Kill NPC" data="EAIGramkosThug_11" InUnrealActors="1">
+    <ExternalEventInstance name="PAWN_HUMANSHIELD_NAV_BEGIN" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Grabber" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="826.000000" y="389.000000"/>
+      <vertex x="1083.000000" y="388.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Start Voice" x="1169.000000" y="530.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::Sequences::se160_Tuto_ShootThug_NPCVoice">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StartSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::se160_Tuto_ShootThug_NPCVoice"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Initial Bark" x="776.000000" y="447.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="EAIGramkosThug_11" InUnrealActors="1">
+        <Event name="NewEvent" start="4.000000" end="6.063250">
+          <CommandInstance name="PlaySound" duration="2.063250">
+            <ParameterInstance name="Actor" data="EAIGramkosThug_11" InUnrealActors="1"/>
+            <ParameterInstance name="Sound" data="Play_AI_USTHUG_FIG_ULKP_24_01USTUG2_RGE" InUnrealSounds="1"/>
+            <ParameterInstance name="Flag" data="Repository::Unreal::enums::ESoundSlot::SLOT_NPCVoice"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="FadeOutTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Wait for Volume" x="776.000000" y="529.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_19" start="Wait for Volume" true="Set Real LKP" data="ETriggerVolume_8" InUnrealActors="1">
+    <ExternalEventInstance name="VOLUME_ENTERED" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Instigator" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="826.000000" y="554.000000"/>
+      <vertex x="1015.000000" y="556.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <DependencyComplete name="NewDependencyComplete_50" start="Enable Last NPC" true="Initial Bark" sequence="se160_Tuto_ShootThug">
+    <vertices>
+      <vertex x="684.000000" y="389.000000"/>
+      <vertex x="776.000000" y="472.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyComplete name="NewDependencyComplete_51" start="Enable Last NPC" true="Wait for Volume" sequence="se160_Tuto_ShootThug">
+    <vertices>
+      <vertex x="684.000000" y="389.000000"/>
+      <vertex x="776.000000" y="554.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyComplete name="NewDependencyComplete_52" start="Set Real LKP" true="Start Voice" sequence="se160_Tuto_ShootThug">
+    <vertices>
+      <vertex x="1065.000000" y="556.000000"/>
+      <vertex x="1169.000000" y="555.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+</Sequence>

@@ -6,203 +6,270 @@ export module BlacklistControls;
 
 import ComVars;
 
-export void OverrideForBlacklistControls(const char* path)
+// Blacklist control layout. The button layout is data, loaded from update instead of the originals:
+//   blacklist.ini                       ActionScheme.ini, the actions of every pad button (keyboard keys are translated to pad buttons)
+//   data\Blacklist\Menus.*              Localization\Menus.*, the button names in the controls menu
+//   data\Blacklist\Sequences\...        data\Sequences\..., scripted scenes enable buttons (PlayerEnableButton) and check which one
+//                                       was pressed by pad button, remapped the same way: B -> X (attack), LT -> B (cover), X -> LB (gadget),
+//                                       LB -> left stick (crouch), left stick -> right stick (reload), right stick -> LT (aim)
+// The code adds what the layout can't do with the game's events: tap to toggle cover, hold to aim and hold to sprint.
+// Everything is per pawn, in coop the pawn events and states also run for the other player.
+
+// Returns the Blacklist version of a file the game opens, if it's in update
+export std::optional<std::string> BlacklistControlsOverride(std::string_view path)
 {
-    static const std::string blacklistINI = "blacklist.ini";
-    static const std::string LocalizationMenus = "Localization\\Menus";
-
-    auto path_view = std::string_view(path);
-    auto dest = const_cast<char*>(path);
-    if (path_view == "ActionScheme.ini")
+    auto find_i = [](std::string_view str, std::string_view what) -> size_t
     {
-        if (GetOverloadedFilePathA(blacklistINI.c_str(), nullptr, 0))
-            strcpy_s(dest, blacklistINI.length() + 1, blacklistINI.c_str());
-    }
-    else if (path_view.contains(LocalizationMenus))
-    {
-        auto replace_view = [](std::string_view str, std::string_view pattern, std::string_view replacement) -> auto
-        {
-            return str | std::views::split(pattern) | std::views::join_with(replacement);
-        };
-
-        auto new_path = replace_view(path_view, LocalizationMenus, "Blacklist\\Menus") | std::ranges::to<std::string>();
-        if (GetOverloadedFilePathA(new_path.c_str(), nullptr, 0))
-            strcpy_s(dest, new_path.length() + 1, new_path.c_str());
-    }
-}
-
-int WhichPrecisionModeNeeded = 0;
-int CrouchSprint = 0;
-int CrouchSprintOff = 0;
-int Sprint = 0;
-int SprintOff = 0;
-bool bSprintNeeded = false;
-bool bCrouchSprintNeeded = false;
-int TogglePrecisionMode = 0;
-int TogglePrecisionModeOn = 0;
-int TogglePrecisionModeOff = 0;
-static injector::hook_back<void(__fastcall*)(int*, void*, const char*, int)> hb458CD3;
-void __fastcall fnTogglePrecisionMode(int* out, void* edx, const char* name, int a3)
-{
-    hb458CD3.fun(&Sprint, edx, "Sprint", a3);
-    hb458CD3.fun(&SprintOff, edx, "SprintOff", a3);
-    hb458CD3.fun(&CrouchSprint, edx, "CrouchSprint", a3);
-    hb458CD3.fun(&CrouchSprintOff, edx, "CrouchSprintOff", a3);
-    hb458CD3.fun(&TogglePrecisionModeOn, edx, "TogglePrecisionModeOn", a3);
-    hb458CD3.fun(&TogglePrecisionModeOff, edx, "TogglePrecisionModeOff", a3);
-    hb458CD3.fun(out, edx, name, a3);
-    TogglePrecisionMode = *out;
-}
-
-int DetectB2W = 0;
-void __fastcall fnDetectB2W(int* out, void* edx, const char* name, int a3)
-{
-    hb458CD3.fun(out, edx, name, a3);
-    DetectB2W = *out;
-}
-
-int StopDetectB2W = 0;
-void __fastcall fnStopDetectB2W(int* out, void* edx, const char* name, int a3)
-{
-    hb458CD3.fun(out, edx, name, a3);
-    StopDetectB2W = *out;
-}
-
-BOOL __fastcall sub_56C0AD(uint32_t* _this, void* edx)
-{
-    auto aimcheck = (*(uint8_t*)((uint8_t*)_this + 0xA42));
-
-    // run speed, disable run when player wants to aim
-    if (WhichPrecisionModeNeeded == TogglePrecisionModeOn)
-    {
-        *(float*)&_this[753] = 200.0f;
-    }
-    else if (WhichPrecisionModeNeeded == TogglePrecisionModeOff)
-    {
-        *(float*)&_this[753] = 1000000.0f;
-    }
-
-    enum AimType
-    {
-        eNormal = 4,
-        eFromCover = 5,
-        eFirstPerson = 12,
+        auto it = std::ranges::search(str, what, [](char a, char b) { return ::tolower(a) == ::tolower(b); });
+        return it.empty() ? std::string_view::npos : static_cast<size_t>(it.begin() - str.begin());
     };
 
-    if ((WhichPrecisionModeNeeded == TogglePrecisionModeOn) && (aimcheck == eNormal || aimcheck == eFromCover || aimcheck == eFirstPerson))
-        return true;
-    if ((WhichPrecisionModeNeeded == TogglePrecisionModeOff) && (aimcheck != eNormal && aimcheck != eFromCover && aimcheck != eFirstPerson))
-        return true;
+    std::string result;
+    if (auto file = path.substr(path.find_last_of("\\/") + 1); _stricmp(std::string(file).c_str(), "ActionScheme.ini") == 0)
+        result = std::string(path.substr(0, path.size() - file.size())) + "blacklist.ini";
+    else if (auto pos = find_i(path, "Localization\\Menus"); pos != std::string_view::npos)
+        result = std::string(path.substr(0, pos)) + "Blacklist\\Menus" + std::string(path.substr(pos + 18));
+    else if (auto pos = find_i(path, "data\\Sequences\\"); pos != std::string_view::npos)
+        result = "..\\..\\data\\Blacklist\\Sequences\\" + std::string(path.substr(pos + 15)); // opened by the absolute path
 
-    return ((_this[655] & 0x100000) != 0) || ((_this[656] & 0x200000) != 0);
+    if (result.empty() || !GetOverloadedFilePathA(result.c_str(), nullptr, 0))
+        return std::nullopt;
+    return result;
+}
+
+namespace BlacklistControls
+{
+    // AEPlayerPawn
+    constexpr auto PrecisionModeFlags = 0xA3C; // 0x1000000: precision mode (aiming)
+    constexpr auto B2WFlags = 0xA44;           // 0x100: wants back to wall (cover), DetectB2W sets it and StopDetectB2W clears it
+    constexpr auto MaxClampedSpeed = 0xBC4;
+
+    struct PawnState
+    {
+        bool sprint = false;
+        bool crouchSprint = false;
+        bool runDisabled = false; // by aiming, precision mode can't be entered while running
+        float maxClampedSpeed = 0.0f;
+        bool inCover = false;     // in one of the cover states
+        bool coverLeft = false;   // a cover state ended, if no other one begins the pawn left cover (opened a door, took down someone...)
+        std::chrono::steady_clock::time_point coverLeftTime;
+        bool coverRequested = false;
+        std::chrono::steady_clock::time_point coverRequestTime;
+    };
+    std::unordered_map<uintptr_t, PawnState> pawns;
+
+    int32_t Sprint, SprintOff, CrouchSprint, CrouchSprintOff, PrecisionModeOn, PrecisionModeOff, DetectB2W, StopDetectB2W;
+
+    void(__fastcall* FName)(int32_t* out, void* edx, const char* name, int32_t findType) = nullptr;
+    void(__fastcall* TogglePrecisionMode)(uintptr_t pawn, void* edx) = nullptr;
+    void(__fastcall* DisableRun)(uintptr_t pawn, void* edx, int32_t disable) = nullptr;
+
+    uint32_t& Flags(uintptr_t pawn, uint32_t offset) { return *reinterpret_cast<uint32_t*>(pawn + offset); }
+
+    void SetPrecisionMode(uintptr_t pawn, PawnState& state, bool on)
+    {
+        if (on && !state.runDisabled)
+        {
+            state.maxClampedSpeed = *reinterpret_cast<float*>(pawn + MaxClampedSpeed);
+            DisableRun(pawn, nullptr, 1);
+            state.runDisabled = true;
+        }
+        else if (!on && state.runDisabled)
+        {
+            *reinterpret_cast<float*>(pawn + MaxClampedSpeed) = state.maxClampedSpeed;
+            state.runDisabled = false;
+        }
+
+        // TogglePrecisionMode doesn't toggle while running or busy, on is sent again while the button is held
+        if (on != ((Flags(pawn, PrecisionModeFlags) & 0x1000000) != 0))
+            TogglePrecisionMode(pawn, nullptr);
+    }
+
+    // any way out of cover counts as leaving it, only the button takes cover again
+    void LeaveCover(uintptr_t pawn, PawnState& state)
+    {
+        Flags(pawn, B2WFlags) &= ~0x100;
+        state.inCover = false;
+        state.coverLeft = false;
+        state.coverRequested = false;
+    }
+
+    void ToggleCover(uintptr_t pawn, PawnState& state)
+    {
+        if (state.inCover)
+            LeaveCover(pawn, state);
+        else
+        {
+            state.coverLeft = false;
+            Flags(pawn, B2WFlags) |= 0x100;
+            state.coverRequested = true;
+            state.coverRequestTime = std::chrono::steady_clock::now();
+        }
+    }
+
+    // Cover states: BeginState (vtable slot 41) and EndState (slot 43), the pawn is at +5Ch
+    constexpr std::array CoverStates = { ".?AVUCoverNavStartState@@", ".?AVUCoverNavState@@", ".?AVUCoverToCoverMkIIState@@", ".?AVUCoverShootToTargetState@@",
+                                         ".?AVUCoverShootToTargetMissState@@", ".?AVUCoverThrowGrenadeState@@", ".?AVUCoverMarkAndExecReloadState@@" };
+    constexpr auto ExitCoverState = ".?AVUExitBackAgainstWallState@@";
+    using StateFunction = void(__fastcall*)(uintptr_t state, void* edx);
+    std::array<std::array<StateFunction, 2>, CoverStates.size() + 1> stateFunctions;
+
+    uintptr_t StatePawn(uintptr_t state) { return *reinterpret_cast<uintptr_t*>(state + 0x5C); }
+
+    template<size_t Index, bool Begin>
+    void __fastcall CoverStateFunction(uintptr_t state, void* edx)
+    {
+        auto pawn = StatePawn(state);
+        auto it = pawns.find(pawn);
+        if constexpr (Index == CoverStates.size()) // leaving cover
+        {
+            if (Begin && it != pawns.end())
+                LeaveCover(pawn, it->second);
+        }
+        else if (Begin)
+        {
+            auto& pawnState = pawns[pawn];
+            pawnState.inCover = true;
+            pawnState.coverLeft = false;
+        }
+        else if (it != pawns.end() && it->second.inCover)
+        {
+            it->second.coverLeft = true;
+            it->second.coverLeftTime = std::chrono::steady_clock::now();
+        }
+        stateFunctions[Index][Begin](state, edx);
+    }
+
+    uintptr_t FindVtable(std::string_view typeName)
+    {
+        auto base = reinterpret_cast<uintptr_t>(GetModuleHandle(nullptr));
+        auto nt = reinterpret_cast<IMAGE_NT_HEADERS*>(base + reinterpret_cast<IMAGE_DOS_HEADER*>(base)->e_lfanew);
+        auto end = base + nt->OptionalHeader.SizeOfImage;
+        auto hex = [](const void* data, size_t size)
+        {
+            std::string str;
+            for (size_t i = 0; i < size; i++)
+                str += std::format("{:02X} ", static_cast<const uint8_t*>(data)[i]);
+            return str;
+        };
+
+        // RTTI: type descriptor (name at +8) <- complete object locator (signature 0, offset 0, cd offset, type descriptor) <- vtable[-1]
+        auto name = hook::range_pattern(base, end, hex(typeName.data(), typeName.size() + 1));
+        if (name.empty())
+            return 0;
+        auto typeDescriptor = reinterpret_cast<uintptr_t>(name.get_first()) - 8;
+        auto locator = hook::range_pattern(base, end, "00 00 00 00 00 00 00 00 ? ? ? ? " + hex(&typeDescriptor, 4));
+        if (locator.empty())
+            return 0;
+        auto locatorAddress = reinterpret_cast<uintptr_t>(locator.get_first());
+        auto vtable = hook::range_pattern(base, end, hex(&locatorAddress, 4));
+        return vtable.empty() ? 0 : reinterpret_cast<uintptr_t>(vtable.get_first()) + 4;
+    }
+
+    template<size_t Index>
+    void HookCoverState(const char* typeName)
+    {
+        auto vtable = FindVtable(typeName);
+        if (!vtable)
+            return;
+        stateFunctions[Index][1] = *reinterpret_cast<StateFunction*>(vtable + 41 * 4);
+        stateFunctions[Index][0] = *reinterpret_cast<StateFunction*>(vtable + 43 * 4);
+        injector::WriteMemory(vtable + 41 * 4, &CoverStateFunction<Index, true>, true);
+        injector::WriteMemory(vtable + 43 * 4, &CoverStateFunction<Index, false>, true);
+    }
+
+    template<size_t... Index>
+    void HookCoverStates(std::index_sequence<Index...>)
+    {
+        (HookCoverState<Index>(CoverStates[Index]), ...);
+        HookCoverState<CoverStates.size()>(ExitCoverState);
+    }
+
+    // returns true if the event was handled
+    bool HandleEvent(uintptr_t pawn, int32_t name)
+    {
+        static bool once = [] {
+            for (auto [out, str] : { std::pair{ &Sprint, "Sprint" }, { &SprintOff, "SprintOff" }, { &CrouchSprint, "CrouchSprint" }, { &CrouchSprintOff, "CrouchSprintOff" },
+                                     { &PrecisionModeOn, "TogglePrecisionModeOn" }, { &PrecisionModeOff, "TogglePrecisionModeOff" }, { &DetectB2W, "DetectB2W" }, { &StopDetectB2W, "StopDetectB2W" } })
+                FName(out, nullptr, str, 2);
+            return true;
+        }();
+
+        auto& state = pawns[pawn];
+        if (name == Sprint || name == SprintOff)
+            state.sprint = name == Sprint;
+        else if (name == CrouchSprint || name == CrouchSprintOff)
+            state.crouchSprint = name == CrouchSprint;
+        else if (name == PrecisionModeOn || name == PrecisionModeOff)
+            SetPrecisionMode(pawn, state, name == PrecisionModeOn);
+        else if (name == DetectB2W)
+            ToggleCover(pawn, state);
+        else if (name != StopDetectB2W) // releasing the button doesn't leave cover
+            return false;
+        return true;
+    }
 }
 
 export void InitBlacklistControls()
 {
-    if (bBlacklistControlScheme)
+    if (!bBlacklistControlScheme)
+        return;
+
+    using namespace BlacklistControls;
+
+    // AEPlayerPawn event handler (sub_56D957), after its event names are made, [esp+10h] is the event FName
+    auto pattern = hook::pattern("3B 05 ? ? ? ? 75 07 8B CE E8 ? ? ? ? 5F 5E 5B");
+    TogglePrecisionMode = reinterpret_cast<decltype(TogglePrecisionMode)>(injector::GetBranchDestination(pattern.get_first(10)).as_int());
+    static auto HandleEventReturn = reinterpret_cast<uintptr_t>(pattern.get_first(15));
+
+    pattern = hook::pattern("E8 ? ? ? ? 8B 44 24 10 8B 00 3B 05 ? ? ? ? 75 04");
+    FName = reinterpret_cast<decltype(FName)>(injector::GetBranchDestination(pattern.get_first(0)).as_int());
+    static auto HandleEventHook = safetyhook::create_mid(pattern.get_first(5), [](SafetyHookContext& regs)
     {
-        // aiming check
-        auto pattern = hook::pattern("E8 ? ? ? ? 8B 4D F8 48");
-        injector::MakeCALL(pattern.get_first(), sub_56C0AD, true);
+        if (BlacklistControls::HandleEvent(regs.esi, **reinterpret_cast<int32_t**>(regs.esp + 0x10)))
+            regs.eip = HandleEventReturn;
+    });
 
-        // add modes for aiming
-        pattern = hook::pattern("E8 ? ? ? ? 8B 44 24 10 8B 00 3B 05 ? ? ? ? 75 04");
-        hb458CD3.fun = injector::MakeCALL(pattern.get_first(), fnTogglePrecisionMode, true).get();
+    pattern = hook::pattern("83 7C 24 04 00 75 12 F3 0F 10 05 ? ? ? ? F3 0F 11 81 C4 0B 00 00");
+    DisableRun = reinterpret_cast<decltype(DisableRun)>(pattern.get_first());
 
-        // check aiming mode
-        pattern = hook::pattern("3B 05 ? ? ? ? 75 07 8B CE E8 ? ? ? ? 5F 5E 5B");
-        static auto loc_56DC64 = (uintptr_t)pattern.get_first(15);
-        struct GetPrecisionMode
+    // cover detection, a request to toggle cover on is dropped when there was no cover to take
+    pattern = hook::pattern("66 F7 86 ? ? ? ? ? ? 0F 84 ? ? ? ? 0F 57 C0");
+    static auto CoverDetectionHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        using namespace std::chrono_literals;
+        auto it = pawns.find(regs.esi);
+        if (it == pawns.end())
+            return;
+        auto& state = it->second;
+        auto now = std::chrono::steady_clock::now();
+        // a cover state ended and no other one began (states change in between, like cover to shooting from cover)
+        if (state.coverLeft && now - state.coverLeftTime > 250ms)
+            LeaveCover(regs.esi, state);
+        if (!state.coverRequested)
+            return;
+        if (state.inCover)
+            state.coverRequested = false;
+        else if (now - state.coverRequestTime > 1s)
         {
-            void operator()(injector::reg_pack& regs)
-            {
-                if (regs.eax == CrouchSprint)
-                    bCrouchSprintNeeded = true;
-                else if (regs.eax == CrouchSprintOff)
-                    bCrouchSprintNeeded = false;
+            Flags(regs.esi, B2WFlags) &= ~0x100;
+            state.coverRequested = false;
+        }
+    });
 
-                if (regs.eax == Sprint)
-                    bSprintNeeded = true;
-                else if (regs.eax == SprintOff)
-                    bSprintNeeded = false;
+    // cover states, to know when the pawn left cover
+    HookCoverStates(std::make_index_sequence<CoverStates.size()>());
 
-                if (regs.eax == TogglePrecisionMode || regs.eax == TogglePrecisionModeOn || regs.eax == TogglePrecisionModeOff)
-                    WhichPrecisionModeNeeded = regs.eax;
-                else
-                    *(uintptr_t*)(regs.esp - 4) = loc_56DC64;
-            }
-        }; injector::MakeInline<GetPrecisionMode>(pattern.get_first(0), pattern.get_first(8));
-
-        // add crouch sprint
-        pattern = hook::pattern("F3 0F 10 45 ? F3 0F 11 45 ? F3 0F 10 86");
-        static auto GetSpeedReferenceAdjustment = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-        {
-            if (bCrouchSprintNeeded)
-                *(float*)(regs.ebp + 0x0C) *= 1.5f;
-            else if (bSprintNeeded)
-                *(float*)(regs.ebp + 0x0C) *= 1.25f;
-        });
-
-        // cover modes
-        pattern = hook::pattern("E8 ? ? ? ? F6 05 ? ? ? ? ? 75 17 83 0D ? ? ? ? ? 53 68 ? ? ? ? B9 ? ? ? ? E8 ? ? ? ? F6 05 ? ? ? ? ? 75 17 83 0D ? ? ? ? ? 53 68 ? ? ? ? B9 ? ? ? ? E8 ? ? ? ? F6 05 ? ? ? ? ? 75 17 83 0D ? ? ? ? ? 53 68 ? ? ? ? B9 ? ? ? ? E8 ? ? ? ? F6 05 ? ? ? ? ? 75 1A 81 0D ? ? ? ? ? ? ? ? 53 68 ? ? ? ? B9 ? ? ? ? E8 ? ? ? ? BF");
-        hb458CD3.fun = injector::MakeCALL(pattern.get_first(0), fnDetectB2W, true).get();
-        pattern = hook::pattern("E8 ? ? ? ? F6 05 ? ? ? ? ? 75 17 83 0D ? ? ? ? ? 53 68 ? ? ? ? B9 ? ? ? ? E8 ? ? ? ? F6 05 ? ? ? ? ? 75 17 83 0D ? ? ? ? ? 53 68 ? ? ? ? B9 ? ? ? ? E8 ? ? ? ? F6 05 ? ? ? ? ? 75 1A 81 0D ? ? ? ? ? ? ? ? 53 68 ? ? ? ? B9 ? ? ? ? E8 ? ? ? ? BF");
-        hb458CD3.fun = injector::MakeCALL(pattern.get_first(0), fnStopDetectB2W, true).get();
-
-        // cover
-        static bool bCoverStateStarted = false;
-        static bool bReleased = false;
-        static auto loc_56DBB3 = (uintptr_t)hook::get_pattern("3B 05 ? ? ? ? 75 13 8B 8E ? ? ? ? 8B 01");
-        static auto lastDetectTime = std::chrono::steady_clock::now();
-
-        pattern = hook::pattern("3B 05 ? ? ? ? 75 0B 09 BE");
-        struct CoverHook
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                if (regs.eax == DetectB2W || regs.eax == StopDetectB2W)
-                {
-                    if (regs.eax == DetectB2W)
-                    {
-                        if (bCoverStateStarted)
-                        {
-                            *(uint32_t*)(regs.esi + 0xA44) &= ~0x100;
-                        }
-                        else
-                        {
-                            lastDetectTime = std::chrono::steady_clock::now();
-                            *(uint32_t*)(regs.esi + 0xA44) |= 0x100;
-                        }
-                    }
-                }
-                else
-                    *(uintptr_t*)(regs.esp - 4) = loc_56DBB3;
-            }
-        }; injector::MakeInline<CoverHook>(pattern.get_first(0), pattern.get_first(14));
-
-        pattern = hook::pattern("81 88 ? ? ? ? ? ? ? ? 8B 4B 78");
-        static auto UCoverNavStartState = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-        {
-            bCoverStateStarted = true;
-        });
-
-        pattern = hook::pattern("0F 57 C0 53 55 56 57");
-        static auto UCoverNavEndState = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-        {
-            bCoverStateStarted = false;
-        });
-
-        pattern = hook::pattern("66 F7 86 ? ? ? ? ? ? 0F 84 ? ? ? ? 0F 57 C0");
-        static auto UCoverNavStartStateCheck = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-        {
-            auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - lastDetectTime).count();
-
-            // Wait for 1 second before applying StopDetectB2W code
-            if (elapsed >= 1 && elapsed <= 2)
-            {
-                if (!bCoverStateStarted)
-                    *(uint32_t*)(regs.esi + 0xA44) &= ~0x100;
-            }
-        });
-    }
+    // sprint, the state's pawn is at +5Ch, [ebp+0Ch] is the speed
+    pattern = hook::pattern("F3 0F 10 45 ? F3 0F 11 45 ? F3 0F 10 86");
+    static auto SpeedHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        auto it = pawns.find(*reinterpret_cast<uintptr_t*>(regs.esi + 0x5C));
+        if (it == pawns.end())
+            return;
+        if (it->second.crouchSprint)
+            *reinterpret_cast<float*>(regs.ebp + 0x0C) *= 1.5f;
+        else if (it->second.sprint)
+            *reinterpret_cast<float*>(regs.ebp + 0x0C) *= 1.25f;
+    });
 }

@@ -523,10 +523,24 @@ namespace MenuMap
     {
         static_assert(offsetof(CMenuManager, m_fMapSize) == 0x40);
         static_assert(offsetof(CMenuManager, m_fMapCenterX) == 0x44);
+        auto calls = hook::pattern("83 BE F8 00 00 00 06 75 ? 89 F1 E8 ? ? ? ?").count(2);
+        auto begin = injector::GetBranchDestination(calls.get_first(11)).get<uint8_t>();
+
+        // MenuMapVC replaces the renderer and handles its own pixel-space canvas.
+        // Leave its input, initial center and drawing calls together, including
+        // renamed copies of the ASI identified by its exported map API.
+        if (*begin == 0xE9)
+        {
+            auto renderer = injector::GetBranchDestination(begin).get<void>();
+            HMODULE module = nullptr;
+            if (GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                reinterpret_cast<LPCWSTR>(renderer), &module) && GetProcAddress(module, "MenuMap_GetScreenCoords"))
+                return;
+        }
+
         auto init = hook::pattern("C7 43 40 00 00 22 43 C7 43 44 00 00 A0 43 C7 43 48").count(1);
         InitialCenterX.SetAddress(init.get_first<float>(10));
 
-        auto begin = hook::pattern("53 56 57 55 89 CB 81 EC ? ? ? ? C6 43 35 01 E8 ? ? ? ? D9 EE D9 43 40").count(1).get_first<uint8_t>();
         auto end = hook::pattern("E8 ? ? ? ? 80 7B 21 00 0F 84").count(1).get_first<uint8_t>();
         for (auto [original, corrected] : { std::pair{ ResXInvRefs[eCMenuManager].get_ptr(), &ScaleX },
             std::pair{ ResYInvRefs[eCMenuManager].get_ptr(), &ScaleY } })
@@ -559,7 +573,6 @@ namespace MenuMap
         });
 
         // Replace only the menu's calls; leave the native entry point intact.
-        auto calls = hook::pattern("83 BE F8 00 00 00 06 75 ? 89 F1 E8 ? ? ? ?").count(2);
         hbPrintMap.fun = reinterpret_cast<decltype(hbPrintMap.fun)>(begin);
         calls.for_each_result([](hook::pattern_match match) { injector::MakeCALL(match.get<void>(11), PrintMap, true); });
         UpdateCanvas();

@@ -1,0 +1,354 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Sequence name="M08_ThirE_se351_ProjCS_CAPTURESAM">
+  <Task name="Monitor button Pressed" x="150.000000" y="163.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <Task name="Play Anim se351" x="699.000000" y="172.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Anim Sam se351 GrimWaitCisco" entity="Repository::O_Pawn_Sam_1">
+        <Event name="NewEvent" end="58.666698">
+          <CommandInstance name="PlayAnimation" duration="58.666698">
+            <ParameterInstance name="Actor" data="Repository::O_Pawn_Sam_1"/>
+            <ParameterInstance name="AnimName">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="M08_ThirE_se351_Spec_GrimWaitingCisco_Sam"/>
+            </ParameterInstance>
+            <ParameterInstance name="UseAnimPosition">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="TweenTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="AnimSpeedMultiplier">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="1.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="OffSetStartTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="Origin" data="SE_Helper_21" InUnrealActors="1"/>
+            <ParameterInstance name="PhysMotionType"/>
+            <ParameterInstance name="DebugOutput">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Return Control" x="989.000000" y="173.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Capture Seq" entity="Repository::o_MainView_1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="EnableCapture">
+            <ParameterInstance name="dummy" data="Repository::o_MainView_1"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="DefaultEncoding">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="FileName">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="M08_ThirE_se351_Spec_GrimTelepres_Sam"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Get Player" entity="Repository::ref_Character_Sam_1">
+        <Event name="NewEvent" start="0.100000" end="-1.000000">
+          <CommandInstance name="PlayerUnPossess">
+            <ParameterInstance name="Character" data="Repository::ref_Character_Sam_1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="End Cinematic State" entity="Repository::ref_Character_Sam_1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetGameCinematicState">
+            <ParameterInstance name="dummy" data="Repository::ref_Character_Sam_1"/>
+            <ParameterInstance name="State">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="SetHUDVisibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Capture Seq_0" entity="Repository::o_MainView_1" ignore="1">
+        <Event name="NewEvent" end="5.000000">
+          <CommandInstance name="CaptureImages" duration="5.000000">
+            <ParameterInstance name="dummy" data="Repository::o_MainView_1"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceCapture">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="FileName">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="M08_ThirE_se351_Spec_GrimTelepres_Sam"/>
+            </ParameterInstance>
+            <ParameterInstance name="Fps">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="30.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Enable Capture" x="578.000000" y="169.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Capture Seq" entity="Repository::o_MainView_1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="EnableCapture">
+            <ParameterInstance name="dummy" data="Repository::o_MainView_1"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="DefaultEncoding">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="FileName">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="M08_ThirE_se351_Spec_GrimTelepres_Sam"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Check X Pressed" x="369.000000" y="163.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <Task name="Get Sam" first="1" x="9.000000" y="161.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Get Player" entity="Repository::ref_Character_Sam_1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerPossess">
+            <ParameterInstance name="Character" data="Repository::ref_Character_Sam_1"/>
+            <ParameterInstance name="ApplyDamageReaction">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Start Cinematic State" entity="Repository::ref_Character_Sam_1">
+        <Event name="NewEvent" start="0.100000" end="-1.000000">
+          <CommandInstance name="SetGameCinematicState">
+            <ParameterInstance name="dummy" data="Repository::ref_Character_Sam_1"/>
+            <ParameterInstance name="State">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="SetHUDVisibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Display Record button" entity="Repository::O_Objective_Manager_1">
+        <Event name="NewEvent" end="5.000000" condition="1">
+          <CommandInstance name="PopupMessage" duration="5.000000">
+            <ParameterInstance name="ObjectiveManager" data="Repository::O_Objective_Manager_1"/>
+            <ParameterInstance name="Text">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="PRESS X TO RECORD MOVIE"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Set Recording Camera" entity="Repository::O_Camera_1">
+        <Event name="NewEvent" start="0.300000" end="-1.000000">
+          <CommandInstance name="TeleportOnActor">
+            <ParameterInstance name="ActorToTeleport" data="Repository::O_Camera_1"/>
+            <ParameterInstance name="DestinationActor" data="ETarget_111" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Put Googles on Head" entity="Repository::ref_Character_Sam_1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerChangeMeshToGogglesMesh">
+            <ParameterInstance name="Character" data="Repository::ref_Character_Sam_1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_0" start="Enable Capture" true="Play Anim se351" sequence="M08_ThirE_se351_ProjCS_CAPTURESAM">
+    <vertices>
+      <vertex x="628.000000" y="194.000000"/>
+      <vertex x="699.000000" y="197.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyCommand name="NewDependencyCommand" start="Check X Pressed" true="Enable Capture" false="Monitor button Pressed">
+    <CommandInstance name="Equal">
+      <ParameterInstance name="Left" data="Repository::ref_se351_XButton_StartCapture"/>
+      <ParameterInstance name="Right" data="Repository::Unreal::enums::eActionType::eActionType_PressLeftShoulder"/>
+    </CommandInstance>
+    <vertices>
+      <vertex x="419.000000" y="188.000000"/>
+      <vertex x="578.000000" y="194.000000"/>
+      <vertex x="150.000000" y="188.000000"/>
+      <vertex x="419.250000" y="116.750000"/>
+      <vertex x="149.000000" y="117.000000"/>
+      <vertex x="578.000000" y="116.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="3" vertex2="5"/>
+      <segment type="0" vertex1="5" vertex2="1"/>
+      <segment type="1" vertex1="3" vertex2="4"/>
+      <segment type="1" vertex1="4" vertex2="2"/>
+      <segment type="2" vertex1="0" vertex2="3"/>
+    </segments>
+  </DependencyCommand>
+  <DependencyComplete name="NewDependencyComplete" start="Get Sam" true="Monitor button Pressed" sequence="M08_ThirE_se351_ProjCS_CAPTURESAM">
+    <vertices>
+      <vertex x="59.000000" y="186.000000"/>
+      <vertex x="150.000000" y="188.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyEvent name="NewDependencyEvent" start="Monitor button Pressed" true="Check X Pressed" data="Repository::ref_Character_Sam_1">
+    <ExternalEventInstance name="RAW_BUTTON_INPUT" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="ActionButton" data="Repository::ref_se351_XButton_StartCapture"/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="200.000000" y="188.000000"/>
+      <vertex x="369.000000" y="188.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Play Anim se365" x="797.000000" y="173.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Anim Sam se365 SamFreaksOut" entity="Repository::O_Pawn_Sam_1">
+        <Event name="NewEvent" end="45.533298">
+          <CommandInstance name="PlayAnimation" duration="45.533298">
+            <ParameterInstance name="Actor" data="Repository::O_Pawn_Sam_1"/>
+            <ParameterInstance name="AnimName">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="M08_ThirE_se365_Spec_SamFreaksOut_Sam"/>
+            </ParameterInstance>
+            <ParameterInstance name="UseAnimPosition">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="TweenTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="AnimSpeedMultiplier">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="1.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="OffSetStartTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="Origin" data="SE_Helper_20" InUnrealActors="1"/>
+            <ParameterInstance name="PhysMotionType"/>
+            <ParameterInstance name="DebugOutput">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Play Anim se366" x="902.000000" y="173.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Anim Sam se366 GrimBringsReality" entity="Repository::O_Pawn_Sam_1">
+        <Event name="NewEvent" end="98.800003">
+          <CommandInstance name="PlayAnimation" duration="98.800003">
+            <ParameterInstance name="Actor" data="Repository::O_Pawn_Sam_1"/>
+            <ParameterInstance name="AnimName">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="M08_ThirE_se366_Spec_GrimBringsReality"/>
+            </ParameterInstance>
+            <ParameterInstance name="UseAnimPosition">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="TweenTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="AnimSpeedMultiplier">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="1.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="OffSetStartTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="Origin" data="SE_Helper_20" InUnrealActors="1"/>
+            <ParameterInstance name="PhysMotionType"/>
+            <ParameterInstance name="DebugOutput">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Throw Monitor" entity="Repository::List_ACT_MonitorLCD_03">
+        <Event name="NewEvent" start="9.000000" end="9.300003" condition="1">
+          <CommandInstance name="Move" duration="0.300003">
+            <ParameterInstance name="Object" data="Repository::List_ACT_MonitorLCD_03"/>
+            <ParameterInstance name="Target" data="StaticMeshActor_2873" InUnrealActors="1"/>
+            <ParameterInstance name="UseFinalPosition">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Capture Images" x="698.000000" y="239.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Capture Seq_0" entity="Repository::o_MainView_1" ignore="1">
+        <Event name="NewEvent" end="205.000000" condition="1">
+          <CommandInstance name="CaptureImages" duration="205.000000">
+            <ParameterInstance name="dummy" data="Repository::o_MainView_1"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceCapture">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="FileName">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="M08_ThirE_se351_Spec_GrimTelepres_Sam"/>
+            </ParameterInstance>
+            <ParameterInstance name="Fps">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="30.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_1" start="Enable Capture" true="Capture Images" sequence="M08_ThirE_se351_ProjCS_CAPTURESAM">
+    <vertices>
+      <vertex x="628.000000" y="194.000000"/>
+      <vertex x="698.000000" y="264.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyComplete name="NewDependencyComplete_2" start="Play Anim se351" true="Play Anim se365" sequence="M08_ThirE_se351_ProjCS_CAPTURESAM">
+    <vertices>
+      <vertex x="749.000000" y="197.000000"/>
+      <vertex x="797.000000" y="198.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyComplete name="NewDependencyComplete_3" start="Play Anim se365" true="Play Anim se366" sequence="M08_ThirE_se351_ProjCS_CAPTURESAM">
+    <vertices>
+      <vertex x="847.000000" y="198.000000"/>
+      <vertex x="902.000000" y="198.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyComplete name="NewDependencyComplete_4" start="Play Anim se366" true="Return Control" sequence="M08_ThirE_se351_ProjCS_CAPTURESAM">
+    <vertices>
+      <vertex x="952.000000" y="198.000000"/>
+      <vertex x="989.000000" y="198.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+</Sequence>

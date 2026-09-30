@@ -1,0 +1,379 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Sequence name="BB00_ShadowVictim">
+  <Task name="Prepare actors" first="1" x="51.000000" y="162.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Amer ref" entity="Repository::ref_player1_char">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Assign">
+            <ParameterInstance name="Left" data="Repository::ref_player1_char"/>
+            <ParameterInstance name="Right" data="Repository::o_Player1_Char_Amer"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Russ ref" entity="Repository::ref_player2_char">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Assign">
+            <ParameterInstance name="Left" data="Repository::ref_player2_char"/>
+            <ParameterInstance name="Right" data="Repository::o_Player2_Char_Russ"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Iron doors_0" entity="Repository::List_Doors_BB00_TutoIronDoors_All">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="LockDoor">
+            <ParameterInstance name="TheDoor" data="Repository::List_Doors_BB00_TutoIronDoors_All"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Iron doors" entity="Repository::List_Doors_BB00_TutoIronDoors_All">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Deactivate">
+            <ParameterInstance name="Object" data="Repository::List_Doors_BB00_TutoIronDoors_All"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Both players_1" entity="Repository::List_Char_BB00_BothPlayerRefs">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerSetInCrouch">
+            <ParameterInstance name="Character" data="Repository::List_Char_BB00_BothPlayerRefs"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Both players_0" entity="Repository::List_Char_BB00_BothPlayerRefs">
+        <Event name="NewEvent" end="-1.000000" indeterminate="1">
+          <CommandInstance name="PlayerHolsterWeapon">
+            <ParameterInstance name="Character" data="Repository::List_Char_BB00_BothPlayerRefs"/>
+            <ParameterInstance name="Draw">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="DrawPrimary">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="NoAnim">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="GI_Gun_Pistol_P228_1" InUnrealActors="1" ignore="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="GI_Gun_Pistol_P228_1" InUnrealActors="1"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Restric actions" x="214.000000" y="160.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Amer character" entity="Repository::List_Char_BB00_BothPlayerRefs" ignore="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerDisableRun">
+            <ParameterInstance name="Character" data="Repository::List_Char_BB00_BothPlayerRefs"/>
+            <ParameterInstance name="DisableRun">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Fire press" entity="Repository::List_Char_BB00_BothPlayerRefs">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::List_Char_BB00_BothPlayerRefs"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressRightTrigger"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Fire Hold" entity="Repository::List_Char_BB00_BothPlayerRefs">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::List_Char_BB00_BothPlayerRefs"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_HoldRightTrigger"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Fire unpress" entity="Repository::List_Char_BB00_BothPlayerRefs">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::List_Char_BB00_BothPlayerRefs"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_ReleaseRightTrigger"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Gadget press" entity="Repository::List_Char_BB00_BothPlayerRefs">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::List_Char_BB00_BothPlayerRefs"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressLeftShoulder"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Gadget hold" entity="Repository::List_Char_BB00_BothPlayerRefs">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::List_Char_BB00_BothPlayerRefs"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_HoldLeftShoulder"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Gadget unpress" entity="Repository::List_Char_BB00_BothPlayerRefs">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::List_Char_BB00_BothPlayerRefs"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_ReleaseLeftShoulder"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Execute press" entity="Repository::List_Char_BB00_BothPlayerRefs" ignore="1">
+        <Event name="NewEvent_0" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::List_Char_BB00_BothPlayerRefs"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressY"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Execute hold" entity="Repository::List_Char_BB00_BothPlayerRefs" ignore="1">
+        <Event name="NewEvent_0" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::List_Char_BB00_BothPlayerRefs"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_HoldY"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Execute unpress" entity="Repository::List_Char_BB00_BothPlayerRefs" ignore="1">
+        <Event name="NewEvent_0" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::List_Char_BB00_BothPlayerRefs"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_ReleaseY"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Cover press" entity="Repository::List_Char_BB00_BothPlayerRefs" ignore="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::List_Char_BB00_BothPlayerRefs"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressB"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Cover hold" entity="Repository::List_Char_BB00_BothPlayerRefs" ignore="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::List_Char_BB00_BothPlayerRefs"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_HoldB"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Cover unpress" entity="Repository::List_Char_BB00_BothPlayerRefs" ignore="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::List_Char_BB00_BothPlayerRefs"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_ReleaseB"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Movie, Unlock, Actions" x="641.000000" y="163.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Shadow victim sequence" entity="Repository::Sequences::se016_Spec_ShadowVictim">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StopSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::se016_Spec_ShadowVictim"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="First doors" entity="Repository::List_Doors_BB00_TutoIronDoors_First">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Activate">
+            <ParameterInstance name="Object" data="Repository::List_Doors_BB00_TutoIronDoors_First"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="First doors_0" entity="Repository::List_Doors_BB00_TutoIronDoors_First">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="UnlockDoor">
+            <ParameterInstance name="TheDoor" data="Repository::List_Doors_BB00_TutoIronDoors_First"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Coop players" entity="Repository::List_Char_BB00_BothPlayerRefs">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="DisplayTutorial">
+            <ParameterInstance name="Character" data="Repository::List_Char_BB00_BothPlayerRefs"/>
+            <ParameterInstance name="Key">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="c01_me_1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Show">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Centered">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceVisible">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Victim&apos;s pistol" entity="GI_Gun_Pistol_P228_1" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="GI_Gun_Pistol_P228_1" InUnrealActors="1"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Both player, restore controls" entity="Repository::List_Char_BB00_BothPlayerRefs">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableAllButtons">
+            <ParameterInstance name="Character" data="Repository::List_Char_BB00_BothPlayerRefs"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisableTick">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::BB00_Obj_counter">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="AssignNumber">
+            <ParameterInstance name="Left" data="Repository::BB00_Obj_counter"/>
+            <ParameterInstance name="Right">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="1.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="SE016 Victim" x="367.000000" y="162.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::Sequences::C01_Banya_se015_Text_Silence">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StartSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::C01_Banya_se015_Text_Silence"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="PCSD016 sequence" entity="Repository::Sequences::BB00_PCSD_SE016_ShadowVictim">
+        <Event name="NewEvent" end="-1.000000" indeterminate="1">
+          <CommandInstance name="PlaySequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::BB00_PCSD_SE016_ShadowVictim"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Coop players" entity="Repository::List_Char_BB00_BothPlayerRefs">
+        <Event name="NewEvent" start="2.000000" end="-1.000000">
+          <CommandInstance name="DisplayTutorial">
+            <ParameterInstance name="Character" data="Repository::List_Char_BB00_BothPlayerRefs"/>
+            <ParameterInstance name="Key">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="c01_me_1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Show">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Centered">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceVisible">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent" start="SE016 Victim" true="Movie, Unlock, Actions" data="EAIRussianThug_0" InUnrealActors="1">
+    <ExternalEventInstance name="PAWN_UNCONSCIOUS" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Instigator" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="417.000000" y="187.000000"/>
+      <vertex x="641.000000" y="188.000000"/>
+      <vertex x="602.000000" y="234.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="2"/>
+      <segment type="0" vertex1="2" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <DependencyComplete name="NewDependencyComplete_1" start="Prepare actors" true="Restric actions" sequence="BB00_ShadowVictim">
+    <vertices>
+      <vertex x="101.000000" y="187.000000"/>
+      <vertex x="214.000000" y="185.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyEvent name="NewDependencyEvent_16" start="SE016 Victim" true="Movie, Unlock, Actions" data="EAIRussianThug_0" InUnrealActors="1">
+    <ExternalEventInstance name="PAWN_DEAD" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Instigator" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="417.000000" y="187.000000"/>
+      <vertex x="641.000000" y="188.000000"/>
+      <vertex x="604.000000" y="139.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="2"/>
+      <segment type="0" vertex1="2" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <DependencyComplete name="NewDependencyComplete" start="Restric actions" true="SE016 Victim" sequence="BB00_ShadowVictim">
+    <vertices>
+      <vertex x="264.000000" y="185.000000"/>
+      <vertex x="367.000000" y="187.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+</Sequence>
