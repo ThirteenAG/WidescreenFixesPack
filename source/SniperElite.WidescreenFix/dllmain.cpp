@@ -116,7 +116,8 @@ namespace UI
     bool CenteredText = false;
     int32_t FontWidth;
     SafetyHookInline MenuDraw, MenuDrawOverlay, PrintText, PixelClip, DrawLine;
-    SafetyHookMid MouseUpdate;
+    SafetyHookMid MouseUpdate, MinimapIcons[3], MinimapRect, MinimapCenter;
+    uintptr_t CrosshairDraw;
     void(__cdecl* SetViewingArea)(const float*);
 
     template <DrawMode drawMode, SafetyHookInline& hook, typename Result = int32_t, typename... Args>
@@ -155,6 +156,35 @@ namespace UI
     {
         auto& x = *reinterpret_cast<float*>(regs.esp + sizeof(uintptr_t));
         x -= Screen.fHudOffset;
+    }
+
+    void AlignMinimapIcon(injector::reg_pack& regs)
+    {
+        if (Mode != Game || Screen.fHudOffset <= 0.0f)
+            return;
+
+        auto* position = reinterpret_cast<float*>(regs.eax);
+        position[0] = (position[0] * Screen.fWidth - Screen.fHudOffset) / Screen.fWidth43; //screen projection to the icon's HUD canvas
+    }
+
+    void SquareMinimap(injector::reg_pack& regs)
+    {
+        if (Mode != Game || Screen.fHudOffset <= 0.0f || *reinterpret_cast<int32_t*>(regs.esi + 0xAC) == 3)
+            return;
+
+        auto& width = *reinterpret_cast<float*>(regs.esi + 0x8C);
+        const float height = *reinterpret_cast<float*>(regs.esi + 0x90);
+        *reinterpret_cast<float*>(regs.esi + 0x94) += width - height; //keep the native right edge
+        width = height;
+    }
+
+    void CenterMinimap(injector::reg_pack& regs)
+    {
+        if (Mode != Game || Screen.fHudOffset <= 0.0f)
+            return;
+
+        auto& delta = *reinterpret_cast<float*>(regs.esp + 0x14);
+        delta *= Screen.fWidth / Screen.fWidth43; //pixel displacement to the map's HUD canvas
     }
 
     char __cdecl Print(const wchar_t* text, const float* clip, float x, float y,
@@ -417,6 +447,23 @@ void Init()
             *(uintptr_t*)(regs.esi + 0x44) = regs.eax;
         }
     }; injector::MakeInline<HudHook2>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
+
+    auto minimapIcons = hook::pattern("E8 ? ? ? ? 8B ? 8B ? 04 8B ? ? 89 ? ? ? 8B ? ? 8D"); //50BB91, 50C10B
+    for (size_t i = 0; i < 2; ++i)
+        UI::MinimapIcons[i] = safetyhook::create_mid(minimapIcons.count(2).get(i).get<uint8_t>(5), UI::AlignMinimapIcon);
+
+    uint8_t* minimapPlayers = nullptr;
+    auto minimapPlayersSIG = hook::pattern("D9 ? ? ? 8B ? 8B ? ? 8B ? ? ? ? ? D8"); //50BE0C
+    if (!minimapPlayersSIG.empty())
+        minimapPlayers = minimapPlayersSIG.get_first<uint8_t>();
+    else
+        minimapPlayers = hook::get_pattern<uint8_t>("8B ? 8B ? ? 8D ? ? ? 89 ? ? ? 50 8D ? ? ? 51");
+
+    UI::MinimapIcons[2] = safetyhook::create_mid(minimapPlayers, UI::AlignMinimapIcon);
+    const auto minimapRect = hook::get_pattern<uint8_t>("D9 ? ? ? ? ? 5E 5B 83 ? ? C3", 6); //50907A
+    UI::MinimapRect = safetyhook::create_mid(minimapRect, UI::SquareMinimap);
+    const auto minimapCenter = hook::get_pattern<uint8_t>("D9 ? ? ? D8 ? ? ? ? ? D9 ? ? ? ? ? D8 ? ? ? ? ? D9 ? ? ? ? ? E8"); //50B30C
+    UI::MinimapCenter = safetyhook::create_mid(minimapCenter, UI::CenterMinimap);
 
     const auto fontClip = hook::get_pattern<uint8_t>("8B ? ? ? 83 ? ? 53 8B ? ? ? 85 ? 56"); //40E450
     const auto printText = hook::get_pattern<uint8_t>("83 ? ? A0 ? ? ? ? 84 ? 55 57"); //40F570
