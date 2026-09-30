@@ -16,14 +16,21 @@
 - **DLC crash** — Prevent crashes when Xbox 360 achievement conditions are met in DLC levels, including “King of the Crypt” in New Orleans and “Watch the Soap” in Portland.
 - **Co-op frame rate** — Changed coop FPS limit to 60 (custom values can be set via `update/convictionsettings.ini`, `SyncMaxStepFrequency` parameter)
 - **Ammunition** — Disabled unlimited ammo for all weapons (restore original behavior by deleting `update/weapontuning.ini`)
+- **Window focus** — In windowed mode, the game window starts focused and shows the cursor without a click.
 
 ## Options
 
-- **Skip intro** — Skip startup intros.
-- **Windowed mode** — Run the game in a window.
-- **Mouse input** — Optionally disable negative mouse acceleration.
+- **Skip intro** — Skip startup intros and the "Press any key" screen.
+- **Windowed mode** — Run the game centered in a window.
+- **Mouse input** — Optionally disable negative mouse acceleration and mouse smoothing, and use raw mouse input so high polling rate mice don't lose movement.
+- **Gamepad camera speed** — Adjust how fast the stick turns the camera.
 - **Hardware detection** — Skip hardware detection messages on startup.
 - **LAN** — Restore LAN support.
+
+### Split screen
+
+- **Split screen** — Restore the original split screen co-op in one game window (Co-op → Split Screen). Player 1 uses the keyboard and mouse or a gamepad, player 2 a gamepad. Player 2 has their own profile (`Guest` by default) for uniform and loadout, changed in the lobby with Teammate Settings.
+- **Two instance split screen** — Launch a second game instance, with each window taking half the screen (top and bottom or side by side). The two instances connect over LAN. Each window uses its own gamepad and the second one uses its own profile.
 
 ### Display and effects
 
@@ -38,7 +45,7 @@
 
 - **Loose files** — Load unpacked files from disk.
 - **DLC** — Unlock DLC content made unavailable by the server shutdown.
-- **Controls** — Enable the Blacklist control scheme. Not fully tested; report issues via GitHub.
+- **Controls** — Enable the Blacklist control scheme on keyboard and gamepad: cover is toggled with a press and released by any action that leaves it, drops from ledges are on the crouch button, and Death from Above is on E / X.
 
 ![controls](https://github.com/user-attachments/assets/2498a891-2991-4604-b0dc-b5d309a0c02d)
 

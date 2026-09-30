@@ -75,6 +75,22 @@ export void InitMouse()
         injector::WriteMemory<uint8_t>(jnz + 5, 0x90, true);
     }
 
+    static auto fGamepadCameraSpeed = iniReader.ReadFloat("GAMEPLAY", "GamepadCameraSpeed", 1.0f);
+    if (fGamepadCameraSpeed > 0.0f && fGamepadCameraSpeed != 1.0f)
+    {
+        // CameraImpl (sub_5CD6FB) turns the camera by the stick input at +424h/+428h (-1..1 with a pad) times the camera mode's
+        // yaw and pitch speed (yawSpeed, pitchSpeed in degrees/second, ConvictionCamera.ini), the controller at +20h is in pad mode with +604h & 2
+        auto pattern = hook::pattern("8B 4E 28 8B 01 57 8D 5E 30 53 8D 96 28 04 00 00");
+        static auto GamepadCameraSpeedHook = safetyhook::create_mid(pattern.get_first(6), [](SafetyHookContext& regs)
+        {
+            auto controller = *reinterpret_cast<uintptr_t*>(regs.esi + 0x20);
+            if (!controller || (*reinterpret_cast<uint32_t*>(controller + 0x604) & 2) == 0)
+                return;
+            *reinterpret_cast<float*>(regs.esi + 0x424) *= fGamepadCameraSpeed;
+            *reinterpret_cast<float*>(regs.esi + 0x428) *= fGamepadCameraSpeed;
+        });
+    }
+
     if (bRawMouseInput)
     {
         auto pattern = hook::pattern("55 8B EC 83 EC 20 53 56 8B 35 ? ? ? ? 57 33 FF 33 DB 89 7D FC 43");

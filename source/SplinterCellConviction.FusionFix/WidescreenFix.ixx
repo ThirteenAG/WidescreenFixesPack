@@ -224,28 +224,6 @@ export void InitWidescreenFix()
             tile[3] += extendY;
         });
 
-        // Menu pages (sc5 components) dim the screen with Background.BG, a stage sized clip: stretch it over the whole screen.
-        // The sticky camera PiP frame is kept at its remapped position (see GetPiPBarX).
-        // GFxMovieView::SetViewport call sites in RenderPhases, edi is the movie.
-        {
-            static auto MovieFixes = [](SafetyHookContext& regs)
-            {
-                auto ratio = GetAspectRatio() / fDefaultAspectRatio;
-                auto movieView = *reinterpret_cast<uintptr_t*>(regs.edi + 0x28);
-                if (ratio <= 1.0f || !movieView)
-                    return;
-                if (SetFlashNumber(movieView, "_root.Background.BG._width", 1280.0 * ratio))
-                    SetFlashNumber(movieView, "_root.Background.BG._x", -640.0 * (ratio - 1.0));
-                SetFlashNumber(movieView, "_root.PiP_Bar._x", GetPiPBarX(PiPBarProgress));
-            };
-
-            auto pattern = hook::pattern("8D 4D C0 E8 ? ? ? ? 8B 4F 28");
-            static auto RenderPhasesMovieFixes = safetyhook::create_mid(pattern.get_first(), MovieFixes);
-
-            pattern = hook::pattern("8D 4D C4 E8 ? ? ? ? 8B 4F 28");
-            static auto RenderMovieFixes = safetyhook::create_mid(pattern.get_first(), MovieFixes);
-        }
-
         // Sticky camera PiP
         {
             auto pattern = hook::pattern("55 8B EC 51 51 53 56 57 8B F1 E8 ? ? ? ? 8B 40 44 8B 10 8B C8 FF 92");
@@ -287,5 +265,39 @@ export void InitWidescreenFix()
             auto pattern = hook::pattern("55 8B EC 83 EC 50 56 8B F1 E8 ? ? ? ? 85 C0 0F 84");
             shHealthFeedbackDraw = safetyhook::create_inline(pattern.get_first(), HealthFeedbackDraw);
         }
+    }
+
+    // GFxMovieView::SetViewport call sites in RenderPhases (esi the renderer: buffer size at +4, viewport size at +0Ch, edi the movie),
+    // the arguments are pushed: buffer width, height, left, top, width, height.
+    {
+        static auto MovieFixes = [](SafetyHookContext& regs)
+        {
+            // Loading after a split screen match: the buffer is still one player's half, the stage is laid out for the whole screen
+            // and ends up off the left side (loading hints), use the whole screen
+            auto args = reinterpret_cast<int32_t*>(regs.esp);
+            if (args[4] > args[0] || args[5] > args[1])
+            {
+                args[0] = std::max(args[0], args[4]);
+                args[1] = std::max(args[1], args[5]);
+                args[2] = (args[0] - args[4]) / 2;
+                args[3] = (args[1] - args[5]) / 2;
+            }
+
+            // Menu pages (sc5 components) dim the screen with Background.BG, a stage sized clip: stretch it over the whole screen.
+            // The sticky camera PiP frame is kept at its remapped position (see GetPiPBarX).
+            auto ratio = GetAspectRatio() / fDefaultAspectRatio;
+            auto movieView = *reinterpret_cast<uintptr_t*>(regs.edi + 0x28);
+            if (!bUltraWideSupport || ratio <= 1.0f || !movieView)
+                return;
+            if (SetFlashNumber(movieView, "_root.Background.BG._width", 1280.0 * ratio))
+                SetFlashNumber(movieView, "_root.Background.BG._x", -640.0 * (ratio - 1.0));
+            SetFlashNumber(movieView, "_root.PiP_Bar._x", GetPiPBarX(PiPBarProgress));
+        };
+
+        auto pattern = hook::pattern("8D 4D C0 E8 ? ? ? ? 8B 4F 28");
+        static auto RenderPhasesMovieFixes = safetyhook::create_mid(pattern.get_first(), MovieFixes);
+
+        pattern = hook::pattern("8D 4D C4 E8 ? ? ? ? 8B 4F 28");
+        static auto RenderMovieFixes = safetyhook::create_mid(pattern.get_first(), MovieFixes);
     }
 }
