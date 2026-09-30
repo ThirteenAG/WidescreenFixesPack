@@ -31,6 +31,18 @@ bool __cdecl CalcScreenCoors(const RwV3d* in, RwV3d* out, float* outw, float* ou
     return true;
 }
 
+bool __cdecl CalcParticleScreenCoors(const RwV3d* in, RwV3d* out, float* outw, float* outh, bool farclip)
+{
+    const bool visible = shCalcScreenCoors.unsafe_ccall<bool>(in, out, outw, outh, farclip);
+    if (visible)
+    {
+        // Particle textures use the original 4:3 proportions. Keep the native
+        // projection and clipping, and correct only their horizontal size.
+        *outw = SCREEN_SCALE_AR(*outw);
+    }
+    return visible;
+}
+
 class Sprite
 {
 public:
@@ -40,6 +52,12 @@ public:
         {
             auto pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 84 C0 0F 84 ? ? ? ? 0F B7 05");
             shCalcScreenCoors = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), CalcScreenCoors);
+
+            // CParticle::Render, including the projection used for particle trails.
+            pattern = hook::pattern("51 50 56 E8 ? ? ? ? 83 C4 14 84 C0 D9 EE D9 EE D9 EE D9 EE 0F 84");
+            injector::MakeCALL(pattern.get_first(3), CalcParticleScreenCoors, true);
+            pattern = hook::pattern("55 50 E8 ? ? ? ? 83 C4 14 84 C0 D9 EE D9 EE D9 EE 0F 84");
+            injector::MakeCALL(pattern.get_first(2), CalcParticleScreenCoors, true);
         };
     }
 } Sprite;

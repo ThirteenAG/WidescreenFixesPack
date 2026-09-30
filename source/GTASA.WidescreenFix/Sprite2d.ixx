@@ -63,6 +63,8 @@ static inline float CorrectX(float x)
 
 static inline bool IsFullscreen(const CRect* r)
 {
+    // A zoomed map tile can cover the screen; it is not a splash texture.
+    if (FrontendMenuManager->m_bDrawingMap) return false;
     return r->left <= 0.5f
         && r->top <= 0.5f
         && r->right >= SCREEN_WIDTH - 0.5f
