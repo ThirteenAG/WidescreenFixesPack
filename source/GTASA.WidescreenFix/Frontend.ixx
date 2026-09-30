@@ -17,42 +17,39 @@ export ProtectedGameRef<float> ScaledResXRef;
 export ProtectedGameRef<float> ResXInvRef;
 export ProtectedGameRef<float> ResYInvRef;
 
-std::array<std::pair<float, float>, 400> vHudScalePtrs;
+std::vector<std::pair<float, float>> vHudScalePtrs;
 
 injector::hook_back<float(__stdcall*)(float)> hbStretchX;
 float __stdcall StretchX(float a1)
 {
-    if (RsGlobal->maximumWidth == 640)
-        return a1;
-
-    auto m_nCurrentMenuPage = *(int8_t*)((uintptr_t)FrontendMenuManager.get_ptr() + 0x15D);
-
-    if (m_nCurrentMenuPage == SCREEN_MAP)
-        return hbStretchX.fun(a1 + std::abs(fWidescreenHudOffset43) * (640.0f / (float)RsGlobal->maximumWidth));
-
-    const float distFromRight = 640.0f - a1;
-    const float scaledDist = RsGlobal->maximumWidth * distFromRight * INV_SCREEN_WIDTH(CDraw::GetAspectRatio());
-    return RsGlobal->maximumWidth - scaledDist;
+    return SCREEN_SCALE_FROM_RIGHT(640.0f - a1);
 }
 
 SafetyHookInline shDisplaySlider = {};
 int __stdcall DisplaySlider(float x, float y, float unk0, float unk1, float width, float progress, signed int unk)
 {
-    if (RsGlobal->maximumWidth != 640)
-    {
-        const float scaleCurrent = (float)RsGlobal->maximumWidth / 640.0f;
-        const float scale43 = (float)RsGlobal->maximumHeight / 480.0f;
-        const float x640 = x / scaleCurrent;
-        const float width640 = width / scaleCurrent;
-        const float unk640 = (float)unk / scaleCurrent; // slider bar thickness-ish
-        const float distFromRight640 = 640.0f - (x640 + width640);
+    x = SCREEN_SCALE_FROM_RIGHT(140.0f);
+    width = SCREEN_SCALE_X(100.0f);
+    unk = static_cast<int>(std::lround(SCREEN_SCALE_X(3.0f)));
 
-        x = (float)RsGlobal->maximumWidth - (distFromRight640 * scale43) - (width640 * scale43);
-        width = width640 * scale43;
-        unk = (signed int)std::lround(unk640 * scale43);
-    }
+    // The original returns zero when no segment is filled. Mouse hit testing
+    // still needs the slider's starting position at the minimum setting.
+    return std::max(static_cast<int>(x), shDisplaySlider.unsafe_stdcall<int>(x, y, unk0, unk1, width, progress, unk));
+}
 
-    return shDisplaySlider.unsafe_stdcall<int>(x, y, unk0, unk1, width, progress, unk);
+float __stdcall SliderLeftX(float)
+{
+    return SCREEN_SCALE_FROM_RIGHT(140.0f);
+}
+
+float __stdcall SliderRightX(float)
+{
+    return SCREEN_WIDTH;
+}
+
+float __stdcall MenuScaleX(float x)
+{
+    return SCREEN_SCALE_X(x);
 }
 
 void InitCleoFix()
@@ -111,6 +108,7 @@ public:
             excludeHudScaleAddrs.push_back(0x57ACBE + 2); // Slider 3
             excludeHudScaleAddrs.push_back(0x57AEB0 + 2); // Slider 4
             excludeHudScaleAddrs.push_back(0x57B0E4 + 2); // Slider 5
+            excludeHudScaleAddrs.push_back(0x575361 + 2); // Map's dynamic right edge
 
             // excludes for ResXInvRef
             excludeResXInvAddrs.push_back(0x57A1E3 + 2); // Main menu
@@ -153,21 +151,20 @@ public:
             allHudScaleAddrs.push_back(0x58FA8E + 2); // Ammo 2
             allHudScaleAddrs.push_back(0x57A319 + 2); // Menu radio station text
 
-            size_t index = 0;
+            std::sort(allHudScaleAddrs.begin(), allHudScaleAddrs.end());
+            allHudScaleAddrs.erase(std::unique(allHudScaleAddrs.begin(), allHudScaleAddrs.end()), allHudScaleAddrs.end());
+            // Instruction operands retain pointers into this storage.
+            vHudScalePtrs.reserve(allHudScaleAddrs.size());
             for (uintptr_t rawAddr : allHudScaleAddrs)
             {
                 if (isExcluded(rawAddr))
                     continue;
 
-                if (index >= vHudScalePtrs.size())
-                    break;
-
                 float** addr = reinterpret_cast<float**>(rawAddr);
                 float value = **addr;
 
-                vHudScalePtrs[index] = { value, value };
-                injector::WriteMemory(addr, &vHudScalePtrs[index].first, true);
-                ++index;
+                vHudScalePtrs.emplace_back(value, value);
+                injector::WriteMemory(addr, &vHudScalePtrs.back().first, true);
             }
 
             static float DefaultResXInv = 1.0f / 640.0f;
@@ -182,6 +179,17 @@ public:
 
             pattern = hook::pattern("E8 ? ? ? ? 8B 4D ? 89 44 24 ? 8B 44 24");
             shDisplaySlider = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), DisplaySlider);
+
+            // Slider rendering and mouse tests use exactly the same screen edges.
+            for (auto address : { 0x57A9CE, 0x57ABC9, 0x57AE06, 0x57AFE9, 0x57B219 })
+                injector::MakeCALL(address, SliderLeftX, true);
+            for (auto address : { 0x57A983, 0x57AB7E, 0x57ADBB, 0x57AF9E, 0x57B1D2 })
+                injector::MakeCALL(address, SliderRightX, true);
+
+            // Remove the width==640 shortcut from the shared size conversion.
+            static auto StretchSizeX = safetyhook::create_inline(hbStretchX.fun, MenuScaleX);
+            for (auto address : { 0x57699D, 0x5769D4 })
+                injector::WriteMemory<int32_t>(address + 1, -1, true);
 
             onResChange() += [](int Width, int Height)
             {

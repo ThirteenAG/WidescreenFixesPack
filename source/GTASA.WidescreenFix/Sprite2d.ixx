@@ -48,6 +48,7 @@ bool g_hasTexture = false;
 uint8_t g_alpha = 255;
 CRect g_contentRect = {};
 bool g_drawingBars = false;
+export float g_drawOffsetX = 0.0f;
 
 static inline float CorrectX(float x)
 {
@@ -68,18 +69,9 @@ static inline bool IsFullscreen(const CRect* r)
         && r->bottom >= SCREEN_HEIGHT - 0.5f;
 }
 
-export bool g_wantsToMoveHudLeft = false;
-export bool g_wantsToMoveHudRight = false;
-export bool g_needsToMoveHudLeft = false;
-export bool g_needsToMoveHudRight = false;
-
 static inline float GetHudOffset()
 {
-    if (g_wantsToMoveHudLeft)  return -fWidescreenHudOffset;
-    if (g_wantsToMoveHudRight) return  fWidescreenHudOffset;
-    if (g_needsToMoveHudLeft)  return -fWidescreenHudOffset43;
-    if (g_needsToMoveHudRight) return  fWidescreenHudOffset43;
-    return 0.0f;
+    return g_drawOffsetX;
 }
 
 static inline CRect* ScaleRect(CRect* r)
@@ -116,6 +108,16 @@ static CRect ComputeContentRect(CSprite2d* sprite2d, const CRect* rect)
     float halfW = (SCREEN_HEIGHT * aspect) / 2.0f;
 
     return CRect(centerX - halfW, rect->bottom, centerX + halfW, rect->top);
+}
+
+static CRect ComputeLoadingBarRect(CSprite2d* sprite2d)
+{
+    CRect screen(0.0f, SCREEN_HEIGHT, SCREEN_WIDTH, 0.0f);
+    const auto content = ComputeContentRect(sprite2d, &screen);
+    const float contentWidth = content.right - content.left;
+    const float x = content.left + contentWidth * (50.0f / 640.0f);
+    const float y = SCREEN_HEIGHT * (408.0f / 448.0f);
+    return CRect(x, y + SCREEN_HEIGHT * (10.0f / 448.0f), x + contentWidth * (180.0f / 640.0f), y);
 }
 
 static CRect ComputeCoverRect(CSprite2d* sprite2d, const CRect* rect)
@@ -235,6 +237,10 @@ static inline int8_t GetTopCutsceneBorderHeightForHelpText()
 SafetyHookInline shDraw1 = {};
 void __fastcall Draw1(CSprite2d* sprite2d, void* edx, CRect* rect, CRGBA* col)
 {
+    // SetVertices may replace the rectangle. Splash fades reuse the caller's
+    // rectangle for a second texture and a fullscreen overlay.
+    CRect drawRect = *rect;
+    rect = &drawRect;
     g_isFullscreen = IsFullscreen(rect);
     g_hasTexture = sprite2d->m_pTexture != nullptr;
     g_alpha = reinterpret_cast<uint8_t*>(col)[3];
@@ -258,7 +264,12 @@ void __fastcall Draw1(CSprite2d* sprite2d, void* edx, CRect* rect, CRGBA* col)
     //}
     //else
     {
-        if (g_isFullscreen && g_hasTexture) g_contentRect = ComputeContentRect(sprite2d, rect);
+        if (g_isFullscreen && g_hasTexture)
+        {
+            g_contentRect = ComputeContentRect(sprite2d, rect);
+            g_contentRect.top = 0.0f;
+            g_contentRect.bottom = SCREEN_HEIGHT;
+        }
         shDraw1.unsafe_fastcall(sprite2d, edx, rect, col);
         if (g_isFullscreen && g_hasTexture) DrawPillarBars(g_contentRect, rect->top, rect->bottom);
     }
@@ -317,6 +328,8 @@ void __fastcall Draw6(CSprite2d* sprite2d, void* edx, float xb, float yb, float 
 
 void __cdecl DrawRect1(CRect* r, CRGBA* col)
 {
+    CRect drawRect = *r;
+    r = &drawRect;
     g_hasTexture = false;
     g_isFullscreen = IsFullscreen(r);
     shDrawRect1.unsafe_ccall(r, col);
@@ -540,6 +553,27 @@ public:
         WFP::onGameInitEvent() += []()
         {
             {
+                // Anchor the loading bar in the same texture space as its logo.
+                // Square and 2:1 legacy rasters use the 4:3 fallback in ComputeContentRect.
+                auto pattern = hook::pattern("8B 0D ? ? ? ? 8D 0C 8D ? ? ? ? E8 ? ? ? ? 83 C4 18 C3");
+                static auto currentSplash = *pattern.get_first<int32_t*>(2);
+                static auto splashes = *pattern.get_first<CSprite2d*>(9);
+                pattern = hook::pattern("E8 ? ? ? ? D9 05 ? ? ? ? D8 1D ? ? ? ? 83 C4 28 DF E0 F6 C4 44");
+                static auto LoadingBar = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+                {
+                    const int32_t index = *currentSplash;
+                    if (index < 0 || index >= 7 || !splashes[index].m_pTexture) return;
+                    const auto rect = ComputeLoadingBarRect(&splashes[index]);
+                    using DrawBarChart = void(__cdecl*)(float, float, uint16_t, uint8_t, float, int8_t, bool, bool, CRGBA, CRGBA);
+                    auto [x, y, width, height, progress, added, percentage, border, color, addedColor] = deduce_args<DrawBarChart>(regs);
+                    x = rect.left;
+                    y = rect.top;
+                    width = static_cast<uint16_t>(std::clamp(rect.right - rect.left, 1.0f, 65535.0f));
+                    height = static_cast<uint8_t>(std::clamp(rect.bottom - rect.top, 1.0f, 255.0f));
+                });
+            }
+
+            {
                 auto pattern = hook::pattern("E8 ? ? ? ? 8B 06 83 C4 34");
                 shSetVertices1 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), SetVertices1);
 
@@ -635,7 +669,7 @@ public:
             }
 
             {
-                //CFont::PrintChar (when g_needsToMoveHudLeft is active, prevent text from disappearing)
+                //CFont::PrintChar (allow text that is shifted into the centered canvas)
                 static auto fZero = 0.0f;
                 auto pattern = hook::pattern("D8 1D ? ? ? ? DF E0 F6 C4 05 0F 8B ? ? ? ? DB 05 ? ? ? ? D8 5C 24 ? DF E0 F6 C4 05 0F 8B ? ? ? ? A0");
                 injector::WriteMemory(pattern.get_first(2), &fZero, true);

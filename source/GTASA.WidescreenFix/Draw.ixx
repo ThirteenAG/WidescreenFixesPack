@@ -23,12 +23,27 @@ export __declspec(noinline) ResChange<int, int>& onResChange()
 }
 
 std::optional<float> fHudAspectRatioConstraint;
+std::optional<float> fSCMAspectRatioConstraint;
+int lastScreenWidth = 0;
+int lastScreenHeight = 0;
 export float fWidescreenHudOffset = 0.0f;
+export float fWidescreenSCMOffset = 0.0f;
 
 // current cutscene camera zoom (tan-space), maintained by the border system
 // (Sprite2d writes it each frame so the FOV conversion can follow the border animation)
 export float g_cutsceneCameraZoom = 1.0f;
 export float fWidescreenHudOffset43 = 0.0f;
+
+static float GetConstraintOffset(const std::optional<float>& constraint, float autoOffset)
+{
+    if (!constraint.has_value())
+        return autoOffset;
+    const float value = constraint.value();
+    if (value < 0.0f || value > (32.0f / 9.0f))
+        return value;
+    const float aspect = ClampHudAspectRatio(value, SCREEN_WIDTH / SCREEN_HEIGHT);
+    return CalculateWidescreenOffset(SCREEN_HEIGHT * aspect, SCREEN_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT, 0.0, true);
+}
 
 export class CDraw
 {
@@ -56,25 +71,17 @@ public:
     static float GetAspectRatio() { return ms_fAspectRatio; }
     static void SetAspectRatio(float ratio)
     {
-        if (ms_fAspectRatio == ratio)
+        if (ms_fAspectRatio == ratio && lastScreenWidth == RsGlobal->width && lastScreenHeight == RsGlobal->height)
             return;
 
         ms_fAspectRatio = ratio;
+        lastScreenWidth = RsGlobal->width;
+        lastScreenHeight = RsGlobal->height;
 
         fWidescreenHudOffset43 = CalculateWidescreenOffset(SCREEN_HEIGHT * (4.0f / 3.0f), SCREEN_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT, 0.0, true);
 
-        fWidescreenHudOffset = CalculateWidescreenOffset(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT, 0.0, true);
-        if (fHudAspectRatioConstraint.has_value())
-        {
-            float value = fHudAspectRatioConstraint.value();
-            if (value < 0.0f || value > (32.0f / 9.0f))
-                fWidescreenHudOffset = value;
-            else
-            {
-                value = ClampHudAspectRatio(value, FindAspectRatio());
-                fWidescreenHudOffset = CalculateWidescreenOffset(SCREEN_HEIGHT * value, SCREEN_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT, 0.0, true);
-            }
-        }
+        fWidescreenHudOffset = GetConstraintOffset(fHudAspectRatioConstraint, 0.0f);
+        fWidescreenSCMOffset = GetConstraintOffset(fSCMAspectRatioConstraint, fWidescreenHudOffset);
 
         onResChange().executeAll(RsGlobal->width, RsGlobal->height);
     }
@@ -221,6 +228,8 @@ public:
         {
             CIniReader iniReader("");
             fHudAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "HudAspectRatioConstraint", ""));
+            fSCMAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "SCMAspectRatioConstraint", "Auto"));
+            lastScreenWidth = 0;
 
             static float fScaledFOV = 0.0f;
             auto pattern = hook::pattern("D9 05 ? ? ? ? 56 D8 0D ? ? ? ? 8B F1");
