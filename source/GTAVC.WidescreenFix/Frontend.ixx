@@ -396,7 +396,156 @@ struct intro_text_line
     wchar_t m_Text[SCRIPT_TEXT_MAX_LENGTH];
 };
 
-intro_text_line** ppIntroTextLines = nullptr;
+static_assert(offsetof(intro_text_line, m_fWrapX) == 0x10);
+static_assert(offsetof(intro_text_line, m_fAtX) == 0x24);
+static_assert(offsetof(intro_text_line, m_Text) == 0x2C);
+
+namespace ScriptDraw
+{
+    constexpr float ScreenHeight = DEFAULT_SCREEN_HEIGHT;
+    injector::hook_back<void(__cdecl*)(float)> hbSetWrapX;
+    injector::hook_back<void(__cdecl*)(float, float, wchar_t*)> hbPrintString;
+
+    float GetOffsetX()
+    {
+        return (SCREEN_WIDTH - SCREEN_SCALE_X(DEFAULT_SCREEN_WIDTH)) * 0.5f;
+    }
+
+    void __cdecl SetWrapX(float x)
+    {
+        // WrapX is an absolute right edge; CentreSize is a width and needs no offset.
+        hbSetWrapX.fun(x + GetOffsetX());
+    }
+
+    void __cdecl PrintString(float x, float y, wchar_t* text)
+    {
+        // The native renderer measures positions from the right edge of the screen.
+        // Move that origin into the same centered 4:3 canvas as WrapX.
+        hbPrintString.fun(x - GetOffsetX(), y, text);
+    }
+
+    void Init(intro_text_line* lines)
+    {
+        // Both CHud::Draw and DrawAfterFade use these fields. Match their native
+        // operands rather than assuming a particular loop register or text index.
+        auto wrap = hook::pattern(pattern_str(0xD8, '?', to_bytes(&lines->m_fWrapX)) + " D9 1C 24 E8 ? ? ? ?").count(2);
+        auto print = hook::pattern(pattern_str(0xD8, '?', to_bytes(&lines->m_fAtX)) + " DE C9 DA 6C 24 ? D9 1C 24 E8 ? ? ? ?").count(2);
+
+        // Keep all script coordinates and font dimensions independent of custom HUD
+        // scaling, including the pass that draws before the fade.
+        for (auto field : { &lines->m_fScaleX, &lines->m_fWrapX, &lines->m_fCenterSize })
+        {
+            auto pattern = hook::pattern("D8 0D ? ? ? ? " + pattern_str(0xD8, '?', to_bytes(field))).count(2);
+            pattern.for_each_result([](hook::pattern_match match)
+            {
+                injector::WriteMemory(match.get<void*>(2), ResXInvRefs[eCHud].get_ptr(), true);
+            });
+        }
+        for (auto field : { &lines->m_fAtX, &lines->m_fAtY })
+        {
+            auto pattern = hook::pattern("D8 0D ? ? ? ? D9 05 ? ? ? ? " + pattern_str(0xD8, '?', to_bytes(field))).count(2);
+            pattern.for_each_result([field, lines](hook::pattern_match match)
+            {
+                auto scale = field == &lines->m_fAtX ? ResXInvRefs[eCHud].get_ptr() : ResYInvRefs[eCHud].get_ptr();
+                injector::WriteMemory(match.get<void*>(2), scale, true);
+                if (field == &lines->m_fAtY)
+                {
+                    // The native bottom origin is 448, but script coordinates use 480.
+                    injector::WriteMemory(match.get<void*>(8), &ScreenHeight, true);
+                }
+            });
+        }
+        auto scaleY = hook::pattern("D8 0D ? ? ? ? " + pattern_str(0xD8, '?', to_bytes(&lines->m_fScaleY))).count(2);
+        scaleY.for_each_result([](hook::pattern_match match)
+        {
+            injector::WriteMemory(match.get<void*>(2), ResYInvRefs[eCHud].get_ptr(), true);
+        });
+
+        hbSetWrapX.fun = reinterpret_cast<decltype(hbSetWrapX.fun)>(injector::GetBranchDestination(wrap.get_first(9)).as_int());
+        hbPrintString.fun = reinterpret_cast<decltype(hbPrintString.fun)>(injector::GetBranchDestination(print.get_first(15)).as_int());
+        wrap.for_each_result([](hook::pattern_match match) { injector::MakeCALL(match.get<void>(9), SetWrapX, true); });
+        print.for_each_result([](hook::pattern_match match) { injector::MakeCALL(match.get<void>(15), PrintString, true); });
+    }
+}
+
+namespace MenuMap
+{
+    constexpr float Height = 448.0f;
+    float CenterX = 320.0f;
+    float ScaleX = 1.0f / 640.0f;
+    float ScaleY = 1.0f / Height;
+    ProtectedGameRef<float> InitialCenterX;
+    injector::hook_back<void(__thiscall*)(CMenuManager*)> hbPrintMap;
+
+    void UpdateCanvas()
+    {
+        const float oldCenter = CenterX;
+        CenterX = Height * CDraw::GetAspectRatio() * 0.5f;
+        ScaleX = 1.0f / (Height * CDraw::GetAspectRatio());
+        InitialCenterX = CenterX;
+        FrontendMenuManager->m_fMapCenterX += CenterX - oldCenter;
+    }
+
+    void __fastcall PrintMap(CMenuManager* menu, void*)
+    {
+        // Tile drawing and radar projection share the native map origin. Give
+        // both the 448-high menu canvas while preserving gameplay radar scaling.
+        const float radarX = ResXInvRefs[eCRadar];
+        const float radarY = ResYInvRefs[eCRadar];
+        ResXInvRefs[eCRadar] = ScaleX;
+        ResYInvRefs[eCRadar] = 1.0f / Height;
+        hbPrintMap.fun(menu);
+        ResXInvRefs[eCRadar] = radarX;
+        ResYInvRefs[eCRadar] = radarY;
+    }
+
+    void Init()
+    {
+        static_assert(offsetof(CMenuManager, m_fMapSize) == 0x40);
+        static_assert(offsetof(CMenuManager, m_fMapCenterX) == 0x44);
+        auto init = hook::pattern("C7 43 40 00 00 22 43 C7 43 44 00 00 A0 43 C7 43 48").count(1);
+        InitialCenterX.SetAddress(init.get_first<float>(10));
+
+        auto begin = hook::pattern("53 56 57 55 89 CB 81 EC ? ? ? ? C6 43 35 01 E8 ? ? ? ? D9 EE D9 43 40").count(1).get_first<uint8_t>();
+        auto end = hook::pattern("E8 ? ? ? ? 80 7B 21 00 0F 84").count(1).get_first<uint8_t>();
+        for (auto [original, corrected] : { std::pair{ ResXInvRefs[eCMenuManager].get_ptr(), &ScaleX },
+            std::pair{ ResYInvRefs[eCMenuManager].get_ptr(), &ScaleY } })
+        {
+            hook::pattern(reinterpret_cast<uintptr_t>(begin), reinterpret_cast<uintptr_t>(end), pattern_str(0xD8, 0x0D, to_bytes(original))).count(27).for_each_result([corrected](hook::pattern_match match)
+            {
+                injector::WriteMemory(match.get<void*>(2), corrected, true);
+            });
+        }
+
+        // A 640-wide mode can still have a different aspect ratio. Its tiles
+        // must take the scaling branch just like the radar markers do.
+        hook::pattern(reinterpret_cast<uintptr_t>(begin), reinterpret_cast<uintptr_t>(end), "81 ? 80 02 00 00").count(27).for_each_result([](hook::pattern_match match)
+        {
+            injector::WriteMemory<int32_t>(match.get<void*>(2), -1, true);
+        });
+
+        // Zoom-out and horizontal panning use the same center as initialization
+        // and rendering. Preserve the player's pan offset across res changes.
+        auto inputBegin = hook::pattern("D9 46 44 DD DA D9 C1 D8 1D").count(2).get(0).get<uint8_t>();
+        auto inputEnd = hook::pattern("D9 5E 44 30 C0 DD D8 88 86").count(2).get(1).get<uint8_t>();
+        auto center = *reinterpret_cast<float**>(inputBegin + 9);
+        hook::pattern(reinterpret_cast<uintptr_t>(inputBegin), reinterpret_cast<uintptr_t>(inputEnd), pattern_str(0xD8, '?', to_bytes(center))).count(7).for_each_result([](hook::pattern_match match)
+        {
+            injector::WriteMemory(match.get<void*>(2), &CenterX, true);
+        });
+        hook::pattern(reinterpret_cast<uintptr_t>(inputBegin), reinterpret_cast<uintptr_t>(inputEnd), pattern_str(0xD9, 0x05, to_bytes(center))).count(1).for_each_result([](hook::pattern_match match)
+        {
+            injector::WriteMemory(match.get<void*>(2), &CenterX, true);
+        });
+
+        // Replace only the menu's calls; leave the native entry point intact.
+        auto calls = hook::pattern("83 BE F8 00 00 00 06 75 ? 89 F1 E8 ? ? ? ?").count(2);
+        hbPrintMap.fun = reinterpret_cast<decltype(hbPrintMap.fun)>(begin);
+        calls.for_each_result([](hook::pattern_match match) { injector::MakeCALL(match.get<void>(11), PrintMap, true); });
+        UpdateCanvas();
+        onResChange() += [](int Width, int Height) { UpdateCanvas(); };
+    }
+}
 
 class Frontend
 {
@@ -743,20 +892,8 @@ public:
                 injector::WriteMemory(match.get<void*>(2), &fDefaultScale, true);
             });
 
-            //Map fix
-            pattern = hook::pattern("D9 43 ? D9 05 ? ? ? ? D8 C9 D8 0D");
-            static auto PrintMapHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-            {
-                FrontendMenuManager->m_fMapCenterX = ((1.0f / INV_DEFAULT_SCREEN_HEIGHT_MENU) * CDraw::GetAspectRatio()) / 2.0f;
-            });
-
-            auto PrintMapStart = (uintptr_t)hook::pattern("D8 0D ? ? ? ? 89 54 24 ? DA 4C 24 ? DD DA 89 54 24").get_first(0);
-            auto PrintMapEnd = (uintptr_t)hook::pattern("D8 0D ? ? ? ? 89 4C 24 ? DA 4C 24 ? DD DC D9 C2 D8 44 24").get_first(6);
-            pattern = hook::pattern(PrintMapStart, PrintMapEnd, pattern_str(0xD8, 0x0D, to_bytes(*(void**)(PrintMapStart + 2))));
-            pattern.for_each_result([&](hook::pattern_match match)
-            {
-                injector::WriteMemory(match.get<void*>(2), ResYInvRefs[FrontendClass::eCRadar].get_ptr(), true);
-            });
+            // Map rendering and input share one native menu canvas.
+            MenuMap::Init();
 
             if (fHudWidthScale || fHudHeightScale)
             {
@@ -892,46 +1029,9 @@ public:
                 SubtitlesHeight *= fSubtitlesScale;
             }
 
-            //IntroTextLines
+            // Script text uses a centered canvas in both fade passes.
             pattern = hook::pattern("BE ? ? ? ? 66 83 BD");
-            ppIntroTextLines = pattern.get_first<intro_text_line*>(1);
-
-            pattern = hook::pattern("E8 ? ? ? ? ? ? ? ? ? ? 59 50 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? E8 ? ? ? ? 80 BD");
-            static auto IntroTextLinesSetWrapX = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-            {
-                using tSetWrapx = void(__cdecl*)(float x);
-                auto [x] = deduce_args<tSetWrapx>(regs);
-
-                auto pIntroTextLines = *ppIntroTextLines;
-                auto line = &pIntroTextLines[regs.ebx];
-
-                x = SCALE_AND_CENTER_X(line->m_fWrapX);
-            });
-
-            pattern = hook::pattern("E8 ? ? ? ? 80 BD ? ? ? ? ? 59 74 ? E8 ? ? ? ? EB ? 8D 40");
-            static auto IntroTextLinesSetCentreSize = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-            {
-                using tSetCentreSize = void(__cdecl*)(float s);
-                auto [s] = deduce_args<tSetCentreSize>(regs);
-
-                auto pIntroTextLines = *ppIntroTextLines;
-                auto line = &pIntroTextLines[regs.ebx];
-
-                s = SCREEN_SCALE_X(line->m_fCenterSize);
-            });
-
-            pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 43 81 C5");
-            static auto IntroTextLinesPrintString = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-            {
-                using tPrintString = void(__cdecl*)(float, float, wchar_t*);
-                auto [xstart, ystart, s] = deduce_args<tPrintString>(regs);
-
-                auto pIntroTextLines = *ppIntroTextLines;
-                auto line = &pIntroTextLines[regs.ebx];
-
-                xstart = SCREEN_WIDTH - SCALE_AND_CENTER_X(DEFAULT_SCREEN_WIDTH - line->m_fAtX);
-                ystart = SCREEN_HEIGHT - SCREEN_SCALE_Y(DEFAULT_SCREEN_HEIGHT - line->m_fAtY);
-            });
+            ScriptDraw::Init(*pattern.get_first<intro_text_line*>(1));
 
             // Subtitles position
             pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 6A ? E8 ? ? ? ? ? ? ? ? ? ? ? ? ? 0F 84 ? ? ? ? 68 ? ? ? ? 68 ");
