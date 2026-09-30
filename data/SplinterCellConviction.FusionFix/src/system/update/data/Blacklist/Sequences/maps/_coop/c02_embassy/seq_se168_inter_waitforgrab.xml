@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Sequence name="se168_Inter_WaitForGrab">
+  <Task name="Wait for new grab" first="1" x="59.000000" y="135.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Both player refs" entity="Repository::List_Characters_PlayersRefs">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableActions">
+            <ParameterInstance name="Character" data="Repository::List_Characters_PlayersRefs"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Bykhov pawn" entity="EAINsa_14" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="NpcEnableInteraction">
+            <ParameterInstance name="AI" data="EAINsa_14" InUnrealActors="1"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Platers interro standard" entity="Repository::List_Bool_se168_InterroStandard_Both">
+        <Event name="NewEvent" start="5.000000" end="-1.000000">
+          <CommandInstance name="AssignBoolean">
+            <ParameterInstance name="Left" data="Repository::List_Bool_se168_InterroStandard_Both"/>
+            <ParameterInstance name="Right">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Amer grabbing" x="200.000000" y="50.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Player grabbing ref" entity="Repository::Ref_Character_PlayerGrabbing">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Assign">
+            <ParameterInstance name="Left" data="Repository::Ref_Character_PlayerGrabbing"/>
+            <ParameterInstance name="Right" data="Repository::o_Player1_Char_Amer_0"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Amer interro standard" entity="Repository::b_se168_InterroStandards_Amer">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="AssignBoolean">
+            <ParameterInstance name="Left" data="Repository::b_se168_InterroStandards_Amer"/>
+            <ParameterInstance name="Right">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Russ interro standard" entity="Repository::b_se168_InterroStandards_Russ">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="AssignBoolean">
+            <ParameterInstance name="Left" data="Repository::b_se168_InterroStandards_Russ"/>
+            <ParameterInstance name="Right">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Russ grabbing" x="197.000000" y="223.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Player grabbing ref" entity="Repository::Ref_Character_PlayerGrabbing">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Assign">
+            <ParameterInstance name="Left" data="Repository::Ref_Character_PlayerGrabbing"/>
+            <ParameterInstance name="Right" data="Repository::o_Player2_Char_Russ_0"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Russ interro standard" entity="Repository::b_se168_InterroStandards_Russ">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="AssignBoolean">
+            <ParameterInstance name="Left" data="Repository::b_se168_InterroStandards_Russ"/>
+            <ParameterInstance name="Right">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Amer interro standard" entity="Repository::b_se168_InterroStandards_Amer">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="AssignBoolean">
+            <ParameterInstance name="Left" data="Repository::b_se168_InterroStandards_Amer"/>
+            <ParameterInstance name="Right">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Grab started" x="338.000000" y="136.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Player grabbing ref" entity="Repository::Ref_Character_PlayerGrabbing">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableActions">
+            <ParameterInstance name="Character" data="Repository::Ref_Character_PlayerGrabbing"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="InterroWall" entity="Repository::List_SM_se168_BlockBykhovInterro">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="Repository::List_SM_se168_BlockBykhovInterro"/>
+            <ParameterInstance name="PhysType"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Both players, god mode" entity="Repository::List_Pawns_PlayerOperators">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetGodmode">
+            <ParameterInstance name="Pawn" data="Repository::List_Pawns_PlayerOperators"/>
+            <ParameterInstance name="GodMode">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Bykhov pawn" entity="EAINsa_14" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetGodmode">
+            <ParameterInstance name="Pawn" data="EAINsa_14" InUnrealActors="1"/>
+            <ParameterInstance name="GodMode">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::List_Characters_PlayersRefs">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::List_Characters_PlayersRefs"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressLeftShoulder"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="Repository::List_Characters_PlayersRefs">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::List_Characters_PlayersRefs"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_HoldLeftShoulder"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_1" entity="Repository::List_Characters_PlayersRefs">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::List_Characters_PlayersRefs"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_ReleaseLeftShoulder"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_1" start="Wait for new grab" true="Amer grabbing" data="Repository::Ref_Character_Amer">
+    <ExternalEventInstance name="INTERROGATE_BEGIN" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="NPC" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="109.000000" y="160.000000"/>
+      <vertex x="200.000000" y="75.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <DependencyEvent name="NewDependencyEvent_2" start="Wait for new grab" true="Russ grabbing" data="Repository::Ref_Character_Russ">
+    <ExternalEventInstance name="INTERROGATE_BEGIN" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="NPC" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="109.000000" y="160.000000"/>
+      <vertex x="197.000000" y="248.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <DependencyComplete name="NewDependencyComplete_1" start="Amer grabbing" true="Grab started" sequence="se168_Inter_WaitForGrab">
+    <vertices>
+      <vertex x="250.000000" y="75.000000"/>
+      <vertex x="338.000000" y="161.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyComplete name="NewDependencyComplete_2" start="Russ grabbing" true="Grab started" sequence="se168_Inter_WaitForGrab">
+    <vertices>
+      <vertex x="247.000000" y="248.000000"/>
+      <vertex x="338.000000" y="161.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Grab finished" x="621.000000" y="136.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent" start="Grab started" true="Grab finished" data="Repository::Ref_Character_PlayerGrabbing">
+    <ExternalEventInstance name="INTERROGATE_NAV_BEGIN" data=""/>
+    <vertices>
+      <vertex x="388.000000" y="161.000000"/>
+      <vertex x="621.000000" y="161.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+</Sequence>

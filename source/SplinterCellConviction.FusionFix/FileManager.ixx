@@ -173,7 +173,14 @@ namespace FileLoader
             return nullptr;
 
         if (bBlacklistControlScheme)
-            OverrideForBlacklistControls(path);
+        {
+            if (auto blacklistPath = BlacklistControlsOverride(path))
+            {
+                thread_local std::string overridePath;
+                overridePath = std::move(*blacklistPath);
+                return overridePath.c_str();
+            }
+        }
 
         if (GetOverloadedFilePathA(path, nullptr, 0))
             return path;

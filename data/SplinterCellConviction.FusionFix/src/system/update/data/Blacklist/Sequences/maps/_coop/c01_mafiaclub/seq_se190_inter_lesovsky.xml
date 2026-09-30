@@ -1,0 +1,1073 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Sequence name="se190_Inter_Lesovsky" restart="0">
+  <Task name="Wait for player grabbing" x="190.000000" y="144.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_26" start="Wait for player grabbing" true="Amer grabbing A" data="Repository::Ref_Character_Amer_0">
+    <ExternalEventInstance name="INTERROGATE_BEGIN" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="NPC" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="240.000000" y="169.000000"/>
+      <vertex x="328.000000" y="69.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <DependencyEvent name="NewDependencyEvent_27" start="Wait for player grabbing" true="Russ grabbing A" data="Repository::Ref_Character_Russ_0">
+    <ExternalEventInstance name="INTERROGATE_BEGIN" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="NPC" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="240.000000" y="169.000000"/>
+      <vertex x="329.000000" y="262.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Assign player refs" first="1" x="47.000000" y="143.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_0" entity="Repository::Ref_Character_Amer_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Assign">
+            <ParameterInstance name="Left" data="Repository::Ref_Character_Amer_0"/>
+            <ParameterInstance name="Right" data="Repository::o_Player1_Char_Amer_3"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::Ref_Character_Russ_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Assign">
+            <ParameterInstance name="Left" data="Repository::Ref_Character_Russ_0"/>
+            <ParameterInstance name="Right" data="Repository::o_Player2_Char_Russ_3"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Prepare room" first="1" x="48.000000" y="45.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Dual doors" entity="Repository::List_Doors_LesovskyDualDoors">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="LockDoor">
+            <ParameterInstance name="TheDoor" data="Repository::List_Doors_LesovskyDualDoors"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Bink ref" entity="Repository::ref_MovieTexture_se180_SoccerGame">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Assign">
+            <ParameterInstance name="Left" data="Repository::ref_MovieTexture_se180_SoccerGame"/>
+            <ParameterInstance name="Right" data="MovieTextureInfo_7" InUnrealDynTexMovies="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Bink ref_0" entity="Repository::ref_MovieTexture_se180_SoccerGame">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="RestartMovie">
+            <ParameterInstance name="MovieTexture" data="Repository::ref_MovieTexture_se180_SoccerGame"/>
+            <ParameterInstance name="FrameCount">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="1.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="Loop">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Desk interact" entity="GI_CustomInteractionPlaceholder_1" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Deactivate">
+            <ParameterInstance name="Object" data="GI_CustomInteractionPlaceholder_1" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Lesivsky, ammo" entity="EAINsa_27" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="NpcSetWeaponAmmo">
+            <ParameterInstance name="AI" data="EAINsa_27" InUnrealActors="1"/>
+            <ParameterInstance name="AmmoCount">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="2.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="OptionalGun"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_11" start="Assign player refs" true="Wait for player grabbing" sequence="se190_Inter_Lesovsky">
+    <vertices>
+      <vertex x="97.000000" y="168.000000"/>
+      <vertex x="190.000000" y="169.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Amer grabbing A" x="328.000000" y="44.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Player grabbing ref" entity="Repository::Ref_Character_PlayerGrabbing_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Assign">
+            <ParameterInstance name="Left" data="Repository::Ref_Character_PlayerGrabbing_0"/>
+            <ParameterInstance name="Right" data="Repository::o_Player1_Char_Amer_3"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Player NOT grabbing" entity="Repository::Ref_Character_PlayerNotGrabbing">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Assign">
+            <ParameterInstance name="Left" data="Repository::Ref_Character_PlayerNotGrabbing"/>
+            <ParameterInstance name="Right" data="Repository::o_Player2_Char_Russ_3"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Music" entity="ESoundTrigger_26" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="ToggleInterroMusicSystem">
+            <ParameterInstance name="Object" data="ESoundTrigger_26" InUnrealActors="1"/>
+            <ParameterInstance name="value">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Lesivsky, invincible_0" entity="EAINsa_27" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="NpcEnableInteraction">
+            <ParameterInstance name="AI" data="EAINsa_27" InUnrealActors="1"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Russ grabbing A" x="329.000000" y="237.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Player grabbing ref" entity="Repository::Ref_Character_PlayerGrabbing_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Assign">
+            <ParameterInstance name="Left" data="Repository::Ref_Character_PlayerGrabbing_0"/>
+            <ParameterInstance name="Right" data="Repository::o_Player2_Char_Russ_3"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Player NOT grabbing" entity="Repository::Ref_Character_PlayerNotGrabbing">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Assign">
+            <ParameterInstance name="Left" data="Repository::Ref_Character_PlayerNotGrabbing"/>
+            <ParameterInstance name="Right" data="Repository::o_Player1_Char_Amer_3"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="ESoundTrigger_26" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="ToggleInterroMusicSystem">
+            <ParameterInstance name="Object" data="ESoundTrigger_26" InUnrealActors="1"/>
+            <ParameterInstance name="value">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Lesivsky, invincible_0" entity="EAINsa_27" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="NpcEnableInteraction">
+            <ParameterInstance name="AI" data="EAINsa_27" InUnrealActors="1"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Amer Lesovsky Russ Hansen" x="533.000000" y="44.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Player grabbing ref" entity="Repository::Ref_Character_PlayerGrabbing_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableActions">
+            <ParameterInstance name="Character" data="Repository::Ref_Character_PlayerGrabbing_0"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Russ, dialog" entity="Repository::o_Player2_Pawn_Russ_3">
+        <Event name="NewEvent" start="2.000000" end="3.570146">
+          <CommandInstance name="SetDialog" duration="1.570146">
+            <ParameterInstance name="CharacterOasis" data="Repository::o_Player2_Pawn_Russ_3"/>
+            <ParameterInstance name="DialogOasis" data="Repository::Unreal::Oasis::COOP Map01 ST PETERSBURG BANYA::SE190_SPEC::9408::33984"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="FadeOutTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayIncomingSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="HideSubtitle">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayOnlyOnLocalPlayer">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+        <Event name="NewEvent_0" start="11.500000" end="14.707729">
+          <CommandInstance name="SetDialog" duration="3.207729">
+            <ParameterInstance name="CharacterOasis" data="Repository::o_Player2_Pawn_Russ_3"/>
+            <ParameterInstance name="DialogOasis" data="Repository::Unreal::Oasis::COOP Map01 ST PETERSBURG BANYA::SE190_SPEC::9408::40061"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="FadeOutTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayIncomingSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="HideSubtitle">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayOnlyOnLocalPlayer">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Hansen, Radio" entity="Repository::o_Player2_Pawn_Russ_3">
+        <Event name="NewEvent_0" start="3.600000" end="11.552000">
+          <CommandInstance name="SetDialog" duration="7.952000">
+            <ParameterInstance name="CharacterOasis" data="Repository::o_Player2_Pawn_Russ_3"/>
+            <ParameterInstance name="DialogOasis" data="Repository::Unreal::Oasis::COOP Map01 ST PETERSBURG BANYA::SE190_SPEC::9408::33988"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="FadeOutTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayIncomingSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="HideSubtitle">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayOnlyOnLocalPlayer">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Lesovsky, sound" entity="EAINsa_27" InUnrealActors="1">
+        <Event name="NewEvent" start="3.000000" end="-1.000000">
+          <CommandInstance name="InstantPlaySound">
+            <ParameterInstance name="Actor" data="EAINsa_27" InUnrealActors="1"/>
+            <ParameterInstance name="Sound" data="Play_Rnd_Choke_sfx" InUnrealSounds="1"/>
+            <ParameterInstance name="Flag" data="Repository::Unreal::enums::ESoundSlot::SLOT_NPCVoice"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete" start="Amer grabbing A" true="Amer Lesovsky Russ Hansen" sequence="se190_Inter_Lesovsky">
+    <vertices>
+      <vertex x="378.000000" y="69.000000"/>
+      <vertex x="533.000000" y="69.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyComplete name="NewDependencyComplete_28" start="Russ grabbing A" true="Russ Lesovsky Amer Hansen" sequence="se190_Inter_Lesovsky">
+    <vertices>
+      <vertex x="379.000000" y="262.000000"/>
+      <vertex x="534.000000" y="261.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Russ Lesovsky Amer Hansen" x="534.000000" y="236.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Player grabbing ref" entity="Repository::Ref_Character_PlayerGrabbing_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableActions">
+            <ParameterInstance name="Character" data="Repository::Ref_Character_PlayerGrabbing_0"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Amer, dialog" entity="Repository::o_Player1_Pawn_Amer_3">
+        <Event name="NewEvent" start="2.000000" end="3.969667">
+          <CommandInstance name="SetDialog" duration="1.969667">
+            <ParameterInstance name="CharacterOasis" data="Repository::o_Player1_Pawn_Amer_3"/>
+            <ParameterInstance name="DialogOasis" data="Repository::Unreal::Oasis::COOP Map01 ST PETERSBURG BANYA::SE190_SPEC::9408::33986"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="FadeOutTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayIncomingSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="HideSubtitle">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayOnlyOnLocalPlayer">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+        <Event name="NewEvent_0" start="12.000000" end="13.790542">
+          <CommandInstance name="SetDialog" duration="1.790542">
+            <ParameterInstance name="CharacterOasis" data="Repository::o_Player1_Pawn_Amer_3"/>
+            <ParameterInstance name="DialogOasis" data="Repository::Unreal::Oasis::COOP Map01 ST PETERSBURG BANYA::SE190_SPEC::9408::40059"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="FadeOutTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayIncomingSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="HideSubtitle">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayOnlyOnLocalPlayer">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Hansen, Radio" entity="Repository::o_Player1_Pawn_Amer_3">
+        <Event name="NewEvent_0" start="4.000000" end="11.952000">
+          <CommandInstance name="SetDialog" duration="7.952000">
+            <ParameterInstance name="CharacterOasis" data="Repository::o_Player1_Pawn_Amer_3"/>
+            <ParameterInstance name="DialogOasis" data="Repository::Unreal::Oasis::COOP Map01 ST PETERSBURG BANYA::SE190_SPEC::9408::33988"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="FadeOutTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayIncomingSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="HideSubtitle">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayOnlyOnLocalPlayer">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Lesovsky, sound" entity="EAINsa_27" InUnrealActors="1">
+        <Event name="NewEvent" start="3.000000" end="-1.000000">
+          <CommandInstance name="InstantPlaySound">
+            <ParameterInstance name="Actor" data="EAINsa_27" InUnrealActors="1"/>
+            <ParameterInstance name="Sound" data="Play_Rnd_Choke_sfx" InUnrealSounds="1"/>
+            <ParameterInstance name="Flag" data="Repository::Unreal::enums::ESoundSlot::SLOT_NPCVoice"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Start SE192" x="673.000000" y="138.000000">
+    <Timeline name="NewTimeline">
+      <Track name="SE192 sequence" entity="Repository::Sequences::se192_Spec_Lesovsky">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StartSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::se192_Spec_Lesovsky"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Wait for player grabs" first="1" x="48.000000" y="450.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_0" entity="Repository::Ref_Character_Amer_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Assign">
+            <ParameterInstance name="Left" data="Repository::Ref_Character_Amer_0"/>
+            <ParameterInstance name="Right" data="Repository::o_Player1_Char_Amer_3"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::Ref_Character_Russ_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Assign">
+            <ParameterInstance name="Left" data="Repository::Ref_Character_Russ_0"/>
+            <ParameterInstance name="Right" data="Repository::o_Player2_Char_Russ_3"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Amer grabbing B" x="309.000000" y="385.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Player grabbing ref" entity="Repository::Ref_Character_PlayerGrabbing_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Assign">
+            <ParameterInstance name="Left" data="Repository::Ref_Character_PlayerGrabbing_0"/>
+            <ParameterInstance name="Right" data="Repository::o_Player1_Char_Amer_3"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Russ grabbing B" x="310.000000" y="520.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Player grabbing ref" entity="Repository::Ref_Character_PlayerGrabbing_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Assign">
+            <ParameterInstance name="Left" data="Repository::Ref_Character_PlayerGrabbing_0"/>
+            <ParameterInstance name="Right" data="Repository::o_Player2_Char_Russ_3"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_29" start="Wait for player grabs" true="Amer grabbing B" data="Repository::Ref_Character_Amer_0">
+    <ExternalEventInstance name="INTERROGATE_BEGIN" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="NPC" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="98.000000" y="475.000000"/>
+      <vertex x="309.000000" y="410.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <DependencyEvent name="NewDependencyEvent_30" start="Wait for player grabs" true="Russ grabbing B" data="Repository::Ref_Character_Russ_0">
+    <ExternalEventInstance name="INTERROGATE_BEGIN" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="NPC" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="98.000000" y="475.000000"/>
+      <vertex x="310.000000" y="545.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <DependencyComplete name="NewDependencyComplete_1" start="Amer grabbing B" true="Interro standard Controls" sequence="se190_Inter_Lesovsky">
+    <vertices>
+      <vertex x="359.000000" y="410.000000"/>
+      <vertex x="453.000000" y="477.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyComplete name="NewDependencyComplete_2" start="Russ grabbing B" true="Interro standard Controls" sequence="se190_Inter_Lesovsky">
+    <vertices>
+      <vertex x="360.000000" y="545.000000"/>
+      <vertex x="453.000000" y="477.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Interro standard Controls" x="453.000000" y="452.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Player grabbing, Movements" entity="Repository::Ref_Character_PlayerGrabbing_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerDisableRun">
+            <ParameterInstance name="Character" data="Repository::Ref_Character_PlayerGrabbing_0"/>
+            <ParameterInstance name="DisableRun">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Player grabbing, controls" entity="Repository::Ref_Character_PlayerGrabbing_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableAllButtons">
+            <ParameterInstance name="Character" data="Repository::Ref_Character_PlayerGrabbing_0"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisableTick">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Button, A Press" entity="Repository::Ref_Character_PlayerGrabbing_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::Ref_Character_PlayerGrabbing_0"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressA"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Button, Movements control" entity="Repository::Ref_Character_PlayerGrabbing_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::Ref_Character_PlayerGrabbing_0"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_Movement"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Button, Camera control" entity="Repository::Ref_Character_PlayerGrabbing_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::Ref_Character_PlayerGrabbing_0"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_CameraMovement"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Button, Camera zoom" entity="Repository::Ref_Character_PlayerGrabbing_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::Ref_Character_PlayerGrabbing_0"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressLeftTrigger"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="HUD_0" entity="Repository::o_Player1_Char_Amer_3">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibilityCOOP">
+            <ParameterInstance name="Character" data="Repository::o_Player1_Char_Amer_3"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_GadgetModule"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="HUD_1" entity="Repository::o_Player2_Char_Russ_3">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibilityCOOP">
+            <ParameterInstance name="Character" data="Repository::o_Player2_Char_Russ_3"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_GadgetModule"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="CouchGirl" first="1" x="47.000000" y="252.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Couch ref" entity="Repository::Ref_Actor_se180_CouchCollision">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Assign">
+            <ParameterInstance name="Left" data="Repository::Ref_Actor_se180_CouchCollision"/>
+            <ParameterInstance name="Right" data="SM_C01_ClubSofa3Seat_02_448" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="CouchGirl, Animation loop_0" entity="Repository::Ref_AI_CouchGirl">
+        <Event name="NewEvent" end="-1.000000" indeterminate="1">
+          <CommandInstance name="AIPlayAnim">
+            <ParameterInstance name="AI" data="Repository::Ref_AI_CouchGirl"/>
+            <ParameterInstance name="MoveStateId" data="Repository::Unreal::enums::MoveStates::map_c01_mafiaclub"/>
+            <ParameterInstance name="AnimIndex">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="1511808.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="Origin" data="SE_Helper_17" InUnrealActors="1"/>
+            <ParameterInstance name="DisableCollisionActor" data="Repository::Ref_Actor_se180_CouchCollision"/>
+            <ParameterInstance name="ForceDefaultBehavior">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Post Action"/>
+            <ParameterInstance name="IgnoreSearchPropagation">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="IgnoreSearchEvents">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="IgnoreCombatPropagation">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="CivIgnoreDisturbances">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceAnimation">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="RootMotion">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="JoiningOption"/>
+            <ParameterInstance name="DockOutMoveStateId"/>
+            <ParameterInstance name="DockOutAnimIndex">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="IgnoreDefaultEvents">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="IgnoreInvestigateEvents">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="IgnoreLowCombatEvents">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="UseSync3D">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="SkipDamageReaction">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="DamageReactionSkipOption">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Wait for kill" first="1" x="46.000000" y="704.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Lesivsky, invincible" entity="EAINsa_27" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="NpcSetInvincible">
+            <ParameterInstance name="AI" data="EAINsa_27" InUnrealActors="1"/>
+            <ParameterInstance name="Invincible">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Game Over" x="263.000000" y="647.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Objectives" entity="Repository::List_Obj_Manager_1">
+        <Event name="NewEvent" start="2.000000" end="-1.000000" indeterminate="1">
+          <CommandInstance name="EndMission">
+            <ParameterInstance name="ObjectiveManager" data="Repository::List_Obj_Manager_1"/>
+            <ParameterInstance name="ForceOutcome">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceSuccess">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForcedCustomText">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="KilledLesovsky"/>
+            </ParameterInstance>
+            <ParameterInstance name="WaitTimeEndMission">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent" start="Wait for kill" true="Game Over" data="EAINsa_27" InUnrealActors="1">
+    <ExternalEventInstance name="PAWN_DEAD" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Instigator" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="96.000000" y="729.000000"/>
+      <vertex x="263.000000" y="672.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Cancel" x="264.000000" y="766.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyCommand name="NewDependencyCommand" start="Wait for kill" true="Cancel">
+    <CommandInstance name="EqualBoolean">
+      <ParameterInstance name="Left" data="Repository::b_se190_LesovskyCanDie"/>
+      <ParameterInstance name="Right">
+        <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+      </ParameterInstance>
+    </CommandInstance>
+    <vertices>
+      <vertex x="96.000000" y="729.000000"/>
+      <vertex x="264.000000" y="791.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyCommand>
+  <Task name="Don&apos;t allow interro" first="1" x="45.000000" y="919.000000">
+    <Timeline name="NewTimeline">
+      <Track name="LESOVSKY" entity="EAINsa_27" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="NpcSetInterrogationFail">
+            <ParameterInstance name="AI" data="EAINsa_27" InUnrealActors="1"/>
+            <ParameterInstance name="Fail">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_32" start="Don&apos;t allow interro" true="Allow interro" data="EAIGramkosThug_0" InUnrealActors="1">
+    <ExternalEventInstance name="PAWN_DEAD" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Instigator" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="95.000000" y="944.000000"/>
+      <vertex x="281.000000" y="946.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Allow interro" x="281.000000" y="921.000000">
+    <Timeline name="NewTimeline">
+      <Track name="LESOVSKY" entity="EAINsa_27" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="NpcSetInterrogationFail">
+            <ParameterInstance name="AI" data="EAINsa_27" InUnrealActors="1"/>
+            <ParameterInstance name="Fail">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Disrupt" x="317.000000" y="1067.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <Task name="Dissable doors" x="556.000000" y="1067.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Dual doors_0" entity="Repository::List_Doors_LesovskyDualDoors">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Deactivate">
+            <ParameterInstance name="Object" data="Repository::List_Doors_LesovskyDualDoors"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::List_LesovskyCCP">
+        <Event name="NewEvent" start="1.000000" end="-1.000000">
+          <CommandInstance name="SetEnabledCustomCombatPoint">
+            <ParameterInstance name="CustomCombatPoint" data="Repository::List_LesovskyCCP"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="Repository::List_LesovskyDEFPts">
+        <Event name="NewEvent" start="1.000000" end="-1.000000">
+          <CommandInstance name="APoint_Activate">
+            <ParameterInstance name="AttractionPoint" data="Repository::List_LesovskyDEFPts"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_33" start="Disrupt" true="Dissable doors" data="Repository::List_Doors_LesovskyDualDoors">
+    <ExternalEventInstance name="GI_CLOSED" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Instigator" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="367.000000" y="1092.000000"/>
+      <vertex x="556.000000" y="1092.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <DependencyComplete name="NewDependencyComplete_41" start="Amer Lesovsky Russ Hansen" true="Start SE192" sequence="se190_Inter_Lesovsky">
+    <vertices>
+      <vertex x="583.000000" y="69.000000"/>
+      <vertex x="673.000000" y="163.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyComplete name="NewDependencyComplete_42" start="Russ Lesovsky Amer Hansen" true="Start SE192" sequence="se190_Inter_Lesovsky">
+    <vertices>
+      <vertex x="584.000000" y="261.000000"/>
+      <vertex x="673.000000" y="163.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Wait for Doors open" first="1" x="43.000000" y="1067.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_34" start="Wait for Doors open" true="Disrupt" data="Repository::List_Doors_LesovskyDualDoors">
+    <ExternalEventInstance name="GI_OPENING" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Instigator" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="93.000000" y="1092.000000"/>
+      <vertex x="317.000000" y="1092.000000"/>
+      <vertex x="263.000000" y="1047.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="2"/>
+      <segment type="0" vertex1="2" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <DependencyEvent name="NewDependencyEvent_35" start="Wait for Doors open" true="Disrupt" data="Repository::List_Doors_LesovskyDualDoors">
+    <ExternalEventInstance name="GI_OPENED" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Instigator" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="93.000000" y="1092.000000"/>
+      <vertex x="317.000000" y="1092.000000"/>
+      <vertex x="259.000000" y="1139.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="2"/>
+      <segment type="0" vertex1="2" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="NewTask" x="722.000000" y="1189.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <Task name="Interro standard HUD" x="595.000000" y="453.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Player grabbing, Lights and shadows" entity="Repository::Ref_Character_PlayerGrabbing_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetLightAndShadowFilter">
+            <ParameterInstance name="Character" data="Repository::Ref_Character_PlayerGrabbing_0"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="FadeTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.300000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="HUD" entity="Repository::Ref_Character_PlayerGrabbing_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibilityCOOP">
+            <ParameterInstance name="Character" data="Repository::Ref_Character_PlayerGrabbing_0"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_Detection"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="HUD_0" entity="Repository::Ref_Character_PlayerGrabbing_0" ignore="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibilityCOOP">
+            <ParameterInstance name="Character" data="Repository::Ref_Character_PlayerGrabbing_0"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_GadgetModule"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="HUD_1" entity="Repository::Ref_Character_PlayerGrabbing_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibilityCOOP">
+            <ParameterInstance name="Character" data="Repository::Ref_Character_PlayerGrabbing_0"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_MarkAndExecute"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="HUD_2" entity="Repository::Ref_Character_PlayerGrabbing_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibilityCOOP">
+            <ParameterInstance name="Character" data="Repository::Ref_Character_PlayerGrabbing_0"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_PECChallenges"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="HUD_3" entity="Repository::Ref_Character_PlayerGrabbing_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibilityCOOP">
+            <ParameterInstance name="Character" data="Repository::Ref_Character_PlayerGrabbing_0"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_Reticule"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="HUD_4" entity="Repository::Ref_Character_PlayerGrabbing_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibilityCOOP">
+            <ParameterInstance name="Character" data="Repository::Ref_Character_PlayerGrabbing_0"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_WeaponModule"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_43" start="Interro standard Controls" true="Interro standard HUD" sequence="se190_Inter_Lesovsky">
+    <vertices>
+      <vertex x="503.000000" y="477.000000"/>
+      <vertex x="595.000000" y="478.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Interro standard Others" x="737.000000" y="453.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Both player buttons, Gadgets_1" entity="Repository::o_Player1_Char_Amer_3">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Player1_Char_Amer_3"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressLeftShoulder"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Both player buttons, Gadgets_2" entity="Repository::o_Player1_Char_Amer_3">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Player1_Char_Amer_3"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_HoldLeftShoulder"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Both player buttons, Gadgets_3" entity="Repository::o_Player1_Char_Amer_3">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Player1_Char_Amer_3"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_ReleaseLeftShoulder"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Both player buttons, Gadgets" entity="Repository::o_Player2_Char_Russ_3">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Player2_Char_Russ_3"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressLeftShoulder"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Both player buttons, Gadgets_0" entity="Repository::o_Player2_Char_Russ_3">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Player2_Char_Russ_3"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_HoldLeftShoulder"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Both player buttons, Gadgets_4" entity="Repository::o_Player2_Char_Russ_3">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Player2_Char_Russ_3"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_ReleaseLeftShoulder"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Lesovsky, God Mode" entity="EAINsa_27" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetGodmode">
+            <ParameterInstance name="Pawn" data="EAINsa_27" InUnrealActors="1"/>
+            <ParameterInstance name="GodMode">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Both player, God Mode" entity="Repository::List_Pawns_Players">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetGodmode">
+            <ParameterInstance name="Pawn" data="Repository::List_Pawns_Players"/>
+            <ParameterInstance name="GodMode">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_44" start="Interro standard HUD" true="Interro standard Others" sequence="se190_Inter_Lesovsky">
+    <vertices>
+      <vertex x="645.000000" y="478.000000"/>
+      <vertex x="737.000000" y="478.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+</Sequence>

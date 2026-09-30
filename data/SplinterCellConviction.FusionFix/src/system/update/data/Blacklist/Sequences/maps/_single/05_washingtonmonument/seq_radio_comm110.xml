@@ -1,0 +1,418 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Sequence name="Radio_Comm110">
+  <Task name="Start" first="1" x="51.000000" y="21.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_8" entity="Repository::O_Sam_Pawn">
+        <Event name="NewEvent" start="3.500000" end="13.715521">
+          <CommandInstance name="SetDialog" duration="10.215521">
+            <ParameterInstance name="CharacterOasis" data="Repository::O_Sam_Pawn"/>
+            <ParameterInstance name="DialogOasis" data="Repository::Unreal::Oasis::Map05 WASHINGTON MONUMENT::SE110_RCOM::18443::73163"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="FadeOutTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayIncomingSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="HideSubtitle">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayOnlyOnLocalPlayer">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+        <Event name="NewEvent_0" start="14.000000" end="16.500000" condition="1">
+          <CommandInstance name="SetDialog" duration="2.500000">
+            <ParameterInstance name="CharacterOasis" data="Repository::O_Sam_Pawn"/>
+            <ParameterInstance name="DialogOasis" data="Repository::Unreal::Oasis::Map05 WASHINGTON MONUMENT::SE110_RCOM::18443::73164"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="FadeOutTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayIncomingSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="HideSubtitle">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayOnlyOnLocalPlayer">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+        <Event name="NewEvent_1" end="2.943104">
+          <CommandInstance name="SetDialog" duration="2.943104">
+            <ParameterInstance name="CharacterOasis" data="Repository::O_Sam_Pawn"/>
+            <ParameterInstance name="DialogOasis" data="Repository::Unreal::Oasis::Map05 WASHINGTON MONUMENT::SE110_RCOM::18443::94345"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="FadeOutTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayIncomingSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="HideSubtitle">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayOnlyOnLocalPlayer">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+        <Event name="NewEvent_2" start="16.799999" end="20.700478">
+          <CommandInstance name="SetDialog" duration="3.900478">
+            <ParameterInstance name="CharacterOasis" data="Repository::O_Sam_Pawn"/>
+            <ParameterInstance name="DialogOasis" data="Repository::Unreal::Oasis::Map05 WASHINGTON MONUMENT::SE110_RCOM::18443::94346"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="FadeOutTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayIncomingSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="HideSubtitle">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayOnlyOnLocalPlayer">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_13" entity="Repository::O_Sam_Pawn">
+        <Event name="NewEvent" end="3.102500" condition="1">
+          <CommandInstance name="PlayFacialAnim" duration="3.102500">
+            <ParameterInstance name="EPawn" data="Repository::O_Sam_Pawn"/>
+            <ParameterInstance name="FacialPkgName" data="FaceFx_Sam.Sam" InUnrealFacialPkg="1"/>
+            <ParameterInstance name="AnimGroup">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="RadioCom"/>
+            </ParameterInstance>
+            <ParameterInstance name="AnimName">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="vo_m05_wasmo_se110_rcom02_00msam_ins"/>
+            </ParameterInstance>
+            <ParameterInstance name="BlendTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.300000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+        <Event name="NewEvent_0" start="14.000000" end="16.500000" condition="1">
+          <CommandInstance name="PlayFacialAnim" duration="2.500000">
+            <ParameterInstance name="EPawn" data="Repository::O_Sam_Pawn"/>
+            <ParameterInstance name="FacialPkgName" data="FaceFx_Sam.Sam" InUnrealFacialPkg="1"/>
+            <ParameterInstance name="AnimGroup">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="RadioCom"/>
+            </ParameterInstance>
+            <ParameterInstance name="AnimName">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="vo_m05_wasmo_se110_rcom02_02sam_ins"/>
+            </ParameterInstance>
+            <ParameterInstance name="BlendTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.300000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::Cam01">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="CameraSelectMode">
+            <ParameterInstance name="Camera" data="Repository::Cam01"/>
+            <ParameterInstance name="CameraMode">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="NarrativeWalk"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_14" entity="Repository::O_Sam_Character">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableAllButtons">
+            <ParameterInstance name="Character" data="Repository::O_Sam_Character"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisableTick">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_4" entity="Repository::O_Sam_Character">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::O_Sam_Character"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_Movement"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_15" entity="Repository::O_Sam_Character">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::O_Sam_Character"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_ReleaseLeftTrigger"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_16" entity="Repository::O_Sam_Character">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::O_Sam_Character"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressLeftTrigger"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_17" entity="Repository::FlashManager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibility">
+            <ParameterInstance name="FlashEventManager" data="Repository::FlashManager"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_Reticule"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Stop" x="230.000000" y="21.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_14" entity="Repository::FlashManager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibility">
+            <ParameterInstance name="FlashEventManager" data="Repository::FlashManager"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_Reticule"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_13" entity="Repository::Cam01">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="CameraSelectMode">
+            <ParameterInstance name="Camera" data="Repository::Cam01"/>
+            <ParameterInstance name="CameraMode"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::Sequences::Radio_Comm110">
+        <Event name="NewEvent" start="3.000000" end="-1.000000">
+          <CommandInstance name="StopSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::Radio_Comm110"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_20" entity="Repository::O_Sam_Character" ignore="1">
+        <Event name="NewEvent" end="-1.000000" indeterminate="1">
+          <CommandInstance name="PlayerForceStanding">
+            <ParameterInstance name="Character" data="Repository::O_Sam_Character"/>
+            <ParameterInstance name="bCrouch">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bStopCoverDetection">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bResetCoverExitStatus">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bTurnOffGoggles">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="bGunDownMode">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="bGunUpMode">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisablePickUp">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bZoomOut">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisableZoom">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisableAllButton">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisableMovement">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDrawWeapon">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDrawPrimary">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bHolsterWeapon">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bKillHumanShield">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="bInvincible">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bUnMarkAll">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="bRemoveLightAndShadowFilter">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisableRun">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bHideLKP">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisableStickyCAMUse">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bNoAnimWithWeapon">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="fLightAndShadowFadeTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.300000"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisableSamThought">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_15" entity="Repository::O_Sam_Character">
+        <Event name="NewEvent" end="-1.000000" indeterminate="1">
+          <CommandInstance name="PlayerForceStandingEnd">
+            <ParameterInstance name="Character" data="Repository::O_Sam_Character"/>
+            <ParameterInstance name="bCrouch">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bStopCoverDetection">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bResetCoverExitStatus">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bTurnOffGoggles">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="bGunDownMode">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="bGunUpMode">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisablePickUp">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bZoomOut">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisableZoom">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisableSamThought">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisableAllButton">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisableMovement">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDrawWeapon">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDrawPrimary">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bHolsterWeapon">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bKillHumanShield">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="bInvincible">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bUnMarkAll">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="bRemoveLightAndShadowFilter">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisableRun">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bHideLKP">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisableStickyCAMUse">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bNoAnimWithWeapon">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="fLightAndShadowFadeTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.300000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_16" entity="Repository::O_Sam_Character" ignore="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerDisableRun">
+            <ParameterInstance name="Character" data="Repository::O_Sam_Character"/>
+            <ParameterInstance name="DisableRun">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_4" entity="Repository::O_Sam_Character">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableAllButtons">
+            <ParameterInstance name="Character" data="Repository::O_Sam_Character"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisableTick">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete" start="Start" true="Stop" sequence="Radio_Comm110">
+    <vertices>
+      <vertex x="101.000000" y="46.000000"/>
+      <vertex x="230.000000" y="46.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+</Sequence>

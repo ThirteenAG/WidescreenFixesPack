@@ -1,0 +1,1017 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Sequence name="CP_Get_Checkpoint_0" startup="1">
+  <Task name="look at checkpoint" first="1" x="15.000000" y="159.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <Task name="checkpt 5" x="251.000000" y="160.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::b_BB5_Bookmark">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="AssignBoolean">
+            <ParameterInstance name="Left" data="Repository::b_BB5_Bookmark"/>
+            <ParameterInstance name="Right">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_14" entity="Repository::o_FlashManager_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibility">
+            <ParameterInstance name="FlashEventManager" data="Repository::o_FlashManager_0"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_MarkAndExecute"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_1" entity="Repository::o_Character_Sam_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableChaseGameplay">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam_0"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="Repository::Sequences::M07_LincM_se215_Text_SIT">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StopSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::M07_LincM_se215_Text_SIT"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_15" entity="Repository::o_MainCamera_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="ToggleEventAmbiance">
+            <ParameterInstance name="Object" data="Repository::o_MainCamera_0"/>
+            <ParameterInstance name="value">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="TrackID">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="5.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="checkpt 6" x="143.000000" y="244.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::b_BB6_Bookmark">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="AssignBoolean">
+            <ParameterInstance name="Left" data="Repository::b_BB6_Bookmark"/>
+            <ParameterInstance name="Right">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="Repository::Sequences::M07_LincM_se215_Text_SIT">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StopSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::M07_LincM_se215_Text_SIT"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_1" entity="Repository::Sequences::MapStart_Objectives">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StartSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::MapStart_Objectives"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_2" entity="GI_NonInteractiveDynActor_1649" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetDamageState">
+            <ParameterInstance name="Object" data="GI_NonInteractiveDynActor_1649" InUnrealActors="1"/>
+            <ParameterInstance name="DamageState" data="Repository::Unreal::enums::eGIStateID::eGIStateID_Destroyed"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_3" entity="Repository::List_Downstairs_Cars">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="Repository::List_Downstairs_Cars"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_4" entity="Repository::List_Upstairs_cars">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="Repository::List_Upstairs_cars"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_5" entity="Repository::List_Cars_All_HIGH">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="Repository::List_Cars_All_HIGH"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_19" entity="Repository::List_Cars_All_HIGH_CarsOnly">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="Repository::List_Cars_All_HIGH_CarsOnly"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_6" entity="GI_NonInteractiveDynActor_1717" InUnrealActors="1">
+        <Event name="NewEvent" end="1.000000" condition="1">
+          <CommandInstance name="Move" duration="1.000000">
+            <ParameterInstance name="Object" data="GI_NonInteractiveDynActor_1717" InUnrealActors="1"/>
+            <ParameterInstance name="Target" data="ETarget_173" InUnrealActors="1"/>
+            <ParameterInstance name="UseFinalPosition">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_7" entity="Repository::List_Hide_PhaseB_02_low">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="Repository::List_Hide_PhaseB_02_low"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_8" entity="Repository::List_Hide_PhaseB_01_high">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="Repository::List_Hide_PhaseB_01_high"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_9" entity="Repository::o_Character_Sam_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="InventoryAddItem">
+            <ParameterInstance name="Sam" data="Repository::o_Character_Sam_0"/>
+            <ParameterInstance name="Item" data="GI_Gun_Pistol_MK23_0" InUnrealActors="1"/>
+            <ParameterInstance name="EquipGun">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_20" entity="Repository::List_BB5_CarExplodeHintCam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="Repository::List_BB5_CarExplodeHintCam"/>
+            <ParameterInstance name="PhysType" data="Repository::Unreal::enums::EPhysics::PHYS_None"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyCommand name="NewDependencyCommand" start="look at checkpoint" true="checkpt 5">
+    <CommandInstance name="EqualNumber">
+      <ParameterInstance name="Left">
+        <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="5.000000"/>
+      </ParameterInstance>
+      <ParameterInstance name="Right" data="Repository::o_Number_SaveID_0"/>
+    </CommandInstance>
+    <vertices>
+      <vertex x="65.000000" y="184.000000"/>
+      <vertex x="251.000000" y="185.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyCommand>
+  <DependencyCommand name="NewDependencyCommand_0" start="look at checkpoint" true="checkpt 6">
+    <CommandInstance name="EqualNumber">
+      <ParameterInstance name="Left">
+        <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="6.000000"/>
+      </ParameterInstance>
+      <ParameterInstance name="Right" data="Repository::o_Number_SaveID_0"/>
+    </CommandInstance>
+    <vertices>
+      <vertex x="65.000000" y="184.000000"/>
+      <vertex x="143.000000" y="269.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyCommand>
+  <Task name="wait for player" x="183.000000" y="56.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyCommand name="NewDependencyCommand_1" start="look at checkpoint" true="wait for player">
+    <CommandInstance name="LessThan">
+      <ParameterInstance name="Left" data="Repository::o_Number_SaveID_0"/>
+      <ParameterInstance name="Right">
+        <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="5.000000"/>
+      </ParameterInstance>
+    </CommandInstance>
+    <vertices>
+      <vertex x="65.000000" y="184.000000"/>
+      <vertex x="183.000000" y="81.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyCommand>
+  <Task name="open newsvan door" x="411.000000" y="160.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="GI_NonInteractiveDynActor_786" InUnrealActors="1">
+        <Event name="NewEvent" end="0.100000" condition="1">
+          <CommandInstance name="Move" duration="0.100000">
+            <ParameterInstance name="Object" data="GI_NonInteractiveDynActor_786" InUnrealActors="1"/>
+            <ParameterInstance name="Target" data="ETarget_116" InUnrealActors="1"/>
+            <ParameterInstance name="UseFinalPosition">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete" start="checkpt 5" true="open newsvan door" sequence="CP_Get_Checkpoint_0">
+    <vertices>
+      <vertex x="301.000000" y="185.000000"/>
+      <vertex x="411.000000" y="185.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="startup all 01 sequences" x="430.000000" y="55.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_2" entity="Repository::o_Character_Sam_0" ignore="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableChaseGameplay">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam_0"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="Repository::Sequences::Map_01_Init">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StartSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::Map_01_Init"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_1" entity="Repository::Sequences::MapStart_Objectives">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StartSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::MapStart_Objectives"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::Sequences::Master_Chase_Handler_BB01">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StartSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::Master_Chase_Handler_BB01"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent" start="wait for player" true="startup all 01 sequences" data="XTrigVol_0" InUnrealActors="1">
+    <ExternalEventInstance name="VOLUME_ENTERED" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Instigator" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="233.000000" y="81.000000"/>
+      <vertex x="430.000000" y="80.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="startup &quot;still in tent&quot; sequence" x="593.000000" y="54.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::Sequences::M07_LincM_se215_Text_SIT">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StartSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::M07_LincM_se215_Text_SIT"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_0" start="startup all 01 sequences" true="startup &quot;still in tent&quot; sequence" sequence="CP_Get_Checkpoint_0">
+    <vertices>
+      <vertex x="480.000000" y="80.000000"/>
+      <vertex x="593.000000" y="79.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="startup all 01 sequences_0" x="410.000000" y="221.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_0" entity="Repository::Sequences::Map_01_Init">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StartSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::Map_01_Init"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_1" entity="Repository::Sequences::MapStart_Objectives">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StartSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::MapStart_Objectives"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::Sequences::Master_Chase_Handler_BB01">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StartSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::Master_Chase_Handler_BB01"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_19" entity="Repository::o_MainCamera_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="ToggleMusic">
+            <ParameterInstance name="Object" data="Repository::o_MainCamera_0"/>
+            <ParameterInstance name="value">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_18" entity="Repository::o_MainCamera_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="InstantPlaySound">
+            <ParameterInstance name="Actor" data="Repository::o_MainCamera_0"/>
+            <ParameterInstance name="Sound" data="Play_Mus_LincolnMemorial_Chase" InUnrealSounds="1"/>
+            <ParameterInstance name="Flag" data="Repository::Unreal::enums::ESoundSlot::SLOT_Music"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="1.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_1" start="checkpt 5" true="startup all 01 sequences_0" sequence="CP_Get_Checkpoint_0">
+    <vertices>
+      <vertex x="301.000000" y="185.000000"/>
+      <vertex x="410.000000" y="246.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="turn off certain lights" first="1" x="21.000000" y="355.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_1" entity="Repository::List_Map01_ProjTextLights">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetLightOn">
+            <ParameterInstance name="Light" data="Repository::List_Map01_ProjTextLights"/>
+            <ParameterInstance name="On">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Flicker">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_2" entity="XSaveVol_20" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="XSaveVol_20" InUnrealActors="1"/>
+            <ParameterInstance name="PhysType"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="hide the SE 240 drivers" first="1" x="20.000000" y="425.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::List_se240_downstairs_drivers">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="Repository::List_se240_downstairs_drivers"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="Repository::List_se240_Upstairs_drivers">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="Repository::List_se240_Upstairs_drivers"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Hide the extraction car" first="1" x="91.000000" y="356.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="ECinematicActor_3" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="ECinematicActor_3" InUnrealActors="1"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="Repository::List_BB6_ExtractBounding">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="Repository::List_BB6_ExtractBounding"/>
+            <ParameterInstance name="PhysType"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="start movie texture in cafe" first="1" x="165.000000" y="357.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::Sequences::MAS_LINTV_01">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StartSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::MAS_LINTV_01"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="disable proper buttons for chase" x="410.000000" y="279.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_0" entity="Repository::o_Character_Sam_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableAllButtons">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam_0"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisableTick">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_1" entity="Repository::o_Character_Sam_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam_0"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressA"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_2" entity="Repository::o_Character_Sam_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam_0"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressX"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_3" entity="Repository::o_Character_Sam_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam_0"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressBack"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_11" entity="Repository::o_Character_Sam_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam_0"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_ReleaseBack"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_4" entity="Repository::o_Character_Sam_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam_0"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressLeftAnalog"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_5" entity="Repository::o_Character_Sam_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam_0"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressB"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_6" entity="Repository::o_Character_Sam_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam_0"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_HoldB"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_7" entity="Repository::o_Character_Sam_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam_0"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_ReleaseB"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_8" entity="Repository::o_Character_Sam_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam_0"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_CameraMovement"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_9" entity="Repository::o_Character_Sam_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam_0"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_Movement"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_10" entity="Repository::o_Character_Sam_0">
+        <Event name="NewEvent" end="-1.000000" indeterminate="1">
+          <CommandInstance name="PlayerHolsterWeapon">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam_0"/>
+            <ParameterInstance name="Draw">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="DrawPrimary">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="NoAnim">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::o_Character_Sam_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerDisablePickUp">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam_0"/>
+            <ParameterInstance name="bDisablePickUp">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_2" start="checkpt 5" true="disable proper buttons for chase" sequence="CP_Get_Checkpoint_0">
+    <vertices>
+      <vertex x="301.000000" y="185.000000"/>
+      <vertex x="410.000000" y="304.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="turn off tentbounds" x="411.000000" y="336.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="EZoneInfo_148" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetBounds">
+            <ParameterInstance name="Zone" data="EZoneInfo_148" InUnrealActors="1"/>
+            <ParameterInstance name="OutOfBound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceWhenPlayerAlreadyInZone">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="Repository::List_BB4_TentBounds">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="Repository::List_BB4_TentBounds"/>
+            <ParameterInstance name="PhysType"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_3" start="checkpt 5" true="turn off tentbounds" sequence="CP_Get_Checkpoint_0">
+    <vertices>
+      <vertex x="301.000000" y="185.000000"/>
+      <vertex x="411.000000" y="361.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="turn off bb5 nogoback" first="1" x="94.000000" y="423.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="StaticMeshActor_2740" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="StaticMeshActor_2740" InUnrealActors="1"/>
+            <ParameterInstance name="PhysType"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="EZoneInfo_150" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetBounds">
+            <ParameterInstance name="Zone" data="EZoneInfo_150" InUnrealActors="1"/>
+            <ParameterInstance name="OutOfBound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceWhenPlayerAlreadyInZone">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_1" entity="StaticMeshActor_2741" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="StaticMeshActor_2741" InUnrealActors="1"/>
+            <ParameterInstance name="PhysType"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_2" entity="EZoneInfo_154" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetBounds">
+            <ParameterInstance name="Zone" data="EZoneInfo_154" InUnrealActors="1"/>
+            <ParameterInstance name="OutOfBound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceWhenPlayerAlreadyInZone">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="turn on bb5 nogoback" x="412.000000" y="398.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_1" entity="EZoneInfo_150" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetBounds">
+            <ParameterInstance name="Zone" data="EZoneInfo_150" InUnrealActors="1"/>
+            <ParameterInstance name="OutOfBound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceWhenPlayerAlreadyInZone">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="StaticMeshActor_2740" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="StaticMeshActor_2740" InUnrealActors="1"/>
+            <ParameterInstance name="PhysType"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_4" start="checkpt 5" true="turn on bb5 nogoback" sequence="CP_Get_Checkpoint_0">
+    <vertices>
+      <vertex x="301.000000" y="185.000000"/>
+      <vertex x="412.000000" y="423.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="hide all HIGH cars" first="1" x="20.000000" y="490.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::List_Cars_All_HIGH">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="Repository::List_Cars_All_HIGH"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="Repository::List_Cars_All_HIGH_CarsOnly">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="Repository::List_Cars_All_HIGH_CarsOnly"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="hide low poly trees" first="1" x="98.000000" y="491.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::List_Hide_PhaseB_02_low">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="Repository::List_Hide_PhaseB_02_low"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="make sure proper trees are shown" x="412.000000" y="457.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::List_Hide_PhaseB_01_high" ignore="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="Repository::List_Hide_PhaseB_01_high"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="Repository::List_Hide_PhaseB_02_low">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="Repository::List_Hide_PhaseB_02_low"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_5" start="checkpt 5" true="make sure proper trees are shown" sequence="CP_Get_Checkpoint_0">
+    <vertices>
+      <vertex x="301.000000" y="185.000000"/>
+      <vertex x="412.000000" y="482.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Assign MULE references" first="1" x="19.000000" y="26.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_11" entity="Repository::ref_Mule_FlashManager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Assign">
+            <ParameterInstance name="Left" data="Repository::ref_Mule_FlashManager"/>
+            <ParameterInstance name="Right" data="Repository::o_Mule_FlashManager"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_10" entity="Repository::ref_Mule_Objective_3_Chase">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Assign">
+            <ParameterInstance name="Left" data="Repository::ref_Mule_Objective_3_Chase"/>
+            <ParameterInstance name="Right" data="Repository::o_Mule_Objective_3_Chase"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::ref_Mule_ObjectiveManager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Assign">
+            <ParameterInstance name="Left" data="Repository::ref_Mule_ObjectiveManager"/>
+            <ParameterInstance name="Right" data="Repository::o_Mule_ObjectiveManager"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_12" entity="Repository::ref_Mule_MainCamera">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Assign">
+            <ParameterInstance name="Left" data="Repository::ref_Mule_MainCamera"/>
+            <ParameterInstance name="Right" data="Repository::o_Mule_MainCamera"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="hide hummers" first="1" x="169.000000" y="428.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_3" entity="Repository::List_CAR_EliteCar1_HIGH">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="Repository::List_CAR_EliteCar1_HIGH"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_2" entity="Repository::List_CAR_EliteCar2_HIGH">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="Repository::List_CAR_EliteCar2_HIGH"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::List_CAR_EliteCar3_HIGH">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="Repository::List_CAR_EliteCar3_HIGH"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_1" entity="Repository::List_CAR_EliteCar4_HIGH">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="Repository::List_CAR_EliteCar4_HIGH"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_8" entity="Repository::List_CAR_EliteCar5_HIGH">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="Repository::List_CAR_EliteCar5_HIGH"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_9" entity="Repository::List_BB6_HummerNAVCOLLS">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="Repository::List_BB6_HummerNAVCOLLS"/>
+            <ParameterInstance name="PhysType"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="hide blood splat" first="1" x="171.000000" y="493.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="GI_NonInteractiveDynActor_2549" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="GI_NonInteractiveDynActor_2549" InUnrealActors="1"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="ObjectiveLight on Reload" x="586.000000" y="400.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_0" entity="EProjectedTextLight_24" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetLightOn">
+            <ParameterInstance name="Light" data="EProjectedTextLight_24" InUnrealActors="1"/>
+            <ParameterInstance name="On">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Flicker">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+        <Event name="NewEvent_0" start="7.000000" end="-1.000000">
+          <CommandInstance name="SetLightOn">
+            <ParameterInstance name="Light" data="EProjectedTextLight_24" InUnrealActors="1"/>
+            <ParameterInstance name="On">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Flicker">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="FlashTextureInfo_15" InUnrealDynTexFlash="1">
+        <Event name="NewEvent_0" end="-1.000000">
+          <CommandInstance name="Fla_ChangeState">
+            <ParameterInstance name="FlashTexture" data="FlashTextureInfo_15" InUnrealDynTexFlash="1"/>
+            <ParameterInstance name="StateName">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="Fadein"/>
+            </ParameterInstance>
+            <ParameterInstance name="Path">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value=""/>
+            </ParameterInstance>
+            <ParameterInstance name="UseSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+        <Event name="NewEvent_1" start="6.000000" end="-1.000000">
+          <CommandInstance name="Fla_ChangeState">
+            <ParameterInstance name="FlashTexture" data="FlashTextureInfo_15" InUnrealDynTexFlash="1"/>
+            <ParameterInstance name="StateName">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="Fadeout"/>
+            </ParameterInstance>
+            <ParameterInstance name="Path">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value=""/>
+            </ParameterInstance>
+            <ParameterInstance name="UseSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_6" start="turn on bb5 nogoback" true="ObjectiveLight on Reload" sequence="CP_Get_Checkpoint_0">
+    <vertices>
+      <vertex x="462.000000" y="423.000000"/>
+      <vertex x="586.000000" y="425.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+</Sequence>

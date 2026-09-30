@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Sequence name="Skip">
+  <Task name="SkipSequenceSe030" x="520.000000" y="21.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Set cinematic" entity="Repository::o_MainView">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetGameCinematicState">
+            <ParameterInstance name="dummy" data="Repository::o_MainView"/>
+            <ParameterInstance name="State">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="SetHUDVisibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Set cinematic_0" entity="Repository::o_MainView">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="HideHUD">
+            <ParameterInstance name="dummy" data="Repository::o_MainView"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Stop Spec After Crash" entity="Repository::Sequences::se030_Spec_AfterCrash">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StopSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::se030_Spec_AfterCrash"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::bool_Se030_IsRunning">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="AssignBoolean">
+            <ParameterInstance name="Left" data="Repository::bool_Se030_IsRunning"/>
+            <ParameterInstance name="Right">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Disable Sam Movement" entity="Repository::O_Char_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerUnPossess">
+            <ParameterInstance name="Character" data="Repository::O_Char_Sam"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Set cinematic_1" entity="Repository::o_MainView">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetGameCinematicState">
+            <ParameterInstance name="dummy" data="Repository::o_MainView"/>
+            <ParameterInstance name="State">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="SetHUDVisibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Disable Sam Movement_0" entity="Repository::O_Char_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableAllButtons">
+            <ParameterInstance name="Character" data="Repository::O_Char_Sam"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisableTick">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_4" entity="Repository::O_Char_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::O_Char_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressLeftTrigger"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Disable Sam Movement_1" entity="Repository::O_Char_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::O_Char_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressLeftTrigger"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="NewTask_1" first="1" x="345.000000" y="51.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete" start="NewTask_1" true="SkipSequenceSe030" sequence="Skip">
+    <vertices>
+      <vertex x="395.000000" y="76.000000"/>
+      <vertex x="520.000000" y="46.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+</Sequence>

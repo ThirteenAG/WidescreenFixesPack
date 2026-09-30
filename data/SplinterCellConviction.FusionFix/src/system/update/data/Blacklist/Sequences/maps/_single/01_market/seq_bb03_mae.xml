@@ -1,0 +1,1874 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Sequence name="BB03_MAE">
+  <Task name="Disable Shooting" x="198.000000" y="218.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Enable Run" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerDisableRun">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="DisableRun">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Enable ALL" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableAllButtons">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisableTick">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Disable Press RT" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressRightTrigger"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Disable Hold RT" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_HoldRightTrigger"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Disable Release RT" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_ReleaseRightTrigger"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Disable Human Shield" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerDisableHumanShield">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Disable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Disable Press DPadDown" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressDPadDown"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Disable Release DPadDown" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_ReleaseDPadDown"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Holster" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000" indeterminate="1">
+          <CommandInstance name="PlayerHolsterWeapon">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Draw">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="DrawPrimary">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="NoAnim">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Disable Press LA" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressRightAnalog"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Disable Hold LA" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_HoldRightAnalog"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Disable Release LA" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_ReleaseRightAnalog"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Disable Press RB" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressRightShoulder"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Disable Hold RB" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_HoldRightShoulder"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Disable Release RB" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_ReleaseRightShoulder"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent" start="Disable Shooting" true="Disable Controls" data="ETriggerVolume_21" InUnrealActors="1">
+    <ExternalEventInstance name="VOLUME_ENTERED" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Instigator" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="248.000000" y="243.000000"/>
+      <vertex x="442.000000" y="243.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Disable Controls" x="442.000000" y="218.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Disable Controls_0" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableAllButtons">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisableTick">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::ref_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerStopCoverDetection">
+            <ParameterInstance name="Character" data="Repository::ref_Character_Sam"/>
+            <ParameterInstance name="bStopCoverDetection">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="Repository::ref_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerResetExecutionToken">
+            <ParameterInstance name="Character" data="Repository::ref_Character_Sam"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Tuto MSG" x="447.000000" y="323.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_0" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent_0" end="-1.000000">
+          <CommandInstance name="DisplayTutorial">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Key" data="m01_id_tuto_11" InUnrealTutorialKeys="1"/>
+            <ParameterInstance name="Show">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Centered">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceVisible">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" start="0.100000" end="-1.000000">
+          <CommandInstance name="DisplayTutorial">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Key" data="m01_81505" InUnrealTutorialKeys="1"/>
+            <ParameterInstance name="Show">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Centered">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceVisible">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Gate 1" x="1277.000000" y="219.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <Task name="Enable NPCs" first="1" x="61.000000" y="143.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_0" entity="EAIGramkosThug_7" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="EnableNPC">
+            <ParameterInstance name="AI" data="EAIGramkosThug_7" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_5" entity="EAIGramkosThug_6" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="EnableNPC">
+            <ParameterInstance name="AI" data="EAIGramkosThug_6" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_6" entity="EAIGramkosThug_5" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="EnableNPC">
+            <ParameterInstance name="AI" data="EAIGramkosThug_5" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_1" entity="EAIGramkosThug_7" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="NpcSetResponsive">
+            <ParameterInstance name="AI" data="EAIGramkosThug_7" InUnrealActors="1"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_2" entity="EAIGramkosThug_6" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="NpcSetResponsive">
+            <ParameterInstance name="AI" data="EAIGramkosThug_6" InUnrealActors="1"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_3" entity="EAIGramkosThug_5" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="NpcSetResponsive">
+            <ParameterInstance name="AI" data="EAIGramkosThug_5" InUnrealActors="1"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_60" entity="Repository::ref_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableMAE">
+            <ParameterInstance name="Character" data="Repository::ref_Character_Sam"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_0" start="Enable NPCs" true="Disable Shooting" sequence="BB03_MAE">
+    <vertices>
+      <vertex x="111.000000" y="168.000000"/>
+      <vertex x="198.000000" y="243.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Crouch Tutorial" x="198.000000" y="57.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="DisplayTutorial">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Key" data="m01_id_tuto_11" InUnrealTutorialKeys="1"/>
+            <ParameterInstance name="Show">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Centered">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceVisible">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_1" start="Enable NPCs" true="Crouch Tutorial" sequence="BB03_MAE">
+    <vertices>
+      <vertex x="111.000000" y="168.000000"/>
+      <vertex x="198.000000" y="82.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Camera Lock Actor" x="1442.000000" y="135.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::o_Camera">
+        <Event name="NewEvent" end="1.000000" condition="1">
+          <CommandInstance name="CameraLockActor" duration="1.000000">
+            <ParameterInstance name="Camera" data="Repository::o_Camera"/>
+            <ParameterInstance name="LockActor" data="ETarget_43" InUnrealActors="1"/>
+            <ParameterInstance name="LockBlend">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="1.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="bPlayOnEveryPlayer">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="bRestoreOriginalLocationAtEnd">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="fSlowMotionIndependantEventTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="-1.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="LockThreshold">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Wait For Trigger" x="199.000000" y="324.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_11" start="Enable NPCs" true="Wait For Trigger" sequence="BB03_MAE">
+    <vertices>
+      <vertex x="111.000000" y="168.000000"/>
+      <vertex x="199.000000" y="349.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Proj TXT OFF" x="2289.000000" y="174.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_3" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent_0" end="-1.000000">
+          <CommandInstance name="DisplayTutorial">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Key" data="id_tuto_20" InUnrealTutorialKeys="1"/>
+            <ParameterInstance name="Show">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Centered">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceVisible">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_4" entity="FlashTextureInfo_13" InUnrealDynTexFlash="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_ChangeState">
+            <ParameterInstance name="FlashTexture" data="FlashTextureInfo_13" InUnrealDynTexFlash="1"/>
+            <ParameterInstance name="StateName">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="fadeout"/>
+            </ParameterInstance>
+            <ParameterInstance name="Path">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value=""/>
+            </ParameterInstance>
+            <ParameterInstance name="UseSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="EProjectedTextLight_16" InUnrealActors="1">
+        <Event name="NewEvent" start="1.000000" end="-1.000000">
+          <CommandInstance name="SetLightOn">
+            <ParameterInstance name="Light" data="EProjectedTextLight_16" InUnrealActors="1"/>
+            <ParameterInstance name="On">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Flicker">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Crouch Tutorial Fin" x="863.000000" y="57.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent_0" end="-1.000000">
+          <CommandInstance name="DisplayTutorial">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Key" data="m01_id_tuto_11" InUnrealTutorialKeys="1"/>
+            <ParameterInstance name="Show">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Centered">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceVisible">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_11" start="Wait for button or trigger" true="Crouch Tutorial Fin" data="ETriggerVolume_18" InUnrealActors="1">
+    <ExternalEventInstance name="VOLUME_ENTERED" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Instigator" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="430.000000" y="82.000000"/>
+      <vertex x="863.000000" y="82.000000"/>
+      <vertex x="633.000000" y="130.000000"/>
+      <vertex x="828.000000" y="129.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="2"/>
+      <segment type="0" vertex1="2" vertex2="3"/>
+      <segment type="0" vertex1="3" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Wait for button or trigger" x="380.000000" y="57.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <Task name="Compare Input" x="631.000000" y="58.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_12" start="Wait for button or trigger" true="Compare Input" data="Repository::ref_Character_Sam">
+    <ExternalEventInstance name="RAW_BUTTON_INPUT" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="ActionButton" data="Repository::Ref_H2H_Button"/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="430.000000" y="82.000000"/>
+      <vertex x="631.000000" y="83.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <DependencyCommand name="NewDependencyCommand_0" start="Compare Input" true="Crouch Tutorial Fin" false="Wait for button or trigger">
+    <CommandInstance name="Equal">
+      <ParameterInstance name="Left" data="Repository::Unreal::enums::eActionType::eActionType_PressLeftAnalog"/>
+      <ParameterInstance name="Right" data="Repository::Ref_H2H_Button"/>
+    </CommandInstance>
+    <vertices>
+      <vertex x="681.000000" y="83.000000"/>
+      <vertex x="863.000000" y="82.000000"/>
+      <vertex x="380.000000" y="82.000000"/>
+      <vertex x="829.000000" y="82.125000"/>
+      <vertex x="829.000000" y="41.000000"/>
+      <vertex x="349.000000" y="41.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="3" vertex2="1"/>
+      <segment type="1" vertex1="3" vertex2="4"/>
+      <segment type="1" vertex1="4" vertex2="5"/>
+      <segment type="1" vertex1="5" vertex2="2"/>
+      <segment type="2" vertex1="0" vertex2="3"/>
+    </segments>
+  </DependencyCommand>
+  <DependencyComplete name="NewDependencyComplete_23" start="Crouch Tutorial" true="Wait for button or trigger" sequence="BB03_MAE">
+    <vertices>
+      <vertex x="248.000000" y="82.000000"/>
+      <vertex x="380.000000" y="82.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Display M&amp;E tutorial" x="1597.000000" y="219.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_1" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="DisplayTutorial">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Key" data="m01_81764" InUnrealTutorialKeys="1"/>
+            <ParameterInstance name="Show">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Centered">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceVisible">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="EProjectedTextLight_16" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetLightOn">
+            <ParameterInstance name="Light" data="EProjectedTextLight_16" InUnrealActors="1"/>
+            <ParameterInstance name="On">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Flicker">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_2" entity="FlashTextureInfo_13" InUnrealDynTexFlash="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_ChangeState">
+            <ParameterInstance name="FlashTexture" data="FlashTextureInfo_13" InUnrealDynTexFlash="1"/>
+            <ParameterInstance name="StateName">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="fadein"/>
+            </ParameterInstance>
+            <ParameterInstance name="Path">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value=""/>
+            </ParameterInstance>
+            <ParameterInstance name="UseSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Execute Tutorial" x="2752.000000" y="152.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::Sequences::Tutorial_Execute">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StartSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::Tutorial_Execute"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_14" start="Wait for Pawn Dead" true="Gate 1" data="EAIGramkosThug_7" InUnrealActors="1">
+    <ExternalEventInstance name="PAWN_DEAD" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Instigator" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="1048.000000" y="243.000000"/>
+      <vertex x="1277.000000" y="244.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Force Move To" x="612.000000" y="217.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000" indeterminate="1">
+          <CommandInstance name="PlayerForceMove">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Target" data="ETarget_50" InUnrealActors="1"/>
+            <ParameterInstance name="speed">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="220.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="TimeOut">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="10.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="StopOffset">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="30.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Enable B" x="774.000000" y="217.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Enable Press B" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressX"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Enable Hold B" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_HoldX"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Enable Release B" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_ReleaseX"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::List_TutoShoot_Guns">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="RemoveFromList">
+            <ParameterInstance name="List" data="Repository::List_TutoShoot_Guns"/>
+            <ParameterInstance name="Data" data="GI_Gun_Pistol_MK23_0" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="Repository::List_TutoShoot_Guns">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="RemoveFromList">
+            <ParameterInstance name="List" data="Repository::List_TutoShoot_Guns"/>
+            <ParameterInstance name="Data" data="GI_Gun_Pistol_DesertEagle_13" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_1" entity="Repository::List_TutoShoot_Guns">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="RemoveFromList">
+            <ParameterInstance name="List" data="Repository::List_TutoShoot_Guns"/>
+            <ParameterInstance name="Data" data="GI_Gun_Pistol_DesertEagle_15" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_2" entity="Repository::List_TutoShoot_Guns">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="RemoveFromList">
+            <ParameterInstance name="List" data="Repository::List_TutoShoot_Guns"/>
+            <ParameterInstance name="Data" data="GI_Gun_Pistol_DesertEagle_2" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Ye Olde Restore HUD" x="1278.000000" y="345.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_0" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="DisplayTutorial">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Key" data="m01_81505" InUnrealTutorialKeys="1"/>
+            <ParameterInstance name="Show">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Centered">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceVisible">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_4" entity="Repository::o_FlashEventManager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibility">
+            <ParameterInstance name="FlashEventManager" data="Repository::o_FlashEventManager"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_Reticule"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_2" entity="Repository::o_FlashEventManager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibility">
+            <ParameterInstance name="FlashEventManager" data="Repository::o_FlashEventManager"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_CommandBox"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_3" entity="Repository::o_FlashEventManager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibility">
+            <ParameterInstance name="FlashEventManager" data="Repository::o_FlashEventManager"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_Tutorial"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_1" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="HideHUD">
+            <ParameterInstance name="dummy" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_15" start="Stealth Kill" true="Restore HUD" data="Repository::ref_Character_Sam">
+    <ExternalEventInstance name="STEALTH_KILL_BEGIN" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Target" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="1048.000000" y="316.000000"/>
+      <vertex x="1278.000000" y="317.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Stealth Kill" x="998.000000" y="291.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <Task name="Ye Olde Disable HUD for BB3 MAE" x="271.000000" y="141.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Holster" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="HideHUD">
+            <ParameterInstance name="dummy" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_2" entity="Repository::o_FlashEventManager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibility">
+            <ParameterInstance name="FlashEventManager" data="Repository::o_FlashEventManager"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_CommandBox"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_3" entity="Repository::o_FlashEventManager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibility">
+            <ParameterInstance name="FlashEventManager" data="Repository::o_FlashEventManager"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_Tutorial"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_4" entity="Repository::o_FlashEventManager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibility">
+            <ParameterInstance name="FlashEventManager" data="Repository::o_FlashEventManager"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_Reticule"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_31" start="Enable NPCs" true="Disable HUD for BB3 MAE" sequence="BB03_MAE">
+    <vertices>
+      <vertex x="111.000000" y="168.000000"/>
+      <vertex x="217.000000" y="166.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyComplete name="NewDependencyComplete_36" start="Enable B" true="Stealth Kill" sequence="BB03_MAE">
+    <vertices>
+      <vertex x="824.000000" y="242.000000"/>
+      <vertex x="998.000000" y="316.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyComplete name="NewDependencyComplete_37" start="Disable Controls" true="Force Move To" sequence="BB03_MAE">
+    <vertices>
+      <vertex x="492.000000" y="243.000000"/>
+      <vertex x="612.000000" y="242.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyComplete name="NewDependencyComplete_38" start="Force Move To" true="Enable B" sequence="BB03_MAE">
+    <vertices>
+      <vertex x="662.000000" y="242.000000"/>
+      <vertex x="774.000000" y="242.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Wait for Pawn Dead" x="998.000000" y="218.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_39" start="Enable B" true="Wait for Pawn Dead" sequence="BB03_MAE">
+    <vertices>
+      <vertex x="824.000000" y="242.000000"/>
+      <vertex x="998.000000" y="243.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyEvent name="NewDependencyEvent_16" start="Wait For Trigger" true="Tuto MSG" data="ETriggerVolume_17" InUnrealActors="1">
+    <ExternalEventInstance name="VOLUME_ENTERED" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Instigator" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="249.000000" y="349.000000"/>
+      <vertex x="447.000000" y="348.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Wait for Gun Picked Up" first="1" x="191.000000" y="492.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <Task name="Holster Weapon" x="568.000000" y="494.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Holster" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000" indeterminate="1">
+          <CommandInstance name="PlayerHolsterWeapon">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Draw">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="DrawPrimary">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="NoAnim">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_21" start="Wait for Gun Picked Up" true="Disable A Button" data="Repository::List_TutoShoot_Guns">
+    <ExternalEventInstance name="GI_PICKEDUP" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Instigator" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="241.000000" y="517.000000"/>
+      <vertex x="409.000000" y="519.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <DependencyComplete name="NewDependencyComplete_49" start="Enable A Button" true="Wait for Gun Picked Up" sequence="BB03_MAE">
+    <vertices>
+      <vertex x="779.000000" y="519.000000"/>
+      <vertex x="191.000000" y="517.000000"/>
+      <vertex x="908.000000" y="518.000000"/>
+      <vertex x="908.000000" y="474.000000"/>
+      <vertex x="159.000000" y="474.000000"/>
+      <vertex x="159.000000" y="517.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="2"/>
+      <segment type="0" vertex1="2" vertex2="3"/>
+      <segment type="0" vertex1="3" vertex2="4"/>
+      <segment type="0" vertex1="4" vertex2="5"/>
+      <segment type="0" vertex1="5" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyComplete name="NewDependencyComplete_50" start="Gate 1" true="Camera Lock Actor" sequence="BB03_MAE">
+    <vertices>
+      <vertex x="1327.000000" y="244.000000"/>
+      <vertex x="1442.000000" y="160.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyComplete name="NewDependencyComplete" start="Gate 1" true="Enable Mark Button" sequence="BB03_MAE">
+    <vertices>
+      <vertex x="1327.000000" y="244.000000"/>
+      <vertex x="1441.000000" y="243.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Mark Manage NPC B" x="1917.000000" y="129.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <Task name="NPC Was Marked B" x="2192.000000" y="127.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::Num_MAE_Tuto_Marks">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="increment">
+            <ParameterInstance name="value" data="Repository::Num_MAE_Tuto_Marks"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_22" start="Mark Manage NPC B" true="NPC Was Marked B" data="EAIGramkosThug_6" InUnrealActors="1">
+    <ExternalEventInstance name="MAE_NPC_WAS_MARKED" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Instigator" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="1967.000000" y="154.000000"/>
+      <vertex x="2192.000000" y="152.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Mark Manage NPC C" x="1915.000000" y="316.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <Task name="NPC Was Marked C" x="2190.000000" y="318.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::Num_MAE_Tuto_Marks">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="increment">
+            <ParameterInstance name="value" data="Repository::Num_MAE_Tuto_Marks"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_23" start="Mark Manage NPC C" true="NPC Was Marked C" data="EAIGramkosThug_5" InUnrealActors="1">
+    <ExternalEventInstance name="MAE_NPC_WAS_MARKED" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Instigator" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="1965.000000" y="341.000000"/>
+      <vertex x="2190.000000" y="343.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="NPC Was Un Marked B" x="2478.000000" y="124.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::Num_MAE_Tuto_Marks">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Decrement">
+            <ParameterInstance name="value" data="Repository::Num_MAE_Tuto_Marks"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_24" start="NPC Was Marked B" true="NPC Was Un Marked B" data="EAIGramkosThug_6" InUnrealActors="1">
+    <ExternalEventInstance name="MAE_NPC_WAS_UNMARKED" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Instigator" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="2242.000000" y="152.000000"/>
+      <vertex x="2478.000000" y="149.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="NPC Was Un Marked C" x="2478.000000" y="319.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::Num_MAE_Tuto_Marks">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Decrement">
+            <ParameterInstance name="value" data="Repository::Num_MAE_Tuto_Marks"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_25" start="NPC Was Marked C" true="NPC Was Un Marked C" data="EAIGramkosThug_5" InUnrealActors="1">
+    <ExternalEventInstance name="MAE_NPC_WAS_UNMARKED" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Instigator" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="2240.000000" y="343.000000"/>
+      <vertex x="2478.000000" y="344.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Enable Mark Button" x="1441.000000" y="218.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Enable Press RB" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressRightShoulder"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Enable Hold RB" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_HoldRightShoulder"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Enable Release RB" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_ReleaseRightShoulder"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_51" start="Enable Mark Button" true="Display M&amp;E tutorial" sequence="BB03_MAE">
+    <vertices>
+      <vertex x="1491.000000" y="243.000000"/>
+      <vertex x="1597.000000" y="244.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Gate 2" x="1749.000000" y="221.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_52" start="Display M&amp;E tutorial" true="Gate 2" sequence="BB03_MAE">
+    <vertices>
+      <vertex x="1647.000000" y="244.000000"/>
+      <vertex x="1749.000000" y="246.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyComplete name="NewDependencyComplete_54" start="Gate 2" true="Mark Manage NPC B" sequence="BB03_MAE">
+    <vertices>
+      <vertex x="1799.000000" y="246.000000"/>
+      <vertex x="1917.000000" y="154.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyComplete name="NewDependencyComplete_55" start="Gate 2" true="Mark Manage NPC C" sequence="BB03_MAE">
+    <vertices>
+      <vertex x="1799.000000" y="246.000000"/>
+      <vertex x="1915.000000" y="341.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Enable Execute Button" x="2289.000000" y="226.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Enable Press Y" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressY"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Enable Hold Y" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_HoldY"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Enable Release Y" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_ReleaseY"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_2" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent_0" end="-1.000000">
+          <CommandInstance name="DisplayTutorial">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Key" data="m01_81764" InUnrealTutorialKeys="1"/>
+            <ParameterInstance name="Show">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Centered">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceVisible">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Enable Controls" x="3075.000000" y="228.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_4" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerDisableHumanShield">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Disable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Enable Controls" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableAllButtons">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisableTick">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Execute Tutorial MSG OFF" x="2557.000000" y="229.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_1" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent_0" end="-1.000000">
+          <CommandInstance name="DisplayTutorial">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Key" data="id_tuto_20" InUnrealTutorialKeys="1"/>
+            <ParameterInstance name="Show">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Centered">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceVisible">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_66" start="Execute Tutorial MSG OFF" true="Execute Tutorial" sequence="BB03_MAE">
+    <vertices>
+      <vertex x="2607.000000" y="254.000000"/>
+      <vertex x="2752.000000" y="177.000000"/>
+      <vertex x="2723.000000" y="177.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="2"/>
+      <segment type="0" vertex1="2" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyCommand name="NewDependencyCommand_1" start="Wait for Mark Num = 2" true="Disable Mark Button">
+    <CommandInstance name="EqualNumber">
+      <ParameterInstance name="Left" data="Repository::Num_MAE_Tuto_Marks"/>
+      <ParameterInstance name="Right">
+        <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="2.000000"/>
+      </ParameterInstance>
+    </CommandInstance>
+    <vertices>
+      <vertex x="1966.000000" y="247.000000"/>
+      <vertex x="2134.000000" y="252.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyCommand>
+  <DependencyComplete name="NewDependencyComplete_67" start="NPC Was Un Marked B" true="Mark Manage NPC B" sequence="BB03_MAE">
+    <vertices>
+      <vertex x="2528.000000" y="149.000000"/>
+      <vertex x="1917.000000" y="154.000000"/>
+      <vertex x="2624.000000" y="149.000000"/>
+      <vertex x="1841.000000" y="101.000000"/>
+      <vertex x="2624.000000" y="101.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="2"/>
+      <segment type="0" vertex1="2" vertex2="4"/>
+      <segment type="0" vertex1="4" vertex2="3"/>
+      <segment type="0" vertex1="3" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyComplete name="NewDependencyComplete_68" start="NPC Was Un Marked C" true="Mark Manage NPC C" sequence="BB03_MAE">
+    <vertices>
+      <vertex x="2528.000000" y="344.000000"/>
+      <vertex x="1915.000000" y="341.000000"/>
+      <vertex x="2627.000000" y="346.000000"/>
+      <vertex x="2627.000000" y="396.000000"/>
+      <vertex x="1837.000000" y="396.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="2"/>
+      <segment type="0" vertex1="2" vertex2="3"/>
+      <segment type="0" vertex1="3" vertex2="4"/>
+      <segment type="0" vertex1="4" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Wait for Mark Num = 2" x="1916.000000" y="222.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_69" start="Gate 2" true="Wait for Mark Num = 2" sequence="BB03_MAE">
+    <vertices>
+      <vertex x="1799.000000" y="246.000000"/>
+      <vertex x="1916.000000" y="247.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Draw Weapon" x="1440.000000" y="303.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Holster" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="1.000000" condition="1">
+          <CommandInstance name="PlayerHolsterWeapon" duration="1.000000">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Draw">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="DrawPrimary">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="NoAnim">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_70" start="Gate 1" true="Draw Weapon" sequence="BB03_MAE">
+    <vertices>
+      <vertex x="1327.000000" y="244.000000"/>
+      <vertex x="1440.000000" y="328.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Enable Zoom Button" x="774.000000" y="292.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Enable Press RA" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressLeftTrigger"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Enable Hold RA" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_HoldLeftTrigger"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Enable Release RA" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_ReleaseLeftTrigger"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_71" start="Force Move To" true="Enable Zoom Button" sequence="BB03_MAE">
+    <vertices>
+      <vertex x="662.000000" y="242.000000"/>
+      <vertex x="774.000000" y="317.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Disable HUD for BB3 MAE" x="217.000000" y="141.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_2" entity="Repository::o_FlashEventManager" ignore="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibility">
+            <ParameterInstance name="FlashEventManager" data="Repository::o_FlashEventManager"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_Detection"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_3" entity="Repository::o_FlashEventManager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibility">
+            <ParameterInstance name="FlashEventManager" data="Repository::o_FlashEventManager"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_GadgetModule"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Enable" entity="Repository::o_FlashEventManager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibility">
+            <ParameterInstance name="FlashEventManager" data="Repository::o_FlashEventManager"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_MarkAndExecute"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_6" entity="Repository::o_FlashEventManager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibility">
+            <ParameterInstance name="FlashEventManager" data="Repository::o_FlashEventManager"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_PECChallenges"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_7" entity="Repository::o_FlashEventManager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibility">
+            <ParameterInstance name="FlashEventManager" data="Repository::o_FlashEventManager"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_WeaponModule"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressLeftAnalog"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Restore HUD" x="1278.000000" y="292.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_0" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="DisplayTutorial">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Key" data="m01_81505" InUnrealTutorialKeys="1"/>
+            <ParameterInstance name="Show">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Centered">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceVisible">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_2" entity="Repository::o_FlashEventManager" ignore="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibility">
+            <ParameterInstance name="FlashEventManager" data="Repository::o_FlashEventManager"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_Detection"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_3" entity="Repository::o_FlashEventManager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibility">
+            <ParameterInstance name="FlashEventManager" data="Repository::o_FlashEventManager"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_GadgetModule"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_4" entity="Repository::o_FlashEventManager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibility">
+            <ParameterInstance name="FlashEventManager" data="Repository::o_FlashEventManager"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_MarkAndExecute"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_6" entity="Repository::o_FlashEventManager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibility">
+            <ParameterInstance name="FlashEventManager" data="Repository::o_FlashEventManager"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_PECChallenges"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_7" entity="Repository::o_FlashEventManager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibility">
+            <ParameterInstance name="FlashEventManager" data="Repository::o_FlashEventManager"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_WeaponModule"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressLeftAnalog"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Disable Mark Button" x="2134.000000" y="227.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Disable Press RB" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressRightShoulder"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Disable Hold RB" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_HoldRightShoulder"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Disable Release RB" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_ReleaseRightShoulder"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Enable Crouch" x="774.000000" y="370.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Enable Press LB" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressLeftAnalog"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Enable Hold LB" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_HoldLeftAnalog"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Enable Release LB" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_ReleaseLeftAnalog"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_74" start="Force Move To" true="Enable Crouch" sequence="BB03_MAE">
+    <vertices>
+      <vertex x="662.000000" y="242.000000"/>
+      <vertex x="774.000000" y="395.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Gang Leader TXT OFF" x="612.000000" y="159.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_65" entity="FlashTextureInfo_3" InUnrealDynTexFlash="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_ChangeState">
+            <ParameterInstance name="FlashTexture" data="FlashTextureInfo_3" InUnrealDynTexFlash="1"/>
+            <ParameterInstance name="StateName">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="Fadeout"/>
+            </ParameterInstance>
+            <ParameterInstance name="Path"/>
+            <ParameterInstance name="UseSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="EProjectedTextLight_17" InUnrealActors="1">
+        <Event name="NewEvent" start="2.000000" end="-1.000000">
+          <CommandInstance name="SetLightOn">
+            <ParameterInstance name="Light" data="EProjectedTextLight_17" InUnrealActors="1"/>
+            <ParameterInstance name="On">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Flicker">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_75" start="Disable Controls" true="Gang Leader TXT OFF" sequence="BB03_MAE">
+    <vertices>
+      <vertex x="492.000000" y="243.000000"/>
+      <vertex x="612.000000" y="184.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Disable A Button" x="409.000000" y="494.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Disable Press A" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressA"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Disable Hold A" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_HoldA"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Disable Release A" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_ReleaseA"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Enable A Button" x="729.000000" y="494.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Enable Press A" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressA"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Enable Hold A" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_HoldA"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Enable Release A" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_ReleaseA"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_76" start="Disable A Button" true="Holster Weapon" sequence="BB03_MAE">
+    <vertices>
+      <vertex x="459.000000" y="519.000000"/>
+      <vertex x="568.000000" y="519.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyComplete name="NewDependencyComplete_77" start="Holster Weapon" true="Enable A Button" sequence="BB03_MAE">
+    <vertices>
+      <vertex x="618.000000" y="519.000000"/>
+      <vertex x="729.000000" y="519.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Wait for Execute Finish" x="2752.000000" y="229.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_78" start="Execute Tutorial MSG OFF" true="Wait for Execute Finish" sequence="BB03_MAE">
+    <vertices>
+      <vertex x="2607.000000" y="254.000000"/>
+      <vertex x="2752.000000" y="254.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyEvent name="NewDependencyEvent_27" start="Wait for Execute Finish" true="Enable Controls" data="Repository::ref_Character_Sam">
+    <ExternalEventInstance name="SAM_ACTION_EXECUTE_FINISHED" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Instigator" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="2802.000000" y="254.000000"/>
+      <vertex x="3075.000000" y="253.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Stop BB03 MAE" x="3231.000000" y="227.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::Sequences::BB03_MAE">
+        <Event name="NewEvent" start="1.000000" end="-1.000000">
+          <CommandInstance name="StopSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::BB03_MAE"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_79" start="Enable Controls" true="Stop BB03 MAE" sequence="BB03_MAE">
+    <vertices>
+      <vertex x="3125.000000" y="253.000000"/>
+      <vertex x="3231.000000" y="252.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyEvent name="NewDependencyEvent_28" start="Enable Execute Button" true="Execute Tutorial MSG OFF" data="Repository::ref_Character_Sam">
+    <ExternalEventInstance name="SAM_ACTION_EXECUTE" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Instigator" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="2339.000000" y="251.000000"/>
+      <vertex x="2557.000000" y="254.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <DependencyComplete name="NewDependencyComplete_80" start="Disable Mark Button" true="Enable Execute Button" sequence="BB03_MAE">
+    <vertices>
+      <vertex x="2184.000000" y="252.000000"/>
+      <vertex x="2289.000000" y="251.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyComplete name="NewDependencyComplete_81" start="Disable Mark Button" true="Proj TXT OFF" sequence="BB03_MAE">
+    <vertices>
+      <vertex x="2184.000000" y="252.000000"/>
+      <vertex x="2289.000000" y="199.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+</Sequence>

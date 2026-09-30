@@ -1,0 +1,1380 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Sequence name="se125_Inter_Sergi" restart="0">
+  <Task name="Wait for grab" x="153.000000" y="170.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <Task name="Sergei answer B" x="3082.000000" y="172.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Merc Talks" entity="EAINsa_20" InUnrealActors="1">
+        <Event name="NewEvent" end="12.730166">
+          <CommandInstance name="SetDialog" duration="12.730166">
+            <ParameterInstance name="CharacterOasis" data="EAINsa_20" InUnrealActors="1"/>
+            <ParameterInstance name="DialogOasis" data="Repository::Unreal::Oasis::COOP Map01 ST PETERSBURG BANYA::SE125_INTR::9397::34605"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="FadeOutTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayIncomingSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="HideSubtitle">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayOnlyOnLocalPlayer">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Sergei, dialogs_0" entity="EAINsa_20" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000" indeterminate="1">
+          <CommandInstance name="PlayFacialAnim">
+            <ParameterInstance name="EPawn" data="EAINsa_20" InUnrealActors="1"/>
+            <ParameterInstance name="FacialPkgName" data="FaceFx_Sergei.SERGEI" InUnrealFacialPkg="1"/>
+            <ParameterInstance name="AnimGroup">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="C01"/>
+            </ParameterInstance>
+            <ParameterInstance name="AnimName">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="VO_C01_BANYA_SE125_INTR01_07SERG"/>
+            </ParameterInstance>
+            <ParameterInstance name="BlendTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.300000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Sergei Resist A" x="693.000000" y="169.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Sergei, dialogs_1" entity="EAINsa_20" InUnrealActors="1">
+        <Event name="NewEvent" end="3.622188">
+          <CommandInstance name="SetDialog" duration="3.622188">
+            <ParameterInstance name="CharacterOasis" data="EAINsa_20" InUnrealActors="1"/>
+            <ParameterInstance name="DialogOasis" data="Repository::Unreal::Oasis::COOP Map01 ST PETERSBURG BANYA::SE125_INTR::9397::33888"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="FadeOutTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayIncomingSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="HideSubtitle">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayOnlyOnLocalPlayer">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Sergei, facial" entity="EAINsa_20" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000" indeterminate="1">
+          <CommandInstance name="PlayFacialAnim">
+            <ParameterInstance name="EPawn" data="EAINsa_20" InUnrealActors="1"/>
+            <ParameterInstance name="FacialPkgName" data="FaceFx_Sergei.SERGEI" InUnrealFacialPkg="1"/>
+            <ParameterInstance name="AnimGroup">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="C01"/>
+            </ParameterInstance>
+            <ParameterInstance name="AnimName">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="VO_C01_BANYA_SE125_INTR01_01SERG"/>
+            </ParameterInstance>
+            <ParameterInstance name="BlendTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.300000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_27" start="Wait for grab" true="Russ grabbing A" data="Repository::Ref_Character_Russ">
+    <ExternalEventInstance name="INTERROGATE_BEGIN" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="NPC" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="203.000000" y="195.000000"/>
+      <vertex x="285.000000" y="281.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Assign Refs" first="1" x="26.000000" y="171.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_0" entity="Repository::Ref_Character_Amer">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Assign">
+            <ParameterInstance name="Left" data="Repository::Ref_Character_Amer"/>
+            <ParameterInstance name="Right" data="Repository::o_Player1_Char_Amer_1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::Ref_Character_Russ">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Assign">
+            <ParameterInstance name="Left" data="Repository::Ref_Character_Russ"/>
+            <ParameterInstance name="Right" data="Repository::o_Player2_Char_Russ_1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Sergei pawn" entity="EAINsa_20" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="NpcSetWeaponAmmo">
+            <ParameterInstance name="AI" data="EAINsa_20" InUnrealActors="1"/>
+            <ParameterInstance name="AmmoCount">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="2.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="OptionalGun" data="GI_Gun_Pistol_P228_36" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_11" start="Assign Refs" true="Wait for grab" sequence="se125_Inter_Sergi">
+    <vertices>
+      <vertex x="76.000000" y="196.000000"/>
+      <vertex x="153.000000" y="195.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Lock ExitDoor" first="1" x="27.000000" y="53.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="GI_Door_Metal_12" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="LockDoor">
+            <ParameterInstance name="TheDoor" data="GI_Door_Metal_12" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Fake door interraction" entity="GI_CustomInteractionPlaceholder_0" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Deactivate">
+            <ParameterInstance name="Object" data="GI_CustomInteractionPlaceholder_0" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Amer grabbing A" x="287.000000" y="80.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Player grabbing ref" entity="Repository::Ref_Character_PlayerGrabbing">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Assign">
+            <ParameterInstance name="Left" data="Repository::Ref_Character_PlayerGrabbing"/>
+            <ParameterInstance name="Right" data="Repository::o_Player1_Char_Amer_1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Amer grabbing" entity="Repository::b_se125_InterroStandard_Amer">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="AssignBoolean">
+            <ParameterInstance name="Left" data="Repository::b_se125_InterroStandard_Amer"/>
+            <ParameterInstance name="Right">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Sergei pawn" entity="EAINsa_20" InUnrealActors="1" ignore="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="InstantPlaySound">
+            <ParameterInstance name="Actor" data="EAINsa_20" InUnrealActors="1"/>
+            <ParameterInstance name="Sound" data="Play_Rnd_Choke_sfx" InUnrealSounds="1"/>
+            <ParameterInstance name="Flag" data="Repository::Unreal::enums::ESoundSlot::SLOT_NPCVoice"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Russ grabbing A" x="285.000000" y="256.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Player grabbing ref" entity="Repository::Ref_Character_PlayerGrabbing">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Assign">
+            <ParameterInstance name="Left" data="Repository::Ref_Character_PlayerGrabbing"/>
+            <ParameterInstance name="Right" data="Repository::o_Player2_Char_Russ_1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Russ grabbing" entity="Repository::b_se125_InterroStandard_Russ">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="AssignBoolean">
+            <ParameterInstance name="Left" data="Repository::b_se125_InterroStandard_Russ"/>
+            <ParameterInstance name="Right">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Sergei pawn" entity="EAINsa_20" InUnrealActors="1" ignore="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="InstantPlaySound">
+            <ParameterInstance name="Actor" data="EAINsa_20" InUnrealActors="1"/>
+            <ParameterInstance name="Sound" data="Play_Rnd_Choke_sfx" InUnrealSounds="1"/>
+            <ParameterInstance name="Flag" data="Repository::Unreal::enums::ESoundSlot::SLOT_NPCVoice"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_30" start="Wait for grab" true="Amer grabbing A" data="Repository::Ref_Character_Amer">
+    <ExternalEventInstance name="INTERROGATE_BEGIN" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="NPC" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="203.000000" y="195.000000"/>
+      <vertex x="287.000000" y="105.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <DependencyComplete name="NewDependencyComplete_31" start="Amer grabbing A" true="Wait Grab End A" sequence="se125_Inter_Sergi">
+    <vertices>
+      <vertex x="337.000000" y="105.000000"/>
+      <vertex x="423.000000" y="195.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyComplete name="NewDependencyComplete_32" start="Russ grabbing A" true="Wait Grab End A" sequence="se125_Inter_Sergi">
+    <vertices>
+      <vertex x="335.000000" y="281.000000"/>
+      <vertex x="423.000000" y="195.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Start SE130" x="3226.000000" y="171.000000">
+    <Timeline name="NewTimeline">
+      <Track name="SE130 sequence" entity="Repository::Sequences::se130_Spec_KnockOnDoor">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StartSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::se130_Spec_KnockOnDoor"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Wait Grab End A" x="423.000000" y="170.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Player grabbing, Actions" entity="Repository::Ref_Character_PlayerGrabbing">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableActions">
+            <ParameterInstance name="Character" data="Repository::Ref_Character_PlayerGrabbing"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Sergei pawn" entity="EAINsa_20" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="NpcEnableInteraction">
+            <ParameterInstance name="AI" data="EAINsa_20" InUnrealActors="1"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Interro music" entity="Repository::Ref_Character_PlayerGrabbing">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="ToggleInterroMusicSystem">
+            <ParameterInstance name="Object" data="Repository::Ref_Character_PlayerGrabbing"/>
+            <ParameterInstance name="value">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Both player, Gadgets" entity="Repository::List_Character_PlayerRefs">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::List_Character_PlayerRefs"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressLeftShoulder"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Both player, Gadgets_0" entity="Repository::List_Character_PlayerRefs">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::List_Character_PlayerRefs"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_HoldLeftShoulder"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Both player, Gadgets_1" entity="Repository::List_Character_PlayerRefs">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::List_Character_PlayerRefs"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_ReleaseLeftShoulder"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Both player, God Mode" entity="Repository::List_BB02_players_pawn">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetGodmode">
+            <ParameterInstance name="Pawn" data="Repository::List_BB02_players_pawn"/>
+            <ParameterInstance name="GodMode">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Sergei pawn, god mode" entity="EAINsa_20" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetGodmode">
+            <ParameterInstance name="Pawn" data="EAINsa_20" InUnrealActors="1"/>
+            <ParameterInstance name="GodMode">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Fix to stop last LKP" entity="EAINsa_20" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="NpcSetResponsive">
+            <ParameterInstance name="AI" data="EAINsa_20" InUnrealActors="1"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="HUD_0" entity="Repository::o_Player1_Char_Amer_1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibilityCOOP">
+            <ParameterInstance name="Character" data="Repository::o_Player1_Char_Amer_1"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_GadgetModule"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::o_Player2_Char_Russ_1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibilityCOOP">
+            <ParameterInstance name="Character" data="Repository::o_Player2_Char_Russ_1"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_GadgetModule"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_31" start="Wait Grab End A" true="Sergei Resist A" data="Repository::Ref_Character_PlayerGrabbing">
+    <ExternalEventInstance name="INTERROGATE_NAV_BEGIN" data=""/>
+    <vertices>
+      <vertex x="473.000000" y="195.000000"/>
+      <vertex x="693.000000" y="194.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="NewTask" x="869.000000" y="1132.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <Task name="Sergei dead" first="1" x="59.000000" y="457.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Sergei pawn" entity="EAINsa_20" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetInvincible">
+            <ParameterInstance name="Pawn" data="EAINsa_20" InUnrealActors="1"/>
+            <ParameterInstance name="Invincible">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Game Over" x="284.000000" y="388.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Objectives" entity="Repository::List_ObjManager">
+        <Event name="NewEvent" start="2.000000" end="-1.000000" indeterminate="1">
+          <CommandInstance name="EndMission">
+            <ParameterInstance name="ObjectiveManager" data="Repository::List_ObjManager"/>
+            <ParameterInstance name="ForceOutcome">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceSuccess">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForcedCustomText">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="KilledSergei"/>
+            </ParameterInstance>
+            <ParameterInstance name="WaitTimeEndMission">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent" start="Sergei dead" true="Game Over" data="EAINsa_20" InUnrealActors="1">
+    <ExternalEventInstance name="PAWN_DEAD" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Instigator" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="109.000000" y="482.000000"/>
+      <vertex x="284.000000" y="413.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Can now be killed" x="283.000000" y="535.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyCommand name="NewDependencyCommand_3" start="Sergei dead" true="Can now be killed">
+    <CommandInstance name="EqualBoolean">
+      <ParameterInstance name="Left" data="Repository::b_se125_SergeiCanDie"/>
+      <ParameterInstance name="Right">
+        <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+      </ParameterInstance>
+    </CommandInstance>
+    <vertices>
+      <vertex x="109.000000" y="482.000000"/>
+      <vertex x="283.000000" y="560.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyCommand>
+  <Task name="Temp allow interro" first="1" x="58.000000" y="683.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Sergei pawn" entity="EAINsa_20" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="NpcSetInterrogationFail">
+            <ParameterInstance name="AI" data="EAINsa_20" InUnrealActors="1"/>
+            <ParameterInstance name="Fail">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Cancel allow" x="282.000000" y="683.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Sergei pawn" entity="EAINsa_20" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="NpcSetInterrogationFail">
+            <ParameterInstance name="AI" data="EAINsa_20" InUnrealActors="1"/>
+            <ParameterInstance name="Fail">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyCommand name="NewDependencyCommand_5" start="Temp allow interro" true="Cancel allow">
+    <CommandInstance name="EqualBoolean">
+      <ParameterInstance name="Left" data="Repository::b_se125_SergeiBodyguardSpawned"/>
+      <ParameterInstance name="Right">
+        <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+      </ParameterInstance>
+    </CommandInstance>
+    <vertices>
+      <vertex x="108.000000" y="708.000000"/>
+      <vertex x="282.000000" y="708.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyCommand>
+  <Task name="Allow interro final" x="502.000000" y="683.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Sergei pawn" entity="EAINsa_20" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="NpcSetInterrogationFail">
+            <ParameterInstance name="AI" data="EAINsa_20" InUnrealActors="1"/>
+            <ParameterInstance name="Fail">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_36" start="Cancel allow" true="Allow interro final">
+    <vertices>
+      <vertex x="332.000000" y="708.000000"/>
+      <vertex x="502.000000" y="708.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Detach" x="638.000000" y="799.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <Task name="Fridge door attach" x="359.000000" y="799.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Fridge door" entity="EAINsa_20" InUnrealActors="1" ignore="1">
+        <Event name="NewEvent" end="-1.000000" indeterminate="1">
+          <CommandInstance name="Attach">
+            <ParameterInstance name="Pawn" data="EAINsa_20" InUnrealActors="1"/>
+            <ParameterInstance name="Object" data="GI_NonInteractiveDynActor_211" InUnrealActors="1"/>
+            <ParameterInstance name="Handle">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="Root"/>
+            </ParameterInstance>
+            <ParameterInstance name="AttachBlendTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="IKBlendTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="DetachOnStop">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Fridge door_0" entity="Repository::o_Pawn_PlayerGrabbing">
+        <Event name="NewEvent" end="-1.000000" indeterminate="1">
+          <CommandInstance name="Attach">
+            <ParameterInstance name="Pawn" data="Repository::o_Pawn_PlayerGrabbing"/>
+            <ParameterInstance name="Object" data="GI_NonInteractiveDynActor_211" InUnrealActors="1"/>
+            <ParameterInstance name="Handle">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="Root"/>
+            </ParameterInstance>
+            <ParameterInstance name="AttachBlendTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="IKBlendTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="DetachOnStop">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Wait for Fridge bash" first="1" x="59.000000" y="801.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_17" start="Fridge door attach" true="Detach" data="Repository::List_Character_PlayerRefs">
+    <ExternalEventInstance name="INTERROGATE_MOVE_END" data=""/>
+    <vertices>
+      <vertex x="409.000000" y="824.000000"/>
+      <vertex x="638.000000" y="824.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <DependencyEvent name="NewDependencyEvent_28" start="Wait for Fridge bash" true="Fridge door attach" data="GI_Interrogation_HotSpot_13" InUnrealActors="1">
+    <ExternalEventInstance name="INTERROGATE_MOVE_BEGIN" data=""/>
+    <vertices>
+      <vertex x="109.000000" y="826.000000"/>
+      <vertex x="359.000000" y="824.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Eval player grabbing A" x="826.000000" y="170.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Sergei pawn" entity="EAINsa_20" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="InstantPlaySound">
+            <ParameterInstance name="Actor" data="EAINsa_20" InUnrealActors="1"/>
+            <ParameterInstance name="Sound" data="Play_Rnd_Choke_sfx" InUnrealSounds="1"/>
+            <ParameterInstance name="Flag" data="Repository::Unreal::enums::ESoundSlot::SLOT_NPCVoice"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Amer question A" x="953.000000" y="86.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Amer, dialogs" entity="Repository::o_Player1_Pawn_Amer_1">
+        <Event name="NewEvent" end="4.590312">
+          <CommandInstance name="SetDialog" duration="4.590312">
+            <ParameterInstance name="CharacterOasis" data="Repository::o_Player1_Pawn_Amer_1"/>
+            <ParameterInstance name="DialogOasis" data="Repository::Unreal::Oasis::COOP Map01 ST PETERSBURG BANYA::SE125_INTR::9397::33884"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="FadeOutTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayIncomingSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="HideSubtitle">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayOnlyOnLocalPlayer">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Russ question A" x="952.000000" y="258.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Amer, dialogs" entity="Repository::o_Player2_Pawn_Russ_1">
+        <Event name="NewEvent" end="7.626709">
+          <CommandInstance name="SetDialog" duration="7.626709">
+            <ParameterInstance name="CharacterOasis" data="Repository::o_Player2_Pawn_Russ_1"/>
+            <ParameterInstance name="DialogOasis" data="Repository::Unreal::Oasis::COOP Map01 ST PETERSBURG BANYA::SE125_INTR::9397::33886"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="FadeOutTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayIncomingSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="HideSubtitle">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayOnlyOnLocalPlayer">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyCommand name="NewDependencyCommand_6" start="Eval player grabbing A" true="Amer question A">
+    <CommandInstance name="Equal">
+      <ParameterInstance name="Left" data="Repository::Ref_Character_PlayerGrabbing"/>
+      <ParameterInstance name="Right" data="Repository::o_Player1_Char_Amer_1"/>
+    </CommandInstance>
+    <vertices>
+      <vertex x="876.000000" y="195.000000"/>
+      <vertex x="953.000000" y="111.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyCommand>
+  <DependencyCommand name="NewDependencyCommand_7" start="Eval player grabbing A" true="Russ question A">
+    <CommandInstance name="Equal">
+      <ParameterInstance name="Left" data="Repository::Ref_Character_PlayerGrabbing"/>
+      <ParameterInstance name="Right" data="Repository::o_Player2_Char_Russ_1"/>
+    </CommandInstance>
+    <vertices>
+      <vertex x="876.000000" y="195.000000"/>
+      <vertex x="952.000000" y="283.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyCommand>
+  <DependencyComplete name="NewDependencyComplete_46" start="Russ question A" true="Wait for Bash A" sequence="se125_Inter_Sergi">
+    <vertices>
+      <vertex x="1002.000000" y="283.000000"/>
+      <vertex x="1086.000000" y="199.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyComplete name="NewDependencyComplete_47" start="Amer question A" true="Wait for Bash A" sequence="se125_Inter_Sergi">
+    <vertices>
+      <vertex x="1003.000000" y="111.000000"/>
+      <vertex x="1086.000000" y="199.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Wait for Bash End A" x="1319.000000" y="172.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Player grabbing ref" entity="Repository::Ref_Character_PlayerGrabbing">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableActions">
+            <ParameterInstance name="Character" data="Repository::Ref_Character_PlayerGrabbing"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Sergei pawn" entity="EAINsa_20" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="NpcEnableInteraction">
+            <ParameterInstance name="AI" data="EAINsa_20" InUnrealActors="1"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Sergei pawn_0" entity="EAINsa_20" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="InstantPlaySound">
+            <ParameterInstance name="Actor" data="EAINsa_20" InUnrealActors="1"/>
+            <ParameterInstance name="Sound" data="Stop_Play_Rnd_Choke_sfx" InUnrealSounds="1"/>
+            <ParameterInstance name="Flag" data="Repository::Unreal::enums::ESoundSlot::SLOT_NPCVoice"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Wait for Bash A" x="1086.000000" y="174.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Player grabbing ref" entity="Repository::List_Character_PlayerRefs">
+        <Event name="NewEvent_0" end="-1.000000">
+          <CommandInstance name="PlayerEnableActions">
+            <ParameterInstance name="Character" data="Repository::List_Character_PlayerRefs"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Sergei pawn" entity="EAINsa_20" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="NpcEnableInteraction">
+            <ParameterInstance name="AI" data="EAINsa_20" InUnrealActors="1"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_37" start="Wait for Bash A" true="Wait for Bash End A" data="Repository::List_Character_PlayerRefs">
+    <ExternalEventInstance name="INTERROGATE_MOVE_BEGIN" data=""/>
+    <vertices>
+      <vertex x="1136.000000" y="199.000000"/>
+      <vertex x="1319.000000" y="197.000000"/>
+      <vertex x="1226.000000" y="105.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="2"/>
+      <segment type="0" vertex1="2" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <DependencyEvent name="NewDependencyEvent_38" start="Wait for Bash A" true="Wait for Bash End A" data="Repository::List_GI_se125_BashItems">
+    <ExternalEventInstance name="INTERROGATE_MOVE_BEGIN" data=""/>
+    <vertices>
+      <vertex x="1136.000000" y="199.000000"/>
+      <vertex x="1319.000000" y="197.000000"/>
+      <vertex x="1227.000000" y="286.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="2"/>
+      <segment type="0" vertex1="2" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <DependencyEvent name="NewDependencyEvent_39" start="Wait for Bash End A" true="Sergei Answer A" data="Repository::List_Character_PlayerRefs">
+    <ExternalEventInstance name="INTERROGATE_MOVE_END" data=""/>
+    <vertices>
+      <vertex x="1369.000000" y="197.000000"/>
+      <vertex x="1589.000000" y="196.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Sergei Answer A" x="1589.000000" y="171.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Sergei, dialogs_0" entity="EAINsa_20" InUnrealActors="1">
+        <Event name="NewEvent" end="7.691375">
+          <CommandInstance name="SetDialog" duration="7.691375">
+            <ParameterInstance name="CharacterOasis" data="EAINsa_20" InUnrealActors="1"/>
+            <ParameterInstance name="DialogOasis" data="Repository::Unreal::Oasis::COOP Map01 ST PETERSBURG BANYA::SE125_INTR::9397::33900"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="FadeOutTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayIncomingSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="HideSubtitle">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayOnlyOnLocalPlayer">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Sergei, facial" entity="EAINsa_20" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000" indeterminate="1">
+          <CommandInstance name="PlayFacialAnim">
+            <ParameterInstance name="EPawn" data="EAINsa_20" InUnrealActors="1"/>
+            <ParameterInstance name="FacialPkgName" data="FaceFx_Sergei.SERGEI" InUnrealFacialPkg="1"/>
+            <ParameterInstance name="AnimGroup">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="C01"/>
+            </ParameterInstance>
+            <ParameterInstance name="AnimName">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="VO_C01_BANYA_SE125_INTR01_04SERG"/>
+            </ParameterInstance>
+            <ParameterInstance name="BlendTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.300000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="NewTask_3" x="3299.000000" y="386.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_48" start="Sergei Answer A" true="Wait for Grab B" sequence="se125_Inter_Sergi">
+    <vertices>
+      <vertex x="1639.000000" y="196.000000"/>
+      <vertex x="1734.000000" y="197.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Wait for Grab B" x="1734.000000" y="172.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Player grabbing ref" entity="Repository::List_Character_PlayerRefs">
+        <Event name="NewEvent_0" end="-1.000000">
+          <CommandInstance name="PlayerEnableActions">
+            <ParameterInstance name="Character" data="Repository::List_Character_PlayerRefs"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Sergei pawn" entity="EAINsa_20" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="NpcEnableInteraction">
+            <ParameterInstance name="AI" data="EAINsa_20" InUnrealActors="1"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Standards" entity="Repository::List_Bool_se125_InterroStandards_Both">
+        <Event name="NewEvent" start="5.000000" end="-1.000000">
+          <CommandInstance name="AssignBoolean">
+            <ParameterInstance name="Left" data="Repository::List_Bool_se125_InterroStandards_Both"/>
+            <ParameterInstance name="Right">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Amer grabbing B" x="1877.000000" y="85.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Player grabbing ref" entity="Repository::Ref_Character_PlayerGrabbing">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Assign">
+            <ParameterInstance name="Left" data="Repository::Ref_Character_PlayerGrabbing"/>
+            <ParameterInstance name="Right" data="Repository::o_Player1_Char_Amer_1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Amer grabbing" entity="Repository::b_se125_InterroStandard_Amer">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="AssignBoolean">
+            <ParameterInstance name="Left" data="Repository::b_se125_InterroStandard_Amer"/>
+            <ParameterInstance name="Right">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Russ grabbing" entity="Repository::b_se125_InterroStandard_Russ">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="AssignBoolean">
+            <ParameterInstance name="Left" data="Repository::b_se125_InterroStandard_Russ"/>
+            <ParameterInstance name="Right">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Sergei pawn" entity="EAINsa_20" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="InstantPlaySound">
+            <ParameterInstance name="Actor" data="EAINsa_20" InUnrealActors="1"/>
+            <ParameterInstance name="Sound" data="Play_Rnd_Choke_sfx" InUnrealSounds="1"/>
+            <ParameterInstance name="Flag" data="Repository::Unreal::enums::ESoundSlot::SLOT_NPCVoice"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Russ grabbing B" x="1873.000000" y="256.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Player grabbing ref" entity="Repository::Ref_Character_PlayerGrabbing">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Assign">
+            <ParameterInstance name="Left" data="Repository::Ref_Character_PlayerGrabbing"/>
+            <ParameterInstance name="Right" data="Repository::o_Player2_Char_Russ_1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Russ grabbing" entity="Repository::b_se125_InterroStandard_Russ">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="AssignBoolean">
+            <ParameterInstance name="Left" data="Repository::b_se125_InterroStandard_Russ"/>
+            <ParameterInstance name="Right">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Amer grabbing" entity="Repository::b_se125_InterroStandard_Amer">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="AssignBoolean">
+            <ParameterInstance name="Left" data="Repository::b_se125_InterroStandard_Amer"/>
+            <ParameterInstance name="Right">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Sergei pawn" entity="EAINsa_20" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="InstantPlaySound">
+            <ParameterInstance name="Actor" data="EAINsa_20" InUnrealActors="1"/>
+            <ParameterInstance name="Sound" data="Play_Rnd_Choke_sfx" InUnrealSounds="1"/>
+            <ParameterInstance name="Flag" data="Repository::Unreal::enums::ESoundSlot::SLOT_NPCVoice"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_40" start="Wait for Grab B" true="Russ grabbing B" data="Repository::Ref_Character_Russ">
+    <ExternalEventInstance name="INTERROGATE_BEGIN" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="NPC" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="1784.000000" y="197.000000"/>
+      <vertex x="1873.000000" y="281.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <DependencyEvent name="NewDependencyEvent_41" start="Wait for Grab B" true="Amer grabbing B" data="Repository::Ref_Character_Amer">
+    <ExternalEventInstance name="INTERROGATE_BEGIN" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="NPC" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="1784.000000" y="197.000000"/>
+      <vertex x="1877.000000" y="110.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Wait for Grab End B" x="2013.000000" y="174.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Player grabbing, Actions" entity="Repository::Ref_Character_PlayerGrabbing">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableActions">
+            <ParameterInstance name="Character" data="Repository::Ref_Character_PlayerGrabbing"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Sergei pawn" entity="EAINsa_20" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="NpcEnableInteraction">
+            <ParameterInstance name="AI" data="EAINsa_20" InUnrealActors="1"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_49" start="Amer grabbing B" true="Wait for Grab End B" sequence="se125_Inter_Sergi">
+    <vertices>
+      <vertex x="1927.000000" y="110.000000"/>
+      <vertex x="2013.000000" y="199.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyComplete name="NewDependencyComplete_50" start="Russ grabbing B" true="Wait for Grab End B" sequence="se125_Inter_Sergi">
+    <vertices>
+      <vertex x="1923.000000" y="281.000000"/>
+      <vertex x="2013.000000" y="199.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Eval player grabbing B" x="2283.000000" y="175.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_42" start="Wait for Grab End B" true="Eval player grabbing B" data="Repository::List_Character_PlayerRefs">
+    <ExternalEventInstance name="INTERROGATE_NAV_BEGIN" data=""/>
+    <vertices>
+      <vertex x="2063.000000" y="199.000000"/>
+      <vertex x="2283.000000" y="200.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Amer question B" x="2433.000000" y="88.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Sam Talks " entity="Repository::o_Player1_Pawn_Amer_1">
+        <Event name="NewEvent" end="2.368750">
+          <CommandInstance name="SetDialog" duration="2.368750">
+            <ParameterInstance name="CharacterOasis" data="Repository::o_Player1_Pawn_Amer_1"/>
+            <ParameterInstance name="DialogOasis" data="Repository::Unreal::Oasis::COOP Map01 ST PETERSBURG BANYA::SE125_INTR::9397::33890"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="FadeOutTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayIncomingSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="HideSubtitle">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayOnlyOnLocalPlayer">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Russ question B" x="2433.000000" y="259.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Sam Talks " entity="Repository::o_Player2_Pawn_Russ_1">
+        <Event name="NewEvent" end="6.454521">
+          <CommandInstance name="SetDialog" duration="6.454521">
+            <ParameterInstance name="CharacterOasis" data="Repository::o_Player2_Pawn_Russ_1"/>
+            <ParameterInstance name="DialogOasis" data="Repository::Unreal::Oasis::COOP Map01 ST PETERSBURG BANYA::SE125_INTR::9397::33892"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="FadeOutTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayIncomingSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="HideSubtitle">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayOnlyOnLocalPlayer">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyCommand name="NewDependencyCommand_8" start="Eval player grabbing B" true="Amer question B">
+    <CommandInstance name="Equal">
+      <ParameterInstance name="Left" data="Repository::Ref_Character_PlayerGrabbing"/>
+      <ParameterInstance name="Right" data="Repository::o_Player1_Char_Amer_1"/>
+    </CommandInstance>
+    <vertices>
+      <vertex x="2333.000000" y="200.000000"/>
+      <vertex x="2433.000000" y="113.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyCommand>
+  <DependencyCommand name="NewDependencyCommand_9" start="Eval player grabbing B" true="Russ question B">
+    <CommandInstance name="Equal">
+      <ParameterInstance name="Left" data="Repository::Ref_Character_PlayerGrabbing"/>
+      <ParameterInstance name="Right" data="Repository::o_Player2_Char_Russ_1"/>
+    </CommandInstance>
+    <vertices>
+      <vertex x="2333.000000" y="200.000000"/>
+      <vertex x="2433.000000" y="284.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyCommand>
+  <DependencyComplete name="NewDependencyComplete_53" start="Sergei answer B" true="Start SE130" sequence="se125_Inter_Sergi">
+    <vertices>
+      <vertex x="3132.000000" y="197.000000"/>
+      <vertex x="3226.000000" y="196.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Wait for Bash End B" x="2815.000000" y="170.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Player grabbing ref" entity="Repository::Ref_Character_PlayerGrabbing">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableActions">
+            <ParameterInstance name="Character" data="Repository::Ref_Character_PlayerGrabbing"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Sergei pawn" entity="EAINsa_20" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="NpcEnableInteraction">
+            <ParameterInstance name="AI" data="EAINsa_20" InUnrealActors="1"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Sergei pawn_0" entity="EAINsa_20" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="InstantPlaySound">
+            <ParameterInstance name="Actor" data="EAINsa_20" InUnrealActors="1"/>
+            <ParameterInstance name="Sound" data="Stop_Play_Rnd_Choke_sfx" InUnrealSounds="1"/>
+            <ParameterInstance name="Flag" data="Repository::Unreal::enums::ESoundSlot::SLOT_NPCVoice"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Wait for Bash B" x="2582.000000" y="172.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Player grabbing ref" entity="Repository::List_Character_PlayerRefs">
+        <Event name="NewEvent_0" end="-1.000000">
+          <CommandInstance name="PlayerEnableActions">
+            <ParameterInstance name="Character" data="Repository::List_Character_PlayerRefs"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Sergei pawn" entity="EAINsa_20" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="NpcEnableInteraction">
+            <ParameterInstance name="AI" data="EAINsa_20" InUnrealActors="1"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_43" start="Wait for Bash B" true="Wait for Bash End B" data="Repository::List_Character_PlayerRefs">
+    <ExternalEventInstance name="INTERROGATE_MOVE_BEGIN" data=""/>
+    <vertices>
+      <vertex x="2632.000000" y="197.000000"/>
+      <vertex x="2815.000000" y="195.000000"/>
+      <vertex x="2722.000000" y="103.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="2"/>
+      <segment type="0" vertex1="2" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <DependencyEvent name="NewDependencyEvent_44" start="Wait for Bash B" true="Wait for Bash End B" data="Repository::List_GI_se125_BashItems">
+    <ExternalEventInstance name="INTERROGATE_MOVE_BEGIN" data=""/>
+    <vertices>
+      <vertex x="2632.000000" y="197.000000"/>
+      <vertex x="2815.000000" y="195.000000"/>
+      <vertex x="2723.000000" y="284.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="2"/>
+      <segment type="0" vertex1="2" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <DependencyEvent name="NewDependencyEvent_45" start="Wait for Bash End B" true="Sergei answer B" data="Repository::List_Character_PlayerRefs">
+    <ExternalEventInstance name="INTERROGATE_MOVE_END" data=""/>
+    <vertices>
+      <vertex x="2865.000000" y="195.000000"/>
+      <vertex x="3082.000000" y="197.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <DependencyComplete name="NewDependencyComplete_54" start="Amer question B" true="Wait for Bash B" sequence="se125_Inter_Sergi">
+    <vertices>
+      <vertex x="2483.000000" y="113.000000"/>
+      <vertex x="2582.000000" y="197.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyComplete name="NewDependencyComplete_55" start="Russ question B" true="Wait for Bash B" sequence="se125_Inter_Sergi">
+    <vertices>
+      <vertex x="2483.000000" y="284.000000"/>
+      <vertex x="2582.000000" y="197.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyComplete name="NewDependencyComplete" start="Sergei Resist A" true="Eval player grabbing A" sequence="se125_Inter_Sergi">
+    <vertices>
+      <vertex x="743.000000" y="194.000000"/>
+      <vertex x="826.000000" y="195.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Wait for Dual-Entry" first="1" x="60.000000" y="1075.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <Task name="Lock kitchen doors" x="532.000000" y="1078.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Both doors" entity="Repository::List_Doors_se120_KitchenDualEntry">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Deactivate">
+            <ParameterInstance name="Object" data="Repository::List_Doors_se120_KitchenDualEntry"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_3" start="Wait for doors closed" true="Lock kitchen doors" data="Repository::List_Doors_se120_KitchenDualEntry">
+    <ExternalEventInstance name="GI_CLOSED" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Instigator" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="373.000000" y="1103.000000"/>
+      <vertex x="532.000000" y="1103.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Wait for doors closed" x="323.000000" y="1078.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_46" start="Wait for Dual-Entry" true="Wait for doors closed" data="Repository::List_Doors_se120_KitchenDualEntry">
+    <ExternalEventInstance name="GI_OPENED" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Instigator" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="110.000000" y="1100.000000"/>
+      <vertex x="323.000000" y="1103.000000"/>
+      <vertex x="286.000000" y="1061.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="2"/>
+      <segment type="0" vertex1="2" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <DependencyEvent name="NewDependencyEvent_47" start="Wait for Dual-Entry" true="Wait for doors closed" data="Repository::List_Doors_se120_KitchenDualEntry">
+    <ExternalEventInstance name="GI_OPENING" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Instigator" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="110.000000" y="1100.000000"/>
+      <vertex x="323.000000" y="1103.000000"/>
+      <vertex x="285.000000" y="1143.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="2"/>
+      <segment type="0" vertex1="2" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Wait for stove bash" first="1" x="61.000000" y="929.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <Task name="Stop cooking" x="358.000000" y="930.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Paticles" entity="ParticleSpawner_97" InUnrealActors="1">
+        <Event name="NewEvent" start="3.000000" end="-1.000000">
+          <CommandInstance name="ParticleSpawnerDisable">
+            <ParameterInstance name="ParticleSpawner" data="ParticleSpawner_97" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Stove bash interaction" entity="GI_Interrogation_HotSpot_11" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Deactivate">
+            <ParameterInstance name="Object" data="GI_Interrogation_HotSpot_11" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_48" start="Wait for stove bash" true="Stop cooking" data="GI_Interrogation_HotSpot_11" InUnrealActors="1">
+    <ExternalEventInstance name="INTERROGATE_MOVE_BEGIN" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="NPC" data=""/>
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance_0" info="Player" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="111.000000" y="954.000000"/>
+      <vertex x="358.000000" y="955.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+</Sequence>

@@ -1,0 +1,1689 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Sequence name="01_Map_start">
+  <Task name="Sam enters Lobby" first="1" x="6.000000" y="406.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <Task name="Start meeting" x="224.000000" y="411.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_0" entity="Repository::O_Obj_Manager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="ObjectiveComplete">
+            <ParameterInstance name="ObjectiveManager" data="Repository::O_Obj_Manager"/>
+            <ParameterInstance name="sObjective" data="Repository::Obj_04"/>
+            <ParameterInstance name="ShowMessage">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="ShowTutoral">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_1" entity="Repository::O_Obj_Manager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="ObjectiveRemoveLocator">
+            <ParameterInstance name="ObjectiveManager" data="Repository::O_Obj_Manager"/>
+            <ParameterInstance name="sObjective" data="Repository::Obj_04"/>
+            <ParameterInstance name="Actor" data="GI_NonInteractiveDynActor_46" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_2" entity="Repository::Sequences::crowd panic">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StopSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::crowd panic"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_3" entity="EProjectedTextLight_4" InUnrealActors="1">
+        <Event name="NewEvent" start="2.000000" end="-1.000000">
+          <CommandInstance name="SetLightOn">
+            <ParameterInstance name="Light" data="EProjectedTextLight_4" InUnrealActors="1"/>
+            <ParameterInstance name="On">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Flicker">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_15" entity="FlashTextureInfo_6" InUnrealDynTexFlash="1">
+        <Event name="NewEvent" start="1.000000" end="-1.000000">
+          <CommandInstance name="Fla_ChangeState">
+            <ParameterInstance name="FlashTexture" data="FlashTextureInfo_6" InUnrealDynTexFlash="1"/>
+            <ParameterInstance name="StateName">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="Fadeout"/>
+            </ParameterInstance>
+            <ParameterInstance name="Path">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value=""/>
+            </ParameterInstance>
+            <ParameterInstance name="UseSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_7" entity="EAIManInBlack_0" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="DisableNPC">
+            <ParameterInstance name="AI" data="EAIManInBlack_0" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_10" entity="Repository::List_SE030_Policemen">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="DisableNPC">
+            <ParameterInstance name="AI" data="Repository::List_SE030_Policemen"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_11" entity="Repository::Sequences::Radio_Comm110">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StopSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::Radio_Comm110"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_12" entity="Repository::Sequences::Spotters_Deaths_CP">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StopSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::Spotters_Deaths_CP"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_14" entity="ETriggerVolume_39" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="ETriggerVolume_39" InUnrealActors="1"/>
+            <ParameterInstance name="PhysType"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_16" entity="GI_Door_Metal_4" InUnrealActors="1">
+        <Event name="NewEvent" start="2.000000" end="-1.000000">
+          <CommandInstance name="Close">
+            <ParameterInstance name="Object" data="GI_Door_Metal_4" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_17" entity="GI_Door_Metal_4" InUnrealActors="1">
+        <Event name="NewEvent" start="2.000000" end="-1.000000">
+          <CommandInstance name="LockDoor">
+            <ParameterInstance name="TheDoor" data="GI_Door_Metal_4" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::Sequences::Master Script">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StartSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::Master Script"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent" start="Sam enters Lobby" true="Start meeting" data="ETriggerVolume_0" InUnrealActors="1">
+    <ExternalEventInstance name="VOLUME_ENTERED" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Instigator" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="56.000000" y="431.000000"/>
+      <vertex x="224.000000" y="436.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Collisions" first="1" x="197.000000" y="62.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="ETriggerVolume_2" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="ETriggerVolume_2" InUnrealActors="1"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="PhysType"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="Repository::List_savetriggers">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="Repository::List_savetriggers"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="PhysType"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_3" entity="ETriggerVolume_34" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="ETriggerVolume_34" InUnrealActors="1"/>
+            <ParameterInstance name="PhysType"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_4" entity="StaticMeshActor_29" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="StaticMeshActor_29" InUnrealActors="1"/>
+            <ParameterInstance name="PhysType"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_5" entity="StaticMeshActor_94" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="StaticMeshActor_94" InUnrealActors="1"/>
+            <ParameterInstance name="PhysType"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Meet Coste" x="548.000000" y="298.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_0" entity="Repository::O_Obj_Manager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="ObjectiveAddPrimary">
+            <ParameterInstance name="ObjectiveManager" data="Repository::O_Obj_Manager"/>
+            <ParameterInstance name="sObjective" data="Repository::Obj_04"/>
+            <ParameterInstance name="ShowMessage">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="ShowTutoralMessage">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Light" data="EProjectedTextLight_2" InUnrealActors="1"/>
+            <ParameterInstance name="Light2" data="EProjectedTextLight_4" InUnrealActors="1"/>
+            <ParameterInstance name="Light3"/>
+            <ParameterInstance name="Light4"/>
+            <ParameterInstance name="Light5"/>
+            <ParameterInstance name="Light6"/>
+            <ParameterInstance name="Light7"/>
+            <ParameterInstance name="AlwaysShowLocators">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_1" entity="Repository::O_Obj_Manager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="ObjectiveAddLocator">
+            <ParameterInstance name="ObjectiveManager" data="Repository::O_Obj_Manager"/>
+            <ParameterInstance name="sObjective" data="Repository::Obj_04"/>
+            <ParameterInstance name="Actor" data="GI_NonInteractiveDynActor_46" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_2" entity="Repository::Sequences::M05_WasMo_se110_Text_MCMB">
+        <Event name="NewEvent" start="0.900000" end="-1.000000">
+          <CommandInstance name="StartSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::M05_WasMo_se110_Text_MCMB"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_7" entity="EAINsa_27" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="EnableNPC">
+            <ParameterInstance name="AI" data="EAINsa_27" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_8" entity="Repository::Sequences::Radio_Comm110">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StartSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::Radio_Comm110"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_20" entity="Repository::O_Sam_Character">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerMarkForceSlotMax">
+            <ParameterInstance name="Character" data="Repository::O_Sam_Character"/>
+            <ParameterInstance name="MaxSlotNbr">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="-1.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="GI_Door_Metal_4" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="UnlockDoor">
+            <ParameterInstance name="TheDoor" data="GI_Door_Metal_4" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Spotters Start" first="1" x="7.000000" y="63.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="StaticMeshActor_457" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="StaticMeshActor_457" InUnrealActors="1"/>
+            <ParameterInstance name="PhysType"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="Repository::O_Sam_Character">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::O_Sam_Character"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressRightShoulder"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_1" entity="Repository::O_Sam_Character">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::O_Sam_Character"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_HoldRightShoulder"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Spotters death" first="1" x="6.000000" y="128.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <Task name="Check Success" x="417.000000" y="297.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_15" entity="Repository::FlashManager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibility">
+            <ParameterInstance name="FlashEventManager" data="Repository::FlashManager"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_SearchAndInterrogate"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_14" entity="Repository::O_Sam_Character">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableSearchAndInterrogateGameplay">
+            <ParameterInstance name="Character" data="Repository::O_Sam_Character"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::O_Obj_Manager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="ObjectiveComplete">
+            <ParameterInstance name="ObjectiveManager" data="Repository::O_Obj_Manager"/>
+            <ParameterInstance name="sObjective" data="Repository::Obj_03"/>
+            <ParameterInstance name="ShowMessage">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="ShowTutoral">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="ESaveTriggerVolume_8" InUnrealActors="1">
+        <Event name="NewEvent" end="0.100000" condition="1">
+          <CommandInstance name="Move" duration="0.100000">
+            <ParameterInstance name="Object" data="ESaveTriggerVolume_8" InUnrealActors="1"/>
+            <ParameterInstance name="Target" data="ETarget_21" InUnrealActors="1"/>
+            <ParameterInstance name="UseFinalPosition">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_1" entity="Repository::Sequences::Spotters_Deaths_CP">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StopSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::Spotters_Deaths_CP"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_2" entity="Repository::Sequences::SpotterChecker">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StopSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::SpotterChecker"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_3" entity="Repository::Sequences::Spotter_NoSam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StopSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::Spotter_NoSam"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_12" entity="Repository::O_Sam_Character">
+        <Event name="NewEvent" start="2.000000" end="-1.000000" indeterminate="1">
+          <CommandInstance name="PlayerForceStanding">
+            <ParameterInstance name="Character" data="Repository::O_Sam_Character"/>
+            <ParameterInstance name="bCrouch">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bStopCoverDetection">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="bResetCoverExitStatus">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="bTurnOffGoggles">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="bGunDownMode">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="bGunUpMode">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisablePickUp">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="bZoomOut">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisableZoom">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisableAllButton">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisableMovement">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDrawWeapon">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDrawPrimary">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bHolsterWeapon">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="bKillHumanShield">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="bInvincible">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="bUnMarkAll">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="bRemoveLightAndShadowFilter">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisableRun">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="bHideLKP">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisableStickyCAMUse">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="bNoAnimWithWeapon">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="fLightAndShadowFadeTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.300000"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisableSamThought">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_13" entity="Repository::O_Sam_Character">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::O_Sam_Character"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressRightShoulder"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete" start="Check Success" true="Meet Coste" sequence="01_Map_start">
+    <vertices>
+      <vertex x="467.000000" y="322.000000"/>
+      <vertex x="548.000000" y="323.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Decrement" x="206.000000" y="127.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::Spotters_deaths">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Decrement">
+            <ParameterInstance name="value" data="Repository::Spotters_deaths"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="GI_Gun_Pistol_FMP8_2" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="GI_Gun_Pistol_FMP8_2" InUnrealActors="1"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_1" entity="Repository::Spotter 1-3">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="increment">
+            <ParameterInstance name="value" data="Repository::Spotter 1-3"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_2" entity="Repository::Spotter 1-2">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="increment">
+            <ParameterInstance name="value" data="Repository::Spotter 1-2"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_4" entity="StaticMeshActor_29" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="StaticMeshActor_29" InUnrealActors="1"/>
+            <ParameterInstance name="PhysType"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_5" entity="StaticMeshActor_94" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="StaticMeshActor_94" InUnrealActors="1"/>
+            <ParameterInstance name="PhysType"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_0" start="Spotters death" true="Decrement" data="EAIManInBlack_0" InUnrealActors="1">
+    <ExternalEventInstance name="PAWN_DEAD" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Instigator" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="56.000000" y="153.000000"/>
+      <vertex x="206.000000" y="152.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Start" first="1" x="11.000000" y="2.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_1" entity="Repository::O_Sam_Character">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="ShowBackPack">
+            <ParameterInstance name="Character" data="Repository::O_Sam_Character"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="ETriggerVolume_10" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="ETriggerVolume_10" InUnrealActors="1"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="PhysType"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_3" entity="Repository::Sequences::Crowdspawners_Phase1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StartSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::Crowdspawners_Phase1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_2" entity="Repository::List_CrowdSpawners_RestoInterro">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="APoint_Activate">
+            <ParameterInstance name="AttractionPoint" data="Repository::List_CrowdSpawners_RestoInterro"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_4" entity="Repository::List_Crowdspawners_interrofun">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="APoint_Activate">
+            <ParameterInstance name="AttractionPoint" data="Repository::List_Crowdspawners_interrofun"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_5" entity="Repository::List_CrowdSpawners_InterroBumper">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="APoint_Activate">
+            <ParameterInstance name="AttractionPoint" data="Repository::List_CrowdSpawners_InterroBumper"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_6" entity="Repository::List_CrowdSpawners_Foodcourt">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="APoint_Activate">
+            <ParameterInstance name="AttractionPoint" data="Repository::List_CrowdSpawners_Foodcourt"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Actors Off" first="1" x="136.000000" y="63.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_33" entity="Repository::List_Car_frames">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="Repository::List_Car_frames"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_3" entity="Repository::List_blockerspole">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="Repository::List_blockerspole"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="PhysType"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_5" entity="Repository::List_lights_chaos">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetLightOn">
+            <ParameterInstance name="Light" data="Repository::List_lights_chaos"/>
+            <ParameterInstance name="On">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Flicker">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_9" entity="Repository::List_projectedlights">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetLightOn">
+            <ParameterInstance name="Light" data="Repository::List_projectedlights"/>
+            <ParameterInstance name="On">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Flicker">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_10" entity="Repository::List_endprops">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="Repository::List_endprops"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_11" entity="Repository::List_booth_2ndlayer">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="Repository::List_booth_2ndlayer"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_14" entity="Repository::O_Sam_Pawn">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetBase">
+            <ParameterInstance name="ActorToBase" data="Repository::O_Sam_Pawn"/>
+            <ParameterInstance name="BaseOn" data="ETarget_46" InUnrealActors="1"/>
+            <ParameterInstance name="Active">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_17" entity="ELight_77" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetLightOn">
+            <ParameterInstance name="Light" data="ELight_77" InUnrealActors="1"/>
+            <ParameterInstance name="On">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Flicker">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_18" entity="EZoneInfo_33" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="ZoneDeactivate">
+            <ParameterInstance name="Zone" data="EZoneInfo_33" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="Repository::List_Chaoslayer01">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="Repository::List_Chaoslayer01"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_19" entity="Repository::List_Chaoslayer02">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="Repository::List_Chaoslayer02"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_20" entity="Repository::List_chaoscovers_01">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="Repository::List_chaoscovers_01"/>
+            <ParameterInstance name="PhysType"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_21" entity="Repository::List_chaoscovers_01">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="DisableActorGEOs">
+            <ParameterInstance name="Actor" data="Repository::List_chaoscovers_01"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_22" entity="Repository::List_RestoChaosLayer">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="Repository::List_RestoChaosLayer"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_23" entity="Repository::List_chaoscovers_02">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="DisableActorGEOs">
+            <ParameterInstance name="Actor" data="Repository::List_chaoscovers_02"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_24" entity="Repository::List_chaoscovers_02">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="Repository::List_chaoscovers_02"/>
+            <ParameterInstance name="PhysType"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_25" entity="Repository::List_Chaoslayer03">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="Repository::List_Chaoslayer03"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_26" entity="Repository::List_covers_carroussel">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="DisableActorGEOs">
+            <ParameterInstance name="Actor" data="Repository::List_covers_carroussel"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::List_Checkpoint_3dTexts">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetLightOn">
+            <ParameterInstance name="Light" data="Repository::List_Checkpoint_3dTexts"/>
+            <ParameterInstance name="On">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Flicker">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_27" entity="Repository::List_particles_fireman">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="ParticleSpawnerDisable">
+            <ParameterInstance name="ParticleSpawner" data="Repository::List_particles_fireman"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_31" entity="ESBCustomActor_2" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="ESBCustomActor_2" InUnrealActors="1"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_32" entity="VegetationActor_394" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="VegetationActor_394" InUnrealActors="1"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_34" entity="EProjectedTextLight_7" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetLightOn">
+            <ParameterInstance name="Light" data="EProjectedTextLight_7" InUnrealActors="1"/>
+            <ParameterInstance name="On">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Flicker">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_35" entity="SM_GenBoothCounterA_02_157" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="SM_GenBoothCounterA_02_157" InUnrealActors="1"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_36" entity="EProjectedTextLight_8" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetLightOn">
+            <ParameterInstance name="Light" data="EProjectedTextLight_8" InUnrealActors="1"/>
+            <ParameterInstance name="On">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Flicker">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_37" entity="EProjectedTextLight_9" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetLightOn">
+            <ParameterInstance name="Light" data="EProjectedTextLight_9" InUnrealActors="1"/>
+            <ParameterInstance name="On">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Flicker">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Spotters death_0" first="1" x="6.000000" y="182.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <Task name="Assign Sam Ref" first="1" x="322.000000" y="62.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::Sam_Ref">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Assign">
+            <ParameterInstance name="Left" data="Repository::Sam_Ref"/>
+            <ParameterInstance name="Right" data="Repository::O_Sam_Character"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Assign AIM" first="1" x="74.000000" y="64.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::AIManager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Assign">
+            <ParameterInstance name="Left" data="Repository::AIManager"/>
+            <ParameterInstance name="Right" data="Repository::AImanager1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Assign Spotters" first="1" x="260.000000" y="62.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::Spotter01">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Assign">
+            <ParameterInstance name="Left" data="Repository::Spotter01"/>
+            <ParameterInstance name="Right" data="EAIManInBlack_0" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="Repository::Spotter02">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Assign">
+            <ParameterInstance name="Left" data="Repository::Spotter02"/>
+            <ParameterInstance name="Right" data="EAIManInBlack_1" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_1" entity="Repository::Spotter03">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Assign">
+            <ParameterInstance name="Left" data="Repository::Spotter03"/>
+            <ParameterInstance name="Right" data="EAIManInBlack_4" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Kill Check" first="1" x="8.000000" y="298.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyCommand name="NewDependencyCommand" start="Kill Check" true="Give time for Player release">
+    <CommandInstance name="EqualNumber">
+      <ParameterInstance name="Left" data="Repository::Spotters_deaths"/>
+      <ParameterInstance name="Right">
+        <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+      </ParameterInstance>
+    </CommandInstance>
+    <vertices>
+      <vertex x="58.000000" y="323.000000"/>
+      <vertex x="266.000000" y="325.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyCommand>
+  <Task name="narrative walk" x="180.000000" y="0.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_1" entity="Repository::O_Sam_Character">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableAllButtons">
+            <ParameterInstance name="Character" data="Repository::O_Sam_Character"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisableTick">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_3" entity="Repository::O_Sam_Character">
+        <Event name="NewEvent" start="0.100000" end="-1.000000">
+          <CommandInstance name="PlayerDisableRun">
+            <ParameterInstance name="Character" data="Repository::O_Sam_Character"/>
+            <ParameterInstance name="DisableRun">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_4" entity="Repository::O_Sam_Character">
+        <Event name="NewEvent" start="0.100000" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::O_Sam_Character"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_Movement"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_11" entity="Repository::O_Sam_Character">
+        <Event name="NewEvent" start="0.100000" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::O_Sam_Character"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_ReleaseLeftTrigger"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_12" entity="Repository::O_Sam_Character">
+        <Event name="NewEvent" start="0.100000" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::O_Sam_Character"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressLeftTrigger"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_5" entity="Repository::O_Sam_Character" ignore="1">
+        <Event name="NewEvent_1" end="-1.000000">
+          <CommandInstance name="SetLightAndShadowFilter">
+            <ParameterInstance name="Character" data="Repository::O_Sam_Character"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="FadeTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.300000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Spotters death_1" first="1" x="7.000000" y="238.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <Task name="Decrement 3" x="207.000000" y="239.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::Spotters_deaths">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Decrement">
+            <ParameterInstance name="value" data="Repository::Spotters_deaths"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="GI_Gun_Pistol_FMP8_6" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="GI_Gun_Pistol_FMP8_6" InUnrealActors="1"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_1" entity="Repository::Spotter 1-3">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="increment">
+            <ParameterInstance name="value" data="Repository::Spotter 1-3"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_2" entity="Repository::Spotter 2-3">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="increment">
+            <ParameterInstance name="value" data="Repository::Spotter 2-3"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_4" entity="StaticMeshActor_29" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="StaticMeshActor_29" InUnrealActors="1"/>
+            <ParameterInstance name="PhysType"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_5" entity="StaticMeshActor_94" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="StaticMeshActor_94" InUnrealActors="1"/>
+            <ParameterInstance name="PhysType"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_16" start="Spotters death_1" true="Decrement 3" data="EAIManInBlack_4" InUnrealActors="1">
+    <ExternalEventInstance name="PAWN_DEAD" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Instigator" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="57.000000" y="263.000000"/>
+      <vertex x="207.000000" y="264.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Stop Seq 01" x="364.000000" y="411.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_0" entity="Repository::Sequences::Crowdspawners_Phase1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StopSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::Crowdspawners_Phase1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::Sequences::01_Map_start">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StopSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::01_Map_start"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_41" entity="Repository::O_Sam_Character" ignore="1">
+        <Event name="NewEvent_1" end="-1.000000">
+          <CommandInstance name="PlayerEnableAllButtons">
+            <ParameterInstance name="Character" data="Repository::O_Sam_Character"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisableTick">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+        <Event name="NewEvent" start="0.050000" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::O_Sam_Character"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_Movement"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+        <Event name="NewEvent_0" start="85.000000" end="-1.000000" ignore="1">
+          <CommandInstance name="PlayerEnableAllButtons">
+            <ParameterInstance name="Character" data="Repository::O_Sam_Character"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisableTick">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_12" start="Start meeting" true="Stop Seq 01" sequence="01_Map_start">
+    <vertices>
+      <vertex x="274.000000" y="436.000000"/>
+      <vertex x="364.000000" y="436.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Decrement_0" x="206.000000" y="182.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::Spotters_deaths">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Decrement">
+            <ParameterInstance name="value" data="Repository::Spotters_deaths"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="GI_Gun_Pistol_FMP8_4" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="GI_Gun_Pistol_FMP8_4" InUnrealActors="1"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_1" entity="Repository::Spotter 2-3">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="increment">
+            <ParameterInstance name="value" data="Repository::Spotter 2-3"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_2" entity="Repository::Spotter 1-2">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="increment">
+            <ParameterInstance name="value" data="Repository::Spotter 1-2"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_4" entity="StaticMeshActor_29" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="StaticMeshActor_29" InUnrealActors="1"/>
+            <ParameterInstance name="PhysType"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_5" entity="StaticMeshActor_94" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="StaticMeshActor_94" InUnrealActors="1"/>
+            <ParameterInstance name="PhysType"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_23" start="Spotters death_0" true="Decrement_0" data="EAIManInBlack_1" InUnrealActors="1">
+    <ExternalEventInstance name="PAWN_DEAD" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Instigator" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="56.000000" y="207.000000"/>
+      <vertex x="206.000000" y="207.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="NewTask_0" first="1" x="334.000000" y="184.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <Task name="NewTask_1" first="1" x="333.000000" y="129.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <Task name="One Spotter Dead" x="559.000000" y="130.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_0" entity="Repository::O_Obj_Manager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="ObjectiveComplete">
+            <ParameterInstance name="ObjectiveManager" data="Repository::O_Obj_Manager"/>
+            <ParameterInstance name="sObjective" data="Repository::Obj_01"/>
+            <ParameterInstance name="ShowMessage">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="ShowTutoral">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::O_Obj_Manager">
+        <Event name="NewEvent" start="1.000000" end="-1.000000">
+          <CommandInstance name="ObjectiveAddPrimary">
+            <ParameterInstance name="ObjectiveManager" data="Repository::O_Obj_Manager"/>
+            <ParameterInstance name="Light" data="EProjectedTextLight_0" InUnrealActors="1"/>
+            <ParameterInstance name="Light2"/>
+            <ParameterInstance name="Light3"/>
+            <ParameterInstance name="Light4"/>
+            <ParameterInstance name="Light5"/>
+            <ParameterInstance name="Light6"/>
+            <ParameterInstance name="Light7"/>
+            <ParameterInstance name="sObjective" data="Repository::Obj_02"/>
+            <ParameterInstance name="ShowMessage">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="ShowTutoralMessage">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="AlwaysShowLocators">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Two Spotters Dead" x="559.000000" y="186.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_0" entity="Repository::O_Obj_Manager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="ObjectiveComplete">
+            <ParameterInstance name="ObjectiveManager" data="Repository::O_Obj_Manager"/>
+            <ParameterInstance name="sObjective" data="Repository::Obj_02"/>
+            <ParameterInstance name="ShowMessage">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="ShowTutoral">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::O_Obj_Manager">
+        <Event name="NewEvent" start="1.000000" end="-1.000000">
+          <CommandInstance name="ObjectiveAddPrimary">
+            <ParameterInstance name="ObjectiveManager" data="Repository::O_Obj_Manager"/>
+            <ParameterInstance name="Light" data="EProjectedTextLight_0" InUnrealActors="1"/>
+            <ParameterInstance name="Light2"/>
+            <ParameterInstance name="Light3"/>
+            <ParameterInstance name="Light4"/>
+            <ParameterInstance name="Light5"/>
+            <ParameterInstance name="Light6"/>
+            <ParameterInstance name="Light7"/>
+            <ParameterInstance name="sObjective" data="Repository::Obj_03"/>
+            <ParameterInstance name="ShowMessage">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="ShowTutoralMessage">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="AlwaysShowLocators">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyCommand name="NewDependencyCommand_0" start="NewTask_1" true="One Spotter Dead">
+    <CommandInstance name="EqualNumber">
+      <ParameterInstance name="Left">
+        <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="2.000000"/>
+      </ParameterInstance>
+      <ParameterInstance name="Right" data="Repository::Spotters_deaths"/>
+    </CommandInstance>
+    <vertices>
+      <vertex x="383.000000" y="154.000000"/>
+      <vertex x="559.000000" y="155.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyCommand>
+  <DependencyCommand name="NewDependencyCommand_1" start="NewTask_0" true="Two Spotters Dead">
+    <CommandInstance name="EqualNumber">
+      <ParameterInstance name="Left">
+        <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="1.000000"/>
+      </ParameterInstance>
+      <ParameterInstance name="Right" data="Repository::Spotters_deaths"/>
+    </CommandInstance>
+    <vertices>
+      <vertex x="384.000000" y="209.000000"/>
+      <vertex x="559.000000" y="211.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyCommand>
+  <Task name="Rides Start" first="1" x="380.000000" y="63.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_0" entity="Repository::Sequences::RideAnims_FerrisWheel">
+        <Event name="NewEvent" start="0.100000" end="-1.000000">
+          <CommandInstance name="StartSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::RideAnims_FerrisWheel"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_1" entity="Repository::Sequences::RideAnims_PirateBoat">
+        <Event name="NewEvent" start="0.200000" end="-1.000000">
+          <CommandInstance name="StartSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::RideAnims_PirateBoat"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_2" entity="Repository::Sequences::RideAnims_SpaceExplorer">
+        <Event name="NewEvent" start="0.300000" end="-1.000000">
+          <CommandInstance name="StartSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::RideAnims_SpaceExplorer"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_4" entity="Repository::Sequences::RideAnims_GravityRing">
+        <Event name="NewEvent" start="0.400000" end="-1.000000">
+          <CommandInstance name="StartSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::RideAnims_GravityRing"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_3" entity="Repository::Sequences::RideAnims_Zipper">
+        <Event name="NewEvent" start="0.500000" end="-1.000000">
+          <CommandInstance name="StartSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::RideAnims_Zipper"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::Sequences::RideAnims_Carousel">
+        <Event name="NewEvent" start="0.600000" end="-1.000000">
+          <CommandInstance name="StartSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::RideAnims_Carousel"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Prep Interro 1" x="1016.000000" y="204.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::Sequences::M05_WasMo_se033_Inter_01">
+        <Event name="NewEvent" end="-1.000000" indeterminate="1">
+          <CommandInstance name="PlaySequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::M05_WasMo_se033_Inter_01"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Prep Interro 2" x="1258.000000" y="205.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::Sequences::M05_WasMo_se034_Inter_02">
+        <Event name="NewEvent" end="-1.000000" indeterminate="1">
+          <CommandInstance name="PlaySequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::M05_WasMo_se034_Inter_02"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Prep Interro 3" x="1510.000000" y="205.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::Sequences::M05_WasMo_se033_Inter_03">
+        <Event name="NewEvent" end="-1.000000" indeterminate="1">
+          <CommandInstance name="PlaySequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::M05_WasMo_se033_Inter_03"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_13" start="Prep Interro 1" true="Prep Interro 2" sequence="01_Map_start">
+    <vertices>
+      <vertex x="1066.000000" y="229.000000"/>
+      <vertex x="1258.000000" y="230.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyComplete name="NewDependencyComplete_14" start="Prep Interro 2" true="Prep Interro 3" sequence="01_Map_start">
+    <vertices>
+      <vertex x="1308.000000" y="230.000000"/>
+      <vertex x="1510.000000" y="230.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Start Interro System" first="1" x="743.000000" y="93.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyCommand name="NewDependencyCommand_2" start="Start Interro System" true="Prep Interro 1" false="Skip 1">
+    <CommandInstance name="LessThan">
+      <ParameterInstance name="Left" data="Repository::GetCPID"/>
+      <ParameterInstance name="Right">
+        <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="1.000000"/>
+      </ParameterInstance>
+    </CommandInstance>
+    <vertices>
+      <vertex x="793.000000" y="118.000000"/>
+      <vertex x="1016.000000" y="229.000000"/>
+      <vertex x="977.000000" y="123.000000"/>
+      <vertex x="942.125000" y="122.625000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="3" vertex2="1"/>
+      <segment type="1" vertex1="3" vertex2="2"/>
+      <segment type="2" vertex1="0" vertex2="3"/>
+    </segments>
+  </DependencyCommand>
+  <Task name="Skip 1" x="977.000000" y="98.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyCommand name="NewDependencyCommand_3" start="Skip 1" true="Prep Interro 2" false="Skip 2">
+    <CommandInstance name="LessThan">
+      <ParameterInstance name="Left" data="Repository::GetCPID"/>
+      <ParameterInstance name="Right">
+        <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="4.000000"/>
+      </ParameterInstance>
+    </CommandInstance>
+    <vertices>
+      <vertex x="1027.000000" y="123.000000"/>
+      <vertex x="1258.000000" y="230.000000"/>
+      <vertex x="1215.000000" y="124.000000"/>
+      <vertex x="1176.375000" y="124.375000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="3" vertex2="1"/>
+      <segment type="1" vertex1="3" vertex2="2"/>
+      <segment type="2" vertex1="0" vertex2="3"/>
+    </segments>
+  </DependencyCommand>
+  <Task name="Skip 2" x="1215.000000" y="99.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyCommand name="NewDependencyCommand_4" start="Skip 2" true="Prep Interro 3" false="Skip All">
+    <CommandInstance name="LessThan">
+      <ParameterInstance name="Left" data="Repository::GetCPID"/>
+      <ParameterInstance name="Right">
+        <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="7.000000"/>
+      </ParameterInstance>
+    </CommandInstance>
+    <vertices>
+      <vertex x="1265.000000" y="124.000000"/>
+      <vertex x="1510.000000" y="230.000000"/>
+      <vertex x="1473.000000" y="127.000000"/>
+      <vertex x="1425.625000" y="127.375000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="3" vertex2="1"/>
+      <segment type="1" vertex1="3" vertex2="2"/>
+      <segment type="2" vertex1="0" vertex2="3"/>
+    </segments>
+  </DependencyCommand>
+  <Task name="Skip All" x="1473.000000" y="102.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <Task name="Loop Animation" first="1" x="443.000000" y="64.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::Sequences::Play_Loop_Animation">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StartSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::Play_Loop_Animation"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Give time for Player release" x="266.000000" y="300.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::O_Sam_Character">
+        <Event name="NewEvent" end="3.000000" condition="1">
+          <CommandInstance name="Wait" duration="3.000000">
+            <ParameterInstance name="Data" data="Repository::O_Sam_Character"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_15" start="Give time for Player release" true="Check Success" sequence="01_Map_start">
+    <vertices>
+      <vertex x="316.000000" y="325.000000"/>
+      <vertex x="417.000000" y="322.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="FireWorkSound" first="1" x="555.000000" y="412.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_19" entity="Repository::Cam01">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="InstantPlaySound">
+            <ParameterInstance name="Actor" data="Repository::Cam01"/>
+            <ParameterInstance name="Sound" data="Play_sfx_s2_FireWorks" InUnrealSounds="1"/>
+            <ParameterInstance name="Flag" data="Repository::Unreal::enums::ESoundSlot::SLOT_SFXNoOcc"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Loop" x="751.000000" y="413.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_19" entity="Repository::Cam01">
+        <Event name="NewEvent" end="4.500000" condition="1">
+          <CommandInstance name="Wait" duration="4.500000">
+            <ParameterInstance name="Data" data="Repository::Cam01"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_16" start="FireWorkSound" true="Loop" sequence="01_Map_start">
+    <vertices>
+      <vertex x="605.000000" y="437.000000"/>
+      <vertex x="751.000000" y="438.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyComplete name="NewDependencyComplete_17" start="Loop" true="FireWorkSound" sequence="01_Map_start">
+    <vertices>
+      <vertex x="801.000000" y="438.000000"/>
+      <vertex x="555.000000" y="437.000000"/>
+      <vertex x="855.000000" y="510.000000"/>
+      <vertex x="519.000000" y="511.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="2"/>
+      <segment type="0" vertex1="2" vertex2="3"/>
+      <segment type="0" vertex1="3" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Start ride sounds" first="1" x="507.000000" y="65.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="ESoundTrigger_17" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="InstantPlaySound">
+            <ParameterInstance name="Actor" data="ESoundTrigger_17" InUnrealActors="1"/>
+            <ParameterInstance name="Sound" data="Play_AMB_WashingtonMonument_Zipper" InUnrealSounds="1"/>
+            <ParameterInstance name="Flag" data="Repository::Unreal::enums::ESoundSlot::SLOT_SFX"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="ESoundTrigger_12" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="InstantPlaySound">
+            <ParameterInstance name="Actor" data="ESoundTrigger_12" InUnrealActors="1"/>
+            <ParameterInstance name="Sound" data="Play_AMB_WashingtonMonument_FerrisWheel" InUnrealSounds="1"/>
+            <ParameterInstance name="Flag" data="Repository::Unreal::enums::ESoundSlot::SLOT_SFX"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_1" entity="ESoundTrigger_15" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="InstantPlaySound">
+            <ParameterInstance name="Actor" data="ESoundTrigger_15" InUnrealActors="1"/>
+            <ParameterInstance name="Sound" data="Play_AMB_WashingtonMonument_PirateBoat" InUnrealSounds="1"/>
+            <ParameterInstance name="Flag" data="Repository::Unreal::enums::ESoundSlot::SLOT_SFX"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_2" entity="ESoundTrigger_9" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="InstantPlaySound">
+            <ParameterInstance name="Actor" data="ESoundTrigger_9" InUnrealActors="1"/>
+            <ParameterInstance name="Sound" data="Play_AMB_WashingtonMonument_caroussel" InUnrealSounds="1"/>
+            <ParameterInstance name="Flag" data="Repository::Unreal::enums::ESoundSlot::SLOT_SFX"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_3" entity="ESoundTrigger_19" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="InstantPlaySound">
+            <ParameterInstance name="Actor" data="ESoundTrigger_19" InUnrealActors="1"/>
+            <ParameterInstance name="Sound" data="Play_AMB_WashingtonMonument_SpaceWheel" InUnrealSounds="1"/>
+            <ParameterInstance name="Flag" data="Repository::Unreal::enums::ESoundSlot::SLOT_SFX"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_18" start="Start" true="narrative walk" sequence="01_Map_start">
+    <vertices>
+      <vertex x="61.000000" y="27.000000"/>
+      <vertex x="180.000000" y="25.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+</Sequence>

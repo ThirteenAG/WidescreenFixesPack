@@ -1,0 +1,2043 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Sequence name="se210_Inter_InterKobin">
+  <Task name="Watch For Bash" x="384.000000" y="538.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Enable Player Actions" entity="Repository::Ref_Character_Sam_2">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableActions">
+            <ParameterInstance name="Character" data="Repository::Ref_Character_Sam_2"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::O_Sam_Pawn_2">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerInterrogateAnswerDone">
+            <ParameterInstance name="dummy" data="Repository::O_Sam_Pawn_2"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Wait For Move Complete" x="943.000000" y="534.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::O_Sam_Pawn_2">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerInterrogateAnswerBegin">
+            <ParameterInstance name="dummy" data="Repository::O_Sam_Pawn_2"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Return Q1" x="1678.000000" y="539.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Increment Number Value" entity="Repository::Num_Inter_Kobin_Anwers">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="increment">
+            <ParameterInstance name="value" data="Repository::Num_Inter_Kobin_Anwers"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Answer 1" x="1518.000000" y="534.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Kobin Talks" entity="EAINsa_26" InUnrealActors="1">
+        <Event name="NewEvent" start="0.020000" end="6.176604">
+          <CommandInstance name="SetDialog" duration="6.156604">
+            <ParameterInstance name="CharacterOasis" data="EAINsa_26" InUnrealActors="1"/>
+            <ParameterInstance name="DialogOasis" data="Repository::Unreal::Oasis::Map02 MUSEUM::SE210_INTR::10168::38521"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="FadeOutTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayIncomingSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="HideSubtitle">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayOnlyOnLocalPlayer">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+        <Event name="NewEvent_0" start="10.180000" end="15.047251">
+          <CommandInstance name="SetDialog" duration="4.867250">
+            <ParameterInstance name="CharacterOasis" data="EAINsa_26" InUnrealActors="1"/>
+            <ParameterInstance name="DialogOasis" data="Repository::Unreal::Oasis::Map02 MUSEUM::SE210_INTR::10168::38524"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="FadeOutTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayIncomingSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="HideSubtitle">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayOnlyOnLocalPlayer">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Sam Talks " entity="Repository::O_Sam_Pawn_2">
+        <Event name="NewEvent" start="5.840000" end="10.441313">
+          <CommandInstance name="SetDialog" duration="4.601313">
+            <ParameterInstance name="CharacterOasis" data="Repository::O_Sam_Pawn_2"/>
+            <ParameterInstance name="DialogOasis" data="Repository::Unreal::Oasis::Map02 MUSEUM::SE210_INTR::10168::38523"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="FadeOutTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayIncomingSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="HideSubtitle">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayOnlyOnLocalPlayer">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Kobin Talks_0" entity="EAINsa_26" InUnrealActors="1">
+        <Event name="NewEvent" start="0.020000" end="-1.000000" indeterminate="1">
+          <CommandInstance name="PlayFacialAnim">
+            <ParameterInstance name="EPawn" data="EAINsa_26" InUnrealActors="1"/>
+            <ParameterInstance name="FacialPkgName" data="FaceFx_Kobin.Kobin" InUnrealFacialPkg="1"/>
+            <ParameterInstance name="AnimGroup">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="M02"/>
+            </ParameterInstance>
+            <ParameterInstance name="AnimName">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="VO_M02_MUSEM_SE210_INTR01_04KOBIN"/>
+            </ParameterInstance>
+            <ParameterInstance name="BlendTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.300000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+        <Event name="NewEvent_0" start="10.180000" end="-1.000000" indeterminate="1">
+          <CommandInstance name="PlayFacialAnim">
+            <ParameterInstance name="EPawn" data="EAINsa_26" InUnrealActors="1"/>
+            <ParameterInstance name="FacialPkgName" data="FaceFx_Kobin.Kobin" InUnrealFacialPkg="1"/>
+            <ParameterInstance name="AnimGroup">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="M02"/>
+            </ParameterInstance>
+            <ParameterInstance name="AnimName">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="VO_M02_MUSEM_SE210_INTR01_06KOBIN"/>
+            </ParameterInstance>
+            <ParameterInstance name="BlendTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.300000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Kobin Talks_1" entity="Repository::O_Sam_Pawn_2">
+        <Event name="NewEvent" start="5.840000" end="10.406406">
+          <CommandInstance name="PlayFacialAnim" duration="4.566406">
+            <ParameterInstance name="EPawn" data="Repository::O_Sam_Pawn_2"/>
+            <ParameterInstance name="FacialPkgName" data="FaceFx_Sam.Sam" InUnrealFacialPkg="1"/>
+            <ParameterInstance name="AnimGroup">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="M_02"/>
+            </ParameterInstance>
+            <ParameterInstance name="AnimName">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="VO_M02_MUSEM_SE210_INTR01_05SAM"/>
+            </ParameterInstance>
+            <ParameterInstance name="BlendTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.300000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Wait for finish" x="681.000000" y="541.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Stop Player Actions" entity="Repository::Ref_Character_Sam_2">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableActions">
+            <ParameterInstance name="Character" data="Repository::Ref_Character_Sam_2"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent" start="Watch For Bash" true="Wait for finish" data="Repository::Ref_Character_Sam_2">
+    <ExternalEventInstance name="INTERROGATE_MOVE_BEGIN" data=""/>
+    <vertices>
+      <vertex x="434.000000" y="563.000000"/>
+      <vertex x="681.000000" y="566.000000"/>
+      <vertex x="633.000000" y="691.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="2"/>
+      <segment type="0" vertex1="2" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <DependencyEvent name="NewDependencyEvent_17" start="Wait for finish" true="Wait For Move Complete" data="Repository::Ref_Character_Sam_2">
+    <ExternalEventInstance name="INTERROGATE_MOVE_END" data=""/>
+    <vertices>
+      <vertex x="731.000000" y="566.000000"/>
+      <vertex x="943.000000" y="559.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <DependencyComplete name="NewDependencyComplete_0" start="Answer 1" true="Return Q1" sequence="se210_Inter_InterKobin">
+    <vertices>
+      <vertex x="1568.000000" y="559.000000"/>
+      <vertex x="1678.000000" y="564.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyComplete name="NewDependencyComplete_1" start="Return Q1" true="Watch For Bash" sequence="se210_Inter_InterKobin">
+    <vertices>
+      <vertex x="1728.000000" y="564.000000"/>
+      <vertex x="384.000000" y="563.000000"/>
+      <vertex x="384.000000" y="755.000000"/>
+      <vertex x="1730.000000" y="755.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="3"/>
+      <segment type="0" vertex1="3" vertex2="2"/>
+      <segment type="0" vertex1="2" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyEvent name="NewDependencyEvent_26" start="Watch For Bash" true="Wait for finish" data="Repository::List_se210_Inter_Kobin_Hotspots_A">
+    <ExternalEventInstance name="INTERROGATE_MOVE_BEGIN" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="NPC" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="434.000000" y="563.000000"/>
+      <vertex x="681.000000" y="566.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Stop Seq" x="4183.000000" y="461.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::Sequences::se210_Inter_InterKobin">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StopSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::se210_Inter_InterKobin"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyExecuteState name="NewDependencyExecuteState" start="Watch For Bash" true="Hotspot Bash" data="Repository::Sequences::Debug_SkipInterro" execState="Definitions::ExecuteStates::Completed">
+    <vertices>
+      <vertex x="434.000000" y="563.000000"/>
+      <vertex x="1599.000000" y="299.000000"/>
+      <vertex x="718.000000" y="102.000000"/>
+      <vertex x="1583.000000" y="181.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="2"/>
+      <segment type="0" vertex1="2" vertex2="3"/>
+      <segment type="0" vertex1="3" vertex2="1"/>
+    </segments>
+  </DependencyExecuteState>
+  <Task name="Intro Question" first="1" x="22.000000" y="537.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="EAINsa_26" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetInvincible">
+            <ParameterInstance name="Pawn" data="EAINsa_26" InUnrealActors="1"/>
+            <ParameterInstance name="Invincible">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="EAINsa_26" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="NpcAssignSet">
+            <ParameterInstance name="AI" data="EAINsa_26" InUnrealActors="1"/>
+            <ParameterInstance name="Set">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="None"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_1" entity="EAINsa_26" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="NpcSetResponsive">
+            <ParameterInstance name="AI" data="EAINsa_26" InUnrealActors="1"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Enable Player Actions" entity="Repository::Ref_Character_Sam_2">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableActions">
+            <ParameterInstance name="Character" data="Repository::Ref_Character_Sam_2"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Sam Talks" entity="Repository::O_Sam_Pawn_2">
+        <Event name="Tell me what i need to know " start="1.040000" end="6.025291">
+          <CommandInstance name="SetDialog" duration="4.985291">
+            <ParameterInstance name="CharacterOasis" data="Repository::O_Sam_Pawn_2"/>
+            <ParameterInstance name="DialogOasis" data="Repository::Unreal::Oasis::Map02 MUSEUM::SE210_INTR::10168::79536"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="FadeOutTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayIncomingSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="HideSubtitle">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayOnlyOnLocalPlayer">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+        <Event name="Wrong Answer" start="13.780000" end="18.191458">
+          <CommandInstance name="SetDialog" duration="4.411458">
+            <ParameterInstance name="CharacterOasis" data="Repository::O_Sam_Pawn_2"/>
+            <ParameterInstance name="DialogOasis" data="Repository::Unreal::Oasis::Map02 MUSEUM::SE210_INTR::10168::38520"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="FadeOutTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayIncomingSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="HideSubtitle">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayOnlyOnLocalPlayer">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Kobin Talks" entity="EAINsa_26" InUnrealActors="1">
+        <Event name="Ive got nothing to say" start="5.400000" end="14.158396">
+          <CommandInstance name="SetDialog" duration="8.758396">
+            <ParameterInstance name="CharacterOasis" data="EAINsa_26" InUnrealActors="1"/>
+            <ParameterInstance name="DialogOasis" data="Repository::Unreal::Oasis::Map02 MUSEUM::SE210_INTR::10168::79537"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="FadeOutTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayIncomingSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="HideSubtitle">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayOnlyOnLocalPlayer">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+        <Event name="Wrong Answer" start="18.000000" end="21.955729">
+          <CommandInstance name="SetDialog" duration="3.955729">
+            <ParameterInstance name="CharacterOasis" data="EAINsa_26" InUnrealActors="1"/>
+            <ParameterInstance name="DialogOasis" data="Repository::Unreal::Oasis::Map02 MUSEUM::SE210_INTR::10168::38531"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="FadeOutTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayIncomingSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="HideSubtitle">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayOnlyOnLocalPlayer">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Kobin Talks_1" entity="Repository::O_Sam_Pawn_2">
+        <Event name="NewEvent" start="1.040000" end="6.004844">
+          <CommandInstance name="PlayFacialAnim" duration="4.964844">
+            <ParameterInstance name="EPawn" data="Repository::O_Sam_Pawn_2"/>
+            <ParameterInstance name="FacialPkgName" data="FaceFx_Sam.Sam" InUnrealFacialPkg="1"/>
+            <ParameterInstance name="AnimGroup">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="M_02"/>
+            </ParameterInstance>
+            <ParameterInstance name="AnimName">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="VO_M02_MUSEM_SE210_INTR01_01SAM"/>
+            </ParameterInstance>
+            <ParameterInstance name="BlendTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.300000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+        <Event name="NewEvent_0" start="13.780000" end="18.178436">
+          <CommandInstance name="PlayFacialAnim" duration="4.398437">
+            <ParameterInstance name="EPawn" data="Repository::O_Sam_Pawn_2"/>
+            <ParameterInstance name="FacialPkgName" data="FaceFx_Sam.Sam" InUnrealFacialPkg="1"/>
+            <ParameterInstance name="AnimGroup">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="M_02"/>
+            </ParameterInstance>
+            <ParameterInstance name="AnimName">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="VO_M02_MUSEM_SE210_INTR01_03SAM"/>
+            </ParameterInstance>
+            <ParameterInstance name="BlendTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.300000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Kobin Talks_0" entity="EAINsa_26" InUnrealActors="1">
+        <Event name="NewEvent" start="5.400000" end="-1.000000" indeterminate="1">
+          <CommandInstance name="PlayFacialAnim">
+            <ParameterInstance name="EPawn" data="EAINsa_26" InUnrealActors="1"/>
+            <ParameterInstance name="FacialPkgName" data="FaceFx_Kobin.Kobin" InUnrealFacialPkg="1"/>
+            <ParameterInstance name="AnimGroup">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="M02"/>
+            </ParameterInstance>
+            <ParameterInstance name="AnimName">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="VO_M02_MUSEM_SE210_INTR01_02KOBIN"/>
+            </ParameterInstance>
+            <ParameterInstance name="BlendTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.300000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+        <Event name="NewEvent_0" start="18.000000" end="-1.000000" indeterminate="1">
+          <CommandInstance name="PlayFacialAnim">
+            <ParameterInstance name="EPawn" data="EAINsa_26" InUnrealActors="1"/>
+            <ParameterInstance name="FacialPkgName" data="FaceFx_Kobin.Kobin" InUnrealFacialPkg="1"/>
+            <ParameterInstance name="AnimGroup">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="M02"/>
+            </ParameterInstance>
+            <ParameterInstance name="AnimName">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="VO_M02_MUSEM_SE210_INTR01_11KOBIN"/>
+            </ParameterInstance>
+            <ParameterInstance name="BlendTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.300000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_6" start="Intro Question" true="Watch For Bash" sequence="se210_Inter_InterKobin">
+    <vertices>
+      <vertex x="72.000000" y="562.000000"/>
+      <vertex x="384.000000" y="563.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Toggle Music and Lights" first="1" x="3.000000" y="18.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_0" entity="Repository::List_se210_Inter_Kobin_Lights">
+        <Event name="NewEvent" end="2.000000" condition="1">
+          <CommandInstance name="LightSetBrightness" duration="2.000000">
+            <ParameterInstance name="Light" data="Repository::List_se210_Inter_Kobin_Lights"/>
+            <ParameterInstance name="UseEndValue">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="EndValue">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="PercentChange">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_1" entity="Repository::List_se210_Interro_Spotlight">
+        <Event name="NewEvent_0" end="2.000000" condition="1">
+          <CommandInstance name="LightSetBrightness" duration="2.000000">
+            <ParameterInstance name="Light" data="Repository::List_se210_Interro_Spotlight"/>
+            <ParameterInstance name="UseEndValue">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="EndValue">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="1.400000"/>
+            </ParameterInstance>
+            <ParameterInstance name="PercentChange">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="1.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_2" entity="Repository::List_se210_Inter_InvisibleWalls">
+        <Event name="NewEvent" start="2.000000" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="Repository::List_se210_Inter_InvisibleWalls"/>
+            <ParameterInstance name="PhysType"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::O_Camera_2">
+        <Event name="NewEvent" start="2.000000" end="-1.000000">
+          <CommandInstance name="ToggleInterroMusicSystem">
+            <ParameterInstance name="Object" data="Repository::O_Camera_2"/>
+            <ParameterInstance name="value">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_23" entity="Repository::O_Camera_2">
+        <Event name="NewEvent" start="1.800000" end="4.286312">
+          <CommandInstance name="PlaySound" duration="2.486312">
+            <ParameterInstance name="Actor" data="Repository::O_Camera_2"/>
+            <ParameterInstance name="Sound" data="Play_Mus_Interrogation_RollTransition" InUnrealSounds="1"/>
+            <ParameterInstance name="Flag" data="Repository::Unreal::enums::ESoundSlot::SLOT_SFX"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="FadeOutTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_11" entity="Repository::o_Character_Sam_2">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerDisableRun">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam_2"/>
+            <ParameterInstance name="DisableRun">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_3" entity="Repository::o_Character_Sam_2">
+        <Event name="NewEvent" start="2.000000" end="-1.000000">
+          <CommandInstance name="SetLightAndShadowFilter">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam_2"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="FadeTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.300000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_5" entity="Repository::O_FlashEventManager_0">
+        <Event name="NewEvent" start="2.000000" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibility">
+            <ParameterInstance name="FlashEventManager" data="Repository::O_FlashEventManager_0"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_Detection"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_6" entity="Repository::O_FlashEventManager_0">
+        <Event name="NewEvent" start="2.000000" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibility">
+            <ParameterInstance name="FlashEventManager" data="Repository::O_FlashEventManager_0"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_GadgetModule"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_7" entity="Repository::O_FlashEventManager_0">
+        <Event name="NewEvent" start="2.000000" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibility">
+            <ParameterInstance name="FlashEventManager" data="Repository::O_FlashEventManager_0"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_MarkAndExecute"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_8" entity="Repository::O_FlashEventManager_0">
+        <Event name="NewEvent" start="2.000000" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibility">
+            <ParameterInstance name="FlashEventManager" data="Repository::O_FlashEventManager_0"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_PECChallenges"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_9" entity="Repository::O_FlashEventManager_0">
+        <Event name="NewEvent" start="2.000000" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibility">
+            <ParameterInstance name="FlashEventManager" data="Repository::O_FlashEventManager_0"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_Reticule"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_10" entity="Repository::O_FlashEventManager_0">
+        <Event name="NewEvent" start="2.000000" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibility">
+            <ParameterInstance name="FlashEventManager" data="Repository::O_FlashEventManager_0"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_WeaponModule"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_12" entity="Repository::o_Character_Sam_2">
+        <Event name="NewEvent" start="2.000000" end="-1.000000">
+          <CommandInstance name="PlayerEnableAllButtons">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam_2"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisableTick">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_13" entity="Repository::o_Character_Sam_2">
+        <Event name="NewEvent" start="2.000000" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam_2"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressX"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_14" entity="Repository::o_Character_Sam_2">
+        <Event name="NewEvent" start="2.000000" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam_2"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_ReleaseX"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_15" entity="Repository::o_Character_Sam_2">
+        <Event name="NewEvent" start="2.000000" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam_2"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_CameraMovement"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_16" entity="Repository::o_Character_Sam_2">
+        <Event name="NewEvent" start="2.000000" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam_2"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_Movement"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_17" entity="Repository::o_Character_Sam_2">
+        <Event name="NewEvent" start="2.000000" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam_2"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressLeftTrigger"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_18" entity="Repository::o_Character_Sam_2">
+        <Event name="NewEvent" start="2.000000" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam_2"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_ReleaseLeftTrigger"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_21" entity="Repository::o_Character_Sam_2">
+        <Event name="NewEvent" start="2.000000" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam_2"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressBack"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_22" entity="Repository::o_Character_Sam_2">
+        <Event name="NewEvent" start="2.000000" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam_2"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_ReleaseBack"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_19" entity="Repository::O_Camera_2">
+        <Event name="NewEvent" start="1.500000" end="-1.000000">
+          <CommandInstance name="ToggleMusic">
+            <ParameterInstance name="Object" data="Repository::O_Camera_2"/>
+            <ParameterInstance name="value">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_20" entity="Repository::Sequences::se200_Spec_ExplodeDoors">
+        <Event name="NewEvent" start="2.000000" end="-1.000000">
+          <CommandInstance name="StopSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::se200_Spec_ExplodeDoors"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_24" entity="Repository::O_Camera_2">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="InstantPlaySound">
+            <ParameterInstance name="Actor" data="Repository::O_Camera_2"/>
+            <ParameterInstance name="Sound" data="Stop_Play_Mus_Museum_BashDoorEnd" InUnrealSounds="1"/>
+            <ParameterInstance name="Flag" data="Repository::Unreal::enums::ESoundSlot::SLOT_Music"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_25" entity="Repository::o_Character_Sam_2">
+        <Event name="NewEvent" end="1.000000" condition="1">
+          <CommandInstance name="FadeCharacterLighting" duration="1.000000">
+            <ParameterInstance name="dummy" data="Repository::o_Character_Sam_2"/>
+            <ParameterInstance name="Factor">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.350000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_26" entity="Repository::List_Zone" ignore="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetFog">
+            <ParameterInstance name="Zone" data="Repository::List_Zone"/>
+            <ParameterInstance name="R">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="G">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="1.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="B">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="2.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="Start">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.100000"/>
+            </ParameterInstance>
+            <ParameterInstance name="End">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="10000.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="Density">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="210.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="InheritLI">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_27" entity="Repository::o_Character_Sam_2">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="LoadPostProcessOptions">
+            <ParameterInstance name="dummy" data="Repository::o_Character_Sam_2"/>
+            <ParameterInstance name="FileName">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="02_Museum_KobinInterro"/>
+            </ParameterInstance>
+            <ParameterInstance name="TransitionTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="2.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="FadeOut">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_7" start="End Interro" true="Stop Seq" sequence="se210_Inter_InterKobin">
+    <vertices>
+      <vertex x="4086.000000" y="484.000000"/>
+      <vertex x="4183.000000" y="486.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="If Answered 1 Q" x="679.000000" y="322.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyCommand name="NewDependencyCommand_0" start="Watch For Bash" true="If Answered 1 Q">
+    <CommandInstance name="EqualNumber">
+      <ParameterInstance name="Left" data="Repository::Num_Inter_Kobin_Anwers"/>
+      <ParameterInstance name="Right">
+        <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="1.000000"/>
+      </ParameterInstance>
+    </CommandInstance>
+    <vertices>
+      <vertex x="434.000000" y="563.000000"/>
+      <vertex x="679.000000" y="347.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyCommand>
+  <Task name="If Generic Bash" x="944.000000" y="343.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Stop Player Actions" entity="Repository::Ref_Character_Sam_2">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableActions">
+            <ParameterInstance name="Character" data="Repository::Ref_Character_Sam_2"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_27" start="If Answered 1 Q" true="If Generic Bash" data="Repository::Ref_Character_Sam_2">
+    <ExternalEventInstance name="INTERROGATE_MOVE_BEGIN" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="NPC" data=""/>
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance_0" info="Player" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="729.000000" y="347.000000"/>
+      <vertex x="944.000000" y="368.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <DependencyEvent name="NewDependencyEvent_28" start="If Generic Bash" true="Generic Bash" data="Repository::Ref_Character_Sam_2">
+    <ExternalEventInstance name="INTERROGATE_MOVE_END" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="NPC" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="994.000000" y="368.000000"/>
+      <vertex x="1598.000000" y="366.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="End Interro" x="4036.000000" y="459.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_12" entity="Repository::O_Sam_Pawn_2">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerInterrogateAnswerDone">
+            <ParameterInstance name="dummy" data="Repository::O_Sam_Pawn_2"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_2" entity="Repository::List_se210_Inter_InvisibleWalls">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="Repository::List_se210_Inter_InvisibleWalls"/>
+            <ParameterInstance name="PhysType"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_11" entity="Repository::o_Character_Sam_2">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerDisableRun">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam_2"/>
+            <ParameterInstance name="DisableRun">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_5" entity="Repository::O_FlashEventManager_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibility">
+            <ParameterInstance name="FlashEventManager" data="Repository::O_FlashEventManager_0"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_Detection"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_6" entity="Repository::O_FlashEventManager_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibility">
+            <ParameterInstance name="FlashEventManager" data="Repository::O_FlashEventManager_0"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_GadgetModule"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_7" entity="Repository::O_FlashEventManager_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibility">
+            <ParameterInstance name="FlashEventManager" data="Repository::O_FlashEventManager_0"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_MarkAndExecute"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_8" entity="Repository::O_FlashEventManager_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibility">
+            <ParameterInstance name="FlashEventManager" data="Repository::O_FlashEventManager_0"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_PECChallenges"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_9" entity="Repository::O_FlashEventManager_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibility">
+            <ParameterInstance name="FlashEventManager" data="Repository::O_FlashEventManager_0"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_Reticule"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_10" entity="Repository::O_FlashEventManager_0">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibility">
+            <ParameterInstance name="FlashEventManager" data="Repository::O_FlashEventManager_0"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_WeaponModule"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Set Up Hotspots" first="1" x="4.000000" y="79.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::List_se210_Inter_Kobin_Hotspots_A">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="Activate">
+            <ParameterInstance name="Object" data="Repository::List_se210_Inter_Kobin_Hotspots_A"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_13" start="Wait For Move Complete" true="Answer 1" sequence="se210_Inter_InterKobin">
+    <vertices>
+      <vertex x="993.000000" y="559.000000"/>
+      <vertex x="1518.000000" y="559.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="If Good Bash Hotspot" x="945.000000" y="275.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Stop Player Actions" entity="Repository::Ref_Character_Sam_2">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableActions">
+            <ParameterInstance name="Character" data="Repository::Ref_Character_Sam_2"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_38" start="If Good Bash Hotspot" true="Hotspot Bash" data="Repository::Ref_Character_Sam_2">
+    <ExternalEventInstance name="INTERROGATE_MOVE_END" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="NPC" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="995.000000" y="300.000000"/>
+      <vertex x="1599.000000" y="299.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <DependencyEvent name="NewDependencyEvent_39" start="If Answered 1 Q" true="If Good Bash Hotspot" data="Repository::List_se210_Inter_Kobin_Hotspots_A">
+    <ExternalEventInstance name="INTERROGATE_MOVE_BEGIN" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="NPC" data=""/>
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance_0" info="Player" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="729.000000" y="347.000000"/>
+      <vertex x="945.000000" y="300.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Disable Geos in Area" first="1" x="5.000000" y="141.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::List_se210_Inter_Kobin_Furniture">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="DisableActorGEOs">
+            <ParameterInstance name="Actor" data="Repository::List_se210_Inter_Kobin_Furniture"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Hotspot Bash" x="1599.000000" y="274.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <Task name="Play Sam Anim" x="2115.000000" y="189.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_5" entity="Repository::o_Character_Sam_2" ignore="1">
+        <Event name="NewEvent" start="5.000000" end="-1.000000">
+          <CommandInstance name="ToggleInterroMusicSystem">
+            <ParameterInstance name="Object" data="Repository::o_Character_Sam_2"/>
+            <ParameterInstance name="value">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_19" entity="Repository::O_Camera_2" ignore="1">
+        <Event name="NewEvent" start="5.100000" end="-1.000000">
+          <CommandInstance name="ToggleMusic">
+            <ParameterInstance name="Object" data="Repository::O_Camera_2"/>
+            <ParameterInstance name="value">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_1" entity="Repository::o_Character_Sam_2">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerPossess">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam_2"/>
+            <ParameterInstance name="ApplyDamageReaction">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_2" entity="Repository::o_Character_Sam_2">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetGameCinematicState">
+            <ParameterInstance name="dummy" data="Repository::o_Character_Sam_2"/>
+            <ParameterInstance name="State">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="SetHUDVisibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="Repository::O_Sam_Pawn_2">
+        <Event name="NewEvent" end="9.333330">
+          <CommandInstance name="PlayAnimation" duration="9.333330">
+            <ParameterInstance name="Actor" data="Repository::O_Sam_Pawn_2"/>
+            <ParameterInstance name="AnimName">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="M02_Musem_se210_Inter_DropAndLookAround_Sam"/>
+            </ParameterInstance>
+            <ParameterInstance name="UseAnimPosition">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="TweenTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.200000"/>
+            </ParameterInstance>
+            <ParameterInstance name="AnimSpeedMultiplier">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="1.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="OffSetStartTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="Origin"/>
+            <ParameterInstance name="PhysMotionType"/>
+            <ParameterInstance name="DebugOutput">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::O_Camera_2">
+        <Event name="NewEvent" end="9.333333">
+          <CommandInstance name="PlayCameraAnimation" duration="9.333333">
+            <ParameterInstance name="Camera" data="Repository::O_Camera_2"/>
+            <ParameterInstance name="AnimName">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="M02_Musem_se210_Inter_DropAndLookAround_Sam"/>
+            </ParameterInstance>
+            <ParameterInstance name="Origin" data="Repository::O_Sam_Pawn_2"/>
+            <ParameterInstance name="Blend">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.200000"/>
+            </ParameterInstance>
+            <ParameterInstance name="BlendingSource"/>
+            <ParameterInstance name="bPlayOnEveryPlayer">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_4" entity="EAINsa_26" InUnrealActors="1">
+        <Event name="NewEvent" end="4.166670" condition="1">
+          <CommandInstance name="AIPlayAnim" duration="4.166670">
+            <ParameterInstance name="AI" data="EAINsa_26" InUnrealActors="1"/>
+            <ParameterInstance name="MoveStateId" data="Repository::Unreal::enums::MoveStates::map_02_museum"/>
+            <ParameterInstance name="AnimIndex">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="1022101.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="Origin"/>
+            <ParameterInstance name="DisableCollisionActor"/>
+            <ParameterInstance name="ForceDefaultBehavior">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Post Action"/>
+            <ParameterInstance name="IgnoreDefaultEvents">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="IgnoreInvestigateEvents">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="IgnoreSearchPropagation">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="IgnoreSearchEvents">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="IgnoreCombatPropagation">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="IgnoreLowCombatEvents">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="CivIgnoreDisturbances">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceAnimation">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="RootMotion">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="JoiningOption"/>
+            <ParameterInstance name="DockOutMoveStateId"/>
+            <ParameterInstance name="DockOutAnimIndex">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="UseSync3D">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="SkipDamageReaction">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="DamageReactionSkipOption">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_20" entity="Repository::O_Camera_2">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="InstantPlaySound">
+            <ParameterInstance name="Actor" data="Repository::O_Camera_2"/>
+            <ParameterInstance name="Sound" data="Stop_Mtt_MUS_INTER_MUSEUM" InUnrealSounds="1"/>
+            <ParameterInstance name="Flag" data="Repository::Unreal::enums::ESoundSlot::SLOT_Music"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_23" entity="Repository::O_Camera_2" ignore="1">
+        <Event name="NewEvent" end="2.486312">
+          <CommandInstance name="PlaySound" duration="2.486312">
+            <ParameterInstance name="Actor" data="Repository::O_Camera_2"/>
+            <ParameterInstance name="Sound" data="Play_Mus_Interrogation_RollTransition" InUnrealSounds="1"/>
+            <ParameterInstance name="Flag" data="Repository::Unreal::enums::ESoundSlot::SLOT_SFX"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="FadeOutTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_24" entity="Repository::List_BarStools">
+        <Event name="NewEvent" start="2.000000" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="Repository::List_BarStools"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Play Kobin Anim Top L" x="2543.000000" y="368.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_2" entity="EAINsa_26" InUnrealActors="1">
+        <Event name="NewEvent" start="4.166670" end="-1.000000">
+          <CommandInstance name="TeleportOnActor">
+            <ParameterInstance name="ActorToTeleport" data="EAINsa_26" InUnrealActors="1"/>
+            <ParameterInstance name="DestinationActor" data="ETarget_87" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_6" entity="EAINsa_26" InUnrealActors="1">
+        <Event name="NewEvent" start="4.300000" end="-1.000000">
+          <CommandInstance name="NPCSetInterroStayOnGround">
+            <ParameterInstance name="AI" data="EAINsa_26" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_14" start="Generic Bash" true="Split" sequence="se210_Inter_InterKobin">
+    <vertices>
+      <vertex x="1648.000000" y="366.000000"/>
+      <vertex x="1935.000000" y="298.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyComplete name="NewDependencyComplete_15" start="Generic Bash" true="NewTask_2" sequence="se210_Inter_InterKobin">
+    <vertices>
+      <vertex x="1648.000000" y="366.000000"/>
+      <vertex x="1818.000000" y="479.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Play Sound" x="3682.000000" y="458.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_0" entity="Repository::O_Sam_Pawn_2">
+        <Event name="NewEvent_4" start="0.250000" end="3.465167">
+          <CommandInstance name="SetDialog" duration="3.215167">
+            <ParameterInstance name="CharacterOasis" data="Repository::O_Sam_Pawn_2"/>
+            <ParameterInstance name="DialogOasis" data="Repository::Unreal::Oasis::Map02 MUSEUM::SE210_INTR::10168::38526"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="FadeOutTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayIncomingSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="HideSubtitle">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayOnlyOnLocalPlayer">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Kobin Talks_1" entity="Repository::O_Sam_Pawn_2">
+        <Event name="NewEvent" start="0.250000" end="3.449219">
+          <CommandInstance name="PlayFacialAnim" duration="3.199219">
+            <ParameterInstance name="EPawn" data="Repository::O_Sam_Pawn_2"/>
+            <ParameterInstance name="FacialPkgName" data="FaceFx_Sam.Sam" InUnrealFacialPkg="1"/>
+            <ParameterInstance name="AnimGroup">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="M_02"/>
+            </ParameterInstance>
+            <ParameterInstance name="AnimName">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="VO_M02_MUSEM_SE210_INTR01_07SAM"/>
+            </ParameterInstance>
+            <ParameterInstance name="BlendTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.300000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="End Cine" x="2340.000000" y="190.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_2" entity="Repository::o_Character_Sam_2">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetGameCinematicState">
+            <ParameterInstance name="dummy" data="Repository::o_Character_Sam_2"/>
+            <ParameterInstance name="State">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="SetHUDVisibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_1" entity="Repository::o_Character_Sam_2">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerUnPossess">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam_2"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_4" entity="Repository::o_Character_Sam_2">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam_2"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_Movement"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_5" entity="Repository::o_Character_Sam_2">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam_2"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressX"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_6" entity="Repository::o_Character_Sam_2">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam_2"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressLeftTrigger"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_16" start="Play Sam Anim" true="End Cine" sequence="se210_Inter_InterKobin">
+    <vertices>
+      <vertex x="2165.000000" y="214.000000"/>
+      <vertex x="2340.000000" y="215.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Generic Bash" x="1598.000000" y="341.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_17" start="Hotspot Bash" true="Split" sequence="se210_Inter_InterKobin">
+    <vertices>
+      <vertex x="1649.000000" y="299.000000"/>
+      <vertex x="1935.000000" y="298.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyComplete name="NewDependencyComplete_20" start="Play Sound" true="End Interro" sequence="se210_Inter_InterKobin">
+    <vertices>
+      <vertex x="3732.000000" y="483.000000"/>
+      <vertex x="4036.000000" y="484.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Kill Anim" x="3356.000000" y="459.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_4" entity="Repository::o_Character_Sam_2">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam_2"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_Movement"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Enable Player Actions" entity="Repository::Ref_Character_Sam_2">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableActions">
+            <ParameterInstance name="Character" data="Repository::Ref_Character_Sam_2"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_5" entity="Repository::o_Character_Sam_2">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableAllButtons">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam_2"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisableTick">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::O_Camera_2" ignore="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="InstantPlaySound">
+            <ParameterInstance name="Actor" data="Repository::O_Camera_2"/>
+            <ParameterInstance name="Sound" data="Play_MUS_Museum_FinalScene_Grab_Kobin" InUnrealSounds="1"/>
+            <ParameterInstance name="Flag" data="Repository::Unreal::enums::ESoundSlot::SLOT_Music"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_21" start="Hotspot Bash" true="NewTask_2" sequence="se210_Inter_InterKobin">
+    <vertices>
+      <vertex x="1649.000000" y="299.000000"/>
+      <vertex x="1818.000000" y="479.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyEvent name="NewDependencyEvent_42" start="Play Kobin Anim Middle R" true="Kill Anim" data="Repository::Ref_Character_Sam_2">
+    <ExternalEventInstance name="INTERROGATE_BEGIN" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="NPC" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="3295.000000" y="696.000000"/>
+      <vertex x="3356.000000" y="484.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="NewTask_2" x="1818.000000" y="454.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyCommand name="NewDependencyCommand" start="NewTask_2" true="Top " false="Not Top">
+    <CommandInstance name="TriggerVolumeCurrentlyOccupied">
+      <ParameterInstance name="TriggerVolume" data="XTrigVol_47" InUnrealActors="1"/>
+      <ParameterInstance name="Pawn" data="Repository::O_Sam_Pawn_2"/>
+      <ParameterInstance name="AI"/>
+    </CommandInstance>
+    <vertices>
+      <vertex x="1868.000000" y="479.000000"/>
+      <vertex x="2187.000000" y="423.000000"/>
+      <vertex x="2193.000000" y="645.000000"/>
+      <vertex x="2121.750000" y="477.125000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="3" vertex2="1"/>
+      <segment type="1" vertex1="3" vertex2="2"/>
+      <segment type="2" vertex1="0" vertex2="3"/>
+    </segments>
+  </DependencyCommand>
+  <Task name="Split" x="1935.000000" y="273.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_3" entity="GI_NonInteractiveDynActor_1978" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="InstantPlaySound">
+            <ParameterInstance name="Actor" data="GI_NonInteractiveDynActor_1978" InUnrealActors="1"/>
+            <ParameterInstance name="Sound" data="Play_SFX_Helicopter_fly_over_fast" InUnrealSounds="1"/>
+            <ParameterInstance name="Flag" data="Repository::Unreal::enums::ESoundSlot::SLOT_SFXNoOcc"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_4" entity="Repository::o_Character_Sam_2">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam_2"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_Movement"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_5" entity="Repository::o_Character_Sam_2">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableAllButtons">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam_2"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisableTick">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::O_Camera_2">
+        <Event name="NewEvent_0" end="1.600000" condition="1">
+          <CommandInstance name="Wait" duration="1.600000">
+            <ParameterInstance name="Data" data="Repository::O_Camera_2"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_22" start="Split" true="Play Sam Anim" sequence="se210_Inter_InterKobin">
+    <vertices>
+      <vertex x="1985.000000" y="298.000000"/>
+      <vertex x="2115.000000" y="214.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Top " x="2187.000000" y="398.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <Task name="Bottom" x="2556.000000" y="576.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_43" start="Play Kobin Anim Top R" true="Kill Anim" data="Repository::Ref_Character_Sam_2">
+    <ExternalEventInstance name="INTERROGATE_BEGIN" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="NPC" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="2944.000000" y="439.000000"/>
+      <vertex x="3356.000000" y="484.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <DependencyEvent name="NewDependencyEvent_44" start="Play Kobin Anim Middle L" true="Kill Anim" data="Repository::Ref_Character_Sam_2">
+    <ExternalEventInstance name="INTERROGATE_BEGIN" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="NPC" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="2949.000000" y="659.000000"/>
+      <vertex x="3356.000000" y="484.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <DependencyCommand name="NewDependencyCommand_2" start="Top " true="Play Kobin Anim Top L" false="Not Right">
+    <CommandInstance name="TriggerVolumeCurrentlyOccupied">
+      <ParameterInstance name="TriggerVolume" data="XTrigVol_49" InUnrealActors="1"/>
+      <ParameterInstance name="Pawn" data="Repository::O_Sam_Pawn_2"/>
+      <ParameterInstance name="AI"/>
+    </CommandInstance>
+    <vertices>
+      <vertex x="2237.000000" y="423.000000"/>
+      <vertex x="2543.000000" y="393.000000"/>
+      <vertex x="2545.000000" y="452.000000"/>
+      <vertex x="2494.875000" y="419.875000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="3" vertex2="1"/>
+      <segment type="1" vertex1="3" vertex2="2"/>
+      <segment type="2" vertex1="0" vertex2="3"/>
+    </segments>
+  </DependencyCommand>
+  <DependencyCommand name="NewDependencyCommand_5" start="Middle" true="Play Kobin Anim Middle L" false="Not Left">
+    <CommandInstance name="TriggerVolumeCurrentlyOccupied">
+      <ParameterInstance name="TriggerVolume" data="XTrigVol_49" InUnrealActors="1"/>
+      <ParameterInstance name="Pawn" data="Repository::O_Sam_Pawn_2"/>
+      <ParameterInstance name="AI"/>
+    </CommandInstance>
+    <vertices>
+      <vertex x="2609.000000" y="689.000000"/>
+      <vertex x="2899.000000" y="659.000000"/>
+      <vertex x="2900.000000" y="721.000000"/>
+      <vertex x="2864.875000" y="686.125000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="3" vertex2="1"/>
+      <segment type="1" vertex1="3" vertex2="2"/>
+      <segment type="2" vertex1="0" vertex2="3"/>
+    </segments>
+  </DependencyCommand>
+  <Task name="Not Right" x="2545.000000" y="427.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyCommand name="NewDependencyCommand_6" start="Not Right" true="Play Kobin Anim Top R" false="Play Kobin Anim Top Middle">
+    <CommandInstance name="TriggerVolumeCurrentlyOccupied">
+      <ParameterInstance name="TriggerVolume" data="XTrigVol_50" InUnrealActors="1"/>
+      <ParameterInstance name="Pawn" data="Repository::Ref_Sam_Pawn_1"/>
+      <ParameterInstance name="AI"/>
+    </CommandInstance>
+    <vertices>
+      <vertex x="2595.000000" y="452.000000"/>
+      <vertex x="2894.000000" y="439.000000"/>
+      <vertex x="2894.000000" y="504.000000"/>
+      <vertex x="2853.625000" y="448.125000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="3" vertex2="1"/>
+      <segment type="1" vertex1="3" vertex2="2"/>
+      <segment type="2" vertex1="0" vertex2="3"/>
+    </segments>
+  </DependencyCommand>
+  <DependencyEvent name="NewDependencyEvent_45" start="Play Kobin Anim Top Middle" true="Kill Anim" data="Repository::Ref_Character_Sam_2">
+    <ExternalEventInstance name="INTERROGATE_BEGIN" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="NPC" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="2944.000000" y="504.000000"/>
+      <vertex x="3356.000000" y="484.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Not Top" x="2193.000000" y="620.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <Task name="Middle" x="2559.000000" y="664.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyCommand name="NewDependencyCommand_7" start="Not Top" true="Bottom" false="Middle">
+    <CommandInstance name="TriggerVolumeCurrentlyOccupied">
+      <ParameterInstance name="TriggerVolume" data="XTrigVol_48" InUnrealActors="1"/>
+      <ParameterInstance name="Pawn" data="Repository::O_Sam_Pawn_2"/>
+      <ParameterInstance name="AI"/>
+    </CommandInstance>
+    <vertices>
+      <vertex x="2243.000000" y="645.000000"/>
+      <vertex x="2556.000000" y="601.000000"/>
+      <vertex x="2559.000000" y="689.000000"/>
+      <vertex x="2502.000000" y="642.375000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="3" vertex2="1"/>
+      <segment type="1" vertex1="3" vertex2="2"/>
+      <segment type="2" vertex1="0" vertex2="3"/>
+    </segments>
+  </DependencyCommand>
+  <DependencyComplete name="NewDependencyComplete_23" start="Bottom" true="Play Kobin Anim Bottom" sequence="se210_Inter_InterKobin">
+    <vertices>
+      <vertex x="2606.000000" y="601.000000"/>
+      <vertex x="2900.000000" y="600.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyEvent name="NewDependencyEvent_46" start="Play Kobin Anim Bottom" true="Kill Anim" data="Repository::Ref_Character_Sam_2">
+    <ExternalEventInstance name="INTERROGATE_BEGIN" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="NPC" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="2950.000000" y="600.000000"/>
+      <vertex x="3356.000000" y="484.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Not Left" x="2900.000000" y="696.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyCommand name="NewDependencyCommand_8" start="Not Left" true="Play Kobin Anim Middle R" false="Play Kobin Anim Middle">
+    <CommandInstance name="TriggerVolumeCurrentlyOccupied">
+      <ParameterInstance name="TriggerVolume" data="XTrigVol_50" InUnrealActors="1"/>
+      <ParameterInstance name="Pawn" data="Repository::O_Sam_Pawn_2"/>
+      <ParameterInstance name="AI"/>
+    </CommandInstance>
+    <vertices>
+      <vertex x="2950.000000" y="721.000000"/>
+      <vertex x="3245.000000" y="696.000000"/>
+      <vertex x="3247.000000" y="755.000000"/>
+      <vertex x="3204.875000" y="722.375000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="3" vertex2="1"/>
+      <segment type="1" vertex1="3" vertex2="2"/>
+      <segment type="2" vertex1="0" vertex2="3"/>
+    </segments>
+  </DependencyCommand>
+  <DependencyEvent name="NewDependencyEvent_47" start="Play Kobin Anim Middle" true="Kill Anim" data="Repository::Ref_Character_Sam_2">
+    <ExternalEventInstance name="INTERROGATE_BEGIN" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="NPC" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="3297.000000" y="755.000000"/>
+      <vertex x="3356.000000" y="484.000000"/>
+      <vertex x="3325.000000" y="638.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="2"/>
+      <segment type="0" vertex1="2" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <DependencyComplete name="NewDependencyComplete_24" start="Kill Anim" true="Play Sound" sequence="se210_Inter_InterKobin">
+    <vertices>
+      <vertex x="3406.000000" y="484.000000"/>
+      <vertex x="3682.000000" y="483.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Play Kobin Anim Top R" x="2894.000000" y="414.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_2" entity="EAINsa_26" InUnrealActors="1">
+        <Event name="NewEvent" start="4.166670" end="-1.000000">
+          <CommandInstance name="TeleportOnActor">
+            <ParameterInstance name="ActorToTeleport" data="EAINsa_26" InUnrealActors="1"/>
+            <ParameterInstance name="DestinationActor" data="ETarget_81" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_6" entity="EAINsa_26" InUnrealActors="1">
+        <Event name="NewEvent" start="4.300000" end="-1.000000">
+          <CommandInstance name="NPCSetInterroStayOnGround">
+            <ParameterInstance name="AI" data="EAINsa_26" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Play Kobin Anim Top Middle" x="2894.000000" y="479.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_2" entity="EAINsa_26" InUnrealActors="1">
+        <Event name="NewEvent" start="4.166670" end="-1.000000">
+          <CommandInstance name="TeleportOnActor">
+            <ParameterInstance name="ActorToTeleport" data="EAINsa_26" InUnrealActors="1"/>
+            <ParameterInstance name="DestinationActor" data="ETarget_80" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_6" entity="EAINsa_26" InUnrealActors="1">
+        <Event name="NewEvent" start="4.300000" end="-1.000000">
+          <CommandInstance name="NPCSetInterroStayOnGround">
+            <ParameterInstance name="AI" data="EAINsa_26" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Play Kobin Anim Bottom" x="2900.000000" y="575.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_2" entity="EAINsa_26" InUnrealActors="1">
+        <Event name="NewEvent" start="4.166670" end="-1.000000">
+          <CommandInstance name="TeleportOnActor">
+            <ParameterInstance name="ActorToTeleport" data="EAINsa_26" InUnrealActors="1"/>
+            <ParameterInstance name="DestinationActor" data="ETarget_82" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_6" entity="EAINsa_26" InUnrealActors="1">
+        <Event name="NewEvent" start="4.300000" end="-1.000000">
+          <CommandInstance name="NPCSetInterroStayOnGround">
+            <ParameterInstance name="AI" data="EAINsa_26" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Play Kobin Anim Middle L" x="2899.000000" y="634.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_2" entity="EAINsa_26" InUnrealActors="1">
+        <Event name="NewEvent" start="4.166670" end="-1.000000">
+          <CommandInstance name="TeleportOnActor">
+            <ParameterInstance name="ActorToTeleport" data="EAINsa_26" InUnrealActors="1"/>
+            <ParameterInstance name="DestinationActor" data="ETarget_76" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_6" entity="EAINsa_26" InUnrealActors="1">
+        <Event name="NewEvent" start="4.300000" end="-1.000000">
+          <CommandInstance name="NPCSetInterroStayOnGround">
+            <ParameterInstance name="AI" data="EAINsa_26" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Play Kobin Anim Middle R" x="3245.000000" y="671.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_2" entity="EAINsa_26" InUnrealActors="1">
+        <Event name="NewEvent" start="4.166670" end="-1.000000">
+          <CommandInstance name="TeleportOnActor">
+            <ParameterInstance name="ActorToTeleport" data="EAINsa_26" InUnrealActors="1"/>
+            <ParameterInstance name="DestinationActor" data="ETarget_81" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_6" entity="EAINsa_26" InUnrealActors="1">
+        <Event name="NewEvent" start="4.300000" end="-1.000000">
+          <CommandInstance name="NPCSetInterroStayOnGround">
+            <ParameterInstance name="AI" data="EAINsa_26" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Play Kobin Anim Middle" x="3247.000000" y="730.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_2" entity="EAINsa_26" InUnrealActors="1">
+        <Event name="NewEvent" start="4.166670" end="-1.000000">
+          <CommandInstance name="TeleportOnActor">
+            <ParameterInstance name="ActorToTeleport" data="EAINsa_26" InUnrealActors="1"/>
+            <ParameterInstance name="DestinationActor" data="ETarget_82" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_6" entity="EAINsa_26" InUnrealActors="1">
+        <Event name="NewEvent" start="4.300000" end="-1.000000">
+          <CommandInstance name="NPCSetInterroStayOnGround">
+            <ParameterInstance name="AI" data="EAINsa_26" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Complete Objective remove locator" first="1" x="5.000000" y="198.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::o_ObjectiveManager_2">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="ObjectiveComplete">
+            <ParameterInstance name="ObjectiveManager" data="Repository::o_ObjectiveManager_2"/>
+            <ParameterInstance name="sObjective" data="Repository::Obj_Main_3"/>
+            <ParameterInstance name="ShowMessage">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="ShowTutoral">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="Repository::o_ObjectiveManager_2">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="ObjectiveRemoveLocator">
+            <ParameterInstance name="ObjectiveManager" data="Repository::o_ObjectiveManager_2"/>
+            <ParameterInstance name="sObjective" data="Repository::Obj_Main_3"/>
+            <ParameterInstance name="Actor" data="ETarget_85" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_48" start="Play Kobin Anim Top L" true="Kill Anim" data="Repository::Ref_Character_Sam_2">
+    <ExternalEventInstance name="INTERROGATE_BEGIN" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="NPC" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="2593.000000" y="393.000000"/>
+      <vertex x="3356.000000" y="484.000000"/>
+      <vertex x="2814.000000" y="333.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="2"/>
+      <segment type="0" vertex1="2" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Turn On Light" x="2115.000000" y="273.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="GI_NonInteractiveDynActor_1978" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="GI_NonInteractiveDynActor_1978" InUnrealActors="1"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_1" entity="GI_NonInteractiveDynActor_1978" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetHide">
+            <ParameterInstance name="Actor" data="GI_NonInteractiveDynActor_1978" InUnrealActors="1"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="ELight_262" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetLightOn">
+            <ParameterInstance name="Light" data="ELight_262" InUnrealActors="1"/>
+            <ParameterInstance name="On">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Flicker">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Play Anim" x="2338.000000" y="273.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="GI_NonInteractiveDynActor_1978" InUnrealActors="1">
+        <Event name="NewEvent" end="9.333330">
+          <CommandInstance name="PlayAnimation" duration="9.333330">
+            <ParameterInstance name="Actor" data="GI_NonInteractiveDynActor_1978" InUnrealActors="1"/>
+            <ParameterInstance name="AnimName">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="M02_Musem_se210_Inter_DropAndLookAround_ChopperLight"/>
+            </ParameterInstance>
+            <ParameterInstance name="UseAnimPosition">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="TweenTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="AnimSpeedMultiplier">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="1.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="OffSetStartTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="Origin" data="SE_Helper_12" InUnrealActors="1"/>
+            <ParameterInstance name="PhysMotionType"/>
+            <ParameterInstance name="DebugOutput">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_4" start="Turn On Light" true="Play Anim" sequence="se210_Inter_InterKobin">
+    <vertices>
+      <vertex x="2165.000000" y="298.000000"/>
+      <vertex x="2338.000000" y="298.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyComplete name="NewDependencyComplete_25" start="Split" true="Turn On Light" sequence="se210_Inter_InterKobin">
+    <vertices>
+      <vertex x="1985.000000" y="298.000000"/>
+      <vertex x="2115.000000" y="298.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Play Heli" x="2114.000000" y="106.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_3" entity="GI_NonInteractiveDynActor_1978" InUnrealActors="1" ignore="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="InstantPlaySound">
+            <ParameterInstance name="Actor" data="GI_NonInteractiveDynActor_1978" InUnrealActors="1"/>
+            <ParameterInstance name="Sound" data="Play_SFX_Helicopter_fly_over_fast" InUnrealSounds="1"/>
+            <ParameterInstance name="Flag" data="Repository::Unreal::enums::ESoundSlot::SLOT_SFXNoOcc"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete" start="Split" true="Play Heli" sequence="se210_Inter_InterKobin">
+    <vertices>
+      <vertex x="1985.000000" y="298.000000"/>
+      <vertex x="2114.000000" y="131.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+</Sequence>

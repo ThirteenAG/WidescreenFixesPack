@@ -1,0 +1,941 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Sequence name="se070_Tuto_TakeCover">
+  <Task name="Check for Trigger" first="1" x="62.000000" y="44.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <Task name="Set C2C Exit ON" x="301.000000" y="42.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Set Exit Cover Status NormalDirection" entity="Repository::ref_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerSetCoverExitStatus">
+            <ParameterInstance name="Character" data="Repository::ref_Character_Sam"/>
+            <ParameterInstance name="CoverExitStatus" data="Repository::Unreal::enums::EExitCoverStatus::eExitCover_NormalWithoutDirection"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Disable Press A" entity="Repository::ref_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::ref_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressA"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Disable Hold A" entity="Repository::ref_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::ref_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_HoldA"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Disable Release A" entity="Repository::ref_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::ref_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_ReleaseA"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_2" start="Check for Trigger" true="Set C2C Exit ON" data="ETriggerVolume_13" InUnrealActors="1">
+    <ExternalEventInstance name="VOLUME_ENTERED" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Instigator" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="112.000000" y="69.000000"/>
+      <vertex x="301.000000" y="67.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Set C2C Exit OFF" x="533.000000" y="42.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::ref_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerSetCoverExitStatus">
+            <ParameterInstance name="Character" data="Repository::ref_Character_Sam"/>
+            <ParameterInstance name="CoverExitStatus" data="Repository::Unreal::enums::EExitCoverStatus::eExitCover_Normal"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Enable Press A" entity="Repository::ref_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::ref_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressA"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Enable Hold A" entity="Repository::ref_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::ref_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_HoldA"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Enagle Release A" entity="Repository::ref_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::ref_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_ReleaseA"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_3" start="Set C2C Exit ON" true="Set C2C Exit OFF" data="ETriggerVolume_13" InUnrealActors="1">
+    <ExternalEventInstance name="VOLUME_EXITED" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Instigator" data=""/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="351.000000" y="67.000000"/>
+      <vertex x="533.000000" y="67.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <DependencyComplete name="NewDependencyComplete_4" start="Set C2C Exit OFF" true="Check for Trigger" sequence="se070_Tuto_TakeCover">
+    <vertices>
+      <vertex x="583.000000" y="67.000000"/>
+      <vertex x="62.000000" y="69.000000"/>
+      <vertex x="670.000000" y="29.000000"/>
+      <vertex x="40.000000" y="29.000000"/>
+      <vertex x="670.000000" y="66.000000"/>
+      <vertex x="40.000000" y="69.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="4"/>
+      <segment type="0" vertex1="4" vertex2="2"/>
+      <segment type="0" vertex1="2" vertex2="3"/>
+      <segment type="0" vertex1="3" vertex2="5"/>
+      <segment type="0" vertex1="5" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="In Cover" x="893.000000" y="187.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_0" entity="StaticMeshActor_55" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="StaticMeshActor_55" InUnrealActors="1"/>
+            <ParameterInstance name="PhysType"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="DisplayTutorial">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Key" data="m01_id_tuto_12" InUnrealTutorialKeys="1"/>
+            <ParameterInstance name="Show">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Centered">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceVisible">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_2" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="DisplayTutorial">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Key" data="m01_80230" InUnrealTutorialKeys="1"/>
+            <ParameterInstance name="Show">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Centered">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceVisible">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_1" entity="StaticMeshActor_195" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="StaticMeshActor_195" InUnrealActors="1"/>
+            <ParameterInstance name="PhysType"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Enable Movement" entity="Repository::ref_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::ref_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_Movement"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Enable Press A" entity="Repository::ref_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::ref_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressA"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Enable Hold A" entity="Repository::ref_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::ref_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_HoldA"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Enagle Release A" entity="Repository::ref_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::ref_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_ReleaseA"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_4" start="Set C2C Exit ON" true="Set Controls" data="Repository::ref_Character_Sam">
+    <ExternalEventInstance name="COVER_START" data=""/>
+    <vertices>
+      <vertex x="351.000000" y="67.000000"/>
+      <vertex x="532.000000" y="134.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Display Inst." first="1" x="63.000000" y="112.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="DisplayTutorial">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Key" data="m01_id_tuto_12" InUnrealTutorialKeys="1"/>
+            <ParameterInstance name="Show">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Centered">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceVisible">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="SE080_1 TXT OFF" x="2371.000000" y="118.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_0" entity="EProjectedTextLight_4" InUnrealActors="1">
+        <Event name="NewEvent_0" end="-1.000000">
+          <CommandInstance name="SetLightOn">
+            <ParameterInstance name="Light" data="EProjectedTextLight_4" InUnrealActors="1"/>
+            <ParameterInstance name="On">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Flicker">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Wait for Cover Start" x="449.000000" y="188.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_5" start="Wait for Cover Start" true="Cover Gate" data="Repository::ref_Character_Sam">
+    <ExternalEventInstance name="COVER_START" data=""/>
+    <vertices>
+      <vertex x="499.000000" y="213.000000"/>
+      <vertex x="697.000000" y="213.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <DependencyComplete name="NewDependencyComplete" start="In Cover" true="SE069 OFF" sequence="se070_Tuto_TakeCover">
+    <vertices>
+      <vertex x="943.000000" y="212.000000"/>
+      <vertex x="1083.000000" y="135.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Cover Exited" x="1993.000000" y="188.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Disable Movement" entity="Repository::ref_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::ref_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_Movement"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Disable Press A" entity="Repository::ref_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::ref_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressA"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Disable Hold A" entity="Repository::ref_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::ref_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_HoldA"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Disable Release A" entity="Repository::ref_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::ref_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_ReleaseA"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="DisplayTutorial">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Key" data="m01_id_tuto_14" InUnrealTutorialKeys="1"/>
+            <ParameterInstance name="Show">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Centered">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceVisible">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="DisplayTutorial">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Key" data="m01_80230" InUnrealTutorialKeys="1"/>
+            <ParameterInstance name="Show">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Centered">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceVisible">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_1" entity="StaticMeshActor_195" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetCollision">
+            <ParameterInstance name="Actor" data="StaticMeshActor_195" InUnrealActors="1"/>
+            <ParameterInstance name="PhysType"/>
+            <ParameterInstance name="Collide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_6" entity="Repository::o_ObjectiveManager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="ObjectiveRemoveLocator">
+            <ParameterInstance name="ObjectiveManager" data="Repository::o_ObjectiveManager"/>
+            <ParameterInstance name="sObjective" data="Repository::Obj_Main_04_MoveC2C"/>
+            <ParameterInstance name="Actor" data="GI_NonInteractiveDynActor_215" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_7" entity="Repository::o_ObjectiveManager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="ObjectiveAddLocator">
+            <ParameterInstance name="ObjectiveManager" data="Repository::o_ObjectiveManager"/>
+            <ParameterInstance name="sObjective" data="Repository::Obj_Main_04_MoveC2C"/>
+            <ParameterInstance name="Actor" data="GI_NonInteractiveDynActor_364" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_6" start="Gate" true="Cover Exited" data="Repository::ref_Character_Sam">
+    <ExternalEventInstance name="COVER_END" data=""/>
+    <vertices>
+      <vertex x="1292.000000" y="213.000000"/>
+      <vertex x="1993.000000" y="213.000000"/>
+      <vertex x="1854.000000" y="132.000000"/>
+      <vertex x="1532.000000" y="132.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="3"/>
+      <segment type="0" vertex1="3" vertex2="2"/>
+      <segment type="0" vertex1="2" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <DependencyComplete name="NewDependencyComplete_7" start="Cover Exited" true="Wait for Cover Start" sequence="se070_Tuto_TakeCover">
+    <vertices>
+      <vertex x="2043.000000" y="213.000000"/>
+      <vertex x="449.000000" y="213.000000"/>
+      <vertex x="406.000000" y="376.000000"/>
+      <vertex x="2246.000000" y="213.000000"/>
+      <vertex x="2246.000000" y="377.000000"/>
+      <vertex x="406.000000" y="213.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="3"/>
+      <segment type="0" vertex1="3" vertex2="4"/>
+      <segment type="0" vertex1="4" vertex2="2"/>
+      <segment type="0" vertex1="2" vertex2="5"/>
+      <segment type="0" vertex1="5" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyComplete name="NewDependencyComplete_9" start="Cover Exited" true="SE069 ON" sequence="se070_Tuto_TakeCover">
+    <vertices>
+      <vertex x="2043.000000" y="213.000000"/>
+      <vertex x="2194.000000" y="144.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Start SE080 Vox" x="892.000000" y="31.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::Sequences::SE080_GrimRadio">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StartSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::SE080_GrimRadio"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Display Beacon Inst." x="1530.000000" y="188.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="DisplayTutorial">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Key" data="m01_id_tuto_14" InUnrealTutorialKeys="1"/>
+            <ParameterInstance name="Show">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Centered">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceVisible">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Set Controls" x="532.000000" y="109.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Disable All Buttons" entity="Repository::ref_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableAllButtons">
+            <ParameterInstance name="Character" data="Repository::ref_Character_Sam"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="bDisableTick">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Disable Roll" entity="Repository::ref_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerDisableRoll">
+            <ParameterInstance name="Character" data="Repository::ref_Character_Sam"/>
+            <ParameterInstance name="DisableRoll">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Start SE080 Tuto" entity="Repository::Sequences::se080_Tuto_CoverToCover">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StartSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::se080_Tuto_CoverToCover"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_4" entity="Repository::o_ObjectiveManager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="ObjectiveRemoveLocator">
+            <ParameterInstance name="ObjectiveManager" data="Repository::o_ObjectiveManager"/>
+            <ParameterInstance name="sObjective" data="Repository::Obj_Main_03_TakeCover"/>
+            <ParameterInstance name="Actor" data="GI_NonInteractiveDynActor_77" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_3" entity="Repository::o_ObjectiveManager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="ObjectiveComplete">
+            <ParameterInstance name="ObjectiveManager" data="Repository::o_ObjectiveManager"/>
+            <ParameterInstance name="sObjective" data="Repository::Obj_Main_03_TakeCover"/>
+            <ParameterInstance name="ShowMessage">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="ShowTutoral">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_5" entity="Repository::o_ObjectiveManager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="ObjectiveAddPrimary">
+            <ParameterInstance name="ObjectiveManager" data="Repository::o_ObjectiveManager"/>
+            <ParameterInstance name="Light" data="EProjectedTextLight_10" InUnrealActors="1"/>
+            <ParameterInstance name="Light2"/>
+            <ParameterInstance name="Light3"/>
+            <ParameterInstance name="sObjective" data="Repository::Obj_Main_04_MoveC2C"/>
+            <ParameterInstance name="ShowMessage">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="ShowTutoralMessage">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Light4"/>
+            <ParameterInstance name="Light5"/>
+            <ParameterInstance name="Light6"/>
+            <ParameterInstance name="Light7"/>
+            <ParameterInstance name="AlwaysShowLocators">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_6" entity="Repository::o_ObjectiveManager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="ObjectiveAddLocator">
+            <ParameterInstance name="ObjectiveManager" data="Repository::o_ObjectiveManager"/>
+            <ParameterInstance name="sObjective" data="Repository::Obj_Main_04_MoveC2C"/>
+            <ParameterInstance name="Actor" data="GI_NonInteractiveDynActor_215" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_11" start="Empty Task" true="Cover Exited" data="Repository::ref_Character_Sam">
+    <ExternalEventInstance name="COVER_END" data=""/>
+    <vertices>
+      <vertex x="1785.000000" y="213.000000"/>
+      <vertex x="1993.000000" y="213.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Locators" x="894.000000" y="265.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_6" entity="Repository::o_ObjectiveManager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="ObjectiveRemoveLocator">
+            <ParameterInstance name="ObjectiveManager" data="Repository::o_ObjectiveManager"/>
+            <ParameterInstance name="sObjective" data="Repository::Obj_Main_04_MoveC2C"/>
+            <ParameterInstance name="Actor" data="GI_NonInteractiveDynActor_364" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_7" entity="Repository::o_ObjectiveManager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="ObjectiveAddLocator">
+            <ParameterInstance name="ObjectiveManager" data="Repository::o_ObjectiveManager"/>
+            <ParameterInstance name="sObjective" data="Repository::Obj_Main_04_MoveC2C"/>
+            <ParameterInstance name="Actor" data="GI_NonInteractiveDynActor_215" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="SE069 OFF" x="1083.000000" y="110.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_0" entity="EProjectedTextLight_12" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetLightOn">
+            <ParameterInstance name="Light" data="EProjectedTextLight_12" InUnrealActors="1"/>
+            <ParameterInstance name="On">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Flicker">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Enable LT and RA" x="695.000000" y="110.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Enable Press LT" entity="Repository::ref_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::ref_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressB"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Enable Hold LT" entity="Repository::ref_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::ref_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_HoldB"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Enable Release LT" entity="Repository::ref_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::ref_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_ReleaseB"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Enable Press Right Analog" entity="Repository::ref_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::ref_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_PressLeftTrigger"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Enable Hold Right Analog" entity="Repository::ref_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::ref_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_HoldLeftTrigger"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Enable Release Right Analog" entity="Repository::ref_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::ref_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_ReleaseLeftTrigger"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_17" start="Set Controls" true="Enable LT and RA" sequence="se070_Tuto_TakeCover">
+    <vertices>
+      <vertex x="582.000000" y="134.000000"/>
+      <vertex x="695.000000" y="135.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="SE080_1 TXT ON" x="893.000000" y="110.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_1" entity="Repository::Sequences::se080_Text_CoverToCover">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StartSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::se080_Text_CoverToCover"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_19" start="Enable LT and RA" true="SE080_1 TXT ON" sequence="se070_Tuto_TakeCover">
+    <vertices>
+      <vertex x="745.000000" y="135.000000"/>
+      <vertex x="893.000000" y="135.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyComplete name="NewDependencyComplete_20" start="Enable LT and RA" true="In Cover" sequence="se070_Tuto_TakeCover">
+    <vertices>
+      <vertex x="745.000000" y="135.000000"/>
+      <vertex x="893.000000" y="212.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="SE080_1 ON" x="1085.000000" y="266.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_0" entity="EProjectedTextLight_4" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetLightOn">
+            <ParameterInstance name="Light" data="EProjectedTextLight_4" InUnrealActors="1"/>
+            <ParameterInstance name="On">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Flicker">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_21" start="Locators" true="SE080_1 ON" sequence="se070_Tuto_TakeCover">
+    <vertices>
+      <vertex x="944.000000" y="290.000000"/>
+      <vertex x="1085.000000" y="291.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="SE069 ON" x="2194.000000" y="119.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_0" entity="EProjectedTextLight_12" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetLightOn">
+            <ParameterInstance name="Light" data="EProjectedTextLight_12" InUnrealActors="1"/>
+            <ParameterInstance name="On">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Flicker">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_22" start="SE069 ON" true="SE080_1 TXT OFF" sequence="se070_Tuto_TakeCover">
+    <vertices>
+      <vertex x="2244.000000" y="144.000000"/>
+      <vertex x="2371.000000" y="143.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Hide Beacon Inst." x="1993.000000" y="251.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="DisplayTutorial">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Key" data="m01_id_tuto_14" InUnrealTutorialKeys="1"/>
+            <ParameterInstance name="Show">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Centered">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceVisible">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_24" start="Hide Beacon Inst." true="Gate" sequence="se070_Tuto_TakeCover">
+    <vertices>
+      <vertex x="2043.000000" y="276.000000"/>
+      <vertex x="1242.000000" y="213.000000"/>
+      <vertex x="2164.000000" y="277.000000"/>
+      <vertex x="2164.000000" y="329.000000"/>
+      <vertex x="1218.000000" y="329.000000"/>
+      <vertex x="1218.000000" y="242.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="2"/>
+      <segment type="0" vertex1="2" vertex2="3"/>
+      <segment type="0" vertex1="3" vertex2="4"/>
+      <segment type="0" vertex1="4" vertex2="5"/>
+      <segment type="0" vertex1="5" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyEvent name="NewDependencyEvent_12" start="Gate" true="Display Beacon Inst." data="Repository::ref_Character_Sam">
+    <ExternalEventInstance name="COVER_PEEK" data=""/>
+    <vertices>
+      <vertex x="1292.000000" y="213.000000"/>
+      <vertex x="1530.000000" y="213.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Gate" x="1242.000000" y="188.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_25" start="In Cover" true="Gate" sequence="se070_Tuto_TakeCover">
+    <vertices>
+      <vertex x="943.000000" y="212.000000"/>
+      <vertex x="1242.000000" y="213.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Empty Task" x="1735.000000" y="188.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_26" start="Display Beacon Inst." true="Empty Task" sequence="se070_Tuto_TakeCover">
+    <vertices>
+      <vertex x="1580.000000" y="213.000000"/>
+      <vertex x="1735.000000" y="213.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyEvent name="NewDependencyEvent_13" start="Empty Task" true="Hide Beacon Inst." data="Repository::ref_Character_Sam">
+    <ExternalEventInstance name="COVER_PEEK_END" data=""/>
+    <vertices>
+      <vertex x="1785.000000" y="213.000000"/>
+      <vertex x="1993.000000" y="276.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Cover Gate" x="697.000000" y="188.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_27" start="Cover Gate" true="In Cover" sequence="se070_Tuto_TakeCover">
+    <vertices>
+      <vertex x="747.000000" y="213.000000"/>
+      <vertex x="893.000000" y="212.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Move Camera" x="1735.000000" y="250.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_3" entity="Repository::o_Camera">
+        <Event name="NewEvent" end="0.600000" condition="1">
+          <CommandInstance name="CameraLockActor" duration="0.600000">
+            <ParameterInstance name="Camera" data="Repository::o_Camera"/>
+            <ParameterInstance name="LockActor" data="ETarget_22" InUnrealActors="1"/>
+            <ParameterInstance name="LockBlend">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.500000"/>
+            </ParameterInstance>
+            <ParameterInstance name="bPlayOnEveryPlayer">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="bRestoreOriginalLocationAtEnd">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="fSlowMotionIndependantEventTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="-1.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="LockThreshold">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_28" start="Display Beacon Inst." true="Move Camera" sequence="se070_Tuto_TakeCover">
+    <vertices>
+      <vertex x="1580.000000" y="213.000000"/>
+      <vertex x="1735.000000" y="275.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyComplete name="NewDependencyComplete_29" start="Cover Gate" true="Locators" sequence="se070_Tuto_TakeCover">
+    <vertices>
+      <vertex x="747.000000" y="213.000000"/>
+      <vertex x="894.000000" y="290.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyComplete name="NewDependencyComplete_30" start="Enable LT and RA" true="Start SE080 Vox" sequence="se070_Tuto_TakeCover">
+    <vertices>
+      <vertex x="745.000000" y="135.000000"/>
+      <vertex x="892.000000" y="56.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+</Sequence>

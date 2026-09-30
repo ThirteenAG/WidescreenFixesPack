@@ -1,0 +1,1177 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Sequence name="SE050_SamLookUAV">
+  <Task name="Trans." first="1" x="25.000000" y="290.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::o_Pawn_Sam">
+        <Event name="NewEvent" end="8.333330">
+          <CommandInstance name="PlayAnimation" duration="8.333330">
+            <ParameterInstance name="Actor" data="Repository::o_Pawn_Sam"/>
+            <ParameterInstance name="AnimName">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="M01_Markt_se050_Spec_SamLookUAV_Part1_Sam"/>
+            </ParameterInstance>
+            <ParameterInstance name="UseAnimPosition">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="TweenTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="AnimSpeedMultiplier">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="1.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="OffSetStartTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="Origin" data="SE_Helper_0" InUnrealActors="1"/>
+            <ParameterInstance name="PhysMotionType"/>
+            <ParameterInstance name="DebugOutput">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="Grim Lines" entity="Repository::o_Pawn_Sam">
+        <Event name="NewEvent" start="0.400000" end="2.329375">
+          <CommandInstance name="SetDialog" duration="1.929375">
+            <ParameterInstance name="CharacterOasis" data="Repository::o_Pawn_Sam"/>
+            <ParameterInstance name="DialogOasis" data="Repository::Unreal::Oasis::Map01 MARKET::SE050_SPEC::28864::79574"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="FadeOutTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayIncomingSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="HideSubtitle">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayOnlyOnLocalPlayer">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+        <Event name="NewEvent_1" start="5.600000" end="6.741146">
+          <CommandInstance name="SetDialog" duration="1.141146">
+            <ParameterInstance name="CharacterOasis" data="Repository::o_Pawn_Sam"/>
+            <ParameterInstance name="DialogOasis" data="Repository::Unreal::Oasis::Map01 MARKET::SE050_SPEC::28864::80234"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="FadeOutTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayIncomingSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="HideSubtitle">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayOnlyOnLocalPlayer">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_2" entity="Repository::o_Camera">
+        <Event name="NewEvent" end="8.333333">
+          <CommandInstance name="PlayCameraAnimation" duration="8.333333">
+            <ParameterInstance name="Camera" data="Repository::o_Camera"/>
+            <ParameterInstance name="AnimName">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="M01_Markt_se050_Spec_SamLookUAV_Part1_Sam"/>
+            </ParameterInstance>
+            <ParameterInstance name="Origin" data="SE_Helper_0" InUnrealActors="1"/>
+            <ParameterInstance name="Blend">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="BlendingSource"/>
+            <ParameterInstance name="bPlayOnEveryPlayer">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_3" entity="GameItems_1" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="DeleteActor">
+            <ParameterInstance name="Actor" data="GameItems_1" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_4" entity="GI_NonInteractiveDynActor_34" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="DeleteActor">
+            <ParameterInstance name="Actor" data="GI_NonInteractiveDynActor_34" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_5" entity="Repository::o_Character_Sam" ignore="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerReverseLookAxis">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Reverse">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Start Grim MSG Loop" x="189.000000" y="291.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::Sequences::SE050_GrimSpeaketh">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StartSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::SE050_GrimSpeaketh"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetGameCinematicState">
+            <ParameterInstance name="dummy" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="State">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="SetHUDVisibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_1" entity="ETarget_24" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="CameraAddTargetToSpot">
+            <ParameterInstance name="Target" data="ETarget_24" InUnrealActors="1"/>
+            <ParameterInstance name="SpottingRange">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="150.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="SpottingZoomed">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="NoisyRange">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="50.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="SpottingDistance">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="100000.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="AutoRemoveAfterSpot">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete" start="Trans." true="Start Grim MSG Loop" sequence="SE050_SamLookUAV">
+    <vertices>
+      <vertex x="75.000000" y="315.000000"/>
+      <vertex x="189.000000" y="316.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Sam Anim" x="406.000000" y="239.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::o_Pawn_Sam">
+        <Event name="NewEvent" end="-1.000000" indeterminate="1">
+          <CommandInstance name="PlayAnimation">
+            <ParameterInstance name="Actor" data="Repository::o_Pawn_Sam"/>
+            <ParameterInstance name="AnimName">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="M01_Markt_se050_Spec_SamLookUAV_Loop_Sam"/>
+            </ParameterInstance>
+            <ParameterInstance name="UseAnimPosition">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="TweenTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="AnimSpeedMultiplier">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="1.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="OffSetStartTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="Origin" data="SE_Helper_0" InUnrealActors="1"/>
+            <ParameterInstance name="PhysMotionType"/>
+            <ParameterInstance name="DebugOutput">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_0" start="Start Grim MSG Loop" true="Sam Anim" sequence="SE050_SamLookUAV">
+    <vertices>
+      <vertex x="239.000000" y="316.000000"/>
+      <vertex x="406.000000" y="264.000000"/>
+      <vertex x="364.000000" y="264.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="2"/>
+      <segment type="0" vertex1="2" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Final Lines" x="873.000000" y="339.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::o_Pawn_Sam">
+        <Event name="NewEvent" end="4.666700">
+          <CommandInstance name="PlayAnimation" duration="4.666700">
+            <ParameterInstance name="Actor" data="Repository::o_Pawn_Sam"/>
+            <ParameterInstance name="AnimName">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="M01_Markt_se050_Spec_SamLookUAV_Part2_Sam"/>
+            </ParameterInstance>
+            <ParameterInstance name="UseAnimPosition">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="TweenTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="AnimSpeedMultiplier">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="1.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="OffSetStartTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="Origin" data="SE_Helper_0" InUnrealActors="1"/>
+            <ParameterInstance name="PhysMotionType"/>
+            <ParameterInstance name="DebugOutput">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="Repository::Sequences::SE050_GrimSpeaketh">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StopSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::SE050_GrimSpeaketh"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_1" entity="Repository::o_Pawn_Sam">
+        <Event name="NewEvent" end="0.870292">
+          <CommandInstance name="SetDialog" duration="0.870292">
+            <ParameterInstance name="CharacterOasis" data="Repository::o_Pawn_Sam"/>
+            <ParameterInstance name="DialogOasis" data="Repository::Unreal::Oasis::Map01 MARKET::SE050_SPEC::28864::79584"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="FadeOutTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayIncomingSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="HideSubtitle">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayOnlyOnLocalPlayer">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_2" entity="Repository::o_Pawn_Sam">
+        <Event name="NewEvent" start="1.200000" end="4.300563">
+          <CommandInstance name="SetDialog" duration="3.100563">
+            <ParameterInstance name="CharacterOasis" data="Repository::o_Pawn_Sam"/>
+            <ParameterInstance name="DialogOasis" data="Repository::Unreal::Oasis::Map01 MARKET::SE050_SPEC::28864::79585"/>
+            <ParameterInstance name="FadeInTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="FadeOutTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayIncomingSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="HideSubtitle">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="PlayOnlyOnLocalPlayer">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_4" entity="ETarget_24" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="CameraRemoveTargetToSpot">
+            <ParameterInstance name="Target" data="ETarget_24" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_5" entity="ParticleSpawner_0" InUnrealActors="1" ignore="1">
+        <Event name="NewEvent" start="5.000000" end="-1.000000">
+          <CommandInstance name="ParticleSpawnerDisable">
+            <ParameterInstance name="ParticleSpawner" data="ParticleSpawner_0" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_6" entity="ParticleSpawner_2" InUnrealActors="1" ignore="1">
+        <Event name="NewEvent" start="5.000000" end="-1.000000">
+          <CommandInstance name="ParticleSpawnerDisable">
+            <ParameterInstance name="ParticleSpawner" data="ParticleSpawner_2" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Enable UAV Visual" x="406.000000" y="335.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="ParticleSpawner_0" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="ParticleSpawnerEnable">
+            <ParameterInstance name="ParticleSpawner" data="ParticleSpawner_0" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent" start="Enable UAV Visual" true="Target Spotted" data="Repository::ref_Character_Sam">
+    <ExternalEventInstance name="CAMERA_TARGET_SPOTTED" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Target" data="Repository::ref_SpottedTarget"/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="456.000000" y="360.000000"/>
+      <vertex x="693.000000" y="363.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <DependencyComplete name="NewDependencyComplete_1" start="Start Grim MSG Loop" true="Enable UAV Visual" sequence="SE050_SamLookUAV">
+    <vertices>
+      <vertex x="239.000000" y="316.000000"/>
+      <vertex x="406.000000" y="360.000000"/>
+      <vertex x="360.000000" y="360.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="2"/>
+      <segment type="0" vertex1="2" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Tutorial MSG" x="408.000000" y="139.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" start="1.000000" end="-1.000000">
+          <CommandInstance name="DisplayTutorial">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Key" data="m01_id_tuto_10" InUnrealTutorialKeys="1"/>
+            <ParameterInstance name="Show">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Centered">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceVisible">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_2" start="Start Grim MSG Loop" true="Tutorial MSG" sequence="SE050_SamLookUAV">
+    <vertices>
+      <vertex x="239.000000" y="316.000000"/>
+      <vertex x="408.000000" y="164.000000"/>
+      <vertex x="371.000000" y="164.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="2"/>
+      <segment type="0" vertex1="2" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="&quot;Loop Up&quot; ProjTxt OFF" x="873.000000" y="412.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="FlashTextureInfo_0" InUnrealDynTexFlash="1">
+        <Event name="NewEvent_0" end="-1.000000">
+          <CommandInstance name="Fla_ChangeState">
+            <ParameterInstance name="FlashTexture" data="FlashTextureInfo_0" InUnrealDynTexFlash="1"/>
+            <ParameterInstance name="StateName">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="Fadeout"/>
+            </ParameterInstance>
+            <ParameterInstance name="Path">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value=""/>
+            </ParameterInstance>
+            <ParameterInstance name="UseSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="EProjectedTextLight_0" InUnrealActors="1">
+        <Event name="NewEvent_0" start="1.000000" end="-1.000000">
+          <CommandInstance name="SetLightOn">
+            <ParameterInstance name="Light" data="EProjectedTextLight_0" InUnrealActors="1"/>
+            <ParameterInstance name="On">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Flicker">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_1" entity="Repository::o_ObjectiveManager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="ObjectiveComplete">
+            <ParameterInstance name="ObjectiveManager" data="Repository::o_ObjectiveManager"/>
+            <ParameterInstance name="sObjective" data="Repository::Obj_Main_01_LookUp"/>
+            <ParameterInstance name="ShowMessage">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="ShowTutoral">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_2" entity="Repository::o_FlashEventManager">
+        <Event name="NewEvent" start="1.000000" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibility">
+            <ParameterInstance name="FlashEventManager" data="Repository::o_FlashEventManager"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_Reticule"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_3" entity="Repository::o_FlashEventManager">
+        <Event name="NewEvent" start="1.000000" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibility">
+            <ParameterInstance name="FlashEventManager" data="Repository::o_FlashEventManager"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_Tutorial"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Target Spotted" x="693.000000" y="338.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_6" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="DisplayTutorial">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Key" data="m01_id_tuto_10" InUnrealTutorialKeys="1"/>
+            <ParameterInstance name="Show">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Centered">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceVisible">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_3" start="Target Spotted" true="&quot;Loop Up&quot; ProjTxt OFF" sequence="SE050_SamLookUAV">
+    <vertices>
+      <vertex x="743.000000" y="363.000000"/>
+      <vertex x="873.000000" y="437.000000"/>
+      <vertex x="843.000000" y="437.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="2"/>
+      <segment type="0" vertex1="2" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyComplete name="NewDependencyComplete_4" start="Target Spotted" true="Final Lines" sequence="SE050_SamLookUAV">
+    <vertices>
+      <vertex x="743.000000" y="363.000000"/>
+      <vertex x="873.000000" y="364.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="&quot;Loop Up&quot; ProjTxt ON" x="406.000000" y="429.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="FlashTextureInfo_0" InUnrealDynTexFlash="1">
+        <Event name="NewEvent" start="0.100000" end="-1.000000">
+          <CommandInstance name="Fla_ChangeState">
+            <ParameterInstance name="FlashTexture" data="FlashTextureInfo_0" InUnrealDynTexFlash="1"/>
+            <ParameterInstance name="StateName">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="Fadein"/>
+            </ParameterInstance>
+            <ParameterInstance name="Path">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value=""/>
+            </ParameterInstance>
+            <ParameterInstance name="UseSound">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="EProjectedTextLight_0" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetLightOn">
+            <ParameterInstance name="Light" data="EProjectedTextLight_0" InUnrealActors="1"/>
+            <ParameterInstance name="On">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Flicker">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_1" entity="Repository::o_ObjectiveManager">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="ObjectiveAddPrimary">
+            <ParameterInstance name="ObjectiveManager" data="Repository::o_ObjectiveManager"/>
+            <ParameterInstance name="Light" data="EProjectedTextLight_0" InUnrealActors="1"/>
+            <ParameterInstance name="Light2"/>
+            <ParameterInstance name="Light3"/>
+            <ParameterInstance name="sObjective" data="Repository::Obj_Main_01_LookUp"/>
+            <ParameterInstance name="ShowMessage">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="ShowTutoralMessage">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Light4"/>
+            <ParameterInstance name="Light5"/>
+            <ParameterInstance name="Light6"/>
+            <ParameterInstance name="Light7"/>
+            <ParameterInstance name="AlwaysShowLocators">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_5" start="Start Grim MSG Loop" true="&quot;Loop Up&quot; ProjTxt ON" sequence="SE050_SamLookUAV">
+    <vertices>
+      <vertex x="239.000000" y="316.000000"/>
+      <vertex x="406.000000" y="454.000000"/>
+      <vertex x="373.000000" y="454.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="2"/>
+      <segment type="0" vertex1="2" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Stop Sequence" x="1063.000000" y="340.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::Sequences::SE050_SamLookUAV">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="StopSequence">
+            <ParameterInstance name="Sequence" data="Repository::Sequences::SE050_SamLookUAV"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_6" start="Final Lines" true="Stop Sequence" sequence="SE050_SamLookUAV">
+    <vertices>
+      <vertex x="923.000000" y="364.000000"/>
+      <vertex x="1063.000000" y="365.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Set up camera listener" x="411.000000" y="47.000000">
+    <Timeline name="NewTimeline">
+      <Track name="Freeze ctrl, allow cam to settle" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_CameraMovement"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_1" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="HideHUD">
+            <ParameterInstance name="dummy" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Hide">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::o_Camera" ignore="1">
+        <Event name="NewEvent" end="0.500000" condition="1">
+          <CommandInstance name="CameraLockActor" duration="0.500000">
+            <ParameterInstance name="Camera" data="Repository::o_Camera"/>
+            <ParameterInstance name="LockActor" data="ETarget_9" InUnrealActors="1"/>
+            <ParameterInstance name="LockBlend">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.400000"/>
+            </ParameterInstance>
+            <ParameterInstance name="bPlayOnEveryPlayer">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="bRestoreOriginalLocationAtEnd">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="fSlowMotionIndependantEventTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="-1.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="LockThreshold">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_2" entity="Repository::o_FlashEventManager">
+        <Event name="NewEvent" start="1.000000" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibility">
+            <ParameterInstance name="FlashEventManager" data="Repository::o_FlashEventManager"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_Reticule"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_3" entity="Repository::o_FlashEventManager">
+        <Event name="NewEvent" start="1.000000" end="-1.000000">
+          <CommandInstance name="Fla_SetHUDModuleVisibility">
+            <ParameterInstance name="FlashEventManager" data="Repository::o_FlashEventManager"/>
+            <ParameterInstance name="Module" data="Repository::Unreal::enums::EHudModule::eHudModule_Tutorial"/>
+            <ParameterInstance name="Activate">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Visibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="...but enable camera control" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" start="1.000000" end="-1.000000">
+          <CommandInstance name="PlayerEnableButton">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="ActionType" data="Repository::Unreal::enums::eActionType::eActionType_CameraMovement"/>
+            <ParameterInstance name="Enable">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_7" start="Start Grim MSG Loop" true="Set up camera listener" sequence="SE050_SamLookUAV">
+    <vertices>
+      <vertex x="239.000000" y="316.000000"/>
+      <vertex x="411.000000" y="72.000000"/>
+      <vertex x="373.000000" y="72.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="2"/>
+      <segment type="0" vertex1="2" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Camera moved" x="1122.000000" y="51.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_0" start="Wait for camera move" true="Camera moved" data="Repository::ref_Character_Sam">
+    <ExternalEventInstance name="CAMERA_INPUT" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="Pitch" data="Repository::n_Pitch"/>
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance_0" info="Yaw" data="Repository::n_Yaw"/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="918.000000" y="75.000000"/>
+      <vertex x="1122.000000" y="76.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Stick Moved Up Enough" x="1443.000000" y="52.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerReverseLookAxis">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Reverse">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="Repository::o_Character_Sam" ignore="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetGameCinematicState">
+            <ParameterInstance name="dummy" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="State">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="SetHUDVisibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyCommand name="NewDependencyCommand" start="Camera moved" true="Stick Moved Up Enough" false="Didn&apos;t Move Up Enough">
+    <CommandInstance name="LessThan">
+      <ParameterInstance name="Left" data="Repository::n_Pitch"/>
+      <ParameterInstance name="Right">
+        <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="-0.100000"/>
+      </ParameterInstance>
+    </CommandInstance>
+    <vertices>
+      <vertex x="1172.000000" y="76.000000"/>
+      <vertex x="1443.000000" y="77.000000"/>
+      <vertex x="1445.000000" y="162.000000"/>
+      <vertex x="1366.625000" y="77.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="3" vertex2="1"/>
+      <segment type="1" vertex1="3" vertex2="2"/>
+      <segment type="2" vertex1="0" vertex2="3"/>
+    </segments>
+  </DependencyCommand>
+  <Task name="Stick Moved Down Enough" x="1790.000000" y="137.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::o_Character_Sam" ignore="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerReverseLookAxis">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Reverse">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_0" entity="Repository::o_Character_Sam" ignore="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="SetGameCinematicState">
+            <ParameterInstance name="dummy" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="State">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="SetHUDVisibility">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_6" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="DisplayTutorial">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Key" data="m01_id_tuto_10" InUnrealTutorialKeys="1"/>
+            <ParameterInstance name="Show">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Centered">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceVisible">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyCommand name="NewDependencyCommand_0" start="Didn&apos;t Move Up Enough" true="Stick Moved Down Enough" false="Didn&apos;t Move Down Enough">
+    <CommandInstance name="GreaterThan">
+      <ParameterInstance name="Left" data="Repository::n_Pitch"/>
+      <ParameterInstance name="Right">
+        <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.100000"/>
+      </ParameterInstance>
+    </CommandInstance>
+    <vertices>
+      <vertex x="1495.000000" y="162.000000"/>
+      <vertex x="1790.000000" y="162.000000"/>
+      <vertex x="1791.000000" y="238.000000"/>
+      <vertex x="1718.625000" y="162.500000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="3" vertex2="1"/>
+      <segment type="1" vertex1="3" vertex2="2"/>
+      <segment type="2" vertex1="0" vertex2="3"/>
+    </segments>
+  </DependencyCommand>
+  <Task name="Invert Y Prompt" x="1973.000000" y="138.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="DisplayTutorial">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Key" data="m01_id_tuto_26" InUnrealTutorialKeys="1"/>
+            <ParameterInstance name="Show">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="Centered">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceVisible">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_8" start="Stick Moved Down Enough" true="Invert Y Prompt" sequence="SE050_SamLookUAV">
+    <vertices>
+      <vertex x="1840.000000" y="162.000000"/>
+      <vertex x="1973.000000" y="163.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Wait for button input" x="2127.000000" y="140.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_9" start="Invert Y Prompt" true="Wait for button input" sequence="SE050_SamLookUAV">
+    <vertices>
+      <vertex x="2023.000000" y="163.000000"/>
+      <vertex x="2127.000000" y="165.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Was it A or B?" x="2361.000000" y="141.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyEvent name="NewDependencyEvent_1" start="Wait for button input" true="Was it A or B?" data="Repository::ref_Character_Sam">
+    <ExternalEventInstance name="RAW_BUTTON_INPUT" data="">
+      <ExternalEventInfoInstance name="NewExternalEventInfoInstance" info="ActionButton" data="Repository::ref_ActionType"/>
+    </ExternalEventInstance>
+    <vertices>
+      <vertex x="2177.000000" y="165.000000"/>
+      <vertex x="2361.000000" y="166.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyEvent>
+  <Task name="Was A. Keep Inverted" x="2672.000000" y="143.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_0" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerReverseLookAxis">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Reverse">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="DisplayTutorial">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Key" data="m01_id_tuto_26" InUnrealTutorialKeys="1"/>
+            <ParameterInstance name="Show">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Centered">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceVisible">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyCommand name="NewDependencyCommand_1" start="Was it A or B?" true="Was A. Keep Inverted" false="Not A">
+    <CommandInstance name="Equal">
+      <ParameterInstance name="Left" data="Repository::Unreal::enums::eActionType::eActionType_PressA"/>
+      <ParameterInstance name="Right" data="Repository::ref_ActionType"/>
+    </CommandInstance>
+    <vertices>
+      <vertex x="2411.000000" y="166.000000"/>
+      <vertex x="2672.000000" y="168.000000"/>
+      <vertex x="2671.000000" y="248.000000"/>
+      <vertex x="2594.500000" y="167.875000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="3" vertex2="1"/>
+      <segment type="1" vertex1="3" vertex2="2"/>
+      <segment type="2" vertex1="0" vertex2="3"/>
+    </segments>
+  </DependencyCommand>
+  <Task name="Not A" x="2671.000000" y="223.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <Task name="Was B. Cancel Inversion" x="2938.000000" y="225.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="DisplayTutorial">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Key" data="m01_id_tuto_26" InUnrealTutorialKeys="1"/>
+            <ParameterInstance name="Show">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="Centered">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="ForceVisible">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_1" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerReverseLookAxis">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Reverse">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyCommand name="NewDependencyCommand_2" start="Not A" true="Was B. Cancel Inversion" false="Wait for button input">
+    <CommandInstance name="Equal">
+      <ParameterInstance name="Left" data="Repository::Unreal::enums::eActionType::eActionType_PressX"/>
+      <ParameterInstance name="Right" data="Repository::ref_ActionType"/>
+    </CommandInstance>
+    <vertices>
+      <vertex x="2721.000000" y="248.000000"/>
+      <vertex x="2938.000000" y="250.000000"/>
+      <vertex x="2127.000000" y="165.000000"/>
+      <vertex x="2895.250000" y="249.750000"/>
+      <vertex x="2812.000000" y="334.000000"/>
+      <vertex x="2075.000000" y="229.000000"/>
+      <vertex x="2426.000000" y="229.000000"/>
+      <vertex x="2508.000000" y="332.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="3" vertex2="1"/>
+      <segment type="1" vertex1="3" vertex2="4"/>
+      <segment type="1" vertex1="4" vertex2="7"/>
+      <segment type="1" vertex1="7" vertex2="6"/>
+      <segment type="1" vertex1="6" vertex2="5"/>
+      <segment type="1" vertex1="5" vertex2="2"/>
+      <segment type="2" vertex1="0" vertex2="3"/>
+    </segments>
+  </DependencyCommand>
+  <Task name="Wait for camera move" x="868.000000" y="50.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_5" entity="Repository::o_Character_Sam">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="PlayerReverseLookAxis">
+            <ParameterInstance name="Character" data="Repository::o_Character_Sam"/>
+            <ParameterInstance name="Reverse">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Didn&apos;t Move Up Enough" x="1445.000000" y="137.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <Task name="Didn&apos;t Move Down Enough" x="1791.000000" y="213.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_11" start="Didn&apos;t Move Down Enough" true="Wait for camera move" sequence="SE050_SamLookUAV">
+    <vertices>
+      <vertex x="1841.000000" y="238.000000"/>
+      <vertex x="868.000000" y="75.000000"/>
+      <vertex x="802.000000" y="143.000000"/>
+      <vertex x="1936.000000" y="309.000000"/>
+      <vertex x="1308.000000" y="143.000000"/>
+      <vertex x="1426.000000" y="265.000000"/>
+      <vertex x="1656.000000" y="263.000000"/>
+      <vertex x="1710.000000" y="309.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="3"/>
+      <segment type="0" vertex1="3" vertex2="7"/>
+      <segment type="0" vertex1="7" vertex2="6"/>
+      <segment type="0" vertex1="6" vertex2="5"/>
+      <segment type="0" vertex1="5" vertex2="4"/>
+      <segment type="0" vertex1="4" vertex2="2"/>
+      <segment type="0" vertex1="2" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Sam &amp; Waiter" first="1" x="21.000000" y="164.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack_1" entity="GI_NonInteractiveDynActor_34" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="DeleteActor">
+            <ParameterInstance name="Actor" data="GI_NonInteractiveDynActor_34" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+      <Track name="NewTrack_2" entity="GameItems_1" InUnrealActors="1">
+        <Event name="NewEvent" end="-1.000000">
+          <CommandInstance name="DeleteActor">
+            <ParameterInstance name="Actor" data="GameItems_1" InUnrealActors="1"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Special Cam" x="539.000000" y="292.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::o_Camera">
+        <Event name="NewEvent" end="-1.000000" indeterminate="1">
+          <CommandInstance name="CameraSetMode">
+            <ParameterInstance name="Camera" data="Repository::o_Camera"/>
+            <ParameterInstance name="CameraMode">
+              <Text name="NewText" mutable="1" scoped="1" auto="1" value="TutorialCam1"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <Task name="Camera Lock" x="407.000000" y="515.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::o_Camera">
+        <Event name="NewEvent" end="-1.000000" indeterminate="1">
+          <CommandInstance name="CameraLockActor">
+            <ParameterInstance name="Camera" data="Repository::o_Camera"/>
+            <ParameterInstance name="LockActor" data="ETarget_9" InUnrealActors="1"/>
+            <ParameterInstance name="LockBlend">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.600000"/>
+            </ParameterInstance>
+            <ParameterInstance name="bPlayOnEveryPlayer">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="1"/>
+            </ParameterInstance>
+            <ParameterInstance name="bRestoreOriginalLocationAtEnd">
+              <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+            </ParameterInstance>
+            <ParameterInstance name="fSlowMotionIndependantEventTime">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="-1.000000"/>
+            </ParameterInstance>
+            <ParameterInstance name="LockThreshold">
+              <Number name="NewNumber" mutable="1" scoped="1" auto="1" value="0.000000"/>
+            </ParameterInstance>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_13" start="Start Grim MSG Loop" true="Camera Lock" sequence="SE050_SamLookUAV">
+    <vertices>
+      <vertex x="239.000000" y="316.000000"/>
+      <vertex x="407.000000" y="540.000000"/>
+      <vertex x="366.000000" y="540.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="2"/>
+      <segment type="0" vertex1="2" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyComplete name="NewDependencyComplete_14" start="Start Grim MSG Loop" true="Special Cam" sequence="SE050_SamLookUAV">
+    <vertices>
+      <vertex x="239.000000" y="316.000000"/>
+      <vertex x="539.000000" y="317.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Release Cam" x="1682.000000" y="53.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::Sequences::SE050_SamLookUAV::Camera Lock">
+        <Event name="NewEvent" start="0.100000" end="-1.000000">
+          <CommandInstance name="StopTask">
+            <ParameterInstance name="Task" data="Repository::Sequences::SE050_SamLookUAV::Camera Lock"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_15" start="Stick Moved Up Enough" true="Release Cam" sequence="SE050_SamLookUAV">
+    <vertices>
+      <vertex x="1493.000000" y="77.000000"/>
+      <vertex x="1682.000000" y="78.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Release Cam_0" x="3192.000000" y="143.000000">
+    <Timeline name="NewTimeline">
+      <Track name="NewTrack" entity="Repository::Sequences::SE050_SamLookUAV::Camera Lock">
+        <Event name="NewEvent" start="0.100000" end="-1.000000">
+          <CommandInstance name="StopTask">
+            <ParameterInstance name="Task" data="Repository::Sequences::SE050_SamLookUAV::Camera Lock"/>
+          </CommandInstance>
+        </Event>
+      </Track>
+    </Timeline>
+  </Task>
+  <DependencyComplete name="NewDependencyComplete_16" start="Was A. Keep Inverted" true="Release Cam_0" sequence="SE050_SamLookUAV">
+    <vertices>
+      <vertex x="2722.000000" y="168.000000"/>
+      <vertex x="3192.000000" y="168.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <DependencyComplete name="NewDependencyComplete_17" start="Was B. Cancel Inversion" true="Release Cam_0" sequence="SE050_SamLookUAV">
+    <vertices>
+      <vertex x="2988.000000" y="250.000000"/>
+      <vertex x="3192.000000" y="168.000000"/>
+      <vertex x="3081.000000" y="168.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="2"/>
+      <segment type="0" vertex1="2" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+  <Task name="Wait for stick centered" x="570.000000" y="49.000000">
+    <Timeline name="NewTimeline"/>
+  </Task>
+  <DependencyCommand name="NewDependencyCommand_3" start="Wait for stick centered" true="Wait for camera move">
+    <CommandInstance name="EqualBoolean">
+      <ParameterInstance name="Left" data="Repository::o_bool_CamStickNotCenter"/>
+      <ParameterInstance name="Right">
+        <Boolean name="NewBoolean" mutable="1" scoped="1" auto="1" value="0"/>
+      </ParameterInstance>
+    </CommandInstance>
+    <vertices>
+      <vertex x="620.000000" y="74.000000"/>
+      <vertex x="868.000000" y="75.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyCommand>
+  <DependencyComplete name="NewDependencyComplete_18" start="Set up camera listener" true="Wait for stick centered" sequence="SE050_SamLookUAV">
+    <vertices>
+      <vertex x="461.000000" y="72.000000"/>
+      <vertex x="570.000000" y="74.000000"/>
+    </vertices>
+    <segments>
+      <segment type="0" vertex1="0" vertex2="1"/>
+    </segments>
+  </DependencyComplete>
+</Sequence>
