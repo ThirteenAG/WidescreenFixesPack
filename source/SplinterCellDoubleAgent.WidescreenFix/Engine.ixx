@@ -24,10 +24,8 @@ namespace UGameEngine
 
         if (Screen.fRawInputMouse > 0.0f && UWindowsViewport::deferredCauseInputEventForRawInput)
         {
-            UWindowsViewport::deferredCauseInputEventForRawInput(228, 4, static_cast<float>(RawInputHandler<>::RawMouseDeltaX));
-            UWindowsViewport::deferredCauseInputEventForRawInput(229, 4, static_cast<float>(RawInputHandler<>::RawMouseDeltaY));
-            RawInputHandler<>::RawMouseDeltaX = 0;
-            RawInputHandler<>::RawMouseDeltaY = 0;
+            UWindowsViewport::deferredCauseInputEventForRawInput(228, 4, static_cast<float>(RawInputHandler<>::RawMouseDeltaX.exchange(0)));
+            UWindowsViewport::deferredCauseInputEventForRawInput(229, 4, static_cast<float>(RawInputHandler<>::RawMouseDeltaY.exchange(0)));
             UWindowsViewport::deferredCauseInputEventForRawInput = nullptr;
         }
 
