@@ -6,46 +6,21 @@ module;
 export module Window;
 
 import ComVars;
+import Splitscreen;
 
 SafetyHookInline shsub_46E388{};
+// UD3DRenderDevice::SetRes(viewport, width, height, fullscreen, ...)
 int __fastcall sub_46E388(void* a1, void* edx, void* a2, int a3, int a4, int fullscreen, int a6)
 {
+    if (bEnableSplitscreen)
+    {
+        auto rect = GetSplitscreenRect();
+        a3 = rect.right - rect.left;
+        a4 = rect.bottom - rect.top;
+    }
     return shsub_46E388.fastcall<int>(a1, edx, a2, a3, a4, 0, a6);
 }
 
-
-enum WindowVerticalPos
-{
-    Center,
-    Top,
-    Bottom,
-};
-
-static BOOL WINAPI CenterWindowPosition(HWND hWnd, int nWidth, int nHeight, WindowVerticalPos put = Center)
-{
-    // fix the window to open at the center of the screen...
-    HMONITOR monitor = MonitorFromWindow(GetDesktopWindow(), MONITOR_DEFAULTTONEAREST);
-    MONITORINFOEX info = { sizeof(MONITORINFOEX) };
-    GetMonitorInfo(monitor, &info);
-    DEVMODE devmode = {};
-    devmode.dmSize = sizeof(DEVMODE);
-    EnumDisplaySettings(info.szDevice, ENUM_CURRENT_SETTINGS, &devmode);
-    DWORD DesktopX = devmode.dmPelsWidth;
-    DWORD DesktopY = devmode.dmPelsHeight;
-
-    int newWidth = nWidth;
-    int newHeight = nHeight;
-
-    int WindowPosX = (int)(((float)DesktopX / 2.0f) - ((float)newWidth / 2.0f));
-    int WindowPosY = (int)(((float)DesktopY / 2.0f) - ((float)newHeight / 2.0f));
-
-    if (put == Top)
-        return SetWindowPos(hWnd, 0, WindowPosX, 0, newWidth, newHeight, SWP_NOZORDER | SWP_FRAMECHANGED);
-    else if (put == Bottom)
-        return SetWindowPos(hWnd, 0, WindowPosX, DesktopY - newHeight, newWidth, newHeight, SWP_NOZORDER | SWP_FRAMECHANGED);
-
-    return SetWindowPos(hWnd, 0, WindowPosX, WindowPosY, newWidth, newHeight, SWP_NOZORDER | SWP_FRAMECHANGED);
-}
 
 bool bFocus = false;
 SafetyHookInline shWndProc{};
@@ -64,7 +39,8 @@ int __fastcall WndProc(HDC _this, void* edx, UINT Msg, int wparam, unsigned int 
     //    break;
 
     case WM_ACTIVATE:
-        if (LOWORD(wparam) == WA_INACTIVE)
+        // split screen: both windows stay over the taskbar
+        if (LOWORD(wparam) == WA_INACTIVE && !bEnableSplitscreen)
         {
             SetWindowPos(*(HWND*)(*((uint32_t*)_this + 253) + 4), HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
             bFocus = false;
@@ -87,27 +63,11 @@ BOOL WINAPI SetWindowPosHook(HWND hWnd, HWND hWndInsertAfter, int X, int Y, int 
 
     if (bEnableSplitscreen)
     {
-        if (bInstance1)
-            return CenterWindowPosition(hWnd, BackBufferWidth, BackBufferHeight, Top);
-        else
-            return CenterWindowPosition(hWnd, BackBufferWidth, BackBufferHeight, Bottom);
+        auto rect = GetSplitscreenRect();
+        return SetWindowPos(hWnd, 0, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, SWP_NOZORDER | SWP_FRAMECHANGED);
     }
 
     return SetWindowPos(hWnd, hWndInsertAfter, X, Y, cx, cy, uFlags);
-}
-
-SafetyHookInline shCreateSemaphoreA{};
-HANDLE WINAPI CreateSemaphoreAHook(LPSECURITY_ATTRIBUTES lpSemaphoreAttributes, LONG lInitialCount, LONG lMaximumCount, LPCSTR lpName)
-{
-    auto ret = shCreateSemaphoreA.stdcall<HANDLE>(lpSemaphoreAttributes, lInitialCount, lMaximumCount, lpName);
-
-    if (GetLastError() == ERROR_ALREADY_EXISTS)
-    {
-        bInstance1 = false;
-        return shCreateSemaphoreA.stdcall<HANDLE>(lpSemaphoreAttributes, lInitialCount, lMaximumCount, "Global\\sc5_semaphore2");
-    }
-
-    return ret;
 }
 
 export void InitWindow()
@@ -133,9 +93,4 @@ export void InitWindow()
         BackBufferWidth = PresentationParameters->BackBufferWidth;
         BackBufferHeight = PresentationParameters->BackBufferHeight;
     });
-
-    if (bEnableSplitscreen)
-    {
-        shCreateSemaphoreA = safetyhook::create_inline(CreateSemaphoreA, CreateSemaphoreAHook);
-    }
 }
