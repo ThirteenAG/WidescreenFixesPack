@@ -77,6 +77,7 @@ void Init()
     InitFileManager();
     InitWindow();
     InitSplitscreen();
+    InitLocalSplitscreen();
     InitGraphics();
 
     InitMouse();
@@ -85,6 +86,18 @@ void Init()
     {
         auto pattern = hook::pattern("55 8D 6C 24 88 81 EC ? ? ? ? A1 ? ? ? ? 33 C5 89 45 74 53 56 57 BE ? ? ? ? 68 ? ? ? ? 8B CE E8 ? ? ? ? E8 ? ? ? ? 50");
         injector::MakeRET(pattern.get_first());
+
+        // Press any key: the title page (OpeningPage) sends ResetPressStart when it opens and SignIn LIVE=0 PRESSSTART=1 on a key press,
+        // sign in right away the first time (CFlashMenuPreGameManager command handler sub_D7B89A, the manager at [ebp+68h], virtual +2Ch sends a command)
+        pattern = hook::pattern("68 ? ? ? ? 50 E8 ? ? ? ? 85 C0 59 59 74 14 E8 ? ? ? ? 8B 10 8B C8 FF 92 60 02 00 00 E9");
+        static auto PressStartHook = safetyhook::create_mid(pattern.get_first(32), [](SafetyHookContext& regs)
+        {
+            static bool once = false;
+            if (std::exchange(once, true))
+                return;
+            auto manager = *reinterpret_cast<uintptr_t*>(regs.ebp + 0x68);
+            reinterpret_cast<int(__thiscall*)(uintptr_t, const char*, const char*, int32_t)>((*reinterpret_cast<uintptr_t**>(manager))[0x2C / 4])(manager, "SignIn", "LIVE=0 PRESSSTART=1", 0);
+        });
     }
 
     if (bSkipSystemDetection)
