@@ -9,6 +9,7 @@ export module Frontend;
 import Skeleton;
 import Sprite2d;
 import Draw;
+import Camera;
 
 auto INV_SCREEN_WIDTH = [](float fAspectRatio) { return (1.0f / 640.0f) / (fAspectRatio / (4.0f / 3.0f)); };
 
@@ -67,6 +68,30 @@ export namespace CFont
 
 export std::array<ProtectedGameRef<float>, FrontendClassCount> ResXInvRefs;
 export std::array<ProtectedGameRef<float>, FrontendClassCount> ResYInvRefs;
+
+namespace Subtitles
+{
+    float RadarReserve = 140.0f;
+    injector::hook_back<void(__cdecl*)(float)> hbSetCentreSize;
+
+    void __cdecl SetCentreSize(float width)
+    {
+        if (!TheCamera->m_WideScreenOn)
+        {
+            // Reserve the radar inside the same centered canvas as the HUD.
+            const float hudWidth = SCREEN_WIDTH + 2.0f * std::min(fWidescreenHudOffset, 0.0f);
+            width = std::max(1.0f, std::min(width, hudWidth - 2.0f * SCREEN_SCALE_X(RadarReserve)));
+        }
+        hbSetCentreSize.fun(width);
+    }
+}
+
+injector::hook_back<void(__cdecl*)(float, float, wchar_t*)> hbPrintStringSubtitles;
+void __cdecl PrintStringSubtitles(float x, float y, wchar_t* text)
+{
+    if (!TheCamera->m_WideScreenOn) x = SCREEN_WIDTH * 0.5f;
+    hbPrintStringSubtitles.fun(x, y, text);
+}
 
 namespace CMenuManager
 {
@@ -443,6 +468,13 @@ public:
                 SubtitlesWidth *= fSubtitlesScale;
                 SubtitlesHeight *= fSubtitlesScale;
             }
+
+            // Gameplay subtitles wrap around the constrained HUD, without shrinking the font.
+            Subtitles::RadarReserve = 30.0f + fRadarWidth + 8.0f;
+            pattern = hook::pattern("D9 1C 24 DE D9 E8 ? ? ? ? 59 6A 01 E8");
+            Subtitles::hbSetCentreSize.fun = injector::MakeCALL(pattern.get_first(5), Subtitles::SetCentreSize, true).get();
+            pattern = hook::pattern("DE D9 DD D8 E8 ? ? ? ? 83 C4 0C 6A 00 E8");
+            hbPrintStringSubtitles.fun = injector::MakeCALL(pattern.get_first(4), PrintStringSubtitles, true).get();
 
             // Script text uses a centered canvas in both fade passes.
             pattern = hook::pattern("BE ? ? ? ? 90 66 83 BD");

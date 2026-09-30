@@ -13,6 +13,7 @@ import Sprite2d;
 import Draw;
 import Menu;
 import Timer;
+import Camera;
 
 auto INV_SCREEN_WIDTH = [](float fAspectRatio) { return (1.0f / 640.0f) / (fAspectRatio / (4.0f / 3.0f)); };
 
@@ -98,9 +99,28 @@ export uint8_t* FontRenderStateBuf = nullptr;
 
 export int ReplaceTextShadowWithOutline = 0;
 
+namespace Subtitles
+{
+    float RadarReserve = 140.0f;
+    injector::hook_back<void(__cdecl*)(float)> hbSetCentreSize;
+
+    void __cdecl SetCentreSize(float width)
+    {
+        if (!TheCamera->m_WideScreenOn)
+        {
+            // Reserve the radar inside the same centered canvas as the HUD.
+            const float hudWidth = SCREEN_WIDTH + 2.0f * std::min(fWidescreenHudOffset, 0.0f);
+            width = std::max(1.0f, std::min(width, hudWidth - 2.0f * SCREEN_SCALE_X(RadarReserve)));
+        }
+        hbSetCentreSize.fun(width);
+    }
+}
+
 injector::hook_back<void(__cdecl*)(float, float, unsigned short*)> hbPrintStringSubtitles;
 void __cdecl PrintStringSubtitles(float PosX, float PosY, unsigned short* c)
 {
+    if (!TheCamera->m_WideScreenOn) PosX = SCREEN_WIDTH * 0.5f;
+
     // Vanilla 4:3 places subtitles inside the bottom bar (H - SCALE_Y(80)), and
     // the vanilla bar is 0.15H + SCALE_Y(14) tall. At wider aspects the bar
     // shrinks and that position no longer fits, so move subtitles up by exactly
@@ -1032,6 +1052,11 @@ public:
             // Script text uses a centered canvas in both fade passes.
             pattern = hook::pattern("BE ? ? ? ? 66 83 BD");
             ScriptDraw::Init(*pattern.get_first<intro_text_line*>(1));
+
+            // Match the gameplay subtitle margins to the constrained radar.
+            Subtitles::RadarReserve = std::max(140.0f, 40.0f + fRadarWidth + 6.0f) + 8.0f;
+            pattern = hook::pattern("D9 1C 24 DE D9 E8 ? ? ? ? 8B 1D ? ? ? ?");
+            Subtitles::hbSetCentreSize.fun = injector::MakeCALL(pattern.get_first(5), Subtitles::SetCentreSize, true).get();
 
             // Subtitles position
             pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 6A ? E8 ? ? ? ? ? ? ? ? ? ? ? ? ? 0F 84 ? ? ? ? 68 ? ? ? ? 68 ");

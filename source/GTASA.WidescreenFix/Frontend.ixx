@@ -52,6 +52,43 @@ float __stdcall MenuScaleX(float x)
     return SCREEN_SCALE_X(x);
 }
 
+namespace MenuMessages
+{
+    injector::hook_back<void(__cdecl*)(const CRect&, const CRGBA&)> hbRadioScanDrawRect;
+
+    void __cdecl RadioScanDrawRect(const CRect& rect, const CRGBA& color)
+    {
+        // Both the track and its moving segment use the dialog's centered canvas.
+        CRect centered = rect;
+        const float offset = SCREEN_WIDTH * 0.5f - SCREEN_SCALE_X(320.0f);
+        centered.left += offset;
+        centered.right += offset;
+        hbRadioScanDrawRect.fun(centered, color);
+    }
+}
+
+namespace Subtitles
+{
+    injector::hook_back<void(__cdecl*)(float)> hbSetCentreSize;
+
+    float ConstrainWidth(float width, float scale)
+    {
+        // The existing symmetric margins reserve the radar. Move both margins
+        // inward with the HUD; the vital-stats branch also scales its width.
+        return std::max(1.0f, width + 2.0f * std::min(fWidescreenHudOffset, 0.0f) * scale);
+    }
+
+    void __cdecl SetCentreSize(float width)
+    {
+        hbSetCentreSize.fun(ConstrainWidth(width, 1.0f));
+    }
+
+    void __cdecl SetCentreSizeStats(float width)
+    {
+        hbSetCentreSize.fun(ConstrainWidth(width, 0.8f));
+    }
+}
+
 void InitCleoFix()
 {
     auto pattern = hook::module_pattern(GetModuleHandle(L"CLEO+.cleo"), "F3 0F 59 05 ? ? ? ? F3 0F 59 C1 F3 0F 11 44 24");
@@ -108,7 +145,13 @@ public:
             excludeHudScaleAddrs.push_back(0x57ACBE + 2); // Slider 3
             excludeHudScaleAddrs.push_back(0x57AEB0 + 2); // Slider 4
             excludeHudScaleAddrs.push_back(0x57B0E4 + 2); // Slider 5
+            excludeHudScaleAddrs.push_back(0x57533C + 2); // Map's dynamic left edge
             excludeHudScaleAddrs.push_back(0x575361 + 2); // Map's dynamic right edge
+
+            // SmallMessageScreen measures and prints around the actual screen center.
+            // These multipliers are positions, not aspect-corrected sizes.
+            excludeHudScaleAddrs.push_back(0x5741D6 + 2);
+            excludeHudScaleAddrs.push_back(0x5742FB + 2);
 
             // excludes for ResXInvRef
             excludeResXInvAddrs.push_back(0x57A1E3 + 2); // Main menu
@@ -190,6 +233,18 @@ public:
             static auto StretchSizeX = safetyhook::create_inline(hbStretchX.fun, MenuScaleX);
             for (auto address : { 0x57699D, 0x5769D4 })
                 injector::WriteMemory<int32_t>(address + 1, -1, true);
+
+            // Dialog text/window and radio scan progress must also scale at 640-wide
+            // resolutions whose height is different from the original 480 pixels.
+            for (auto address : { 0x5740A0, 0x5741BA, 0x5742DF })
+                injector::WriteMemory<int32_t>(address + 6, -1, true);
+            for (auto address : { 0x5740FB, 0x57412E, 0x57BCF4, 0x57BD2B })
+                injector::WriteMemory<int32_t>(address + 1, -1, true);
+            for (auto address : { 0x57BDAF, 0x57BDDE })
+                injector::WriteMemory<int32_t>(address + 2, -1, true);
+
+            MenuMessages::hbRadioScanDrawRect.fun = injector::MakeCALL(0x57BD70, MenuMessages::RadioScanDrawRect, true).get();
+            injector::MakeCALL(0x57BE2B, MenuMessages::RadioScanDrawRect, true);
 
             onResChange() += [](int Width, int Height)
             {
@@ -280,6 +335,11 @@ public:
             static float SubtitlesStatsShift = 0.0f;
             pattern = hook::pattern("D9 44 24 ? D8 0D ? ? ? ? DE C1 E9 ? ? ? ? DB 05");
             injector::WriteMemory(pattern.get_first(6), &SubtitlesStatsShift, true);
+
+            // These calls belong to gameplay's normal and vital-stats branches.
+            // Cutscene and explicit script message formatting retain their native widths.
+            Subtitles::hbSetCentreSize.fun = injector::MakeCALL(0x58C603, Subtitles::SetCentreSize, true).get();
+            injector::MakeCALL(0x58C536, Subtitles::SetCentreSizeStats, true);
 
             //CFont::SetScaleForCurrentlanguage
             static float fNonEnglishScale = 1.0f;
