@@ -89,7 +89,7 @@ private:
             RAWINPUT raw = {};
             UINT dwSize = sizeof(raw);
             if (GetRawInputData((HRAWINPUT)lParam, RID_INPUT, &raw, &dwSize, sizeof(RAWINPUTHEADER)) != UINT(-1) &&
-                raw.header.dwType == RIM_TYPEMOUSE && !(raw.data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE) && GetForegroundWindow() == GameWindow)
+                raw.header.dwType == RIM_TYPEMOUSE && !(raw.data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE) && GetForegroundWindow() == GetAncestor(GameWindow, GA_ROOT))
             {
                 float dx = static_cast<float>(raw.data.mouse.lLastX);
                 float dy = static_cast<float>(raw.data.mouse.lLastY);
