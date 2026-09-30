@@ -111,7 +111,77 @@ struct intro_text_line
     wchar_t m_Text[SCRIPT_TEXT_MAX_LENGTH];
 };
 
-intro_text_line** ppIntroTextLines = nullptr;
+static_assert(offsetof(intro_text_line, m_fWrapX) == 0x10);
+static_assert(offsetof(intro_text_line, m_fAtX) == 0x24);
+static_assert(offsetof(intro_text_line, m_Text) == 0x2C);
+
+namespace ScriptDraw
+{
+    constexpr float ScreenHeight = DEFAULT_SCREEN_HEIGHT;
+    injector::hook_back<void(__cdecl*)(float)> hbSetWrapX;
+    injector::hook_back<void(__cdecl*)(float, float, wchar_t*)> hbPrintString;
+
+    float GetOffsetX()
+    {
+        return (SCREEN_WIDTH - SCREEN_SCALE_X(DEFAULT_SCREEN_WIDTH)) * 0.5f;
+    }
+
+    void __cdecl SetWrapX(float x)
+    {
+        // WrapX is an absolute right edge; CentreSize is a width and needs no offset.
+        hbSetWrapX.fun(x + GetOffsetX());
+    }
+
+    void __cdecl PrintString(float x, float y, wchar_t* text)
+    {
+        // The native renderer measures positions from the right edge of the screen.
+        // Move that origin into the same centered 4:3 canvas as WrapX.
+        hbPrintString.fun(x - GetOffsetX(), y, text);
+    }
+
+    void Init(intro_text_line* lines)
+    {
+        // Both CHud::Draw and DrawAfterFade use these fields. Match their native
+        // operands rather than assuming a particular loop register or text index.
+        auto wrap = hook::pattern(pattern_str(0xD8, '?', to_bytes(&lines->m_fWrapX)) + " D9 1C 24 E8 ? ? ? ?").count(2);
+        auto print = hook::pattern(pattern_str(0xD8, '?', to_bytes(&lines->m_fAtX)) + " DE C9 DA 6C 24 ? D9 1C 24 E8 ? ? ? ?").count(2);
+
+        // Keep all script coordinates and font dimensions independent of custom HUD
+        // scaling, including the pass that draws before the fade.
+        for (auto field : { &lines->m_fScaleX, &lines->m_fWrapX, &lines->m_fCenterSize })
+        {
+            auto pattern = hook::pattern("D8 0D ? ? ? ? " + pattern_str(0xD8, '?', to_bytes(field))).count(2);
+            pattern.for_each_result([](hook::pattern_match match)
+            {
+                injector::WriteMemory(match.get<void*>(2), ResXInvRefs[eCHud].get_ptr(), true);
+            });
+        }
+        for (auto field : { &lines->m_fAtX, &lines->m_fAtY })
+        {
+            auto pattern = hook::pattern("D8 0D ? ? ? ? D9 05 ? ? ? ? " + pattern_str(0xD8, '?', to_bytes(field))).count(2);
+            pattern.for_each_result([field, lines](hook::pattern_match match)
+            {
+                auto scale = field == &lines->m_fAtX ? ResXInvRefs[eCHud].get_ptr() : ResYInvRefs[eCHud].get_ptr();
+                injector::WriteMemory(match.get<void*>(2), scale, true);
+                if (field == &lines->m_fAtY)
+                {
+                    // The native bottom origin is 448, but script coordinates use 480.
+                    injector::WriteMemory(match.get<void*>(8), &ScreenHeight, true);
+                }
+            });
+        }
+        auto scaleY = hook::pattern("D8 0D ? ? ? ? " + pattern_str(0xD8, '?', to_bytes(&lines->m_fScaleY))).count(2);
+        scaleY.for_each_result([](hook::pattern_match match)
+        {
+            injector::WriteMemory(match.get<void*>(2), ResYInvRefs[eCHud].get_ptr(), true);
+        });
+
+        hbSetWrapX.fun = reinterpret_cast<decltype(hbSetWrapX.fun)>(injector::GetBranchDestination(wrap.get_first(9)).as_int());
+        hbPrintString.fun = reinterpret_cast<decltype(hbPrintString.fun)>(injector::GetBranchDestination(print.get_first(15)).as_int());
+        wrap.for_each_result([](hook::pattern_match match) { injector::MakeCALL(match.get<void>(9), SetWrapX, true); });
+        print.for_each_result([](hook::pattern_match match) { injector::MakeCALL(match.get<void>(15), PrintString, true); });
+    }
+}
 
 class Frontend
 {
@@ -374,46 +444,10 @@ public:
                 SubtitlesHeight *= fSubtitlesScale;
             }
 
-            //IntroTextLines
+            // Script text uses a centered canvas in both fade passes.
             pattern = hook::pattern("BE ? ? ? ? 90 66 83 BD");
-            ppIntroTextLines = pattern.get_first<intro_text_line*>(1);
+            ScriptDraw::Init(*pattern.get_first<intro_text_line*>(1));
 
-            pattern = hook::pattern("E8 ? ? ? ? ? ? ? ? ? ? 59 50 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? E8 ? ? ? ? 80 BD ? ? ? ? ? 59 74 ? E8 ? ? ? ? EB ? 8D 40 ? E8 ? ? ? ? 8B 95");
-            static auto IntroTextLinesSetWrapX = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-            {
-                using tSetWrapx = void(__cdecl*)(float x);
-                auto [x] = deduce_args<tSetWrapx>(regs);
-
-                auto pIntroTextLines = *ppIntroTextLines;
-                auto line = &pIntroTextLines[regs.ebx];
-
-                x = SCALE_AND_CENTER_X(line->m_fWrapX);
-            });
-
-            pattern = hook::pattern("E8 ? ? ? ? 80 BD ? ? ? ? ? 59 74 ? E8 ? ? ? ? EB ? 8D 40 ? E8 ? ? ? ? 8B 95");
-            static auto IntroTextLinesSetCentreSize = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-            {
-                using tSetCentreSize = void(__cdecl*)(float s);
-                auto [s] = deduce_args<tSetCentreSize>(regs);
-
-                auto pIntroTextLines = *ppIntroTextLines;
-                auto line = &pIntroTextLines[regs.ebx];
-
-                s = SCREEN_SCALE_X(line->m_fCenterSize);
-            });
-
-            pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 43 81 C5 ? ? ? ? 81 C6 ? ? ? ? 66 83 FB ? 0F 82 ? ? ? ? 31 DB 31 ED BE ? ? ? ? 90");
-            static auto IntroTextLinesPrintString = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-            {
-                using tPrintString = void(__cdecl*)(float, float, wchar_t*);
-                auto [xstart, ystart, s] = deduce_args<tPrintString>(regs);
-
-                auto pIntroTextLines = *ppIntroTextLines;
-                auto line = &pIntroTextLines[regs.ebx];
-
-                xstart = SCREEN_WIDTH - SCALE_AND_CENTER_X(DEFAULT_SCREEN_WIDTH - line->m_fAtX);
-                ystart = SCREEN_HEIGHT - SCREEN_SCALE_Y(DEFAULT_SCREEN_HEIGHT - line->m_fAtY);
-            });
         };
     }
 } Frontend;
