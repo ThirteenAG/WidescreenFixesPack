@@ -22,6 +22,7 @@
 
 - **Skip intro** — Skip startup intros and the "Press any key" screen.
 - **Windowed mode** — Run the game centered in a window.
+- **Frame rate limit** — Set a custom frame rate limit instead of the default 120 FPS.
 - **Mouse input** — Optionally disable negative mouse acceleration and mouse smoothing, and use raw mouse input so high polling rate mice don't lose movement.
 - **Gamepad camera speed** — Adjust how fast the stick turns the camera.
 - **Hardware detection** — Skip hardware detection messages on startup.
@@ -45,7 +46,7 @@
 
 - **Loose files** — Load unpacked files from disk.
 - **DLC** — Unlock DLC content made unavailable by the server shutdown.
-- **Controls** — Enable the Blacklist control scheme on keyboard and gamepad: cover is toggled with a press and released by any action that leaves it, drops from ledges are on the crouch button, and Death from Above is on E / X.
+- **Controls** — Enable the Blacklist control scheme on keyboard and gamepad: cover is toggled with a press and released by any action that leaves it, drops from ledges are on the cover button, as in Blacklist, and Death from Above is on E / X.
 
 ![controls](https://github.com/user-attachments/assets/2498a891-2991-4604-b0dc-b5d309a0c02d)
 

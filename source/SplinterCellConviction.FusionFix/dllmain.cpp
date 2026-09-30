@@ -53,8 +53,20 @@ void Init()
     auto bUnlockDLC = iniReader.ReadInteger("UNLOCKS", "UnlockDLC", 1) != 0;
     bEnableSplitscreen = iniReader.ReadInteger("2INSTANCESPLITSCREEN", "Enable", 0) != 0;
 
+    static auto nFPSLimit = iniReader.ReadInteger("DISPLAY", "FPSLimit", 0);
+
     if (bEnableSplitscreen)
         bWindowedMode = true;
+
+    // frame rate limit: Engine.Display MaxFPS in User.ini (120 if it isn't there), 30 to 1000
+    if (nFPSLimit > 0)
+    {
+        auto pattern = hook::pattern("FF 50 04 6A 1E 58 39 45 F8 7C");
+        static auto MaxFPSHook = safetyhook::create_mid(pattern.get_first(3), [](SafetyHookContext& regs)
+        {
+            *reinterpret_cast<int32_t*>(regs.ebp - 8) = nFPSLimit;
+        });
+    }
 
     //accept any refresh rate
     {

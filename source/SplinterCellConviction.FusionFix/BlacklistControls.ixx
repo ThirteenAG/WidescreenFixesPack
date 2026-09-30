@@ -185,6 +185,39 @@ namespace BlacklistControls
         HookCoverState<CoverStates.size()>(ExitCoverState);
     }
 
+    // Drops and the slide are on the cover button too: the press also asked for cover, which would be taken after the drop
+    // or would end the slide (the original only asked while the button was held). Their BeginState (slot 41) cancels it.
+    constexpr std::array DropStates = { ".?AVUGeoDropToLedgeState@@", ".?AVUGeoLowDropState@@", ".?AVUGeoNavExitState@@", ".?AVUSlideOnGroundState@@" };
+    std::array<StateFunction, DropStates.size()> dropBeginState;
+
+    void CancelCoverRequest(uintptr_t pawn)
+    {
+        auto it = pawns.find(pawn);
+        if (it == pawns.end() || !it->second.coverRequested || it->second.inCover)
+            return;
+        Flags(pawn, B2WFlags) &= ~0x100;
+        it->second.coverRequested = false;
+    }
+
+    template<size_t Index>
+    void __fastcall DropStateBegin(uintptr_t state, void* edx)
+    {
+        CancelCoverRequest(StatePawn(state));
+        dropBeginState[Index](state, edx);
+    }
+
+    template<size_t... Index>
+    void HookDropStates(std::index_sequence<Index...>)
+    {
+        ([] {
+            if (auto vtable = FindVtable(DropStates[Index]))
+            {
+                dropBeginState[Index] = *reinterpret_cast<StateFunction*>(vtable + 41 * 4);
+                injector::WriteMemory(vtable + 41 * 4, &DropStateBegin<Index>, true);
+            }
+        }(), ...);
+    }
+
     // returns true if the event was handled
     bool HandleEvent(uintptr_t pawn, int32_t name)
     {
@@ -259,6 +292,9 @@ export void InitBlacklistControls()
 
     // cover states, to know when the pawn left cover
     HookCoverStates(std::make_index_sequence<CoverStates.size()>());
+
+    // drop and slide states, they don't take cover after
+    HookDropStates(std::make_index_sequence<DropStates.size()>());
 
     // sprint, the state's pawn is at +5Ch, [ebp+0Ch] is the speed
     pattern = hook::pattern("F3 0F 10 45 ? F3 0F 11 45 ? F3 0F 10 86");
