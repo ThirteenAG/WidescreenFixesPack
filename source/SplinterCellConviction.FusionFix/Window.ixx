@@ -123,16 +123,16 @@ export void InitWindow()
         IATHook::Replace(GetModuleHandleA(NULL), "USER32.DLL",
             std::forward_as_tuple("SetWindowPos", SetWindowPosHook)
         );
-
-        pattern = hook::pattern("A3 ? ? ? ? 83 BE");
-        static auto GetPresentationParametersHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-        {
-            auto PresentationParameters = (D3DPRESENT_PARAMETERS*)regs.edi;
-
-            BackBufferWidth = PresentationParameters->BackBufferWidth;
-            BackBufferHeight = PresentationParameters->BackBufferHeight;
-        });
     }
+
+    auto pattern = hook::pattern("A3 ? ? ? ? 83 BE");
+    static auto GetPresentationParametersHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        auto PresentationParameters = (D3DPRESENT_PARAMETERS*)regs.edi;
+
+        BackBufferWidth = PresentationParameters->BackBufferWidth;
+        BackBufferHeight = PresentationParameters->BackBufferHeight;
+    });
 
     if (bEnableSplitscreen)
     {

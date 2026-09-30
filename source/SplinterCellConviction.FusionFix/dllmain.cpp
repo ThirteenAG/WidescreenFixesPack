@@ -3,7 +3,6 @@
 #include <list>
 
 import ComVars;
-import Lead3DEngine;
 import LeadD3DRender;
 import WidescreenFix;
 import Window;
@@ -222,7 +221,6 @@ CEXP void InitializeASI()
 
         CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("D9 1C 24 E8 ? ? ? ? D9 5E 0C"));
         CallbackHandler::RegisterCallback(L"LeadD3DRender.dll", InitLeadD3DRender);
-        CallbackHandler::RegisterCallback(L"Lead3DEngine.dll", InitLead3DEngine);
         CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(InitLED, hook::pattern("D9 1C 24 E8 ? ? ? ? D9 5E 0C"));
     });
 }

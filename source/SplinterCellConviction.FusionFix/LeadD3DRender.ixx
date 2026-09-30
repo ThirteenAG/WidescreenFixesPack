@@ -7,6 +7,30 @@ export module LeadD3DRender;
 import ComVars;
 import Graphics;
 
+// D3DVideoRenderer: quad is left, top, right, bottom in clip space, +0x14 is the render target texture (null for the screen)
+SafetyHookInline shVideoRender = {};
+void __fastcall VideoRender(void* renderer, void* edx, float* quad)
+{
+    auto renderTarget = reinterpret_cast<void**>(quad)[5];
+    auto ratio = GetAspectRatio() / fDefaultAspectRatio;
+    if (renderTarget || std::abs(ratio - 1.0f) < 0.01f)
+        return shVideoRender.fastcall<void>(renderer, edx, quad);
+
+    float saved[4] = { quad[0], quad[1], quad[2], quad[3] };
+    if (ratio > 1.0f)
+    {
+        quad[0] /= ratio;
+        quad[2] /= ratio;
+    }
+    else
+    {
+        quad[1] *= ratio;
+        quad[3] *= ratio;
+    }
+    shVideoRender.fastcall<void>(renderer, edx, quad);
+    std::copy(std::begin(saved), std::end(saved), quad);
+}
+
 export void InitLeadD3DRender()
 {
     CIniReader iniReader("");
@@ -15,7 +39,6 @@ export void InitLeadD3DRender()
     auto bDisableCharacterLighting = iniReader.ReadInteger("GRAPHICS", "DisableCharacterLighting", 0) != 0;
     auto bEnhancedSonarVision = iniReader.ReadInteger("GRAPHICS", "EnhancedSonarVision", 0) != 0;
     gBlacklistIndicators = iniReader.ReadInteger("GRAPHICS", "BlacklistIndicators", 0);
-    auto bUltraWideSupport = iniReader.ReadInteger("DISPLAY", "UltraWideSupport", 1) != 0;
 
     if (bDisableDOF)
     {
@@ -83,34 +106,15 @@ export void InitLeadD3DRender()
         injector::MakeNOP(pattern.get_first(2), 7);
     }
 
-    // Viewport
-    if (bUltraWideSupport)
+    if (iniReader.ReadInteger("DISPLAY", "UltraWideSupport", 1) != 0)
     {
-        auto pattern = hook::module_pattern(GetModuleHandle(L"LeadD3DRender"), "F3 0F 11 49 ? F3 0F 11 61");
-        static auto ViewportHook1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-        {
-            if (!OpenedVideosList.empty() && bVideoRender && GetAspectRatio() > fDefaultAspectRatio)
-                regs.xmm1.f32[0] /= (GetAspectRatio() / fDefaultAspectRatio);
-        });
+        // Flash pass: don't restrict the viewport to the multi-monitor HUD rect (l3d::Options +0x1F8 enable, +0x1FC rect),
+        // the Flash renderer places the stage into that rect itself (see InitWidescreenFix)
+        auto pattern = hook::module_pattern(GetModuleHandle(L"LeadD3DRender"), "38 98 F8 01 00 00 74");
+        injector::WriteMemory<uint8_t>(pattern.get_first(6), 0xEB, true);
 
-        pattern = hook::module_pattern(GetModuleHandle(L"LeadD3DRender"), "F3 0F 11 51 ? F3 0F 11 49 ? F3 0F 59 F5");
-        static auto ViewportHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-        {
-            if (!OpenedVideosList.empty() && bVideoRender && GetAspectRatio() > fDefaultAspectRatio)
-                regs.xmm2.f32[0] /= (GetAspectRatio() / fDefaultAspectRatio);
-            bVideoRender = false;
-        });
-
-        pattern = hook::module_pattern(GetModuleHandle(L"LeadD3DRender"), "89 4D 28 E8 ? ? ? ? 8B 75 7C 33 FF 8B D8");
-        static auto VideoRenderHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-        {
-            bVideoRender = true;
-        });
-
-        pattern = hook::module_pattern(GetModuleHandle(L"LeadD3DRender"), "8B 07 8B 08 6A 00 50 FF 91 ? ? ? ? 8B 07 8B 08 6A 00");
-        static auto d3ddevice = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-        {
-            pDevice = *(IDirect3DDevice9**)(regs.edi);
-        });
+        // Videos are drawn in that pass as a clip space quad covering the whole viewport, keep them in the 16:9 rect
+        pattern = hook::module_pattern(GetModuleHandle(L"LeadD3DRender"), "55 8D 6C 24 8C 81 EC ? ? ? ? 53 56 57 89 4D 28 E8");
+        shVideoRender = safetyhook::create_inline(pattern.get_first(), VideoRender);
     }
 }
