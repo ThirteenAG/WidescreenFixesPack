@@ -229,6 +229,33 @@ namespace UI
     }
 }
 
+namespace FMV
+{
+    struct VideoSize { uint32_t Width, Height; };
+    struct Stream { const VideoSize* Video; };
+    Stream*** StreamStorage;
+    int32_t* Handle;
+    SafetyHookMid ScreenRect;
+
+    void FitToScreen(injector::reg_pack& regs)
+    {
+        if (*Handle < 0 || !*StreamStorage)
+            return;
+
+        const auto* stream = (*StreamStorage)[*Handle];
+        if (!stream || !stream->Video || !stream->Video->Width || !stream->Video->Height)
+            return;
+
+        auto* rect = reinterpret_cast<float*>(regs.esp); //x, y, width, height before SetRect
+        const float scale = std::min(Screen.fWidth / stream->Video->Width, Screen.fHeight / stream->Video->Height);
+        rect[2] = stream->Video->Width * scale;
+        rect[3] = stream->Video->Height * scale;
+        rect[0] = (Screen.fWidth - rect[2]) / 2.0f;
+        rect[1] = (Screen.fHeight - rect[3]) / 2.0f;
+        UI::DrawBackdrop(0xFF000000); //clear the pillarbox or letterbox area every frame
+    }
+}
+
 inline bool Near(float a, float b)
 {
     return fabsf(a - b) < 2.0f;
@@ -491,6 +518,13 @@ void Init()
     const auto loadingImage = hook::get_pattern<uint8_t>("A1 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 6A ? 6A"); //4D49E0
     UI::LoadingTexture = *reinterpret_cast<int32_t**>(loadingImage + 1);
     UI::FlushQuads = reinterpret_cast<decltype(UI::FlushQuads)>(injector::GetBranchDestination(loadingImage + 0x66, true).as_int());
+
+    const auto movieDraw = hook::get_pattern<uint8_t>("A1 ? ? ? ? 83 ? ? 0F ? ? ? ? ? 50 E8 ? ? ? ? 83 ? ? 84"); //628280
+    FMV::Handle = *reinterpret_cast<int32_t**>(movieDraw + 1);
+    const auto streamStorage = hook::get_pattern<uint8_t>("8B ? ? ? ? ? 8B ? ? 85 ? 74 ? 8A ? ? C3"); //41367A
+    FMV::StreamStorage = *reinterpret_cast<FMV::Stream****>(streamStorage + 2);
+    const auto movieRect = hook::get_pattern<uint8_t>("E8 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 6A ? 6A ? B9 ? ? ? ? E8 ? ? ? ? A1"); //6282CE
+    FMV::ScreenRect = safetyhook::create_mid(movieRect, FMV::FitToScreen);
 
     const auto loadingFrame = hook::get_pattern<uint8_t>("83 ? ? DB ? ? ? ? ? 56 8B ? ? ? 83"); //4D4770
     const auto loadingText = hook::get_pattern<uint8_t>("83 ? ? DB ? ? ? ? ? A1 ? ? ? ? 56"); //4D4840
