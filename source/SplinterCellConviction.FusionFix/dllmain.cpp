@@ -10,6 +10,7 @@ import Graphics;
 import FileManager;
 import BlacklistControls;
 import LAN;
+import Mouse;
 
 SafetyHookInline shSetProcessAffinityMask{};
 BOOL WINAPI SetProcessAffinityMaskHook(HANDLE hProcess, DWORD_PTR dwProcessAffinityMask)
@@ -76,17 +77,7 @@ void Init()
     InitWindow();
     InitGraphics();
 
-    if (bDisableNegativeMouseAcceleration)
-    {
-        auto pattern = hook::pattern("76 05 0F 28 D9 EB 08 0F 2F DA");
-        injector::MakeNOP(pattern.get_first(0), 2, true);
-        injector::MakeNOP(pattern.get_first(5), 2, true);
-        injector::MakeNOP(pattern.get_first(10), 2, true);
-
-        pattern = hook::pattern("77 0D 0F 2F C2 76 05 0F 28 CA EB 03 0F 28 C8 0F 57 C0");
-        injector::MakeNOP(pattern.get_first(0), 2, true);
-        injector::MakeNOP(pattern.get_first(5), 2, true);
-    }
+    InitMouse();
 
     if (bSkipIntro)
     {
