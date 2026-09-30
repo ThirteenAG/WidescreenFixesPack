@@ -3,6 +3,7 @@ module;
 #include <stdafx.h>
 #define DIRECTINPUT_VERSION 0x0700
 #include <dinput.h>
+#include <Xinput.h>
 
 export module input;
 
@@ -133,6 +134,66 @@ export DIJOYSTATE* GetJoyState()
 export DIJOYSTATE* GetPrevJoyState()
 {
     return &g_PrevJoyState;
+}
+
+// Buttons that skip videos, pressed on any controller. Read with XInput directly: the intro plays
+// before the game sets up its controller, and Xidi's keyboard mapping only starts with that.
+WORD GetVideoSkipButtons()
+{
+    using XInputGetStateFunc = DWORD(WINAPI*)(DWORD, XINPUT_STATE*);
+    static auto pXInputGetState = []() -> XInputGetStateFunc
+    {
+        for (auto szName : { L"xinput1_4.dll", L"xinput1_3.dll", L"xinput9_1_0.dll" })
+        {
+            if (auto hXInput = LoadLibraryW(szName))
+                return (XInputGetStateFunc)GetProcAddress(hXInput, "XInputGetState");
+        }
+        return nullptr;
+    }();
+
+    WORD wButtons = 0;
+    if (pXInputGetState)
+    {
+        for (DWORD i = 0; i < XUSER_MAX_COUNT; ++i)
+        {
+            XINPUT_STATE state = {};
+            if (pXInputGetState(i, &state) == ERROR_SUCCESS)
+                wButtons |= state.Gamepad.wButtons;
+        }
+    }
+
+    constexpr WORD wSkipButtons = XINPUT_GAMEPAD_A | XINPUT_GAMEPAD_B | XINPUT_GAMEPAD_X | XINPUT_GAMEPAD_Y | XINPUT_GAMEPAD_START | XINPUT_GAMEPAD_BACK;
+    return wButtons & wSkipButtons;
+}
+
+// Stands in for PeekMessageA in the loop of the video player, which stops on a key press message.
+// A gamepad button press is reported as one.
+export BOOL WINAPI VideoPeekMessageA(LPMSG lpMsg, HWND hWnd, UINT wMsgFilterMin, UINT wMsgFilterMax, UINT wRemoveMsg)
+{
+    using namespace std::chrono_literals;
+    using clock = std::chrono::steady_clock;
+    static clock::time_point lastPoll;
+    static WORD wPrevButtons = 0;
+
+    auto now = clock::now();
+    if (now - lastPoll >= 30ms)
+    {
+        // The loop calls this all the time, a longer gap means another video started. Buttons
+        // held from before it, like the one that started a new game, don't skip it.
+        bool bNewVideo = now - lastPoll > 500ms;
+        WORD wButtons = GetVideoSkipButtons();
+        WORD wNewlyPressed = bNewVideo ? 0 : (wButtons & ~wPrevButtons);
+        wPrevButtons = wButtons;
+        lastPoll = now;
+
+        if (wNewlyPressed)
+        {
+            *lpMsg = { .hwnd = hWnd, .message = WM_KEYDOWN, .wParam = VK_ESCAPE };
+            return TRUE;
+        }
+    }
+
+    return PeekMessageA(lpMsg, hWnd, wMsgFilterMin, wMsgFilterMax, wRemoveMsg);
 }
 
 // Helper to check if a button is currently pressed

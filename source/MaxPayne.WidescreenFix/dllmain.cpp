@@ -619,6 +619,11 @@ void Init()
         shsub_40D040 = safetyhook::create_inline(pattern.get_first(), sub_40D040);
     }
 
+    // Intro video, gamepad buttons skip it too
+    static auto pVideoPeekMessageA = &VideoPeekMessageA;
+    pattern = hook::pattern("8B 35 ? ? ? ? 8B 3D ? ? ? ? 38 5D 0B 0F 85"); // mov esi, ds:PeekMessageA
+    injector::WriteMemory(pattern.get_first(2), &pVideoPeekMessageA, true); //0x409E77
+
     InitInput();
 }
 
