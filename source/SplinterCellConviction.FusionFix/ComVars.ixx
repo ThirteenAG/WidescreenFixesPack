@@ -19,11 +19,8 @@ export float gVisibility = 1.0f;
 export int32_t gBlacklistIndicators = 0;
 export bool bDisableBlackAndWhiteFilter = false;
 export bool bBlacklistControlScheme = true;
-export IDirect3DDevice9* pDevice = nullptr;
 export int BackBufferWidth = 0;
 export int BackBufferHeight = 0;
-export bool bVideoRender = false;
-export std::list<int> OpenedVideosList;
 export bool bEnableSplitscreen = false;
 export bool bInstance1 = true;
 
