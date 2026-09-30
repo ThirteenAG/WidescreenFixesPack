@@ -82,6 +82,24 @@ static float MapAreaNameY(float y)
     return bFullscreenMap ? y - SCREEN_HEIGHT * (40.0f / 448.0f) : y;
 }
 
+// The overview texture is square, but map X and Y use 480- and 448-unit
+// scales respectively. Match their pixel scale about the existing map origin.
+bool bDrawingMapOverview = false;
+
+static float MapOverviewX(float x, float center)
+{
+    return center + (x - center) * (480.0f / 448.0f);
+}
+
+static void ScaleMapOverviewRect(SafetyHookContext& regs)
+{
+    if (!bDrawingMapOverview) return;
+    auto rect = *reinterpret_cast<CRect**>(regs.esp);
+    const float center = SCREEN_SCALE_X(FrontendMenuManager->m_vMapOrigin.x);
+    rect->left = MapOverviewX(rect->left, center);
+    rect->right = MapOverviewX(rect->right, center);
+}
+
 static float __stdcall MapLeftX(float) { return SCREEN_SCALE_X(mapInset); }
 static float __stdcall MapRightX(float) { return SCREEN_SCALE_X(mapRight); }
 static float __stdcall MapTopY(float) { return SCREEN_HEIGHT * mapInset / 448.0f; }
@@ -163,6 +181,46 @@ public:
             static auto ClampDrawOrigin = safetyhook::create_mid(0x575246, [](SafetyHookContext& regs)
             {
                 ClampMapOrigin(reinterpret_cast<CMenuManager*>(regs.edi));
+            });
+
+            // Start after the native overview has chosen its center and zoom.
+            // Keep the texture, frame, unrevealed zones and radar overlays together.
+            static auto BeginOverview = safetyhook::create_mid(0x575715, [](SafetyHookContext& regs)
+            {
+                bDrawingMapOverview = true;
+            });
+            static auto EndOverview = safetyhook::create_mid(0x575B49, [](SafetyHookContext& regs)
+            {
+                bDrawingMapOverview = false;
+            });
+            static std::array OverviewRects = {
+                safetyhook::create_mid(0x5757B3, ScaleMapOverviewRect),
+                safetyhook::create_mid(0x575862, ScaleMapOverviewRect),
+                safetyhook::create_mid(0x575917, ScaleMapOverviewRect),
+                safetyhook::create_mid(0x5759C9, ScaleMapOverviewRect),
+                safetyhook::create_mid(0x575B0E, ScaleMapOverviewRect)
+            };
+            static auto OverviewProjection = safetyhook::create_mid(0x5834A1, [](SafetyHookContext& regs)
+            {
+                if (!bDrawingMapOverview) return;
+                auto point = reinterpret_cast<CVector2D*>(regs.ecx);
+                point->x = MapOverviewX(point->x, FrontendMenuManager->m_vMapOrigin.x);
+            });
+
+            // Run the native blip clamp in its original X space, then return to
+            // the square overview. Its Y bounds and the regular map stay intact.
+            static auto OverviewLimitBegin = safetyhook::create_mid(0x58337B, [](SafetyHookContext& regs)
+            {
+                if (!bDrawingMapOverview) return;
+                auto& x = *reinterpret_cast<float*>(regs.ecx);
+                const float center = SCREEN_SCALE_X(FrontendMenuManager->m_vMapOrigin.x);
+                x = center + (x - center) * (448.0f / 480.0f);
+            });
+            static auto OverviewLimitEnd = safetyhook::create_mid(0x5833C5, [](SafetyHookContext& regs)
+            {
+                if (!bDrawingMapOverview) return;
+                auto& x = *reinterpret_cast<float*>(regs.ecx);
+                x = MapOverviewX(x, SCREEN_SCALE_X(FrontendMenuManager->m_vMapOrigin.x));
             });
 
             // Only this PrintString call draws the map's area name.
