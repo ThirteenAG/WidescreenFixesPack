@@ -11,6 +11,7 @@ import FileManager;
 import BlacklistControls;
 import LAN;
 import Mouse;
+import Splitscreen;
 
 SafetyHookInline shSetProcessAffinityMask{};
 BOOL WINAPI SetProcessAffinityMaskHook(HANDLE hProcess, DWORD_PTR dwProcessAffinityMask)
@@ -50,10 +51,10 @@ void Init()
     bDisableBlackAndWhiteFilter = iniReader.ReadInteger("GRAPHICS", "DisableBlackAndWhiteFilter", 0) != 0;
     bBlacklistControlScheme = iniReader.ReadInteger("GAMEPLAY", "BlacklistControlScheme", 1) != 0;
     auto bUnlockDLC = iniReader.ReadInteger("UNLOCKS", "UnlockDLC", 1) != 0;
-    bEnableSplitscreen = iniReader.ReadInteger("2INSTANCESPLITSCREEN", "Enable", 1) != 0;
+    bEnableSplitscreen = iniReader.ReadInteger("2INSTANCESPLITSCREEN", "Enable", 0) != 0;
 
-    if (!bWindowedMode)
-        bEnableSplitscreen = false;
+    if (bEnableSplitscreen)
+        bWindowedMode = true;
 
     //accept any refresh rate
     {
@@ -75,6 +76,7 @@ void Init()
 
     InitFileManager();
     InitWindow();
+    InitSplitscreen();
     InitGraphics();
 
     InitMouse();

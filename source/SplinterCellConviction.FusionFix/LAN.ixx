@@ -3,308 +3,199 @@ module;
 #include <stdafx.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <iphlpapi.h>
+#include <fstream>
+#include <deque>
 #pragma comment(lib, "Ws2_32.lib")
+#pragma comment(lib, "Iphlpapi.lib")
 
 export module LAN;
 
 import ComVars;
 
-std::string getLocalIPAddress()
+// LAN play goes through Ubisoft's Agora SDK:
+// - Os::CoreTaskGetGameConnectSettings gets the matchmaking config from gconnect.ubi.com (GET /MatchMakingConfig.aspx on port 3074),
+//   without it the LAN menu can't be entered. The host name is replaced by ServerAddr (127.0.0.1) and a local server answers with the config.
+// - Os::Agora::LANMessageManager::broadcastMessage sends every LAN message (search, get session, session reply) to 255.255.255.255,
+//   which Windows sends out of one network adapter only, with several adapters (VPN, virtual machines) the other PC may not get it.
+//   It's sent to the broadcast address of every adapter instead.
+// - The session reply has the host's addresses (LANSessionInfo +8), Os::CoreTaskUpdateNetworkInformation adds the address of every
+//   adapter and 127.0.0.1, the joining PC can connect to one it can't reach. They're replaced with the address the reply came from.
+namespace LAN
 {
-    WSADATA wsaData;
-    int result = WSAStartup(MAKEWORD(2, 2), &wsaData);
-    if (result != 0)
+    // Matchmaking config server
+    constexpr uint16_t ConfigPort = 3074;
+    constexpr std::string_view ConfigResponse =
+        "<RESPONSE xmlns=\"\"><AuthenticationServer><VALUE>lb-agora.ubisoft.com:3081</VALUE></AuthenticationServer>"
+        "<CreateAccount><VALUE>https://secure.ubi.com/login/CreateUser.aspx?lang=%s</VALUE></CreateAccount>"
+        "<LobbyServer><VALUE>lb-lsg-prod.ubisoft.com:3105</VALUE></LobbyServer>"
+        "<MmpTitleId><VALUE>0xA004</VALUE></MmpTitleId>"
+        "<SandboxUrl><VALUE>prudp:/address=lb-rdv-as-prod01.ubisoft.com;port=23931</VALUE></SandboxUrl>"
+        "<SandboxUrlWS><VALUE>ne1-z3-as-rdv03.ubisoft.com:23930</VALUE></SandboxUrlWS>"
+        "<SerialName><VALUE>SPLINTERCELL5PC</VALUE></SerialName>"
+        "<uplay_DownloadServiceUrl><VALUE>https://secure.ubi.com/UplayServices/UplayFacade/DownloadServicesRESTXML.svc/REST/XML/?url=</VALUE></uplay_DownloadServiceUrl>"
+        "<uplay_DynContentBaseUrl><VALUE>http://static8.cdn.ubi.com/u/Uplay/</VALUE></uplay_DynContentBaseUrl>"
+        "<uplay_DynContentSecureBaseUrl><VALUE>http://static8.cdn.ubi.com/</VALUE></uplay_DynContentSecureBaseUrl>"
+        "<uplay_PackageBaseUrl><VALUE>http://static8.cdn.ubi.com/u/Uplay/Packages/1.0.1/</VALUE></uplay_PackageBaseUrl>"
+        "<uplay_WebServiceBaseUrl><VALUE>https://secure.ubi.com/UplayServices/UplayFacade/ProfileServicesFacadeRESTXML.svc/REST/</VALUE></uplay_WebServiceBaseUrl>"
+        "</RESPONSE>";
+
+    void ConfigServer(bool loopbackOnly)
     {
-        DBGONLY(spd::log()->error("WSAStartup failed: {0:x}", result);)
-            return "";
-    }
-
-    struct sockaddr_in destination
-    {
-    };
-    destination.sin_family = AF_INET;
-    destination.sin_port = htons(80);
-    inet_pton(AF_INET, "8.8.8.8", &destination.sin_addr);
-
-    SOCKET sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if (sock == INVALID_SOCKET)
-    {
-        DBGONLY(spd::log()->error("Socket creation failed.");)
-            WSACleanup();
-        return "";
-    }
-
-    result = connect(sock, reinterpret_cast<struct sockaddr*>(&destination), sizeof(destination));
-    if (result == SOCKET_ERROR)
-    {
-        DBGONLY(spd::log()->error("Socket connection failed.");)
-            closesocket(sock);
-        WSACleanup();
-        return "";
-    }
-
-    struct sockaddr_in localAddress
-    {
-    };
-    int addressLength = sizeof(localAddress);
-    result = getsockname(sock, reinterpret_cast<struct sockaddr*>(&localAddress), &addressLength);
-    if (result == SOCKET_ERROR)
-    {
-        DBGONLY(spd::log()->error("getsockname failed.");)
-            closesocket(sock);
-        WSACleanup();
-        return "";
-    }
-
-    std::string ipAddress(INET_ADDRSTRLEN, '\0');
-    inet_ntop(AF_INET, &localAddress.sin_addr, ipAddress.data(), ipAddress.size());
-
-    closesocket(sock);
-    WSACleanup();
-
-    return std::string(ipAddress.c_str());
-}
-
-void LocalServer()
-{
-    WSADATA wsaData;
-    SOCKET sockserv, sock;
-    struct sockaddr_in server, client;
-    int c = sizeof(struct sockaddr_in);
-
-    // Initialize Winsock
-    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
-    {
-        DBGONLY(spd::log()->error("Failed. Error Code : {0:x}", WSAGetLastError());)
+        WSADATA wsaData;
+        if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
             return;
-    }
 
-    // Create a socket
-    if ((sockserv = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET)
-    {
-        DBGONLY(spd::log()->error("Could not create socket : {0:x}", WSAGetLastError());)
+        auto server = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        sockaddr_in address = {};
+        address.sin_family = AF_INET;
+        address.sin_addr.s_addr = htonl(loopbackOnly ? INADDR_LOOPBACK : INADDR_ANY); // other PCs can use this one with ServerAddr
+        address.sin_port = htons(ConfigPort);
+        // with two instances on one PC the port is taken, the first one's server answers both
+        if (server == INVALID_SOCKET || bind(server, reinterpret_cast<sockaddr*>(&address), sizeof(address)) == SOCKET_ERROR || listen(server, SOMAXCONN) == SOCKET_ERROR)
+        {
+            if (server != INVALID_SOCKET)
+                closesocket(server);
             WSACleanup();
-        return;
-    }
+            return;
+        }
 
-    // Prepare the sockaddr_in structure
-    server.sin_family = AF_INET;
-    server.sin_addr.s_addr = INADDR_ANY;
-    server.sin_port = htons(3074);
-
-    // Bind
-    if (bind(sockserv, (struct sockaddr*)&server, sizeof(server)) == SOCKET_ERROR)
-    {
-        DBGONLY(spd::log()->error("Bind failed with error code : {0:x}", WSAGetLastError());)
-            closesocket(sockserv);
+        auto response = std::format("HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}", ConfigResponse.size(), ConfigResponse);
+        SOCKET client;
+        while ((client = accept(server, nullptr, nullptr)) != INVALID_SOCKET)
+        {
+            char request[1024];
+            recv(client, request, sizeof(request), 0);
+            send(client, response.data(), static_cast<int>(response.size()), 0);
+            shutdown(client, SD_SEND);
+            closesocket(client);
+        }
+        closesocket(server);
         WSACleanup();
-        return;
     }
 
-    // Listen to incoming connections
-    listen(sockserv, 10);
-
-    // Accept and incoming connection
-    DBGONLY(spd::log()->info("Waiting for incoming connections...");)
-
-        while ((sock = accept(sockserv, (struct sockaddr*)&client, &c)) != INVALID_SOCKET)
+    // Broadcast address of every IPv4 adapter that is up (the adapter's address with all host bits set)
+    std::vector<in_addr> GetBroadcastAddresses()
+    {
+        std::vector<in_addr> result;
+        ULONG size = 16 * 1024;
+        std::vector<uint8_t> buffer;
+        ULONG error;
+        do
         {
-            DBGONLY(spd::log()->info("Connection accepted");)
-                char client_message[1024] = { 0 };
-            int recv_size;
-            if ((recv_size = recv(sock, client_message, 1024, 0)) == SOCKET_ERROR)
+            buffer.resize(size);
+            error = GetAdaptersAddresses(AF_INET, GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_DNS_SERVER, nullptr, reinterpret_cast<IP_ADAPTER_ADDRESSES*>(buffer.data()), &size);
+        } while (error == ERROR_BUFFER_OVERFLOW);
+        if (error != NO_ERROR)
+            return result;
+
+        for (auto adapter = reinterpret_cast<IP_ADAPTER_ADDRESSES*>(buffer.data()); adapter; adapter = adapter->Next)
+        {
+            if (adapter->OperStatus != IfOperStatusUp || adapter->IfType == IF_TYPE_SOFTWARE_LOOPBACK)
+                continue;
+            for (auto unicast = adapter->FirstUnicastAddress; unicast; unicast = unicast->Next)
             {
-                DBGONLY(spd::log()->error("recv failed");)
-            }
-            DBGONLY(spd::log()->info("Client says: {}", client_message);)
-
-                auto h = "HTTP/1.1 200 OK\r\n"
-                "Cache-Control: priva"
-                "te\r\n"
-                "Content-Type: text/h"
-                "tml; charset=utf-8\r"
-                "\n"
-                "Server: Microsoft-II"
-                "S/10.0\r\n"
-                "X-AspNet-Version: 2."
-                "0.50727\r\n"
-                "X-Powered-By: ASP.NE"
-                "T\r\n"
-                "Date: Mon, 01 Jan 20"
-                "24 23:10:02 GMT\r\n"
-                "Content-Length: 1183"
-                "\r\n\r\n";
-
-            auto r = "<RESPONSE xmlns=\"\""
-                "><AuthenticationServ"
-                "er><VALUE>lb-agora.u"
-                "bisoft.com:3081</VAL"
-                "UE></AuthenticationS"
-                "erver><CreateAccount"
-                "><VALUE>https://secu"
-                "re.ubi.com/login/Cre"
-                "ateUser.aspx?lang=%s"
-                "</VALUE></CreateAcco"
-                "unt><LobbyServer><VA"
-                "LUE>lb-lsg-prod.ubis"
-                "oft.com:3105</VALUE>"
-                "</LobbyServer><MmpTi"
-                "tleId><VALUE>0xA004<"
-                "/VALUE></MmpTitleId>"
-                "<SandboxUrl><VALUE>p"
-                "rudp:/address=lb-rdv"
-                "-as-prod01.ubisoft.c"
-                "om;port=23931</VALUE"
-                "></SandboxUrl><Sandb"
-                "oxUrlWS><VALUE>ne1-z"
-                "3-as-rdv03.ubisoft.c"
-                "om:23930</VALUE></Sa"
-                "ndboxUrlWS><SerialNa"
-                "me><VALUE>SPLINTERCE"
-                "LL5PC</VALUE></Seria"
-                "lName><uplay_Downloa"
-                "dServiceUrl><VALUE>h"
-                "ttps://secure.ubi.co"
-                "m/UplayServices/Upla"
-                "yFacade/DownloadServ"
-                "icesRESTXML.svc/REST"
-                "/XML/?url=</VALUE></"
-                "uplay_DownloadServic"
-                "eUrl><uplay_DynConte"
-                "ntBaseUrl><VALUE>htt"
-                "p://static8.cdn.ubi."
-                "com/u/Uplay/</VALUE>"
-                "</uplay_DynContentBa"
-                "seUrl><uplay_DynCont"
-                "entSecureBaseUrl><VA"
-                "LUE>http://static8.c"
-                "dn.ubi.com/</VALUE><"
-                "/uplay_DynContentSec"
-                "ureBaseUrl><uplay_Pa"
-                "ckageBaseUrl><VALUE>"
-                "http://static8.cdn.u"
-                "bi.com/u/Uplay/Packa"
-                "ges/1.0.1/</VALUE></"
-                "uplay_PackageBaseUrl"
-                "><uplay_WebServiceBa"
-                "seUrl><VALUE>https:/"
-                "/secure.ubi.com/Upla"
-                "yServices/UplayFacad"
-                "e/ProfileServicesFac"
-                "adeRESTXML.svc/REST/"
-                "</VALUE></uplay_WebS"
-                "erviceBaseUrl></RESP"
-                "ONSE>";
-
-            std::string matchmaking_config = std::string(h) + std::string(r);
-            send(sock, matchmaking_config.c_str(), matchmaking_config.size(), 0);
-            closesocket(sock);
-        }
-
-    if (sock == INVALID_SOCKET)
-    {
-        DBGONLY(spd::log()->error("accept failed with error code : {0:x}", WSAGetLastError());)
-    }
-
-    closesocket(sockserv);
-    WSACleanup();
-}
-
-namespace Os
-{
-    namespace CoreTaskGetGameConnectSettings
-    {
-        SafetyHookInline shonSendRequest{};
-        void __fastcall onSendRequest(int _this, void* edx, int a2, int a3, char* response, char* header, int a6, int a7)
-        {
-            return shonSendRequest.fastcall<void>(_this, edx, a2, a3, response, header, a6, a7);
-        }
-    }
-
-    namespace NetworkTaskHTTPSend
-    {
-        SafetyHookInline shparseHeader{};
-        uint8_t __fastcall parseHeader(void* _this, void* edx)
-        {
-            return shparseHeader.fastcall<uint8_t>(_this, edx);
-        }
-
-        SafetyHookInline shreadResponse{};
-        uint8_t __fastcall readResponse(void* _this, void* edx)
-        {
-            return shreadResponse.fastcall<uint8_t>(_this, edx);
-        }
-    }
-}
-
-int WINAPI sendhook(SOCKET s, const char* buf, int len, int flags)
-{
-    return send(s, buf, len, flags);
-}
-
-int WINAPI sendtohook(SOCKET s, const char* buf, int len, int flags, const struct sockaddr* to, int tolen)
-{
-    // Only modify host info packets (len > 500)
-    // Search packets (len == 54) and other traffic are passed through unchanged.
-    if (to->sa_family == AF_INET && len > 500)
-    {
-        static std::string localAddr = getLocalIPAddress();
-
-        if (!localAddr.empty())
-        {
-            struct in_addr ipAddr;
-            if (inet_pton(AF_INET, localAddr.c_str(), &ipAddr) == 1)
-            {
-                // Build the 8-byte IP field: 07 <4-byte IP> 05 23 8F
-                constexpr size_t IP_FIELD_SIZE = 8;
-                uint8_t ipField[IP_FIELD_SIZE] = { 0x07, 0, 0, 0, 0, 0x05, 0x23, 0x8F };
-                memcpy(ipField + 1, &ipAddr, 4);
-
-                // Read the IP count at offset 0x5B (value = actual count + 1)
-                int numIPs = static_cast<int>(static_cast<uint8_t>(buf[0x5B])) - 1;
-
-                // Work on a mutable copy since we may need to change the buffer size
-                std::vector<char> newBuf;
-
-                if (numIPs <= 0)
-                {
-                    // No IP fields present (or unexpected value) - insert one
-                    newBuf.assign(buf, buf + 0x5C);
-                    newBuf.insert(newBuf.end(), reinterpret_cast<char*>(ipField), reinterpret_cast<char*>(ipField) + IP_FIELD_SIZE);
-                    newBuf.insert(newBuf.end(), buf + 0x5C, buf + len);
-                }
-                else if (numIPs >= 2)
-                {
-                    // Multiple IP fields - remove extras, keep one correct field
-                    newBuf.assign(buf, buf + 0x5C);
-                    newBuf.insert(newBuf.end(), reinterpret_cast<char*>(ipField), reinterpret_cast<char*>(ipField) + IP_FIELD_SIZE);
-                    size_t oldFieldsEnd = 0x5C + static_cast<size_t>(IP_FIELD_SIZE) * numIPs;
-                    if (oldFieldsEnd < static_cast<size_t>(len))
-                        newBuf.insert(newBuf.end(), buf + oldFieldsEnd, buf + len);
-                }
-                else
-                {
-                    // Exactly 1 IP field - update it in place
-                    newBuf.assign(buf, buf + len);
-                    memcpy(newBuf.data() + 0x5C, ipField, IP_FIELD_SIZE);
-                }
-
-                // Set count to 1 IP + 1 = 2
-                newBuf[0x5B] = static_cast<char>(2);
-
-                DBGONLY(spd::log()->info("Fixed host info packet IP to: {}", localAddr););
-
-                return sendto(s, newBuf.data(), static_cast<int>(newBuf.size()), flags, to, tolen);
+                auto ip = ntohl(reinterpret_cast<sockaddr_in*>(unicast->Address.lpSockaddr)->sin_addr.s_addr);
+                auto mask = unicast->OnLinkPrefixLength ? ~0u << (32 - unicast->OnLinkPrefixLength) : 0u;
+                in_addr broadcast = {};
+                broadcast.s_addr = htonl(ip | ~mask);
+                if (std::ranges::none_of(result, [&](auto& a) { return a.s_addr == broadcast.s_addr; }))
+                    result.push_back(broadcast);
             }
         }
+        return result;
     }
 
-    return sendto(s, buf, len, flags, to, tolen);
-}
+    int WINAPI sendto(SOCKET s, const char* buf, int len, int flags, const sockaddr* to, int tolen)
+    {
+        auto destination = reinterpret_cast<const sockaddr_in*>(to);
+        if (to->sa_family != AF_INET || destination->sin_addr.s_addr != INADDR_BROADCAST)
+            return ::sendto(s, buf, len, flags, to, tolen);
 
-int WINAPI WSASendToHook(SOCKET s, LPWSABUF lpBuffers, DWORD dwBufferCount, LPDWORD lpNumberOfBytesSent, DWORD dwFlags, const struct sockaddr* lpTo, int iTolen, LPWSAOVERLAPPED lpOverlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine)
-{
-    return WSASendTo(s, lpBuffers, dwBufferCount, lpNumberOfBytesSent, dwFlags, lpTo, iTolen, lpOverlapped, lpCompletionRoutine);
+        // adapters can change while the game runs (VPN connected...)
+        static std::vector<in_addr> broadcastAddresses;
+        static auto lastUpdate = std::chrono::steady_clock::time_point();
+        if (auto now = std::chrono::steady_clock::now(); now - lastUpdate > std::chrono::seconds(5))
+        {
+            broadcastAddresses = GetBroadcastAddresses();
+            lastUpdate = now;
+        }
+
+        int result = SOCKET_ERROR;
+        for (auto& address : broadcastAddresses)
+        {
+            auto adapterDestination = *destination;
+            adapterDestination.sin_addr = address;
+            if (auto sent = ::sendto(s, buf, len, flags, reinterpret_cast<sockaddr*>(&adapterDestination), sizeof(adapterDestination)); sent != SOCKET_ERROR)
+                result = sent;
+        }
+        return result == SOCKET_ERROR ? ::sendto(s, buf, len, flags, to, tolen) : result;
+    }
+
+    // A broadcast sent on every adapter comes back once per adapter on the same PC, the copies are dropped (the game would list a lobby twice)
+    // Sender of the last datagram, the game's own address of it is built with the wrong byte order (it's only logged)
+    uint32_t lastSender = 0;
+
+    int WINAPI recvfrom(SOCKET s, char* buf, int len, int flags, sockaddr* from, int* fromlen)
+    {
+        auto received = ::recvfrom(s, buf, len, flags, from, fromlen);
+        if (received > 0)
+        {
+            if (from && from->sa_family == AF_INET)
+                lastSender = reinterpret_cast<sockaddr_in*>(from)->sin_addr.s_addr;
+
+            static std::deque<std::pair<size_t, std::chrono::steady_clock::time_point>> recent;
+            auto now = std::chrono::steady_clock::now();
+            std::erase_if(recent, [&](auto& r) { return now - r.second > std::chrono::milliseconds(250); });
+            auto hash = std::hash<std::string_view>{}(std::string_view(buf, received));
+            if (std::ranges::any_of(recent, [&](auto& r) { return r.first == hash; }))
+                memset(buf, 0, received); // not an Agora message anymore, it's ignored
+            else
+                recent.emplace_back(hash, now);
+        }
+        return received;
+    }
+
+    // Agora log (Os::Log), level 0 (everything) when it's written to a file
+    std::ofstream logFile;
+    SafetyHookInline shLog = {};
+    void __cdecl Log(const char* category, int32_t level, const char* file, const char* function, int32_t line, void* message)
+    {
+        if (!logFile.is_open())
+            logFile.open(GetExeModulePath<std::filesystem::path>() / (bInstance1 ? "Conviction_LAN.log" : "Conviction_LAN2.log"));
+        // Gear::GearBasicString: rep at +4, rep: length at +4, data at +12
+        std::string_view text;
+        if (auto rep = message ? *reinterpret_cast<uint8_t**>(reinterpret_cast<uintptr_t>(message) + 4) : nullptr)
+            text = std::string_view(*reinterpret_cast<const char**>(rep + 12), *reinterpret_cast<int32_t*>(rep + 4));
+        auto time = std::chrono::zoned_time(std::chrono::current_zone(), std::chrono::floor<std::chrono::milliseconds>(std::chrono::system_clock::now()));
+        logFile << std::format("{:%H:%M:%S} [{}] {} {}: {}", time, level, category ? category : "", function ? function : "", text) << std::endl;
+        shLog.ccall<void>(category, level, file, function, line, message);
+    }
+
+    SafetyHookInline shLogLevel = {};
+    int32_t __cdecl LogLevel()
+    {
+        return 0;
+    }
+
+    // Address a session reply came from, while it's handled (Os::Agora address: IPv4 in network byte order, port at +4)
+    std::optional<uint32_t> replySource;
+
+    SafetyHookInline shDeserializeSessionInfo = {};
+    bool __fastcall DeserializeSessionInfo(uintptr_t sessionInfo, void* edx, void* buffer)
+    {
+        auto result = shDeserializeSessionInfo.fastcall<bool>(sessionInfo, edx, buffer);
+        if (result && replySource)
+        {
+            // host addresses: count at +8, pointer to 8 byte addresses at +0Ch, the port of each is kept
+            auto hostAddresses = sessionInfo + 8;
+            auto count = *reinterpret_cast<uint32_t*>(hostAddresses + 8);
+            auto addresses = *reinterpret_cast<uint8_t**>(hostAddresses + 0x0C);
+            for (uint32_t i = 0; addresses && i < count; i++)
+                *reinterpret_cast<uint32_t*>(addresses + i * 8) = *replySource;
+        }
+        return result;
+    }
 }
 
 export void InitLAN()
@@ -313,6 +204,7 @@ export void InitLAN()
     auto sLANHelperExePath = iniReader.ReadString("LAN", "LANHelperExePath", "");
     auto bFixLAN = iniReader.ReadInteger("LAN", "FixLAN", 1) != 0;
     static auto sServerAddr = iniReader.ReadString("LAN", "ServerAddr", "127.0.0.1");
+    auto bLog = iniReader.ReadInteger("LAN", "Log", 0) != 0;
 
     if (!sLANHelperExePath.empty())
     {
@@ -341,25 +233,54 @@ export void InitLAN()
 
     if (bFixLAN)
     {
-        auto pattern = hook::pattern("E8 ? ? ? ? 89 5D FC 33 FF");
-        static auto MatchMakingConfigHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        // the game connects before it sends the request, the server has to be up first
+        std::thread(LAN::ConfigServer, sServerAddr == "127.0.0.1").detach();
+
+        // LANMessageManager::broadcastMessage
+        auto pattern = hook::pattern("FF 15 ? ? ? ? 8B F8 83 FF FF 75 0D FF 15 ? ? ? ? E8 ? ? ? ? 8B D8 85 DB 8B C7 74 03 89 5E 04 5B 5F 5E C2 0C 00");
+        injector::MakeNOP(pattern.get_first(), 6, true);
+        injector::MakeCALL(pattern.get_first(), LAN::sendto, true);
+
+        // LANMessageManager::receive
+        pattern = hook::pattern("C7 44 24 24 10 00 00 00 FF 15 ? ? ? ? 8B F8 85 FF 74 05 83 FF FF");
+        injector::MakeNOP(pattern.get_first(8), 6, true);
+        injector::MakeCALL(pattern.get_first(8), LAN::recvfrom, true);
+
+        // LANMessageManager::receive, session reply handler
+        pattern = hook::pattern("8D 45 E0 50 FF 75 F0 E8 ? ? ? ? E9");
+        static auto SessionReplyStart = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& regs)
         {
-            static std::once_flag flag;
-            std::call_once(flag, []()
-            {
-                std::thread(LocalServer).detach();
-            });
+            LAN::replySource = LAN::lastSender;
+        });
+        static auto SessionReplyEnd = safetyhook::create_mid(pattern.get_first(12), [](SafetyHookContext& regs)
+        {
+            LAN::replySource.reset();
         });
 
-        pattern = hook::pattern("FF 15 ? ? ? ? 8B F8 83 FF FF 75 0D FF 15 ? ? ? ? E8 ? ? ? ? 8B D8 85 DB 8B C7 74 03 89 5E 04 5B 5F 5E C2 0C 00");
-        injector::MakeNOP(pattern.get_first(), 6, true);
-        injector::MakeCALL(pattern.get_first(), sendtohook, true);
-
-        //Os::NetworkTaskHTTPSend::shparseHeader = safetyhook::create_inline(0xC14154, Os::NetworkTaskHTTPSend::parseHeader);
-        //Os::NetworkTaskHTTPSend::shreadResponse = safetyhook::create_inline(0xC1475C, Os::NetworkTaskHTTPSend::readResponse);
-        //Os::CoreTaskGetGameConnectSettings::shonSendRequest = safetyhook::create_inline(0xC0ED58, Os::CoreTaskGetGameConnectSettings::onSendRequest);
+        // LANSessionInfo deserialize
+        pattern = hook::pattern("6A 70 B8 ? ? ? ? E8 ? ? ? ? 8B F1 8B 7D 08 33 DB 43 53");
+        LAN::shDeserializeSessionInfo = safetyhook::create_inline(pattern.get_first(), LAN::DeserializeSessionInfo);
     }
 
+    if (bLog)
+    {
+        auto pattern = hook::pattern("55 8B EC 51 53 56 57 E8 ? ? ? ? 8B 70 34 83 C0 2C 33 DB");
+        auto logger = injector::GetBranchDestination(pattern.get_first(7)).as_int();
+        LAN::shLog = safetyhook::create_inline(pattern.get_first(), LAN::Log);
+
+        // the level getter calls the same logger getter
+        pattern = hook::pattern("E8 ? ? ? ? 8B 40 28 C3");
+        for (size_t i = 0; i < pattern.size(); i++)
+        {
+            if (injector::GetBranchDestination(pattern.get(i).get<void>(0)).as_int() == logger)
+            {
+                LAN::shLogLevel = safetyhook::create_inline(pattern.get(i).get<void>(0), LAN::LogLevel);
+                break;
+            }
+        }
+    }
+
+    // gconnect.ubi.com
     if (!sServerAddr.empty())
     {
         auto pattern = hook::pattern("68 ? ? ? ? 8D 4D E0 E8 ? ? ? ? C7 45 ? ? ? ? ? E8");
