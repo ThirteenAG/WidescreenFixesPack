@@ -363,15 +363,12 @@ project "GTA2.WidescreenFix"
    setpaths("GRAND_THEFT_AUTO_2_DIR", "gta2.exe")
 project "GTA3.WidescreenFix"
    add_postfx()
-   files { "includes/GTA/*.h", "includes/GTA/*.cpp" }
    setpaths("GTAIII_DIR", "gta3.exe")
 project "GTAVC.WidescreenFix"
    add_postfx()
-   files { "includes/GTA/*.h", "includes/GTA/*.cpp" }
    setpaths("GRAND_THEFT_AUTO_VICE_CITY_DIR", "gta-vc.exe")
 project "GTASA.WidescreenFix"
    add_postfx()
-   files { "includes/GTA/*.h", "includes/GTA/*.cpp" }
    setpaths("GTA_SAN_ANDREAS_DIR", "gta_sa.exe")
 group ""
 

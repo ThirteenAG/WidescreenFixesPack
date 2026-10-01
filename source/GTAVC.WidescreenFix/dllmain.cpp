@@ -1,9 +1,9 @@
 ﻿#include "stdafx.h"
-#include <GTA/CDraw.h>
 
 import Legacy;
 import Draw;
 import MenuConstraint;
+import Movie;
 bool bUsingLegacy = false;
 
 void Init()
@@ -15,6 +15,12 @@ void Init()
         InitLegacy();
         return;
     }
+
+    // VC has separate movie setup and focus-restoration paths.
+    Movie::Init({
+        "FF 15 ? ? ? ? 8B 84 24 0C 02 00 00 8B 8C 24 08 02 00 00 50 8B 84 24 08 02 00 00 8B 94 24 04 02 00 00 51 50 A1 ? ? ? ? 8B 18 52 50 FF 93 9C 00 00 00",
+        "FF 15 ? ? ? ? 8B 44 24 ? 8B 5C 24 ? 50 8B 44 24 ? 8B 4C 24 ? 53 50 A1 ? ? ? ? 8B 28 51 50 FF 95 9C 00 00 00"
+    });
 
     auto pattern = hook::pattern("BE ? ? ? ? 59 89 C7");
     static auto WinMainHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
