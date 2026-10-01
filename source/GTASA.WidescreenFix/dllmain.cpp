@@ -1,5 +1,4 @@
 ﻿#include "stdafx.h"
-#include <GTA/CDraw.h>
 
 import Legacy;
 import Draw;

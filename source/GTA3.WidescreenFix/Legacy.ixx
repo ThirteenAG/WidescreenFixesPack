@@ -1,10 +1,304 @@
 ﻿module;
 
 #include "stdafx.h"
-#include "GTA\common.h"
-#include "GTA\global.h"
 
 export module Legacy;
+
+class CDraw
+{
+public:
+    static float* pfScreenAspectRatio;
+    static float* pfScreenFieldOfView;
+
+    static void CalculateAspectRatio();
+    static void SetFOV(float);
+};
+
+class CCamera
+{
+public:
+	char align01[0x6C];
+	bool m_bWideScreenOn;
+	char align02[0x8EA];
+
+	static void DrawBordersForWideScreen();
+};
+
+void Hide1pxAABug();
+
+#pragma pack(push, 1)
+class CRGBA
+{
+public:
+	union {
+		unsigned int colorInt;
+		struct {
+			unsigned char red, green, blue, alpha;
+		};
+	};
+
+	inline CRGBA(unsigned char r, unsigned char g, unsigned char b, unsigned char a = 255)
+		: red(r), green(g), blue(b), alpha(a)
+	{}
+	inline CRGBA() {}
+};
+#pragma pack(pop)
+
+#pragma pack(push, 4)
+class CRect
+{
+public:
+	float m_fLeft;          // x1
+	float m_fBottom;        // y1
+	float m_fRight;         // x2
+	float m_fTop;           // y2
+
+	inline CRect() {}
+	inline CRect(float a, float b, float c, float d)
+		: m_fLeft(a), m_fBottom(b), m_fRight(c), m_fTop(d)
+	{}
+};
+#pragma pack(pop)
+
+struct RsGlobalType
+{
+	char *AppName;
+	int MaximumWidth;
+	int MaximumHeight;
+	int frameLimit;
+	int quit;
+	int ps;
+	/**/
+};
+
+struct RwV3d
+{
+	float x;
+	float y;
+	float z;
+};
+
+class CSprite2d;
+
+class CVector;
+
+class CFileMgr
+{
+public:
+	static inline FILE*  OpenFile(const char* path, const char* mode)
+	{
+		return fopen(path, mode);
+	};
+	static inline  int  CloseFile(FILE* stream)
+	{
+		return fclose(stream);
+	};
+	static inline bool  ReadLine(FILE* stream, char* str, int num)
+	{
+		return fgets(str, num, stream) != nullptr;
+	};
+	static inline size_t Read(FILE* stream, void* buf, size_t len)
+	{
+		return fread(buf, 1, len, stream);
+	};
+	static inline size_t Write(FILE* stream, const char* ptr, size_t len)
+	{
+		return fwrite(ptr, 1, len, stream);
+	};
+	static inline bool  Seek(FILE* stream, long pos, int from)
+	{
+		return fseek(stream, pos, from) != 0;
+	};
+	static inline const char* LoadLine(FILE* hFile)
+	{
+		static char		cLineBuffer[512];
+
+		if (!CFileMgr::ReadLine(hFile, cLineBuffer, sizeof(cLineBuffer)))
+			return nullptr;
+
+		for (int i = 0; cLineBuffer[i]; ++i)
+		{
+			if (cLineBuffer[i] == '\n')
+				cLineBuffer[i] = '\0';
+			else if (cLineBuffer[i] < ' ' || cLineBuffer[i] == ',')
+				cLineBuffer[i] = ' ';
+		}
+
+		const char* p = cLineBuffer;
+		while (*p <= ' ')
+		{
+			if (!*p++)
+				break;
+		}
+		return p;
+	};
+};
+
+uint32_t ResX, ResY;
+RsGlobalType* RsGlobal;
+float fWideScreenWidthScaleDown, fWideScreenHeightScaleDown;
+float fHudWidthScale, fHudHeightScale;
+float fSubtitlesScale;
+float fCustomWideScreenWidthScaleDown;
+float fCustomWideScreenHeightScaleDown;
+uint32_t AspectRatioWidth, AspectRatioHeight;
+uint32_t FrontendAspectRatioWidth, FrontendAspectRatioHeight;
+float fCustomAspectRatioHor, fCustomAspectRatioVer;
+float fRadarWidthScale, fCustomRadarWidthScale, fRadarHeightScale, fCustomRadarHeightScale;
+float fPlayerMarkerPos;
+std::string szForceAspectRatio;
+std::string szFrontendAspectRatio;
+bool bSmallerVehicleCorona;
+bool bNoLightSquare;
+bool bFOVControl;
+float fEmergencyVehiclesFix;
+float fCrosshairPosFactor;
+uint32_t nHideAABug;
+float fCrosshairHeightScaleDown;
+bool bIVRadarScaling;
+uint32_t ReplaceTextShadowWithOutline;
+bool DisableWhiteCrosshairDot;
+float fCustomRadarWidthIV;
+float fCustomRadarHeightIV;
+float fCustomRadarRingWidthIV;
+float fCustomRadarRingHeightIV;
+std::string szSelectedMultisamplingLevels;
+uint32_t SelectedMultisamplingLevels;
+uint32_t* BordersVar1;
+uint32_t* BordersVar2;
+bool* bWideScreen;
+bool* bIsInCutscene;
+bool bRestoreCutsceneFOV;
+bool bDontTouchFOV;
+bool bSmartCutsceneBorders;
+bool bAllowAltTabbingWithoutPausing;
+int(__cdecl* CSprite2dDrawRect)(class CRect const &, class CRGBA const &);
+int(__cdecl* CSprite2dDrawRect2)(class CRect const &, class CRGBA const &, class CRGBA const &, class CRGBA const &, class CRGBA const &);
+void(__thiscall *funcCCameraAvoidTheGeometry)(void*, RwV3d const&, RwV3d const&, RwV3d&, float);
+std::map<void*, float> FOVMods;
+
+float* CDraw::pfScreenAspectRatio;
+float* CDraw::pfScreenFieldOfView;
+
+
+void CDraw::CalculateAspectRatio()
+{
+    if (!fCustomAspectRatioHor && !fCustomAspectRatioVer)
+    {
+        *pfScreenAspectRatio = (float)RsGlobal->MaximumWidth / (float)RsGlobal->MaximumHeight;
+    }
+    else
+    {
+        *pfScreenAspectRatio = fCustomAspectRatioHor / fCustomAspectRatioVer;
+    }
+
+    fWideScreenWidthScaleDown = (1.0f / 640.0f) / (*pfScreenAspectRatio / (4.0f / 3.0f));
+}
+
+void CDraw::SetFOV(float fFactor)
+{
+    fEmergencyVehiclesFix = 70.0f / fFactor;
+
+    if (bDontTouchFOV)
+        *pfScreenFieldOfView = fFactor;
+    else if (*bIsInCutscene == true && bRestoreCutsceneFOV)
+        *pfScreenFieldOfView = AdjustFOV(fFactor, *pfScreenAspectRatio, std::min(*pfScreenAspectRatio, 16.0f / 9.0f));
+    else
+        *pfScreenFieldOfView = AdjustFOV(fFactor, *pfScreenAspectRatio);
+
+    for (auto var : FOVMods)
+    {
+        *pfScreenFieldOfView *= var.second;
+    }
+}
+
+export void __cdecl LegacyGetCurrentFOV(float* out)
+{
+    *out = *CDraw::pfScreenFieldOfView;
+}
+
+export void __cdecl LegacySetFOVMultiplier(void* hash, float value)
+{
+    if (value <= 0.0f)
+        value = 1.0f;
+
+    if (!FOVMods.emplace(hash, value).second)
+    {
+        FOVMods[hash] = value;
+    }
+}
+
+export void __cdecl LegacyRemoveFOVMultiplier(void* hash)
+{
+    FOVMods.erase(hash);
+}
+
+void GetScreenRect(CRect& rect)
+{
+    float			fScreenRatio = *CDraw::pfScreenAspectRatio;
+    float			dScreenHeightWeWannaCut = ((-9.0f / 16.0f) * fScreenRatio + 1.0f);
+    float			dBorderProportionsFix = ((-144643.0f / 50000.0f) * fScreenRatio * fScreenRatio) + ((807321.0f / 100000.0f) * fScreenRatio) - (551143.0f / 100000.0f);
+
+    if (dBorderProportionsFix < 0.0)
+        dBorderProportionsFix = 0.0;
+
+    if (dScreenHeightWeWannaCut > 0.0)
+    {
+        // Letterbox
+        rect.m_fBottom = ((float)RsGlobal->MaximumHeight / 2) * (dScreenHeightWeWannaCut - dBorderProportionsFix);
+        rect.m_fTop = (float)RsGlobal->MaximumHeight - (((float)RsGlobal->MaximumHeight / 2) * (dScreenHeightWeWannaCut + dBorderProportionsFix));
+    }
+    else
+    {
+        // Pillarbox
+        dScreenHeightWeWannaCut = -dScreenHeightWeWannaCut;
+
+        rect.m_fLeft = ((float)RsGlobal->MaximumWidth / 4) * dScreenHeightWeWannaCut;
+        rect.m_fRight = (float)RsGlobal->MaximumWidth - ((float)RsGlobal->MaximumWidth / 4) * dScreenHeightWeWannaCut;
+    }
+}
+
+void Hide1pxAABug()
+{
+    CSprite2dDrawRect(CRect(0.0f, -5.0f, (float)RsGlobal->MaximumWidth, 0.5f), CRGBA(0, 0, 0, 255));
+    CSprite2dDrawRect(CRect(-5.0f, -1.0f, 0.5f, (float)RsGlobal->MaximumHeight), CRGBA(0, 0, 0, 255));
+    if (nHideAABug == 2)
+    {
+        CSprite2dDrawRect(CRect(0.0f, (float)RsGlobal->MaximumHeight - 1.5f, (float)RsGlobal->MaximumWidth, (float)RsGlobal->MaximumHeight + 5.0f), CRGBA(0, 0, 0, 255));
+        CSprite2dDrawRect(CRect((float)RsGlobal->MaximumWidth - 1.0f, 0.0f, (float)RsGlobal->MaximumWidth + 5.0f, (float)RsGlobal->MaximumHeight + 5.0f), CRGBA(0, 0, 0, 255));
+    }
+}
+
+void CCamera::DrawBordersForWideScreen()
+{
+    if (*bWideScreen == false)
+        return;
+
+    CRect		ScreenRect;
+
+    ScreenRect.m_fLeft = -1000.0f;
+    ScreenRect.m_fBottom = -1000.0f;
+    ScreenRect.m_fRight = -1000.0f;
+    ScreenRect.m_fTop = -1000.0f;
+
+    GetScreenRect(ScreenRect);
+
+    if (!*BordersVar1 || *BordersVar1 == 2)
+        *BordersVar2 = 80;
+
+    // Letterbox
+    if (ScreenRect.m_fBottom > 0.0 && ScreenRect.m_fTop > 0.0)
+    {
+        CSprite2dDrawRect(CRect(-5.0f, -5.0f, (float)RsGlobal->MaximumWidth + 5.0f, ScreenRect.m_fBottom), CRGBA(0, 0, 0, 255));
+        CSprite2dDrawRect(CRect(-5.0f, ScreenRect.m_fTop, (float)RsGlobal->MaximumWidth + 5.0f, (float)RsGlobal->MaximumHeight + 5.0f), CRGBA(0, 0, 0, 255));
+    }
+    //Pillarbox
+    else if (ScreenRect.m_fLeft > 0.0 && ScreenRect.m_fRight > 0.0)
+    {
+        CSprite2dDrawRect(CRect(-5.0f, -5.0f, ScreenRect.m_fLeft, (float)RsGlobal->MaximumHeight + 5.0f), CRGBA(0, 0, 0, 255));
+        CSprite2dDrawRect(CRect(ScreenRect.m_fRight, -5.0f, (float)RsGlobal->MaximumWidth + 5.0f, (float)RsGlobal->MaximumHeight + 5.0f), CRGBA(0, 0, 0, 255));
+    }
+}
 
 hook::pattern dwGameLoadStatePattern, DxInputNeedsExclusive, EmergencyVehiclesFixPattern, RadarScalingPattern;
 hook::pattern MenuPattern, MenuPattern15625, RsSelectDevicePattern, CDarkelDrawMessagesPattern, CDarkelDrawMessagesPattern2, CParticleRenderPattern;

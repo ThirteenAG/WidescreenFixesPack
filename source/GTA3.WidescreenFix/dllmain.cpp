@@ -1,9 +1,9 @@
 ﻿#include "stdafx.h"
-#include <GTA/CDraw.h>
 
 import Legacy;
 import Draw;
 import MenuConstraint;
+import Movie;
 bool bUsingLegacy = false;
 
 void Init()
@@ -15,6 +15,8 @@ void Init()
         InitLegacy();
         return;
     }
+
+    Movie::Init({ "FF 15 ? ? ? ? 8B 44 24 0C 8B 54 24 08 50 8B 44 24 08 8B 4C 24 04 52 50 A1 ? ? ? ? 8B 18 51 50 FF 93 9C 00 00 00" });
 
     auto pattern = hook::pattern("BE ? ? ? ? 59 89 C7");
     static auto WinMainHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
