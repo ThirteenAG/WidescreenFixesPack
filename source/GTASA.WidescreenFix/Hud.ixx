@@ -390,10 +390,17 @@ void __cdecl DisplayScriptMenu(uint8_t id, uint8_t bright)
     if (panel) panel->position.x = originalX;
 }
 
+float MenuContentOffsetX()
+{
+    if (MenuCanvas::Depth && !MenuCanvas::Suspensions)
+        return (SCREEN_WIDTH - SCREEN_WIDTH * DEFAULT_ASPECT_RATIO / MenuCanvas::GetCurrentAspectRatio()) * 0.5f;
+    return -fWidescreenHudOffset43;
+}
+
 SafetyHookInline shPrintRadioStationList = {};
 void __fastcall PrintRadioStationList(void* MenuManager, void* edx)
 {
-    HudDrawScope scope(-fWidescreenHudOffset43);
+    HudDrawScope scope(MenuContentOffsetX());
     shPrintRadioStationList.unsafe_fastcall(MenuManager, edx);
 }
 
@@ -407,14 +414,14 @@ void __cdecl DrawRect(CRect* rect, uint8_t* rgbaColor)
 SafetyHookInline shPrintStats = {};
 void __fastcall PrintStats(CMenuManager* menu, void* edx)
 {
-    HudDrawScope scope(-fWidescreenHudOffset43);
+    HudDrawScope scope(MenuContentOffsetX());
     shPrintStats.unsafe_fastcall(menu, edx);
 }
 
 SafetyHookInline shPrintBriefs = {};
 void __fastcall PrintBriefs(CMenuManager* menu, void* edx)
 {
-    HudDrawScope scope(-fWidescreenHudOffset43);
+    HudDrawScope scope(MenuContentOffsetX());
     shPrintBriefs.unsafe_fastcall(menu, edx);
 }
 

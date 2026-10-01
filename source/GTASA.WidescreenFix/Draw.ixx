@@ -28,6 +28,7 @@ int lastScreenWidth = 0;
 int lastScreenHeight = 0;
 export float fWidescreenHudOffset = 0.0f;
 export float fWidescreenSCMOffset = 0.0f;
+export float fMenuAspectRatio = 0.0f;
 
 // current cutscene camera zoom (tan-space), maintained by the border system
 // (Sprite2d writes it each frame so the FOV conversion can follow the border animation)
@@ -116,6 +117,8 @@ public:
         };
     }
 } Draw;
+
+#include <GTA/MenuCanvas.inl>
 
 float CDraw::FindAspectRatio()
 {
