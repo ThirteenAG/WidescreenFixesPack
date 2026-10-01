@@ -25,6 +25,7 @@
 - **Startup save** — Automatically load a selected, most recent, or last-used save on startup.
 - **Save location** — Store saves in a `savegames` folder inside the game directory.
 - **Background play** — Keep the game running when minimized.
+- **Mouse smoothing** — Turn off the game's mouse smoothing for a more direct feel.
 
 ---
 

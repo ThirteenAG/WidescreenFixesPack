@@ -440,6 +440,23 @@ void Init()
     auto pattern = hook::pattern("83 F8 ? C7 44 24");
     static auto X_ModeSwitchupdateHook = safetyhook::create_mid(pattern.get_first(), X_ModeSwitch::update);
 
+    // Mouse: X_InputDeviceMouse turns the movement into a speed by dividing it by the frame time
+    // X_Input::update gets, and aiming and the menu cursor turn that back into a distance with the
+    // frame time the game runs on. The game runs on an average of the last frame times while
+    // X_Input got the last frame time alone, so whenever frame times varied, part of the movement
+    // was lost (slow frames) or exaggerated (fast frames after them). X_Input gets the averaged
+    // time too now, X_TimeUpdate::getRelativeTime stored just before.
+    pattern = hook::pattern("D9 5C 24 3C 8B CF E8 ? ? ? ? D9 5C 24 ? 8B 44 24 40 50 E8"); // X_ModeSwitch::update
+    injector::WriteMemory<uint8_t>(pattern.get_first(18), 0x3C, true); // mov eax, [esp+40h] -> mov eax, [esp+3Ch] //0x60128B
+
+    // Mouse smoothing: each frame applies half of the movement not applied yet and carries the rest
+    // over to the next one. Without it the movement applies in the frame it's made.
+    if (iniReader.ReadInteger("MISC", "MouseSmoothing", 1) == 0)
+    {
+        pattern = hook::pattern("8D 4D DC E8 ? ? ? ? D9 45 DC D8 46 5B"); // X_InputDeviceMouse::update
+        injector::MakeNOP(pattern.get_first(3), 5, true); //0x5191CC
+    }
+
     pattern = hook::pattern("A0 ? ? ? ? 84 C0 0F 85 ? ? ? ? 8B 86");
     X_Crosshair::sm_bCameraPathRunning.SetAddress(*pattern.get_first<bool*>(1));
 
