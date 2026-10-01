@@ -16,12 +16,15 @@
 
 - **Skip intro** — Skip startup intros.
 - **Startup prompt** — Skip the “Press Any Key” screen and checkpoint selection.
-- **Startup display** — Switch to fullscreen if the game starts in a window.
-- **Mouse input** — Optionally disable negative mouse acceleration.
+- **Mouse input** — Raw mouse input for camera turning, so high polling rate mice don't lose movement; optionally disable negative mouse acceleration.
+- **Turn speed** — `TurnSpeed` makes Sam turn faster toward the movement direction while moving, for snappier direction changes.
 
 ### Display and camera
 
-- **Ultrawide** — Enable ultrawide support; this also disables the damage overlay and fading in ultrawide.
+- **Window modes** — Windowed, borderless and fullscreen list the same resolutions; windowed and borderless windows are centered, the window can be resized and the game remembers it.
+- **Ultrawide** — The HUD and menus stay 16:9 on screens wider or narrower than 16:9 (menus, dialogs and full screen movies get black bars), the 3D view fills the screen.
+- **Letterbox** — On screens narrower than 16:9 (4:3, 16:10), optionally letterbox the 3D view to 16:9.
+- **Frame rate limit** — Set a frame rate limit with `FPSLimit`.
 - **Field of view** — Adjust `FOVFactor` from 0.5 to 2.5.
 - **Draw distance** — Adjust `ScreenCullBias`; lower values keep distant objects visible for longer.
 
@@ -29,9 +32,13 @@
 
 - **DLC** — Unlock DLC content made unavailable by the server shutdown.
 - **Mission unlocks** — Separate options unlock campaign and 4th Echelon missions from the start.
-- **Loose files** — Load unpacked files from disk.
+- **Loose files** — Load unpacked files from the `update` folder. `DumpPackedFiles` unpacks all .umd archives into an `unpacked` folder next to the exe, its contents can be moved to `update` to run the game from loose files.
 - **RGB lighting** — Support [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html).
 - **Forced walking** — Allow running during forced walking sections.
+
+### Fixes
+
+- The grid transition no longer stays over the ending cutscene at high frame rates.
 
 Difficulty tweaks: **Mark and Execute**, sonar and drop crates enabled on **Perfectionist**, unlimited ammo disabled on **Rookie**. To go back to original behavior, delete `update/difficultyconfiguration.ini` and set `DisablePerfectionistChecks` to 0.
 

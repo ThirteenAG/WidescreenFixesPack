@@ -6,11 +6,158 @@ module;
 #include <numeric>
 #include <atomic>
 #include <map>
+#include <commctrl.h>
+#include <winioctl.h>
+#include <mutex>
+#include <thread>
 
 export module FileManager;
 
 import ComVars;
 import BlacklistControls;
+
+// A task dialog with a progress bar and a Cancel button, shown on its own thread while the caller does the work.
+// Games don't have a comctl32 v6 manifest, the dialog thread loads it through an activation context (shell32's manifest, resource 124).
+//
+//     ProgressDialog dialog(L"Game", L"Dumping archives...");
+//     for (...) { if (dialog.Cancelled()) break; dialog.Set(done, total, L"file.umd"); ... }
+//     dialog.Close();
+class ProgressDialog
+{
+    std::wstring title, heading;
+    std::thread thread;
+    std::mutex mutex;
+    std::wstring text;
+    std::atomic<uint64_t> done = 0, total = 1;
+    std::atomic<bool> cancelled = false, closing = false;
+    std::atomic<HWND> window = nullptr;
+
+    static HRESULT CALLBACK Callback(HWND hwnd, UINT message, WPARAM wParam, LPARAM, LONG_PTR data)
+    {
+        auto self = reinterpret_cast<ProgressDialog*>(data);
+        switch (message)
+        {
+        case TDN_CREATED:
+            self->window = hwnd;
+            SendMessageW(hwnd, TDM_SET_PROGRESS_BAR_RANGE, 0, MAKELPARAM(0, 1000));
+            break;
+        case TDN_TIMER:
+        {
+            auto total = std::max<uint64_t>(self->total, 1);
+            auto position = static_cast<WPARAM>(std::min<uint64_t>(self->done * 1000 / total, 1000));
+            SendMessageW(hwnd, TDM_SET_PROGRESS_BAR_POS, position, 0);
+            std::wstring text;
+            {
+                std::lock_guard lock(self->mutex);
+                text = self->text;
+            }
+            SendMessageW(hwnd, TDM_SET_ELEMENT_TEXT, TDE_CONTENT, reinterpret_cast<LPARAM>(text.c_str()));
+            if (self->closing)
+                SendMessageW(hwnd, TDM_CLICK_BUTTON, IDOK, 0);
+            break;
+        }
+        case TDN_BUTTON_CLICKED:
+            if (wParam == IDCANCEL && !self->closing)
+            {
+                // stays open until the work stops
+                self->cancelled = true;
+                SendMessageW(hwnd, TDM_ENABLE_BUTTON, IDCANCEL, FALSE);
+                std::lock_guard lock(self->mutex);
+                self->text = L"Cancelling...";
+                return S_FALSE;
+            }
+            break;
+        }
+        return S_OK;
+    }
+
+    void Run()
+    {
+        // comctl32 v6
+        wchar_t shell32[MAX_PATH] = {};
+        GetSystemDirectoryW(shell32, MAX_PATH);
+        wcscat_s(shell32, L"\\shell32.dll");
+        ACTCTXW context = { sizeof(context) };
+        context.dwFlags = ACTCTX_FLAG_RESOURCE_NAME_VALID;
+        context.lpSource = shell32;
+        context.lpResourceName = MAKEINTRESOURCEW(124);
+        auto activation = CreateActCtxW(&context);
+        ULONG_PTR cookie = 0;
+        if (activation != INVALID_HANDLE_VALUE)
+            ActivateActCtx(activation, &cookie);
+
+        using TaskDialogIndirectFn = HRESULT(WINAPI*)(const TASKDIALOGCONFIG*, int*, int*, BOOL*);
+        auto comctl32 = LoadLibraryW(L"comctl32.dll");
+        auto taskDialogIndirect = comctl32 ? reinterpret_cast<TaskDialogIndirectFn>(GetProcAddress(comctl32, "TaskDialogIndirect")) : nullptr;
+        if (taskDialogIndirect)
+        {
+            TASKDIALOGCONFIG config = { sizeof(config) };
+            config.dwFlags = TDF_SHOW_PROGRESS_BAR | TDF_CALLBACK_TIMER | TDF_SIZE_TO_CONTENT | TDF_POSITION_RELATIVE_TO_WINDOW;
+            config.dwCommonButtons = TDCBF_CANCEL_BUTTON;
+            config.pszWindowTitle = title.c_str();
+            config.pszMainInstruction = heading.c_str();
+            config.pszContent = L" ";
+            config.pfCallback = Callback;
+            config.lpCallbackData = reinterpret_cast<LONG_PTR>(this);
+            config.cxWidth = 300;
+            taskDialogIndirect(&config, nullptr, nullptr, nullptr);
+        }
+        else
+        {
+            // no dialog, just wait for the work
+            while (!closing)
+                Sleep(100);
+        }
+
+        if (activation != INVALID_HANDLE_VALUE)
+        {
+            DeactivateActCtx(0, cookie);
+            ReleaseActCtx(activation);
+        }
+    }
+
+public:
+    ProgressDialog(std::wstring title, std::wstring heading) : title(std::move(title)), heading(std::move(heading))
+    {
+        thread = std::thread([this]() { Run(); });
+    }
+
+    ~ProgressDialog()
+    {
+        Close();
+    }
+
+    void Set(uint64_t done, uint64_t total, std::wstring text = {})
+    {
+        this->total = total;
+        this->done = done;
+        if (!text.empty())
+        {
+            std::lock_guard lock(mutex);
+            if (!cancelled)
+                this->text = std::move(text);
+        }
+    }
+
+    bool Cancelled() const
+    {
+        return cancelled;
+    }
+
+    // the window, for message boxes shown after it
+    HWND Window() const
+    {
+        return window;
+    }
+
+    void Close()
+    {
+        if (!thread.joinable())
+            return;
+        closing = true;
+        thread.join();
+    }
+};
 
 // File managers are chained, each one forwards what it doesn't handle to the next one (+4):
 //   FFileManagerArc (Loc-<lang>.umd) -> FFileManagerArc (DynamicXbox.umd) -> FFileManagerLinear -> FFileManagerWindows (disk)
@@ -341,6 +488,21 @@ namespace Dumper
         std::transform(s.begin(), s.end(), s.begin(), ::towlower);
         return s;
     }
+    // Output files are sparse, the parts no archive contains take no space
+    void CreateSparseFile(const std::filesystem::path& path, int64_t size)
+    {
+        auto file = CreateFileW(path.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+        if (file == INVALID_HANDLE_VALUE)
+            return;
+        DWORD bytes = 0;
+        DeviceIoControl(file, FSCTL_SET_SPARSE, nullptr, 0, nullptr, 0, &bytes, nullptr);
+        LARGE_INTEGER end;
+        end.QuadPart = size;
+        SetFilePointerEx(file, end, nullptr, FILE_BEGIN);
+        SetEndOfFile(file);
+        CloseHandle(file);
+    }
+
     std::unordered_map<std::wstring, OutputFile> outputFiles;
     std::fstream stream;
     OutputFile* streamFile = nullptr;
@@ -359,8 +521,7 @@ namespace Dumper
                 variantPath.replace_filename(variantPath.stem().string() + "~" + std::to_string(count) + variantPath.extension().string());
             std::error_code ec;
             std::filesystem::create_directories(variantPath.parent_path(), ec);
-            std::ofstream(variantPath, std::ios::binary).close();
-            std::filesystem::resize_file(variantPath, size, ec);
+            CreateSparseFile(variantPath, size);
             file.path = variantPath;
             file.size = size;
             file.writable = true;
@@ -391,10 +552,7 @@ namespace Dumper
             if (!file.writable)
                 log.push_back(std::format("  kept existing: {}", path.lexically_relative(outputPath).string()));
             else
-            {
                 std::filesystem::create_directories(path.parent_path(), ec);
-                std::ofstream(path, std::ios::binary).close();
-            }
         }
         if (file.archives.empty() || file.archives.back() != currentArchive)
             file.archives.push_back(currentArchive);
@@ -403,7 +561,7 @@ namespace Dumper
         if (inserted)
         {
             file.size = size;
-            std::filesystem::resize_file(path, size, ec);
+            CreateSparseFile(path, size);
         }
         else if (size != file.size)
             file.conflict = true;
@@ -686,45 +844,76 @@ namespace Dumper
         std::error_code ec;
         std::filesystem::create_directories(outputPath, ec);
 
-        std::vector<std::string> dumped;
-        DumpMountedArchives(dumped);
-
-        // everything else in the exe folder and UMDs: Conviction.umd, per map linear and sparse archives, menu and PEC archives.
-        // Loc-<lang>.umd of other languages would overwrite each other, only the mounted one is dumped.
-        std::vector<std::filesystem::path> archives;
-        for (auto& dir : { std::filesystem::path("UMDs"), std::filesystem::path() })
+        bool cancelled = false;
         {
-            for (auto& entry : std::filesystem::directory_iterator(exePath / dir, ec))
+            ProgressDialog dialog(L"Splinter Cell Conviction FusionFix", L"Unpacking the game archives...");
+            dialog.Set(0, 1, L"Mounted archives");
+            std::vector<std::string> dumped;
+            DumpMountedArchives(dumped);
+
+            // everything else in the exe folder and UMDs: Conviction.umd, per map linear and sparse archives, menu and PEC archives.
+            // Loc-<lang>.umd of other languages would overwrite each other, only the mounted one is dumped.
+            std::vector<std::filesystem::path> archives;
+            uint64_t totalSize = 0;
+            for (auto& dir : { std::filesystem::path("UMDs"), std::filesystem::path() })
             {
-                auto name = entry.path().filename().string();
-                if (!entry.is_regular_file(ec) || _stricmp(entry.path().extension().string().c_str(), ".umd") != 0 || starts_with_i(name, "loc-"))
-                    continue;
-                if (std::any_of(dumped.begin(), dumped.end(), [&](auto& d) { return _stricmp(d.c_str(), name.c_str()) == 0; }))
-                    continue;
-                archives.push_back(dir / name);
+                // incremented with an error code, the listing can end with an error (the loader merges the overload folder into it)
+                for (auto it = std::filesystem::directory_iterator(exePath / dir, ec); !ec && it != std::filesystem::directory_iterator(); it.increment(ec))
+                {
+                    auto& entry = *it;
+                    auto name = entry.path().filename().string();
+                    if (!entry.is_regular_file(ec) || _stricmp(entry.path().extension().string().c_str(), ".umd") != 0 || starts_with_i(name, "loc-"))
+                        continue;
+                    if (std::any_of(dumped.begin(), dumped.end(), [&](auto& d) { return _stricmp(d.c_str(), name.c_str()) == 0; }))
+                        continue;
+                    archives.push_back(dir / name);
+                    std::error_code sizeError;
+                    totalSize += entry.file_size(sizeError);
+                }
+                if (ec && archives.empty())
+                    log.push_back(std::format("listing {}: {}", (exePath / dir).string(), ec.message()));
+                ec.clear();
             }
-        }
 
-        for (auto& archive : archives)
-            DumpArchive(archive);
-        stream.close();
+            uint64_t done = 0;
+            for (auto& archive : archives)
+            {
+                if (dialog.Cancelled())
+                {
+                    cancelled = true;
+                    break;
+                }
+                dialog.Set(done, totalSize, archive.wstring());
+                DumpArchive(archive);
+                done += std::filesystem::file_size(exePath / archive, ec);
+            }
+            stream.close();
 
-        // every version of the files that differ between archives
-        std::vector<std::string> variantArchives;
-        for (auto& [key, file] : outputFiles)
-        {
-            if (!file.writable || !file.conflict)
-                continue;
-            conflictKeys[key] = true;
-            for (auto& archive : file.archives)
-                if (std::find(variantArchives.begin(), variantArchives.end(), archive) == variantArchives.end())
-                    variantArchives.push_back(archive);
+            // every version of the files that differ between archives
+            std::vector<std::string> variantArchives;
+            for (auto& [key, file] : outputFiles)
+            {
+                if (!file.writable || !file.conflict)
+                    continue;
+                conflictKeys[key] = true;
+                for (auto& archive : file.archives)
+                    if (std::find(variantArchives.begin(), variantArchives.end(), archive) == variantArchives.end())
+                        variantArchives.push_back(archive);
+            }
+            variantPass = true;
+            for (size_t i = 0; i < variantArchives.size() && !cancelled; i++)
+            {
+                if (dialog.Cancelled())
+                {
+                    cancelled = true;
+                    break;
+                }
+                dialog.Set(i, variantArchives.size(), L"Conflicting files: " + std::filesystem::path(variantArchives[i]).wstring());
+                DumpArchive(variantArchives[i]);
+            }
+            variantPass = false;
+            stream.close();
         }
-        variantPass = true;
-        for (auto& archive : variantArchives)
-            DumpArchive(archive);
-        variantPass = false;
-        stream.close();
 
         // report files that differ between archives (removed) and files that are not complete (parts no archive contains are zero)
         size_t written = 0, incomplete = 0, conflicts = 0;
@@ -769,6 +958,8 @@ namespace Dumper
             }
         }
         std::sort(incompleteLog.begin(), incompleteLog.end());
+        if (cancelled)
+            log.push_back("\nCancelled, the folder is not complete.");
         log.push_back(std::format("\n{} files differ between archives and were left in them, every version of them is in _conflicts:", conflicts));
         for (auto& [relative, lines] : conflictLog)
             log.insert(log.end(), lines.begin(), lines.end());
@@ -776,9 +967,9 @@ namespace Dumper
         log.insert(log.end(), incompleteLog.begin(), incompleteLog.end());
 
         std::ofstream(outputPath / "_dump.log") << std::accumulate(log.begin(), log.end(), std::string(), [](auto a, auto& b) { return a + b + "\n"; });
-        MessageBoxA(nullptr, std::format("Dumped {} files to\n{}\n\n{} files are not complete and were moved to _incomplete, {} differ between archives and were left in them (their versions are in _conflicts).\n"
+        MessageBoxA(nullptr, std::format("{}Dumped {} files to\n{}\n\n{} files are not complete and were moved to _incomplete, {} differ between archives and were left in them (their versions are in _conflicts).\n"
             "Rename the folder to 'update' to load the files from disk instead of the archives.\nSee _dump.log for details.",
-            written - incomplete, outputPath.string(), incomplete, conflicts).c_str(), "Splinter Cell Conviction FusionFix", MB_OK | MB_ICONINFORMATION);
+            cancelled ? "Cancelled.\n\n" : "", written - incomplete, outputPath.string(), incomplete, conflicts).c_str(), "Splinter Cell Conviction FusionFix", MB_OK | MB_ICONINFORMATION);
         dumping = false;
     }
 }
