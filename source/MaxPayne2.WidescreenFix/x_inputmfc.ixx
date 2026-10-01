@@ -608,6 +608,15 @@ export void InitInput()
     auto pattern = hook::pattern("8B 15 ? ? ? ? 50 51 53");
     MaxPayne_ConfiguredInput::sm_control = *pattern.get_first<uintptr_t*>(2);
 
+    // Mouse smoothing: each frame applies half of the movement not applied yet and carries the rest
+    // over to the next one. Without it the movement applies in the frame it's made.
+    CIniReader iniReader("");
+    if (iniReader.ReadInteger("MISC", "MouseSmoothing", 1) == 0)
+    {
+        pattern = hook::module_pattern(GetModuleHandle(L"X_Inputmfc"), "8D 74 24 ? E8 ? ? ? ? D9 44 24 ? D8 47 5B"); // X_InputDeviceMouse::update
+        injector::MakeNOP(pattern.get_first(4), 5, true); //0x10006DCA
+    }
+
     pattern = hook::module_pattern(GetModuleHandle(L"X_Inputmfc"), "C7 05 ? ? ? ? ? ? ? ? 8B 4D");
     static auto X_InputconstructHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {

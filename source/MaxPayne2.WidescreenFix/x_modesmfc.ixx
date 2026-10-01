@@ -125,6 +125,15 @@ export void InitX_ModesMFC()
     auto pattern = hook::module_pattern(GetModuleHandle(L"X_ModesMFC"), "8B 46 0D 83 F8 03 75 ? D9 46 11");
     static auto X_ModeSwitchUpdateHook = safetyhook::create_mid(pattern.get_first(), X_ModeSwitch::update); //0x10001914
 
+    // Mouse: X_InputDeviceMouse turns the movement into a speed by dividing it by the frame time
+    // X_Input::update gets, and aiming and the menu cursor turn that back into a distance with the
+    // frame time the game runs on. The game runs on an average of the last frame times while
+    // X_Input got the last frame time alone, so whenever frame times varied, part of the movement
+    // was lost (slow frames) or exaggerated (fast frames after them). X_Input gets the averaged
+    // time too now, X_TimeUpdate::getRelativeTime stored just before.
+    pattern = hook::module_pattern(GetModuleHandle(L"X_ModesMFC"), "D9 5C 24 18 8B CF FF 15 ? ? ? ? D9 5C 24 10 8B 44 24 1C 50 FF 15"); // X_ModeSwitch::update
+    injector::WriteMemory<uint8_t>(pattern.get_first(19), 0x18, true); // mov eax, [esp+1Ch] -> mov eax, [esp+18h] //0x10001906
+
     pattern = hook::module_pattern(GetModuleHandle(L"X_ModesMFC"), "8B 4E 09 8B 11 FF 52 10 8B 4E 09 8B 01 FF 50 14");
     static auto X_ModeSwitchRenderHook = safetyhook::create_mid(pattern.get_first(), X_ModeSwitch::render); //0x10008A7E
 }
