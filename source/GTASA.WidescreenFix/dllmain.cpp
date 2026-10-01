@@ -3,6 +3,7 @@
 
 import Legacy;
 import Draw;
+import MenuConstraint;
 bool bUsingLegacy = false;
 
 void Init()

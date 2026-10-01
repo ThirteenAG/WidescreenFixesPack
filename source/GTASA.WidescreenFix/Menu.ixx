@@ -210,6 +210,12 @@ public:
     int32_t* m_pPressedKey;
     bool      m_isPreInitialised;
     ///...
+
+    eMenuScreen GetCurrentScreen() const
+    {
+        // The sprites following the partial layout end at the current screen.
+        return *reinterpret_cast<const eMenuScreen*>(reinterpret_cast<const uint8_t*>(this) + 0x15D);
+    }
 };
 
 export GameRef<CMenuManager> FrontendMenuManager([]() -> CMenuManager*

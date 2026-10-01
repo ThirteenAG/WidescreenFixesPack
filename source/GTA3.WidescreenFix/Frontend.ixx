@@ -99,16 +99,16 @@ namespace CMenuManager
     float __fastcall StretchX(void* CMenuManager, void* edx, float fScaleFactor)
     {
         if (fScaleFactor == 225.0f || fScaleFactor == 415.0f) //logo
-            fScaleFactor = ((640.0f * (CDraw::GetAspectRatio() / (4.0f / 3.0f))) / 2.0f) - (320.0f - fScaleFactor);
+            fScaleFactor = ((640.0f * (MenuCanvas::GetCurrentAspectRatio() / (4.0f / 3.0f))) / 2.0f) - (320.0f - fScaleFactor);
 
         if (fScaleFactor == 320.0f || fScaleFactor == 321.0f)
             return fScaleFactor * 0.0015625f * (float)RsGlobal->maximumWidth;
         else
-            return fScaleFactor * INV_SCREEN_WIDTH(CDraw::GetAspectRatio()) * (float)RsGlobal->maximumWidth;
+            return fScaleFactor * INV_SCREEN_WIDTH(MenuCanvas::GetCurrentAspectRatio()) * (float)RsGlobal->maximumWidth;
     }
 }
 
-ProtectedGameRef<CVector> playerSkinPos;
+export ProtectedGameRef<CVector> playerSkinPos;
 
 enum
 {
@@ -296,7 +296,7 @@ public:
             static float fChatRadioOffset = 0.0f;
             static float fMp33RadioOffset = 0.0f;
 
-            onResChange() += [](int Width, int Height)
+            auto UpdateMenuLayout = [](int Width, int Height)
             {
                 float fAspectRatio = static_cast<float>(Width) / static_cast<float>(Height);
 
@@ -329,6 +329,8 @@ public:
                 fChatRadioOffset = fBaseOffset * 9.0f;
                 fMp33RadioOffset = fBaseOffset * 10.0f;
             };
+            onResChange() += UpdateMenuLayout;
+            MenuCanvas::onLayoutChange() += UpdateMenuLayout;
 
             pattern = hook::pattern("FF 35 ? ? ? ? E8 ? ? ? ? 8D 84 24 ? ? 00 00 50");
             injector::WriteMemory(pattern.count(10).get(0).get<uint32_t>(2), &fHeadRadioOffset, true);

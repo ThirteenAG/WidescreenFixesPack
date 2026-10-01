@@ -9,9 +9,12 @@ import Skeleton;
 import Draw;
 import Menu;
 
+#undef SCREEN_ASPECT_RATIO
+#define SCREEN_ASPECT_RATIO (MenuCanvas::GetCurrentAspectRatio())
+
 // The map uses a virtual canvas with the same horizontal scale as the HUD.
 // Its origin and input limits live in this space; no cursor or vertex offsets.
-bool bFullscreenMap = true;
+export bool bFullscreenMap = true;
 float mapCenterX = 320.0f;
 float mapInset = 0.0f;
 float mapRight = 640.0f;
@@ -26,7 +29,9 @@ float mapBottomScale = 1.0f;
 
 static void UpdateMapCanvas()
 {
-    const float canvasWidth = SCREEN_WIDTH / SCREEN_SCALE_X(1.0f);
+    // Keep the persistent map origin/bounds stable between processing and drawing.
+    const float aspectRatio = bFullscreenMap ? CDraw::GetAspectRatio() : MenuCanvas::GetAspectRatio();
+    const float canvasWidth = 480.0f * aspectRatio;
     const float oldCenter = mapCenterX;
     mapCenterX = canvasWidth * 0.5f;
     mapInset = bFullscreenMap ? 0.0f : 60.0f;
@@ -115,7 +120,7 @@ public:
         {
             CIniReader iniReader("");
             if (!iniReader.ReadInteger("MAIN", "ScalingMode", 1)) return;
-            bFullscreenMap = iniReader.ReadInteger("MAIN", "FullscreenMap", 1) != 0;
+            bFullscreenMap = iniReader.ReadInteger("MISC", "FullscreenMap", 1) != 0;
 
             // PrintMap initializes a map centered on the player.
             auto pattern = hook::pattern("C7 47 68 00 00 A0 43 C7 47 6C 00 00 4E 43");
@@ -261,12 +266,14 @@ public:
             static auto LegendWindow = safetyhook::create_mid(0x5760A1, [](SafetyHookContext& regs)
             {
                 auto rect = *reinterpret_cast<CRect**>(regs.esp);
-                rect->left -= fWidescreenHudOffset43;
-                rect->right -= fWidescreenHudOffset43;
+                const float offset = (SCREEN_WIDTH - SCREEN_SCALE_X(640.0f)) * 0.5f;
+                rect->left += offset;
+                rect->right += offset;
             });
             static auto LegendEntry = safetyhook::create_mid(0x5761EB, [](SafetyHookContext& regs)
             {
-                *reinterpret_cast<int32_t*>(regs.esp) -= static_cast<int32_t>(std::lround(fWidescreenHudOffset43));
+                const float offset = (SCREEN_WIDTH - SCREEN_SCALE_X(640.0f)) * 0.5f;
+                *reinterpret_cast<int32_t*>(regs.esp) += static_cast<int32_t>(std::lround(offset));
             });
 
             UpdateMapCanvas();

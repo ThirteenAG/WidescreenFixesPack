@@ -309,6 +309,16 @@ static bool DrawMenuBackground(CSprite2d* sprite, void* edx, const CRect* rect, 
 SafetyHookInline shDraw1 = {};
 void __fastcall Draw1(CSprite2d* sprite2d, void* edx, CRect* rect, CRGBA* col)
 {
+    CRect backgroundRect;
+    std::optional<MenuCanvas::Suspend> physicalBackground;
+    if (MenuCanvas::Depth && IsFullscreen(rect) && FindMenuBackground(sprite2d))
+    {
+        backgroundRect = *rect;
+        physicalBackground.emplace();
+        backgroundRect.left = 0.0f;
+        backgroundRect.right = SCREEN_WIDTH;
+        rect = &backgroundRect;
+    }
     g_isFullscreen = IsFullscreen(rect);
     g_hasTexture = sprite2d->m_pTexture != nullptr;
 

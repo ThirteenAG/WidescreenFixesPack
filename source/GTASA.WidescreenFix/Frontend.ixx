@@ -11,6 +11,10 @@ import Sprite2d;
 import Draw;
 import Menu;
 
+// Only menu helpers use the temporary canvas aspect; the 3D camera stays physical.
+#undef SCREEN_ASPECT_RATIO
+#define SCREEN_ASPECT_RATIO (MenuCanvas::GetCurrentAspectRatio())
+
 auto INV_SCREEN_WIDTH = [](float fAspectRatio) { return (1.0f / 640.0f) / (fAspectRatio / (4.0f / 3.0f)); };
 
 export ProtectedGameRef<float> ScaledResXRef;
@@ -246,7 +250,7 @@ public:
             MenuMessages::hbRadioScanDrawRect.fun = injector::MakeCALL(0x57BD70, MenuMessages::RadioScanDrawRect, true).get();
             injector::MakeCALL(0x57BE2B, MenuMessages::RadioScanDrawRect, true);
 
-            onResChange() += [](int Width, int Height)
+            auto UpdateMenuLayout = [](int Width, int Height)
             {
                 float fAspectRatio = static_cast<float>(Width) / static_cast<float>(Height);
 
@@ -256,9 +260,11 @@ public:
 
                 for (auto& it : vHudScalePtrs)
                 {
-                    it.first = it.second / (CDraw::GetAspectRatio() / (4.0f / 3.0f));
+                    it.first = it.second / (fAspectRatio / (4.0f / 3.0f));
                 }
             };
+            onResChange() += UpdateMenuLayout;
+            MenuCanvas::onLayoutChange() += UpdateMenuLayout;
 
             // Radar
             static ProtectedGameRef<float> radarWidthRef;

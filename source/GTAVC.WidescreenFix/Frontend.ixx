@@ -386,7 +386,7 @@ export std::array<ProtectedGameRef<float>, FrontendClassCount> ResYInvRefs;
 
 void StretchX(SafetyHookContext& ctx)
 {
-    float f = (CDraw::GetAspectRatio() / (4.0f / 3.0f));
+    float f = (MenuCanvas::GetCurrentAspectRatio() / (4.0f / 3.0f));
     _asm {fdiv dword ptr[f]}
 }
 
@@ -488,6 +488,8 @@ namespace ScriptDraw
     }
 }
 
+export bool g_externalMenuMap = false;
+
 namespace MenuMap
 {
     constexpr float Height = 448.0f;
@@ -500,8 +502,8 @@ namespace MenuMap
     void UpdateCanvas()
     {
         const float oldCenter = CenterX;
-        CenterX = Height * CDraw::GetAspectRatio() * 0.5f;
-        ScaleX = 1.0f / (Height * CDraw::GetAspectRatio());
+        CenterX = Height * MenuCanvas::GetAspectRatio() * 0.5f;
+        ScaleX = 1.0f / (Height * MenuCanvas::GetAspectRatio());
         InitialCenterX = CenterX;
         FrontendMenuManager->m_fMapCenterX += CenterX - oldCenter;
     }
@@ -535,7 +537,10 @@ namespace MenuMap
             HMODULE module = nullptr;
             if (GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
                 reinterpret_cast<LPCWSTR>(renderer), &module) && GetProcAddress(module, "MenuMap_GetScreenCoords"))
+            {
+                g_externalMenuMap = true;
                 return;
+            }
         }
 
         auto init = hook::pattern("C7 43 40 00 00 22 43 C7 43 44 00 00 A0 43 C7 43 48").count(1);
@@ -577,6 +582,38 @@ namespace MenuMap
         calls.for_each_result([](hook::pattern_match match) { injector::MakeCALL(match.get<void>(11), PrintMap, true); });
         UpdateCanvas();
         onResChange() += [](int Width, int Height) { UpdateCanvas(); };
+    }
+}
+
+namespace MenuBorders
+{
+    injector::hook_back<int(__cdecl*)(float, float, float, float, float, float, float, float, CRGBA*)> hbDraw;
+
+    int __cdecl Draw(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4, CRGBA* color)
+    {
+        // These animated masks frame the physical background, independently
+        // of the menu canvas. Their coordinates already use its current width.
+        const float scale = MenuCanvas::Depth && !MenuCanvas::Suspensions
+            ? float(MenuCanvas::PhysicalWidth) / RsGlobal->width : 1.0f;
+        MenuCanvas::Suspend physicalViewport;
+        return hbDraw.fun(x1 * scale, y1, x2 * scale, y2, x3 * scale, y3, x4 * scale, y4, color);
+    }
+
+    void Init(uintptr_t start, uintptr_t end)
+    {
+        if (end <= start) return;
+        // The final mask follows the last background coordinate calculation.
+        auto last = hook::pattern(end, end + 0x100, "DE D9 DE D9 E8 ? ? ? ? 83 C4 24 80 3D ? ? ? ? 00");
+        if (last.size() != 1) return;
+        auto calls = hook::pattern(start, reinterpret_cast<uintptr_t>(last.get_first(12)), "DE D9 DE D9 E8 ? ? ? ? 83 C4 24");
+        // Both transition branches share the last of their four masks.
+        // Leave a replacement renderer untouched if any call differs.
+        if (calls.size() != 7) return;
+        auto target = injector::GetBranchDestination(calls.get_first(4)).as_int();
+        for (size_t i = 0; i < calls.size(); ++i)
+            if (injector::GetBranchDestination(calls.get(i).get<void>(4)).as_int() != target) return;
+        hbDraw.fun = reinterpret_cast<decltype(hbDraw.fun)>(target);
+        calls.for_each_result([](hook::pattern_match match) { injector::MakeCALL(match.get<void>(4), Draw, true); });
     }
 }
 
@@ -719,9 +756,23 @@ public:
             pattern = hook::pattern("D8 0D ? ? ? ? DD D9 D9 C0 D9 7C 24 ? 8B 44 24 ? 80 4C 24 ? ? D9 6C 24 ? 89 44 24 ? A1 ? ? ? ? DB 5C 24 ? D9 6C 24 ? 3D C0 01 00 00");
             injector::WriteMemory(pattern.get_first(2), &fLegendRight, true);
 
-            onResChange() += [](int Width, int Height)
+            auto UpdateMenuLayout = [](int Width, int Height)
             {
                 float fAspectRatio = static_cast<float>(Width) / static_cast<float>(Height);
+
+                // The radio carousel keeps a pixel position initialized when
+                // textures load, outside the constrained menu. Keep its scroll
+                // progress relative to the canvas, including background suspends.
+                // Retain the fraction across unchanged round-trips to avoid drift.
+                static int radioWidth = 0;
+                static int radioPosition = 0;
+                static float radioFraction = 0.0f;
+                auto& x = FrontendMenuManager->m_LeftMostRadioX;
+                if (!radioWidth || x != radioPosition)
+                    radioFraction = float(x) / (radioWidth ? radioWidth : Width);
+                radioWidth = Width;
+                x = static_cast<int>(std::lround(radioFraction * Width));
+                radioPosition = x;
 
                 for (auto [index, resXInv] : std::views::enumerate(ResXInvRefs))
                 {
@@ -747,6 +798,8 @@ public:
                 fLegendLeft = (offset + boxW * (160.0f / 640.0f)) / static_cast<float>(Width);
                 fLegendRight = (offset + boxW * (350.0f / 640.0f)) / static_cast<float>(Width);
             };
+            onResChange() += UpdateMenuLayout;
+            MenuCanvas::onLayoutChange() += UpdateMenuLayout;
 
             std::vector<void*> StretchXRefs;
 
@@ -916,6 +969,8 @@ public:
             {
                 injector::WriteMemory(match.get<void*>(2), &fDefaultScale, true);
             });
+
+            MenuBorders::Init(DrawBackgroundStart, DrawBackgroundEnd);
 
             auto CMenuManagerDrawStart = (uintptr_t)hook::pattern("D8 0D ? ? ? ? 89 BC 24 ? ? ? ? DA 8C 24 ? ? ? ? DD DD").get_first(0);
             auto CMenuManagerDrawEnd = (uintptr_t)hook::pattern("D8 0D ? ? ? ? 89 94 24 ? ? ? ? DA 8C 24 ? ? ? ? DD DB 81 FE C0 01 00 00").get_first(6);
