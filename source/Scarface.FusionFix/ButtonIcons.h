@@ -6,25 +6,47 @@
 namespace ScarfaceButtons
 {
     // Physical element order shared with XidiGetPhysicalButtonMask.
-    inline constexpr const char* Names[] = {
-        "Left Stick", "Left Stick", "Right Stick", "Right Stick",
-        "D-Pad Up", "D-Pad Down", "D-Pad Left", "D-Pad Right",
-        "LT", "RT", "A", "B", "X", "Y", "LB", "RB", "Back", "Start", "LS", "RS"
+    // Style order matches Max Payne 3's GamepadIcons option.
+    inline constexpr const char* Names[][20] = {
+        {"Left Stick", "Left Stick", "Right Stick", "Right Stick",
+         "D-Pad Up", "D-Pad Down", "D-Pad Left", "D-Pad Right",
+         "LT", "RT", "A", "B", "X", "Y", "LB", "RB", "Back", "Start", "LS", "RS"},
+        {"Left Stick", "Left Stick", "Right Stick", "Right Stick",
+         "D-Pad Up", "D-Pad Down", "D-Pad Left", "D-Pad Right",
+         "LT", "RT", "A", "B", "X", "Y", "LB", "RB", "View", "Menu", "LS", "RS"},
+        {"Left Stick", "Left Stick", "Right Stick", "Right Stick",
+         "D-Pad Up", "D-Pad Down", "D-Pad Left", "D-Pad Right",
+         "L2", "R2", "Cross", "Circle", "Square", "Triangle", "L1", "R1", "Select", "Start", "L3", "R3"},
+        {"Left Stick", "Left Stick", "Right Stick", "Right Stick",
+         "D-Pad Up", "D-Pad Down", "D-Pad Left", "D-Pad Right",
+         "L2", "R2", "Cross", "Circle", "Square", "Triangle", "L1", "R1", "Touchpad", "Options", "L3", "R3"},
+        {"Left Stick", "Left Stick", "Right Stick", "Right Stick",
+         "D-Pad Up", "D-Pad Down", "D-Pad Left", "D-Pad Right",
+         "L2", "R2", "Cross", "Circle", "Square", "Triangle", "L1", "R1", "Touchpad", "Options", "L3", "R3"},
+        {"Left Stick", "Left Stick", "Right Stick", "Right Stick",
+         "D-Pad Up", "D-Pad Down", "D-Pad Left", "D-Pad Right",
+         "ZL", "ZR", "B", "A", "Y", "X", "L", "R", "Minus", "Plus", "LS", "RS"},
+        {"Left Stick", "Left Stick", "Right Stick", "Right Stick",
+         "D-Pad Up", "D-Pad Down", "D-Pad Left", "D-Pad Right",
+         "L2", "R2", "A", "B", "X", "Y", "L1", "R1", "View", "Menu", "L3", "R3"},
+        {"Left Stick", "Left Stick", "Right Trackpad", "Right Trackpad",
+         "D-Pad Up", "D-Pad Down", "D-Pad Left", "D-Pad Right",
+         "LT", "RT", "A", "B", "X", "Y", "LB", "RB", "Back", "Start", "LS", "Right Trackpad Click"}
     };
 
-    inline Microsoft::WRL::ComPtr<IDirect3DTexture9> CreateIcon(IDirect3DDevice9* device, unsigned id)
+    inline Microsoft::WRL::ComPtr<IDirect3DTexture9> CreateIcon(IDirect3DDevice9* device, unsigned id, unsigned style)
     {
         // DDS assets embedded unchanged from Max Payne 3 Fusion Fix's buttons_pc.wtd.
         constexpr unsigned resources[] = {
-            4100,4100,4101,4101,4102,4103,4104,4105,4106,4107,
-            4108,4109,4110,4111,4112,4113,4114,4115,4116,4117
+            0,0,1,1,2,3,4,5,6,7,
+            8,9,10,11,12,13,14,15,16,17
         };
-        if(id>=std::size(resources))return {};
+        if(id>=std::size(resources) || style>=std::size(Names))return {};
         HMODULE module=nullptr;
         if(!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
             reinterpret_cast<LPCWSTR>(&CreateIcon),&module))return {};
         Microsoft::WRL::ComPtr<IDirect3DTexture9> texture;
-        if(FAILED(D3DXCreateTextureFromResourceExW(device,module,MAKEINTRESOURCEW(resources[id]),
+        if(FAILED(D3DXCreateTextureFromResourceExW(device,module,MAKEINTRESOURCEW(4100+style*100+resources[id]),
             D3DX_DEFAULT,D3DX_DEFAULT,1,0,D3DFMT_A8R8G8B8,D3DPOOL_MANAGED,
             D3DX_FILTER_NONE,D3DX_FILTER_NONE,0,nullptr,nullptr,texture.GetAddressOf())))return {};
 
