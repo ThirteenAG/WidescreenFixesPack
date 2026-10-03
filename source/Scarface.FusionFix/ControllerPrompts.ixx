@@ -2,10 +2,8 @@ module;
 #include "stdafx.h"
 #include "RTTI.h"
 #include "ButtonIcons.h"
-#include <Xinput.h>
 #include <atomic>
 #include <mutex>
-#include <fstream>
 #include <map>
 
 export module ControllerPrompts;
@@ -57,20 +55,17 @@ namespace
     const wchar_t* (__cdecl* lookupText)(const char*) = nullptr;
     bool enabled = false;
     std::atomic<bool> gamepad{false};
-    std::atomic<unsigned> keyboardGeneration{0};
-    unsigned seenKeyboard = 0, controller = 0;
+    std::atomic<uint64_t> lastKeyboardActivity{0};
+    unsigned controller = 0;
     uintptr_t* controllerDescription = nullptr;
     using QueryButton = uint32_t(__cdecl*)(unsigned,unsigned);
     QueryButton queryButton = nullptr;
-    using GetState = DWORD(WINAPI*)(DWORD,XINPUT_STATE*);
-    GetState getState = nullptr;
-    HMODULE xinput = nullptr;
+    using QueryActivity = uint64_t(__cdecl*)(unsigned);
+    QueryActivity queryActivity = nullptr;
     IDirect3DDevice9* device = nullptr;
     std::array<ComPtr<IDirect3DTexture9>,20> icons;
     ComPtr<IDirect3DBaseTexture9> savedTexture;
     bool textureChanged = false;
-    std::array<XINPUT_GAMEPAD,4> previous{};
-    std::array<bool,4> connected{};
     std::array<int,17> bindingPhysical{};
     injector::hook_back<const char* (__cdecl*)(const char*,int)> hbControlButtonLabel;
 
@@ -96,8 +91,6 @@ namespace
         }
         return hbControlButtonLabel.fun(format,index);
     }
-
-    void Log(const char* message) { std::ofstream(GetExeModulePath()/"Scarface.ControllerPrompts.log",std::ios::app)<<message<<'\n'; }
 
     uint32_t Key(std::string_view text)
     {
@@ -271,23 +264,23 @@ namespace
         savedTexture.Reset();textureChanged=false;return result;
     }
 
-    XINPUT_GAMEPAD Filter(XINPUT_GAMEPAD p)
+    void UpdateInputMode()
     {
-        auto stick=[](SHORT& x,SHORT& y,int deadzone)
-        {if(int64_t(x)*x+int64_t(y)*y<=int64_t(deadzone)*deadzone)x=y=0;else{x=SHORT(x/1024*1024);y=SHORT(y/1024*1024);}};
-        stick(p.sThumbLX,p.sThumbLY,XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
-        stick(p.sThumbRX,p.sThumbRY,XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
-        if(p.bLeftTrigger<XINPUT_GAMEPAD_TRIGGER_THRESHOLD)p.bLeftTrigger=0;
-        if(p.bRightTrigger<XINPUT_GAMEPAD_TRIGGER_THRESHOLD)p.bRightTrigger=0;
-        return p;
+        // Xidi owns both device detection and profile mappings. Its indices match
+        // queryButton's indices even when the backend reads a DS4 or another non-XInput pad.
+        uint64_t latestActivity=0;
+        if(queryActivity)for(unsigned i=0;i<4;++i)
+        {
+            const auto activity=queryActivity(i);
+            if(activity>latestActivity)
+            {
+                latestActivity=activity;
+                controller=i;
+            }
+        }
+        gamepad.store(latestActivity>lastKeyboardActivity.load(std::memory_order_relaxed),std::memory_order_relaxed);
     }
-    bool Activity(const XINPUT_GAMEPAD& p,const XINPUT_GAMEPAD& old)
-    {
-        return (p.wButtons&~old.wButtons) || (p.bLeftTrigger && p.bLeftTrigger!=old.bLeftTrigger) ||
-            (p.bRightTrigger && p.bRightTrigger!=old.bRightTrigger) ||
-            ((p.sThumbLX||p.sThumbLY)&&(p.sThumbLX!=old.sThumbLX||p.sThumbLY!=old.sThumbLY)) ||
-            ((p.sThumbRX||p.sThumbRY)&&(p.sThumbRX!=old.sThumbRX||p.sThumbRY!=old.sThumbRY));
-    }
+
 }
 
 export namespace ControllerPrompts
@@ -309,7 +302,7 @@ export namespace ControllerPrompts
         if(raw.header.dwType==RIM_TYPEKEYBOARD)activity=!(raw.data.keyboard.Flags&RI_KEY_BREAK);
         if(raw.header.dwType==RIM_TYPEMOUSE)
             activity=raw.data.mouse.lLastX||raw.data.mouse.lLastY||raw.data.mouse.usButtonFlags;
-        if(activity)keyboardGeneration.fetch_add(1,std::memory_order_relaxed);
+        if(activity)lastKeyboardActivity.store(GetTickCount64(),std::memory_order_relaxed);
     }
 
     void Update(IDirect3DDevice9* d)
@@ -320,26 +313,15 @@ export namespace ControllerPrompts
             for(auto& icon:icons)icon.Reset();device=d;
             for(unsigned i=0;i<icons.size();++i)icons[i]=ScarfaceButtons::CreateIcon(d,i);
         }
-        if(!queryButton)
-            if(auto module=GetModuleHandleW(L"Xidi.32.dll"))queryButton=reinterpret_cast<QueryButton>(GetProcAddress(module,"XidiGetPhysicalButtonMask"));
+        if(!queryButton || !queryActivity)
+            if(auto module=GetModuleHandleW(L"Xidi.32.dll"))
+            {
+                queryButton=reinterpret_cast<QueryButton>(GetProcAddress(module,"XidiGetPhysicalButtonMask"));
+                queryActivity=reinterpret_cast<QueryActivity>(GetProcAddress(module,"XidiGetLastControllerActivity"));
+            }
         DWORD foregroundPid=0;GetWindowThreadProcessId(GetForegroundWindow(),&foregroundPid);
         if(foregroundPid!=GetCurrentProcessId())return;
-        bool activeConnected=false;
-        if(getState)for(unsigned i=0;i<4;++i)
-        {
-            XINPUT_STATE state{};
-            bool present=getState(i,&state)==ERROR_SUCCESS;
-            if(present)
-            {
-                auto filtered=Filter(state.Gamepad);
-                if(Activity(filtered,connected[i]?previous[i]:XINPUT_GAMEPAD{})){controller=i;gamepad.store(true,std::memory_order_relaxed);}
-                previous[i]=filtered;
-                if(i==controller)activeConnected=true;
-            }
-            connected[i]=present;
-        }
-        const auto generation=keyboardGeneration.load(std::memory_order_relaxed);
-        if(generation!=seenKeyboard || !activeConnected){gamepad.store(false,std::memory_order_relaxed);seenKeyboard=generation;}
+        UpdateInputMode();
         bindingPhysical.fill(-1);
         if(queryButton && controllerDescription && *controllerDescription)
         {
@@ -364,20 +346,16 @@ export namespace ControllerPrompts
         CIniReader iniReader("");
         const bool bControllerPrompts=iniReader.ReadInteger("MAIN","ControllerPrompts",1)!=0;
         if(!bControllerPrompts)return;
-        std::ofstream(GetExeModulePath()/"Scarface.ControllerPrompts.log")<<"Controller prompts\n";
         auto font=ScarfaceRTTI::FindVtable(".?AVTextureFont@pure3d@@");
         auto pattern=hook::pattern("8B 44 24 04 83 F8 FF 74 11 8B 51 1C 8B 04 82 8B 49 20 D1 E8 8D 04 41 C2 04 00"); // 0x6A41E0
-        if(!font || pattern.size()!=1){Log("Text lookup/font unavailable; keyboard prompts retained.");return;}
+        if(!font || pattern.size()!=1)return;
         auto lookup=pattern.get_first();
         pattern=hook::pattern("55 8B 6C 24 08 56 57 BF ? ? ? ? 8B F5 B9 01 00 00 00 33 C0 F3 A6"); // 0x6783A0
-        if(pattern.size()!=1){Log("Token lookup unavailable; keyboard prompts retained.");return;}
+        if(pattern.size()!=1)return;
         lookupText=reinterpret_cast<decltype(lookupText)>(pattern.get_first());
         pattern=hook::pattern("83 3D ? ? ? ? 00 55 8B E9 74 ? 83 3D ? ? ? ? 00 74 ? 53 8B 1D"); // 0x42EC60 + 14
-        if(pattern.size()!=1){Log("Controller description unavailable; keyboard prompts retained.");return;}
+        if(pattern.size()!=1)return;
         controllerDescription=*pattern.get_first<uintptr_t*>(14);
-        xinput=LoadLibraryW(L"xinput1_4.dll");
-        if(!xinput)xinput=LoadLibraryW(L"xinput9_1_0.dll");
-        if(xinput)getState=reinterpret_cast<GetState>(GetProcAddress(xinput,"XInputGetState"));
         for(unsigned i=0;i<std::size(tokens);++i)tokens[i].marker[0]=markerBase+wchar_t(i);
         bindingPhysical.fill(-1);
         auto slot=[font](unsigned i){return injector::ReadMemory<void*>(font+i*sizeof(void*),true);};
@@ -403,7 +381,6 @@ export namespace ControllerPrompts
                     hbControlButtonLabel.fun=injector::MakeCALL(pattern.get_first(6),ControlButtonLabel,true).get();
             }
         }
-        Log(enabled?"Native font hooks installed.":"Hook installation failed.");
     }
     void Shutdown()
     {
@@ -411,6 +388,6 @@ export namespace ControllerPrompts
         drawHook.reset();wrapDrawHook.reset();beginHook.reset();endHook.reset();
         setTextHook.reset();
         savedTexture.Reset();for(auto& icon:icons)icon.Reset();device=nullptr;
-        if(xinput)FreeLibrary(xinput);xinput=nullptr;enabled=false;
+        queryActivity=nullptr;queryButton=nullptr;enabled=false;
     }
 }

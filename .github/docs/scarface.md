@@ -27,7 +27,7 @@
 ## Options
 
 - **Vehicle camera** — Delay automatic recentering after stick or mouse look; the default is 3 seconds. Right-mouse-button aim hold keeps its existing behavior.
-- **Character blood** — Restore the PS2-style blood texture pass on characters using the game's joint damage and blood texture. Disabled by default.
+- **Character blood** — Restore the PS2-style blood texture pass on characters using the game's joint damage and blood texture.
 - **Console gamma** — Apply a custom gamma curve similar to GTA IV on Xbox 360.
 - **Antialiasing** — Enable SMAA post-processing antialiasing; it does not work with MSAA.
 
