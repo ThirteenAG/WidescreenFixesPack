@@ -6,6 +6,7 @@ import ComVars;
 import PostFX;
 import RestoredFeatures;
 import WidescreenFix;
+import Camera;
 
 void CheckCompatibility()
 {
@@ -37,6 +38,7 @@ void CheckCompatibility()
 void Init()
 {
     InitWidescreenFix();
+    InitCamera();
     RestoredFeatures::InitRadar();
     CIniReader iniReader("");
     bool bWriteSettingsToFile = iniReader.ReadInteger("MAIN", "WriteSettingsToFile", 1) != 0;
