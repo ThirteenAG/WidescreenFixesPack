@@ -168,6 +168,31 @@ namespace
         return Offset(display) * std::clamp((640.0f - width) / 550.0f, 0.0f, 1.0f);
     }
 
+    void ShiftCallouts(void* manager, float offset)
+    {
+        auto callouts = Element(manager, 70); // EHE_CALLOUTS
+        if (!callouts) return;
+
+        // HUDCallout2 owns an ArrayDynamic<CalloutObject*> at +68h.
+        // Text slots are reused for different types; shifting CalloutTextNN by
+        // name would also move centered tutorials, rewards and cinematic text.
+        auto begin = Game::Field<void**>(callouts, 0x68);
+        auto end = Game::Field<void**>(callouts, 0x6C);
+        for (auto it = begin; it && it != end; ++it)
+        {
+            auto callout = *it;
+            if (!callout) continue;
+            const auto type = Game::Field<int>(callout, 0x0C);
+            // CalloutObject's SCORE and PENALTY descriptors are edge anchored.
+            // The other types (including subtitles) keep their original layout.
+            if (type != 0 && type != 4) continue;
+            Collect(Game::Field<void*>(callout, 0x00)); // Text
+            Collect(Game::Field<void*>(callout, 0x04)); // Shared backing for this type
+            Collect(Game::Field<void*>(callout, 0x08)); // Foreground
+            Shift(offset, type == 0 ? 1.0f : -1.0f);
+        }
+    }
+
     void __fastcall SubmitMapIcon(void* sprite, void*, const void* instance)
     {
         // Waypoint sprites have per-instance coordinates, independent of FEObject positions.
@@ -195,6 +220,23 @@ namespace
 
         moved.clear();
         group.clear();
+        if (auto health = Element(manager, 1))
+        {
+            // HUDHealth::RelinkResources stores the live cheat/save text at +98h;
+            // SetVisibility (5C6670) uses this same pointer. It is outside the meter layer.
+            Collect(Game::Field<void*>(health, 0x98));
+            Shift(offset, 1.0f);
+        }
+        if (Element(manager, 11)) // EHE_INVENTORY_SELECTION_HUD
+        {
+            // InventorySelect.pag has a separate layer for the satphone list:
+            // move its text, selection cursor, blue panel and shadow together.
+            // The objective and total-cash panel belong to other, centered layers.
+            Collect(Find("IS_SatPhoneLayer"));
+            Shift(offset, -1.0f);
+        }
+        ShiftCallouts(manager, offset);
+
         // HUDMeterWithIcon::RelinkResources: select the meter's own layer, never the shared HUD page.
         for (int id : { 1, 2, 3, 4 }) // Health, balls, gang heat, cop heat.
         {
