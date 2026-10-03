@@ -1,10 +1,10 @@
 <div align="center">
 
-<img src="https://thirteenag.github.io/screens/mafia/main2.jpg" width="760" alt="Mafia: The City of Lost Heaven Widescreen Fix">
+<img src="https://thirteenag.github.io/screens/mafia/main2.jpg" width="760" alt="Mafia: The City of Lost Heaven Fusion Fix">
 
-**Mafia: The City of Lost Heaven Widescreen Fix** adds proper widescreen support, corrects aspect ratio, HUD, field of view and FMV playback, and includes a range of quality-of-life improvements.
+**Mafia: The City of Lost Heaven Fusion Fix** adds proper widescreen support, corrects aspect ratio, HUD, field of view and FMV playback, and includes a range of quality-of-life improvements.
 
-[Website](https://thirteenag.github.io/wfp#mafia) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/Mafia.FusionFix/dllmain.cpp) · [Default INI](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/Mafia.WidescreenFix/scripts/Mafia.FusionFix.ini)
+[Website](https://thirteenag.github.io/wfp#mafia) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/Mafia.FusionFix/dllmain.cpp) · [Default INI](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/Mafia.FusionFix/scripts/Mafia.FusionFix.ini)
 
 </div>
 
@@ -23,8 +23,8 @@
 
 ## New Options
 
-- **Draw Distance** - increases the draw distance; the new distance and the skip ranges are configurable in `Mafia.WidescreenFix.ini`
-- **FPS Limit** - caps the frame rate via the `FPS Limit` option in `Mafia.WidescreenFix.ini`
+- **Draw Distance** - increases the draw distance; the new distance and the skip ranges are configurable in `Mafia.FusionFix.ini`
+- **FPS Limit** - caps the frame rate via the `FPSLimit` option in `Mafia.FusionFix.ini`
 - **Settings** - saves all game settings to `savegame\settings.bin` instead of the registry, fixing an issue when the settings are lost
 - **Borderless Windowed** - makes windowed mode borderless
 - **Stick Deadzones** - configurable deadzones for the left and right stick (otherwise the camera just spins on its own)
@@ -50,8 +50,9 @@
 
 1. Download the `.zip` from this release.
 2. Extract the contents directly into the game folder - the same folder as `Game.exe`.
-3. Optionally edit `Mafia.FusionFix.ini` and `Mafia.WidescreenFix.ini` to configure the available options.
-4. Launch the game.
+3. Delete any old `Mafia.WidescreenFix.asi`; its functionality is included in Fusion Fix.
+4. Optionally edit `Mafia.FusionFix.ini` to configure the available options.
+5. Launch the game.
 
 > [!NOTE]
 > **Xbox 360 Gamma** and **SMAA** require the D3D8 to D3D9 wrapper, which is bundled and enabled by default in `d3d8.ini` (`UseD3D8to9=1`).

@@ -403,11 +403,7 @@ project "LARush.WidescreenFix"
 
 project "Mafia.FusionFix"
    add_postfx()
-   setpaths("MAFIA_DIR", "Setup.exe")
-   targetdir "data/Mafia.WidescreenFix/scripts"
-
-project "Mafia.WidescreenFix"
-   setpaths("MAFIA_DIR", "GameV12.exe")
+   setpaths("MAFIA_DIR", "Game.exe")
 
 project "Manhunt.WidescreenFix"
    buildoptions { "/Zc:strictStrings-" }
@@ -496,6 +492,7 @@ group ""
 
 project "Scarface.FusionFix"
    add_postfx()
+   files { "source/%{prj.name}/ControllerIcons.rc", "textures/Scarface/Controller/*.dds" }
    setpaths("SCARFACE_DIR", "scarface.exe", "scripts/")
 
 project "SecondSight.WidescreenFix"

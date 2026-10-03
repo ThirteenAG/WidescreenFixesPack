@@ -5,6 +5,7 @@ module;
 
 export module PostFX;
 
+import ComVars;
 import PostFXCore;
 
 static IUnknown** pD3D8Device = nullptr;
@@ -13,7 +14,7 @@ static void InitDevicePointer()
 {
     if (pD3D8Device) return;
 
-    auto hLS3DF = GetModuleHandle(L"LS3DF.dll");
+    auto hLS3DF = GetLS3DF();
     if (!hLS3DF) return;
 
     auto pattern = hook::module_pattern(hLS3DF, "A1 ? ? ? ? 53 6A ? 89 1D ? ? ? ? ? ? 50 FF 91 ? ? ? ? 8B 4C 24");
@@ -46,7 +47,7 @@ export void InitPostFX()
     if (!CPostFX::bConsoleGammaEnabled && !CPostFX::bSmaaEnabled)
         return;
 
-    auto hLS3DF = GetModuleHandle(L"LS3DF.dll");
+    auto hLS3DF = GetLS3DF();
     if (!hLS3DF || !pD3D8Device)
         return;
 

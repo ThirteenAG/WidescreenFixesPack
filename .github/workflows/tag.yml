@@ -136,7 +136,7 @@ env:
   kr: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:KnightRider_WidescreenFix /p:Configuration=Release && msbuild -m build/PCSX2F.WidescreenFixesPack.slnx /t:KnightRider_PCSX2F_WidescreenFix /p:Configuration=Release
   kr2: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:KnightRider2_WidescreenFix /p:Configuration=Release
   larush: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:LARush_WidescreenFix /p:Configuration=Release
-  mafia: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:Mafia_WidescreenFix /p:Configuration=Release
+  mafia: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:Mafia_FusionFix /p:Configuration=Release
   mafiaxbox: msbuild -m build/CXBXR.WidescreenFixesPack.slnx /t:Mafia_CXBXR_WidescreenFix /p:Configuration=Release
   manhunt: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:Manhunt_WidescreenFix /p:Configuration=Release
   mp1: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:MaxPayne\\MaxPayne_WidescreenFix /p:Configuration=Release
