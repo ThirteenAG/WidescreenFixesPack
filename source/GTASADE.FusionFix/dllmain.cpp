@@ -515,7 +515,7 @@ void Init()
                 {
                     if (!IsPlayerOnAMission() && !*m_WideScreenOn)
                     {
-                        injector::WriteMemory<uint32_t>(DoGameSpecificStuffBeforeSaveTime, 0, true);
+                        injector::WriteMemory<uint32_t>(DoGameSpecificStuffBeforeSaveTime, 1, true);
                         SaveToSlot(0x708, nIniSaveSlot);
                         injector::WriteMemory<uint32_t>(DoGameSpecificStuffBeforeSaveTime, 360, true);
                 
