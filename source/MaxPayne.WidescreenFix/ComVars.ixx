@@ -129,6 +129,30 @@ export namespace X_Character
     }
 }
 
+export namespace X_CharacterProperties
+{
+    enum
+    {
+        CURRENT_WEAPON = 0x7B, // the WEAPONID of the weapon in hand
+    };
+
+    // WEAPONIDs from database\weaponid.h. The rest are no weapon, the lead pipe and the baseball bat,
+    // molotovs, grenades and painkillers.
+    bool IsHoldingGun(uint8_t* _this)
+    {
+        enum
+        {
+            WEAPONID_BERETTA = 3,
+            WEAPONID_JACKHAMMER = 11,
+            WEAPONID_M79 = 14,
+            WEAPONID_SNIPER = 15,
+        };
+
+        auto nWeaponID = *(int32_t*)(_this + CURRENT_WEAPON);
+        return (nWeaponID >= WEAPONID_BERETTA && nWeaponID <= WEAPONID_JACKHAMMER) || nWeaponID == WEAPONID_M79 || nWeaponID == WEAPONID_SNIPER;
+    }
+}
+
 export std::string CurrentGameMode;
 
 // Written by the game thread, read by Xidi's polling thread

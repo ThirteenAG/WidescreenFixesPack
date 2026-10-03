@@ -691,25 +691,32 @@ export void InitInput()
     });
 
     // Shooting, the X_PlayerInputEvaluator states also drive the enemies (MaxPayne_ArtificialPlayerInput):
-    // esi is the state, its X_CharacterProperties are at +0x10
+    // esi is the state, its X_CharacterProperties are at +0x10. The states shoot whatever is in hand,
+    // only guns vibrate.
+    static auto IsPlayerHoldingGun = [](SafetyHookContext& regs)
+    {
+        auto pCharacterProperties = *(uint8_t**)(regs.esi + 0x10);
+        return X_Character::IsPlayerCharacterProperties(pCharacterProperties) && X_CharacterProperties::IsHoldingGun(pCharacterProperties);
+    };
+
     pattern = hook::pattern("E8 ? ? ? ? 8B 44 24 ? 50 8B CE E8 ? ? ? ? 5E");
     static auto X_CharacterPropertiessetIsShooting1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        if (X_Character::IsPlayerCharacterProperties(*(uint8_t**)(regs.esi + 0x10)))
+        if (IsPlayerHoldingGun(regs))
             Vibrate(80, std::chrono::milliseconds{ 80 });
     });
 
     pattern = hook::pattern("6A ? 8B CE E8 ? ? ? ? 8B C8 E8 ? ? ? ? 5E 5B C2");
     static auto X_CharacterPropertiessetIsShooting2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        if (X_Character::IsPlayerCharacterProperties(*(uint8_t**)(regs.esi + 0x10)))
+        if (IsPlayerHoldingGun(regs))
             Vibrate(80, std::chrono::milliseconds{ 180 });
     });
 
     pattern = hook::pattern("E8 ? ? ? ? 53 8B CE E8 ? ? ? ? 5E");
     static auto X_CharacterPropertiessetIsShooting3 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        if (X_Character::IsPlayerCharacterProperties(*(uint8_t**)(regs.esi + 0x10)))
+        if (IsPlayerHoldingGun(regs))
             Vibrate(80, std::chrono::milliseconds{ 80 });
     });
 
