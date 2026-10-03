@@ -40,6 +40,7 @@
 ### Fixes
 
 - The grid transition no longer stays over the ending cutscene at high frame rates.
+- The game no longer crashes after about 30 minutes of play because of the shut down online servers (the failed logins used up its pool of network requests).
 
 Difficulty tweaks: **Mark and Execute**, sonar and drop crates enabled on **Perfectionist**, unlimited ammo disabled on **Rookie**. To go back to original behavior, delete `update/difficultyconfiguration.ini` and set `DisablePerfectionistChecks` to 0.
 
