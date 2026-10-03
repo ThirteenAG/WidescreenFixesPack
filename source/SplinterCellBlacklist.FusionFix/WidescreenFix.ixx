@@ -39,7 +39,13 @@ bool IsStageOverlayUnsafe(uintptr_t frame, uintptr_t batch, const float* m)
         minY = std::min(minY, clipY); maxY = std::max(maxY, clipY);
     }
     constexpr float edge = 0.99f;
-    return minX <= -edge && maxX >= edge && minY <= -edge && maxY >= edge;
+    if (minY > -edge || maxY < edge)
+        return false;
+
+    // split screen: a player's overlay covers their half
+    if (bSplitscreen && ((minX <= -edge && std::abs(maxX) < 0.02f) || (std::abs(minX) < 0.02f && maxX >= edge)))
+        return true;
+    return minX <= -edge && maxX >= edge;
 }
 
 bool IsStageOverlay(uintptr_t frame, uintptr_t batch, const float* m)
@@ -117,6 +123,19 @@ SafetyHookInline shViewport2Movie{};
 float* __fastcall Viewport2Movie(uintptr_t scene, void* edx, float* out, const float* position, uintptr_t viewport)
 {
     auto result = shViewport2Movie.fastcall<float*>(scene, edx, out, position, viewport);
+
+    // Split screen: the HUD elements are scaled around the middle of their half (ScaleRow), the positions on the 3D view (markers)
+    // are moved the other way, they end up where they were
+    if (bSplitscreen && IsWide())
+    {
+        auto scale = fDefaultAspectRatio / GetAspectRatio();
+        auto x = out[0] / 640.0f - 1.0f;
+        auto center = x < -0.05f ? -0.5f : x > 0.05f ? 0.5f : 0.0f;
+        out[0] = ((x - center) / scale + center + 1.0f) * 640.0f;
+        reticlePosition = nullptr;
+        return result;
+    }
+
     if (position != std::exchange(reticlePosition, nullptr) || (IsSplitscreen && IsSplitscreen()))
         return result;
     if (IsWide())
@@ -275,8 +294,18 @@ export void InitWidescreenFix()
         // A row is scaled to put the 1280x720 stage in the middle 16:9 of the screen. sub_16D8CC0 also draws the Flash render
         // targets (buffer 12, in-world screens), only the HUD buffer (11) and batches without their own render target (+24h) are changed.
         // the x row (wider than 16:9) or the y row (narrower) of the view matrix
+        // Split screen: the stage covers the screen and each player's HUD is laid out in its half for a 16:9 screen, every element
+        // (its own matrix) is scaled around the middle of its half (x -0.5 or 0.5, the middle of the screen stays)
         static auto ScaleRow = [](float* m)
         {
+            if (bSplitscreen && IsWide())
+            {
+                auto scale = fDefaultAspectRatio / GetAspectRatio();
+                auto center = m[3] < -0.05f ? -0.5f : m[3] > 0.05f ? 0.5f : 0.0f;
+                for (int i = 0; i < 3; i++) m[i] *= scale;
+                m[3] = m[3] * scale + center * (1.0f - scale);
+                return;
+            }
             if (IsWide())
                 for (int i = 0; i < 4; i++) m[i] *= fDefaultAspectRatio / GetAspectRatio();
             else
@@ -356,7 +385,8 @@ export void InitWidescreenFix()
             dx9 = *pattern.get_first<uint8_t>(2) == 0xAF;
             static ptrdiff_t sides = dx9 ? 0xB4 : 0xAC;
             static ptrdiff_t top = dx9 ? 0xAC : 0xC0;
-            static auto Bars = safetyhook::create_mid(pattern.get_first(9), [](SafetyHookContext& regs)
+            // before the split screen check (+2B3h, DX9 +2AFh), split screen skips the [ebp-A1h] check
+            static auto Bars = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& regs)
             {
                 auto& sidesWidth = *reinterpret_cast<int*>(regs.ebp - sides);
                 auto& topHeight = *reinterpret_cast<int*>(regs.ebp - top);

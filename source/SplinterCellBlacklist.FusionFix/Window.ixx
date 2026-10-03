@@ -294,6 +294,14 @@ namespace Window
             return;
         GameWndProc = reinterpret_cast<WNDPROC>(SetWindowLongPtrA(WindowHandle, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(&WndProc)));
         subclassed = WindowHandle;
+
+        // the windowed window can open behind other windows, it's brought to the front once
+        if (lastMode == Windowed)
+        {
+            ShowWindow(WindowHandle, SW_SHOW);
+            SetForegroundWindow(WindowHandle);
+            BringWindowToTop(WindowHandle);
+        }
     }
 }
 

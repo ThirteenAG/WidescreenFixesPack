@@ -34,6 +34,9 @@ export int* pViewportResolutionHeight = nullptr;
 
 export constexpr float fDefaultAspectRatio = 16.0f / 9.0f;
 
+// split screen is on (two viewports), each player's HUD is laid out by the game for its half
+export bool bSplitscreen = false;
+
 export float GetAspectRatio()
 {
     if (!pViewportResolutionWidth || !pViewportResolutionHeight || *pViewportResolutionWidth <= 0 || *pViewportResolutionHeight <= 0)
