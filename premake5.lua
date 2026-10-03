@@ -890,10 +890,6 @@ group ""
 CommonWorkspaceSetup("Win32", "CXBXR")
 
 group ""
-project "Mafia.CXBXR.WidescreenFix"
-   setpaths("CXBXR_DIR", "cxbx.exe")
-   files { "includes/cxbxr/cxbxr.h" }
-
 project "SplinterCellDoubleAgent.CXBXR.WidescreenFix"
    setpaths("CXBXR_DIR", "cxbx.exe")
    files { "includes/cxbxr/cxbxr.h" }
