@@ -27,7 +27,7 @@ export struct Screen
     uint32_t nGeneration;        // changes whenever the values above do
     bool bDrawBordersToFillGap;
     bool bDrawBordersForCameraOverlay;
-    bool bGraphicNovelMode;      // true: original framing, false: page fills the screen width
+    bool bGraphicNovelMode;      // true: original framing, false: whole pages as large as the screen allows
 } Screen;
 
 export void UpdateScreenResolution(int32_t nWidth, int32_t nHeight)
@@ -72,14 +72,6 @@ export void UpdateScreenResolution(int32_t nWidth, int32_t nHeight)
     ++Screen.nGeneration;
 }
 
-export struct TextCoords
-{
-    float a;
-    float b;
-    float c;
-    float d;
-};
-
 export SafetyHookInline shDllMainHook = {};
 export safetyhook::MidHook BorderlessWindowedHook = {};
 
@@ -92,6 +84,7 @@ export namespace MaxPayne_GameMode
 {
     enum
     {
+        LEVEL_SETTINGS = 0xF8, // X_SharedDB entry of the level being played, the same object every time it's played
         GLOBAL_CINEMATIC_SETTINGS = 0x1230,
         SNIPER_ZOOM_STATE = 0x124C, // 0 when not zooming
         CURRENT_HEIGHT_MULTIPLIER = 0x1260,
@@ -103,12 +96,12 @@ export namespace MaxPayne_GameMode
     uint8_t* pInstance = nullptr;
 
     // MaxPayne_GameMode::getPlayerCharacterInScene
-    uint8_t* GetPlayerCharacter()
+    uint8_t* GetPlayerCharacter(uint8_t* pGameMode = pInstance)
     {
-        if (!pInstance)
+        if (!pGameMode)
             return nullptr;
 
-        auto pLevel = *(uint8_t**)(pInstance + LEVEL);
+        auto pLevel = *(uint8_t**)(pGameMode + LEVEL);
         return pLevel ? *(uint8_t**)(pLevel + 8) : nullptr;
     }
 
@@ -122,6 +115,12 @@ export namespace X_Character
 {
     // X_Character::accessCharacterProperties
     constexpr ptrdiff_t CHARACTER_PROPERTIES = 0x22E;
+
+    // What adaptive difficulty rates the player's play of a level by, counted from the start of it
+    constexpr ptrdiff_t DEATHS = 0x75C;
+    constexpr ptrdiff_t HEALTH_SUM = 0x760;         // health and painkillers, added every second of play
+    constexpr ptrdiff_t PLAY_TIME = 0x764;          // seconds, standing still for long isn't counted
+    constexpr ptrdiff_t PLAY_TIME_FRACTION = 0x768; // of the second not added yet
 
     bool IsPlayerCharacterProperties(uint8_t* pCharacterProperties)
     {
@@ -194,12 +193,53 @@ export namespace X_InputDeviceMouse
     }
 }
 
+export namespace P_BaseObject
+{
+    enum
+    {
+        LOCAL_MATRIX = 0x2C, // M_Matrix4x3: the right, up and forward axes, then the position
+        WORLD_MATRIX = 0x5C, // the same in world space, up to date after calculateObjectToWorldMatrix
+    };
+
+    void(__fastcall* invalidateMatrices)(void* _this, void* edx) = nullptr;
+    void(__fastcall* calculateObjectToWorldMatrix)(void* _this, void* edx) = nullptr;
+
+    // Virtual, in object space
+    const float* getBoundingBoxMin(uint8_t* _this)
+    {
+        auto pVTable = *(void***)_this;
+        return reinterpret_cast<const float* (__fastcall*)(void*, void*)>(pVTable[10])(_this, nullptr);
+    }
+
+    const float* getBoundingBoxMax(uint8_t* _this)
+    {
+        auto pVTable = *(void***)_this;
+        return reinterpret_cast<const float* (__fastcall*)(void*, void*)>(pVTable[11])(_this, nullptr);
+    }
+}
+
 export namespace P_VirtualObject
 {
     enum
     {
         SORT_PRIORITY = 0x110, // the order 2D objects are drawn in
     };
+}
+
+export namespace KF_ObjectAnimation
+{
+    // Virtual
+    uint32_t getTotalMeshes(uint8_t* _this)
+    {
+        auto pVTable = *(void***)_this;
+        return reinterpret_cast<uint32_t(__fastcall*)(void*, void*)>(pVTable[24])(_this, nullptr);
+    }
+
+    uint8_t* getMesh(uint8_t* _this, uint32_t nIndex)
+    {
+        auto pVTable = *(void***)_this;
+        return reinterpret_cast<uint8_t* (__fastcall*)(void*, void*, uint32_t)>(pVTable[25])(_this, nullptr, nIndex);
+    }
 }
 
 export namespace P_Sprite
@@ -209,7 +249,8 @@ export namespace P_Sprite
         WIDTH = 0x144,
         HEIGHT = 0x148,
         REFERENCE_POINT = 0x160,
-        SCREEN_POSITION_Y = 0x18C, // of the reference point, in 640x480 virtual units
+        SCREEN_POSITION_X = 0x188, // of the reference point, in 640x480 virtual units
+        SCREEN_POSITION_Y = 0x18C,
     };
 
     // P_BitmapInterface::ReferencePoint, the corner the screen position is of
@@ -240,7 +281,7 @@ export void UpdateCursorBounds(bool bWholeScreen)
 
 // Graphic novels:
 // - the cursor stays hidden until the mouse moves
-// - while the page fills the screen width, the playback controls (indicators, the band behind them
+// - outside original framing, the playback controls (indicators, the band behind them
 //   and the tooltip of the indicator under the cursor), which would cover the bottom of the page,
 //   only show up while the cursor is there
 export namespace MaxPayne_GraphicNovelMode

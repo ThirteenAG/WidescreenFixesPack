@@ -31,7 +31,20 @@ int __fastcall sub_40D040(int* CWnd, void* edx, char a2)
 
 namespace P_Camera
 {
+    enum
+    {
+        VIEWPORT = 0x1C4, // left, right, top and bottom
+    };
+
     void(__fastcall* setFOV)(void* _this, void* edx, float fFOV) = nullptr;
+
+    // What P_Camera::validate turns the horizontal FOV tangent into the vertical one with
+    float GetViewportRatio(uint8_t* _this)
+    {
+        auto pViewport = (float*)(_this + VIEWPORT);
+        float fRatio = (pViewport[3] - pViewport[2]) / (pViewport[1] - pViewport[0]);
+        return std::isfinite(fRatio) && fRatio > 0.0f ? fRatio : 0.75f;
+    }
 }
 
 // Set when MaxPayne_GameMode renders the game view, cleared at the end of each frame
@@ -221,31 +234,212 @@ namespace X_LevelRuntimeCamera
     }
 }
 
+// Graphic novel pages are 3D scenes, meshes and a camera to show them with, which the page copies to
+// the camera of the graphic novel mode when it shows. Original framing keeps that camera: the page
+// across the 4:3 width at the top, the playback controls below it. Otherwise the camera moves to the
+// middle of the page and zooms in as far as the whole page, its black border included, still fits
+// on the screen.
 namespace MaxPayne_GraphicNovelPage
 {
-    void* pCamera = nullptr;
-    float fPageFOV = 0.0f;
-
-    float CalculateFOV(float fFOV)
+    enum
     {
-        if (Screen.bGraphicNovelMode)
-            return fFOV; // original framing, the screen shows the whole page
+        OBJECT_ANIMATION = 0x2B, // KF2::KF_ObjectAnimation*, the meshes of the page
+        CAMERA_MATRIX = 0x33,    // M_Matrix4x3
+        FOV = 0x6B,
+    };
 
-        // the page fills the screen width, like in the mobile release
-        return 2.0f * atanf(tanf(fFOV * 0.5f) / Screen.fAspectScaleX);
+    // The page shown and the camera showing it, cleared when the graphic novel mode ends
+    uint8_t* pPage = nullptr;
+    uint8_t* pCamera = nullptr;
+
+    // The page as seen with its own camera
+    struct Extents
+    {
+        float fCenterX; // how far the camera moves along its right and up axes to face the middle of the page
+        float fCenterY;
+        float fTanX;    // tangents of half the page width and height from there
+        float fTanY;
+    };
+    std::optional<Extents> PageExtents;
+
+    uint32_t nGeneration = 0;
+
+    // From the bounding boxes of the meshes, the page only animates how opaque they are
+    std::optional<Extents> Measure(uint8_t* page, uint8_t* camera)
+    {
+        auto pAnimation = *(uint8_t**)(page + OBJECT_ANIMATION);
+        if (!pAnimation)
+            return std::nullopt;
+
+        P_BaseObject::calculateObjectToWorldMatrix(camera, nullptr);
+        auto pView = (const float*)(camera + P_BaseObject::WORLD_MATRIX);
+
+        struct Point { float x, y, z; };
+        std::vector<Point> Points;
+        for (uint32_t i = 0, nMeshes = KF_ObjectAnimation::getTotalMeshes(pAnimation); i < nMeshes; ++i)
+        {
+            auto pMesh = KF_ObjectAnimation::getMesh(pAnimation, i);
+            if (!pMesh)
+                continue;
+
+            auto pMin = P_BaseObject::getBoundingBoxMin(pMesh);
+            auto pMax = P_BaseObject::getBoundingBoxMax(pMesh);
+            if (!(pMin[0] <= pMax[0] && pMin[1] <= pMax[1] && pMin[2] <= pMax[2]))
+                continue;
+
+            P_BaseObject::calculateObjectToWorldMatrix(pMesh, nullptr);
+            auto pWorld = (const float*)(pMesh + P_BaseObject::WORLD_MATRIX);
+            for (int nCorner = 0; nCorner < 8; ++nCorner)
+            {
+                float local[3] = { (nCorner & 1) ? pMax[0] : pMin[0], (nCorner & 2) ? pMax[1] : pMin[1], (nCorner & 4) ? pMax[2] : pMin[2] };
+                float relative[3];
+                for (int k = 0; k < 3; ++k)
+                    relative[k] = local[0] * pWorld[k] + local[1] * pWorld[3 + k] + local[2] * pWorld[6 + k] + pWorld[9 + k] - pView[9 + k];
+
+                auto Dot = [&](const float* pAxis) { return relative[0] * pAxis[0] + relative[1] * pAxis[1] + relative[2] * pAxis[2]; };
+                Point point = { Dot(pView), Dot(pView + 3), Dot(pView + 6) };
+                if (!(point.z > 0.0f))
+                    return std::nullopt;
+                Points.push_back(point);
+            }
+        }
+
+        if (Points.empty())
+            return std::nullopt;
+
+        constexpr float fInfinity = std::numeric_limits<float>::infinity();
+        float fMinX = fInfinity, fMaxX = -fInfinity, fMinY = fInfinity, fMaxY = -fInfinity, fDepth = 0.0f;
+        for (auto& point : Points)
+        {
+            fMinX = std::min(fMinX, point.x / point.z);
+            fMaxX = std::max(fMaxX, point.x / point.z);
+            fMinY = std::min(fMinY, point.y / point.z);
+            fMaxY = std::max(fMaxY, point.y / point.z);
+            fDepth += point.z;
+        }
+        fDepth /= Points.size();
+
+        // The page is flat and faces the camera, the depths only differ by its layers
+        Extents extents = { (fMinX + fMaxX) * 0.5f * fDepth, (fMinY + fMaxY) * 0.5f * fDepth, 0.0f, 0.0f };
+        for (auto& point : Points)
+        {
+            extents.fTanX = std::max(extents.fTanX, std::abs(point.x - extents.fCenterX) / point.z);
+            extents.fTanY = std::max(extents.fTanY, std::abs(point.y - extents.fCenterY) / point.z);
+        }
+
+        if (!std::isfinite(extents.fCenterX) || !std::isfinite(extents.fCenterY) || !std::isfinite(extents.fTanX) || !std::isfinite(extents.fTanY) || extents.fTanX <= 0.0f || extents.fTanY <= 0.0f)
+            return std::nullopt;
+        return extents;
     }
 
-    void __fastcall setFOV(void* camera, void* edx, float fFOV)
+    void Apply()
     {
+        if (!pPage || !pCamera)
+            return;
+
+        nGeneration = Screen.nGeneration;
+
+        // the page's camera, as MaxPayne_GraphicNovelPage::show sets it
+        auto pMatrix = (float*)(pCamera + P_BaseObject::LOCAL_MATRIX);
+        std::memcpy(pMatrix, pPage + CAMERA_MATRIX, 12 * sizeof(float));
+        float fPageFOV = *(float*)(pPage + FOV);
+        float fFOV = fPageFOV;
+        if (!Screen.bGraphicNovelMode && PageExtents)
+        {
+            for (int k = 0; k < 3; ++k)
+                pMatrix[9 + k] += pMatrix[k] * PageExtents->fCenterX + pMatrix[3 + k] * PageExtents->fCenterY;
+
+            // P_Camera::validate widens the tangents for the screen
+            float fTan = std::max(PageExtents->fTanX / Screen.fAspectScaleX, PageExtents->fTanY / (P_Camera::GetViewportRatio(pCamera) * Screen.fAspectScaleY));
+            fFOV = 2.0f * atanf(fTan);
+        }
+
+        P_BaseObject::invalidateMatrices(pCamera, nullptr);
+        P_Camera::setFOV(pCamera, nullptr, fFOV);
+    }
+
+    SafetyHookInline shShow = {};
+    void __fastcall show(uint8_t* _this, void* edx, uint8_t* camera)
+    {
+        shShow.unsafe_fastcall(_this, edx, camera);
+        if (!P_BaseObject::invalidateMatrices || !P_BaseObject::calculateObjectToWorldMatrix || !P_Camera::setFOV)
+            return;
+
+        pPage = _this;
         pCamera = camera;
-        fPageFOV = fFOV;
-        P_Camera::setFOV(camera, edx, CalculateFOV(fFOV));
+        PageExtents = Measure(_this, camera);
+        Apply();
     }
 
+    // For the key toggling original framing
     void Refresh()
     {
-        if (pCamera)
-            P_Camera::setFOV(pCamera, nullptr, CalculateFOV(fPageFOV));
+        Apply();
+    }
+
+    // Called every frame in the graphic novel mode
+    void Update()
+    {
+        if (pPage && nGeneration != Screen.nGeneration)
+            Apply();
+    }
+
+    void Reset()
+    {
+        pPage = nullptr;
+        pCamera = nullptr;
+        PageExtents.reset();
+    }
+}
+
+// Fugitive's adaptive difficulty rates each level by the player's deaths, average health and play
+// time in it, counted on the player character, and moves the difficulty a step up or down when the
+// level ends. Loading a save creates the player character anew with these at 0, and dying always
+// ends in loading one, so deaths were never counted and health and time only covered the stretch
+// since the last load: the difficulty went up after nearly every level and stayed at the hardest
+// step. The counters now carry over loads within the same level.
+namespace AdaptiveDifficulty
+{
+    struct LevelPerformance
+    {
+        uint8_t* pLevel = nullptr; // MaxPayne_GameMode::LEVEL_SETTINGS of the level the counters are from
+        int32_t nDeaths = 0;
+        float fHealthSum = 0.0f;
+        float fPlayTime = 0.0f;
+        float fPlayTimeFraction = 0.0f;
+    } Performance;
+
+    // Every frame the game view renders, a death included
+    void Track(uint8_t* pGameMode)
+    {
+        auto pPlayer = MaxPayne_GameMode::GetPlayerCharacter(pGameMode);
+        auto pLevel = *(uint8_t**)(pGameMode + MaxPayne_GameMode::LEVEL_SETTINGS);
+        if (!pPlayer || !pLevel)
+            return;
+
+        Performance.pLevel = pLevel;
+        Performance.nDeaths = *(int32_t*)(pPlayer + X_Character::DEATHS);
+        Performance.fHealthSum = *(float*)(pPlayer + X_Character::HEALTH_SUM);
+        Performance.fPlayTime = *(float*)(pPlayer + X_Character::PLAY_TIME);
+        Performance.fPlayTimeFraction = *(float*)(pPlayer + X_Character::PLAY_TIME_FRACTION);
+    }
+
+    SafetyHookInline shLoad = {};
+    bool __fastcall load(uint8_t* pGameMode, void* edx, void* pMemoryFile)
+    {
+        auto performance = Performance; // before loading tears the level down
+        bool bResult = shLoad.unsafe_fastcall<bool>(pGameMode, edx, pMemoryFile);
+
+        auto pPlayer = MaxPayne_GameMode::GetPlayerCharacter(pGameMode);
+        if (pPlayer && performance.pLevel && performance.pLevel == *(uint8_t**)(pGameMode + MaxPayne_GameMode::LEVEL_SETTINGS))
+        {
+            *(int32_t*)(pPlayer + X_Character::DEATHS) = performance.nDeaths;
+            *(float*)(pPlayer + X_Character::HEALTH_SUM) = performance.fHealthSum;
+            *(float*)(pPlayer + X_Character::PLAY_TIME) = performance.fPlayTime;
+            *(float*)(pPlayer + X_Character::PLAY_TIME_FRACTION) = performance.fPlayTimeFraction;
+        }
+
+        return bResult;
     }
 }
 
@@ -290,13 +484,16 @@ namespace X_ModeSwitch
             pPrevActiveMode = pActiveMode;
             CurrentGameMode = GetModeName(pActiveMode);
             if (CurrentGameMode != "graphicnovel")
-                MaxPayne_GraphicNovelPage::pCamera = nullptr;
+                MaxPayne_GraphicNovelPage::Reset();
         }
 
         auto profile = eGamepadProfile::Menu;
         if (pActiveMode && CurrentGameMode == "game")
             profile = *(pActiveMode + MaxPayne_GameMode::PAUSED) ? eGamepadProfile::Pause : eGamepadProfile::Main;
         GamepadProfile.store(profile, std::memory_order_relaxed);
+
+        if (CurrentGameMode == "graphicnovel")
+            MaxPayne_GraphicNovelPage::Update();
 
         // graphic novels in their original framing keep the cursor on the 4:3 page
         UpdateCursorBounds(CurrentGameMode != "graphicnovel" || !Screen.bGraphicNovelMode);
@@ -460,7 +657,7 @@ void Init()
     pattern = hook::pattern("A0 ? ? ? ? 84 C0 0F 85 ? ? ? ? 8B 86");
     X_Crosshair::sm_bCameraPathRunning.SetAddress(*pattern.get_first<bool*>(1));
 
-    // Graphic novels: key toggles between the original framing and a page that fills the screen width
+    // Graphic novels: key toggles between the original framing and the whole page as large as the screen allows
     static int32_t nGraphicNovelModeKey = iniReader.ReadInteger("MAIN", "GraphicNovelModeKey", VK_F2);
     pattern = hook::pattern("8B 06 8B CE 33 FF FF 50 10"); //60146E
     struct GraphicNovelPageUpdateHook
@@ -505,11 +702,14 @@ void Init()
         MaxPayne_GameMode::pInstance = (uint8_t*)regs.esi;
         bGameViewRendered = true;
         Cinematic::UpdateBorders(MaxPayne_GameMode::pInstance);
+        AdaptiveDifficulty::Track(MaxPayne_GameMode::pInstance);
     });
 
-    pattern = hook::pattern("8B 46 6B 50 8B CF FF 15"); // MaxPayne_GraphicNovelPage::show
-    injector::MakeCALL(pattern.get_first(6), MaxPayne_GraphicNovelPage::setFOV, true);
-    injector::MakeNOP(pattern.get_first(11), 1, true);
+    pattern = hook::pattern("6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 81 EC 14 02 00 00 53 55 33 DB 56 57 8B E9"); // MaxPayne_GameMode::load
+    AdaptiveDifficulty::shLoad = safetyhook::create_inline(pattern.get_first(), AdaptiveDifficulty::load); //0x454230
+
+    pattern = hook::pattern("55 8B EC 83 EC 0C 53 56 8B F1 57 89 75 F4 E8 ? ? ? ? 8B 45 08 83 C6 33 83 C0 2C"); // MaxPayne_GraphicNovelPage::show
+    MaxPayne_GraphicNovelPage::shShow = safetyhook::create_inline(pattern.get_first(), MaxPayne_GraphicNovelPage::show); //0x4A8860
 
     // Menu and graphic novel cursor bounds, see UpdateCursorBounds. X_MenuModeBase::update and
     // MaxPayne_GraphicNovelMode::update clamp the cursor with the same inlined code, which loads the
