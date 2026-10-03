@@ -23,6 +23,14 @@ public:
             auto bFixRecoilRange = iniReader.ReadInteger("FIXES", "FixRecoilRange", 1) != 0;
             static auto fForceAlphaRef = iniReader.ReadFloat("TEST", "ForceAlphaRef", 0.0f);
 
+            // ControllerDirectInput's constructor spins on DIERR_OTHERAPPHASPRIO while
+            // unfocused, preventing the main thread from pumping window messages.
+            // Keep the initial Acquire; Update already retries it once per frame and
+            // stops on failure, so focus can be acquired normally after background startup.
+            auto pattern = hook::pattern("FF 51 1C 3D 05 00 07 80 74 ED 8B 95 ? ? ? ? 03 D2 03 D2"); // 0x6DDB9B + 8
+            if (pattern.size() == 1)
+                injector::MakeNOP(pattern.get_first(8), 2);
+
             if (bSkipIntro)
             {
                 auto pattern = hook::pattern("0F 85 ? ? ? ? 6A ? 6A ? 6A ? 6A ? 68 ? ? ? ? E8 ? ? ? ? 83 C4 ? 5E");

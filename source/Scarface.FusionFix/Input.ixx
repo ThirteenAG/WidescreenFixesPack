@@ -5,6 +5,7 @@ module;
 #include <dinput.h>
 
 export module Input;
+import ControllerPrompts;
 
 void InitXidi();
 void InitScarfaceHook();
@@ -17,6 +18,8 @@ public:
     static inline bool* bIsInvertY = nullptr;
     static inline int* nMouseLookSensitivity = nullptr;
     static inline bool bGamepadUsed = false;
+    static inline float fVehicleCameraRecenterDelay = 3.0f;
+    static inline uint32_t nVehicleCameraAimHoldOffset = 0;
     static inline bool (*pScarfaceHook_GetMenuActive)() = nullptr;
 
     static inline bool IsInvertX()
@@ -42,6 +45,7 @@ public:
 SafetyHookInline shWndProc = {};
 LRESULT WINAPI WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 {
+    ControllerPrompts::OnMessage(hWnd, Msg, wParam, lParam);
     static bool bOnce = false;
     if (!bOnce)
     {
@@ -52,12 +56,12 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
     return shWndProc.unsafe_stdcall<LRESULT>(hWnd, Msg, wParam, lParam);
 }
 
-void SetMouseInput(float* dest_x, float* dest_y, float baseline_x = 0.0f, float baseline_y = 0.0f)
+bool SetMouseInput(float* dest_x, float* dest_y, float baseline_x = 0.0f, float baseline_y = 0.0f)
 {
     if (OptionManager::bGamepadUsed)
-        return;
+        return false;
     if ((*OptionManager::hWnd != GetForegroundWindow()) || OptionManager::ScarfaceHook_GetMenuActive())
-        return;
+        return false;
 
     RawCursorHandler<float>::SetSensitivity(OptionManager::GetMouseLookSensitivity() / 100.0f);
     RawCursorHandler<float>::UpdateMouseInput(false);
@@ -80,6 +84,7 @@ void SetMouseInput(float* dest_x, float* dest_y, float baseline_x = 0.0f, float 
 
     RawCursorHandler<float>::MouseDeltaX = 0.0f;
     RawCursorHandler<float>::MouseDeltaY = 0.0f;
+    return dx != 0.0f || dy != 0.0f;
 }
 
 injector::hook_back<char(__fastcall*)(float* mInputs, void* edx, float* angleH, float* angleV, float deltaTime)> hb_GenericVehicleCamera_ApplyRightStickMotion;
@@ -90,11 +95,46 @@ char __fastcall GenericVehicleCamera_ApplyRightStickMotion(float* mInputs, void*
 
     auto ret = hb_GenericVehicleCamera_ApplyRightStickMotion.fun(mInputs, edx, angleH, angleV, deltaTime);
 
-    SetMouseInput(angleH, angleV, H, V);
+    const bool mouseMoved = SetMouseInput(angleH, angleV, H, V);
+
+    static const float* lastCamera = nullptr;
+    static float remainingDelay = 0.0f;
+    static bool temporaryAimHold = false;
+    auto& aimHold = *reinterpret_cast<bool*>(reinterpret_cast<uint8_t*>(mInputs) + OptionManager::nVehicleCameraAimHoldOffset);
+    if (lastCamera != mInputs)
+    {
+        lastCamera = mInputs;
+        remainingDelay = 0.0f;
+        temporaryAimHold = false;
+    }
 
     if (GetAsyncKeyState(VK_RBUTTON))
+    {
+        // Preserve the existing native aim-hold mode; do not expire or clear it.
+        remainingDelay = 0.0f;
+        temporaryAimHold = false;
         return 1;
-    return ret;
+    }
+
+    if (ret || mouseMoved)
+        remainingDelay = OptionManager::fVehicleCameraRecenterDelay;
+    else if (std::isfinite(deltaTime) && deltaTime > 0.0f)
+        remainingDelay = std::max(0.0f, remainingDelay - deltaTime);
+
+    // A genuine stick input owns the game's native hold. Otherwise remember when
+    // our timeout creates a hold, so ordinary mouse look cannot become permanent
+    // if the vehicle stops before the delay expires.
+    if (ret)
+        temporaryAimHold = false;
+    const bool active = ret || mouseMoved || remainingDelay > 0.0f;
+    if (active && !ret && !aimHold)
+        temporaryAimHold = true;
+    if (!active && temporaryAimHold)
+    {
+        aimHold = false;
+        temporaryAimHold = false;
+    }
+    return active;
 }
 
 float __cdecl math__ClampX(float* value, float* min, float* max)
@@ -115,6 +155,9 @@ void Init()
 {
     CIniReader iniReader("");
     auto bScrollWeaponsWithMouseWheel = iniReader.ReadInteger("MAIN", "ScrollWeaponsWithMouseWheel", 1) != 0;
+    auto fVehicleCameraRecenterDelay = iniReader.ReadFloat("MAIN", "VehicleCameraRecenterDelay", 3.0f);
+    OptionManager::fVehicleCameraRecenterDelay = std::isfinite(fVehicleCameraRecenterDelay)
+        ? std::max(0.0f, fVehicleCameraRecenterDelay) : 3.0f;
 
     auto pattern = hook::pattern("A2 ? ? ? ? A2 ? ? ? ? A2 ? ? ? ? A2 ? ? ? ? A2 ? ? ? ? A2 ? ? ? ? A3");
     OptionManager::bIsInvertX = *pattern.get_first<bool*>(1);
@@ -144,6 +187,7 @@ void Init()
 
     //vehicle camera
     pattern = hook::pattern("E8 ? ? ? ? 84 C0 74 0C C6 85");
+    OptionManager::nVehicleCameraAimHoldOffset = *pattern.get_first<uint32_t>(11);
     hb_GenericVehicleCamera_ApplyRightStickMotion.fun = injector::MakeCALL(pattern.get_first(0), GenericVehicleCamera_ApplyRightStickMotion, true).get();
 
     //melee camera

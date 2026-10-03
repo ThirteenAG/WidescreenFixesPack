@@ -6,6 +6,10 @@ module;
 export module PostFX;
 
 import PostFXCore;
+import ShaderDump;
+import CharacterBlood;
+import SkinRendering;
+import ControllerPrompts;
 
 IDirect3DDevice9* pDevice = nullptr;
 
@@ -28,14 +32,23 @@ public:
             CPostFX::bConsoleGammaEnabled = iniReader.ReadInteger("GRAPHICS", "ConsoleGamma", 0) != 0;
             CPostFX::bSmaaEnabled = iniReader.ReadInteger("GRAPHICS", "SMAA", 0) != 0;
 
-            if (!CPostFX::bConsoleGammaEnabled && !CPostFX::bSmaaEnabled)
+            const bool dumpShaders = ShaderDump::Initialize();
+            const bool characterBlood = CharacterBlood::Initialize();
+            ControllerPrompts::Initialize();
+            if (!CPostFX::bConsoleGammaEnabled && !CPostFX::bSmaaEnabled && !dumpShaders && !characterBlood && !ControllerPrompts::IsEnabled())
                 return;
 
             auto pattern = hook::pattern("88 87 ? ? ? ? 8B 47");
             static auto PresentHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
                 pDevice = *(IDirect3DDevice9**)(regs.edi + 0x10);
+                ControllerPrompts::Update(pDevice);
+                SkinRendering::ObserveDevice(pDevice);
+                ShaderDump::ObserveDevice(pDevice);
             });
+
+            if (!CPostFX::bConsoleGammaEnabled && !CPostFX::bSmaaEnabled)
+                return;
 
             pattern = hook::pattern("E8 ? ? ? ? 8B 4C 24 ? 8B 54 24 ? ? ? 83 C4");
             static auto DrawHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext&)
@@ -62,6 +75,10 @@ public:
 
         WFP::onShutdownEvent() += []()
         {
+            SkinRendering::Shutdown();
+            ControllerPrompts::Shutdown();
+            ShaderDump::Shutdown();
+            CharacterBlood::Shutdown();
             CPostFX::Shutdown();
             pDevice = nullptr;
         };
