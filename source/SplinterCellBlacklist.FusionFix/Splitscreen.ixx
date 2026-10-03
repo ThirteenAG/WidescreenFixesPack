@@ -1,0 +1,870 @@
+module;
+
+#include <stdafx.h>
+#include <Xinput.h>
+#include <intrin.h>
+
+export module Splitscreen;
+
+import ComVars;
+
+// Split screen co-op (Xbox 360/PS3/Wii U), most of it is still in the PC game:
+// - the co-op launch box handler (SMI) still has button 1, StartLaunchSplitscreenCoop: a local co-op game for 2 local players
+// - the co-op lobby asks for START on the second controller (LocID_C_LOB_Splitscreen_Prompt), SMICOOPLobby::StartPressed
+//   calls UGameEngine::AddSecondaryLocalPlayer with the last pad that pressed a button, which is never set on PC
+// - the mission start adds ?SplitScreen when the profile manager (engine +288h) has a second controller (+18h != -1),
+//   UGameEngine::LoadMap sets the split screen flag and the next tick creates the second viewport and spawns the second player
+// - UWindowsViewport input reads XInput for the input's controller index, a new input takes the active pad
+// The PC game has one gamepad mode (icons, no cursor, pads read) for everything, it's switched on around what is player 2's.
+namespace Splitscreen
+{
+    uint8_t* (*GetEngine)() = nullptr;
+    int32_t* pLastPad = nullptr;
+
+    uint8_t* GetProfileManager(uint8_t* engine)
+    {
+        return engine ? *reinterpret_cast<uint8_t**>(engine + 0x288) : nullptr;
+    }
+
+    int32_t GetController(int index)
+    {
+        auto profiles = GetProfileManager(GetEngine());
+        return profiles ? *reinterpret_cast<int32_t*>(profiles + 0x14 + index * 4) : -1;
+    }
+
+    uint8_t* GetSplitViewport()
+    {
+        auto engine = GetEngine();
+        return engine ? *reinterpret_cast<uint8_t**>(engine + 0x25C) : nullptr;
+    }
+
+    // Player 2's controller (split viewport +30h)
+    uint8_t* GetPlayer2Controller()
+    {
+        auto viewport = GetSplitViewport();
+        return viewport ? *reinterpret_cast<uint8_t**>(viewport + 0x30) : nullptr;
+    }
+
+    // pad of each player, 1-4, 0 for none (keyboard and mouse)
+    int32_t padPlayer1 = 0;
+    int32_t padPlayer2 = 1;
+
+    // the game's controllers for the players
+    constexpr int32_t controllerPlayer1 = 0;
+    constexpr int32_t controllerPlayer2 = 1;
+
+    bool IsPlaying()
+    {
+        return GetEngine && GetController(1) != -1;
+    }
+
+    // the split screen lobby (before player 2 joined) or player 2 in
+    ULONGLONG lobbyTime = 0;
+    bool IsSplitSession()
+    {
+        return IsPlaying() || GetTickCount64() - lobbyTime < 1000;
+    }
+
+    // While the second player is in, the game's controller 0 and 1 read the players' pads, otherwise any pad works as usual
+    SafetyHookInline shXInputGetState{};
+    SafetyHookInline shXInputSetState{};
+    SafetyHookInline shXInputGetCapabilities{};
+
+    DWORD Pad(DWORD userIndex)
+    {
+        if (!IsPlaying())
+            return userIndex;
+        auto pad = userIndex == controllerPlayer1 ? padPlayer1 : userIndex == controllerPlayer2 ? padPlayer2 : 0;
+        return pad >= 1 && pad <= XUSER_MAX_COUNT ? pad - 1 : XUSER_MAX_COUNT;
+    }
+
+    DWORD WINAPI XInputGetStateHook(DWORD userIndex, XINPUT_STATE* state)
+    {
+        auto pad = Pad(userIndex);
+        return pad < XUSER_MAX_COUNT ? shXInputGetState.stdcall<DWORD>(pad, state) : ERROR_DEVICE_NOT_CONNECTED;
+    }
+
+    DWORD WINAPI XInputGetCapabilitiesHook(DWORD userIndex, DWORD flags, XINPUT_CAPABILITIES* capabilities)
+    {
+        auto pad = Pad(userIndex);
+        return pad < XUSER_MAX_COUNT ? shXInputGetCapabilities.stdcall<DWORD>(pad, flags, capabilities) : ERROR_DEVICE_NOT_CONNECTED;
+    }
+
+    DWORD WINAPI XInputSetStateHook(DWORD userIndex, XINPUT_VIBRATION* vibration)
+    {
+        auto pad = Pad(userIndex);
+        return pad < XUSER_MAX_COUNT ? shXInputSetState.stdcall<DWORD>(pad, vibration) : ERROR_DEVICE_NOT_CONNECTED;
+    }
+
+    // buttons of player 2's pad that were just pressed, polled by a caller with its own state
+    WORD PollPlayer2(WORD& previous)
+    {
+        XINPUT_STATE state{};
+        WORD buttons = shXInputGetState.stdcall<DWORD>(padPlayer2 - 1, &state) == ERROR_SUCCESS ? state.Gamepad.wButtons : 0;
+        WORD pressed = buttons & ~previous;
+        previous = buttons;
+        return pressed;
+    }
+
+    // UWindowsViewport input reads XInput for controllers marked as XInput pads (found at startup)
+    int32_t* padIsXInput = nullptr;
+
+    void SetInputController(uint8_t* input, int32_t controller)
+    {
+        reinterpret_cast<void(__thiscall*)(uint8_t*, int32_t)>((*reinterpret_cast<void***>(input))[0xA4 / 4])(input, controller);
+    }
+
+    int32_t GetInputController(uint8_t* input)
+    {
+        return reinterpret_cast<int32_t(__thiscall*)(uint8_t*)>((*reinterpret_cast<void***>(input))[0xA0 / 4])(input);
+    }
+
+    // input of the first viewport
+    uint8_t* firstInput = nullptr;
+
+    // Gamepad mode (icons, no cursor), set by any input with a pad, pads are only read in it
+    int32_t* pGamepadMode = nullptr;
+    void(__stdcall* SetKeyboardMode)(uint8_t* input, int32_t keyboard) = nullptr;
+
+    // Player 1's input without a pad in split screen switches modes only by the plugin: the game also switches it by the profile's
+    // gamepad setting (applied when the gear screen opens) and by a pad on the input. A pad button's release after a switch has
+    // another key in the keyboard layout, the UI keeps that button as held for the controller and takes no other button.
+    bool IsModeByPlugin(uint8_t* input)
+    {
+        auto split = GetSplitViewport();
+        return !padPlayer1 && input && IsSplitSession() && !(split && input == *reinterpret_cast<uint8_t**>(split + 0x54));
+    }
+
+    bool modeByPlugin = false;
+    SafetyHookInline shKeyboardModeOn{};
+    SafetyHookInline shGamepadModeOn{};
+
+    char __fastcall KeyboardModeOn(uint8_t* input, void* edx, void* profile)
+    {
+        return modeByPlugin || !IsModeByPlugin(input) ? shKeyboardModeOn.thiscall<char>(input, profile) : 0;
+    }
+
+    char __fastcall GamepadModeOn(uint8_t* input, void* edx)
+    {
+        return modeByPlugin || !IsModeByPlugin(input) ? shGamepadModeOn.thiscall<char>(input) : 0;
+    }
+
+    void SwitchMode(uint8_t* input, bool keyboard)
+    {
+        modeByPlugin = true;
+        SetKeyboardMode(input, keyboard);
+        modeByPlugin = false;
+    }
+
+    // the input's keyboard layout (+3638h, set with keyboard mode): pad keys go through the keyboard remap, A is lost and B becomes A
+    bool HasKeyboardLayout(uint8_t* input)
+    {
+        return input && *reinterpret_cast<int32_t*>(input + 0x3638) != 0;
+    }
+
+    template<typename F>
+    auto WithGamepadMode(bool player2, F&& f)
+    {
+        if (!player2 || !IsPlaying() || *pGamepadMode)
+            return f();
+        *pGamepadMode = 1;
+        auto result = f();
+        *pGamepadMode = 0;
+        return result;
+    }
+
+    uint8_t** pUIManager = nullptr;
+
+    // a screen owned by player 2: UI manager +78h locked to the controller at +7Ch
+    bool IsPlayer2Screen()
+    {
+        auto ui = pUIManager ? *pUIManager : nullptr;
+        return ui && *reinterpret_cast<bool*>(ui + 0x78) && *reinterpret_cast<int32_t*>(ui + 0x7C) == controllerPlayer2;
+    }
+
+    // UI manager: menus blocking the players' input (mask at +5A0h)
+    bool IsMenuBlockingInput()
+    {
+        auto ui = pUIManager ? *pUIManager : nullptr;
+        return ui && *reinterpret_cast<uint32_t*>(ui + 0x5A0) != 0;
+    }
+
+    // ALevelInfo (engine level, virtual +114h, first actor) paused (+5E8h)
+    bool IsPaused()
+    {
+        auto engine = GetEngine();
+        if (!engine)
+            return false;
+        auto level = reinterpret_cast<uint8_t*(__thiscall*)(uint8_t*)>((*reinterpret_cast<void***>(engine))[0x114 / 4])(engine);
+        if (!level || *reinterpret_cast<int32_t*>(level + 0x2C) <= 0)
+            return false;
+        auto levelInfo = **reinterpret_cast<uint8_t***>(level + 0x28);
+        return levelInfo && *reinterpret_cast<int32_t*>(levelInfo + 0x5E8) != 0;
+    }
+
+    // player 2's pad read by player 1's input, its events (pad keys from 196 on) get player 2's controller
+    bool sharedUpdate = false;
+
+    // the menus show the prompts of the last used device: player 2's pad or the keyboard and mouse
+    bool lastInputPad = false;
+
+    // Offline, the pause menus take some buttons from the primary controller only, player 2 is primary on their screens in the
+    // mission (in the lobby it breaks their pad on the gear screen)
+    SafetyHookInline shIsPrimaryController{};
+    bool __stdcall IsPrimaryController(int32_t controller)
+    {
+        return (controller == controllerPlayer2 && IsPlaying() && GetSplitViewport() && IsPlayer2Screen()) || shIsPrimaryController.stdcall<bool>(controller);
+    }
+
+    // Input key bindings (the input's controller) run before the UI and can take the event, player 2's pad in the menus goes
+    // to the UI only: read by player 1's input, or their own while a menu is open
+    SafetyHookInline shProcessBindings{};
+    int32_t __fastcall ProcessBindings(uint8_t* input, void* edx, int32_t key, int32_t action, float delta)
+    {
+        if (key >= 196 && (sharedUpdate || (IsPlaying() && GetInputController(input) == controllerPlayer2 && (IsPlayer2Screen() || IsPaused() || IsMenuBlockingInput()))))
+            return 0;
+        return shProcessBindings.thiscall<int32_t>(input, key, action, delta);
+    }
+
+    // Software occlusion culling (the renderer's default, Lead option +420h = 2): visibility jobs for the camera and up to 3 shadow lights,
+    // each run of a job reads the results of its last run. The split screen views take turns, each view has its own jobs (with the
+    // shared ones the first view culled by the second's camera: missing geometry, shadow casters).
+    void*** pCameraJob = nullptr;
+    void**** pLightJobs = nullptr;
+    void* (__cdecl* CreateVisibilityJob)(const uint32_t* params) = nullptr;
+    char(__cdecl* DestroyVisibilityJob)(void* job) = nullptr;
+
+    struct VisibilityJobs
+    {
+        void** camera = nullptr;
+        void*** lights = nullptr;
+    };
+    VisibilityJobs gameJobs{};
+    void* player2Lights[3] = {};
+    VisibilityJobs player2Jobs{ nullptr, reinterpret_cast<void***>(player2Lights) };
+    bool jobsSwapped = false;
+    int32_t views[2] = { -1, -1 };
+
+    void UseJobs(const VisibilityJobs& jobs, bool swapped)
+    {
+        if (!jobsSwapped)
+            gameJobs = { *pCameraJob, *pLightJobs };
+        *pCameraJob = jobs.camera;
+        *pLightJobs = jobs.lights;
+        jobsSwapped = swapped;
+    }
+
+    void DestroyPlayer2Jobs()
+    {
+        if (jobsSwapped)
+            UseJobs(gameJobs, false);
+        if (player2Jobs.camera)
+            DestroyVisibilityJob(player2Jobs.camera);
+        for (auto& job : player2Lights)
+        {
+            if (job)
+                DestroyVisibilityJob(job);
+            job = nullptr;
+        }
+        player2Jobs.camera = nullptr;
+        views[0] = views[1] = -1;
+    }
+
+    // A frame prepares each view (its jobs start), then renders each one (its jobs finish): the view's index (view parameters +26Ch)
+    void SelectVisibilityJobs(int32_t view)
+    {
+        if (!GetSplitViewport() || !*pCameraJob || view < 0)
+        {
+            if (jobsSwapped)
+                UseJobs(gameJobs, false);
+            views[0] = views[1] = -1;
+            return;
+        }
+
+        if (views[0] == -1)
+            views[0] = view;
+        else if (views[1] == -1 && view != views[0])
+            views[1] = view;
+
+        if (view != views[1])
+        {
+            if (jobsSwapped)
+                UseJobs(gameJobs, false);
+            return;
+        }
+
+        // the game's parameters (SoftwareRasterizer init): size, then the same for the camera and the lights
+        if (!player2Jobs.camera)
+        {
+            const uint32_t camera[9] = { 512, 256, 0x8000, 0, 0x40000, 40, std::bit_cast<uint32_t>(0.01f), std::bit_cast<uint32_t>(1.5f), 0x1000101 };
+            const uint32_t light[9] = { 256, 256, 0x8000, 0, 0x40000, 40, std::bit_cast<uint32_t>(0.01f), std::bit_cast<uint32_t>(1.5f), 0x1000101 };
+            player2Jobs.camera = reinterpret_cast<void**>(CreateVisibilityJob(camera));
+            for (auto& job : player2Lights)
+                job = CreateVisibilityJob(light);
+        }
+        if (!jobsSwapped)
+            UseJobs(player2Jobs, true);
+    }
+
+    // Ambient occlusion (Lead options +3CCh, DX9 +3C8h, ResourceDB +8): a split screen view is smaller than the buffers, the game
+    // takes its own SSAO instead of HBAO+ and it darkens a band along player 1's view that moves with the camera. It's off while
+    // in split screen (applying the video options in the mission sets it again).
+    uint8_t** pResourceDB = nullptr;
+    uintptr_t aoOffset = 0x3CC;
+    float savedAO = 0.0f;
+    bool aoOff = false;
+
+    void UpdateAmbientOcclusion()
+    {
+        if (!pResourceDB || !*pResourceDB)
+            return;
+        auto& ao = *reinterpret_cast<float*>(*reinterpret_cast<uint8_t**>(*pResourceDB + 8) + aoOffset);
+        if (bSplitscreen)
+        {
+            if (ao != 0.0f)
+            {
+                savedAO = ao;
+                ao = 0.0f;
+                aoOff = true;
+            }
+        }
+        else if (aoOff)
+        {
+            ao = savedAO;
+            aoOff = false;
+        }
+    }
+
+    // Player 2 is a guest with the guest loadout (CLoadoutManager, flag +2Ch), +2Dh makes it customizable in the lobby's gear screen
+    // and saved in the profile (its own section, by name)
+    uint8_t** pLoadoutGlobal = nullptr;
+    uint8_t* (__fastcall* GetGuestLoadout)(void* loadouts, void* edx) = nullptr;
+
+    void UnlockGuestLoadout()
+    {
+        auto global = pLoadoutGlobal ? *pLoadoutGlobal : nullptr;
+        auto loadouts = global ? *reinterpret_cast<uint8_t**>(global + 0x2C) : nullptr;
+        auto guest = loadouts && GetGuestLoadout ? GetGuestLoadout(loadouts, nullptr) : nullptr;
+        if (guest)
+            guest[0x2D] = 1;
+    }
+
+    // UWindowsViewport input update, player 2's pad is read in gamepad mode while player 1 stays on keyboard and mouse
+    SafetyHookInline shUpdateInput{};
+    void __fastcall UpdateInput(uint8_t* viewport, void* edx, uint8_t* input, uint32_t delta1, uint32_t delta2, int32_t a4)
+    {
+        bSplitscreen = GetSplitViewport() != nullptr;
+        UpdateAmbientOcclusion();
+
+        // from the start, before the profile loads: the profile saves and loads customizable loadouts only
+        UnlockGuestLoadout();
+
+        // the controller player 1's input had before player 2 joined, it gets it back after
+        static int32_t singleController = INT32_MIN;
+        if (!padPlayer1 && viewport != GetSplitViewport() && !IsSplitSession() && singleController != INT32_MIN)
+        {
+            SetInputController(input, singleController);
+            std::memset(input + 0x3434 + 196, 0, 224 - 196);
+            singleController = INT32_MIN;
+        }
+
+        if (!padPlayer1 && viewport != GetSplitViewport() && IsSplitSession())
+        {
+            // Player 1 without a pad stays in keyboard and mouse mode from the split screen lobby on (the profile's gamepad setting
+            // switches to gamepad mode, a pad would also press player 2's START). In the menus after player 2 joined, this input also
+            // reads player 2's pad (events with their controller), the lobby gives the screen to whoever pressed a button, so player 2
+            // customizes their own loadout
+            if (singleController == INT32_MIN)
+                singleController = GetInputController(input);
+            auto shared = IsPlaying() && !GetSplitViewport();
+            auto controller = shared ? controllerPlayer2 : -1;
+            if (GetInputController(input) != controller)
+            {
+                SetInputController(input, controller);
+
+                // pad buttons held when the pad changed never get their release, the input ignores presses of held keys (+3434h)
+                std::memset(input + 0x3434 + 196, 0, 224 - 196);
+            }
+
+            // moving the mouse also switches back to keyboard and mouse
+            static POINT lastCursor{};
+            POINT cursor{};
+            if (GetCursorPos(&cursor) && (cursor.x != lastCursor.x || cursor.y != lastCursor.y))
+            {
+                lastCursor = cursor;
+                lastInputPad = false;
+            }
+
+            // the menus switch to gamepad mode the game's way when player 2's pad was used last, the UI updates its prompts
+            auto gamepad = IsPlaying() && lastInputPad && (shared || IsPlayer2Screen());
+            // the gamepad mode can be on already (set by a pad event) with the input still in the keyboard layout
+            if ((*pGamepadMode != 0) != gamepad || (gamepad && HasKeyboardLayout(input)))
+            {
+                SwitchMode(input, !gamepad);
+
+                // the layout remaps the pad keys, a press can miss its release and the input ignores presses of held keys (+3434h)
+                std::memset(input + 0x3434 + 196, 0, 224 - 196);
+            }
+
+            // in the lobby menus (not while a mission loads) the cursor comes back the game's way: a pad key hides it until the mouse
+            // moves (+5D0h, player 2's pad or player 1's in single player before), viewport virtual +9Ch shows it outside gamepad mode
+            if (!gamepad && !GetSplitViewport() && (GetTickCount64() - lobbyTime < 1000 || IsPlayer2Screen()))
+            {
+                *reinterpret_cast<int32_t*>(viewport + 0x5D0) = 0;
+                reinterpret_cast<void(__thiscall*)(uint8_t*)>((*reinterpret_cast<void***>(viewport))[0x9C / 4])(viewport);
+            }
+            if (shared)
+            {
+                auto mode = *pGamepadMode;
+                *pGamepadMode = 1;
+                sharedUpdate = true;
+                shUpdateInput.thiscall<void>(viewport, input, delta1, delta2, a4);
+                sharedUpdate = false;
+                *pGamepadMode = mode;
+                return;
+            }
+        }
+        WithGamepadMode(IsPlaying() && GetInputController(input) == controllerPlayer2, [&] { shUpdateInput.thiscall<void>(viewport, input, delta1, delta2, a4); return 0; });
+    }
+
+    // Viewport input events (input, key, action, delta, controller): the game passes controller 0 for pads
+    void ViewportEvent(uint8_t* viewport, uint32_t* args)
+    {
+        // player 2's pad: read by player 1's input in the menus, or their own viewport's in the mission
+        auto player2Pad = sharedUpdate || (IsPlaying() && viewport == GetSplitViewport());
+        if (player2Pad && args[1] >= 196 && args[1] < 224 && args[2] == 1)
+        {
+            lastInputPad = true;
+
+            // a press of a key the input still has as held (+3434h) is dropped, a release can be missed when the pad changes
+            reinterpret_cast<uint8_t*>(args[0])[0x3434 + args[1]] = 0;
+        }
+        else if (!player2Pad && (args[2] == 1 || ((args[1] == 228 || args[1] == 229) && *reinterpret_cast<float*>(&args[3]) != 0.0f)))
+            lastInputPad = false;
+
+        // player 2's events, keyboard and mouse also work on a screen owned by player 2 in the menus
+        if ((sharedUpdate && args[1] >= 196) || (IsPlaying() && (viewport == GetSplitViewport() || (!GetSplitViewport() && IsPlayer2Screen()))))
+            args[4] = controllerPlayer2;
+    }
+
+    // UWindowsViewport input event (input, key, action, delta, controller, ?): player 2's pad keys skip player 1's keyboard layout
+    // (+3638h remaps the keys), a press and its release then always have the same key: the UI keeps a pressed button per controller
+    // until its release and takes no other button meanwhile (START pressed in the layout to join kept A and B from working)
+    SafetyHookInline shViewportInput{};
+    int32_t __fastcall ViewportInput(uint8_t* viewport, void* edx, uint8_t* input, int32_t key, int32_t action, float delta, int32_t controller, int32_t a7)
+    {
+        uint32_t args[5] = { uint32_t(uintptr_t(input)), uint32_t(key), uint32_t(action), std::bit_cast<uint32_t>(delta), uint32_t(controller) };
+        ViewportEvent(viewport, args);
+
+        auto player2Pad = (sharedUpdate || (IsPlaying() && viewport == GetSplitViewport())) && key >= 196 && key < 224;
+        auto& layout = *reinterpret_cast<int32_t*>(input + 0x3638);
+        auto saved = layout;
+        if (player2Pad)
+            layout = 0;
+        auto result = shViewportInput.thiscall<int32_t>(viewport, input, key, action, delta, int32_t(args[4]), a7);
+        if (player2Pad)
+            layout = saved;
+        return result;
+    }
+
+    // SMICOOPLobby::StartPressed, ButtonX
+    void(__fastcall* StartPressed)(void* lobby, void* edx) = nullptr;
+    void(__fastcall* ButtonX)(void* lobby, void* edx) = nullptr;
+
+    // co-op lobby tick, state 2 is the local lobby
+    void LobbyTick(uint8_t* lobby)
+    {
+        if (*reinterpret_cast<int32_t*>(lobby + 0x2AC) != 2)
+            return;
+        lobbyTime = GetTickCount64();
+
+        static WORD previous = 0;
+        auto pressed = PollPlayer2(previous);
+        if (IsPlaying())
+        {
+            // X customizes player 2's gear (in gamepad mode the button bar takes X before the lobby, then does nothing for player 2)
+            // it opens once the input update switched to gamepad mode and out of the keyboard layout
+            static bool pendingX = false;
+            auto ui = pUIManager ? *pUIManager : nullptr;
+            if (pressed & XINPUT_GAMEPAD_X)
+            {
+                lastInputPad = true;
+                pendingX = true;
+            }
+            pendingX = pendingX && lastInputPad;
+            if (pendingX && *pGamepadMode && !HasKeyboardLayout(firstInput))
+            {
+                pendingX = false;
+                if (ui && !ui[0x78])
+                {
+                    *pLastPad = controllerPlayer2;
+                    ButtonX(lobby, nullptr);
+                }
+            }
+            return;
+        }
+
+        // player 2 joins with START on their pad
+        if (!(pressed & XINPUT_GAMEPAD_START))
+            return;
+
+        *reinterpret_cast<int32_t*>(GetProfileManager(GetEngine()) + 0x14) = controllerPlayer1;
+        *pLastPad = controllerPlayer2;
+        StartPressed(lobby, nullptr);
+        if (IsPlaying())
+        {
+            padIsXInput[controllerPlayer1] = padIsXInput[controllerPlayer2] = 1;
+            if (firstInput && padPlayer1)
+                SetInputController(firstInput, controllerPlayer1);
+        }
+    }
+
+    // UWindowsViewport: pad for an input that has none yet
+    SafetyHookInline shDefaultController{};
+    int32_t __fastcall DefaultController(uint8_t* viewport, void* edx, uint8_t* input)
+    {
+        auto split = viewport == GetSplitViewport();
+        if (!split)
+            firstInput = input;
+
+        // player 1 without a pad never gets one in split screen, an input with a pad switches the game to gamepad mode
+        if (!split && !padPlayer1 && IsSplitSession())
+            return -1;
+
+        if (IsPlaying())
+        {
+            auto controller = split ? controllerPlayer2 : controllerPlayer1;
+            padIsXInput[controller] = 1;
+            SetInputController(input, controller);
+            return controller;
+        }
+        return shDefaultController.thiscall<int32_t>(viewport, input);
+    }
+
+    // RTTI: is the object of the class (or derived), name like ".?AVHudScene@UI@@"
+    bool IsA(void* object, const char* name)
+    {
+        static std::unordered_map<void*, std::unordered_map<std::string, bool>> cache;
+        auto vtable = *reinterpret_cast<void***>(object);
+        auto& entry = cache[vtable];
+        if (auto it = entry.find(name); it != entry.end())
+            return it->second;
+
+        bool result = false;
+        auto locator = reinterpret_cast<uint8_t*>(vtable[-1]);
+        auto hierarchy = *reinterpret_cast<uint8_t**>(locator + 0x10);
+        auto count = *reinterpret_cast<uint32_t*>(hierarchy + 8);
+        auto bases = *reinterpret_cast<uint8_t***>(hierarchy + 0xC);
+        for (uint32_t i = 0; i < count && !result; i++)
+        {
+            auto type = *reinterpret_cast<uint8_t**>(bases[i]);
+            result = strcmp(reinterpret_cast<const char*>(type + 8), name) == 0;
+        }
+        entry[name] = result;
+        return result;
+    }
+
+    // HUD scenes in player 2's viewport, the world tips (SceneGeoTip, owner +1C8h, +34h, pawn at +8Ch) of their pawn
+    uint8_t* (__fastcall* GetHudViewport)(void* scene, void* edx) = nullptr;
+    bool IsPlayer2Scene(void* scene)
+    {
+        if (!IsPlaying() || !GetSplitViewport())
+            return false;
+        if (IsA(scene, ".?AVHudScene@UI@@"))
+            return GetHudViewport(scene, nullptr) == GetSplitViewport();
+        if (IsA(scene, ".?AVSceneGeoTip@UI@@"))
+        {
+            auto owner = *reinterpret_cast<uint8_t**>(reinterpret_cast<uint8_t*>(scene) + 0x1C8);
+            auto source = owner ? *reinterpret_cast<uint8_t**>(owner + 0x34) : nullptr;
+            auto controller = GetPlayer2Controller();
+            return source && controller && *reinterpret_cast<void**>(source + 0x8C) == *reinterpret_cast<void**>(controller + 0x310);
+        }
+        return false;
+    }
+
+    // Player 2's pause menu in the mission: START doesn't reach it (taken before), the plugin calls its handler (scene virtual +60h)
+    void PauseMenuPlayer2(void* scene)
+    {
+        static WORD previous = 0;
+        static void* lastScene = nullptr;
+        static ULONGLONG lastTime = 0;
+
+        // a new pause menu (or one that didn't tick for a while) ignores the buttons held when it opened
+        auto now = GetTickCount64();
+        if (scene != lastScene || now - lastTime > 500)
+            PollPlayer2(previous);
+        lastScene = scene;
+        lastTime = now;
+
+        auto pressed = PollPlayer2(previous);
+        if ((pressed & XINPUT_GAMEPAD_START) && IsPlayer2Screen())
+            reinterpret_cast<void(__thiscall*)(void*)>((*reinterpret_cast<void***>(scene))[0x60 / 4])(scene);
+    }
+
+    // Scene tick slot handlers (identical copies): player 2's HUD and world tips show pad prompts
+    std::vector<SafetyHookInline> shSceneTick;
+    template<size_t N>
+    bool __fastcall SceneTick(void* scene, void* edx, void* slot, float delta)
+    {
+        // the input update stops while paused, the pause menu still ticks
+        if (IsPlaying() && GetSplitViewport() && IsA(scene, ".?AVScenePause@UI@@"))
+            PauseMenuPlayer2(scene);
+
+        if (IsPlayer2Scene(scene))
+        {
+            auto mode = *pGamepadMode;
+            *pGamepadMode = 1;
+            auto result = shSceneTick[N].thiscall<bool>(scene, slot, delta);
+            *pGamepadMode = mode;
+            return result;
+        }
+        return shSceneTick[N].thiscall<bool>(scene, slot, delta);
+    }
+
+    // Player 2's controller, pawn (controller +310h) and camera tick in gamepad mode: the controller tick clears the look axes in
+    // keyboard mode, the pawn's tips (prompts) take the button of the input mode, the camera picks the invert setting by it
+    SafetyHookInline shControllerTick{};
+    int32_t __fastcall ControllerTick(uint8_t* controller, void* edx, float delta, int32_t tickType)
+    {
+        return WithGamepadMode(controller == GetPlayer2Controller(), [&] { return shControllerTick.thiscall<int32_t>(controller, delta, tickType); });
+    }
+
+    SafetyHookInline shPawnTick{};
+    int32_t __fastcall PawnTick(uint8_t* pawn, void* edx, float delta, int32_t tickType)
+    {
+        auto controller = GetPlayer2Controller();
+        return WithGamepadMode(controller && pawn == *reinterpret_cast<uint8_t**>(controller + 0x310), [&] { return shPawnTick.thiscall<int32_t>(pawn, delta, tickType); });
+    }
+
+    // Movement stick (controller +368h, +36Ch) to speed: keyboard mode takes the larger axis, a diagonal is a walk
+    SafetyHookInline shMoveStick{};
+    float* __fastcall MoveStick(uint8_t* controller, void* edx, float* x, float* y)
+    {
+        return WithGamepadMode(controller == GetPlayer2Controller(), [&] { return shMoveStick.thiscall<float*>(controller, x, y); });
+    }
+
+    SafetyHookInline shCameraUpdate{};
+    void __fastcall CameraUpdate(uint8_t* camera, void* edx)
+    {
+        WithGamepadMode(*reinterpret_cast<uint8_t**>(camera + 0x1C) == GetPlayer2Controller(), [&] { shCameraUpdate.thiscall<void>(camera); return 0; });
+    }
+
+    // Leaving split screen requests the resolution back as twice the first viewport's width (consoles halve it), the PC game never
+    // changes the resolution for split screen, the request would set half the height (1920x540)
+    std::vector<void*> resolutionRestores;
+    SafetyHookInline shRequestResolution{};
+    void __fastcall RequestResolution(void* viewport, void* edx, int32_t width, int32_t height, int32_t mode, int32_t refresh)
+    {
+        if (std::find(resolutionRestores.begin(), resolutionRestores.end(), _ReturnAddress()) != resolutionRestores.end())
+            return;
+        shRequestResolution.thiscall<void>(viewport, width, height, mode, refresh);
+    }
+
+    // UWindowsViewport::Repaint draws a viewport when its player has a pawn (controller +310h) or a few other states, a player 1 who bled
+    // out has none: their viewport isn't drawn and the split screen view (drawn with it) freezes too. It's drawn anyway in split screen.
+    SafetyHookInline shRepaint{};
+    void __fastcall Repaint(uint8_t* viewport, void* edx, int32_t a2, int32_t a3)
+    {
+        auto split = GetSplitViewport();
+        auto controller = *reinterpret_cast<uint8_t**>(viewport + 0x30);
+        if (split && viewport != split && controller && !*reinterpret_cast<void**>(controller + 0x310))
+        {
+            auto engine = *reinterpret_cast<uint8_t**>(*reinterpret_cast<uint8_t**>(viewport + 0x18) + 0x28);
+            reinterpret_cast<void(__thiscall*)(uint8_t*, uint8_t*, int32_t, int32_t, int32_t, int32_t)>((*reinterpret_cast<void***>(engine))[0x80 / 4])(engine, viewport, a2, 0, 0, 0);
+            return;
+        }
+        shRepaint.thiscall<void>(viewport, a2, a3);
+    }
+
+    // EnterSplitscreen sets GIsRequestingExit when the second player can't be spawned (a map without a second player start)
+    uint32_t* pRequestingExit = nullptr;
+    SafetyHookInline shEnter{};
+    void __fastcall Enter(void* engine, void* edx)
+    {
+        auto requested = *pRequestingExit;
+        shEnter.thiscall<void>(engine);
+        if (!requested)
+            *pRequestingExit = 0;
+    }
+
+    // co-op launch box, adds the split screen button: options {id, FString label} at ebp - boxOptions, the count 40h after, up to 4
+    wchar_t* (__cdecl* Localize)(const wchar_t* section, const wchar_t* key, const char* package, int, int, int) = nullptr;
+    void(__fastcall* FStringFromText)(void* string, void* edx, const wchar_t* text) = nullptr;
+    const wchar_t* section = nullptr;
+    const char* package = nullptr;
+    uintptr_t boxOptions = 0;
+
+    void LaunchBox(uintptr_t ebp)
+    {
+        auto count = reinterpret_cast<int32_t*>(ebp - boxOptions + 0x40);
+        if (*count < 2 || *count >= 4)
+            return;
+
+        auto option = reinterpret_cast<uint8_t*>(ebp - boxOptions) + *count * 0x10;
+        auto text = Localize(section, L"LocID_CONF_Option_COOP_Splitscreen", package, 0, 0, 0);
+        FStringFromText(option + 4, nullptr, text && *text ? text : L"SPLIT-SCREEN");
+        *reinterpret_cast<int32_t*>(option) = 1;
+        ++*count;
+    }
+}
+
+export void InitSplitscreen()
+{
+    CIniReader iniReader("");
+    if (iniReader.ReadInteger("SPLITSCREEN", "Enable", 1) == 0)
+        return;
+
+    Splitscreen::padPlayer1 = std::clamp(iniReader.ReadInteger("SPLITSCREEN", "GamepadPlayer1", 0), 0, XUSER_MAX_COUNT);
+    Splitscreen::padPlayer2 = std::clamp(iniReader.ReadInteger("SPLITSCREEN", "GamepadPlayer2", 1), 1, XUSER_MAX_COUNT);
+
+    auto xinput = GetModuleHandleW(L"xinput1_3.dll");
+    if (!xinput)
+        xinput = LoadLibraryW(L"xinput1_3.dll");
+    auto getState = xinput ? GetProcAddress(xinput, "XInputGetState") : nullptr;
+    auto setState = xinput ? GetProcAddress(xinput, "XInputSetState") : nullptr;
+    auto getCapabilities = xinput ? GetProcAddress(xinput, "XInputGetCapabilities") : nullptr;
+    if (!getState || !setState || !getCapabilities)
+        return;
+
+    auto branch = [](void* call) { return reinterpret_cast<uintptr_t>(call) + 5 + *reinterpret_cast<int32_t*>(reinterpret_cast<uintptr_t>(call) + 1); };
+
+    // DX11 / DX9 (Blacklist_game.exe) where they differ
+    auto start = hook::pattern("53 57 8B 3D ? ? ? ? 8B D9 E8 ? ? ? ? 84 C0 75 ? 56 E8 ? ? ? ? 8B F0 8B 06 8B 90 F0 01 00 00");
+    auto start9 = hook::pattern("53 8B D9 8B 0D ? ? ? ? 57 8B 3D ? ? ? ? 85 C9 74 09 E8");
+    auto buttonX = hook::pattern("53 56 8B F1 8B 0D ? ? ? ? 57 8B 3D ? ? ? ? B3 01 E8");
+    auto buttonX9 = hook::pattern("A1 ? ? ? ? 53 56 8B 35 ? ? ? ? 57 8B F9 8B 48 54 B3 01");
+    auto box = hook::pattern("8D 8D 6C FF FF FF 8D 86 BC 05 00 00 51 89 45 DC E8");
+    auto box9 = hook::pattern("8D 95 68 FF FF FF 8D 8E BC 05 00 00 52");
+    auto uiManager = hook::pattern("A1 ? ? ? ? C3 CC CC CC CC CC CC CC CC CC CC A1 ? ? ? ? 85 C0 74 0C 83 78 04 00 74 06");
+    auto uiManager9 = hook::pattern("8B 0D ? ? ? ? 80 79 78 00 75 ? 84 DB");
+    if ((start.empty() && start9.empty()) || (buttonX.empty() && buttonX9.empty()) || (box.empty() && box9.empty()) || (uiManager.empty() && uiManager9.empty()))
+        return;
+
+    auto engine = hook::pattern("83 3D ? ? ? ? 00 75 09 A1 ? ? ? ? 85 C0 75 05 A1 ? ? ? ? C3");
+    auto solo = hook::pattern("53 53 53 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 88 5D ? C7 45 ? 01 00 00 00 C7 45 ? 06 00 00 00 E8 ? ? ? ? 83 C4 18 50 8D 8D ? ? ? ? E8");
+    auto lobbyTick = hook::pattern("8B 86 AC 02 00 00 83 E8 02 74 ? 83 E8 03 74 05 83 E8 04");
+    auto viewportController = hook::pattern("55 8B EC A1 ? ? ? ? 56 8B F0 83 F8 FF 74 ? 83 3C 85 ? ? ? ? 00 74 ? 8B 4D 08 8B 11 50 8B 82 A4 00 00 00 FF D0");
+    auto exitRequest = hook::pattern("8B 90 84 02 00 00 51 8B CE FF D2 85 C0 75 ? 5F C7 05");
+    auto enter = hook::pattern("55 8B EC 83 EC 14 56 57 8B F1 E8 ? ? ? ? 8B 06 8B 90 68 02 00 00 6A 00 8B CE FF D2");
+    auto xinputPad = hook::pattern("83 F8 FF 0F 84 ? ? ? ? 83 3C 85 ? ? ? ? 00 0F 84 ? ? ? ? 83 3D ? ? ? ? 00");
+    auto keyboardMode = hook::pattern("55 8B EC E8 ? ? ? ? 8B 10 8B C8 8B 82 F0 01 00 00 FF D0 85 C0 74 09 8B C8 E8 ? ? ? ? EB 02 33 C0 8B 4D 08 85 C9 74 37 85 C0 74 33");
+    auto resourceDB = hook::pattern("A1 ? ? ? ? 8B 48 10 85 C9 74 0A E8 ? ? ? ? A1 ? ? ? ? 56 8B F0 85 C0 74 10 8B C8 E8");
+    auto createJob = hook::pattern("C7 45 D8 00 02 00 00 C7 45 DC 00 01 00 00 C7 45 F8 01 01 00 01 E8");
+    auto destroyJobs = hook::pattern("A1 ? ? ? ? 56 50 E8 ? ? ? ? 83 C4 04 33 F6 8B 0D ? ? ? ? 8B 14 0E 52 E8");
+    auto prepareView = hook::pattern("8B 07 89 82 6C 02 00 00 8B 0E 8B 41 14 8A 90 E9 01 00 00");
+    auto renderView = hook::pattern("55 8B EC 83 EC 08 A1 ? ? ? ? 33 C5 89 45 FC 57 8B F9 8B 87 FC 20 00 00 83 B8 6C 02 00 00 FF 0F 84");
+    auto guest = hook::pattern("8B 0D ? ? ? ? 8B 49 2C E8 ? ? ? ? EB 15");
+    auto primary = hook::pattern("55 8B EC 8B 0D ? ? ? ? 85 C9 74 09 E8 ? ? ? ? 84 C0 75 1E E8");
+    auto bindings = hook::pattern("55 8B EC 56 8B F1 8B 86 B8 26 00 00 85 C0 74 21 8B 40 48 85 C0 74 1A F3 0F 10 45 10 8B 55 08 51");
+    auto hudViewport = hook::pattern("55 8B EC 83 EC 10 89 4D F0 C7 45 FC 00 00 00 00 8B 45 F0 83 B8 5C 02 00 00 00 74 3D");
+    auto sceneTicks = hook::pattern("55 8B EC 8B 01 F3 0F 10 45 0C 8B 90 60 01 00 00 51 F3 0F 11 04 24 FF D2 B0 01 5D C2 08 00");
+    auto controllerTick = hook::pattern("75 28 83 3D ? ? ? ? 00 75 1F 8B 86 D8 04 00 00 F6 40 28 04");
+    auto pawnTick = hook::pattern("55 8B EC F3 0F 10 45 08 83 EC 08 80 3D ? ? ? ? 00 56 8B F1 F3 0F 10 96 08 0C 00 00");
+    auto cameraUpdate = hook::pattern("89 96 84 06 00 00 83 3D ? ? ? ? 00 74 0E 8B 46 1C 8B 80 74 03 00 00 C1 E8 1A");
+    auto keyboardModeOn = hook::pattern("55 8B EC 56 8B 75 08 57 8B F9 85 F6 75 33 39 35 ? ? ? ? 75 0A 8B 0D ? ? ? ? 85 C9 75 06 8B 0D ? ? ? ? 8B 01 8B 90 F0 01 00 00 FF D2");
+    auto gamepadModeOn = hook::pattern("83 3D ? ? ? ? 00 56 8B F1 75 0A 8B 0D ? ? ? ? 85 C9 75 06 8B 0D ? ? ? ? 8B 01 8B 90 F0 01 00 00 FF D2 85 C0 74 16 8B C8 E8");
+    auto repaint = hook::pattern("55 8B EC 83 3D ? ? ? ? 00 56 8B F1 74 12 83 7E 30 00 74 4F 8B 46 18 8B 48 28 8B 45 0C 50 EB 30 8B 46 30 85 C0 74 3C 83 B8 10 03 00 00 00 75 18 80 78 4D 00");
+    auto moveStick = hook::pattern("55 8B EC F3 0F 10 81 6C 03 00 00 83 EC 08 83 3D ? ? ? ? 00 0F 5A C0 F2 0F 59 C0 74 1C F3 0F 10 89 68 03 00 00");
+    auto viewportEvent = hook::pattern("55 8B EC 83 3D ? ? ? ? 00 57 8B F9 74 28 8B 45 1C F3 0F 10 45 14");
+    if (engine.empty() || solo.empty() || lobbyTick.empty() || viewportController.empty() || exitRequest.empty() || enter.empty() || xinputPad.empty() ||
+        keyboardMode.empty() || resourceDB.empty() || createJob.empty() || destroyJobs.empty() || prepareView.empty() || renderView.empty() || guest.empty() || primary.empty() || bindings.empty() || hudViewport.empty() || sceneTicks.empty() ||
+        controllerTick.empty() || pawnTick.empty() || cameraUpdate.empty() || repaint.empty() || moveStick.empty() || keyboardModeOn.empty() || gamepadModeOn.empty() || viewportEvent.empty())
+        return;
+
+    Splitscreen::GetEngine = engine.get_first<uint8_t*()>();
+    if (!start.empty())
+    {
+        Splitscreen::StartPressed = start.get_first<void(__fastcall)(void*, void*)>();
+        Splitscreen::pLastPad = *start.get_first<int32_t*>(4);
+    }
+    else
+    {
+        Splitscreen::StartPressed = start9.get_first<void(__fastcall)(void*, void*)>();
+        Splitscreen::pLastPad = *start9.get_first<int32_t*>(12);
+    }
+    Splitscreen::ButtonX = !buttonX.empty() ? buttonX.get_first<void(__fastcall)(void*, void*)>() : buttonX9.get_first<void(__fastcall)(void*, void*)>();
+    Splitscreen::pUIManager = !uiManager.empty() ? *uiManager.get_first<uint8_t**>(1) : *uiManager9.get_first<uint8_t**>(2);
+    Splitscreen::padIsXInput = *xinputPad.get_first<int32_t*>(12);
+    Splitscreen::pGamepadMode = *xinputPad.get_first<int32_t*>(25);
+    Splitscreen::SetKeyboardMode = keyboardMode.get_first<void(__stdcall)(uint8_t*, int32_t)>();
+    Splitscreen::shKeyboardModeOn = safetyhook::create_inline(keyboardModeOn.get_first(), Splitscreen::KeyboardModeOn);
+    Splitscreen::shGamepadModeOn = safetyhook::create_inline(gamepadModeOn.get_first(), Splitscreen::GamepadModeOn);
+    Splitscreen::pRequestingExit = *exitRequest.get_first<uint32_t*>(18);
+    Splitscreen::pResourceDB = *resourceDB.get_first<uint8_t**>(1);
+    Splitscreen::aoOffset = !box.empty() ? 0x3CC : 0x3C8;
+    Splitscreen::CreateVisibilityJob = reinterpret_cast<decltype(Splitscreen::CreateVisibilityJob)>(branch(createJob.get_first(21)));
+    Splitscreen::pCameraJob = *destroyJobs.get_first<void***>(1);
+    Splitscreen::DestroyVisibilityJob = reinterpret_cast<decltype(Splitscreen::DestroyVisibilityJob)>(branch(destroyJobs.get_first(7)));
+    Splitscreen::pLightJobs = *destroyJobs.get_first<void****>(19);
+    Splitscreen::pLoadoutGlobal = *guest.get_first<uint8_t**>(2);
+    Splitscreen::GetGuestLoadout = reinterpret_cast<decltype(Splitscreen::GetGuestLoadout)>(branch(guest.get_first(9)));
+    Splitscreen::GetHudViewport = hudViewport.get_first<uint8_t*(__fastcall)(void*, void*)>();
+
+    Splitscreen::package = *solo.get_first<const char*>(4);
+    Splitscreen::section = *solo.get_first<const wchar_t*>(14);
+    Splitscreen::Localize = reinterpret_cast<decltype(Splitscreen::Localize)>(branch(solo.get_first(35)));
+    Splitscreen::FStringFromText = reinterpret_cast<decltype(Splitscreen::FStringFromText)>(branch(solo.get_first(50)));
+
+    // the box options at ebp-70h (DX9 ebp-74h)
+    Splitscreen::boxOptions = !box.empty() ? 0x70 : 0x74;
+    static auto LaunchBox = safetyhook::create_mid(!box.empty() ? box.get_first() : box9.get_first(), [](SafetyHookContext& regs)
+    {
+        Splitscreen::LaunchBox(regs.ebp);
+    });
+
+    // a view prepared (its index set from the new view in edi), rendered (renderer in ecx, view parameters +20FCh), the game destroying
+    // its jobs
+    static auto PrepareView = safetyhook::create_mid(prepareView.get_first(8), [](SafetyHookContext& regs)
+    {
+        Splitscreen::SelectVisibilityJobs(*reinterpret_cast<int32_t*>(regs.edi));
+    });
+    static auto RenderView = safetyhook::create_mid(renderView.get_first(), [](SafetyHookContext& regs)
+    {
+        Splitscreen::SelectVisibilityJobs(*reinterpret_cast<int32_t*>(*reinterpret_cast<uint8_t**>(regs.ecx + 0x20FC) + 0x26C));
+    });
+    static auto DestroyJobs = safetyhook::create_mid(destroyJobs.get_first(), [](SafetyHookContext& regs)
+    {
+        Splitscreen::DestroyPlayer2Jobs();
+    });
+
+    static auto LobbyTick = safetyhook::create_mid(lobbyTick.get_first(), [](SafetyHookContext& regs)
+    {
+        Splitscreen::LobbyTick(reinterpret_cast<uint8_t*>(regs.esi));
+    });
+
+    Splitscreen::shViewportInput = safetyhook::create_inline(viewportEvent.get_first(), Splitscreen::ViewportInput);
+
+    static void* sceneTickHandlers[] = { &Splitscreen::SceneTick<0>, &Splitscreen::SceneTick<1>, &Splitscreen::SceneTick<2>, &Splitscreen::SceneTick<3>,
+                                         &Splitscreen::SceneTick<4>, &Splitscreen::SceneTick<5>, &Splitscreen::SceneTick<6>, &Splitscreen::SceneTick<7> };
+    Splitscreen::shSceneTick.resize(std::size(sceneTickHandlers));
+    for (size_t i = 0; i < sceneTicks.size() && i < std::size(sceneTickHandlers); i++)
+        Splitscreen::shSceneTick[i] = safetyhook::create_inline(sceneTicks.get(i).get<void>(), sceneTickHandlers[i]);
+
+    // the calls after the width is doubled
+    for (auto restores : { hook::pattern("8B ? A4 04 00 00 8B ? A0 04 00 00 50 51 03 D2 52 8B CF E8"), hook::pattern("8B ? A0 04 00 00 50 8B ? A4 04 00 00 03 C9 50 51 8B CE E8") })
+    {
+        restores.for_each_result([](hook::pattern_match match)
+        {
+            Splitscreen::resolutionRestores.push_back(match.get<uint8_t>(0x18));
+        });
+    }
+    if (!Splitscreen::resolutionRestores.empty())
+    {
+        auto call = reinterpret_cast<uintptr_t>(Splitscreen::resolutionRestores.front()) - 5;
+        Splitscreen::shRequestResolution = safetyhook::create_inline(reinterpret_cast<void*>(branch(reinterpret_cast<void*>(call))), Splitscreen::RequestResolution);
+    }
+
+    Splitscreen::shDefaultController = safetyhook::create_inline(viewportController.get_first(), Splitscreen::DefaultController);
+    Splitscreen::shEnter = safetyhook::create_inline(enter.get_first(), Splitscreen::Enter);
+    Splitscreen::shIsPrimaryController = safetyhook::create_inline(primary.get_first(), Splitscreen::IsPrimaryController);
+    Splitscreen::shProcessBindings = safetyhook::create_inline(bindings.get_first(), Splitscreen::ProcessBindings);
+    Splitscreen::shControllerTick = safetyhook::create_inline(controllerTick.get_first(-0x15B), Splitscreen::ControllerTick);
+    Splitscreen::shPawnTick = safetyhook::create_inline(pawnTick.get_first(), Splitscreen::PawnTick);
+    Splitscreen::shRepaint = safetyhook::create_inline(repaint.get_first(), Splitscreen::Repaint);
+    Splitscreen::shMoveStick = safetyhook::create_inline(moveStick.get_first(), Splitscreen::MoveStick);
+    Splitscreen::shCameraUpdate = safetyhook::create_inline(cameraUpdate.get_first(-0xAF), Splitscreen::CameraUpdate);
+    Splitscreen::shUpdateInput = safetyhook::create_inline(xinputPad.get_first(-0x74), Splitscreen::UpdateInput);
+    Splitscreen::shXInputGetState = safetyhook::create_inline(getState, Splitscreen::XInputGetStateHook);
+    Splitscreen::shXInputSetState = safetyhook::create_inline(setState, Splitscreen::XInputSetStateHook);
+    Splitscreen::shXInputGetCapabilities = safetyhook::create_inline(getCapabilities, Splitscreen::XInputGetCapabilitiesHook);
+}

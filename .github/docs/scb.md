@@ -21,7 +21,7 @@
 
 ### Display and camera
 
-- **Window modes** — Windowed, borderless and fullscreen list the same resolutions; windowed and borderless windows are centered, the window can be resized and the game remembers it.
+- **Window modes** — Windowed, borderless and fullscreen list the same resolutions; windowed and borderless windows are centered and open in front, the window can be resized and the game remembers it.
 - **Ultrawide** — The HUD and menus stay 16:9 on screens wider or narrower than 16:9 (menus, dialogs and full screen movies get black bars), the 3D view fills the screen.
 - **Letterbox** — On screens narrower than 16:9 (4:3, 16:10), optionally letterbox the 3D view to 16:9.
 - **Frame rate limit** — Set a frame rate limit with `FPSLimit`.
@@ -35,6 +35,7 @@
 - **Loose files** — Load unpacked files from the `update` folder. `DumpPackedFiles` unpacks all .umd archives into an `unpacked` folder next to the exe, its contents can be moved to `update` to run the game from loose files.
 - **RGB lighting** — Support [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html).
 - **Forced walking** — Allow running during forced walking sections.
+- **Split screen co-op** — Restores the console split screen co-op (`[SPLITSCREEN] Enable`), DX11 and DX9: pick a co-op mission in the SMI and choose SPLIT-SCREEN, player 2 joins with START on their gamepad in the lobby and customizes their gear with X (it's saved in the profile). `GamepadPlayer1`/`GamepadPlayer2` assign the gamepads, by default player 1 uses keyboard and mouse only and player 2 the first gamepad while player 2 is in; single player isn't affected. Each player gets their own HUD, button prompts and markers in their half, also on ultrawide screens; player 2 can open and close the pause menu with START, the menu itself is controlled by player 1. Ambient occlusion is turned off while in split screen.
 
 ### Fixes
 

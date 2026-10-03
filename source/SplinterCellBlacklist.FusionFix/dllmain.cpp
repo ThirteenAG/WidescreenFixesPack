@@ -10,6 +10,7 @@ import WidescreenFix;
 import Missions;
 import Unlocks;
 import LED;
+import Splitscreen;
 
 SafetyHookInline shSetProcessAffinityMask{};
 BOOL WINAPI SetProcessAffinityMaskHook(HANDLE hProcess, DWORD_PTR dwProcessAffinityMask)
@@ -69,6 +70,7 @@ void Init()
     InitMissions();
     InitUnlocks();
     InitWidescreenFix();
+    InitSplitscreen();
 
     if (bForceCPUAffinityToAllCores)
         shSetProcessAffinityMask = safetyhook::create_inline(SetProcessAffinityMask, SetProcessAffinityMaskHook);
