@@ -674,25 +674,35 @@ export void InitInput()
     });
 
     // Shooting, the input evaluator states also drive the enemies: esi is the state, its
-    // X_CharacterProperties are at +0xF
+    // X_CharacterProperties are at +0xF. Only guns vibrate.
+    static auto IsPlayerHoldingGun = [](SafetyHookContext& regs)
+    {
+        auto pCharacterProperties = *(uint8_t**)(regs.esi + 0xF);
+        return X_Character::IsPlayerCharacterProperties(pCharacterProperties) && X_CharacterProperties::IsHoldingGun(pCharacterProperties);
+    };
+
+    // X_ActionState_DodgeSpecific, shooting while shootdodging
     pattern = hook::module_pattern(GetModuleHandle(L"X_GameObjectsMFC"), "E8 ? ? ? ? 8B 44 24 ? 50 8B CE E8 ? ? ? ? 5E");
     static auto X_CharacterPropertiessetIsShooting1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        if (X_Character::IsPlayerCharacterProperties(*(uint8_t**)(regs.esi + 0xF)))
+        if (IsPlayerHoldingGun(regs))
             Vibrate(80, std::chrono::milliseconds{ 80 });
     });
 
+    // X_ActionState_WeaponSpecific: ebx is the action, CHARANIM_SHOOTEMPTY for shooting the weapon in
+    // hand, CHARANIM_ATTACKMELEE for secondary attacks (melee, also on an empty clip, and throwing)
+    constexpr uintptr_t ACTION_SHOOT = 430;
     pattern = hook::module_pattern(GetModuleHandle(L"X_GameObjectsMFC"), "E8 ? ? ? ? 8B C8 E8 ? ? ? ? 5E 5B");
     static auto X_CharacterPropertiessetIsShooting2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        if (X_Character::IsPlayerCharacterProperties(*(uint8_t**)(regs.esi + 0xF)))
+        if (regs.ebx == ACTION_SHOOT && IsPlayerHoldingGun(regs))
             Vibrate(80, std::chrono::milliseconds{ 80 });
     });
 
     pattern = hook::module_pattern(GetModuleHandle(L"X_GameObjectsMFC"), "E8 ? ? ? ? 8B C8 E8 ? ? ? ? 53 8B CE E8 ? ? ? ? 5E");
     static auto X_CharacterPropertiessetIsShooting3 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        if (X_Character::IsPlayerCharacterProperties(*(uint8_t**)(regs.esi + 0xF)))
+        if (regs.ebx == ACTION_SHOOT && IsPlayerHoldingGun(regs))
             Vibrate(80, std::chrono::milliseconds{ 80 });
     });
 

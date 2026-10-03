@@ -140,6 +140,28 @@ export namespace X_Character
     }
 }
 
+export namespace X_CharacterProperties
+{
+    enum
+    {
+        CURRENT_WEAPON = 0x92, // the WEAPONID of the weapon in hand
+    };
+
+    // WEAPONIDs from database\weaponid.h. The rest are no weapon and painkillers, the secondary
+    // attacks (melee, molotovs and grenades) have their own.
+    bool IsHoldingGun(uint8_t* _this)
+    {
+        enum
+        {
+            WEAPONID_BERETTA = 1,
+            WEAPONID_DRAGUNOV = 14,
+        };
+
+        auto nWeaponID = *(int32_t*)(_this + CURRENT_WEAPON);
+        return nWeaponID >= WEAPONID_BERETTA && nWeaponID <= WEAPONID_DRAGUNOV;
+    }
+}
+
 export namespace Cinematic
 {
     enum eCutsceneBorders
