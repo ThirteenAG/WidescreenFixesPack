@@ -27,6 +27,15 @@ namespace P_Driver
             UpdateScreenResolution(pDriver[1], pDriver[2]);
         }
     }
+
+    // The game asks for vertical sync whenever it opens a fullscreen mode, which P_D3D turns into
+    // D3DPRESENT_INTERVAL_ONE, and into D3DPRESENT_INTERVAL_IMMEDIATE without it. Windowed modes
+    // never wait for it, like Direct3D 8 always presents there.
+    SafetyHookInline shSetFullscreenMode = {};
+    void __fastcall setFullscreenMode(void* _this, void* edx, HWND hWnd, uint32_t nWidth, uint32_t nHeight, uint32_t nBitDepth, int32_t nBuffering, uint32_t nRefreshRate, const void* pZBufferFormat, bool bFlag, uint32_t nMultisampleType, bool bVSync, bool bLockableBackBuffer)
+    {
+        shSetFullscreenMode.unsafe_fastcall(_this, edx, hWnd, nWidth, nHeight, nBitDepth, nBuffering, nRefreshRate, pZBufferFormat, bFlag, nMultisampleType, false, bLockableBackBuffer);
+    }
 }
 
 export void RefreshScreenResolution()
@@ -297,6 +306,10 @@ export void InitE2MFC()
 
     P_Driver::m_initializedDriver = (void**)GetProcAddress(e2mfc, "?m_initializedDriver@P_Driver@@0PAV1@A");
     P_Driver::clearScreen = (decltype(P_Driver::clearScreen))GetProcAddress(e2mfc, "?clearScreen@P_Driver@@QAEXABUtagRECT@@W4ClearingMode@1@ABVG_Color@@@Z");
+
+    CIniReader iniReader("");
+    if (iniReader.ReadInteger("GRAPHICS", "VSync", 1) == 0)
+        P_Driver::shSetFullscreenMode = safetyhook::create_inline(GetProcAddress(e2mfc, "?setFullscreenMode@P_Driver@@QAEXPAUHWND__@@IIIW4Buffering@1@IPBVP_ZBufferFormat@@_NI33@Z"), P_Driver::setFullscreenMode);
 
     P_Camera::shValidate = safetyhook::create_inline(GetProcAddress(e2mfc, "?validate@P_Camera@@QAEXXZ"), P_Camera::validate);
     P_Camera::shPrepare = safetyhook::create_inline(GetProcAddress(e2mfc, "?prepare@P_Camera@@QAEXXZ"), P_Camera::prepare);
