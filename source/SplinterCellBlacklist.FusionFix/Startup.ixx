@@ -20,9 +20,39 @@ export void InitStartup()
     pattern = hook::pattern("0F 84 ? ? ? ? 56 56 56 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 83 C4 18 50 8D 8D");
     injector::WriteMemory<uint16_t>(pattern.get_first(), 0xE990, true); // jz -> jmp
 
-    // NetOnlineManager::NetOnlineManager
-    pattern = hook::pattern("C7 45 ? ? ? ? ? 8D 64 24 00 53");
-    injector::WriteMemory<uint32_t>(pattern.get_first(3), 4372, true);
+    // NetOnlineManager keeps a pool of NetOverlapped (async network requests, 24h bytes, made in its constructor: 20 of them, free list +E4h,
+    // count +F4h). Every login attempt to the rendezvous server (nsOnlineConnection::StateLoggingInToRdv) takes one and a failed attempt
+    // doesn't give it back: with the servers gone the pool is empty after about 30 minutes and the next attempt gets none, the state reads it
+    // and the game crashes. Taking one from an empty pool now adds a new one first, the game's own way (an online server emulator still works).
+    pattern = hook::pattern("8D 45 ? 50 8D 8E E4 00 00 00 E8 ? ? ? ? FF 4D");
+    if (!pattern.empty() && *pattern.get_first<uint8_t>(-0x57) == 0xE8)
+    {
+        static auto PoolAlloc = reinterpret_cast<void*(__cdecl*)(uint32_t, const char*, int32_t, int32_t, int32_t)>(injector::GetBranchDestination(pattern.get_first(-0x57)).as_int());
+        static auto PushBack = reinterpret_cast<void(__fastcall*)(uint8_t*, void*, void*, void**, void*, void*)>(injector::GetBranchDestination(pattern.get_first(10)).as_int());
+
+        static SafetyHookInline shTakeOverlapped{};
+        struct Overlapped
+        {
+            static void* __fastcall Take(uint8_t* manager, void* edx)
+            {
+                if (*reinterpret_cast<uint32_t*>(manager + 0xF4) == 0)
+                {
+                    if (auto overlapped = PoolAlloc(0x24, "notag", 2, 0, 0))
+                    {
+                        std::memset(overlapped, 0, 0x24);
+                        auto list = manager + 0xE4;
+                        void* position = nullptr;
+                        PushBack(list, nullptr, &position, &overlapped, *reinterpret_cast<void**>(list + 8), list + 8);
+                    }
+                }
+                return shTakeOverlapped.thiscall<void*>(manager);
+            }
+        };
+
+        auto take = hook::pattern("55 8B EC 83 EC 08 56 57 8B F9 33 C0 39 87 F4 00 00 00 76 ? 83 BF F4 00 00 00 00");
+        if (!take.empty())
+            shTakeOverlapped = safetyhook::create_inline(take.get_first(), Overlapped::Take);
+    }
 
     // InitBootVideos
     if (bSkipIntro)
