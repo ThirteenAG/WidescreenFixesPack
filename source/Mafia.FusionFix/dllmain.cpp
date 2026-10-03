@@ -2,10 +2,42 @@
 #include "callargs.h"
 #include <d3d9.h>
 
+import ComVars;
 import PostFX;
+import RestoredFeatures;
+import WidescreenFix;
+
+void CheckCompatibility()
+{
+    std::filesystem::path widescreenASI;
+    if (auto hModule = GetModuleHandleW(L"Mafia.WidescreenFix.asi"))
+        widescreenASI = GetModulePath(hModule);
+    else
+    {
+        auto gamePath = GetExeModulePath();
+        for (const auto& directory : { GetThisModulePath(), gamePath, gamePath / L"scripts", gamePath / L"plugins" })
+        {
+            auto file = directory / L"Mafia.WidescreenFix.asi";
+            std::error_code ec;
+            if (std::filesystem::is_regular_file(file, ec))
+            {
+                widescreenASI = file;
+                break;
+            }
+        }
+    }
+    if (widescreenASI.empty()) return;
+
+    auto message = L"Mafia Fusion Fix now includes the widescreen fix.\n\nDelete Mafia.WidescreenFix.asi and restart the game:\n\n"
+        + widescreenASI.wstring();
+    MessageBoxW(nullptr, message.c_str(), L"Mafia Fusion Fix", MB_OK | MB_ICONWARNING | MB_SETFOREGROUND);
+    TerminateProcess(GetCurrentProcess(), EXIT_FAILURE);
+}
 
 void Init()
 {
+    InitWidescreenFix();
+    RestoredFeatures::InitRadar();
     CIniReader iniReader("");
     bool bWriteSettingsToFile = iniReader.ReadInteger("MAIN", "WriteSettingsToFile", 1) != 0;
 
@@ -55,14 +87,17 @@ HWND WINAPI CreateWindowExAHook(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWi
 
 void InitLS3DF()
 {
+    RestoredFeatures::InitProjectorOpacity();
     CIniReader iniReader("");
 
     if (iniReader.ReadInteger("MAIN", "BorderlessWindowed", 1) != 0)
     {
-        auto pattern = hook::module_pattern(GetModuleHandle(L"LS3DF"), "8B 35 ? ? ? ? 0F 84 ? ? ? ? 8B 3D ? ? ? ? 55 55 55 55");
-        injector::WriteMemory(*pattern.get_first<uint32_t*>(2), GetSystemMetricsHook, true);
-        pattern = hook::module_pattern(GetModuleHandle(L"LS3DF"), "FF 15 ? ? ? ? 3B C5 A3 ? ? ? ? 0F 84 ? ? ? ? 50");
-        injector::WriteMemory(*pattern.get_first<uint32_t*>(2), CreateWindowExAHook, true);
+        auto pattern = hook::module_pattern(GetLS3DF(), "8B 35 ? ? ? ? 0F 84 ? ? ? ? 8B 3D ? ? ? ? 55 55 55 55");
+        if (pattern.size() == 1)
+            injector::WriteMemory(*pattern.get_first<uint32_t*>(2), GetSystemMetricsHook, true);
+        pattern = hook::module_pattern(GetLS3DF(), "FF 15 ? ? ? ? 3B C5 A3 ? ? ? ? 0F 84 ? ? ? ? 50");
+        if (pattern.size() == 1)
+            injector::WriteMemory(*pattern.get_first<uint32_t*>(2), CreateWindowExAHook, true);
     }
 
     // Shadows Z-Fighting
@@ -79,7 +114,9 @@ void InitLS3DF()
 
         for (const auto& p : patterns)
         {
-            auto pattern = hook::module_pattern(GetModuleHandle(L"LS3DF"), p.first);
+            auto pattern = hook::module_pattern(GetLS3DF(), p.first);
+            if (pattern.size() != 1)
+                continue;
             zbiasHooks.emplace_back(safetyhook::create_mid(pattern.get_first(p.second), [](SafetyHookContext& regs)
             {
                 constexpr auto D3DRS_ZBIAS = 47;
@@ -193,9 +230,21 @@ CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
+        CheckCompatibility();
         CallbackHandler::RegisterCallback(Init);
-        CallbackHandler::RegisterCallback(L"LS3DF.dll", InitLS3DF);
-        CallbackHandler::RegisterCallback(L"LS3DF.dll", InitPostFX);
+        CallbackHandler::RegisterCallback(L"rw_data.dll", RestoredFeatures::InitEyeAnimations);
+        for (auto name : { L"LS3DF.dll", L"LSV11.dll", L"LSV10.dll" })
+        {
+            CallbackHandler::RegisterCallback(name, +[]()
+            {
+                static std::once_flag flag;
+                std::call_once(flag, []()
+                {
+                    InitLS3DF();
+                    InitPostFX();
+                });
+            });
+        }
         CallbackHandler::RegisterCallback(L"IJoy.dll", InitIJoy);
     });
 }
