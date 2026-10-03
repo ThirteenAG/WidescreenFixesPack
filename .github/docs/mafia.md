@@ -27,7 +27,7 @@
 
 - **Eye Animations** - restores the original character models with moving eyes from `A2.dta`, bypassing their static-eyed replacements in `A8.dta`; loose replacement models remain supported
 - **Car Scratches** - restores the original 1.0 scratch opacity on 1.1 and 1.2, while retaining native 1.0 behavior
-- **Radar Map** - draws the PC city map inside the radar, as on Xbox, with a smooth circular mask and native radar blips
+- **Radar Map** - draws the PC city map inside the radar with a smooth circular mask, Xbox-sized car footprints and smooth speed-based zoom. Zooms out between 0 and 60 km/h (about 37 mph), doubling the visible world range; the map and blips scale together with resolution
 - **Free Camera** - optional free car camera controlled by mouse or right stick. While aiming and shooting, the view rotates independently from the current orbit position, retaining native camera collision and weapon targeting. Enable `FreeCamera` in `[CAMERA]`; uses the game's look bindings, sensitivity, inversion and stick deadzones. Automatic return delay and speed are configurable
 - **Draw Distance** - increases the draw distance; the new distance and the skip ranges are configurable in `Mafia.FusionFix.ini`
 - **FPS Limit** - caps the frame rate via the `FPSLimit` option in `Mafia.FusionFix.ini`

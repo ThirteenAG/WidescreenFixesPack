@@ -115,10 +115,61 @@ namespace RestoredFeatures
 
     struct RadarLayout
     {
-        size_t texture, scale, matrix, origin, dimensions, center;
+        size_t texture, scale, matrix, origin, dimensions, center, speed;
     };
     static RadarLayout radar;
     static void** graphics;
+    static SafetyHookInline radarUpdateHook, radarDrawHook;
+
+    float GetRadarZoom(uintptr_t hud)
+    {
+        float zoom = Field<float>(hud, radar.scale);
+        // The PC HUD reset initializes this to 0.9. Xbox clamps it to 0.6
+        // before drawing; retain an unscaled value between HUD updates.
+        return std::isfinite(zoom) ? std::clamp(zoom, 0.3f, 0.6f) : 0.6f;
+    }
+
+    void UpdateRadarZoom(uintptr_t hud, uint32_t elapsed)
+    {
+        if (!(Field<uint32_t>(hud, radar.texture + 20) & 0x80000)) return;
+        float target = 0.6f;
+        float speed = Field<float>(hud, radar.speed); // native speedometer value, km/h
+        if (Field<uintptr_t>(hud, radar.scale - 24) && std::isfinite(speed))
+            target -= speed * (1.0f / 60.0f) * 0.3f;
+        // Xbox HUD update 0x14C100: interpolate at 4/sec, then clamp. Keep
+        // the target unclamped, including above 60 km/h, as in the original.
+        float blend = std::min(elapsed * 0.001f * 4.0f, 1.0f);
+        Field<float>(hud, radar.scale) = std::clamp((1.0f - blend) * GetRadarZoom(hud) + blend * target, 0.3f, 0.6f);
+    }
+
+    uint32_t __fastcall UpdateRadar(uintptr_t hud, void*, uint32_t elapsed)
+    {
+        auto result = radarUpdateHook.thiscall<uint32_t>(hud, elapsed);
+        UpdateRadarZoom(hud, elapsed);
+        return result;
+    }
+
+    uint32_t __fastcall DrawRadar(uintptr_t hud, void*)
+    {
+        float zoom = GetRadarZoom(hud);
+        // Xbox initializes its renderer to 640x480. Its 0.3..0.6 projection
+        // is in pixels, so scale it with HUD height on PC. All native blips
+        // and the map read the same field during this draw. Restore it after
+        // drawing so repeated draws/resolution changes cannot compound zoom.
+        Field<float>(hud, radar.scale) = zoom * Screen.fHeight / 480.0f;
+        auto result = radarDrawHook.thiscall<uint32_t>(hud);
+        Field<float>(hud, radar.scale) = zoom;
+        return result;
+    }
+
+    void ScaleRadarBlip(SafetyHookContext& regs)
+    {
+        // Xbox HUD 0x142900 enlarges all eight local bounding-box corners
+        // before applying the car/model matrix. Scaling screen coordinates
+        // would also move blips away from their actual positions.
+        auto vertex = reinterpret_cast<float*>(regs.esi);
+        for (size_t i = 0; i < 3; ++i) vertex[i] *= 3.0f;
+    }
 
     struct RadarVertex
     {
@@ -300,20 +351,43 @@ namespace RestoredFeatures
         auto newer = find_pattern("A1 ? ? ? ? 6A 01 6A 0C 50 8B 10 FF 52 44 8B 9D 9C 44 00 00 8B 85 A0 44 00 00");
         if (old.size() + newer.size() != 1)
             return;
+        auto pDraw = find_pattern("A1 ? ? ? ? 81 EC ? ? ? ? 53 55 56 57 33 FF 8B E9 8B 08 6A 01 57 50 FF 51 44");
+        auto pUpdate = find_pattern("83 EC 24 53 55 56 57 8B 7C 24 38 33 DB 89 7C 24 2C 89 5C 24 30 DF 6C 24 2C 8B E9");
+        auto pCars = find_pattern("D9 85 ? ? ? ? D9 E0 D9 5C 24 ? D9 85 ? ? ? ? 8D 8C 24 ? ? ? ? 8D 54 24 ? 51 52");
+        auto pModels = find_pattern<2>(
+            "D9 85 ? ? ? ? D9 E0 D9 5C 24 ? D9 85 ? ? ? ? 8D 94 24 ? ? ? ? 8D 44 24 ? 52 50 D9 5C 24 ? 56 E8",
+            "D9 85 ? ? ? ? D9 E0 D9 5C 24 ? D9 85 ? ? ? ? 8D 94 24 ? ? ? ? 8D 84 24 ? ? ? ? 52 50 D9 5C 24 ? 56 E8");
+        if (pDraw.size() != 1 || pUpdate.size() != 1 || pCars.size() != 1 || pModels.size() != 2)
+            return;
         void* target;
         if (old.size() == 1)
         {
-            radar = { 37008, 38072, 0xAF4, 0x18, 0x4C, 0x64 };
+            radar = { 37008, 38072, 0xAF4, 0x18, 0x4C, 0x64, 37228 };
             graphics = *old.get_first<void**>(1);
             target = old.get_first(15);
         }
         else
         {
-            radar = { 16528, 17600, 0xB04, 0x20, 0x6C, 0x74 };
+            radar = { 16528, 17600, 0xB04, 0x20, 0x6C, 0x74, 16756 };
             graphics = *newer.get_first<void**>(1);
             target = newer.get_first(15);
         }
-        static SafetyHookMid hook = safetyhook::create_mid(target, DrawRadarMap);
+        // The second model sequence is a redundant legacy transform before
+        // the player marker. Only enlarge the actual model-list footprints.
+        radarUpdateHook = safetyhook::create_inline(pUpdate.get_first(), UpdateRadar);
+        radarDrawHook = safetyhook::create_inline(pDraw.get_first(), DrawRadar);
+        static auto CarsHook = safetyhook::create_mid(pCars.get_first(), ScaleRadarBlip);
+        static auto ModelsHook = safetyhook::create_mid(pModels.get(0).get<void>(), ScaleRadarBlip);
+        static auto MapHook = safetyhook::create_mid(target, DrawRadarMap);
+        if (!radarUpdateHook || !radarDrawHook || !CarsHook || !ModelsHook || !MapHook)
+        {
+            MapHook.reset();
+            ModelsHook.reset();
+            CarsHook.reset();
+            radarDrawHook.reset();
+            radarUpdateHook.reset();
+            return;
+        }
         auto pMask = find_pattern(
             "8B 10 51 50 FF 52 0C A1 ? ? ? ? 8D 8C 24 8C 00 00 00 6A 01 51 8B 10 6A 02 6A 05 50 FF 52 58 D9 44 24 ? D8 05",
             "8B 10 51 50 FF 52 0C A1 ? ? ? ? 8D 4C 24 7C 6A 01 51 8B 10 6A 02 6A 05 50 FF 52 58 D9 44 24 ? D8 05");
