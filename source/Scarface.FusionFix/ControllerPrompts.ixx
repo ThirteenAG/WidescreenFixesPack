@@ -353,11 +353,22 @@ export namespace ControllerPrompts
         if(!font || pattern.size()!=1)return;
         auto lookup=pattern.get_first();
         pattern=hook::pattern("55 8B 6C 24 08 56 57 BF ? ? ? ? 8B F5 B9 01 00 00 00 33 C0 F3 A6"); // 0x6783A0
+        if(pattern.empty())
+            pattern=hook::pattern("55 8B 6C 24 08 56 57 E9 ? ? ? ? 8B F5 B9 01 00 00 00 33 C0 F3 A6"); // Scarface2: 0x6783A0, protected MOV EDI.
         if(pattern.size()!=1)return;
         lookupText=reinterpret_cast<decltype(lookupText)>(pattern.get_first());
         pattern=hook::pattern("83 3D ? ? ? ? 00 55 8B E9 74 ? 83 3D ? ? ? ? 00 74 ? 53 8B 1D"); // 0x42EC60 + 14
-        if(pattern.size()!=1)return;
-        controllerDescription=*pattern.get_first<uintptr_t*>(14);
+        if(pattern.size()==1)
+            controllerDescription=*pattern.get_first<uintptr_t*>(14);
+        else if(pattern.empty())
+        {
+            // Find the same description through logical-to-device binding lookup;
+            // Scarface2 protects the original getter's entry instructions.
+            pattern=hook::pattern("8B 0D ? ? ? ? 8B 49 04 8D 04 7F 03 C0 8B 94 00 ? ? ? ? 8B 14 91 03 C0 8B 80 ? ? ? ? 89 54 24 18"); // Scarface2: 0x42EC25 + 2.
+            if(pattern.size()!=1)return;
+            controllerDescription=*pattern.get_first<uintptr_t*>(2);
+        }
+        else return;
         for(unsigned i=0;i<std::size(tokens);++i)tokens[i].marker[0]=markerBase+wchar_t(i);
         bindingPhysical.fill(-1);
         auto slot=[font](unsigned i){return injector::ReadMemory<void*>(font+i*sizeof(void*),true);};
