@@ -10,6 +10,7 @@ import x_modesmfc;
 import sndmfc;
 import x_inputmfc;
 import xidi;
+import PostFX;
 
 SafetyHookInline shsub_404B20 = {};
 int __fastcall sub_404B20(int* CWnd, void* edx, char a2)
@@ -216,6 +217,8 @@ void Init()
     injector::MakeCALL(pattern.get_first(36), ClampCursorBottom, true);
     injector::MakeCALL(pattern.get_first(47), ClampCursorTop, true);
 
+    InitPostFX();
+
     // Post-processing (pain and bullet time): the scene is warped with a grid covering the render target
     pattern = hook::pattern("8B 8E 9C 00 00 00 52 68 ? ? ? ? E8");
     static auto PostProcessWarpHook = safetyhook::create_mid(pattern.get_first(12), [](SafetyHookContext& regs) //0x47AB87
@@ -246,8 +249,8 @@ CEXP void InitializeASI()
         CallbackHandler::RegisterCallback(L"X_GameObjectsMFC.dll", InitX_GameObjectsMFC);
         CallbackHandler::RegisterCallback(L"X_ModesMFC.dll", InitX_ModesMFC);
         CallbackHandler::RegisterCallback(L"X_HelpersMFC.dll", InitX_HelpersMFC);
-        CallbackHandler::RegisterCallback(L"E2_D3D8_DRIVER_MFC.dll", InitE2_D3D8_DRIVER_MFC);
-        CallbackHandler::RegisterModuleUnloadCallback(L"E2_D3D8_DRIVER_MFC.dll", []() { BorderlessWindowedHook.reset(); shDllMainHook.reset(); });
+        CallbackHandler::RegisterCallback(L"E2_D3D8_DRIVER_MFC.dll", []() { InitE2_D3D8_DRIVER_MFC(); InitPostFXDriver(); });
+        CallbackHandler::RegisterModuleUnloadCallback(L"E2_D3D8_DRIVER_MFC.dll", []() { BorderlessWindowedHook.reset(); shDllMainHook.reset(); ShutdownPostFXDriver(); });
         CallbackHandler::RegisterCallback(L"X_BasicModesMFC.dll", InitX_BasicModesMFC);
         CallbackHandler::RegisterCallback(L"sndmfc.dll", InitSNDMFC);
         CallbackHandler::RegisterCallback(L"X_Inputmfc.dll", InitInput);

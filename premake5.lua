@@ -423,11 +423,13 @@ project "MaxPayne.MSVCP60Wrapper"
    files { "source/%{prj.name}/MemoryModule.h", "source/%{prj.name}/MemoryModule.c" }
 project "MaxPayne.WidescreenFix"
    dependson { "MaxPayne.MSVCP60Wrapper" }
+   add_postfx()
    debugargs { "-skipstartup -window -developer -screenshot -nodialog" }
    linkoptions { "/SAFESEH:NO" }
    libdirs { "includes/minidx8" }
    setpaths("MAX_PAYNE_DIR", "MaxPayne.exe")
 project "MaxPayne2.WidescreenFix"
+   add_postfx()
    debugargs { "-skipstartup -developer -window -nodialog" }
    linkoptions { "/SAFESEH:NO" }
    libdirs { "includes/minidx8" }

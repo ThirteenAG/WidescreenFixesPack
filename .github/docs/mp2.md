@@ -20,6 +20,8 @@
 ## Options
 
 - **Field of view** — Adjust the FOV multiplier in the INI file.
+- **Xbox 360 Gamma** — A custom gamma curve that produces a higher-contrast image with deeper colors, similar to GTA IV on the Xbox 360. Requires d3d8to9, which the bundled dxwrapper enables (`D3d8to9 = 1`).
+- **SMAA** — Enhanced subpixel morphological antialiasing as a post-processing effect. Requires d3d8to9 like the gamma curve; turns itself off with MSAA.
 - **Graphic novels** — Toggle fullscreen graphic novels with the configured hotkey (F2 by default). In fullscreen, whole pages are shown as large as the screen allows and the playback controls appear while the mouse cursor is at the bottom of the screen; the keyboard navigates pages too. The cursor stays hidden until the mouse moves.
 - **Cutscene borders** — In-engine cutscenes keep their original framing at any aspect ratio; choose letterbox borders, pillarbox borders, both, or none. Borders slide in and out.
 - **Startup save** — Automatically load a selected, most recent, or last-used save on startup.

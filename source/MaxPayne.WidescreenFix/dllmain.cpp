@@ -5,6 +5,7 @@ import e2mfc;
 import e2_d3d8_driver_mfc;
 import input;
 import xidi;
+import PostFX;
 
 SafetyHookInline shsub_40D040 = {};
 int __fastcall sub_40D040(int* CWnd, void* edx, char a2)
@@ -705,6 +706,8 @@ void Init()
         AdaptiveDifficulty::Track(MaxPayne_GameMode::pInstance);
     });
 
+    InitPostFX();
+
     pattern = hook::pattern("6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 81 EC 14 02 00 00 53 55 33 DB 56 57 8B E9"); // MaxPayne_GameMode::load
     AdaptiveDifficulty::shLoad = safetyhook::create_inline(pattern.get_first(), AdaptiveDifficulty::load); //0x454230
 
@@ -851,8 +854,8 @@ CEXP void InitializeASI()
         ReadSettings();
         CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("0F 84 ? ? ? ? E8 ? ? ? ? 8B 48 04 68 ? ? ? ? 56 89"));
         CallbackHandler::RegisterCallback(L"E2MFC.dll", InitE2MFC);
-        CallbackHandler::RegisterCallback(L"E2_D3D8_DRIVER_MFC.dll", InitE2_D3D8_DRIVER_MFC);
-        CallbackHandler::RegisterModuleUnloadCallback(L"E2_D3D8_DRIVER_MFC.dll", []() { BorderlessWindowedHook.reset(); shDllMainHook.reset(); });
+        CallbackHandler::RegisterCallback(L"E2_D3D8_DRIVER_MFC.dll", []() { InitE2_D3D8_DRIVER_MFC(); InitPostFXDriver(); });
+        CallbackHandler::RegisterModuleUnloadCallback(L"E2_D3D8_DRIVER_MFC.dll", []() { BorderlessWindowedHook.reset(); shDllMainHook.reset(); ShutdownPostFXDriver(); });
         CallbackHandler::RegisterCallback(L"Xidi.32.dll", InitXidi);
     });
 }

@@ -631,4 +631,14 @@ public:
         // the reset, so there is nothing to reset here.
         bBackBufferInfoDirty = true;
     }
+
+    // For games that release their device and create a new one (Max Payne
+    // on video mode changes): unlike a reset, this also drops the managed
+    // SMAA lookup textures, which belong to the old device.
+    static void ReleaseDevice()
+    {
+        Shutdown();
+        SafeRelease(pAreaTex);
+        SafeRelease(pSearchTex);
+    }
 };
