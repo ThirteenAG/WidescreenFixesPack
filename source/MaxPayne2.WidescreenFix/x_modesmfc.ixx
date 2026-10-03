@@ -50,7 +50,7 @@ namespace X_ModeSwitch
             pPrevActiveMode = pActiveMode;
             CurrentGameMode = GetModeName(pActiveMode);
             if (CurrentGameMode != "graphicnovel")
-                MaxPayne_GraphicNovelPage::pCamera = nullptr;
+                MaxPayne_GraphicNovelPage::Reset();
         }
 
         auto profile = eGamepadProfile::Menu;
@@ -61,10 +61,13 @@ namespace X_ModeSwitch
         if (X_Crosshair::sm_bCameraPathRunning.is_initialized() && !X_Crosshair::sm_bCameraPathRunning)
             Screen.bDrawBordersForCameraOverlay = false;
 
+        if (CurrentGameMode == "graphicnovel")
+            MaxPayne_GraphicNovelPage::Update();
+
         // graphic novels in their original framing have borders around the 4:3 page
         UpdateCursorBounds(CurrentGameMode != "graphicnovel" || !Screen.bGraphicNovelMode);
 
-        // Graphic novels: key toggles between the original framing and a page that fills the screen width
+        // Graphic novels: key toggles between the original framing and the whole page as large as the screen allows
         static bool bWasPressed = false;
         if (CurrentGameMode != "graphicnovel")
         {
@@ -97,8 +100,8 @@ namespace X_ModeSwitch
             if (nWidth > 0)
                 DrawPillarboxBars(nWidth, nWidth);
 
-            // the scope overlay covers the 4:3 area
-            if (MP_GameMode::IsSniperScopeOn())
+            // the scope overlay covers the 4:3 area, unless the widescreen HUD fills the screen around it
+            if (MP_GameMode::IsSniperScopeOn() && !IsSniperScopeFilled())
                 Draw4by3Borders(1);
         }
 

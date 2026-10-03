@@ -205,11 +205,9 @@ void Init()
             MaxPayne_HUDFadeLayer::pSprite = *(uint8_t**)(regs.ecx + 0xAD);
     });
 
-    // Graphic novels: key toggles between the original framing and a page that fills the screen width
-    pattern = hook::pattern("8B 46 6F 50 8B CF FF 15"); // camera setup when the page changes
-    P_Camera::setFOV = **pattern.get_first<decltype(P_Camera::setFOV)*>(8);
-    injector::MakeCALL(pattern.get_first(6), MaxPayne_GraphicNovelPage::setFOV, true); //0x48630F
-    injector::MakeNOP(pattern.get_first(11), 1, true);
+    // Graphic novels: key toggles between the original framing and the whole page as large as the screen allows
+    pattern = hook::pattern("56 57 8B F1 E8 ? ? ? ? 8B 7C 24 0C 8D 46 37 50 8D 4F 38 E8"); // MaxPayne_GraphicNovelPage::show
+    MaxPayne_GraphicNovelPage::shShow = safetyhook::create_inline(pattern.get_first(), MaxPayne_GraphicNovelPage::show); //0x4862D0
 
     // Graphic novel cursor bounds, see UpdateCursorBounds
     pattern = hook::pattern("52 68 00 00 20 44 E8 ? ? ? ? 51 D9 1C 24 6A 00 E8 ? ? ? ? D9 5C 24 ? 8B 44 24 ? 50 68 00 00 F0 43 E8 ? ? ? ? 51 D9 1C 24 6A 00 E8"); // MP_GraphicNovelMode::update

@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include <unordered_set>
 
 export module e2mfc;
 
@@ -97,27 +98,196 @@ namespace P_Camera
     }
 }
 
+// Widescreen HUD. hud.txt places every HUD element in the 640x480 area, which stays centered on
+// wider screens. The elements of the blocks below belong to a screen edge and are drawn that much
+// closer to it. Their P_Sprite and P_Text objects are told apart by the hud.txt block
+// MaxPayne_HUDMode creates them in.
+namespace WidescreenHud
+{
+    // Blocks from the top of hud.txt and the screen edge their elements belong to, -1 left, 1 right.
+    // The rest stays centered: WeaponInventory, Inventory/PauseSlot, LookAt and Weapons/Overlay (sniper scope).
+    constexpr std::pair<std::string_view, float> Anchors[] =
+    {
+        { "Health", -1.0f },
+        { "SlowMotion", -1.0f },
+        { "PrintTip", -1.0f },
+        { "Objectives", -1.0f },
+        { "Weapons/Painkiller", -1.0f },
+        { "Print", 1.0f },
+        { "Inventory/Slot0", 1.0f },
+        { "Inventory/Slot1", 1.0f },
+        { "Inventory/Slot2", 1.0f },
+        { "TimedMode", 1.0f },
+        { "Weapons/AmmoInClipsText", 1.0f },
+        { "Weapons/AmmoInPocketText", 1.0f },
+        { "Weapons/ActiveWeapon", 1.0f },
+    };
+
+    // The R_Script reading hud.txt, while it exists
+    uint8_t* pScript = nullptr;
+
+    // P_Sprite and P_Text objects of anchored elements, with their edge
+    std::unordered_map<uint8_t*, float> Elements;
+
+    // P_Sprite objects the sniper scope is made of
+    std::unordered_set<uint8_t*> ScopePieces;
+
+    // The blocks the script is in, like "Weapons/Painkiller/AmountText". R_Script keeps the current
+    // one at +4, a block has its name at +0 and its parent at +0x14, up to the block of the file itself.
+    std::string GetPath()
+    {
+        std::string Path;
+        for (auto pBlock = *(uint8_t**)(pScript + 4); pBlock && *(uint8_t**)(pBlock + 0x14); pBlock = *(uint8_t**)(pBlock + 0x14))
+        {
+            std::string Name = *(const char**)pBlock;
+            Path = Path.empty() ? Name : Name + '/' + Path;
+        }
+        return Path;
+    }
+
+    // Whether the path is the block or inside it, ignoring case like R_Script
+    bool IsIn(std::string_view Path, std::string_view Block)
+    {
+        return Path.size() >= Block.size() && _strnicmp(Path.data(), Block.data(), Block.size()) == 0 && (Path.size() == Block.size() || Path[Block.size()] == '/');
+    }
+
+    // Called for every P_Sprite and P_Text constructed
+    void Register(uint8_t* pObject)
+    {
+        if (!pScript)
+            return;
+
+        auto Path = GetPath();
+        if (IsIn(Path, "Weapons/Overlay"))
+        {
+            ScopePieces.insert(pObject);
+            return;
+        }
+
+        for (auto& [Block, fDirection] : Anchors)
+        {
+            if (IsIn(Path, Block))
+            {
+                Elements[pObject] = fDirection;
+                return;
+            }
+        }
+    }
+
+    // Called for every P_Sprite and P_Text destroyed
+    void Unregister(uint8_t* pObject)
+    {
+        if (!Elements.empty())
+            Elements.erase(pObject);
+        if (!ScopePieces.empty())
+            ScopePieces.erase(pObject);
+    }
+
+    // How far the object is moved while it's drawn, in 640x480 virtual units
+    float GetOffset(uint8_t* pObject)
+    {
+        if (Elements.empty() || Screen.fWidescreenHudOffset == 0.0f)
+            return 0.0f;
+
+        auto it = Elements.find(pObject);
+        return it != Elements.end() ? it->second * Screen.fWidescreenHudOffset : 0.0f;
+    }
+
+    // Runs executeAlways of a P_Sprite or P_Text with the object moved, nPositionX is where its
+    // screen position is
+    template<typename Fn>
+    bool ExecuteMoved(uint8_t* pObject, ptrdiff_t nPositionX, Fn&& fnExecuteAlways)
+    {
+        float fOffset = GetOffset(pObject);
+        if (fOffset == 0.0f)
+            return fnExecuteAlways();
+
+        auto& fPositionX = *(float*)(pObject + nPositionX);
+        float fOriginalX = fPositionX;
+        fPositionX = fOriginalX + fOffset;
+        bool bResult = fnExecuteAlways();
+        fPositionX = fOriginalX;
+        return bResult;
+    }
+}
+
+namespace R_Script
+{
+    SafetyHookInline shConstructor = {};
+    uint8_t* __fastcall constructor(uint8_t* _this, void* edx, const char* szFileName)
+    {
+        auto pResult = shConstructor.unsafe_fastcall<uint8_t*>(_this, edx, szFileName);
+        if (szFileName && _stricmp(szFileName, "hud.txt") == 0)
+            WidescreenHud::pScript = _this;
+        return pResult;
+    }
+
+    SafetyHookInline shDestructor = {};
+    void __fastcall destructor(uint8_t* _this, void* edx)
+    {
+        if (_this == WidescreenHud::pScript)
+            WidescreenHud::pScript = nullptr;
+        shDestructor.unsafe_fastcall(_this, edx);
+    }
+}
+
 // P_BaseObject::executeHierarchy only draws objects whose executeAlways returns true, this is how
-// the graphic novel cursor and controls are hidden
+// the graphic novel cursor and controls are hidden. executeAlways also places the object around
+// its screen position, the widescreen HUD moves that position for the call.
 namespace P_Sprite
 {
+    SafetyHookInline shConstructor = {};
+    uint8_t* __fastcall constructor(uint8_t* _this, void* edx, void* pMaterial, float fWidth, float fHeight, uint32_t nReferencePoint)
+    {
+        auto pResult = shConstructor.unsafe_fastcall<uint8_t*>(_this, edx, pMaterial, fWidth, fHeight, nReferencePoint);
+        WidescreenHud::Register(_this);
+        return pResult;
+    }
+
+    SafetyHookInline shDestructor = {};
+    void __fastcall destructor(uint8_t* _this, void* edx)
+    {
+        WidescreenHud::Unregister(_this);
+        shDestructor.unsafe_fastcall(_this, edx);
+    }
+
     SafetyHookInline shExecuteAlways = {};
     bool __fastcall executeAlways(uint8_t* _this, void* edx)
     {
         if (MaxPayne_GraphicNovelMode::IsSpriteHidden(_this))
             return false;
-        return shExecuteAlways.unsafe_fastcall<bool>(_this, edx);
+        return WidescreenHud::ExecuteMoved(_this, SCREEN_POSITION_X, [&] { return shExecuteAlways.unsafe_fastcall<bool>(_this, edx); });
     }
 }
 
 namespace P_Text
 {
+    enum
+    {
+        POSITION_X = 0x16C, // of the reference point, in 640x480 virtual units
+    };
+
+    SafetyHookInline shConstructor = {};
+    uint8_t* __fastcall constructor(uint8_t* _this, void* edx, void* pFont, uint32_t nReferencePoint)
+    {
+        auto pResult = shConstructor.unsafe_fastcall<uint8_t*>(_this, edx, pFont, nReferencePoint);
+        WidescreenHud::Register(_this);
+        return pResult;
+    }
+
+    SafetyHookInline shDestructor = {};
+    void __fastcall destructor(uint8_t* _this, void* edx)
+    {
+        WidescreenHud::Unregister(_this);
+        shDestructor.unsafe_fastcall(_this, edx);
+    }
+
     SafetyHookInline shExecuteAlways = {};
     bool __fastcall executeAlways(uint8_t* _this, void* edx)
     {
         if (MaxPayne_GraphicNovelMode::IsTextHidden(_this))
             return false;
-        return shExecuteAlways.unsafe_fastcall<bool>(_this, edx);
+        return WidescreenHud::ExecuteMoved(_this, POSITION_X, [&] { return shExecuteAlways.unsafe_fastcall<bool>(_this, edx); });
     }
 }
 
@@ -130,11 +300,22 @@ export void InitE2MFC()
 
     P_Camera::shValidate = safetyhook::create_inline(GetProcAddress(e2mfc, "?validate@P_Camera@@QAEXXZ"), P_Camera::validate);
     P_Camera::shPrepare = safetyhook::create_inline(GetProcAddress(e2mfc, "?prepare@P_Camera@@QAEXXZ"), P_Camera::prepare);
+    P_BaseObject::invalidateMatrices = (decltype(P_BaseObject::invalidateMatrices))GetProcAddress(e2mfc, "?invalidateMatrices@P_BaseObject@@IAEXXZ");
+    P_BaseObject::calculateObjectToWorldMatrix = (decltype(P_BaseObject::calculateObjectToWorldMatrix))GetProcAddress(e2mfc, "?calculateObjectToWorldMatrix@P_BaseObject@@IAEXXZ");
 
     P_Sprite::shExecuteAlways = safetyhook::create_inline(GetProcAddress(e2mfc, "?executeAlways@P_Sprite@@UAE_NXZ"), P_Sprite::executeAlways);
     P_Text::shExecuteAlways = safetyhook::create_inline(GetProcAddress(e2mfc, "?executeAlways@P_Text@@MAE_NXZ"), P_Text::executeAlways);
 
-    // Hud
+    // Widescreen HUD, see WidescreenHud. rlmfc is loaded before e2mfc, which imports it.
+    auto rlmfc = GetModuleHandle(L"rlmfc");
+    R_Script::shConstructor = safetyhook::create_inline(GetProcAddress(rlmfc, "??0R_Script@@QAE@PBD@Z"), R_Script::constructor);
+    R_Script::shDestructor = safetyhook::create_inline(GetProcAddress(rlmfc, "??1R_Script@@QAE@XZ"), R_Script::destructor);
+    P_Sprite::shConstructor = safetyhook::create_inline(GetProcAddress(e2mfc, "??0P_Sprite@@QAE@PAVP_Material@@MMW4ReferencePoint@P_BitmapInterface@@@Z"), P_Sprite::constructor);
+    P_Sprite::shDestructor = safetyhook::create_inline(GetProcAddress(e2mfc, "??1P_Sprite@@UAE@XZ"), P_Sprite::destructor);
+    P_Text::shConstructor = safetyhook::create_inline(GetProcAddress(e2mfc, "??0P_Text@@QAE@PAVP_Font@@W4ReferencePoint@0@@Z"), P_Text::constructor);
+    P_Text::shDestructor = safetyhook::create_inline(GetProcAddress(e2mfc, "??1P_Text@@UAE@XZ"), P_Text::destructor);
+
+    // Fades and the sniper scope, in P_Sprite::executeAlways where the pivot is subtracted
     auto pattern = hook::module_pattern(e2mfc, "D9 05 ? ? ? ? D9 E0 D9 45 FC D8 25");
     static float* pHudElementPosX = *pattern.count(2).get(1).get<float*>(2); //0x10065190
     static float* pHudElementPosY = *pattern.count(2).get(1).get<float*>(22); //0x10065194
@@ -150,22 +331,8 @@ export void InitE2MFC()
             float ElementNewPosX2 = ElementPosX;
             float ElementNewPosY2 = ElementPosY;
 
-            if (ElementPosX == 7.0f) // bullet time meter
-                ElementNewPosX1 = ElementPosX + Screen.fWidescreenHudOffset;
-            else if (ElementPosX == 8.0f && regs.eax != 8) // bullet time overlay
-                ElementNewPosX1 = ElementPosX + Screen.fWidescreenHudOffset;
-            else if (ElementPosX == 12.0f) // painkillers
-                ElementNewPosX1 = ElementPosX + Screen.fWidescreenHudOffset;
-            else if (ElementPosX == 22.5f) // health bar and overlay
-                ElementNewPosX1 = ElementPosX + Screen.fWidescreenHudOffset;
-            else if (ElementPosX == 95.0f) // other weapons name
-                ElementNewPosX1 = ElementPosX - Screen.fWidescreenHudOffset;
-            else if (ElementPosX == 190.0f) // molotovs/grenades name pos
-                ElementNewPosX1 = ElementPosX - Screen.fWidescreenHudOffset;
-
-            ElementNewPosX2 = ElementNewPosX1;
-
             auto fWidth = *(float*)(regs.esi + P_Sprite::WIDTH);
+            bool bScopePiece = WidescreenHud::ScopePieces.contains((uint8_t*)regs.esi);
             if (ElementPosX == 0.0f && ElementPosY == 0.0f && regs.eax == P_Sprite::REFERENCE_POINT_TOP_LEFT && fWidth == 640.0f) // fades, flashes and text backgrounds covering the whole 4:3 area
             {
                 // at least 640 on each side like before, which also covers overlays that aren't at x = 0
@@ -173,12 +340,12 @@ export void InitE2MFC()
                 ElementNewPosX1 = ElementPosX + fExtension;
                 ElementNewPosX2 = ElementPosX - fExtension;
             }
-            else if (ElementPosX == 100.0f && (ElementPosY == 0.0f || ElementPosY == 20.0f || ElementPosY == 220.0f)) // sniper scope borders left side
+            else if (bScopePiece && ElementPosX == 100.0f && (ElementPosY == 0.0f || ElementPosY == 20.0f || ElementPosY == 220.0f)) // sniper scope borders left side
             {
                 Screen.bDrawBordersToFillGap = true;
                 ElementNewPosX1 += Screen.fFullscreenExtension;
             }
-            else if (ElementPosX == 0.0f && (ElementPosY == 0.0f || ElementPosY == 20.0f || ElementPosY == 220.0f) && fWidth == 100.0f) // sniper scope borders right side
+            else if (bScopePiece && ElementPosX == 0.0f && (ElementPosY == 0.0f || ElementPosY == 20.0f || ElementPosY == 220.0f) && fWidth == 100.0f) // sniper scope borders right side
             {
                 Screen.bDrawBordersToFillGap = true;
                 ElementNewPosX2 -= Screen.fFullscreenExtension;
@@ -196,50 +363,6 @@ export void InitE2MFC()
             }
         }
     }; injector::MakeInline<P_HudPosHook>(pattern.count(2).get(1).get<uintptr_t>(0), pattern.count(2).get(1).get<uintptr_t>(40)); //1000856C
-
-    pattern = hook::module_pattern(e2mfc, "D9 05 ? ? ? ? D8 8E 74 01 00 00");
-    static auto pTextElementPosX = *pattern.get_first<TextCoords*>(2); //0x100647D0
-    struct P_TextPosHook
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            auto TextPosX = pTextElementPosX->a;
-            auto TextNewPosX = TextPosX;
-
-            if ((pTextElementPosX->a == 0.0f || pTextElementPosX->a == -8.0f || pTextElementPosX->a == -16.0f || pTextElementPosX->a == -24.0f || pTextElementPosX->a == -32.0f) && pTextElementPosX->b == -10.5f && (pTextElementPosX->c == 8.0f || pTextElementPosX->c == 16.0f || pTextElementPosX->c == 24.0f || pTextElementPosX->c == 32.0f) && pTextElementPosX->d == 21) //ammo numbers(position depends on digits amount)
-                TextNewPosX = TextPosX + Screen.fWidescreenHudOffset;
-
-            _asm fld    dword ptr[TextNewPosX]
-        }
-    }; injector::MakeInline<P_TextPosHook>(pattern.get_first(0), pattern.get_first(6));
-
-    static float TextPosX1, TextPosX2, TextPosY1;
-    pattern = hook::module_pattern(e2mfc, "C7 45 D0 00 00 00 00 D9 5D"); //100045FC
-    struct P_TextPosHook2
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            *(float*)(regs.ebp - 0x30) = 0.0f;
-            TextPosX1 = *(float*)(regs.ebp - 0x28);
-            TextPosY1 = *(float*)(regs.ebp - 0x2C);
-        }
-    }; injector::MakeInline<P_TextPosHook2>(pattern.get_first(0), pattern.get_first(7));
-
-    pattern = hook::module_pattern(e2mfc, "89 41 08 D9 45 E4 D8 0D"); //0x10004693
-    struct P_TextPosHook3
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            TextPosX2 = *(float*)(regs.ebp - 0x1C);
-
-            if (TextPosX1 == (69.0f + Screen.fWidescreenHudOffset) && TextPosY1 == 457.0f) // painkillers amount number
-                *(float*)(regs.ebp - 0x1C) += (24.0f * Screen.fWidescreenHudOffset);
-
-            *(uint32_t*)(regs.ecx + 8) = regs.eax;
-            auto ebp1C = *(float*)(regs.ebp - 0x1C);
-            _asm fld  dword ptr[ebp1C]
-        }
-    }; injector::MakeInline<P_TextPosHook3>(pattern.get_first(0), pattern.get_first(6));
 
     //relocate dllmain code of e2_d3d8_driver_mfc
     pattern = hook::module_pattern(e2mfc, "C7 46 ? ? ? ? ? 8B 75 ? 89 07 EB 15 FF 15 ? ? ? ? 50 68 ? ? ? ? 53 E8 ? ? ? ? 83 C4 0C 8D 8D ? ? ? ? 51 56 FF 15 ? ? ? ? 85 C0 75 ? 56 FF 15 ? ? ? ? 8D 95");

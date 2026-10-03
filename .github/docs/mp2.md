@@ -20,7 +20,7 @@
 ## Options
 
 - **Field of view** — Adjust the FOV multiplier in the INI file.
-- **Graphic novels** — Toggle fullscreen graphic novels with the configured hotkey (F2 by default). In fullscreen, the playback controls appear while the mouse cursor is at the bottom of the screen; the keyboard navigates pages too. The cursor stays hidden until the mouse moves.
+- **Graphic novels** — Toggle fullscreen graphic novels with the configured hotkey (F2 by default). In fullscreen, whole pages are shown as large as the screen allows and the playback controls appear while the mouse cursor is at the bottom of the screen; the keyboard navigates pages too. The cursor stays hidden until the mouse moves.
 - **Cutscene borders** — In-engine cutscenes keep their original framing at any aspect ratio; choose letterbox borders, pillarbox borders, both, or none. Borders slide in and out.
 - **Startup save** — Automatically load a selected, most recent, or last-used save on startup.
 - **Save location** — Store saves in a `savegames` folder inside the game directory.

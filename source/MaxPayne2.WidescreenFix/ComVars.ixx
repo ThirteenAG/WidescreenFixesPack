@@ -26,7 +26,7 @@ export struct Screen
     float fFOVFactor = 1.0f;
     uint32_t nGeneration;        // changes whenever the values above do
     bool bDrawBordersForCameraOverlay;
-    bool bGraphicNovelMode;      // true: original framing, false: page fills the screen width
+    bool bGraphicNovelMode;      // true: original framing, false: whole pages as large as the screen allows
 } Screen;
 
 export void UpdateScreenResolution(int32_t nWidth, int32_t nHeight)
@@ -72,14 +72,6 @@ export void UpdateScreenResolution(int32_t nWidth, int32_t nHeight)
 
     ++Screen.nGeneration;
 }
-
-export struct TextCoords
-{
-    float a;
-    float b;
-    float c;
-    float d;
-};
 
 export SafetyHookInline shDllMainHook = {};
 export safetyhook::MidHook BorderlessWindowedHook = {};
@@ -269,36 +261,220 @@ export namespace MaxPayne_HUDFadeLayer
     uint8_t* pSprite = nullptr;
 }
 
-export namespace P_Camera
+export namespace P_BaseObject
 {
-    void(__fastcall* setFOV)(void* _this, void* edx, float fFOV) = nullptr;
+    enum
+    {
+        LOCAL_MATRIX = 0x38, // M_Matrix4x3: the right, up and forward axes, then the position
+        WORLD_MATRIX = 0x68, // the same in world space, up to date after calculateObjectToWorldMatrix
+    };
+
+    void(__fastcall* invalidateMatrices)(void* _this, void* edx) = nullptr;
+    void(__fastcall* calculateObjectToWorldMatrix)(void* _this, void* edx) = nullptr;
+
+    // Virtual, in object space
+    const float* getBoundingBoxMin(uint8_t* _this)
+    {
+        auto pVTable = *(void***)_this;
+        return reinterpret_cast<const float* (__fastcall*)(void*, void*)>(pVTable[11])(_this, nullptr);
+    }
+
+    const float* getBoundingBoxMax(uint8_t* _this)
+    {
+        auto pVTable = *(void***)_this;
+        return reinterpret_cast<const float* (__fastcall*)(void*, void*)>(pVTable[12])(_this, nullptr);
+    }
 }
 
+export namespace P_Camera
+{
+    enum
+    {
+        VIEWPORT = 0x1D0, // left, right, top and bottom
+    };
+
+    void(__fastcall* setFOV)(void* _this, void* edx, float fFOV) = nullptr;
+
+    // What P_Camera::validate turns the horizontal FOV tangent into the vertical one with
+    float GetViewportRatio(uint8_t* _this)
+    {
+        auto pViewport = (float*)(_this + VIEWPORT);
+        float fRatio = (pViewport[3] - pViewport[2]) / (pViewport[1] - pViewport[0]);
+        return std::isfinite(fRatio) && fRatio > 0.0f ? fRatio : 0.75f;
+    }
+}
+
+export namespace KF_ObjectAnimation
+{
+    // Virtual
+    uint32_t getTotalMeshes(uint8_t* _this)
+    {
+        auto pVTable = *(void***)_this;
+        return reinterpret_cast<uint32_t(__fastcall*)(void*, void*)>(pVTable[25])(_this, nullptr);
+    }
+
+    uint8_t* getMesh(uint8_t* _this, uint32_t nIndex)
+    {
+        auto pVTable = *(void***)_this;
+        return reinterpret_cast<uint8_t* (__fastcall*)(void*, void*, uint32_t)>(pVTable[26])(_this, nullptr, nIndex);
+    }
+}
+
+// Graphic novel pages are 3D scenes, meshes and a camera to show them with, which the page copies to
+// the camera of the graphic novel mode when it shows. Original framing keeps that camera: the page
+// across the 4:3 width at the top, the playback controls below it. Otherwise the camera moves to the
+// middle of the page and zooms in as far as the whole page, its black border included, still fits
+// on the screen.
 export namespace MaxPayne_GraphicNovelPage
 {
-    void* pCamera = nullptr;
-    float fPageFOV = 0.0f;
-
-    float CalculateFOV(float fFOV)
+    enum
     {
-        if (Screen.bGraphicNovelMode)
-            return fFOV; // original framing, the area around the 4:3 page is covered by borders
+        OBJECT_ANIMATION = 0x2F, // KF2::KF_ObjectAnimation*, the meshes of the page
+        CAMERA_MATRIX = 0x37,    // M_Matrix4x3
+        FOV = 0x6F,
+    };
 
-        // the page fills the screen width
-        return 2.0f * atanf(tanf(fFOV * 0.5f) / Screen.fAspectScaleX);
+    // The page shown and the camera showing it, cleared when the graphic novel mode ends
+    uint8_t* pPage = nullptr;
+    uint8_t* pCamera = nullptr;
+
+    // The page as seen with its own camera
+    struct Extents
+    {
+        float fCenterX; // how far the camera moves along its right and up axes to face the middle of the page
+        float fCenterY;
+        float fTanX;    // tangents of half the page width and height from there
+        float fTanY;
+    };
+    std::optional<Extents> PageExtents;
+
+    uint32_t nGeneration = 0;
+
+    // From the bounding boxes of the meshes, the page doesn't animate them
+    std::optional<Extents> Measure(uint8_t* page, uint8_t* camera)
+    {
+        auto pAnimation = *(uint8_t**)(page + OBJECT_ANIMATION);
+        if (!pAnimation)
+            return std::nullopt;
+
+        P_BaseObject::calculateObjectToWorldMatrix(camera, nullptr);
+        auto pView = (const float*)(camera + P_BaseObject::WORLD_MATRIX);
+
+        struct Point { float x, y, z; };
+        std::vector<Point> Points;
+        for (uint32_t i = 0, nMeshes = KF_ObjectAnimation::getTotalMeshes(pAnimation); i < nMeshes; ++i)
+        {
+            auto pMesh = KF_ObjectAnimation::getMesh(pAnimation, i);
+            if (!pMesh)
+                continue;
+
+            auto pMin = P_BaseObject::getBoundingBoxMin(pMesh);
+            auto pMax = P_BaseObject::getBoundingBoxMax(pMesh);
+            if (!(pMin[0] <= pMax[0] && pMin[1] <= pMax[1] && pMin[2] <= pMax[2]))
+                continue;
+
+            P_BaseObject::calculateObjectToWorldMatrix(pMesh, nullptr);
+            auto pWorld = (const float*)(pMesh + P_BaseObject::WORLD_MATRIX);
+            for (int nCorner = 0; nCorner < 8; ++nCorner)
+            {
+                float local[3] = { (nCorner & 1) ? pMax[0] : pMin[0], (nCorner & 2) ? pMax[1] : pMin[1], (nCorner & 4) ? pMax[2] : pMin[2] };
+                float relative[3];
+                for (int k = 0; k < 3; ++k)
+                    relative[k] = local[0] * pWorld[k] + local[1] * pWorld[3 + k] + local[2] * pWorld[6 + k] + pWorld[9 + k] - pView[9 + k];
+
+                auto Dot = [&](const float* pAxis) { return relative[0] * pAxis[0] + relative[1] * pAxis[1] + relative[2] * pAxis[2]; };
+                Point point = { Dot(pView), Dot(pView + 3), Dot(pView + 6) };
+                if (!(point.z > 0.0f))
+                    return std::nullopt;
+                Points.push_back(point);
+            }
+        }
+
+        if (Points.empty())
+            return std::nullopt;
+
+        constexpr float fInfinity = std::numeric_limits<float>::infinity();
+        float fMinX = fInfinity, fMaxX = -fInfinity, fMinY = fInfinity, fMaxY = -fInfinity, fDepth = 0.0f;
+        for (auto& point : Points)
+        {
+            fMinX = std::min(fMinX, point.x / point.z);
+            fMaxX = std::max(fMaxX, point.x / point.z);
+            fMinY = std::min(fMinY, point.y / point.z);
+            fMaxY = std::max(fMaxY, point.y / point.z);
+            fDepth += point.z;
+        }
+        fDepth /= Points.size();
+
+        // The page is flat and faces the camera, the depths only differ by its layers
+        Extents extents = { (fMinX + fMaxX) * 0.5f * fDepth, (fMinY + fMaxY) * 0.5f * fDepth, 0.0f, 0.0f };
+        for (auto& point : Points)
+        {
+            extents.fTanX = std::max(extents.fTanX, std::abs(point.x - extents.fCenterX) / point.z);
+            extents.fTanY = std::max(extents.fTanY, std::abs(point.y - extents.fCenterY) / point.z);
+        }
+
+        if (!std::isfinite(extents.fCenterX) || !std::isfinite(extents.fCenterY) || !std::isfinite(extents.fTanX) || !std::isfinite(extents.fTanY) || extents.fTanX <= 0.0f || extents.fTanY <= 0.0f)
+            return std::nullopt;
+        return extents;
     }
 
-    void __fastcall setFOV(void* camera, void* edx, float fFOV)
+    void Apply()
     {
+        if (!pPage || !pCamera)
+            return;
+
+        nGeneration = Screen.nGeneration;
+
+        // the page's camera, as MaxPayne_GraphicNovelPage::show sets it
+        auto pMatrix = (float*)(pCamera + P_BaseObject::LOCAL_MATRIX);
+        std::memcpy(pMatrix, pPage + CAMERA_MATRIX, 12 * sizeof(float));
+        float fPageFOV = *(float*)(pPage + FOV);
+        float fFOV = fPageFOV;
+        if (!Screen.bGraphicNovelMode && PageExtents)
+        {
+            for (int k = 0; k < 3; ++k)
+                pMatrix[9 + k] += pMatrix[k] * PageExtents->fCenterX + pMatrix[3 + k] * PageExtents->fCenterY;
+
+            // P_Camera::validate widens the tangents for the screen
+            float fTan = std::max(PageExtents->fTanX / Screen.fAspectScaleX, PageExtents->fTanY / (P_Camera::GetViewportRatio(pCamera) * Screen.fAspectScaleY));
+            fFOV = 2.0f * atanf(fTan);
+        }
+
+        P_BaseObject::invalidateMatrices(pCamera, nullptr);
+        P_Camera::setFOV(pCamera, nullptr, fFOV);
+    }
+
+    SafetyHookInline shShow = {};
+    void __fastcall show(uint8_t* _this, void* edx, uint8_t* camera)
+    {
+        shShow.unsafe_fastcall(_this, edx, camera);
+        if (!P_BaseObject::invalidateMatrices || !P_BaseObject::calculateObjectToWorldMatrix || !P_Camera::setFOV)
+            return;
+
+        pPage = _this;
         pCamera = camera;
-        fPageFOV = fFOV;
-        P_Camera::setFOV(camera, edx, CalculateFOV(fFOV));
+        PageExtents = Measure(_this, camera);
+        Apply();
     }
 
+    // For the key toggling original framing
     void Refresh()
     {
-        if (pCamera && P_Camera::setFOV)
-            P_Camera::setFOV(pCamera, nullptr, CalculateFOV(fPageFOV));
+        Apply();
+    }
+
+    // Called every frame in the graphic novel mode
+    void Update()
+    {
+        if (pPage && nGeneration != Screen.nGeneration)
+            Apply();
+    }
+
+    void Reset()
+    {
+        pPage = nullptr;
+        pCamera = nullptr;
+        PageExtents.reset();
     }
 }
 
@@ -390,9 +566,12 @@ export namespace P_Sprite
 {
     enum
     {
+        WIDTH = 0x15C,
         HEIGHT = 0x160,
         REFERENCE_POINT = 0x178,
-        SCREEN_POSITION_Y = 0x1A4, // of the reference point, in 640x480 virtual units
+        UV = 0x17C,                // u and v of the top left, top right, bottom right and bottom left corners
+        SCREEN_POSITION_X = 0x1A0, // of the reference point, in 640x480 virtual units
+        SCREEN_POSITION_Y = 0x1A4,
     };
 
     // P_BitmapInterface::ReferencePoint, the corner the screen position is of
@@ -429,7 +608,7 @@ export float __stdcall ClampCursorTop(float, float fY) { return std::max(fY, Cur
 
 // Graphic novels:
 // - the cursor stays hidden until the mouse moves
-// - while the page fills the screen width, the playback controls (indicators, the band behind them
+// - outside original framing, the playback controls (indicators, the band behind them
 //   and the tooltip of the indicator under the cursor), which would cover the bottom of the page,
 //   only show up while the cursor is there
 export namespace MP_GraphicNovelMode
