@@ -38,6 +38,7 @@ Configure these settings in `scripts/Scarface.FusionFix.ini`:
 | `MAIN` | `SkipIntro` | `1` | Skip the legal screen, intro movies, and press-to-start screen. |
 | `MAIN` | `ModernControlScheme` | `1` | Enable the Xidi profiles for modern on-foot and vehicle controls. |
 | `MAIN` | `ControllerPrompts` | `1` | Switch keyboard labels and controller icons with the last input; use the bundled Xidi for current profile mappings. |
+| `MAIN` | `GamepadIcons` | `0` | Button artwork and controls-menu names: `0`: Xbox 360; `1`: Xbox One; `2`: PS3; `3`: PS4; `4`: PS5; `5`: Switch; `6`: Steam Deck; `7`: Steam Controller. Restart the game after changing this setting. |
 | `MAIN` | `ScrollWeaponsWithMouseWheel` | `1` | Enable mouse-wheel weapon selection. |
 | `MAIN` | `VehicleCameraRecenterDelay` | `3.0` | Seconds before automatic vehicle camera recentering; `0` removes the delay. |
 | `MAIN` | `WindowedMode` | `0` | `0`: fullscreen; `1`: borderless at the selected resolution; `2`: borderless at desktop resolution. |

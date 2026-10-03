@@ -54,6 +54,7 @@ namespace
     std::map<std::pair<uintptr_t,int>,std::wstring> expandedBible;
     const wchar_t* (__cdecl* lookupText)(const char*) = nullptr;
     bool enabled = false;
+    unsigned gamepadIcons = 0;
     std::atomic<bool> gamepad{false};
     std::atomic<uint64_t> lastKeyboardActivity{0};
     unsigned controller = 0;
@@ -73,7 +74,7 @@ namespace
     {
         // FETextObject::SetText clears strings without a text-bible substitution
         // unless its literal flag is set. Only our binding labels are literal.
-        for(const auto name:ScarfaceButtons::Names)
+        for(const auto name:ScarfaceButtons::Names[gamepadIcons])
             if(text==name){literal=1;break;}
         return setTextHook.thiscall<int>(self,text,index,literal);
     }
@@ -86,8 +87,8 @@ namespace
         if(queryButton && index>=0 && index<int(std::size(slots)))
         {
             const int physical=bindingPhysical[slots[index]];
-            if(physical>=0 && physical<int(std::size(ScarfaceButtons::Names)))
-                return ScarfaceButtons::Names[physical];
+            if(physical>=0 && physical<int(std::size(ScarfaceButtons::Names[gamepadIcons])))
+                return ScarfaceButtons::Names[gamepadIcons][physical];
         }
         return hbControlButtonLabel.fun(format,index);
     }
@@ -311,7 +312,7 @@ export namespace ControllerPrompts
         if(device!=d)
         {
             for(auto& icon:icons)icon.Reset();device=d;
-            for(unsigned i=0;i<icons.size();++i)icons[i]=ScarfaceButtons::CreateIcon(d,i);
+            for(unsigned i=0;i<icons.size();++i)icons[i]=ScarfaceButtons::CreateIcon(d,i,gamepadIcons);
         }
         if(!queryButton || !queryActivity)
             if(auto module=GetModuleHandleW(L"Xidi.32.dll"))
@@ -346,6 +347,7 @@ export namespace ControllerPrompts
         CIniReader iniReader("");
         const bool bControllerPrompts=iniReader.ReadInteger("MAIN","ControllerPrompts",1)!=0;
         if(!bControllerPrompts)return;
+        gamepadIcons=unsigned(std::clamp(iniReader.ReadInteger("MAIN","GamepadIcons",0),0,int(std::size(ScarfaceButtons::Names))-1));
         auto font=ScarfaceRTTI::FindVtable(".?AVTextureFont@pure3d@@");
         auto pattern=hook::pattern("8B 44 24 04 83 F8 FF 74 11 8B 51 1C 8B 04 82 8B 49 20 D1 E8 8D 04 41 C2 04 00"); // 0x6A41E0
         if(!font || pattern.size()!=1)return;
