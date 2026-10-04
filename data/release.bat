@@ -11,7 +11,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "Sign.ps1" ^
 
 if %errorlevel% neq 0 (
     echo ERROR: Signing failed!
-    exit /b 1
+    goto packaging_failed
 )
 
 rem Copying asi loader
@@ -23,7 +23,9 @@ if errorlevel 1 (
    SET filepath=%%F
    SET dll=!filepath:.ual=.dll!
    ECHO !dll!
-   7za e -so "..\Ultimate-ASI-Loader.zip" *.dll -r > !dll!
+   7za e -so "..\Ultimate-ASI-Loader.zip" *.dll -r > "!dll!"
+   if errorlevel 1 goto packaging_failed
+   for %%D in ("!dll!") do if %%~zD EQU 0 goto packaging_failed
 )
 )
 
@@ -35,7 +37,9 @@ if errorlevel 1 (
    SET filepath=%%F
    SET dll=!filepath:.x64ual=.dll!
    ECHO !dll!
-   7za e -so "..\Ultimate-ASI-Loader_x64.zip" *.dll -r > !dll!
+   7za e -so "..\Ultimate-ASI-Loader_x64.zip" *.dll -r > "!dll!"
+   if errorlevel 1 goto packaging_failed
+   for %%D in ("!dll!") do if %%~zD EQU 0 goto packaging_failed
 )
 )
 
@@ -46,51 +50,86 @@ copy /b/v/y "..\source\Manhunt.WidescreenFix\bin\Manhunt.WidescreenFix.ini" ".\M
 
 rem dgVoodoo
 7za e -so "..\dgVoodoo2.zip" "MS\x86\DDraw.dll" > ".\KnightRider.WidescreenFix\DDraw.dll"
+if errorlevel 1 goto packaging_failed
 7za e -so "..\dgVoodoo2.zip" "MS\x86\D3DImm.dll" > ".\KnightRider.WidescreenFix\D3DImm.dll"
+if errorlevel 1 goto packaging_failed
 
 7za e -so "..\dgVoodoo2.zip" "MS\x86\DDraw.dll" > ".\KnightRider2.WidescreenFix\DDraw.dll"
+if errorlevel 1 goto packaging_failed
 7za e -so "..\dgVoodoo2.zip" "MS\x86\D3DImm.dll" > ".\KnightRider2.WidescreenFix\D3DImm.dll"
+if errorlevel 1 goto packaging_failed
 
 7za e -so "..\dgVoodoo2.zip" "MS\x86\D3D8.dll" > ".\SplinterCell.WidescreenFix\system\d3d8.dll"
+if errorlevel 1 goto packaging_failed
 
 rem Xidi
 7za e "..\xidi.zip" "Xidi-*/Win32/dinput8.dll" "Xidi-*/Win32/Xidi.32.dll" -o".\Condemned.WidescreenFix\" -y
+if errorlevel 1 goto packaging_failed
 7za e "..\xidi.zip" "Xidi-*/Win32/dinput8.dll" "Xidi-*/Win32/Xidi.32.dll" -o".\Scarface.FusionFix\" -y
+if errorlevel 1 goto packaging_failed
 7za e "..\xidi.zip" "Xidi-*/Win32/dinput8.dll" "Xidi-*/Win32/Xidi.32.dll" -o".\SplinterCell.WidescreenFix\system\" -y
+if errorlevel 1 goto packaging_failed
 7za e "..\xidi.zip" "Xidi-*/Win32/dinput8.dll" "Xidi-*/Win32/Xidi.32.dll" -o".\SplinterCellPandoraTomorrow.WidescreenFix\system\" -y
+if errorlevel 1 goto packaging_failed
 7za e "..\xidi.zip" "Xidi-*/Win32/dinput8.dll" "Xidi-*/Win32/Xidi.32.dll" -o".\SplinterCellChaosTheory.WidescreenFix\System\" -y
+if errorlevel 1 goto packaging_failed
 7za e "..\xidi.zip" "Xidi-*/Win32/dinput8.dll" "Xidi-*/Win32/Xidi.32.dll" -o".\SplinterCellDoubleAgent.WidescreenFix\SCDA-Offline\System\" -y
+if errorlevel 1 goto packaging_failed
 7za e "..\xidi.zip" "Xidi-*/Win32/dinput8.dll" "Xidi-*/Win32/Xidi.32.dll" -o".\SplinterCellConviction.FusionFix\src\system\" -y
+if errorlevel 1 goto packaging_failed
 7za e "..\xidi.zip" "Xidi-*/Win32/winmm.dll" "Xidi-*/Win32/Xidi.32.dll" -o".\KingKong.WidescreenFix\" -y
+if errorlevel 1 goto packaging_failed
 7za e "..\xidi.zip" "Xidi-*/Win32/dinput.dll" "Xidi-*/Win32/Xidi.32.dll" -o".\MaxPayne.WidescreenFix\scripts\" -y
+if errorlevel 1 goto packaging_failed
 move /Y ".\MaxPayne.WidescreenFix\scripts\dinput.dll" ".\MaxPayne.WidescreenFix\dinputHooked.dll"
+if errorlevel 1 goto packaging_failed
 move /Y ".\MaxPayne.WidescreenFix\scripts\Xidi.32.dll" ".\MaxPayne.WidescreenFix\Xidi.32.dll"
+if errorlevel 1 goto packaging_failed
 7za e "..\xidi.zip" "Xidi-*/Win32/dinput.dll" "Xidi-*/Win32/Xidi.32.dll" -o".\MaxPayne2.WidescreenFix\" -y
+if errorlevel 1 goto packaging_failed
 
 rem dxwrapper
 7za e "..\dxwrapper.zip" "dxwrapper.asi" -o".\TonyHawksProSkater4.WidescreenFix\Game\scripts\" -y
+if errorlevel 1 goto packaging_failed
 7za e "..\dxwrapper.zip" "dxwrapper.asi" -o".\TheSuffering.WidescreenFix\scripts\" -y
+if errorlevel 1 goto packaging_failed
 7za e "..\dxwrapper.zip" "dxwrapper.asi" -o".\ThePunisher.WidescreenFix\scripts\" -y
+if errorlevel 1 goto packaging_failed
 7za e "..\dxwrapper.zip" "dxwrapper.asi" -o".\MaxPayne.WidescreenFix\scripts\" -y
+if errorlevel 1 goto packaging_failed
 7za e "..\dxwrapper.zip" "dxwrapper.asi" -o".\MaxPayne2.WidescreenFix\scripts\" -y
+if errorlevel 1 goto packaging_failed
 7za e "..\dxwrapper.zip" "dxwrapper.asi" -o".\TrueCrimeNewYorkCity.WidescreenFix\scripts\" -y
+if errorlevel 1 goto packaging_failed
 7za e "..\dxwrapper.zip" "dxwrapper.asi" -o".\DriverParallelLines.WidescreenFix\scripts\" -y
+if errorlevel 1 goto packaging_failed
 7za e "..\dxwrapper.zip" "dxwrapper.asi" -o".\Driv3r.WidescreenFix\scripts\" -y
+if errorlevel 1 goto packaging_failed
 
 rem dxwrapper-scda
 7za e "..\dxwrapper-scda.zip" "dxwrapper.dll" -o".\SplinterCellDoubleAgent.WidescreenFix\SCDA-Offline\System\scripts\" -y
+if errorlevel 1 goto packaging_failed
 move /Y ".\SplinterCellDoubleAgent.WidescreenFix\SCDA-Offline\System\scripts\dxwrapper.dll" ".\SplinterCellDoubleAgent.WidescreenFix\SCDA-Offline\System\scripts\dxwrapper.asi"
+if errorlevel 1 goto packaging_failed
 
 7za e "..\dxwrapper-scda.zip" "dxwrapper.dll" -o".\KingKong.WidescreenFix\scripts\" -y
+if errorlevel 1 goto packaging_failed
 move /Y ".\KingKong.WidescreenFix\scripts\dxwrapper.dll" ".\KingKong.WidescreenFix\scripts\dxwrapper.asi"
+if errorlevel 1 goto packaging_failed
 
 rem DSOAL
 7za e "..\DSOAL.zip" "DSOAL+HRTF/Win32/dsound.dll" "DSOAL+HRTF/Win32/dsoal-aldrv.dll" -o".\MaxPayne.WidescreenFix\" -y
+if errorlevel 1 goto packaging_failed
 7za e "..\DSOAL.zip" "DSOAL+HRTF/Win32/dsound.dll" "DSOAL+HRTF/Win32/dsoal-aldrv.dll" -o".\MaxPayne2.WidescreenFix\" -y
+if errorlevel 1 goto packaging_failed
 7za e "..\DSOAL.zip" "DSOAL+HRTF/Win32/dsound.dll" "DSOAL+HRTF/Win32/dsoal-aldrv.dll" -o".\SplinterCell.WidescreenFix\system\" -y
+if errorlevel 1 goto packaging_failed
 7za e "..\DSOAL.zip" "DSOAL+HRTF/Win32/dsound.dll" "DSOAL+HRTF/Win32/dsoal-aldrv.dll" -o".\SplinterCellPandoraTomorrow.WidescreenFix\system\" -y
+if errorlevel 1 goto packaging_failed
 7za e "..\DSOAL.zip" "DSOAL+HRTF/Win32/dsound.dll" "DSOAL+HRTF/Win32/dsoal-aldrv.dll" -o".\SplinterCellChaosTheory.WidescreenFix\System\" -y
+if errorlevel 1 goto packaging_failed
 7za e "..\DSOAL.zip" "DSOAL+HRTF/Win32/dsound.dll" "DSOAL+HRTF/Win32/dsoal-aldrv.dll" -o".\SplinterCellDoubleAgent.WidescreenFix\SCDA-Offline\System\" -y
+if errorlevel 1 goto packaging_failed
 
 rem Creating archives
 
@@ -107,13 +146,18 @@ rem Additional texture archives
 
 FOR /d %%X IN (*) DO (
 7za a -tzip "Archives\%%X.zip" ".\%%X\*" -r -xr^^!Archives -x^^!*.pdb -x^^!*.db -x^^!*.ipdb -x^^!*.iobj -x^^!*.tmp -x^^!*.iobj -x^^!*.ual -x^^!*.x64ual -x^^!*.iobj -x^^!*.wrapper -x^^!*.lib -x^^!*.exp -x^^!*.ilk -x^^!*.map -x^^!*.gitkeep
+if errorlevel 1 goto packaging_failed
 )
 
 rem Creating texture archives
 if exist "..\textures\GTA3.WidescreenFrontend" 7za a "Archives\GTA3.WidescreenFrontend.zip" "..\textures\GTA3.WidescreenFrontend"
 if exist "..\textures\GTAVC.WidescreenFrontend" 7za a "Archives\GTAVC.WidescreenFrontend.zip" "..\textures\GTAVC.WidescreenFrontend"
 if exist "..\textures\Manhunt.WidescreenFrontend" 7za a "Archives\Manhunt.WidescreenFrontend.zip" "..\textures\Manhunt.WidescreenFrontend"
-EXIT
+exit /b 0
+
+:packaging_failed
+echo ERROR: Packaging failed. No release should be uploaded.
+exit /b 1
 
 7-Zip Extra
 ~~~~~~~~~~~

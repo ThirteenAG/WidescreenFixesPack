@@ -38,6 +38,8 @@ runs:
         )
 
     - name: Before Package
+      env:
+        GH_TOKEN: ${{ github.token }}
       shell: cmd
       run: |
         ./before_packaging.bat
