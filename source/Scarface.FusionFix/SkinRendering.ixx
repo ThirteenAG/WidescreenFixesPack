@@ -58,7 +58,6 @@ export namespace SkinRendering
         upHook = safetyhook::create_inline(vtable[IDirect3DDevice9VTBL::DrawPrimitiveUP], DrawUP);
         indexedUpHook = safetyhook::create_inline(vtable[IDirect3DDevice9VTBL::DrawIndexedPrimitiveUP], DrawIndexedUP);
         installed = true;
-        SkinCapture::ReportDrawHooks(bool(drawHook), bool(indexedHook), bool(upHook), bool(indexedUpHook));
     }
 
     void Shutdown()

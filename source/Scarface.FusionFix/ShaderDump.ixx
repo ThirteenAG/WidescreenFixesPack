@@ -95,12 +95,6 @@ export namespace ShaderDump
         SkinCapture::Initialize(mode == 2, dumpPath);
         compiler = LoadLibraryW(L"d3dcompiler_47.dll");
         if (compiler) disassemble = reinterpret_cast<Disassemble>(GetProcAddress(compiler, "D3DDisassemble"));
-        std::ofstream info(dumpPath / "capture.txt");
-        info << "Scarface Fusion Fix shader capture\n"
-             << "Shaders are captured on successful D3D9 binds; menus and other scenes are included.\n"
-             << "CRC32 names: .vso/.pso = bytecode, .vs/.ps = disassembly.\n"
-             << "Existing files are refreshed on first use each run. Disable DEBUG/DumpShaders after capture.\n"
-             << "Disassembler: " << (disassemble ? "available" : "unavailable; binary dumps still work") << '\n';
         return true;
     }
 
@@ -125,8 +119,6 @@ export namespace ShaderDump
             Dump(pixel, false);
             pixel->Release();
         }
-        std::ofstream status(dumpPath / "capture.txt", std::ios::app);
-        status << "Bind hooks: vertex=" << bool(vertexHook) << ", pixel=" << bool(pixelHook) << '\n';
     }
 
     void Shutdown()
