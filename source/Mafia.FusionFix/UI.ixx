@@ -84,6 +84,13 @@ export void InitUIScaling()
     // versions. Use the object's native Draw method, including renamed engines.
     auto graph = *reinterpret_cast<void**>(reinterpret_cast<uintptr_t>(pResolutionWidth) - 6);
     if (!graph) return;
+    // The engine can register its window class before the resolution hook
+    // runs. Refresh its cached cursor once the actual game size is known;
+    // intercepting LoadCursorA alone only affects future class registrations.
+    using GetWindow = HWND(__stdcall*)(void*);
+    auto window = reinterpret_cast<GetWindow>((*reinterpret_cast<uintptr_t**>(graph))[16 / sizeof(uintptr_t)])(graph);
+    if (window)
+        SetClassLongPtrW(window, GCLP_HCURSOR, reinterpret_cast<LONG_PTR>(LoadCursorHook(nullptr, MAKEINTRESOURCEA(32512))));
     auto draw = (*reinterpret_cast<uintptr_t**>(graph))[88 / sizeof(uintptr_t)];
     uiDrawHook = safetyhook::create_inline(reinterpret_cast<void*>(draw), DrawUI);
 }
