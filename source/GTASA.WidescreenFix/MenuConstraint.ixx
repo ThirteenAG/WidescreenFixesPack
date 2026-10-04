@@ -55,7 +55,16 @@ namespace MenuConstraintHooks
     SafetyHookInline Draw, Input, Transition, ChangeVideoMode, CentreMouse, Preview;
     SafetyHookInline Primitive, Indexed, Line, Triangle;
     SafetyHookMid Mouse;
-    void (__cdecl* FlushFonts)() = nullptr;
+    void (__cdecl* RenderFonts)() = nullptr;
+
+    void FlushFonts()
+    {
+        // Process runs outside camera updates. Leaving redefine controls can
+        // queue text there; rendering it now dereferences a null RW camera.
+        // Native frame initialization clears that text before the next draw.
+        if (RwEngineInstance->curCamera)
+            RenderFonts();
+    }
 
     void RestoreMouseRange(SafetyHookContext& regs)
     {
@@ -199,8 +208,8 @@ namespace MenuConstraintHooks
         if (PreviewSignature && !preview) return false;
         auto engine = **reinterpret_cast<uintptr_t***>(primitive + 1);
         if (!engine) return false;
-        FlushFonts = reinterpret_cast<decltype(FlushFonts)>(FontAddress(font));
-        if (!FlushFonts) return false;
+        RenderFonts = reinterpret_cast<decltype(RenderFonts)>(FontAddress(font));
+        if (!RenderFonts) return false;
 
         // Prepare every hook before enabling any of them. Unsupported/replaced
         // entry points leave the original menu and its input together.
