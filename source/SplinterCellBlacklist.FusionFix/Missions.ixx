@@ -115,6 +115,7 @@ namespace ExtractionOnOtherMaps
     // A Charlie spawner for a map that has no co-op spawner (Grim's maps), made when the first wave starts and handed out as the
     // black box's spawner (AEchelonLevelInfo +12F0h: FBlackBoxInfo { id, spawner })
     void** pAttractionPointClass = nullptr;
+    void** pAIPawnClass = nullptr;
     uint8_t* createdSpawner = nullptr;
     uint8_t* createdSpawnerLevelInfo = nullptr;
     int32_t createdSpawnerInfo[2]{};
@@ -132,8 +133,12 @@ namespace ExtractionOnOtherMaps
         return info;
     }
 
+    // AEExtractionMatchManager::PreResetCheckpoint was called (dying), until the next wave
+    bool resettingCheckpoint = false;
+
     void CreateSpawner(uint8_t* matchManager)
     {
+        resettingCheckpoint = false;
         auto levelInfo = *reinterpret_cast<uint8_t**>(matchManager + 0x318);
         auto level = *reinterpret_cast<uint8_t**>(matchManager + 0x148);
         if (!levelInfo || !level || !pExtractionSpawnerClass || !*pExtractionSpawnerClass || IsCharlieMap(level))
@@ -208,6 +213,22 @@ namespace ExtractionOnOtherMaps
     {
         createdSpawner = nullptr;
         createdSpawnerLevelInfo = nullptr;
+        resettingCheckpoint = false;
+    }
+
+    // AECoopExtractionSpawner::Destroy frees the wave config (the game's spawners only go with their level), a created spawner is destroyed
+    // with the actors a checkpoint reset removes (dying on a co-op campaign map): the match's next wave read the freed config (crash).
+    // There the config is kept (the spawner is made again when the next wave starts), when the level goes it's freed (it references
+    // the level's actors, the garbage collection after the level crashed on them).
+    bool DestroyingCreatedSpawner(uint8_t* spawner)
+    {
+        if (!spawner || spawner != createdSpawner)
+            return false;
+        createdSpawner = nullptr;
+        createdSpawnerLevelInfo = nullptr;
+        auto keepConfig = resettingCheckpoint;
+        resettingCheckpoint = false;
+        return keepConfig;
     }
 
     void __cdecl ClassConstructor(void* object)
@@ -223,7 +244,21 @@ namespace ExtractionOnOtherMaps
 // profile, not counted in the SMI stat bars or for mastery.
 namespace CharlieMissions
 {
-    constexpr int32_t ContextIDBase = 1000; // contextID of a copy = 1000 + the original's contextID
+    constexpr int32_t ContextIDBase = 1000; // contextID of a Charlie copy = 1000 + the original's contextID
+    constexpr int32_t KestrelContextIDBase = 2000; // of a Kestrel mission = 2000 + the original's contextID
+
+    bool bAddCharlieCopies = false; // [EXTRACTION] EnableKobinAndGrimMaps
+    bool bAddCoopCampaignCopies = false; // [EXTRACTION] EnableCoopCampaignMaps
+    bool bAddKestrelMissions = false; // [KESTREL] EnableKestrelDLC
+
+    // The cut Kestrel DLC: 4 "Assassination" missions, 2 of Kobin (Hunter) and 2 of Grim (Ghost), on their maps
+    struct KestrelMission { const char* source; const char* title; };
+    constexpr KestrelMission KestrelMissions[] = {
+        { "H02", "Kestrel: Fish Market" },
+        { "H03", "Kestrel: Blood Diamond Mine" },
+        { "G02", "Kestrel: Border Crossing" },
+        { "G03", "Kestrel: Hackers' Den" },
+    };
 
     struct FArchive
     {
@@ -291,6 +326,14 @@ namespace CharlieMissions
 
     std::unordered_map<int32_t, uint32_t> copyMapAssets; // contextID of a copy -> NetOnlineMapId of its map
 
+    // what a copy doesn't take from its original: its place in the progression (unlocks, locks, conditions) and its debrief sequence
+    // (C04's plays the Paladin's scene of Kestrel brought aboard, which needs the campaign's state: black screen after it)
+    bool IsOriginalOnly(const std::string& line)
+    {
+        return line.find("<unlocks") != std::string::npos || line.find("<locks") != std::string::npos || line.find("<condition") != std::string::npos ||
+            line.find("key=\"DebriefSequence\"") != std::string::npos;
+    }
+
     std::string AddMissions(const std::string& xml)
     {
         // <mission id="..." ...> ... </mission>
@@ -317,7 +360,10 @@ namespace CharlieMissions
         {
             auto openTag = block.substr(0, block.find('>') + 1);
             auto id = Attribute(openTag, "id");
-            if (id.size() != 3 || (id[0] != 'H' && id[0] != 'G') || !std::isdigit(uint8_t(id[1])) || !std::isdigit(uint8_t(id[2])))
+            // Kobin's (H), Grim's (G) and the co-op campaign's (C) missions
+            if (id.size() != 3 || !std::isdigit(uint8_t(id[1])) || !std::isdigit(uint8_t(id[2])))
+                continue;
+            if (!((id[0] == 'H' || id[0] == 'G') ? bAddCharlieCopies : id[0] == 'C' && bAddCoopCampaignCopies))
                 continue;
 
             auto contextID = ContextIDBase + std::atoi(Attribute(openTag, "contextID").c_str());
@@ -331,7 +377,7 @@ namespace CharlieMissions
                 auto line = std::string(body.substr(pos, next == std::string_view::npos ? std::string_view::npos : next - pos));
                 pos = next == std::string_view::npos ? body.size() : next + 1;
 
-                if (line.find("<unlocks") != std::string::npos || line.find("<locks") != std::string::npos || line.find("<condition") != std::string::npos)
+                if (IsOriginalOnly(line))
                     continue;
 
                 // next to the original on the map
@@ -357,6 +403,49 @@ namespace CharlieMissions
             }
             if (!missions.ends_with("\n"))
                 missions += "\n";
+        }
+
+        // the Kestrel missions, copies of the originals in their mode (Hunter, Ghost) on the other side of the original on the map
+        for (auto& kestrel : KestrelMissions)
+        {
+            if (!bAddKestrelMissions)
+                break;
+            for (auto block : blocks)
+            {
+                auto openTag = block.substr(0, block.find('>') + 1);
+                if (Attribute(openTag, "id") != kestrel.source)
+                    continue;
+
+                // the title is the name's LocID, LocID_FFK_<rest> is "KESTREL: " + the original's (KestrelMissions::Localize)
+                auto contextID = KestrelContextIDBase + std::atoi(Attribute(openTag, "contextID").c_str());
+                auto name = Attribute(openTag, "name");
+                if (name.starts_with("LocID_"))
+                    name.insert(6, "FFK_");
+                missions += std::format("\t<mission id=\"FFK_{}\" name=\"{}\" itemType=\"{}\" initialState=\"1\" contextID=\"{}\">", kestrel.source,
+                    name, Attribute(openTag, "itemType"), contextID);
+
+                auto body = block.substr(openTag.size());
+                for (size_t pos = 0; pos < body.size();)
+                {
+                    auto next = body.find('\n', pos);
+                    auto line = std::string(body.substr(pos, next == std::string_view::npos ? std::string_view::npos : next - pos));
+                    pos = next == std::string_view::npos ? body.size() : next + 1;
+
+                    if (IsOriginalOnly(line))
+                        continue;
+                    if (auto smi = line.find("<smi "); smi != std::string::npos)
+                    {
+                        auto x = std::atof(Attribute(line, "locx").c_str()) - 0.012;
+                        auto y = std::atof(Attribute(line, "locy").c_str()) + 0.012;
+                        line = line.substr(0, smi) + std::format("<smi locx=\"{:.7f}\" locy=\"{:.7f}\" />", x, y);
+                    }
+                    if (auto translation = line.find("<Translation locale=\"en-US\">"); translation != std::string::npos)
+                        line = line.substr(0, translation) + std::format("<Translation locale=\"en-US\">{}</Translation>", kestrel.title);
+                    missions += line + "\n";
+                }
+                if (!missions.ends_with("\n"))
+                    missions += "\n";
+            }
         }
 
         auto root = xml.rfind("</root>");
@@ -390,22 +479,51 @@ namespace CharlieMissions
 
     uint8_t* launchedMission = nullptr;
 
+    // the Charlie copies of C01..C04 (contextID 13..16)
+    bool IsCoopCampaignCopy(uint8_t* mission)
+    {
+        auto contextID = mission ? *reinterpret_cast<int32_t*>(mission + 164) : 0;
+        return contextID >= ContextIDBase + 13 && contextID <= ContextIDBase + 16;
+    }
+
+    // AActor::IsRemovedInGameMode(gameMode): the co-op campaign maps' own enemies (placed AI pawns) are removed in their Charlie copies like
+    // actors of another game mode, only the waves' enemies are there
+    SafetyHookInline shIsRemovedInGameMode{};
+    int32_t __fastcall IsRemovedInGameMode(uint8_t* actor, void* edx, uint8_t gameMode)
+    {
+        using namespace ExtractionOnOtherMaps;
+        if (gameMode == EXTRACTION && pAIPawnClass && *pAIPawnClass && IsCoopCampaignCopy(launchedMission) && IsA(actor, *pAIPawnClass))
+            return 1;
+        return shIsRemovedInGameMode.thiscall<int32_t>(actor, gameMode);
+    }
+
+    bool IsKestrelMission(uint8_t* mission)
+    {
+        return mission && *reinterpret_cast<int32_t*>(mission + 164) >= KestrelContextIDBase;
+    }
+
     bool IsCopyOf(uint8_t* copy, uint8_t* mission)
     {
-        return IsCopy(copy) && mission && !IsCopy(mission) && *reinterpret_cast<int32_t*>(copy + 164) == ContextIDBase + *reinterpret_cast<int32_t*>(mission + 164);
+        return IsCopy(copy) && mission && !IsCopy(mission) && *reinterpret_cast<int32_t*>(copy + 164) % 1000 == *reinterpret_cast<int32_t*>(mission + 164);
     }
 
     // The starting wave can be picked on all waves (SC6Mission +184: the last completed extraction wave, +185: the selected starting wave), the
     // SMI offers it on completed missions (+180 status 3). The briefing and the completion are marked as seen (+188, +192), the SMI would show
-    // the completed animation every time otherwise.
+    // the completed animation every time otherwise, and the icon as hovered (+196, a NEW label otherwise).
     void UnlockWaves(uint8_t* mission)
     {
-        mission[184] = std::max<uint8_t>(mission[184], 20);
-        mission[185] = std::max<uint8_t>(mission[185], 1);
         auto& status = *reinterpret_cast<int32_t*>(mission + 180);
-        status = std::max(status, 3);
+        if (*reinterpret_cast<int32_t*>(mission + 152) == 5) // Charlie
+        {
+            mission[184] = std::max<uint8_t>(mission[184], 20);
+            mission[185] = std::max<uint8_t>(mission[185], 1);
+            status = std::max(status, 3);
+        }
+        else
+            status = std::max(status, 1);
         *reinterpret_cast<int32_t*>(mission + 188) = 1;
         *reinterpret_cast<int32_t*>(mission + 192) = 1;
+        *reinterpret_cast<int32_t*>(mission + 196) = 1;
     }
 
     // The map list of the lobby only has maps made for the mode (NetOnlineMapAsset +38h: game mode flags, Extraction 4); the map of a launched
@@ -472,11 +590,20 @@ namespace CharlieMissions
         {
             if (!IsCopy(mission))
                 return;
-            screen[223]--; // Charlie
-            screen[215]--; // co-op
+            // totals and completed of the type (+152 itemType 1 Grim, 4 Kobin, 5 Charlie), and of co-op
+            int32_t index = 0;
+            switch (*reinterpret_cast<int32_t*>(mission + 152))
+            {
+            case 1: index = 217; break;
+            case 4: index = 219; break;
+            case 5: index = 223; break;
+            default: return;
+            }
+            screen[index]--;
+            screen[215]--;
             if (*reinterpret_cast<int32_t*>(mission + 180) >= 3)
             {
-                screen[224]--;
+                screen[index + 1]--;
                 screen[216]--;
             }
         });
@@ -506,7 +633,7 @@ namespace CharlieMissions
     // (a linear archive streams each file once)
     bool IsCopyId(const char* id)
     {
-        return id && std::string_view(id).starts_with("FFC_");
+        return id && (std::string_view(id).starts_with("FFC_") || std::string_view(id).starts_with("FFK_"));
     }
 
     struct TString { const char* data; int32_t count; int32_t max; };
@@ -523,6 +650,80 @@ namespace CharlieMissions
     int32_t __fastcall GetMapScoringInfoIndex(void* scoring, void* edx, const char* id)
     {
         return shGetMapScoringInfoIndex.thiscall<int32_t>(scoring, IsCopyId(id) ? id + 4 : id);
+    }
+}
+
+// The Kestrel missions ("Assassination"): Kobin's and Grim's maps with their HVT (config\HighValueTargets.xml) as the target, killing it
+// completes the mission. Player 2 is Kestrel instead of Briggs, the engine still has his co-op preset (EPresetType 26h, his goggles).
+namespace KestrelMissions
+{
+    bool IsActive()
+    {
+        using namespace CharlieMissions;
+        return IsKestrelMission(launchedMission) && (CurrentGameMode == eGameMode::HUNTER || CurrentGameMode == eGameMode::GHOST);
+    }
+
+    // AECooperativeMatchManager (the match manager global if its EndMission, virtual 5F8h, is the co-op one)
+    uint8_t** pMatchManager = nullptr;
+    void* EndMission = nullptr;
+
+    int32_t HVTSkeletalMesh = 0;
+    int32_t HVTStaticMesh = 0;
+
+    bool IsHVT(uint8_t* pawn)
+    {
+        return (*reinterpret_cast<uint32_t*>(pawn + 0x5C) & 0x4000000) &&
+            (*reinterpret_cast<void**>(pawn + HVTSkeletalMesh) || *reinterpret_cast<void**>(pawn + HVTStaticMesh));
+    }
+
+    void CompleteMission()
+    {
+        auto manager = pMatchManager ? *pMatchManager : nullptr;
+        if (!manager || !EndMission || (*reinterpret_cast<void***>(manager))[0x5F8 / 4] != EndMission)
+            return;
+        // EndMission(ECoopMissionEndReason Success, instigator, instant end), what a map's CoopEndMission does
+        reinterpret_cast<void(__thiscall*)(uint8_t*, int32_t, void*, int32_t)>(EndMission)(manager, 1, nullptr, 0);
+    }
+
+    // Localize(section, key, package, ...): the mission intro of a Kestrel mission has the cut mode's title, LocID_C_HUD_Intro_Assassination
+    // ("KESTREL MISSION"), its descriptions only say "Deprecated - Assassination"
+    SafetyHookInline shLocalize{};
+    const wchar_t* __cdecl Localize(const wchar_t* section, const wchar_t* key, const char* package, const char* language, int32_t optional, void* config)
+    {
+        // a Kestrel mission's title (CharlieMissions::AddMissions; the SMI's title of a co-op mission is its name key in [COOP_Mission_Locations])
+        if (key && wcsncmp(key, L"LocID_FFK_", 10) == 0)
+        {
+            static std::wstring titles[16];
+            static size_t next = 0;
+            auto original = L"LocID_" + std::wstring(key + 10);
+            auto& title = titles[next++ % std::size(titles)];
+            title = L"KESTREL: " + std::wstring(shLocalize.ccall<const wchar_t*>(section, original.c_str(), package, language, optional, config));
+            return title.c_str();
+        }
+        if (key && IsActive())
+        {
+            if (wcscmp(key, L"LocID_C_HUD_Intro_Hunter") == 0 || wcscmp(key, L"LocID_C_HUD_Intro_Ghost") == 0)
+                return shLocalize.ccall<const wchar_t*>(section, L"LocID_C_HUD_Intro_Assassination", package, language, optional, config);
+            if (wcscmp(key, L"LocID_C_HUD_Intro_Hunter_Desc") == 0)
+                return L"ELIMINATE THE HIGH VALUE TARGET (HVT)\nBONUS: STAY UNDETECTED\nTO AVOID REINFORCEMENTS";
+            if (wcscmp(key, L"LocID_C_HUD_Intro_Ghost_Desc") == 0)
+                return L"ELIMINATE THE HIGH VALUE TARGET (HVT)\nBONUS: STAY UNDETECTED";
+        }
+        return shLocalize.ccall<const wchar_t*>(section, key, package, language, optional, config);
+    }
+
+    // CHighValueTargetManager (+4: the map's SHighValueTargetDefinition, +0: captured before, saved in the profile, the target isn't
+    // set up again then)
+    SafetyHookInline shIsCurrentHVTTarget{};
+    bool __fastcall IsCurrentHVTTarget(uint8_t* manager, void* edx, void* pawn)
+    {
+        auto definition = IsActive() ? *reinterpret_cast<uint8_t**>(manager + 4) : nullptr;
+        if (!definition || !definition[0])
+            return shIsCurrentHVTTarget.thiscall<bool>(manager, pawn);
+        definition[0] = 0;
+        auto result = shIsCurrentHVTTarget.thiscall<bool>(manager, pawn);
+        definition[0] = 1;
+        return result;
     }
 }
 
@@ -564,6 +765,10 @@ export void InitMissions()
     nExtractionWaveEnemyRandomRangeMin = std::clamp(iniReader.ReadInteger("EXTRACTION", "ExtractionWaveEnemyRandomRangeMin", 0), 0, 9999);
     nExtractionWaveEnemyRandomRangeMax = std::clamp(iniReader.ReadInteger("EXTRACTION", "ExtractionWaveEnemyRandomRangeMax", 4), 1, 9999);
     auto bEnableKobinAndGrimMaps = iniReader.ReadInteger("EXTRACTION", "EnableKobinAndGrimMaps", 0) != 0;
+    auto bEnableCoopCampaignMaps = iniReader.ReadInteger("EXTRACTION", "EnableCoopCampaignMaps", 0) != 0;
+    // Charlie on maps of other modes
+    auto bCharlieOnOtherMaps = bEnableKobinAndGrimMaps || bEnableCoopCampaignMaps;
+    auto bEnableKestrelDLC = iniReader.ReadInteger("KESTREL", "EnableKestrelDLC", 0) != 0;
 
     static auto sHUNTERReinforcementsNumber = iniReader.ReadString("HUNTER", "ReinforcementsNumber", "Default");
     static auto nHUNTERReinforcementsEnemyMultiplier = std::clamp(iniReader.ReadInteger("HUNTER", "ReinforcementsEnemyMultiplier", 1), 1, 9999);
@@ -621,12 +826,13 @@ export void InitMissions()
         });
     }
 
-    if (bEnableKobinAndGrimMaps)
+    if (bCharlieOnOtherMaps)
     {
         // UClass storage of the spawner classes, InitializePrivateStaticClass: push size, push &class (the name is pushed before)
         for (auto [size, out, className] : { std::tuple{ "68 18 05 00 00 68 ? ? ? ? E8", &ExtractionOnOtherMaps::pHunterSpawnerClass, "AECoopHunterSpawner" },
                                              std::tuple{ "68 48 05 00 00 68 ? ? ? ? E8", &ExtractionOnOtherMaps::pExtractionSpawnerClass, "AECoopExtractionSpawner" },
-                                             std::tuple{ "68 38 04 00 00 68 ? ? ? ? E8", &ExtractionOnOtherMaps::pAttractionPointClass, "AEAIAttractionPoint" } })
+                                             std::tuple{ "68 38 04 00 00 68 ? ? ? ? E8", &ExtractionOnOtherMaps::pAttractionPointClass, "AEAIAttractionPoint" },
+                                             std::tuple{ "68 38 0D 00 00 68 ? ? ? ? E8", &ExtractionOnOtherMaps::pAIPawnClass, "AEAIPawn" } })
         {
             hook::pattern(size).for_each_result([out, className](hook::pattern_match match)
             {
@@ -773,10 +979,13 @@ export void InitMissions()
         }
     }
 
-    // Charlie missions on the other co-op maps
-    if (bEnableKobinAndGrimMaps)
+    // Charlie missions on the other co-op maps, the Kestrel missions
+    if (bCharlieOnOtherMaps || bEnableKestrelDLC)
     {
         using namespace CharlieMissions;
+        bAddCharlieCopies = bEnableKobinAndGrimMaps;
+        bAddCoopCampaignCopies = bEnableCoopCampaignMaps;
+        bAddKestrelMissions = bEnableKestrelDLC;
 
         // SC6MissionSystem::LoadFromXML, after GFileManager->CreateFileReader("..\..\Data\Config\SC6MissionData.xml", 0, GError, 0)
         hook::pattern("8B 15 ? ? ? ? 8B 0D ? ? ? ? 8B 01 8B 40 10 57 52 57 68 ? ? ? ? FF D0").for_each_result([](hook::pattern_match match)
@@ -860,12 +1069,13 @@ export void InitMissions()
             static auto SetImage = safetyhook::create_mid(pattern.get_first(offset), [](SafetyHookContext& regs)
             {
                 auto& text = *reinterpret_cast<const char**>(regs.ebp + 8);
-                if (!text || !strstr(text, "img://") || !strstr(text, "FFC_"))
+                if (!text || !strstr(text, "img://") || (!strstr(text, "FFC_") && !strstr(text, "FFK_")))
                     return;
                 static std::string image;
                 image = text;
-                for (auto pos = image.find("FFC_"); pos != std::string::npos; pos = image.find("FFC_", pos))
-                    image.erase(pos, 4);
+                for (auto prefix : { "FFC_", "FFK_" })
+                    for (auto pos = image.find(prefix); pos != std::string::npos; pos = image.find(prefix, pos))
+                        image.erase(pos, 4);
                 text = image.c_str();
             });
             break;
@@ -880,6 +1090,32 @@ export void InitMissions()
         pattern = hook::pattern("55 8B EC 53 56 8B F1 33 DB 57 39 9E D4 00 00 00 7E ? 33 FF");
         if (!pattern.empty())
             shGetMapScoringInfoIndex = safetyhook::create_inline(pattern.get_first(), GetMapScoringInfoIndex);
+
+        // UESEQJobCoopSyncPoint::Update: the co-op campaign maps' sequences wait for the players at sync points, the network state only
+        // advances in the co-op campaign mode (in Extraction the job gives up after 60 s): after the intro cutscene the screen stayed
+        // black. In their Charlie copies (contextID 1000 + C01..C04's 13..16) it finishes right away.
+        pattern = hook::pattern("8B F1 83 3D ? ? ? ? 00 75 1C 8B 06 8B 90 88 00 00 00 FF D2 8B 4D F4 64 89 0D 00 00 00 00 59 5E 8B E5 5D C2 08 00");
+        if (bAddCoopCampaignCopies && !pattern.empty())
+        {
+            static uintptr_t finishSyncPoint = reinterpret_cast<uintptr_t>(pattern.get_first(11));
+            static auto SyncPoint = safetyhook::create_mid(pattern.get_first(2), [](SafetyHookContext& regs)
+            {
+                if (CurrentGameMode == EXTRACTION && IsCoopCampaignCopy(launchedMission))
+                    regs.eip = finishSyncPoint;
+            });
+        }
+
+        // UESEQJobCoopActivateCoOpsObjective::Start: the co-op campaign's objective markers (where to go) aren't used in their Charlie copies
+        // (push 0, call ECoOpsObjective::Activate skipped)
+        pattern = hook::pattern("56 8B F1 8B 4E 38 85 C9 74 0F 6A 00 E8 ? ? ? ? 8B CE 5E E9");
+        if (bAddCoopCampaignCopies && !pattern.empty())
+        {
+            static auto ActivateCoOpsObjective = safetyhook::create_mid(pattern.get_first(10), [](SafetyHookContext& regs)
+            {
+                if (CurrentGameMode == EXTRACTION && IsCoopCampaignCopy(launchedMission))
+                    regs.eip += 7;
+            });
+        }
 
         // SC6Mission::SerializeProfile(archive): the copies are not saved or loaded, they keep their initial state
         auto retn4 = hook::pattern("F7 D8 1B C0 40 5D C2 04 00");
@@ -897,12 +1133,134 @@ export void InitMissions()
                 }
             });
         }
+
+        // AActor::IsRemovedInGameMode (its end is the retn 4 above, hooked after it's found)
+        pattern = hook::pattern("55 8B EC 8B 45 08 50 81 C1 BC 02 00 00 E8 ? ? ? ? F7 D8 1B C0 40 5D C2 04 00");
+        if (bAddCoopCampaignCopies && !pattern.empty())
+            shIsRemovedInGameMode = safetyhook::create_inline(pattern.get_first(), IsRemovedInGameMode);
+
+        // AEExtractionMatchManager::PreResetCheckpoint (vtable +48Ch)
+        pattern = hook::pattern("56 8B F1 E8 ? ? ? ? 8B CE E8 ? ? ? ? 8B 86 54 04 00 00 85 C0 74 13 50 E8 ? ? ? ? 83 C4 04 C7 86 54 04 00 00 00 00 00 00 A1");
+        if (bCharlieOnOtherMaps && !pattern.empty())
+        {
+            static auto PreResetCheckpoint = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            {
+                ExtractionOnOtherMaps::resettingCheckpoint = true;
+            });
+        }
+
+        // AECoopExtractionSpawner::Destroy: the wave config's release, skipped for a created spawner in a checkpoint reset
+        pattern = hook::pattern("8B CF E8 ? ? ? ? 57 E8 ? ? ? ? 83 C4 04 C7 86 20 05 00 00 00 00 00 00 E8 ? ? ? ? 5F 8B CE");
+        if (bCharlieOnOtherMaps && !pattern.empty())
+        {
+            static auto SpawnerDestroy = safetyhook::create_mid(pattern.get_first(0x1A), [](SafetyHookContext& regs)
+            {
+                if (ExtractionOnOtherMaps::DestroyingCreatedSpawner(reinterpret_cast<uint8_t*>(regs.esi)))
+                    regs.eip += 5;
+            });
+        }
+    }
+
+    if (bEnableKestrelDLC)
+    {
+        using namespace KestrelMissions;
+
+        // AECooperativeMatchManager::GetInstance (and the other co-op managers' ones, the same global) and EndMission
+        auto pattern = hook::pattern("CC A1 ? ? ? ? 85 C0 74 3F 8B 15");
+        if (!pattern.empty())
+            pMatchManager = *pattern.get_first<uint8_t**>(2);
+        pattern = hook::pattern("55 8B EC 80 79 4D 02 74 0B 8B 01 8B 80 F4 05 00 00 5D FF E0");
+        if (!pattern.empty())
+            EndMission = pattern.get_first();
+
+        // The HVT is the pawn the level designers gave an HVT mesh (AEAIPawn +CB4h skeletal / +CB8h static, read from ScanForHVTLoad's test
+        // of them); the HVT manager doesn't always have it as its target (OnHighValueTargetKilled wasn't called), it's checked on every kill
+        pattern = hook::pattern("F7 40 5C 00 00 00 04 74 ? 83 B8 ? ? 00 00 00 75 ? 83 B8 ? ? 00 00 00 74");
+        if (!pattern.empty())
+        {
+            HVTSkeletalMesh = *pattern.get_first<int32_t>(11);
+            HVTStaticMesh = *pattern.get_first<int32_t>(20);
+        }
+
+        // AECooperativeMatchManager::HandlePawnKilled(FKillMsg* message): +0 the killed (or knocked out) pawn
+        pattern = hook::pattern("55 8B EC 53 56 57 8B 7D 08 8B 07 8B D9 85 C0 0F 84 ? ? ? ? F7 40 60 00 00 04 00");
+        if (!pattern.empty() && HVTSkeletalMesh && HVTStaticMesh)
+        {
+            static auto HandlePawnKilled = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            {
+                auto message = *reinterpret_cast<uint8_t**>(regs.esp + 4);
+                auto pawn = message ? *reinterpret_cast<uint8_t**>(message) : nullptr;
+                if (pawn && IsHVT(pawn) && IsActive())
+                    CompleteMission();
+            });
+        }
+
+        // CHighValueTargetManager::ScanForHVTLoad: the target is set up when its map's definition isn't captured (+0) and has no state yet (+8),
+        // in a Kestrel mission it's checked as never captured
+        pattern = hook::pattern("8B D9 8B 43 04 85 C0 0F 84 ? ? ? ? 80 38 00 0F 85");
+        if (!pattern.empty())
+        {
+            static auto ScanForHVTLoad = safetyhook::create_mid(pattern.get_first(13), [](SafetyHookContext& regs)
+            {
+                static uint8_t definition[0x20];
+                if (!IsActive() || !regs.eax)
+                    return;
+                memcpy(definition, reinterpret_cast<void*>(regs.eax), sizeof(definition));
+                definition[0] = 0;
+                regs.eax = reinterpret_cast<uintptr_t>(definition);
+            });
+        }
+
+        // Localize(section, key, package, ...)
+        pattern = hook::pattern("55 8B EC 6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 B8 3C 11 00 00 E8 ? ? ? ? A1 ? ? ? ? 33 C5 89 45 F0 53 56 57 50 8D 45 F4 64 A3 00 00 00 00 8B 45 08 8B 4D 10 8B 5D 14 8B 7D 0C");
+        if (!pattern.empty())
+            shLocalize = safetyhook::create_inline(pattern.get_first(), Localize);
+
+        // CHighValueTargetManager::IsCurrentHVTTarget(pawn)
+        pattern = hook::pattern("55 8B EC 32 C0 83 3D ? ? ? ? 00 56 8B F1 75 ? 83 7E 04 00 74");
+        if (!pattern.empty())
+            shIsCurrentHVTTarget = safetyhook::create_inline(pattern.get_first(), IsCurrentHVTTarget);
+
+        // UEPECInventoryManager::ConstructAdvArmorBodyPartInfo(pawn, ..., head preset, ...): Briggs' co-op head (25h, 29h) is Kestrel's (26h)
+        pattern = hook::pattern("8B 5D 14 8B 45 18 84 DB 75 ? 85 F6 74 ? 83 F8 25");
+        if (!pattern.empty())
+        {
+            static auto HeadPreset = safetyhook::create_mid(pattern.get_first(3), [](SafetyHookContext& regs)
+            {
+                auto& head = *reinterpret_cast<int32_t*>(regs.ebp + 0x18);
+                if ((head == 0x25 || head == 0x29) && IsActive())
+                    head = 0x26;
+            });
+        }
+
+        // ConstructAdvArmorBodyPartInfo: the goggles part of the head (Sam 4, Briggs 8, Kestrel 9); Kestrel's goggles have no textures in the
+        // maps (not in their texture streams), he gets Sam's (loaded for player 1)
+        pattern = hook::pattern("8B 55 18 B9 04 00 00 00 83 FA 25 74 ? 83 FA 29 74 ? 83 FA 26 75 ? 8D 4A E3 EB ? B9 08 00 00 00 6A 00");
+        if (!pattern.empty())
+        {
+            static auto GogglesPart = safetyhook::create_mid(pattern.get_first(0x21), [](SafetyHookContext& regs)
+            {
+                if (regs.ecx == 9 && IsActive())
+                    regs.ecx = 4;
+            });
+        }
+
+        // UEPECInventoryManager::LoadPackages: the packages of the co-op head preset (his head and goggles)
+        pattern = hook::pattern("1B C0 83 E0 25 50 8B 45");
+        if (!pattern.empty())
+        {
+            static auto PackagesHeadPreset = safetyhook::create_mid(pattern.get_first(5), [](SafetyHookContext& regs)
+            {
+                if (regs.eax == 0x25 && IsActive())
+                    regs.eax = 0x26;
+            });
+        }
     }
 
     // ExtractionWaveConfigXMLParser::LoadFile: a map without its own wave config (the maps of the other co-op modes) gets the 20 waves
     // of a random Charlie map instead of DefaultWaveConfig.xml (waves 1, 3, 4 and 6 only, the mission ends after wave 6)
     pattern = hook::pattern("50 68 ? ? ? ? E8 ? ? ? ? 83 C4 08 50 8D 4D D8 E8 ? ? ? ? BB");
-    if (bEnableKobinAndGrimMaps && !pattern.empty())
+    if (bCharlieOnOtherMaps && !pattern.empty())
     {
         static auto WaveConfigMapName = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
