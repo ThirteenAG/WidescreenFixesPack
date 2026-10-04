@@ -38,6 +38,21 @@ namespace Splitscreen
         return engine ? *reinterpret_cast<uint8_t**>(engine + 0x25C) : nullptr;
     }
 
+    // a split screen view was there since the last map without it (it's gone before that map loads: the mission's exit)
+    bool wasSplit = false;
+
+    // the first viewport's size before split screen
+    int32_t fullWidth = 0;
+    int32_t fullHeight = 0;
+
+    uint8_t* GetFirstViewport()
+    {
+        auto engine = GetEngine();
+        auto client = engine ? *reinterpret_cast<uint8_t**>(engine + 0x44) : nullptr;
+        auto viewports = client ? *reinterpret_cast<uint8_t***>(client + 0x2C) : nullptr;
+        return viewports && *reinterpret_cast<int32_t*>(client + 0x30) > 0 ? viewports[0] : nullptr;
+    }
+
     // Player 2's controller (split viewport +30h)
     uint8_t* GetPlayer2Controller()
     {
@@ -240,8 +255,8 @@ namespace Splitscreen
         void*** lights = nullptr;
     };
     VisibilityJobs gameJobs{};
-    void* player2Lights[3] = {};
-    VisibilityJobs player2Jobs{ nullptr, reinterpret_cast<void***>(player2Lights) };
+    void* secondViewLights[3] = {};
+    VisibilityJobs secondViewJobs{ nullptr, reinterpret_cast<void***>(secondViewLights) };
     bool jobsSwapped = false;
     int32_t views[2] = { -1, -1 };
 
@@ -254,19 +269,19 @@ namespace Splitscreen
         jobsSwapped = swapped;
     }
 
-    void DestroyPlayer2Jobs()
+    void DestroySecondViewJobs()
     {
         if (jobsSwapped)
             UseJobs(gameJobs, false);
-        if (player2Jobs.camera)
-            DestroyVisibilityJob(player2Jobs.camera);
-        for (auto& job : player2Lights)
+        if (secondViewJobs.camera)
+            DestroyVisibilityJob(secondViewJobs.camera);
+        for (auto& job : secondViewLights)
         {
             if (job)
                 DestroyVisibilityJob(job);
             job = nullptr;
         }
-        player2Jobs.camera = nullptr;
+        secondViewJobs.camera = nullptr;
         views[0] = views[1] = -1;
     }
 
@@ -294,16 +309,122 @@ namespace Splitscreen
         }
 
         // the game's parameters (SoftwareRasterizer init): size, then the same for the camera and the lights
-        if (!player2Jobs.camera)
+        if (!secondViewJobs.camera)
         {
             const uint32_t camera[9] = { 512, 256, 0x8000, 0, 0x40000, 40, std::bit_cast<uint32_t>(0.01f), std::bit_cast<uint32_t>(1.5f), 0x1000101 };
             const uint32_t light[9] = { 256, 256, 0x8000, 0, 0x40000, 40, std::bit_cast<uint32_t>(0.01f), std::bit_cast<uint32_t>(1.5f), 0x1000101 };
-            player2Jobs.camera = reinterpret_cast<void**>(CreateVisibilityJob(camera));
-            for (auto& job : player2Lights)
+            secondViewJobs.camera = reinterpret_cast<void**>(CreateVisibilityJob(camera));
+            for (auto& job : secondViewLights)
                 job = CreateVisibilityJob(light);
         }
         if (!jobsSwapped)
-            UseJobs(player2Jobs, true);
+            UseJobs(secondViewJobs, true);
+    }
+
+    // Sun shadow casters: preparing a view queues each node of the scene grid (HGrid +10Ch nodes, +110h count) in the cascade jobs and
+    // keeps its slot in them in the node (GeomNode +18Ch, a dword for each of the 3 cascades), rendering the view reads the job results by
+    // these. Both views are prepared before they're rendered (player 2's split viewport first, then player 1's), the first view read the
+    // second's slots (shadows appearing and disappearing). Each view's slots are kept and put back before it's rendered.
+    struct CascadeSlots
+    {
+        uint8_t* node;
+        uint32_t slot[3];
+    };
+    std::vector<CascadeSlots> viewSlots[2];
+    bool viewSlotsValid[2] = {};
+
+    bool SaveCascadeSlots(uint8_t* grid, int index)
+    {
+        auto& out = viewSlots[index];
+        out.clear();
+        viewSlotsValid[index] = false;
+        if (!grid)
+            return false;
+        auto nodes = *reinterpret_cast<uint8_t***>(grid + 0x10C);
+        auto count = *reinterpret_cast<int32_t*>(grid + 0x110);
+        if (!nodes || count <= 0 || count > 0x100000)
+            return false;
+        for (int32_t i = 0; i < count; i++)
+        {
+            if (!nodes[i])
+                continue;
+            CascadeSlots slots{ nodes[i] };
+            memcpy(slots.slot, nodes[i] + 0x18C, sizeof(slots.slot));
+            out.push_back(slots);
+        }
+        viewSlotsValid[index] = true;
+        return true;
+    }
+
+    void RestoreCascadeSlots(int index)
+    {
+        if (!viewSlotsValid[index])
+            return;
+        for (auto& slots : viewSlots[index])
+            memcpy(slots.node + 0x18C, slots.slot, sizeof(slots.slot));
+    }
+
+    void ResetCascadeSlots()
+    {
+        for (int i = 0; i < 2; i++)
+        {
+            viewSlots[i].clear();
+            viewSlotsValid[i] = false;
+        }
+    }
+
+    // the second view is about to be prepared: the first view's slots
+    void PreparingView(int32_t view, uint8_t* grid)
+    {
+        if (!GetSplitViewport() || views[0] == -1 || views[1] == -1)
+            return ResetCascadeSlots();
+        if (view == views[1])
+            SaveCascadeSlots(grid, 0);
+    }
+
+    // the first view is about to be rendered: the second view's slots are kept, its own put back; the second view: its own put back
+    void RenderingView(int32_t view, uint8_t* grid)
+    {
+        if (!GetSplitViewport() || views[0] == -1 || views[1] == -1)
+            return ResetCascadeSlots();
+        if (view == views[0] && viewSlotsValid[0])
+        {
+            SaveCascadeSlots(grid, 1);
+            RestoreCascadeSlots(0);
+            viewSlotsValid[0] = false;
+        }
+        else if (view == views[1])
+        {
+            RestoreCascadeSlots(1);
+            viewSlotsValid[1] = false;
+        }
+    }
+
+    // Lens flare and sun godray occlusion (hardware queries): a flare node (+40h) and the sun light node (+2CCh) have 16 query slots, the
+    // game uses 2 per GPU (frame parity, slot k = (frame / GPUs) % 2 + 2 * (frame % GPUs)), issues them while rendering a view and reads the
+    // previous frame's. The split screen views shared them: each view restarted the other's query and read its result (flares of lights
+    // hidden by walls). The second view (with its own visibility jobs) takes the slots after 8.
+    void(__fastcall* CreateQuery)(void* device, void* edx, int32_t type, void** out) = nullptr;
+    int32_t queryType = 1;
+
+    void CreateSecondViewQueries(uint8_t* pass, void** first)
+    {
+        auto device = *reinterpret_cast<uint8_t**>(*reinterpret_cast<uint8_t**>(pass) + 0xC);
+        auto gpus = device ? *reinterpret_cast<int32_t*>(device + 0x10) : 0;
+        if (gpus <= 0 || gpus > 4)
+            return;
+        for (int32_t i = 0; i < 2 * gpus; i++)
+            CreateQuery(device, nullptr, queryType, first + i);
+    }
+
+    // eax: the game's slot for the frame parity, moved to the second view's when it exists
+    void SecondViewQuerySlot(SafetyHookContext& regs, void** queries, uint32_t gpu)
+    {
+        if (!jobsSwapped || gpu >= 4)
+            return;
+        auto slot = regs.eax + 2 * gpu + 8;
+        if (slot < 16 && queries[slot])
+            regs.eax += 8;
     }
 
     // Ambient occlusion (Lead options +3CCh, DX9 +3C8h, ResourceDB +8): a split screen view is smaller than the buffers, the game
@@ -354,6 +475,13 @@ namespace Splitscreen
     void __fastcall UpdateInput(uint8_t* viewport, void* edx, uint8_t* input, uint32_t delta1, uint32_t delta2, int32_t a4)
     {
         bSplitscreen = GetSplitViewport() != nullptr;
+        if (bSplitscreen)
+            wasSplit = true;
+        else if (!wasSplit && viewport && viewport == GetFirstViewport() && !IsPlaying())
+        {
+            fullWidth = *reinterpret_cast<int32_t*>(viewport + 0x4A0);
+            fullHeight = *reinterpret_cast<int32_t*>(viewport + 0x4A4);
+        }
         UpdateAmbientOcclusion();
 
         // from the start, before the profile loads: the profile saves and loads customizable loadouts only
@@ -650,14 +778,34 @@ namespace Splitscreen
     }
 
     // Leaving split screen requests the resolution back as twice the first viewport's width (consoles halve it), the PC game never
-    // changes the resolution for split screen, the request would set half the height (1920x540)
+    // changes the resolution for split screen and it can be off (half the height, an odd width lost). It's the size before split screen.
     std::vector<void*> resolutionRestores;
     SafetyHookInline shRequestResolution{};
     void __fastcall RequestResolution(void* viewport, void* edx, int32_t width, int32_t height, int32_t mode, int32_t refresh)
     {
         if (std::find(resolutionRestores.begin(), resolutionRestores.end(), _ReturnAddress()) != resolutionRestores.end())
-            return;
+        {
+            if (fullWidth <= 0 || fullHeight <= 0)
+                return;
+            width = fullWidth;
+            height = fullHeight;
+        }
         shRequestResolution.thiscall<void>(viewport, width, height, mode, refresh);
+    }
+
+    // Leaving split screen (UGameEngine::EndSplitScreen, a map loaded without ?SplitScreen: the hub after the mission) keeps player 2
+    // (the console game removes them when the next mission is picked), the plugin's split screen state stayed on. Player 2 is removed
+    // like the game's leave of a local match does (UGameEngine::RemoveSecondaryLocalPlayer).
+    void(__fastcall* RemoveSecondaryLocalPlayer)(uint8_t* engine, void* edx, int32_t controller) = nullptr;
+    SafetyHookInline shEndSplitScreen{};
+    void __fastcall EndSplitScreen(uint8_t* engine, void* edx)
+    {
+        auto split = *reinterpret_cast<uint8_t**>(engine + 0x25C) != nullptr || wasSplit;
+        wasSplit = false;
+        auto controller = GetController(1);
+        shEndSplitScreen.thiscall<void>(engine);
+        if (split && controller != -1 && RemoveSecondaryLocalPlayer)
+            RemoveSecondaryLocalPlayer(engine, nullptr, controller);
     }
 
     // UWindowsViewport::Repaint draws a viewport when its player has a pawn (controller +310h) or a few other states, a player 1 who bled
@@ -814,18 +962,61 @@ export void InitSplitscreen()
 
     // a view prepared (its index set from the new view in edi), rendered (renderer in ecx, view parameters +20FCh), the game destroying
     // its jobs
+    // (the scene grid: prepare's argument in ebx, renderer +44h)
     static auto PrepareView = safetyhook::create_mid(prepareView.get_first(8), [](SafetyHookContext& regs)
     {
-        Splitscreen::SelectVisibilityJobs(*reinterpret_cast<int32_t*>(regs.edi));
+        auto view = *reinterpret_cast<int32_t*>(regs.edi);
+        Splitscreen::SelectVisibilityJobs(view);
+        Splitscreen::PreparingView(view, reinterpret_cast<uint8_t*>(regs.ebx));
     });
     static auto RenderView = safetyhook::create_mid(renderView.get_first(), [](SafetyHookContext& regs)
     {
-        Splitscreen::SelectVisibilityJobs(*reinterpret_cast<int32_t*>(*reinterpret_cast<uint8_t**>(regs.ecx + 0x20FC) + 0x26C));
+        auto params = *reinterpret_cast<uint8_t**>(regs.ecx + 0x20FC);
+        auto view = *reinterpret_cast<int32_t*>(params + 0x26C);
+        Splitscreen::SelectVisibilityJobs(view);
+        Splitscreen::RenderingView(view, *reinterpret_cast<uint8_t**>(regs.ecx + 0x44));
     });
     static auto DestroyJobs = safetyhook::create_mid(destroyJobs.get_first(), [](SafetyHookContext& regs)
     {
-        Splitscreen::DestroyPlayer2Jobs();
+        Splitscreen::DestroySecondViewJobs();
+        Splitscreen::ResetCascadeSlots();
     });
+
+    // flare and godray queries: created (VisibilityPass esi, node arg), issued (flare edi / sun esi, eax slot parity, edx GPU), read
+    // (node ebp-8, type ebx+4: 2 flare, 4 godray, GPU ebp-14h); the game's queries are released with all 16 slots
+    auto createFlare = hook::pattern("8B 45 08 C6 40 3C 01");
+    auto createGodray = hook::pattern("8B 45 08 C6 80 C8 02 00 00 01");
+    auto issueFlare = hook::pattern("25 01 00 00 80 79 05 48 83 C8 FE 40 8D 54 50 10 8B 04 97");
+    auto issueGodray = hook::pattern("25 01 00 00 80 79 05 48 83 C8 FE 40 8D 14 50 8B 84 96 CC 02 00 00");
+    auto readQueries = hook::pattern("25 01 00 00 80 79 05 48 83 C8 FE 40 8B 4B 04 83 F9 02");
+    if (!createFlare.empty() && !createGodray.empty() && !issueFlare.empty() && !issueGodray.empty() && !readQueries.empty())
+    {
+        Splitscreen::CreateQuery = reinterpret_cast<decltype(Splitscreen::CreateQuery)>(branch(createFlare.get_first(-0x13)));
+        Splitscreen::queryType = *createFlare.get_first<int8_t>(-0x14);
+        static auto CreateFlareQueries = safetyhook::create_mid(createFlare.get_first(), [](SafetyHookContext& regs)
+        {
+            Splitscreen::CreateSecondViewQueries(reinterpret_cast<uint8_t*>(regs.esi), reinterpret_cast<void**>(*reinterpret_cast<uint8_t**>(regs.ebp + 8) + 0x60));
+        });
+        static auto CreateGodrayQueries = safetyhook::create_mid(createGodray.get_first(), [](SafetyHookContext& regs)
+        {
+            Splitscreen::CreateSecondViewQueries(reinterpret_cast<uint8_t*>(regs.esi), reinterpret_cast<void**>(*reinterpret_cast<uint8_t**>(regs.ebp + 8) + 0x2EC));
+        });
+        static auto IssueFlare = safetyhook::create_mid(issueFlare.get_first(12), [](SafetyHookContext& regs)
+        {
+            Splitscreen::SecondViewQuerySlot(regs, reinterpret_cast<void**>(regs.edi + 0x40), regs.edx);
+        });
+        static auto IssueGodray = safetyhook::create_mid(issueGodray.get_first(12), [](SafetyHookContext& regs)
+        {
+            Splitscreen::SecondViewQuerySlot(regs, reinterpret_cast<void**>(regs.esi + 0x2CC), regs.edx);
+        });
+        static auto ReadQueries = safetyhook::create_mid(readQueries.get_first(12), [](SafetyHookContext& regs)
+        {
+            auto node = *reinterpret_cast<uint8_t**>(regs.ebp - 8);
+            auto type = *reinterpret_cast<int32_t*>(regs.ebx + 4);
+            if (node && (type == 2 || type == 4))
+                Splitscreen::SecondViewQuerySlot(regs, reinterpret_cast<void**>(node + (type == 2 ? 0x40 : 0x2CC)), *reinterpret_cast<uint32_t*>(regs.ebp - 0x14));
+        });
+    }
 
     static auto LobbyTick = safetyhook::create_mid(lobbyTick.get_first(), [](SafetyHookContext& regs)
     {
@@ -848,6 +1039,14 @@ export void InitSplitscreen()
             Splitscreen::resolutionRestores.push_back(match.get<uint8_t>(0x18));
         });
     }
+    auto endSplit = hook::pattern("56 8B F1 83 A6 EC 01 00 00 EF E8 ? ? ? ? C7 86 7C 02 00 00 00 00 00 00 5E C3");
+    auto removePlayer = hook::pattern("55 8B EC 56 57 8B F9 8B 47 44 33 F6 39 70 30 7E ? 8B 40 2C 8B 0C B0 6A FF E8");
+    if (!endSplit.empty() && !removePlayer.empty())
+    {
+        Splitscreen::RemoveSecondaryLocalPlayer = removePlayer.get_first<void(__fastcall)(uint8_t*, void*, int32_t)>();
+        Splitscreen::shEndSplitScreen = safetyhook::create_inline(endSplit.get_first(), Splitscreen::EndSplitScreen);
+    }
+
     if (!Splitscreen::resolutionRestores.empty())
     {
         auto call = reinterpret_cast<uintptr_t>(Splitscreen::resolutionRestores.front()) - 5;
