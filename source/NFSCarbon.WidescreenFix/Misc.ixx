@@ -7,6 +7,33 @@ export module Misc;
 
 import ComVars;
 
+namespace MoviePlayback
+{
+    int (__thiscall* GetBufferedBytes)(void* reader) = nullptr;
+    int (__thiscall* GetStreamState)(void* reader) = nullptr;
+
+    int __fastcall WaitForAudio(void* reader, void*)
+    {
+        // Movie startup waits for video/subtitle data, but checks audio only once.
+        // If audio arrives later, its decoder and renderer are never connected.
+        // The unconsumed audio then fills the shared stream and starves video.
+        const DWORD start = GetTickCount();
+        int bufferedBytes = GetBufferedBytes(reader);
+        while (bufferedBytes == 0)
+        {
+            // State 2 is the terminal stream state checked by the game's other
+            // startup waits. Bound the wait for missing or malformed audio too.
+            if (GetStreamState(reader) == 2 || GetTickCount() - start >= 5000)
+                return GetBufferedBytes(reader);
+
+            // File reads use completion routines; the wait must be alertable.
+            SleepEx(1, TRUE);
+            bufferedBytes = GetBufferedBytes(reader);
+        }
+        return bufferedBytes;
+    }
+}
+
 class Misc
 {
 public:
@@ -17,8 +44,22 @@ public:
             CIniReader iniReader("");
             bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 0) != 0;
             bool bExperimentalCrashFix = iniReader.ReadInteger("MISC", "CrashFix", 1) != 0;
+            bool bMoviePlaybackFix = iniReader.ReadInteger("MISC", "MoviePlaybackFix", 1) != 0;
             SimRate = iniReader.ReadInteger("MISC", "SimRate", -1);
             bool bCarShadowFix = iniReader.ReadInteger("GRAPHICS", "CarShadowFix", 1) != 0;
+
+            if (bMoviePlaybackFix)
+            {
+                auto audioPattern = hook::pattern("8B 8E 80 01 00 00 3B CB 74 ? E8 ? ? ? ? 85 C0 7E ? FF 76 44"); // 0x888908
+                auto statePattern = hook::pattern("8B 8E 5C 01 00 00 E8 ? ? ? ? 83 F8 02 74 ? 8B 8E 5C 01 00 00"); // 0x88883E
+                if (audioPattern.size() == 1 && statePattern.size() == 1)
+                {
+                    auto audioCall = audioPattern.get_first(10);
+                    MoviePlayback::GetBufferedBytes = (decltype(MoviePlayback::GetBufferedBytes))injector::GetBranchDestination(audioCall).as_int();
+                    MoviePlayback::GetStreamState = (decltype(MoviePlayback::GetStreamState))injector::GetBranchDestination(statePattern.get_first(6)).as_int();
+                    injector::MakeCALL(audioCall, MoviePlayback::WaitForAudio, true);
+                }
+            }
 
             if (bCarShadowFix)
             {
