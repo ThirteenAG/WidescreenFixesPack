@@ -233,6 +233,38 @@ export void InitLAN()
 
     if (bFixLAN)
     {
+        // Quazal::DSoundSource destructors (voice chat): leaving the LAN lobby released an object that was already freed (+0Ch or +10h,
+        // the call went through a garbage vtable). Objects whose Release (vtable +8) isn't code of a module are left alone.
+        static auto IsCode = [](uintptr_t address)
+        {
+            MEMORY_BASIC_INFORMATION info{};
+            return address && VirtualQuery(reinterpret_cast<void*>(address), &info, sizeof(info)) && info.State == MEM_COMMIT && info.Type == MEM_IMAGE &&
+                (info.Protect & (PAGE_EXECUTE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY));
+        };
+        static auto IsReadable = [](uintptr_t address)
+        {
+            MEMORY_BASIC_INFORMATION info{};
+            return address && VirtualQuery(reinterpret_cast<void*>(address), &info, sizeof(info)) && info.State == MEM_COMMIT &&
+                !(info.Protect & (PAGE_NOACCESS | PAGE_GUARD));
+        };
+        auto soundSource = hook::pattern("56 8B F1 8B 46 10 85 C0 C7 06 ? ? ? ? 74 08 8B 08 8B 51 08 50 FF D2 8B 46 0C 85 C0 74 08 8B 08 8B 51 08 50 FF D2");
+        static std::vector<SafetyHookMid> SoundSourceDestructors;
+        soundSource.for_each_result([](hook::pattern_match match)
+        {
+            SoundSourceDestructors.push_back(safetyhook::create_mid(match.get<void>(3), [](SafetyHookContext& regs)
+            {
+                for (auto offset : { 0x0C, 0x10 })
+                {
+                    auto& object = *reinterpret_cast<uintptr_t*>(regs.esi + offset);
+                    if (!object)
+                        continue;
+                    auto vtable = IsReadable(object) ? *reinterpret_cast<uintptr_t*>(object) : 0;
+                    if (!IsReadable(vtable + 8) || !IsCode(*reinterpret_cast<uintptr_t*>(vtable + 8)))
+                        object = 0;
+                }
+            }));
+        });
+
         // the game connects before it sends the request, the server has to be up first
         std::thread(LAN::ConfigServer, sServerAddr == "127.0.0.1").detach();
 

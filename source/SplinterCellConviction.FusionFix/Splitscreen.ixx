@@ -2,7 +2,6 @@ module;
 
 #include <stdafx.h>
 #include <xinput.h>
-#include <fstream> // DEBUG
 
 export module Splitscreen;
 
@@ -29,7 +28,9 @@ namespace Splitscreen
     int32_t padInstance2 = 2;
     int32_t padPlayer1 = 0;
     int32_t padPlayer2 = 1;
+    bool invertYPlayer2 = false;
     bool localSplitscreen = false;              // [SPLITSCREEN] enabled
+    bool splitSession = false;                  // the split screen connection (InitMPConnection TYPE=SPLIT until it's closed)
     std::atomic<bool> localSplitscreenPlaying = false; // two local players right now
     uintptr_t viewportPlayer1 = 0;              // the players' viewports in split screen
     uintptr_t viewportPlayer2 = 0;
@@ -106,15 +107,93 @@ namespace Splitscreen
     uint32_t* padsFound = nullptr;  // dword_1431E4C
     uint32_t* padXInput = nullptr;  // dword_1431E34[2]
 
-    // Profile settings (FProfileManager, sub_790ED4), Use Controller at +10h is on for the instance with a pad,
-    // or player 1 in split screen (its prompts and settings are player 1's)
+    // the player whose HUD (FlashHud) is being updated in split screen, -1 outside of it
+    int32_t hudPlayer = -1;
+
+    // Profile settings (FProfileManager, sub_790ED4, player 1's), Use Controller at +10h is on for the instance with a pad, or in split
+    // screen for the player with a pad: the HUD's prompts (key names or pad buttons) read it, player 2's HUD is answered for player 2
     SafetyHookInline shGetProfileSettings = {};
     uint8_t* __fastcall GetProfileSettings(void* profileManager, void* edx)
     {
         auto settings = shGetProfileSettings.fastcall<uint8_t*>(profileManager, edx);
-        if (settings && (bEnableSplitscreen || localSplitscreenPlaying))
-            *reinterpret_cast<int32_t*>(settings + 0x10) = (bEnableSplitscreen ? (bInstance1 ? padInstance1 : padInstance2) : padPlayer1) > 0;
+        if (settings && (bEnableSplitscreen || localSplitscreenPlaying || (localSplitscreen && hudPlayer >= 0)))
+        {
+            auto pad = bEnableSplitscreen ? (bInstance1 ? padInstance1 : padInstance2) : padPlayer1;
+            *reinterpret_cast<int32_t*>(settings + 0x10) = pad > 0;
+            // player 2's HUD gets a copy, the game reads player 1's settings directly too (the mouse look stopped when they said pad)
+            if (!bEnableSplitscreen && hudPlayer == 1)
+            {
+                static uint8_t player2Settings[0x80] = {};
+                memcpy(player2Settings, settings, sizeof(player2Settings));
+                *reinterpret_cast<int32_t*>(player2Settings + 0x10) = padPlayer2 > 0;
+                return player2Settings;
+            }
+        }
         return settings;
+    }
+
+    // the player of a FlashHud: its viewport (+0BCh) is player 2's (engine +210h) or player 1's, -1 outside split screen
+    int32_t HudPlayer(uintptr_t hud)
+    {
+        auto engine = GetEngine ? GetEngine() : 0;
+        auto viewport = hud ? *reinterpret_cast<uintptr_t*>(hud + 0xBC) : 0;
+        if (!engine || !viewport || !(*reinterpret_cast<uint16_t*>(engine + 0x1FC) & 0x100))
+            return -1;
+        return viewport == *reinterpret_cast<uintptr_t*>(engine + 0x210) ? 1 : 0;
+    }
+
+    // a HUD's prompts are made while it's updated or by its elements (the FlashHud at +38h)
+    struct HudPlayerScope
+    {
+        int32_t saved = hudPlayer;
+        explicit HudPlayerScope(uintptr_t hud)
+        {
+            if (auto player = HudPlayer(hud); player >= 0)
+                hudPlayer = player;
+        }
+        ~HudPlayerScope() { hudPlayer = saved; }
+    };
+
+    // FlashHud update (sub_DA124C)
+    SafetyHookInline shHudTick = {};
+    int __fastcall HudTick(uintptr_t hud, void* edx, float delta, int32_t a4)
+    {
+        HudPlayerScope scope(hud);
+        return shHudTick.fastcall<int>(hud, edx, delta, a4);
+    }
+
+    // HUD elements making their prompts also outside the update (in cutscenes, the text then stays): FlashHudCoste, FlashHudMarkerManager,
+    // FlashHudInventory, FlashHudButtons updates (one argument), the elements' SetText (two)
+    SafetyHookInline shHudElement1[4] = {};
+    SafetyHookInline shHudElement2[2] = {};
+
+    // their text is made once (FlashHudCoste +0C0h, FlashHudMarkerManager +10Ch, FlashHudInventory +120h set), also before the HUD had its
+    // player's viewport: it's made again when the player it was made for isn't the HUD's
+    constexpr ptrdiff_t hudElementMade[4] = { 0xC0, 0x10C, 0x120, 0 };
+    std::unordered_map<uintptr_t, int32_t> hudElementPlayers;
+
+    template<size_t I>
+    int __fastcall HudElement1(uintptr_t element, void* edx, int32_t a2)
+    {
+        auto hud = *reinterpret_cast<uintptr_t*>(element + 0x38);
+        HudPlayerScope scope(hud);
+        if (auto player = HudPlayer(hud); player >= 0 && hudElementMade[I])
+        {
+            auto [it, added] = hudElementPlayers.try_emplace(element, -2);
+            if (it->second != player)
+            {
+                *reinterpret_cast<int32_t*>(element + hudElementMade[I]) = 0;
+                it->second = player;
+            }
+        }
+        return shHudElement1[I].fastcall<int>(element, edx, a2);
+    }
+
+    template<size_t I>
+    int __fastcall HudElement2(uintptr_t element, void* edx, int32_t a2, int32_t a3)
+    {
+        HudPlayerScope scope(*reinterpret_cast<uintptr_t*>(element + 0x38));
+        return shHudElement2[I].fastcall<int>(element, edx, a2, a3);
     }
 
     // Profiles (FProfileManager, the engine's virtual +1F0h): 4 slots at +A8h, the players' slot indices at +230h and +234h (also their joystick ids).
@@ -197,12 +276,12 @@ namespace Splitscreen
         }
         if (player >= 0) // it can be looked at before the viewport has it
             controllerPlayers[controller] = player;
-        //std::ofstream(GetExeModulePath<std::filesystem::path>() / "_camera.log", std::ios::app) << std::format("controller {:X} player {} viewports {:X} {:X}", controller, player, viewportPlayer1, viewportPlayer2) << std::endl; // DEBUG
         return player;
     }
 
-    // CameraMovement (camera: controller at +20h): the controller's +604h & 2 is the pad mode (stick input clamped to 1,
-    // mouse input otherwise), it's the same for both players, set it for each one's device
+    // CameraMovement (camera: AECamera at +1Ch, controller at +20h): the controller's +604h & 2 is the pad mode (stick input clamped to 1,
+    // mouse input otherwise), it's the same for both players, set it for each one's device. Invert look (AECamera +3ACh & 8) is the profile's,
+    // applied to player 1's camera only: player 2's is set from the ini.
     SafetyHookInline shCameraMovement = {};
     int __fastcall CameraMovement(uintptr_t camera, void* edx)
     {
@@ -213,26 +292,14 @@ namespace Splitscreen
             {
                 auto& flags = *reinterpret_cast<uint32_t*>(controller + 0x604);
                 flags = ((player == 0 ? padPlayer1 : padPlayer2) > 0) ? (flags | 2) : (flags & ~2u);
+                if (auto aeCamera = *reinterpret_cast<uintptr_t*>(camera + 0x1C); aeCamera && player == 1)
+                {
+                    auto& cameraFlags = *reinterpret_cast<uint32_t*>(aeCamera + 0x3AC);
+                    cameraFlags = invertYPlayer2 ? (cameraFlags | 8) : (cameraFlags & ~8u);
+                }
             }
         }
-        auto result = shCameraMovement.fastcall<int>(camera, edx);
-        if (localSplitscreenPlaying && controller) // DEBUG
-        {
-            static int counter[2] = {};
-            auto player = ControllerPlayer(controller);
-            if (player >= 0 && ++counter[player] % 30 == 0)
-            {
-                auto input = *reinterpret_cast<uintptr_t*>(camera + 40);
-                auto f = [&](int off) { return *reinterpret_cast<float*>(camera + off); };
-                XINPUT_STATE state = {};
-                if (GetState) GetState(Pad(player), &state);
-                std::ofstream(GetExeModulePath<std::filesystem::path>() / "_camera.log", std::ios::app) << std::format("p{} flags {:X} input {:X} vt {:X} vf104 {:X} vf36 {:X} vf44 {:X} dt {} in {} {} last {} {} rx {} ry {} yaw {} pitch {}",
-                    player, *reinterpret_cast<uint32_t*>(controller + 0x604), input, input ? *reinterpret_cast<uintptr_t*>(input) : 0,
-                    input ? (*reinterpret_cast<uintptr_t**>(input))[104 / 4] : 0, input ? (*reinterpret_cast<uintptr_t**>(input))[36 / 4] : 0, input ? (*reinterpret_cast<uintptr_t**>(input))[44 / 4] : 0,
-                    f(0), f(1060), f(1064), f(1112), f(1116), state.Gamepad.sThumbRX, state.Gamepad.sThumbRY, *reinterpret_cast<int32_t*>(camera + 48), *reinterpret_cast<int32_t*>(camera + 52)) << std::endl;
-            }
-        }
-        return result;
+        return shCameraMovement.fastcall<int>(camera, edx);
     }
 
     // UWindowsViewport, can the pad be read: has focus (+414h), pads were found, active (+388h, the second split screen viewport never is)
@@ -257,23 +324,51 @@ namespace Splitscreen
     int __fastcall ReadInput(uintptr_t viewport, void* edx, int32_t a2, uintptr_t player, double delta)
     {
         auto engine = GetEngine();
-        // the split screen lobby gives the players these joystick ids (FWinProfileManager +230h and +234h, -1 on PC)
+        // the split screen lobby gives the players these joystick ids (FWinProfileManager +230h and +234h, -1 on PC), only in a split screen
+        // session: a second player in other sessions crashed leaving the LAN lobby
+        static bool joystickIdsSet[2] = {};
         if (localSplitscreen && engine)
         {
             auto profileManager = reinterpret_cast<uintptr_t(__thiscall*)(uintptr_t)>((*reinterpret_cast<uintptr_t**>(engine))[496 / 4])(engine);
             if (profileManager)
             {
                 auto joystickIds = reinterpret_cast<int32_t*>(profileManager + 560);
-                if (joystickIds[0] == -1)
-                    joystickIds[0] = 0;
-                if (joystickIds[1] == -1)
-                    joystickIds[1] = 1;
+                auto split = splitSession || localSplitscreenPlaying;
+                for (int32_t i = 0; i < 2; i++)
+                {
+                    if (split && joystickIds[i] == -1)
+                    {
+                        joystickIds[i] = i;
+                        joystickIdsSet[i] = true;
+                    }
+                    else if (!split && joystickIdsSet[i])
+                    {
+                        if (joystickIds[i] == i)
+                            joystickIds[i] = -1;
+                        joystickIdsSet[i] = false;
+                    }
+                }
             }
         }
         auto client = engine ? *reinterpret_cast<uintptr_t*>(engine + 0x44) : 0;
         auto secondViewport = engine && (*reinterpret_cast<uint16_t*>(engine + 0x1FC) & 0x100) ? *reinterpret_cast<uintptr_t*>(engine + 0x210) : 0;
         auto firstViewport = client && *reinterpret_cast<int32_t*>(client + 48) > 0 ? **reinterpret_cast<uintptr_t**>(client + 44) : 0;
         localSplitscreenPlaying = firstViewport && secondViewport;
+
+        // Player 1's viewport is resized back to the whole width after the split screen layout of the next map (the resolution requested when
+        // the last one ended): its view was cut to the left half (crosshair and markers off the center, narrower view). It's player 2's origin.
+        if (localSplitscreenPlaying && viewport == firstViewport)
+        {
+            auto width = *reinterpret_cast<int32_t*>(firstViewport + 0xD8);
+            auto height = *reinterpret_cast<int32_t*>(firstViewport + 0xDC);
+            auto half = *reinterpret_cast<int32_t*>(secondViewport + 0xE8);
+            if (half > 0 && width > half && *reinterpret_cast<int32_t*>(firstViewport + 0xE8) == 0)
+            {
+                auto vtable = *reinterpret_cast<uintptr_t**>(firstViewport);
+                auto fullscreen = reinterpret_cast<int32_t(__thiscall*)(uintptr_t)>(vtable[140 / 4])(firstViewport) != 0;
+                reinterpret_cast<int32_t(__thiscall*)(uintptr_t, int32_t, int32_t, int32_t)>(vtable[144 / 4])(firstViewport, (fullscreen ? 1 : 0) | 0x30, half, height);
+            }
+        }
         if (localSplitscreenPlaying && player && (viewport == firstViewport || viewport == secondViewport))
         {
             padXInput[0] = padXInput[1] = 1;
@@ -389,11 +484,187 @@ namespace LocalSplitscreen
         shSetCustomizationInput.stdcall<void>(1, second);
     }
 
+    // UGameEngine split screen layout (sub_79844B, every map load): with the split flag (engine +1FCh & 100h) player 2's viewport (engine
+    // +210h) is created or kept and player 1's (the client's first) is resized (virtual +90h) to half of its current width (+D8h, height +DCh);
+    // without it player 2's is removed and the resolution is requested at twice the width, which doesn't resize player 1's viewport on PC.
+    // A map loaded while in split screen or after it (the next co-op mission) halved it again: player 1's view was a quarter of the screen,
+    // only partly lit. Player 1's viewport gets its width before split screen back before it's halved and when split screen ends.
+    int32_t fullWidth = 0;
+    int32_t fullHeight = 0;
+
+    bool IsHalfWidth(int32_t width)
+    {
+        return fullWidth > 0 && (width == fullWidth / 2 || width == fullWidth - fullWidth / 2);
+    }
+
+    SafetyHookInline shSplitLayout = {};
+    int __fastcall SplitLayout(uintptr_t engine, void* edx)
+    {
+        auto client = *reinterpret_cast<uintptr_t*>(engine + 0x44);
+        auto first = client && *reinterpret_cast<int32_t*>(client + 48) > 0 ? **reinterpret_cast<uintptr_t**>(client + 44) : 0;
+        auto split = (*reinterpret_cast<uint16_t*>(engine + 0x1FC) & 0x100) != 0;
+        auto second = *reinterpret_cast<uintptr_t*>(engine + 0x210);
+        auto width = first ? reinterpret_cast<int32_t*>(first + 0xD8) : nullptr;
+        if (width && split)
+        {
+            if (!second && !IsHalfWidth(*width))
+            {
+                fullWidth = width[0];
+                fullHeight = width[1];
+            }
+            else if (IsHalfWidth(*width))
+                *width = fullWidth;
+        }
+        auto result = shSplitLayout.fastcall<int>(engine, edx);
+        if (width && !split && second && IsHalfWidth(*width))
+        {
+            auto vtable = *reinterpret_cast<uintptr_t**>(first);
+            auto fullscreen = reinterpret_cast<int32_t(__thiscall*)(uintptr_t)>(vtable[140 / 4])(first) != 0;
+            reinterpret_cast<int32_t(__thiscall*)(uintptr_t, int32_t, int32_t, int32_t)>(vtable[144 / 4])(first, (fullscreen ? 1 : 0) | 0x30, fullWidth, fullHeight);
+        }
+        return result;
+    }
+
+    // FlashHudButtons layout (sub_DA31E1(index, state)): in split screen player 2's HUD (+90h) puts the button prompts at the right of its half
+    // by the widths measured when the HUD was laid out, not by the current texts: longer prompts ("KNOCK OUT") went off the screen. They're
+    // laid out from the left as player 1's, in player 2's half (the HUD's stage is the whole screen, element +20h wide).
+    float buttonsShiftX = 0.0f;
+    SafetyHookInline shButtonsLayout = {};
+    void __fastcall ButtonsLayout(uintptr_t element, void* edx, int32_t index, int32_t state)
+    {
+        auto hud = *reinterpret_cast<uintptr_t*>(element + 0x38);
+        if (!hud)
+            return shButtonsLayout.fastcall<void>(element, edx, index, state);
+        auto& player2 = *reinterpret_cast<int32_t*>(hud + 0x90);
+        auto saved = std::exchange(player2, 0);
+        if (saved)
+            buttonsShiftX = *reinterpret_cast<int32_t*>(element + 0x20) / 2.0f;
+        shButtonsLayout.fastcall<void>(element, edx, index, state);
+        buttonsShiftX = 0.0f;
+        player2 = saved;
+    }
+
+    // FlashHudElement position (sub_DAA670(position, clip name, in pixels))
+    SafetyHookInline shElementPosition = {};
+    int __fastcall ElementPosition(uintptr_t element, void* edx, float* position, int32_t name, int32_t pixels)
+    {
+        if (buttonsShiftX != 0.0f && pixels && position)
+        {
+            float shifted[2] = { position[0] + buttonsShiftX, position[1] };
+            return shElementPosition.fastcall<int>(element, edx, shifted, name, pixels);
+        }
+        return shElementPosition.fastcall<int>(element, edx, position, name, pixels);
+    }
+
+    // The split screen lobby is a solo lobby: START (207) launches the match. Esc is START on the PC (ProfileDefaultsPC.ini) and losing the
+    // focus sends it too, they launched the match: in the lobby START is taken from a pad's START only, Esc is B (back), anything else is
+    // dropped. The lobby's message clip ("click here to launch the match", onPress CauseInput 207) caught clicks on the menus above it:
+    // a click away from it is A on the highlighted item.
+    int32_t allowLobbyStart = 0;
+
+    bool IsSplitLobby()
+    {
+        return Splitscreen::splitSession && !Splitscreen::localSplitscreenPlaying;
+    }
+
+    bool PadStartHeld()
+    {
+        for (DWORD pad = 0; pad < XUSER_MAX_COUNT; pad++)
+        {
+            XINPUT_STATE state = {};
+            if (Splitscreen::GetState && Splitscreen::GetState(pad, &state) == ERROR_SUCCESS && (state.Gamepad.wButtons & XINPUT_GAMEPAD_START))
+                return true;
+        }
+        return false;
+    }
+
+    // the cursor on the launch message (bottom of the lobby, in the 16:9 menu rect of the window)
+    bool CursorOnLaunchMessage()
+    {
+        auto engine = Splitscreen::GetEngine ? Splitscreen::GetEngine() : 0;
+        auto client = engine ? *reinterpret_cast<uintptr_t*>(engine + 0x44) : 0;
+        auto viewport = client && *reinterpret_cast<int32_t*>(client + 48) > 0 ? **reinterpret_cast<uintptr_t**>(client + 44) : 0;
+        auto window = viewport && *reinterpret_cast<uintptr_t*>(viewport + 0x3F4) ? *reinterpret_cast<HWND*>(*reinterpret_cast<uintptr_t*>(viewport + 0x3F4) + 4) : nullptr;
+        POINT cursor = {};
+        RECT rect = {};
+        if (!window || !GetCursorPos(&cursor) || !ScreenToClient(window, &cursor) || !GetClientRect(window, &rect) || rect.right <= 0 || rect.bottom <= 0)
+            return true;
+        double width = rect.right, height = rect.bottom, left = 0.0, top = 0.0;
+        if (width / height > 16.0 / 9.0)
+        {
+            left = (width - height * 16.0 / 9.0) / 2.0;
+            width = height * 16.0 / 9.0;
+        }
+        else
+        {
+            top = (height - width * 9.0 / 16.0) / 2.0;
+            height = width * 9.0 / 16.0;
+        }
+        auto x = (cursor.x - left) / width, y = (cursor.y - top) / height;
+        return x >= 0.12 && x <= 0.85 && y >= 0.70 && y <= 0.78;
+    }
+
+    SafetyHookInline shMenuInput = {};
+    int __fastcall MenuInput(void* manager, void* edx, int32_t action, int32_t key, int32_t a4)
+    {
+        if (key == 207 && IsSplitLobby() && !allowLobbyStart && !PadStartHeld())
+        {
+            if (!(GetAsyncKeyState(VK_ESCAPE) & 0x8000))
+                return 1;
+            key = 201;
+        }
+        return shMenuInput.fastcall<int>(manager, edx, action, key, a4);
+    }
+
+    // The lobby's X switches the edited player (setUser, SplitChangeInput MAIN=1/0) only with the main menu focused, the keyboard has no
+    // X in the menus and clicking a player (the only X a mouse gives, CauseInput 202) focuses the player list: the click switches it.
+    bool editingPlayer1 = true;
+
+    void LobbySetUser(bool player1)
+    {
+        auto flashMenu = GetFlashMenu();
+        if (!flashMenu)
+            return;
+        // movie Invoke(result, path, format, ...), the result has a string at +0Ch and a wide one at +20h
+        uint8_t path[16] = {};
+        alignas(8) uint8_t result[0x40] = {};
+        Splitscreen::StringFromChars(path, nullptr, "_root.FlashMenu.frame.lobby.setUser");
+        reinterpret_cast<void(__cdecl*)(uintptr_t, void*, void*, const char*, int32_t)>((*reinterpret_cast<uintptr_t**>(flashMenu))[0x38 / 4])(flashMenu, result, path, "i", player1 ? 1 : 0);
+        StringDestructor(result + 0x20, nullptr);
+        Splitscreen::StringDestructor(result + 0x0C, nullptr);
+        Splitscreen::StringDestructor(path, nullptr);
+    }
+
     SafetyHookInline shMenuCommand = {};
     int __fastcall MenuCommand(void* manager, void* edx, const char* command, const char* args, int32_t a4)
     {
+        if (command && std::string_view(command) == "InitMPConnection")
+            Splitscreen::splitSession = args && std::string_view(args).contains("TYPE=SPLIT");
+        else if (command && std::string_view(command) == "UnInitMPConnection")
+            Splitscreen::splitSession = false;
+        if (command && args && std::string_view(command) == "SplitChangeInput")
+            editingPlayer1 = std::string_view(args).contains("MAIN=1");
+        if (command && args && IsSplitLobby() && std::string_view(command) == "CauseInput" && std::string_view(args).contains("INPUTKEY=202"))
+        {
+            if (std::string_view(args).contains("INPUTACTION=1"))
+                LobbySetUser(!editingPlayer1);
+            return 1;
+        }
+        if (command && args && IsSplitLobby() && std::string_view(command) == "CauseInput" && std::string_view(args).contains("INPUTKEY=207"))
+        {
+            if (CursorOnLaunchMessage())
+            {
+                allowLobbyStart++;
+                auto result = shMenuCommand.fastcall<int>(manager, edx, command, args, a4);
+                allowLobbyStart--;
+                return result;
+            }
+            if (!std::string_view(args).contains("INPUTACTION=1"))
+                return 1;
+            shMenuCommand.fastcall<int>(manager, edx, command, "INPUTACTION=1 INPUTKEY=200", a4);
+            return shMenuCommand.fastcall<int>(manager, edx, command, "INPUTACTION=3 INPUTKEY=200", a4);
+        }
         auto result = shMenuCommand.fastcall<int>(manager, edx, command, args, a4);
-        if (command && !std::string_view(command).starts_with("PlaySound") && !std::string_view(command).starts_with("Localize")) std::ofstream(GetExeModulePath<std::filesystem::path>() / "_menucommands.log", std::ios::app) << command << " | " << (args ? args : "") << " -> " << result << std::endl; // DEBUG
         if (command && args && std::string_view(command).starts_with("GetPlayerJoystickID") && std::string_view(args).contains("MAIN=0"))
         {
             if (auto flashMenu = GetFlashMenu())
@@ -415,8 +686,16 @@ export void InitLocalSplitscreen()
         return;
 
     Splitscreen::localSplitscreen = true;
+    // the mouse is player 1's (keyboard and mouse) while two players play
+    GetMouseViewport = []() -> void*
+    {
+        if (!Splitscreen::localSplitscreenPlaying || Splitscreen::padPlayer1 > 0)
+            return nullptr;
+        return reinterpret_cast<void*>(Splitscreen::viewportPlayer1);
+    };
     Splitscreen::padPlayer1 = iniReader.ReadInteger("SPLITSCREEN", "GamepadPlayer1", 0);
     Splitscreen::padPlayer2 = iniReader.ReadInteger("SPLITSCREEN", "GamepadPlayer2", 1);
+    Splitscreen::invertYPlayer2 = iniReader.ReadInteger("SPLITSCREEN", "InvertYPlayer2", 0) != 0;
     Splitscreen::profileName2 = iniReader.ReadString("SPLITSCREEN", "ProfilePlayer2", "Guest");
     Splitscreen::InitPads();
     Splitscreen::InitProfiles();
@@ -447,6 +726,10 @@ export void InitLocalSplitscreen()
     shSetPlayerInputDisabled = safetyhook::create_inline(hook::get_pattern("8B 44 24 04 85 C0 56 8B F1 74 2D 83 7C 24 0C 00"), SetPlayerInputDisabled);
     shSetCustomizationInput = safetyhook::create_inline(hook::get_pattern("57 E8 ? ? ? ? 8B F8 85 FF 74 41 56 E8 ? ? ? ? 8B 10 8B C8 FF 92 A4 00 00 00 8B F0 85 F6 74 2A 6A 01"), SetCustomizationInput);
     shMenuCommand = safetyhook::create_inline(hook::get_pattern("55 8D 6C 24 94 81 EC 20 02 00 00 53 56 8B 75 78"), MenuCommand);
+    shMenuInput = safetyhook::create_inline(hook::get_pattern("55 8B EC 83 EC 4C 53 56 57 89 4D FC E8 ? ? ? ? 8B 10 8B C8 FF 92 F0 01 00 00 33 DB 8B F0 33"), MenuInput);
+    shElementPosition = safetyhook::create_inline(hook::get_pattern("55 8D 6C 24 94 81 EC 4C 01 00 00 A1 ? ? ? ? 33 C5 89 45 68 53 8B 5D"), ElementPosition);
+    shButtonsLayout = safetyhook::create_inline(hook::get_pattern("55 8B EC 83 EC 50 53 8B 5D 08 85 DB 56 8B F1 0F 8C ? ? ? ? 3B 5E 10 0F 8D"), ButtonsLayout);
+    shSplitLayout = safetyhook::create_inline(hook::get_pattern("55 8B EC 83 EC 10 53 56 8B F1 8B 46 44 33 DB 3B C3 57 0F 84 ? ? ? ? 8D 48 2C 8B 01 8B 38 3B FB 0F 84 ? ? ? ? 66"), SplitLayout);
 
     // engine (sub_792B49), its client at +44h has the viewports at +2Ch
     Splitscreen::shReadInput = safetyhook::create_inline(hook::get_pattern("55 8D AC 24 30 FD FF FF 81 EC 50 03 00 00 A1"), Splitscreen::ReadInput);
@@ -454,4 +737,11 @@ export void InitLocalSplitscreen()
     Splitscreen::shGetProfileSettings = safetyhook::create_inline(hook::get_pattern("FF B1 30 02 00 00 E8 ? ? ? ? 50 E8 ? ? ? ? C3"), Splitscreen::GetProfileSettings);
     Splitscreen::GetProfile1 = hook::get_pattern("FF B1 30 02 00 00 E8 ? ? ? ? C3");
     Splitscreen::shGetProfile2 = safetyhook::create_inline(hook::get_pattern("FF B1 34 02 00 00 E8 ? ? ? ? C3"), Splitscreen::GetProfile2);
+    Splitscreen::shHudTick = safetyhook::create_inline(hook::get_pattern("55 8B EC 56 57 33 FF 39 7D 0C 8B F1 74 13 39 BE 88 00 00 00 0F 85"), Splitscreen::HudTick);
+    Splitscreen::shHudElement1[0] = safetyhook::create_inline(hook::get_pattern("55 8B EC 83 EC 28 53 56 8B F1 E8 ? ? ? ? 33 DB 85 C0 74 13 8B 80 F4"), Splitscreen::HudElement1<0>);
+    Splitscreen::shHudElement1[1] = safetyhook::create_inline(hook::get_pattern("55 8B EC 83 EC 60 53 56 8B F1 E8 ? ? ? ? 33 DB 3B C3 0F 84"), Splitscreen::HudElement1<1>);
+    Splitscreen::shHudElement1[2] = safetyhook::create_inline(hook::get_pattern("55 8B EC 83 EC 30 53 56 8B F1 57 8D 7E 64 57 8D 8E B8 00 00 00 E8"), Splitscreen::HudElement1<2>);
+    Splitscreen::shHudElement1[3] = safetyhook::create_inline(hook::get_pattern("55 8D 6C 24 8C 81 EC F4 00 00 00 53 57 8B D9 33 FF 39 BB 18 08 00 00 0F"), Splitscreen::HudElement1<3>);
+    Splitscreen::shHudElement2[0] = safetyhook::create_inline(hook::get_pattern("55 8B EC 83 EC 14 56 FF 75 0C 8B F1 8D 4D EC E8"), Splitscreen::HudElement2<0>);
+    Splitscreen::shHudElement2[1] = safetyhook::create_inline(hook::get_pattern("55 8B EC 83 EC 14 53 56 57 FF 75 0C 8B D9 8D 4D EC E8"), Splitscreen::HudElement2<1>);
 }
