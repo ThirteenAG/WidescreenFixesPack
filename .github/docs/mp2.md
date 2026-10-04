@@ -27,6 +27,7 @@
 - **Cutscene borders** — In-engine cutscenes keep their original framing at any aspect ratio; choose letterbox borders, pillarbox borders, both, or none. Borders slide in and out.
 - **Startup save** — Automatically load a selected, most recent, or last-used save on startup.
 - **Save location** — Store saves in a `savegames` folder inside the game directory.
+- **Settings file** — Keep the game's settings in `settings.ini` next to the savegames instead of the registry. The first time, the settings already in the registry are copied there.
 - **Background play** — Keep the game running when minimized.
 - **Mouse smoothing** — Turn off the game's mouse smoothing for a more direct feel.
 
