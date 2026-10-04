@@ -400,6 +400,19 @@ namespace Splitscreen
         }
     }
 
+    // Spot light shadows (ShadowPass::NewComposite, after the light's depth pass): the light's volume marks the stencil where the scene is
+    // inside it (depth test fails behind the scene), the shadow is applied where it's marked. In split screen the marking failed in
+    // player 1's view (the second one rendered) depending on the camera angle: lamps lit Sam and the walls without their shadows. The
+    // stencil test is off there, the shadow is applied over the volume's screen area.
+    bool inSpotComposite = false;
+
+    // the composite enabling the stencil test: the value pushed for SetRenderState(D3DRS_STENCILENABLE)
+    void StencilEnable(uint32_t* value)
+    {
+        if (inSpotComposite && GetSplitViewport())
+            *value = 0;
+    }
+
     // Lens flare and sun godray occlusion (hardware queries): a flare node (+40h) and the sun light node (+2CCh) have 16 query slots, the
     // game uses 2 per GPU (frame parity, slot k = (frame / GPUs) % 2 + 2 * (frame % GPUs)), issues them while rendering a view and reads the
     // previous frame's. The split screen views shared them: each view restarted the other's query and read its result (flares of lights
@@ -976,6 +989,40 @@ export void InitSplitscreen()
         Splitscreen::SelectVisibilityJobs(view);
         Splitscreen::RenderingView(view, *reinterpret_cast<uint8_t**>(regs.ecx + 0x44));
     });
+
+    // the spot light composite (the call after the depth pass at +12h, after it +16h), its SetRenderState(D3DRS_STENCILENABLE, 1) call
+    // (DX11 the game's state cache, value at esp+4; DX9 the device's, value at esp+8)
+    auto spotComposite = hook::pattern("E8 ? ? ? ? 83 BF 8C 01 00 00 00 7E 08 53 8B CF E8");
+    auto spotComposite9 = hook::pattern("E8 ? ? ? ? 83 BF 54 01 00 00 00 7E 08 53 8B CF E8");
+    auto stencilEnable = hook::pattern("6A 01 6A 34 8B CE E8 ? ? ? ? 6A 01 6A 39 8B CE E8");
+    auto stencilEnable9 = hook::pattern("6A 01 6A 34 50 FF D2 8B 46 34 8B 08 8B 91 E4 00 00 00 6A 01 6A 39 50 FF D2");
+    auto& composite = spotComposite.size() == 2 ? spotComposite : spotComposite9;
+    if (composite.size() == 2 && (!stencilEnable.empty() || !stencilEnable9.empty()))
+    {
+        static auto CompositeStart = safetyhook::create_mid(composite.get(0).get<void>(5), [](SafetyHookContext& regs)
+        {
+            Splitscreen::inSpotComposite = true;
+        });
+        static auto CompositeEnd = safetyhook::create_mid(composite.get(0).get<void>(0x16), [](SafetyHookContext& regs)
+        {
+            Splitscreen::inSpotComposite = false;
+        });
+        if (!stencilEnable.empty())
+        {
+            static auto StencilEnable = safetyhook::create_mid(stencilEnable.get_first(6), [](SafetyHookContext& regs)
+            {
+                Splitscreen::StencilEnable(reinterpret_cast<uint32_t*>(regs.esp + 4));
+            });
+        }
+        else
+        {
+            static auto StencilEnable = safetyhook::create_mid(stencilEnable9.get_first(5), [](SafetyHookContext& regs)
+            {
+                Splitscreen::StencilEnable(reinterpret_cast<uint32_t*>(regs.esp + 8));
+            });
+        }
+    }
+
     static auto DestroyJobs = safetyhook::create_mid(destroyJobs.get_first(), [](SafetyHookContext& regs)
     {
         Splitscreen::DestroySecondViewJobs();
