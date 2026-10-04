@@ -525,32 +525,49 @@ namespace MenuMap
     {
         static_assert(offsetof(CMenuManager, m_fMapSize) == 0x40);
         static_assert(offsetof(CMenuManager, m_fMapCenterX) == 0x44);
-        auto calls = hook::pattern("83 BE F8 00 00 00 06 75 ? 89 F1 E8 ? ? ? ?").count(2);
-        auto begin = injector::GetBranchDestination(calls.get_first(11)).get<uint8_t>();
+        // Replacement frontends can remove the native map calls altogether.
+        // Keep their map in physical coordinates unless the complete native
+        // renderer and input layout are recognized before applying any patch.
+        g_externalMenuMap = true;
+        auto calls = hook::pattern("83 BE F8 00 00 00 06 75 ? 89 F1 E8 ? ? ? ?");
+        if (calls.size() != 2) return;
+        auto begin = injector::GetBranchDestination(calls.get(0).get<void>(11)).get<uint8_t>();
+        if (injector::GetBranchDestination(calls.get(1).get<void>(11)).get<uint8_t>() != begin) return;
 
-        // MenuMapVC replaces the renderer and handles its own pixel-space canvas.
-        // Leave its input, initial center and drawing calls together, including
-        // renamed copies of the ASI identified by its exported map API.
-        if (*begin == 0xE9)
-        {
-            auto renderer = injector::GetBranchDestination(begin).get<void>();
-            HMODULE module = nullptr;
-            if (GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                reinterpret_cast<LPCWSTR>(renderer), &module) && GetProcAddress(module, "MenuMap_GetScreenCoords"))
-            {
-                g_externalMenuMap = true;
-                return;
-            }
-        }
+        HMODULE module = nullptr;
+        if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+            reinterpret_cast<LPCWSTR>(begin), &module) || module != GetModuleHandleW(nullptr)) return;
+        // Any detoured renderer owns its canvas, including renamed MenuMapVC
+        // copies and versions without the optional GPS exports.
+        if (*begin == 0xE9) return;
 
-        auto init = hook::pattern("C7 43 40 00 00 22 43 C7 43 44 00 00 A0 43 C7 43 48").count(1);
+        auto init = hook::pattern("C7 43 40 00 00 22 43 C7 43 44 00 00 A0 43 C7 43 48");
+        auto endPattern = hook::pattern("E8 ? ? ? ? 80 7B 21 00 0F 84");
+        auto inputBeginPattern = hook::pattern("D9 46 44 DD DA D9 C1 D8 1D");
+        auto inputEndPattern = hook::pattern("D9 5E 44 30 C0 DD D8 88 86");
+        if (init.size() != 1 || endPattern.size() != 1 || inputBeginPattern.size() != 2 || inputEndPattern.size() != 2) return;
+        const auto start = reinterpret_cast<uintptr_t>(begin);
+        const auto end = reinterpret_cast<uintptr_t>(endPattern.get_first());
+        const auto inputBegin = reinterpret_cast<uintptr_t>(inputBeginPattern.get(0).get<void>());
+        const auto inputEnd = reinterpret_cast<uintptr_t>(inputEndPattern.get(1).get<void>());
+        if (end <= start || inputEnd <= inputBegin) return;
+
+        std::array scales{
+            hook::pattern(start, end, pattern_str(0xD8, 0x0D, to_bytes(ResXInvRefs[eCMenuManager].get_ptr()))),
+            hook::pattern(start, end, pattern_str(0xD8, 0x0D, to_bytes(ResYInvRefs[eCMenuManager].get_ptr())))
+        };
+        auto widths = hook::pattern(start, end, "81 ? 80 02 00 00").count_hint(27);
+        auto center = *reinterpret_cast<float**>(inputBegin + 9);
+        auto centers = hook::pattern(inputBegin, inputEnd, pattern_str(0xD8, '?', to_bytes(center)));
+        auto centerLoad = hook::pattern(inputBegin, inputEnd, pattern_str(0xD9, 0x05, to_bytes(center))).count_hint(1);
+        if (scales[0].size() != 27 || scales[1].size() != 27 || widths.size() != 27 || centers.size() != 7 || centerLoad.size() != 1) return;
+
+        g_externalMenuMap = false;
         InitialCenterX.SetAddress(init.get_first<float>(10));
-
-        auto end = hook::pattern("E8 ? ? ? ? 80 7B 21 00 0F 84").count(1).get_first<uint8_t>();
-        for (auto [original, corrected] : { std::pair{ ResXInvRefs[eCMenuManager].get_ptr(), &ScaleX },
-            std::pair{ ResYInvRefs[eCMenuManager].get_ptr(), &ScaleY } })
+        const std::array correctedScales{ &ScaleX, &ScaleY };
+        for (size_t i = 0; i < scales.size(); ++i)
         {
-            hook::pattern(reinterpret_cast<uintptr_t>(begin), reinterpret_cast<uintptr_t>(end), pattern_str(0xD8, 0x0D, to_bytes(original))).count(27).for_each_result([corrected](hook::pattern_match match)
+            scales[i].for_each_result([corrected = correctedScales[i]](hook::pattern_match match)
             {
                 injector::WriteMemory(match.get<void*>(2), corrected, true);
             });
@@ -558,21 +575,18 @@ namespace MenuMap
 
         // A 640-wide mode can still have a different aspect ratio. Its tiles
         // must take the scaling branch just like the radar markers do.
-        hook::pattern(reinterpret_cast<uintptr_t>(begin), reinterpret_cast<uintptr_t>(end), "81 ? 80 02 00 00").count(27).for_each_result([](hook::pattern_match match)
+        widths.for_each_result([](hook::pattern_match match)
         {
             injector::WriteMemory<int32_t>(match.get<void*>(2), -1, true);
         });
 
         // Zoom-out and horizontal panning use the same center as initialization
         // and rendering. Preserve the player's pan offset across res changes.
-        auto inputBegin = hook::pattern("D9 46 44 DD DA D9 C1 D8 1D").count(2).get(0).get<uint8_t>();
-        auto inputEnd = hook::pattern("D9 5E 44 30 C0 DD D8 88 86").count(2).get(1).get<uint8_t>();
-        auto center = *reinterpret_cast<float**>(inputBegin + 9);
-        hook::pattern(reinterpret_cast<uintptr_t>(inputBegin), reinterpret_cast<uintptr_t>(inputEnd), pattern_str(0xD8, '?', to_bytes(center))).count(7).for_each_result([](hook::pattern_match match)
+        centers.for_each_result([](hook::pattern_match match)
         {
             injector::WriteMemory(match.get<void*>(2), &CenterX, true);
         });
-        hook::pattern(reinterpret_cast<uintptr_t>(inputBegin), reinterpret_cast<uintptr_t>(inputEnd), pattern_str(0xD9, 0x05, to_bytes(center))).count(1).for_each_result([](hook::pattern_match match)
+        centerLoad.for_each_result([](hook::pattern_match match)
         {
             injector::WriteMemory(match.get<void*>(2), &CenterX, true);
         });
@@ -609,7 +623,7 @@ namespace MenuBorders
         // Both transition branches share the last of their four masks.
         // Leave a replacement renderer untouched if any call differs.
         if (calls.size() != 7) return;
-        auto target = injector::GetBranchDestination(calls.get_first(4)).as_int();
+        auto target = injector::GetBranchDestination(calls.get(0).get<void>(4)).as_int();
         for (size_t i = 0; i < calls.size(); ++i)
             if (injector::GetBranchDestination(calls.get(i).get<void>(4)).as_int() != target) return;
         hbDraw.fun = reinterpret_cast<decltype(hbDraw.fun)>(target);

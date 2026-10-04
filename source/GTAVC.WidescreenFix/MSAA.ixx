@@ -7,6 +7,7 @@ module;
 export module MSAA;
 
 import Skeleton;
+import Draw;
 
 export GameRef<IDirect3DDevice8*> RwD3DDevice([]() -> IDirect3DDevice8**
 {
@@ -78,9 +79,13 @@ public:
                     return;
 
                 D3DCOLOR black = D3DCOLOR_ARGB(255, 0, 0, 0);
+                // Menu transitions can end a frame inside the narrower canvas.
+                // Clear the physical screen edge, not a line through the menu.
+                const int width = MenuCanvas::Depth && !MenuCanvas::Suspensions
+                    ? MenuCanvas::PhysicalWidth : RsGlobal->width;
 
                 // Top 1px
-                D3DRECT topRect = { 0, -5, RsGlobal->width, 1 };
+                D3DRECT topRect = { 0, -5, width, 1 };
                 RwD3DDevice->Clear(1, &topRect, D3DCLEAR_TARGET, black, 1.0f, 0);
 
                 // Left 1px
@@ -90,11 +95,11 @@ public:
                 if (nHideAABug > 1)
                 {
                     // Bottom 1px
-                    D3DRECT bottomRect = { 0, RsGlobal->height - 1, RsGlobal->width, RsGlobal->height + 5 };
+                    D3DRECT bottomRect = { 0, RsGlobal->height - 1, width, RsGlobal->height + 5 };
                     RwD3DDevice->Clear(1, &bottomRect, D3DCLEAR_TARGET, black, 1.0f, 0);
 
                     // Right 1px
-                    D3DRECT rightRect = { RsGlobal->width - 1, 0, RsGlobal->width + 5, RsGlobal->height + 5 };
+                    D3DRECT rightRect = { width - 1, 0, width + 5, RsGlobal->height + 5 };
                     RwD3DDevice->Clear(1, &rightRect, D3DCLEAR_TARGET, black, 1.0f, 0);
                 }
             };

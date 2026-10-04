@@ -48,6 +48,19 @@ public:
                 {
                     CPostFX::RenderGamma(GetDevice9());
                 });
+
+                // SwitchToNewScreen presents two frames through
+                // DoRWStuffEndOfFrame instead of Idle. Apply gamma after its
+                // final draws too, or the transparent backdrop flashes brighter
+                // during every page switch. Keep the native text crossfade.
+                pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 50 E8 ? ? ? ? A1 ? ? ? ? 59 50 E8 ? ? ? ? 59 C3");
+                if (pattern.size() == 1)
+                {
+                    static auto TransitionGammaHook = safetyhook::create_mid(pattern.get_first(10), [](SafetyHookContext&)
+                    {
+                        CPostFX::RenderGamma(GetDevice9());
+                    });
+                }
             }
 
             if (CPostFX::bConsoleGammaEnabled || CPostFX::bSmaaEnabled)

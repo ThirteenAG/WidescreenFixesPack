@@ -117,6 +117,23 @@ static CRect ComputeLoadingBarRect(CSprite2d* sprite2d)
     CRect screen(0.0f, SCREEN_HEIGHT, SCREEN_WIDTH, 0.0f);
     const auto content = ComputeContentRect(sprite2d, &screen);
     const float contentWidth = content.right - content.left;
+    const auto texture = sprite2d->m_pTexture;
+    const auto raster = RwTextureGetRaster(texture);
+    const std::string_view name(texture->name, strnlen(texture->name, sizeof(texture->name)));
+    const bool isLoadingArtwork = name.starts_with("loadsc")
+        && ((name.size() == 7 && name[6] >= '1' && name[6] <= '9')
+            || (name.size() == 8 && name[6] == '1' && name[7] >= '0' && name[7] <= '4'));
+    if (isLoadingArtwork && raster && raster->width > 0 && raster->height > 0
+        && int64_t(raster->width) * 9 == int64_t(raster->height) * 16)
+    {
+        // LOADSCS widescreen artwork shares a logo at x=111..521 in 1920x1080.
+        // Transform its bounds with the splash, including pillarbox/crop offset.
+        const float left = std::round(content.left + contentWidth * (111.0f / 1920.0f));
+        const float right = std::round(content.left + contentWidth * (521.0f / 1920.0f));
+        const float top = std::round(SCREEN_HEIGHT * (984.0f / 1080.0f));
+        const float bottom = std::round(SCREEN_HEIGHT * (1008.0f / 1080.0f));
+        return CRect(left, bottom, right, top);
+    }
     const float x = content.left + contentWidth * (50.0f / 640.0f);
     const float y = SCREEN_HEIGHT * (408.0f / 448.0f);
     return CRect(x, y + SCREEN_HEIGHT * (10.0f / 448.0f), x + contentWidth * (180.0f / 640.0f), y);
@@ -556,7 +573,8 @@ public:
         {
             {
                 // Anchor the loading bar in the same texture space as its logo.
-                // Square and 2:1 legacy rasters use the 4:3 fallback in ComputeContentRect.
+                // Widescreen LOADSCS artwork has its own logo bounds. Square
+                // and 2:1 legacy rasters retain the original 4:3 placement.
                 auto pattern = hook::pattern("8B 0D ? ? ? ? 8D 0C 8D ? ? ? ? E8 ? ? ? ? 83 C4 18 C3");
                 static auto currentSplash = *pattern.get_first<int32_t*>(2);
                 static auto splashes = *pattern.get_first<CSprite2d*>(9);

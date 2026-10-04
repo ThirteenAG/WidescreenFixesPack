@@ -57,11 +57,16 @@ void Init()
     pattern = find_pattern("68 ? ? ? ? 50 ? ? FF 51 ? A1", "C7 44 24 ? ? ? ? ? ? ? ? ? ? FF 52 ? E8 ? ? ? ? 33 C0");
     static auto _rwD3D8RasterShowRasterBeforeResetHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs) { WFP::onBeforeReset().executeAll(); });
 
-    pattern = find_pattern("8B 08 53 56 57 50 FF 91", "A1 ? ? ? ? ? ? 50 FF 92 ? ? ? ? A1");
-    static auto BeforeEndSceneHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    // Run at presentation, as in SA, rather than CameraEndUpdate: frontend
+    // transitions also end camera updates while capturing offscreen textures.
+    pattern = find_pattern("8B B0 98 00 00 00 E8 ? ? ? ? 8B 4C 24 14 8B 54 24 10 8B 7C 24 0C 51 52 57 FF D6", "8B 98 98 00 00 00 E8 ? ? ? ? 8B 44 24 1C 8B 54 24 20 8B CB 8B 5C 24 18");
+    if (!pattern.empty())
     {
-        WFP::onEndScene().executeAll();
-    });
+        static auto BeforeRasterShowRasterHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            WFP::onEndScene().executeAll();
+        });
+    }
 }
 
 CEXP void UpdateVars()
