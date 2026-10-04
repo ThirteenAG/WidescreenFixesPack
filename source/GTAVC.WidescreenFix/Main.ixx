@@ -56,6 +56,25 @@ public:
 
         WFP::onGameInitEvent() += []()
         {
+            // GenerateOneRandomCar scales its spawn radius by the camera's
+            // GenerationDistMultiplier, but TestCoorsCloseness compares the
+            // resulting path against a fixed 150 units. Wider spawn radii can
+            // exceed that limit and reject otherwise valid traffic.
+            // Normalize only the car path distance before the native comparison;
+            // keep pedestrian paths, traffic budgets and visibility tests intact.
+            {
+                auto pathCheck = hook::pattern("84 DB 75 1D D9 44 24 04 D8 1D ? ? ? ? DF E0 80 E4 05 80 FC 01 75 ? 83 C4 08 B0 01 5B C2 1C 00");
+                if (pathCheck.size() == 1)
+                {
+                    static auto TrafficPathDistanceFix = safetyhook::create_mid(pathCheck.get_first(4), [](SafetyHookContext& regs)
+                    {
+                        const float multiplier = TheCamera->GenerationDistMultiplier;
+                        if (std::isfinite(multiplier) && multiplier > 0.0f)
+                            *reinterpret_cast<float*>(regs.esp + 4) /= multiplier;
+                    });
+                }
+            }
+
             auto pattern = hook::pattern("E8 ? ? ? ? C7 44 24 ? ? ? ? ? 8B 54 24");
             shCameraSize = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), CameraSize);
 
